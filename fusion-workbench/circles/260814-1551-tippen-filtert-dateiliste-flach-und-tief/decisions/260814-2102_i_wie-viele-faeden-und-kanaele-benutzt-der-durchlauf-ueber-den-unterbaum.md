@@ -47,3 +47,6 @@ Answered: `planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Implemented: `2cdd299` — `Durchlauf::neu` legt genau einen `sync_channel(STAPELGROESSE)` an und startet genau einen benannten Faden je Aufruf (`crates/krk-core/src/verzeichnis/durchlauf.rs:262-267`); `STAPELGROESSE` ist 1.024 (`crates/krk-core/src/verzeichnis/leser.rs:50`), also die im Datensatz vorgerechnete Kanaltiefe. Die Auftragsliste wird beim Start vollständig übergeben. Je Tab entsteht ein Durchlauf (`crates/krk-ui/src/tabs.rs:914`), damit ein Faden und ein Kanal je Tab — Möglichkeit 2 wie beantwortet. Abgeglichen am 260820-2056 gegen `f5300f4`.

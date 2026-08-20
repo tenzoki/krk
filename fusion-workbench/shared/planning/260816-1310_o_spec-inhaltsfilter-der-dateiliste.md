@@ -1,7 +1,7 @@
 # Spec: Der Filter der Dateiliste berücksichtigt den Inhalt der Dateien
 
 **Datum:** 2026-08-16
-**Status:** Entwurf
+**Status:** Gebaut und belegt, Abnahmelauf **nicht** gefahren — die Runde 11 (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content`) ist am 260816-2030 beschränkt geschlossen, ihr Plan `planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md` steht auf `_c_`. Die Abnahmeliste liegt fertig unter `messungen/260816-abnahme-inhaltsfilter.md` und ist Nutzerarbeit. Der Dateimarker bleibt `_o_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` offen ist; siehe `## Reconciliation Log` am Ende.
 **Quelle:** „Nächste Erweiterung des Filters: im Moment filtern wir Datei-/Foldernamen. Nun erweitern wir so, dass matches im Dateiinhalt berücksichtigt werden. Diese Funktion wird mit einer weiteren Checkbox in der unteren Controlleiste aktiviert: ‚Content'."
 **Baumstand:** `9236dd4`, gelesen am 260816
 **Ablage:** Dieser Spec entsteht ohne Circle im Blick und liegt deshalb im gemeinsamen Speicher. Der Circle der elften Runde nimmt ihn über sein Feld `Active spec/plan:` an.
@@ -241,3 +241,64 @@ Zwei Fragen sind offen. **Keine hält die Planung auf, jede bindet sie**, und f�
 Zwei weitere Datensätze sind mit dieser Klärung beantwortet und liegen als `_a_` im gemeinsamen Speicher: die Größengrenze und die Frage nach einer elften Zeitzusage.
 
 Daneben binden zwei offene Datensätze der Runde 10 diese Runde weiter, ohne sie aufzuhalten. `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md` steht offen, obwohl der Baum die Frage für „Deep" faktisch mit „je Tab" beantwortet hat, und `decisions/260814-1552_*_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md` steht offen, während die Rangfolge gebaut ist. Beide liegen im Circle `260814-1551-tippen-filtert-dateiliste-flach-und-tief`.
+
+---
+
+## Reconciliation Log
+
+**260820-2056, erster Abgleich dieses Specs, Baumstand `f5300f4`, Domäne `code`.**
+
+**Diese Datei ist bis heute nie beurteilt worden.** Der Abgleich vom 260819-1440 hat das
+festgestellt und als Vorbehalt festgehalten: sie trägt als eine von zwei Planungsdateien keinen
+`## Reconciliation Log`, „ihr `_o_` ist nicht gesetzt, sondern stehen geblieben". Der Circle der
+Runde 11 führt daneben **kein** Abgleichsprotokoll in seinem `history/`. Dieser Eintrag schließt die
+Lücke; er beurteilt und benennt nicht um.
+
+**Der Marker bleibt `_o_`, und der Grund ist nicht der Befund, sondern die offene Frage.**
+`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` fragt,
+ob `_c_` an einem Spec „gebaut und belegt" oder „abgenommen" heißt, und ist unbeantwortet. Nach der
+einen Lesart stünde dieser Spec auf `_c_`, nach der anderen auf `_o_`. Eine Umbenennung entschiede
+die Frage durch vollendete Tatsache, und der Nutzer hat sie nicht getroffen. **Was dieser Abgleich
+zur Frage beiträgt, ist Bestand und keine Wahl:** die Kostenrechnung des Datensatzes ist um die
+Archivfolge ergänzt worden — ein Spec auf `_c_` wandert beim nächsten Aufräumen in den Archivspeicher,
+belegt an zwei Specs vom 260819-1613.
+
+**Was am Baum nachgelesen ist, und was nicht.** Der Spec führt 57 Abnahmekriterien. Geprüft ist die
+Teilmenge, die sich ohne laufendes Bündel entscheiden lässt, nämlich die strukturellen Zusagen der
+Fähigkeit C6 und die zwei Zahlen, an denen C1 hängt. Die übrigen — alles, was Anzeige, Bedienung und
+Zeitverhalten betrifft — sind Nutzerarbeit und stehen ungefahren in
+`messungen/260816-abnahme-inhaltsfilter.md`, 28 Beobachtungen an vier Orten.
+
+| Kriterium | Befund am Baum |
+|---|---|
+| C6.1 — `traegt_die_folge` steht genau einmal, keine zweite Fassung für den Inhalt | **hält.** `crates/krk-core/src/verzeichnis/filter.rs:122`, eine Erklärung im ganzen Baum. Rufer sind drei: `durchlauf.rs:539`, `inhalt.rs:139`, `modell.rs:823`. |
+| C6.3 — die Zählprobe ist nachgezogen, nennt den dritten Rufer namentlich, ist nicht durch eine Zahl ersetzt | **hält der Sache nach, nicht dem Namen nach.** Die Probe steht bei `crates/krk-core/tests/verzeichnis.rs:3095` und führt die drei Rufer als namentliche Liste, mit einer Meldung, die sagt, welcher unerwartet ist. Sie heißt aber `die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei` und nicht mehr, wie hier zugesagt, `die_zeichenregel_und_der_vergleich_stehen_je_einmal_und_haben_je_zwei_rufer`. Die Umbenennung ist folgerichtig — der alte Name behauptete zwei Rufer je Regel, und genau das gilt seit dieser Runde nicht mehr —, aber sie ist hier nicht nachgetragen, und `CLAUDE.md:131` zitiert weiter den alten Namen. Gefilt als `shared/issues/260820-2056_*_claude-md-nennt-eine-zaehlprobe-unter-einem-namen-den-der-baum-nicht-traegt.md`. |
+| C6.4 — die Zeichenregel behält ihre zwei Rufer | **hält.** `traegt_ein_dateiname` (`filter.rs:90`) hat außerhalb der Proben genau zwei Rufer: `krk-ui/src/belegungsmodell.rs:701` und `krk-ui/src/appkit/tabelle.rs:1736`. |
+| C6.5 — kein dritter Weg, eine Datei zu lesen | **hält.** `ohne_warten_oeffnen` hat außerhalb der Proben genau zwei Rufer, und beide liegen in `crates/krk-core/src/text/datei.rs`: `:421` für den Editor, `:606` für Vorschau und Inhaltsfilter. |
+| C6.8 — im Filter steht keine Zeitmessung, die Probe bleibt grün | **hält.** `im_filter_steht_keine_zeitmessung` (`crates/krk-core/tests/verzeichnis.rs:3007`) ist im Lauf vom 260820-2050 grün. |
+| C1.7 — die Grenze ist `TEXTGRENZE` und keine neue Zahl | **hält.** `TEXTGRENZE = 1024 * 1024` (`crates/krk-ui/src/vorschaumodell.rs:131`), unverändert; sie reist an genau einer Stelle in den Kern (`crates/krk-ui/src/tabs.rs:929`), und `krk-core` führt keine eigene Zahl. |
+| Schwelle aus dem Directive-Satz „lang genug" | **hält.** `inhaltsschwelle` (`filter.rs:157`) liefert 5 mit tiefer Suche und 3 ohne, mit Probe bei `:260`. Ein Rufer: `modell.rs:1059`. |
+
+**Prüflauf.** `make check` am 260820-2050 gegen `f5300f4`, Rückgabewert 0: alle vier Kommandos grün,
+keine Probe rot, keine Warnung unter `-D warnings`.
+
+**Die zwei offenen Nutzerentscheidungen dieses Specs sind seit dem 260819-1613 nicht mehr im
+gemeinsamen Speicher zu finden, und das ist kein Verlust.** Beide sind beantwortet und umgesetzt
+worden und mit dem Marker `_i_` ins Archiv gewandert:
+`archive/260819-1613-safe-cleanup-tier-1/shared/decisions/260816-1310_i_was-zeigt-die-eine-statuszeile-waehrend-der-inhalt-gelesen-wird.md`
+und `.../260816-1310_i_sieht-der-nutzer-ob-eine-zeile-wegen-des-namens-oder-wegen-des-inhalts-steht.md`.
+**Der Abschnitt `## Ausstehende Nutzerentscheidungen` oben ist damit überholt**, und die zwei
+Kästchen dort sind nicht mehr offen; angefasst wird der Abschnitt nicht, weil er aufzeichnet, was
+beim Schreiben des Specs offen war.
+
+**Von den zwei Datensätzen, die der Spec als `_a_` nennt, ist einer mit diesem Abgleich auf `_i_`
+gewandert:** `shared/decisions/260816-1310_*_welche-vorhandene-groessengrenze-gilt-fuer-den-inhaltsfilter.md`,
+belegt an `crates/krk-ui/src/tabs.rs:929`. Der zweite, die Frage nach einer elften Messgröße, bleibt
+auf `_a_`, weil seine Antwort „keine Zahl" lautet und eine Abwesenheit keinen Umsetzungscommit hat;
+als Gestalt abgelegt in
+`shared/issues/260820-2056_*_drei-beantwortete-datensaetze-koennen-nie-umgesetzt-werden-weil-ihre-antwort-eine-abwesenheit-ist.md`.
+
+**Sechs Befunde der Runde 11 bleiben offen**, wie ihr Circle-Datensatz sie führt. Einer davon,
+`issues/260816-1935_*_claude-md-nennt-zwei-filterregeln-…`, ist mit diesem Abgleich geschlossen: alle
+vier Aussagen sind von zwei Kuratorenläufen berichtigt und einzeln am heutigen `CLAUDE.md`
+nachgelesen. Es bleiben fünf.

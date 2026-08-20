@@ -43,3 +43,14 @@ Also seen: 260819-1230 by orchestrator — in der Praxis eingetreten, und zwar g
 Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und am Werkzeug nachgelesen.** `CLAUDE.md:106` sagt wortgleich „den Tag setzt der Nutzer, nicht das Werkzeug". Der Baum sagt das Gegenteil: `xtask/src/version.rs:97` baut die Zeichenkette `v{zahl}`, `:216` trägt `fn taggen`, und `vorhaben_bestimmen` (`:329`) führt drei Vorhaben, von denen zwei taggen (`NurTaggen`, `SetzenEintragenTaggen`); die Tafel dazu steht als Kommentar bei `:307-310`. Der Nutzer liefert allein die Zahl, über `./release.sh <version>`.
 
 **Zur Doppelung.** Der Commit `ee6d033` trägt eine Meldung über die Berichtigung dieses Befunds, sein Diff an `CLAUDE.md` ist aber leer; `77dcd48` hat den zweiten Datensatz derselben Sache wieder zurückgenommen (`shared/issues/260819-1230_c_claude-md-sagt-den-tag-setze-der-nutzer-das-werkzeug-setzt-ihn-seit-dem-260813.md`). Dieser Datensatz hier ist der lebende. Der Marker bleibt `_o_` für den Durchgang des Kurators.
+
+---
+Resolved: Der Kuratorenlauf `260819-1500` hat mit seinem Eintrag L07 den überholten Halbsatz aus
+`CLAUDE.md` genommen (Commit `5886d04`). **Am Baumstand `f5300f4` nachgelesen:**
+`grep -c 'den Tag setzt der Nutzer, nicht das Werkzeug' CLAUDE.md` liefert 0, und `CLAUDE.md:109`
+sagt jetzt die richtige Fassung — „Den Tag setzt seit dem 260813-1534 das Werkzeug und nicht der
+Nutzer […]; der Nutzer wählt allein die Zahl, im Argument von `./release.sh <version>`" — samt
+Verweis auf den bindenden Datensatz
+`shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`.
+Damit ist der Schaden, den dieser Datensatz vorhergesagt und am 260819-1230 als eingetreten
+gemeldet hat, an seiner Quelle abgestellt: wer `CLAUDE.md` folgt, setzt den Tag nicht mehr von Hand.

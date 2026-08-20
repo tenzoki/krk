@@ -44,3 +44,35 @@ dem Augenblick still falsch geworden, in dem der Kuratorenlauf seine Änderung a
 Schritt jenes Laufs sucht die Defektdatensätze, die eine Änderung erledigt. Ob ein
 Kuratorendurchgang den offenen Defektbestand nach Treffern absucht, ist eine Frage an fusion und
 nicht an dieses Projekt.
+
+---
+Resolved: Der Abgleich vom 260820-2056 hat den Fix dieses Datensatzes gefahren. Alle fünf
+Behauptungen sind am Baumstand `f5300f4` gegen den heutigen Stand von `CLAUDE.md` einzeln
+nachgelesen — nicht gegen die Messung vom 260820-1119 übernommen, weil `CLAUDE.md` seither ein
+zweites Mal geändert worden ist (`7da3098`). Alle fünf halten. Jeder der fünf Datensätze hat seine
+Zeile `Resolved:` mit dem Kuratorenlauf und dem Eintrag bekommen, der die Aussage berichtigt hat,
+und trägt jetzt `_c_`:
+
+| Datensatz | Neuer Marker | Berichtigt durch |
+|---|---|---|
+| `shared/issues/260816-2138_*_claude-md-nennt-zehn-gefahrene-runden-es-sind-elf.md` | `_c_` | L01 (`5886d04`), dazu L03 und L04 (`7da3098`) |
+| `shared/issues/260816-1232_*_claude-md-sagt-den-tag-setze-der-nutzer-….md` | `_c_` | L07 (`5886d04`) |
+| `shared/issues/260818-0028_*_claude-md-says-the-bundle-ships-as-v0-4-1-….md` | `_c_` | L03 (`5886d04`) |
+| `shared/issues/260818-1635_*_claude-md-nennt-zwei-nachzuziehende-stellen-je-kommando-….md` | `_c_` | L09 (`5886d04`) |
+| `circles/260816-1321-…/issues/260816-1935_*_claude-md-nennt-zwei-filterregeln-….md` | `_c_` | L10 und L11 (`5886d04`), dazu L03 (`7da3098`) |
+
+**Zwei Abweichungen von der Vorlage dieses Datensatzes, beide zugunsten der Prüfung:**
+
+- Der fünfte Datensatz trägt **vier** Behauptungen und nicht eine. Die Tabelle oben nennt zwei
+  davon; geprüft sind alle vier, und alle vier halten. Die Belege stehen in seiner eigenen Zeile
+  `Resolved:`.
+- Beim Prüfen der ersten Behauptung des fünften Datensatzes ist ein neuer Befund abgefallen: die
+  Zählprobe, die `CLAUDE.md:131` als Beleg anbietet, trägt dort einen Namen, den der Baum nicht hat.
+  Gefilt als
+  `shared/issues/260820-2056_*_claude-md-nennt-eine-zaehlprobe-unter-einem-namen-den-der-baum-nicht-traegt.md`.
+
+**Die Nebenfrage dieses Datensatzes bleibt offen und ist hier nicht mitentschieden:** ob ein
+Kuratorendurchgang den offenen Defektbestand nach Treffern absucht. Sie richtet sich an fusion und
+nicht an dieses Projekt, und dieser Abgleich beantwortet sie nicht, sondern liefert nur ein zweites
+Datum dafür — der Weg „Kurator filt einen Sammeldatensatz, Reconciler arbeitet ihn ab" hat in einem
+Zug funktioniert und fünf Marker richtig gestellt.

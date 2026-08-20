@@ -55,3 +55,28 @@ diese Runde falsch geworden, keine war es vorher.
 Gefunden bei der Durchsicht der elften Runde, Bereich `9f5ced5..b9ab8ae`.
 Verwandt: `issues/260816-1934_o_sechs-prosastellen-im-baum-beschreiben-den-stand-vor-der-elften-runde.md`
 (dieselbe Sorte Befund, andere Fläche).
+
+---
+Resolved: Alle **vier** Stellen dieses Datensatzes sind berichtigt, drei durch den Kuratorenlauf
+`260819-1500` (Einträge L10 und L11, Commit `5886d04`) und die vierte durch den Lauf `260820-1119`
+(Eintrag L03, Commit `7da3098`). Am Baumstand `f5300f4` einzeln nachgelesen:
+
+1. **Zwei Regeln, zwei Rufer je Regel** — `CLAUDE.md:131` sagt jetzt „trägt seit der Runde 11
+   **drei** Regeln, die je genau einmal dastehen" und nennt `traegt_ein_dateiname`,
+   `traegt_die_folge` und `inhaltsschwelle`. Die Rufer sind nicht mehr beziffert: „Wie viele Rufer
+   jede hat, sagt die Zählprobe […] und nicht diese Zeile."
+2. **Lesehülle in `krk-ui`** — `grep -c 'krk-ui/src/vorschau' CLAUDE.md` liefert 0. Die Zeile sagt
+   jetzt „Die Hülle hat zwei Aufrufer, und beide liegen seit der Runde 11 in
+   `krk-core/src/text/datei.rs`: `oeffnen` für den Editor (`:421`) und `bis_zur_grenze_lesen`
+   (`:605`) für die Vorschau und den Inhaltsfilter."
+3. **Deskriptorhaushalt** — der Absatz trägt jetzt die zweite Hälfte: „**Seit der Runde 11 legt der
+   Inhaltsfilter genau einen Dateideskriptor dazu, und nur während eines Lesens**".
+4. **Die Rundentabelle** — sie führt vierzehn Zeilen, die elfte darunter, und der Absatz nennt gar
+   keine Zahl mehr, sondern das Kommando `ls fusion-workbench/circles/*/_*_circle.md`.
+
+**Ein Nachbefund, der aus dieser Prüfung stammt und nicht mehr hierher gehört:** die Zählprobe, die
+`CLAUDE.md:131` unter Punkt 1 als Beleg anbietet, heißt dort
+`die_zeichenregel_und_der_vergleich_stehen_je_einmal_…`; im Baum heißt sie
+`die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei`
+(`crates/krk-core/tests/verzeichnis.rs:3095`), und der zitierte Name hat null Treffer. Gefilt als
+`shared/issues/260820-2056_o_claude-md-nennt-eine-zaehlprobe-unter-einem-namen-den-der-baum-nicht-traegt.md`.

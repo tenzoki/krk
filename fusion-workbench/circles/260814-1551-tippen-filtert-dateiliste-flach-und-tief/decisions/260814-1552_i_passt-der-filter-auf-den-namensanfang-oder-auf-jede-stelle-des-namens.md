@@ -43,3 +43,6 @@ Superseded by:
 
 ---
 Answered: Nutzer am 260814-1610, und schon in seinem ersten Satz am 260814-1520 — jede Stelle des Namens. Woertlich: "In jedem Fall muss die Suche Substrings suchen (\"aaa\" match \"bbbaaaccc\")". Deckt sich mit der Empfehlung. Der Vergleich ist eine Teilzeichenfolge ohne Ruecksicht auf Gross- und Kleinschreibung, wie ihn `krk-ui/src/belegungsmodell.rs:536-541` fuer die Belegungsansicht schon fuehrt.
+
+---
+Implemented: `9e1892d` — `traegt_die_folge` (`crates/krk-core/src/verzeichnis/filter.rs:122`) ist `name.to_lowercase().contains(filter_klein)`, also eine Teilzeichenfolge an jeder Stelle und ohne Rücksicht auf Groß- und Kleinschreibung. Die Regel steht dort genau einmal und hat drei Rufer (`durchlauf.rs:539`, `inhalt.rs:139`, `modell.rs:823`); die Zählprobe `die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei` (`crates/krk-core/tests/verzeichnis.rs:3095`) hält die Liste namentlich. Die Proben `filter.rs:218-254` schreiben die Antwort aus: „mittendrin", „am Anfang", „am Ende", und `Äpfel` wird von `apfel` nicht gefunden. Abgeglichen am 260820-2056 gegen `f5300f4`.

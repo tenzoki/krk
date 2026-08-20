@@ -52,3 +52,14 @@ Answered: `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md`, 
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Implemented: `09baffd` — die 1 MB der Vorschau reisen an genau einer Stelle in den Kern:
+`crates/krk-ui/src/tabs.rs:929` reicht `tab.modell.inhalt_wirkt().then_some(crate::vorschaumodell::TEXTGRENZE)`
+an den Durchlauf weiter, und der Kommentar darüber schreibt die Bauform aus („**Die eine Stelle, an
+der die 1 MB in den Kern reisen**"; `None` heißt „bei diesem Lauf wird keine Datei geöffnet",
+`Some(n)` heißt „es wird gelesen, und n ist die Grenze"). `crates/krk-core/src/verzeichnis/inhalt.rs`
+nimmt die Grenze als Argument entgegen und führt keine eigene Zahl (`7283d55`); `TEXTGRENZE` steht
+unverändert bei `crates/krk-ui/src/vorschaumodell.rs:131` und ist nicht angehoben worden. Damit ist
+die Antwort in ihrer tragenden Form eingelöst: keine dritte Zahl, keine dritte Lesemechanik, und
+`krk-core` bekommt keinen Bezug auf `krk-ui`. Abgeglichen am 260820-2056 gegen `f5300f4`.

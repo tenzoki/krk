@@ -86,3 +86,39 @@ Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **der eine ungedeckte Wu
 
 ---
 Umgelegt am 260819 vom Defekt- in den Entscheidungsspeicher, auf Befund des Abgleichs 260819-1440: der Text sagt selbst, dass zu entscheiden und nicht zu beheben ist. Der Datensatz behaelt vorerst die Gestalt eines Defektberichts; die Abschnitte Options, Constraints und Recommendation fehlen ihm und sind nachzutragen, wenn die Frage vorgelegt wird.
+
+---
+Abgleich 260820-2056 (reconciler, Baumstand `f5300f4`): **offen, und ein zweiter Fehlerweg ist
+dazugekommen, den dieser Datensatz noch nicht nennt.**
+
+**Der Baum trägt heute einen ungedeckten Codecommit, und das Werkzeug kann ihn nicht melden.**
+`f5300f4` („ein fertiges Buendel laesst sich allein beglaubigen") legt `xtask/src/beglaubigung.rs`
+mit 665 Zeilen an und ändert vier weitere Dateien unter `xtask/`; keine Durchsichtsdatei im ganzen
+Baum liegt danach. Die jüngste ist
+`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/reviews/260820-0745-coderev-auswahl-und-kopieren-in-der-vorschau.md`,
+gut acht Stunden davor. Der Commit ist außerhalb jeder Orchestrator-Sitzung entstanden; sein
+Protokoll ist `shared/history/260820-1624-coder-nur-beglaubigungsweg-fuer-ein-fertiges-buendel.md`.
+
+**Gemessen:**
+
+```
+$ "$FUSION_PLUGIN_ROOT/bin/fusion-review-coverage"
+anchor=workbench-root  since=  head=HEAD
+commits=0  reviews=0  unusable=0  uncovered=0  verdict=unchecked
+why=fusion-workbench/agentstate.yaml is absent — no session in progress to measure a range for
+```
+
+**Das ist nicht derselbe Fehler wie der ursprüngliche und trifft dieselbe Stelle.** Der Datensatz
+hier beschreibt eine falsche Zuordnung **innerhalb** einer gemessenen Spanne: `7fae5ba` galt als
+„nur Markdown" und war es nicht. Hier gibt es gar keine Spanne — ohne `agentstate.yaml` hat das
+Werkzeug keinen Anker und meldet `unchecked` statt `uncovered`. **Arbeit außerhalb einer Sitzung ist
+für die Deckungsmessung strukturell unsichtbar**, und `unchecked` liest sich in einem Bericht wie
+„nichts zu beanstanden".
+
+**Was das für die Frage dieses Datensatzes bedeutet.** Sein Abschnitt `## Abgrenzung` fragt, ob die
+Zuordnung „fasst nur Werkbank-Markdown an" von Hand geschieht oder aus `git show --name-only`
+abgeleitet wird. Beide Zuschnitte setzen voraus, dass es eine Spanne gibt, über die gezählt wird.
+Der Fall `f5300f4` zeigt, dass diese Voraussetzung nicht immer trägt — wer die Frage beantwortet,
+beantwortet sie also für einen Teil der Commits dieses Baums und nicht für alle. **Ob `f5300f4` eine
+Durchsicht bekommen soll, entscheidet dieser Abgleich nicht**; er stellt fest, dass keine liegt und
+dass kein Werkzeug es sagen würde.

@@ -50,3 +50,17 @@ zum dritten Mal veraltet; der Datensatz benennt genau dieses Muster.
 Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Zahl in der Überschrift dieses Datensatzes ist selbst überholt.** `CLAUDE.md:12` sagt unverändert „Zehn Runden sind gefahren", und die zwei abgeleiteten Spannen bei `:39` („Runden 2 bis 10") und `:78` („Runden 5 bis 10") stehen ebenso. Nachgezählt am Dateibestand: `ls fusion-workbench/circles/*/_*_circle.md` liefert 15 Datensätze, davon 10 beschränkt geschlossen, **3** kohärent geschlossen (`260813-0939`, `260817-0833`, `260818-1615`), einer vorgesehen (`260804-0933`, nie gefahren) und einer zurückgestellt (`260816-2255`, nie gefahren). **Gefahren sind 13**, nicht elf. Die Prosa in `CLAUDE.md` ist damit zum vierten Mal veraltet.
 
 **Zwei weitere Aussagen derselben Datei hängen an dieser Zahl** und sind mit ihr falsch geworden: `CLAUDE.md` nennt die Runde `260813-0939` als „bisher einzige" kohärent geschlossene, und es sind drei. Der Datensatz bleibt `_o_` für den Durchgang des Kurators; dieser Abgleich fasst `CLAUDE.md` nicht an.
+
+---
+Resolved: Der Kuratorenlauf `260819-1500` hat mit seinem Eintrag L01 die Zahl aus `CLAUDE.md`
+genommen und durch das Kommando `ls fusion-workbench/circles/*/_*_circle.md` ersetzt (Commit
+`5886d04`); der Lauf `260820-1119` hat mit L03 die Rundentabelle auf vierzehn Zeilen und mit L04
+die Zahl der kohärent geschlossenen Runden von einer auf drei gezogen (Commit `7da3098`).
+**Am Baumstand `f5300f4` einzeln nachgelesen, alle vier Behauptungen dieses Datensatzes:**
+`grep -c 'Wie viele Runden gefahren sind und wie jede geschlossen hat, sagt der Dateibestand' CLAUDE.md`
+liefert 1, die fette Zeile „Zehn Runden sind gefahren" steht nirgends mehr; die abgeleitete Spanne
+„die Runden 2 bis 10" heißt jetzt „Was die Runden ab der zweiten hinzugefügt haben"; die zweite
+Spanne „er liegt vor den Runden 5 bis 10 — keine der sechs" heißt jetzt „er liegt vor jeder Runde,
+die seither geschlossen hat"; und die Aussage über die „bisher einzige" kohärent geschlossene Runde
+nennt jetzt drei. Damit ist keine der beanstandeten Stellen mehr im Baum, und keine trägt eine Zahl,
+die ein sechstes Mal veralten könnte — genau die Richtung, die dieser Datensatz selbst empfohlen hat.

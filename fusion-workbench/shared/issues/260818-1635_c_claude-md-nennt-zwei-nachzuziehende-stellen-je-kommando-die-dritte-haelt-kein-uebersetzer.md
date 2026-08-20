@@ -59,3 +59,18 @@ Abschnitt „Was der Übersetzer einfordert, und was er nicht einfordert"); sie 
 Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Rechnung ist ausgezählt.** `CLAUDE.md:120` nennt unverändert zwei nachzuziehende Stellen je neuem Kommando. Am Baum sind es **15**: **vier** hält der Übersetzer über vollständige Fallunterscheidungen (`crates/krk-core/src/tasten/belegung.rs:814` und zwei weitere in derselben Datei, dazu `crates/krk-ui/src/belegungsmodell.rs:227`), **zwei** hält eine Probe über die Kopfzählung von `resources/default-keymap.toml`, und **neun** hält nichts. Die zwei, die `CLAUDE.md` nennt, sind beide übersetzergehalten — also gerade die, die von selbst auffallen.
 
 **Die zwei ungehaltenen Auffangzweige, an denen ein neues Kommando still wirkungslos bleibt, stehen heute bei** `crates/krk-ui/src/appkit/anwendung.rs:3145` (`andere => self.bereichskommando(fokus, andere)`) und `crates/krk-ui/src/appkit/tabelle.rs:1494` (`_ => return false`). Ein Kommando ohne eigenen Zweig übersetzt, besteht jede Probe, steht mit Namen und Kombination im Hauptmenü und tut nichts. Der Marker bleibt `_o_` für den Durchgang des Kurators.
+
+---
+Resolved: Der Kuratorenlauf `260819-1500` hat mit seinem Eintrag L09 die dritte Stelle in
+`CLAUDE.md` nachgetragen (Commit `5886d04`). **Am Baumstand `f5300f4` nachgelesen**, `CLAUDE.md:123`:
+der Absatz sagt jetzt „**Diese Stellen hält der Übersetzer, und genau deshalb sind sie nicht die
+gefährlichen.** Der Ausführungszweig hält er nicht" und nennt beide Auffangzweige beim Namen,
+`Anwendungsdelegierter::kommando_ausfuehren` und `Tabelle::kommando_ausfuehren`, samt der Folge
+(„übersetzt, besteht jede Probe, steht mit Namen und Kombination im Hauptmenü — und tut nichts").
+
+**Die Auflage aus `## Was eine Behebung leisten müsste` ist ebenfalls erfüllt, und zwar durch
+Verweis statt durch Abschrift:** derselbe Absatz zitiert für die vollständige Trennung — was der
+Übersetzer hält, was eine Probe hält, was gar nichts hält — den Plan der Runde 13
+(`circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/planning/260818-1633_*_plan-ordner-angleichen-und-abwurf-aus-fremden-apps.md`,
+Abschnitt „Was der Übersetzer einfordert, und was er nicht einfordert"). Genau das hatte dieser
+Datensatz verlangt: „sie ist von dort zu übernehmen und nicht neu zu erheben."

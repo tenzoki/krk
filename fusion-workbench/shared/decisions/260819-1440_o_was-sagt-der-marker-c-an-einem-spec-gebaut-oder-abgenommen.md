@@ -78,3 +78,52 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Abgleich 260820-2056 (reconciler, Baumstand `f5300f4`): **offen, und der Bestand hat sich in drei
+Punkten geändert. Kein Marker ist bewegt worden.**
+
+**1. Die Runde 14 ist dazugekommen, und sie steht in beiden Spalten anders als jede Zeile der
+Tafel.** Ihr Spec `shared/planning/260819-2216_p_spec-auswahl-und-kopieren-in-der-vorschau.md` trägt
+`_p_`, einen Marker, den die Tafel oben gar nicht kennt; ihr Plan
+`circles/260819-2230-…/planning/260819-2245_*_plan-…` trug bis zu diesem Abgleich ebenfalls `_p_` und
+steht jetzt auf `_c_`. Der Abnahmelauf ist am 260820-1030 gefahren.
+
+| Runde | Circle | Spec | Abnahmelauf gefahren |
+|---|---|---|---|
+| 14 | `_c_` | `_p_` | ja, am 260820-1030; ein Kriterium von 39 ist dabei zur Hälfte widerlegt |
+
+**Die Runde 14 ist der erste Fall, in dem die zwei Lesarten an derselben Datei auseinanderfallen,
+ohne dass der Abnahmelauf fehlte.** Bei den sieben Specs der Tafel oben trennt sie die Frage
+„gefahren oder nicht". Hier ist er gefahren, und sie trennt trotzdem: nach Lesart B steht der Spec
+auf `_c_` (acht von acht Planschritten belegt), nach Lesart A nicht (C2.12 verlangt vier Wege, zwei
+davon sind am Baum widerlegt — `circles/260819-2230-…/issues/260820-0733_o_` —, und C2.3 und C2.4
+tragen die Kennzeichnung **(Probe)** ohne Probe). Wer Lesart A für zu grob hielt, weil sie nur
+„gefahren oder nicht" unterscheidet, hat hier den Gegenbeleg: sie unterscheidet feiner, und genau
+deshalb ist ihre Anwendung teurer.
+
+**2. `_p_` ist als Ausweichmarker in Gebrauch gekommen, und er behauptet etwas Falsches.** Zwei
+Planungsdateien standen vor diesem Abgleich auf `_p_`, beide aus der Runde 14, beide mit der
+ausdrücklichen Begründung, `_c_` würde diese Frage durch vollendete Tatsache entscheiden. Die
+Konvention liest `_p_` als „In progress — agent is actively working on it"
+(`rules/fusion-workbench-conventions.md`, `## State Markers — issues and planning`). An keiner der
+beiden arbeitet ein Agent. **Solange die Frage offen ist, erzeugt sie also nicht nur sieben
+stehengebliebene `_o_`, sondern zusätzlich einen Marker, der eine Tätigkeit behauptet.** Das ist ein
+Argument für eine Entscheidung, nicht für eine bestimmte.
+
+**3. Eine Folge von Lesart B, die oben unter „Was sie verbaut" nicht steht: `_c_` macht einen Spec
+archivierbar.** Am 260819-1613 hat der Archivschritt von `/fusion:cleanup` 70 terminale Datensätze
+verschoben, darunter zwei Specs aus `shared/planning/`:
+`archive/260819-1613-safe-cleanup-tier-1/shared/planning/260817-0536_c_spec-absicherung-jedes-loeschwegs.md`
+und `.../260818-1510_c_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md`. Beide standen
+vorher im gemeinsamen Speicher, beide sind mit dem Marker `_c_` dorthin gewandert. **Nach Lesart B
+würden die sieben offenen Specs beim nächsten Aufräumen denselben Weg nehmen**, und die
+Kurzform-Zitate auf sie — die Gestalt, die
+`shared/issues/260810-1851_*_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md`
+beschreibt — zeigten dann ins Leere, ohne dass eine Suche es meldete. Nach Lesart A bleiben sie
+liegen. Das ist kein Argument gegen Lesart B, aber es ist ein Preis, den die Kostenrechnung oben
+nicht führt, und er fällt beim nächsten `/fusion:cleanup` an und nicht später.
+
+**Was dieser Abgleich getan hat:** die Kopfzeile `**Status:**` von vier Specs gegen den Baum gestellt,
+ohne einen Dateimarker zu bewegen, und den Spec der Runde 11 zum ersten Mal beurteilt. Die
+Einzelheiten stehen in `shared/history/260820-2056-reconciliation.md`.

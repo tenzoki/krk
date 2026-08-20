@@ -44,3 +44,6 @@ Superseded by:
 
 ---
 Answered: Nutzer am 260814-1610 im Orchestrator-Dialog — keine Tastenkombination. "Deep" ist ein Ankreuzfeld in der Bereichsleiste, neben dem Kaestchen "Typ". Der Nutzer hat das dreimal so gesagt; die Frage nach einer Kombination war eine Fehlvorlage des Orchestrators. Der Baum traegt das Muster bereits: `spalte_typ_umschalten` fuehrt `tasten = []` (`resources/default-keymap.toml:383`) und ist ueber sein Kaestchen und das Hauptmenue erreichbar. Der neue Befehl macht es gleich. Damit bleiben die drei genannten Moeglichkeiten unbenutzt; `shift+cmd+f`, `opt+cmd+f`, `ctrl+cmd+f` und der nackte Tabulator sind weiterhin frei.
+
+---
+Implemented: `d73be91` — `resources/default-keymap.toml:459-462` führt die Funktion `tiefe_suche_umschalten` mit `tasten = []` und nicht mit `reserviert_fuer`, genau nach dem Muster von `spalte_typ_umschalten`. Der Kommentar darüber schreibt die Folge aus: der Eintrag fällt aus der Markdown-Ausgabe der Runde 3, weil sie eine Funktion nur bei mindestens einer Kombination aufnimmt. Die drei erwogenen Kombinationen und der nackte Tabulator sind unbenutzt geblieben. Abgeglichen am 260820-2056 gegen `f5300f4`.

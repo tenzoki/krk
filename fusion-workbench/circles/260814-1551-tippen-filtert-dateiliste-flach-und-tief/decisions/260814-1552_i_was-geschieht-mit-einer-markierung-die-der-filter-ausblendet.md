@@ -46,3 +46,6 @@ Superseded by:
 
 ---
 Answered: Nutzer am 260814-1610 — Moeglichkeit 2, wie empfohlen. Eine Operation fasst nur an, was sichtbar ist; die bestehende Regel in `krk-ui/src/kommandos/operationen.rs:162-192` bleibt unveraendert. Die Statuszeile sagt an, wie viele Markierungen der Filter gerade ausblendet, damit das Verschwinden keine Ueberraschung ist.
+
+---
+Implemented: `2d3d971` — die Statuszeile führt das Feld `ausgeblendete_markierungen` (`crates/krk-ui/src/appkit/statuszeile.rs:330`), gefüllt bei `:1048`, und schreibt daraus „, eine Markierung ausgeblendet" beziehungsweise „, N Markierungen ausgeblendet" (`:447-453`); die Rangfolge im Modulkopf zeigt die Stelle (`:374`). Die Auswahlregel in `krk-ui/src/kommandos/operationen.rs` ist unverändert geblieben, wie die Antwort es verlangt, und die Probe `ausgeblendete_markierungen_stehen_daneben_und_sonst_nicht` (`:1110`) hält beides zusammen. Abgeglichen am 260820-2056 gegen `f5300f4`.

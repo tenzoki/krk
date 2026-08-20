@@ -45,3 +45,6 @@ Superseded by:
 
 ---
 Answered: Nutzer am 260814-1610 — Moeglichkeit 1, wie empfohlen: die tiefe Suche steigt nicht in symbolische Verknuepfungen hinab. Der Nutzer haelt daneben fest, dass Verknuepfungen ausserhalb der Suche begehbar sein sollen und es heute nicht sind. Das ist ein eigener Defekt und nicht Gegenstand dieser Runde; abgelegt als `shared/issues/260814-1612_o_eine-verknuepfung-auf-einen-ordner-laesst-sich-nicht-betreten.md`.
+
+---
+Implemented: `32fd038` — der Durchlauf über den Unterbaum trifft die Verknüpfung als eigenen Zweig und tut nichts: `Typ::Verknuepfung => {}` (`crates/krk-core/src/verzeichnis/durchlauf.rs:573`). Es gibt keinen Abstieg und keinen mitgeführten Besuchszustand, also Möglichkeit 1 wie beantwortet. Der daneben festgehaltene Defekt, dass eine Verknüpfung auf einen Ordner sich außerhalb der Suche nicht betreten lässt, ist unverändert offen (`shared/issues/260814-1612_o_…`) und von dieser Umsetzung nicht berührt. Abgeglichen am 260820-2056 gegen `f5300f4`.

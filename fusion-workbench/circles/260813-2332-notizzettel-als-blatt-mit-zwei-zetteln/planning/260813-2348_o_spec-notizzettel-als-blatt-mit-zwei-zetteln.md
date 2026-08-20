@@ -1,7 +1,7 @@
 # Spec: Ein Notizzettel als Blatt am Hauptfenster, zwei Zettel, sichert sich selbst
 
 **Date:** 2026-08-13
-**Status:** Entwurf
+**Status:** Gebaut und belegt, Abnahmelauf am 260814 gefahren und 8 von 29 Bündelkriterien deckend — die Runde 9 ist beschränkt geschlossen, ihr Plan `planning/260814-0656_c_plan-notizzettel-als-blatt-mit-zwei-zetteln.md` steht auf `_c_`. Der Dateimarker bleibt `_o_`, gemessen gesetzt vom Abgleich vom 260814-1247 und bestätigt am 260820-2056; die Lesart des Markers an einem Spec ist offen (`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`).
 **Source:** Backlog-Eintrag des Nutzers vom 260813-2033, mit der Anlage des Circles geschlossen, und die Directive im Circle-Datensatz `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_*_circle.md`
 **Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`, aktiv seit 260813-2341
 **Grundlage erhoben:** 260813-2348, am Baum unter `crates/` und `resources/`

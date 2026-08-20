@@ -1,7 +1,7 @@
 # Implementation Plan: Auswahl und Kopieren in der Vorschau
 
 **Date:** 2026-08-19
-**Status:** Teilweise abgeschlossen — acht von acht Schritten `[DONE]` und gegen den Baum gelesen; die Bündelabnahme aus `## Nutzerarbeit` steht aus
+**Status:** Complete — acht von acht Schritten `[DONE]` und einzeln gegen den Baum gelesen; die Bündelabnahme aus `## Nutzerarbeit` hat der Nutzer am 260820-1030 gefahren
 **Spec:** `fusion-workbench/shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`, vom Nutzer am 260819-2228 abgenommen. Er bleibt im gemeinsamen Speicher, weil er vor diesem Circle entstanden ist (Herkunftsregel).
 **Circle:** `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau`
 **Grundlage erhoben:** 260819-2245, am Baum auf dem Stand `fce0b6f`, unter `crates/` und `resources/`
@@ -468,3 +468,51 @@ trägt seither zwei verschobene Zeilennummern, die in seiner Abgleichsnotiz beri
 **Keine Abweichung zwischen Plan und Umsetzung, die nicht schon gefilt wäre.** Drei
 Zählerwartungen des Plantextes waren am Baum nicht erfüllbar; alle drei sind zugunsten des
 Baums geändert und im Befund `issues/260820-0646_o_…` festgehalten.
+
+**260820-2056, Abgleich zum Sitzungsabschluss, Baumstand `f5300f4`, Domäne `code`.**
+
+**Marker `_p_` → `_c_`.** Der Abgleich vom 260820-0834 hat zwei Gründe genannt, den Plan auf `_p_`
+zu belassen. Beide tragen heute nicht mehr, und zwar aus verschiedenen Gründen.
+
+**Der erste Grund ist entfallen.** „Sein eigener Abschnitt `## Nutzerarbeit` führt 15
+Abnahmekriterien mit Bündelanteil, […] und dieser eine Durchgang ist nicht gefahren." Der Nutzer hat
+ihn am 260820-1030 gefahren, an `KRK.app` 0.5.4 aus `05cb614`; sein Befund lautet, die neuen
+Funktionen halten. Die Schließungsnotiz des Circle-Datensatzes schreibt genau das aus und nennt
+denselben Grund für den Marker `_c_` der Runde:
+`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md`, Abschnitt
+`## Closure note`. Die drei Befunde des Laufs liegen im gemeinsamen Speicher, und keiner davon
+stammt aus dieser Runde.
+
+**Der zweite Grund hat nie für einen Plan gegolten.** „`shared/decisions/260819-1440_o_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`
+ist offen; `_c_` jetzt zu setzen entschiede sie durch vollendete Tatsache." Jener Datensatz schließt
+Pläne ausdrücklich aus: „Die Regel ist für **Schritte** geschrieben, und ein Spec hat keine […]. Für
+Pläne trägt sie und ist im ganzen Baum befolgt — alle Pläne geschlossener Runden stehen auf `_c_`.
+Für Specs schweigt sie." Die offene Frage betrifft den Spec dieser Runde und nicht diesen Plan. Ihn
+auf `_c_` zu setzen nimmt ihr nichts vorweg.
+
+**Am Dateibestand nachgezählt, und dieser Plan war die einzige Ausnahme.** Über alle sechzehn Circles
+erhoben: dreizehn Runden sind gefahren und tragen einen Plan; dreizehn von dreizehn Plänen stehen auf
+`_c_`, darunter die der Runden 2, 3, 4, 5, 6, 7, 10, 11 und 12, deren Abnahmelauf **nie** gefahren
+worden ist (die Zuordnung Runde zu Lauf steht in der Tafel von
+`shared/decisions/260819-1440_o_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`,
+Abschnitt `## Der Bestand am 260819-1440`). Der Plan-Marker folgt in diesem Baum ausnahmslos den Schritten und nicht der Abnahme.
+Der einzige weitere Plan mit `_o_` gehört zum zurückgestellten Circle
+`260816-2255-befehle-absetzen-und-makros-speichern`, an dem nichts gebaut ist.
+
+**Die acht Schritte stehen unverändert.** `git diff 05cb614..HEAD -- crates/ resources/` ist leer:
+zwischen dem Abgleich vom 260820-0834 und `f5300f4` ist an dieser Runde keine Zeile mehr geändert
+worden, der einzige Codecommit seither (`f5300f4`) fasst allein `xtask/` an. Die Einzelbelege des
+Abgleichs vom 260820-0834, oben in diesem Protokoll, gelten damit unverändert weiter und sind hier
+nicht zweitgeschrieben.
+
+**Prüflauf.** `make check` ist am 260820-2050 gegen `f5300f4` gefahren und liefert Rückgabewert 0;
+alle vier Kommandos grün, keine Probe rot, keine Warnung. Das ist der zweite grüne Lauf über diese
+Arbeit, der erste lag am 260820-0834 gegen `05cb614`.
+
+**Was der Marker `_c_` hier **nicht** sagt.** Vier Durchsichtsbefunde der Runde bleiben auf
+ausdrücklichen Nutzerentscheid vom 260820-0750 offen (`issues/260820-0733_o_`, `260820-0735_o_`,
+`260820-0737_o_`, `260820-0739_o_`), und zwei Entscheidungsdatensätze stehen begründet auf
+beantwortet statt umgesetzt. Der gewichtigste Befund widerlegt die Erschließung, auf der C2.12 ruht:
+die eine Abfangstelle trägt die Zwischenablage, das Ziehen und die Dienste trägt sie nicht. Der Plan
+ist abgearbeitet; die Runde ist damit nicht rückstandsfrei. Beides steht nebeneinander und das eine
+hebt das andere nicht auf.

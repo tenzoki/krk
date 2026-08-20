@@ -51,3 +51,6 @@ Superseded by:
 Answered: Nutzer am 260814-1910 im Orchestrator-Dialog — Moeglichkeit 2, wie empfohlen. Die Tastenwiederholung traegt nicht ueber die Grenze: ein gehaltener Rueckschritt hoert auf, sobald der Filtertext leer ist, und erst ein neuer Druck raeumt. Kein Zeitgeber; AppKit meldet an jedem Tastenereignis, ob es aus einer Wiederholung stammt, also faellt die Frage an dieselbe Stelle wie die Fallunterscheidung selbst. Der Spec faehrt bereits darauf (C1.18), es ist keine Aenderung noetig.
 
 Die beiden Gegenrechnungen sind vorgelegt und angenommen: eine Groesse mehr in einer ohnehin zustandsabhaengigen Regel, und ein Verhalten, das in keiner Uebersicht steht. Moeglichkeit 3 ist mit ihr verworfen, weil sie einen Zustand einfuehrt, den nichts anzeigt.
+
+---
+Implemented: `2ff4b5a` — dieselbe Tafel in `crates/krk-ui/src/kommandos/rueckschritt.rs` trägt die dritte Größe `merker` (Modulkopf `:48-50`), und die Zeile „nein | ja | ja" liefert `Rueckschritt::Nichts`: die gehaltene Taste trägt nicht über die Grenze, erst ein neuer Druck räumt. Kein Zeitgeber; `wiederholung` kommt als `isARepeat` am Ereignis herein und reist als `ereignisse::Anschlag` bis in den Ausführungszweig. Der Ausgang steht als eigene Aufzählungsvariante da und nicht als Sonderfall des Räumens, wie die Antwort es verlangt. Abgeglichen am 260820-2056 gegen `f5300f4`.

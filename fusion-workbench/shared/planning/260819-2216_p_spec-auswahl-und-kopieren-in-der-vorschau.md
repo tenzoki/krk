@@ -1,7 +1,7 @@
 # Spec: Auswahl und Kopieren in der Vorschau
 
 **Date:** 2026-08-19
-**Status:** Teilweise abgeschlossen — vom Nutzer am 260819-2228 abgenommen, alle acht Planschritte gebaut und gegen den Baum gelesen; 15 der 39 Abnahmekriterien tragen einen Bündelanteil und sind ungefahren
+**Status:** Gebaut und am laufenden Bündel abgenommen — vom Nutzer am 260819-2228 abgenommen, alle acht Planschritte gebaut und einzeln gegen den Baum gelesen; die 15 Abnahmekriterien mit Bündelanteil hat der Nutzer am 260820-1030 an `KRK.app` 0.5.4 gefahren, mit dem Befund, die neuen Funktionen halten. Der Dateimarker steht auf `_p_` und nicht auf `_c_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` offen ist
 **Source:** Der Wunsch des Nutzers vom 260819-2031, in der Vorschau Text auswählen und kopieren zu können, und seine vier Antworten der ersten Klärungsrunde vom 260819-2210
 **Circle:** keiner. Diese Runde ist am 260819-1835 als eigener Circle mit vorgeschalteter Klärung beschlossen worden (Ereignis `scope_resolved` in `orchestrator-events.jsonl`); der Circle entsteht nach der Abnahme dieses Specs, und bis dahin liegen Spec und Datensätze im gemeinsamen Speicher.
 **Grundlage erhoben:** 260819-2216, am Baum auf dem Stand `6be1e81`, unter `crates/` und `resources/`
@@ -297,3 +297,47 @@ Befund `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0
 **Der Prüfvorbehalt dieses Specs steht unverändert.** Beide Erschließungen — dass die vier
 Blättertasten in der Vorschau blättern (C1.11), und dass der Durchgang die Abbildung ohne
 messbare Mehrkosten trägt — sind weiterhin nicht gemessen.
+
+**260820-2056, Abgleich zum Sitzungsabschluss, Baumstand `f5300f4`, Domäne `code`.**
+
+**Der Marker bleibt `_p_`, und der Grund ist nur noch einer von dreien.** Der Abgleich vom
+260820-0834 hat drei Aussagen genannt. Zwei davon tragen heute nicht mehr.
+
+- **„`_o_` ist falsch geworden"** — gilt unverändert, und stärker als damals. `make check` ist am
+  260820-2050 gegen `f5300f4` ein zweites Mal grün gefahren (Rückgabewert 0, alle vier Kommandos,
+  keine Probe rot).
+- **„`_c_` wäre falsch, weil 15 der 39 Abnahmekriterien ungefahren sind"** — **entfallen.** Der
+  Nutzer hat den Bündeldurchgang am 260820-1030 an `KRK.app` 0.5.4 aus `05cb614` gefahren; sein
+  Befund lautet, die neuen Funktionen halten. Damit sind C1.1, C1.2, C1.6, C1.8, C1.9, C1.10, C1.11,
+  C1.12, C2.1, C2.2, C2.11, C3.1, C3.2 und C3.3 gefahren. Beleg:
+  `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md`, `## Closure note`, und
+  Commit `70d914d`.
+- **„`_c_` wäre eine Antwort auf eine offene Nutzerfrage"** — **steht.**
+  `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` ist
+  unbeantwortet, und dieser Abgleich benennt sie als den einzigen verbliebenen Grund.
+
+**Ein Kriterium der fünfzehn ist nicht mit gefahren, und das ist mehr als eine Lücke im Bericht.**
+C2.12 verlangt vier Wege, den Menüeintrag, das Kontextmenü und die zwei erschlossenen: eine Auswahl
+mit der Maus in einen Editor ziehen, und einen Dienst des Systems auf sie anwenden. Der Bericht des
+Nutzers nennt die zwei letzten nicht, weder haltend noch fehlschlagend. Der Befund
+`circles/260819-2230-…/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md`
+misst am Baum, dass sie in dieser Form **nicht** halten. **C2.12 ist damit nicht ungeprüft, sondern
+zur Hälfte widerlegt**, und `shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md`
+steht deshalb begründet auf beantwortet und nicht auf umgesetzt.
+
+**Warum das die Wahl zwischen den zwei Lesarten schärft und nicht erledigt.** Nach der Lesart der
+belegten Bauarbeit steht dieser Spec heute auf `_c_`: acht von acht Planschritten sind gebaut und
+einzeln belegt, und der Plan daneben trägt seit diesem Abgleich `_c_`. Nach der Lesart der
+Abnahmekriterien steht er nicht auf `_c_`: eines der 39 ist am Baum zur Hälfte widerlegt, und zwei
+weitere tragen die Kennzeichnung **(Probe)** ohne Probe (C2.3 und C2.4,
+`circles/260819-2230-…/issues/260820-0737_o_`). **Die zwei Lesarten fallen für diesen Spec
+auseinander**, und deshalb entscheidet eine Umbenennung hier die offene Frage und ist keine bloße
+Buchführung. Der Abgleich benennt es und benennt nicht um.
+
+**Was am Marker `_p_` trotzdem unwahr bleibt.** Die Konvention liest `_p_` als „In progress — agent
+is actively working on it" (`rules/fusion-workbench-conventions.md`,
+`## State Markers — issues and planning`). An diesem Spec arbeitet kein Agent, und die Runde ist seit
+dem 260820-1045 geschlossen. `_p_` ist von den vier Markern der einzige, der die offene Frage nicht
+vorwegnimmt, und zugleich der einzige, der eine Tätigkeit behauptet, die es nicht gibt. **Das ist
+kein Rückstand dieses Abgleichs, sondern die Kosten der offenen Frage**, hier ausgeschrieben, damit
+sie beim nächsten Durchgang nicht als Nachlässigkeit gelesen wird.

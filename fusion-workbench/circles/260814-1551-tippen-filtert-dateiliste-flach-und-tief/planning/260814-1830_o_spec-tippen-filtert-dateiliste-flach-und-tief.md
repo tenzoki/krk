@@ -1,7 +1,7 @@
 # Spec: Tippen filtert die Dateiliste, flach und als gefilterter Ordnerbaum
 
 **Date:** 2026-08-14
-**Status:** Entwurf
+**Status:** Gebaut und belegt, Abnahmelauf **nicht** gefahren — die Runde 10 ist beschränkt geschlossen, ihr Plan `planning/260814-2102_c_plan-tippen-filtert-dateiliste-flach-und-tief.md` steht auf `_c_`. Der Dateimarker bleibt `_o_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` offen ist.
 **Source:** Der Entwurf des Nutzers vom 260814-1520 und seine Berichtigungen vom 260814-1610, festgehalten in der Directive des Circle-Datensatzes `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_t_circle.md`
 **Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`, aktiv seit 260814-1551
 **Grundlage erhoben:** 260814-1830, am Baum auf dem Stand `43dfe90`, unter `crates/` und `resources/`

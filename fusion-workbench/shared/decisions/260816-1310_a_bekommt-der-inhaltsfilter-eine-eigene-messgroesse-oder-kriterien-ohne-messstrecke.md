@@ -53,3 +53,24 @@ Answered: `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md`, 
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Abgleich 260820-2056 (reconciler, Baumstand `f5300f4`): **bleibt auf beantwortet, und der Grund ist
+nicht Nachlässigkeit, sondern die Form der Antwort.** Am Baum nachgemessen ist die eine Aussage, die
+sich messen lässt: `grep -oE '"L[0-9]+"' crates/krk-bench/src/messen.rs | sort -u` liefert
+unverändert L1 bis L10, also ist keine elfte Zahl gesetzt worden.
+
+**`_i_` setzt der Marker trotzdem nicht, weil eine Antwort „wir setzen keine Zahl" keinen
+Umsetzungscommit hat, den man zitieren könnte.** `rules/fusion-workbench-conventions.md`,
+`## State Markers — decisions`, verlangt für `_i_` ausdrücklich die Zeile
+`Implemented: <commit hash> or <path>:<line>`. Eine Abwesenheit hat keine Fundstelle. Die zwei
+Ersatzkriterien, die an die Stelle der Zahl treten, sind daneben nur mittelbar über die Bauform des
+Durchlaufs eingelöst, und das wäre Erschließung und kein Beleg.
+
+**Dieselbe Lage tragen zwei weitere Datensätze dieses Baums**, und in einem steht sie seit dem
+260812-2253 ausgeschrieben: `circles/260812-1000-…/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md`
+(Antwort: nichts ändern) und `circles/260814-1551-…/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md`
+(Antwort: die Frage löst sich mit der Bauform auf, kein dritter Weg). **Drei Datensätze stehen damit
+dauerhaft auf `_a_`, ohne dass irgendetwas aussteht**, und eine Zählung offener Grundlage über
+`_o_` + `_a_` meldet sie als offen. Als eigener Befund abgelegt:
+`shared/issues/260820-2056_o_drei-beantwortete-datensaetze-koennen-nie-umgesetzt-werden-weil-ihre-antwort-eine-abwesenheit-ist.md`.

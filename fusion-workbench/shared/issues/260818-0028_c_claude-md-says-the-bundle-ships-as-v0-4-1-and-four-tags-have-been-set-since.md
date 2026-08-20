@@ -56,3 +56,13 @@ that cannot age again.
 
 ---
 Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und der Abstand ist von vier auf sieben Tags gewachsen.** `CLAUDE.md:39` sagt unverändert, das Bündel liege als `v0.4.1` aus. `Cargo.toml:13` trägt heute `version = "0.5.4"`, und der jüngste Tag ist `v0.5.4`. Nach `v0.4.1` stehen **sieben** Tags: `v0.4.3`, `v0.4.4`, `v0.5.0`, `v0.5.1`, `v0.5.2`, `v0.5.3`, `v0.5.4`. Der Datensatz misst vier; drei sind seither dazugekommen. Der Marker bleibt `_o_` für den Durchgang des Kurators; dieser Abgleich fasst `CLAUDE.md` nicht an.
+
+---
+Resolved: Der Kuratorenlauf `260819-1500` hat mit seinem Eintrag L03 die Versionszahl aus dem Satz
+genommen (Commit `5886d04`), und zwar in der Richtung, die dieser Datensatz unter `## Direction`
+selbst empfohlen hat: nicht die Zeitform nachziehen, sondern die Zahl fallen lassen.
+**Am Baumstand `f5300f4` nachgelesen:** `grep -c 'v0\.4\.1' CLAUDE.md` liefert 0, und der Absatz
+`## Projektstand` sagt jetzt „**Welche Version, sagt `grep '^version' Cargo.toml` und der jüngste Tag
+aus `git tag -l`, nicht diese Zeile**". `Cargo.toml` trägt heute `0.5.5`; nach `v0.4.1` stehen
+inzwischen acht Tags. Eine Zahl, die neunmal veralten konnte, steht nicht mehr da und kann kein
+zehntes Mal veralten.
