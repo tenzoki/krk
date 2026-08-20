@@ -43,6 +43,31 @@ Die Frage ist nicht bloß Vollständigkeit. Fällt die Antwort auf „nur die Zw
 
 Zwischenablage, Ziehen mit der Maus und die System-Dienste liefern denselben Quelltext. Eine Regel, ein Ort im Code. Der Vorbehalt gehört dazu: ob eine Stelle wirklich alle Wege trägt, ist am gebauten Bündel zu prüfen und nicht an einer Probe.
 
+## Abgleich 260820-0834 — der Marker bleibt auf beantwortet
+
+**Die eine Stelle steht, dass sie alle Wege traegt, ist nicht gemessen.** Gebaut ist genau,
+was die Antwort verlangt: `Vorschautext::auswahl_ablegen`, die Ueberschreibung von
+`writeSelectionToPasteboard:types:` (`crates/krk-ui/src/appkit/vorschau.rs:445-461`), ist die
+einzige Abfangstelle im Baum, und die Zaehlprobe
+`die_abfangstelle_steht_im_baum_genau_einmal` (`vorschau.rs:1765`) haelt das fest.
+
+**Zwei Gruende halten den Marker trotzdem auf `_a_`:**
+
+- Der Plan der Runde sagt es selbst. Seine Tabelle `## Welcher Schritt welchen Datensatz
+  realisiert` traegt fuer diesen Datensatz **erst nach der Buendelabnahme von C2.12**. Die
+  Abnahme ist Nutzerarbeit und nicht gefahren.
+- Der offene Durchsichtsbefund
+  `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md`
+  misst am Baum, dass die Stelle den Parameter `sorten` im Markdown-Zweig nicht liest und
+  `text_auf_ablage_schreiben` unbedingt `clearContents()` ruft. Fuer die Zwischenablage des
+  Nutzers ist beides richtig; fuer eine hereingereichte Ablage — die eines Ziehvorgangs oder
+  eines Dienstes — ist es ungeprueft. Der Befund ist am 260820-0834 gegen `05cb614` nachgelesen
+  und trifft unveraendert zu; jene Behebung hat allein `markdown.rs` angefasst.
+
+Fuer die Zwischenablage ist die Zusage eingeloest. Fuer die zwei uebrigen Wege, um die dieser
+Datensatz allein geht, ist sie es nicht. `_i_` waere hier die unehrlichere Auskunft.
+
+
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — Klärungsrunden des Orchestrators mit dem Nutzer am 260819; Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`. Ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
 Implemented:

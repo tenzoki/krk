@@ -49,6 +49,28 @@ Zu entscheiden ist, ob die Runde deshalb einen Abnahmelauf am laufenden Bündel 
 
 An die Stelle der Zahl treten zwei ohne Messstrecke prüfbare Kriterien, C2.4 über die Zahl der Durchgänge und C2.13 über den Ort der Abbildung. L7 kommt auf die Gegenstände der späteren Messrunde, neben die Geschwindigkeit der Syntaxhervorhebung aus C3 der Runde 2. Der Rückstand der zehn Zusagen seit dem 260810 bleibt bestehen und ist nicht von dieser Runde verursacht.
 
+## Abgleich 260820-0834 — der Marker bleibt auf beantwortet
+
+**Die Antwort lautet „kein Lauf“ und ist durch keinen Commit einzuloesen.** Eingeloest wird
+sie durch das, was an die Stelle des Laufs treten sollte, und davon steht am Baum eine
+Haelfte:
+
+- **C2.13, der Ort der Abbildung: eingeloest.** Der Quellbezug liegt als Feld an `Gerendert`
+  (`crates/krk-ui/src/markdown.rs:271`) und damit auf der Seite des Textes; die Probe
+  `das_vorschaumodell_weiss_von_der_einfaerbung_nichts`
+  (`crates/krk-ui/src/appkit/vorschau.rs:1558`) haelt die Zusage aus C4.11 der Runde 6 fest.
+- **C2.3 und C2.4, die Zahl der Durchgaenge: ohne Probe.** Die Sache stimmt — `into_offset_iter`
+  steht in `markdown.rs:582` genau einmal, und `Quellbezug::quelle` kommt aus
+  `self.quelle.to_owned()` in `Zerlegung::abschliessen` (`:1594`), also aus der Eingabe des
+  Durchgangs. Ein Kommando prueft es nicht nach. Gemessen ist das im offenen Befund
+  `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0737_o_zwei-abnahmekriterien-mit-probenkennzeichnung-haben-keine-probe.md`.
+
+Der Verzicht auf einen Abnahmelauf haengt an diesen zwei Kriterien. Solange eines davon keine
+Probe hat, ist der Ersatz nur zur Haelfte gebaut, und `_i_` behauptete mehr, als der Baum
+traegt. Die dritte Haelfte der Antwort — L7 kommt auf die Gegenstaende der spaeteren Messrunde
+— hat im Baum ueberhaupt keinen Ort; sie steht bislang allein in diesem Datensatz und im Spec.
+
+
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — Klärungsrunden des Orchestrators mit dem Nutzer am 260819; Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`. Ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
 Implemented:

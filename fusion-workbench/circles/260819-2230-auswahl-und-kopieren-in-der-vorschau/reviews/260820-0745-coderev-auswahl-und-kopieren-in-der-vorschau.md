@@ -256,3 +256,27 @@ fünf Wege trägt; M2 ist in einem Handgriff nachzusehen und gehört in die List
 `## Nutzerarbeit`, die ihn heute nicht führt.
 
 **Danach:** N1 und N2.
+
+---
+
+## Abgleich 260820-0834
+
+Die sechs Befunde sind am Baumstand `05cb614` einzeln nachgelesen. Die Befunde selbst sind
+unangetastet; hier steht allein ihr Stand.
+
+| Befund | Datensatz | Stand |
+|---|---|---|
+| H1 — Absatz mit Entität oder Escape trägt eine Klammer | `issues/260820-0728_c_…` | **geschlossen** mit `05cb614`. Probe `eine_entitaet_oder_ein_escape_im_absatz_blaeht_die_auswahl_nicht_auf` (`crates/krk-ui/src/markdown.rs:2774`), vor der Behebung rot gefahren. |
+| H2 — Überschrift, die mit einem Kind beginnt, verliert ihre Klammer | `issues/260820-0731_c_…` | **geschlossen** mit derselben Wurzelbehebung. Probe `eine_ueberschrift_mit_einem_kind_am_anfang_behaelt_ihr_doppelkreuz` (`markdown.rs:2805`). |
+| M1 — die Abfangstelle verwirft die geforderten Sorten und leert jede gereichte Ablage | `issues/260820-0733_o_…` | **offen auf Nutzerentscheid.** Am 260820-0834 nachgelesen und unverändert zutreffend: `05cb614` hat allein `markdown.rs` angefasst. |
+| M2 — der Anker des Freigabedialogs ist das ganze Dokumentrechteck | `issues/260820-0735_o_…` | **offen auf Nutzerentscheid.** Alle drei zitierten Stellen stehen wie beschrieben. |
+| N1 — zwei Abnahmekriterien mit Probenkennzeichnung haben keine Probe | `issues/260820-0737_o_…` | **offen auf Nutzerentscheid.** Zutreffend; zwei Zeilennummern sind mit `05cb614` gewandert (`:593`→`:582`, `:1546`→`:1594`), die Sache nicht. |
+| N2 — `text_schreiben` hat sein `#[must_use]` nicht mitbekommen | `issues/260820-0739_o_…` | **offen auf Nutzerentscheid.** `zwischenablage.rs` ist seit `b28cdd6` unberührt. |
+
+**Die Wurzelbehebung ist eine und nicht zwei.** `05cb614` hat den Begriff der Klammer von
+„irgendwo verdeckte Bytes" auf „Zeichen an den Rändern eines Elements" zurückgeführt und
+`verdeckt_quelle` mit weggenommen; die Reihenfolge dieses Berichts — H1 und H2 vor der
+Bündelabnahme, weil beide in derselben Funktion sitzen — hat sich damit als richtig erwiesen.
+
+**Was die Durchsicht nicht abnehmen konnte, bleibt ungefahren.** Die 15 Abnahmekriterien mit
+Bündelanteil sind Nutzerarbeit; M1 und M2 hängen beide daran.

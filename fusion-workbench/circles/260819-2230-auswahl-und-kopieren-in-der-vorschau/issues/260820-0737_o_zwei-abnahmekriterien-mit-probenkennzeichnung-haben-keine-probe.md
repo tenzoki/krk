@@ -41,3 +41,17 @@ in diesem Speicher sagt, warum.
 **Schwere:** niedrig im heutigen Schaden, mittel in der Bedeutung, weil an diesen zwei
 Kriterien der Verzicht auf einen Abnahmelauf hängt.
 **Baumstand:** `b28cdd6`.
+
+---
+Abgleich 260820-0834, gegen `05cb614`: **trifft unveraendert zu, mit zwei verschobenen
+Zeilennummern.** Die Wurzelbehebung hat `markdown.rs` um 238 Zeilen veraendert, und die beiden
+Belege dieses Befundes sind mitgewandert: `Parser::new_ext(…).into_offset_iter()` steht jetzt in
+`crates/krk-ui/src/markdown.rs:582` (im Befund: `:593`), und `quelle: self.quelle.to_owned()` in
+`Zerlegung::abschliessen` jetzt in `:1594` (im Befund: `:1546`). Die Sache selbst ist unveraendert:
+genau ein Durchgang, kein zweiter Lesevorgang — und weiterhin keine Probe, die es nachmisst. Der
+Text oben bleibt unangetastet; er ist die Aufzeichnung des Standes `b28cdd6`.
+
+Der Befund haelt den Datensatz
+`shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md`
+auf `_a_`: an C2.3 und C2.4 haengt der Verzicht auf einen Abnahmelauf, und eine der beiden
+Ersatzzusagen hat keinen Pruefer.

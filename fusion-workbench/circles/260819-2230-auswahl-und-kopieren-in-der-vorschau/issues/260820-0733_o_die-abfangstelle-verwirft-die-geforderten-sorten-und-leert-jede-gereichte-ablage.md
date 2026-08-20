@@ -49,3 +49,15 @@ was die Bündelabnahme über die fünf Wege zeigt.
 der ein Ausgabeweg außerhalb der Zwischenablage vorbeikommt, und sie behandelt ihn wie die
 Zwischenablage.
 **Baumstand:** `b28cdd6`.
+
+---
+Abgleich 260820-0834, gegen `05cb614`: **trifft unveraendert zu.** Die Wurzelbehebung hat
+allein `crates/krk-ui/src/markdown.rs` angefasst; die beiden Stellen dieses Befundes liegen in
+`vorschau.rs` und `zwischenablage.rs` und sind seit `b28cdd6` byteweise dieselben. Nachgelesen:
+`auswahl_ablegen` nimmt `sorten: &NSArray<NSPasteboardType>` entgegen und liest den Parameter im
+Markdown-Zweig nicht (`vorschau.rs:445-461`); `text_auf_ablage_schreiben` ruft unbedingt
+`ablage.clearContents()` und schreibt danach allein `NSPasteboardTypeString`
+(`zwischenablage.rs:259-262`). Der Befund bleibt offen, wie der Nutzer es fuer diesen Durchgang
+bestimmt hat. Er haelt zugleich den Datensatz
+`shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md`
+auf `_a_`.

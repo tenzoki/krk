@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_was-tut-ein-link-im-gerenderten-markdown-und-bleibt-die-vorschau-unauswaehlbar.md` (der überholte Datensatz); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_*_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md` (C4.8 in Zeile 68, die Umsetzungszusage in Zeile 417); `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (C1); `crates/krk-ui/src/appkit/vorschau.rs:1120-1121`; `crates/krk-ui/src/appkit/ereignisse.rs:685-701`
 
@@ -57,6 +57,6 @@ Die Textfläche zeigt sechs Sorten Inhalt: den rohen Text einer Datei, eingefär
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — Klärungsrunden des Orchestrators mit dem Nutzer am 260819; Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`. Ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
-Implemented:
+Implemented: `dfacf29`, `1b85538` — `crates/krk-ui/src/appkit/vorschau.rs:1437` setzt `setSelectable(true)` an der einen Stelle, die die Textanzeige baut, ohne Fallunterscheidung ueber den Inhaltswert; damit sind alle sechs Inhalte auswaehlbar. `setEditable(false)` steht unveraendert daneben (`:1436`). Die Bildansicht ist ein eigenes `NSImageView` (`:521`, `:696`) und unberuehrt. Beleg: Probe `die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort` (`vorschau.rs:1620`). Abgeglichen am 260820-0834.
 Deferred:
 Superseded by:

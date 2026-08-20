@@ -65,3 +65,10 @@ aus an fusion zu melden.
 Eine Behebung hätte den Dateinamen um etwas zu ergänzen, das je Sitzung eindeutig ist — der
 Projektname, wie die Umgehung vom 260816 ihn schon trägt, oder die Prozesskennung, oder beides.
 Welche Form, ist nicht hier zu entscheiden.
+
+---
+Abgleich 260820-0834: **trifft zu und bindet kuenftige Arbeit, nicht diese Runde.** Der Defekt
+liegt in fusion und nicht in KRK; der Datensatz sagt es selbst und nennt die Stelle
+(`$FUSION_PLUGIN_ROOT/agents/orchestrator.md`, Schritt 3b). Kein Commit dieser Runde traegt eine
+fremde Nachricht: die fuenfzehn Commits `6be1e81..05cb614` sind gelesen und beschreiben
+durchweg die Arbeit dieser Runde. Er bleibt offen und ist an fusion zu melden.

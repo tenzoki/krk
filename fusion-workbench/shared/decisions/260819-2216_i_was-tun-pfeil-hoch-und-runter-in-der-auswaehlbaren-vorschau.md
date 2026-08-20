@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (C1.10, C1.11); `crates/krk-core/src/tasten/belegung.rs` (`fn wirkungsbereich`, `Wirkungsbereich::Navigator`); `crates/krk-ui/src/appkit/anwendung.rs:3168-3205` (`bereichskommando`)
 
@@ -47,6 +47,6 @@ Die Antwort ist auf die Frage nach den Pfeiltasten gegeben worden und nicht auf 
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — Klärungsrunden des Orchestrators mit dem Nutzer am 260819; Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`. Ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
-Implemented:
+Implemented: `6531f38` — "Bleibt so" haengt daran, dass die Vorschauflaeche im Ereignisabgriff angemeldet ist; `Anwendungsdelegierter::ist_eigene_textflaeche` (`crates/krk-ui/src/appkit/anwendung.rs:2402`) vergleicht seither zwei Flaechen statt einer. Damit bleiben `AuswahlHoch` und `AuswahlRunter` mit `Fokus::Vorschau` zulaessig, werden entgegengenommen und erreichen AppKit nicht. Probe: `crates/krk-ui/src/kommandos/zulaessigkeit.rs:846`. Abgeglichen am 260820-0834.
 Deferred:
 Superseded by:

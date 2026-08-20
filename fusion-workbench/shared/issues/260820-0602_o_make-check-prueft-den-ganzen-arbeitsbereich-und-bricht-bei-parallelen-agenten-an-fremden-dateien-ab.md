@@ -54,3 +54,11 @@ Nicht entschieden, hier nur festgehalten:
   Agent zu verlangen. Kostet die Zuordnung eines roten Ergebnisses zu seinem Schritt.
 - Parallele Dispatches werden auf Schritte beschränkt, die keine gemeinsame Prüfung teilen.
   In einem Cargo-Arbeitsbereich sind das keine.
+
+---
+Abgleich 260820-0834: **trifft zu und bindet kuenftige Arbeit, nicht diese Runde.** Der
+Abgleichslauf hat `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets` und `cargo fmt --all --check` allein gefahren, ohne
+zweiten Agenten im Baum, und alle vier sind gruen. Damit ist die Zusage dieser Runde belegt und
+der Befund unberuehrt: er handelt von der Aussagekraft eines gruenen Ergebnisses bei parallelem
+Lauf, nicht vom Ergebnis selbst. Er bleibt offen.

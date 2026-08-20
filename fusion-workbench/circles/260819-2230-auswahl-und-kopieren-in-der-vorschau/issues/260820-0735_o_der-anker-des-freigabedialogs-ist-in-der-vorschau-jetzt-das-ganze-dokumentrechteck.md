@@ -47,3 +47,11 @@ Rechteck, nicht die Ansicht.
 **Schwere:** mittel. Es trifft einen Befehl aus einer früheren Runde, den diese Runde nicht
 anfassen wollte.
 **Baumstand:** `b28cdd6`.
+
+---
+Abgleich 260820-0834, gegen `05cb614`: **trifft unveraendert zu.** Alle drei zitierten Stellen
+stehen wie beschrieben. `Vorschaufenster::fokusansicht` (`crates/krk-ui/src/appkit/vorschau.rs:832-838`)
+liefert `&self.ivars().text`, solange die Bildlaufansicht steht; `Anwendungsdelegierter::teilen`
+(`crates/krk-ui/src/appkit/anwendung.rs`) reicht `flaeche.bounds()` als Ankerrechteck an
+`teilen::anbieten`; und `textanzeige` setzt am `Vorschautext` `setVerticallyResizable(true)` und
+`setMaxSize(NSSize::new(f64::MAX, f64::MAX))` (`vorschau.rs:1435-1441`). Der Befund bleibt offen.

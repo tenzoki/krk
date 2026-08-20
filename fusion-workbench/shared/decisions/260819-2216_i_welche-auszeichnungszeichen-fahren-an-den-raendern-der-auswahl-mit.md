@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `shared/decisions/260819-2216_*_was-landet-beim-gerenderten-markdown-in-der-zwischenablage.md` (die Antwort, aus der diese Frage entstanden ist); `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (C2.2, C2.8, C2.9); `crates/krk-ui/src/markdown.rs` (Modulkopf, Abschnitte „Die Regel der Zerlegung" und „Die Deckung"); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_*_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md`
 
@@ -64,6 +64,6 @@ Wer drei Buchstaben einer fetten Stelle markiert, bekommt die ganze fette Stelle
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — Klärungsrunden des Orchestrators mit dem Nutzer am 260819; Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`. Ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
-Implemented:
+Implemented: `91f8727`, `05cb614` — die Fixpunktregel steht als `Quellbezug::klammern_schliessen` (`crates/krk-ui/src/markdown.rs:434`), die Klammer selbst entscheidet `klammer_der_raender` (`:991`) an Vorspann und Nachspann eines Elements. Die Wurzelbehebung `05cb614` hat den Begriff von "irgendwo verdeckte Bytes" auf "Zeichen an den Raendern" zurueckgefuehrt, nachdem zwei Durchsichtsbefunde beide Richtungen desselben Fehlers gemessen hatten. Proben: `ueberschrift_betonung_verweis_und_punkt_tragen_eine_klammer_ein_absatz_nicht` (`:2595`), `eine_entitaet_oder_ein_escape_im_absatz_blaeht_die_auswahl_nicht_auf` (`:2774`), `eine_ueberschrift_mit_einem_kind_am_anfang_behaelt_ihr_doppelkreuz` (`:2805`). Abgeglichen am 260820-0834.
 Deferred:
 Superseded by:

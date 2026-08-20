@@ -49,3 +49,16 @@ Nicht entschieden, hier nur festgehalten:
 - Die Dispatch des Orchestrators trägt den Hinweis mit, die Lage vor der Erwartung zu prüfen.
   Das ist ab Schritt 7 dieser Runde geschehen und hat gewirkt, ist aber eine Gewohnheit und
   keine Vorkehrung.
+
+---
+Abgleich 260820-0834: **trifft zu und bindet kuenftige Arbeit, nicht diese Runde.** Alle drei
+Faelle sind am Baum nachgelesen und zugunsten des Baums geloest: `setSelectable(false)` steht
+weiter genau einmal, an der Meldungszeile des Belegungsblattes
+(`crates/krk-ui/src/appkit/belegungsansicht.rs`), und die berichtigte Probe
+`die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort`
+(`crates/krk-ui/src/appkit/vorschau.rs:1620`) zaehlt Fundstellen je Datei statt eine Null zu
+erwarten; `fn fokusansicht` steht zweimal, und die Probe
+`die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal` (`vorschau.rs:1846`) misst
+darum die Vorschau statt des Baums; die `expect(dead_code)`-Zeile aus Schritt 6 ist weggelassen,
+weil `text_schreiben` die neue Funktion sofort ruft. Der Befund richtet sich gegen die Gestalt
+des Planens und nicht gegen diese Umsetzung. Er bleibt offen.

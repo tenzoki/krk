@@ -22,3 +22,9 @@ Pfadkopierer aus der Runde 4 nehmen.
 
 **Schwere:** niedrig.
 **Baumstand:** `b28cdd6`.
+
+---
+Abgleich 260820-0834, gegen `05cb614`: **trifft unveraendert zu.** `zwischenablage.rs` ist seit
+`b28cdd6` unberuehrt. Nachgelesen: `#[must_use]` steht in Zeile 258 ueber
+`text_auf_ablage_schreiben`, und `text_schreiben` (`:270`) traegt keines, obwohl es denselben
+Wahrheitswert weiterreicht. Der Befund bleibt offen.

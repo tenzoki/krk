@@ -1,7 +1,7 @@
 # Implementation Plan: Auswahl und Kopieren in der Vorschau
 
 **Date:** 2026-08-19
-**Status:** Draft
+**Status:** Teilweise abgeschlossen — acht von acht Schritten `[DONE]` und gegen den Baum gelesen; die Bündelabnahme aus `## Nutzerarbeit` steht aus
 **Spec:** `fusion-workbench/shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`, vom Nutzer am 260819-2228 abgenommen. Er bleibt im gemeinsamen Speicher, weil er vor diesem Circle entstanden ist (Herkunftsregel).
 **Circle:** `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau`
 **Grundlage erhoben:** 260819-2245, am Baum auf dem Stand `fce0b6f`, unter `crates/` und `resources/`
@@ -416,4 +416,55 @@ Die Markerwanderung gehört dem Abschluss der Runde und keinem Schritt; sie steh
 
 ## Reconciliation Log
 
-Noch kein Eintrag. Die Schritte tragen ihren Stand inline, wie es `fusion-workbench-conventions.md` vorgibt.
+**260820-0834, Abgleich zum Abschluss der Runde 14, Baumstand `05cb614`, Domäne `code`.**
+
+**Marker `_o_` → `_p_`.** Alle acht Schritte stehen auf `[DONE]`, und jede Erledigung ist gegen
+den Baum gelesen und nicht gegen den Plantext. Auf `_c_` geht der Plan trotzdem nicht: sein
+eigener Abschnitt `## Nutzerarbeit` führt 15 Abnahmekriterien mit Bündelanteil, sein
+Abhängigkeitsgraph endet auf dem Knoten „Bündelabnahme", und dieser eine Durchgang ist nicht
+gefahren. Ein Plan, dessen eigener Text eine ausstehende Verpflichtung nennt, ist nicht
+geschlossen. Dazu kommt, dass `shared/decisions/260819-1440_o_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`
+offen ist; `_c_` jetzt zu setzen entschiede sie durch vollendete Tatsache.
+
+**Die acht Schritte, einzeln am Baum belegt:**
+
+| Schritt | Commit | Beleg am Baum |
+|---|---|---|
+| 1 Quellbezug im Durchgang | `13be459` | `Quellbezug` (`crates/krk-ui/src/markdown.rs:280`), `Abschnitt` (`:463`), `Abschnittsart` (`:536`), `Quellelement` (`:556`), `Gerendert.quellbezug` (`:271`); `schreiben(stueck, bis)` (`:1192`), `erzeugen` (`:1165`); Probe `die_kachelung_deckt_quelle_und_text_lueckenlos` (`:2553`) |
+| 2 Klammerregel und `quelltext` | `91f8727` | `Quellbezug::quelltext` (`markdown.rs:335`), `klammern_schliessen` (`:434`), `klammer_der_raender` (`:991`) |
+| 3 `Vorschautext`, auswählbar | `dfacf29` | `pub struct Vorschautext` (`crates/krk-ui/src/appkit/vorschau.rs:395`); `setSelectable(true)` und `setEditable(false)` (`:1436-1437`); Probe `die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort` (`:1620`) |
+| 4 Anmeldung im Ereignisabgriff | `6531f38` | `ist_eigene_textflaeche` (`crates/krk-ui/src/appkit/anwendung.rs:2402`), gebildet in `lage` (`:2893`); `Vorschaufenster::textflaeche` (`vorschau.rs:857`); Proben `zulaessigkeit.rs:812` (C1.6) und `:846` (C1.10) |
+| 5 Fokus und Quellbezug am Inhalt | `1b85538` | `fokusansicht` (`vorschau.rs:832`), `quellbezug_setzen` (`:490`) mit `Some` im Markdown-Zweig (`:1044`) und `None` in `text_zeigen` (`:1108`); Proben `der_quellbezug_wird_an_genau_zwei_stellen_gesetzt` (`:1683`) und `die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal` (`:1846`) |
+| 6 Hülle nimmt fremde Ablage | `9e10b94` | `text_auf_ablage_schreiben` (`crates/krk-ui/src/appkit/zwischenablage.rs:259`), `text_schreiben` reicht `generalPasteboard` hinein (`:270-272`); Probe `text_auf_ablage_schreiben_legt_den_text_in_die_gereichte_ablage` (`:423`) |
+| 7 Abfangstelle `writeSelection` | `17dad8a` | Überschreibung `auswahl_ablegen` (`vorschau.rs:445-461`); Probe `die_abfangstelle_steht_im_baum_genau_einmal` (`:1765`) |
+| 8 Zählproben und Prosastellen | `b28cdd6` | `die_menge_der_eigenen_textflaechen_steht_an_genau_einer_stelle` (`crates/krk-ui/src/appkit/ereignisse.rs:1008`), `die_huelle_um_die_zwischenablage_steht_in_genau_einer_datei` (`zwischenablage.rs:483`), `die_abfangstelle_steht_im_baum_genau_einmal` (`vorschau.rs:1765`); neun Prosastellen statt der geplanten vier |
+
+Dazu die Wurzelbehebung `05cb614` zu den zwei hohen Durchsichtsbefunden; sie hat den Begriff
+der Klammer auf die Ränder eines Elements zurückgeführt und `verdeckt_quelle` weggenommen.
+
+**C4 ist vollständig eingelöst und maschinell nachgelesen.** `git diff fce0b6f..HEAD` zeigt
+keine Änderung an `crates/krk-core/src`, an `crates/krk-ui/src/fenstermodell.rs`, an
+`resources/default-keymap.toml`, an `Cargo.toml` und an `Cargo.lock`; `kommandos/fokus.rs`
+trägt allein einen berichtigten Doc-Kommentar. Damit wächst keine der vier Aufzählungen (C4.1),
+die Belegung bekommt keinen Eintrag (C4.2), und es kommt keine fremde Kiste dazu (C4.6). Die
+drei Prüfordner-Fassungen und die eine Hülle um `NSPasteboard` (C4.7) hält die vorhandene Probe
+`genau_drei_pruefordner_fassungen_stehen_im_baum` zusammen mit der neuen aus Schritt 8.
+
+**Zwei Zusagen mit Probenkennzeichnung haben keine Probe:** C2.3 und C2.4. Die Sache stimmt am
+Baum — `into_offset_iter` steht in `markdown.rs:582` genau einmal, und `Quellbezug::quelle`
+kommt aus `self.quelle.to_owned()` in `Zerlegung::abschliessen` (`:1594`) —, aber kein Kommando
+misst es nach. Gemessen im offenen Befund
+`issues/260820-0737_o_zwei-abnahmekriterien-mit-probenkennzeichnung-haben-keine-probe.md`.
+
+**Vier Durchsichtsbefunde bleiben auf Nutzerentscheid offen** (`260820-0733_o_`, `260820-0735_o_`,
+`260820-0737_o_`, `260820-0739_o_`). Alle vier sind gegen `05cb614` nachgelesen und treffen
+unverändert zu; die Wurzelbehebung hat allein `markdown.rs` angefasst, und `260820-0737_o_`
+trägt seither zwei verschobene Zeilennummern, die in seiner Abgleichsnotiz berichtigt sind.
+
+**Prüflauf.** `cargo build --workspace`, `cargo test --workspace`,
+`cargo clippy --workspace --all-targets` und `cargo fmt --all --check` sind am 260820-0834 gegen
+`05cb614` gefahren und laufen grün; keine Probe fällt aus, keine Warnung steht.
+
+**Keine Abweichung zwischen Plan und Umsetzung, die nicht schon gefilt wäre.** Drei
+Zählerwartungen des Plantextes waren am Baum nicht erfüllbar; alle drei sind zugunsten des
+Baums geändert und im Befund `issues/260820-0646_o_…` festgehalten.

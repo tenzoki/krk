@@ -1,7 +1,7 @@
 # Spec: Auswahl und Kopieren in der Vorschau
 
 **Date:** 2026-08-19
-**Status:** Entwurf
+**Status:** Teilweise abgeschlossen — vom Nutzer am 260819-2228 abgenommen, alle acht Planschritte gebaut und gegen den Baum gelesen; 15 der 39 Abnahmekriterien tragen einen Bündelanteil und sind ungefahren
 **Source:** Der Wunsch des Nutzers vom 260819-2031, in der Vorschau Text auswählen und kopieren zu können, und seine vier Antworten der ersten Klärungsrunde vom 260819-2210
 **Circle:** keiner. Diese Runde ist am 260819-1835 als eigener Circle mit vorgeschalteter Klärung beschlossen worden (Ereignis `scope_resolved` in `orchestrator-events.jsonl`); der Circle entsteht nach der Abnahme dieses Specs, und bis dahin liegen Spec und Datensätze im gemeinsamen Speicher.
 **Grundlage erhoben:** 260819-2216, am Baum auf dem Stand `6be1e81`, unter `crates/` und `resources/`
@@ -265,3 +265,35 @@ Die Ausgangslage ist am 260819-2216 auf dem Stand `6be1e81` am Baum erhoben, und
 
 - **Dass Bild-auf, Bild-ab, Pos1 und Ende nach der Änderung in der Vorschau blättern** (C1.11), ist aus zwei geprüften Tatsachen erschlossen und nicht am Bündel gesehen: die vier tragen `Wirkungsbereich::Dateifenster`, und der Abgriff reicht einen unzulässigen Befehl weiter. Ob AppKit sie in einer nicht bearbeitbaren, auswählbaren Textansicht zum Blättern nutzt, ist am laufenden Bündel nachzusehen.
 - **Dass der Durchgang des Renderns die Abbildung ohne messbare Mehrkosten trägt**, ist aus den 19 bis 30 ms für 1,05 MB und dem Budget von 100 ms erschlossen. Gemessen ist die Abbildung nicht, weil es sie noch nicht gibt.
+
+---
+
+## Reconciliation Log
+
+**260820-0834, Abgleich zum Abschluss der Runde 14, Baumstand `05cb614`, Domäne `code`.**
+
+**Marker `_o_` → `_p_`, und ausdrücklich nicht `_c_`.** Drei Aussagen tragen das:
+
+- `_o_` ist falsch geworden. Es heißt „Open — initial state on creation"; acht Planschritte
+  stehen gebaut, jeder einzeln gegen den Baum gelesen, und alle vier Prüfkommandos laufen grün
+  (`cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets`,
+  `cargo fmt --all --check`, gefahren am 260820-0834).
+- `_c_` wäre falsch. **15 der 39 Abnahmekriterien tragen einen Bündelanteil** und sind am
+  laufenden `KRK.app` im Vordergrund abzunehmen: C1.1, C1.2, C1.6, C1.8, C1.9, C1.10, C1.11,
+  C1.12, C2.1, C2.2, C2.11, C2.12, C3.1, C3.2 und C3.3. Keines davon ist gefahren. **Kein Agent
+  kann sie fahren**; der Grund steht in `CLAUDE.md` unter „Was man nicht sieht" und in diesem
+  Spec unter `## Fähigkeiten und Abnahmekriterien`. Dazu kommt C4.4 als Augenschein.
+- `_c_` wäre außerdem eine Antwort auf eine offene Nutzerfrage. `shared/decisions/260819-1440_o_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`
+  fragt genau, ob `_c_` an einem Spec „gebaut" oder „abgenommen" heißt. Diesen Spec jetzt auf
+  `_c_` zu setzen entschiede die Frage durch vollendete Tatsache. `_p_` ist der einzige der vier
+  Marker, der heute wahr ist und die Frage offen lässt.
+
+**Was am Baum nachgelesen ist.** Die 24 Kriterien ohne Bündelanteil sind einzeln geprüft;
+die Belege stehen im Abgleichsprotokoll
+`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/history/260820-0834-reconciliation.md`.
+Zwei Kriterien mit Probenkennzeichnung haben keine Probe, C2.3 und C2.4; gemessen im offenen
+Befund `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0737_o_…`.
+
+**Der Prüfvorbehalt dieses Specs steht unverändert.** Beide Erschließungen — dass die vier
+Blättertasten in der Vorschau blättern (C1.11), und dass der Durchgang die Abbildung ohne
+messbare Mehrkosten trägt — sind weiterhin nicht gemessen.

@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_*_an-welchen-drei-flaechen-haengt-das-neue-kontextmenue.md`; `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (C3); `crates/krk-ui/src/appkit/vorschau.rs:393-415` (`textView:menu:forEvent:atIndex:`), `:538-567` (die zweite Anschlussart für Bild und Inhaltsfläche)
 
@@ -41,6 +41,6 @@ Seit C1 der Runde 6 hängt an allen drei Ansichten der Vorschau ein Kontextmenü
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — Klärungsrunden des Orchestrators mit dem Nutzer am 260819; Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`. Ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
-Implemented:
+Implemented: `dfacf29` — die Antwort "AppKits Menue unveraendert uebernehmen" kostet genau keine Zeile, und der Abgleich misst das als zwei Tatsachen: die Textanzeige ist auswaehlbar (`crates/krk-ui/src/appkit/vorschau.rs:1437`), also traegt AppKits Menue seine eigenen Eintraege, und `textView:menu:forEvent:atIndex:` (`:626`) ist seit `fce0b6f` byteweise unveraendert (`git diff fce0b6f..HEAD` an dieser Methode ist leer). Der Teilen-Eintrag der Runde 6 steht unangetastet daneben. Die sichtbare Haelfte (C3.1 bis C3.3) ist Buendelkriterium und ungefahren; die Entscheidung selbst ist damit am Baum eingeloest. Abgeglichen am 260820-0834.
 Deferred:
 Superseded by:

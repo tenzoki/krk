@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** answered
+**Status:** implemented
 **Filed by:** shaper
 **Cross-references:** `shared/decisions/260819-2216_*_wird-die-vorschauflaeche-auswaehlbar-und-was-genau-laesst-sich-auswaehlen.md`; `shared/decisions/260819-2216_*_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md` (die Folgefrage, die aus dieser Antwort entstanden ist); `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (C2); `crates/krk-ui/src/markdown.rs:187-203`; `crates/krk-ui/src/vorschaumodell.rs:211-219`
 
@@ -46,6 +46,6 @@ Die Frage stellt sich allein für gerendertes Markdown. Bei rohem Text, eingefä
 
 ---
 Answered: dieser Datensatz, Abschnitt `## Antwort` — Klärungsrunden des Orchestrators mit dem Nutzer am 260819; Sitzungsprotokoll `shared/history/260819-2026-orchestrator-session.md`. Ausformuliert im Spec `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.
-Implemented:
+Implemented: `13be459`, `91f8727`, `17dad8a` — `Gerendert` traegt `quellbezug: Arc<Quellbezug>` (`crates/krk-ui/src/markdown.rs:271`), `Quellbezug::quelltext` (`:335`) rechnet die Auswahl auf den Quellausschnitt, und `Vorschautext::auswahl_ablegen` (`crates/krk-ui/src/appkit/vorschau.rs:445-461`) legt ihn ueber die eine Huelle ab. Die Quelle wird nicht ein zweites Mal gelesen: sie kommt aus `self.quelle.to_owned()` in `Zerlegung::abschliessen` (`markdown.rs:1594`). Abgeglichen am 260820-0834.
 Deferred:
 Superseded by:
