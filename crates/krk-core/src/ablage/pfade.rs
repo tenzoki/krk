@@ -101,6 +101,32 @@ pub enum Format {
     Text,
 }
 
+/// Was eine dastehende Ablagedatei bedeutet, aus der kein einziger oberster
+/// Schluessel kommt.
+///
+/// **Zwei Werte, vollstaendig und ohne Auffangzweig**, wie [`Format`] daneben.
+/// Die Frage ist je Datei zu beantworten und nicht ueber alle zu
+/// verallgemeinern: sie haengt daran, ob KRK diese Datei je ohne obersten
+/// Schluessel schreibt, und das ist eine Aussage ueber ihren Schreiber und
+/// nicht ueber TOML.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Leerbefund {
+    /// Ein gueltiger Bestand: jedes Feld steht auf seinem Auslieferungswert.
+    ///
+    /// Der Wert der von Hand gepflegten Dateien und der zwei Zettel. Wer
+    /// `keymap.toml` bis auf die Kommentare leerraeumt, meint die
+    /// Vorgabebelegung und keinen Schaden; ein leerer Notizzettel ist ein
+    /// leerer Notizzettel.
+    Vorgabe,
+    /// Kein Bestand: die Datei hat nicht hergegeben, was sie traegt.
+    ///
+    /// Der Wert der Dateien, die KRK selbst schreibt und dabei **immer** mit
+    /// mindestens einem obersten Schluessel: eine solche Datei ohne einen
+    /// einzigen kann nicht aus KRKs Feder stammen, und sie als ersten Start zu
+    /// lesen hiesse, den Bestand beim naechsten Schreibvorgang zu verlieren.
+    Beschaedigt,
+}
+
 /// Die sechs Dateien, die KRK unter `Application Support` ablegt.
 ///
 /// Eine Aufzaehlung statt sechs loser Namen: wer alle anfassen muss, laeuft
@@ -177,6 +203,40 @@ impl Datei {
                 Format::Toml
             }
             Datei::Zettel(_) => Format::Text,
+        }
+    }
+
+    /// Was eine dastehende Datei bedeutet, aus der kein einziger oberster
+    /// Schluessel kommt.
+    ///
+    /// Die zweite abgeleitete Frage neben [`Datei::format`], und sie steht aus
+    /// demselben Grund hier: vollstaendig, ohne Auffangzweig, damit eine
+    /// siebte Ablagedatei den Bau anhaelt und eine bewusste Einordnung
+    /// erzwingt. Wer sie beantwortet, beantwortet sie **je Datei** und leitet
+    /// sie nicht von einer anderen ab.
+    ///
+    /// **`bookmarks.toml` ist die eine mit [`Leerbefund::Beschaedigt`]**, und
+    /// die Antwort ist gemessen und nicht geraten: eine leere
+    /// [`Lesezeichenliste`](super::Lesezeichenliste) serialisiert zu
+    /// `eintraege = []` und damit zu einem obersten Schluessel. Eine
+    /// `bookmarks.toml` ohne einen einzigen hat KRK nie geschrieben.
+    ///
+    /// **Die drei uebrigen TOML-Dateien und die zwei Zettel tragen
+    /// [`Leerbefund::Vorgabe`]**, und zwar vorlaeufig: `settings.toml` und
+    /// `keymap.toml` aendert der Nutzer von Hand und darf sie leerraeumen,
+    /// `session.toml` traegt an jeder Struktur `#[serde(default)]` und ist auf
+    /// Nachsicht gegenueber einer aelteren Fassung gebaut. Ob die strenge
+    /// Lesart auf `session.toml` und `keymap.toml` gehoert, ist die offene
+    /// Frage
+    /// `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`;
+    /// bis zu ihrer Antwort steht hier die Fassung, die nichts am Verhalten
+    /// aendert.
+    pub const fn leerbefund(self) -> Leerbefund {
+        match self {
+            Datei::Lesezeichen => Leerbefund::Beschaedigt,
+            Datei::Belegung | Datei::Sitzung | Datei::Einstellungen | Datei::Zettel(_) => {
+                Leerbefund::Vorgabe
+            }
         }
     }
 }

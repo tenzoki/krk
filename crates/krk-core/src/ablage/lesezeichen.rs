@@ -326,8 +326,28 @@ pub enum Ausgang {
 }
 
 /// Alle Lesezeichen in ihrer Reihenfolge, wie sie in `bookmarks.toml` stehen.
+///
+/// **`#[serde(deny_unknown_fields)]` steht hier seit dem 260821**, und die
+/// Liste holt damit nach, was `Belegungsdatei` und `Einstellungsdatei` seit
+/// jeher tragen. Ohne ihn ist eine `bookmarks.toml`, deren oberster Schluessel
+/// nicht `eintraege` heisst, gueltiges TOML mit null Eintraegen: `serde`
+/// uebergeht den fremden Schluessel, `#[serde(default)]` setzt die leere Liste
+/// ein, und der Ladeweg sieht kein `Err`. Der Nutzer bekaeme eine leere Leiste
+/// ohne Meldung und ohne Sicherung, und der naechste Lesezeichenbefehl schriebe
+/// sie fest
+/// (`shared/issues/260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md`).
+///
+/// **Er steht an der Liste und nicht am einzelnen [`Lesezeichen`]**, und beides
+/// hat seinen Grund. Ein unbekanntes Feld **im** Eintrag bleibt getragen: das
+/// ist die Vorsorge, die [`Lesezeichen`] mit `#[serde(default)]` beschreibt,
+/// und eine Datei aus einer spaeteren Runde soll in einer frueheren lesbar
+/// bleiben. Ein unbekannter Schluessel **ueber** den Eintraegen dagegen sagt,
+/// dass die Datei ihren Bestand woanders fuehrt als KRK ihn sucht. Technisch
+/// waere der Vermerk am Eintrag ohnehin nicht zu haben: `deny_unknown_fields`
+/// und `#[serde(flatten)]` schliessen einander aus, und [`Lesezeichen::ziel`]
+/// traegt `flatten`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct Lesezeichenliste {
     /// Die Lesezeichen von oben nach unten.
     pub eintraege: Vec<Lesezeichen>,

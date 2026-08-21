@@ -78,3 +78,43 @@ Für Gestalt 2 ist die Antwort schmaler und liegt in derselben Fallunterscheidun
 Datei, die sich nicht lesen ließ, gibt es nichts zu sichern — dann darf sie aber auch nicht
 überschrieben werden. Ein `sichern`, das auf einer `Ersetzung` aufsetzt, schreibt heute
 trotzdem.
+
+---
+Resolved: Gestalt 1 behoben, Gestalt 2 abgetrennt. Der Ladeweg fragt jetzt „hat die gelesene
+Datei den Bestand hergegeben, den sie trägt", und die Frage hat zwei Hälften, die beide in den
+schon bestehenden Zweig `Grund::Beschaedigt` und damit in `Zugang::beiseite_legen` münden; ein
+zweiter Mechanismus daneben ist nicht entstanden.
+
+Die zweite Zeile der Messtabelle (oberster Schlüssel heißt anders) fängt
+`#[serde(deny_unknown_fields)]` an `Lesezeichenliste`
+(`crates/krk-core/src/ablage/lesezeichen.rs`) ab. Die Liste holt damit nach, was
+`Belegungsdatei` und `Einstellungsdatei` seit jeher tragen. Der Vermerk steht an der Liste und
+nicht am einzelnen `Lesezeichen`: die vierte Zeile der Messtabelle bleibt deshalb wie gemessen,
+ein unbekanntes Feld **im** Eintrag wird weiter getragen. Am Eintrag wäre er ohnehin nicht zu
+haben, weil `deny_unknown_fields` und `#[serde(flatten)]` einander ausschließen.
+
+Die dritte Zeile (Datei ist 0 Bytes) fängt `Datei::leerbefund`
+(`crates/krk-core/src/ablage/pfade.rs`) ab, eine vollständige Fallunterscheidung ohne
+Auffangzweig nach dem Vorbild von `Datei::format`. `bookmarks.toml` trägt dort
+`Leerbefund::Beschaedigt`, die fünf übrigen Ablagedateien `Leerbefund::Vorgabe`. Die Antwort für
+`bookmarks.toml` ist gemessen und nicht geraten: eine leere `Lesezeichenliste` serialisiert zu
+`eintraege = []`, also zu einem obersten Schlüssel, und die Probe
+`eine_leere_liste_steht_als_oberster_schluessel_in_der_datei` hält das fest. Die Frage steht am
+TOML-Dokument und nicht an der Dateilänge, deshalb fällt eine Datei aus lauter Kommentaren
+mit darunter.
+
+Die Frage, ob dieselbe strenge Lesart auf `session.toml` und `keymap.toml` gehört, ist nicht
+im Vorbeigehen beantwortet worden: für den Lauf steht die Fassung, die nichts am Verhalten
+ändert, und die Frage liegt als
+`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`
+vor. Die Probe `eine_leere_datei_meldet_bei_den_drei_uebrigen_toml_dateien_nichts` schreibt die
+heutige Antwort aus, damit sie nicht stillschweigend wandert.
+
+Gestalt 2 (`Grund::NichtLesbar` legt nichts beiseite, und der nächste Schreibvorgang schreibt
+trotzdem) ist **nicht** behoben. Sie verändert, was `sichern` nach einer `Ersetzung` tut, und
+drei Folgefragen daran sind aus dem Baum nicht zu beantworten; sie steht mit dem Gemessenen als
+eigener Datensatz
+`shared/issues/260821-0142_*_eine-nicht-lesbare-ablagedatei-wird-nicht-gesichert-und-vom-naechsten-schreibvorgang-ueberschrieben.md`.
+
+Sechs Proben in `crates/krk-core/tests/ablage.rs`, die Messtabelle Zeile für Zeile. Abnahme:
+`make check`, Exit 0.

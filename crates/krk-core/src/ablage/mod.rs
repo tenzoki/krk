@@ -69,7 +69,7 @@
 //!
 //! [`Ablage::laden`] liefert keinen Fehler, sondern immer einen Wert. Eine
 //! fehlende Datei ist der erste Start und keine Meldung wert. Eine nicht
-//! lesbare oder syntaktisch kaputte Datei fuehrt zum Auslieferungszustand und
+//! lesbare oder beschaedigte Datei fuehrt zum Auslieferungszustand und
 //! zu einer [`Ersetzung`], die die Datei benennt. Die Datei auf der Platte
 //! bleibt dabei stehen: `keymap.toml` ist laut `### Frage 4` von Hand
 //! aenderbar, und ein Tippfehler darin darf die Arbeit des Nutzers nicht
@@ -108,11 +108,48 @@
 //! - **Der Weg dorthin ist [`atomar::schreiben`]**, also derselbe wie fuer jede
 //!   andere Datei dieses Moduls. Ein zweiter Schreibweg entsteht nicht.
 //!
-//! Alle vier TOML-Dateien gehen durch [`Zugang::laden`] und haben dort keinen
-//! eigenen Zweig; die Regel gilt deshalb fuer alle vier gleich. Die zwei Zettel
-//! gehen durch [`Zugang::text_laden`], und die vier Regeln gelten dort
-//! unveraendert weiter — [`Zugang::beiseite_legen`] ist dieselbe Funktion und
-//! hat mit dem Zettel ihren zweiten Aufrufer bekommen.
+//! Alle vier TOML-Dateien gehen durch [`Zugang::laden`], und die vier Regeln
+//! gelten dort fuer alle vier gleich: das Sichern selbst kennt keine Datei. Die
+//! zwei Zettel gehen durch [`Zugang::text_laden`], und die vier Regeln gelten
+//! dort unveraendert weiter — [`Zugang::beiseite_legen`] ist dieselbe Funktion
+//! und hat mit dem Zettel ihren zweiten Aufrufer bekommen.
+//!
+//! # Beschaedigt heisst nicht „ungueltiges TOML"
+//!
+//! **Bis zum 260821 stand ueber diesem Abschnitt eine Zusage, die weiter reichte
+//! als der Code.** Der Ladeweg fragte „ist das gueltiges TOML"; die Frage, die
+//! er stellen muss, ist „hat die gelesene Datei den Bestand hergegeben, den sie
+//! traegt". Zwei Gestalten kamen an der schmaleren Frage vorbei, und beide
+//! endeten in einer leeren Liste ohne Meldung und ohne Sicherung, die der
+//! naechste gewoehnliche Schreibvorgang festschrieb
+//! (`shared/issues/260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md`).
+//!
+//! Zwei Stellen beantworten die weitere Frage, und keine davon ist ein zweiter
+//! Mechanismus: beide muenden in denselben Zweig [`Grund::Beschaedigt`] und
+//! damit in [`Zugang::beiseite_legen`].
+//!
+//! - **Ein oberster Schluessel, den der Leser nicht kennt**, ist ein `Err` und
+//!   kein stiller Auslieferungszustand. Das leistet
+//!   `#[serde(deny_unknown_fields)]` an der jeweiligen Struktur, und drei der
+//!   vier TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei` und
+//!   seit dem 260821 auch [`Lesezeichenliste`].
+//! - **Kein einziger oberster Schluessel** heisst je nach Datei etwas anderes,
+//!   und deshalb steht die Antwort in [`pfade::Datei::leerbefund`] — einer
+//!   vollstaendigen Fallunterscheidung ohne Auffangzweig, wie
+//!   [`pfade::Datei::format`] daneben. `bookmarks.toml` traegt dort
+//!   [`Leerbefund::Beschaedigt`], weil KRK selbst eine leere Liste als
+//!   `eintraege = []` schreibt und die Datei nie ohne obersten Schluessel
+//!   hinterlaesst. Die drei uebrigen tragen [`Leerbefund::Vorgabe`]: zwei davon
+//!   pflegt der Nutzer von Hand und darf sie leerraeumen, und `session.toml`
+//!   ist auf Nachsicht gegenueber einer aelteren Fassung gebaut. Ob die strenge
+//!   Lesart auch dorthin gehoert, ist offen
+//!   (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`).
+//!
+//! **Die Zusage deckt weiterhin nicht jede Gestalt des Verlusts.** Eine Datei,
+//! die dasteht und sich nicht lesen laesst, traegt [`Grund::NichtLesbar`] und
+//! [`Beiseite::Nicht`]: es gibt keinen Inhalt zu sichern, und der naechste
+//! Schreibvorgang schreibt trotzdem. Der Datensatz dazu ist
+//! `shared/issues/260821-0142_*_eine-nicht-lesbare-ablagedatei-wird-nicht-gesichert-und-vom-naechsten-schreibvorgang-ueberschrieben.md`.
 //!
 //! # Der Kern gibt nichts aus
 //!
@@ -156,7 +193,7 @@ pub use einstellungen::Einstellungen;
 pub use lesezeichen::{
     Aenderung, Ausgang, Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel,
 };
-pub use pfade::{Ablageort, Datei, Format, Zettel};
+pub use pfade::{Ablageort, Datei, Format, Leerbefund, Zettel};
 pub use sitzung::{
     Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber,
     Spaltensichtbarkeit, Tab,
@@ -169,8 +206,11 @@ pub enum Grund {
     /// Die Datei liegt da, liess sich aber nicht lesen. Traegt die Meldung des
     /// Dateisystems.
     NichtLesbar(String),
-    /// Die Datei liess sich lesen, ist aber kein gueltiges TOML oder passt
-    /// nicht auf die erwartete Gestalt. Traegt die Meldung des Lesers.
+    /// Die Datei liess sich lesen, hat ihren Bestand aber nicht hergegeben:
+    /// kein gueltiges TOML, nicht die erwartete Gestalt, ein oberster
+    /// Schluessel, den der Leser nicht kennt, oder — je nach Datei — kein
+    /// einziger oberster Schluessel. Traegt die Meldung des Lesers, oder, wo es
+    /// keine gibt, den Satz der Stelle, die den Befund gefasst hat.
     Beschaedigt(String),
     /// Die Datei fehlte und liess sich nicht anlegen. Traegt die Meldung des
     /// Dateisystems.
@@ -480,6 +520,13 @@ impl Zugang<'_> {
     /// nur dort gibt es einen gelesenen Text zu sichern. Die beiden uebrigen
     /// Zweige tragen [`Beiseite::Nicht`]; siehe den Modulkopf.
     ///
+    /// **Beschaedigt heisst mehr als „kein gueltiges TOML".** Eine dastehende
+    /// Datei, aus der kein einziger oberster Schluessel kommt, hat ihren
+    /// Bestand nicht hergegeben; ob das ein Schaden ist, entscheidet
+    /// [`Datei::leerbefund`] je Datei und nicht diese Stelle. Der gleichnamige
+    /// Abschnitt im Modulkopf traegt die Begruendung und die zweite Haelfte
+    /// derselben Regel, die an den Strukturen steht.
+    ///
     /// **Das Lesen steht mit unter der Sperre und nicht davor.** Ein Aufrufer,
     /// der seine eine Aenderung auf den eben gelesenen Stand anwendet, haette
     /// sonst zwischen Lesen und Schreiben ein Fenster, in dem die andere Instanz
@@ -516,6 +563,20 @@ impl Zugang<'_> {
                 };
             }
         };
+        if welche.leerbefund() == Leerbefund::Beschaedigt && ohne_obersten_schluessel(&text) {
+            let beiseite = self.beiseite_legen(&pfad, &mut text.as_bytes());
+            return Geladen {
+                wert: T::default(),
+                ersetzung: Some(Ersetzung {
+                    datei: pfad,
+                    grund: Grund::Beschaedigt(String::from(
+                        "die Datei traegt keinen einzigen obersten Schluessel, \
+                         und KRK schreibt sie nie so",
+                    )),
+                    beiseite,
+                }),
+            };
+        }
         match toml::from_str(&text) {
             Ok(wert) => Geladen {
                 wert,
@@ -755,6 +816,23 @@ fn steht_noch_etwas_an(quelle: &mut impl Read) -> bool {
             Err(_) => return true,
         }
     }
+}
+
+/// Ob eine dastehende Datei nicht einen einzigen obersten Schluessel traegt.
+///
+/// **Die Frage steht am Dokument und nicht am gelesenen Wert.** Eine Struktur,
+/// deren Felder alle einen Auslieferungswert haben, nimmt das leere Dokument
+/// widerspruchslos an; danach ist der gelesene Wert von einem echten Bestand
+/// nicht mehr zu unterscheiden, und genau daran ist der Verlust vorbeigekommen,
+/// den
+/// `shared/issues/260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md`
+/// gemessen hat. Das Dokument dagegen sagt, was in der Datei stand.
+///
+/// **Ungueltiges TOML beantwortet sie mit „nein"**, und das ist keine
+/// Nachlaessigkeit: fuer diesen Fall steht der Zweig darunter, und er traegt
+/// die Meldung des Lesers samt Zeile und Spalte, die hier niemand kennt.
+fn ohne_obersten_schluessel(text: &str) -> bool {
+    toml::from_str::<toml::Table>(text).is_ok_and(|dokument| dokument.is_empty())
 }
 
 /// Presst eine mehrzeilige Fehlermeldung in eine Zeile.

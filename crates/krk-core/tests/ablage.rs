@@ -2761,6 +2761,210 @@ ordner = \"/\"
     );
 }
 
+// ---------------------------------------------------------------------------
+// Eine dastehende Datei, die ihren Bestand nicht hergibt
+// ---------------------------------------------------------------------------
+//
+// Der Ladeweg fragte bis zum 260821 „ist das gueltiges TOML" und nicht „hat die
+// gelesene Datei den Bestand hergegeben, den sie traegt". Zwei Gestalten kamen
+// an der Zusage der Runde 6 vorbei und fuehrten zu einer stummen leeren Liste,
+// die der naechste Lesezeichenbefehl festschrieb
+// (`shared/issues/260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md`).
+// Die Proben darunter sind die Messtabelle jenes Datensatzes, Zeile fuer Zeile.
+
+/// Prueft, dass eine `bookmarks.toml` als beschaedigt gilt und ihr Wortlaut
+/// unter dem Beiseitepfad steht.
+///
+/// Drei Zusagen in einer Stelle, weil sie an demselben Lesevorgang haengen: die
+/// Liste ist leer, die Meldung nennt einen Schaden, und die Sicherung traegt
+/// den Text der Datei Zeichen fuer Zeichen. Die Datei selbst bleibt liegen.
+fn beschaedigte_lesezeichen(zweck: &str, inhalt: &str) {
+    let (_ordner, ablage) = ablage(zweck);
+    fs::write(ablage.pfad(Datei::Lesezeichen), inhalt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    assert_eq!(geladen.wert, Lesezeichenliste::default());
+
+    let ersetzung = geladen
+        .ersetzung
+        .expect("die Datei wurde ohne Meldung als leer gelesen");
+    assert!(
+        matches!(ersetzung.grund, Grund::Beschaedigt(_)),
+        "{ersetzung:?}"
+    );
+
+    let sicherung = beiseitepfad(&ablage, Datei::Lesezeichen);
+    assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
+    assert_eq!(
+        fs::read_to_string(&sicherung).expect("die Sicherung laesst sich nicht lesen"),
+        inhalt,
+        "die Sicherung traegt nicht den Wortlaut der Datei"
+    );
+    assert_eq!(
+        fs::read_to_string(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert"),
+        inhalt,
+        "die Datei wurde ueberschrieben"
+    );
+}
+
+/// Zweite Zeile der Messtabelle: der oberste Schluessel heisst anders.
+///
+/// Bis zum 260821 gab `serde` darauf `Ok` mit null Eintraegen zurueck, ohne
+/// Meldung und ohne Sicherung. `#[serde(deny_unknown_fields)]` an
+/// [`Lesezeichenliste`] macht daraus den `Err`, den `Zugang::laden` schon immer
+/// beiseitelegt; ein zweiter Mechanismus daneben entsteht nicht.
+#[test]
+fn ein_fremder_oberster_schluessel_in_bookmarks_toml_gilt_als_beschaedigt() {
+    beschaedigte_lesezeichen(
+        "lesezeichen-fremder-schluessel",
+        "\
+[[lesezeichen]]
+name = \"Projekte\"
+ordner = \"/Users/pruefung/Projekte\"
+",
+    );
+}
+
+/// Dritte Zeile der Messtabelle: die Datei ist 0 Bytes lang.
+///
+/// KRK schreibt `bookmarks.toml` nie so. Eine leere Liste serialisiert zu
+/// `eintraege = []`, also zu einem obersten Schluessel; das prueft
+/// [`eine_leere_liste_steht_als_oberster_schluessel_in_der_datei`] daneben.
+/// Eine Datei ohne einen einzigen kann deshalb nicht aus KRKs Feder stammen und
+/// ist kein erster Start.
+#[test]
+fn eine_leere_bookmarks_toml_gilt_als_beschaedigt() {
+    beschaedigte_lesezeichen("lesezeichen-null-bytes", "");
+}
+
+/// Dieselbe Regel, aber mit Zeichen in der Datei: nur Kommentare und Umbrueche.
+///
+/// Die Datei ist nicht leer, und die Frage „steht ueberhaupt ein oberster
+/// Schluessel darin" ist trotzdem mit nein zu beantworten. Deshalb steht sie am
+/// TOML-Dokument und nicht an der Dateilaenge.
+#[test]
+fn eine_bookmarks_toml_aus_lauter_kommentaren_gilt_als_beschaedigt() {
+    beschaedigte_lesezeichen(
+        "lesezeichen-nur-kommentare",
+        "# hier standen einmal Lesezeichen\n\n# und jetzt nicht mehr\n",
+    );
+}
+
+/// Die leere Liste, die KRK selbst schreibt, ist kein Schaden.
+///
+/// **Die Gegenprobe zu den drei darueber**, und ohne sie waere die neue Regel
+/// gefaehrlicher als der Defekt: wer sein letztes Lesezeichen loescht, bekaeme
+/// beim naechsten Start eine Schadensmeldung und eine Sicherung ueber eine
+/// Datei, die genau das enthaelt, was sie soll.
+#[test]
+fn eine_leere_liste_steht_als_oberster_schluessel_in_der_datei() {
+    let (_ordner, ablage) = ablage("lesezeichen-leere-liste");
+    gesichert(&ablage, Datei::Lesezeichen, &Lesezeichenliste::default())
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+
+    let text = fs::read_to_string(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+    assert!(
+        text.contains("eintraege"),
+        "die leere Liste steht ohne obersten Schluessel in der Datei: {text:?}"
+    );
+
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    assert_eq!(geladen.wert, Lesezeichenliste::default());
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die selbst geschriebene leere Liste gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert!(
+        !beiseitepfad(&ablage, Datei::Lesezeichen)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "die selbst geschriebene leere Liste wurde zur Seite gelegt"
+    );
+}
+
+/// Ein unbekanntes Feld **im** Eintrag bleibt getragen (vierte Zeile der
+/// Messtabelle).
+///
+/// Die Vorsorge, die der Kopf von [`Lesezeichen`] beschreibt, bleibt
+/// unangetastet: eine `bookmarks.toml` aus einer spaeteren Runde ist in einer
+/// frueheren weiter lesbar. Die neue Strenge steht ueber den Eintraegen und
+/// nicht in ihnen.
+#[test]
+fn ein_unbekanntes_feld_im_eintrag_bleibt_getragen() {
+    let (_ordner, ablage) = ablage("lesezeichen-fremdes-feld");
+    fs::write(
+        ablage.pfad(Datei::Lesezeichen),
+        "\
+[[eintraege]]
+name = \"Projekte\"
+ordner = \"/Users/pruefung/Projekte\"
+farbe = \"rot\"
+",
+    )
+    .expect("schreiben gescheitert");
+
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "ein unbekanntes Feld im Eintrag gilt als Schaden: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(
+        geladen.wert,
+        Lesezeichenliste::aus(vec![Lesezeichen::neu(
+            "Projekte",
+            "/Users/pruefung/Projekte"
+        )])
+    );
+}
+
+/// Die drei uebrigen TOML-Dateien bleiben bei einer leeren Datei still.
+///
+/// **Die sichtbar gesetzte Antwort und keine stillschweigende
+/// Verallgemeinerung.** `Datei::leerbefund` beantwortet die Frage je Datei, und
+/// diese Probe schreibt die heutige Antwort aus: `settings.toml` und
+/// `keymap.toml` aendert der Nutzer von Hand und darf sie leerraeumen,
+/// `session.toml` ist auf Nachsicht gegenueber einer aelteren Fassung gebaut.
+/// Ob die strenge Lesart dorthin gehoert, ist die offene Frage
+/// `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`;
+/// bis zu ihrer Antwort laesst diese Probe die drei rot werden, die sie im
+/// Vorbeigehen mitnaehme.
+#[test]
+fn eine_leere_datei_meldet_bei_den_drei_uebrigen_toml_dateien_nichts() {
+    let (_ordner, ablage) = ablage("leerbefund-die-drei-uebrigen");
+    for welche in toml_dateien().filter(|welche| *welche != Datei::Lesezeichen) {
+        fs::write(ablage.pfad(welche), "").expect("schreiben gescheitert");
+    }
+
+    let belegung: Geladen<BelegungStellvertreter> = geladen(&ablage, Datei::Belegung);
+    let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+    let eingestellt = geladene_einstellungen(&ablage);
+
+    for (welche, ersetzt, ersetzung) in [
+        (Datei::Belegung, belegung.ist_ersetzt(), belegung.ersetzung),
+        (Datei::Sitzung, sitzung.ist_ersetzt(), sitzung.ersetzung),
+        (
+            Datei::Einstellungen,
+            eingestellt.ist_ersetzt(),
+            eingestellt.ersetzung,
+        ),
+    ] {
+        assert!(
+            !ersetzt,
+            "{} gilt leer als beschaedigt: {ersetzung:?}",
+            welche.dateiname()
+        );
+        assert!(
+            !beiseitepfad(&ablage, welche)
+                .try_exists()
+                .expect("try_exists gescheitert"),
+            "{} wurde leer zur Seite gelegt",
+            welche.dateiname()
+        );
+    }
+}
+
 /// Eine Rundreise ueber beide Sorten liefert byteweise dieselbe Datei.
 ///
 /// **Das ist die Abnahme des Vorbehalts zu `#[serde(flatten)]`**, den der
