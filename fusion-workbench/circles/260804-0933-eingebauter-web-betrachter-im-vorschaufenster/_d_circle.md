@@ -1557,3 +1557,31 @@ Circle, der den zurückgestellten über `## Dependencies` zitiert.
 Aktivierungsvorschläge und zehn Vermerke zur Grundlage. Die Länge wächst mit jedem Lauf, in dem
 der Circle vorgesehen bleibt, ohne bearbeitet zu werden. Die zwei Abschnitte dieses Laufs tragen
 den Stand für sich; wer ihn braucht, liest sie und nicht alle 23.
+
+## Closure note
+
+**Zurückgestellt am 260821-2202, auf Entscheidung des Nutzers.** Datensatz:
+`shared/decisions/260821-2202_*_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md`.
+Sitzungsprotokoll: `shared/history/260820-2200-orchestrator-session.md`.
+
+**Fallengelassen, nicht aufgeschoben.** Der Nutzer hat entschieden, dass das Abgeben an den
+Systembrowser genügt und ein eingebauter Betrachter kein echtes Problem löst. `Opt+Cmd+G`
+bleibt, wie es ist. Der Circle ist nie gefahren worden; er stand siebzehn Tage vorgesehen.
+
+**Der Marker sagt weniger, als die Entscheidung meint, und das steht hier ausdrücklich.** Das
+Circle-Vokabular kennt `_d_` als „vorgesehen → auf unbestimmte Zeit verschoben" und `_s_` als
+„durch einen anderen Circle ersetzt". Zutreffend wäre „nicht mehr gewollt", und dafür gibt es
+keinen Marker. `_s_` scheidet aus, weil kein ersetzender Circle existiert; `_d_` ist die
+nächstliegende Entsprechung und trägt die Lesart „kommt vielleicht wieder", die hier nicht
+gemeint ist. Wer diesen Datensatz später liest, hält sich an diesen Absatz und nicht an den
+Buchstaben im Dateinamen.
+
+**Was mit ihm liegen bleibt.** Die drei offenen Fragen des Grundlagenschnappschusses, darunter
+die nach einer elften Zeitzusage, sind mit der Absage gegenstandslos. Der Fund des Playmakers
+vom 260821-2115 bleibt dagegen stehen und gehört nicht zu diesem Circle: KRKs Bündel führt
+weder `NSAppTransportSecurity` noch eine Berechtigungsdatei und wird mit `--options runtime`
+signiert. Wer künftig irgendeinen Netzzugriff aus KRK heraus bauen will, trifft dieselbe
+ungemessene Frage wieder an.
+
+**Der angehängte Abschnitt `## Parent grounding stale` vom 260807-1042 bleibt unverändert
+stehen.** Er ist eine Aufzeichnung des damaligen Standes und wird nicht nachgezogen.
