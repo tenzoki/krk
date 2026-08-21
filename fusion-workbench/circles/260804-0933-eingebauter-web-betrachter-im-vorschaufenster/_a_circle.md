@@ -1436,3 +1436,124 @@ einen Namensteil, den es nie gegeben hat, abgelegt als
 und weiterhin offen. Der Ort macht sie teuer: die Zeile steht im Abschnitt
 `## Grounding snapshot`, der bei der Aktivierung als bindende Grundlage gelesen wird. Der
 Playmaker schreibt nur die drei Abschnitte, die sein Auftrag nennt, und berichtigt sie nicht.
+
+## Parent grounding stale
+
+**Festgestellt am:** 260821-2115
+**Playmaker-Lauf:** 260821-2115-playmaker-orchestrator-phase4
+**Kohärent abgeschlossenes Kind:** `260821-1644-veroeffentlichen-als-achte-station`
+(Runde 15), geschlossen am 260821-2110 nach einer Abnahme, die der Nutzer gefahren hat
+
+**Die Auslösebedingung fehlt zweifach, und der Vermerk steht trotzdem hier.** Der Auftrag des
+Playmakers knüpft ihn an ein Kind, das beschränkt (`_b_`) schließt; die Runde 15 hat kohärent
+geschlossen. Und der Grounding-Schnappschuss dieses Circles zitiert die Runde 15 nirgends, denn
+sie ist zwei Wochen jünger als er. Der Nutzer hat diesen Lauf ausdrücklich beauftragt zu prüfen,
+ob der Schnappschuss noch trägt. Er trägt in dem, was die Runde 15 angefasst hat, und er hat
+eine Lücke, die keine Runde verursacht hat.
+
+### 1. Die Runde 15 hat keine Zeile Anwendungscode angefasst, und die Alterung von 260820 steht unverändert
+
+Gemessen an den fünf Commits der Runde (`72f7a5d`, `465330b`, `94855a7`, `4e810f9`, `26212b1`):
+betroffen sind allein `xtask/`, `README.md` und Werkstattdatensätze. Kein `crates/`-Pfad ist
+darunter. Die Vorschaufläche, der Ereignisabgriff und die Kachelung für gerendertes Markdown
+stehen so, wie sie der Vermerk vom 260820-1044 beschreibt; seine vier Punkte gelten unverändert
+und werden hier nicht wiederholt.
+
+Ebenso unverändert am 260821 nachgezählt: `Kommando`
+(`crates/krk-core/src/tasten/belegung.rs`) trägt 79 Varianten, `resources/default-keymap.toml`
+trägt 85 Funktionsblöcke, `Rang` (`crates/krk-ui/src/appkit/statuszeile.rs`) trägt sechs Werte.
+Die einzige Kante unter `## Dependencies` führt weiterhin auf `260802-0842-krk-mac-dateimanager-editor-git`.
+
+### 2. Der Schnappschuss sagt nichts darüber, was KRKs eigenes Bündel braucht, um `http:` selbst anzuzeigen
+
+**Das ist die Lücke, und sie ist so alt wie der Schnappschuss.** Die Directive sagt `http:` und
+`https:` zu, wie schon heute. Heute heißt aber: KRK übergibt beide dem Systembrowser, und die
+Netzrichtlinie ist dessen Sache. Sobald KRK den Inhalt selbst darstellt, ist sie KRKs Sache.
+
+`resources/Info.plist` trägt am 260821 keinen Schlüssel `NSAppTransportSecurity`; im ganzen Baum
+kommt der Name nicht vor. App Transport Security ist für ein gegen ein heutiges SDK gebautes
+Programm ab Werk eingeschaltet und weist unverschlüsselte `http:`-Ladevorgänge ab. Ob das den
+Betrachter trifft und in welcher Form, hängt am Darstellungsmittel und ist hier **nicht
+gemessen**; benannt ist es, weil die Untersuchung des Darstellungsmittels die Stelle ist, an der
+es auffallen muss, und weil der Schnappschuss von 260804 die Frage nicht stellt.
+
+### 3. Das Bündel ist gehärtet signiert, und eine Berechtigungsdatei gibt es nicht
+
+`cargo xtask` signiert mit `--options runtime` (`xtask/src/sign.rs:226`), seit der Runde 1 und
+dem Commit `d577295`. Seit dem 260820 prüft die siebte Station die Härtung ausdrücklich nach
+(`xtask/src/beglaubigung.rs`, Konstante `GEHAERTET`). Eine `.entitlements`-Datei führt der Baum
+nicht; `find . -name '*.entitlements'` gibt außerhalb von `target/` nichts zurück.
+
+Für diesen Circle folgt daraus keine Antwort, sondern eine Kostenstelle. Ein Darstellungsmittel,
+das unter der gehärteten Laufzeitumgebung eine Berechtigung braucht, etwa für die Ausführung von
+erzeugtem Maschinencode, hat heute keinen Ort, an dem es sie erklären könnte. Welches Mittel was
+braucht, legt dieser Circle bewusst nicht fest, und die Untersuchung davor hat mit der Härtung
+eine Randbedingung mehr zu prüfen, als der Schnappschuss kennt.
+
+### 4. Was die Runde 15 für diesen Circle wirklich geändert hat, und es ist klein
+
+Die Auslieferungskette endet seit dem 260821 nicht mehr auf der Platte, sondern an einer
+öffentlichen Releaseseite; `KRK 0.5.6` liegt dort. Damit reist jede Änderung an
+`resources/Info.plist` zu fremden Geräten. Der Preis eines später nachgereichten Schlüssels ist
+also nicht mehr ein lokaler Neubau, sondern eine Fassung mehr in der Kette. Das hält die
+Aktivierung nicht auf; es verschiebt die Punkte 2 und 3 in der Reihenfolge nach vorn, vor den
+Plan und in die Untersuchung.
+
+### 5. Vorschlag zur Neuschärfung, falls der Nutzer den Circle aktiviert
+
+Der Playmaker führt ihn nicht aus; der Shaper in der Aktivierungsmodus-Klärung tut es. Vier
+Stücke wären nachzuziehen. Erstens der Absatz „Technisch steht KRK seit dem 260802-1150 fest":
+er nennt Sandbox, Mindestsystem und Werkzeugkasten und schweigt zur Härtung, zur Beglaubigung
+und zur öffentlichen Weitergabe, die seit dem 260820 und dem 260821 dazugehören. Zweitens eine
+vierte offene Frage nach der Netzrichtlinie des Bündels, gleichrangig neben den drei
+bestehenden. Drittens der Abschnitt „Was der aktive Circle schon gebaut hat und dieser erbt": er
+spricht von der Runde 1 als dem *aktiven* Circle, und die ist seit dem 260807 geschlossen.
+Viertens die Berichtigung aus
+`shared/issues/260818-0752_*_ein-zitat-im-circle-datensatz-des-web-betrachters-nennt-einen-namensteil-den-es-nie-gab.md`,
+die seit dem 260818 aussteht und im Schnappschuss selbst steht.
+
+## Activation proposal
+
+**Vorgeschlagen am:** 260821-2115
+**Playmaker-Lauf:** 260821-2115-playmaker-orchestrator-phase4
+**Vorgeschlagener Aktivierungszeitpunkt:** der nächste `/fusion:next` des Nutzers. Dieser Lauf
+ist ein nicht-interaktiver Phase-4-Auftrag und hält keine Bestätigung. Die Umbenennung dieses
+Datensatzes von `_a_circle.md` auf `_t_circle.md` und das Schreiben von `.active-circle` bleiben
+beim Nutzer oder beim Orchestrator.
+
+**Rang 1 von 1, zum dreizehnten Mal, und die Rangfolge ist wieder keine Leistung der
+Heuristik.** Dieser Circle ist der einzige vorgesehene des Projekts. Was die Heuristik beiträgt,
+ist die Prüfung der Vorbedingungen, und sie fällt sauber aus. Ein einziger offener
+Entscheidungsdatensatz bindet ihn, die Verfügbarkeitsprüfung für Schnittstellen ab macOS 26
+(`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_*_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md`),
+und sie hängt an derselben Wahl, die der Circle offenlässt: womit KRK Web-Inhalt darstellt.
+
+**Die eine Abhängigkeitskante bekommt keinen Abzug, und das ist eine bewusste Abweichung von der
+Regel.** Mechanisch verlangt die Vorbedingungsprüfung, dass jede Kante auf einen kohärent
+(`_c_`) geschlossenen Circle zeigt; die Runde 1 trägt den beschränkten Abschluss (`_b_`), also
+bekäme sie eine Marke. `CLAUDE.md` weist diese Lesart für dieses Projekt ausdrücklich zurück:
+der Marker misst hier die Verfügbarkeit des Nutzers für den Abnahmelauf und nicht die Reife
+einer Runde. Zehn der fünfzehn gefahrenen Runden tragen ihn aus diesem einen Grund. Die Runde 1
+ist am Baum gebaut, und die zwei Bauteile, auf denen dieser Circle aufsetzt, die
+Zwischenablage-Auswertung und das Vorschaufenster mit Tabs, stehen und werden täglich benutzt.
+Kein Abzug angesetzt.
+
+**Was vor der Aktivierung steht, unverändert seit dem 260804 und um einen Punkt gewachsen.**
+Erstens eine Untersuchung des Darstellungsmittels; sie trägt seit dieser Prüfung zwei
+Randbedingungen mehr, die Netzrichtlinie des Bündels und die gehärtete Laufzeitumgebung, beide
+im Vermerk über diesem Abschnitt. Zweitens die Klärungsrunde über die drei offenen Fragen des
+Schnappschusses. Die erste entscheidet den Zuschnitt: bleiben Zwischenablage und Verweisanker
+der Seite die einzigen Quellen einer Adresse, bekommt KRK einen Betrachter; kommen Adresseingabe
+oder gespeicherte Web-Adressen hinzu, bekommt es einen Browser.
+
+**Zwei andere Kandidaten stehen daneben, und keiner von beiden ist vorgesehen.** Die Bewegung
+zwischen Editor und Vorschau, beschrieben von zwei Defekten, einer offenen Nutzerfrage und dem
+einen lebenden Rückstandseintrag, steht als Runde nirgends; der Playmaker rankt sie nicht mit
+und filt nichts. Und `260816-2255-befehle-absetzen-und-makros-speichern`, am 260817-0445
+zurückgestellt, mit vollständigem Spec und Plan und nichts gebaut; eine Aufnahme wäre ein neuer
+Circle, der den zurückgestellten über `## Dependencies` zitiert.
+
+**Der Datensatz trägt jetzt 23 Playmaker-Abschnitte aus dreizehn Läufen**, dreizehn
+Aktivierungsvorschläge und zehn Vermerke zur Grundlage. Die Länge wächst mit jedem Lauf, in dem
+der Circle vorgesehen bleibt, ohne bearbeitet zu werden. Die zwei Abschnitte dieses Laufs tragen
+den Stand für sich; wer ihn braucht, liest sie und nicht alle 23.

@@ -47,3 +47,84 @@ Die Beglaubigung als siebte Station in ihrer heutigen Gestalt stammt aus `f5300f
   nachdem der Abgleich `shared/history/260821-1532-reconciliation.md` den fehlenden Träger
   festgestellt hatte. Die Zeile hält den Turn fest, wie er gefahren ist, und behauptet nicht,
   er sei unter diesem Datensatz gelaufen.
+
+- Abnahme (260821-2105): die fünfzehn dem Nutzer zugewiesenen Kriterien sind nach der
+  Auslieferung von `v0.5.6` einzeln gemessen worden. 14 halten, 1 ist nicht prüfbar, keines
+  fällt. Durchsicht:
+  `circles/260821-1644-veroeffentlichen-als-achte-station/reviews/260821-2105-coderev-abnahme-der-fuenfzehn-nutzerkriterien.md`.
+
+## Closure note
+
+**Kohärent geschlossen am 260821-2110.** Sitzungsprotokoll:
+`shared/history/260820-2200-orchestrator-session.md`. Abgleich:
+`shared/history/260821-1532-reconciliation.md`. Vier Durchsichten:
+`shared/reviews/260821-1023-…`, `260821-1346-…`, `260821-1401-…`, `260821-1432-…`, dazu die
+Abnahme unter `reviews/` dieses Circles.
+
+**Die Directive ist erreicht, und der Nutzer hat sie am laufenden Dienst abgenommen.** Am
+260821 um 20:24 ist `KRK 0.5.6` über die neue achte Station ausgeliefert worden: universell
+gebaut, mit Developer-ID und gehärteter Laufzeitumgebung signiert, bei Apple beglaubigt
+(`Accepted`), angeheftet, gepackt, geschoben, veröffentlicht. Das Ergebnis liegt öffentlich
+unter `https://github.com/tenzoki/krk/releases/tag/v0.5.6`.
+
+**Der Marker `_c_` steht auf einer gefahrenen Abnahme.** Der Abgleich vom 260821-1532 hatte
+`review-needed` verdiktiert, und zwar wegen der Aufzeichnung und nicht wegen des Codes: 15 der
+40 Abnahmekriterien warteten auf den Nutzer, und die Runde hatte keinen Circle, der einen
+Abschluss hätte tragen können. Beide Gründe sind entfallen — dieser Datensatz ist der
+nachgetragene Träger, und die 15 Kriterien sind am 260821-2105 gemessen worden.
+
+**Ein Kriterium ist nicht prüfbar und bleibt es.** C2.2 verlangt einen zweiten Mac ohne
+Netzverbindung; den gibt es hier nicht, und die Netzverbindung dieses Geräts lässt sich für die
+Messung nicht trennen. Geprüft ist stattdessen der Mechanismus, auf dem die Zusage beruht: das
+Ticket trägt den CDHash des Bündels roh in sich, die Zugehörigkeit ist damit ohne Netz
+entscheidbar. Das ist ein Indiz und keine Abnahme, und es steht hier als das, was es ist.
+
+## Was die Runde gebracht hat
+
+Aus einem beglaubigten Bündel entsteht mit einem Kommando ein weitergebbares Zip an einer
+öffentlichen Releaseseite. `cargo xtask veroeffentlichen <zahl>` ist die achte Station der
+Auslieferungskette und hat zwei Rufer, dieselbe Gestalt wie die siebte seit `f5300f4`: ein
+Lauf, der weit gekommen und am Netz gescheitert ist, setzt dort wieder an, ohne beide Ziele
+erneut zu übersetzen.
+
+**Das Zip wird nach dem Anheften gepackt und nicht davor.** Der Beglaubigungsablauf baut sein
+eigenes Zip vor der Einreichung und löscht es wieder; wer dieses aufhöbe, gäbe ein Bündel ohne
+angehefteten Nachweis weiter, und ein Nutzer ohne Netz bekäme es nicht auf. Die Ticketprüfung
+liest dafür Bytes statt zu fragen: `Contents/CodeResources` beginnt mit `s8ch`. `xcrun stapler
+validate` beantwortet eine andere Frage und braucht das Netz, das die Zusage gerade nicht
+voraussetzen darf.
+
+**`git` nimmt in diesem Werkzeug keine nackte Wortliste mehr entgegen, sondern einen
+`Auftrag`.** Das ist der Umbau, den die Durchsicht `260821-1432` erzwungen hat, und er ist der
+bleibende Teil der Runde: `push` ist hier zum ersten Mal erlaubt, und die Aufsicht darüber
+liest jetzt Plätze mit einer zulässigen Gestalt statt freier Wörter gegen eine Verbotsliste.
+`Gestalt::Tagname` ruft `version::versionszahl_pruefen`, sodass die Sicherung, die wirklich
+trägt, die Aufsicht selbst ist. Was der Übersetzer hält, was die Aufsicht hält und was nichts
+hält, steht getrennt im Modulkopf von `xtask/src/git.rs` und ist nicht schöner gemacht.
+
+**Die `README.md` führt seit dieser Runde den Nutzer zuerst** und ist von 639 auf 407 Zeilen
+gekürzt. Der Anlass steht darin: die Betriebsregel gegen den Datenverlust beim Austausch der
+App, in den ersten dreißig Zeilen statt auf Seite fünf.
+
+## Was offen bleibt, und warum
+
+**Zwei Entscheidungen stehen weiter offen**, beide bewusst nicht durch vollendete Tatsache
+entschieden: ob der Veröffentlichungsbefehl eine eigene Hülle wie `certify-only.sh` bekommt
+(`shared/decisions/260821-1115_*_`), und ob der Aufruf fremder Werkzeuge über den Suchpfad zur
+Regel wird (`shared/decisions/260821-1221_*_`). Die Voraussetzung der zweiten ist beim
+Nachmessen gefallen: `iconutil` und `rustup` stehen seit dem 260811 und dem 260806 ohne vollen
+Pfad da, `gh` ist nicht die erste Ausnahme.
+
+**Ein Defekt ist gemildert und nicht behoben:** `bundle` und `release` schreiben an denselben
+Ort, und ein Entwicklungsbau überschreibt das beglaubigte Bündel
+(`shared/issues/260813-0026_*_`). Die zwei Prüfungen aus `beglaubigen` fangen den Fall ab, weil
+ein Entwicklungsbündel eine andere Identität trägt; ein Abschluss wird nicht behauptet.
+
+**Vier Befunde bleiben offen**, gefilt in dieser Runde: `gh_pruefen` fragt nach dem Konto und
+nicht nach dem Vorhaben (`260821-2105_*_`), das Abnahmekriterium C6.3 enthält die Zeichenfolge,
+die es verbietet (`260821-1221_*_`), und zwei Aufzeichnungsbefunde aus dem Abgleich
+(`260821-1532_*_`).
+
+**Eine Lücke der Aufzeichnung ist nicht mehr zu schließen:** die Tagzahl der Gegenseite vor dem
+Lauf um 20:24 ist nirgends festgehalten, und die Wachstumszahl jenes Laufs ist aus dem heutigen
+Stand nicht rekonstruierbar. C3.3 ist deshalb an einer Kontrollmessung abgenommen.
