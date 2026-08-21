@@ -1,6 +1,6 @@
 //! Das Auslieferungspaket: `cargo xtask release` (Schritt 23).
 //!
-//! Der Weg in sieben Stationen, jede scheitert mit einer benennenden Meldung.
+//! Der Weg in acht Stationen, jede scheitert mit einer benennenden Meldung.
 //! Dazwischen stehen drei Vorlaeufe: sie kosten nichts, laufen deshalb frueh,
 //! und tragen einen Buchstaben statt einer Zahl, weil ihr Ergebnis erst einer
 //! spaeteren Station dient. Die Reihenfolge unten ist die des Quelltextes in
@@ -1158,6 +1158,46 @@ mod tests {
 
     /// Alle `.rs`-Dateien des Baums, ohne `target/` und ohne das
     /// Git-Verzeichnis.
+    /// Der Quellbaum nennt die alte Stationszahl nicht mehr (C6.3).
+    ///
+    /// Gelesen werden `README.md`, das `Makefile` und jede `.rs`-Datei unter
+    /// `xtask/`, also die drei Orte, an denen der Weg beschrieben wird. Gesucht
+    /// ist die Wendung aus der Zahl vor der achten Station und dem Wort
+    /// `Stationen`; sie stand am 260821 an sieben Stellen und steht seitdem an
+    /// keiner.
+    ///
+    /// **Die Werkbank bleibt draussen, und das ist eine Festlegung.** Unter
+    /// `fusion-workbench/` liegen Aufzeichnungen eines vergangenen Standes, und
+    /// die behalten nach der Ortsregel aus `CLAUDE.md` ihren damaligen
+    /// Wortlaut. Das Abnahmekriterium selbst enthaelt ueberdies die
+    /// Zeichenfolge, die es verbietet, ist also woertlich genommen nicht
+    /// erfuellbar; der Befund ist gefilt
+    /// (`shared/issues/260821-1221_*_das-abnahmekriterium-c6-3-enthaelt-die-zeichenfolge-die-es-verbietet.md`),
+    /// und der Plan begrenzt die Zusage deshalb auf den Quellbaum.
+    ///
+    /// Die Nadel steht als `concat!`, und keine Meldung dieser Probe schreibt
+    /// sie aus: die Probe liegt in einer der Dateien, die sie liest, und
+    /// ausgeschrieben zaehlte sie sich selbst mit.
+    #[test]
+    fn der_quellbaum_nennt_die_alte_stationszahl_nicht_mehr() {
+        let nadel = concat!("sieben ", "Stationen");
+        let wurzel = bundle::wurzel();
+        let mut zu_lesen = vec![wurzel.join("README.md"), wurzel.join("Makefile")];
+        zu_lesen.extend(rust_dateien(&wurzel.join("xtask")));
+
+        let mut stellen = Vec::new();
+        for datei in zu_lesen {
+            let inhalt = fs::read_to_string(&datei).expect("die Datei ist lesbar");
+            if inhalt.contains(nadel) {
+                stellen.push(datei);
+            }
+        }
+        assert!(
+            stellen.is_empty(),
+            "die alte Zahl steht noch in {stellen:?}"
+        );
+    }
+
     fn rust_dateien(wurzel: &Path) -> Vec<PathBuf> {
         let mut gefunden = Vec::new();
         sammeln(wurzel, &mut gefunden);

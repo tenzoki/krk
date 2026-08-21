@@ -8,7 +8,7 @@
 //! ./release.sh 0.2.0
 //!   └─ make ausliefern VERSION=0.2.0
 //!        ├─ cargo xtask version 0.2.0    ← dieses Modul: Zahl, Eintrag, Tag
-//!        └─ cargo xtask release          ← release.rs: die sieben Stationen
+//!        └─ cargo xtask release          ← release.rs: die acht Stationen
 //! ```
 //!
 //! **Warum es zwei Kommandos sind und nicht eines.** `xtask` liest die
@@ -47,7 +47,7 @@
 //! Setzen des Tags, **steht der Eintrag** und wird nicht zurueckgenommen: eine
 //! Ruecknahme schriebe Geschichte um, und der Eintrag ist fuer sich richtig.
 //! Die Meldung sagt dann, was steht und welcher Handgriff fehlt. Dasselbe gilt
-//! fuer einen Abbruch der sieben Stationen danach: Eintrag und Tag bleiben
+//! fuer einen Abbruch der acht Stationen danach: Eintrag und Tag bleiben
 //! stehen, und ein zweiter Lauf desselben `./release.sh 0.2.0` faellt hier
 //! durch, ohne etwas zu tun, und faehrt gleich weiter zu `release`.
 

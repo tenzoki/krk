@@ -40,6 +40,14 @@ xtask — Bauwerkzeug fuer KRK
       eine gibt. Findet keine Stufe eine Identitaet, bricht der Bau mit
       einer Anleitung ab und weicht nicht auf eine Ad-hoc-Signatur aus.
 
+      **Fuer die Weitergabe reicht dieses Buendel nicht.** Lokal signiert
+      heisst: ohne gehaertete Laufzeitumgebung, ohne Beglaubigung, ohne
+      angeheftetes Ticket, und uebersetzt allein fuer die Architektur der
+      Baumaschine. Gatekeeper weist ein so gebautes Buendel auf einem
+      zweiten Mac ab. Wer weitergeben will, nimmt ./release.sh <zahl>.
+      Denselben Hinweis gibt der Lauf am Ende noch einmal aus, dann mit der
+      Identitaet, die er gefunden hat.
+
   ./release.sh <zahl>
       Der ganze Auslieferungsweg in einem Kommando mit einem Argument, der
       Versionszahl. Das Skript ist kein drittes Bauwerkzeug: es reicht an
@@ -65,14 +73,15 @@ xtask — Bauwerkzeug fuer KRK
       1 von release vergleicht danach die neu eingebackene Zahl mit dem Tag.
 
   cargo xtask release
-      Baut das Auslieferungspaket (Schritt 23) in sieben Stationen: prueft Tag
+      Baut das Auslieferungspaket (Schritt 23) in acht Stationen: prueft Tag
       und Arbeitsbaum, prueft die AppKit-Grenze (keine `use objc2`-Zeile
       ausserhalb von crates/krk-ui/src/appkit/), uebersetzt beide Mac-Ziele,
       fuegt sie mit lipo zu einer universellen Binaerdatei zusammen, baut
       dasselbe Buendel wie `bundle`, signiert mit einer
       Developer-ID-Identitaet und gehaerteter Laufzeitumgebung, reicht ueber
-      \"xcrun notarytool submit --wait\" zur Beglaubigung ein und heftet das
-      Ergebnis mit \"xcrun stapler staple\" an. Dazwischen laufen drei
+      \"xcrun notarytool submit --wait\" zur Beglaubigung ein, heftet das
+      Ergebnis mit \"xcrun stapler staple\" an und veroeffentlicht es als
+      GitHub-Release. Dazwischen laufen drei
       Vorlaeufe, die einer spaeteren Station zuarbeiten: die Buendelvorlage,
       die Identitaetssuche und die Zielpruefung.
 
@@ -114,6 +123,29 @@ xtask — Bauwerkzeug fuer KRK
       Daraus folgt die Grenze: ein so beglaubigtes Buendel ist nicht durch die
       Vorpruefungen der Auslieferungskette gegangen, und es ist nicht gesagt,
       dass ein Tag den Stand benennt, aus dem es gebaut wurde.
+
+  cargo xtask veroeffentlichen <zahl>
+      Packt das beglaubigte target/KRK.app zu target/KRK-<zahl>.zip, schiebt
+      HEAD und refs/tags/v<zahl> zur Gegenseite und legt eine oeffentliche
+      GitHub-Releaseseite an, an der das Zip haengt und deren Text sagt, wie
+      installiert wird, ohne die gemerkten Daten zu verlieren.
+
+      **Es baut nichts und es beglaubigt nichts** — kein Uebersetzungslauf,
+      kein lipo, keine Montage, keine Signierung, keine Einreichung bei
+      Apple. Es fragt bloss nach, ob das Ticket schon am Buendel haengt, und
+      es fragt an einer Datei und nicht bei einem Dienst; fehlt es, bricht es
+      ab und nennt ./certify-only.sh <zahl>.
+
+      Vorausgesetzt ist gh, das GitHub-Kommandozeilenwerkzeug, vorhanden und
+      angemeldet. Das ist die dritte aeussere Voraussetzung der Kette, neben
+      dem vollstaendigen Xcode und dem Entwicklerkonto; geprueft wird sie ganz
+      zuerst, damit ein Abbruch weder ein Zip hinterlaesst noch etwas
+      geschoben hat. Abhilfe: \"brew install gh\" und \"gh auth login\".
+
+      Dieselbe Station faehrt `cargo xtask release` als achte. Der Unterschied
+      zwischen beiden Wegen ist eine einzige Frage: dieser hier prueft selbst,
+      ob v<zahl> auf HEAD steht, weil vor ihm keine Station stand. Den
+      Arbeitsbaum prueft er nicht — das tut Station 1 von release.
 
   cargo xtask messen --alle --ordner-a P --ordner-b P --ordner100k P --kopierziel P
       Der eine Einstiegspunkt fuer beide Messstrecken (Schritt 21): baut das
@@ -214,6 +246,35 @@ mod tests {
         matches!(ergebnis, Err(Abbruch::Aufruf(_)))
     }
 
+    /// Der Abschnitt des Hilfetexts, der zu der Kopfzeile `kopf` gehoert.
+    ///
+    /// Die Hilfe ist in Abschnitte gegliedert: eine Kopfzeile mit genau zwei
+    /// Leerzeichen Einzug, darunter ein Rumpf mit tieferem Einzug und
+    /// Leerzeilen. Der Abschnitt endet an der naechsten Kopfzeile.
+    ///
+    /// **Warum die Proben den Abschnitt nehmen und nicht den ganzen Text.**
+    /// Eine Wendung, die irgendwo in der Hilfe steht, sagt nichts darueber, ob
+    /// sie beim richtigen Befehl steht. Seit dem 260821 sagen zwei Abschnitte
+    /// "Es baut nichts", und eine Probe ueber den ganzen Text bliebe gruen,
+    /// auch wenn der Satz beim falschen von beiden stuende.
+    fn hilfeabschnitt(kopf: &str) -> &'static str {
+        let anfang = HILFE
+            .find(kopf)
+            .unwrap_or_else(|| panic!("die Hilfe fuehrt keinen Abschnitt {kopf:?}"));
+        let rest = &HILFE[anfang + kopf.len()..];
+        let mut versatz = 0;
+        for zeile in rest.split_inclusive('\n') {
+            // Eine Kopfzeile ruecken genau zwei Leerzeichen ein; jede
+            // Rumpfzeile rueckt tiefer ein, und eine Leerzeile rueckt gar
+            // nicht ein.
+            if zeile.starts_with("  ") && !zeile.starts_with("   ") {
+                return &rest[..versatz];
+            }
+            versatz += zeile.len();
+        }
+        rest
+    }
+
     #[test]
     fn ohne_unterbefehl_ist_der_aufruf_falsch() {
         assert!(ist_aufruffehler(ausfuehren(&[])));
@@ -260,6 +321,50 @@ mod tests {
         assert!(HILFE.contains("./certify-only.sh <zahl>"), "{HILFE}");
     }
 
+    /// Der Veroeffentlichungsweg steht in der Verteilung und in der Hilfe.
+    ///
+    /// Dieselbe Bauart wie die zwei Proben darueber: ohne Zahl ist es ein
+    /// Aufruffehler und kein unbekannter Unterbefehl, der Befehl ist also
+    /// verteilt worden.
+    #[test]
+    fn veroeffentlichen_steht_in_verteilung_und_hilfe() {
+        let Err(Abbruch::Aufruf(meldung)) = ausfuehren(&worte(&["veroeffentlichen"])) else {
+            panic!("veroeffentlichen ohne Zahl ist ein Aufruffehler");
+        };
+        assert!(meldung.contains("genau ein Argument"), "{meldung}");
+        assert!(
+            HILFE.contains("cargo xtask veroeffentlichen <zahl>"),
+            "{HILFE}"
+        );
+    }
+
+    /// Der Abschnitt zum neuen Weg sagt, dass er nichts baut (C6.2).
+    ///
+    /// Beides gehoert dazu und nicht nur das erste: wer den Befehl sucht,
+    /// entscheidet zwischen ihm, `release` und `beglaubigen`, und die
+    /// Entscheidung haengt daran, was er ausser dem Veroeffentlichen noch tut.
+    #[test]
+    fn der_abschnitt_zum_veroeffentlichen_sagt_dass_er_nichts_baut() {
+        let abschnitt = hilfeabschnitt("cargo xtask veroeffentlichen <zahl>");
+        assert!(abschnitt.contains("baut nichts"), "{abschnitt}");
+        assert!(abschnitt.contains("beglaubigt nichts"), "{abschnitt}");
+    }
+
+    /// Der Abschnitt zu `bundle` sagt, was das Buendel fuer die Weitergabe
+    /// bedeutet (C6.6).
+    ///
+    /// Der Abschlusshinweis des Laufs sagt es seit dem 260815, der Hilfetext
+    /// schwieg dazu — und er ist die Stelle, die jemand **vor** dem Bau liest,
+    /// wenn er den passenden Unterbefehl erst sucht. Defekt
+    /// `shared/issues/260815-1436_*_der-hilfetext-zu-bundle-schweigt-zur-weitergabe-obwohl-die-ausgabe-des-befehls-sie-jetzt-nennt.md`.
+    #[test]
+    fn der_abschnitt_zu_bundle_nennt_die_weitergabe() {
+        let abschnitt = hilfeabschnitt("cargo xtask bundle");
+        assert!(abschnitt.contains("Weitergabe"), "{abschnitt}");
+        assert!(abschnitt.contains("Gatekeeper"), "{abschnitt}");
+        assert!(abschnitt.contains("./release.sh <zahl>"), "{abschnitt}");
+    }
+
     /// Die Hilfe sagt, was der Weg nicht prueft, und was daraus folgt.
     ///
     /// Ein Weg, der Station 1 uebergeht, muss das dort sagen, wo jemand ihn
@@ -275,7 +380,8 @@ mod tests {
             HILFE.contains("Vorpruefungen der Auslieferungskette"),
             "die Hilfe nennt die Folge nicht"
         );
-        assert!(HILFE.contains("Es baut nichts"), "{HILFE}");
+        let abschnitt = hilfeabschnitt("cargo xtask beglaubigen <zahl>");
+        assert!(abschnitt.contains("Es baut nichts"), "{abschnitt}");
     }
 
     /// Der ueberholte Satz steht nirgends mehr in der Hilfe.

@@ -130,16 +130,7 @@ pub(crate) fn veroeffentlichen(zahl: &str, tagfrage: Tagfrage) -> Result<(), Abb
 
     let buendel = bundle::buendelpfad(&wurzel);
     if !buendel.exists() {
-        return Err(Abbruch::Lauf(format!(
-            "Unter {} liegt kein Buendel. Dieser Weg veroeffentlicht ein bereits gebautes und \
-             beglaubigtes und baut selbst nichts: kein Uebersetzungslauf, kein lipo, keine \
-             Montage.\n\
-             \n\
-             Abhilfe ist der ganze Weg:\n\
-             \x20      ./release.sh {zahl}\n\
-             \x20      cargo xtask release   (ohne den Halbschritt davor)",
-            buendel.display()
-        )));
+        return Err(Abbruch::Lauf(ohne_buendel_meldung(&buendel, zahl)));
     }
 
     ticket_pruefen(&buendel, zahl)?;
@@ -222,6 +213,31 @@ fn nicht_angemeldet_meldung() -> String {
         .to_owned()
 }
 
+/// Die Meldung, wenn unter `target/` gar kein Buendel liegt.
+///
+/// Die reine Haelfte der Buendelfrage: der Dateizugriff bleibt beim Rufer, der
+/// Wortlaut steht hier und ist damit ohne gebautes Buendel abnehmbar. Dasselbe
+/// Muster wie bei [`gh_fehlt_meldung`], [`ohne_tag_meldung`] und
+/// [`ohne_ticket_meldung`].
+///
+/// **Sie nennt den ganzen Weg und nicht bloss die Beglaubigung.** Wer hier
+/// landet, hat nichts gebaut; mit `./certify-only.sh` waere ihm nicht geholfen,
+/// denn auch jener Weg setzt ein fertiges Buendel voraus. Genannt sind deshalb
+/// beide Aufrufformen des ganzen Wegs, mit und ohne den Halbschritt davor.
+#[must_use]
+fn ohne_buendel_meldung(buendel: &Path, zahl: &str) -> String {
+    format!(
+        "Unter {} liegt kein Buendel. Dieser Weg veroeffentlicht ein bereits gebautes und \
+         beglaubigtes und baut selbst nichts: kein Uebersetzungslauf, kein lipo, keine \
+         Montage.\n\
+         \n\
+         Abhilfe ist der ganze Weg:\n\
+         \x20      ./release.sh {zahl}\n\
+         \x20      cargo xtask release   (ohne den Halbschritt davor)",
+        buendel.display()
+    )
+}
+
 /// Prueft, dass das Buendel das Beglaubigungsticket angeheftet traegt.
 ///
 /// Der Prozessaufruf dieser Pruefung ist ein Dateizugriff und sonst nichts;
@@ -253,9 +269,10 @@ fn ticket_pruefen(buendel: &Path, zahl: &str) -> Result<(), Abbruch> {
 /// des Heftungslaufs vom 260820 um 19:44, waehrend `Info.plist`, `PkgInfo`,
 /// `MacOS/` und `Contents/_CodeSignature/CodeResources` die Bauzeit 11:35
 /// tragen. Die Datei beginnt mit den vier Bytes `s8ch`, gefolgt von einer
-/// DER-Struktur. Kein Aufruf unter `xtask/` schreibt sie, und die Zeichenfolge
-/// `CodeResources` steht weder im Bauwerkzeug noch im `Makefile` noch in der
-/// `README.md`; geschrieben hat sie `xcrun stapler`, das die Beglaubigung
+/// DER-Struktur. **Kein Aufruf unter `xtask/` schreibt sie**: genannt wird sie
+/// dort allein von [`TICKETDATEI`] und den Stellen, die diese Pruefung
+/// beschreiben, und keiner der Aufrufe von `codesign`, `ditto` oder `xcrun`
+/// legt sie an. Geschrieben hat sie `xcrun stapler`, das die Beglaubigung
 /// anheftet.
 ///
 /// **Die gleichnamige Datei unter `_CodeSignature/` ist eine andere.** Sie ist
@@ -656,6 +673,23 @@ mod tests {
             ausfuehren(&["v0.5.6".to_owned()]),
             Err(Abbruch::Aufruf(_))
         ));
+    }
+
+    /// Ohne Buendel bricht der Weg ab und nennt den ganzen Weg (C1.6).
+    ///
+    /// Die Meldung ist eine reine Funktion, also ist ihr Wortlaut hier
+    /// abnehmbar und nicht erst an einem Lauf, der ein fehlendes Buendel
+    /// voraussetzte. Geprueft ist beides, was das Kriterium verlangt: dass der
+    /// Befund benannt wird, und dass die Abhilfe der **ganze** Weg ist und
+    /// nicht die Beglaubigung, die selbst schon ein Buendel braucht.
+    #[test]
+    fn ohne_buendel_nennt_die_meldung_den_ganzen_weg() {
+        let meldung = ohne_buendel_meldung(buendel(), "0.5.6");
+        assert!(meldung.contains("liegt kein Buendel"), "{meldung}");
+        assert!(meldung.contains("baut selbst nichts"), "{meldung}");
+        assert!(meldung.contains("./release.sh 0.5.6"), "{meldung}");
+        assert!(meldung.contains("cargo xtask release"), "{meldung}");
+        assert!(!meldung.contains("certify-only"), "{meldung}");
     }
 
     /// Fehlt `gh`, nennt die Meldung das Werkzeug und die Folge.

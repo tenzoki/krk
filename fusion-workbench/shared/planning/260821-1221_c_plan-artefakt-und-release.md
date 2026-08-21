@@ -1,7 +1,7 @@
 # Implementation Plan: Artefakt und Release
 
 **Datum:** 2026-08-21
-**Status:** Entwurf
+**Status:** Complete
 **Spec:** `fusion-workbench/shared/planning/260821-1115_o_spec-artefakt-und-release.md`, vom Nutzer am 260821 abgenommen
 **Baumstand bei der Abfassung:** `77b84bb`
 **Decidability:** Die tragende Frage dieser Runde lautet: trägt das Bündel, das gleich zu GitHub hochgeladen wird, das angeheftete Beglaubigungsticket? Sie ist entscheidbar aus dem, was das Werkzeug in der Hand hält, denn das Ticket ist eine Datei im Bündel und keine Auskunft eines fremden Dienstes. Am ausgelieferten Bündel dieses Geräts liegt `Contents/CodeResources` mit der Kennung `s8ch` in den ersten vier Bytes, und die Datei stammt nachweislich aus dem Heftungslauf. Das Mittel, das der Spec verworfen sehen wollte, `xcrun stapler validate`, beantwortet dagegen eine andere Frage: es fragt Apple, ob dieser Stand beglaubigt ist, und braucht dafür eine Netzverbindung, die die Zusage aus C2 gerade nicht voraussetzen darf. Die zweite tragende Frage, ob dieses Kommando schieben darf, ist aus demselben Grund entscheidbar: das Werkzeug baut die Argumentliste selbst als Vektor von Wörtern, statt eine fremde Zeichenkette zu deuten. Beide Fragen brauchen keinen Wechsel des Mechanismus.
@@ -340,10 +340,10 @@ flowchart TD
    - Kriterien: C1.1, C1.4, C1.5
    - Abhängigkeiten: Schritte 2, 3, 5, 6
 
-8. **Der Hilfetext, und der Defekt am Hilfetext zu `bundle`**
+8. [DONE] **Der Hilfetext, und der Defekt am Hilfetext zu `bundle`**
    - Executor: `coder`
    - Dateien: `xtask/src/main.rs`,
-     `fusion-workbench/shared/issues/260815-1436_o_der-hilfetext-zu-bundle-schweigt-zur-weitergabe-obwohl-die-ausgabe-des-befehls-sie-jetzt-nennt.md`
+     `fusion-workbench/shared/issues/260815-1436_*_der-hilfetext-zu-bundle-schweigt-zur-weitergabe-obwohl-die-ausgabe-des-befehls-sie-jetzt-nennt.md`
    - Änderungen: ein Absatz für `cargo xtask veroeffentlichen <zahl>` in `HILFE`, der in einem
      Satz sagt, was der Befehl tut, und ausdrücklich sagt, dass er nichts baut und nichts
      beglaubigt. Der Absatz zu `bundle` bekommt den Satz, den der offene Defekt verlangt: was
@@ -358,7 +358,7 @@ flowchart TD
    - Kriterien: C6.1, C6.2, C6.6, C6.7
    - Abhängigkeiten: Schritt 7
 
-9. **Aus sieben Stationen werden acht**
+9. [DONE] **Aus sieben Stationen werden acht**
    - Executor: `coder`
    - Dateien: `README.md`, `xtask/src/main.rs`, `xtask/src/release.rs`, `xtask/src/version.rs`
    - Änderungen: die sieben Stellen im Quellbaum, die von sieben Stationen sprechen, werden
@@ -371,7 +371,7 @@ flowchart TD
    - Kriterien: C6.3
    - Abhängigkeiten: Schritt 7
 
-10. **Die `README.md` zieht nach**
+10. [DONE] **Die `README.md` zieht nach**
     - Executor: `coder`
     - Dateien: `README.md`
     - Änderungen: vier Stellen. Die Voraussetzungstabelle bekommt `gh` als dritte äußere
@@ -388,7 +388,7 @@ flowchart TD
     - Kriterien: C5.4, C5.5, C6.4, C6.5
     - Abhängigkeiten: Schritt 9
 
-11. **Abnahme am Gerät: `make check` und die zwei Läufe ohne `gh`**
+11. [DONE] **Abnahme am Gerät: `make check` und die zwei Läufe ohne `gh`**
     - Executor: `coder`
     - Dateien: keine
     - Änderungen: keine. `make check` fährt Bau, Proben, clippy und fmt in einem Zug; `cargo`
@@ -403,6 +403,19 @@ flowchart TD
     - Kriterien: keines eigen. Der Schritt bestätigt am Gerät, was die Schritte 1 und 2 an
       Proben schon halten; die Zuordnung jener drei Kriterien bleibt dort.
     - Abhängigkeiten: Schritte 8, 10
+    - **Gemessen am 260821, am lebenden Gerät:** `make check` endet mit Rückgabewert 0 (Bau,
+      134 Proben in `xtask`, clippy unter `-D warnings`, fmt). `cargo xtask veroeffentlichen
+      0.5.6` endet mit 1 und bricht an der ersten Stufe ab, mit der Meldung, die das
+      GitHub-Kommandozeilenwerkzeug beim Namen nennt; `cargo xtask veroeffentlichen` ohne
+      Argument endet mit 2. Danach liegt kein `target/KRK-*.zip`, und `git ls-remote origin`
+      führt unverändert `refs/heads/main` auf `01d2365` und den einen Tag `v0.1.0`, während
+      HEAD lokal auf `72f7a5d` steht — geschoben ist also nichts.
+    - **Ein Befund an Schritt 1, hier behoben:** C1.6 ist in der Zuordnung mit „Probe"
+      abgenommen, und eine solche gab es nicht — die Abbruchmeldung ohne Bündel entstand
+      inline im Rumpf von `veroeffentlichen` und war damit nicht abnehmbar. Sie steht jetzt
+      als reine Funktion `ohne_buendel_meldung` da, im selben Muster wie die drei anderen
+      Meldungen des Moduls, und die Probe `ohne_buendel_nennt_die_meldung_den_ganzen_weg`
+      nimmt sie ab. Der Wortlaut ist unverändert.
 
 ## Where this Circle stops
 

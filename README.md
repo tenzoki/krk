@@ -15,11 +15,19 @@ können soll, steht im Spec und im Implementierungsplan unter
 | Rust | 1.97.1, festgeschrieben in `rust-toolchain.toml` | `rustup` |
 | `codesign`, `plutil`, `vtool`, `security` | mit macOS ausgeliefert | Command Line Tools |
 | macOS | 15 oder neuer | — |
+| `gh` | nur für die Auslieferung, nicht für den Bau | `brew install gh`, danach `gh auth login` |
 
 Ein vollständiges Xcode ist für den Bau **nicht** nötig. Die Command Line Tools
 genügen; `xcode-select -p` darf auf `/Library/Developer/CommandLineTools` zeigen.
-Erst die Auslieferung an Dritte braucht mehr, weil sie eine Developer-ID-Identität
-und eine Beglaubigung durch Apple verlangt.
+
+Erst die Auslieferung an Dritte braucht mehr, und zwar dreierlei. Sie verlangt
+eine Developer-ID-Identität; sie verlangt für die Beglaubigung das vollständige
+Xcode (die Command Line Tools führen weder `notarytool` noch `stapler`) und ein
+Apple-Entwicklerkonto; und sie verlangt `gh`, das GitHub-Kommandozeilenwerkzeug,
+für die öffentliche Releaseseite. `gh` ist die einzige der drei, die das System
+gar nicht mitbringt: anders als `git`, `codesign`, `ditto` und `xcrun` wird es
+nachinstalliert und über den Suchpfad gefunden. Fehlt eine der drei, bricht
+allein die Station ab, die sie braucht; was bis dahin gebaut ist, bleibt liegen.
 
 ## Bauen
 
@@ -223,7 +231,7 @@ eine Sache beiträgt und keine zweimal:
 ./release.sh 0.2.0
   └─ make ausliefern VERSION=0.2.0        Pfad zu cargo, Notarprofil, Reihenfolge
        ├─ cargo xtask version 0.2.0       Zahl setzen, eintragen, taggen
-       └─ cargo xtask release             die sieben Stationen
+       └─ cargo xtask release             die acht Stationen
 ```
 
 `release.sh` ist kein drittes Bauwerkzeug. Das Projekt hat eines, `xtask`, und
@@ -271,7 +279,7 @@ Agentenlauf neu schreibt.
 danach das Auffrischen der `Cargo.lock` oder der Eintrag, werden beide Dateien
 auf ihren vorigen Stand zurückgeschrieben. Scheitert allein das Setzen des
 Tags, bleibt der Eintrag stehen: er ist für sich richtig, und eine Rücknahme
-schriebe Geschichte um. Dasselbe gilt für einen Abbruch der sieben Stationen
+schriebe Geschichte um. Dasselbe gilt für einen Abbruch der acht Stationen
 danach — Eintrag und Tag bleiben. Der Handgriff ist in beiden Fällen derselbe:
 `./release.sh 0.2.0` noch einmal. Der Lauf sieht, dass Zahl und Tag schon
 stehen, trägt nichts doppelt ein und fährt gleich weiter.
@@ -282,7 +290,7 @@ stehen, trägt nichts doppelt ein und fährt gleich weiter.
 cargo xtask release
 ```
 
-Der Befehl baut das Auslieferungspaket in sieben Stationen; jede bricht mit
+Der Befehl baut das Auslieferungspaket in acht Stationen; jede bricht mit
 einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt. Dazwischen laufen
 drei Vorläufe: sie kosten nichts, stehen deshalb früh und tragen einen
 Buchstaben statt einer Zahl, weil ihr Ergebnis erst einer späteren Station
@@ -331,13 +339,24 @@ dient.
    `flags=0x10000(runtime)`.
 7. **Beglaubigen.** `xcrun notarytool submit --wait` reicht das Bündel als
    Zip bei Apple ein, `xcrun stapler staple` heftet das Urteil an.
+8. **Veröffentlichen.** Aus dem beglaubigten Bündel wird
+   `target/KRK-<version>.zip`; HEAD und `refs/tags/v<version>` gehen in **einem**
+   Aufruf zur Gegenseite, damit kein Zwischenzustand entsteht, in dem der Zweig
+   oben steht und der Tag nicht; und an einer öffentlichen GitHub-Releaseseite
+   hängt danach das Zip. Vorher prüft die Station dreierlei, und zwar in dieser
+   Reihenfolge, weil ein Abbruch daran nichts hinterlässt: `gh` ist vorhanden
+   und angemeldet, das Bündel liegt da, und es trägt das Ticket angeheftet.
+   Denselben Weg fährt `cargo xtask veroeffentlichen <zahl>` allein; was er
+   prüft und was er nicht prüft, steht unter „Nur veröffentlichen".
 
-Die siebte Station hat zwei äußere Voraussetzungen, und nur sie: das
-vollständige Xcode (die Command Line Tools führen weder `notarytool` noch
-`stapler`) und ein Apple-Entwicklerkonto. Fehlt eines von beidem, bricht
-allein die Beglaubigung ab, und das universell gebaute, signierte Bündel
-bleibt unter `target/KRK.app` liegen — für die lokale Arbeit ist es voll
-brauchbar.
+Sechs der acht Stationen laufen mit dem, was das System mitbringt. Zwei nicht:
+die siebte verlangt das vollständige Xcode (die Command Line Tools führen weder
+`notarytool` noch `stapler`) und ein Apple-Entwicklerkonto, die achte verlangt
+`gh` samt Anmeldung. Fehlt eine dieser drei Voraussetzungen, bricht allein die
+Station ab, die sie braucht, und was bis dahin entstanden ist, bleibt liegen:
+ohne Entwicklerkonto das universell gebaute, signierte Bündel unter
+`target/KRK.app`, das für die lokale Arbeit voll brauchbar ist; ohne `gh`
+dasselbe Bündel, dann sogar beglaubigt.
 
 Die Zugangsdaten des Entwicklerkontos erwartet der Befehl als
 Schlüsselbundprofil, dessen Name in der Umgebungsvariablen
@@ -407,6 +426,112 @@ Grenze: ein so beglaubigtes Bündel ist nicht durch die Vorprüfungen der
 Auslieferungskette gegangen, und es ist nicht gesagt, dass ein Tag den Stand
 benennt, aus dem es gebaut wurde. Wer von Grund auf ausliefert, nimmt
 `./release.sh <version>`.
+
+### Nur veröffentlichen
+
+```sh
+~/.cargo/bin/cargo xtask veroeffentlichen 0.2.0
+```
+
+Der Weg für den Fall, dass ein Auslieferungslauf **erst an der achten Station**
+gescheitert ist: das beglaubigte Bündel liegt fertig unter `target/KRK.app`, und
+allein die Weitergabe fehlt. Er ist die achte Station allein, so wie
+`cargo xtask beglaubigen` die siebte allein ist.
+
+**Für diesen Weg gibt es keine Hülle**, weder ein Skript wie `certify-only.sh`
+noch ein Ziel im `Makefile`. Das ist die schmalste Fassung und eine bewusste
+Wahl; die Frage, ob er eine bekommt, liegt dem Nutzer vor
+(`fusion-workbench/shared/decisions/260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-wie-certify-only-sh.md`).
+Solange es keine gibt, trägt der Aufruf den vollen Pfad zu `cargo`: auf diesem
+Gerät steht `cargo` nicht auf dem Standard-`PATH`, und genau das nimmt einem das
+`Makefile` sonst ab. Wer den Pfad lieber einmal setzt, tut es mit
+`export PATH="$HOME/.cargo/bin:$PATH"`.
+
+Was der Befehl tut, in dieser Reihenfolge:
+
+| Schritt | Was geschieht |
+|---|---|
+| `gh` prüfen | vorhanden (`gh --version` startet) und angemeldet (`gh auth status` gibt null zurück) |
+| Tag prüfen | `v<zahl>` steht auf HEAD |
+| Ticket prüfen | `target/KRK.app/Contents/CodeResources` beginnt mit den vier Bytes `s8ch` |
+| packen | `target/KRK-<zahl>.zip` mit `ditto -c -k --keepParent` |
+| schieben | `git push origin HEAD refs/tags/v<zahl>`, ein Aufruf |
+| anlegen | `gh release create v<zahl>`, öffentlich, mit dem Zip als einziger Datei |
+
+Die drei Prüfungen stehen vorn, und das ist die Zusage des Wegs: bricht er an
+einer von ihnen ab, liegt danach kein Zip da und es ist nichts geschoben.
+
+**Gebaut wird nichts und beglaubigt wird nichts**: kein Übersetzungslauf, kein
+`lipo`, keine Montage, keine Signierung, keine Einreichung bei Apple. Ob das
+Ticket hängt, fragt der Befehl an einer Datei und nicht bei Apple — `xcrun
+stapler validate` beantwortet eine andere Frage und bräuchte dafür Netz, während
+hier gerade zu prüfen ist, ob das Bündel den Nachweis *mitbringt*. Fehlt das
+Ticket, bricht der Befehl ab und nennt `./certify-only.sh <zahl>`; fehlt das
+Bündel, nennt er `./release.sh <zahl>`.
+
+**Den Arbeitsbaum prüft er nicht.** Das tut Station 1 von `release`, und daraus
+folgt hier dieselbe Grenze wie beim Nur-Beglaubigungsweg: es ist nicht gesagt,
+dass das Bündel aus dem Stand gebaut wurde, den der Befehl gleich schiebt.
+
+**Ein zweiter Lauf mit derselben Zahl legt nichts doppelt an.** Vor dem Anlegen
+steht die Existenzfrage `gh release view v<zahl>`; steht das Release schon,
+bricht der Lauf ab, nennt die Lage und überschreibt nichts.
+
+#### Einmal vor dem ersten Lauf: die alten Tags nachschieben
+
+Der Befehl schiebt je Lauf genau den einen Tag, den er veröffentlicht. Die Tags
+der Runden davor stehen deshalb nur lokal, solange sie niemand nachgeschoben
+hat. Einmalig:
+
+```sh
+git push origin --tags
+```
+
+Wie viele es sind, sagt keine Zahl in dieser Datei, sondern der Vergleich beider
+Seiten:
+
+```sh
+comm -23 <(git tag -l | sort) \
+         <(git ls-remote --tags origin | sed 's|.*refs/tags/||' | sort)
+```
+
+Was `comm` ausgibt, steht lokal und fehlt auf `origin`. Gibt es nichts aus, ist
+der Handgriff getan.
+
+## Installieren und aktualisieren
+
+Dieser Abschnitt richtet sich an den Nutzer des ausgelieferten Bündels und nicht
+an den, der es baut. Er trägt die Betriebsregel dieses Projekts für den Austausch
+der App, und die ist gemessen und nicht geraten: die Untersuchung
+`fusion-workbench/shared/analyses/260820-2242-lesezeichenverlust-nach-installation.md`
+schreibt sie im Abschnitt „Betriebsregel für den Austausch der App" aus.
+
+1. `KRK-<version>.zip` von der Releaseseite herunterladen und entpacken.
+2. KRK beenden, falls es läuft.
+3. Die neue Fassung über die alte in `/Applications` kopieren und das Ersetzen
+   bestätigen.
+
+**Die alte Fassung vorher nicht löschen.** Ein Überkopieren ist gefahrlos, ein
+Löschen ist es nicht. Werkzeuge, die eine App samt ihrer Stützdateien entfernen
+— ForkLifts App Deleter ist eines und stand auf dem untersuchten Gerät —, nehmen
+dabei den Ordner `~/Library/Application Support/KRK/` mit. Dort hält KRK alles,
+was es sich merkt: die Lesezeichen, die gesicherte Sitzung, die abweichende
+Tastenbelegung und die zwei Notizzettel. Nach so einem Löschen sind sie fort.
+
+Beide Hälften der Regel sind am selben Gerät belegt. Der Ablageordner ist am
+17.08. um 19:13:48 neu angelegt worden, weil er fort war — dreieinhalb Minuten
+nach einem Auslieferungslauf. Die vier Auslieferungen zwischen dem 18.08. und
+dem 20.08. haben ihn dagegen unangetastet gelassen, und nach dem Überkopieren
+vom 20.08. um 19:47 stand `bookmarks.toml` unverändert da.
+
+Wer doch löschen will, kopiert `~/Library/Application Support/KRK/` vorher an
+eine andere Stelle und schreibt die Kopie nach der Installation zurück.
+
+Dasselbe sagt der Text jeder Releaseseite. Er steht an **einer** Stelle, als
+Konstante `RELEASETEXT` in `xtask/src/veroeffentlichung.rs`, und jede seiner
+Aussagen hängt dort an einer eigenen Behauptung der Probe
+`der_releasetext_traegt_jede_seiner_aussagen`; fällt eine aus dem Text, benennt
+der Ausfall, welche.
 
 ## Versionspflege
 

@@ -278,7 +278,7 @@ Aufgabe, weil ein Kommando, das dreizehn Referenzen auf einmal schiebt, die Enge
       sondern mit dem Kommando, das sie zählt.
 - [ ] C6.6 Der Hilfetext zu `bundle` sagt, was das gebaute Bündel für die Weitergabe bedeutet,
       und schließt damit den Defekt
-      `shared/issues/260815-1436_o_der-hilfetext-zu-bundle-schweigt-zur-weitergabe-obwohl-die-ausgabe-des-befehls-sie-jetzt-nennt.md`.
+      `shared/issues/260815-1436_*_der-hilfetext-zu-bundle-schweigt-zur-weitergabe-obwohl-die-ausgabe-des-befehls-sie-jetzt-nennt.md`.
       Der Defektdatensatz wird auf `_c_` umbenannt und trägt eine `Resolved:`-Zeile.
 - [ ] C6.7 Eine Probe hält Hilfetext und Verteilung des neuen Unterbefehls aneinander, wie es
       `beglaubigen_steht_in_verteilung_und_hilfe` in `xtask/src/main.rs` für den vorigen tut.
