@@ -1289,3 +1289,4 @@
 {"ts":"2026-08-21T10:36:04","event":"queue_built","detail":"11 Aufgaben, 0 blockiert, alle coder"}
 {"ts":"2026-08-21T10:36:04","event":"turn_start","turn":3,"detail":"Schritte 1 bis 4"}
 {"ts":"2026-08-21T19:21:52","event":"portfolio_refresh","detail":"circles/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md; shared/history/260821-2115-playmaker-orchestrator-phase4.md"}
+{"ts":"2026-08-21T19:24:13","event":"session_end","detail":"3 Turns, 21 Commits, KRK 0.5.6 ausgeliefert, Runde 15 kohaerent geschlossen"}
