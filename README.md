@@ -15,7 +15,7 @@ können soll, steht im Spec und im Implementierungsplan unter
 | Rust | 1.97.1, festgeschrieben in `rust-toolchain.toml` | `rustup` |
 | `codesign`, `plutil`, `vtool`, `security` | mit macOS ausgeliefert | Command Line Tools |
 | macOS | 15 oder neuer | — |
-| `gh` | nur für die Auslieferung, nicht für den Bau | `brew install gh`, danach `gh auth login` |
+| `gh` | für die öffentliche Releaseseite, nicht für den Bau | `brew install gh`, danach `gh auth login` |
 
 Ein vollständiges Xcode ist für den Bau **nicht** nötig. Die Command Line Tools
 genügen; `xcode-select -p` darf auf `/Library/Developer/CommandLineTools` zeigen.
@@ -27,7 +27,9 @@ Apple-Entwicklerkonto; und sie verlangt `gh`, das GitHub-Kommandozeilenwerkzeug,
 für die öffentliche Releaseseite. `gh` ist die einzige der drei, die das System
 gar nicht mitbringt: anders als `git`, `codesign`, `ditto` und `xcrun` wird es
 nachinstalliert und über den Suchpfad gefunden. Fehlt eine der drei, bricht
-allein die Station ab, die sie braucht; was bis dahin gebaut ist, bleibt liegen.
+allein die Station ab, die sie verlangt; was bis dahin gebaut ist, bleibt
+liegen. Nach `gh` fragt `cargo xtask release` schon in Station 1, damit sein
+Fehlen weder einen Übersetzungslauf noch eine Einreichung bei Apple kostet.
 
 ## Bauen
 
@@ -296,17 +298,24 @@ drei Vorläufe: sie kosten nichts, stehen deshalb früh und tragen einen
 Buchstaben statt einer Zahl, weil ihr Ergebnis erst einer späteren Station
 dient.
 
-1. **Tag und Arbeitsbaum prüfen.** HEAD muss einen Tag `v<version>` mit der
-   Zahl aus `[workspace.package]` tragen, und keine verfolgte Datei darf
-   geändert sein; unbeachtete Dateien zählen nicht mit. Treffen beide Befunde
-   zu, nennt eine Meldung beide. Die Station ist die billigste des Weges und
-   steht ganz vorn, damit ein Abbruch dieser Art keinen Übersetzungslauf
-   kostet. Sie liest allein; geschrieben hat der Halbschritt davor. Von Hand
-   sind es diese beiden Fragen:
+1. **Tag, Arbeitsbaum und `gh` prüfen.** HEAD muss einen Tag `v<version>` mit
+   der Zahl aus `[workspace.package]` tragen, keine verfolgte Datei darf
+   geändert sein — unbeachtete Dateien zählen nicht mit —, und `gh` muss
+   vorhanden und angemeldet sein. Treffen mehrere Befunde zu, nennt eine
+   Meldung sie. Die Station ist die billigste des Weges und steht ganz vorn,
+   damit ein Abbruch dieser Art keinen Übersetzungslauf kostet. Sie liest
+   allein; geschrieben hat der Halbschritt davor. Von Hand sind es diese drei
+   Fragen:
    ```sh
    git tag --points-at HEAD                    # muss v<version> nennen
    git status --porcelain --untracked-files=no # darf nichts ausgeben
+   gh auth status                              # muss mit 0 enden
    ```
+   **`gh` steht hier, obwohl es erst Station 8 braucht.** Eine fehlende
+   Voraussetzung soll auffallen, solange noch nichts geschehen ist; am Kopf der
+   achten Station wäre zu diesem Zeitpunkt bereits eine Einreichung bei Apple
+   gelaufen. Das Vorziehen kostet nichts, und `cargo xtask bundle` und
+   `make check` bekommen dadurch keine Abhängigkeit von `gh`.
    - *Vorlauf a:* `resources/Info.plist` wird gelesen und die Bündelvorlage
      gebaut, die Station 5 braucht.
 2. **AppKit-Grenze prüfen.** Keine `use objc2`-Zeile außerhalb von
@@ -345,15 +354,21 @@ dient.
    oben steht und der Tag nicht; und an einer öffentlichen GitHub-Releaseseite
    hängt danach das Zip. Vorher prüft die Station dreierlei, und zwar in dieser
    Reihenfolge, weil ein Abbruch daran nichts hinterlässt: `gh` ist vorhanden
-   und angemeldet, das Bündel liegt da, und es trägt das Ticket angeheftet.
+   und angemeldet, das Bündel liegt da, und es trägt das Ticket angeheftet. Die
+   erste dieser drei hat Station 1 auf diesem Weg schon gestellt; die Station
+   stellt sie trotzdem noch einmal, weil ihr zweiter Rufer keine Station vor
+   sich hat. **Das Schieben ist die einzige Wirkung der ganzen Kette, die über
+   dieses Gerät hinausgeht und sich nicht zurücknehmen lässt.**
    Denselben Weg fährt `cargo xtask veroeffentlichen <zahl>` allein; was er
    prüft und was er nicht prüft, steht unter „Nur veröffentlichen".
 
 Sechs der acht Stationen laufen mit dem, was das System mitbringt. Zwei nicht:
 die siebte verlangt das vollständige Xcode (die Command Line Tools führen weder
 `notarytool` noch `stapler`) und ein Apple-Entwicklerkonto, die achte verlangt
-`gh` samt Anmeldung. Fehlt eine dieser drei Voraussetzungen, bricht allein die
-Station ab, die sie braucht, und was bis dahin entstanden ist, bleibt liegen:
+`gh` samt Anmeldung — nach `gh` fragt auf diesem Weg allerdings schon Station 1,
+damit sein Fehlen keinen Übersetzungslauf und keine Einreichung kostet. Fehlt
+eine dieser drei Voraussetzungen, bricht allein die Station ab, die sie
+verlangt, und was bis dahin entstanden ist, bleibt liegen:
 ohne Entwicklerkonto das universell gebaute, signierte Bündel unter
 `target/KRK.app`, das für die lokale Arbeit voll brauchbar ist; ohne `gh`
 dasselbe Bündel, dann sogar beglaubigt.
@@ -502,9 +517,13 @@ der Handgriff getan.
 
 Dieser Abschnitt richtet sich an den Nutzer des ausgelieferten Bündels und nicht
 an den, der es baut. Er trägt die Betriebsregel dieses Projekts für den Austausch
-der App, und die ist gemessen und nicht geraten: die Untersuchung
-`fusion-workbench/shared/analyses/260820-2242-lesezeichenverlust-nach-installation.md`
-schreibt sie im Abschnitt „Betriebsregel für den Austausch der App" aus.
+der App, und die ist gemessen und nicht geraten: sie stammt aus der Untersuchung
+eines Lesezeichenverlusts nach einer Installation am 260820. (Wer im Quellbaum
+liest, findet sie unter
+`fusion-workbench/shared/analyses/260820-2242-lesezeichenverlust-nach-installation.md`,
+Abschnitt „Betriebsregel für den Austausch der App"; wer das ausgelieferte Zip
+in der Hand hat, hat diese Datei nicht und braucht sie auch nicht — die Regel
+steht hier vollständig.)
 
 1. `KRK-<version>.zip` von der Releaseseite herunterladen und entpacken.
 2. KRK beenden, falls es läuft.

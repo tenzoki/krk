@@ -148,6 +148,16 @@ pub(crate) fn veroeffentlichen(zahl: &str, tagfrage: Tagfrage) -> Result<(), Abb
 
 /// Prueft die aeussere Voraussetzung `gh`: vorhanden und angemeldet.
 ///
+/// **Sie hat seit dem 260821 zwei Rufer.** Der zweite ist Station 1 von
+/// [`crate::release`]: auf dem langen Weg stand diese Frage bis dahin erst am
+/// Kopf der achten Station, also hinter einer abgeschlossenen Einreichung bei
+/// Apple, und die Begruendung des Specs — eine fehlende Voraussetzung soll
+/// auffallen, solange noch nichts geschehen ist — trug dort nicht mehr
+/// (Durchsicht 260821-1346, B4). Sie steht deshalb dort zusaetzlich und hier
+/// unveraendert: der eigenstaendige Weg hat keine Station vor sich, und eine
+/// Pruefung, die er nicht selbst faehrt, faehrt fuer ihn niemand. Zweimal
+/// fragen kostet nichts, denn die Frage laesst den Baum, wie er ist.
+///
 /// Zwei Fragen, und beide fragen nur das Werkzeug selbst, nicht das Netz.
 ///
 /// **Die erste ist ein Startversuch.** Scheitert schon das Starten von
@@ -160,16 +170,17 @@ pub(crate) fn veroeffentlichen(zahl: &str, tagfrage: Tagfrage) -> Result<(), Abb
 /// getrennt fuehrt: eine Antwort, die am Text einer Fehlermeldung haengt,
 /// aendert sich mit der naechsten Fassung des fremden Werkzeugs.
 ///
-/// Beide Meldungen entstehen als reine Funktionen — [`gh_fehlt_meldung`] und
-/// [`nicht_angemeldet_meldung`] —, damit ihr Wortlaut ohne `gh` abnehmbar ist.
-fn gh_pruefen() -> Result<(), Abbruch> {
+/// Beide Meldungen entstehen als reine Funktionen — [`vorab_ohne_gh_meldung`]
+/// und [`nicht_angemeldet_meldung`] —, damit ihr Wortlaut ohne `gh` abnehmbar
+/// ist.
+pub(crate) fn gh_pruefen() -> Result<(), Abbruch> {
     if let Err(fehler) = Command::new(GH).arg("--version").output() {
-        return Err(Abbruch::Lauf(gh_fehlt_meldung(&fehler.to_string())));
+        return Err(Abbruch::Lauf(vorab_ohne_gh_meldung(&fehler.to_string())));
     }
     let angemeldet = Command::new(GH)
         .args(["auth", "status"])
         .output()
-        .map_err(|fehler| Abbruch::Lauf(gh_fehlt_meldung(&fehler.to_string())))?;
+        .map_err(|fehler| Abbruch::Lauf(vorab_ohne_gh_meldung(&fehler.to_string())))?;
     if !angemeldet.status.success() {
         return Err(Abbruch::Lauf(nicht_angemeldet_meldung()));
     }
@@ -179,8 +190,17 @@ fn gh_pruefen() -> Result<(), Abbruch> {
 /// Die Meldung, wenn `gh` nicht zu starten ist.
 ///
 /// Sie nennt das Werkzeug beim vollen Namen, weil `gh` allein nicht sagt,
-/// wonach zu suchen ist, und sie nennt die Folge: es ist nichts gepackt und
-/// nichts veroeffentlicht.
+/// wonach zu suchen ist, und sie nennt die Abhilfe.
+///
+/// **Was sie nicht mehr nennt, ist der Stand des Laufs**, und das ist eine
+/// Berichtigung vom 260821. Sie hat drei Verwendungsstellen, und der Stand ist
+/// an ihnen verschieden: an der Vorpruefung ist nichts geschehen, an den zwei
+/// spaeten Stellen liegt das Zip und ist geschoben. Der Satz „Es ist nichts
+/// gepackt und nichts veroeffentlicht" stand bis dahin in dieser gemeinsamen
+/// Haelfte und war an zwei von drei Stellen das Gegenteil dessen, was der
+/// Nutzer aufraeumen muss. Er steht jetzt in [`vorab_ohne_gh_meldung`] und die
+/// wahre Auskunft der spaeten Stellen in [`spaet_ohne_gh_meldung`]; geteilt
+/// wird allein, was ueberall stimmt.
 #[must_use]
 fn gh_fehlt_meldung(grund: &str) -> String {
     format!(
@@ -192,9 +212,40 @@ fn gh_fehlt_meldung(grund: &str) -> String {
          \n\
          Abhilfe:\n\
          \x20      brew install gh\n\
-         \x20      gh auth login\n\
+         \x20      gh auth login"
+    )
+}
+
+/// Fehlt `gh` schon der Vorpruefung, ist noch nichts geschehen.
+///
+/// Die eine Stelle, an der der alte Schlusssatz gilt: [`gh_pruefen`] steht vor
+/// dem ersten Wirken.
+#[must_use]
+fn vorab_ohne_gh_meldung(grund: &str) -> String {
+    format!(
+        "{}\n\
          \n\
-         Es ist nichts gepackt und nichts veroeffentlicht."
+         Es ist nichts gepackt und nichts veroeffentlicht.",
+        gh_fehlt_meldung(grund)
+    )
+}
+
+/// Verschwindet `gh` zwischen der Vorpruefung und der Releaseseite, ist bereits
+/// gepackt und geschoben.
+///
+/// Der seltene Fall — `gh` antwortet der Vorpruefung und ist beim Anlegen weg —,
+/// und der einzige, an dem der Nutzer etwas vorfindet. Die Meldung sagt ihm
+/// deshalb, was steht und dass derselbe Aufruf die Seite nachholt; dasselbe,
+/// was [`release_steht_meldung`] und der gescheiterte Anlegeversuch sagen.
+#[must_use]
+fn spaet_ohne_gh_meldung(grund: &str) -> String {
+    format!(
+        "{}\n\
+         \n\
+         Gepackt ist bereits, und geschoben ist ebenfalls schon: HEAD und der Tag stehen auf der \
+         Gegenseite. Was fehlt, ist allein die Releaseseite. Derselbe Aufruf noch einmal holt sie \
+         nach und schiebt dabei nichts zweites.",
+        gh_fehlt_meldung(grund)
     )
 }
 
@@ -380,7 +431,7 @@ fn tagname(zahl: &str) -> String {
 /// mehrdeutig, sobald ein Zweig genauso hiesse, und `git` entschiede die
 /// Mehrdeutigkeit selbst. Hier soll sie gar nicht erst entstehen.
 #[must_use]
-pub(crate) fn tagverweis(tag: &str) -> String {
+fn tagverweis(tag: &str) -> String {
     format!("refs/tags/{tag}")
 }
 
@@ -394,10 +445,11 @@ pub(crate) fn tagverweis(tag: &str) -> String {
 /// Datei fest, und ein Verweis von hier truege sie an eine zweite.
 ///
 /// Gefragt wird stattdessen mit denselben zwei Bausteinen, aus denen jene
-/// Station selbst gebaut ist: [`git::TAGS_AUF_HEAD`] und [`git::tag_steht`].
+/// Station selbst gebaut ist: [`git::Auftrag::TagsAufHead`] und
+/// [`git::tag_steht`].
 /// Eine vierte Frage nach `git` entsteht dabei nicht.
 fn tagstand_fragen(wurzel: &Path, tag: &str) -> Result<(), Abbruch> {
-    let tags = git::rufen(wurzel, git::TAGS_AUF_HEAD)?;
+    let tags = git::rufen(wurzel, &git::Auftrag::TagsAufHead)?;
     tagstand_pruefen(&tags, tag).map_err(Abbruch::Lauf)?;
     println!("Tag geprueft: {tag} steht auf HEAD.");
     Ok(())
@@ -405,7 +457,7 @@ fn tagstand_fragen(wurzel: &Path, tag: &str) -> Result<(), Abbruch> {
 
 /// Die reine Haelfte der Tagfrage: eine Ausgabe hinein, eine Meldung heraus.
 ///
-/// `tags_auf_head` ist die Ausgabe von [`git::TAGS_AUF_HEAD`], ein Name je
+/// `tags_auf_head` ist die Ausgabe von [`git::Auftrag::TagsAufHead`], ein Name je
 /// Zeile. Kein Prozessaufruf, kein Git-Verzeichnis: der gruene Fall ist hier
 /// abzunehmen und nicht an einem Lauf, der einen gesetzten Tag voraussetzt.
 fn tagstand_pruefen(tags_auf_head: &str, tag: &str) -> Result<(), String> {
@@ -448,7 +500,10 @@ fn ohne_tag_meldung(tags_auf_head: &str, tag: &str) -> String {
 ///
 /// **Es ist ein Aufruf und nicht zwei.** Zwei haetten einen Zwischenzustand, in
 /// dem der Zweig oben steht und der Tag nicht; und eine Liste, die beide
-/// Referenzen traegt, ist an einer Stelle nachzusehen statt an zweien.
+/// Referenzen traegt, ist an einer Stelle nachzusehen statt an zweien. Die
+/// Liste selbst steht als [`git::Auftrag::Schub`] und nicht hier — dort steht
+/// die Aufsicht, die sie liest. Was hier steht, ist die Entscheidung zu
+/// schieben, und die gehoert hierher.
 ///
 /// **Der Aufruf geht durch [`git::rufen`]** und legt keine zweite
 /// Git-Aufrufstelle an; die Probe `xtask_ruft_git_an_genau_einer_stelle` in
@@ -457,35 +512,13 @@ fn ohne_tag_meldung(tags_auf_head: &str, tag: &str) -> String {
 /// **Was schiefgehen kann, geht laut schief.** Ein losgeloester HEAD, ein
 /// zurueckgefallener Zweig, ein auf der Gegenseite anders stehender Tag: jeder
 /// dieser Faelle laesst `git` mit einem Rueckgabewert ungleich null enden, und
-/// der Lauf bricht mit dessen Meldung ab. Erzwungen wird nichts.
+/// der Lauf bricht mit dessen Meldung ab. Erzwungen wird nichts, und die
+/// Aufsicht in `git` liesse es auch nicht zu.
 fn schieben(wurzel: &Path, tag: &str) -> Result<(), Abbruch> {
     let verweis = tagverweis(tag);
-    git::rufen(wurzel, &schiebe_argumente(&verweis))?;
+    git::rufen(wurzel, &git::Auftrag::Schub { verweis: &verweis })?;
     println!("Geschoben: HEAD und {verweis} stehen auf origin.");
     Ok(())
-}
-
-/// `git push origin HEAD refs/tags/<name>`: das dritte schreibende Kommando.
-///
-/// Genau vier Woerter. **Geschoben wird `HEAD` und nicht der Zweigname**, damit
-/// keine vierte lesende Frage nach `git` noetig wird — die drei Konstanten dort
-/// bleiben, wie sie sind, und die Probe `keine_der_drei_fragen_schreibt` laeuft
-/// unveraendert durch. `HEAD` als Quellreferenz schreibt auf der Gegenseite in
-/// den Zweig gleichen Namens.
-///
-/// **Nachgesehen wird es Wort fuer Wort, und zwar dort, wo auch die zwei
-/// aelteren schreibenden Kommandos nachgesehen werden:**
-/// `version::tests::die_schreibenden_kommandos_tragen_keine_gewalt`. Die
-/// Aufsicht bleibt an jener einen Stelle, weil es eine ist; der Bauer steht
-/// hier, weil das Schieben hierher gehoert.
-///
-/// **Der Verweis kommt fertig herein und wird nicht hier gefuegt.** Der
-/// Rueckgabetyp ist `Vec<&str>` wie bei den zwei aelteren Bauern, damit die eine
-/// Aufsicht alle drei gleich liest; ein hier zusammengesetztes Wort koennte
-/// dieser Vektor nicht besitzen. Gefuegt wird in [`tagverweis`], gleich nebenan.
-#[must_use]
-pub(crate) fn schiebe_argumente(tagverweis: &str) -> Vec<&str> {
-    vec!["push", "origin", "HEAD", tagverweis]
 }
 
 /// Der Platzhalter, an dem [`RELEASETEXT`] die Versionszahl aufnimmt.
@@ -587,7 +620,7 @@ fn releaseseite_anlegen(wurzel: &Path, zahl: &str, tag: &str, zip: &Path) -> Res
         .arg(zip)
         .current_dir(wurzel)
         .output()
-        .map_err(|fehler| Abbruch::Lauf(gh_fehlt_meldung(&fehler.to_string())))?;
+        .map_err(|fehler| Abbruch::Lauf(spaet_ohne_gh_meldung(&fehler.to_string())))?;
     if !angelegt.status.success() {
         return Err(Abbruch::Lauf(format!(
             "Das Release {tag} liess sich nicht anlegen ({}): {}\n\
@@ -625,7 +658,7 @@ fn release_steht(wurzel: &Path, tag: &str) -> Result<bool, Abbruch> {
         .arg(tag)
         .current_dir(wurzel)
         .output()
-        .map_err(|fehler| Abbruch::Lauf(gh_fehlt_meldung(&fehler.to_string())))?;
+        .map_err(|fehler| Abbruch::Lauf(spaet_ohne_gh_meldung(&fehler.to_string())))?;
     Ok(gefragt.status.success())
 }
 
@@ -692,7 +725,7 @@ mod tests {
         assert!(!meldung.contains("certify-only"), "{meldung}");
     }
 
-    /// Fehlt `gh`, nennt die Meldung das Werkzeug und die Folge.
+    /// Fehlt `gh`, nennt die Meldung das Werkzeug und die Abhilfe.
     ///
     /// Der Wortlaut ist ohne `gh` abnehmbar, weil die Meldung eine reine
     /// Funktion ist; auf diesem Geraet ist `gh` am 260821 nicht installiert.
@@ -705,10 +738,43 @@ mod tests {
         );
         assert!(meldung.contains("brew install gh"), "{meldung}");
         assert!(meldung.contains("No such file or directory"), "{meldung}");
+    }
+
+    /// Die geteilte Haelfte sagt ueber den Stand des Laufs nichts, und jede
+    /// der zwei Stellen sagt ihn selbst.
+    ///
+    /// **Das ist die Berichtigung vom 260821.** Der Satz „Es ist nichts
+    /// gepackt und nichts veroeffentlicht" stand in der gemeinsamen Haelfte
+    /// und galt an zwei von drei Verwendungsstellen nicht: hinter dem Packen
+    /// und hinter dem Schieben sagte er dem Nutzer das Gegenteil dessen, was
+    /// auf der Platte und auf der Gegenseite steht. Diese Probe haelt beide
+    /// Richtungen — dass der Satz aus der geteilten Haelfte heraus ist, und
+    /// dass jede der zwei Stellen ihren eigenen Stand nennt.
+    #[test]
+    fn jede_gh_meldung_nennt_den_stand_der_an_ihrer_stelle_gilt() {
+        let grund = "No such file or directory (os error 2)";
+        let geteilt = gh_fehlt_meldung(grund);
+        assert!(!geteilt.contains("nichts gepackt"), "{geteilt}");
+        assert!(!geteilt.contains("Geschoben"), "{geteilt}");
+        assert!(!geteilt.contains("geschoben"), "{geteilt}");
+
+        let vorab = vorab_ohne_gh_meldung(grund);
         assert!(
-            meldung.contains("nichts gepackt und nichts veroeffentlicht"),
-            "{meldung}"
+            vorab.contains("Es ist nichts gepackt und nichts veroeffentlicht."),
+            "{vorab}"
         );
+
+        let spaet = spaet_ohne_gh_meldung(grund);
+        assert!(!spaet.contains("nichts gepackt"), "{spaet}");
+        assert!(spaet.contains("Gepackt ist bereits"), "{spaet}");
+        assert!(spaet.contains("geschoben ist ebenfalls schon"), "{spaet}");
+        assert!(spaet.contains("allein die Releaseseite"), "{spaet}");
+
+        // Beide tragen weiter, was ueberall stimmt: Werkzeug, Grund, Abhilfe.
+        for meldung in [&vorab, &spaet] {
+            assert!(meldung.contains("brew install gh"), "{meldung}");
+            assert!(meldung.contains(grund), "{meldung}");
+        }
     }
 
     /// Ist `gh` da und nicht angemeldet, nennt die Meldung den Handgriff.
@@ -725,10 +791,18 @@ mod tests {
 
     /// Der Rumpf der achten Station, in seiner festgelegten Reihenfolge.
     ///
-    /// Vier Stellen, drei Vergleiche: die Pruefung auf `gh` steht vor dem
-    /// Packen, das Packen vor dem Schieben, das Schieben vor dem Anlegen. Daran
-    /// haengt die Zusage, dass ein Abbruch an der aeusseren Voraussetzung nichts
+    /// Sechs Stellen, fuenf Vergleiche, eine Kette: `gh` vor der Tagfrage, die
+    /// Tagfrage vor der Ticketpruefung, die Ticketpruefung vor dem Packen, das
+    /// Packen vor dem Schieben, das Schieben vor dem Anlegen. Daran haengt die
+    /// Zusage, die der Doc-Kommentar von [`veroeffentlichen`] ausschreibt: die
+    /// drei Pruefungen stehen vorn, weil ein Abbruch an ihnen nichts
     /// hinterlaesst — weder ein Zip noch eine geschobene Referenz.
+    ///
+    /// **Bis zum 260821 waren es vier Stellen und drei Vergleiche**, und die
+    /// zwei, die fehlten, lagen beide in der pruefenden Haelfte: wer
+    /// `ticket_pruefen` hinter `zip_packen` zoege, liesse jede Probe gruen und
+    /// braeche genau jene Zusage (Durchsicht 260821-1346, B1). Die Kette ist
+    /// deshalb so lang wie der Rumpf.
     ///
     /// **Was diese Probe nicht sieht:** sie liest die Reihenfolge des Textes im
     /// Rumpf von [`veroeffentlichen`] und nicht den Ablauf — dieselbe Grenze wie
@@ -740,28 +814,28 @@ mod tests {
     fn die_voraussetzungspruefung_steht_vor_dem_ersten_wirken() {
         let rumpf = rumpf_von(concat!("pub(crate) fn ", "veroeffentlichen("));
 
-        let voraussetzung = rumpf
-            .find(concat!("gh_", "pruefen()"))
-            .expect("die Station prueft die aeussere Voraussetzung");
-        let packen = rumpf
-            .find(concat!("zip_", "packen(&"))
-            .expect("die Station packt");
-        let schieben = rumpf
-            .find(concat!("schieben(&", "wurzel"))
-            .expect("die Station schiebt");
-        let anlegen = rumpf
-            .find(concat!("releaseseite_", "anlegen(&"))
-            .expect("die Station legt die Releaseseite an");
+        let kette = [
+            (
+                "die Pruefung der aeusseren Voraussetzung",
+                concat!("gh_", "pruefen()"),
+            ),
+            ("die Tagfrage", concat!("tagstand_", "fragen(&wurzel")),
+            ("die Ticketpruefung", concat!("ticket_", "pruefen(&buendel")),
+            ("das Packen", concat!("zip_", "packen(&")),
+            ("das Schieben", concat!("schieben(&", "wurzel")),
+            ("das Anlegen", concat!("releaseseite_", "anlegen(&")),
+        ];
 
-        assert!(
-            voraussetzung < packen,
-            "die Pruefung auf gh steht hinter dem Packen"
-        );
-        assert!(packen < schieben, "das Schieben steht vor dem Packen");
-        assert!(
-            schieben < anlegen,
-            "die Releaseseite entsteht vor dem Schieben"
-        );
+        let mut voriger: Option<(&str, usize)> = None;
+        for (name, nadel) in kette {
+            let stelle = rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("die Station faehrt {name} nicht"));
+            if let Some((vorname, vorstelle)) = voriger {
+                assert!(vorstelle < stelle, "{vorname} steht hinter {name}");
+            }
+            voriger = Some((name, stelle));
+        }
     }
 
     /// Der Rumpf einer Funktion dieses Moduls, von ihrer Kopfzeile bis zur
@@ -804,16 +878,17 @@ mod tests {
 
     /// Das Schieben traegt genau vier Woerter, und keines erweitert es.
     ///
-    /// Die Aufsicht ueber alle drei schreibenden Kommandos steht in
-    /// `version::tests::die_schreibenden_kommandos_tragen_keine_gewalt`; diese
-    /// Probe hier sieht die Fuegung nach, die dort nicht entsteht: dass der
-    /// Verweis `refs/tags/<name>` heisst und der Tagname sein `v` traegt.
+    /// Die Aufsicht ueber jeden Auftrag steht seit dem 260821 in
+    /// `git::aufsichtsbefund`, auf dem Weg zum Prozessaufruf; diese Probe hier
+    /// sieht die Fuegung nach, die dort nicht entsteht: dass der Verweis
+    /// `refs/tags/<name>` heisst und der Tagname sein `v` traegt.
     #[test]
     fn das_schieben_traegt_genau_vier_woerter() {
         assert_eq!(tagname("0.5.6"), "v0.5.6");
         assert_eq!(tagverweis("v0.5.6"), "refs/tags/v0.5.6");
+        let verweis = tagverweis(&tagname("0.5.6"));
         assert_eq!(
-            schiebe_argumente(&tagverweis(&tagname("0.5.6"))),
+            git::Auftrag::Schub { verweis: &verweis }.worte(),
             vec!["push", "origin", "HEAD", "refs/tags/v0.5.6"]
         );
     }

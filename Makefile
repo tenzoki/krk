@@ -126,8 +126,13 @@ ausliefern: ## Version setzen, eintragen, taggen und ausliefern: make ausliefern
 	$(CARGO) xtask version $(VERSION)
 	$(MAKE) release
 
+# **Dieses Ziel wirkt ueber das Geraet hinaus.** Die achte Station schiebt HEAD
+# und den Tag zu origin und legt eine oeffentliche Releaseseite an; das ist die
+# einzige Wirkung der ganzen Kette, die sich nicht zuruecknehmen laesst. Die
+# ##-Zeile darunter nennt sie deshalb, denn sie ist es, die `make help` vor dem
+# Tippen ausgibt. Bis zum 260821 tat sie es nicht (Durchsicht 260821-1346, F1).
 .PHONY: release
-release: ## Universelles Buendel bauen, mit Developer-ID signieren, beglaubigen
+release: ## Bauen, signieren, beglaubigen, HEAD und Tag zu origin schieben, veroeffentlichen
 	KRK_NOTARY_PROFILE=$(NOTARPROFIL) $(CARGO) xtask release
 
 # Der Nur-Beglaubigungsweg: fuer den Lauf, der erst an der siebten Station

@@ -80,17 +80,27 @@ xtask — Bauwerkzeug fuer KRK
       dasselbe Buendel wie `bundle`, signiert mit einer
       Developer-ID-Identitaet und gehaerteter Laufzeitumgebung, reicht ueber
       \"xcrun notarytool submit --wait\" zur Beglaubigung ein, heftet das
-      Ergebnis mit \"xcrun stapler staple\" an und veroeffentlicht es als
-      GitHub-Release. Dazwischen laufen drei
+      Ergebnis mit \"xcrun stapler staple\" an, packt es zu
+      target/KRK-<version>.zip, **schiebt HEAD und refs/tags/v<version> zu
+      origin** und haengt das Zip an eine oeffentliche GitHub-Releaseseite.
+      Das Schieben ist die einzige Wirkung dieser Kette, die ueber das Geraet
+      hinausgeht und sich nicht zuruecknehmen laesst. Dazwischen laufen drei
       Vorlaeufe, die einer spaeteren Station zuarbeiten: die Buendelvorlage,
       die Identitaetssuche und die Zielpruefung.
 
       Station 1 ist die Vorpruefung, und sie steht ganz vorn, damit ein
       Abbruch keinen Uebersetzungslauf kostet: HEAD muss einen Tag v<version>
-      mit der Zahl aus [workspace.package] tragen, und keine verfolgte Datei
-      darf geaendert sein. Unbeachtete Dateien zaehlen nicht mit. Sie liest
-      allein; geschrieben hat der Halbschritt davor, \"cargo xtask version\".
-      `cargo xtask bundle` fragt weder nach dem einen noch nach dem anderen.
+      mit der Zahl aus [workspace.package] tragen, keine verfolgte Datei darf
+      geaendert sein, und gh muss vorhanden und angemeldet sein. Unbeachtete
+      Dateien zaehlen nicht mit. Sie liest allein; geschrieben hat der
+      Halbschritt davor, \"cargo xtask version\". `cargo xtask bundle` fragt
+      nach keinem der drei.
+
+      Dass gh schon hier gefragt wird und nicht erst in Station 8, hat einen
+      Grund: eine fehlende Voraussetzung soll auffallen, solange nichts
+      geschehen ist, und am Kopf der achten Station waere die Einreichung bei
+      Apple bereits gelaufen. Station 8 fragt trotzdem noch einmal, weil ihr
+      zweiter Rufer keine Station vor sich hat.
 
       Die Identitaetssuche laeuft in denselben drei Stufen wie bei `bundle`,
       nur sucht die zweite nach dem Namensanfang \"Developer ID Application\".
@@ -363,6 +373,23 @@ mod tests {
         assert!(abschnitt.contains("Weitergabe"), "{abschnitt}");
         assert!(abschnitt.contains("Gatekeeper"), "{abschnitt}");
         assert!(abschnitt.contains("./release.sh <zahl>"), "{abschnitt}");
+    }
+
+    /// Der Abschnitt zu `release` nennt das Schieben.
+    ///
+    /// **Warum gerade diese Wendung gehalten wird.** Das Schieben ist die
+    /// einzige Wirkung des Wegs, die ueber das Geraet hinausgeht und sich nicht
+    /// zuruecknehmen laesst; wer den Befehl nachschlaegt, bevor er ihn tippt,
+    /// muss sie dort lesen. Bis zum 260821 sagte der Abschnitt allein
+    /// „veroeffentlicht es als GitHub-Release", und das Schieben stand nur im
+    /// Abschnitt zu `veroeffentlichen`, den nicht liest, wer `release` sucht
+    /// (Durchsicht 260821-1346, F1).
+    #[test]
+    fn der_abschnitt_zu_release_nennt_das_schieben() {
+        let abschnitt = hilfeabschnitt("cargo xtask release");
+        assert!(abschnitt.contains("schiebt HEAD"), "{abschnitt}");
+        assert!(abschnitt.contains("origin"), "{abschnitt}");
+        assert!(abschnitt.contains("nicht zuruecknehmen"), "{abschnitt}");
     }
 
     /// Die Hilfe sagt, was der Weg nicht prueft, und was daraus folgt.

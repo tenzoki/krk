@@ -6,13 +6,24 @@
 //! spaeteren Station dient. Die Reihenfolge unten ist die des Quelltextes in
 //! [`ausfuehren`].
 //!
-//! 1. **Tag und Arbeitsbaum pruefen:** HEAD traegt einen Tag `v<version>` mit
-//!    der Zahl aus `[workspace.package]`, und keine verfolgte Datei ist
-//!    geaendert. Die billigste Station des Weges und die, die am haeufigsten
-//!    anschlaegt; sie steht ganz vorn, damit ein Abbruch dieser Art keinen
-//!    Uebersetzungslauf kostet. Was sie fragt, steht bei
+//! 1. **Tag, Arbeitsbaum und `gh` pruefen:** HEAD traegt einen Tag
+//!    `v<version>` mit der Zahl aus `[workspace.package]`, keine verfolgte
+//!    Datei ist geaendert, und das GitHub-Kommandozeilenwerkzeug ist vorhanden
+//!    und angemeldet. Die billigste Station des Weges und die, die am
+//!    haeufigsten anschlaegt; sie steht ganz vorn, damit ein Abbruch dieser Art
+//!    keinen Uebersetzungslauf kostet. Was sie fragt, steht bei
 //!    [`auslieferungsstand_pruefen`], der Vergleich selbst bei
 //!    [`stand_pruefen`].
+//!
+//!    **`gh` steht seit dem 260821 hier und nicht mehr allein am Kopf der
+//!    achten Station.** Die Zusage des Specs lautet, dass eine fehlende
+//!    Voraussetzung auffallen soll, solange noch nichts geschehen ist; am Kopf
+//!    der achten Station war zu diesem Zeitpunkt bereits eine Einreichung bei
+//!    Apple abgeschlossen (Durchsicht 260821-1346, B4). Das Vorziehen kostet
+//!    nichts: die Frage geht an das Werkzeug und nicht an den Baum, `bundle`
+//!    bekommt keine neue Vorbedingung, und `make check` keine Abhaengigkeit
+//!    von `gh`. Die achte Station behaelt ihre eigene Pruefung, denn sie hat
+//!    einen zweiten Rufer, vor dem keine Station steht.
 //!
 //!    **Sie liest, und sie liest jetzt gegen etwas Geschriebenes.** Den Tag
 //!    setzt seit dem 260813 `cargo xtask version <zahl>`, der Halbschritt vor
@@ -71,8 +82,15 @@
 //!    Gegenseite, und an einer oeffentlichen Releaseseite haengt danach das
 //!    Zip. Was sie vorher prueft, ist `gh`: vorhanden und angemeldet. Das ist
 //!    die dritte aeussere Voraussetzung der Kette, neben dem vollstaendigen
-//!    Xcode und dem Apple-Entwicklerkonto von Station 7; fehlt sie, bricht
+//!    Xcode und dem Apple-Entwicklerkonto von Station 7. Auf diesem Weg hat
+//!    Station 1 sie schon erfragt; die Station fragt trotzdem noch einmal,
+//!    weil ihr zweiter Rufer keine Station vor sich hat. Fehlt sie, bricht
 //!    allein diese Station ab, und das beglaubigte Buendel bleibt liegen.
+//!
+//!    **Was sie im Erfolgsfall schreibt, steht ausserhalb dieses Geraets:**
+//!    HEAD und `refs/tags/v<version>` gehen zu `origin`, und die Releaseseite
+//!    ist oeffentlich. Das ist die einzige Wirkung der ganzen Kette, die sich
+//!    nicht zuruecknehmen laesst.
 //!
 //!    **Sie steht in `veroeffentlichung.rs` und hat wie Station 7 zwei
 //!    Rufer**, diesen hier und `cargo xtask veroeffentlichen <zahl>`. Der
@@ -183,6 +201,14 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 
     auslieferungsstand_pruefen(&bundle::wurzel())?;
 
+    // Die aeussere Voraussetzung der achten Station, hier vorn erfragt. Sie
+    // kostet nichts und laesst den Baum, wie er ist; stuende sie allein am Kopf
+    // der achten, faende ein Lauf ohne `gh` das erst hinter einer
+    // abgeschlossenen Einreichung bei Apple heraus. Die achte Station fragt
+    // trotzdem noch einmal — sie hat einen zweiten Rufer, vor dem keine Station
+    // steht.
+    veroeffentlichung::gh_pruefen()?;
+
     let vorlage = bundle::vorbereiten()?;
     appkit_grenze_pruefen(&vorlage.wurzel)?;
     let identitaet = sign::bestimmen_fuer_release()?;
@@ -222,8 +248,9 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 /// Station 1: HEAD traegt den passenden Tag, und der Arbeitsbaum entspricht
 /// ihm.
 ///
-/// Sie stellt `git` die drei Fragen [`git::VERZEICHNIS`], [`git::TAGS_AUF_HEAD`]
-/// und [`git::STAND`] und reicht die beiden Antworten an [`stand_pruefen`]
+/// Sie stellt `git` die drei Fragen [`git::Auftrag::Verzeichnis`],
+/// [`git::Auftrag::TagsAufHead`] und [`git::Auftrag::Stand`] und reicht die
+/// beiden Antworten an [`stand_pruefen`]
 /// weiter. **Alle drei lesen.** Aus diesem Modul entsteht kein `git tag`, kein
 /// `git commit` und kein Schreibzugriff; wer schreibt, ist `version`, und das
 /// laeuft vor diesem Kommando und in einem eigenen Prozess.
@@ -233,7 +260,7 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 /// Versionszahl entsteht nicht, und ein Zerteiler fuer die `Cargo.toml` auch
 /// nicht.
 fn auslieferungsstand_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
-    git::rufen(wurzel, git::VERZEICHNIS).map_err(|fehler| {
+    git::rufen(wurzel, &git::Auftrag::Verzeichnis).map_err(|fehler| {
         let grund = match fehler {
             Abbruch::Lauf(text) | Abbruch::Aufruf(text) => text,
         };
@@ -249,8 +276,8 @@ fn auslieferungsstand_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
         ))
     })?;
 
-    let tags = git::rufen(wurzel, git::TAGS_AUF_HEAD)?;
-    let geaenderte = git::rufen(wurzel, git::STAND)?;
+    let tags = git::rufen(wurzel, &git::Auftrag::TagsAufHead)?;
+    let geaenderte = git::rufen(wurzel, &git::Auftrag::Stand)?;
     stand_pruefen(bundle::VERSION, &tags, &geaenderte).map_err(Abbruch::Lauf)?;
 
     println!(
@@ -1124,6 +1151,38 @@ mod tests {
         );
     }
 
+    /// Die aeussere Voraussetzung steht vor dem ersten Uebersetzungslauf.
+    ///
+    /// Dieselbe Zusage wie bei
+    /// [`die_standpruefung_steht_vor_der_ersten_uebersetzung`], fuer die dritte
+    /// aeussere Voraussetzung der Kette: fehlt `gh`, faellt es auf, bevor
+    /// irgendetwas geschehen ist — und nicht erst hinter einer abgeschlossenen
+    /// Einreichung bei Apple (Durchsicht 260821-1346, B4).
+    ///
+    /// **Was diese Probe nicht sieht:** dieselbe Grenze wie dort — sie liest
+    /// die Reihenfolge des Textes und nicht den Ablauf.
+    #[test]
+    fn die_aeussere_voraussetzung_steht_vor_der_ersten_uebersetzung() {
+        let quelle = include_str!("release.rs");
+        let anfang = quelle
+            .find(concat!("pub fn ", "ausfuehren("))
+            .expect("release.rs fuehrt ausfuehren");
+        let rumpf = &quelle[anfang..];
+        let ende = rumpf.find("\n}\n").expect("ausfuehren hat ein Ende");
+        let rumpf = &rumpf[..ende];
+
+        let pruefung = rumpf
+            .find(concat!("veroeffentlichung::gh_", "pruefen()"))
+            .expect("ausfuehren fragt nach gh");
+        let uebersetzung = rumpf
+            .find("bundle::uebersetzen(")
+            .expect("ausfuehren uebersetzt");
+        assert!(
+            pruefung < uebersetzung,
+            "die Frage nach gh steht hinter dem ersten Uebersetzungslauf"
+        );
+    }
+
     /// Die achte Station steht hinter der Beglaubigung (C1.4).
     ///
     /// Die Reihenfolge ist keine Bequemlichkeit: veroeffentlicht wird ein
@@ -1156,8 +1215,35 @@ mod tests {
         );
     }
 
+    /// Die Hilfezeile des `Makefile` nennt das Schieben.
+    ///
+    /// **Was `make help` ausgibt, ist das Letzte, was der Nutzer vor dem Tippen
+    /// liest.** `make release` schiebt seit dem 260821 HEAD und einen Tag zu
+    /// `origin`; die `##`-Zeile sagte es bis zur Durchsicht 260821-1346 nicht.
+    /// Die Zaehlprobe darunter konnte die Stelle nicht fangen, denn eine
+    /// Zaehlprobe faengt, was falsch **dasteht**, nie, was fehlt. Diese hier
+    /// fragt nach dem, was dastehen muss.
+    #[test]
+    fn die_hilfezeile_des_makefiles_nennt_das_schieben() {
+        let makefile =
+            fs::read_to_string(bundle::wurzel().join("Makefile")).expect("das Makefile ist lesbar");
+        let zeile = makefile
+            .lines()
+            .find(|zeile| zeile.starts_with("release: ##"))
+            .expect("das Makefile fuehrt ein Ziel release mit Hilfezeile");
+        assert!(zeile.contains("origin"), "{zeile}");
+        assert!(zeile.contains("schieben"), "{zeile}");
+    }
+
     /// Alle `.rs`-Dateien des Baums, ohne `target/` und ohne das
     /// Git-Verzeichnis.
+    fn rust_dateien(wurzel: &Path) -> Vec<PathBuf> {
+        let mut gefunden = Vec::new();
+        sammeln(wurzel, &mut gefunden);
+        gefunden.sort();
+        gefunden
+    }
+
     /// Der Quellbaum nennt die alte Stationszahl nicht mehr (C6.3).
     ///
     /// Gelesen werden `README.md`, das `Makefile` und jede `.rs`-Datei unter
@@ -1196,13 +1282,6 @@ mod tests {
             stellen.is_empty(),
             "die alte Zahl steht noch in {stellen:?}"
         );
-    }
-
-    fn rust_dateien(wurzel: &Path) -> Vec<PathBuf> {
-        let mut gefunden = Vec::new();
-        sammeln(wurzel, &mut gefunden);
-        gefunden.sort();
-        gefunden
     }
 
     fn sammeln(ordner: &Path, gefunden: &mut Vec<PathBuf>) {

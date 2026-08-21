@@ -39,6 +39,17 @@
 //! laufenden `cargo run` heraus nicht an der Bausperre haengenbleibt, ist am
 //! 260813 nachgemessen.
 //!
+//! **Die drei Kommandos, die dieser Schritt an `git` reicht, stehen nicht in
+//! diesem Modul.** Bis zum 260821 baute es die Wortlisten fuer
+//! `git tag --list`, `git tag <name>` und `git commit --only` selbst. Sie
+//! stehen jetzt als Varianten von [`git::Auftrag`], weil dort die Aufsicht
+//! ueber sie steht: eine Wortliste, die neben der Aufzaehlung gebaut wird,
+//! kaeme an der Aufsicht vorbei, und genau das war der Zustand, den die
+//! Durchsicht vom 260821-1346 unter A1 benannt hat. Was hier bleibt, ist die
+//! Entscheidung, welchen Auftrag dieser Schritt erteilt — die
+//! Fallunterscheidung [`Vorhaben`] —, und welche zwei Dateien der Eintrag
+//! traegt, [`EINGETRAGENE`].
+//!
 //! **Was ein Abbruch hinterlaesst.** Alles, was ohne Schreiben zu pruefen ist,
 //! wird vor dem ersten Schreiben geprueft: die Zahl, das Git-Verzeichnis, der
 //! Arbeitsbaum und der Tag. Danach gibt es zwei Fenster. Scheitert die
@@ -99,7 +110,7 @@ pub(crate) fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 
     // Erst fragen, dann schreiben. Die vier Vorpruefungen kosten nichts und
     // lassen den Baum, wie er ist.
-    git::rufen(&wurzel, git::VERZEICHNIS).map_err(|fehler| {
+    git::rufen(&wurzel, &git::Auftrag::Verzeichnis).map_err(|fehler| {
         let grund = match fehler {
             Abbruch::Lauf(text) | Abbruch::Aufruf(text) => text,
         };
@@ -113,14 +124,14 @@ pub(crate) fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         ))
     })?;
 
-    let stand = git::rufen(&wurzel, git::STAND)?;
+    let stand = git::rufen(&wurzel, &git::Auftrag::Stand)?;
     let geaendert = git::geaenderte_dateien(&stand);
     if !geaendert.is_empty() {
         return Err(Abbruch::Lauf(arbeitsbaum_meldung(&geaendert, zahl)));
     }
 
-    let auf_head = git::rufen(&wurzel, git::TAGS_AUF_HEAD)?;
-    let vorhandene = git::rufen(&wurzel, &tagliste_argumente(&tagname))?;
+    let auf_head = git::rufen(&wurzel, &git::Auftrag::TagsAufHead)?;
+    let vorhandene = git::rufen(&wurzel, &git::Auftrag::Tagliste(&tagname))?;
     let tag_auf_head = git::tag_steht(&auf_head, &tagname);
     let tag_existiert = git::tag_steht(&vorhandene, &tagname);
 
@@ -199,7 +210,11 @@ fn setzen_eintragen_taggen(
     }
 
     let meldung = eintragsmeldung(neu);
-    if let Err(fehler) = git::rufen(wurzel, &eintrag_argumente(&meldung)) {
+    let eintrag = git::Auftrag::Eintrag {
+        meldung: &meldung,
+        dateien: &EINGETRAGENE,
+    };
+    if let Err(fehler) = git::rufen(wurzel, &eintrag) {
         return Err(mit_ruecknahme(fehler, &voriger));
     }
     println!("Eingetragen: {meldung}");
@@ -214,7 +229,7 @@ fn setzen_eintragen_taggen(
 /// `eintrag_steht` entscheidet allein ueber den Wortlaut des Abbruchs: ist der
 /// Eintrag gerade entstanden, muss die Meldung sagen, dass er stehenbleibt.
 fn taggen(wurzel: &Path, tagname: &str, eintrag_steht: bool) -> Result<(), Abbruch> {
-    match git::rufen(wurzel, &tag_argumente(tagname)) {
+    match git::rufen(wurzel, &git::Auftrag::TagSetzen(tagname)) {
         Ok(_) => {
             println!("Tag {tagname} steht auf HEAD.");
             Ok(())
@@ -517,56 +532,9 @@ fn eintragsmeldung(neu: &str) -> String {
     format!("chore(release): die Version steht auf {neu}")
 }
 
-/// `git tag --list <name>`: steht dieser Tag irgendwo im Verzeichnis?
-///
-/// `--list` ist das, was den Aufruf zu einer Frage macht. Ohne die Marke legte
-/// derselbe Aufruf den Tag an, und die Probe `die_tagliste_fragt_nur` sieht
-/// deshalb nach ihr.
-fn tagliste_argumente(tagname: &str) -> Vec<&str> {
-    vec!["tag", "--list", tagname]
-}
-
-/// `git tag <name>`: der leichte Tag auf HEAD.
-///
-/// Leicht und nicht annotiert, wie `v0.1.0` vom 260813, den der Nutzer von
-/// Hand gesetzt hat. Station 1 von `release` fragt `--points-at` und
-/// unterscheidet die beiden Arten nicht; zwei Arten nebeneinander waeren
-/// trotzdem zwei Schreibweisen fuer dieselbe Sache.
-///
-/// **Ohne `-f`.** Ein bestehender Tag laesst diesen Aufruf scheitern, und das
-/// ist die Absicht: [`vorhaben_bestimmen`] hat den Fall vorher entschieden.
-fn tag_argumente(tagname: &str) -> Vec<&str> {
-    vec!["tag", tagname]
-}
-
-/// `git commit --only -- Cargo.toml Cargo.lock`: der Eintrag der einen
-/// Aenderung.
-///
-/// **`--only` mit Pfaden und kein `git add`.** Der Eintrag entsteht aus dem
-/// Stand dieser beiden Dateien im Arbeitsbaum, ohne die Vormerkung anzufassen.
-/// Das hat zwei Wirkungen: ein gescheiterter Eintrag laesst nichts Vorgemerktes
-/// zurueck, das jemand wegraeumen muesste, und der Lauf greift nicht auf die
-/// gemeinsame Vormerkung zu, an der in diesem Projekt auch Agenten arbeiten.
-fn eintrag_argumente(meldung: &str) -> Vec<&str> {
-    vec![
-        "commit",
-        "--only",
-        "-m",
-        meldung,
-        "--",
-        EINGETRAGENE[0],
-        EINGETRAGENE[1],
-    ]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Der dritte Bauer der Argumentlisten steht dort, wo das Schieben
-    // hingehoert; die Aufsicht ueber alle drei steht hier. Warum, sagt der
-    // Pruefkommentar von `die_schreibenden_kommandos_tragen_keine_gewalt`.
-    use crate::veroeffentlichung;
 
     /// Die Wurzel-Cargo.toml in klein: Abschnitte drumherum, Kommentare drin,
     /// und in den anderen Abschnitten Zeilen, die genauso anfangen.
@@ -769,86 +737,39 @@ toml = \"1\"
         assert!(meldung.contains("1 verfolgte Datei ist"), "{meldung}");
     }
 
-    /// Die Frage nach einem Tag legt keinen an, und daran haengt die Marke.
+    /// Die Auftraege dieses Schritts stehen und werden in `git` nachgesehen.
+    ///
+    /// **Bis zum 260821 stand hier die Aufsicht ueber die schreibenden
+    /// Kommandos**, und sie zaehlte drei Bauer namentlich auf. Sie steht jetzt
+    /// in `git::aufsichtsbefund`, und zwar auf dem Weg zum Prozessaufruf statt
+    /// daneben: gelesen wird dort jede Liste, die wirklich hinausgeht, und
+    /// nicht die, an die jemand gedacht hat. Was hier bleibt, ist die Frage,
+    /// die dieses Modul allein beantwortet — welchen Auftrag der Schritt
+    /// erteilt.
     #[test]
-    fn die_tagliste_fragt_nur() {
-        let argumente = tagliste_argumente("v0.2.0");
-        assert_eq!(argumente, vec!["tag", "--list", "v0.2.0"]);
-        assert!(argumente.contains(&"--list"), "{argumente:?}");
-    }
-
-    /// Die drei schreibenden Kommandos, Wort fuer Wort. Sie koennen keine
-    /// Konstanten sein, weil jedes einen Wert aus der Befehlszeile traegt;
-    /// nachgesehen werden sie trotzdem.
-    ///
-    /// **Seit dem 260821 deckt diese Aufsicht drei Kommandos und nicht mehr
-    /// zwei.** Das dritte ist das Schieben, und sein Bauer steht nicht hier,
-    /// sondern in `veroeffentlichung`, wo das Schieben hingehoert. Die Aufsicht
-    /// ist trotzdem nicht mitgewandert und auch nicht verdoppelt worden: sie
-    /// liest die Listen, die bei `git::rufen` landen, und es gibt einen solchen
-    /// Aufruf im ganzen Baum. Eine zweite Aufsicht daneben waere eine zweite
-    /// Antwort darauf, was ein schreibendes Kommando dieses Werkzeugs tragen
-    /// darf.
-    ///
-    /// **Wie die Zusage seither lautet.** Bis dahin sagte sie, dass keines der
-    /// Kommandos eine Marke aus einer Liste traegt, und `push` stand in jener
-    /// Liste neben `--force`. Das geht nicht weiter, sobald ein Kommando `push`
-    /// **ist**. Sie steht deshalb in zwei Haelften, und die Teilung ist
-    /// trennscharf und ohne Ausnahmeliste:
-    ///
-    /// - **Das erste Wort ist der Unterbefehl und wird auf Gleichheit
-    ///   geprueft**, je Kommando einzeln: `tag`, `commit`, `push`. Damit ist
-    ///   gesagt, dass jedes genau eine Sache tut — und `push` ist an der einen
-    ///   Stelle erlaubt und an den zwei anderen ausgeschlossen, ohne dass
-    ///   irgendwo eine Ausnahme stuende. `add` faellt aus der Markenliste
-    ///   heraus, weil diese Haelfte es abdeckt.
-    /// - **Die Woerter danach tragen keine Marke, die Reichweite oder Gewalt
-    ///   hinzufuegt.** Die sechs des Schiebens und die drei, die schon
-    ///   dastanden.
-    #[test]
-    fn die_schreibenden_kommandos_tragen_keine_gewalt() {
-        let tag = tag_argumente("v0.2.0");
-        assert_eq!(tag, vec!["tag", "v0.2.0"]);
-
-        let eintrag = eintrag_argumente("chore(release): die Version steht auf 0.2.0");
-        assert!(
-            eintrag.starts_with(&["commit", "--only", "-m"]),
-            "{eintrag:?}"
+    fn dieser_schritt_erteilt_drei_auftraege() {
+        assert_eq!(
+            git::Auftrag::Tagliste("v0.2.0").worte(),
+            ["tag", "--list", "v0.2.0"]
         );
-        assert!(
-            eintrag.ends_with(&["--", "Cargo.toml", "Cargo.lock"]),
-            "{eintrag:?}"
-        );
-
-        let verweis = veroeffentlichung::tagverweis("v0.2.0");
-        let schub = veroeffentlichung::schiebe_argumente(&verweis);
-        assert_eq!(schub, vec!["push", "origin", "HEAD", "refs/tags/v0.2.0"]);
-
-        // Erste Haelfte: das erste Wort, auf Gleichheit.
-        for (kommando, unterbefehl) in [(&tag, "tag"), (&eintrag, "commit"), (&schub, "push")] {
-            assert_eq!(kommando.first(), Some(&unterbefehl), "{kommando:?}");
-        }
-
-        // Zweite Haelfte: keine Marke, die Reichweite oder Gewalt hinzufuegt.
-        const MARKEN: [&str; 9] = [
-            "--force",
-            "-f",
-            "--tags",
-            "--all",
-            "--mirror",
-            "--delete",
-            "--amend",
-            "--no-verify",
-            "-a",
-        ];
-        for kommando in [&tag, &eintrag, &schub] {
-            for marke in MARKEN {
-                assert!(
-                    !kommando[1..].contains(&marke),
-                    "{kommando:?} traegt {marke}"
-                );
+        assert_eq!(git::Auftrag::TagSetzen("v0.2.0").worte(), ["tag", "v0.2.0"]);
+        let meldung = eintragsmeldung("0.2.0");
+        assert_eq!(
+            git::Auftrag::Eintrag {
+                meldung: &meldung,
+                dateien: &EINGETRAGENE,
             }
-        }
+            .worte(),
+            [
+                "commit",
+                "--only",
+                "-m",
+                meldung.as_str(),
+                "--",
+                "Cargo.toml",
+                "Cargo.lock"
+            ]
+        );
     }
 
     #[test]

@@ -464,13 +464,22 @@ liest.
 `xtask_ruft_git_an_genau_einer_stelle`, `keine_der_drei_fragen_schreibt`,
 `allein_release_fragt_nach_tag_und_arbeitsbaum`. Eine davon wird bewusst erweitert,
 `die_schreibenden_kommandos_tragen_keine_gewalt`, und Schritt 5 schreibt aus, wie ihre Zusage
-danach lautet.
+danach lautet. **Nach der Durchsicht vom 260821-1346 ist sie durch etwas Stärkeres ersetzt** —
+`git::aufsichtsbefund` auf dem Weg zum Prozessaufruf statt einer Probe daneben; der Nachtrag am
+Ende dieses Plans schreibt aus, was das an den Kriterien C3.4 bis C3.7 ändert und was nicht.
 
-**Und was keine Probe hält, wird hier gesagt und nicht versprochen.** Dreizehn Kriterien
+**Und was keine Probe hält, wird hier gesagt und nicht versprochen.** Fünfzehn Kriterien
 verlangen einen echten Lauf gegen GitHub oder einen zweiten Mac; sie stehen unten in einer
-eigenen Tabelle und tragen in der Zuordnung den Vermerk „Nutzer". Dieses Projekt führt
-„Kriterium verspricht eine Probe und hat keine" als eigene Defektklasse, und der Weg daran
-vorbei ist, es auszusprechen.
+eigenen Tabelle und tragen in der Zuordnung entweder den Vermerk „Nutzer" oder den Zusatz
+„dazu Nutzer". Dieses Projekt führt „Kriterium verspricht eine Probe und hat keine" als eigene
+Defektklasse, und der Weg daran vorbei ist, es auszusprechen.
+
+**Zwei davon standen bis zum 260821 nicht in jener Tabelle**, und die Durchsicht
+`shared/reviews/260821-1346-coderev-artefakt-und-release.md` hat beide gefunden. Es ist
+dieselbe Defektklasse, die diese Runde schon einmal getroffen hat (C1.6 in Schritt 11): eine
+**Quelltextprobe** wurde für eine Zusage genommen, die den **Ablauf** betrifft. Die Regel, die
+daraus folgt und die diese Zuordnung seither anwendet: wo eine Quelltextprobe steht, gehört
+„dazu Nutzer" daneben — außer die Zusage ist selbst eine über den Text.
 
 ## Zuordnung der 40 Abnahmekriterien
 
@@ -483,7 +492,7 @@ sagt, wodurch es abgenommen wird.
 | C1.2 ohne Argument Rückgabewert 2 | 1 | Probe, dazu ein Lauf in Schritt 11 |
 | C1.3 falsche Zahl ist Aufruffehler | 1 | Probe |
 | C1.4 `release` fährt die achte Station | 7 | Quelltextprobe, dazu Nutzer |
-| C1.5 der Befehl baut nichts | 7 | Quelltextprobe |
+| C1.5 der Befehl baut nichts | 7 | Quelltextprobe, dazu Nutzer |
 | C1.6 ohne Bündel bricht er ab und nennt den ganzen Weg | 1 | Probe |
 | C2.1 `target/KRK-<zahl>.zip` liegt da | 4 | Probe auf `zipname`, der Lauf beim Nutzer |
 | C2.2 zweiter Mac ohne Netz, keine Rückfrage | 4 | Nutzer |
@@ -525,8 +534,15 @@ das ist die zulässige Richtung und kein Befund.
 
 ## Abnahme durch den Nutzer
 
-Dreizehn Kriterien sind ohne den Nutzer nicht abzunehmen. Kein Agent kommt an sie heran, und
-zwar aus drei Gründen, die alle außerhalb des Baums liegen.
+Fünfzehn Kriterien sind ohne den Nutzer nicht abzunehmen. Kein Agent kommt an sie heran, und
+zwar aus drei Gründen, die alle außerhalb des Baums liegen. **Die Zählung dieser Runde lautet
+damit: 25 an Proben und Lesen abgenommen, 15 warten auf den Nutzer** — und nicht 27 zu 13, wie
+sie bis zum 260821 hier stand.
+
+Ehrlicher als zwei Zahlen ist ein vierteiliger Schnitt, denn die 25 verdecken eine dritte
+Gruppe: **21 an Proben, 4 am Lesen** (C5.4, C5.5, C6.4, C6.5 tragen in der Zuordnung nicht
+„Probe", sondern „Lesen"), **9 allein beim Nutzer, 6 halb an einer Probe und halb beim
+Nutzer**.
 
 **Was der Nutzer vorher tun muss.** `gh` installieren; `gh auth login` fahren; einmalig
 `git push origin --tags` fahren, weil auf der Gegenseite 13 der 14 lokalen Tags fehlen. Erst
@@ -535,6 +551,8 @@ danach ist ein Lauf möglich.
 | Kriterium | Warum es den Nutzer verlangt |
 |---|---|
 | C1.1 | Ein vollständiger Lauf braucht `gh` und eine Anmeldung. |
+| C1.4 | Die Quelltextprobe `die_achte_station_steht_hinter_der_beglaubigung` liest die Reihenfolge des **Textes** und nicht den Ablauf; ihr eigener Prüfkommentar sagt das. Dass `release` die achte Station wirklich fährt, sieht nur ein Lauf. |
+| C1.5 | Das Kriterium nennt sein Mittel selbst: „Prüfbar an den Änderungszeiten des Bündelinhalts vor und nach dem Lauf". Die Probe `dieser_weg_baut_nichts` sagt, dass das Modul die Bauaufrufe nicht **nennt** — nicht, dass nach einem Lauf nichts neu entstanden ist; und sie sieht nicht, dass `zip_packen` sehr wohl nach `target/` schreibt. |
 | C2.1 | Das Zip entsteht erst im Lauf. |
 | C2.2 | Ein zweiter Mac ohne Netzverbindung. |
 | C2.3 | Der Befund am entpackten Zip; die Prüffunktion selbst ist im Bau abgenommen. |
@@ -601,3 +619,35 @@ wurde; die Zahl bleibt richtig.
 - [ ] **Der Name des Unterbefehls, `veroeffentlichen`, ist eine Vorgabe des Specs und keine Wahl
       des Nutzers.** Er kann sie beim Durchsehen dieses Plans überschreiben; betroffen wären
       dann die Schritte 1, 7, 8 und 10.
+
+## Nachtrag: was die Durchsicht vom 260821-1346 am gebauten Stand geändert hat
+
+Die Durchsicht `shared/reviews/260821-1346-coderev-artefakt-und-release.md` hat neun Befunde
+gemeldet, keinen als Auslieferungshindernis. Behoben sind sie am selben Tag. Drei davon
+berühren Zusagen, die dieser Plan ausschreibt, und stehen deshalb hier und nicht nur dort.
+
+**Die Aufsicht über die schreibenden Kommandos steht jetzt auf dem Weg statt daneben (A1).**
+Schritt 5 hat sie als Erweiterung der Probe `die_schreibenden_kommandos_tragen_keine_gewalt`
+gebaut, und die zählte drei Bauer namentlich auf. Eine Aufzählung von Namen kann nicht zusagen,
+dass sie vollständig ist, und sie war es auch nicht: `version::tagliste_argumente` stand als
+vierter Bauer daneben. `git::rufen` nimmt seither keine nackte Wortliste mehr entgegen, sondern
+einen `git::Auftrag` — die vollständige Aufzählung jedes Kommandos, das dieses Werkzeug an `git`
+reicht —, und `git::aufsichtsbefund` liest vor jedem Prozessaufruf die Liste, die wirklich
+hinausgeht. Der Zuordnung ändert das nichts: **C3.4 hält weiter** (`die_auftraege_stehen_wort_fuer_wort`,
+jetzt über sieben statt drei Listen), **C3.5 hält weiter und deckt statt drei
+Kommandos alle sieben**, **C3.6 und C3.7 sind unverändert grün** — die Probe
+`keine_der_drei_fragen_schreibt` steht weiter unter diesem Namen und liest dieselben drei
+Fragen, nur in ihrer neuen Form als Varianten.
+
+**Die Markenliste hatte drei Lücken (A2).** `-d` als kurze Form von `--delete`,
+`--force-with-lease` und `--force-if-includes` — die ein Vergleich auf Gleichheit nicht deckt —
+und `--prune`; dazu ein Refspec mit führendem `+`, der ganz ohne Marke erzwingt. Alle vier sind
+geschlossen, und die Unterbefehle stehen seither als **Erlaubnisliste** statt als Verbotsliste:
+was niemand ausdrücklich erlaubt hat, kommt nicht durch.
+
+**`gh` wird auf dem `release`-Weg jetzt in Station 1 erfragt (B4).** C5.1 war wörtlich schon
+erfüllt, die Begründung des Specs unter C5 aber nicht: „eine fehlende Voraussetzung soll
+auffallen, solange noch nichts geschehen ist" trug am Kopf der achten Station nicht mehr, denn
+dort war die Einreichung bei Apple bereits gelaufen. Die achte Station behält ihre eigene
+Prüfung, weil ihr zweiter Rufer keine Station vor sich hat. `bundle` und `make check` bekommen
+dadurch keine Abhängigkeit von `gh`.
