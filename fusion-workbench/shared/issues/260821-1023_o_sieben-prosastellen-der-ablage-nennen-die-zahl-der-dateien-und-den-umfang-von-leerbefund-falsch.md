@@ -83,3 +83,34 @@ Leser sich fragt, ob ein Zettel über `Ablage::pfad` erreichbar ist.
 `crates/krk-core/src/ablage/pfade.rs:1-2`, `:219-220`
 
 **Domain:** code
+
+---
+
+## Nachtrag 260821-1401: die Zeilennummern stehen jetzt richtig hier
+
+`d771ec6` hat `mod.rs` um Prosa verlängert und die sechs Fundstellen dieses Datensatzes nach
+unten geschoben. Der Wortlaut aller sieben ist unverändert, der Befund gilt weiter. Am
+Baumstand `d771ec6` nachgezählt:
+
+| Stelle bei `e688238` | jetzt | Wortlaut zur Wiedererkennung |
+|---|---|---|
+| `mod.rs:45` | `:45` (unverschoben) | „`Ablage::pfad` liefert den Pfad einer der vier Dateien" |
+| `mod.rs:142` | `:151` | „Die drei übrigen tragen `Leerbefund::Vorgabe`" |
+| `mod.rs:425` | `:461` | „Der Ablageordner mit den vier Dateien" |
+| `mod.rs:427` | `:463` | „Wer eine der vier Dateien anfassen will" |
+| `mod.rs:467` | `:503` | „Der Pfad einer der vier Dateien" (`Ablage::pfad`) |
+| `mod.rs:508` | `:544` | „Der Pfad einer der vier Dateien" (`Zugang::pfad`) |
+| `pfade.rs:1-2`, `:219-220` | unverändert | `pfade.rs` hat `d771ec6` nicht angefasst |
+
+**Die Verschiebungstabelle im geschlossenen Datensatz
+`260821-1023_c_der-neue-leerbefund-zweig-belegt-den-einen-sicherungsplatz-mit-einer-datei-ohne-bestand.md`
+nennt fünf davon um genau eine Zeile zu niedrig** (`:150`, `:460`, `:462`, `:502`, `:543`).
+Wer sie übernimmt, landet auf einer Leerzeile, auf `///` oder auf `impl Zugang<'_> {`. Die
+Tabelle darüber ist die geprüfte.
+
+**Drei benachbarte richtige Stellen sind ebenfalls verschoben** und dürfen weiterhin nicht
+mitgezogen werden: `:59` bleibt `:59`, `:513` steht auf `:549` (`laden`), `:599` auf `:645`
+(`sichern`).
+
+**Nachgetragen von:** coderev, Durchsicht des Commits `d771ec6` am 260821-1401, Bereich
+`073448e..d771ec6`
