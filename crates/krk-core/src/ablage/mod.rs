@@ -89,8 +89,9 @@
 //! und [`Ersetzung::beiseite`] sagt, was dabei herauskam. Vier Regeln tragen
 //! den Vorgang, und jede beantwortet eine Frage, die sonst geraten wuerde:
 //!
-//! - **Nur eine beschaedigte Datei wird gesichert.** Von einer, die sich nicht
-//!   lesen liess, gibt es keinen Inhalt, und eine fehlende ist der erste Start.
+//! - **Nur eine beschaedigte Datei wird gesichert, und auch die nicht immer.**
+//!   Von einer, die sich nicht lesen liess, gibt es keinen Inhalt, und eine
+//!   fehlende ist der erste Start.
 //!   Seit der Runde 9 zaehlt "zu gross" mit dazu: eine Zetteldatei ueber
 //!   `text::datei::EDITORGRENZE` wird nicht geladen, ihr Inhalt geht aber
 //!   denselben Weg beiseite. Sie wird dabei aus ihrem offenen Deskriptor
@@ -100,6 +101,11 @@
 //!   die ersten 16 MB da, und [`Beiseite::Gekuerzt`] sagt es dem Nutzer. Der
 //!   Preis ist angenommen, die Begruendung steht bei
 //!   [`Zugang::beiseite_legen`].
+//!   **Seit dem 260821 faellt umgekehrt ein Fall wieder heraus**: eine Datei
+//!   ohne einen einzigen obersten Schluessel gilt als beschaedigt und wird
+//!   trotzdem nicht gesichert, denn sie kann keinen Bestand tragen und
+//!   sperrte den einen Platz gegen die Sicherung, die ihn traegt. Die
+//!   Begruendung steht bei [`Beiseite::Nicht`].
 //! - **Der Text wird kopiert und die Datei nicht verschoben.** Ein `rename`
 //!   waere kuerzer und naehme dem Nutzer die Datei unter der Hand weg, an der er
 //!   gerade tippt; siehe den Abschnitt darueber.
@@ -125,8 +131,11 @@
 //! (`shared/issues/260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md`).
 //!
 //! Zwei Stellen beantworten die weitere Frage, und keine davon ist ein zweiter
-//! Mechanismus: beide muenden in denselben Zweig [`Grund::Beschaedigt`] und
-//! damit in [`Zugang::beiseite_legen`].
+//! Mechanismus: beide muenden in denselben Zweig [`Grund::Beschaedigt`]. Was
+//! dabei zur Seite gelegt wird, unterscheidet sie: der Leser meldet einen
+//! Fehler ueber einen Text, der einen Bestand tragen kann, und der geht durch
+//! [`Zugang::beiseite_legen`]; eine Datei ohne einen einzigen obersten
+//! Schluessel kann keinen tragen und traegt deshalb [`Beiseite::Nicht`].
 //!
 //! - **Ein oberster Schluessel, den der Leser nicht kennt**, ist ein `Err` und
 //!   kein stiller Auslieferungszustand. Das leistet
@@ -150,6 +159,11 @@
 //! [`Beiseite::Nicht`]: es gibt keinen Inhalt zu sichern, und der naechste
 //! Schreibvorgang schreibt trotzdem. Der Datensatz dazu ist
 //! `shared/issues/260821-0142_*_eine-nicht-lesbare-ablagedatei-wird-nicht-gesichert-und-vom-naechsten-schreibvorgang-ueberschrieben.md`.
+//! Die Datei ohne obersten Schluessel steht daneben und ist derselbe Ausgang
+//! aus dem umgekehrten Grund: dort gibt es einen Inhalt, aber keinen Bestand.
+//! Was alle diese Gestalten teilen, ist der Schlusssatz — der naechste
+//! gewoehnliche Schreibvorgang fragt nicht, ob der gelesene Wert aus der Datei
+//! kam oder aus dem Auslieferungszustand.
 //!
 //! # Der Kern gibt nichts aus
 //!
@@ -279,9 +293,31 @@ impl Grund {
 pub enum Beiseite {
     /// Es wurde nichts zur Seite gelegt, und das ist richtig so.
     ///
-    /// Der Wert jeder Ersetzung ausser der beschaedigten: von einer Datei, die
-    /// sich nicht lesen liess, gibt es keinen Inhalt zu sichern, und eine
-    /// fehlende Datei ist der erste Start.
+    /// Drei Faelle, und der dritte ist seit dem 260821 dabei: von einer Datei,
+    /// die sich nicht lesen liess, gibt es keinen Inhalt zu sichern; eine
+    /// fehlende Datei ist der erste Start; und aus einer Datei ohne einen
+    /// einzigen obersten Schluessel gibt es keinen **Bestand** zu sichern.
+    /// Zeichen mag sie tragen, den Schluessel, unter dem der Bestand steht,
+    /// traegt sie definitionsgemaess nicht — er ist genau der, der fehlt.
+    ///
+    /// **Warum der dritte Fall nicht doch sichert.** Es gibt je Ablagedatei
+    /// genau einen Sicherungsplatz, und die zuerst dort abgelegte Fassung
+    /// bleibt stehen; siehe [`atomar::beiseitepfad`]. Dessen Begruendung — „die
+    /// erste ist die wertvollere" — gilt fuer eine Fassung ohne obersten
+    /// Schluessel nicht: sie ist nicht die wertvollere, sondern die einzige,
+    /// von der sicher feststeht, dass sie nichts enthaelt. Gesichert sperrte
+    /// sie den Platz gegen die spaetere Sicherung, die den Bestand traegt, und
+    /// machte damit genau den Verlust unwiederbringlich, gegen den die Runde 6
+    /// gebaut ist
+    /// (`shared/issues/260821-1023_*_der-neue-leerbefund-zweig-belegt-den-einen-sicherungsplatz-mit-einer-datei-ohne-bestand.md`).
+    ///
+    /// **Der Preis ist benannt und angenommen:** der Wortlaut einer Datei aus
+    /// lauter Kommentaren bleibt nicht erhalten. Die Datei selbst bleibt
+    /// liegen, denn [`Zugang::laden`] ueberschreibt nie; sie geht erst beim
+    /// naechsten gewoehnlichen Schreibvorgang verloren, und bis dahin hat der
+    /// Nutzer die Meldung gesehen. Wer den Wortlaut halten wollte, braeuchte
+    /// einen zweiten Sicherungsplatz oder eine Rangfolge darauf, und beides
+    /// widerspraeche dem Datensatz vom 260812-1105.
     Nicht,
     /// Der Inhalt liegt jetzt unter diesem Pfad, und zwar ganz.
     Gesichert(PathBuf),
@@ -520,6 +556,13 @@ impl Zugang<'_> {
     /// nur dort gibt es einen gelesenen Text zu sichern. Die beiden uebrigen
     /// Zweige tragen [`Beiseite::Nicht`]; siehe den Modulkopf.
     ///
+    /// **Und auch dort nicht in beiden Haelften.** Eine Datei ohne einen
+    /// einzigen obersten Schluessel traegt keinen Bestand und traegt deshalb
+    /// ebenfalls [`Beiseite::Nicht`]; gesichert wird allein die Haelfte
+    /// darunter, in der der Leser einen Fehler meldet. Die Begruendung steht
+    /// bei [`Beiseite::Nicht`] und ist nicht ableitbar: sie haengt daran, dass
+    /// es je Datei genau einen Sicherungsplatz gibt.
+    ///
     /// **Beschaedigt heisst mehr als „kein gueltiges TOML".** Eine dastehende
     /// Datei, aus der kein einziger oberster Schluessel kommt, hat ihren
     /// Bestand nicht hergegeben; ob das ein Schaden ist, entscheidet
@@ -564,7 +607,6 @@ impl Zugang<'_> {
             }
         };
         if welche.leerbefund() == Leerbefund::Beschaedigt && ohne_obersten_schluessel(&text) {
-            let beiseite = self.beiseite_legen(&pfad, &mut text.as_bytes());
             return Geladen {
                 wert: T::default(),
                 ersetzung: Some(Ersetzung {
@@ -573,7 +615,11 @@ impl Zugang<'_> {
                         "die Datei traegt keinen einzigen obersten Schluessel, \
                          und KRK schreibt sie nie so",
                     )),
-                    beiseite,
+                    // Hier wird nichts zur Seite gelegt, und der Grund steht
+                    // bei [`Beiseite::Nicht`]: aus null obersten Schluesseln
+                    // ist kein Bestand zu sichern, und der eine Platz bliebe
+                    // gegen die Sicherung gesperrt, die ihn traegt.
+                    beiseite: Beiseite::Nicht,
                 }),
             };
         }

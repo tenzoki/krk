@@ -121,3 +121,69 @@ neu erreichbar. Die Reihenfolge, die ihn auslöst, ist eng: es braucht einen Sta
 `Grund::Beschaedigt` und `Beiseite::SchonVorhanden`, also ein anderer Zweig.
 `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`
 — wird die strenge Lesart auf `session.toml` ausgeweitet, gilt dieser Befund dort mit.
+
+---
+Resolved: Der Leerbefund-Zweig in `Zugang::laden` (`crates/krk-core/src/ablage/mod.rs`) gibt
+`Beiseite::Nicht` zurück, statt `beiseite_legen` zu rufen. Der Vorschlag der Durchsicht ist
+übernommen, weil er sich am gebauten Ergebnis bestätigt hat: die Probe unten scheitert vor der
+Änderung genau an Schritt 1 („der Leerbefund hat den einen Sicherungsplatz belegt") und läuft
+danach durch. Der Zweig ist nicht zurückgenommen — eine `bookmarks.toml` ohne obersten
+Schlüssel ist weiterhin kein erster Start, erzeugt weiterhin eine `Ersetzung`, und der
+Auslieferungszustand springt weiterhin ein. Allein die wertlose Sicherung entfällt.
+
+**Die Meldung ist mitgezogen, ohne dass `Display` angefasst werden musste.** Mit `Beiseite::Nicht`
+greift ein anderer Zweig von `melden`, und der verspricht keine Datei. Gemessen über
+`Ablage::oeffnen`, `durchgang` und `laden`, für die 0-Byte-Datei und für die Datei aus lauter
+Kommentaren, Ausgabe wörtlich und für beide gleich:
+
+```
+beiseite=Nicht
+meldung=.../bookmarks.toml ist beschaedigt und wird durch den Auslieferungszustand
+        ersetzt: die Datei traegt keinen einzigen obersten Schluessel, und KRK
+        schreibt sie nie so
+platz_belegt=Ok(false)
+```
+
+Die Zusage im Doc-Kommentar an `Beiseite`, „dass keine Meldung eine Datei verspricht, die es
+nicht gibt", hält damit wieder. Die Probe hält sie fest: sie prüft, dass die Meldung den
+Beiseitepfad nicht nennt, statt einen Wortlaut zu vergleichen.
+
+**Die Probe für die gemessene Reihenfolge** ist
+`nach_einem_leerbefund_bleibt_der_sicherungsplatz_fuer_den_echten_bestand_frei`
+(`crates/krk-core/tests/ablage.rs`), die vier Schritte dieses Datensatzes als vier Abschnitte:
+0-Byte-Datei beim ersten Start und der Platz bleibt frei, echter Bestand mit fremdem obersten
+Schlüssel beim zweiten und er wird gesichert, die Sicherung trägt den Bestand und nicht den
+Leerbefund, der nächste gewöhnliche Schreibvorgang nimmt `bookmarks.toml` und lässt die
+Sicherung stehen. Es ist die eine Probe im Baum, die zweimal lädt — genau der blinde Fleck, den
+die Durchsicht an den sechs Proben des Ausgangsdefekts benannt hat.
+
+Die drei vorhandenen Proben des Ausgangsdefekts bleiben stehen. Ihr gemeinsamer Rumpf
+`beschaedigte_lesezeichen` nimmt jetzt die erwartete `Sicherungslage` als Argument: `Wortlaut`
+für den fremden obersten Schlüssel, der einen Bestand trägt und gesichert wird, `Frei` für die
+0-Byte-Datei und die Datei aus lauter Kommentaren. Zwei Werte und kein Wahrheitswert, damit an
+der Rufstelle die Frage neben der Antwort steht.
+
+Der Preis ist der im Vorschlag benannte und angenommene: der Wortlaut einer Datei aus lauter
+Kommentaren wird nicht mehr gesichert. Die Datei bleibt liegen, `laden` überschreibt nie; sie
+geht erst beim nächsten gewöhnlichen Schreibvorgang verloren, und bis dahin hat der Nutzer die
+Schadensmeldung gesehen. Ein zweiter Sicherungsplatz oder eine Rangfolge darauf ist nicht
+gebaut worden, beides widerspräche dem Datensatz vom 260812-1105.
+
+**Kein zweiter Mechanismus, und eine Zeile weniger statt einer mehr.**
+`nur_benannte_dateien_erreichen_das_atomare_schreiben` (`crates/krk-core/tests/baum.rs`) zählt
+unverändert fünf Dateien: `beiseite_legen` bleibt, es hat nur einen Rufer weniger.
+`Datei::leerbefund` ist unangetastet, die drei übrigen TOML-Dateien und die zwei Zettel laufen
+wie zuvor — `eine_leere_datei_meldet_bei_den_drei_uebrigen_toml_dateien_nichts` läuft grün.
+
+Vier Prosastellen sind mitgezogen, weil die Änderung sie falsch gemacht hätte: die erste der
+vier Regeln im Modulkopf („Nur eine beschädigte Datei wird gesichert" — jetzt „und auch die
+nicht immer"), der Absatz „Zwei Stellen beantworten die weitere Frage", der nicht mehr sagt,
+beide mündeten in `beiseite_legen`, der Doc-Kommentar an `Beiseite::Nicht` (zwei Fälle, jetzt
+drei, samt der Begründung, warum der dritte nicht doch sichert) und der Doc-Kommentar an
+`Zugang::laden`. Keine davon gehört zu den sieben Stellen des Befunds „Niedrig"
+(`260821-1023_*_sieben-prosastellen-der-ablage-nennen-die-zahl-der-dateien-und-den-umfang-von-leerbefund-falsch.md`);
+deren Zeilennummern haben sich allerdings verschoben — `mod.rs:142` steht jetzt auf `:150`,
+`:425` auf `:460`, `:427` auf `:462`, `:467` auf `:502`, `:508` auf `:543`. Der Wortlaut der
+sieben ist unverändert.
+
+Abnahme: `make check`, Exit 0.

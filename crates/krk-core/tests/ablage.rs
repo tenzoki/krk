@@ -2772,13 +2772,30 @@ ordner = \"/\"
 // (`shared/issues/260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md`).
 // Die Proben darunter sind die Messtabelle jenes Datensatzes, Zeile fuer Zeile.
 
-/// Prueft, dass eine `bookmarks.toml` als beschaedigt gilt und ihr Wortlaut
-/// unter dem Beiseitepfad steht.
+/// Was eine Probe unter dem Beiseitepfad erwartet.
+///
+/// **Zwei Werte und kein Wahrheitswert**, weil an der Rufstelle sonst ein
+/// nacktes `true` staende und die Frage dazu nicht. Der Unterschied ist der
+/// Gegenstand des Datensatzes
+/// `shared/issues/260821-1023_*_der-neue-leerbefund-zweig-belegt-den-einen-sicherungsplatz-mit-einer-datei-ohne-bestand.md`:
+/// eine Datei, die einen Bestand tragen kann, wird gesichert; eine, die keinen
+/// tragen kann, laesst den einen Platz frei.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Sicherungslage {
+    /// Der Wortlaut der Datei steht danach unter dem Beiseitepfad.
+    Wortlaut,
+    /// Der Platz bleibt frei: aus dieser Datei ist kein Bestand zu sichern.
+    Frei,
+}
+
+/// Prueft, dass eine `bookmarks.toml` als beschaedigt gilt und was dabei unter
+/// dem Beiseitepfad steht.
 ///
 /// Drei Zusagen in einer Stelle, weil sie an demselben Lesevorgang haengen: die
-/// Liste ist leer, die Meldung nennt einen Schaden, und die Sicherung traegt
-/// den Text der Datei Zeichen fuer Zeichen. Die Datei selbst bleibt liegen.
-fn beschaedigte_lesezeichen(zweck: &str, inhalt: &str) {
+/// Liste ist leer, die Meldung nennt einen Schaden, und der Beiseitepfad traegt
+/// die Lage, die der Aufrufer nennt. Die Datei selbst bleibt in jedem Fall
+/// liegen.
+fn beschaedigte_lesezeichen(zweck: &str, inhalt: &str, lage: Sicherungslage) {
     let (_ordner, ablage) = ablage(zweck);
     fs::write(ablage.pfad(Datei::Lesezeichen), inhalt).expect("schreiben gescheitert");
 
@@ -2794,12 +2811,28 @@ fn beschaedigte_lesezeichen(zweck: &str, inhalt: &str) {
     );
 
     let sicherung = beiseitepfad(&ablage, Datei::Lesezeichen);
-    assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
-    assert_eq!(
-        fs::read_to_string(&sicherung).expect("die Sicherung laesst sich nicht lesen"),
-        inhalt,
-        "die Sicherung traegt nicht den Wortlaut der Datei"
-    );
+    match lage {
+        Sicherungslage::Wortlaut => {
+            assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
+            assert_eq!(
+                fs::read_to_string(&sicherung).expect("die Sicherung laesst sich nicht lesen"),
+                inhalt,
+                "die Sicherung traegt nicht den Wortlaut der Datei"
+            );
+        }
+        Sicherungslage::Frei => {
+            assert_eq!(ersetzung.beiseite, Beiseite::Nicht);
+            assert!(
+                !sicherung.try_exists().expect("try_exists gescheitert"),
+                "der eine Sicherungsplatz ist mit einer Datei ohne Bestand belegt"
+            );
+            let meldung = melden(&ersetzung);
+            assert!(
+                !meldung.contains(&sicherung.display().to_string()),
+                "die Meldung verspricht eine Sicherung, die es nicht gibt: {meldung}"
+            );
+        }
+    }
     assert_eq!(
         fs::read_to_string(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert"),
         inhalt,
@@ -2822,6 +2855,7 @@ fn ein_fremder_oberster_schluessel_in_bookmarks_toml_gilt_als_beschaedigt() {
 name = \"Projekte\"
 ordner = \"/Users/pruefung/Projekte\"
 ",
+        Sicherungslage::Wortlaut,
     );
 }
 
@@ -2834,7 +2868,7 @@ ordner = \"/Users/pruefung/Projekte\"
 /// ist kein erster Start.
 #[test]
 fn eine_leere_bookmarks_toml_gilt_als_beschaedigt() {
-    beschaedigte_lesezeichen("lesezeichen-null-bytes", "");
+    beschaedigte_lesezeichen("lesezeichen-null-bytes", "", Sicherungslage::Frei);
 }
 
 /// Dieselbe Regel, aber mit Zeichen in der Datei: nur Kommentare und Umbrueche.
@@ -2847,6 +2881,81 @@ fn eine_bookmarks_toml_aus_lauter_kommentaren_gilt_als_beschaedigt() {
     beschaedigte_lesezeichen(
         "lesezeichen-nur-kommentare",
         "# hier standen einmal Lesezeichen\n\n# und jetzt nicht mehr\n",
+        Sicherungslage::Frei,
+    );
+}
+
+/// Auf einen Leerbefund folgt der echte Bestand, und der eine Platz ist noch
+/// frei.
+///
+/// **Die eine Probe im Baum, die zweimal laedt**, und die Reihenfolge ist ihr
+/// ganzer Gegenstand. Es gibt je Ablagedatei genau einen Sicherungsplatz, und
+/// die zuerst dort abgelegte Fassung bleibt unangetastet
+/// (`atomar::beiseitepfad`). Legte der Leerbefund-Zweig seine Datei dorthin,
+/// staende der Platz beim zweiten Start belegt — mit null Bytes, denn eine
+/// Datei ohne obersten Schluessel kann `eintraege` nicht tragen —, und der
+/// Bestand aus Schritt 2 waere beim naechsten gewoehnlichen Schreibvorgang
+/// unwiederbringlich fort
+/// (`shared/issues/260821-1023_*_der-neue-leerbefund-zweig-belegt-den-einen-sicherungsplatz-mit-einer-datei-ohne-bestand.md`).
+///
+/// Die vier Schritte des Datensatzes stehen unten als vier Abschnitte, in der
+/// gemessenen Reihenfolge.
+#[test]
+fn nach_einem_leerbefund_bleibt_der_sicherungsplatz_fuer_den_echten_bestand_frei() {
+    let (_ordner, ablage) = ablage("lesezeichen-leerbefund-dann-bestand");
+    let pfad = ablage.pfad(Datei::Lesezeichen);
+    let sicherung = beiseitepfad(&ablage, Datei::Lesezeichen);
+
+    // Schritt 1: erster Start, die Datei traegt keinen obersten Schluessel.
+    fs::write(&pfad, "").expect("schreiben gescheitert");
+    let erster: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    assert!(
+        erster.ist_ersetzt(),
+        "der Leerbefund blieb stumm und gilt als erster Start"
+    );
+    assert!(
+        !sicherung.try_exists().expect("try_exists gescheitert"),
+        "der Leerbefund hat den einen Sicherungsplatz belegt"
+    );
+
+    // Schritt 2: der Nutzer spielt seinen Bestand zurueck, in einer Gestalt,
+    // die dieser Bau nicht liest. Diese Datei traegt den Bestand woertlich.
+    let bestand = "\
+[[lesezeichen]]
+name = \"Projekte\"
+ordner = \"/Users/pruefung/Projekte\"
+";
+    fs::write(&pfad, bestand).expect("schreiben gescheitert");
+    let zweiter: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    let ersetzung = zweiter
+        .ersetzung
+        .expect("der echte Bestand wurde ohne Meldung als leer gelesen");
+    assert_eq!(
+        ersetzung.beiseite,
+        Beiseite::Gesichert(sicherung.clone()),
+        "der Bestand ist nicht gesichert worden"
+    );
+
+    // Schritt 3: unter dem Platz steht der Bestand und nicht der Leerbefund.
+    assert_eq!(
+        fs::read_to_string(&sicherung).expect("die Sicherung laesst sich nicht lesen"),
+        bestand,
+        "die Sicherung traegt nicht den Bestand aus Schritt 2"
+    );
+
+    // Schritt 4: der naechste gewoehnliche Schreibvorgang nimmt die Datei, und
+    // der Bestand ist trotzdem zurueckzuholen.
+    gesichert(&ablage, Datei::Lesezeichen, &Lesezeichenliste::default())
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("lesen gescheitert"),
+        "eintraege = []\n",
+        "der Schreibvorgang hat die Datei nicht ersetzt"
+    );
+    assert_eq!(
+        fs::read_to_string(&sicherung).expect("die Sicherung laesst sich nicht lesen"),
+        bestand,
+        "der Schreibvorgang hat die Sicherung mitgenommen"
     );
 }
 
