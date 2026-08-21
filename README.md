@@ -1,35 +1,68 @@
 # KRK
 
-KRK ist ein Dateimanager für macOS in der Tradition der Norton-Commander-Bedienung:
-zwei Dateifenster nebeneinander, alles über die Tastatur erreichbar. Editor und
-Git-Anbindung folgen in späteren Runden.
+KRK ist ein Dateimanager mit eingebautem Editor für macOS, in der Tradition der
+Norton-Commander-Bedienung: zwei Dateifenster nebeneinander, Lesezeichen- und
+Geräteleiste links, Vorschau rechts, alles über die Tastatur erreichbar bei
+zusätzlicher Maus- und Trackpad-Unterstützung. Eine Git-Anbindung ist vorgesehen
+und noch nicht gebaut.
 
-Diese Datei beschreibt, wie KRK gebaut, signiert und versioniert wird. Was KRK
-können soll, steht im Spec und im Implementierungsplan unter
-`fusion-workbench/circles/260802-0842-krk-mac-dateimanager-editor-git/planning/`.
+**Voraussetzung: macOS 15 oder neuer.** Das ausgelieferte Bündel ist beglaubigt
+und trägt den Nachweis von Apple angeheftet; es startet deshalb ohne Rückfrage,
+auch auf einem Mac ohne Netzverbindung.
+
+## Herunterladen und installieren
+
+Das jeweils neueste Bündel liegt als Zip auf der Releaseseite:
+
+<https://github.com/tenzoki/krk/releases/latest>
+
+1. `KRK-<version>.zip` herunterladen und entpacken.
+2. KRK beenden, falls es läuft.
+3. Die neue Fassung über die alte in `/Applications` kopieren und das Ersetzen
+   bestätigen.
+
+**Die alte Fassung vorher nicht löschen.** Ein Überkopieren ist gefahrlos, ein
+Löschen ist es nicht. Werkzeuge, die eine App samt ihrer Stützdateien entfernen
+— der App Deleter von ForkLift ist eines —, nehmen dabei den Ordner
+`~/Library/Application Support/KRK/` mit. Dort hält KRK alles, was es sich
+merkt: die Lesezeichen, die gesicherte Sitzung, die abweichende Tastenbelegung
+und die zwei Notizzettel. Nach so einem Löschen sind sie fort.
+
+Wer doch löschen will, kopiert `~/Library/Application Support/KRK/` vorher an
+eine andere Stelle und schreibt die Kopie nach der Installation zurück.
+
+Die Regel ist gemessen und nicht geraten: sie stammt aus der Untersuchung eines
+Lesezeichenverlusts nach einer Installation am 260820. Wer im Quellbaum liest,
+findet sie unter
+`fusion-workbench/shared/analyses/260820-2242-lesezeichenverlust-nach-installation.md`;
+wer nur das Zip in der Hand hat, braucht diese Datei nicht, denn die Regel steht
+hier vollständig. Dasselbe sagt der Text jeder Releaseseite: er steht an **einer**
+Stelle, als Konstante `RELEASETEXT` in `xtask/src/veroeffentlichung.rs`, und jede
+seiner Aussagen hängt dort an einer eigenen Behauptung der Probe
+`der_releasetext_traegt_jede_seiner_aussagen`.
+
+---
+
+Alles Weitere richtet sich an den, der KRK baut, signiert und ausliefert.
 
 ## Voraussetzungen
 
 | Werkzeug | Stand | Woher |
 |---|---|---|
-| Rust | 1.97.1, festgeschrieben in `rust-toolchain.toml` | `rustup` |
+| Rust | festgeschrieben in `rust-toolchain.toml` | `rustup` |
 | `codesign`, `plutil`, `vtool`, `security` | mit macOS ausgeliefert | Command Line Tools |
 | macOS | 15 oder neuer | — |
-| `gh` | für die öffentliche Releaseseite, nicht für den Bau | `brew install gh`, danach `gh auth login` |
+| `gh` | nur für die Releaseseite, nicht für den Bau | `brew install gh`, danach `gh auth login` |
 
-Ein vollständiges Xcode ist für den Bau **nicht** nötig. Die Command Line Tools
-genügen; `xcode-select -p` darf auf `/Library/Developer/CommandLineTools` zeigen.
+Ein vollständiges Xcode ist für den Bau **nicht** nötig; die Command Line Tools
+genügen, und `xcode-select -p` darf auf `/Library/Developer/CommandLineTools`
+zeigen.
 
-Erst die Auslieferung an Dritte braucht mehr, und zwar dreierlei. Sie verlangt
-eine Developer-ID-Identität; sie verlangt für die Beglaubigung das vollständige
-Xcode (die Command Line Tools führen weder `notarytool` noch `stapler`) und ein
-Apple-Entwicklerkonto; und sie verlangt `gh`, das GitHub-Kommandozeilenwerkzeug,
-für die öffentliche Releaseseite. `gh` ist die einzige der drei, die das System
-gar nicht mitbringt: anders als `git`, `codesign`, `ditto` und `xcrun` wird es
-nachinstalliert und über den Suchpfad gefunden. Fehlt eine der drei, bricht
-allein die Station ab, die sie verlangt; was bis dahin gebaut ist, bleibt
-liegen. Nach `gh` fragt `cargo xtask release` schon in Station 1, damit sein
-Fehlen weder einen Übersetzungslauf noch eine Einreichung bei Apple kostet.
+Erst die Auslieferung an Dritte braucht dreierlei mehr: eine
+Developer-ID-Identität, für die Beglaubigung das vollständige Xcode samt
+Apple-Entwicklerkonto (die Command Line Tools führen weder `notarytool` noch
+`stapler`), und `gh` für die Releaseseite. Fehlt eine der drei, bricht allein die
+Station ab, die sie verlangt; was bis dahin gebaut ist, bleibt liegen.
 
 ## Bauen
 
@@ -42,7 +75,8 @@ cargo fmt --all --check
 
 Der Workspace hat vier Mitglieder: `crates/krk-core` (Kern, kein AppKit),
 `crates/krk-ui` (das Binärziel `krk`), `crates/krk-bench` (Prüfordner und
-kopflose Messstrecke) und `xtask` (dieses Bauwerkzeug).
+kopflose Messstrecke) und `xtask` (dieses Bauwerkzeug). Dieselben vier Kommandos
+in einem Zug fährt `make check`; die übrigen Ziele listet `make help`.
 
 `.cargo/config.toml` setzt `MACOSX_DEPLOYMENT_TARGET = "15.0"` für jeden Bau.
 Nachweisen lässt sich das am fertigen Binärprogramm:
@@ -60,9 +94,9 @@ cargo xtask bundle
 `cargo xtask` ist kein eingebautes Cargo-Kommando, sondern der Alias aus dem
 Abschnitt `[alias]` der `.cargo/config.toml`.
 
-Der Befehl übersetzt das Binärziel im Profil `release`, legt `target/KRK.app`
-neu an, kopiert `resources/Info.plist` mit eingesetzter Version, schreibt
-`Contents/PkgInfo` und signiert das Bündel. Ergebnis:
+Der Befehl übersetzt das Binärziel im Profil `release`, legt `target/KRK.app` neu
+an, kopiert `resources/Info.plist` mit eingesetzter Version, schreibt
+`Contents/PkgInfo` und signiert das Bündel:
 
 ```text
 target/KRK.app/
@@ -74,15 +108,11 @@ target/KRK.app/
 ```
 
 Das Profil ist `release`, weil dasselbe Bündel später die Zeitzusagen aus dem
-Spec misst. Zahlen aus einem unoptimierten Bau sagen über diese Zusagen nichts
-aus.
-
-**Warum es das Bündel überhaupt gibt.** Ein nacktes Binärprogramm aus dem
-Terminal erbt die Freigaben des Terminals und löst keine eigene Rückfrage aus.
-Der Zugriff auf Schreibtisch, Dokumente, Downloads, Wechselmedien und
-Netzlaufwerke läuft über den Systemmechanismus für Transparenz, Zustimmung und
-Kontrolle, und der greift am signierten Anwendungsbündel an. Nur am Bündel ist
-also prüfbar, ob KRK diese Zusagen einhält.
+Spec misst; Zahlen aus einem unoptimierten Bau sagen über diese Zusagen nichts
+aus. Und gemessen wird am Bündel und nicht am nackten Binärprogramm, weil der
+Zugriff auf Schreibtisch, Dokumente, Downloads und Netzlaufwerke über den
+Systemmechanismus für Transparenz, Zustimmung und Kontrolle läuft, und der greift
+am signierten Anwendungsbündel an.
 
 ## Signierung
 
@@ -92,133 +122,52 @@ also prüfbar, ob KRK diese Zusagen einhält.
 2. eine Identität mit dem Namen `KRK Entwicklung` im Schlüsselbund;
 3. die einzige gültige Identität im Schlüsselbund, falls es genau eine gibt.
 
-Greift keine der drei, **bricht der Bau ab und baut kein Bündel**. Er weicht
-nicht auf eine Ad-hoc-Signatur (`codesign -s -`) aus, und das ist der Punkt: eine
-Ad-hoc-Signatur bekommt bei jedem Bau einen anderen Hash. Das System hielte dann
-jeden Bau für eine andere Anwendung und fragte bei jedem Start erneut nach dem
-Zugriff auf die geschützten Ordner. Eine stabile Identität fragt einmal.
+Greift keine der drei, **bricht der Bau ab und baut kein Bündel**. Auf eine
+Ad-hoc-Signatur (`codesign -s -`) weicht er nicht aus: die bekäme bei jedem Bau
+einen anderen Hash, das System hielte jeden Bau für eine andere Anwendung und
+fragte bei jedem Start erneut nach dem Zugriff auf die geschützten Ordner.
 
-Stufe 3 greift bei null gültigen Identitäten nicht und bei mehr als einer auch
-nicht, weil die Wahl dann geraten wäre. In beiden Fällen nennt die
-Abbruchmeldung die Wege: die ausdrückliche Wahl über `KRK_SIGN_IDENTITY` oder
-das Anlegen von `KRK Entwicklung`. Bei mehreren gültigen Identitäten zählt sie
-außerdem auf, welche gefunden wurden.
-
-Welche Identitäten es gibt:
+Welche Identitäten es gibt, zeigen zwei Abfragen; ihr Unterschied ist der
+zwischen Stufe 2 und Stufe 3:
 
 ```sh
 security find-identity -p codesigning      # alle, auch die nicht als gültig bewerteten
 security find-identity -v -p codesigning   # nur die gültigen
 ```
 
-**Die beiden Stufen fragen verschieden ab, und das ist Absicht.** Stufe 2 fragt
-ohne `-v`. `-v` zeigt nur die als gültig bewerteten Identitäten, und eine
-selbstsignierte Identität ohne gesetzte Vertrauenseinstellung gilt als nicht
-vertrauenswürdig (`CSSMERR_TP_NOT_TRUSTED`). Signieren und Prüfen funktionieren
-mit ihr trotzdem. Wer `KRK Entwicklung` angelegt hat, hat sich für diese
-Identität entschieden, und der Bau hat sie nicht auszusortieren.
-
-Stufe 3 fragt mit `-v`. Dort wählt der Bau aus einer Menge aus, ohne dass jemand
-die Wahl getroffen hätte, und automatisch gewählt werden soll nur, was auch
-signieren kann. Ohne `-v` griffe die Stufe sonst nach einem abgelaufenen
-Zertifikat oder einem, dessen Kette sich nicht aufbaut, und der Bau scheiterte
-danach an einer Meldung von `codesign`, die den Grund nicht nennt (siehe den
-Abschnitt zur abgelaufenen Zertifikatskette weiter unten).
-
-Die Vertrauenseinstellung braucht erst, wer das Bündel auf einem fremden Rechner
-an Gatekeeper vorbeibringen will, und dafür ist ohnehin eine Developer-ID nötig.
-
 ### Entwicklungsidentität anlegen
 
-Einmalig, ohne Xcode. Zwei Wege führen zum selben Ergebnis.
-
-**Weg 1: Schlüsselbundverwaltung.** Menü `Schlüsselbundverwaltung` →
-`Zertifikatsassistent` → `Ein Zertifikat erstellen`. Name `KRK Entwicklung`,
-Identitätstyp `Selbstsigniertes Root-Zertifikat`, Zertifikatstyp `Codesignatur`.
-
-**Weg 2: auf der Kommandozeile.** Schlüssel und Zertifikat erzeugen, in einer
-PKCS#12-Datei bündeln und in den Anmeldeschlüsselbund importieren:
-
-```sh
-openssl req -x509 -newkey rsa:2048 -keyout krk-entwicklung-key.pem \
-  -out krk-entwicklung-cert.pem -days 3650 -nodes \
-  -subj "/CN=KRK Entwicklung" \
-  -addext "basicConstraints=critical,CA:true" \
-  -addext "keyUsage=critical,digitalSignature" \
-  -addext "extendedKeyUsage=critical,codeSigning"
-
-openssl pkcs12 -export -out krk-entwicklung.p12 \
-  -inkey krk-entwicklung-key.pem -in krk-entwicklung-cert.pem \
-  -name "KRK Entwicklung" -passout pass:krk \
-  -macalg sha1 -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES
-
-security import krk-entwicklung.p12 -k ~/Library/Keychains/login.keychain-db \
-  -P krk -T /usr/bin/codesign
-```
-
-Die drei Algorithmus-Angaben im zweiten Befehl sind nötig, nicht schmückend:
-OpenSSL 3 schreibt PKCS#12 sonst mit Verfahren, die der Schlüsselbund nicht
-liest, und der Import scheitert mit `MAC verification failed`.
-
+Einmalig, ohne Xcode, über die Schlüsselbundverwaltung: Menü
+`Schlüsselbundverwaltung` → `Zertifikatsassistent` → `Ein Zertifikat erstellen`.
+Name `KRK Entwicklung`, Identitätstyp `Selbstsigniertes Root-Zertifikat`,
+Zertifikatstyp `Codesignatur` — die Vorgabe des Assistenten ist eine andere.
 Beim ersten Signieren fragt macOS einmal, ob `codesign` auf den privaten
-Schlüssel zugreifen darf. `Immer erlauben` beantwortet das dauerhaft.
-
-Die drei erzeugten Dateien enthalten den privaten Schlüssel und gehören nicht
-ins Repository. Nach dem Import sind sie entbehrlich:
-
-```sh
-rm krk-entwicklung-key.pem krk-entwicklung-cert.pem krk-entwicklung.p12
-```
+Schlüssel zugreifen darf; `Immer erlauben` beantwortet das dauerhaft.
 
 ### Abgelaufene Zertifikatskette (`errSecInternalComponent`)
 
-`codesign` scheitert mit dieser Meldung, obwohl Zertifikat und privater
-Schlüssel im Anmeldeschlüsselbund liegen:
-
-```text
-Warning: unable to build chain to self-signed root for signer
-  "Apple Development: <Name> (<Kennung>)"
-errSecInternalComponent
-```
-
-Dazu passt: `security find-identity -p codesigning` zeigt die Identität,
-`security find-identity -v -p codesigning` meldet null gültige.
-
-**Die Meldung deutet in die falsche Richtung.** Sie nennt die eigene Identität,
-und die ist in Ordnung; das Zwischenzertifikat, an dem es liegt, erwähnt sie mit
-keinem Wort. Im System-Schlüsselbund liegt das Apple-Zwischenzertifikat in einer
-alten Fassung, abgelaufen am 2023-02-07. Ein heute von Apple ausgestelltes
-Entwicklerzertifikat kommt dagegen von der G3-Instanz (`issuer=CN=Apple
-Worldwide Developer Relations Certification Authority, OU=G3`), und ohne deren
-Zertifikat baut sich die Kette zur Apple Root CA nicht auf.
-
-Die Behebung holt das aktuelle Zwischenzertifikat in den Anmeldeschlüsselbund:
+Der häufigste Fehler: `codesign` scheitert mit `errSecInternalComponent` und
+`unable to build chain to self-signed root`, die erste Abfrage von oben zeigt die
+Identität, die zweite meldet null gültige. **Die Meldung deutet in die falsche
+Richtung** — sie nennt die eigene Identität, und die ist in Ordnung. Es liegt am
+Apple-Zwischenzertifikat, das im System-Schlüsselbund in einer 2023 abgelaufenen
+Fassung steht. Die aktuelle in den Anmeldeschlüsselbund holen genügt; das alte
+muss **nicht** weichen, denn die Kette baut sich neben ihm richtig auf:
 
 ```sh
 curl -fsS -o AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
 security import AppleWWDRCAG3.cer -k ~/Library/Keychains/login.keychain-db
 ```
 
-Danach meldet `security find-identity -v -p codesigning` die Identität als
-gültig, und `codesign -dvv target/KRK.app` zeigt die vollständige Kette bis zur
-Apple Root CA samt `TeamIdentifier`.
-
-Das abgelaufene alte Zwischenzertifikat im System-Schlüsselbund muss dafür
-**nicht** entfernt werden; die Kette baut sich neben ihm richtig auf. Es zu
-entfernen verlangt erhöhte Rechte und ist erst der nächste Versuch, falls der
-Fehler trotz vorhandenem G3-Zertifikat bleibt.
-
 ### Prüfen, was signiert wurde
 
 ```sh
 codesign --verify --strict target/KRK.app   # Rückgabewert 0
-codesign -dvv target/KRK.app                # nennt die Identität als Authority
+codesign -dvv target/KRK.app                # Authority = die Identität,
+                                            # flags=0x0(none) = nicht ad hoc
 ```
 
-`flags=0x0(none)` im Kopf der Ausgabe heißt: keine Ad-hoc-Signatur. Eine solche
-stünde dort als `flags=0x2(adhoc)`.
-
-## Auslieferung
+## Ein Release machen
 
 Ein Kommando, ein Argument, die Versionszahl:
 
@@ -226,8 +175,8 @@ Ein Kommando, ein Argument, die Versionszahl:
 ./release.sh 0.2.0
 ```
 
-Das ist der ganze Weg. Er reicht durch drei Schichten, von denen jede genau
-eine Sache beiträgt und keine zweimal:
+Das ist der ganze Weg. Er reicht durch drei Schichten, von denen jede genau eine
+Sache beiträgt und keine zweimal:
 
 ```text
 ./release.sh 0.2.0
@@ -236,32 +185,18 @@ eine Sache beiträgt und keine zweimal:
        └─ cargo xtask release             die acht Stationen
 ```
 
-`release.sh` ist kein drittes Bauwerkzeug. Das Projekt hat eines, `xtask`, und
-eine Hülle darum, das `Makefile`; das Skript ist die zweite Hülle und trägt
-keine Logik. Wer lieber tippt, ruft die beiden Kommandos einzeln — es geht
-nichts verloren.
-
 **Warum es unten zwei Kommandos sind und nicht eines.** `xtask` liest die
 Versionszahl beim Übersetzen, über `env!("CARGO_PKG_VERSION")`. Zwischen dem
 Setzen der Zahl und dem Bau des Bündels muss deshalb ein Prozess enden, sonst
-trüge die `Info.plist` die alte Zahl, während der Tag die neue nennt. Der
-Umweg ist zugleich der Wachposten: Station 1 läuft im neu übersetzten Werkzeug
-und vergleicht die frisch eingebackene Zahl mit dem Tag.
+trüge die `Info.plist` die alte Zahl, während der Tag die neue nennt.
 
 ### Zahl, Eintrag, Tag
 
-```sh
-cargo xtask version 0.2.0
-```
-
-Setzt `version` unter `[workspace.package]` der Wurzel-`Cargo.toml`, trägt
-`Cargo.toml` und `Cargo.lock` als **eine** Änderung ein und setzt den Tag
-`v0.2.0` auf HEAD. Die `Cargo.lock` muss mit, weil sie die Zahl für jedes
-Mitglied mitführt; aufgefrischt wird sie nicht von Hand, sondern von
-`cargo update --workspace --offline`.
-
-Erlaubt sind genau drei Zahlenteile ohne führendes `v` — das trägt allein der
-Tag. Was wann steigt, steht unter „Versionsstufen".
+`cargo xtask version <version>` setzt `version` unter `[workspace.package]` der
+Wurzel-`Cargo.toml`, trägt `Cargo.toml` und `Cargo.lock` als **eine** Änderung
+ein und setzt den Tag `v<version>` auf HEAD. Erlaubt sind genau drei Zahlenteile
+ohne führendes `v` — das trägt allein der Tag. Was wann steigt, steht unter
+„Versionsstufen".
 
 Geprüft wird vor dem ersten Schreiben:
 
@@ -279,142 +214,70 @@ Agentenlauf neu schreibt.
 
 **Was ein Abbruch hinterlässt.** Bis zum ersten Schreiben nichts. Scheitert
 danach das Auffrischen der `Cargo.lock` oder der Eintrag, werden beide Dateien
-auf ihren vorigen Stand zurückgeschrieben. Scheitert allein das Setzen des
-Tags, bleibt der Eintrag stehen: er ist für sich richtig, und eine Rücknahme
-schriebe Geschichte um. Dasselbe gilt für einen Abbruch der acht Stationen
-danach — Eintrag und Tag bleiben. Der Handgriff ist in beiden Fällen derselbe:
-`./release.sh 0.2.0` noch einmal. Der Lauf sieht, dass Zahl und Tag schon
-stehen, trägt nichts doppelt ein und fährt gleich weiter.
+zurückgeschrieben. Scheitert allein das Setzen des Tags oder eine der Stationen
+danach, bleiben Eintrag und Tag stehen: sie sind für sich richtig, und eine
+Rücknahme schriebe Geschichte um. Der Handgriff ist derselbe — `./release.sh
+<version>` noch einmal. Der Lauf sieht, dass Zahl und Tag schon stehen, trägt
+nichts doppelt ein und fährt gleich weiter.
 
-### Das Paket bauen
+### Die acht Stationen
 
-```sh
-cargo xtask release
-```
+`cargo xtask release` baut und verteilt das Paket in acht Stationen; jede bricht
+mit einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt.
 
-Der Befehl baut das Auslieferungspaket in acht Stationen; jede bricht mit
-einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt. Dazwischen laufen
-drei Vorläufe: sie kosten nichts, stehen deshalb früh und tragen einen
-Buchstaben statt einer Zahl, weil ihr Ergebnis erst einer späteren Station
-dient.
+| | Station | Was sie tut |
+|---|---|---|
+| 1 | Stand prüfen | HEAD trägt `v<version>` passend zu `[workspace.package]`, keine verfolgte Datei ist geändert, `gh` ist vorhanden und angemeldet |
+| 2 | AppKit-Grenze | keine `use objc2`-Zeile außerhalb von `crates/krk-ui/src/appkit/` |
+| 3 | Übersetzen | `x86_64-apple-darwin` und `aarch64-apple-darwin`, dieselben zwei wie in `rust-toolchain.toml` |
+| 4 | `lipo` | die zwei Binärdateien zu `target/universal/krk`, geprüft mit `lipo -archs` |
+| 5 | Montage | dasselbe Bündel wie `cargo xtask bundle`, nur mit der universellen Binärdatei |
+| 6 | Signieren | Developer-ID, gehärtete Laufzeitumgebung, gesicherter Zeitstempel |
+| 7 | Beglaubigen | `xcrun notarytool submit --wait`, danach `xcrun stapler staple` |
+| 8 | Veröffentlichen | Zip packen, HEAD und Tag schieben, Releaseseite anlegen |
 
-1. **Tag, Arbeitsbaum und `gh` prüfen.** HEAD muss einen Tag `v<version>` mit
-   der Zahl aus `[workspace.package]` tragen, keine verfolgte Datei darf
-   geändert sein — unbeachtete Dateien zählen nicht mit —, und `gh` muss
-   vorhanden und angemeldet sein. Treffen mehrere Befunde zu, nennt eine
-   Meldung sie. Die Station ist die billigste des Weges und steht ganz vorn,
-   damit ein Abbruch dieser Art keinen Übersetzungslauf kostet. Sie liest
-   allein; geschrieben hat der Halbschritt davor. Von Hand sind es diese drei
-   Fragen:
-   ```sh
-   git tag --points-at HEAD                    # muss v<version> nennen
-   git status --porcelain --untracked-files=no # darf nichts ausgeben
-   gh auth status                              # muss mit 0 enden
-   ```
-   **`gh` steht hier, obwohl es erst Station 8 braucht.** Eine fehlende
-   Voraussetzung soll auffallen, solange noch nichts geschehen ist; am Kopf der
-   achten Station wäre zu diesem Zeitpunkt bereits eine Einreichung bei Apple
-   gelaufen. Das Vorziehen kostet nichts, und `cargo xtask bundle` und
-   `make check` bekommen dadurch keine Abhängigkeit von `gh`.
-   - *Vorlauf a:* `resources/Info.plist` wird gelesen und die Bündelvorlage
-     gebaut, die Station 5 braucht.
-2. **AppKit-Grenze prüfen.** Keine `use objc2`-Zeile außerhalb von
-   `crates/krk-ui/src/appkit/`. `#![deny(unsafe_code)]` erzwingt die Grenze
-   nur zur Hälfte, weil ein großer Teil der `objc2`-Bindungen als sicher
-   deklariert ist und außerhalb anstandslos übersetzt; diese Prüfung trägt die
-   andere Hälfte. Von Hand ist es dieselbe Vorschrift wie im Plan:
-   ```sh
-   grep -rEln '^[[:space:]]*use +objc2' crates/krk-ui/src --include='*.rs' \
-     | grep -v '^crates/krk-ui/src/appkit/'   # darf keine Zeile ausgeben
-   ```
-   - *Vorlauf b:* die Identitätssuche liefert die Identität für Station 6.
-   - *Vorlauf c:* die Zielprüfung über `rustup` ist die Voraussetzung von
-     Station 3.
-3. **Beide Ziele übersetzen.** `x86_64-apple-darwin` und
-   `aarch64-apple-darwin`, dieselben zwei wie in `rust-toolchain.toml`. Fehlt
-   eines, nennt der Abbruch das Ziel und das Kommando `rustup target add`.
-4. **`lipo`.** Die beiden Binärdateien werden zu
-   `target/universal/krk` zusammengefügt und sofort geprüft:
-   `lipo -archs` muss `x86_64 arm64` melden.
-5. **Montage.** Dasselbe Bündel wie `cargo xtask bundle`, aus denselben
-   Funktionen, samt Versionsersetzung — nur wandert die universelle
-   Binärdatei nach `Contents/MacOS`.
-6. **Signieren.** Dieselbe dreistufige Identitätssuche wie bei `bundle`, nur
-   sucht die zweite Stufe nach dem Namensanfang `Developer ID Application`
-   statt nach `KRK Entwicklung`. Signiert wird mit gehärteter
-   Laufzeitumgebung und gesichertem Zeitstempel
-   (`codesign --options runtime --timestamp`); beides verlangt die
-   Beglaubigung. Nachprüfen: `codesign -dv --verbose=4 target/KRK.app` zeigt
-   `flags=0x10000(runtime)`.
-7. **Beglaubigen.** `xcrun notarytool submit --wait` reicht das Bündel als
-   Zip bei Apple ein, `xcrun stapler staple` heftet das Urteil an.
-8. **Veröffentlichen.** Aus dem beglaubigten Bündel wird
-   `target/KRK-<version>.zip`; HEAD und `refs/tags/v<version>` gehen in **einem**
-   Aufruf zur Gegenseite, damit kein Zwischenzustand entsteht, in dem der Zweig
-   oben steht und der Tag nicht; und an einer öffentlichen GitHub-Releaseseite
-   hängt danach das Zip. Vorher prüft die Station dreierlei, und zwar in dieser
-   Reihenfolge, weil ein Abbruch daran nichts hinterlässt: `gh` ist vorhanden
-   und angemeldet, das Bündel liegt da, und es trägt das Ticket angeheftet. Die
-   erste dieser drei hat Station 1 auf diesem Weg schon gestellt; die Station
-   stellt sie trotzdem noch einmal, weil ihr zweiter Rufer keine Station vor
-   sich hat. **Das Schieben ist die einzige Wirkung der ganzen Kette, die über
-   dieses Gerät hinausgeht und sich nicht zurücknehmen lässt.**
-   Denselben Weg fährt `cargo xtask veroeffentlichen <zahl>` allein; was er
-   prüft und was er nicht prüft, steht unter „Nur veröffentlichen".
+Drei Dinge daran sind nicht offensichtlich:
 
-Sechs der acht Stationen laufen mit dem, was das System mitbringt. Zwei nicht:
-die siebte verlangt das vollständige Xcode (die Command Line Tools führen weder
-`notarytool` noch `stapler`) und ein Apple-Entwicklerkonto, die achte verlangt
-`gh` samt Anmeldung — nach `gh` fragt auf diesem Weg allerdings schon Station 1,
-damit sein Fehlen keinen Übersetzungslauf und keine Einreichung kostet. Fehlt
-eine dieser drei Voraussetzungen, bricht allein die Station ab, die sie
-verlangt, und was bis dahin entstanden ist, bleibt liegen:
-ohne Entwicklerkonto das universell gebaute, signierte Bündel unter
-`target/KRK.app`, das für die lokale Arbeit voll brauchbar ist; ohne `gh`
-dasselbe Bündel, dann sogar beglaubigt.
+- **Station 1 fragt schon nach `gh`, obwohl erst Station 8 es braucht.** Eine
+  fehlende Voraussetzung soll auffallen, solange noch nichts geschehen ist; am
+  Kopf der achten Station wäre bereits eine Einreichung bei Apple gelaufen.
+  `cargo xtask bundle` und `make check` bekommen dadurch keine Abhängigkeit
+  von `gh`.
+- **Station 2 trägt die Hälfte, die `#![deny(unsafe_code)]` nicht trägt.** Ein
+  großer Teil der `objc2`-Bindungen ist als sicher deklariert und übersetzte
+  außerhalb von `appkit/` anstandslos.
+- **Station 8 ist die einzige Wirkung der ganzen Kette, die über dieses Gerät
+  hinausgeht und sich nicht zurücknehmen lässt.** HEAD und `refs/tags/v<version>`
+  gehen in **einem** Aufruf zur Gegenseite, damit kein Zwischenzustand entsteht,
+  in dem der Zweig oben steht und der Tag nicht.
 
-Die Zugangsdaten des Entwicklerkontos erwartet der Befehl als
-Schlüsselbundprofil, dessen Name in der Umgebungsvariablen
-`KRK_NOTARY_PROFILE` steht. Einmalig hinterlegen:
+Die Zugangsdaten des Entwicklerkontos erwartet Station 7 als Schlüsselbundprofil,
+dessen Name in `KRK_NOTARY_PROFILE` steht. Einmalig hinterlegen:
 
 ```sh
 xcrun notarytool store-credentials <Profilname> \
   --apple-id <Apple-ID> --team-id <Team-Kennung> \
   --password <app-spezifisches-Passwort>
-
-KRK_NOTARY_PROFILE=<Profilname> cargo xtask release
 ```
 
 Findet die Identitätssuche keine Developer-ID, aber genau eine gültige andere
-Identität (Stufe 3), läuft der Bau mit ihr durch und sagt dazu, dass die
-Beglaubigung ein so signiertes Bündel nicht annehmen wird. So bleiben Bau,
-`lipo` und die Signierung mit gehärteter Laufzeitumgebung auch auf einem
-Gerät ohne Entwicklerkonto prüfbar.
+Identität, läuft der Bau mit ihr durch und sagt dazu, dass die Beglaubigung ein
+so signiertes Bündel nicht annehmen wird. So bleiben Bau, `lipo` und die
+Signierung mit gehärteter Laufzeitumgebung auch auf einem Gerät ohne
+Entwicklerkonto prüfbar.
 
 ### Nur beglaubigen
 
 ```sh
-./certify-only.sh 0.2.0
+./certify-only.sh <version>      # make beglaubigen VERSION=… → cargo xtask beglaubigen
 ```
 
-Der Weg für den Fall, dass der Lauf **erst an der siebten Station** gescheitert
-ist: das universelle, mit Developer-ID und gehärteter Laufzeitumgebung
-signierte Bündel liegt fertig unter `target/KRK.app`, und allein das Ticket
-fehlt. So geschehen am 260820, als der Upload zu Apple in einen Zeitüberlauf
-lief (`HTTPClientError.deadlineExceeded`).
-
-Dieselben Schichten wie beim ganzen Weg, eine weniger:
-
-```text
-./certify-only.sh 0.2.0
-  └─ make beglaubigen VERSION=0.2.0        Pfad zu cargo, Notarprofil
-       └─ cargo xtask beglaubigen 0.2.0    die Prüfungen und Station 7
-```
-
-**Ein zweites `./release.sh 0.2.0` hilft in dieser Lage nicht.** Es bräche an
-Station 1 ab, denn nach dem Lauf trägt HEAD den Tag `v0.2.0` nicht mehr allein,
-und der Arbeitsbaum ist inzwischen ein anderer — und es übersetzte beide Ziele
-neu, um dasselbe Bündel ein zweites Mal herzustellen.
+Für den Fall, dass der Lauf **erst an Station 7** gescheitert ist: das
+universelle, mit Developer-ID und gehärteter Laufzeitumgebung signierte Bündel
+liegt fertig unter `target/KRK.app`, und allein das Ticket fehlt. So geschehen am
+260820, als der Upload zu Apple in einen Zeitüberlauf lief. **Ein zweites
+`./release.sh` hilft hier nicht:** es bräche an Station 1 ab und übersetzte
+überdies beide Ziele neu, um dasselbe Bündel herzustellen.
 
 Geprüft wird zweierlei, und beides am Bündel, das dort liegt:
 
@@ -423,46 +286,33 @@ Geprüft wird zweierlei, und beides am Bündel, das dort liegt:
 | die Versionszahl | sie von `CFBundleShortVersionString` der `Info.plist` im Bündel abweicht |
 | der Signaturstand | keine `Authority=`-Zeile mit `Developer ID Application` beginnt oder die Merkmalsliste `runtime` nicht nennt |
 
-Die erste Prüfung ist es, die das Argument rechtfertigt: `target/KRK.app`
-überlebt jede Sitzung, und ohne sie ginge ein Bündel von vorgestern still bei
-Apple ein. Die zweite spart eine sinnlose Einreichung, denn ein mit
-`cargo xtask bundle` gebautes Bündel trägt eine Entwicklungsidentität und keine
-gehärtete Laufzeitumgebung; Apple weist es ab. Gegen die `Cargo.toml` wird
-nicht geprüft — sie sagt, was ein *neuer* Bau trüge, und der findet hier nicht
-statt.
+Die erste rechtfertigt das Argument: `target/KRK.app` überlebt jede Sitzung, und
+ohne sie ginge ein Bündel von vorgestern still bei Apple ein. Die zweite spart
+eine sinnlose Einreichung, denn ein mit `cargo xtask bundle` gebautes Bündel
+trägt eine Entwicklungsidentität und keine gehärtete Laufzeitumgebung.
 
-**Gebaut wird nichts**: kein Übersetzungslauf, kein `lipo`, keine Montage,
-keine Signierung. Fehlt das Bündel, bricht der Befehl ab und nennt
-`cargo xtask release`.
-
-**Weder Tag noch Arbeitsbaum werden geprüft, und das ist der Zweck des Wegs.**
-Station 1 zu übergehen ist seine Daseinsberechtigung und zugleich seine
-Grenze: ein so beglaubigtes Bündel ist nicht durch die Vorprüfungen der
-Auslieferungskette gegangen, und es ist nicht gesagt, dass ein Tag den Stand
-benennt, aus dem es gebaut wurde. Wer von Grund auf ausliefert, nimmt
-`./release.sh <version>`.
+**Gebaut wird nichts**, und **weder Tag noch Arbeitsbaum werden geprüft**. Station
+1 zu übergehen ist der Zweck des Wegs und zugleich seine Grenze: es ist nicht
+gesagt, dass ein Tag den Stand benennt, aus dem das Bündel gebaut wurde. Wer von
+Grund auf ausliefert, nimmt `./release.sh <version>`.
 
 ### Nur veröffentlichen
 
 ```sh
-~/.cargo/bin/cargo xtask veroeffentlichen 0.2.0
+~/.cargo/bin/cargo xtask veroeffentlichen <version>
 ```
 
-Der Weg für den Fall, dass ein Auslieferungslauf **erst an der achten Station**
-gescheitert ist: das beglaubigte Bündel liegt fertig unter `target/KRK.app`, und
-allein die Weitergabe fehlt. Er ist die achte Station allein, so wie
-`cargo xtask beglaubigen` die siebte allein ist.
+Für den Fall, dass der Lauf **erst an Station 8** gescheitert ist: das
+beglaubigte Bündel liegt fertig unter `target/KRK.app`, und allein die Weitergabe
+fehlt. Der Weg ist Station 8 allein, so wie `cargo xtask beglaubigen` Station 7
+allein ist.
 
-**Für diesen Weg gibt es keine Hülle**, weder ein Skript wie `certify-only.sh`
-noch ein Ziel im `Makefile`. Das ist die schmalste Fassung und eine bewusste
-Wahl; die Frage, ob er eine bekommt, liegt dem Nutzer vor
+**Für diesen Weg gibt es keine Hülle**, weder ein Skript noch ein Ziel im
+`Makefile`; ob er eine bekommt, liegt dem Nutzer vor
 (`fusion-workbench/shared/decisions/260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-wie-certify-only-sh.md`).
-Solange es keine gibt, trägt der Aufruf den vollen Pfad zu `cargo`: auf diesem
-Gerät steht `cargo` nicht auf dem Standard-`PATH`, und genau das nimmt einem das
-`Makefile` sonst ab. Wer den Pfad lieber einmal setzt, tut es mit
-`export PATH="$HOME/.cargo/bin:$PATH"`.
-
-Was der Befehl tut, in dieser Reihenfolge:
+Solange es keine gibt, trägt der Aufruf den vollen Pfad zu `cargo`, denn auf
+diesem Gerät steht `cargo` nicht auf dem Standard-`PATH`. Wer den Pfad lieber
+einmal setzt, tut es mit `export PATH="$HOME/.cargo/bin:$PATH"`.
 
 | Schritt | Was geschieht |
 |---|---|
@@ -474,83 +324,30 @@ Was der Befehl tut, in dieser Reihenfolge:
 | anlegen | `gh release create v<zahl>`, öffentlich, mit dem Zip als einziger Datei |
 
 Die drei Prüfungen stehen vorn, und das ist die Zusage des Wegs: bricht er an
-einer von ihnen ab, liegt danach kein Zip da und es ist nichts geschoben.
-
-**Gebaut wird nichts und beglaubigt wird nichts**: kein Übersetzungslauf, kein
-`lipo`, keine Montage, keine Signierung, keine Einreichung bei Apple. Ob das
+einer von ihnen ab, liegt danach kein Zip da und es ist nichts geschoben. Ob das
 Ticket hängt, fragt der Befehl an einer Datei und nicht bei Apple — `xcrun
-stapler validate` beantwortet eine andere Frage und bräuchte dafür Netz, während
-hier gerade zu prüfen ist, ob das Bündel den Nachweis *mitbringt*. Fehlt das
-Ticket, bricht der Befehl ab und nennt `./certify-only.sh <zahl>`; fehlt das
-Bündel, nennt er `./release.sh <zahl>`.
+stapler validate` bräuchte Netz, während hier gerade zu prüfen ist, ob das Bündel
+den Nachweis *mitbringt*. Fehlt das Ticket, nennt der Abbruch
+`./certify-only.sh <zahl>`; fehlt das Bündel, `./release.sh <zahl>`. **Ein
+zweiter Lauf mit derselben Zahl legt nichts doppelt an:** vor dem Anlegen steht
+die Existenzfrage `gh release view v<zahl>`.
 
-**Den Arbeitsbaum prüft er nicht.** Das tut Station 1 von `release`, und daraus
-folgt hier dieselbe Grenze wie beim Nur-Beglaubigungsweg: es ist nicht gesagt,
-dass das Bündel aus dem Stand gebaut wurde, den der Befehl gleich schiebt.
-
-**Ein zweiter Lauf mit derselben Zahl legt nichts doppelt an.** Vor dem Anlegen
-steht die Existenzfrage `gh release view v<zahl>`; steht das Release schon,
-bricht der Lauf ab, nennt die Lage und überschreibt nichts.
+**Den Arbeitsbaum prüft er nicht**, mit derselben Grenze wie beim
+Nur-Beglaubigungsweg.
 
 #### Einmal vor dem ersten Lauf: die alten Tags nachschieben
 
 Der Befehl schiebt je Lauf genau den einen Tag, den er veröffentlicht. Die Tags
-der Runden davor stehen deshalb nur lokal, solange sie niemand nachgeschoben
-hat. Einmalig:
-
-```sh
-git push origin --tags
-```
-
-Wie viele es sind, sagt keine Zahl in dieser Datei, sondern der Vergleich beider
-Seiten:
+der Runden davor stehen deshalb nur lokal, solange sie niemand nachgeschoben hat.
+Was fehlt, sagt der Vergleich beider Seiten; gibt er nichts aus, ist der Handgriff
+getan:
 
 ```sh
 comm -23 <(git tag -l | sort) \
          <(git ls-remote --tags origin | sed 's|.*refs/tags/||' | sort)
+
+git push origin --tags
 ```
-
-Was `comm` ausgibt, steht lokal und fehlt auf `origin`. Gibt es nichts aus, ist
-der Handgriff getan.
-
-## Installieren und aktualisieren
-
-Dieser Abschnitt richtet sich an den Nutzer des ausgelieferten Bündels und nicht
-an den, der es baut. Er trägt die Betriebsregel dieses Projekts für den Austausch
-der App, und die ist gemessen und nicht geraten: sie stammt aus der Untersuchung
-eines Lesezeichenverlusts nach einer Installation am 260820. (Wer im Quellbaum
-liest, findet sie unter
-`fusion-workbench/shared/analyses/260820-2242-lesezeichenverlust-nach-installation.md`,
-Abschnitt „Betriebsregel für den Austausch der App"; wer das ausgelieferte Zip
-in der Hand hat, hat diese Datei nicht und braucht sie auch nicht — die Regel
-steht hier vollständig.)
-
-1. `KRK-<version>.zip` von der Releaseseite herunterladen und entpacken.
-2. KRK beenden, falls es läuft.
-3. Die neue Fassung über die alte in `/Applications` kopieren und das Ersetzen
-   bestätigen.
-
-**Die alte Fassung vorher nicht löschen.** Ein Überkopieren ist gefahrlos, ein
-Löschen ist es nicht. Werkzeuge, die eine App samt ihrer Stützdateien entfernen
-— ForkLifts App Deleter ist eines und stand auf dem untersuchten Gerät —, nehmen
-dabei den Ordner `~/Library/Application Support/KRK/` mit. Dort hält KRK alles,
-was es sich merkt: die Lesezeichen, die gesicherte Sitzung, die abweichende
-Tastenbelegung und die zwei Notizzettel. Nach so einem Löschen sind sie fort.
-
-Beide Hälften der Regel sind am selben Gerät belegt. Der Ablageordner ist am
-17.08. um 19:13:48 neu angelegt worden, weil er fort war — dreieinhalb Minuten
-nach einem Auslieferungslauf. Die vier Auslieferungen zwischen dem 18.08. und
-dem 20.08. haben ihn dagegen unangetastet gelassen, und nach dem Überkopieren
-vom 20.08. um 19:47 stand `bookmarks.toml` unverändert da.
-
-Wer doch löschen will, kopiert `~/Library/Application Support/KRK/` vorher an
-eine andere Stelle und schreibt die Kopie nach der Installation zurück.
-
-Dasselbe sagt der Text jeder Releaseseite. Er steht an **einer** Stelle, als
-Konstante `RELEASETEXT` in `xtask/src/veroeffentlichung.rs`, und jede seiner
-Aussagen hängt dort an einer eigenen Behauptung der Probe
-`der_releasetext_traegt_jede_seiner_aussagen`; fällt eine aus dem Text, benennt
-der Ausfall, welche.
 
 ## Versionspflege
 
@@ -558,17 +355,11 @@ Die Version steht an **einer** Stelle: im Feld `version` unter
 `[workspace.package]` der `Cargo.toml`. Jedes Mitglied erbt sie über
 `version.workspace = true`.
 
-`resources/Info.plist` trägt bei `CFBundleShortVersionString` nur den
-Platzhalter `__KRK_VERSION__`. `cargo xtask bundle` ersetzt ihn beim Kopieren
-durch die geerbte Version; die Quelldatei bleibt unangetastet. Findet der Bau
-den Platzhalter nicht, bricht er ab und baut kein Bündel — so kann weder eine
-veraltete Zahl noch ein versionsloses Bündel unbemerkt entstehen.
-
-Eine neue Version wird also allein in der `Cargo.toml` gesetzt, und im Baum ist
-danach nichts nachzuführen. Von Hand geschieht auch das nicht mehr:
-`./release.sh <version>` setzt die Zahl, trägt sie ein, setzt den Tag und
-liefert aus (siehe „Auslieferung"). Nachprüfen lässt sich das Ergebnis am
-gebauten Bündel:
+`resources/Info.plist` trägt bei `CFBundleShortVersionString` nur den Platzhalter
+`__KRK_VERSION__`. `cargo xtask bundle` ersetzt ihn beim Kopieren durch die
+geerbte Version; die Quelldatei bleibt unangetastet. Findet der Bau den
+Platzhalter nicht, bricht er ab und baut kein Bündel — so kann weder eine
+veraltete Zahl noch ein versionsloses Bündel unbemerkt entstehen. Nachprüfen:
 
 ```sh
 plutil -extract CFBundleShortVersionString raw target/KRK.app/Contents/Info.plist
@@ -577,63 +368,40 @@ plutil -extract CFBundleShortVersionString raw target/KRK.app/Contents/Info.plis
 `CFBundleVersion` in der `Info.plist` ist etwas anderes: die Baunummer. Sie steht
 nirgends ein zweites Mal und wird von Hand gepflegt.
 
+**Die Zahl, die KRK anzeigt, ist an jedem Bau dieselbe.** Sie stammt immer aus
+der `Cargo.toml`, gleich ob der Bau aus einem getaggten Stand kommt oder nicht.
+Die Deckung durch einen Tag hängt deshalb an der Auslieferung und nicht an jedem
+Bau: ein Entwicklungsbündel darf eine Zahl zeigen, ohne dass der Tag existiert,
+ein ausgeliefertes nicht.
+
 ### Versionsstufen
 
-Wann welche der drei Zahlen steigt, misst sich an KRKs eigenen Flächen und
-nicht an einer Programmierschnittstelle: KRK ist eine Anwendung und keine
-Bibliothek, und die Stelle des Vertrags nehmen die Flächen ein, die der Nutzer
-sieht und speichert.
+Wann welche der drei Zahlen steigt, misst sich an KRKs eigenen Flächen und nicht
+an einer Programmierschnittstelle: KRK ist eine Anwendung und keine Bibliothek,
+und die Stelle des Vertrags nehmen die Flächen ein, die der Nutzer sieht und
+speichert.
 
 - **Major** steigt, wenn KRK etwas hergibt, worauf sich der Nutzer eingerichtet
-  hat: die Bedeutung eines Tastenbefehls ändert sich oder eine Kombination
-  fällt weg, eine Datei unter `~/Library/Application Support/KRK/` wird nicht
-  mehr gelesen, wie sie geschrieben wurde, das Mindest-Zielsystem steigt, oder
-  ein Befehl des Bauwerkzeugs verschwindet oder bedeutet etwas anderes.
+  hat: die Bedeutung eines Tastenbefehls ändert sich oder eine Kombination fällt
+  weg, eine Datei unter `~/Library/Application Support/KRK/` wird nicht mehr
+  gelesen, wie sie geschrieben wurde, das Mindest-Zielsystem steigt, oder ein
+  Befehl des Bauwerkzeugs verschwindet oder bedeutet etwas anderes.
 - **Minor** steigt bei jeder neuen Fähigkeit, also bei jeder Runde, die eine
   bringt. Ein neuer Befehl in der Tastenbelegung und ein neuer Unterbefehl des
   Bauwerkzeugs zählen dazu.
 - **Patch** steigt bei Behebungen ohne neue Fähigkeit.
 
-**Jede Auslieferung bekommt einen Tag `v<version>`, und den setzt das
-Werkzeug.** Bis zum 260813-1534 galt das Gegenteil: der Nutzer setzte ihn von
-Hand, und das Werkzeug erzeugte unter keinen Umständen einen. Der Nutzer hat
-diese Festlegung am selben Tag zurückgenommen, weil sie einen Auslieferungsweg
-in einem Kommando unmöglich macht — ein Weg, der den Tag nicht setzt, braucht
-zwei Kommandos, und damit entfällt die Ersparnis. Der Entscheid ist
-`shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`;
-er überholt `circles/260813-0939-.../decisions/260813-0939_*_wer-setzt-den-ersten-tag-v0-1-0-und-wann.md`.
+**Jede Auslieferung bekommt einen Tag `v<version>`, und den setzt das Werkzeug**
+(`shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`).
+Der Tag bleibt ein bewusster Akt, nur liegt der Vorsatz im Argument: wer
+`./release.sh 0.2.0` tippt, hat die Zahl gewählt, und der Tag folgt daraus
+mechanisch. Verschoben wird nie einer — ein vergebener Name hält den Lauf an.
 
-Der Tag bleibt trotzdem ein bewusster Akt, nur liegt der Vorsatz jetzt im
-Argument: wer `./release.sh 0.2.0` tippt, hat die Zahl gewählt, und der Tag
-folgt daraus mechanisch. Verschoben wird nie einer — ein vergebener Name hält
-den Lauf an.
-
-`v0.1.0` benennt den ersten getaggten Stand und keine Weitergabe. Er steht auf
-dem Commit, der die Runde vom 260813 schließt, damit der grüne Fall der
-Prüfung an einem echten Lauf zu sehen ist; ein Bündel ist an diesem Tag an
-niemanden gegangen. Er ist zugleich der einzige von Hand gesetzte. Rückwirkende
-Tags für die Runden davor gibt es nicht: alle liefen auf derselben Zahl
-`0.1.0`, und sieben Marken für eine Zahl schrieben eine
-Auslieferungsgeschichte, die es nicht gab.
-
-**Was `cargo xtask release` prüft** (Station 1, siehe „Auslieferung"): dass
-HEAD einen Tag mit genau diesem Namen trägt, und dass keine verfolgte Datei
-des Verzeichnisses geändert ist. Vorgemerkte und nicht vorgemerkte Änderungen
-zählen gleich, gelöschte verfolgte Dateien zählen mit.
-
-**Was es nicht prüft:** unbeachtete Dateien. Ein Bauergebnis, eine Notiz oder
-ein Messbericht, der nie eingetragen wurde, hält die Auslieferung nicht auf.
-Und die Prüfung hängt allein an `release`: `cargo xtask bundle` baut jederzeit
-ohne Tag, ebenso jedes Ziel des `Makefile`, das an `bundle` hängt, und
-`make check` bleibt unberührt.
-
-**Die Zahl, die KRK anzeigt, ist an jedem Bau dieselbe.** Sie stammt immer aus
-der `Cargo.toml`, gleich ob der Bau aus einem getaggten Stand kommt oder nicht;
-ein Entwicklungsbau zeigt keine andere Zahl als ein ausgeliefertes Bündel und
-sagt an der Anzeige auch nicht, dass er einer ist. Die Deckung der Zahl durch
-einen Tag hängt deshalb an der Auslieferung und nicht an jedem Bau: ein
-Entwicklungsbündel darf `0.1.0` zeigen, ohne dass der Tag existiert, ein
-ausgeliefertes nicht.
-
-Wo die Zahl wohnt und wie sie in die `Info.plist` kommt, steht im Abschnitt
-darüber und wird hier nicht wiederholt.
+Station 1 von `cargo xtask release` prüft, dass HEAD einen Tag mit genau diesem
+Namen trägt und dass keine verfolgte Datei geändert ist; vorgemerkte und nicht
+vorgemerkte Änderungen zählen gleich, gelöschte verfolgte Dateien zählen mit.
+**Unbeachtete Dateien prüft sie nicht** — ein Bauergebnis, eine Notiz oder ein
+Messbericht, der nie eingetragen wurde, hält die Auslieferung nicht auf. Und die
+Prüfung hängt allein an `release`: `cargo xtask bundle` baut jederzeit ohne Tag,
+ebenso jedes Ziel des `Makefile`, das an `bundle` hängt, und `make check` bleibt
+unberührt.
