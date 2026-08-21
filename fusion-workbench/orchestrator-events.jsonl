@@ -1281,3 +1281,6 @@
 {"ts":"2026-08-21T08:31:33","event":"review_done","turn":1,"agent":"coderev","detail":"2 Befunde, davon 1 Auslieferungshindernis"}
 {"ts":"2026-08-21T08:31:33","event":"turn_end","turn":1,"detail":"2 Aufgaben erledigt, 2 Befunde gefilt"}
 {"ts":"2026-08-21T08:31:33","event":"turn_start","turn":2,"detail":"1 Aufgabe: den Rueckschritt beheben"}
+{"ts":"2026-08-21T10:13:30","event":"shaper_done","detail":"shared/planning/260821-1115_o_spec-artefakt-und-release.md, 40 Abnahmekriterien"}
+{"ts":"2026-08-21T10:13:30","event":"gate_response","agent":"user","detail":"Spec abgenommen, Plan bauen"}
+{"ts":"2026-08-21T10:13:30","event":"planner_start","detail":"shared/planning/260821-1115_o_spec-artefakt-und-release.md"}
