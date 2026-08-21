@@ -61,3 +61,27 @@ weil der Nutzer am 260820-2250 die Behebung der ersten Gestalt beauftragt hat.
 
 **Verwandt:** `shared/issues/260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md`
 — die erste Gestalt, am 260821 behoben.
+
+---
+
+## Nachtrag 260821-1532 (Abgleich): der Schlusssatz gilt jetzt für mehr Gestalten
+
+**Offen; nichts am beschriebenen Verhalten ist behoben.** `Zugang::laden` gibt im Zweig
+`Grund::NichtLesbar` weiter `Beiseite::Nicht` zurück (`crates/krk-core/src/ablage/mod.rs:604`),
+und der nächste gewöhnliche Schreibvorgang schreibt weiter.
+
+**Was sich geändert hat, ist der Umfang.** Mit `d771ec6` hat `Beiseite::Nicht` einen weiteren
+Erzeuger bekommen — die Datei ohne einen einzigen obersten Schlüssel (`mod.rs:622`) —, und der
+Schlusssatz dieses Datensatzes gilt für ihn mit: es wird nichts gesichert, und der nächste
+gewöhnliche Schreibvorgang fragt nicht, ob der gelesene Wert aus der Datei kam oder aus dem
+Auslieferungszustand. Der Modulkopf schreibt es seit `d771ec6` aus (`mod.rs:158-167`); dieser
+Datensatz führte die Gestalt bis hierher nicht. Die Durchsicht vom 260821-1401 hat es unter
+„Verwandt" vermerkt, ohne dass es hier eingetragen worden wäre.
+
+**Und es sind nicht zwei Erzeuger, sondern sieben.** Die vollständige Aufstellung steht im
+Nachtrag von
+`shared/issues/260821-1401_*_zwei-mit-d771ec6-neu-geschriebene-prosastellen-der-ablage-geben-ihren-umfang-falsch-an.md`;
+drei davon liegen in `crates/krk-core/src/tasten/belegung.rs`. Wer diesen Defekt behebt, hat
+damit mehr Stellen vor sich als die zwei, die der Text oben nennt.
+
+**Nachgetragen von:** reconciler, Abgleich 260821-1532, Baumstand `4e810f9`.

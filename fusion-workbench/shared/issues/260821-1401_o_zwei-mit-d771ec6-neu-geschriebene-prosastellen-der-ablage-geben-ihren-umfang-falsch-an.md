@@ -121,3 +121,35 @@ Diese zwei sind mit `d771ec6` neu. Wer beide behebt, fasst sie zusammen.
 `shared/issues/260821-1023_c_der-neue-leerbefund-zweig-belegt-den-einen-sicherungsplatz-mit-einer-datei-ohne-bestand.md`
 — dessen `Resolved:`-Notiz nennt vier mitgezogene Prosastellen; es sind fünf, der Absatz
 `mod.rs:162-167` kam ungezählt dazu.
+
+---
+
+## Nachtrag 260821-1532 (Abgleich): die Erzeugertabelle zählt selbst zu niedrig
+
+**Offen, der Befund gilt, und er ist größer als hier gemessen.** Der Abschnitt „Ein Erzeuger
+fehlt in der Zählung" nennt vier Stellen im Baum. Am Baumstand `4e810f9` nachgezählt über
+`grep -rn 'Beiseite::Nicht' crates/krk-core/src` sind es **sieben**; drei liegen in einem
+Modul, das der Bereich der Durchsicht (`073448e..d771ec6`) nicht berührt hat und das der
+`grep` deshalb nicht gesehen hat.
+
+| Stelle | Grund | in der Tabelle oben |
+|---|---|---|
+| `ablage/mod.rs:604` (`laden`) | `Grund::NichtLesbar` | ja |
+| `ablage/mod.rs:622` (`laden`) | `Grund::Beschaedigt`, kein oberster Schlüssel | ja |
+| `ablage/mod.rs:725` (`text_laden`) | `Grund::NichtLesbar`, `KeinGueltigesZiel` | ja |
+| `ablage/einstellungen.rs:169` | `Grund::NichtAnlegbar` | ja |
+| `tasten/belegung.rs:1464` | `Grund::Beschaedigt` — gültiges TOML, eine Ebene höher als widersprüchlich aufgefallen | **nein** |
+| `tasten/belegung.rs:1498` | `Grund::NichtLesbar` — der Durchgang scheitert an der Schreibsperre | **nein** |
+| `tasten/belegung.rs:1509` | `Grund::NichtLesbar` — kein Ablageordner | **nein** |
+
+Alle sieben bauen eine `Ersetzung`; die drei aus `belegung.rs` sind nicht weniger Erzeuger als
+die vier genannten. Der fünfte fällt dabei unter keinen der drei Fälle des Doc-Kommentars und
+auch unter keinen der vier der Tabelle: die Datei war lesbar **und** gültiges TOML.
+
+**Das stärkt den Vorschlag und ändert ihn nicht.** Die Empfehlung lautet, die Zählung wieder
+durch eine Regel zu ersetzen — „Der Wert jeder `Ersetzung`, aus der es nichts zu sichern gibt".
+Dass eine zweite Zählung, gefahren zwei Stunden nach der ersten, um drei danebenlag, ist der
+Beleg dafür, dass eine Zahl an dieser Stelle nicht zu halten ist. Wer den Befund behebt, setzt
+**keine** Sieben ein.
+
+**Nachgetragen von:** reconciler, Abgleich 260821-1532, Baumstand `4e810f9`.

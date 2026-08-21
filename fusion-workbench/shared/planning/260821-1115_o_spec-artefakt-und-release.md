@@ -1,7 +1,7 @@
 # Spec: Artefakt und Release
 
 **Datum:** 2026-08-21
-**Status:** Entwurf
+**Status:** Vom Nutzer am 260821 abgenommen, gebaut und am Baum belegt; 25 der 40 Abnahmekriterien sind an Proben und am Lesen abgenommen, 15 warten auf den Nutzer. Der Marker bleibt `_o_`; die Begründung steht unten im Abgleichsprotokoll.
 **Baumstand bei der Abfassung:** `d771ec6`
 **Quelle:** Nutzerwunsch vom 260821, „wie könnten wir eine Ersteinstall und eine Update-Function realisieren?", eingegrenzt in drei Klärungsrunden auf Artefakt und Release.
 **Umfangswahl des Nutzers:** nur Artefakt und Release. Kein App-Code, keine neue Kiste, keine Netzverbindung zur Laufzeit. Aktualisieren heißt herunterladen und hinüberziehen.
@@ -384,3 +384,54 @@ Keiner der drei ist dauerhaft ausgeschlossen. Verworfen sind sie für diese Rund
       `shared/decisions/260821-1115_o_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-wie-certify-only-sh.md`.
 - [ ] Der Name des Unterbefehls, `veroeffentlichen`, ist eine Vorgabe und keine Wahl des Nutzers.
       Er kann sie beim Durchsehen dieses Specs überschreiben.
+
+---
+
+## Reconciliation Log
+
+**260821-1532, Reconciler, Baumstand `4e810f9`.** Erste Beurteilung dieses Specs.
+
+### Was gemessen ist
+
+| Gegenstand | Ergebnis |
+|---|---|
+| Elf Planschritte gegen den Baum | alle elf belegt; `xtask/src/veroeffentlichung.rs` steht mit 1.090 Zeilen, die achte Station hängt in `release` und im Hilfetext |
+| `cargo test --workspace` | grün, `xtask` liefert 155 Proben |
+| `cargo clippy --workspace --all-targets` | Rückgabewert 0 |
+| `cargo fmt --all --check` | Rückgabewert 0 |
+| Abnahmekriterien im Spec gezählt | 40 |
+| Zuordnungstabelle des Plans | 40 Zeilen, keine Doppelung, keine Lücke |
+| C6.3 am Quellbaum | „sieben Stationen" kommt in `README.md`, `Makefile` und `xtask/**.rs` nicht mehr vor; `acht Stationen` steht in vier Dateien |
+| Geschoben worden ist nichts | `origin/main` steht auf `01d2365`, HEAD lokal auf `4e810f9` |
+
+### Warum der Marker `_o_` bleibt
+
+Aus demselben Grund, aus dem der Abgleich vom 260820-2056 die zwei Specs
+`260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` und
+`260816-1310_*_spec-inhaltsfilter-der-dateiliste.md` hat stehen lassen: ein `_c_` an einem Spec
+entschiede die offene Frage
+`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`
+durch vollendete Tatsache.
+
+**Die Lage ist an dieser Datei dieselbe, und sie ist nachgemessen und nicht angenommen.** Die
+zwei Lesarten fallen auseinander: nach der Lesart der belegten Bauarbeit stünde der Spec auf
+`_c_` (elf von elf Planschritten belegt, vier Durchsichten gefahren, alle Befunde behoben oder
+als eigener Datensatz abgelegt), nach der Lesart der Abnahmekriterien nicht — 15 der 40 sind
+ohne den Nutzer nicht abzunehmen, und der Plan führt sie unter `## Abnahme durch den Nutzer`
+einzeln auf. Was ihnen fehlt, liegt außerhalb des Baums: `gh` ist auf diesem Gerät nicht
+installiert, es gibt keine Anmeldung, und `git push origin --tags` ist nie gefahren.
+
+### Was daneben berichtigt ist
+
+Die Kopfzeile `**Status:**` stand auf „Entwurf". Der Spec ist am 260821 vom Nutzer abgenommen
+(`77b84bb`) und vollständig gebaut; „Entwurf" war seit jenem Commit falsch. Der Dateimarker ist
+dabei nicht bewegt worden.
+
+### Was offen bleibt und diesen Spec bindet
+
+- `shared/issues/260821-1221_*_das-abnahmekriterium-c6-3-enthaelt-die-zeichenfolge-die-es-verbietet.md`
+  — C6.3 ist so, wie es hier dasteht, selbstbezüglich unerfüllbar. Der Plan begrenzt die Zusage
+  auf den Quellbaum; am Wortlaut des Kriteriums ist nichts geändert.
+- `shared/decisions/260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-wie-certify-only-sh.md`
+  — weiter offen. Der Baum hat keine Hülle bekommen, und das ist die vorläufige Fassung des
+  Specs und keine Antwort.

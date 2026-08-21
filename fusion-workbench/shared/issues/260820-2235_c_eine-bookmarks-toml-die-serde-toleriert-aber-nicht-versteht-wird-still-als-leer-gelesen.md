@@ -118,3 +118,13 @@ eigener Datensatz
 
 Sechs Proben in `crates/krk-core/tests/ablage.rs`, die Messtabelle Zeile für Zeile. Abnahme:
 `make check`, Exit 0.
+
+---
+Revised by: `d771ec6` — Die `Resolved:`-Notiz sagt, beide Hälften der Frage mündeten „in den
+schon bestehenden Zweig `Grund::Beschaedigt` und damit in `Zugang::beiseite_legen`". Für die
+zweite Hälfte gilt das seit `d771ec6` nicht mehr: der Leerbefund-Zweig gibt `Beiseite::Nicht`
+zurück und ruft `beiseite_legen` nicht (`crates/krk-core/src/ablage/mod.rs:607-624`). Der Zweig
+`Grund::Beschaedigt` trägt beide Hälften weiter, der Weg dahinter trennt sie. Der Defekt bleibt
+geschlossen; allein die genannte Begründung ist überholt. Nachgemessen im Abgleich vom
+260821-1532 am Baumstand `4e810f9`; der Anlass ist
+`shared/issues/260821-1023_*_der-neue-leerbefund-zweig-belegt-den-einen-sicherungsplatz-mit-einer-datei-ohne-bestand.md`.

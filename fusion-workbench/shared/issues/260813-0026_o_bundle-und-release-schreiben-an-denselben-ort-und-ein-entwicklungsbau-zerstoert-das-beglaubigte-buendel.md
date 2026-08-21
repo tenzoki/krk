@@ -44,3 +44,24 @@ reist also mit.
 
 Herkunft: gemeinsamer Speicher. Betrifft `xtask` und den Bauweg des ganzen Projekts, nicht die
 Directive einer Runde.
+
+---
+
+## Nachtrag 260821-1532 (Abgleich): zwei Abfangstellen, beide hinter dem Schaden
+
+**Offen und unverändert.** `bundle` schreibt weiter nach `target/KRK.app`, und ein
+Entwicklungsbau zerstört ein dort liegendes beglaubigtes Bündel unwiderruflich. Keiner der drei
+Zuschnitte oben ist gebaut.
+
+**Was seit dem 260821 dazugekommen ist**, und was die Durchsicht
+`shared/reviews/260821-1346-coderev-artefakt-und-release.md` hier einzutragen verlangt hat: es
+sind jetzt **zwei** Stellen, die den Fall abfangen, `beglaubigen` und `veroeffentlichen`. Die
+zweite prüft am Bündel, ob das Beglaubigungsticket angeheftet ist
+(`xtask/src/veroeffentlichung.rs`, `traegt_angeheftetes_ticket` an
+`Contents/CodeResources`), und ein Entwicklungsbündel trägt keins. **Beide stehen hinter dem
+Schaden und nicht davor:** sie fangen den Fall am Anfang der siebten und der achten Station,
+also nachdem das beglaubigte Bündel bereits überschrieben ist. Das ist eine Milderung und kein
+Abschluss; der Plan `shared/planning/260821-1221_*_plan-artefakt-und-release.md` sagt es in
+seiner Risikotabelle ausdrücklich, und kein Schritt jener Runde behauptet etwas anderes.
+
+**Nachgetragen von:** reconciler, Abgleich 260821-1532, Baumstand `4e810f9`.

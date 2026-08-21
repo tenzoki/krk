@@ -81,3 +81,41 @@ Implemented:
 Deferred:
 Superseded by:
 Retired:
+
+---
+Abgleich 260821-1532 (reconciler, Baumstand `4e810f9`): **offen, und die Frage steht schärfer da
+als bei ihrer Abfassung. Der Marker ist nicht bewegt worden.**
+
+**Warum kein `_a_`.** Der Baum hat Fakten geschaffen — `gh` wird über den Suchpfad gerufen —,
+aber eine Antwort ist das nicht. Die Frage lautet, ob daraus die **Regel für jedes künftige
+fremde Werkzeug** wird; sie steht wörtlich in der letzten Randbedingung. Der Plan sagt selbst,
+er fahre auf dem Suchpfad, weil die Alternative auf einem der beiden Geräte falsch wäre, und
+führt die Frage unter `## Open Questions` als ungehakt. Der Modulkopf von
+`xtask/src/veroeffentlichung.rs:43-45` legt sie ausdrücklich dem Nutzer vor und zitiert diesen
+Datensatz mit ausgeschriebenem `_o_`. Ein `_a_` hier entschiede die allgemeine Frage durch
+vollendete Tatsache und erzeugte daneben einen toten Zeiger im Quelltext.
+
+**Der Satz „Das Bauwerkzeug ruft heute jedes fremde Werkzeug mit vollem Pfad" trifft nicht zu,
+und das war schon bei der Abfassung so.** Nachgezählt über alle `Command::new` in `xtask/src`:
+
+| Stelle | Aufruf | Seit |
+|---|---|---|
+| `xtask/src/bundle.rs:427` | `Command::new("iconutil")` | `8695b77`, 260811 |
+| `xtask/src/release.rs:604` | `Command::new("rustup")` | `d577295`, 260806 |
+
+Beide liegen zehn und fünfzehn Tage vor dieser Frage. `gh` ist damit **nicht** die erste
+Ausnahme der Gewohnheit, sondern die dritte, und die zwei älteren tragen an ihrem Aufrufort
+keine Begründung. Das verschiebt die Optionen: das Contra von Option 1 („die Gewohnheit des
+Baums bekommt eine Ausnahme, und eine Ausnahme, die nur an einer Stelle begründet steht, wird
+beim zweiten Mal übersehen") ist am Baum bereits eingetreten, zweimal. Als eigener Defekt
+abgelegt:
+`shared/issues/260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`.
+
+**Der Nachtrag, den die Durchsicht vom 260821-1346 verlangt hat, ist bis heute nicht eingetragen
+gewesen; er steht hiermit, und seine Zahl ist berichtigt.** Die Durchsicht nennt drei
+Aufrufstellen über die Konstante `GH`. Es sind vier, und sie waren es schon an dem Stand, den sie
+gelesen hat (`465330b`: `:166`, `:169`, `:579`, `:622` — die zweite fehlt in ihrer Aufzählung).
+Heute stehen sie auf `xtask/src/veroeffentlichung.rs:177` (`gh --version`), `:180`
+(`gh auth status`), `:612` (`gh release create`) und `:655` (`gh release view`), alle über
+`const GH` (`:59`). Die Folgerung der Durchsicht hält unabhängig von der Zahl: eine spätere
+Umstellung auf eine Stufensuche berührt genau eine Zeile, was die Kosten von Option 2 senkt.

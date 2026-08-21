@@ -88,3 +88,36 @@ Option 2, aber erst nach der Messung, die die dritte Bedingung nennt, und mit ei
 die Rückwärtsrichtung. Der Sitzungszustand ist der Bestand mit der höchsten Schreibfrequenz und
 damit der, den die Lücke am teuersten macht; die von Hand gepflegten Dateien dagegen haben eine
 legitime leere Gestalt, die `bookmarks.toml` nicht hat.
+
+---
+Abgleich 260821-1532 (reconciler, Baumstand `4e810f9`): **offen, und eine Randbedingung ist seit
+`d771ec6` überholt. Der Marker ist nicht bewegt worden.**
+
+**Die Frage selbst steht unverändert.** `Datei::leerbefund`
+(`crates/krk-core/src/ablage/pfade.rs:234-241`) gibt weiter `Leerbefund::Beschaedigt` allein für
+`Datei::Lesezeichen` zurück; `keymap.toml`, `session.toml`, `settings.toml` und die zwei Zettel
+tragen `Leerbefund::Vorgabe`. `Sitzung` (`crates/krk-core/src/ablage/sitzung.rs`) trägt weiter
+kein `#[serde(deny_unknown_fields)]`. Die Messung, die die dritte Randbedingung verlangt —
+schreibt KRK je eine `session.toml` ohne obersten Schlüssel —, ist nicht gefahren. Es gibt keine
+Antwort, also bleibt der Marker `_o_`.
+
+**Die erste Randbedingung stimmt seit `d771ec6` nicht mehr.** Sie lautet: „Beide Hälften der
+Regel münden heute in denselben Zweig `Grund::Beschaedigt` und damit in
+`Zugang::beiseite_legen`; jede Antwort hält das ein." Der Zweig `Grund::Beschaedigt` trägt beide
+Hälften weiter, der Weg dahinter trennt sie: die Hälfte „kein einziger oberster Schlüssel" gibt
+seit `d771ec6` `Beiseite::Nicht` zurück und ruft `beiseite_legen` nicht mehr
+(`crates/krk-core/src/ablage/mod.rs:607-624`). Gesichert wird allein die Hälfte, in der der Leser
+einen Fehler über einen Text meldet, der einen Bestand tragen kann.
+
+**Was das für die Optionen ändert, und was nicht.** Die Zusage „kein zweiter Mechanismus" hält
+weiter — es ist eine Zeile weniger geworden und keine Stelle mehr, und
+`nur_benannte_dateien_erreichen_das_atomare_schreiben` zählt unverändert fünf. Die Rechnung von
+Option 2 verschiebt sich dagegen: eine streng gestellte `session.toml` ohne obersten Schlüssel
+bekäme eine Meldung und den Auslieferungszustand, aber **keine Sicherung**. Der Grund, mit dem
+die Empfehlung Option 2 trägt — „der Sitzungszustand ist der Bestand mit der höchsten
+Schreibfrequenz und damit der, den die Lücke am teuersten macht" —, ist damit für diese Hälfte
+schwächer, als er am 260821-0142 war. Für die andere Hälfte, `deny_unknown_fields`, ist er
+unberührt: dort wird weiter gesichert.
+
+Verwandt: `shared/issues/260821-1401_*_der-leerbefund-zweig-verschweigt-eine-dastehende-sicherung-die-den-bestand-traegt.md`
+— derselbe Zweig, eine Auskunft, die mit derselben Zeile weggefallen ist.

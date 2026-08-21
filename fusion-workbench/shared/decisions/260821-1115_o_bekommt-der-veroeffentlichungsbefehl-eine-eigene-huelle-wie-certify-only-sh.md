@@ -62,3 +62,23 @@ Implemented:
 Deferred:
 Superseded by:
 Retired:
+
+---
+Abgleich 260821-1532 (reconciler, Baumstand `4e810f9`): **offen. Der Marker ist nicht bewegt
+worden.**
+
+**Der Baum trägt Option 1, und das ist keine Antwort.** Nachgezählt: die Projektwurzel führt zwei
+Skripte, `release.sh` und `certify-only.sh`, kein `publish-only.sh`; das `Makefile` führt kein
+Ziel `veroeffentlichen`. Der Befehl ist allein als `cargo xtask veroeffentlichen <zahl>`
+erreichbar. Genau so hat es der Spec unter `## Offene Nutzerentscheidungen` angekündigt — mit dem
+Wort „vorläufig" —, und der Plan wiederholt es unter `## Open Questions` als ungehakt. Eine
+Empfehlung, die sich selbst als vorläufig bezeichnet, und ein Baum, der ihr folgt, sind zusammen
+kein `Answered:`; wer das als Antwort nähme, entschiede durch vollendete Tatsache.
+
+**Der Nachtrag der Durchsicht vom 260821-1346 ist bis heute nicht eingetragen gewesen; er steht
+hiermit.** Die `README.md` trägt die Begründung für Option 1 inzwischen ausgeschrieben, im
+Abschnitt „Nur veröffentlichen" (`README.md:445-462`): dass es keine Hülle gibt, dass das die
+schmalste Fassung und eine bewusste Wahl ist, dass die Frage dem Nutzer vorliegt, und dass der
+Aufruf deshalb den vollen Pfad zu `cargo` braucht, samt dem Handgriff `export PATH=…`. Wer
+Option 2 oder 3 wählt, zieht diese Zeilen mit — das erhöht die Kosten beider gegenüber dem, was
+der Datensatz unter „Contra" annimmt, um eine Stelle in der `README.md`.
