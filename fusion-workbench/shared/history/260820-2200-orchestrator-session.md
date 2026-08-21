@@ -1,8 +1,8 @@
 # Orchestrator-Sitzung — 260820-2200
 
 **Directive:** Nach dem Überkopieren der App sind alle Lesezeichen weg. Es braucht einen persistenten Speicherort.
-**Mode:** noch nicht aufgelöst (Phase 0 steht aus)
-**Status:** Läuft
+**Mode:** custom, zweimal verschoben (siehe `## Verlauf`)
+**Status:** Abgeschlossen
 
 ## Snapshot bei Sitzungsbeginn
 
@@ -17,7 +17,52 @@
 
 ## Verlauf
 
-(wird während der Sitzung fortgeschrieben)
+Die Sitzung hat **zwei Stränge** gefahren, beide auf ausdrückliche Nutzerentscheidung.
+
+**Strang 1 — der gemeldete Lesezeichenverlust.** Die Meldung lautete, ein Überkopieren der App
+nehme jedesmal alle Lesezeichen mit. Die Annahme dahinter trug nicht: `bookmarks.toml` hat
+genau einen Schreiber, und der hängt an einem Lesezeichenbefehl. Die Untersuchung fand einen
+einzigen datierten Vorfall am 17.08.; der Nutzer nahm die ForkLift-Spur als Erklärung an und
+schloss den Vorfall. Dabei fiel ein echter Datenverlustweg im Code auf. Seine erste Behebung
+führte selbst einen Rückschritt ein, den die Durchsicht fand und der zweite Anlauf behob.
+
+**Strang 2 — Artefakt und Release.** Aus „wie könnten wir eine Ersteinstall und eine
+Update-Function realisieren" wurde in drei Klärungsrunden und zwölf Nutzerentscheidungen ein
+enger Umfang. Spec (40 Kriterien) und Plan (11 Schritte) abgenommen, alle Schritte gebaut,
+fünf Durchsichten gefahren, KRK 0.5.6 ausgeliefert, die 15 offenen Kriterien gemessen, Circle
+kohärent geschlossen.
+
+## Budget
+
+| Größe | Zahl |
+|---|---|
+| Turns | 3 |
+| Commits | 21 |
+| Defektdatensätze gefilt | 19 |
+| Entscheidungsdatensätze gefilt | 3 |
+| Defekte geschlossen | 10 |
+| Durchsichten | 5 |
+| Menschliche Gates | 12 |
+
+Gezählt am Dateibestand und am Ereignisprotokoll ab `session_start`, nicht mitgeschrieben.
+
+## Was diese Sitzung über sich selbst gelernt hat
+
+**Drei Rückschritte sind nur aufgefallen, weil jemand nachgemessen hat**, und alle drei
+standen hinter einer grünen Abnahme. Der Sicherungsplatz-Rückschritt an `073448e`, die zu
+starke Zusage im Modulkopf von `git.rs`, und die Abnahmezahl 27/13, die ehrlich 25/15 lautete.
+Keiner wäre durch `make check` gefallen.
+
+**Mein eigenes Ereignisprotokoll ist lückenhaft.** Dieser Lauf hat rund fünfzehn Agenten
+gefahren und dabei 2 `task_start` und 2 `task_done` emittiert. Der Defekt
+`shared/issues/260810-1945_*_der-orchestrator-hat-in-drei-turns-keine-aufgabenereignisse-emittiert.md`
+beschreibt genau das, und diese Sitzung hat ihn wiederholt statt vermieden.
+
+## Abdeckung der Durchsichten
+
+**Bereich:** `01d2365..8b16b8d`, 21 Commits, 5 Durchsichten.
+**Nicht abgedeckt:** vier Commits, alle reine Werkstattdokumente ohne Codezeile — `77b84bb`
+(Spec), `7db749e` (Plan), `66e480b` (Abnahme), `8b16b8d` (Portfolio).
 
 ## Coherence
 
