@@ -66,6 +66,21 @@
 //!    ausdruecklich nicht prueft, ist Station 1: der Modulkopf von
 //!    `beglaubigung` schreibt aus, warum das sein Zweck und nicht sein Mangel
 //!    ist.
+//! 8. **Veroeffentlichen:** aus dem beglaubigten Buendel wird
+//!    `target/KRK-<version>.zip`, HEAD und `refs/tags/v<version>` gehen zur
+//!    Gegenseite, und an einer oeffentlichen Releaseseite haengt danach das
+//!    Zip. Was sie vorher prueft, ist `gh`: vorhanden und angemeldet. Das ist
+//!    die dritte aeussere Voraussetzung der Kette, neben dem vollstaendigen
+//!    Xcode und dem Apple-Entwicklerkonto von Station 7; fehlt sie, bricht
+//!    allein diese Station ab, und das beglaubigte Buendel bleibt liegen.
+//!
+//!    **Sie steht in `veroeffentlichung.rs` und hat wie Station 7 zwei
+//!    Rufer**, diesen hier und `cargo xtask veroeffentlichen <zahl>`. Der
+//!    Unterschied zwischen beiden ist eine einzige Frage: der eigenstaendige
+//!    Weg prueft selbst, ob `v<zahl>` auf HEAD steht, weil vor ihm keine
+//!    Station stand; von hier aus hat Station 1 dieselbe Wahrheit schon gegen
+//!    die eingebackene Zahl geprueft. Ausgedrueckt ist der Unterschied als
+//!    `veroeffentlichung::Tagfrage` und nicht als Wahrheitswert.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -76,6 +91,7 @@ use crate::beglaubigung;
 use crate::bundle;
 use crate::git;
 use crate::sign;
+use crate::veroeffentlichung;
 
 /// Die beiden Ziel-Tripel der universellen Binaerdatei.
 ///
@@ -157,7 +173,7 @@ const GRENZWURZEL: &str = "crates";
 /// Der eine Teilbaum unter [`GRENZWURZEL`], der eine `objc2`-Kiste nennen darf.
 const AUSNAHME: &str = "crates/krk-ui/src/appkit";
 
-/// Baut, signiert und beglaubigt das Auslieferungspaket.
+/// Baut, signiert, beglaubigt und veroeffentlicht das Auslieferungspaket.
 pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     if let Some(ueberzaehlig) = argumente.first() {
         return Err(Abbruch::Aufruf(format!(
@@ -193,7 +209,14 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 
     beglaubigung::beglaubigen(&buendel)?;
     println!("Beglaubigt und angeheftet: {}", buendel.display());
-    Ok(())
+
+    // Station 8 nimmt die Zahl aus `env!("CARGO_PKG_VERSION")`, denn `release`
+    // nimmt kein Argument; es ist dieselbe Zahl, gegen die Station 1 den Tag
+    // gehalten hat. Deshalb fragt die Station hier nicht noch einmal danach.
+    veroeffentlichung::veroeffentlichen(
+        env!("CARGO_PKG_VERSION"),
+        veroeffentlichung::Tagfrage::Erledigt,
+    )
 }
 
 /// Station 1: HEAD traegt den passenden Tag, und der Arbeitsbaum entspricht
@@ -1098,6 +1121,38 @@ mod tests {
         assert!(
             pruefung < uebersetzung,
             "Station 1 steht hinter dem ersten Uebersetzungslauf"
+        );
+    }
+
+    /// Die achte Station steht hinter der Beglaubigung (C1.4).
+    ///
+    /// Die Reihenfolge ist keine Bequemlichkeit: veroeffentlicht wird ein
+    /// Buendel mit angeheftetem Ticket, und angeheftet wird es in Station 7.
+    /// Stuende die achte davor, truege das Zip den Nachweis nicht — und die
+    /// Ticketpruefung jener Station liesse den Lauf jedesmal scheitern.
+    ///
+    /// **Was diese Probe nicht sieht:** dieselbe Grenze wie bei
+    /// [`die_standpruefung_steht_vor_der_ersten_uebersetzung`] — sie liest die
+    /// Reihenfolge des Textes und nicht den Ablauf.
+    #[test]
+    fn die_achte_station_steht_hinter_der_beglaubigung() {
+        let quelle = include_str!("release.rs");
+        let anfang = quelle
+            .find(concat!("pub fn ", "ausfuehren("))
+            .expect("release.rs fuehrt ausfuehren");
+        let rumpf = &quelle[anfang..];
+        let ende = rumpf.find("\n}\n").expect("ausfuehren hat ein Ende");
+        let rumpf = &rumpf[..ende];
+
+        let heften = rumpf
+            .find(concat!("beglaubigung", "::beglaubigen(&"))
+            .expect("ausfuehren faehrt Station 7");
+        let veroeffentlichen = rumpf
+            .find(concat!("veroeffentlichung", "::veroeffentlichen("))
+            .expect("ausfuehren faehrt Station 8");
+        assert!(
+            heften < veroeffentlichen,
+            "Station 8 steht vor der Beglaubigung"
         );
     }
 

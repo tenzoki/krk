@@ -13,10 +13,17 @@
 //! drei Fragen [`VERZEICHNIS`], [`TAGS_AUF_HEAD`] und [`STAND`] sind
 //! Konstanten: sie tragen keinen Wert aus der Befehlszeile, also laesst sich an
 //! ihnen einmal nachsehen, dass keine von ihnen schreibt, und die Probe
-//! `keine_der_drei_fragen_schreibt` tut das Wort fuer Wort. Die beiden
-//! schreibenden Kommandos koennen keine Konstanten sein, weil beide die
-//! Versionszahl tragen; sie entstehen in `version` als reine Funktionen und
-//! werden dort ebenso Wort fuer Wort nachgesehen.
+//! `keine_der_drei_fragen_schreibt` tut das Wort fuer Wort. Die schreibenden
+//! Kommandos koennen keine Konstanten sein, weil jedes einen Wert aus der
+//! Befehlszeile traegt; sie entstehen als reine Funktionen und werden ebenso
+//! Wort fuer Wort nachgesehen.
+//!
+//! **Es sind seit dem 260821 drei, und sie entstehen an zwei Orten.** `version`
+//! baut das Setzen des Tags und den Eintrag, `veroeffentlichung` das Schieben.
+//! Nachgesehen werden alle drei an einer einzigen Stelle,
+//! `version::tests::die_schreibenden_kommandos_tragen_keine_gewalt`: sie liest
+//! die Listen, die hier ankommen, und keine anderen. Genau daran haengt ihre
+//! Aussagekraft, und darum ist sie nicht mit dem dritten Bauer mitgewandert.
 //!
 //! Die zwei kleinen Lesehilfen [`geaenderte_dateien`] und [`tag_steht`] stehen
 //! ebenfalls hier und nicht bei ihren Abnehmern: `release` und `version`

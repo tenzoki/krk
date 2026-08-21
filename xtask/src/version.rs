@@ -563,6 +563,11 @@ fn eintrag_argumente(meldung: &str) -> Vec<&str> {
 mod tests {
     use super::*;
 
+    // Der dritte Bauer der Argumentlisten steht dort, wo das Schieben
+    // hingehoert; die Aufsicht ueber alle drei steht hier. Warum, sagt der
+    // Pruefkommentar von `die_schreibenden_kommandos_tragen_keine_gewalt`.
+    use crate::veroeffentlichung;
+
     /// Die Wurzel-Cargo.toml in klein: Abschnitte drumherum, Kommentare drin,
     /// und in den anderen Abschnitten Zeilen, die genauso anfangen.
     const MUSTER: &str = "\
@@ -772,9 +777,34 @@ toml = \"1\"
         assert!(argumente.contains(&"--list"), "{argumente:?}");
     }
 
-    /// Die beiden schreibenden Kommandos, Wort fuer Wort. Sie koennen keine
-    /// Konstanten sein, weil beide die Versionszahl tragen; nachgesehen werden
-    /// sie trotzdem.
+    /// Die drei schreibenden Kommandos, Wort fuer Wort. Sie koennen keine
+    /// Konstanten sein, weil jedes einen Wert aus der Befehlszeile traegt;
+    /// nachgesehen werden sie trotzdem.
+    ///
+    /// **Seit dem 260821 deckt diese Aufsicht drei Kommandos und nicht mehr
+    /// zwei.** Das dritte ist das Schieben, und sein Bauer steht nicht hier,
+    /// sondern in `veroeffentlichung`, wo das Schieben hingehoert. Die Aufsicht
+    /// ist trotzdem nicht mitgewandert und auch nicht verdoppelt worden: sie
+    /// liest die Listen, die bei `git::rufen` landen, und es gibt einen solchen
+    /// Aufruf im ganzen Baum. Eine zweite Aufsicht daneben waere eine zweite
+    /// Antwort darauf, was ein schreibendes Kommando dieses Werkzeugs tragen
+    /// darf.
+    ///
+    /// **Wie die Zusage seither lautet.** Bis dahin sagte sie, dass keines der
+    /// Kommandos eine Marke aus einer Liste traegt, und `push` stand in jener
+    /// Liste neben `--force`. Das geht nicht weiter, sobald ein Kommando `push`
+    /// **ist**. Sie steht deshalb in zwei Haelften, und die Teilung ist
+    /// trennscharf und ohne Ausnahmeliste:
+    ///
+    /// - **Das erste Wort ist der Unterbefehl und wird auf Gleichheit
+    ///   geprueft**, je Kommando einzeln: `tag`, `commit`, `push`. Damit ist
+    ///   gesagt, dass jedes genau eine Sache tut — und `push` ist an der einen
+    ///   Stelle erlaubt und an den zwei anderen ausgeschlossen, ohne dass
+    ///   irgendwo eine Ausnahme stuende. `add` faellt aus der Markenliste
+    ///   heraus, weil diese Haelfte es abdeckt.
+    /// - **Die Woerter danach tragen keine Marke, die Reichweite oder Gewalt
+    ///   hinzufuegt.** Die sechs des Schiebens und die drei, die schon
+    ///   dastanden.
     #[test]
     fn die_schreibenden_kommandos_tragen_keine_gewalt() {
         let tag = tag_argumente("v0.2.0");
@@ -789,17 +819,35 @@ toml = \"1\"
             eintrag.ends_with(&["--", "Cargo.toml", "Cargo.lock"]),
             "{eintrag:?}"
         );
-        for marke in [
-            "-f",
+
+        let verweis = veroeffentlichung::tagverweis("v0.2.0");
+        let schub = veroeffentlichung::schiebe_argumente(&verweis);
+        assert_eq!(schub, vec!["push", "origin", "HEAD", "refs/tags/v0.2.0"]);
+
+        // Erste Haelfte: das erste Wort, auf Gleichheit.
+        for (kommando, unterbefehl) in [(&tag, "tag"), (&eintrag, "commit"), (&schub, "push")] {
+            assert_eq!(kommando.first(), Some(&unterbefehl), "{kommando:?}");
+        }
+
+        // Zweite Haelfte: keine Marke, die Reichweite oder Gewalt hinzufuegt.
+        const MARKEN: [&str; 9] = [
             "--force",
+            "-f",
+            "--tags",
+            "--all",
+            "--mirror",
+            "--delete",
             "--amend",
             "--no-verify",
-            "add",
-            "push",
             "-a",
-        ] {
-            assert!(!tag.contains(&marke), "der Tag traegt {marke}");
-            assert!(!eintrag.contains(&marke), "der Eintrag traegt {marke}");
+        ];
+        for kommando in [&tag, &eintrag, &schub] {
+            for marke in MARKEN {
+                assert!(
+                    !kommando[1..].contains(&marke),
+                    "{kommando:?} traegt {marke}"
+                );
+            }
         }
     }
 

@@ -253,7 +253,7 @@ flowchart TD
    - Kriterien: C2.1, C2.2, C2.4, C2.5
    - Abhängigkeiten: Schritt 1
 
-5. **Schieben, und die Aufsicht von zwei auf drei Kommandos erweitern**
+5. [DONE] **Schieben, und die Aufsicht von zwei auf drei Kommandos erweitern**
    - Executor: `coder`
    - Dateien: `xtask/src/veroeffentlichung.rs`, `xtask/src/git.rs` (Modulkopf),
      `xtask/src/version.rs` (Probe und ihr Prüfkommentar)
@@ -298,7 +298,7 @@ flowchart TD
    - Kriterien: C3.1, C3.2, C3.3, C3.4, C3.5, C3.6, C3.7
    - Abhängigkeiten: Schritt 1
 
-6. **Die Releaseseite mit festem Text**
+6. [DONE] **Die Releaseseite mit festem Text**
    - Executor: `coder`
    - Dateien: `xtask/src/veroeffentlichung.rs`
    - Änderungen: der Text steht als Konstante mit einer einzigen Fügestelle für die Zahl, und
@@ -324,7 +324,7 @@ flowchart TD
    - Kriterien: C4.1, C4.2, C4.3, C4.4, C4.5, C4.6, C4.7, C4.8, C4.9, C4.10
    - Abhängigkeiten: Schritt 4
 
-7. **Verdrahten: Verteilung und die achte Station**
+7. [DONE] **Verdrahten: Verteilung und die achte Station**
    - Executor: `coder`
    - Dateien: `xtask/src/main.rs`, `xtask/src/release.rs`
    - Änderungen: der Zweig `"veroeffentlichen" => veroeffentlichung::ausfuehren(&argumente[1..])`
