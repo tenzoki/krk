@@ -502,8 +502,8 @@ sagt, wodurch es abgenommen wird.
 | C3.1 Tag und Zweig stehen auf der Gegenseite | 5 | Nutzer |
 | C3.2 ohne Tag auf HEAD bricht er ab | 5 | Probe auf der Prüffunktion, `git ls-remote` beim Nutzer |
 | C3.3 die Zahl der Tags wächst um genau eins | 5 | Nutzer |
-| C3.4 die Argumentliste wird Wort für Wort nachgesehen | 5 | Probe |
-| C3.5 die Aufsicht deckt drei Kommandos | 5 | Probe |
+| C3.4 die Argumentliste wird Wort für Wort nachgesehen | 5 | Probe (seit 260821-1700 auch der zweite Satz, siehe Nachtrag) |
+| C3.5 die Aufsicht deckt drei Kommandos | 5 | **überholt** — Wegkriterium, der Weg ist begründet verlassen, siehe Nachtrag |
 | C3.6 `xtask_ruft_git_an_genau_einer_stelle` bleibt grün | 5 | bestehende Probe |
 | C3.7 `keine_der_drei_fragen_schreibt` läuft unverändert | 5 | bestehende Probe |
 | C4.1 `releases/latest` zeigt `v<zahl>` | 6 | Nutzer |
@@ -633,11 +633,30 @@ dass sie vollständig ist, und sie war es auch nicht: `version::tagliste_argumen
 vierter Bauer daneben. `git::rufen` nimmt seither keine nackte Wortliste mehr entgegen, sondern
 einen `git::Auftrag` — die vollständige Aufzählung jedes Kommandos, das dieses Werkzeug an `git`
 reicht —, und `git::aufsichtsbefund` liest vor jedem Prozessaufruf die Liste, die wirklich
-hinausgeht. Der Zuordnung ändert das nichts: **C3.4 hält weiter** (`die_auftraege_stehen_wort_fuer_wort`,
-jetzt über sieben statt drei Listen), **C3.5 hält weiter und deckt statt drei
-Kommandos alle sieben**, **C3.6 und C3.7 sind unverändert grün** — die Probe
-`keine_der_drei_fragen_schreibt` steht weiter unter diesem Namen und liest dieselben drei
-Fragen, nur in ihrer neuen Form als Varianten.
+hinausgeht.
+
+**Was das an den vier Kriterien ändert, einzeln.** Der erste Nachtrag vom 260821-1620 sagte
+hier „C3.4 und C3.5 halten weiter"; beide nennen die Probe
+`die_schreibenden_kommandos_tragen_keine_gewalt` in `xtask/src/version.rs`, und die ist mit
+demselben Commit gelöscht. Die Durchsicht vom 260821-1432 hat es als Befund D1 aufgenommen,
+und der Schluss wird hier nachgezogen:
+
+- **C3.4 hält, seit dem 260821-1700 in beiden Sätzen.** Der erste Satz — die Argumentliste
+  wird Wort für Wort nachgesehen — hält über `git::tests::die_auftraege_stehen_wort_fuer_wort`,
+  die alle sieben Listen liest statt dreier. Der zweite Satz — „die Probe verwirft jede der
+  sechs oben genannten Marken" — hielt zunächst **nicht**: von den sechs war genau `-f` als
+  angehalten nachgesehen. Er hält jetzt über
+  `git::tests::jede_einzelne_marke_wird_angehalten`, die jede Marke ausgeschrieben nachsieht,
+  und über `jeder_eintrag_der_listen_steht_in_der_anhalteprobe`, die die Gegenrichtung nimmt.
+- **C3.5 ist überholt und hält nicht.** Es ist ein Wegkriterium: es benennt eine Probe an einem
+  Ort und verlangt, dass sie erweitert und nicht umgangen wird. Der Weg wurde bewusst und
+  begründet verlassen — die Ersetzung wirkt zur Laufzeit statt in einer Probe und ist die
+  Antwort auf einen Befund, den das Kriterium nicht vorhersehen konnte. Was an seine Stelle
+  tritt, deckt statt dreier schreibender Kommandos alle sieben; „überholt" ist trotzdem die
+  richtige Aufzeichnung und „hält weiter" die falsche.
+- **C3.6 und C3.7 sind unverändert grün.** `keine_der_drei_fragen_schreibt` steht weiter unter
+  diesem Namen und liest dieselben drei Fragen, nur in ihrer neuen Form als Varianten; die
+  Durchsicht hat sie gegen die gelöschte Fassung gelesen und strikt stärker befunden.
 
 **Die Markenliste hatte drei Lücken (A2).** `-d` als kurze Form von `--delete`,
 `--force-with-lease` und `--force-if-includes` — die ein Vergleich auf Gleichheit nicht deckt —
@@ -651,3 +670,60 @@ auffallen, solange noch nichts geschehen ist" trug am Kopf der achten Station ni
 dort war die Einreichung bei Apple bereits gelaufen. Die achte Station behält ihre eigene
 Prüfung, weil ihr zweiter Rufer keine Station vor sich hat. `bundle` und `make check` bekommen
 dadurch keine Abhängigkeit von `gh`.
+
+## Nachtrag: was die Durchsicht vom 260821-1432 am gebauten Stand geändert hat
+
+Die Durchsicht `shared/reviews/260821-1432-coderev-auftrag-statt-nackter-wortliste.md` hat sechs
+Befunde gemeldet, keinen als Auslieferungshindernis, zwei davon als hoch. Der Nutzer hat am
+260821 die Umstellung gewählt und nicht die zwei Flicken. Behoben sind sie am selben Tag.
+
+**Die Aufsicht liest Plätze statt freier Wörter (A1, A2).** Beide hohen Befunde hatten dieselbe
+Wurzel: die Aufsicht las ein flaches Wortfeld und musste raten, ob ein Wort ein Schalter, ein
+Wert, ein Refspec oder ein Pfad ist. Daraus kamen zwei Löcher — `:refs/heads/feature` löscht
+einen Zweig auf der Gegenseite und trägt dabei keine einzige Marke, und `git` nimmt `--del` als
+`--delete` an, was ein Vergleich auf Gleichheit nicht fängt; beides ist an einem Wegwerf-Repo
+nachgemessen. `git::Auftrag::wortplaetze` sagt seither je Variante, welche Wörter fest dastehen
+und welche Plätze der Aufrufer belegt, und jeder belegte Platz nennt die `git::Gestalt`, die er
+tragen darf. **An einem Platz, dessen Wert `git` als Option oder als Verweis liest, steht damit
+eine Erlaubnisliste**, und die ist vollständig: weder ein Doppelpunkt noch eine Marke, abgekürzt
+oder nicht, hat in `refs/tags/v<zahl>` Platz. `Gestalt::Tagname` ruft dafür
+`version::versionszahl_pruefen` — die Prüfung, die vor der Umstellung die Sicherung war, die in
+Wahrheit trug, während die Aufsicht nichts von ihr wusste.
+
+**An den zwei übrigen Plätzen trägt die Stellung und nicht die Gestalt**, und das steht so da.
+Eine Eintragsmeldung hinter `-m` und ein Pfad hinter `--` liest `git` nicht als eigenes Wort;
+geprüft wird deshalb, dass sie wirklich dort stehen, und darüber hinaus nur das Grobe — nicht
+leer, keine Steuerzeichen, kein Ausstieg aus dem Arbeitsbaum. Ein Nebeneffekt: die Meldung darf
+wieder wie eine Marke aussehen, was die alte Aufsicht als Falschalarm anhielt.
+
+**An festen Wörtern bleibt eine Verbotsliste stehen, mit ihrem Vorbehalt.** Ein festes Wort
+schreibt der hin, der eine Variante hinzufügt; es steht im Quelltext und ist beim Hinschreiben
+zu sehen. `MARKEN` ist dort eine zweite Gelegenheit hinzusehen und keine Zusage, und der
+Modulkopf von `git.rs` sagt das jetzt so. Verglichen wird nicht mehr auf Gleichheit, sondern am
+Wortanfang in beide Richtungen, nachdem ein Anhang hinter `=` abgetrennt ist; damit fällt auch
+`--del` und `--ame`, und `--exec` und `--receive-pack` sind als Einträge dazugekommen.
+
+**Jeder Eintrag der Listen misst jetzt eine Probe (B1).** `jede_einzelne_marke_wird_angehalten`
+schreibt jede Marke aus, statt über die Liste zu laufen: wer einen Eintrag löscht, wird rot.
+`jeder_eintrag_der_listen_steht_in_der_anhalteprobe` nimmt die Gegenrichtung. `beispiele()`
+hängt über `naechster` an einer Fallunterscheidung ohne Auffangzweig, und
+`die_auftraege_stehen_wort_fuer_wort` zählt gegen `beispiele()` nach, statt eine Zahl in Prosa
+zu führen.
+
+**Die Hilfezeile von `make ausliefern` nennt das Schieben (C1).** Die Berichtigung des Befunds
+F1 war an `release` gelandet und an `ausliefern` nicht — ausgerechnet an dem Ziel, zu dem
+`./release.sh` führt. Die Probe heißt jetzt `die_hilfezeilen_des_makefiles_nennen_das_schieben`
+und läuft über beide Ziele.
+
+**Der Modulkopf von `git.rs` sagt die Stärke der Zusage genau (D2).** Der dritte der drei Sätze
+sagte in einem Atemzug, dass nichts den zweiten Prozessaufruf hält und dass eine Probe ihn hält.
+Die dritte Kategorie heißt jetzt „allein eine Probe hält" und nennt die Grenze dieser Probe
+dazu; der zweite Satz ist auf das zurückgenommen, was die Aufsicht wirklich hält, und trennt
+dabei den belegten Platz vom festen Wort.
+
+**Was gemessen ist und was nicht.** `make check` läuft grün; `cargo test -p xtask` liefert 155
+Proben. Vier Mutationen sind gefahren und werden je rot: ein gelöschter Eintrag aus `MARKEN`,
+eine entfernte Doppelpunkt-Regel, ein auf Gleichheit zurückgestellter Markenvergleich und ein
+`Gestalt`-Platz, der zum festen Wort gemacht wird. Eine achte Variante von `Auftrag` hält den
+Bau an drei Stellen an, nachgefahren. **Alles gegen GitHub bleibt ungemessen**, `gh` fehlt auf
+diesem Gerät.

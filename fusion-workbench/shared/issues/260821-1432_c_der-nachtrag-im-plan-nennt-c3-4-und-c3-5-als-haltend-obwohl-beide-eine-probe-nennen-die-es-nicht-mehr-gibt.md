@@ -94,3 +94,20 @@ der Stelle.
 `shared/issues/260821-1432_o_fuenf-der-sieben-marken-ein-gewaltbuchstabe-und-die-uebergehende-marke-messen-keine-probe.md`
 — die Messseite desselben Sachverhalts. Wer die Anhalteproben nachzieht, macht den zweiten
 Satz von C3.4 wieder wahr und braucht dann nur noch C3.5 umzumarkieren.
+
+---
+
+Resolved: Behoben am 260821 im Plan `shared/planning/260821-1221_c_plan-artefakt-und-release.md`,
+ohne Änderung am Code.
+
+Der Satz „Der Zuordnung ändert das nichts" ist gefallen. An seiner Stelle steht ein Abschnitt,
+der die vier Kriterien einzeln führt: **C3.4** hält in beiden Sätzen, seit die Anhalteproben je
+Markeneintrag stehen (verwandter Datensatz) — der erste Satz über
+`die_auftraege_stehen_wort_fuer_wort`, der zweite über `jede_einzelne_marke_wird_angehalten` und
+`jeder_eintrag_der_listen_steht_in_der_anhalteprobe`. **C3.5** ist als **überholt** geführt, mit
+dem Grund, den dieser Datensatz nennt: ein Wegkriterium, dessen Weg bewusst und begründet
+verlassen wurde, hält nicht. **C3.6 und C3.7** stehen unverändert. Die Zuordnungstabelle in Zeile
+505-506 ist nachgezogen; C3.5 trägt dort statt „Probe" den Vermerk „überholt".
+
+Daneben ist ein zweiter Nachtrag angefügt, der ausschreibt, was die Durchsicht vom 260821-1432
+am gebauten Stand geändert hat — nach demselben Muster wie der erste.

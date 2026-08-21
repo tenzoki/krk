@@ -134,3 +134,34 @@ Gegenteil zusagt.
 `shared/reviews/260821-1346-coderev-artefakt-und-release.md`, Befund A2 — dort ist der
 Gleichheitsvergleich schon als Ursache dreier Lücken benannt; geschlossen wurden die drei
 Wörter, nicht der Vergleich.
+
+---
+
+Resolved: Behoben am 260821 in zwei Schichten, weil die zwei Hälften des Befunds verschieden
+schwer wiegen.
+
+**Was von außen kommt, fällt jetzt unter eine Erlaubnisliste.** Die Umstellung, die der
+Datensatz unter „Abhilfe" als den einen Schnitt benennt, ist gefahren: `Auftrag::wortplaetze`
+trennt feste Wörter von belegten Plätzen, und ein belegter Platz trägt eine `Gestalt`. `--del`,
+`--ame`, `--exec=/bin/sh` und jede andere Marke scheitern dort daran, dass sie kein Tagname und
+kein Tagverweis sind — ohne dass eine von ihnen irgendwo als verboten dastünde. Nachgesehen von
+`ein_belegter_platz_traegt_nur_seine_gestalt`.
+
+**Die Verbotsliste bleibt für feste Wörter stehen, und sie ist stärker geworden.** Ein festes
+Wort schreibt der hin, der eine Variante hinzufügt; die Liste ist dort eine zweite Gelegenheit
+hinzusehen und keine Zusage, und der Modulkopf sagt das jetzt so. `verwandte_marke` vergleicht
+nicht mehr auf Gleichheit, sondern am Wortanfang in beide Richtungen, nachdem ein Anhang hinter
+`=` abgetrennt ist: damit fallen `--del`, `--ame`, `--mirr`, `--al` und `--tag` genauso wie
+`--force-with-lease`. `--exec` und `--receive-pack` sind als Einträge dazugekommen, `--force`
+ist aus dem eigenen Wortanfang-Vergleich in `MARKEN` gewandert. Kurze Marken bleiben draußen,
+sonst wäre `-m` der Anfang von `--mirror`; sie liest weiter `kurze_marke`. Nachgesehen von
+`die_aufsicht_faengt_die_abgekuerzte_marke`, und dass die Regel nichts mitnimmt, was dastehen
+muss, von `kein_festes_wort_der_sieben_varianten_wird_angehalten`.
+
+**Der zweite der drei Sätze im Modulkopf ist zurückgenommen** auf das, was die Aufsicht wirklich
+hält, und trennt dabei den belegten Platz vom festen Wort; siehe den verwandten Datensatz zum
+dritten Satz.
+
+Dass `git` die vier Abkürzungen annimmt, ist an einem eigenen Wegwerf-Verzeichnis nachgemessen
+(`--del` löscht einen Tag, `--mirr` kommt durch den Optionszerleger) und nicht aus dem Datensatz
+übernommen.

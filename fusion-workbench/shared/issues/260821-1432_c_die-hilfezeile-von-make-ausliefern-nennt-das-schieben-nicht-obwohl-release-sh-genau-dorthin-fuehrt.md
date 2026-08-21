@@ -80,3 +80,16 @@ sie steht am Ziel, das er nicht tippt.
 
 **Verwandt:** `shared/reviews/260821-1346-coderev-artefakt-und-release.md`, Befund F1 — dieser
 Datensatz ist sein Rest.
+
+---
+
+Resolved: Behoben am 260821. Die `##`-Zeile von `ausliefern` lautet jetzt „Version setzen,
+eintragen, taggen, ausliefern und HEAD und Tag zu origin schieben: make ausliefern
+VERSION=0.2.0"; darüber steht der Grund, den der Datensatz nennt — das Ziel wirkt über das Gerät
+hinaus **und** schreibt in den Arbeitsbaum, und es ist das, zu dem `./release.sh` führt.
+
+Die Probe ist der zweiten Empfehlung des Datensatzes gefolgt und setzt den Zielnamen nicht mehr
+fest ein: sie heißt jetzt `release::tests::die_hilfezeilen_des_makefiles_nennen_das_schieben` und
+läuft über die Liste `SCHIEBENDE_ZIELE`, damit das nächste wirkende Ziel dieselbe Lücke nicht
+ein drittes Mal aufmacht. Nachgemessen als Mutation: die alte `##`-Zeile wieder eingesetzt lässt
+die Probe ausfallen.

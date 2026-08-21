@@ -13,11 +13,13 @@
 //! nimmt einen [`Auftrag`], und `Auftrag` ist die vollstaendige Aufzaehlung
 //! jedes Kommandos, das dieses Werkzeug an `git` reicht. Wer ein neues braucht,
 //! kann es nicht danebenbauen: er bekommt es nur durch diese Tuer, und die Tuer
-//! ist eine Variante. [`Auftrag::worte`] und [`Auftrag::wirkung`] sind beide
-//! vollstaendige Fallunterscheidungen ohne Auffangzweig, also haelt der
+//! ist eine Variante. [`Auftrag::wortplaetze`] und [`Auftrag::wirkung`] sind
+//! beide vollstaendige Fallunterscheidungen ohne Auffangzweig, also haelt der
 //! Uebersetzer eine neue Variante an, bis sie ihre Woerter genannt und sich als
 //! lesend oder schreibend eingeordnet hat — dieselbe Bauart, die dieses Projekt
-//! fuer `Wirkungsbereich`, `Bereich` und `Fokus` fuehrt.
+//! fuer `Wirkungsbereich`, `Bereich` und `Fokus` fuehrt. [`Auftrag::worte`]
+//! leitet sich aus der ersten ab und zaehlt die Varianten nicht ein zweites
+//! Mal.
 //!
 //! **Bis dahin stand die Aufsicht daneben statt auf dem Weg.** Sie zaehlte drei
 //! Bauer namentlich auf, und ein vierter — `git tag --list` — stand schon
@@ -27,14 +29,60 @@
 //! wird die Liste, die wirklich hinausgeht, und nicht die, an die jemand
 //! gedacht hat.
 //!
-//! **Wie stark die Zusage danach ist, in drei Saetzen.** Der Uebersetzer haelt,
-//! dass jedes Kommando eine Variante ist und dass jede Variante ihre Woerter und
-//! ihre Wirkung nennt. Die Aufsicht auf dem Weg haelt, dass keine Liste — auch
-//! die einer ungeprueften neuen Variante — einen fremden Unterbefehl, eine Marke
-//! aus [`MARKEN`], eine `--force`-Form, eine kurze Gewaltmarke oder einen
-//! erzwingenden Verweis mit `+` traegt. Was **nichts** haelt, ist ein zweiter
-//! Prozessaufruf an [`rufen`] vorbei; das haelt weiterhin allein die Probe
-//! `xtask_ruft_git_an_genau_einer_stelle`, und der Uebersetzer haelt es nicht.
+//! **Noch am selben Tag ging sie einen Schritt weiter: sie liest jetzt Plaetze
+//! und nicht mehr freie Woerter.** [`Auftrag::wortplaetze`] sagt je Variante,
+//! welche Woerter fest dastehen und welche Plaetze der Aufrufer belegt; jeder
+//! belegte Platz nennt die [`Gestalt`], die er tragen darf. Davor las die
+//! Aufsicht ein flaches Wortfeld und musste raten, ob ein Wort ein Schalter,
+//! ein Wert, ein Refspec oder ein Pfad ist. Zwei Loecher kamen daraus, beide an
+//! einem Wegwerf-Verzeichnis nachgemessen: `:refs/heads/feature` loescht einen
+//! Zweig auf der Gegenseite und traegt dabei keine einzige Marke, und `git`
+//! nimmt `--del` als `--delete` an, was ein Vergleich auf Gleichheit nicht
+//! faengt. Beide landeten an demselben Platz — dem Verweis eines `push` —, und
+//! dort steht jetzt eine Gestalt, die genau eine Form zulaesst. Niemand muss
+//! eine Marke verbieten, an die er nicht gedacht hat.
+//!
+//! **Wie stark die Zusage danach ist.** *Der Uebersetzer haelt*, dass jedes
+//! Kommando eine Variante ist, dass jede Variante ihre Woerter und ihre Wirkung
+//! nennt und dass jedes Wort entweder fest dasteht oder ein Platz mit einer
+//! Gestalt ist. *Die Aufsicht auf dem Weg haelt* dreierlei, und die drei sind
+//! verschieden stark:
+//!
+//! 1. An einem Platz, dessen Wert `git` als Option oder als Verweis liest —
+//!    einem Tagnamen, einem Tagverweis —, haelt sie eine Gestalt, die genau
+//!    eine Form zulaesst. Das ist eine Erlaubnisliste, und sie ist
+//!    vollstaendig: weder ein Doppelpunkt noch eine Marke, abgekuerzt oder
+//!    nicht, hat in `refs/tags/v<zahl>` Platz.
+//! 2. An einem Platz, dessen Wert `git` gar nicht als eigenes Wort liest —
+//!    einer Meldung hinter `-m`, einem Pfad hinter `--` —, haelt sie, dass er
+//!    wirklich dort steht, und darueber hinaus nur das Grobe: nicht leer, keine
+//!    Steuerzeichen, kein Ausstieg aus dem Arbeitsbaum. **Hier traegt die
+//!    Stellung und nicht die Gestalt**, und deshalb darf eine Meldung wie eine
+//!    Marke aussehen.
+//! 3. An einem festen Wort haelt sie nur, dass es keine bekannte Marke ist.
+//!    Das ist eine Verbotsliste und wird nie beweisbar vollstaendig.
+//!
+//! *Allein eine Probe haelt*, dass kein zweiter Prozessaufruf an [`rufen`]
+//! vorbeigeht: `xtask_ruft_git_an_genau_einer_stelle` zaehlt im ganzen Baum den
+//! Aufruf von `Command` mit dem festen Pfad zu `git` und laesst ihn genau
+//! einmal zu — der Uebersetzer haelt hier gar nichts, und einen Aufruf, dessen
+//! Programmname aus einer Variablen kaeme, saehe auch die Probe nicht.
+//!
+//! **Dass an einem festen Wort eine Verbotsliste steht, ist kein Rest, sondern
+//! die Einteilung selbst.** Ein belegter Platz nimmt einen Wert von aussen
+//! entgegen, und was von aussen kommt, ist die Gefahr. Ein festes Wort schreibt
+//! dagegen der hin, der eine Variante hinzufuegt, und er sieht es beim
+//! Hinschreiben; [`MARKEN`] ist dort eine zweite Gelegenheit hinzusehen und
+//! keine Zusage. Wer sie fuer eine haelt, liest sie staerker, als sie ist.
+//!
+//! **Die Gestalt eines Tagnamens steht nicht hier, sondern bei dem, der sie
+//! festlegt:** [`Gestalt`] ruft dafuer `version::versionszahl_pruefen`. Bis zum
+//! 260821 war jene Pruefung die Sicherung, die in Wahrheit trug — sie war der
+//! Grund, aus dem kein Doppelpunkt und keine Marke je in einen Refspec dieses
+//! Werkzeugs geriet —, waehrend die Aufsicht nichts von ihr wusste. Jetzt ist
+//! sie die Aufsicht. Eine zweite Vorschrift darueber, wie eine Versionszahl
+//! dieses Projekts aussieht, waere genau der Fehler, den der Doc-Kommentar
+//! jener Funktion benennt.
 //!
 //! **Lesen und Schreiben stehen hier verschieden da, und das ist Absicht.** Die
 //! Unterscheidung traegt [`Wirkung`], und sie ist nicht bloss Beschriftung: die
@@ -51,6 +99,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::Abbruch;
+use crate::version::versionszahl_pruefen;
 
 /// Was ein Auftrag am Zustand aendert.
 ///
@@ -64,6 +113,140 @@ pub(crate) enum Wirkung {
     Liest,
     /// Der Auftrag aendert etwas — am Verzeichnis oder auf der Gegenseite.
     Schreibt,
+}
+
+/// Die Gestalt, die ein belegter Wortplatz tragen darf.
+///
+/// **Eine Erlaubnisliste und der Kern der Aufsicht.** Ein belegter Platz nimmt
+/// seinen Wert von aussen entgegen; geprueft wird deshalb nicht, was der Wert
+/// nicht sein darf, sondern ob er ist, was an seiner Stelle vorgesehen ist. Ein
+/// Doppelpunkt, eine Marke und jede abgekuerzte Marke scheitern daran
+/// gleichermassen, ohne dass eine von ihnen irgendwo als verboten dastuende.
+///
+/// Vier Gestalten, weil dieses Werkzeug vier Arten von Werten hinausreicht.
+/// Eine fuenfte hinzuzufuegen heisst, sie hier zu beschreiben — und wer es tut,
+/// steht vor derselben Frage wie der, der [`SCHREIBENDE`] erweitert.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Gestalt {
+    /// Ein Tagname dieses Projekts: `v` und danach eine Versionszahl.
+    ///
+    /// Er steht an einer Stelle, an der `git` Optionen liest — `git tag -d x`
+    /// loescht —, also darf er gar nicht erst wie eine Option aussehen koennen.
+    Tagname,
+    /// Der vollstaendige Verweis auf einen Tag: [`TAGRAUM`] und ein Tagname.
+    ///
+    /// Er steht als Refspec eines `push`, und ein Refspec ist die eine Stelle,
+    /// an der ein Wort ganz ohne Marke auf der Gegenseite schreibt oder
+    /// loescht. Der Doppelpunkt, mit dem das geschieht, kommt in dieser Gestalt
+    /// nicht vor.
+    Tagverweis,
+    /// Die Meldung eines Eintrags.
+    ///
+    /// Sie darf jedes druckbare Zeichen tragen, auch einen fuehrenden Strich:
+    /// sie steht hinter `-m`, das sie als Wert aufnimmt, und das prueft
+    /// [`stellungsbefund`]. Die alte Aufsicht las sie als haette sie eine Marke
+    /// sein koennen und hielt `-m "-a"` an; eine Aufsicht, die Plaetze kennt,
+    /// tut das nicht.
+    Meldung,
+    /// Ein Pfad im Arbeitsbaum, hinter dem Trenner `--`.
+    Pfad,
+}
+
+/// Der Namensraum, in dem die Tags dieses Projekts stehen.
+const TAGRAUM: &str = "refs/tags/";
+
+/// Der Trenner, hinter dem `git` keine Option mehr liest.
+const TRENNER: &str = "--";
+
+impl Gestalt {
+    /// Warum dieser Wert an einem Platz dieser Gestalt nicht stehen darf, oder
+    /// `None`.
+    ///
+    /// Vollstaendige Fallunterscheidung ohne Auffangzweig: eine fuenfte Gestalt
+    /// haelt hier den Bau an.
+    fn befund(self, wert: &str) -> Option<String> {
+        match self {
+            Gestalt::Tagname => tagnamenbefund(wert),
+            Gestalt::Tagverweis => match wert.strip_prefix(TAGRAUM) {
+                Some(name) => tagnamenbefund(name),
+                None => Some(format!(
+                    "der Verweis {wert} steht nicht unter {TAGRAUM} und benennt damit keinen Tag"
+                )),
+            },
+            Gestalt::Meldung => {
+                if wert.is_empty() {
+                    return Some("die Eintragsmeldung ist leer".to_owned());
+                }
+                steuerzeichenbefund("die Eintragsmeldung", wert)
+            }
+            Gestalt::Pfad => {
+                if wert.is_empty() {
+                    return Some("ein Pfad des Eintrags ist leer".to_owned());
+                }
+                if wert.starts_with('/') {
+                    return Some(format!(
+                        "der Pfad {wert} ist absolut und zeigt damit aus dem Arbeitsbaum hinaus"
+                    ));
+                }
+                if wert.split('/').any(|teil| teil == "..") {
+                    return Some(format!("der Pfad {wert} steigt mit .. aus dem Arbeitsbaum"));
+                }
+                steuerzeichenbefund("der Pfad", wert)
+            }
+        }
+    }
+}
+
+/// Warum dieser Name kein Tagname dieses Projekts ist, oder `None`.
+///
+/// **Die Zahl prueft `version::versionszahl_pruefen` und nicht diese Datei.**
+/// Wie eine Versionszahl dieses Projekts aussieht, ist dort festgelegt und
+/// dorthin gehoert es; eine zweite Vorschrift daneben waere eine zweite
+/// Antwort auf dieselbe Frage. Was dieses Werkzeug taggt, ist ausschliesslich
+/// ein Stand mit einer Versionszahl — wer es anders braucht, aendert die
+/// Gestalt hier und weiss dann, was er tut.
+fn tagnamenbefund(name: &str) -> Option<String> {
+    let Some(zahl) = name.strip_prefix('v') else {
+        return Some(format!(
+            "der Tagname {name} faengt nicht mit v an und ist damit keiner dieses Projekts"
+        ));
+    };
+    versionszahl_pruefen(zahl)
+        .err()
+        .map(|grund| format!("der Tagname {name} traegt keine Versionszahl: {grund}"))
+}
+
+/// Warum dieser Wert ein Steuerzeichen traegt, oder `None`.
+fn steuerzeichenbefund(was: &str, wert: &str) -> Option<String> {
+    let zeichen = wert.chars().find(|zeichen| zeichen.is_control())?;
+    Some(format!(
+        "{was} {wert:?} traegt das Steuerzeichen {zeichen:?}"
+    ))
+}
+
+/// Ein Wort hinter `git`, mit seinem Platz.
+///
+/// **Der Unterschied zwischen aussen und innen.** Ein festes Wort schreibt der
+/// hin, der eine Variante von [`Auftrag`] hinzufuegt; es steht im Quelltext und
+/// ist beim Hinschreiben zu sehen. Ein Platz nimmt seinen Wert vom Aufrufer
+/// entgegen. Die Aufsicht behandelt beide verschieden, und der Modulkopf sagt,
+/// wie stark sie dabei je ist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Wort<'a> {
+    /// Ein Wort, das die Variante selbst mitbringt.
+    Fest(&'a str),
+    /// Ein Platz, den der Aufrufer belegt, samt der Gestalt, die er tragen darf.
+    Platz(Gestalt, &'a str),
+}
+
+impl<'a> Wort<'a> {
+    /// Das Wort, wie es hinausgeht.
+    #[must_use]
+    fn wert(&self) -> &'a str {
+        match self {
+            Wort::Fest(text) | Wort::Platz(_, text) => text,
+        }
+    }
 }
 
 /// Jedes Kommando, das dieses Werkzeug an `git` reicht.
@@ -166,25 +349,68 @@ pub(crate) enum Auftrag<'a> {
 }
 
 impl<'a> Auftrag<'a> {
-    /// Die Woerter hinter `git`, in ihrer Reihenfolge.
+    /// Die Woerter hinter `git`, jedes mit seinem Platz.
     ///
-    /// Vollstaendige Fallunterscheidung ohne Auffangzweig: eine neue Variante
-    /// haelt hier den Bau an.
+    /// **Die eine Stelle, an der die sieben Varianten ihre Woerter nennen.**
+    /// Vollstaendige Fallunterscheidung ohne Auffangzweig: eine achte Variante
+    /// haelt hier den Bau an, und sie kommt nicht davon, ohne je Wort gesagt zu
+    /// haben, ob es fest dasteht oder ein Platz ist. [`Auftrag::worte`] leitet
+    /// sich hieraus ab und zaehlt die Varianten nicht ein zweites Mal.
     #[must_use]
-    pub(crate) fn worte(&self) -> Vec<&'a str> {
+    pub(crate) fn wortplaetze(&self) -> Vec<Wort<'a>> {
         match self {
-            Auftrag::Verzeichnis => vec!["rev-parse", "--git-dir"],
-            Auftrag::TagsAufHead => vec!["tag", "--points-at", "HEAD"],
-            Auftrag::Stand => vec!["status", "--porcelain", "--untracked-files=no"],
-            Auftrag::Tagliste(name) => vec!["tag", "--list", name],
-            Auftrag::TagSetzen(name) => vec!["tag", name],
+            Auftrag::Verzeichnis => vec![Wort::Fest("rev-parse"), Wort::Fest("--git-dir")],
+            Auftrag::TagsAufHead => vec![
+                Wort::Fest("tag"),
+                Wort::Fest("--points-at"),
+                Wort::Fest("HEAD"),
+            ],
+            Auftrag::Stand => vec![
+                Wort::Fest("status"),
+                Wort::Fest("--porcelain"),
+                Wort::Fest("--untracked-files=no"),
+            ],
+            Auftrag::Tagliste(name) => vec![
+                Wort::Fest("tag"),
+                Wort::Fest("--list"),
+                Wort::Platz(Gestalt::Tagname, name),
+            ],
+            Auftrag::TagSetzen(name) => {
+                vec![Wort::Fest("tag"), Wort::Platz(Gestalt::Tagname, name)]
+            }
             Auftrag::Eintrag { meldung, dateien } => {
-                let mut worte = vec!["commit", "--only", "-m", meldung, "--"];
-                worte.extend_from_slice(dateien);
+                let mut worte = vec![
+                    Wort::Fest("commit"),
+                    Wort::Fest("--only"),
+                    Wort::Fest("-m"),
+                    Wort::Platz(Gestalt::Meldung, meldung),
+                    Wort::Fest(TRENNER),
+                ];
+                worte.extend(
+                    dateien
+                        .iter()
+                        .map(|datei| Wort::Platz(Gestalt::Pfad, datei)),
+                );
                 worte
             }
-            Auftrag::Schub { verweis } => vec!["push", "origin", "HEAD", verweis],
+            Auftrag::Schub { verweis } => vec![
+                Wort::Fest("push"),
+                Wort::Fest("origin"),
+                Wort::Fest("HEAD"),
+                Wort::Platz(Gestalt::Tagverweis, verweis),
+            ],
         }
+    }
+
+    /// Die Woerter hinter `git`, in ihrer Reihenfolge und ohne ihre Plaetze.
+    ///
+    /// Fuer den Prozessaufruf und fuer jede Meldung, die das Kommando
+    /// ausschreibt. Abgeleitet aus [`Auftrag::wortplaetze`]: eine zweite
+    /// Aufzaehlung der Varianten waere eine zweite Wahrheit darueber, was
+    /// hinausgeht.
+    #[must_use]
+    pub(crate) fn worte(&self) -> Vec<&'a str> {
+        self.wortplaetze().iter().map(Wort::wert).collect()
     }
 
     /// Ob dieser Auftrag liest oder schreibt.
@@ -219,13 +445,25 @@ const LESENDE: [&str; 3] = ["rev-parse", "tag", "status"];
 /// jemand einzeln verbieten muesste.
 const SCHREIBENDE: [&str; 3] = ["tag", "commit", "push"];
 
-/// Die Marken, die einem Kommando Reichweite oder Gewalt hinzufuegen.
+/// Die langen Marken, die einem Kommando Reichweite oder Gewalt hinzufuegen.
 ///
-/// Verglichen wird das ganze Wort. Die `--force`-Familie steht daneben und
-/// nicht hier, weil sie Formen mit Anhang hat — `--force-with-lease`,
-/// `--force-if-includes`, `--force-with-lease=<verweis>` —, die ein Vergleich
-/// auf Gleichheit nicht faengt; sie wird deshalb am Wortanfang geprueft.
-const MARKEN: [&str; 7] = [
+/// **Eine Verbotsliste, und sie steht mit Vorbehalt da.** Sie wird allein auf
+/// feste Woerter angewandt, also auf das, was jemand beim Hinzufuegen einer
+/// Variante selbst hinschreibt; sie ist dort eine zweite Gelegenheit
+/// hinzusehen und keine Zusage. An einem belegten Platz steht statt ihrer die
+/// [`Gestalt`], und die ist eine Erlaubnisliste.
+///
+/// **Verglichen wird nicht auf Gleichheit.** `git` nimmt eine lange Marke auch
+/// abgekuerzt entgegen, solange die Abkuerzung eindeutig ist: `--del` loescht
+/// einen Tag, `--ame` aendert den letzten Eintrag, `--mirr` und `--al` kommen
+/// durch den Optionszerleger. Ein Vergleich auf Gleichheit sah keines dieser
+/// Woerter (Durchsicht 260821-1432, A2). [`verwandte_marke`] haelt deshalb
+/// jedes Wort an, von dem ein Eintrag der Anfang ist oder das der Anfang eines
+/// Eintrags ist, nachdem ein Anhang hinter `=` abgetrennt ist. Damit deckt
+/// `--force` seine ganze Familie — `--force-with-lease`, `--force-if-includes`,
+/// `--force-with-lease=<verweis>` —, und `--exec` und `--receive-pack` decken
+/// ihre Formen mit Wert.
+const MARKEN: [&str; 10] = [
     "--tags",
     "--follow-tags",
     "--all",
@@ -233,12 +471,16 @@ const MARKEN: [&str; 7] = [
     "--delete",
     "--prune",
     "--amend",
+    "--force",
+    "--exec",
+    "--receive-pack",
 ];
 
-/// Der Anfang, an dem jede Form von `--force` erkannt wird.
-const GEWALTANFANG: &str = "--force";
-
 /// Weitere lange Marken, die eine Pruefung uebergehen.
+///
+/// Getrennt von [`MARKEN`] allein wegen der Meldung: wer sie liest, soll den
+/// Unterschied zwischen mehr Reichweite und einer uebergangenen Pruefung
+/// sehen. Verglichen wird nach derselben Regel.
 const UEBERGEHENDE: [&str; 1] = ["--no-verify"];
 
 /// Die Buchstaben, die in einer kurzen Marke Gewalt oder Reichweite bedeuten.
@@ -253,32 +495,57 @@ const GEWALTBUCHSTABEN: [char; 3] = ['f', 'd', 'a'];
 /// Die Aufsicht ueber ein Kommando: was daran nicht hinausgehen darf.
 ///
 /// **Sie steht auf dem Weg und nicht daneben.** [`rufen`] ruft sie vor jedem
-/// Prozessaufruf mit der Liste, die wirklich hinausgeht. Bis zum 260821 stand
-/// an ihrer Stelle eine Probe, die drei Bauer namentlich aufzaehlte; eine
+/// Prozessaufruf mit den Wortplaetzen, die wirklich hinausgehen. Bis zum 260821
+/// stand an ihrer Stelle eine Probe, die drei Bauer namentlich aufzaehlte; eine
 /// Aufzaehlung von Namen kann aber nicht zusagen, dass sie vollstaendig ist,
 /// und sie war es auch nicht. Hier kommt nichts vorbei.
 ///
-/// Vier Fragen, in dieser Reihenfolge:
+/// **Sie liest Plaetze und keine freien Woerter.** Bis zur Durchsicht vom
+/// 260821-1432 las sie ein flaches Wortfeld und musste raten, ob ein Wort ein
+/// Schalter, ein Wert, ein Refspec oder ein Pfad ist. Zwei Loecher kamen
+/// daraus, und sie schliessen sich beide dadurch, dass die Auskunft, die
+/// [`Auftrag`] ohnehin hat, bis hierher durchgereicht wird.
 ///
-/// 1. Es steht ueberhaupt ein Unterbefehl da.
+/// Fuenf Fragen, in dieser Reihenfolge:
+///
+/// 1. Es steht ueberhaupt ein Unterbefehl da, und er steht fest.
 /// 2. Der Unterbefehl steht in der Erlaubnisliste, die zur [`Wirkung`] gehoert.
 ///    Damit ist `push` an einem lesenden Auftrag ausgeschlossen und `reset` an
 ///    jedem.
 /// 3. Ein lesendes `tag` traegt die Marke, die aus dem Anlegen eine Frage
-///    macht. `git tag v0.2.0` als Frage getarnt kommt so nicht hinaus.
-/// 4. Kein Wort hinter dem Unterbefehl traegt Gewalt: keine Marke aus
-///    [`MARKEN`], keine `--force`-Form, keine kurze Gruppe mit einem Buchstaben
-///    aus [`GEWALTBUCHSTABEN`], keine Marke aus [`UEBERGEHENDE`] und kein
-///    Verweis mit fuehrendem `+`, der ohne jede Marke erzwingt.
+///    macht — und sie steht fest. `git tag v0.2.0` als Frage getarnt kommt so
+///    nicht hinaus, und eine `--list` von aussen zaehlt dabei nicht.
+/// 4. Jeder belegte Platz traegt die [`Gestalt`], die an seiner Stelle
+///    zulaessig ist, und steht an der Stelle, an der `git` ihn als Wert liest.
+/// 5. Kein festes Wort hinter dem Unterbefehl traegt Gewalt: keine Marke aus
+///    [`MARKEN`] oder [`UEBERGEHENDE`], auch nicht abgekuerzt, keine kurze
+///    Gruppe mit einem Buchstaben aus [`GEWALTBUCHSTABEN`], kein Verweis mit
+///    fuehrendem `+` und keiner mit einem `:`, die beide ohne jede Marke auf
+///    der Gegenseite wirken.
 ///
-/// **Was sie nicht kann.** Der vierte Punkt ist eine Verbotsliste und damit
-/// nie beweisbar vollstaendig; die Punkte 2 und 3 sind Erlaubnislisten und
-/// fallen zur sicheren Seite. Ein Auftrag, der mit erlaubtem Unterbefehl und
-/// ohne Marke etwas Unerwuenschtes tut, kommt durch — was ihn haelt, ist die
-/// Aufzaehlung [`Auftrag`] und der Blick dessen, der eine Variante hinzufuegt.
-fn aufsichtsbefund(wirkung: Wirkung, worte: &[&str]) -> Option<String> {
-    let Some(unterbefehl) = worte.first() else {
+/// **Wie stark die fuenf sind, ist verschieden**, und der Modulkopf schreibt
+/// es aus. Die Punkte 1 bis 3 sind Erlaubnislisten. Punkt 4 ist eine, wo der
+/// Wert an einer Stelle steht, an der `git` eine Option oder einen Verweis
+/// liest — ein Tagname, ein Tagverweis —, und traegt sonst die Stellung: eine
+/// Meldung hinter `-m` und ein Pfad hinter `--` liest `git` nicht als eigenes
+/// Wort, und was sie darueber hinaus abweist, ist grob. Punkt 5 ist eine
+/// Verbotsliste und wird es bleiben — sie gilt aber nur fuer feste Woerter,
+/// also fuer das, was der hinschreibt, der eine Variante hinzufuegt.
+///
+/// **Was sie nicht kann.** Ein Auftrag, der mit erlaubtem Unterbefehl, ohne
+/// Marke und mit gestaltrichtigen Werten etwas Unerwuenschtes tut, kommt durch;
+/// was ihn haelt, ist die Aufzaehlung [`Auftrag`] und der Blick dessen, der
+/// eine Variante hinzufuegt. Und ein Prozessaufruf an [`rufen`] vorbei erreicht
+/// sie gar nicht — dazu der Modulkopf.
+fn aufsichtsbefund(wirkung: Wirkung, plaetze: &[Wort<'_>]) -> Option<String> {
+    let Some(erstes) = plaetze.first() else {
         return Some("es steht gar kein Unterbefehl da".to_owned());
+    };
+    let Wort::Fest(unterbefehl) = erstes else {
+        return Some(format!(
+            "der Unterbefehl {} kommt von aussen, statt an seiner Variante festzustehen",
+            erstes.wert()
+        ));
     };
     let erlaubte: &[&str] = match wirkung {
         Wirkung::Liest => &LESENDE,
@@ -289,37 +556,77 @@ fn aufsichtsbefund(wirkung: Wirkung, worte: &[&str]) -> Option<String> {
             "der Unterbefehl {unterbefehl} steht nicht in der Erlaubnisliste {erlaubte:?}"
         ));
     }
+    let feste: Vec<&str> = plaetze[1..]
+        .iter()
+        .filter_map(|wort| match wort {
+            Wort::Fest(text) => Some(*text),
+            Wort::Platz(..) => None,
+        })
+        .collect();
     if wirkung == Wirkung::Liest
         && *unterbefehl == "tag"
-        && !worte[1..].contains(&"--points-at")
-        && !worte[1..].contains(&"--list")
+        && !feste.contains(&"--points-at")
+        && !feste.contains(&"--list")
     {
         return Some(
             "git tag ohne --points-at und ohne --list legt einen Tag an, statt zu fragen"
                 .to_owned(),
         );
     }
-    for wort in &worte[1..] {
-        if let Some(befund) = gewaltbefund(wort) {
-            return Some(befund);
+    for (stelle, wort) in plaetze.iter().enumerate().skip(1) {
+        let befund = match wort {
+            Wort::Fest(text) => gewaltbefund(text),
+            Wort::Platz(gestalt, wert) => {
+                stellungsbefund(*gestalt, &plaetze[..stelle]).or_else(|| gestalt.befund(wert))
+            }
+        };
+        if befund.is_some() {
+            return befund;
         }
     }
     None
 }
 
-/// Ob ein einzelnes Wort hinter dem Unterbefehl Gewalt oder Reichweite traegt.
+/// Ob ein Platz dieser Gestalt an dieser Stelle steht.
 ///
-/// Die innerste Haelfte der Aufsicht, getrennt, weil ihre vier Faelle sich
-/// einzeln nachsehen lassen.
+/// **Die Gestalt allein genuegt nicht; es zaehlt auch, wo sie steht.** Eine
+/// Eintragsmeldung ist nur deshalb harmlos, weil `-m` unmittelbar davorsteht
+/// und sie als Wert aufnimmt; dieselbe Zeichenfolge an einer anderen Stelle
+/// laese `git` als Wort. Ein Pfad ist nur deshalb ein Pfad, weil der Trenner
+/// `--` davorsteht; davor waere er ein Refspec.
+///
+/// Ein Tagname und ein Tagverweis stehen an Stellen, an denen `git` Optionen
+/// liest, und tragen ihre Sicherheit deshalb ganz in ihrer Gestalt.
+///
+/// Vollstaendige Fallunterscheidung ohne Auffangzweig: eine fuenfte Gestalt
+/// haelt hier den Bau an und muss sagen, wo sie stehen darf.
+fn stellungsbefund(gestalt: Gestalt, davor: &[Wort<'_>]) -> Option<String> {
+    match gestalt {
+        Gestalt::Meldung => (davor.last() != Some(&Wort::Fest("-m"))).then(|| {
+            "die Eintragsmeldung steht nicht unmittelbar hinter -m und wird damit als Wort gelesen"
+                .to_owned()
+        }),
+        Gestalt::Pfad => (!davor.contains(&Wort::Fest(TRENNER))).then(|| {
+            format!("ein Pfad steht vor dem Trenner {TRENNER} und wird damit als Verweis gelesen")
+        }),
+        Gestalt::Tagname | Gestalt::Tagverweis => None,
+    }
+}
+
+/// Ob ein festes Wort hinter dem Unterbefehl Gewalt oder Reichweite traegt.
+///
+/// Die innerste Haelfte der Aufsicht, getrennt, weil ihre fuenf Faelle sich
+/// einzeln nachsehen lassen. **Sie gilt nur fuer feste Woerter** — der
+/// Vorbehalt, unter dem sie steht, haengt am Doc-Kommentar von [`MARKEN`].
 fn gewaltbefund(wort: &str) -> Option<String> {
-    if MARKEN.contains(&wort) {
-        return Some(format!("die Marke {wort} erweitert die Reichweite"));
+    if wort == TRENNER {
+        return None;
     }
-    if UEBERGEHENDE.contains(&wort) {
-        return Some(format!("die Marke {wort} uebergeht eine Pruefung"));
+    if let Some(eintrag) = verwandte_marke(&MARKEN, wort) {
+        return Some(markenmeldung(wort, eintrag, "erweitert die Reichweite"));
     }
-    if wort.starts_with(GEWALTANFANG) {
-        return Some(format!("die Marke {wort} erzwingt"));
+    if let Some(eintrag) = verwandte_marke(&UEBERGEHENDE, wort) {
+        return Some(markenmeldung(wort, eintrag, "uebergeht eine Pruefung"));
     }
     if let Some(buchstaben) = kurze_marke(wort)
         && let Some(gewalt) = buchstaben
@@ -335,7 +642,53 @@ fn gewaltbefund(wort: &str) -> Option<String> {
             "der Verweis {wort} erzwingt mit seinem fuehrenden + und ohne jede Marke"
         ));
     }
+    if wort.contains(':') {
+        return Some(format!(
+            "der Verweis {wort} benennt mit seinem : ein Ziel auf der Gegenseite und schreibt \
+             oder loescht es, ohne jede Marke"
+        ));
+    }
     None
+}
+
+/// Die Meldung zu einer angehaltenen langen Marke.
+///
+/// Sie nennt den Eintrag dazu, wenn das Wort ihn abkuerzt oder erweitert: wer
+/// `--del` liest, soll `--delete` daneben sehen und nicht raten muessen, warum
+/// die Aufsicht anhaelt.
+#[must_use]
+fn markenmeldung(wort: &str, eintrag: &str, wirkt: &str) -> String {
+    if wort == eintrag {
+        format!("die Marke {wort} {wirkt}")
+    } else {
+        format!("die Marke {wort} steht fuer {eintrag} und {wirkt}")
+    }
+}
+
+/// Der Eintrag der Liste, den dieses Wort meint, oder `None`.
+///
+/// **Weder Gleichheit noch blosser Wortanfang, sondern beides.** `git` nimmt
+/// eine lange Marke abgekuerzt entgegen, also meint `--del` den Eintrag
+/// `--delete`; und eine Marke traegt Formen mit Anhang, also meint
+/// `--force-with-lease` den Eintrag `--force`. Angehalten wird deshalb, wenn
+/// eines von beiden der Anfang des anderen ist.
+///
+/// Ein Anhang hinter `=` faellt vorher weg: `--exec=/bin/sh` meint `--exec`.
+///
+/// **Kurze Marken bleiben draussen**, und das ist nicht Nachlaessigkeit: `-m`
+/// waere der Anfang von `--mirror`, wenn man den einen Strich nicht verlangte,
+/// und die Eintragsmeldung braucht `-m`. Kurze Gruppen liest [`kurze_marke`],
+/// Buchstabe fuer Buchstabe. Der Trenner `--` ist der Anfang jeder langen
+/// Marke und faellt ebenfalls heraus; ihn haelt [`gewaltbefund`] vorweg ab.
+fn verwandte_marke<'l>(liste: &'l [&'l str], wort: &str) -> Option<&'l str> {
+    let kern = wort.split('=').next().unwrap_or(wort);
+    if kern == TRENNER || !kern.starts_with(TRENNER) {
+        return None;
+    }
+    liste
+        .iter()
+        .copied()
+        .find(|eintrag| eintrag.starts_with(kern) || kern.starts_with(eintrag))
 }
 
 /// Die Buchstaben einer kurzen Markengruppe, oder `None`.
@@ -380,12 +733,13 @@ fn aufsichtsmeldung(worte: &[&str], befund: &str) -> String {
 /// Startfehler und ein Rueckgabewert ungleich null werden beide zum
 /// Laufabbruch.
 ///
-/// **Vor dem Prozessaufruf steht die Aufsicht.** Sie liest die Woerter des
+/// **Vor dem Prozessaufruf steht die Aufsicht.** Sie liest die Wortplaetze des
 /// Auftrags, nicht seinen Namen; ein Auftrag, den niemand nachgesehen hat,
 /// kommt damit trotzdem nicht als Gewalt hinaus.
 pub(crate) fn rufen(wurzel: &Path, auftrag: &Auftrag<'_>) -> Result<String, Abbruch> {
+    let plaetze = auftrag.wortplaetze();
     let worte = auftrag.worte();
-    if let Some(befund) = aufsichtsbefund(auftrag.wirkung(), &worte) {
+    if let Some(befund) = aufsichtsbefund(auftrag.wirkung(), &plaetze) {
         return Err(Abbruch::Lauf(aufsichtsmeldung(&worte, &befund)));
     }
     let ausgabe = Command::new("/usr/bin/git")
@@ -433,39 +787,95 @@ mod tests {
     /// Die zwei Dateien, die der Eintrag des Versionsschritts traegt.
     const BEISPIELDATEIEN: [&str; 2] = ["Cargo.toml", "Cargo.lock"];
 
+    /// Jede lange Marke, die angehalten werden muss, ausgeschrieben.
+    ///
+    /// **Ausgeschrieben und nicht aus [`MARKEN`] gelesen** — der Grund steht
+    /// bei [`jede_einzelne_marke_wird_angehalten`].
+    const ANGEHALTENE_LANGE: [&str; 11] = [
+        "--tags",
+        "--follow-tags",
+        "--all",
+        "--mirror",
+        "--delete",
+        "--prune",
+        "--amend",
+        "--force",
+        "--exec",
+        "--receive-pack",
+        "--no-verify",
+    ];
+
+    /// Jede kurze Gewaltmarke, ausgeschrieben.
+    const ANGEHALTENE_KURZE: [&str; 3] = ["-f", "-d", "-a"];
+
+    /// Die Beispielmeldung des Versionsschritts.
+    const BEISPIELMELDUNG: &str = "chore(release): die Version steht auf 0.2.0";
+
+    /// Der naechste Auftrag der Aufzaehlung, mit Beispielwerten, oder `None`.
+    ///
+    /// **Diese Kette ist es, die [`beispiele`] an die Aufzaehlung bindet.**
+    /// Vollstaendige Fallunterscheidung ohne Auffangzweig: eine achte Variante
+    /// haelt hier den Bau an, und wer sie einordnet, muss sagen, wer nach ihr
+    /// kommt — davor war [`beispiele`] ein `vec!`-Literal, das eine achte
+    /// Variante gruen liegengelassen haette (Durchsicht 260821-1432, B1).
+    ///
+    /// **Was die Kette nicht haelt:** wer den neuen Zweig auf `None` setzt und
+    /// den bisherigen letzten stehenlaesst, haengt seine Variante nicht ein.
+    /// Der Bau haelt dann nicht an, und die Aufsicht faengt den Auftrag
+    /// trotzdem — nur eben erst beim Lauf. Mehr sagt diese Probe nicht zu.
+    fn naechster(auftrag: &Auftrag<'_>) -> Option<Auftrag<'static>> {
+        match auftrag {
+            Auftrag::Verzeichnis => Some(Auftrag::TagsAufHead),
+            Auftrag::TagsAufHead => Some(Auftrag::Stand),
+            Auftrag::Stand => Some(Auftrag::Tagliste("v0.2.0")),
+            Auftrag::Tagliste(_) => Some(Auftrag::TagSetzen("v0.2.0")),
+            Auftrag::TagSetzen(_) => Some(Auftrag::Eintrag {
+                meldung: BEISPIELMELDUNG,
+                dateien: &BEISPIELDATEIEN,
+            }),
+            Auftrag::Eintrag { .. } => Some(Auftrag::Schub {
+                verweis: "refs/tags/v0.2.0",
+            }),
+            Auftrag::Schub { .. } => None,
+        }
+    }
+
     /// Jeder Auftrag einmal, mit Beispielwerten.
     ///
     /// **Diese Liste ist nicht die Zusage, sondern ihre Vorwegnahme.** Was
     /// haelt, dass kein Auftrag Gewalt traegt, ist [`aufsichtsbefund`] auf dem
     /// Weg selbst; diese Liste laesst den Ausfall bei `cargo test` geschehen
-    /// statt beim Auslieferungslauf. Bleibt eine neue Variante hier stehen,
-    /// faengt die Aufsicht sie trotzdem — nur eben spaeter.
+    /// statt beim Auslieferungslauf. Sie entsteht aus [`naechster`], damit sie
+    /// nicht neben der Aufzaehlung veraltet.
     fn beispiele() -> Vec<Auftrag<'static>> {
-        vec![
-            Auftrag::Verzeichnis,
-            Auftrag::TagsAufHead,
-            Auftrag::Stand,
-            Auftrag::Tagliste("v0.2.0"),
-            Auftrag::TagSetzen("v0.2.0"),
-            Auftrag::Eintrag {
-                meldung: "chore(release): die Version steht auf 0.2.0",
-                dateien: &BEISPIELDATEIEN,
-            },
-            Auftrag::Schub {
-                verweis: "refs/tags/v0.2.0",
-            },
-        ]
+        let mut alle = vec![Auftrag::Verzeichnis];
+        while let Some(folgender) =
+            naechster(alle.last().expect("die Kette faengt bei Verzeichnis an"))
+        {
+            alle.push(folgender);
+        }
+        alle
+    }
+
+    /// Eine Liste aus lauter festen Woertern.
+    ///
+    /// So saehe die Liste einer Variante aus, die jemand hinzugefuegt hat, ohne
+    /// dass jemand sie nachgesehen hat: alles steht im Quelltext, nichts kommt
+    /// von aussen. Genau dafuer ist [`gewaltbefund`] da.
+    fn fest(worte: &[&'static str]) -> Vec<Wort<'static>> {
+        worte.iter().copied().map(Wort::Fest).collect()
     }
 
     /// Kein Auftrag dieses Werkzeugs traegt Gewalt.
     #[test]
     fn die_aufsicht_laesst_jeden_auftrag_durch() {
         for auftrag in beispiele() {
-            let worte = auftrag.worte();
+            let plaetze = auftrag.wortplaetze();
             assert_eq!(
-                aufsichtsbefund(auftrag.wirkung(), &worte),
+                aufsichtsbefund(auftrag.wirkung(), &plaetze),
                 None,
-                "{worte:?} kommt nicht durch"
+                "{:?} kommt nicht durch",
+                auftrag.worte()
             );
         }
     }
@@ -487,7 +897,11 @@ mod tests {
         for frage in [Auftrag::Verzeichnis, Auftrag::TagsAufHead, Auftrag::Stand] {
             assert_eq!(frage.wirkung(), Wirkung::Liest);
             let worte = frage.worte();
-            assert_eq!(aufsichtsbefund(Wirkung::Liest, &worte), None, "{worte:?}");
+            assert_eq!(
+                aufsichtsbefund(Wirkung::Liest, &frage.wortplaetze()),
+                None,
+                "{worte:?}"
+            );
             assert!(LESENDE.contains(&worte[0]), "{worte:?}");
             if worte[0] == "tag" {
                 assert!(
@@ -504,47 +918,57 @@ mod tests {
         }
     }
 
-    /// Die sieben Auftraege, Wort fuer Wort.
+    /// Jeder Auftrag, Wort fuer Wort.
     ///
     /// Bis zum 260821 stand diese Nachschau in `version::tests` und las drei
     /// Bauer namentlich; sie steht jetzt dort, wo die Bauer stehen, und liest
-    /// alle sieben.
+    /// alle.
+    ///
+    /// **Die Zahl steht nicht in der Prosa, sondern haengt an [`beispiele`].**
+    /// Der Doc-Kommentar sprach bis zur Durchsicht 260821-1432 von „den sieben
+    /// Auftraegen"; eine achte Variante haette den Satz falsch gemacht, und
+    /// nichts haette es gemerkt. Jetzt zaehlt die Probe selbst nach.
     #[test]
     fn die_auftraege_stehen_wort_fuer_wort() {
-        assert_eq!(Auftrag::Verzeichnis.worte(), ["rev-parse", "--git-dir"]);
-        assert_eq!(Auftrag::TagsAufHead.worte(), ["tag", "--points-at", "HEAD"]);
+        let nachgesehen: Vec<(Auftrag<'static>, Vec<&str>)> = vec![
+            (Auftrag::Verzeichnis, vec!["rev-parse", "--git-dir"]),
+            (Auftrag::TagsAufHead, vec!["tag", "--points-at", "HEAD"]),
+            (
+                Auftrag::Stand,
+                vec!["status", "--porcelain", "--untracked-files=no"],
+            ),
+            (Auftrag::Tagliste("v0.2.0"), vec!["tag", "--list", "v0.2.0"]),
+            (Auftrag::TagSetzen("v0.2.0"), vec!["tag", "v0.2.0"]),
+            (
+                Auftrag::Eintrag {
+                    meldung: "eine Meldung",
+                    dateien: &BEISPIELDATEIEN,
+                },
+                vec![
+                    "commit",
+                    "--only",
+                    "-m",
+                    "eine Meldung",
+                    "--",
+                    "Cargo.toml",
+                    "Cargo.lock",
+                ],
+            ),
+            (
+                Auftrag::Schub {
+                    verweis: "refs/tags/v0.2.0",
+                },
+                vec!["push", "origin", "HEAD", "refs/tags/v0.2.0"],
+            ),
+        ];
         assert_eq!(
-            Auftrag::Stand.worte(),
-            ["status", "--porcelain", "--untracked-files=no"]
+            nachgesehen.len(),
+            beispiele().len(),
+            "hier steht nicht jede Variante von Auftrag Wort fuer Wort da"
         );
-        assert_eq!(
-            Auftrag::Tagliste("v0.2.0").worte(),
-            ["tag", "--list", "v0.2.0"]
-        );
-        assert_eq!(Auftrag::TagSetzen("v0.2.0").worte(), ["tag", "v0.2.0"]);
-        assert_eq!(
-            Auftrag::Eintrag {
-                meldung: "eine Meldung",
-                dateien: &BEISPIELDATEIEN,
-            }
-            .worte(),
-            [
-                "commit",
-                "--only",
-                "-m",
-                "eine Meldung",
-                "--",
-                "Cargo.toml",
-                "Cargo.lock"
-            ]
-        );
-        assert_eq!(
-            Auftrag::Schub {
-                verweis: "refs/tags/v0.2.0"
-            }
-            .worte(),
-            ["push", "origin", "HEAD", "refs/tags/v0.2.0"]
-        );
+        for (auftrag, erwartet) in nachgesehen {
+            assert_eq!(auftrag.worte(), erwartet);
+        }
     }
 
     /// Genau drei Auftraege schreiben, und `push` ist einer davon.
@@ -593,7 +1017,7 @@ mod tests {
             vec!["push", "--follow-tags", "origin", "HEAD"],
         ] {
             assert!(
-                aufsichtsbefund(Wirkung::Schreibt, &gewalt).is_some(),
+                aufsichtsbefund(Wirkung::Schreibt, &fest(&gewalt)).is_some(),
                 "{gewalt:?} kommt durch"
             );
         }
@@ -602,14 +1026,231 @@ mod tests {
     /// Ein Verweis mit fuehrendem `+` erzwingt ohne jede Marke.
     #[test]
     fn die_aufsicht_faengt_den_erzwingenden_verweis() {
-        assert!(aufsichtsbefund(Wirkung::Schreibt, &["push", "origin", "+HEAD"]).is_some());
+        assert!(aufsichtsbefund(Wirkung::Schreibt, &fest(&["push", "origin", "+HEAD"])).is_some());
         assert!(
             aufsichtsbefund(
                 Wirkung::Schreibt,
-                &["push", "origin", "+refs/tags/v0.2.0:refs/tags/v0.2.0"]
+                &fest(&["push", "origin", "+refs/tags/v0.2.0:refs/tags/v0.2.0"])
             )
             .is_some()
         );
+    }
+
+    /// Jede einzelne Marke der Listen wird angehalten.
+    ///
+    /// **Die Woerter stehen hier ausgeschrieben und werden nicht aus den Listen
+    /// gelesen.** Eine Schleife ueber [`MARKEN`] pruefte, was dasteht, und
+    /// bliebe gruen, wenn ein Eintrag verschwaende — genau das war der Befund
+    /// B1 der Durchsicht vom 260821-1432: fuenf der sieben Marken, der
+    /// Gewaltbuchstabe `a` und `--no-verify` massen keine Probe, und wer einen
+    /// von ihnen loeschte, liess alles gruen. Ausgeschrieben wird die Probe
+    /// rot.
+    ///
+    /// Damit ist der zweite Satz des Abnahmekriteriums C3.4 gemessen: die
+    /// sechs, die es nennt — `--force`, `-f`, `--tags`, `--all`, `--mirror`,
+    /// `--delete` — stehen alle hier.
+    #[test]
+    fn jede_einzelne_marke_wird_angehalten() {
+        for marke in ANGEHALTENE_LANGE {
+            assert!(gewaltbefund(marke).is_some(), "{marke} kommt durch");
+            assert!(
+                aufsichtsbefund(Wirkung::Schreibt, &fest(&["push", marke, "origin"])).is_some(),
+                "{marke} kommt an einem push durch"
+            );
+        }
+        for marke in ANGEHALTENE_KURZE {
+            assert!(gewaltbefund(marke).is_some(), "{marke} kommt durch");
+        }
+    }
+
+    /// Kein Eintrag der Listen steht ohne Anhalteprobe da.
+    ///
+    /// Die Gegenrichtung zu [`jede_einzelne_marke_wird_angehalten`]: die dortige
+    /// Liste faengt einen geloeschten Eintrag, diese hier faengt einen
+    /// hinzugefuegten, den niemand nachgesehen hat.
+    #[test]
+    fn jeder_eintrag_der_listen_steht_in_der_anhalteprobe() {
+        for eintrag in MARKEN.iter().chain(UEBERGEHENDE.iter()) {
+            assert!(
+                ANGEHALTENE_LANGE.contains(eintrag),
+                "{eintrag} steht in einer Liste, aber in keiner Anhalteprobe"
+            );
+        }
+        for buchstabe in GEWALTBUCHSTABEN {
+            let kurz = format!("-{buchstabe}");
+            assert!(
+                ANGEHALTENE_KURZE.contains(&kurz.as_str()),
+                "{kurz} steht in GEWALTBUCHSTABEN, aber in keiner Anhalteprobe"
+            );
+        }
+    }
+
+    /// `git` nimmt eine lange Marke abgekuerzt an, und die Aufsicht auch.
+    ///
+    /// Nachgemessen an einem Wegwerf-Verzeichnis (Durchsicht 260821-1432, A2):
+    /// `git tag --del t1` loescht, `git commit --ame` aendert den letzten
+    /// Eintrag, `git push --mirr` und `--al` kommen durch den Optionszerleger.
+    /// Ein Vergleich auf Gleichheit sah keines dieser Woerter.
+    #[test]
+    fn die_aufsicht_faengt_die_abgekuerzte_marke() {
+        for kurz in [
+            "--del",
+            "--dele",
+            "--ame",
+            "--mirr",
+            "--al",
+            "--tag",
+            "--pru",
+            "--no-verif",
+            "--force-with-lease",
+            "--exec=/bin/sh",
+            "--receive-pack=/bin/sh",
+        ] {
+            assert!(gewaltbefund(kurz).is_some(), "{kurz} kommt durch");
+        }
+        let meldung = gewaltbefund("--del").expect("--del wird angehalten");
+        assert!(meldung.contains("--delete"), "{meldung}");
+    }
+
+    /// Ein Refspec mit `:` schreibt oder loescht ohne jede Marke.
+    ///
+    /// `git push origin HEAD :refs/heads/feature` sind genau die vier Woerter
+    /// von [`Auftrag::Schub`] und loeschen einen Zweig auf der Gegenseite;
+    /// nachgemessen an einem Wegwerf-Verzeichnis (Durchsicht 260821-1432, A1).
+    /// Die Regel fuer `+` stand schon da — der Doppelpunkt ist dieselbe Wirkung
+    /// in der aelteren Schreibweise.
+    #[test]
+    fn die_aufsicht_faengt_den_refspec_mit_doppelpunkt() {
+        for verweis in [
+            ":refs/heads/feature",
+            "HEAD:refs/heads/main",
+            "refs/tags/v0.2.0:refs/heads/main",
+        ] {
+            assert!(
+                gewaltbefund(verweis).is_some(),
+                "{verweis} kommt als festes Wort durch"
+            );
+            let auftrag = Auftrag::Schub { verweis };
+            assert!(
+                aufsichtsbefund(Wirkung::Schreibt, &auftrag.wortplaetze()).is_some(),
+                "{verweis} kommt als belegter Platz durch"
+            );
+        }
+    }
+
+    /// Ein belegter Platz traegt seine Gestalt, oder er kommt nicht durch.
+    ///
+    /// **Hier steht die Erlaubnisliste, und sie ist der eigentliche Schnitt.**
+    /// Kein Wort dieser Probe steht irgendwo als verboten da; sie kommen nicht
+    /// durch, weil sie nicht aussehen wie das, was an ihrer Stelle vorgesehen
+    /// ist. Damit muss niemand eine Marke verbieten, an die er nicht gedacht
+    /// hat — der Vorbehalt, unter dem [`MARKEN`] steht, gilt fuer belegte
+    /// Plaetze nicht.
+    #[test]
+    fn ein_belegter_platz_traegt_nur_seine_gestalt() {
+        for verweis in [
+            "--delete",
+            "--del",
+            "+refs/tags/v0.2.0",
+            "refs/heads/main",
+            "v0.2.0",
+            "refs/tags/0.2.0",
+            "refs/tags/v0.2.0-rc1",
+            "",
+        ] {
+            let auftrag = Auftrag::Schub { verweis };
+            assert!(
+                aufsichtsbefund(Wirkung::Schreibt, &auftrag.wortplaetze()).is_some(),
+                "der Verweis {verweis:?} kommt durch"
+            );
+        }
+        for name in ["-d", "--delete", "0.2.0", "v0.2", "v0.2.0-rc1", "HEAD", ""] {
+            for auftrag in [Auftrag::TagSetzen(name), Auftrag::Tagliste(name)] {
+                assert!(
+                    aufsichtsbefund(auftrag.wirkung(), &auftrag.wortplaetze()).is_some(),
+                    "der Tagname {name:?} kommt durch"
+                );
+            }
+        }
+        for datei in ["/etc/passwd", "../fremd.toml", "", "Cargo\ntoml"] {
+            let dateien = [datei];
+            let auftrag = Auftrag::Eintrag {
+                meldung: BEISPIELMELDUNG,
+                dateien: &dateien,
+            };
+            assert!(
+                aufsichtsbefund(Wirkung::Schreibt, &auftrag.wortplaetze()).is_some(),
+                "der Pfad {datei:?} kommt durch"
+            );
+        }
+    }
+
+    /// Eine Eintragsmeldung darf wie eine Marke aussehen.
+    ///
+    /// Sie steht hinter `-m`, das sie als Wert aufnimmt; `git` liest sie nicht
+    /// als Schalter. Die alte Aufsicht las jedes Wort als haette es eine Marke
+    /// sein koennen und hielt diesen Auftrag an — ein Falschalarm, den eine
+    /// Aufsicht, die Plaetze kennt, nicht mehr hat.
+    #[test]
+    fn die_eintragsmeldung_darf_wie_eine_marke_aussehen() {
+        for meldung in ["-a", "--force", "-m", "chore(release): 0.2.0"] {
+            let auftrag = Auftrag::Eintrag {
+                meldung,
+                dateien: &BEISPIELDATEIEN,
+            };
+            assert_eq!(
+                aufsichtsbefund(Wirkung::Schreibt, &auftrag.wortplaetze()),
+                None,
+                "die Meldung {meldung:?} wird angehalten"
+            );
+        }
+    }
+
+    /// Ein Platz an der falschen Stelle kommt nicht durch.
+    ///
+    /// Die Gestalt allein genuegt nicht: eine Meldung ist nur hinter `-m`
+    /// harmlos, ein Pfad nur hinter dem Trenner.
+    #[test]
+    fn ein_platz_an_der_falschen_stelle_kommt_nicht_durch() {
+        assert!(stellungsbefund(Gestalt::Meldung, &fest(&["commit", "--only"])).is_some());
+        assert!(stellungsbefund(Gestalt::Meldung, &fest(&["commit", "--only", "-m"])).is_none());
+        assert!(stellungsbefund(Gestalt::Pfad, &fest(&["commit", "--only"])).is_some());
+        assert!(stellungsbefund(Gestalt::Pfad, &fest(&["commit", "--"])).is_none());
+        assert!(stellungsbefund(Gestalt::Tagname, &fest(&["tag"])).is_none());
+        assert!(stellungsbefund(Gestalt::Tagverweis, &fest(&["push", "origin"])).is_none());
+    }
+
+    /// Der Unterbefehl steht fest und kommt nicht von aussen.
+    #[test]
+    fn ein_unterbefehl_von_aussen_kommt_nicht_durch() {
+        let plaetze = [Wort::Platz(Gestalt::Meldung, "status")];
+        assert!(aufsichtsbefund(Wirkung::Liest, &plaetze).is_some());
+    }
+
+    /// Die Marken der sieben Varianten bleiben zulaessig.
+    ///
+    /// Der Vergleich am Wortanfang faellt zur sicheren Seite, und diese Probe
+    /// haelt fest, dass er dabei nichts mitnimmt, was dastehen muss.
+    #[test]
+    fn kein_festes_wort_der_sieben_varianten_wird_angehalten() {
+        for zulaessig in [
+            "--git-dir",
+            "--points-at",
+            "--porcelain",
+            "--untracked-files=no",
+            "--list",
+            "--only",
+            "--",
+            "-m",
+            "HEAD",
+            "origin",
+        ] {
+            assert_eq!(
+                gewaltbefund(zulaessig),
+                None,
+                "{zulaessig} wird angehalten, obwohl es dastehen muss"
+            );
+        }
     }
 
     /// Ein fremder Unterbefehl kommt nicht durch, ohne dass ihn jemand einzeln
@@ -627,11 +1268,11 @@ mod tests {
             vec!["update-ref", "refs/heads/main", "HEAD"],
         ] {
             assert!(
-                aufsichtsbefund(Wirkung::Schreibt, &fremd).is_some(),
+                aufsichtsbefund(Wirkung::Schreibt, &fest(&fremd)).is_some(),
                 "{fremd:?} kommt durch"
             );
             assert!(
-                aufsichtsbefund(Wirkung::Liest, &fremd).is_some(),
+                aufsichtsbefund(Wirkung::Liest, &fest(&fremd)).is_some(),
                 "{fremd:?} kommt als Frage durch"
             );
         }
@@ -644,10 +1285,12 @@ mod tests {
     /// nicht hinaus, und `push` an einer Frage ebenso wenig.
     #[test]
     fn eine_lesende_frage_legt_keinen_tag_an() {
-        assert!(aufsichtsbefund(Wirkung::Liest, &["tag", "v0.2.0"]).is_some());
-        assert!(aufsichtsbefund(Wirkung::Liest, &["tag", "--list", "v0.2.0"]).is_none());
-        assert!(aufsichtsbefund(Wirkung::Liest, &["tag", "--points-at", "HEAD"]).is_none());
-        assert!(aufsichtsbefund(Wirkung::Liest, &["push", "origin", "HEAD"]).is_some());
+        assert!(aufsichtsbefund(Wirkung::Liest, &fest(&["tag", "v0.2.0"])).is_some());
+        assert!(
+            aufsichtsbefund(Wirkung::Liest, &Auftrag::Tagliste("v0.2.0").wortplaetze()).is_none()
+        );
+        assert!(aufsichtsbefund(Wirkung::Liest, &Auftrag::TagsAufHead.wortplaetze()).is_none());
+        assert!(aufsichtsbefund(Wirkung::Liest, &fest(&["push", "origin", "HEAD"])).is_some());
     }
 
     /// `-m` bleibt zulaessig: `m` ist kein Gewaltbuchstabe.

@@ -67,3 +67,23 @@ Absicherung nachschlägt, und sie ist an ihrem schwächsten Punkt uneindeutig.
 `shared/issues/260821-1432_o_git-nimmt-abkuerzungen-langer-marken-an-und-der-gleichheitsvergleich-in-marken-faengt-sie-nicht.md`
 — derselbe Absatz, zweiter Satz: dort ist die Zusage nicht uneindeutig, sondern zu stark. Wer
 den Absatz anfasst, fasst beides an.
+
+---
+
+Resolved: Behoben am 260821. Der Absatz ist im Zuge der Umstellung neu geschrieben, und die
+dritte Kategorie heißt jetzt, was sie ist: **„Allein eine Probe hält"**, dass kein zweiter
+Prozessaufruf an `rufen` vorbeigeht. Die Grenze der Probe steht dabei, wie es die „Abhilfe"
+dieses Datensatzes vorschlägt — sie zählt den Aufruf von `Command` mit dem festen Pfad zu `git`
+im ganzen Baum und lässt ihn genau einmal zu; einen Aufruf, dessen Programmname aus einer
+Variablen käme, sähe auch sie nicht, und der Übersetzer hält hier gar nichts. Die Zeichenfolge
+selbst steht im Absatz **nicht** ausgeschrieben: sie ist genau die Nadel, die jene Probe zählt,
+und ausgeschrieben zählte der Modulkopf sich selbst mit.
+
+**Der zweite Satz, den der verwandte Datensatz als zu stark benennt, ist im selben Zug
+zurückgenommen.** Er sagt jetzt nicht mehr pauschal, dass keine Liste eine Marke aus `MARKEN`
+trägt, sondern trennt drei Stärken: an einem Platz, dessen Wert `git` als Option oder als
+Verweis liest, hält eine Gestalt, die genau eine Form zulässt; an einem Platz, dessen Wert `git`
+gar nicht als eigenes Wort liest, trägt die Stellung und nicht die Gestalt; an einem festen Wort
+hält nur eine Verbotsliste, die nie beweisbar vollständig wird. Derselbe Schnitt steht im
+Doc-Kommentar von `aufsichtsbefund` bei den fünf Fragen und im Doc-Kommentar von `MARKEN`, der
+seinen Vorbehalt jetzt ausschreibt.

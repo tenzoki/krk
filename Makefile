@@ -120,8 +120,14 @@ NOTARPROFIL := $(or $(KRK_NOTARY_PROFILE),krk-notar)
 # der erste Prozess geendet hat, uebersetzt cargo das Werkzeug mit der neuen
 # Zahl neu; Station 1 des zweiten vergleicht dann die neu eingebackene Zahl mit
 # dem Tag und faellt durch, wenn ein altes Werkzeug stehengeblieben ist.
+#
+# **Auch dieses Ziel wirkt ueber das Geraet hinaus**, und es schreibt zusaetzlich
+# in den Arbeitsbaum. Es ist ueberdies das Ziel, zu dem `./release.sh` fuehrt,
+# also das, was der Nutzer wirklich faehrt; die ##-Zeile darunter nennt das
+# Schieben deshalb ebenso wie die von `release`. Bis zum 260821 tat sie es nicht
+# (Durchsicht 260821-1432, C1).
 .PHONY: ausliefern
-ausliefern: ## Version setzen, eintragen, taggen und ausliefern: make ausliefern VERSION=0.2.0
+ausliefern: ## Version setzen, eintragen, taggen, ausliefern und HEAD und Tag zu origin schieben: make ausliefern VERSION=0.2.0
 	@test -n "$(VERSION)" || { echo "make ausliefern braucht eine Zahl: make ausliefern VERSION=0.2.0"; exit 2; }
 	$(CARGO) xtask version $(VERSION)
 	$(MAKE) release

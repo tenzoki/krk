@@ -695,6 +695,13 @@ fn zusammenfuegen(vorlage: &bundle::Vorlage) -> Result<PathBuf, Abbruch> {
 
 #[cfg(test)]
 mod tests {
+
+    /// Die Ziele des `Makefile`, deren Hilfezeile das Schieben nennen muss.
+    ///
+    /// Beide wirken ueber das Geraet hinaus, und beide sind ueber `make help`
+    /// zu lesen, bevor jemand sie tippt. `ausliefern` steht hier, weil
+    /// `./release.sh` dorthin fuehrt.
+    const SCHIEBENDE_ZIELE: [&str; 2] = ["ausliefern", "release"];
     use super::*;
 
     /// Die zwei Ziele dieses Projekts unter dem Namen ihres Pruefwerkzeugs.
@@ -1215,7 +1222,7 @@ mod tests {
         );
     }
 
-    /// Die Hilfezeile des `Makefile` nennt das Schieben.
+    /// Die Hilfezeilen des `Makefile` nennen das Schieben.
     ///
     /// **Was `make help` ausgibt, ist das Letzte, was der Nutzer vor dem Tippen
     /// liest.** `make release` schiebt seit dem 260821 HEAD und einen Tag zu
@@ -1223,16 +1230,26 @@ mod tests {
     /// Die Zaehlprobe darunter konnte die Stelle nicht fangen, denn eine
     /// Zaehlprobe faengt, was falsch **dasteht**, nie, was fehlt. Diese hier
     /// fragt nach dem, was dastehen muss.
+    ///
+    /// **Sie fragt es fuer beide Ziele, und das ist der Rest jenes Befunds.**
+    /// Die erste Fassung setzte den Zielnamen `release` fest ein und liess
+    /// `ausliefern` daneben unberichtigt stehen — ausgerechnet das Ziel, zu dem
+    /// `./release.sh` fuehrt und das der Nutzer wirklich tippt (Durchsicht
+    /// 260821-1432, C1). Die Liste steht hier, damit das naechste wirkende Ziel
+    /// dieselbe Luecke nicht ein drittes Mal aufmacht.
     #[test]
-    fn die_hilfezeile_des_makefiles_nennt_das_schieben() {
+    fn die_hilfezeilen_des_makefiles_nennen_das_schieben() {
         let makefile =
             fs::read_to_string(bundle::wurzel().join("Makefile")).expect("das Makefile ist lesbar");
-        let zeile = makefile
-            .lines()
-            .find(|zeile| zeile.starts_with("release: ##"))
-            .expect("das Makefile fuehrt ein Ziel release mit Hilfezeile");
-        assert!(zeile.contains("origin"), "{zeile}");
-        assert!(zeile.contains("schieben"), "{zeile}");
+        for ziel in SCHIEBENDE_ZIELE {
+            let anfang = format!("{ziel}: ##");
+            let zeile = makefile
+                .lines()
+                .find(|zeile| zeile.starts_with(&anfang))
+                .unwrap_or_else(|| panic!("das Makefile fuehrt ein Ziel {ziel} mit Hilfezeile"));
+            assert!(zeile.contains("origin"), "{zeile}");
+            assert!(zeile.contains("schieben"), "{zeile}");
+        }
     }
 
     /// Alle `.rs`-Dateien des Baums, ohne `target/` und ohne das

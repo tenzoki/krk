@@ -108,3 +108,19 @@ weil der Modulkopf sie stärker beschreibt, als sie ist.
 kennen, die an ihrem Platz zulässig ist.
 `shared/reviews/260821-1346-coderev-artefakt-und-release.md`, Befund A2 — die vorige Durchsicht
 hat den `+`-Refspec gefunden; behoben ist er, der Doppelpunkt blieb ungesehen.
+
+---
+
+Resolved: Behoben am 260821 als Umstellung und nicht als Flicken, wie der Datensatz sie unter
+„Abhilfe" als die bessere benennt. `git::Auftrag::wortplaetze` sagt je Variante, welche Wörter
+fest dastehen und welche Plätze der Aufrufer belegt; jeder belegte Platz nennt eine
+`git::Gestalt`. Der Verweis von `Auftrag::Schub` trägt `Gestalt::Tagverweis`, also `refs/tags/`
+und danach einen Tagnamen, dessen Zahl `version::versionszahl_pruefen` liest — die Prüfung, die
+der Datensatz unter „Was heute nicht bedroht ist" als die wirklich tragende benennt und die die
+Aufsicht jetzt selbst ruft. Ein Doppelpunkt hat in dieser Form keinen Platz. Nachgesehen von
+`git::tests::die_aufsicht_faengt_den_refspec_mit_doppelpunkt` mit genau den drei Formen dieses
+Datensatzes und von `ein_belegter_platz_traegt_nur_seine_gestalt`; die Löschwirkung selbst ist an
+einem eigenen Wegwerf-Verzeichnis nachgemessen und nicht aus dem Datensatz übernommen. Daneben
+hält `gewaltbefund` den Doppelpunkt jetzt auch an einem **festen** Wort an, für den Fall, dass
+ihn jemand in eine neue Variante schreibt — dort mit dem Vorbehalt, unter dem jede Verbotsliste
+steht.

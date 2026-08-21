@@ -101,3 +101,28 @@ morgen noch zusagt.
 **Verwandt:**
 `shared/issues/260821-1432_o_der-nachtrag-im-plan-nennt-c3-4-und-c3-5-als-haltend-obwohl-beide-eine-probe-nennen-die-es-nicht-mehr-gibt.md`
 — dort steht die Aufzeichnungsseite desselben Sachverhalts.
+
+---
+
+Resolved: Behoben am 260821, beide Handgriffe der „Abhilfe" gefahren.
+
+**Je Eintrag eine Anhalteprobe, aber nicht als Schleife über die Liste.** Der Datensatz schlägt
+vor, über `MARKEN` und `UEBERGEHENDE` zu laufen; das prüfte, was dasteht, und bliebe grün, wenn
+ein Eintrag verschwände — also genau die Lage, die der Datensatz beklagt.
+`git::tests::jede_einzelne_marke_wird_angehalten` schreibt die elf langen Marken und die drei
+Gewaltbuchstaben deshalb **aus** und sieht jedes Wort einzeln als angehalten nach; ein
+gelöschter Eintrag wird damit rot. Nachgemessen als Mutation: `--all` aus `MARKEN` entfernt
+lässt zwei Proben ausfallen. `jeder_eintrag_der_listen_steht_in_der_anhalteprobe` nimmt die
+Gegenrichtung und fängt einen Eintrag, den jemand hinzufügt, ohne ihn nachzusehen.
+
+**`beispiele()` hängt jetzt am Übersetzer.** Statt eines `vec!`-Literals entsteht die Liste aus
+`naechster`, einer vollständigen Fallunterscheidung ohne Auffangzweig: eine achte Variante hält
+den Bau an, nachgefahren (drei Anhaltestellen — `wortplaetze`, `wirkung`, `naechster`). Was die
+Kette nicht hält, steht in ihrem Doc-Kommentar: wer den neuen Zweig auf `None` setzt und den
+bisherigen letzten stehenlässt, hängt seine Variante nicht ein. Der Doc-Kommentar „Die sieben
+Aufträge" ist gefallen; `die_auftraege_stehen_wort_fuer_wort` zählt jetzt gegen
+`beispiele().len()` nach, statt eine Zahl in Prosa zu führen.
+
+**Damit hält der zweite Satz von C3.4 wieder**, und die sechs Marken, die er nennt — `--force`,
+`-f`, `--tags`, `--all`, `--mirror`, `--delete` — stehen alle in der ausgeschriebenen Liste. Der
+Plan ist entsprechend berichtigt (verwandter Datensatz).
