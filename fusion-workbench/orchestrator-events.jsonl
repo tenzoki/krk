@@ -1284,3 +1284,7 @@
 {"ts":"2026-08-21T10:13:30","event":"shaper_done","detail":"shared/planning/260821-1115_o_spec-artefakt-und-release.md, 40 Abnahmekriterien"}
 {"ts":"2026-08-21T10:13:30","event":"gate_response","agent":"user","detail":"Spec abgenommen, Plan bauen"}
 {"ts":"2026-08-21T10:13:30","event":"planner_start","detail":"shared/planning/260821-1115_o_spec-artefakt-und-release.md"}
+{"ts":"2026-08-21T10:36:04","event":"planner_done","detail":"shared/planning/260821-1221_o_plan-artefakt-und-release.md, 11 Schritte"}
+{"ts":"2026-08-21T10:36:04","event":"gate_response","agent":"user","detail":"Plan freigegeben, bauen, kein eigener Circle"}
+{"ts":"2026-08-21T10:36:04","event":"queue_built","detail":"11 Aufgaben, 0 blockiert, alle coder"}
+{"ts":"2026-08-21T10:36:04","event":"turn_start","turn":3,"detail":"Schritte 1 bis 4"}

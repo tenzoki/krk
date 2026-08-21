@@ -20,6 +20,7 @@ mod git;
 mod messen;
 mod release;
 mod sign;
+mod veroeffentlichung;
 mod version;
 
 use std::process::ExitCode;
@@ -189,6 +190,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         "version" => version::ausfuehren(&argumente[1..]),
         "release" => release::ausfuehren(&argumente[1..]),
         "beglaubigen" => beglaubigung::ausfuehren(&argumente[1..]),
+        "veroeffentlichen" => veroeffentlichung::ausfuehren(&argumente[1..]),
         "messen" => messen::ausfuehren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
             println!("{HILFE}");

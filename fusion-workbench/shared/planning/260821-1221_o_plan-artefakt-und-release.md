@@ -179,7 +179,7 @@ flowchart TD
 
 ---
 
-1. **Das Modul anlegen, mit Argumentprüfung und Bündelfrage**
+1. [DONE] **Das Modul anlegen, mit Argumentprüfung und Bündelfrage**
    - Executor: `coder`
    - Dateien: `xtask/src/veroeffentlichung.rs` (neu), `xtask/src/main.rs` (allein die
      `mod`-Zeile)
@@ -198,7 +198,7 @@ flowchart TD
    - Kriterien: C1.2, C1.3, C1.6
    - Abhängigkeiten: keine
 
-2. **Die äußere Voraussetzung `gh` prüfen, ganz zuerst**
+2. [DONE] **Die äußere Voraussetzung `gh` prüfen, ganz zuerst**
    - Executor: `coder`
    - Dateien: `xtask/src/veroeffentlichung.rs`
    - Änderungen: zwei Fragen in einer Funktion `gh_pruefen()`. Die erste ist ein Startversuch
@@ -219,7 +219,7 @@ flowchart TD
    - Kriterien: C5.1, C5.2, C5.3
    - Abhängigkeiten: Schritt 1
 
-3. **Die Ticketprüfung, netzunabhängig**
+3. [DONE] **Die Ticketprüfung, netzunabhängig**
    - Executor: `coder`
    - Dateien: `xtask/src/veroeffentlichung.rs`
    - Änderungen: zwei Konstanten und eine reine Funktion. `TICKETDATEI` ist
@@ -236,7 +236,7 @@ flowchart TD
    - Kriterien: C2.3
    - Abhängigkeiten: Schritt 1
 
-4. **Das Zip packen, nach dem Heften**
+4. [DONE] **Das Zip packen, nach dem Heften**
    - Executor: `coder`
    - Dateien: `xtask/src/veroeffentlichung.rs`
    - Änderungen: eine reine Funktion `zipname(zahl: &str) -> String` mit dem Ergebnis
