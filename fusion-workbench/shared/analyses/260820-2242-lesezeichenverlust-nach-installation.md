@@ -6,6 +6,7 @@
 **Angefordert von:** Nutzer, über den Orchestrator
 **Baumstand:** `01d2365`
 **Einschränkung:** Kein Lauf im Vordergrund möglich, also kein Nachstellen. Alles unten ist am Code und an der Platte gelesen.
+**Nachtrag:** 2026-08-21, Antwort des Nutzers auf den Befund. Sie steht unter H1 und schließt die Untersuchung; der Abschnitt „Betriebsregel für den Austausch der App“ am Ende zieht die Folgerung.
 
 > **Zur Entstehung dieser Datei.** Die Untersuchung lief am 260820 und gab ihren Bericht als
 > Rückgabetext zurück; auf der Platte stand er nicht. Dies ist die unveränderte Niederschrift
@@ -106,6 +107,22 @@ Dafür: B1, B2 und B4 zusammen sind eindeutig. Ein Ordner, den KRK selbst anlegt
 Dagegen: B3 schließt aus, dass der Ordner seit dem 17.08. noch einmal entfernt wurde. Vier Auslieferungen sind seither ohne Verlust vorbeigegangen. Dein „jedesmal" trifft auf den **Ordner** nicht zu.
 `speculation:` dass es ForkLifts App Deleter war. Der Beleg dafür (`AppDeleterWindowFrame`) steht im ForkLift-**3**-Plist von 2023, nicht im heutigen.
 
+**Nachtrag vom 260821: die Untersuchung ist beendet und nicht abgeschlossen.** Der Nutzer hat
+auf den Befund geantwortet: „vergiss die verlorenen lesezeichen. der hinweis dass forklift
+die daten gelöscht hat war hilfreich.“ Er nimmt die Spur als Erklärung an und schließt den
+Vorfall damit für sich. Berichtet hat er nicht, dass er ForkLifts App Deleter am 17.08.
+benutzt hat, und nachgemessen hat er nichts. Die Beweislage ist deshalb unverändert, und
+die Kennzeichnung `speculation:` im Absatz darüber bleibt stehen: ob ForkLifts App Deleter
+den Ablageordner genommen hat, ist weiterhin ungeprüft. Geändert hat sich die Bewertung der
+Untersuchung, nicht die der Belege. Die Suche nach der Wurzel endet auf Wunsch des Nutzers.
+
+Die Wiederherstellung aus den Time-Machine-Schnappschüssen vom 14. und 15.08. ist auf
+denselben Wunsch hin **nicht verfolgt** worden. Lokale Schnappschüsse altern, und das System
+räumt sie fort, sobald es Platz braucht. Der im Messprotokoll beschriebene Blick auf die
+Lesezeichen vom 15.08. steht einem späteren Leser also aller Wahrscheinlichkeit nach nicht
+mehr offen. Das Messprotokoll selbst behält seinen Wert: es entscheidet den nächsten Vorfall,
+falls einer kommt.
+
 **H2 — Nur `bookmarks.toml` verschwindet, der Ordner bleibt.** *Nicht entschieden, und aus den vorhandenen Spuren auch nicht entscheidbar.*
 Dafür: eine fehlende `bookmarks.toml` ist für KRK der erste Start und **keine Meldung wert** (`mod.rs:490-496`). Der Vorgang wäre vollständig stumm, und genau das passt zu deiner Beschreibung.
 Dagegen: nichts. Widerlegen lässt sie sich nicht, weil `atomar::schreiben` jede Datei über `rename` ersetzt und damit bei jedem Schreibvorgang eine neue Geburtszeit setzt. Die 16:11:10 an `bookmarks.toml` sagt nur, wann zuletzt geschrieben wurde, nicht, was davor da war.
@@ -172,7 +189,7 @@ Zeigt, ob das Beenden etwas geschrieben hat. Nach meinem Befund darf es das nich
 
 **Wiederherstellen, falls verloren:** `cp -p ~/krk-befund/vorher/bookmarks.toml ~/Library/Application\ Support/KRK/` — bei beendetem KRK, sonst überschreibt der nächste Lesezeichenbefehl es wieder.
 
-**Und für den Vorfall vom 17.08.:** es liegen 24 lokale Time-Machine-Schnappschüsse vom 14. und 15.08. auf der Platte. Einer davon trägt den Ablageordner in seinem damaligen Zustand. Mit `sudo mount_apfs -o ro,nobrowse -s com.apple.TimeMachine.2026-08-15-115109.local / /tmp/snap` und einem Blick in `/tmp/snap/Users/k1/Library/Application Support/KRK/` siehst du, welche Lesezeichen du am 15.08. hattest. Ich brauche dafür Rechte, die ich nicht habe.
+**Und für den Vorfall vom 17.08.:** es liegen 24 lokale Time-Machine-Schnappschüsse vom 14. und 15.08. auf der Platte. Einer davon trägt den Ablageordner in seinem damaligen Zustand. Mit `sudo mount_apfs -o ro,nobrowse -s com.apple.TimeMachine.2026-08-15-115109.local / /tmp/snap` und einem Blick in `/tmp/snap/Users/k1/Library/Application Support/KRK/` siehst du, welche Lesezeichen du am 15.08. hattest. Ich brauche dafür Rechte, die ich nicht habe. **Dieser Weg ist nicht gegangen worden**, und er fällt mit dem Altern der Schnappschüsse fort; der Nachtrag unter H1 hält es fest.
 
 ## Gefilte Defekte
 
@@ -197,6 +214,24 @@ Drei, keiner davon die Wurzel:
 - **Die TCC-Datenbank ist mir verschlossen.** Für die Frage, ob ein Überkopieren Zugriffsrechte zurücksetzt, ist das ohne Belang: ein Lesezeichen auf einen unerreichbaren Ordner verschwindet nicht, es bekommt einen Zusatz und eine andere Farbe (`leistenmodell.rs:339-341`). „Weg" heißt es also nicht.
 - **Ohne Lauf im Vordergrund** kann ich weder die Statuszeile beim Start sehen noch die Reihenfolge der Systemaufrufe messen. Beides steckt im Protokoll.
 - **Die vier Auslieferungen nach dem 17.08.** kann ich nur am Ordner ausschließen, nicht an der einzelnen Datei. Das ist die Lücke, die H2 offen hält.
+
+## Betriebsregel für den Austausch der App
+
+Wer `KRK.app` mit einem Werkzeug löscht, das Stützdateien mitnimmt, verliert
+`~/Library/Application Support/KRK/` und mit dem Ordner alles, was KRK dort hält: die
+Lesezeichen, die gesicherte Sitzung, die abweichende Tastenbelegung und die zwei
+Notizzettel. ForkLifts App Deleter ist ein Werkzeug dieser Art, und er steht auf demselben
+Gerät (B12).
+
+Ein Überkopieren ohne vorheriges Löschen ist gefahrlos. Die vier Auslieferungen zwischen dem
+18.08. und dem 20.08. belegen es an zwei Beweisstücken. B3 zeigt, dass in
+`~/Library/Application Support/` seit dem 17.08. um 19:13 kein Eintrag hinzugekommen oder
+weggefallen ist, der Ablageordner also keiner der vier Auslieferungen zum Opfer fiel. B6
+zeigt die Kopie vom 20.08. um 19:47, nach der `bookmarks.toml` unangetastet dastand.
+
+Die Regel lautet damit: die neue Fassung über die alte kopieren und die alte nicht vorher
+löschen. Muss doch gelöscht werden, dann vorher `~/Library/Application Support/KRK/`
+sichern, so wie es der erste Halt des Messprotokolls tut.
 
 ## Quellen
 

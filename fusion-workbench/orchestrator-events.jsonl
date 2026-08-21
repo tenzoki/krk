@@ -1274,3 +1274,6 @@
 {"ts":"2026-08-20T20:19:07","event":"queue_built","detail":"1 Aufgabe, 0 blockiert"}
 {"ts":"2026-08-20T20:19:07","event":"turn_start","turn":1,"detail":"1 Aufgabe bereit"}
 {"ts":"2026-08-20T20:19:07","event":"task_start","turn":1,"task":"T1","agent":"analyst","detail":"crates/krk-core/src/ablage/"}
+{"ts":"2026-08-20T23:24:49","event":"task_done","turn":1,"task":"T1","agent":"analyst","detail":"bb072a0"}
+{"ts":"2026-08-20T23:24:49","event":"gate_response","agent":"user","detail":"stummen Leseweg haerten; die anderen zwei Defekte bleiben offen"}
+{"ts":"2026-08-20T23:24:49","event":"task_start","turn":1,"task":"T2","agent":"bugfixer","detail":"crates/krk-core/src/ablage/"}
