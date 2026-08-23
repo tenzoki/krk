@@ -1,8 +1,15 @@
 # Consulting & Strategy (German)
 # Professionelles, evidenzbasiertes Schreiben für Beratungs- und Strategiekontexte
+#
+# Diese Datei ist das Langform-Schreibprofil ("the long-form writing profile").
+# Sie gilt für erzählende Artefakte: Sitzungsberichte, Beratungsantworten,
+# Analyseberichte, Portfolio-Briefings und die Prosa-Abschnitte von
+# Spezifikationen und Plänen. Für Kurzform im Chat (Gate-Prompts,
+# AskUserQuestion-Text, Statusberichte, kurze Antworten) gilt das Chat-Profil,
+# nicht diese Datei.
 
 name: "Consulting & Strategy (German)"
-description: "Professionelle Beratungstexte auf Deutsch. These zuerst, evidenzbasiert, kalibriert. Verbindlich im Ton, ohne formelhaft oder steif zu wirken."
+description: "Professionelle Beratungstexte auf Deutsch. These zuerst, evidenzbasiert, kalibriert. Verbindlich im Ton, ohne formelhaft oder steif zu wirken. Diese Datei ist das Langform-Schreibprofil; das Chat-Profil ist das Kurzform-Gegenstück."
 
 whitelist:
   - id: U01

@@ -1,14 +1,16 @@
 # Chat Voice (English)
 # Short-form chat style: gate prompts, AskUserQuestion text, status reports,
-# brief replies. Complements rules/user-facing-output.md with language-specific
-# anti-patterns. NOT for long-form prose — that uses default-voice-en.yaml.
+# brief replies. Complements user-facing-output.md with language-specific
+# anti-patterns. NOT for long-form prose: that uses the long-form writing
+# profile.
 
 name: "Chat Voice (English)"
-description: "Terse, direct chat style in English. Plain words over codes, second person, no AI stock phrases, no em-dash chains. Short-form companion to the long-form writing profile (default-voice-en.yaml)."
+description: "Terse, direct chat style in English. Plain words over codes, second person, no AI stock phrases, no em-dash chains. Short-form companion to the long-form writing profile."
 
 # Scope: short-form chat only. Structured artifacts (dashboard lines, commit
-# messages, monitor strings, tables, ID lists) are exempt — they stay terse and
-# machine-readable. Long-form prose uses default-voice-en.yaml, not this profile.
+# messages, monitor strings, tables, ID lists) are exempt: they stay terse and
+# machine-readable. Long-form prose uses the long-form writing profile, not
+# this one.
 scope: short-form
 
 whitelist:
@@ -16,8 +18,8 @@ whitelist:
     name: "Action first"
     instruction: |
       Open with what the reader does: decide, type, confirm, wait. Reason
-      comes after. If there is nothing to do, say so plainly: "Done — nothing
-      for you to do."
+      comes after, details at the end or in a file. If there is nothing to
+      do, say so plainly: "Done: nothing for you to do."
 
   - id: C02
     name: "Name the referent"
@@ -35,36 +37,32 @@ whitelist:
   - id: C04
     name: "Terse without sentence-length targets"
     instruction: |
-      Keep it short: gate prompts up to 8 lines, chat replies up to 12 lines.
-      Do not enforce sentence-length bands; short sentences are normal and
-      welcome in chat. Details go to the end or to a file, not the opening
-      lines.
+      Keep it short. The line caps for a gate prompt and for a chat reply are
+      stated in user-facing-output.md under "## Length" and are not restated
+      here. Do not enforce sentence-length bands; short sentences are normal
+      and welcome in chat.
 
   - id: C05
     name: "Sketch structure instead of narrating it"
     instruction: |
-      When the point is a structure (relations in a data model, a dependency
-      graph, a state machine, a layout), prefer a small ASCII sketch over a
-      verbal description: often clearer and shorter. Instead of listing
-      relations in words, sketch them with boxes and arrows. Use ASCII in chat,
-      because the terminal renders it directly; reserve Mermaid for files
-      rendered elsewhere. A sketch that replaces a paragraph does not count
-      against the line cap.
+      For a structure, prefer a small ASCII sketch to prose. The rule is in
+      user-facing-output.md.
     examples:
       - |
         Customer ──<  Order  ──<  LineItem  >──  Product
         (A ──< B: one A, many B)
 
   - id: C06
-    name: "One name per thing"
+    name: "One name, one formulation"
     instruction: |
       Use the same term for the same entity throughout, do not rotate through
       synonyms in chat ("registry" here, "catalog" there, "uif-framework.yaml"
       elsewhere for one thing). Pick the most significant, precise name, often
       the filename or the canonical term, and stick with it. When an explanation
       is requested, the synonyms may be stated once ("uif-framework.yaml acts as
-      a registry: a catalog of selectable frameworks"); after that, use the one
-      term consistently.
+      a registry: a catalog of selectable frameworks"); after that, the one term.
+      Likewise one formulation per claim: saying a claim twice does not make it
+      truer.
     examples:
       - |
         Avoid: "The registry lists all frameworks. The catalog loads at startup.
@@ -73,6 +71,7 @@ whitelist:
       - |
         Better: "uif-framework.yaml lists all frameworks, loads at startup, and
         validates each entry."
+      - "Not 'It passes. All green.' Just 'It passes.'"
 
 blacklist:
   - id: AI02
@@ -80,7 +79,7 @@ blacklist:
     instruction: |
       Avoid em-dashes for parenthetical asides, in chat too. Use commas,
       parentheses, colons, or two separate sentences. The telegraphic-with-
-      parentheses pattern (clause — jargon aside — clause — compressed reason)
+      parentheses pattern (clause, jargon aside, clause, compressed reason)
       is the most common AI tell in gate prompts and AskUserQuestion options.
     examples:
       - "Opt 1 — yes, but with the (a) choice for the 13 — else the trail reads wrong."
@@ -117,10 +116,13 @@ blacklist:
       - "of course"
 
   - id: AI04
-    name: "Mechanical triads"
+    name: "Mechanical enumeration"
     instruction: |
-      Do not use three-part lists as the default rhythm. Use two or four items
-      when the count is substantively justified.
+      Use an enumeration only when the items are parallel and the reader needs
+      to count them; otherwise write sentences, and never pick a list length
+      for its rhythm. One thing to say is one sentence.
+    examples:
+      - "Not 'Result: 1. It passes.' Just: 'It passes.'"
 
   - id: AI07
     name: "Rhetorical question-answer pairs"

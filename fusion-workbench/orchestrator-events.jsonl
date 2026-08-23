@@ -1290,3 +1290,32 @@
 {"ts":"2026-08-21T10:36:04","event":"turn_start","turn":3,"detail":"Schritte 1 bis 4"}
 {"ts":"2026-08-21T19:21:52","event":"portfolio_refresh","detail":"circles/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md; shared/history/260821-2115-playmaker-orchestrator-phase4.md"}
 {"ts":"2026-08-21T19:24:13","event":"session_end","detail":"3 Turns, 21 Commits, KRK 0.5.6 ausgeliefert, Runde 15 kohaerent geschlossen"}
+{"ts":"2026-08-23T02:42:32","event":"session_start","history_file":"shared/history/260823-0442-orchestrator-session.md","detail":"Directive noch nicht gesetzt; Modus noch nicht aufgeloest; Domaene code; Turn-Budget 12"}
+{"ts":"2026-08-23T04:25:52","event":"scope_resolved","detail":"custom; 1 Aufgabe; bugfixer; Gates: keins erwartet ausser der Abnahme durch den Nutzer"}
+{"ts":"2026-08-23T04:25:52","event":"queue_built","detail":"1 Aufgabe, 0 blockiert"}
+{"ts":"2026-08-23T04:25:52","event":"turn_start","turn":1,"detail":"1 Aufgabe bereit"}
+{"ts":"2026-08-23T04:25:52","event":"task_start","turn":1,"task":"T1","agent":"bugfixer","detail":"editor_oeffnen_lassen: Ursache erheben, F4 und cmd+e beheben"}
+{"ts":"2026-08-23T05:22:33","event":"task_done","turn":1,"task":"T1","agent":"bugfixer","detail":"df8163d — sichtbarkeit_aendern zieht die Aufteilung selbst nach"}
+{"ts":"2026-08-23T05:22:33","event":"commit","turn":1,"task":"T1","detail":"df8163d fix(ui): das Einblenden erreichte das Fenstermodell und nicht den Schirm"}
+{"ts":"2026-08-23T05:22:33","event":"review_start","turn":1,"agent":"coderev","detail":"1 Datei: crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-23T05:37:46","event":"review_done","turn":1,"agent":"coderev","detail":"4 Defektdatensaetze, kein Auslieferungshindernis; Bereich ab11eb8..df8163d gedeckt"}
+{"ts":"2026-08-23T05:37:46","event":"commit","turn":1,"detail":"a8be186 docs(workbench): die Durchsicht von df8163d"}
+{"ts":"2026-08-23T07:43:49","event":"gate_response","turn":1,"detail":"Abnahme durch den Nutzer: F4 und die f3-Fokusrichtung halten; L1-Messung nicht gefahren"}
+{"ts":"2026-08-23T07:43:49","event":"turn_end","turn":1,"detail":"1 Aufgabe erledigt, 4 Defektdatensaetze aus der Durchsicht, 2 Datensaetze geschlossen"}
+{"ts":"2026-08-23T07:43:49","event":"turn_start","turn":2,"detail":"1 Aufgabe: cmd+e als Rundweg"}
+{"ts":"2026-08-23T07:43:49","event":"task_start","turn":2,"task":"T2","agent":"coder","detail":"cmd+e: Dateiliste -> Editor -> Dateiliste, Rueckweg schliesst"}
+{"ts":"2026-08-23T08:17:39","event":"task_done","turn":2,"task":"T2","agent":"coder","detail":"28cbb7b — cmd+e ist der Rundweg"}
+{"ts":"2026-08-23T08:17:39","event":"commit","turn":2,"task":"T2","detail":"28cbb7b feat(ui): cmd+e wird der Rundweg"}
+{"ts":"2026-08-23T08:17:39","event":"review_start","turn":2,"agent":"coderev","detail":"Bereich a8be186..28cbb7b"}
+{"ts":"2026-08-23T09:25:37","event":"review_done","turn":2,"agent":"coderev","detail":"7 Befunde, davon 1 hoch; Bereich a8be186..28cbb7b gedeckt"}
+{"ts":"2026-08-23T09:25:37","event":"commit","turn":2,"detail":"1042895 Durchsicht, 471d801 Markerkorrektur"}
+{"ts":"2026-08-23T09:25:37","event":"gate_response","turn":2,"detail":"Nutzer 260823-1125: Umbenennung bleibt, es gibt noch keine Nutzer; Befund 260823-1030 als Lage angenommen geschlossen"}
+{"ts":"2026-08-23T09:25:37","event":"turn_end","turn":2,"detail":"1 Aufgabe erledigt, 7 Befunde, 1 geschlossen"}
+{"ts":"2026-08-23T09:25:37","event":"turn_start","turn":3,"detail":"1 Aufgabe: acht Befunde aus beiden Durchsichten"}
+{"ts":"2026-08-23T09:25:37","event":"task_start","turn":3,"task":"T3","agent":"coder","detail":"0730 0733 1031 1032 1033 1034 1035 1036"}
+{"ts":"2026-08-23T10:15:53","event":"task_done","turn":3,"task":"T3","agent":"coder","detail":"52fba42 — 7 Befunde geschlossen, 1035 wird eine Frage, 5 abhaengige Stellen zusaetzlich"}
+{"ts":"2026-08-23T10:15:53","event":"commit","turn":3,"detail":"52fba42 Code, 8ecfd0e Schliessungen"}
+{"ts":"2026-08-23T12:19:40","event":"reconciliation","detail":"Verdikt review-needed, 2 Abweichungen abgelegt, Empfehlung revise Grounding"}
+{"ts":"2026-08-23T12:19:40","event":"coherence_review","detail":"review-needed; Artefakt haelt, Grundlage traegt eine ueberholte offene Frage"}
+{"ts":"2026-08-23T12:19:40","event":"rebalance_grounding","detail":"260813-0053 vom Nutzer bestaetigt, _o_ -> _i_"}
+{"ts":"2026-08-23T12:20:02","event":"session_end","detail":"3 Turns, 9 Commits, f4 und der cmd+e-Rundweg vom Nutzer abgenommen, Verdikt review-needed dann per Grundlage geschlossen"}

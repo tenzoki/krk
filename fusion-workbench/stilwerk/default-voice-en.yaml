@@ -1,8 +1,14 @@
 # Consulting & Strategy - Professional Voice
 # Authoritative, evidence-grounded writing for advisory and strategic contexts
+#
+# This file is the long-form writing profile. It governs narrative artifacts:
+# session summary bodies, consultant replies, analyst reports, playmaker
+# briefings, and the prose sections of specs and plans. Short-form chat (gate
+# prompts, AskUserQuestion text, status reports, brief replies) is governed by
+# the chat profile, not by this one.
 
 name: "Consulting & Strategy - Professional Voice"
-description: "Professional advisory writing. Thesis-first, evidence-grounded, calibrated. Authoritative without being stiff or formulaic."
+description: "Professional advisory writing. Thesis-first, evidence-grounded, calibrated. Authoritative without being stiff or formulaic. This file is the long-form writing profile; the chat profile is its short-form counterpart."
 
 # Patterns to ENCOURAGE
 whitelist:

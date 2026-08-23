@@ -1,15 +1,15 @@
 # Chat Voice (German)
 # Kurzform-Stil für den Chat: Gate-Prompts, AskUserQuestion-Text, Statusberichte,
-# kurze Antworten. Ergänzt rules/user-facing-output.md um sprachspezifische
-# Anti-Muster. NICHT für Langform-Prosa — dafür gilt default-voice-de.yaml.
+# kurze Antworten. Ergänzt user-facing-output.md um sprachspezifische
+# Anti-Muster. NICHT für Langform-Prosa: dafür gilt das Langform-Schreibprofil.
 
 name: "Chat Voice (German)"
-description: "Knapper, direkter Chat-Stil auf Deutsch. Klartext statt Kürzel, Du-Form, keine KI-Floskeln, keine Gedankenstrich-Ketten. Kurzform-Begleiter zum Beratungs-Schreibprofil (default-voice-de.yaml)."
+description: "Knapper, direkter Chat-Stil auf Deutsch. Klartext statt Kürzel, Du-Form, keine KI-Floskeln, keine Gedankenstrich-Ketten. Kurzform-Begleiter zum Langform-Schreibprofil."
 
 # Geltungsbereich: nur Kurzform im Chat. Strukturierte Artefakte (Dashboard-
 # Zeilen, Commit-Messages, Monitor-Strings, Tabellen, ID-Listen) sind
-# ausgenommen — sie bleiben knapp und maschinenlesbar. Für Langform-Prosa gilt
-# default-voice-de.yaml, nicht dieses Profil.
+# ausgenommen: sie bleiben knapp und maschinenlesbar. Für Langform-Prosa gilt
+# das Langform-Schreibprofil ("the long-form writing profile"), nicht dieses.
 scope: short-form
 
 whitelist:
@@ -17,8 +17,9 @@ whitelist:
     name: "Aktion zuerst"
     instruction: |
       Mit der Handlung beginnen, die der Leser ausführen soll: entscheiden,
-      tippen, bestätigen, warten. Erst danach die Begründung. Gibt es nichts
-      zu tun, das ausdrücklich sagen: "Fertig, nichts weiter zu tun."
+      tippen, bestätigen, warten. Erst danach die Begründung, Details ans
+      Ende oder in eine Datei. Gibt es nichts zu tun, das ausdrücklich sagen:
+      "Fertig, nichts weiter zu tun."
 
   - id: C02
     name: "Klartext-Referenten"
@@ -38,28 +39,23 @@ whitelist:
   - id: C04
     name: "Knappheit ohne Satzlängen-Zwang"
     instruction: |
-      Kurz halten: Gate-Prompts bis 8 Zeilen, Chat-Antworten bis 12 Zeilen.
-      Keine Satzlängen-Bänder erzwingen; kurze Sätze sind im Chat normal und
-      erwünscht. Details ans Ende oder in eine Datei, nicht in die ersten
-      Zeilen.
+      Kurz halten. Die Zeilenlimits für Gate-Prompts und Chat-Antworten stehen
+      in user-facing-output.md unter "## Length" und werden hier nicht
+      wiederholt. Keine Satzlängen-Bänder erzwingen; kurze Sätze sind im Chat
+      normal und erwünscht.
 
   - id: C05
     name: "Skizze statt Prosa bei Struktur"
     instruction: |
-      Wenn es um Struktur geht (Relationen in einem Datenmodell, ein
-      Abhängigkeitsgraph, ein Zustandsautomat, ein Layout), eine kurze
-      ASCII-Skizze der verbalen Beschreibung vorziehen: oft klarer und kürzer.
-      Statt Relationen in Worten aufzuzählen, die Zusammenhänge mit Kästchen
-      und Pfeilen skizzieren. ASCII im Chat, weil das Terminal es direkt
-      anzeigt; Mermaid nur in Dateien, die anderswo gerendert werden. Eine
-      Skizze, die einen Absatz ersetzt, zählt nicht gegen das Zeilenlimit.
+      Bei Struktur eine kurze ASCII-Skizze statt Prosa. Die Regel steht in
+      user-facing-output.md.
     examples:
       - |
         Customer ──<  Order  ──<  LineItem  >──  Product
         (A ──< B: ein A, viele B)
 
   - id: C06
-    name: "Eine Benennung pro Sache"
+    name: "Eine Benennung, eine Formulierung"
     instruction: |
       Für dieselbe Entität durchgehend denselben Begriff verwenden, nicht im
       Chat zwischen Synonymen wechseln (mal "Registry", mal "Katalog", mal
@@ -67,7 +63,8 @@ whitelist:
       Namen wählen, oft der Dateiname oder der kanonische Term, und dabei
       bleiben. Bei einer angefragten Erklärung dürfen die Synonyme einmal
       genannt werden ("uif-framework.yaml dient als Registry: ein Katalog der
-      wählbaren Frameworks"); danach konsequent der eine Begriff.
+      wählbaren Frameworks"); danach der eine Begriff. Ebenso eine Formulierung
+      pro Aussage: zweimal gesagt wird sie nicht wahrer.
     examples:
       - |
         Vermeiden: "Die Registry listet alle Frameworks. Der Katalog wird beim
@@ -76,6 +73,7 @@ whitelist:
       - |
         Besser: "uif-framework.yaml listet alle Frameworks, wird beim Start
         geladen und validiert jeden Eintrag."
+      - "Nicht 'Läuft durch. Alles grün.', sondern 'Läuft durch.'"
 
 blacklist:
   - id: AI02
@@ -121,10 +119,13 @@ blacklist:
       - "natürlich"
 
   - id: AI04
-    name: "Mechanische Dreiergruppen"
+    name: "Mechanische Aufzählungen"
     instruction: |
-      Dreigliedrige Aufzählungen nicht als Default-Rhythmus nutzen. Zwei oder
-      vier Glieder verwenden, wenn die Zahl inhaltlich begründet ist.
+      Eine Aufzählung nur dann verwenden, wenn die Glieder parallel sind und
+      der Leser sie zählen muss; sonst Sätze schreiben und die Zahl nie nach
+      dem Rhythmus wählen. Eine Aussage, ein Satz.
+    examples:
+      - "Nicht 'Ergebnis: 1. Läuft durch.', sondern 'Läuft durch.'"
 
   - id: AI07
     name: "Rhetorische Frage-Antwort-Paare"
