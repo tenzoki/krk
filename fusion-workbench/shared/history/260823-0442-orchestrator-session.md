@@ -31,13 +31,13 @@ worden (Anker `ab11eb8`, Startstempel `260823-0442`, beide Hälften messbar).
 | Turns | 3 |
 | Aufgaben erledigt | 3 |
 | Aufgaben übersprungen oder zurückgestellt | 0 |
-| Defektdatensätze angelegt | 12 |
+| Defektdatensätze angelegt | 14 |
 | Defektdatensätze geschlossen | 11 |
 | Entscheidungen beantwortet (`_o_`→`_a_`) | 0 |
-| Entscheidungen umgesetzt (`_a_`→`_i_`) | 2 |
-| Commits | 9 |
+| Entscheidungen umgesetzt (`_a_`→`_i_`) | 3 |
+| Commits | 11 |
 | Agentenfehler | 0 |
-| Nutzergates | 7 |
+| Nutzergates | 8 |
 
 Die Null bei „beantwortet" ist kein Fehlbetrag: beide Entscheidungen dieser Sitzung sind noch in
 derselben Sitzung umgesetzt worden und tragen deshalb heute `_i_`. Der Zwischenstand `_a_` hat auf
