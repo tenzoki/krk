@@ -2066,6 +2066,15 @@ impl Anwendungsdelegierter {
     /// eine ausgeblendete Leiste blendet sie ein, auch wenn der Fokus danach
     /// aus einem anderen Grund nicht umzieht; ohne das oder-Zeichen liesse er
     /// die Aufteilung ungezeichnet stehen.
+    ///
+    /// **Hervorholen und Fokussetzen sind zwei Handlungen, und die Flaeche
+    /// steht zuerst auf dem Schirm.** [`Self::bereich_einblenden`] kehrt seit
+    /// dem 260823 erst zurueck, wenn [`Self::sichtbarkeit_aendern`] die neue
+    /// Sichtbarkeit an die Ansichten geschrieben hat; erst danach ruft
+    /// [`Self::fokus_setzen`] `makeFirstResponder:`. Die Reihenfolge ist
+    /// tragend und nicht kosmetisch: eine Ansicht, die AppKit noch als
+    /// ausgeblendet fuehrt, nimmt den Ersthelferrang nicht verlaesslich an, und
+    /// der Fokus landet dann irgendwo statt im hervorgeholten Bereich.
     fn fokus_holen(&self, ziel: Fokus) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let eingeblendet = match fokus::bereich_mit_fokus(ziel, aktiv) {
@@ -4148,6 +4157,40 @@ impl Anwendungsdelegierter {
     /// Sichtbarkeit vorher gegen die nachher. Damit bleibt der Ausschluss
     /// vollstaendig im Fenstermodell, und diese Datei kennt ihn nicht: sie
     /// erfaehrt sein Ergebnis, statt seine Regel ein zweites Mal zu tragen.
+    ///
+    /// **Wer die Sichtbarkeit im Modell aendert, schreibt sie auch auf den
+    /// Schirm, und zwar hier.** Bis zum 260823 tat das allein
+    /// [`Self::kommando_ausfuehren`] am Ende jedes ausgefuehrten Befehls; ein
+    /// eingeblendeter Bereich bekam seinen Auslegungsdurchgang nur ueber jenen
+    /// Weg, und der Kommentar an `a6b3818` sagte es ausdruecklich zu. **Die
+    /// Zusage traegt nicht mehr, seit `784840c` das Lesen des Editors auf einen
+    /// Arbeitsfaden gelegt hat**: [`Self::editorausgang_behandeln`] kommt aus
+    /// dem Einzugstakt des Editorbereichs und laeuft, wenn der Befehl, der das
+    /// Oeffnen angefordert hat, laengst zurueck ist. Der Editor stand danach im
+    /// Fenstermodell und nicht auf dem Schirm, und der Nutzer sah weder die
+    /// Flaeche noch das Kaestchen der Bereichsleiste umspringen
+    /// (`shared/issues/260820-1034_*_f4-setzt-den-fokus-nur-dann-in-den-editor-*`
+    /// und `260820-1034_*_cmd-e-bleibt-in-der-vorschau-wirkungslos-*`).
+    /// [`Self::anlass_ausfuehren`] traegt denselben Nachzug seit demselben
+    /// Befund, dort aber von Hand am Ende der Fortsetzung; hier steht er an der
+    /// Stelle, die das Modell aendert, und keine kuenftige Fortsetzung kann ihn
+    /// vergessen.
+    ///
+    /// **Er steht vor den Nachzuegen der einzelnen Bereiche und nicht hinter
+    /// ihnen.** [`Self::nach_dem_sichtbarkeitswechsel`] setzt den Fokus, und
+    /// [`Self::fokus_holen`] setzt ihn gleich danach ein zweites Mal; beide
+    /// rufen dafuer `makeFirstResponder:`, und der trifft sonst eine Ansicht,
+    /// die AppKit noch als ausgeblendet fuehrt. Das ist dieselbe Trennung, die
+    /// `a6b3818` fuer das Angleichen gezogen hat: einblenden und das Zweite
+    /// sind zwei Handlungen, und die Flaeche steht zuerst.
+    ///
+    /// **Der Ruf am Ende von [`Self::kommando_ausfuehren`] bleibt daneben
+    /// stehen.** Er deckt die Aenderungen ab, die keine Sichtbarkeit sind — die
+    /// Breiten und das aktive Dateifenster —, und trifft nach einem
+    /// Sichtbarkeitswechsel auf ein unveraendertes Modell. Ein Befehl, der
+    /// einen Bereich umschaltet, legt die Zeile damit zweimal aus; das ist der
+    /// Preis dafuer, dass die Zusage an der Quelle haengt statt an der
+    /// Vollstaendigkeit einer Aufrufliste.
     fn sichtbarkeit_aendern(&self, aendern: impl FnOnce(&mut Fenstermodell) -> bool) -> bool {
         let vorher = self.ivars().modell.borrow().sichtbarkeit();
         let geaendert = aendern(&mut self.ivars().modell.borrow_mut());
@@ -4155,6 +4198,11 @@ impl Anwendungsdelegierter {
             return false;
         }
         let nachher = self.ivars().modell.borrow().sichtbarkeit();
+        // Erst die Flaeche auf den Schirm, dann alles, was einen Ersthelfer
+        // setzt. Die Begruendung steht im Doc-Kommentar; die Ausleihe des
+        // Modells ist an dieser Stelle beendet, `vorher` und `nachher` sind
+        // Werte.
+        self.aufteilung_nachziehen();
         for bereich in Bereich::ALLE {
             if sichtbar_in(&vorher, bereich) != sichtbar_in(&nachher, bereich) {
                 self.nach_dem_sichtbarkeitswechsel(bereich);
@@ -4506,8 +4554,15 @@ impl Anwendungsdelegierter {
     /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
     /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`].
     /// Der erste ist [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten
-    /// Kommando folgt — **auf jedem Weg genau einmal**, fuer den Tastendruck
-    /// wie fuer den Klick.
+    /// Kommando folgt, fuer den Tastendruck wie fuer den Klick.
+    ///
+    /// **Mindestens einmal je Weg und seit dem 260823 nicht mehr genau
+    /// einmal.** [`Self::sichtbarkeit_aendern`] zieht den Nachzug selbst, damit
+    /// eine Fortsetzung ausserhalb von [`Self::kommando_ausfuehren`] den Schirm
+    /// nicht schuldig bleibt; ein Befehl, der einen Bereich umschaltet, kommt
+    /// damit zweimal hier an. Geschrieben werden beide Male dieselben zehn
+    /// Zustaende aus demselben Modell, und die Begruendung fuer den Preis steht
+    /// an jener Funktion.
     ///
     /// **Der zweite ist der Ordnerwechsel eines Dateifensters**, und er kam mit
     /// dem neunten Schalter dazu. Die acht ersten stehen im
@@ -6313,7 +6368,20 @@ impl Anwendungsdelegierter {
     /// und vorher gefragt nennt [`Self::editordatei`] die vorige. Ein Aufruf je
     /// Oeffnungsweg entsteht dafuer nicht — alle drei laufen durch diese eine
     /// Stelle.
+    ///
+    /// **Sie ist eine Fortsetzung und kein Befehl, und deshalb beginnt sie wie
+    /// [`Self::kommando_ausfuehren`] mit dem Nachlesen der Breiten.** Jeder
+    /// Zweig unten aendert die Sichtbarkeit — der erste ueber
+    /// [`Self::fokus_holen`], der letzte ueber [`Self::editor_ausblenden`] —,
+    /// und [`Self::sichtbarkeit_aendern`] schreibt sie von dort auf den Schirm.
+    /// Was der Nutzer waehrend des Lesens mit der Maus verschoben hat, stuende
+    /// ohne diese Zeile im Rahmen der Ansicht und nicht im Fenstermodell, und
+    /// der Nachzug naehme ihm die Ziehbewegung. **Der Zeitpunkt ist der
+    /// richtige**: gemessen wird, bevor irgendetwas die Sichtbarkeit anfasst,
+    /// also solange Modell und Schirm dieselbe meinen — die Bedingung, die
+    /// [`Self::bildschirmbreiten_uebernehmen`] an ihren Aufrufer stellt.
     fn editorausgang_behandeln(&self, ausgang: Ladeausgang, herkunft: Oeffnungsherkunft) {
+        self.bildschirmbreiten_uebernehmen();
         let aus_sitzung = herkunft.ist_aus_sitzung();
         let marke = self.ivars().vorgemerkte_marke.borrow_mut().take();
         match ausgang {
@@ -6757,8 +6825,14 @@ impl Anwendungsdelegierter {
         }
         // **Was `kommando_ausfuehren` einem ausgefuehrten Befehl nachzieht.**
         // Die Fortsetzung laeuft lange nach ihm, und ohne diese beiden Zeilen
-        // stuende die neue Sichtbarkeit im Fenstermodell und nicht auf dem
-        // Schirm.
+        // bliebe die Statuszeile auf dem Stand vor der Antwort.
+        //
+        // **Die Sichtbarkeit haengt seit dem 260823 nicht mehr an dieser
+        // Zeile.** `sichtbarkeit_aendern` schreibt sie selbst auf den Schirm,
+        // und `editor_ausblenden` geht darueber; der Ruf hier ist deshalb fuer
+        // diesen Anlass kein Nachzug mehr, sondern eine Wiederholung. Er bleibt
+        // stehen, weil `Anlass::AndereDatei` gar keine Sichtbarkeit aendert und
+        // die uebrigen Anzeigen trotzdem nachzuziehen sind.
         self.aufteilung_nachziehen();
         self.sitzung_vormerken();
     }
@@ -8022,6 +8096,96 @@ mod fokusnachzugproben {
                 "der Nachzug der Fokusanzeige schreibt nicht mehr: {nadel}"
             );
         }
+    }
+}
+
+/// Die Zusage, dass eine geaenderte Sichtbarkeit auf den Schirm kommt.
+///
+/// **Warum am Quelltext und nicht am Verhalten.** Der Weg von der Sichtbarkeit
+/// im Fenstermodell bis zu `setHidden:` laeuft ueber ein `NSSplitView`, und die
+/// Ansichten stehen erst, wenn KRK im Vordergrund laeuft; kein Agent kann den
+/// Abnahmelauf fahren. Was ohne Fenster pruefbar bleibt, ist die Verdrahtung:
+/// dass die eine Stelle, die die Sichtbarkeit aendert, den Nachzug ruft, und
+/// dass sie ihn **vor** allem ruft, was einen Ersthelfer setzt.
+///
+/// **Der Defekt, gegen den sie geschrieben sind.** `784840c` hat das Lesen des
+/// Editors auf einen Arbeitsfaden gelegt; seither laeuft
+/// [`Anwendungsdelegierter::editorausgang_behandeln`] aus dem Einzugstakt und
+/// nicht mehr im Rumpf von [`Anwendungsdelegierter::kommando_ausfuehren`], das
+/// den Nachzug bis dahin fuer jeden Weg hinter sich brachte. `f4` und `cmd+e`
+/// blendeten den Editor damit im Modell ein und nicht auf dem Schirm
+/// (`shared/issues/260820-1034_*`).
+///
+/// **Was sie nicht sehen:** einen zweiten Schreiber der Sichtbarkeit neben
+/// `Fenstermodell::umschalten` und `::einblenden`. Dagegen haelt, dass
+/// `Fenstermodell::sichtbar_setzen` privat ist.
+#[cfg(test)]
+mod sichtbarkeitsproben {
+    use super::zettelproben::{diese_datei, rumpf};
+
+    /// Wer die Sichtbarkeit aendert, schreibt sie auf den Schirm.
+    ///
+    /// Die eine Stelle ist `sichtbarkeit_aendern`; beide Wege in das
+    /// Fenstermodell — `bereich_umschalten` und `bereich_einblenden` — gehen
+    /// durch sie. Faellt der Ruf hier weg, steht die neue Sichtbarkeit wieder
+    /// nur im Modell, sobald der Aenderer keinen Befehlsrumpf hinter sich hat.
+    #[test]
+    fn die_geaenderte_sichtbarkeit_kommt_auf_den_schirm() {
+        let nadel = concat!("aufteilung_", "nachziehen(");
+        let rumpf = rumpf(&diese_datei(), "sichtbarkeit_aendern");
+        assert!(
+            rumpf.contains(nadel),
+            "die Sichtbarkeitsaenderung zieht die Aufteilung nicht nach und bleibt damit im Modell stehen"
+        );
+    }
+
+    /// Die Flaeche steht auf dem Schirm, **bevor** ein Ersthelfer gesetzt wird.
+    ///
+    /// `nach_dem_sichtbarkeitswechsel` setzt den Fokus, und `fokus_holen` setzt
+    /// ihn gleich danach ein zweites Mal. Beide rufen `makeFirstResponder:`,
+    /// und der trifft eine Ansicht, die AppKit noch als ausgeblendet fuehrt,
+    /// wenn der Nachzug erst hinter der Schleife stuende — dieselbe Trennung,
+    /// die `a6b3818` fuer das Angleichen gezogen hat.
+    #[test]
+    fn der_nachzug_steht_vor_den_bereichsnachzuegen() {
+        let nachzug = concat!("aufteilung_", "nachziehen(");
+        let bereichsnachzug = concat!("nach_dem_", "sichtbarkeitswechsel(");
+        let rumpf = rumpf(&diese_datei(), "sichtbarkeit_aendern");
+        let stelle_nachzug = rumpf
+            .find(nachzug)
+            .expect("die Sichtbarkeitsaenderung zieht die Aufteilung nicht nach");
+        let stelle_bereich = rumpf
+            .find(bereichsnachzug)
+            .expect("die Sichtbarkeitsaenderung zieht die einzelnen Bereiche nicht mehr nach");
+        assert!(
+            stelle_nachzug < stelle_bereich,
+            "der Nachzug der Aufteilung steht hinter den Bereichsnachzügen; der Fokus trifft dann eine noch ausgeblendete Ansicht"
+        );
+    }
+
+    /// Die Fortsetzung des Editors liest die Breiten nach, bevor sie einblendet.
+    ///
+    /// `editorausgang_behandeln` laeuft aus dem Einzugstakt und damit lange
+    /// nach dem Befehl, der das Oeffnen angefordert hat. Sie beginnt deshalb
+    /// wie `kommando_ausfuehren`: erst messen, solange Modell und Schirm
+    /// dieselbe Sichtbarkeit meinen, dann erst eine aendern. Ohne die Messung
+    /// naehme der Nachzug dem Nutzer eine Ziehbewegung, die er waehrend des
+    /// Lesens gemacht hat.
+    #[test]
+    fn die_editorfortsetzung_misst_vor_dem_einblenden() {
+        let messung = concat!("bildschirmbreiten_", "uebernehmen(");
+        let einblenden = concat!("fokus_", "holen(");
+        let rumpf = rumpf(&diese_datei(), "editorausgang_behandeln");
+        let stelle_messung = rumpf
+            .find(messung)
+            .expect("die Fortsetzung des Editors liest die Bildschirmbreiten nicht nach");
+        let stelle_einblenden = rumpf
+            .find(einblenden)
+            .expect("die Fortsetzung des Editors holt den Editor nicht mehr hervor");
+        assert!(
+            stelle_messung < stelle_einblenden,
+            "die Fortsetzung misst erst, nachdem sie die Sichtbarkeit geändert hat; die Messung ist dann wertlos"
+        );
     }
 }
 

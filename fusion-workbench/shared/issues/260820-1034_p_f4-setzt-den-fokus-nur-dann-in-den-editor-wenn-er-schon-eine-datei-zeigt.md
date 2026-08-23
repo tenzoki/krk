@@ -51,3 +51,38 @@ KRK frisch starten, sodass der Editor keine Datei zeigt. In der Dateiliste auf e
 navigieren, `f4` drücken. Erwartet: die Datei steht im Editor und der Fokus ist darin. Beobachtet:
 die Datei steht im Editor, der Fokus liegt in der Lesezeichenleiste oder nirgends. Ein zweites
 `f4` auf dieselbe oder eine andere Datei setzt den Fokus dann richtig.
+
+---
+
+## Also seen: 260823-0508 by orchestrator — der Editor öffnet gar nicht, und ein Pfeiltastendruck holt ihn nach
+
+Der Nutzer meldet denselben Befehl am Baumstand `ab11eb8` mit einer **schwereren** Beobachtung
+als der Ursprungsbericht. Sie steht hier und nicht in einem zweiten Datensatz, weil sie denselben
+Befehl und denselben Ausführungszweig betrifft; ob es dieselbe Ursache ist, ist offen.
+
+**Ausgangslage:** Fokus in der Dateiliste, die Vorschau ist der stehende Bereich der Fensterzeile.
+
+1. `f4` drücken. Der Fokus springt irgendwohin, meist in die Lesezeichenliste. **Der Editor
+   öffnet nicht**, und das Ankreuzfeld steht weiter auf Vorschau.
+2. Den Fokus von Hand zurück in die Dateiliste legen und dort die Zeilenmarkierung mit einer
+   Pfeiltaste verschieben. **Jetzt** öffnet der Editor — mit dem Fokus in der Dateiliste und auf
+   einer anderen Datei als der, auf der `f4` gedrückt wurde.
+
+**Worin sich das vom Ursprungsbericht unterscheidet.** Dort stand die Datei im Editor und allein
+der Fokus lag falsch. Hier bleibt der Editor zu und das Ankreuzfeld unverändert; das Öffnen
+geschieht erst beim nächsten Auswahlwechsel. Zwei Lesarten, beide ungemessen:
+
+- **`inference:`** derselbe Reihenfolgefehler wie im Ursprungsbericht, nur weiter fortgeschritten:
+  das Einblenden wird nicht wirksam, und was `f4` hinterlässt, ist ein vorgemerkter Stand, den
+  erst die nächste Auffrischung einlöst. Der Pfeiltastendruck ist dann kein zweiter Auslöser,
+  sondern die Auffrischung, die den ersten nachholt.
+- **`speculation:`** der Baum hat sich zwischen `dad0a36` und `ab11eb8` bewegt, und das Verhalten
+  ist ein anderes geworden.
+
+**Was zuerst zu erheben ist:** ob `im_editor_oeffnen` überhaupt erreicht wird, und was
+`editor_oeffnen_lassen` zurückgibt. Der Ursprungsbericht nennt `fokus_setzen`s Sperre gegen
+ausgeblendete Bereiche als Verdacht; diese Beobachtung passt dazu, verlangt aber zusätzlich eine
+Erklärung dafür, dass das Einblenden selbst ausbleibt.
+
+**Nicht abgenommen:** die Beobachtung stammt aus der Hand des Nutzers. Kein Agent kann sie
+nachfahren, weil der Abnahmelauf KRK im Vordergrund verlangt.
