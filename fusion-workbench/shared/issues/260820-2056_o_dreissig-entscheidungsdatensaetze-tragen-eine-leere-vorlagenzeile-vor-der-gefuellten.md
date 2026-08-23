@@ -68,3 +68,11 @@ Zwei Wege, und dieser Datensatz wählt keinen:
 lesen, etwa `grep 'Answered:' <datei> | tail -1`. Denselben blinden Fleck beschreibt
 `shared/issues/260818-0710_*_forty-three-closure-notes-are-written-in-a-form-no-resolved-sweep-finds.md`
 für die Schließungsnotizen des Defektspeichers, mit anderer Ursache und gleicher Wirkung.
+
+---
+Also seen: 260823-1336 by reconciler — der Bestand liegt heute bei 28 statt dreißig, und die
+Differenz ist kein Fortschritt: zwei der genannten Datensätze sind am 260820 ins Archiv
+gewandert, korrigiert wurde keiner. Neu hinzugekommen ist einer aus der Sitzung `260823-0442`,
+`shared/decisions/260823-1137_*_holt-der-rueckweg-von-cmd-e-die-vorschau-*`. Erhoben über alle
+161 Datensätze in `shared/decisions/` und `circles/*/decisions/` mit der Bedingung „erste leere
+Vorlagenzeile steht vor der ersten gefüllten".

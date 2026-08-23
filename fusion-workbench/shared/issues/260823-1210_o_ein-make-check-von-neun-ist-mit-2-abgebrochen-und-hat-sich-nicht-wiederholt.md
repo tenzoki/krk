@@ -52,3 +52,13 @@ weiter zu treiben; deshalb steht hier keine Vermutung als Ursache.
 den Änderungen jener Arbeit
 
 **Domain:** code
+
+---
+
+**Abgleich 260823-1336.** Ein zehnter Lauf ist gefahren, am Baumstand `616ad5e` samt den nicht
+eingecheckten Workbench-Änderungen, mit erhaltener Ausgabe: Rückgabewert 0, Schlusszeile „alle
+vier gruen", `krk-core` und `xtask` je 155 beziehungsweise alle Ziele grün, `fmt` und `clippy`
+ohne Befund. Der Datensatz bleibt offen, und zwar unverändert aus dem Grund, den er selbst nennt:
+ein einzelner roter Lauf ohne erhaltene Ausgabe ist nicht diagnostizierbar, und ein weiterer
+grüner Lauf entkräftet ihn nicht, er verschiebt nur die Häufigkeit. Zu tun bleibt das, was unter
+„Was zu tun wäre" steht: den nächsten roten Lauf mit seiner Ausgabe festhalten.

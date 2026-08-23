@@ -114,3 +114,32 @@ geht anschließend über `sitzung_vormerken` in die `session.toml` und überlebt
 `circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0539_*_ein-zusammengezogenes-fenster-ersetzt-die-aufteilung-des-nutzers-dauerhaft.md`
 — derselbe Gegenstand von der anderen Seite: dort übernahm das Modell eine Zahl, die es nicht
 übernehmen durfte, hier übernimmt es eine nicht, die es übernehmen müsste.
+
+---
+
+**Abgleich 260823-1336: der Befund steht, seine Zeilennummern nicht.** Der Sachverhalt ist am
+Baumstand `616ad5e` nachgelesen und unverändert: `aktives_setzen` ruft `aufteilung_nachziehen`
+ohne vorherige Messung, und `sitzung_vormerken` steht eine Zeile danach.
+
+Jede Zeilenangabe dieses Datensatzes zeigt jedoch ins Leere, weil `52fba42` in
+`crates/krk-ui/src/appkit/anwendung.rs` rund 220 Zeilen hinzugefügt hat. Wer dem Datensatz
+folgt, sucht ab jetzt über den Namen und nicht über die Zahl:
+
+| genannt | trägt heute | Fundstelle |
+|---|---|---|
+| `:4320-4325` | `fn aktives_setzen` | `:4379` |
+| `:4369-4374` | `fn aktives_dem_ersthelfer_nachziehen` | `:4428` |
+| `:4507` | `fn bildschirmbreiten_uebernehmen` | `:4578` |
+| `:4530`, `:4523-4529` | `fn aufteilung_nachziehen` samt Doc-Kommentar | `:4601` |
+| `:2991` | die Messung am Kopf von `fn kommando_ausfuehren` | `:2982` |
+| `:7061` | die Messung in `fn sitzung_bauen` | `:7229` |
+| `:4489-4498`, `:4500-4506` | die Reihenfolgezusage am Doc-Kommentar von `bildschirmbreiten_uebernehmen` | `:4556-4577` |
+
+Die Tafel ist eine Wegweisung für heute und keine neue Zusage: sie veraltet mit dem nächsten
+Commit an dieser Datei genauso. Die Gestalt dahinter ist als eigener Datensatz abgelegt
+(`shared/issues/260823-1336_*_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-*`).
+
+Die zwei Rufer selbst sind unverändert: `bildschirmbreiten_uebernehmen` hat weiterhin genau
+zwei, und `aktives_setzen` ist keiner von beiden. Der Datensatz bleibt offen, und die
+Vorfrage, die er stellt — Messung an die Rufer oder in `aufteilung_nachziehen` selbst —, ist
+nicht beantwortet.

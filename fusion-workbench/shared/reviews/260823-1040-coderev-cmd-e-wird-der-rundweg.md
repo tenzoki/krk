@@ -288,3 +288,27 @@ Zeilen), `260823-1034` (die Quelltextprobe für `vorschau_danach`).
   weder `sichtbarkeit_aendern` noch `editorausgang_behandeln` an; die neue Zeile
   `bereich_einblenden(Bereich::Vorschau)` läuft durch dieselbe Stelle, die `260823-0732`
   beschreibt, ändert dort aber nichts.
+
+---
+
+## Abgleich 260823-1336
+
+Alle sieben Befunde sind gegen den Baumstand `616ad5e` nachgelesen, jeder einzeln und nicht über
+den Commit-Text.
+
+| Befund | Stand | Beleg |
+|---|---|---|
+| `260823-1030` Kennung weist die `keymap.toml` ab | geschlossen als **angenommene Lage**, nicht behoben | der Mechanismus besteht fort (`belegung.rs:1423` bricht beim ersten unbekannten Bezeichner ab, nachgelesen); der Datensatz trägt `Resolved:` und darunter das vorgeschriebene `Revised by:`, weil die Schließungsbegründung am 260823-1140 richtiggestellt wurde |
+| `260823-1031` zweite Fokuserhebung | geschlossen | `52fba42`; `fn editor_rundweg(&self, fokus: Fokus)`, der Zweig ruft `self.editor_rundweg(fokus)`, und `self.fokus()` hat wieder genau fünf Aufrufer |
+| `260823-1032` zwei Zahlen im Modulkopf | geschlossen | `52fba42`; beide Zahlen gestrichen, „Zehn Module" bleibt und stimmt: `crates/krk-ui/src/kommandos/` trägt zehn Module neben `mod.rs` |
+| `260823-1033` drei Stellen zum `false` | geschlossen | `52fba42`; `umbenennung_beginnen` in `tabelle.rs` sagt jetzt, der Wert entscheide über den Nachzug und nicht über das Weiterlaufen |
+| `260823-1034` `vorschau_danach` ungeprüft | geschlossen | `52fba42`; `mod rundwegproben` mit vier Proben steht in `anwendung.rs` ab `:8412` |
+| `260823-1035` Rückweg blendet immer ein | geschlossen ohne Verhaltensänderung | `52fba42`; der Nutzer hat am 260823-1235 Möglichkeit 1 gewählt, geändert ist die Begründung im Code |
+| `260823-1036` Zuschreibung zweier Proben | geschlossen | `52fba42`; beide Doc-Kommentare tragen den Absatz, `resources/default-keymap.toml:825` führt die Umbenennung |
+
+**Die drei Zeilenangaben dieses Berichts nach `anwendung.rs` gelten nicht mehr**, aus demselben
+Grund wie im Bericht vom 260823-0735:
+`shared/issues/260823-1336_*_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-*`.
+
+Das im Bericht genannte Auslieferungshindernis ist mit `260823-1030` als angenommene Lage
+erledigt und nicht behoben; der Auslöser für die Zukunft steht in jenem Datensatz.

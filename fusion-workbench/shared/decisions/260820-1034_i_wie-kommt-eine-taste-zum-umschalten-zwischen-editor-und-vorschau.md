@@ -157,3 +157,10 @@ alle drei Zweige rufen bestehende Rümpfe, und `editor_schliessen` ist für den 
 herausgezogen statt abgeschrieben. `Wirkungsbereich::Vorschau` ist gefallen und
 `Wirkungsbereich::Dateibereiche` an seine Stelle getreten, weil `Vorschau` genau diesen einen
 Befehl trug. Die Kennung heißt jetzt `editor_rundweg`. **Die Abnahme von Hand steht noch aus.**
+
+---
+**Abgenommen am 260823-1320.** Der Nutzer hat die drei Handgriffe von Hand gefahren und berichtet,
+es funktioniere: `cmd+e` aus der Dateiliste öffnet die Datei im Editor mit dem Fokus darin, ein
+zweites `cmd+e` schließt ihn und gibt den Fokus an die Dateiliste zurück, und „Abbrechen" an der
+Nachfrage nach ungesichertem Stand lässt den Editor stehen und die Vorschau draußen. Der letzte
+Handgriff war der einzige, den keine Probe deckt.

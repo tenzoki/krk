@@ -98,3 +98,25 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+**Abgleich 260823-1336: sieben neue tote Zeiger an einem einzigen Tag.** Die Sitzung `260823-0442`
+hat in ihren eigenen Datensätzen sieben Verweise mit ausgeschriebenem Marker hinterlassen, deren
+Ziel dieselbe Sitzung anschließend umbenannt hat. Keiner davon löst heute auf:
+
+- `shared/decisions/260820-1034_a_wie-kommt-eine-taste-zum-umschalten-*` (heute `_i_`), zitiert in
+  der `Answered:`-Zeile desselben Datensatzes und im `Resolved:`-Vermerk von
+  `shared/issues/260820-1034_c_cmd-e-bleibt-in-der-vorschau-wirkungslos-*`.
+- `shared/decisions/260823-1137_o_holt-der-rueckweg-von-cmd-e-die-vorschau-*` (heute `_i_`).
+- `shared/issues/260820-1034_o_cmd-e-bleibt-*` und `…_p_cmd-e-bleibt-*` (heute `_c_`).
+- `shared/issues/260820-1034_p_f4-setzt-den-fokus-*` (heute `_c_`).
+- `shared/issues/260823-0730_o_drei-prosastellen-*` und `260823-0733_o_die-probe-zur-editorfortsetzung-*`
+  (beide heute `_c_`), zitiert unter anderem aus `shared/reviews/260823-1040-coderev-cmd-e-wird-der-rundweg.md`.
+
+Die Erhebung ist mechanisch: alle Verweise der Form `<speicher>/<art>/<stempel>_<marker>_<thema>.md`
+aus den Datensätzen, Durchsichten und Protokollen dieser Sitzung gegen den Dateibestand geprüft.
+Fünf der sieben stehen nicht in einer `**Cross-references:**`-Zeile, sondern in Fließtext, in einem
+`Resolved:`-Vermerk und in einer `Answered:`-Zeile. **Das ist Sachstand zu dieser Frage und keine
+Antwort auf sie**: der Zerfall trifft breiter als die eine Kopfzeile, um die die Frage gestellt ist,
+und jede Antwort, die allein `**Cross-references:**` umstellt, ließe fünf dieser sieben stehen.

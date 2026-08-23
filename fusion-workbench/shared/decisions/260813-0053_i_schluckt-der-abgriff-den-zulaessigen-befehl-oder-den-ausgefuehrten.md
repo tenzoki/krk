@@ -54,3 +54,47 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+**Abgleich 260823-1336: Möglichkeit 1 steht seit dem 260813 im Baum, die Antwort des Nutzers
+steht aus.** Der Marker bleibt deshalb `_o_` und wird nicht auf `_a_` oder `_i_` gezogen: der
+Datensatz fragt den Nutzer, und die Runde ist ausdrücklich auf der Empfehlung gefahren, statt
+sie beantwortet zu bekommen. Gebaut zu sein und beantwortet zu sein ist hier zweierlei.
+
+Was gemessen ist, und woran:
+
+- `9da33bc` (260813) hat `kommando_ausfuehren` umgestellt. Der Diff zeigt es unmittelbar:
+  `let ausgefuehrt = match kommando` heißt jetzt `let gewirkt = match kommando`, die Rückgabe
+  `ausgefuehrt` ist `true` geworden, und davor steht `if !zulaessigkeit::zulaessig(kommando, lage)`.
+- Am heutigen Baumstand `616ad5e` gilt es unverändert: `crates/krk-ui/src/appkit/anwendung.rs`,
+  `fn kommando_ausfuehren` schließt auf `if gewirkt { … } true`.
+- Der Planschritt S3 der Runde 7 steht auf `[DONE]`
+  (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_*_plan-suche-in-der-belegung-*`,
+  Abschnitt „S3").
+- Die Sitzung `260823-0442` hat die Regel ein zweites Mal gegen den Baum gelesen, weil vier
+  Code-Kommentare das Gegenteil behaupteten: `shared/issues/260823-1033_*_drei-stellen-behaupten-ein-false-*`,
+  behoben mit `52fba42`. Der Befund bestätigt Möglichkeit 1 und ändert sie nicht.
+
+**Was zum Schließen fehlt, ist eine Zeile vom Nutzer**, nicht Arbeit am Code. Fällt sie auf
+Möglichkeit 1, wandert der Datensatz in einem Schritt auf `_i_` und zitiert `9da33bc`. Fällt sie
+anders, ist der Rückweg teuer: dreizehn Planschritte der Runde 7 hängen daran, und die
+Nebenfrage `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/decisions/260813-0320_*_esc-im-editor-erreicht-heute-die-textflaeche-*`
+hängt mit.
+
+---
+Answered: Der Nutzer hat am 260823-1350 Möglichkeit 1 bestätigt: der Abgriff schluckt, was
+zulässig war, unabhängig davon, was der Befehlsrumpf zurückgibt. Die Frage ist ihm mit dem Preis
+vorgelegt worden, nämlich dass die Rückgabewerte der Befehlsrümpfe damit dauerhaft nur noch den
+Zweck behalten, den `#[must_use]` ihnen gibt.
+
+Implemented: `9da33bc` vom 260813 — die Regel steht seit der Runde 7 im Baum, und diese Sitzung
+hat sie mit dem Befund `260823-1033` (behoben in `52fba42`) ein zweites Mal gegen den Baum
+gelesen: `kommando_ausfuehren` liefert seit jener Runde ausnahmslos `true`. Drei Prosastellen
+hatten das Gegenteil behauptet und sind berichtigt.
+
+**Die Reihenfolge ist die auffällige Stelle und gehört festgehalten.** Die Umsetzung liegt zehn
+Tage vor der Antwort. Die Runde 7 ist auf der Empfehlung gefahren, statt sie beantwortet zu
+bekommen, und der Datensatz stand seitdem offen, während der Baum auf ihm aufbaute. Der Abgleich
+vom 260823-1336 hat das gefunden und den Marker bewusst nicht selbst gezogen: die Antwort war die
+des Nutzers und keine, die aus dem Baum abzulesen gewesen wäre.

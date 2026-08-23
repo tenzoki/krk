@@ -176,3 +176,24 @@ vier Befunde ist ein Rückschritt gegenüber `ab11eb8`.
 3. `260823-0733` (Probe) — klein, gehört zur nächsten Berührung dieser Datei.
 4. `260823-0732` (Reihenfolge, L1) — auf die Liste des nächsten Abnahmelaufs. Vorher ist nichts
    zu tun.
+
+---
+
+## Abgleich 260823-1336
+
+Alle vier Befunde sind gegen den Baumstand `616ad5e` nachgelesen.
+
+| Befund | Stand | Beleg |
+|---|---|---|
+| `260823-0730` Prosastellen | geschlossen | `52fba42`; die Aufruferzählung an `bildschirmbreiten_uebernehmen` ist durch eine Regel ersetzt und nennt keine Zahl mehr |
+| `260823-0731` Ziehbewegung | **offen**, zu Recht | die Vorfrage „Messung an die Rufer oder in `aufteilung_nachziehen`" ist unbeantwortet; `aktives_setzen` ist weiterhin kein Rufer der Messung |
+| `260823-0732` Reihenfolge, L1 | **offen**, zu Recht | die AppKit-Frage braucht ein laufendes Bündel, die Zeithälfte den Abnahmelauf; beides ist Nutzerarbeit |
+| `260823-0733` Probe | geschlossen | `52fba42`; `die_editorfortsetzung_misst_als_erste_anweisung` und der Helfer `erste_anweisung` stehen im Baum |
+
+**Die Zeilenangaben dieses Berichts gelten nicht mehr.** `52fba42` hat `anwendung.rs` um rund
+220 Zeilen verlängert; der Versatz liegt zwischen 59 und 168 Zeilen und ist ungleichmäßig. Wer
+dem Bericht folgt, sucht über den Funktionsnamen. Abgelegt als
+`shared/issues/260823-1336_*_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-*`.
+
+Das Urteil „kein Auslieferungshindernis" hält: `make check` gibt am 260823-1336 den Wert 0
+zurück, alle vier Kommandos grün.

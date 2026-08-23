@@ -139,3 +139,32 @@ Dateifenster, und mehrfaches `f3` lässt dasselbe Dateifenster aktiv.
 und was offen bleibt, ist allein die Frage nach den Kosten je Tastendruck durch den doppelten
 und den reentranten Ruf von `aufteilung_nachziehen`. Die Befürchtung, AppKit könne beim
 Ausblenden einen unerwarteten Rang vergeben, ist damit ausgeräumt.
+
+---
+
+**Abgleich 260823-1336: der Befund steht, seine Zeilennummern nicht.** Am Baumstand `616ad5e`
+nachgelesen: `aufteilung_nachziehen` steht in `sichtbarkeit_aendern` weiterhin vor der Schleife
+über `nach_dem_sichtbarkeitswechsel`, und der Melder trägt weiterhin zwei Empfänger, von denen
+der erste bis `anwenden` durchgeht. Die beschriebene Reihenfolge ist unverändert.
+
+Jede Zeilenangabe zeigt ins Leere, weil `52fba42` in
+`crates/krk-ui/src/appkit/anwendung.rs` rund 220 Zeilen hinzugefügt hat:
+
+| genannt | trägt heute | Fundstelle |
+|---|---|---|
+| `:4194-4212` | `fn sichtbarkeit_aendern` | `:4253` |
+| `:4222-4252` | `fn nach_dem_sichtbarkeitswechsel` | `:4281` |
+| `:1130-1131` | die zwei Empfänger des Melders | `:1163-1164` |
+| `:2233-2237` | `fn fokus_setzen` | `:2262` |
+| `:4559-4565` | die zurückgenommene Zusage „auf jedem Weg genau einmal" | `:4630` ff. |
+| `:4700-4733` | `fn statuszeile_nachziehen` | `:4771` |
+| `:8043-8080`, `:8046-8062` | `mod fokusnachzugproben` und der Doc-Kommentar von `der_nachzug_der_anzeige_ruehrt_die_auslegung_nicht_an` | `:8217`, `:8241` |
+
+Die Tafel gilt für heute und veraltet mit dem nächsten Commit an dieser Datei; die Gestalt
+dahinter steht in `shared/issues/260823-1336_*_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-*`.
+
+**Offen bleibt der Datensatz aus beiden Gründen, die er selbst nennt**, und keiner davon ist
+durch diese Sitzung ausgeräumt: die Frage, ob AppKit nach dem Ausblenden einen Rang innerhalb
+eines Dateifensters vergibt, ist ohne laufendes Bündel nicht entscheidbar, und die Zeithälfte
+(L1 mit Umschaltbefehlen in der Reihe) verlangt den Abnahmelauf, der KRK im Vordergrund braucht
+und damit Nutzerarbeit ist.
