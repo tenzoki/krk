@@ -1702,15 +1702,16 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         }
         // Der Aufruf selbst ist die Probe: er liefert fuer jedes Kommando
         // einen der sieben Werte und kann keinen zweiten liefern.
-        // `Tabbereich` kam mit dem Vorschaufenster aus S19 dazu; `Vorschau`,
-        // `Editor` und `Navigator` mit dem eingebauten Editor.
+        // `Tabbereich` kam mit dem Vorschaufenster aus S19 dazu; `Dateibereiche`
+        // (bis zum 260823 `Vorschau`), `Editor` und `Navigator` mit dem
+        // eingebauten Editor.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
                 bereich,
                 Wirkungsbereich::Dateifenster
                     | Wirkungsbereich::Leiste
-                    | Wirkungsbereich::Vorschau
+                    | Wirkungsbereich::Dateibereiche
                     | Wirkungsbereich::Editor
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
@@ -1810,10 +1811,14 @@ fn die_drei_befehle_des_navigators_tragen_den_navigator() {
 ///
 /// Drei Sorten, und die Grenze ist die Frage, was der Befehl voraussetzt.
 /// `bearbeiten` setzt das Dateifenster voraus, dessen ausgewaehlten Eintrag es
-/// oeffnet; der Uebergang aus der Vorschau setzt die Vorschau voraus, deren
-/// angezeigte Datei er uebernimmt; der Fokusbefehl setzt nichts voraus, weil
-/// er den Fokus holt. Die uebrigen acht arbeiten in der Datei, die der Editor
-/// haelt, und ohne Fokus dort gibt es keine.
+/// oeffnet; der Fokusbefehl setzt nichts voraus, weil er den Fokus holt. Die
+/// uebrigen acht arbeiten in der Datei, die der Editor haelt, und ohne Fokus
+/// dort gibt es keine.
+///
+/// **Der Rundweg faellt aus dieser Dreiteilung heraus**, und seit dem
+/// 260823-0942 ist das seine Aussage: er setzt keinen einzelnen Bereich voraus,
+/// sondern bedeutet in dreien etwas. Bis dahin hiess er `editor_aus_vorschau`
+/// und trug `Wirkungsbereich::Vorschau`.
 #[test]
 fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
     assert_eq!(
@@ -1822,9 +1827,9 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
         "F4 oeffnet den ausgewaehlten Eintrag des Dateifensters"
     );
     assert_eq!(
-        Kommando::EditorAusVorschau.wirkungsbereich(),
-        Wirkungsbereich::Vorschau,
-        "der Uebergang braucht die angezeigte Datei der Vorschau"
+        Kommando::EditorRundweg.wirkungsbereich(),
+        Wirkungsbereich::Dateibereiche,
+        "der Rundweg wirkt nicht in den drei Bereichen, in denen eine Datei im Spiel ist"
     );
     assert_eq!(
         Kommando::FokusEditor.wirkungsbereich(),
@@ -1863,7 +1868,10 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
 const SIEBEN_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 7] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
-    (Wirkungsbereich::Vorschau, "Vorschau"),
+    (
+        Wirkungsbereich::Dateibereiche,
+        "Dateifenster, Vorschau und Editor",
+    ),
     (Wirkungsbereich::Editor, "Editor"),
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
     (
@@ -1885,7 +1893,7 @@ fn stelle_in_den_sieben(bereich: Wirkungsbereich) -> usize {
     match bereich {
         Wirkungsbereich::Dateifenster => 0,
         Wirkungsbereich::Leiste => 1,
-        Wirkungsbereich::Vorschau => 2,
+        Wirkungsbereich::Dateibereiche => 2,
         Wirkungsbereich::Editor => 3,
         Wirkungsbereich::Tabbereich => 4,
         Wirkungsbereich::Navigator => 5,
@@ -1980,7 +1988,7 @@ fn keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich() {
 fn die_kennungen_der_editor_runde_stehen_in_der_auslieferungsbelegung() {
     let belegung = Belegung::auslieferung();
     for kennung in [
-        "editor_aus_vorschau",
+        "editor_rundweg",
         "fokus_editor",
         "editor_schliessen",
         "editor_ansicht_umschalten",

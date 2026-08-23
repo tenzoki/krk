@@ -369,10 +369,12 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // Gliederung fragt nach der **Gegend der Anwendung**, der
         // Wirkungsbereich nach dem Fokus, den ein Befehl braucht. F4 braucht
         // das Dateifenster, aber wer die Zeile sucht, sucht sie unter "Editor"
-        // und nicht unter "Dateioperationen". Derselbe Satz ordnet den
-        // Uebergang aus der Vorschau hierher und nicht zu "Vorschau": beide
-        // sind Einstiegswege in den Editor, und der Nutzer findet unter
-        // "Editor" alle Befehle, die ihn angehen.
+        // und nicht unter "Dateioperationen". Derselbe Satz ordnet den Rundweg
+        // hierher und nicht zu "Vorschau": beide fuehren in den Editor, und der
+        // Nutzer findet unter "Editor" alle Befehle, die ihn angehen. Fuer den
+        // Rundweg traegt der Satz seit dem 260823 mehr als vorher, denn er
+        // wirkt jetzt in drei Bereichen und keiner davon ist die Vorschau
+        // allein.
         //
         // Das Ein- und Ausblenden des Editors steht hier und nicht unter
         // "Fenster", wo sein Gegenstueck fuer die beiden Dateifenster steht.
@@ -383,7 +385,7 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // Regel: ein Dateifenster ist keine eigene Gegend der Belegung, es
         // gibt keinen Abschnitt dafuer.
         Kommando::Bearbeiten
-        | Kommando::EditorAusVorschau
+        | Kommando::EditorRundweg
         | Kommando::FokusEditor
         | Kommando::EditorSchliessen
         | Kommando::EditorUmschalten
@@ -1283,7 +1285,7 @@ mod tests {
     fn der_bereich_editor_fuehrt_genau_die_befehle_des_editors() {
         const EDITORBEFEHLE: [&str; 13] = [
             "bearbeiten",
-            "editor_aus_vorschau",
+            "editor_rundweg",
             "fokus_editor",
             "editor_schliessen",
             "editor_umschalten",
@@ -1444,7 +1446,7 @@ mod tests {
     #[test]
     fn jede_neue_kennung_der_editor_runde_ist_umbelegbar() {
         const NEUE_KENNUNGEN: [&str; 13] = [
-            "editor_aus_vorschau",
+            "editor_rundweg",
             "fokus_editor",
             "editor_schliessen",
             "editor_ansicht_umschalten",

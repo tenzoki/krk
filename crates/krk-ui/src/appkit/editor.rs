@@ -27,6 +27,7 @@
 //!   zurueckgehaltenes_fallenlassen <───────────────┘ (abbrechen)
 //!
 //!   opt+cmd+e ──> Blatt ──> schliessen ──> stand_einsetzen, kopf_nachziehen
+//!   cmd+e (im Editor) ─┘ derselbe Weg, und die Vorschau kommt danach zurueck
 //!
 //!   Tippen ──> textDidChange: ──> Editormodell::bearbeiten ──> kopf_nachziehen
 //!                                          │ gewandelt
@@ -1210,7 +1211,8 @@ impl Editorsicht {
 /// (die Erzwingung endete an der Grenze des Anwendungsdelegierten).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Oeffnungsherkunft {
-    /// F4, `cmd+e` aus der Vorschau oder der Sprung auf eine Textmarke aus C6.
+    /// Ein Befehl des Nutzers: `f4`, `cmd+e` aus der Dateiliste oder aus der
+    /// Vorschau, oder der Sprung auf eine Textmarke aus C6.
     Befehl,
     /// Die Datei, die `session.toml` gemerkt hat, beim Start (C7).
     Sitzung,

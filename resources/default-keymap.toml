@@ -171,7 +171,10 @@ tasten = ["f4"]
 # Funktionen, die je eine tragen, wie "terminal_oeffnen" weiter unten. Ein
 # Cmd-Kuerzel daneben braucht es auch sachlich nicht: der zweite Einstiegsweg in
 # den Editor ist kein zweiter Weg auf dieselbe Handlung, sondern eine eigene
-# Funktion mit eigener Quelle ("editor_aus_vorschau" weiter unten).
+# Funktion mit eigener Quelle ("editor_rundweg" weiter unten). Seit dem 260823
+# treffen die beiden sich im Dateifenster: dort oeffnen f4 und cmd+e denselben
+# ausgewaehlten Eintrag und laufen durch denselben Rumpf. Der Unterschied
+# bleibt, dass cmd+e in zwei weiteren Bereichen etwas bedeutet und f4 nicht.
 
 # ── C1: Dateifenster und Tabs ────────────────────────────────────────────────
 # Dieselben vier Tabbefehle bedienen nach C6 auch die Tabs des
@@ -797,13 +800,33 @@ tasten = ["return"]
 # Buchstaben ueber die Stelle nachschlug, und ist seit S2 gegenstandslos.
 
 [[funktion]]
-id = "editor_aus_vorschau"
-name = "Im Editor bearbeiten"
+id = "editor_rundweg"
+name = "In den Editor und zurück"
 tasten = ["cmd+e"]
-# Der zweite Einstiegsweg: die im Vorschaufenster angezeigte Datei in den
-# Editor uebernehmen (Nutzerentscheid vom 260807-2139). e wie Editor, und die
-# blanke Cmd-Ebene traegt die Handlung selbst, so wie cmd+y die Vorschau ein-
-# und ausblendet und cmd+d ein Lesezeichen anlegt.
+# Der Rundweg zwischen Dateiliste und Editor, und was er tut, haengt am Fokus
+# (Nutzerentscheid vom 260823-0942,
+# `shared/decisions/260820-1034_*_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md`):
+#
+#   Dateifenster  den ausgewaehlten Eintrag im Editor oeffnen, wie f4
+#   Vorschau      die dort angezeigte Datei im Editor oeffnen
+#   Editor        den Editor schliessen; die Vorschau kommt zurueck, der Fokus
+#                 geht in die Dateiliste
+#
+# e wie Editor, und die blanke Cmd-Ebene traegt die Handlung selbst, so wie
+# cmd+y die Vorschau ein- und ausblendet und cmd+d ein Lesezeichen anlegt.
+#
+# **Der Rueckweg schliesst und blendet nicht aus.** Er nimmt damit denselben Weg
+# wie "editor_schliessen" weiter unten, gibt die Datei frei und loest die
+# Nachfrage aus C4 aus. Das Ausblenden ohne Nachfrage taete "editor_umschalten",
+# und der Unterschied der beiden steht im Kommentar bei "editor_schliessen".
+# Der Nutzer hat den Rueckweg mit diesem Preis vorgelegt bekommen und ihn so
+# gewaehlt; wer das umdreht, dreht eine bewusste Wahl um.
+#
+# **Der Eintrag hiess bis zum 260823 "editor_aus_vorschau" und trug den Namen
+# "Im Editor bearbeiten".** Er tat allein die mittlere der drei Zeilen. Eine
+# `keymap.toml`, die den alten Bezeichner noch fuehrt, wird beim Start als
+# unbekannte Funktion abgewiesen; KRK meldet es und faehrt mit dieser
+# Auslieferungsbelegung.
 
 [[funktion]]
 id = "fokus_editor"
@@ -825,8 +848,13 @@ tasten = ["opt+cmd+e"]
 # opt+cmd+e bleibt beim Schliessen und wandert nicht auf den Umschalter
 # darunter. Die beiden tun Verschiedenes: das Schliessen gibt die Datei frei und
 # loest die Nachfrage aus C4 aus, das Umschalten blendet aus und behaelt den
-# Stand. Die Einblendhaelfte des Schliessens tragen weiter F4 und der Uebergang
-# aus der Vorschau, weil beide zugleich eine Datei mitbringen.
+# Stand. Die Einblendhaelfte des Schliessens tragen weiter F4 und cmd+e, weil
+# beide zugleich eine Datei mitbringen.
+#
+# **Seit dem 260823 hat das Schliessen einen zweiten Rufer.** Der Rueckweg von
+# "editor_rundweg" geht durch denselben Rumpf und damit durch dieselbe
+# Nachfrage; er blendet danach die Vorschau wieder ein, und darin allein
+# unterscheiden sich die beiden. Opt+cmd+e selbst ist unveraendert.
 
 [[funktion]]
 id = "editor_umschalten"
@@ -837,6 +865,12 @@ tasten = ["opt+cmd+b"]
 # Kombination einer abgenommenen Runde wechselt ihre Bedeutung nicht. Der
 # Unterschied der beiden steht im Kommentar darueber. Nutzerantwort vom
 # 260812-0430, Datensatz wie beim linken Dateifenster in C7.
+#
+# **Die Erweiterung von cmd+e am 260823 ist keine Ausnahme von diesem Satz.**
+# Der Befehl behaelt seine bisherige Richtung, die angezeigte Datei der Vorschau
+# im Editor zu oeffnen, und bekommt zwei Bereiche und einen Rueckweg dazu; er
+# wechselt seine Bedeutung also nicht, sondern erweitert sie. Der Nutzer hat die
+# Erweiterung ausdruecklich verlangt.
 
 [[funktion]]
 id = "editor_ansicht_umschalten"

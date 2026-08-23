@@ -243,6 +243,7 @@ use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{self, Anlegeart, Auswahl, Konfliktfrage, Vorgangszustand};
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
+use crate::kommandos::rundweg::{Rundweg, rundweg};
 use crate::kommandos::zulaessigkeit::{self, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
@@ -392,8 +393,29 @@ const CODE_RUECKTASTE: u16 = code_von_pflicht("delete");
 /// beiden den Bau an, statt still den Zweig des Nachbarn zu bekommen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Anlass {
-    /// `opt+cmd+e`: der Editor wird ausgeblendet und gibt seine Datei frei.
-    EditorSchliessen,
+    /// `opt+cmd+e` und der Rueckweg von `cmd+e`: der Editor wird ausgeblendet
+    /// und gibt seine Datei frei.
+    EditorSchliessen {
+        /// Ob danach die Vorschau wieder eingeblendet wird.
+        ///
+        /// **Der eine Unterschied zwischen den beiden Ruefern.** `opt+cmd+e`
+        /// schliesst und laesst die Flaeche leer, wie seit der Editor-Runde;
+        /// der Rueckweg von `cmd+e` holt die Vorschau zurueck, denn er ist die
+        /// Umkehrung eines Hinwegs, der sie verdraengt hat (Nutzerentscheid vom
+        /// 260823-0942).
+        ///
+        /// **Ein Feld und kein vierter Anlass.** Der Anlass ist derselbe — der
+        /// Editor gibt seine Datei auf, und dieselbe Nachfrage aus C4 geht
+        /// voraus —, und ein vierter Wert daneben hiesse, dass `anlass_ausfuehren`
+        /// und `anlass_unterbleibt` zwei Zweige fuer ein und dieselbe Sache
+        /// fuehren.
+        ///
+        /// **Er reist bis hinter die Nachfrage mit**, und das ist der Grund, aus
+        /// dem er hier steht und nicht beim Aufrufer: sagt der Nutzer
+        /// "Abbrechen", bleibt der Editor stehen, und die Vorschau darf ihn dann
+        /// gerade nicht verdraengen.
+        vorschau_danach: bool,
+    },
     /// Der Editor nimmt eine andere Datei auf, die schon gelesen und geprueft
     /// ist und auf die Antwort wartet (C2).
     AndereDatei,
@@ -3106,13 +3128,21 @@ impl Anwendungsdelegierter {
             // `Wirkungsbereich::Dateifenster` traegt: er nimmt dessen
             // ausgewaehlten Eintrag, fuellt damit aber einen anderen Bereich,
             // und ein einzelnes Dateifenster kommt an den Editor nicht heran.
+            //
+            // Derselbe Rumpf laeuft seit dem 260823 auch fuer `cmd+e` in der
+            // Dateiliste, ueber den Zweig darunter.
             Kommando::Bearbeiten => self.im_editor_oeffnen(),
-            // Der zweite der beiden Einstiege in den Editor (C2). Er steht aus
-            // demselben Grund hier wie F4 darueber: er nimmt die Datei eines
-            // anderen Bereichs, naemlich der Vorschau, und fuellt damit den
-            // Editor; keiner der beiden kommt vom anderen aus an den Delegierten
-            // heran.
-            Kommando::EditorAusVorschau => self.editor_aus_vorschau(),
+            // Der Rundweg aus dem Nutzerentscheid vom 260823-0942. Er steht aus
+            // demselben Grund hier wie F4 darueber: jeder seiner drei Wege
+            // greift ueber die Grenze eines Bereichs hinweg, und keiner der
+            // Bereiche kommt von sich aus an den Delegierten heran.
+            //
+            // **Ein eigener Zweig, und der Uebersetzer haette ihn nicht
+            // verlangt.** Das `match` hier endet mit einem Auffangzweig auf
+            // `bereichskommando`; ohne diese Zeile fiele der Befehl dort
+            // stillschweigend hindurch und taete nichts — genau die Gestalt, die
+            // fuer `cmd+e` als Defekt gemeldet war.
+            Kommando::EditorRundweg => self.editor_rundweg(),
             // Das Sichern aus C4. Es traegt `Wirkungsbereich::Editor` und
             // steht trotzdem hier und nicht bei `bereichskommando`: der
             // Editorbereich haengt am Delegierten, und `bereichskommando`
@@ -3121,7 +3151,11 @@ impl Anwendungsdelegierter {
             // Der erste Anlass der Nachfrage aus C4. Er steht hier und nicht
             // bei `bereichskommando`, aus demselben Grund wie das Sichern
             // darueber: der Editorbereich haengt am Delegierten.
-            Kommando::EditorSchliessen => self.editor_schliessen(),
+            //
+            // `false`: `opt+cmd+e` laesst die Flaeche leer zurueck. Der zweite
+            // Rufer desselben Rumpfs, der Rueckweg von `cmd+e`, uebergibt
+            // `true` und holt die Vorschau zurueck.
+            Kommando::EditorSchliessen => self.editor_schliessen(false),
             // Der Umschalter aus C6 der Bereichsleisten-Runde. Er steht neben
             // dem Schliessen darueber und ist nicht dasselbe: er blendet aus
             // und behaelt die Datei, loest also keine Nachfrage aus. Der
@@ -6188,13 +6222,18 @@ impl Anwendungsdelegierter {
     /// **Die eine Stelle, an der der Delegierte den Editor eine Datei aufnehmen
     /// laesst.**
     ///
-    /// Vier Wege fuehren hierher: F4 ([`Self::im_editor_oeffnen`]), `cmd+e` aus
-    /// der Vorschau ([`Self::editor_aus_vorschau`]), der Sprung auf eine
-    /// Textmarke aus C6 ([`Self::textmarke_anspringen`]) und die
+    /// Vier Wege fuehren hierher: [`Self::im_editor_oeffnen`], das `f4` und seit
+    /// dem 260823 auch `cmd+e` in der Dateiliste nehmen,
+    /// [`Self::editor_aus_vorschau`] fuer `cmd+e` in der Vorschau, der Sprung
+    /// auf eine Textmarke aus C6 ([`Self::textmarke_anspringen`]) und die
     /// Wiederherstellung der Sitzung beim Start
     /// ([`Self::editor_wiederherstellen`]). Jeder von ihnen **nennt seine
     /// Herkunft**, weil sie ein Pflichtargument ist; ein fuenfter Weg, der sie
     /// nicht nennt, uebersetzt nicht.
+    ///
+    /// **Es sind vier Wege und fuenf Tasten.** Der Rundweg aus dem
+    /// Nutzerentscheid vom 260823-0942 hat keinen eigenen bekommen: er verteilt
+    /// sich auf die beiden ersten, statt einen dritten daneben zu stellen.
     ///
     /// **Das ist der Gewinn gegenueber dem billigeren Weg**, die Marke an den
     /// Befehlswegen zu loeschen: der haette eine Zusage auf drei Aufrufstellen
@@ -6226,10 +6265,16 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// F4 oeffnet den ausgewaehlten Eintrag des aktiven Dateifensters im
-    /// eingebauten Editor (C2).
+    /// Den ausgewaehlten Eintrag des aktiven Dateifensters im eingebauten Editor
+    /// oeffnen (C2).
     ///
-    /// Der erste der beiden Einstiegswege. **Die Reihenfolge ist bindend und
+    /// Der erste der beiden Einstiegswege, und **er hat seit dem 260823 zwei
+    /// Tasten**: `f4` traegt ihn seit der Editor-Runde, `cmd+e` in der
+    /// Dateiliste seit dem Nutzerentscheid vom 260823-0942 ueber
+    /// [`Self::editor_rundweg`]. Es ist derselbe Rumpf und keine Kopie daneben;
+    /// die beiden koennen deshalb nicht auseinanderlaufen.
+    ///
+    /// **Die Reihenfolge ist bindend und
     /// steht im elften Abnahmekriterium von C2: erst die Pruefung, dann die
     /// Flaeche.** Eine Datei, die der Editor ohnehin abweist, blendet ihn nicht
     /// ein, verdraengt die Vorschau nicht und kostet den Nutzer spaeter keine
@@ -6268,7 +6313,10 @@ impl Anwendungsdelegierter {
     /// eingebauten Editor oeffnen (C2).
     ///
     /// Der zweite der beiden Einstiegswege, festgelegt vom Nutzer am
-    /// 260807-2139.
+    /// 260807-2139 und am 260823-0942 unveraendert beibehalten: er ist seither
+    /// die mittlere Zeile des Rundwegs und wird ueber
+    /// [`Self::editor_rundweg`] erreicht statt unmittelbar aus
+    /// [`Self::kommando_ausfuehren`].
     ///
     /// **Er nimmt die Datei aktiv mit.** Der Editor verdraengt die Vorschau
     /// nach C1, sobald er die Flaeche bekommt; ein Uebergang, der die Datei nur
@@ -6287,10 +6335,13 @@ impl Anwendungsdelegierter {
     /// ungesicherten Standes daneben. Sie stuende vor der Pruefung und
     /// verletzte damit das elfte Abnahmekriterium von C2.
     ///
-    /// **Dass der Befehl ausserhalb der Vorschau nicht wirkt, traegt der
-    /// Wirkungsbereich** `Wirkungsbereich::Vorschau` und keine Abfrage hier;
-    /// [`Self::kommando_ausfuehren`] hat sie schon gestellt. Was bleibt, ist der
-    /// Fall, den der Wirkungsbereich nicht abdeckt: die Vorschau steht im Fokus
+    /// **Dass dieser Rumpf allein aus der Vorschau erreicht wird, traegt die
+    /// Regel [`rundweg`]** und keine Abfrage hier; der Wirkungsbereich
+    /// `Wirkungsbereich::Dateibereiche` laesst `cmd+e` seit dem 260823 auch aus
+    /// der Dateiliste und aus dem Editor durch, und welcher der drei Ruempfe
+    /// dann laeuft, entscheidet [`Self::editor_rundweg`]. Was bleibt, ist der
+    /// Fall, den weder der Wirkungsbereich noch die Regel abdeckt: die Vorschau
+    /// steht im Fokus
     /// und zeigt trotzdem keine Datei, naemlich den Inhalt der Zwischenablage
     /// aus C10 der Runde 1 oder gar nichts. Dann liefert `angezeigter_pfad`
     /// `None`, und der Grund geht in die Statuszeile — kommentarlos nichts zu
@@ -6808,7 +6859,26 @@ impl Anwendungsdelegierter {
     /// und erzwingt beide Antworten.
     fn anlass_ausfuehren(&self, anlass: Anlass) {
         match anlass {
-            Anlass::EditorSchliessen => self.editor_ausblenden(),
+            Anlass::EditorSchliessen { vorschau_danach } => {
+                self.editor_ausblenden();
+                // Der Rueckweg des Rundwegs holt die Vorschau zurueck, die sein
+                // Hinweg verdraengt hat; `opt+cmd+e` laesst die Flaeche leer.
+                //
+                // **Die Zeile steht hinter dem Ausblenden und nicht davor.**
+                // `editor_ausblenden` setzt ueber `nach_dem_sichtbarkeitswechsel`
+                // den Fokus in die Dateiliste, und `bereich_einblenden` laesst
+                // ihn dort: es holt einen Bereich hervor und setzt keinen Fokus.
+                // Umgekehrt verdraengte die eingeblendete Vorschau den Editor,
+                // und das Ausblenden danach traefe einen Bereich, der schon weg
+                // ist.
+                //
+                // Die Abweisung bleibt stumm, wie ueberall in dieser Datei: eine
+                // Vorschau, die nicht mehr in die Zeile passt, ist kein Grund,
+                // das Schliessen zurueckzunehmen.
+                if vorschau_danach {
+                    let _ = self.bereich_einblenden(Bereich::Vorschau);
+                }
+            }
             Anlass::AndereDatei => {
                 if let Some(editor) = self.ivars().editor.get() {
                     editor.zurueckgehaltenes_uebernehmen();
@@ -6847,8 +6917,11 @@ impl Anwendungsdelegierter {
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
     fn anlass_unterbleibt(&self, anlass: Anlass) {
         match anlass {
-            // Nichts zu tun: der Editor steht, wie er stand.
-            Anlass::EditorSchliessen => {}
+            // Nichts zu tun: der Editor steht, wie er stand. Das gilt fuer
+            // beide Rufer — bleibt der Editor stehen, darf die Vorschau ihn
+            // gerade nicht verdraengen, und deshalb wird `vorschau_danach` hier
+            // nicht gelesen.
+            Anlass::EditorSchliessen { .. } => {}
             // Die gelesene Datei wartet nicht weiter: sie kostete sonst bis zu
             // 16 MB Arbeitsspeicher fuer einen Wechsel, den der Nutzer eben
             // abgelehnt hat. Mit ihr faellt die vorgemerkte Stelle einer
@@ -6893,22 +6966,71 @@ impl Anwendungsdelegierter {
         self.titel_nachziehen(self.fokus());
     }
 
-    /// `opt+cmd+e`: den Editor schliessen (C1, C4).
+    /// Den Editor schliessen (C1, C4).
     ///
-    /// Der erste Anlass der Nachfrage. Der Befehl traegt
-    /// [`Wirkungsbereich::Editor`](krk_core::tasten::Wirkungsbereich) und
-    /// erreicht diese Stelle deshalb nur mit dem Fokus in der Textflaeche.
+    /// Der erste Anlass der Nachfrage. **Der eine Rumpf mit zwei Ruefern**, und
+    /// sie unterscheiden sich in nichts als dem Argument:
+    ///
+    /// - `opt+cmd+e` ([`Kommando::EditorSchliessen`](krk_core::tasten::Kommando))
+    ///   uebergibt `false`. Der Befehl traegt
+    ///   [`Wirkungsbereich::Editor`](krk_core::tasten::Wirkungsbereich) und
+    ///   erreicht diese Stelle deshalb nur mit dem Fokus in der Textflaeche.
+    /// - Der Rueckweg von `cmd+e` ([`Self::editor_rundweg`]) uebergibt `true`
+    ///   und holt damit die Vorschau zurueck, die sein Hinweg verdraengt hat
+    ///   (Nutzerentscheid vom 260823-0942).
+    ///
+    /// **Ein zweiter Rumpf daneben waere ein zweiter Weg zum Aufgeben der
+    /// Datei**, und mit ihm eine zweite Stelle, die die Nachfrage aus C4 stellt.
+    /// Die erste Abweichung zwischen beiden faende keine Pruefung.
     ///
     /// **Nicht dasselbe wie [`Self::editor_umschalten`] darunter, und die
     /// beiden bestehen nebeneinander.** Dieser Befehl **gibt die Datei auf**:
     /// er fragt nach einem ungesicherten Stand, gibt danach ueber
     /// [`Self::editor_ausblenden`] die Datei frei und blendet die Flaeche aus.
-    /// Der Umschalter darunter laesst die Datei, wo sie ist.
-    fn editor_schliessen(&self) -> bool {
+    /// Der Umschalter darunter laesst die Datei, wo sie ist. Der Rueckweg des
+    /// Rundwegs geht bewusst hier entlang und nicht dort: der Nutzer hat ihn mit
+    /// diesem Preis vorgelegt bekommen und so gewaehlt.
+    fn editor_schliessen(&self, vorschau_danach: bool) -> bool {
         if self.ivars().editor.get().is_none() {
             return false;
         }
-        self.anlass_beginnen(Anlass::EditorSchliessen)
+        self.anlass_beginnen(Anlass::EditorSchliessen { vorschau_danach })
+    }
+
+    /// `cmd+e`: der Rundweg in den Editor und zurueck (Nutzerentscheid vom
+    /// 260823-0942).
+    ///
+    /// **Der eine Rufer der Regel [`rundweg`]**, und sein Rumpf ist die
+    /// Verteilung auf die drei bestehenden Wege und sonst nichts. Was `cmd+e`
+    /// von hier aus bedeutet, entscheidet nicht diese Funktion, sondern jene
+    /// reine Funktion in `crate::kommandos::rundweg`; die Fallunterscheidung
+    /// steht dort und nicht hier, damit sie ohne Fenster pruefbar ist. Dieselbe
+    /// Aufteilung traegt [`rueckschritt`] fuer die Rueckschritt-Taste.
+    ///
+    /// **Keiner der drei Zweige baut etwas Neues:**
+    ///
+    /// | Fokus | Zweig | derselbe Rumpf wie |
+    /// |---|---|---|
+    /// | Dateifenster | [`Self::im_editor_oeffnen`] | `f4` |
+    /// | Vorschau | [`Self::editor_aus_vorschau`] | `cmd+e` bis zum 260823 |
+    /// | Editor | [`Self::editor_schliessen`] | `opt+cmd+e`, mit der Vorschau danach |
+    ///
+    /// `None` heisst: von diesem Fokus aus fuehrt kein Rundweg. Der Fall ist
+    /// heute unerreichbar, weil
+    /// [`Wirkungsbereich::Dateibereiche`](krk_core::tasten::Wirkungsbereich) die
+    /// Leiste und das stehende Blatt schon abgewiesen hat; `false` gibt den
+    /// Tastendruck dann weiter, statt ihn zu verbrauchen — dieselbe Antwort, die
+    /// [`Self::editor_oeffnen_lassen`] fuer die noch nicht gebaute Oberflaeche
+    /// gibt.
+    fn editor_rundweg(&self) -> bool {
+        let Some(weg) = rundweg(self.fokus()) else {
+            return false;
+        };
+        match weg {
+            Rundweg::AusDerDateiliste => self.im_editor_oeffnen(),
+            Rundweg::AusDerVorschau => self.editor_aus_vorschau(),
+            Rundweg::ZurueckInDieDateiliste => self.editor_schliessen(true),
+        }
     }
 
     /// `opt+cmd+b`: den Editor ein- und ausblenden, ohne seine Datei

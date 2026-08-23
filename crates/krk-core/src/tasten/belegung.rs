@@ -181,20 +181,23 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// [`Wirkungsbereich::Ueberall`] gewechselt, und die Begruendung steht bei
 /// [`Kommando::wirkungsbereich`] an seinem Zweig.
 ///
-/// **Die drei uebrigen kommen mit dem eingebauten Editor.** Bis dahin stand
-/// hier der Satz, ein eigener Vorschau-Wert entstehe nicht, weil kein Befehl
-/// allein im Vorschaufenster wirke. Der Uebergang aus der Vorschau in den
-/// Editor ist genau ein solcher Befehl; der Satz ist damit hinfaellig und
-/// steht nicht mehr hier. Jeder der drei neuen Werte ist sachlich begruendet
-/// und nicht bequem:
+/// **Die drei uebrigen kommen mit dem eingebauten Editor.** Jeder von ihnen ist
+/// sachlich begruendet und nicht bequem:
 ///
-/// - [`Wirkungsbereich::Vorschau`], weil der Uebergang aus der Vorschau in den
-///   Editor allein mit Fokus in der Vorschau wirkt.
+/// - [`Wirkungsbereich::Dateibereiche`], weil der Rundweg in den Editor und
+///   zurueck in den drei Bereichen wirkt, in denen eine Datei im Spiel ist.
 /// - [`Wirkungsbereich::Editor`], weil die Befehle aus C3, C4, C5 und C6 der
 ///   Editor-Runde allein im Editor wirken.
 /// - [`Wirkungsbereich::Navigator`], weil drei Befehle bis dahin
 ///   [`Wirkungsbereich::Ueberall`] trugen, deren Taste im Editor der
 ///   Textflaeche gehoert.
+///
+/// **Der erste der drei hiess bis zum 260823 `Vorschau` und wirkte allein im
+/// Vorschaufenster.** Er trug genau einen Befehl, den Uebergang aus der
+/// Vorschau in den Editor; seit der Nutzerentscheid vom 260823-0942 daraus den
+/// Rundweg gemacht hat, wirkt derselbe Befehl in drei Bereichen, und ein Wert
+/// fuer die Vorschau allein haette keinen Traeger mehr. Der Datensatz ist
+/// `shared/decisions/260820-1034_*_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md`.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Drei neue Werte in einer Aufzaehlung sind
@@ -213,15 +216,27 @@ pub enum Wirkungsbereich {
     /// Wirkt nur, wenn der Fokus in der Lesezeichen- und Geraeteleiste steht
     /// (C5).
     Leiste,
-    /// Wirkt nur, wenn der Fokus im Vorschaufenster steht (C2 der
-    /// Editor-Runde).
+    /// Wirkt in einem Dateifenster, im Vorschaufenster und im Editor, aber
+    /// nicht in der Lesezeichen- und Geraeteleiste.
     ///
-    /// Der Wert eines einzigen Befehls, des Uebergangs aus der Vorschau in den
-    /// Editor. Er ist der zweite Einstiegsweg in den Editor neben F4 im
-    /// Dateifenster, festgelegt vom Nutzer am 260807-2139, und er setzt den
-    /// Fokus in der Vorschau voraus: sonst gaebe es keine angezeigte Datei,
-    /// die er uebernaehme.
-    Vorschau,
+    /// Der Wert eines einzigen Befehls, des Rundwegs in den Editor und zurueck
+    /// (`editor_rundweg`, Nutzerentscheid vom 260823-0942). Er bedeutet in
+    /// jedem der drei Bereiche etwas: in der Dateiliste den ausgewaehlten
+    /// Eintrag oeffnen, in der Vorschau die angezeigte Datei uebernehmen, im
+    /// Editor ihn wieder schliessen. In der Leiste bedeutet er nichts, denn
+    /// dort gibt es keine Datei, die er meinte.
+    ///
+    /// **Positiv aufgezaehlt und nicht als Verneinung der Leiste**, aus
+    /// demselben Grund wie bei [`Wirkungsbereich::Navigator`]: "ueberall ausser
+    /// in der Leiste" liesse den Fokuswert `Anderswo` durch, den `krk_ui` fuer
+    /// ein stehendes Blatt und fuer ein Textfeld fuehrt, und der Rundweg wirkte
+    /// dann vor einer Rueckfrage.
+    ///
+    /// **Bis zum 260823 hiess der Wert `Vorschau`** und verlangte den Fokus im
+    /// Vorschaufenster. Die Vorschau-Richtung des Befehls ist unveraendert
+    /// geblieben; hinzugekommen sind die Dateiliste und der Rueckweg aus dem
+    /// Editor.
+    Dateibereiche,
     /// Wirkt nur, wenn der Fokus im eingebauten Editor steht (C3 bis C6 der
     /// Editor-Runde).
     ///
@@ -308,7 +323,7 @@ impl Wirkungsbereich {
         match self {
             Wirkungsbereich::Dateifenster => "Dateifenster",
             Wirkungsbereich::Leiste => "Lesezeichen- und Geräteleiste",
-            Wirkungsbereich::Vorschau => "Vorschau",
+            Wirkungsbereich::Dateibereiche => "Dateifenster, Vorschau und Editor",
             Wirkungsbereich::Editor => "Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
             Wirkungsbereich::Navigator => "Dateifenster, Leiste und Vorschau",
@@ -571,16 +586,37 @@ pub enum Kommando {
     ///
     /// Der erste der beiden Einstiegswege in den Editor. Der Eintrag stand seit
     /// der Runde 1 als `reserviert_fuer = "editor"` in der
-    /// Auslieferungsbelegung und traegt seit dieser Runde die Taste und dieses
-    /// Kommando.
-    Bearbeiten,
-    /// Die im Vorschaufenster angezeigte Datei in den Editor uebernehmen (C2
-    /// der Editor-Runde).
+    /// Auslieferungsbelegung und traegt seit der Editor-Runde die Taste und
+    /// dieses Kommando.
     ///
-    /// Der zweite Einstiegsweg, festgelegt vom Nutzer am 260807-2139. Er wirkt
-    /// allein mit dem Fokus in der Vorschau und ist damit der einzige Befehl
-    /// mit [`Wirkungsbereich::Vorschau`].
-    EditorAusVorschau,
+    /// **Seit dem 260823 fuehrt eine zweite Taste auf denselben Rumpf**, naemlich
+    /// `cmd+e` mit dem Fokus in der Dateiliste ([`Kommando::EditorRundweg`]).
+    /// Der Weg ist derselbe und nicht eine Kopie daneben; dieses Kommando ist
+    /// unveraendert und bleibt an `f4`.
+    Bearbeiten,
+    /// Der Rundweg in den Editor und zurueck (C2 der Editor-Runde,
+    /// Nutzerentscheid vom 260823-0942).
+    ///
+    /// **Ein Befehl mit drei fokusabhaengigen Bedeutungen**, und er ist der
+    /// einzige Traeger von [`Wirkungsbereich::Dateibereiche`]:
+    ///
+    /// | Fokus | was der Befehl tut |
+    /// |---|---|
+    /// | Dateifenster | den ausgewaehlten Eintrag im Editor oeffnen, wie F4 |
+    /// | Vorschau | die angezeigte Datei im Editor oeffnen |
+    /// | Editor | den Editor schliessen und in die Dateiliste zurueckgehen |
+    ///
+    /// Die Fallunterscheidung selbst steht nicht hier, sondern als reine
+    /// Funktion in `krk_ui::kommandos::rundweg`: sie fragt nach dem Fokus, und
+    /// der Kern kennt keinen. Hier steht allein, dass die drei Bereiche den
+    /// Befehl durchlassen.
+    ///
+    /// **Bis zum 260823 hiess er `EditorAusVorschau`** und trug allein die
+    /// mittlere Zeile der Tafel. Die Vorschau-Richtung ist unveraendert; die
+    /// erste und die dritte Zeile sind hinzugekommen, weil der Fokus nach `f3`
+    /// in der Dateiliste bleibt und ein Umschalter, der die Vorschau als
+    /// Ausgangspunkt naehme, den haeufigen Fall verfehlte.
+    EditorRundweg,
     /// Den Eingabefokus in den eingebauten Editor setzen (C1 der
     /// Editor-Runde).
     ///
@@ -737,7 +773,7 @@ impl Kommando {
         (Kommando::FokusDateifenster, "fokus_dateifenster"),
         (Kommando::FokusVorschau, "fokus_vorschau"),
         (Kommando::Bearbeiten, "bearbeiten"),
-        (Kommando::EditorAusVorschau, "editor_aus_vorschau"),
+        (Kommando::EditorRundweg, "editor_rundweg"),
         (Kommando::FokusEditor, "fokus_editor"),
         (Kommando::EditorSchliessen, "editor_schliessen"),
         (Kommando::EditorUmschalten, "editor_umschalten"),
@@ -916,11 +952,21 @@ impl Kommando {
             | Kommando::FokusVorschau
             | Kommando::FokusEditor
             | Kommando::LesezeichenAnlegen => Wirkungsbereich::Ueberall,
-            // Der Uebergang aus der Vorschau in den Editor (C2 der
-            // Editor-Runde), der einzige Befehl, der allein im Vorschaufenster
-            // wirkt: ohne Fokus dort gibt es keine angezeigte Datei, die er
-            // uebernaehme.
-            Kommando::EditorAusVorschau => Wirkungsbereich::Vorschau,
+            // Der Rundweg in den Editor und zurueck (C2 der Editor-Runde,
+            // Nutzerentscheid vom 260823-0942), der einzige Befehl mit diesem
+            // Wert. Er bedeutet in jedem der drei Bereiche etwas — in der
+            // Dateiliste den ausgewaehlten Eintrag, in der Vorschau die
+            // angezeigte Datei, im Editor den Rueckweg —, und ein
+            // Wirkungsbereich, der einen davon nennte, schnitte die beiden
+            // anderen ab. Die Leiste bleibt draussen: dort gibt es keine Datei,
+            // die der Befehl meinte.
+            //
+            // Bis zum 260823 stand hier `Wirkungsbereich::Vorschau`, und der
+            // Befehl hiess `EditorAusVorschau`. Welche der drei Bedeutungen
+            // gilt, entscheidet `krk_ui::kommandos::rundweg` und nicht dieser
+            // Zweig; der Wirkungsbereich sagt, ob die Taste durchkommt, und
+            // nicht, was sie dann tut.
+            Kommando::EditorRundweg => Wirkungsbereich::Dateibereiche,
             // Die acht Befehle, die in der Datei arbeiten, die der Editor
             // haelt (C3 bis C6 der Editor-Runde). Mit dem Fokus anderswo gibt
             // es keine solche Datei.

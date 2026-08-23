@@ -309,7 +309,7 @@ mod tests {
     const STELLVERTRETER: [(Wirkungsbereich, Kommando); 7] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
-        (Wirkungsbereich::Vorschau, Kommando::EditorAusVorschau),
+        (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
         (Wirkungsbereich::Editor, Kommando::EditorSichern),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
         (Wirkungsbereich::Navigator, Kommando::AuswahlHoch),
@@ -402,7 +402,7 @@ mod tests {
         const OHNE_SPERRE: [[bool; 5]; 7] = [
             [true, false, false, false, false],
             [false, true, false, false, false],
-            [false, false, true, false, false],
+            [true, false, true, true, false],
             [false, false, false, true, false],
             [true, false, true, false, false],
             [true, true, true, false, false],

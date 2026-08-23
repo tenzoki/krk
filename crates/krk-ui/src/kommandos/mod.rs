@@ -5,7 +5,7 @@
 //! den Tastenbefehlen; die Ansicht dazu ist [`crate::appkit::tabelle`], die das
 //! Ergebnis in eine `NSTableView` stellt und die Blaetter am Fenster zeigt.
 //!
-//! Neun Module entlang dessen geschnitten, was ein Tastenbefehl bewegt — und
+//! Zehn Module entlang dessen geschnitten, was ein Tastenbefehl bewegt — und
 //! seit der Runde 13 eines, das kein Tastenbefehl ist:
 //!
 //! ```text
@@ -16,6 +16,9 @@
 //! rueckschritt Was die nackte Rueckschritt-Taste bedeutet: ein Zeichen des
 //!              Filtertextes zurueck, nichts, oder in den Papierkorb (C1 und C6
 //!              der Runde 10)
+//! rundweg      Was cmd+e bedeutet: aus der Dateiliste oder aus der Vorschau in
+//!              den Editor, aus dem Editor zurueck in die Dateiliste
+//!              (Nutzerentscheid vom 260823-0942)
 //! navigation   Auswahl bewegen: Zeile, Bildschirmseite, Anfang, Ende (C2)
 //! auswahl      Mehrfachauswahl: markieren und weiterruecken (C2)
 //! pfadeingabe  Einen Pfad pruefen und sagen, wohin KRK geht (C2 und C10)
@@ -54,6 +57,15 @@
 //! Loeschtasten; mit der Leiste aus C5 betrifft sie jedes Kommando und gehoert
 //! deshalb nicht mehr zu den Dateioperationen.
 //!
+//! **`rundweg` steht neben `rueckschritt` und aus demselben Grund.** Es sind
+//! die zwei Regeln dieses Baums, die ein Befehl **nach seinem Fokus** trifft,
+//! und beide stehen hinter `zulaessigkeit` statt darin: die Zulaessigkeit
+//! entscheidet, **ob** eine Taste durchkommt, diese beiden, **was** sie dann
+//! tut. Der Unterschied zwischen ihnen ist der Preis. Der falsche Zweig von
+//! `rueckschritt` stellt einen Loeschbefehl, der von `rundweg` oeffnet oder
+//! schliesst einen Editor; die Form ist trotzdem dieselbe, weil eine
+//! Fallunterscheidung im Ausfuehrungszweig an keiner Probe zu fassen waere.
+//!
 //! **`rueckschritt` steht als drittes, und zwar hinter `zulaessigkeit` und
 //! nicht darin.** Es beantwortet nicht, **ob** ein Befehl wirken darf, sondern
 //! **welchen** von drei Ausgaengen ein Tastendruck nimmt, der die
@@ -82,4 +94,5 @@ pub mod navigation;
 pub mod operationen;
 pub mod pfadeingabe;
 pub mod rueckschritt;
+pub mod rundweg;
 pub mod zulaessigkeit;

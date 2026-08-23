@@ -97,7 +97,12 @@ pub enum Fokus {
     ///
     /// Hierhin kommt der Fokus per Mausklick in die Textflaeche, ueber den
     /// Tastenbefehl `fokus_editor` und auf den beiden Einstiegswegen, die eine
-    /// Datei oeffnen: F4 im Dateifenster und der Uebergang aus der Vorschau.
+    /// Datei oeffnen: den ausgewaehlten Eintrag des Dateifensters, auf `f4` und
+    /// seit dem 260823 auch auf `cmd+e`, und die angezeigte Datei der Vorschau.
+    ///
+    /// **Von hier fuehrt seit dem 260823 auch ein Weg zurueck.** `cmd+e` mit dem
+    /// Fokus im Editor schliesst ihn, und der Fokus geht in die Dateiliste; die
+    /// Regel dazu steht in [`super::rundweg`].
     ///
     /// **Der Wert steht neben [`Fokus::Anderswo`] und nicht darin**, obwohl der
     /// Ersthelfer in beiden Faellen ein Textsystem sein kann. Der Unterschied
@@ -340,7 +345,13 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         Wirkungsbereich::Ueberall => true,
         Wirkungsbereich::Dateifenster => fokus == Fokus::Dateifenster,
         Wirkungsbereich::Leiste => fokus == Fokus::Leiste,
-        Wirkungsbereich::Vorschau => fokus == Fokus::Vorschau,
+        // Positiv aufgezaehlt und **nicht** als `fokus != Fokus::Leiste`, aus
+        // demselben Grund wie beim Navigator darunter: die Verneinung liesse
+        // `Fokus::Anderswo` durch, und `cmd+e` schloesse den Editor vor einer
+        // stehenden Rueckfrage.
+        Wirkungsbereich::Dateibereiche => {
+            matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau | Fokus::Editor)
+        }
         Wirkungsbereich::Editor => fokus == Fokus::Editor,
         Wirkungsbereich::Tabbereich => {
             matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
@@ -392,8 +403,8 @@ mod tests {
             ),
             (Wirkungsbereich::Leiste, [false, true, false, false, false]),
             (
-                Wirkungsbereich::Vorschau,
-                [false, false, true, false, false],
+                Wirkungsbereich::Dateibereiche,
+                [true, false, true, true, false],
             ),
             (Wirkungsbereich::Editor, [false, false, false, true, false]),
             (
@@ -772,12 +783,30 @@ mod tests {
                     );
                 }
                 Wirkungsbereich::Leiste
-                | Wirkungsbereich::Vorschau
                 | Wirkungsbereich::Tabbereich
                 | Wirkungsbereich::Navigator => {
                     assert!(
                         !wirkt(kommando.wirkungsbereich(), Fokus::Editor),
                         "„{kennung}“ gehoert einem anderen Bereich und wirkt trotzdem im Editor"
+                    );
+                }
+                // Der Rundweg aus dem Nutzerentscheid vom 260823-0942 ist der
+                // eine Befehl, der im Dateifenster **und** im Editor wirkt, und
+                // das ist sein Sinn: im Editor ist er der Rueckweg. Er zaehlt
+                // in keine der beiden Gruppen darueber, denn er ist weder ein
+                // Befehl des Dateifensters noch einer des Fensters als ganzem.
+                Wirkungsbereich::Dateibereiche => {
+                    assert!(
+                        wirkt(Wirkungsbereich::Dateibereiche, Fokus::Editor),
+                        "„{kennung}“ erreicht den Editor nicht und hat damit keinen Rueckweg"
+                    );
+                    assert!(
+                        wirkt(Wirkungsbereich::Dateibereiche, Fokus::Dateifenster),
+                        "„{kennung}“ erreicht die Dateiliste nicht"
+                    );
+                    assert!(
+                        !wirkt(Wirkungsbereich::Dateibereiche, Fokus::Leiste),
+                        "„{kennung}“ wirkt in der Leiste, wo es keine Datei gibt"
                     );
                 }
                 // Die neun Befehle des Editors sind der Sinn der Uebung.
