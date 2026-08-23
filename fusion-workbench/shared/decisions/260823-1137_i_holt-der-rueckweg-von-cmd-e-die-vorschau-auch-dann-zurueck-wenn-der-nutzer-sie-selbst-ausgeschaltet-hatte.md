@@ -86,3 +86,18 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: Der Nutzer hat am 260823-1235 Möglichkeit 1 gewählt: es bleibt, wie es ist. Der Rückweg
+endet immer in derselben Lage, gleich wo er begonnen hat, und die Prosa im Code sagt das als Regel
+statt als Umkehrung eines Hinwegs. Die Frage war ihm mit dem Preis vorgelegt: nach `f3` steht die
+Vorschau nach dem Rundweg wieder da und geht mit einem weiteren `f3` wieder weg.
+
+Der Einwand aus Möglichkeit 2 hat die Wahl getragen und gehört zum Ergebnis: „der Hinweg" ist
+nicht wohldefiniert, weil der Fokus auch über `f4`, `opt+cmd+b` und die Sitzungswiederherstellung
+in den Editor kommt. Ein gemerkter Zustand müsste an allen vier Wegen gepflegt werden, sonst
+findet der Rückweg keinen oder einen veralteten Wert.
+
+Implemented: `52fba42` — kein Verhalten geändert, weil das gewählte Verhalten das gebaute ist.
+Umgesetzt ist die Begründung: die überzogene Prosa („Umkehrung eines Hinwegs, der die Vorschau
+verdrängt hat") ist durch die Regel ersetzt, die wirklich gilt.

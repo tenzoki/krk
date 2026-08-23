@@ -105,3 +105,10 @@ allein die überzogene Begründung im Code. Die Sachfrage liegt beim Nutzer als
 und dort ist beim Ausschreiben der Folgen ein Einwand aufgetaucht, den dieser Datensatz nicht
 führt: „der Hinweg" ist nicht wohldefiniert, denn der Fokus kommt auch über `f4`, `opt+cmd+b` und
 die Sitzungswiederherstellung in den Editor.
+
+---
+Resolved: `52fba42`, entschieden am 260823-1235. Der Befund war richtig und die Behebung ist
+nicht die, die er nahelegte: nicht das Verhalten war zu eng, sondern die Begründung im Code zu
+weit. Der Nutzer hat das Verhalten bestätigt (Möglichkeit 1 von
+`shared/decisions/260823-1137_i_holt-der-rueckweg-von-cmd-e-die-vorschau-auch-dann-zurueck-wenn-der-nutzer-sie-selbst-ausgeschaltet-hatte.md`),
+und die überzogene Prosa ist durch die Regel ersetzt, die wirklich gebaut ist.
