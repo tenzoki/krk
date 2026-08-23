@@ -65,3 +65,9 @@ den Eintrag hat die Editor-Runde angelegt, seinen Namen der Nutzerentscheid vom
 `jede_neue_kennung_der_editor_runde_ist_umbelegbar`. Die Proben selbst sind unveraendert.
 `resources/default-keymap.toml` fuehrt die Umbenennung schon; dort war nichts zu tun.
 Bleibt zum Schliessen mit dem Commit.
+
+---
+Resolved: `52fba42` — behoben, `make check` gibt 0 zurück. Durchsicht: die Befunde stammen aus
+`shared/reviews/260823-0735-coderev-einblenden-erreicht-den-schirm.md` und
+`shared/reviews/260823-1040-coderev-cmd-e-wird-der-rundweg.md`; was im Einzelnen getan ist, steht
+im Protokoll `shared/history/260823-1137-coder-acht-befunde-aus-zwei-durchsichten.md`.

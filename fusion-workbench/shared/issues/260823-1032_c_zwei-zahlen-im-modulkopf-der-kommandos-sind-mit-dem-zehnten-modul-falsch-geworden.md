@@ -73,3 +73,9 @@ Die Zahl „Zehn Module" in Zeile 8 bleibt stehen: unmittelbar darunter steht di
 Aufzaehlung dieser zehn, sie ist ihr eigener Beleg, und `28cbb7b` hat sie nachgezogen.
 Weitere Stellen, die von derselben Menge abhaengen, stehen nicht im Baum (gesucht ueber
 `grep -rn "Module" crates/krk-ui/src/kommandos/`). Bleibt zum Schliessen mit dem Commit.
+
+---
+Resolved: `52fba42` — behoben, `make check` gibt 0 zurück. Durchsicht: die Befunde stammen aus
+`shared/reviews/260823-0735-coderev-einblenden-erreicht-den-schirm.md` und
+`shared/reviews/260823-1040-coderev-cmd-e-wird-der-rundweg.md`; was im Einzelnen getan ist, steht
+im Protokoll `shared/history/260823-1137-coder-acht-befunde-aus-zwei-durchsichten.md`.

@@ -71,3 +71,9 @@ Alle vier sind zum Ausloesen gebracht worden: die zwei Wahrheitswerte vertauscht
 `if vorschau_danach`-Block entfernt und `{ .. }` durch `{ vorschau_danach }` ersetzt,
 danach `cargo test -p krk-ui rundwegproben` — vier von vier rot. Der Baum ist danach aus
 der Sicherung zurueckgestellt. Bleibt zum Schliessen mit dem Commit.
+
+---
+Resolved: `52fba42` — behoben, `make check` gibt 0 zurück. Durchsicht: die Befunde stammen aus
+`shared/reviews/260823-0735-coderev-einblenden-erreicht-den-schirm.md` und
+`shared/reviews/260823-1040-coderev-cmd-e-wird-der-rundweg.md`; was im Einzelnen getan ist, steht
+im Protokoll `shared/history/260823-1137-coder-acht-befunde-aus-zwei-durchsichten.md`.

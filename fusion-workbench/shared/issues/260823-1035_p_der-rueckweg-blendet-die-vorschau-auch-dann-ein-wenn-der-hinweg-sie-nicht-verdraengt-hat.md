@@ -97,3 +97,11 @@ kommt auch ueber `f4`, ueber `opt+cmd+b` und ueber die Wiederherstellung aus der
 in den Editor, und aus jeder dieser Lagen ist der Rueckweg erreichbar; entweder merken
 sich alle diese Wege die Sichtbarkeit, oder der Rueckweg findet keinen oder einen
 veralteten Wert vor.
+
+---
+Dieser Datensatz bleibt in Arbeit. Das Verhalten ist mit `52fba42` **nicht** geändert; geändert ist
+allein die überzogene Begründung im Code. Die Sachfrage liegt beim Nutzer als
+`shared/decisions/260823-1137_o_holt-der-rueckweg-von-cmd-e-die-vorschau-auch-dann-zurueck-wenn-der-nutzer-sie-selbst-ausgeschaltet-hatte.md`,
+und dort ist beim Ausschreiben der Folgen ein Einwand aufgetaucht, den dieser Datensatz nicht
+führt: „der Hinweg" ist nicht wohldefiniert, denn der Fokus kommt auch über `f4`, `opt+cmd+b` und
+die Sitzungswiederherstellung in den Editor.

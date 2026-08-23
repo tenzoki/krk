@@ -122,3 +122,9 @@ demselben Satz nachgezogen:
 `Tabelle::filterzeichen_tippen`, der Zweig `Eingabe::Zeichen` in `eingabe_ausfuehren`).
 Dort wird der Rueckgabewert wirklich bis zum Abgriff durchgereicht. Bleibt zum
 Schliessen mit dem Commit.
+
+---
+Resolved: `52fba42` — behoben, `make check` gibt 0 zurück. Durchsicht: die Befunde stammen aus
+`shared/reviews/260823-0735-coderev-einblenden-erreicht-den-schirm.md` und
+`shared/reviews/260823-1040-coderev-cmd-e-wird-der-rundweg.md`; was im Einzelnen getan ist, steht
+im Protokoll `shared/history/260823-1137-coder-acht-befunde-aus-zwei-durchsichten.md`.

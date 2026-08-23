@@ -87,3 +87,9 @@ Doc-Kommentar traegt jetzt denselben Absatz „Keine zweite Fokusabfrage" wie di
 Geschwister. Der Nebenbefund ist damit gegenstandslos: `self.fokus()` hat wieder genau
 fuenf Aufrufer (Zeilen 1353, 1898, 4334, 6474, 6966), und die Zahl an `fokus_bei` stimmt
 ohne Nachzug. Bleibt zum Schliessen mit dem Commit.
+
+---
+Resolved: `52fba42` — behoben, `make check` gibt 0 zurück. Durchsicht: die Befunde stammen aus
+`shared/reviews/260823-0735-coderev-einblenden-erreicht-den-schirm.md` und
+`shared/reviews/260823-1040-coderev-cmd-e-wird-der-rundweg.md`; was im Einzelnen getan ist, steht
+im Protokoll `shared/history/260823-1137-coder-acht-befunde-aus-zwei-durchsichten.md`.
