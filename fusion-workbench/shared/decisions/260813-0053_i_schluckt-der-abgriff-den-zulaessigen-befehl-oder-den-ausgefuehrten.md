@@ -90,7 +90,9 @@ Zweck behalten, den `#[must_use]` ihnen gibt.
 
 Implemented: `9da33bc` vom 260813 — die Regel steht seit der Runde 7 im Baum, und diese Sitzung
 hat sie mit dem Befund `260823-1033` (behoben in `52fba42`) ein zweites Mal gegen den Baum
-gelesen: `kommando_ausfuehren` liefert seit jener Runde ausnahmslos `true`. Drei Prosastellen
+gelesen: `kommando_ausfuehren` liefert genau das, was die Zulässigkeit sagt — `false` für
+jeden Befehl, den `zulaessigkeit::zulaessig` abweist (`anwendung.rs:3002-3004`), und `true`
+für jeden anderen, unabhängig davon, was der Rumpf zurückgibt. Das **ist** Möglichkeit 1. Drei Prosastellen
 hatten das Gegenteil behauptet und sind berichtigt.
 
 **Die Reihenfolge ist die auffällige Stelle und gehört festgehalten.** Die Umsetzung liegt zehn
@@ -98,3 +100,18 @@ Tage vor der Antwort. Die Runde 7 ist auf der Empfehlung gefahren, statt sie bea
 bekommen, und der Datensatz stand seitdem offen, während der Baum auf ihm aufbaute. Der Abgleich
 vom 260823-1336 hat das gefunden und den Marker bewusst nicht selbst gezogen: die Antwort war die
 des Nutzers und keine, die aus dem Baum abzulesen gewesen wäre.
+
+
+**Berichtigung 260823-1455.** Die `Implemented:`-Zeile darüber sagte bis zu diesem Zeitpunkt,
+`kommando_ausfuehren` liefere „ausnahmslos `true`". Das war falsch und ist von der
+Auslieferungsdurchsicht `shared/reviews/260823-1450-coderev-auslieferungsdurchsicht-vor-1-0-0.md`
+gefunden worden; der Datensatz dazu ist
+`shared/issues/260823-1433_*_kommando-ausfuehren-liefert-nicht-immer-true-*`. Geschrieben hat
+den Satz der Orchestrator beim Eintragen der Nutzerantwort, übernommen aus einem
+Durchsichtsbericht.
+
+**Die Entscheidung des Nutzers ist davon nicht berührt.** Die Frage, Möglichkeit 1 und die
+`Answered:`-Zeile tragen alle die richtige, bedingte Fassung: der Abgriff schluckt, was
+**zulässig** war. Auch das Gate, an dem der Nutzer am 260823-1350 zugestimmt hat, war in dieser
+Fassung formuliert. Falsch war allein die Zusammenfassung in der `Implemented:`-Zeile, und der
+Fehler bestand ganze fünf Stunden.

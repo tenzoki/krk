@@ -1319,3 +1319,8 @@
 {"ts":"2026-08-23T12:19:40","event":"coherence_review","detail":"review-needed; Artefakt haelt, Grundlage traegt eine ueberholte offene Frage"}
 {"ts":"2026-08-23T12:19:40","event":"rebalance_grounding","detail":"260813-0053 vom Nutzer bestaetigt, _o_ -> _i_"}
 {"ts":"2026-08-23T12:20:02","event":"session_end","detail":"3 Turns, 9 Commits, f4 und der cmd+e-Rundweg vom Nutzer abgenommen, Verdikt review-needed dann per Grundlage geschlossen"}
+{"ts":"2026-08-23T12:24:18","event":"session_start","history_file":"shared/history/260823-1424-orchestrator-session.md","detail":"KRK 1.0.0 ausliefern; Modus custom; Domaene code; Turn-Budget 12"}
+{"ts":"2026-08-23T12:24:18","event":"scope_resolved","detail":"custom; 2 Aufgaben: Durchsicht der Luecke, dann Auslieferung 1.0.0"}
+{"ts":"2026-08-23T12:24:18","event":"gate_response","detail":"Nutzer 260823-1424: Version 1.0.0 nach der README-Major-Regel; Durchsicht vor der Auslieferung"}
+{"ts":"2026-08-23T12:24:18","event":"turn_start","turn":1,"detail":"1 Aufgabe: Durchsicht 28cbb7b..HEAD"}
+{"ts":"2026-08-23T12:24:18","event":"review_start","turn":1,"agent":"coderev","detail":"Bereich 28cbb7b..b58e9d1, 8 Commits, 6 Codedateien"}
