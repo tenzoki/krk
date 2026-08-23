@@ -1324,3 +1324,5 @@
 {"ts":"2026-08-23T12:24:18","event":"gate_response","detail":"Nutzer 260823-1424: Version 1.0.0 nach der README-Major-Regel; Durchsicht vor der Auslieferung"}
 {"ts":"2026-08-23T12:24:18","event":"turn_start","turn":1,"detail":"1 Aufgabe: Durchsicht 28cbb7b..HEAD"}
 {"ts":"2026-08-23T12:24:18","event":"review_start","turn":1,"agent":"coderev","detail":"Bereich 28cbb7b..b58e9d1, 8 Commits, 6 Codedateien"}
+{"ts":"2026-08-23T12:46:18","event":"gate_response","turn":1,"detail":"Nutzer 260823-1500: jetzt ausliefern, 1.0.0, ohne vorherige Messung der Zeitzusagen"}
+{"ts":"2026-08-23T12:46:18","event":"task_start","turn":1,"task":"T2","agent":"orchestrator","detail":"./release.sh 1.0.0 — acht Stationen, Station 8 unwiderruflich"}
