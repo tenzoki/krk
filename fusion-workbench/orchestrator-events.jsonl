@@ -1326,3 +1326,8 @@
 {"ts":"2026-08-23T12:24:18","event":"review_start","turn":1,"agent":"coderev","detail":"Bereich 28cbb7b..b58e9d1, 8 Commits, 6 Codedateien"}
 {"ts":"2026-08-23T12:46:18","event":"gate_response","turn":1,"detail":"Nutzer 260823-1500: jetzt ausliefern, 1.0.0, ohne vorherige Messung der Zeitzusagen"}
 {"ts":"2026-08-23T12:46:18","event":"task_start","turn":1,"task":"T2","agent":"orchestrator","detail":"./release.sh 1.0.0 — acht Stationen, Station 8 unwiderruflich"}
+{"ts":"2026-08-23T19:08:57","event":"task_done","turn":1,"task":"T2","detail":"7d86420 — KRK 1.0.0 ausgeliefert, alle acht Stationen"}
+{"ts":"2026-08-23T19:08:57","event":"reconciliation","detail":"Verdikt review-needed; Auslieferung haelt, Ladezahlen stellen die Grundlage von 260823-1030 in Frage"}
+{"ts":"2026-08-23T19:08:57","event":"rebalance_grounding","detail":"Nutzer 260823-1710: die Ladevorgaenge sind seine eigenen; 260823-1650 als Lage angenommen geschlossen"}
+{"ts":"2026-08-23T19:08:57","event":"turn_end","turn":1,"detail":"2 Aufgaben erledigt, 5 Befunde, 1.0.0 ausgeliefert"}
+{"ts":"2026-08-23T19:08:57","event":"session_end","detail":"1 Turn, KRK 1.0.0 oeffentlich, Verdikt review-needed dann per Grundlage geschlossen"}

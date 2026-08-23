@@ -123,3 +123,40 @@ anderen Stellen desselben Baums; das ist genau die Klasse, gegen die `260823-103
 
 ---
 Resolved:
+
+---
+
+**Abgleich 260823-1649 (Baumstand `7d86420`, Tag `v1.0.0`).** Der Datensatz bleibt `_o_`, und
+die Hälfte, die ihn offen hält, ist die im Quelltext.
+
+**Die Hälfte am Entscheidungsdatensatz ist erledigt.** `db1a177` hat die `Implemented:`-Zeile von
+`shared/decisions/260813-0053_i_schluckt-der-abgriff-den-zulaessigen-befehl-oder-den-ausgefuehrten.md`
+berichtigt; sie trägt jetzt die bedingte Fassung („`false` für jeden Befehl, den
+`zulaessigkeit::zulaessig` abweist … und `true` für jeden anderen") und darunter einen eigenen
+Absatz „Berichtigung 260823-1455".
+
+**Die Berichtigung stimmt sachlich, einzeln am Baum gelesen.**
+`crates/krk-ui/src/appkit/anwendung.rs:3002-3004` trägt `if !zulaessigkeit::zulaessig(kommando,
+lage) { return false; }`, die Funktion schließt auf `if gewirkt { … } true`. Zwei Ausgänge, wie
+dieser Datensatz sagt.
+
+**Der Entscheid des Nutzers vom 260823-1350 ist unberührt, und das ist geprüft.** Die `## Frage`,
+die Möglichkeit 1 („`kommando_ausfuehren` liefert `true`, sobald der Befehl die beiden Vorbehalte
+passiert hat") und die `Answered:`-Zeile („der Abgriff schluckt, was **zulässig** war") tragen alle
+die bedingte Fassung. Keine von ihnen hat je die absolute getragen.
+
+**Es sind weiterhin genau vier Codestellen**, gezählt mit
+`grep -rn "kommando_ausfuehren" --include='*.rs' crates/ | grep -E "immer|ausnahmslos|jedem Fall"`
+und dem Zeilennachschlag daneben. Die vier Zeilenangaben dieses Datensatzes treffen am heutigen
+Stand unverändert, weil seit `b58e9d1` keine Codedatei angefasst worden ist:
+
+| Stelle | Steht heute dort |
+|---|---|
+| `anwendung.rs:1959` | „[`Self::kommando_ausfuehren`] liefert seit der Runde 7 immer `true`." |
+| `anwendung.rs:6297-6298` | „weil [`Self::kommando_ausfuehren`] seit der Runde 7 immer `true` liefert" |
+| `anwendung.rs:7075` | „[`Self::kommando_ausfuehren`] seit der Runde 7 immer `true` liefert." |
+| `kommandos/rundweg.rs:120-121` | „verbraucht … in jedem Fall, weil es seit der Runde 7 immer `true` liefert." |
+
+Die drei Gegenstellen stehen ebenfalls unverändert: `anwendung.rs:5354-5356`, `messmodus.rs:93-95`,
+`appkit/blaetter/mod.rs:304-305`. Der Baum sagt damit weiter an sieben Stellen zweierlei über
+dieselbe Zeile.

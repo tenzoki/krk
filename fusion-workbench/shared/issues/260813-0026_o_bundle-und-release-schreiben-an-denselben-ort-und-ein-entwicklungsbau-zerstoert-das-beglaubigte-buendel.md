@@ -65,3 +65,10 @@ Abschluss; der Plan `shared/planning/260821-1221_*_plan-artefakt-und-release.md`
 seiner Risikotabelle ausdrücklich, und kein Schritt jener Runde behauptet etwas anderes.
 
 **Nachgetragen von:** reconciler, Abgleich 260821-1532, Baumstand `4e810f9`.
+
+---
+Also seen: 260823-1651 by reconciler — nach der Auslieferung der 1.0.0 liegt unter
+`target/KRK.app` das beglaubigte Bündel (`Contents/CodeResources` beginnt mit `s8ch`,
+`Info.plist` führt `1.0.0`), daneben `target/KRK-1.0.0.zip`. Der Befund ist damit scharf gestellt:
+ein `make run` an dieser Stelle nimmt die Beglaubigung der ausgelieferten Fassung weg. Die
+Auslieferungskette hat ihn nicht behoben und nicht berührt.

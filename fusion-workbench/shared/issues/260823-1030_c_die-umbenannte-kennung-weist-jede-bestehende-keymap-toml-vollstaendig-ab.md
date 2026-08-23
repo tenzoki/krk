@@ -149,3 +149,15 @@ die neue umschreiben. Der Anzeigename in derselben Zeile bliebe der alte, weil `
 nicht aus der Auslieferung; das ist kosmetisch. Das Löschen der Datei wirkt ebenfalls, kostet aber
 die eigene Belegung. **Nie den Ordner löschen**, nur die eine Datei: daneben liegen Lesezeichen,
 Sitzung, Notizzettel und Einstellungen.
+
+---
+**Nachtrag 260823-1710.** Der Abgleich zur Auslieferung von 1.0.0 hat die Grundlage dieser
+Schließung erneut geprüft und einen Einwand gefunden: die öffentliche Releaseseite weist für
+`KRK-0.5.6.zip` vier Ladevorgänge aus, für `KRK-1.0.0.zip` binnen anderthalb Stunden zwei. Der
+Satz „auf keiner der zwei Maschinen liegt eine `keymap.toml`" spricht für die Geräte des
+Entwicklers und kann für Ladende nicht sprechen.
+
+Der Nutzer hat den Einwand am 260823-1710 entkräftet: die Ladevorgänge sind seine eigenen. Die
+Schließung steht damit unverändert, und ihr Auslöser bleibt der oben formulierte — nicht „es gibt
+Nutzer", sondern „jemand hat eine `keymap.toml` **und** installiert danach eine Fassung mit
+umbenannter Kennung".
