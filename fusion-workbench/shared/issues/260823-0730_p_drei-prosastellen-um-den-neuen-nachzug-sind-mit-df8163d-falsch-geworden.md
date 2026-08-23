@@ -123,3 +123,34 @@ Verhaltensbefund.
 und `shared/issues/260821-1023_o_sieben-prosastellen-der-ablage-nennen-die-zahl-der-dateien-und-den-umfang-von-leerbefund-falsch.md`
 — dieselbe Klasse in einem anderen Modul: eine Zählung, die eine Regel ersetzt hat, und die bei
 ihrem Entstehen falsch war.
+
+---
+
+In Arbeit: 260823-1137 durch coder. Alle drei Stellen sind nachgezogen, und zwei
+weitere derselben Wurzel dazu.
+
+1. `bildschirmbreiten_uebernehmen`: die Zaehlung der Aufrufer ist durch eine Regel
+   ersetzt. Der Satz nennt keine Zahl mehr und sagt ausdruecklich, dass
+   `aktives_setzen` nicht misst und es auch nicht begruendet, mit Verweis auf
+   `shared/issues/260823-0731_*`; wer ihn beim Wort nimmt, haelt jenen Fall jetzt nicht
+   mehr fuer geprueft.
+2. `ordner_angleichen`: der zweite Halbsatz ist umgeschrieben. Er sagt jetzt, dass
+   `sichtbarkeit_aendern` die Sichtbarkeit selbst auf den Schirm schreibt und am
+   Rueckgabewert `sitzung_vormerken` und die Anzeigen haengen, die keine Sichtbarkeit
+   sind.
+3. `sichtbarkeit_aendern`: „seit demselben Befund" ist durch „seit dem 260810 und aus
+   demselben Grund" ersetzt, mit dem Satz, dass jene Stelle die erste, unvollstaendige
+   Antwort auf dieselbe Klasse war.
+
+**Zwei abhaengige Stellen, die dieser Datensatz nicht fuehrt**, beide von `df8163d`
+falsch gemacht und aus derselben Menge:
+
+4. Derselbe Doc-Kommentar an `bildschirmbreiten_uebernehmen` sagte „Zwei Anlaesse tun
+   das" und zaehlte `kommando_ausfuehren` und `sitzung_bauen`. `df8163d` hat mit
+   `editorausgang_behandeln` den dritten hinzugefuegt (`git log -L` weist die Zeile aus)
+   und den Satz nicht angefasst. Er traegt jetzt die Regel und keine Zahl.
+5. Der Kommentar im Rumpf von `sitzung_bauen` nannte sich „der zweite der **beiden**
+   Anlaesse"; dieselbe Menge, dieselbe Verschiebung. Er verweist jetzt auf die Regel an
+   `bildschirmbreiten_uebernehmen`.
+
+Bleibt zum Schliessen mit dem Commit.

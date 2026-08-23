@@ -86,3 +86,39 @@ der Punkt — sonst wandert sie in den nächsten neuen Rumpf.
 **Schwere:** Medium.
 
 **Filed by:** coderev
+
+---
+
+In Arbeit: 260823-1137 durch coder. **Der Befund ist am Baum nachgeprueft und trifft
+zu**: `Anwendungsdelegierter::kommando_ausfuehren` endet auf ein nacktes `true`
+(`anwendung.rs`), und der Modulkopf von `appkit/ereignisse.rs` schreibt die Regel aus:
+„Geschluckt wird, was zulaessig war, und nicht mehr, was gewirkt hat. Bis zur Runde 7
+lautete die Grenze ‚ausgefuehrt'."
+
+Alle drei genannten Stellen sagen jetzt: `false` heisst allein, dass kein Nachzug der
+Aufteilung und keine vorgemerkte Sitzung anfaellt; der Tastendruck ist verbraucht.
+
+**Vier weitere Stellen derselben Klasse, die dieser Datensatz nicht fuehrt**, alle mit
+demselben Satz nachgezogen:
+
+- `anwendung.rs`, `terminal_oeffnen`: „Ein `false` gaebe den Tastendruck an AppKit
+  weiter, das mit ihm nichts anfangen kann."
+- `anwendung.rs`, `weitere_instanz_starten`: derselbe Satz, ausdruecklich von der
+  vorigen Stelle uebernommen.
+- `anwendung.rs`, `bereichskommando`, Zweig `Fokus::Vorschau`: „der Tastendruck laeuft
+  wie ein unbelegter weiter."
+- `anwendung.rs`, `bereichskommando`, Zweig `Fokus::Editor`: „der Tastendruck laeuft
+  unveraendert an AppKit weiter und wird in der Textflaeche zu einem Zeichen oder zu
+  einer Bewegung der Schreibmarke." Das ist die folgenreichste der vier: ein Befehl mit
+  `Wirkungsbereich::Ueberall` ist mit dem Fokus im Editor zulaessig und wird seit der
+  Runde 7 geschluckt statt getippt. **Kein Defekt, sondern die Wahl der Runde 7**, aber
+  der Kommentar sagte das Gegenteil; er sagt es jetzt richtig.
+- `appkit/tabelle.rs`, `umbenennung_beginnen`: „dann ist der Tastendruck nicht
+  verbraucht." Liegt auf demselben Kommandoweg ueber `Tabelle::kommando_ausfuehren` und
+  `bereichskommando`.
+
+**Nicht angefasst und geprueft richtig**: die Aussagen auf dem Zeichenweg
+(`Ordnermodell::zeichen_anhaengen`, `::letztes_zeichen_weg`,
+`Tabelle::filterzeichen_tippen`, der Zweig `Eingabe::Zeichen` in `eingabe_ausfuehren`).
+Dort wird der Rueckgabewert wirklich bis zum Abgriff durchgereicht. Bleibt zum
+Schliessen mit dem Commit.

@@ -115,8 +115,10 @@ pub enum Rundweg {
 /// waere die Umsetzung ein zweites Mal.
 ///
 /// `None` heisst "von hier aus fuehrt kein Rundweg" und nicht "hier ist nichts
-/// zu tun": der Aufrufer verbraucht den Tastendruck dann nicht, sondern reicht
-/// ihn weiter, wie er es fuer jeden unbelegten tut.
+/// zu tun". Der Aufrufer antwortet darauf mit `false`, und das heisst allein,
+/// dass kein Nachzug der Aufteilung und keine vorgemerkte Sitzung anfaellt: den
+/// Tastendruck verbraucht `Anwendungsdelegierter::kommando_ausfuehren` in jedem
+/// Fall, weil es seit der Runde 7 immer `true` liefert.
 ///
 /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
 /// bliebe: `cmd+e` taete dann gar nichts, und keine Meldung sagte warum.

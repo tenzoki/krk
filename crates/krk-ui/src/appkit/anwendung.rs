@@ -400,9 +400,20 @@ enum Anlass {
         ///
         /// **Der eine Unterschied zwischen den beiden Ruefern.** `opt+cmd+e`
         /// schliesst und laesst die Flaeche leer, wie seit der Editor-Runde;
-        /// der Rueckweg von `cmd+e` holt die Vorschau zurueck, denn er ist die
-        /// Umkehrung eines Hinwegs, der sie verdraengt hat (Nutzerentscheid vom
-        /// 260823-0942).
+        /// der Rueckweg von `cmd+e` holt die Vorschau zurueck (Nutzerentscheid
+        /// vom 260823-0942, dort ohne Vorbehalt: „die Vorschau zeigt die Datei
+        /// wieder").
+        ///
+        /// **Die Zeile traegt eine Regel und keine Umkehrung.** Der Rueckweg
+        /// endet immer in derselben Lage, gleich wo er begonnen hat — auch
+        /// dann, wenn der Nutzer die Vorschau vorher mit `f3` ausgeschaltet
+        /// hatte und der Hinweg also nichts verdraengt hat. Aus der Lage beim
+        /// Druecken ist der Unterschied nicht abzulesen: der gegenseitige
+        /// Ausschluss aus C1 haelt die Vorschau ausgeblendet, solange der Editor
+        /// die Flaeche hat, gleich aus welchem Grund. Wer die Zeile bedingt
+        /// machen will, braucht einen gemerkten Zustand und einen Setzer an
+        /// jedem Weg in den Editor; die Frage steht dem Nutzer vor
+        /// (`shared/decisions/260823-1137_*_holt-der-rueckweg-von-cmd-e-die-vorschau-*`).
         ///
         /// **Ein Feld und kein vierter Anlass.** Der Anlass ist derselbe — der
         /// Editor gibt seine Datei auf, und dieselbe Nachfrage aus C4 geht
@@ -1943,8 +1954,9 @@ impl Anwendungsdelegierter {
     /// `settings.toml`, hat sich beim Start gemeldet, denn dort faellt er an.
     ///
     /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur etwas
-    /// zu melden hatte. Ein `false` gaebe den Tastendruck an AppKit weiter, das
-    /// mit ihm nichts anfangen kann.
+    /// zu melden hatte. Ein `false` liesse den Nachzug der Aufteilung und die
+    /// vorgemerkte Sitzung ausfallen; den Tastendruck gaebe es nicht her, denn
+    /// [`Self::kommando_ausfuehren`] liefert seit der Runde 7 immer `true`.
     fn terminal_oeffnen(&self) -> bool {
         let seite = self.ivars().modell.borrow().aktiv();
         let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
@@ -1962,9 +1974,9 @@ impl Anwendungsdelegierter {
     /// Startet eine weitere Instanz von KRK (C3 der Runde 7).
     ///
     /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur etwas
-    /// zu melden hatte. Ein `false` gaebe den Tastendruck an AppKit weiter, das
-    /// mit ihm nichts anfangen kann — dieselbe Ueberlegung wie bei
-    /// [`Self::terminal_oeffnen`] darueber.
+    /// zu melden hatte — dieselbe Ueberlegung wie bei
+    /// [`Self::terminal_oeffnen`] darueber, und dort steht auch, was ein
+    /// `false` hier ausfallen liesse und was nicht.
     ///
     /// Der eine Fall, den der Nutzer sieht, ist der Entwicklungslauf ohne
     /// Buendel; er geht als Befehlsantwort in die Statuszeile, den ersten der
@@ -3142,7 +3154,7 @@ impl Anwendungsdelegierter {
             // `bereichskommando`; ohne diese Zeile fiele der Befehl dort
             // stillschweigend hindurch und taete nichts — genau die Gestalt, die
             // fuer `cmd+e` als Defekt gemeldet war.
-            Kommando::EditorRundweg => self.editor_rundweg(),
+            Kommando::EditorRundweg => self.editor_rundweg(fokus),
             // Das Sichern aus C4. Es traegt `Wirkungsbereich::Editor` und
             // steht trotzdem hier und nicht bei `bereichskommando`: der
             // Editorbereich haengt am Delegierten, und `bereichskommando`
@@ -3248,8 +3260,10 @@ impl Anwendungsdelegierter {
         match fokus {
             Fokus::Leiste => self.leiste().quelle().kommando_ausfuehren(kommando),
             // Die vier Tabbefehle aus C1 bedienen hier die Vorschau-Tabs
-            // (C6); alles andere fuehrt die Vorschau nicht aus, und der
-            // Tastendruck laeuft wie ein unbelegter weiter.
+            // (C6); alles andere fuehrt die Vorschau nicht aus, und dann faellt
+            // kein Nachzug an. Verbraucht ist der Tastendruck auch dann, denn
+            // geschluckt wird seit der Runde 7, was zulaessig war, und nicht
+            // mehr, was gewirkt hat.
             Fokus::Vorschau => {
                 let ausgefuehrt = self.vorschau().kommando_ausfuehren(kommando);
                 if ausgefuehrt {
@@ -3270,9 +3284,14 @@ impl Anwendungsdelegierter {
             // Fokus im Editor bis hierher durchkommt, ist ein Befehl mit
             // [`Wirkungsbereich::Ueberall`], den das Fenster selbst nicht
             // ausfuehrt — und der gehoert nicht ins Dateifenster umgeleitet.
-            // `false` heisst dann, was es ueberall heisst: der Tastendruck
-            // laeuft unveraendert an AppKit weiter und wird in der Textflaeche
-            // zu einem Zeichen oder zu einer Bewegung der Schreibmarke.
+            // `false` heisst dann, was es in diesem `match` ueberall heisst:
+            // kein Nachzug der Aufteilung und keine vorgemerkte Sitzung. **Den
+            // Tastendruck gibt es nicht an AppKit zurueck** — bis zur Runde 7
+            // tat es das, seither schluckt der Abgriff jeden zulaessigen
+            // Befehl, und ein `Wirkungsbereich::Ueberall` ist mit dem Fokus im
+            // Editor zulaessig. Der Befehl wird in der Textflaeche also weder
+            // zu einem Zeichen noch zu einer Bewegung der Schreibmarke; er tut
+            // nichts, und das ist die Wahl der Runde 7 und kein Versehen.
             Fokus::Editor => false,
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
@@ -3496,8 +3515,12 @@ impl Anwendungsdelegierter {
     /// [`Self::aufteilung_nachziehen`] und [`Self::sitzung_vormerken`]. Hier
     /// ist er tragend und nicht kosmetisch, denn
     /// [`Self::nach_dem_sichtbarkeitswechsel`] legt die Fensterzeile **nicht**
-    /// neu aus: ein hervorgeholtes Dateifenster bekommt seinen Nachzug allein
-    /// ueber diesen Wert. Darum `false` in den beiden Zweigen, in denen nichts
+    /// neu aus. **Den Nachzug eines hervorgeholten Dateifensters traegt er seit
+    /// dem 260823 nicht mehr allein**: [`Self::sichtbarkeit_aendern`] schreibt
+    /// die geaenderte Sichtbarkeit selbst auf den Schirm, und
+    /// [`Self::bereich_einblenden`] geht darueber. Was hier am Wert haengt,
+    /// sind [`Self::sitzung_vormerken`] und die Anzeigen, die keine
+    /// Sichtbarkeit sind. Darum `false` in den beiden Zweigen, in denen nichts
     /// geschah, dem zu schmalen Fenster und dem sichtbaren Ziel auf demselben
     /// Ordner, und `true` in den uebrigen.
     /// [`Self::ordner_der_datei_zeigen`] weicht davon ab und liefert auch auf
@@ -4205,10 +4228,12 @@ impl Anwendungsdelegierter {
     /// Flaeche noch das Kaestchen der Bereichsleiste umspringen
     /// (`shared/issues/260820-1034_*_f4-setzt-den-fokus-nur-dann-in-den-editor-*`
     /// und `260820-1034_*_cmd-e-bleibt-in-der-vorschau-wirkungslos-*`).
-    /// [`Self::anlass_ausfuehren`] traegt denselben Nachzug seit demselben
-    /// Befund, dort aber von Hand am Ende der Fortsetzung; hier steht er an der
-    /// Stelle, die das Modell aendert, und keine kuenftige Fortsetzung kann ihn
-    /// vergessen.
+    /// [`Self::anlass_ausfuehren`] traegt denselben Nachzug seit dem 260810 und
+    /// aus demselben Grund, dort aber von Hand am Ende der Fortsetzung. **Das
+    /// war die erste Antwort auf dieselbe Klasse, an einer einzelnen Stelle**,
+    /// und ihre Unvollstaendigkeit ist der Grund, aus dem der Befund hier ein
+    /// zweites Mal auflaufen musste; hier steht der Nachzug an der Stelle, die
+    /// das Modell aendert, und keine kuenftige Fortsetzung kann ihn vergessen.
     ///
     /// **Er steht vor den Nachzuegen der einzelnen Bereiche und nicht hinter
     /// ihnen.** [`Self::nach_dem_sichtbarkeitswechsel`] setzt den Fokus, und
@@ -4508,10 +4533,17 @@ impl Anwendungsdelegierter {
     /// nirgends sonst, und der Delegierte der Aufteilung meldet sie nicht
     /// zurueck: er haelt nichts und hat bewusst keinen Rueckweg in das Modell
     /// (siehe den Modulkopf von [`super::aufteilung`]). Das Modell erfaehrt von
-    /// ihr also nur, wenn jemand nachmisst. Zwei Anlaesse tun das: jeder
-    /// Tastenbefehl, bevor er das Modell anfasst
-    /// ([`Self::kommando_ausfuehren`]), und jedes Schreiben der Sitzung
-    /// ([`Self::sitzung_bauen`]), das auch ohne Befehl faellig wird.
+    /// ihr also nur, wenn jemand nachmisst. Wer das tut, sagt es an sich selbst,
+    /// und eine Aufzaehlung steht hier nicht: sie ist mit `df8163d` schon
+    /// einmal falsch geworden, weil ein dritter Messer hinzukam und dieser Satz
+    /// weiter von zweien sprach
+    /// (`shared/issues/260823-0730_*_drei-prosastellen-um-den-neuen-nachzug-*`).
+    /// Gemessen wird, wo zwischen der letzten Messung und dem naechsten Griff
+    /// in das Modell eine Ziehbewegung des Nutzers liegen kann: am Kopf jedes
+    /// Tastenbefehls ([`Self::kommando_ausfuehren`]), vor jedem Schreiben der
+    /// Sitzung ([`Self::sitzung_bauen`]), das auch ohne Befehl faellig wird,
+    /// und am Kopf jeder Fortsetzung, die lange nach ihrem Befehl laeuft
+    /// ([`Self::editorausgang_behandeln`]).
     ///
     /// **Uebernommen wird dabei nur eine wirkliche Ziehbewegung.** Steht auf
     /// dem Schirm genau das, was die Breitenregel selbst ausgelegt hat, bleibt
@@ -4531,13 +4563,18 @@ impl Anwendungsdelegierter {
     /// im laufenden Buendel gemessene Fehler, den der Kommentar an
     /// `breiten_uebernehmen` fuehrt.
     ///
-    /// **Die beiden uebrigen Aufrufer von [`Self::aufteilung_nachziehen`]
-    /// brauchen keine Messung davor.** Beim Aufbau der Oberflaeche gibt es noch
-    /// keine Ziehbewegung, die verlorenginge, und die Fortsetzung nach einer
-    /// Rueckfrage aus C4 laeuft hinter einem Blatt: solange eines steht, nimmt
-    /// das Fenster keine Maus in seinem Inhalt an, und der Befehl, der das
-    /// Blatt aufgezogen hat, ist ueber den Kopf von
-    /// [`Self::kommando_ausfuehren`] gekommen.
+    /// **Ob ein Aufrufer von [`Self::aufteilung_nachziehen`] eine Messung davor
+    /// braucht, steht an ihm und nicht hier.** Eine Aufzaehlung an dieser
+    /// Stelle war zweimal um eins daneben, ohne dass es jemand bemerkt hat, und
+    /// das zweite Mal verdeckte sie einen offenen Verhaltensbefund
+    /// (`shared/issues/260823-0730_*_drei-prosastellen-um-den-neuen-nachzug-*`).
+    /// Zwei der Aufrufer tragen ihre Begruendung mit: beim Aufbau der
+    /// Oberflaeche gibt es noch keine Ziehbewegung, die verlorenginge, und die
+    /// Fortsetzung nach einer Rueckfrage aus C4 laeuft hinter einem Blatt, wo
+    /// das Fenster keine Maus in seinem Inhalt annimmt. [`Self::aktives_setzen`]
+    /// misst nicht und begruendet es auch nicht; **das ist keine gepruefte
+    /// Ausnahme, sondern ein offener Befund**
+    /// (`shared/issues/260823-0731_*_ein-klick-in-das-andere-dateifenster-*`).
     fn bildschirmbreiten_uebernehmen(&self) {
         let Some(aufteilung) = self.ivars().aufteilung.get() else {
             return;
@@ -6254,8 +6291,12 @@ impl Anwendungsdelegierter {
     /// Datei angenommen wurde: das entscheidet
     /// `krk_core::text::datei::oeffnen` auf dem Arbeitsfaden, und der Ausgang
     /// kommt in [`Self::editorausgang_behandeln`] an. `false` heisst allein, dass
-    /// die Oberflaeche noch nicht steht; die beiden Befehle darunter geben den
-    /// Tastendruck dann weiter, statt ihn zu verbrauchen.
+    /// die Oberflaeche noch nicht steht; die beiden Befehle darunter reichen den
+    /// Wert weiter, und er entscheidet dort ueber [`Self::aufteilung_nachziehen`]
+    /// und [`Self::sitzung_vormerken`] und ueber sonst nichts. **Der Tastendruck
+    /// ist auch dann verbraucht**, weil [`Self::kommando_ausfuehren`] seit der
+    /// Runde 7 immer `true` liefert; dieselbe Auskunft steht dreissig Zeilen
+    /// weiter unten am Leerweg von [`Self::im_editor_oeffnen`].
     ///
     fn editor_oeffnen_lassen(&self, pfad: &Path, herkunft: Oeffnungsherkunft) -> bool {
         let Some(editor) = self.ivars().editor.get() else {
@@ -6861,8 +6902,10 @@ impl Anwendungsdelegierter {
         match anlass {
             Anlass::EditorSchliessen { vorschau_danach } => {
                 self.editor_ausblenden();
-                // Der Rueckweg des Rundwegs holt die Vorschau zurueck, die sein
-                // Hinweg verdraengt hat; `opt+cmd+e` laesst die Flaeche leer.
+                // Der Rueckweg des Rundwegs holt die Vorschau zurueck;
+                // `opt+cmd+e` laesst die Flaeche leer. Bedingungslos, und
+                // warum, steht am Feld `vorschau_danach`: der Rueckweg endet
+                // immer in derselben Lage, gleich wo er begonnen hat.
                 //
                 // **Die Zeile steht hinter dem Ausblenden und nicht davor.**
                 // `editor_ausblenden` setzt ueber `nach_dem_sichtbarkeitswechsel`
@@ -7015,15 +7058,23 @@ impl Anwendungsdelegierter {
     /// | Vorschau | [`Self::editor_aus_vorschau`] | `cmd+e` bis zum 260823 |
     /// | Editor | [`Self::editor_schliessen`] | `opt+cmd+e`, mit der Vorschau danach |
     ///
+    /// **Keine zweite Fokusabfrage.** Der Wert kommt als Argument aus der einen
+    /// Abfrage in [`Self::kommando_ausfuehren`], wie bei
+    /// [`Self::bereichskommando`], [`Self::tab_schliessen`] und
+    /// [`Self::teilen`]; dort steht die Begruendung ausgeschrieben. Ein
+    /// zweites `self.fokus()` waere eine zweite Erhebung desselben Augenblicks,
+    /// und liefen die beiden auseinander, oeffnete `cmd+e` eine Datei, wo es
+    /// den Editor schliessen sollte.
+    ///
     /// `None` heisst: von diesem Fokus aus fuehrt kein Rundweg. Der Fall ist
     /// heute unerreichbar, weil
     /// [`Wirkungsbereich::Dateibereiche`](krk_core::tasten::Wirkungsbereich) die
-    /// Leiste und das stehende Blatt schon abgewiesen hat; `false` gibt den
-    /// Tastendruck dann weiter, statt ihn zu verbrauchen — dieselbe Antwort, die
-    /// [`Self::editor_oeffnen_lassen`] fuer die noch nicht gebaute Oberflaeche
-    /// gibt.
-    fn editor_rundweg(&self) -> bool {
-        let Some(weg) = rundweg(self.fokus()) else {
+    /// Leiste und das stehende Blatt schon abgewiesen hat. `false` heisst dann
+    /// allein, dass kein Nachzug der Aufteilung und keine vorgemerkte Sitzung
+    /// anfaellt; der Tastendruck ist verbraucht, weil
+    /// [`Self::kommando_ausfuehren`] seit der Runde 7 immer `true` liefert.
+    fn editor_rundweg(&self, fokus: Fokus) -> bool {
+        let Some(weg) = rundweg(fokus) else {
             return false;
         };
         match weg {
@@ -7176,10 +7227,11 @@ impl Anwendungsdelegierter {
     /// 9); eine Probe in `krk-core/tests/ablage.rs` haelt es an der
     /// geschriebenen Datei fest.
     fn sitzung_bauen(&self) -> Sitzung {
-        // Der zweite der beiden Anlaesse, an denen der Schirm in das Modell
-        // zurueckgelesen wird. Er faellt auch ohne Befehl an, naemlich ueber
-        // den Takt der Sitzungssicherung und beim Beenden, und deshalb bleibt
-        // er neben dem am Kopf von `kommando_ausfuehren` stehen.
+        // Einer der Anlaesse, an denen der Schirm in das Modell zurueckgelesen
+        // wird; die Regel dafuer steht an `bildschirmbreiten_uebernehmen`.
+        // Dieser hier faellt auch ohne Befehl an, naemlich ueber den Takt der
+        // Sitzungssicherung und beim Beenden, und deshalb bleibt er neben dem
+        // am Kopf von `kommando_ausfuehren` stehen.
         self.bildschirmbreiten_uebernehmen();
         let fenster = [
             self.dateifenster(Fensterseite::Links).quelle().zustand(),
@@ -8285,7 +8337,27 @@ mod sichtbarkeitsproben {
         );
     }
 
-    /// Die Fortsetzung des Editors liest die Breiten nach, bevor sie einblendet.
+    /// Die erste Anweisung eines Rumpfs, ohne Kommentar- und Leerzeilen.
+    ///
+    /// [`rumpf`] liefert die `fn`-Zeile mit und zieht die Kommentarzeilen ab.
+    /// Der Rumpf beginnt hinter der Klammer, die die Signatur schliesst; sie
+    /// steht heute auf der `fn`-Zeile, darf aber ueber mehrere gehen.
+    fn erste_anweisung(rumpf: &str) -> String {
+        let mut im_rumpf = false;
+        for zeile in rumpf.lines() {
+            if !im_rumpf {
+                im_rumpf = zeile.trim_end().ends_with('{');
+                continue;
+            }
+            let zeile = zeile.trim();
+            if !zeile.is_empty() {
+                return zeile.to_owned();
+            }
+        }
+        panic!("der Rumpf hat keine Anweisung");
+    }
+
+    /// Die Fortsetzung des Editors misst als **erste** Anweisung.
     ///
     /// `editorausgang_behandeln` laeuft aus dem Einzugstakt und damit lange
     /// nach dem Befehl, der das Oeffnen angefordert hat. Sie beginnt deshalb
@@ -8293,20 +8365,123 @@ mod sichtbarkeitsproben {
     /// dieselbe Sichtbarkeit meinen, dann erst eine aendern. Ohne die Messung
     /// naehme der Nachzug dem Nutzer eine Ziehbewegung, die er waehrend des
     /// Lesens gemacht hat.
+    ///
+    /// **Gehalten wird die Stellung und nicht eine Reihenfolge gegen eine
+    /// Nadel.** Bis zum 260823 verglich die Probe die Messung mit dem ersten
+    /// `fokus_holen(`; der Rumpf aendert die Sichtbarkeit aber an zwei Stellen,
+    /// im Zweig `Geoeffnet | SchonOffen` ueber `fokus_holen` und im Zweig
+    /// `Abgewiesen` ueber `editor_ausblenden`. Eine Messung, die in den ersten
+    /// Zweig gewandert waere, haette jenen Vergleich bestanden und den zweiten
+    /// Zweig ungemessen laufen lassen
+    /// (`shared/issues/260823-0733_*_die-probe-zur-editorfortsetzung-*`). Die
+    /// Zusage des Doc-Kommentars von `editorausgang_behandeln` lautet "gemessen
+    /// wird, bevor irgendetwas die Sichtbarkeit anfasst", und genau die haelt
+    /// diese Fassung — auch fuer den dritten Aenderer, den noch niemand
+    /// geschrieben hat.
     #[test]
-    fn die_editorfortsetzung_misst_vor_dem_einblenden() {
+    fn die_editorfortsetzung_misst_als_erste_anweisung() {
         let messung = concat!("bildschirmbreiten_", "uebernehmen(");
-        let einblenden = concat!("fokus_", "holen(");
         let rumpf = rumpf(&diese_datei(), "editorausgang_behandeln");
-        let stelle_messung = rumpf
-            .find(messung)
-            .expect("die Fortsetzung des Editors liest die Bildschirmbreiten nicht nach");
-        let stelle_einblenden = rumpf
-            .find(einblenden)
-            .expect("die Fortsetzung des Editors holt den Editor nicht mehr hervor");
         assert!(
-            stelle_messung < stelle_einblenden,
-            "die Fortsetzung misst erst, nachdem sie die Sichtbarkeit geändert hat; die Messung ist dann wertlos"
+            erste_anweisung(&rumpf).contains(messung),
+            "die Fortsetzung des Editors misst nicht als erste Anweisung; jeder Zweig davor ändert die Sichtbarkeit auf einer überholten Zahl"
+        );
+    }
+}
+
+/// Die Verdrahtung des Rundwegs von `cmd+e`, soweit sie ohne Fenster zu lesen
+/// ist.
+///
+/// **Warum am Quelltext und nicht am Verhalten.** Was `vorschau_danach` bewirkt,
+/// steht erst am laufenden Buendel zu sehen, und der Abnahmelauf verlangt KRK im
+/// Vordergrund. Was ohne Fenster pruefbar bleibt, ist dieselbe Verdrahtung, die
+/// [`sichtbarkeitsproben`] fuer die Sichtbarkeit haelt: welcher Rufer welchen
+/// Wahrheitswert uebergibt, und dass die abgelehnte Nachfrage ihn nicht liest.
+///
+/// **Der Uebersetzer haelt davon nichts.** Ein `bool` an einer Aufrufstelle
+/// vertauscht uebersetzt, und ein `{ .. }`, das zu `{ vorschau_danach }` wird,
+/// auch. `opt+cmd+e` bekaeme im ersten Fall eine andere Bedeutung als seit der
+/// Editor-Runde, und im zweiten drehte "Abbrechen" die Wahl des Nutzers vom
+/// 260823-0942 um (`shared/issues/260823-1034_*_das-neue-feld-vorschau-danach-*`).
+///
+/// **Was sie nicht sehen:** einen dritten Rufer von
+/// [`Anwendungsdelegierter::editor_schliessen`], der einen eigenen Wert
+/// uebergibt. Dagegen haelt, dass die Regel des Rundwegs genau einen Aufrufer
+/// hat (`crate::kommandos::rundweg::tests::die_regel_hat_genau_einen_aufrufer`).
+#[cfg(test)]
+mod rundwegproben {
+    use super::zettelproben::{diese_datei, rumpf};
+
+    /// Der Rumpf einer Methode dieser Datei, ohne Kommentare.
+    fn rumpf_von(name: &str) -> String {
+        rumpf(&diese_datei(), name)
+    }
+
+    /// `opt+cmd+e` schliesst und laesst die Flaeche leer.
+    ///
+    /// Die Kombination traegt ihre Bedeutung seit der Editor-Runde, und
+    /// `resources/default-keymap.toml` schliesst an `editor_umschalten` aus,
+    /// dass eine ausgelieferte Kombination einer abgenommenen Runde ihre
+    /// Bedeutung wechselt. Ein `true` an dieser Aufrufstelle taete genau das.
+    #[test]
+    fn opt_cmd_e_schliesst_ohne_die_vorschau_danach() {
+        let rumpf = rumpf_von("kommando_ausfuehren");
+        let zweig = concat!("Kommando::EditorSchliessen => self.editor_", "schliessen(");
+        let stelle = rumpf
+            .find(zweig)
+            .expect("der Ausfuehrungszweig schliesst den Editor nicht mehr");
+        assert!(
+            rumpf[stelle..].starts_with(&format!("{zweig}false)")),
+            "opt+cmd+e übergibt nicht mehr `false` und blendet damit die Vorschau ein, die es seit der Editor-Runde leer lässt"
+        );
+    }
+
+    /// Der Rueckweg des Rundwegs holt die Vorschau zurueck.
+    ///
+    /// Der Nutzerentscheid vom 260823-0942 sagt fuer `cmd+e` im Editor: „die
+    /// Vorschau zeigt die Datei wieder". Ein `false` an dieser Aufrufstelle
+    /// liesse die Flaeche leer und machte den Rueckweg zu `opt+cmd+e`.
+    #[test]
+    fn der_rueckweg_schliesst_mit_der_vorschau_danach() {
+        let rumpf = rumpf_von("editor_rundweg");
+        let zweig = concat!(
+            "Rundweg::ZurueckInDieDateiliste => self.editor_",
+            "schliessen("
+        );
+        let stelle = rumpf
+            .find(zweig)
+            .expect("der Rueckweg schliesst den Editor nicht mehr");
+        assert!(
+            rumpf[stelle..].starts_with(&format!("{zweig}true)")),
+            "der Rückweg von cmd+e übergibt nicht mehr `true` und holt die Vorschau nicht zurück"
+        );
+    }
+
+    /// Die ausgefuehrte Nachfrage liest das Feld.
+    ///
+    /// Die Gegenprobe zur Verneinung darunter: ein Zweig, der das Feld nirgends
+    /// mehr liest, bestuende jene muehelos, und `cmd+e` liesse die Flaeche leer.
+    #[test]
+    fn die_ausgefuehrte_nachfrage_liest_das_feld() {
+        let nadel = concat!("if vorschau_", "danach");
+        assert!(
+            rumpf_von("anlass_ausfuehren").contains(nadel),
+            "die ausgeführte Nachfrage liest `vorschau_danach` nicht mehr; der Rückweg von cmd+e lässt die Fläche dann leer"
+        );
+    }
+
+    /// „Abbrechen" liest das Feld **nicht**.
+    ///
+    /// Bleibt der Editor stehen, darf die Vorschau ihn gerade nicht
+    /// verdraengen. Wer hier spaeter `if vorschau_danach { … }` ergaenzt, dreht
+    /// die Wahl des Nutzers vom 260823-0942 um, und ohne diese Probe wuerde
+    /// nichts rot.
+    #[test]
+    fn die_abgelehnte_nachfrage_liest_das_feld_nicht() {
+        let nadel = concat!("vorschau_", "danach");
+        assert!(
+            !rumpf_von("anlass_unterbleibt").contains(nadel),
+            "das abgebrochene Schließen liest `vorschau_danach`; die Vorschau verdrängt dann einen Editor, der stehen bleibt"
         );
     }
 }

@@ -50,3 +50,24 @@ der `rueckschritt.rs` mit seiner Vorlage dieselbe Frage schon einmal beantwortet
 **Schwere:** Medium.
 
 **Filed by:** coderev
+
+---
+
+In Arbeit: 260823-1137 durch coder. Ein neues Quelltext-Pruefmodul `rundwegproben`
+steht in `anwendung.rs` neben `sichtbarkeitsproben` und liest ueber
+`zettelproben::{diese_datei, rumpf}` denselben Weg wie jene. Vier Proben:
+
+- `opt_cmd_e_schliesst_ohne_die_vorschau_danach` — der Zweig `Kommando::EditorSchliessen`
+  in `kommando_ausfuehren` ruft `editor_schliessen(false)`.
+- `der_rueckweg_schliesst_mit_der_vorschau_danach` — der Zweig
+  `Rundweg::ZurueckInDieDateiliste` in `editor_rundweg` ruft `editor_schliessen(true)`.
+- `die_abgelehnte_nachfrage_liest_das_feld_nicht` — der Rumpf von `anlass_unterbleibt`
+  nennt `vorschau_danach` nicht.
+- `die_ausgefuehrte_nachfrage_liest_das_feld` — die Gegenprobe dazu: `anlass_ausfuehren`
+  liest es sehr wohl. Ohne sie bestuende ein Zweig, der das Feld nirgends mehr liest,
+  die Verneinung muehelos.
+
+Alle vier sind zum Ausloesen gebracht worden: die zwei Wahrheitswerte vertauscht, den
+`if vorschau_danach`-Block entfernt und `{ .. }` durch `{ vorschau_danach }` ersetzt,
+danach `cargo test -p krk-ui rundwegproben` — vier von vier rot. Der Baum ist danach aus
+der Sicherung zurueckgestellt. Bleibt zum Schliessen mit dem Commit.

@@ -52,3 +52,16 @@ derselbe Satz oder ein Name ohne Rundenbezug.
 **Schwere:** Low.
 
 **Filed by:** coderev
+
+---
+
+In Arbeit: 260823-1137 durch coder. Beide Zuschreibungen sind richtiggestellt und
+nicht getilgt, wie der Datensatz es empfiehlt. In `crates/krk-core/tests/belegung.rs`
+traegt der Doc-Kommentar von
+`die_kennungen_der_editor_runde_stehen_in_der_auslieferungsbelegung` jetzt einen Absatz:
+den Eintrag hat die Editor-Runde angelegt, seinen Namen der Nutzerentscheid vom
+260823-0942; bis dahin hiess er `editor_aus_vorschau`. In
+`crates/krk-ui/src/belegungsmodell.rs` steht derselbe Satz an
+`jede_neue_kennung_der_editor_runde_ist_umbelegbar`. Die Proben selbst sind unveraendert.
+`resources/default-keymap.toml` fuehrt die Umbenennung schon; dort war nichts zu tun.
+Bleibt zum Schliessen mit dem Commit.

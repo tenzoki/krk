@@ -77,3 +77,13 @@ an drei Stellen schriftlich führt, in dem einen Zweig, der sie am nötigsten ha
 beiden Erhebungen auseinander, öffnete `cmd+e` eine Datei, wo es den Editor schließen sollte.
 
 **Filed by:** coderev
+
+---
+
+In Arbeit: 260823-1137 durch coder. `Anwendungsdelegierter::editor_rundweg` nimmt
+`fokus: Fokus` als Argument, der Zweig ruft `self.editor_rundweg(fokus)`, und der Rumpf
+gibt den Wert an `rundweg` weiter statt `self.fokus()` ein zweites Mal zu rufen. Der
+Doc-Kommentar traegt jetzt denselben Absatz „Keine zweite Fokusabfrage" wie die drei
+Geschwister. Der Nebenbefund ist damit gegenstandslos: `self.fokus()` hat wieder genau
+fuenf Aufrufer (Zeilen 1353, 1898, 4334, 6474, 6966), und die Zahl an `fokus_bei` stimmt
+ohne Nachzug. Bleibt zum Schliessen mit dem Commit.

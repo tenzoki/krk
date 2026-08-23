@@ -42,16 +42,20 @@
 //! `NSDraggingInfo` laesst sich ohne Ziehsitzung nicht bauen, und jede Zeile,
 //! die im Annahmezweig entschiede, waere allein von Hand nachpruefbar.
 //!
-//! **`zulaessigkeit` steht vor den sieben uebrigen Tastenbefehlsmodulen, und
-//! das ist die Reihenfolge des Weges.** Sie ist seit der Runde 7 die erste Frage jedes Befehls, und
-//! `fokus` ist einer ihrer drei Bestandteile geworden statt der einen Regel
-//! daneben. Zwei Frager stellen sie, der Ereignisabgriff ueber
+//! **`zulaessigkeit` steht vor den uebrigen Tastenbefehlsmodulen, und das ist
+//! die Reihenfolge des Weges.** Die Aussage ist die Reihenfolge und nicht die
+//! Menge; eine Zahl an dieser Stelle waere mit dem naechsten Modul falsch, wie
+//! sie es mit `rundweg` geworden ist
+//! (`shared/issues/260823-1032_*_zwei-zahlen-im-modulkopf-der-kommandos-*`).
+//! Sie ist seit der Runde 7 die erste Frage jedes Befehls, und `fokus` ist
+//! einer ihrer drei Bestandteile geworden statt der einen Regel daneben. Zwei
+//! Frager stellen sie, der Ereignisabgriff ueber
 //! `Anwendungsdelegierter::kommando_ausfuehren` und die Ausgrauung des
 //! Hauptmenues ueber `validateMenuItem:`; dass es eine Funktion ist und nicht
 //! zwei Abfragen, ist der Grund, aus dem ihre Antworten nicht auseinanderlaufen
 //! koennen.
 //!
-//! **`fokus` steht danach und vor den sechs uebrigen.** Jeder Befehl laeuft durch
+//! **`fokus` steht danach und vor den uebrigen.** Jeder Befehl laeuft durch
 //! diese eine Regel, bevor irgendein anderes Modul ihn zu sehen bekommt. Bis
 //! Schritt 18 wohnte sie in `operationen` und galt allein fuer die
 //! Loeschtasten; mit der Leiste aus C5 betrifft sie jedes Kommando und gehoert

@@ -87,3 +87,23 @@ ist, deckt sie die Hälfte.
 `shared/issues/260815-1446_o_die-probe-zum-einen-rufer-des-weitergabehinweises-liest-drei-von-sechs-modulen-und-nicht-den-zweig.md`
 und `shared/issues/260815-1447_o_die-probe-ueber-die-paarung-von-zielen-und-architekturen-prueft-mitgliedschaft-statt-paarung.md`
 — dieselbe Klasse: eine Quelltextprobe, deren Nadel weniger hält als ihr Doc-Kommentar zusagt.
+
+---
+
+In Arbeit: 260823-1137 durch coder. Die Probe heisst jetzt
+`die_editorfortsetzung_misst_als_erste_anweisung` und prueft nicht mehr eine Reihenfolge
+gegen eine Nadel, sondern die Stellung: die erste Anweisung des Rumpfs von
+`editorausgang_behandeln` enthaelt `bildschirmbreiten_uebernehmen(`. Das ist die
+haltbarere der beiden im Datensatz vorgeschlagenen Fassungen; sie deckt auch den dritten
+Sichtbarkeitsaenderer mit, den noch niemand geschrieben hat, und sie ist genau die
+Zusage, die der Doc-Kommentar von `editorausgang_behandeln` gibt.
+
+Ein kleiner Helfer `erste_anweisung` steht daneben; er ueberspringt die Signatur bis zu
+der Klammer, die den Rumpf oeffnet, und dann die Leerzeilen.
+
+**Gemessen und nicht behauptet**: die Messung wurde versuchsweise aus der ersten Zeile
+des Rumpfs in den Zweig `Geoeffnet | SchonOffen` verschoben, neben
+`dateisystemwache_nachziehen()`. Die neue Probe wird dabei rot. Die alte waere gruen
+geblieben: an demselben Baumstand nachgerechnet liegt die Messung bei Zeichen 376 und
+`fokus_holen(` bei 468, also `stelle_messung < stelle_einblenden`. Der Datensatz trifft
+damit zu. Bleibt zum Schliessen mit dem Commit.

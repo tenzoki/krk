@@ -1984,6 +1984,15 @@ fn keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich() {
 /// nirgends sonst in dieser Kiste: `jede_kennung_der_kommandos_steht_in_der_
 /// auslieferungsbelegung` erreicht elf der dreizehn, denn `text_rueckgaengig`
 /// und `text_wiederholen` tragen kein Kommando — das Menue stellt sie zu.
+///
+/// **Eine der dreizehn steht unter einem juengeren Namen**, und die Ueberschrift
+/// darueber ist insoweit zu lesen wie geschrieben: den **Eintrag**
+/// `editor_rundweg` hat die Editor-Runde angelegt, seinen Namen nicht. Sie hiess
+/// bis zum 260823-0942 `editor_aus_vorschau`; umbenannt hat sie der
+/// Nutzerentscheid jenes Tages, der `cmd+e` zum Rundweg gemacht hat
+/// (`shared/decisions/260820-1034_*_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md`).
+/// Wer fragt, was die Editor-Runde geliefert hat, findet den heutigen Namen in
+/// keinem ihrer Datensaetze.
 #[test]
 fn die_kennungen_der_editor_runde_stehen_in_der_auslieferungsbelegung() {
     let belegung = Belegung::auslieferung();

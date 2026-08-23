@@ -61,3 +61,15 @@ Aussage ist die Reihenfolge, nicht die Menge, und ohne Zahl kann sie nicht falsc
 festlegt, und im selben Kommentarblock, den dieser Commit angefasst hat.
 
 **Filed by:** coderev
+
+---
+
+In Arbeit: 260823-1137 durch coder. Beide Zahlen sind nicht korrigiert, sondern
+gestrichen, nach dem zweiten Vorschlag des Datensatzes: „vor den uebrigen
+Tastenbefehlsmodulen" und „danach und vor den uebrigen". Der erste Absatz sagt jetzt
+selbst, warum dort keine Zahl steht, mit Verweis auf diesen Datensatz. Die Aussage ist
+die Reihenfolge, und ohne Zahl kann sie mit dem elften Modul nicht wieder falsch werden.
+Die Zahl „Zehn Module" in Zeile 8 bleibt stehen: unmittelbar darunter steht die
+Aufzaehlung dieser zehn, sie ist ihr eigener Beleg, und `28cbb7b` hat sie nachgezogen.
+Weitere Stellen, die von derselben Menge abhaengen, stehen nicht im Baum (gesucht ueber
+`grep -rn "Module" crates/krk-ui/src/kommandos/`). Bleibt zum Schliessen mit dem Commit.

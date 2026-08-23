@@ -75,3 +75,25 @@ Drei Möglichkeiten:
 Vorschau wieder aus. Es ist eine Frage nach der gewollten Bedeutung des Rückwegs.
 
 **Filed by:** coderev
+
+---
+
+In Arbeit: 260823-1137 durch coder. **Kein Verhalten geaendert**, und das ist die
+Antwort auf einen Datensatz, der sich selbst als Frage an den Nutzer bezeichnet. Die
+drei Moeglichkeiten sind mit ihren Folgen als Entscheidungsdatensatz vorgelegt:
+`shared/decisions/260823-1137_o_holt-der-rueckweg-von-cmd-e-die-vorschau-auch-dann-zurueck-wenn-der-nutzer-sie-selbst-ausgeschaltet-hatte.md`.
+
+Geaendert ist allein, was der Code ueber die Zeile behauptet. Beide Prosastellen sagten,
+der Rueckweg sei „die Umkehrung eines Hinwegs, der sie verdraengt hat"; diese Begruendung
+traegt nur fuer einen Teil der Faelle. Sie sagen jetzt die Regel, die wirklich gebaut
+ist: der Rueckweg endet immer in derselben Lage, gleich wo er begonnen hat. Dazu steht
+dort, warum die Unterscheidung aus der Lage beim Druecken nicht abzulesen ist — der
+gegenseitige Ausschluss aus C1 haelt die Vorschau ausgeblendet, solange der Editor die
+Flaeche hat, gleich aus welchem Grund — und der Verweis auf die offene Frage.
+
+Der schwerste Einwand gegen Moeglichkeit 2 steht im Entscheidungsdatensatz und war im
+Befund noch nicht ausgeschrieben: „der Hinweg" ist gar nicht wohldefiniert. Der Fokus
+kommt auch ueber `f4`, ueber `opt+cmd+b` und ueber die Wiederherstellung aus der Sitzung
+in den Editor, und aus jeder dieser Lagen ist der Rueckweg erreichbar; entweder merken
+sich alle diese Wege die Sichtbarkeit, oder der Rueckweg findet keinen oder einen
+veralteten Wert vor.

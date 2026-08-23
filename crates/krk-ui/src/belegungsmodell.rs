@@ -1443,6 +1443,11 @@ mod tests {
     /// Die beiden Textbefehle stehen mit in der Liste, obwohl das Menue sie
     /// zustellt und nicht der Ereignisabgriff: die Zusage von C3 gilt jeder
     /// Kombination, die in KRK etwas ausloest, gleich wer sie zustellt.
+    ///
+    /// **`editor_rundweg` steht seit dem 260823-0942 unter diesem Namen**; die
+    /// Editor-Runde hat den Eintrag als `editor_aus_vorschau` angelegt. Die
+    /// Kennung ist dieselbe Zeile der Belegungsdatei, der Name kommt aus dem
+    /// Nutzerentscheid, der `cmd+e` zum Rundweg gemacht hat.
     #[test]
     fn jede_neue_kennung_der_editor_runde_ist_umbelegbar() {
         const NEUE_KENNUNGEN: [&str; 13] = [

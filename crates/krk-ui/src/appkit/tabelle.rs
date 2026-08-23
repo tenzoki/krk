@@ -2201,7 +2201,10 @@ impl DateifensterQuelle {
     /// ihn ersetzt und ein Pfeil ihn behaelt.
     ///
     /// Liefert `false`, wenn keine Zeile ausgewaehlt ist oder in ihr kein
-    /// Eintrag steht; dann ist der Tastendruck nicht verbraucht.
+    /// Eintrag steht. Der Wert entscheidet ueber den Nachzug der Aufteilung und
+    /// die vorgemerkte Sitzung und nicht darueber, ob der Tastendruck
+    /// weiterlaeuft: `Anwendungsdelegierter::kommando_ausfuehren` schluckt seit
+    /// der Runde 7 jeden zulaessigen Befehl.
     fn umbenennung_beginnen(&self) -> bool {
         let Ok(zeile) = usize::try_from(self.ivars().tabelle.selectedRow()) else {
             return false;

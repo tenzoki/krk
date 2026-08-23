@@ -104,3 +104,48 @@ ein Nutzer nachschlägt, tut es nicht.
 Zutun des Nutzers, mit einem zweiten Schritt, der ihn festschreibt.
 
 **Filed by:** coderev
+
+---
+Resolved: Als Lage angenommen, nicht behoben. Der Nutzer hat am 260823-1125 entschieden: die
+Umbenennung auf `editor_rundweg` bleibt, und der Grund ist, dass es **noch keine Nutzer gibt**.
+Ohne eine einzige `keymap.toml` im Umlauf hat der Defekt heute kein Opfer, und weder die
+Rücknahme des Namens noch eine Umstiegstabelle wären ihren Preis wert.
+
+**Der Mechanismus besteht unverändert fort, und der Auslöser ist benannt.** `Belegung::bauen`
+(`crates/krk-core/src/tasten/belegung.rs:1423`) bricht beim ersten unbekannten Bezeichner mit
+`return Err` ab, `Belegungsdatei::from` (`:1660`) schreibt alle 85 Funktionen statt der geänderten,
+und `belegungsansicht_verlassen` (`crates/krk-ui/src/appkit/anwendung.rs:3653`) sichert bei jeder
+Änderung. Jede künftige Umbenennung einer Kennung trifft damit jede bestehende Belegungsdatei,
+und zwar ganz und nicht an der einen Zeile.
+
+**Was die Annahme aufhebt:** der erste Nutzer außer dem Entwickler. Ab dann ist eine Umbenennung
+ohne Umstiegsweg ein Datenverlust beim Nutzer, und dieser Datensatz ist gegen den Baum wieder zu
+lesen, statt neu erhoben zu werden.
+
+---
+Revised by: 260823-1140, dieselbe Sitzung — die Begründung der Schließung darüber war falsch
+belegt, das Ergebnis bleibt.
+
+**Falsch war „es gibt noch keine Nutzer".** Der Nutzer betreibt KRK auf zwei Maschinen, und die
+zweite ist genau der Fall, für den dieser Datensatz geschrieben ist. Der Satz stammt aus einer
+Antwort auf eine Frage, die die zweite Maschine nicht kannte.
+
+**Richtig und geprüft ist:** auf keiner der beiden Maschinen liegt eine
+`~/Library/Application Support/KRK/keymap.toml`. Der Nutzer hat am 260823-1140 auf der zweiten
+nachgesehen und keine gefunden, für das Referenzgerät steht die Prüfung weiter oben. Ohne eine
+solche Datei hat die Umbenennung nichts, woran sie scheitern könnte; sie ist damit folgenlos, und
+nicht bloß ungefährlich mangels Publikum.
+
+**Der Auslöser ist damit schärfer als oben formuliert.** Es genügt nicht, dass ein Nutzer
+hinzukommt. Gefährlich wird erst die Verbindung aus beidem: jemand hat eine `keymap.toml`, weil er
+einmal eine Taste umbelegt hat, **und** installiert danach eine Fassung, die eine Kennung
+umbenannt hat. Wer künftig eine Kennung umbenennt, prüft deshalb nicht „gibt es Nutzer", sondern
+„liegt irgendwo eine `keymap.toml`" — und die Antwort darauf kennt der Entwickler nur für seine
+eigenen Geräte.
+
+**Die Gegenmaßnahme ist erhoben und kostet nichts:** in der betroffenen Datei die alte Kennung auf
+die neue umschreiben. Der Anzeigename in derselben Zeile bliebe der alte, weil `Belegung::bauen`
+(`crates/krk-core/src/tasten/belegung.rs:1446-1447`) `name` aus der Nutzerdatei übernimmt und
+nicht aus der Auslieferung; das ist kosmetisch. Das Löschen der Datei wirkt ebenfalls, kostet aber
+die eigene Belegung. **Nie den Ordner löschen**, nur die eine Datei: daneben liegen Lesezeichen,
+Sitzung, Notizzettel und Einstellungen.
