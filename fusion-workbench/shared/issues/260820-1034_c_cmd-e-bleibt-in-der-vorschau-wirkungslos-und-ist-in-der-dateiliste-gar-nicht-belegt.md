@@ -44,3 +44,13 @@ prüfen: beide enden in `editor_oeffnen_lassen`.
 
 Eine Datei in der Vorschau anzeigen, den Fokus in die Vorschau setzen, `cmd+e` drücken.
 Erwartet: die Datei öffnet sich im Editor. Beobachtet: nichts.
+
+---
+Resolved: `df8163d` — dieselbe Wurzel wie beim F4-Datensatz, mit derselben Korrektur behoben.
+
+**Die Dateilisten-Hälfte hat der Nutzer am 260823-0942 überholt.** Dieser Datensatz hielt fest,
+`cmd+e` sei in der Dateiliste kein Defekt, sondern die Belegung. Der Nutzer hat entschieden, dass
+`cmd+e` dort künftig sehr wohl wirkt: die ausgewählte Datei im Editor öffnen, Fokus hinein. Die
+Umsetzung führt der Entscheidungsdatensatz
+`shared/decisions/260820-1034_a_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md`
+und nicht dieser Datensatz; er schließt mit dem behobenen Defekt, den er beschrieben hat.

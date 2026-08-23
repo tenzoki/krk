@@ -86,3 +86,9 @@ Erklärung dafür, dass das Einblenden selbst ausbleibt.
 
 **Nicht abgenommen:** die Beobachtung stammt aus der Hand des Nutzers. Kein Agent kann sie
 nachfahren, weil der Abnahmelauf KRK im Vordergrund verlangt.
+
+---
+Resolved: `df8163d` — `sichtbarkeit_aendern` zieht die Aufteilung selbst nach, damit die neue
+Sichtbarkeit den Schirm erreicht und nicht nur im Fenstermodell steht. Vom Nutzer am 260823-0942
+von Hand abgenommen: F4 aus der Dateiliste bei nie geöffnetem Editor stellt die Datei in den
+Editor und den Fokus hinein, das Tippen landet im Text. Durchsicht `a8be186`.

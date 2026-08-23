@@ -103,3 +103,49 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+
+## Antwort des Nutzers, 260823-0942: eine vierte Gestalt, nicht eine der drei
+
+Der Nutzer hat zuerst die F-Tasten-Möglichkeit gestrichen („keine F-Taste, etwas besser
+zugängliches") und danach die Frage selbst umgestellt. Seine Begründung widerlegt die Annahme, auf
+der die Empfehlung oben ruhte, und zwar an genau der Stelle, an der sie sich als `inference:`
+gekennzeichnet hat: **der Fokus steht nach `f3` nicht in der Vorschau, sondern bleibt in der
+Dateiliste.** Ein Umschalter, der die Vorschau als Ausgangspunkt nimmt, trifft damit einen
+Zustand, den der Nutzer im Betrieb selten hat. Möglichkeit 1 ist deshalb nicht gewählt, sondern
+gegenstandslos.
+
+**Beschlossen ist:**
+
+| Fokus | `cmd+e` tut |
+|---|---|
+| Dateiliste | öffnet die ausgewählte Datei im Editor und legt den Fokus hinein (dasselbe wie `f4`) |
+| Editor | **schließt** den Editor, die Vorschau zeigt die Datei wieder, der Fokus geht in die Dateiliste |
+| Vorschau | bleibt wie bisher: die angezeigte Datei im Editor öffnen |
+
+**Der Rückweg schließt und blendet nicht aus.** Die Wahl ist dem Nutzer am 260823-0942 mit ihrem
+Preis vorgelegt worden und er hat sie so getroffen: `editor_schliessen` gibt die Datei frei und
+löst die Nachfrage aus C4 aus, `editor_umschalten` behält den Stand. Auf dem Rückweg kommt damit
+bei ungesichertem Stand die Nachfrage, also gerade dann, wenn der Nutzer eben getippt hat. Dafür
+hält kein unsichtbarer Editor ungesicherte Änderungen. Wer das später umdreht, dreht eine
+bewusste Wahl um und nicht ein Versehen.
+
+**Die Vorschau-Zeile ist nicht vom Nutzer entschieden, sondern beibehalten.** Sie steht heute so
+am Baum, sie zeigt in dieselbe Richtung wie die neue Dateilisten-Zeile, und der Nutzer hat nicht
+verlangt, sie zu entfernen. Wer sie streichen will, fragt ihn.
+
+**Eine Spannung gehört benannt.** Der Kommentar bei `editor_schliessen` in
+`resources/default-keymap.toml` führt den Satz, eine ausgelieferte Kombination einer abgenommenen
+Runde wechsle ihre Bedeutung nicht; er ist der Grund, warum `editor_umschalten` auf `opt+cmd+b`
+und nicht auf `opt+cmd+e` liegt. `cmd+e` behält hier seine bisherige Richtung und bekommt zwei
+Bereiche und einen Rückweg dazu, wechselt seine Bedeutung also nicht, sondern erweitert sie. Der
+Nutzer hat die Erweiterung ausdrücklich verlangt.
+
+**Der Wirkungsbereich wächst** von `Vorschau` auf Dateifenster, Vorschau und Editor. Die
+Fallunterscheidung gehört nach dem Vorbild von `kommandos/rueckschritt.rs` als reine Funktion mit
+genau einem Rufer geschrieben und nicht als `if` im Ausführungszweig; diese Auflage aus der
+Empfehlung oben gilt unverändert.
+
+---
+Answered: `shared/decisions/260820-1034_a_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md` (dieser Datensatz, Abschnitt „Antwort des Nutzers, 260823-0942") — `cmd+e` wird der Rundweg Dateiliste → Editor → Dateiliste, der Rückweg schließt.

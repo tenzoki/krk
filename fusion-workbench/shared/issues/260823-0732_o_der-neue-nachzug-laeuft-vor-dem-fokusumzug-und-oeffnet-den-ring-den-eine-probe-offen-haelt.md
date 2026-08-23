@@ -125,3 +125,17 @@ die Frage beantworten; sie hängt am Verhalten von AppKit.
 `shared/decisions/260819-2216_*_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md`
 — dieselbe Lage für eine andere Zusage: Arbeit innerhalb einer Endbedingung ohne eigenen
 Abnahmelauf.
+
+---
+
+## Also seen: 260823-0942 — die Fokushälfte ist abgenommen, die Zeithälfte nicht
+
+Der Nutzer hat am 260823-0942 die Prüfschritte 1 bis 3 der Liste oben von Hand gefahren und
+berichtet, es halte alles wie beschrieben: der Fokus landet nach `f3` im vorher aktiven
+Dateifenster, und mehrfaches `f3` lässt dasselbe Dateifenster aktiv.
+
+**Schritt 4 ist nicht gefahren.** L1 mit Umschaltbefehlen in der Reihe, gegen den Lauf
+`messungen/260810-1918-alle-zusagen.txt`, steht weiter aus. Der Datensatz bleibt deshalb offen,
+und was offen bleibt, ist allein die Frage nach den Kosten je Tastendruck durch den doppelten
+und den reentranten Ruf von `aufteilung_nachziehen`. Die Befürchtung, AppKit könne beim
+Ausblenden einen unerwarteten Rang vergeben, ist damit ausgeräumt.
