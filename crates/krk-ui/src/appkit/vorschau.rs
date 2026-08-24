@@ -868,10 +868,15 @@ impl Vorschaufenster {
         // braucht sie deshalb jetzt. Gefragt wird nicht hier, sondern beim
         // Aufbau und bei jedem Wechsel des Erscheinungsbildes — die eine
         // Zuordnung dazu steht in [`textmerkmale::tafel_der_erscheinung`].
-        self.ivars()
-            .modell
-            .borrow_mut()
-            .datei_anzeigen(pfad, self.ivars().tafel.get());
+        // Der leere Profilsatz ist die Uebergangsfassung aus Schritt 9 der
+        // Runde 16: er heisst „keine Profile", und dann zeigt ein Ordner seine
+        // Metadaten wie vor der Runde. Schritt 10 setzt hier das Merkfeld
+        // `profile` ein, das `profile_setzen` fuellt.
+        self.ivars().modell.borrow_mut().datei_anzeigen(
+            pfad,
+            self.ivars().tafel.get(),
+            Arc::default(),
+        );
         // **Nur die Leiste und nicht die ganze Anzeige.** Geaendert hat sich
         // allein die Beschriftung des Tabs; Inhalt und Pfad wechseln erst,
         // wenn der Arbeitsfaden geliefert hat, und bis dahin steht der
@@ -1049,6 +1054,13 @@ impl Vorschaufenster {
                 self.text_zeigen(&zeilen);
             }
             Inhalt::Bild { daten, metadaten } => self.bild_zeigen(&daten, metadaten.as_ref()),
+            // Schritt 9 der Runde 16 hat den siebten `Inhalt` gesetzt, und die
+            // vollstaendige Fallunterscheidung hier hat den Bau angehalten, wie
+            // sie soll. Dieser Zweig ist die Antwort darauf und nicht mehr:
+            // Schritt 10 schreibt seine Begruendung und den Modulkopf dazu.
+            Inhalt::Zusammenfassung(zusammenfassung) => {
+                self.text_zeigen(&zusammenfassung.als_text());
+            }
         }
 
         // Erst nachdem der Text steht: der Vorgang faerbt genau diese Zeichen
@@ -1389,6 +1401,7 @@ fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a s
         | Inhalt::Markdown(_)
         | Inhalt::Bild { .. }
         | Inhalt::Metadaten(_)
+        | Inhalt::Zusammenfassung(_)
         | Inhalt::Hinweis(_) => None,
     }
 }

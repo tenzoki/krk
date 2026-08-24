@@ -60,6 +60,39 @@
 //! es verlangt; das ist Weg 2 aus `issues/260803-2007_*_die-metadatenvorschau-
 //! aus-c6-verlangt-rechte-die-der-eintrag-nicht-traegt.md`.
 //!
+//! # Die Zusammenfassung ist der vierte Weg und die vierte Antwort nicht
+//!
+//! Seit der Runde 16 steht neben den drei Wegen ein vierter: ein Ordner, den
+//! ein Leseprofil aus `readers.toml` an seinem Pfad oder an einer
+//! Kennzeichendatei darin erkennt, zeigt statt der Metadatenzeilen die Zeilen
+//! seines Profils ([`Inhalt::Zusammenfassung`]). **Er teilt die Dreiteilung
+//! nicht in vier, sondern besetzt einen Teil des dritten:** Text und Bild
+//! bleiben unberuehrt, und was sich aendert, ist allein, was an der Stelle
+//! „alles Uebrige" fuer einen **erkannten** Ordner steht. Trifft kein Profil,
+//! steht dort weiter die Metadatenanzeige mit ihren sechs Angaben (C2.5), und
+//! auf eine **Datei** greift kein Profil, auch dann nicht, wenn ihr Pfad ein
+//! Pfadmuster erfuellt (C2.6). Die Kopfzeile mit Name und vollem Pfad ist die
+//! eine Auskunft der Metadaten, die die Ersetzung ueberlebt; sie steckt in der
+//! [`Zusammenfassung`](krk_core::leseprofil::Zusammenfassung) selbst
+//! (Festlegung A6).
+//!
+//! **Sie entsteht auf demselben Arbeitsfaden wie das Lesen einer Textdatei,
+//! und aus demselben Grund.** Eine Zusammenfassung kostet bis zu zwoelf
+//! Verzeichnisleselaeufe und bis zu vierundzwanzig Dateioeffnungen
+//! ([`krk_core::leseprofil::HOECHSTENS_LESELAEUFE`],
+//! [`krk_core::leseprofil::HOECHSTENS_OEFFNUNGEN`]) — also mehr Platte als
+//! jede einzelne Textdatei dieser Anzeige. Auf dem Hauptfaden gerechnet ginge
+//! L7 auf Kosten von L1, und genau das verhindert der Faden aus dem Abschnitt
+//! `# Der Arbeitsfaden` seit der Runde 1. Ein zweiter Faden neben ihm entsteht
+//! nicht: die Zusammenfassung ist Teil dessen, was `laden` fuer **einen**
+//! ausgewaehlten Eintrag liefert, und sie hat kein anderes Ende als er.
+//!
+//! Daraus folgt C4.7 ohne eine eigene Vorkehrung: [`laden`] ist der eine
+//! Aufrufer von [`krk_core::leseprofil::zusammenfassen`] in diesem Baum, und
+//! [`laden`] laeuft allein auf dem Faden, den
+//! [`Vorschaumodell::datei_anzeigen`] fuer den ausgewaehlten Eintrag startet.
+//! Ein Ordner, den der Nutzer nie auswaehlt, wird damit nie zusammengefasst.
+//!
 //! # Gelesen wird ueber den Deskriptor und nicht ueber den Pfad
 //!
 //! Der eine Weg von einem Pfad zu den Bytes ist
@@ -120,6 +153,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
+use krk_core::leseprofil::{Profile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
 
@@ -238,6 +272,27 @@ pub enum Inhalt {
     },
     /// Die Metadaten: alles, was weder Text noch Bild ist, auch Ordner (C6).
     Metadaten(Metadaten),
+    /// Die Zeilen eines Leseprofils fuer einen **erkannten** Ordner (C4 der
+    /// Runde 16).
+    ///
+    /// **Er ersetzt die Metadaten und tritt nicht neben sie.** Ein Ordner, den
+    /// ein Profil aus `readers.toml` an seinem Pfad oder an einer
+    /// Kennzeichendatei darin erkennt, zeigt statt Name, Pfad, Groesse,
+    /// Aenderungsdatum, Rechten und Typ die Zeilen seines Profils. Ohne
+    /// Treffer bleibt es bei [`Inhalt::Metadaten`] mit allen sechs Angaben
+    /// (C2.5), und eine **Datei** erreicht diesen Wert nie (C2.6).
+    ///
+    /// **Die Kopfzeile aus Festlegung A6 steckt in ihm** und nicht daneben:
+    /// [`Zusammenfassung::name`](krk_core::leseprofil::Zusammenfassung::name)
+    /// und [`Zusammenfassung::pfad`](krk_core::leseprofil::Zusammenfassung::pfad)
+    /// sind die eine Auskunft der Metadatenanzeige, die die Ersetzung
+    /// ueberlebt. Deshalb faehrt hier kein [`Metadaten`] als Rueckfall mit, wie
+    /// es [`Inhalt::Bild`] tut: es gibt keinen zweiten Weg, auf den die Ansicht
+    /// zurueckfallen koennte, und die eine Angabe, die sie braucht, hat sie.
+    ///
+    /// Der Wert wandert **strukturiert** bis in die Ansicht und wird erst dort
+    /// zu Text; der Grund steht an seinem Typ im Kern.
+    Zusammenfassung(krk_core::leseprofil::Zusammenfassung),
     /// Ein Satz an den Nutzer: die leere Zwischenablage, ein Lesefehler.
     Hinweis(String),
 }
@@ -265,7 +320,14 @@ impl Ladevorgang {
     ///
     /// Die Tafel faehrt mit, weil das Rendern von Markdown auf diesem Faden
     /// laeuft und die Farbe eines Verweises aus ihr kommt; siehe [`laden`].
-    fn starten(pfad: PathBuf, tafel: Tafel) -> Self {
+    ///
+    /// **Die Profile fahren als `Arc` mit und nicht als Kopie**, aus demselben
+    /// Grund, aus dem [`Inhalt::Bild`] seine Bytes teilt: der Satz wird bei
+    /// jeder Auswahl an einen neuen Faden gereicht, er traegt je Profil einen
+    /// uebersetzten regulaeren Ausdruck, und ein Klon legte jedes Mal eine
+    /// zweite Fassung aller Profile an. `Arc` macht denselben Klon zu einem
+    /// Zaehlerschritt. Er und nicht `Rc`, weil der Wert diesen Faden erreicht.
+    fn starten(pfad: PathBuf, tafel: Tafel, profile: Arc<Profile>) -> Self {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
         let fuer_faden = pfad.clone();
@@ -275,7 +337,7 @@ impl Ladevorgang {
                 let _ = SyncSender::send(
                     &sender,
                     Geladen {
-                        inhalt: laden(&fuer_faden, tafel),
+                        inhalt: laden(&fuer_faden, tafel, &profile),
                     },
                 );
             });
@@ -425,10 +487,15 @@ impl Vorschaumodell {
     /// Modulkopf. Bis die Meldung eintrifft, steht der bisherige Inhalt, der
     /// Titel wechselt sofort: der Nutzer sieht damit, dass seine Auswahl
     /// angekommen ist, ohne dass eine halbgelesene Anzeige aufblitzt.
-    pub fn datei_anzeigen(&mut self, pfad: &Path, tafel: Tafel) {
+    ///
+    /// Die Profile gehen an den Faden weiter und werden dort nur gelesen; ein
+    /// leerer Satz heisst „keine Profile" und ist kein Fehlerfall, dann zeigt
+    /// ein Ordner seine Metadaten. Warum sie als `Arc` und nicht als Kopie
+    /// reisen, steht an [`Ladevorgang::starten`].
+    pub fn datei_anzeigen(&mut self, pfad: &Path, tafel: Tafel, profile: Arc<Profile>) {
         let tab = &mut self.tabs[self.aktiv];
         tab.titel = titel_von(pfad);
-        tab.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf(), tafel));
+        tab.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf(), tafel, profile));
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
@@ -488,6 +555,12 @@ impl Vorschaumodell {
     pub fn zeigt_dateitext(&self) -> bool {
         match self.aktiver_inhalt() {
             Inhalt::Text(_) => self.aktiver_pfad().is_some(),
+            // **Eine Zusammenfassung traegt keine Nummern**, aus demselben
+            // Grund wie gerendertes Markdown darueber: die Zahlen zaehlten die
+            // Zeilen der Zusammenfassung, und daneben steht keine Datei mit
+            // diesen Zeilen. Der Tab zeigt einen Ordner, und ein Ordner hat
+            // keine Zeilen; die Zeilen daneben sind die des Profils.
+            Inhalt::Zusammenfassung(_) => false,
             Inhalt::Leer
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
@@ -595,7 +668,12 @@ fn zu_gross_text(groesse: u64) -> String {
 /// [`krk_core::text::datei::bis_zur_grenze_lesen`](krk_core::text::datei::bis_zur_grenze_lesen)
 /// neben den anderen Gruenden; vier Wege zu derselben Antwort brauchen keine
 /// vier Verzweigungen.
-fn laden(pfad: &Path, tafel: Tafel) -> Inhalt {
+///
+/// **Der eine Aufrufer von [`krk_core::leseprofil::zusammenfassen`] in diesem
+/// Baum** (C4.7). Weil er hier steht und diese Funktion allein auf dem
+/// Arbeitsfaden eines ausgewaehlten Eintrags laeuft, kostet ein Ordner, den der
+/// Nutzer nie auswaehlt, keinen Verzeichnisleselauf und keine Dateioeffnung.
+fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
     let roh = match std::fs::symlink_metadata(pfad) {
@@ -616,6 +694,16 @@ fn laden(pfad: &Path, tafel: Tafel) -> Inhalt {
         typ: typ_von(&roh),
     };
     if metadaten.typ != Typ::Datei {
+        // Der Zusammenfassungszweig steht **vor** dem Rueckgabezweig fuer
+        // Ordner und Verknuepfungen, und die Reihenfolge traegt beide Zusagen
+        // der Runde 16 auf einmal: gefragt wird allein hier drin, also greift
+        // kein Profil auf eine Datei (C2.6), und ohne Treffer faellt der Weg
+        // in denselben Zweig zurueck, der vor der Runde der einzige war —
+        // Metadaten mit allen sechs Angaben und kein zweiter Zweig daneben
+        // (C2.5).
+        if let Some(zusammenfassung) = zusammenfassen(profile, pfad) {
+            return Inhalt::Zusammenfassung(zusammenfassung);
+        }
         // Ordner und Verknuepfungen erscheinen als Metadaten (C6).
         return Inhalt::Metadaten(metadaten);
     }
@@ -837,7 +925,7 @@ mod tests {
         let pfad = ordner.pfad().join("notiz.txt");
         std::fs::write(&pfad, "Erste Zeile\nZweite").expect("Probendatei");
         assert_eq!(
-            laden(&pfad, Tafel::Hell),
+            laden(&pfad, Tafel::Hell, &Profile::default()),
             Inhalt::Text("Erste Zeile\nZweite".to_owned())
         );
     }
@@ -853,7 +941,7 @@ mod tests {
 
         let markdown = ordner.pfad().join("notiz.md");
         std::fs::write(&markdown, "# Ueberschrift\n").expect("Probendatei");
-        let Inhalt::Markdown(gerendert) = laden(&markdown, Tafel::Hell) else {
+        let Inhalt::Markdown(gerendert) = laden(&markdown, Tafel::Hell, &Profile::default()) else {
             panic!("eine .md-Datei wird gerendert");
         };
         assert_eq!(
@@ -866,7 +954,7 @@ mod tests {
         let quelltext = ordner.pfad().join("quelle.rs");
         std::fs::write(&quelltext, "fn main() {}\n").expect("Probendatei");
         assert_eq!(
-            laden(&quelltext, Tafel::Hell),
+            laden(&quelltext, Tafel::Hell, &Profile::default()),
             Inhalt::Text("fn main() {}\n".to_owned())
         );
 
@@ -875,7 +963,7 @@ mod tests {
         let html = ordner.pfad().join("seite.html");
         std::fs::write(&html, "<p>Hallo</p>\n").expect("Probendatei");
         assert_eq!(
-            laden(&html, Tafel::Hell),
+            laden(&html, Tafel::Hell, &Profile::default()),
             Inhalt::Text("<p>Hallo</p>\n".to_owned())
         );
     }
@@ -883,7 +971,8 @@ mod tests {
     #[test]
     fn ein_ordner_erscheint_als_metadaten() {
         let ordner = Pruefordner::neu("ordner");
-        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad(), Tafel::Hell) else {
+        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad(), Tafel::Hell, &Profile::default())
+        else {
             panic!("ein Ordner gehoert in die Metadatenanzeige");
         };
         assert_eq!(metadaten.typ, Typ::Ordner);
@@ -897,7 +986,7 @@ mod tests {
         let ordner = Pruefordner::neu("gross");
         let pfad = ordner.pfad().join("gross.txt");
         std::fs::write(&pfad, "a".repeat((TEXTGRENZE + 1) as usize)).expect("Probendatei");
-        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell) else {
+        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell, &Profile::default()) else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
         assert_eq!(metadaten.groesse, TEXTGRENZE + 1);
@@ -912,7 +1001,8 @@ mod tests {
         let ordner = Pruefordner::neu("bild-klein");
         let pfad = ordner.pfad().join("bild.png");
         std::fs::write(&pfad, [0x89, b'P', b'N', b'G']).expect("Probendatei");
-        let Inhalt::Bild { daten, metadaten } = laden(&pfad, Tafel::Hell) else {
+        let Inhalt::Bild { daten, metadaten } = laden(&pfad, Tafel::Hell, &Profile::default())
+        else {
             panic!("unter der Grenze zeigt das Bild");
         };
         assert_eq!(*daten, vec![0x89, b'P', b'N', b'G']);
@@ -935,7 +1025,7 @@ mod tests {
         let datei = std::fs::File::create(&pfad).expect("Probendatei");
         datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
         drop(datei);
-        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell) else {
+        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell, &Profile::default()) else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
         assert_eq!(metadaten.groesse, BILDGRENZE + 1);
@@ -947,13 +1037,19 @@ mod tests {
         let ordner = Pruefordner::neu("binaer");
         let pfad = ordner.pfad().join("roh.bin");
         std::fs::write(&pfad, [0xFF, 0xFE, 0x00, 0x42]).expect("Probendatei");
-        assert!(matches!(laden(&pfad, Tafel::Hell), Inhalt::Metadaten(_)));
+        assert!(matches!(
+            laden(&pfad, Tafel::Hell, &Profile::default()),
+            Inhalt::Metadaten(_)
+        ));
     }
 
     #[test]
     fn ein_fehlender_pfad_liefert_einen_hinweis() {
         let pfad = Path::new("/gibt/es/nicht/krk-probe");
-        assert!(matches!(laden(pfad, Tafel::Hell), Inhalt::Hinweis(_)));
+        assert!(matches!(
+            laden(pfad, Tafel::Hell, &Profile::default()),
+            Inhalt::Hinweis(_)
+        ));
     }
 
     /// Ruft [`laden`] auf einem eigenen Faden und gibt die Antwort nur heraus,
@@ -972,7 +1068,7 @@ mod tests {
         let (sender, empfaenger) = std::sync::mpsc::channel();
         let pfad = pfad.to_path_buf();
         thread::spawn(move || {
-            let _ = sender.send(laden(&pfad, Tafel::Hell));
+            let _ = sender.send(laden(&pfad, Tafel::Hell, &Profile::default()));
         });
         empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
             panic!("laden ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
@@ -1039,7 +1135,7 @@ mod tests {
         std::fs::write(&pfad, "aus dem Faden").expect("Probendatei");
 
         let mut modell = Vorschaumodell::neu();
-        modell.datei_anzeigen(&pfad, Tafel::Hell);
+        modell.datei_anzeigen(&pfad, Tafel::Hell, Arc::default());
         modell.oeffnen();
         // Der bestellende Tab ist jetzt inaktiv; die Meldung gehoert trotzdem
         // ihm.
@@ -1129,6 +1225,229 @@ mod tests {
             )
             .zeigt_dateitext(),
             "ein Bild hat keine Zeilen"
+        );
+        assert!(
+            !tab_setzen(
+                Inhalt::Zusammenfassung(krk_core::leseprofil::Zusammenfassung::neu(
+                    "werkbank".to_owned(),
+                    PathBuf::from("/tmp/probe/werkbank"),
+                    Vec::new(),
+                )),
+                Some("/tmp/probe/werkbank"),
+            )
+            .zeigt_dateitext(),
+            "die Zahlen zaehlten die Zeilen der Zusammenfassung, und daneben \
+             steht keine Datei mit diesen Zeilen"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Die Zusammenfassung eines erkannten Ordners (Runde 16)
+    // -----------------------------------------------------------------------
+
+    /// Ein geprueftes Profilbuendel aus einem TOML-Text, wie die Ablage es
+    /// beim Start liefert.
+    ///
+    /// Die Proben hier bauen ihre Profile aus Text und nicht aus
+    /// [`krk_core::leseprofil::Profil::neu`], damit sie denselben Weg nehmen
+    /// wie der Nutzer mit seiner `readers.toml`; der Fall der beschaedigten
+    /// Datei gehoert der Ablage und wird dort abgenommen.
+    fn profile_aus(text: &str) -> Profile {
+        let datei: krk_core::leseprofil::datei::Profildatei = toml::from_str(text)
+            .unwrap_or_else(|fehler| panic!("der Probentext ist kein lesbares TOML: {fehler}"));
+        let (profile, meldungen) = krk_core::leseprofil::datei::pruefen(datei);
+        assert!(meldungen.is_empty(), "unerwartete Meldungen: {meldungen:?}");
+        profile
+    }
+
+    /// C2.5: ein Ordner ohne Treffer zeigt seine Metadaten mit allen sechs
+    /// Angaben, unveraendert gegenueber dem Stand vor der Runde 16.
+    ///
+    /// Geprueft wird gegen ein Profilbuendel, das **nicht leer** ist: ein
+    /// leeres liefe an der Erkennung ohnehin vorbei und sagte nichts darueber,
+    /// was ein Profil tut, das seinen Ort nicht findet.
+    #[test]
+    fn ein_ordner_ohne_treffer_zeigt_weiter_alle_sechs_metadatenangaben() {
+        let ordner = Pruefordner::neu("ohne-treffer");
+        let profile = profile_aus(
+            r#"
+[[profil]]
+name = "Eine Werkbank"
+pfad = 'fusion-workbench$'
+kennzeichen = '^\.fusion-setup$'
+
+  [[profil.zeile]]
+  beschriftung = "Datensaetze"
+  zaehlung = { muster = '\.md$' }
+"#,
+        );
+
+        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad(), Tafel::Hell, &profile) else {
+            panic!("ohne Treffer bleibt es beim Zweig von vor der Runde");
+        };
+        assert_eq!(metadaten.name, titel_von(ordner.pfad()));
+        assert_eq!(metadaten.pfad, ordner.pfad());
+        assert_eq!(metadaten.typ, Typ::Ordner);
+        assert_ne!(
+            metadaten.geaendert,
+            SystemTime::UNIX_EPOCH,
+            "das Aenderungsdatum ist erhoben und nicht der Rueckfallwert"
+        );
+        assert_ne!(metadaten.rechte, 0, "die Rechte sind erhoben");
+        // Die Groesse eines Ordners hat nach dem Doc-Kommentar von `Metadaten`
+        // keine Aussage; abgelesen wird sie trotzdem und steht damit da.
+        let _ = metadaten.groesse;
+    }
+
+    /// Ein Ordner, den ein Profil erkennt, zeigt dessen Zeilen statt der
+    /// Metadaten, samt der Kopfzeile aus Festlegung A6.
+    #[test]
+    fn ein_erkannter_ordner_zeigt_die_zeilen_seines_profils() {
+        let ordner = Pruefordner::neu("mit-treffer");
+        let werkbank = ordner.ordner("werkbank");
+        std::fs::write(werkbank.join("eins.md"), "a").expect("Probendatei");
+        std::fs::write(werkbank.join("zwei.md"), "b").expect("Probendatei");
+        std::fs::write(werkbank.join("drei.txt"), "c").expect("Probendatei");
+
+        let profile = profile_aus(
+            r#"
+[[profil]]
+name = "Eine Werkbank"
+pfad = 'werkbank$'
+
+  [[profil.zeile]]
+  beschriftung = "Datensaetze"
+  zaehlung = { muster = '\.md$' }
+"#,
+        );
+
+        let Inhalt::Zusammenfassung(zusammenfassung) = laden(&werkbank, Tafel::Hell, &profile)
+        else {
+            panic!("ein erkannter Ordner zeigt die Zeilen seines Profils");
+        };
+        // Die Kopfzeile aus A6: die eine Auskunft der Metadaten, die die
+        // Ersetzung ueberlebt.
+        assert_eq!(zusammenfassung.name(), "werkbank");
+        assert_eq!(zusammenfassung.pfad(), &werkbank);
+        assert_eq!(zusammenfassung.zeilen().len(), 1);
+        assert_eq!(zusammenfassung.zeilen()[0].beschriftung(), "Datensaetze");
+        assert_eq!(
+            zusammenfassung.zeilen()[0].wert(),
+            &krk_core::leseprofil::Wert::Zahl(2),
+            "gezaehlt werden die zwei .md-Dateien und nicht die dritte daneben"
+        );
+    }
+
+    /// C2.6: kein Profil greift auf eine Datei, auch dann nicht, wenn ihr Pfad
+    /// ein Pfadmuster erfuellt.
+    ///
+    /// Das Muster `'werkbank'` trifft hier auf **jeden** der drei Pfade, denn
+    /// alle drei liegen in einem Ordner dieses Namens. Waere die Frage nach dem
+    /// Profil vor die Typunterscheidung gerutscht, saehe der Nutzer statt der
+    /// Textdatei die Zeilen eines Profils.
+    #[test]
+    fn eine_datei_unter_einem_treffenden_pfadmuster_zeigt_weiter_ihren_inhalt() {
+        let ordner = Pruefordner::neu("datei-unter-muster");
+        let werkbank = ordner.ordner("werkbank");
+        let text = werkbank.join("notiz.txt");
+        std::fs::write(&text, "Erste Zeile\nZweite").expect("Probendatei");
+        let bild = werkbank.join("bild.png");
+        std::fs::write(&bild, [0x89, b'P', b'N', b'G']).expect("Probendatei");
+        let binaer = werkbank.join("roh.bin");
+        std::fs::write(&binaer, [0xFF, 0xFE, 0x00, 0x42]).expect("Probendatei");
+
+        let profile = profile_aus(
+            r#"
+[[profil]]
+name = "Eine Werkbank"
+pfad = 'werkbank'
+
+  [[profil.zeile]]
+  beschriftung = "Datensaetze"
+  zaehlung = { }
+"#,
+        );
+
+        assert_eq!(
+            laden(&text, Tafel::Hell, &profile),
+            Inhalt::Text("Erste Zeile\nZweite".to_owned()),
+            "eine Textdatei bis 1 MB zeigt weiter ihren Inhalt"
+        );
+        assert!(
+            matches!(
+                laden(&bild, Tafel::Hell, &profile),
+                Inhalt::Bild {
+                    metadaten: Some(_),
+                    ..
+                }
+            ),
+            "eine Bilddatei bis 64 MB zeigt weiter ihre Bytes"
+        );
+        assert!(
+            matches!(laden(&binaer, Tafel::Hell, &profile), Inhalt::Metadaten(_)),
+            "alles Uebrige zeigt weiter seine Metadaten"
+        );
+        // Die Gegenprobe am selben Buendel: der Ordner darum wird erkannt. Ohne
+        // sie sagte die Probe darueber nur, dass das Muster nirgends trifft.
+        assert!(
+            matches!(
+                laden(&werkbank, Tafel::Hell, &profile),
+                Inhalt::Zusammenfassung(_)
+            ),
+            "dasselbe Muster trifft den Ordner sehr wohl"
+        );
+    }
+
+    /// C4.7: die Zusammenfassung entsteht beim Auswaehlen und nicht im Voraus.
+    ///
+    /// Die Zusage ist eine Aussage ueber den **Baum** und an keinem
+    /// Rueckgabewert abzulesen; geprueft wird sie deshalb an zwei Zaehlungen,
+    /// die zusammen die Kette schliessen:
+    ///
+    /// 1. In `crates/krk-ui` wird [`krk_core::leseprofil::zusammenfassen`] an
+    ///    genau einer Stelle gerufen, und die steht in dieser Datei. Gezaehlt
+    ///    wird allein diese Kiste: `krk-core` erklaert die Funktion und prueft
+    ///    sie in eigenen Proben ab, und beides sind keine Rufer der
+    ///    Oberflaeche.
+    /// 2. In dieser Datei ruft ausserhalb des Pruefmoduls genau eine Stelle
+    ///    [`laden`], naemlich der Rumpf des Arbeitsfadens in
+    ///    [`Ladevorgang::starten`]. Der Faden entsteht allein in
+    ///    [`Vorschaumodell::datei_anzeigen`], also fuer einen ausgewaehlten
+    ///    Eintrag.
+    ///
+    /// Zusammen: ein Ordner, den der Nutzer nie auswaehlt, erreicht
+    /// `zusammenfassen` nicht und kostet damit keinen Verzeichnisleselauf und
+    /// keine Dateioeffnung.
+    ///
+    /// **Die verbleibende Blindheit**, wie im Kopf von [`crate::quellbaum`]
+    /// ausgeschrieben: ein Aufruf unter anderem Namen, also ein
+    /// `use … as anders;`, entginge beiden Zaehlungen.
+    #[test]
+    fn zusammenfassen_hat_einen_rufer_und_der_haengt_am_arbeitsfaden() {
+        let name = concat!("zusammen", "fassen");
+        let rufer: Vec<(String, usize)> = crate::quellbaum::quelldateien()
+            .into_iter()
+            .filter(|(datei, _)| datei.starts_with("krk-ui/"))
+            .map(|(datei, inhalt)| (datei, crate::quellbaum::aufrufstellen(&inhalt, name)))
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+        assert_eq!(
+            rufer,
+            vec![("krk-ui/src/vorschaumodell.rs".to_owned(), 1)],
+            "in krk-ui ruft genau eine Stelle {name}, und sie steht in dieser Datei"
+        );
+
+        let (_, diese_datei) = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/vorschaumodell.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let (ohne_proben, _) = diese_datei
+            .split_once("#[cfg(test)]")
+            .expect("das Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
+        assert_eq!(
+            crate::quellbaum::aufrufstellen(ohne_proben, concat!("la", "den")),
+            1,
+            "ausserhalb des Pruefmoduls ruft genau der Arbeitsfaden laden"
         );
     }
 }
