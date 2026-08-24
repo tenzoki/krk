@@ -37,8 +37,9 @@ use krk_core::ablage::{
     Ablage, Ablageort, Aenderung, Ausgang, Beiseite, Breiten, Datei, Dateifenster, Einstellungen,
     Ersetzung, Fensterseite, Format, Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit,
     Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Zettel, Ziel, atomar,
-    einstellungen, melden, pfade,
+    einstellungen, leseprofile, melden, pfade,
 };
+use krk_core::leseprofil::{Profil, Profile};
 use krk_core::text::datei::EDITORGRENZE;
 use krk_core::verzeichnis::sys::{self, Sperrversuch};
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
@@ -92,6 +93,25 @@ fn geladene_einstellungen(ablage: &Ablage) -> Geladen<Einstellungen> {
         .expect("die Schreibsperre laesst sich nicht nehmen")
 }
 
+/// Laedt `readers.toml` unter der Schreibsperre.
+///
+/// Aus demselben Grund eine eigene Stelle wie [`geladene_einstellungen`]:
+/// `leseprofile::laden` legt die Datei beim ersten Start an, und das gehoert
+/// mit unter die Sperre. Die zweite Haelfte des Rueckgabepaares sind die
+/// Meldungen ueber abgewiesene Profile; die Proben, die sie nicht brauchen,
+/// nehmen [`geladene_leseprofile`].
+fn geladene_leseprofile_mit_meldungen(ablage: &Ablage) -> (Geladen<Profile>, Vec<String>) {
+    ablage
+        .durchgang(leseprofile::laden)
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Laedt `readers.toml` und laesst die Meldungen ueber abgewiesene Profile
+/// fallen.
+fn geladene_leseprofile(ablage: &Ablage) -> Geladen<Profile> {
+    geladene_leseprofile_mit_meldungen(ablage).0
+}
+
 /// Die fuenf Ablagedateien, die TOML tragen, in der Reihenfolge von
 /// [`Datei::ALLE`].
 ///
@@ -102,9 +122,10 @@ fn geladene_einstellungen(ablage: &Ablage) -> Geladen<Einstellungen> {
 /// Die Proben, die **jede** Ablagedatei meinen — Pfad, Name, Nichtanlage —,
 /// laufen weiterhin ueber `Datei::ALLE` und decken die zwei Zettel mit ab.
 ///
-/// **Nicht jede der fuenf geht durch `Zugang::laden` und `Zugang::sichern`.**
-/// `readers.toml` hat in diesem Baum noch keinen Ladeweg; wo eine Probe einen
-/// geladenen Wert braucht, nennt sie die Dateien deshalb einzeln.
+/// **Nicht jede der fuenf geht durch `Zugang::sichern`.** `settings.toml` und
+/// `readers.toml` pflegt der Nutzer von Hand, und ihr Schreibweg ist die
+/// woertliche Anlage der Auslieferungsfassung. Ueber `Zugang::laden` gehen
+/// seit Schritt 8 der Runde 16 alle fuenf.
 fn toml_dateien() -> impl Iterator<Item = Datei> {
     Datei::ALLE
         .into_iter()
@@ -374,9 +395,24 @@ fn der_auslieferungszustand_der_sitzung_erfuellt_c1() {
 
 /// Eine `readers.toml`, wie der Nutzer sie von Hand hinterliesse.
 ///
-/// Der Inhalt ist hier nur Nutzlast: der Rundlauf prueft, dass der Ablageort
-/// den Text unveraendert zurueckgibt, und nicht, was er bedeutet.
-const LESEPROFILTEXT: &str = "# von Hand gepflegt\n";
+/// **Sie traegt seit dem 260824 ein Profil und nicht nur eine Kommentarzeile.**
+/// Fuer den Rundlauf ist der Inhalt blosse Nutzlast: geprueft wird dort, dass
+/// der Ablageort den Text unveraendert zurueckgibt, und nicht, was er bedeutet.
+/// Die Probe
+/// [`eine_fehlende_readers_toml_entsteht_byteweise_und_bleibt_beim_zweiten_start_liegen`]
+/// braucht daneben eine **gueltige** Nutzerdatei, an der der veraenderte Fall
+/// aus C1.2 sich vom leergeraeumten unterscheidet; eine blosse Kommentarzeile
+/// ergibt dieselben null Profile wie die leergeraeumte Datei und traegt den
+/// Unterschied nicht.
+const LESEPROFILTEXT: &str = r#"# von Hand gepflegt
+[[profil]]
+name = "eigener Ordner"
+pfad = 'eigenes/verzeichnis$'
+
+  [[profil.zeile]]
+  beschriftung = "Dateien"
+  zaehlung = { muster = '\.md$' }
+"#;
 
 /// Der Rundlauf jeder Ablagedatei, die von Hand gepflegten eingeschlossen.
 ///
@@ -956,17 +992,23 @@ fn eine_kaputte_datei_fuehrt_zum_auslieferungszustand_und_zu_einer_meldung() {
     let lesezeichen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     let eingestellt = geladene_einstellungen(&ablage);
+    let profile = geladene_leseprofile(&ablage);
 
     assert_eq!(belegung.wert, BelegungStellvertreter::default());
     assert_eq!(lesezeichen.wert, Lesezeichenliste::default());
     assert_eq!(sitzung.wert, Sitzung::default());
     assert_eq!(eingestellt.wert, Einstellungen::auslieferung());
+    // C1.6: eine kaputte `readers.toml` fuehrt zu **keinem** Profil und nicht
+    // zur Auslieferungsfassung; der Kopf von `ablage::leseprofile` schreibt
+    // aus, warum die zwei von Hand gepflegten Dateien hier auseinandergehen.
+    assert_eq!(profile.wert.zahl(), 0);
 
     for (welche, ersetzung) in [
         (Datei::Belegung, belegung.ersetzung),
         (Datei::Lesezeichen, lesezeichen.ersetzung),
         (Datei::Sitzung, sitzung.ersetzung),
         (Datei::Einstellungen, eingestellt.ersetzung),
+        (Datei::Leser, profile.ersetzung),
     ] {
         pruefe_meldung(&ablage, welche, ersetzung, true);
 
@@ -1057,67 +1099,50 @@ fn beiseitepfad(ablage: &Ablage, welche: Datei) -> PathBuf {
     atomar::beiseitepfad(&ablage.pfad(welche)).expect("kein Beiseitepfad")
 }
 
-/// Die TOML-Dateien, die in diesem Baum noch keinen Ladeweg haben.
-///
-/// **Eine benannte Ausnahme und keine stille Luecke.** `readers.toml` traegt
-/// seit Schritt 2 der Runde 16 TOML, ihren Ladeweg baut erst Schritt 8
-/// (`ablage/leseprofile.rs`). Bis dahin kann [`ersetzungen_der_toml_dateien`]
-/// fuer sie keine Ersetzung liefern, und die Beiseitelegeprobe laesst sie
-/// deshalb aus — hier, wo die Auslassung dasteht und gezaehlt wird, statt
-/// stillschweigend im `zip`.
-///
-/// Wer den Ladeweg baut, nimmt den Eintrag hier heraus und traegt die Datei in
-/// [`ersetzungen_der_toml_dateien`] nach. Wer das eine ohne das andere tut,
-/// bekommt die Zusicherung ueber die Laengen rot.
-const OHNE_LADEWEG: [Datei; 1] = [Datei::Leser];
-
-/// Die TOML-Dateien mit Ladeweg, in der Reihenfolge von [`toml_dateien`].
-fn toml_dateien_mit_ladeweg() -> impl Iterator<Item = Datei> {
-    toml_dateien().filter(|welche| !OHNE_LADEWEG.contains(welche))
-}
-
-/// Laedt die TOML-Dateien mit Ladeweg und liefert ihre Ersetzungen in der
-/// Reihenfolge von [`toml_dateien_mit_ladeweg`].
+/// Laedt jede TOML-Datei und liefert ihre Ersetzungen in der Reihenfolge von
+/// [`toml_dateien`].
 ///
 /// Die Belegung geht ueber ihren Stellvertreter, die Einstellungen ueber
-/// `einstellungen::laden`; damit laufen alle durch denselben `Zugang::laden`
-/// wie im Betrieb. Die zwei Zettel stehen nicht darin: sie gehen ueber
-/// `Zugang::text_laden` und haben ihre eigenen Proben weiter unten.
+/// `einstellungen::laden`, die Leseprofile ueber `leseprofile::laden`; damit
+/// laufen alle durch denselben `Zugang::laden` wie im Betrieb. Die zwei Zettel
+/// stehen nicht darin: sie gehen ueber `Zugang::text_laden` und haben ihre
+/// eigenen Proben weiter unten.
 ///
-/// **Welche TOML-Datei hier fehlt und warum, sagt [`OHNE_LADEWEG`]**, und die
-/// Probe unten zaehlt beide Seiten gegeneinander, statt sie im `zip` still zu
-/// kuerzen.
+/// **Die Liste steht hier von Hand, und die Probe unten zaehlt sie gegen
+/// [`toml_dateien`]**, statt beide Seiten im `zip` still zu kuerzen. Bis
+/// Schritt 8 der Runde 16 stand daneben eine benannte Ausnahme `OHNE_LADEWEG`
+/// fuer `readers.toml`, die damals keinen Ladeweg hatte; sie ist mit dem
+/// Ladeweg weggefallen, weil eine leere Ausnahmeliste nichts mehr aussagt.
 fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
     let belegung: Geladen<BelegungStellvertreter> = geladen(ablage, Datei::Belegung);
     let lesezeichen: Geladen<Lesezeichenliste> = geladen(ablage, Datei::Lesezeichen);
     let sitzung: Geladen<Sitzung> = geladen(ablage, Datei::Sitzung);
     let eingestellt = geladene_einstellungen(ablage);
+    let profile = geladene_leseprofile(ablage);
     vec![
         belegung.ersetzung,
         lesezeichen.ersetzung,
         sitzung.ersetzung,
         eingestellt.ersetzung,
+        profile.ersetzung,
     ]
 }
 
-/// Jede TOML-Datei mit Ladeweg wird gesichert, und das Original bleibt liegen
-/// (C3.1, C3.3, C3.4).
+/// Jede TOML-Datei wird gesichert, und das Original bleibt liegen (C3.1, C3.3,
+/// C3.4 der Runde 6; C1.6 und C1.8 der Runde 16).
 ///
 /// Die Regel hat in `Ablage::laden` keinen Zweig je Datei, und diese Probe
 /// laeuft deshalb ueber [`toml_dateien`] statt ueber eine eigene Liste.
-/// Beschaedigt wird **jede** der TOML-Dateien; geprueft werden die mit
-/// Ladeweg, und welche das nicht hat, steht in [`OHNE_LADEWEG`].
 ///
-/// **Die Zusicherung ueber die zwei Laengen ist der eigentliche Inhalt dieser
-/// Aenderung.** Bis zum 260824 paarte ein `zip` fuenf Dateien mit vier
-/// Ersetzungen und kuerzte still auf vier; die Probe blieb gruen und prueft
-/// eine Datei weniger, als ihr Rundlauf verspricht
+/// **Die Zusicherung ueber die zwei Laengen haelt die Probe an ihrer Zusage.**
+/// Bis zum 260824 paarte ein `zip` fuenf Dateien mit vier Ersetzungen und
+/// kuerzte still auf vier; die Probe blieb gruen und prueft eine Datei weniger,
+/// als ihr Name verspricht
 /// (`issues/260824-0940_*_readers-toml-faellt-beim-zip-…`). Jetzt haelt sie
-/// beide Seiten gegeneinander: eine sechste TOML-Datei, die niemand einordnet,
-/// laesst sie rot werden, und ebenso der Ladeweg, der gebaut wird, ohne dass
-/// jemand den Eintrag aus [`OHNE_LADEWEG`] nimmt.
+/// beide Seiten gegeneinander: eine sechste TOML-Datei, die niemand in
+/// [`ersetzungen_der_toml_dateien`] eintraegt, laesst sie rot werden.
 #[test]
-fn jede_toml_datei_mit_ladeweg_wird_bei_beschaedigung_zur_seite_gelegt() {
+fn jede_toml_datei_wird_bei_beschaedigung_zur_seite_gelegt() {
     let (_ordner, ablage) = ablage("beiseite-alle-toml");
     for welche in toml_dateien() {
         fs::write(ablage.pfad(welche), KAPUTT).expect("schreiben gescheitert");
@@ -1125,13 +1150,13 @@ fn jede_toml_datei_mit_ladeweg_wird_bei_beschaedigung_zur_seite_gelegt() {
 
     let ersetzungen = ersetzungen_der_toml_dateien(&ablage);
     assert_eq!(
-        toml_dateien_mit_ladeweg().count(),
+        toml_dateien().count(),
         ersetzungen.len(),
-        "die zwei Seiten der Paarung sind verschieden lang; entweder fehlt eine Datei in \
-         `ersetzungen_der_toml_dateien` oder eine steht zu Unrecht in `OHNE_LADEWEG`"
+        "die zwei Seiten der Paarung sind verschieden lang; \
+         eine TOML-Datei fehlt in `ersetzungen_der_toml_dateien`"
     );
 
-    for (welche, ersetzung) in toml_dateien_mit_ladeweg().zip(ersetzungen) {
+    for (welche, ersetzung) in toml_dateien().zip(ersetzungen) {
         let ersetzung = ersetzung
             .unwrap_or_else(|| panic!("{} wurde ohne Meldung ersetzt", welche.dateiname()));
         let erwartet = beiseitepfad(&ablage, welche);
@@ -1897,6 +1922,161 @@ fn eine_nicht_anlegbare_settings_toml_meldet_sich() {
         text.contains("settings.toml"),
         "die Meldung benennt die Datei nicht: {text}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Die von Hand gepflegten Leseprofile (C1 der Runde 16)
+// ---------------------------------------------------------------------------
+
+/// Der erste Start legt `readers.toml` Byte fuer Byte an (C1.1), der zweite
+/// laesst eine vom Nutzer geschriebene Datei liegen (C1.2).
+///
+/// **Verglichen wird gegen [`leseprofile::AUSLIEFERUNGSTEXT`] und nicht ueber
+/// eine Zaehlung von Kommentarzeilen.** C1.1 sagt „Byte fuer Byte", und eine
+/// Zaehlung liesse eine Anlage durchgehen, die die Datei umschreibt und dabei
+/// genug Kommentarzeilen stehen laesst. Die Vorlage
+/// [`eine_fehlende_settings_toml_liefert_die_vorbelegung_und_entsteht_mit_kommentaren`]
+/// zaehlt nur deshalb, weil sie aelter ist als diese Zusage.
+///
+/// **Gelesen wird, was angelegt wurde**, und das ist die erste Abweichung aus
+/// dem Kopf von `krk_core::ablage::leseprofile`: die Anlage steht vor dem
+/// Lesen, also arbeitet schon die Sitzung, die die Datei anlegt, mit deren
+/// fuenf Profilen. Ohne diese Zusicherung bliebe der erste Start ohne Profil,
+/// und niemand bemerkte es.
+///
+/// Der zweite Teil ist der **veraenderte** Fall aus C1.2. Den leergeraeumten
+/// prueft [`eine_leere_datei_meldet_bei_den_vier_uebrigen_toml_dateien_nichts`]
+/// und er steht hier nicht ein zweites Mal.
+#[test]
+fn eine_fehlende_readers_toml_entsteht_byteweise_und_bleibt_beim_zweiten_start_liegen() {
+    let (_ordner, ablage) = ablage("leseprofile-erststart");
+    let pfad = ablage.pfad(Datei::Leser);
+    assert!(!pfad.exists(), "readers.toml steht schon vorher");
+
+    let (geladen, meldungen) = geladene_leseprofile_mit_meldungen(&ablage);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine fehlende Datei ist der erste Start und keine Meldung wert"
+    );
+    assert!(
+        meldungen.is_empty(),
+        "die angelegte Datei wird beanstandet: {meldungen:?}"
+    );
+    assert_eq!(
+        geladen.wert.zahl(),
+        5,
+        "der erste Start arbeitet nicht mit den fuenf mitgelieferten Profilen"
+    );
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("readers.toml ist nicht entstanden"),
+        leseprofile::AUSLIEFERUNGSTEXT,
+        "die angelegte Datei ist nicht Byte fuer Byte die Auslieferungsfassung"
+    );
+
+    // Der zweite Start findet eine gueltige, vom Nutzer geschriebene Datei vor,
+    // liest deren Profil und schreibt sie nicht noch einmal.
+    fs::write(&pfad, LESEPROFILTEXT).expect("schreiben gescheitert");
+    let (wieder, meldungen) = geladene_leseprofile_mit_meldungen(&ablage);
+
+    assert!(
+        !wieder.ist_ersetzt(),
+        "eine gueltige Nutzerdatei gilt als ersetzt: {:?}",
+        wieder.ersetzung
+    );
+    assert!(
+        meldungen.is_empty(),
+        "die Nutzerdatei wird beanstandet: {meldungen:?}"
+    );
+    let namen: Vec<&str> = wieder.wert.iter().map(Profil::name).collect();
+    assert_eq!(
+        namen,
+        ["eigener Ordner"],
+        "der zweite Start liest nicht das Profil der Nutzerdatei"
+    );
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("lesen gescheitert"),
+        LESEPROFILTEXT,
+        "die vorhandene Datei wurde ueberschrieben"
+    );
+}
+
+/// Laesst sich `readers.toml` nicht anlegen, sagt KRK das, statt still ohne
+/// Profile weiterzulaufen (C1.7).
+///
+/// Derselbe Weg wie bei [`eine_nicht_anlegbare_settings_toml_meldet_sich`]:
+/// der Ablageordner verschwindet zwischen Oeffnen und Laden, und damit kommt
+/// die Probe ohne entzogene Rechte aus und laeuft unter jedem Benutzer.
+///
+/// **Der Ausgang ist ein anderer als dort, und das ist die zweite Abweichung
+/// aus dem Kopf von `krk_core::ablage::leseprofile`:** bei den Einstellungen
+/// springt die Auslieferungsfassung ein, hier bleibt es bei **keinem** Profil.
+/// Ohne diese Zusicherung stuende die Abweichung nur in der Prosa, und ein
+/// spaeterer Griff zur Auslieferungsfassung an dieser Stelle bliebe unbemerkt.
+#[test]
+fn eine_nicht_anlegbare_readers_toml_meldet_sich() {
+    let ordner = Pruefordner::neu("leseprofile-nicht-anlegbar");
+    let wurzel = ordner.pfad().join("KRK");
+    let ablage = Ablage::oeffnen(Ablageort::an(&wurzel)).expect("Ablage laesst sich nicht oeffnen");
+    fs::remove_dir_all(&wurzel).expect("der Ablageordner laesst sich nicht entfernen");
+
+    let (geladen, meldungen) = geladene_leseprofile_mit_meldungen(&ablage);
+
+    assert_eq!(
+        geladen.wert.zahl(),
+        0,
+        "die Auslieferungsfassung ist an die Stelle der nicht angelegten Datei getreten"
+    );
+    assert!(
+        meldungen.is_empty(),
+        "eine nicht anlegbare Datei traegt kein abgewiesenes Profil: {meldungen:?}"
+    );
+    let ersetzung = geladen
+        .ersetzung
+        .expect("die gescheiterte Anlage wurde nicht gemeldet");
+    assert!(
+        matches!(ersetzung.grund, Grund::NichtAnlegbar(_)),
+        "{ersetzung:?}"
+    );
+    let text = ersetzung.to_string();
+    assert!(
+        text.contains("readers.toml"),
+        "die Meldung benennt die Datei nicht: {text}"
+    );
+}
+
+/// Eine `readers.toml`, die dasteht und sich nicht lesen laesst, ergibt
+/// `Grund::NichtLesbar` und kein Profil (C1.6, erste Haelfte).
+///
+/// Die beschaedigte Haelfte von C1.6 nimmt
+/// [`jede_toml_datei_wird_bei_beschaedigung_zur_seite_gelegt`] ueber
+/// [`toml_dateien`] mit; die nicht lesbare kann keine Probe ueber alle fuenf
+/// mitnehmen, denn der Ordner an der Stelle der Datei laesst sich nur je
+/// Datei setzen. Die zwei vorhandenen Proben zu [`Grund::NichtLesbar`] nehmen
+/// `bookmarks.toml` und `session.toml`; ohne diese hier stuende die erste
+/// Haelfte von C1.6 fuer `readers.toml` nirgends.
+#[test]
+fn eine_nicht_lesbare_readers_toml_ergibt_kein_profil_und_eine_meldung() {
+    let (_ordner, ablage) = ablage("leseprofile-nichtlesbar");
+
+    // Ein Ordner an der Stelle der Datei. Das Lesen scheitert damit mit einem
+    // anderen Fehler als "nicht vorhanden", und zwar unabhaengig davon, unter
+    // welchem Benutzer die Pruefung laeuft; ein entzogenes Leserecht taete
+    // dasselbe, aber nicht fuer root.
+    fs::create_dir(ablage.pfad(Datei::Leser)).expect("Ordner laesst sich nicht anlegen");
+
+    let (geladen, meldungen) = geladene_leseprofile_mit_meldungen(&ablage);
+
+    assert_eq!(
+        geladen.wert.zahl(),
+        0,
+        "eine nicht lesbare readers.toml ergibt ein Profil"
+    );
+    assert!(
+        meldungen.is_empty(),
+        "eine nicht lesbare Datei traegt kein abgewiesenes Profil: {meldungen:?}"
+    );
+    pruefe_meldung(&ablage, Datei::Leser, geladen.ersetzung, false);
 }
 
 // ---------------------------------------------------------------------------
@@ -3105,20 +3285,26 @@ farbe = \"rot\"
     );
 }
 
-/// Die drei uebrigen TOML-Dateien bleiben bei einer leeren Datei still.
+/// Die vier uebrigen TOML-Dateien bleiben bei einer leeren Datei still
+/// (C1.5 der Runde 16).
 ///
 /// **Die sichtbar gesetzte Antwort und keine stillschweigende
 /// Verallgemeinerung.** `Datei::leerbefund` beantwortet die Frage je Datei, und
-/// diese Probe schreibt die heutige Antwort aus: `settings.toml` und
-/// `keymap.toml` aendert der Nutzer von Hand und darf sie leerraeumen,
-/// `session.toml` ist auf Nachsicht gegenueber einer aelteren Fassung gebaut.
-/// Ob die strenge Lesart dorthin gehoert, ist die offene Frage
+/// diese Probe schreibt die heutige Antwort aus: `settings.toml`,
+/// `readers.toml` und `keymap.toml` aendert der Nutzer von Hand und darf sie
+/// leerraeumen, `session.toml` ist auf Nachsicht gegenueber einer aelteren
+/// Fassung gebaut. Ob die strenge Lesart dorthin gehoert, ist die offene Frage
 /// `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`;
-/// bis zu ihrer Antwort laesst diese Probe die drei rot werden, die sie im
+/// bis zu ihrer Antwort laesst diese Probe die vier rot werden, die sie im
 /// Vorbeigehen mitnaehme.
+///
+/// Fuer `readers.toml` sagt C1.5 mehr als „keine Meldung": eine leergeraeumte
+/// Datei ergibt **kein Profil**, und jeder Ordner zeigt dann seine
+/// Metadatenanzeige. Die zweite Haelfte steht deshalb unten als eigene
+/// Zusicherung.
 #[test]
-fn eine_leere_datei_meldet_bei_den_drei_uebrigen_toml_dateien_nichts() {
-    let (_ordner, ablage) = ablage("leerbefund-die-drei-uebrigen");
+fn eine_leere_datei_meldet_bei_den_vier_uebrigen_toml_dateien_nichts() {
+    let (_ordner, ablage) = ablage("leerbefund-die-vier-uebrigen");
     for welche in toml_dateien().filter(|welche| *welche != Datei::Lesezeichen) {
         fs::write(ablage.pfad(welche), "").expect("schreiben gescheitert");
     }
@@ -3126,6 +3312,22 @@ fn eine_leere_datei_meldet_bei_den_drei_uebrigen_toml_dateien_nichts() {
     let belegung: Geladen<BelegungStellvertreter> = geladen(&ablage, Datei::Belegung);
     let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     let eingestellt = geladene_einstellungen(&ablage);
+    let (profile, meldungen) = geladene_leseprofile_mit_meldungen(&ablage);
+
+    assert_eq!(
+        profile.wert.zahl(),
+        0,
+        "eine leergeraeumte readers.toml ergibt ein Profil"
+    );
+    assert!(
+        meldungen.is_empty(),
+        "eine leergeraeumte readers.toml wird beanstandet: {meldungen:?}"
+    );
+    assert_eq!(
+        fs::read_to_string(ablage.pfad(Datei::Leser)).expect("lesen gescheitert"),
+        "",
+        "die leergeraeumte readers.toml wurde neu angelegt"
+    );
 
     for (welche, ersetzt, ersetzung) in [
         (Datei::Belegung, belegung.ist_ersetzt(), belegung.ersetzung),
@@ -3135,6 +3337,7 @@ fn eine_leere_datei_meldet_bei_den_drei_uebrigen_toml_dateien_nichts() {
             eingestellt.ist_ersetzt(),
             eingestellt.ersetzung,
         ),
+        (Datei::Leser, profile.ist_ersetzt(), profile.ersetzung),
     ] {
         assert!(
             !ersetzt,

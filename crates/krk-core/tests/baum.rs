@@ -193,6 +193,8 @@ fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
             // `Zugang::text_sichern`, `Zugang::beiseite_legen` und die Anlage
             // von `settings.toml`.
             "krk-core/src/ablage/einstellungen.rs".to_owned(),
+            // Die Anlage von `readers.toml`, unter einem Durchgang.
+            "krk-core/src/ablage/leseprofile.rs".to_owned(),
             "krk-core/src/ablage/mod.rs".to_owned(),
             // Der Editor sichert seine Datei, ausserhalb des Ablageordners.
             "krk-core/src/text/datei.rs".to_owned(),

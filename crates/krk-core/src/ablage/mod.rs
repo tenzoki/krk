@@ -9,24 +9,24 @@
 //! und nicht uebereinander: TOML und Text unterscheiden sich im Lesen, im
 //! Auslieferungszustand und in dem, was eine beschaedigte Datei bedeutet.
 //!
-//! Sechs Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
+//! Sieben Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
 //!
 //! ```text
 //! pfade ──> mod (Ablage ──> Zugang: laden, sichern, melden) ──> atomar
-//!                   │              ^        ^         ^
-//!                sperre            │        │         │
-//!                           lesezeichen  sitzung  einstellungen
+//!                   │           ^       ^        ^            ^
+//!                sperre         │       │        │            │
+//!                        lesezeichen sitzung einstellungen leseprofile
 //! ```
 //!
 //! [`pfade`] loest den Ordner auf und legt ihn beim ersten Start an.
 //! [`sperre`] traegt die beiden Absprachen, die zwei gleichzeitig laufende
 //! Instanzen von KRK auseinanderhalten. [`atomar`] schreibt jede Datei ueber
-//! eine Nachbardatei und `rename`. [`sitzung`], [`lesezeichen`] und
-//! [`einstellungen`] halten drei der vier Inhalte; den vierten, die Belegung aus
-//! `keymap.toml`, baut Schritt 11 und legt ihn ueber [`Zugang::laden`] und
-//! [`Zugang::sichern`] hier ab. Die Ablage ist deshalb ueber den Inhalt
-//! allgemein gehalten: sie kennt Pfad, Format und Fehlerbehandlung, nicht die
-//! Felder.
+//! eine Nachbardatei und `rename`. [`sitzung`], [`lesezeichen`],
+//! [`einstellungen`] und [`leseprofile`] halten vier der fuenf Inhalte; den
+//! fuenften, die Belegung aus `keymap.toml`, baut Schritt 11 und legt ihn ueber
+//! [`Zugang::laden`] und [`Zugang::sichern`] hier ab. Die Ablage ist deshalb
+//! ueber den Inhalt allgemein gehalten: sie kennt Pfad, Format und
+//! Fehlerbehandlung, nicht die Felder.
 //!
 //! # Jeder Weg auf die Platte geht durch die Schreibsperre
 //!
@@ -50,7 +50,7 @@
 //! Diese eine Luecke bewacht deshalb eine Probe und kein Typ:
 //! `nur_benannte_dateien_erreichen_das_atomare_schreiben` in
 //! `krk-core/tests/baum.rs` zaehlt, welche Dateien des ganzen Baums
-//! [`atomar::schreiben`] ueberhaupt erreichen koennen. Eine sechste laesst sie
+//! [`atomar::schreiben`] ueberhaupt erreichen koennen. Eine siebte laesst sie
 //! rot werden. Bis zur Runde 7 stand hier, die Zusage sei „eine Eigenschaft der
 //! Typen und keine Verabredung in Kommentaren"; sie war beides nicht, sondern
 //! eine unbewachte Aussage ueber den damaligen Baum
@@ -64,9 +64,11 @@
 //! [`Ablage::sichern`]: die Anlage beim ersten Start schreibt die eingebettete
 //! Auslieferungsfassung woertlich, samt deren Kommentaren, die `serde` nicht
 //! kennt. Der Weg dorthin ist derselbe [`atomar::schreiben`], allein die
-//! Nutzlast ist eine andere; siehe den Kopf von [`einstellungen`]. Wer sie
-//! anlegt, beschreibt fuer `readers.toml` ein spaeterer Schritt der Runde 16;
-//! die Ablage kennt von ihr bislang Namen, Pfad und Format.
+//! Nutzlast ist eine andere; siehe den Kopf von [`einstellungen`]. Fuer
+//! `readers.toml` steht derselbe Weg seit der Runde 16 in [`leseprofile`], samt
+//! den zwei Abweichungen, die deren Kopf ausschreibt: dort wird angelegt, bevor
+//! gelesen wird, und eine beschaedigte Datei fuehrt zu gar keinem Profil statt
+//! zur Auslieferungsfassung.
 //!
 //! # Ein beschaedigter Bestand laesst KRK starten
 //!
@@ -145,8 +147,8 @@
 //!   `#[serde(deny_unknown_fields)]` an der jeweiligen Struktur, und drei der
 //!   fuenf TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei` und
 //!   seit dem 260821 auch [`Lesezeichenliste`]. `readers.toml` traegt es
-//!   ebenfalls, an `leseprofil::datei::Profildatei`, geht aber noch nicht
-//!   ueber diesen Ladeweg.
+//!   ebenfalls, an `leseprofil::datei::Profildatei`, und geht seit der Runde 16
+//!   ueber denselben Ladeweg.
 //! - **Kein einziger oberster Schluessel** heisst je nach Datei etwas anderes,
 //!   und deshalb steht die Antwort in [`pfade::Datei::leerbefund`] — einer
 //!   vollstaendigen Fallunterscheidung ohne Auffangzweig, wie
@@ -191,6 +193,7 @@
 
 pub mod atomar;
 pub mod einstellungen;
+pub mod leseprofile;
 pub mod lesezeichen;
 pub mod pfade;
 pub mod sitzung;
@@ -234,11 +237,11 @@ pub enum Grund {
     /// Die Datei fehlte und liess sich nicht anlegen. Traegt die Meldung des
     /// Dateisystems.
     ///
-    /// Nur `settings.toml` kann ihn tragen. Sie ist die eine Datei, die KRK
-    /// beim ersten Start von sich aus anlegt, weil in dieser Runde keine
-    /// Ansicht sie schreibt und der Nutzer sonst nichts zu pflegen haette. Bei
-    /// den drei uebrigen ist eine fehlende Datei der erste Start und keine
-    /// Meldung wert.
+    /// Nur `settings.toml` und, seit der Runde 16, `readers.toml` koennen ihn
+    /// tragen. Sie sind die zwei Dateien, die KRK beim ersten Start von sich
+    /// aus anlegt, weil keine Ansicht sie schreibt und der Nutzer sonst nichts
+    /// zu pflegen haette. Bei den drei uebrigen ist eine fehlende Datei der
+    /// erste Start und keine Meldung wert.
     NichtAnlegbar(String),
     /// Die Datei ist groesser als [`EDITORGRENZE`] und wurde deshalb gar nicht
     /// erst gelesen.
