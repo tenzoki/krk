@@ -49,3 +49,6 @@ misst.
 `jede_der_vier_dateien_wird_bei_beschaedigung_zur_seite_gelegt`.
 
 **Domain:** code
+
+---
+Also seen: 260824-1014 by coderev — Befund am Baumstand `b76800b` bestätigt, mit zwei Berichtigungen: der Ladeweg entsteht in **Schritt 8** (`ablage/leseprofile.rs`, Bündel C) und nicht in Schritt 7 (`resources/default-readers.toml`, `ontocoder`), so wie es der Datensatz `260824-0955_o_die-files-zeile-eines-planschritts-…` bereits richtig führt; und die Paarung ist heute nur deshalb noch die richtige, weil `Datei::Leser` in `Datei::ALLE` hinter `Datei::Einstellungen` und damit als letzte TOML-Datei steht — wer die Reihenfolge in `ALLE` ändert, bekommt statt der stillen Kürzung eine falsch gepaarte Zusicherung mit irreführendem Meldetext. Im ganzen Baum ist dies das einzige `zip`, das still kürzen kann; die übrigen dreizehn laufen über Felder fester, typgeprüfter Länge oder über dieselbe Quelle.
