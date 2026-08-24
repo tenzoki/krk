@@ -104,7 +104,7 @@ Zeile zu klein und nicht zu groß. Der ursprüngliche Wortlaut in `## Question`
 bleibt stehen: er ist der Beleg dafür, auf welcher Grundlage die Frage gestellt
 wurde.
 
-Implemented:
+Implemented: 260824-1650, Commit `b5bf2e3`, Schritt 14 des Plans. Die Zeile „Abgelegt" steht in `resources/default-readers.toml` hinter „Geschlossen" und vor der Directive-Zeile. Nachgemessen an den achtzehn Circle-Verzeichnissen dieser Werkbank: die vier Zustandszeilen treffen 0, 1, 15 und 2, jedes Verzeichnis bejaht genau eine. Der Haushalt ist unverändert.
 Deferred:
 Superseded by:
 Retired:

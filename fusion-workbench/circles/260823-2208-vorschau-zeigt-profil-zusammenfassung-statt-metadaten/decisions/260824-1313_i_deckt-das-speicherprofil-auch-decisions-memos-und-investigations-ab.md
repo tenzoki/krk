@@ -89,7 +89,7 @@ eigenes Profil für `decisions` — Möglichkeit 3 — ließe sich später ohne 
 nachziehen, indem der Name aus der Aufzählung wieder herausgenommen wird. Wer
 das aufgreift, stellt dafür eine eigene Frage.
 
-Implemented:
+Implemented: 260824-1650, Commit `b5bf2e3`, Schritt 14 des Plans. Das Pfadmuster trägt neun Namen. Nachgemessen an den 118 Unterordnern unter `shared/` und den achtzehn Runden: das Speicherprofil trifft 99 statt 78, der Defektspeicher unverändert 19, ohne Profil bleiben 0 statt 21. Der Haushalt ist unverändert.
 Deferred:
 Superseded by:
 Retired:
