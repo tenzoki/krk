@@ -67,4 +67,19 @@ nachgeschlagen wird.
 **Domain:** code
 
 ---
-Resolved:
+Resolved: 260824 durch `coder`. Der Aufzaehlungspunkt im Modulkopf von
+`crates/krk-core/src/leseprofil/bausteine.rs` (Abschnitt `# Was eine unvollstaendige Lesung sagen
+darf`) sagt jetzt dasselbe wie der Doc-Kommentar von `Wert::UeberGrenze` und wie die berichtigte
+Fassung von C6.5: die Zaehlung sagt zweierlei und sonst nichts — dass es **mindestens** so viele
+sind wie die getroffenen, und dass die Lesung abgebrochen wurde; *mehr* als die getroffenen sagt
+sie ausdruecklich nicht, weil ein weiterer Treffer hinter dem Abbruch moeglich und nicht gesichert
+ist. Der Grund dafuer, dass die Zahl die der Treffer ist und nicht die der Grenze, steht weiterhin
+nur an einer Stelle; der Modulkopf verweist auf sie, statt sie zu wiederholen.
+
+Die Fassung von `Wert::UeberGrenze` ist beim Lesen die bessere und ist unveraendert geblieben: sie
+traegt die Begruendung an dem Wert, den sie beschreibt, und der Bau folgt ihr — `Wert::als_text`
+setzt `mindestens {Treffer} (Lesung bei {HOECHSTENS_EINTRAEGE} Eintraegen abgebrochen)`. Angeglichen
+wurde deshalb allein der Modulkopf.
+
+Kein Verhalten geaendert; die Aenderung ist ein Kommentar. Eine Datei angefasst,
+`crates/krk-core/src/leseprofil/bausteine.rs`. `make check` gruen (Exit 0).

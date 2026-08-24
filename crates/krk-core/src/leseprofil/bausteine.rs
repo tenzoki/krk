@@ -44,8 +44,12 @@
 //! Teilauskunft, und darauf gilt **eine** Regel, dreimal angewandt: *es wird
 //! nur gesagt, was die Teillesung entscheidet.*
 //!
-//! - Die Zaehlung liefert [`Wert::UeberGrenze`] statt [`Wert::Zahl`]. Sie kann
-//!   sagen, dass es mehr sind als die gezaehlten, und sonst nichts.
+//! - Die Zaehlung liefert [`Wert::UeberGrenze`] statt [`Wert::Zahl`]. Sie sagt
+//!   zweierlei und sonst nichts: dass es **mindestens** so viele sind wie die
+//!   getroffenen, und dass die Lesung abgebrochen wurde. *Mehr* als die
+//!   getroffenen sagt sie nicht — ein weiterer Treffer hinter dem Abbruch ist
+//!   moeglich und nicht gesichert. Warum die Zahl die der Treffer ist und
+//!   nicht die der Grenze, steht bei [`Wert::UeberGrenze`].
 //! - Das Vorhandensein liefert `ja`, wenn es einen Treffer gefunden hat, und
 //!   den Platzhalter, wenn es keinen gefunden hat. Ein Nichtfund in einer
 //!   Teilliste ist kein Nichtvorhandensein.
