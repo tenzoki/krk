@@ -1,0 +1,292 @@
+# KRK — Auslieferungsfassung der Leseprofile
+#
+# Diese Datei ist die alleinige Quelle der ausgelieferten Leseprofile. Die
+# Ablage bindet sie über `include_str!` ein und legt
+# `~/Library/Application Support/KRK/readers.toml` beim ersten Start wörtlich
+# aus ihr an, samt dieser Kommentare. Danach schreibt KRK die Nutzerdatei nicht
+# mehr: sie ist neben `settings.toml` die zweite Datei der Ablage, die von Hand
+# gepflegt wird.
+#
+# Quelle: Spec `260824-0613_*_spec-vorschau-zeigt-profil-zusammenfassung-statt-
+# metadaten.md`, Fähigkeit C5. Bindend ist außerdem der Datensatz
+# `decisions/260823-2208_*_liefert-krk-ein-fertiges-fusion-workbench-profil-
+# mit.md`.
+#
+# Wozu ein Profil da ist: Wählt man im Dateifenster einen Ordner aus, zeigt das
+# Vorschaufenster sonst seine Metadaten, also Größe, Änderungsdatum, Rechte und
+# Typ. Trifft ein Profil auf diesen Ordner zu, stehen dort stattdessen die
+# Zeilen des Profils. Trifft keines zu, bleibt die Metadatenanzeige, wie sie
+# war. Die fünf Profile unten beschreiben die Ablage von fusion; wer mit fusion
+# nicht arbeitet, kann sie ersetzen und verliert nichts.
+#
+# Geändert wird die Datei bei ausgeschaltetem KRK, oder die Änderung wirkt erst
+# beim nächsten Start: KRK liest sie einmal und beobachtet sie nicht.
+
+# ----------------------------------------------------------------------------
+# Was ein Schreibfehler kostet
+# ----------------------------------------------------------------------------
+#
+# Ein verschriebener Schlüssel in einem Baustein kostet nicht die eine Zeile,
+# sondern die GANZE DATEI. Sie gilt dann als beschädigt, KRK legt sie beiseite
+# und arbeitet ohne jedes Profil weiter; die Meldung darüber steht beim Start in
+# der Statuszeile und nennt den Schlüssel. Wer `zahlung` statt `zaehlung` oder
+# `feldmusster` statt `feldmuster` schreibt, verliert also alle fünf
+# Zusammenfassungen und nicht bloß eine Zeile.
+#
+# Drei Reichweiten gibt es, und diese ist die weiteste:
+#
+#   1. Die ganze Datei fällt weg — ein unbekannter Schlüssel, ein Tischname,
+#      den es nicht gibt, oder sonst etwas, das nicht in die erwartete Gestalt
+#      passt.
+#   2. Ein ganzes Profil fällt weg — sein `pfad` oder sein `kennzeichen` lässt
+#      sich nicht als Ausdruck übersetzen, oder es nennt keines von beiden. Die
+#      übrigen Profile bleiben.
+#   3. Eine Zeile verliert ihren Baustein und behält ihre Beschriftung — sie
+#      nennt nicht genau einen der vier Bausteine, ein Muster darin lässt sich
+#      nicht übersetzen, das `feldmuster` trägt nicht genau eine Fanggruppe,
+#      oder der `ordner` führt aus dem erkannten Ordner heraus. Die Zeile zeigt
+#      dann ihre Beschriftung und den Platzhalter `--`, die übrigen Zeilen
+#      stimmen weiter.
+
+# ----------------------------------------------------------------------------
+# Der Aufbau: Profil, Zeile, genau ein Baustein
+# ----------------------------------------------------------------------------
+#
+# Ein `[[profil]]` trägt einen `name` (er dient allein den Meldungen und wird
+# nicht angezeigt), dazu `pfad` oder `kennzeichen` oder beides, und darunter
+# beliebig viele `[[profil.zeile]]`.
+#
+# Eine `[[profil.zeile]]` trägt eine `beschriftung` und GENAU EINEN der vier
+# Bausteine `zaehlung`, `juengste`, `feld` und `vorhandensein`. Keiner ist zu
+# wenig, zwei sind zu viel; beides weist KRK mit einer Meldung ab und die Zeile
+# zeigt ihren Platzhalter.
+#
+# Jedes Muster ist ein regulärer Ausdruck und steht in einfachen
+# Anführungszeichen. Das ist in TOML eine wörtliche Zeichenkette: die
+# Rückstriche stehen darin so, wie der Ausdruck sie braucht, und sind nicht
+# noch einmal zu verdoppeln.
+#
+# Jeder Baustein darf `ordner` nennen, einen Unterordner des erkannten Ordners.
+# Ohne die Angabe ist der erkannte Ordner selbst gemeint. Ein absoluter Pfad,
+# ein `..` und ein doppelter Schrägstrich werden abgewiesen, und was aufgelöst
+# doch aus dem Ordner herausführt, ebenso: eine Zusammenfassung liest nie
+# außerhalb des Ordners, über den sie spricht.
+
+# ----------------------------------------------------------------------------
+# Die vier Bausteine
+# ----------------------------------------------------------------------------
+#
+# `zaehlung` — die Zahl der Einträge, deren Name das Muster erfüllt. Ohne
+# `muster` zählt sie alle. Sie zählt flach über eine Ebene und steigt nicht in
+# Unterordner ab.
+#
+#   [[profil.zeile]]
+#   beschriftung = "Offene Defekte"
+#   zaehlung = { ordner = "issues", muster = '_o_.*\.md$' }
+#
+# `juengste` — die `anzahl` Dateien mit dem jüngsten Änderungsdatum, jede mit
+# ihrem Titel. Der Titel ist die erste nicht leere Zeile der Datei; ein
+# führendes `#` und die Leerzeichen dahinter fallen weg. Eine leere oder nicht
+# lesbare Datei zeigt ihren Dateinamen.
+#
+#   [[profil.zeile]]
+#   beschriftung = "Die jüngsten zehn"
+#   juengste = { ordner = "history", muster = '\.md$', anzahl = 10 }
+#
+# `feld` — die erste Fanggruppe des ersten Treffers im Inhalt einer Datei.
+# `datei` sucht die Datei über ihren Namen, `feldmuster` greift den Wert und
+# trägt genau eine Fanggruppe. Wer eine Alternative gruppieren, aber nicht
+# fangen will, schreibt `(?:…)`.
+#
+#   [[profil.zeile]]
+#   beschriftung = "Fassung"
+#   feld = { datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
+#
+# `vorhandensein` — ob ein Eintrag das Muster erfüllt. Der Wert ist „ja" oder
+# „nein".
+#
+#   [[profil.zeile]]
+#   beschriftung = "Spec"
+#   vorhandensein = { ordner = "planning", muster = '_._spec-' }
+#
+# Zur Verankerung: `datei`, `kennzeichen`, `pfad` und das `muster` der übrigen
+# Bausteine laufen gegen einen einzelnen Namen oder einen Pfad, also gegen eine
+# einzige Zeile ohne Zeilenende. Das `feldmuster` läuft dagegen über den ganzen
+# Dateiinhalt, und dort verankern `^` und `$` am Anfang und Ende der GANZEN
+# Eingabe. Wer eine einzelne Zeile darin verankern will, schreibt `(?m)` an den
+# Anfang seines Ausdrucks; wer über Zeilengrenzen hinweg greifen will, `(?s)`.
+
+# ----------------------------------------------------------------------------
+# Welches Profil gewinnt
+# ----------------------------------------------------------------------------
+#
+# KRK sucht in drei Schritten, und der erste Treffer gewinnt:
+#
+#   1. Alle Profile in der Reihenfolge dieser Datei, je Profil allein das
+#      `pfad`-Muster gegen den vollen Pfad des ausgewählten Ordners.
+#   2. Hat kein `pfad` getroffen: alle Profile ein zweites Mal in derselben
+#      Reihenfolge, je Profil allein das `kennzeichen` gegen die Namen der
+#      Einträge im ausgewählten Ordner.
+#   3. Hat auch das nicht getroffen: die gewohnte Metadatenanzeige.
+#
+# Ein `pfad` geht damit jedem `kennzeichen` vor, gleich wo die beiden Profile in
+# dieser Datei stehen. Wer die Rangfolge unter gleichartigen Profilen ändern
+# will, verschiebt ihre Blöcke.
+
+# ----------------------------------------------------------------------------
+# Was eine Zusammenfassung höchstens kostet
+# ----------------------------------------------------------------------------
+#
+# Damit die Vorschau schnell bleibt, arbeitet eine Zusammenfassung innerhalb
+# fester Grenzen:
+#
+#   höchstens 12 Verzeichnisleseläufe je Zusammenfassung
+#   höchstens 24 Dateiöffnungen je Zusammenfassung
+#   höchstens 2.000 Einträge je Leselauf
+#   höchstens 64 KB je gelesener Datei
+#   höchstens 10 bei `anzahl`; eine größere Zahl wird darauf gekappt
+#
+# Der erkannte Ordner wird höchstens einmal gelesen, und jeder Baustein ohne
+# `ordner` benutzt diese eine Lesung. Ein Baustein mit `ordner` kostet genau
+# einen Leselauf, `feld` genau eine Öffnung und `juengste` deren `anzahl`.
+#
+# Wird eine der Grenzen erreicht, bricht nichts ab: die übrigen Zeilen zeigen
+# ihren Platzhalter `--`. Eine Zählung über 2.000 Einträgen nennt die Zahl der
+# gefundenen Treffer und sagt dazu, dass die Lesung abgebrochen wurde.
+
+# ============================================================================
+# Die Profile
+# ============================================================================
+
+# Die Wurzel einer fusion-Werkbank.
+#
+# Erkannt wird sie über `.fusion-setup` und nicht über ihren Namen: ein
+# Pfadmuster auf `fusion-workbench` träfe jeden Ordner dieses Namens, auch einen
+# leeren, während `.fusion-setup` in einer eingerichteten Werkbank steht und
+# sonst nirgends.
+#
+# Die Zeile „Sitzung" hängt an einer Zeilenform von `orchestrator-live.md`, die
+# fusion ändern kann. Ändert fusion sie, zeigt diese eine Zeile ihren
+# Platzhalter, und die sechs übrigen stimmen weiter.
+[[profil]]
+name = "fusion-Werkbank: die Wurzel"
+kennzeichen = '^\.fusion-setup$'
+
+  [[profil.zeile]]
+  beschriftung = "Projekt"
+  feld = { datei = '^\.fusion-setup$', feldmuster = '"setup_pwd":"[^"]*/([^"/]+)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Eingerichtet"
+  feld = { datei = '^\.fusion-setup$', feldmuster = '"setup_at":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "fusion-Fassung"
+  feld = { datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Aktive Runde"
+  feld = { datei = '^\.active-circle$', feldmuster = '^([^\n]+)' }
+
+  [[profil.zeile]]
+  beschriftung = "Sitzung"
+  feld = { datei = '^orchestrator-live\.md$', feldmuster = '(?s)## Current\n\s*(.+?)\n' }
+
+  [[profil.zeile]]
+  beschriftung = "Runden"
+  zaehlung = { ordner = "circles" }
+
+  [[profil.zeile]]
+  beschriftung = "Offene Defekte, gemeinsam"
+  zaehlung = { ordner = "shared/issues", muster = '_o_.*\.md$' }
+
+# Ein Speicher, gemeinsam oder in einer Runde.
+#
+# Ein Profil für zwölf Orte: die sechs Speicher unter `shared/` und dieselben
+# sechs in jeder Runde. Der Defektspeicher steht darunter als eigenes Profil,
+# weil er zwei Zählungen trägt und nicht eine.
+[[profil]]
+name = "fusion-Werkbank: ein Speicher"
+pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|history|planning|reviews)$'
+
+  [[profil.zeile]]
+  beschriftung = "Datensätze"
+  zaehlung = { muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Die jüngsten zehn"
+  juengste = { muster = '\.md$', anzahl = 10 }
+
+# Ein Defektspeicher, gemeinsam oder in einer Runde.
+#
+# Der Marker im Dateinamen trägt den Stand: `_o_` offen, `_c_` geschlossen.
+[[profil]]
+name = "fusion-Werkbank: ein Defektspeicher"
+pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
+
+  [[profil.zeile]]
+  beschriftung = "Offen"
+  zaehlung = { muster = '_o_.*\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Geschlossen"
+  zaehlung = { muster = '_c_.*\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Die jüngsten zehn"
+  juengste = { muster = '\.md$', anzahl = 10 }
+
+# Das Verzeichnis aller Runden.
+[[profil]]
+name = "fusion-Werkbank: alle Runden"
+pfad = 'fusion-workbench/circles$'
+
+  [[profil.zeile]]
+  beschriftung = "Runden"
+  zaehlung = { }
+
+# Eine einzelne Runde.
+#
+# Erkannt über den Circle-Datensatz, dessen Name den Zustandsmarker trägt. Kein
+# Pfadmuster dieser Datei trifft ein Rundenverzeichnis, also kann dieses Profil
+# im ersten Durchgang nicht überholt werden.
+#
+# Der Zustand steht als drei Zeilen und nicht als eine, weil er im DATEINAMEN
+# des Datensatzes steht und in keinem Feld darin; keiner der vier Bausteine
+# liefert einen Dateinamen. Eine überholte oder zurückgestellte Runde antwortet
+# auf alle drei mit „nein".
+[[profil]]
+name = "fusion-Werkbank: eine Runde"
+kennzeichen = '^_._circle\.md$'
+
+  [[profil.zeile]]
+  beschriftung = "Vorgesehen"
+  vorhandensein = { muster = '^_a_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Aktiv"
+  vorhandensein = { muster = '^_t_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Geschlossen"
+  vorhandensein = { muster = '^_[cb]_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Directive"
+  feld = { datei = '^_._circle\.md$', feldmuster = '(?sm)^## Directive\s*\n+(.+?)\n\n' }
+
+  [[profil.zeile]]
+  beschriftung = "Spec"
+  vorhandensein = { ordner = "planning", muster = '_._spec-' }
+
+  [[profil.zeile]]
+  beschriftung = "Plan"
+  vorhandensein = { ordner = "planning", muster = '_._plan-' }
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Die jüngsten zehn Verläufe"
+  juengste = { ordner = "history", anzahl = 10 }

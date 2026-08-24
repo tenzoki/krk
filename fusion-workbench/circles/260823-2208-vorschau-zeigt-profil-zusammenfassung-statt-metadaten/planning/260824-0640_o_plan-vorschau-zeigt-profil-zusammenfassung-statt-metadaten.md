@@ -1,7 +1,7 @@
 # Implementation Plan: Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der Metadaten
 
 **Date:** 2026-08-24
-**Status:** In Umsetzung. Die Schritte 1 bis 6 und 13 stehen auf `[DONE]`, die Schritte 7 bis 12 sind offen. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor".)*
+**Status:** In Umsetzung. Die Schritte 1 bis 7 und 13 stehen auf `[DONE]`, die Schritte 8 bis 12 sind offen. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor". Am 260824-1313 auf Schritt 7 fortgeschrieben.)*
 **Spec:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0613_o_spec-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, vom Nutzer am 260824-0625 freigegeben, A1 bis A7 eingeschlossen
 **Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Grundlage erhoben:** 260824-0634, am Baum auf dem Stand `278a008` unter `crates/` und `resources/`, und am Bestand dieser Werkbank
@@ -319,7 +319,7 @@ Fünf Bündel, dreizehn Schritte. Jeder Schritt nennt genau einen Executor. **Na
 
 ### Bündel C — Die Auslieferungsfassung und ihr Weg in den Bestandsort
 
-7. **Die Auslieferungsfassung mit fünf Profilen und ihren Kommentarzeilen**
+7. [DONE] **Die Auslieferungsfassung mit fünf Profilen und ihren Kommentarzeilen**
    - Executor: `ontocoder`
    - Files: `resources/default-readers.toml`
    - Changes: Die fünf Profile aus der Tabelle unter `### Die fünf mitgelieferten Profile`, in der Reihenfolge Wurzel, Speicher, Defektspeicher, Circle-Verzeichnis, einzelner Circle. Die Ausdrücke im Einzelnen: die Wurzel über das Kennzeichen `^\.fusion-setup$` mit den Feldmustern `"setup_pwd":"[^"]*/([^"/]+)"`, `"setup_at":"([^"]*)"`, `"plugin_version":"([^"]*)"` auf `^\.fusion-setup$`, `^([^\n]+)` auf `^\.active-circle$` und `(?s)## Current\n\s*(.+?)\n` auf `^orchestrator-live\.md$`, dazu zwei Zählungen auf `circles` (ohne Muster) und `shared/issues` (`_o_.*\.md$`). Der Speicher und der Defektspeicher über die Pfadmuster aus der Tabelle, mit `\.md$` als Zählmuster und `anzahl = 10`. Der einzelne Circle über das Kennzeichen `^_._circle\.md$`, mit den drei Zustandszeilen `^_a_circle\.md$`, `^_t_circle\.md$`, `^_[cb]_circle\.md$`, dem Feldmuster `(?sm)^## Directive\s*\n+(.+?)\n\n` auf `^_._circle\.md$`, zwei Vorhandensein auf `ordner = "planning"` mit `_._spec-` und `_._plan-`, einer Zählung auf `ordner = "decisions"` mit `\.md$` und den jüngsten zehn auf `ordner = "history"`. **Die Datei ist zur Hälfte Kommentar**, wie `resources/default-settings.toml` es ist: ein Kopf, der sagt, wofür die Datei da ist, dass KRK sie nach dem ersten Start nie wieder anfasst und dass sie von Hand gepflegt wird; ein Abschnitt, der **alle vier Bausteinnamen** nennt und je einen an einem kurzen Beispiel zeigt (C5.10); ein Abschnitt über die Vorrangregel aus C2, ausgeschrieben in ihren drei Schritten; und die Zahlen des Haushalts mit dem Satz, dass eine Zeile über der Grenze ihren Platzhalter zeigt. Die deutschen Umlaute stehen als Umlaute; die Datei ist Prosa für den Nutzer, kein Bezeichner. Jedes Muster steht in einfachen Anführungszeichen, also als literale Zeichenkette in TOML, damit die Rückstriche nicht zu maskieren sind. **Der Bausteinabschnitt trägt daneben den Satz zur Verankerung:** ein Feldmuster läuft über den ganzen Dateiinhalt, und wer eine Zeile verankern will, schreibt `(?m)`.

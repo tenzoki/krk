@@ -155,3 +155,46 @@ Kein Auslösegrund für einen Umschwung; der Nutzer hat Turn 2 gewählt.
 
 Bündel B: Schritt 3 (Gestalt der Datei und Prüfschritt), Schritt 5 (Erkennung),
 Schritt 6 (die vier Bausteine und der Haushalt).
+
+## Turn 2 (260824-1020 bis 260824-1220)
+
+Bündel B, drei Schritte: P-3, P-5, P-6. Vier Commits (`f013227`, `a327d08`,
+`abe1a31`, `615190a`). Das Profilmodell läuft vollständig ohne Fenster.
+
+Die Durchsicht fand fünf Befunde, zwei davon vor dem nächsten Bau: `zusammenfassen`
+nahm auch eine Datei an, wo C2.6 das Gegenteil verlangt, und die abgeschnittene
+Zählung zeigte „über 1" für 2.101 Einträge.
+
+**Nebenbefund, der die ganze Sitzung betraf:** der Coder von Schritt 6 fand 22
+verwaiste Lastschleifen aus Sitzungen vom 15. und 16.08., zusammen 1443 % CPU auf
+16 Kernen. Der Nutzer hat sie um 12:00 beenden lassen; `kill` allein griff nicht,
+`kill -9` einzeln quittiert schon. Der Lastdurchschnitt fiel von 32 auf 16,8.
+Ein `make check` brauchte vorher über zehn Minuten statt einer.
+
+## Turn 3 (260824-1224 bis 260824-1250) — Befundräumung
+
+**Ein Sicherungsschalter hatte angeschlagen:** zwei Turns in Folge mehr Befunde
+gefiled als geschlossen, 14 offene gegen 7 erledigte Schritte. Der Nutzer hat die
+Räumung gewählt statt weiterzubauen oder abzubrechen.
+
+Zwei Agenten parallel, ohne gemeinsame Datei: der Coder an `crates/`, der Analyst
+an `planning/`. Ergebnis in einem Commit `06dbb4c`: **15 Befunde geschlossen, einer
+neu** (die Kommentarzeilen der Auslieferungsfassung, erst mit Schritt 7 behebbar).
+
+**Vier Abnahmekriterien des freigegebenen Specs sind berichtigt** und vom Nutzer
+am 260824-1250 einzeln angenommen: C3.8 trug einen Ausdruck, der nie treffen
+konnte (0 von 18 Circle-Datensätzen; berichtigt alle 18); C3.14 nannte eine
+Funktion, die abweist, wo C6.6 anlesen verlangt; C4.3 war enger als C3.9; C6.1 war
+in seiner Allgemeinheit falsch. Jede Berichtigung steht neben ihrem ursprünglichen
+Wortlaut, nicht an seiner Stelle.
+
+**Eine Bauentscheidung im Vorbeigehen:** die Profilzeile trägt jetzt vier benannte
+`Option`-Felder statt der unmarkierten Auswahl hinter `flatten`, die Schritt 3
+gebaut hatte. Grund: zwei Bausteintische in einer Zeile wurden schweigend
+angenommen, und ein verschriebener Schlüssel kostete alle Profile ohne sich zu
+nennen. Die Datei sieht für den Nutzer aus wie zuvor.
+
+## Turn 4 (ab 260824-1255)
+
+Bündel C und D: Schritt 7 (Auslieferungsfassung, `ontocoder`, Freigabetor),
+Schritt 8 (Ablagehälfte), Schritt 9 (der siebte Inhalt).

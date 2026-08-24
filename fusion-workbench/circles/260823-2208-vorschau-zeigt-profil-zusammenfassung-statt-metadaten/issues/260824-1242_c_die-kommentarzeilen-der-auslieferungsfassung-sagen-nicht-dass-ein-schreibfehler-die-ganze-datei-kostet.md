@@ -36,3 +36,12 @@ nichts darüber gelesen hat.
 **Betroffen:** `resources/default-readers.toml` (steht noch aus, Schritt 7, `ontocoder`)
 
 **Domain:** data
+
+---
+Resolved: `resources/default-readers.toml` steht seit dem 260824-1313 (Schritt 7) und trägt
+im Kopf den Abschnitt „Was ein Schreibfehler kostet". Er sagt beides, was hier gefordert war:
+ein verschriebener Schlüssel in einem Baustein kostet die ganze Datei und nicht die eine
+Zeile, und er zählt die drei Reichweiten einzeln auf. Dass eine Zeile genau einen der vier
+Bausteine `zaehlung`, `juengste`, `feld` und `vorhandensein` trägt, steht im Abschnitt
+darunter, „Der Aufbau: Profil, Zeile, genau ein Baustein". Beide stehen vor dem ersten
+`[[profil]]`, also an der Stelle, an der der Nutzer die Datei zu bearbeiten anfängt.
