@@ -73,4 +73,36 @@ nicht erfüllt, ohne dass die Abweichung irgendwo steht.
 **Domain:** code
 
 ---
-Resolved:
+Resolved: Die vier Stellen tragen die Berichtigung, und der gebaute Wortlaut ist der, der stehen
+bleibt. Geprüft wurde zuerst, welche Seite recht hat, und nicht nur nachgetragen.
+
+**Der gebaute Satz ist der richtige.** Eine Zählung trägt nach C3 ein Muster und zählt damit
+gefiltert; der zugesagte Satz bildet sich aus der Konstanten und sagt deshalb für einen Speicher mit
+2.101 Datensätzen, von denen einer offen ist, „über 2.000 offene Defekte". Das ist falsch, und am
+260824-1214 hat genau das dort gestanden. Der gebaute Satz nennt die Treffer und den Abbruch getrennt
+und ist in beiden Hälften wahr. Er hält daneben die Zusage aus Schritt 6, dass die Grenze aus
+`HOECHSTENS_EINTRAEGE` kommt und nicht ein zweites Mal im Text steht. **Kein Auftrag an den `coder`
+folgt aus dieser Hälfte.**
+
+Geändert:
+
+| Datei | Zeile |
+|---|---|
+| `planning/260824-0613_o_spec-…` | 4 (Kopfzeile), 86 (A5, Verweis), 309 (C6.5, Verweis), 319–326 (die Berichtigung unter der Kriterienliste von C6) |
+| `planning/260824-0640_o_plan-…` | 4 (Kopfzeile), 198 (der Satz der Zählung), 319 (Schritt 6, das Beispiel in Klammern) |
+
+Die Berichtigung steht **neben** dem freigegebenen Wortlaut und nicht an seiner Stelle, in der Form
+der sieben übrigen; A5 bleibt im Wortlaut stehen und trägt einen Verweis, wie A7 ihn trägt.
+
+**Der Punkt in „2.000" ist kein Rest und braucht keinen Nachfolgedatensatz.** Der Spec schreibt die
+Zahl in deutscher Prosa mit Tausenderpunkt, die Anzeige schreibt `2000` ohne. So schreibt KRK jede
+Zahl, die es zeigt; `vorschaumodell::zu_gross_text` setzt seine Megabyte genauso, und kein
+Anzeigetext im Baum trägt einen Tausenderpunkt. Ein Punkt allein an dieser Stelle wäre die
+Abweichung.
+
+**Eine weitere Stelle derselben Abweichung ist dabei aufgefallen und als eigener Befund abgelegt:**
+`crates/krk-core/src/leseprofil/bausteine.rs:47-48` sagt im Modulkopf weiter, die abgeschnittene
+Zählung „kann sagen, dass es mehr sind als die gezählten", während der Doc-Kommentar von
+`Wert::UeberGrenze` in derselben Kiste ausschreibt, dass „über 1" gerade nicht wahr wäre. Der Befund
+ist `issues/260824-1722_o_der-modulkopf-der-bausteine-sagt-die-abgeschnittene-zaehlung-duerfe-mehr-sagen-der-wert-widerspricht.md`;
+er gehört dem `coder` und ist hier nicht mitbehoben, weil `crates/` in diesem Lauf nicht anzufassen war.
