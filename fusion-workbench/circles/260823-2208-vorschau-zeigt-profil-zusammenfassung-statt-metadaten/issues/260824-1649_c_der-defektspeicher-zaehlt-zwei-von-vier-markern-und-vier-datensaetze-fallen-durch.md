@@ -43,3 +43,27 @@ Leselauf und zehn Öffnungen, weit unter den Grenzen 12 und 24 aus C6.4.
 Der Kommentar in Zeile 228 ist in jedem Fall zu berichtigen: er nennt zwei Marker, wo vier gelten.
 
 Gefunden bei der Durchsicht der Auslieferungsfassung, `reviews/260824-1655-ontorev-…`.
+
+---
+Resolved: Der Nutzer hat am 260824-1935 **beide** Zeilen gewählt, und beide stehen:
+`resources/default-readers.toml` führt im Profil „ein Defektspeicher" jetzt fünf Zeilen statt
+drei, nämlich „Datensätze" (`zaehlung = { muster = '\.md$' }`), „Offen", „Geschlossen",
+„Zurückgestellt" (`_d_`) und „Die jüngsten zehn". Begründung des Nutzers, die im Kommentarkopf
+des Profils steht: die Summe geht damit auf, und die Gesamtzahl fängt jeden künftigen Marker ab,
+den keine eigene Zeile führt.
+
+Der Kommentar in der vormaligen Zeile 228 ist berichtigt: er nennt jetzt alle vier Marker des
+Vokabulars (`_o_`, `_p_`, `_c_`, `_d_`) und sagt, warum `_p_` keine eigene Zeile bekommt.
+
+**Am Bestand dieser Werkbank nachgerechnet am 260824-1739**, mit `regex` 1.13.1 und den Mustern
+der geänderten Datei gegen die neunzehn Defektspeicher: 622 Datensätze, davon 178 offen, 440
+geschlossen, 4 zurückgestellt und 0 in Arbeit. 178 + 440 + 4 + 0 = 622, die Summe geht auf. Die
+Zahlen dieses Datensatzes sind seit dem 260824-1649 gewachsen, weil die Durchsicht selbst
+Datensätze angelegt hat; die Verteilung ist dieselbe.
+
+**Der Haushalt hält, und die Grenze im Rundenprofil ist unberührt.** Alle fünf Zeilen sind eine
+`zaehlung` oder eine `juengste` **ohne** `ordner`, benutzen also den einen ohnehin fälligen
+Leselauf. Gemessen nach der Änderung: der Defektspeicher steht bei **einem** Leselauf und **zehn**
+Öffnungen, unverändert gegen vorher und weit unter den Grenzen 12 und 24 aus C6.4. Die vier Zahlen
+der Probe `die_zwei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen` sind
+gleichgeblieben: das Rundenprofil bei (5, 11), die Wurzel bei (3, 5). `make check` grün, Exit 0.

@@ -34,3 +34,17 @@ Messung zu C6.7 in `crates/krk-core/tests/leseprofil.rs:2136-2139` prüft gegen 
 zehn `.md`-Verläufen und bleibt bei (5, 11).
 
 Gefunden bei der Durchsicht der Auslieferungsfassung, `reviews/260824-1655-ontorev-…`.
+
+---
+Resolved: Die Verlaufszeile des Rundenprofils trägt jetzt `muster = '\.md$'` wie die zwei anderen
+`juengste`-Zeilen der Datei und das Beispiel im Kommentarkopf.
+
+**Gemessen am 260824-1739** mit `regex` 1.13.1 über die achtzehn Rundenverzeichnisse: die Zahl der
+aufgenommenen Verläufe fällt von 151 auf 150, und der eine wegfallende Eintrag ist die `.gitkeep`
+in `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/history/`. Kein Eintrag ohne
+`.md` bleibt übrig.
+
+Der Haushalt ist unverändert, wie der Vorschlag es vorhergesagt hat: das Rundenprofil steht
+weiterhin bei fünf Leseläufen und elf Öffnungen, und
+`die_zwei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen` bleibt bei `(5, 11)` grün.
+`make check` grün, Exit 0.

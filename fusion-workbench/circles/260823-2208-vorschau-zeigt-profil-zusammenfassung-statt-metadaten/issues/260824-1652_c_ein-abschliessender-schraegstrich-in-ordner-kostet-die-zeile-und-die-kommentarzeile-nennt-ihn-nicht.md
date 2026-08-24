@@ -33,3 +33,15 @@ liest, findet den abschließenden Schrägstrich in der Aufzählung jedoch nicht 
 ein `..` sowie ein doppelter oder ein abschließender Schrägstrich werden abgewiesen."
 
 Gefunden bei der Durchsicht der Auslieferungsfassung, `reviews/260824-1655-ontorev-…`.
+
+---
+Resolved: Die Aufzählung in `resources/default-readers.toml:69-75` nennt jetzt alle fünf Formen,
+die `Ortsangabe::aus_angabe` abweist: einen absoluten Pfad, ein `.`, ein `..` sowie einen
+doppelten und einen abschließenden Schrägstrich. Der abschließende ist ausgeschrieben und mit dem
+Beispiel `ordner = "planning/"` belegt, samt dem Satz, dass er keine Verschreibung ist, sondern
+eine gewöhnliche Schreibgewohnheit, und die Zeile trotzdem ihren Baustein kostet.
+
+Gegengelesen an `crates/krk-core/src/leseprofil/mod.rs:345-359`: `aus_angabe` weist ab bei
+führendem `/` (`Ortsmangel::Absolut`), bei leerem Stück (`Ortsmangel::LeeresStueck`, also `a//b`
+**und** `planning/`) und bei `.` oder `..` (`Ortsmangel::Punktstueck`). Fünf Formen, drei
+Mangelarten, und die Aufzählung führt jetzt die Formen und nicht die Mangelarten.

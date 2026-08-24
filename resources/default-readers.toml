@@ -1,11 +1,11 @@
 # KRK — Auslieferungsfassung der Leseprofile
 #
-# Diese Datei ist die alleinige Quelle der ausgelieferten Leseprofile. Die
-# Ablage bindet sie über `include_str!` ein und legt
+# Diese Datei ist die alleinige Quelle der ausgelieferten Leseprofile. KRK
+# bindet sie über `include_str!` ein und legt
 # `~/Library/Application Support/KRK/readers.toml` beim ersten Start wörtlich
 # aus ihr an, samt dieser Kommentare. Danach schreibt KRK die Nutzerdatei nicht
-# mehr: sie ist neben `settings.toml` die zweite Datei der Ablage, die von Hand
-# gepflegt wird.
+# mehr: sie ist neben `settings.toml` die zweite Datei, die KRK nach ihrer
+# Anlage nie wieder überschreibt.
 #
 # Quelle: Spec `260824-0613_*_spec-vorschau-zeigt-profil-zusammenfassung-statt-
 # metadaten.md`, Fähigkeit C5. Bindend ist außerdem der Datensatz
@@ -16,8 +16,8 @@
 # Vorschaufenster sonst seine Metadaten, also Größe, Änderungsdatum, Rechte und
 # Typ. Trifft ein Profil auf diesen Ordner zu, stehen dort stattdessen die
 # Zeilen des Profils. Trifft keines zu, bleibt die Metadatenanzeige, wie sie
-# war. Die fünf Profile unten beschreiben die Ablage von fusion; wer mit fusion
-# nicht arbeitet, kann sie ersetzen und verliert nichts.
+# war. Die fünf Profile unten beschreiben die Werkbank von fusion; wer mit
+# fusion nicht arbeitet, kann sie ersetzen und verliert nichts.
 #
 # Geändert wird die Datei bei ausgeschaltetem KRK, oder die Änderung wirkt erst
 # beim nächsten Start: KRK liest sie einmal und beobachtet sie nicht.
@@ -67,10 +67,12 @@
 # noch einmal zu verdoppeln.
 #
 # Jeder Baustein darf `ordner` nennen, einen Unterordner des erkannten Ordners.
-# Ohne die Angabe ist der erkannte Ordner selbst gemeint. Ein absoluter Pfad,
-# ein `..` und ein doppelter Schrägstrich werden abgewiesen, und was aufgelöst
-# doch aus dem Ordner herausführt, ebenso: eine Zusammenfassung liest nie
-# außerhalb des Ordners, über den sie spricht.
+# Ohne die Angabe ist der erkannte Ordner selbst gemeint. Abgewiesen werden ein
+# absoluter Pfad, ein `.`, ein `..` sowie ein doppelter und ein ABSCHLIESSENDER
+# Schrägstrich: `ordner = "planning/"` ist keine Verschreibung, sondern eine
+# gewöhnliche Schreibgewohnheit, und kostet die Zeile trotzdem ihren Baustein.
+# Was aufgelöst doch aus dem Ordner herausführt, wird ebenso abgewiesen: eine
+# Zusammenfassung liest nie außerhalb des Ordners, über den sie spricht.
 
 # ----------------------------------------------------------------------------
 # Die vier Bausteine
@@ -98,12 +100,20 @@
 # trägt genau eine Fanggruppe. Wer eine Alternative gruppieren, aber nicht
 # fangen will, schreibt `(?:…)`.
 #
+# Passen mehrere Dateien auf `datei`, gewinnt die erste in der Lesereihenfolge,
+# und die gibt das Dateisystem vor: welche davon es wird, ist nicht zugesagt.
+# Ein `datei`-Muster gehört deshalb an beiden Enden verankert, wie die fünf
+# unten es sind.
+#
 #   [[profil.zeile]]
 #   beschriftung = "Fassung"
 #   feld = { datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
 #
 # `vorhandensein` — ob ein Eintrag das Muster erfüllt. Der Wert ist „ja" oder
-# „nein".
+# „nein". Es gibt einen dritten Ausgang: gibt es den genannten `ordner` nicht,
+# zeigt die Zeile ihren Platzhalter `--` und nicht „nein". „Der Ordner ist da
+# und enthält nichts Passendes" und „den Ordner gibt es nicht" sind zwei
+# verschiedene Auskünfte, und nur die erste heißt „nein".
 #
 #   [[profil.zeile]]
 #   beschriftung = "Spec"
@@ -168,6 +178,13 @@
 # Die Zeile „Sitzung" hängt an einer Zeilenform von `orchestrator-live.md`, die
 # fusion ändern kann. Ändert fusion sie, zeigt diese eine Zeile ihren
 # Platzhalter, und die sechs übrigen stimmen weiter.
+#
+# Ihr Muster nimmt die erste Zeile unter `## Current`, die etwas trägt. Es
+# überspringt dabei Leerzeilen, hält aber vor der nächsten Überschrift an: ist
+# der Abschnitt leer, steht der Platzhalter da und nicht der Name des nächsten
+# Abschnitts. Eine Zeile, die selbst mit `#` beginnt, gilt dabei als
+# Überschrift und wird nicht gelesen. Ein fehlendes Zeilenende am Dateiende
+# kostet den Wert nicht.
 [[profil]]
 name = "fusion-Werkbank: die Wurzel"
 kennzeichen = '^\.fusion-setup$'
@@ -190,7 +207,7 @@ kennzeichen = '^\.fusion-setup$'
 
   [[profil.zeile]]
   beschriftung = "Sitzung"
-  feld = { datei = '^orchestrator-live\.md$', feldmuster = '(?s)## Current\n\s*(.+?)\n' }
+  feld = { datei = '^orchestrator-live\.md$', feldmuster = '## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
 
   [[profil.zeile]]
   beschriftung = "Runden"
@@ -202,9 +219,13 @@ kennzeichen = '^\.fusion-setup$'
 
 # Ein Speicher, gemeinsam oder in einer Runde.
 #
-# Ein Profil für achtzehn Orte: die neun Speicher unter `shared/` und dieselben
-# neun in jeder Runde. Der Defektspeicher steht darunter als eigenes Profil,
-# weil er zwei Zählungen trägt und nicht eine.
+# Ein Profil für die neun Speichernamen unter `shared/` und die fünf, die
+# daneben in jeder Runde stehen. Vier der neun — `backlog`, `consult`,
+# `investigations` und `memos` — gibt es nach den Konventionen der Werkbank
+# allein unter `shared/`; sie stehen in der Aufzählung, weil das Muster für
+# beide Orte dasselbe ist. Wie viele Ordner das trifft, sagt der Bestand und
+# nicht diese Zeile: die Zahl wächst mit jeder Runde. Der Defektspeicher steht
+# darunter als eigenes Profil, weil er nach Markern aufschlüsselt.
 #
 # Der Entscheidungsspeicher `decisions` steht in derselben Aufzählung und trägt
 # damit dieselben zwei Zeilen wie ein Analysespeicher, obwohl seine fünf Marker
@@ -225,10 +246,22 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|decisi
 
 # Ein Defektspeicher, gemeinsam oder in einer Runde.
 #
-# Der Marker im Dateinamen trägt den Stand: `_o_` offen, `_c_` geschlossen.
+# Der Marker im Dateinamen trägt den Stand, und das Vokabular der Werkbank hat
+# vier davon: `_o_` offen, `_p_` in Arbeit, `_c_` geschlossen, `_d_`
+# zurückgestellt.
+#
+# Drei der vier bekommen eine eigene Zeile. `_p_` bekommt keine: er steht nur,
+# solange gerade jemand an dem Datensatz arbeitet. Damit er trotzdem nicht
+# unsichtbar bleibt, führt die erste Zeile die Gesamtzahl — die Summe der drei
+# Zeilen darunter geht gegen sie auf, und jeder Marker, den keine eigene Zeile
+# führt, wird als Differenz sichtbar.
 [[profil]]
 name = "fusion-Werkbank: ein Defektspeicher"
 pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
+
+  [[profil.zeile]]
+  beschriftung = "Datensätze"
+  zaehlung = { muster = '\.md$' }
 
   [[profil.zeile]]
   beschriftung = "Offen"
@@ -237,6 +270,10 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
   [[profil.zeile]]
   beschriftung = "Geschlossen"
   zaehlung = { muster = '_c_.*\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Zurückgestellt"
+  zaehlung = { muster = '_d_.*\.md$' }
 
   [[profil.zeile]]
   beschriftung = "Die jüngsten zehn"
@@ -301,4 +338,4 @@ kennzeichen = '^_._circle\.md$'
 
   [[profil.zeile]]
   beschriftung = "Die jüngsten zehn Verläufe"
-  juengste = { ordner = "history", anzahl = 10 }
+  juengste = { ordner = "history", muster = '\.md$', anzahl = 10 }

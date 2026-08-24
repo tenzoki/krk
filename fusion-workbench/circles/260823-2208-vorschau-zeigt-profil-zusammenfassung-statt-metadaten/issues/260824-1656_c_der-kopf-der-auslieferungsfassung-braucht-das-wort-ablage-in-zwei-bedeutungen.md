@@ -41,3 +41,16 @@ Zeile 7 die Definition mitliefern, statt sie vorauszusetzen: „sie ist neben `s
 zweite Datei, die KRK nach ihrer Anlage nie wieder überschreibt".
 
 Gefunden bei der Durchsicht der Auslieferungsfassung, `reviews/260824-1655-ontorev-…`.
+
+---
+Resolved: Das Wort „Ablage" steht im Kopf der Datei jetzt gar nicht mehr, statt in zwei
+Bedeutungen. Der Datensatz schlug für Zeile 19 „die Werkbank von fusion" vor; das ist übernommen.
+Die zweite Bedeutung, KRKs Bestandsort in Zeile 4, ist über die Vorlage hinaus mitgeräumt worden:
+aus „Die Ablage bindet sie über `include_str!` ein" ist „KRK bindet sie über `include_str!` ein"
+geworden. Der Begriff war für den Leser dieser Datei auch allein nicht selbsterklärend, und der
+Pfad `~/Library/Application Support/KRK/readers.toml` in der Zeile darunter sagt ohnehin, wo die
+Ablage liegt.
+
+Zeile 7 liefert die Definition jetzt mit, statt sie vorauszusetzen: „sie ist neben `settings.toml`
+die zweite Datei, die KRK nach ihrer Anlage nie wieder überschreibt." Damit fällt die Lesart weg,
+unter der `keymap.toml` als Gegenbeispiel zählte.

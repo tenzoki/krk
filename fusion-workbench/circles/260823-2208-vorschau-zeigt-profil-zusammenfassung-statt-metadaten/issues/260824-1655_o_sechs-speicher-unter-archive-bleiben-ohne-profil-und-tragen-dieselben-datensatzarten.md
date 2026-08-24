@@ -44,3 +44,28 @@ herausgeräumt wurden.
 unberührt, C6.7 ebenso.
 
 Gefunden bei der Durchsicht der Auslieferungsfassung, `reviews/260824-1655-ontorev-…`.
+
+---
+**Angesehen am 260824-1739 beim Räumen der acht Befunde, und offen gelassen.** Der Datensatz stellt
+selbst fest, dass die Frage eine Entscheidung ist und kein Mangel; die Erkennung ist deshalb
+unverändert geblieben. Nachgemessen gegen alle 154 Verzeichnisse unter `fusion-workbench/`: es sind
+weiter dieselben 16 ohne Profil und dieselben sechs Speicher darunter. Die übrigen sieben Befunde
+der Durchsicht sind geräumt und berühren diesen nicht.
+
+**Ein drittes Stück Grundlage, das dieser Datensatz noch nicht trägt, und es steht auf der Seite
+des Nichtstuns.** Die zweite der zwei Zeilen des Speicherprofils ist „Die jüngsten zehn". In einem
+archivierten Speicher ist das Änderungsdatum das des Archivlaufs und nicht das der Arbeit:
+gemessen am 260824-1739 tragen die 51 Dateien in
+`archive/260819-1613-safe-cleanup-tier-1/shared/issues` zusammen **fünf** verschiedene
+Änderungszeiten, die 14 in `…/shared/decisions` ebenfalls fünf. Die Zeile wählte dort zehn von 51
+über einen Schlüssel, der sie in fünf Gruppen teilt; welche zehn, entschiede der Namensvergleich,
+der allein für die Bestimmtheit der Reihenfolge dasteht. Die Hälfte der Auskunft eines
+Speicherprofils ist an einem eingefrorenen Bestand also keine Auskunft. Die andere Hälfte, die
+Zahl der Datensätze, wäre eine.
+
+Damit stehen sich gegenüber: eine Zeile, die dort trägt, und eine, die dort nur so aussieht. Wer
+die sechs Ordner aufnehmen will, bekommt beide, denn das Pfadmuster wählt das ganze Profil. Ein
+eigenes Profil für den Archivspeicher, das allein zählt, wäre der dritte Weg und kostete einen
+sechsten `[[profil]]`-Block.
+
+Die Frage bleibt beim Nutzer.

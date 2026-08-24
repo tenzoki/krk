@@ -40,3 +40,20 @@ verankern ist; bei `vorhandensein` ein dritter Ausgang, „gibt es den genannten
 zeigt die Zeile ihren Platzhalter und nicht „nein"".
 
 Gefunden bei der Durchsicht der Auslieferungsfassung, `reviews/260824-1655-ontorev-…`.
+
+---
+Resolved: Beide Bausteinbeschreibungen tragen jetzt, was der Baustein tut.
+
+Bei `feld` (`resources/default-readers.toml:103-106`) steht der Absatz: passen mehrere Dateien auf
+`datei`, gewinnt die erste in der Lesereihenfolge, die das Dateisystem vorgibt, und welche davon es
+wird, ist nicht zugesagt; ein `datei`-Muster gehört deshalb an beiden Enden verankert, wie die fünf
+ausgelieferten es sind.
+
+Bei `vorhandensein` (`:112-116`) steht der dritte Ausgang: gibt es den genannten `ordner` nicht,
+zeigt die Zeile ihren Platzhalter `--` und nicht „nein", denn „der Ordner ist da und enthält nichts
+Passendes" und „den Ordner gibt es nicht" sind zwei verschiedene Auskünfte.
+
+Am 260824-1739 nachgerechnet: die fünf `datei`-Muster der Auslieferungsfassung sind unverändert an
+beiden Enden verankert, und über die achtzehn Rundenverzeichnisse tritt der dritte Ausgang weiter
+nirgends ein — „Spec" 8 zu 10, „Plan" 14 zu 4, kein Platzhalter. Der Fall bleibt latent, und der
+Satz, der den Nutzer davor bewahrt, steht jetzt in der Datei, die er liest.
