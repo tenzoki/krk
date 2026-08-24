@@ -7,15 +7,18 @@
 //! in [`datei`]; hier stehen die **geprueften** Werte, mit denen die Auswertung
 //! danach arbeitet, und die Werte, die sie liefert. Welches Profil ein
 //! ausgewaehlter Ordner bekommt, entscheidet [`erkennung`] in zwei
-//! Durchgaengen.
+//! Durchgaengen; was seine Zeilen dort ergeben, rechnet [`bausteine`] innerhalb
+//! des [`Haushalt`]s, dessen Zahlen weiter unten als Konstanten stehen.
 //!
 //! ```text
 //! readers.toml ──serde──> datei::Profildatei ──datei::pruefen──> Profile
 //!                                                                   │
 //!                            ausgewaehlter Ordner ──erkennung───────┘
 //!                                                   │
+//!                                    bausteine::zusammenfassen
+//!                                                   │
 //!                                                   v
-//!                                            Zusammenfassung
+//!                                     Zusammenfassung ──als_text──> Vorschau
 //! ```
 //!
 //! # Warum die Auswertung im Kern liegt und nicht in `krk-ui`
@@ -82,8 +85,11 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
+pub mod bausteine;
 pub mod datei;
 pub mod erkennung;
+
+pub use bausteine::zusammenfassen;
 
 // ---------------------------------------------------------------------------
 // Die Zahlen des Haushalts
@@ -414,7 +420,54 @@ impl Zusammenfassung {
     pub fn zeilen(&self) -> &[Zusammenfassungszeile] {
         &self.zeilen
     }
+
+    /// Die Zusammenfassung als anzuzeigender Text (C4.2, C4.3).
+    ///
+    /// Eine reine Funktion, und die **eine** Stelle, an der aus den Werten
+    /// Zeilen werden. `Name:` und `Pfad:` stehen oben wie in der
+    /// Metadatenanzeige (Festlegung A6); darunter steht je Profilzeile eine
+    /// Zeile aus Beschriftung und Wert.
+    ///
+    /// **Wann ein Wert unter seine Beschriftung rutscht**, ist eine
+    /// vollstaendige und ueberschneidungsfreie Unterscheidung mit zwei Fragen:
+    /// [`Wert::Titel`] steht immer darunter, weil C4.3 einen Block aus bis zu N
+    /// Zeilen verlangt, und jeder andere Wert genau dann, wenn er selbst mehr
+    /// als eine Zeile traegt. Das zweite ist kein Sonderfall, sondern die Folge
+    /// von C3.9: der Feldbaustein greift einen ganzen Absatz, und einer der
+    /// Circle-Datensaetze dieser Werkbank traegt seine Directive auf vier
+    /// Zeilen. Hinter der Beschriftung stehend liefe er in die naechste
+    /// Beschriftung hinein.
+    ///
+    /// Der Weg an die Flaeche geht danach durch `text_zeigen` wie jeder andere
+    /// Text der Vorschau; damit gilt die Auswaehlbarkeit aus der Runde 14
+    /// unveraendert weiter (C4.6).
+    #[must_use = "der Text ist das Ergebnis; wer ihn fallen laesst, zeigt nichts an"]
+    pub fn als_text(&self) -> String {
+        let mut ausgabe = format!("Name: {}\nPfad: {}", self.name, self.pfad.display());
+        for zeile in &self.zeilen {
+            let wert = zeile.wert().als_text();
+            if matches!(zeile.wert(), Wert::Titel(_)) || wert.contains('\n') {
+                ausgabe.push_str(&format!("\n{}:", zeile.beschriftung()));
+                for teilzeile in wert.lines() {
+                    ausgabe.push_str(&format!("\n{EINRUECKUNG}{teilzeile}"));
+                }
+            } else {
+                ausgabe.push_str(&format!("\n{}: {wert}", zeile.beschriftung()));
+            }
+        }
+        ausgabe
+    }
 }
+
+/// Was an der Stelle eines Wertes steht, ueber den nichts zu sagen ist (C3.12).
+///
+/// Kein neues Zeichen: die Metadatenanzeige schreibt es seit der Runde 1 in die
+/// Groessenzeile eines Ordners, und es heisst dort schon „darueber ist nichts
+/// zu sagen".
+pub const PLATZHALTER: &str = "--";
+
+/// Womit die Zeilen eines Blocks unter ihrer Beschriftung einruecken.
+const EINRUECKUNG: &str = "    ";
 
 /// Eine Zeile der fertigen Zusammenfassung.
 ///
@@ -480,6 +533,28 @@ pub enum Wert {
     Nicht,
 }
 
+impl Wert {
+    /// Der Wert als Text, ohne seine Beschriftung.
+    ///
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
+    /// Der Satz zu [`Wert::UeberGrenze`] entsteht aus der Zahl, die der Wert
+    /// traegt, und nicht aus einer zweiten Zahl im Text; dieselbe Regel, nach
+    /// der `vorschaumodell::zu_gross_text` seine Grenze aus der Konstanten
+    /// bildet.
+    #[must_use]
+    pub fn als_text(&self) -> String {
+        match self {
+            Wert::Zahl(zahl) => zahl.to_string(),
+            Wert::UeberGrenze(gezaehlt) => format!("über {gezaehlt}"),
+            Wert::Vorhanden(true) => "ja".to_owned(),
+            Wert::Vorhanden(false) => "nein".to_owned(),
+            Wert::Text(text) => text.clone(),
+            Wert::Titel(titel) => titel.join("\n"),
+            Wert::Nicht => PLATZHALTER.to_owned(),
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Der Haushalt
 // ---------------------------------------------------------------------------
@@ -516,13 +591,27 @@ impl Haushalt {
         true
     }
 
-    /// Bucht eine Dateioeffnung und sagt, ob sie noch im Haushalt lag.
+    /// Bucht `wie_viele` Dateioeffnungen und sagt, ob sie noch im Haushalt
+    /// lagen.
+    ///
+    /// **Ganz oder gar nicht**, und darin liegt der Grund fuer die Zahl im
+    /// Argument: der Baustein „juengste N" braucht N Oeffnungen fuer **eine**
+    /// Antwort, und passt die letzte nicht mehr hinein, ist die halbe Antwort
+    /// keine. Einzeln gebucht haette er die ersten Oeffnungen verbraucht und
+    /// den Wert am Ende doch fallen lassen, und die verbrauchten fehlten den
+    /// Zeilen darunter.
+    ///
+    /// `false` heisst wie bei [`Haushalt::leselauf_nehmen`]: es hat nicht
+    /// stattgefunden, und der Zaehler bleibt stehen.
     #[must_use = "wer nicht hinsieht, oeffnet ueber die Grenze hinaus"]
-    pub fn oeffnung_nehmen(&mut self) -> bool {
-        if self.oeffnungen >= HOECHSTENS_OEFFNUNGEN {
+    pub fn oeffnungen_nehmen(&mut self, wie_viele: u32) -> bool {
+        let Some(danach) = self.oeffnungen.checked_add(wie_viele) else {
+            return false;
+        };
+        if danach > HOECHSTENS_OEFFNUNGEN {
             return false;
         }
-        self.oeffnungen += 1;
+        self.oeffnungen = danach;
         true
     }
 

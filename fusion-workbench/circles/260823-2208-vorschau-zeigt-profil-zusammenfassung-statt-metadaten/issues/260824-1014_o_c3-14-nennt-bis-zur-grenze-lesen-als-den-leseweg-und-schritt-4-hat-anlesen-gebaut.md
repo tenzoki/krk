@@ -71,3 +71,9 @@ Fassung, die am Ende der Runde als „nicht eingelöst" abzuhaken wäre, obwohl 
 `crates/krk-core/src/text/datei.rs`
 
 **Domain:** code
+
+---
+Also seen: 260824-1130 by coder — Schritt 6 ist gebaut und ruft `text::datei::anlesen` in
+`leseprofil::bausteine::angelesener_text`, dem einen Leseweg der Bausteine. Punkt 3 der Liste
+oben ist damit entschieden: `bis_zur_grenze_lesen` hat in der Zusammenfassung keinen Rufer, und
+C3.14 nennt in ihrer heutigen Fassung eine Funktion, die die Runde nicht benutzt.

@@ -40,3 +40,13 @@ Die Meldung des Ausfallzweigs behauptet eine Ursache, die die Probe nicht misst:
 1. **Den Ausfallzweig um die beiden Zähler `gelaufen` und `getauscht` ergänzen.** Ohne sie ist im Ausfall nicht zu sehen, wie weit die Fäden gekommen sind, und die verbleibende Frage bleibt unentscheidbar. Ohne Abwägung richtig.
 2. **Die Meldung berichtigen:** sie darf sagen, dass in der gesetzten Zeit nichts zurückkam, und die benannte Röhre als **eine** mögliche Ursache nennen. Wer die heutige Meldung liest, sucht am `O_NONBLOCK`-Pfad in `crates/krk-core/src/verzeichnis/sys.rs`, und dort ist nach heutigem Stand nichts.
 3. **Erst danach über die Marge entscheiden.** Die Abwägung gehört dem Nutzer: eine höhere Schranke macht den Ausfall seltener und den Abnahmelauf im Fehlerfall länger; weniger Durchläufe schwächen die Aussage über das Wettrennen; ein `#[ignore]` nähme die Probe aus dem Abnahmelauf. Eine vierte Möglichkeit ist, die Schranke an der gemessenen Dauer des Laufs zu bemessen statt an einer festen Zahl.
+
+---
+Also seen: 260824-1130 by coder — auf diesem Gerät laufen seit dem 15. und dem 16.08. **22
+verwaiste Endlosschleifen** aus zwei früheren Sitzungen, je bei rund 65 Prozent einer Kerns,
+gefunden mit `ps -Ao pid,pcpu,etime,command | awk '$3>30'`. Es sind die Lastschleifen zweier
+Lastproben (`for i in $(seq 1 12); do (while :; do :; done) & done`), deren abschließendes
+`kill $(jobs -p)` nie gelaufen ist. Die Lastdurchschnitte stehen dadurch bei 35 bis 40 auf 16
+Kernen, und ein `make check` braucht statt einer Minute über zehn. Wer Lastabhängigkeit an
+diesem Gerät misst, misst bis auf Weiteres gegen diese Grundlast mit; die Prozesse sind mit
+`kill` zu beenden, und die Entscheidung darüber gehört dem Nutzer.

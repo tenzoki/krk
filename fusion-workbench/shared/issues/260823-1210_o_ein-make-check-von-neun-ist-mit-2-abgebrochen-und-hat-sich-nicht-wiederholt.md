@@ -62,3 +62,13 @@ ohne Befund. Der Datensatz bleibt offen, und zwar unverändert aus dem Grund, de
 ein einzelner roter Lauf ohne erhaltene Ausgabe ist nicht diagnostizierbar, und ein weiterer
 grüner Lauf entkräftet ihn nicht, er verschiebt nur die Häufigkeit. Zu tun bleibt das, was unter
 „Was zu tun wäre" steht: den nächsten roten Lauf mit seiner Ausgabe festhalten.
+
+---
+Also seen: 260824-1130 by coder — auf diesem Gerät laufen seit dem 15. und dem 16.08. **22
+verwaiste Endlosschleifen** aus zwei früheren Sitzungen, je bei rund 65 Prozent einer Kerns,
+gefunden mit `ps -Ao pid,pcpu,etime,command | awk '$3>30'`. Es sind die Lastschleifen zweier
+Lastproben (`for i in $(seq 1 12); do (while :; do :; done) & done`), deren abschließendes
+`kill $(jobs -p)` nie gelaufen ist. Die Lastdurchschnitte stehen dadurch bei 35 bis 40 auf 16
+Kernen, und ein `make check` braucht statt einer Minute über zehn. Wer Lastabhängigkeit an
+diesem Gerät misst, misst bis auf Weiteres gegen diese Grundlast mit; die Prozesse sind mit
+`kill` zu beenden, und die Entscheidung darüber gehört dem Nutzer.
