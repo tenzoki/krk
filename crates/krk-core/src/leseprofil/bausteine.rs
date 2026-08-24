@@ -136,17 +136,32 @@ use super::{
 #[must_use = "die Zusammenfassung ist das Ergebnis des ganzen Lesens; wer sie \
               fallen laesst, hat den Ordner umsonst gelesen"]
 pub fn zusammenfassen(profile: &Profile, ordner: &Path) -> Option<Zusammenfassung> {
-    gezaehlt(profile, ordner).map(|(zusammenfassung, _)| zusammenfassung)
+    zusammenfassen_gezaehlt(profile, ordner).map(|(zusammenfassung, _)| zusammenfassung)
 }
 
 /// Wie [`zusammenfassen`], aber mit dem verbrauchten [`Haushalt`] daneben.
 ///
 /// Der Einstieg ist an dieser Naht geteilt, damit die Zaehlproben zu C6 den
 /// Haushalt eines Laufs auslesen koennen, statt eine zweite Zaehlstelle neben
-/// die eine zu stellen, die es ohnehin gibt. Sie erreichen ihn erst, wenn
-/// diese Fassung dafuer geoeffnet wird; bis dahin ist sie der Rumpf von
-/// [`zusammenfassen`] und sonst nichts.
-fn gezaehlt(profile: &Profile, ordner: &Path) -> Option<(Zusammenfassung, Haushalt)> {
+/// die eine zu stellen, die es ohnehin gibt. **Gemessen wird damit derselbe
+/// Lauf, den die Vorschau faehrt**, und nicht ein zweiter daneben:
+/// [`zusammenfassen`] ist diese Funktion ohne ihre zweite Haelfte und hat
+/// keinen eigenen Rumpf mehr.
+///
+/// Das ist die Antwort auf C6.8, die verlangt, dass die Zahlen aus C6.1 bis
+/// C6.7 durch Proben belegt sind, die **Aufrufe** zaehlen und keine
+/// Millisekunden. Eine Probe, die Leselaeufe und Oeffnungen selbst mitzaehlte,
+/// zaehlte, was sie erwartet, und nicht, was geschieht.
+///
+/// **Die Anzeige ruft sie nicht.** Sie hat mit dem verbrauchten Haushalt
+/// nichts zu tun; fuer sie ist [`zusammenfassen`] da, das die zweite Haelfte
+/// des Paares fallen laesst.
+#[must_use = "das Paar ist das Ergebnis des ganzen Lesens; wer es fallen laesst, hat \
+              den Ordner umsonst gelesen"]
+pub fn zusammenfassen_gezaehlt(
+    profile: &Profile,
+    ordner: &Path,
+) -> Option<(Zusammenfassung, Haushalt)> {
     let wurzel = std::fs::canonicalize(ordner).ok()?;
     // C2.6, am aufgeloesten Pfad und nicht am ausgewaehlten: eine Verknuepfung
     // auf eine Datei ist eine Datei. Der Aufruf kostet einen Systemaufruf je

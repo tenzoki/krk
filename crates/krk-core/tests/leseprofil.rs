@@ -13,7 +13,17 @@
 //! - **Gegen einen Pruefordner** in der Gestalt einer Werkbank: die vier
 //!   Bausteine (C3.1 bis C3.13) und die eine Regel ueber die Teillesung.
 //!
-//! Die Zaehlproben zu C6 kommen mit Schritt 12 hinzu.
+//! - **Zaehlend, gegen den Haushalt eines Laufs**: die neun Kriterien aus C6
+//!   und die eine Haelfte von C2.8, die ohne Fenster zu belegen ist. Sie lesen
+//!   [`krk_core::leseprofil::Haushalt`] **nach** dem Lauf aus, statt eine
+//!   zweite Zaehlstelle neben die eine zu stellen, die der Lauf ohnehin
+//!   fuehrt; C6.8 verlangt gezaehlte Aufrufe und keine Millisekunden.
+//!
+//! Zwei der neun stehen nicht in dieser Reihe, weil sie schon woanders belegt
+//! sind und eine zweite Probe dieselbe Frage ein zweites Mal stellte: C6.3
+//! haengt an
+//! [`eine_anzahl_ueber_der_grenze_wird_gekappt_und_nicht_abgewiesen`], C6.5 an
+//! [`eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet`].
 //!
 //! # Warum die Zahlen dieser Werkbank in keiner Probe stehen
 //!
@@ -38,15 +48,17 @@ use std::fs::FileTimes;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use krk_core::ablage::leseprofile::AUSLIEFERUNGSTEXT;
 use krk_core::leseprofil::datei::{Profildatei, pruefen};
 use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{
-    Baustein, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE, Profile, Wert, Zusammenfassung,
-    Zusammenfassungszeile, zusammenfassen,
+    Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE, HOECHSTENS_LESELAEUFE,
+    HOECHSTENS_OEFFNUNGEN, Haushalt, Profile, Wert, Zusammenfassung, Zusammenfassungszeile,
+    zusammenfassen, zusammenfassen_gezaehlt,
 };
 use krk_core::verzeichnis::{Eintrag, Typ};
 
-use gemeinsam::Pruefordner;
+use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze};
 
 mod gemeinsam;
 
@@ -936,9 +948,23 @@ fn geaendert_setzen(pfad: &Path, seit_epoche: u64) {
 
 /// Die Zusammenfassung eines Ordners gegen ein von Hand geschriebenes Profil.
 fn zusammengefasst(text: &str, ordner: &Path) -> Zusammenfassung {
+    gezaehlt(text, ordner).0
+}
+
+/// Dieselbe Zusammenfassung, mit dem verbrauchten [`Haushalt`] daneben.
+///
+/// **Der Haushalt ist der Zaehler, den der Lauf ohnehin fuehrt**, und C6.8
+/// verlangt genau das: die Zahlen aus C6.1 bis C6.7 sind gezaehlte Aufrufe und
+/// keine Millisekunden. Eine Probe, die selbst mitzaehlte — etwa ueber die
+/// Zahl der Ordner, die sie angelegt hat —, zaehlte ihre eigene Erwartung und
+/// nicht den Lauf.
+///
+/// Die zwei Einstiege sind kein zweiter Rechenweg: `zusammenfassen` ist
+/// `zusammenfassen_gezaehlt` ohne die zweite Haelfte seines Paares.
+fn gezaehlt(text: &str, ordner: &Path) -> (Zusammenfassung, Haushalt) {
     let (profile, meldungen) = gepruefte(text);
     assert!(meldungen.is_empty(), "unerwartete Meldungen: {meldungen:?}");
-    zusammenfassen(&profile, ordner).expect("kein Profil greift auf den Pruefordner")
+    zusammenfassen_gezaehlt(&profile, ordner).expect("kein Profil greift auf den Pruefordner")
 }
 
 /// Die Werte der Zusammenfassung, zu ihren Beschriftungen.
@@ -1421,5 +1447,1007 @@ kennzeichen = '^\.fusion-nicht-da$'
     assert!(
         zusammenfassen(&profile, &ordner.unter("gibt-es-nicht")).is_none(),
         "ein Ordner, der sich nicht aufloesen laesst, liefert keine Zusammenfassung"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Die abzaehlbaren Grenzen aus C6, gezaehlt am Haushalt eines Laufs
+// ---------------------------------------------------------------------------
+
+/// Ein Circle-Verzeichnis in der Gestalt dieser Werkbank, mit vollem Bestand.
+///
+/// Der Unterschied zu [`werkbankgestalt`] ist zweierlei, und beides braucht die
+/// Messung zu C6.7. **Hier steht keine `.fusion-setup`**: das erste
+/// mitgelieferte Profil erkennt die Wurzel der Werkbank daran, und in einem
+/// Ordner mit beidem gewaenne es den zweiten Erkennungsdurchgang, sodass die
+/// Messung das falsche Profil naehme. Und `history` traegt **zwoelf** Dateien
+/// statt vier, damit der Baustein „juengste zehn" seine zehn Oeffnungen
+/// wirklich braucht; mit vier Dateien maesse die Probe vier und nicht die
+/// Zusage.
+fn runde(zweck: &str) -> Pruefordner {
+    let ordner = Pruefordner::neu(zweck);
+
+    ordner.datei(
+        "_t_circle.md",
+        "# Circle: eine Runde\n\n## Directive\n\nDas Vorschaufenster beantwortet, was an einem Ort liegt.\n\n## Grounding\n",
+    );
+
+    let planning = ordner.ordner("planning");
+    schreiben(&planning, "260824-0613_o_spec-vorschau.md", "# Spec\n");
+    schreiben(&planning, "260824-0640_o_plan-vorschau.md", "# Plan\n");
+
+    let decisions = ordner.ordner("decisions");
+    for nummer in 0..3 {
+        schreiben(
+            &decisions,
+            &format!("260824-06{nummer:02}_a_eine-frage.md"),
+            "# Eine Frage?\n",
+        );
+    }
+
+    let history = ordner.ordner("history");
+    for nummer in 0..12 {
+        let pfad = schreiben(
+            &history,
+            &format!("260824-{nummer:02}00-ein-verlauf.md"),
+            &format!("# Verlauf {nummer}\n"),
+        );
+        geaendert_setzen(&pfad, 1_700_000_000 + nummer as u64 * 60);
+    }
+
+    ordner
+}
+
+/// Die Wurzel einer Werkbank in der Gestalt, die das erste mitgelieferte
+/// Profil erwartet.
+fn werkbankwurzel(zweck: &str) -> Pruefordner {
+    let ordner = Pruefordner::neu(zweck);
+
+    ordner.datei(
+        ".fusion-setup",
+        r#"{"setup_at":"260801-0900","setup_pwd":"/Users/k/krk","plugin_version":"5.3.1"}"#,
+    );
+    ordner.datei(".active-circle", "circles/260823-2208-vorschau\n");
+    ordner.datei(
+        "orchestrator-live.md",
+        "# Live\n\n## Current\n\nSchritt 12, die Zaehlproben\n\n## Next\n",
+    );
+
+    let circles = ordner.ordner("circles");
+    for nummer in 0..3 {
+        std::fs::create_dir_all(circles.join(format!("2608{nummer:02}-eine-runde")))
+            .expect("das Circle-Verzeichnis laesst sich nicht anlegen");
+    }
+
+    let issues = ordner.ordner("shared/issues");
+    schreiben(&issues, "260824-0955_o_ein offener.md", "ein offener\n");
+    schreiben(
+        &issues,
+        "260824-1014_o_ein zweiter offener.md",
+        "noch einer\n",
+    );
+    schreiben(&issues, "260824-0600_c_ein geschlossener.md", "erledigt\n");
+
+    ordner
+}
+
+/// Die geprueften Profile der eingebetteten Auslieferungsfassung.
+///
+/// **Gemessen wird gegen `resources/default-readers.toml` und nicht gegen ein
+/// nachgebautes Profil im Quelltext der Probe.** C6.7 spricht ueber die
+/// mitgelieferten Profile; ein Nachbau maesse, was die Probe schreibt, und
+/// bliebe gruen, wenn jemand der Auslieferungsfassung eine Zeile hinzufuegt.
+fn ausgelieferte() -> Profile {
+    let (profile, meldungen) = gepruefte(AUSLIEFERUNGSTEXT);
+    assert!(
+        meldungen.is_empty(),
+        "die Auslieferungsfassung wird beanstandet: {meldungen:?}"
+    );
+    assert_eq!(profile.zahl(), 5, "es sind nicht die fuenf Profile");
+    profile
+}
+
+/// C6.1: Ein Baustein kostet hoechstens einen Leselauf, und im erkannten Ordner
+/// keinen eigenen.
+///
+/// **Das ist die am 260824-1224 berichtigte Fassung des Kriteriums**
+/// (`issues/260824-0634_*_c6-1-sagt-der-feldbaustein-lese-kein-verzeichnis-…`).
+/// „Der Feldbaustein loest keinen Leselauf aus" war in dieser Allgemeinheit
+/// falsch: wer eine Datei ueber ein Muster auf ihrem Namen benennt, liest damit
+/// das Verzeichnis, in dem sie liegt. Was gilt, steht in den zwei letzten
+/// Zeilen der Tabelle: im erkannten Ordner kostet er nichts, weil er die eine
+/// Lesung benutzt, die es dort ohnehin gibt; in einem Unterordner kostet er
+/// genau einen.
+///
+/// **Der Erkennungslauf steckt in jeder Zahl**, denn er ist ein Leselauf dieser
+/// Zusammenfassung und keiner daneben; das Profil hier findet seinen Ort ueber
+/// eine Kennzeichendatei und braucht die Eintraege des erkannten Ordners
+/// deshalb schon vor der ersten Zeile.
+///
+/// Ohne diese Probe stuende die Zusage allein im Modulkopf von
+/// `leseprofil::bausteine`. Ein weggefallener gemeinsamer Leselauf bliebe dann
+/// unbemerkt, bis jemand die Vorschau am laufenden Buendel langsam findet — und
+/// dort ist sie nicht mehr abzuzaehlen, sondern nur noch zu spueren.
+#[test]
+fn ein_baustein_kostet_hoechstens_einen_leselauf_und_im_erkannten_ordner_keinen() {
+    let ordner = werkbankgestalt("leselaeufe-je-baustein");
+
+    let faelle: [(&str, &str, u32); 11] = [
+        ("kein Baustein, nur die Erkennung", "", 1),
+        (
+            "Zaehlung im erkannten Ordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Eintraege"
+  zaehlung = { }
+"#,
+            1,
+        ),
+        (
+            "Zaehlung in einem Unterordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions" }
+"#,
+            2,
+        ),
+        (
+            "juengste im erkannten Ordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Die juengsten drei"
+  juengste = { anzahl = 3 }
+"#,
+            1,
+        ),
+        (
+            "juengste in einem Unterordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Die juengsten drei"
+  juengste = { ordner = "history", anzahl = 3 }
+"#,
+            2,
+        ),
+        (
+            "Feld im erkannten Ordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Directive"
+  feld = { datei = '^_._circle\.md$', feldmuster = '^# (.+)' }
+"#,
+            1,
+        ),
+        (
+            "Feld in einem Unterordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Spec"
+  feld = { ordner = "planning", datei = '_o_spec-', feldmuster = '^# (.+)' }
+"#,
+            2,
+        ),
+        (
+            "Vorhandensein im erkannten Ordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Aktiv"
+  vorhandensein = { muster = '^_t_circle\.md$' }
+"#,
+            1,
+        ),
+        (
+            "Vorhandensein in einem Unterordner",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Plan"
+  vorhandensein = { ordner = "planning", muster = '_._plan-' }
+"#,
+            2,
+        ),
+        (
+            "alle vier im erkannten Ordner teilen sich eine Lesung",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Eintraege"
+  zaehlung = { }
+
+  [[profil.zeile]]
+  beschriftung = "Die juengsten drei"
+  juengste = { anzahl = 3 }
+
+  [[profil.zeile]]
+  beschriftung = "Directive"
+  feld = { datei = '^_._circle\.md$', feldmuster = '^# (.+)' }
+
+  [[profil.zeile]]
+  beschriftung = "Aktiv"
+  vorhandensein = { muster = '^_t_circle\.md$' }
+"#,
+            1,
+        ),
+        (
+            "zwei Bausteine auf demselben Unterordner lesen ihn zweimal",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Spec"
+  vorhandensein = { ordner = "planning", muster = '_._spec-' }
+
+  [[profil.zeile]]
+  beschriftung = "Plan"
+  vorhandensein = { ordner = "planning", muster = '_._plan-' }
+"#,
+            3,
+        ),
+    ];
+
+    for (fall, zeilen, erwartet) in faelle {
+        let (_, haushalt) = gezaehlt(&circleprofil(zeilen), ordner.pfad());
+        assert_eq!(
+            haushalt.leselaeufe(),
+            erwartet,
+            "{fall}: {} Leselaeufe statt {erwartet}",
+            haushalt.leselaeufe()
+        );
+    }
+}
+
+/// C6.1, die zweite Haelfte: der eine Leselauf faellt erst an, wenn ihn jemand
+/// braucht.
+///
+/// Trifft ein **Pfadmuster**, kostet die Erkennung nichts, denn sie sieht allein
+/// auf den Pfadtext. Ein Profil, dessen Zeilen alle in Unterordnern arbeiten,
+/// liest den erkannten Ordner dann ueberhaupt nicht: zwei Bausteine, zwei
+/// Leselaeufe, und kein dritter fuer einen Ordner, den niemand befragt hat.
+///
+/// Die Probe steht neben der Tabelle darueber und nicht in ihr, weil sie eine
+/// andere Aussage traegt: dort geht es um den Preis **eines** Bausteins, hier
+/// darum, dass der gemerkte Leselauf traege ist. Faellt die Traegheit weg,
+/// bleibt die Tabelle gruen und diese Probe wird rot.
+#[test]
+fn ohne_einen_rufer_wird_der_erkannte_ordner_gar_nicht_gelesen() {
+    let ordner = werkbankgestalt("traeger-leselauf");
+
+    let (zusammenfassung, haushalt) = gezaehlt(
+        r#"
+[[profil]]
+name = "Trifft ueber den Pfad"
+pfad = '.'
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions" }
+
+  [[profil.zeile]]
+  beschriftung = "Verlaeufe"
+  zaehlung = { ordner = "history" }
+"#,
+        ordner.pfad(),
+    );
+
+    assert_eq!(
+        haushalt.leselaeufe(),
+        2,
+        "der erkannte Ordner ist gelesen worden, obwohl ihn keine Zeile nennt"
+    );
+    assert_eq!(
+        werte(&zusammenfassung)
+            .into_iter()
+            .map(|(_, wert)| wert.clone())
+            .collect::<Vec<_>>(),
+        [Wert::Zahl(3), Wert::Zahl(4)],
+        "die zwei Unterordner sind trotzdem gelesen worden"
+    );
+}
+
+/// C6.2: Wie viele Dateien eine Bausteinsorte oeffnet.
+///
+/// Die Zaehlung und das Vorhandensein sehen auf Namen und oeffnen nichts; der
+/// Feldbaustein oeffnet eine Datei, und auch das nur, wenn sein Dateimuster
+/// einen Eintrag trifft; die juengsten N oeffnen so viele Dateien, wie es
+/// Kandidaten gibt, hoechstens aber N.
+///
+/// **Die letzte Zeile der Tabelle ist die, die eine Zahl aus dem Profil
+/// ablesbar haelt.** Zwei Feldbausteine auf **derselben** Datei kosten zwei
+/// Oeffnungen und nicht eine: die Auswertung fuehrt bewusst keinen
+/// Zwischenspeicher ueber gelesene Dateien, damit die Zahl der Oeffnungen aus
+/// dem Profil folgt und nicht aus dessen Inhalt. Faellt ein Zwischenspeicher
+/// spaeter doch hinein, wird diese Zeile rot und nicht die Zusage in C6.7.
+#[test]
+fn die_zahl_der_oeffnungen_folgt_der_bausteinsorte() {
+    let ordner = werkbankgestalt("oeffnungen-je-baustein");
+
+    let faelle: [(&str, &str, u32); 8] = [
+        (
+            "die Zaehlung oeffnet nichts",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions" }
+"#,
+            0,
+        ),
+        (
+            "das Vorhandensein oeffnet nichts",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Spec"
+  vorhandensein = { ordner = "planning", muster = '_._spec-' }
+"#,
+            0,
+        ),
+        (
+            "das Feld oeffnet eine Datei",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Directive"
+  feld = { datei = '^_._circle\.md$', feldmuster = '^# (.+)' }
+"#,
+            1,
+        ),
+        (
+            "ein Feld ohne passende Datei oeffnet keine",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Gibt es nicht"
+  feld = { datei = '^steht-hier-nicht$', feldmuster = '^(.+)' }
+"#,
+            0,
+        ),
+        (
+            "die juengsten drei oeffnen drei",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Die juengsten drei"
+  juengste = { ordner = "history", anzahl = 3 }
+"#,
+            3,
+        ),
+        (
+            "die juengsten zehn oeffnen nur die vier, die es gibt",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Die juengsten zehn"
+  juengste = { ordner = "history", anzahl = 10 }
+"#,
+            4,
+        ),
+        (
+            "ohne Kandidaten wird nichts geoeffnet",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Die juengsten zehn"
+  juengste = { ordner = "leer", anzahl = 10 }
+"#,
+            0,
+        ),
+        (
+            "zwei Felder auf derselben Datei oeffnen sie zweimal",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Directive"
+  feld = { datei = '^_._circle\.md$', feldmuster = '^# (.+)' }
+
+  [[profil.zeile]]
+  beschriftung = "Noch einmal dieselbe Datei"
+  feld = { datei = '^_._circle\.md$', feldmuster = '(?m)^## (.+)' }
+"#,
+            2,
+        ),
+    ];
+
+    for (fall, zeilen, erwartet) in faelle {
+        let (_, haushalt) = gezaehlt(&circleprofil(zeilen), ordner.pfad());
+        assert_eq!(
+            haushalt.oeffnungen(),
+            erwartet,
+            "{fall}: {} Oeffnungen statt {erwartet}",
+            haushalt.oeffnungen()
+        );
+    }
+}
+
+/// C6.4, erste Haelfte: mehr Bausteine als Leselaeufe, und die uebrigen Zeilen
+/// tragen ihren Platzhalter.
+///
+/// Das Profil traegt einen Zaehlbaustein mehr, als der Haushalt hergibt. Der
+/// Erkennungslauf nimmt den ersten der [`HOECHSTENS_LESELAEUFE`], also rechnen
+/// genau einer weniger als die Grenze; die zwei uebrigen Zeilen behalten ihre
+/// Beschriftung und bekommen [`Wert::Nicht`].
+///
+/// **Der Zaehler bleibt bei der Grenze stehen und laeuft nicht darueber
+/// hinaus.** Er zaehlt die stattgefundenen Leselaeufe und nicht die versuchten;
+/// ohne diese Zusage saehe eine Zusammenfassung, die dreizehnmal liest, genauso
+/// aus wie eine, die zwoelfmal liest und zweimal absagt.
+#[test]
+fn dreizehn_zaehlbausteine_erreichen_die_grenze_und_der_rest_traegt_den_platzhalter() {
+    let ordner = werkbankgestalt("leselaufgrenze");
+
+    // Einer mehr, als nach dem Erkennungslauf noch hineinpasst.
+    let wie_viele = HOECHSTENS_LESELAEUFE + 1;
+    let mut zeilen = String::new();
+    for nummer in 0..wie_viele {
+        zeilen.push_str(&format!(
+            "\n  [[profil.zeile]]\n  beschriftung = \"Entscheidungen {nummer}\"\n  \
+             zaehlung = {{ ordner = \"decisions\" }}\n"
+        ));
+    }
+
+    let (zusammenfassung, haushalt) = gezaehlt(&circleprofil(&zeilen), ordner.pfad());
+    let werte = werte(&zusammenfassung);
+
+    assert_eq!(
+        haushalt.leselaeufe(),
+        HOECHSTENS_LESELAEUFE,
+        "der Haushalt ist ueber seine Grenze hinaus verbraucht worden"
+    );
+    assert_eq!(
+        haushalt.oeffnungen(),
+        0,
+        "eine Zaehlung oeffnet keine Datei"
+    );
+
+    let gerechnet = werte
+        .iter()
+        .take_while(|(_, wert)| !matches!(wert, Wert::Nicht))
+        .count();
+    assert_eq!(
+        u32::try_from(gerechnet).expect("die Zahl der Zeilen passt in u32"),
+        HOECHSTENS_LESELAEUFE - 1,
+        "es haben nicht genau die Zeilen gerechnet, fuer die der Haushalt reichte"
+    );
+    assert!(
+        werte[..gerechnet]
+            .iter()
+            .all(|(_, wert)| matches!(wert, Wert::Zahl(3))),
+        "eine der gerechneten Zeilen traegt nicht die drei Entscheidungen: {werte:?}"
+    );
+    assert!(
+        werte[gerechnet..]
+            .iter()
+            .all(|(_, wert)| matches!(wert, Wert::Nicht)),
+        "eine Zeile hinter der Grenze traegt keinen Platzhalter: {werte:?}"
+    );
+    assert_eq!(
+        werte.last().map(|(beschriftung, _)| *beschriftung),
+        Some(format!("Entscheidungen {}", wie_viele - 1)).as_deref(),
+        "die Beschriftung faellt mit dem Wert weg"
+    );
+}
+
+/// C6.4, zweite Haelfte: dieselbe Regel fuer die Dateioeffnungen, und „ganz oder
+/// gar nicht".
+///
+/// Der Verlauf des Profils ist mit Absicht so gelegt, dass er beide Aussagen
+/// trennt:
+///
+/// ```text
+/// zwei juengste zu je zehn      20 von 24    beide rechnen
+/// eine dritte juengste zu zehn  passt nicht  Platzhalter, und es wird keine
+///                                            einzige Datei geoeffnet
+/// vier Felder zu je einer       24 von 24    die Grenze ist erreicht
+/// ein fuenftes Feld             passt nicht  Platzhalter
+/// ```
+///
+/// **Die dritte Zeile ist die eigentliche Zusage.** Vier ihrer zehn Oeffnungen
+/// haetten noch hineingepasst, und einzeln gebucht haette sie diese vier
+/// verbraucht und ihren Wert am Ende doch fallen lassen — die vier fehlten dann
+/// den Zeilen darunter. Eine Liste aus vier von zehn Titeln unter der
+/// Beschriftung „die juengsten zehn" laese sich ausserdem als „es sind nur
+/// vier".
+#[test]
+fn die_oeffnungen_gehen_ganz_oder_gar_nicht_und_enden_an_der_grenze() {
+    let ordner = werkbankgestalt("oeffnungsgrenze");
+    let viele = ordner.ordner("viele");
+    for nummer in 0..12 {
+        schreiben(&viele, &format!("{nummer:02}.md"), "# Ein Datensatz\n");
+    }
+
+    let mut zeilen = String::new();
+    for nummer in 0..3 {
+        zeilen.push_str(&format!(
+            "\n  [[profil.zeile]]\n  beschriftung = \"Die juengsten zehn {nummer}\"\n  \
+             juengste = {{ ordner = \"viele\", anzahl = 10 }}\n"
+        ));
+    }
+    for nummer in 0..5 {
+        zeilen.push_str(&format!(
+            "\n  [[profil.zeile]]\n  beschriftung = \"Directive {nummer}\"\n  \
+             feld = {{ datei = '^_._circle\\.md$', feldmuster = '^# (.+)' }}\n"
+        ));
+    }
+
+    let (zusammenfassung, haushalt) = gezaehlt(&circleprofil(&zeilen), ordner.pfad());
+    let werte = werte(&zusammenfassung);
+
+    assert_eq!(
+        haushalt.oeffnungen(),
+        HOECHSTENS_OEFFNUNGEN,
+        "die Grenze ist nicht genau erreicht worden"
+    );
+    assert!(
+        matches!(werte[0].1, Wert::Titel(titel) if titel.len() == 10),
+        "die erste Zeile hat ihre zehn Titel nicht bekommen: {:?}",
+        werte[0].1
+    );
+    assert!(
+        matches!(werte[1].1, Wert::Titel(titel) if titel.len() == 10),
+        "die zweite Zeile hat ihre zehn Titel nicht bekommen: {:?}",
+        werte[1].1
+    );
+    assert_eq!(
+        werte[2].1,
+        &Wert::Nicht,
+        "die dritte Zeile hat eine halbe Antwort bekommen"
+    );
+    for (stelle, (_, wert)) in werte.iter().enumerate().take(7).skip(3) {
+        assert_eq!(
+            *wert,
+            &Wert::Text("Circle: eine Runde".to_owned()),
+            "die Zeile an Stelle {stelle} hat ihr Feld nicht bekommen"
+        );
+    }
+    assert_eq!(
+        werte[7].1,
+        &Wert::Nicht,
+        "hinter der erreichten Grenze steht kein Platzhalter"
+    );
+}
+
+/// C6.6: Eine Datei wird bis [`HOECHSTENS_BYTES`] gelesen und keinen Schritt
+/// weiter.
+///
+/// **Geprueft wird an einem Feldmuster, das nur hinter der Grenze trifft.** Eine
+/// Probe, die allein die Laufzeit misst, saehe den Unterschied zwischen 64 KB
+/// und 100 KB nicht; eine, die die gelesenen Bytes zaehlte, brauchte eine zweite
+/// Zaehlstelle in der Auswertung. Der Text hinter der Grenze steht in der Datei,
+/// und die Antwort darauf ist der Platzhalter: was nicht gelesen wurde, ist
+/// nicht da.
+///
+/// Die dritte Zeile nimmt dieselbe Zusage fuer den **Titel** ab, denn C6.6
+/// nennt beide: die Datei in `spaet` traegt vor ihrer ersten nicht leeren Zeile
+/// mehr Leerzeilen, als der Deckel fasst, und faellt deshalb auf ihren
+/// Dateinamen zurueck.
+#[test]
+fn eine_datei_wird_bis_zur_grenze_gelesen_und_nicht_weiter() {
+    let ordner = werkbankgestalt("bytegrenze");
+
+    let deckel = usize::try_from(HOECHSTENS_BYTES).expect("der Deckel passt in usize");
+    let ganze_groesse = 100 * 1024;
+    let mut inhalt = String::from("KOPF: vorn\n");
+    inhalt.push_str(&"x".repeat(deckel + 4096 - inhalt.len()));
+    inhalt.push_str("\nHINTEN: dahinter\n");
+    inhalt.push_str(&"y".repeat(ganze_groesse - inhalt.len()));
+    let hinter_der_grenze = inhalt
+        .find("HINTEN:")
+        .expect("die Marke steht in der Datei");
+    assert!(
+        hinter_der_grenze > deckel,
+        "die Marke steht bei Byte {hinter_der_grenze} und damit noch vor dem Deckel"
+    );
+    let gross = ordner.datei("gross.md", &inhalt);
+    assert_eq!(
+        std::fs::metadata(&gross)
+            .expect("die grosse Datei steht nicht da")
+            .len(),
+        ganze_groesse as u64,
+        "die Datei ist nicht 100 KB gross"
+    );
+
+    let spaet = ordner.ordner("spaet");
+    schreiben(
+        &spaet,
+        "der-titel-kommt-zu-spaet.md",
+        &format!("{}Der Titel\n", "\n".repeat(deckel + 1024)),
+    );
+
+    let zusammenfassung = zusammengefasst(
+        &circleprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Vorn"
+  feld = { datei = '^gross\.md$', feldmuster = '(?m)^KOPF: (.+)$' }
+
+  [[profil.zeile]]
+  beschriftung = "Dahinter"
+  feld = { datei = '^gross\.md$', feldmuster = 'HINTEN: (.+)' }
+
+  [[profil.zeile]]
+  beschriftung = "Die juengste"
+  juengste = { ordner = "spaet", anzahl = 1 }
+"#,
+        ),
+        ordner.pfad(),
+    );
+    let werte = werte(&zusammenfassung);
+
+    assert_eq!(
+        werte[0].1,
+        &Wert::Text("vorn".to_owned()),
+        "das Feld vor der Grenze ist nicht gelesen worden"
+    );
+    assert_eq!(
+        werte[1].1,
+        &Wert::Nicht,
+        "das Feld hinter der Grenze ist gelesen worden; die Datei wird weiter gelesen, \
+         als C6.6 zusagt"
+    );
+    assert_eq!(
+        werte[2].1,
+        &Wert::Titel(vec!["der-titel-kommt-zu-spaet.md".to_owned()]),
+        "der Titel ist hinter der Grenze gefunden worden"
+    );
+}
+
+/// C6.7: Die zwei groessten mitgelieferten Profile bleiben unter den Zahlen,
+/// die der Spec ihnen zusagt.
+///
+/// Gemessen an der eingebetteten Auslieferungsfassung und an je einem
+/// Pruefordner in der Gestalt, die das Profil erwartet. Die Zahlen stehen hier
+/// **genau** und nicht als „unter der Grenze": eine Probe, die allein
+/// `<= 7` prueft, bliebe gruen, wenn ein Profil von fuenf auf sieben
+/// Leselaeufe steigt, und genau der Schritt waere die Nachricht.
+///
+/// ```text
+/// eine Runde       5 Leselaeufe   11 Oeffnungen   C6.7: hoechstens 7 und 11
+///   erkannter Ordner, planning zweimal, decisions, history
+///   Circle-Datensatz, zehn Verlaeufe
+/// die Wurzel       3 Leselaeufe    5 Oeffnungen   C6.4: hoechstens 12 und 24
+///   erkannter Ordner, circles, shared/issues
+///   .fusion-setup dreimal, .active-circle, orchestrator-live.md
+/// ```
+///
+/// **Geprueft wird auch, welches Profil gegriffen hat.** Die Erkennung nimmt
+/// das erste Profil mit Treffer, und ein Pruefordner, auf den ein anderes
+/// passt, maesse dessen Zahlen unter dieser Ueberschrift; die Beschriftungen
+/// der Zusammenfassung sind der Ausweis dafuer, welches es war.
+#[test]
+fn die_zwei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
+    let profile = ausgelieferte();
+
+    let eine_runde = runde("haushalt-eine-runde");
+    let (zusammenfassung, haushalt) =
+        zusammenfassen_gezaehlt(&profile, eine_runde.pfad()).expect("kein Profil greift");
+    let rundenwerte = werte(&zusammenfassung);
+
+    assert_eq!(
+        rundenwerte
+            .iter()
+            .map(|(name, _)| *name)
+            .collect::<Vec<_>>(),
+        [
+            "Vorgesehen",
+            "Aktiv",
+            "Geschlossen",
+            "Abgelegt",
+            "Directive",
+            "Spec",
+            "Plan",
+            "Entscheidungen",
+            "Die jüngsten zehn Verläufe"
+        ],
+        "gemessen wurde nicht das Profil des einzelnen Circles"
+    );
+    assert_eq!(
+        (haushalt.leselaeufe(), haushalt.oeffnungen()),
+        (5, 11),
+        "das groesste mitgelieferte Profil kostet nicht mehr die gemessenen fuenf \
+         Leselaeufe und elf Oeffnungen"
+    );
+    assert!(
+        haushalt.leselaeufe() <= 7 && haushalt.oeffnungen() <= 11,
+        "C6.7 ist gebrochen: {} Leselaeufe und {} Oeffnungen",
+        haushalt.leselaeufe(),
+        haushalt.oeffnungen()
+    );
+    assert_eq!(
+        rundenwerte[4].1,
+        &Wert::Text("Das Vorschaufenster beantwortet, was an einem Ort liegt.".to_owned()),
+        "das Profil hat seine Directive nicht gezogen; gemessen waere dann ein Lauf, \
+         der gar nichts findet"
+    );
+    assert!(
+        matches!(rundenwerte[8].1, Wert::Titel(titel) if titel.len() == 10),
+        "die zehn juengsten Verlaeufe fehlen: {:?}",
+        rundenwerte[8].1
+    );
+
+    let wurzel = werkbankwurzel("haushalt-wurzel");
+    let (zusammenfassung, haushalt) =
+        zusammenfassen_gezaehlt(&profile, wurzel.pfad()).expect("kein Profil greift");
+    let wurzelwerte = werte(&zusammenfassung);
+
+    assert_eq!(
+        wurzelwerte
+            .iter()
+            .map(|(name, _)| *name)
+            .collect::<Vec<_>>(),
+        [
+            "Projekt",
+            "Eingerichtet",
+            "fusion-Fassung",
+            "Aktive Runde",
+            "Sitzung",
+            "Runden",
+            "Offene Defekte, gemeinsam"
+        ],
+        "gemessen wurde nicht das Profil der Werkbankwurzel"
+    );
+    assert_eq!(
+        (haushalt.leselaeufe(), haushalt.oeffnungen()),
+        (3, 5),
+        "die Wurzelzusammenfassung kostet nicht mehr die gemessenen drei Leselaeufe \
+         und fuenf Oeffnungen"
+    );
+    assert!(
+        haushalt.leselaeufe() <= HOECHSTENS_LESELAEUFE
+            && haushalt.oeffnungen() <= HOECHSTENS_OEFFNUNGEN,
+        "C6.4 ist gebrochen: {} Leselaeufe und {} Oeffnungen",
+        haushalt.leselaeufe(),
+        haushalt.oeffnungen()
+    );
+    assert_eq!(
+        wurzelwerte
+            .iter()
+            .map(|(_, wert)| (*wert).clone())
+            .collect::<Vec<_>>(),
+        [
+            Wert::Text("krk".to_owned()),
+            Wert::Text("260801-0900".to_owned()),
+            Wert::Text("5.3.1".to_owned()),
+            Wert::Text("circles/260823-2208-vorschau".to_owned()),
+            Wert::Text("Schritt 12, die Zaehlproben".to_owned()),
+            Wert::Zahl(3),
+            Wert::Zahl(2),
+        ],
+        "die Wurzelzusammenfassung liefert nicht die Werte, fuer die sie gelesen hat"
+    );
+}
+
+/// C2.8, die Haelfte ohne Fenster: ein bloesartiges Muster haelt die Auswertung
+/// nicht an.
+///
+/// `(a+)+$` gegen vierzig `a` und ein `b` ist der Schulfall der exponentiellen
+/// Rueckverfolgung: eine rueckverfolgende Maschine probiert jede Zerlegung der
+/// vierzig `a` und kommt in der Lebenszeit dieses Laufs nicht zurueck. Die
+/// Kiste `regex` hat kein Rueckverfolgen und laeuft linear; **die Zusage
+/// besteht deshalb darin, dass der Aufruf zurueckkehrt**, und die Zeitschranke
+/// darunter steht nur da, damit ein Fehlschlag als Fehlschlag erscheint und
+/// nicht als haengender Testlauf.
+///
+/// Geprueft werden alle vier Stellen, an denen ein Muster aus der
+/// `readers.toml` auf Text trifft: das Pfadmuster auf dem vollen Pfad, die
+/// Kennzeichendatei und das Eintragsmuster auf Namen, das Feldmuster auf dem
+/// Inhalt. Eine fuenfte gibt es nicht.
+///
+/// Die sichtbare Haelfte der Zusage — die Zusammenfassung erscheint, das
+/// Fenster bleibt bedienbar — steht unter `## Nutzerarbeit` des Plans und ist
+/// hier nicht zu belegen.
+#[test]
+fn ein_boesartiges_muster_haelt_die_auswertung_nicht_an() {
+    let boesartig = format!("{}b", "a".repeat(40));
+    let ordner = Pruefordner::neu("boesartiges-muster");
+    let tief = ordner.ordner(&boesartig);
+    schreiben(&tief, &boesartig, &boesartig);
+
+    let beginn = std::time::Instant::now();
+
+    // Das Pfadmuster, auf dem vollen Pfad des ausgewaehlten Ordners.
+    let (nur_pfad, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Boesartiges Pfadmuster"
+pfad = '(a+)+$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+    assert!(
+        zusammenfassen(&nur_pfad, &tief).is_none(),
+        "der Pfad endet auf b und darf nicht treffen"
+    );
+
+    // Die Kennzeichendatei, auf den Namen der Eintraege.
+    let (nur_kennzeichen, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Boesartiges Kennzeichen"
+kennzeichen = '(a+)+$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+    assert!(
+        zusammenfassen(&nur_kennzeichen, &tief).is_none(),
+        "der eine Eintrag endet auf b und darf nicht treffen"
+    );
+
+    // Das Eintragsmuster und das Feldmuster, in einem Profil, das trifft.
+    let zusammenfassung = zusammengefasst(
+        r#"
+[[profil]]
+name = "Boesartige Zeilen"
+pfad = '.'
+
+  [[profil.zeile]]
+  beschriftung = "Zaehlung"
+  zaehlung = { muster = '(a+)+$' }
+
+  [[profil.zeile]]
+  beschriftung = "Vorhandensein"
+  vorhandensein = { muster = '(a+)+$' }
+
+  [[profil.zeile]]
+  beschriftung = "Feld"
+  feld = { datei = '(a+)+b$', feldmuster = '(a+)+$' }
+"#,
+        &tief,
+    );
+
+    let gebraucht = beginn.elapsed();
+
+    assert_eq!(
+        werte(&zusammenfassung)
+            .into_iter()
+            .map(|(_, wert)| wert.clone())
+            .collect::<Vec<_>>(),
+        [Wert::Zahl(0), Wert::Vorhanden(false), Wert::Nicht],
+        "die drei Zeilen liefern nicht, was ein Muster ohne Treffer liefert"
+    );
+    assert!(
+        gebraucht < Duration::from_secs(10),
+        "die vier Muster haben {gebraucht:?} gebraucht; eine rueckverfolgende \
+         Maschine ist in die Auswertung geraten"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// C6.9: der Deskriptorhaushalt, gemessen in einer Kindprobe
+// ---------------------------------------------------------------------------
+
+/// Die abgesenkte Deskriptorgrenze der Kindprobe.
+///
+/// Dieselbe Zahl wie in `tests/umfang.rs`, und aus demselben Grund: sie muss
+/// tief genug liegen, dass das Kind den Vorrat in wenigen Schritten
+/// aufgebraucht hat, und hoch genug, dass `libtest` selbst noch starten kann.
+/// Behauptet wird sie nicht — das Kind misst zuerst, was es bekommt.
+const GRENZE_DESKRIPTOREN: usize = 24;
+
+/// Die Umgebungsvariable, die die Kindprobe beauftragt. Ihr Wert ist der
+/// Pruefordner, den das Elternteil angelegt hat.
+const AUFTRAG_DESKRIPTOREN: &str = "KRK_PROBE_LESEPROFIL_DESKRIPTOREN";
+
+/// Die Zeilen, mit denen die Kindprobe rechnet.
+///
+/// Alle drei Sorten, die etwas oeffnen oder lesen, und jede an einer anderen
+/// Stelle: das Feld im erkannten Ordner, die Zaehlung in einem Unterordner, die
+/// juengsten zehn in einem zweiten. Das sind vier Verzeichnisleselaeufe und elf
+/// Oeffnungen nacheinander — und keine zwei zugleich.
+const ZEILEN_DER_DESKRIPTORPROBE: &str = r#"
+  [[profil.zeile]]
+  beschriftung = "Directive"
+  feld = { datei = '^_._circle\.md$', feldmuster = '(?sm)^## Directive\s*\n+(.+?)\n\n' }
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Die juengsten zehn"
+  juengste = { ordner = "history", anzahl = 10 }
+"#;
+
+/// C6.9: Eine Zusammenfassung haelt nie mehr als einen Verzeichnis- und einen
+/// Dateideskriptor zugleich.
+///
+/// **Die Probe laeuft im Kind, weil `cargo test` die angehobene Deskriptor-
+/// grenze der Anmeldesitzung erbt.** Im selben Prozess gemessen behauptete sie
+/// die Zusage, statt sie zu messen: bei tausend freien Deskriptoren liefe auch
+/// eine Auswertung durch, die zehn Dateien gleichzeitig offen haelt. Die Form
+/// ist die der Deskriptorproben aus der Runde 10 in `tests/verzeichnis.rs` und
+/// `tests/umfang.rs`, und sie ist es ausdruecklich: eine zweite Bauart daneben
+/// haette dieselbe Frage zweimal verschieden beantwortet.
+///
+/// Angelegt und abgeraeumt wird der Pruefordner vom **Elternteil**:
+/// `remove_dir_all` haelt selbst Deskriptoren und koennte unter der abgesenkten
+/// Grenze nicht aufraeumen.
+#[test]
+fn eine_zusammenfassung_haelt_nie_mehr_als_einen_deskriptor_zugleich() {
+    let ordner = runde("deskriptorhaushalt");
+
+    let ergebnis = kind_mit_deskriptorgrenze(
+        GRENZE_DESKRIPTOREN,
+        "kind_fasst_mit_einem_freien_deskriptor_zusammen",
+        AUFTRAG_DESKRIPTOREN,
+        ordner.pfad(),
+    );
+
+    assert!(
+        ergebnis.status.success(),
+        "mit einem freien Deskriptor kommt die Zusammenfassung nicht zustande\n\
+         --- stdout ---\n{}\n--- stderr ---\n{}",
+        String::from_utf8_lossy(&ergebnis.stdout),
+        String::from_utf8_lossy(&ergebnis.stderr)
+    );
+}
+
+/// Die Kindprobe zu C6.9: rechnen mit genau einem freien Deskriptor.
+///
+/// Der Vorrat wird **hergestellt und nicht abgewartet**: das Kind nimmt
+/// Deskriptoren, bis keiner mehr kommt, und gibt genau einen zurueck. Wer dann
+/// zwei zugleich braucht, bekommt beim zweiten `EMFILE`.
+///
+/// **Der erste Durchgang ohne einen einzigen freien Deskriptor ist die
+/// Gegenprobe.** Ohne ihn saehe der zweite auch dann bestanden aus, wenn
+/// `ulimit` nicht gegriffen haette und in Wahrheit tausend Deskriptoren frei
+/// waeren.
+///
+/// **Gemessen wird an den Werten und nicht an einem Rueckgabewert `Some`.** Ein
+/// Titel faellt bei einem Lesefehler still auf den Dateinamen zurueck, und ein
+/// Feld auf den Platzhalter; die Titel der Verlaufsdateien lauten deshalb
+/// „Verlauf n" und nicht wie ihre Dateien.
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_LESEPROFIL_DESKRIPTOREN gestartet"]
+fn kind_fasst_mit_einem_freien_deskriptor_zusammen() {
+    let Some(ordner) = std::env::var_os(AUFTRAG_DESKRIPTOREN) else {
+        return;
+    };
+    let ordner = PathBuf::from(ordner);
+
+    // Vor dem Mangel: das Uebersetzen der Muster braucht keinen Deskriptor,
+    // und danach steht keiner mehr zur Verfuegung.
+    let (profile, meldungen) = gepruefte(&circleprofil(ZEILEN_DER_DESKRIPTORPROBE));
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    let mut gehalten = Vec::new();
+    while gehalten.len() < 4 * GRENZE_DESKRIPTOREN {
+        match std::fs::File::open("/dev/null") {
+            Ok(datei) => gehalten.push(datei),
+            Err(_) => break,
+        }
+    }
+    let vorrat = gehalten.len();
+
+    // Erst ohne einen freien, dann mit genau einem.
+    let ohne = zusammenfassen(&profile, &ordner);
+    drop(gehalten.pop());
+    let mit = zusammenfassen(&profile, &ordner);
+    drop(gehalten);
+
+    assert!(
+        vorrat < 4 * GRENZE_DESKRIPTOREN,
+        "das Kind bekommt {vorrat} Deskriptoren; die Grenze {GRENZE_DESKRIPTOREN} hat \
+         nicht gegriffen, und die Probe messte nichts"
+    );
+    assert!(
+        vorrat > 0,
+        "das Kind bekommt gar keinen Deskriptor; gemessen waere der Mangel und nicht \
+         die Bauart"
+    );
+    assert!(
+        ohne.is_none(),
+        "ohne einen freien Deskriptor entsteht eine Zusammenfassung; die Gegenprobe \
+         belegt nichts mehr"
+    );
+
+    let zusammenfassung = mit.expect("mit einem freien Deskriptor entsteht keine Zusammenfassung");
+    let werte = werte(&zusammenfassung);
+    assert_eq!(
+        werte[0].1,
+        &Wert::Text("Das Vorschaufenster beantwortet, was an einem Ort liegt.".to_owned()),
+        "das Feld ist nicht gelesen worden; ein Ordner blieb offen, waehrend die Datei \
+         an der Reihe war"
+    );
+    assert_eq!(
+        werte[1].1,
+        &Wert::Zahl(3),
+        "der Unterordner ist nicht gelesen worden"
+    );
+    let Wert::Titel(titel) = werte[2].1 else {
+        panic!("die juengsten zehn fehlen: {:?}", werte[2].1);
+    };
+    assert_eq!(titel.len(), 10, "es sind nicht zehn Titel: {titel:?}");
+    assert!(
+        titel.iter().all(|zeile| zeile.starts_with("Verlauf ")),
+        "ein Titel ist auf seinen Dateinamen zurueckgefallen: {titel:?}"
     );
 }

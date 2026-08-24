@@ -97,7 +97,7 @@ pub mod bausteine;
 pub mod datei;
 pub mod erkennung;
 
-pub use bausteine::zusammenfassen;
+pub use bausteine::{zusammenfassen, zusammenfassen_gezaehlt};
 
 // ---------------------------------------------------------------------------
 // Die Zahlen des Haushalts

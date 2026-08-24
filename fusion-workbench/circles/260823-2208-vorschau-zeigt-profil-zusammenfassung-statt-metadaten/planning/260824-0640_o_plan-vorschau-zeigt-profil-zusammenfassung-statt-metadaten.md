@@ -1,7 +1,7 @@
 # Implementation Plan: Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der Metadaten
 
 **Date:** 2026-08-24
-**Status:** In Umsetzung. Die Schritte 1 bis 11 und 13 stehen auf `[DONE]`, offen sind Schritt 12 und der am 260824-1538 nachgetragene Schritt 14. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor". Am 260824-1313 auf Schritt 7 fortgeschrieben, am 260824-1538 um Schritt 14 ergänzt, am 260824-1755 auf Schritt 11 fortgeschrieben.)*
+**Status:** Gebaut. Alle vierzehn Schritte stehen auf `[DONE]`; offen ist allein die Nutzerarbeit am laufenden Bündel. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor". Am 260824-1313 auf Schritt 7 fortgeschrieben, am 260824-1538 um Schritt 14 ergänzt, am 260824-1755 auf Schritt 11 fortgeschrieben, am 260824-1902 auf Schritt 12 und damit auf den letzten. Schritt 14 stand seit dem 260824-1650 auf `[DONE]`, während diese Zeile ihn noch als offen führte.)*
 **Spec:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0613_o_spec-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, vom Nutzer am 260824-0625 freigegeben, A1 bis A7 eingeschlossen
 **Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Grundlage erhoben:** 260824-0634, am Baum auf dem Stand `278a008` unter `crates/` und `resources/`, und am Bestand dieser Werkbank
@@ -363,7 +363,7 @@ Fünf Bündel, vierzehn Schritte. Jeder Schritt nennt genau einen Executor. **Na
 
 ### Bündel E — Die abzählbaren Grenzen und die Buchführung
 
-12. **Die Zählproben: C6 wird belegt statt behauptet**
+12. [DONE] **Die Zählproben: C6 wird belegt statt behauptet**
     - Executor: `coder`
     - Files: `crates/krk-core/src/leseprofil/bausteine.rs`, `crates/krk-core/tests/leseprofil.rs`
     - Changes: Die Proben, die die neun Kriterien aus C6 abzählen. Gezählt werden Aufrufe und keine Millisekunden (C6.8). Der Zähler wohnt im `Haushalt` und ist ohnehin da; die Proben lesen ihn nach dem Lauf aus, statt eine zweite Zählstelle danebenzustellen. Im Einzelnen: ein Baustein löst höchstens einen Leselauf aus und ein Feldbaustein auf eine Datei im erkannten Ordner keinen (C6.1, in der Fassung, die der Defekt `issues/260824-0634_o_…` nennt); die Zahl der Öffnungen je Bausteinsorte (C6.2); `anzahl = 25` wird zu 10 (C6.3); ein Profil mit dreizehn Zählbausteinen erreicht die Grenze, und die übrigen Zeilen tragen den Platzhalter (C6.4); ein Prüfordner mit 2.001 Einträgen liefert `Wert::UeberGrenze` (C6.5); eine Datei von 100 KB wird bis 64 KB gelesen, geprüft an einem Feldmuster, das nur hinter der Grenze trifft und deshalb den Platzhalter liefert (C6.6); die zwei größten mitgelieferten Profile bleiben unter 7 Leseläufen und 11 Öffnungen, geprüft gegen die **eingebettete** Auslieferungsfassung und einen Prüfordner in der Gestalt einer Werkbank (C6.7); ein Lauf hält nie mehr als einen Verzeichnis- und einen Dateideskriptor zugleich, geprüft in einer Kindprobe unter `ulimit -n 24` nach dem Vorbild der Deskriptorproben aus der Runde 10 (C6.9). Dazu die Probe zu C2.8: das Muster `(a+)+$` gegen vierzig `a` und ein `b`, mit der Zusage, dass der Aufruf zurückkehrt; sie belegt die Hälfte der Zusage, die ohne Fenster zu belegen ist, und die andere steht in `## Nutzerarbeit`.
