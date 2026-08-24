@@ -44,7 +44,7 @@ Neun Feststellungen tragen den Zuschnitt. Vier davon widersprechen dem, was man 
 
 **`Eintrag` trägt den Änderungszeitpunkt bereits** (`krk-core/src/verzeichnis/eintrag.rs`, Feld `geaendert`). Das Sortieren nach Änderungsdatum kostet damit keinen zusätzlichen Systemaufruf; die Kosten des Bausteins „jüngste N mit Titel" beschränken sich auf die N Dateiöffnungen.
 
-**Die Ausdruckskiste steht schon im Bündel, und die frühere Kostenangabe dieser Runde war falsch.** `cargo tree -p krk-ui -e normal` zeigt `syntect` → `fancy-regex` 0.16.2 → `regex-automata` 0.4.18 → `aho-corasick` 1.1.5 und `memchr` 2.8.3, dazu `regex-syntax` 0.8.11; die Wurzel-`Cargo.toml` zählt dieselben Pakete in ihrer Begründung zu `syntect` namentlich auf. `regex` 1.x setzt auf genau diese vier Pakete auf und wäre damit ein einziges neues Paket. Der Entscheidungsdatensatz vom 260824-0541 beziffert die Kosten zu hoch; der Defekt dazu ist `issues/260824-0600_o_…-er-fuehrt-eine.md`. Die Wahl des Nutzers kehrt sich dadurch nicht um, sie wird billiger.
+**Die Ausdruckskiste steht schon im Bündel, und die frühere Kostenangabe dieser Runde war falsch.** `cargo tree -p krk-ui -e normal` zeigt `syntect` → `fancy-regex` 0.16.2 → `regex-automata` 0.4.18 → `aho-corasick` 1.1.5 und `memchr` 2.8.3, dazu `regex-syntax` 0.8.11; die Wurzel-`Cargo.toml` zählt dieselben Pakete in ihrer Begründung zu `syntect` namentlich auf. `regex` 1.x setzt auf genau diese vier Pakete auf und wäre damit ein einziges neues Paket. Der Entscheidungsdatensatz vom 260824-0541 beziffert die Kosten zu hoch; der Defekt dazu ist `issues/260824-0600_*_…-er-fuehrt-eine.md`. Die Wahl des Nutzers kehrt sich dadurch nicht um, sie wird billiger.
 
 **Die Zusage über fremden C-Code hält.** `Cargo.lock` führt am 260824-0600 kein `cc` und außer `windows-sys` kein `-sys`-Paket, bei 97 Paketen insgesamt. Auch `regex` brächte keinen C-Code herein. Jede fremde Kiste dieses Projekts trägt ihre Begründung in der Wurzel-`Cargo.toml`, und eine Aufnahme in dieser Runde muss beides halten.
 
@@ -54,20 +54,20 @@ Neun Feststellungen tragen den Zuschnitt. Vier davon widersprechen dem, was man 
 
 ## Die acht Antworten, aus denen dieser Spec gebaut ist
 
-Verbindlich sind die Datensätze und nicht diese Tabelle; sie ist ein Verweisregister. Alle acht stehen auf `_a_`, also beantwortet und noch nicht in Code umgesetzt.
+Verbindlich sind die Datensätze und nicht diese Tabelle; sie ist ein Verweisregister. Bei der Abfassung standen alle acht auf beantwortet und noch nicht in Code umgesetzt (`_a_`); **seit dem Abgleich vom 260824-1849 stehen alle acht auf umgesetzt (`_i_`)**, jeder mit seiner Umsetzungszeile. Die Zitate in dieser Tabelle tragen deshalb die Sternform und keinen Marker.
 
 | Frage | Antwort | Datensatz unter `decisions/` |
 |---|---|---|
-| Gilt ein Profil auch für einzelne Dateien? | Nur Ordner | `260823-2208_a_gilt-ein-profil-nur-fuer-ordner-oder-auch-fuer-einzelne-dateien.md` |
-| Liefert KRK ein fusion-Profil mit? | Mitgeliefert und wirksam, über `include_str!` wie `settings.toml` | `260823-2208_a_liefert-krk-ein-fertiges-fusion-workbench-profil-mit.md` |
-| Wie zieht der Baustein ein Feld aus einer Datei? | Regulärer Ausdruck mit Fanggruppe | `260824-0541_a_wie-zieht-der-baustein-ein-feld-aus-einer-datei-und-traegt-er-auch-einen-abschnitt.md` |
-| Was heißt „die jüngsten zehn"? | Sortiert nach Änderungsdatum | `260824-0541_a_was-heisst-die-juengsten-zehn-und-was-ist-ihr-titel.md` |
-| Was zeigt ein Baustein, der ins Leere greift? | Die Zeile steht mit einem Platzhalter | `260824-0541_a_was-zeigt-die-zusammenfassung-wenn-ein-baustein-ins-leere-greift.md` |
-| Was ist der Titel? | Die erste nicht leere Zeile | `260824-0600_a_der-titel-aus-der-ueberschriftenzeile-erreicht-keinen-einzigen-defektdatensatz.md` |
-| Welche Form hat das Pfadmuster? | Regulärer Ausdruck auf dem vollen Pfad | `260824-0600_a_welche-form-hat-das-pfadmuster-und-welche-die-kennzeichendatei.md` |
-| Woher kommt die Sitzungsinfo? | Aus `orchestrator-live.md` | `260824-0600_a_woher-nimmt-die-wurzelzusammenfassung-ihre-sitzungsinfo.md` |
+| Gilt ein Profil auch für einzelne Dateien? | Nur Ordner | `260823-2208_*_gilt-ein-profil-nur-fuer-ordner-oder-auch-fuer-einzelne-dateien.md` |
+| Liefert KRK ein fusion-Profil mit? | Mitgeliefert und wirksam, über `include_str!` wie `settings.toml` | `260823-2208_*_liefert-krk-ein-fertiges-fusion-workbench-profil-mit.md` |
+| Wie zieht der Baustein ein Feld aus einer Datei? | Regulärer Ausdruck mit Fanggruppe | `260824-0541_*_wie-zieht-der-baustein-ein-feld-aus-einer-datei-und-traegt-er-auch-einen-abschnitt.md` |
+| Was heißt „die jüngsten zehn"? | Sortiert nach Änderungsdatum | `260824-0541_*_was-heisst-die-juengsten-zehn-und-was-ist-ihr-titel.md` |
+| Was zeigt ein Baustein, der ins Leere greift? | Die Zeile steht mit einem Platzhalter | `260824-0541_*_was-zeigt-die-zusammenfassung-wenn-ein-baustein-ins-leere-greift.md` |
+| Was ist der Titel? | Die erste nicht leere Zeile | `260824-0600_*_der-titel-aus-der-ueberschriftenzeile-erreicht-keinen-einzigen-defektdatensatz.md` |
+| Welche Form hat das Pfadmuster? | Regulärer Ausdruck auf dem vollen Pfad | `260824-0600_*_welche-form-hat-das-pfadmuster-und-welche-die-kennzeichendatei.md` |
+| Woher kommt die Sitzungsinfo? | Aus `orchestrator-live.md` | `260824-0600_*_woher-nimmt-die-wurzelzusammenfassung-ihre-sitzungsinfo.md` |
 
-**Zwei der acht sind zusammen zu lesen, und der Spec sagt es hier, damit die Berichtigung nicht verlorengeht.** Der Nutzer hat am 260824-0555 zur Frage nach den jüngsten zehn die Möglichkeit 2 gewählt, also Sortierung nach Änderungsdatum **und** Titel aus der Überschriftenzeile. Die Messung am Bestand hat danach ergeben, dass die Überschriftenzeile keinen einzigen Defektdatensatz erreicht. Der Nutzer hat die Titelhälfte am 260824-0610 berichtigt: **maßgeblich für den Titel ist `260824-0600_a_der-titel-aus-der-ueberschriftenzeile-…`, maßgeblich für die Sortierung bleibt `260824-0541_a_was-heisst-die-juengsten-zehn-…`.** Der ältere Datensatz trägt diesen Nachtrag in seiner zweiten `Answered`-Zeile. Wer nur einen der beiden liest, baut den falschen Titel.
+**Zwei der acht sind zusammen zu lesen, und der Spec sagt es hier, damit die Berichtigung nicht verlorengeht.** Der Nutzer hat am 260824-0555 zur Frage nach den jüngsten zehn die Möglichkeit 2 gewählt, also Sortierung nach Änderungsdatum **und** Titel aus der Überschriftenzeile. Die Messung am Bestand hat danach ergeben, dass die Überschriftenzeile keinen einzigen Defektdatensatz erreicht. Der Nutzer hat die Titelhälfte am 260824-0610 berichtigt: **maßgeblich für den Titel ist `260824-0600_*_der-titel-aus-der-ueberschriftenzeile-…`, maßgeblich für die Sortierung bleibt `260824-0541_*_was-heisst-die-juengsten-zehn-…`.** Der ältere Datensatz trägt diesen Nachtrag in seiner zweiten `Answered`-Zeile. Wer nur einen der beiden liest, baut den falschen Titel.
 
 ---
 
@@ -147,7 +147,7 @@ flowchart TD
 **Decisions made:**
 - Eigene `readers.toml` statt eines Abschnitts in `settings.toml`: Nutzerentscheid vom 260823.
 - TOML statt YAML, und `readers.toml` statt des Entwurfsnamens `krk-rc.yaml`: Nutzerentscheid vom 260823.
-- Mitgeliefert und beim ersten Start wirksam: Nutzerentscheid vom 260824-0530, `decisions/260823-2208_a_liefert-krk-ein-fertiges-fusion-workbench-profil-mit.md`.
+- Mitgeliefert und beim ersten Start wirksam: Nutzerentscheid vom 260824-0530, `decisions/260823-2208_*_liefert-krk-ein-fertiges-fusion-workbench-profil-mit.md`.
 - `Leerbefund::Vorgabe` für die leere Datei: abgeleitet aus der Vorlage `settings.toml`, die als von Hand gepflegte Datei denselben Wert trägt.
 
 ---
@@ -173,7 +173,7 @@ flowchart TD
 - [ ] C2.8 Ein Muster aus der `readers.toml` kann die Vorschau nicht anhalten. Geprüft wird mit einem Ausdruck, der bei rückverfolgender Auswertung exponentiell läuft, etwa `(a+)+$` gegen eine Zeichenkette aus vierzig `a` und einem `b`: die Zusammenfassung erscheint, und das Fenster bleibt bedienbar.
 
 **Decisions made:**
-- Pfadmuster und Kennzeichendatei sind reguläre Ausdrücke, das Pfadmuster läuft auf dem vollen Pfad: Nutzerentscheid vom 260824-0610, `decisions/260824-0600_a_welche-form-hat-das-pfadmuster-und-welche-die-kennzeichendatei.md`, Möglichkeit 1. Damit trägt die Datei eine Mustersprache und nicht zwei.
+- Pfadmuster und Kennzeichendatei sind reguläre Ausdrücke, das Pfadmuster läuft auf dem vollen Pfad: Nutzerentscheid vom 260824-0610, `decisions/260824-0600_*_welche-form-hat-das-pfadmuster-und-welche-die-kennzeichendatei.md`, Möglichkeit 1. Damit trägt die Datei eine Mustersprache und nicht zwei.
 - Das Pfadmuster geht der Kennzeichendatei vor, ohne Treffer bleibt die Metadatenanzeige: Nutzerentscheid vom 260823.
 - Erstes passendes Profil in der Datei gewinnt: Festlegung A1.
 
@@ -221,9 +221,9 @@ Der Befund ist `issues/260824-1124_*_zwei-feldmuster-der-auslieferungsfassung-ve
 
 **Decisions made:**
 - Fester Bausteinsatz ohne eigene Ausdruckssprache über den Bausteinen: Nutzerentscheid vom 260823.
-- Der Feldbaustein ist ein regulärer Ausdruck mit Fanggruppe: Nutzerentscheid vom 260824-0555, `decisions/260824-0541_a_wie-zieht-der-baustein-ein-feld-aus-einer-datei-…`. Er trägt damit alle vier Zugriffsformen der Werkbank, JSON eingeschlossen.
+- Der Feldbaustein ist ein regulärer Ausdruck mit Fanggruppe: Nutzerentscheid vom 260824-0555, `decisions/260824-0541_*_wie-zieht-der-baustein-ein-feld-aus-einer-datei-…`. Er trägt damit alle vier Zugriffsformen der Werkbank, JSON eingeschlossen.
 - Sortiert wird nach Änderungsdatum: Nutzerentscheid vom 260824-0555.
-- Der Titel ist die erste nicht leere Zeile: Nutzerentscheid vom 260824-0610, `decisions/260824-0600_a_der-titel-aus-der-ueberschriftenzeile-…`, Möglichkeit 1. Diese Antwort berichtigt die Titelhälfte der Antwort vom 260824-0555; die Sortierung bleibt.
+- Der Titel ist die erste nicht leere Zeile: Nutzerentscheid vom 260824-0610, `decisions/260824-0600_*_der-titel-aus-der-ueberschriftenzeile-…`, Möglichkeit 1. Diese Antwort berichtigt die Titelhälfte der Antwort vom 260824-0555; die Sortierung bleibt.
 - Ein Baustein ohne Wert setzt einen sichtbaren Platzhalter: Nutzerentscheid vom 260824-0555.
 - Flache Zählung: Festlegung A2.
 
@@ -285,18 +285,18 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|histor
 - [ ] C5.9 Das mitgelieferte Profil greift nur in einer fusion-Werkbank. In einem beliebigen anderen Ordner trifft kein Pfadmuster und keine Kennzeichendatei, und die Vorschau zeigt die heutige Metadatenanzeige.
 - [ ] C5.10 Die Auslieferungsfassung trägt Kommentarzeilen, die alle vier Bausteine benennen und je einen an einem Beispiel zeigen. Eine Probe hält, dass jeder der vier Bausteinnamen in der Datei vorkommt, nach dem Vorbild der Proben über `AUSLIEFERUNGSTEXT` in `einstellungen.rs`.
 
-**Berichtigung 260824-1505 zu C5.2 und C5.3: drei Speicher blieben ohne Profil.** Das Pfadmuster zählt sechs Namen auf, und `decisions`, `memos` und `investigations` stehen nicht darunter. Gemessen am 260824-1313 mit der fertigen `resources/default-readers.toml` gegen den Bestand dieser Werkbank: 78 Ordner treffen das Speicherprofil, 19 den Defektspeicher, **21 keines von beiden** — `shared/decisions`, `shared/investigations`, `shared/memos` und die achtzehn `decisions`-Ordner der Runden. Der Speicher, den `CLAUDE.md` als „bindende Grundlage" führt, war damit der einzige, den die Vorschau nicht zusammenfasst. Der Nutzer hat am 260824-1505 die Möglichkeit 2 gewählt: **aus sechs Alternativen des Pfadmusters werden neun**, und die drei Namen zeigen Zahl und jüngste zehn wie die übrigen Speicher. C5.2 und C5.3 nennen damit neun Speicher statt sechs; die Zahl 118 für `shared/history` ist unberührt. **Der Preis ist gemessen und beträgt null:** betroffen ist die Erkennung und kein Baustein, es entsteht kein neues Profil und keine Zeile mehr in einem vorhandenen, und die Grenzen aus C6 bleiben, wie sie sind. Der Datensatz ist `decisions/260824-1313_a_deckt-das-speicherprofil-auch-decisions-memos-und-investigations-ab.md`; gebaut wird die Änderung in Schritt 14 des Plans.
+**Berichtigung 260824-1505 zu C5.2 und C5.3: drei Speicher blieben ohne Profil.** Das Pfadmuster zählt sechs Namen auf, und `decisions`, `memos` und `investigations` stehen nicht darunter. Gemessen am 260824-1313 mit der fertigen `resources/default-readers.toml` gegen den Bestand dieser Werkbank: 78 Ordner treffen das Speicherprofil, 19 den Defektspeicher, **21 keines von beiden** — `shared/decisions`, `shared/investigations`, `shared/memos` und die achtzehn `decisions`-Ordner der Runden. Der Speicher, den `CLAUDE.md` als „bindende Grundlage" führt, war damit der einzige, den die Vorschau nicht zusammenfasst. Der Nutzer hat am 260824-1505 die Möglichkeit 2 gewählt: **aus sechs Alternativen des Pfadmusters werden neun**, und die drei Namen zeigen Zahl und jüngste zehn wie die übrigen Speicher. C5.2 und C5.3 nennen damit neun Speicher statt sechs; die Zahl 118 für `shared/history` ist unberührt. **Der Preis ist gemessen und beträgt null:** betroffen ist die Erkennung und kein Baustein, es entsteht kein neues Profil und keine Zeile mehr in einem vorhandenen, und die Grenzen aus C6 bleiben, wie sie sind. Der Datensatz ist `decisions/260824-1313_*_deckt-das-speicherprofil-auch-decisions-memos-und-investigations-ab.md`; gebaut wird die Änderung in Schritt 14 des Plans.
 
-**Berichtigung 260824-1505 zu C5.6: der Zustand steht als vier Zeilen und nicht als drei.** Der ursprüngliche Wortlaut lautet: „Der Zustand steht als drei Zeilen, eine je Marker: vorgesehen, aktiv, geschlossen." Das Markervokabular der Werkbank kennt aber sechs Zustände, und drei Zeilen decken vier davon ab, wenn die dritte `_c_` und `_b_` zusammenfasst. Eine überholte (`_s_`) oder zurückgestellte (`_d_`) Runde antwortet auf alle drei mit „nein" und sähe damit aus wie eine Runde, über deren Zustand die Werkbank nichts sagt. **Am Bestand betrifft das heute zwei der achtzehn Circle-Verzeichnisse**, `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` und `260816-2255-befehle-absetzen-und-makros-speichern`, beide `_d_`, nachgezählt am 260824-1508; kein Circle-Datensatz trägt heute `_a_` oder `_s_`. Der Nutzer hat am 260824-1505 die Möglichkeit 2 gewählt: eine vierte Zustandszeile „Abgelegt", ein Vorhandensein auf `^_[sd]_circle\.md$`. Damit fällt jeder der sechs Marker in genau eine Zeile. **Das weicht von der Festlegung A7 ab**, die drei Zeilen nennt; A7 bleibt im Wortlaut stehen und trägt einen Verweis hierher. Der feste Bausteinsatz bleibt bei vier Bausteinen: eine vierte Zeile ist kein fünfter Baustein, und A7s tragende Hälfte bleibt gewahrt. **Der Preis ist gemessen und beträgt null** — ein Vorhandensein mit `muster` und ohne `ordner` prüft die Liste des ohnehin gelesenen Ordners, also kein zusätzlicher Verzeichnisleselauf und keine Dateiöffnung; das Rundenprofil bleibt bei elf von vierundzwanzig Öffnungen, und C6.7 ist unberührt. Der Datensatz ist `decisions/260824-0634_a_bekommt-das-circle-profil-eine-vierte-zustandszeile-fuer-die-abgelegten-runden.md`; gebaut wird die Änderung in Schritt 14 des Plans.
+**Berichtigung 260824-1505 zu C5.6: der Zustand steht als vier Zeilen und nicht als drei.** Der ursprüngliche Wortlaut lautet: „Der Zustand steht als drei Zeilen, eine je Marker: vorgesehen, aktiv, geschlossen." Das Markervokabular der Werkbank kennt aber sechs Zustände, und drei Zeilen decken vier davon ab, wenn die dritte `_c_` und `_b_` zusammenfasst. Eine überholte (`_s_`) oder zurückgestellte (`_d_`) Runde antwortet auf alle drei mit „nein" und sähe damit aus wie eine Runde, über deren Zustand die Werkbank nichts sagt. **Am Bestand betrifft das heute zwei der achtzehn Circle-Verzeichnisse**, `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` und `260816-2255-befehle-absetzen-und-makros-speichern`, beide `_d_`, nachgezählt am 260824-1508; kein Circle-Datensatz trägt heute `_a_` oder `_s_`. Der Nutzer hat am 260824-1505 die Möglichkeit 2 gewählt: eine vierte Zustandszeile „Abgelegt", ein Vorhandensein auf `^_[sd]_circle\.md$`. Damit fällt jeder der sechs Marker in genau eine Zeile. **Das weicht von der Festlegung A7 ab**, die drei Zeilen nennt; A7 bleibt im Wortlaut stehen und trägt einen Verweis hierher. Der feste Bausteinsatz bleibt bei vier Bausteinen: eine vierte Zeile ist kein fünfter Baustein, und A7s tragende Hälfte bleibt gewahrt. **Der Preis ist gemessen und beträgt null** — ein Vorhandensein mit `muster` und ohne `ordner` prüft die Liste des ohnehin gelesenen Ordners, also kein zusätzlicher Verzeichnisleselauf und keine Dateiöffnung; das Rundenprofil bleibt bei elf von vierundzwanzig Öffnungen, und C6.7 ist unberührt. Der Datensatz ist `decisions/260824-0634_*_bekommt-das-circle-profil-eine-vierte-zustandszeile-fuer-die-abgelegten-runden.md`; gebaut wird die Änderung in Schritt 14 des Plans.
 
 **Diese zwei Berichtigungen ändern drei freigegebene Abnahmekriterien inhaltlich** (C5.2, C5.3 und C5.6) und weichen an einer Stelle von einer bestätigten Festlegung ab (A7). Sie stehen deshalb hier und nicht anstelle des ursprünglichen Wortlauts, in derselben Form wie die vier Berichtigungen vom 260824-1224: der freigegebene Wortlaut ist der Beleg dafür, was der Nutzer am Tor bestätigt hat.
 
 **Berichtigung 260824-1751 zu C5.4: der Defektspeicher zeigt fünf Zeilen und nicht drei.** Der ursprüngliche Wortlaut lautet: „erscheinen die Zahl der offenen, die Zahl der geschlossenen und die zehn jüngsten Titel." Gebaut sind fünf Zeilen, in dieser Reihenfolge: „Datensätze" als Gesamtzahl, „Offen", „Geschlossen", „Zurückgestellt" und „Die jüngsten zehn" (`resources/default-readers.toml`, Profil „fusion-Werkbank: ein Defektspeicher", gebaut mit `942172b`). Der Grund ist die Vollständigkeit der Auskunft. Das Markervokabular der Werkbank kennt für einen Defektdatensatz vier Marker, nämlich `_o_` offen, `_p_` in Arbeit, `_c_` geschlossen und `_d_` zurückgestellt; zwei Zählungen ließen zwei davon unsichtbar, und ohne eine Gesamtzahl ergab sich die Lücke aus nichts, was auf dem Bildschirm steht. Der Nutzer hat beide zusätzlichen Zeilen gewählt: die Gesamtzahl, weil die Summe damit aufgeht und jeder künftige Marker als Differenz sichtbar wird, und die zurückgestellten, weil sie am Bestand vorkommen. **Gemessen am 260824-1739** über die neunzehn Defektspeicher dieser Werkbank: 622 Datensätze, davon 178 offen, 440 geschlossen, 4 zurückgestellt und 0 in Arbeit, und 178 + 440 + 4 + 0 ergibt 622. **Der Preis ist gemessen und beträgt null:** beide neuen Zeilen sind eine `zaehlung` ohne `ordner` und benutzen den ohnehin fälligen Leselauf, der Defektspeicher bleibt bei einem Verzeichnisleselauf und zehn Dateiöffnungen, und die Grenzen aus C6.4 sind unberührt. Der Befund ist `issues/260824-1649_*_der-defektspeicher-zaehlt-zwei-von-vier-markern-und-vier-datensaetze-fallen-durch.md`, dessen `Resolved:`-Notiz die Wahl des Nutzers auf 260824-1935 datiert.
 
-**Die Zahl „54 offene von 82" in C5.4 ist ein datierter Stand und keine Zusage, die heute noch hält.** Sie stimmte am 260824-0613 und am 260824-1739. Am 260824-1751 sind es 55 offene von 83, weil derselbe Commit `942172b` mit `shared/issues/260824-2115_o_ein-commit-des-orchestrators-nimmt-die-git-mv-umbenennungen-eines-laufenden-agenten-mit.md` einen weiteren offenen Datensatz angelegt hat. Der Plan hält diesen Fall bereits fest: die Zahlen dieser Werkbank stehen in keiner Probe, sie ändern sich mit jeder Sitzung und werden bei der Abnahme einmal am echten Bestand nachgezählt (`planning/260824-0640_o_plan-…`, `## Nutzerarbeit` Punkt 7 und `## Testing Strategy`). Der Wortlaut bleibt deshalb stehen. Wer C5.4 abnimmt, zählt nach und hält das Ergebnis gegen die Anzeige, nicht gegen diese Zahl.
+**Die Zahl „54 offene von 82" in C5.4 ist ein datierter Stand und keine Zusage, die heute noch hält.** Sie stimmte am 260824-0613 und am 260824-1739. Am 260824-1751 sind es 55 offene von 83, weil derselbe Commit `942172b` mit `shared/issues/260824-1745_*_ein-commit-des-orchestrators-nimmt-die-git-mv-umbenennungen-eines-laufenden-agenten-mit.md` einen weiteren offenen Datensatz angelegt hat. Der Plan hält diesen Fall bereits fest: die Zahlen dieser Werkbank stehen in keiner Probe, sie ändern sich mit jeder Sitzung und werden bei der Abnahme einmal am echten Bestand nachgezählt (`planning/260824-0640_*_plan-…`, `## Nutzerarbeit` Punkt 7 und `## Testing Strategy`). Der Wortlaut bleibt deshalb stehen. Wer C5.4 abnimmt, zählt nach und hält das Ergebnis gegen die Anzeige, nicht gegen diese Zahl.
 
 **Decisions made:**
-- Die Sitzungsinfo kommt aus `orchestrator-live.md`: Nutzerentscheid vom 260824-0610, `decisions/260824-0600_a_woher-nimmt-die-wurzelzusammenfassung-ihre-sitzungsinfo.md`, Möglichkeit 1. Gewählt gegen `agentstate.yaml`, das in dieser Werkbank nicht existiert und in `.gitignore` geführt ist.
+- Die Sitzungsinfo kommt aus `orchestrator-live.md`: Nutzerentscheid vom 260824-0610, `decisions/260824-0600_*_woher-nimmt-die-wurzelzusammenfassung-ihre-sitzungsinfo.md`, Möglichkeit 1. Gewählt gegen `agentstate.yaml`, das in dieser Werkbank nicht existiert und in `.gitignore` geführt ist.
 - Der Zustand eines Circles über drei Vorhandensein-Zeilen: Festlegung A7.
 
 ---
@@ -388,5 +388,60 @@ Sieben technische Fragen entscheidet der Plan und nicht dieser Spec.
 ## User Decisions Pending
 
 - [x] Die sieben abgeleiteten Festlegungen A1 bis A7 hat der Nutzer am 260824-0625 am Spec-Tor bestätigt. Sie stehen in `## Abgeleitete Festlegungen` beisammen; A7 war die schwächste und ist mitbestätigt. *(Am 260824-1224 nachgezogen: die Zeile stand noch in ihrer Fassung von vor dem Tor.)*
-- [x] Der Defektdatensatz `issues/260824-0600_*_…-er-fuehrt-eine.md` ist mit Schritt 13 des Plans geschlossen; die berichtigte Kostenangabe steht im Datensatz `decisions/260824-0541_a_wie-zieht-der-baustein-…`. *(Am 260824-1224 nachgezogen.)*
+- [x] Der Defektdatensatz `issues/260824-0600_*_…-er-fuehrt-eine.md` ist mit Schritt 13 des Plans geschlossen; die berichtigte Kostenangabe steht im Datensatz `decisions/260824-0541_*_wie-zieht-der-baustein-…`. *(Am 260824-1224 nachgezogen.)*
 - [ ] Der Backlogeintrag `shared/backlog/260823-2136_o_readerconventions-profile-fuer-dateizugriff.md` bleibt offen und trägt weiter seine erste Hälfte.
+
+---
+
+## Reconciliation Log
+
+**260824-1852, Abgleich zum Abschluss der Runde 16, Baumstand `83026f6`, Domäne `code`.**
+Gemessen ist gegen die **berichtigte** Fassung jedes Kriteriums, also gegen den freigegebenen
+Wortlaut zusammen mit den Berichtigungen vom 260824-1224, -1505, -1722 und -1751, die bei ihrem
+Kriterium stehen.
+
+**Der Marker bleibt auf `_o_`.** Was `_c_` an einem Spec heißt, ist offen
+(`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`),
+und fünf der bisher geschlossenen Runden lassen ihren Spec ebenfalls auf `_o_`. Ihn jetzt zu
+setzen entschiede die offene Frage durch vollendete Tatsache.
+
+**Die sechsundfünfzig Kriterien, in vier Gruppen:**
+
+| Gruppe | Zahl | Welche |
+|---|---|---|
+| Ohne Fenster belegt | 38 | C1.1–C1.8, C2.1–C2.7, C3.1–C3.13, C4.7, C6.1–C6.9 |
+| Nutzerarbeit am laufenden Bündel | 14 | C2.8 (sichtbare Hälfte), C4.1–C4.6, C5.1–C5.7 |
+| Zur Hälfte belegt | 2 | C3.14, C5.10 |
+| Unbelegt | 2 | C5.8, C5.9 |
+
+**Die achtunddreißig belegten sind einzeln nachgelesen** und nicht aus den Probennamen
+übernommen. Beispiele, an denen der Abgleich die Messung gegen die Zusage gehalten hat: C6.7
+misst genau `(5, 11)` und `(3, 5)` und prüft daneben über die Beschriftungen, **welches** Profil
+gegriffen hat (`crates/krk-core/tests/leseprofil.rs:2121`); C6.9 läuft als Kindprobe unter
+`ulimit -n 24`, stellt den Deskriptormangel selbst her und fährt einen Gegenlauf ohne einen
+einzigen freien Deskriptor (`:2370`, `:2406`); C6.5 legt wirklich 2.001 Einträge an und nicht
+eine abgesenkte Grenze (`:1351`); C6.4 prüft, dass der Zähler an der Grenze **stehenbleibt** und
+nicht über sie hinausläuft (`:1880`). C3.8 ist belegt, aber nirgends als C3.8 gekennzeichnet: die
+Zeile „Aktive Runde" der Wurzelzusammenfassung wird in der Messung zu C6.7 gegen
+`Wert::Text("circles/260823-2208-vorschau")` gehalten.
+
+**C4.2 und C4.3 haben je eine abzählbare Hälfte, und die ist belegt.** Die Kopfzeile aus A6 hält
+`::die_kopfzeile_traegt_den_ausgewaehlten_pfad_und_nicht_den_aufgeloesten` (`:1255`), die
+Zeilenform aus der Berichtigung vom 260824-1224 hält
+`::der_text_setzt_einzeilige_werte_hinter_und_mehrzeilige_unter_die_beschriftung` (`:1282`).
+Was ein Fenster braucht, steht unter `## Nutzerarbeit` des Plans.
+
+**Die vier Kriterien, die nicht aufgehen, tragen je einen neuen Datensatz.** Alle vier sind am
+Baum **eingelöst**; ungehalten ist die Zusage jeweils für die Zukunft:
+
+- C3.14, zweite Hälfte: `issues/260824-1852_*_c3-14-nennt-seinen-eigenen-nachweis-und-nichts-im-baum-fuehrt-ihn.md`
+- C5.8 und C5.9: `issues/260824-1852_*_zwei-abnahmekriterien-aus-c5-sind-weder-durch-eine-probe-belegt-noch-stehen-sie-unter-nutzerarbeit.md`
+- C5.10, zweite Hälfte: `issues/260824-1852_*_die-probe-zu-c5-10-liest-den-ganzen-text-und-misst-die-haelfte-des-kriteriums-nicht.md`
+
+**Zwei Buchführungsstellen dieses Specs sind berichtigt.** Der Satz unter
+`## Die acht Antworten` sagte, alle acht Datensätze stünden auf beantwortet; sie stehen seit
+diesem Abgleich auf umgesetzt. Und das Zitat in der Notiz zu C5.4 nannte
+`shared/issues/260824-2115_o_…`, einen Pfad, der seit der Umbenennung aus
+`shared/issues/260824-1758_*_die-zeitstempel-…` ins Leere zeigte; es steht jetzt in der Sternform
+auf `260824-1745`. Daneben tragen alle Zitate dieses Specs die Sternform statt eines
+ausgeschriebenen Markers.

@@ -2,7 +2,7 @@ Sechs Speicher unter `archive/` bleiben ohne Profil und tragen dieselben Datensa
 
 ---
 
-Das Pfadmuster des Speicherprofils (`resources/default-readers.toml:216`) verlangt hinter
+Das Pfadmuster des Speicherprofils (`resources/default-readers.toml:237`) verlangt hinter
 `fusion-workbench/` entweder `shared` oder `circles/<name>`. Die Speicher, die der Archivschritt
 von `/fusion:cleanup` nach `fusion-workbench/archive/<lauf>/shared/` verschoben hat, erreicht es
 damit nicht. Sechs Ordner mit denselben Datensatzarten zeigen weiter die Metadatenanzeige.
@@ -69,3 +69,15 @@ eigenes Profil für den Archivspeicher, das allein zählt, wäre der dritte Weg 
 sechsten `[[profil]]`-Block.
 
 Die Frage bleibt beim Nutzer.
+
+---
+**Nachgemessen beim Abgleich zum Abschluss der Runde 16, 260824-1852: die Beschreibung stimmt
+unverändert.** Gegen die heutige `resources/default-readers.toml` und alle Verzeichnisse unter
+`fusion-workbench/` gerechnet: 154 Verzeichnisse, davon 16 ohne Profil, und darunter dieselben
+sechs Speicher unter `archive/`. Auch die Aufzählung der zehn Nicht-Speicher trifft Stelle für
+Stelle. Der Datensatz bleibt offen; die Frage ist eine Nutzerentscheidung und kein Mangel, wie er
+selbst feststellt.
+
+**Eine Zeilenangabe ist nachgezogen:** das Pfadmuster des Speicherprofils stand hier auf
+`resources/default-readers.toml:216` und steht seit den Räumungen `b5bf2e3` und `942172b` auf
+`:237`.

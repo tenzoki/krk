@@ -244,3 +244,15 @@ C6.1 bis C6.9 sind an dieser Datei gemessen und halten.
    Kommentarberichtigungen und ein `muster = '\.md$'`.
 3. **Als Frage an den Nutzer und nicht als Arbeit**: B7. Ob die Speicher unter `archive/` ein
    Profil bekommen sollen, ist eine Entscheidung und kein Mangel.
+
+---
+
+**Abgleich 260824-1852.** Sieben der acht Befunde dieser Durchsicht sind geräumt und tragen den
+Marker geschlossen (`_c_`); geräumt sind sie mit `942172b`. Der achte,
+`issues/260824-1655_*_sechs-speicher-unter-archive-…`, bleibt **absichtlich offen**: er stellt
+eine Nutzerentscheidung und keinen Mangel. Seine Beschreibung ist am 260824-1852 gegen alle 154
+Verzeichnisse unter `fusion-workbench/` nachgemessen und stimmt unverändert — 16 ohne Profil,
+davon dieselben sechs Speicher unter `archive/`. Nachgelesen am Baum: das Speicherprofil trägt
+neun Namen (`resources/default-readers.toml:237`), das Rundenprofil vier Zustandszeilen
+(`:308-321`), der Defektspeicher fünf Zeilen (`:263-280`), und die Verlaufszeile trägt ihr Muster
+(`:341`). Der Text dieser Durchsicht bleibt unverändert.

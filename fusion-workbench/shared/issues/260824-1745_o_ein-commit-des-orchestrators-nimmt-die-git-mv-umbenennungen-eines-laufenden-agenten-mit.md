@@ -71,3 +71,15 @@ getrennt sein müssen sie auch im **Index**.
 
 ---
 Resolved:
+
+---
+**Nachgeprüft beim Abgleich zum Abschluss der Runde 16, 260824-1852: die Beschreibung stimmt
+Stelle für Stelle.** `git show --name-status 79209c8` führt acht Dateien: die geänderte
+`crates/krk-core/src/leseprofil/bausteine.rs`, die neue Verlaufsdatei und sechs Umbenennungen.
+Fünf der sechs sind die hier aufgezählten Defektdatensätze; die sechste,
+`260824-1722_*_der-modulkopf-der-bausteine-…`, gehört dem Commit und ist in seiner Zeile
+`Source:` genannt. Der Datensatz bleibt offen: keine der vier Möglichkeiten ist gewählt.
+
+**Der Abgleich hat aus dem Befund eine Vorkehrung gezogen** und die zehn Markerwechsel dieser
+Sitzung mit `mv` statt `git mv` gefahren, damit der Index unberührt bleibt. Das ist Möglichkeit 3
+in der Praxis eines einzelnen Laufs und keine Entscheidung über die Regel.

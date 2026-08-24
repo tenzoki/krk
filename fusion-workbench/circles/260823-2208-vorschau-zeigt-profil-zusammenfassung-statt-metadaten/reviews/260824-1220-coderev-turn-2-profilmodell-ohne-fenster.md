@@ -289,3 +289,15 @@ nachzieht, zieht sie dreimal nach; wer sie zusammen nachzieht, einmal.
 6. `260824-1216_o_zwei-bausteintische-…` — entscheiden, ob geprüft oder ausgeschrieben wird.
 
 Kein Befund hält einen Planschritt auf, und keiner ist ein Auslieferungshindernis.
+
+---
+
+**Abgleich 260824-1852.** Alle fünf Befunde dieser Durchsicht stehen als Datensätze unter
+`issues/` dieser Runde und tragen den Marker geschlossen (`_c_`): `260824-1214_*_zusammenfassen-…`,
+`260824-1215_*_die-abgeschnittene-zaehlung-…`, `260824-1216_*_zwei-bausteintische-…`,
+`260824-1217_*_ein-tippfehler-in-einem-bausteintisch-…` und
+`260824-1218_*_die-probe-zur-teillesung-…`. Die Räumung liegt in `06dbb4c`. Nachgelesen am Baum:
+`zusammenfassen` weist eine Datei am aufgelösten Pfad ab (`crates/krk-core/src/leseprofil/bausteine.rs:142`,
+Probe `tests/leseprofil.rs::auf_eine_datei_greift_kein_profil_auch_bei_passendem_pfadmuster`), und
+der Satz der abgeschnittenen Zählung lautet „mindestens …" (`leseprofil/mod.rs:574`). Der Text
+dieser Durchsicht bleibt unverändert.

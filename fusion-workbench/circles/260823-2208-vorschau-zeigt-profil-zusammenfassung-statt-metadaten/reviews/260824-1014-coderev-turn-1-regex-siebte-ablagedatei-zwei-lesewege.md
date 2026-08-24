@@ -220,3 +220,14 @@ hält einen Planschritt auf.
    Bauarbeit; sie muss stehen, bevor `## Where this Circle stops` die sechsundfünfzig Kriterien
    abhakt.
 3. **L1 bei Gelegenheit**, spätestens beim nächsten Anfassen von `text/datei.rs`.
+
+---
+
+**Abgleich 260824-1852.** Alle drei Befunde dieser Durchsicht stehen als Datensätze unter
+`issues/` dieser Runde und tragen den Marker geschlossen (`_c_`): `260824-1014_*_c3-14-nennt-…`,
+`260824-1014_*_vierzehn-prosastellen-der-ablage-…` und
+`260824-1014_*_zwei-doc-kommentare-in-datei-rs-…`. Die Räumung liegt in `06dbb4c`; C3.14 des
+Specs trägt seither die Berichtigung vom 260824-1224. Nachgelesen ist die Sache und nicht der
+Marker: `crates/krk-core/src/text/datei.rs` führt `anlesen` (`:691`) an derselben Tür
+`sys::ohne_warten_oeffnen` (`:692`) wie `lesen` und `bis_zur_grenze_lesen`. Der Text dieser
+Durchsicht bleibt unverändert.

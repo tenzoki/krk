@@ -198,3 +198,42 @@ nennen. Die Datei sieht für den Nutzer aus wie zuvor.
 
 Bündel C und D: Schritt 7 (Auslieferungsfassung, `ontocoder`, Freigabetor),
 Schritt 8 (Ablagehälfte), Schritt 9 (der siebte Inhalt).
+
+**Wiederaufnahme 260824-1440.** Die Sitzung war innerhalb von Turn 4 abgebrochen,
+nach `8433935` (Schritt 7, Freigabetor erteilt) und mit Schritt 8 auf `running`.
+Der Nutzer hat am 260824-1440 „Fortsetzen" gewählt. Historiendatei, Sitzungsanker
+`278a008` und Startzeit `260824-0530` bleiben unverändert; für Turn 4 wird kein
+zweiter `turn_start` gesetzt.
+
+Stand beim Wiedereinstieg: 4 Turns, 11 Commits gegen den Anker, 10 von 15
+Aufgaben erledigt. Der Arbeitsbaum trägt die unfertige Arbeit an Schritt 8 —
+`crates/krk-core/src/ablage/leseprofile.rs` (176 Zeilen, unversioniert),
+geändert `ablage/mod.rs`, `tests/ablage.rs`, `tests/baum.rs`. Ungeprüft gegen
+`make check`.
+
+Momentaufnahme: Turnbudget 12 (aus `fusion.json`), Domäne `code`
+(157 Quelldateien gegen 12 Datendateien, gezählt über `git ls-files`), offene
+Befunde 1 im Circle und 54 im gemeinsamen Speicher, offene Entscheidungen 2 im
+Circle und 14 gemeinsam, Circles 1 aktiv / 5 kohärent / 10 beschränkt /
+2 zurückgestellt / 0 vorgesehen. Keine Halt-Altlast.
+
+---
+
+## Coherence
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** review-needed
+
+**Edges:**
+
+- **Artefakt ↔ Grundlage — beanstandet.** 14 von 14 Planschritten einzeln am Baum belegt, 10 von 10 Entscheidungsdatensätzen der Runde umgesetzt und mit `Implemented:`-Zeile versehen, 34 von 40 Defekten geschlossen, 22 von 23 Durchsichtsbefunden geräumt, `make check` grün (1520 Proben, keine rot). Beanstandet sind zwei Dinge: vier Abnahmekriterien (C3.14 zweite Hälfte, C5.8, C5.9, C5.10 zweite Hälfte) stimmen am Baum, sind aber durch keine Probe gehalten, entgegen der ersten Schlussbedingung des Plans; und der Spec sagt, die Runde schulde denselben späteren Messlauf gegen L7 wie die Runde 14, während die Messstrecke die Arbeit dieser Runde nicht sehen kann. Belege: `issues/260824-1852_*_c3-14-…`, `issues/260824-1852_*_zwei-abnahmekriterien-aus-c5-…`, `issues/260824-1852_*_die-probe-zu-c5-10-…`, `decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-…`.
+- **Artefakt ↔ Directive — in Ordnung.** Die 25 Commits aus `278a008..HEAD` bewegen sich sämtlich auf die Directive zu; keiner steht quer, keiner führt weg. Vierzehn tragen einen Planschritt (`abecfb2`, `ed893a4`, `f013227`, `b76800b`, `a327d08`, `abe1a31`, `8433935`, `4516f4e`, `b60988f`, `a77bb77`, `7de937f`, `f9e34e7`, `c15f99b`, `b5bf2e3`), die übrigen elf sind Durchsichten, Räumungen ihrer Befunde und Buchführung. Was die Directive verlangt, ist gebaut: `readers.toml` als siebte Ablagedatei, die Erkennung in zwei Durchgängen, die vier Bausteine, der siebte Wert von `Inhalt` und die fünf mitgelieferten Profile. Was fehlt, ist die Sichtprüfung am laufenden Bündel, und die ist Nutzerarbeit.
+- **Grundlage ↔ Directive — in Ordnung.** 41 aktive Entscheidungsdatensätze (offen oder beantwortet) über alle Speicher durchgesehen; keiner widerspricht der Directive. Die vier, die sie berühren, stützen sie: `shared/decisions/260819-2216_*_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md` und `shared/decisions/260816-1310_*_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-…` tragen die Wahl abzählbarer Kriterien statt einer Zeitmessung, `circles/260802-0842-…/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md` trägt den Grund dafür, und `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-…` ist beim Setzen der Marker beachtet worden. Neu hinzugekommen ist `decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-…`; er stellt eine Frage an die Grundlage und widerspricht ihr nicht.
+
+**Die Zeitzusagen aus C8 der Runde 1, ausdrücklich beurteilt:** Die Runde setzt keine elfte Zusage und fasst keine der zehn an. Sie **berührt genau eine**, nämlich **L7** („Vorschau des ausgewählten Eintrags sichtbar", 100 ms im Perzentil), und zwar innerhalb deren Endbedingung `Vorschaumodell::laedt_noch`: jeder ausgewählte Ordner ohne Pfadmustertreffer kostet seit dieser Runde einen Verzeichnisleselauf, den es vorher nicht gab, gedeckelt auf 2.000 Einträge; ein erkannter Ordner kostet bis zu 12 Leseläufe und 24 Dateiöffnungen. Keine der neun übrigen Zusagen ist berührt. **Der Abnahmelauf ist Nutzerarbeit** und kann von keinem Agenten gefahren werden. **Er würde diese Arbeit allerdings auch nicht messen:** L7 wählt eine Datei und keinen Ordner, und der Messmodus lädt die Ablage nicht, also greift dort kein Profil. Darin unterscheidet sich die Lage von der der Runde 14, deren Arbeit im gemessenen Weg liegt. Der Datensatz dazu ist `decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-…`.
+
+**Rebalance recommendation:** revise Grounding
+
+Die Voreinstellung für eine beanstandete Kante Artefakt ↔ Grundlage lautet „revise Artifact"; sie trifft hier nicht zu, und der Abgleich weicht bewusst ab. Der Bau ist an jeder der vier beanstandeten Stellen nachgemessen und **richtig**; falsch ist ein Satz über ihn, nämlich die Aussage des Specs über L7, und ungehalten sind vier Zusagen, denen eine Probe fehlt. Beides ist Arbeit an der Grundlage und an ihren Proben und kein Umbau. **Keiner der Befunde hält den Rundenabschluss auf.** Ohne die sieben Punkte aus `## Nutzerarbeit` des Plans schließt die Runde beschränkt (`_b_`) und nicht kohärent, wie ihr eigener Abschnitt `## Where this Circle stops` es vorsieht.
+
+Vollständiger Abgleich: `history/260824-1900-reconciliation.md`.

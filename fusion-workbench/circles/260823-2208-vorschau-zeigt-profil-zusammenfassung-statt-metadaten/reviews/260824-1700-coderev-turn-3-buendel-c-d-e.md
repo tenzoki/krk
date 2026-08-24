@@ -355,3 +355,16 @@ zwei Stellen, die sie zusammenfassen, tun es nicht.
 **Kein Befund hält einen Planschritt auf, und keiner ist ein Auslieferungshindernis.** Die
 Runde steht damit vor der Nutzerarbeit, und die sieben Punkte aus `## Nutzerarbeit` des Plans
 sind das, was noch aussteht.
+
+---
+
+**Abgleich 260824-1852.** Alle sieben Befunde dieser Durchsicht stehen als Datensätze unter
+`issues/` dieser Runde und tragen den Marker geschlossen (`_c_`); geräumt sind sie mit `7180b3e`
+und `79209c8`. Nachgelesen am Baum: die Probe zur Naht schneidet jetzt mitten in einem Zeichen
+(`crates/krk-core/src/leseprofil/bausteine.rs`, Prüfmodul), die Zeile „Sitzung" trägt das Muster
+`## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)` (`resources/default-readers.toml:210`), und
+der Modulkopf von `crates/krk-core/src/leseprofil/bausteine.rs:47` sagt „mindestens" wie
+`Wert::UeberGrenze`. **Ein Rest steht noch:** die Fehlermeldung der Teillesungsprobe
+(`crates/krk-core/tests/leseprofil.rs:1382`) trägt weiter die alte Aussage; der Datensatz dafür
+ist `issues/260824-1852_*_die-meldung-der-teillesungsprobe-…`. Der Text dieser Durchsicht bleibt
+unverändert.
