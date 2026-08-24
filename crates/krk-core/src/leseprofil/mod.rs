@@ -5,12 +5,14 @@
 //! Zusammenfassung, die das Vorschaufenster dort zeigt. Die Gestalt der Datei,
 //! die der Nutzer dafuer von Hand pflegt, und der Pruefschritt dahinter stehen
 //! in [`datei`]; hier stehen die **geprueften** Werte, mit denen die Auswertung
-//! danach arbeitet, und die Werte, die sie liefert.
+//! danach arbeitet, und die Werte, die sie liefert. Welches Profil ein
+//! ausgewaehlter Ordner bekommt, entscheidet [`erkennung`] in zwei
+//! Durchgaengen.
 //!
 //! ```text
 //! readers.toml ──serde──> datei::Profildatei ──datei::pruefen──> Profile
 //!                                                                   │
-//!                            ausgewaehlter Ordner ──Erkennung───────┘
+//!                            ausgewaehlter Ordner ──erkennung───────┘
 //!                                                   │
 //!                                                   v
 //!                                            Zusammenfassung
@@ -81,6 +83,7 @@ use std::path::PathBuf;
 use regex::Regex;
 
 pub mod datei;
+pub mod erkennung;
 
 // ---------------------------------------------------------------------------
 // Die Zahlen des Haushalts

@@ -1,11 +1,12 @@
-//! Abnahme der Gestalt von `readers.toml` und des Pruefschritts dahinter
-//! (Schritt 3 der Runde 16).
+//! Abnahme der Gestalt von `readers.toml`, des Pruefschritts dahinter
+//! (Schritt 3 der Runde 16) und der Ortserkennung (Schritt 5).
 //!
 //! Alle Proben hier laufen ohne Fenster **und ohne Dateisystem**: sie lesen
 //! einen TOML-Text aus dem Quelltext und halten die gepruefte Fassung gegen
-//! erwartete Werte. Das ist die erste der drei Pruefformen aus dem Abschnitt
-//! `## Testing Strategy` des Plans; die Bausteine am Pruefordner und die
-//! Zaehlproben zu C6 kommen in spaeteren Schritten hinzu.
+//! erwartete Werte, und die Eintraege eines Ordners kommen als von Hand
+//! gebaute Liste herein. Das ist die erste der drei Pruefformen aus dem
+//! Abschnitt `## Testing Strategy` des Plans; die Bausteine am Pruefordner und
+//! die Zaehlproben zu C6 kommen in spaeteren Schritten hinzu.
 //!
 //! # Die erste Probe ist die, die laufen muss
 //!
@@ -16,8 +17,14 @@
 //! entscheiden. Faellt sie, ist der Ausweg im Kopf von
 //! `krk_core::leseprofil` benannt und nicht zu suchen.
 
+use std::cell::Cell;
+use std::path::Path;
+use std::time::SystemTime;
+
 use krk_core::leseprofil::datei::{Profildatei, pruefen};
+use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{Baustein, HOECHSTENS_JUENGSTE, Profile};
+use krk_core::verzeichnis::{Eintrag, Typ};
 
 /// Liest einen TOML-Text und prueft ihn, so wie die Ablage es beim Start tut.
 ///
@@ -384,4 +391,321 @@ fn eine_datei_ohne_profilblock_liefert_keine_profile_und_keine_meldung() {
             "der Text {text:?} meldet: {meldungen:?}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Die Erkennung, in zwei Durchgaengen
+// ---------------------------------------------------------------------------
+
+/// Eintraege eines Ordners, von Hand gebaut.
+///
+/// Die Erkennung sieht allein auf [`Eintrag::name`]; Groesse, Zeitpunkt und Typ
+/// stehen deshalb fest und tragen keine Aussage. Genau das ist der Grund, aus
+/// dem diese Proben ohne Dateisystem auskommen.
+fn bestand(namen: &[&str]) -> Vec<Eintrag> {
+    namen
+        .iter()
+        .map(|name| Eintrag::neu((*name).to_owned(), 0, SystemTime::UNIX_EPOCH, Typ::Datei))
+        .collect()
+}
+
+/// Ein Abschluss ueber einen festen Bestand, der seine Rufe mitzaehlt.
+///
+/// Die Zaehlung ist die Probe selbst und kein Beiwerk: der erste Durchgang
+/// darf den Abschluss nicht rufen, und dass er es nicht tut, ist an nichts
+/// anderem abzulesen.
+fn abschluss<'e>(
+    eintraege: &'e [Eintrag],
+    gerufen: &'e Cell<u32>,
+) -> impl Fn() -> Option<&'e [Eintrag]> + 'e {
+    move || {
+        gerufen.set(gerufen.get() + 1);
+        Some(eintraege)
+    }
+}
+
+/// Der Name des erkannten Profils, oder `None`.
+fn erkannt(
+    profile: &Profile,
+    pfad: &str,
+    eintraege: &[Eintrag],
+    gerufen: &Cell<u32>,
+) -> Option<String> {
+    erkennen(profile, Path::new(pfad), &abschluss(eintraege, gerufen))
+        .map(|profil| profil.name().to_owned())
+}
+
+/// C2.1: Ein Pfadmuster trifft seinen Ordner und den daneben nicht.
+///
+/// Der zweite Ordner liegt im selben Speicher und unterscheidet sich allein im
+/// letzten Namensbestandteil; das Muster ist am Ende verankert und trennt die
+/// zwei deshalb.
+#[test]
+fn ein_pfadmuster_trifft_seinen_ordner_und_den_daneben_nicht() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Ein Speicher"
+pfad = 'fusion-workbench/shared/analyses$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    let gerufen = Cell::new(0);
+    assert_eq!(
+        erkannt(
+            &profile,
+            "/Users/k/krk/fusion-workbench/shared/analyses",
+            &[],
+            &gerufen
+        )
+        .as_deref(),
+        Some("Ein Speicher")
+    );
+    assert_eq!(
+        erkannt(
+            &profile,
+            "/Users/k/krk/fusion-workbench/shared/history",
+            &[],
+            &gerufen
+        ),
+        None,
+        "ohne Treffer bleibt es bei der Metadatenanzeige"
+    );
+}
+
+/// C2.2: Von zwei passenden Pfadmustern gewinnt das obere. Vertauscht der
+/// Nutzer die Bloecke, gewinnt das andere.
+///
+/// Beide Muster treffen denselben Pfad, also entscheidet allein die
+/// Reihenfolge der Datei (Festlegung A1).
+#[test]
+fn von_zwei_passenden_pfadmustern_gewinnt_das_obere() {
+    let weit = "[[profil]]\nname = \"Weit\"\npfad = 'analyses$'\n";
+    let eng = "[[profil]]\nname = \"Eng\"\npfad = 'fusion-workbench/shared/analyses$'\n";
+    let pfad = "/Users/k/krk/fusion-workbench/shared/analyses";
+
+    for (datei, erwartet) in [
+        (format!("{weit}\n{eng}"), "Weit"),
+        (format!("{eng}\n{weit}"), "Eng"),
+    ] {
+        let (profile, meldungen) = gepruefte(&datei);
+        assert!(meldungen.is_empty(), "{meldungen:?}");
+        assert_eq!(profile.zahl(), 2);
+
+        let gerufen = Cell::new(0);
+        assert_eq!(
+            erkannt(&profile, pfad, &[], &gerufen).as_deref(),
+            Some(erwartet),
+            "die Reihenfolge der Datei entscheidet nicht"
+        );
+    }
+}
+
+/// C2.3: Das Pfadmuster eines **spaeteren** Profils schlaegt die
+/// Kennzeichendatei eines **frueheren**.
+///
+/// Das ist keine Sonderregel, sondern die Folge davon, dass der erste
+/// Durchgang ganz vorbei ist, bevor der zweite beginnt.
+#[test]
+fn ein_spaeteres_pfadmuster_schlaegt_ein_frueheres_kennzeichen() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Das fruehere Kennzeichen"
+kennzeichen = '^_._circle\.md$'
+
+[[profil]]
+name = "Das spaetere Pfadmuster"
+pfad = 'circles/[^/]+$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    let eintraege = bestand(&["_t_circle.md", "planning", "history"]);
+    let gerufen = Cell::new(0);
+    assert_eq!(
+        erkannt(
+            &profile,
+            "/Users/k/krk/fusion-workbench/circles/260823-2208-vorschau",
+            &eintraege,
+            &gerufen
+        )
+        .as_deref(),
+        Some("Das spaetere Pfadmuster")
+    );
+    assert_eq!(
+        gerufen.get(),
+        0,
+        "das getroffene Pfadmuster kostet keinen Verzeichnisleselauf"
+    );
+}
+
+/// C2.4: Die Kennzeichendatei `^_._circle\.md$` trifft bei jedem der sechs
+/// Zustandsmarker des Vokabulars.
+///
+/// Kein Pfadmuster steht davor, also entscheidet der zweite Durchgang, und die
+/// Erkennung des einzelnen Circles haengt nicht am Zustand seiner Runde.
+#[test]
+fn das_kennzeichen_eines_circles_trifft_bei_jedem_der_sechs_marker() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Ein einzelner Circle"
+kennzeichen = '^_._circle\.md$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    for marker in ['a', 't', 'c', 'b', 's', 'd'] {
+        let eintraege = bestand(&[&format!("_{marker}_circle.md"), "planning"]);
+        let gerufen = Cell::new(0);
+        assert_eq!(
+            erkannt(
+                &profile,
+                "/Users/k/krk/fusion-workbench/circles/260823-2208-vorschau",
+                &eintraege,
+                &gerufen
+            )
+            .as_deref(),
+            Some("Ein einzelner Circle"),
+            "der Marker {marker} wird nicht erkannt"
+        );
+        assert_eq!(gerufen.get(), 1, "der Bestand wird genau einmal geholt");
+    }
+}
+
+/// Der erste Durchgang ruft den Abschluss nicht.
+///
+/// Weder wenn ein Pfadmuster trifft, noch wenn keines der Profile eine
+/// Kennzeichendatei nennt: der Verzeichnisleselauf faellt erst am ersten
+/// Profil mit Kennzeichendatei an, und die Zahlen aus C6.7 fallen aus dieser
+/// Bauart.
+#[test]
+fn der_erste_durchgang_ruft_den_abschluss_nicht() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Mit Kennzeichen"
+kennzeichen = '^\.fusion-setup$'
+
+[[profil]]
+name = "Nur Pfad"
+pfad = 'shared/analyses$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    let eintraege = bestand(&[".fusion-setup"]);
+    let gerufen = Cell::new(0);
+    assert_eq!(
+        erkannt(
+            &profile,
+            "/Users/k/krk/fusion-workbench/shared/analyses",
+            &eintraege,
+            &gerufen
+        )
+        .as_deref(),
+        Some("Nur Pfad")
+    );
+    assert_eq!(
+        gerufen.get(),
+        0,
+        "ein Pfadmustertreffer holt die Eintraege nicht"
+    );
+
+    let (nur_pfade, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Nur Pfad"
+pfad = 'nirgends$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+    let gerufen = Cell::new(0);
+    assert_eq!(
+        erkannt(&nur_pfade, "/Users/k/krk", &eintraege, &gerufen),
+        None
+    );
+    assert_eq!(
+        gerufen.get(),
+        0,
+        "ohne Kennzeichendatei in der Datei wird nichts gelesen"
+    );
+}
+
+/// Ein Profil, das beides nennt, nimmt an beiden Durchgaengen teil.
+///
+/// Der erste Durchgang uebergeht es nicht, weil es eine Kennzeichendatei hat,
+/// und der zweite nicht, weil es ein Pfadmuster hat.
+#[test]
+fn ein_profil_mit_beidem_nimmt_an_beiden_durchgaengen_teil() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Beides"
+pfad = 'shared/analyses$'
+kennzeichen = '^\.fusion-setup$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    let gerufen = Cell::new(0);
+    assert_eq!(
+        erkannt(
+            &profile,
+            "/Users/k/krk/fusion-workbench/shared/analyses",
+            &[],
+            &gerufen
+        )
+        .as_deref(),
+        Some("Beides"),
+        "der erste Durchgang uebergeht es nicht"
+    );
+    assert_eq!(gerufen.get(), 0);
+
+    let eintraege = bestand(&[".fusion-setup"]);
+    let gerufen = Cell::new(0);
+    assert_eq!(
+        erkannt(
+            &profile,
+            "/Users/k/krk/fusion-workbench",
+            &eintraege,
+            &gerufen
+        )
+        .as_deref(),
+        Some("Beides"),
+        "der zweite Durchgang uebergeht es nicht"
+    );
+    assert_eq!(gerufen.get(), 1);
+}
+
+/// Ohne Eintraege trifft keine Kennzeichendatei, und die Antwort ist
+/// unentschieden und nicht negativ.
+///
+/// `None` aus dem Abschluss heisst „die Eintraege stehen nicht zur
+/// Verfuegung", nicht „der Ordner ist leer": ein leerer Ordner liefert einen
+/// leeren Ausschnitt und wird hier danebengestellt.
+#[test]
+fn ohne_eintraege_trifft_keine_kennzeichendatei() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Ein einzelner Circle"
+kennzeichen = '^_._circle\.md$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    let gerufen = Cell::new(0);
+    let ohne = || {
+        gerufen.set(gerufen.get() + 1);
+        None
+    };
+    assert!(erkennen(&profile, Path::new("/Users/k/krk"), &ohne).is_none());
+    assert_eq!(gerufen.get(), 1);
+
+    let leer = Cell::new(0);
+    assert_eq!(erkannt(&profile, "/Users/k/krk", &[], &leer), None);
+    assert_eq!(leer.get(), 1, "auch der leere Ordner wird einmal geholt");
 }
