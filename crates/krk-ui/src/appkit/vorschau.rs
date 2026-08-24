@@ -910,13 +910,7 @@ impl Vorschaufenster {
     /// hier mit `let _ =` weg: dieselbe Form wie an den uebrigen
     /// `OnceCell`-Feldern des Programms, und sie heisst wie ueberall „ich
     /// brauche den Wert nicht". Dass es beim einen Aufruf bleibt, misst die
-    /// Probe `die_profile_haben_einen_schreiber_und_hoechstens_einen_rufer`.
-    // **Die Ausnahme faellt mit Schritt 11 der Runde 16**, der den Rufer in
-    // `appkit/anwendung.rs` baut; bis dahin haelt `-D warnings` die Kiste sonst
-    // an. Sie steht am einzelnen Stueck und nicht am Dateikopf, damit sie genau
-    // diese eine Methode deckt und nichts sonst — dieselbe Form, in der
-    // `editormodell.rs` ihre vier gehalten und wieder abgebaut hat.
-    #[allow(dead_code)]
+    /// Probe `die_profile_haben_genau_einen_schreiber_und_einen_rufer`.
     pub fn profile_setzen(&self, profile: Arc<Profile>) {
         let _ = self.ivars().profile.set(profile);
     }
@@ -1674,37 +1668,33 @@ mod tests {
     }
 
     /// Das Merkfeld der Profile hat genau einen Schreiber, und `profile_setzen`
-    /// hoechstens einen Rufer, und der steht beim Anwendungsdelegierten
-    /// (C4.5).
+    /// genau einen Rufer, und der steht beim Anwendungsdelegierten (C4.5).
     ///
-    /// **Die erste Haelfte ist die Zusage und steht als „genau einmal" da.**
-    /// Zugesagt ist, dass [`Vorschaufenster::profile_setzen`] der eine
-    /// Schreiber des Merkfeldes ist; ein zweiter Schreiber daneben waere ein
-    /// zweiter Zeitpunkt, zu dem die Vorschau andere Profile bekaeme, und an
-    /// keinem Rueckgabewert waere er abzulesen. Gezaehlt wird deshalb im Baum.
+    /// **Beide Haelften stehen als „genau einmal" da.** Zugesagt ist erstens,
+    /// dass [`Vorschaufenster::profile_setzen`] der eine Schreiber des
+    /// Merkfeldes ist, und zweitens, dass genau eine Stelle im Baum ihn ruft,
+    /// naemlich `oberflaeche_aufbauen` in `appkit/anwendung.rs`. Ein zweiter
+    /// Schreiber wie ein zweiter Rufer waere ein zweiter Zeitpunkt, zu dem die
+    /// Vorschau andere Profile bekaeme, und an keinem Rueckgabewert waere
+    /// einer von beiden abzulesen. Gezaehlt wird deshalb im Baum.
     ///
-    /// **Die zweite Haelfte ist eine obere Schranke, und das ist keine
-    /// Nachlaessigkeit, sondern die Lage.** Den einen Rufer baut Schritt 11
-    /// der Runde 16 in `appkit/anwendung.rs`; heute ist die Zahl null. Eine
-    /// Probe, die hier „genau einmal" verlangte, waere von dem Tag an rot, an
-    /// dem sie geschrieben wird, bis zum naechsten Schritt — und der billigste
-    /// Weg ins Gruene waere, sie wieder herauszunehmen. Sie sagt deshalb, was
-    /// heute und nach Schritt 11 gleichermassen gilt: **hoechstens einer, und
-    /// wenn einer, dann in `appkit/anwendung.rs`.**
+    /// Die zweite Haelfte stand bis zum Schritt 11 der Runde 16 als obere
+    /// Schranke da, weil es den Rufer noch nicht gab; seit jener Schritt ihn
+    /// gebaut hat, ist sie eine Gleichheit und faengt damit auch den Fall, dass
+    /// ihn jemand wieder ausbaut.
     ///
     /// # Was diese Probe nicht sieht
     ///
-    /// **Sie faengt keinen verschwundenen Rufer.** Wer Schritt 11 wieder
-    /// ausbaut, laesst sie gruen; dass die Profile ueberhaupt hereinkommen,
-    /// misst die Zaehlprobe jenes Schritts ueber `leseprofile::laden` und
-    /// nicht diese. Solange der Rufer fehlt, ist die zweite Haelfte leer und
-    /// bestaetigt nichts — die erste haelt in dieser Zeit allein.
+    /// **Sie sagt nichts darueber, ob die Profile ueberhaupt gelesen wurden.**
+    /// Ein Rufer, der einen leeren Satz uebergibt, besteht sie muehelos; dass
+    /// `readers.toml` beim Start einmal gelesen wird, misst die Zaehlprobe
+    /// ueber `leseprofile::laden` beim Anwendungsdelegierten und nicht diese.
     ///
     /// Daneben gelten die Grenzen aus dem Kopf von [`crate::quellbaum`]:
     /// [`aufrufstellen`] zaehlt jede Empfaengerform und jeden Pfad, aber
     /// keinen Aufruf unter einem anderen Namen.
     #[test]
-    fn die_profile_haben_einen_schreiber_und_hoechstens_einen_rufer() {
+    fn die_profile_haben_genau_einen_schreiber_und_einen_rufer() {
         // Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum,
         // den sie liest, und als ein Stueck geschrieben faende jede sich
         // selbst.
@@ -1729,21 +1719,13 @@ mod tests {
              das Merkfeld hat einen Schreiber, und der heisst `{rufer}`"
         );
 
-        let rufstellen = zaehlen(rufer);
-        assert!(
-            rufstellen.len() <= 1,
-            "`{rufer}` wird aus mehr als einer Datei gerufen: {rufstellen:?}; \
-             die Profile gehen einmal beim Aufbau der Oberflaeche herein und \
-             wechseln danach nicht mehr"
+        assert_eq!(
+            zaehlen(rufer),
+            vec![(anwendung.to_owned(), 1)],
+            "`{rufer}` wird nicht genau einmal und beim Anwendungsdelegierten \
+             gerufen; die Profile gehen einmal beim Aufbau der Oberflaeche \
+             herein und wechseln danach nicht mehr"
         );
-        for (datei, zahl) in &rufstellen {
-            assert_eq!(
-                (datei.as_str(), *zahl),
-                (anwendung, 1),
-                "`{rufer}` wird nicht genau einmal und beim \
-                 Anwendungsdelegierten gerufen"
-            );
-        }
     }
 
     /// Das Vorschaumodell weiss von der Einfaerbung nichts (C4, elftes

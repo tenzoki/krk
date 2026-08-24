@@ -217,8 +217,10 @@ use objc2_foundation::{
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
     Ablage, Aenderung, Ausgang, Datei, Einstellungen, Fensterseite, Lesezeichen, Lesezeichenliste,
-    Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen, lesezeichen, pfade,
+    Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen, leseprofile, lesezeichen,
+    pfade,
 };
+use krk_core::leseprofil::Profile;
 use krk_core::operation::{
     self, Abschluss, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung,
     Namensfehler, freier_name,
@@ -523,6 +525,24 @@ pub struct AnwendungsIvars {
     /// Auslieferungsfassung; im Messmodus bleibt es dabei, weil dort nichts
     /// geladen wird.
     einstellungen: RefCell<Einstellungen>,
+    /// Die geprueften Leseprofile aus `readers.toml` (C1 der Runde 16).
+    ///
+    /// Sie haengen neben den Einstellungen und aus demselben Grund: einmal beim
+    /// Start geladen, danach unveraendert. C4.5 sagt genau das zu — eine
+    /// waehrend des Laufs geaenderte `readers.toml` erreicht KRK erst mit dem
+    /// naechsten Start, und ein Beobachter auf der Datei entsteht in dieser
+    /// Runde nicht.
+    ///
+    /// **Ein [`Arc`] und keine Kopie.** Der Satz reist bis auf den Arbeitsfaden
+    /// des Vorschaumodells mit; dieselbe Ueberlegung traegt [`Inhalt::Bild`]
+    /// seine Bytes.
+    ///
+    /// Bis [`Self::sitzung_laden`] gelaufen ist, steht hier der leere Satz, und
+    /// im Messmodus bleibt es dabei. Er heisst „keine Profile" und ist kein
+    /// Fehlerfall: dann zeigt auch ein erkennbarer Ordner seine Metadaten.
+    ///
+    /// [`Inhalt::Bild`]: crate::vorschaumodell::Inhalt::Bild
+    profile: RefCell<Arc<Profile>>,
     /// Die Meldung, falls die Belegung ersetzt werden musste.
     ///
     /// Sie steht hier und nicht in der Statuszeile, weil es die Statuszeile
@@ -1033,6 +1053,7 @@ impl Anwendungsdelegierter {
             messaufgabe,
             belegung: RefCell::new(belegung),
             einstellungen: RefCell::new(Einstellungen::default()),
+            profile: RefCell::new(Arc::default()),
             belegungsmeldung,
             modell: RefCell::new(Fenstermodell::aus_sitzung(&Sitzung::default())),
             fenster: OnceCell::new(),
@@ -1191,6 +1212,13 @@ impl Anwendungsdelegierter {
         // schwach, die Tabelle haelt Datenquelle und Delegierten schwach.
         let _ = ivars.dateifenster.set(dateifenster);
         let _ = ivars.leiste.set(leiste);
+        // **Die Leseprofile gehen genau hier herein und nirgends sonst** (C4.5).
+        // `sitzung_laden` hat sie oben in dieser Funktion gelesen; die Vorschau
+        // steht seit wenigen Zeilen, und ein zweiter Zeitpunkt spaeter waere ein
+        // zweiter Satz Profile. Im Messmodus ist der Satz leer, und das ist die
+        // Folge und kein Versehen; der Doc-Kommentar von `sitzung_laden` schreibt
+        // sie aus.
+        vorschau.profile_setzen(Arc::clone(&ivars.profile.borrow()));
         let _ = ivars.vorschau.set(vorschau);
         let _ = ivars.editor.set(editor);
         let _ = ivars.aufteilung.set(aufteilung);
@@ -1406,6 +1434,14 @@ impl Anwendungsdelegierter {
     /// Pruefsitzung her, und der Sitzungsstart stellt sie wie ein
     /// gewoehnlicher Start aus `session.toml` wieder her. Ein
     /// Sitzungsschreiber entsteht in keinem der vier Faelle.
+    ///
+    /// **Seit der Runde 16 kommen die Leseprofile im selben Durchgang mit**, und
+    /// im Messmodus bleibt [`AnwendungsIvars::profile`] deshalb leer: alle vier
+    /// Aufgaben kehren zurueck, bevor der Durchgang laeuft, also uebergibt
+    /// [`Vorschaufenster::profile_setzen`] dort einen leeren Profilsatz. Das ist
+    /// die Folge und kein Versehen — ohne Profil zeigt ein Ordner die
+    /// Metadatenanzeige, die er bis zur Runde 15 immer gezeigt hat, und keine
+    /// der zehn Zeitzusagen misst an einer Zusammenfassung.
     fn sitzung_laden(&self) -> (Sitzung, Vec<String>) {
         let ivars = self.ivars();
         match &ivars.messaufgabe {
@@ -1497,10 +1533,11 @@ impl Anwendungsdelegierter {
         }
         let _ = ivars.sitzungsrecht.set(recht);
 
-        // **Ein Durchgang fuer beide Dateien.** Die Sitzung und die
-        // Einstellungen werden unter derselben Schreibsperre gelesen; das Lesen
-        // steht mit darunter, weil schon `Zugang::laden` schreibt, wenn eine
-        // Datei beschaedigt ist und zur Seite gelegt wird.
+        // **Ein Durchgang fuer alle drei Dateien.** Die Sitzung, die
+        // Einstellungen und die Leseprofile werden unter derselben
+        // Schreibsperre gelesen; das Lesen steht mit darunter, weil schon
+        // `Zugang::laden` schreibt, wenn eine Datei beschaedigt ist und zur
+        // Seite gelegt wird.
         let gelesen = ablage.durchgang(|zugang| {
             let sitzung = zugang.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
             // Die Einstellungen aus C11, ueber denselben Zugang. Der Aufruf legt
@@ -1508,10 +1545,30 @@ impl Anwendungsdelegierter {
             // Nutzer nichts zu pflegen, weil in dieser Runde keine Ansicht die
             // Datei schreibt.
             let eingestellt = einstellungen::laden(zugang).mit_meldung();
-            (sitzung, eingestellt)
+            // Die Leseprofile aus C1 der Runde 16, ueber denselben Zugang und
+            // aus demselben Grund wie die Einstellungen: der Aufruf legt
+            // `readers.toml` beim ersten Start an, und ein zweiter Durchgang
+            // stellte dieselbe Frage nach dem Ablageordner ein zweites Mal.
+            //
+            // **Zwei Sorten Meldung kommen heraus.** Die `Ersetzung` sagt, dass
+            // die Datei beiseitegelegt oder nicht anlegbar war (C1.6, C1.7); die
+            // Liste daneben nennt jedes abgewiesene Profil und jede Zeile, die
+            // ihren Baustein verloren hat (C2.7, C3.10). Beide gehen in dieselbe
+            // Statuszeile, aber nicht durch dieselbe Tuer — warum, steht im Kopf
+            // von `krk_core::ablage::leseprofile`.
+            let (profile, profilmeldungen) = leseprofile::laden(zugang);
+            (
+                sitzung,
+                eingestellt,
+                (profile.mit_meldung(), profilmeldungen),
+            )
         });
-        let ((sitzung, meldung), (eingestellt, meldung_einstellungen)) = match gelesen {
-            Ok(beides) => beides,
+        let (
+            (sitzung, meldung),
+            (eingestellt, meldung_einstellungen),
+            ((profile, meldung_profile), profilmeldungen),
+        ) = match gelesen {
+            Ok(alle_drei) => alle_drei,
             Err(fehler) => {
                 meldungen.push(format!(
                     "die Schreibsperre der Ablage laesst sich nicht nehmen, es wird nichts \
@@ -1523,6 +1580,9 @@ impl Anwendungsdelegierter {
         meldungen.extend(meldung);
         *ivars.einstellungen.borrow_mut() = eingestellt;
         meldungen.extend(meldung_einstellungen);
+        *ivars.profile.borrow_mut() = Arc::new(profile);
+        meldungen.extend(meldung_profile);
+        meldungen.extend(profilmeldungen);
         // Derselbe Zugang traegt die Lesezeichen aus C5. Er wird hier einmal
         // geoeffnet und nicht je Datei ein zweites Mal: `Ablage::oeffnen` legt
         // den Ordner an, und zweimal anzulegen hiesse, dieselbe Frage zweimal an
@@ -8618,6 +8678,60 @@ mod loeschzielproben {
         assert!(
             !text.contains("aus einem Git-Arbeitsbaum"),
             "ein Datentraeger wird als Arbeitsbaum angesagt: {text}"
+        );
+    }
+}
+
+/// Der eine Weg, auf dem die Leseprofile in KRK hereinkommen (Runde 16).
+///
+/// Eine Zaehlprobe ueber den Baum und keine ueber ein Ergebnis: die Zusage aus
+/// C4.5 lautet, dass `readers.toml` **einmal beim Start** gelesen wird, und an
+/// keinem Rueckgabewert ist abzulesen, dass es keine zweite Lesestelle gibt.
+#[cfg(test)]
+mod leseprofilproben {
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// [`krk_core::ablage::leseprofile::laden`] wird im Baum genau einmal
+    /// gerufen, und zwar in dieser Datei (C4.5).
+    ///
+    /// Der Aufruf steht im **einen** Durchgang von
+    /// [`Anwendungsdelegierter::sitzung_laden`](super::Anwendungsdelegierter),
+    /// zusammen mit der Sitzung und den Einstellungen. Ein zweiter Rufer waere
+    /// ein zweiter Zeitpunkt, zu dem KRK die Datei laese, und damit ein zweiter
+    /// Profilstand neben dem des Starts.
+    ///
+    /// **Sie ist die Gegenprobe zur Zaehlprobe der Vorschau.** Jene
+    /// (`vorschau::tests::die_profile_haben_genau_einen_schreiber_und_einen_rufer`)
+    /// haelt fest, dass die Profile genau einmal an die Vorschau uebergeben
+    /// werden; sie sieht aber nicht, ob ueberhaupt welche gelesen wurden. Diese
+    /// haelt die andere Haelfte der Kette.
+    ///
+    /// # Was diese Probe nicht sieht
+    ///
+    /// Gezaehlt wird die **Aufrufform** `leseprofile::laden(`. Nicht gezaehlt
+    /// ist damit die Weitergabe der Funktion als Wert, wie sie
+    /// `krk-core/tests/ablage.rs` mit `.durchgang(leseprofile::laden)` schreibt:
+    /// dort ruft der Durchgang, und im Quelltext steht keine Klammer. Daneben
+    /// gelten die Grenzen aus dem Kopf von [`crate::quellbaum`], insbesondere
+    /// ein Aufruf unter einem anderen Namen ueber `use … as anders;`.
+    #[test]
+    fn die_leseprofile_werden_im_baum_genau_einmal_geladen() {
+        // Die Nadel steht zusammengesetzt da: die Probe liegt in der Datei, die
+        // sie zaehlt, und als ein Stueck geschrieben faende sie sich selbst.
+        let nadel = concat!("leseprofile::", "laden");
+        let diese_datei = "krk-ui/src/appkit/anwendung.rs";
+
+        let rufer: Vec<(String, usize)> = quelldateien()
+            .into_iter()
+            .map(|(datei, inhalt)| (datei, aufrufstellen(&inhalt, nadel)))
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+
+        assert_eq!(
+            rufer,
+            vec![(diese_datei.to_owned(), 1)],
+            "`{nadel}` wird nicht genau einmal und nicht in dieser Datei gerufen; \
+             die Leseprofile kommen einmal beim Start herein und danach nicht mehr"
         );
     }
 }
