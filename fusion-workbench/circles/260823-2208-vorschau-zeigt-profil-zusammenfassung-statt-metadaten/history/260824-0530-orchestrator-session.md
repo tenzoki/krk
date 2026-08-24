@@ -237,3 +237,161 @@ Circle und 14 gemeinsam, Circles 1 aktiv / 5 kohärent / 10 beschränkt /
 Die Voreinstellung für eine beanstandete Kante Artefakt ↔ Grundlage lautet „revise Artifact"; sie trifft hier nicht zu, und der Abgleich weicht bewusst ab. Der Bau ist an jeder der vier beanstandeten Stellen nachgemessen und **richtig**; falsch ist ein Satz über ihn, nämlich die Aussage des Specs über L7, und ungehalten sind vier Zusagen, denen eine Probe fehlt. Beides ist Arbeit an der Grundlage und an ihren Proben und kein Umbau. **Keiner der Befunde hält den Rundenabschluss auf.** Ohne die sieben Punkte aus `## Nutzerarbeit` des Plans schließt die Runde beschränkt (`_b_`) und nicht kohärent, wie ihr eigener Abschnitt `## Where this Circle stops` es vorsieht.
 
 Vollständiger Abgleich: `history/260824-1900-reconciliation.md`.
+
+---
+
+# Sitzungsabschluss 260824-1815
+
+**Directive:** Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der Metadaten
+**Modus:** plan · **Domäne:** code · **Anker:** `278a008`
+**Status:** Beschränkt geschlossen (`_b_`) — sieben Abnahmekriterien sind Nutzerarbeit am laufenden Bündel
+
+Diese Sitzung ist am 260824-0530 begonnen, innerhalb von Turn 4 abgebrochen und
+am 260824-1440 vom Nutzer fortgesetzt worden. Historiendatei, Anker und
+Startzeit sind dieselben geblieben; für Turn 4 ist kein zweiter `turn_start`
+gesetzt worden.
+
+## Budget
+
+Die vier Datensatzzahlen sind am 260824-1812 über beide Speicher gerechnet, nicht
+mitgezählt: gefiled heißt Namensstempel ab `session.started`, geschlossen heißt,
+dass der heutige Name am Anker nicht existierte.
+
+| Größe | Zahl |
+|---|---|
+| Turns | 5 |
+| Commits | 27 |
+| Aufgaben erledigt | 17 (14 Planschritte, 3 Räumungsaufträge) |
+| Befunde angelegt | 42 |
+| Befunde geschlossen | 34 |
+| Entscheidungen beantwortet | 9 angelegt, 1 offen geblieben |
+| Entscheidungen umgesetzt (`_a_`→`_i_`) | 10 |
+| Menschliche Tore | 5 (Wiederaufnahme, zwei Entscheidungen, Defektspeicher, Rundenende) |
+| Agentenfehler | 0 |
+
+## Was die Sitzung gebaut hat
+
+Die Schritte 8 bis 12 und 14 des Plans, also die Ablagehälfte von `readers.toml`,
+der siebte `Inhalt`, der Anzeigezweig, der Weg der Profile durch die Anwendung,
+die Zählproben zu C6 und die zwei Zeilen aus den Nutzerentscheidungen. Damit
+stehen alle vierzehn Planschritte.
+
+## Was sie darüber hinaus gefunden hat
+
+**Vier Proben, die mehr behaupteten, als sie maßen.** Der Reihe nach: eine Probe,
+deren zwei Fälle nicht unterscheidbar waren (`LESEPROFILTEXT` trug nur eine
+Kommentarzeile); ein `zip`, das fünf Dateien mit vier Ersetzungen paarte und
+still auf vier kürzte; eine Zählprobe mit einer oberen statt einer beidseitigen
+Schranke; und die Probe zur Naht des Deckels, die hinter einem ganzen Zeichen
+schnitt und ihren Zweig nie erreichte. Die letzte ist durch Aushöhlen des
+Zweiges nachgewiesen und nicht durch Lesen.
+
+**Drei Befunde über die Sitzungsmechanik selbst**, zwei davon im gemeinsamen
+Speicher, weil sie nicht KRK betreffen:
+
+- `shared/issues/260824-1745_o_…` — ein Commit des Orchestrators nimmt die
+  `git mv`-Umbenennungen eines laufenden Agenten mit. Der Index ist geteilt, die
+  Commit-Sperre serialisiert nur Committer. Der Abgleich hat den Datensatz zwei
+  Stunden später schon beachtet und seine Marker mit `mv` gefahren.
+- `shared/issues/260824-1758_o_…` — zehn Dateinamen tragen einen Stempel, der
+  später liegt als der Commit, der sie trägt; sieben um 25 bis 208 Minuten. Sechs
+  stammen von Agenten, einer vom Orchestrator.
+- Dreimal hat der Orchestrator eine Umbenennung mit nur einem statt zwei Pfaden
+  in die Staging-Liste geschrieben. Zweimal brach der Commit ab, einmal standen
+  beide Namen in HEAD und mussten nachgetragen werden (`bde9ea0`).
+
+## Der Rundenabschluss
+
+Die neun Endbedingungen des Plans sind dem Nutzer am 260824-1808 einzeln
+vorgelegt worden. **Acht halten, eine nicht:** vier Abnahmekriterien (C3.14
+zweite Hälfte, C5.8, C5.9, C5.10 zweite Hälfte) stimmen am Baum, ohne dass eine
+Probe sie hält. Der Nutzer hat entschieden, die Runde trotzdem zu schließen; die
+vier Datensätze bleiben offen und binden weiter.
+
+Der Marker ist `_b_`, wie die neunte Endbedingung es vorsieht.
+
+## Review coverage
+
+**Bereich:** `278a008..HEAD` — 27 Commits
+**Gedeckt von:** vier Durchsichten, `unusable=0`
+**Nicht gedeckt:** 9 Commits — `bde9ea0`, `23ab893`, `83026f6`, `942172b`,
+`79209c8`, `7180b3e`, `89e0c01`, `fe03526`, `9c859db`. Es sind die Räumungs- und
+Buchführungscommits aus Turn 5 und zwei Randartefakte; **keine Durchsicht hat die
+Räumung der Durchsichtsbefunde gelesen.**
+**Mitzuschleppen:** die `Not-opened`-Liste der letzten Durchsicht führt
+`resources/default-readers.toml` (vom `ontorev` gelesen), elf Verlaufsdateien und
+zwei Entscheidungsdatensätze.
+
+## Verbleibende Arbeit
+
+- **Sieben Punkte Nutzerarbeit** am laufenden Bündel, im Plan unter `## Nutzerarbeit`.
+- `issues/260824-1655_o_…` — ob archivierte Speicher ein Profil bekommen. Der
+  Datensatz trägt ein gemessenes Argument dagegen.
+- Vier `issues/260824-1852_o_*` — die unbewachten Kriterien und zwei Aussagen in
+  `CLAUDE.md`, die diese Runde falsch gemacht hat.
+- `decisions/260824-1900_o_…` — wie die Arbeit dieser Runde jemals gegen L7
+  gemessen wird.
+- Die neun ungelesenen Commits.
+
+## Session Flow
+
+Aus `orchestrator-events.jsonl`, ab dem `session_start` dieser Historie.
+
+```mermaid
+sequenceDiagram
+    participant U as Nutzer
+    participant O as Orchestrator
+    participant C as Coder
+    participant OC as Ontocoder
+    participant A as Analyst
+    participant CR as Coderev
+    participant OR as Ontorev
+    participant R as Reconciler
+    participant PM as Playmaker
+
+    Note over O: Wiederaufnahme in Turn 4
+    O->>U: GATE unterbrochene Sitzung
+    U-->>O: fortsetzen
+    O->>C: P-8 drei fehlende Probenpflichten
+    C-->>O: done (4516f4e)
+    O->>U: GATE zwei offene Entscheidungen
+    U-->>O: beide Moeglichkeit 2
+    O->>C: P-9 der siebte Inhalt
+    O->>A: P-15 Spec- und Planbuchfuehrung
+    A-->>O: done (30fd560)
+    C-->>O: done (b60988f)
+    O->>OC: P-14 vierte Zustandszeile
+    O->>C: P-10 Anzeigezweig
+    OC-->>O: done (b5bf2e3), ohne Profil 21 -> 0
+    C-->>O: done (a77bb77)
+    O->>C: P-11 Anwendung laedt die Profile
+    C-->>O: done (7de937f)
+    O->>C: P-12 Zaehlproben zu C6
+    C-->>O: done (f9e34e7), alle 14 Schritte DONE
+    O->>CR: Durchsicht abe1a31..HEAD
+    O->>OR: Durchsicht der Auslieferungsfassung
+    CR-->>O: 7 Befunde, keiner haelt auf
+    OR-->>O: 8 Befunde, keiner haelt auf
+    O->>U: Coherence, 16 offene Befunde
+    U-->>O: Turn 5, Befunde raeumen
+
+    Note over O: Turn 5
+    O->>C: T5-CODE sechs Code-Befunde
+    O->>A: T5-SPEC C6.5 und A5
+    O->>OC: T5-DATA acht Befunde der Fassung
+    A-->>O: done (89e0c01), der Bau hat recht
+    C-->>O: done (7180b3e), Zweig durch Aushoehlen belegt
+    O->>C: Nachtrag Modulkopf
+    C-->>O: done (79209c8)
+    OC-->>O: done (942172b), Vorschlag abgelehnt
+    O->>A: T5-SPEC2 vier Stellen nachziehen
+    A-->>O: done (83026f6), Zeitstempeldrift gefunden
+
+    Note over O: Rundenabschluss
+    O->>R: Abgleich
+    R-->>O: 12 Abweichungen, review-needed
+    O->>U: GATE neun Endbedingungen
+    U-->>O: Bedingung 1 haelt nicht, trotzdem schliessen; _b_
+    O->>PM: Portfolio nach _t_ -> _b_
+    Note over O: Beschraenkt geschlossen
+```

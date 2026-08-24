@@ -64,3 +64,61 @@ Messrunde steht.
 
 Der Playmaker benennt den Marker nicht um. Die Aktivierung fährt der Nutzer über
 `/fusion:next`, oder der Orchestrator nach bestätigtem Vorschlag.
+
+---
+
+## Closure note
+
+**Beschränkt geschlossen am 260824-1810.** Der Nutzer hat den Abschluss am
+260824-1808 an den neun Endbedingungen des Plans einzeln entschieden.
+
+**Gebaut ist, was die Directive verlangt.** `readers.toml` als siebte
+Ablagedatei mit ihrem eigenen Ladeweg, die Erkennung in zwei Durchgängen, die
+vier Bausteine mit ihrem Haushalt, der siebte Wert von `Inhalt`, der Weg der
+Profile durch die Anwendung bis an die Vorschaufläche, und fünf mitgelieferte
+Profile, deren 33 Ausdrücke gegen die 154 Verzeichnisse dieser Werkbank
+nachgerechnet sind. Vierzehn Planschritte, jede behauptete Erledigung einzeln
+gegen den Baum gelesen; die Belegtabelle steht im
+`## Reconciliation Log` des Plans.
+
+**Warum beschränkt und nicht kohärent.** Sieben Abnahmekriterien verlangen KRK
+im Vordergrund und sind damit Nutzerarbeit, die kein Agent fahren kann; der
+Plan führt sie unter `## Nutzerarbeit` beisammen. Die neunte Endbedingung sieht
+diesen Ausgang ausdrücklich vor. Das ist keine Häufung von Fehlschlägen,
+sondern eine Eigenschaft dieses Projekts: der Marker misst hier die
+Verfügbarkeit des Nutzers und nicht die Reife der Runde.
+
+**Eine Endbedingung hält nicht, und sie steht hier, statt weggeschrieben zu
+werden.** Bedingung 1 verlangt, dass jedes der 56 Abnahmekriterien belegt ist
+oder unter `## Nutzerarbeit` steht. 38 sind belegt, 14 sind Nutzerarbeit, und
+**vier — C3.14 zweite Hälfte, C5.8, C5.9, C5.10 zweite Hälfte — stimmen am Baum,
+ohne dass eine Probe sie hält.** Nachgemessen sind sie; ungehalten ist die
+Zusage für die Zukunft. Der Nutzer hat am 260824-1808 entschieden, die Runde
+trotzdem zu schließen; die vier Datensätze `issues/260824-1852_o_*` bleiben
+offen und binden weiter.
+
+**Der Dreikantenbefund lautet `review-needed`**, und die Empfehlung des
+Abgleichs weicht bewusst von der Voreinstellung ab: nicht *revise Artifact*,
+sondern *revise Grounding*. Der Bau ist an jeder beanstandeten Stelle
+nachgemessen und richtig; falsch ist ein **Satz über ihn**. Der Spec sagt, die
+Runde schulde denselben späteren Messlauf gegen L7 wie die Runde 14. Sie
+berührt L7 — jeder ausgewählte Ordner ohne Pfadmustertreffer kostet seit ihr
+einen Verzeichnisleselauf, den es vorher nicht gab —, aber die Messstrecke kann
+diese Arbeit nicht sehen: L7 wählt eine Datei und keinen Ordner, und der
+Messmodus lädt die Ablage nicht. Die offene Frage dazu ist
+`decisions/260824-1900_o_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-…`.
+
+**Was diese Runde über das Bauen hinaus hervorgebracht hat.** Vier Proben, die
+mehr behaupteten als sie maßen, sind gefunden und berichtigt worden — die
+letzte durch Aushöhlen ihres Zweiges nachgewiesen. Zwei Befunde betreffen die
+Sitzungsmechanik und nicht KRK und liegen deshalb im gemeinsamen Speicher: der
+geteilte git-Index (`shared/issues/260824-1745_o_…`) und Zeitstempel in
+Dateinamen, die der Uhr um bis zu 208 Minuten vorausliefen
+(`shared/issues/260824-1758_o_…`).
+
+**Offen und bindend:** `issues/260824-1655_o_…` (ob archivierte Speicher ein
+Profil bekommen — der Datensatz trägt ein gemessenes Argument dagegen), die
+vier `issues/260824-1852_o_*` und `decisions/260824-1900_o_…`.
+
+**Sitzungsverlauf:** `history/260824-0530-orchestrator-session.md`.
+**Abgleich:** `history/260824-1900-reconciliation.md`.
