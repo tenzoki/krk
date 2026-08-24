@@ -16,8 +16,24 @@
 //! [`super::nummernspalte`] haelt sie, und C10 sagt eine Anzeige fuer beide
 //! Flaechen zu und nicht zwei aehnliche. Ob sie steht, entscheidet
 //! [`Vorschaumodell::zeigt_dateitext`] und sonst nichts: sie steht beim rohen
-//! Inhalt einer Textdatei und weder bei einem Bild noch bei Metadaten, einem
-//! Hinweis, einem leeren Tab oder dem Text aus der Zwischenablage.
+//! Inhalt einer Textdatei und weder bei einem Bild noch bei Metadaten, einer
+//! Zusammenfassung, einem Hinweis, einem leeren Tab oder dem Text aus der
+//! Zwischenablage.
+//!
+//! # Die Zusammenfassung eines erkannten Ordners
+//!
+//! Seit der Runde 16 tritt sie an die Stelle der Metadaten, sobald ein
+//! Leseprofil den ausgewaehlten Ordner erkennt (C4.1, C4.2). **Sie nimmt
+//! denselben Weg an die Flaeche wie Metadaten und Hinweise**:
+//! [`als_text`](krk_core::leseprofil::Zusammenfassung::als_text) macht aus
+//! ihren Werten Zeilen, und [`Vorschaufenster::text_zeigen`] stellt sie hin;
+//! ein zweiter Ausgabeweg entsteht fuer sie nicht. Eine Nummernspalte traegt
+//! sie nicht, und der Grund steht im Absatz darueber: die Zahlen zaehlten die
+//! Zeilen der Zusammenfassung, und daneben steht keine Datei mit diesen
+//! Zeilen. **Ihre Auswaehlbarkeit gilt aus der Runde 14 unveraendert weiter**
+//! (C4.6) — sie faellt aus dem Weg heraus, den sie nimmt, und nicht aus einer
+//! Regel, die fuer sie geschrieben waere; der Zweig in
+//! [`Vorschaufenster::anzeigen`] schreibt aus, warum.
 //!
 //! **Die Vorschau stammt aus der Runde 1 und wird mit der Nummernspalte zum
 //! ersten Mal seit ihrem Abschluss erweitert.** Der Nutzer hat sie am
@@ -223,7 +239,7 @@
 //! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
 //! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -241,6 +257,7 @@ use objc2_foundation::{
     NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
 };
 
+use krk_core::leseprofil::Profile;
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Typ;
 
@@ -580,6 +597,19 @@ pub struct VorschaufensterIvars {
     /// [`textmerkmale::tafel_der_erscheinung`], der einen Zuordnung im
     /// Programm; nachgezogen wird sie von [`Vorschaufenster::erscheinung_nachziehen`].
     tafel: Cell<Tafel>,
+    /// Die geprueften Leseprofile, mit denen ein ausgewaehlter Ordner
+    /// erkannt wird (Runde 16).
+    ///
+    /// **Sie stehen nach dem Aufbau der Oberflaeche fest und wechseln
+    /// danach nicht mehr** (C4.5); deshalb eine [`OnceCell`] und keine
+    /// [`RefCell`]. Der eine Schreiber ist
+    /// [`Vorschaufenster::profile_setzen`], und dessen Doc-Kommentar sagt,
+    /// warum die Profile hier wohnen und nicht im [`Vorschaumodell`].
+    ///
+    /// Leer heisst „keine Profile" und ist kein Fehlerfall: im Messmodus
+    /// liest KRK die Ablage gar nicht erst, und dann zeigt jeder Ordner
+    /// seine Metadaten.
+    profile: OnceCell<Arc<Profile>>,
     /// Der Formatierer fuer das Aenderungsdatum der Metadaten.
     datumsformat: Retained<NSDateFormatter>,
     /// Der Formatierer fuer die Groesse der Metadaten.
@@ -727,6 +757,7 @@ impl Vorschaufenster {
             einfaerbungsstand: RefCell::new(None),
             einfaerbung_erneut: Cell::new(false),
             tafel: Cell::new(tafel),
+            profile: OnceCell::new(),
             datumsformat,
             groessenformat,
         });
@@ -858,6 +889,38 @@ impl Vorschaufenster {
         &self.ivars().text
     }
 
+    /// Uebergibt der Vorschau die geprueften Leseprofile (Runde 16).
+    ///
+    /// **Der eine Schreiber des Merkfeldes, und er hat einen Rufer:**
+    /// `Anwendungsdelegierter::oberflaeche_aufbauen` ruft ihn einmal, nachdem
+    /// die Bereiche stehen, mit dem Satz, den `sitzung_laden` gelesen hat. Ein
+    /// zweiter Rufer waere ein zweiter Zeitpunkt, zu dem die Vorschau andere
+    /// Profile bekaeme, und C4.5 sagt das Gegenteil zu: es gilt der Stand des
+    /// Starts, und eine geaenderte `readers.toml` erreicht KRK erst mit dem
+    /// naechsten Start.
+    ///
+    /// **Warum die Profile hier wohnen und nicht im [`Vorschaumodell`].** Das
+    /// Modell haelt, was ein Tab zeigt; die Profile sind Bestand der
+    /// Anwendung und gelten fuer jeden Tab und fuer jeden, der noch aufgeht.
+    /// Im Modell laegen sie an der Sache vorbei — es muesste sie beim
+    /// Anlegen jedes Tabs mitbekommen und haette dann eine Auskunft zu
+    /// halten, die mit dem angezeigten Tab nichts zu tun hat.
+    ///
+    /// **Ein zweiter Aufruf schreibt nicht**, und der Rueckgabewert faellt
+    /// hier mit `let _ =` weg: dieselbe Form wie an den uebrigen
+    /// `OnceCell`-Feldern des Programms, und sie heisst wie ueberall „ich
+    /// brauche den Wert nicht". Dass es beim einen Aufruf bleibt, misst die
+    /// Probe `die_profile_haben_einen_schreiber_und_hoechstens_einen_rufer`.
+    // **Die Ausnahme faellt mit Schritt 11 der Runde 16**, der den Rufer in
+    // `appkit/anwendung.rs` baut; bis dahin haelt `-D warnings` die Kiste sonst
+    // an. Sie steht am einzelnen Stueck und nicht am Dateikopf, damit sie genau
+    // diese eine Methode deckt und nichts sonst — dieselbe Form, in der
+    // `editormodell.rs` ihre vier gehalten und wieder abgebaut hat.
+    #[allow(dead_code)]
+    pub fn profile_setzen(&self, profile: Arc<Profile>) {
+        let _ = self.ivars().profile.set(profile);
+    }
+
     /// Zeigt den genannten Eintrag im aktiven Tab (C6).
     ///
     /// Kehrt sofort zurueck; gelesen wird auf dem Arbeitsfaden des Modells,
@@ -868,15 +931,17 @@ impl Vorschaufenster {
         // braucht sie deshalb jetzt. Gefragt wird nicht hier, sondern beim
         // Aufbau und bei jedem Wechsel des Erscheinungsbildes — die eine
         // Zuordnung dazu steht in [`textmerkmale::tafel_der_erscheinung`].
-        // Der leere Profilsatz ist die Uebergangsfassung aus Schritt 9 der
-        // Runde 16: er heisst „keine Profile", und dann zeigt ein Ordner seine
-        // Metadaten wie vor der Runde. Schritt 10 setzt hier das Merkfeld
-        // `profile` ein, das `profile_setzen` fuellt.
-        self.ivars().modell.borrow_mut().datei_anzeigen(
-            pfad,
-            self.ivars().tafel.get(),
-            Arc::default(),
-        );
+        // Die Profile kommen aus dem Merkfeld, das `profile_setzen` einmal
+        // beim Aufbau der Oberflaeche fuellt. Ist es leer, heisst das „keine
+        // Profile" und ist kein Fehlerfall: im Messmodus liest KRK die Ablage
+        // gar nicht erst, und dann zeigt auch ein erkennbarer Ordner seine
+        // Metadaten. Der leere Satz nimmt denselben Weg wie ein voller; eine
+        // Verzweigung danach stuende sonst hier und im Modell ein zweites Mal.
+        let profile = self.ivars().profile.get().cloned().unwrap_or_default();
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .datei_anzeigen(pfad, self.ivars().tafel.get(), profile);
         // **Nur die Leiste und nicht die ganze Anzeige.** Geaendert hat sich
         // allein die Beschriftung des Tabs; Inhalt und Pfad wechseln erst,
         // wenn der Arbeitsfaden geliefert hat, und bis dahin steht der
@@ -1054,10 +1119,17 @@ impl Vorschaufenster {
                 self.text_zeigen(&zeilen);
             }
             Inhalt::Bild { daten, metadaten } => self.bild_zeigen(&daten, metadaten.as_ref()),
-            // Schritt 9 der Runde 16 hat den siebten `Inhalt` gesetzt, und die
-            // vollstaendige Fallunterscheidung hier hat den Bau angehalten, wie
-            // sie soll. Dieser Zweig ist die Antwort darauf und nicht mehr:
-            // Schritt 10 schreibt seine Begruendung und den Modulkopf dazu.
+            // Derselbe Weg wie Metadaten und Hinweise, und mehr geschieht
+            // hier nicht (C4.2, C4.3): `als_text` ist die eine Stelle, an der
+            // aus den Werten Zeilen werden, und sie steht in `krk-core`.
+            //
+            // **Daraus faellt C4.6 heraus, ohne dass eine Regel dazukommt.**
+            // `text_zeigen` nimmt den Quellbezug des vorigen Inhalts zurueck;
+            // ohne Quellbezug reicht `Vorschautext::auswahl_ablegen` an die
+            // Oberklasse durch, und was markiert ist, geht Zeichen fuer
+            // Zeichen heraus — wie bei jedem anderen Text der Vorschau seit
+            // der Runde 14. Eine eigene Abfangstelle fuer die Zusammenfassung
+            // waere eine zweite Meinung darueber, was eine Auswahl hergibt.
             Inhalt::Zusammenfassung(zusammenfassung) => {
                 self.text_zeigen(&zusammenfassung.als_text());
             }
@@ -1379,8 +1451,12 @@ impl Vorschaufenster {
 /// zu erkennen waere. Dieselbe Unterscheidung, die
 /// [`Vorschaumodell::zeigt_dateitext`] fuer die Nummernspalte trifft.
 ///
+/// **Eine Zusammenfassung ist kein Quelltext.** Ihre Zeilen gibt ein Leseprofil
+/// vor, und der Pfad daneben zeigt auf einen Ordner; es gibt nichts, woran eine
+/// Sprache haengt, und `syntect` haette an ihr nichts zu faerben.
+///
 /// **Eine reine Fallunterscheidung ohne Auffangzweig**, wie die uebrigen dieser
-/// Art im Programm: ein siebter [`Inhalt`] haelt den Bau an und erzwingt die
+/// Art im Programm: ein achter [`Inhalt`] haelt den Bau an und erzwingt die
 /// Antwort auf die Frage, ob er eingefaerbt wird.
 ///
 /// Keine Groessenschranke: eingefaerbt wird jede Datei, die die Vorschau
@@ -1397,11 +1473,15 @@ fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a s
             }
             Some(_) | None => None,
         },
+        // Der eigene Zweig haelt den Grund an der Stelle, an der er gilt:
+        // eine Zusammenfassung traegt keine Sprache, an der ein Einfaerbungs-
+        // lauf ansetzen koennte. In der Sammelliste darunter stuende er nicht,
+        // und der Leser muesste ihn sich aus dem Doc-Kommentar zusammensuchen.
+        Inhalt::Zusammenfassung(_) => None,
         Inhalt::Leer
         | Inhalt::Markdown(_)
         | Inhalt::Bild { .. }
         | Inhalt::Metadaten(_)
-        | Inhalt::Zusammenfassung(_)
         | Inhalt::Hinweis(_) => None,
     }
 }
@@ -1497,9 +1577,12 @@ mod tests {
     ///
     /// **Die Probe zur Anforderungsbedingung, als reine Fallunterscheidung.**
     /// Sie misst die eine Frage, die [`einzufaerben`] beantwortet: aus welchem
-    /// Zustand der Vorschau ein Einfaerbungsfaden entsteht. Alle sechs Werte
-    /// von [`Inhalt`] kommen vor, damit ein siebter hier auffaellt und nicht
-    /// erst am Bild.
+    /// Zustand der Vorschau ein Einfaerbungsfaden entsteht. Sechs der sieben
+    /// Werte von [`Inhalt`] kommen hier vor; der siebte, die Zusammenfassung,
+    /// hat seit der Runde 16 die Probe
+    /// [`eine_zusammenfassung_wird_nicht_eingefaerbt`] daneben. Ein achter
+    /// faellt an der vollstaendigen Fallunterscheidung in [`einzufaerben`]
+    /// auf und nicht erst am Bild.
     #[test]
     fn eingefaerbt_wird_genau_darstellungsart_code() {
         let quelltext = PathBuf::from("/tmp/beispiel.rs");
@@ -1550,6 +1633,115 @@ mod tests {
             assert!(
                 einzufaerben(inhalt, Some(&quelltext)).is_none(),
                 "{inhalt:?} zeigt keinen rohen Dateitext und wird nicht eingefaerbt"
+            );
+        }
+    }
+
+    /// Eine Zusammenfassung wird nicht eingefaerbt (Runde 16).
+    ///
+    /// **Die Probe zum siebten Wert von [`Inhalt`]**, nach dem Vorbild der
+    /// Probe darueber und aus demselben Grund daneben und nicht in ihr: der
+    /// Grund ist ein eigener. Eine Zusammenfassung zeigt Text, aber keinen
+    /// Dateiinhalt; ihre Zeilen gibt ein Leseprofil vor, und keine Endung
+    /// sagt eine Sprache dazu.
+    ///
+    /// **Der zweite Durchgang legt einen Quelltextpfad daneben.** An ihm
+    /// haengt es nicht: `einzufaerben` entscheidet am Inhalt, und ohne diese
+    /// Haelfte liesse die Probe zu, dass die Antwort bloss am Ordnerpfad
+    /// haengt.
+    #[test]
+    fn eine_zusammenfassung_wird_nicht_eingefaerbt() {
+        let ordner = PathBuf::from("/tmp/probe/werkbank");
+        let quelltext = PathBuf::from("/tmp/beispiel.rs");
+        let zusammenfassung = Inhalt::Zusammenfassung(krk_core::leseprofil::Zusammenfassung::neu(
+            "werkbank".to_owned(),
+            ordner.clone(),
+            vec![krk_core::leseprofil::Zusammenfassungszeile::neu(
+                "Runden".to_owned(),
+                krk_core::leseprofil::Wert::Zahl(16),
+            )],
+        ));
+
+        assert!(
+            einzufaerben(&zusammenfassung, Some(&ordner)).is_none(),
+            "eine Zusammenfassung traegt keine Sprache; syntect haette an ihr \
+             nichts zu faerben"
+        );
+        assert!(
+            einzufaerben(&zusammenfassung, Some(&quelltext)).is_none(),
+            "am Inhalt liegt es und nicht am Pfad daneben"
+        );
+    }
+
+    /// Das Merkfeld der Profile hat genau einen Schreiber, und `profile_setzen`
+    /// hoechstens einen Rufer, und der steht beim Anwendungsdelegierten
+    /// (C4.5).
+    ///
+    /// **Die erste Haelfte ist die Zusage und steht als „genau einmal" da.**
+    /// Zugesagt ist, dass [`Vorschaufenster::profile_setzen`] der eine
+    /// Schreiber des Merkfeldes ist; ein zweiter Schreiber daneben waere ein
+    /// zweiter Zeitpunkt, zu dem die Vorschau andere Profile bekaeme, und an
+    /// keinem Rueckgabewert waere er abzulesen. Gezaehlt wird deshalb im Baum.
+    ///
+    /// **Die zweite Haelfte ist eine obere Schranke, und das ist keine
+    /// Nachlaessigkeit, sondern die Lage.** Den einen Rufer baut Schritt 11
+    /// der Runde 16 in `appkit/anwendung.rs`; heute ist die Zahl null. Eine
+    /// Probe, die hier „genau einmal" verlangte, waere von dem Tag an rot, an
+    /// dem sie geschrieben wird, bis zum naechsten Schritt — und der billigste
+    /// Weg ins Gruene waere, sie wieder herauszunehmen. Sie sagt deshalb, was
+    /// heute und nach Schritt 11 gleichermassen gilt: **hoechstens einer, und
+    /// wenn einer, dann in `appkit/anwendung.rs`.**
+    ///
+    /// # Was diese Probe nicht sieht
+    ///
+    /// **Sie faengt keinen verschwundenen Rufer.** Wer Schritt 11 wieder
+    /// ausbaut, laesst sie gruen; dass die Profile ueberhaupt hereinkommen,
+    /// misst die Zaehlprobe jenes Schritts ueber `leseprofile::laden` und
+    /// nicht diese. Solange der Rufer fehlt, ist die zweite Haelfte leer und
+    /// bestaetigt nichts — die erste haelt in dieser Zeit allein.
+    ///
+    /// Daneben gelten die Grenzen aus dem Kopf von [`crate::quellbaum`]:
+    /// [`aufrufstellen`] zaehlt jede Empfaengerform und jeden Pfad, aber
+    /// keinen Aufruf unter einem anderen Namen.
+    #[test]
+    fn die_profile_haben_einen_schreiber_und_hoechstens_einen_rufer() {
+        // Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum,
+        // den sie liest, und als ein Stueck geschrieben faende jede sich
+        // selbst.
+        let schreiber = concat!("profile", ".set");
+        let rufer = concat!("profile_", "setzen");
+        let vorschau = "krk-ui/src/appkit/vorschau.rs";
+        let anwendung = "krk-ui/src/appkit/anwendung.rs";
+
+        let dateien = quelldateien();
+        let zaehlen = |nadel: &str| -> Vec<(String, usize)> {
+            dateien
+                .iter()
+                .map(|(datei, inhalt)| (datei.clone(), aufrufstellen(inhalt, nadel)))
+                .filter(|(_, zahl)| *zahl > 0)
+                .collect()
+        };
+
+        assert_eq!(
+            zaehlen(schreiber),
+            vec![(vorschau.to_owned(), 1)],
+            "`{schreiber}` steht nicht genau einmal, und zwar in der Vorschau; \
+             das Merkfeld hat einen Schreiber, und der heisst `{rufer}`"
+        );
+
+        let rufstellen = zaehlen(rufer);
+        assert!(
+            rufstellen.len() <= 1,
+            "`{rufer}` wird aus mehr als einer Datei gerufen: {rufstellen:?}; \
+             die Profile gehen einmal beim Aufbau der Oberflaeche herein und \
+             wechseln danach nicht mehr"
+        );
+        for (datei, zahl) in &rufstellen {
+            assert_eq!(
+                (datei.as_str(), *zahl),
+                (anwendung, 1),
+                "`{rufer}` wird nicht genau einmal und beim \
+                 Anwendungsdelegierten gerufen"
             );
         }
     }
