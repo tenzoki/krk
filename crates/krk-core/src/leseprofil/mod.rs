@@ -38,30 +38,38 @@
 //! ihren Haushalt dort gefuehrt, wo ihn keine Probe ohne Fenster nachzaehlen
 //! kann.
 //!
-//! # Warum die Bausteinauswahl unmarkiert ist
+//! # Warum die Datei keine Sortenkennung traegt und der Pruefschritt trotzdem
+//! zaehlt
 //!
 //! [`Baustein`] traegt vier Werte, und in `readers.toml` steht dafuer **keine
 //! Sortenkennung**, sondern allein der Tisch `zaehlung`, `juengste`, `feld`
-//! oder `vorhandensein` neben der Beschriftung. Die Vorlage ist
-//! [`crate::ablage::lesezeichen::Ziel`], die unmarkierte Auswahl der
-//! Lesezeichen: dieselbe Form, ueber `#[serde(flatten)]` neben das
-//! gemeinsame Feld gelegt, aus demselben Grund. Die Datei bleibt von Hand
-//! lesbar, und der Nutzer pflegt kein `baustein = "zaehlung"` mit, das
+//! oder `vorhandensein` neben der Beschriftung. Die Datei bleibt damit von
+//! Hand lesbar, und der Nutzer pflegt kein `baustein = "zaehlung"` mit, das
 //! dasselbe ein zweites Mal sagte.
 //!
-//! **Der Vorbehalt der Vorlage gilt hier weiter.** `#[serde(flatten)]` zwingt
-//! den Deserialisierer ueber einen zwischenspeichernden Weg, und ob `toml` die
-//! Verbindung aus `flatten` und `untagged` traegt, ist am Papier nicht zu
-//! entscheiden; dort nimmt ihn eine Rundreise ueber beide Sorten ab
-//! (`tests/ablage.rs::eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei`),
-//! hier eine ueber alle vier Bausteine
-//! (`tests/leseprofil.rs::eine_rundreise_ueber_alle_vier_bausteine_liefert_die_erwarteten_werte`).
-//! Die Vorlage traegt zwei Varianten, diese Auswahl vier; die Rundreise ist
-//! deshalb die erste Probe, die laufen muss. Sollte sie eines Tages fallen,
-//! ist der Ausweg benannt und nicht zu suchen: die Zeile bekommt ein Feld
-//! `baustein = "zaehlung"` als ausgeschriebene Sortenkennung und einen von
-//! Hand geschriebenen Pruefschritt, der genau eine Bausteinangabe fordert. Der
-//! Preis waere eine Zeile mehr je Profilzeile in der Datei.
+//! **Die Wahl unter den vieren trifft [`datei::Zeilendatei::zerlegen`] und
+//! nicht `serde`.** Bis zum 260824 stand hier eine unmarkierte Auswahl hinter
+//! `#[serde(flatten)]`, nach der Vorlage von
+//! [`crate::ablage::lesezeichen::Ziel`], und sie hat zwei Dinge nicht geleistet
+//! (`issues/260824-1216_*_zwei-bausteintische-…`,
+//! `issues/260824-1217_*_ein-tippfehler-in-einem-bausteintisch-…`): zwei Tische
+//! in einer Zeile nahm sie schweigend an und liess den unteren fallen, und die
+//! Meldung eines verschriebenen Schluessels verwarf sie unterwegs, weil sie
+//! allein sagen konnte, dass keine Variante gepasst hat. Beides sind Aussagen
+//! ueber die Zeile, die dem Nutzer gehoeren, und deshalb steht die Auswahl
+//! jetzt als vier benannte Felder da, deren Zahl der Pruefschritt zaehlt. Die
+//! Vorlage bleibt bei ihrer Form: ihre zwei Varianten unterscheiden sich an je
+//! einem Pflichtfeld und tragen keinen Tisch, an dem eine Meldung verloren
+//! gehen koennte.
+//!
+//! **Der Vorbehalt der Vorlage ist damit erledigt und nicht bloss umgangen.**
+//! `#[serde(flatten)]` zwang den Deserialisierer ueber einen
+//! zwischenspeichernden Weg, und ob `toml` die Verbindung aus `flatten` und
+//! `untagged` traegt, war am Papier nicht zu entscheiden; die Rundreise ueber
+//! alle vier Bausteine
+//! (`tests/leseprofil.rs::eine_rundreise_ueber_alle_vier_bausteine_liefert_die_erwarteten_werte`)
+//! nimmt jetzt vier gewoehnliche `Option`-Felder ab und keine Verbindung
+//! zweier Sonderwege mehr.
 //!
 //! # Warum jede Pruefung beim Laden laeuft und nicht beim Anzeigen
 //!
@@ -505,13 +513,25 @@ impl Zusammenfassungszeile {
 pub enum Wert {
     /// Eine Zahl, genau gezaehlt.
     Zahl(u64),
-    /// Die Lesung hat die Grenze erreicht, die der Wert traegt; gezaehlt sind
-    /// mehr Eintraege, als die Zahl sagt.
+    /// Die Lesung wurde bei [`HOECHSTENS_EINTRAEGE`] abgebrochen; die Zahl ist,
+    /// was **innerhalb** der gelesenen Eintraege getroffen hat.
     ///
-    /// **Es wird nur gesagt, was die Teillesung entscheidet.** Eine
-    /// abgeschnittene Liste kann sagen, dass es mehr als die Grenze sind, und
-    /// sonst nichts. Der Satz der Anzeige entsteht aus dieser Zahl und nicht
-    /// aus einer zweiten im Text.
+    /// **Es wird nur gesagt, was die Teillesung entscheidet.** Sie entscheidet
+    /// zweierlei, und der Satz der Anzeige traegt beides: dass es mindestens so
+    /// viele sind wie die getroffenen, und dass die Lesung abgebrochen wurde.
+    ///
+    /// **Die Zahl ist die der Treffer und nicht die der Grenze**, und darin
+    /// liegt der Unterschied zu einem Satz, der allein die Grenze naehme: ein
+    /// Muster, auf das in 2.101 Eintraegen genau einer passt, ergaebe „ueber
+    /// 2.000 offene Defekte" und damit eine falsche Aussage. „Mindestens 1" ist
+    /// wahr — und „ueber 1" waere es nicht, denn ein weiterer Treffer hinter
+    /// dem Abbruch ist moeglich und nicht gesichert.
+    ///
+    /// **Die Zahl allein traegt die zweite Auskunft nicht.** Bei einem Wert
+    /// nahe der Grenze erraet der Nutzer den Abbruch noch, bei „1" nicht mehr;
+    /// deshalb nennt [`Wert::als_text`] den Abbruch ausdruecklich, und die
+    /// Grenze darin kommt aus [`HOECHSTENS_EINTRAEGE`] und steht nicht ein
+    /// zweites Mal im Text.
     UeberGrenze(u64),
     /// Ja oder nein.
     ///
@@ -537,15 +557,20 @@ impl Wert {
     /// Der Wert als Text, ohne seine Beschriftung.
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
-    /// Der Satz zu [`Wert::UeberGrenze`] entsteht aus der Zahl, die der Wert
-    /// traegt, und nicht aus einer zweiten Zahl im Text; dieselbe Regel, nach
-    /// der `vorschaumodell::zu_gross_text` seine Grenze aus der Konstanten
-    /// bildet.
+    /// Der Satz zu [`Wert::UeberGrenze`] traegt zwei Zahlen aus je einer
+    /// Quelle: die Treffer aus dem Wert und die Grenze aus
+    /// [`HOECHSTENS_EINTRAEGE`]. Keine von beiden steht ein zweites Mal im
+    /// Text; dieselbe Regel, nach der `vorschaumodell::zu_gross_text` seine
+    /// Grenze aus der Konstanten bildet.
     #[must_use]
     pub fn als_text(&self) -> String {
         match self {
             Wert::Zahl(zahl) => zahl.to_string(),
-            Wert::UeberGrenze(gezaehlt) => format!("über {gezaehlt}"),
+            Wert::UeberGrenze(gezaehlt) => {
+                format!(
+                    "mindestens {gezaehlt} (Lesung bei {HOECHSTENS_EINTRAEGE} Einträgen abgebrochen)"
+                )
+            }
             Wert::Vorhanden(true) => "ja".to_owned(),
             Wert::Vorhanden(false) => "nein".to_owned(),
             Wert::Text(text) => text.clone(),

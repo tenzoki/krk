@@ -26,33 +26,54 @@
 //!
 //! # Wo `deny_unknown_fields` steht und wo nicht
 //!
-//! An [`Profildatei`] und an jedem der vier Bausteintische, nicht an
-//! [`Zeilendatei`]: `#[serde(flatten)]` und `deny_unknown_fields` schliessen
-//! einander aus, und die Zeile traegt `flatten`. Dieselbe Wahl aus demselben
-//! Grund trifft `ablage::lesezeichen::Lesezeichenliste`. Ein Tippfehler
-//! **innerhalb** eines Bausteins faellt damit auf, ein zusaetzlicher
-//! Schluessel neben der Beschriftung nicht.
+//! An [`Profildatei`], an [`Zeilendatei`] und an jedem der vier
+//! Bausteintische; allein [`Profilblock`] traegt ihn nicht, und das kostet
+//! nichts: ein verschriebenes `pfad` laesst das Profil ohne Pfadmuster und
+//! ohne Kennzeichen zurueck, und genau das weist [`pruefen`] mit einer Meldung
+//! ab.
 //!
-//! [`Profilblock`] traegt ihn ebenfalls nicht, und das kostet nichts: ein
-//! verschriebenes `pfad` laesst das Profil ohne Pfadmuster und ohne
-//! Kennzeichen zurueck, und genau das weist [`pruefen`] mit einer Meldung ab.
+//! **An der Zeile stand er bis zum 260824 nicht**, weil ihre Bausteinhaelfte
+//! ueber `#[serde(flatten)]` in eine unmarkierte Auswahl lief und die beiden
+//! Angaben einander ausschliessen. Der Preis dafuer war doppelt: ein
+//! zusaetzlicher Schluessel neben der Beschriftung fiel nicht auf, und zwei
+//! Bausteintische in einer Zeile wurden schweigend angenommen, wobei der obere
+//! gewann und der untere wegfiel (`issues/260824-1216_*_zwei-bausteintische-…`).
+//! Beides ist mit den vier benannten Feldern weg, und die Datei sieht dabei
+//! aus wie zuvor.
 //!
 //! # Was abgewiesen wird, und wie weit
 //!
-//! Zwei Reichweiten, und der Unterschied ist die Antwort darauf, was ohne das
-//! abgewiesene Stueck noch Sinn ergibt:
+//! **Drei** Reichweiten, und der Unterschied ist die Antwort darauf, was ohne
+//! das abgewiesene Stueck noch Sinn ergibt:
 //!
+//! - **Die ganze Datei faellt weg**, wenn `serde` sie nicht in diese Gestalt
+//!   bringt: ein unbekannter Schluessel an einer der sechs Stellen mit
+//!   `deny_unknown_fields`, eine Zahl ausserhalb ihres Bereichs, ein
+//!   Tischname, den es nicht gibt. Die Datei gilt dann nach C1.6 als
+//!   beschaedigt, wird beiseitegelegt, und KRK arbeitet ohne jedes Profil
+//!   weiter. **Das ist die weiteste der drei Reichweiten, und ein Buchstaben-
+//!   dreher in einem Bausteintisch faellt in sie und nicht in die kleinste.**
+//!   Die Meldung stammt von `serde` und nicht von hier; sie nennt seit dem
+//!   260824 den Schluessel und die erwarteten Namen, denn ohne die unmarkierte
+//!   Auswahl darueber wird die Meldung des Tisches nicht mehr verworfen
+//!   (`issues/260824-1217_*_ein-tippfehler-in-einem-bausteintisch-…`).
 //! - **Das ganze Profil faellt weg**, wenn eines seiner beiden
 //!   Erkennungsmuster sich nicht uebersetzen laesst (C2.7) oder wenn es
 //!   keines von beiden nennt. Ein Profil, das seinen Ort nicht erkennt, ist
 //!   nicht halb brauchbar, sondern gar nicht. Die uebrigen Profile bleiben
 //!   unberuehrt.
 //! - **Die Zeile behaelt ihre Beschriftung und verliert ihren Baustein**, wenn
-//!   ein Muster darin sich nicht uebersetzen laesst, wenn das Feldmuster nicht
-//!   genau eine Fanggruppe traegt (C3.10) oder wenn die Ortsangabe schon am
-//!   Text aus dem erkannten Ordner herausfuehrt (C3.13, erste Haelfte). Die
-//!   Zeile steht dann in jeder Zusammenfassung mit ihrem Platzhalter, und die
-//!   uebrigen Zeilen bleiben unberuehrt (C3.12).
+//!   sie nicht genau einen der vier Bausteintische nennt (C3), wenn ein Muster
+//!   darin sich nicht uebersetzen laesst, wenn das Feldmuster nicht genau eine
+//!   Fanggruppe traegt (C3.10) oder wenn die Ortsangabe schon am Text aus dem
+//!   erkannten Ordner herausfuehrt (C3.13, erste Haelfte). Die Zeile steht dann
+//!   in jeder Zusammenfassung mit ihrem Platzhalter, und die uebrigen Zeilen
+//!   bleiben unberuehrt (C3.12).
+//!
+//! Die zweite und die dritte Reichweite melden aus [`pruefen`], und **jede
+//! Meldung nennt den Profilnamen, bei einer Zeile deren Beschriftung, und den
+//! Grund**. Die erste kann das nicht: dort ist noch kein Profil gelesen, und
+//! die Zeilennummer der Meldung ist alles, was `serde` an dieser Stelle hat.
 //!
 //! Eine Zahl ueber [`HOECHSTENS_JUENGSTE`] wird **gekappt und nicht
 //! abgewiesen** (C6.3): sie ist keine falsche Angabe, sondern eine, die mehr
@@ -100,47 +121,105 @@ pub struct Profilblock {
 
 /// Eine `[[profil.zeile]]`, wie sie in der Datei steht.
 ///
-/// Der Baustein steht **eingebettet** neben der Beschriftung und nicht
-/// geschachtelt darunter; warum die Auswahl darunter unmarkiert ist und wo
-/// ihre Vorlage steht, sagt der Modulkopf des Elternmoduls.
+/// Die vier Bausteintische stehen **neben** der Beschriftung und nicht
+/// geschachtelt darunter; die Gestalt der Datei ist damit dieselbe, die sie
+/// vor dem 260824 hatte. Genau einer von ihnen muss dastehen, und diese Frage
+/// beantwortet [`Zeilendatei::zerlegen`] und nicht `serde`.
+///
+/// **Vier benannte Felder statt einer unmarkierten Auswahl hinter
+/// `#[serde(flatten)]`**, und der Grund steht im Modulkopf unter „Wo
+/// `deny_unknown_fields` steht und wo nicht": die unmarkierte Auswahl konnte
+/// weder zwei Tische in einer Zeile bemerken noch die Meldung eines
+/// verschriebenen Schluessels durchlassen. Der Preis ist ein Feld mehr in
+/// dieser Struktur und keines in der Datei; die Vorlage
+/// `ablage::lesezeichen::Ziel` bleibt bei ihrer Form, weil ihre zwei Varianten
+/// sich an je einem Pflichtfeld unterscheiden und keinen Tisch tragen.
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Zeilendatei {
     /// Die Beschriftung, wie sie in der Zusammenfassung links steht.
     pub beschriftung: String,
-    /// Genau einer der vier Bausteintische.
-    #[serde(flatten)]
-    pub baustein: Bausteindatei,
+    /// B1: `zaehlung = { … }`.
+    pub zaehlung: Option<Zaehlungsdatei>,
+    /// B2: `juengste = { … }`.
+    pub juengste: Option<Juengstedatei>,
+    /// B3: `feld = { … }`.
+    pub feld: Option<Felddatei>,
+    /// B4: `vorhandensein = { … }`.
+    pub vorhandensein: Option<Vorhandenseindatei>,
 }
 
-/// Die vier Bausteintische, als unmarkierte Auswahl.
+impl Zeilendatei {
+    /// Zerlegt die Zeile in ihre Beschriftung und ihren einen Bausteintisch.
+    ///
+    /// Die Beschriftung kommt in beiden Ausgaengen heraus, denn eine
+    /// abgewiesene Zeile behaelt sie (C3.12), und die Meldung nennt sie.
+    ///
+    /// Keiner und zwei sind beide ein Grund und keine stille Wahl: C3 sagt
+    /// „genau ein Baustein", und ohne diese Stelle traefe die Entscheidung die
+    /// Reihenfolge der Felder.
+    fn zerlegen(self) -> (String, Result<Bausteindatei, String>) {
+        let Zeilendatei {
+            beschriftung,
+            zaehlung,
+            juengste,
+            feld,
+            vorhandensein,
+        } = self;
+        let mut genannt: Vec<(&'static str, Bausteindatei)> = [
+            zaehlung.map(|tisch| ("zaehlung", Bausteindatei::Zaehlung(tisch))),
+            juengste.map(|tisch| ("juengste", Bausteindatei::Juengste(tisch))),
+            feld.map(|tisch| ("feld", Bausteindatei::Feld(tisch))),
+            vorhandensein.map(|tisch| ("vorhandensein", Bausteindatei::Vorhandensein(tisch))),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        if genannt.len() > 1 {
+            let namen: Vec<&str> = genannt.iter().map(|(name, _)| *name).collect();
+            return (
+                beschriftung,
+                Err(format!(
+                    "sie nennt {} Bausteine ({}) und nicht genau einen",
+                    genannt.len(),
+                    namen.join(", ")
+                )),
+            );
+        }
+        match genannt.pop() {
+            Some((_, tisch)) => (beschriftung, Ok(tisch)),
+            None => (
+                beschriftung,
+                Err(format!(
+                    "sie nennt keinen der vier Bausteine ({BAUSTEINNAMEN})"
+                )),
+            ),
+        }
+    }
+}
+
+/// Die Namen der vier Bausteintische, wie sie in der Datei stehen.
 ///
-/// Die Reihenfolge der Varianten ist die Reihenfolge, in der `serde` sie
-/// probiert. Sie ist hier ohne Bedeutung, weil die vier sich an ihrem
-/// Tischnamen unterscheiden und kein Tisch die Felder eines anderen traegt;
-/// stuenden in einer Zeile zwei Tische, gewaenne der obere.
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
+/// Eine Meldung ueber eine Zeile ohne Baustein zaehlt sie auf: der Nutzer hat
+/// an dieser Stelle offenbar keinen von ihnen vor Augen.
+const BAUSTEINNAMEN: &str = "zaehlung, juengste, feld, vorhandensein";
+
+/// Der eine Bausteintisch einer Zeile, ausgewaehlt aus den vieren.
+///
+/// **Kein `Deserialize`.** Der Wert entsteht in [`Zeilendatei::zerlegen`] und
+/// nicht beim Lesen; genau darin liegt der Unterschied zur unmarkierten
+/// Auswahl, die bis zum 260824 hier stand.
+#[derive(Debug)]
 pub enum Bausteindatei {
     /// B1: `zaehlung = { … }`.
-    Zaehlung {
-        /// Der Tisch.
-        zaehlung: Zaehlungsdatei,
-    },
+    Zaehlung(Zaehlungsdatei),
     /// B2: `juengste = { … }`.
-    Juengste {
-        /// Der Tisch.
-        juengste: Juengstedatei,
-    },
+    Juengste(Juengstedatei),
     /// B3: `feld = { … }`.
-    Feld {
-        /// Der Tisch.
-        feld: Felddatei,
-    },
+    Feld(Felddatei),
     /// B4: `vorhandensein = { … }`.
-    Vorhandensein {
-        /// Der Tisch.
-        vorhandensein: Vorhandenseindatei,
-    },
+    Vorhandensein(Vorhandenseindatei),
 }
 
 /// Der Tisch `zaehlung`.
@@ -251,11 +330,8 @@ pub fn pruefen(datei: Profildatei) -> (Profile, Vec<String>) {
 
 /// Prueft eine einzelne Zeile. Eine abgewiesene behaelt ihre Beschriftung.
 fn zeile_pruefen(profil: &str, zeile: Zeilendatei, meldungen: &mut Vec<String>) -> Zeile {
-    let Zeilendatei {
-        beschriftung,
-        baustein,
-    } = zeile;
-    match baustein_pruefen(baustein) {
+    let (beschriftung, tisch) = zeile.zerlegen();
+    match tisch.and_then(baustein_pruefen) {
         Ok(baustein) => Zeile::neu(beschriftung, Some(baustein)),
         Err(grund) => {
             meldungen.push(zeilenmeldung(profil, &beschriftung, &grund));
@@ -270,21 +346,21 @@ fn zeile_pruefen(profil: &str, zeile: Zeilendatei, meldungen: &mut Vec<String>) 
 /// keinen Auffangzweig.
 fn baustein_pruefen(baustein: Bausteindatei) -> Result<Baustein, String> {
     match baustein {
-        Bausteindatei::Zaehlung { zaehlung } => Ok(Baustein::Zaehlung {
+        Bausteindatei::Zaehlung(zaehlung) => Ok(Baustein::Zaehlung {
             ort: ortsangabe(zaehlung.ordner.as_deref())?,
             muster: wahlfreies_muster(zaehlung.muster.as_deref())?,
         }),
-        Bausteindatei::Juengste { juengste } => Ok(Baustein::Juengste {
+        Bausteindatei::Juengste(juengste) => Ok(Baustein::Juengste {
             ort: ortsangabe(juengste.ordner.as_deref())?,
             muster: wahlfreies_muster(juengste.muster.as_deref())?,
             anzahl: gekappte_anzahl(juengste.anzahl),
         }),
-        Bausteindatei::Feld { feld } => Ok(Baustein::Feld {
+        Bausteindatei::Feld(feld) => Ok(Baustein::Feld {
             ort: ortsangabe(feld.ordner.as_deref())?,
             datei: muster(&feld.datei)?,
             feldmuster: feldmuster(&feld.feldmuster)?,
         }),
-        Bausteindatei::Vorhandensein { vorhandensein } => Ok(Baustein::Vorhandensein {
+        Bausteindatei::Vorhandensein(vorhandensein) => Ok(Baustein::Vorhandensein {
             ort: ortsangabe(vorhandensein.ordner.as_deref())?,
             muster: muster(&vorhandensein.muster)?,
         }),

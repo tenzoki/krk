@@ -39,3 +39,6 @@ zugesagten hoechstens sieben und hoechstens elf. Der Widerspruch kostet die Rund
 Arbeit, sondern eine Berichtigung des Wortlauts.
 
 **Filed by:** planner
+
+---
+Resolved: C6.1 des Specs traegt seit dem 260824-1224 die genaue Fassung, die dieser Datensatz nennt: der Feldbaustein loest keinen **eigenen** Verzeichnisleselauf aus, solange seine Datei in einem Ordner liegt, der ohnehin gelesen wird, und der erkannte Ordner ist immer einer davon. Dazu steht, was allgemein gilt und was nicht: fuer die fuenf mitgelieferten Profile gilt der Satz durchweg, fuer einen Feldbaustein in einem Unterordner faellt genau ein Leselauf an. Die Berichtigung unter der Kriterienliste von C6 fuehrt den Grund und die Zahlen aus C6.7, die unberuehrt sind. Der Punkt unter `## Open Questions` des Plans ist abgehakt. Die Berichtigung aendert ein freigegebenes Abnahmekriterium inhaltlich und ist dem Nutzer vorzulegen.

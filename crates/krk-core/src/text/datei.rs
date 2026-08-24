@@ -141,11 +141,12 @@
 //!
 //! **Der Unterschied zwischen den beiden ist keine Feinheit, sondern der Grund
 //! fuer die zweite Fassung.** Wer eine Ueberschrift, ein Feld oder die ersten
-//! Zeilen einer Datei braucht, ist mit einer Abweisung nicht bedient: der
-//! groesste Circle-Datensatz dieser Werkbank ist 119.614 Bytes gross, und seine
-//! Zeile `## Directive` steht bei Byte 222. Unter einer Grenze von 64 KB liefert
-//! [`bis_zur_grenze_lesen`] dafuer nichts und [`anlesen`] die Ueberschrift.
-//! Der Unterschied zu [`lesen`] steht an den Huellen selbst.
+//! Zeilen einer Datei braucht, ist mit einer Abweisung nicht bedient: gesucht
+//! ist ein Wert am Dateianfang, und eine Datei kann im Ganzen weit ueber der
+//! Grenze liegen und ihn trotzdem in ihren ersten hundert Bytes tragen. Unter
+//! einer Grenze von 64 KB liefert [`bis_zur_grenze_lesen`] fuer sie nichts und
+//! [`anlesen`] die Ueberschrift. Der Unterschied zu [`lesen`] steht an den
+//! Huellen selbst.
 //!
 //! [`einlesen`] nimmt weiterhin Bytes und keinen Pfad. Die Unwucht gegenueber
 //! [`sichern`] ist Absicht und jetzt erst recht: die Groessenpruefung laeuft
@@ -674,12 +675,19 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
 ///
 /// Die Profil-Zusammenfassung der Vorschau bildet ihre Werte aus den gelesenen
 /// Bytes: die Ueberschrift einer Datei, ein Feld aus ihrem Kopf. Eine Abweisung
-/// nuetzt ihr nichts, denn was sie sucht, steht am Anfang. Der groesste
-/// Circle-Datensatz dieser Werkbank ist 119.614 Bytes gross, und seine Zeile
-/// `## Directive` steht bei Byte 222; unter einer Grenze von 64 KB liefert
-/// [`bis_zur_grenze_lesen`] fuer ihn [`Lesehindernis::ZuGross`] und diese Huelle
-/// die Ueberschrift. Die Grenze reist wie bei der zweiten Fassung als Argument
-/// und wohnt nicht hier.
+/// nuetzt ihr nichts, denn was sie sucht, steht am Anfang, und die Groesse der
+/// ganzen Datei sagt darueber nichts. Fuer eine Datei weit ueber der Grenze,
+/// deren gesuchter Wert in ihren ersten hundert Bytes steht, liefert
+/// [`bis_zur_grenze_lesen`] [`Lesehindernis::ZuGross`] und diese Huelle die
+/// Ueberschrift. Die Grenze reist wie bei der zweiten Fassung als Argument und
+/// wohnt nicht hier.
+///
+/// **Der gemessene Fall, einmal und mit Datum:** am 260824 war der groesste
+/// Circle-Datensatz der Werkbank dieses Projekts 119.614 Bytes gross und trug
+/// seine Zeile `## Directive` bei Byte 222. Die Zahl steht hier als Beleg von
+/// damals und nicht als Zusage: der Datensatz liegt ausserhalb des Quellbaums,
+/// keine Probe liest ihn, und ein Archivlauf verschiebt ihn. Dieselbe Form
+/// tragen die Kostenangaben in der Wurzel-`Cargo.toml`.
 pub fn anlesen(pfad: &Path, hoechstens: u64) -> Result<Vec<u8>, Lesehindernis> {
     let datei = match crate::verzeichnis::sys::ohne_warten_oeffnen(pfad) {
         Ok(datei) => datei,

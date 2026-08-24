@@ -99,3 +99,40 @@ zu lassen. Das ist teurer als eine falsche Zahl.
 `shared/issues/260816-2307_o_der-doc-kommentar-von-ablage-pfad-nennt-vier-dateien-die-aufzaehlung-fuehrt-sechs.md`
 
 **Domain:** code
+
+---
+Resolved: Alle vier Punkte des Vorschlags, am 260824-1245.
+
+**1. und 2.** `mod.rs:1` steht auf sieben, `mod.rs:4` auf fünf. Die zwölf verbleibenden
+„vier"-Stellen sind je einzeln gelesen und gesetzt: die Überschrift bei `:59` nennt jetzt
+**zwei** von fünf (`settings.toml` und `readers.toml` gehen beide nicht über `Ablage::sichern`),
+`:117` sagt „Alle fünf TOML-Dateien … und die vier Regeln gelten dort für alle gleich" — die
+zweite Vier bleibt, sie zählt die Regeln —, `:143` nennt drei von fünf und schreibt dazu, dass
+`readers.toml` `deny_unknown_fields` an `leseprofil::datei::Profildatei` ebenfalls trägt, aber
+noch nicht über diesen Ladeweg geht. In `tests/ablage.rs` sind die sieben Stellen gesetzt; zwei
+davon (`:53`, `:70`) sprechen jetzt ausdrücklich von den fünf **TOML**-Dateien statt von „den vier
+Dateien", und `:1049` (`beiseitepfad`) nennt gar keine Zahl mehr, weil die Funktion jedes `Datei`
+annimmt.
+
+**`mod.rs:241` ist neu begründet und nicht bloß umgezählt.** Der Träger der Aussage ist
+`Zugang::text_laden` und nicht die Herkunft der Datei; der alte Wortlaut steht im Text als das,
+was er war, damit der nächste Leser die Umkehrung sieht statt nur das Ergebnis.
+
+**3.** Die Schutzanweisung in
+`shared/issues/260821-1023_o_sieben-prosastellen-der-ablage-…` ist zurückgenommen: dort steht ein
+`## Nachtrag 260824-1245`, der sagt, warum die drei Stellen `mod.rs:59`, `:549`→`:558` und
+`:645`→`:654` seit Schritt 2 der Runde 16 **nicht** mehr richtig sind, und der die fünf offenen
+Stellen jenes Datensatzes mit ihren neuen Zeilennummern und der berichtigten Zahl (sieben, nicht
+sechs) führt. Der Befund jenes Datensatzes selbst bleibt offen; er gehört ihm und nicht dieser
+Räumung.
+
+**4. Die zwei Probennamen tragen jetzt gar keine Zahl mehr**, statt auf den Ladeweg zu warten:
+`alle_toml_dateien_ueberstehen_schreiben_und_wiedereinlesen` und
+`jede_toml_datei_mit_ladeweg_wird_bei_beschaedigung_zur_seite_gelegt`. Eine Zahl im Bezeichner
+geht mit jeder neuen Ablagedatei wieder schief, und beide Proben laufen ohnehin über
+`toml_dateien()` und nicht über eine Zahl. Der zweite Name sagt zusätzlich, was die Probe
+tatsächlich prüft; die Ausnahme dazu steht als `OHNE_LADEWEG` daneben (siehe
+`260824-0940_c_readers-toml-faellt-beim-zip-…`).
+
+Nicht angefasst: `mod.rs:25` („drei der vier Inhalte"), das über die Inhaltsmodule spricht und
+nicht über die Dateien, und die fünf Stellen des gemeinsamen Datensatzes.

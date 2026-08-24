@@ -52,3 +52,29 @@ misst.
 
 ---
 Also seen: 260824-1014 by coderev — Befund am Baumstand `b76800b` bestätigt, mit zwei Berichtigungen: der Ladeweg entsteht in **Schritt 8** (`ablage/leseprofile.rs`, Bündel C) und nicht in Schritt 7 (`resources/default-readers.toml`, `ontocoder`), so wie es der Datensatz `260824-0955_o_die-files-zeile-eines-planschritts-…` bereits richtig führt; und die Paarung ist heute nur deshalb noch die richtige, weil `Datei::Leser` in `Datei::ALLE` hinter `Datei::Einstellungen` und damit als letzte TOML-Datei steht — wer die Reihenfolge in `ALLE` ändert, bekommt statt der stillen Kürzung eine falsch gepaarte Zusicherung mit irreführendem Meldetext. Im ganzen Baum ist dies das einzige `zip`, das still kürzen kann; die übrigen dreizehn laufen über Felder fester, typgeprüfter Länge oder über dieselbe Quelle.
+
+---
+Resolved: Die stille Kürzung ist weg, und an ihrer Stelle steht eine Zusicherung, die heute grün
+ist und rot wird, sobald wieder eine Datei herausfällt.
+
+`crates/krk-core/tests/ablage.rs` führt jetzt die benannte Ausnahme `const OHNE_LADEWEG: [Datei;
+1] = [Datei::Leser]` und daraus abgeleitet `toml_dateien_mit_ladeweg()`. Die Probe — jetzt
+`jede_toml_datei_mit_ladeweg_wird_bei_beschaedigung_zur_seite_gelegt` — beschädigt weiter **jede**
+TOML-Datei, hält vor dem `zip` `toml_dateien_mit_ladeweg().count()` gegen
+`ersetzungen_der_toml_dateien(&ablage).len()` und paart erst danach.
+
+**Der vom Datensatz vorgeschlagene Weg war, `readers.toml` nachzutragen; er ist heute nicht
+gangbar**, denn `ablage::leseprofile::laden` entsteht erst mit Schritt 8. Die Ausnahmeliste ist
+die Fassung, die den Befund trotzdem schließt: sie schreibt die Auslassung dort aus, wo sie
+gezählt wird, statt sie dem `zip` zu überlassen. Wer den Ladeweg baut, nimmt den Eintrag heraus
+und trägt die Datei in `ersetzungen_der_toml_dateien` nach; wer nur eines von beidem tut, bekommt
+die Zusicherung rot. Nachgestellt und gemessen: mit leerer Ausnahmeliste meldet sie `left: 5,
+right: 4` samt dem Satz, welche der zwei Seiten zu berichtigen ist.
+
+Damit fällt auch die zweite Hälfte der `Also seen`-Zeile vom 260824-1014 weg: die Paarung hängt
+nicht mehr daran, dass `Datei::Leser` in `Datei::ALLE` als letzte TOML-Datei steht. Eine geänderte
+Reihenfolge in `ALLE` liefert jetzt keine falsch gepaarte Zusicherung mit irreführendem Meldetext
+mehr, weil `OHNE_LADEWEG` nach Wert filtert und nicht nach Stelle.
+
+Die zwei Doc-Kommentare, die die Lücke ausschrieben, sind auf die neue Fassung gesetzt. Die
+Berichtigung des Datensatzes ist übernommen: Schritt **8** baut den Ladeweg, nicht Schritt 7.

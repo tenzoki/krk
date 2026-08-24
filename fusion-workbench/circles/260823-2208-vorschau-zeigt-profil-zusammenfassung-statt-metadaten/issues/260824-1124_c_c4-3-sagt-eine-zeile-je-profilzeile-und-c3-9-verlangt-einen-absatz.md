@@ -58,3 +58,6 @@ enger ist als die Anzeige.
 `crates/krk-core/src/leseprofil/mod.rs`
 
 **Domain:** code
+
+---
+Resolved: C4.3 des Specs traegt seit dem 260824-1224 den Wortlaut, den dieser Datensatz vorschlaegt: ein einzeiliger Wert steht hinter seiner Beschriftung, ein mehrzeiliger eingerueckt darunter, und der Baustein „juengste N" tut das immer. Die Berichtigung steht unter der Kriterienliste von C4 und nennt die verworfene Alternative mit. Kein Code ist angefasst; `Zusammenfassung::als_text` bleibt, wie Schritt 6 es gebaut hat. Die Berichtigung aendert ein freigegebenes Abnahmekriterium inhaltlich und ist dem Nutzer vorzulegen.

@@ -56,3 +56,17 @@ veraltet still, und nichts im Baum hält sie.
 **Betroffen:** `crates/krk-core/src/text/datei.rs:145-146`, `:678-679`
 
 **Domain:** code
+
+---
+Resolved: Der Vorschlag, in beiden Teilen. Die Stelle im Modulkopf (`:145-146`) nennt jetzt allein
+das Verhältnis und keine Zahl: „eine Datei kann im Ganzen weit über der Grenze liegen und ihn
+trotzdem in ihren ersten hundert Bytes tragen". Die Stelle am Doc-Kommentar von `anlesen`
+(`:678-679`) trägt dasselbe Verhältnis und den Beleg daneben, einmal, mit Datum und Herkunft —
+„am 260824 war der größte Circle-Datensatz der Werkbank dieses Projekts 119.614 Bytes groß" —
+samt dem Satz, warum die Zahl kein Präsens verträgt: der Datensatz liegt außerhalb des
+Quellbaums, keine Probe liest ihn, und ein Archivlauf verschiebt ihn. Die Form ist die der
+Kostenangaben in der Wurzel-`Cargo.toml` („Am 260824 auf diesem Geraet erhoben").
+
+Die getragene Aussage ist unverändert: eine Hülle, die über der Grenze abweist, kann keinen Titel
+aus dem Dateianfang liefern. Genau das war am Befund nicht zu beanstanden, und es steht jetzt
+ohne die Zahl da, die es tragen sollte.

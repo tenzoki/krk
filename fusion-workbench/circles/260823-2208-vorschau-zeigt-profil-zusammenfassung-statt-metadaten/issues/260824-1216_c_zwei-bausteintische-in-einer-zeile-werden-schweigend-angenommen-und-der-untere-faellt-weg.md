@@ -71,3 +71,31 @@ sie geht ohne jede Meldung ab, und das Projekt hält es sonst anders.
 `pruefen`), `resources/default-readers.toml` (steht noch aus, Schritt 7)
 
 **Domain:** code
+
+---
+Resolved: Weg 1 des Datensatzes, und er hat den Befund `260824-1217` mit erledigt — eine
+Änderung für beide, weil beide dieselbe Wurzel hatten: die unmarkierte Auswahl hinter
+`#[serde(flatten)]`.
+
+`Zeilendatei` trägt jetzt vier benannte Felder `zaehlung`, `juengste`, `feld` und
+`vorhandensein`, je `Option<…>`, und `#[serde(deny_unknown_fields)]` dazu.
+`Zeilendatei::zerlegen` zählt, wie viele davon dastehen, und beantwortet die Frage aus C3 selbst:
+genau einer ergibt den Baustein, keiner und zwei sind je ein Grund mit Meldung. `Bausteindatei`
+bleibt als Aufzählung stehen, trägt aber kein `Deserialize` mehr; sie entsteht in `zerlegen` und
+nicht beim Lesen, und `baustein_pruefen` behält seine vollständige Fallunterscheidung.
+
+**Die Gestalt der Datei ist unverändert.** Der Nutzer schreibt weiter `zaehlung = { … }` neben
+seine Beschriftung, ohne Sortenkennung; die dritte Möglichkeit des Datensatzes, den Fall
+hinzunehmen und in `default-readers.toml` auszuschreiben, war damit nicht nötig. Weg 2, die
+ausgeschriebene Sortenkennung aus dem Risikoabschnitt des Plans, kostet eine Zeile je Profilzeile
+in der Datei und ist nicht gezogen.
+
+**Drei Dinge fallen mit ab**, die vorher keine Meldung hatten: ein zusätzlicher Schlüssel neben
+der Beschriftung, eine Zeile ganz ohne Bausteintisch, und der Vorbehalt über die Verbindung aus
+`flatten` und `untagged` — beide Sonderwege sind weg, die Rundreise nimmt jetzt vier gewöhnliche
+`Option`-Felder ab.
+
+Belegt von `eine_zeile_mit_zwei_bausteinen_oder_ohne_einen_verliert_ihren_baustein`
+(`crates/krk-core/tests/leseprofil.rs`): die Zeile behält ihre Beschriftung, verliert ihren
+Baustein, und die Meldung nennt Profilnamen, Beschriftung und bei zwei Tischen deren Namen.
+Modulkopf von `leseprofil::datei` und der Abschnitt des Elternmoduls sind nachgezogen.

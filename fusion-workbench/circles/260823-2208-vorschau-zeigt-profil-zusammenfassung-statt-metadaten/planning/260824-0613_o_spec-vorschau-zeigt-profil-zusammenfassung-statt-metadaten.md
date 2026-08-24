@@ -1,12 +1,12 @@
 # Spec: Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der Metadaten
 
 **Date:** 2026-08-24
-**Status:** Entwurf, noch nicht gebaut
+**Status:** Vom Nutzer am 260824-0625 freigegeben, A1 bis A7 eingeschlossen; in Umsetzung. Vier Kriterien sind am 260824-1224 berichtigt, jede Berichtigung steht bei ihrem Kriterium.
 **Source:** Der Backlogeintrag `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md` und die Directive des Circle-Datensatzes `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_t_circle.md`
 **Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/`, aktiv seit 260824-0530
 **Grundlage erhoben:** 260824-0541, 260824-0600 und 260824-0613, am Baum auf dem Stand `278a008` und am Bestand dieser Werkbank
 
-**Acht Fragen sind beantwortet** und liegen als Datensätze unter `decisions/` dieses Circles; sie werden hier nicht erneut gestellt, sondern in `## Die acht Antworten, aus denen dieser Spec gebaut ist` einzeln zitiert. **Ein Defektdatensatz ist offen** und geht in die Arbeitsschlange dieser Runde: `issues/260824-0600_o_der-entscheidungsdatensatz-zum-regulaeren-ausdruck-sagt-der-baum-fuehre-keine-solche-kiste-er-fuehrt-eine.md`. Er hält keinen Planschritt auf; die berichtigte Kostenlage steht unten in `## Ausgangslage`.
+**Acht Fragen sind beantwortet** und liegen als Datensätze unter `decisions/` dieses Circles; sie werden hier nicht erneut gestellt, sondern in `## Die acht Antworten, aus denen dieser Spec gebaut ist` einzeln zitiert. **Ein Defektdatensatz stand bei der Abfassung offen** und ist mit Schritt 13 des Plans geschlossen: `issues/260824-0600_*_der-entscheidungsdatensatz-zum-regulaeren-ausdruck-sagt-der-baum-fuehre-keine-solche-kiste-er-fuehrt-eine.md`. Er hat keinen Planschritt aufgehalten; die berichtigte Kostenlage steht unten in `## Ausgangslage`. *(Am 260824-1224 nachgezogen.)*
 
 ---
 
@@ -199,13 +199,25 @@ flowchart TD
 - [ ] C3.5 B2 über einem Entscheidungsspeicher liefert für jede Zeile den Titel ohne das führende `#` und ohne die Leerzeichen dahinter.
 - [ ] C3.6 B2 über einer vollständig leeren Datei liefert deren Dateinamen.
 - [ ] C3.7 B3 auf `.fusion-setup` mit dem Ausdruck `"plugin_version":"([^"]*)"` liefert die Fassungsnummer, die auch `cat .fusion-setup` zeigt. Dieselbe Datei mit `"setup_at":"([^"]*)"` liefert das Setup-Datum, und mit `"setup_pwd":"[^"]*/([^"/]+)"` den Projektnamen.
-- [ ] C3.8 B3 auf `.active-circle` mit dem Ausdruck `^(.+)$` liefert den Namen des aktiven Circles.
-- [ ] C3.9 B3 auf einem Circle-Datensatz zieht die Directive: der Ausdruck greift den Absatz hinter der Überschrift `## Directive`, und der Wert ist der Absatz und nicht seine erste Zeile.
+- [ ] C3.8 B3 auf `.active-circle` mit dem Ausdruck `^([^\n]+)` liefert den Namen des aktiven Circles. *(Der Ausdruck ist am 260824-1224 berichtigt; die Berichtigung steht unter dieser Liste.)*
+- [ ] C3.9 B3 auf einem Circle-Datensatz zieht die Directive: der Ausdruck greift den Absatz hinter der Überschrift `## Directive`, und der Wert ist der Absatz und nicht seine erste Zeile. Ein Ausdruck, der die Überschriftenzeile mit `^` verankert, trägt dafür die Angabe `m`. *(Der Satz über die Angabe `m` ist am 260824-1224 nachgetragen; die Berichtigung steht unter dieser Liste.)*
 - [ ] C3.10 B3 mit einem Ausdruck, der mehr als eine Fanggruppe trägt, wird abgewiesen: die Zeile setzt ihren Platzhalter, und die Meldung erscheint in der Statuszeile.
 - [ ] C3.11 B4 über `planning` mit dem Ausdruck `_._spec-` liefert „ja" für einen Circle mit Spec und „nein" für einen ohne.
 - [ ] C3.12 Jeder der vier Bausteine, der nichts findet, lässt seine Beschriftung stehen und setzt an die Stelle des Wertes ein Zeichen für „nicht gefunden". Die übrigen Zeilen der Zusammenfassung bleiben unberührt.
 - [ ] C3.13 Ein Baustein, dessen Ortsangabe aus dem erkannten Ordner herausführt, wird abgewiesen und setzt seinen Platzhalter. Eine Zusammenfassung liest nie außerhalb des Ordners, den sie beschreibt.
-- [ ] C3.14 Gelesen wird über `krk_core::text::datei::bis_zur_grenze_lesen` und über die vorhandene Verzeichnismaschinerie. Ein zweiter Leseweg entsteht nicht; nachzuweisen daran, dass keine neue Stelle im Baum eine Datei über ihren Pfad statt über den Deskriptor öffnet.
+- [ ] C3.14 Gelesen wird über die Hüllen in `krk_core::text::datei`, die sämtlich durch `krk_core::verzeichnis::sys::ohne_warten_oeffnen` gehen und den Typ am offenen Deskriptor prüfen, und über die vorhandene Verzeichnismaschinerie. Ein zweiter Leseweg entsteht nicht; nachzuweisen daran, dass keine neue Stelle im Baum eine Datei über ihren Pfad statt über den Deskriptor öffnet. *(Die erste Hälfte ist am 260824-1224 berichtigt; sie nannte `bis_zur_grenze_lesen` namentlich. Die Berichtigung steht unter dieser Liste.)*
+
+**Berichtigung 260824-1224 zu C3.8 und C3.9: zwei Ausdrücke, die nie treffen konnten.** Die Kiste `regex`, die der Plan gewählt hat, verankert `^` und `$` ohne die Angabe `m` an Anfang und Ende der **ganzen Eingabe** und nicht an denen einer Zeile. Der Feldbaustein ist der einzige der vier, der gegen einen Dateiinhalt läuft; nur seine Ausdrücke sind davon betroffen, die Kennzeichen- und Pfadmuster laufen gegen einen Eintragsnamen oder einen Pfad und damit gegen eine einzige Zeile ohne Zeilenende.
+
+Zwei der sechs Ausdrücke, die C3.7 bis C3.9 und C5.1 bis C5.6 verlangen, konnten deshalb nie treffen: `^(.+)$` auf `.active-circle`, weil die Datei nach dem Namen auf ein Zeilenende endet, das `.` ohne die Angabe `s` nicht deckt und das `$` ohne die Angabe `m` nicht überspringt; und `(?s)^## Directive\s*\n+(.+?)\n\n` auf dem Circle-Datensatz, weil die Überschrift dort nicht am Dateianfang steht. Die übrigen vier treffen und sind unverändert.
+
+**Nachgemessen am 260824-1224 an den echten Dateien dieser Werkbank**, in einem Wegwerfprogramm gegen `regex` 1.13.1 außerhalb des Baumes: `^(.+)$` gegen `.active-circle` liefert keinen Treffer, `^([^\n]+)` und `(?m)^(.+)$` liefern beide den Namen des aktiven Circles. Das alte Directive-Muster trifft **null** der achtzehn Circle-Datensätze, das berichtigte `(?sm)^## Directive\s*\n+(.+?)\n\n` trifft **alle achtzehn**. Die vier unberührten Ausdrücke sind im selben Lauf gegen `.fusion-setup` und `orchestrator-live.md` gehalten worden und liefern, was C3.7 und C5.1 ihnen zuschreiben.
+
+Der Befund ist `issues/260824-1124_*_zwei-feldmuster-der-auslieferungsfassung-verankern-mit-dach-und-koennen-nie-treffen.md`; Schritt 7 des Plans trägt die berichtigten Ausdrücke.
+
+**Berichtigung 260824-1224 zu C3.14: der genannte Leseweg ist nicht der gebaute.** Die erste Hälfte lautete „Gelesen wird über `krk_core::text::datei::bis_zur_grenze_lesen`". Diese Funktion **weist** eine Datei über der Grenze ab, statt sie anzulesen, und C6.6 verlangt das Anlesen: „Der Titel und das Feld entstehen aus diesen Bytes." Beide Kriterien waren in ihrem Wortlaut nicht zugleich erfüllbar. Schritt 4 hat deshalb `krk_core::text::datei::anlesen` gebaut, und Schritt 6 ruft es; `bis_zur_grenze_lesen` hat in der Zusammenfassung keinen Rufer mehr. C3.14 nennt jetzt die Zusage statt der Funktion. **Die zweite Hälfte ist unverändert und bleibt der Nachweis:** `anlesen` geht durch dieselbe eine Tür `verzeichnis::sys::ohne_warten_oeffnen` und prüft den Typ am `fstat` des offenen Deskriptors. Der Befund ist `issues/260824-1014_*_c3-14-nennt-bis-zur-grenze-lesen-als-den-leseweg-und-schritt-4-hat-anlesen-gebaut.md`.
+
+**Diese drei Berichtigungen ändern zwei Abnahmekriterien inhaltlich** (C3.8 und C3.14) und tragen an einem dritten (C3.9) einen Satz nach. Der Nutzer hat den Spec am 260824-0625 freigegeben; die Berichtigungen stehen ausdrücklich hier und nicht anstelle des ursprünglichen Wortlauts, damit er sie einzeln prüfen kann.
 
 **Decisions made:**
 - Fester Bausteinsatz ohne eigene Ausdruckssprache über den Bausteinen: Nutzerentscheid vom 260823.
@@ -224,11 +236,15 @@ flowchart TD
 **Acceptance criteria:**
 - [ ] C4.1 Wählt der Nutzer einen erkannten Ordner aus, erscheint dessen Zusammenfassung ohne weiteres Zutun im aktiven Tab des Vorschaufensters.
 - [ ] C4.2 Die Kopfzeile trägt Name und vollen Pfad des Ordners. Die übrigen Metadatenzeilen erscheinen nicht.
-- [ ] C4.3 Jede Profilzeile erscheint als eine Zeile aus Beschriftung und Wert, in der Reihenfolge der Datei. Der Baustein „jüngste N" erscheint als Block aus bis zu N Zeilen unter seiner Beschriftung.
+- [ ] C4.3 Jede Profilzeile erscheint in der Reihenfolge der Datei. Ein Wert auf einer Zeile steht hinter seiner Beschriftung; ein Wert, der mehr als eine Zeile trägt, steht eingerückt unter ihr, und der Baustein „jüngste N" tut das immer, als Block aus bis zu N eingerückten Zeilen. *(Am 260824-1224 berichtigt; die Berichtigung steht unter dieser Liste.)*
 - [ ] C4.4 Wechselt der Nutzer auf einen anderen Tab des Vorschaufensters und zurück, steht die Zusammenfassung unverändert. Sie folgt derselben Regel wie jeder andere Inhalt: jede Quelle schreibt in den aktiven Tab und in keinen anderen.
 - [ ] C4.5 Ändert der Nutzer die `readers.toml`, während KRK läuft, zeigt die Vorschau weiter die Profile des Startzeitpunkts. Ein Neustart übernimmt die geänderte Datei. Ein Beobachter auf der Datei entsteht in dieser Runde nicht.
 - [ ] C4.6 Der Text der Zusammenfassung ist auswählbar und kopierbar, wie die Vorschaufläche seit der Runde 14; kopiert wird der angezeigte Text.
 - [ ] C4.7 Die Zusammenfassung entsteht beim Auswählen und nicht im Voraus. Ein Ordner, den der Nutzer nie auswählt, löst keinen Verzeichnisleselauf und keine Dateiöffnung aus.
+
+**Berichtigung 260824-1224 zu C4.3: „eine Zeile" war enger als C3.9.** Der ursprüngliche Wortlaut lautete: „Jede Profilzeile erscheint als eine Zeile aus Beschriftung und Wert, in der Reihenfolge der Datei. Der Baustein „jüngste N" erscheint als Block aus bis zu N Zeilen unter seiner Beschriftung." Damit war genau **ein** Baustein genannt, der mehr als eine Zeile belegen darf. C3.9 verlangt aber vom Feldbaustein ausdrücklich den Absatz und nicht seine erste Zeile, und ein Directive-Absatz dieser Werkbank steht auf bis zu vier Zeilen: von achtzehn Circle-Datensätzen trägt einer seine Directive mehrzeilig. Ein Feldwert kann also mehrzeilig sein, und C4.3 sagte in ihrem Wortlaut, dass er es nicht ist.
+
+`Zusammenfassung::als_text` löst das mit einer überschneidungsfreien und vollständigen Unterscheidung: der Titelbaustein steht immer unter seiner Beschriftung, jeder andere Wert genau dann, wenn er selbst mehr als eine Zeile trägt. Die Alternative wäre gewesen, den Absatz hinter die Beschriftung zu setzen und seine Folgezeilen am linken Rand stehen zu lassen; dort liefe er in die Beschriftung der nächsten Zeile hinein, und der Nutzer sähe zwei Angaben als eine. C4.3 sagt jetzt, was die Anzeige tut. **Das ändert ein Abnahmekriterium inhaltlich** und ist kein Bauauftrag: der Bau ist entschieden und geprüft. Der Befund ist `issues/260824-1124_*_c4-3-sagt-eine-zeile-je-profilzeile-und-c3-9-verlangt-einen-absatz.md`.
 
 **Decisions made:**
 - Kopfzeile mit Name und vollem Pfad: Festlegung A6.
@@ -280,7 +296,7 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|histor
 **Description:** Eine Zusammenfassung arbeitet innerhalb einer festen Zahl von Verzeichnisleseläufen und Dateiöffnungen. Die Grenzen sind abzählbar und ohne den Abnahmelauf im Vordergrund zu prüfen; sie treten an die Stelle einer Zeitmessung gegen L7.
 
 **Acceptance criteria:**
-- [ ] C6.1 Ein Baustein löst höchstens einen Verzeichnisleselauf aus. Der Feldbaustein löst keinen aus.
+- [ ] C6.1 Ein Baustein löst höchstens einen Verzeichnisleselauf aus. Der Feldbaustein löst keinen **eigenen** aus, solange seine Datei in einem Ordner liegt, der ohnehin gelesen wird; der erkannte Ordner ist immer einer davon. Für die fünf mitgelieferten Profile gilt das durchweg; allgemein gilt es nicht, denn ein Feldbaustein, der seine Datei in einem Unterordner benennt, kostet genau einen Leselauf. *(Am 260824-1224 berichtigt; die Berichtigung steht unter dieser Liste.)*
 - [ ] C6.2 Der Baustein „jüngste N" öffnet höchstens N Dateien, der Feldbaustein höchstens eine, die Zählung und das Vorhandensein keine.
 - [ ] C6.3 N ist höchstens 10. Ein Profil, das eine größere Zahl nennt, wird auf 10 gekappt.
 - [ ] C6.4 Eine Zusammenfassung löst höchstens 12 Verzeichnisleseläufe und höchstens 24 Dateiöffnungen aus. Erreicht ein Profil eine der beiden Grenzen, setzen die übrigen Bausteine ihren Platzhalter.
@@ -289,6 +305,10 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|histor
 - [ ] C6.7 Das größte mitgelieferte Profil, das des einzelnen Circles, bleibt in der Messung unter allen Grenzen aus C6.4: es löst höchstens 7 Verzeichnisleseläufe und höchstens 11 Dateiöffnungen aus.
 - [ ] C6.8 Die Zahlen aus C6.1 bis C6.7 sind durch Proben belegt, die ohne Fenster laufen, und nicht durch eine Zeitmessung. Die Proben zählen die Aufrufe und nicht die Millisekunden.
 - [ ] C6.9 Der offene Deskriptorhaushalt bleibt, wie er ist: eine Zusammenfassung hält zu keinem Zeitpunkt mehr als einen Verzeichnisdeskriptor und einen Dateideskriptor zugleich.
+
+**Berichtigung 260824-1224 zu C6.1: „Der Feldbaustein löst keinen aus" war in dieser Allgemeinheit falsch.** Der Satz stand gegen die Form des Bausteins aus C3: „Nennt eine Datei über einen Ausdruck auf dem Dateinamen." Ein Ausdruck auf dem Dateinamen lässt sich nur gegen Namen halten, die jemand zuvor aufgezählt hat, und wer eine Datei über ein Muster benennt, liest damit das Verzeichnis, in dem sie liegt. Der Fall ist nicht ausgedacht: C5.6 verlangt die Directive aus dem Circle-Datensatz, und dessen Name trägt den Zustandsmarker, den ein fester Dateiname nicht erreicht.
+
+Der Plan löst den Widerspruch, ohne ein Kriterium fallen zu lassen: er liest den erkannten Ordner höchstens einmal je Zusammenfassung und lässt jeden Baustein, der ihn nennt, diese eine Lesung benutzen. Für die fünf mitgelieferten Profile fällt damit kein eigener Leselauf des Feldbausteins an. Für einen Feldbaustein in einem Unterordner fällt genau einer an, und dafür war der ursprüngliche Satz falsch. Die Zahlen aus C6.7 sind unberührt: fünf Verzeichnisleseläufe und elf Dateiöffnungen am größten mitgelieferten Profil, gegen die dort zugesagten höchstens sieben und höchstens elf. **Das ändert ein Abnahmekriterium inhaltlich.** Der Befund ist `issues/260824-0634_*_c6-1-sagt-der-feldbaustein-lese-kein-verzeichnis-seine-form-aus-c3-verlangt-es.md`.
 
 **Decisions made:**
 - Abzählbares Kriterium statt Zeitmessung: abgeleitet aus der Lage, dass der Abnahmelauf KRK im Vordergrund verlangt und damit Nutzerarbeit ist. Form nach dem Vorbild der Runde 2.
@@ -303,7 +323,7 @@ Sechs Bedingungen binden jede Umsetzung dieses Specs, und keine davon ist in die
 
 **Die vollständigen Fallunterscheidungen bleiben vollständig.** `Inhalt` in `vorschaumodell.rs`, `Datei::format` und `Datei::leerbefund` in `pfade.rs` und `Grund` in `ablage/mod.rs` haben keinen Auffangzweig. Wer sie erweitert, ordnet jede Stelle bewusst ein; der Übersetzer nennt sie.
 
-**Gelesen wird über den Deskriptor und nicht über den Pfad.** `krk_core::text::datei::bis_zur_grenze_lesen` öffnet mit `O_NONBLOCK`, prüft den Typ am offenen Deskriptor und gibt ihn frei, bevor der nächste Kandidat drankommt. Ein zweiter Öffnungsweg entsteht nicht, und eine Liste offener Dateien entsteht nicht.
+**Gelesen wird über den Deskriptor und nicht über den Pfad.** Die Hüllen in `krk_core::text::datei` öffnen über `verzeichnis::sys::ohne_warten_oeffnen` mit `O_NONBLOCK`, prüfen den Typ am offenen Deskriptor und geben ihn frei, bevor der nächste Kandidat drankommt. Ein zweiter Öffnungsweg entsteht nicht, und eine Liste offener Dateien entsteht nicht. *(Am 260824-1224 berichtigt: hier stand `bis_zur_grenze_lesen` als der eine Weg. Die Bedingung selbst ist unverändert; sie bindet jetzt die Hüllen statt einer von ihnen, aus dem Grund, der bei C3.14 steht.)*
 
 **Der Fehlerweg ist der vorhandene.** Die laufenden Fehler trägt die Statuszeile, genau ein Fehler bricht über das modale Hinweisfenster ab. Diese Runde fügt keinen zweiten Weg hinzu und öffnet kein Blatt.
 
@@ -349,6 +369,6 @@ Sieben technische Fragen entscheidet der Plan und nicht dieser Spec.
 
 ## User Decisions Pending
 
-- [ ] Die sieben abgeleiteten Festlegungen A1 bis A7 sind nicht einzeln bestätigt. Sie stehen in `## Abgeleitete Festlegungen` beisammen und fallen am Spec-Tor, wenn der Nutzer widerspricht. A7 ist die schwächste.
-- [ ] Der Defektdatensatz `issues/260824-0600_o_…-er-fuehrt-eine.md` ist offen und geht in die Arbeitsschlange dieser Runde. Er hält keinen Planschritt auf.
+- [x] Die sieben abgeleiteten Festlegungen A1 bis A7 hat der Nutzer am 260824-0625 am Spec-Tor bestätigt. Sie stehen in `## Abgeleitete Festlegungen` beisammen; A7 war die schwächste und ist mitbestätigt. *(Am 260824-1224 nachgezogen: die Zeile stand noch in ihrer Fassung von vor dem Tor.)*
+- [x] Der Defektdatensatz `issues/260824-0600_*_…-er-fuehrt-eine.md` ist mit Schritt 13 des Plans geschlossen; die berichtigte Kostenangabe steht im Datensatz `decisions/260824-0541_a_wie-zieht-der-baustein-…`. *(Am 260824-1224 nachgezogen.)*
 - [ ] Der Backlogeintrag `shared/backlog/260823-2136_o_readerconventions-profile-fuer-dateizugriff.md` bleibt offen und trägt weiter seine erste Hälfte.

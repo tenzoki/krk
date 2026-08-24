@@ -69,3 +69,18 @@ hinzukommt.
 `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md` (Schritt 9, `## Was der Übersetzer einfordert`)
 
 **Domain:** code
+
+---
+Resolved: Weg 2 des Datensatzes, die Frage im Kern entschieden. `bausteine::gezaehlt` fragt nach
+`canonicalize` mit `std::fs::metadata`, ob der aufgelöste Pfad ein Verzeichnis benennt, und
+liefert sonst `None`; die Prüfung steht am **aufgelösten** Pfad, damit eine Verknüpfung auf eine
+Datei als Datei zählt. Sie kostet einen Systemaufruf je Zusammenfassung und weder einen
+Leselauf noch eine Öffnung, also rührt sie den Haushalt aus C6 nicht an. Der Doc-Kommentar von
+`zusammenfassen` und der Modulkopf von `bausteine.rs` schreiben die Zusage aus, samt dem Grund,
+warum sie hier und nicht beim Aufrufer steht. Weg 1 ist damit mit erledigt und nicht ersetzt.
+
+Belegt von `auf_eine_datei_greift_kein_profil_auch_bei_passendem_pfadmuster`
+(`crates/krk-core/tests/leseprofil.rs`): drei Dateien und eine Verknüpfung auf eine Datei gegen
+ein Profil, dessen Pfadmuster `.` jeden Pfad trifft, dazu der Ordner selbst als Gegenprobe. Ohne
+die Prüfung ist sie rot — nachgestellt und gemessen, nicht behauptet: `die Datei _t_circle.md hat
+eine Zusammenfassung bekommen`. Schritt 9 behält seinen Zweig als zweite Sperre.

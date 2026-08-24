@@ -52,3 +52,19 @@ festnageln, fällt das erst auf, wenn jemand nachliest.
 **Betroffen:** `crates/krk-core/tests/leseprofil.rs:1199-1252`
 
 **Domain:** code
+
+---
+Resolved: Der vorgeschlagene Weg, gegangen. Das Vorhandensein in
+`eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet` sucht jetzt `muster = '\.md$'` statt
+`der-eine-treffer`, und die Zusicherung lautet `assert_eq!(werte[1].1, &Wert::Vorhanden(true))`
+statt eines `matches!` über beide möglichen Werte. Bei 2.001 Dateien `00000.md` bis `02000.md`
+enthält jede Auswahl von 2.000 mindestens 1.999 Treffer; der Ausgang hängt an keiner
+Lesereihenfolge mehr.
+
+`der-eine-treffer.txt` ist entfallen und nicht danebenstehen geblieben: die Datei diente allein
+dieser einen Zusicherung, und ein Prüfstück ohne Aussage lädt den nächsten Leser dazu ein, eine
+zweite darauf zu schreiben. Der Doc-Kommentar der Probe trägt einen Abschnitt, der sagt, warum
+das Muster auf fast jeden Eintrag passen muss.
+
+Die zwei sauber belegten Anwendungen (`werte[2]`, `werte[3]`) sind unverändert; die erste prüft
+weiter `UeberGrenze(HOECHSTENS_EINTRAEGE)` und sagt seit `260824-1215` „mindestens" statt „über".

@@ -72,3 +72,25 @@ Prosastellen, die etwas anderes zusagen als der Baum tut.
 `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md` (Schritt 6)
 
 **Domain:** code
+
+---
+Resolved: Punkt 1 des Datensatzes, der Satz der Anzeige. `Wert::als_text` schreibt für
+`UeberGrenze` jetzt `mindestens {Treffer} (Lesung bei {HOECHSTENS_EINTRAEGE} Einträgen
+abgebrochen)`. Beide Auskünfte stehen darin, und die Grenze kommt aus der Konstanten und nicht
+ein zweites Mal aus dem Text, wie Schritt 6 es verlangt.
+
+**„mindestens" statt „über", und das ist nicht nur Wortwahl.** „über 1" behauptet echt mehr als
+einen; getroffen hat aber genau einer innerhalb der gelesenen Einträge, und ob hinter dem
+Abbruch ein zweiter steht, ist unentschieden. Die gebaute Fassung sagte damit eine Aussage, die
+falsch sein kann. Der Doc-Kommentar von `Wert::UeberGrenze` trägt beide Gründe.
+
+Die Probe `der_text_setzt_einzeilige_werte_hinter_und_mehrzeilige_unter_die_beschriftung` prüft
+den Satz jetzt an einer **kleinen** Zahl (`UeberGrenze(1)`) und nicht mehr an einer, die der
+Grenze gleicht: bei 2.000 erriete der Nutzer den Abbruch noch, und die Probe belegte den Punkt
+des Befundes deshalb gerade nicht.
+
+**Punkt 2 bleibt offen und gehört nicht hierher.** C6.5 und Schritt 6 nennen weiter „über 2.000"
+als den anzuzeigenden Satz; Spec und Plan werden in dieser Sitzung von einem zweiten Agenten
+geführt, und diese Räumung fasst beide Dateien ausdrücklich nicht an. Der Zuschnitt ist derselbe
+wie bei `260824-1124_*_c4-3-sagt-eine-zeile-je-profilzeile-…`: der Bau ist entschieden, die
+Buchführung steht aus.

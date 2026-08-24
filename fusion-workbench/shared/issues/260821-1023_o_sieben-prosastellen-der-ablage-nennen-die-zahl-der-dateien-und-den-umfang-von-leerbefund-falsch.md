@@ -117,3 +117,47 @@ mitgezogen werden: `:59` bleibt `:59`, `:513` steht auf `:549` (`laden`), `:599`
 
 ---
 Also seen: 260824-0940 by coder — Schritt 2 der Runde 16 hat `readers.toml` als siebte Ablagedatei aufgenommen; die zwei Fundstellen in `pfade.rs` lesen sich jetzt „sieben Ablagedateien" (`:1`) und „Die vier übrigen TOML-Dateien und die zwei Zettel" (`leerbefund`), der Befund selbst — die fehlende dritte Frage im Modulkopf — steht unverändert, und die fünf Stellen in `mod.rs` sind nicht angefasst.
+
+---
+
+## Nachtrag 260824-1245: die Schutzanweisung für drei Stellen ist zurückgenommen
+
+**Der Satz „Drei benachbarte Stellen sind richtig und dürfen nicht mitgezogen werden" gilt
+nicht mehr.** Er stand zur Erhebung am 260821 richtig da: `mod.rs:59`, `:513`/`:549` (`laden`)
+und `:599`/`:645` (`sichern`) sprachen über die **vier** TOML-Dateien, und vier waren es. Seit
+Schritt 2 der Runde 16 sind es fünf: `readers.toml` ist die siebte Ablagedatei und die fünfte
+mit `Format::Toml` (`crates/krk-core/src/ablage/pfade.rs`, `Datei::Leser`). Wer diesen
+Datensatz nach seinem bisherigen Wortlaut abarbeitet, lässt genau die drei Stellen stehen, die
+inzwischen falsch geworden sind.
+
+Die drei sind am 260824-1245 nachgezogen und tragen jetzt:
+
+| damals | jetzt | Wortlaut |
+|---|---|---|
+| `mod.rs:59` | `:59` | „Zwei der fünf TOML-Dateien entstehen einmal und werden nie wieder geschrieben" |
+| `mod.rs:549` (`laden`) | `:558` | „Liest eine der fünf TOML-Dateien." |
+| `mod.rs:645` (`sichern`) | `:654` | „Schreibt eine der fünf TOML-Dateien, atomar über `atomar::schreiben`." |
+
+Die Überschrift bei `:59` nennt jetzt **zwei**, weil `readers.toml` wie `settings.toml` von Hand
+gepflegt wird und nicht über `Ablage::sichern` geht.
+
+**Der eigentliche Befund dieses Datensatzes ist davon unberührt und bleibt offen.** Die fünf
+Stellen seiner Tabelle sprechen weiter von „vier Dateien" über einen Weg, der inzwischen
+**sieben** annimmt — nicht mehr sechs, wie der Datensatz sie zählt. Ihre Zeilennummern haben
+sich mit den Nachträgen vom 260824 verschoben:
+
+| Stelle bei `d771ec6` | jetzt | Wortlaut zur Wiedererkennung |
+|---|---|---|
+| `mod.rs:45` | `:45` | „`Ablage::pfad` liefert den Pfad einer der vier Dateien" |
+| `mod.rs:151` | `:154` | „Die drei übrigen tragen `Leerbefund::Vorgabe`" |
+| `mod.rs:461` | `:470` | „Der Ablageordner mit den vier Dateien" |
+| `mod.rs:463` | `:472` | „Wer eine der vier Dateien anfassen will" |
+| `mod.rs:503` | `:512` | „Der Pfad einer der vier Dateien" (`Ablage::pfad`) |
+| `mod.rs:544` | `:553` | „Der Pfad einer der vier Dateien" (`Zugang::pfad`) |
+
+Wer sie nachzieht, setzt sie auf **sieben** und nicht auf sechs. `mod.rs:154` ist die Ausnahme:
+dort geht es um `Leerbefund`, und der Satz ist auf „die vier übrigen TOML-Dateien und die zwei
+Zettel" zu lesen, wie `pfade.rs` es ausschreibt.
+
+**Nachgetragen von:** coder, bei der Befundräumung am 260824-1245, veranlasst durch
+`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1014_c_vierzehn-prosastellen-der-ablage-sagen-weiter-vier-und-ein-offener-datensatz-schuetzt-drei-davon.md`

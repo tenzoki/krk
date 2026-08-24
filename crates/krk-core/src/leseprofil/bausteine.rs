@@ -9,9 +9,16 @@
 //! ```text
 //! ausgewaehlter Ordner
 //!   ├─ canonicalize ──────────> die Schranke aus C3.13
+//!   ├─ ist es ein Verzeichnis? ─> sonst None            (C2.6)
 //!   ├─ erkennung::erkennen ───> Profil          (Leselauf 1, auf Verlangen)
 //!   └─ je Zeile ein Baustein ─> Wert oder Wert::Nicht
 //! ```
+//!
+//! Die zweite Zeile des Ablaufs ist die Zusage aus C2.6, und sie steht hier,
+//! weil sie hier zu halten ist: die Erkennung ueber ein Pfadmuster sieht allein
+//! auf den Pfadtext, also traefe sie eine Datei genauso wie den Ordner daneben.
+//! Ein Rufer, der die Frage vor dem Aufruf stellt, haelt die Zusage fuer sich
+//! und nicht fuer den naechsten Rufer.
 //!
 //! # Der erkannte Ordner wird hoechstens einmal gelesen
 //!
@@ -111,6 +118,14 @@ use super::{
 /// aufloesen laesst, denn ohne aufgeloesten Ordner gibt es keine Schranke, an
 /// der C3.13 zu messen waere.
 ///
+/// **Ein Eintrag, der aufgeloest kein Verzeichnis ist, bekommt nie eine
+/// Zusammenfassung** (C2.6), auch dann nicht, wenn sein Pfad ein Pfadmuster
+/// erfuellt. Die Frage wird hier entschieden und nicht beim Aufrufer: der
+/// erste Erkennungsdurchgang sieht allein auf den Pfadtext und braucht keine
+/// Eintraege, also traefe ein Profil mit Pfadmuster auch eine Datei. Eine
+/// Zusage, die an einem Zweig des einen heutigen Rufers haengt, faellt mit dem
+/// zweiten, und die Vorschau ist nicht der einzige denkbare.
+///
 /// **Der Pfad, den der Nutzer ausgewaehlt hat, und der aufgeloeste Pfad sind
 /// zwei verschiedene Dinge, und jeder hat seine Aufgabe.** Das Pfadmuster der
 /// Erkennung laeuft gegen den ausgewaehlten Pfad, denn der steht im
@@ -133,6 +148,13 @@ pub fn zusammenfassen(profile: &Profile, ordner: &Path) -> Option<Zusammenfassun
 /// [`zusammenfassen`] und sonst nichts.
 fn gezaehlt(profile: &Profile, ordner: &Path) -> Option<(Zusammenfassung, Haushalt)> {
     let wurzel = std::fs::canonicalize(ordner).ok()?;
+    // C2.6, am aufgeloesten Pfad und nicht am ausgewaehlten: eine Verknuepfung
+    // auf eine Datei ist eine Datei. Der Aufruf kostet einen Systemaufruf je
+    // Zusammenfassung und keinen Leselauf und keine Oeffnung; der Haushalt aus
+    // C6 zaehlt die zwei letzteren.
+    if !std::fs::metadata(&wurzel).is_ok_and(|angaben| angaben.is_dir()) {
+        return None;
+    }
     let lauf = Lauf::neu(&wurzel);
 
     let profil = erkennen(profile, ordner, &|| lauf.eintraege())?;

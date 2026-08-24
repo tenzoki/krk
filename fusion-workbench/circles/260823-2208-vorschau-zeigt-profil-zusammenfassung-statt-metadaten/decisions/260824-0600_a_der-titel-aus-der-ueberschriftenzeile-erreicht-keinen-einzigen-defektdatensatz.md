@@ -53,7 +53,14 @@ Baustein „jüngste zehn mit Titel" tragen.
 
 ## Constraints
 
-Gelesen wird über den vorhandenen Weg `krk_core::text::datei::bis_zur_grenze_lesen`. Die zehn
+Gelesen wird über den vorhandenen Weg `krk_core::text::datei::bis_zur_grenze_lesen`. Die zehn **Berichtigt am 260824-1224:** gelesen wird
+über `krk_core::text::datei::anlesen`, die dritte Hülle an derselben Tür
+`verzeichnis::sys::ohne_warten_oeffnen`. `bis_zur_grenze_lesen` weist eine Datei über der Grenze
+ab, statt sie anzulesen, und C6.6 des Specs verlangt das Anlesen; die Begründung im Einzelnen
+steht in der Berichtigung 260824-1224 des Datensatzes
+`260824-0541_a_wie-zieht-der-baustein-ein-feld-aus-einer-datei-und-traegt-er-auch-einen-abschnitt.md`.
+Die Zusage der Bedingung ist unverändert: gelesen wird über den Deskriptor und nicht über den
+Pfad. Die zehn
 Dateiöffnungen je Zusammenfassung sind mit der Antwort vom 260824-0555 bereits in Kauf
 genommen; keine dieser drei Möglichkeiten ändert ihre Zahl, sie unterscheiden sich allein in
 dem, was aus den gelesenen Bytes wird. `Eintrag` trägt den Änderungszeitpunkt schon aus dem

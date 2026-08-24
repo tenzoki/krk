@@ -1,7 +1,7 @@
-//! Die Ablage: sechs Dateien in zwei Formaten unter
+//! Die Ablage: sieben Dateien in zwei Formaten unter
 //! `~/Library/Application Support/KRK/`.
 //!
-//! Vier tragen TOML und gehen ueber [`Zugang::laden`] und [`Zugang::sichern`];
+//! Fuenf tragen TOML und gehen ueber [`Zugang::laden`] und [`Zugang::sichern`];
 //! die zwei Notizzettel der Runde 9 tragen nackten Text und gehen ueber
 //! [`Zugang::text_laden`] und [`Zugang::text_sichern`]. Welche Datei welches
 //! Format traegt, sagt [`pfade::Datei::format`], und der Kopf von [`pfade`]
@@ -56,14 +56,17 @@
 //! eine unbewachte Aussage ueber den damaligen Baum
 //! (`issues/260813-0540_*_kein-schreibweg-an-der-sperre-vorbei-ist-nicht-typgesichert-und-ungeprueft.md`).
 //!
-//! # Eine der vier Dateien entsteht einmal und wird nie wieder geschrieben
+//! # Zwei der fuenf TOML-Dateien entstehen einmal und werden nie wieder
+//! geschrieben
 //!
-//! `settings.toml` aus Schritt 18c ist die eine von Hand gepflegte Datei, und
-//! sie geht als einzige **nicht** ueber [`Ablage::sichern`]: die Anlage beim
-//! ersten Start schreibt die eingebettete Auslieferungsfassung woertlich, samt
-//! deren Kommentaren, die `serde` nicht kennt. Der Weg dorthin ist derselbe
-//! [`atomar::schreiben`], allein die Nutzlast ist eine andere; siehe den Kopf
-//! von [`einstellungen`].
+//! `settings.toml` aus Schritt 18c und, seit der Runde 16, `readers.toml` sind
+//! die von Hand gepflegten Dateien, und sie gehen als einzige **nicht** ueber
+//! [`Ablage::sichern`]: die Anlage beim ersten Start schreibt die eingebettete
+//! Auslieferungsfassung woertlich, samt deren Kommentaren, die `serde` nicht
+//! kennt. Der Weg dorthin ist derselbe [`atomar::schreiben`], allein die
+//! Nutzlast ist eine andere; siehe den Kopf von [`einstellungen`]. Wer sie
+//! anlegt, beschreibt fuer `readers.toml` ein spaeterer Schritt der Runde 16;
+//! die Ablage kennt von ihr bislang Namen, Pfad und Format.
 //!
 //! # Ein beschaedigter Bestand laesst KRK starten
 //!
@@ -114,8 +117,8 @@
 //! - **Der Weg dorthin ist [`atomar::schreiben`]**, also derselbe wie fuer jede
 //!   andere Datei dieses Moduls. Ein zweiter Schreibweg entsteht nicht.
 //!
-//! Alle vier TOML-Dateien gehen durch [`Zugang::laden`], und die vier Regeln
-//! gelten dort fuer alle vier gleich: das Sichern selbst kennt keine Datei. Die
+//! Alle fuenf TOML-Dateien gehen durch [`Zugang::laden`], und die vier Regeln
+//! gelten dort fuer alle gleich: das Sichern selbst kennt keine Datei. Die
 //! zwei Zettel gehen durch [`Zugang::text_laden`], und die vier Regeln gelten
 //! dort unveraendert weiter — [`Zugang::beiseite_legen`] ist dieselbe Funktion
 //! und hat mit dem Zettel ihren zweiten Aufrufer bekommen.
@@ -140,8 +143,10 @@
 //! - **Ein oberster Schluessel, den der Leser nicht kennt**, ist ein `Err` und
 //!   kein stiller Auslieferungszustand. Das leistet
 //!   `#[serde(deny_unknown_fields)]` an der jeweiligen Struktur, und drei der
-//!   vier TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei` und
-//!   seit dem 260821 auch [`Lesezeichenliste`].
+//!   fuenf TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei` und
+//!   seit dem 260821 auch [`Lesezeichenliste`]. `readers.toml` traegt es
+//!   ebenfalls, an `leseprofil::datei::Profildatei`, geht aber noch nicht
+//!   ueber diesen Ladeweg.
 //! - **Kein einziger oberster Schluessel** heisst je nach Datei etwas anderes,
 //!   und deshalb steht die Antwort in [`pfade::Datei::leerbefund`] — einer
 //!   vollstaendigen Fallunterscheidung ohne Auffangzweig, wie
@@ -238,8 +243,12 @@ pub enum Grund {
     /// Die Datei ist groesser als [`EDITORGRENZE`] und wurde deshalb gar nicht
     /// erst gelesen.
     ///
-    /// Nur eine Zetteldatei kann ihn tragen: die vier TOML-Dateien schreibt KRK
-    /// selbst, und ihr Leseweg kennt keine Grenze. Der Wert steht neben
+    /// Nur eine Zetteldatei kann ihn tragen, und der Traeger dieser Aussage ist
+    /// [`Zugang::text_laden`] und nicht die Herkunft der Datei: die Grenze
+    /// steht in jenem Leseweg, und der Leseweg der TOML-Dateien kennt keine.
+    /// Bis zum 260824 stand hier die Begruendung „die vier TOML-Dateien
+    /// schreibt KRK selbst"; sie traegt seit `readers.toml` nicht mehr, denn
+    /// die schreibt KRK im Betrieb nicht. Der Wert steht neben
     /// [`Grund::Beschaedigt`] und nicht darin, weil die beiden verschiedene
     /// Auskuenfte sind — die eine laedt zum Teilen der Datei ein, die andere
     /// nicht. Dieselbe Unterscheidung trifft `text::datei::Abweisung` fuer den
@@ -546,7 +555,7 @@ impl Zugang<'_> {
         self.ort.datei(welche)
     }
 
-    /// Liest eine der vier Dateien.
+    /// Liest eine der fuenf TOML-Dateien.
     ///
     /// Scheitert nie: eine fehlende, nicht lesbare oder beschaedigte Datei
     /// fuehrt zum Auslieferungszustand. Nur die letzten beiden Faelle tragen
@@ -642,12 +651,14 @@ impl Zugang<'_> {
         }
     }
 
-    /// Schreibt eine der vier Dateien, atomar ueber [`atomar::schreiben`].
+    /// Schreibt eine der fuenf TOML-Dateien, atomar ueber
+    /// [`atomar::schreiben`].
     ///
-    /// **Nicht der Weg zu `settings.toml`.** Die Serialisierung kennt keine
-    /// Kommentare, und die von Hand gepflegte Datei besteht zur Haelfte aus
-    /// ihnen; ihre Anlage schreibt deshalb die eingebettete
-    /// Auslieferungsfassung woertlich. Siehe den Kopf von [`einstellungen`].
+    /// **Nicht der Weg zu `settings.toml` und nicht der zu `readers.toml`.**
+    /// Die Serialisierung kennt keine Kommentare, und die zwei von Hand
+    /// gepflegten Dateien bestehen zur Haelfte aus ihnen; ihre Anlage schreibt
+    /// deshalb die eingebettete Auslieferungsfassung woertlich. Siehe den Kopf
+    /// von [`einstellungen`].
     pub fn sichern<T>(&self, welche: Datei, wert: &T) -> io::Result<()>
     where
         T: Serialize,
@@ -766,7 +777,7 @@ impl Zugang<'_> {
     /// daneben.
     ///
     /// **Die Quelle ist ein Leser und keine Zeichenkette**, und sie hat mit der
-    /// Runde 9 ihren zweiten Aufrufer bekommen. Die vier TOML-Dateien reichen
+    /// Runde 9 ihren zweiten Aufrufer bekommen. Die fuenf TOML-Dateien reichen
     /// ihren gelesenen Text als `&mut text.as_bytes()` herein; eine Zetteldatei
     /// reicht ihren **offenen Deskriptor** herein, denn ihre zwei unlesbaren
     /// Faelle tragen keinen `&str`: eine ungueltige Bytefolge ist definitions-

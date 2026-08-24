@@ -54,3 +54,6 @@ Plan für seine vier Fälle selbst zieht. Der Befund ist die Lücke in der Aufz�
 `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, Schritt 3
 
 **Domain:** code
+
+---
+Resolved: Der Planschritt 3 nennt die fuenfte Abweisung seit dem 260824-1224 und **bestaetigt die Einordnung der Umsetzung**: ein unuebersetzbares Muster innerhalb eines Bausteins kostet die Zeile und nicht das Profil. Der Grund steht dabei, in derselben Form, die der Datensatz vorschlaegt: Muster im Erkennungsteil kosten das Profil, Muster und Ortsangaben in einer Zeile kosten die Zeile, und die fuenf Faelle sind Beispiele dieser Regel und keine abgeschlossene Liste. Die Probenzeile desselben Schrittes ist von „die vier Abweisungen" auf die Abweisungen umgestellt. Kein Abnahmekriterium ist betroffen und kein Code angefasst.

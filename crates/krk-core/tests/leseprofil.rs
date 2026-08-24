@@ -81,9 +81,9 @@ fn beschriftungen(profile: &Profile, stelle: usize) -> Vec<&str> {
 
 /// Eine Datei mit je einer Zeile jeder Sorte kommt als geprueftes Profil an.
 ///
-/// Geprueft wird beides: dass die unmarkierte Auswahl **die richtige Sorte**
-/// trifft und dass die Angaben darin ankommen — der Unterordner, das wahlfreie
-/// Muster, seine Abwesenheit und die Zahl.
+/// Geprueft wird beides: dass die Zerlegung **die richtige Sorte** waehlt und
+/// dass die Angaben darin ankommen — der Unterordner, das wahlfreie Muster,
+/// seine Abwesenheit und die Zahl.
 #[test]
 fn eine_rundreise_ueber_alle_vier_bausteine_liefert_die_erwarteten_werte() {
     let (profile, meldungen) = gepruefte(
@@ -191,7 +191,7 @@ kennzeichen = '^\.fusion-setup$'
 }
 
 // ---------------------------------------------------------------------------
-// Die vier Abweisungen
+// Die Abweisungen des Pruefschritts
 // ---------------------------------------------------------------------------
 
 /// C2.7: Ein unuebersetzbares Pfadmuster schaltet nur sein eigenes Profil ab.
@@ -397,6 +397,97 @@ pfad = 'history$'
         )
         .collect();
     assert_eq!(anzahlen, [HOECHSTENS_JUENGSTE, 3]);
+}
+
+/// C3: Eine Zeile traegt genau einen Baustein, und keiner wie zwei sind ein
+/// Grund mit Meldung.
+///
+/// **Zwei Tische wurden bis zum 260824 schweigend angenommen**, wobei der in
+/// der Aufzaehlung obere gewann und der untere wegfiel
+/// (`issues/260824-1216_*_zwei-bausteintische-…`). Geprueft wird deshalb
+/// beides: dass die Zeile ihren Baustein verliert und dass die Meldung sagt,
+/// welche Tische sie gefunden hat.
+#[test]
+fn eine_zeile_mit_zwei_bausteinen_oder_ohne_einen_verliert_ihren_baustein() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Ein Speicher"
+pfad = 'analyses$'
+
+  [[profil.zeile]]
+  beschriftung = "Beides"
+  zaehlung = { }
+  vorhandensein = { muster = 'y' }
+
+  [[profil.zeile]]
+  beschriftung = "Gar nichts"
+
+  [[profil.zeile]]
+  beschriftung = "Nur eines"
+  zaehlung = { }
+"#,
+    );
+
+    assert_eq!(profile.zahl(), 1, "das Profil bleibt stehen");
+    let zeilen = profile.iter().next().expect("das Profil fehlt").zeilen();
+    assert_eq!(
+        beschriftungen(&profile, 0),
+        ["Beides", "Gar nichts", "Nur eines"],
+        "jede abgewiesene Zeile behaelt ihre Beschriftung (C3.12)"
+    );
+    assert!(zeilen[0].baustein().is_none(), "zwei Tische sind kein Wert");
+    assert!(zeilen[1].baustein().is_none(), "kein Tisch ist kein Wert");
+    assert!(zeilen[2].baustein().is_some(), "genau einer traegt");
+
+    assert_eq!(meldungen.len(), 2, "{meldungen:?}");
+    for (meldung, erwartet) in meldungen.iter().zip(["Beides", "Gar nichts"]) {
+        assert!(
+            meldung.contains("Ein Speicher") && meldung.contains(erwartet),
+            "die Meldung nennt Profil und Beschriftung nicht: {meldung}"
+        );
+    }
+    assert!(
+        meldungen[0].contains("zaehlung, vorhandensein"),
+        "die Meldung nennt die zwei gefundenen Tische nicht: {}",
+        meldungen[0]
+    );
+    assert!(
+        meldungen[1].contains("zaehlung, juengste, feld, vorhandensein"),
+        "die Meldung zaehlt die vier moeglichen Tische nicht auf: {}",
+        meldungen[1]
+    );
+}
+
+/// Ein verschriebener Schluessel kostet die ganze Datei, und die Meldung nennt
+/// ihn.
+///
+/// **Die Reichweite ist die weiteste der drei** und nach C1.6 zulaessig: die
+/// Datei gilt als beschaedigt, wird beiseitegelegt, und KRK arbeitet ohne
+/// Profile weiter. Was bis zum 260824 daneben fehlte, war der Gegenstand: die
+/// unmarkierte Auswahl verwarf die Meldung des Tisches und sagte allein, dass
+/// keine Variante gepasst habe
+/// (`issues/260824-1217_*_ein-tippfehler-in-einem-bausteintisch-…`). Diese
+/// Probe haelt fest, dass jede der vier Eingaben ihren eigenen Schluessel
+/// nennt.
+#[test]
+fn ein_verschriebener_schluessel_nennt_sich_in_der_meldung() {
+    let vorspann = "[[profil]]\nname = \"Ein Speicher\"\npfad = 'analyses$'\n\n                      [[profil.zeile]]\n  beschriftung = \"Eine Zeile\"\n";
+    for (zeile, gesucht) in [
+        ("  zaehlung = { mustre = 'y' }\n", "mustre"),
+        ("  zaehlungg = { }\n", "zaehlungg"),
+        (
+            "  zaehlung = { }\n  beschreibung = \"zu viel\"\n",
+            "beschreibung",
+        ),
+    ] {
+        let fehler = toml::from_str::<Profildatei>(&format!("{vorspann}{zeile}"))
+            .expect_err("der Text kommt durch, obwohl er einen falschen Schluessel traegt");
+        assert!(
+            fehler.to_string().contains(gesucht),
+            "die Meldung nennt {gesucht:?} nicht: {fehler}"
+        );
+    }
 }
 
 /// C1.5: Eine Datei ohne einen einzigen `[[profil]]`-Block ist gueltig und
@@ -1152,7 +1243,12 @@ fn der_text_setzt_einzeilige_werte_hinter_und_mehrzeilige_unter_die_beschriftung
         PathBuf::from("/Users/k/krk/fusion-workbench/shared/analyses"),
         vec![
             Zusammenfassungszeile::neu("Datensaetze".to_owned(), Wert::Zahl(54)),
-            Zusammenfassungszeile::neu("Eintraege".to_owned(), Wert::UeberGrenze(2_000)),
+            // Eine **kleine** Zahl, und darin liegt der Punkt: bei einem Wert
+            // nahe der Grenze erriete der Nutzer den Abbruch noch, bei „1"
+            // nicht mehr. Der Satz nennt ihn deshalb ausdruecklich, und
+            // „mindestens" statt „ueber", weil ein zweiter Treffer hinter dem
+            // Abbruch moeglich und nicht gesichert ist.
+            Zusammenfassungszeile::neu("Eintraege".to_owned(), Wert::UeberGrenze(1)),
             Zusammenfassungszeile::neu("Spec liegt vor".to_owned(), Wert::Vorhanden(true)),
             Zusammenfassungszeile::neu("Plan liegt vor".to_owned(), Wert::Vorhanden(false)),
             Zusammenfassungszeile::neu("Fassung".to_owned(), Wert::Text("5.3.1".to_owned())),
@@ -1173,7 +1269,7 @@ fn der_text_setzt_einzeilige_werte_hinter_und_mehrzeilige_unter_die_beschriftung
         "Name: analyses\n\
          Pfad: /Users/k/krk/fusion-workbench/shared/analyses\n\
          Datensaetze: 54\n\
-         Eintraege: über 2000\n\
+         Eintraege: mindestens 1 (Lesung bei 2000 Einträgen abgebrochen)\n\
          Spec liegt vor: ja\n\
          Plan liegt vor: nein\n\
          Fassung: 5.3.1\n\
@@ -1191,11 +1287,21 @@ fn der_text_setzt_einzeilige_werte_hinter_und_mehrzeilige_unter_die_beschriftung
 ///
 /// Ein Ordner ueber [`HOECHSTENS_EINTRAEGE`] wird abgeschnitten gelesen, und
 /// dann sagt jeder Baustein nur noch, was die Teilliste entscheidet: die
-/// Zaehlung „ueber n", das Vorhandensein sein „ja" bei Treffer und sonst den
-/// Platzhalter, die juengsten N den Platzhalter.
+/// Zaehlung „mindestens n", das Vorhandensein sein „ja" bei Treffer und sonst
+/// den Platzhalter, die juengsten N den Platzhalter.
 ///
 /// Alle drei stehen in **einer** Probe, weil sie sich einen Ordner mit gut
 /// zweitausend Eintraegen teilen; drei Proben legten ihn dreimal an.
+///
+/// # Warum das Muster des Treffers auf fast jeden Eintrag passt
+///
+/// Ob ein **einzelner** Treffer innerhalb der ersten [`HOECHSTENS_EINTRAEGE`]
+/// gelesenen Eintraege liegt, entscheidet die Reihenfolge, in der das
+/// Dateisystem sie liefert, und die ist nicht zugesagt. Bis zum 260824 liess
+/// die Probe deshalb beide Ausgaenge zu und belegte damit nichts
+/// (`issues/260824-1218_*_die-probe-zur-teillesung-…`). Ein Muster auf alle
+/// 2.001 Dateien haengt dagegen an keiner Reihenfolge: jede Auswahl von 2.000
+/// aus 2.001 Eintraegen enthaelt mindestens 1.999 davon.
 #[test]
 fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
     let ordner = Pruefordner::neu("teillesung");
@@ -1204,7 +1310,6 @@ fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
     for nummer in 0..=HOECHSTENS_EINTRAEGE {
         schreiben(&viele, &format!("{nummer:05}.md"), "# Ein Datensatz\n");
     }
-    schreiben(&viele, "der-eine-treffer.txt", "# Der Treffer\n");
 
     let zusammenfassung = zusammengefasst(
         &circleprofil(
@@ -1215,7 +1320,7 @@ fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
 
   [[profil.zeile]]
   beschriftung = "Ein Treffer darunter"
-  vorhandensein = { ordner = "viele", muster = 'der-eine-treffer' }
+  vorhandensein = { ordner = "viele", muster = '\.md$' }
 
   [[profil.zeile]]
   beschriftung = "Etwas, das es nicht gibt"
@@ -1235,10 +1340,10 @@ fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
         &Wert::UeberGrenze(HOECHSTENS_EINTRAEGE as u64),
         "die Zaehlung sagt, dass es mehr sind, und keine Zahl"
     );
-    assert!(
-        matches!(werte[1].1, Wert::Vorhanden(true) | Wert::Nicht),
-        "ein Treffer entscheidet, ein Nichtfund in der Teilliste nicht: {:?}",
-        werte[1].1
+    assert_eq!(
+        werte[1].1,
+        &Wert::Vorhanden(true),
+        "ein Treffer entscheidet auch in einer Teilliste"
     );
     assert_eq!(
         werte[2].1,
@@ -1249,6 +1354,52 @@ fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
         werte[3].1,
         &Wert::Nicht,
         "die juengsten zehn einer Teilliste sind nicht die juengsten zehn"
+    );
+}
+
+/// C2.6: Auf eine Datei greift kein Profil, auch nicht bei passendem
+/// Pfadmuster.
+///
+/// **Die Zusage haengt an dieser Stelle und nicht am Aufrufer.** Der erste
+/// Erkennungsdurchgang sieht allein auf den Pfadtext und braucht keine
+/// Eintraege; ein Profil mit Pfadmuster traefe eine Datei deshalb genauso wie
+/// den Ordner daneben, und bis zum 260824 tat es das auch
+/// (`issues/260824-1214_*_zusammenfassen-nimmt-auch-eine-datei-an-…`). Ein
+/// Profil, das seinen Ort ueber eine Kennzeichendatei findet, konnte eine
+/// Datei nie treffen; die Probe nimmt beide Wege.
+///
+/// Die Verknuepfung steht daneben, weil die Frage am **aufgeloesten** Pfad
+/// entschieden wird: eine Verknuepfung auf eine Datei ist eine Datei.
+#[test]
+fn auf_eine_datei_greift_kein_profil_auch_bei_passendem_pfadmuster() {
+    let ordner = werkbankgestalt("datei-statt-ordner");
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Trifft jeden Pfad"
+pfad = '.'
+kennzeichen = '^_._circle\.md$'
+"#,
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+
+    assert!(
+        zusammenfassen(&profile, ordner.pfad()).is_some(),
+        "der Ordner selbst bekommt seine Zusammenfassung"
+    );
+    for name in ["_t_circle.md", ".fusion-setup", "README"] {
+        assert!(
+            zusammenfassen(&profile, &ordner.unter(name)).is_none(),
+            "die Datei {name} hat eine Zusammenfassung bekommen"
+        );
+    }
+
+    let verknuepfung = ordner.unter("zeigt-auf-eine-datei");
+    std::os::unix::fs::symlink(ordner.unter("_t_circle.md"), &verknuepfung)
+        .expect("die Verknuepfung laesst sich nicht anlegen");
+    assert!(
+        zusammenfassen(&profile, &verknuepfung).is_none(),
+        "eine Verknuepfung auf eine Datei ist eine Datei"
     );
 }
 

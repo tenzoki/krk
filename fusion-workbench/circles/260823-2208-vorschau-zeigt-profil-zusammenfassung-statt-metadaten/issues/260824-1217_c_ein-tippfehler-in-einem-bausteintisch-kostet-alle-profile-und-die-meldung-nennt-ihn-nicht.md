@@ -73,3 +73,31 @@ Zusammenfassungen verliert und aus der Meldung nicht erfährt, wo er suchen soll
 `resources/default-readers.toml` (steht noch aus, Schritt 7)
 
 **Domain:** code
+
+---
+Resolved: Punkt 1 des Datensatzes, und die Meldung ist dabei besser geworden, als der Datensatz
+erwartet hat.
+
+Die Aussage „der Bau ist nicht ohne Weiteres zu ändern; die Meldung stammt aus `serde`" traf für
+die unmarkierte Auswahl zu und nicht mehr für das, was an ihrer Stelle steht. Mit den vier
+benannten `Option`-Feldern in `Zeilendatei` (siehe
+`260824-1216_c_zwei-bausteintische-…`) wird die Meldung des Tisches nicht mehr verworfen: `serde`
+meldet jetzt `unknown field \`mustre\`, expected \`ordner\` or \`muster\`` statt `data did not
+match any variant of untagged enum Bausteindatei`. Alle vier Eingaben der Tabelle im Datensatz
+tragen damit ihren eigenen Gegenstand, und die drei prüfbaren davon hält
+`ein_verschriebener_schluessel_nennt_sich_in_der_meldung`
+(`crates/krk-core/tests/leseprofil.rs`): Tippfehler im Tisch, Tippfehler im Tischnamen, und der
+zusätzliche Schlüssel neben der Beschriftung, der vorher gar nicht auffiel.
+
+**Die Reichweite ist unverändert und jetzt ausgeschrieben.** Ein solcher Fehler kostet weiter die
+ganze Datei; nach C1.6 ist das zulässig. Der Modulkopf von `leseprofil::datei` führt statt zwei
+Reichweiten **drei** und nennt diese ausdrücklich als die weiteste, samt der Feststellung, dass
+ein Buchstabendreher in einem Bausteintisch in sie fällt und nicht in die kleinste. Der Satz
+„fällt damit auf", der den milden Fall nahelegte, steht nicht mehr da.
+
+**Punkt 2 ist ausgelagert und nicht erledigt:** die Kommentarzeilen von
+`resources/default-readers.toml` gehören zu Schritt 7 und dem `ontocoder`, und die Datei steht in
+diesem Baum noch nicht. Neuer Datensatz:
+`issues/260824-1242_o_die-kommentarzeilen-der-auslieferungsfassung-sagen-nicht-dass-ein-schreibfehler-die-ganze-datei-kostet.md`.
+Die im Datensatz genannte Entscheidung über eine eigene, benennende Meldung von KRK ist damit
+gegenstandslos: sie hing an derselben Zwischenstufe, die jetzt dasteht.

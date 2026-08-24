@@ -50,7 +50,7 @@ use gemeinsam::Pruefordner;
 // Stellvertreter
 // ---------------------------------------------------------------------------
 
-/// Laedt eine der vier Dateien so, wie der Betrieb es tut: unter der
+/// Laedt eine der fuenf TOML-Dateien so, wie der Betrieb es tut: unter der
 /// Schreibsperre.
 ///
 /// Seit der Runde 7 fuehrt jeder Weg auf die Platte durch einen `Zugang`, und
@@ -67,7 +67,7 @@ where
         .expect("die Schreibsperre laesst sich nicht nehmen")
 }
 
-/// Schreibt eine der vier Dateien unter der Schreibsperre.
+/// Schreibt eine der fuenf TOML-Dateien unter der Schreibsperre.
 ///
 /// Der Rueckgabewert ist der des Schreibens und nicht der des Durchgangs: die
 /// Proben pruefen ihn, und ein Fehlschlag beim Nehmen der Sperre waere ein
@@ -123,9 +123,9 @@ fn ablage(zweck: &str) -> (Pruefordner, Ablage) {
 ///
 /// Die Belegung selbst entsteht mit Schritt 11 und liegt nicht in diesem
 /// Modul; die Ablage kennt von dieser Datei nur ihren Namen und ihren Weg.
-/// Damit die Zusage "alle vier Dateien" trotzdem an vier Dateien geprueft wird
-/// und nicht an dreien, laeuft dieser Weg hier mit dem Stellvertreter, ueber
-/// dieselbe Ablage und denselben Pfad.
+/// Damit die Zusage ueber **alle** TOML-Dateien trotzdem an jeder von ihnen
+/// geprueft wird und nicht an einer weniger, laeuft dieser Weg hier mit dem
+/// Stellvertreter, ueber dieselbe Ablage und denselben Pfad.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 struct BelegungStellvertreter {
@@ -380,6 +380,12 @@ const LESEPROFILTEXT: &str = "# von Hand gepflegt\n";
 
 /// Der Rundlauf jeder Ablagedatei, die von Hand gepflegten eingeschlossen.
 ///
+/// **Der Name traegt keine Zahl mehr.** Er sprach bis zum 260824 von vier
+/// Dateien und meinte seit Schritt 2 der Runde 16 fuenf
+/// (`issues/260824-1014_*_vierzehn-prosastellen-der-ablage-…`); eine Zahl im
+/// Bezeichner geht mit jeder neuen Ablagedatei schief, und der Rundlauf laeuft
+/// ohnehin ueber [`toml_dateien`] und nicht ueber eine Zahl.
+///
 /// **Zwei der fuenf gehen nicht ueber [`Ablage::sichern`]**: `settings.toml`
 /// und, seit der Runde 16, `readers.toml`. Beide pflegt der Nutzer von Hand,
 /// und ihr Schreibweg ist das atomare Schreiben eines Textes. Geprueft wird
@@ -389,7 +395,7 @@ const LESEPROFILTEXT: &str = "# von Hand gepflegt\n";
 /// geladenen Wert: die Ablage kennt von dieser Datei bislang nur Namen und
 /// Pfad, und wer ihren Inhalt auswertet, kommt mit einem spaeteren Schritt.
 #[test]
-fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
+fn alle_toml_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     let (_ordner, ablage) = ablage("rundlauf");
 
     let belegung = beispielbelegung();
@@ -1046,23 +1052,41 @@ fn pruefe_meldung(ablage: &Ablage, welche: Datei, ersetzung: Option<Ersetzung>, 
 /// Ein zweiter kaputter Inhalt, der sich vom ersten unterscheiden laesst.
 const KAPUTT_ZWEITER: &str = "auch = dies [ist kein gueltiges TOML\n";
 
-/// Der Pfad, unter dem die Sicherung einer der vier Dateien zu erwarten ist.
+/// Der Pfad, unter dem die Sicherung einer Ablagedatei zu erwarten ist.
 fn beiseitepfad(ablage: &Ablage, welche: Datei) -> PathBuf {
     atomar::beiseitepfad(&ablage.pfad(welche)).expect("kein Beiseitepfad")
 }
 
-/// Laedt die vier TOML-Dateien mit Ladeweg und liefert ihre Ersetzungen in der
-/// Reihenfolge von [`toml_dateien`].
+/// Die TOML-Dateien, die in diesem Baum noch keinen Ladeweg haben.
+///
+/// **Eine benannte Ausnahme und keine stille Luecke.** `readers.toml` traegt
+/// seit Schritt 2 der Runde 16 TOML, ihren Ladeweg baut erst Schritt 8
+/// (`ablage/leseprofile.rs`). Bis dahin kann [`ersetzungen_der_toml_dateien`]
+/// fuer sie keine Ersetzung liefern, und die Beiseitelegeprobe laesst sie
+/// deshalb aus — hier, wo die Auslassung dasteht und gezaehlt wird, statt
+/// stillschweigend im `zip`.
+///
+/// Wer den Ladeweg baut, nimmt den Eintrag hier heraus und traegt die Datei in
+/// [`ersetzungen_der_toml_dateien`] nach. Wer das eine ohne das andere tut,
+/// bekommt die Zusicherung ueber die Laengen rot.
+const OHNE_LADEWEG: [Datei; 1] = [Datei::Leser];
+
+/// Die TOML-Dateien mit Ladeweg, in der Reihenfolge von [`toml_dateien`].
+fn toml_dateien_mit_ladeweg() -> impl Iterator<Item = Datei> {
+    toml_dateien().filter(|welche| !OHNE_LADEWEG.contains(welche))
+}
+
+/// Laedt die TOML-Dateien mit Ladeweg und liefert ihre Ersetzungen in der
+/// Reihenfolge von [`toml_dateien_mit_ladeweg`].
 ///
 /// Die Belegung geht ueber ihren Stellvertreter, die Einstellungen ueber
-/// `einstellungen::laden`; damit laufen alle vier durch denselben
-/// `Zugang::laden` wie im Betrieb. Die zwei Zettel stehen nicht darin: sie
-/// gehen ueber `Zugang::text_laden` und haben ihre eigenen Proben weiter unten.
+/// `einstellungen::laden`; damit laufen alle durch denselben `Zugang::laden`
+/// wie im Betrieb. Die zwei Zettel stehen nicht darin: sie gehen ueber
+/// `Zugang::text_laden` und haben ihre eigenen Proben weiter unten.
 ///
-/// **`readers.toml` fehlt hier, und das Fehlen ist gesehen und nicht
-/// uebersehen**: sie traegt seit der Runde 16 TOML, hat in diesem Baum aber
-/// noch keinen Ladeweg. Wer den Ladeweg baut, traegt sie hier nach; bis dahin
-/// laesst die Liste sie aus, und das `zip` unten kuerzt entsprechend.
+/// **Welche TOML-Datei hier fehlt und warum, sagt [`OHNE_LADEWEG`]**, und die
+/// Probe unten zaehlt beide Seiten gegeneinander, statt sie im `zip` still zu
+/// kuerzen.
 fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
     let belegung: Geladen<BelegungStellvertreter> = geladen(ablage, Datei::Belegung);
     let lesezeichen: Geladen<Lesezeichenliste> = geladen(ablage, Datei::Lesezeichen);
@@ -1076,21 +1100,38 @@ fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
     ]
 }
 
-/// Alle vier Dateien werden gesichert, und das Original bleibt liegen (C3.1,
-/// C3.3, C3.4).
+/// Jede TOML-Datei mit Ladeweg wird gesichert, und das Original bleibt liegen
+/// (C3.1, C3.3, C3.4).
 ///
 /// Die Regel hat in `Ablage::laden` keinen Zweig je Datei, und diese Probe
-/// laeuft deshalb ueber [`toml_dateien`] statt ueber eine eigene Liste. Sie
-/// prueft die vier mit Ladeweg; `readers.toml` bekommt ihren Kaputtinhalt und
-/// faellt beim `zip` heraus, solange sie keinen hat.
+/// laeuft deshalb ueber [`toml_dateien`] statt ueber eine eigene Liste.
+/// Beschaedigt wird **jede** der TOML-Dateien; geprueft werden die mit
+/// Ladeweg, und welche das nicht hat, steht in [`OHNE_LADEWEG`].
+///
+/// **Die Zusicherung ueber die zwei Laengen ist der eigentliche Inhalt dieser
+/// Aenderung.** Bis zum 260824 paarte ein `zip` fuenf Dateien mit vier
+/// Ersetzungen und kuerzte still auf vier; die Probe blieb gruen und prueft
+/// eine Datei weniger, als ihr Rundlauf verspricht
+/// (`issues/260824-0940_*_readers-toml-faellt-beim-zip-…`). Jetzt haelt sie
+/// beide Seiten gegeneinander: eine sechste TOML-Datei, die niemand einordnet,
+/// laesst sie rot werden, und ebenso der Ladeweg, der gebaut wird, ohne dass
+/// jemand den Eintrag aus [`OHNE_LADEWEG`] nimmt.
 #[test]
-fn jede_der_vier_dateien_wird_bei_beschaedigung_zur_seite_gelegt() {
-    let (_ordner, ablage) = ablage("beiseite-alle-vier");
+fn jede_toml_datei_mit_ladeweg_wird_bei_beschaedigung_zur_seite_gelegt() {
+    let (_ordner, ablage) = ablage("beiseite-alle-toml");
     for welche in toml_dateien() {
         fs::write(ablage.pfad(welche), KAPUTT).expect("schreiben gescheitert");
     }
 
-    for (welche, ersetzung) in toml_dateien().zip(ersetzungen_der_toml_dateien(&ablage)) {
+    let ersetzungen = ersetzungen_der_toml_dateien(&ablage);
+    assert_eq!(
+        toml_dateien_mit_ladeweg().count(),
+        ersetzungen.len(),
+        "die zwei Seiten der Paarung sind verschieden lang; entweder fehlt eine Datei in \
+         `ersetzungen_der_toml_dateien` oder eine steht zu Unrecht in `OHNE_LADEWEG`"
+    );
+
+    for (welche, ersetzung) in toml_dateien_mit_ladeweg().zip(ersetzungen) {
         let ersetzung = ersetzung
             .unwrap_or_else(|| panic!("{} wurde ohne Meldung ersetzt", welche.dateiname()));
         let erwartet = beiseitepfad(&ablage, welche);
@@ -1555,7 +1596,7 @@ fn eine_ungueltige_zetteldatei_wird_beiseitegelegt_und_der_zettel_ist_leer() {
         "die Sicherung traegt nicht Byte fuer Byte den Inhalt der Datei"
     );
 
-    // Kopiert und nicht verschoben, wie bei den vier TOML-Dateien.
+    // Kopiert und nicht verschoben, wie bei den fuenf TOML-Dateien.
     assert_eq!(
         fs::read(&pfad).expect("das Original fehlt"),
         kaputt,
@@ -1574,7 +1615,7 @@ fn eine_ungueltige_zetteldatei_wird_beiseitegelegt_und_der_zettel_ist_leer() {
 
 /// Eine zweite ungueltige Fassung laesst die erste Sicherung unangetastet (C5).
 ///
-/// Dieselbe Zusage wie fuer die vier TOML-Dateien, und sie haengt an derselben
+/// Dieselbe Zusage wie fuer die fuenf TOML-Dateien, und sie haengt an derselben
 /// Funktion: `Zugang::beiseite_legen` fragt vorher, ob dort schon etwas steht.
 #[test]
 fn eine_zweite_ungueltige_zetteldatei_laesst_die_erste_sicherung_stehen() {
@@ -2749,7 +2790,7 @@ fn gemischte_liste() -> Lesezeichenliste {
 /// denselben Lesevorgang derselben Datei; zwei Proben davon waeren zweimal
 /// dasselbe Ereignis. Der Nachweis, dass eine wirklich beschaedigte Datei
 /// gesichert wird, steht weiter oben bei
-/// [`jede_der_vier_dateien_wird_bei_beschaedigung_zur_seite_gelegt`].
+/// [`jede_toml_datei_mit_ladeweg_wird_bei_beschaedigung_zur_seite_gelegt`].
 #[test]
 fn eine_bookmarks_toml_aus_der_zeit_vor_den_textmarken_bleibt_lesbar() {
     let (_ordner, ablage) = ablage("lesezeichen-altbestand");

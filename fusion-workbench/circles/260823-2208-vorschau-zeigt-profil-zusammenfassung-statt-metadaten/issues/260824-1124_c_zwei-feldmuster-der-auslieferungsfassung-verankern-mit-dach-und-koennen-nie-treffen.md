@@ -81,3 +81,6 @@ die der Nutzer bei der Abnahme zuerst ansieht.
 `resources/default-readers.toml` (steht noch aus)
 
 **Domain:** code
+
+---
+Resolved: Die Messung ist am 260824-1224 unabhaengig nachgepruft, in einem Wegwerfprogramm gegen `regex` 1.13.1 ausserhalb des Baumes und gegen die echten Dateien dieser Werkbank: `^(.+)$` gegen `.active-circle` liefert keinen Treffer, `^([^\n]+)` und `(?m)^(.+)$` liefern beide den Namen; das alte Directive-Muster trifft null der achtzehn Circle-Datensaetze, das berichtigte alle achtzehn. Die vier uebrigen Ausdruecke sind im selben Lauf gegen `.fusion-setup` und `orchestrator-live.md` gehalten worden und treffen; die Kennzeichen- und Pfadmuster ebenso. Berichtigt sind: C3.8 des Specs auf `^([^\n]+)`, C3.9 um den Satz ueber die Angabe `m`, und Schritt 7 des Plans um beide Ausdruecke und um den Satz fuer den Kommentarabschnitt der Auslieferungsfassung. Die Berichtigung an C3.8 aendert ein freigegebenes Abnahmekriterium inhaltlich und ist dem Nutzer vorzulegen. `resources/default-readers.toml` steht weiterhin aus; Schritt 7 schreibt jetzt die richtigen Muster vor.
