@@ -1,7 +1,7 @@
 # Implementation Plan: Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der Metadaten
 
 **Date:** 2026-08-24
-**Status:** In Umsetzung. Die Schritte 1 bis 7 und 13 stehen auf `[DONE]`, die Schritte 8 bis 12 sind offen. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor". Am 260824-1313 auf Schritt 7 fortgeschrieben.)*
+**Status:** In Umsetzung. Die Schritte 1 bis 7 und 13 stehen auf `[DONE]`, die Schritte 8 bis 12 und der am 260824-1538 nachgetragene Schritt 14 sind offen. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor". Am 260824-1313 auf Schritt 7 fortgeschrieben, am 260824-1538 um Schritt 14 ergänzt.)*
 **Spec:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0613_o_spec-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, vom Nutzer am 260824-0625 freigegeben, A1 bis A7 eingeschlossen
 **Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Grundlage erhoben:** 260824-0634, am Baum auf dem Stand `278a008` unter `crates/` und `resources/`, und am Bestand dieser Werkbank
@@ -226,12 +226,12 @@ Die Meldungen gehen denselben Weg wie die der Einstellungen: `sitzung_laden` sam
 
 ### Die fünf mitgelieferten Profile
 
-Sechs Orte, fünf Profile: die zwölf Speicherordner aus C5.2 und C5.3 fallen in eines.
+Sechs Orte, fünf Profile: die Speicherordner aus C5.2 und C5.3 fallen in eines. **Es sind seit der Antwort vom 260824-1505 achtzehn und nicht zwölf**, je neun im gemeinsamen Speicher und im Circle; die drei zusätzlichen Namen trägt Schritt 14 nach.
 
 | Profil | Erkennung | Zeilen |
 |---|---|---|
 | Wurzel der Werkbank | Kennzeichen `^\.fusion-setup$` | drei Feldbausteine auf `.fusion-setup`, je einer auf `.active-circle` und `orchestrator-live.md`, zwei Zählungen auf `circles` und `shared/issues` |
-| Ein Speicher | Pfad `fusion-workbench/(shared\|circles/[^/]+)/(analyses\|backlog\|consult\|history\|planning\|reviews)$` | Zählung, jüngste zehn |
+| Ein Speicher | Pfad `fusion-workbench/(shared\|circles/[^/]+)/(analyses\|backlog\|consult\|decisions\|history\|investigations\|memos\|planning\|reviews)$` (die drei Namen `decisions`, `investigations` und `memos` kommen mit Schritt 14 dazu; Schritt 7 hat die sechs gebaut) | Zählung, jüngste zehn |
 | Defektspeicher | Pfad `fusion-workbench/(shared\|circles/[^/]+)/issues$` | zwei Zählungen (offen, geschlossen), jüngste zehn |
 | Das Circle-Verzeichnis | Pfad `fusion-workbench/circles$` | eine Zählung |
 | Ein einzelner Circle | Kennzeichen `^_._circle\.md$` | drei Vorhandensein für den Zustand, Feld für die Directive, zwei Vorhandensein für Spec und Plan, Zählung der Entscheidungen, jüngste zehn Verläufe |
@@ -240,7 +240,9 @@ Sechs Orte, fünf Profile: die zwölf Speicherordner aus C5.2 und C5.3 fallen in
 
 **Der einzelne Circle fällt in den zweiten Durchgang und kann dort nicht überholt werden.** Kein Pfadmuster der Datei trifft ein Circle-Verzeichnis: das Speichermuster verlangt hinter dem Circle-Namen einen Speichernamen, und `fusion-workbench/circles$` endet vor ihm. C2.3 und C5.7 fallen damit aus der Reihenfolge der zwei Durchgänge und brauchen keine Sonderregel.
 
-**Die drei Zustandszeilen sind die aus A7**, also `^_a_circle\.md$`, `^_t_circle\.md$` und `^_[cb]_circle\.md$`. Sie decken vier der sechs Marker des Vokabulars. Eine überholte (`_s_`) oder zurückgestellte (`_d_`) Runde antwortet auf alle drei mit „nein", und dieser Werkbank betrifft das heute genau ein Verzeichnis. Der Datensatz dazu steht unter `## Open Questions`; er hält keinen Schritt auf.
+**Die drei Zustandszeilen sind die aus A7**, also `^_a_circle\.md$`, `^_t_circle\.md$` und `^_[cb]_circle\.md$`. Sie decken vier der sechs Marker des Vokabulars. Eine überholte (`_s_`) oder zurückgestellte (`_d_`) Runde antwortet auf alle drei mit „nein", und in dieser Werkbank betrifft das heute **zwei** der achtzehn Verzeichnisse: `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster` und `circles/260816-2255-befehle-absetzen-und-makros-speichern`, beide `_d_`; kein Circle-Datensatz trägt heute `_a_` oder `_s_`. *(Hier stand „genau ein Verzeichnis"; nachgemessen und berichtigt am 260824-1508, der Befund ist `issues/260824-1313_*_der-datensatz-zur-vierten-zustandszeile-nennt-ein-verzeichnis-ausserhalb-der-drei-zeilen-es-sind-zwei.md`.)*
+
+**Eine vierte Zustandszeile kommt dazu.** Der Nutzer hat am 260824-1505 ein Vorhandensein auf `^_[sd]_circle\.md$` mit der Beschriftung „Abgelegt" beschlossen; damit fällt jeder der sechs Marker in genau eine Zeile. Gebaut wird sie in Schritt 14 und nicht in Schritt 7, dessen Wortlaut den gebauten Stand von 260824-1313 festhält.
 
 **Die Zahlen des Haushalts, an den zwei größten Profilen gerechnet:**
 
@@ -271,11 +273,11 @@ Sechs Orte, fünf Profile: die zwölf Speicherordner aus C5.2 und C5.3 fallen in
 
 ## Implementation Steps
 
-Fünf Bündel, dreizehn Schritte. Jeder Schritt nennt genau einen Executor. **Nach jedem einzelnen Schritt laufen `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets` und `cargo fmt --all --check` grün**; `cargo` liegt unter `$HOME/.cargo/bin` und nicht auf dem Standard-PATH, `make check` fährt die vier in einem Zug.
+Fünf Bündel, vierzehn Schritte. Jeder Schritt nennt genau einen Executor. **Nach jedem einzelnen Schritt laufen `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets` und `cargo fmt --all --check` grün**; `cargo` liegt unter `$HOME/.cargo/bin` und nicht auf dem Standard-PATH, `make check` fährt die vier in einem Zug.
 
 **Die Bezeichner sind deutsch, wie im ganzen Baum.** `CLAUDE.md` verlangt für Bezeichner „die üblichen englischen Konventionen", und gemeint sind damit die Schreibweisen (`snake_case`, `CamelCase`) und nicht die Sprache der Wörter: der Baum führt `Vorschaumodell`, `Durchlauf`, `Eintrag`, `Ablage`. Ein englisch benannter Typ neben ihnen wäre der Bruch und nicht die Regel.
 
-**Elf der dreizehn Schritte gehören dem `coder`, einer dem `ontocoder`, einer dem `analyst`.** Für den `ontocoder` gibt es genau eine Arbeit, die Auslieferungsfassung `resources/default-readers.toml`: sie trägt Daten und keine Bauanweisung, anders als die Wurzel-`Cargo.toml`, die zum `coder` geht. Für den `analyst` gibt es ebenfalls genau eine, die Berichtigung eines Entscheidungsdatensatzes und der Schluss eines Defekts; beides sind Schreibarbeiten im Entscheidungs- und Defektspeicher der Werkbank und weder Code noch strukturierte Daten.
+**Elf der vierzehn Schritte gehören dem `coder`, zwei dem `ontocoder`, einer dem `analyst`.** Für den `ontocoder` gibt es genau eine Datei und zwei Schritte darauf, die Auslieferungsfassung `resources/default-readers.toml` in den Schritten 7 und 14: sie trägt Daten und keine Bauanweisung, anders als die Wurzel-`Cargo.toml`, die zum `coder` geht. Für den `analyst` gibt es ebenfalls genau eine, die Berichtigung eines Entscheidungsdatensatzes und der Schluss eines Defekts; beides sind Schreibarbeiten im Entscheidungs- und Defektspeicher der Werkbank und weder Code noch strukturierte Daten.
 
 ### Bündel A — Die Ablage nimmt eine siebte Datei auf
 
@@ -333,9 +335,15 @@ Fünf Bündel, dreizehn Schritte. Jeder Schritt nennt genau einen Executor. **Na
    - Changes: `AUSLIEFERUNGSTEXT` über `include_str!("../../../../resources/default-readers.toml")`, `laden(zugang: &Zugang<'_>) -> (Geladen<Profile>, Vec<String>)` und `anlegen_falls_fehlt`, jeweils in der Form von `ablage/einstellungen.rs` und mit demselben Fehlerweg: eine fehlende Datei ist der erste Start und keine Meldung wert, eine nicht anlegbare ergibt `Grund::NichtAnlegbar` (C1.7), eine nicht lesbare `Grund::NichtLesbar` und eine unlesbare oder falsch gestaltete `Grund::Beschaedigt` mit Beiseitelegen (C1.6). Alle vier kommen aus `Zugang::laden` und aus `anlegen_falls_fehlt`; ein eigener Zweig entsteht für keinen. Die zweite Hälfte des Rückgabepaares sind die Meldungen aus `leseprofil::datei::pruefen`, die nicht in eine `Ersetzung` gehören: sie sagen etwas über ein einzelnes Profil und nicht über die Datei. Der Modulkopf schreibt aus, warum die geprüfte Fassung woanders wohnt als die gelesene: die Ablage kennt Pfad, Format und Fehlerbehandlung, das Profilmodell kennt den Inhalt. `ablage/mod.rs` bekommt `pub mod leseprofile;` und den Wiederausfuhrsatz, und sein Modulkopf zieht von vier TOML-Dateien auf fünf. In `tests/baum.rs` wächst die Liste in `nur_benannte_dateien_erreichen_das_atomare_schreiben` um `krk-core/src/ablage/leseprofile.rs`, an der alphabetisch richtigen Stelle, mit einem Kommentar in der Form der vorhandenen: „Die Anlage von `readers.toml`, unter einem Durchgang." **Proben:** C1.1 und C1.2 gegen einen Prüfordner, also erster Start legt die Datei Byte für Byte gleich der Auslieferungsfassung an, zweiter Start ändert eine vorhandene und eine geleerte an keinem Byte; C1.5 bis C1.8 je einzeln; die Probe nach dem Vorbild von `die_auslieferungsfassung_traegt_ihre_kommentare`, die hält, dass jeder der vier Bausteinnamen im `AUSLIEFERUNGSTEXT` vorkommt (C5.10); eine Probe, dass die eingebettete Fassung sich ohne Meldung prüfen lässt, also dass KRK keine Auslieferungsfassung mitliefert, die ihre eigene Prüfung nicht besteht.
    - Dependencies: Schritt 2, Schritt 3, Schritt 7
 
+14. **Die vierte Zustandszeile und die drei zusätzlichen Speichernamen**
+    - Executor: `ontocoder`
+    - Files: `resources/default-readers.toml`
+    - Changes: Zwei Zeilen TOML und keine Zeile Rust, aus den zwei Antworten des Nutzers vom 260824-1505. **Erstens** bekommt das Profil des einzelnen Circles eine vierte Zustandszeile: ein Vorhandensein auf `^_[sd]_circle\.md$` mit der Beschriftung „Abgelegt", hinter den drei Zeilen aus A7 und vor der Directive-Zeile. Damit fällt jeder der sechs Marker des Vokabulars in genau eine Zeile; heute antworten zwei der achtzehn Circle-Verzeichnisse auf die drei Zeilen aus A7 mit „nein". **Zweitens** wächst das Pfadmuster des Speicherprofils von sechs auf neun Namen und lautet `fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|decisions|history|investigations|memos|planning|reviews)$`; die drei neuen sind `decisions`, `investigations` und `memos`, und sie zeigen Zahl und jüngste zehn wie die übrigen Speicher, ohne ein eigenes Profil und ohne einen fünften Baustein. Ohne sie blieben 21 Ordner dieser Werkbank ohne Profil, darunter alle achtzehn Entscheidungsspeicher, gemessen am 260824-1313. Die Kommentarzeilen der Datei ziehen mit, soweit sie die Zustandszeilen oder die Speichernamen aufzählen. **Der Haushalt ändert sich durch keine der beiden Änderungen**: das Vorhandensein trägt `muster` und keinen `ordner` und prüft damit die Liste des ohnehin gelesenen Ordners, kostet also keinen zusätzlichen Verzeichnisleselauf und keine Dateiöffnung; die zweite Änderung betrifft die Erkennung und keinen Baustein. Das Rundenprofil bleibt bei fünf Leseläufen und elf Öffnungen, und C6.7 ist unberührt. **Eine neue Probe entsteht nicht**: die Probe aus Schritt 8, dass die eingebettete Fassung ihre eigene Prüfung ohne Meldung besteht, deckt beide Zeilen mit ab. **Dieser Schritt liegt vor Schritt 12**, und das ist die einzige Reihenfolgebedingung, die er trägt: Schritt 12 misst C6.7 gegen die **eingebettete** Auslieferungsfassung, und eine Änderung an dieser Datei nach der Messung kostete eine Neumessung. Die zwei Entscheidungsdatensätze gehen mit diesem Schritt von `_a_` auf `_i_`.
+    - Dependencies: Schritt 7
+
 ### Bündel D — Die Anzeige
 
-9. **Der siebte Inhalt, und der Arbeitsfaden bekommt die Profile mit**
+9. [DONE] **Der siebte Inhalt, und der Arbeitsfaden bekommt die Profile mit**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/vorschaumodell.rs`
    - Changes: `Inhalt::Zusammenfassung(krk_core::leseprofil::Zusammenfassung)` als siebter Wert, mit einem Doc-Kommentar, der sagt, dass er die Metadaten eines **erkannten** Ordners ersetzt und dass die Kopfzeile aus A6 in ihm steckt. `zeigt_dateitext` bekommt den Zweig und antwortet `false`, mit dem Grund am Zweig: die Zahlen zählten die Zeilen der Zusammenfassung, und daneben steht keine Datei mit diesen Zeilen. `Ladevorgang::starten` und `Vorschaumodell::datei_anzeigen` nehmen zusätzlich `profile: Arc<Profile>` entgegen und reichen es an `laden` weiter; ein `Arc` und keine Kopie, aus demselben Grund, aus dem `Inhalt::Bild` seine Bytes teilt. In `laden` tritt der Zusammenfassungszweig **vor** den Rückgabezweig für Ordner und Verknüpfungen: ist der Eintrag kein `Typ::Datei` und liefert `krk_core::leseprofil::zusammenfassen` ein Ergebnis, entsteht `Inhalt::Zusammenfassung`, sonst bleibt es bei `Inhalt::Metadaten`. Damit greift kein Profil auf eine Datei (C2.6), und ohne Treffer bleibt es beim heutigen Zweig und nicht bei einem zweiten daneben (C2.5). Der Modulkopf bekommt einen Abschnitt, der die Zusammenfassung in die Dreiteilung aus C6 einordnet und sagt, dass sie auf demselben Arbeitsfaden entsteht wie das Lesen einer Textdatei und aus demselben Grund. **Proben:** C2.5 und C2.6 gegen einen Prüfordner, also ein Ordner ohne Treffer liefert `Inhalt::Metadaten` mit allen sechs Angaben, und eine Datei, deren Pfad ein Pfadmuster erfüllt, liefert weiter Text, Bild oder Metadaten; ein Ordner mit Treffer liefert `Inhalt::Zusammenfassung`; C4.7, also dass `zusammenfassen` für einen nicht ausgewählten Ordner nicht gerufen wird, geprüft daran, dass `laden` der einzige Rufer ist und `laden` nur aus dem Arbeitsfaden gerufen wird.
@@ -359,7 +367,7 @@ Fünf Bündel, dreizehn Schritte. Jeder Schritt nennt genau einen Executor. **Na
     - Executor: `coder`
     - Files: `crates/krk-core/src/leseprofil/bausteine.rs`, `crates/krk-core/tests/leseprofil.rs`
     - Changes: Die Proben, die die neun Kriterien aus C6 abzählen. Gezählt werden Aufrufe und keine Millisekunden (C6.8). Der Zähler wohnt im `Haushalt` und ist ohnehin da; die Proben lesen ihn nach dem Lauf aus, statt eine zweite Zählstelle danebenzustellen. Im Einzelnen: ein Baustein löst höchstens einen Leselauf aus und ein Feldbaustein auf eine Datei im erkannten Ordner keinen (C6.1, in der Fassung, die der Defekt `issues/260824-0634_o_…` nennt); die Zahl der Öffnungen je Bausteinsorte (C6.2); `anzahl = 25` wird zu 10 (C6.3); ein Profil mit dreizehn Zählbausteinen erreicht die Grenze, und die übrigen Zeilen tragen den Platzhalter (C6.4); ein Prüfordner mit 2.001 Einträgen liefert `Wert::UeberGrenze` (C6.5); eine Datei von 100 KB wird bis 64 KB gelesen, geprüft an einem Feldmuster, das nur hinter der Grenze trifft und deshalb den Platzhalter liefert (C6.6); die zwei größten mitgelieferten Profile bleiben unter 7 Leseläufen und 11 Öffnungen, geprüft gegen die **eingebettete** Auslieferungsfassung und einen Prüfordner in der Gestalt einer Werkbank (C6.7); ein Lauf hält nie mehr als einen Verzeichnis- und einen Dateideskriptor zugleich, geprüft in einer Kindprobe unter `ulimit -n 24` nach dem Vorbild der Deskriptorproben aus der Runde 10 (C6.9). Dazu die Probe zu C2.8: das Muster `(a+)+$` gegen vierzig `a` und ein `b`, mit der Zusage, dass der Aufruf zurückkehrt; sie belegt die Hälfte der Zusage, die ohne Fenster zu belegen ist, und die andere steht in `## Nutzerarbeit`.
-    - Dependencies: Schritt 6, Schritt 11
+    - Dependencies: Schritt 6, Schritt 11, Schritt 14 (die Messung zu C6.7 läuft gegen die eingebettete Auslieferungsfassung, also muss deren letzte Änderung davor liegen)
 
 13. [DONE] **Die falsche Kostenangabe wird berichtigt und der Defekt geschlossen**
     - Executor: `analyst`
@@ -384,6 +392,7 @@ flowchart TD
   s11["11 laden und uebergeben"]
   s12["12 Zaehlproben zu C6"]
   s13["13 Datensatz berichtigt, Defekt geschlossen"]
+  s14["14 vierte Zustandszeile, drei Speichernamen"]
   abnahme["Nutzerarbeit am laufenden Buendel"]
 
   s1 --> s3
@@ -398,8 +407,10 @@ flowchart TD
   s9 --> s10
   s8 --> s11
   s10 --> s11
+  s7 --> s14
   s6 --> s12
   s11 --> s12
+  s14 --> s12
   s12 --> abnahme
   s13 --> abnahme
 ```
@@ -413,7 +424,7 @@ Die Schritte 1, 2, 4 und 13 haben keine Vorbedingung und können nebeneinander l
 Neun Bedingungen, jede mit ja oder nein zu beantworten.
 
 - Alle sechsundfünfzig Abnahmekriterien aus C1 bis C6 des Specs sind eingelöst, und jedes ist entweder durch eine Probe belegt oder steht unter `## Nutzerarbeit`.
-- Die dreizehn Schritte oben stehen auf `[DONE]`, und jede behauptete Erledigung ist einzeln gegen den Baum gelesen; der Abgleich liegt unter `history/` dieses Circles.
+- Die vierzehn Schritte oben stehen auf `[DONE]`, und jede behauptete Erledigung ist einzeln gegen den Baum gelesen; der Abgleich liegt unter `history/` dieses Circles.
 - `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets` und `cargo fmt --all --check` laufen grün.
 - Der Defektdatensatz `issues/260824-0600_o_…` ist geschlossen, und die berichtigte Kostenangabe steht im Datensatz `decisions/260824-0541_a_wie-zieht-der-baustein-…`.
 - Der Defektdatensatz `issues/260824-0634_*_c6-1-sagt-der-feldbaustein-…` ist geschlossen, oder der Nutzer hat ihn ausdrücklich stehen lassen. *(Am 260824-1224 geschlossen; der Wortlaut von C6.1 ist berichtigt und dem Nutzer vorzulegen.)*
@@ -585,7 +596,8 @@ Keine öffentliche Signatur wird entfernt, und keine ändert stillschweigend ihr
 
 ## Open Questions
 
-- [ ] **Die vierte Zustandszeile des Circle-Profils.** A7 nennt drei Zeilen, das Markervokabular kennt sechs Zustände, und eine überholte oder zurückgestellte Runde antwortet dreimal mit „nein". In dieser Werkbank betrifft das heute genau ein Verzeichnis. Der Datensatz ist `decisions/260824-0634_o_bekommt-das-circle-profil-eine-vierte-zustandszeile-fuer-die-abgelegten-runden.md`; er hält keinen Schritt auf, weil der Plan die drei Zeilen aus A7 baut und eine vierte zwei Zeilen TOML kostet.
+- [x] **Die vierte Zustandszeile des Circle-Profils.** Beantwortet am 260824-1505 mit Möglichkeit 2: eine vierte Zeile „Abgelegt" auf `^_[sd]_circle\.md$`, womit jeder der sechs Marker in genau eine Zeile fällt. Gebaut wird sie in Schritt 14; der Datensatz ist `decisions/260824-0634_a_bekommt-das-circle-profil-eine-vierte-zustandszeile-fuer-die-abgelegten-runden.md` und geht auf `_i_`, wenn die zwei Zeilen TOML stehen. **Die Frage stand hier mit einer falschen Zahl**: „genau ein Verzeichnis" waren zwei, `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` und `260816-2255-befehle-absetzen-und-makros-speichern`, beide `_d_`, nachgezählt am 260824-1508; der Befund ist `issues/260824-1313_*_der-datensatz-zur-vierten-zustandszeile-nennt-ein-verzeichnis-ausserhalb-der-drei-zeilen-es-sind-zwei.md`. Die Antwort ist davon unberührt, denn die falsche Zahl beziffert den Nutzen der vierten Zeile zu klein und nicht zu groß.
+- [x] **Die drei Speicher ohne Profil.** Beantwortet am 260824-1505 mit Möglichkeit 2: `decisions`, `investigations` und `memos` kommen in dieselbe Aufzählung, aus sechs Alternativen des Pfadmusters werden neun. Der Datensatz ist `decisions/260824-1313_a_deckt-das-speicherprofil-auch-decisions-memos-und-investigations-ab.md`; gebaut wird die Änderung in Schritt 14. Die Frage ist erst beim Halten der Ausdrücke gegen den echten Bestand entstanden und stand deshalb nicht in der ursprünglichen Fassung dieses Abschnitts.
 - [x] **Der Wortlaut von C6.1.** Erledigt am 260824-1224: der Spec trägt die genaue Fassung, und der Defektdatensatz `issues/260824-0634_*_c6-1-sagt-der-feldbaustein-lese-kein-verzeichnis-seine-form-aus-c3-verlangt-es.md` ist geschlossen. Der zweite Satz lautete „Der Feldbaustein löst keinen aus" und galt nur, solange die Datei des Feldbausteins in einem Ordner liegt, der ohnehin gelesen wird; er sagt das jetzt. Für die fünf mitgelieferten Profile gilt er durchweg, allgemein nicht. **Der Nutzer bekommt die Änderung am Kriterium vorgelegt**, weil sie den Wortlaut eines freigegebenen Abnahmekriteriums ändert.
 - [ ] **Ob `regex` die richtige Kiste ist**, entscheidet der Nutzer am Tor mit. Der Plan hält den Grund für nachvollziehbar und die Kosten für gemessen, aber die Aufnahme einer fremden Kiste ist in diesem Projekt eine Entscheidung und keine Nebensache. Die Alternative wäre `fancy-regex` mit einer Schrittgrenze, und ihr Preis ist eine Näherung an die Frage aus C2.8 statt einer Antwort darauf.
 
@@ -603,5 +615,7 @@ Keine öffentliche Signatur wird entfernt, und keine ändert stillschweigend ihr
 | `260824-0600_a_der-titel-aus-der-ueberschriftenzeile-…` (Titelhälfte) | Schritt 6 |
 | `260824-0600_a_welche-form-hat-das-pfadmuster-und-welche-die-kennzeichendatei` | Schritt 3 und Schritt 5 |
 | `260824-0600_a_woher-nimmt-die-wurzelzusammenfassung-ihre-sitzungsinfo` | Schritt 7 |
+| `260824-0634_a_bekommt-das-circle-profil-eine-vierte-zustandszeile-…` | Schritt 14 |
+| `260824-1313_a_deckt-das-speicherprofil-auch-decisions-memos-und-investigations-ab` | Schritt 14 |
 
-Die acht Marker wandern von `_a_` auf `_i_`, wenn die zugehörigen Schritte auf `[DONE]` stehen und der Abgleich gegen den Baum gelaufen ist. Das ist Buchführung des Rundenabschlusses und kein eigener Schritt.
+Die zehn Marker wandern von `_a_` auf `_i_`, wenn die zugehörigen Schritte auf `[DONE]` stehen und der Abgleich gegen den Baum gelaufen ist. Das ist Buchführung des Rundenabschlusses und kein eigener Schritt.

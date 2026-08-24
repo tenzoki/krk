@@ -70,7 +70,25 @@ nachziehen, indem `decisions` aus der Aufzählung wieder herausgenommen wird und
 ein eigenes Profil bekommt.
 
 ---
-Answered:
+Answered: 260824-1505 — Möglichkeit 2. Aus sechs Alternativen des Pfadmusters
+werden neun: `decisions`, `memos` und `investigations` kommen hinzu und zeigen
+Zahl und jüngste zehn wie die übrigen Speicher.
+
+**Der Preis ist gemessen und beträgt null.** Betroffen ist das Pfadmuster, also
+die Erkennung, und kein Baustein. Kein neues Profil, kein neuer Baustein, keine
+Zeile mehr in einem vorhandenen Profil; die Grenzen aus C6 sind unberührt. Die
+Änderung schließt die Lücke, die der Datensatz am Bestand gemessen hat: 21
+Ordner ohne Profil, darunter alle achtzehn Entscheidungsspeicher.
+
+**C5.2 und C5.3 werden berichtigt statt überschrieben**, in derselben Form wie
+die vier Kriterien vom 260824-1250: die Berichtigung steht neben dem
+freigegebenen Wortlaut und nicht an seiner Stelle.
+
+**Die Unterscheidung nach Markern bleibt offen und ist kein Rückstand.** Ein
+eigenes Profil für `decisions` — Möglichkeit 3 — ließe sich später ohne Bruch
+nachziehen, indem der Name aus der Aufzählung wieder herausgenommen wird. Wer
+das aufgreift, stellt dafür eine eigene Frage.
+
 Implemented:
 Deferred:
 Superseded by:

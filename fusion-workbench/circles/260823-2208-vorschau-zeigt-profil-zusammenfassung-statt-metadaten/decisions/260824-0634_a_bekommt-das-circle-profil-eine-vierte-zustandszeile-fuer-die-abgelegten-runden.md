@@ -70,7 +70,40 @@ nennt, ist die Zahl der Zustaende, die der Spec vor Augen hatte, und nicht eine 
 die Messung am Bestand zeigt, dass es sechs sind.
 
 ---
-Answered:
+Answered: 260824-1505 — Möglichkeit 2. Das Rundenprofil bekommt eine vierte
+Zustandszeile „Abgelegt", ein Vorhandensein auf `^_[sd]_circle\.md$`. Damit
+fällt jeder der sechs Marker in genau eine Zeile.
+
+**Der Preis ist gemessen und beträgt null.** Ein Vorhandensein mit `muster` und
+ohne `ordner` prüft die Liste des erkannten Ordners, die für die Erkennung
+ohnehin gelesen ist: kein zusätzlicher Verzeichnisleselauf, keine
+Dateiöffnung. Das Rundenprofil steht bei acht Zeilen und elf von vierundzwanzig
+Öffnungen; die vierte Zustandszeile ändert an beiden Zahlen nichts. Damit
+kostet die Antwort zwei Zeilen TOML und keine Zeile Rust, wie der Datensatz es
+vorausgesagt hat.
+
+**A7 weicht ab und wird berichtigt statt überschrieben.** Die Festlegung nennt
+drei Zeilen; C5.6 bekommt eine Berichtigung **neben** ihren ursprünglichen
+Wortlaut, in der Form, die diese Runde am 260824-1250 für vier Kriterien schon
+angewandt hat. Der Grund, aus dem A7 drei Zeilen nennt, ist die Zahl der
+Zustände, die der Spec vor Augen hatte, und keine Obergrenze; am Bestand
+gemessen sind es sechs.
+
+**Die Frage stand mit einer falschen Zahl da, und die Berichtigung gehört zur
+Antwort.** Der Abschnitt `## Question` sagt, von den achtzehn
+Circle-Verzeichnissen falle „heute genau eines" aus den drei Zeilen. Es sind
+zwei: `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` und
+`260816-2255-befehle-absetzen-und-makros-speichern`, beide `_d_`, nachgezählt
+am 260824-1508 mit `ls circles/*/_d_circle.md`. Kein Datensatz trägt heute `_a_`
+oder `_s_`. Der Befund lag beim Beantworten als
+`issues/260824-1313_o_der-datensatz-zur-vierten-zustandszeile-nennt-ein-verzeichnis-…`
+im selben Speicher und ist dem Nutzer beim Vorlegen der Frage nicht genannt
+worden; der Orchestrator hat die falsche Zahl weitergereicht. **Die Antwort
+bleibt davon unberührt**, denn die falsche Zahl beziffert den Nutzen der vierten
+Zeile zu klein und nicht zu groß. Der ursprüngliche Wortlaut in `## Question`
+bleibt stehen: er ist der Beleg dafür, auf welcher Grundlage die Frage gestellt
+wurde.
+
 Implemented:
 Deferred:
 Superseded by:

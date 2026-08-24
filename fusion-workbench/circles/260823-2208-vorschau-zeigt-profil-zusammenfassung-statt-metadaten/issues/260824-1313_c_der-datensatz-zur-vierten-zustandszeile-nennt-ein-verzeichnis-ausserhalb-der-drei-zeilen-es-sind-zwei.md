@@ -27,3 +27,6 @@ sie beziffert deren Nutzen heute um die Hälfte zu klein.
 `planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`
 
 **Domain:** data
+
+---
+Resolved: Beide betroffenen Stellen tragen die gemessene Zahl. Der Entscheidungsdatensatz `decisions/260824-0634_a_bekommt-das-circle-profil-eine-vierte-zustandszeile-fuer-die-abgelegten-runden.md` nennt die zwei Verzeichnisse in seinem `Answered:`-Abschnitt und sagt dazu, dass der ursprüngliche Wortlaut in `## Question` als Beleg der Fragegrundlage stehen bleibt; der Plan `planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md` ist am 260824-1538 an seinen zwei Stellen berichtigt, unter `### Die fünf mitgelieferten Profile` und unter `## Open Questions`, jeweils mit den beiden Verzeichnisnamen und dem Vermerk, welche Zahl dort stand. Nachgemessen am 260824-1508: `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` und `260816-2255-befehle-absetzen-und-makros-speichern`, beide `_d_`, unter achtzehn Circle-Verzeichnissen; kein Datensatz trägt heute `_a_` oder `_s_`. Die Antwort des Nutzers vom 260824-1505 ist von der falschen Zahl unberührt — sie bezifferte den Nutzen der vierten Zustandszeile zu klein und nicht zu groß. Kein Code ist angefasst.
