@@ -159,17 +159,101 @@ impl Drop for Lesevorgang {
     }
 }
 
+/// Was ein gedeckelter Lesevorgang geliefert hat.
+///
+/// Der Rueckgabewert von [`lesen_hoechstens`]. Er traegt neben den Eintraegen
+/// die eine Angabe, die eine Teilliste von einer vollstaendigen Liste
+/// unterscheidet; ohne sie waere beides derselbe `Vec` und der Aufrufer haette
+/// keine Moeglichkeit, die zwei auseinanderzuhalten.
+#[derive(Debug)]
+pub struct Lesestand {
+    /// Die gelesenen Eintraege in Lesereihenfolge, hoechstens so viele, wie der
+    /// Deckel zulaesst.
+    pub eintraege: Vec<Eintrag>,
+    /// Wahr, wenn wegen des Deckels mindestens ein Eintrag **nicht**
+    /// aufgenommen wurde. Dann sagt die Liste nichts darueber, was nicht in ihr
+    /// steht.
+    ///
+    /// Die Aussage ist bewusst "es wurde etwas weggelassen" und nicht "der
+    /// Deckel wurde erreicht". Ein Ordner mit fuenf Eintraegen unter dem Deckel
+    /// fuenf ist vollstaendig gelesen, und ein Aufrufer, der daraufhin eine
+    /// negative Antwort gibt, gibt sie zu Recht. Was die schwaechere Lesart
+    /// kostet, steht an [`lesen_hoechstens`].
+    pub abgeschnitten: bool,
+}
+
 /// Liest ein Verzeichnis auf dem aufrufenden Faden vollstaendig ein.
 ///
 /// Fuer Tests und fuer Aufrufer, die ohnehin warten muessen. Der gestueckelte
 /// Weg ueber [`Lesevorgang`] und dieser hier benutzen denselben Leser.
+///
+/// Signatur und Verhalten sind unveraendert; seit der Runde 16 hat diese
+/// Funktion keine eigene Leserschleife mehr, sondern ist
+/// [`lesen_hoechstens`] ohne Deckel. Zwei Schleifen ueber demselben
+/// [`Schwungleser`] waeren die erste Gelegenheit, sie verschieden zu schreiben.
 pub fn lesen(pfad: &Path) -> io::Result<Vec<Eintrag>> {
+    lesen_hoechstens(pfad, usize::MAX).map(|stand| stand.eintraege)
+}
+
+/// Liest ein Verzeichnis auf dem aufrufenden Faden, hoechstens `hoechstens`
+/// Eintraege weit.
+///
+/// # Die Zahl kommt von aussen und wohnt nicht hier
+///
+/// Der Leser kennt keine Obergrenze und soll keine kennen. Die 2.000 Eintraege,
+/// unter denen die Profil-Zusammenfassung der Vorschau bleibt, gehoeren jener
+/// Rechnung und nicht dem Verzeichnisleser; genauso wenig wohnen die Grenzen
+/// der Vorschau in [`crate::text::datei::bis_zur_grenze_lesen`]. Wer hier ruft,
+/// bringt seine eigene Zahl mit, und der naechste Aufrufer mit einer anderen
+/// Zahl braucht dafuer keine zweite Fassung.
+///
+/// # Der Deckel greift im Abschluss und nicht danach
+///
+/// Geprueft wird **innerhalb** des Abschlusses, den
+/// [`Schwungleser::naechster_schwung`] je Eintrag ruft. Ein Filter ueber der
+/// fertigen Liste haette denselben Rueckgabewert und einen anderen Preis: ein
+/// Ordner mit 100.000 Eintraegen stuende dann vollstaendig im Arbeitsspeicher,
+/// bevor die Zahl 2.000 ueberhaupt zur Sprache kaeme.
+///
+/// # Was ein Schwung ueber den Deckel hinaus kostet, und warum er sich lohnt
+///
+/// [`Lesestand::abgeschnitten`] sagt, dass etwas weggelassen wurde, und nicht
+/// bloss, dass die Zahl erreicht ist. Das ist an einer Stelle nicht umsonst zu
+/// haben: faellt der Deckel genau auf das Ende eines Schwungs, weiss niemand
+/// ohne einen weiteren `getattrlistbulk(2)`, ob dahinter noch etwas steht. Der
+/// Lauf holt in diesem einen Fall einen Schwung mehr, nimmt aus ihm keinen
+/// Eintrag mehr auf und endet danach.
+///
+/// **Teurer als ein Schwung wird es nicht**, denn sobald ein Eintrag abgewiesen
+/// ist, steht die Antwort fest und es wird nicht weitergelesen. Der Preis ist
+/// damit ein Systemaufruf, und der Gegenwert ist eine Auskunft, auf die ein
+/// Aufrufer eine negative Antwort stuetzen darf. Die umgekehrte Wahl —
+/// `abgeschnitten` schon beim Erreichen der Zahl — waere billiger und
+/// entschiede jeden vollstaendig gelesenen Ordner, dessen Bestand zufaellig auf
+/// dem Deckel liegt, zu Unrecht als unentschieden.
+pub fn lesen_hoechstens(pfad: &Path, hoechstens: usize) -> io::Result<Lesestand> {
     let mut leser = Schwungleser::oeffnen(pfad)?;
     let mut eintraege = Vec::new();
+    let mut abgeschnitten = false;
     loop {
-        let geliefert = leser.naechster_schwung(|roh| eintraege.push(Eintrag::aus_roh(roh)))?;
+        if abgeschnitten {
+            return Ok(Lesestand {
+                eintraege,
+                abgeschnitten,
+            });
+        }
+        let geliefert = leser.naechster_schwung(|roh| {
+            if eintraege.len() < hoechstens {
+                eintraege.push(Eintrag::aus_roh(roh));
+            } else {
+                abgeschnitten = true;
+            }
+        })?;
         if geliefert == 0 {
-            return Ok(eintraege);
+            return Ok(Lesestand {
+                eintraege,
+                abgeschnitten,
+            });
         }
     }
 }

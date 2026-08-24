@@ -13,7 +13,9 @@ use std::time::{Duration, SystemTime};
 
 use krk_core::verzeichnis::durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
 use krk_core::verzeichnis::inhalt::{Inhaltsbefund, traegt_der_inhalt};
-use krk_core::verzeichnis::leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
+use krk_core::verzeichnis::leser::{
+    Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen, lesen_hoechstens,
+};
 use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
 use krk_core::verzeichnis::sortierung::{Richtung, Schluessel, Sortierung};
 use krk_core::verzeichnis::sys::ist_deskriptormangel;
@@ -30,6 +32,20 @@ fn ordner_mit_dateien(zweck: &str, anzahl: usize) -> Pruefordner {
         ordner.fuelldatei(&format!("eintrag-{nummer:06}.txt"), nummer % 17);
     }
     ordner
+}
+
+/// Die Namen einer Eintragsliste, sortiert.
+///
+/// Zwei Laeufe ueber demselben Ordner vergleichbar zu machen, geht nur ueber
+/// den Bestand: `Eintrag` traegt kein `PartialEq`, und eine Lesereihenfolge
+/// sagt der Leser niemandem zu.
+fn sortierte_namen(eintraege: &[Eintrag]) -> Vec<&str> {
+    let mut gefunden: Vec<&str> = eintraege
+        .iter()
+        .map(|eintrag| eintrag.name.as_str())
+        .collect();
+    gefunden.sort_unstable();
+    gefunden
 }
 
 fn namen(modell: &Ordnermodell) -> Vec<&str> {
@@ -232,6 +248,81 @@ fn ein_pfad_der_kein_verzeichnis_ist_scheitert() {
 
     let fehler = lesen(&ordner.pfad().join("datei.txt")).expect_err("das haette scheitern muessen");
     assert_eq!(fehler.kind(), std::io::ErrorKind::NotADirectory);
+}
+
+// ---------------------------------------------------------------------------
+// Der gedeckelte Leser
+// ---------------------------------------------------------------------------
+
+/// Der Deckel schneidet ab, und der Lesestand sagt, dass er es getan hat.
+///
+/// Die Zahl der Eintraege haengt am Deckel, `abgeschnitten` haengt daran, dass
+/// mindestens ein Eintrag **nicht** aufgenommen wurde. Welche drei
+/// zurueckkommen, sagt die Lesereihenfolge des Dateisystems und nicht diese
+/// Probe; geprueft wird deshalb, dass jeder gelieferte Name aus dem angelegten
+/// Bestand stammt, und nicht, welcher.
+#[test]
+fn ein_deckel_unter_dem_bestand_liefert_den_deckel_und_meldet_das_abschneiden() {
+    let ordner = ordner_mit_dateien("deckel-darunter", 5);
+
+    let stand = lesen_hoechstens(ordner.pfad(), 3).expect("Lesen gescheitert");
+
+    assert_eq!(stand.eintraege.len(), 3, "der Deckel haelt nicht");
+    assert!(
+        stand.abgeschnitten,
+        "der weggelassene Eintrag wird nicht gemeldet"
+    );
+    for eintrag in &stand.eintraege {
+        assert!(
+            eintrag.name.starts_with("eintrag-"),
+            "{} stammt nicht aus dem angelegten Bestand",
+            eintrag.name
+        );
+    }
+}
+
+/// Ein Deckel genau auf dem Bestand laesst nichts weg, und sagt genau das.
+///
+/// Das ist die Lage, fuer die der Leser einen `getattrlistbulk(2)` mehr ausgibt:
+/// nach fuenf aufgenommenen Eintraegen unter dem Deckel fuenf steht noch nicht
+/// fest, ob dahinter etwas kommt. Faellt `abgeschnitten` hier auf wahr, ist die
+/// schwaechere Lesart "der Deckel wurde erreicht" zurueckgekommen, und jeder
+/// Aufrufer, der darauf eine negative Antwort stuetzt, gibt sie zu Unrecht.
+#[test]
+fn ein_deckel_genau_auf_dem_bestand_meldet_kein_abschneiden() {
+    let ordner = ordner_mit_dateien("deckel-genau", 5);
+
+    let stand = lesen_hoechstens(ordner.pfad(), 5).expect("Lesen gescheitert");
+
+    assert_eq!(stand.eintraege.len(), 5);
+    assert!(
+        !stand.abgeschnitten,
+        "ein vollstaendig gelesener Ordner gilt als abgeschnitten"
+    );
+}
+
+/// `lesen` ist `lesen_hoechstens` ohne Deckel, und das steht nicht nur im
+/// Doc-Kommentar.
+///
+/// Die Aussage der Probe ist der Bestand: seit der Runde 16 hat `lesen` keine
+/// eigene Leserschleife mehr, und was daran zu pruefen ist, ist dass der Umbau
+/// nichts weggelassen hat.
+#[test]
+fn lesen_liefert_denselben_bestand_wie_der_hoechste_deckel() {
+    let ordner = ordner_mit_dateien("deckel-ohne", 5);
+
+    let ohne_deckel = lesen(ordner.pfad()).expect("Lesen gescheitert");
+    let stand = lesen_hoechstens(ordner.pfad(), usize::MAX).expect("Lesen gescheitert");
+
+    assert_eq!(ohne_deckel.len(), 5);
+    assert!(
+        !stand.abgeschnitten,
+        "der hoechste Deckel meldet ein Abschneiden"
+    );
+    assert_eq!(
+        sortierte_namen(&ohne_deckel),
+        sortierte_namen(&stand.eintraege)
+    );
 }
 
 // ---------------------------------------------------------------------------

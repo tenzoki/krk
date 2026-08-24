@@ -46,6 +46,12 @@
 //! angehobene Grenze der Sitzung erbt, und er steht deshalb bei der Probe des
 //! Durchlaufs.
 //!
+//! **Drei weitere stehen seit der Runde 16 daneben**, und auch sie gehoeren zu
+//! keinem der zwoelf Faelle: `datei::anlesen` ist die dritte Huelle um dieselbe
+//! Tuer und die einzige, die eine zu grosse Datei nicht abweist, sondern
+//! anliest. Sie pruefen den Unterschied zur zweiten Huelle an derselben Datei
+//! und derselben Zahl sowie die zwei Wege, auf denen `KeineDatei` entsteht.
+//!
 //! **Fall 10 ist am 260810 auf drei Proben verteilt worden**, weil `oeffnen`
 //! seither zuerst oeffnet und danach am Deskriptor prueft (Defekt
 //! `260809-1652`). Der eine Byte Unterschied bleibt bei Fall 10 selbst, die
@@ -540,13 +546,30 @@ fn die_sicherungsform_haengt_genau_einen_umbruch_an_und_raeumt_hinten_nicht_auf(
 /// Der Faden bleibt im Fehlerfall stehen, wo er steht. Er stirbt mit dem
 /// Probelauf, und ein Deskriptor, der nie aufgeht, haelt nichts fest.
 fn oeffnen_mit_zeitschranke(pfad: &Path, schranke: Duration) -> Result<String, Abweisung> {
-    let (sender, empfaenger) = mpsc::channel();
     let pfad = pfad.to_path_buf();
+    mit_zeitschranke("oeffnen", schranke, move || datei::oeffnen(&pfad))
+}
+
+/// Ruft `auftrag` auf einem eigenen Faden und gibt die Antwort nur heraus, wenn
+/// sie innerhalb der Schranke kommt.
+///
+/// **Die eine Fassung fuer alle drei Huellen um dieselbe Tuer.** Ein
+/// blockierendes `open` liefert kein falsches Ergebnis, sondern gar keines, und
+/// ohne Schranke waere das ein stehender Probelauf statt eines Befundes. Die
+/// drei Rufer unterscheiden sich in nichts als der gerufenen Funktion; deshalb
+/// steht die Bauform hier einmal und nicht dreimal, und `was` steht im
+/// Meldetext, damit ein Fehlschlag sagt, welche der drei haengt.
+fn mit_zeitschranke<T: Send + 'static>(
+    was: &str,
+    schranke: Duration,
+    auftrag: impl FnOnce() -> T + Send + 'static,
+) -> T {
+    let (sender, empfaenger) = mpsc::channel();
     std::thread::spawn(move || {
-        let _ = sender.send(datei::oeffnen(&pfad));
+        let _ = sender.send(auftrag());
     });
     empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
-        panic!("oeffnen ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
+        panic!("{was} ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
     })
 }
 
@@ -1117,26 +1140,15 @@ fn der_befund_deckt_alle_vier_ausgaenge_und_spult_zurueck() {
     }
 }
 
-/// Ruft [`datei::bis_zur_grenze_lesen`] auf einem eigenen Faden und gibt die
-/// Antwort nur heraus, wenn sie innerhalb der Schranke kommt.
-///
-/// Dieselbe Bauform und derselbe Grund wie bei [`oeffnen_mit_zeitschranke`]: ein
-/// blockierendes `open` liefert kein falsches Ergebnis, sondern gar keines, und
-/// ohne Schranke waere das ein stehender Probelauf statt eines Befundes.
+/// Ruft [`datei::bis_zur_grenze_lesen`] hinter [`mit_zeitschranke`].
 fn bis_zur_grenze_mit_zeitschranke(
     pfad: &Path,
     grenze: u64,
     schranke: Duration,
 ) -> Result<Vec<u8>, Lesehindernis> {
-    let (sender, empfaenger) = mpsc::channel();
     let pfad = pfad.to_path_buf();
-    std::thread::spawn(move || {
-        let _ = sender.send(datei::bis_zur_grenze_lesen(&pfad, grenze));
-    });
-    empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
-        panic!(
-            "bis_zur_grenze_lesen ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt"
-        )
+    mit_zeitschranke("bis_zur_grenze_lesen", schranke, move || {
+        datei::bis_zur_grenze_lesen(&pfad, grenze)
     })
 }
 
@@ -1236,5 +1248,88 @@ fn ein_fehler_beim_oeffnen_ist_kein_deskriptormangel() {
         datei::bis_zur_grenze_lesen(&gesperrt, 1024),
         Err(Lesehindernis::Fehler),
         "das fehlende Leserecht gilt nicht als Fehler"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Die dritte Huelle um dieselbe Tuer: anlesen
+// ---------------------------------------------------------------------------
+
+/// Ruft [`datei::anlesen`] hinter [`mit_zeitschranke`].
+fn anlesen_mit_zeitschranke(
+    pfad: &Path,
+    hoechstens: u64,
+    schranke: Duration,
+) -> Result<Vec<u8>, Lesehindernis> {
+    let pfad = pfad.to_path_buf();
+    mit_zeitschranke("anlesen", schranke, move || {
+        datei::anlesen(&pfad, hoechstens)
+    })
+}
+
+/// Die dritte Huelle liest an, wo die zweite abweist.
+///
+/// Beide bekommen dieselbe Datei und dieselbe Zahl, und genau daran ist der
+/// Unterschied abzulesen: `bis_zur_grenze_lesen` sagt "zu gross",
+/// [`datei::anlesen`] liefert die ersten zehn Bytes. Das ist die Lage der
+/// Profil-Zusammenfassung in klein: sie sucht ihre Ueberschrift am Anfang einer
+/// Datei, die im Ganzen ueber der Grenze liegen darf.
+///
+/// Die dritte Zusicherung haelt die andere Haelfte: eine Datei **unter** dem
+/// Deckel kommt ganz und wird nicht auf den Deckel gekuerzt.
+#[test]
+fn anlesen_liefert_den_anfang_wo_die_grenze_abweist() {
+    let ordner = Pruefordner::neu("anlesen-anfang");
+    let hundert = ordner.datei("hundert.txt", vec![b'x'; 100]);
+
+    assert_eq!(
+        datei::anlesen(&hundert, 10),
+        Ok(vec![b'x'; 10]),
+        "die dritte Huelle liest den Anfang nicht an"
+    );
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&hundert, 10),
+        Err(Lesehindernis::ZuGross),
+        "die zweite Huelle weist dieselbe Datei nicht mehr ab"
+    );
+    assert_eq!(
+        datei::anlesen(&hundert, 1_000),
+        Ok(vec![b'x'; 100]),
+        "unter dem Deckel kommt die Datei nicht ganz"
+    );
+}
+
+/// Ein Ordner ist auch fuer die dritte Huelle keine Datei.
+///
+/// Dieselbe Aussage wie bei der zweiten Huelle und aus demselben Grund: die
+/// Typpruefung steht am `fstat` des offenen Deskriptors und nicht an einer
+/// Endung. Der Deckel spielt dabei keine Rolle; abgewiesen wird vor dem Lesen.
+#[test]
+fn ein_ordner_ist_fuer_das_anlesen_keine_datei() {
+    let ordner = Pruefordner::neu("anlesen-ordner");
+    let unterordner = ordner.ordner("ein-ordner");
+
+    assert_eq!(
+        datei::anlesen(&unterordner, 1024),
+        Err(Lesehindernis::KeineDatei)
+    );
+}
+
+/// Eine benannte Roehre ohne Schreiber kommt als `KeineDatei` zurueck, und sie
+/// kommt ueberhaupt zurueck.
+///
+/// **Zwei Aussagen, und die groessere ist die zweite.** Dass hier eine Antwort
+/// faellt, haengt am `O_NONBLOCK` in `verzeichnis::sys::ohne_warten_oeffnen`,
+/// durch das auch die dritte Huelle geht. Wer sie an einer eigenen Tuer
+/// vorbeifuehrte, saehe diese Probe an ihrer Zeitschranke scheitern und nicht an
+/// einem falschen Wert.
+#[test]
+fn eine_benannte_roehre_ist_keine_datei_und_haelt_das_anlesen_nicht_an() {
+    let ordner = Pruefordner::neu("anlesen-roehre");
+    let roehre = ordner.roehre("ohne-schreiber");
+
+    assert_eq!(
+        anlesen_mit_zeitschranke(&roehre, 1024, Duration::from_secs(5)),
+        Err(Lesehindernis::KeineDatei)
     );
 }

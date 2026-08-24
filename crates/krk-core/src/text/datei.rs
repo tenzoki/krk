@@ -128,12 +128,24 @@
 //! weiter. [`Textstand::Unlesbar`] traegt den offenen Deskriptor deshalb mit,
 //! und [`Abweisung`] tut es nicht.
 //!
-//! **[`bis_zur_grenze_lesen`] steht daneben und stellt eine andere Frage.** Es
-//! sagt nicht, ob hinter einem Pfad eine Textdatei steht, sondern liefert
-//! hoechstens so viele Bytes, wie sein Aufrufer zulaesst; was daraus ein Text
-//! ist, entscheidet der Aufrufer. Es ist damit kein zweiter Leseweg im Sinne
-//! des Absatzes darueber, sondern derselbe Eingang mit einer anderen Grenze.
-//! Der Unterschied zu [`lesen`] steht an der Huelle selbst.
+//! **Daneben stehen zwei weitere Fragen, und beide gehen durch dieselbe Tuer.**
+//! Keine von ihnen ist ein zweiter Leseweg im Sinne des Absatzes darueber; es
+//! ist derselbe Eingang, dreimal verschieden befragt:
+//!
+//! - **[`bis_zur_grenze_lesen`]:** "gib mir die Bytes, aber hoechstens so
+//!   viele, sonst gar nichts". Ueber der Grenze weist es ab, und der Aufrufer
+//!   weiss ueber den Inhalt der Datei nichts.
+//! - **[`anlesen`]:** "gib mir die ersten N Bytes und sage nichts ueber das,
+//!   was dahinter steht". Es weist wegen der Groesse nie ab und kann
+//!   [`Lesehindernis::ZuGross`] deshalb gar nicht liefern.
+//!
+//! **Der Unterschied zwischen den beiden ist keine Feinheit, sondern der Grund
+//! fuer die zweite Fassung.** Wer eine Ueberschrift, ein Feld oder die ersten
+//! Zeilen einer Datei braucht, ist mit einer Abweisung nicht bedient: der
+//! groesste Circle-Datensatz dieser Werkbank ist 119.614 Bytes gross, und seine
+//! Zeile `## Directive` steht bei Byte 222. Unter einer Grenze von 64 KB liefert
+//! [`bis_zur_grenze_lesen`] dafuer nichts und [`anlesen`] die Ueberschrift.
+//! Der Unterschied zu [`lesen`] steht an den Huellen selbst.
 //!
 //! [`einlesen`] nimmt weiterhin Bytes und keinen Pfad. Die Unwucht gegenueber
 //! [`sichern`] ist Absicht und jetzt erst recht: die Groessenpruefung laeuft
@@ -561,11 +573,12 @@ pub enum Lesehindernis {
 /// Liest hoechstens `grenze` Bytes hinter einem Pfad, **ohne bei einer
 /// benannten Roehre zu warten** (C1, C6).
 ///
-/// Die zweite Haelfte des Zuschnitts aus dem Modulkopf: [`lesen`] beantwortet
-/// "ist das eine Textdatei fuer den Editor", diese Huelle beantwortet "gib mir
-/// die Bytes, aber hoechstens so viele". Beide gehen durch dieselbe eine Tuer,
+/// Die zweite der drei Fragen aus dem Modulkopf: [`lesen`] beantwortet "ist das
+/// eine Textdatei fuer den Editor", diese Huelle beantwortet "gib mir die Bytes,
+/// aber hoechstens so viele", und [`anlesen`] beantwortet "gib mir die ersten N
+/// Bytes". Alle drei gehen durch dieselbe eine Tuer,
 /// [`verzeichnis::sys::ohne_warten_oeffnen`](crate::verzeichnis::sys::ohne_warten_oeffnen),
-/// und ein dritter Weg zu den Bytes entsteht daneben nicht.
+/// und eine zweite Tuer entsteht daneben nicht.
 ///
 /// # Die Grenze reist als Argument und wohnt nicht hier
 ///
@@ -630,6 +643,67 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
         // Die Datei ist zwischen `fstat` und `read` gewachsen.
         return Err(Lesehindernis::ZuGross);
     }
+    Ok(bytes)
+}
+
+/// Liest die ersten `hoechstens` Bytes hinter einem Pfad, **ohne bei einer
+/// benannten Roehre zu warten** und **ohne wegen der Groesse abzuweisen**.
+///
+/// Die dritte der drei Fragen an dieselbe eine Tuer,
+/// [`verzeichnis::sys::ohne_warten_oeffnen`](crate::verzeichnis::sys::ohne_warten_oeffnen):
+/// "gib mir die ersten N Bytes und sage nichts ueber das, was dahinter steht".
+/// Die Reihenfolge — oeffnen ohne zu warten, `fstat(2)` am Deskriptor, Typ,
+/// dann lesen — ist dieselbe wie bei [`lesen`] und dort ausfuehrlich begruendet;
+/// der eine Aufruf, der den **Namen** anfasst, ist das Oeffnen, und alles danach
+/// fragt den Deskriptor. Wer die Pruefung an den Pfad zurueckzoege, haette das
+/// Fenster aus dem Defekt `260809-1652` wieder und bliebe an einer benannten
+/// Roehre haengen.
+///
+/// # Der eine Unterschied zu [`bis_zur_grenze_lesen`]
+///
+/// Jene Huelle weist eine Datei ueber ihrer Grenze ab; diese liest sie an.
+/// [`Lesehindernis::ZuGross`] kann deshalb aus [`anlesen`] nicht kommen, und
+/// eine Groessenpruefung vor dem Lesen gibt es hier nicht: gelesen wird ueber
+/// `take`, also stehen zu keinem Zeitpunkt mehr als `hoechstens` Bytes im
+/// Arbeitsspeicher, gleich wie gross die Datei ist. Das ist dieselbe Zusage wie
+/// drueben, nur nicht ueber eine Auskunft von `fstat` hergestellt, sondern ueber
+/// die Zahl gelesener Bytes; auch eine wachsende Datei und `/dev/zero` fallen
+/// darunter.
+///
+/// # Warum es die dritte Fassung ueberhaupt gibt
+///
+/// Die Profil-Zusammenfassung der Vorschau bildet ihre Werte aus den gelesenen
+/// Bytes: die Ueberschrift einer Datei, ein Feld aus ihrem Kopf. Eine Abweisung
+/// nuetzt ihr nichts, denn was sie sucht, steht am Anfang. Der groesste
+/// Circle-Datensatz dieser Werkbank ist 119.614 Bytes gross, und seine Zeile
+/// `## Directive` steht bei Byte 222; unter einer Grenze von 64 KB liefert
+/// [`bis_zur_grenze_lesen`] fuer ihn [`Lesehindernis::ZuGross`] und diese Huelle
+/// die Ueberschrift. Die Grenze reist wie bei der zweiten Fassung als Argument
+/// und wohnt nicht hier.
+pub fn anlesen(pfad: &Path, hoechstens: u64) -> Result<Vec<u8>, Lesehindernis> {
+    let datei = match crate::verzeichnis::sys::ohne_warten_oeffnen(pfad) {
+        Ok(datei) => datei,
+        Err(fehler) => {
+            return Err(if crate::verzeichnis::sys::ist_deskriptormangel(&fehler) {
+                Lesehindernis::Deskriptormangel
+            } else {
+                Lesehindernis::Fehler
+            });
+        }
+    };
+    let angaben = datei.metadata().map_err(|_| Lesehindernis::Fehler)?;
+    if !angaben.is_file() {
+        return Err(Lesehindernis::KeineDatei);
+    }
+
+    // Vorgemerkt wird die kleinere der beiden Zahlen: die Datei kann groesser
+    // sein als der Deckel, und dann waere ihre Groesse als Vorrat genau das,
+    // was diese Huelle nicht in den Speicher holen soll.
+    let mut bytes = Vec::with_capacity(angaben.len().min(hoechstens) as usize);
+    datei
+        .take(hoechstens)
+        .read_to_end(&mut bytes)
+        .map_err(|_| Lesehindernis::Fehler)?;
     Ok(bytes)
 }
 
