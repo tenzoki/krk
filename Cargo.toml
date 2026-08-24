@@ -45,6 +45,67 @@ toml = "1"
 # CLDR-Tabellen in das Programm und ist der Grund, aus dem zur Laufzeit keine
 # Datei gesucht und kein Fehler behandelt werden muss.
 icu_collator = "2.2"
+# Der Mustervergleich der Leseprofile (C2 und C3 der Runde 16). Welche Kiste
+# ihn traegt, entscheidet nicht der Spec, sondern der Plan:
+# `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0640_*_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`,
+# Abschnitt `### Die Kiste und der Grund`.
+#
+# **C2.8 verlangt eine Laufzeitzusage, die vom Muster unabhaengig ist:** ein
+# Ausdruck, den der Nutzer in seine `readers.toml` schreibt, darf die Vorschau
+# nicht anhalten koennen. Aus dem Text eines Ausdrucks allein ist das nicht
+# entscheidbar, denn welche Muster eine rueckverfolgende Auswertung exponentiell
+# laufen lassen, steht nicht im Muster; C2.8 fuehrt mit `(a+)+$` das
+# Standardbeispiel dafuer an. `regex` wertet ueber endliche Automaten aus und
+# laeuft damit linear in der Laenge der Eingabe, gleich welches Muster dasteht.
+# Die Zusage ist so eine Eigenschaft der Auswertungsmaschine und keine
+# Vorhersage ueber ein Muster.
+#
+# **`fancy-regex` steht ueber `syntect` schon im Baum und scheidet trotzdem
+# aus.** Es wertet rueckverfolgend aus und kappt seine Arbeit ueber eine
+# Schrittgrenze: `backtrack_limit`, in der Vorgabe 1.000.000 Schritte, gemessen
+# an Fassung 0.16.2. Ist sie erreicht, liefert der Aufruf
+# `BacktrackLimitExceeded` statt einer Antwort. Eine Schrittgrenze naehert die
+# Frage "laeuft dieses Muster in vertretbarer Zeit" an, statt sie zu
+# beantworten, und C2.8 verlangt die Antwort. Dazu ist `fancy-regex` heute
+# Abhaengigkeit von `krk-ui` und nicht von `krk-core`; eine unmittelbare Nennung
+# mit Begruendung an dieser Stelle kostete es in jedem Fall.
+#
+# Keine bestehende Abhaengigkeit leistet einen Mustervergleich: `icu_collator`
+# sortiert, `toml` zerlegt, `pulldown-cmark` rendert Markdown, `syntect` faerbt
+# ein, `signal-hook` faengt Signale, die `objc2`-Kisten reichen AppKit durch.
+#
+# **Was mitkommt, gezaehlt und nicht geschaetzt.** Am 260824 auf diesem Geraet
+# erhoben, mit `cargo tree -p krk-core -e normal` und dem Vergleich von
+# `Cargo.lock` vor und nach der Aufnahme:
+#
+# - **Ein einziges neues Paket**, `regex` 1.13.1: `Cargo.lock` waechst von 97
+#   auf 98 Eintraege. Die vier Kisten, auf denen `regex` aufsetzt, standen
+#   bereits in genau diesen Fassungen im Baum, saemtlich ueber `fancy-regex`:
+#   `regex-automata` 0.4.18, `regex-syntax` 0.8.11, `aho-corasick` 1.1.5 und
+#   `memchr` 2.8.3. Die Begruendung zu `syntect` weiter unten zaehlt dieselben
+#   vier namentlich auf.
+# - **Das eine neue Paket kommt auf dem Bauziel an.** Es haengt an keinem
+#   Zielvorbehalt und steht unmittelbar unter `krk-core` im Baum. Von den vier
+#   schon vorhandenen Kisten kommt keine neu hinzu; der Zuwachs bleibt damit
+#   eins von eins.
+# - **Weder `cc` noch ein `-sys`-Paket kommt hinzu.** `cargo tree --workspace
+#   -e normal,build` findet im ganzen Baum weder `cc` noch `onig` noch einen
+#   Namen auf `-sys`. `windows-sys` steht wie zuvor allein in `Cargo.lock`,
+#   haengt am Windows-Ziel und wird auf macOS nie uebersetzt. Die Zusage aus
+#   der Technologiewahl haelt: die Bauvoraussetzungen aendern sich nicht.
+#
+# Die Vorgabemerkmale bleiben an, anders als bei den meisten Eintraegen dieser
+# Datei, und beide tragenden sind hier noetig. `unicode` laesst `.`, `\w` und
+# die Schreibungsfaltung ueber die ganze Zeichenmenge greifen statt nur ueber
+# ASCII; die Muster laufen ueber Dateinamen und Dateiinhalte dieser Werkbank,
+# und die tragen Umlaute. `perf` schaltet allein Beschleuniger in
+# `regex-automata` ein, und keiner davon nimmt die Zusage oben zurueck: der
+# Zweig hinter `perf-backtrack` laeuft nur dort, wo die Suche nachweislich
+# beschraenkt ist, und merkt besuchte Zustaende vor, statt sie erneut zu
+# betreten.
+#
+# Die Mindestfassung passt: `rust-version = "1.65"`, das Projekt faehrt 1.97.1.
+regex = "1"
 # Signalbehandlung, nur fuer die Messstrecke. `std` kennt keine Signale, und die
 # einzige Zusage, die daran haengt, ist die Sitzungssicherung aus
 # `krk-bench/src/messen.rs`: sie muss den vorigen Stand auch dann zurueckspielen,

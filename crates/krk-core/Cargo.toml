@@ -12,3 +12,10 @@ toml = { workspace = true }
 # weil der Sortierschluessel im Kern entsteht: `verzeichnis::kollation` ist
 # die einzige Stelle, die die Kiste nennt.
 icu_collator = { workspace = true }
+# Der Mustervergleich der Leseprofile. Er steht hier und nicht in `krk-ui`,
+# weil C6.8 der Runde 16 Proben ohne Fenster verlangt: `krk-ui` hat kein
+# Bibliotheksziel, eine Datei unter `crates/krk-ui/tests/` erreicht also nichts
+# aus jener Kiste, und die abzaehlbaren Grenzen aus C6 waeren dort nicht zu
+# belegen. `leseprofil::datei::pruefen` ist die einzige Stelle, die ein Muster
+# uebersetzt.
+regex = { workspace = true }
