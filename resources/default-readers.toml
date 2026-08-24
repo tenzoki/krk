@@ -202,12 +202,18 @@ kennzeichen = '^\.fusion-setup$'
 
 # Ein Speicher, gemeinsam oder in einer Runde.
 #
-# Ein Profil für zwölf Orte: die sechs Speicher unter `shared/` und dieselben
-# sechs in jeder Runde. Der Defektspeicher steht darunter als eigenes Profil,
+# Ein Profil für achtzehn Orte: die neun Speicher unter `shared/` und dieselben
+# neun in jeder Runde. Der Defektspeicher steht darunter als eigenes Profil,
 # weil er zwei Zählungen trägt und nicht eine.
+#
+# Der Entscheidungsspeicher `decisions` steht in derselben Aufzählung und trägt
+# damit dieselben zwei Zeilen wie ein Analysespeicher, obwohl seine fünf Marker
+# mehr hergäben. Wer ihn nach Markern aufschlüsseln will, nimmt den Namen aus
+# der Aufzählung heraus und gibt ihm ein eigenes Profil nach dem Vorbild des
+# Defektspeichers darunter.
 [[profil]]
 name = "fusion-Werkbank: ein Speicher"
-pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|history|planning|reviews)$'
+pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|decisions|history|investigations|memos|planning|reviews)$'
 
   [[profil.zeile]]
   beschriftung = "Datensätze"
@@ -251,10 +257,12 @@ pfad = 'fusion-workbench/circles$'
 # Pfadmuster dieser Datei trifft ein Rundenverzeichnis, also kann dieses Profil
 # im ersten Durchgang nicht überholt werden.
 #
-# Der Zustand steht als drei Zeilen und nicht als eine, weil er im DATEINAMEN
+# Der Zustand steht als vier Zeilen und nicht als eine, weil er im DATEINAMEN
 # des Datensatzes steht und in keinem Feld darin; keiner der vier Bausteine
-# liefert einen Dateinamen. Eine überholte oder zurückgestellte Runde antwortet
-# auf alle drei mit „nein".
+# liefert einen Dateinamen. Die vier Zeilen decken die sechs Marker des
+# Werkbankvokabulars vollständig ab: `_a_` vorgesehen, `_t_` aktiv, `_c_` und
+# `_b_` geschlossen, `_s_` und `_d_` abgelegt. Genau eine der vier Zeilen sagt
+# „ja", die drei übrigen sagen „nein".
 [[profil]]
 name = "fusion-Werkbank: eine Runde"
 kennzeichen = '^_._circle\.md$'
@@ -270,6 +278,10 @@ kennzeichen = '^_._circle\.md$'
   [[profil.zeile]]
   beschriftung = "Geschlossen"
   vorhandensein = { muster = '^_[cb]_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Abgelegt"
+  vorhandensein = { muster = '^_[sd]_circle\.md$' }
 
   [[profil.zeile]]
   beschriftung = "Directive"
