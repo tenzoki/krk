@@ -481,19 +481,35 @@ pfad = 'analyses$'
 /// keine Variante gepasst habe
 /// (`issues/260824-1217_*_ein-tippfehler-in-einem-bausteintisch-…`). Diese
 /// Probe haelt fest, dass jede der vier Eingaben ihren eigenen Schluessel
-/// nennt.
+/// nennt: ein verschriebenes Feld im Bausteintisch, ein verschriebener
+/// Tischname, ein zusaetzlicher Schluessel neben der Beschriftung und einer auf
+/// der obersten Ebene. Bis zum 260824 nannte der Satz vier und die Schleife
+/// trug drei; der vierte ist nachgetragen und nicht die Zahl gesenkt worden,
+/// denn die oberste Ebene ist die vierte der sechs Stellen mit
+/// `deny_unknown_fields` und war ungemessen.
 #[test]
 fn ein_verschriebener_schluessel_nennt_sich_in_der_meldung() {
-    let vorspann = "[[profil]]\nname = \"Ein Speicher\"\npfad = 'analyses$'\n\n                      [[profil.zeile]]\n  beschriftung = \"Eine Zeile\"\n";
-    for (zeile, gesucht) in [
-        ("  zaehlung = { mustre = 'y' }\n", "mustre"),
-        ("  zaehlungg = { }\n", "zaehlungg"),
+    let vorspann = "[[profil]]\nname = \"Ein Speicher\"\npfad = 'analyses$'\n\n[[profil.zeile]]\n  beschriftung = \"Eine Zeile\"\n";
+    let ganz = format!("{vorspann}  zaehlung = {{ }}\n");
+    for (text, gesucht) in [
+        // Ein verschriebenes Feld *im* Bausteintisch.
         (
-            "  zaehlung = { }\n  beschreibung = \"zu viel\"\n",
+            format!("{vorspann}  zaehlung = {{ mustre = 'y' }}\n"),
+            "mustre",
+        ),
+        // Ein verschriebener Tischname.
+        (format!("{vorspann}  zaehlungg = {{ }}\n"), "zaehlungg"),
+        // Ein zusaetzlicher Schluessel *neben* der Beschriftung.
+        (
+            format!("{vorspann}  zaehlung = {{ }}\n  beschreibung = \"zu viel\"\n"),
             "beschreibung",
         ),
+        // Ein unbekannter Schluessel auf der obersten Ebene, neben
+        // `[[profil]]`. Er faellt an `Profildatei`s `deny_unknown_fields` und
+        // nicht an einer der drei Ebenen darunter.
+        (format!("fassung = 2\n{ganz}"), "fassung"),
     ] {
-        let fehler = toml::from_str::<Profildatei>(&format!("{vorspann}{zeile}"))
+        let fehler = toml::from_str::<Profildatei>(&text)
             .expect_err("der Text kommt durch, obwohl er einen falschen Schluessel traegt");
         assert!(
             fehler.to_string().contains(gesucht),

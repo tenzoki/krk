@@ -61,4 +61,4 @@ Zeilennummer im dortigen Datensatz fest.
 **Domain:** code
 
 ---
-Resolved:
+Resolved: 260824-1740 vom coder. Der Absatz sagt jetzt „vier der fünf" und zählt die vier in einer Aufzählung auf; `session.toml` steht als benannte Ausnahme da und nicht als Rest einer Subtraktion, mit der offenen Frage vom 260821-0142 daneben. **Die Nachbarzeile ist mitgezogen** (Anweisung dieses Datensatzes): sie sagt jetzt „Die vier uebrigen TOML-Dateien und die zwei Zettel" und nennt die drei von Hand gepflegten mit Namen. Damit ist der Eintrag `:154`/`:158` aus `shared/issues/260821-1023_o_…` in der Sache erledigt; jener Datensatz ist nicht angefasst worden und braucht seinen Eintrag nachgezogen.

@@ -260,9 +260,14 @@ impl Zeile {
 ///
 /// Eine vollstaendige Fallunterscheidung ohne Auffangzweig. Ein fuenfter
 /// Baustein haelt jeden Rechner an und erzwingt eine bewusste Einordnung;
-/// Festlegung A7 haelt die Zahl vier fest und nennt sie ausdruecklich als das,
-/// was den Zustand eines Circles auf drei Vorhandensein-Zeilen verteilt,
-/// statt einen Baustein fuer Dateinamen aufzunehmen.
+/// Festlegung A7 haelt die Zahl vier fest und nennt als ihren Preis
+/// ausdruecklich, dass der Zustand eines Circles sich auf mehrere
+/// Vorhandensein-Zeilen verteilt, statt einen Baustein fuer Dateinamen zu
+/// bekommen. **Wie viele Zeilen das sind, steht hier nicht**: es sind die
+/// Zeilen, die `resources/default-readers.toml` im Circle-Profil fuehrt, und
+/// eine dritte Stelle fuer diese Zahl waere eine dritte, die veraltet — bis
+/// zum 260824 stand hier „drei", waehrend die Auslieferungsfassung seit
+/// Schritt 14 vier traegt.
 ///
 /// Zwei der vier sehen auf **Namen** und zwei lesen **Dateien**, und daran
 /// haengt der Umgang mit Verknuepfungen: [`Baustein::Zaehlung`] und

@@ -51,10 +51,15 @@
 //! Pruefschritt [`datei::pruefen`], und dieses Modul reicht ihn nur durch.
 //!
 //! Die Meldungen jenes Pruefschritts gehen deshalb **neben** der [`Ersetzung`]
-//! heraus und nicht in ihr: eine `Ersetzung` sagt, dass eine Datei durch den
-//! Auslieferungszustand ersetzt wurde, und genau das ist bei einem
-//! abgewiesenen Profil nicht geschehen. Die Datei ist in Ordnung, ein Profil
-//! darin ist es nicht.
+//! heraus und nicht in ihr: eine `Ersetzung` sagt, dass eine Datei ersetzt
+//! wurde, und genau das ist bei einem abgewiesenen Profil nicht geschehen. Die
+//! Datei ist in Ordnung, ein Profil darin ist es nicht.
+//!
+//! **Die Meldung zu dieser Datei verspricht seit dem 260824 keinen
+//! Auslieferungszustand mehr.** Der Satzteil stand bis dahin als feststehende
+//! Prosa im Formatierer von [`Ersetzung`] und war fuer `readers.toml` als
+//! einzige der sieben falsch; er kommt jetzt aus
+//! [`Datei::ersatz`](super::Datei::ersatz), das ihn je Datei beantwortet.
 
 use std::io;
 
@@ -103,6 +108,7 @@ pub fn laden(zugang: &Zugang<'_>) -> (Geladen<Profile>, Vec<String>) {
     let ersetzung = roh.ersetzung.or_else(|| {
         anlage.err().map(|fehler| Ersetzung {
             datei: zugang.pfad(Datei::Leser),
+            welche: Datei::Leser,
             grund: Grund::NichtAnlegbar(fehler.to_string()),
             // Eine Datei, die es nicht gibt, hat keinen Inhalt zu sichern.
             beiseite: Beiseite::Nicht,

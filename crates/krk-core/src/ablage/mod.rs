@@ -144,22 +144,25 @@
 //!
 //! - **Ein oberster Schluessel, den der Leser nicht kennt**, ist ein `Err` und
 //!   kein stiller Auslieferungszustand. Das leistet
-//!   `#[serde(deny_unknown_fields)]` an der jeweiligen Struktur, und drei der
-//!   fuenf TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei` und
-//!   seit dem 260821 auch [`Lesezeichenliste`]. `readers.toml` traegt es
-//!   ebenfalls, an `leseprofil::datei::Profildatei`, und geht seit der Runde 16
-//!   ueber denselben Ladeweg.
+//!   `#[serde(deny_unknown_fields)]` an der jeweiligen Struktur, und vier der
+//!   fuenf TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei`, seit
+//!   dem 260821 [`Lesezeichenliste`] und seit der Runde 16
+//!   `leseprofil::datei::Profildatei`, ueber die `readers.toml` denselben
+//!   Ladeweg geht. `session.toml` traegt es nicht; ob die strenge Lesart auch
+//!   dorthin gehoert, ist die offene Frage
+//!   `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`.
 //! - **Kein einziger oberster Schluessel** heisst je nach Datei etwas anderes,
 //!   und deshalb steht die Antwort in [`pfade::Datei::leerbefund`] — einer
 //!   vollstaendigen Fallunterscheidung ohne Auffangzweig, wie
 //!   [`pfade::Datei::format`] daneben. `bookmarks.toml` traegt dort
 //!   [`Leerbefund::Beschaedigt`], weil KRK selbst eine leere Liste als
 //!   `eintraege = []` schreibt und die Datei nie ohne obersten Schluessel
-//!   hinterlaesst. Die drei uebrigen tragen [`Leerbefund::Vorgabe`]: zwei davon
-//!   pflegt der Nutzer von Hand und darf sie leerraeumen, und `session.toml`
-//!   ist auf Nachsicht gegenueber einer aelteren Fassung gebaut. Ob die strenge
-//!   Lesart auch dorthin gehoert, ist offen
-//!   (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`).
+//!   hinterlaesst. Die vier uebrigen TOML-Dateien und die zwei Zettel tragen
+//!   [`Leerbefund::Vorgabe`]: `keymap.toml`, `settings.toml` und `readers.toml`
+//!   pflegt der Nutzer von Hand und darf sie leerraeumen, ein leerer Zettel ist
+//!   ein leerer Zettel, und `session.toml` ist auf Nachsicht gegenueber einer
+//!   aelteren Fassung gebaut. Ob die strenge Lesart auch dorthin gehoert, ist
+//!   dieselbe offene Frage wie eine Zeile weiter oben.
 //!
 //! **Die Zusage deckt weiterhin nicht jede Gestalt des Verlusts.** Eine Datei,
 //! die dasteht und sich nicht lesen laesst, traegt [`Grund::NichtLesbar`] und
@@ -215,14 +218,19 @@ pub use einstellungen::Einstellungen;
 pub use lesezeichen::{
     Aenderung, Ausgang, Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel,
 };
-pub use pfade::{Ablageort, Datei, Format, Leerbefund, Zettel};
+pub use pfade::{Ablageort, Datei, Ersatz, Format, Leerbefund, Zettel};
 pub use sitzung::{
     Breiten, Dateifenster, Fensterseite, Sichtbarkeit, Sitzung, Sitzungsschreiber,
     Spaltensichtbarkeit, Tab,
 };
 pub use sperre::{Schreibgriff, Sitzungsrecht};
 
-/// Warum eine Datei durch den Auslieferungszustand ersetzt wurde.
+/// Warum eine Ablagedatei ihren Bestand nicht hergegeben hat.
+///
+/// **Der Grund sagt nicht, was an ihre Stelle tritt**, und kann es nicht sagen:
+/// beschaedigt ist beschaedigt, gleich ob danach der Auslieferungszustand
+/// einspringt oder nichts. Diese Auskunft haengt an der Datei und steht in
+/// [`Datei::ersatz`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Grund {
     /// Die Datei liegt da, liess sich aber nicht lesen. Traegt die Meldung des
@@ -361,14 +369,30 @@ pub enum Beiseite {
     Gescheitert(String),
 }
 
-/// Eine Datei wurde durch den Auslieferungszustand ersetzt.
+/// Eine Ablagedatei ist ersetzt worden.
 ///
 /// Ein Wert und keine Ausgabe: wer laedt, entscheidet, ob und wie er ihn
 /// meldet. Der Weg dorthin ist [`melden`].
+///
+/// **Wodurch ersetzt, sagt [`Datei::ersatz`] und nicht dieser Satz.** Fuer
+/// sechs der sieben Dateien ist es der Auslieferungszustand, fuer
+/// `readers.toml` nichts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ersetzung {
     /// Die Datei, um die es geht. Sie steht in jeder Meldung.
     pub datei: PathBuf,
+    /// Welche der sieben Ablagedateien das ist.
+    ///
+    /// **Neben dem Pfad und nicht statt seiner.** Der Pfad ist der absolute
+    /// Ort, den die Meldung nennt, und er ist nicht aus dieser Angabe
+    /// ableitbar: [`tasten::belegung::fuer_den_betrieb`](crate::tasten::belegung::fuer_den_betrieb)
+    /// baut eine Meldung, wenn es gar keinen Ablageordner gibt, und traegt dort
+    /// den nackten Dateinamen ein. Umgekehrt ist die Angabe nicht aus dem Pfad
+    /// ableitbar, ohne den Dateinamen ein zweites Mal auszuwerten.
+    ///
+    /// Getragen wird sie, seit [`Datei::ersatz`] den Satzteil ueber den Ersatz
+    /// entscheidet; siehe [`Ersatz`].
+    pub welche: Datei,
     /// Warum sie ersetzt wurde.
     pub grund: Grund,
     /// Was mit ihrem Inhalt geschehen ist.
@@ -389,40 +413,42 @@ impl fmt::Display for Ersetzung {
     /// Beide Pfade stehen im Satz, sobald es beide gibt. Fuer
     /// [`Beiseite::Nicht`] bleibt der Satz Wort fuer Wort der von vor der
     /// Runde 6, denn dort gibt es keinen zweiten Pfad und nichts hinzuzufuegen.
+    ///
+    /// **Was an die Stelle der Datei tritt, steht nicht mehr hier.** Bis zum
+    /// 260824 schrieb jeder der fuenf Zweige „und wird durch den
+    /// Auslieferungszustand ersetzt" als feststehende Prosa; mit `readers.toml`
+    /// gibt es seit der Runde 16 eine Datei, fuer die das nicht stimmt. Den
+    /// Satzteil liefert jetzt [`Datei::ersatz`], und die Begruendung fuer diese
+    /// Zustaendigkeit steht bei [`Ersatz`].
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
         let datei = self.datei.display();
         let beschreibung = self.grund.beschreibung();
+        let ersatz = self.welche.ersatz().satzteil();
         let einzelheit = self.grund.einzelheit();
         match &self.beiseite {
-            Beiseite::Nicht => write!(
-                ausgabe,
-                "{datei} {beschreibung} und wird durch den Auslieferungszustand ersetzt: \
-                 {einzelheit}"
-            ),
+            Beiseite::Nicht => write!(ausgabe, "{datei} {beschreibung} {ersatz}: {einzelheit}"),
             Beiseite::Gesichert(pfad) => write!(
                 ausgabe,
-                "Die bisherige Fassung liegt unter {}; {datei} {beschreibung} und wird durch den \
-                 Auslieferungszustand ersetzt: {einzelheit}",
+                "Die bisherige Fassung liegt unter {}; {datei} {beschreibung} {ersatz}: \
+                 {einzelheit}",
                 pfad.display()
             ),
             Beiseite::Gekuerzt(pfad) => write!(
                 ausgabe,
                 "Die bisherige Fassung liegt gekuerzt unter {}, gesichert sind allein ihre \
-                 ersten {EDITORGRENZE} Bytes; {datei} {beschreibung} und wird durch den \
-                 Auslieferungszustand ersetzt: {einzelheit}",
+                 ersten {EDITORGRENZE} Bytes; {datei} {beschreibung} {ersatz}: {einzelheit}",
                 pfad.display()
             ),
             Beiseite::SchonVorhanden(pfad) => write!(
                 ausgabe,
                 "Die bisherige Fassung liegt seit einem frueheren Start unter {} und bleibt dort; \
-                 {datei} {beschreibung} und wird durch den Auslieferungszustand ersetzt: \
-                 {einzelheit}",
+                 {datei} {beschreibung} {ersatz}: {einzelheit}",
                 pfad.display()
             ),
             Beiseite::Gescheitert(fehler) => write!(
                 ausgabe,
                 "Der Inhalt liess sich nicht zur Seite legen ({fehler}); {datei} {beschreibung} \
-                 und wird durch den Auslieferungszustand ersetzt: {einzelheit}"
+                 {ersatz}: {einzelheit}"
             ),
         }
     }
@@ -612,6 +638,7 @@ impl Zugang<'_> {
                     wert: T::default(),
                     ersetzung: Some(Ersetzung {
                         datei: pfad,
+                        welche,
                         grund: Grund::NichtLesbar(fehler.to_string()),
                         beiseite: Beiseite::Nicht,
                     }),
@@ -623,6 +650,7 @@ impl Zugang<'_> {
                 wert: T::default(),
                 ersetzung: Some(Ersetzung {
                     datei: pfad,
+                    welche,
                     grund: Grund::Beschaedigt(String::from(
                         "die Datei traegt keinen einzigen obersten Schluessel, \
                          und KRK schreibt sie nie so",
@@ -646,6 +674,7 @@ impl Zugang<'_> {
                     wert: T::default(),
                     ersetzung: Some(Ersetzung {
                         datei: pfad,
+                        welche,
                         grund: Grund::Beschaedigt(einzeilig(&fehler.to_string())),
                         beiseite,
                     }),
@@ -733,6 +762,7 @@ impl Zugang<'_> {
                 wert: String::new(),
                 ersetzung: Some(Ersetzung {
                     datei: pfad,
+                    welche,
                     grund: Grund::NichtLesbar(einzeilig(&grund)),
                     // Von einer Datei, die sich nicht oeffnen liess, gibt es
                     // keinen Inhalt zu sichern.
@@ -751,6 +781,7 @@ impl Zugang<'_> {
                     wert: String::new(),
                     ersetzung: Some(Ersetzung {
                         datei: pfad,
+                        welche,
                         grund,
                         beiseite,
                     }),

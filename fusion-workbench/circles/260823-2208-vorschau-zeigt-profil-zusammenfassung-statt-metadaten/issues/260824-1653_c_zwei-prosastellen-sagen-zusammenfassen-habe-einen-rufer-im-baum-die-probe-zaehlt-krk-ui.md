@@ -56,4 +56,4 @@ ersetzen. Kein Bau ändert sich, und die Zusage C4.7 bleibt, was sie ist: die ze
 **Domain:** code
 
 ---
-Resolved:
+Resolved: 260824-1740 vom coder. Beide Stellen in `crates/krk-ui/src/vorschaumodell.rs` sagen jetzt „im ausgelieferten Programm" statt „in diesem Baum"; der Doc-Kommentar an `laden` schreibt dazu aus, warum „im Baum" zu weit greift (zehn Rufe in `krk-core/tests`, keiner in einem Vorschaufenster) und dass die Zählprobe deshalb `crates/krk-ui` liest. Kein Bau geändert.

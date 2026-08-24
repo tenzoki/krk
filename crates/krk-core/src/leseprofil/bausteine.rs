@@ -548,23 +548,41 @@ mod tests {
 
     #[test]
     fn ein_abgeschnittenes_zeichen_am_ende_nimmt_der_datei_nicht_ihren_text() {
-        let ganz = "Überschrift".as_bytes();
-        assert_eq!(lesbarer_anfang(ganz), Some("Überschrift"));
-
-        // Der Deckel faellt mitten in das zweibytige „ü".
-        let naht = &ganz[..ganz.len() - 1];
+        let ganz = "Titel Ü".as_bytes();
         assert_eq!(
-            lesbarer_anfang(&ganz[..2]),
-            Some("Ü"),
-            "der Schnitt hinter einem ganzen Zeichen ist kein Sonderfall"
+            ganz.len(),
+            8,
+            "sechs ASCII-Bytes und zwei fuer das Umlaut-U"
         );
+        assert_eq!(lesbarer_anfang(ganz), Some("Titel Ü"));
+
+        // Der Deckel faellt zwischen die zwei Bytes des „Ü": das erste steht
+        // noch da, das zweite fehlt.
+        let naht = &ganz[..7];
         assert!(
-            lesbarer_anfang(naht).is_some_and(|text| text.starts_with("Übersch")),
+            std::str::from_utf8(naht).is_err(),
+            "sonst traegt schon der erste Zweig die Antwort und der zweite bleibt ungemessen"
+        );
+        assert_eq!(
+            lesbarer_anfang(naht),
+            Some("Titel "),
             "die Naht des Deckels nimmt der Datei ihren Text"
+        );
+
+        // Der Schnitt hinter einem ganzen Zeichen geht durch den ersten Zweig.
+        assert_eq!(
+            lesbarer_anfang(&ganz[..6]),
+            Some("Titel "),
+            "der Schnitt hinter einem ganzen Zeichen ist kein Sonderfall"
         );
 
         // Ein ungueltiges Byte mitten im Gelesenen bleibt ein Befund.
         assert_eq!(lesbarer_anfang(&[b'a', 0xff, b'b']), None);
+        assert_eq!(
+            lesbarer_anfang(&[b'T', 0xc3, 0x9c, 0xff]),
+            None,
+            "ein ungueltiges Byte am Ende ist keine Naht, sondern ein Befund"
+        );
     }
 
     #[test]

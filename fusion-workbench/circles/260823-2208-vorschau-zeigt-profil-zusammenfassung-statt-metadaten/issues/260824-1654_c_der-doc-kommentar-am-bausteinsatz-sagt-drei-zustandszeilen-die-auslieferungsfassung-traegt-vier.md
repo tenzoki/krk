@@ -45,4 +45,4 @@ Spec, und eine dritte Stelle dafür ist eine dritte, die veraltet.
 **Domain:** code
 
 ---
-Resolved:
+Resolved: 260824-1740 vom coder. Die haltbarere der zwei vorgeschlagenen Formen gewählt: der Satz nennt keine Zahl mehr, sondern „mehrere Vorhandensein-Zeilen", und sagt ausdrücklich, dass die Zahl in `resources/default-readers.toml` steht und eine dritte Stelle dafür eine dritte wäre, die veraltet. Die tragende Hälfte von A7 — vier Bausteine und kein fünfter — bleibt unverändert stehen.

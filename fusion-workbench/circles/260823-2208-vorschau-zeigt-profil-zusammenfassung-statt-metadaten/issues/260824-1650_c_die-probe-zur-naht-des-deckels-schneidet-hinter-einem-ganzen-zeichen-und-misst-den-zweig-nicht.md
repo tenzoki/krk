@@ -74,4 +74,4 @@ von `lesbarer_anfang` auf `String::from_utf8(bytes).ok()` bliebe grün.
 **Domain:** code
 
 ---
-Resolved:
+Resolved: 260824-1740 vom coder. Die Probe schneidet jetzt an einer echten Naht: `"Titel Ü"` ist acht Bytes, `&ganz[..7]` lässt das erste Byte des `Ü` stehen und nimmt das zweite weg, und `lesbarer_anfang` liefert `Some("Titel ")`. Eine vorangestellte Zusicherung `std::str::from_utf8(naht).is_err()` hält fest, dass der erste Zweig die Antwort nicht schon trägt; daneben stehen weiter der Schnitt hinter einem ganzen Zeichen, ein ungültiges Byte in der Mitte und eines am Ende. Der Kommentar zieht mit. **Der Zweig `Err(fehler) if fehler.error_len().is_none()` läuft nachweislich**: mit ausgehöhltem Zweig (`None` statt `from_utf8(&bytes[..valid_up_to()])`) fällt die Probe an genau dieser Zusicherung um, die alte Fassung blieb unter derselben Aushöhlung grün. Beide Läufe sind gefahren.

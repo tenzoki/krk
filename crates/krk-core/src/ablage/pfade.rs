@@ -127,6 +127,55 @@ pub enum Leerbefund {
     Beschaedigt,
 }
 
+/// Was an die Stelle einer ersetzten Ablagedatei tritt.
+///
+/// **Zwei Werte, vollstaendig und ohne Auffangzweig**, wie [`Format`] und
+/// [`Leerbefund`] daneben. Die Frage ist je Datei zu beantworten: sie haengt
+/// daran, ob es fuer diese Datei ueberhaupt etwas gibt, das einspringen
+/// koennte, und das ist eine Aussage ueber ihren Zweck und nicht ueber ihr
+/// Format.
+///
+/// **Der Wert traegt die Auskunft, weil sie sonst niemand traegt.** Bis zum
+/// 260824 stand sie als feststehende Prosa im Formatierer von
+/// [`Ersetzung`](super::Ersetzung) und sagte in jedem Zweig „und wird durch den
+/// Auslieferungszustand ersetzt". Fuer sechs der sieben Dateien stimmte das;
+/// mit `readers.toml` ist die erste dazugekommen, fuer die es nicht stimmt.
+/// [`Grund`](super::Grund) kann sie nicht tragen — derselbe Grund trifft jede
+/// Datei, und beschaedigt ist beschaedigt, gleich was danach einspringt.
+/// Getragen wird sie deshalb hier, neben den zwei anderen je Datei
+/// beantworteten Fragen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Ersatz {
+    /// Die eingebettete Auslieferungsfassung oder der Vorgabewert tritt an die
+    /// Stelle der Datei.
+    ///
+    /// Der Wert von sechs der sieben. Bei den von KRK geschriebenen Dateien ist
+    /// es der Vorgabewert der Struktur, bei `settings.toml` die eingebettete
+    /// Auslieferungsfassung, bei einem Zettel der leere Text.
+    Auslieferungszustand,
+    /// Es tritt nichts an ihre Stelle.
+    ///
+    /// Der Wert allein von [`Datei::Leser`], und die Begruendung steht unter
+    /// „Zweite Abweichung" im Kopf von [`super::leseprofile`]: die
+    /// Auslieferungsfassung einzusetzen hiesse, dem Nutzer Profile
+    /// unterzuschieben, die er vielleicht gerade herausgenommen hat.
+    Nichts,
+}
+
+impl Ersatz {
+    /// Der Satzteil, der die Auskunft in die Meldung traegt.
+    ///
+    /// Steht hier und nicht beim Formatierer, damit die Antwort und ihr
+    /// Wortlaut an einer Stelle bleiben; [`Grund::beschreibung`](super::Grund)
+    /// ist dieselbe Bauform.
+    pub(super) const fn satzteil(self) -> &'static str {
+        match self {
+            Ersatz::Auslieferungszustand => "und wird durch den Auslieferungszustand ersetzt",
+            Ersatz::Nichts => "und nichts tritt an ihre Stelle",
+        }
+    }
+}
+
 /// Die sieben Dateien, die KRK unter `Application Support` ablegt.
 ///
 /// Eine Aufzaehlung statt sieben loser Namen: wer alle anfassen muss, laeuft
@@ -259,6 +308,31 @@ impl Datei {
             | Datei::Einstellungen
             | Datei::Leser
             | Datei::Zettel(_) => Leerbefund::Vorgabe,
+        }
+    }
+
+    /// Was an die Stelle dieser Datei tritt, wenn sie ersetzt wird.
+    ///
+    /// Die dritte abgeleitete Frage neben [`Datei::format`] und
+    /// [`Datei::leerbefund`], und sie steht aus demselben Grund hier:
+    /// vollstaendig, ohne Auffangzweig, damit eine achte Ablagedatei den Bau
+    /// anhaelt und eine bewusste Einordnung erzwingt.
+    ///
+    /// **`readers.toml` ist die eine mit [`Ersatz::Nichts`]** (C1.6 der
+    /// Runde 16). Fuer die sechs uebrigen gibt es einen Zustand, der einspringt
+    /// — ein Vorgabewert, die eingebettete Auslieferungsfassung oder der leere
+    /// Zettel —, und die Meldung darf ihn versprechen. Fuer `readers.toml`
+    /// gibt es ihn nicht: eine beschaedigte Datei fuehrt dort zu gar keinem
+    /// Profil, und die Begruendung steht unter „Zweite Abweichung" im Kopf von
+    /// [`super::leseprofile`].
+    pub const fn ersatz(self) -> Ersatz {
+        match self {
+            Datei::Leser => Ersatz::Nichts,
+            Datei::Belegung
+            | Datei::Lesezeichen
+            | Datei::Sitzung
+            | Datei::Einstellungen
+            | Datei::Zettel(_) => Ersatz::Auslieferungszustand,
         }
     }
 }

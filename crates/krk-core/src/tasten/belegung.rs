@@ -1501,6 +1501,7 @@ pub fn laden(zugang: &Zugang<'_>) -> Geladen<Belegung> {
             wert: Belegung::auslieferung(),
             ersetzung: Some(Ersetzung {
                 datei: zugang.pfad(Datei::Belegung),
+                welche: Datei::Belegung,
                 grund: Grund::Beschaedigt(fehler.to_string()),
                 // Nichts zur Seite gelegt: die Datei war gueltiges TOML und ist
                 // erst hier, eine Ebene hoeher, als widerspruechlich
@@ -1539,6 +1540,7 @@ pub fn fuer_den_betrieb() -> (Belegung, Option<String>) {
                 Belegung::auslieferung(),
                 Some(melden(&Ersetzung {
                     datei: ablage.pfad(Datei::Belegung),
+                    welche: Datei::Belegung,
                     grund: Grund::NichtLesbar(fehler.to_string()),
                     // Gelesen worden ist nichts, also gibt es nichts zu sichern.
                     beiseite: Beiseite::Nicht,
@@ -1549,6 +1551,7 @@ pub fn fuer_den_betrieb() -> (Belegung, Option<String>) {
             Belegung::auslieferung(),
             Some(melden(&Ersetzung {
                 datei: PathBuf::from(Datei::Belegung.dateiname()),
+                welche: Datei::Belegung,
                 grund: Grund::NichtLesbar(fehler.to_string()),
                 // Ohne Ablageordner gibt es keinen Ort, an den etwas zur Seite
                 // zu legen waere, und es ist auch nichts gelesen worden.

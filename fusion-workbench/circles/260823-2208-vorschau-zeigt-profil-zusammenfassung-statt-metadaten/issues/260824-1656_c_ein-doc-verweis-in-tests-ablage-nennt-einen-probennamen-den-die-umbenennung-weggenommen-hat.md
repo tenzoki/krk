@@ -37,4 +37,4 @@ also meldet nichts im Bauablauf einen kaputten `intra_doc_link`. `cargo build`, 
 **Domain:** code
 
 ---
-Resolved:
+Resolved: 260824-1740 vom coder. `_mit_ladeweg_` gestrichen; beide Verweise auf `jede_toml_datei_wird_bei_beschaedigung_zur_seite_gelegt` tragen jetzt denselben Namen wie die Probe in Zeile 1157.

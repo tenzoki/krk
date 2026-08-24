@@ -43,4 +43,4 @@ Zahl darüber.
 **Domain:** code
 
 ---
-Resolved:
+Resolved: 260824-1740 vom coder. Der vierte Fall ist nachgetragen statt die Zahl gesenkt: ein unbekannter Schlüssel auf der obersten Ebene (`fassung = 2` vor `[[profil]]`), der an `Profildatei`s `deny_unknown_fields` fällt. Die Schleife nimmt jetzt vollständige Texte statt eines angehängten Zeilenstücks, weil der vierte Fall vor dem ersten Block stehen muss. Der Doc-Kommentar zählt die vier Gestalten einzeln auf. Die zweiundzwanzig Leerzeichen im `vorspann` sind weg.

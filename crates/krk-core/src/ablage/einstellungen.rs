@@ -164,6 +164,7 @@ pub fn laden(zugang: &Zugang<'_>) -> Geladen<Einstellungen> {
             wert,
             ersetzung: Some(Ersetzung {
                 datei: zugang.pfad(Datei::Einstellungen),
+                welche: Datei::Einstellungen,
                 grund: Grund::NichtAnlegbar(fehler.to_string()),
                 // Eine Datei, die es nicht gibt, hat keinen Inhalt zu sichern.
                 beiseite: Beiseite::Nicht,

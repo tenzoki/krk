@@ -35,9 +35,9 @@ use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
 use krk_core::ablage::sperre::{SCHREIBSPERRE, SITZUNGSRECHT};
 use krk_core::ablage::{
     Ablage, Ablageort, Aenderung, Ausgang, Beiseite, Breiten, Datei, Dateifenster, Einstellungen,
-    Ersetzung, Fensterseite, Format, Geladen, Grund, Lesezeichen, Lesezeichenliste, Sichtbarkeit,
-    Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Zettel, Ziel, atomar,
-    einstellungen, leseprofile, melden, pfade,
+    Ersatz, Ersetzung, Fensterseite, Format, Geladen, Grund, Lesezeichen, Lesezeichenliste,
+    Sichtbarkeit, Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Zettel, Ziel,
+    atomar, einstellungen, leseprofile, melden, pfade,
 };
 use krk_core::leseprofil::{Profil, Profile};
 use krk_core::text::datei::EDITORGRENZE;
@@ -1055,6 +1055,12 @@ fn eine_nicht_lesbare_datei_fuehrt_ebenso_zum_auslieferungszustand() {
 }
 
 /// Prueft, dass eine Ersetzung gemeldet wird und die Datei benennt.
+///
+/// **Der Satzteil ueber den Ersatz haengt an der Datei und nicht an dieser
+/// Stelle.** Sechs der sieben bekommen den Auslieferungszustand, `readers.toml`
+/// bekommt nichts; die erwarteten Woerter stehen hier ausgeschrieben und werden
+/// nicht aus [`Ersatz`] geholt, damit die Probe den Wortlaut haelt und nicht
+/// den Aufruf wiederholt, den sie pruefen soll.
 fn pruefe_meldung(ablage: &Ablage, welche: Datei, ersetzung: Option<Ersetzung>, beschaedigt: bool) {
     let ersetzung =
         ersetzung.unwrap_or_else(|| panic!("{} wurde ohne Meldung ersetzt", welche.dateiname()));
@@ -1075,14 +1081,20 @@ fn pruefe_meldung(ablage: &Ablage, welche: Datei, ersetzung: Option<Ersetzung>, 
         "die Meldung nennt keinen Grund"
     );
 
+    assert_eq!(ersetzung.welche, welche);
+
     let text = ersetzung.to_string();
     assert!(
         text.contains(welche.dateiname()),
         "die Meldung benennt die Datei nicht: {text}"
     );
+    let erwartet = match welche.ersatz() {
+        Ersatz::Auslieferungszustand => "und wird durch den Auslieferungszustand ersetzt",
+        Ersatz::Nichts => "und nichts tritt an ihre Stelle",
+    };
     assert!(
-        text.contains("Auslieferungszustand"),
-        "die Meldung nennt die Ersetzung nicht: {text}"
+        text.contains(erwartet),
+        "die Meldung traegt den Satzteil {erwartet} nicht: {text}"
     );
     assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
 }
@@ -1351,6 +1363,7 @@ fn die_meldung_unterscheidet_die_fuenf_lagen_und_bleibt_einzeilig() {
     let sicherung = atomar::beiseitepfad(&datei).expect("kein Beiseitepfad");
     let bau = |beiseite: Beiseite| Ersetzung {
         datei: datei.clone(),
+        welche: Datei::Lesezeichen,
         grund: Grund::Beschaedigt("Zeile 3, Spalte 7".to_owned()),
         beiseite,
     };
@@ -1430,6 +1443,72 @@ fn die_meldung_unterscheidet_die_fuenf_lagen_und_bleibt_einzeilig() {
             "die Meldung nennt die Ersetzung nicht: {text}"
         );
     }
+}
+
+/// `readers.toml` bekommt in jeder der fuenf Lagen den anderen Satzteil, weil
+/// bei ihr nichts an die Stelle der Datei tritt (C1.6).
+///
+/// Die Gegenprobe zu
+/// [`die_meldung_unterscheidet_die_fuenf_lagen_und_bleibt_einzeilig`]: dieselben
+/// fuenf Lagen, dieselbe Bauform, und der Unterschied haengt allein an
+/// [`Datei::ersatz`]. Bis zum 260824 schrieb der Formatierer den Satzteil ueber
+/// den Auslieferungszustand in jedem Zweig fest, und die Meldung versprach dem
+/// Nutzer die fuenf mitgelieferten Profile, die er in dieser Lage gerade nicht
+/// bekommt.
+#[test]
+fn die_meldung_zu_readers_toml_verspricht_keinen_auslieferungszustand() {
+    let datei = PathBuf::from("/Users/pruefung/Library/Application Support/KRK/readers.toml");
+    let sicherung = atomar::beiseitepfad(&datei).expect("kein Beiseitepfad");
+    let bau = |welche: Datei, beiseite: Beiseite| Ersetzung {
+        datei: datei.clone(),
+        welche,
+        grund: Grund::Beschaedigt("Zeile 3, Spalte 7".to_owned()),
+        beiseite,
+    };
+
+    for beiseite in [
+        Beiseite::Nicht,
+        Beiseite::Gesichert(sicherung.clone()),
+        Beiseite::Gekuerzt(sicherung.clone()),
+        Beiseite::SchonVorhanden(sicherung.clone()),
+        Beiseite::Gescheitert("kein Platz mehr".to_owned()),
+    ] {
+        let text = bau(Datei::Leser, beiseite.clone()).to_string();
+        assert!(
+            !text.contains("Auslieferungszustand"),
+            "die Meldung verspricht einen Zustand, den readers.toml nicht bekommt: {text}"
+        );
+        assert!(
+            text.contains("nichts tritt an ihre Stelle"),
+            "die Meldung sagt nicht, dass nichts einspringt: {text}"
+        );
+        assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
+
+        // Derselbe Bau mit einer anderen Datei traegt den anderen Satzteil: der
+        // Unterschied haengt an `Datei::ersatz` und an nichts sonst.
+        let daneben = bau(Datei::Einstellungen, beiseite).to_string();
+        assert!(
+            daneben.contains("und wird durch den Auslieferungszustand ersetzt"),
+            "die sechs uebrigen Dateien verlieren ihren Satzteil: {daneben}"
+        );
+        assert_ne!(text, daneben);
+    }
+}
+
+/// Genau eine der sieben Ablagedateien traegt [`Ersatz::Nichts`].
+///
+/// Die Zaehlprobe zu der Aussage, die der Doc-Kommentar von [`Datei::ersatz`]
+/// macht. Sie laeuft ueber [`Datei::ALLE`] und kann keine vergessen; eine achte
+/// Datei mit `Ersatz::Nichts` laesst sie rot werden und verlangt, dass die
+/// Prosa nachgezogen wird.
+#[test]
+fn genau_readers_toml_bekommt_keinen_ersatz() {
+    let ohne: Vec<&str> = Datei::ALLE
+        .iter()
+        .filter(|welche| welche.ersatz() == Ersatz::Nichts)
+        .map(|welche| welche.dateiname())
+        .collect();
+    assert_eq!(ohne, ["readers.toml"]);
 }
 
 // ---------------------------------------------------------------------------
@@ -2970,7 +3049,7 @@ fn gemischte_liste() -> Lesezeichenliste {
 /// denselben Lesevorgang derselben Datei; zwei Proben davon waeren zweimal
 /// dasselbe Ereignis. Der Nachweis, dass eine wirklich beschaedigte Datei
 /// gesichert wird, steht weiter oben bei
-/// [`jede_toml_datei_mit_ladeweg_wird_bei_beschaedigung_zur_seite_gelegt`].
+/// [`jede_toml_datei_wird_bei_beschaedigung_zur_seite_gelegt`].
 #[test]
 fn eine_bookmarks_toml_aus_der_zeit_vor_den_textmarken_bleibt_lesbar() {
     let (_ordner, ablage) = ablage("lesezeichen-altbestand");

@@ -88,7 +88,8 @@
 //! ausgewaehlten Eintrag liefert, und sie hat kein anderes Ende als er.
 //!
 //! Daraus folgt C4.7 ohne eine eigene Vorkehrung: [`laden`] ist der eine
-//! Aufrufer von [`krk_core::leseprofil::zusammenfassen`] in diesem Baum, und
+//! Aufrufer von [`krk_core::leseprofil::zusammenfassen`] im ausgelieferten
+//! Programm, und
 //! [`laden`] laeuft allein auf dem Faden, den
 //! [`Vorschaumodell::datei_anzeigen`] fuer den ausgewaehlten Eintrag startet.
 //! Ein Ordner, den der Nutzer nie auswaehlt, wird damit nie zusammengefasst.
@@ -669,8 +670,11 @@ fn zu_gross_text(groesse: u64) -> String {
 /// neben den anderen Gruenden; vier Wege zu derselben Antwort brauchen keine
 /// vier Verzweigungen.
 ///
-/// **Der eine Aufrufer von [`krk_core::leseprofil::zusammenfassen`] in diesem
-/// Baum** (C4.7). Weil er hier steht und diese Funktion allein auf dem
+/// **Der eine Aufrufer von [`krk_core::leseprofil::zusammenfassen`] im
+/// ausgelieferten Programm** (C4.7). „Im Baum" waere zu weit gegriffen: die
+/// Proben in `krk-core/tests` rufen ihn zehnmal, und keiner dieser Rufe laeuft
+/// in einem Vorschaufenster. Gezaehlt wird deshalb `crates/krk-ui`, und die
+/// Zaehlprobe sagt das ausdruecklich. Weil er hier steht und diese Funktion allein auf dem
 /// Arbeitsfaden eines ausgewaehlten Eintrags laeuft, kostet ein Ordner, den der
 /// Nutzer nie auswaehlt, keinen Verzeichnisleselauf und keine Dateioeffnung.
 fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
