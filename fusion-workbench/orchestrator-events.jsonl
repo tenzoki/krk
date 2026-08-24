@@ -1331,3 +1331,115 @@
 {"ts":"2026-08-23T19:08:57","event":"rebalance_grounding","detail":"Nutzer 260823-1710: die Ladevorgaenge sind seine eigenen; 260823-1650 als Lage angenommen geschlossen"}
 {"ts":"2026-08-23T19:08:57","event":"turn_end","turn":1,"detail":"2 Aufgaben erledigt, 5 Befunde, 1.0.0 ausgeliefert"}
 {"ts":"2026-08-23T19:08:57","event":"session_end","detail":"1 Turn, KRK 1.0.0 oeffentlich, Verdikt review-needed dann per Grundlage geschlossen"}
+{"ts":"2026-08-23T19:19:32","event":"session_start","history_file":"shared/history/260823-2119-orchestrator-session.md","detail":"Directive not yet stated; mode unresolved; domain code; max_turns 12"}
+{"ts":"2026-08-24T03:30:24","event":"session_start","history_file":"circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/history/260824-0530-orchestrator-session.md","detail":"Directive from active Circle 260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten; mode unresolved; domain code; max_turns 12"}
+{"ts":"2026-08-24T03:36:17","event":"scope_resolved","detail":"mode custom on active Circle 260823-2208; 2 Circle decisions answered _o_->_a_; path: shaper spec then planner"}
+{"ts":"2026-08-24T03:36:24","event":"shaper_start","agent":"shaper","detail":"spec for active Circle 260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten"}
+{"ts":"2026-08-24T04:18:53","event":"shaper_done","agent":"shaper","detail":"spec at circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0613_o_spec-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md; 6 capabilities, 56 acceptance criteria, 7 derived decisions A1-A7"}
+{"ts":"2026-08-24T04:18:53","event":"gate_hit","detail":"spec review"}
+{"ts":"2026-08-24T04:20:32","event":"gate_response","detail":"spec review: proceed; A1-A7 confirmed"}
+{"ts":"2026-08-24T04:20:32","event":"planner_start","agent":"planner","detail":"circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0613_o_spec-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md"}
+{"ts":"2026-08-24T04:46:21","event":"planner_done","agent":"planner","detail":"circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md; 13 steps in 5 bundles"}
+{"ts":"2026-08-24T04:46:21","event":"gate_hit","detail":"plan review"}
+{"ts":"2026-08-24T07:07:08","event":"gate_response","detail":"plan review: proceed; regex 1.x accepted as new crate"}
+{"ts":"2026-08-24T07:07:08","event":"scope_resolved","detail":"mode plan; 13 steps in 5 bundles; executors coder/ontocoder/analyst"}
+{"ts":"2026-08-24T07:07:59","event":"queue_built","detail":"13 tasks, 4 unblocked at start, 1 human gate (P-7 ontocoder)"}
+{"ts":"2026-08-24T07:08:12","event":"turn_start","turn":1,"detail":"4 ready tasks: P-1, P-2, P-4, P-13"}
+{"ts":"2026-08-24T07:09:08","event":"task_start","turn":1,"task":"P-1","agent":"coder","detail":"Cargo.toml, crates/krk-core/Cargo.toml"}
+{"ts":"2026-08-24T07:09:08","event":"task_start","turn":1,"task":"P-13","agent":"analyst","detail":"decisions/260824-0541_a_..., issues/260824-0600_o_..."}
+{"ts":"2026-08-24T07:12:54","event":"task_done","turn":1,"task":"P-13","agent":"analyst","detail":"c15f99b"}
+{"ts":"2026-08-24T07:12:54","event":"commit","turn":1,"task":"P-13","detail":"c15f99b — Circle, Spec, Plan und Schritt 13"}
+{"ts":"2026-08-24T07:21:29","event":"task_done","turn":1,"task":"P-1","agent":"coder","detail":"abecfb2; make check exit 0"}
+{"ts":"2026-08-24T07:21:29","event":"commit","turn":1,"task":"P-1","detail":"abecfb2 — regex 1.13.1, ein Paket mehr"}
+{"ts":"2026-08-24T07:21:29","event":"task_start","turn":1,"task":"P-2","agent":"coder","detail":"ablage/pfade.rs, tests/ablage.rs"}
+{"ts":"2026-08-24T07:38:21","event":"task_done","turn":1,"task":"P-2","agent":"coder","detail":"ed893a4; make check exit 0"}
+{"ts":"2026-08-24T07:38:21","event":"commit","turn":1,"task":"P-2","detail":"ed893a4 — Datei::Leser, siebte Ablagedatei"}
+{"ts":"2026-08-24T07:38:21","event":"task_start","turn":1,"task":"P-4","agent":"coder","detail":"verzeichnis/leser.rs, text/datei.rs"}
+{"ts":"2026-08-24T08:02:21","event":"task_done","turn":1,"task":"P-4","agent":"coder","detail":"b76800b; make check exit 0"}
+{"ts":"2026-08-24T08:02:21","event":"commit","turn":1,"task":"P-4","detail":"b76800b — lesen_hoechstens und anlesen, sechs Proben"}
+{"ts":"2026-08-24T08:02:59","event":"review_start","turn":1,"agent":"coderev","detail":"9 files, range 278a008..HEAD, 4 commits"}
+{"ts":"2026-08-24T08:19:31","event":"review_done","turn":1,"agent":"coderev","detail":"3 issues filed; verdict covered, 4/4 commits, not-opened none"}
+{"ts":"2026-08-24T08:19:31","event":"commit","turn":1,"detail":"9c859db — Durchsicht Turn 1 und drei Befunde"}
+{"ts":"2026-08-24T08:25:36","event":"coherence_review","turn":1,"detail":"verdict ok; Artefakt-Grundlage: 3 Befunde; Artefakt-Directive: bewegt sich zu; Grundlage-Directive: 8 beruehrt, 1 mit ueberholtem Constraint"}
+{"ts":"2026-08-24T08:25:36","event":"turn_end","turn":1,"detail":"4 tasks resolved, 4 issues created, 5 commits"}
+{"ts":"2026-08-24T08:25:36","event":"turn_start","turn":2,"detail":"Buendel B: P-3, P-5, P-6"}
+{"ts":"2026-08-24T08:25:36","event":"task_start","turn":2,"task":"P-3","agent":"coder","detail":"leseprofil/mod.rs, leseprofil/datei.rs, lib.rs"}
+{"ts":"2026-08-24T08:46:09","event":"task_done","turn":2,"task":"P-3","agent":"coder","detail":"f013227; make check exit 0"}
+{"ts":"2026-08-24T08:46:09","event":"commit","turn":2,"task":"P-3","detail":"f013227 — Modul leseprofil, Gestalt und Pruefschritt"}
+{"ts":"2026-08-24T08:46:09","event":"task_start","turn":2,"task":"P-5","agent":"coder","detail":"leseprofil/erkennung.rs"}
+{"ts":"2026-08-24T09:05:05","event":"task_done","turn":2,"task":"P-5","agent":"coder","detail":"a327d08; make check exit 0"}
+{"ts":"2026-08-24T09:05:05","event":"commit","turn":2,"task":"P-5","detail":"a327d08 — erkennen, zwei Durchgaenge"}
+{"ts":"2026-08-24T09:05:05","event":"task_start","turn":2,"task":"P-6","agent":"coder","detail":"leseprofil/bausteine.rs, leseprofil/mod.rs"}
+{"ts":"2026-08-24T10:01:22","event":"task_done","turn":2,"task":"P-6","agent":"coder","detail":"abe1a31; make check exit 0"}
+{"ts":"2026-08-24T10:01:22","event":"commit","turn":2,"task":"P-6","detail":"abe1a31 — vier Bausteine, Haushalt, Teillesung"}
+{"ts":"2026-08-24T10:02:17","event":"review_start","turn":2,"agent":"coderev","detail":"6 files, range 9c859db..abe1a31, 3 commits"}
+{"ts":"2026-08-24T10:19:47","event":"review_done","turn":2,"agent":"coderev","detail":"5 issues filed; 2 vor dem naechsten Bau"}
+{"ts":"2026-08-24T10:19:47","event":"commit","turn":2,"detail":"615190a — Durchsicht Buendel B"}
+{"ts":"2026-08-24T10:19:47","event":"turn_end","turn":2,"detail":"3 tasks resolved, 8 issues created, 4 commits"}
+{"ts":"2026-08-24T10:20:21","event":"circuit_breaker","turn":2,"detail":"Net-negative progress: Turn 1 (5 gefiled, 1 geschlossen), Turn 2 (8 gefiled, 0 geschlossen)"}
+{"ts":"2026-08-24T10:23:39","event":"turn_start","turn":3,"detail":"Befundraeumung: T3-CODE, T3-DOC"}
+{"ts":"2026-08-24T10:23:39","event":"task_start","turn":3,"task":"T3-CODE","agent":"coder"}
+{"ts":"2026-08-24T10:23:39","event":"task_start","turn":3,"task":"T3-DOC","agent":"analyst"}
+{"ts":"2026-08-24T10:52:02","event":"gate_response","turn":3,"detail":"Spec-Berichtigung C3.8, C3.14, C4.3, C6.1: alle vier angenommen"}
+{"ts":"2026-08-24T10:52:02","event":"task_done","turn":3,"task":"T3-CODE","agent":"coder","detail":"06dbb4c; make check exit 0, 1497 Proben"}
+{"ts":"2026-08-24T10:52:02","event":"task_done","turn":3,"task":"T3-DOC","agent":"analyst","detail":"06dbb4c; sechs Befunde geschlossen"}
+{"ts":"2026-08-24T10:52:02","event":"commit","turn":3,"detail":"06dbb4c — Raeumung, 14 Befunde auf 1"}
+{"ts":"2026-08-24T10:52:02","event":"turn_end","turn":3,"detail":"2 tasks resolved, 15 issues closed, 1 created, 1 commit"}
+{"ts":"2026-08-24T10:52:32","event":"turn_start","turn":4,"detail":"Buendel C und D: P-7 (GATE), P-8, P-9"}
+{"ts":"2026-08-24T10:52:32","event":"gate_hit","turn":4,"task":"P-7","detail":"ontocoder task"}
+{"ts":"2026-08-24T11:30:13","event":"gate_response","turn":4,"task":"P-7","detail":"proceed"}
+{"ts":"2026-08-24T11:30:13","event":"task_done","turn":4,"task":"P-7","agent":"ontocoder","detail":"8433935; make check exit 0"}
+{"ts":"2026-08-24T11:30:13","event":"task_start","turn":4,"task":"P-8","agent":"coder"}
+{"ts":"2026-08-24T12:42:24","event":"session_start","history_file":"circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/history/260824-0530-orchestrator-session.md","detail":"Wiederaufnahme: Vorschau zeigt Profil-Zusammenfassung (Circle 260823-2208), Modus plan, Domaene code, Wiedereinstieg in Turn 4 bei Schritt 8"}
+{"ts":"2026-08-24T13:34:39","event":"task_done","turn":4,"task":"P-8","agent":"coder","detail":"4516f4e; drei fehlende Probenpflichten C1.1 C1.2 C1.7 und NichtLesbar nachgetragen; make check exit 0"}
+{"ts":"2026-08-24T13:34:39","event":"commit","turn":4,"task":"P-8","detail":"4516f4e feat(core): readers.toml bekommt ihre Ablagehaelfte"}
+{"ts":"2026-08-24T13:37:33","event":"gate_hit","turn":4,"detail":"zwei offene Entscheidungen im aktiven Circle: 260824-0634 vierte Zustandszeile, 260824-1313 drei Speichernamen"}
+{"ts":"2026-08-24T13:37:33","event":"gate_response","turn":4,"detail":"beide Moeglichkeit 2; Marker _o_ -> _a_; Umsetzung als neuer Schritt 14 (ontocoder), vor Schritt 12"}
+{"ts":"2026-08-24T13:37:33","event":"task_start","turn":4,"task":"P-9","agent":"coder"}
+{"ts":"2026-08-24T13:37:33","event":"task_start","turn":4,"task":"P-15","agent":"analyst","detail":"Spec C5.2 C5.3 C5.6 und A7 berichtigen, zwei falsche Zahlen im Plan, Schritt 14 eintragen, Befund 260824-1313 schliessen"}
+{"ts":"2026-08-24T13:48:14","event":"task_done","turn":4,"task":"P-9","agent":"coder","detail":"b60988f; siebter Inhalt gesetzt; drei erzwungene Uebergangszeilen in appkit/vorschau.rs deklariert; make check exit 0"}
+{"ts":"2026-08-24T13:48:14","event":"commit","turn":4,"task":"P-9","detail":"b60988f feat(ui): der siebte Inhalt"}
+{"ts":"2026-08-24T13:48:14","event":"task_done","turn":4,"task":"P-15","agent":"analyst","detail":"30fd560; C5.2 C5.3 C5.6 und A7 berichtigt neben dem Wortlaut; Schritt 14 eingetragen; Befund 260824-1313 geschlossen"}
+{"ts":"2026-08-24T13:48:14","event":"commit","turn":4,"task":"P-15","detail":"30fd560 docs(workbench): zwei Antworten des Nutzers"}
+{"ts":"2026-08-24T13:48:14","event":"task_start","turn":4,"task":"P-14","agent":"ontocoder","detail":"resources/default-readers.toml; Freigabe liegt in der Nutzerantwort vom 260824-1505"}
+{"ts":"2026-08-24T13:48:14","event":"task_start","turn":4,"task":"P-10","agent":"coder","detail":"crates/krk-ui/src/appkit/vorschau.rs"}
+{"ts":"2026-08-24T13:55:27","event":"task_done","turn":4,"task":"P-14","agent":"ontocoder","detail":"b5bf2e3; ohne Profil 21 -> 0, jedes der 18 Circle-Verzeichnisse bejaht genau eine Zustandszeile"}
+{"ts":"2026-08-24T13:55:27","event":"commit","turn":4,"task":"P-14","detail":"b5bf2e3 feat(resources) und ec5e2f3 docs(workbench): Entscheidungen _a_ -> _i_"}
+{"ts":"2026-08-24T14:02:53","event":"task_done","turn":4,"task":"P-10","agent":"coder","detail":"a77bb77; Zaehlprobe zerlegt statt gelockert; allow(dead_code) mit Ablaufdatum an Schritt 11"}
+{"ts":"2026-08-24T14:02:53","event":"commit","turn":4,"task":"P-10","detail":"a77bb77 feat(ui): der Anzeigezweig"}
+{"ts":"2026-08-24T14:02:53","event":"task_start","turn":4,"task":"P-11","agent":"coder","detail":"appkit/anwendung.rs; dazu die zwei Hinterlassenschaften aus Schritt 10"}
+{"ts":"2026-08-24T14:16:00","event":"task_done","turn":4,"task":"P-11","agent":"coder","detail":"7de937f; beide Hinterlassenschaften aus Schritt 10 eingeloest"}
+{"ts":"2026-08-24T14:16:00","event":"commit","turn":4,"task":"P-11","detail":"7de937f feat(ui): die Anwendung laedt die Profile"}
+{"ts":"2026-08-24T14:16:00","event":"task_start","turn":4,"task":"P-12","agent":"coder","detail":"letzter offener Planschritt; neun C6-Kriterien plus C2.8"}
+{"ts":"2026-08-24T14:38:19","event":"task_done","turn":4,"task":"P-12","agent":"coder","detail":"f9e34e7; alle vierzehn Planschritte auf DONE; C6.7 gemessen 5/11 und 3/5"}
+{"ts":"2026-08-24T14:38:19","event":"commit","turn":4,"task":"P-12","detail":"f9e34e7 test(core): C6 wird belegt statt behauptet"}
+{"ts":"2026-08-24T14:38:19","event":"review_start","turn":4,"agent":"coderev","detail":"abe1a31..HEAD, elf unbelesene Commits, 10 Quelldateien"}
+{"ts":"2026-08-24T14:38:19","event":"review_start","turn":4,"agent":"ontorev","detail":"abe1a31..HEAD beschraenkt auf resources/default-readers.toml"}
+{"ts":"2026-08-24T15:17:51","event":"review_done","turn":4,"agent":"coderev","detail":"7 Befunde, 0 kritisch, 2 mittel, 5 niedrig; covers=11"}
+{"ts":"2026-08-24T15:17:51","event":"review_done","turn":4,"agent":"ontorev","detail":"8 Befunde, 2 mittel, 6 niedrig; alle 21 Ausdruecke gegen 154 Verzeichnisse nachgerechnet"}
+{"ts":"2026-08-24T15:17:51","event":"coherence_review","turn":4,"verdict":"ok","detail":"Artefakt<->Grundlage: 15 Befunde, keiner haelt auf. Artefakt<->Directive: alle 14 Planschritte DONE, Commits gehen auf die Directive zu. Grundlage<->Directive: 2 Entscheidungen beantwortet und umgesetzt, keine offene Frage im Circle."}
+{"ts":"2026-08-24T15:17:51","event":"turn_end","turn":4,"detail":"7 Aufgaben erledigt, 7 Commits, 16 Befunde offen; Nutzer waehlt Turn 5 zur Raeumung"}
+{"ts":"2026-08-24T15:18:28","event":"turn_start","turn":5,"detail":"Raeumung der 16 offenen Befunde; Nutzerwahl vom 260824-1925"}
+{"ts":"2026-08-24T15:25:42","event":"gate_hit","turn":5,"detail":"Defektspeicher zaehlt zwei von vier Markern: dritte Zeile, vierte Zeile oder beide"}
+{"ts":"2026-08-24T15:25:42","event":"gate_response","turn":5,"detail":"beide Zeilen: Gesamtzahl und Zurueckgestellt"}
+{"ts":"2026-08-24T15:25:42","event":"task_start","turn":5,"task":"T5-CODE","agent":"coder","detail":"sechs Code-Befunde, darunter die blinde Probe zur Naht des Deckels"}
+{"ts":"2026-08-24T15:25:42","event":"task_start","turn":5,"task":"T5-SPEC","agent":"analyst","detail":"C6.5, A5 und zwei Planstellen sagen weiter ueber 2.000"}
+{"ts":"2026-08-24T15:25:42","event":"task_start","turn":5,"task":"T5-DATA","agent":"ontocoder","detail":"acht Befunde der Auslieferungsfassung, darunter das Sitzungsmuster und der Defektspeicher"}
+{"ts":"2026-08-24T16:38:00","event":"task_done","turn":5,"task":"T5-CODE","agent":"coder","detail":"7180b3e und 79209c8; sieben Befunde, Zweig durch Aushoehlen belegt"}
+{"ts":"2026-08-24T16:38:00","event":"task_done","turn":5,"task":"T5-DATA","agent":"ontocoder","detail":"942172b; sieben von acht, Vorschlag abgelehnt weil dritter falscher Ausgang"}
+{"ts":"2026-08-24T16:38:00","event":"task_done","turn":5,"task":"T5-SPEC","agent":"analyst","detail":"89e0c01 und 3e5cb0c; C6.5 entschieden, Zeitstempeldrift gefunden"}
+{"ts":"2026-08-24T16:38:00","event":"turn_end","turn":5,"detail":"15 von 16 Befunden geraeumt, 6 Commits, 3 neue Befunde ueber die Sitzung selbst"}
+{"ts":"2026-08-24T18:13:52","event":"reconciliation","turn":5,"detail":"12 Abweichungen, 6 berichtigt, 6 als Datensatz; Verdict review-needed, Empfehlung revise Grounding"}
+{"ts":"2026-08-24T18:13:52","event":"gate_hit","turn":5,"detail":"Circle stop conditions"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 1: does not hold"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 2: holds"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 3: holds"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 4: holds"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 5: holds"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 6: holds"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 7: holds"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 8: holds"}
+{"ts":"2026-08-24T18:13:52","event":"gate_response","turn":5,"detail":"Bedingung 9: holds"}
+{"ts":"2026-08-24T18:13:52","event":"bounded_closure_proposed","turn":5,"detail":"Nutzerwahl: Bedingung 1 haelt nicht und die Runde schliesst trotzdem; sieben Punkte Nutzerarbeit ausstehend, deshalb _b_ statt _c_"}
+{"ts":"2026-08-24T18:20:42","event":"portfolio_refresh","turn":5,"detail":"circles/260823-2208-…/_b_circle.md; shared/history/260824-2017-playmaker-orchestrator-phase4.md"}
+{"ts":"2026-08-24T18:20:42","event":"session_end","turn":5,"detail":"5 Turns, 28 Commits, Runde 16 beschraenkt geschlossen; 9 Commits ohne Durchsicht"}
