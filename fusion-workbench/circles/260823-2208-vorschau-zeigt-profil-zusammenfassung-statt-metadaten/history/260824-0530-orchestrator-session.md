@@ -118,3 +118,40 @@ Plan: `circles/260823-2208-.../planning/260824-0640_o_plan-vorschau-zeigt-profil
 Das Kopffeld `**Active spec/plan:**` des Circle-Datensatzes zeigt seit diesem Tor auf den
 Plan, und der Abschnitt `## Directive` trägt an Stelle der Prosa den festen Zeiger auf dieses
 Feld.
+
+## Turn 1 (260824-0530 bis 260824-1020)
+
+Vier Schritte erledigt: P-13, P-1, P-2, P-4. Fünf Commits.
+
+| Commit | Was |
+|---|---|
+| `c15f99b` | Circle, Spec, Plan, acht beantwortete Fragen, Schritt 13 |
+| `abecfb2` | `regex` 1.13.1 aufgenommen; `Cargo.lock` von 97 auf 98 Einträge |
+| `ed893a4` | `Datei::Leser` als siebte Ablagedatei |
+| `b76800b` | `lesen_hoechstens` und `anlesen`, sechs Proben |
+| `9c859db` | Durchsicht der vier Commits, drei Befunde |
+
+**Vier neue Defektdatensätze**, alle im Circle-Speicher: der stille `zip`-Kürzer
+in der Beiseitelegeprobe, die unvollständigen `Files:`-Zeilen der Planschritte,
+die vierzehn Prosastellen der Ablage samt dem Datensatz, der drei davon schützt,
+der Widerspruch zwischen C3.14 und C6.6, und zwei Doc-Kommentare im Präsens.
+
+**Ein Befund, der Bauarbeit verlangt und vor Schritt 8 gehört:** der offene
+Datensatz `shared/issues/260821-1023_o_...` weist ausdrücklich an, drei
+Prosastellen nicht anzufassen, weil sie damals richtig waren. Seit Schritt 2
+sind sie falsch, und die angehängte `Also seen`-Zeile nennt die Umkehrung nicht.
+
+**Eine Entscheidung habe ich selbst getroffen**, ohne den Nutzer zu fragen: die
+sechs Proben zu `lesen_hoechstens` und `anlesen` gehen in das bestehende
+Testziel der Kiste, obwohl die `Files:`-Zeile des Schrittes nur zwei
+Quelldateien nannte. Der Grund steht im Defektdatensatz `260824-0955_o_...`.
+
+**Kohärenz-Blick, drei Kanten:** Artefakt gegen Grundlage — drei Befunde, keiner
+hält auf. Artefakt gegen Directive — die Commits bewegen sich darauf zu. Grundlage
+gegen Directive — 8 beantwortete Fragen berührt, eine mit überholtem Constraint.
+Kein Auslösegrund für einen Umschwung; der Nutzer hat Turn 2 gewählt.
+
+## Turn 2 (ab 260824-1020)
+
+Bündel B: Schritt 3 (Gestalt der Datei und Prüfschritt), Schritt 5 (Erkennung),
+Schritt 6 (die vier Bausteine und der Haushalt).

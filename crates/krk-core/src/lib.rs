@@ -1,7 +1,15 @@
 #![deny(unsafe_code)]
 //! Der Kern von KRK: Verzeichnisleser, Ordnermodell, Belegungstabelle,
 //! Operationsmaschine, das Regelmodell fuer das Umbenennen im Stapel, die
-//! Textrechnung des Editors und die Ablage in TOML.
+//! Textrechnung des Editors, die Leseprofile des Vorschaufensters und die
+//! Ablage in TOML.
+//!
+//! Die Leseprofile aus der Runde 16 sind die juengste Schicht: `leseprofil`
+//! liest die von Hand gepflegte `readers.toml`, erkennt an einem Ordner sein
+//! Profil und rechnet daraus die Zusammenfassung, die das Vorschaufenster an
+//! die Stelle der Metadaten setzt. Sie liegt hier und nicht in `krk-ui`, weil
+//! ihre abzaehlbaren Grenzen ohne Fenster zu belegen sind und `krk-ui` kein
+//! Bibliotheksziel hat; die Herleitung steht im Kopf jenes Moduls.
 //!
 //! Der Kern kennt AppKit nicht. Das ist der Grund, aus dem er ohne Fenster
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
@@ -18,6 +26,7 @@
 //! hinzugebracht haben.
 
 pub mod ablage;
+pub mod leseprofil;
 pub mod operation;
 pub mod stapelumbenennen;
 pub mod tasten;
