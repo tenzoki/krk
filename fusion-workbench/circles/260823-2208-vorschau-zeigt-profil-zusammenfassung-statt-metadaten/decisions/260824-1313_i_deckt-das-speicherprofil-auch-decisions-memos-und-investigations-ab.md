@@ -70,7 +70,7 @@ nachziehen, indem `decisions` aus der Aufzählung wieder herausgenommen wird und
 ein eigenes Profil bekommt.
 
 ---
-Answered: 260824-1505 — Möglichkeit 2. Aus sechs Alternativen des Pfadmusters
+Answered: 260824-1546 — Möglichkeit 2. Aus sechs Alternativen des Pfadmusters
 werden neun: `decisions`, `memos` und `investigations` kommen hinzu und zeigen
 Zahl und jüngste zehn wie die übrigen Speicher.
 
@@ -89,7 +89,7 @@ eigenes Profil für `decisions` — Möglichkeit 3 — ließe sich später ohne 
 nachziehen, indem der Name aus der Aufzählung wieder herausgenommen wird. Wer
 das aufgreift, stellt dafür eine eigene Frage.
 
-Implemented: 260824-1650, Commit `b5bf2e3`, Schritt 14 des Plans. Das Pfadmuster trägt neun Namen. Nachgemessen an den 118 Unterordnern unter `shared/` und den achtzehn Runden: das Speicherprofil trifft 99 statt 78, der Defektspeicher unverändert 19, ohne Profil bleiben 0 statt 21. Der Haushalt ist unverändert.
+Implemented: 260824-1554, Commit `b5bf2e3`, Schritt 14 des Plans. Das Pfadmuster trägt neun Namen. Nachgemessen an den 118 Unterordnern unter `shared/` und den achtzehn Runden: das Speicherprofil trifft 99 statt 78, der Defektspeicher unverändert 19, ohne Profil bleiben 0 statt 21. Der Haushalt ist unverändert.
 Deferred:
 Superseded by:
 Retired:

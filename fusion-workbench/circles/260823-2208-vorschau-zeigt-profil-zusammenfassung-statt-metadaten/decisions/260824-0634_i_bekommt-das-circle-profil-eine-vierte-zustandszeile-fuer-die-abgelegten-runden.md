@@ -70,7 +70,7 @@ nennt, ist die Zahl der Zustaende, die der Spec vor Augen hatte, und nicht eine 
 die Messung am Bestand zeigt, dass es sechs sind.
 
 ---
-Answered: 260824-1505 — Möglichkeit 2. Das Rundenprofil bekommt eine vierte
+Answered: 260824-1546 — Möglichkeit 2. Das Rundenprofil bekommt eine vierte
 Zustandszeile „Abgelegt", ein Vorhandensein auf `^_[sd]_circle\.md$`. Damit
 fällt jeder der sechs Marker in genau eine Zeile.
 
@@ -94,7 +94,7 @@ Antwort.** Der Abschnitt `## Question` sagt, von den achtzehn
 Circle-Verzeichnissen falle „heute genau eines" aus den drei Zeilen. Es sind
 zwei: `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` und
 `260816-2255-befehle-absetzen-und-makros-speichern`, beide `_d_`, nachgezählt
-am 260824-1508 mit `ls circles/*/_d_circle.md`. Kein Datensatz trägt heute `_a_`
+am 260824-1540 mit `ls circles/*/_d_circle.md`. Kein Datensatz trägt heute `_a_`
 oder `_s_`. Der Befund lag beim Beantworten als
 `issues/260824-1313_o_der-datensatz-zur-vierten-zustandszeile-nennt-ein-verzeichnis-…`
 im selben Speicher und ist dem Nutzer beim Vorlegen der Frage nicht genannt
@@ -104,7 +104,7 @@ Zeile zu klein und nicht zu groß. Der ursprüngliche Wortlaut in `## Question`
 bleibt stehen: er ist der Beleg dafür, auf welcher Grundlage die Frage gestellt
 wurde.
 
-Implemented: 260824-1650, Commit `b5bf2e3`, Schritt 14 des Plans. Die Zeile „Abgelegt" steht in `resources/default-readers.toml` hinter „Geschlossen" und vor der Directive-Zeile. Nachgemessen an den achtzehn Circle-Verzeichnissen dieser Werkbank: die vier Zustandszeilen treffen 0, 1, 15 und 2, jedes Verzeichnis bejaht genau eine. Der Haushalt ist unverändert.
+Implemented: 260824-1554, Commit `b5bf2e3`, Schritt 14 des Plans. Die Zeile „Abgelegt" steht in `resources/default-readers.toml` hinter „Geschlossen" und vor der Directive-Zeile. Nachgemessen an den achtzehn Circle-Verzeichnissen dieser Werkbank: die vier Zustandszeilen treffen 0, 1, 15 und 2, jedes Verzeichnis bejaht genau eine. Der Haushalt ist unverändert.
 Deferred:
 Superseded by:
 Retired:
