@@ -7,3 +7,6 @@ Der Befund ist von den Stellen zu trennen, an denen „vier" richtig steht. `Zug
 Gefunden beim Lesen des Ablagemoduls für die Planung der zwölften Runde, nicht durch deren Directive verursacht: die Abweichung stammt aus der Runde 9, die die Ablage von vier auf sechs Dateien gebracht hat. Deshalb liegt der Datensatz im gemeinsamen Speicher.
 
 Die zwölfte Runde bringt die siebte Ablagedatei und zieht dabei nach ihrem Abnahmekriterium C2.1 jede Prosastelle nach, die heute **sechs** nennt. Die drei Stellen hier nennen vier und fallen aus jenem Kriterium heraus; wer sie beim Nachziehen mitnimmt, hat den Befund erledigt, und wer nicht, findet ihn hier wieder.
+
+---
+Also seen: 260824-0940 by coder — die siebte Ablagedatei ist mit Schritt 2 der Runde 16 gekommen (`readers.toml`), nicht mit der zwölften; die drei Stellen in `ablage/mod.rs` sind dabei nicht mitgezogen worden und nennen weiter vier.

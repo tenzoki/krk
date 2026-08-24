@@ -92,16 +92,19 @@ fn geladene_einstellungen(ablage: &Ablage) -> Geladen<Einstellungen> {
         .expect("die Schreibsperre laesst sich nicht nehmen")
 }
 
-/// Die vier Ablagedateien, die TOML tragen, in der Reihenfolge von
+/// Die fuenf Ablagedateien, die TOML tragen, in der Reihenfolge von
 /// [`Datei::ALLE`].
 ///
-/// **Eine abgeleitete Frage und keine zweite Liste.** Seit der Runde 9 fuehrt
-/// [`Datei::ALLE`] sechs Dateien in zwei Formaten, und die Rundlaeufe dieser
-/// Datei meinen die vier, die durch `Zugang::laden` und `Zugang::sichern`
-/// gehen. Eine von Hand gepflegte Liste daneben koennte von `Datei::ALLE`
-/// abweichen; ein Filter ueber [`Datei::format`] kann es nicht. Die Proben, die
-/// **jede** Ablagedatei meinen — Pfad, Name, Nichtanlage —, laufen weiterhin
-/// ueber `Datei::ALLE` und decken die zwei Zettel mit ab.
+/// **Eine abgeleitete Frage und keine zweite Liste.** Seit der Runde 16 fuehrt
+/// [`Datei::ALLE`] sieben Dateien in zwei Formaten, und dieser Filter meint
+/// die fuenf mit TOML. Eine von Hand gepflegte Liste daneben koennte von
+/// `Datei::ALLE` abweichen; ein Filter ueber [`Datei::format`] kann es nicht.
+/// Die Proben, die **jede** Ablagedatei meinen — Pfad, Name, Nichtanlage —,
+/// laufen weiterhin ueber `Datei::ALLE` und decken die zwei Zettel mit ab.
+///
+/// **Nicht jede der fuenf geht durch `Zugang::laden` und `Zugang::sichern`.**
+/// `readers.toml` hat in diesem Baum noch keinen Ladeweg; wo eine Probe einen
+/// geladenen Wert braucht, nennt sie die Dateien deshalb einzeln.
 fn toml_dateien() -> impl Iterator<Item = Datei> {
     Datei::ALLE
         .into_iter()
@@ -253,6 +256,7 @@ fn der_ablageordner_liegt_unter_application_support() {
             "bookmarks.toml",
             "session.toml",
             "settings.toml",
+            "readers.toml",
             "note-1.txt",
             "note-2.txt"
         ]
@@ -368,11 +372,22 @@ fn der_auslieferungszustand_der_sitzung_erfuellt_c1() {
 // Rundlauf: schreiben und wiedereinlesen
 // ---------------------------------------------------------------------------
 
-/// Der Rundlauf jeder Ablagedatei, `settings.toml` eingeschlossen.
+/// Eine `readers.toml`, wie der Nutzer sie von Hand hinterliesse.
 ///
-/// Die vierte geht als einzige nicht ueber [`Ablage::sichern`]: sie wird von
-/// Hand gepflegt, und ihr Schreibweg ist das atomare Schreiben eines Textes.
-/// Geprueft wird derselbe Rundlauf, allein die Nutzlast ist eine andere.
+/// Der Inhalt ist hier nur Nutzlast: der Rundlauf prueft, dass der Ablageort
+/// den Text unveraendert zurueckgibt, und nicht, was er bedeutet.
+const LESEPROFILTEXT: &str = "# von Hand gepflegt\n";
+
+/// Der Rundlauf jeder Ablagedatei, die von Hand gepflegten eingeschlossen.
+///
+/// **Zwei der fuenf gehen nicht ueber [`Ablage::sichern`]**: `settings.toml`
+/// und, seit der Runde 16, `readers.toml`. Beide pflegt der Nutzer von Hand,
+/// und ihr Schreibweg ist das atomare Schreiben eines Textes. Geprueft wird
+/// derselbe Rundlauf, allein die Nutzlast ist eine andere.
+///
+/// Fuer `readers.toml` endet der Rundlauf beim Text und nicht bei einem
+/// geladenen Wert: die Ablage kennt von dieser Datei bislang nur Namen und
+/// Pfad, und wer ihren Inhalt auswertet, kommt mit einem spaeteren Schritt.
 #[test]
 fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     let (_ordner, ablage) = ablage("rundlauf");
@@ -400,6 +415,14 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
         })
         .expect("die Schreibsperre laesst sich nicht nehmen")
         .expect("settings.toml laesst sich nicht schreiben");
+    // Dieselbe Ueberlegung fuer `readers.toml`, aus demselben Grund: sie wird
+    // von Hand gepflegt und geht deshalb nicht ueber `Zugang::sichern`.
+    ablage
+        .durchgang(|zugang| {
+            atomar::schreiben(&zugang.pfad(Datei::Leser), &mut LESEPROFILTEXT.as_bytes())
+        })
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("readers.toml laesst sich nicht schreiben");
 
     for welche in toml_dateien() {
         assert!(
@@ -420,6 +443,13 @@ fn alle_vier_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     assert_eq!(zurueck_belegung.wert, belegung);
     assert_eq!(zurueck_lesezeichen.wert, lesezeichen);
     assert_eq!(zurueck_sitzung.wert, sitzung);
+
+    assert_eq!(
+        fs::read_to_string(ablage.pfad(Datei::Leser))
+            .expect("readers.toml laesst sich nicht lesen"),
+        LESEPROFILTEXT,
+        "der Rundlauf hat readers.toml veraendert"
+    );
 
     let zurueck_einstellungen = geladene_einstellungen(&ablage);
     assert!(!zurueck_einstellungen.ist_ersetzt());
@@ -1021,13 +1051,18 @@ fn beiseitepfad(ablage: &Ablage, welche: Datei) -> PathBuf {
     atomar::beiseitepfad(&ablage.pfad(welche)).expect("kein Beiseitepfad")
 }
 
-/// Laedt die vier TOML-Dateien und liefert ihre Ersetzungen in der Reihenfolge
-/// von [`toml_dateien`].
+/// Laedt die vier TOML-Dateien mit Ladeweg und liefert ihre Ersetzungen in der
+/// Reihenfolge von [`toml_dateien`].
 ///
 /// Die Belegung geht ueber ihren Stellvertreter, die Einstellungen ueber
 /// `einstellungen::laden`; damit laufen alle vier durch denselben
 /// `Zugang::laden` wie im Betrieb. Die zwei Zettel stehen nicht darin: sie
 /// gehen ueber `Zugang::text_laden` und haben ihre eigenen Proben weiter unten.
+///
+/// **`readers.toml` fehlt hier, und das Fehlen ist gesehen und nicht
+/// uebersehen**: sie traegt seit der Runde 16 TOML, hat in diesem Baum aber
+/// noch keinen Ladeweg. Wer den Ladeweg baut, traegt sie hier nach; bis dahin
+/// laesst die Liste sie aus, und das `zip` unten kuerzt entsprechend.
 fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
     let belegung: Geladen<BelegungStellvertreter> = geladen(ablage, Datei::Belegung);
     let lesezeichen: Geladen<Lesezeichenliste> = geladen(ablage, Datei::Lesezeichen);
@@ -1045,8 +1080,9 @@ fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
 /// C3.3, C3.4).
 ///
 /// Die Regel hat in `Ablage::laden` keinen Zweig je Datei, und diese Probe
-/// laeuft deshalb ueber `Datei::ALLE`: eine fuenfte Ablagedatei koennte sie
-/// nicht vergessen.
+/// laeuft deshalb ueber [`toml_dateien`] statt ueber eine eigene Liste. Sie
+/// prueft die vier mit Ladeweg; `readers.toml` bekommt ihren Kaputtinhalt und
+/// faellt beim `zip` heraus, solange sie keinen hat.
 #[test]
 fn jede_der_vier_dateien_wird_bei_beschaedigung_zur_seite_gelegt() {
     let (_ordner, ablage) = ablage("beiseite-alle-vier");

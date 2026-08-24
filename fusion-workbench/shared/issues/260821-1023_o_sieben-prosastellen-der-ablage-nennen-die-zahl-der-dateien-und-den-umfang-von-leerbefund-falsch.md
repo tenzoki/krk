@@ -114,3 +114,6 @@ mitgezogen werden: `:59` bleibt `:59`, `:513` steht auf `:549` (`laden`), `:599`
 
 **Nachgetragen von:** coderev, Durchsicht des Commits `d771ec6` am 260821-1401, Bereich
 `073448e..d771ec6`
+
+---
+Also seen: 260824-0940 by coder — Schritt 2 der Runde 16 hat `readers.toml` als siebte Ablagedatei aufgenommen; die zwei Fundstellen in `pfade.rs` lesen sich jetzt „sieben Ablagedateien" (`:1`) und „Die vier übrigen TOML-Dateien und die zwei Zettel" (`leerbefund`), der Befund selbst — die fehlende dritte Frage im Modulkopf — steht unverändert, und die fünf Stellen in `mod.rs` sind nicht angefasst.

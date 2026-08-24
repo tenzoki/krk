@@ -1,9 +1,9 @@
-//! Wo die sechs Ablagedateien liegen, in welchen zwei Formaten sie stehen, und
+//! Wo die sieben Ablagedateien liegen, in welchen zwei Formaten sie stehen, und
 //! wie der Ordner beim ersten Start entsteht.
 //!
 //! # Zwei Formate, und warum die Zettel kein TOML tragen
 //!
-//! Vier Dateien tragen TOML und gehen ueber [`super::Zugang::laden`] und
+//! Fuenf Dateien tragen TOML und gehen ueber [`super::Zugang::laden`] und
 //! [`super::Zugang::sichern`]; die zwei Zetteldateien der Runde 9 tragen den
 //! Text des Zettels und sonst nichts. [`Datei::format`] sagt, welche welche
 //! ist, und wer beide Sorten verschieden behandeln muss, fragt diese abgeleitete
@@ -127,9 +127,9 @@ pub enum Leerbefund {
     Beschaedigt,
 }
 
-/// Die sechs Dateien, die KRK unter `Application Support` ablegt.
+/// Die sieben Dateien, die KRK unter `Application Support` ablegt.
 ///
-/// Eine Aufzaehlung statt sechs loser Namen: wer alle anfassen muss, laeuft
+/// Eine Aufzaehlung statt sieben loser Namen: wer alle anfassen muss, laeuft
 /// ueber [`Datei::ALLE`] und kann keine vergessen. Eine Ablagedatei, die in
 /// keiner Aufzaehlung steht, gibt es nicht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -146,10 +146,19 @@ pub enum Datei {
     /// `settings.toml`: die von Hand gepflegten Einstellungen (C11), siehe
     /// [`super::einstellungen`].
     ///
-    /// Die einzige der vier, die KRK im Betrieb nicht schreibt. Sie entsteht
-    /// beim ersten Start aus der eingebetteten Auslieferungsfassung und bleibt
-    /// danach dem Nutzer ueberlassen.
+    /// Eine der beiden, die KRK im Betrieb nicht schreibt; die andere ist
+    /// [`Datei::Leser`]. Sie entsteht beim ersten Start aus der eingebetteten
+    /// Auslieferungsfassung und bleibt danach dem Nutzer ueberlassen.
     Einstellungen,
+    /// `readers.toml`: die von Hand gepflegten Leseprofile, aus denen die
+    /// Vorschau ihre Zusammenfassung baut (C1 der Runde 16).
+    ///
+    /// Sie geht denselben Weg wie [`Datei::Einstellungen`]: beim ersten Start
+    /// entsteht sie aus einer eingebetteten Auslieferungsfassung, danach
+    /// gehoert sie dem Nutzer. Wer sie anlegt und wer ihren Inhalt auswertet,
+    /// beschreiben spaetere Schritte; die Ablage kennt von dieser Datei nur den
+    /// Namen und den Weg dorthin.
+    Leser,
     /// `note-1.txt` und `note-2.txt`: die zwei Notizzettel aus C5 der Runde 9.
     ///
     /// **Eine Variante mit Nutzlast und nicht zwei nebeneinander.** Welcher
@@ -163,13 +172,14 @@ pub enum Datei {
 }
 
 impl Datei {
-    /// Alle sechs, in fester Reihenfolge: die vier TOML-Dateien, danach die
+    /// Alle sieben, in fester Reihenfolge: die fuenf TOML-Dateien, danach die
     /// zwei Zettel.
-    pub const ALLE: [Datei; 6] = [
+    pub const ALLE: [Datei; 7] = [
         Datei::Belegung,
         Datei::Lesezeichen,
         Datei::Sitzung,
         Datei::Einstellungen,
+        Datei::Leser,
         Datei::Zettel(Zettel::Erster),
         Datei::Zettel(Zettel::Zweiter),
     ];
@@ -185,6 +195,7 @@ impl Datei {
             Datei::Lesezeichen => "bookmarks.toml",
             Datei::Sitzung => "session.toml",
             Datei::Einstellungen => "settings.toml",
+            Datei::Leser => "readers.toml",
             Datei::Zettel(Zettel::Erster) => "note-1.txt",
             Datei::Zettel(Zettel::Zweiter) => "note-2.txt",
         }
@@ -195,13 +206,15 @@ impl Datei {
     /// Die abgeleitete Frage, ueber die sich die beiden Sorten trennen lassen,
     /// ohne eine zweite Liste neben [`Datei::ALLE`] zu fuehren. Die
     /// Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: eine
-    /// siebte Ablagedatei haelt den Bau hier an und erzwingt eine bewusste
+    /// achte Ablagedatei haelt den Bau hier an und erzwingt eine bewusste
     /// Einordnung.
     pub const fn format(self) -> Format {
         match self {
-            Datei::Belegung | Datei::Lesezeichen | Datei::Sitzung | Datei::Einstellungen => {
-                Format::Toml
-            }
+            Datei::Belegung
+            | Datei::Lesezeichen
+            | Datei::Sitzung
+            | Datei::Einstellungen
+            | Datei::Leser => Format::Toml,
             Datei::Zettel(_) => Format::Text,
         }
     }
@@ -211,7 +224,7 @@ impl Datei {
     ///
     /// Die zweite abgeleitete Frage neben [`Datei::format`], und sie steht aus
     /// demselben Grund hier: vollstaendig, ohne Auffangzweig, damit eine
-    /// siebte Ablagedatei den Bau anhaelt und eine bewusste Einordnung
+    /// achte Ablagedatei den Bau anhaelt und eine bewusste Einordnung
     /// erzwingt. Wer sie beantwortet, beantwortet sie **je Datei** und leitet
     /// sie nicht von einer anderen ab.
     ///
@@ -221,7 +234,14 @@ impl Datei {
     /// `eintraege = []` und damit zu einem obersten Schluessel. Eine
     /// `bookmarks.toml` ohne einen einzigen hat KRK nie geschrieben.
     ///
-    /// **Die drei uebrigen TOML-Dateien und die zwei Zettel tragen
+    /// **`readers.toml` steht mit [`Leerbefund::Vorgabe`] neben
+    /// `settings.toml` und `keymap.toml` und nicht neben `bookmarks.toml`**
+    /// (C1.4 der Runde 16): sie wird von Hand gepflegt, und wer sie bis auf
+    /// ihre Kommentare leerraeumt, meint „keine Profile" und keinen Schaden.
+    /// KRK schreibt sie im Betrieb nie, also kann eine Datei ohne obersten
+    /// Schluessel hier kein Zeichen fuer einen Schaden sein.
+    ///
+    /// **Die vier uebrigen TOML-Dateien und die zwei Zettel tragen
     /// [`Leerbefund::Vorgabe`]**, und zwar vorlaeufig: `settings.toml` und
     /// `keymap.toml` aendert der Nutzer von Hand und darf sie leerraeumen,
     /// `session.toml` traegt an jeder Struktur `#[serde(default)]` und ist auf
@@ -234,9 +254,11 @@ impl Datei {
     pub const fn leerbefund(self) -> Leerbefund {
         match self {
             Datei::Lesezeichen => Leerbefund::Beschaedigt,
-            Datei::Belegung | Datei::Sitzung | Datei::Einstellungen | Datei::Zettel(_) => {
-                Leerbefund::Vorgabe
-            }
+            Datei::Belegung
+            | Datei::Sitzung
+            | Datei::Einstellungen
+            | Datei::Leser
+            | Datei::Zettel(_) => Leerbefund::Vorgabe,
         }
     }
 }
@@ -314,7 +336,7 @@ pub fn gekuerzt_fuer_anzeige(pfad: &Path, benutzerverzeichnis: Option<&Path>) ->
     }
 }
 
-/// Der Ordner, in dem die sechs Dateien liegen.
+/// Der Ordner, in dem die sieben Dateien liegen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ablageort {
     wurzel: PathBuf,
@@ -351,7 +373,7 @@ impl Ablageort {
         &self.wurzel
     }
 
-    /// Der Pfad einer der sechs Dateien.
+    /// Der Pfad einer der sieben Dateien.
     pub fn datei(&self, welche: Datei) -> PathBuf {
         self.wurzel.join(welche.dateiname())
     }
