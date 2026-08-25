@@ -255,7 +255,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
 
 ### Strang 2: der Mechanismus der Leseprofile
 
-4. **Ein Ort wird je Zusammenfassung höchstens einmal gelesen**
+4. [DONE] **Ein Ort wird je Zusammenfassung höchstens einmal gelesen**
    - Executor: `coder`
    - Files: `crates/krk-core/src/leseprofil/bausteine.rs`, `crates/krk-core/tests/leseprofil.rs`
    - Changes: `Lauf` merkt seine Lesungen nach **aufgelöstem Pfad**, so wie er heute schon den erkannten Ordner in `Lauf::stand` merkt. Aus der `OnceCell<Option<Lesestand>>` wird ein Merker über mehrere Orte; `Lauf::am_ort` fragt ihn, statt bei einer Ortsangabe unbesehen zu lesen. Der Haushalt zählt damit **verschiedene Orte** statt Zeilen mit Ortsangabe.
@@ -319,7 +319,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
 
 ### Strang 3: was der Nutzer sieht
 
-7. **Ohne angewählte Zeile beschreibt die Vorschau den angezeigten Ordner**
+7. [DONE] **Ohne angewählte Zeile beschreibt die Vorschau den angezeigten Ordner**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes: Die Regel lautet: **die Vorschau beschreibt den ausgewählten Eintrag, und ohne Auswahl den angezeigten Ordner.** Eine Regel ohne Ausnahme, für jeden Ordner und nicht nur für die Projektwurzel — „Projektwurzel" ist für die Anwendung kein Begriff, und sie aus etwas zu erschließen hieße, Projektwissen in die Anzeige zu legen, wo heute allein die Leseprofile es tragen.

@@ -1314,9 +1314,11 @@ impl Anwendungsdelegierter {
                         selbst.bereichsleiste_nachziehen();
                     }
                 }));
-            // Eine neue Auswahl fuellt den aktiven Vorschau-Tab (C6). Auch
-            // dieser Rueckruf haelt den Delegierten **schwach**, aus demselben
-            // Grund wie die beiden darueber.
+            // Was das Dateifenster zu beschreiben gibt, fuellt den aktiven
+            // Vorschau-Tab (C6): der ausgewaehlte Eintrag, und ohne
+            // ausgewaehlte Zeile der angezeigte Ordner. Auch dieser Rueckruf
+            // haelt den Delegierten **schwach**, aus demselben Grund wie die
+            // beiden darueber.
             let schwach = objc2::rc::Weak::from_retained(&self.retain());
             self.dateifenster(seite)
                 .quelle()
@@ -1682,25 +1684,30 @@ impl Anwendungsdelegierter {
             .expect("das Vorschaufenster steht seit `oberflaeche_aufbauen`")
     }
 
-    /// Eine neue Auswahl fuellt den aktiven Vorschau-Tab (C6).
+    /// Fuellt den aktiven Vorschau-Tab mit dem, was das Dateifenster meldet
+    /// (C6).
     ///
-    /// Nur die Auswahl des **aktiven** Dateifensters: der Rueckruf kommt aus
-    /// beiden, und die Vorschau zeigt, was vor dem Nutzer liegt. Eine
-    /// aufgehobene Auswahl laesst den Tab stehen; das Zustandsdiagramm des
-    /// Specs kennt allein die **neue** Auswahl als Ausloeser.
+    /// Nur die Meldung des **aktiven** Dateifensters: der Rueckruf kommt aus
+    /// beiden, und die Vorschau zeigt, was vor dem Nutzer liegt.
+    ///
+    /// **Es kommt immer ein Pfad an und nie `None`.** Bis zum 260825 stand
+    /// hier ein zweiter frueher Ruecksprung mit der Begruendung, eine
+    /// aufgehobene Auswahl lasse den Tab stehen, weil das Zustandsdiagramm des
+    /// Specs allein die neue Auswahl als Ausloeser kenne. Der Nutzerentscheid
+    /// vom 260825-1740 hat die Regel ersetzt: die Vorschau beschreibt den
+    /// ausgewaehlten Eintrag, und ohne Auswahl den angezeigten Ordner. Was
+    /// beschrieben wird, entscheidet damit `zu_beschreiben` in
+    /// [`super::tabelle`] und nicht diese Funktion; sie nimmt entgegen.
     ///
     /// **Bei ausgeblendeter Vorschau wird nichts gelesen.** Der Pfad geht
     /// dann in [`AnwendungsIvars::vorschau_nachtrag`], und das Einblenden aus
     /// C7 holt ihn nach; die Begruendung steht am Feld. Ein zweiter Weg in die
     /// Vorschau entsteht dabei nicht: nachgeholt wird mit demselben
     /// `datei_anzeigen`, das auch hier steht.
-    fn vorschau_fuellen(&self, seite: Fensterseite, pfad: Option<PathBuf>) {
+    fn vorschau_fuellen(&self, seite: Fensterseite, pfad: PathBuf) {
         if seite != self.ivars().modell.borrow().aktiv() {
             return;
         }
-        let Some(pfad) = pfad else {
-            return;
-        };
         if !self.ivars().modell.borrow().sichtbar(Bereich::Vorschau) {
             *self.ivars().vorschau_nachtrag.borrow_mut() = Some(pfad);
             return;

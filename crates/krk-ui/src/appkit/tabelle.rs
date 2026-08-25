@@ -456,12 +456,38 @@ fn ohne_ordnerzeichen(anzeige: &str) -> Option<&str> {
 /// Schreibweise tragen und keine von beiden zu lesen ist wie ein Bandwurm.
 pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 
-/// Was mit einer neuen Auswahl zu geschehen hat: der vollstaendige Pfad des
-/// ausgewaehlten Eintrags, `None` fuer eine aufgehobene Auswahl.
+/// Was die Vorschau zu beschreiben hat: der vollstaendige Pfad des
+/// ausgewaehlten Eintrags, und ohne ausgewaehlte Zeile der angezeigte Ordner.
+///
+/// **Er meldet immer einen Pfad und nie `None`.** Bis zum 260825 trug er ein
+/// `Option`, und der Empfaenger kehrte bei `None` zurueck; der Vorschau-Tab
+/// zeigte danach weiter eine Datei aus einem Ordner, in dem der Nutzer nicht
+/// mehr stand. Der Nutzerentscheid vom 260825-1740 kennt diesen Fall nicht
+/// mehr; die Regel selbst steht bei [`zu_beschreiben`] und nicht hier, damit
+/// sie nicht an zwei Stellen auseinanderlaeuft.
 ///
 /// Ein eigener Name aus demselben Grund wie beim [`Umbenennungsmelder`]
 /// darueber.
-pub type Auswahlmelder = Box<dyn Fn(Option<PathBuf>)>;
+pub type Auswahlmelder = Box<dyn Fn(PathBuf)>;
+
+/// Was die Vorschau zu beschreiben hat, aus dem ausgewaehlten Eintrag und dem
+/// angezeigten Ordner.
+///
+/// **Die eine Stelle, an der die Regel des Nutzerentscheids vom 260825-1740
+/// steht:** die Vorschau beschreibt den ausgewaehlten Eintrag, und ohne Auswahl
+/// den angezeigten Ordner. Ohne Ausnahme und fuer **jeden** Ordner —
+/// „Projektwurzel“ ist fuer KRK kein Begriff, und welcher Ordner eine ist,
+/// beantwortet ein Leseprofil in `readers.toml` und nicht diese Datei
+/// (`shared/decisions/260825-1725_*_was-zeigt-die-vorschau-wenn-keine-zeile-ausgewaehlt-ist.md`).
+///
+/// **Genau ein Rufer**, [`DateifensterQuelle::auswahl_merken`]. Sie steht
+/// trotzdem als eigene Funktion da, aus demselben Grund wie die
+/// Rueckschrittregel in [`crate::kommandos::rueckschritt`]: eine Regel, die als
+/// Zeile mitten in einem AppKit-Weg steht, erreicht keine Probe.
+#[must_use]
+fn zu_beschreiben(eintrag: Option<PathBuf>, ordner: PathBuf) -> PathBuf {
+    eintrag.unwrap_or(ordner)
+}
 
 /// Was zu geschehen hat, wenn der Nutzer dieses Dateifenster angefasst hat:
 /// [`Rangmitnahme`] sagt, ob der Ersthelferrang mitkommt.
@@ -793,16 +819,21 @@ pub struct QuelleIvars {
     /// Ordner nicht, und sie laeuft im Rueckruf des Stroms: den Strom von dort
     /// aus freizugeben hiesse, ihn mitten in seinem eigenen Aufruf abzubauen.
     ordnerwechsel: RefCell<Option<Box<dyn Fn()>>>,
-    /// Was gerufen wird, wenn die Auswahl auf einem anderen Eintrag steht
+    /// Was gerufen wird, wenn die Vorschau etwas anderes zu beschreiben hat
     /// (C6).
     ///
     /// Der Weg, auf dem eine neue Auswahl die Vorschau anstoesst: gemeldet
-    /// wird der vollstaendige Pfad des ausgewaehlten Eintrags, `None` fuer
-    /// eine aufgehobene Auswahl. Gerufen aus [`DateifensterQuelle::
-    /// auswahl_merken`], der einen Stelle, die eine Zeile in einen Eintrag
-    /// uebersetzt; Tastatur und Maus muenden beide dort. Wahlfrei, weil die
-    /// Quelle vor dem Anwendungsdelegierten zur Welt kommt, wie die Rueckrufe
-    /// darueber.
+    /// wird der vollstaendige Pfad des ausgewaehlten Eintrags, und ohne
+    /// ausgewaehlte Zeile der angezeigte Ordner. Gerufen aus
+    /// [`DateifensterQuelle::auswahl_merken`], der einen Stelle, die eine Zeile
+    /// in einen Eintrag uebersetzt; Tastatur und Maus muenden beide dort.
+    /// Wahlfrei, weil die Quelle vor dem Anwendungsdelegierten zur Welt kommt,
+    /// wie die Rueckrufe darueber.
+    ///
+    /// **Seit dem 260825 stoesst ihn auch ein Ordnerwechsel an**, ueber
+    /// [`DateifensterQuelle::nach_lesebeginn`]. Ohne das bliebe die neue Regel
+    /// genau dort wirkungslos, wo der Nutzer sie verlangt hat: war vor dem
+    /// Wechsel schon nichts ausgewaehlt, meldet AppKit keine Aenderung.
     auswahlmelder: RefCell<Option<Auswahlmelder>>,
     /// Was gerufen wird, wenn der Nutzer einen Eintrag umbenannt hat (C4).
     ///
@@ -1505,6 +1536,24 @@ impl DateifensterQuelle {
         // zurueck, also ueber dieselbe Huelle, die sie nach einem Umsortieren
         // wiederherstellt.
         self.auswahl_anzeigen();
+        // **Und die Vorschau anstossen, nachdem die Auswahl an der Tabelle
+        // steht.** Erst danach beantwortet `selectedRow` die Frage, die
+        // [`Self::auswahl_merken`] stellt. Der Anstoss steht hier, weil ein
+        // Ordnerwechsel den Melder sonst nicht erreicht: gerufen wird er von
+        // der Tastatur und vom Auswahlrueckruf des Delegierten, und AppKit
+        // meldet nichts, wenn vor dem Wechsel schon nichts ausgewaehlt war.
+        // Genau dieser Fall ist der haeufige — eine Navigation baut den Tab
+        // frisch auf und hat keine Auswahl —, und ohne diese Zeile bliebe die
+        // Regel aus [`zu_beschreiben`] dort wirkungslos, wo der Nutzer sie
+        // verlangt hat.
+        //
+        // **Kein zweiter Weg in die Vorschau**: gemeldet wird ueber denselben
+        // Melder, gelesen ueber dasselbe `datei_anzeigen`, gerechnet auf
+        // demselben Arbeitsfaden. Eine Auffrischung kommt hier ebenso durch wie
+        // eine Navigation und meldet dann den weiterhin ausgewaehlten Eintrag;
+        // das ist eine Auskunft ueber eine Datei, die sich eben geaendert hat,
+        // und keine zweite Regel.
+        self.auswahl_merken();
         self.meldung_gewechselt();
         self.einzug_starten();
         self.tableiste_nachziehen();
@@ -2103,12 +2152,21 @@ impl DateifensterQuelle {
         self.auswahl_merken();
     }
 
-    /// Haelt fest, welcher Eintrag der ausgewaehlten Zeile entspricht.
+    /// Haelt fest, welcher Eintrag der ausgewaehlten Zeile entspricht, und
+    /// meldet, was die Vorschau daraufhin zu beschreiben hat.
     ///
     /// Der Weg von der Zeile zum Eintrag laeuft genau hier und sonst nirgends.
     /// Gerufen wird er von jeder Stelle, an der sich die Auswahl der Tabelle
     /// aendert: von [`DateifensterQuelle::auswahl_verschieben`] und vom
-    /// Auswahlrueckruf des Delegierten, den die Maus ausloest.
+    /// Auswahlrueckruf des Delegierten, den die Maus ausloest — und seit dem
+    /// 260825 von [`Self::nach_lesebeginn`], damit ein Ordnerwechsel den Weg
+    /// auch dann nimmt, wenn AppKit keine Aenderung zu melden hat.
+    ///
+    /// **Gemeldet wird immer ein Pfad.** Steht keine Zeile auf einem Eintrag,
+    /// ist es der angezeigte Ordner; die Regel und ihre Begruendung stehen bei
+    /// [`zu_beschreiben`]. Der Ordner liegt dabei ohnehin schon in der Hand:
+    /// die Zeile darunter braucht ihn, um den Namen des Eintrags zu einem Pfad
+    /// zu machen.
     fn auswahl_merken(&self) {
         let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
         let pfad = {
@@ -2117,9 +2175,10 @@ impl DateifensterQuelle {
             let modell = tabs.aktiver_mut().modell_mut();
             let eintrag = zeile.and_then(|zeile| modell.eintragsindex(zeile));
             modell.auswahl_setzen(eintrag);
-            eintrag
+            let gewaehlt = eintrag
                 .and_then(|eintrag| modell.eintraege().get(eintrag as usize))
-                .map(|eintrag| ordner.join(&eintrag.name))
+                .map(|eintrag| ordner.join(&eintrag.name));
+            zu_beschreiben(gewaehlt, ordner)
         };
         // Nach dem Ende der Ausleihe: der Melder fuellt die Vorschau aus C6,
         // und die gehoert einem anderen Halter.
@@ -5378,6 +5437,125 @@ mod tests {
             zaehlen(concat!("sel!(", "kontextbefehl:)")),
             1,
             "der Selektor `kontextbefehl:` wird nicht genau einmal gesetzt"
+        );
+    }
+
+    /// Der Rumpf einer Methode dieser Datei, vom Kopf bis zur schliessenden
+    /// Klammer auf Methodenebene.
+    ///
+    /// **Eine Naeherung und als solche benannt.** Sie schneidet an der ersten
+    /// Zeile, die allein aus vier Leerzeichen und `}` besteht; das ist die
+    /// Einrueckung einer Methode in einem `impl`-Block und trifft in dieser
+    /// Datei zu. Ein `match`-Zweig oder ein Block auf derselben Ebene gibt es
+    /// im Rumpf einer Methode nicht, weil er tiefer steht. Eine Zerlegung des
+    /// Quelltexts waere die genaue Antwort und fuer eine Reihenfolgeprobe die
+    /// unangemessene.
+    fn rumpf_von<'a>(code: &'a str, name: &str) -> &'a str {
+        let kopf = format!("fn {name}(");
+        let beginn = code
+            .find(&kopf)
+            .unwrap_or_else(|| panic!("{DIESE_DATEI} erklaert {name} nicht"));
+        let rumpf = &code[beginn..];
+        let ende = rumpf
+            .find("\n    }\n")
+            .unwrap_or_else(|| panic!("der Rumpf von {name} endet nicht auf Methodenebene"));
+        &rumpf[..ende]
+    }
+
+    /// Die Regel, was die Vorschau beschreibt, gilt ohne Ausnahme.
+    ///
+    /// Der Nutzerentscheid vom 260825-1740: der ausgewaehlte Eintrag, und ohne
+    /// Auswahl der angezeigte Ordner. Fuer **jeden** Ordner — die Probe nennt
+    /// deshalb drei sehr verschiedene und erwartet fuer alle dieselbe Antwort.
+    #[test]
+    fn ohne_ausgewaehlten_eintrag_wird_der_angezeigte_ordner_beschrieben() {
+        let ordner = PathBuf::from("/Nutzer/k/Bilder");
+        let eintrag = ordner.join("Urlaub.jpg");
+        assert_eq!(
+            zu_beschreiben(Some(eintrag.clone()), ordner.clone()),
+            eintrag,
+            "eine ausgewaehlte Zeile wird nicht durch ihren Eintrag beschrieben"
+        );
+        for ohne_auswahl in [
+            PathBuf::from("/"),
+            PathBuf::from("/Nutzer/k"),
+            PathBuf::from("/Nutzer/k/Projekte/krk"),
+        ] {
+            assert_eq!(
+                zu_beschreiben(None, ohne_auswahl.clone()),
+                ohne_auswahl,
+                "{} faellt nicht auf sich selbst zurueck",
+                ohne_auswahl.display()
+            );
+        }
+    }
+
+    /// Die Regel steht an einer Stelle, und der Ordnerwechsel erreicht sie.
+    ///
+    /// **Drei Zaehlungen und eine Reihenfolge.** Die erste haelt fest, dass
+    /// keine andere Datei des Baums den Namen der Regel ueberhaupt fuehrt: sie
+    /// ist privat, und eine zweite Fassung anderswo entschiede dieselbe Frage
+    /// ein zweites Mal. Die zweite haelt die Regel bei einem Rufer, naemlich
+    /// [`DateifensterQuelle::auswahl_merken`]. Die dritte haelt den Melder bei
+    /// drei Rufern: der Tastatur ueber `zeile_setzen`, dem Auswahlrueckruf des
+    /// Delegierten, den die Maus ausloest, und seit dem 260825
+    /// [`DateifensterQuelle::nach_lesebeginn`] fuer den Ordnerwechsel.
+    ///
+    /// **Die Reihenfolge ist die eigentliche Zusage dieses Schritts.** Stuende
+    /// der Anstoss vor `auswahl_anzeigen`, meldete er die Zeilennummer des
+    /// vorigen Ordners; der Bau bliebe gruen und die Vorschau zeigte einen
+    /// beliebigen Eintrag. Ein Ordnerwechsel ist an keinem Rueckgabewert
+    /// abzulesen, und ohne diese Zeile faenge das keine Probe.
+    ///
+    /// **Ihre Blindheit:** dass der Anstoss den Nutzer erreicht, sagt sie
+    /// nicht. Ob die Vorschau daraufhin wirklich den Ordner beschreibt, ist an
+    /// der laufenden Oberflaeche zu sehen und bleibt Nutzerarbeit.
+    ///
+    /// Die Nadeln stehen zusammengesetzt da, aus demselben Grund wie oben.
+    #[test]
+    fn die_vorschauregel_hat_einen_rufer_und_der_ordnerwechsel_meldet() {
+        let regel = concat!("zu_be", "schreiben");
+        let melden = concat!("auswahl_", "merken");
+        let anzeigen = concat!("auswahl_an", "zeigen");
+
+        let anderswo: Vec<String> = quelldateien()
+            .into_iter()
+            .filter(|(name, inhalt)| {
+                name != DIESE_DATEI
+                    && code_zeilen(inhalt).any(|zeile| fuehrt_den_namen(zeile, regel))
+            })
+            .map(|(name, _)| name)
+            .collect();
+        assert!(
+            anderswo.is_empty(),
+            "{regel} steht ausser in {DIESE_DATEI} auch in {anderswo:?}"
+        );
+
+        let inhalt = diese_datei();
+        let code = vor_dem_pruefmodul(&inhalt);
+        assert_eq!(
+            aufrufstellen(code, regel),
+            1,
+            "die Regel hat nicht genau einen Rufer; \
+             der einzige ist DateifensterQuelle::auswahl_merken"
+        );
+        assert_eq!(
+            aufrufstellen(code, melden),
+            3,
+            "der Auswahlmelder hat nicht genau drei Rufer; \
+             zeile_setzen, der Auswahlrueckruf des Delegierten und nach_lesebeginn"
+        );
+
+        let rumpf = rumpf_von(code, concat!("nach_lese", "beginn"));
+        let stelle = |nadel: &str| {
+            rumpf
+                .find(&format!("{nadel}("))
+                .unwrap_or_else(|| panic!("nach_lesebeginn ruft {nadel} nicht"))
+        };
+        assert!(
+            stelle(anzeigen) < stelle(melden),
+            "der Anstoss der Vorschau steht vor auswahl_anzeigen und meldete \
+             damit die Zeile des vorigen Ordners"
         );
     }
 }
