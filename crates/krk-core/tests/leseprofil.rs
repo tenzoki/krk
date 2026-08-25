@@ -368,6 +368,123 @@ kennzeichen = '^_._circle\.md$'
     }
 }
 
+/// Ein **zweiter** Platzhalter nimmt der Zeile ihren Baustein.
+///
+/// Einer laesst die Form der Kosten aus dem Profil ablesen: ein Lauf ueber den
+/// Ordner vor ihm, dann einer je Treffer. Ein zweiter vervielfachte sie um eine
+/// Zahl, die erst am Bestand feststuende.
+#[test]
+fn eine_ortsangabe_mit_zwei_platzhaltern_nimmt_der_zeile_ihren_baustein() {
+    for angabe in ["*/*", "*/issues/*", "circles/*/*/planning"] {
+        let (profile, meldungen) = gepruefte(&format!(
+            r#"
+[[profil]]
+name = "Ein Speicher"
+kennzeichen = '^_._circle\.md$'
+
+  [[profil.zeile]]
+  beschriftung = "Zweimal offen"
+  zaehlung = {{ ordner = "{angabe}" }}
+
+  [[profil.zeile]]
+  beschriftung = "Einmal offen"
+  zaehlung = {{ ordner = "*" }}
+"#
+        ));
+
+        let zeilen = profile.iter().next().expect("das Profil fehlt").zeilen();
+        assert_eq!(
+            beschriftungen(&profile, 0),
+            ["Zweimal offen", "Einmal offen"],
+            "die Angabe {angabe:?} nimmt eine Beschriftung weg"
+        );
+        assert!(
+            zeilen[0].baustein().is_none(),
+            "die Angabe {angabe:?} kommt durch"
+        );
+        assert!(
+            zeilen[1].baustein().is_some(),
+            "ein einzelner Platzhalter ist zulaessig und die Zeile daneben bleibt unberuehrt"
+        );
+        assert_eq!(meldungen.len(), 1, "{meldungen:?}");
+        let meldung = &meldungen[0];
+        assert!(meldung.contains("Ein Speicher"), "{meldung:?}");
+        assert!(meldung.contains("Zweimal offen"), "{meldung:?}");
+        assert!(meldung.contains("Platzhalter"), "{meldung:?}");
+    }
+}
+
+/// `juengste` und `feld` nehmen keinen Platzhalter an, je mit eigener Meldung.
+///
+/// Die Grenze liegt auf der Naht, die der Modulkopf von `leseprofil::bausteine`
+/// ohnehin zieht: zwei Bausteine sehen auf Namen, zwei **lesen** Dateien. Wer
+/// eine Datei liest, braucht ihren Pfad, und den traegt ein Lesestand nicht
+/// mehr, in dem die Eintraege mehrerer Ordner zusammenliegen.
+#[test]
+fn juengste_und_feld_nehmen_keinen_platzhalter_an() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Ein Speicher"
+kennzeichen = '^_._circle\.md$'
+
+  [[profil.zeile]]
+  beschriftung = "Die juengsten drei"
+  juengste = { ordner = "*/history", anzahl = 3 }
+
+  [[profil.zeile]]
+  beschriftung = "Fassung"
+  feld = { ordner = "*", datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Offene Defekte"
+  zaehlung = { ordner = "*/issues", muster = '_o_' }
+
+  [[profil.zeile]]
+  beschriftung = "Ein Spec darunter"
+  vorhandensein = { ordner = "*/planning", muster = '_._spec-' }
+"#,
+    );
+
+    let zeilen = profile.iter().next().expect("das Profil fehlt").zeilen();
+    assert_eq!(
+        beschriftungen(&profile, 0),
+        [
+            "Die juengsten drei",
+            "Fassung",
+            "Offene Defekte",
+            "Ein Spec darunter"
+        ],
+        "eine abgewiesene Zeile behaelt ihre Beschriftung"
+    );
+    assert!(zeilen[0].baustein().is_none(), "juengste kommt durch");
+    assert!(zeilen[1].baustein().is_none(), "feld kommt durch");
+    assert!(
+        zeilen[2].baustein().is_some() && zeilen[3].baustein().is_some(),
+        "die zwei Bausteine, die auf Namen sehen, nehmen den Platzhalter an"
+    );
+
+    // Der Tischname steht in Anfuehrungszeichen, sonst traefe „juengste" auch
+    // auf die Beschriftung „Die juengsten drei" und die Probe belegte nichts.
+    assert_eq!(meldungen.len(), 2, "{meldungen:?}");
+    assert!(
+        meldungen[0].contains("\u{201e}juengste\u{201c}"),
+        "{:?}",
+        meldungen[0]
+    );
+    assert!(
+        meldungen[0].contains("Die juengsten drei"),
+        "{:?}",
+        meldungen[0]
+    );
+    assert!(
+        meldungen[1].contains("\u{201e}feld\u{201c}"),
+        "{:?}",
+        meldungen[1]
+    );
+    assert!(meldungen[1].contains("Fassung"), "{:?}", meldungen[1]);
+}
+
 // ---------------------------------------------------------------------------
 // Kappen statt Abweisen, und die leere Datei
 // ---------------------------------------------------------------------------
@@ -1242,6 +1359,277 @@ fn eine_verknuepfung_aus_dem_ordner_heraus_wird_erst_aufgeloest_abgewiesen() {
         werte(&zusammenfassung),
         [("Hinaus", &Wert::Nicht), ("Drinnen", &Wert::Zahl(3)),],
         "eine Zusammenfassung liest nie ausserhalb des Ordners, den sie beschreibt"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Der Platzhalter in der Ortsangabe
+// ---------------------------------------------------------------------------
+
+/// Ein Speicher gleichartiger Unterordner, wie ihn `circles/` einer Werkbank
+/// darstellt.
+///
+/// Die zwei Auskuenfte, um derentwillen der Platzhalter entstanden ist, liegen
+/// hier je eine Ebene tiefer: der Zustandsmarker einer Runde in
+/// `<runde>/_X_circle.md`, ihre offenen Defekte in `<runde>/issues/*_o_*.md`.
+///
+/// ```text
+/// <wurzel>/          README.md, hinaus -> <fremd>, drinnen -> 260801-erste
+///   260801-erste/    _c_circle.md ; issues/ zwei offene, einer geschlossen
+///   260802-zweite/   _b_circle.md ; issues/ ein offener
+///   260803-dritte/   _t_circle.md ; kein issues-Ordner
+/// ```
+///
+/// **Vier Fallen stecken mit Absicht darin.** `260803-dritte` hat keinen
+/// Defektspeicher: ein Ordner, den es hinter dem Platzhalter nicht gibt, wird
+/// uebergangen. `README.md` ist eine Datei: der Platzhalter greift allein
+/// Eintraege vom Typ Ordner.
+///
+/// Und die zwei Verknuepfungen sind zwei und nicht eine, weil sie **zwei
+/// verschiedene Stellen** messen. `hinaus` fuehrt auf einen Ordner derselben
+/// Gestalt ausserhalb der Wurzel und wird von der aufgeloesten Pruefung
+/// abgewiesen (C3.13, zweite Haelfte). `drinnen` fuehrt auf einen Ordner
+/// **innerhalb** der Wurzel; jene Pruefung laesst es durch, und was es
+/// uebergeht, ist allein die Bauart des Platzhalters: gegriffen wird, was vom
+/// Typ Ordner ist. Ohne diese zweite Verknuepfung bliebe die Probe gruen, wenn
+/// jemand die Typfrage streicht.
+fn circlespeicher(zweck: &str) -> (Pruefordner, Pruefordner) {
+    let fremd = Pruefordner::neu(&format!("{zweck}-fremd"));
+    schreiben(fremd.pfad(), "_a_circle.md", "# Eine fremde Runde\n");
+    schreiben(
+        &fremd.ordner("issues"),
+        "260824-0100_o_ein fremder Defekt.md",
+        "",
+    );
+
+    let ordner = Pruefordner::neu(zweck);
+    ordner.datei("README.md", "# Der Speicher\n");
+    ordner.verknuepfung("hinaus", fremd.pfad());
+
+    for (name, marker, offene) in [
+        ("260801-erste", "_c_", 2),
+        ("260802-zweite", "_b_", 1),
+        ("260803-dritte", "_t_", 0),
+    ] {
+        let runde = ordner.ordner(name);
+        schreiben(&runde, &format!("{marker}circle.md"), "# Eine Runde\n");
+        if offene == 0 {
+            // Diese Runde bekommt bewusst keinen Defektspeicher.
+            continue;
+        }
+        let issues = runde.join("issues");
+        std::fs::create_dir_all(&issues).expect("der Defektspeicher laesst sich nicht anlegen");
+        for nummer in 0..offene {
+            schreiben(&issues, &format!("260824-{nummer:02}00_o_offen.md"), "");
+        }
+        schreiben(&issues, "260824-0900_c_geschlossen.md", "");
+    }
+
+    // Erst hier, denn sie zeigt auf einen der Rundenordner darueber.
+    ordner.verknuepfung("drinnen", ordner.unter("260801-erste"));
+
+    (ordner, fremd)
+}
+
+/// Ein Profil auf dem Speicher, das seinen Ort ueber den Pfad erkennt.
+///
+/// Ueber den Pfad und nicht ueber eine Kennzeichendatei, damit die Erkennung
+/// keinen Leselauf kostet und die gezaehlten Laeufe allein von den Zeilen
+/// stammen.
+fn speicherprofil(zeilen: &str) -> String {
+    format!("[[profil]]\nname = \"Ein Speicher\"\npfad = '.'\n{zeilen}")
+}
+
+/// Der Platzhalter legt die Eintraege aller Unterordner zu **einem** Stand
+/// zusammen und bucht dafuer **einen** Leselauf.
+///
+/// Drei Aussagen an einem Lauf, weil sie sich einen Bestand teilen:
+///
+/// - `ordner = "*"` erreicht die Zustandsmarker, die je eine Ebene tiefer
+///   liegen, und `ordner = "*/issues"` die Defekte zwei Ebenen tiefer.
+/// - Eine Runde ohne Defektspeicher wird uebergangen und macht die Zeile nicht
+///   zum Platzhalterwert: die Antwort ist eine Zahl und nicht `--`.
+/// - Der Ordner vor dem Platzhalter wird genau **einmal** gelesen, obwohl ihn
+///   drei Zeilen nennen — die zwei Platzhalterzeilen und die Zeile ohne
+///   Ortsangabe. Drei Laeufe insgesamt: einer fuer ihn, einer je Sammlung.
+#[test]
+fn der_platzhalter_legt_die_eintraege_aller_unterordner_zu_einem_stand_zusammen() {
+    let (ordner, _fremd) = circlespeicher("platzhalter");
+
+    let (zusammenfassung, haushalt) = gezaehlt(
+        &speicherprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Eintraege"
+  zaehlung = { }
+
+  [[profil.zeile]]
+  beschriftung = "Runden"
+  zaehlung = { ordner = "*", muster = '^_._circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Beschraenkt geschlossen"
+  zaehlung = { ordner = "*", muster = '^_b_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Offene Defekte"
+  zaehlung = { ordner = "*/issues", muster = '_o_' }
+
+  [[profil.zeile]]
+  beschriftung = "Ein Defekt darunter"
+  vorhandensein = { ordner = "*/issues", muster = '_o_' }
+"#,
+        ),
+        ordner.pfad(),
+    );
+
+    assert_eq!(
+        werte(&zusammenfassung),
+        [
+            // Drei Rundenordner, eine Datei, zwei Verknuepfungen. Die Zaehlung
+            // ohne Ortsangabe sieht auf Namen und zaehlt jeden Eintrag mit.
+            ("Eintraege", &Wert::Zahl(6)),
+            ("Runden", &Wert::Zahl(3)),
+            ("Beschraenkt geschlossen", &Wert::Zahl(1)),
+            // Zwei aus der ersten Runde, einer aus der zweiten; die dritte hat
+            // keinen Defektspeicher und wird uebergangen, ohne die Zeile zum
+            // Platzhalterwert zu machen.
+            ("Offene Defekte", &Wert::Zahl(3)),
+            ("Ein Defekt darunter", &Wert::Vorhanden(true)),
+        ]
+    );
+
+    assert_eq!(
+        haushalt.leselaeufe(),
+        3,
+        "erwartet sind drei Laeufe: der Speicher selbst, den drei Zeilen nennen, und je einer \
+         fuer die zwei verschiedenen Sammlungen"
+    );
+    assert_eq!(
+        haushalt.oeffnungen(),
+        0,
+        "die zwei Bausteine, die den Platzhalter annehmen, sehen auf Namen und oeffnen nichts"
+    );
+}
+
+/// Eine Verknuepfung an der Stelle des Platzhalters wird uebergangen (C3.13).
+///
+/// **Zwei Verknuepfungen, zwei verschiedene Stellen, die es halten.**
+///
+/// `hinaus` fuehrt aus dem erkannten Ordner heraus, auf einen fremden Ordner
+/// derselben Gestalt — einen Zustandsmarker und einen offenen Defekt. Sie faellt
+/// an der aufgeloesten Pruefung, die jede Ortsangabe gegen die Wurzel haelt.
+///
+/// `drinnen` fuehrt auf einen der Rundenordner **innerhalb** der Wurzel. Jene
+/// Pruefung laesst sie durch, denn aufgeloest bleibt sie im Ordner; was sie
+/// uebergeht, ist allein die Bauart des Platzhalters, der nimmt, was vom Typ
+/// Ordner ist. Wer diese Frage streicht, zaehlt die erste Runde ein zweites Mal
+/// mit, und dann steht hier 5 statt 3.
+///
+/// Ohne die zweite Verknuepfung maesse die Probe die Bauart nicht: sie bliebe
+/// gruen, weil schon die Aufloesung die erste abweist. Genau so ist es bei der
+/// ersten Gegenprobe am 260825 gewesen.
+#[test]
+fn eine_verknuepfung_an_der_stelle_des_platzhalters_wird_uebergangen() {
+    let (ordner, fremd) = circlespeicher("platzhalter-verknuepfung");
+
+    // Ohne diese drei Zeilen belegte die Probe nichts: eine Verknuepfung ins
+    // Leere waere auch dann uebergangen, wenn der Platzhalter ihr folgte.
+    assert!(
+        ordner.pfad().join("hinaus/_a_circle.md").is_file(),
+        "die Verknuepfung fuehrt nicht auf den fremden Ordner"
+    );
+    assert!(
+        fremd.pfad().join("issues").is_dir(),
+        "der fremde Ordner traegt nicht die Gestalt einer Runde"
+    );
+    assert!(
+        ordner.pfad().join("drinnen/_c_circle.md").is_file(),
+        "die zweite Verknuepfung fuehrt nicht auf einen Rundenordner"
+    );
+
+    let zusammenfassung = zusammengefasst(
+        &speicherprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Runden"
+  zaehlung = { ordner = "*", muster = '^_._circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Offene Defekte"
+  zaehlung = { ordner = "*/issues", muster = '_o_' }
+"#,
+        ),
+        ordner.pfad(),
+    );
+
+    assert_eq!(
+        werte(&zusammenfassung),
+        [
+            ("Runden", &Wert::Zahl(3)),
+            ("Offene Defekte", &Wert::Zahl(3))
+        ],
+        "der Platzhalter ist der Verknuepfung gefolgt und liest ausserhalb des Ordners, ueber \
+         den er spricht"
+    );
+}
+
+/// Eine Sammlung ueber der Eintragsschranke nennt die Zahl der **Treffer** und
+/// nicht die der Grenze.
+///
+/// Das ist derselbe Satz, den die Runde 16 fuer eine abgeschnittene Lesung
+/// geschrieben hat, an der Sammlung nachgemessen: „mindestens n, und die Lesung
+/// wurde abgebrochen". Naehme er die Grenze statt der Treffer, stuende hier
+/// 2.000 statt 1.200 und damit eine falsche Aussage.
+///
+/// # Warum drei gleich zusammengesetzte Ordner
+///
+/// In welcher Reihenfolge das Dateisystem die drei Unterordner liefert, ist
+/// nicht zugesagt. Traegt jeder von ihnen gleich viele Eintraege und gleich
+/// viele Treffer, haengt die Antwort daran nicht: zwei beliebige von ihnen
+/// fuellen die Schranke genau aus, der dritte kommt nicht mehr dran, und die
+/// Zahl der Treffer ist in jeder Reihenfolge dieselbe.
+#[test]
+fn eine_sammlung_ueber_der_grenze_nennt_die_treffer_und_nicht_die_grenze() {
+    const JE_ORDNER: usize = HOECHSTENS_EINTRAEGE / 2;
+    const TREFFER_JE_ORDNER: usize = JE_ORDNER * 3 / 5;
+
+    let ordner = Pruefordner::neu("platzhalter-ueber-der-grenze");
+    for name in ["eins", "zwei", "drei"] {
+        let runde = ordner.ordner(name);
+        for nummer in 0..JE_ORDNER {
+            let marker = if nummer < TREFFER_JE_ORDNER {
+                "_o_"
+            } else {
+                "_c_"
+            };
+            schreiben(&runde, &format!("2608{nummer:04}{marker}datensatz.md"), "");
+        }
+    }
+
+    let (zusammenfassung, haushalt) = gezaehlt(
+        &speicherprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Offene Defekte"
+  zaehlung = { ordner = "*", muster = '_o_' }
+"#,
+        ),
+        ordner.pfad(),
+    );
+
+    assert_eq!(
+        werte(&zusammenfassung),
+        [(
+            "Offene Defekte",
+            &Wert::UeberGrenze((TREFFER_JE_ORDNER * 2) as u64)
+        )],
+        "die Sammlung nennt nicht die Treffer der zwei gelesenen Ordner"
+    );
+    assert_eq!(
+        haushalt.leselaeufe(),
+        2,
+        "auch eine Sammlung ueber der Schranke bucht einen Leselauf und keinen je Ordner"
     );
 }
 

@@ -22,13 +22,14 @@
 //!
 //! # Ein Ort wird je Zusammenfassung hoechstens einmal gelesen
 //!
-//! [`Lauf`] merkt jede Lesung nach **aufgeloestem Pfad**. Wer denselben Ort ein
-//! zweites Mal braucht, bekommt die Eintraege der ersten Lesung, und ein
-//! zweiter Leselauf faellt nicht an. Die Regel gilt ohne Ausnahme: fuer den
-//! erkannten Ordner, den drei Rufer brauchen (der zweite Erkennungsdurchgang,
-//! jeder Baustein ohne Ortsangabe und der Feldbaustein, der seine Datei ueber
-//! ein Namensmuster sucht), genauso wie fuer einen Unterordner, den so viele
-//! Rufer brauchen, wie ihn nennen.
+//! [`Lauf`] merkt jede Lesung nach ihrem **aufgeloesten Ort** ([`Ort`]). Wer
+//! denselben Ort ein zweites Mal braucht, bekommt die Eintraege der ersten
+//! Lesung, und ein zweiter Leselauf faellt nicht an. Die Regel gilt ohne
+//! Ausnahme: fuer den erkannten Ordner, den drei Rufer brauchen (der zweite
+//! Erkennungsdurchgang, jeder Baustein ohne Ortsangabe und der Feldbaustein,
+//! der seine Datei ueber ein Namensmuster sucht), genauso wie fuer einen
+//! Unterordner, den so viele Rufer brauchen, wie ihn nennen, und genauso fuer
+//! einen Platzhalterlauf, den zwei Zeilen mit derselben Ortsangabe sich teilen.
 //!
 //! **Gelesen wird traege**, naemlich erst, wenn der erste Rufer den Ort
 //! braucht. Ein Profil, dessen Zeilen alle in Unterordnern arbeiten, liest den
@@ -42,6 +43,40 @@
 //! verschiedene Orte (der erkannte Ordner, `planning`, `decisions`, `history`)
 //! und kommt damit auf vier Leselaeufe und elf Oeffnungen (der
 //! Circle-Datensatz, zehn Verlaufsdateien).
+//!
+//! # Ein Platzhalterlauf ist ein Ort und kostet einen Leselauf
+//!
+//! Traegt die Ortsangabe einen Platzhalter (`*`, `*/issues`), dann ist der Ort
+//! kein einzelnes Verzeichnis mehr, sondern eine **Sammlung**: gelesen wird der
+//! Ordner vor dem Platzhalter, aus ihm wird jeder Eintrag vom Typ
+//! [`Typ::Ordner`] genommen, das Stueck hinter dem Platzhalter angehaengt und
+//! dort gelesen. Die Eintraege aller Treffer liegen danach in **einem**
+//! [`Lesestand`].
+//!
+//! **Die Einheit der Begrenzung wechselt damit**, und das ist der Zweck der
+//! Form und nicht ihr Nebenwirkung. Die Zahl der Unterordner eines Ordners
+//! waechst mit dem Bestand: eine Auskunft ueber alle Runden einer Werkbank
+//! kostete je Runde ein Verzeichnis, und keine feste Zahl in
+//! [`super::HOECHSTENS_LESELAEUFE`] traegt das dauerhaft. Begrenzt wird die
+//! Sammlung deshalb durch [`HOECHSTENS_EINTRAEGE`] — eine Zahl, die vom Bestand
+//! unabhaengig ist —, und gebucht wird **ein** Leselauf.
+//!
+//! Daraus folgt der Preis, den diese Runde bewusst zahlt: **ein Leselauf
+//! oeffnet nicht mehr genau ein Verzeichnis.** Wie viele Systemaufrufe eine
+//! Zusammenfassung kostet, steht nicht mehr im Profil, sondern erst am Profil
+//! **und** am Bestand; ablesbar bleibt allein ihre Form, naemlich ein Lauf
+//! ueber den Ordner vor dem Platzhalter und dann einer je Treffer. Genau
+//! darum nimmt [`Ortsangabe`] hoechstens **einen** Platzhalter an.
+//!
+//! **Der Ordner vor dem Platzhalter ist selbst ein Ort** und geht durch
+//! dieselbe Merkstelle. Nennt eine andere Zeile ihn ebenfalls, wird er trotzdem
+//! nur einmal gelesen.
+//!
+//! **Was ein Platzhalterlauf ueber sich sagt**, wenn er unvollstaendig blieb:
+//! `abgeschnitten` steht, sobald eine der Teillesungen abgeschnitten war oder
+//! die Sammlung die Schranke erreicht hat. Die drei Regeln aus dem Abschnitt
+//! darunter tragen damit unveraendert weiter; sie fragen den Lesestand und
+//! nicht, aus wie vielen Verzeichnissen er stammt.
 //!
 //! **Bei der Dateioeffnung faellt die Wahl anders aus**, siehe
 //! [`super::HOECHSTENS_OEFFNUNGEN`]: zwei Feldbausteine auf derselben Datei
@@ -97,11 +132,21 @@
 //!   Grund, aus dem der Durchlauf nicht in sie absteigt: sie fuehrt aus dem
 //!   Ordner heraus, den die Zusammenfassung beschreibt.
 //!
+//! **Dieselbe Naht traegt den Platzhalter**: die zwei, die auf Namen sehen,
+//! nehmen ihn an, die zwei, die Dateien lesen, nicht. Wer eine Datei liest,
+//! braucht ihren Pfad, und den traegt ein Lesestand nicht mehr, in dem die
+//! Eintraege mehrerer Ordner zusammenliegen. Abgewiesen wird das beim Laden
+//! (`datei::ortsangabe_ohne_platzhalter`); [`Lauf::in_einem_ordner`] ist die
+//! zweite Haelfte derselben Aussage, an der Stelle, an der die Bauart sie
+//! haelt.
+//!
 //! Die zweite Haelfte derselben Frage ist die Ortsangabe eines Bausteins
 //! (C3.13). Sie wird beim Laden textlich geprueft ([`Ortsangabe::aus_angabe`])
 //! und hier **aufgeloest** gegen den aufgeloesten erkannten Ordner gehalten;
 //! erst das entscheidet ueber eine Verknuepfung im Weg, die im Text nicht
-//! dasteht.
+//! dasteht. Fuer einen Platzhalterlauf gilt sie an jedem Treffer einzeln: das
+//! Stueck hinter dem Platzhalter wird aufgeloest und gegen die Wurzel gehalten
+//! wie jede andere Ortsangabe.
 //!
 //! # Der Deskriptorhaushalt (C6.9)
 //!
@@ -112,6 +157,13 @@
 //! gelesen wird erst der Ordner, dann aus seinen Eintraegen eine Datei nach der
 //! anderen. Wer daraus eine Liste offener Dateien macht, holt sich den Defekt
 //! `260815-0211` in seiner naechsten Gestalt.
+//!
+//! **Der Platzhalterlauf aendert daran nichts**, obwohl er viele Verzeichnisse
+//! liest: er haelt die *Eintraege* des Ordners vor dem Platzhalter und keinen
+//! Deskriptor darauf, und die Treffer liest er einen nach dem anderen.
+//! Dieselbe Wahl trifft `verzeichnis/durchlauf.rs`, das seine Unterordner als
+//! **Pfad** auf einem Stapel vormerkt, statt den Leser der uebergeordneten
+//! Ebene offen zu halten.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -228,6 +280,30 @@ fn ordnername(ordner: &Path) -> String {
 // Der Lauf: ein Ordner, ein Haushalt, die gemerkten Leselaeufe
 // ---------------------------------------------------------------------------
 
+/// Der aufgeloeste Ort, an dem ein Baustein arbeitet.
+///
+/// Er entsteht aus einer [`Ortsangabe`] in [`Lauf::ort_aufloesen`] und ist
+/// zugleich der Schluessel, unter dem [`Lauf`] seine Lesungen merkt: zwei
+/// Zeilen mit derselben Angabe treffen denselben Wert und teilen sich damit die
+/// eine Lesung.
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig. Sie steht dafuer,
+/// dass ein Ort seit der Runde 18 nicht mehr dasselbe ist wie ein Verzeichnis.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Ort {
+    /// Ein einzelnes Verzeichnis, aufgeloest und innerhalb der Wurzel.
+    Einer(PathBuf),
+    /// Jeder Unterordner von `ueber`, je um `hinter` verlaengert, zu einem
+    /// Lesestand zusammengelegt. Ein leeres `hinter` heisst: die Unterordner
+    /// selbst.
+    Gestreut {
+        /// Der aufgeloeste Ordner vor dem Platzhalter.
+        ueber: PathBuf,
+        /// Die Namensbestandteile hinter dem Platzhalter.
+        hinter: Vec<String>,
+    },
+}
+
 /// Was eine einzelne Zusammenfassung ueber ihren Lauf mitfuehrt.
 ///
 /// Die drei Felder mit Innenveraenderlichkeit sind kein Zufall der Bequemlich-
@@ -240,7 +316,7 @@ struct Lauf<'w> {
     wurzel: &'w Path,
     /// Was dieser Lauf schon verbraucht hat.
     haushalt: Cell<Haushalt>,
-    /// Jeder Ort, den dieser Lauf gelesen hat, nach aufgeloestem Pfad, jeder
+    /// Jeder Ort, den dieser Lauf gelesen hat, nach aufgeloestem [`Ort`], jeder
     /// beim ersten Bedarf angefordert. `None` an einem Eintrag heisst „steht
     /// nicht zur Verfuegung": der Haushalt war erschoepft oder das Lesen ist
     /// gescheitert. Auch das wird gemerkt, denn ein zweiter Versuch am selben
@@ -254,8 +330,11 @@ struct Lauf<'w> {
     /// diese Liste haelt ihn, und ein Rufer bekommt ihn geliehen. Ohne den
     /// gemeinsamen Besitz muesste der Rufer die Liste ausgeliehen halten,
     /// waehrend er rechnet, und ein spaeterer Baustein, der dabei einen
-    /// zweiten Ort braucht, liefe in einen Ausleihfehler zur Laufzeit.
-    staende: RefCell<Vec<(PathBuf, Option<Rc<Lesestand>>)>>,
+    /// zweiten Ort braucht, liefe in einen Ausleihfehler zur Laufzeit. Ein
+    /// Platzhalterlauf braucht ihn dazu **waehrend** seiner eigenen Lesung: er
+    /// fragt diese Liste nach dem Ordner vor dem Platzhalter, waehrend er
+    /// gerade selbst darin aufgenommen wird.
+    staende: RefCell<Vec<(Ort, Option<Rc<Lesestand>>)>>,
     /// Derselbe Stand fuer den erkannten Ordner, ein zweites Mal gehalten.
     ///
     /// **Keine zweite Lesung**, sondern ein geliehener Handgriff auf den
@@ -279,29 +358,27 @@ impl<'w> Lauf<'w> {
     ///
     /// Die eine Stelle, an der ein Leselauf ueberhaupt angefordert wird. Wer
     /// den Ort schon gelesen hat, bekommt den gemerkten Stand; wer der erste
-    /// ist, bezahlt ihn. Der Pfad kommt **aufgeloest** herein, sonst waeren
-    /// zwei Schreibweisen desselben Ortes zwei Eintraege.
-    fn stand_am(&self, pfad: &Path) -> Option<Rc<Lesestand>> {
+    /// ist, bezahlt ihn. Der Ort kommt **aufgeloest** herein, sonst waeren zwei
+    /// Schreibweisen desselben Ortes zwei Eintraege.
+    fn stand_am(&self, ort: &Ort) -> Option<Rc<Lesestand>> {
         let gemerkt = self
             .staende
             .borrow()
             .iter()
-            .find(|(gelesen, _)| gelesen == pfad)
+            .find(|(gelesen, _)| gelesen == ort)
             .map(|(_, stand)| stand.clone());
         if let Some(stand) = gemerkt {
             return stand;
         }
-        let stand = self.lesen(pfad).map(Rc::new);
-        self.staende
-            .borrow_mut()
-            .push((pfad.to_path_buf(), stand.clone()));
+        let stand = self.lesen(ort).map(Rc::new);
+        self.staende.borrow_mut().push((ort.clone(), stand.clone()));
         stand
     }
 
     /// Die Eintraege des erkannten Ordners, hoechstens einmal gelesen.
     fn stand(&self) -> Option<&Lesestand> {
         self.wurzelstand
-            .get_or_init(|| self.stand_am(self.wurzel))
+            .get_or_init(|| self.stand_am(&Ort::Einer(self.wurzel.to_path_buf())))
             .as_deref()
     }
 
@@ -310,15 +387,76 @@ impl<'w> Lauf<'w> {
         self.stand().map(|stand| stand.eintraege.as_slice())
     }
 
-    /// Liest ein Verzeichnis auf Kosten des Haushalts.
+    /// Liest einen Ort auf Kosten des Haushalts.
     ///
     /// Gebucht wird der **Versuch**: der Systemaufruf faellt an, ob er gelingt
     /// oder nicht, und der Haushalt begrenzt die Arbeit und nicht den Erfolg.
-    fn lesen(&self, pfad: &Path) -> Option<Lesestand> {
+    /// Gebucht wird **ein** Leselauf, auch fuer eine Sammlung ueber viele
+    /// Verzeichnisse; der Modulkopf schreibt aus, warum die Einheit dort
+    /// wechselt.
+    ///
+    /// Die Fallunterscheidung ueber die zwei Ortsformen ist vollstaendig und
+    /// hat keinen Auffangzweig.
+    fn lesen(&self, ort: &Ort) -> Option<Lesestand> {
         if !self.buchen(Haushalt::leselauf_nehmen) {
             return None;
         }
-        leser::lesen_hoechstens(pfad, HOECHSTENS_EINTRAEGE).ok()
+        match ort {
+            Ort::Einer(pfad) => leser::lesen_hoechstens(pfad, HOECHSTENS_EINTRAEGE).ok(),
+            Ort::Gestreut { ueber, hinter } => self.gestreut_lesen(ueber, hinter),
+        }
+    }
+
+    /// Legt die Eintraege aller getroffenen Ordner zu einem Lesestand zusammen.
+    ///
+    /// Der Ordner vor dem Platzhalter geht durch [`Lauf::stand_am`] wie jeder
+    /// andere Ort und wird deshalb hoechstens einmal gelesen, auch wenn eine
+    /// andere Zeile ihn ebenfalls nennt.
+    ///
+    /// **Gegriffen wird allein, was vom Typ [`Typ::Ordner`] ist.** Eine
+    /// Verknuepfung wird damit uebergangen, ohne dass es dafuer eine eigene
+    /// Pruefung braeuchte, und C3.13 haelt an dieser Stelle durch Bauart: ein
+    /// wirklicher Unterordner eines Ordners innerhalb der Schranke liegt
+    /// innerhalb der Schranke. Das Stueck **hinter** dem Platzhalter kann
+    /// dagegen sehr wohl hinausfuehren und geht deshalb durch dieselbe
+    /// Aufloesung wie jede andere Ortsangabe.
+    ///
+    /// Ein Ordner, den es hinter dem Platzhalter nicht gibt, wird uebergangen
+    /// und nicht zum Abbruch: eine Runde ohne Defektspeicher ist eine Runde
+    /// ohne Defekte und keine Auskunft, die fehlt.
+    fn gestreut_lesen(&self, ueber: &Path, hinter: &[String]) -> Option<Lesestand> {
+        let elternstand = self.stand_am(&Ort::Einer(ueber.to_path_buf()))?;
+        let mut eintraege = Vec::new();
+        // Eine abgeschnittene Elternlesung heisst, dass Unterordner fehlen, und
+        // damit ist auch die Sammlung darueber unvollstaendig.
+        let mut abgeschnitten = elternstand.abgeschnitten;
+        for treffer in elternstand
+            .eintraege
+            .iter()
+            .filter(|eintrag| eintrag.typ == Typ::Ordner)
+        {
+            let offen = HOECHSTENS_EINTRAEGE - eintraege.len();
+            if offen == 0 {
+                abgeschnitten = true;
+                break;
+            }
+            let mut pfad = ueber.join(&treffer.name);
+            for teil in hinter {
+                pfad.push(teil);
+            }
+            let Some(pfad) = self.innerhalb(&pfad) else {
+                continue;
+            };
+            let Ok(teilstand) = leser::lesen_hoechstens(&pfad, offen) else {
+                continue;
+            };
+            abgeschnitten |= teilstand.abgeschnitten;
+            eintraege.extend(teilstand.eintraege);
+        }
+        Some(Lesestand {
+            eintraege,
+            abgeschnitten,
+        })
     }
 
     /// Bucht etwas im Haushalt und sagt, ob es noch hineinpasste.
@@ -333,38 +471,81 @@ impl<'w> Lauf<'w> {
         gelungen
     }
 
-    /// Der Ordner, in dem ein Baustein arbeitet, aufgeloest und geprueft.
+    /// Loest einen Pfad auf und haelt ihn gegen die Wurzel (C3.13, zweite
+    /// Haelfte).
     ///
     /// `None` heisst: es gibt ihn nicht, oder er liegt aufgeloest ausserhalb
-    /// des erkannten Ordners (C3.13, zweite Haelfte). Eine Zusammenfassung
-    /// liest nie ausserhalb des Ordners, den sie beschreibt.
-    fn zielordner(&self, ort: &Ortsangabe) -> Option<PathBuf> {
-        if ort.teile().is_empty() {
+    /// des erkannten Ordners. Eine Zusammenfassung liest nie ausserhalb des
+    /// Ordners, den sie beschreibt. Die eine Stelle, an der diese Schranke
+    /// gemessen wird; die zwei Rufer sind die Ortsangabe eines Bausteins und
+    /// jeder einzelne Treffer eines Platzhalterlaufs.
+    fn innerhalb(&self, pfad: &Path) -> Option<PathBuf> {
+        let aufgeloest = std::fs::canonicalize(pfad).ok()?;
+        aufgeloest.starts_with(self.wurzel).then_some(aufgeloest)
+    }
+
+    /// Der Ordner, in dem ein Baustein arbeitet, aufgeloest und geprueft.
+    ///
+    /// Die Wurzel selbst ist schon aufgeloest und braucht die Pruefung nicht.
+    fn zielordner(&self, teile: &[String]) -> Option<PathBuf> {
+        if teile.is_empty() {
             return Some(self.wurzel.to_path_buf());
         }
         let mut pfad = self.wurzel.to_path_buf();
-        for teil in ort.teile() {
+        for teil in teile {
             pfad.push(teil);
         }
-        let aufgeloest = std::fs::canonicalize(&pfad).ok()?;
-        aufgeloest.starts_with(self.wurzel).then_some(aufgeloest)
+        self.innerhalb(&pfad)
+    }
+
+    /// Der Ort eines Bausteins, aufgeloest: ein Ordner oder eine Sammlung.
+    fn ort_aufloesen(&self, ort: &Ortsangabe) -> Option<Ort> {
+        let basis = self.zielordner(ort.teile())?;
+        match ort.hinter_dem_platzhalter() {
+            None => Some(Ort::Einer(basis)),
+            Some(hinter) => Some(Ort::Gestreut {
+                ueber: basis,
+                hinter: hinter.to_vec(),
+            }),
+        }
     }
 
     /// Fuehrt eine Rechnung am Ort eines Bausteins aus.
     ///
     /// Sie kostet **hoechstens** einen Leselauf (C6.1) und keinen, wenn dieser
-    /// Lauf den Ort schon gelesen hat — ob als erkannten Ordner oder als
-    /// Ortsangabe einer frueheren Zeile, denn beide Wege gehen durch
-    /// [`Lauf::stand_am`] und beide finden ihn unter demselben aufgeloesten
-    /// Pfad.
-    fn am_ort<T>(
+    /// Lauf den Ort schon gelesen hat — ob als erkannten Ordner, als Ortsangabe
+    /// einer frueheren Zeile oder als denselben Platzhalterlauf, denn alle Wege
+    /// gehen durch [`Lauf::stand_am`] und alle finden ihn unter demselben
+    /// aufgeloesten [`Ort`].
+    ///
+    /// **Der Rechner bekommt keinen Pfad**, und das ist der Unterschied zu
+    /// [`Lauf::in_einem_ordner`]: eine Sammlung ueber mehrere Verzeichnisse hat
+    /// keinen. Wer einen braucht, nimmt jene Stelle.
+    fn am_ort<T>(&self, ort: &Ortsangabe, rechnen: impl FnOnce(&Lesestand) -> T) -> Option<T> {
+        let aufgeloest = self.ort_aufloesen(ort)?;
+        let stand = self.stand_am(&aufgeloest)?;
+        Some(rechnen(&stand))
+    }
+
+    /// Dasselbe fuer die zwei Bausteine, die **einen** Ordner brauchen.
+    ///
+    /// Wer eine Datei liest, braucht ihren Pfad, und den gibt es nur, wenn alle
+    /// Eintraege aus demselben Verzeichnis stammen. Eine Ortsangabe mit
+    /// Platzhalter wird deshalb schon beim Laden abgewiesen und erreicht diese
+    /// Stelle nicht; kommt sie doch hier an, liefert der Baustein seinen
+    /// Platzhalterwert, statt dass hier ein Pfad erfunden wuerde, unter dem
+    /// keine der Dateien liegt.
+    fn in_einem_ordner<T>(
         &self,
         ort: &Ortsangabe,
         rechnen: impl FnOnce(&Path, &Lesestand) -> T,
     ) -> Option<T> {
-        let ziel = self.zielordner(ort)?;
-        let stand = self.stand_am(&ziel)?;
-        Some(rechnen(&ziel, &stand))
+        let aufgeloest = self.ort_aufloesen(ort)?;
+        let Ort::Einer(pfad) = &aufgeloest else {
+            return None;
+        };
+        let stand = self.stand_am(&aufgeloest)?;
+        Some(rechnen(pfad, &stand))
     }
 
     /// Rechnet einen einzelnen Baustein.
@@ -375,14 +556,14 @@ impl<'w> Lauf<'w> {
     fn rechnen(&self, baustein: &Baustein) -> Wert {
         match baustein {
             Baustein::Zaehlung { ort, muster } => self
-                .am_ort(ort, |_, stand| zaehlen(stand, muster.as_ref()))
+                .am_ort(ort, |stand| zaehlen(stand, muster.as_ref()))
                 .unwrap_or(Wert::Nicht),
             Baustein::Juengste {
                 ort,
                 muster,
                 anzahl,
             } => self
-                .am_ort(ort, |pfad, stand| {
+                .in_einem_ordner(ort, |pfad, stand| {
                     self.juengste(pfad, stand, muster.as_ref(), *anzahl)
                 })
                 .unwrap_or(Wert::Nicht),
@@ -391,10 +572,10 @@ impl<'w> Lauf<'w> {
                 datei,
                 feldmuster,
             } => self
-                .am_ort(ort, |pfad, stand| self.feld(pfad, stand, datei, feldmuster))
+                .in_einem_ordner(ort, |pfad, stand| self.feld(pfad, stand, datei, feldmuster))
                 .unwrap_or(Wert::Nicht),
             Baustein::Vorhandensein { ort, muster } => self
-                .am_ort(ort, |_, stand| vorhandensein(stand, muster))
+                .am_ort(ort, |stand| vorhandensein(stand, muster))
                 .unwrap_or(Wert::Nicht),
         }
     }

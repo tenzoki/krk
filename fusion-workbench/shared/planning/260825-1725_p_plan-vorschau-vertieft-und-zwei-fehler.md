@@ -273,7 +273,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - Das mitgelieferte Circle-Profil kostet danach **vier** Leseläufe statt fünf, weil seine zwei Zeilen auf `planning` sich eine Lesung teilen. Die Zahl steht heute im Modulkopf von `bausteine.rs` und wird dort nachgezogen.
      - `make check` grün.
 
-5. **Die Ortsangabe darf einen Platzhalter tragen**
+5. [DONE] **Die Ortsangabe darf einen Platzhalter tragen**
    - Executor: `coder`
    - Files: `crates/krk-core/src/leseprofil/mod.rs`, `crates/krk-core/src/leseprofil/datei.rs`, `crates/krk-core/src/leseprofil/bausteine.rs`, `crates/krk-core/tests/leseprofil.rs`
    - Changes: `Ortsangabe` nimmt ein Stück `*` an. `Ortsangabe::aus_angabe` weist unverändert einen absoluten Pfad, ein leeres Stück, `.` und `..` ab und weist **zusätzlich** eine Angabe mit zwei oder mehr Platzhaltern ab; `Ortsmangel` bekommt dafür einen vierten Wert, und die Aufzählung bleibt vollständig ohne Auffangzweig, also hält der Bau an `Ortsmangel::grund` an.

@@ -117,13 +117,21 @@ pub const HOECHSTENS_LESELAEUFE: u32 = 12;
 /// ablesbar, naemlich eine je Feldbaustein und N je Baustein „juengste N".
 pub const HOECHSTENS_OEFFNUNGEN: u32 = 24;
 
-/// Wie viele Eintraege ein einzelner Verzeichnisleselauf liefert, hoechstens
-/// (C6.5, Festlegung A5).
+/// Wie viele Eintraege ein einzelner Leselauf liefert, hoechstens (C6.5,
+/// Festlegung A5).
 ///
 /// Der groesste Speicher der Werkbank, an der die Runde gemessen hat, traegt
 /// 157 Eintraege; die Grenze laesst Raum fuer das Zehnfache und kappt keine
 /// Zaehlung des Beispielfalls. Was eine abgeschnittene Lesung noch sagen darf,
 /// steht bei [`Wert::UeberGrenze`].
+///
+/// **Seit der Runde 18 begrenzt sie einen Ort und nicht ein Verzeichnis.** Eine
+/// Ortsangabe mit Platzhalter ([`Ortsangabe::hinter_dem_platzhalter`]) legt die
+/// Eintraege mehrerer Verzeichnisse zu **einem** Lesestand zusammen, und diese
+/// Zahl deckelt die Sammlung. Das ist die Einheit, die die Arbeit dort noch
+/// begrenzt, wo [`HOECHSTENS_LESELAEUFE`] es nicht mehr kann: die Zahl der
+/// Unterordner eines Ordners waechst mit dem Bestand, die Zahl der gelesenen
+/// Eintraege ist gedeckelt.
 pub const HOECHSTENS_EINTRAEGE: usize = 2_000;
 
 /// Wie viele Bytes ein Baustein aus einer Datei liest, hoechstens (C6.6).
@@ -313,6 +321,13 @@ pub enum Baustein {
     },
 }
 
+/// Das Stueck einer Ortsangabe, das fuer „jeder Unterordner hier" steht.
+///
+/// **Nicht zu verwechseln mit [`PLATZHALTER`]**, das weiter unten steht: jenes
+/// ist das Zeichenpaar, das die Anzeige an die Stelle eines fehlenden Wertes
+/// setzt, dieses das Stueck, das in `readers.toml` einen Namen offen laesst.
+pub const PLATZHALTERSTUECK: &str = "*";
+
 /// Wo ein Baustein arbeitet, relativ zum erkannten Ordner.
 ///
 /// Leer heisst: der erkannte Ordner selbst. Sonst eine Folge gewoehnlicher
@@ -324,44 +339,110 @@ pub enum Baustein {
 /// Verknuepfung im Weg aus dem Ordner herausfuehrt; die aufgeloeste
 /// entscheidet das und kostet dafuer einen Aufruf je Auswertung. C3.13
 /// verlangt beide.
+///
+/// # Der eine Platzhalter
+///
+/// Genau eines der Stuecke darf [`PLATZHALTERSTUECK`] sein und laesst damit
+/// einen Namen offen: `*` meint jeden Unterordner des erkannten Ordners,
+/// `*/issues` den Speicher `issues` in jedem von ihnen. Die Auswertung legt
+/// die Eintraege aller getroffenen Ordner zu **einem** Lesestand zusammen und
+/// bucht dafuer **einen** Leselauf; begrenzt wird die Sammlung durch
+/// [`HOECHSTENS_EINTRAEGE`].
+///
+/// **Warum hoechstens einer**: so ist die Form der Kosten aus dem Profil
+/// abzulesen — ein Lauf ueber den Ordner vor dem Platzhalter, dann einer je
+/// Treffer. Ein zweiter Platzhalter vervielfachte sie, und wie oft, stuende
+/// erst am Bestand fest. Zwei oder mehr werden deshalb beim Laden abgewiesen
+/// ([`Ortsmangel::MehrerePlatzhalter`]).
+///
+/// **Was er greift und was nicht**: allein Eintraege vom Typ
+/// [`crate::verzeichnis::Typ::Ordner`], und damit keine Verknuepfung. Daran
+/// haelt C3.13 durch Bauart statt durch eine zusaetzliche Pruefung — ein
+/// wirklicher Unterordner eines Ordners innerhalb der Schranke liegt innerhalb
+/// der Schranke. Es ist derselbe Grund, aus dem
+/// [`crate::verzeichnis::durchlauf`] nicht in eine Verknuepfung absteigt.
+///
+/// **Wer ihn nicht annimmt**: [`Baustein::Juengste`] und [`Baustein::Feld`].
+/// Beide **lesen** Dateien und brauchen dafuer deren Pfad, den ein
+/// zusammengelegter Lesestand nicht mehr traegt; die Grenze liegt auf der
+/// Naht, die der Modulkopf von [`bausteine`] ohnehin zieht. Abgewiesen wird
+/// beim Laden, und die Zeile behaelt ihre Beschriftung.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ortsangabe {
-    teile: Vec<String>,
+    /// Die Stuecke vor dem Platzhalter; ohne Platzhalter alle.
+    vor: Vec<String>,
+    /// Die Stuecke hinter dem Platzhalter. `None` heisst: es steht keiner da.
+    nach: Option<Vec<String>>,
 }
 
 impl Ortsangabe {
     /// Der erkannte Ordner selbst, ohne Unterordner.
     pub fn wurzel() -> Self {
-        Self { teile: Vec::new() }
+        Self {
+            vor: Vec::new(),
+            nach: None,
+        }
     }
 
     /// Prueft eine Ortsangabe aus der Datei, textlich (C3.13, erste Haelfte).
     ///
     /// Abgewiesen wird, was schon am Text aus dem erkannten Ordner
-    /// herausfuehrt oder ihn gar nicht erst benennt: ein absoluter Pfad, ein
-    /// leeres Stueck (`a//b`, `planning/`) und die Stuecke `.` und `..`. Was
-    /// uebrig bleibt, ist eine Folge gewoehnlicher Namensbestandteile — und
-    /// ob **die** aufgeloest im Ordner bleibt, entscheidet erst die zweite
-    /// Haelfte der Pruefung beim Auswerten.
+    /// herausfuehrt, ihn gar nicht erst benennt oder mehr verlangt, als die
+    /// eine Sammlung hergibt: ein absoluter Pfad, ein leeres Stueck (`a//b`,
+    /// `planning/`), die Stuecke `.` und `..` und ein zweiter Platzhalter. Was
+    /// uebrig bleibt, ist eine Folge gewoehnlicher Namensbestandteile mit
+    /// hoechstens einem offenen Namen darin — und ob **die** aufgeloest im
+    /// Ordner bleibt, entscheidet erst die zweite Haelfte der Pruefung beim
+    /// Auswerten.
+    ///
+    /// Ein Stueck, in dem ein `*` bloss **vorkommt**, ist ein gewoehnlicher
+    /// Name: offen ist der Name nur, wenn das ganze Stueck aus dem Stern
+    /// besteht. Ein Ordner, der `*` heisst, ist damit als Ort nicht mehr
+    /// benennbar, und das ist der Preis dieser Form.
     pub fn aus_angabe(angabe: &str) -> Result<Self, Ortsmangel> {
         if angabe.starts_with('/') {
             return Err(Ortsmangel::Absolut);
         }
-        let mut teile = Vec::new();
+        let mut vor = Vec::new();
+        let mut nach: Option<Vec<String>> = None;
         for stueck in angabe.split('/') {
             match stueck {
                 "" => return Err(Ortsmangel::LeeresStueck),
                 "." | ".." => return Err(Ortsmangel::Punktstueck),
-                name => teile.push(name.to_owned()),
+                PLATZHALTERSTUECK if nach.is_some() => {
+                    return Err(Ortsmangel::MehrerePlatzhalter);
+                }
+                PLATZHALTERSTUECK => nach = Some(Vec::new()),
+                name => match nach.as_mut() {
+                    Some(hinter) => hinter.push(name.to_owned()),
+                    None => vor.push(name.to_owned()),
+                },
             }
         }
-        Ok(Self { teile })
+        Ok(Self { vor, nach })
     }
 
-    /// Die Namensbestandteile, von oben nach unten. Leer heisst: der erkannte
-    /// Ordner selbst.
+    /// Die Namensbestandteile bis zum Platzhalter, von oben nach unten.
+    ///
+    /// Ohne Platzhalter sind es alle. Leer heisst: der erkannte Ordner selbst,
+    /// und bei einer Angabe wie `*` heisst es, dass der Platzhalter unmittelbar
+    /// in ihm greift.
     pub fn teile(&self) -> &[String] {
-        &self.teile
+        &self.vor
+    }
+
+    /// Die Namensbestandteile hinter dem Platzhalter.
+    ///
+    /// `None` heisst: die Angabe traegt keinen Platzhalter. `Some` mit einer
+    /// leeren Folge heisst: sie traegt einen, und dahinter steht nichts mehr —
+    /// die Angabe `*`.
+    pub fn hinter_dem_platzhalter(&self) -> Option<&[String]> {
+        self.nach.as_deref()
+    }
+
+    /// Ob die Angabe einen Platzhalter traegt.
+    pub fn traegt_platzhalter(&self) -> bool {
+        self.nach.is_some()
     }
 }
 
@@ -379,6 +460,10 @@ pub enum Ortsmangel {
     /// Sie traegt `.` oder `..`. Das zweite fuehrt aus dem Ordner heraus, das
     /// erste sagt nichts und stuende nur da, um wie ein Pfad auszusehen.
     Punktstueck,
+    /// Sie traegt zwei oder mehr Platzhalter. Einer laesst die Kosten aus dem
+    /// Profil ablesen, ein zweiter vervielfachte sie um eine Zahl, die erst am
+    /// Bestand feststuende.
+    MehrerePlatzhalter,
 }
 
 impl Ortsmangel {
@@ -390,6 +475,10 @@ impl Ortsmangel {
             Ortsmangel::Absolut => "ist ein absoluter Pfad",
             Ortsmangel::LeeresStueck => "traegt ein leeres Stueck",
             Ortsmangel::Punktstueck => "traegt ein Stueck . oder ..",
+            Ortsmangel::MehrerePlatzhalter => {
+                "traegt mehr als einen Platzhalter * und damit Kosten, die erst am Bestand \
+                 feststuenden"
+            }
         }
     }
 }
@@ -667,7 +756,54 @@ mod tests {
     fn eine_ortsangabe_traegt_gewoehnliche_namensbestandteile() {
         let ort = Ortsangabe::aus_angabe("planning/entwuerfe").expect("die Angabe ist gewoehnlich");
         assert_eq!(ort.teile(), ["planning", "entwuerfe"]);
+        assert!(!ort.traegt_platzhalter());
         assert!(Ortsangabe::wurzel().teile().is_empty());
+        assert!(Ortsangabe::wurzel().hinter_dem_platzhalter().is_none());
+    }
+
+    /// Der Platzhalter zerlegt die Angabe in ein Stueck davor und eines
+    /// dahinter, und beide Stuecke duerfen leer sein.
+    #[test]
+    fn ein_platzhalter_zerlegt_die_ortsangabe_in_zwei_haelften() {
+        let jeder = Ortsangabe::aus_angabe("*").expect("ein Platzhalter allein ist zulaessig");
+        assert!(jeder.teile().is_empty(), "vor dem Stern steht nichts");
+        assert_eq!(
+            jeder.hinter_dem_platzhalter(),
+            Some(&[][..]),
+            "hinter dem Stern steht nichts, und das ist etwas anderes als kein Stern"
+        );
+
+        let defekte = Ortsangabe::aus_angabe("*/issues").expect("die Angabe ist zulaessig");
+        assert!(defekte.teile().is_empty());
+        assert_eq!(
+            defekte.hinter_dem_platzhalter(),
+            Some(&["issues".to_owned()][..])
+        );
+
+        let mittendrin =
+            Ortsangabe::aus_angabe("circles/*/planning").expect("die Angabe ist zulaessig");
+        assert_eq!(mittendrin.teile(), ["circles"]);
+        assert_eq!(
+            mittendrin.hinter_dem_platzhalter(),
+            Some(&["planning".to_owned()][..])
+        );
+    }
+
+    /// Ein Stern **im** Stueck ist ein gewoehnlicher Name, ein zweites Stueck
+    /// aus einem Stern ist ein Mangel.
+    #[test]
+    fn ein_zweiter_platzhalter_wird_abgewiesen_und_ein_stern_im_namen_nicht() {
+        for angabe in ["*/*", "circles/*/issues/*", "*/*/planning"] {
+            assert_eq!(
+                Ortsangabe::aus_angabe(angabe),
+                Err(Ortsmangel::MehrerePlatzhalter),
+                "die Angabe {angabe:?} kommt durch"
+            );
+        }
+
+        let sternchen = Ortsangabe::aus_angabe("a*b/c").expect("ein Stern im Namen ist ein Name");
+        assert_eq!(sternchen.teile(), ["a*b", "c"]);
+        assert!(!sternchen.traegt_platzhalter());
     }
 
     #[test]

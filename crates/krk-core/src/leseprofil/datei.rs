@@ -66,9 +66,14 @@
 //!   sie nicht genau einen der vier Bausteintische nennt (C3), wenn ein Muster
 //!   darin sich nicht uebersetzen laesst, wenn das Feldmuster nicht genau eine
 //!   Fanggruppe traegt (C3.10) oder wenn die Ortsangabe schon am Text aus dem
-//!   erkannten Ordner herausfuehrt (C3.13, erste Haelfte). Die Zeile steht dann
-//!   in jeder Zusammenfassung mit ihrem Platzhalter, und die uebrigen Zeilen
-//!   bleiben unberuehrt (C3.12).
+//!   erkannten Ordner herausfuehrt (C3.13, erste Haelfte). Seit der Runde 18
+//!   faellt zweierlei dazu, und beides ist eine Aussage ueber die Zeile und
+//!   nicht ueber die Datei: eine Ortsangabe mit **zwei** Platzhaltern
+//!   ([`super::Ortsmangel::MehrerePlatzhalter`]) und ein Platzhalter in der
+//!   Ortsangabe von `juengste` oder `feld`
+//!   ([`ortsangabe_ohne_platzhalter`]). Die Zeile steht dann in jeder
+//!   Zusammenfassung mit ihrem Platzhalter, und die uebrigen Zeilen bleiben
+//!   unberuehrt (C3.12).
 //!
 //! Die zweite und die dritte Reichweite melden aus [`pruefen`], und **jede
 //! Meldung nennt den Profilnamen, bei einer Zeile deren Beschriftung, und den
@@ -227,6 +232,9 @@ pub enum Bausteindatei {
 #[serde(deny_unknown_fields)]
 pub struct Zaehlungsdatei {
     /// Der Unterordner, oder der erkannte Ordner selbst.
+    ///
+    /// Ein Stueck `*` laesst einen Namen offen und legt die Eintraege aller
+    /// getroffenen Unterordner zusammen, siehe [`Ortsangabe`].
     pub ordner: Option<String>,
     /// Das Muster auf dem Eintragsnamen, oder alle Eintraege.
     pub muster: Option<String>,
@@ -237,6 +245,9 @@ pub struct Zaehlungsdatei {
 #[serde(deny_unknown_fields)]
 pub struct Juengstedatei {
     /// Der Unterordner, oder der erkannte Ordner selbst.
+    ///
+    /// **Ohne Platzhalter**: dieser Baustein liest Dateien und braucht dafuer
+    /// ihren Pfad, siehe [`ortsangabe_ohne_platzhalter`].
     pub ordner: Option<String>,
     /// Das Muster auf dem Eintragsnamen, oder alle Eintraege.
     pub muster: Option<String>,
@@ -253,6 +264,9 @@ pub struct Juengstedatei {
 #[serde(deny_unknown_fields)]
 pub struct Felddatei {
     /// Der Unterordner, oder der erkannte Ordner selbst.
+    ///
+    /// **Ohne Platzhalter**: dieser Baustein liest Dateien und braucht dafuer
+    /// ihren Pfad, siehe [`ortsangabe_ohne_platzhalter`].
     pub ordner: Option<String>,
     /// Das Muster auf dem Dateinamen.
     pub datei: String,
@@ -265,6 +279,9 @@ pub struct Felddatei {
 #[serde(deny_unknown_fields)]
 pub struct Vorhandenseindatei {
     /// Der Unterordner, oder der erkannte Ordner selbst.
+    ///
+    /// Ein Stueck `*` laesst einen Namen offen und legt die Eintraege aller
+    /// getroffenen Unterordner zusammen, siehe [`Ortsangabe`].
     pub ordner: Option<String>,
     /// Das Muster auf dem Eintragsnamen.
     pub muster: String,
@@ -351,12 +368,12 @@ fn baustein_pruefen(baustein: Bausteindatei) -> Result<Baustein, String> {
             muster: wahlfreies_muster(zaehlung.muster.as_deref())?,
         }),
         Bausteindatei::Juengste(juengste) => Ok(Baustein::Juengste {
-            ort: ortsangabe(juengste.ordner.as_deref())?,
+            ort: ortsangabe_ohne_platzhalter(juengste.ordner.as_deref(), "juengste")?,
             muster: wahlfreies_muster(juengste.muster.as_deref())?,
             anzahl: gekappte_anzahl(juengste.anzahl),
         }),
         Bausteindatei::Feld(feld) => Ok(Baustein::Feld {
-            ort: ortsangabe(feld.ordner.as_deref())?,
+            ort: ortsangabe_ohne_platzhalter(feld.ordner.as_deref(), "feld")?,
             datei: muster(&feld.datei)?,
             feldmuster: feldmuster(&feld.feldmuster)?,
         }),
@@ -427,6 +444,28 @@ fn ortsangabe(angabe: Option<&str>) -> Result<Ortsangabe, String> {
         None => Ok(Ortsangabe::wurzel()),
         Some(text) => Ortsangabe::aus_angabe(text)
             .map_err(|mangel| format!("die Ortsangabe {text:?} {}", mangel.grund())),
+    }
+}
+
+/// Dieselbe Pruefung fuer die zwei Bausteine, die Dateien **lesen**.
+///
+/// `juengste` und `feld` nehmen keinen Platzhalter an, und die Grenze liegt auf
+/// der Naht, die der Modulkopf von [`super::bausteine`] ohnehin zieht: zwei
+/// Bausteine sehen auf Namen, zwei lesen Dateien. Wer eine Datei liest, braucht
+/// ihren Pfad, und den traegt ein Lesestand nicht mehr, in dem die Eintraege
+/// mehrerer Ordner zusammenliegen.
+///
+/// `baustein` benennt den Tisch, in dem die Angabe steht; die zwei Aufrufer
+/// sind die zwei Bausteine, und ein dritter Satz entsteht nicht.
+fn ortsangabe_ohne_platzhalter(angabe: Option<&str>, baustein: &str) -> Result<Ortsangabe, String> {
+    let ort = ortsangabe(angabe)?;
+    match angabe.filter(|_| ort.traegt_platzhalter()) {
+        None => Ok(ort),
+        Some(text) => Err(format!(
+            "die Ortsangabe {text:?} traegt einen Platzhalter, und der Baustein \
+             \u{201e}{baustein}\u{201c} nimmt keinen an: er liest Dateien und braucht dafuer \
+             ihren Pfad, den ein zusammengelegter Lesestand nicht traegt"
+        )),
     }
 }
 
