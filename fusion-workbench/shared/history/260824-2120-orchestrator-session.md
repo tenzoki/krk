@@ -1,8 +1,8 @@
 # Orchestrator Session — 260824-2120
 
-**Directive:** (noch nicht gesetzt; der Nutzer hat nur /fusion:setup aufgerufen)
-**Mode:** (offen)
-**Status:** In Arbeit
+**Directive:** Das Kontextmenü der Dateiliste trägt Zip, Unzip und Finder neben dem Teilen (Runde 17, Circle `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder`)
+**Mode:** custom, ab Phase 1 plan
+**Status:** Complete
 
 ## Snapshot bei Setup
 
@@ -23,7 +23,25 @@
 
 ## Per-Turn Log
 
-(noch keine Runde)
+### Runde 1
+- Aufgaben: P-1 bis P-4, alle erledigt
+- Commits: `9af13ba`, `b0841ba`, `ab74c9e`, `423d5f2`
+- Durchsicht: fünf Defekte, einer kritisch
+- Circuit Breaker: OK
+- Kohärenz: ok
+
+### Runde 2
+- Aufgaben: F-1, F-2 (die fünf Befunde), dann P-5, P-6, P-8, P-7 — alle erledigt
+- Commits: `3d8332a`, `299d1e1`, `dd80e81`, `a34a3f0`, `8b5a5ce`, `6faaa91`
+- Durchsicht: vier Defekte, einer hoch; einer davon sofort geschlossen, weil er diese Datei betraf und nicht den Baum
+- Circuit Breaker: OK
+- Kohärenz: ok
+
+### Runde 3
+- Aufgaben: F-3, die drei verbliebenen Befunde — erledigt
+- Commits: `dd74b0e`, `ddd41ff`
+- Durchsicht: keine eigene; der Abgleich meldet `dd74b0e` als ungelesen
+- Circuit Breaker: OK, Warteschlange leer
 
 ## Entscheidungen des Nutzers zu Runde 17
 
@@ -72,3 +90,22 @@ bei dem das Archiv des ersten Laufs selbst in der Markierung steht —, **fällt
 Lauf heraus**. Gewählt ist der zweite der beiden Vorschläge des Datensatzes, also der kleinere:
 die Oberfläche legt das Ziel nicht auf eine Quelle, statt dass der Kern einen Pfadvergleich
 bekommt, der aus der Oberfläche stammt. Die Entpack-Gestalt fällt unter dieselbe Antwort.
+
+## Coherence
+
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** review-needed
+
+**Edges:**
+- Artifact↔Grounding: 13 von 13 Behauptungen gedeckt (8 Planschritte, 5 Zeilen `Implemented:`), 0 Abweichung zwischen Behauptung und Baum, `make check` grün am Stand `ddd41ff` — **geflaggt** wegen zweier Abweichungen daneben: zwei Aussagen in `CLAUDE.md` sind mit dieser Runde falsch geworden (`circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1230_o_claude-md-fuehrt-die-runden-nur-bis-15-*`), und `dd74b0e` mit vier Codedateien und 303 hinzugefügten Zeilen liegt hinter dem Bereich beider Durchsichten (`428fbc4..6faaa91`) und ist ungelesen (`.../issues/260825-1230_o_der-groesste-codecommit-nach-der-letzten-durchsicht-ist-ungelesen-*`). Offene Durchsichtsbefunde: 3 (`260825-0838_o_` im Circle, `260825-0727_o_` und `260825-1130_o_` im gemeinsamen Speicher), alle drei am Baum bestätigt.
+- Artifact↔Directive: alle 16 Commits aus `428fbc4..ddd41ff` bewegen sich **auf die Directive zu**, keiner daneben. `9af13ba`, `b0841ba`, `ab74c9e` bauen den Kern (Kiste, `Art::Zippen`, `Art::Entpacken`), `423d5f2`, `dd80e81`, `a34a3f0`, `8b5a5ce`, `6faaa91` die Oberfläche bis zum Ausführungszweig, `3d8332a`, `299d1e1`, `dd74b0e` beheben Durchsichtsbefunde innerhalb derselben Directive, `d63d07b`, `fe1aff5`, `6ad9198`, `e3478e6`, `ddd41ff` sind Werkbankarbeit dazu. Keine Zeile Code außerhalb des Kontextmenüs, seiner zwei Vorgangsarten und des Konfliktblatts.
+- Grounding↔Directive: 18 aktive Entscheidungsdatensätze im gemeinsamen Speicher, 0 offene im Circle, **keiner im Widerspruch** zur Directive. Zwei stehen nahe und binden nicht: `shared/decisions/260821-1221_o_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-*` hätte gebunden, wäre die Runde auf ein Systemwerkzeug gefallen, und sie ist auf eine fremde Kiste gefallen; `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1516_o_hebt-ein-rechtsklick-auf-eine-unmarkierte-zeile-die-markierung-anderswo-auf.md` bleibt offen und trägt jetzt drei weitere Einträge, die auf derselben Rechtsklick-Auswahl aufsetzen — eine gewachsene Reichweite, kein Widerspruch.
+
+**Rebalance recommendation:** revise Artifact
+
+**Wozu die Empfehlung rät, im Klartext:** keine der zwei Abweichungen berührt das gebaute
+Verhalten. Die erste ist Kuratorenarbeit an `CLAUDE.md`, die zweite eine Wahl zwischen einer
+dritten Durchsicht über `6faaa91..ddd41ff` (ein Commit, vier Dateien) und dem Weiterreichen jenes
+Bereichs an die erste Durchsicht der nächsten Runde. Der Abgleich selbst liegt in
+`circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/history/260825-1230-reconciliation.md`.

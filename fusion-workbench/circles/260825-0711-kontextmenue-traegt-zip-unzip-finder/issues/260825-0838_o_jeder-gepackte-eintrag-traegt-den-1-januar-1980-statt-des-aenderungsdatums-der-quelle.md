@@ -95,3 +95,12 @@ solange der Packlauf jedem Eintrag den 1. Januar 1980 gibt, machte ein Entpacken
 Zeitstempel des Eintrags übernähme, aus jeder Datei eine von 1980, und der Befund wäre von
 einem verlorenen Wert zu einem falschen geworden. Wer den Datensatz abarbeitet, fängt am
 Packende an. Der Modulkopf von `entpacken.rs` verweist auf diesen Datensatz.
+
+**Abgleich 260825-1230 (reconciler), Marker `_o_` bestätigt.** Gegen den Baumstand `ddd41ff`
+gelesen: `Cargo.toml:176` bindet `zip` weiterhin mit `default-features = false` und dem einen
+Merkmal `deflate-flate2`, das Merkmal `time` steht nicht dabei. Weder `zippen.rs` noch
+`entpacken.rs` nennt `last_modified_time`, `FullFileOptions`, `add_extra_data` oder `set_times`;
+`dateiwahl` (`zippen.rs:504`) und `ordnerwahl` (`:513`) gehen unverändert über
+`SimpleFileOptions::default()`. Beide Enden stehen damit so, wie der Datensatz sie beschreibt, das
+Packende wie die im Nachtrag genannte Gegenrichtung. Nichts ist behoben, nichts ist
+weitergewandert.

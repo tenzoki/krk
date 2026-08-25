@@ -70,3 +70,5 @@ geworden; jeder ist nur teurer zu prüfen.
 der Antwort „Regel statt Zahl".
 `shared/decisions/260818-0201_*_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md`
 — dieselbe Frage für den Marker im Dateinamen statt für die Zeilennummer im Code.
+
+Also seen: 260825-1230 by reconciler — dieselbe Bewegung in der Runde 17: die Zeile `Also seen: 260825-1144 by coderev` in `shared/issues/260825-1130_o_ein-selbst-getippter-name-im-konfliktblatt-*` zitiert `crates/krk-core/src/operation/zippen.rs:259-268` für `halbes_archiv_wegraeumen`; nach `dd74b0e` steht dort der Zweig `Konfliktantwort::UmbenennenIn`, und die Funktion liegt bei `:277-286`.

@@ -57,3 +57,5 @@ nachgeschlagen wird.
 `crates/krk-core/src/verzeichnis/sys.rs`, Modulkopf von `ohne_warten_oeffnen`
 
 **Domain:** code
+
+Also seen: 260825-1230 by reconciler — die Runde 17 hat den Befund verbreitert: der Baum trägt jetzt **fünf** Aufrufer, und zwei davon liegen außerhalb von `text/datei.rs` (`operation/zippen.rs:348`, `operation/entpacken.rs:118`). Damit ist neben der Zahl auch der Satzteil „beide liegen seit der Runde 11 in `krk-core/src/text/datei.rs`" falsch, und das Zählkommando, das derselbe Absatz mitgibt (`grep -n 'sys::ohne_warten_oeffnen(' crates/krk-core/src/text/datei.rs`), ist auf eine Datei verengt, die den Bestand nicht mehr hält. Der Modulkopf von `verzeichnis/sys.rs` ist in dieser Runde neu geschrieben worden (`299d1e1`, `ab74c9e`) und zählt an zwei Stellen weiterhin daneben: Zeile 52–53 nennt „die zwei ältesten … in `text/datei.rs`" und lässt `anlesen` erneut aus, Zeile 848–849 sagt „der dritte und der vierte mit der Runde 17", wo es der vierte und der fünfte sind. Die vom Vorschlag verlangte Bewegung ist im Modulkopf halb vollzogen: Zeile 49 nennt das Zählkommando bereits, die Aufzählung darunter widerspricht ihm.

@@ -136,3 +136,17 @@ Geprueft und in Ordnung, mit einer Einschraenkung.
 2. **B3** vor der Abnahme der Runde, weil sie eine Nutzerantwort braucht und nicht bloss eine Zeile. Solange sie offen ist, bedeuten zwei Eintraege desselben Menues mit demselben Blatt zweierlei.
 3. **B2** vor dem Rundenabschluss. Der Fall ist selten, seine Wirkung ist ein Vorgang, den der Nutzer nicht mehr anhalten kann.
 4. **B4** und **B5** sind Aufraeumen und koennen mit dem naechsten Schritt derselben Dateien mitlaufen.
+
+---
+
+**Abgleich 260825-1230 (reconciler).** Alle fünf Befunde dieser Durchsicht sind als Datensatz
+abgelegt, und vier davon sind am Baumstand `ddd41ff` als behoben nachgelesen: der Archivname aus
+Punkten (`kontextmenue::brauchbarer_stamm` schickt jeden Stamm durch
+`krk_core::operation::umbenennen::name_pruefen`), die benannte Röhre (`zippen.rs:362-363` fragt
+`metadata()` am offenen Deskriptor und weist alles ab, was `is_file()` nicht bejaht; die Probe
+`eine_benannte_roehre_mit_schreiber_haelt_das_packen_nicht_an` steht in
+`crates/krk-core/tests/operation.rs:1678`), das fehlende `#[must_use]` (`zippen.rs:135` an
+`Packschritt`, `operation/mod.rs:136` an `Zielentscheid`) und die zwei Prosastellen zu
+`enclosed_name`. Der fünfte, der Zeitstempel 1. Januar 1980, steht als offener Datensatz
+`issues/260825-0838_o_*` und ist am Baum bestätigt. Der Nebenbefund zum selbst getippten Namen
+liegt als `shared/issues/260825-1130_o_*` und ist offen.

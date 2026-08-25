@@ -347,3 +347,22 @@ Ausserhalb dieser Durchsicht bleiben die zwei bekannten offenen Datensaetze der 
 Zeitstempel 1980 an jedem gepackten Eintrag (`issues/260825-0838`) und der selbst getippte Name im
 Konfliktblatt (`shared/issues/260825-1130`, um eine Zeile ergaenzt: nach einem Abbruch loescht
 `halbes_archiv_wegraeumen` die getroffene Datei endgueltig).
+
+---
+
+**Abgleich 260825-1230 (reconciler).** Alle vier Befunde dieser Durchsicht sind als Datensatz
+abgelegt und geschlossen, und alle vier sind am Baumstand `ddd41ff` nachgelesen: die Paarungsprobe
+(`jeder_kontextbefehl_erreicht_seine_wirkung`, `crates/krk-ui/src/appkit/anwendung.rs:9064`, zählt
+zeilenweise Befehls- und Zweignamen zugleich), das doppelte Kommentarzeichen (`grep -rn '^\s*//!\s*//!'
+crates/` gibt nichts mehr aus), der zu enge Satz der Sitzungsgeschichte (dort berichtigt, nicht am
+Code) und der schwere Befund zur Quelle des eigenen Laufs (`ist_ziel_des_laufs`,
+`crates/krk-ui/src/kommandos/kontextmenue.rs:598`, mit den zwei Rufern `packziel:457` und
+`ohne_die_eigenen_ziele:616` und drei haltenden Proben).
+
+**Eine Lücke bleibt, und sie liegt nicht an dieser Durchsicht.** Ihr Bereich endet auf `6faaa91`;
+die Behebung ihres schweren Befundes ist `dd74b0e` und liegt dahinter. Der Commit ändert vier
+Codedateien mit 303 hinzugefügten Zeilen und ist von keiner Durchsicht gelesen. Abgelegt als
+`issues/260825-1230_o_der-groesste-codecommit-nach-der-letzten-durchsicht-ist-ungelesen-und-traegt-eine-nutzerzusage.md`.
+Der Satz „zusammen tilen die beiden den ganzen Sitzungsbereich" im Kopf dieser Datei war zum
+Zeitpunkt des Schreibens wahr und ist es seit `dd74b0e` nicht mehr; er bleibt als Aufzeichnung
+seines Standes stehen.

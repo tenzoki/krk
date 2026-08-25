@@ -40,3 +40,14 @@ Gefunden am 260825 in der Durchsicht der Runde 17, Abschnitt "Nebenbei, im selbe
 Datensatzes `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-0942_c_ueberschreiben-loescht-beim-packen-endgueltig-und-beim-entpacken-in-den-papierkorb.md`.
 
 Also seen: 260825-1144 by coderev — beim Packen kommt eine zweite Wirkung dazu: bricht der Nutzer den Lauf ab, loescht `zippen::halbes_archiv_wegraeumen` (`crates/krk-core/src/operation/zippen.rs:259-268`) die getroffene Datei mit `fs::remove_file` **endgueltig**, also ohne den Papierkorb, den derselbe Zweig seit dem 260825 sonst nimmt.
+
+**Abgleich 260825-1230 (reconciler), Marker `_o_` bestätigt.** Gegen den Baumstand `ddd41ff`
+gelesen: alle drei genannten Stellen verhalten sich unverändert. `zielarchiv_klaeren`
+(`crates/krk-core/src/operation/zippen.rs:259-265`) und `zielordner_klaeren`
+(`crates/krk-core/src/operation/entpacken.rs:196-202`) reichen den getippten Namen nach
+`name_pruefen` unmittelbar an `Zielentscheid::Nach` weiter, ohne den Bestand ein zweites Mal zu
+fragen; `ziel_klaeren` in `operation/mod.rs` tut dasselbe für Kopieren und Verschieben. Die
+Nebenwirkung aus der Zeile `Also seen` steht ebenfalls: `halbes_archiv_wegraeumen`
+(`zippen.rs:277-286`) nimmt weiter `fs::remove_file` und nicht den Papierkorb. Der Datensatz ist
+in dieser Runde nicht angefasst worden und war das nach seiner eigenen Begründung auch nicht zu
+erwarten.

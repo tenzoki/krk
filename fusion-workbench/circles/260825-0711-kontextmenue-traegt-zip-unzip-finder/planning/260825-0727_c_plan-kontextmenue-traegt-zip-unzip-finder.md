@@ -362,3 +362,98 @@ Zwei Fragen bleiben planintern und brauchen keinen eigenen Datensatz, weil sie n
 - [ ] **Bekommt `appkit/terminal.rs` einen Namen, der zu seinen zwei Aufrufern passt?** Der Plan benennt die Datei **nicht** um, obwohl ihr Name nach Schritt 5 zu eng ist. Grund: `CLAUDE.md` nennt sie beim Pfad, und `CLAUDE.md` gehört dem `curator` und nicht dem `coder`; eine Umbenennung im Code hinterließe dort einen toten Zeiger. Ein späterer Aufräumlauf kann beides zusammen machen.
 
 Ein Defekt ist beim Erkunden aufgefallen und liegt als `shared/issues/260825-0727_*_claude-md-nennt-zwei-aufrufer-von-ohne-warten-oeffnen-der-baum-traegt-drei.md`. Er hält den Plan nicht auf und wird durch Schritt 2 größer, weil das Packen einen vierten Aufrufer hinzufügt.
+
+## Reconciliation Log
+
+**260825-1230, reconciler, Domäne `code`, gegen den Baumstand `ddd41ff`.** Jede der acht
+Schrittmarken `[DONE]` und jeder Nachtrag ist einzeln gegen den Baum gelesen worden, nicht gegen
+die Marke.
+
+**Alle acht Schritte halten.** Die Belege je Schritt:
+
+1. `Cargo.toml:176` bindet `zip = { version = "8.6", default-features = false, features =
+   ["deflate-flate2"] }`, `:186` `flate2 = "1"`, beide mit der ausführlichen Begründung darüber;
+   `crates/krk-core/Cargo.toml:28` und `:37` tragen sie mit `workspace = true`. Die Abnahmezeile ist
+   hier nachgefahren: `cargo tree --workspace -e normal,build` nennt weder `cc` noch einen
+   `-sys`-Namen, auch `windows-sys` nicht, und `Cargo.lock` führt außer `windows-sys` keinen. Der
+   Nachtrag zu `crc32fast` deckt sich mit `Cargo.toml:145-148`.
+2. `Art::Zippen { ziel: PathBuf }` steht in `crates/krk-core/src/operation/auftrag.rs`; der Lauf
+   in `operation/zippen.rs`. Der Nachtrag zu `add_symlink` und zum 1. Januar 1980 ist am Baum
+   bestätigt: `zippen.rs:490` setzt `unix_permissions(0o120777)` neben dem Verknüpfungsweg, und
+   keine Stelle setzt `last_modified_time`.
+3. `Art::Entpacken { ziele: Vec<PathBuf> }` steht in `auftrag.rs`, `entpackziel(stelle)` bei `:186`,
+   der Lauf in `operation/entpacken.rs`. Alle drei Abweichungen des Nachtrags halten: die Liste
+   statt des einzelnen Ziels, die umgekehrte Reihenfolge (`ZipArchive::new` bei `entpacken.rs:125`,
+   `zielordner_klaeren` erst bei `:137`) und `kette_anlegen` neben `enclosed_name`.
+4. `crates/krk-ui/src/kommandos/kontextmenue.rs` trägt `Kontextbefehl` mit drei Werten und `ALLE`
+   (`:190`), `ist_zipname` (`:304`), `archivname` (`:416`), `ordnername_zum_archiv` (`:489`) und
+   `entpackziel` (`:538`); `operationen.rs:482` trägt `erzeugt_genau_ein_ziel`. Alle sieben
+   Abweichungen des Nachtrags sind am Baum wiedergefunden, `von_menuemarke` und
+   `Entpackbefund::Archive` eingeschlossen. Die im Nachtrag angekündigte Sperre — die drei
+   Datensätze behalten vorerst `_a_` — ist inzwischen aufgehoben, siehe unten.
+5. `operationen::ordner_fehlt` steht bei `operationen.rs:846`; `terminalordner_fehlt` kommt im
+   ganzen Quellbaum nur noch einmal vor, und zwar in einem Prosaverweis auf den alten Namen
+   (`appkit/anwendung.rs:6193`). `terminal::ordner_oeffnen` ist unverändert.
+6. `menuNeedsUpdate:` (`appkit/tabelle.rs:1148-1155`) leert, baut über
+   `eigene_kontexteintraege_anfuegen` die drei eigenen Einträge und ruft **danach**
+   `teilen::eintrag_anfuegen`. Der Nachtrag hält: der Eintrag entsteht in `menue::ohne_kuerzel`
+   (`tabelle.rs:1677`) und nicht über einen zweiten Erzeuger, `Kontextmelder` steht bei `:498`.
+7. `kontextbefehl_ausfuehren` (`appkit/anwendung.rs:6081-6086`) verzweigt vollständig und ohne
+   Auffangzweig auf `zipauftrag_stellen`, `entpackauftrag_stellen` und `im_finder_zeigen`; der
+   Melder wird bei `:1389` gesetzt, `FINDERKENNUNG` steht bei `:299`.
+8. `blaetter/konflikt.rs:139` legt beide Gestalten als eine Angabe an, `antwort` (`:196`) trägt die
+   zwei Tafeln, `tastenhinweis` (`:217`) den Satz je Gestalt. Die gekürzte Gestalt trägt
+   Überschreiben, Umbenennen, Abbrechen, die Eingabetaste auf Abbrechen und kein `Taste::Escape` —
+   genau wie der Nachtrag sagt.
+
+**Die Abnahmezeilen der Schritte sind nachgefahren.** `make check` läuft am Stand `ddd41ff` mit
+Exit 0 über alle vier Kommandos; `krk-ui` meldet 795 Proben, kein Fehlschlag in einem der
+Probenziele.
+
+**Die fünf Entscheidungsdatensätze tragen `_i_` zu Recht.** Jede Zeile `Implemented:` ist gegen den
+Code gelesen worden, den sie zitiert, und jede deckt:
+
+| Datensatz | Zitierte Umsetzung | Befund |
+|---|---|---|
+| `wie-heisst-das-archiv-*` | `kontextmenue::archivname`, `ordnername_zum_archiv`, Probe `archivname_und_ordnername_kehren_einander_um` | `:416`, `:489`, `:837` — gedeckt |
+| `woran-erkennt-unzip-*` | `kontextmenue::ist_zipname`, eine Regel an einer Stelle | `:304`, zwei Proben bei `:757` und `:769` — gedeckt |
+| `was-tut-unzip-wenn-der-zielordner-*` | `entpacken::zielordner_klaeren`, Papierkorb statt endgültig | `entpacken.rs:170`, der Zweig `Ueberschreiben` bei `:181` ruft `papierkorb.in_den_papierkorb` — gedeckt |
+| `welche-antworten-bietet-das-konfliktblatt-*` | `konflikt::schaltflaechen(genau_ein_ziel)`, zwei Tafelproben | `konflikt.rs:139`, `:196` — gedeckt |
+| `nimmt-unzip-die-betroffenen-eintraege-*` | `Art::Entpacken { ziele }`, `entpackziel`, `ohne_die_eigenen_ziele` | `auftrag.rs`, `kontextmenue.rs:538`, `:612` — gedeckt |
+
+Kein `Implemented:` steht ohne Deckung, und keiner der genannten Commit-Hashes fehlt im Bereich
+`428fbc4..ddd41ff`.
+
+**Die drei Zusagen des Nutzers halten am Baum.**
+
+- *„Überschreiben" räumt in den Papierkorb, beim Packen wie beim Entpacken.* `zippen.rs:242` und
+  `entpacken.rs:181` rufen beide `papierkorb.in_den_papierkorb(ziel)`; `loeschen::baum_entfernen`
+  kommt in keinem der zwei Läufe mehr vor. Gehalten von
+  `ueberschreiben_raeumt_allein_den_gleichnamigen_eintrag_in_den_papierkorb`
+  (`crates/krk-core/tests/operation.rs:1488`).
+- *Angetastet wird allein der namensgleiche Eintrag.* `zielarchiv_klaeren` nimmt `ziel` und sonst
+  nichts. Dieselbe Probe prüft es in einem Zug mit: der Ordner am Archivnamen geht in den
+  Papierkorb und ist dort vollständig, der Nachbar `Projekte` ohne `.zip` ist unangetastet.
+- *Trifft das Ziel eines Laufs eine seiner eigenen Quellen, fällt diese Quelle aus dem Lauf.*
+  `ist_ziel_des_laufs` (`kontextmenue.rs:598`) mit den zwei Rufern `packziel` (`:457`) und
+  `ohne_die_eigenen_ziele` (`:616`); der Kern hat wie festgelegt keinen Pfadvergleich bekommen.
+  Drei Proben (`:1095`, `:1124`, `:1147`).
+
+**Die neun Defektdatensätze der Runde tragen den richtigen Marker.** Acht `_c_` sind einzeln gegen
+den Baum gelesen und gedeckt; der eine `_o_` (Zeitstempel 1. Januar 1980) ist am Baum bestätigt und
+hat seine Prüfnotiz bekommen. Ebenso die zwei offenen im gemeinsamen Speicher.
+
+**Zwei Abweichungen sind neu abgelegt**, beide in diesem Speicher:
+
+- `260825-1230_o_claude-md-fuehrt-die-runden-nur-bis-15-*` — zwei Aussagen in `CLAUDE.md` sind mit
+  dieser Runde falsch geworden.
+- `260825-1230_o_der-groesste-codecommit-nach-der-letzten-durchsicht-ist-ungelesen-*` — `dd74b0e`
+  liegt hinter dem Bereich beider Durchsichten.
+
+**Was ausdrücklich kein Befund ist:** der ausstehende Abnahmelauf am gebauten Bündel (er verlangt
+KRK im Vordergrund und ist Nutzerarbeit) und die zehn Zeitzusagen aus C8, die diese Runde nach
+`## Where this Circle stops` nicht misst.
+
+**Der Abschnitt `## Turn log` des Circle-Datensatzes `_t_circle.md` ist leer**, ebenso der Abschnitt
+`## Per-Turn Log` der Sitzungsgeschichte, obwohl das Ereignisprotokoll drei Runden der
+Turn-Schleife führt. Der Reconciler schreibt sie nicht; sie sind dem Nutzer gemeldet.
