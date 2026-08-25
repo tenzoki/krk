@@ -366,7 +366,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - `make check` grün.
    - **Nachtrag 260825-2051, Umsetzung. Es sind zwölf Profile geworden und nicht acht**, auf einen zweiten Teil, den der Nutzer am 260825-2020 nach der Freigabe hinzugefügt hat: neben den acht für fusion stehen vier für eine flight-Werkbank (die Wurzel, ein Speicher, der Ablagespeicher, das Verzeichnis darüber). flight ist derselbe Zuschnitt ohne Runden und ohne Zustandsmarker; die eine Ausnahme beim Speicherprofil ist `archive`, das Läufe als Ordner führt. Das Vorbild liegt unter `/Users/k1/Projects/productive/example/` und ist allein gelesen worden. Alle sechs Abnahmekriterien halten, sinngemäß auf zwölf gezogen und an beiden Bäumen gemessen: die Summe der sechs Zustände ist 19 wie die Zeile „Runden", und die Defektzeile zeigt 116 wie das `find`. **Die Profilzahl stand an vier Stellen und nicht an einer**, also sind neben `ablage/leseprofile.rs` auch `tests/ablage.rs` und `tests/leseprofil.rs` nachgezogen worden, je eine Zahl; die vier Prosastellen haben ihre Zahl verloren statt einer neuen. Abgelegt als `shared/issues/260825-2044_*_die-zeile-projekt-der-werkbankprofile-haengt-an-einem-feld-das-fusion-nicht-mehr-schreibt.md`: `setup_pwd` schreibt fusion seit einer Fassung zwischen 8.1.0 und 10.7.0 nicht mehr, und die Zeile „Projekt" kann an einer heutigen Werkbank nie antworten. Der Verlauf steht in `shared/history/260825-2051-ontocoder-zwoelf-leseprofile-fuer-fusion-und-flight.md`.
 
-9. **Der Weg zu einer neuen Profildatei steht im `README.md`**
+9. [DONE] **Der Weg zu einer neuen Profildatei steht im `README.md`**
    - Executor: `coder`
    - Files: `README.md`
    - Changes: Ein Abschnitt „Neue Leseprofile übernehmen". `ablage::leseprofile::anlegen_falls_fehlt` schreibt die Auslieferungsfassung **nur**, wenn `~/Library/Application Support/KRK/readers.toml` fehlt; eine vorhandene Datei wird nach C1.2 nie angefasst. Die drei neuen Profile dieser Runde erreichen deshalb niemanden, der KRK schon einmal gestartet hat — ohne jede Meldung, denn eine unveränderte Datei verhält sich vollkommen richtig.
@@ -379,6 +379,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - Der Abschnitt nennt den vollen Pfad der Datei, die drei Schritte in dieser Reihenfolge und ausdrücklich, was ohne den Handgriff geschieht: die neuen Profile bleiben unsichtbar.
      - Er sagt, was verloren geht, wenn der Nutzer die alte Datei löscht statt sie beiseitezulegen.
      - `make check` grün.
+   - **Nachtrag 260825-2058, Umsetzung.** Der Abschnitt steht als `## Neue Leseprofile übernehmen` in `README.md:44-73`, hinter dem Abschnitt zum Installieren und vor dem Trennstrich, ab dem der Text sich an den Bauenden richtet. **Er nennt keine Zahl**: der Schritttext oben spricht von „den drei neuen Profilen dieser Runde", Schritt 8 hat zwölf statt fünf geliefert, und eine Zahl an dieser Stelle wäre mit der nächsten Runde wieder falsch. Der `RELEASETEXT` ist unberührt. Alle drei Abnahmekriterien halten, `make check` grün. Der Verlauf steht in `shared/history/260825-2058-coder-der-weg-zu-einer-neuen-profildatei-steht-im-readme.md`.
 
 10. **Was die acht Profile an der wirklichen Werkbank kosten**
     - Executor: `analyst`

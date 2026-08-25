@@ -41,6 +41,37 @@ Stelle, als Konstante `RELEASETEXT` in `xtask/src/veroeffentlichung.rs`, und jed
 seiner Aussagen hängt dort an einer eigenen Behauptung der Probe
 `der_releasetext_traegt_jede_seiner_aussagen`.
 
+## Neue Leseprofile übernehmen
+
+Wählt man im Dateifenster einen Ordner aus, zeigt die Vorschau rechts seine
+Metadaten. Für Orte, die KRK erkennt, steht dort stattdessen eine
+Zusammenfassung ihres Inhalts. Welche Orte das sind und was in der
+Zusammenfassung steht, sagt die Datei
+`~/Library/Application Support/KRK/readers.toml`.
+
+**Ein Versionswechsel bringt neue Leseprofile nicht mit.** KRK legt diese Datei
+beim ersten Start an und schreibt sie danach nie wieder, auch dann nicht, wenn
+eine neue Fassung Profile mitbringt, die darin fehlen. Wer KRK schon einmal
+gestartet hat, sieht nach der Installation weiter genau die Profile von vorher.
+Eine Meldung darüber gibt es nicht, und es wäre auch keine am Platz: eine
+unveränderte Datei ist nicht beschädigt, sie verhält sich vollkommen richtig.
+
+Die neuen Profile holt man sich in drei Schritten:
+
+1. KRK beenden.
+2. `~/Library/Application Support/KRK/readers.toml` beiseitelegen, etwa als
+   `readers.toml.alt` im selben Ordner.
+3. KRK starten. Die Datei entsteht neu aus der Auslieferungsfassung, samt allen
+   Kommentaren darin.
+
+**Beiseitelegen und nicht löschen.** Es ist derselbe Grund wie beim
+Installieren: was KRK sich merkt, liegt außerhalb des Bündels, und ein
+Handgriff, der es mitnimmt, hat es genommen. In der alten Datei stehen die
+eigenen Profile und die eigenen Änderungen an den ausgelieferten; wer sie
+löscht, hat sie nicht mehr, denn die neu angelegte Datei kennt nur die
+Auslieferungsfassung. Aus der beiseitegelegten holt man sie sich Zeile für
+Zeile zurück.
+
 ---
 
 Alles Weitere richtet sich an den, der KRK baut, signiert und ausliefert.
