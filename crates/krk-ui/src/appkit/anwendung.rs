@@ -8925,6 +8925,45 @@ mod aktivschreiberproben {
         );
     }
 
+    /// `aktives_setzen` hat genau zwei Aufrufer, und keiner kommt dazu, ueber
+    /// den niemand entschieden hat.
+    ///
+    /// Die Naht, an der die Regel der Runde 18 wirklich haengt: jeder Weg, der
+    /// `Fenstermodell::aktiv` umschreibt, nimmt den Ersthelferrang mit, wo AppKit
+    /// ihn nicht selbst bewegt. Die zwei Aufrufer sind der Rueckruf der
+    /// Datenquelle aus dem Aufbau der Oberflaeche, der die Mitnahme
+    /// durchreicht, und [`super::Anwendungsdelegierter::aktives_dem_ersthelfer_nachziehen`],
+    /// das mit [`super::Rangmitnahme::Appkit`] kommt, weil der Rang dort der
+    /// Ausloeser ist. Ein dritter Aufrufer, der `Appkit` an einer Stelle
+    /// hinschreibt, an der AppKit den Rang gerade nicht bewegt, stellt den
+    /// Fehler wieder her, den `fd361d7` und `d3da6e3` behoben haben — und weder
+    /// der Uebersetzer noch eine der Proben darueber wuerde rot: die
+    /// Fallunterscheidung in `aktives_setzen` haelt gegen einen dritten
+    /// **Wert**, nicht gegen einen dritten **Weg**, und die Zaehlung ueber
+    /// `aktiv_setzen` sieht den dritten Weg nicht, weil er dasselbe eine
+    /// `aktiv_setzen` innerhalb von `aktives_setzen` mitbenutzt
+    /// (`shared/issues/260825-2127_*_ein-dritter-weg-nach-aktives-setzen-haelt-den-bau-nicht-an-und-keine-probe-faengt-ihn.md`).
+    ///
+    /// Eine Aufruferzaehlung steht hier, weil die Zahl selbst zugesagt ist —
+    /// die Commit-Botschaft von `d3da6e3` sagt „weiter genau zwei Aufrufer" —;
+    /// der Kopf von [`crate::quellbaum`] sagt, warum sie sonst nirgends stehen
+    /// soll.
+    ///
+    /// **Was sie nicht sieht:** einen Aufrufer aus einer anderen Datei. Dagegen
+    /// haelt, dass die Methode privat ist. Und sie sieht nicht, **welchen** Wert
+    /// ein Aufrufer hinschreibt; das ist die Entscheidung, die der dritte Weg
+    /// dem Leser dieser Probe abverlangt, wenn er die Zahl anhebt.
+    #[test]
+    fn aktives_setzen_hat_genau_zwei_aufrufer() {
+        let name = concat!("aktives_", "setzen");
+        assert_eq!(
+            aufrufstellen(&diese_datei(), name),
+            2,
+            "{name} hat nicht mehr genau zwei Aufrufer; ueber den neuen Weg in `aktiv` und \
+             seine Rangmitnahme hat niemand entschieden"
+        );
+    }
+
     /// Ausserhalb des Fenstermodells schreibt je **eine** Stelle das aktive
     /// Dateifenster.
     ///

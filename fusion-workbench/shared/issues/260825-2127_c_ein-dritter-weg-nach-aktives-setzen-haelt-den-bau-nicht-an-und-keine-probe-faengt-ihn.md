@@ -63,3 +63,23 @@ Zwei Dinge, und das erste ist eine Zeile:
 diese Zusage hält an dieser Naht nichts.
 
 **Gefunden:** coderev, bei der Durchsicht der Runde 18 gegen `20eccd4..8478753`.
+
+---
+
+**Resolved:** 260825, coder, Aufgabe R-3 der Runde 18.
+
+1. **Die Zahl ist belegt.** Die Zaehlprobe `aktives_setzen_hat_genau_zwei_aufrufer` im Modul
+   `aktivschreiberproben` (`crates/krk-ui/src/appkit/anwendung.rs:8957`) zaehlt ueber
+   `quellbaum::aufrufstellen` die Aufrufer von `aktives_setzen` in derselben Datei und haelt
+   sie auf zwei; die Nadel steht mit `concat!` zusammengesetzt, damit die Probe sich nicht selbst
+   zaehlt. Gegenprobe gefahren: ein dritter Ruf
+   `self.aktives_setzen(seite, Rangmitnahme::Appkit)` in `aktives_dem_ersthelfer_nachziehen`
+   macht sie rot („hat nicht mehr genau zwei Aufrufer"), danach aus der Sicherungskopie
+   byteidentisch wiederhergestellt. Was sie nicht sieht, steht am Doc-Kommentar: einen
+   Aufrufer aus einer anderen Datei (dagegen haelt, dass die Methode privat ist) und den
+   **Wert**, den ein Aufrufer hinschreibt.
+2. **Der Satz an `Rangmitnahme` ist berichtigt** (`crates/krk-ui/src/appkit/tabelle.rs`, Doc-Kommentar
+   der Aufzaehlung): der Uebersetzer haelt gegen einen dritten Wert, gegen einen dritten Weg
+   halten die zwei Zaehlproben, beide beim Namen genannt, mit Verweis auf diesen Datensatz.
+
+`make check` Exit 0.

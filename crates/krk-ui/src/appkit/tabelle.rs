@@ -749,9 +749,17 @@ enum Einstieg {
 /// stuende der Rang nach einem Tableistenklick in der Liste, die danach nicht
 /// mehr die aktive ist.
 ///
-/// **Zwei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.** Ein
-/// dritter Weg in `angefasst` haelt damit den Bau an, statt sich stillschweigend
-/// den einen oder den anderen Fall auszusuchen.
+/// **Zwei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.** Der
+/// Uebersetzer haelt damit gegen einen dritten **Wert**: die Fallunterscheidung in
+/// `Anwendungsdelegierter::aktives_setzen` hat keinen Auffangzweig. Gegen einen
+/// dritten **Weg** haelt er nichts — ein weiterer Aufrufer schreibt einen der zwei
+/// Werte hin und uebersetzt, und gerade so suchte er sich stillschweigend einen
+/// Fall aus. Was dagegen haelt, sind zwei Zaehlproben in
+/// `anwendung.rs::aktivschreiberproben`: `aktives_setzen_hat_genau_zwei_aufrufer`
+/// an der Naht, an der die Regel wirklich haengt, und
+/// `die_zwei_anfasswege_unterscheiden_sich_in_der_rangmitnahme` fuer die zwei
+/// Rufe von `angefasst` in dieser Datei
+/// (`shared/issues/260825-2127_*_ein-dritter-weg-nach-aktives-setzen-haelt-den-bau-nicht-an-und-keine-probe-faengt-ihn.md`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rangmitnahme {
     /// AppKit hat den Rang schon umgesetzt; KRK ruehrt ihn nicht an.
