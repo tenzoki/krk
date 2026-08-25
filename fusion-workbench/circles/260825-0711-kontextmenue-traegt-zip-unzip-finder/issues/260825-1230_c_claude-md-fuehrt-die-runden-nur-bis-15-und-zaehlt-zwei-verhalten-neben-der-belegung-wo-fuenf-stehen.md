@@ -76,3 +76,42 @@ nachgeschlagen wird.
 
 **Betroffen:** `CLAUDE.md`, Zeilen 15–29 (Verweisregister der Runden) und Zeile 74
 (Tastenbelegung); nachrangig Zeile 80 (`syntect`/`two-face`)
+
+---
+Resolved: Behoben am 260825 in `CLAUDE.md`, ohne eine einzige Codedatei anzufassen.
+
+**Das Verweisregister trägt jetzt siebzehn Zeilen.** Nachgetragen sind
+`260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten` als Runde 16 und
+`260825-0711-kontextmenue-traegt-zip-unzip-finder` als Runde 17. Der Satz über der Tabelle
+nennt daneben den Marker `_t_`, den er bisher nicht kannte: solange die Runde 17 läuft, gibt
+`ls fusion-workbench/circles/*/_*_circle.md` einen Marker aus, den die Aufzählung der Zeile
+nicht einordnete.
+
+**Der Belegungsabsatz zählt nicht auf fünf hoch**, sondern folgt dem Vorschlag dieses
+Datensatzes und nennt die zwei Klassen: was an einer Taste hängt, sagt die Belegung; was an
+einer Mausgeste oder an der Bauzeit hängt, steht nicht darin. Als Fundort der Gesten steht
+dort jetzt der Modulkopf von `crates/krk-ui/src/kommandos/mod.rs`, der die Module ohne
+Tastenbefehl abgrenzt und ihre Zahl aus demselben Grund nicht nennt; der Doppelklick ist mit
+seinem Ort (`appkit/tabelle.rs`) danebengestellt, weil er kein Modul dort ist.
+
+**Der nachrangige Punkt zu `syntect` und `two-face` ist mitgenommen.** Der Absatz nennt jetzt
+`zip` als dritte Kiste ohne Vorgabemerkmale, samt dem Merkmal `deflate-flate2` und dem
+Nebeneintrag `flate2`, dessen Streichung `cargo test -p krk-core` rot machte. Die tragende
+Aussage des Absatzes ist am Baumstand `7ba5a20` nachgemessen und hält: `grep '^name = "cc"'
+Cargo.lock` findet nichts, `grep '^name = ".*-sys"' Cargo.lock` allein `windows-sys`.
+
+**Zwei Aussagen daneben sind bei der Prüfung ebenfalls falsch geworden und mitberichtigt.**
+Erstens sprach `CLAUDE.md` von „vier Aufzählungen", die seit der Runde 1 gewachsen sind; mit
+`Art` (`krk-core/src/operation/auftrag.rs`), das diese Runde um Zippen und Entpacken erweitert
+hat, sind es mehr, und die Zahl ist deshalb gefallen statt hochgezählt worden. Zweitens fehlte
+dem Abschnitt „Was man nicht sieht, wenn man es nicht weiß" der zweite Weg in die Anwendung,
+der keine Taste hat: die drei Kontextbefehle stehen weder in der Belegung noch im Hauptmenü,
+und was sie vor dem wirkungslosen Menüeintrag schützt, ist die Aufzählung `Kontextbefehl` mit
+ihrem Ausführungszweig ohne Auffangzweig.
+
+**Nachgezählt und für weiterhin richtig befunden**, statt aus dem Abgleich übernommen: die eine
+Hülle um `NSPasteboard` (die weiteren Fundstellen sind `NSPasteboardType` im Abwurf und der
+hereingereichte Parameter der Vorschau-Abfangstelle, beide aus früheren Runden),
+`Wirkungsbereich` mit sieben, `Bereich` mit fünf und `Fokus` mit fünf Werten, und dass
+`git diff 428fbc4..HEAD -- crates/krk-core/src/tasten/belegung.rs resources/default-keymap.toml`
+nichts ausgibt.

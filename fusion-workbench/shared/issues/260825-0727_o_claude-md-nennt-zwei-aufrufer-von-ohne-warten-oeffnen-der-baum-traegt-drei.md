@@ -59,3 +59,32 @@ nachgeschlagen wird.
 **Domain:** code
 
 Also seen: 260825-1230 by reconciler — die Runde 17 hat den Befund verbreitert: der Baum trägt jetzt **fünf** Aufrufer, und zwei davon liegen außerhalb von `text/datei.rs` (`operation/zippen.rs:348`, `operation/entpacken.rs:118`). Damit ist neben der Zahl auch der Satzteil „beide liegen seit der Runde 11 in `krk-core/src/text/datei.rs`" falsch, und das Zählkommando, das derselbe Absatz mitgibt (`grep -n 'sys::ohne_warten_oeffnen(' crates/krk-core/src/text/datei.rs`), ist auf eine Datei verengt, die den Bestand nicht mehr hält. Der Modulkopf von `verzeichnis/sys.rs` ist in dieser Runde neu geschrieben worden (`299d1e1`, `ab74c9e`) und zählt an zwei Stellen weiterhin daneben: Zeile 52–53 nennt „die zwei ältesten … in `text/datei.rs`" und lässt `anlesen` erneut aus, Zeile 848–849 sagt „der dritte und der vierte mit der Runde 17", wo es der vierte und der fünfte sind. Die vom Vorschlag verlangte Bewegung ist im Modulkopf halb vollzogen: Zeile 49 nennt das Zählkommando bereits, die Aufzählung darunter widerspricht ihm.
+
+---
+**Zur Hälfte behoben am 260825, und der Marker bleibt deshalb auf `_o_`.**
+
+**Die `CLAUDE.md`-Hälfte ist erledigt.** Der Absatz heißt jetzt „Die Prüfung dessen, was da
+geöffnet wurde, steht am Deskriptor und nicht am Pfad" — die alte Überschrift sprach von einer
+Textdatei, und zwei der Aufrufer öffnen keine. An die Stelle der Aufzählung ist das
+Zählkommando getreten, und zwar das breite: `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src`
+statt des auf `text/datei.rs` verengten, das der Absatz bisher mitgab. Der Satzteil „beide
+liegen seit der Runde 11 in `krk-core/src/text/datei.rs`" ist ersetzt durch die Ortsangabe nach
+Klassen: die Textwege dort, das Packen und das Entpacken unter `krk-core/src/operation/`.
+Dazugekommen ist, warum ein weiterer Aufrufer die Typprüfung nicht in die Hülle zieht, sondern
+sie jedes Mal besser begründet — mit den vier verschiedenen Antworten, die kein gemeinsamer
+Rumpf geben könnte.
+
+**Offen bleibt der Modulkopf von `crates/krk-core/src/verzeichnis/sys.rs`.** Er ist in der
+Runde 17 neu geschrieben worden und zählt an zwei Stellen weiterhin daneben, wie der Zusatz
+vom 260825-1230 es beschreibt: Zeile 52–53 nennt „die zwei aeltesten … in `text/datei.rs`" und
+lässt `anlesen` aus, Zeile 848–849 sagt „der dritte und der vierte mit der Runde 17", wo es der
+vierte und der fünfte sind. Am Baumstand `7ba5a20` nachgemessen:
+`grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src` gibt fünf Aufruferzeilen aus
+(`text/datei.rs:434,620,692`, `operation/zippen.rs:348`, `operation/entpacken.rs:118`), dazu die
+Definition, die Prüfzeile 1120 und die Zeile mit dem Zählkommando selbst. **Der Aufrufer in
+`entpacken.rs` entgeht dem engeren Muster `sys::ohne_warten_oeffnen(`**, weil die Datei den
+Namen über `use` hereinholt und ihn unqualifiziert ruft; wer mit dem engeren Muster zählt,
+kommt auf vier statt fünf.
+
+Notiert vom coder, der allein `CLAUDE.md` anfassen durfte; die Codedatei gehört einer
+Sitzung, die den Baum gerade durchliest.
