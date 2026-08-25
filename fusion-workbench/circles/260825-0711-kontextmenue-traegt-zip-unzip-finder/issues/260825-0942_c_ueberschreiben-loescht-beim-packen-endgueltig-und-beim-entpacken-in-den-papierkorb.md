@@ -37,3 +37,37 @@ Auf `Konfliktantwort::UmbenennenIn` wird nicht ein zweites Mal gefragt (`zippen.
 ## Umfang
 
 `krk-core`, `operation/zippen.rs` und `operation/mod.rs` (die Uebergabe des `Papierkorb`).
+
+---
+
+## Antwort des Nutzers, 260825
+
+**Moeglichkeit 1.** Der Packlauf bekommt den `Papierkorb` gereicht und nimmt ihn wie der
+Entpacklauf; `loeschen::baum_entfernen` faellt aus diesem Zweig. "Ueberschreiben" bedeutet
+danach im ganzen Kontextmenue dasselbe, und nichts ist unwiederbringlich weg.
+
+Der Nutzer hat die Antwort um eine Zusage ergaenzt, die den Umfang der Loeschung festlegt und
+mitzupruefen ist: **angetastet wird allein der Eintrag, dessen Name dem Archivnamen genau
+gleicht.** Ein vorhandenes `Projekte.zip` geht in den Papierkorb, ein daneben liegender Ordner
+`Projekte` **nicht** — und die Quellen des Laufs ohnehin nie. Der Baumstand haelt diese Zusage
+schon (beide Loeschstellen in `zippen.rs` liegen auf `ziel`, keine auf `auftrag.quellen`); sie
+ist bisher nur nirgends als Zusage aufgeschrieben und durch keine Probe gehalten. Wer diesen
+Defekt behebt, legt beides dazu.
+
+Zitiert in `shared/history/260824-2120-orchestrator-session.md`.
+
+---
+Resolved: Moeglichkeit 1 umgesetzt. `zippen::lauf` und `zielarchiv_klaeren` nehmen den
+`Papierkorb` entgegen (`crates/krk-core/src/operation/zippen.rs`), der Zweig
+`Konfliktantwort::Ueberschreiben` ruft `papierkorb.in_den_papierkorb(ziel)` statt
+`loeschen::baum_entfernen`; die Leitung legt `operation/mod.rs` in `ausfuehren`. Die Zusage
+"angetastet wird allein der Eintrag, dessen Name dem Archivnamen genau gleicht" steht als
+eigener Abschnitt im Modulkopf von `zippen.rs` und an `zielarchiv_klaeren`; gehalten wird sie
+von der neuen Probe `ueberschreiben_raeumt_allein_den_gleichnamigen_eintrag_in_den_papierkorb`
+in `crates/krk-core/tests/operation.rs` (Ordner am Archivnamen geht in den Papierkorb und ist
+dort vollstaendig, gleichnamiger Nachbar ohne `.zip` — zugleich die Quelle des Laufs — bleibt
+unangetastet). `die_regel_ueberschreiben_ersetzt_ein_vorhandenes_archiv` belegt denselben Weg
+fuer die Datei am Archivnamen. Der ueberholte Querverweis im Modulkopf von `entpacken.rs`
+("das der Zip-Lauf fuer seine einzelne Zieldatei nimmt") ist nachgezogen. Der Nebenbefund zu
+`UmbenennenIn` und zum selbst getippten Namen ist **nicht** angefasst: er ist alt, gilt fuer
+das Kopieren ebenso und traegt keine Antwort des Nutzers.

@@ -36,3 +36,26 @@ Der Modulkopf ist im selben Zug nachzuziehen: heute behauptet er einen Typfilter
 ## Umfang
 
 `krk-core`, `operation/zippen.rs` und die zugehoerige Probe. Der Entpacklauf ist nicht betroffen.
+
+---
+Resolved: Wurzel behoben wie vorgeschlagen. `datei_packen`
+(`crates/krk-core/src/operation/zippen.rs`) fragt nach dem Oeffnen `metadata()` **am offenen
+Deskriptor** und laesst jeden Eintrag aus, den `is_file()` nicht bejaht — mit dem Grund
+"keine gewoehnliche Datei" in der Abschlussliste und **vor** `start_file`, damit kein leerer
+Eintrag im Archiv zurueckbleibt. `verzeichnis/sys.rs` ist unberuehrt geblieben, die Ausnahme
+`#![allow(unsafe_code)]` nicht erweitert.
+
+Die Probe ist aussagekraeftig gemacht: `eine_benannte_roehre_mit_schreiber_haelt_das_packen_nicht_an`
+(`crates/krk-core/tests/operation.rs`) haengt einen Schreiber an die Roehre und haelt ihn ueber
+den ganzen Lauf. Der Schreiber ist ein `O_RDWR` auf die Roehre und kein zweiter Prozess: ein
+nur schreibendes `open` bliebe seinerseits stehen, bis ein Leser kommt, und die Probe haenge
+schon beim Aufbau. Gewartet wird mit Frist (neuer Helfer `bericht_mit_frist`), damit ein
+Rueckfall den Befund meldet statt den Testlauf stehen zu lassen. Gegenprobe gefahren: mit
+entfernter Typfrage faellt sie nach 2 s mit "das Packen haengt an der Roehre; die Typfrage am
+Deskriptor fehlt". Die alte Probe bleibt als der leichtere Fall stehen, jetzt mit dem Namen
+"ohne Schreiber" und der Aussage, warum sie den schwereren nicht treffen konnte.
+
+Beide Prosastellen sind nachgezogen: der Abschnitt "Gelesen wird ohne zu warten" im Modulkopf
+von `zippen.rs` und der Doku-Kommentar an `ohne_warten_oeffnen`
+(`crates/krk-core/src/verzeichnis/sys.rs`), der sagte, beim Packen erreiche "nur eine Datei
+ueberhaupt das Oeffnen".

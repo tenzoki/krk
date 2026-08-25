@@ -36,3 +36,19 @@ Am Abnahmegate des Plans, 260825, in zwei Fragerunden beantwortet.
 5. **Worauf Unzip wirkt** — die bestehende Regel `betroffene`, und jedes Archiv darin wird entpackt: drei markierte Archive ergeben drei Zielordner in einem Vorgang. **Der Nutzer ist damit der Empfehlung nicht gefolgt** und hat die im Datensatz als späteren Ausbau genannte Möglichkeit sofort gewählt. Die Folgefrage, die der Datensatz dazu stellt — je Archiv gefragt oder einmal für alle —, ist aus den übrigen Wahlen entschieden und braucht keinen eigenen Mechanismus: bei mehreren Archiven erzeugt der Vorgang mehrere Ziele, also greift `erzeugt_genau_ein_ziel` nicht, das volle Blatt erscheint samt Ankreuzfeld „für alle weiteren", und der Nutzer beantwortet je Archiv mit einem Ausweg für den Rest. Gekürzt wird das Blatt allein beim Zip. Auch dieser Auslegung hat der Nutzer im Chat nicht widersprochen.
 
 Der Plan `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/planning/260825-0727_o_plan-kontextmenue-traegt-zip-unzip-finder.md` ist im selben Gate abgenommen worden, unverändert. Er ist auf genau diese fünf Antworten parametrisiert und musste für die zwei Abweichungen von seinen Empfehlungen nicht umgeschrieben werden.
+
+## Nutzerantwort zum Befund B3 der ersten Durchsicht
+
+Am 260825, nach der Durchsicht `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/reviews/260825-0942-coderev-runde-17-zip-unzip-und-die-regel-des-kontextmenues.md`.
+
+Die erste Fassung der Frage hat der Nutzer zurueckgewiesen, weil sie den Eindruck erweckte, das
+Packen koenne die **Quelle** loeschen. Nachgesehen und richtiggestellt: der Packlauf hat genau
+zwei Loeschstellen, `zippen.rs:156` und `:189`, und beide liegen auf dem Archivpfad. Keine liegt
+auf `auftrag.quellen`. Die zweite raeumt allein ein halb geschriebenes Archiv nach einem Abbruch
+weg.
+
+Auf die richtiggestellte Frage lautet die Antwort **Moeglichkeit 1**: der gleichnamige Nachbar
+geht auch beim Packen in den Papierkorb, nicht mehr ueber `baum_entfernen`. Dazu die Zusage des
+Nutzers, dass allein der namensgleiche Eintrag angetastet wird und ein Ordner `Projekte` neben
+`Projekte.zip` unberuehrt bleibt. Sie gilt heute schon und ist als Zusage aufzuschreiben und
+durch eine Probe zu halten.

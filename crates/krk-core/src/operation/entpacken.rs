@@ -39,18 +39,29 @@
 //! Seit der Runde 12 gibt es genau einen Loeschweg, und der fuehrt in den
 //! Papierkorb. Der vorhandene Zielordner geht deshalb ueber die hereingereichte
 //! [`Papierkorb`]-Schnittstelle und **nicht** ueber
-//! [`super::loeschen::baum_entfernen`], das der Zip-Lauf fuer seine einzelne
-//! Zieldatei nimmt. Der Nutzer hat die Rueckfrage selbst gewaehlt und dabei die
-//! Bindung mitgegeben (`decisions/260825-0711_*_was-tut-unzip-wenn-der-
-//! zielordner-schon-dasteht.md`, Moeglichkeit 2).
+//! [`super::loeschen::baum_entfernen`]. Der Nutzer hat die Rueckfrage selbst
+//! gewaehlt und dabei die Bindung mitgegeben (`decisions/260825-0711_*_was-tut-
+//! unzip-wenn-der-zielordner-schon-dasteht.md`, Moeglichkeit 2).
+//!
+//! **Der Packlauf nimmt seit dem 260825 denselben Weg.** Bis dahin loeschte er
+//! sein vorhandenes Ziel ueber den Baumloescher, und dieselbe Schaltflaeche
+//! desselben Blattes bedeutete zweierlei; der Nutzer hat den Unterschied
+//! aufgehoben. Der Kopf von [`super::zippen`] schreibt es aus.
 //!
 //! # Zwei Wege aus dem Zielordner heraus, und beide sind versperrt
 //!
 //! Ein Archiv ist eine fremde Datei, und seine Eintragsnamen sind kein
 //! Versprechen. **Der erste Weg ist der Name selbst**: `../../etc/passwd` oder
-//! `/etc/passwd`. Ihn versperrt [`ZipFile::enclosed_name`](zip::read::ZipFile::enclosed_name),
-//! das fuer jeden Namen `None` liefert, der aus dem Zielordner herausfuehrte;
-//! der Eintrag wird ausgelassen und in der Abschlussliste genannt.
+//! `/etc/passwd`. Ihn versperrt
+//! [`ZipFile::enclosed_name`](zip::read::ZipFile::enclosed_name) — aber die
+//! zwei Formen enden verschieden, und das ist beim Nachlesen der wichtigere
+//! Teil. Ein Name, der ueber `..` aus dem Zielordner herausfuehrte, liefert
+//! `None`; der Eintrag wird ausgelassen und in der Abschlussliste genannt. Ein
+//! **fuehrender Schraegstrich** dagegen wird abgestreift: aus `/etc/passwd`
+//! wird `etc/passwd`, und der Eintrag entsteht im Zielordner statt in der
+//! Wurzel. Sicher ist beides, ausgelassen ist nur das erste. Die Probe
+//! `ein_eintrag_der_aus_dem_zielordner_herausfuehrt_entsteht_nirgends` in
+//! `tests/operation.rs` schreibt beide Ausgaenge aus.
 //!
 //! **Der zweite Weg geht ueber zwei Eintraege und kaeme daran vorbei**: der
 //! erste legt eine Verknuepfung `hinaus -> /etc` an, deren Name im Zielordner
@@ -216,8 +227,10 @@ fn eintraege_entpacken(
         };
 
         // **Die eine Frage, die ein fremder Name beantworten muss.** `None`
-        // heisst: der Name fuehrte aus dem Zielordner heraus, sei es ueber
-        // `..`, sei es ueber einen fuehrenden Schraegstrich.
+        // heisst: der Name fuehrte ueber `..` aus dem Zielordner heraus. Einen
+        // fuehrenden Schraegstrich streift die Kiste dagegen ab und liefert den
+        // gekuerzten Namen; der Eintrag entsteht dann im Zielordner und wird
+        // nicht ausgelassen. Der Kopf dieser Datei schreibt den Unterschied aus.
         let Some(innen) = eintrag.enclosed_name() else {
             let name = eintrag.name().to_owned();
             drop(eintrag);

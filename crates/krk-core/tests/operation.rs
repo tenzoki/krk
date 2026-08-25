@@ -48,10 +48,35 @@ use gemeinsam::Pruefordner;
 /// Die beiden Zeitmessungen laufen nacheinander, nicht nebeneinander.
 static ZEITMESSUNG: Mutex<()> = Mutex::new(());
 
-/// Ein Papierkorb, der nichts loescht, sondern nur mitschreibt.
+/// Ein Papierkorb, der mitschreibt — und auf Wunsch auch wirklich wegraeumt.
+///
+/// **Zwei Fassungen, weil die Proben zwei verschiedene Aussagen brauchen.**
+/// [`Papierkorbattrappe::default`] schreibt nur mit und laesst den Eintrag
+/// stehen; das ist die staerkere Aussage ueberall dort, wo zu belegen ist, dass
+/// der Kern **nicht selbst** geloescht hat. [`Papierkorbattrappe::raeumend`]
+/// haengt den Eintrag zusaetzlich in eine Ablage um, so wie der echte Papierkorb
+/// es taete. Sie wird dort gebraucht, wo der Lauf nach dem Raeumen weiterarbeiten
+/// muss: ein Packlauf legt seine Zieldatei an der Stelle an, an der eben noch der
+/// weggeraeumte Eintrag stand, und ein stehen gebliebener Ordner liesse
+/// `File::create` scheitern.
+///
+/// Umgehaengt wird ueber `fs::rename`, also ohne einen Baum zu loeschen: was in
+/// der Ablage ankommt, ist vollstaendig da, und genau daran ist abzulesen, dass
+/// kein rekursives Loeschen im Spiel war.
 #[derive(Debug, Default)]
 struct Papierkorbattrappe {
     geraeumt: Mutex<Vec<PathBuf>>,
+    ablage: Option<PathBuf>,
+}
+
+impl Papierkorbattrappe {
+    /// Eine Attrappe, die den Eintrag in die genannte Ablage umhaengt.
+    fn raeumend(ablage: &Path) -> Self {
+        Self {
+            geraeumt: Mutex::new(Vec::new()),
+            ablage: Some(ablage.to_path_buf()),
+        }
+    }
 }
 
 impl Papierkorb for Papierkorbattrappe {
@@ -60,7 +85,14 @@ impl Papierkorb for Papierkorbattrappe {
             .lock()
             .expect("Attrappe vergiftet")
             .push(pfad.to_path_buf());
-        Ok(PathBuf::from("/Users/pruefer/.Trash").join(pfad.file_name().unwrap_or_default()))
+        let Some(ablage) = &self.ablage else {
+            return Ok(
+                PathBuf::from("/Users/pruefer/.Trash").join(pfad.file_name().unwrap_or_default())
+            );
+        };
+        let hin = ablage.join(pfad.file_name().unwrap_or_default());
+        fs::rename(pfad, &hin)?;
+        Ok(hin)
     }
 }
 
@@ -85,6 +117,24 @@ fn bericht_abholen(meldungen: &Receiver<Meldung>) -> Bericht {
         }
     }
     panic!("der Lauf hat keine Abschlussmeldung geschickt");
+}
+
+/// Leert den Kanal bis zur Abschlussmeldung, aber nicht laenger als `frist`.
+///
+/// Fuer die Proben, deren Befund gerade das **Haengen** waere. `bericht_abholen`
+/// wartet unbegrenzt; ein Lauf, der in einem `read(2)` steht, liesse den ganzen
+/// Testlauf stehen, und ein stehender Testlauf benennt nichts. `None` heisst:
+/// die Frist ist um, und der Rufer sagt, was das bedeutet.
+fn bericht_mit_frist(meldungen: &Receiver<Meldung>, frist: Duration) -> Option<Bericht> {
+    let ende = Instant::now() + frist;
+    loop {
+        let rest = ende.checked_duration_since(Instant::now())?;
+        match meldungen.recv_timeout(rest) {
+            Ok(Meldung::Fertig(bericht)) => return Some(bericht),
+            Ok(_) => {}
+            Err(_) => return None,
+        }
+    }
 }
 
 /// Zaehlt alle Eintraege unterhalb eines Ordners, den Ordner selbst nicht mit.
@@ -1387,19 +1437,95 @@ fn ein_belegter_archivname_wird_einmal_und_vor_dem_ersten_byte_erfragt() {
     );
 }
 
+/// **"Ueberschreiben" raeumt das vorhandene Archiv in den Papierkorb.**
+///
+/// Bis zum 260825 nahm dieser Zweig `loeschen::baum_entfernen`, also ein
+/// endgueltiges Loeschen, waehrend die Gegenseite im Entpacken den Papierkorb
+/// nahm. Der Nutzer hat den Unterschied aufgehoben; die Attrappe belegt den Weg.
 #[test]
 fn die_regel_ueberschreiben_ersetzt_ein_vorhandenes_archiv() {
     let ordner = Pruefordner::neu("zip-ueberschreiben");
     let quelle = ordner.datei("bericht.txt", "neu");
     let archiv = ordner.datei("bericht.txt.zip", "das alte Archiv");
+    let ablage = ordner.ordner("papierkorb");
+    let attrappe = Arc::new(Papierkorbattrappe::raeumend(&ablage));
 
-    let bericht = durchlaufen_ohne_papierkorb(
+    let bericht = durchlaufen(
         Auftrag::zippen(vec![quelle], &archiv).mit_konfliktregel(Konfliktregel::Ueberschreiben),
+        attrappe.clone(),
     );
 
     assert_eq!(bericht.abschluss, Abschluss::Fertig);
     assert_eq!(archivnamen(&archiv), vec!["bericht.txt".to_owned()]);
     assert_eq!(archivinhalt(&archiv, "bericht.txt"), "neu");
+    let geraeumt = attrappe.geraeumt.lock().expect("Attrappe vergiftet");
+    assert_eq!(
+        *geraeumt,
+        vec![archiv.clone()],
+        "das alte Archiv ist nicht in den Papierkorb gegangen"
+    );
+    drop(geraeumt);
+    assert_eq!(
+        fs::read_to_string(ablage.join("bericht.txt.zip")).expect("das alte Archiv fehlt"),
+        "das alte Archiv",
+        "der Kern hat selbst geloescht, statt den Papierkorb zu rufen"
+    );
+}
+
+/// **Angetastet wird allein der Eintrag, der genau so heisst wie das Archiv.**
+///
+/// Die Zusage, die der Nutzer seiner Antwort auf
+/// `issues/260825-0942_*_ueberschreiben-loescht-beim-packen-endgueltig-*`
+/// mitgegeben hat, und der Fall, der den Defekt gefaehrlich machte: am
+/// Archivnamen steht ein **Ordner** und nicht eine Datei. `baum_entfernen` haette
+/// ihn samt Inhalt unwiederbringlich weggeraeumt; der Papierkorb haengt ihn um,
+/// und das ist an seinem Inhalt in der Ablage abzulesen.
+///
+/// Geprueft werden drei Dinge in einem Zug: der gleichnamige Eintrag geht, der
+/// Nachbar ohne die Endung `.zip` bleibt, und die Quelle des Laufs — die hier
+/// derselbe Nachbar ist — wird nicht angefasst.
+#[test]
+fn ueberschreiben_raeumt_allein_den_gleichnamigen_eintrag_in_den_papierkorb() {
+    let ordner = Pruefordner::neu("zip-nur-gleichnamig");
+    let quelle = ordner.ordner("Projekte");
+    fs::write(quelle.join("inhalt.txt"), "die Quelle").expect("nicht schreibbar");
+    // Am Archivnamen steht ein Ordner mit Inhalt, kein leeres Archiv.
+    let archiv = ordner.ordner("Projekte.zip");
+    fs::write(archiv.join("alt.txt"), "das alte").expect("nicht schreibbar");
+    let ablage = ordner.ordner("papierkorb");
+    let attrappe = Arc::new(Papierkorbattrappe::raeumend(&ablage));
+
+    let bericht = durchlaufen(
+        Auftrag::zippen(vec![quelle.clone()], &archiv)
+            .mit_konfliktregel(Konfliktregel::Ueberschreiben),
+        attrappe.clone(),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    let geraeumt = attrappe.geraeumt.lock().expect("Attrappe vergiftet");
+    assert_eq!(
+        *geraeumt,
+        vec![archiv.clone()],
+        "in den Papierkorb gehoert genau ein Eintrag, und zwar der Archivname"
+    );
+    drop(geraeumt);
+    assert_eq!(
+        fs::read_to_string(ablage.join("Projekte.zip").join("alt.txt")).expect("alt.txt fehlt"),
+        "das alte",
+        "der Ordner am Archivnamen ist geloescht statt umgehaengt worden"
+    );
+    // Der Nachbar ohne die Endung ist unangetastet — und er ist zugleich die
+    // Quelle des Laufs, die dieser Zweig ohnehin nie anfassen darf.
+    assert_eq!(
+        fs::read_to_string(quelle.join("inhalt.txt")).expect("die Quelle ist weg"),
+        "die Quelle",
+        "der gleichnamige Nachbar ohne .zip ist mitgegangen"
+    );
+    assert_eq!(
+        archivnamen(&archiv),
+        vec!["Projekte/".to_owned(), "Projekte/inhalt.txt".to_owned()]
+    );
+    assert_eq!(archivinhalt(&archiv, "Projekte/inhalt.txt"), "die Quelle");
 }
 
 #[test]
@@ -1510,28 +1636,81 @@ fn eine_fehlende_quelle_wird_gemeldet_und_die_uebrigen_werden_gepackt() {
     assert_eq!(archivnamen(&archiv), vec!["da.txt".to_owned()]);
 }
 
-/// Eine benannte Roehre im Ordner haelt das Packen nicht an.
+/// Eine benannte Roehre **ohne** Schreiber haelt das Packen nicht an.
 ///
-/// Der Grund steht im Kopf von `operation/zippen.rs`: geoeffnet wird ueber
-/// `sys::ohne_warten_oeffnen` und damit mit `O_NONBLOCK`. Ein `File::open`
-/// haenge hier, bis jemand in die Roehre schreibt — und niemand tut es. Die
-/// Probe kehrt deshalb zurueck oder sie kehrt nie zurueck.
+/// Der leichtere der zwei Faelle, und bis zum 260825 der einzige gepruefte: an
+/// einer Roehre, die niemand offen haelt, liefert `read(2)` sofort 0. Die Probe
+/// war deshalb gruen, gleich wie der Code aussah — die Zusage haelt hier schon
+/// durch `sys::ohne_warten_oeffnen`, das mit `O_NONBLOCK` oeffnet und damit auch
+/// das **Oeffnen** nicht warten laesst. Der schwerere Fall steht darunter.
 #[test]
 fn eine_benannte_roehre_im_ordner_haelt_das_packen_nicht_an() {
     let ordner = Pruefordner::neu("zip-roehre");
     let quelle = ordner.ordner("quelle");
     fs::write(quelle.join("datei.txt"), "Inhalt").expect("nicht schreibbar");
-    let stand = std::process::Command::new("/usr/bin/mkfifo")
-        .arg(quelle.join("roehre"))
-        .status()
-        .expect("mkfifo laesst sich nicht starten");
-    assert!(stand.success(), "mkfifo ist gescheitert: {stand:?}");
+    ordner.roehre("quelle/roehre");
     let archiv = ordner.unter("quelle.zip");
 
     let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
 
     assert_eq!(bericht.abschluss, Abschluss::Fertig);
     assert_eq!(archivinhalt(&archiv, "quelle/datei.txt"), "Inhalt");
+}
+
+/// Eine benannte Roehre **mit** Schreiber haelt das Packen ebenfalls nicht an.
+///
+/// **Der Fall, den die Probe darueber nicht treffen konnte** (Defekt
+/// `260825-0942`). `sys::ohne_warten_oeffnen` nimmt `O_NONBLOCK` wieder ab,
+/// bevor es den Deskriptor herausgibt; steht an der Roehre ein Schreiber, bleibt
+/// das erste `read(2)` danach unbegrenzt stehen. Der Abbruch wird erst nach
+/// einem geglueckten `read` geprueft, also erreichte auch `Esc` den Lauf nicht
+/// mehr. Die Antwort ist die Typfrage am offenen Deskriptor in `datei_packen`.
+///
+/// **Der Schreiber ist ein `O_RDWR` auf die Roehre und kein zweiter Prozess.**
+/// Ein Schreiber, der nur schreibend oeffnete, bliebe seinerseits im `open`
+/// stehen, bis ein Leser kommt — die Probe haenge dann schon beim Aufbau. Ein
+/// Deskriptor, der beide Richtungen traegt, kehrt sofort zurueck und zaehlt fuer
+/// die Roehre als Schreiber; genau das ist hier gebraucht.
+///
+/// Gewartet wird mit Frist. Faellt die Typfrage weg, meldet die Probe nach zwei
+/// Sekunden den Befund, statt den Testlauf stehen zu lassen.
+#[test]
+fn eine_benannte_roehre_mit_schreiber_haelt_das_packen_nicht_an() {
+    let ordner = Pruefordner::neu("zip-roehre-schreiber");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("datei.txt"), "Inhalt").expect("nicht schreibbar");
+    let roehre = ordner.roehre("quelle/roehre");
+    let schreiber = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&roehre)
+        .expect("die Roehre laesst sich nicht mit Schreiber oeffnen");
+    let archiv = ordner.unter("quelle.zip");
+
+    let lauf = starten(
+        Auftrag::zippen(vec![quelle], &archiv),
+        Arc::new(OhnePapierkorb),
+    );
+    let bericht = bericht_mit_frist(lauf.meldungen(), Duration::from_secs(2))
+        .expect("das Packen haengt an der Roehre; die Typfrage am Deskriptor fehlt");
+    lauf.warten();
+    drop(schreiber);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(archivinhalt(&archiv, "quelle/datei.txt"), "Inhalt");
+    assert_eq!(
+        bericht.uebersprungen.len(),
+        1,
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    assert_eq!(bericht.uebersprungen[0].pfad, roehre);
+    assert_eq!(bericht.uebersprungen[0].grund, "keine gewoehnliche Datei");
+    assert_eq!(
+        archivnamen(&archiv),
+        vec!["quelle/".to_owned(), "quelle/datei.txt".to_owned()],
+        "die Roehre hat eine leere Zeile im Archiv hinterlassen"
+    );
 }
 
 // ---------------------------------------------------------------------------

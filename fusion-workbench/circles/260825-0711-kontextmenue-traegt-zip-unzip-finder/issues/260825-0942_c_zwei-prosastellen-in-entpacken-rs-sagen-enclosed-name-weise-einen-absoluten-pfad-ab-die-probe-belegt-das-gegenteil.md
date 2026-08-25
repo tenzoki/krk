@@ -25,3 +25,12 @@ Beide Stellen auf das trennen, was die Kiste wirklich tut: ein Name mit `..`, de
 ## Umfang
 
 `krk-core`, `operation/entpacken.rs`, nur Prosa.
+
+---
+Resolved: Beide Stellen in `crates/krk-core/src/operation/entpacken.rs` trennen jetzt die zwei
+Ausgaenge: ein Name, der ueber `..` aus dem Zielordner herausfuehrte, liefert `None` und wird
+ausgelassen; ein fuehrender Schraegstrich wird abgestreift, und der Eintrag entsteht im
+Zielordner statt in der Wurzel. Der Modulkopf nennt dafuer die Probe
+`ein_eintrag_der_aus_dem_zielordner_herausfuehrt_entsteht_nirgends`, die beide Ausgaenge
+ausschreibt; der Kommentar im Rumpf verweist auf den Modulkopf. Nur Prosa, kein Code und keine
+Probe geaendert.

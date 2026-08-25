@@ -2,6 +2,7 @@
 //!
 //! ```text
 //! lauf ──> zielarchiv_klaeren  ──> steuerung.konflikt_loesen (einmal, vorweg)
+//!                              └─> "ueberschreiben" ──> Papierkorb
 //!      ──> File::create ──> ZipWriter
 //!      ──> je Quelle: eintrag_packen ──> Typ::Datei        ──> start_file + Stuecke
 //!                                    ──> Typ::Ordner       ──> add_directory
@@ -27,19 +28,61 @@
 //! `File::create` die vorhandene Datei abschneidet. Umgekehrt waere die Frage
 //! eine Hoeflichkeit ueber eine Datei, die es schon nicht mehr gaebe.
 //!
+//! # "Ueberschreiben" raeumt in den Papierkorb und loescht nicht
+//!
+//! Dieselbe Bindung wie beim Entpacken, und seit dem 260825 auch derselbe Weg:
+//! seit der Runde 12 gibt es genau einen Loeschweg, und der fuehrt in den
+//! Papierkorb. Ein vorhandener Eintrag am Archivnamen geht deshalb ueber die
+//! hereingereichte [`Papierkorb`]-Schnittstelle und **nicht** ueber
+//! [`super::loeschen::baum_entfernen`]. Bis dahin nahm dieser Zweig den
+//! Baumloescher, und ein Ordner am Archivnamen war damit unwiederbringlich weg;
+//! der Nutzer hat den Unterschied aufgehoben
+//! (`issues/260825-0942_*_ueberschreiben-loescht-beim-packen-endgueltig-und-
+//! beim-entpacken-in-den-papierkorb.md`, Moeglichkeit 1). "Ueberschreiben"
+//! bedeutet seither im ganzen Kontextmenue dasselbe.
+//!
+//! # Angetastet wird allein der Eintrag, der genau so heisst wie das Archiv
+//!
+//! Die Zusage, die der Nutzer der Antwort mitgegeben hat: in den Papierkorb geht
+//! **ein** Eintrag, und zwar der, dessen Name dem Archivnamen genau gleicht. Ein
+//! vorhandenes `Projekte.zip` geht; ein daneben liegender Ordner `Projekte`
+//! **nicht**, gleich wie aehnlich er heisst. Die Quellen des Laufs faellt dieser
+//! Zweig ohnehin nie an — beide Stellen, die hier etwas wegnehmen
+//! ([`zielarchiv_klaeren`] und [`halbes_archiv_wegraeumen`]), liegen auf dem
+//! Zielpfad und keine auf `auftrag.quellen`. Gehalten wird die Zusage von der
+//! Probe `ueberschreiben_raeumt_allein_den_gleichnamigen_eintrag_in_den_papierkorb`
+//! in `tests/operation.rs`.
+//!
 //! # Einer Verknuepfung wird nicht gefolgt
 //!
 //! Gepackt wird die Verknuepfung, nicht ihr Ziel — dieselbe Wahl und derselbe
 //! Grund wie in [`super::kopieren`]: wer einem Verweis folgte, packte einen
 //! Ordner doppelt, sobald er auf sich selbst zeigt, und der Abstieg endete nie.
 //!
-//! # Gelesen wird ohne zu warten
+//! # Gelesen wird ohne zu warten, und der Typ wird am Deskriptor gefragt
 //!
 //! Jede Datei geht durch
 //! [`verzeichnis::sys::ohne_warten_oeffnen`](crate::verzeichnis::sys::ohne_warten_oeffnen)
-//! und nicht durch `File::open`. Eine benannte Roehre im Ordner haenge sonst
-//! den Arbeitsfaden an, bis jemand hineinschreibt; mit `O_NONBLOCK` faellt sie
-//! an ihrem Typ heraus, statt den Vorgang ohne Meldung anzuhalten.
+//! und nicht durch `File::open`. Das Oeffnen selbst haengt damit nicht: eine
+//! benannte Roehre, an der kein Schreiber steht, liesse `File::open` warten, bis
+//! jemand sie oeffnet.
+//!
+//! **Das Oeffnen ist aber nur die halbe Sperre, und bis zum 260825 stand hier
+//! nur diese Haelfte.** Die Huelle nimmt `O_NONBLOCK` wieder ab, bevor sie den
+//! Deskriptor herausgibt; an einer Roehre, an der ein Schreiber **steht**,
+//! bliebe `read(2)` danach unbegrenzt stehen, und der Abbruch wird erst nach
+//! einem geglueckten `read` geprueft — `Esc` erreichte den Lauf also nicht mehr
+//! (`issues/260825-0942_*_das-packen-haengt-an-einer-benannten-roehre-mit-
+//! schreiber-und-die-probe-kann-es-nicht-sehen.md`). [`datei_packen`] fragt
+//! deshalb `metadata()` **am offenen Deskriptor** und laesst alles aus, was
+//! `is_file()` nicht bejaht, mit seinem Grund in der Abschlussliste.
+//!
+//! Die Frage steht hier und nicht in [`super::typ_und_groesse`]: dessen
+//! [`Typ::Datei`] ist das Auffangfach fuer alles, was weder Ordner noch
+//! Verknuepfung ist, und traegt Roehren, Geraete und Sockel mit. Und sie steht
+//! am Deskriptor und nicht am Pfad, aus demselben Grund wie in
+//! [`crate::text::datei`]: zwischen einer Frage am Pfad und dem Oeffnen liegt
+//! ein Fenster, in dem der Eintrag ein anderer werden kann.
 
 use std::fs::{self, File};
 use std::io::{self, BufWriter, Read, Write};
@@ -53,7 +96,7 @@ use crate::verzeichnis::{Typ, lesen};
 use super::fortschritt::Steuerung;
 use super::umbenennen::name_pruefen;
 use super::{
-    Abschluss, Auftrag, Konfliktantwort, Quelle, STUECK, Zielentscheid, grund, loeschen,
+    Abschluss, Auftrag, Konfliktantwort, Papierkorb, Quelle, STUECK, Zielentscheid, grund,
     typ_und_groesse,
 };
 
@@ -63,7 +106,15 @@ use super::{
 /// nicht auf (C4), ein **hin gewordenes Archiv** dagegen schon. Nach einem
 /// Schreibfehler am Archiv ist jeder weitere Eintrag verlorene Arbeit, denn was
 /// dasteht, laesst sich ohnehin nicht mehr oeffnen.
+///
+/// **`#[must_use]` steht am Typ und nicht an den fuenf Funktionen, die ihn
+/// liefern** — dieselbe Marke aus demselben Grund wie an [`super::Ablauf`], und
+/// die zwei sind als Paar zu lesen. Ein fallen gelassenes `Abgebrochen` liesse
+/// den Lauf ueber die abgebrochene Stelle hinaus weiterlaufen; ein fallen
+/// gelassenes `ArchivHin` liesse ihn in ein Archiv weiterschreiben, das nicht
+/// mehr zu schreiben ist. Beides bliebe ohne die Marke unbemerkt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
 enum Packschritt {
     /// Weiter mit dem naechsten Eintrag.
     Weiter,
@@ -74,12 +125,20 @@ enum Packschritt {
 }
 
 /// Packt die Quellen des Auftrags in das genannte Archiv.
-pub(crate) fn lauf(auftrag: &Auftrag, ziel: &Path, steuerung: &mut Steuerung) -> Abschluss {
+///
+/// Der [`Papierkorb`] reist mit, weil "ueberschreiben" ihn braucht; gerufen
+/// wird er hoechstens einmal je Lauf, naemlich in [`zielarchiv_klaeren`].
+pub(crate) fn lauf(
+    auftrag: &Auftrag,
+    ziel: &Path,
+    papierkorb: &dyn Papierkorb,
+    steuerung: &mut Steuerung,
+) -> Abschluss {
     if steuerung.abgebrochen() {
         return Abschluss::Abgebrochen;
     }
 
-    let archiv = match zielarchiv_klaeren(auftrag, ziel, steuerung) {
+    let archiv = match zielarchiv_klaeren(auftrag, ziel, papierkorb, steuerung) {
         Zielentscheid::Nach(archiv) => archiv,
         // Ein Lauf, ein Ziel: wird es ausgelassen, bleibt nichts zu tun. Der
         // Grund steht bereits in der Abschlussliste.
@@ -135,7 +194,16 @@ pub(crate) fn lauf(auftrag: &Auftrag, ziel: &Path, steuerung: &mut Steuerung) ->
 /// [`super::ziel_klaeren`] ihn nicht noch einmal erfragt: der Vorschlag der
 /// Oberflaeche ist ein freier Name, und eine Kette von Rueckfragen ueber
 /// dieselbe eine Datei waere keine Auskunft mehr.
-fn zielarchiv_klaeren(auftrag: &Auftrag, ziel: &Path, steuerung: &mut Steuerung) -> Zielentscheid {
+///
+/// **"Ueberschreiben" nimmt `ziel` und sonst nichts**, und `ziel` ist der volle
+/// Pfad des Archivs. Ein Nachbar mit aehnlichem Namen und die Quellen des Laufs
+/// kommen an dieser Zeile nicht vor; die Zusage steht im Kopf dieser Datei.
+fn zielarchiv_klaeren(
+    auftrag: &Auftrag,
+    ziel: &Path,
+    papierkorb: &dyn Papierkorb,
+    steuerung: &mut Steuerung,
+) -> Zielentscheid {
     if fs::symlink_metadata(ziel).is_err() {
         return Zielentscheid::Nach(ziel.to_path_buf());
     }
@@ -153,12 +221,15 @@ fn zielarchiv_klaeren(auftrag: &Auftrag, ziel: &Path, steuerung: &mut Steuerung)
         .unwrap_or(ziel);
 
     match steuerung.konflikt_loesen(herkunft, ziel) {
-        Konfliktantwort::Ueberschreiben => match loeschen::baum_entfernen(ziel) {
-            Ok(()) => Zielentscheid::Nach(ziel.to_path_buf()),
+        Konfliktantwort::Ueberschreiben => match papierkorb.in_den_papierkorb(ziel) {
+            Ok(_) => Zielentscheid::Nach(ziel.to_path_buf()),
             Err(fehler) => {
                 steuerung.ueberspringen(
                     ziel,
-                    format!("das Ziel liess sich nicht ersetzen: {}", grund(&fehler)),
+                    format!(
+                        "das Ziel liess sich nicht in den Papierkorb raeumen: {}",
+                        grund(&fehler)
+                    ),
                 );
                 Zielentscheid::Ueberspringen
             }
@@ -263,6 +334,24 @@ fn datei_packen(
             return Packschritt::Weiter;
         }
     };
+
+    // **Die Typfrage am offenen Deskriptor**, und zwar vor `start_file`: was
+    // hier ausgelassen wird, soll auch keine leere Zeile im Archiv bekommen.
+    // Der Grund im Einzelnen steht im Kopf dieser Datei; kurz: `Typ::Datei` aus
+    // [`super::typ_und_groesse`] ist das Auffangfach und traegt auch Roehren,
+    // Geraete und Sockel, und an einer Roehre mit Schreiber bliebe das `read`
+    // darunter unbegrenzt stehen.
+    match gelesen.metadata() {
+        Ok(angaben) if angaben.is_file() => {}
+        Ok(_) => {
+            steuerung.ueberspringen(quelle.pfad, "keine gewoehnliche Datei");
+            return Packschritt::Weiter;
+        }
+        Err(fehler) => {
+            steuerung.ueberspringen(quelle.pfad, grund(&fehler));
+            return Packschritt::Weiter;
+        }
+    }
 
     if let Err(fehler) = schreiber.start_file(name_im_archiv, dateiwahl(quelle.pfad)) {
         steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));

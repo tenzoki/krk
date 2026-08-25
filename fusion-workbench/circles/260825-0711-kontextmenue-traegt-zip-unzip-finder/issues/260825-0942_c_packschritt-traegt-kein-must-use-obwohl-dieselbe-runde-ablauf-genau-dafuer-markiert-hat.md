@@ -26,3 +26,11 @@ Alle fuenf Rueckgaben werden ausgewertet; der Baum ist an dieser Stelle in Ordnu
 ## Umfang
 
 `krk-core`, `operation/zippen.rs` und `operation/mod.rs`.
+
+---
+Resolved: `#[must_use]` steht am Typ `Packschritt`
+(`crates/krk-core/src/operation/zippen.rs`), mit der Begruendung daneben und einem Verweis auf
+`Ablauf`, damit die zwei Marken als Paar lesbar bleiben. `Zielentscheid`
+(`crates/krk-core/src/operation/mod.rs`) hat sie im selben Zug bekommen, wie der Befund es
+nebenbei vorschlaegt: er entscheidet, ob ueberhaupt geschrieben wird. Beide Aenderungen sind
+ohne Folge fuer den Bau — alle Rueckgaben wurden schon ausgewertet.

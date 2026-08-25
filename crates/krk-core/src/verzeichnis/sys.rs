@@ -821,9 +821,14 @@ unsafe extern "C" {
 /// Endung des Pfades.
 ///
 /// **Die zwei Archivwege fragen ihrerseits anders, und sie sind der beste Beleg
-/// dafuer, dass die Frage hier nicht hingehoert.** Das Packen kennt den Typ
-/// seiner Quelle schon, bevor es oeffnet: er kommt aus dem Verzeichnisleser oder
-/// aus einem `lstat`, und nur eine Datei erreicht ueberhaupt das Oeffnen. Das
+/// dafuer, dass die Frage hier nicht hingehoert.** Das Packen fragt `metadata()`
+/// am Deskriptor wie die zwei Textwege und laesst alles aus, was `is_file()`
+/// nicht bejaht — die Antwort ist aber weder eine Abweisung noch ein Rueckfall,
+/// sondern eine Zeile in der Abschlussliste, und eine Groessengrenze kennt es
+/// gar nicht. (Bis zum 260825 stand hier, das Packen kenne den Typ seiner Quelle
+/// schon vor dem Oeffnen. Das war falsch: `typ_und_groesse` legt jeden Eintrag,
+/// der weder Ordner noch Verknuepfung ist, in `Typ::Datei`, und dieses Fach
+/// traegt auch Roehren, Geraete und Sockel. Der Defekt ist `260825-0942`.) Das
 /// Entpacken fragt gar nicht nach dem Typ, sondern reicht den Deskriptor an
 /// `ZipArchive::new` weiter und laesst die Kiste antworten; ein Ordner scheitert
 /// dort an `EISDIR` und kommt mit ihrem Wortlaut in die Abschlussliste. Keine

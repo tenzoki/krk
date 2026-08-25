@@ -15,7 +15,8 @@
 //!                                                     Papierkorb (injiziert)
 //!                                                     ┌─────────┘
 //!                                            auch "ueberschreiben"
-//!                                            beim Entpacken geht hier durch
+//!                                            geht hier durch, beim
+//!                                            Entpacken wie beim Packen
 //!
 //!            anlegen, umbenennen: ohne Faden, sofort fertig
 //! ```
@@ -128,6 +129,11 @@ pub(crate) enum Ablauf {
 }
 
 /// Wohin ein Eintrag geht, nachdem ein Konflikt geklaert ist.
+///
+/// **`#[must_use]` am Typ, aus demselben Grund wie an [`Ablauf`]:** der Wert
+/// entscheidet, ob ueberhaupt geschrieben wird. Wer ihn fallen liesse, schriebe
+/// ueber ein Ziel, ueber das der Nutzer gerade "nein" gesagt hat.
+#[must_use]
 pub(crate) enum Zielentscheid {
     /// An diesen Pfad. Er kann vom urspruenglichen abweichen, wenn der Nutzer
     /// umbenennen gewaehlt hat.
@@ -172,13 +178,16 @@ pub fn starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
 /// Lauf, das einmal geoeffnet und einmal geschlossen wird; die Begruendung
 /// steht im Kopf von [`zippen`]. Das Entpacken ist sein Spiegelbild und laeuft
 /// in der Schleife: es gibt jedem Archiv seinen eigenen Zielordner.
+///
+/// **Der [`Papierkorb`] geht in beide Bahnen**, seit auch der Packlauf ein
+/// vorhandenes Ziel dorthin raeumt statt es zu loeschen.
 fn ausfuehren(
     auftrag: &Auftrag,
     papierkorb: &dyn Papierkorb,
     steuerung: &mut Steuerung,
 ) -> Abschluss {
     match &auftrag.art {
-        Art::Zippen { ziel } => zippen::lauf(auftrag, ziel, steuerung),
+        Art::Zippen { ziel } => zippen::lauf(auftrag, ziel, papierkorb, steuerung),
         Art::Kopieren { .. }
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
