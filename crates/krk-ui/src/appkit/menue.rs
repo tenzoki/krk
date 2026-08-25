@@ -28,6 +28,14 @@
 //! die Kette umgehen und einen Eintrag auch dann aktiv lassen, wenn niemand ihn
 //! beantworten kann.
 //!
+//! **Ein Stueck dieser Datei baut seit der Runde 17 auch fremde Menues.**
+//! [`ohne_kuerzel`] ist `pub(super)`, weil das Kontextmenue der Dateiliste
+//! seine drei eigenen Eintraege darueber anlegt. Was diese Datei entscheidet,
+//! bleibt davon unberuehrt: der Bestand der Leiste kommt weiter allein aus
+//! [`crate::menuemodell`], und der fremde Rufer bringt Titel, Selektor und
+//! Marke selbst mit. Getragen wird der Weg von C2.10 der Runde 7, also davon,
+//! dass genau eine Stelle im Baum ein `NSMenuItem` anlegt.
+//!
 //! # Jeder Eintrag mit Kommando traegt einen Selektor, und es ist derselbe
 //!
 //! Ein eigener Selektor je Kommando waere eine Methode je Kommando am
@@ -499,7 +507,20 @@ fn befehl(
 }
 
 /// Ein Menuebefehl ohne Tastenentsprechung.
-fn ohne_kuerzel(
+///
+/// **Seit der Runde 17 auch der Bauer der Kontextmenue-Eintraege der
+/// Dateiliste**, und deshalb `pub(super)` statt dateiprivat. Der Grund ist
+/// C2.10 der Runde 7: es gibt genau **eine** Stelle, die ein `NSMenuItem`
+/// anlegt, und das ist [`roher_befehl`] darunter. Ein zweiter Erzeuger in
+/// [`super::tabelle`] waere genau der Doppelbau, den die Probe
+/// `es_gibt_eine_stelle_je_anlage_und_uebersetzung` verhindert; dass die
+/// Huellen mehrere Aufrufer haben duerfen, sagt jene Probe in ihrem Kopf
+/// ausdruecklich.
+///
+/// **Ein Ziel setzt auch dieser Weg nicht.** Wer eines braucht — der
+/// Kontextmenue-Bauer braucht es, weil seine Eintraege nicht ueber die
+/// Antwortkette laufen —, setzt es am fertigen Eintrag und begruendet es dort.
+pub(super) fn ohne_kuerzel(
     mtm: MainThreadMarker,
     titel: &NSString,
     aktion: Option<Sel>,

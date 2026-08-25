@@ -71,11 +71,35 @@
 //! lesen. Jede Ausleihe unten steht deshalb in einer eigenen Anweisung, und
 //! keine ueberlebt eine Zeile mit einem Objective-C-Aufruf.
 //!
-//! **Das Kontextmenue der Liste baut diese Datei nicht.** Die Tabelle traegt
-//! seit C1 der Runde 6 ein `NSMenu`, dessen Delegierter die Quelle ist; sie
-//! beantwortet in `menuNeedsUpdate:` allein, welche Eintraege betroffen sind,
-//! und laesst [`super::teilen::eintrag_anfuegen`] den Eintrag setzen. Ein
-//! zweiter Menuebauer hier waere die Wiederholung, die jener Kopf ausschliesst.
+//! **Den Freigabeeintrag baut diese Datei nicht, ihre drei eigenen schon.**
+//! Die Tabelle traegt seit C1 der Runde 6 ein `NSMenu`, dessen Delegierter die
+//! Quelle ist; sie beantwortet in `menuNeedsUpdate:`, welche Eintraege
+//! betroffen sind, haengt seit der Runde 17 die drei eigenen Befehle aus
+//! [`Kontextbefehl`] an und laesst danach
+//! [`super::teilen::eintrag_anfuegen`] den Freigabeeintrag setzen. Ein zweiter
+//! Bauer **jenes** Eintrags waere hier die Wiederholung, die jener Kopf
+//! ausschliesst; die drei eigenen kann er nicht bauen, denn er kennt keine der
+//! Flaechen und keinen Befehl von KRK.
+//!
+//! **Die Reihenfolge im Rumpf traegt die Form des Menues und ist keine
+//! Geschmacksfrage.** [`super::teilen::eintrag_anfuegen`] fuegt **vorn** ein
+//! (`insertItem_atIndex(…, 0)`) und setzt seinen Trenner nur, wenn schon etwas
+//! dasteht. Erst die drei eigenen anhaengen, dann jenen rufen, ergibt damit
+//! von selbst „Teilen, Trenner, Zip, Unzip, Im Finder oeffnen"; die umgekehrte
+//! Folge ergaebe ein Menue ohne Trenner, in dem der Freigabeeintrag zwischen
+//! den eigenen stuende.
+//!
+//! **Was in den drei Eintraegen steht und worauf sie wirken, entscheidet
+//! [`crate::kommandos::kontextmenue`] ohne AppKit.** Titel und Marke kommen von
+//! dort, gebaut wird ueber [`Kontextbefehl::ALLE`], und die drei teilen sich
+//! **einen** Selektor `kontextbefehl:`; unterschieden werden sie allein an
+//! ihrer Marke. Das ist die Sperre gegen den Menueeintrag, der dasteht und
+//! nichts tut: die Marke wird ueber [`Kontextbefehl::von_menuemarke`]
+//! zurueckgelesen, und die Ausfuehrung beim Anwendungsdelegierten verzweigt
+//! ueber den Wert vollstaendig und ohne Auffangzweig. Ein vierter Wert haelt
+//! damit den Bau an, statt still nichts zu tun. Der Freigabeeintrag gehoert
+//! nicht in jene Aufzaehlung: er traegt Ziel und Handlung des Systems, und KRK
+//! fuehrt ihn nicht aus.
 //!
 //! **Der Rechtsklick rueckt dabei die Auswahl auf die angeklickte Zeile, es
 //! sei denn, sie ist markiert** (Nutzerentscheid vom 260812-1200,
@@ -154,7 +178,25 @@
 //! [`super::abwurf`], das sie geschlossen fuehrt; hier stehen die, die diese
 //! Datei selbst anspricht.
 //!
-//! **`clickedRow` steht seit 10.0** (`NSTableView.h:276`, am SDK gelesen: die
+//! **Die fuenf Beruehrungen des Kontextmenues aus der Runde 17 stehen seit
+//! 10.0**, jede am SDK nachgelesen und keine mit einem `API_AVAILABLE` im Kopf:
+//! die Klasse `NSMenuItem` selbst (`NSMenuItem.h:23`), ihre Eigenschaft `tag`
+//! in beiden Richtungen (`NSMenuItem.h:96` — Lesen und Setzen stehen in
+//! derselben Deklaration), ihre schwach gehaltene Eigenschaft `target`
+//! (`NSMenuItem.h:93`) und `NSMenu`s `addItem:` (`NSMenu.h:92`). Die
+//! Zeilenangaben sind am 260825 in
+//! `$(xcrun --show-sdk-path)/System/Library/Frameworks/AppKit.framework/Headers/`
+//! nachgelesen.
+//!
+//! **Der Erzeuger `initWithTitle:action:keyEquivalent:` (`NSMenuItem.h:38`,
+//! ebenfalls ohne Angabe und damit seit 10.0) steht bewusst nicht in dieser
+//! Liste**: diese Datei ruft ihn nicht. Sie geht ueber
+//! [`super::menue::ohne_kuerzel`], weil C2.10 der Runde 7 genau eine Stelle im
+//! Baum zusagt, die ein `NSMenuItem` anlegt. `setAction:` (`NSMenuItem.h:94`)
+//! braucht sie aus demselben Grund nicht: der Selektor geht durch jene Huelle
+//! in den Erzeuger.
+//!
+//! //! **`clickedRow` steht seit 10.0** (`NSTableView.h:276`, am SDK gelesen: die
 //! Eigenschaft traegt kein `API_AVAILABLE`). Sie hat seit dem 260812 zwei
 //! Abnehmer statt einen, den Doppelklick aus C3 der Runde 4 und die Auswahl
 //! vor dem Rechtsklick aus C1 der Runde 6.
@@ -191,7 +233,7 @@ use objc2::{ClassType, DefinedClass, MainThreadOnly, Message, define_class, msg_
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSDragOperation,
     NSDraggingInfo, NSFont, NSFontWeightBold, NSFontWeightRegular, NSMenu, NSMenuDelegate,
-    NSScrollView, NSTableColumn, NSTableView, NSTableViewColumnAutoresizingStyle,
+    NSMenuItem, NSScrollView, NSTableColumn, NSTableView, NSTableViewColumnAutoresizingStyle,
     NSTableViewDataSource, NSTableViewDelegate, NSTableViewDropOperation, NSTableViewStyle,
     NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
 };
@@ -215,6 +257,7 @@ use crate::kommandos::abwurfregel::{
     self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang,
 };
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
+use crate::kommandos::kontextmenue::Kontextbefehl;
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
@@ -223,6 +266,7 @@ use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::abwurf;
 use super::blaetter;
+use super::menue;
 use super::standardprogramm;
 use super::statuszeile::{self, Filterstand, Quellen};
 use super::tableiste::Tableiste;
@@ -437,6 +481,21 @@ pub type Vorgangsfrage = Box<dyn Fn() -> bool>;
 /// Operationsmaschine dort haengt und die Quellen einer fremden Anwendung
 /// gehoeren, also nicht aus der Auswahl dieses Dateifensters kommen.
 pub type Abwurfmelder = Box<dyn Fn(PathBuf, Vec<PathBuf>, Abwurfvorgang)>;
+
+/// Was mit einem angeklickten Eintrag des Kontextmenues zu geschehen ist
+/// (Runde 17).
+///
+/// Ein eigener Name aus demselben Grund wie beim [`Umbenennungsmelder`]
+/// darueber. Ausgefuehrt wird der Befehl beim Anwendungsdelegierten, weil zwei
+/// der drei Wege die Operationsmaschine brauchen und der dritte die
+/// Statuszeile ueber beide Dateifenster hinweg; von einer Quelle aus ist
+/// keines von beiden zu erreichen.
+///
+/// **Der Wert und nicht die Marke.** Die Zurueckrechnung der Menuemarke steht
+/// in [`Kontextbefehl::von_menuemarke`] und damit vor diesem Rueckruf; was
+/// hier herauskommt, ist bereits einer der drei Befehle, und der Empfaenger
+/// verzweigt darueber vollstaendig und ohne Auffangzweig.
+pub type Kontextmelder = Box<dyn Fn(Kontextbefehl)>;
 
 /// Was die Statuszeile sagt, wenn die Quelle keine Datei auf dem Datentraeger
 /// liefert (C7).
@@ -817,6 +876,17 @@ pub struct QuelleIvars {
     /// [`DateifensterQuelle::befehlsantwort_beidseitig_loeschen`] an einer
     /// Stelle.
     befehlsantwort_raeumer: RefCell<Option<Box<dyn Fn()>>>,
+    /// Was mit einem angeklickten Eintrag des Kontextmenues zu geschehen ist
+    /// (Runde 17).
+    ///
+    /// Der neunte Rueckruf, wahlfrei wie die acht darueber und aus demselben
+    /// Grund: die Quelle kommt vor dem Anwendungsdelegierten zur Welt. Was ein
+    /// fehlender Rueckruf bedeutet, entscheidet
+    /// [`DateifensterQuelle::kontextbefehl_melden`] an einer Stelle, naemlich
+    /// gar nichts zu tun. Eintreten kann der Fall nicht: der Rueckruf steht
+    /// seit dem Aufbau der Oberflaeche, und ein Rechtsklick braucht ein
+    /// stehendes Fenster.
+    kontextbefehl: RefCell<Option<Kontextmelder>>,
     /// Der Grund, den der vorige Durchgang von
     /// [`DateifensterQuelle::abwurf_pruefen`] gefaellt hat, `None` fuer ein
     /// angenommenes Urteil (C7).
@@ -957,6 +1027,28 @@ define_class!(
         fn stapel_einziehen(&self, _zeitgeber: &NSTimer) {
             self.einziehen();
         }
+
+        /// Der Klick auf einen der drei eigenen Kontextmenue-Eintraege
+        /// (Runde 17).
+        ///
+        /// **Ein Selektor fuer alle drei, und die Marke sagt, welcher gemeint
+        /// war.** Drei Selektoren nebeneinander waeren drei Stellen, an denen
+        /// einer fehlen koennte, ohne dass etwas meldet; so gibt es genau eine,
+        /// und wer einen vierten Befehl anlegt, kommt an
+        /// [`Kontextbefehl`] nicht vorbei.
+        ///
+        /// Der Rumpf steht daneben, in
+        /// [`DateifensterQuelle::kontextbefehl_melden`], nach der Bauform von
+        /// `validateDrop:` weiter unten: dieser Block ist die Liste dessen,
+        /// was KRK entgegennimmt, und bleibt eine Liste.
+        // SAFETY: Die Signatur passt zu der, die ein `NSMenuItem` an sein Ziel
+        // schickt: ein Argument, der Absender. Er ist der Eintrag, an dem die
+        // Handlung gesetzt wurde, und traegt damit die Marke, die
+        // `eigene_kontexteintraege_anfuegen` ihm gegeben hat.
+        #[unsafe(method(kontextbefehl:))]
+        fn kontextbefehl(&self, absender: &NSMenuItem) {
+            self.kontextbefehl_melden(absender.tag());
+        }
     }
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
@@ -1045,6 +1137,11 @@ define_class!(
         /// [`crate::kommandos::operationen::rechtsklick_zielzeile`], samt der
         /// Begruendung und der Ablehnung der beiden anderen Moeglichkeiten.
         ///
+        /// **Erst die drei eigenen Eintraege, dann der Freigabeeintrag**, und
+        /// die Folge ist die Form des Menues und keine Geschmacksfrage: jener
+        /// Bauer fuegt vorn ein und setzt seinen Trenner nur, wenn schon etwas
+        /// dasteht. Der Modulkopf schreibt es aus.
+        ///
         /// Die Ausleihe des Tabmodells endet in jeder der beiden ersten
         /// Zeilen, vor dem ersten Objective-C-Aufruf; siehe den Modulkopf.
         // SAFETY: Die Signatur entspricht der des Protokolls.
@@ -1053,6 +1150,7 @@ define_class!(
             self.rechtsklick_auswahl_nachziehen();
             let betroffen = self.betroffene_eintraege();
             menue.removeAllItems();
+            self.eigene_kontexteintraege_anfuegen(menue);
             teilen::eintrag_anfuegen(menue, &betroffen.pfade, self.mtm());
         }
     }
@@ -1088,6 +1186,7 @@ impl DateifensterQuelle {
             vorgang_laeuft: RefCell::new(None),
             abwurf: RefCell::new(None),
             befehlsantwort_raeumer: RefCell::new(None),
+            kontextbefehl: RefCell::new(None),
             gemeldeter_abwurfgrund: Cell::new(None),
             beschlossener_vorgang: Cell::new(None),
             abwurfquellen: RefCell::new(None),
@@ -1144,6 +1243,27 @@ impl DateifensterQuelle {
     /// laesst (C7 der Runde 13).
     pub fn befehlsantwort_raeumer_setzen(&self, raeumen: Box<dyn Fn()>) {
         *self.ivars().befehlsantwort_raeumer.borrow_mut() = Some(raeumen);
+    }
+
+    /// Hinterlegt, was mit einem angeklickten Eintrag des Kontextmenues zu
+    /// geschehen ist (Runde 17).
+    ///
+    /// **Die Ausnahme darunter hat ein Ablaufdatum.** `krk-ui` hat kein
+    /// Bibliotheksziel, also ist `pub` hier keine Wurzel; bis Schritt 7 dieser
+    /// Runde den Rueckruf beim Aufbau der Oberflaeche setzt, ruft niemand
+    /// diesen Setzer, und `-D warnings` hielte den Bau an. Die Erwartung
+    /// erlischt mit dem ersten Aufrufer: dann meldet der Uebersetzer die
+    /// unerfuellte Erwartung, und die Zeilen muessen weg. Dieselbe Form
+    /// tragen die Stuecke aus [`crate::kommandos::kontextmenue`], die auf
+    /// denselben Schritt warten.
+    #[expect(
+        dead_code,
+        reason = "Schritt 7 dieser Runde setzt den Rueckruf beim Aufbau der \
+                  Oberflaeche; bis dahin ruft niemand diesen Setzer, und eine \
+                  Probe dafuer gaebe es nicht: sie brauchte den Hauptfaden"
+    )]
+    pub fn kontextmelder_setzen(&self, melden: Kontextmelder) {
+        *self.ivars().kontextbefehl.borrow_mut() = Some(melden);
     }
 
     /// Der Ordner, den der sichtbare Tab gerade zeigt.
@@ -1524,6 +1644,85 @@ impl DateifensterQuelle {
         if let Some(zeile) = ziel {
             self.zeile_setzen(zeile);
         }
+    }
+
+    /// Haengt die drei eigenen Eintraege an das Kontextmenue (Runde 17).
+    ///
+    /// **Gebaut wird ueber [`Kontextbefehl::ALLE`] und nicht aus drei Zeilen
+    /// von Hand.** Damit ist die Reihenfolge im Menue dieselbe Angabe wie die
+    /// Reihenfolge jener Liste, und ein vierter Befehl erscheint, ohne dass
+    /// hier jemand etwas nachzieht. Titel und Marke kommen aus
+    /// [`crate::kommandos::kontextmenue`]; diese Stelle rechnet nichts nach.
+    ///
+    /// **Angehaengt und nicht vorn eingefuegt.** Der Freigabeeintrag kommt
+    /// danach und setzt sich mit seinem Trenner selbst nach vorn; wer hier
+    /// einfuegte statt anzuhaengen, drehte die drei um.
+    ///
+    /// **Angelegt wird der Eintrag nicht hier, sondern in
+    /// [`super::menue::ohne_kuerzel`].** C2.10 der Runde 7 sagt zu, dass genau
+    /// eine Stelle im Baum ein `NSMenuItem` anlegt, und die Probe
+    /// `es_gibt_eine_stelle_je_anlage_und_uebersetzung` haelt die Zusage ueber
+    /// den ganzen Quellbaum. Ein eigener Erzeuger an dieser Stelle waere der
+    /// Doppelbau, den sie verhindert; mehrere Aufrufer der Huelle sind
+    /// dagegen ausdruecklich vorgesehen.
+    ///
+    /// **Ein Ziel setzt jene Huelle nicht, und hier bekommt der Eintrag
+    /// eines.** Das Hauptmenue laesst die Antwortkette entscheiden; diese drei
+    /// Eintraege koennen das nicht, denn ihr Befehl haengt an der Fensterseite,
+    /// aus der der Rechtsklick kam, und die kennt nur diese Quelle.
+    ///
+    /// **Kein Eintrag wird ausgegraut und keiner weggelassen**, auch dann
+    /// nicht, wenn er nichts vorfinden wird. Was er vorfindet, entscheidet
+    /// sich im Augenblick der Ausfuehrung und wird dort in der Statuszeile
+    /// gemeldet; eine zweite Zulaessigkeitsmaschine neben
+    /// [`crate::kommandos::zulaessigkeit`], die fuer das Hauptmenue gebaut ist,
+    /// entsteht damit nicht.
+    fn eigene_kontexteintraege_anfuegen(&self, menue: &NSMenu) {
+        let mtm = self.mtm();
+        for befehl in Kontextbefehl::ALLE {
+            let eintrag = menue::ohne_kuerzel(
+                mtm,
+                &NSString::from_str(befehl.titel()),
+                Some(sel!(kontextbefehl:)),
+            );
+            eintrag.setTag(befehl.menuemarke());
+            // SAFETY: `setTarget:` verlangt, dass das Ziel vom richtigen Typ
+            // ist (`NSMenuItem.h:93`), also auf die gesetzte Handlung
+            // antwortet; diese Quelle traegt `kontextbefehl:` selbst. Gehalten
+            // wird das Ziel **schwach** ("@property (nullable, weak) id
+            // target"), und das haelt den Ring offen: Quelle → Tabelle → Menue
+            // → Eintrag → Ziel bricht an der letzten Kante, genau wie beim
+            // Delegierten des Menues. Ein gestorbenes Ziel liefert `nil` und
+            // keinen Absturz.
+            unsafe { eintrag.setTarget(Some(self)) };
+            menue.addItem(&eintrag);
+        }
+    }
+
+    /// Meldet den angeklickten Kontextmenue-Befehl weiter (Runde 17).
+    ///
+    /// Der Rumpf hinter dem Selektor `kontextbefehl:`. **Er entscheidet
+    /// nichts**, sondern rechnet die Marke ueber
+    /// [`Kontextbefehl::von_menuemarke`] zurueck und reicht den Wert an den
+    /// Anwendungsdelegierten; ausgefuehrt wird dort, weil die
+    /// Operationsmaschine dort haengt.
+    ///
+    /// **Zwei Wege enden hier still, und beide sind gewollt.** Eine Marke, die
+    /// keinen der drei Befehle benennt, kommt von einem Eintrag, den nicht
+    /// diese Datei gesetzt hat — die Null eines ungesetzten `NSMenuItem`
+    /// eingeschlossen —, und ein fehlender Rueckruf heisst, dass die
+    /// Oberflaeche noch nicht steht. In beiden Lagen ist nichts zu tun die
+    /// richtige Antwort und nicht die bequeme: ein Rueckfall auf den ersten
+    /// Befehl packte Dateien, die niemand packen wollte.
+    fn kontextbefehl_melden(&self, marke: NSInteger) {
+        let Some(befehl) = Kontextbefehl::von_menuemarke(marke) else {
+            return;
+        };
+        let melden = self.ivars().kontextbefehl.borrow();
+        let Some(melden) = melden.as_ref() else {
+            return;
+        };
+        melden(befehl);
     }
 
     /// Worauf ein Dateioperations-Befehl in diesem Dateifenster wirkt (C4).
@@ -4407,10 +4606,11 @@ impl Dateifenster {
         }
 
         // Das Kontextmenue aus C1 der Runde 6. Es entsteht hier leer und
-        // bekommt seinen einen Eintrag erst beim Rechtsklick, in
+        // bekommt seine vier Eintraege erst beim Rechtsklick, in
         // `menuNeedsUpdate:` oben; ein Menue mit festem Bestand koennte die
         // betroffenen Eintraege nicht nennen, weil die sich zwischen zwei
-        // Klicks aendern.
+        // Klicks aendern. Seit der Runde 17 sind es vier statt einem: der
+        // Freigabeeintrag des Systems und die drei eigenen Befehle.
         //
         // SAFETY: `setMenu:` ist als Setzer einer `strong`-Eigenschaft
         // unsicher gebunden und verlangt nichts weiter, als dass das Menue
@@ -5057,5 +5257,48 @@ mod tests {
                 }
             }
         }
+    }
+    /// Der Selektor des Kontextmenues wird genau einmal erklaert und genau
+    /// einmal gesetzt (Runde 17).
+    ///
+    /// **Die eine Falle dieser Runde, und der Uebersetzer haelt sie nicht.**
+    /// `sel!` baut einen Selektornamen und fragt nicht, ob eine Methode ihn
+    /// beantwortet; ein Vertipper zwischen der Erklaerung im
+    /// `define_class!`-Block und dem Aufruf in
+    /// [`DateifensterQuelle::eigene_kontexteintraege_anfuegen`] uebersetzt,
+    /// besteht jede Probe, steht im Menue und tut nichts. Genau die Gestalt,
+    /// die `CLAUDE.md` fuer Tastenbefehle beschreibt.
+    ///
+    /// Gezaehlt werden Fundstellen und nicht Dateien: eine zweite Erklaerung
+    /// in dieser Datei waere genauso ein zweiter Empfaenger wie eine in einer
+    /// anderen. Kommentarzeilen zaehlen nicht mit — die Koepfe darueber nennen
+    /// den Namen mehrfach in Prosa, und das ist keine Beruehrung.
+    ///
+    /// Die Nadeln stehen zusammengesetzt da, wie bei
+    /// `es_gibt_genau_einen_menuebauer` in [`super::super::teilen`]: als ein
+    /// Stueck geschrieben faenden sie sich selbst.
+    #[test]
+    fn der_kontextmenue_selektor_hat_einen_empfaenger_und_einen_setzer() {
+        let dateien = quelldateien();
+        let zaehlen = |nadel: &str| -> usize {
+            dateien
+                .iter()
+                .map(|(_, inhalt)| {
+                    code_zeilen(inhalt)
+                        .filter(|zeile| zeile.contains(nadel))
+                        .count()
+                })
+                .sum()
+        };
+        assert_eq!(
+            zaehlen(concat!("method(", "kontextbefehl:)")),
+            1,
+            "der Selektor `kontextbefehl:` wird nicht genau einmal erklaert"
+        );
+        assert_eq!(
+            zaehlen(concat!("sel!(", "kontextbefehl:)")),
+            1,
+            "der Selektor `kontextbefehl:` wird nicht genau einmal gesetzt"
+        );
     }
 }
