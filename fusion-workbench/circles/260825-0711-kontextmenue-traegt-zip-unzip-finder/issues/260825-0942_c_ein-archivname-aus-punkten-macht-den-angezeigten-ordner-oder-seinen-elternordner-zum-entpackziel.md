@@ -42,3 +42,12 @@ Den gerechneten Ordnernamen durch `name_pruefen` schicken, an genau einer Stelle
 ## Umfang
 
 `krk-ui`, das Modul `kommandos/kontextmenue`. Der Kern ist nicht zu aendern: er tut, was der Auftrag sagt.
+
+---
+Resolved: `crates/krk-ui/src/kommandos/kontextmenue.rs` — die neue private Funktion `brauchbarer_stamm` schickt jeden gerechneten Stamm durch `krk_core::operation::umbenennen::name_pruefen` und fällt bei jedem der vier `Namensfehler` auf `ERSATZSTAMM` zurück. Keine zweite Namensprüfung daneben; die bestehende deckt zugleich den Stamm `␣␣` aus `␣␣.zip`.
+
+Gewählt ist der Ersatzname und nicht die Statuszeile: die Directive stellt den Satz der Statuszeile für den Fall bereit, dass ein Befehl **nichts vorfindet**, und Unzip findet hier etwas vor — der Nutzer hat auf eine Datei geklickt, die die Endung sichtbar trägt. `kein_archiv()` wäre vor seinen Augen die Unwahrheit, und den Eintrag stillschweigend fallen zu lassen wäre schlechter. Unbrauchbar ist allein der gerechnete Name, und für den steht die Antwort seit dem Wurzelverzeichnis schon da; sie ist erweitert und nicht verdoppelt. `kommandos/operationen.rs` ist unangetastet.
+
+Abweichung vom Vorschlag: die Prüfung steht in `ordnername_zum_archiv` und nicht in `paar`. Die Zusage „das ist ein Name" gehört der Funktion, die den Namen herausgibt; `ordnername_zum_archiv` ist `pub`, und eine Prüfung im Aufrufer ließe den öffentlichen Rückweg weiterhin `..` liefern. `archivname` geht denselben Weg, damit das Paar in beiden Richtungen dieselbe Antwort gibt; die Umkehrbarkeit bleibt für jeden Namen erhalten, den `name_pruefen` durchlässt.
+
+Vier neue Proben neben dem Code, darunter je eine für `..zip` und `...zip` über den vollen Weg `entpackziel` und eine, die über zehn Namen die **Gestalt** des Zielordners prüft statt einer Liste erwarteter Namen. Gegenprobe: ohne die Sperre werden genau diese vier rot. `cargo test -p krk-ui` exit 0, `cargo clippy -p krk-ui --all-targets -- -D warnings` exit 0, `cargo fmt --all --check` exit 0. Protokoll: `history/260825-1033-coder-b1-archivname-aus-punkten.md`.

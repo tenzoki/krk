@@ -47,7 +47,9 @@
 //!    [`ordnername_zum_archiv`] umkehrbar**: unter der ersetzenden Regel wuerde
 //!    aus `bericht.txt` das Archiv `bericht.zip` und daraus der Ordner
 //!    `bericht`, und der Ursprungsname waere verloren. Da beide Befehle im
-//!    selben Menue stehen, saehe der Nutzer den Verlust unmittelbar.
+//!    selben Menue stehen, saehe der Nutzer den Verlust unmittelbar. Wo der
+//!    Rundweg endet, endet er in beiden Richtungen gleich; die eine Stelle,
+//!    an der das entschieden wird, ist [`brauchbarer_stamm`].
 //! 2. **Ein Archiv wird an der Endung erkannt, ohne Ruecksicht auf Gross- und
 //!    Kleinschreibung und ohne Dateizugriff**
 //!    (`260825-0711_*_woran-erkennt-unzip-dass-eine-datei-ein-zip-ist.md`,
@@ -100,7 +102,7 @@
 
 use std::path::{Path, PathBuf};
 
-use krk_core::operation::umbenennen::namen_teilen;
+use krk_core::operation::umbenennen::{Namensfehler, name_pruefen, namen_teilen};
 use krk_core::verzeichnis::Ordnermodell;
 
 /// Die Endung, an der ein Archiv erkannt und mit der eines benannt wird.
@@ -111,14 +113,20 @@ use krk_core::verzeichnis::Ordnermodell;
 /// in der der Rundweg spaeter unbemerkt aufhoert zu schliessen.
 const ENDUNG: &str = ".zip";
 
-/// Der Stamm, wenn weder ein Eintrag noch der angezeigte Ordner einen Namen
-/// hergibt.
+/// Der Stamm, wenn die Rechnung keinen **brauchbaren** Namen hergibt.
 ///
-/// Der Fall ist das Wurzelverzeichnis: `Path::new("/").file_name()` liefert
-/// `None`, und ein Archiv namens `.zip` waere keines (siehe [`ist_zipname`]).
-/// Ein Ersatzname ist hier die richtige Antwort und keine Notluege: der Nutzer
-/// sieht ihn im Konfliktblatt und in der Statuszeile, bevor irgendetwas
-/// entsteht.
+/// Zwei Lagen fuehren hierher, und die zweite ist seit dem 260825 dabei:
+///
+/// 1. **Es steht kein Name da.** Der Fall ist das Wurzelverzeichnis:
+///    `Path::new("/").file_name()` liefert `None`, und ein Archiv namens `.zip`
+///    waere keines (siehe [`ist_zipname`]).
+/// 2. **Es steht einer da, der keiner ist.** Aus dem Archiv `..zip` faellt der
+///    Stamm `.`, aus `...zip` der Stamm `..`; beide weist
+///    [`name_pruefen`] ab, und [`brauchbarer_stamm`] fragt es.
+///
+/// Ein Ersatzname ist in beiden Lagen die richtige Antwort und keine Notluege:
+/// der Nutzer sieht ihn im Konfliktblatt und in der Statuszeile, bevor
+/// irgendetwas entsteht.
 const ERSATZSTAMM: &str = "Archiv";
 
 /// Was das Kontextmenue der Dateiliste an eigenen Eintraegen traegt.
@@ -278,6 +286,69 @@ pub fn ist_zipname(name: &str) -> bool {
     endung.eq_ignore_ascii_case(ENDUNG)
 }
 
+/// Ein gerechneter Stamm, sofern er als Name taugt — sonst [`ERSATZSTAMM`].
+///
+/// **Die eine Sperre gegen einen Zielordner, der keiner ist.** Aus dem Archiv
+/// `..zip` liefert [`namen_teilen`] den Stamm `.`, aus `...zip` den Stamm `..`.
+/// `Path::join` normalisiert nichts, und `<angezeigter Ordner>/..` trifft beim
+/// `symlink_metadata` der Zielordnerklaerung den **Elternordner**: wer im
+/// Konfliktblatt dann „Ueberschreiben" waehlt, gibt den angezeigten Ordner oder
+/// dessen Elternordner an den Papierkorb, und wer es nicht waehlt, bekommt den
+/// Archivinhalt eine Ebene zu hoch geschrieben
+/// (`issues/260825-0942_*_ein-archivname-aus-punkten-macht-den-angezeigten-ordner-oder-seinen-elternordner-zum-entpackziel.md`).
+///
+/// **Die zwei gebauten Sperren des Kerns sehen das nicht, und das ist kein
+/// Versaeumnis an ihnen.** `ZipFile::enclosed_name` und `kette_anlegen`
+/// versperren jeden Weg **aus dem Zielordner heraus**, und beide rechnen dabei
+/// relativ zu dem `ziel`, das diese Kiste ihnen reicht. Ist dieses `ziel` schon
+/// falsch, geschieht der Ausbruch vor ihnen und nicht an ihnen vorbei. Die
+/// Pruefung gehoert deshalb hierher, wo der Name entsteht.
+///
+/// **Gefragt wird [`name_pruefen`] und keine eigene Punktregel.** Was kein Name
+/// ist, beantwortet dieses Projekt an einer Stelle; die Zielordnerklaerung des
+/// Entpackens stellt dieselbe Frage im Zweig `Konfliktantwort::UmbenennenIn`
+/// bereits. Eine zweite Fassung daneben deckte heute dieselben Faelle und liefe
+/// spaeter auseinander. Nebenbei faengt die bestehende auch den Stamm `␣␣` aus
+/// `␣␣.zip`, den eine Regel ueber Punkte durchgelassen haette.
+///
+/// # Warum ein Ersatzname und nicht eine Meldung
+///
+/// Die Directive dieser Runde sagt: die drei Eintraege sind immer da und immer
+/// bedienbar, und wo ein Befehl **nichts vorfindet**, meldet er es in der
+/// Statuszeile. Unzip findet hier aber etwas vor — der Nutzer hat auf eine
+/// Datei geklickt, die die Endung sichtbar traegt.
+/// [`super::operationen::kein_archiv`] („hier steht keine Datei mit der Endung
+/// .zip") waere vor seinen Augen die Unwahrheit. Und den Eintrag
+/// stillschweigend aus [`Entpackbefund::Archive`] zu nehmen waere schlechter
+/// als beides: von drei markierten Archiven bliebe eines ohne Ordner und ohne
+/// Wort.
+///
+/// Unbrauchbar ist allein der **gerechnete Name**, und fuer genau diesen Fall
+/// steht die Antwort seit dem Wurzelverzeichnis schon da. Sie wird deshalb
+/// erweitert und nicht verdoppelt: aus „kein Name" wird „kein brauchbarer
+/// Name", und die Statuszeile bleibt der Lage vorbehalten, in der wirklich
+/// nichts dasteht.
+///
+/// **Zwei solche Archive nebeneinander zielen damit auf denselben Ordner.** Das
+/// ist keine neue Lage: `a.zip` neben `a.ZIP` tut es seit dem ersten Tag dieser
+/// Runde, weil die Endung ohne Ruecksicht auf die Schreibung erkannt wird. Die
+/// Zielordnerklaerung des Vorgangs fragt beim zweiten nach, einmal je Archiv.
+///
+/// **Kein Auffangzweig ueber [`Namensfehler`].** Alle vier Gruende fuehren auf
+/// dieselbe Antwort, und ein fuenfter soll den Bau anhalten statt still
+/// mitzulaufen — so wie es die Aufzaehlungen dieses Baums durchweg tun.
+fn brauchbarer_stamm(stamm: &str) -> String {
+    match name_pruefen(stamm) {
+        Ok(()) => stamm.to_owned(),
+        Err(
+            Namensfehler::Leer
+            | Namensfehler::Schraegstrich
+            | Namensfehler::Nullbyte
+            | Namensfehler::Punktname,
+        ) => ERSATZSTAMM.to_owned(),
+    }
+}
+
 /// Der volle Pfad des Archivs, das Zip anlegt.
 ///
 /// Es entsteht immer im **angezeigten** Ordner, auch wenn die betroffenen
@@ -306,6 +377,14 @@ pub fn ist_zipname(name: &str) -> bool {
 /// [`ordnername_zum_archiv`] und in [`ist_zipname`], und eine zweite daneben
 /// gibt es nicht.
 ///
+/// **Auch dieser Stamm geht durch [`brauchbarer_stamm`]**, obwohl `.` und `..`
+/// ihn nicht erreichen koennen: `Path::file_name` liefert fuer beide `None`,
+/// und der Ersatzstamm steht dort ohnehin. Erreichen kann ihn der leere Stamm,
+/// etwa aus einer Datei namens `␣␣`. Vor allem aber haelt der gemeinsame Weg
+/// das Paar symmetrisch — beide Richtungen antworten auf einen unbrauchbaren
+/// Namen dasselbe, statt dass die eine ihn durchliesse und die andere ihn
+/// ersetzte.
+///
 /// **Ein leeres `betroffen` erreicht diese Funktion im Betrieb nicht**: der
 /// Aufrufer faengt es vorher mit [`super::operationen::nichts_zu_packen`] ab.
 /// Beantwortet wird der Fall trotzdem, denn eine Rechnung mit einer Luecke
@@ -319,7 +398,7 @@ pub fn archivname(betroffen: &[PathBuf], ordner: &Path) -> PathBuf {
     .or_else(|| ordner.file_name())
     .map_or_else(
         || ERSATZSTAMM.to_owned(),
-        |name| name.to_string_lossy().into_owned(),
+        |name| brauchbarer_stamm(&name.to_string_lossy()),
     );
     ordner.join(format!("{stamm}{ENDUNG}"))
 }
@@ -339,17 +418,28 @@ pub fn archivname(betroffen: &[PathBuf], ordner: &Path) -> PathBuf {
 ///
 /// Zurueck kommt ein **Name** und kein Pfad: wo der Ordner entsteht, sagt der
 /// angezeigte Ordner und nicht das Archiv.
+///
+/// **Und es kommt ein Name zurueck, der einer ist.** Beide Wege — der Stamm des
+/// Archivnamens wie der unveraenderte Name ohne Endung — muenden in
+/// [`brauchbarer_stamm`]; aus `..zip` und `...zip` kommt damit [`ERSATZSTAMM`]
+/// und nicht `.` oder `..`. **Die Pruefung steht hier und nicht in [`paar`]**,
+/// obwohl [`paar`] heute der einzige Weg ins Dateisystem ist: die Zusage „das
+/// ist ein Name" gehoert der Funktion, die den Namen herausgibt, und nicht
+/// einem ihrer Aufrufer. Sonst gaebe der oeffentliche Rundweg weiterhin `..`
+/// heraus, und der naechste Aufrufer — der Ausfuehrungszweig aus Schritt 7 —
+/// muesste die Pruefung ein zweites Mal mitbringen.
 #[must_use]
 pub fn ordnername_zum_archiv(archiv: &Path) -> String {
     let Some(name) = archiv.file_name() else {
         return ERSATZSTAMM.to_owned();
     };
     let name = name.to_string_lossy();
-    if !ist_zipname(&name) {
-        return name.into_owned();
-    }
-    let (stamm, _) = namen_teilen(&name);
-    stamm.to_owned()
+    let stamm = if ist_zipname(&name) {
+        namen_teilen(&name).0
+    } else {
+        &name
+    };
+    brauchbarer_stamm(stamm)
 }
 
 /// Worauf Unzip wirkt: welche Archive gemeint sind und wohin jedes geht.
@@ -424,6 +514,8 @@ fn paar(archiv: PathBuf, ordner: &Path) -> (PathBuf, PathBuf) {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Component;
+
     use krk_core::verzeichnis::{Eintrag, Typ};
 
     use super::*;
@@ -657,6 +749,116 @@ mod tests {
             "bericht.txt"
         );
         assert_eq!(ordnername_zum_archiv(Path::new("/")), "Archiv");
+    }
+
+    /// Wo die Umkehrbarkeit endet, endet sie in beide Richtungen gleich.
+    ///
+    /// **Die Probe zieht die Grenze, die [`brauchbarer_stamm`] gesetzt hat.**
+    /// Der Name `␣␣` ist auf macOS anlegbar und faellt in [`Namensfehler::Leer`];
+    /// beide Richtungen antworten darauf mit [`ERSATZSTAMM`]. Wuerde nur eine
+    /// von beiden pruefen, entstuende aus `␣␣` das Archiv `␣␣.zip` und daraus
+    /// der Ordner `Archiv` — zwei Regeln, wo eine steht.
+    #[test]
+    fn ein_unbrauchbarer_stamm_bekommt_in_beiden_richtungen_den_ersatz() {
+        let ordner = ordner();
+        assert_eq!(
+            archivname(&[ordner.join("  ")], ordner),
+            ordner.join("Archiv.zip")
+        );
+        assert_eq!(ordnername_zum_archiv(&ordner.join("  .zip")), ERSATZSTAMM);
+    }
+
+    // ------------------------------------------------------------------
+    // Kein Entpackziel ausserhalb des angezeigten Ordners
+    // ------------------------------------------------------------------
+
+    /// Ein Archiv namens `..zip` macht nicht den angezeigten Ordner zum Ziel.
+    ///
+    /// **Der kritische Befund der ersten Durchsicht dieser Runde**, in der
+    /// Gestalt, in der er ausloest: [`namen_teilen`] gibt aus `..zip` den Stamm
+    /// `.` heraus, und `<angezeigter Ordner>/.` **ist** der angezeigte Ordner.
+    /// Wer im Konfliktblatt „Ueberschreiben" waehlt, gibt ihn an den
+    /// Papierkorb. Die Probe faehrt den vollen Weg ueber [`entpackziel`] und
+    /// nicht [`ordnername_zum_archiv`] allein, damit sie das prueft, was der
+    /// Ausfuehrungszweig spaeter bekommt.
+    #[test]
+    fn ein_archiv_aus_zwei_punkten_zielt_nicht_auf_den_angezeigten_ordner() {
+        let ordner = ordner();
+        let modell = modell_mit(&["..zip"]);
+        let archiv = ordner.join("..zip");
+
+        assert_eq!(
+            entpackziel(&modell, std::slice::from_ref(&archiv), ordner),
+            Entpackbefund::Archive(vec![(archiv, ordner.join(ERSATZSTAMM))])
+        );
+    }
+
+    /// Ein Archiv namens `...zip` macht nicht den Elternordner zum Ziel.
+    ///
+    /// Die zweite Gestalt desselben Befundes, und die schwerere: der Stamm ist
+    /// `..`, und `symlink_metadata` loest ihn zum **Elternordner** auf — also zu
+    /// einem Ordner, den der Nutzer beim Klicken nicht einmal vor sich hatte.
+    /// Sie geht ueber die Ersatzregel statt ueber die betroffenen Eintraege,
+    /// damit beide Zweige von [`entpackziel`] durch [`paar`] belegt sind.
+    #[test]
+    fn ein_archiv_aus_drei_punkten_zielt_nicht_auf_den_elternordner() {
+        let ordner = ordner();
+        let modell = modell_mit(&["...zip"]);
+
+        assert_eq!(
+            entpackziel(&modell, &[], ordner),
+            Entpackbefund::Archive(vec![(ordner.join("...zip"), ordner.join(ERSATZSTAMM))])
+        );
+    }
+
+    /// Kein Entpackziel trifft den angezeigten Ordner oder dessen Elternordner.
+    ///
+    /// **Die Probe prueft die Gestalt und keine Liste erwarteter Namen.** Eine
+    /// Liste haette gesagt, was aus den zehn Namen wird; hier steht, was aus
+    /// **keinem** Namen werden darf, und das ist die Zusage: der Zielordner
+    /// liegt unmittelbar im angezeigten Ordner und sein letzter Bestandteil ist
+    /// ein `Component::Normal`.
+    ///
+    /// **Beide Bedingungen sind noetig, und jede faengt eine der zwei
+    /// Gestalten.** `<ordner>/.` traegt `Projekte` als letzten Bestandteil —
+    /// `Path` streicht den Punkt weg —, faellt aber aus dem angezeigten Ordner
+    /// heraus, weil sein Elternteil `/tmp` ist. `<ordner>/..` behaelt umgekehrt
+    /// den angezeigten Ordner als Elternteil und faellt allein ueber den
+    /// `ParentDir` auf. Mit nur einer der beiden Zeilen bliebe die Probe bei
+    /// einem der zwei Defekte gruen.
+    ///
+    /// Gefahren wird ueber [`paar`], die eine Stelle, an der das Paar entsteht,
+    /// und nicht ueber [`entpackziel`]: so stehen auch die Namen in der Liste,
+    /// die [`ist_zipname`] gar nicht als Archiv durchliesse.
+    #[test]
+    fn kein_entpackziel_verlaesst_den_angezeigten_ordner() {
+        let ordner = ordner();
+        for name in [
+            "..zip", "...zip", "..ZIP", "....zip", " .zip", "  .zip", ".zip", "a.zip", "..", ".",
+        ] {
+            let (_, ziel) = paar(ordner.join(name), ordner);
+
+            assert_eq!(
+                ziel.parent(),
+                Some(ordner),
+                "das Ziel zu \"{name}\" liegt nicht im angezeigten Ordner"
+            );
+            let letzter = ziel.components().next_back();
+            assert!(
+                matches!(letzter, Some(Component::Normal(_))),
+                "das Ziel zu \"{name}\" endet auf {letzter:?} und nicht auf einem Namen"
+            );
+            assert_ne!(
+                ziel.as_path(),
+                ordner,
+                "das Ziel zu \"{name}\" ist der angezeigte Ordner"
+            );
+            assert_ne!(
+                Some(ziel.as_path()),
+                ordner.parent(),
+                "das Ziel zu \"{name}\" ist der Elternordner"
+            );
+        }
     }
 
     // ------------------------------------------------------------------
