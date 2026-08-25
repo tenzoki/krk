@@ -159,12 +159,13 @@ flowchart LR
     S8 --> S7
 ```
 
-1. **Die Kiste `zip` aufnehmen und begründen**
+1. [DONE] **Die Kiste `zip` aufnehmen und begründen**
    - Executor: `coder`
    - Files: `Cargo.toml`, `crates/krk-core/Cargo.toml`
    - Changes: In `[workspace.dependencies]` zwei Einträge anlegen: `zip = { version = "8.6", default-features = false, features = ["deflate-flate2"] }` und `flate2 = "1"`. Beide bekommen die ausführliche Begründung, die jede fremde Kiste dieses Projekts an dieser Stelle trägt; der Text übernimmt die sechs gemessenen Aussagen aus dem Abschnitt „Die Kiste und der Grund" wörtlich, samt Datum und Gerät, und misst sie nicht neu. In `crates/krk-core/Cargo.toml` beide unter `[dependencies]` mit `workspace = true` eintragen, dazu je einen kurzen Satz, warum sie im Kern und nicht in `krk-ui` stehen. **`flate2` bekommt dabei ausdrücklich den Satz, dass es nicht überflüssig ist**, sondern das Rust-Verfahren einstellt, das `zip` selbst abschaltet; ohne diesen Satz fällt der Eintrag beim nächsten Aufräumen als scheinbar unbenutzt weg.
    - Dependencies: keine
    - Abnahme: `make check` läuft grün, `cargo tree --workspace -e normal,build` nennt weder `cc` noch einen `-sys`-Namen außer `windows-sys`.
+   - *Nachtrag 260825-0822: beide Abnahmezeilen halten (`make check` Exit 0; der Baum nennt weder `cc` noch einen `-sys`-Namen, auch `windows-sys` nicht, das allein in `Cargo.lock` steht). **Eine der sechs gemessenen Aussagen aus `### Die Kiste und der Grund` hält im Baum nicht:** `crc32fast` steigt nicht von 1.5.0 auf 1.5.1, weil KRKs vorhandene `Cargo.lock` 1.5.0 hält und `zip 8.6.0` sich damit begnügt. Die Erhebung im Wegwerf-Workspace sah den Anstieg, weil sie frisch auflöste. Die Begründung in der Wurzel-`Cargo.toml` schreibt beides aus; der Abschnitt oben ist unverändert stehen geblieben, weil er dem Planer gehört. Beleg: `history/260825-0822-coder-die-kiste-zip-aufnehmen-und-begruenden.md`.*
 
 2. **`Art::Zippen` und der Packlauf**
    - Executor: `coder`

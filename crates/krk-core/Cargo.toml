@@ -19,3 +19,19 @@ icu_collator = { workspace = true }
 # belegen. `leseprofil::datei::pruefen` ist die einzige Stelle, die ein Muster
 # uebersetzt.
 regex = { workspace = true }
+# Das Archivformat fuer Zip und Unzip. Es steht hier und nicht in `krk-ui`, weil
+# der Lauf im Kern liegt: `operation::zippen` und `operation::entpacken` sind die
+# einzigen Stellen, die die Kiste nennen, und ihre Proben brauchen den
+# selbstabraeumenden Pruefordner aus `tests/gemeinsam/mod.rs`. `krk-ui` hat kein
+# Bibliotheksziel, eine Datei unter `crates/krk-ui/tests/` erreicht also nichts
+# aus jener Kiste, und ein gepacktes Archiv waere dort nicht zu belegen.
+zip = { workspace = true }
+# Das Deflate-Verfahren dazu. **Der Eintrag ist nicht ueberfluessig, obwohl kein
+# Modul den Namen `flate2` nennt**: `zip` schaltet `flate2` ohne dessen
+# Vorgabemerkmale ein und stellt damit gar kein Verfahren ein, worauf `flate2`
+# den Bau mit "No compression backend selected" anhaelt. Erst dieser Eintrag mit
+# den Vorgabemerkmalen stellt `miniz_oxide` ein, das reine Rust-Verfahren, das
+# ueber `syntect` ohnehin schon im Baum steht. Er gehoert in dieselbe Kiste wie
+# `zip`, denn auf die Merkmalsvereinigung ueber den Workspace ist kein Verlass:
+# sie liesse `cargo build --workspace` gruen und `cargo test -p krk-core` rot.
+flate2 = { workspace = true }

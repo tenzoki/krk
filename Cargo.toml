@@ -106,6 +106,84 @@ icu_collator = "2.2"
 #
 # Die Mindestfassung passt: `rust-version = "1.65"`, das Projekt faehrt 1.97.1.
 regex = "1"
+# Das Archivformat fuer das Packen und Entpacken (Zip und Unzip im
+# Kontextmenue, Runde 17). Warum diese Kiste und nicht ein Systemwerkzeug, steht
+# ausgeschrieben im Plan:
+# `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/planning/260825-0727_*_plan-kontextmenue-traegt-zip-unzip-finder.md`,
+# Abschnitt `### Die Kiste und der Grund`. Drei Wege standen zur Wahl.
+#
+# **Ein Unterprozess auf `ditto(1)` oder `zip(1)` scheidet aus.** Er meldet
+# keinen Fortschritt je Eintrag, sein Abbruch waere ein Signal an einen fremden
+# Prozess statt ein `AtomicBool` zwischen zwei Eintraegen, und seinen Fehler
+# schreibt er auf die Standardfehlerausgabe, die C1 der Runde 1 als Kanal an den
+# Nutzer ausschliesst. Er waere zudem der erste Unterprozess dieses Vorhabens,
+# mit den Fragen, wer ihn abholt und was der Hauptfaden solange tut;
+# `appkit/terminal.rs` fuehrt genau diese drei Gruende schon einmal auf und hat
+# sich deshalb gegen `open -a` entschieden.
+#
+# **Ein eigener Zip-Schreiber in `krk-core` scheidet ebenfalls aus.** Ohne
+# Kompression waere er machbar und lieferte Archive, die kein Nutzer erwartet;
+# mit Kompression brauchte er eine Deflate-Umsetzung, und die steht mit `flate2`
+# bereits im Baum, aber nicht als Archivformat.
+#
+# Keine bestehende Abhaengigkeit leistet das Archivformat: `icu_collator`
+# sortiert, `regex` vergleicht Muster, `toml` zerlegt, `pulldown-cmark` rendert
+# Markdown, `syntect` faerbt ein, `signal-hook` faengt Signale, die
+# `objc2`-Kisten reichen AppKit durch. `flate2` kommt am naechsten und kennt
+# doch nur den Datenstrom, nicht den Behaelter, der ihn je Eintrag mit Namen,
+# Rechten und Pruefsumme umgibt.
+#
+# **Was `zip` mitbringt, ist gezaehlt und nicht geschaetzt.** Am 260825 auf
+# diesem Geraet erhoben, mit `cargo add` in einem Wegwerf-Workspace,
+# `cargo tree -e normal,build` und dem Vergleich der beiden `Cargo.lock`:
+#
+# - **Zwei neue Pakete**, `zip 8.6.0` und `typed-path 0.12.3`. Alles Uebrige,
+#   worauf `zip` aufsetzt, steht bereits in KRKs `Cargo.lock`, und zwar in
+#   denselben Fassungen: `flate2 1.1.9`, `miniz_oxide 0.8.9`, `adler2 2.0.1`,
+#   `simd-adler32 0.3.10`, `cfg-if 1.0.4`, `memchr 2.8.3`, `indexmap 2.14.0`,
+#   `hashbrown 0.17.1` und `equivalent 1.0.2`. Sie kommen ueber `syntect` und
+#   `toml` schon herein. Die Erhebung im Wegwerf-Workspace sah `crc32fast` von
+#   1.5.0 auf 1.5.1 steigen, also eine Fehlerbehebungsstufe; **in KRKs Baum
+#   steigt es nicht**, weil die vorhandene `Cargo.lock` 1.5.0 haelt und `zip`
+#   sich damit begnuegt (`cargo tree --workspace -e normal,build -i crc32fast`,
+#   am 260825 nachgesehen). Der Zuwachs bleibt damit zwei von zwei.
+# - **Weder `cc` noch ein `-sys`-Paket kommt hinzu.** `cargo tree -e
+#   normal,build` ueber den Pruef-Workspace findet keinen solchen Namen. Die
+#   Zusage aus der Technologiewahl haelt: die Bauvoraussetzungen aendern sich
+#   nicht.
+# - **Die Merkmalswahl ist die Bedingung der Einbindung und keine
+#   Sparsamkeit.** Der Vorgabesatz von `zip` zieht `bzip2`, `zstd` und `lzma`
+#   herein, und die beiden ersten bringen C-Code mit. `default-features = false`
+#   mit dem einen Merkmal `deflate-flate2` laesst genau das Deflate-Verfahren
+#   uebrig, das jedes Zip-Werkzeug liest.
+# - **`flate2` muss unmittelbar danebenstehen, und das ist gemessen.** `zip`
+#   schaltet `flate2` **ohne** dessen Vorgabemerkmale ein; allein damit
+#   uebersetzt `flate2` nicht und meldet "No compression backend selected". Ein
+#   Eintrag `flate2` mit seinen Vorgabemerkmalen in derselben Kiste stellt das
+#   reine Rust-Verfahren `miniz_oxide` ein, das ohnehin schon im Baum steht. Wer
+#   sich auf die Merkmalsvereinigung ueber den Workspace verliesse, bekaeme
+#   einen Baum, in dem `cargo build --workspace` gruen ist und
+#   `cargo test -p krk-core` rot.
+# - **Die Mindestfassung passt.** `zip` verlangt Rust 1.88, `typed-path` 1.65;
+#   das Projekt faehrt 1.97.1.
+# - **Die Geschwindigkeit ist auf diesem Geraet gemessen und nicht auf dem
+#   Referenzgeraet.** Acht Megabyte kaum verdichtbarer Zufallsdaten kosten im
+#   Profil `release` 212 ms, also rund 38 MB/s; acht Megabyte gut verdichtbarer
+#   Daten kosten 15 ms. `speculation:` Ob das Referenzgeraet von 2018 dieselbe
+#   Groessenordnung haelt, ist ungemessen. Keine der zehn Zeitzusagen aus C8
+#   spricht ueber das Packen, also haengt an der Zahl keine Zusage; sie steht
+#   hier, damit die spaetere Messrunde einen Ausgangswert hat.
+zip = { version = "8.6", default-features = false, features = ["deflate-flate2"] }
+# Das Deflate-Verfahren, das `zip` selbst abschaltet. **Dieser Eintrag ist nicht
+# ueberfluessig**, auch wenn kein Modul den Namen `flate2` nennt: die
+# Begruendung zu `zip` darueber misst es im vierten Aufzaehlungspunkt. `zip`
+# schaltet `flate2` ohne dessen Vorgabemerkmale ein und stellt damit gar kein
+# Verfahren ein; erst der zweite Nenner mit Vorgabemerkmalen stellt
+# `miniz_oxide` ein, das reine Rust-Verfahren, das ueber `syntect` ohnehin schon
+# im Baum steht. Eine Bibliothek in C kommt darueber nicht herein. Wer die Zeile
+# beim Aufraeumen als scheinbar unbenutzt streicht, macht `cargo test -p
+# krk-core` rot.
+flate2 = "1"
 # Signalbehandlung, nur fuer die Messstrecke. `std` kennt keine Signale, und die
 # einzige Zusage, die daran haengt, ist die Sitzungssicherung aus
 # `krk-bench/src/messen.rs`: sie muss den vorigen Stand auch dann zurueckspielen,
