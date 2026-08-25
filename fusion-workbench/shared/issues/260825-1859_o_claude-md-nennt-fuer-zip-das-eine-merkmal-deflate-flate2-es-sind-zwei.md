@@ -43,3 +43,11 @@ darf; deshalb der Datensatz statt der Berichtigung.
 **Betroffen:** `CLAUDE.md:82`
 
 **Domain:** code
+
+---
+Also seen: 260825-2127 by coderev — dieselbe Wendung steht in der Wurzel-`Cargo.toml:157`
+("`default-features = false` mit dem einen Merkmal `deflate-flate2` laesst genau das
+Deflate-Verfahren uebrig"), also in der Datei, die die Merkmale fuehrt. Ein vorletzter
+Aufzaehlungspunkt derselben Begruendung nennt `unreserved` ausdruecklich als das zweite,
+also berichtigt sich der Block selbst — wer aber beim ersten Punkt aufhoert, liest dort
+dieselbe Aufzaehlung als vollstaendig wie in `CLAUDE.md:82`.
