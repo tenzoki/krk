@@ -53,7 +53,7 @@ use krk_core::leseprofil::datei::{Profildatei, pruefen};
 use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{
     Anzeige, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE,
-    HOECHSTENS_LESELAEUFE, HOECHSTENS_OEFFNUNGEN, Haushalt, Profile, Wert, Zusammenfassung,
+    HOECHSTENS_LESELAEUFE, HOECHSTENS_OEFFNUNGEN, Haushalt, Profil, Profile, Wert, Zusammenfassung,
     Zusammenfassungszeile, zusammenfassen, zusammenfassen_gezaehlt,
 };
 use krk_core::verzeichnis::sys::ortszeit;
@@ -2867,7 +2867,65 @@ fn eine_datei_wird_bis_zur_grenze_gelesen_und_nicht_weiter() {
     );
 }
 
-/// C6.7: Die zwei groessten mitgelieferten Profile bleiben unter den Zahlen,
+/// Das mitgelieferte Profil des gemeinsamen Speichers, `fusion-Werkbank: der
+/// gemeinsame Speicher`.
+fn speicherprofil_der_auslieferung(profile: &Profile) -> &Profil {
+    profile
+        .iter()
+        .find(|profil| profil.name() == "fusion-Werkbank: der gemeinsame Speicher")
+        .expect("die Auslieferungsfassung fuehrt kein Profil des gemeinsamen Speichers")
+}
+
+/// Die verschiedenen Orte, die die Zeilen eines Profils nennen, in der
+/// Reihenfolge des ersten Auftretens und ohne Wiederholung.
+///
+/// **Die Zahl der Unterspeicher kommt aus der Profildatei und nicht aus der
+/// Probe.** Wer dem Profil einen Unterspeicher hinzufuegt, aendert damit den
+/// Pruefordner mit; die Probe misst dann elf Orte und sagt es, statt an einem
+/// Ordner mit zehn zu messen und zu schweigen. Ein Ort mit Platzhalter waere
+/// hier keine einzelne Lesung mehr; das Speicherprofil fuehrt keinen, und
+/// die Probe haelt den Bau an, sobald es einen fuehrt.
+fn genannte_orte(profil: &Profil) -> Vec<String> {
+    let mut orte: Vec<String> = Vec::new();
+    for zeile in profil.zeilen() {
+        let ort = match zeile.baustein().expect("eine Zeile ohne Baustein") {
+            Baustein::Zaehlung { ort, .. }
+            | Baustein::Juengste { ort, .. }
+            | Baustein::Feld { ort, .. }
+            | Baustein::Vorhandensein { ort, .. } => ort,
+        };
+        assert!(
+            !ort.traegt_platzhalter(),
+            "ein Ort des Speicherprofils traegt einen Platzhalter; die Rechnung \
+             „ein Ort, ein Leselauf\" gilt fuer ihn nicht mehr"
+        );
+        let name = ort.teile().join("/");
+        if !orte.contains(&name) {
+            orte.push(name);
+        }
+    }
+    orte
+}
+
+/// Ein gemeinsamer Speicher in der Gestalt, die das Profil erwartet: der
+/// Ordner heisst `fusion-workbench/shared`, weil das Pfadmuster des Profils
+/// darauf trifft, und traegt genau die Unterordner, die das Profil nennt,
+/// mit je einem Datensatz darin.
+///
+/// Ein leerer Unterordner kostete dieselbe Lesung; der eine Datensatz steht
+/// da, damit die Zaehlung `1` und nicht `0` liefert und die Messung sich von
+/// einem Lauf unterscheidet, der die Ordner gar nicht findet.
+fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) {
+    let ordner = Pruefordner::neu(zweck);
+    let shared = ordner.ordner("fusion-workbench/shared");
+    for ort in orte {
+        let unterordner = ordner.ordner(&format!("fusion-workbench/shared/{ort}"));
+        schreiben(&unterordner, "260825-2127_o_ein-datensatz.md", "# Einer\n");
+    }
+    (ordner, shared)
+}
+
+/// C6.7: Die drei groessten mitgelieferten Profile bleiben unter den Zahlen,
 /// die der Spec ihnen zusagt.
 ///
 /// Gemessen an der eingebetteten Auslieferungsfassung und an je einem
@@ -2876,9 +2934,18 @@ fn eine_datei_wird_bis_zur_grenze_gelesen_und_nicht_weiter() {
 /// `<= 7` prueft, bliebe gruen, wenn ein Profil von vier auf sieben
 /// Leselaeufe steigt, und genau der Schritt waere die Nachricht.
 ///
-/// **Vier und nicht mehr fuenf**, seit ein Ort je Zusammenfassung hoechstens
-/// einmal gelesen wird: die zwei Zeilen des Circle-Profils auf `planning`
-/// teilen sich seither eine Lesung.
+/// **Welches Profil das groesste ist, haengt an der Frage.** Nach Oeffnungen
+/// ist es das der einzelnen Runde mit elf; nach Leselaeufen ist es seit der
+/// Runde 18 das des gemeinsamen Speichers mit zehn von zwoelf, und das ist
+/// zugleich das mit dem kleinsten Abstand zu seiner Schranke. Die Zahlen
+/// sind die der Kostenmessung vom 260825-2107 an der wirklichen Werkbank
+/// (`shared/analyses/260825-2107-was-die-zwoelf-leseprofile-…`).
+///
+/// **Vier und nicht mehr fuenf** bei der Runde, seit ein Ort je
+/// Zusammenfassung hoechstens einmal gelesen wird: die zwei Zeilen des
+/// Circle-Profils auf `planning` teilen sich seither eine Lesung. Aus
+/// demselben Grund kostet der gemeinsame Speicher zehn Laeufe fuer zwanzig
+/// Zeilen.
 ///
 /// ```text
 /// eine Runde       4 Leselaeufe   11 Oeffnungen   C6.7: hoechstens 7 und 11
@@ -2887,6 +2954,9 @@ fn eine_datei_wird_bis_zur_grenze_gelesen_und_nicht_weiter() {
 /// die Wurzel       3 Leselaeufe    5 Oeffnungen   C6.4: hoechstens 12 und 24
 ///   erkannter Ordner, circles, shared/issues
 ///   .fusion-setup dreimal, .active-circle, orchestrator-live.md
+/// der Speicher    10 Leselaeufe    0 Oeffnungen   C6.4: hoechstens 12 und 24
+///   die zehn Unterspeicher, die das Profil nennt; keiner doppelt
+///   `zeigt = "datum"` oeffnet keine Datei
 /// ```
 ///
 /// **Geprueft wird auch, welches Profil gegriffen hat.** Die Erkennung nimmt
@@ -2894,7 +2964,7 @@ fn eine_datei_wird_bis_zur_grenze_gelesen_und_nicht_weiter() {
 /// passt, maesse dessen Zahlen unter dieser Ueberschrift; die Beschriftungen
 /// der Zusammenfassung sind der Ausweis dafuer, welches es war.
 #[test]
-fn die_zwei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
+fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     let profile = ausgelieferte();
 
     let eine_runde = runde("haushalt-eine-runde");
@@ -2993,6 +3063,120 @@ fn die_zwei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
             Wert::Zahl(2),
         ],
         "die Wurzelzusammenfassung liefert nicht die Werte, fuer die sie gelesen hat"
+    );
+
+    let speicherprofil = speicherprofil_der_auslieferung(&profile);
+    let orte = genannte_orte(speicherprofil);
+    assert_eq!(
+        orte.len(),
+        10,
+        "das Speicherprofil nennt nicht mehr zehn Unterspeicher: {orte:?}"
+    );
+    let (_speicher, shared) = gemeinsamer_speicher("haushalt-speicher", &orte);
+    let (zusammenfassung, haushalt) =
+        zusammenfassen_gezaehlt(&profile, &shared).expect("kein Profil greift");
+    let speicherwerte = werte(&zusammenfassung);
+
+    assert_eq!(
+        speicherwerte
+            .iter()
+            .map(|(name, _)| *name)
+            .collect::<Vec<_>>(),
+        speicherprofil
+            .zeilen()
+            .iter()
+            .map(|zeile| zeile.beschriftung())
+            .collect::<Vec<_>>(),
+        "gemessen wurde nicht das Profil des gemeinsamen Speichers"
+    );
+    assert_eq!(
+        (haushalt.leselaeufe(), haushalt.oeffnungen()),
+        (10, 0),
+        "der gemeinsame Speicher kostet nicht mehr die gemessenen zehn Leselaeufe \
+         und null Oeffnungen"
+    );
+    assert_eq!(
+        haushalt.leselaeufe() as usize,
+        orte.len(),
+        "ein Ort, ein Leselauf: die Laeufe folgen nicht mehr der Zahl der Orte"
+    );
+    assert_eq!(
+        HOECHSTENS_LESELAEUFE - haushalt.leselaeufe(),
+        2,
+        "der Abstand des Speicherprofils zur Schranke ist nicht mehr zwei Laeufe"
+    );
+    assert!(
+        haushalt.leselaeufe() <= HOECHSTENS_LESELAEUFE
+            && haushalt.oeffnungen() <= HOECHSTENS_OEFFNUNGEN,
+        "C6.4 ist gebrochen: {} Leselaeufe und {} Oeffnungen",
+        haushalt.leselaeufe(),
+        haushalt.oeffnungen()
+    );
+    assert!(
+        speicherwerte
+            .iter()
+            .all(|(_, wert)| !matches!(wert, Wert::Nicht)),
+        "eine Zeile des Speicherprofils ist nicht drangekommen: {speicherwerte:?}"
+    );
+    assert!(
+        speicherwerte
+            .iter()
+            .step_by(2)
+            .all(|(_, wert)| **wert == Wert::Zahl(1)),
+        "die Zaehlungen sehen nicht je den einen Datensatz: {speicherwerte:?}"
+    );
+}
+
+/// Die Gegenprobe zu C6.7 am Speicherprofil: ein elfter Unterspeicher kostet
+/// einen elften Leselauf, und der Abstand zur Schranke faellt auf einen.
+///
+/// Gemessen wird an einer **Kopie** der Auslieferungsfassung, der das
+/// Speicherprofil um eine Zeile auf einen elften Ort erweitert ist; die
+/// Datei unter `resources/` bleibt, wie sie ist. Die Probe belegt, dass die
+/// Messung darueber die Aenderung sieht: waere der Ort schon mitgelesen oder
+/// die Zaehlung an den Zeilen statt an den Orten, bliebe die Zahl bei zehn,
+/// und die Probe davor hielte etwas, das sie nicht misst.
+#[test]
+fn ein_elfter_unterspeicher_kostet_einen_elften_leselauf() {
+    let ankerzeile = "pfad = 'fusion-workbench/shared$'\n";
+    assert_eq!(
+        AUSLIEFERUNGSTEXT.matches(ankerzeile).count(),
+        1,
+        "das Pfadmuster des Speicherprofils steht nicht genau einmal in der \
+         Auslieferungsfassung"
+    );
+    let erweitert = AUSLIEFERUNGSTEXT.replacen(
+        ankerzeile,
+        "pfad = 'fusion-workbench/shared$'\n\n  [[profil.zeile]]\n  beschriftung = \"Elfter\"\n  zaehlung = { ordner = \"elfter\", muster = '\\.md$' }\n",
+        1,
+    );
+    let (profile, meldungen) = gepruefte(&erweitert);
+    assert!(
+        meldungen.is_empty(),
+        "die erweiterte Fassung wird beanstandet: {meldungen:?}"
+    );
+
+    let speicherprofil = speicherprofil_der_auslieferung(&profile);
+    let orte = genannte_orte(speicherprofil);
+    assert_eq!(orte.len(), 11, "die Kopie nennt nicht elf Orte: {orte:?}");
+    let (_speicher, shared) = gemeinsamer_speicher("haushalt-elfter-speicher", &orte);
+    let (zusammenfassung, haushalt) =
+        zusammenfassen_gezaehlt(&profile, &shared).expect("kein Profil greift");
+
+    assert_eq!(
+        werte(&zusammenfassung).first().map(|(name, _)| *name),
+        Some("Elfter"),
+        "gemessen wurde nicht das erweiterte Speicherprofil"
+    );
+    assert_eq!(
+        (haushalt.leselaeufe(), haushalt.oeffnungen()),
+        (11, 0),
+        "der elfte Unterspeicher kostet nicht den elften Leselauf"
+    );
+    assert_eq!(
+        HOECHSTENS_LESELAEUFE - haushalt.leselaeufe(),
+        1,
+        "mit elf Orten bleibt nicht genau ein Lauf Abstand"
     );
 }
 

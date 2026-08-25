@@ -58,3 +58,18 @@ es geht.
 Schranke am kleinsten ist, und die einzige, die durch nichts gehalten wird.
 
 **Gefunden:** coderev, bei der Durchsicht der Runde 18 gegen `20eccd4..8478753`.
+
+---
+
+**Resolved:** 260825-2222, coder, Aufgabe R-4. Die Probe heißt jetzt
+`die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen`
+(`crates/krk-core/tests/leseprofil.rs:2967`) und misst als dritten Fall das Profil
+`fusion-Werkbank: der gemeinsame Speicher` an einem Prüfordner `fusion-workbench/shared`, dessen
+Unterordner aus dem Profil selbst gelesen werden (`genannte_orte`, `:2888`): zehn Orte, zehn
+Leseläufe, null Öffnungen, Abstand zwei zur Schranke `HOECHSTENS_LESELAEUFE`, jede Zahl auf die
+Zahl genau. Die Gegenprobe steht als eigene Probe
+`ein_elfter_unterspeicher_kostet_einen_elften_leselauf` (`:3140`): eine Kopie der
+Auslieferungsfassung mit einem elften Ort im Speicherprofil misst elf Läufe und einen Lauf
+Abstand; `resources/default-readers.toml` ist unberührt. Überschrift und Kopf der Probe sagen,
+dass das größte Profil an der Frage hängt (Öffnungen: die Runde; Leseläufe: der Speicher).
+`make check` grün.
