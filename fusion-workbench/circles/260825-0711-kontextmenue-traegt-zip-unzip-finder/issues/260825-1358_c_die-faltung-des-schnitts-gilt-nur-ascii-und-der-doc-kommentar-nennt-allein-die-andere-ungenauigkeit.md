@@ -100,3 +100,56 @@ einmal dasteht.
 **Querverweise:** `issues/260825-1249_*_der-schnitt-vergleicht-pfade-buchstabengetreu-waehrend-das-dateisystem-und-die-endungsregel-die-schreibung-falten.md`
 (geschlossen, Moeglichkeit 1 vom Nutzer gewaehlt) — dieser Datensatz ist sein Rest und nicht sein
 Widerruf.
+
+---
+Resolved: Weg 3 gebaut. `gleicher_eintrag`
+(`crates/krk-ui/src/kommandos/kontextmenue.rs`) vergleicht den letzten
+Bestandteil jetzt ueber `to_string_lossy().to_lowercase()` statt ueber
+`eq_ignore_ascii_case`; der Elternteil bleibt buchstabengetreu und wird
+weiterhin zuerst gefragt, also entstehen die zwei Umschriften nur, wo sie
+etwas entscheiden. Es ist dieselbe Faltung, die
+`krk_core::verzeichnis::filter::traegt_die_folge` dem Filter der Dateiliste
+gibt: dessen `to_lowercase` faltet `Ä` auf `ä` (Probe
+`der_vergleich_faltet_keine_umlaute_und_keine_akzente`), und „faltet keine
+Umlaute" in `CLAUDE.md` meint die Normalisierung `ä`→`a`, nicht die
+Schreibung. Eine zweite Art zu falten steht damit nicht im Baum; der
+Vergleich selbst ist nicht wiederverwendet, denn `traegt_die_folge` fragt
+nach einer Teilzeichenfolge und nicht nach Gleichheit. Kein neues fremdes
+Paket.
+
+Alle vier Zeilen der Messtafel des Datensatzes fallen jetzt so aus, wie APFS
+in der Vorgabe entscheidet; ausserhalb des Baums nachgestellt und gefahren.
+Drei Proben dazu: `das_archiv_des_vorigen_laufs_faellt_auch_mit_umlaut`
+(`übersicht.zip` gegen das gerechnete `Übersicht.zip`),
+`der_entpackschnitt_trifft_auch_mit_umlaut` (`äpfel.zip` gegen `Äpfel.zip.zip`)
+und `ein_zerlegt_geschriebener_umlaut_bleibt_quelle`, die die verbliebene Enge
+festhaelt. Gegenprobe gefahren: mit zurueckgenommener Weitung werden die
+ersten zwei rot, die dritte bleibt gruen.
+
+Der Doc-Kommentar bei `ist_ziel_des_laufs` nennt jetzt beide Ungenauigkeiten
+statt einer — zu weit auf einem schreibungsempfindlich formatierten
+Datentraeger, zu eng bei zusammengesetzten Zeichen (NFC gegen NFD, wofuer eine
+Normalform und damit eine Zerlegungstabelle noetig waere, die dieses Vorhaben
+nicht aufnimmt) — und sagt daneben, dass `Straße` gegen `STRASSE` kein
+Unterschied zum Bauziel ist. Die Ueberschrift verspricht nicht mehr „ohne
+Ruecksicht auf Gross- und Kleinschreibung", sondern sagt, was der Rumpf tut:
+verglichen wird die kleingeschriebene Fassung. Bei `gleicher_eintrag` steht
+neu, dass ein Name ohne gueltiges UTF-8 durch `to_string_lossy` geht und zwei
+solcher Namen dadurch fuer einen gehalten werden koennen — dieselbe Seite wie
+die zu weite Faltung, und auf dem Bauziel entsteht der Fall nicht, weil APFS
+solche Namen nicht annimmt.
+
+Eine Folge ist mitvermerkt und nicht bloss gemacht: `ohne_die_eigenen_ziele`
+ordnet nach der Bytelaenge des Archivpfads, und der Beweis, dass der
+Beansprucher vor dem Beanspruchten drankommt, ruhte darauf, dass
+`eq_ignore_ascii_case` nur gleich lange Bytefolgen trifft. Das
+Kleinschreiben ueber Unicode kann die Laenge aendern; gemessen ueber alle
+Codepunkte verliert eine Handvoll Zeichen ein Byte, allein das Kelvinzeichen
+`K` (`U+212A`) zwei, und drei gewinnen eines. Der Vorsprung von vier Bytes
+traegt das bis zu zwei solchen Zeichen in einem Namen; ab dreien kehrt sich
+die Ordnung um. Der Doc-Kommentar von `ohne_die_eigenen_ziele` sagt das jetzt
+aus, samt dem Weg, der die Grenze schloesse (nach der kleingeschriebenen
+Laenge ordnen). Gebaut ist er nicht: ein Archivname mit drei Kelvinzeichen ist
+kein Fall dieses Vorhabens.
+
+`make check` gibt Exit 0 (Bau, Proben, `clippy -D warnings`, `fmt --check`).

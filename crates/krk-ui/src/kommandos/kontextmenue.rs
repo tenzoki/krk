@@ -653,9 +653,9 @@ fn paar(archiv: PathBuf, ordner: &Path) -> (PathBuf, PathBuf) {
 /// dieses Modul, und deshalb steht hier ein Vergleich und keine Frage an das
 /// Dateisystem.
 ///
-/// **Der letzte Bestandteil wird ohne Ruecksicht auf Gross- und
-/// Kleinschreibung verglichen, alles davor buchstabengetreu** — die Wahl des
-/// Nutzers vom 260825 auf
+/// **Der letzte Bestandteil wird in seiner kleingeschriebenen Fassung
+/// verglichen, alles davor buchstabengetreu** — die Wahl des Nutzers vom
+/// 260825 auf
 /// `issues/260825-1249_*_der-schnitt-vergleicht-pfade-buchstabengetreu-*`,
 /// Moeglichkeit 1. Der Grund liegt bei [`archivname`]: es **bildet** den
 /// Zielnamen und haengt dabei die kleingeschriebene Konstante [`ENDUNG`] an,
@@ -666,13 +666,44 @@ fn paar(archiv: PathBuf, ordner: &Path) -> (PathBuf, PathBuf) {
 /// Konfliktblatt raeumte damit doch wieder eine Quelle desselben Laufs in den
 /// Papierkorb.
 ///
-/// **Die Ungenauigkeit, die das kostet, gehoert dazu:** APFS laesst sich
+/// **Kleingeschrieben wird ueber ganz Unicode und nicht ueber ASCII.** Bis zum
+/// 260825-1358 stand hier `eq_ignore_ascii_case`, und das faltet die eine
+/// Haelfte des Alphabets, das dieses Vorhaben schreibt: `PROJEKTE.ZIP` gegen
+/// `Projekte.zip` faellt auch so richtig, `übersicht.zip` gegen
+/// `Übersicht.zip` nicht, denn `Ü` und `ü` sind fuer die ASCII-Faltung zwei
+/// Bytefolgen. Auf APFS in der Vorgabe sind sie ein Eintrag, und damit stand
+/// der Ausgang des Befundes fuer jeden Namen mit Umlaut weiter offen
+/// (`issues/260825-1358_*_die-faltung-des-schnitts-gilt-nur-ascii-*`). Es ist
+/// dieselbe Faltung, die
+/// [`krk_core::verzeichnis::filter::traegt_die_folge`] dem Filter der
+/// Dateiliste gibt; eine zweite Art zu falten fuehrt dieser Baum nicht.
+///
+/// **Zwei Ungenauigkeiten bleiben, eine nach jeder Seite, und beide gehoeren
+/// dazu.** Die genaue Antwort braeuchte die Platte, und die hat dieses Modul
+/// nicht.
+///
+/// *Zu weit auf einem schreibungsempfindlichen Datentraeger.* APFS laesst sich
 /// gross-/kleinschreibungsempfindlich formatieren, und auf einem so
 /// formatierten Datentraeger sind `Projekte.zip` und `PROJEKTE.ZIP` zwei
 /// Dateien. Dort faellt gelegentlich eine Quelle heraus, die keine Kollision
 /// waere. Der Nutzer verliert dabei nichts — der Eintrag bleibt, wie er ist —,
-/// ihm fehlt einer im Archiv. Die genaue Antwort braeuchte die Platte, und die
-/// hat dieses Modul nicht.
+/// ihm fehlt einer im Archiv.
+///
+/// *Zu eng bei zusammengesetzten Zeichen.* Verglichen werden Bytefolgen, und
+/// `Übersicht` gibt es in zweien: `Ü` als ein Zeichen (NFC) und als `U` mit
+/// nachgestelltem Trema (NFD). Das Kleinschreiben ruehrt daran nicht, also
+/// gelten die beiden hier als zwei Eintraege, waehrend APFS in der Vorgabe
+/// einen daraus macht. Der Ausgang ist dann derselbe, den die Nutzerwahl
+/// schliessen wollte: „Ueberschreiben" raeumt eine Quelle des Laufs in den
+/// Papierkorb. Die Antwort waere eine Normalform, und die braeuchte eine
+/// Zerlegungstabelle — eine fremde Kiste, die dieses Vorhaben dafuer nicht
+/// aufnimmt. Der Fall ist enger als der behobene: er verlangt zwei Schreibungen
+/// desselben Zeichens nebeneinander und nicht bloss zwei Schreibungen
+/// desselben Namens.
+///
+/// **Was daneben nicht gefaltet wird, ist kein Unterschied zum Bauziel.**
+/// `Straße` und `STRASSE` gelten hier als zwei Eintraege; APFS haelt sie
+/// ebenso auseinander.
 fn ist_ziel_des_laufs(pfad: &Path, ziele: &[PathBuf]) -> bool {
     ziele.iter().any(|ziel| gleicher_eintrag(ziel, pfad))
 }
@@ -686,13 +717,25 @@ fn ist_ziel_des_laufs(pfad: &Path, ziele: &[PathBuf]) -> bool {
 /// und ein Pfad, der auf `..` endet, gehen deshalb durch den buchstabengetreuen
 /// Vergleich; sie erreichen diese Stelle nicht, denn [`brauchbarer_stamm`]
 /// haelt beide Rechnungen davon ab, einen solchen Namen herauszugeben.
+///
+/// **Der Elternteil wird zuerst gefragt**, und das ist nicht bloss die
+/// Reihenfolge: er entscheidet buchstabengetreu, kostet nichts und haelt die
+/// beiden Umschriften von den Faellen fern, in denen sie ohnehin nichts
+/// entschieden.
+///
+/// **Ein Name ohne gueltiges UTF-8 geht durch [`std::ffi::OsStr::to_string_lossy`]**
+/// und traegt danach das Ersatzzeichen. Zwei solcher Namen koennen dadurch fuer
+/// einen gehalten werden — dieselbe Seite wie die zu weite Faltung bei
+/// [`ist_ziel_des_laufs`], mit demselben Ausgang: ein Eintrag fehlt im Archiv,
+/// verloren geht keiner. Auf dem Bauziel entsteht der Fall nicht, denn APFS
+/// nimmt einen solchen Namen gar nicht an. Der Weg ist derselbe, den
+/// [`archivname`] und [`ordnername_zum_archiv`] schon gehen; ein zweiter
+/// daneben antwortete an einem Namen anders als sie.
 fn gleicher_eintrag(einer: &Path, anderer: &Path) -> bool {
     match (einer.file_name(), anderer.file_name()) {
         (Some(dieser), Some(jener)) => {
             einer.parent() == anderer.parent()
-                && dieser
-                    .as_encoded_bytes()
-                    .eq_ignore_ascii_case(jener.as_encoded_bytes())
+                && dieser.to_string_lossy().to_lowercase() == jener.to_string_lossy().to_lowercase()
         }
         _ => einer == anderer,
     }
@@ -721,6 +764,21 @@ fn gleicher_eintrag(einer: &Path, anderer: &Path) -> bool {
 /// um [`ENDUNG`] gekuerzte Archivname und damit vier Zeichen kuerzer. Wo er das
 /// nicht ist, traegt er [`ERSATZSTAMM`] — und der endet nicht auf `.zip`, kann
 /// also gar kein Archiv dieser Liste treffen.
+///
+/// **Die Faltung laesst diese Rechnung stehen und macht sie zu einer Annahme.**
+/// Bis zum 260825-1358 verglich [`gleicher_eintrag`] ASCII-gefaltet, und das
+/// trifft nur gleich lange Bytefolgen: der beanspruchte Eintrag war damit genau
+/// vier Bytes kuerzer als sein Beansprucher, und die Ordnung war bewiesen. Das
+/// Kleinschreiben ueber ganz Unicode kann die Laenge aendern: gut zwei Dutzend
+/// Zeichen verlieren dabei Bytes, das Kelvinzeichen `K` (`U+212A`) als einziges
+/// zwei und die uebrigen je eines, drei Zeichen gewinnen eines. Der Vorsprung
+/// von vier Bytes traegt das, solange nicht
+/// mehrere solcher Zeichen in einem Namen stehen: zwei Kelvinzeichen stellen
+/// die Laengen gleich, drei kehren die Ordnung um. Dahinter kommt der
+/// Beanspruchte vor seinem Beansprucher dran und bleibt stehen — der Ausgang
+/// des Befundes vom 260825, an einer Stelle, die ein Archivname mit drei
+/// Kelvinzeichen erreicht. Wer die Grenze schliessen will, ordnet nach der
+/// kleingeschriebenen Laenge und nicht nach der geschriebenen.
 ///
 /// **Herausgegeben wird trotzdem in der Reihenfolge der Eingabe**, denn das ist
 /// die Reihenfolge, in der die Eintraege vor dem Nutzer stehen; die
@@ -1431,6 +1489,79 @@ mod tests {
                 ausgelassen: 1,
             },
             "a.zip ist der Zielordner von A.ZIP.zip, in der Schreibung der Platte"
+        );
+    }
+
+    /// Dieselbe Faltung jenseits von ASCII, in der Packgestalt.
+    ///
+    /// **Der Rest der Nutzerwahl, nachgezogen am 260825-1358**
+    /// (`issues/260825-1358_*_die-faltung-des-schnitts-gilt-nur-ascii-*`): im
+    /// Ordner `Übersicht` liegt ein von fremder Hand angelegtes
+    /// `übersicht.zip`, und [`archivname`] rechnet `Übersicht.zip` aus dem
+    /// Namen des angezeigten Ordners. Solange hier `eq_ignore_ascii_case`
+    /// stand, fiel der Eintrag **nicht** heraus — `Ü` und `ü` sind fuer sie
+    /// zwei Bytefolgen —, und „Ueberschreiben" im Konfliktblatt raeumte eine
+    /// Quelle des Laufs in den Papierkorb.
+    #[test]
+    fn das_archiv_des_vorigen_laufs_faellt_auch_mit_umlaut() {
+        let ordner = Path::new("/tmp/Übersicht");
+        let betroffen = vec![
+            ordner.join("a.txt"),
+            ordner.join("übersicht.zip"),
+            ordner.join("b.txt"),
+        ];
+
+        let (quellen, ziel) = packziel(&betroffen, ordner);
+
+        assert_eq!(ziel, ordner.join("Übersicht.zip"));
+        assert_eq!(
+            quellen,
+            vec![ordner.join("a.txt"), ordner.join("b.txt")],
+            "übersicht.zip und das gerechnete Übersicht.zip sind auf der Platte \
+             derselbe Eintrag"
+        );
+    }
+
+    /// Dieselbe Weitung in der Entpackgestalt.
+    ///
+    /// Neben `äpfel.zip` steht `Äpfel.zip.zip`. [`paar`] rechnet fuer das
+    /// zweite den Zielordner `<ordner>/Äpfel.zip`; auf der Platte ist das der
+    /// Eintrag `äpfel.zip`, den derselbe Lauf noch entpacken will.
+    #[test]
+    fn der_entpackschnitt_trifft_auch_mit_umlaut() {
+        let ordner = ordner();
+        let modell = modell_mit(&["äpfel.zip", "Äpfel.zip.zip"]);
+        let betroffen = vec![ordner.join("äpfel.zip"), ordner.join("Äpfel.zip.zip")];
+
+        assert_eq!(
+            entpackziel(&modell, &betroffen, ordner),
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("Äpfel.zip.zip"), ordner.join("Äpfel.zip"))],
+                ausgelassen: 1,
+            },
+            "äpfel.zip ist der Zielordner von Äpfel.zip.zip, in der Schreibung der Platte"
+        );
+    }
+
+    /// Die Grenze der Faltung, ausgeschrieben und festgehalten.
+    ///
+    /// `Ü` als ein Zeichen (NFC) und `U` mit nachgestelltem Trema (NFD) sehen
+    /// gleich aus und sind auf APFS in der Vorgabe ein Eintrag; hier sind es
+    /// zwei, denn das Kleinschreiben ruehrt an der Zerlegung nicht. Die
+    /// Ungenauigkeit steht bei [`ist_ziel_des_laufs`] ausgeschrieben, und diese
+    /// Probe haelt sie fest, damit die naechste Runde den Weg nicht fuer
+    /// geschlossen haelt.
+    #[test]
+    fn ein_zerlegt_geschriebener_umlaut_bleibt_quelle() {
+        let ordner = Path::new("/tmp/Übersicht");
+        let betroffen = vec![ordner.join("a.txt"), ordner.join("U\u{308}bersicht.zip")];
+
+        let (quellen, ziel) = packziel(&betroffen, ordner);
+
+        assert_eq!(ziel, ordner.join("Übersicht.zip"));
+        assert_eq!(
+            quellen, betroffen,
+            "die zerlegte und die zusammengesetzte Schreibung sind hier zwei Eintraege"
         );
     }
 
