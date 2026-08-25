@@ -38,3 +38,5 @@ Rueckfragen ueber dieselbe eine Datei noch eine Auskunft ist. Der Doc-Kommentar 
 verneint das Zweite ausdruecklich; er beantwortet aber nicht, was bei einem Treffer geschehen soll.
 Gefunden am 260825 in der Durchsicht der Runde 17, Abschnitt "Nebenbei, im selben Zweig" des
 Datensatzes `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-0942_c_ueberschreiben-loescht-beim-packen-endgueltig-und-beim-entpacken-in-den-papierkorb.md`.
+
+Also seen: 260825-1144 by coderev — beim Packen kommt eine zweite Wirkung dazu: bricht der Nutzer den Lauf ab, loescht `zippen::halbes_archiv_wegraeumen` (`crates/krk-core/src/operation/zippen.rs:259-268`) die getroffene Datei mit `fs::remove_file` **endgueltig**, also ohne den Papierkorb, den derselbe Zweig seit dem 260825 sonst nimmt.
