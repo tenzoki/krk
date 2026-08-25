@@ -134,20 +134,20 @@ blacklist:
       - "Die Realität ist"
       - "Die Wahrheit ist"
       - "Es versteht sich von selbst"
-      - "Das heißt,"
+      - "Allerdings,"
       - "Die wichtigste Erkenntnis"
 
   - id: AI02
     name: "Gedankenstrich-Übernutzung"
     instruction: |
-      Gedankenstriche (–) für parenthetische Einschübe vermeiden.
-      Kommas, Klammern, Doppelpunkte oder Satzumstellung verwenden.
+      Gedankenstriche (Geviertstrich, U+2014) für parenthetische Einschübe
+      vermeiden. Kommas, Klammern, Doppelpunkte oder Satzumstellung verwenden.
       Maximal ein Gedankenstrich pro 1000 Wörter. Gedankenstriche
       sind ein starkes KI-Signal und untergraben die Gravität
       formaler Prosa.
     examples:
-      - "der Befund – der vergangene Woche entstand – bestätigt sich"
-      - "drei Optionen – schnell, günstig, gut – davon zwei"
+      - "der Befund — der vergangene Woche entstand — bestätigt sich"
+      - "drei Optionen — schnell, günstig, gut — davon zwei"
       - "findet hervorragend, diszipliniert aber nicht — Recall top, Precision leck"
       - "der Fix ist nicht 'besserer Prompt', sondern S4s Gate vor den Orderer ziehen"
 
@@ -165,7 +165,7 @@ blacklist:
       - "Das ändert alles."
       - "Und das ist die zentrale Erkenntnis."
 
-  - id: AI04
+  - id: AI12
     name: "Mechanische Dreiergruppen"
     instruction: |
       Dreigliedrige Aufzählungen nicht als Default-Rhythmus nutzen.

@@ -1,6 +1,6 @@
 # Chat Voice (English)
 # Short-form chat style: gate prompts, AskUserQuestion text, status reports,
-# brief replies. Complements user-facing-output.md with language-specific
+# brief replies. Complements the rule on user-facing output with language-specific
 # anti-patterns. NOT for long-form prose: that uses the long-form writing
 # profile.
 
@@ -38,15 +38,15 @@ whitelist:
     name: "Terse without sentence-length targets"
     instruction: |
       Keep it short. The line caps for a gate prompt and for a chat reply are
-      stated in user-facing-output.md under "## Length" and are not restated
-      here. Do not enforce sentence-length bands; short sentences are normal
+      stated in the rule on user-facing output, section "Length", and are not
+      restated here. Do not enforce sentence-length bands; short sentences are normal
       and welcome in chat.
 
   - id: C05
     name: "Sketch structure instead of narrating it"
     instruction: |
-      For a structure, prefer a small ASCII sketch to prose. The rule is in
-      user-facing-output.md.
+      For a structure, prefer a small ASCII sketch to prose. The rule is stated
+      in the rule on user-facing output.
     examples:
       - |
         Customer ──<  Order  ──<  LineItem  >──  Product
@@ -79,8 +79,9 @@ blacklist:
     instruction: |
       Avoid em-dashes for parenthetical asides, in chat too. Use commas,
       parentheses, colons, or two separate sentences. The telegraphic-with-
-      parentheses pattern (clause, jargon aside, clause, compressed reason)
-      is the most common AI tell in gate prompts and AskUserQuestion options.
+      parentheses pattern (a clause, an em-dash, a jargon aside, another
+      em-dash, a compressed reason) is the most common AI tell in gate prompts
+      and AskUserQuestion options.
     examples:
       - "Opt 1 — yes, but with the (a) choice for the 13 — else the trail reads wrong."
       - "three options — fast, cheap, good — two of them"

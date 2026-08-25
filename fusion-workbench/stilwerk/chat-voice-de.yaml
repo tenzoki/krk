@@ -1,6 +1,6 @@
 # Chat Voice (German)
 # Kurzform-Stil für den Chat: Gate-Prompts, AskUserQuestion-Text, Statusberichte,
-# kurze Antworten. Ergänzt user-facing-output.md um sprachspezifische
+# kurze Antworten. Ergänzt die Regel zur nutzerseitigen Ausgabe um sprachspezifische
 # Anti-Muster. NICHT für Langform-Prosa: dafür gilt das Langform-Schreibprofil.
 
 name: "Chat Voice (German)"
@@ -22,11 +22,11 @@ whitelist:
       "Fertig, nichts weiter zu tun."
 
   - id: C02
-    name: "Klartext-Referenten"
+    name: "Bezugswort statt nacktem Kürzel"
     instruction: |
-      Nackte Kürzel und Zähler immer mit ihrem Bezug nennen. Nicht "die 13"
-      oder "8 von 13", sondern "die 13 offenen Einträge" oder "8 redundante von
-      13". Workbench-interne IDs nur zusammen mit ihrer menschenlesbaren
+      Nackte Kürzel und Zähler immer mit ihrem Bezugswort nennen. Nicht "die
+      13" oder "8 von 13", sondern "die 13 offenen Einträge" oder "8 redundante
+      von 13". Workbench-interne IDs nur zusammen mit ihrer menschenlesbaren
       Zusammenfassung.
 
   - id: C03
@@ -40,15 +40,15 @@ whitelist:
     name: "Knappheit ohne Satzlängen-Zwang"
     instruction: |
       Kurz halten. Die Zeilenlimits für Gate-Prompts und Chat-Antworten stehen
-      in user-facing-output.md unter "## Length" und werden hier nicht
-      wiederholt. Keine Satzlängen-Bänder erzwingen; kurze Sätze sind im Chat
+      in der Regel zur nutzerseitigen Ausgabe, Abschnitt "Length", und werden
+      hier nicht wiederholt. Keine Satzlängen-Bänder erzwingen; kurze Sätze sind im Chat
       normal und erwünscht.
 
   - id: C05
     name: "Skizze statt Prosa bei Struktur"
     instruction: |
-      Bei Struktur eine kurze ASCII-Skizze statt Prosa. Die Regel steht in
-      user-facing-output.md.
+      Bei Struktur eine kurze ASCII-Skizze statt Prosa. Die Regel steht in der
+      Regel zur nutzerseitigen Ausgabe.
     examples:
       - |
         Customer ──<  Order  ──<  LineItem  >──  Product
@@ -59,7 +59,7 @@ whitelist:
     instruction: |
       Für dieselbe Entität durchgehend denselben Begriff verwenden, nicht im
       Chat zwischen Synonymen wechseln (mal "Registry", mal "Katalog", mal
-      "uif-framework.yaml" für eine Sache). Den signifikantesten, präzisesten
+      "uif-framework.yaml" für eine Sache). Den treffendsten, präzisesten
       Namen wählen, oft der Dateiname oder der kanonische Term, und dabei
       bleiben. Bei einer angefragten Erklärung dürfen die Synonyme einmal
       genannt werden ("uif-framework.yaml dient als Registry: ein Katalog der
@@ -79,14 +79,15 @@ blacklist:
   - id: AI02
     name: "Gedankenstrich-Übernutzung"
     instruction: |
-      Gedankenstriche (–) für parenthetische Einschübe vermeiden, auch im Chat.
-      Kommas, Klammern, Doppelpunkte oder zwei getrennte Sätze verwenden. Das
-      Telegramm-mit-Klammern-Muster (Klausel – Klammer-Jargon – Klausel –
-      komprimierter Grund) ist das häufigste KI-Signal in Gate-Prompts und
+      Gedankenstriche (Geviertstrich, U+2014) für parenthetische Einschübe
+      vermeiden, auch im Chat. Kommas, Klammern, Doppelpunkte oder zwei
+      getrennte Sätze verwenden. Das Telegramm-mit-Klammern-Muster (Klausel,
+      Gedankenstrich, Klammer-Jargon, Gedankenstrich, Klausel, komprimierter
+      Grund) ist das häufigste KI-Signal in Gate-Prompts und
       AskUserQuestion-Optionen.
     examples:
       - "Opt 1 — ja, aber mit (a)-Wahl für die 13 — sonst liest sich der Trail falsch."
-      - "drei Optionen – schnell, günstig, gut – davon zwei"
+      - "drei Optionen — schnell, günstig, gut — davon zwei"
 
   - id: AI01
     name: "Allgemeine KI-Phrasen"
@@ -95,7 +96,7 @@ blacklist:
       - "Es ist wichtig zu beachten"
       - "Lass uns eintauchen"
       - "Die Realität ist"
-      - "Das heißt,"
+      - "Allerdings,"
       - "Kurz gesagt"
       - "Im Wesentlichen"
 

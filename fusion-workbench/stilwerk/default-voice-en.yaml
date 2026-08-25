@@ -162,7 +162,7 @@ blacklist:
       - "The pace of change is accelerating."
       - "This changes everything."
 
-  - id: AI04
+  - id: AI12
     name: "Mechanical tricolons"
     instruction: |
       Avoid three-item parallel lists as default rhythm. "X, Y, and Z"

@@ -18,6 +18,11 @@ fusion-workbench/orchestrator-live.md
 fusion-workbench/.active-circle
 fusion-workbench/.commit-lock/
 fusion-workbench/.session-marker
+# Kennung dieses Checkouts. Als einziger Eintrag hier nicht deshalb, weil eine
+# fruehere Fassung nichts beantwortete, sondern weil sie beantwortet, WELCHES
+# Checkout -- ein Checkout, der die Kopie eines anderen zoege, truege dessen
+# Kennung und damit genau die Kollision, die sie verhindern soll.
+fusion-workbench/.checkout-id
 # Wortgleiche Kopie des mitgelieferten bin/monitor, von /fusion:setup neu gelegt.
 fusion-workbench/monitor
 # Setup-Marker (Zeitstempel und Plugin-Version): in der Aufzaehlung der
