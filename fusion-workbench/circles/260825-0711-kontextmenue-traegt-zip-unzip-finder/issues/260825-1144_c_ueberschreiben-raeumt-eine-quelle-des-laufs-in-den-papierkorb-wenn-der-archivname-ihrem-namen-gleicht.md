@@ -89,3 +89,48 @@ an der das steht — dann aber als Aussage ueber den Namen und nicht ueber die Q
 `krk-ui`, `appkit/anwendung.rs` (`zipauftrag_stellen`) oder `krk-core`, `operation/zippen.rs`
 (`zielarchiv_klaeren`), je nach gewaehltem Weg; dazu `crates/krk-core/tests/operation.rs`. Die
 Entpack-Gestalt liegt in `kommandos/kontextmenue.rs` und `operation/entpacken.rs`.
+
+---
+
+## Antwort des Nutzers, 260825
+
+**Der zweite Weg des Vorschlags**, also der kleinere: die Oberflaeche legt das Ziel nicht auf eine
+Quelle. Ein Eintrag, dessen Pfad dem gerechneten Archivnamen gleicht, faellt aus den Quellen
+heraus; das Archiv des vorigen Laufs wandert nicht in sich selbst. Danach greift die Rueckfrage
+wie sonst, denn der Zieleintrag steht ja weiterhin auf der Platte.
+
+Die Entpack-Gestalt (`a.zip` und `a.zip.zip` nebeneinander markiert) faellt unter dieselbe
+Antwort und ist mitzubehandeln.
+
+Dazu die Probe, die heute fehlt: ein Lauf, dessen Ziel einer seiner Quellen gleicht, und die
+Zusage, dass diese Quelle danach noch dasteht. Und der Modulkopf von `zippen.rs` ist nachzuziehen:
+das Argument "keine Stelle nennt `auftrag.quellen`" traegt die Zusage nicht und darf nicht so
+aussehen, als traege es sie.
+
+Zitiert in `shared/history/260824-2120-orchestrator-session.md`.
+
+---
+Resolved: Der zweite Weg umgesetzt, also der kleinere: die Oberflaeche legt das Ziel nicht auf eine
+Quelle. Die Regel steht als `ist_ziel_des_laufs` einmal in
+`crates/krk-ui/src/kommandos/kontextmenue.rs` und hat zwei Rufer, einen je Gestalt. **Packen:** das
+neue `packziel(betroffen, ordner)` rechnet ueber `archivname` das Ziel und gibt die Quellen ohne den
+Eintrag heraus, dessen Pfad ihm gleicht; `zipauftrag_stellen`
+(`crates/krk-ui/src/appkit/anwendung.rs`) nimmt beide Listen von dort, zaehlt die Positionen aus den
+verbliebenen Quellen und fragt "gibt es etwas zu packen" seither **hinter** der Zielklaerung — eine
+Meldung (`nichts_zu_packen`) fuer die leere Markierung und fuer die leer geschnittene. **Entpacken:**
+`entpackziel` fuehrt seine Paare durch `ohne_die_eigenen_ziele`, sodass ein Archiv, das derselbe Lauf
+schon als Zielordner beansprucht (`a.zip` neben `a.zip.zip`), aus den Quellen faellt. Der Name wird
+aus der ungefilterten Markierung gerechnet und nach dem Schnitt **nicht** neu gerechnet, sonst hiesse
+das Archiv beim zweiten Lauf anders als beim ersten. Der Kern hat wie festgelegt keinen
+Pfadvergleich bekommen.
+
+Drei Proben in `kontextmenue.rs` halten es: `das_archiv_des_vorigen_laufs_faellt_aus_den_quellen`
+(der zweite Zip-Lauf), `ein_archiv_das_zielordner_eines_anderen_ist_faellt_aus_den_quellen` (die
+Entpack-Gestalt) und `ein_einzelnes_archiv_bleibt_seine_eigene_quelle` gegen den zu weiten Schnitt.
+Gegenprobe gefahren: mit ausgeschaltetem `ist_ziel_des_laufs` werden die ersten zwei rot, die dritte
+bleibt gruen.
+
+Der Modulkopf von `crates/krk-core/src/operation/zippen.rs` ist nachgezogen: das Argument "keine
+Loeschstelle nennt `auftrag.quellen`" steht dort jetzt als das, was es ist — eine Aussage ueber den
+Quelltext und keine ueber Pfadwerte —, und die Zusage haengt ausgeschrieben am Rufer. `zippen.rs`
+selbst und `crates/krk-core/tests/operation.rs` sind im Verhalten unveraendert.

@@ -6103,28 +6103,34 @@ impl Anwendungsdelegierter {
     ///
     /// **Das Archiv entsteht im angezeigten Ordner**, auch wenn die betroffenen
     /// Eintraege anderswo laegen, und wie es heisst, rechnet
-    /// [`kontextmenue::archivname`] und nicht diese Stelle.
+    /// [`kontextmenue::packziel`] und nicht diese Stelle. Von dort kommen die
+    /// Quellen **und** das Ziel, und zwar in einem Zug: ein Eintrag, der schon
+    /// das Ziel ist, faellt dort aus den Quellen heraus, damit „Ueberschreiben"
+    /// im Konfliktblatt nicht eine Quelle desselben Laufs in den Papierkorb
+    /// raeumt (Nutzerantwort vom 260825 auf
+    /// `issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-*`).
+    ///
+    /// **Die Frage „gibt es etwas zu packen" steht deshalb hinter der
+    /// Zielklaerung und nicht davor**, und sie steht einmal: eine leere
+    /// Markierung und eine Markierung, aus der nach dem Schnitt nichts
+    /// uebrigbliebe, bekommen dieselbe Meldung und stellen beide keinen
+    /// Auftrag.
     fn zipauftrag_stellen(&self, seite: Fensterseite) {
         if self.vorgang_laeuft_schon(seite) {
             return;
         }
         let quelle = self.dateifenster(seite).quelle();
         let auswahl = quelle.betroffene_eintraege();
-        if auswahl.ist_leer() {
+        let ordner = quelle.angezeigter_ordner();
+        let (quellen, ziel) = kontextmenue::packziel(&auswahl.pfade, &ordner);
+        if quellen.is_empty() {
             self.antwort_zeigen(seite, &operationen::nichts_zu_packen());
             return;
         }
-        let ordner = quelle.angezeigter_ordner();
-        let ziel = kontextmenue::archivname(&auswahl.pfade, &ordner);
-        let positionen = auswahl.zahl();
+        let positionen = quellen.len();
         // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
         // es keinen: ein Menueklick ist eine Mausbewegung.
-        let _ = self.auftrag_starten(
-            seite,
-            Auftrag::zippen(auswahl.pfade, ziel),
-            ordner,
-            positionen,
-        );
+        let _ = self.auftrag_starten(seite, Auftrag::zippen(quellen, ziel), ordner, positionen);
     }
 
     /// Entpackt jedes betroffene Archiv in einen eigenen neuen Ordner
@@ -9029,18 +9035,31 @@ mod kontextproben {
         );
     }
 
-    /// Jeder der drei Kontextbefehle erreicht einen Zweig, und jeder Zweig eine
-    /// Wirkung.
+    /// Jeder der drei Kontextbefehle erreicht **seinen** Zweig, und jeder Zweig
+    /// eine Wirkung.
     ///
     /// Zwei Glieder in einer Probe, weil sie zusammen erst die Aussage tragen:
     /// die Zuordnung Befehl → Zweig steht in der Verzweigung, die Wirkung im
     /// Rumpf des Zweigs. Ein Zweig, der auf einen leeren Rumpf zeigte,
     /// uebersetzte und liesse jede andere Probe gruen.
     ///
+    /// **Gezaehlt wird zeilenweise, und daran haengt die Aussage.** Gehalten
+    /// wird die **Paarung** und nicht das blosse Vorhandensein: Befehl und
+    /// Zweig muessen auf **einer** Zeile zusammenstehen. Zwei getrennte Fragen
+    /// an den ganzen Rumpf — steht der Befehlsname darin, steht der
+    /// Funktionsname darin — waeren auch bei vertauschten Zweigen erfuellt, denn
+    /// der Rumpf traegt alle drei Namen jeder Art. Ein „Zip", das entpackt,
+    /// liesse sie gruen; die drei Zeilen sehen einander aehnlich, und eine
+    /// vertauschte ist beim Lesen schwer zu sehen
+    /// (`issues/260825-1144_*_die-probe-befehl-zweig-wirkung-prueft-vorhandensein-
+    /// statt-paarung-*`).
+    ///
     /// **Was sie nicht sieht:** eine Wirkung, die in eine tiefer gerufene
     /// Hilfsfunktion gewandert ist. Sie liest den Rumpf und nicht den Aufrufbaum
     /// darunter — dieselbe Grenze, die `das_fensterschliessen_sichert_vor_dem_performclose`
-    /// in [`super::zettelproben`] an sich selbst benennt.
+    /// in [`super::zettelproben`] an sich selbst benennt. Und sie sieht nicht,
+    /// ob eine Zeile mehr tut, als sie zeigt: gezaehlt wird, dass Befehl und
+    /// Zweig einander genau einmal auf einer Zeile treffen.
     #[test]
     fn jeder_kontextbefehl_erreicht_seine_wirkung() {
         /// Befehl, Zweig und die Nadel, an der die Wirkung des Zweigs zu
@@ -9067,9 +9086,14 @@ mod kontextproben {
         let datei = diese_datei();
         let verzweigung = rumpf(&datei, "kontextbefehl_ausfuehren");
         for (befehl, zweig, wirkung) in ZWEIGE {
-            assert!(
-                verzweigung.contains(befehl) && verzweigung.contains(zweig),
-                "{befehl} erreicht {zweig} nicht: der Menüeintrag stünde da und täte nichts"
+            let paarungen = verzweigung
+                .lines()
+                .filter(|zeile| zeile.contains(befehl) && zeile.contains(zweig))
+                .count();
+            assert_eq!(
+                paarungen, 1,
+                "{befehl} und {zweig} stehen nicht auf genau einer Zeile beisammen: \
+                 der Menüeintrag stünde da und täte nichts oder das Falsche"
             );
             assert!(
                 rumpf(&datei, zweig).contains(wirkung),

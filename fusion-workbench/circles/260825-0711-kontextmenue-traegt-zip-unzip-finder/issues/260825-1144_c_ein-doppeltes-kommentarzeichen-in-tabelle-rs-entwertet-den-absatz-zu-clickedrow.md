@@ -36,3 +36,8 @@ Das zweite `//!` streichen.
 ## Umfang
 
 `krk-ui`, `appkit/tabelle.rs`, nur Prosa.
+
+---
+Resolved: Das zweite `//!` in `crates/krk-ui/src/appkit/tabelle.rs` ist gestrichen; der Absatz zu
+`clickedRow` steht wieder als Fortsetzung der Moduldokumentation, und die Auszeichnung des ersten
+Satzes greift. `grep -rn '^\s*//!\s*//!' crates/` gibt danach nichts mehr aus.

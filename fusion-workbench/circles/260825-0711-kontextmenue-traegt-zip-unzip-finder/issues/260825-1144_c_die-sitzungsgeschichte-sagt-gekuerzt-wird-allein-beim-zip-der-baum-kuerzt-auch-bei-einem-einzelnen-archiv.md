@@ -63,3 +63,11 @@ kein `Implemented:`: die Gestalt ist gebaut, ihr Geltungsbereich ist es nicht.
 `krk-ui`, `kommandos/operationen.rs` und die Sitzungsgeschichte. Das Blatt selbst
 (`appkit/blaetter/konflikt.rs`) ist in beiden Faellen unveraendert: es kennt die Art nicht und
 bekommt die Antwort gereicht.
+
+---
+Resolved: Die Sitzungsgeschichte war die falsche Seite, nicht der Baum. Der Nutzerentscheid lautet
+"bei genau einer Zieldatei", und ein Entpacken eines einzelnen Archivs erzeugt genau ein Ziel;
+`erzeugt_genau_ein_ziel` haengt beim Entpacken deshalb zu Recht an `ziele.len() == 1`. Der zu enge
+Satz in `shared/history/260824-2120-orchestrator-session.md` ist berichtigt, und der Abschnitt
+"Berichtigung, 260825: die Reichweite des gekuerzten Konfliktblatts" derselben Datei schreibt aus,
+warum. Am Code ist nichts geaendert.

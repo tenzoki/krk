@@ -196,7 +196,7 @@
 //! braucht sie aus demselben Grund nicht: der Selektor geht durch jene Huelle
 //! in den Erzeuger.
 //!
-//! //! **`clickedRow` steht seit 10.0** (`NSTableView.h:276`, am SDK gelesen: die
+//! **`clickedRow` steht seit 10.0** (`NSTableView.h:276`, am SDK gelesen: die
 //! Eigenschaft traegt kein `API_AVAILABLE`). Sie hat seit dem 260812 zwei
 //! Abnehmer statt einen, den Doppelklick aus C3 der Runde 4 und die Auswahl
 //! vor dem Rechtsklick aus C1 der Runde 6.

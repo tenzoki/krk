@@ -84,3 +84,12 @@ gewandert ist).
 ## Umfang
 
 `krk-ui`, `appkit/anwendung.rs`, Pruefmodul `kontextproben`. Kein Code der Anwendung.
+
+---
+Resolved: Der vorgeschlagene Weg umgesetzt. `jeder_kontextbefehl_erreicht_seine_wirkung`
+(`crates/krk-ui/src/appkit/anwendung.rs`, Pruefmodul `kontextproben`) zaehlt jetzt zeilenweise: die
+Zeilen des Rumpfes von `kontextbefehl_ausfuehren`, die Befehlsnamen **und** Zweignamen zugleich
+tragen, muessen genau eine sein. Der Doc-Kommentar sagt aus, dass die **Paarung** gehalten wird, und
+benennt weiterhin, was die Zaehlung nicht sieht. Gegenprobe gefahren: mit vertauschten Zweigen
+(Zippen auf `entpackauftrag_stellen`, Entpacken auf `zipauftrag_stellen`) faellt die Zahl auf 0 und
+die Probe wird rot; die Vertauschung ist zurueckgenommen. Kein Code der Anwendung geaendert.

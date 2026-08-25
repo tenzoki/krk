@@ -9,7 +9,8 @@
 //!
 //! ```text
 //!  betroffene Eintraege ─┐
-//!  angezeigter Ordner ───┼──> archivname()   ──> der Pfad des Archivs
+//!  angezeigter Ordner ───┼──> packziel()     ──> die Quellen und der Pfad des Archivs
+//!                        │      └─> archivname()
 //!                        │
 //!  sichtbare Zeilen ─────┴──> entpackziel()  ──> Archive mit ihren Zielordnern
 //! ```
@@ -75,6 +76,32 @@
 //! markiert ist. Eine Regel mit einem seltenen, gemeldeten Fehlversuch ist
 //! besser als zwei Regeln, die auseinanderlaufen koennen.
 //!
+//! # Das Ziel eines Laufs liegt nie auf einer seiner Quellen
+//!
+//! **Die Zusage steht hier und nicht im Kern**, weil hier beide Listen
+//! zusammenkommen und sonst nirgends: [`packziel`] rechnet das Archiv aus
+//! denselben betroffenen Eintraegen, die es als Quellen weiterreicht, und
+//! [`entpackziel`] rechnet jeden Zielordner aus einem Archiv, das neben den
+//! uebrigen in derselben Liste steht. Der Kern bekommt dafuer ausdruecklich
+//! keinen Pfadvergleich (Nutzerantwort vom 260825 auf
+//! `issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-in-den-
+//! papierkorb-*`, der zweite und kleinere der zwei Wege).
+//!
+//! Beide Gestalten entstehen von selbst, sobald derselbe Befehl ein zweites Mal
+//! auf denselben Ordner faellt:
+//!
+//! ```text
+//!  Zip, zweiter Lauf     Projekte/{a.txt, Projekte.zip}  ──> Projekte/Projekte.zip
+//!  Unzip ueber beide     Projekte/{a.zip, a.zip.zip}     ──> Projekte/a.zip
+//! ```
+//!
+//! In beiden Faellen traegt die Markierung den gerechneten Zielpfad selbst. Er
+//! **faellt** deshalb aus den Quellen heraus ([`ist_ziel_des_laufs`]); die
+//! Rueckfrage des Vorgangs greift danach wie sonst, denn der Zieleintrag steht
+//! ja weiterhin auf der Platte. Ohne diesen Schnitt raeumte „Ueberschreiben"
+//! eine Quelle desselben Laufs in den Papierkorb, und der Lauf meldete sie
+//! danach als ausgelassen.
+//!
 //! # Wer hier hereinruft
 //!
 //! Zwei Stellen, und beide stehen unter `crate::appkit`. Die Datenquelle der
@@ -83,7 +110,7 @@
 //! [`Kontextbefehl::von_menuemarke`] und in ihrem `entpackbefund` das
 //! [`entpackziel`] — dort und nicht beim Ausfuehrenden, weil diese Regel die
 //! **sichtbaren Zeilen** braucht und das Ordnermodell jener Quelle gehoert. Die
-//! Ausfuehrung beim Anwendungsdelegierten fragt [`archivname`] und liest den
+//! Ausfuehrung beim Anwendungsdelegierten fragt [`packziel`] und liest den
 //! [`Entpackbefund`], den sie sich von der Quelle geben laesst.
 //!
 //! **Bis zur Runde 17 stand hier `expect(dead_code)` am ganzen Modul**, mit
@@ -378,10 +405,13 @@ fn brauchbarer_stamm(stamm: &str) -> String {
 /// Namen dasselbe, statt dass die eine ihn durchliesse und die andere ihn
 /// ersetzte.
 ///
-/// **Ein leeres `betroffen` erreicht diese Funktion im Betrieb nicht**: der
-/// Aufrufer faengt es vorher mit [`super::operationen::nichts_zu_packen`] ab.
-/// Beantwortet wird der Fall trotzdem, denn eine Rechnung mit einer Luecke
-/// waere an der Stelle unbrauchbar, an der sie geprueft wird.
+/// **Ein leeres `betroffen` erreicht diese Funktion**, seit die Frage „gibt es
+/// etwas zu packen" hinter [`packziel`] steht: gerechnet wird zuerst, gefragt
+/// wird an dessen Ergebnis. Der Name aus dem angezeigten Ordner faellt dabei an
+/// und wird verworfen, denn der Aufrufer meldet
+/// [`super::operationen::nichts_zu_packen`] und stellt keinen Auftrag. Die
+/// Rechnung bleibt darum vollstaendig: eine Luecke waere an der Stelle
+/// unbrauchbar, an der sie geprueft wird.
 #[must_use]
 pub fn archivname(betroffen: &[PathBuf], ordner: &Path) -> PathBuf {
     let stamm = match betroffen {
@@ -394,6 +424,40 @@ pub fn archivname(betroffen: &[PathBuf], ordner: &Path) -> PathBuf {
         |name| brauchbarer_stamm(&name.to_string_lossy()),
     );
     ordner.join(format!("{stamm}{ENDUNG}"))
+}
+
+/// Worauf Zip wirkt: die Quellen des Laufs und der Pfad seines Archivs.
+///
+/// **Die eine Stelle, an der beide Listen zusammenkommen**, und deshalb die
+/// Stelle, an der das Ziel von den Quellen getrennt wird. Ein Eintrag, dessen
+/// Pfad dem gerechneten Archivnamen gleicht, faellt aus den Quellen heraus: er
+/// ist das Archiv des vorigen Laufs, und es wandert nicht in sich selbst. Wie
+/// die Lage entsteht, steht im Modulkopf.
+///
+/// **Gerechnet wird der Name aus der ungefilterten Markierung, und danach wird
+/// geschnitten.** Ein zweiter Durchgang ueber die verbliebenen Quellen taete
+/// etwas anderes: aus `{a.txt, Projekte.zip}` wuerde nicht mehr
+/// `Projekte.zip`, sondern `a.txt.zip`, weil dann nur noch ein Eintrag
+/// dastuende. Der Nutzer bekaeme bei jedem zweiten Lauf einen anderen
+/// Archivnamen als beim ersten, und die Zusage, die [`archivname`] gibt, haette
+/// zwei Fassungen.
+///
+/// **Die Liste kommt nicht leer zurueck, wenn etwas markiert war.** Bei einem
+/// einzelnen Eintrag traegt das Ziel dessen Namen **und** die angehaengte
+/// Endung, ist also ein anderer Name; bei mehreren traegt es den Namen des
+/// angezeigten Ordners, und den kann hoechstens einer der Eintraege tragen.
+/// Der Aufrufer fragt die Leere trotzdem, und mit derselben Meldung wie bei
+/// einer leeren Markierung: eine Zusage, die nur ein Beweis in Prosa haelt,
+/// gehoert nicht zwischen den Nutzer und einen leeren Auftrag.
+#[must_use]
+pub fn packziel(betroffen: &[PathBuf], ordner: &Path) -> (Vec<PathBuf>, PathBuf) {
+    let ziel = archivname(betroffen, ordner);
+    let quellen = betroffen
+        .iter()
+        .filter(|pfad| !ist_ziel_des_laufs(pfad, std::slice::from_ref(&ziel)))
+        .cloned()
+        .collect();
+    (quellen, ziel)
 }
 
 /// Der Name des Ordners, in den ein Archiv entpackt wird.
@@ -462,13 +526,23 @@ pub fn ordnername_zum_archiv(archiv: &Path) -> String {
 /// Archiv. Beides faellt heute zusammen, weil die betroffenen Eintraege aus
 /// ebendiesem Ordner kommen; ausgeschrieben steht es, weil die Zusage dem
 /// angezeigten Ordner gilt und nicht dem Zufall.
+///
+/// **Ein Archiv, das derselbe Lauf schon als Zielordner beansprucht, faellt aus
+/// den Quellen heraus** ([`ohne_die_eigenen_ziele`]). Die Lage stellt die
+/// anhaengende Endungsregel selbst her: neben `a.zip` steht nach einem Zip-Lauf
+/// `a.zip.zip`, und der Zielordner des zweiten ist der Pfad des ersten. Die
+/// Ersatzregel darunter braucht den Schnitt nicht, denn sie liefert genau ein
+/// Paar, und ein Archiv ist nie sein eigenes Ziel: sein Zielname ist der um die
+/// Endung gekuerzte Archivname und damit ein anderer.
 #[must_use]
 pub fn entpackziel(modell: &Ordnermodell, betroffen: &[PathBuf], ordner: &Path) -> Entpackbefund {
-    let betroffene_archive: Vec<(PathBuf, PathBuf)> = betroffen
-        .iter()
-        .filter(|pfad| ist_archivpfad(pfad))
-        .map(|pfad| paar(pfad.clone(), ordner))
-        .collect();
+    let betroffene_archive = ohne_die_eigenen_ziele(
+        betroffen
+            .iter()
+            .filter(|pfad| ist_archivpfad(pfad))
+            .map(|pfad| paar(pfad.clone(), ordner))
+            .collect(),
+    );
     if !betroffene_archive.is_empty() {
         return Entpackbefund::Archive(betroffene_archive);
     }
@@ -503,6 +577,44 @@ fn ist_archivpfad(pfad: &Path) -> bool {
 fn paar(archiv: PathBuf, ordner: &Path) -> (PathBuf, PathBuf) {
     let ziel = ordner.join(ordnername_zum_archiv(&archiv));
     (archiv, ziel)
+}
+
+/// Ob ein Eintrag als Quelle ausfaellt, weil derselbe Lauf ihn schon als Ziel
+/// beansprucht.
+///
+/// **Die eine Fassung der Regel, und sie hat zwei Rufer**: [`packziel`] haelt
+/// die betroffenen Eintraege gegen das eine Archiv des Packlaufs,
+/// [`ohne_die_eigenen_ziele`] jedes Archiv gegen die Zielordner aller Paare
+/// desselben Entpacklaufs. Zwei Fassungen nebeneinander waeren die Lage, in der
+/// die eine Gestalt des Befundes behoben bleibt und die andere zurueckkommt.
+///
+/// Verglichen werden **Pfade, wie sie dastehen**, ohne `canonicalize` und ohne
+/// Ruecksicht auf Verknuepfungen. Mehr ist hier nicht noetig: beide Listen
+/// entstehen als `ordner.join(name)` ueber demselben angezeigten Ordner
+/// ([`super::operationen::betroffene`] auf der einen, [`archivname`] und
+/// [`paar`] auf der anderen Seite), und derselbe Eintrag ergibt damit
+/// buchstaeblich denselben Pfad. Ein Zugriff auf die Platte gehoert ohnehin
+/// nicht in dieses Modul.
+fn ist_ziel_des_laufs(pfad: &Path, ziele: &[PathBuf]) -> bool {
+    ziele.iter().any(|ziel| ziel.as_path() == pfad)
+}
+
+/// Die Paare eines Entpacklaufs ohne die Archive, die er schon als Zielordner
+/// beansprucht.
+///
+/// Die Ziele stehen vorher als eigene Liste da, weil jedes Archiv gegen **alle**
+/// Ziele des Laufs gehalten wird und nicht nur gegen sein eigenes.
+///
+/// **Leer kommt die Liste nicht zurueck, solange sie es nicht schon war.** Ein
+/// Zielname ist der um die Endung gekuerzte Archivname, also kuerzer als er;
+/// das laengste Archiv der Liste kann deshalb keines Anderen Ziel sein und
+/// bleibt stehen. Aus `{a.zip, a.zip.zip, a.zip.zip.zip}` bleibt das letzte.
+fn ohne_die_eigenen_ziele(paare: Vec<(PathBuf, PathBuf)>) -> Vec<(PathBuf, PathBuf)> {
+    let ziele: Vec<PathBuf> = paare.iter().map(|(_, ziel)| ziel.clone()).collect();
+    paare
+        .into_iter()
+        .filter(|(archiv, _)| !ist_ziel_des_laufs(archiv, &ziele))
+        .collect()
 }
 
 #[cfg(test)]
@@ -960,6 +1072,87 @@ mod tests {
         assert_eq!(
             entpackziel(&modell, &[], ordner),
             Entpackbefund::Archive(vec![(ordner.join("eins.zip"), ordner.join("eins"))])
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Das Ziel eines Laufs liegt nie auf einer seiner Quellen
+    // ------------------------------------------------------------------
+
+    /// Der zweite Zip-Lauf ueber denselben Ordner packt sein eigenes Archiv
+    /// nicht mit.
+    ///
+    /// **Die Lage stellt der erste Lauf selbst her:** aus `{a.txt, b.txt}` in
+    /// `Projekte` entsteht `Projekte/Projekte.zip`. Beim naechsten Mal steht es
+    /// in der Markierung, [`archivname`] rechnet denselben Pfad, und ohne den
+    /// Schnitt in [`packziel`] raeumte „Ueberschreiben" im Konfliktblatt eine
+    /// **Quelle des Laufs** in den Papierkorb (Nutzerantwort vom 260825 auf
+    /// `issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-*`).
+    ///
+    /// Geprueft wird beides in einem Zug: das Ziel bleibt der gerechnete Name,
+    /// und keine Quelle traegt ihn.
+    #[test]
+    fn das_archiv_des_vorigen_laufs_faellt_aus_den_quellen() {
+        let ordner = ordner();
+        let betroffen = vec![
+            ordner.join("a.txt"),
+            ordner.join("Projekte.zip"),
+            ordner.join("b.txt"),
+        ];
+
+        let (quellen, ziel) = packziel(&betroffen, ordner);
+
+        assert_eq!(ziel, ordner.join("Projekte.zip"));
+        assert_eq!(
+            quellen,
+            vec![ordner.join("a.txt"), ordner.join("b.txt")],
+            "das Archiv des vorigen Laufs steht als Quelle desselben Laufs da"
+        );
+        assert!(
+            !quellen.contains(&ziel),
+            "das Ziel des Laufs ist eine seiner Quellen"
+        );
+    }
+
+    /// Ein einzelner Eintrag bleibt Quelle, auch wenn er ein Archiv ist.
+    ///
+    /// **Der Schnitt schneidet nicht mehr, als er soll.** Die angehaengte
+    /// Endung macht aus `sicherung.zip` das Archiv `sicherung.zip.zip`, und
+    /// damit ist der Eintrag nicht sein eigenes Ziel. Ein Schnitt am Namen
+    /// statt am Pfad haette hier eine leere Quellenliste hinterlassen.
+    #[test]
+    fn ein_einzelnes_archiv_bleibt_seine_eigene_quelle() {
+        let ordner = ordner();
+        let betroffen = vec![ordner.join("sicherung.zip")];
+
+        let (quellen, ziel) = packziel(&betroffen, ordner);
+
+        assert_eq!(ziel, ordner.join("sicherung.zip.zip"));
+        assert_eq!(quellen, betroffen);
+    }
+
+    /// Ein Archiv, dessen Zielordner eine andere Quelle desselben Laufs ist,
+    /// faellt heraus.
+    ///
+    /// **Dieselbe Antwort in der Entpack-Gestalt, und die Runde stellt sie
+    /// selbst her:** die anhaengende Endungsregel legt `a.zip.zip` neben
+    /// `a.zip`. Werden beide markiert, rechnet [`paar`] fuer das zweite den
+    /// Zielordner `<ordner>/a.zip` — den Pfad der ersten Quelle. Ohne den
+    /// Schnitt ginge sie ueber das Konfliktblatt in den Papierkorb, waehrend
+    /// derselbe Lauf sie noch entpacken wollte.
+    ///
+    /// Das laengste Archiv bleibt immer stehen: sein Zielname ist der
+    /// gekuerzte, und keiner der markierten traegt ihn.
+    #[test]
+    fn ein_archiv_das_zielordner_eines_anderen_ist_faellt_aus_den_quellen() {
+        let ordner = ordner();
+        let modell = modell_mit(&["a.zip", "a.zip.zip"]);
+        let betroffen = vec![ordner.join("a.zip"), ordner.join("a.zip.zip")];
+
+        assert_eq!(
+            entpackziel(&modell, &betroffen, ordner),
+            Entpackbefund::Archive(vec![(ordner.join("a.zip.zip"), ordner.join("a.zip"))]),
+            "a.zip wird entpackt und ist zugleich Zielordner von a.zip.zip"
         );
     }
 }

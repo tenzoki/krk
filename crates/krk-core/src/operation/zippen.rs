@@ -46,12 +46,30 @@
 //! Die Zusage, die der Nutzer der Antwort mitgegeben hat: in den Papierkorb geht
 //! **ein** Eintrag, und zwar der, dessen Name dem Archivnamen genau gleicht. Ein
 //! vorhandenes `Projekte.zip` geht; ein daneben liegender Ordner `Projekte`
-//! **nicht**, gleich wie aehnlich er heisst. Die Quellen des Laufs faellt dieser
-//! Zweig ohnehin nie an — beide Stellen, die hier etwas wegnehmen
-//! ([`zielarchiv_klaeren`] und [`halbes_archiv_wegraeumen`]), liegen auf dem
-//! Zielpfad und keine auf `auftrag.quellen`. Gehalten wird die Zusage von der
-//! Probe `ueberschreiben_raeumt_allein_den_gleichnamigen_eintrag_in_den_papierkorb`
+//! **nicht**, gleich wie aehnlich er heisst. Gehalten wird das von der Probe
+//! `ueberschreiben_raeumt_allein_den_gleichnamigen_eintrag_in_den_papierkorb`
 //! in `tests/operation.rs`.
+//!
+//! **Dass dieser Eintrag keine Quelle desselben Laufs ist, sichert der Rufer und
+//! nicht dieser Zweig.** Bis zum 260825 stand hier ein anderes Argument: keine
+//! der zwei Stellen, die etwas wegnehmen ([`zielarchiv_klaeren`] und
+//! [`halbes_archiv_wegraeumen`]), nenne `auftrag.quellen`. Das ist wahr und
+//! beantwortet die Frage nicht — es sagt, welche Variable gelesen wird, und
+//! nicht, ob der **Pfadwert** `ziel` mit einem Quellpfad zusammenfaellt. Er kann
+//! es: beim zweiten Zip-Lauf ueber denselben Ordner steht das
+//! `Projekte/Projekte.zip` des ersten selbst in der Markierung und wird erneut
+//! zum Archivnamen.
+//!
+//! Der Kern vergleicht die Pfade trotzdem nicht, und das ist die Antwort des
+//! Nutzers vom 260825
+//! (`issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-in-den-
+//! papierkorb-*`, der kleinere der zwei Wege): der Schnitt faellt in der
+//! Oberflaeche, die beide Listen bildet, naemlich in
+//! `kommandos::kontextmenue::packziel` der Kiste `krk-ui`, gehalten von dessen
+//! Probe `das_archiv_des_vorigen_laufs_faellt_aus_den_quellen`. Hier gilt
+//! deshalb schlicht: geraeumt wird der Zielpfad, wer immer ihn hereinreicht.
+//! Steht er doch einmal auf der Quellenliste, geht er in den Papierkorb und
+//! fehlt dem Lauf danach als Quelle, die er als ausgelassen meldet.
 //!
 //! # Einer Verknuepfung wird nicht gefolgt
 //!
