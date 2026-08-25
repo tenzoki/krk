@@ -463,6 +463,14 @@ pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 /// darueber.
 pub type Auswahlmelder = Box<dyn Fn(Option<PathBuf>)>;
 
+/// Was zu geschehen hat, wenn der Nutzer dieses Dateifenster angefasst hat:
+/// [`Rangmitnahme`] sagt, ob der Ersthelferrang mitkommt.
+///
+/// Ein eigener Name aus demselben Grund wie bei den beiden darueber, und seit
+/// dem 260825 auch aus einem zweiten: ohne ihn steht `clippy::type_complexity`
+/// am Feld, und `make lint` macht daraus einen Fehler.
+pub type Aktivierungsmelder = Box<dyn Fn(Rangmitnahme)>;
+
 /// Ob KRK gerade schon einen Vorgang haelt, ohne dass die Frage etwas meldet
 /// (C6 der Runde 13).
 ///
@@ -696,6 +704,44 @@ enum Einstieg {
     Gemeldet,
 }
 
+/// Wer den Ersthelferrang mitnimmt, wenn ein Klick das aktive Dateifenster
+/// umsetzt.
+///
+/// **Zwei Fokusgroessen, und diese Aufzaehlung sagt, wer die zweite bewegt.**
+/// `Fenstermodell::aktiv` sagt, welches Dateifenster die Befehle meinen; der
+/// Ersthelferrang von AppKit sagt, wohin die Tastendruecke gehen. Beide Wege in
+/// `DateifensterQuelle::angefasst` schreiben das erste, und sie unterscheiden
+/// sich allein darin, ob das zweite von selbst nachkommt.
+///
+/// **Gemessen und nicht angenommen.** Ein Klick auf eine Zeile laeuft ueber
+/// `tableView:shouldSelectRow:`, und AppKit hat den Rang dabei schon in die
+/// `NSTableView` gelegt. Ein Klick auf die Tableiste trifft ein
+/// `NSSegmentedControl`, und das nimmt den Rang **nicht** an, obwohl sein
+/// `acceptsFirstResponder` `1` liefert; am 260825 an einem Nachbau gemessen
+/// (`shared/decisions/260825-1725_*_nimmt-ein-klick-auf-die-tableiste-des-
+/// anderen-dateifensters-den-ersthelferrang-mit.md`). Ohne die Unterscheidung
+/// stuende der Rang nach einem Tableistenklick in der Liste, die danach nicht
+/// mehr die aktive ist.
+///
+/// **Zwei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.** Ein
+/// dritter Weg in `angefasst` haelt damit den Bau an, statt sich stillschweigend
+/// den einen oder den anderen Fall auszusuchen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rangmitnahme {
+    /// AppKit hat den Rang schon umgesetzt; KRK ruehrt ihn nicht an.
+    ///
+    /// Der Klick auf eine Zeile. Ein `makeFirstResponder:` daneben traefe die
+    /// Ansicht, die den Rang gerade bekommt, und liefe mitten in AppKits eigener
+    /// Behandlung des Mausklicks.
+    Appkit,
+    /// KRK nimmt den Rang mit.
+    ///
+    /// Der Klick auf die Tableiste. Getragen wird er von
+    /// `Anwendungsdelegierter::fokus_setzen`, der einen Stelle, die
+    /// `makeFirstResponder:` ruft.
+    Krk,
+}
+
 /// Was die Datenquelle haelt.
 pub struct QuelleIvars {
     /// Die Tabelle, der die Quelle Aenderungen meldet.
@@ -732,7 +778,10 @@ pub struct QuelleIvars {
     ///
     /// Der Weg, auf dem ein Mausklick das aktive Dateifenster umsetzt. Er ist
     /// wahlfrei, weil die Quelle vor dem Anwendungsdelegierten zur Welt kommt.
-    aktivierung: RefCell<Option<Box<dyn Fn()>>>,
+    ///
+    /// **Das Argument sagt, ob der Ersthelferrang mitkommt**; welcher der beiden
+    /// Klicks welchen Wert mitbringt und warum, steht an [`Rangmitnahme`].
+    aktivierung: RefCell<Option<Aktivierungsmelder>>,
     /// Was gerufen wird, wenn dieses Dateifenster einen anderen Ordner zeigt.
     ///
     /// Der Weg, auf dem die Dateisystembeobachtung aus C9 erfaehrt, dass sie
@@ -1202,7 +1251,7 @@ impl DateifensterQuelle {
     }
 
     /// Hinterlegt, was beim Anfassen dieses Dateifensters zu tun ist.
-    pub fn aktivierung_setzen(&self, melden: Box<dyn Fn()>) {
+    pub fn aktivierung_setzen(&self, melden: Aktivierungsmelder) {
         *self.ivars().aktivierung.borrow_mut() = Some(melden);
     }
 
@@ -3362,10 +3411,15 @@ impl DateifensterQuelle {
     }
 
     /// Meldet, dass der Nutzer dieses Dateifenster angefasst hat.
-    fn angefasst(&self) {
+    ///
+    /// **Der Aufrufer sagt mit [`Rangmitnahme`], ob der Ersthelferrang
+    /// mitkommt.** Es gibt genau zwei Aufrufer, und sie geben verschiedene
+    /// Werte mit; die Begruendung steht an der Aufzaehlung und nicht hier, damit
+    /// sie nicht an zwei Stellen auseinanderlaeuft.
+    fn angefasst(&self, mitnahme: Rangmitnahme) {
         let melden = self.ivars().aktivierung.borrow();
         if let Some(melden) = melden.as_ref() {
-            melden();
+            melden(mitnahme);
         }
     }
 
@@ -3802,7 +3856,7 @@ define_class!(
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(tableView:shouldSelectRow:))]
         fn zeile_waehlbar(&self, _tabelle: &NSTableView, _zeile: NSInteger) -> bool {
-            self.ivars().quelle.angefasst();
+            self.ivars().quelle.angefasst(Rangmitnahme::Appkit);
             true
         }
 
@@ -4642,10 +4696,17 @@ impl Dateifenster {
         // Die Leiste zuletzt: ihr Rueckruf braucht die Quelle. Er haelt sie
         // **schwach**, sonst schloesse sich der Ring Quelle → Leiste → Ziel →
         // Rueckruf → Quelle.
+        //
+        // **Er fordert den Ersthelferrang an, und darin unterscheidet er sich
+        // vom Klick auf eine Zeile.** Die Leiste ist ein `NSSegmentedControl`,
+        // und das nimmt den Rang bei einem Klick nicht an; ohne diese
+        // Anforderung bliebe er in der Liste sitzen, die nach dem Klick nicht
+        // mehr die aktive ist. Die Begruendung im Einzelnen steht an
+        // [`Rangmitnahme`].
         let schwach = objc2::rc::Weak::from_retained(&delegierter.quelle().retain());
         let leiste = Tableiste::bauen(mtm, move |stelle| {
             if let Some(quelle) = schwach.load() {
-                quelle.angefasst();
+                quelle.angefasst(Rangmitnahme::Krk);
                 quelle.tab_waehlen(stelle);
             }
         });

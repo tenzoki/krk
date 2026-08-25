@@ -274,7 +274,7 @@ use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::{self, Systempapierkorb};
 use super::statuszeile::{self, Statuszeile};
-use super::tabelle::Dateifenster;
+use super::tabelle::{Dateifenster, Rangmitnahme};
 use super::teilen;
 use super::terminal;
 use super::volumes::{self, Datentraeger, Datentraegerwache, Wechsel};
@@ -1273,13 +1273,20 @@ impl Anwendungsdelegierter {
         // Ein Klick in eine der beiden Listen macht sie zur aktiven. Der
         // Rueckruf haelt den Delegierten **schwach**, sonst schloesse sich der
         // Ring Delegierter → Dateifenster → Quelle → Rueckruf → Delegierter.
+        //
+        // **Die Rangmitnahme wird durchgereicht und hier nicht entschieden.**
+        // Welcher der beiden Klicks den Ersthelferrang mitbringt und welcher
+        // ihn AppKit ueberlaesst, weiss [`super::tabelle`]; dieser Rueckruf
+        // kennt die Frage nur als Wert. Eine Fallunterscheidung an dieser
+        // Stelle waere die zweite Wahrheit darueber, was ein
+        // `NSSegmentedControl` mit dem Rang tut.
         for seite in Fensterseite::ALLE {
             let schwach = objc2::rc::Weak::from_retained(&self.retain());
             self.dateifenster(seite)
                 .quelle()
-                .aktivierung_setzen(Box::new(move || {
+                .aktivierung_setzen(Box::new(move |mitnahme| {
                     if let Some(selbst) = schwach.load() {
-                        selbst.aktives_setzen(seite);
+                        selbst.aktives_setzen(seite, mitnahme);
                     }
                 }));
             // Jede Navigation setzt die Dateisystembeobachtung neu auf und
@@ -4527,10 +4534,49 @@ impl Anwendungsdelegierter {
     /// Tableiste, beide ueber `DateifensterQuelle::angefasst`. Der dritte ist
     /// [`Self::aktives_dem_ersthelfer_nachziehen`] und deckt jede Flaeche eines
     /// Dateifensters ab, die keine Zeile ist.
-    fn aktives_setzen(&self, seite: Fensterseite) {
+    ///
+    /// # Der Ersthelferrang kommt mit, wenn der Aufrufer es sagt
+    ///
+    /// **Seit dem 260825, und der Aufrufer entscheidet es nicht frei.**
+    /// [`Rangmitnahme`] traegt die Antwort, und sie haengt daran, was AppKit
+    /// beim jeweiligen Klick von sich aus tut: der Klick auf eine Zeile legt den
+    /// Rang schon in die `NSTableView`, der Klick auf die Tableiste trifft ein
+    /// `NSSegmentedControl` und bewegt ihn nicht. Der Nutzerentscheid vom
+    /// 260825-1740 sagt fuer den zweiten Fall „der Rang kommt mit"
+    /// (`shared/decisions/260825-1725_*`, Moeglichkeit 1).
+    ///
+    /// **Die Mitnahme steht im `if` und nicht davor**, also nur dann, wenn das
+    /// aktive Dateifenster wirklich gewechselt hat — dieselbe Bedingung, unter
+    /// der der Tabbefehl in [`Self::kommando_ausfuehren`] den Rang mitnimmt. Ein
+    /// Klick auf die Tableiste des ohnehin aktiven Dateifensters schreibt `aktiv`
+    /// nicht um und hat damit nichts nachzuziehen; er zoege den Rang sonst aus
+    /// dem Editor heraus und loeschte damit gerade die Lage, die
+    /// [`crate::kommandos::fokus::Rahmenrolle::AktivOhneFokus`] absichtlich
+    /// anzeigt — Befehle meinen das Dateifenster, Tasten gehen in den Editor.
+    ///
+    /// **Und sie steht hinter den beiden anderen Zeilen.** `aufteilung_nachziehen`
+    /// legt die Rahmen neu aus, und `fokus_setzen` ruft `makeFirstResponder:`;
+    /// das ist dieselbe Reihenfolge, die [`Self::sichtbarkeit_aendern`] fuer
+    /// denselben Grund haelt — erst die Flaeche auf den Schirm, dann der
+    /// Ersthelfer.
+    ///
+    /// **Der Ring bricht von selbst ab.** Das ausgeloeste
+    /// `makeFirstResponder:` meldet sich beim
+    /// [`Hauptfenster`](super::fenster::Hauptfenster),
+    /// [`Self::aktives_dem_ersthelfer_nachziehen`] laeuft an und kommt mit
+    /// [`Rangmitnahme::Appkit`] hierher zurueck; `aktiv_setzen` liefert dann
+    /// `false`, und es gibt weder einen zweiten Nachzug noch ein zweites
+    /// `makeFirstResponder:`.
+    fn aktives_setzen(&self, seite: Fensterseite, mitnahme: Rangmitnahme) {
         if self.ivars().modell.borrow_mut().aktiv_setzen(seite) {
             self.aufteilung_nachziehen();
             self.sitzung_vormerken();
+            match mitnahme {
+                Rangmitnahme::Appkit => {}
+                Rangmitnahme::Krk => {
+                    self.fokus_setzen(Fokus::Dateifenster);
+                }
+            }
         }
     }
 
@@ -4566,10 +4612,14 @@ impl Anwendungsdelegierter {
     /// dieser Nachzug laeuft nicht an. Getragen wird die Zusage deshalb erst
     /// dadurch, dass **jeder** Schreiber von `Fenstermodell::aktiv` den Rang
     /// mitnimmt — sonst faellt der Rang und das aktive Dateifenster
-    /// auseinander, und der Klick zurueck hat nichts mehr zu melden. Der
-    /// Tabbefehl tat genau das; die Zaehlprobe
+    /// auseinander, und der Klick zurueck hat nichts mehr zu melden. **Zwei
+    /// Wege taten genau das**, und beide sind am 260825 nachgezogen: der
+    /// Tabbefehl in [`Self::kommando_ausfuehren`] und der Klick auf die
+    /// Tableiste, der ueber [`Self::aktives_setzen`] mit
+    /// [`Rangmitnahme::Krk`] hereinkommt. Die Proben
     /// `aktivschreiberproben::der_fensterwechsel_nimmt_den_ersthelferrang_mit`
-    /// haelt die Vorbedingung seither fest.
+    /// und `::der_klick_auf_die_tableiste_nimmt_den_ersthelferrang_mit` halten
+    /// die Vorbedingung seither fest.
     ///
     /// # Was er von sich aus in Ruhe laesst
     ///
@@ -4592,7 +4642,11 @@ impl Anwendungsdelegierter {
         let Some(seite) = self.bereich_des_ersthelfers().and_then(Bereich::seite) else {
             return;
         };
-        self.aktives_setzen(seite);
+        // Der Rang ist hier der **Ausloeser** und nicht die Folge: diese
+        // Funktion haengt am Melder des Hauptfensters, laeuft also aus
+        // `makeFirstResponder:` heraus. Ein zweites `makeFirstResponder:` von
+        // hier aus liefe mitten im ersten.
+        self.aktives_setzen(seite, Rangmitnahme::Appkit);
     }
 
     /// Holt das Fenster nach vorn (C7).
@@ -8673,12 +8727,16 @@ mod fokusnachzugproben {
 /// schon haelt, und dann laeuft
 /// [`Anwendungsdelegierter::aktives_dem_ersthelfer_nachziehen`] nicht an. Genau
 /// das tat der Tabbefehl bis zum 260825 (`shared/planning/260825-1725_*`,
-/// Strang 1, Schritt 1).
+/// Strang 1, Schritt 1), und der Klick auf die Tableiste bis zur Aufgabe E-1
+/// desselben Tages: ein `NSSegmentedControl` nimmt den Rang bei einem Klick
+/// nicht an, obwohl sein `acceptsFirstResponder` `1` liefert
+/// (`shared/decisions/260825-1725_*`, Moeglichkeit 1).
 ///
 /// **Warum am Quelltext und nicht am Verhalten.** Der Rang liegt in AppKit und
 /// steht erst, wenn KRK im Vordergrund laeuft; kein Agent kann den Abnahmelauf
 /// fahren. Was ohne Fenster pruefbar bleibt, ist die Verdrahtung — dass jeder
-/// der drei Schreiber den Ruf danebenstehen hat, der den Rang nachzieht. Der
+/// Weg, der `aktiv` umschreibt, den Ruf danebenstehen hat, der den Rang
+/// nachzieht, und zwar genau dort, wo AppKit ihn nicht schon selbst bewegt. Der
 /// Kopf von [`crate::quellbaum`] beschreibt die Bauform und sagt auch, was sie
 /// nicht kann.
 ///
@@ -8755,8 +8813,10 @@ mod aktivschreiberproben {
 
     /// Der dritte Schreiber haengt am Rangwechsel und nicht neben ihm.
     ///
-    /// [`super::Anwendungsdelegierter::aktives_setzen`] nimmt den Rang nicht
-    /// mit, weil der Rang bei ihm der **Ausloeser** ist: der Melder des
+    /// [`super::Anwendungsdelegierter::aktives_setzen`] nimmt den Rang auf
+    /// diesem Weg nicht mit — er kommt mit
+    /// [`super::Rangmitnahme::Appkit`] herein —, weil der Rang hier der
+    /// **Ausloeser** ist: der Melder des
     /// Hauptfensters ruft
     /// [`super::Anwendungsdelegierter::aktives_dem_ersthelfer_nachziehen`], und
     /// erst das schreibt `aktiv`. Faellt die Anmeldung im Aufbau weg, dreht sich
@@ -8772,6 +8832,89 @@ mod aktivschreiberproben {
         assert!(
             rumpf(&diese_datei(), "oberflaeche_aufbauen").contains(nadel),
             "der Aufbau meldet den Rangwechsel nicht mehr an das aktive Dateifenster"
+        );
+    }
+
+    /// **Der Klick auf die Tableiste nimmt den Rang mit** — die Probe zur
+    /// Aufgabe E-1 vom 260825.
+    ///
+    /// Der vierte Anlass, und der einzige, bei dem AppKit den Rang von sich aus
+    /// liegen laesst: die Tableiste ist ein `NSSegmentedControl`, und das nimmt
+    /// ihn bei einem Klick nicht an. Bis zum 260825 sass der Rang danach in der
+    /// Liste, die nicht mehr die aktive war — dieselbe Lage, die der Tabbefehl
+    /// hinterliess, nur nach einem anderen Handgriff.
+    ///
+    /// Die Reihenfolge steht mit in der Zusage, aus demselben Grund wie beim
+    /// Tabbefehl: [`super::Anwendungsdelegierter::fokusansicht`] loest
+    /// [`super::Fokus::Dateifenster`] ueber `modell.aktiv()` auf und traefe vor dem
+    /// Umschreiben noch das alte Dateifenster.
+    ///
+    /// **Was sie nicht sieht:** ob die Bedingung darum die richtige ist. Dass
+    /// die Mitnahme im `if` steht und nicht davor, haelt keine Probe; es steht
+    /// im Doc-Kommentar von `aktives_setzen`.
+    #[test]
+    fn der_klick_auf_die_tableiste_nimmt_den_ersthelferrang_mit() {
+        let wechsel = concat!("aktiv_", "setzen(seite)");
+        let rang = concat!("fokus_", "setzen(Fokus::Dateifenster)");
+        let rumpf = rumpf(&diese_datei(), "aktives_setzen");
+        let stelle_wechsel = rumpf
+            .find(wechsel)
+            .expect("aktives_setzen schreibt das aktive Dateifenster nicht mehr um");
+        let stelle_rang = rumpf
+            .find(rang)
+            .expect("aktives_setzen nimmt den Ersthelferrang auf keinem Weg mehr mit");
+        assert!(
+            stelle_wechsel < stelle_rang,
+            "aktives_setzen setzt den Fokus, bevor das aktive Dateifenster steht"
+        );
+        assert!(
+            rumpf[..stelle_rang].contains(concat!("Rangmitnahme::", "Krk")),
+            "die Rangmitnahme haengt nicht mehr an der Antwort des Aufrufers"
+        );
+    }
+
+    /// Die zwei Anfasswege unterscheiden sich in der Rangmitnahme, und es sind
+    /// zwei.
+    ///
+    /// Die Gegenprobe zur Probe darueber: jene sieht, dass `aktives_setzen` den
+    /// Rang mitnehmen **kann**, nicht aber, dass der Tableistenklick ihn
+    /// anfordert und der Zeilenklick nicht. Beides steht in
+    /// [`super::super::tabelle`], und beide Werte muessen dort je genau einmal
+    /// vorkommen: ein zweiter `Rangmitnahme::Appkit` waere ein Weg, der den Rang
+    /// stillschweigend liegen laesst.
+    ///
+    /// **Eine Aufruferzaehlung steht daneben**, weil die Zahl selbst zugesagt
+    /// ist: ein dritter Ruf von `angefasst` waere ein Weg in `aktiv`, ueber den
+    /// niemand entschieden hat. Der Kopf von [`crate::quellbaum`] sagt, warum
+    /// eine solche Zaehlung sonst nirgends stehen soll.
+    ///
+    /// **Was sie nicht sieht:** einen Ruf von `angefasst` aus einer anderen
+    /// Datei. Dagegen haelt, dass die Methode privat ist.
+    #[test]
+    fn die_zwei_anfasswege_unterscheiden_sich_in_der_rangmitnahme() {
+        let datei = "krk-ui/src/appkit/tabelle.rs";
+        let inhalt = quelldateien()
+            .into_iter()
+            .find(|(name, _)| name == datei)
+            .unwrap_or_else(|| panic!("{datei} steht nicht im Quellbaum"))
+            .1;
+        let ohne_prosa = inhalt
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        for wert in ["Appkit", "Krk"] {
+            let nadel = format!("angefasst(Rangmitnahme::{wert})");
+            assert_eq!(
+                ohne_prosa.matches(&nadel).count(),
+                1,
+                "{nadel} steht nicht genau einmal in {datei}"
+            );
+        }
+        assert_eq!(
+            aufrufstellen(&ohne_prosa, "angefasst"),
+            2,
+            "{datei} hat nicht mehr genau zwei Anfasswege; über den neuen hat niemand entschieden"
         );
     }
 
