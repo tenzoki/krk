@@ -242,6 +242,7 @@ use crate::fenstermodell::{
 use crate::fenstertitel;
 use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::fokus::{self, Fokus};
+use crate::kommandos::kontextmenue::{self, Entpackbefund, Kontextbefehl};
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{self, Anlegeart, Auswahl, Konfliktfrage, Vorgangszustand};
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
@@ -282,6 +283,20 @@ use super::weitereinstanz;
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
+
+/// Die Buendelkennung des Finders (Runde 17).
+///
+/// **Sie steht fest im Baum und nicht in `settings.toml`**, anders als die des
+/// Terminals aus C11. Der Terminal-Befehl laesst den Nutzer waehlen, welches
+/// Terminal er meint; einen zweiten Finder gibt es nicht, und eine Einstellung
+/// dafuer waere eine Wahl ohne Alternative.
+///
+/// Sie steht als Konstante da und nicht als Zeichenfolge am Aufruf, damit die
+/// Stelle einen Namen hat: `com.apple.finder` an einem
+/// [`terminal::ordner_oeffnen`] mitten im Rumpf saehe wie eine Einstellung aus,
+/// die jemand vergessen hat. **Genau einmal im Baum**, wie
+/// [`operationen::kein_finder`] in seinem Kopf voraussetzt.
+const FINDERKENNUNG: &str = "com.apple.finder";
 
 /// Der Satz, den eine Instanz ohne Sitzungsrecht beim Start zeigt (C3.10).
 ///
@@ -1353,6 +1368,27 @@ impl Anwendungsdelegierter {
                 .befehlsantwort_raeumer_setzen(Box::new(move || {
                     if let Some(selbst) = schwach.load() {
                         selbst.befehlsantwort_beidseitig_loeschen();
+                    }
+                }));
+            // Der Klick auf einen der drei eigenen Kontextmenue-Eintraege
+            // (Runde 17). **Ohne diese Zeilen faellt der Klick still durch**:
+            // die Eintraege stuenden im Menue, ihr Selektor kaeme bei der
+            // Quelle an, und `kontextbefehl_melden` faende keinen Rueckruf vor.
+            // Ausgefuehrt wird beim Delegierten, weil die Operationsmaschine
+            // hier haengt und eine Quelle nur ihre eigene Seite erreicht.
+            //
+            // **`seite` ist das Dateifenster, in dem der Rechtsklick stand**,
+            // und nicht das aktive: ein Rechtsklick macht sein Dateifenster
+            // nicht zum aktiven, und Fortschritt wie Meldung gehoeren in die
+            // Statuszeile jenes Fensters. Dieselbe Ueberlegung wie beim Abwurf
+            // darueber. Auch dieser Rueckruf haelt den Delegierten **schwach**,
+            // aus demselben Grund wie die acht darueber.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .kontextmelder_setzen(Box::new(move |befehl| {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.kontextbefehl_ausfuehren(seite, befehl);
                     }
                 }));
         }
@@ -5242,7 +5278,7 @@ impl Anwendungsdelegierter {
                 })
         }) {
             // Die Meldung baut `vorgang_laeuft_schon`, die eine Stelle,
-            // die sie fuer alle drei Frager baut; sie nennt die Art des
+            // die sie fuer jeden ihrer Frager baut; sie nennt die Art des
             // laufenden Vorgangs und liest ihn dafuer ein zweites Mal. Es ist
             // derselbe Durchgang der Ereignisschleife wie oben, also dieselbe
             // Antwort, und `let _ =` heisst hier wie ueberall im Baum „ich
@@ -5891,23 +5927,28 @@ impl Anwendungsdelegierter {
     /// anfangen darf, liest hier `ivars().vorgang` und nirgends sonst. Eine
     /// zweite Prueferei waeren zwei Antworten auf dieselbe Frage.
     ///
-    /// **Vier Wege fragen, und sie teilen sich in drei und einen.** Drei folgen
-    /// einem Tastendruck und nehmen deshalb den meldenden Mantel
-    /// [`Self::vorgang_laeuft_schon`], denn auf einen Tastendruck gehoert eine
+    /// **Sechs Wege fragen, und sie teilen sich in fuenf und einen.** Fuenf
+    /// folgen einer ausdruecklichen Handlung des Nutzers und nehmen deshalb den
+    /// meldenden Mantel [`Self::vorgang_laeuft_schon`], denn auf einen
+    /// Tastendruck und ebenso auf einen angeklickten Menueeintrag gehoert eine
     /// Antwort in die Statuszeile: die vier Befehle aus der Auswahl
     /// ([`Self::auftrag_stellen`]), das Stapel-Umbenennen
-    /// ([`Self::stapel_beauftragen`]) und die Vorstufe der Loeschrueckfrage
+    /// ([`Self::stapel_beauftragen`]), die Vorstufe der Loeschrueckfrage
     /// ([`Self::loeschen_nach_rueckfrage`], die von der Antwort allein braucht,
-    /// **ob** es einen Vorgang gibt).
+    /// **ob** es einen Vorgang gibt) und seit der Runde 17 die zwei Zweige des
+    /// Kontextmenues, die einen Auftrag stellen
+    /// ([`Self::zipauftrag_stellen`] und [`Self::entpackauftrag_stellen`]).
+    /// Der dritte Zweig jenes Menues fragt nicht: [`Self::im_finder_zeigen`]
+    /// stellt keinen Auftrag.
     ///
-    /// Der vierte ist der Abwurf aus einer fremden Anwendung (C6 der Runde 13),
+    /// Der sechste ist der Abwurf aus einer fremden Anwendung (C6 der Runde 13),
     /// und er nimmt die Frage **ohne** die Meldung. Der Grund ist der Ort seines
     /// Fragers: `validateDrop:` laeuft bei jeder Zeigerbewegung, und eine
     /// Meldung von dort schriebe die Statuszeile mehrmals je Sekunde voll. Was
     /// der Abwurf stattdessen zeigt, ist der Zeiger selbst.
     ///
-    /// Der vierte Weg ist damit **keine zweite Pruefung**, sondern dieselbe ohne
-    /// ihre Nebenwirkung.
+    /// Der sechste Weg ist damit **keine zweite Pruefung**, sondern dieselbe
+    /// ohne ihre Nebenwirkung.
     ///
     /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
     /// bliebe: diese Funktion hat seit dem Wegfall ihrer Nebenwirkung gar keine
@@ -6010,12 +6051,173 @@ impl Anwendungsdelegierter {
         let _ = self.auftrag_starten(seite, auftrag, ziel, positionen);
     }
 
+    /// Fuehrt den angeklickten Eintrag des Kontextmenues aus (Runde 17).
+    ///
+    /// **Die Stelle, an der die Kette ankommt**, und die einzige, die einen der
+    /// drei Befehle ausfuehrt. Der Weg dorthin: `menuNeedsUpdate:` baut die
+    /// drei Eintraege mit **einem** Selektor und je einer Marke, der Klick
+    /// laeuft ueber `DateifensterQuelle::kontextbefehl_melden`, das die Marke
+    /// ueber [`kontextmenue::Kontextbefehl::von_menuemarke`] zurueckrechnet,
+    /// und der Rueckruf aus dem Aufbau der Oberflaeche fuehrt die Fensterseite
+    /// mit. Ausgefuehrt wird hier, weil die Operationsmaschine hier haengt und
+    /// eine Quelle nur ihre eigene Seite erreicht.
+    ///
+    /// **Verzweigt wird vollstaendig und ohne Auffangzweig.** Ein vierter
+    /// [`Kontextbefehl`](kontextmenue::Kontextbefehl) haelt damit den Bau an,
+    /// statt still nichts zu tun — die Falle, die `CLAUDE.md` fuer
+    /// Tastenbefehle beschreibt und die hier ein `NSMenuItem` waere, dessen
+    /// Selektor nirgends ankommt. Der Uebersetzer haelt allerdings nur, dass
+    /// jeder Wert einen Zweig hat, und nicht, dass der Zweig etwas tut; dafuer
+    /// steht die Probe `jeder_kontextbefehl_erreicht_seine_wirkung`.
+    ///
+    /// **`seite` ist das Dateifenster, in dem der Rechtsklick stand**, und
+    /// nicht das aktive. Ein Rechtsklick macht sein Dateifenster nicht zum
+    /// aktiven; die Seite reist deshalb vom Rueckruf bis in den [`Vorgang`]
+    /// mit, und Fortschritt, Rueckfrage und Abschlusstext erscheinen in der
+    /// Statuszeile jenes Dateifensters.
+    ///
+    /// Drei duenne Zweige und kein Rumpf: was jeder tut, steht in seiner
+    /// eigenen Funktion, damit diese Stelle allein die Zuordnung traegt.
+    fn kontextbefehl_ausfuehren(&self, seite: Fensterseite, befehl: Kontextbefehl) {
+        match befehl {
+            Kontextbefehl::Zippen => self.zipauftrag_stellen(seite),
+            Kontextbefehl::Entpacken => self.entpackauftrag_stellen(seite),
+            Kontextbefehl::ImFinderZeigen => self.im_finder_zeigen(seite),
+        }
+    }
+
+    /// Packt die betroffenen Eintraege in ein Archiv im angezeigten Ordner
+    /// (Runde 17).
+    ///
+    /// **Der vierte Weg, der den meldenden Mantel
+    /// [`Self::vorgang_laeuft_schon`] nimmt**, und er nimmt ihn wie jeder Weg,
+    /// den der Nutzer ausdruecklich ausloest: auf einen angeklickten
+    /// Menueeintrag gehoert eine Antwort in die Statuszeile.
+    ///
+    /// **Er wirkt auf dieselbe Menge wie F5 und F6**, naemlich auf
+    /// [`operationen::betroffene`] ueber `betroffene_eintraege`: die Markierung
+    /// hat den Vorrang, sonst gilt die ausgewaehlte Zeile, die der Rechtsklick
+    /// vorher nachgerueckt hat. Eine leere Menge packt nichts und meldet es
+    /// ([`operationen::nichts_zu_packen`]); den ganzen angezeigten Ordner zu
+    /// packen hat der Nutzer beim Zuschnitt dieser Runde verworfen.
+    ///
+    /// **Das Archiv entsteht im angezeigten Ordner**, auch wenn die betroffenen
+    /// Eintraege anderswo laegen, und wie es heisst, rechnet
+    /// [`kontextmenue::archivname`] und nicht diese Stelle.
+    fn zipauftrag_stellen(&self, seite: Fensterseite) {
+        if self.vorgang_laeuft_schon(seite) {
+            return;
+        }
+        let quelle = self.dateifenster(seite).quelle();
+        let auswahl = quelle.betroffene_eintraege();
+        if auswahl.ist_leer() {
+            self.antwort_zeigen(seite, &operationen::nichts_zu_packen());
+            return;
+        }
+        let ordner = quelle.angezeigter_ordner();
+        let ziel = kontextmenue::archivname(&auswahl.pfade, &ordner);
+        let positionen = auswahl.zahl();
+        // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
+        // es keinen: ein Menueklick ist eine Mausbewegung.
+        let _ = self.auftrag_starten(
+            seite,
+            Auftrag::zippen(auswahl.pfade, ziel),
+            ordner,
+            positionen,
+        );
+    }
+
+    /// Entpackt jedes betroffene Archiv in einen eigenen neuen Ordner
+    /// (Runde 17).
+    ///
+    /// Der fuenfte Weg, der den meldenden Mantel
+    /// [`Self::vorgang_laeuft_schon`] nimmt, und aus demselben Grund wie
+    /// [`Self::zipauftrag_stellen`] darueber.
+    ///
+    /// **Welche Archive gemeint sind, entscheidet
+    /// [`kontextmenue::entpackziel`]** und nicht diese Stelle: die betroffenen
+    /// Eintraege zuerst, ersatzweise das eine Archiv unter den sichtbaren
+    /// Zeilen. Gefragt wird ueber `DateifensterQuelle::entpackbefund`, weil die
+    /// Regel neben der Auswahl die sichtbaren Zeilen braucht und das
+    /// Ordnermodell der Quelle gehoert.
+    ///
+    /// **Die zwei Fehlbefunde tragen je einen eigenen Satz** und kommen als
+    /// eigene Werte statt als leeres `Option` herein; sie unterscheiden „hier
+    /// steht kein Archiv" von „hier stehen mehrere, und die Auswahl zeigt auf
+    /// keines". Ein dritter Wert haelt den Bau an.
+    ///
+    /// **Ein Vorgang traegt mehrere Archive**, seit der Nutzer am 260824-2120
+    /// so entschieden hat; deshalb zaehlen die Positionen die Paare und nicht
+    /// die Eintraege eines Archivs.
+    fn entpackauftrag_stellen(&self, seite: Fensterseite) {
+        if self.vorgang_laeuft_schon(seite) {
+            return;
+        }
+        let quelle = self.dateifenster(seite).quelle();
+        let paare = match quelle.entpackbefund() {
+            Entpackbefund::Archive(paare) => paare,
+            Entpackbefund::Keines => {
+                self.antwort_zeigen(seite, &operationen::kein_archiv());
+                return;
+            }
+            Entpackbefund::Mehrere => {
+                self.antwort_zeigen(seite, &operationen::mehrere_archive());
+                return;
+            }
+        };
+        let ordner = quelle.angezeigter_ordner();
+        let positionen = paare.len();
+        // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
+        // es keinen: ein Menueklick ist eine Mausbewegung.
+        let _ = self.auftrag_starten(seite, Auftrag::entpacken(paare), ordner, positionen);
+    }
+
+    /// Oeffnet den angezeigten Ordner im Finder (Runde 17).
+    ///
+    /// **Derselbe Weg wie der Terminal-Befehl aus C11**, und das ist der
+    /// Zuschnitt: [`terminal::ordner_oeffnen`] beantwortet die Frage „wie kommt
+    /// ein Ordner an eine ueber ihre Buendelkennung benannte Anwendung", und
+    /// zwei Wege stellen sie. Unterschieden sind sie in zwei Stuecken, und
+    /// beide stehen hier: die Kennung kommt aus [`FINDERKENNUNG`] statt aus
+    /// `settings.toml`, und gemeldet wird [`operationen::kein_finder`] statt
+    /// [`operationen::kein_terminal`], das die eingestellte Kennung nennt, weil
+    /// der Nutzer sie berichtigen kann.
+    ///
+    /// **Der zweite Aufrufer von [`operationen::ordner_fehlt`]**, das bis zur
+    /// Runde 17 `terminalordner_fehlt` hiess. Geprueft wird vor dem Aufruf,
+    /// weil der Rueckruf von `openURLs:…` leer bleibt und dies die eine
+    /// Gelegenheit ist, dem Nutzer etwas zu sagen, das er beheben kann: der
+    /// ausgeworfene Datentraeger, dessen Pfad der Tab noch traegt.
+    ///
+    /// **Kein laufender Vorgang haelt ihn auf**, anders als die zwei Zweige
+    /// darueber. Er stellt keinen Auftrag, fasst nichts an und reicht einen
+    /// Pfad an das System weiter; die Frage nach dem einen Vorgang gilt der
+    /// Operationsmaschine und nicht dem Menue.
+    fn im_finder_zeigen(&self, seite: Fensterseite) {
+        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        if let Some(meldung) = operationen::ordner_fehlt(&ordner) {
+            self.antwort_zeigen(seite, &meldung);
+            return;
+        }
+        if !terminal::ordner_oeffnen(FINDERKENNUNG, &ordner) {
+            self.antwort_zeigen(seite, &operationen::kein_finder());
+        }
+    }
+
     /// Startet einen fertigen Auftrag auf der Operationsmaschine.
     ///
-    /// Der gemeinsame Teil aller vier Wege hinein: Arbeitsfaden ueber
+    /// Der gemeinsame Teil aller **sechs** Wege hinein: Arbeitsfaden ueber
     /// [`krk_core::operation::starten`], Vermittlerfaden fuer die Meldungen und
     /// der [`Vorgang`], an dem der Hauptfaden ihn wiederfindet. Liefert immer
     /// `true`: der Tastendruck ist verbraucht, gleich ob der Faden zustande kam.
+    ///
+    /// Die sechs, in der Reihenfolge ihres Hinzukommens: die vier Befehle aus
+    /// der Auswahl ([`Self::auftrag_stellen`]), das Stapel-Umbenennen
+    /// ([`Self::stapel_beauftragen`]), das bestaetigte Loeschen
+    /// ([`Self::loeschauftrag_stellen`]), der Abwurf aus einer fremden
+    /// Anwendung ([`Self::abwurf_ausfuehren`]) und die zwei Zweige des
+    /// Kontextmenues, die einen Auftrag stellen ([`Self::zipauftrag_stellen`]
+    /// und [`Self::entpackauftrag_stellen`]).
     fn auftrag_starten(
         &self,
         seite: Fensterseite,
@@ -8763,5 +8965,116 @@ mod leseprofilproben {
             "`{nadel}` wird nicht genau einmal und nicht in dieser Datei gerufen; \
              die Leseprofile kommen einmal beim Start herein und danach nicht mehr"
         );
+    }
+}
+
+/// Die Kette des Kontextmenues, am Quelltext gezaehlt (Runde 17).
+///
+/// **Warum am Baum und nicht an einem Ergebnis.** Die drei Menueeintraege sind
+/// ohne laufende Anwendung nicht auszuloesen: ein `NSMenu` verlangt den
+/// Hauptfaden, den `libtest` nicht hergibt, und der Anwendungsdelegierte ist
+/// ohne Fenster nicht zu bauen. Was hier gehalten wird, ist deshalb eine
+/// Aussage ueber den **Baum**: dass die Kette vom Klick bis zur Wirkung nirgends
+/// abreisst. Der Kopf von [`crate::quellbaum`] beschreibt die Bauform und sagt
+/// auch, was sie nicht kann.
+///
+/// **Die zwei Proben schliessen die zwei Stellen, die der Uebersetzer nicht
+/// haelt.** Er haelt, dass jeder [`Kontextbefehl`] einen Zweig hat — die
+/// Verzweigung in
+/// [`Anwendungsdelegierter::kontextbefehl_ausfuehren`](super::Anwendungsdelegierter)
+/// hat keinen Auffangzweig. Er haelt **nicht**, dass der Rueckruf ueberhaupt
+/// gesetzt wird, und nicht, dass ein Zweig etwas tut. Beides waere die Falle,
+/// die `CLAUDE.md` fuer Tastenbefehle beschreibt: der Eintrag steht im Menue,
+/// jede Probe ist gruen, und nichts geschieht. Die dritte Stelle, den Selektor
+/// selbst, haelt `der_kontextmenue_selektor_hat_einen_empfaenger_und_einen_setzer`
+/// in [`super::tabelle`].
+#[cfg(test)]
+mod kontextproben {
+    use super::zettelproben::{diese_datei, rumpf};
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// Der Kontextmelder wird im Baum genau einmal gesetzt, und zwar hier.
+    ///
+    /// **Ohne diesen Aufruf faellt jeder Klick still durch.** Die Eintraege
+    /// stuenden im Menue, ihr Selektor kaeme bei der Quelle an, und
+    /// `DateifensterQuelle::kontextbefehl_melden` faende keinen Rueckruf vor und
+    /// taete nichts — ohne Fehler, ohne Meldung, ohne rote Probe.
+    ///
+    /// Gezaehlt wird die **Aufrufstelle** und nicht die Zahl der Fensterseiten:
+    /// der Aufruf steht in der Schleife ueber `Fensterseite::ALLE` und laeuft
+    /// damit zweimal, steht im Quelltext aber einmal. Eine zweite Fundstelle
+    /// waere ein zweiter Halteort fuer dieselbe Frage.
+    ///
+    /// **Was sie nicht sieht:** ob der Aufruf in einem Zweig steht, den der
+    /// Aufbau nie erreicht. Dagegen haelt keine Zaehlung; der Nutzer sieht es am
+    /// gebauten Buendel.
+    #[test]
+    fn der_kontextmelder_wird_beim_aufbau_gesetzt() {
+        // Die Nadel steht zusammengesetzt da: die Probe liegt in der Datei, die
+        // sie zaehlt, und als ein Stueck geschrieben faende sie sich selbst.
+        let nadel = concat!("kontextmelder_", "setzen");
+        let diese = "krk-ui/src/appkit/anwendung.rs";
+
+        let rufer: Vec<(String, usize)> = quelldateien()
+            .into_iter()
+            .map(|(datei, inhalt)| (datei, aufrufstellen(&inhalt, nadel)))
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+
+        assert_eq!(
+            rufer,
+            vec![(diese.to_owned(), 1)],
+            "`{nadel}` wird nicht genau einmal und nicht in dieser Datei gerufen; \
+             ohne diesen Aufruf tut jeder Eintrag des Kontextmenüs nichts"
+        );
+    }
+
+    /// Jeder der drei Kontextbefehle erreicht einen Zweig, und jeder Zweig eine
+    /// Wirkung.
+    ///
+    /// Zwei Glieder in einer Probe, weil sie zusammen erst die Aussage tragen:
+    /// die Zuordnung Befehl → Zweig steht in der Verzweigung, die Wirkung im
+    /// Rumpf des Zweigs. Ein Zweig, der auf einen leeren Rumpf zeigte,
+    /// uebersetzte und liesse jede andere Probe gruen.
+    ///
+    /// **Was sie nicht sieht:** eine Wirkung, die in eine tiefer gerufene
+    /// Hilfsfunktion gewandert ist. Sie liest den Rumpf und nicht den Aufrufbaum
+    /// darunter — dieselbe Grenze, die `das_fensterschliessen_sichert_vor_dem_performclose`
+    /// in [`super::zettelproben`] an sich selbst benennt.
+    #[test]
+    fn jeder_kontextbefehl_erreicht_seine_wirkung() {
+        /// Befehl, Zweig und die Nadel, an der die Wirkung des Zweigs zu
+        /// erkennen ist. Die Nadeln stehen zusammengesetzt da, aus demselben
+        /// Grund wie in der Probe darueber.
+        const ZWEIGE: [(&str, &str, &str); 3] = [
+            (
+                "Kontextbefehl::Zippen",
+                "zipauftrag_stellen",
+                concat!("Auftrag::", "zippen("),
+            ),
+            (
+                "Kontextbefehl::Entpacken",
+                "entpackauftrag_stellen",
+                concat!("Auftrag::", "entpacken("),
+            ),
+            (
+                "Kontextbefehl::ImFinderZeigen",
+                "im_finder_zeigen",
+                concat!("terminal::", "ordner_oeffnen("),
+            ),
+        ];
+
+        let datei = diese_datei();
+        let verzweigung = rumpf(&datei, "kontextbefehl_ausfuehren");
+        for (befehl, zweig, wirkung) in ZWEIGE {
+            assert!(
+                verzweigung.contains(befehl) && verzweigung.contains(zweig),
+                "{befehl} erreicht {zweig} nicht: der Menüeintrag stünde da und täte nichts"
+            );
+            assert!(
+                rumpf(&datei, zweig).contains(wirkung),
+                "{zweig} ruft {wirkung} nicht: der Zweig ist da und wirkt nicht"
+            );
+        }
     }
 }

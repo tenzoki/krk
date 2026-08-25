@@ -257,7 +257,7 @@ use crate::kommandos::abwurfregel::{
     self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang,
 };
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
-use crate::kommandos::kontextmenue::Kontextbefehl;
+use crate::kommandos::kontextmenue::{self, Entpackbefund, Kontextbefehl};
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
@@ -1248,20 +1248,14 @@ impl DateifensterQuelle {
     /// Hinterlegt, was mit einem angeklickten Eintrag des Kontextmenues zu
     /// geschehen ist (Runde 17).
     ///
-    /// **Die Ausnahme darunter hat ein Ablaufdatum.** `krk-ui` hat kein
-    /// Bibliotheksziel, also ist `pub` hier keine Wurzel; bis Schritt 7 dieser
-    /// Runde den Rueckruf beim Aufbau der Oberflaeche setzt, ruft niemand
-    /// diesen Setzer, und `-D warnings` hielte den Bau an. Die Erwartung
-    /// erlischt mit dem ersten Aufrufer: dann meldet der Uebersetzer die
-    /// unerfuellte Erwartung, und die Zeilen muessen weg. Dieselbe Form
-    /// tragen die Stuecke aus [`crate::kommandos::kontextmenue`], die auf
-    /// denselben Schritt warten.
-    #[expect(
-        dead_code,
-        reason = "Schritt 7 dieser Runde setzt den Rueckruf beim Aufbau der \
-                  Oberflaeche; bis dahin ruft niemand diesen Setzer, und eine \
-                  Probe dafuer gaebe es nicht: sie brauchte den Hauptfaden"
-    )]
+    /// **Der eine Aufrufer steht im Aufbau der Oberflaeche**, je Fensterseite
+    /// einmal (`Anwendungsdelegierter::oberflaeche_aufbauen`). Ohne ihn faellt
+    /// [`Self::kontextbefehl_melden`] still durch, und die drei Menueeintraege
+    /// stuenden da und taeten nichts — genau die Falle, gegen die der eine
+    /// Selektor und die Marke gebaut sind. Dass er gesetzt wird, haelt die
+    /// Probe `der_kontextmelder_wird_beim_aufbau_gesetzt` beim
+    /// Anwendungsdelegierten; eine Probe an dieser Stelle koennte es nicht,
+    /// denn sie brauchte den Hauptfaden.
     pub fn kontextmelder_setzen(&self, melden: Kontextmelder) {
         *self.ivars().kontextbefehl.borrow_mut() = Some(melden);
     }
@@ -1734,6 +1728,30 @@ impl DateifensterQuelle {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
         operationen::betroffene(tab.modell(), tab.ordner())
+    }
+
+    /// Worauf der Unzip-Eintrag des Kontextmenues in diesem Dateifenster wirkt
+    /// (Runde 17).
+    ///
+    /// Das Gegenstueck zu [`Self::betroffene_eintraege`] und aus demselben
+    /// Zuschnitt: die Regel steht in [`kontextmenue::entpackziel`] und ist ohne
+    /// Fenster pruefbar, hier bleibt allein die Ausleihe des Tabmodells.
+    ///
+    /// **Sie steht hier und nicht beim Anwendungsdelegierten, der den Befehl
+    /// ausfuehrt.** Die Regel fragt neben den betroffenen Eintraegen die
+    /// **sichtbaren Zeilen**, also das [`Ordnermodell`] des sichtbaren Tabs;
+    /// das liegt in den Ivars dieser Quelle, und der Delegierte kommt an es
+    /// nicht heran, ohne einen zweiten Weg an ihm vorbei zu bauen.
+    ///
+    /// **Beide Fragen gehen durch dieselbe Ausleihe.** Zwei nacheinander
+    /// koennten einen Lesevorgang zwischen sich haben und Auswahl und Bestand
+    /// aus zwei Staenden desselben Ordners mischen; hier sieht die Regel eine
+    /// Liste und dieselbe, die der Nutzer beim Klicken vor sich hatte.
+    pub fn entpackbefund(&self) -> Entpackbefund {
+        let tabs = self.ivars().tabs.borrow();
+        let tab = tabs.aktiver();
+        let betroffen = operationen::betroffene(tab.modell(), tab.ordner());
+        kontextmenue::entpackziel(tab.modell(), &betroffen.pfade, tab.ordner())
     }
 
     /// Legt den Pfad des angezeigten Ordners in die Zwischenablage (C1).

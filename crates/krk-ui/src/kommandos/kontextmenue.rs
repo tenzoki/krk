@@ -75,30 +75,23 @@
 //! markiert ist. Eine Regel mit einem seltenen, gemeldeten Fehlversuch ist
 //! besser als zwei Regeln, die auseinanderlaufen koennen.
 //!
-//! # Die Ausnahme mit Ablaufdatum
+//! # Wer hier hereinruft
 //!
-//! Bis zum Menuebau in `crate::appkit::tabelle` und der Ausfuehrung beim
-//! Anwendungsdelegierten ruft niemand ausser den Proben in dieses Modul
-//! hinein. **`krk-ui` hat kein Bibliotheksziel**, also ist `pub` hier keine
-//! Wurzel: der Uebersetzer meldet jedes Stueck als unbenutzt, und
-//! `-D warnings` haelt den Bau an.
+//! Zwei Stellen, und beide stehen unter `crate::appkit`. Die Datenquelle der
+//! Dateiliste (`tabelle`) fragt beim Menuebau [`Kontextbefehl::ALLE`],
+//! [`Kontextbefehl::titel`] und [`Kontextbefehl::menuemarke`], beim Klick
+//! [`Kontextbefehl::von_menuemarke`] und in ihrem `entpackbefund` das
+//! [`entpackziel`] — dort und nicht beim Ausfuehrenden, weil diese Regel die
+//! **sichtbaren Zeilen** braucht und das Ordnermodell jener Quelle gehoert. Die
+//! Ausfuehrung beim Anwendungsdelegierten fragt [`archivname`] und liest den
+//! [`Entpackbefund`], den sie sich von der Quelle geben laesst.
 //!
-//! Deshalb steht darunter `expect` und nicht `allow`, und es steht am Modul
-//! und nicht elfmal am einzelnen Stueck. Die Erwartung erlischt in dem
-//! Augenblick, in dem das letzte Stueck einen Aufrufer bekommt: dann meldet der
-//! Uebersetzer die unerfuellte Erwartung, und der Bau haelt an, bis die Zeilen
-//! weg sind. Eine Ausnahme mit Ablaufdatum statt einer, die stehen bleibt und
-//! niemandem mehr sagt, warum — dieselbe Form, die
-//! [`super::rueckschritt`] in seinem Kopf beschreibt.
-#![cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "die Schritte 6 und 7 dieser Runde setzen die Aufrufer im \
-                  Menuebau und beim Anwendungsdelegierten; bis dahin rufen \
-                  allein die Proben"
-    )
-)]
+//! **Bis zur Runde 17 stand hier `expect(dead_code)` am ganzen Modul**, mit
+//! einem Ablaufdatum: `krk-ui` hat kein Bibliotheksziel, also ist `pub` hier
+//! keine Wurzel, und bis zum ersten Aufrufer meldete der Uebersetzer jedes
+//! Stueck als unbenutzt. Mit dem Ausfuehrungszweig ist die Erwartung
+//! unerfuellt geworden und die Ausnahme gefallen — so, wie es eine Ausnahme
+//! mit Ablaufdatum soll.
 
 use std::path::{Path, PathBuf};
 

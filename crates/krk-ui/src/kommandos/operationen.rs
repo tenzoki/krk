@@ -970,14 +970,8 @@ pub fn nichts_zu_oeffnen() -> String {
 /// angezeigten Ordner gepackt**; der Nutzer hat das verworfen und die
 /// bestehende Regel gewaehlt. Dieser Satz ist die Stelle, an der die Wahl
 /// sichtbar wird: statt einer ungefragten Handlung steht eine Auskunft.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Zip-Zweig des \
-                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
-    )
-)]
+/// **Ein Rufer**, der Zip-Zweig des Kontextmenues
+/// (`Anwendungsdelegierter::zipauftrag_stellen`).
 #[must_use]
 pub fn nichts_zu_packen() -> String {
     nichts_betroffen("packen")
@@ -1015,14 +1009,9 @@ pub fn nichts_zu_teilen() -> String {
 /// (`decisions/260825-0711_*_woran-erkennt-unzip-dass-eine-datei-ein-zip-ist.md`,
 /// Moeglichkeit 1). Ohne den Halbsatz suchte der Nutzer den Grund an der
 /// falschen Stelle, wenn sein Archiv anders heisst.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Unzip-Zweig des \
-                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
-    )
-)]
+/// **Ein Rufer**, der Unzip-Zweig des Kontextmenues
+/// (`Anwendungsdelegierter::entpackauftrag_stellen`), auf den Befund
+/// [`super::kontextmenue::Entpackbefund::Keines`].
 #[must_use]
 pub fn kein_archiv() -> String {
     "nichts zu entpacken: hier steht keine Datei mit der Endung .zip".to_owned()
@@ -1040,14 +1029,8 @@ pub fn kein_archiv() -> String {
 /// [`kein_terminal`] mit seinem Hinweis auf `settings.toml` vormacht: die
 /// Auskunft, dass die Auswahl auf keines der Archive zeigt, ist zugleich der
 /// Weg heraus.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Unzip-Zweig des \
-                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
-    )
-)]
+/// **Ein Rufer**, derselbe Zweig wie bei [`kein_archiv`], auf den Befund
+/// [`super::kontextmenue::Entpackbefund::Mehrere`].
 #[must_use]
 pub fn mehrere_archive() -> String {
     "nichts zu entpacken: hier stehen mehrere Archive, und die Auswahl zeigt \
@@ -1066,14 +1049,9 @@ pub fn mehrere_archive() -> String {
 /// **Der Fall ist selten und wird trotzdem gemeldet**, aus demselben Grund wie
 /// bei [`ablage_weist_ab`]: ein Befehl, der still nichts tut, sieht aus wie
 /// einer, der nicht angekommen ist.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Finder-Zweig des \
-                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
-    )
-)]
+/// **Ein Rufer**, der Finder-Zweig des Kontextmenues
+/// (`Anwendungsdelegierter::im_finder_zeigen`), wenn
+/// [`crate::appkit::terminal::ordner_oeffnen`] `false` liefert.
 #[must_use]
 pub fn kein_finder() -> String {
     "der Finder ist nicht erreichbar: das System hat keine Anwendung dafür genannt".to_owned()
