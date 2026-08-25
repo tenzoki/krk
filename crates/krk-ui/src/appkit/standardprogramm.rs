@@ -85,7 +85,7 @@ use objc2_foundation::{NSString, NSURL};
 /// nicht, und diese Huelle fragt es auch nicht: ein Eintrag, den es nicht mehr
 /// gibt, geht bis zum Aufruf durch, und was das System dazu sagt, meldet der
 /// Aufrufer. Der Gegenentwurf waere eine Pruefung nach dem Vorbild von
-/// [`crate::kommandos::operationen::terminalordner_fehlt`]; die steht dort, weil
+/// [`crate::kommandos::operationen::ordner_fehlt`]; die steht dort, weil
 /// jener Aufruf **keine** Antwort liefert, und hier liefert er eine.
 pub fn oeffnen(pfad: &Path) -> bool {
     let ziel = NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy()));

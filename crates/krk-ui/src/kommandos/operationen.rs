@@ -820,14 +820,22 @@ fn menge(bytes: u64) -> String {
 }
 
 // ----------------------------------------------------------------------
-// Das Terminal im angezeigten Ordner (C11, Schritt 18c)
+// Der angezeigte Ordner an einer benannten Anwendung (C11, Schritt 18c)
 // ----------------------------------------------------------------------
 
-/// Ob der Ordner noch da ist, den der Terminal-Befehl uebergeben soll (C11).
+/// Ob der Ordner noch da ist, den ein Befehl uebergeben soll.
 ///
 /// `None`, wenn er sich uebergeben laesst; sonst der Satz fuer die Statuszeile.
 /// Der Fall ist der ausgeworfene Datentraeger: der sichtbare Tab traegt den
 /// Pfad noch, den Ordner gibt es nicht mehr.
+///
+/// **Der Name nennt das Terminal nicht mehr, und das ist der Punkt.** Der
+/// Rumpf war seit C11 allgemein und die zwei Saetze sind es auch; gefragt wird
+/// von jedem Befehl, der einen Ordner an eine ueber ihre Buendelkennung
+/// benannte Anwendung uebergibt. Der Terminal-Befehl aus C11 stellt die Frage,
+/// der Finder-Eintrag des Kontextmenues aus der Runde 17 stellt dieselbe. Ein
+/// Aufruf mit "terminal" im Namen aus dem Finder-Zweig waere die
+/// Doppelbenennung, die dieses Projekt vermeidet.
 ///
 /// **Geprueft wird vor dem Aufruf und nicht nach ihm.** Der Rueckruf von
 /// `openURLs:…` bleibt leer (siehe `crate::appkit::terminal`), also ist dies
@@ -836,8 +844,9 @@ fn menge(bytes: u64) -> String {
 /// Nicht ueber [`super::pfadeingabe::pruefen`]: jene Funktion beantwortet
 /// "wohin geht KRK", und ihre Antwort traegt ein Sprungziel samt Auswahl, das
 /// dieser Befehl nicht braucht und nicht auswerten wuerde. Sie verlangte zudem
-/// das Leserecht, das eine Terminal-Sitzung in einem Ordner nicht braucht.
-pub fn terminalordner_fehlt(ordner: &Path) -> Option<String> {
+/// das Leserecht, das weder eine Terminal-Sitzung noch ein Finder-Fenster in
+/// einem Ordner braucht.
+pub fn ordner_fehlt(ordner: &Path) -> Option<String> {
     match std::fs::metadata(ordner) {
         Ok(angaben) if angaben.is_dir() => None,
         Ok(_) => Some(format!("{} ist kein Ordner mehr", ordner.display())),
@@ -1687,7 +1696,7 @@ mod tests {
         );
     }
 
-    /// Alle drei Zweige von [`terminalordner_fehlt`].
+    /// Alle drei Zweige von [`ordner_fehlt`].
     ///
     /// Der Fall, den C11 meint, ist der dritte: der sichtbare Tab traegt den
     /// Pfad noch, der Datentraeger ist weg. Geprueft wird jeweils, dass der
@@ -1697,13 +1706,13 @@ mod tests {
     fn ein_fehlender_terminalordner_nennt_den_pfad() {
         let ordner = Pruefordner::neu("terminalordner");
         assert_eq!(
-            terminalordner_fehlt(ordner.pfad()),
+            ordner_fehlt(ordner.pfad()),
             None,
             "ein vorhandener Ordner laesst sich uebergeben"
         );
 
         let datei = ordner.datei("keine-mappe.txt", b"x");
-        let text = terminalordner_fehlt(&datei).expect("eine Datei ist kein Ordner");
+        let text = ordner_fehlt(&datei).expect("eine Datei ist kein Ordner");
         assert!(
             text.contains(&datei.display().to_string()),
             "die Meldung nennt den Pfad nicht: {text}"
@@ -1711,7 +1720,7 @@ mod tests {
         assert!(text.contains("kein Ordner mehr"), "{text}");
 
         let fehlt = ordner.unter("ausgeworfen");
-        let text = terminalordner_fehlt(&fehlt).expect("ein fehlender Eintrag ist kein Ordner");
+        let text = ordner_fehlt(&fehlt).expect("ein fehlender Eintrag ist kein Ordner");
         assert!(
             text.contains(&fehlt.display().to_string()),
             "die Meldung nennt den Pfad nicht: {text}"

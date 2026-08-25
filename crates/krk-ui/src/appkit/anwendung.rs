@@ -2027,7 +2027,7 @@ impl Anwendungsdelegierter {
     fn terminal_oeffnen(&self) -> bool {
         let seite = self.ivars().modell.borrow().aktiv();
         let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
-        if let Some(meldung) = operationen::terminalordner_fehlt(&ordner) {
+        if let Some(meldung) = operationen::ordner_fehlt(&ordner) {
             self.antwort_zeigen(seite, &meldung);
             return true;
         }

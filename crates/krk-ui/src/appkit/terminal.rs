@@ -1,10 +1,24 @@
-//! Die eine Beruehrung mit dem System, die C11 braucht.
+//! Wie ein Ordner an eine ueber ihre Buendelkennung benannte Anwendung kommt.
 //!
 //! ```text
 //! Buendelkennung ──> URLForApplicationWithBundleIdentifier: ──> Ort der Anwendung
 //!                                                                     │
 //!             Ordner ──> openURLs:withApplicationAtURL:… <────────────┘
 //! ```
+//!
+//! # Zwei Wege stellen diese Frage
+//!
+//! Das Modul heisst nach dem ersten und beantwortet die Frage fuer beide. Der
+//! Terminal-Befehl aus C11 stellt sie mit der Kennung aus `settings.toml`, die
+//! der Nutzer selbst eintraegt; der Finder-Eintrag des Kontextmenues aus der
+//! Runde 17 stellt sie mit der festen Kennung des Finders. **Beide gehen durch
+//! [`ordner_oeffnen`]**, und eine zweite Huelle daneben waere derselbe
+//! Doppelbau, den der Zuschnitt dieses Moduls im naechsten Absatz vermeidet.
+//! Was die zwei Wege unterscheidet, liegt ausserhalb dieser Datei: woher die
+//! Kennung kommt, und welchen Satz der Aufrufer meldet, wenn keine Anwendung
+//! dazu installiert ist ([`crate::kommandos::operationen::kein_terminal`]
+//! nennt die eingestellte Kennung, weil der Nutzer sie berichtigen kann,
+//! [`crate::kommandos::operationen::kein_finder`] nennt keine).
 //!
 //! Ein eigenes Modul und kein Zusatz zu [`super::zwischenablage`]: jenes
 //! beantwortet nach seinem eigenen Kopf die eine Frage "was steht in der
@@ -33,7 +47,7 @@
 //! Schlange. Die beiden Fehler, die der Nutzer beheben kann, stellt KRK vorher
 //! und synchron fest: eine Kennung ohne installierte Anwendung an der
 //! `None`-Antwort der Aufloesung, einen nicht mehr erreichbaren Ordner an der
-//! Pruefung in [`crate::kommandos::operationen::terminalordner_fehlt`]. Was
+//! Pruefung in [`crate::kommandos::operationen::ordner_fehlt`]. Was
 //! danach noch scheitern kann, ist der Start eines aufgeloesten Buendels
 //! selbst, und dafuer bleibt der Rueckruf leer: ein Block mit einem Sprung auf
 //! den Hauptfaden waere der zweite asynchrone Weg neben dem Vermittlerfaden aus
