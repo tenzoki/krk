@@ -114,7 +114,10 @@ pub const HOECHSTENS_LESELAEUFE: u32 = 12;
 ///
 /// Eine Datei, die zwei Bausteine desselben Profils lesen, wird zweimal
 /// geoeffnet. Das ist gewollt: so ist die Zahl der Oeffnungen aus dem Profil
-/// ablesbar, naemlich eine je Feldbaustein und N je Baustein „juengste N".
+/// ablesbar, naemlich eine je Feldbaustein und N je Baustein „juengste N",
+/// der Titel zeigt. **Seine Datumsform kostet keine**: sie nimmt den
+/// Zeitpunkt aus dem Eintrag, den der Leselauf ohnehin liefert
+/// ([`Anzeige::Datum`]).
 pub const HOECHSTENS_OEFFNUNGEN: u32 = 24;
 
 /// Wie viele Eintraege ein einzelner Leselauf liefert, hoechstens (C6.5,
@@ -282,6 +285,12 @@ impl Zeile {
 /// [`Baustein::Vorhandensein`] sehen auf die Namen aller Eintraege, gleich
 /// welchen Typs, [`Baustein::Juengste`] und [`Baustein::Feld`] nehmen allein
 /// Eintraege vom Typ Datei.
+///
+/// **Die Naht laeuft dabei am Lesen entlang und nicht am Baustein**, und seit
+/// der Runde 18 faellt das auseinander: [`Baustein::Juengste`] mit
+/// [`Anzeige::Datum`] liest keine Datei und sieht deshalb Eintraege jedes
+/// Typs. Ohne das koennte ein Speicher, der Ordner enthaelt, keine Zeitangabe
+/// hergeben.
 #[derive(Debug, Clone)]
 pub enum Baustein {
     /// B1: die Zahl der Eintraege, deren Name das Muster erfuellt.
@@ -294,7 +303,10 @@ pub enum Baustein {
         /// Das Muster auf dem Eintragsnamen, oder alle Eintraege.
         muster: Option<Regex>,
     },
-    /// B2: die N Eintraege mit dem juengsten Aenderungsdatum, je mit Titel.
+    /// B2: die N Eintraege mit dem juengsten Aenderungsdatum.
+    ///
+    /// Was er ueber sie zeigt, sagt [`Anzeige`]; **welche** es sind, haengt
+    /// nicht daran.
     Juengste {
         /// Wo gesucht wird.
         ort: Ortsangabe,
@@ -302,6 +314,8 @@ pub enum Baustein {
         muster: Option<Regex>,
         /// Wie viele, hoechstens [`HOECHSTENS_JUENGSTE`].
         anzahl: u8,
+        /// Ob der Titel jedes Eintrags dasteht oder sein Aenderungsdatum.
+        zeigt: Anzeige,
     },
     /// B3: die erste Fanggruppe des ersten Treffers im Inhalt einer Datei.
     Feld {
@@ -319,6 +333,39 @@ pub enum Baustein {
         /// Das Muster auf dem Eintragsnamen.
         muster: Regex,
     },
+}
+
+/// Was der Baustein „juengste N" ueber seine Eintraege zeigt (`zeigt`).
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: ein dritter Wert
+/// haelt den Bau an und erzwingt die Antwort darauf, was er zeigt, was er
+/// dafuer oeffnet und welche Eintraege er ueberhaupt sieht. In der Datei steht
+/// er als `zeigt = "titel"` oder `zeigt = "datum"`; fehlt der Schluessel, ist
+/// [`Anzeige::Titel`] gemeint, denn das ist die Fassung, die es vor der Runde
+/// 18 allein gab.
+///
+/// **Die zwei Werte unterscheiden sich in dreierlei**, und jedes folgt aus dem
+/// einen Unterschied, dass der eine Dateien liest und der andere nicht:
+///
+/// | | [`Anzeige::Titel`] | [`Anzeige::Datum`] |
+/// |---|---|---|
+/// | Oeffnungen | eine je Eintrag | keine |
+/// | gesehene Eintraege | allein vom Typ Datei | jeden Typs |
+/// | Wert | [`Wert::Titel`] | [`Wert::Text`] |
+///
+/// Ein dritter Wert „Titel und Datum" waere nuetzlich und ist bewusst nicht
+/// gebaut; wer ihn will, fuegt ihn hinzu und haelt den Bau an genau den
+/// Stellen an, die ihn dann brauchen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anzeige {
+    /// Der Titel jedes Eintrags, aus seiner Datei gezogen. Die Vorgabe.
+    Titel,
+    /// Das Aenderungsdatum jedes Eintrags, ohne eine Datei zu oeffnen.
+    ///
+    /// Es steht in `Eintrag::geaendert`, das der Verzeichnisleselauf ohnehin
+    /// liefert; diese Form ist damit **billiger** als [`Anzeige::Titel`] und
+    /// nicht teurer.
+    Datum,
 }
 
 /// Das Stueck einer Ortsangabe, das fuer „jeder Unterordner hier" steht.
@@ -367,6 +414,13 @@ pub const PLATZHALTERSTUECK: &str = "*";
 /// zusammengelegter Lesestand nicht mehr traegt; die Grenze liegt auf der
 /// Naht, die der Modulkopf von [`bausteine`] ohnehin zieht. Abgewiesen wird
 /// beim Laden, und die Zeile behaelt ihre Beschriftung.
+///
+/// **Die Abweisung haengt am Baustein und nicht an seiner Form.** Sie greift
+/// auch fuer [`Anzeige::Datum`], das keine Datei liest und einen
+/// zusammengelegten Stand also tragen koennte. Das ist eine Zurueckstellung
+/// und keine Notwendigkeit: die Grenze bleibt an einer Stelle ablesbar
+/// („`juengste` nimmt keinen Platzhalter an"), solange niemand die Auskunft
+/// braucht, die erst der Platzhalter hergibt.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ortsangabe {
     /// Die Stuecke vor dem Platzhalter; ohne Platzhalter alle.
@@ -634,7 +688,14 @@ pub enum Wert {
     /// `verzeichnis::sys::ist_deskriptormangel` seit der Runde 10 im Durchlauf
     /// traegt.
     Vorhanden(bool),
-    /// Ein aus einer Datei gezogenes Feld.
+    /// Ein Text.
+    ///
+    /// **Die Variante beschreibt die Gestalt eines Wertes und nicht seine
+    /// Herkunft**, und seit der Runde 18 hat sie zwei Quellen: das aus einer
+    /// Datei gezogene Feld ([`Baustein::Feld`]) und das Aenderungsdatum
+    /// ([`Anzeige::Datum`]), das gar keine Datei sieht. Traegt der Text einen
+    /// Zeilenumbruch, rutscht er unter seine Beschriftung; das entscheidet
+    /// [`Zusammenfassung::als_text`] am Text und nicht an der Variante.
     Text(String),
     /// Bis zu N Titel, in der Reihenfolge des Aenderungsdatums.
     Titel(Vec<String>),

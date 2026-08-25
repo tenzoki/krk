@@ -296,7 +296,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - Eine Sammlung über der Eintragsschranke liefert `Wert::UeberGrenze` mit der Zahl der **Treffer** und nicht der Grenze; die Probe nimmt den Satz ab, den die Runde 16 dafür geschrieben hat.
      - `make check` grün.
 
-6. **`juengste` zeigt auf Wunsch ein Änderungsdatum statt eines Titels**
+6. [DONE] **`juengste` zeigt auf Wunsch ein Änderungsdatum statt eines Titels**
    - Executor: `coder`
    - Files: `crates/krk-core/src/leseprofil/mod.rs`, `crates/krk-core/src/leseprofil/datei.rs`, `crates/krk-core/src/leseprofil/bausteine.rs`, `crates/krk-core/tests/leseprofil.rs`
    - Changes: `Juengstedatei` bekommt den Schlüssel `zeigt` mit den zwei Werten `titel` (Vorgabe, die heutige Fassung) und `datum`. `Baustein::Juengste` trägt ihn als Aufzählung mit zwei Werten, vollständig und ohne Auffangzweig; `Lauf::juengste` verzweigt darüber.

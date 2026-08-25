@@ -49,7 +49,8 @@
 //! - **Die ganze Datei faellt weg**, wenn `serde` sie nicht in diese Gestalt
 //!   bringt: ein unbekannter Schluessel an einer der sechs Stellen mit
 //!   `deny_unknown_fields`, eine Zahl ausserhalb ihres Bereichs, ein
-//!   Tischname, den es nicht gibt. Die Datei gilt dann nach C1.6 als
+//!   Tischname, den es nicht gibt, und seit der Runde 18 ein Wert fuer
+//!   `zeigt`, den es nicht gibt ([`Anzeigedatei`]). Die Datei gilt dann nach C1.6 als
 //!   beschaedigt, wird beiseitegelegt, und KRK arbeitet ohne jedes Profil
 //!   weiter. **Das ist die weiteste der drei Reichweiten, und ein Buchstaben-
 //!   dreher in einem Bausteintisch faellt in sie und nicht in die kleinste.**
@@ -87,7 +88,7 @@
 use regex::Regex;
 use serde::Deserialize;
 
-use super::{Baustein, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile, Zeile};
+use super::{Anzeige, Baustein, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile, Zeile};
 
 // ---------------------------------------------------------------------------
 // Die Gestalt der Datei
@@ -257,6 +258,39 @@ pub struct Juengstedatei {
     /// Kappung erreicht, statt schon am Zahlenbereich zu scheitern und die
     /// ganze Datei als beschaedigt dastehen zu lassen.
     pub anzahl: u64,
+    /// Ob Titel oder Aenderungsdatum dastehen. Fehlt er, sind es Titel.
+    ///
+    /// **Hier faellt die Wahl anders aus als bei `anzahl`**: ein Wert, den es
+    /// nicht gibt, wird nicht auf den naechstbesten gebracht, sondern kostet
+    /// die ganze Datei. Eine ueberhoehte Zahl ist eine Angabe, die mehr
+    /// verlangt, als die Zusammenfassung hergibt; `zeigt = "titelchen"` ist
+    /// keine Angabe, sondern ein Vertipper, und den still auf „titel" zu
+    /// bringen hiesse, dem Nutzer etwas anderes zu zeigen, als er geschrieben
+    /// hat.
+    pub zeigt: Option<Anzeigedatei>,
+}
+
+/// Der Wert des Schluessels `zeigt`, wie er in der Datei steht.
+///
+/// **Ein eigener Typ neben [`Anzeige`] und nicht dieser selbst**: `serde`
+/// wohnt in dieser Datei und nicht im Elternmodul, so wie das uebersetzte
+/// Muster dort wohnt und die Zeichenkette hier. Der Preis ist eine
+/// Zuordnung ([`anzeige`]), und sie ist vollstaendig ohne Auffangzweig — ein
+/// dritter Wert haelt den Bau dort an.
+///
+/// **Ein Wert, den es nicht gibt, kostet die ganze Datei** (C1.6, die weiteste
+/// der drei Reichweiten): `serde` bringt den Text dann nicht in diese Gestalt,
+/// und seine Meldung nennt den Schluessel und die zwei erwarteten Namen. Das
+/// ist dieselbe Reichweite wie bei einem verschriebenen Bausteintisch, und aus
+/// demselben Grund — die Zeile ist nicht zu retten, indem man raet, was
+/// gemeint war.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Anzeigedatei {
+    /// `zeigt = "titel"`.
+    Titel,
+    /// `zeigt = "datum"`.
+    Datum,
 }
 
 /// Der Tisch `feld`.
@@ -371,6 +405,7 @@ fn baustein_pruefen(baustein: Bausteindatei) -> Result<Baustein, String> {
             ort: ortsangabe_ohne_platzhalter(juengste.ordner.as_deref(), "juengste")?,
             muster: wahlfreies_muster(juengste.muster.as_deref())?,
             anzahl: gekappte_anzahl(juengste.anzahl),
+            zeigt: anzeige(juengste.zeigt),
         }),
         Bausteindatei::Feld(feld) => Ok(Baustein::Feld {
             ort: ortsangabe_ohne_platzhalter(feld.ordner.as_deref(), "feld")?,
@@ -466,6 +501,19 @@ fn ortsangabe_ohne_platzhalter(angabe: Option<&str>, baustein: &str) -> Result<O
              \u{201e}{baustein}\u{201c} nimmt keinen an: er liest Dateien und braucht dafuer \
              ihren Pfad, den ein zusammengelegter Lesestand nicht traegt"
         )),
+    }
+}
+
+/// Liest den Schluessel `zeigt`, auch wenn er fehlt.
+///
+/// Ohne ihn zeigt der Baustein Titel: das ist die Fassung, die es vor der
+/// Runde 18 allein gab, und eine `readers.toml` von gestern soll zeigen, was
+/// sie gestern gezeigt hat. Die Fallunterscheidung ist vollstaendig und hat
+/// keinen Auffangzweig.
+fn anzeige(angabe: Option<Anzeigedatei>) -> Anzeige {
+    match angabe {
+        None | Some(Anzeigedatei::Titel) => Anzeige::Titel,
+        Some(Anzeigedatei::Datum) => Anzeige::Datum,
     }
 }
 

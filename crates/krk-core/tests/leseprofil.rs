@@ -52,10 +52,11 @@ use krk_core::ablage::leseprofile::AUSLIEFERUNGSTEXT;
 use krk_core::leseprofil::datei::{Profildatei, pruefen};
 use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{
-    Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE, HOECHSTENS_LESELAEUFE,
-    HOECHSTENS_OEFFNUNGEN, Haushalt, Profile, Wert, Zusammenfassung, Zusammenfassungszeile,
-    zusammenfassen, zusammenfassen_gezaehlt,
+    Anzeige, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE,
+    HOECHSTENS_LESELAEUFE, HOECHSTENS_OEFFNUNGEN, Haushalt, Profile, Wert, Zusammenfassung,
+    Zusammenfassungszeile, zusammenfassen, zusammenfassen_gezaehlt,
 };
+use krk_core::verzeichnis::sys::ortszeit;
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze};
@@ -168,10 +169,16 @@ kennzeichen = '^\.fusion-setup$'
             ort,
             muster,
             anzahl,
+            zeigt,
         } => {
             assert_eq!(ort.teile(), ["history"]);
             assert!(muster.is_none(), "ohne Muster zaehlen alle Eintraege");
             assert_eq!(*anzahl, 10);
+            assert_eq!(
+                *zeigt,
+                Anzeige::Titel,
+                "ohne den Schluessel `zeigt` stehen Titel da"
+            );
         }
         anderer => panic!("die zweite Zeile traegt nicht die juengsten: {anderer:?}"),
     }
@@ -632,6 +639,48 @@ fn ein_verschriebener_schluessel_nennt_sich_in_der_meldung() {
             fehler.to_string().contains(gesucht),
             "die Meldung nennt {gesucht:?} nicht: {fehler}"
         );
+    }
+}
+
+/// Ein dritter Wert fuer `zeigt` kostet die ganze Datei, und die Meldung nennt
+/// den Schluessel und die zwei erwarteten Namen.
+///
+/// **Dieselbe Reichweite wie ein verschriebener Bausteintisch**, und aus
+/// demselben Grund: `zeigt = "titelchen"` ist keine Angabe, die mehr verlangt,
+/// als die Zusammenfassung hergibt — dann wuerde gekappt wie bei `anzahl` —,
+/// sondern ein Vertipper. Ihn still auf „titel" zu bringen hiesse, dem Nutzer
+/// etwas anderes zu zeigen, als er geschrieben hat.
+///
+/// Die zwei erwarteten Namen stehen in der Meldung, weil `serde` sie aus der
+/// Aufzaehlung nimmt; der Schluessel steht darin, weil `toml` die Quellzeile
+/// mitliefert. Beides ist die Auskunft, die der Nutzer braucht, um die eine
+/// Stelle zu finden — die Datei liegt danach beiseite, und KRK arbeitet ohne
+/// jedes Profil weiter (C1.6).
+#[test]
+fn ein_dritter_wert_fuer_zeigt_kostet_die_ganze_datei() {
+    let vorspann = "[[profil]]\nname = \"Ein Speicher\"\npfad = 'analyses$'\n\n[[profil.zeile]]\n  beschriftung = \"Eine Zeile\"\n";
+    for wert in ["titelchen", "Datum", ""] {
+        let text = format!("{vorspann}  juengste = {{ anzahl = 1, zeigt = \"{wert}\" }}\n");
+        let fehler = toml::from_str::<Profildatei>(&text)
+            .expect_err("der Wert {wert:?} kommt durch, obwohl es ihn nicht gibt");
+        let meldung = fehler.to_string();
+        for gesucht in ["zeigt", "titel", "datum"] {
+            assert!(
+                meldung.contains(gesucht),
+                "die Meldung zu {wert:?} nennt {gesucht:?} nicht: {meldung}"
+            );
+        }
+    }
+
+    // Die zwei, die es gibt, kommen durch, und der Schluessel darf fehlen.
+    for zeile in [
+        "  juengste = { anzahl = 1, zeigt = \"titel\" }\n",
+        "  juengste = { anzahl = 1, zeigt = \"datum\" }\n",
+        "  juengste = { anzahl = 1 }\n",
+    ] {
+        let (profile, meldungen) = gepruefte(&format!("{vorspann}{zeile}"));
+        assert!(meldungen.is_empty(), "{zeile:?} meldet: {meldungen:?}");
+        assert_eq!(profile.zahl(), 1, "{zeile:?} laesst kein Profil uebrig");
     }
 }
 
@@ -1225,6 +1274,236 @@ fn die_juengsten_stehen_nach_aenderungsdatum_und_tragen_ihre_titel() {
     );
 }
 
+/// `zeigt = "datum"` liefert ein Kalenderdatum und oeffnet dabei keine Datei.
+///
+/// **Die Zahl ist das erste der Abnahmekriterien**, und sie ist eine Null: der
+/// Zeitpunkt steht in `Eintrag::geaendert`, das der Verzeichnisleselauf
+/// ohnehin liefert. Die Datumsform ist damit billiger als die Titelform, die
+/// fuer dieselbe eine Zeile eine Oeffnung braucht — die zweite Haelfte der
+/// Probe zaehlt sie daneben, denn eine Null ohne die Eins daneben belegte
+/// nicht, dass hier ueberhaupt etwas zu sparen war.
+///
+/// **Die erwartete Zeichenkette kommt aus [`ortszeit`] und steht nicht im
+/// Quelltext.** Eine feste Zahl darin waere die Zeitzone des Geraets, auf dem
+/// die Probe geschrieben wurde; dieselbe Wahl trifft
+/// `tests/operation.rs::das_msdos_feld_traegt_die_ortszeit_des_quelldatums`.
+/// Die **Form** dagegen steht hier ausgeschrieben, denn sie ist die Zusage.
+#[test]
+fn zeigt_datum_liefert_ein_kalenderdatum_und_oeffnet_keine_datei() {
+    let ordner = werkbankgestalt("zeigt-datum");
+    let juengster = 1_700_000_000 + 3 * 60;
+
+    let (zusammenfassung, haushalt) = gezaehlt(
+        &circleprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Zuletzt geschrieben"
+  juengste = { ordner = "history", anzahl = 1, zeigt = "datum" }
+"#,
+        ),
+        ordner.pfad(),
+    );
+
+    assert_eq!(
+        werte(&zusammenfassung)[0].1,
+        &Wert::Text(kalendertext(juengster)),
+        "das Datum des juengsten Eintrags steht nicht da"
+    );
+    assert_eq!(
+        haushalt.oeffnungen(),
+        0,
+        "die Datumsform oeffnet eine Datei"
+    );
+
+    // Die Titelform daneben, einmal ausgeschrieben und einmal weggelassen. Eine
+    // Null ohne die Eins daneben belegte nicht, dass hier ueberhaupt etwas zu
+    // sparen war, und ein ausgeschriebenes `zeigt = "titel"` muss dasselbe
+    // liefern wie eine `readers.toml`, die den Schluessel nicht kennt.
+    let titelzeile = |zeigt: &str| {
+        gezaehlt(
+            &circleprofil(&format!(
+                r#"
+  [[profil.zeile]]
+  beschriftung = "Zuletzt geschrieben"
+  juengste = {{ ordner = "history", anzahl = 1{zeigt} }}
+"#
+            )),
+            ordner.pfad(),
+        )
+    };
+    let (ausgeschrieben, mit_titel) = titelzeile(r#", zeigt = "titel""#);
+    let (weggelassen, ohne_zeigt) = titelzeile("");
+
+    assert_eq!(
+        mit_titel.oeffnungen(),
+        1,
+        "dieselbe Zeile kostet als Titelform eine Oeffnung"
+    );
+    assert_eq!(
+        werte(&ausgeschrieben),
+        werte(&weggelassen),
+        "`zeigt = \"titel\"` liefert etwas anderes als eine Zeile ohne den Schluessel"
+    );
+    assert_eq!(
+        mit_titel, ohne_zeigt,
+        "`zeigt = \"titel\"` kostet etwas anderes als eine Zeile ohne den Schluessel"
+    );
+}
+
+/// Die Form ist `JJJJ-MM-TT HH:MM`, und sie haengt an keiner
+/// Spracheinstellung.
+///
+/// Sechzehn Zeichen, vier Trenner an festen Stellen, sonst nur Ziffern. Der
+/// Nutzerentscheid vom 260825-1740 nennt genau diese Form: sie ist eindeutig,
+/// sortiert sich von selbst und entsteht ohne AppKit. Ohne diese Probe
+/// belegte die Probe darueber allein, dass zwei Wege dieselbe Zeichenkette
+/// bauen, und nicht, wie sie aussieht.
+#[test]
+fn die_datumsform_traegt_vier_zahlen_an_festen_stellen() {
+    let ordner = werkbankgestalt("datumsform");
+    let zusammenfassung = zusammengefasst(
+        &circleprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Zuletzt geschrieben"
+  juengste = { ordner = "history", anzahl = 1, zeigt = "datum" }
+"#,
+        ),
+        ordner.pfad(),
+    );
+    let Wert::Text(datum) = werte(&zusammenfassung)[0].1 else {
+        panic!(
+            "die Zeile traegt keinen Text: {:?}",
+            werte(&zusammenfassung)[0].1
+        )
+    };
+
+    let zeichen: Vec<char> = datum.chars().collect();
+    assert_eq!(
+        zeichen.len(),
+        16,
+        "{datum:?} ist nicht sechzehn Zeichen lang"
+    );
+    for (stelle, erwartet) in [(4, '-'), (7, '-'), (10, ' '), (13, ':')] {
+        assert_eq!(
+            zeichen[stelle], erwartet,
+            "an Stelle {stelle} steht in {datum:?} nicht {erwartet:?}"
+        );
+    }
+    for stelle in [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15] {
+        assert!(
+            zeichen[stelle].is_ascii_digit(),
+            "an Stelle {stelle} steht in {datum:?} keine Ziffer"
+        );
+    }
+}
+
+/// Ein Ordner, der **nur Ordner** enthaelt, liefert ein Datum und nicht den
+/// Platzhalter.
+///
+/// Das ist die zweite der drei Festlegungen des Nutzerentscheids und die
+/// Bedingung dafuer, dass `fusion-workbench/archive` ueberhaupt antworten
+/// kann: dort liegen die Archivlaeufe als Ordner. Die Titelform sieht
+/// denselben Ordner leer, und das bleibt richtig — sie liest Dateien.
+#[test]
+fn ein_ordner_aus_lauter_ordnern_liefert_ein_datum_und_keinen_titel() {
+    let ordner = Pruefordner::neu("nur-ordner");
+    ordner.datei("_t_circle.md", "# Eine Runde\n");
+    let archive = ordner.ordner("archive");
+    for name in [
+        "260819-1613-safe-cleanup-tier-1",
+        "260820-2115-safe-cleanup-tier-1",
+    ] {
+        std::fs::create_dir(archive.join(name)).expect("der Archivlauf laesst sich nicht anlegen");
+    }
+
+    let zusammenfassung = zusammengefasst(
+        &circleprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Zuletzt archiviert"
+  juengste = { ordner = "archive", anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Der juengste Lauf"
+  juengste = { ordner = "archive", anzahl = 1 }
+"#,
+        ),
+        ordner.pfad(),
+    );
+    let werte = werte(&zusammenfassung);
+
+    assert!(
+        matches!(werte[0].1, Wert::Text(_)),
+        "die Datumsform sieht die Ordner nicht: {:?}",
+        werte[0].1
+    );
+    assert_eq!(
+        werte[1].1,
+        &Wert::Nicht,
+        "die Titelform nimmt weiter allein Eintraege vom Typ Datei"
+    );
+}
+
+/// Mehrere Daten stehen untereinander unter ihrer Beschriftung, ein einzelnes
+/// daneben.
+///
+/// **Ohne eine neue Regel in `als_text`**: die vorhandene entscheidet am
+/// Zeilenumbruch, und deshalb ist der Wert [`Wert::Text`] und kein siebter
+/// Wert. Die Probe nimmt beide Lagen an einem Lauf ab, denn es ist eine Regel
+/// und nicht zwei.
+#[test]
+fn drei_daten_stehen_untereinander_und_eines_daneben() {
+    let ordner = werkbankgestalt("drei-daten");
+    let zusammenfassung = zusammengefasst(
+        &circleprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Die juengsten drei"
+  juengste = { ordner = "history", anzahl = 3, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Zuletzt geschrieben"
+  juengste = { ordner = "history", anzahl = 1, zeigt = "datum" }
+"#,
+        ),
+        ordner.pfad(),
+    );
+
+    let drei = [3, 2, 1].map(|nummer| kalendertext(1_700_000_000 + nummer * 60));
+    assert_eq!(
+        werte(&zusammenfassung)[0].1,
+        &Wert::Text(drei.join("\n")),
+        "die drei Daten stehen nicht in der Reihenfolge des Aenderungsdatums"
+    );
+
+    let text = zusammenfassung.als_text();
+    assert!(
+        text.contains(&format!(
+            "Die juengsten drei:\n    {}\n    {}\n    {}",
+            drei[0], drei[1], drei[2]
+        )),
+        "die drei Daten stehen nicht eingerueckt unter ihrer Beschriftung: {text}"
+    );
+    assert!(
+        text.contains(&format!("Zuletzt geschrieben: {}", drei[0])),
+        "das einzelne Datum steht nicht neben seiner Beschriftung: {text}"
+    );
+}
+
+/// Ein Zeitpunkt, wie ihn die Datumsform schreibt.
+///
+/// Sie rechnet ueber [`ortszeit`] und nicht ueber eine feste Zahl: die Probe
+/// soll in jeder Zone dieselbe Aussage machen wie die Auswertung.
+fn kalendertext(seit_epoche: u64) -> String {
+    let zeit = ortszeit(SystemTime::UNIX_EPOCH + Duration::from_secs(seit_epoche))
+        .expect("der Pruefzeitpunkt laesst sich nicht in Ortszeit umrechnen");
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}",
+        zeit.jahr, zeit.monat, zeit.tag, zeit.stunde, zeit.minute
+    )
+}
+
 /// C3.7 bis C3.9: der Feldbaustein zieht drei Felder aus einer JSON-Zeile und
 /// einen Absatz ueber mehrere Zeilen aus einem Markdown-Datensatz.
 #[test]
@@ -1721,7 +2000,9 @@ fn der_text_setzt_einzeilige_werte_hinter_und_mehrzeilige_unter_die_beschriftung
 /// den Platzhalter, die juengsten N den Platzhalter.
 ///
 /// Alle drei stehen in **einer** Probe, weil sie sich einen Ordner mit gut
-/// zweitausend Eintraegen teilen; drei Proben legten ihn dreimal an.
+/// zweitausend Eintraegen teilen; drei Proben legten ihn dreimal an. Die
+/// juengsten N stehen darin zweimal, einmal je Form: die Abbruchregel haengt
+/// an der Liste und nicht daran, was der Baustein ueber sie zeigt.
 ///
 /// # Warum das Muster des Treffers auf fast jeden Eintrag passt
 ///
@@ -1759,6 +2040,10 @@ fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
   [[profil.zeile]]
   beschriftung = "Die juengsten zehn"
   juengste = { ordner = "viele", anzahl = 10 }
+
+  [[profil.zeile]]
+  beschriftung = "Die juengsten zehn, als Datum"
+  juengste = { ordner = "viele", anzahl = 10, zeigt = "datum" }
 "#,
         ),
         ordner.pfad(),
@@ -1784,6 +2069,11 @@ fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
         werte[3].1,
         &Wert::Nicht,
         "die juengsten zehn einer Teilliste sind nicht die juengsten zehn"
+    );
+    assert_eq!(
+        werte[4].1,
+        &Wert::Nicht,
+        "auch als Datum sind die juengsten zehn einer Teilliste nicht die juengsten zehn"
     );
 }
 

@@ -106,7 +106,9 @@
 //!   den Platzhalter, wenn es keinen gefunden hat. Ein Nichtfund in einer
 //!   Teilliste ist kein Nichtvorhandensein.
 //! - Die juengsten N liefern den Platzhalter. Die juengsten zehn einer
-//!   Teilliste sind nicht die juengsten zehn.
+//!   Teilliste sind nicht die juengsten zehn. Das gilt fuer **beide** Formen
+//!   des Bausteins: ein Datum ist so wenig das juengste wie ein Titel, wenn
+//!   die Liste, aus der es stammt, abgeschnitten war.
 //!
 //! Der Rueckgriff auf den Platzhalter statt auf eine negative Antwort ist
 //! derselbe, den [`crate::verzeichnis::sys::ist_deskriptormangel`] seit der
@@ -118,7 +120,9 @@
 //! Platzhalter und keine halbe Antwort. Die juengsten N nehmen ihre Oeffnungen
 //! deshalb **in einem Zug oder gar nicht**: eine Liste aus drei von zehn
 //! Titeln stuende unter der Beschriftung „die juengsten zehn" und laese sich
-//! als „es sind nur drei".
+//! als „es sind nur drei". In ihrer Datumsform stellt sich die Frage nicht,
+//! denn sie oeffnet nichts; derselbe Satz haelt dort den Zeitpunkt, den der
+//! Kalender nicht traegt (siehe [`daten`]).
 //!
 //! # Was ein Name entscheidet und was eine Datei
 //!
@@ -132,8 +136,19 @@
 //!   Grund, aus dem der Durchlauf nicht in sie absteigt: sie fuehrt aus dem
 //!   Ordner heraus, den die Zusammenfassung beschreibt.
 //!
-//! **Dieselbe Naht traegt den Platzhalter**: die zwei, die auf Namen sehen,
-//! nehmen ihn an, die zwei, die Dateien lesen, nicht. Wer eine Datei liest,
+//! **Die Naht liegt am Lesen und nicht am Baustein**, und seit der Runde 18
+//! faellt beides auseinander: die juengsten N in ihrer Datumsform
+//! ([`Anzeige::Datum`]) oeffnen keine Datei, denn der Zeitpunkt steht in
+//! `Eintrag::geaendert`, das der Leselauf ohnehin liefert. Wer nichts liest,
+//! den trifft der Grund nicht, also sieht diese Form Eintraege **jedes Typs**
+//! — und erst damit kann ein Speicher antworten, der Ordner enthaelt. Sie ist
+//! aus demselben Grund **billiger** als die Titelform und nicht teurer.
+//!
+//! **Dieselbe Naht traegt den Platzhalter**, und zwar je Baustein und nicht
+//! je Form: die zwei, die auf Namen sehen, nehmen ihn an, die zwei, die
+//! Dateien lesen, nicht — `juengste` auch in seiner Datumsform, die keine
+//! liest. Warum die Ausnahme zurueckgestellt und nicht gebaut ist, steht bei
+//! [`Ortsangabe`]. Wer eine Datei liest,
 //! braucht ihren Pfad, und den traegt ein Lesestand nicht mehr, in dem die
 //! Eintraege mehrerer Ordner zusammenliegen. Abgewiesen wird das beim Laden
 //! (`datei::ortsangabe_ohne_platzhalter`); [`Lauf::in_einem_ordner`] ist die
@@ -168,16 +183,18 @@
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::time::SystemTime;
 
 use regex::Regex;
 
 use crate::text::datei::anlesen;
 use crate::verzeichnis::leser::{self, Lesestand};
+use crate::verzeichnis::sys::ortszeit;
 use crate::verzeichnis::{Eintrag, Typ};
 
 use super::erkennung::erkennen;
 use super::{
-    Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, Haushalt, Ortsangabe, Profile, Wert,
+    Anzeige, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, Haushalt, Ortsangabe, Profile, Wert,
     Zusammenfassung, Zusammenfassungszeile,
 };
 
@@ -562,9 +579,10 @@ impl<'w> Lauf<'w> {
                 ort,
                 muster,
                 anzahl,
+                zeigt,
             } => self
                 .in_einem_ordner(ort, |pfad, stand| {
-                    self.juengste(pfad, stand, muster.as_ref(), *anzahl)
+                    self.juengste(pfad, stand, muster.as_ref(), *anzahl, *zeigt)
                 })
                 .unwrap_or(Wert::Nicht),
             Baustein::Feld {
@@ -580,7 +598,17 @@ impl<'w> Lauf<'w> {
         }
     }
 
-    /// B2: die N Eintraege mit dem juengsten Aenderungsdatum, je mit Titel.
+    /// B2: die N Eintraege mit dem juengsten Aenderungsdatum.
+    ///
+    /// **Welche es sind, haengt nicht an [`Anzeige`]** — die Reihenfolge, die
+    /// Kappung auf N und die Abbruchregel sind fuer beide Formen dieselben.
+    /// Woran es haengt, ist dreierlei: welche Eintraege ueberhaupt in Frage
+    /// kommen, was gebucht wird und welcher [`Wert`] herauskommt. Alle drei
+    /// folgen aus dem einen Unterschied, dass [`Anzeige::Titel`] Dateien liest
+    /// und [`Anzeige::Datum`] nicht.
+    ///
+    /// `ordner` braucht deshalb allein die Titelform: sie baut aus ihm und
+    /// dem Eintragsnamen den Pfad, den sie oeffnet.
     #[must_use = "der Wert ist die Antwort dieser Profilzeile"]
     fn juengste(
         &self,
@@ -588,6 +616,7 @@ impl<'w> Lauf<'w> {
         stand: &Lesestand,
         muster: Option<&Regex>,
         anzahl: u8,
+        zeigt: Anzeige,
     ) -> Wert {
         if stand.abgeschnitten {
             return Wert::Nicht;
@@ -595,7 +624,12 @@ impl<'w> Lauf<'w> {
         let mut kandidaten: Vec<&Eintrag> = stand
             .eintraege
             .iter()
-            .filter(|eintrag| eintrag.typ == Typ::Datei)
+            .filter(|eintrag| match zeigt {
+                // Wer eine Datei liest, nimmt allein Dateien; wer nichts
+                // liest, den trifft der Grund nicht. Siehe den Modulkopf.
+                Anzeige::Titel => eintrag.typ == Typ::Datei,
+                Anzeige::Datum => true,
+            })
             .filter(|eintrag| muster.is_none_or(|muster| muster.is_match(&eintrag.name)))
             .collect();
         // Absteigend nach Aenderungsdatum, bei gleichem Zeitpunkt aufsteigend
@@ -612,17 +646,22 @@ impl<'w> Lauf<'w> {
         if kandidaten.is_empty() {
             return Wert::Nicht;
         }
-        // In einem Zug oder gar nicht, siehe den Modulkopf.
-        let wie_viele = u32::try_from(kandidaten.len()).unwrap_or(u32::MAX);
-        if !self.buchen(|haushalt| haushalt.oeffnungen_nehmen(wie_viele)) {
-            return Wert::Nicht;
+        match zeigt {
+            Anzeige::Titel => {
+                // In einem Zug oder gar nicht, siehe den Modulkopf.
+                let wie_viele = u32::try_from(kandidaten.len()).unwrap_or(u32::MAX);
+                if !self.buchen(|haushalt| haushalt.oeffnungen_nehmen(wie_viele)) {
+                    return Wert::Nicht;
+                }
+                Wert::Titel(
+                    kandidaten
+                        .iter()
+                        .map(|eintrag| titel(&ordner.join(&eintrag.name), &eintrag.name))
+                        .collect(),
+                )
+            }
+            Anzeige::Datum => daten(&kandidaten),
         }
-        Wert::Titel(
-            kandidaten
-                .iter()
-                .map(|eintrag| titel(&ordner.join(&eintrag.name), &eintrag.name))
-                .collect(),
-        )
     }
 
     /// B3: die erste Fanggruppe des ersten Treffers im Inhalt einer Datei.
@@ -699,6 +738,58 @@ fn vorhandensein(stand: &Lesestand, muster: &Regex) -> Wert {
         return Wert::Nicht;
     }
     Wert::Vorhanden(false)
+}
+
+// ---------------------------------------------------------------------------
+// Aus Zeitpunkten ein Kalendertext
+// ---------------------------------------------------------------------------
+
+/// Die Aenderungsdaten der Kandidaten, untereinander.
+///
+/// **Ein Wert und nicht N**, wie ihn [`Wert::Titel`] traegt: `als_text`
+/// entscheidet am Zeilenumbruch, ob ein Wert unter seine Beschriftung rutscht,
+/// und ein einzelnes Datum steht damit von selbst daneben, mehrere von selbst
+/// darunter. Eine zweite Regel dafuer entsteht nicht.
+///
+/// **Ein Zeitpunkt, den der Kalender nicht traegt, kostet die ganze Zeile**
+/// und nicht nur seine eigene. Das ist derselbe Satz, den die Titelform mit
+/// ihren Oeffnungen haelt: eine Liste, in der einer der Eintraege fehlt oder
+/// mit einem Ersatztext dasteht, laese sich unter der Beschriftung „die
+/// juengsten drei" falsch. Der Fall ist die dritte Lage des Platzhalters aus
+/// C3.12 — hier ist nichts zu sagen.
+#[must_use = "der Wert ist die Antwort dieser Profilzeile"]
+fn daten(kandidaten: &[&Eintrag]) -> Wert {
+    let mut zeilen = Vec::with_capacity(kandidaten.len());
+    for eintrag in kandidaten {
+        let Some(text) = kalendertext(eintrag.geaendert) else {
+            return Wert::Nicht;
+        };
+        zeilen.push(text);
+    }
+    Wert::Text(zeilen.join("\n"))
+}
+
+/// Ein Zeitpunkt als `JJJJ-MM-TT HH:MM` in buergerlicher Ortszeit.
+///
+/// **Ohne Abhaengigkeit von der Spracheinstellung**, und das ist der
+/// Unterschied zu dem kurzen Format, das die Metadatenanzeige derselben
+/// Vorschauflaeche ueber einen `NSDateFormatter` zeigt: diese Form ist
+/// eindeutig, sortiert sich von selbst und entsteht ohne AppKit, das von
+/// `krk-core` aus nicht erreichbar ist. Die beiden erscheinen nie zusammen,
+/// denn ein Ordner zeigt entweder seine Metadaten oder seine Zusammenfassung.
+///
+/// Die Sekunde faellt weg: sie beantwortet keine Frage, die jemand an eine
+/// Zusammenfassung stellt, und macht die Zeile um drei Zeichen laenger.
+///
+/// `None` heisst, dass der Zeitpunkt sich nicht in einen Kalendertag
+/// uebersetzen laesst; siehe [`ortszeit`].
+#[must_use = "die Zeitangabe ist die halbe Antwort dieser Profilzeile"]
+fn kalendertext(zeitpunkt: SystemTime) -> Option<String> {
+    let zeit = ortszeit(zeitpunkt)?;
+    Some(format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}",
+        zeit.jahr, zeit.monat, zeit.tag, zeit.stunde, zeit.minute
+    ))
 }
 
 // ---------------------------------------------------------------------------
