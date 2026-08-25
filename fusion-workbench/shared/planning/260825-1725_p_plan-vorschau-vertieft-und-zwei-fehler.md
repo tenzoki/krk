@@ -339,7 +339,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - Ein Ordner, den der Nutzer nie anzeigt, kostet weiter keinen Leselauf.
      - `make check` grün.
 
-8. **Die Auslieferungsfassung führt acht Profile**
+8. [DONE] **Die Auslieferungsfassung führt acht Profile**
    - Executor: `ontocoder`
    - Files: `resources/default-readers.toml`
    - Changes: Aus fünf Profilen werden acht. Die drei neuen und die eine Erweiterung:
@@ -364,6 +364,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - An der Werkbank dieses Vorhabens: `circles/` zeigt sechs Zustandszahlen, deren Summe der Zeile „Runden" entspricht, und eine Zahl offener Defekte, die gegen `find fusion-workbench/circles/*/issues -maxdepth 1 -name '*_o_*.md' | wc -l` aufgeht. `shared/` zeigt zehn Paare aus Zahl und Datum. `archive/` zeigt die Zahl der Läufe und das Datum des jüngsten.
      - Jedes der acht Profile bleibt unter zwölf Leseläufen und unter vierundzwanzig Dateiöffnungen. Nachgemessen wird das in Schritt 10 und hier nur behauptet.
      - `make check` grün.
+   - **Nachtrag 260825-2051, Umsetzung. Es sind zwölf Profile geworden und nicht acht**, auf einen zweiten Teil, den der Nutzer am 260825-2020 nach der Freigabe hinzugefügt hat: neben den acht für fusion stehen vier für eine flight-Werkbank (die Wurzel, ein Speicher, der Ablagespeicher, das Verzeichnis darüber). flight ist derselbe Zuschnitt ohne Runden und ohne Zustandsmarker; die eine Ausnahme beim Speicherprofil ist `archive`, das Läufe als Ordner führt. Das Vorbild liegt unter `/Users/k1/Projects/productive/example/` und ist allein gelesen worden. Alle sechs Abnahmekriterien halten, sinngemäß auf zwölf gezogen und an beiden Bäumen gemessen: die Summe der sechs Zustände ist 19 wie die Zeile „Runden", und die Defektzeile zeigt 116 wie das `find`. **Die Profilzahl stand an vier Stellen und nicht an einer**, also sind neben `ablage/leseprofile.rs` auch `tests/ablage.rs` und `tests/leseprofil.rs` nachgezogen worden, je eine Zahl; die vier Prosastellen haben ihre Zahl verloren statt einer neuen. Abgelegt als `shared/issues/260825-2044_*_die-zeile-projekt-der-werkbankprofile-haengt-an-einem-feld-das-fusion-nicht-mehr-schreibt.md`: `setup_pwd` schreibt fusion seit einer Fassung zwischen 8.1.0 und 10.7.0 nicht mehr, und die Zeile „Projekt" kann an einer heutigen Werkbank nie antworten. Der Verlauf steht in `shared/history/260825-2051-ontocoder-zwoelf-leseprofile-fuer-fusion-und-flight.md`.
 
 9. **Der Weg zu einer neuen Profildatei steht im `README.md`**
    - Executor: `coder`

@@ -2237,7 +2237,7 @@ fn ausgelieferte() -> Profile {
         meldungen.is_empty(),
         "die Auslieferungsfassung wird beanstandet: {meldungen:?}"
     );
-    assert_eq!(profile.zahl(), 5, "es sind nicht die fuenf Profile");
+    assert_eq!(profile.zahl(), 12, "es sind nicht die zwoelf Profile");
     profile
 }
 

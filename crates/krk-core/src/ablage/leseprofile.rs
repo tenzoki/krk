@@ -14,8 +14,10 @@
 //! Der Weg ist derselbe: die Auslieferungsfassung steht einkompiliert da, wird
 //! beim ersten Start **woertlich** geschrieben und danach von KRK nie wieder
 //! angefasst. Der Grund ist derselbe: `serde` kennt keine Kommentare, und die
-//! rund 180 Kommentarzeilen der Auslieferungsfassung sind der Zweck der Datei
-//! und nicht ihre Verzierung — sie nennen die vier Bausteinnamen, die
+//! Kommentarzeilen der Auslieferungsfassung sind der Zweck der Datei
+//! und nicht ihre Verzierung — wie viele es sind, sagt der Dateibestand und
+//! nicht diese Zeile, denn die Zahl waechst mit jedem Profil. Sie nennen die
+//! vier Bausteinnamen, die
 //! Vorrangregel der Erkennung und die Zahlen des Haushalts. Eine
 //! Serialisierung von [`Profile`] hinterliesse sie ohne all das.
 //!
@@ -68,7 +70,7 @@ use crate::leseprofil::{Profile, datei};
 
 /// Die Auslieferungsfassung der Leseprofile, in das Programm einkompiliert.
 ///
-/// Damit gibt es keinen Start ohne die fuenf mitgelieferten Profile, und die
+/// Damit gibt es keinen Start ohne die mitgelieferten Profile, und die
 /// Anlage beim ersten Start braucht keinen Zugriff auf das Buendel. Dieselbe
 /// Ueberlegung traegt [`super::einstellungen::AUSLIEFERUNGSTEXT`].
 pub const AUSLIEFERUNGSTEXT: &str = include_str!("../../../../resources/default-readers.toml");
@@ -175,8 +177,8 @@ mod tests {
         );
         assert_eq!(
             profile.zahl(),
-            5,
-            "die Auslieferungsfassung fuehrt nicht mehr die fuenf mitgelieferten Profile"
+            12,
+            "die Auslieferungsfassung fuehrt nicht mehr die zwoelf mitgelieferten Profile"
         );
     }
 }

@@ -16,8 +16,13 @@
 # Vorschaufenster sonst seine Metadaten, also Größe, Änderungsdatum, Rechte und
 # Typ. Trifft ein Profil auf diesen Ordner zu, stehen dort stattdessen die
 # Zeilen des Profils. Trifft keines zu, bleibt die Metadatenanzeige, wie sie
-# war. Die fünf Profile unten beschreiben die Werkbank von fusion; wer mit
-# fusion nicht arbeitet, kann sie ersetzen und verliert nichts.
+# war.
+#
+# Die Profile unten beschreiben zwei Werkbänke. Die von fusion, das seine
+# Arbeit in Runden schneidet und den Stand jedes Datensatzes als Marker im
+# Dateinamen trägt, und die von flight, das dieselben Arten von Datensätzen
+# flach an der Wurzel führt und keine Marker kennt. Wer mit keinem von beiden
+# arbeitet, kann alle Profile ersetzen und verliert nichts.
 #
 # Geändert wird die Datei bei ausgeschaltetem KRK, oder die Änderung wirkt erst
 # beim nächsten Start: KRK liest sie einmal und beobachtet sie nicht.
@@ -30,8 +35,8 @@
 # sondern die GANZE DATEI. Sie gilt dann als beschädigt, KRK legt sie beiseite
 # und arbeitet ohne jedes Profil weiter; die Meldung darüber steht beim Start in
 # der Statuszeile und nennt den Schlüssel. Wer `zahlung` statt `zaehlung` oder
-# `feldmusster` statt `feldmuster` schreibt, verliert also alle fünf
-# Zusammenfassungen und nicht bloß eine Zeile.
+# `feldmusster` statt `feldmuster` schreibt, verliert also jede Zusammenfassung
+# dieser Datei und nicht bloß eine Zeile.
 #
 # Drei Reichweiten gibt es, und diese ist die weiteste:
 #
@@ -44,9 +49,10 @@
 #   3. Eine Zeile verliert ihren Baustein und behält ihre Beschriftung — sie
 #      nennt nicht genau einen der vier Bausteine, ein Muster darin lässt sich
 #      nicht übersetzen, das `feldmuster` trägt nicht genau eine Fanggruppe,
-#      oder der `ordner` führt aus dem erkannten Ordner heraus. Die Zeile zeigt
-#      dann ihre Beschriftung und den Platzhalter `--`, die übrigen Zeilen
-#      stimmen weiter.
+#      der `ordner` führt aus dem erkannten Ordner heraus, oder er trägt einen
+#      Platzhalter an einem Baustein, der keinen annimmt. Die Zeile zeigt dann
+#      ihre Beschriftung und den Platzhalter `--`, die übrigen Zeilen stimmen
+#      weiter.
 
 # ----------------------------------------------------------------------------
 # Der Aufbau: Profil, Zeile, genau ein Baustein
@@ -75,6 +81,39 @@
 # Zusammenfassung liest nie außerhalb des Ordners, über den sie spricht.
 
 # ----------------------------------------------------------------------------
+# Der Platzhalter in der Ortsangabe
+# ----------------------------------------------------------------------------
+#
+# GENAU EIN Stück der Ortsangabe darf `*` sein und lässt damit einen Namen
+# offen. `ordner = "*"` meint jeden Unterordner des erkannten Ordners,
+# `ordner = "*/issues"` den Unterordner `issues` in jedem von ihnen. Die
+# Einträge aller getroffenen Ordner liegen danach in EINER Lesung.
+#
+# Damit beantwortet eine Zeile eine Frage über den ganzen Bestand einer Ebene
+# darunter, ohne dass ihre Kosten mit dem Bestand wachsen: das Verzeichnis
+# aller Runden zählt seine Zustände so, gleich ob es zwanzig Runden führt oder
+# zweihundert.
+#
+# Vier Dinge gehören dazu, jedes mit seinem Grund:
+#
+#   - HÖCHSTENS EINER. Zwei Platzhalter werden beim Laden abgewiesen. Mit einem
+#     ist die Form der Kosten aus dem Profil ablesbar — ein Lauf über den
+#     Ordner vor dem Platzhalter, dann einer je Treffer —, mit zweien stünde sie
+#     erst am Bestand fest.
+#   - ER GREIFT ALLEIN ORDNER. Eine Verknüpfung an seiner Stelle wird
+#     übergangen, aus demselben Grund, aus dem eine Zusammenfassung nie
+#     außerhalb ihres Ordners liest: eine Verknüpfung führt heraus.
+#   - `juengste` UND `feld` NEHMEN IHN NICHT AN. Beide lesen Dateien und
+#     brauchen dafür deren Pfad, und den trägt eine Lesung nicht mehr, in der
+#     die Einträge mehrerer Ordner zusammenliegen. Abgewiesen wird beim Laden;
+#     die Zeile behält ihre Beschriftung. Für `juengste` gilt das auch in
+#     seiner Datumsform, die gar keine Datei liest — die Grenze steht am
+#     Baustein, damit sie an einer Stelle abzulesen bleibt.
+#   - EIN STERN IM NAMEN IST EIN NAME. Offen ist der Name nur, wenn das ganze
+#     Stück aus dem Stern besteht. Ein Ordner, der `*` heißt, ist als Ort damit
+#     nicht mehr benennbar, und das ist der Preis dieser Form.
+
+# ----------------------------------------------------------------------------
 # Die vier Bausteine
 # ----------------------------------------------------------------------------
 #
@@ -86,14 +125,31 @@
 #   beschriftung = "Offene Defekte"
 #   zaehlung = { ordner = "issues", muster = '_o_.*\.md$' }
 #
-# `juengste` — die `anzahl` Dateien mit dem jüngsten Änderungsdatum, jede mit
-# ihrem Titel. Der Titel ist die erste nicht leere Zeile der Datei; ein
-# führendes `#` und die Leerzeichen dahinter fallen weg. Eine leere oder nicht
-# lesbare Datei zeigt ihren Dateinamen.
+# `juengste` — die `anzahl` Einträge mit dem jüngsten Änderungsdatum. Was über
+# jeden von ihnen dasteht, sagt `zeigt`:
+#
+#   `zeigt = "titel"` (die Vorgabe, wenn der Schlüssel fehlt) zeigt den Titel
+#   jeder Datei. Der Titel ist ihre erste nicht leere Zeile; ein führendes `#`
+#   und die Leerzeichen dahinter fallen weg. Eine leere oder nicht lesbare Datei
+#   zeigt ihren Dateinamen. Diese Form ÖFFNET JEDE DATEI und sieht deshalb
+#   allein Einträge vom Typ Datei.
+#
+#   `zeigt = "datum"` zeigt stattdessen das Änderungsdatum in der Form
+#   `JJJJ-MM-TT HH:MM`, in bürgerlicher Ortszeit. Diese Form ÖFFNET NICHTS —
+#   das Datum steht ohnehin in jedem gelesenen Eintrag — und sieht deshalb
+#   Einträge JEDES TYPS. Nur so kann ein Speicher antworten, der Ordner
+#   enthält, etwa `archive/`.
+#
+#   Ein dritter Wert für `zeigt` kostet die ganze Datei, wie jeder Schlüssel,
+#   den es nicht gibt.
 #
 #   [[profil.zeile]]
 #   beschriftung = "Die jüngsten zehn"
 #   juengste = { ordner = "history", muster = '\.md$', anzahl = 10 }
+#
+#   [[profil.zeile]]
+#   beschriftung = "Zuletzt abgelegt"
+#   juengste = { anzahl = 1, zeigt = "datum" }
 #
 # `feld` — die erste Fanggruppe des ersten Treffers im Inhalt einer Datei.
 # `datei` sucht die Datei über ihren Namen, `feldmuster` greift den Wert und
@@ -102,8 +158,8 @@
 #
 # Passen mehrere Dateien auf `datei`, gewinnt die erste in der Lesereihenfolge,
 # und die gibt das Dateisystem vor: welche davon es wird, ist nicht zugesagt.
-# Ein `datei`-Muster gehört deshalb an beiden Enden verankert, wie die fünf
-# unten es sind.
+# Ein `datei`-Muster gehört deshalb an beiden Enden verankert, wie die unten es
+# alle sind.
 #
 #   [[profil.zeile]]
 #   beschriftung = "Fassung"
@@ -156,16 +212,30 @@
 #   höchstens 64 KB je gelesener Datei
 #   höchstens 10 bei `anzahl`; eine größere Zahl wird darauf gekappt
 #
-# Der erkannte Ordner wird höchstens einmal gelesen, und jeder Baustein ohne
-# `ordner` benutzt diese eine Lesung. Ein Baustein mit `ordner` kostet genau
-# einen Leselauf, `feld` genau eine Öffnung und `juengste` deren `anzahl`.
+# EIN ORT KOSTET GENAU EINEN LESELAUF, gleich wie viele Zeilen ihn nennen: der
+# erkannte Ordner ebenso wie jeder Unterordner und jeder Platzhalterlauf. Zwei
+# Zeilen über `planning` teilen sich also eine Lesung, und die Zahl der
+# Leseläufe eines Profils ist die Zahl der VERSCHIEDENEN Orte darin.
+#
+# Bei den Öffnungen fällt die Wahl anders aus. `feld` kostet genau eine,
+# `juengste` mit `zeigt = "titel"` deren `anzahl` und mit `zeigt = "datum"`
+# keine; zwei Feldbausteine über derselben Datei öffnen sie zweimal. Ein Ort
+# steht als Ortsangabe im Profil und ist vor jeder Lesung bekannt, welche Datei
+# ein Baustein öffnet, entscheidet dagegen erst sein Muster an den gelesenen
+# Einträgen.
+#
+# Ein Platzhalterlauf bucht EINEN Leselauf und öffnet dabei so viele
+# Verzeichnisse, wie er Treffer hat. Ein Leselauf öffnet damit nicht mehr genau
+# ein Verzeichnis; was eine Zusammenfassung an Systemaufrufen wirklich kostet,
+# steht erst am Profil UND am Bestand. Begrenzt wird die Arbeit deshalb an den
+# gelesenen Einträgen und nicht an den geöffneten Verzeichnissen.
 #
 # Wird eine der Grenzen erreicht, bricht nichts ab: die übrigen Zeilen zeigen
 # ihren Platzhalter `--`. Eine Zählung über 2.000 Einträgen nennt die Zahl der
 # gefundenen Treffer und sagt dazu, dass die Lesung abgebrochen wurde.
 
 # ============================================================================
-# Die Profile
+# Die Profile für eine fusion-Werkbank
 # ============================================================================
 
 # Die Wurzel einer fusion-Werkbank.
@@ -174,6 +244,14 @@
 # Pfadmuster auf `fusion-workbench` träfe jeden Ordner dieses Namens, auch einen
 # leeren, während `.fusion-setup` in einer eingerichteten Werkbank steht und
 # sonst nirgends.
+#
+# Die Zeile „Projekt" steht an einer fusion-Werkbank derzeit leer, und das ist
+# kein Schreibfehler in dieser Datei: sie zieht den Namen aus dem Feld
+# `setup_pwd` von `.fusion-setup`, und fusion schreibt dieses Feld seit einer
+# Fassung zwischen 8.1.0 und 10.7.0 nicht mehr. Sie bleibt trotzdem stehen,
+# weil eine ältere Werkbank das Feld noch trägt und weil sie sich ihre Öffnung
+# mit den zwei Zeilen darunter teilt, also nichts kostet. Bei einer
+# flight-Werkbank ganz unten liefert dieselbe Zeile weiter einen Wert.
 #
 # Die Zeile „Sitzung" hängt an einer Zeilenform von `orchestrator-live.md`, die
 # fusion ändern kann. Ändert fusion sie, zeigt diese eine Zeile ihren
@@ -185,6 +263,14 @@
 # Abschnitts. Eine Zeile, die selbst mit `#` beginnt, gilt dabei als
 # Überschrift und wird nicht gelesen. Ein fehlendes Zeilenende am Dateiende
 # kostet den Wert nicht.
+#
+# DIESE SIEBEN ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
+# „Projektwurzel mit fusion-Werkbank" ganz unten, dort jede mit
+# `fusion-workbench/` vor der Ortsangabe. Wer hier eine Zeile ändert, ändert sie
+# dort mit; nichts hält die beiden Blöcke aneinander. Der Preis ist bewusst
+# gezahlt: eine Vererbung oder eine Vorlage wäre ein neuer Mechanismus, und für
+# zwei Blöcke in einer von Hand gepflegten Datei ist ein Hinweis die angemessene
+# Antwort.
 [[profil]]
 name = "fusion-Werkbank: die Wurzel"
 kennzeichen = '^\.fusion-setup$'
@@ -280,6 +366,24 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
   juengste = { muster = '\.md$', anzahl = 10 }
 
 # Das Verzeichnis aller Runden.
+#
+# Der Zustand einer Runde steht im DATEINAMEN ihres Circle-Datensatzes, also
+# eine Ebene tiefer: `<runde>/_X_circle.md`. Deshalb tragen die sechs
+# Zustandszeilen `ordner = "*"` und zählen über jede Runde hinweg. Alle sechs
+# nennen denselben Ort und teilen sich damit EINEN Leselauf; die Defektzeile
+# nennt `*/issues` und kostet einen zweiten. Zusammen mit der Lesung des
+# Verzeichnisses selbst sind es drei, gleich wie viele Runden darin stehen.
+#
+# SECHS ZEILEN UND NICHT VIER: das Vokabular der Werkbank hat sechs Marker
+# (`_a_` vorgesehen, `_t_` aktiv, `_c_` kohärent geschlossen, `_b_` beschränkt
+# geschlossen, `_s_` überholt, `_d_` zurückgestellt), und dieses Projekt
+# unterscheidet einen beschränkten von einem kohärenten Abschluss ausdrücklich.
+# Die sechs sind überschneidungsfrei und vollständig; ihre Summe geht gegen die
+# Zeile „Runden" auf, und ein siebter Marker würde als Differenz sichtbar. Das
+# Profil einer EINZELNEN Runde weiter unten fasst dieselben sechs Marker zu vier
+# Zeilen zusammen, und das ist kein Widerspruch: dort sagt genau eine Zeile „ja"
+# und die Frage ist, in welchem Zustand diese eine Runde steht, hier ist die
+# Frage, wie viele in jedem Zustand stehen.
 [[profil]]
 name = "fusion-Werkbank: alle Runden"
 pfad = 'fusion-workbench/circles$'
@@ -287,6 +391,152 @@ pfad = 'fusion-workbench/circles$'
   [[profil.zeile]]
   beschriftung = "Runden"
   zaehlung = { }
+
+  [[profil.zeile]]
+  beschriftung = "Vorgesehen"
+  zaehlung = { ordner = "*", muster = '^_a_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Aktiv"
+  zaehlung = { ordner = "*", muster = '^_t_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Kohärent geschlossen"
+  zaehlung = { ordner = "*", muster = '^_c_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Beschränkt geschlossen"
+  zaehlung = { ordner = "*", muster = '^_b_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Überholt"
+  zaehlung = { ordner = "*", muster = '^_s_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Zurückgestellt"
+  zaehlung = { ordner = "*", muster = '^_d_circle\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Offene Defekte, alle Runden"
+  zaehlung = { ordner = "*/issues", muster = '_o_.*\.md$' }
+
+# Der Ablagespeicher.
+#
+# Erkannt über den Pfad und nicht über eine Kennzeichendatei, denn `archive/`
+# trägt keine. Das Muster verlangt, dass `archive` unmittelbar hinter
+# `fusion-workbench` steht, und trifft damit nicht die Speicher INNERHALB eines
+# Ablagelaufs, also nichts unter `archive/<lauf>/shared/`.
+#
+# Ein Ablagelauf ist ein ORDNER, und `zeigt = "datum"` ist die Form von
+# `juengste`, die Einträge jedes Typs sieht. Mit `zeigt = "titel"` stünde hier
+# der Platzhalter, denn dieser Speicher enthält keine Dateien.
+[[profil]]
+name = "fusion-Werkbank: der Ablagespeicher"
+pfad = 'fusion-workbench/archive$'
+
+  [[profil.zeile]]
+  beschriftung = "Läufe"
+  zaehlung = { }
+
+  [[profil.zeile]]
+  beschriftung = "Zuletzt abgelegt"
+  juengste = { anzahl = 1, zeigt = "datum" }
+
+# Der gemeinsame Speicher.
+#
+# Er führt zehn Unterspeicher, und jeder bekommt zwei Zeilen: wie viele
+# Datensätze darin stehen und wann zuletzt einer geschrieben wurde. Zwanzig
+# Zeilen, aber nur ZEHN Leseläufe, denn die zwei Zeilen eines Unterspeichers
+# nennen denselben Ort und teilen sich seine Lesung. Von den zwölf erlaubten
+# Läufen bleiben damit zwei übrig; wer einen elften Unterspeicher aufnimmt,
+# rechnet nach, was er kostet.
+#
+# Die Datumszeilen öffnen keine Datei: `zeigt = "datum"` liest das
+# Änderungsdatum aus dem Verzeichniseintrag, den der Leselauf ohnehin liefert.
+# Dieser Block kostet deshalb null Dateiöffnungen.
+[[profil]]
+name = "fusion-Werkbank: der gemeinsame Speicher"
+pfad = 'fusion-workbench/shared$'
+
+  [[profil.zeile]]
+  beschriftung = "Analysen"
+  zaehlung = { ordner = "analyses", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Analysen, zuletzt"
+  juengste = { ordner = "analyses", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Ideen"
+  zaehlung = { ordner = "backlog", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Ideen, zuletzt"
+  juengste = { ordner = "backlog", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Beratungen"
+  zaehlung = { ordner = "consult", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Beratungen, zuletzt"
+  juengste = { ordner = "consult", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen, zuletzt"
+  juengste = { ordner = "decisions", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Verläufe"
+  zaehlung = { ordner = "history", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Verläufe, zuletzt"
+  juengste = { ordner = "history", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Untersuchungen"
+  zaehlung = { ordner = "investigations", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Untersuchungen, zuletzt"
+  juengste = { ordner = "investigations", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Defekte"
+  zaehlung = { ordner = "issues", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Defekte, zuletzt"
+  juengste = { ordner = "issues", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Notizen"
+  zaehlung = { ordner = "memos", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Notizen, zuletzt"
+  juengste = { ordner = "memos", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Planung"
+  zaehlung = { ordner = "planning", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Planung, zuletzt"
+  juengste = { ordner = "planning", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
+  beschriftung = "Durchsichten"
+  zaehlung = { ordner = "reviews", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Durchsichten, zuletzt"
+  juengste = { ordner = "reviews", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
 # Eine einzelne Runde.
 #
@@ -339,3 +589,172 @@ kennzeichen = '^_._circle\.md$'
   [[profil.zeile]]
   beschriftung = "Die jüngsten zehn Verläufe"
   juengste = { ordner = "history", muster = '\.md$', anzahl = 10 }
+
+# Das Verzeichnis, das eine fusion-Werkbank enthält.
+#
+# Erkannt über den Eintrag `fusion-workbench` darin, also über den Namen und
+# nicht über den Inhalt: welcher Ordner eine Projektwurzel ist, beantwortet der
+# Nutzer damit hier, wo er es ändern kann, und nicht die Anwendung.
+#
+# DIESE SIEBEN ZEILEN SIND DIE DES WURZELPROFILS GANZ OBEN, jede mit
+# `fusion-workbench/` vor der Ortsangabe. Sie stehen zweimal in dieser Datei und
+# können auseinanderlaufen; nichts hält sie aneinander. Wer eine ändert, ändert
+# die andere mit. Der Grund steht oben beim Wurzelprofil.
+[[profil]]
+name = "Projektwurzel mit fusion-Werkbank"
+kennzeichen = '^fusion-workbench$'
+
+  [[profil.zeile]]
+  beschriftung = "Projekt"
+  feld = { ordner = "fusion-workbench", datei = '^\.fusion-setup$', feldmuster = '"setup_pwd":"[^"]*/([^"/]+)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Eingerichtet"
+  feld = { ordner = "fusion-workbench", datei = '^\.fusion-setup$', feldmuster = '"setup_at":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "fusion-Fassung"
+  feld = { ordner = "fusion-workbench", datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Aktive Runde"
+  feld = { ordner = "fusion-workbench", datei = '^\.active-circle$', feldmuster = '^([^\n]+)' }
+
+  [[profil.zeile]]
+  beschriftung = "Sitzung"
+  feld = { ordner = "fusion-workbench", datei = '^orchestrator-live\.md$', feldmuster = '## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
+
+  [[profil.zeile]]
+  beschriftung = "Runden"
+  zaehlung = { ordner = "fusion-workbench/circles" }
+
+  [[profil.zeile]]
+  beschriftung = "Offene Defekte, gemeinsam"
+  zaehlung = { ordner = "fusion-workbench/shared/issues", muster = '_o_.*\.md$' }
+
+# ============================================================================
+# Die Profile für eine flight-Werkbank
+# ============================================================================
+#
+# flight ist die kleinere Schwester von fusion: dieselbe Art von Datensätzen,
+# aber ohne Runden und ohne Zustandsmarker im Dateinamen. Die Speicher liegen
+# flach an der Wurzel der Werkbank, und ein Datensatz heißt schlicht
+# `260528-14-40-route-option-a.md`. Jede Zeile, die bei fusion nach Markern
+# aufschlüsselt, hat hier also keinen Gegenstand, und die vier Profile unten
+# sind aus demselben Grund kürzer als ihre Vorbilder.
+#
+# Die Kennzeichendatei `.flight-setup` trägt dieselben drei Felder wie
+# `.fusion-setup`, also greifen dieselben Muster.
+
+# Die Wurzel einer flight-Werkbank.
+#
+# Erkannt über `.flight-setup`, aus demselben Grund, aus dem das fusion-Profil
+# über `.fusion-setup` erkennt: ein Pfadmuster auf den Namen träfe auch einen
+# leeren Ordner.
+#
+# Vier Speicher, vier Zeilen. `stilwerk` bekommt keine: es trägt die
+# Stilprofile, mit denen flight schreibt, und keine Datensätze über die Reise.
+[[profil]]
+name = "flight-Werkbank: die Wurzel"
+kennzeichen = '^\.flight-setup$'
+
+  [[profil.zeile]]
+  beschriftung = "Projekt"
+  feld = { datei = '^\.flight-setup$', feldmuster = '"setup_pwd":"[^"]*/([^"/]+)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Eingerichtet"
+  feld = { datei = '^\.flight-setup$', feldmuster = '"setup_at":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "flight-Fassung"
+  feld = { datei = '^\.flight-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Verläufe"
+  zaehlung = { ordner = "history", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Notizen"
+  zaehlung = { ordner = "memos", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Ablagen"
+  zaehlung = { ordner = "archive" }
+
+# Ein Speicher einer flight-Werkbank.
+#
+# Drei Namen und nicht vier: `archive` steht darunter als eigenes Profil, weil
+# es Läufe als Ordner führt und keine Datensätze als Dateien. Das ist die eine
+# Ausnahme, die dieser Zuschnitt braucht — die zweite Ausnahme des
+# fusion-Vorbilds, der Defektspeicher mit seiner Aufschlüsselung nach Markern,
+# hat hier keinen Gegenstand.
+[[profil]]
+name = "flight-Werkbank: ein Speicher"
+pfad = 'flight-workbench/(decisions|history|memos)$'
+
+  [[profil.zeile]]
+  beschriftung = "Datensätze"
+  zaehlung = { muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Die jüngsten zehn"
+  juengste = { muster = '\.md$', anzahl = 10 }
+
+# Der Ablagespeicher einer flight-Werkbank.
+[[profil]]
+name = "flight-Werkbank: der Ablagespeicher"
+pfad = 'flight-workbench/archive$'
+
+  [[profil.zeile]]
+  beschriftung = "Läufe"
+  zaehlung = { }
+
+  [[profil.zeile]]
+  beschriftung = "Zuletzt abgelegt"
+  juengste = { anzahl = 1, zeigt = "datum" }
+
+# Das Verzeichnis, das eine flight-Werkbank enthält.
+#
+# Dieselben sieben Zeilen wie das Wurzelprofil darüber, jede mit
+# `flight-workbench/` vor der Ortsangabe, und derselbe Hinweis gilt: sie stehen
+# zweimal da und können auseinanderlaufen.
+#
+# Enthält ein Verzeichnis BEIDE Werkbänke, gewinnt das fusion-Profil, weil es
+# in dieser Datei weiter oben steht. Wer es andersherum will, verschiebt die
+# Blöcke.
+[[profil]]
+name = "Projektwurzel mit flight-Werkbank"
+kennzeichen = '^flight-workbench$'
+
+  [[profil.zeile]]
+  beschriftung = "Projekt"
+  feld = { ordner = "flight-workbench", datei = '^\.flight-setup$', feldmuster = '"setup_pwd":"[^"]*/([^"/]+)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Eingerichtet"
+  feld = { ordner = "flight-workbench", datei = '^\.flight-setup$', feldmuster = '"setup_at":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "flight-Fassung"
+  feld = { ordner = "flight-workbench", datei = '^\.flight-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "flight-workbench/decisions", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Verläufe"
+  zaehlung = { ordner = "flight-workbench/history", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Notizen"
+  zaehlung = { ordner = "flight-workbench/memos", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Ablagen"
+  zaehlung = { ordner = "flight-workbench/archive" }

@@ -1453,7 +1453,7 @@ fn die_meldung_unterscheidet_die_fuenf_lagen_und_bleibt_einzeilig() {
 /// fuenf Lagen, dieselbe Bauform, und der Unterschied haengt allein an
 /// [`Datei::ersatz`]. Bis zum 260824 schrieb der Formatierer den Satzteil ueber
 /// den Auslieferungszustand in jedem Zweig fest, und die Meldung versprach dem
-/// Nutzer die fuenf mitgelieferten Profile, die er in dieser Lage gerade nicht
+/// Nutzer die mitgelieferten Profile, die er in dieser Lage gerade nicht
 /// bekommt.
 #[test]
 fn die_meldung_zu_readers_toml_verspricht_keinen_auslieferungszustand() {
@@ -2020,7 +2020,7 @@ fn eine_nicht_anlegbare_settings_toml_meldet_sich() {
 /// **Gelesen wird, was angelegt wurde**, und das ist die erste Abweichung aus
 /// dem Kopf von `krk_core::ablage::leseprofile`: die Anlage steht vor dem
 /// Lesen, also arbeitet schon die Sitzung, die die Datei anlegt, mit deren
-/// fuenf Profilen. Ohne diese Zusicherung bliebe der erste Start ohne Profil,
+/// Profilen. Ohne diese Zusicherung bliebe der erste Start ohne Profil,
 /// und niemand bemerkte es.
 ///
 /// Der zweite Teil ist der **veraenderte** Fall aus C1.2. Den leergeraeumten
@@ -2044,8 +2044,8 @@ fn eine_fehlende_readers_toml_entsteht_byteweise_und_bleibt_beim_zweiten_start_l
     );
     assert_eq!(
         geladen.wert.zahl(),
-        5,
-        "der erste Start arbeitet nicht mit den fuenf mitgelieferten Profilen"
+        12,
+        "der erste Start arbeitet nicht mit den zwoelf mitgelieferten Profilen"
     );
     assert_eq!(
         fs::read_to_string(&pfad).expect("readers.toml ist nicht entstanden"),
