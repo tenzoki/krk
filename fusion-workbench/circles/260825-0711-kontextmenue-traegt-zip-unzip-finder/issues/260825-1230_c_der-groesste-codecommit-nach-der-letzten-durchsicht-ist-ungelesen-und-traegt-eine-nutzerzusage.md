@@ -80,3 +80,11 @@ Runde ihre eigene Zusage baut.
 **Betroffen:** `crates/krk-core/src/operation/zippen.rs`,
 `crates/krk-ui/src/kommandos/kontextmenue.rs`, `crates/krk-ui/src/appkit/anwendung.rs`,
 `crates/krk-ui/src/appkit/tabelle.rs` — jeweils der Anteil aus `dd74b0e`
+
+---
+Resolved: Die dritte Durchsicht hat `6faaa91..ddd41ff` gelesen
+(`reviews/260825-1249-coderev-runde-17-dritte-durchsicht-das-ziel-eines-laufs-und-seine-quellen.md`),
+die vierte danach den Behebungscommit
+(`reviews/260825-1358-coderev-runde-17-vierte-durchsicht-der-behebungscommit.md`). Die vier
+Durchsichten dieser Runde tilen damit den Codeanteil des ganzen Sitzungsbereichs; die Commits, die
+keine Durchsichtsspanne deckt, fassen allein Werkbank-Prosa und `CLAUDE.md` an.

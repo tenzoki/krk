@@ -109,3 +109,20 @@ Verhalten. Die erste ist Kuratorenarbeit an `CLAUDE.md`, die zweite eine Wahl zw
 dritten Durchsicht über `6faaa91..ddd41ff` (ein Commit, vier Dateien) und dem Weiterreichen jenes
 Bereichs an die erste Durchsicht der nächsten Runde. Der Abgleich selbst liegt in
 `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/history/260825-1230-reconciliation.md`.
+
+### Runde 4
+- Aufgaben: R-3 (dritte Durchsicht), C-1 (CLAUDE.md), F-4 (sechs Befunde), F-5 (die Faltung) — alle erledigt
+- Commits: `8c111ea`, `f464bc5`, `95e55da`, `863e8c5`, `714bf70`
+- Durchsichten: die dritte über den ungelesenen Commit (sechs Befunde), die vierte über den Behebungscommit (einer, verengt statt geschlossen)
+- Circuit Breaker: OK
+
+## Abschluss
+
+Die Runde 17 ist am 260825 **beschränkt** geschlossen (`_b_`), aus dem Grund, aus dem die meisten
+Runden dieses Projekts beschränkt schließen: sieben der zehn Endbedingungen verlangen KRK im
+Vordergrund und sind Nutzerarbeit. Die Schließungsnotiz steht im Circle-Datensatz
+`circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md`.
+
+Vier Runden der Turn-Schleife, 23 Commits, vier Durchsichten mit zusammen sechzehn Befunden, alle
+geschlossen. Vier Defekte bleiben bewusst offen und stehen als Datensätze im Circle; einer weiterer
+im gemeinsamen Speicher ist älter als diese Runde.
