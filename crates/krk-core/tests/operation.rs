@@ -1263,6 +1263,330 @@ fn archivrechte(archiv: &Path, name: &str) -> u32 {
         .unwrap_or_else(|| panic!("«{name}» traegt keine Unix-Rechte"))
 }
 
+/// Ein Zeitpunkt aus der Sommerzeit: 4. Juli 2026, 12:30:45 UTC.
+const SOMMER: u64 = 1_783_168_245;
+
+/// Ein Zeitpunkt aus der Winterzeit: 15. Januar 2026, 09:30:45 UTC.
+///
+/// **Beide zusammen sind die eigentliche Aussage.** In einer Zone mit
+/// Sommerzeit gilt an ihnen ein verschiedener Versatz; ein Packlauf, der den
+/// Versatz einmal je Lauf holte statt je Zeitpunkt, legte einen der beiden um
+/// eine Stunde daneben. Genau das tut `ditto(1)` beim Auspacken.
+const WINTER: u64 = 1_768_469_445;
+
+/// Macht aus Epochensekunden einen Zeitpunkt.
+fn zeitpunkt(sekunden: u64) -> std::time::SystemTime {
+    std::time::UNIX_EPOCH + Duration::from_secs(sekunden)
+}
+
+/// Setzt das Aenderungsdatum eines vorhandenen Eintrags.
+fn datum_setzen(pfad: &Path, wann: std::time::SystemTime) {
+    let zeiten = std::fs::FileTimes::new()
+        .set_modified(wann)
+        .set_accessed(wann);
+    File::open(pfad)
+        .expect("der Eintrag laesst sich nicht oeffnen")
+        .set_times(zeiten)
+        .expect("das Datum laesst sich nicht setzen");
+}
+
+/// Liest das Aenderungsdatum eines Eintrags im Dateisystem.
+fn datum_lesen(pfad: &Path) -> std::time::SystemTime {
+    fs::symlink_metadata(pfad)
+        .expect("der Eintrag ist nicht zu befragen")
+        .modified()
+        .expect("der Eintrag traegt kein Aenderungsdatum")
+}
+
+/// Liefert das MS-DOS-Zeitfeld eines Archiveintrags.
+///
+/// Der vierte Helfer neben [`archivnamen`], [`archivinhalt`] und
+/// [`archivrechte`], und aus demselben Grund gebaut wie die drei: eine Probe
+/// soll den gebauten Eintrag befragen und nicht ein zweites Archiv aufmachen.
+fn archivzeit(archiv: &Path, name: &str) -> zip::DateTime {
+    let datei = File::open(archiv).expect("das Archiv laesst sich nicht oeffnen");
+    let mut gelesen = zip::ZipArchive::new(datei).expect("das Archiv ist keines");
+    gelesen
+        .by_name(name)
+        .unwrap_or_else(|fehler| panic!("«{name}» steht nicht im Archiv: {fehler}"))
+        .last_modified()
+        .unwrap_or_else(|| panic!("«{name}» traegt kein Datum"))
+}
+
+/// Liefert die Kennungen der Zusatzfelder eines Archiveintrags, in ihrer
+/// Reihenfolge.
+///
+/// Gelesen wird der Rohblock, den die Kiste unzerlegt herausgibt, und die Folge
+/// aus je zwei Byte Kennung, zwei Byte Laenge und Rumpf wird hier abgeschritten.
+/// Nur so ist `0x5855` ueberhaupt zu sehen: die Kiste zerlegt es nicht.
+fn archivzusatzfelder(archiv: &Path, name: &str) -> Vec<u16> {
+    let datei = File::open(archiv).expect("das Archiv laesst sich nicht oeffnen");
+    let mut gelesen = zip::ZipArchive::new(datei).expect("das Archiv ist keines");
+    let eintrag = gelesen
+        .by_name(name)
+        .unwrap_or_else(|fehler| panic!("«{name}» steht nicht im Archiv: {fehler}"));
+    let Some(block) = eintrag.extra_data() else {
+        return Vec::new();
+    };
+    let mut kennungen = Vec::new();
+    let mut rest = block;
+    while rest.len() >= 4 {
+        let kennung = u16::from_le_bytes([rest[0], rest[1]]);
+        let laenge = usize::from(u16::from_le_bytes([rest[2], rest[3]]));
+        if rest.len() < 4 + laenge {
+            break;
+        }
+        kennungen.push(kennung);
+        rest = &rest[4 + laenge..];
+    }
+    kennungen
+}
+
+/// Liefert die Aenderungszeit aus dem erweiterten Zeitfeld `0x5455`.
+fn archivepochenzeit(archiv: &Path, name: &str) -> Option<u32> {
+    use zip::extra_fields::ExtraField;
+
+    let datei = File::open(archiv).expect("das Archiv laesst sich nicht oeffnen");
+    let mut gelesen = zip::ZipArchive::new(datei).expect("das Archiv ist keines");
+    let eintrag = gelesen
+        .by_name(name)
+        .unwrap_or_else(|fehler| panic!("«{name}» steht nicht im Archiv: {fehler}"));
+    eintrag.extra_data_fields().find_map(|feld| match feld {
+        ExtraField::ExtendedTimestamp(zeit) => zeit.mod_time(),
+        _ => None,
+    })
+}
+
+/// Das MS-DOS-Feld traegt die Ortszeit des Quelldatums, je Zeitpunkt gerechnet.
+///
+/// **Die zwei Zeitpunkte sind der Gegenstand und nicht die Verdopplung einer
+/// Aussage.** Sie liegen in verschiedenen Halbjahren; in einer Zone mit
+/// Sommerzeit gilt an ihnen ein verschiedener Versatz. Ein Packlauf, der den
+/// Versatz einmal je Lauf holte, kaeme bei einem der beiden eine Stunde daneben
+/// heraus, und die Probe wuerde rot.
+///
+/// Die Sekunde wird auf ein gerades Raster abgeschnitten: das MS-DOS-Feld haelt
+/// fuer sie nur fuenf Bit. Genau deshalb steht daneben das erweiterte Zeitfeld.
+#[test]
+fn das_msdos_feld_traegt_die_ortszeit_des_quelldatums() {
+    let ordner = Pruefordner::neu("zip-msdos-zeit");
+    let quelle = ordner.ordner("quelle");
+    for (name, sekunden) in [("sommer.txt", SOMMER), ("winter.txt", WINTER)] {
+        let datei = quelle.join(name);
+        fs::write(&datei, "inhalt").expect("nicht schreibbar");
+        datum_setzen(&datei, zeitpunkt(sekunden));
+    }
+    let archiv = ordner.unter("quelle.zip");
+
+    durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+
+    for (name, sekunden) in [("sommer.txt", SOMMER), ("winter.txt", WINTER)] {
+        let erwartet = krk_core::verzeichnis::sys::ortszeit(zeitpunkt(sekunden))
+            .expect("der Zeitpunkt ist nicht umzurechnen");
+        let steht_da = archivzeit(&archiv, &format!("quelle/{name}"));
+        assert_eq!(
+            (
+                steht_da.year(),
+                steht_da.month(),
+                steht_da.day(),
+                steht_da.hour(),
+                steht_da.minute(),
+                steht_da.second(),
+            ),
+            (
+                u16::try_from(erwartet.jahr).expect("das Jahr passt nicht in 16 Bit"),
+                erwartet.monat,
+                erwartet.tag,
+                erwartet.stunde,
+                erwartet.minute,
+                erwartet.sekunde & !1,
+            ),
+            "«{name}» traegt nicht die Ortszeit seiner Quelle"
+        );
+    }
+}
+
+/// Jeder Eintrag traegt beide Zusatzfelder, und beide tragen die Epochensekunde.
+///
+/// **Zwei Felder und nicht eines, weil die zwei Entpackwerkzeuge von macOS sich
+/// nicht einig sind:** `unzip` liest `0x5455`, `ditto(1)` uebergeht es und liest
+/// `0x5855`. Die Messung dazu steht in der Wurzel-`Cargo.toml` neben dem Merkmal
+/// `unreserved`. Dass `ditto` das zweite Feld wirklich liest, kann `cargo test`
+/// nicht pruefen; das ist Nutzerarbeit.
+///
+/// Geprueft werden alle vier Eintragsarten, denn die Wahl entsteht an drei
+/// Stellen und deckt Datei, Ordner, leeren Ordner und Verknuepfung ab.
+#[test]
+fn jeder_eintrag_traegt_beide_zusatzfelder_mit_der_epochensekunde() {
+    let ordner = Pruefordner::neu("zip-zusatzfelder");
+    let quelle = ordner.ordner("quelle");
+    let datei = quelle.join("datei.txt");
+    fs::write(&datei, "inhalt").expect("nicht schreibbar");
+    let leer = quelle.join("leer");
+    fs::create_dir(&leer).expect("nicht anlegbar");
+    std::os::unix::fs::symlink("datei.txt", quelle.join("verweis.txt"))
+        .expect("Verknuepfung nicht anlegbar");
+    for pfad in [&datei, &leer, &quelle] {
+        datum_setzen(pfad, zeitpunkt(SOMMER));
+    }
+    let archiv = ordner.unter("quelle.zip");
+
+    durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+
+    for name in [
+        "quelle/",
+        "quelle/leer/",
+        "quelle/datei.txt",
+        "quelle/verweis.txt",
+    ] {
+        let kennungen = archivzusatzfelder(&archiv, name);
+        assert!(
+            kennungen.contains(&0x5455) && kennungen.contains(&0x5855),
+            "«{name}» traegt nicht beide Zeitfelder, sondern {kennungen:04x?}"
+        );
+    }
+    for name in ["quelle/", "quelle/leer/", "quelle/datei.txt"] {
+        assert_eq!(
+            archivepochenzeit(&archiv, name),
+            u32::try_from(SOMMER).ok(),
+            "«{name}» traegt im erweiterten Zeitfeld nicht die Sekunde seiner Quelle"
+        );
+    }
+}
+
+/// Der Rundweg durch Zip und Unzip erhaelt das Aenderungsdatum auf die Sekunde.
+///
+/// **Auf die Sekunde und nicht auf zwei**, denn gelesen wird das erweiterte
+/// Zeitfeld und nicht das MS-DOS-Feld mit seinem Raster. Die Verknuepfung ist
+/// ausgenommen: `File::set_times` folgte ihr und schriebe das Datum auf ihr
+/// Ziel; der Grund im Einzelnen steht im Kopf von `operation::entpacken`.
+#[test]
+fn der_rundweg_erhaelt_das_aenderungsdatum_jeder_datei_und_jedes_ordners() {
+    let ordner = Pruefordner::neu("zip-rundweg-datum");
+    let quelle = ordner.ordner("quelle");
+    let datei = quelle.join("sommer.txt");
+    fs::write(&datei, "inhalt").expect("nicht schreibbar");
+    let unten = quelle.join("unten");
+    fs::create_dir(&unten).expect("nicht anlegbar");
+    let tief = unten.join("winter.txt");
+    fs::write(&tief, "tief").expect("nicht schreibbar");
+    datum_setzen(&datei, zeitpunkt(SOMMER));
+    datum_setzen(&tief, zeitpunkt(WINTER));
+    datum_setzen(&unten, zeitpunkt(WINTER));
+    datum_setzen(&quelle, zeitpunkt(SOMMER));
+    let archiv = ordner.unter("quelle.zip");
+    let ziel = ordner.unter("wieder");
+
+    durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+    let bericht = entpacken_durchlaufen(&archiv, &ziel);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    for (weg, sekunden) in [
+        ("quelle/sommer.txt", SOMMER),
+        ("quelle/unten/winter.txt", WINTER),
+        ("quelle/unten", WINTER),
+        ("quelle", SOMMER),
+    ] {
+        assert_eq!(
+            datum_lesen(&ziel.join(weg)),
+            zeitpunkt(sekunden),
+            "«{weg}» hat sein Aenderungsdatum auf dem Rundweg verloren"
+        );
+    }
+}
+
+/// Ein Archiv, das allein das alte Info-ZIP-Feld fuehrt, wird trotzdem gelesen.
+///
+/// Das ist der Fall, den der Finder und `ditto(1)` erzeugen: sie schreiben
+/// `0x5855` und kein `0x5455`. Ohne diesen Weg traege eine so ausgepackte Datei
+/// die Uhrzeit des Entpackens.
+#[test]
+fn ein_archiv_mit_allein_dem_alten_info_zip_feld_gibt_sein_datum_her() {
+    let ordner = Pruefordner::neu("unzip-altes-zeitfeld");
+    let archiv = ordner.unter("fremd.zip");
+    let ziel = ordner.unter("wieder");
+
+    {
+        let mut schreiber =
+            zip::ZipWriter::new(File::create(&archiv).expect("Archiv nicht anlegbar"));
+        let mut wahl = zip::write::FullFileOptions::default()
+            .unix_permissions(0o644)
+            // Ein bewusst falsches MS-DOS-Feld: es darf nicht gelesen werden.
+            .last_modified_time(
+                zip::DateTime::from_date_and_time(1999, 12, 31, 23, 59, 58)
+                    .expect("der Zeitpunkt ist gueltig"),
+            );
+        let sekunden = u32::try_from(WINTER).expect("der Zeitpunkt passt in 32 Bit");
+        let mut rumpf = Vec::new();
+        // Zuerst die Zugriffszeit, dann die Aenderungszeit.
+        rumpf.extend_from_slice(&sekunden.to_le_bytes());
+        rumpf.extend_from_slice(&sekunden.to_le_bytes());
+        wahl.add_extra_data(0x5855, rumpf, false)
+            .expect("das Zusatzfeld laesst sich nicht anhaengen");
+        schreiber
+            .start_file("alt.txt", wahl)
+            .expect("Eintrag nicht anlegbar");
+        schreiber.write_all(b"inhalt").expect("nicht schreibbar");
+        schreiber.finish().expect("Archiv nicht abschliessbar");
+    }
+
+    let bericht = entpacken_durchlaufen(&archiv, &ziel);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert!(
+        !archivzusatzfelder(&archiv, "alt.txt").contains(&0x5455),
+        "die Probe misst nicht, was sie messen soll: das erweiterte Zeitfeld steht doch da"
+    );
+    assert_eq!(
+        datum_lesen(&ziel.join("alt.txt")),
+        zeitpunkt(WINTER),
+        "das alte Info-ZIP-Feld ist nicht gelesen worden"
+    );
+}
+
+/// Ein Zeitpunkt vor 1980 faellt auf das Vorgabedatum zurueck und wird gemeldet.
+///
+/// **Abgewiesen wird der Eintrag nicht.** Ein Archiv ohne diese Datei waere die
+/// schlechtere Antwort als eine Datei mit einem Datum, das der Nutzer als falsch
+/// erkennt; das Packen schreibt hier auf, statt abzuweisen. Genau eine Zeile,
+/// denn die Zusatzfelder tragen die Sekunde weiterhin und melden nichts.
+#[test]
+fn ein_zeitpunkt_vor_1980_faellt_auf_das_vorgabedatum_und_erzeugt_eine_zeile() {
+    let ordner = Pruefordner::neu("zip-vor-1980");
+    let alt = ordner.datei("alt.txt", "inhalt");
+    // 1. Januar 1970, also 15 Jahre vor dem, was das MS-DOS-Feld fassen kann.
+    datum_setzen(&alt, zeitpunkt(0));
+    let archiv = ordner.unter("alt.zip");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![alt.clone()], &archiv));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(
+        bericht.uebersprungen.len(),
+        1,
+        "erwartet ist genau eine Zeile, dasteht: {:?}",
+        bericht.uebersprungen
+    );
+    assert_eq!(bericht.uebersprungen[0].pfad, alt);
+    assert!(
+        bericht.uebersprungen[0].grund.contains("Aenderungsdatum"),
+        "die Zeile nennt den Grund nicht: {}",
+        bericht.uebersprungen[0].grund
+    );
+    assert_eq!(archivinhalt(&archiv, "alt.txt"), "inhalt");
+    let steht_da = archivzeit(&archiv, "alt.txt");
+    assert_eq!(
+        (steht_da.year(), steht_da.month(), steht_da.day()),
+        (1980, 1, 1),
+        "der Eintrag traegt nicht das Vorgabedatum des Formats"
+    );
+    assert_eq!(
+        archivepochenzeit(&archiv, "alt.txt"),
+        Some(0),
+        "das erweiterte Zeitfeld faellt nicht mit, es fasst 1970 muehelos"
+    );
+}
+
 #[test]
 fn ein_ordnerbaum_wird_gepackt_und_jeder_eintrag_steht_im_archiv() {
     let ordner = Pruefordner::neu("zip-baum");

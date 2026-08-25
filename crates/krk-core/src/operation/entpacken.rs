@@ -74,15 +74,31 @@
 //! wie [`super::kopieren`] und [`super::zippen`] eine Verknuepfung unveraendert
 //! weitergeben.
 //!
-//! # Das Aenderungsdatum kommt nicht mit, und das ist ein offener Befund
+//! # Das Aenderungsdatum kommt mit, wenn der Eintrag es in Epochensekunden fuehrt
 //!
-//! Eine entpackte Datei traegt die Uhrzeit des Entpackens und nicht den
-//! Zeitstempel ihres Archiveintrags. Das ist die Gegenrichtung des Defekts
-//! `issues/260825-0838_*_jeder-gepackte-eintrag-traegt-den-1-januar-1980-*`, und
-//! **beide Enden gehoeren in denselben Zug**: solange der Packlauf jedem Eintrag
-//! den 1. Januar 1980 gibt, machte ein Entpacken, das den Zeitstempel
-//! uebernaehme, aus jeder Datei eine von 1980. Der Datensatz nennt die drei
-//! Wege und diese Datei als betroffen; hier steht bewusst keine halbe Loesung.
+//! Eine entpackte Datei traegt den Zeitstempel ihres Archiveintrags und nicht
+//! die Uhrzeit des Entpackens. **Gelesen wird dafuer eines der zwei
+//! Zusatzfelder** — `0x5455` (Extended Timestamp) oder `0x5855` (Info-ZIP Unix,
+//! alte Form) —, denn beide tragen Sekunden seit 1970 und brauchen keine
+//! Zeitzone. Dieselben zwei schreibt [`super::zippen`]; die zwei Enden sind ein
+//! Zug.
+//!
+//! **Das MS-DOS-Pflichtfeld wird bewusst nicht gelesen**, und der Grund ist
+//! nicht Bequemlichkeit: es traegt buergerliche Ortszeit ohne Zonenangabe, und
+//! der Weg zurueck braucht `mktime(3)`, also die Umkehrung von
+//! [`crate::verzeichnis::sys::ortszeit`], die dieses Vorhaben nicht bindet. Eine
+//! Umrechnung mit dem heute geltenden Versatz waere gerade der Fehler, den
+//! `ditto(1)` macht und den die zwei Zusatzfelder vermeiden. Ein Archiv ohne
+//! Zusatzfeld liefert deshalb Dateien mit der Uhrzeit des Entpackens, so wie
+//! bisher jedes; das ist die Auskunft "unbekannt" und keine falsche Zeit.
+//!
+//! **Eine Verknuepfung bekommt ihr Datum nicht.** `File::set_times` folgt der
+//! Verknuepfung und schriebe das Datum auf ihr Ziel; die Zeit am Verweis selbst
+//! setzte allein `lutimes(2)`, eine siebte Schnittstelle der Systemschicht, die
+//! hier nicht entschieden wird. Der Eintrag im Archiv traegt das richtige Datum,
+//! das Auspacken legt es nur nicht an. Abgelegt ist das als
+//! `shared/issues/260825-1859_*_eine-entpackte-verknuepfung-bekommt-ihr-aenderungsdatum-nicht.md`;
+//! `/usr/bin/unzip` und `/usr/bin/ditto` machen es an dieser Stelle genauso.
 //!
 //! # Nach einem Abbruch bleibt stehen, was schon entpackt ist
 //!
@@ -92,12 +108,15 @@
 //! anders als ein halbes Archiv, benutzbar, und ihn wegzuraeumen waere ein
 //! Loeschen ohne Auftrag.
 
-use std::fs::{self, File, Permissions};
+use std::fs::{self, File, FileTimes, Permissions};
 use std::io::{self, BufReader, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use zip::ZipArchive;
+use zip::extra_fields::ExtraField;
+use zip::read::ZipFile;
 
 use crate::verzeichnis::sys::ohne_warten_oeffnen;
 
@@ -144,15 +163,15 @@ pub(crate) fn archiv_entpacken(
         return Ablauf::Weiter;
     }
 
-    let mut ordnerrechte = Vec::new();
+    let mut nachtraege = Vec::new();
     let ablauf = eintraege_entpacken(
         quelle.pfad,
         &mut archiv,
         &zielordner,
-        &mut ordnerrechte,
+        &mut nachtraege,
         steuerung,
     );
-    ordnerrechte_nachtragen(&ordnerrechte);
+    ordnerangaben_nachtragen(&nachtraege);
     ablauf
 }
 
@@ -206,12 +225,26 @@ fn zielordner_klaeren(
     }
 }
 
+/// Was an einem angelegten Ordner erst nachtraeglich zu setzen ist.
+///
+/// Beides muss warten, bis der Ordner befuellt ist: die Rechte, weil ein Ordner
+/// ohne Schreibrecht sich nicht mehr befuellen liesse, und das Datum, weil jeder
+/// Eintrag darin es wieder auf die Uhrzeit des Entpackens setzt.
+struct Ordnernachtrag {
+    /// Der angelegte Ordner.
+    pfad: PathBuf,
+    /// Die Rechte des Archiveintrags, wenn er welche fuehrt.
+    rechte: Option<u32>,
+    /// Das Aenderungsdatum des Archiveintrags, wenn er eines fuehrt.
+    geaendert: Option<SystemTime>,
+}
+
 /// Legt jeden Eintrag des Archivs unter dem Zielordner ab.
 fn eintraege_entpacken(
     archivpfad: &Path,
     archiv: &mut ZipArchive<BufReader<File>>,
     zielordner: &Path,
-    ordnerrechte: &mut Vec<(PathBuf, u32)>,
+    nachtraege: &mut Vec<Ordnernachtrag>,
     steuerung: &mut Steuerung,
 ) -> Ablauf {
     for stelle in 0..archiv.len() {
@@ -243,6 +276,7 @@ fn eintraege_entpacken(
         let pfad = zielordner.join(&innen);
         let ist_ordner = eintrag.is_dir();
         let rechte = eintrag.unix_mode();
+        let geaendert = eintragszeit(&eintrag);
 
         // Bei einem Ordnereintrag gehoert der Eintrag selbst zur Kette, bei
         // jedem anderen nur sein uebergeordneter Ordner.
@@ -259,13 +293,16 @@ fn eintraege_entpacken(
         }
 
         if ist_ordner {
-            // Die Rechte des Ordners kommen zuletzt und nicht jetzt: ein Ordner
-            // ohne Schreibrecht liesse sich sonst nicht mehr befuellen. Dieselbe
+            // Rechte und Datum des Ordners kommen zuletzt und nicht jetzt: ein
+            // Ordner ohne Schreibrecht liesse sich sonst nicht mehr befuellen,
+            // und jeder Eintrag darin setzte sein Datum wieder um. Dieselbe
             // Reihenfolge und derselbe Grund wie bei
             // [`super::kopieren`]`::ordnerangaben_uebernehmen`.
-            if let Some(rechte) = rechte {
-                ordnerrechte.push((pfad.clone(), rechte));
-            }
+            nachtraege.push(Ordnernachtrag {
+                pfad: pfad.clone(),
+                rechte,
+                geaendert,
+            });
             drop(eintrag);
             steuerung.eintrag_fertig(&pfad, 0);
             continue;
@@ -284,6 +321,9 @@ fn eintraege_entpacken(
         }
 
         if eintrag.is_symlink() {
+            // Das Datum bleibt hier liegen, und der Grund steht im Kopf dieser
+            // Datei: `File::set_times` folgte der Verknuepfung und schriebe es
+            // auf ihr Ziel.
             let ergebnis = verknuepfung_ablegen(&mut eintrag, &pfad);
             drop(eintrag);
             match ergebnis {
@@ -306,8 +346,71 @@ fn eintraege_entpacken(
             // und den hat der Weg hierher schon entschieden.
             let _ = fs::set_permissions(&pfad, Permissions::from_mode(rechte & 0o777));
         }
+        // Das Datum zuletzt, denn das Schreiben des Inhalts setzt es um. Ein
+        // Fehlschlag bleibt stumm, aus demselben Grund wie bei den Rechten
+        // darueber: die Datei steht vollstaendig da, und sie in der
+        // Abschlussliste als uebersprungen zu nennen, waere die falsche Auskunft.
+        if let Some(geaendert) = geaendert {
+            let _ = zeit_setzen(&pfad, geaendert);
+        }
     }
     Ablauf::Weiter
+}
+
+/// Liest das Aenderungsdatum eines Archiveintrags, soweit es in Epochensekunden
+/// dasteht.
+///
+/// Zwei Quellen, in dieser Reihenfolge: das erweiterte Zeitfeld `0x5455`, das
+/// die Kiste selbst zerlegt, und das alte Info-ZIP-Unix-Feld `0x5855`, das sie
+/// nicht zerlegt und das [`infozip_unix_zeit`] deshalb aus den Rohbytes holt.
+/// `None` heisst: der Eintrag fuehrt keines von beiden, und dann bleibt die
+/// entpackte Datei bei der Uhrzeit des Entpackens. Warum das MS-DOS-Pflichtfeld
+/// hier nicht einspringt, steht im Kopf dieser Datei.
+fn eintragszeit<R: Read>(eintrag: &ZipFile<'_, R>) -> Option<SystemTime> {
+    let erweitert = eintrag.extra_data_fields().find_map(|feld| match feld {
+        ExtraField::ExtendedTimestamp(zeit) => zeit.mod_time(),
+        _ => None,
+    });
+    let sekunden = erweitert.or_else(|| eintrag.extra_data().and_then(infozip_unix_zeit))?;
+    Some(UNIX_EPOCH + Duration::from_secs(u64::from(sekunden)))
+}
+
+/// Holt die Aenderungszeit aus dem alten Info-ZIP-Unix-Feld `0x5855`.
+///
+/// Der uebergebene Block ist die Folge der Zusatzfelder, jedes mit zwei Byte
+/// Kennung, zwei Byte Laenge und seinem Rumpf. Gesucht wird
+/// [`super::zippen::FELD_INFOZIP_UNIX`]; sein Rumpf traegt zuerst die
+/// Zugriffszeit und dann die Aenderungszeit, je vier Byte Epochensekunden.
+///
+/// **Die Kennung steht in [`super::zippen`] und nicht hier**, damit sie im
+/// Vorhaben genau einmal dasteht: dieselbe Zahl schreibt der Packlauf.
+fn infozip_unix_zeit(zusatzfelder: &[u8]) -> Option<u32> {
+    let mut rest = zusatzfelder;
+    while rest.len() >= 4 {
+        let kennung = u16::from_le_bytes([rest[0], rest[1]]);
+        let laenge = usize::from(u16::from_le_bytes([rest[2], rest[3]]));
+        let rumpf = rest.get(4..4 + laenge)?;
+        if kennung == super::zippen::FELD_INFOZIP_UNIX
+            && let Some(zeit) = rumpf.get(4..8)
+        {
+            return Some(u32::from_le_bytes([zeit[0], zeit[1], zeit[2], zeit[3]]));
+        }
+        rest = &rest[4 + laenge..];
+    }
+    None
+}
+
+/// Setzt das Aenderungsdatum eines angelegten Eintrags.
+///
+/// Die Zugriffszeit bekommt denselben Wert: das Archiv fuehrt zwar auch eine
+/// eigene, aber sie hat den Rundweg nicht ueberlebt — die Datei ist eben erst
+/// geschrieben worden — und zwei verschiedene Zeiten waeren eine Genauigkeit,
+/// die niemand mitbringt.
+fn zeit_setzen(pfad: &Path, geaendert: SystemTime) -> io::Result<()> {
+    let zeiten = FileTimes::new()
+        .set_modified(geaendert)
+        .set_accessed(geaendert);
+    File::open(pfad)?.set_times(zeiten)
 }
 
 /// Legt die Ordnerkette zu einem Eintrag an und weist jeden Weg ab, der durch
@@ -439,7 +542,8 @@ fn halbe_datei_wegraeumen(pfad: &Path, steuerung: &mut Steuerung) {
     }
 }
 
-/// Setzt die Rechte der angelegten Ordner, nachdem sie befuellt sind.
+/// Setzt Rechte und Aenderungsdatum der angelegten Ordner, nachdem sie befuellt
+/// sind.
 ///
 /// **Ein Fehler bleibt hier stumm, und das ist die Ausnahme und nicht die
 /// Regel.** Ein Ordner, dessen Rechte nicht zu setzen sind, steht mit seinem
@@ -447,9 +551,18 @@ fn halbe_datei_wegraeumen(pfad: &Path, steuerung: &mut Steuerung) {
 /// nennen, waere die falsche Auskunft, und ein eigener Meldeweg fuer "steht da,
 /// traegt aber die Vorgaberechte" ist mehr Mechanismus, als die Sache wiegt.
 /// Die letzte Ebene kommt zuerst an die Reihe, damit ein Ordner ohne
-/// Schreibrecht nicht seine eigenen Unterordner sperrt.
-fn ordnerrechte_nachtragen(ordnerrechte: &[(PathBuf, u32)]) {
-    for (pfad, rechte) in ordnerrechte.iter().rev() {
-        let _ = fs::set_permissions(pfad, Permissions::from_mode(rechte & 0o777));
+/// Schreibrecht nicht seine eigenen Unterordner sperrt — und damit ein
+/// Elternordner sein Datum erst bekommt, wenn in ihm nichts mehr entsteht.
+///
+/// Das Datum kommt nach den Rechten: `chmod(2)` ruehrt es nicht an, aber die
+/// umgekehrte Reihenfolge waere darauf angewiesen, und sie ist es nicht wert.
+fn ordnerangaben_nachtragen(nachtraege: &[Ordnernachtrag]) {
+    for nachtrag in nachtraege.iter().rev() {
+        if let Some(rechte) = nachtrag.rechte {
+            let _ = fs::set_permissions(&nachtrag.pfad, Permissions::from_mode(rechte & 0o777));
+        }
+        if let Some(geaendert) = nachtrag.geaendert {
+            let _ = zeit_setzen(&nachtrag.pfad, geaendert);
+        }
     }
 }

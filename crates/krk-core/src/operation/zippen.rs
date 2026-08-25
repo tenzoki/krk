@@ -115,13 +115,39 @@
 //! am Deskriptor und nicht am Pfad, aus demselben Grund wie in
 //! [`crate::text::datei`]: zwischen einer Frage am Pfad und dem Oeffnen liegt
 //! ein Fenster, in dem der Eintrag ein anderer werden kann.
+//!
+//! # Jeder Eintrag traegt das Aenderungsdatum seiner Quelle, und zwar dreimal
+//!
+//! Das Zip-Format kennt genau ein Pflichtfeld fuer die Zeit, und es ist eine
+//! **buergerliche Ortszeit ohne Zonenangabe** im MS-DOS-Format, gerastert auf
+//! zwei Sekunden. Es allein genuegt nicht, und das ist gemessen: `ditto(1)`
+//! rechnet es beim Auspacken mit dem **heute** geltenden Zonenversatz zurueck
+//! und legt eine Januardatei im August eine Stunde daneben ab. Deshalb stehen
+//! daneben zwei Zusatzfelder, die die Zeit in Epochensekunden tragen und keine
+//! Zone brauchen: [`FELD_ERWEITERTE_ZEIT`] (`0x5455`), das `unzip` liest, und
+//! [`FELD_INFOZIP_UNIX`] (`0x5855`), das `ditto(1)` liest. Welches Werkzeug
+//! welches uebergeht, steht als Messtabelle in der Wurzel-`Cargo.toml` neben
+//! dem Merkmal `unreserved`, das `0x5855` ueberhaupt erst zulaesst.
+//!
+//! Die Umrechnung in die Ortszeit macht [`crate::verzeichnis::sys::ortszeit`]
+//! ueber `localtime_r(3)`, also **mit dem Versatz, der zum Dateidatum galt**.
+//! Ein Zeitpunkt, den das MS-DOS-Feld nicht fasst (vor 1980, nach 2107),
+//! faellt auf `DateTime::DEFAULT` zurueck und bekommt eine Zeile in der
+//! Abschlussliste; abgewiesen wird der Eintrag deswegen nicht, so wie das
+//! Packen auch sonst aufschreibt statt abzuweisen.
+//!
+//! Die Gegenrichtung steht in [`super::entpacken`], und die zwei Enden gehoeren
+//! zusammen: was hier hineingeschrieben wird, liest dort [`super::entpacken`]
+//! aus denselben zwei Zusatzfeldern wieder heraus.
 
 use std::fs::{self, File};
 use std::io::{self, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use zip::DateTime;
 use zip::ZipWriter;
-use zip::write::SimpleFileOptions;
+use zip::write::FullFileOptions;
 
 use crate::verzeichnis::{Typ, lesen};
 
@@ -373,8 +399,11 @@ fn datei_packen(
     // [`super::typ_und_groesse`] ist das Auffangfach und traegt auch Roehren,
     // Geraete und Sockel, und an einer Roehre mit Schreiber bliebe das `read`
     // darunter unbegrenzt stehen.
-    match gelesen.metadata() {
-        Ok(angaben) if angaben.is_file() => {}
+    // Dieselbe Antwort traegt drei Fragen: den Typ, die Rechte und das
+    // Aenderungsdatum. Sie am Pfad ein zweites Mal zu stellen, kostete einen
+    // Systemaufruf und oeffnete das Fenster wieder, das der Deskriptor schliesst.
+    let angaben = match gelesen.metadata() {
+        Ok(angaben) if angaben.is_file() => angaben,
         Ok(_) => {
             steuerung.ueberspringen(quelle.pfad, "keine gewoehnliche Datei");
             return Packschritt::Weiter;
@@ -383,9 +412,10 @@ fn datei_packen(
             steuerung.ueberspringen(quelle.pfad, grund(&fehler));
             return Packschritt::Weiter;
         }
-    }
+    };
 
-    if let Err(fehler) = schreiber.start_file(name_im_archiv, dateiwahl(quelle.pfad)) {
+    let wahl = dateiwahl(quelle.pfad, &angaben, steuerung);
+    if let Err(fehler) = schreiber.start_file(name_im_archiv, wahl) {
         steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));
         return Packschritt::ArchivHin;
     }
@@ -445,7 +475,8 @@ fn ordner_packen(
     schreiber: &mut ZipWriter<BufWriter<File>>,
     steuerung: &mut Steuerung,
 ) -> Packschritt {
-    if let Err(fehler) = schreiber.add_directory(name_im_archiv, ordnerwahl(quelle.pfad)) {
+    let wahl = ordnerwahl(quelle.pfad, steuerung);
+    if let Err(fehler) = schreiber.add_directory(name_im_archiv, wahl) {
         steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));
         return Packschritt::ArchivHin;
     }
@@ -482,12 +513,8 @@ fn ordner_packen(
 /// Packt eine symbolische Verknuepfung als Verknuepfung, nicht ihr Ziel.
 ///
 /// Der Inhalt des Eintrags ist das Verweisziel, und die Rechte tragen
-/// `S_IFLNK`. **Gesetzt wird das Kennzeichen von `add_symlink` und nicht von
-/// `unix_permissions`:** dessen Rumpf maskiert mit `& 0o777` und wirft die
-/// oberen Modusbits fort, `0o120777` kaeme dort also als `0o777` an und das
-/// Archiv truege eine gewoehnliche Datei mit dem Pfad als Inhalt. Die Wahl
-/// nennt `0o120777` trotzdem, weil `add_symlink` die Rechte nur ergaenzt, wenn
-/// keine dastehen.
+/// `S_IFLNK`. Wer setzt das Kennzeichen und warum die Wahl es trotzdem nennt,
+/// steht an [`verknuepfungswahl`].
 fn verknuepfung_packen(
     quelle: &Quelle<'_>,
     name_im_archiv: &str,
@@ -501,7 +528,7 @@ fn verknuepfung_packen(
             return Packschritt::Weiter;
         }
     };
-    let wahl = SimpleFileOptions::default().unix_permissions(0o120777);
+    let wahl = verknuepfungswahl(quelle.pfad, steuerung);
     match schreiber.add_symlink(name_im_archiv, verweis.to_string_lossy(), wahl) {
         Ok(()) => {
             steuerung.eintrag_fertig(quelle.pfad, 0);
@@ -514,9 +541,19 @@ fn verknuepfung_packen(
     }
 }
 
-/// Die Wahl fuer einen Dateieintrag: verdichtet, mit den Rechten der Quelle.
-fn dateiwahl(pfad: &Path) -> SimpleFileOptions {
-    rechte_uebernehmen(SimpleFileOptions::default(), pfad, 0o644)
+/// Die Wahl fuer einen Dateieintrag: verdichtet, mit den Rechten und dem
+/// Aenderungsdatum der Quelle.
+///
+/// `angaben` ist die Antwort, die [`datei_packen`] schon am offenen Deskriptor
+/// eingeholt hat, und sie wird hier nicht ein zweites Mal am Pfad erfragt.
+#[must_use = "ohne die Wahl traegt der Eintrag weder Rechte noch Datum"]
+fn dateiwahl(
+    pfad: &Path,
+    angaben: &fs::Metadata,
+    steuerung: &mut Steuerung,
+) -> FullFileOptions<'static> {
+    let wahl = zeit_uebernehmen(FullFileOptions::default(), pfad, Some(angaben), steuerung);
+    rechte_uebernehmen(wahl, Some(angaben), 0o644)
 }
 
 /// Die Wahl fuer einen Ordnereintrag.
@@ -524,8 +561,43 @@ fn dateiwahl(pfad: &Path) -> SimpleFileOptions {
 /// Das Verfahren steht hier nicht: `add_directory` setzt es selbst auf
 /// "gespeichert", denn ein Ordnereintrag hat keinen Inhalt, den zu verdichten
 /// sich lohnte.
-fn ordnerwahl(pfad: &Path) -> SimpleFileOptions {
-    rechte_uebernehmen(SimpleFileOptions::default(), pfad, 0o755)
+///
+/// Gefragt wird am Pfad, denn einen Deskriptor auf den Ordner haelt der Packlauf
+/// nicht: er liest ihn ueber [`lesen`] und nicht ueber ein `open`.
+#[must_use = "ohne die Wahl traegt der Eintrag weder Rechte noch Datum"]
+fn ordnerwahl(pfad: &Path, steuerung: &mut Steuerung) -> FullFileOptions<'static> {
+    let angaben = fs::metadata(pfad).ok();
+    let wahl = zeit_uebernehmen(
+        FullFileOptions::default(),
+        pfad,
+        angaben.as_ref(),
+        steuerung,
+    );
+    rechte_uebernehmen(wahl, angaben.as_ref(), 0o755)
+}
+
+/// Die Wahl fuer eine Verknuepfung: ihr eigenes Datum, nicht das ihres Ziels.
+///
+/// Gefragt wird mit `lstat(2)` und nicht mit `stat(2)`, aus demselben Grund, aus
+/// dem der Packlauf einer Verknuepfung nicht folgt: gepackt ist die
+/// Verknuepfung, also gehoert in den Eintrag ihr eigenes Aenderungsdatum.
+///
+/// **Die Rechte sind fest und kommen nicht aus den Angaben.** Der Typ steht in
+/// den oberen Modusbits, und `unix_permissions` maskiert mit `& 0o777`, wirft
+/// `S_IFLNK` also fort; gesetzt wird das Kennzeichen von `add_symlink`, das die
+/// Rechte nur ergaenzt, wenn keine dastehen. `0o120777` steht hier trotzdem,
+/// damit der Eintrag es auch dann traegt, wenn `add_symlink` es einmal nicht
+/// mehr selbst setzt.
+#[must_use = "ohne die Wahl traegt der Eintrag weder Rechte noch Datum"]
+fn verknuepfungswahl(pfad: &Path, steuerung: &mut Steuerung) -> FullFileOptions<'static> {
+    let angaben = fs::symlink_metadata(pfad).ok();
+    let wahl = zeit_uebernehmen(
+        FullFileOptions::default(),
+        pfad,
+        angaben.as_ref(),
+        steuerung,
+    );
+    wahl.unix_permissions(0o120777)
 }
 
 /// Uebernimmt die Rechte der Quelle in die Wahl, notfalls die genannte Vorgabe.
@@ -534,9 +606,130 @@ fn ordnerwahl(pfad: &Path) -> SimpleFileOptions {
 /// beim Entpacken eine gewoehnliche Datei. Laesst sich die Quelle gerade nicht
 /// befragen, steht die uebliche Vorgabe da; ein Eintrag ohne Rechte waere
 /// schlechter als ein Eintrag mit den ueblichen.
-fn rechte_uebernehmen(wahl: SimpleFileOptions, pfad: &Path, vorgabe: u32) -> SimpleFileOptions {
+#[must_use = "ohne die Wahl traegt der Eintrag keine Rechte"]
+fn rechte_uebernehmen(
+    wahl: FullFileOptions<'static>,
+    angaben: Option<&fs::Metadata>,
+    vorgabe: u32,
+) -> FullFileOptions<'static> {
     use std::os::unix::fs::PermissionsExt;
 
-    let rechte = fs::metadata(pfad).map_or(vorgabe, |angaben| angaben.permissions().mode());
+    let rechte = angaben.map_or(vorgabe, |angaben| angaben.permissions().mode());
     wahl.unix_permissions(rechte)
+}
+
+/// Kennung des erweiterten Zeitfeldes (`Extended Timestamp`), das `unzip` liest.
+///
+/// Rumpf: ein Kennzeichenbyte, dann die genannten Zeiten als Epochensekunden in
+/// der Reihenfolge Aenderung, Zugriff, Erzeugung. KRK setzt die ersten zwei
+/// Kennzeichenbits, schreibt also acht Byte Zeit hinter das Kennzeichen.
+pub(super) const FELD_ERWEITERTE_ZEIT: u16 = 0x5455;
+
+/// Kennung des alten Info-ZIP-Unix-Feldes, das `ditto(1)` liest.
+///
+/// Rumpf in der kurzen Form: Zugriffszeit, dann Aenderungszeit, je vier Byte
+/// Epochensekunden. Die lange Form haengt Benutzer- und Gruppenkennung an; KRK
+/// schreibt sie nicht, denn `ditto` setzt sie beim Auspacken um, und dieses
+/// Vorhaben packt Zeitstempel und keine Eigentumsverhaeltnisse.
+///
+/// **Diese Kennung ist der einzige Grund fuer das Merkmal `unreserved`** in der
+/// Wurzel-`Cargo.toml`; ohne es weist `add_extra_data` sie ab.
+pub(super) const FELD_INFOZIP_UNIX: u16 = 0x5855;
+
+/// Traegt das Aenderungsdatum der Quelle in die Wahl ein, dreifach.
+///
+/// Einmal als MS-DOS-Feld, das jeder Leser versteht und das keine Zone kennt,
+/// und zweimal als Zusatzfeld in Epochensekunden. Warum es zwei Zusatzfelder
+/// sein muessen, steht als Messtabelle in der Wurzel-`Cargo.toml`.
+///
+/// **Ein Zeitpunkt, den keines der Felder fasst, weist den Eintrag nicht ab.**
+/// Er bekommt eine Zeile in der Abschlussliste und das Vorgabedatum des
+/// Formats; ein Archiv ohne diese Datei waere die schlechtere Antwort als eine
+/// Datei mit einem Datum, das der Nutzer als falsch erkennt.
+#[must_use = "ohne die Wahl traegt der Eintrag kein Datum"]
+fn zeit_uebernehmen(
+    mut wahl: FullFileOptions<'static>,
+    pfad: &Path,
+    angaben: Option<&fs::Metadata>,
+    steuerung: &mut Steuerung,
+) -> FullFileOptions<'static> {
+    let Some(geaendert) = angaben.and_then(|angaben| angaben.modified().ok()) else {
+        steuerung.ueberspringen(
+            pfad,
+            "das Aenderungsdatum war nicht zu lesen; der Eintrag traegt das Vorgabedatum",
+        );
+        return wahl;
+    };
+    // Die Zugriffszeit ist die Zugabe und nicht der Gegenstand: fehlt sie, steht
+    // das Aenderungsdatum an beiden Stellen, so wie `ditto(1)` es auch haelt.
+    let gelesen = angaben
+        .and_then(|angaben| angaben.accessed().ok())
+        .unwrap_or(geaendert);
+
+    match archivzeitpunkt(geaendert) {
+        Some(zeitpunkt) => wahl = wahl.last_modified_time(zeitpunkt),
+        None => steuerung.ueberspringen(
+            pfad,
+            "das Aenderungsdatum liegt ausserhalb dessen, was ein Zip-Eintrag fassen kann; \
+             der Eintrag traegt das Vorgabedatum",
+        ),
+    }
+
+    if let (Some(geaendert), Some(gelesen)) = (epochensekunden(geaendert), epochensekunden(gelesen))
+    {
+        let mut erweitert = Vec::with_capacity(9);
+        // Bit 0: die Aenderungszeit steht da. Bit 1: die Zugriffszeit steht da.
+        erweitert.push(0b0000_0011);
+        erweitert.extend_from_slice(&geaendert.to_le_bytes());
+        erweitert.extend_from_slice(&gelesen.to_le_bytes());
+
+        let mut infozip = Vec::with_capacity(8);
+        infozip.extend_from_slice(&gelesen.to_le_bytes());
+        infozip.extend_from_slice(&geaendert.to_le_bytes());
+
+        // Beide Felder gehen in den lokalen Kopf; die Kiste wiederholt ihn im
+        // Hauptverzeichnis, ein zweiter Eintrag als "nur zentral" stuende dort
+        // also doppelt.
+        for (kennung, rumpf) in [
+            (FELD_ERWEITERTE_ZEIT, erweitert),
+            (FELD_INFOZIP_UNIX, infozip),
+        ] {
+            if let Err(fehler) = wahl.add_extra_data(kennung, rumpf, false) {
+                steuerung.ueberspringen(
+                    pfad,
+                    format!("das Zeitfeld {kennung:#06x} kam nicht in den Eintrag: {fehler}"),
+                );
+            }
+        }
+    }
+
+    wahl
+}
+
+/// Rechnet ein Aenderungsdatum in die MS-DOS-Zeitform des Zip-Formats um.
+///
+/// `None` heisst: der Zeitpunkt liegt ausserhalb von 1980 bis 2107, oder das
+/// System konnte ihn nicht in einen Kalendertag uebersetzen. Die Sekunde faellt
+/// dabei auf ein gerades Raster, denn das Format traegt fuer sie nur fuenf Bit.
+fn archivzeitpunkt(zeitpunkt: SystemTime) -> Option<DateTime> {
+    let ortszeit = crate::verzeichnis::sys::ortszeit(zeitpunkt)?;
+    DateTime::from_date_and_time(
+        u16::try_from(ortszeit.jahr).ok()?,
+        ortszeit.monat,
+        ortszeit.tag,
+        ortszeit.stunde,
+        ortszeit.minute,
+        ortszeit.sekunde,
+    )
+    .ok()
+}
+
+/// Macht aus einem Zeitpunkt die Zahl der Sekunden seit 1970, wie die zwei
+/// Zusatzfelder sie tragen.
+///
+/// `None` heisst: der Zeitpunkt liegt vor 1970 oder nach 2106 und passt damit
+/// nicht in die vier Byte, die beide Felder dafuer vorsehen.
+fn epochensekunden(zeitpunkt: SystemTime) -> Option<u32> {
+    let seither = zeitpunkt.duration_since(UNIX_EPOCH).ok()?;
+    u32::try_from(seither.as_secs()).ok()
 }

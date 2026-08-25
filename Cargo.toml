@@ -173,7 +173,37 @@ regex = "1"
 #   Groessenordnung haelt, ist ungemessen. Keine der zehn Zeitzusagen aus C8
 #   spricht ueber das Packen, also haengt an der Zahl keine Zusage; sie steht
 #   hier, damit die spaetere Messrunde einen Ausgangswert hat.
-zip = { version = "8.6", default-features = false, features = ["deflate-flate2"] }
+# - **`unreserved` ist das zweite Merkmal, und es schaltet keine Abhaengigkeit
+#   ein.** Es steht in `zip`s `Cargo.toml` als `unreserved = []` da und hebt
+#   allein eine Pruefung auf: ohne es weist `ExtendedFileOptions::add_extra_data`
+#   jede Feldkennung ab, die in `EXTRA_FIELD_MAPPING` steht und die Kiste selbst
+#   nicht zerlegt. Genau eine solche Kennung braucht KRK, naemlich `0x5855`
+#   (Info-ZIP Unix, alte Form). `Cargo.lock` waechst dadurch um keinen Eintrag,
+#   und C-Code kommt keiner herein.
+# - **Warum es zwei Zeitfelder sein muessen und nicht eines, ist gemessen und
+#   nicht angenommen.** Am 260825 an fuenf von Hand gebauten Archiven ueber
+#   dieselben zwei Zeitpunkte, einen aus der Sommerzeit (4. Juli 2026 14:30:45)
+#   und einen aus der Winterzeit (15. Januar 2026 10:30:45), jedes mit
+#   `/usr/bin/unzip` und mit `/usr/bin/ditto -x -k` ausgepackt:
+#
+#   | Archiv traegt | `unzip` liefert | `ditto` liefert |
+#   |---|---|---|
+#   | nur das MS-DOS-Feld | :44 (Zweisekundenraster) | :44, im Winter eine Stunde daneben |
+#   | dazu `0x5455` | :45, beide richtig | :44, im Winter eine Stunde daneben |
+#   | dazu `0x5455` und `0x5855` | :45, beide richtig | :45, beide richtig |
+#
+#   `ditto(1)` uebergeht `0x5455` also nachweislich und liest `0x5855`; die
+#   Stunde Abweichung ist die Sommerzeitfalle, denn es rechnet die MS-DOS-Zeit
+#   mit dem heute geltenden Versatz um statt mit dem am Dateidatum geltenden.
+#   `unzip` seinerseits liest `0x5455`. Ein Feld allein laesst deshalb immer
+#   eines der zwei Werkzeuge daneben liegen. Geschrieben wird `0x5855` in seiner
+#   kurzen Form aus Zugriffs- und Aenderungszeit, ohne Benutzer- und
+#   Gruppenkennung: mit ihnen setzt `ditto` beim Auspacken auch die Gruppe um,
+#   und dieses Vorhaben packt Zeitstempel und keine Eigentumsverhaeltnisse.
+zip = { version = "8.6", default-features = false, features = [
+    "deflate-flate2",
+    "unreserved",
+] }
 # Das Deflate-Verfahren, das `zip` selbst abschaltet. **Dieser Eintrag ist nicht
 # ueberfluessig**, auch wenn kein Modul den Namen `flate2` nennt: die
 # Begruendung zu `zip` darueber misst es im vierten Aufzaehlungspunkt. `zip`

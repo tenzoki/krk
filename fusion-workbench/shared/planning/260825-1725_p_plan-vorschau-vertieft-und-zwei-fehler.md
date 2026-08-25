@@ -229,7 +229,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - `grep` über `crates/krk-core/src` findet keine fünfte Stelle mit der alten Zahl.
      - `make check` grün, `krk-core` trägt weiter `#![deny(unsafe_code)]` mit genau einer Öffnung.
 
-3. **Ein gepackter Eintrag trägt das Änderungsdatum seiner Quelle, ein entpackter das des Archivs**
+3. [DONE] **Ein gepackter Eintrag trägt das Änderungsdatum seiner Quelle, ein entpackter das des Archivs**
    - Executor: `coder`
    - Files: `crates/krk-core/src/operation/zippen.rs`, `crates/krk-core/src/operation/entpacken.rs`, `Cargo.toml` (Merkmalsliste von `zip`), `crates/krk-core/tests/operation.rs`
    - Changes: Die drei Stellen, an denen `SimpleFileOptions` entsteht (`zippen.rs:504` in `verknuepfung_packen`, `:519` in `dateiwahl`, `:528` in `ordnerwahl`), setzen `last_modified_time` aus dem Änderungsdatum der Quelle, umgerechnet über Schritt 2 und übergeben an `DateTime::from_date_and_time`. Beide sind merkmalsfrei; **das Merkmal `time` wird nicht eingeschaltet**, weil es die Aufgabe nicht löst (siehe „Current State").
@@ -251,6 +251,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - Ein Zeitpunkt vor 1980 fällt auf `DateTime::DEFAULT` zurück und erzeugt genau eine Zeile in der Abschlussliste; eine Probe hält beides.
      - `Cargo.lock` wächst um keinen Eintrag; weder `cc` noch ein neues `-sys`-Paket kommt herein.
      - `make check` grün.
+   - **Nachtrag 260825-1859, Umsetzung.** Alle Kriterien sind erfüllt bis auf eine Hälfte des dritten: der Rundweg erhält das Änderungsdatum jeder Datei und jedes Ordners, **nicht** aber das einer Verknüpfung. `File::set_times` folgt der Verknüpfung und schriebe das Datum auf ihr Ziel; die Zeit am Verweis selbst setzte allein `lutimes(2)`, also eine siebte Schnittstelle der Systemschicht, und die steht nicht in der Dateiliste dieses Schritts. Der Archiveintrag trägt das richtige Datum, das Auspacken legt es nur nicht an, und `/usr/bin/unzip` und `/usr/bin/ditto` verhalten sich an dieser Stelle gemessenermaßen genauso. Abgelegt als `shared/issues/260825-1859_*_eine-entpackte-verknuepfung-bekommt-ihr-aenderungsdatum-nicht.md`, mit derselben Lücke in `operation::kopieren`. Das Merkmal `unreserved` ist aufgenommen worden, `time` nicht; die Messung dazu steht in der Wurzel-`Cargo.toml` und im aufgelösten Defektdatensatz. Daneben ist `shared/issues/260825-1859_*_claude-md-nennt-fuer-zip-das-eine-merkmal-deflate-flate2-es-sind-zwei.md` entstanden: `CLAUDE.md` steht nicht in der Dateiliste dieses Schritts.
 
 ### Strang 2: der Mechanismus der Leseprofile
 
