@@ -65,3 +65,6 @@ zu lassen, ist die ältere Werkbank und nicht der Preis. Dieselbe Berichtigung i
 `260825-2044`.
 
 **Schwere:** mittel. Eine Aussage im Handbuch, die der Datei an anderer Stelle widerspricht.
+
+---
+Resolved: der Halbsatz „weil sie sich ihre Öffnung mit den zwei Zeilen darunter teilt, also nichts kostet" ist ersetzt: geteilt wird der Leselauf über einen Ort und nicht die Öffnung einer Datei, jeder Feldbaustein öffnet selbst, die drei Zeilen über `.fusion-setup` kosten drei der vierundzwanzig Öffnungen. Nachgemessen am 260825 an `fusion-workbench` dieses Projekts: Leseläufe 3, Öffnungen 4 (drei `.fusion-setup`, eine `orchestrator-live.md`, `.active-circle` fehlt). Der gleichlautende Satz in `260825-2044_o_die-zeile-projekt-…` unter „Möglichkeiten" Punkt 1 ist nicht angefasst: der Datensatz ist offen und gehört nicht zu dieser Aufgabe.

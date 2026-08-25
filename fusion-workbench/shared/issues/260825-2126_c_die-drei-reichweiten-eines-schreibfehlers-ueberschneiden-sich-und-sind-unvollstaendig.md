@@ -76,3 +76,6 @@ Zwei Änderungen an `resources/default-readers.toml:41-55`:
 
 **Schwere:** mittel. Kein Bau hängt daran; die eine Aufstellung, aus der ein Nutzer die Folgen
 seines Tippfehlers liest, ist an zwei Stellen falsch.
+
+---
+Resolved: Reichweite 1 nennt jetzt die oberste Ebene, die Zeile und den Bausteintisch als Orte des unbekannten Schlüssels, dazu den fehlenden `name` und den unbekannten Wert für `zeigt`; ein neuer Absatz sagt, dass der `[[profil]]`-Block einen unbekannten Schlüssel übergeht und der Preis das ist, was der Schreibfehler weggenommen hat (`kennzeichnen` → Reichweite 2, `zeilen` → Profil ohne Zeile, ohne Meldung). Reichweite 3 führt das leere Stück und den zweiten Platzhalter; der Platzhalter-Absatz nennt seine Reichweite. Nachgemessen am 260825 über `leseprofil::datei::pruefen` an sieben abgewandelten Fassungen: `kennzeichnen` → 11 Profile, Meldung „weder ein Pfadmuster noch eine Kennzeichendatei"; `nane` → Datei fällt (TOML-Fehler); `zeilen` → 12 Profile, keine Meldung; Fremdschlüssel `foo = 1` im Block → 12 Profile, keine Meldung; `circles/` → „traegt ein leeres Stueck"; `*/*/x` → „mehr als einen Platzhalter"; `zeigt = "beides"` → Datei fällt.

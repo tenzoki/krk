@@ -40,19 +40,30 @@
 #
 # Drei Reichweiten gibt es, und diese ist die weiteste:
 #
-#   1. Die ganze Datei fällt weg — ein unbekannter Schlüssel, ein Tischname,
-#      den es nicht gibt, oder sonst etwas, das nicht in die erwartete Gestalt
-#      passt.
+#   1. Die ganze Datei fällt weg — ein unbekannter Schlüssel an der obersten
+#      Ebene, in einer `[[profil.zeile]]` oder in einem Bausteintisch, ein
+#      Tischname, den es nicht gibt, ein Wert für `zeigt`, den es nicht gibt,
+#      ein fehlender `name`, oder sonst etwas, das nicht in die erwartete
+#      Gestalt passt.
 #   2. Ein ganzes Profil fällt weg — sein `pfad` oder sein `kennzeichen` lässt
 #      sich nicht als Ausdruck übersetzen, oder es nennt keines von beiden. Die
 #      übrigen Profile bleiben.
 #   3. Eine Zeile verliert ihren Baustein und behält ihre Beschriftung — sie
 #      nennt nicht genau einen der vier Bausteine, ein Muster darin lässt sich
 #      nicht übersetzen, das `feldmuster` trägt nicht genau eine Fanggruppe,
-#      der `ordner` führt aus dem erkannten Ordner heraus, oder er trägt einen
-#      Platzhalter an einem Baustein, der keinen annimmt. Die Zeile zeigt dann
-#      ihre Beschriftung und den Platzhalter `--`, die übrigen Zeilen stimmen
+#      oder der `ordner` taugt nicht: er trägt ein leeres Stück (etwa durch
+#      einen abschließenden Schrägstrich), führt aus dem erkannten Ordner
+#      heraus, trägt mehr als einen Platzhalter, oder einen Platzhalter an
+#      einem Baustein, der keinen annimmt. Die Zeile zeigt dann ihre
+#      Beschriftung und den Platzhalter `--`, die übrigen Zeilen stimmen
 #      weiter.
+#
+# Der `[[profil]]`-Block selbst ist die eine Stelle, an der ein unbekannter
+# Schlüssel NICHT gemeldet, sondern übergangen wird. Was er kostet, ist das,
+# was der Schreibfehler weggenommen hat: `kennzeichnen` statt `kennzeichen`
+# lässt das Profil ohne Erkennungsmuster zurück und fällt in die zweite
+# Reichweite, `zeilen` statt `zeile` lässt ein Profil ohne eine einzige Zeile
+# stehen, und das ohne jede Meldung.
 
 # ----------------------------------------------------------------------------
 # Der Aufbau: Profil, Zeile, genau ein Baustein
@@ -96,7 +107,8 @@
 #
 # Vier Dinge gehören dazu, jedes mit seinem Grund:
 #
-#   - HÖCHSTENS EINER. Zwei Platzhalter werden beim Laden abgewiesen. Mit einem
+#   - HÖCHSTENS EINER. Zwei Platzhalter werden beim Laden abgewiesen und
+#     kosten die Zeile ihren Baustein, nicht die Datei. Mit einem
 #     ist die Form der Kosten aus dem Profil ablesbar — ein Lauf über den
 #     Ordner vor dem Platzhalter, dann einer je Treffer —, mit zweien stünde sie
 #     erst am Bestand fest.
@@ -215,7 +227,16 @@
 # EIN ORT KOSTET GENAU EINEN LESELAUF, gleich wie viele Zeilen ihn nennen: der
 # erkannte Ordner ebenso wie jeder Unterordner und jeder Platzhalterlauf. Zwei
 # Zeilen über `planning` teilen sich also eine Lesung, und die Zahl der
-# Leseläufe eines Profils ist die Zahl der VERSCHIEDENEN Orte darin.
+# Leseläufe eines Profils ist die Zahl der VERSCHIEDENEN Orte darin — PLUS
+# EINEN LAUF FÜR DIE ERKENNUNG, wenn das Profil über sein `kennzeichen`
+# erkannt wurde und keine seiner Zeilen den erkannten Ordner selbst nennt.
+# Die Erkennung über ein `kennzeichen` liest die Einträge des ausgewählten
+# Ordners, und dieser Lauf ist einer der zwölf; nennt eine Zeile denselben
+# Ordner, teilt sie sich die Lesung mit ihm. Ein `pfad` erkennt ohne Lesung
+# und kostet nichts. Das Wurzelprofil einer fusion-Werkbank unten kostet
+# deshalb drei Läufe, das Projektwurzelprofil mit denselben sieben Zeilen
+# vier: dort trägt jede Zeile eine Ortsangabe, und den erkannten Ordner liest
+# allein die Erkennung.
 #
 # Bei den Öffnungen fällt die Wahl anders aus. `feld` kostet genau eine,
 # `juengste` mit `zeigt = "titel"` deren `anzahl` und mit `zeigt = "datum"`
@@ -249,9 +270,12 @@
 # kein Schreibfehler in dieser Datei: sie zieht den Namen aus dem Feld
 # `setup_pwd` von `.fusion-setup`, und fusion schreibt dieses Feld seit einer
 # Fassung zwischen 8.1.0 und 10.7.0 nicht mehr. Sie bleibt trotzdem stehen,
-# weil eine ältere Werkbank das Feld noch trägt und weil sie sich ihre Öffnung
-# mit den zwei Zeilen darunter teilt, also nichts kostet. Bei einer
-# flight-Werkbank ganz unten liefert dieselbe Zeile weiter einen Wert.
+# weil eine ältere Werkbank das Feld noch trägt. Umsonst ist sie nicht:
+# geteilt wird der Leselauf über einen Ort, nicht die Öffnung einer Datei,
+# und jeder Feldbaustein öffnet seine Datei selbst. Die drei Zeilen über
+# `.fusion-setup` kosten also drei der vierundzwanzig Öffnungen, und diese
+# eine davon. Bei einer flight-Werkbank ganz unten liefert dieselbe Zeile
+# weiter einen Wert.
 #
 # Die Zeile „Sitzung" hängt an einer Zeilenform von `orchestrator-live.md`, die
 # fusion ändern kann. Ändert fusion sie, zeigt diese eine Zeile ihren
@@ -262,7 +286,11 @@
 # der Abschnitt leer, steht der Platzhalter da und nicht der Name des nächsten
 # Abschnitts. Eine Zeile, die selbst mit `#` beginnt, gilt dabei als
 # Überschrift und wird nicht gelesen. Ein fehlendes Zeilenende am Dateiende
-# kostet den Wert nicht.
+# kostet den Wert nicht. Das `(?m)^` am Anfang verankert die Überschrift am
+# Zeilenanfang, wie der Absatz „Zur Verankerung" oben es verlangt: ohne das
+# fingen auch eine Unterüberschrift `### Current` und eine Erwähnung von
+# `## Current` mitten im Fließtext, und die Zeile zeigte deren Inhalt statt
+# des Platzhalters.
 #
 # DIESE SIEBEN ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
 # „Projektwurzel mit fusion-Werkbank" ganz unten, dort jede mit
@@ -293,7 +321,7 @@ kennzeichen = '^\.fusion-setup$'
 
   [[profil.zeile]]
   beschriftung = "Sitzung"
-  feld = { datei = '^orchestrator-live\.md$', feldmuster = '## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
+  feld = { datei = '^orchestrator-live\.md$', feldmuster = '(?m)^## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
 
   [[profil.zeile]]
   beschriftung = "Runden"
@@ -447,9 +475,9 @@ pfad = 'fusion-workbench/archive$'
 # Er führt zehn Unterspeicher, und jeder bekommt zwei Zeilen: wie viele
 # Datensätze darin stehen und wann zuletzt einer geschrieben wurde. Zwanzig
 # Zeilen, aber nur ZEHN Leseläufe, denn die zwei Zeilen eines Unterspeichers
-# nennen denselben Ort und teilen sich seine Lesung. Von den zwölf erlaubten
-# Läufen bleiben damit zwei übrig; wer einen elften Unterspeicher aufnimmt,
-# rechnet nach, was er kostet.
+# nennen denselben Ort und teilen sich seine Lesung. Die Erkennung über `pfad`
+# kostet keinen Lauf dazu. Von den zwölf erlaubten Läufen bleiben damit zwei
+# übrig; wer einen elften Unterspeicher aufnimmt, rechnet nach, was er kostet.
 #
 # Die Datumszeilen öffnen keine Datei: `zeigt = "datum"` liest das
 # Änderungsdatum aus dem Verzeichniseintrag, den der Leselauf ohnehin liefert.
@@ -596,6 +624,15 @@ kennzeichen = '^_._circle\.md$'
 # nicht über den Inhalt: welcher Ordner eine Projektwurzel ist, beantwortet der
 # Nutzer damit hier, wo er es ändern kann, und nicht die Anwendung.
 #
+# DAS IST DIE ERKENNUNG, DIE DAS WURZELPROFIL OBEN FÜR SICH VERWIRFT, und sie
+# hat ihren Preis: ein `kennzeichen` sieht allein die Namen der Einträge und
+# kann nicht in den Ordner hineinsehen. Ein leeres `fusion-workbench`, also
+# der Zustand vor `/fusion:setup`, oder eine Datei dieses Namens genügt, und
+# die Vorschau zeigt statt der Metadaten sieben Zeilen Platzhalter. Der Preis
+# ist in Kauf genommen, weil die Auskunft an einer eingerichteten
+# Projektwurzel ihn aufwiegt; wer ihn nicht zahlen will, streicht dieses
+# Profil und sieht an der Projektwurzel die Metadaten.
+#
 # DIESE SIEBEN ZEILEN SIND DIE DES WURZELPROFILS GANZ OBEN, jede mit
 # `fusion-workbench/` vor der Ortsangabe. Sie stehen zweimal in dieser Datei und
 # können auseinanderlaufen; nichts hält sie aneinander. Wer eine ändert, ändert
@@ -622,7 +659,7 @@ kennzeichen = '^fusion-workbench$'
 
   [[profil.zeile]]
   beschriftung = "Sitzung"
-  feld = { ordner = "fusion-workbench", datei = '^orchestrator-live\.md$', feldmuster = '## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
+  feld = { ordner = "fusion-workbench", datei = '^orchestrator-live\.md$', feldmuster = '(?m)^## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
 
   [[profil.zeile]]
   beschriftung = "Runden"
@@ -723,6 +760,10 @@ pfad = 'flight-workbench/archive$'
 # Dieselben sieben Zeilen wie das Wurzelprofil darüber, jede mit
 # `flight-workbench/` vor der Ortsangabe, und derselbe Hinweis gilt: sie stehen
 # zweimal da und können auseinanderlaufen.
+#
+# Erkannt wird auch hier am Namen, und der Preis ist derselbe wie beim
+# fusion-Projektwurzelprofil oben: ein leeres `flight-workbench` liefert
+# sieben Zeilen Platzhalter statt der Metadaten.
 #
 # Enthält ein Verzeichnis BEIDE Werkbänke, gewinnt das fusion-Profil, weil es
 # in dieser Datei weiter oben steht. Wer es andersherum will, verschiebt die

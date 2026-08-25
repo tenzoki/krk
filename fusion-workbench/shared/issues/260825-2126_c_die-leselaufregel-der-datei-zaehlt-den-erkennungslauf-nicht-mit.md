@@ -67,3 +67,6 @@ keine seiner Zeilen den erkannten Ordner selbst nennt." Der Doc-Kommentar von
 
 **Schwere:** mittel. Kein Bau und keine Probe hängt daran; die Anleitung, mit der ein Nutzer
 sein eigenes Profil gegen die Schranke hält, ist um eins zu klein.
+
+---
+Resolved: die Regel bei „Was eine Zusammenfassung höchstens kostet" trägt den zweiten Halbsatz: plus ein Lauf für die Erkennung, wenn das Profil über sein `kennzeichen` erkannt wurde und keine Zeile den erkannten Ordner nennt; ein `pfad` erkennt ohne Lesung. Die Zahlen 3 (Wurzelprofil) und 4 (Projektwurzelprofil) stehen als Beispiel dort, und der Kommentar des gemeinsamen Speichers sagt, dass seine Erkennung über `pfad` keinen Lauf kostet. Nachgemessen am 260825 über `leseprofil::zusammenfassen_gezaehlt`: `fusion-workbench` 3 Läufe, Projektwurzel `krk` 4, `fusion-workbench/shared` 10, `example/flight-workbench` 5, `example` 6.

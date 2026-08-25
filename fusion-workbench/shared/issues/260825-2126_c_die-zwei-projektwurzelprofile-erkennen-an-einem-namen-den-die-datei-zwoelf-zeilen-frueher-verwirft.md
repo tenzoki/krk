@@ -65,3 +65,6 @@ mit demselben Mittel behandelt, nämlich mit einem Hinweis statt mit einem Mecha
 
 **Schwere:** mittel. Kein Bau hängt daran; an einem Ordner mit leerer Werkbank ist die
 Vorschau ärmer als ohne jedes Profil.
+
+---
+Resolved: Möglichkeit 1, der Zuschnitt bleibt. Der Kommentar über „Projektwurzel mit fusion-Werkbank" sagt jetzt in Großschrift, dass dies die Erkennung ist, die das Wurzelprofil verwirft, dass ein `kennzeichen` nicht in den Ordner hineinsehen kann, dass ein leeres `fusion-workbench` (der Zustand vor `/fusion:setup`) oder eine Datei dieses Namens sieben Zeilen Platzhalter statt der Metadaten liefert, warum der Preis in Kauf genommen ist und wie man ihn abwählt; der flight-Block verweist darauf mit demselben Preis. Nachgemessen am 260825: leeres Verzeichnis `fusion-workbench` → sieben `--`, Datei `fusion-workbench` → sieben `--`, leeres `flight-workbench` → sieben `--`.

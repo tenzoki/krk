@@ -68,3 +68,6 @@ Muster den Abschnitt und nicht mehr seine Unterüberschrift und nicht mehr seine
 
 **Schwere:** mittel. Kein Bau hängt daran; die Zeile kann einen falschen Wert zeigen, wo sie
 den Platzhalter zeigen müsste.
+
+---
+Resolved: `resources/default-readers.toml` trägt an beiden Stellen (`:324` und `:662`, nach der Verschiebung durch die neue Prosa) das Muster `'(?m)^## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)'`; der Kommentar über dem Wurzelprofil sagt, was das `(?m)^` abhält. Nachgemessen am 260825 über `leseprofil::zusammenfassen_gezaehlt` an drei künstlichen Werkbankwurzeln: `### Current` mit `FALSCHER-ABSCHNITT` vor dem echten Abschnitt zeigt `RICHTIG`, die Fließtextzeile `siehe ## Current` zeigt `RICHTIG`, CRLF zeigt `--` (der Platzhalter, wie angesagt; fusion schreibt `\n`). `cargo test -p krk-core --lib leseprofile` Exit 0.
