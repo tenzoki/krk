@@ -32,7 +32,7 @@ Der Kern kennt die Verschmelzung bereits: `Konfliktregel` in `crates/krk-core/sr
 Möglichkeit 1. Sie ist die einzige der drei, die weder löscht noch mischt, und sie kostet den Nutzer nichts als einen Ordner, den er selbst wieder wegräumt. Möglichkeit 3 wäre die konsequentere Fortsetzung der Kopierregel, verlangt aber eine Kette von Rückfragen für einen Vorgang, den der Nutzer als eine Handlung angestoßen hat.
 
 ---
-Answered:
+Answered: shared/history/260824-2120-orchestrator-session.md:33 — Moeglichkeit 2, dieselbe Rueckfrage wie beim Zip; Ueberschreiben raeumt den vorhandenen Ordner in den Papierkorb, nicht endgueltig (Bindung aus Runde 12).
 Implemented:
 Deferred:
 Superseded by:

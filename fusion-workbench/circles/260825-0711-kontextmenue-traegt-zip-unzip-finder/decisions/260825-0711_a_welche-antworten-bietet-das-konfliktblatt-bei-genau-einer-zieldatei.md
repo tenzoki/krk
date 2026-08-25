@@ -32,7 +32,7 @@ Die Reihenfolge der Schaltflächen und die Tastenbelegung des Blattes sind aus e
 Möglichkeit 2, mit der Eingabetaste auf Abbrechen. Sie liefert, was der Nutzer beschrieben hat, und die Fallunterscheidung ist billig: sie hängt an einer Zahl, die der Aufrufer ohnehin kennt, und die Wahl der Vorgabeschaltfläche steht bereits an einer prüfbaren Stelle.
 
 ---
-Answered:
+Answered: shared/history/260824-2120-orchestrator-session.md:34 — Moeglichkeit 2, auf Ueberschreiben, Umbenennen und Abbrechen kuerzen; Eingabetaste auf Abbrechen.
 Implemented:
 Deferred:
 Superseded by:

@@ -3,14 +3,14 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** (none yet)
+**Active spec/plan:** circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/planning/260825-0727_p_plan-kontextmenue-traegt-zip-unzip-finder.md
 **Active session history:** shared/history/260824-2120-orchestrator-session.md
 
 ---
 
 ## Directive
 
-Nach Abschluss dieser Runde trägt das Kontextmenü der Dateiliste vier Einträge statt einem: neben dem Teilen über die Freigabedienste des Systems stehen Zip, Unzip und Finder. Zip packt die betroffenen Einträge, also die markierten und ersatzweise die ausgewählte Zeile, in ein Archiv, das im angezeigten Ordner entsteht; bei einem einzelnen Eintrag trägt es dessen Namen, bei mehreren den des angezeigten Ordners. Unzip entpackt das Archiv, das der Nutzer meint: die ausgewählte Datei, wenn sie ein Zip ist, sonst das eine Zip des angezeigten Ordners, sofern dort genau eines liegt. Der Inhalt landet in einem neuen Ordner im angezeigten Ordner, benannt nach dem Archiv. Finder öffnet den angezeigten Ordner im Finder. Alle drei Befehle sind allein über das Kontextmenü erreichbar und bekommen weder eine Tastenkombination noch einen Eintrag im Hauptmenü. Zip und Unzip laufen über die bestehende Vorgangsanzeige mit Fortschritt und Abbruch und stellen bei einem Namenskonflikt dieselbe Rückfrage wie das Kopieren; wo ein Befehl nichts vorfindet, meldet er es in der Statuszeile.
+See `**Active spec/plan:**` above. The cited spec or plan states the Directive in force.
 
 ## Grounding snapshot
 

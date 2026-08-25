@@ -24,3 +24,15 @@
 ## Per-Turn Log
 
 (noch keine Runde)
+
+## Entscheidungen des Nutzers zu Runde 17
+
+Am Abnahmegate des Plans, 260825, in zwei Fragerunden beantwortet.
+
+1. **Archivname einer einzelnen Datei mit Endung** — Endung anhängen: aus `bericht.txt` wird `bericht.txt.zip`. Der Ursprungsname bleibt vollständig, zwei Dateien gleichen Stamms erzeugen zwei Archive statt einer Kollision, und nur diese Form macht das Paar Zip/Unzip umkehrbar.
+2. **Woran Unzip ein Archiv erkennt** — an der Endung `.zip`, ohne Rücksicht auf Groß- und Kleinschreibung, ohne Dateizugriff. Die Prüfung am Inhalt bleibt der spätere Ausbau, falls sich der Fehlversuch in der Praxis zeigt.
+3. **Zielordner beim Entpacken steht schon da** — dieselbe Rückfrage wie beim Zip: überschreiben, danebenlegen oder abbrechen, bevor ein Eintrag geschrieben wird. **Der Nutzer ist damit der Empfehlung nicht gefolgt**, und daraus folgt eine Bindung, die der Datensatz unter `## Constraints` schon nennt: seit Runde 12 geht jedem Löschweg eine Rückfrage voraus, und es gibt nur den Weg in den Papierkorb. „Überschreiben" auf einen vorhandenen Ordner räumt jenen Ordner deshalb in den Papierkorb und löscht ihn nicht endgültig. Der Nutzer hat dieser Auslegung im Chat nicht widersprochen.
+4. **Konfliktblatt bei genau einer Zieldatei** — auf drei Antworten kürzen: Überschreiben, Umbenennen, Abbrechen. Das Ankreuzfeld „für alle weiteren" und „Überspringen" entfallen, die Eingabetaste liegt auf Abbrechen, wie es die Löschbestätigung seit Runde 12 vormacht.
+5. **Worauf Unzip wirkt** — die bestehende Regel `betroffene`, und jedes Archiv darin wird entpackt: drei markierte Archive ergeben drei Zielordner in einem Vorgang. **Der Nutzer ist damit der Empfehlung nicht gefolgt** und hat die im Datensatz als späteren Ausbau genannte Möglichkeit sofort gewählt. Die Folgefrage, die der Datensatz dazu stellt — je Archiv gefragt oder einmal für alle —, ist aus den übrigen Wahlen entschieden und braucht keinen eigenen Mechanismus: bei mehreren Archiven erzeugt der Vorgang mehrere Ziele, also greift `erzeugt_genau_ein_ziel` nicht, das volle Blatt erscheint samt Ankreuzfeld „für alle weiteren", und der Nutzer beantwortet je Archiv mit einem Ausweg für den Rest. Gekürzt wird das Blatt allein beim Zip. Auch dieser Auslegung hat der Nutzer im Chat nicht widersprochen.
+
+Der Plan `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/planning/260825-0727_o_plan-kontextmenue-traegt-zip-unzip-finder.md` ist im selben Gate abgenommen worden, unverändert. Er ist auf genau diese fünf Antworten parametrisiert und musste für die zwei Abweichungen von seinen Empfehlungen nicht umgeschrieben werden.

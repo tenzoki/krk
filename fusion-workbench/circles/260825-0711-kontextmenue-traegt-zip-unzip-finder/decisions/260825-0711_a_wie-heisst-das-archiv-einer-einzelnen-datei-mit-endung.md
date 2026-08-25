@@ -32,7 +32,7 @@ Die Namensbildung steht als eine reine Funktion an einer Stelle und ist ohne App
 Möglichkeit 1. Sie hält den Ursprungsnamen vollständig und vermeidet die Kollision zweier Dateien gleichen Stamms, die sonst eine Rückfrage auslöst, ohne dass der Nutzer einen Grund dafür sieht. Es ist zugleich das Verhalten, das die Nutzer vom Komprimieren im Finder kennen.
 
 ---
-Answered:
+Answered: shared/history/260824-2120-orchestrator-session.md:31 — Moeglichkeit 1, Endung anhaengen: aus bericht.txt wird bericht.txt.zip.
 Implemented:
 Deferred:
 Superseded by:

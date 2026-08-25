@@ -32,7 +32,7 @@ Dieses Projekt prüft den Typ einer Datei am offenen Deskriptor und nicht am Pfa
 Möglichkeit 1 für den ersten Bau. Der Nutzer wählt im Kontextmenü, was er im Dateifenster sieht, und dort steht der Name; ein Archiv, das nicht `.zip` heißt, ist in diesem Ordner ohnehin nicht als solches erkennbar. Möglichkeit 3 bleibt die Erweiterung, falls sich der Fehlversuch in der Praxis zeigt.
 
 ---
-Answered:
+Answered: shared/history/260824-2120-orchestrator-session.md:32 — Moeglichkeit 1, Endung .zip ohne Ruecksicht auf Gross- und Kleinschreibung; die Inhaltspruefung bleibt spaeterer Ausbau.
 Implemented:
 Deferred:
 Superseded by:
