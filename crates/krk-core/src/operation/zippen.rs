@@ -37,8 +37,8 @@
 //! [`super::loeschen::baum_entfernen`]. Bis dahin nahm dieser Zweig den
 //! Baumloescher, und ein Ordner am Archivnamen war damit unwiederbringlich weg;
 //! der Nutzer hat den Unterschied aufgehoben
-//! (`issues/260825-0942_*_ueberschreiben-loescht-beim-packen-endgueltig-und-
-//! beim-entpacken-in-den-papierkorb.md`, Moeglichkeit 1). "Ueberschreiben"
+//! (`issues/260825-0942_*_ueberschreiben-loescht-beim-packen-endgueltig-und-beim-entpacken-in-den-papierkorb.md`,
+//! Moeglichkeit 1). "Ueberschreiben"
 //! bedeutet seither im ganzen Kontextmenue dasselbe.
 //!
 //! # Angetastet wird allein der Eintrag, der genau so heisst wie das Archiv
@@ -62,14 +62,28 @@
 //!
 //! Der Kern vergleicht die Pfade trotzdem nicht, und das ist die Antwort des
 //! Nutzers vom 260825
-//! (`issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-in-den-
-//! papierkorb-*`, der kleinere der zwei Wege): der Schnitt faellt in der
+//! (`issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-in-den-papierkorb-*`,
+//! der kleinere der zwei Wege): der Schnitt faellt in der
 //! Oberflaeche, die beide Listen bildet, naemlich in
 //! `kommandos::kontextmenue::packziel` der Kiste `krk-ui`, gehalten von dessen
 //! Probe `das_archiv_des_vorigen_laufs_faellt_aus_den_quellen`. Hier gilt
 //! deshalb schlicht: geraeumt wird der Zielpfad, wer immer ihn hereinreicht.
 //! Steht er doch einmal auf der Quellenliste, geht er in den Papierkorb und
 //! fehlt dem Lauf danach als Quelle, die er als ausgelassen meldet.
+//!
+//! **Und das Glied dazwischen ist seit dem 260825 ebenfalls gehalten.** Bis
+//! dahin sagte dieser Abschnitt „sichert der Rufer" und liess offen, wer den
+//! Rufer sichert: `Auftrag::zippen(quellen, ziel)` nimmt zwei unabhaengige
+//! Listen, und wer im Ausfuehrungszweig weiterhin `packziel` ruft, davon aber
+//! nur das Ziel nimmt und die ungeschnittene Markierung als Quellen
+//! weiterreicht, bekam den Defekt zurueck, ohne dass eine Probe rot wurde
+//! (`issues/260825-1249_*_die-zusage-haengt-jetzt-am-rufer-in-einer-anderen-kiste-*`).
+//! Zwei Zaehlproben im Rufer schliessen die Kette:
+//! `der_packauftrag_reicht_die_quellen_aus_packziel_weiter` haelt, dass die
+//! geschnittene Liste den Auftrag erreicht, und
+//! `ein_packauftrag_entsteht_in_der_oberflaeche_genau_einmal`, dass daneben kein
+//! zweiter Eingang entsteht; beide stehen in
+//! `krk-ui/src/appkit/anwendung.rs`, Pruefmodul `kontextproben`.
 //!
 //! # Einer Verknuepfung wird nicht gefolgt
 //!
@@ -90,8 +104,8 @@
 //! Deskriptor herausgibt; an einer Roehre, an der ein Schreiber **steht**,
 //! bliebe `read(2)` danach unbegrenzt stehen, und der Abbruch wird erst nach
 //! einem geglueckten `read` geprueft — `Esc` erreichte den Lauf also nicht mehr
-//! (`issues/260825-0942_*_das-packen-haengt-an-einer-benannten-roehre-mit-
-//! schreiber-und-die-probe-kann-es-nicht-sehen.md`). [`datei_packen`] fragt
+//! (`issues/260825-0942_*_das-packen-haengt-an-einer-benannten-roehre-mit-schreiber-und-die-probe-kann-es-nicht-sehen.md`).
+//! [`datei_packen`] fragt
 //! deshalb `metadata()` **am offenen Deskriptor** und laesst alles aus, was
 //! `is_file()` nicht bejaht, mit seinem Grund in der Abschlussliste.
 //!

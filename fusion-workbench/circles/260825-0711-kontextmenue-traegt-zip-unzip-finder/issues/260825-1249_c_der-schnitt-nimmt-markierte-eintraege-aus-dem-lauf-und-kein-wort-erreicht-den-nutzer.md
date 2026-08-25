@@ -80,3 +80,31 @@ entschieden.
 **Betroffen:** `crates/krk-ui/src/kommandos/kontextmenue.rs` (`packziel`, `ohne_die_eigenen_ziele`),
 `crates/krk-ui/src/appkit/anwendung.rs` (`zipauftrag_stellen`, `entpackauftrag_stellen`),
 `crates/krk-ui/src/kommandos/operationen.rs` (der Wortlaut).
+
+---
+Resolved: Weg 1, ueber den bestehenden Meldeweg und ohne einen zweiten daneben.
+`operationen::abschlusstext` nimmt ein viertes Argument `ausgelassen` und haengt
+den Halbsatz ", ein Eintrag als Ziel dieses Laufs ausgelassen" an — hinter dem
+Halbsatz zu den uebersprungenen, denn uebersprungen hat der Vorgang, was er
+angefasst und liegengelassen hat, ausgelassen ist, was ihm nie vorlag. Die Zahl
+reist als `Vorgang::ausgelassen` durch `auftrag_starten`; die vier uebrigen Wege
+hinein reichen null herein.
+
+**Gesagt wird es am Ende und nicht vor dem Start**, und das entscheidet die
+Rangfolge der Statuszeile: eine Befehlsantwort steht ueber der Vorgangsanzeige
+(`appkit::statuszeile::Rang`), also verdeckte eine Meldung vor dem Start genau
+den Fortschritt, den sie ankuendigt, bis zum naechsten Tastendruck.
+
+Woher die Zahl kommt, ist auf den zwei Seiten verschieden, und der Grund steht
+an beiden Stellen: beim Packen rechnet sie der Aufrufer als
+`auswahl.pfade.len() - quellen.len()`, denn er haelt beide Listen; beim
+Entpacken traegt sie `Entpackbefund::Archive { paare, ausgelassen }` mit, weil
+`entpackziel` zwischen zwei Regeln entscheidet und unter der Ersatzregel die
+Markierung mit dem Ergebnis nichts zu tun hat.
+
+Probe: `der_abschlusstext_nennt_die_ausgelassenen_eintraege` prueft beide
+Richtungen — ohne Schnitt kein Halbsatz, mit Schnitt der Wortlaut. Die
+Entpackzahl haelt `ein_archiv_das_zielordner_eines_anderen_ist_faellt_aus_den_quellen`
+und die zwei neuen Entpackproben mit ihrem `ausgelassen`-Feld. Gegenproben
+gefahren: ohne den Halbsatz wird die erste rot, mit einer auf null gerechneten
+Entpackzahl die drei anderen.

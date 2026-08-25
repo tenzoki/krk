@@ -550,7 +550,23 @@ pub fn schon_ein_vorgang(art: &Art) -> String {
 ///
 /// Nach einem Abbruch nennt sie, wie viele Eintraege bereits uebertragen wurden
 /// (C4).
-pub fn abschlusstext(art: &Art, bericht: &Bericht, positionen: usize) -> String {
+///
+/// **`ausgelassen` sind Eintraege, die gar nicht erst in den Auftrag kamen**
+/// (Runde 17), und deshalb steht ihre Zahl **hinter** der der uebersprungenen:
+/// uebersprungen hat der Vorgang, was er angefasst und liegengelassen hat,
+/// ausgelassen ist, was ihm nie vorlag. Zip und Unzip nehmen einen markierten
+/// Eintrag aus dem Lauf, wenn derselbe Lauf ihn als Ziel anlegt
+/// (`crate::kommandos::kontextmenue`); ohne diesen Halbsatz taete der Befehl
+/// wortlos weniger, als der Nutzer markiert hat
+/// (`issues/260825-1249_*_der-schnitt-nimmt-markierte-eintraege-aus-dem-lauf-*`).
+/// Jeder andere Weg reicht hier null herein; welche und warum, steht bei
+/// `Vorgang::ausgelassen`.
+pub fn abschlusstext(
+    art: &Art,
+    bericht: &Bericht,
+    positionen: usize,
+    ausgelassen: usize,
+) -> String {
     let was = ueberschrift(art);
     let uebertragen = format!(
         "{}, {} ({})",
@@ -566,6 +582,12 @@ pub fn abschlusstext(art: &Art, bericht: &Bericht, positionen: usize) -> String 
         text.push_str(&format!(
             ", {} übersprungen",
             eintraege_text(bericht.uebersprungen.len())
+        ));
+    }
+    if ausgelassen > 0 {
+        text.push_str(&format!(
+            ", {} als Ziel dieses Laufs ausgelassen",
+            eintraege_text(ausgelassen)
         ));
     }
     text
@@ -1480,6 +1502,7 @@ mod tests {
             },
             &bericht,
             5,
+            0,
         );
         assert!(text.contains("4.812"), "{text}");
         assert!(text.contains("abgebrochen"), "{text}");
@@ -1551,10 +1574,42 @@ mod tests {
             },
             &bericht,
             50,
+            0,
         );
         assert!(text.starts_with("Umbenennen fertig: "), "{text}");
         assert!(text.contains("48 Einträge"), "{text}");
         assert!(text.contains("50 ausgewählte Positionen"), "{text}");
+    }
+
+    /// Der geschnittene Eintrag kommt im Abschlusstext vor (Runde 17).
+    ///
+    /// **Die eine Stelle, an der der Nutzer davon erfaehrt.** Zip nimmt das
+    /// Archiv des vorigen Laufs aus den Quellen; ohne diesen Halbsatz zeigte
+    /// die Statuszeile eine Position weniger und beantwortete nicht, warum
+    /// (`issues/260825-1249_*_der-schnitt-nimmt-markierte-eintraege-aus-dem-lauf-*`).
+    #[test]
+    fn der_abschlusstext_nennt_die_ausgelassenen_eintraege() {
+        let bericht = Bericht {
+            abschluss: Abschluss::Fertig,
+            eintraege: 2,
+            bytes: 4_812,
+            uebersprungen: Vec::new(),
+        };
+        let art = Art::Zippen {
+            ziel: "/tmp/Projekte/Projekte.zip".into(),
+        };
+
+        let ohne = abschlusstext(&art, &bericht, 2, 0);
+        assert!(
+            !ohne.contains("ausgelassen"),
+            "ein Lauf ohne Schnitt bekommt den Halbsatz nicht: {ohne}"
+        );
+
+        let mit = abschlusstext(&art, &bericht, 2, 1);
+        assert!(
+            mit.contains("ein Eintrag als Ziel dieses Laufs ausgelassen"),
+            "{mit}"
+        );
     }
 
     #[test]

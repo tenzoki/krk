@@ -125,3 +125,23 @@ dieser Runde haelt in einem erreichbaren Fall nicht.
 **Betroffen:** `crates/krk-ui/src/kommandos/kontextmenue.rs` (`ist_ziel_des_laufs`, beide Rufer);
 mittelbar `crates/krk-core/src/operation/zippen.rs` und `entpacken.rs`, deren Konfliktblatt die Lage
 sichtbar macht.
+
+---
+Resolved: Moeglichkeit 1, so vom Nutzer gewaehlt. `ist_ziel_des_laufs`
+(`crates/krk-ui/src/kommandos/kontextmenue.rs`) vergleicht ueber den neuen
+Helfer `gleicher_eintrag`: der letzte Bestandteil mit `eq_ignore_ascii_case`,
+der Elternteil buchstabengetreu wie bisher, kein Dateizugriff. Beide Rufer
+erben das, weil die Regel weiterhin genau einmal dasteht. Die Ungenauigkeit
+steht ausgeschrieben im Doc-Kommentar: auf einem
+gross-/kleinschreibungsempfindlich formatierten Datentraeger faellt gelegentlich
+eine Quelle heraus, die keine Kollision waere; der Nutzer verliert dabei nichts,
+ihm fehlt ein Eintrag im Archiv. Die Moeglichkeiten 2 und 3 sind verworfen.
+
+Drei Proben dazu, alle in demselben Pruefmodul:
+`das_archiv_des_vorigen_laufs_faellt_auch_in_abweichender_schreibung` (Packen,
+`PROJEKTE.ZIP` gegen das gerechnete `Projekte.zip`),
+`der_entpackschnitt_trifft_auch_in_abweichender_schreibung` (Entpacken, `a.zip`
+neben `A.ZIP.zip`) und `ein_aehnlich_benanntes_archiv_bleibt_quelle`, die die
+Grenze haelt: gefaltet wird die Schreibung und nicht die Aehnlichkeit.
+Gegenprobe gefahren — mit `dieser == jener` statt der Faltung werden die ersten
+zwei rot, die dritte bleibt gruen.

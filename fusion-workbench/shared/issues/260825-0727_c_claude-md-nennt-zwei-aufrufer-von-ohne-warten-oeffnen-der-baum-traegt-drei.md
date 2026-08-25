@@ -88,3 +88,33 @@ kommt auf vier statt fünf.
 
 Notiert vom coder, der allein `CLAUDE.md` anfassen durfte; die Codedatei gehört einer
 Sitzung, die den Baum gerade durchliest.
+
+---
+**Vollstaendig behoben am 260825; der Marker geht auf `_c_`.**
+
+**Die zweite Haelfte, der Modulkopf von `crates/krk-core/src/verzeichnis/sys.rs`, ist
+nachgezogen** — dieselbe Bewegung, die `CLAUDE.md` schon vollzogen hatte. Drei Stellen
+waren daneben, eine mehr als der Zusatz vom 260825-1230 nannte:
+
+1. **Die Aufzaehlung nach dem Zaehlkommando** sagte "bis zur Runde 17 auf zwei" und liess
+   `anlesen` aus. Sie sagt jetzt "bis zur Runde 16 auf zwei" und nennt die zwei Sprunge
+   einzeln, das Anlesen der Runde 16 und die zwei Archivwege der Runde 17. An die Stelle
+   der Namensliste ist eine Ortsangabe nach Klassen getreten: die drei Textwege in
+   `text/datei.rs`, die zwei Archivwege unter `operation/`. Dazu steht jetzt dort, dass
+   das enge Muster `sys::ohne_warten_oeffnen(` nur vier der fuenf findet, weil
+   `entpacken.rs` den Namen ueber `use` hereinholt.
+2. **Die ASCII-Skizze am Kopf** fuehrte vier Aufrufer unter `fcntl(2)` und kannte
+   `text::datei::anlesen` nicht. Sie fuehrt jetzt fuenf.
+3. **Der Doc-Kommentar von `ohne_warten_oeffnen` selbst** zaehlte an zwei Stellen daneben:
+   die Aufzaehlung der Rufer liess `anlesen` aus und sprach von "den zwei Textwegen", und
+   der Schlusssatz sagte "der dritte und der vierte mit der Runde 17". Beides steht
+   richtig, und der Schlusssatz sagt jetzt dazu, dass die Zahl keine Zusage ist, sondern
+   mit jeder Runde waechst, die einen weiteren Leser baut. Dass der dritte Textweg die
+   Groesse gar nicht gegen eine Grenze haelt, sondern ueber `take` anliest, steht
+   ebenfalls dort — die Beschreibung des gemeinsamen Ablaufs stimmte fuer ihn nicht.
+
+Nachgemessen am Stand dieser Sitzung: `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src`
+gibt fuenf Aufruferzeilen (`text/datei.rs:434,620,692`, `operation/zippen.rs:362`,
+`operation/entpacken.rs:118`), dazu die Erklaerung, die Pruefzeile und die zwei Zeilen des
+Modulkopfs, die das Muster selbst nennen. Die Zeile in `zippen.rs` stand am 260825-1230
+noch auf 348; verschoben hat sie diese Sitzung, die dem Modulkopf Prosa hinzugefuegt hat. `make check` Exit 0.

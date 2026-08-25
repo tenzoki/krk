@@ -75,3 +75,13 @@ seinen Zweck.
 
 **Betroffen:** `crates/krk-core/src/operation/zippen.rs`,
 `crates/krk-ui/src/kommandos/kontextmenue.rs`, `crates/krk-ui/src/appkit/anwendung.rs`.
+
+---
+Resolved: Alle fuenf Stellen stehen wieder auf einer Zeile, also auch die zwei
+aelteren aus fruehen Commits derselben Runde, denen der Befund ausdruecklich
+mitgilt: `crates/krk-core/src/operation/zippen.rs` (drei Stellen),
+`crates/krk-ui/src/kommandos/kontextmenue.rs` und
+`crates/krk-ui/src/appkit/anwendung.rs`. Der Rest des Absatzes ist umgebrochen,
+sodass allein die Zeile mit dem Verweis ueber die Spaltenbreite laeuft.
+`cargo fmt --all --check` gibt Exit 0; rustfmt bricht Kommentarzeilen nicht um.
+Die Kuerzung auf `...-des-laufs-*` bleibt, wie der Datensatz es vorsieht.

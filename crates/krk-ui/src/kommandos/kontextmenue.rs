@@ -84,8 +84,8 @@
 //! [`entpackziel`] rechnet jeden Zielordner aus einem Archiv, das neben den
 //! uebrigen in derselben Liste steht. Der Kern bekommt dafuer ausdruecklich
 //! keinen Pfadvergleich (Nutzerantwort vom 260825 auf
-//! `issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-in-den-
-//! papierkorb-*`, der zweite und kleinere der zwei Wege).
+//! `issues/260825-1144_*_ueberschreiben-raeumt-eine-quelle-des-laufs-in-den-papierkorb-*`,
+//! der zweite und kleinere der zwei Wege).
 //!
 //! Beide Gestalten entstehen von selbst, sobald derselbe Befehl ein zweites Mal
 //! auf denselben Ordner faellt:
@@ -101,6 +101,23 @@
 //! ja weiterhin auf der Platte. Ohne diesen Schnitt raeumte „Ueberschreiben"
 //! eine Quelle desselben Laufs in den Papierkorb, und der Lauf meldete sie
 //! danach als ausgelassen.
+//!
+//! **Drei Bestimmungen gehoeren zum Schnitt, und alle drei sind Antworten auf
+//! die dritte Durchsicht dieser Runde:**
+//!
+//! 1. **Verglichen wird der letzte Bestandteil ohne Ruecksicht auf die
+//!    Schreibung**, denn das Bauziel faltet sie und [`ist_zipname`] tut es
+//!    ausdruecklich mit. Was das kostet, steht bei [`ist_ziel_des_laufs`].
+//! 2. **Der Entpackschnitt ist ein Festpunkt**: ein Archiv faellt nur fuer
+//!    einen Anspruch, den ein **bleibender** Lauf erhebt. Aus der Kette
+//!    `{a.zip, a.zip.zip, a.zip.zip.zip}` bleiben zwei Paare und nicht eines;
+//!    siehe [`ohne_die_eigenen_ziele`].
+//! 3. **Der Schnitt bleibt nicht stumm.** Wie viele Eintraege er genommen hat,
+//!    nennt der Abschlusstext des Vorgangs
+//!    ([`super::operationen::abschlusstext`]). Ein Befehl, der wortlos weniger
+//!    tut, als der Nutzer markiert hat, waere genau der Ausgang, den der
+//!    Doc-Kommentar von [`brauchbarer_stamm`] fuenfzig Zeilen weiter unten
+//!    zurueckweist.
 //!
 //! # Wer hier hereinruft
 //!
@@ -120,6 +137,7 @@
 //! unerfuellt geworden und die Ausnahme gefallen — so, wie es eine Ausnahme
 //! mit Ablaufdatum soll.
 
+use std::cmp::Reverse;
 use std::path::{Path, PathBuf};
 
 use krk_core::operation::umbenennen::{Namensfehler, name_pruefen, namen_teilen};
@@ -273,7 +291,29 @@ pub enum Entpackbefund {
     /// `Art::Entpacken { ziele }` auftrennt.
     ///
     /// Nie leer: eine leere Menge ist [`Entpackbefund::Keines`].
-    Archive(Vec<(PathBuf, PathBuf)>),
+    Archive {
+        /// Archiv und Zielordner, Stelle fuer Stelle.
+        paare: Vec<(PathBuf, PathBuf)>,
+        /// Wie viele **markierte** Archive [`ohne_die_eigenen_ziele`] aus dem
+        /// Lauf genommen hat.
+        ///
+        /// **Die Zahl reist mit, weil der Aufrufer sie nicht nachrechnen
+        /// kann.** Beim Packen kann er es: dort haelt er die betroffenen
+        /// Eintraege selbst in der Hand, und die Zahl der geschnittenen ist die
+        /// Differenz zu den Quellen, die [`packziel`] zurueckgibt. Hier hat er
+        /// keine Ausgangsmenge, gegen die er zaehlen koennte — [`entpackziel`]
+        /// entscheidet zwischen zwei Regeln, und unter der Ersatzregel hat die
+        /// Markierung mit dem Ergebnis gar nichts zu tun.
+        ///
+        /// Ohne sie naehme der Schnitt markierte Eintraege aus dem Lauf, und
+        /// kein Wort erreichte den Nutzer
+        /// (`issues/260825-1249_*_der-schnitt-nimmt-markierte-eintraege-aus-dem-lauf-*`).
+        /// Gesagt wird es im Abschlusstext des Vorgangs
+        /// ([`super::operationen::abschlusstext`]) und nicht in einer eigenen
+        /// Meldung davor: eine Befehlsantwort steht ueber der Vorgangsanzeige
+        /// und verdeckte den Fortschritt, den sie ankuendigt.
+        ausgelassen: usize,
+    },
     /// Weder unter den betroffenen Eintraegen noch unter den sichtbaren Zeilen
     /// steht ein Archiv.
     Keines,
@@ -449,6 +489,15 @@ pub fn archivname(betroffen: &[PathBuf], ordner: &Path) -> PathBuf {
 /// Der Aufrufer fragt die Leere trotzdem, und mit derselben Meldung wie bei
 /// einer leeren Markierung: eine Zusage, die nur ein Beweis in Prosa haelt,
 /// gehoert nicht zwischen den Nutzer und einen leeren Auftrag.
+///
+/// **Was geschnitten wurde, sagt die Laengendifferenz**, und deshalb gibt diese
+/// Funktion keine dritte Zahl heraus: `betroffen.len() - quellen.len()` ist die
+/// Zahl der Eintraege, die der Schnitt genommen hat, und der Aufrufer haelt
+/// beide Listen. Er meldet sie im Abschlusstext des Vorgangs, damit der Nutzer
+/// nicht wortlos weniger bekommt, als er markiert hat
+/// (`issues/260825-1249_*_der-schnitt-nimmt-markierte-eintraege-aus-dem-lauf-*`).
+/// Die Entpackseite kann das nicht nachrechnen und traegt die Zahl deshalb im
+/// Befund mit; der Grund steht bei [`Entpackbefund::Archive`].
 #[must_use]
 pub fn packziel(betroffen: &[PathBuf], ordner: &Path) -> (Vec<PathBuf>, PathBuf) {
     let ziel = archivname(betroffen, ordner);
@@ -536,15 +585,18 @@ pub fn ordnername_zum_archiv(archiv: &Path) -> String {
 /// Endung gekuerzte Archivname und damit ein anderer.
 #[must_use]
 pub fn entpackziel(modell: &Ordnermodell, betroffen: &[PathBuf], ordner: &Path) -> Entpackbefund {
-    let betroffene_archive = ohne_die_eigenen_ziele(
-        betroffen
-            .iter()
-            .filter(|pfad| ist_archivpfad(pfad))
-            .map(|pfad| paar(pfad.clone(), ordner))
-            .collect(),
-    );
+    let markierte: Vec<(PathBuf, PathBuf)> = betroffen
+        .iter()
+        .filter(|pfad| ist_archivpfad(pfad))
+        .map(|pfad| paar(pfad.clone(), ordner))
+        .collect();
+    let markiert = markierte.len();
+    let betroffene_archive = ohne_die_eigenen_ziele(markierte);
     if !betroffene_archive.is_empty() {
-        return Entpackbefund::Archive(betroffene_archive);
+        return Entpackbefund::Archive {
+            ausgelassen: markiert - betroffene_archive.len(),
+            paare: betroffene_archive,
+        };
     }
 
     let mut sichtbare = modell
@@ -557,7 +609,12 @@ pub fn entpackziel(modell: &Ordnermodell, betroffen: &[PathBuf], ordner: &Path) 
     if sichtbare.next().is_some() {
         return Entpackbefund::Mehrere;
     }
-    Entpackbefund::Archive(vec![paar(erstes, ordner)])
+    // Die Ersatzregel schneidet nichts: sie liefert genau ein Paar, und ein
+    // Archiv ist nie sein eigenes Ziel.
+    Entpackbefund::Archive {
+        paare: vec![paar(erstes, ordner)],
+        ausgelassen: 0,
+    }
 }
 
 /// Ob der letzte Bestandteil eines Pfades ein Archivname ist.
@@ -589,31 +646,106 @@ fn paar(archiv: PathBuf, ordner: &Path) -> (PathBuf, PathBuf) {
 /// die eine Gestalt des Befundes behoben bleibt und die andere zurueckkommt.
 ///
 /// Verglichen werden **Pfade, wie sie dastehen**, ohne `canonicalize` und ohne
-/// Ruecksicht auf Verknuepfungen. Mehr ist hier nicht noetig: beide Listen
-/// entstehen als `ordner.join(name)` ueber demselben angezeigten Ordner
-/// ([`super::operationen::betroffene`] auf der einen, [`archivname`] und
-/// [`paar`] auf der anderen Seite), und derselbe Eintrag ergibt damit
-/// buchstaeblich denselben Pfad. Ein Zugriff auf die Platte gehoert ohnehin
-/// nicht in dieses Modul.
+/// Ruecksicht auf Verknuepfungen. Der Weg dahin ist bei beiden Rufern derselbe:
+/// beide Listen entstehen als `ordner.join(name)` ueber demselben angezeigten
+/// Ordner ([`super::operationen::betroffene`] auf der einen, [`archivname`] und
+/// [`paar`] auf der anderen Seite). Ein Zugriff auf die Platte gehoert nicht in
+/// dieses Modul, und deshalb steht hier ein Vergleich und keine Frage an das
+/// Dateisystem.
+///
+/// **Der letzte Bestandteil wird ohne Ruecksicht auf Gross- und
+/// Kleinschreibung verglichen, alles davor buchstabengetreu** — die Wahl des
+/// Nutzers vom 260825 auf
+/// `issues/260825-1249_*_der-schnitt-vergleicht-pfade-buchstabengetreu-*`,
+/// Moeglichkeit 1. Der Grund liegt bei [`archivname`]: es **bildet** den
+/// Zielnamen und haengt dabei die kleingeschriebene Konstante [`ENDUNG`] an,
+/// waehrend [`ist_zipname`] ein vorhandenes Archiv ausdruecklich ohne
+/// Ruecksicht auf die Schreibung erkennt. Ein Eintrag `PROJEKTE.ZIP` und das
+/// gerechnete Ziel `Projekte.zip` sind auf dem Bauziel derselbe Eintrag; ein
+/// buchstabengetreuer Vergleich hielt sie fuer zwei, und „Ueberschreiben" im
+/// Konfliktblatt raeumte damit doch wieder eine Quelle desselben Laufs in den
+/// Papierkorb.
+///
+/// **Die Ungenauigkeit, die das kostet, gehoert dazu:** APFS laesst sich
+/// gross-/kleinschreibungsempfindlich formatieren, und auf einem so
+/// formatierten Datentraeger sind `Projekte.zip` und `PROJEKTE.ZIP` zwei
+/// Dateien. Dort faellt gelegentlich eine Quelle heraus, die keine Kollision
+/// waere. Der Nutzer verliert dabei nichts — der Eintrag bleibt, wie er ist —,
+/// ihm fehlt einer im Archiv. Die genaue Antwort braeuchte die Platte, und die
+/// hat dieses Modul nicht.
 fn ist_ziel_des_laufs(pfad: &Path, ziele: &[PathBuf]) -> bool {
-    ziele.iter().any(|ziel| ziel.as_path() == pfad)
+    ziele.iter().any(|ziel| gleicher_eintrag(ziel, pfad))
+}
+
+/// Ob zwei gerechnete Pfade denselben Eintrag meinen.
+///
+/// Die eine Stelle, an der die Faltung steht; warum sie gefaltet wird und was
+/// sie kostet, steht bei [`ist_ziel_des_laufs`].
+///
+/// **Ohne letzten Bestandteil bleibt nichts zu falten.** Das Wurzelverzeichnis
+/// und ein Pfad, der auf `..` endet, gehen deshalb durch den buchstabengetreuen
+/// Vergleich; sie erreichen diese Stelle nicht, denn [`brauchbarer_stamm`]
+/// haelt beide Rechnungen davon ab, einen solchen Namen herauszugeben.
+fn gleicher_eintrag(einer: &Path, anderer: &Path) -> bool {
+    match (einer.file_name(), anderer.file_name()) {
+        (Some(dieser), Some(jener)) => {
+            einer.parent() == anderer.parent()
+                && dieser
+                    .as_encoded_bytes()
+                    .eq_ignore_ascii_case(jener.as_encoded_bytes())
+        }
+        _ => einer == anderer,
+    }
 }
 
 /// Die Paare eines Entpacklaufs ohne die Archive, die er schon als Zielordner
 /// beansprucht.
 ///
-/// Die Ziele stehen vorher als eigene Liste da, weil jedes Archiv gegen **alle**
-/// Ziele des Laufs gehalten wird und nicht nur gegen sein eigenes.
+/// Jedes Archiv wird gegen **alle** Ziele des Laufs gehalten und nicht nur
+/// gegen sein eigenes.
 ///
-/// **Leer kommt die Liste nicht zurueck, solange sie es nicht schon war.** Ein
-/// Zielname ist der um die Endung gekuerzte Archivname, also kuerzer als er;
-/// das laengste Archiv der Liste kann deshalb keines Anderen Ziel sein und
-/// bleibt stehen. Aus `{a.zip, a.zip.zip, a.zip.zip.zip}` bleibt das letzte.
+/// **Der Schnitt ist ein Festpunkt und keine einmalige Runde.** Der Unterschied
+/// wird an der Kette sichtbar, die die anhaengende Endungsregel dieser Runde
+/// selbst herstellt: aus `{a.zip, a.zip.zip, a.zip.zip.zip}` bleiben **zwei**
+/// Paare. `a.zip.zip` faellt, weil `a.zip.zip.zip` dorthin entpackt; `a.zip`
+/// bleibt stehen, denn sein einziger Beansprucher ist eben gefallen und erhebt
+/// den Anspruch nicht mehr. Bis zum 260825 entstand die Zielliste einmal ueber
+/// **alle** Paare, und danach wurde gefiltert; dabei fiel `a.zip` fuer einen
+/// Anspruch, den niemand mehr erhob, und der Nutzer bekam ein entpacktes Archiv
+/// statt zweier
+/// (`issues/260825-1249_*_der-entpackschnitt-ist-kein-festpunkt-*`).
+///
+/// **Entschieden wird vom laengsten Archivpfad zum kuerzesten**, und das ist
+/// genau die Reihenfolge, in der ein Beansprucher vor dem Beanspruchten
+/// drankommt. Sie folgt aus [`paar`] und ist keine Annahme: ein Zielname ist der
+/// um [`ENDUNG`] gekuerzte Archivname und damit vier Zeichen kuerzer. Wo er das
+/// nicht ist, traegt er [`ERSATZSTAMM`] — und der endet nicht auf `.zip`, kann
+/// also gar kein Archiv dieser Liste treffen.
+///
+/// **Herausgegeben wird trotzdem in der Reihenfolge der Eingabe**, denn das ist
+/// die Reihenfolge, in der die Eintraege vor dem Nutzer stehen; die
+/// Laengenordnung entscheidet allein, wer bleibt.
+///
+/// **Leer kommt die Liste nicht zurueck, solange sie es nicht schon war.** Das
+/// laengste Archiv kommt zuerst dran, und die Zielliste ist dann noch leer.
 fn ohne_die_eigenen_ziele(paare: Vec<(PathBuf, PathBuf)>) -> Vec<(PathBuf, PathBuf)> {
-    let ziele: Vec<PathBuf> = paare.iter().map(|(_, ziel)| ziel.clone()).collect();
+    let mut reihenfolge: Vec<usize> = (0..paare.len()).collect();
+    reihenfolge.sort_by_key(|stelle| Reverse(paare[*stelle].0.as_os_str().len()));
+
+    let mut bleibt = vec![true; paare.len()];
+    let mut ziele: Vec<PathBuf> = Vec::with_capacity(paare.len());
+    for stelle in reihenfolge {
+        if ist_ziel_des_laufs(&paare[stelle].0, &ziele) {
+            bleibt[stelle] = false;
+        } else {
+            ziele.push(paare[stelle].1.clone());
+        }
+    }
+
     paare
         .into_iter()
-        .filter(|(archiv, _)| !ist_ziel_des_laufs(archiv, &ziele))
+        .zip(bleibt)
+        .filter_map(|(paar, bleibt)| bleibt.then_some(paar))
         .collect()
 }
 
@@ -894,7 +1026,10 @@ mod tests {
 
         assert_eq!(
             entpackziel(&modell, std::slice::from_ref(&archiv), ordner),
-            Entpackbefund::Archive(vec![(archiv, ordner.join(ERSATZSTAMM))])
+            Entpackbefund::Archive {
+                paare: vec![(archiv, ordner.join(ERSATZSTAMM))],
+                ausgelassen: 0,
+            }
         );
     }
 
@@ -912,7 +1047,10 @@ mod tests {
 
         assert_eq!(
             entpackziel(&modell, &[], ordner),
-            Entpackbefund::Archive(vec![(ordner.join("...zip"), ordner.join(ERSATZSTAMM))])
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("...zip"), ordner.join(ERSATZSTAMM))],
+                ausgelassen: 0,
+            }
         );
     }
 
@@ -988,11 +1126,14 @@ mod tests {
 
         assert_eq!(
             entpackziel(&modell, &betroffen, ordner),
-            Entpackbefund::Archive(vec![
-                (ordner.join("eins.zip"), ordner.join("eins")),
-                (ordner.join("zwei.zip"), ordner.join("zwei")),
-                (ordner.join("drei.zip"), ordner.join("drei")),
-            ])
+            Entpackbefund::Archive {
+                paare: vec![
+                    (ordner.join("eins.zip"), ordner.join("eins")),
+                    (ordner.join("zwei.zip"), ordner.join("zwei")),
+                    (ordner.join("drei.zip"), ordner.join("drei")),
+                ],
+                ausgelassen: 0,
+            }
         );
     }
 
@@ -1009,7 +1150,10 @@ mod tests {
 
         assert_eq!(
             entpackziel(&modell, &betroffen, ordner),
-            Entpackbefund::Archive(vec![(ordner.join("eins.zip"), ordner.join("eins"))])
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("eins.zip"), ordner.join("eins"))],
+                ausgelassen: 0,
+            }
         );
     }
 
@@ -1024,10 +1168,10 @@ mod tests {
 
         assert_eq!(
             entpackziel(&modell, &[], ordner),
-            Entpackbefund::Archive(vec![(
-                ordner.join("sicherung.zip"),
-                ordner.join("sicherung")
-            )])
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("sicherung.zip"), ordner.join("sicherung"))],
+                ausgelassen: 0,
+            }
         );
     }
 
@@ -1071,7 +1215,10 @@ mod tests {
         modell.filtertext_setzen("eins");
         assert_eq!(
             entpackziel(&modell, &[], ordner),
-            Entpackbefund::Archive(vec![(ordner.join("eins.zip"), ordner.join("eins"))])
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("eins.zip"), ordner.join("eins"))],
+                ausgelassen: 0,
+            }
         );
     }
 
@@ -1120,6 +1267,12 @@ mod tests {
     /// Endung macht aus `sicherung.zip` das Archiv `sicherung.zip.zip`, und
     /// damit ist der Eintrag nicht sein eigenes Ziel. Ein Schnitt am Namen
     /// statt am Pfad haette hier eine leere Quellenliste hinterlassen.
+    ///
+    /// **Sie prueft den Packschneider und nur ihn.** [`entpackziel`] kommt in
+    /// ihr nicht vor; der haeufigste Unzip-Fall — ein einzelnes Archiv, ein
+    /// Zielordner — steht daneben in
+    /// [`ein_einzelnes_archiv_behaelt_seinen_zielordner`]
+    /// (`issues/260825-1249_*_die-probe-gegen-den-zu-weiten-schnitt-prueft-nur-den-packschneider-*`).
     #[test]
     fn ein_einzelnes_archiv_bleibt_seine_eigene_quelle() {
         let ordner = ordner();
@@ -1151,8 +1304,150 @@ mod tests {
 
         assert_eq!(
             entpackziel(&modell, &betroffen, ordner),
-            Entpackbefund::Archive(vec![(ordner.join("a.zip.zip"), ordner.join("a.zip"))]),
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("a.zip.zip"), ordner.join("a.zip"))],
+                ausgelassen: 1,
+            },
             "a.zip wird entpackt und ist zugleich Zielordner von a.zip.zip"
         );
+    }
+
+    /// Ein einzelnes Archiv behaelt seinen Zielordner.
+    ///
+    /// **Die Gegenprobe zum zu weiten Schnitt auf der Entpackseite**, und die
+    /// haeufigste Lage von Unzip ueberhaupt: ein Archiv markiert, ein Ordner
+    /// daneben. Ihr Zwilling
+    /// [`ein_einzelnes_archiv_bleibt_seine_eigene_quelle`] prueft dieselbe
+    /// Frage fuer den Packschneider und ruft [`entpackziel`] nicht; bis zum
+    /// 260825 hielt diesen Fall allein aelterer Bestand, der vor dem Schnitt
+    /// geschrieben wurde und ihn im Namen nicht nennt
+    /// (`issues/260825-1249_*_die-probe-gegen-den-zu-weiten-schnitt-prueft-nur-den-packschneider-*`).
+    ///
+    /// Ein Archiv ist nie sein eigenes Ziel: sein Zielname ist der um
+    /// [`ENDUNG`] gekuerzte Archivname und damit ein anderer.
+    ///
+    /// **Das zweite Archiv im Modell ist die eigentliche Pruefung.** Ohne es
+    /// bliebe die Probe auch bei einem zu weiten Schnitt gruen: die Markierung
+    /// fiele leer aus, und die Ersatzregel lieferte dasselbe eine Paar wieder
+    /// zurueck. Mit ihm antwortet die Ersatzregel [`Entpackbefund::Mehrere`],
+    /// und der zu weite Schnitt faellt auf.
+    #[test]
+    fn ein_einzelnes_archiv_behaelt_seinen_zielordner() {
+        let ordner = ordner();
+        let modell = modell_mit(&["sicherung.zip", "anderes.zip"]);
+        let betroffen = vec![ordner.join("sicherung.zip")];
+
+        assert_eq!(
+            entpackziel(&modell, &betroffen, ordner),
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("sicherung.zip"), ordner.join("sicherung"))],
+                ausgelassen: 0,
+            },
+            "der Entpackschnitt hat das einzige Archiv des Laufs genommen"
+        );
+    }
+
+    /// Die Kette aus drei Archiven ergibt zwei Laeufe und nicht einen.
+    ///
+    /// **Der Schnitt ist ein Festpunkt.** `a.zip.zip` faellt, weil
+    /// `a.zip.zip.zip` dorthin entpackt; `a.zip` bleibt, denn sein einziger
+    /// Beansprucher ist eben gefallen. Bis zum 260825 rechnete
+    /// [`ohne_die_eigenen_ziele`] die Zielliste einmal ueber alle Paare und
+    /// filterte danach, und `a.zip` fiel fuer einen Anspruch, den niemand mehr
+    /// erhob
+    /// (`issues/260825-1249_*_der-entpackschnitt-ist-kein-festpunkt-*`).
+    ///
+    /// Die Kette entsteht in diesem Baum von selbst: jeder Zip-Lauf ueber ein
+    /// `a.zip` legt `a.zip.zip` daneben.
+    #[test]
+    fn aus_einer_kette_von_drei_archiven_bleiben_zwei() {
+        let ordner = ordner();
+        let modell = modell_mit(&["a.zip", "a.zip.zip", "a.zip.zip.zip"]);
+        let betroffen = vec![
+            ordner.join("a.zip"),
+            ordner.join("a.zip.zip"),
+            ordner.join("a.zip.zip.zip"),
+        ];
+
+        assert_eq!(
+            entpackziel(&modell, &betroffen, ordner),
+            Entpackbefund::Archive {
+                paare: vec![
+                    (ordner.join("a.zip"), ordner.join("a")),
+                    (ordner.join("a.zip.zip.zip"), ordner.join("a.zip.zip")),
+                ],
+                ausgelassen: 1,
+            },
+            "a.zip faellt fuer einen Anspruch, den a.zip.zip nicht mehr erhebt"
+        );
+    }
+
+    /// Der Schnitt trifft auch, was in abweichender Schreibung dasteht.
+    ///
+    /// **Die Nutzerwahl vom 260825**
+    /// (`issues/260825-1249_*_der-schnitt-vergleicht-pfade-buchstabengetreu-*`,
+    /// Moeglichkeit 1) in ihrer Packgestalt: im Ordner `Projekte` liegt ein von
+    /// fremder Hand angelegtes `PROJEKTE.ZIP`, und [`archivname`] rechnet
+    /// `Projekte.zip`, weil [`ENDUNG`] kleingeschrieben dasteht. Auf dem
+    /// Bauziel ist das derselbe Eintrag; ein buchstabengetreuer Vergleich hielt
+    /// ihn fuer einen anderen und liess ihn als Quelle stehen, worauf
+    /// „Ueberschreiben" im Konfliktblatt eine Quelle des Laufs in den
+    /// Papierkorb raeumte.
+    #[test]
+    fn das_archiv_des_vorigen_laufs_faellt_auch_in_abweichender_schreibung() {
+        let ordner = ordner();
+        let betroffen = vec![
+            ordner.join("a.txt"),
+            ordner.join("PROJEKTE.ZIP"),
+            ordner.join("b.txt"),
+        ];
+
+        let (quellen, ziel) = packziel(&betroffen, ordner);
+
+        assert_eq!(ziel, ordner.join("Projekte.zip"));
+        assert_eq!(
+            quellen,
+            vec![ordner.join("a.txt"), ordner.join("b.txt")],
+            "PROJEKTE.ZIP und das gerechnete Projekte.zip sind auf der Platte \
+             derselbe Eintrag"
+        );
+    }
+
+    /// Dieselbe Faltung in der Entpackgestalt.
+    ///
+    /// Neben `a.zip` steht `A.ZIP.zip`. [`paar`] rechnet fuer das zweite den
+    /// Zielordner `<ordner>/A.ZIP`; auf der Platte ist das der Eintrag `a.zip`,
+    /// den derselbe Lauf noch entpacken will.
+    #[test]
+    fn der_entpackschnitt_trifft_auch_in_abweichender_schreibung() {
+        let ordner = ordner();
+        let modell = modell_mit(&["a.zip", "A.ZIP.zip"]);
+        let betroffen = vec![ordner.join("a.zip"), ordner.join("A.ZIP.zip")];
+
+        assert_eq!(
+            entpackziel(&modell, &betroffen, ordner),
+            Entpackbefund::Archive {
+                paare: vec![(ordner.join("A.ZIP.zip"), ordner.join("A.ZIP"))],
+                ausgelassen: 1,
+            },
+            "a.zip ist der Zielordner von A.ZIP.zip, in der Schreibung der Platte"
+        );
+    }
+
+    /// Was verschieden heisst, faellt nicht: die Faltung gilt dem letzten
+    /// Bestandteil und nicht dem ganzen Pfad.
+    ///
+    /// **Die Grenze der Nutzerwahl, ausgeschrieben.** Ein Eintrag, der bis auf
+    /// die Gross- und Kleinschreibung anders heisst, bleibt Quelle; gefaltet
+    /// wird allein die Schreibung und nicht die Aehnlichkeit.
+    #[test]
+    fn ein_aehnlich_benanntes_archiv_bleibt_quelle() {
+        let ordner = ordner();
+        let betroffen = vec![ordner.join("a.txt"), ordner.join("Projekte 2.zip")];
+
+        let (quellen, ziel) = packziel(&betroffen, ordner);
+
+        assert_eq!(ziel, ordner.join("Projekte.zip"));
+        assert_eq!(quellen, betroffen);
     }
 }

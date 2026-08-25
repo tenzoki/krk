@@ -88,3 +88,25 @@ Nutzer markiert hat, und der Doc-Kommentar erklaert das zur Absicht.
 
 **Betroffen:** `crates/krk-ui/src/kommandos/kontextmenue.rs` (`ohne_die_eigenen_ziele`,
 `entpackziel`).
+
+---
+Resolved: Weg 1. `ohne_die_eigenen_ziele`
+(`crates/krk-ui/src/kommandos/kontextmenue.rs`) entscheidet jetzt vom laengsten
+Archivpfad zum kuerzesten und schreibt die Zielliste dabei fort: aufgenommen
+wird allein das Ziel eines Paares, das selbst bleibt. Aus
+`{a.zip, a.zip.zip, a.zip.zip.zip}` bleiben damit zwei Paare — `a.zip.zip.zip`
+nach `a.zip.zip` und `a.zip` nach `a` —, und `a.zip.zip` faellt als einziges.
+
+Die Reihenfolge ist keine Annahme, sondern folgt aus `paar`: ein Zielname ist
+der um `ENDUNG` gekuerzte Archivname und damit vier Zeichen kuerzer als der Pfad,
+der ihn beansprucht. Wo er das nicht ist, traegt er `ERSATZSTAMM`, und der endet
+nicht auf `.zip`, kann also gar kein Archiv dieser Liste treffen. Herausgegeben
+wird weiterhin in der Reihenfolge der Eingabe; die Laengenordnung entscheidet
+allein, wer bleibt. Der Beweis, dass die Liste nicht leer zurueckkommt, ist
+dabei kuerzer geworden: das laengste Archiv kommt zuerst dran, und die Zielliste
+ist dann noch leer.
+
+Der Doc-Kommentar sagt das Verhalten jetzt richtig aus; die Zeile "aus
+`{a.zip, a.zip.zip, a.zip.zip.zip}` bleibt das letzte" ist weg. Probe:
+`aus_einer_kette_von_drei_archiven_bleiben_zwei`. Gegenprobe gefahren — mit dem
+alten einmaligen Filter wird sie rot.

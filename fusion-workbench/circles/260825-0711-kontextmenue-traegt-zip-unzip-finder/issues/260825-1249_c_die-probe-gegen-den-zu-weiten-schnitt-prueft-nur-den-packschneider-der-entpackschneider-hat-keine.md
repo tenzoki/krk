@@ -70,3 +70,21 @@ Packschneider prueft und nicht beide.
 Runde ihre eigene Zusage gegen das Uebermass sichert.
 
 **Betroffen:** `crates/krk-ui/src/kommandos/kontextmenue.rs`, Probenmodul.
+
+---
+Resolved: Die vierte Probe steht da, unter dem vorgeschlagenen Namen
+`ein_einzelnes_archiv_behaelt_seinen_zielordner`
+(`crates/krk-ui/src/kommandos/kontextmenue.rs`, Pruefmodul). Sie ruft
+`entpackziel` mit einem markierten Archiv und haelt das Paar.
+
+**Ein zweites Archiv steht dabei im Ordnermodell, und das ist die eigentliche
+Pruefung.** Ohne es bliebe sie auch bei einem zu weiten Schnitt gruen: die
+Markierung fiele leer aus, und die Ersatzregel lieferte dasselbe eine Paar
+wieder zurueck. Mit ihm antwortet die Ersatzregel `Entpackbefund::Mehrere`, und
+der zu weite Schnitt faellt auf. Beim Bauen der Gegenprobe ist genau das
+aufgefallen; die erste Fassung der Probe war blind.
+
+Der Doc-Kommentar von `ein_einzelnes_archiv_bleibt_seine_eigene_quelle` sagt
+jetzt, dass sie den Packschneider prueft und nur ihn, und verweist auf die neue
+Probe daneben. Gegenprobe gefahren — laesst man ein Archiv als sein eigenes Ziel
+gelten, wird die neue Probe rot.

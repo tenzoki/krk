@@ -106,3 +106,27 @@ ist, die keine Probe liest.
 **Betroffen:** `crates/krk-ui/src/appkit/anwendung.rs` (`zipauftrag_stellen` und das Probenmodul
 `kontextproben`), mittelbar `crates/krk-core/src/operation/zippen.rs` (der Modulkopf, der die Zusage
 abgibt).
+
+---
+Resolved: Beide vorgeschlagenen Zuschnitte gebaut, im Pruefmodul `kontextproben`
+(`crates/krk-ui/src/appkit/anwendung.rs`).
+
+`der_packauftrag_reicht_die_quellen_aus_packziel_weiter` haelt die Kette im
+bestehenden Zweig, und zwar als **Paarung** und nicht als blosses Vorhandensein:
+`quellen` muss auf der Zeile entstehen, die `kontextmenue::packziel(` ruft, und
+dieselbe Bezeichnung muss auf der Zeile stehen, die `Auftrag::zippen(` stellt.
+Genau die im Datensatz beschriebene Umgehung — `packziel` weiter rufen, davon
+nur das Ziel nehmen und `auswahl.pfade` als Quellen weiterreichen — laesst sie
+rot werden; nachgestellt und gefahren.
+
+`ein_packauftrag_entsteht_in_der_oberflaeche_genau_einmal` faengt den zweiten
+Eingang: eine `aufrufstellen`-Zaehlung ueber `quelldateien()`, auf `krk-ui/`
+eingeschraenkt, weil die Abnahmeproben des Kerns den Auftrag zu Recht
+unmittelbar stellen. Gegenprobe: ein zweiter `Auftrag::zippen`-Aufruf in
+`kommandos/operationen.rs` laesst sie rot werden.
+
+Was beide nicht sehen, steht in ihren Doc-Kommentaren: eine Zuweisung zwischen
+den zwei Zeilen, die `quellen` ersetzt, und ein Aufruf ueber `type X = Auftrag;`.
+Der Modulkopf von `crates/krk-core/src/operation/zippen.rs` sagt jetzt, dass das
+Glied gehalten ist, und nennt beide Proben beim Namen; das Wort "sichert" steht
+damit nicht mehr allein da.

@@ -14,6 +14,7 @@
 //! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
 //! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::lesen
 //!                                             ├─> text::datei::bis_zur_grenze_lesen
+//!                                             ├─> text::datei::anlesen
 //!                                             ├─> operation::zippen
 //!                                             └─> operation::entpacken
 //! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
@@ -47,14 +48,23 @@
 //! ersten Aufrufer von ausserhalb `verzeichnis/`, und sie sind der Grund, aus
 //! dem die Aussage nicht mehr nur behauptet ist. **Wie viele es sind, sagt
 //! `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src` und nicht diese
-//! Zeile**; sie stand vom Defekt `260810-1247` bis zur Runde 17 auf zwei und ist
-//! mit den zwei Archivwegen jener Runde falsch geworden. Die zwei aeltesten
-//! liegen seit der Runde 11 in `text/datei.rs`: [`crate::text::datei::lesen`]
-//! fuer den Editor und [`crate::text::datei::bis_zur_grenze_lesen`] fuer jeden,
-//! der seine eigene Grenze mitbringt. Die zwei juengsten sind
-//! [`crate::operation::zippen`], das jede Quelle in ein Archiv liest, und
-//! [`crate::operation::entpacken`], das jedes Archiv oeffnet; beide aus dem
-//! gleichen Grund wie die aelteren, naemlich einer benannten Roehre im Ordner,
+//! Zeile**; sie stand vom Defekt `260810-1247` bis zur Runde 16 auf zwei und ist
+//! seither zweimal falsch geworden, erst mit dem Anlesen jener Runde, dann mit
+//! den zwei Archivwegen der Runde 17
+//! (`shared/issues/260825-0727_*_claude-md-nennt-zwei-aufrufer-von-ohne-warten-oeffnen-*`).
+//! **Zaehlen muss man mit dem breiten Muster**: `entpacken.rs` holt den Namen
+//! ueber `use` herein und ruft ihn unqualifiziert, entgeht dem engeren
+//! `sys::ohne_warten_oeffnen(` also.
+//!
+//! Genannt seien sie deshalb nach ihren Klassen und nicht als Aufzaehlung, die
+//! mit der naechsten Runde wieder falsch waere. **Die Textwege** liegen seit der
+//! Runde 11 in `text/datei.rs`: [`crate::text::datei::lesen`] fuer den Editor,
+//! [`crate::text::datei::bis_zur_grenze_lesen`] fuer jeden, der seine eigene
+//! Grenze mitbringt, und [`crate::text::datei::anlesen`], das eine zu grosse
+//! Datei anliest, statt sie abzuweisen. **Die Archivwege** stehen unter
+//! `operation/`: [`crate::operation::zippen`] liest jede Quelle in ein Archiv,
+//! [`crate::operation::entpacken`] oeffnet jedes Archiv. Alle aus dem gleichen
+//! Grund, naemlich einer benannten Roehre im Ordner,
 //! die ein `File::open` bis in alle Ewigkeit anhielte. Die Vorschau und der
 //! Inhaltsfilter der Dateiliste, beide in `krk-ui`, rufen die Huelle und nicht
 //! diese Stelle; bis zur Runde 11 stand die Huelle in `krk-ui`s
@@ -803,22 +813,28 @@ unsafe extern "C" {
 ///
 /// # Mehrere Aufrufer, und die Zielpruefung bleibt bei jedem von ihnen
 ///
-/// Gerufen wird die Funktion von [`crate::text::datei::lesen`], dem Eingang des
-/// Editors, von [`crate::text::datei::bis_zur_grenze_lesen`], der Huelle mit der
-/// uebergebenen Grenze, und seit der Runde 17 von den zwei Archivwegen
-/// [`crate::operation::zippen`] und [`crate::operation::entpacken`]. **Alle
-/// liegen in `krk-core`**; bis zur Runde 11 stand die zweite als private Fassung
-/// in `krk-ui`s `vorschaumodell.rs` und hatte deshalb keinen Doku-Verweis.
-/// Aufrufer der Huelle ist heute die Vorschau, mit ihren zwei Grenzen.
+/// Gerufen wird die Funktion von den drei Textwegen in
+/// [`crate::text::datei`] — [`crate::text::datei::lesen`] als Eingang des
+/// Editors, [`crate::text::datei::bis_zur_grenze_lesen`] als Huelle mit der
+/// uebergebenen Grenze und [`crate::text::datei::anlesen`] fuer die
+/// Profil-Zusammenfassung der Vorschau — und seit der Runde 17 von den zwei
+/// Archivwegen [`crate::operation::zippen`] und
+/// [`crate::operation::entpacken`]. **Alle liegen in `krk-core`**; bis zur
+/// Runde 11 stand die zweite als private Fassung in `krk-ui`s
+/// `vorschaumodell.rs` und hatte deshalb keinen Doku-Verweis. Aufrufer der
+/// Huelle ist heute die Vorschau, mit ihren zwei Grenzen.
 ///
-/// **Gemeinsam ist den zwei Textwegen der Ablauf**: hier oeffnen, `fstat` am
-/// Deskriptor fragen, alles abweisen, was `is_file()` nicht bejaht, die Groesse
-/// gegen eine Grenze halten, erst danach lesen. **Verschieden sind die Antwort
-/// und die Grenze.** Der Editor weist mit [`crate::text::Abweisung::KeinGueltigesZiel`]
+/// **Gemeinsam ist den Textwegen der Ablauf**: hier oeffnen, `fstat` am
+/// Deskriptor fragen, alles abweisen, was `is_file()` nicht bejaht, erst danach
+/// lesen. **Verschieden sind die Antwort und die Grenze.** Der Editor weist mit
+/// [`crate::text::Abweisung::KeinGueltigesZiel`]
 /// ab und nennt dem Nutzer den Grund; die Vorschau faellt auf ihre
 /// Metadatenanzeige zurueck, die Groesse, Rechte und Datum zeigt. Der Editor
 /// haelt dabei `EDITORGRENZE`, die Vorschau `TEXTGRENZE` oder `BILDGRENZE`, je
-/// Endung des Pfades.
+/// Endung des Pfades. **Der dritte Textweg haelt die Groesse gar nicht gegen
+/// eine Grenze**, sondern liest ueber `take` an: eine zu grosse Datei wird
+/// angelesen und nicht abgewiesen, denn was die Profil-Zusammenfassung sucht,
+/// steht am Anfang.
 ///
 /// **Die zwei Archivwege fragen ihrerseits anders, und sie sind der beste Beleg
 /// dafuer, dass die Frage hier nicht hingehoert.** Das Packen fragt `metadata()`
@@ -832,7 +848,7 @@ unsafe extern "C" {
 /// Entpacken fragt gar nicht nach dem Typ, sondern reicht den Deskriptor an
 /// `ZipArchive::new` weiter und laesst die Kiste antworten; ein Ordner scheitert
 /// dort an `EISDIR` und kommt mit ihrem Wortlaut in die Abschlussliste. Keine
-/// der vier Antworten kennt diese Huelle.
+/// dieser Antworten kennt diese Huelle.
 ///
 /// **Ein weiterer Aufrufer verschiebt die Pruefung damit nicht hierher, sondern
 /// begruendet sie jedes Mal besser.** Eine Typpruefung in dieser Huelle muesste
@@ -842,8 +858,11 @@ unsafe extern "C" {
 /// Schutz, den sie seit dem 260810 hat.
 ///
 /// Der Defekt, der die Funktion verlangt hat, ist `260809-1652`; der zweite
-/// Aufrufer ist mit `260810-1247` dazugekommen, der dritte und der vierte mit
-/// der Runde 17.
+/// Aufrufer ist mit `260810-1247` dazugekommen, der dritte mit der Runde 16, der
+/// vierte und der fuenfte mit der Runde 17. **Eine Zahl steht hier trotzdem
+/// nicht als Zusage**: sie waechst mit jeder Runde, die einen weiteren Leser
+/// baut, und der Modulkopf nennt das Zaehlkommando
+/// (`shared/issues/260825-0727_*_claude-md-nennt-zwei-aufrufer-von-ohne-warten-oeffnen-*`).
 pub fn ohne_warten_oeffnen(pfad: &Path) -> io::Result<File> {
     let datei = OpenOptions::new()
         .read(true)

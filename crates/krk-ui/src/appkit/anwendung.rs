@@ -474,6 +474,27 @@ struct Vorgang {
     quellordner: PathBuf,
     /// Wie viele Positionen der Nutzer ausgewaehlt hatte.
     positionen: usize,
+    /// Wie viele markierte Eintraege gar nicht erst in den Auftrag kamen
+    /// (Runde 17).
+    ///
+    /// **Null bei jedem Weg ausser den zweien des Kontextmenues.** Allein Zip
+    /// und Unzip nehmen einen markierten Eintrag aus dem Lauf, naemlich den,
+    /// den derselbe Lauf als Ziel anlegt; die Regel steht in
+    /// [`crate::kommandos::kontextmenue`]. Der Abschlusstext nennt die Zahl,
+    /// damit ein Befehl nicht wortlos weniger tut, als der Nutzer markiert hat
+    /// (`issues/260825-1249_*_der-schnitt-nimmt-markierte-eintraege-aus-dem-lauf-*`).
+    ///
+    /// **Das Stapel-Umbenennen laesst ebenfalls Zeilen aus und traegt hier
+    /// trotzdem null**, weil es dieselbe Auskunft schon anders gibt: seine
+    /// Positionszahl zaehlt alle Zeilen der Vorschau, die Eintragszahl nur die
+    /// umbenannten, und die Differenz steht damit im selben Satz. Eine zweite
+    /// Zahl daneben zaehlte dieselben Zeilen ein zweites Mal.
+    ///
+    /// **Gesagt wird es am Ende und nicht am Anfang**, und das entscheidet die
+    /// Rangfolge der Statuszeile: eine Befehlsantwort steht ueber der
+    /// Vorgangsanzeige (`crate::appkit::statuszeile::Rang`), also verdeckte
+    /// eine Meldung vor dem Start genau den Fortschritt, den sie ankuendigt.
+    ausgelassen: usize,
     /// Wann der Vorgang begonnen hat. Der Verzug misst ab hier.
     begonnen: Instant,
     /// Der Zustand, den der Vermittlerfaden fuellt.
@@ -5484,7 +5505,9 @@ impl Anwendungsdelegierter {
         };
         // `auftrag_starten` liefert immer `true`; hier gibt es niemanden mehr,
         // der die Antwort brauchte, denn der Tastendruck ist laengst verbraucht.
-        let _ = self.auftrag_starten(aktiv, auftrag, quellordner, positionen);
+        // Der Loeschweg schneidet nichts aus der Markierung; siehe
+        // `Vorgang::ausgelassen`.
+        let _ = self.auftrag_starten(aktiv, auftrag, quellordner, positionen, 0);
     }
 
     /// Der Abbruchbefehl (C4, C1.7).
@@ -5747,6 +5770,7 @@ impl Anwendungsdelegierter {
             auftrag,
             ordner.to_path_buf(),
             vorschau.zeilen().len(),
+            0,
         );
     }
 
@@ -5917,7 +5941,7 @@ impl Anwendungsdelegierter {
             konfliktregel: Default::default(),
             uebertragung: Default::default(),
         };
-        self.auftrag_starten(aktiv, auftrag, quellordner, positionen)
+        self.auftrag_starten(aktiv, auftrag, quellordner, positionen, 0)
     }
 
     /// Ob KRK gerade einen Vorgang haelt, und welcher Art er ist (C4).
@@ -6048,7 +6072,7 @@ impl Anwendungsdelegierter {
         };
         // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
         // es keinen: ein Abwurf ist eine Mausbewegung.
-        let _ = self.auftrag_starten(seite, auftrag, ziel, positionen);
+        let _ = self.auftrag_starten(seite, auftrag, ziel, positionen, 0);
     }
 
     /// Fuehrt den angeklickten Eintrag des Kontextmenues aus (Runde 17).
@@ -6127,10 +6151,20 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(seite, &operationen::nichts_zu_packen());
             return;
         }
+        // Was der Schnitt genommen hat, ist die Differenz der beiden Listen;
+        // der Abschlusstext nennt es. Nachgerechnet wird hier nichts: `quellen`
+        // ist `auswahl.pfade` ohne die Eintraege, die das Ziel sind.
+        let ausgelassen = auswahl.pfade.len() - quellen.len();
         let positionen = quellen.len();
         // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
         // es keinen: ein Menueklick ist eine Mausbewegung.
-        let _ = self.auftrag_starten(seite, Auftrag::zippen(quellen, ziel), ordner, positionen);
+        let _ = self.auftrag_starten(
+            seite,
+            Auftrag::zippen(quellen, ziel),
+            ordner,
+            positionen,
+            ausgelassen,
+        );
     }
 
     /// Entpackt jedes betroffene Archiv in einen eigenen neuen Ordner
@@ -6160,8 +6194,8 @@ impl Anwendungsdelegierter {
             return;
         }
         let quelle = self.dateifenster(seite).quelle();
-        let paare = match quelle.entpackbefund() {
-            Entpackbefund::Archive(paare) => paare,
+        let (paare, ausgelassen) = match quelle.entpackbefund() {
+            Entpackbefund::Archive { paare, ausgelassen } => (paare, ausgelassen),
             Entpackbefund::Keines => {
                 self.antwort_zeigen(seite, &operationen::kein_archiv());
                 return;
@@ -6175,7 +6209,13 @@ impl Anwendungsdelegierter {
         let positionen = paare.len();
         // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
         // es keinen: ein Menueklick ist eine Mausbewegung.
-        let _ = self.auftrag_starten(seite, Auftrag::entpacken(paare), ordner, positionen);
+        let _ = self.auftrag_starten(
+            seite,
+            Auftrag::entpacken(paare),
+            ordner,
+            positionen,
+            ausgelassen,
+        );
     }
 
     /// Oeffnet den angezeigten Ordner im Finder (Runde 17).
@@ -6224,12 +6264,18 @@ impl Anwendungsdelegierter {
     /// Anwendung ([`Self::abwurf_ausfuehren`]) und die zwei Zweige des
     /// Kontextmenues, die einen Auftrag stellen ([`Self::zipauftrag_stellen`]
     /// und [`Self::entpackauftrag_stellen`]).
+    ///
+    /// **`ausgelassen` ist bei vier der sechs Wege null**, und das ist keine
+    /// Nachlaessigkeit: allein die zwei Zweige des Kontextmenues nehmen einen
+    /// markierten Eintrag aus dem Lauf. Was die Zahl bedeutet und warum sie erst
+    /// im Abschlusstext erscheint, steht bei [`Vorgang::ausgelassen`].
     fn auftrag_starten(
         &self,
         seite: Fensterseite,
         auftrag: Auftrag,
         quellordner: PathBuf,
         positionen: usize,
+        ausgelassen: usize,
     ) -> bool {
         let art = auftrag.art.clone();
         // Hier bekommt die Schnittstelle aus `operation/loeschen.rs` ihre
@@ -6260,6 +6306,7 @@ impl Anwendungsdelegierter {
             seite,
             quellordner,
             positionen,
+            ausgelassen,
             begonnen: Instant::now(),
             zustand,
         });
@@ -6420,7 +6467,12 @@ impl Anwendungsdelegierter {
         self.dateifenster(vorgang.seite).quelle().vorgang_beenden();
         self.antwort_zeigen(
             vorgang.seite,
-            &operationen::abschlusstext(&vorgang.art, bericht, vorgang.positionen),
+            &operationen::abschlusstext(
+                &vorgang.art,
+                bericht,
+                vorgang.positionen,
+                vorgang.ausgelassen,
+            ),
         );
 
         // **Der eine Auffrischungspfad.** Der gemeldete Abschluss einer
@@ -9051,8 +9103,7 @@ mod kontextproben {
     /// der Rumpf traegt alle drei Namen jeder Art. Ein „Zip", das entpackt,
     /// liesse sie gruen; die drei Zeilen sehen einander aehnlich, und eine
     /// vertauschte ist beim Lesen schwer zu sehen
-    /// (`issues/260825-1144_*_die-probe-befehl-zweig-wirkung-prueft-vorhandensein-
-    /// statt-paarung-*`).
+    /// (`issues/260825-1144_*_die-probe-befehl-zweig-wirkung-prueft-vorhandensein-statt-paarung-*`).
     ///
     /// **Was sie nicht sieht:** eine Wirkung, die in eine tiefer gerufene
     /// Hilfsfunktion gewandert ist. Sie liest den Rumpf und nicht den Aufrufbaum
@@ -9100,5 +9151,101 @@ mod kontextproben {
                 "{zweig} ruft {wirkung} nicht: der Zweig ist da und wirkt nicht"
             );
         }
+    }
+
+    /// Der Packauftrag nimmt seine Quellen aus
+    /// [`kontextmenue::packziel`](crate::kommandos::kontextmenue::packziel).
+    ///
+    /// **Das letzte offene Glied der Nutzerzusage dieser Runde.** „Das Ziel
+    /// eines Laufs liegt nie auf einer seiner Quellen" wird in
+    /// `kommandos::kontextmenue` eingeloest und dort von
+    /// `das_archiv_des_vorigen_laufs_faellt_aus_den_quellen` gehalten. Der
+    /// Modulkopf von `krk_core::operation::zippen` gibt die Zusage
+    /// ausdruecklich an diesen Rufer ab, und bis zum 260825 hielt den Rufer
+    /// nichts: `Auftrag::zippen(quellen, ziel)` nimmt zwei unabhaengige Listen,
+    /// und wer hier weiterhin `packziel` ruft, davon aber nur das Ziel nimmt
+    /// und die ungeschnittene Markierung als Quellen weiterreicht, bekommt den
+    /// Defekt zurueck — ohne Warnung und mit gruenem `make check`
+    /// (`issues/260825-1249_*_die-zusage-haengt-jetzt-am-rufer-in-einer-anderen-kiste-*`).
+    ///
+    /// Gehalten wird deshalb die **Kette**, in zwei Gliedern: `quellen` entsteht
+    /// auf der Zeile, die `packziel` ruft, und dieselbe Bezeichnung steht auf
+    /// der Zeile, die den Auftrag stellt. Dieselbe Bauform wie die Paarungsprobe
+    /// darueber, und aus demselben Grund: zwei getrennte Fragen an den ganzen
+    /// Rumpf waeren auch dann erfuellt, wenn beide Zeilen von verschiedenen
+    /// Listen sprechen.
+    ///
+    /// **Was sie nicht sieht:** eine Zuweisung zwischen den beiden Zeilen, die
+    /// `quellen` durch etwas anderes ersetzt. Sie liest Zeilen und nicht den
+    /// Datenfluss; der Kopf von [`crate::quellbaum`] schreibt aus, warum keine
+    /// Suche im Quelltext restlos dicht ist.
+    #[test]
+    fn der_packauftrag_reicht_die_quellen_aus_packziel_weiter() {
+        // Zusammengesetzt, weil diese Probe in der Datei liegt, die sie liest.
+        let herkunft = concat!("kontextmenue::", "packziel(");
+        let auftrag = concat!("Auftrag::", "zippen(");
+
+        let zweig = rumpf(&diese_datei(), "zipauftrag_stellen");
+        let gerechnet = zweig
+            .lines()
+            .filter(|zeile| zeile.contains(herkunft) && zeile.contains("quellen"))
+            .count();
+        assert_eq!(
+            gerechnet, 1,
+            "`quellen` entsteht nicht auf genau einer Zeile mit {herkunft}: \
+             der Schnitt des Kontextmenüs erreicht den Auftrag nicht mehr"
+        );
+
+        let weitergereicht = zweig
+            .lines()
+            .filter(|zeile| zeile.contains(auftrag) && zeile.contains("quellen"))
+            .count();
+        assert_eq!(
+            weitergereicht, 1,
+            "{auftrag} bekommt nicht die geschnittenen `quellen`: \
+             „Überschreiben\" räumte damit wieder eine Quelle desselben Laufs \
+             in den Papierkorb"
+        );
+    }
+
+    /// Ein Packauftrag entsteht in der Oberflaechenkiste genau einmal.
+    ///
+    /// Das zweite Glied neben
+    /// [`der_packauftrag_reicht_die_quellen_aus_packziel_weiter`]: jene faengt
+    /// die Umgehung im bestehenden Zweig, diese den **zweiten Eingang**. Ein
+    /// spaeterer Tastenbefehl fuer Zip baute einen zweiten Ausfuehrungszweig,
+    /// und der rief `Auftrag::zippen` nach heutigem Stand ohne jeden Widerstand
+    /// unmittelbar — am Schnitt vorbei
+    /// (`issues/260825-1249_*_die-zusage-haengt-jetzt-am-rufer-in-einer-anderen-kiste-*`).
+    ///
+    /// **Gezaehlt wird allein in `krk-ui`**, und das ist keine Verengung der
+    /// Frage, sondern ihr Zuschnitt: die Abnahmeproben des Kerns
+    /// (`krk-core/tests/operation.rs`) stellen den Auftrag zu Recht unmittelbar,
+    /// denn sie pruefen die Maschine und nicht den Weg dorthin. Die Zusage gilt
+    /// dem Weg, und der liegt in dieser Kiste.
+    ///
+    /// **Was sie nicht sieht:** einen Aufruf ueber einen Aliasnamen. Eine
+    /// zugeordnete Funktion laesst sich nicht mit `use` hereinholen, also bleibt
+    /// allein `type Anderer = Auftrag;` — die Grenze, die der Kopf von
+    /// [`crate::quellbaum`] fuer jede Suche im Quelltext benennt.
+    #[test]
+    fn ein_packauftrag_entsteht_in_der_oberflaeche_genau_einmal() {
+        let nadel = concat!("Auftrag::", "zippen");
+        let diese = "krk-ui/src/appkit/anwendung.rs";
+
+        let rufer: Vec<(String, usize)> = quelldateien()
+            .into_iter()
+            .filter(|(datei, _)| datei.starts_with("krk-ui/"))
+            .map(|(datei, inhalt)| (datei, aufrufstellen(&inhalt, nadel)))
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+
+        assert_eq!(
+            rufer,
+            vec![(diese.to_owned(), 1)],
+            "`{nadel}` wird in krk-ui nicht genau einmal und nicht in dieser \
+             Datei gestellt; ein zweiter Eingang ginge am Schnitt vorbei, der \
+             das Ziel des Laufs aus seinen Quellen nimmt"
+        );
     }
 }
