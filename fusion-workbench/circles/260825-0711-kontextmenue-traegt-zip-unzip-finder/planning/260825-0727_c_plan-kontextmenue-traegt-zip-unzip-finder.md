@@ -1,7 +1,7 @@
 # Implementation Plan: Das Kontextmenü trägt Zip, Unzip und Finder neben dem Teilen
 
 **Date:** 2026-08-25
-**Status:** Draft
+**Status:** Complete
 **Spec:** keiner. Geplant gegen die Directive und den Grounding-Schnappschuss des Circle-Datensatzes `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/_t_circle.md`.
 **Decidability:** Die tragende Frage lautet: **welches Archiv meint der Nutzer, wenn er Unzip wählt, und was packt Zip?** Beides ist aus den Eingaben entscheidbar, die der Mechanismus zum Zeitpunkt des Rechtsklicks hat, nämlich den betroffenen Einträgen aus `operationen::betroffene` und der sichtbaren Zeilenliste des `Ordnermodell`. Kein Dateisystemzugriff, keine Vorhersage. **Der Plan sagt insbesondere nicht voraus, ob eine Datei sich als Archiv öffnen lässt** — diese Frage wäre aus dem Namen nicht entscheidbar. Er bietet den Eintrag unabhängig davon an, versucht das Öffnen im Vorgang und meldet das Scheitern in der Statuszeile. Damit steht an der Stelle, an der die Frage entschieden werden kann, eine Entscheidung, und an der Stelle, an der sie es nicht kann, eine Meldung statt einer Vermutung.
 

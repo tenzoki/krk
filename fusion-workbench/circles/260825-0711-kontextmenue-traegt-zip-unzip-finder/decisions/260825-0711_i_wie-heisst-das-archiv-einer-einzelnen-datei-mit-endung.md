@@ -33,7 +33,7 @@ Möglichkeit 1. Sie hält den Ursprungsnamen vollständig und vermeidet die Koll
 
 ---
 Answered: shared/history/260824-2120-orchestrator-session.md:31 — Moeglichkeit 1, Endung anhaengen: aus bericht.txt wird bericht.txt.zip.
-Implemented:
+Implemented: 423d5f2, 3d8332a — kontextmenue::archivname haengt die Endung an; ordnername_zum_archiv kehrt es um, und die Probe archivname_und_ordnername_kehren_einander_um haelt das Paar.
 Deferred:
 Superseded by:
 Retired:

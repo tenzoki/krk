@@ -33,7 +33,7 @@ Möglichkeit 1 für den ersten Bau. Der Nutzer wählt im Kontextmenü, was er im
 
 ---
 Answered: shared/history/260824-2120-orchestrator-session.md:32 — Moeglichkeit 1, Endung .zip ohne Ruecksicht auf Gross- und Kleinschreibung; die Inhaltspruefung bleibt spaeterer Ausbau.
-Implemented:
+Implemented: 423d5f2 — kontextmenue::ist_zipname prueft die Endung ohne Ruecksicht auf Gross- und Kleinschreibung und ohne Dateizugriff, als die eine Regel mit einer Stelle.
 Deferred:
 Superseded by:
 Retired:

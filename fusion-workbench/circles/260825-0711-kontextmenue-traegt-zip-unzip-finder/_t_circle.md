@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/planning/260825-0727_p_plan-kontextmenue-traegt-zip-unzip-finder.md
+**Active spec/plan:** circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/planning/260825-0727_c_plan-kontextmenue-traegt-zip-unzip-finder.md
 **Active session history:** shared/history/260824-2120-orchestrator-session.md
 
 ---

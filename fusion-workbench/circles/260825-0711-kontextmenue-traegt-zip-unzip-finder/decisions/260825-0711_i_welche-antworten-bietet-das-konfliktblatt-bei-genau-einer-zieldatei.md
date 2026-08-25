@@ -33,7 +33,7 @@ Möglichkeit 2, mit der Eingabetaste auf Abbrechen. Sie liefert, was der Nutzer 
 
 ---
 Answered: shared/history/260824-2120-orchestrator-session.md:34 — Moeglichkeit 2, auf Ueberschreiben, Umbenennen und Abbrechen kuerzen; Eingabetaste auf Abbrechen.
-Implemented:
+Implemented: 8b5a5ce — blaetter::konflikt::schaltflaechen(genau_ein_ziel) baut beide Gestalten als eine Angabe; bei genau einem Ziel drei Antworten, Eingabetaste auf Abbrechen, kein Ankreuzfeld. Je eine Tafelprobe haelt beide.
 Deferred:
 Superseded by:
 Retired:

@@ -77,7 +77,7 @@ sollte zugleich sagen, ob der Zielordner-Konflikt je Archiv gefragt wird oder ei
 
 ---
 Answered: shared/history/260824-2120-orchestrator-session.md:35 — Moeglichkeit 3, betroffene nehmen und jedes Archiv darin entpacken; der Zielordner-Konflikt wird je Archiv gefragt, mit dem Ankreuzfeld fuer alle weiteren.
-Implemented:
+Implemented: ab74c9e, 423d5f2, 6faaa91, dd74b0e — Art::Entpacken traegt ziele: Vec<PathBuf> Stelle fuer Stelle zu quellen, kontextmenue::entpackziel liefert mehrere Paare, und ohne_die_eigenen_ziele haelt ein Archiv aus dem Lauf, dessen Zielordner es selbst ist.
 Deferred:
 Superseded by:
 Retired:

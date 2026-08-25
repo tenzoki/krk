@@ -33,7 +33,7 @@ Möglichkeit 1. Sie ist die einzige der drei, die weder löscht noch mischt, und
 
 ---
 Answered: shared/history/260824-2120-orchestrator-session.md:33 — Moeglichkeit 2, dieselbe Rueckfrage wie beim Zip; Ueberschreiben raeumt den vorhandenen Ordner in den Papierkorb, nicht endgueltig (Bindung aus Runde 12).
-Implemented:
+Implemented: ab74c9e, 299d1e1 — entpacken::zielordner_klaeren stellt dieselbe Rueckfrage wie das Zip, und Ueberschreiben raeumt in den Papierkorb statt endgueltig zu loeschen (Bindung aus Runde 12).
 Deferred:
 Superseded by:
 Retired:
