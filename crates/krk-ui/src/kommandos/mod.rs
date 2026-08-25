@@ -5,8 +5,13 @@
 //! den Tastenbefehlen; die Ansicht dazu ist [`crate::appkit::tabelle`], die das
 //! Ergebnis in eine `NSTableView` stellt und die Blaetter am Fenster zeigt.
 //!
-//! Zehn Module entlang dessen geschnitten, was ein Tastenbefehl bewegt — und
-//! seit der Runde 13 eines, das kein Tastenbefehl ist:
+//! Die Module sind entlang dessen geschnitten, was ein Tastenbefehl bewegt —
+//! und seit der Runde 13 stehen zwei daneben, die kein Tastenbefehl sind.
+//! **Wie viele es sind, sagt `grep -c '^pub mod'` auf diese Datei und keine
+//! Zahl an dieser Stelle**: die Zahl hier ist zwischen dem 260823 und dem
+//! 260825 zweimal falsch geworden, und die zwei Zahlen, die einmal danebenstanden,
+//! sind aus demselben Grund schon gefallen
+//! (`shared/issues/260823-1032_*_zwei-zahlen-im-modulkopf-der-kommandos-*`).
 //!
 //! ```text
 //! zulaessigkeit Ob ein Befehl hier gerade wirken darf: kein Blatt, der
@@ -31,16 +36,28 @@
 //! abwurfregel  Was ein Abwurf aus einer fremden Anwendung trifft und ob er
 //!              ausgefuehrt wird: die Marke und ihr Ziel, das Urteil und sein
 //!              Grund (C4, C5 und C6 der Runde 13)
+//! kontextmenue Was das Kontextmenue der Dateiliste traegt und worauf jeder
+//!              Eintrag wirkt: der Archivname, der Ordnername zurueck und die
+//!              Archive, die Unzip meint (Runde 17)
 //! ```
 //!
-//! **`abwurfregel` steht als letztes, und es ist das eine Modul hier, das kein
-//! Tastenbefehl ist.** Sein Ausloeser ist eine Mausgeste aus einer fremden
-//! Anwendung, und trotzdem wohnt es hier: was das Verzeichnis zusammenhaelt,
-//! ist nicht die Tastatur, sondern die Zusage seines zweiten Absatzes — die
-//! Rechnung steht ohne Fenster da und ist ohne Fenster pruefbar. Fuer den
-//! Abwurf traegt diese Zusage mehr als fuer jeden Tastenbefehl: ein
-//! `NSDraggingInfo` laesst sich ohne Ziehsitzung nicht bauen, und jede Zeile,
-//! die im Annahmezweig entschiede, waere allein von Hand nachpruefbar.
+//! **`abwurfregel` und `kontextmenue` stehen am Schluss, und sie sind die zwei
+//! Module hier, die kein Tastenbefehl sind.** Ihre Ausloeser sind Mausgesten —
+//! ein Abwurf aus einer fremden Anwendung, ein Rechtsklick in der Dateiliste —,
+//! und trotzdem wohnen sie hier: was das Verzeichnis zusammenhaelt, ist nicht
+//! die Tastatur, sondern die Zusage seines zweiten Absatzes — die Rechnung
+//! steht ohne Fenster da und ist ohne Fenster pruefbar. Fuer beide traegt diese
+//! Zusage mehr als fuer jeden Tastenbefehl: ein `NSDraggingInfo` laesst sich
+//! ohne Ziehsitzung nicht bauen und ein `NSMenu` nicht ohne den Hauptfaden, den
+//! `libtest` nicht hergibt; jede Zeile, die im Annahmezweig oder im Menuebau
+//! entschiede, waere allein von Hand nachpruefbar.
+//!
+//! **Die drei Menueeintraege bekommen aus demselben Grund keine
+//! `Kommando`-Variante**: sie tragen weder eine Tastenkombination noch einen
+//! Hauptmenueeintrag, haengen also weder an `Kommando::wirkungsbereich` noch an
+//! `crate::belegungsmodell::bereich_des_kommandos`. Was sie stattdessen vor dem
+//! wirkungslosen Menueeintrag schuetzt, steht bei
+//! [`kontextmenue::Kontextbefehl`].
 //!
 //! **`zulaessigkeit` steht vor den uebrigen Tastenbefehlsmodulen, und das ist
 //! die Reihenfolge des Weges.** Die Aussage ist die Reihenfolge und nicht die
@@ -93,6 +110,7 @@
 pub mod abwurfregel;
 pub mod auswahl;
 pub mod fokus;
+pub mod kontextmenue;
 pub mod loeschwarnung;
 pub mod navigation;
 pub mod operationen;

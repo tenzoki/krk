@@ -7,7 +7,10 @@
 //! [`nichts_zu_kopieren`] und [`ablage_weist_ab`] fuer die beiden Pfadkopierer
 //! aus C1 und C2, [`nichts_zu_oeffnen`] und [`oeffnungsmeldung`] fuer die
 //! Uebergabe an das Standardprogramm aus C3, und seit dem 260812
-//! [`nichts_zu_teilen`] fuer das Teilen aus C1 der Runde 6. Die Texte der
+//! [`nichts_zu_teilen`] fuer das Teilen aus C1 der Runde 6, und seit der
+//! Runde 17 [`nichts_zu_packen`], [`kein_archiv`], [`mehrere_archive`] und
+//! [`kein_finder`] fuer die drei Eintraege des Kontextmenues, deren Regel in
+//! [`super::kontextmenue`] steht. Die Texte der
 //! Runde 4 tragen den Zuschnitt der Dateioperationen vollstaendig: ein Befehl,
 //! der auf den sichtbaren Tab des aktiven Dateifensters wirkt und seine
 //! Antwort als Befehlsantwort in die Statuszeile schreibt. **Das Teilen weicht
@@ -433,6 +436,60 @@ fn ueberschrift(art: &Art) -> &'static str {
         Art::UmbenennenImStapel { .. } => "Umbenennen",
         Art::Zippen { .. } => "Packen",
         Art::Entpacken { .. } => "Entpacken",
+    }
+}
+
+/// Ob der Vorgang genau **eine** Zieldatei erzeugt.
+///
+/// Die zweite vollstaendige Rechnung ueber [`Art`], und sie steht neben der
+/// ersten: wer einen siebten Wert hinzufuegt, findet beide Stellen an einem
+/// Fleck statt an zweien.
+///
+/// **Gefragt wird sie vom Konfliktblatt**, das in dieser Lage drei Antworten
+/// statt vier zeigt und das Ankreuzfeld „fuer alle weiteren" weglaesst: es
+/// haette keinen Gegenstand, und „Ueberspringen" fiele mit „Abbrechen"
+/// zusammen, weil der Vorgang danach ohnehin endet. So hat der Nutzer es am
+/// 260824-2120 gewaehlt
+/// (`decisions/260825-0711_*_welche-antworten-bietet-das-konfliktblatt-bei-genau-einer-zieldatei.md`,
+/// Moeglichkeit 2).
+///
+/// Die sechs Werte und ihre Antwort:
+///
+/// | Art | genau ein Ziel | warum |
+/// |---|---|---|
+/// | Kopieren | nein | je Quelle ein Ziel |
+/// | Verschieben | nein | ebenso |
+/// | InDenPapierkorb | nein | kein Ziel, und kein Konflikt |
+/// | UmbenennenImStapel | nein | je Quelle ein neuer Name |
+/// | Zippen | **ja** | ein Archiv fuer den ganzen Lauf |
+/// | Entpacken | wenn genau ein Archiv | je Archiv ein Zielordner |
+///
+/// **Das Entpacken haengt an einer Zahl und nicht am Wert**, und das ist die
+/// Folge der dritten Nutzerentscheidung dieser Runde: seit ein Vorgang mehrere
+/// Archive tragen kann, wird der Zielordner-Konflikt je Archiv gefragt, und
+/// dann traegt das Ankreuzfeld wieder seinen Gegenstand. Bei genau einem Archiv
+/// traegt es ihn nicht, und die Antwort ist dieselbe wie beim Packen.
+///
+/// `#[must_use]`: der Rueckgabewert entscheidet, welche Gestalt das Blatt
+/// annimmt; fiele er still weg, stuende das Blatt in der vierantwortigen
+/// Gestalt da, ohne dass eine Probe es saehe.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Schritt 8 dieser Runde setzt den Aufrufer im Konfliktblatt; \
+                  bis dahin ruft allein die Probe daneben"
+    )
+)]
+#[must_use]
+pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
+    match art {
+        Art::Kopieren { .. }
+        | Art::Verschieben { .. }
+        | Art::InDenPapierkorb
+        | Art::UmbenennenImStapel { .. } => false,
+        Art::Zippen { .. } => true,
+        Art::Entpacken { ziele } => ziele.len() == 1,
     }
 }
 
@@ -895,6 +952,31 @@ pub fn nichts_zu_oeffnen() -> String {
     nichts_betroffen("öffnen")
 }
 
+/// Der Satz, wenn beim Packen kein Eintrag betroffen ist (Runde 17).
+///
+/// **Der dritte Eingang von [`nichts_betroffen`], und er steht neben seinen
+/// zwei Geschwistern und nicht bei den Archivsaetzen darunter.** Zip wirkt auf
+/// dieselbe Menge wie die beiden Befehle darueber, naemlich auf
+/// [`betroffene`], und findet auf dieselbe Weise nichts: nichts markiert und
+/// nichts ausgewaehlt. Ein eigener Satz daneben saehe wie eine andere Lage aus.
+///
+/// **Der Entwurf dieser Runde haette bei leerer Markierung den ganzen
+/// angezeigten Ordner gepackt**; der Nutzer hat das verworfen und die
+/// bestehende Regel gewaehlt. Dieser Satz ist die Stelle, an der die Wahl
+/// sichtbar wird: statt einer ungefragten Handlung steht eine Auskunft.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Zip-Zweig des \
+                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
+    )
+)]
+#[must_use]
+pub fn nichts_zu_packen() -> String {
+    nichts_betroffen("packen")
+}
+
 /// Der Satz, wenn beim Teilen nichts zu uebergeben ist (C1 der Runde 6).
 ///
 /// **Er geht nicht durch [`nichts_betroffen`], und das ist der Unterschied
@@ -912,6 +994,83 @@ pub fn nichts_zu_oeffnen() -> String {
 /// bleibt einzeilig.
 pub fn nichts_zu_teilen() -> String {
     "nichts zu teilen: hier steht nichts, was an die Freigabedienste ginge".to_owned()
+}
+
+/// Der Satz, wenn Unzip kein Archiv vorfindet (Runde 17).
+///
+/// **Er geht nicht durch [`nichts_betroffen`]**, und der Grund ist derselbe,
+/// aus dem [`nichts_zu_teilen`] es nicht tut: „nichts markiert und nichts
+/// ausgewaehlt" waere hier falsch. Unzip findet auch dann nichts, wenn der
+/// Nutzer eine Datei ausgewaehlt hat — sie ist nur kein Archiv, und der Ordner
+/// traegt keines.
+///
+/// **Er nennt die Endung**, denn sie ist die ganze Regel: KRK erkennt ein
+/// Archiv am Namen und nicht am Inhalt
+/// (`decisions/260825-0711_*_woran-erkennt-unzip-dass-eine-datei-ein-zip-ist.md`,
+/// Moeglichkeit 1). Ohne den Halbsatz suchte der Nutzer den Grund an der
+/// falschen Stelle, wenn sein Archiv anders heisst.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Unzip-Zweig des \
+                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
+    )
+)]
+#[must_use]
+pub fn kein_archiv() -> String {
+    "nichts zu entpacken: hier steht keine Datei mit der Endung .zip".to_owned()
+}
+
+/// Der Satz, wenn die Ersatzregel von Unzip mehrere Archive vorfindet
+/// (Runde 17).
+///
+/// Der zweite Fehlbefund neben [`kein_archiv`]. Er gilt **allein der
+/// Ersatzregel**: mehrere **betroffene** Archive sind kein Fehlbefund, sondern
+/// der Regelfall seit dem Nutzerentscheid vom 260824-2120, und sie werden alle
+/// entpackt.
+///
+/// **Er sagt, was zu tun ist, ohne den Nutzer anzureden**, wie es
+/// [`kein_terminal`] mit seinem Hinweis auf `settings.toml` vormacht: die
+/// Auskunft, dass die Auswahl auf keines der Archive zeigt, ist zugleich der
+/// Weg heraus.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Unzip-Zweig des \
+                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
+    )
+)]
+#[must_use]
+pub fn mehrere_archive() -> String {
+    "nichts zu entpacken: hier stehen mehrere Archive, und die Auswahl zeigt \
+     auf keines"
+        .to_owned()
+}
+
+/// Der Satz, wenn das System keinen Finder nennt (Runde 17).
+///
+/// **Er nennt die Buendelkennung nicht**, anders als [`kein_terminal`]. Dort
+/// ist sie die Angabe, mit der der Nutzer `settings.toml` berichtigen kann;
+/// hier steht sie fest im Baum, und ein Nutzer, der `com.apple.finder` liest,
+/// haette nichts, was er damit anfangen koennte. Sie stuende dann zudem an zwei
+/// Stellen, hier und am Aufruf.
+///
+/// **Der Fall ist selten und wird trotzdem gemeldet**, aus demselben Grund wie
+/// bei [`ablage_weist_ab`]: ein Befehl, der still nichts tut, sieht aus wie
+/// einer, der nicht angekommen ist.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "Schritt 7 dieser Runde setzt den Aufrufer im Finder-Zweig des \
+                  Anwendungsdelegierten; bis dahin ruft allein die Probe"
+    )
+)]
+#[must_use]
+pub fn kein_finder() -> String {
+    "der Finder ist nicht erreichbar: das System hat keine Anwendung dafür genannt".to_owned()
 }
 
 /// Die gemeinsame Haelfte der beiden Saetze darueber.
@@ -1649,6 +1808,129 @@ mod tests {
         let lage = "nichts markiert und nichts ausgewählt";
         assert!(kopieren.ends_with(lage), "{kopieren}");
         assert!(oeffnen.ends_with(lage), "{oeffnen}");
+    }
+
+    /// Der dritte Satz durch [`nichts_betroffen`] ist der des Packens.
+    ///
+    /// Er steht in derselben Form wie seine zwei Geschwister darueber und nennt
+    /// dieselbe Lage, weil Zip auf dieselbe Menge wirkt wie sie: auf
+    /// [`betroffene`]. Ein anders gebauter Satz saehe wie eine andere Lage aus.
+    #[test]
+    fn der_satz_des_packens_steht_in_der_form_seiner_zwei_geschwister() {
+        let packen = nichts_zu_packen();
+        let klein = packen.to_lowercase();
+        assert!(klein.contains("packen"), "{packen}");
+        assert!(!klein.contains("kopier"), "{packen}");
+        assert!(!klein.contains("öffn"), "{packen}");
+        assert!(
+            packen.ends_with("nichts markiert und nichts ausgewählt"),
+            "{packen}"
+        );
+    }
+
+    /// Die zwei Fehlbefunde von Unzip nennen zwei verschiedene Lagen.
+    ///
+    /// **Sie gehen bewusst nicht durch [`nichts_betroffen`]**, aus demselben
+    /// Grund wie der Satz des Teilens: Unzip findet auch dann nichts, wenn
+    /// etwas ausgewaehlt ist — es ist nur kein Archiv.
+    ///
+    /// Der erste nennt die Endung, denn sie ist die ganze Erkennungsregel; der
+    /// zweite nennt die Auswahl, denn ueber sie kommt der Nutzer heraus.
+    #[test]
+    fn die_zwei_fehlbefunde_von_unzip_nennen_zwei_lagen() {
+        let keines = kein_archiv();
+        let mehrere = mehrere_archive();
+        assert_ne!(keines, mehrere);
+        for satz in [&keines, &mehrere] {
+            assert!(satz.to_lowercase().contains("entpacken"), "{satz}");
+            assert!(!satz.contains("markiert"), "{satz}");
+            assert!(
+                !satz.contains('\n'),
+                "die Statuszeile ist einzeilig: {satz}"
+            );
+        }
+        assert!(keines.contains(".zip"), "{keines}");
+        assert!(mehrere.contains("Auswahl"), "{mehrere}");
+    }
+
+    /// Der Satz des Finders nennt die Buendelkennung nicht.
+    ///
+    /// Der Unterschied zu [`kein_terminal`], und er ist keine Wortklauberei:
+    /// dort ist die Kennung die Angabe, mit der der Nutzer `settings.toml`
+    /// berichtigt. Fuer den Finder steht sie fest im Baum; sie zu nennen gaebe
+    /// dem Nutzer nichts und stellte dieselbe Zeichenfolge an eine zweite
+    /// Stelle.
+    #[test]
+    fn der_satz_des_finders_nennt_die_kennung_nicht() {
+        let finder = kein_finder();
+        assert!(finder.contains("Finder"), "{finder}");
+        assert!(!finder.contains("com.apple"), "{finder}");
+        assert!(!finder.contains("settings.toml"), "{finder}");
+        assert!(
+            !finder.contains('\n'),
+            "die Statuszeile ist einzeilig: {finder}"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Was ein Vorgang erzeugt (Runde 17)
+    // ------------------------------------------------------------------
+
+    /// Die Tafel ueber alle sechs Werte von [`Art`], von Hand geschrieben.
+    ///
+    /// **Sie ist die zweite Haelfte der Vollstaendigkeit.** Der Uebersetzer
+    /// erzwingt, dass [`erzeugt_genau_ein_ziel`] jeden Wert beantwortet, aber
+    /// nicht, dass eine Probe jeden nennt; ein siebter Wert liefe sonst
+    /// ungeprueft mit.
+    #[test]
+    fn genau_ein_ziel_erzeugt_allein_das_packen() {
+        let ziel = PathBuf::from("/tmp/x");
+        let tafel: [(Art, bool); 6] = [
+            (Art::Kopieren { ziel: ziel.clone() }, false),
+            (Art::Verschieben { ziel: ziel.clone() }, false),
+            (Art::InDenPapierkorb, false),
+            (
+                Art::UmbenennenImStapel {
+                    neue_namen: vec!["a".to_owned()],
+                },
+                false,
+            ),
+            (Art::Zippen { ziel: ziel.clone() }, true),
+            (
+                Art::Entpacken {
+                    ziele: vec![ziel.clone(), ziel.clone()],
+                },
+                false,
+            ),
+        ];
+        for (art, erwartet) in tafel {
+            assert_eq!(
+                erzeugt_genau_ein_ziel(&art),
+                erwartet,
+                "{art:?} wird falsch eingeordnet"
+            );
+        }
+    }
+
+    /// Ein Vorgang ueber **ein** Archiv erzeugt genau ein Ziel, einer ueber
+    /// zwei nicht.
+    ///
+    /// **Der Fall, um dessentwillen das Entpacken an einer Zahl haengt und
+    /// nicht am Wert.** Seit der Nutzerentscheidung vom 260824-2120 kann ein
+    /// Vorgang mehrere Archive tragen; dann wird der Zielordner-Konflikt je
+    /// Archiv gefragt, und das Ankreuzfeld „fuer alle weiteren" traegt wieder
+    /// seinen Gegenstand. Bei genau einem traegt es ihn nicht.
+    #[test]
+    fn ein_einzelnes_archiv_entpackt_in_genau_ein_ziel() {
+        let eines = Art::Entpacken {
+            ziele: vec![PathBuf::from("/tmp/x/eins")],
+        };
+        assert!(erzeugt_genau_ein_ziel(&eines));
+
+        let zwei = Art::Entpacken {
+            ziele: vec![PathBuf::from("/tmp/x/eins"), PathBuf::from("/tmp/x/zwei")],
+        };
+        assert!(!erzeugt_genau_ein_ziel(&zwei));
     }
 
     /// Der Satz des Teilens nennt seine Folge und **keine** Ursache.
