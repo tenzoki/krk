@@ -3169,7 +3169,34 @@ impl Anwendungsdelegierter {
             Kommando::UmbenennenStapel => self.stapel_umbenennen(),
             Kommando::TerminalOeffnen => self.terminal_oeffnen(),
             Kommando::ZwischenablageAnsehen => self.zwischenablage_ansehen(),
-            Kommando::FensterWechseln => self.ivars().modell.borrow_mut().fenster_wechseln(),
+            // **Der Tabbefehl nimmt den Ersthelferrang mit, seit dem 260825.**
+            // Bis dahin schrieb er allein `Fenstermodell::aktiv` um und liess
+            // den Rang in der Liste sitzen, die danach nicht mehr die aktive
+            // war. Damit war der Weg mit der Maus zurueck tot: AppKit ruft
+            // `makeFirstResponder:` gar nicht erst, wenn die geklickte Ansicht
+            // den Rang schon haelt — also lief weder der Melder aus
+            // [`Hauptfenster`](super::fenster::Hauptfenster) an noch
+            // [`Self::aktives_dem_ersthelfer_nachziehen`] dahinter, und der
+            // zweite Weg ueber `tableView:shouldSelectRow:` feuert nur, wenn
+            // der Klick die Auswahl wirklich bewegt.
+            //
+            // **Der Ring bricht von selbst ab**: das ausgeloeste
+            // `makeFirstResponder:` meldet, der Nachzug laeuft, `aktiv_setzen`
+            // liefert `false`, und es gibt keinen zweiten Nachzug. Eine zweite
+            // Zuordnung entsteht auch nicht: [`Self::fokusansicht`] loest
+            // [`Fokus::Dateifenster`] ueber `modell.aktiv()` auf, also ueber den
+            // gerade umgesetzten Wert.
+            //
+            // **Die Ausleihe endet vor dem Fokus.** `fokus_setzen` leiht sich
+            // das Fenstermodell selbst aus; die Zeile darunter haelt den
+            // `RefMut` nur bis zu ihrem Semikolon.
+            Kommando::FensterWechseln => {
+                let gewechselt = self.ivars().modell.borrow_mut().fenster_wechseln();
+                if gewechselt {
+                    self.fokus_setzen(Fokus::Dateifenster);
+                }
+                gewechselt
+            }
             Kommando::LeisteUmschalten => self.bereich_umschalten(Bereich::Lesezeichen),
             // Die beiden Dateifenster gehen durch dieselbe Stelle, seit das
             // linke ausblendbar ist. Dass eines von beiden stehen bleibt,
@@ -4531,6 +4558,18 @@ impl Anwendungsdelegierter {
     /// [`Hauptfenster`](super::fenster::Hauptfenster). Eine Ueberschreibung an
     /// der Tabelle waere die zweite Tuer, die deren Modulkopf ausschliesst,
     /// und traefe die Lesezeichenleiste ohnehin nicht mit.
+    ///
+    /// **Nur auf den Rangwechsel zu hoeren hat eine Vorbedingung, und bis zum
+    /// 260825 war sie nicht hergestellt:** es gibt Klicks in einen Bereich
+    /// **ohne** Rangwechsel, naemlich dann, wenn die geklickte Ansicht den Rang
+    /// schon haelt. AppKit ruft `makeFirstResponder:` dann gar nicht erst, und
+    /// dieser Nachzug laeuft nicht an. Getragen wird die Zusage deshalb erst
+    /// dadurch, dass **jeder** Schreiber von `Fenstermodell::aktiv` den Rang
+    /// mitnimmt — sonst faellt der Rang und das aktive Dateifenster
+    /// auseinander, und der Klick zurueck hat nichts mehr zu melden. Der
+    /// Tabbefehl tat genau das; die Zaehlprobe
+    /// `aktivschreiberproben::der_fensterwechsel_nimmt_den_ersthelferrang_mit`
+    /// haelt die Vorbedingung seither fest.
     ///
     /// # Was er von sich aus in Ruhe laesst
     ///
@@ -8618,6 +8657,153 @@ mod fokusnachzugproben {
             assert!(
                 rumpf.contains(nadel),
                 "der Nachzug der Fokusanzeige schreibt nicht mehr: {nadel}"
+            );
+        }
+    }
+}
+
+/// Jeder Schreiber des aktiven Dateifensters nimmt den Ersthelferrang mit.
+///
+/// **Die zwei Fokusgroessen, die auseinanderfallen koennen.** KRK fuehrt
+/// `Fenstermodell::aktiv` — welches Dateifenster die Befehle meinen — und
+/// daneben den Ersthelferrang von AppKit — wohin die Tastendruecke gehen. Wer
+/// das eine umschreibt und das andere stehen laesst, hinterlaesst einen Zustand,
+/// aus dem der Mausklick nicht mehr herausfuehrt: AppKit ruft
+/// `makeFirstResponder:` gar nicht erst, wenn die geklickte Ansicht den Rang
+/// schon haelt, und dann laeuft
+/// [`Anwendungsdelegierter::aktives_dem_ersthelfer_nachziehen`] nicht an. Genau
+/// das tat der Tabbefehl bis zum 260825 (`shared/planning/260825-1725_*`,
+/// Strang 1, Schritt 1).
+///
+/// **Warum am Quelltext und nicht am Verhalten.** Der Rang liegt in AppKit und
+/// steht erst, wenn KRK im Vordergrund laeuft; kein Agent kann den Abnahmelauf
+/// fahren. Was ohne Fenster pruefbar bleibt, ist die Verdrahtung — dass jeder
+/// der drei Schreiber den Ruf danebenstehen hat, der den Rang nachzieht. Der
+/// Kopf von [`crate::quellbaum`] beschreibt die Bauform und sagt auch, was sie
+/// nicht kann.
+///
+/// **Die Nadeln stehen zusammengesetzt da**, wie in den Nachbarmodulen: diese
+/// Proben liegen in der Datei, die sie lesen.
+#[cfg(test)]
+mod aktivschreiberproben {
+    use super::zettelproben::{diese_datei, rumpf};
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// Der Zweig eines Kommandos aus einem `match` ueber [`Kommando`].
+    ///
+    /// Der Zweig beginnt hinter seinem `Kommando::… =>` und endet vor dem
+    /// naechsten `Kommando::`, also am Kopf des Nachbarzweigs. Die
+    /// Kommentarzeilen sind schon heraus: [`rumpf`] hat sie abgezogen, bevor der
+    /// Text hier ankommt.
+    fn zweig(rumpf: &str, kommando: &str) -> String {
+        let kopf = format!("Kommando::{kommando} =>");
+        let beginn = rumpf
+            .find(&kopf)
+            .unwrap_or_else(|| panic!("{kopf} steht nicht in diesem Rumpf"));
+        let rest = &rumpf[beginn + kopf.len()..];
+        let ende = rest.find("Kommando::").unwrap_or(rest.len());
+        rest[..ende].to_owned()
+    }
+
+    /// **Der Tabbefehl nimmt den Rang mit** — die Probe zum Fehler vom 260825.
+    ///
+    /// Sie wird rot, sobald der Ruf aus dem Zweig verschwindet, und das ist ihr
+    /// ganzer Zweck: der Fehler war unsichtbar, weil beide Haelften fuer sich
+    /// richtig aussahen. Die Reihenfolge steht mit in der Zusage — der Fokus
+    /// wird **nach** dem Wechsel gesetzt, weil [`super::Anwendungsdelegierter`]
+    /// ihn ueber `modell.aktiv()` aufloest und davor noch das alte Dateifenster
+    /// traefe.
+    ///
+    /// **Was sie nicht sieht:** einen Rangwechsel, der aus dem Zweig in eine
+    /// spaeter gerufene Hilfsfunktion gewandert ist. Dann stuende die Nadel hier
+    /// nicht mehr, und die Probe faende sie auch nicht anderswo.
+    #[test]
+    fn der_fensterwechsel_nimmt_den_ersthelferrang_mit() {
+        let wechsel = concat!("fenster_", "wechseln(");
+        let rang = concat!("fokus_", "setzen(Fokus::Dateifenster)");
+        let zweig = zweig(
+            &rumpf(&diese_datei(), "kommando_ausfuehren"),
+            "FensterWechseln",
+        );
+        let stelle_wechsel = zweig
+            .find(wechsel)
+            .expect("der Tabbefehl wechselt das aktive Dateifenster nicht mehr");
+        let stelle_rang = zweig
+            .find(rang)
+            .expect("der Tabbefehl nimmt den Ersthelferrang nicht mit");
+        assert!(
+            stelle_wechsel < stelle_rang,
+            "der Tabbefehl setzt den Fokus, bevor das aktive Dateifenster steht"
+        );
+    }
+
+    /// Der Aufbau der Oberflaeche setzt den Rang in das aktive Dateifenster.
+    ///
+    /// Der erste der drei Schreiber: `Fenstermodell::aus_sitzung` bringt mit,
+    /// welches Dateifenster das aktive ist, und der Ruf am Ende des Aufbaus
+    /// bringt den Rang dorthin. Ohne ihn stuende der Rang, wo AppKit ihn beim
+    /// ersten Anzeigen hinlegt — in der ersten Ansicht der
+    /// Schluesselansichtskette, also in der Leiste.
+    #[test]
+    fn der_aufbau_setzt_den_ersthelfer_in_das_aktive_dateifenster() {
+        let nadel = concat!("fokus_", "setzen(");
+        assert!(
+            rumpf(&diese_datei(), "oberflaeche_aufbauen").contains(nadel),
+            "der Aufbau der Oberflaeche setzt den Ersthelfer nicht"
+        );
+    }
+
+    /// Der dritte Schreiber haengt am Rangwechsel und nicht neben ihm.
+    ///
+    /// [`super::Anwendungsdelegierter::aktives_setzen`] nimmt den Rang nicht
+    /// mit, weil der Rang bei ihm der **Ausloeser** ist: der Melder des
+    /// Hauptfensters ruft
+    /// [`super::Anwendungsdelegierter::aktives_dem_ersthelfer_nachziehen`], und
+    /// erst das schreibt `aktiv`. Faellt die Anmeldung im Aufbau weg, dreht sich
+    /// die Richtung um und der Klick in eine Flaeche ohne Zeile setzt nichts
+    /// mehr.
+    ///
+    /// **Was sie nicht sieht:** ob der Melder wirklich vom Hauptfenster kommt.
+    /// Dass es genau einen Ausloesepunkt gibt, traegt der Modulkopf von
+    /// [`super::super::fenster`].
+    #[test]
+    fn das_nachziehen_des_aktiven_haengt_am_rangwechsel() {
+        let nadel = concat!("aktives_dem_", "ersthelfer_nachziehen(");
+        assert!(
+            rumpf(&diese_datei(), "oberflaeche_aufbauen").contains(nadel),
+            "der Aufbau meldet den Rangwechsel nicht mehr an das aktive Dateifenster"
+        );
+    }
+
+    /// Ausserhalb des Fenstermodells schreibt je **eine** Stelle das aktive
+    /// Dateifenster.
+    ///
+    /// Die Zaehlung, die die drei Proben darueber vollstaendig macht: ohne sie
+    /// bliebe eine vierte Tuer in `aktiv` unbemerkt, und die Aussage „alle drei
+    /// Schreiber nehmen den Rang mit" waere ueber die Schreiber von gestern
+    /// gesagt. Eine Aufruferzaehlung steht hier, weil die Zahl selbst zugesagt
+    /// ist; der Kopf von [`crate::quellbaum`] sagt, warum sie sonst nirgends
+    /// stehen soll.
+    ///
+    /// **Das Fenstermodell selbst bleibt aussen vor.** Dort stehen die beiden
+    /// Erklaerungen und die Proben darauf, und `fenster_wechseln` ruft
+    /// `aktiv_setzen` von innen; mitgezaehlt waeren das lauter Stellen, an denen
+    /// von einem Ersthelferrang gar nicht die Rede sein kann.
+    ///
+    /// **Was sie nicht sieht:** einen dritten Schreiber, der das Feld ueber
+    /// einen neuen Weg im Fenstermodell umsetzt statt ueber diese beiden.
+    #[test]
+    fn keine_vierte_tuer_schreibt_das_aktive_dateifenster() {
+        let modell = "krk-ui/src/fenstermodell.rs";
+        for name in [concat!("fenster_", "wechseln"), concat!("aktiv_", "setzen")] {
+            let treffer: usize = quelldateien()
+                .iter()
+                .filter(|(datei, _)| datei != modell)
+                .map(|(_, inhalt)| aufrufstellen(inhalt, name))
+                .sum();
+            assert_eq!(
+                treffer, 1,
+                "{name} wird ausserhalb des Fenstermodells nicht genau einmal gerufen"
             );
         }
     }
