@@ -1,8 +1,8 @@
 # Implementation Plan: Die Vorschau vertieft, und zwei Fehler
 
 **Date:** 2026-08-25
-**Status:** Draft
-**Spec:** keiner — geplant aus einem Rohauftrag des Nutzers vom 260825. Das Schärfen ist ausdrücklich übersprungen; die offenen Fragen sind in diesem Plan beantwortet und in fünf Entscheidungsdatensätzen abgelegt.
+**Status:** In Progress
+**Spec:** keiner — geplant aus einem Rohauftrag des Nutzers vom 260825. Das Schärfen ist ausdrücklich übersprungen; die offenen Fragen sind in diesem Plan beantwortet und in sieben Entscheidungsdatensätzen abgelegt.
 **Decidability:** Die tragende Frage lautet: *kann eine Profil-Zusammenfassung eine Auskunft geben, die über alle Unterordner eines Ordners aggregiert, ohne dass ihre Kosten mit dem Bestand der Werkbank wachsen?* Die Antwort ist **nein**, und zwar nicht aus Unentscheidbarkeit, sondern aus Unbeschränktheit: die Zahl der offenen Defekte über alle Runden ist entscheidbar, kostet aber eine Verzeichnisöffnung je Runde, und die Zahl der Runden wächst. Ein fester Deckel auf Verzeichnisöffnungen kann diese Auskunft deshalb nie dauerhaft tragen. **Der Mechanismus wechselt daher die Einheit, in der er zählt**: nicht mehr die geöffneten Verzeichnisse, sondern die **gelesenen Einträge** begrenzen einen Platzhalter-Lauf, und die Schranke dafür steht seit der Runde 16 als `HOECHSTENS_EINTRAEGE` da, samt der Vokabel für die abgeschnittene Antwort (`Wert::UeberGrenze`: „mindestens N, Lesung abgebrochen"). Damit ist die Auskunft an der heutigen Werkbank exakt (568 von 2.000 Einträgen), bei rund hundert Runden ausdrücklich unvollständig — und sie sagt dann selbst, dass sie es ist, statt eine Zahl zu nennen, die stillschweigend falsch ist.
 
 ## Directive
@@ -395,7 +395,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
 
 ### Kein weiterer Schritt für `analyst`, und warum
 
-Der Auftrag stellt `coder`, `ontocoder` und `analyst` bereit. Genau ein Schritt geht an `analyst`, nämlich der zehnte. Die zwei Untersuchungen, die diesen Plan tragen — die Wurzel des Klick-Fokus und die Merkmals- und Zeitzonenfrage beim Packen —, sind bei der Planung gelaufen und in diesen Plan sowie in die fünf Entscheidungsdatensätze eingegangen; ein Schritt, der sie wiederholte, brächte nichts. Was danach bleibt, ist Code, Daten und Dokumentation.
+Der Auftrag stellt `coder`, `ontocoder` und `analyst` bereit. Genau ein Schritt geht an `analyst`, nämlich der zehnte. Die zwei Untersuchungen, die diesen Plan tragen — die Wurzel des Klick-Fokus und die Merkmals- und Zeitzonenfrage beim Packen —, sind bei der Planung gelaufen und in diesen Plan sowie in die sieben Entscheidungsdatensätze eingegangen; ein Schritt, der sie wiederholte, brächte nichts. Was danach bleibt, ist Code, Daten und Dokumentation.
 
 ## Where this Circle stops
 
@@ -406,7 +406,7 @@ Es ist kein Circle aktiv; die Bedingungen gelten für die Arbeit dieses Plans.
 - `Cargo.lock` führt weiter kein `cc` und außer `windows-sys` kein `-sys`-Paket, und der Baum ist um höchstens die Einträge gewachsen, die Schritt 3 nennt.
 - `krk-core` trägt weiter `#![deny(unsafe_code)]` mit genau einer Öffnung, nämlich `verzeichnis/sys.rs`.
 - Der Defektdatensatz `circles/260825-0711-…/issues/260825-0838_*_jeder-gepackte-eintrag-traegt-den-1-januar-1980-…` trägt seine Auflösung und steht auf `_c_`; die zwei durch Messung berichtigten Vorschläge sind darin ausgeschrieben.
-- Die fünf Entscheidungsdatensätze dieser Runde sind vom Nutzer beantwortet oder ausdrücklich bei der Empfehlung belassen; ihre Marker stehen auf `_a_` oder `_i_`.
+- Die sieben Entscheidungsdatensätze dieser Runde sind vom Nutzer beantwortet oder ausdrücklich bei der Empfehlung belassen; ihre Marker stehen auf `_a_` oder `_i_`.
 - Der Nutzer hat den Handgriff aus Schritt 9 an seinem Gerät ausgeführt und die acht Profile in KRK gesehen. **Das ist die Vorbedingung für jede spätere Aussage, die Arbeit sei sichtbar**: ohne ihn zeigt KRK die fünf Profile von gestern, und zwar ohne Meldung.
 - Vor einem Auslieferungslauf: der Nutzer hat den Klick-Fokus, den Rundweg durch Zip und Unzip und die vier neuen Zusammenfassungen am laufenden Bündel gesehen. Was davon kein Agent abnehmen kann, steht unter „Testing Strategy"; ein Tag ohne diese Abnahme wäre derselbe Vorgang, den der Datensatz `260817-1613` einmal nachträglich hat aufarbeiten müssen.
 - **Nicht Bedingung und ausdrücklich außerhalb:** der Abnahmelauf gegen die zehn Zeitzusagen aus C8. Keine der zehn spricht über die Profil-Zusammenfassung, und wie diese Arbeit je gegen L7 gemessen wird, ist eine offene Frage der Runde 16 (`260824-1900_o_…`), die dieser Plan nicht beantwortet und dringender macht.
