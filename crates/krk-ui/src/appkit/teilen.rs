@@ -28,13 +28,26 @@
 //!
 //! # Ein Menue, ein Bauer, drei Flaechen
 //!
-//! [`eintrag_anfuegen`] ist der **eine** Menuebauer. Die Dateiliste, der
-//! Editor und die Vorschau beantworten allein, welche Eintraege betroffen
-//! sind; sie bauen kein Menue. Drei Menuebauer nebeneinander waeren die
-//! Wiederholung, die dieses Projekt an `appkit/nummernspalte.rs` und
-//! `appkit/tableiste.rs` bereits zweimal vermieden hat (C1, siebtes
-//! Kriterium). **Diese Datei kennt keine der drei Flaechen**; sie stellt den
-//! Bauer bereit, und angehaengt haben sich die Flaechen selbst.
+//! [`eintrag_anfuegen`] ist der **eine** Bauer des Freigabeeintrags. Die
+//! Dateiliste, der Editor und die Vorschau beantworten allein, welche
+//! Eintraege betroffen sind; keine von ihnen baut sich einen zweiten
+//! Freigabeeintrag. Drei Bauer nebeneinander waeren die Wiederholung, die
+//! dieses Projekt an `appkit/nummernspalte.rs` und `appkit/tableiste.rs`
+//! bereits zweimal vermieden hat (C1, siebtes Kriterium). **Diese Datei kennt
+//! keine der drei Flaechen**; sie stellt den Bauer bereit, und angehaengt
+//! haben sich die Flaechen selbst.
+//!
+//! **Was eine Flaeche sonst noch in ihr Menue haengt, geht diese Datei nichts
+//! an.** Bis zur Runde 17 stand hier "sie bauen kein Menue"; fuer den
+//! Freigabeeintrag stimmt der Satz weiter, als Aussage ueber die Flaechen
+//! stimmt er seit dem Menuebau jener Runde nicht mehr. Die Dateiliste legt in
+//! `menuNeedsUpdate:` erst ihre drei eigenen Eintraege an — Zip, Unzip und
+//! Finder — und ruft [`eintrag_anfuegen`] danach; dass dabei die Form
+//! "Teilen, Trenner, Zip, Unzip, Finder" herauskommt, liegt daran, dass dieser
+//! Bauer vorn einfuegt und seinen Trenner nur setzt, wenn schon etwas dasteht.
+//! Die beiden Zaehlproben unter `mod tests` bleiben davon unberuehrt und
+//! sollen es: sie halten fest, dass der **Freigabeeintrag** einen Bauer hat,
+//! nicht dass ein Menue einen Eintrag traegt.
 //!
 //! **Zwei Anschlussarten, ein Bauer**, und der Unterschied ist nicht
 //! Geschmack, sondern die Bauart der Flaeche:
@@ -44,7 +57,7 @@
 //!     Textflaeche des Editors  ─┐
 //!     Textanzeige der Vorschau ─┴─> textView:menu:forEvent:atIndex: ─┐
 //!                                                                    ├─> eintrag_anfuegen
-//!   baut keines und nimmt das Menue der Ansicht                      │
+//!   bringt kein eigenes Menue mit und nimmt das der Ansicht           │
 //!     Dateiliste               ─┐                                    │
 //!     Bildansicht              ─┼─> setMenu: + menuNeedsUpdate: ─────┘
 //!     Inhaltsflaeche           ─┘

@@ -6111,7 +6111,7 @@ impl Anwendungsdelegierter {
             return;
         }
         if let Some(konflikt) = konflikt {
-            self.konflikt_fragen(konflikt);
+            self.konflikt_fragen(konflikt, &art);
             return;
         }
         if !operationen::anzeige_faellig(begonnen, Instant::now()) {
@@ -6139,12 +6139,21 @@ impl Anwendungsdelegierter {
     /// Die Vorgangsanzeige bleibt dabei stehen: sie ist eine Zeile am Fuss des
     /// Dateifensters und kein zweites Blatt, das AppKit hinter dieses stellen
     /// muesste. Bis S16 wich hier ein Fortschrittsblatt.
-    fn konflikt_fragen(&self, frage: Konfliktfrage) {
+    ///
+    /// **Die `art` waehlt die Gestalt des Blattes**, und zwar ueber
+    /// [`operationen::erzeugt_genau_ein_ziel`]: ein Vorgang mit genau einer
+    /// Zieldatei, also jedes Packen und ein Entpacken ueber ein einzelnes
+    /// Archiv, bekommt drei Antworten statt vier und kein Kaestchen "fuer alle
+    /// weiteren". Die Rechnung steht hier und nicht im Blatt, weil das Blatt
+    /// die [`Art`] nicht kennt und nicht kennenlernen soll; gewaehlt hat die
+    /// Kuerzung der Nutzer am 260824-2120 (`decisions/260825-0711_*_welche-antworten-bietet-das-konfliktblatt-bei-genau-einer-zieldatei.md`).
+    fn konflikt_fragen(&self, frage: Konfliktfrage, art: &Art) {
         let Some(fenster) = self.ivars().fenster.get() else {
             return;
         };
 
         let vorschlag = freier_name(&frage.ziel);
+        let genau_ein_ziel = operationen::erzeugt_genau_ein_ziel(art);
         let antwortweg = frage.antwort.clone();
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = konflikt::zeigen(
@@ -6153,6 +6162,7 @@ impl Anwendungsdelegierter {
             &frage.quelle,
             &frage.ziel,
             &vorschlag,
+            genau_ein_ziel,
             move |entscheid| {
                 // Ein leerer Name waere kein Name; dann bleibt der Eintrag
                 // stehen, statt unter einem Namen zu landen, den niemand

@@ -473,14 +473,11 @@ fn ueberschrift(art: &Art) -> &'static str {
 /// `#[must_use]`: der Rueckgabewert entscheidet, welche Gestalt das Blatt
 /// annimmt; fiele er still weg, stuende das Blatt in der vierantwortigen
 /// Gestalt da, ohne dass eine Probe es saehe.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "Schritt 8 dieser Runde setzt den Aufrufer im Konfliktblatt; \
-                  bis dahin ruft allein die Probe daneben"
-    )
-)]
+///
+/// Gefragt wird sie an genau einer Stelle, naemlich in
+/// `Anwendungsdelegierter::konflikt_fragen`, und die reicht die Antwort an
+/// `crate::appkit::blaetter::konflikt::zeigen` weiter. Das Blatt selbst kennt
+/// die [`Art`] nicht und soll sie nicht kennenlernen.
 #[must_use]
 pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
     match art {
