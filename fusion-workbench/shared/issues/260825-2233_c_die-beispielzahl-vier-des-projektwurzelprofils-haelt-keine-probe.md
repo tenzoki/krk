@@ -68,3 +68,24 @@ kommt, sodass ein Nutzer sie nachrechnen kann.
 Die erste Möglichkeit ist die, die die Probe ohnehin für die zwei anderen Profile gewählt
 hat, und sie hält zugleich die Aussage `:231-232` „dieser Lauf ist einer der zwölf" an
 einem Profil, bei dem er sichtbar dazukommt.
+---
+Resolved: Möglichkeit 1, und die Arbeit lag bei `coder`: `crates/krk-core/tests/leseprofil.rs` hält
+mit dem vierten Prüfordner der Probe zu C6.7 jetzt `(4, 5)` genau und daneben `orte.len() + 1`.
+`resources/default-readers.toml` ist an dieser Stelle nicht angefasst. Die Herleitung dort
+(`:237-240`) ist gegen die neue Probe gehalten und stimmt: die Drei des Wurzelprofils wandert über
+„mit denselben sieben Zeilen" mit, und die zwei Bedingungen des Erkennungslaufs stehen ausgeschrieben
+(„dort trägt jede Zeile eine Ortsangabe, und den erkannten Ordner liest allein die Erkennung"). Die
+Probe misst dieselben drei Orte (`fusion-workbench`, `fusion-workbench/circles`,
+`fusion-workbench/shared/issues`) und prüft eigens, dass keiner der erkannte Ordner selbst ist.
+Nachgemessen am 260826-0124 über `zusammenfassen_gezaehlt`: `krk` 4 Leseläufe, `krk/fusion-workbench`
+3. Die zwei Zahlen in der Datei bleiben stehen, weil eine Probe sie jetzt hält.
+
+Nachtrag vom 260826-0210, `coder`, nach dem Landen der Probe: **die Vier hält, die Fünf daneben
+steht an einer anderen Gestalt als die Kostenmessung.** Der Prüfordner der Probe trägt den vollen
+Bestand einer eingerichteten Werkbank und zählt fünf Öffnungen; die Kostenmessung vom 260825-2107
+zählt an `krk` vier, weil dort `.active-circle` fehlt und eine Zeile, die ihre Datei nicht findet,
+nichts öffnet. Nachgemessen: derselbe Prüfordner ohne diese eine Datei liefert `(4, 4)`. Die
+Leseläufe sind in beiden Gestalten vier, und um sie geht dieser Datensatz. Ein leeres
+`fusion-workbench` liefert dagegen `(2, 0)`: ein Ort, den es nicht gibt, wird nicht gelesen — die
+Vier steht nur an einer eingerichteten Werkbank, und genau die baut der Prüfordner. Beide
+Nebenmessungen stehen im Doc-Kommentar der Probe.
