@@ -486,8 +486,14 @@ impl Vorgang {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => ordner.push(ziel.clone()),
             // Loeschen, Papierkorb und das Stapel-Umbenennen bleiben im
             // Quellordner. Das Packen ebenso: sein Archiv entsteht im
-            // angezeigten Ordner, und der steht schon als `quellordner` da.
-            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } | Art::Zippen { .. } => {}
+            // angezeigten Ordner, und der steht schon als `quellordner` da. Das
+            // Entpacken ebenso, und dass es mehrere Zielordner anlegt, aendert
+            // daran nichts: jeder von ihnen entsteht **in** diesem einen
+            // Ordner, und aufgefrischt wird der Ordner und nicht der Eintrag.
+            Art::InDenPapierkorb
+            | Art::UmbenennenImStapel { .. }
+            | Art::Zippen { .. }
+            | Art::Entpacken { .. } => {}
         }
         ordner
     }
@@ -6259,10 +6265,16 @@ impl Anwendungsdelegierter {
             // anzuspringen, riss den Nutzer von den Eintraegen fort, die er
             // gerade gepackt hat und moeglicherweise als naechstes wegraeumen
             // will; die Auffrischung eine Zeile darueber zeigt es ihm ohnehin.
+            //
+            // **Nach dem Entpacken ebenso, und dort kommt ein zweiter Grund
+            // dazu.** Ein Vorgang entpackt jedes betroffene Archiv und legt
+            // damit moeglicherweise mehrere Ordner an; welcher von ihnen die
+            // Auswahl bekaeme, waere eine willkuerliche Wahl.
             Art::Kopieren { .. }
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
-            | Art::Zippen { .. } => {}
+            | Art::Zippen { .. }
+            | Art::Entpacken { .. } => {}
         }
 
         // **Der vierte Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**

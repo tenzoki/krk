@@ -298,7 +298,7 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 ///
 /// **Die eine Stelle, an der "schnell" entschieden wird.** Die
 /// Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: eine
-/// fuenfte Operationsart bricht hier den Bau ab und erzwingt eine bewusste
+/// weitere Operationsart bricht hier den Bau ab und erzwingt eine bewusste
 /// Einordnung, statt still in den Aufschub oder still an ihm vorbei zu laufen.
 ///
 /// **Das Stapel-Umbenennen schiebt auf.** Es schreibt Verzeichniseintraege und
@@ -308,11 +308,13 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 /// Das war der Defekt vom 260805-1337, den [`auffrischung_aufgeschoben`]
 /// abfaengt.
 ///
-/// **Die uebrigen drei schieben nicht auf.** Kopieren, Verschieben und der
-/// Papierkorb melden in gemaechlichem Takt; zwischen zwei
-/// Meldungen wird ein Lesevorgang fertig, und der Nutzer sieht einen
-/// angezeigten Zielordner sich waehrend des Laufs fuellen statt in einem Schlag
-/// am Ende. Bis `fd5e3c5` war das so, danach nicht mehr, und seit der
+/// **Jede uebrige Art schiebt nicht auf.** Kopieren, Verschieben, der
+/// Papierkorb, das Packen und das Entpacken melden in gemaechlichem Takt;
+/// zwischen zwei Meldungen wird ein Lesevorgang fertig, und der Nutzer sieht
+/// einen angezeigten Zielordner sich waehrend des Laufs fuellen statt in einem
+/// Schlag am Ende. Das Entpacken ist der Fall, an dem man es am ehesten sieht:
+/// der neue Ordner entsteht im angezeigten Ordner und fuellt sich vor den Augen
+/// des Nutzers. Bis `fd5e3c5` war das so, danach nicht mehr, und seit der
 /// Nutzerentscheidung vom 260806 wieder
 /// (`issues/260806-1331_*_der-auffrischungsaufschub-gilt-fuer-alle-fuenf-
 /// operationsarten-statt-nur-fuer-die-schnelle.md`).
@@ -333,7 +335,8 @@ pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
         Art::Kopieren { .. }
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
-        | Art::Zippen { .. } => false,
+        | Art::Zippen { .. }
+        | Art::Entpacken { .. } => false,
     }
 }
 

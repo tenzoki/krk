@@ -53,16 +53,9 @@ use crate::verzeichnis::{Typ, lesen};
 use super::fortschritt::Steuerung;
 use super::umbenennen::name_pruefen;
 use super::{
-    Abschluss, Auftrag, Konfliktantwort, Quelle, Zielentscheid, grund, loeschen, typ_und_groesse,
+    Abschluss, Auftrag, Konfliktantwort, Quelle, STUECK, Zielentscheid, grund, loeschen,
+    typ_und_groesse,
 };
-
-/// Wie viele Bytes zwischen zwei Abbruchpruefungen gelesen werden.
-///
-/// 64 KiB sind bei der auf diesem Geraet gemessenen Packrate von rund 38 MB/s
-/// knapp zwei Millisekunden. Wer groessere Stuecke nimmt, prueft den Abbruch
-/// seltener; wer kleinere nimmt, ruft haeufiger `read(2)`, ohne dass ein Nutzer
-/// den Unterschied bemerkte.
-const STUECK: usize = 64 * 1024;
 
 /// Was nach einem Eintrag geschieht.
 ///

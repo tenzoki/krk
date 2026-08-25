@@ -1,5 +1,5 @@
 //! Die Operationsmaschine: Kopieren, Verschieben, Loeschen, Anlegen,
-//! Umbenennen (C4), Packen.
+//! Umbenennen (C4), Packen, Entpacken.
 //!
 //! ```text
 //!            Auftrag ──> starten ──> Arbeitsfaden ──> ausfuehren
@@ -8,10 +8,14 @@
 //!                          │                             │
 //!                          │                    quelle_fuer_quelle
 //!                          │                             ├─> kopieren
-//!  Hauptfaden <── Lauf ────┘                             ├─> verschieben
+//!                          │                             ├─> verschieben
+//!  Hauptfaden <── Lauf ────┘                             ├─> entpacken
 //!    Meldung  <── Kanal <── Steuerung <──────────────────┴─> loeschen
 //!    abbrechen ─> AtomicBool ─┘                                 │
 //!                                                     Papierkorb (injiziert)
+//!                                                     ┌─────────┘
+//!                                            auch "ueberschreiben"
+//!                                            beim Entpacken geht hier durch
 //!
 //!            anlegen, umbenennen: ohne Faden, sofort fertig
 //! ```
@@ -50,6 +54,7 @@
 
 pub mod anlegen;
 pub mod auftrag;
+mod entpacken;
 pub mod fortschritt;
 mod kopieren;
 pub mod loeschen;
@@ -80,6 +85,18 @@ pub use umbenennen::{Namensfehler, freier_name, name_pruefen, umbenennen};
 use fortschritt::Steuerung;
 use umbenennen::name_pruefen as namen_pruefen;
 
+/// Wie viele Bytes ein Lauf zwischen zwei Abbruchpruefungen bewegt.
+///
+/// **Eine Zahl fuer beide Archivwege**, das Packen und das Entpacken. 64 KiB
+/// sind bei der auf diesem Geraet gemessenen Packrate von rund 38 MB/s knapp
+/// zwei Millisekunden. Wer groessere Stuecke nimmt, prueft den Abbruch
+/// seltener; wer kleinere nimmt, ruft haeufiger `read(2)`, ohne dass ein Nutzer
+/// den Unterschied bemerkte.
+///
+/// Das Kopieren und das Verschieben lesen die Zahl nicht: sie uebertragen ueber
+/// `copyfile(3)`, und dessen Takt bestimmt der Kern des Systems.
+pub(crate) const STUECK: usize = 64 * 1024;
+
 /// Ein Eintrag, so wie die Maschine ihn anfasst.
 ///
 /// Der Typ und die Groesse stehen daneben, weil der Aufrufer sie schon hat: im
@@ -95,7 +112,14 @@ pub(crate) struct Quelle<'a> {
 }
 
 /// Ob nach einem Eintrag weitergemacht wird.
+///
+/// **`#[must_use]` steht am Typ und nicht an den vier Funktionen, die ihn
+/// liefern.** Ein fallen gelassenes `Abgebrochen` bliebe unbemerkt: der Lauf
+/// liefe ueber die abgebrochene Position hinaus weiter, und niemand saehe eine
+/// Warnung. Die Marke am Typ deckt jede Stelle, die ihn heute zurueckgibt, und
+/// jede, die es einmal tun wird.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
 pub(crate) enum Ablauf {
     /// Weiter mit dem naechsten Eintrag.
     Weiter,
@@ -143,10 +167,11 @@ pub fn starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
 /// weitere Operationsart bricht hier den Bau ab und erzwingt die Einordnung in
 /// eine der beiden Bahnen, statt still in der falschen zu landen.
 ///
-/// Vier der fuenf Arten haben je Quelle ein eigenes Ziel und laufen deshalb
+/// Jede Art ausser dem Packen hat je Quelle ein eigenes Ziel und laeuft deshalb
 /// ueber [`quelle_fuer_quelle`]. Das Packen hat **ein** Ziel fuer den ganzen
 /// Lauf, das einmal geoeffnet und einmal geschlossen wird; die Begruendung
-/// steht im Kopf von [`zippen`].
+/// steht im Kopf von [`zippen`]. Das Entpacken ist sein Spiegelbild und laeuft
+/// in der Schleife: es gibt jedem Archiv seinen eigenen Zielordner.
 fn ausfuehren(
     auftrag: &Auftrag,
     papierkorb: &dyn Papierkorb,
@@ -157,7 +182,8 @@ fn ausfuehren(
         Art::Kopieren { .. }
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
-        | Art::UmbenennenImStapel { .. } => quelle_fuer_quelle(auftrag, papierkorb, steuerung),
+        | Art::UmbenennenImStapel { .. }
+        | Art::Entpacken { .. } => quelle_fuer_quelle(auftrag, papierkorb, steuerung),
     }
 }
 
@@ -167,9 +193,10 @@ fn quelle_fuer_quelle(
     papierkorb: &dyn Papierkorb,
     steuerung: &mut Steuerung,
 ) -> Abschluss {
-    // Die Stelle laeuft mit, weil das Stapel-Umbenennen den neuen Namen an ihr
-    // findet: er steht in der Art, Stelle fuer Stelle zu `quellen`. Die drei
-    // uebrigen Arten dieser Bahn sehen sie nicht.
+    // Die Stelle laeuft mit, weil zwei Arten ihre zweite Angabe an ihr finden:
+    // das Stapel-Umbenennen den neuen Namen, das Entpacken den Zielordner.
+    // Beide stehen in der Art, Stelle fuer Stelle zu `quellen`; die uebrigen
+    // Arten dieser Bahn sehen die Stelle nicht.
     for (stelle, pfad) in auftrag.quellen.iter().enumerate() {
         if steuerung.abgebrochen() {
             return Abschluss::Abgebrochen;
@@ -222,6 +249,16 @@ fn einen_abarbeiten(
             // Ausfall hier hiesse, einen Eintrag stillschweigend auszulassen.
             None => {
                 steuerung.ueberspringen(pfad, "es fehlt der neue Name");
+                Ablauf::Weiter
+            }
+        },
+        Art::Entpacken { .. } => match auftrag.entpackziel(stelle) {
+            Some(ziel) => entpacken::archiv_entpacken(&quelle, ziel, papierkorb, steuerung),
+            // Die beiden Listen entstehen aus denselben Paaren und sind damit
+            // gleich lang. Der Fall ist trotzdem behandelt, aus demselben Grund
+            // wie beim Stapel-Umbenennen eine Zeile darueber.
+            None => {
+                steuerung.ueberspringen(pfad, "es fehlt der Zielordner");
                 Ablauf::Weiter
             }
         },

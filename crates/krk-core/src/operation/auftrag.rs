@@ -5,12 +5,13 @@
 //! [`super::starten`] auf einem eigenen Arbeitsfaden.
 //!
 //! **Das Ziel steht in der Art und nicht daneben.** Kopieren und Verschieben
-//! brauchen einen Zielordner, Papierkorb und Stapelumbenennen nicht. Ein
-//! flaches Feld `ziel` haette bei zwei der vier Arten keinen Wert, den der
-//! Aufrufer sinnvoll fuellen koennte, und jede Auswertung muesste sich darauf
-//! verlassen, dass er ihn trotzdem richtig gefuellt hat.
+//! brauchen einen Zielordner, Papierkorb und Stapelumbenennen nicht, das Packen
+//! eine Zieldatei und das Entpacken eine ganze Liste davon. Ein flaches Feld
+//! `ziel` haette bei mehreren Arten keinen Wert, den der Aufrufer sinnvoll
+//! fuellen koennte, und jede Auswertung muesste sich darauf verlassen, dass er
+//! ihn trotzdem richtig gefuellt hat.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::verzeichnis::sys::Uebertragungsart;
 
@@ -59,6 +60,33 @@ pub enum Art {
         /// fertigen Pfad. Ein Name, den das Dateisystem inzwischen vergeben hat,
         /// loest die Konfliktfrage aus, bevor ein Byte geschrieben wird.
         ziel: PathBuf,
+    },
+    /// Jede Quelle ist ein Archiv und wird in **ihren eigenen** neuen Ordner
+    /// entpackt.
+    ///
+    /// **Das Spiegelbild des Packens und nicht seine Umkehrung.** Das Packen
+    /// zieht viele Quellen in ein Ziel und laeuft deshalb neben der
+    /// Quelle-fuer-Quelle-Schleife; das Entpacken gibt jeder Quelle ihr eigenes
+    /// Ziel und laeuft deshalb **in** ihr, wie das Kopieren.
+    Entpacken {
+        /// Die Zielordner, Stelle fuer Stelle zu [`Auftrag::quellen`].
+        ///
+        /// **Es ist eine Liste und kein einzelner Pfad**, weil ein Vorgang
+        /// mehrere Archive tragen kann: der Nutzer hat am 260824-2120 gewaehlt,
+        /// dass Unzip auf die betroffenen Eintraege wirkt und **jedes** Archiv
+        /// darin entpackt (`decisions/260825-0727_*_nimmt-unzip-die-betroffenen-
+        /// eintraege-oder-allein-die-ausgewaehlte-zeile.md`, Moeglichkeit 3).
+        /// Drei markierte Archive ergeben damit drei Zielordner in einem
+        /// Vorgang, und der Zielordner-Konflikt wird je Archiv gefragt.
+        ///
+        /// Zwei Listen und keine Liste aus Paaren, aus demselben Grund wie bei
+        /// [`Art::UmbenennenImStapel`]: die Maschine laeuft ueber `quellen` wie
+        /// bei jeder anderen Art. Aneinander gebunden werden sie von
+        /// [`Auftrag::entpacken`], das die Paare auftrennt.
+        ///
+        /// Wie ein Zielordner heisst, rechnet die Oberflaeche; der Kern bekommt
+        /// die fertigen Pfade.
+        ziele: Vec<PathBuf>,
     },
 }
 
@@ -133,10 +161,31 @@ impl Auftrag {
         Self::neu(quellen, Art::Zippen { ziel: ziel.into() })
     }
 
+    /// Die genannten Archive in je einen eigenen Ordner entpacken.
+    ///
+    /// Genommen werden Paare aus Archivpfad und Zielordner, damit die beiden
+    /// Listen gar nicht erst getrennt uebergeben werden koennen. Aufgetrennt
+    /// werden sie hier, einmal, und danach laufen sie Stelle fuer Stelle
+    /// nebeneinander.
+    ///
+    /// Die Zielordner rechnet die Oberflaeche; der Kern legt sie an.
+    pub fn entpacken(paare: Vec<(PathBuf, PathBuf)>) -> Self {
+        let (quellen, ziele): (Vec<PathBuf>, Vec<PathBuf>) = paare.into_iter().unzip();
+        Self::neu(quellen, Art::Entpacken { ziele })
+    }
+
     /// Der neue Name der Quelle an dieser Stelle, sofern die Art einen kennt.
     pub(crate) fn neuer_name(&self, stelle: usize) -> Option<&str> {
         match &self.art {
             Art::UmbenennenImStapel { neue_namen } => neue_namen.get(stelle).map(String::as_str),
+            _ => None,
+        }
+    }
+
+    /// Der Zielordner des Archivs an dieser Stelle, sofern die Art einen kennt.
+    pub(crate) fn entpackziel(&self, stelle: usize) -> Option<&Path> {
+        match &self.art {
+            Art::Entpacken { ziele } => ziele.get(stelle).map(PathBuf::as_path),
             _ => None,
         }
     }
@@ -166,15 +215,21 @@ impl Auftrag {
 
     /// Der Zielordner, sofern die Art einen hat.
     ///
-    /// **Drei Arten haben keinen, und `None` ist bei keiner ein vergessener
+    /// **Vier Arten haben keinen, und `None` ist bei keiner ein vergessener
     /// Fall.** Beim Papierkorb liegt das Ziel ausserhalb des Auftrags. Beim
     /// Stapel-Umbenennen bleibt jeder Eintrag, wo er ist. Beim Packen ist das
     /// Ziel eine **Datei** und keine Ablage fuer weitere Eintraege; wer es hier
-    /// zurueckgaebe, gaebe einen Ordnerpfad heraus, der keiner ist.
+    /// zurueckgaebe, gaebe einen Ordnerpfad heraus, der keiner ist. Beim
+    /// Entpacken hat **jede Quelle** ihren eigenen Zielordner; einer davon waere
+    /// eine willkuerliche Wahl, und die Stelle, die danach fragt, ist
+    /// [`Auftrag::entpackziel`].
     pub fn zielordner(&self) -> Option<&PathBuf> {
         match &self.art {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => Some(ziel),
-            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } | Art::Zippen { .. } => None,
+            Art::InDenPapierkorb
+            | Art::UmbenennenImStapel { .. }
+            | Art::Zippen { .. }
+            | Art::Entpacken { .. } => None,
         }
     }
 }
@@ -182,7 +237,6 @@ impl Auftrag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn ein_loeschauftrag_hat_keinen_zielordner() {
@@ -236,6 +290,36 @@ mod tests {
                 ziel: PathBuf::from("/tmp/a.zip")
             }
         );
+    }
+
+    #[test]
+    fn ein_entpackauftrag_traegt_die_ziele_stelle_fuer_stelle_zu_den_archiven() {
+        let auftrag = Auftrag::entpacken(vec![
+            (PathBuf::from("/tmp/eins.zip"), PathBuf::from("/tmp/eins")),
+            (PathBuf::from("/tmp/zwei.zip"), PathBuf::from("/tmp/zwei")),
+        ]);
+
+        assert_eq!(
+            auftrag.quellen,
+            vec![
+                PathBuf::from("/tmp/eins.zip"),
+                PathBuf::from("/tmp/zwei.zip")
+            ]
+        );
+        assert_eq!(auftrag.entpackziel(0), Some(Path::new("/tmp/eins")));
+        assert_eq!(auftrag.entpackziel(1), Some(Path::new("/tmp/zwei")));
+        assert_eq!(auftrag.entpackziel(2), None, "jenseits der Liste");
+        assert_eq!(
+            auftrag.zielordner(),
+            None,
+            "jedes Archiv hat seinen eigenen Zielordner, und einer davon waere eine willkuerliche Wahl"
+        );
+    }
+
+    #[test]
+    fn eine_andere_art_kennt_kein_entpackziel() {
+        let auftrag = Auftrag::zippen(vec![PathBuf::from("/tmp/a")], "/tmp/a.zip");
+        assert_eq!(auftrag.entpackziel(0), None);
     }
 
     #[test]

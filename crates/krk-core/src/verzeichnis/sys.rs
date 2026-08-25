@@ -13,7 +13,9 @@
 //!   copyfile_state_{alloc,free,set,get}
 //! renamex_np(2)      ──> im_datentraeger_...  ──> operation::{verschieben,umbenennen}
 //! fcntl(2)           ──> ohne_warten_oeffnen  ──> text::datei::lesen
-//!                                             └─> text::datei::bis_zur_grenze_lesen
+//!                                             ├─> text::datei::bis_zur_grenze_lesen
+//!                                             ├─> operation::zippen
+//!                                             └─> operation::entpacken
 //! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
 //!                        sperre_versuchen
 //!                        sperre_abgeben
@@ -43,14 +45,21 @@
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
 //! Kerns und nicht allein die des Lesers. Die Zeile zu `fcntl(2)` traegt die
 //! ersten Aufrufer von ausserhalb `verzeichnis/`, und sie sind der Grund, aus
-//! dem die Aussage nicht mehr nur behauptet ist. Es sind seit dem Defekt
-//! `260810-1247` zwei, und seit der Runde 11 liegen beide in `text/datei.rs`:
-//! [`crate::text::datei::lesen`] fuer den Editor und
-//! [`crate::text::datei::bis_zur_grenze_lesen`] fuer jeden, der seine eigene
-//! Grenze mitbringt. Die Vorschau und der Inhaltsfilter der Dateiliste, beide
-//! in `krk-ui`, rufen die Huelle und nicht diese Stelle; bis zur Runde 11 stand
-//! die Huelle in `krk-ui`s `vorschaumodell.rs`, und der zweite Aufrufer lag
-//! damit ausserhalb der Kiste. Warum die Zielpruefung trotzdem bei den
+//! dem die Aussage nicht mehr nur behauptet ist. **Wie viele es sind, sagt
+//! `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src` und nicht diese
+//! Zeile**; sie stand vom Defekt `260810-1247` bis zur Runde 17 auf zwei und ist
+//! mit den zwei Archivwegen jener Runde falsch geworden. Die zwei aeltesten
+//! liegen seit der Runde 11 in `text/datei.rs`: [`crate::text::datei::lesen`]
+//! fuer den Editor und [`crate::text::datei::bis_zur_grenze_lesen`] fuer jeden,
+//! der seine eigene Grenze mitbringt. Die zwei juengsten sind
+//! [`crate::operation::zippen`], das jede Quelle in ein Archiv liest, und
+//! [`crate::operation::entpacken`], das jedes Archiv oeffnet; beide aus dem
+//! gleichen Grund wie die aelteren, naemlich einer benannten Roehre im Ordner,
+//! die ein `File::open` bis in alle Ewigkeit anhielte. Die Vorschau und der
+//! Inhaltsfilter der Dateiliste, beide in `krk-ui`, rufen die Huelle und nicht
+//! diese Stelle; bis zur Runde 11 stand die Huelle in `krk-ui`s
+//! `vorschaumodell.rs`, und der zweite Aufrufer lag damit ausserhalb der Kiste.
+//! Warum die Zielpruefung trotzdem bei den
 //! Aufrufern bleibt, steht bei [`ohne_warten_oeffnen`]. Das Modul liegt unter
 //! `verzeichnis/`, weil es dort entstanden ist und ein Umzug jede Fundstelle
 //! verschoebe, ohne eine Zeile besser zu machen.
@@ -792,33 +801,44 @@ unsafe extern "C" {
 /// erst am `fstat` des Aufrufers; das ist gewollt, denn was ein gueltiges Ziel
 /// ist, entscheidet der Aufrufer und nicht diese Stelle.
 ///
-/// # Zwei Aufrufer, und die Zielpruefung bleibt bei beiden
+/// # Mehrere Aufrufer, und die Zielpruefung bleibt bei jedem von ihnen
 ///
 /// Gerufen wird die Funktion von [`crate::text::datei::lesen`], dem Eingang des
-/// Editors, und von [`crate::text::datei::bis_zur_grenze_lesen`], der Huelle mit
-/// der uebergebenen Grenze. **Beide liegen seit der Runde 11 in `krk-core`**;
-/// bis dahin stand die zweite als private Fassung in `krk-ui`s
-/// `vorschaumodell.rs` und hatte deshalb keinen Doku-Verweis. Aufrufer der
-/// Huelle ist heute die Vorschau, mit ihren zwei Grenzen.
+/// Editors, von [`crate::text::datei::bis_zur_grenze_lesen`], der Huelle mit der
+/// uebergebenen Grenze, und seit der Runde 17 von den zwei Archivwegen
+/// [`crate::operation::zippen`] und [`crate::operation::entpacken`]. **Alle
+/// liegen in `krk-core`**; bis zur Runde 11 stand die zweite als private Fassung
+/// in `krk-ui`s `vorschaumodell.rs` und hatte deshalb keinen Doku-Verweis.
+/// Aufrufer der Huelle ist heute die Vorschau, mit ihren zwei Grenzen.
 ///
-/// **Gemeinsam ist beiden der Ablauf**: hier oeffnen, `fstat` am Deskriptor
-/// fragen, alles abweisen, was `is_file()` nicht bejaht, die Groesse gegen eine
-/// Grenze halten, erst danach lesen. **Verschieden sind die Antwort und die
-/// Grenze.** Der Editor weist mit [`crate::text::Abweisung::KeinGueltigesZiel`]
+/// **Gemeinsam ist den zwei Textwegen der Ablauf**: hier oeffnen, `fstat` am
+/// Deskriptor fragen, alles abweisen, was `is_file()` nicht bejaht, die Groesse
+/// gegen eine Grenze halten, erst danach lesen. **Verschieden sind die Antwort
+/// und die Grenze.** Der Editor weist mit [`crate::text::Abweisung::KeinGueltigesZiel`]
 /// ab und nennt dem Nutzer den Grund; die Vorschau faellt auf ihre
 /// Metadatenanzeige zurueck, die Groesse, Rechte und Datum zeigt. Der Editor
 /// haelt dabei `EDITORGRENZE`, die Vorschau `TEXTGRENZE` oder `BILDGRENZE`, je
 /// Endung des Pfades.
 ///
-/// **Der zweite Aufrufer verschiebt die Pruefung damit nicht hierher, sondern
-/// begruendet sie erst richtig.** Eine Typpruefung in dieser Huelle muesste eine
-/// der beiden Antworten waehlen, und keine der drei Grenzen kennt sie. Sie
-/// oeffnet und nimmt `O_NONBLOCK` wieder ab; was ein gueltiges Ziel ist, bleibt
-/// die Frage des Aufrufers. Wer sie auf den Editorfall zuschneidet, nimmt der
-/// Vorschau den Schutz, den sie seit dem 260810 hat.
+/// **Die zwei Archivwege fragen ihrerseits anders, und sie sind der beste Beleg
+/// dafuer, dass die Frage hier nicht hingehoert.** Das Packen kennt den Typ
+/// seiner Quelle schon, bevor es oeffnet: er kommt aus dem Verzeichnisleser oder
+/// aus einem `lstat`, und nur eine Datei erreicht ueberhaupt das Oeffnen. Das
+/// Entpacken fragt gar nicht nach dem Typ, sondern reicht den Deskriptor an
+/// `ZipArchive::new` weiter und laesst die Kiste antworten; ein Ordner scheitert
+/// dort an `EISDIR` und kommt mit ihrem Wortlaut in die Abschlussliste. Keine
+/// der vier Antworten kennt diese Huelle.
+///
+/// **Ein weiterer Aufrufer verschiebt die Pruefung damit nicht hierher, sondern
+/// begruendet sie jedes Mal besser.** Eine Typpruefung in dieser Huelle muesste
+/// eine der Antworten waehlen, und keine der Grenzen kennt sie. Sie oeffnet und
+/// nimmt `O_NONBLOCK` wieder ab; was ein gueltiges Ziel ist, bleibt die Frage
+/// des Aufrufers. Wer sie auf den Editorfall zuschneidet, nimmt der Vorschau den
+/// Schutz, den sie seit dem 260810 hat.
 ///
 /// Der Defekt, der die Funktion verlangt hat, ist `260809-1652`; der zweite
-/// Aufrufer ist mit `260810-1247` dazugekommen.
+/// Aufrufer ist mit `260810-1247` dazugekommen, der dritte und der vierte mit
+/// der Runde 17.
 pub fn ohne_warten_oeffnen(pfad: &Path) -> io::Result<File> {
     let datei = OpenOptions::new()
         .read(true)

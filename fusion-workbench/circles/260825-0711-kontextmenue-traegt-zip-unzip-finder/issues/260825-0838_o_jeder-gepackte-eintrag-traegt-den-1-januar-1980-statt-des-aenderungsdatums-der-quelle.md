@@ -85,3 +85,13 @@ den der Nutzer sieht, und ein sichtbarer Unterschied zu dem Werkzeug, das er bis
 `crates/krk-core/src/operation/entpacken.rs` aus Schritt 3
 
 **Domain:** code
+
+---
+
+**Nachtrag 260825, Schritt 3.** `crates/krk-core/src/operation/entpacken.rs` steht jetzt im Baum
+und setzt **keinen** Zeitstempel: eine entpackte Datei trägt die Uhrzeit des Entpackens. Das ist
+die im Absatz „Vorschlag" beschriebene Gegenrichtung, und sie ist absichtlich offen geblieben —
+solange der Packlauf jedem Eintrag den 1. Januar 1980 gibt, machte ein Entpacken, das den
+Zeitstempel des Eintrags übernähme, aus jeder Datei eine von 1980, und der Befund wäre von
+einem verlorenen Wert zu einem falschen geworden. Wer den Datensatz abarbeitet, fängt am
+Packende an. Der Modulkopf von `entpacken.rs` verweist auf diesen Datensatz.

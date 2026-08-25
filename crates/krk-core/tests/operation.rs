@@ -1533,3 +1533,649 @@ fn eine_benannte_roehre_im_ordner_haelt_das_packen_nicht_an() {
     assert_eq!(bericht.abschluss, Abschluss::Fertig);
     assert_eq!(archivinhalt(&archiv, "quelle/datei.txt"), "Inhalt");
 }
+
+// ---------------------------------------------------------------------------
+// Entpacken (Runde 17, Schritt 3)
+// ---------------------------------------------------------------------------
+
+/// Baut ein Archiv von Hand, Eintrag fuer Eintrag.
+///
+/// **Von Hand und nicht ueber `Auftrag::zippen`**, weil die Proben hier Namen
+/// brauchen, die KRK selbst nie schriebe: `../draussen.txt` fuehrt aus dem
+/// Zielordner heraus, und ein Packlauf kann so etwas nicht erzeugen. Ein Archiv
+/// ist eine fremde Datei, und geprueft wird, was mit einer fremden Datei
+/// geschieht.
+fn archiv_bauen(pfad: &Path, eintraege: &[Archiveintrag<'_>]) {
+    use zip::write::SimpleFileOptions;
+
+    let datei = File::create(pfad).expect("Archiv laesst sich nicht anlegen");
+    let mut schreiber = zip::ZipWriter::new(datei);
+    for eintrag in eintraege {
+        match eintrag {
+            Archiveintrag::Datei {
+                name,
+                inhalt,
+                rechte,
+            } => {
+                let wahl = SimpleFileOptions::default().unix_permissions(*rechte);
+                schreiber
+                    .start_file(*name, wahl)
+                    .expect("Eintrag laesst sich nicht anlegen");
+                schreiber
+                    .write_all(inhalt.as_bytes())
+                    .expect("Eintrag laesst sich nicht fuellen");
+            }
+            Archiveintrag::Ordner { name } => {
+                schreiber
+                    .add_directory(*name, SimpleFileOptions::default())
+                    .expect("Ordnereintrag laesst sich nicht anlegen");
+            }
+            Archiveintrag::Verknuepfung { name, ziel } => {
+                schreiber
+                    .add_symlink(*name, *ziel, SimpleFileOptions::default())
+                    .expect("Verknuepfung laesst sich nicht anlegen");
+            }
+        }
+    }
+    schreiber.finish().expect("Archiv bleibt unfertig");
+}
+
+/// Was [`archiv_bauen`] in ein Archiv legen kann.
+enum Archiveintrag<'a> {
+    Datei {
+        name: &'a str,
+        inhalt: &'a str,
+        rechte: u32,
+    },
+    Ordner {
+        name: &'a str,
+    },
+    Verknuepfung {
+        name: &'a str,
+        ziel: &'a str,
+    },
+}
+
+/// Eine gewoehnliche Datei im Archiv, mit den ueblichen Rechten.
+fn archivdatei<'a>(name: &'a str, inhalt: &'a str) -> Archiveintrag<'a> {
+    Archiveintrag::Datei {
+        name,
+        inhalt,
+        rechte: 0o644,
+    }
+}
+
+/// Faehrt einen Entpackauftrag mit genau einem Archiv zu Ende.
+fn entpacken_durchlaufen(archiv: &Path, ziel: &Path) -> Bericht {
+    durchlaufen_ohne_papierkorb(Auftrag::entpacken(vec![(
+        archiv.to_path_buf(),
+        ziel.to_path_buf(),
+    )]))
+}
+
+#[test]
+fn ein_archiv_wird_in_seinen_ordner_entpackt_und_jeder_eintrag_steht_da() {
+    let ordner = Pruefordner::neu("unzip-baum");
+    let archiv = ordner.unter("quelle.zip");
+    archiv_bauen(
+        &archiv,
+        &[
+            Archiveintrag::Ordner { name: "quelle/" },
+            archivdatei("quelle/oben.txt", "oben"),
+            Archiveintrag::Ordner {
+                name: "quelle/unten/",
+            },
+            archivdatei("quelle/unten/tief.txt", "tief"),
+            Archiveintrag::Ordner {
+                name: "quelle/leer/",
+            },
+        ],
+    );
+    let ziel = ordner.unter("quelle");
+
+    let bericht = entpacken_durchlaufen(&archiv, &ziel);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    // Der Baum des Archivs entsteht **unter** dem Zielordner und nicht an seiner
+    // Stelle: das Archiv traegt seinen eigenen obersten Ordner, und das Ziel ist
+    // der neue Ordner, in den er hineinkommt.
+    assert_eq!(
+        fs::read_to_string(ziel.join("quelle/oben.txt")).expect("oben.txt fehlt"),
+        "oben"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel.join("quelle/unten/tief.txt")).expect("tief.txt fehlt"),
+        "tief"
+    );
+    assert!(ziel.join("quelle/leer").is_dir(), "der leere Ordner fehlt");
+    assert_eq!(
+        bericht.bytes, 8,
+        "gezaehlt werden die Bytes des Inhalts und nicht die des Archivs"
+    );
+}
+
+/// Ein gepacktes Archiv, wieder entpackt, liefert denselben Baum.
+///
+/// Die Probe faehrt beide Wege dieser Runde gegeneinander und ist damit die
+/// einzige, die den Packlauf mitprueft. Sie ersetzt keine der Einzelproben:
+/// was ein **fremdes** Archiv mitbringen kann, sieht ein selbst gepacktes nie.
+#[test]
+fn was_krk_packt_kommt_beim_entpacken_unveraendert_wieder_heraus() {
+    let ordner = Pruefordner::neu("unzip-rundweg");
+    let quelle = ordner.ordner("baum");
+    fs::write(quelle.join("oben.txt"), "oben").expect("nicht schreibbar");
+    fs::create_dir(quelle.join("unten")).expect("nicht anlegbar");
+    fs::write(quelle.join("unten/tief.txt"), "tief").expect("nicht schreibbar");
+    let archiv = ordner.unter("baum.zip");
+    durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+    let ziel = ordner.unter("wieder");
+
+    let bericht = entpacken_durchlaufen(&archiv, &ziel);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(
+        fs::read_to_string(ziel.join("baum/oben.txt")).expect("oben.txt fehlt"),
+        "oben"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel.join("baum/unten/tief.txt")).expect("tief.txt fehlt"),
+        "tief"
+    );
+}
+
+/// **Ein Eintrag, der aus dem Zielordner herausfuehrt, entsteht nirgends.**
+///
+/// Die Sperre ist `enclosed_name`, und sie ist der Grund, aus dem das Entpacken
+/// die Namen des Archivs nicht einfach an `join` weiterreicht. Geprueft wird
+/// beides: dass draussen nichts entsteht, und dass der Eintrag mit seinem Namen
+/// in der Abschlussliste steht statt stillschweigend zu verschwinden.
+///
+/// **Die zwei Ausbruchsformen werden verschieden beantwortet, und beide sind
+/// dicht.** Ein `..` wird ausgelassen, weil kein Pfad im Zielordner ihm
+/// entspricht. Ein fuehrender Schraegstrich dagegen wird **abgestreift**:
+/// `enclosed_name` liefert `absolut.txt`, und der Eintrag landet damit im
+/// Zielordner statt in der Wurzel. Die Probe haelt beides fest, weil ein Leser
+/// sonst annaehme, ein absoluter Name werde ebenfalls ausgelassen.
+#[test]
+fn ein_eintrag_der_aus_dem_zielordner_herausfuehrt_entsteht_nirgends() {
+    let ordner = Pruefordner::neu("unzip-ausbruch");
+    let archiv = ordner.unter("boese.zip");
+    archiv_bauen(
+        &archiv,
+        &[
+            archivdatei("../draussen.txt", "hier sollte nichts stehen"),
+            archivdatei("../../weiter/weg.txt", "hier erst recht nicht"),
+            archivdatei("/absolut.txt", "das landet im Zielordner"),
+            archivdatei("drin.txt", "das ist erlaubt"),
+        ],
+    );
+    let ziel = ordner.unter("boese");
+
+    let bericht = entpacken_durchlaufen(&archiv, &ziel);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert!(
+        !ordner.unter("draussen.txt").exists(),
+        "«../draussen.txt» ist neben dem Zielordner entstanden"
+    );
+    assert!(
+        !ziel.join("draussen.txt").exists(),
+        "«../draussen.txt» ist im Zielordner entstanden, statt ausgelassen zu werden"
+    );
+    assert!(
+        !ordner
+            .pfad()
+            .parent()
+            .unwrap_or(ordner.pfad())
+            .join("weiter")
+            .exists(),
+        "«../../weiter/weg.txt» ist ueber dem Pruefordner entstanden"
+    );
+    assert!(
+        !Path::new("/absolut.txt").exists(),
+        "«/absolut.txt» ist in der Wurzel entstanden"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel.join("absolut.txt")).expect("absolut.txt fehlt"),
+        "das landet im Zielordner",
+        "der fuehrende Schraegstrich wird abgestreift, nicht der Eintrag ausgelassen"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel.join("drin.txt")).expect("drin.txt fehlt"),
+        "das ist erlaubt",
+        "ein ausgelassener Eintrag haelt die uebrigen nicht auf"
+    );
+    assert_eq!(bericht.uebersprungen.len(), 2);
+    let gruende: Vec<&str> = bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| eintrag.grund.as_str())
+        .collect();
+    assert!(
+        gruende
+            .iter()
+            .all(|grund| grund.contains("fuehrt aus dem Zielordner heraus")),
+        "die Gruende nennen den Ausbruch nicht: {gruende:?}"
+    );
+    assert!(
+        gruende.iter().any(|grund| grund.contains("draussen.txt")),
+        "der ausgelassene Eintrag steht nicht mit Namen da: {gruende:?}"
+    );
+}
+
+/// **Der zweite Weg nach draussen fuehrt ueber zwei Eintraege**, und er ist
+/// ebenfalls versperrt.
+///
+/// Beide Namen liegen fuer sich genommen im Zielordner, `enclosed_name` sagt
+/// also zu beiden ja. Erst zusammen fuehren sie hinaus: der erste legt die
+/// Verknuepfung, der zweite schriebe durch sie hindurch. Die Sperre ist
+/// `kette_anlegen`.
+#[test]
+fn ein_eintrag_hinter_einer_verknuepfung_schreibt_nicht_aus_dem_zielordner_heraus() {
+    let ordner = Pruefordner::neu("unzip-ausbruch-verknuepfung");
+    let archiv = ordner.unter("schlau.zip");
+    archiv_bauen(
+        &archiv,
+        &[
+            Archiveintrag::Verknuepfung {
+                name: "hinaus",
+                ziel: "..",
+            },
+            archivdatei("hinaus/draussen.txt", "hier sollte nichts stehen"),
+            archivdatei("drin.txt", "das ist erlaubt"),
+        ],
+    );
+    let ziel = ordner.unter("schlau");
+
+    let bericht = entpacken_durchlaufen(&archiv, &ziel);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert!(
+        !ordner.unter("draussen.txt").exists(),
+        "durch die Verknuepfung hindurch ist neben dem Zielordner etwas entstanden"
+    );
+    assert!(
+        ziel.join("hinaus").is_symlink(),
+        "die Verknuepfung selbst gehoert ins Ergebnis"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel.join("drin.txt")).expect("drin.txt fehlt"),
+        "das ist erlaubt"
+    );
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert!(
+        bericht.uebersprungen[0].grund.contains("Verknuepfung"),
+        "der Grund nennt den Weg nicht: {}",
+        bericht.uebersprungen[0].grund
+    );
+}
+
+#[test]
+fn eine_verknuepfung_im_archiv_wird_wieder_eine_verknuepfung() {
+    let ordner = Pruefordner::neu("unzip-verknuepfung");
+    let archiv = ordner.unter("mitverweis.zip");
+    archiv_bauen(
+        &archiv,
+        &[
+            archivdatei("ziel.txt", "Inhalt"),
+            Archiveintrag::Verknuepfung {
+                name: "verweis",
+                ziel: "ziel.txt",
+            },
+        ],
+    );
+    let ziel = ordner.unter("mitverweis");
+
+    let bericht = entpacken_durchlaufen(&archiv, &ziel);
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    let verweis = ziel.join("verweis");
+    assert!(
+        fs::symlink_metadata(&verweis)
+            .expect("der Verweis fehlt")
+            .is_symlink(),
+        "aus der Verknuepfung ist eine gewoehnliche Datei geworden"
+    );
+    assert_eq!(
+        fs::read_link(&verweis).expect("kein Verweisziel"),
+        Path::new("ziel.txt")
+    );
+}
+
+/// Die Rechte kommen aus dem Archiv und nicht aus der Vorgabe.
+///
+/// Sonst wuerde aus einem ausfuehrbaren Skript beim Entpacken eine gewoehnliche
+/// Datei. Dieselbe Zusage wie beim Packen, von der anderen Seite gelesen.
+#[test]
+fn ein_ausfuehrbarer_eintrag_bleibt_ausfuehrbar() {
+    let ordner = Pruefordner::neu("unzip-rechte");
+    let archiv = ordner.unter("skript.zip");
+    archiv_bauen(
+        &archiv,
+        &[Archiveintrag::Datei {
+            name: "skript.sh",
+            inhalt: "#!/bin/sh\n",
+            rechte: 0o755,
+        }],
+    );
+    let ziel = ordner.unter("skript");
+
+    entpacken_durchlaufen(&archiv, &ziel);
+
+    let rechte = fs::metadata(ziel.join("skript.sh"))
+        .expect("skript.sh fehlt")
+        .permissions()
+        .mode();
+    assert_eq!(rechte & 0o777, 0o755, "die Rechte sind nicht angekommen");
+}
+
+/// Ein vorhandener Zielordner wird **einmal je Archiv** erfragt, und zwar
+/// bevor ein Eintrag geschrieben wird.
+///
+/// Die Antwort ist hier "abbrechen". Danach muss der alte Ordner unangetastet
+/// dastehen: haette der Lauf ihn schon geleert, waere die Rueckfrage eine
+/// Hoeflichkeit ueber etwas gewesen, das es nicht mehr gab.
+#[test]
+fn ein_vorhandener_zielordner_wird_einmal_und_vor_dem_ersten_eintrag_erfragt() {
+    let ordner = Pruefordner::neu("unzip-konflikt");
+    let archiv = ordner.unter("bericht.zip");
+    archiv_bauen(&archiv, &[archivdatei("neu.txt", "neu")]);
+    let ziel = ordner.ordner("bericht");
+    fs::write(ziel.join("alt.txt"), "das alte").expect("nicht schreibbar");
+
+    let lauf = starten(
+        Auftrag::entpacken(vec![(archiv.clone(), ziel.clone())])
+            .mit_konfliktregel(Konfliktregel::Fragen),
+        Arc::new(OhnePapierkorb),
+    );
+    let mut gefragt = 0;
+    let mut bericht = None;
+    while let Ok(meldung) = lauf.meldungen().recv() {
+        match meldung {
+            Meldung::Konflikt {
+                quelle,
+                ziel: gefragtes,
+                antwort,
+            } => {
+                gefragt += 1;
+                assert_eq!(quelle, archiv, "gefragt wird ueber das Archiv");
+                assert_eq!(gefragtes, ziel, "gefragt wird nach dem Zielordner");
+                antwort
+                    .send(Konfliktentscheid::einmal(Konfliktantwort::Abbrechen))
+                    .expect("Antwort laesst sich nicht senden");
+            }
+            Meldung::Fertig(fertig) => {
+                bericht = Some(fertig);
+                break;
+            }
+            _ => {}
+        }
+    }
+    lauf.warten();
+
+    let bericht = bericht.expect("keine Abschlussmeldung");
+    assert_eq!(gefragt, 1, "ein Archiv, ein Zielordner, eine Frage");
+    assert_eq!(bericht.abschluss, Abschluss::Abgebrochen);
+    assert_eq!(
+        fs::read_to_string(ziel.join("alt.txt")).expect("der alte Inhalt ist weg"),
+        "das alte",
+        "vor der Antwort darf kein Eintrag angefasst werden"
+    );
+    assert!(
+        !ziel.join("neu.txt").exists(),
+        "trotz Abbruch ist ein Eintrag entstanden"
+    );
+}
+
+/// Drei markierte Archive ergeben drei Zielordner, und gefragt wird je Archiv.
+///
+/// Die Nutzerentscheidung vom 260824-2120 (`decisions/260825-0727_*_nimmt-unzip-
+/// die-betroffenen-eintraege-oder-allein-die-ausgewaehlte-zeile.md`,
+/// Moeglichkeit 3). Sie ist der Grund, aus dem `Art::Entpacken` eine **Liste**
+/// von Zielen traegt und keinen einzelnen Pfad.
+#[test]
+fn mehrere_archive_in_einem_vorgang_bekommen_je_ihren_eigenen_zielordner() {
+    let ordner = Pruefordner::neu("unzip-mehrere");
+    let eins = ordner.unter("eins.zip");
+    archiv_bauen(&eins, &[archivdatei("a.txt", "aus eins")]);
+    let zwei = ordner.unter("zwei.zip");
+    archiv_bauen(&zwei, &[archivdatei("b.txt", "aus zwei")]);
+    let ziel_eins = ordner.unter("eins");
+    let ziel_zwei = ordner.unter("zwei");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::entpacken(vec![
+        (eins, ziel_eins.clone()),
+        (zwei, ziel_zwei.clone()),
+    ]));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(
+        fs::read_to_string(ziel_eins.join("a.txt")).expect("a.txt fehlt"),
+        "aus eins"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel_zwei.join("b.txt")).expect("b.txt fehlt"),
+        "aus zwei"
+    );
+}
+
+/// **"Ueberschreiben" raeumt den vorhandenen Ordner in den Papierkorb.**
+///
+/// Die Bindung stammt aus der Runde 12: seit dem 260817 geht jedem Loeschweg
+/// eine Rueckfrage voraus, und es gibt nur den einen Weg in den Papierkorb. Der
+/// Nutzer hat die Rueckfrage fuer den Zielordner ausdruecklich gewaehlt und die
+/// Bindung mitgegeben.
+///
+/// Die Attrappe loescht nichts, sie schreibt mit. Genau das ist hier die
+/// staerkere Aussage: der Kern hat den Ordner **nicht selbst** weggeraeumt,
+/// sondern herausgegeben.
+#[test]
+fn ueberschreiben_raeumt_den_vorhandenen_zielordner_in_den_papierkorb() {
+    let ordner = Pruefordner::neu("unzip-ueberschreiben");
+    let archiv = ordner.unter("bericht.zip");
+    archiv_bauen(&archiv, &[archivdatei("neu.txt", "neu")]);
+    let ziel = ordner.ordner("bericht");
+    fs::write(ziel.join("alt.txt"), "das alte").expect("nicht schreibbar");
+    let attrappe = Arc::new(Papierkorbattrappe::default());
+
+    let bericht = durchlaufen(
+        Auftrag::entpacken(vec![(archiv, ziel.clone())])
+            .mit_konfliktregel(Konfliktregel::Ueberschreiben),
+        attrappe.clone(),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    let geraeumt = attrappe.geraeumt.lock().expect("Attrappe vergiftet");
+    assert_eq!(
+        *geraeumt,
+        vec![ziel.clone()],
+        "der vorhandene Zielordner ist nicht in den Papierkorb gegangen"
+    );
+    drop(geraeumt);
+    assert!(
+        ziel.join("alt.txt").exists(),
+        "der Kern hat selbst geloescht, statt den Papierkorb zu rufen"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel.join("neu.txt")).expect("neu.txt fehlt"),
+        "neu"
+    );
+}
+
+#[test]
+fn ueberspringen_laesst_den_vorhandenen_zielordner_stehen() {
+    let ordner = Pruefordner::neu("unzip-ueberspringen");
+    let archiv = ordner.unter("bericht.zip");
+    archiv_bauen(&archiv, &[archivdatei("neu.txt", "neu")]);
+    let ziel = ordner.ordner("bericht");
+    fs::write(ziel.join("alt.txt"), "das alte").expect("nicht schreibbar");
+
+    let bericht = durchlaufen_ohne_papierkorb(
+        Auftrag::entpacken(vec![(archiv, ziel.clone())])
+            .mit_konfliktregel(Konfliktregel::Ueberspringen),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 0);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert!(
+        !ziel.join("neu.txt").exists(),
+        "in den vorhandenen Ordner ist hineinentpackt worden"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel.join("alt.txt")).expect("der alte Inhalt ist weg"),
+        "das alte"
+    );
+}
+
+#[test]
+fn umbenennen_legt_den_zielordner_daneben() {
+    let ordner = Pruefordner::neu("unzip-umbenennen");
+    let archiv = ordner.unter("bericht.zip");
+    archiv_bauen(&archiv, &[archivdatei("neu.txt", "neu")]);
+    let ziel = ordner.ordner("bericht");
+    fs::write(ziel.join("alt.txt"), "das alte").expect("nicht schreibbar");
+    let daneben = ordner.unter(&freier_name(&ziel));
+
+    let bericht = durchlaufen_ohne_papierkorb(
+        Auftrag::entpacken(vec![(archiv, ziel.clone())])
+            .mit_konfliktregel(Konfliktregel::AutomatischUmbenennen),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(
+        fs::read_to_string(ziel.join("alt.txt")).expect("der alte Inhalt ist weg"),
+        "das alte"
+    );
+    assert_eq!(
+        fs::read_to_string(daneben.join("neu.txt")).expect("neu.txt fehlt"),
+        "neu",
+        "der neue Ordner steht nicht unter {}",
+        daneben.display()
+    );
+}
+
+/// Eine Datei, die kein Archiv ist, haelt den Vorgang nicht auf.
+///
+/// Gemeldet wird der Wortlaut der Kiste: sie sagt genauer als eine eigene
+/// Formulierung, woran das Oeffnen gescheitert ist. Geprueft wird deshalb, dass
+/// **ein** Grund dasteht und dass das zweite Archiv trotzdem herauskommt, und
+/// nicht der Satz im Einzelnen.
+#[test]
+fn eine_datei_die_kein_archiv_ist_wird_gemeldet_und_die_uebrigen_laufen_durch() {
+    let ordner = Pruefordner::neu("unzip-kein-archiv");
+    let keines = ordner.datei("keines.zip", "das ist kein Archiv");
+    let echtes = ordner.unter("echtes.zip");
+    archiv_bauen(&echtes, &[archivdatei("drin.txt", "drin")]);
+    let ziel_keines = ordner.unter("keines");
+    let ziel_echtes = ordner.unter("echtes");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::entpacken(vec![
+        (keines.clone(), ziel_keines.clone()),
+        (echtes, ziel_echtes.clone()),
+    ]));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(bericht.uebersprungen[0].pfad, keines);
+    assert!(
+        !bericht.uebersprungen[0].grund.is_empty(),
+        "der Grund ist leer"
+    );
+    assert!(
+        !ziel_keines.exists(),
+        "fuer eine Datei, die kein Archiv ist, entsteht kein Ordner"
+    );
+    assert_eq!(
+        fs::read_to_string(ziel_echtes.join("drin.txt")).expect("drin.txt fehlt"),
+        "drin"
+    );
+}
+
+/// **Nach einem Abbruch bleibt stehen, was schon entpackt ist.**
+///
+/// Anders als beim Packen, wo das halbe Archiv weggeraeumt wird: ein halbes
+/// Archiv laesst sich von keinem Werkzeug oeffnen, ein halb entpackter Ordner
+/// dagegen ist benutzbar. Weggeraeumt wird allein die Datei, an der der Abbruch
+/// traf.
+///
+/// Abgebrochen wird nicht nach einer Wartezeit, sondern auf die erste
+/// Fortschrittsmeldung ueber die grosse Datei hin. Damit steht fest, dass der
+/// Lauf wirklich in ihr steht, und die Probe haengt nicht an der Geschwindigkeit
+/// des Geraets.
+#[test]
+fn ein_abbruch_beim_entpacken_laesst_das_fertige_stehen_und_raeumt_die_halbe_datei_weg() {
+    let ordner = Pruefordner::neu("unzip-abbruch");
+    let klein = ordner.datei("klein.txt", "klein");
+    let gross = ordner.unter("rauschen.bin");
+    rauschdatei(&gross, 16 * 1024 * 1024);
+    let archiv = ordner.unter("beides.zip");
+    durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![klein, gross], &archiv));
+    let ziel = ordner.unter("beides");
+
+    let lauf = starten(
+        Auftrag::entpacken(vec![(archiv, ziel.clone())]),
+        Arc::new(OhnePapierkorb),
+    );
+    let mut abgebrochen = false;
+    let mut bericht = None;
+    while let Ok(meldung) = lauf.meldungen().recv() {
+        match meldung {
+            Meldung::Fortschritt(stand) if !abgebrochen => {
+                if stand.eintrag.ends_with("rauschen.bin") {
+                    lauf.abbrechen();
+                    abgebrochen = true;
+                }
+            }
+            Meldung::Fertig(fertig) => {
+                bericht = Some(fertig);
+                break;
+            }
+            _ => {}
+        }
+    }
+    lauf.warten();
+
+    let bericht = bericht.expect("keine Abschlussmeldung");
+    assert!(abgebrochen, "die grosse Datei kam nie im Fortschritt vor");
+    assert_eq!(bericht.abschluss, Abschluss::Abgebrochen);
+    assert_eq!(
+        fs::read_to_string(ziel.join("klein.txt")).expect("die fertige Datei ist weg"),
+        "klein",
+        "was schon entpackt war, muss stehen bleiben"
+    );
+    assert!(
+        !ziel.join("rauschen.bin").exists(),
+        "die halbe Datei ist liegen geblieben"
+    );
+}
+
+/// Ein Archiv, das es nicht mehr gibt, haelt den Vorgang nicht auf.
+///
+/// Dieselbe Zusage wie bei jeder anderen Art (C4).
+#[test]
+fn ein_fehlendes_archiv_wird_gemeldet_und_die_uebrigen_werden_entpackt() {
+    let ordner = Pruefordner::neu("unzip-fehlend");
+    let weg = ordner.unter("weg.zip");
+    let da = ordner.unter("da.zip");
+    archiv_bauen(&da, &[archivdatei("drin.txt", "drin")]);
+    let ziel_da = ordner.unter("da");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::entpacken(vec![
+        (weg, ordner.unter("weg")),
+        (da, ziel_da.clone()),
+    ]));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(bericht.uebersprungen[0].grund, "gibt es nicht mehr");
+    assert_eq!(
+        fs::read_to_string(ziel_da.join("drin.txt")).expect("drin.txt fehlt"),
+        "drin"
+    );
+}
