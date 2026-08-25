@@ -1,9 +1,12 @@
 //! Die Operationsmaschine: Kopieren, Verschieben, Loeschen, Anlegen,
-//! Umbenennen (C4).
+//! Umbenennen (C4), Packen.
 //!
 //! ```text
 //!            Auftrag ──> starten ──> Arbeitsfaden ──> ausfuehren
 //!                          │                             │
+//!                          │                             ├─> zippen (ein Ziel)
+//!                          │                             │
+//!                          │                    quelle_fuer_quelle
 //!                          │                             ├─> kopieren
 //!  Hauptfaden <── Lauf ────┘                             ├─> verschieben
 //!    Meldung  <── Kanal <── Steuerung <──────────────────┴─> loeschen
@@ -52,6 +55,7 @@ mod kopieren;
 pub mod loeschen;
 pub mod umbenennen;
 mod verschieben;
+mod zippen;
 
 use std::fs;
 use std::io;
@@ -133,15 +137,39 @@ pub fn starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
     Lauf::neu(abbruch, empfaenger, faden)
 }
 
-/// Arbeitet einen Auftrag Quelle fuer Quelle ab.
+/// Arbeitet einen Auftrag ab.
+///
+/// **Die Verzweigung ist vollstaendig und hat keinen Auffangzweig**: eine
+/// weitere Operationsart bricht hier den Bau ab und erzwingt die Einordnung in
+/// eine der beiden Bahnen, statt still in der falschen zu landen.
+///
+/// Vier der fuenf Arten haben je Quelle ein eigenes Ziel und laufen deshalb
+/// ueber [`quelle_fuer_quelle`]. Das Packen hat **ein** Ziel fuer den ganzen
+/// Lauf, das einmal geoeffnet und einmal geschlossen wird; die Begruendung
+/// steht im Kopf von [`zippen`].
 fn ausfuehren(
     auftrag: &Auftrag,
     papierkorb: &dyn Papierkorb,
     steuerung: &mut Steuerung,
 ) -> Abschluss {
+    match &auftrag.art {
+        Art::Zippen { ziel } => zippen::lauf(auftrag, ziel, steuerung),
+        Art::Kopieren { .. }
+        | Art::Verschieben { .. }
+        | Art::InDenPapierkorb
+        | Art::UmbenennenImStapel { .. } => quelle_fuer_quelle(auftrag, papierkorb, steuerung),
+    }
+}
+
+/// Arbeitet einen Auftrag Quelle fuer Quelle ab.
+fn quelle_fuer_quelle(
+    auftrag: &Auftrag,
+    papierkorb: &dyn Papierkorb,
+    steuerung: &mut Steuerung,
+) -> Abschluss {
     // Die Stelle laeuft mit, weil das Stapel-Umbenennen den neuen Namen an ihr
-    // findet: er steht in der Art, Stelle fuer Stelle zu `quellen`. Die vier
-    // uebrigen Arten sehen sie nicht.
+    // findet: er steht in der Art, Stelle fuer Stelle zu `quellen`. Die drei
+    // uebrigen Arten dieser Bahn sehen sie nicht.
     for (stelle, pfad) in auftrag.quellen.iter().enumerate() {
         if steuerung.abgebrochen() {
             return Abschluss::Abgebrochen;
@@ -197,6 +225,15 @@ fn einen_abarbeiten(
                 Ablauf::Weiter
             }
         },
+        // **Das Packen erreicht diese Schleife nicht**: [`ausfuehren`]
+        // verzweigt vorher und gibt es an [`zippen::lauf`]. Der Zweig steht
+        // trotzdem da, weil die Fallunterscheidung vollstaendig ist und keinen
+        // Auffangzweig hat; sein Rumpf meldet statt stillzuschweigen, damit ein
+        // spaeterer Umbau der Verzweigung nicht unbemerkt hier landet.
+        Art::Zippen { .. } => {
+            steuerung.ueberspringen(pfad, "das Packen laeuft nicht Quelle fuer Quelle");
+            Ablauf::Weiter
+        }
     }
 }
 

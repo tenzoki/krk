@@ -485,8 +485,9 @@ impl Vorgang {
         match &self.art {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => ordner.push(ziel.clone()),
             // Loeschen, Papierkorb und das Stapel-Umbenennen bleiben im
-            // Quellordner.
-            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } => {}
+            // Quellordner. Das Packen ebenso: sein Archiv entsteht im
+            // angezeigten Ordner, und der steht schon als `quellordner` da.
+            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } | Art::Zippen { .. } => {}
         }
         ordner
     }
@@ -6254,7 +6255,14 @@ impl Anwendungsdelegierter {
                         .eintrag_waehlen(erster);
                 }
             }
-            Art::Kopieren { .. } | Art::Verschieben { .. } | Art::InDenPapierkorb => {}
+            // Nach dem Packen bleibt die Auswahl, wo sie war. Das neue Archiv
+            // anzuspringen, riss den Nutzer von den Eintraegen fort, die er
+            // gerade gepackt hat und moeglicherweise als naechstes wegraeumen
+            // will; die Auffrischung eine Zeile darueber zeigt es ihm ohnehin.
+            Art::Kopieren { .. }
+            | Art::Verschieben { .. }
+            | Art::InDenPapierkorb
+            | Art::Zippen { .. } => {}
         }
 
         // **Der vierte Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**

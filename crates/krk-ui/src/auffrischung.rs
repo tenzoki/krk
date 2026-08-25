@@ -330,7 +330,10 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
     match art {
         Art::UmbenennenImStapel { .. } => true,
-        Art::Kopieren { .. } | Art::Verschieben { .. } | Art::InDenPapierkorb => false,
+        Art::Kopieren { .. }
+        | Art::Verschieben { .. }
+        | Art::InDenPapierkorb
+        | Art::Zippen { .. } => false,
     }
 }
 

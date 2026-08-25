@@ -431,6 +431,7 @@ fn ueberschrift(art: &Art) -> &'static str {
         Art::Verschieben { .. } => "Verschieben",
         Art::InDenPapierkorb => "In den Papierkorb räumen",
         Art::UmbenennenImStapel { .. } => "Umbenennen",
+        Art::Zippen { .. } => "Packen",
     }
 }
 

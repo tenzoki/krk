@@ -46,6 +46,20 @@ pub enum Art {
         /// verschieben.
         neue_namen: Vec<String>,
     },
+    /// Die Quellen in **ein** Archiv packen.
+    ///
+    /// Die einzige Art, die nicht Quelle fuer Quelle abgearbeitet wird: ihr
+    /// Ziel gehoert dem ganzen Lauf und nicht der einzelnen Quelle. Wo die
+    /// Verzweigung sitzt und warum, steht bei [`super::zippen`].
+    Zippen {
+        /// Der volle Pfad des Archivs, **nicht** sein Ordner. Ein Lauf erzeugt
+        /// genau eine Zieldatei, und sie steht damit hier vollstaendig da.
+        ///
+        /// Wie das Archiv heisst, rechnet die Oberflaeche; der Kern bekommt den
+        /// fertigen Pfad. Ein Name, den das Dateisystem inzwischen vergeben hat,
+        /// loest die Konfliktfrage aus, bevor ein Byte geschrieben wird.
+        ziel: PathBuf,
+    },
 }
 
 /// Was geschieht, wenn am Ziel schon ein Eintrag desselben Namens steht.
@@ -111,6 +125,14 @@ impl Auftrag {
         Self::neu(quellen, Art::UmbenennenImStapel { neue_namen })
     }
 
+    /// Die genannten Eintraege in **ein** Archiv packen.
+    ///
+    /// `ziel` ist der volle Pfad des Archivs und kein Ordner; die Namensbildung
+    /// gehoert der Oberflaeche.
+    pub fn zippen(quellen: Vec<PathBuf>, ziel: impl Into<PathBuf>) -> Self {
+        Self::neu(quellen, Art::Zippen { ziel: ziel.into() })
+    }
+
     /// Der neue Name der Quelle an dieser Stelle, sofern die Art einen kennt.
     pub(crate) fn neuer_name(&self, stelle: usize) -> Option<&str> {
         match &self.art {
@@ -143,12 +165,16 @@ impl Auftrag {
     }
 
     /// Der Zielordner, sofern die Art einen hat.
+    ///
+    /// **Drei Arten haben keinen, und `None` ist bei keiner ein vergessener
+    /// Fall.** Beim Papierkorb liegt das Ziel ausserhalb des Auftrags. Beim
+    /// Stapel-Umbenennen bleibt jeder Eintrag, wo er ist. Beim Packen ist das
+    /// Ziel eine **Datei** und keine Ablage fuer weitere Eintraege; wer es hier
+    /// zurueckgaebe, gaebe einen Ordnerpfad heraus, der keiner ist.
     pub fn zielordner(&self) -> Option<&PathBuf> {
         match &self.art {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => Some(ziel),
-            // Ein Stapel-Umbenennen hat keinen Zielordner: jeder Eintrag
-            // bleibt, wo er ist, und bekommt nur einen anderen Namen.
-            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } => None,
+            Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } | Art::Zippen { .. } => None,
         }
     }
 }
@@ -198,6 +224,18 @@ mod tests {
     fn eine_andere_art_kennt_keinen_neuen_namen() {
         let auftrag = Auftrag::kopieren(vec![PathBuf::from("/tmp/a")], "/tmp/b");
         assert_eq!(auftrag.neuer_name(0), None);
+    }
+
+    #[test]
+    fn ein_packauftrag_hat_keinen_zielordner_sondern_eine_zieldatei() {
+        let auftrag = Auftrag::zippen(vec![PathBuf::from("/tmp/a")], "/tmp/a.zip");
+        assert_eq!(auftrag.zielordner(), None);
+        assert_eq!(
+            auftrag.art,
+            Art::Zippen {
+                ziel: PathBuf::from("/tmp/a.zip")
+            }
+        );
     }
 
     #[test]

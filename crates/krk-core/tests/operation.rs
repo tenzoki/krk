@@ -1136,3 +1136,400 @@ fn der_fortschritt_meldet_sich_waehrend_einer_grossen_kopie() {
         bericht.eintraege
     );
 }
+
+// ---------------------------------------------------------------------------
+// Packen (Runde 17, Schritt 2)
+// ---------------------------------------------------------------------------
+
+/// Legt eine Datei mit kaum verdichtbaren Bytes an.
+///
+/// Fuer die Abbruchpruefung des Packens: eine Datei aus lauter gleichen Bytes
+/// verdichtet der Zerleger so schnell, dass der Lauf fertig waere, bevor der
+/// Abbruch ihn erreicht. Die Folge stammt aus einem linearen Kongruenzgenerator
+/// und nicht aus einer Kiste — sie muss unvorhersehbar aussehen, nicht
+/// unvorhersehbar sein.
+fn rauschdatei(pfad: &Path, bytes: u64) {
+    let mut datei = File::create(pfad).expect("Pruefdatei laesst sich nicht anlegen");
+    let mut stand = 0x2545_F491_4F6C_DD1D_u64;
+    let mut block = vec![0_u8; 1024 * 1024];
+    let mut geschrieben = 0_u64;
+    while geschrieben < bytes {
+        for stelle in block.iter_mut() {
+            stand = stand
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            *stelle = (stand >> 33) as u8;
+        }
+        let rest = (bytes - geschrieben).min(block.len() as u64) as usize;
+        datei
+            .write_all(&block[..rest])
+            .expect("Pruefdatei laesst sich nicht fuellen");
+        geschrieben += rest as u64;
+    }
+    datei.sync_all().expect("Pruefdatei nicht auf die Platte");
+}
+
+/// Oeffnet ein Archiv und liefert die Namen seiner Eintraege, sortiert.
+fn archivnamen(archiv: &Path) -> Vec<String> {
+    let datei = File::open(archiv).expect("das Archiv laesst sich nicht oeffnen");
+    let mut gelesen = zip::ZipArchive::new(datei).expect("das Archiv ist keines");
+    let mut namen: Vec<String> = (0..gelesen.len())
+        .map(|stelle| {
+            gelesen
+                .by_index(stelle)
+                .expect("Eintrag nicht lesbar")
+                .name()
+                .to_owned()
+        })
+        .collect();
+    namen.sort();
+    namen
+}
+
+/// Liefert den Inhalt eines Archiveintrags als Zeichenkette.
+fn archivinhalt(archiv: &Path, name: &str) -> String {
+    use std::io::Read;
+
+    let datei = File::open(archiv).expect("das Archiv laesst sich nicht oeffnen");
+    let mut gelesen = zip::ZipArchive::new(datei).expect("das Archiv ist keines");
+    let mut eintrag = gelesen
+        .by_name(name)
+        .unwrap_or_else(|fehler| panic!("«{name}» steht nicht im Archiv: {fehler}"));
+    let mut inhalt = String::new();
+    eintrag
+        .read_to_string(&mut inhalt)
+        .expect("der Eintrag ist kein Text");
+    inhalt
+}
+
+/// Liefert die Unix-Rechte eines Archiveintrags, samt Typbits.
+fn archivrechte(archiv: &Path, name: &str) -> u32 {
+    let datei = File::open(archiv).expect("das Archiv laesst sich nicht oeffnen");
+    let mut gelesen = zip::ZipArchive::new(datei).expect("das Archiv ist keines");
+    gelesen
+        .by_name(name)
+        .unwrap_or_else(|fehler| panic!("«{name}» steht nicht im Archiv: {fehler}"))
+        .unix_mode()
+        .unwrap_or_else(|| panic!("«{name}» traegt keine Unix-Rechte"))
+}
+
+#[test]
+fn ein_ordnerbaum_wird_gepackt_und_jeder_eintrag_steht_im_archiv() {
+    let ordner = Pruefordner::neu("zip-baum");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("oben.txt"), "oben").expect("nicht schreibbar");
+    let unten = quelle.join("unten");
+    fs::create_dir(&unten).expect("nicht anlegbar");
+    fs::write(unten.join("tief.txt"), "tief").expect("nicht schreibbar");
+    fs::create_dir(quelle.join("leer")).expect("nicht anlegbar");
+    let archiv = ordner.unter("quelle.zip");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    assert_eq!(
+        archivnamen(&archiv),
+        vec![
+            "quelle/".to_owned(),
+            "quelle/leer/".to_owned(),
+            "quelle/oben.txt".to_owned(),
+            "quelle/unten/".to_owned(),
+            "quelle/unten/tief.txt".to_owned(),
+        ],
+        "der leere Ordner gehoert mit ins Archiv"
+    );
+    assert_eq!(archivinhalt(&archiv, "quelle/unten/tief.txt"), "tief");
+    assert_eq!(
+        bericht.bytes, 8,
+        "gezaehlt werden die Bytes des Inhalts, nicht die des Archivs"
+    );
+}
+
+#[test]
+fn mehrere_quellen_kommen_nebeneinander_in_ein_einziges_archiv() {
+    let ordner = Pruefordner::neu("zip-mehrere");
+    let eine = ordner.datei("eine.txt", "eins");
+    let andere = ordner.datei("andere.txt", "zwei");
+    let archiv = ordner.unter("beide.zip");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![eine, andere], &archiv));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(
+        archivnamen(&archiv),
+        vec!["andere.txt".to_owned(), "eine.txt".to_owned()]
+    );
+    assert_eq!(archivinhalt(&archiv, "eine.txt"), "eins");
+    assert_eq!(archivinhalt(&archiv, "andere.txt"), "zwei");
+}
+
+/// Die Rechte der Quelle stehen im Archiv, nicht eine Vorgabe.
+///
+/// Ohne sie waere ein ausfuehrbares Skript nach dem Rundweg durch das Archiv
+/// keines mehr, und der Nutzer saehe erst beim Aufruf, dass etwas fehlt.
+#[test]
+fn die_rechte_der_quelle_stehen_im_archiv() {
+    let ordner = Pruefordner::neu("zip-rechte");
+    let skript = ordner.datei("skript.sh", "#!/bin/sh\n");
+    fs::set_permissions(&skript, fs::Permissions::from_mode(0o755)).expect("Rechte nicht setzbar");
+    let archiv = ordner.unter("skript.sh.zip");
+
+    durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![skript], &archiv));
+
+    assert_eq!(archivrechte(&archiv, "skript.sh") & 0o777, 0o755);
+}
+
+/// Eine Verknuepfung wird als Verknuepfung abgelegt und nicht als ihr Ziel.
+///
+/// **Der Typ steht in den oberen Modusbits und nicht in den Rechten.**
+/// `unix_permissions` der Kiste maskiert mit `& 0o777`, wirft `S_IFLNK` also
+/// fort; gesetzt wird es von `add_symlink`. Steht es nicht, traegt das Archiv
+/// eine gewoehnliche Datei, deren Inhalt zufaellig wie ein Pfad aussieht — und
+/// jedes Entpackwerkzeug legte sie als solche an.
+#[test]
+fn eine_verknuepfung_wird_als_verknuepfung_gepackt_und_nicht_ihr_ziel() {
+    let ordner = Pruefordner::neu("zip-verknuepfung");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("echt.txt"), "Inhalt").expect("nicht schreibbar");
+    std::os::unix::fs::symlink("echt.txt", quelle.join("verweis.txt"))
+        .expect("Verknuepfung nicht anlegbar");
+    let archiv = ordner.unter("quelle.zip");
+
+    durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+
+    assert_eq!(
+        archivrechte(&archiv, "quelle/verweis.txt") & 0o170_000,
+        0o120_000,
+        "der Eintrag traegt nicht das Kennzeichen einer Verknuepfung"
+    );
+    assert_eq!(
+        archivinhalt(&archiv, "quelle/verweis.txt"),
+        "echt.txt",
+        "der Inhalt einer Verknuepfung ist ihr Verweisziel"
+    );
+}
+
+/// Eine Verknuepfung auf den eigenen Ordner laesst den Lauf enden.
+///
+/// Genau der Fall, den `kopieren.rs` fuer sich ausschreibt: wer einem Verweis
+/// folgte, stiege endlos in denselben Ordner ab. Die Probe braucht keine
+/// Zeitgrenze — sie kehrt zurueck oder sie kehrt nie zurueck.
+#[test]
+fn eine_verknuepfung_auf_den_eigenen_ordner_laesst_den_lauf_enden() {
+    let ordner = Pruefordner::neu("zip-schlinge");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("datei.txt"), "Inhalt").expect("nicht schreibbar");
+    std::os::unix::fs::symlink(&quelle, quelle.join("ich_selbst"))
+        .expect("Verknuepfung nicht anlegbar");
+    let archiv = ordner.unter("quelle.zip");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(
+        archivnamen(&archiv),
+        vec![
+            "quelle/".to_owned(),
+            "quelle/datei.txt".to_owned(),
+            "quelle/ich_selbst".to_owned(),
+        ]
+    );
+}
+
+/// Ein belegter Archivname wird **einmal** erfragt, und zwar **bevor** das
+/// vorhandene Archiv angefasst wird.
+///
+/// Die Antwort ist hier "abbrechen". Danach muss die alte Datei Byte fuer Byte
+/// dastehen wie vorher: haette `File::create` sie schon abgeschnitten, waere
+/// die Rueckfrage eine Hoeflichkeit ueber etwas gewesen, das es nicht mehr gab.
+#[test]
+fn ein_belegter_archivname_wird_einmal_und_vor_dem_ersten_byte_erfragt() {
+    let ordner = Pruefordner::neu("zip-konflikt");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let archiv = ordner.datei("bericht.txt.zip", "das alte Archiv");
+
+    let lauf = starten(
+        Auftrag::zippen(vec![quelle], &archiv).mit_konfliktregel(Konfliktregel::Fragen),
+        Arc::new(OhnePapierkorb),
+    );
+    let mut gefragt = 0;
+    let mut bericht = None;
+    while let Ok(meldung) = lauf.meldungen().recv() {
+        match meldung {
+            Meldung::Konflikt { ziel, antwort, .. } => {
+                gefragt += 1;
+                assert_eq!(ziel, archiv, "gefragt wird nach dem Archiv");
+                antwort
+                    .send(Konfliktentscheid::einmal(Konfliktantwort::Abbrechen))
+                    .expect("Antwort laesst sich nicht senden");
+            }
+            Meldung::Fertig(fertig) => {
+                bericht = Some(fertig);
+                break;
+            }
+            _ => {}
+        }
+    }
+    lauf.warten();
+
+    let bericht = bericht.expect("keine Abschlussmeldung");
+    assert_eq!(gefragt, 1, "ein Lauf hat ein Ziel und damit eine Frage");
+    assert_eq!(bericht.abschluss, Abschluss::Abgebrochen);
+    assert_eq!(
+        fs::read_to_string(&archiv).expect("das alte Archiv ist weg"),
+        "das alte Archiv",
+        "vor der Antwort darf kein Byte geschrieben werden"
+    );
+}
+
+#[test]
+fn die_regel_ueberschreiben_ersetzt_ein_vorhandenes_archiv() {
+    let ordner = Pruefordner::neu("zip-ueberschreiben");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let archiv = ordner.datei("bericht.txt.zip", "das alte Archiv");
+
+    let bericht = durchlaufen_ohne_papierkorb(
+        Auftrag::zippen(vec![quelle], &archiv).mit_konfliktregel(Konfliktregel::Ueberschreiben),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(archivnamen(&archiv), vec!["bericht.txt".to_owned()]);
+    assert_eq!(archivinhalt(&archiv, "bericht.txt"), "neu");
+}
+
+#[test]
+fn die_regel_ueberspringen_laesst_das_vorhandene_archiv_stehen() {
+    let ordner = Pruefordner::neu("zip-ueberspringen");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let archiv = ordner.datei("bericht.txt.zip", "das alte Archiv");
+
+    let bericht = durchlaufen_ohne_papierkorb(
+        Auftrag::zippen(vec![quelle], &archiv).mit_konfliktregel(Konfliktregel::Ueberspringen),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 0);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(
+        fs::read_to_string(&archiv).expect("das alte Archiv ist weg"),
+        "das alte Archiv"
+    );
+}
+
+#[test]
+fn die_regel_umbenennen_legt_das_archiv_daneben() {
+    let ordner = Pruefordner::neu("zip-umbenennen");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let archiv = ordner.datei("bericht.txt.zip", "das alte Archiv");
+    // Vor dem Lauf abgefragt: danach steht das neue Archiv unter genau diesem
+    // Namen, und `freier_name` naennte den naechsten freien daneben.
+    let daneben = ordner.unter(&freier_name(&archiv));
+
+    let bericht = durchlaufen_ohne_papierkorb(
+        Auftrag::zippen(vec![quelle], &archiv)
+            .mit_konfliktregel(Konfliktregel::AutomatischUmbenennen),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(
+        fs::read_to_string(&archiv).expect("das alte Archiv ist weg"),
+        "das alte Archiv"
+    );
+    assert_eq!(
+        archivinhalt(&daneben, "bericht.txt"),
+        "neu",
+        "das neue Archiv steht nicht unter {}",
+        daneben.display()
+    );
+}
+
+/// Ein Abbruch mitten in einer grossen Datei laesst kein halbes Archiv liegen.
+///
+/// Geprueft wird beides in einem: dass der Abbruch **innerhalb** eines Eintrags
+/// ankommt — sonst liefen die 32 MB zu Ende und der Bericht naennte alle Bytes
+/// —, und dass die angefangene Datei danach nicht dasteht. Ein halbes Archiv
+/// traegt kein Verzeichnis am Ende und laesst sich von keinem Werkzeug oeffnen;
+/// es sieht aus wie ein Ergebnis und ist ein Rest.
+#[test]
+fn ein_abbruch_waehrend_des_packens_hinterlaesst_kein_halbes_archiv() {
+    let ordner = Pruefordner::neu("zip-abbruch");
+    let quelle = ordner.unter("rauschen.bin");
+    let groesse = 32 * 1024 * 1024;
+    rauschdatei(&quelle, groesse);
+    let archiv = ordner.unter("rauschen.bin.zip");
+
+    let lauf = starten(
+        Auftrag::zippen(vec![quelle], &archiv),
+        Arc::new(OhnePapierkorb),
+    );
+    // Lange genug, dass der Schreiber wirklich in der Datei steht, und kurz
+    // genug, dass von 32 MB kaum verdichtbarer Bytes noch reichlich uebrig ist.
+    std::thread::sleep(Duration::from_millis(20));
+    lauf.abbrechen();
+    let bericht = bericht_abholen(lauf.meldungen());
+    lauf.warten();
+
+    assert_eq!(bericht.abschluss, Abschluss::Abgebrochen);
+    assert_eq!(
+        bericht.eintraege, 0,
+        "eine abgebrochene Datei ist kein gepackter Eintrag"
+    );
+    assert!(
+        bericht.bytes < groesse,
+        "gemeldet sind {} von {groesse} Bytes; der Abbruch kam gar nicht an",
+        bericht.bytes
+    );
+    assert!(
+        !archiv.exists(),
+        "das halbe Archiv ist liegen geblieben: {}",
+        archiv.display()
+    );
+}
+
+/// Eine Quelle, die es nicht gibt, haelt den Lauf nicht auf.
+///
+/// Dieselbe Zusage wie bei jeder anderen Art (C4): die gescheiterte Position
+/// kommt mit ihrem Grund in die Abschlussliste, die uebrigen laufen durch.
+#[test]
+fn eine_fehlende_quelle_wird_gemeldet_und_die_uebrigen_werden_gepackt() {
+    let ordner = Pruefordner::neu("zip-fehlende-quelle");
+    let da = ordner.datei("da.txt", "da");
+    let weg = ordner.unter("weg.txt");
+    let archiv = ordner.unter("beide.zip");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![weg, da], &archiv));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(bericht.uebersprungen[0].grund, "gibt es nicht mehr");
+    assert_eq!(archivnamen(&archiv), vec!["da.txt".to_owned()]);
+}
+
+/// Eine benannte Roehre im Ordner haelt das Packen nicht an.
+///
+/// Der Grund steht im Kopf von `operation/zippen.rs`: geoeffnet wird ueber
+/// `sys::ohne_warten_oeffnen` und damit mit `O_NONBLOCK`. Ein `File::open`
+/// haenge hier, bis jemand in die Roehre schreibt — und niemand tut es. Die
+/// Probe kehrt deshalb zurueck oder sie kehrt nie zurueck.
+#[test]
+fn eine_benannte_roehre_im_ordner_haelt_das_packen_nicht_an() {
+    let ordner = Pruefordner::neu("zip-roehre");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("datei.txt"), "Inhalt").expect("nicht schreibbar");
+    let stand = std::process::Command::new("/usr/bin/mkfifo")
+        .arg(quelle.join("roehre"))
+        .status()
+        .expect("mkfifo laesst sich nicht starten");
+    assert!(stand.success(), "mkfifo ist gescheitert: {stand:?}");
+    let archiv = ordner.unter("quelle.zip");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![quelle], &archiv));
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(archivinhalt(&archiv, "quelle/datei.txt"), "Inhalt");
+}
