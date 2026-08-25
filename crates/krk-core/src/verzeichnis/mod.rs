@@ -27,10 +27,11 @@
 //! `renamex_np(2)` fuer die Operationsmaschine und seit dem Defekt
 //! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den gemeinsamen Eingang
 //! von `text::datei::lesen` und, seit dem Defekt `260810-1247`, von
-//! `text::datei::bis_zur_grenze_lesen`, und seit der Runde 7 `flock(2)` fuer
-//! die beiden Sperren der Ablage. Das sind fuenf Schnittstellen und neun gebundene
-//! Funktionen, denn `copyfile(3)` braucht seine vier
-//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der fuenf
+//! `text::datei::bis_zur_grenze_lesen`, seit der Runde 7 `flock(2)` fuer
+//! die beiden Sperren der Ablage und seit der Runde 18 `localtime_r(3)` fuer
+//! die buergerliche Ortszeit eines Zeitpunkts. Das sind sechs Schnittstellen
+//! und zehn gebundene Funktionen, denn `copyfile(3)` braucht seine vier
+//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der sechs
 //! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
 //! laesst sich von [`kollation`] die beiden Sortierschluessel bauen.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, und [`sortierung`]

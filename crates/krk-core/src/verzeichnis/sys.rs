@@ -1,5 +1,5 @@
-//! Die Systemschicht des Kerns: die fuenf Schnittstellen, die KRK braucht, und
-//! die neun Funktionen, die sie binden.
+//! Die Systemschicht des Kerns: die sechs Schnittstellen, die KRK braucht, und
+//! die zehn Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -20,19 +20,29 @@
 //! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
 //!                        sperre_versuchen
 //!                        sperre_abgeben
+//! localtime_r(3)     ──> ortszeit             ──> (noch ohne Rufer im Baum,
+//!                                                  siehe den Absatz dazu)
 //! ```
 //!
-//! **Fuenf ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! fuenf Schnittstellen und neun gebundene Funktionen, denn `copyfile(3)`
+//! **Sechs ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! sechs Schnittstellen und zehn gebundene Funktionen, denn `copyfile(3)`
 //! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
 //! Aufrufe ueber die Sprachgrenze schon, und die Reichweite der Ausnahme oben
 //! liest ein Leser hier nach. Die Zeile steht wortgleich in `lib.rs` und in
 //! `verzeichnis/mod.rs`; die dritte Stelle hat der Defekt `260810-1017`
-//! nachgezogen, die fuenfte Schnittstelle die Runde 7. Gebunden sind alle neun
-//! in den vier `unsafe extern "C"`-Bloecken dieses Moduls, und gerufen sind sie
-//! ebenfalls alle neun.
+//! nachgezogen, die fuenfte Schnittstelle die Runde 7 und die sechste die
+//! Runde 18. Gebunden sind alle zehn in den fuenf `unsafe extern "C"`-Bloecken
+//! dieses Moduls.
+//!
+//! **Gerufen sind neun davon aus dem Baum, und die zehnte ist es noch nicht.**
+//! [`ortszeit`] steht seit der Runde 18 bereit und bekommt ihre Rufer mit dem
+//! Zeitstempel des Packens und mit der Datumszeile eines Leseprofils, beide in
+//! derselben Runde und beide nach dieser Stelle. Bis dahin ruft sie allein die
+//! Probe. Wer den Satz spaeter liest und die zwei Rufer im Baum findet,
+//! streicht diesen Absatz; wer sie nicht findet, hat einen Rueckbau vor sich
+//! und keinen toten Zweig.
 //!
 //! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
 //! oder schreibt, sondern eine Absprache zwischen zwei Prozessen traegt.** An
@@ -42,6 +52,19 @@
 //! Absturz; eine Marke im Dateisystem ueber `create_new` oder ueber
 //! `renamex_np` mit `RENAME_EXCL` ueberlebte ihn und sperrte danach jede
 //! weitere Instanz von KRK fuer immer aus.
+//!
+//! **`localtime_r(3)` ist die sechste, und sie ist die erste, die das
+//! Dateisystem gar nicht anfasst.** Sie beantwortet eine Frage, die allein das
+//! System beantworten kann: welcher Kalendertag und welche Uhrzeit gehoeren zu
+//! einer Zahl von Sekunden seit 1970, in der Zone dieses Geraets und **mit dem
+//! Versatz, der zu jenem Zeitpunkt galt**. Dass der Versatz des Laufs dafuer
+//! nicht genuegt, ist gemessen und nicht befuerchtet: `ditto(1)` legt eine
+//! Maerzdatei aus einem Archiv eine Stunde daneben ab, weil es den heute
+//! geltenden Sommerzeitversatz auf ein Datum anwendet, an dem er nicht galt.
+//! Die Standardbibliothek kennt keine Zeitzone, `NSDateFormatter` liegt in
+//! AppKit und damit ausserhalb des Kerns, und eine Zeitkiste braechte auf macOS
+//! das erste `-sys`-Paket neben `windows-sys` herein; die Gegenueberstellung
+//! steht in `shared/decisions/260825-1725_*_wo-wohnt-die-umrechnung-von-*`.
 //!
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
 //! Kerns und nicht allein die des Lesers. Die Zeile zu `fcntl(2)` traegt die
@@ -107,7 +130,7 @@
 #![allow(unsafe_code)]
 
 use std::borrow::Cow;
-use std::ffi::{CString, c_char, c_int, c_uint, c_void};
+use std::ffi::{CString, c_char, c_int, c_long, c_uint, c_void};
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::os::fd::AsRawFd;
@@ -993,6 +1016,171 @@ fn flock_rufen(datei: &File, operation: c_int) -> io::Result<()> {
     Ok(())
 }
 
+/// `time_t` aus `<sys/_types/_time_t.h>`: auf Darwin ein `long`, also 64 Bit auf
+/// beiden Bauzielen dieses Vorhabens. Ein `i32` an dieser Stelle liefe 2038 ab
+/// und wuerde nicht etwa falsch rechnen, sondern den Aufruf ueber die falsche
+/// Argumentbreite schicken.
+#[allow(non_camel_case_types)]
+type time_t = c_long;
+
+/// `struct tm` aus `<time.h>`, vollstaendig und in der Reihenfolge des Headers.
+///
+/// **Vollstaendig ist Absicht, obwohl [`ortszeit`] nur sechs der elf Felder
+/// liest.** Die Speicherform gehoert dem Kern und nicht diesem Modul: liesse
+/// man die hinteren Felder weg, schriebe `localtime_r` ueber das Ende der
+/// Bindung hinaus. Nachgemessen am Geraet, nicht nur nachgelesen: die Probe
+/// `struct_tm_hat_die_groesse_aus_time_h` haelt Groesse und Ausrichtung fest,
+/// wie es die Probe daneben fuer [`Attrlist`] tut.
+///
+/// `tm_gmtoff` und `tm_zone` sind BSD-Erweiterungen und stehen auf Darwin
+/// bedingungslos im Header. Auf einem System ohne sie waere die Bindung um
+/// sechzehn Bytes zu lang; das Bauziel ist macOS, und die Groessenprobe faengt
+/// eine Abweichung.
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct Tm {
+    tm_sec: c_int,
+    tm_min: c_int,
+    tm_hour: c_int,
+    tm_mday: c_int,
+    tm_mon: c_int,
+    tm_year: c_int,
+    tm_wday: c_int,
+    tm_yday: c_int,
+    tm_isdst: c_int,
+    tm_gmtoff: c_long,
+    tm_zone: *mut c_char,
+}
+
+/// Der Ausgangsstand, den [`ortszeit`] hinueberreicht.
+///
+/// Genullt und nicht uninitialisiert: `localtime_r` beschreibt zwar jedes Feld,
+/// aber eine Bindung, die dem Kern uninitialisierten Speicher hinhaelt, muesste
+/// diese Zusage aus einem fremden Quelltext belegen. Ein Nullzeiger ist fuer
+/// `tm_zone` ein gueltiger Wert, also kostet das Nullen nichts als eine Zeile.
+const TM_LEER: Tm = Tm {
+    tm_sec: 0,
+    tm_min: 0,
+    tm_hour: 0,
+    tm_mday: 0,
+    tm_mon: 0,
+    tm_year: 0,
+    tm_wday: 0,
+    tm_yday: 0,
+    tm_isdst: 0,
+    tm_gmtoff: 0,
+    tm_zone: std::ptr::null_mut(),
+};
+
+unsafe extern "C" {
+    /// `struct tm *localtime_r(const time_t *restrict, struct tm *restrict)`
+    ///
+    /// **Nicht variadisch und mit zwei Zeigern**, so wie der Header es fuehrt.
+    /// Liefert den Zeiger auf die uebergebene `struct tm` zurueck oder
+    /// `NULL`, wenn der Zeitpunkt sich nicht in einen Kalendertag uebersetzen
+    /// laesst.
+    ///
+    /// Die Zone kommt aus der Umgebungsvariablen `TZ`, hilfsweise aus der
+    /// Einstellung des Geraets, und der Kern liest sie beim ersten Aufruf im
+    /// Prozess. **Eine Probe, die eine bestimmte Zone braucht, setzt `TZ`
+    /// deshalb vor dem Start und nicht im Lauf**; das ist der Grund fuer die
+    /// Kindproben in `tests/zeit.rs`.
+    fn localtime_r(zeitpunkt: *const time_t, ziel: *mut Tm) -> *mut Tm;
+}
+
+/// Ein Zeitpunkt in buergerlicher Ortszeit, zerlegt in seine sechs Felder.
+///
+/// Die Zaehlung ist die des Kalenders und nicht die von `struct tm`: das Jahr
+/// traegt sein Jahrhundert, und der Monat laeuft von 1 bis 12. Wer die Felder
+/// weiterreicht, reicht damit das weiter, was auf einem Zettel steht.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use = "eine fallen gelassene Zeitangabe faellt niemandem auf"]
+pub struct Ortszeit {
+    /// Das Jahr mit seinem Jahrhundert, also 2026 und nicht 126.
+    pub jahr: i32,
+    /// Der Monat von 1 bis 12.
+    pub monat: u8,
+    /// Der Tag im Monat, von 1 bis 31.
+    pub tag: u8,
+    /// Die Stunde von 0 bis 23.
+    pub stunde: u8,
+    /// Die Minute von 0 bis 59.
+    pub minute: u8,
+    /// Die Sekunde von 0 bis 60; die 60 ist die Schaltsekunde.
+    pub sekunde: u8,
+}
+
+/// Rechnet einen Zeitpunkt in die buergerliche Ortszeit dieses Geraets um.
+///
+/// **Der Zonenversatz ist der, der zum uebergebenen Zeitpunkt galt, und nicht
+/// der von jetzt.** Das ist die eine Eigenschaft, um derentwillen diese
+/// Funktion ueber die Sprachgrenze geht, statt sich aus einer Zahl je Lauf und
+/// etwas Kalenderarithmetik zusammensetzen zu lassen: eine Datei vom Juli und
+/// eine vom Januar bekommen in Mitteleuropa verschiedene Versaetze, und wer
+/// einen einzigen Wert holt, legt die eine von beiden um eine Stunde daneben.
+/// Genau daran scheitert `ditto(1)` gemessenermassen.
+///
+/// # Was `None` heisst
+///
+/// Der Zeitpunkt laesst sich nicht in einen Kalendertag uebersetzen: er liegt
+/// jenseits dessen, was `time_t` fasst, oder der Kern weist ihn ab. Kein
+/// Aufrufer kann daran etwas richten, und keiner soll deshalb einen Fehlertext
+/// weiterreichen muessen. Das Packen schreibt in diesem Fall eine Zeile in die
+/// Abschlussliste, die Anzeige eines Leseprofils ihren Platzhalter.
+///
+/// Ein Zeitpunkt **vor** dem Nullpunkt von 1970 wird nach unten abgerundet und
+/// nicht zur Null hin: eine halbe Sekunde davor liegt in der Sekunde -1.
+pub fn ortszeit(zeitpunkt: SystemTime) -> Option<Ortszeit> {
+    let sekunden = epochensekunden(zeitpunkt)?;
+    let mut stand = TM_LEER;
+
+    // SICHERHEIT: `sekunden` und `stand` sind zwei Bindungen auf dem Stapel
+    // dieses Aufrufs und leben ueber den Aufruf hinweg. `localtime_r` liest
+    // genau einen `time_t` aus dem ersten Zeiger und beschreibt genau eine
+    // `struct tm` hinter dem zweiten; die Bindung [`Tm`] hat die Groesse und
+    // die Ausrichtung des Headers, nachgemessen von der Probe daneben. Der
+    // Rueckgabewert zeigt entweder auf `stand` oder ist `NULL`; er wird nicht
+    // verfolgt, sondern nur auf `NULL` geprueft.
+    let antwort = unsafe { localtime_r(&raw const sekunden, &raw mut stand) };
+    if antwort.is_null() {
+        return None;
+    }
+
+    Some(Ortszeit {
+        jahr: stand.tm_year.checked_add(1900)?,
+        monat: u8::try_from(stand.tm_mon.checked_add(1)?).ok()?,
+        tag: u8::try_from(stand.tm_mday).ok()?,
+        stunde: u8::try_from(stand.tm_hour).ok()?,
+        minute: u8::try_from(stand.tm_min).ok()?,
+        sekunde: u8::try_from(stand.tm_sec).ok()?,
+    })
+}
+
+/// Macht aus einem [`SystemTime`] die Zahl der Sekunden seit dem 1. Januar 1970.
+///
+/// `SystemTime` traegt beide Richtungen, und die Standardbibliothek gibt sie
+/// nur ueber zwei Wege heraus: [`SystemTime::duration_since`] liefert die
+/// Spanne nach vorn als `Ok` und die nach hinten als `Err`. Die Bruchteile
+/// fallen weg, denn ein Kalendertag hat keine.
+fn epochensekunden(zeitpunkt: SystemTime) -> Option<time_t> {
+    match zeitpunkt.duration_since(UNIX_EPOCH) {
+        Ok(seither) => time_t::try_from(seither.as_secs()).ok(),
+        Err(davor) => {
+            let spanne = davor.duration();
+            let ganze = time_t::try_from(spanne.as_secs()).ok()?;
+            // Abgerundet wird nach unten und nicht zur Null hin: eine halbe
+            // Sekunde vor dem Nullpunkt liegt in der Sekunde -1 und nicht in
+            // der 0, sonst spraenge die Umrechnung um den Nullpunkt herum.
+            let ganze = if spanne.subsec_nanos() > 0 {
+                ganze.checked_add(1)?
+            } else {
+                ganze
+            };
+            ganze.checked_neg()
+        }
+    }
+}
+
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.
 ///
 /// Ein Pfad mit einem Nullbyte darin kann im Dateisystem nicht vorkommen; er
@@ -1014,6 +1202,60 @@ mod tests {
     fn attrlist_hat_die_groesse_aus_sys_attr_h() {
         assert_eq!(size_of::<Attrlist>(), 24);
         assert_eq!(align_of::<Attrlist>(), 4);
+    }
+
+    /// Die Bindung [`Tm`] hat die Speicherform, die `<time.h>` beschreibt.
+    ///
+    /// Dieselbe Probe wie die fuer [`Attrlist`] darueber und aus demselben
+    /// Grund: eine zu kurze Bindung faellt nicht auf, sie laesst `localtime_r`
+    /// ueber ihr Ende hinausschreiben. Die Zahlen stammen aus einem
+    /// `sizeof`/`offsetof`-Lauf gegen das SDK dieses Geraets.
+    #[test]
+    fn struct_tm_hat_die_groesse_aus_time_h() {
+        assert_eq!(size_of::<Tm>(), 56);
+        assert_eq!(align_of::<Tm>(), 8);
+    }
+
+    /// Der Nullpunkt und die Sekunde davor, ohne eine Zone zu kennen.
+    ///
+    /// Geprueft ist allein die Umrechnung von [`SystemTime`] in die Zahl der
+    /// Sekunden: sie faellt nach unten und nicht zur Null hin. Ohne die
+    /// Abrundung nach unten bekaeme eine halbe Sekunde vor 1970 denselben
+    /// Kalendertag wie eine halbe Sekunde danach.
+    #[test]
+    fn epochensekunden_runden_vor_dem_nullpunkt_nach_unten() {
+        assert_eq!(epochensekunden(UNIX_EPOCH), Some(0));
+        assert_eq!(
+            epochensekunden(UNIX_EPOCH + Duration::from_millis(1_500)),
+            Some(1)
+        );
+        assert_eq!(
+            epochensekunden(UNIX_EPOCH - Duration::from_secs(1)),
+            Some(-1)
+        );
+        assert_eq!(
+            epochensekunden(UNIX_EPOCH - Duration::from_millis(500)),
+            Some(-1),
+            "eine halbe Sekunde vor dem Nullpunkt liegt in der Sekunde -1"
+        );
+    }
+
+    /// Ein Zeitpunkt, den der Kalender nicht mehr traegt, kommt als `None`
+    /// zurueck und nicht als irgendein Tag.
+    ///
+    /// Die Grenze sitzt **nicht** an `time_t` — auf Darwin ist der 64 Bit breit
+    /// und fasst weit mehr, als der Kalender kennt —, sondern an `localtime_r`
+    /// selbst, das den Zeitpunkt abweist und einen Nullzeiger liefert. Die
+    /// Probe haelt die zwei Stellen auseinander, damit ein spaeterer Leser die
+    /// Abweisung nicht fuer einen Ueberlauf der Umrechnung haelt.
+    #[test]
+    fn ein_zeitpunkt_jenseits_des_kalenders_liefert_keine_ortszeit() {
+        let fern = UNIX_EPOCH + Duration::from_secs(u64::MAX / 4);
+        assert!(
+            epochensekunden(fern).is_some(),
+            "die Zahl der Sekunden passt noch in einen time_t"
+        );
+        assert_eq!(ortszeit(fern), None);
     }
 
     #[test]

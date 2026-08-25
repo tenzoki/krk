@@ -210,7 +210,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - **Der vierteilige Handgriff des Nutzers bestätigt oder widerlegt die Diagnose**, und er steht namentlich unter „Testing Strategy". Widerlegt er sie schon im ersten Teil, ist dieser Schritt zurückzustellen und die Wurzel neu zu suchen; dann stimmte auch die Messung vom 260819 nicht mehr.
      - `make check` grün.
 
-2. **`krk-core` rechnet einen `SystemTime` in bürgerliche Ortszeit um**
+2. [DONE] **`krk-core` rechnet einen `SystemTime` in bürgerliche Ortszeit um**
    - Executor: `coder`
    - Files: `crates/krk-core/src/verzeichnis/sys.rs`, `crates/krk-core/src/verzeichnis/mod.rs`, `crates/krk-core/src/lib.rs`, `crates/krk-core/tests/verzeichnis.rs` (oder eine neue Prüfdatei `zeit.rs` unter `crates/krk-core/tests/`)
    - Changes: `localtime_r(3)` wird die **sechste** Schnittstelle der Systemschicht und die zehnte gebundene Funktion, in einem fünften `unsafe extern "C"`-Block. Die Bindung liefert aus einem `SystemTime` die sechs Felder Jahr, Monat, Tag, Stunde, Minute, Sekunde in bürgerlicher Ortszeit — **mit dem Zonenversatz, der zu jenem Zeitpunkt galt** und nicht mit dem von jetzt. Genau daran scheitert `ditto(1)` gemessenermaßen um eine Stunde.
