@@ -20,23 +20,40 @@
 //! Ein Rufer, der die Frage vor dem Aufruf stellt, haelt die Zusage fuer sich
 //! und nicht fuer den naechsten Rufer.
 //!
-//! # Der erkannte Ordner wird hoechstens einmal gelesen
+//! # Ein Ort wird je Zusammenfassung hoechstens einmal gelesen
 //!
-//! Drei Rufer brauchen seine Eintraege: der zweite Erkennungsdurchgang, jeder
-//! Baustein ohne Ortsangabe und der Feldbaustein, der seine Datei ueber ein
-//! Namensmuster sucht. Sie teilen sich **einen** Leselauf, gehalten in
-//! [`Lauf::stand`], und er faellt erst an, wenn ihn der erste von ihnen
-//! braucht. Aus dieser Bauart fallen die Zahlen aus C6.7: das groesste
-//! mitgelieferte Profil, das des einzelnen Circles, kommt damit auf fuenf
-//! Leselaeufe (der erkannte Ordner, `planning` zweimal, `decisions`,
-//! `history`) und elf Oeffnungen (der Circle-Datensatz, zehn Verlaufsdateien).
+//! [`Lauf`] merkt jede Lesung nach **aufgeloestem Pfad**. Wer denselben Ort ein
+//! zweites Mal braucht, bekommt die Eintraege der ersten Lesung, und ein
+//! zweiter Leselauf faellt nicht an. Die Regel gilt ohne Ausnahme: fuer den
+//! erkannten Ordner, den drei Rufer brauchen (der zweite Erkennungsdurchgang,
+//! jeder Baustein ohne Ortsangabe und der Feldbaustein, der seine Datei ueber
+//! ein Namensmuster sucht), genauso wie fuer einen Unterordner, den so viele
+//! Rufer brauchen, wie ihn nennen.
 //!
-//! **Ein Unterordner wird dagegen nicht gemerkt**, und die Asymmetrie hat einen
-//! Grund: der erkannte Ordner wird ohnehin gelesen, weil die Erkennung ihn
-//! braucht, ein Unterordner nicht. Zwei Bausteine auf `planning` kosten deshalb
-//! zwei Leselaeufe, und die Zahl der Laeufe bleibt aus dem Profil ablesbar,
-//! statt vom Inhalt eines Zwischenspeichers abzuhaengen. Dieselbe Wahl trifft
-//! die Dateioeffnung, siehe [`HOECHSTENS_OEFFNUNGEN`].
+//! **Gelesen wird traege**, naemlich erst, wenn der erste Rufer den Ort
+//! braucht. Ein Profil, dessen Zeilen alle in Unterordnern arbeiten, liest den
+//! erkannten Ordner ueberhaupt nicht.
+//!
+//! **Die Zahl der Leselaeufe bleibt aus dem Profil ablesbar**, und zwar als die
+//! Zahl der **verschiedenen** genannten Orte. Das ist die genauere Groesse als
+//! die Zahl der Zeilen mit Ortsangabe, denn sie zaehlt keine Arbeit doppelt,
+//! die nur einmal geschieht. Aus dieser Bauart fallen die Zahlen aus C6.7: das
+//! groesste mitgelieferte Profil, das des einzelnen Circles, nennt vier
+//! verschiedene Orte (der erkannte Ordner, `planning`, `decisions`, `history`)
+//! und kommt damit auf vier Leselaeufe und elf Oeffnungen (der
+//! Circle-Datensatz, zehn Verlaufsdateien).
+//!
+//! **Bei der Dateioeffnung faellt die Wahl anders aus**, siehe
+//! [`super::HOECHSTENS_OEFFNUNGEN`]: zwei Feldbausteine auf derselben Datei
+//! oeffnen sie zweimal. Der Unterschied ist keine Unachtsamkeit. Ein Ort steht
+//! als Ortsangabe im Profil und ist damit vor jeder Lesung bekannt; welche
+//! Datei ein Baustein oeffnet, entscheidet erst sein Muster an den gelesenen
+//! Eintraegen. Ein Merker darueber haenge am Inhalt des Ordners statt am
+//! Profil, und die Zahl der Oeffnungen waere nicht mehr abzulesen.
+//!
+//! **Der Merker lebt genau so lange wie ein [`Lauf`]**, also fuer eine
+//! Zusammenfassung. Zwei Zusammenfassungen desselben Ordners nacheinander lesen
+//! zweimal; alles andere zeigte dem Nutzer einen Stand von vorhin.
 //!
 //! # Was eine unvollstaendige Lesung sagen darf
 //!
@@ -96,8 +113,9 @@
 //! anderen. Wer daraus eine Liste offener Dateien macht, holt sich den Defekt
 //! `260815-0211` in seiner naechsten Gestalt.
 
-use std::cell::{Cell, OnceCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use regex::Regex;
 
@@ -207,12 +225,12 @@ fn ordnername(ordner: &Path) -> String {
 }
 
 // ---------------------------------------------------------------------------
-// Der Lauf: ein Ordner, ein Haushalt, ein gemerkter Leselauf
+// Der Lauf: ein Ordner, ein Haushalt, die gemerkten Leselaeufe
 // ---------------------------------------------------------------------------
 
 /// Was eine einzelne Zusammenfassung ueber ihren Lauf mitfuehrt.
 ///
-/// Die zwei Felder mit Innenveraenderlichkeit sind kein Zufall der Bequemlich-
+/// Die drei Felder mit Innenveraenderlichkeit sind kein Zufall der Bequemlich-
 /// keit: [`erkennen`] nimmt die Eintraege als Abschluss ueber `&self`
 /// entgegen, damit der Leselauf erst beim ersten Profil mit Kennzeichendatei
 /// anfaellt. Ein `&mut self` waere durch diesen Abschluss nicht zu reichen.
@@ -222,10 +240,29 @@ struct Lauf<'w> {
     wurzel: &'w Path,
     /// Was dieser Lauf schon verbraucht hat.
     haushalt: Cell<Haushalt>,
-    /// Der eine Leselauf ueber den erkannten Ordner, beim ersten Bedarf
-    /// angefordert. `None` darin heisst „steht nicht zur Verfuegung": der
-    /// Haushalt war erschoepft oder das Lesen ist gescheitert.
-    stand: OnceCell<Option<Lesestand>>,
+    /// Jeder Ort, den dieser Lauf gelesen hat, nach aufgeloestem Pfad, jeder
+    /// beim ersten Bedarf angefordert. `None` an einem Eintrag heisst „steht
+    /// nicht zur Verfuegung": der Haushalt war erschoepft oder das Lesen ist
+    /// gescheitert. Auch das wird gemerkt, denn ein zweiter Versuch am selben
+    /// Ort scheiterte genauso und kostete einen weiteren Leselauf.
+    ///
+    /// Eine Liste und keine Abbildung: es sind hoechstens so viele Eintraege,
+    /// wie [`super::HOECHSTENS_LESELAEUFE`] zulaesst, und bei zwoelf davon ist
+    /// das Durchgehen der guenstigere Weg als das Streuen.
+    ///
+    /// Der [`Lesestand`] steht unter [`Rc`], weil ihn zwei Stellen brauchen:
+    /// diese Liste haelt ihn, und ein Rufer bekommt ihn geliehen. Ohne den
+    /// gemeinsamen Besitz muesste der Rufer die Liste ausgeliehen halten,
+    /// waehrend er rechnet, und ein spaeterer Baustein, der dabei einen
+    /// zweiten Ort braucht, liefe in einen Ausleihfehler zur Laufzeit.
+    staende: RefCell<Vec<(PathBuf, Option<Rc<Lesestand>>)>>,
+    /// Derselbe Stand fuer den erkannten Ordner, ein zweites Mal gehalten.
+    ///
+    /// **Keine zweite Lesung**, sondern ein geliehener Handgriff auf den
+    /// Eintrag aus `staende`: [`erkennen`] erwartet die Eintraege als
+    /// Ausschnitt, der so lange lebt wie der Lauf, und den gibt eine
+    /// [`RefCell`] nicht heraus. Eine [`OnceCell`] gibt ihn.
+    wurzelstand: OnceCell<Option<Rc<Lesestand>>>,
 }
 
 impl<'w> Lauf<'w> {
@@ -233,13 +270,39 @@ impl<'w> Lauf<'w> {
         Self {
             wurzel,
             haushalt: Cell::new(Haushalt::neu()),
-            stand: OnceCell::new(),
+            staende: RefCell::new(Vec::new()),
+            wurzelstand: OnceCell::new(),
         }
+    }
+
+    /// Die Eintraege eines Ortes, je Lauf hoechstens einmal gelesen.
+    ///
+    /// Die eine Stelle, an der ein Leselauf ueberhaupt angefordert wird. Wer
+    /// den Ort schon gelesen hat, bekommt den gemerkten Stand; wer der erste
+    /// ist, bezahlt ihn. Der Pfad kommt **aufgeloest** herein, sonst waeren
+    /// zwei Schreibweisen desselben Ortes zwei Eintraege.
+    fn stand_am(&self, pfad: &Path) -> Option<Rc<Lesestand>> {
+        let gemerkt = self
+            .staende
+            .borrow()
+            .iter()
+            .find(|(gelesen, _)| gelesen == pfad)
+            .map(|(_, stand)| stand.clone());
+        if let Some(stand) = gemerkt {
+            return stand;
+        }
+        let stand = self.lesen(pfad).map(Rc::new);
+        self.staende
+            .borrow_mut()
+            .push((pfad.to_path_buf(), stand.clone()));
+        stand
     }
 
     /// Die Eintraege des erkannten Ordners, hoechstens einmal gelesen.
     fn stand(&self) -> Option<&Lesestand> {
-        self.stand.get_or_init(|| self.lesen(self.wurzel)).as_ref()
+        self.wurzelstand
+            .get_or_init(|| self.stand_am(self.wurzel))
+            .as_deref()
     }
 
     /// Dieselben Eintraege als Ausschnitt, so wie [`erkennen`] sie erwartet.
@@ -289,20 +352,18 @@ impl<'w> Lauf<'w> {
 
     /// Fuehrt eine Rechnung am Ort eines Bausteins aus.
     ///
-    /// Ohne Ortsangabe ist der erkannte Ordner gemeint, und dann kostet die
-    /// Rechnung **keinen** eigenen Leselauf: sie nimmt den einen, den es
-    /// ohnehin gibt. Mit Ortsangabe kostet sie genau einen (C6.1).
+    /// Sie kostet **hoechstens** einen Leselauf (C6.1) und keinen, wenn dieser
+    /// Lauf den Ort schon gelesen hat — ob als erkannten Ordner oder als
+    /// Ortsangabe einer frueheren Zeile, denn beide Wege gehen durch
+    /// [`Lauf::stand_am`] und beide finden ihn unter demselben aufgeloesten
+    /// Pfad.
     fn am_ort<T>(
         &self,
         ort: &Ortsangabe,
         rechnen: impl FnOnce(&Path, &Lesestand) -> T,
     ) -> Option<T> {
         let ziel = self.zielordner(ort)?;
-        if ort.teile().is_empty() {
-            let stand = self.stand()?;
-            return Some(rechnen(&ziel, stand));
-        }
-        let stand = self.lesen(&ziel)?;
+        let stand = self.stand_am(&ziel)?;
         Some(rechnen(&ziel, &stand))
     }
 

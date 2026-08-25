@@ -1573,7 +1573,16 @@ fn ausgelieferte() -> Profile {
 /// das Verzeichnis, in dem sie liegt. Was gilt, steht in den zwei letzten
 /// Zeilen der Tabelle: im erkannten Ordner kostet er nichts, weil er die eine
 /// Lesung benutzt, die es dort ohnehin gibt; in einem Unterordner kostet er
-/// genau einen.
+/// genau einen, und auch den nur, wenn diese Zusammenfassung den Unterordner
+/// noch nicht gelesen hat.
+///
+/// **Der letzte Fall ist der, den die Runde 18 umgedreht hat.** Bis dahin
+/// lasen zwei Bausteine auf demselben Unterordner ihn zweimal, weil ein
+/// Unterordner nicht gemerkt wurde; seit
+/// `shared/decisions/260825-1725_*_liest-eine-zusammenfassung-denselben-…`
+/// gilt ohne Ausnahme: ein Ort wird je Zusammenfassung hoechstens einmal
+/// gelesen. Die Zahl der Laeufe ist damit die Zahl der **verschiedenen**
+/// genannten Orte und nicht die der Zeilen mit Ortsangabe.
 ///
 /// **Der Erkennungslauf steckt in jeder Zahl**, denn er ist ein Leselauf dieser
 /// Zusammenfassung und keiner daneben; das Profil hier findet seinen Ort ueber
@@ -1684,7 +1693,7 @@ fn ein_baustein_kostet_hoechstens_einen_leselauf_und_im_erkannten_ordner_keinen(
             1,
         ),
         (
-            "zwei Bausteine auf demselben Unterordner lesen ihn zweimal",
+            "zwei Bausteine auf demselben Unterordner teilen sich eine Lesung",
             r#"
   [[profil.zeile]]
   beschriftung = "Spec"
@@ -1694,7 +1703,7 @@ fn ein_baustein_kostet_hoechstens_einen_leselauf_und_im_erkannten_ordner_keinen(
   beschriftung = "Plan"
   vorhandensein = { ordner = "planning", muster = '_._plan-' }
 "#,
-            3,
+            2,
         ),
     ];
 
@@ -1754,6 +1763,72 @@ pfad = '.'
             .collect::<Vec<_>>(),
         [Wert::Zahl(3), Wert::Zahl(4)],
         "die zwei Unterordner sind trotzdem gelesen worden"
+    );
+}
+
+/// Der Merker ueber die gelesenen Orte lebt genau so lange wie **eine**
+/// Zusammenfassung.
+///
+/// Die dritte Haelfte derselben Zusage. Die Tabelle darueber misst, dass ein
+/// Ort **innerhalb** eines Laufs hoechstens einmal gelesen wird; hier steht die
+/// Gegenprobe, dass er es in jedem Lauf wieder wird. Ein Merker, der laenger
+/// lebte, zeigte dem Nutzer beim zweiten Blick auf denselben Ordner den Stand
+/// vom ersten — und zwar ohne jedes Anzeichen, dass er alt ist.
+///
+/// Gemessen wird beides, was ein zu langlebiger Merker verraten wuerde: die
+/// Zahl der Leselaeufe des zweiten Laufes und sein Ergebnis, nachdem sich der
+/// Ordner zwischen den Laeufen geaendert hat. Die erste Haelfte allein bliebe
+/// gruen, wenn jemand den Merker global haelt und die Buchung trotzdem vornimmt.
+#[test]
+fn zwei_zusammenfassungen_desselben_ordners_lesen_zweimal() {
+    let ordner = werkbankgestalt("merker-ueberlebt-die-zusammenfassung-nicht");
+    let profil = circleprofil(
+        r#"
+  [[profil.zeile]]
+  beschriftung = "Spec"
+  vorhandensein = { ordner = "planning", muster = '_._spec-' }
+
+  [[profil.zeile]]
+  beschriftung = "Plan"
+  vorhandensein = { ordner = "planning", muster = '_._plan-' }
+
+  [[profil.zeile]]
+  beschriftung = "Entscheidungen"
+  zaehlung = { ordner = "decisions" }
+"#,
+    );
+
+    // Drei verschiedene Orte auf vier Zeilen: der erkannte Ordner fuer die
+    // Kennzeichendatei, `planning` fuer die zwei Vorhandenseinszeilen zusammen,
+    // `decisions` fuer die Zaehlung.
+    let (erste, erster_haushalt) = gezaehlt(&profil, ordner.pfad());
+    assert_eq!(
+        erster_haushalt.leselaeufe(),
+        3,
+        "der erste Lauf liest nicht die drei verschiedenen Orte des Profils"
+    );
+    assert_eq!(
+        werte(&erste)[2].1,
+        &Wert::Zahl(3),
+        "der erste Lauf zaehlt nicht die drei Entscheidungsdatensaetze"
+    );
+
+    schreiben(
+        &ordner.ordner("decisions"),
+        "260825-1725_o_vierte-frage.md",
+        "# Vierte Frage?\n",
+    );
+
+    let (zweite, zweiter_haushalt) = gezaehlt(&profil, ordner.pfad());
+    assert_eq!(
+        zweiter_haushalt.leselaeufe(),
+        3,
+        "der zweite Lauf hat Staende des ersten benutzt, statt selbst zu lesen"
+    );
+    assert_eq!(
+        werte(&zweite)[2].1,
+        &Wert::Zahl(4),
+        "der zweite Lauf zeigt den Stand von vorhin"
     );
 }
 
@@ -1876,17 +1951,35 @@ fn die_zahl_der_oeffnungen_folgt_der_bausteinsorte() {
 /// hinaus.** Er zaehlt die stattgefundenen Leselaeufe und nicht die versuchten;
 /// ohne diese Zusage saehe eine Zusammenfassung, die dreizehnmal liest, genauso
 /// aus wie eine, die zwoelfmal liest und zweimal absagt.
+///
+/// **Dreizehn verschiedene Orte und nicht dreizehn Zeilen auf einem.** Seit ein
+/// Ort je Zusammenfassung hoechstens einmal gelesen wird, kosten dreizehn
+/// Zeilen auf demselben Unterordner einen einzigen Leselauf; das Profil
+/// erreichte die Grenze nicht mehr und diese Probe maesse nichts. Der Haushalt
+/// begrenzt die Arbeit auf der Platte, und Arbeit auf der Platte macht ein
+/// weiterer **Ort**.
 #[test]
 fn dreizehn_zaehlbausteine_erreichen_die_grenze_und_der_rest_traegt_den_platzhalter() {
     let ordner = werkbankgestalt("leselaufgrenze");
 
-    // Einer mehr, als nach dem Erkennungslauf noch hineinpasst.
+    // Einer mehr, als nach dem Erkennungslauf noch hineinpasst. Jede Zeile
+    // nennt ihren eigenen Ort, und jeder traegt dieselben drei Datensaetze wie
+    // `decisions`, damit die gerechneten Zeilen alle dieselbe Zahl tragen.
     let wie_viele = HOECHSTENS_LESELAEUFE + 1;
     let mut zeilen = String::new();
     for nummer in 0..wie_viele {
+        let ort = format!("grenze-{nummer:02}");
+        let angelegt = ordner.ordner(&ort);
+        for lfd in 0..3 {
+            schreiben(
+                &angelegt,
+                &format!("260825-{lfd:02}00_a_eine-frage.md"),
+                "# Eine Frage?\n",
+            );
+        }
         zeilen.push_str(&format!(
             "\n  [[profil.zeile]]\n  beschriftung = \"Entscheidungen {nummer}\"\n  \
-             zaehlung = {{ ordner = \"decisions\" }}\n"
+             zaehlung = {{ ordner = \"{ort}\" }}\n"
         ));
     }
 
@@ -2102,12 +2195,16 @@ fn eine_datei_wird_bis_zur_grenze_gelesen_und_nicht_weiter() {
 /// Gemessen an der eingebetteten Auslieferungsfassung und an je einem
 /// Pruefordner in der Gestalt, die das Profil erwartet. Die Zahlen stehen hier
 /// **genau** und nicht als „unter der Grenze": eine Probe, die allein
-/// `<= 7` prueft, bliebe gruen, wenn ein Profil von fuenf auf sieben
+/// `<= 7` prueft, bliebe gruen, wenn ein Profil von vier auf sieben
 /// Leselaeufe steigt, und genau der Schritt waere die Nachricht.
 ///
+/// **Vier und nicht mehr fuenf**, seit ein Ort je Zusammenfassung hoechstens
+/// einmal gelesen wird: die zwei Zeilen des Circle-Profils auf `planning`
+/// teilen sich seither eine Lesung.
+///
 /// ```text
-/// eine Runde       5 Leselaeufe   11 Oeffnungen   C6.7: hoechstens 7 und 11
-///   erkannter Ordner, planning zweimal, decisions, history
+/// eine Runde       4 Leselaeufe   11 Oeffnungen   C6.7: hoechstens 7 und 11
+///   erkannter Ordner, planning, decisions, history
 ///   Circle-Datensatz, zehn Verlaeufe
 /// die Wurzel       3 Leselaeufe    5 Oeffnungen   C6.4: hoechstens 12 und 24
 ///   erkannter Ordner, circles, shared/issues
@@ -2147,8 +2244,8 @@ fn die_zwei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     );
     assert_eq!(
         (haushalt.leselaeufe(), haushalt.oeffnungen()),
-        (5, 11),
-        "das groesste mitgelieferte Profil kostet nicht mehr die gemessenen fuenf \
+        (4, 11),
+        "das groesste mitgelieferte Profil kostet nicht mehr die gemessenen vier \
          Leselaeufe und elf Oeffnungen"
     );
     assert!(
