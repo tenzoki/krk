@@ -132,9 +132,10 @@
 //! Die Umrechnung in die Ortszeit macht [`crate::verzeichnis::sys::ortszeit`]
 //! ueber `localtime_r(3)`, also **mit dem Versatz, der zum Dateidatum galt**.
 //! Ein Zeitpunkt, den das MS-DOS-Feld nicht fasst (vor 1980, nach 2107),
-//! faellt auf `DateTime::DEFAULT` zurueck und bekommt eine Zeile in der
-//! Abschlussliste; abgewiesen wird der Eintrag deswegen nicht, so wie das
-//! Packen auch sonst aufschreibt statt abzuweisen.
+//! faellt auf `DateTime::DEFAULT` zurueck; abgewiesen wird der Eintrag
+//! deswegen nicht, und **gemeldet wird er auch nicht**. Warum beides, steht
+//! an [`zeit_uebernehmen`], und die Regel ist dieselbe wie am anderen Ende in
+//! [`super::entpacken`].
 //!
 //! Die Gegenrichtung steht in [`super::entpacken`], und die zwei Enden gehoeren
 //! zusammen: was hier hineingeschrieben wird, liest dort [`super::entpacken`]
@@ -414,7 +415,7 @@ fn datei_packen(
         }
     };
 
-    let wahl = dateiwahl(quelle.pfad, &angaben, steuerung);
+    let wahl = dateiwahl(&angaben);
     if let Err(fehler) = schreiber.start_file(name_im_archiv, wahl) {
         steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));
         return Packschritt::ArchivHin;
@@ -475,7 +476,7 @@ fn ordner_packen(
     schreiber: &mut ZipWriter<BufWriter<File>>,
     steuerung: &mut Steuerung,
 ) -> Packschritt {
-    let wahl = ordnerwahl(quelle.pfad, steuerung);
+    let wahl = ordnerwahl(quelle.pfad);
     if let Err(fehler) = schreiber.add_directory(name_im_archiv, wahl) {
         steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));
         return Packschritt::ArchivHin;
@@ -528,7 +529,7 @@ fn verknuepfung_packen(
             return Packschritt::Weiter;
         }
     };
-    let wahl = verknuepfungswahl(quelle.pfad, steuerung);
+    let wahl = verknuepfungswahl(quelle.pfad);
     match schreiber.add_symlink(name_im_archiv, verweis.to_string_lossy(), wahl) {
         Ok(()) => {
             steuerung.eintrag_fertig(quelle.pfad, 0);
@@ -547,12 +548,8 @@ fn verknuepfung_packen(
 /// `angaben` ist die Antwort, die [`datei_packen`] schon am offenen Deskriptor
 /// eingeholt hat, und sie wird hier nicht ein zweites Mal am Pfad erfragt.
 #[must_use = "ohne die Wahl traegt der Eintrag weder Rechte noch Datum"]
-fn dateiwahl(
-    pfad: &Path,
-    angaben: &fs::Metadata,
-    steuerung: &mut Steuerung,
-) -> FullFileOptions<'static> {
-    let wahl = zeit_uebernehmen(FullFileOptions::default(), pfad, Some(angaben), steuerung);
+fn dateiwahl(angaben: &fs::Metadata) -> FullFileOptions<'static> {
+    let wahl = zeit_uebernehmen(FullFileOptions::default(), Some(angaben));
     rechte_uebernehmen(wahl, Some(angaben), 0o644)
 }
 
@@ -565,14 +562,9 @@ fn dateiwahl(
 /// Gefragt wird am Pfad, denn einen Deskriptor auf den Ordner haelt der Packlauf
 /// nicht: er liest ihn ueber [`lesen`] und nicht ueber ein `open`.
 #[must_use = "ohne die Wahl traegt der Eintrag weder Rechte noch Datum"]
-fn ordnerwahl(pfad: &Path, steuerung: &mut Steuerung) -> FullFileOptions<'static> {
+fn ordnerwahl(pfad: &Path) -> FullFileOptions<'static> {
     let angaben = fs::metadata(pfad).ok();
-    let wahl = zeit_uebernehmen(
-        FullFileOptions::default(),
-        pfad,
-        angaben.as_ref(),
-        steuerung,
-    );
+    let wahl = zeit_uebernehmen(FullFileOptions::default(), angaben.as_ref());
     rechte_uebernehmen(wahl, angaben.as_ref(), 0o755)
 }
 
@@ -589,14 +581,9 @@ fn ordnerwahl(pfad: &Path, steuerung: &mut Steuerung) -> FullFileOptions<'static
 /// damit der Eintrag es auch dann traegt, wenn `add_symlink` es einmal nicht
 /// mehr selbst setzt.
 #[must_use = "ohne die Wahl traegt der Eintrag weder Rechte noch Datum"]
-fn verknuepfungswahl(pfad: &Path, steuerung: &mut Steuerung) -> FullFileOptions<'static> {
+fn verknuepfungswahl(pfad: &Path) -> FullFileOptions<'static> {
     let angaben = fs::symlink_metadata(pfad).ok();
-    let wahl = zeit_uebernehmen(
-        FullFileOptions::default(),
-        pfad,
-        angaben.as_ref(),
-        steuerung,
-    );
+    let wahl = zeit_uebernehmen(FullFileOptions::default(), angaben.as_ref());
     wahl.unix_permissions(0o120777)
 }
 
@@ -642,22 +629,29 @@ pub(super) const FELD_INFOZIP_UNIX: u16 = 0x5855;
 /// und zweimal als Zusatzfeld in Epochensekunden. Warum es zwei Zusatzfelder
 /// sein muessen, steht als Messtabelle in der Wurzel-`Cargo.toml`.
 ///
-/// **Ein Zeitpunkt, den keines der Felder fasst, weist den Eintrag nicht ab.**
-/// Er bekommt eine Zeile in der Abschlussliste und das Vorgabedatum des
+/// **Ein Zeitpunkt, den keines der Felder fasst, weist den Eintrag nicht ab,
+/// und er bleibt stumm.** Der Eintrag traegt dann das Vorgabedatum des
 /// Formats; ein Archiv ohne diese Datei waere die schlechtere Antwort als eine
-/// Datei mit einem Datum, das der Nutzer als falsch erkennt.
+/// Datei mit einem Datum, das der Nutzer als falsch erkennt. Dasselbe gilt fuer
+/// ein Aenderungsdatum, das nicht zu lesen war, und fuer ein Zusatzfeld, das
+/// nicht in den Eintrag kam.
+///
+/// Stumm, weil die Abschlussliste die Liste der **nicht bearbeiteten**
+/// Eintraege ist ([`super::fortschritt::Uebersprungen`]) und das Blatt sie dem
+/// Nutzer so ausschreibt: die Datei steht vollstaendig im Archiv, und sie dort
+/// als uebersprungen zu nennen, waere die falsche Auskunft. Das ist die Wahl,
+/// die [`super::entpacken`] fuer den Fehlschlag beim Rechte- und Datumsetzen
+/// trifft, und bis zum 260825 traf das Packen fuer dieselbe Lage die
+/// entgegengesetzte — mit bis zu drei Zeilen je Eintrag
+/// (`shared/issues/260825-2127_*_ein-gepackter-eintrag-mit-ersatzdatum-steht-
+/// in-der-liste-der-uebersprungenen.md`). Deshalb nimmt diese Funktion keine
+/// [`Steuerung`] entgegen: sie hat nichts zu melden.
 #[must_use = "ohne die Wahl traegt der Eintrag kein Datum"]
 fn zeit_uebernehmen(
     mut wahl: FullFileOptions<'static>,
-    pfad: &Path,
     angaben: Option<&fs::Metadata>,
-    steuerung: &mut Steuerung,
 ) -> FullFileOptions<'static> {
     let Some(geaendert) = angaben.and_then(|angaben| angaben.modified().ok()) else {
-        steuerung.ueberspringen(
-            pfad,
-            "das Aenderungsdatum war nicht zu lesen; der Eintrag traegt das Vorgabedatum",
-        );
         return wahl;
     };
     // Die Zugriffszeit ist die Zugabe und nicht der Gegenstand: fehlt sie, steht
@@ -666,13 +660,8 @@ fn zeit_uebernehmen(
         .and_then(|angaben| angaben.accessed().ok())
         .unwrap_or(geaendert);
 
-    match archivzeitpunkt(geaendert) {
-        Some(zeitpunkt) => wahl = wahl.last_modified_time(zeitpunkt),
-        None => steuerung.ueberspringen(
-            pfad,
-            "das Aenderungsdatum liegt ausserhalb dessen, was ein Zip-Eintrag fassen kann; \
-             der Eintrag traegt das Vorgabedatum",
-        ),
+    if let Some(zeitpunkt) = archivzeitpunkt(geaendert) {
+        wahl = wahl.last_modified_time(zeitpunkt);
     }
 
     if let (Some(geaendert), Some(gelesen)) = (epochensekunden(geaendert), epochensekunden(gelesen))
@@ -694,12 +683,9 @@ fn zeit_uebernehmen(
             (FELD_ERWEITERTE_ZEIT, erweitert),
             (FELD_INFOZIP_UNIX, infozip),
         ] {
-            if let Err(fehler) = wahl.add_extra_data(kennung, rumpf, false) {
-                steuerung.ueberspringen(
-                    pfad,
-                    format!("das Zeitfeld {kennung:#06x} kam nicht in den Eintrag: {fehler}"),
-                );
-            }
+            // Ein Feld, das nicht hineinkam, laesst das MS-DOS-Feld stehen;
+            // der Eintrag traegt dann ein Datum ohne Zone statt keines.
+            let _ = wahl.add_extra_data(kennung, rumpf, false);
         }
     }
 

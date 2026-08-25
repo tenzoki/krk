@@ -71,3 +71,18 @@ Wer 1 oder 3 wählt, zieht die Probe
 Archivs widerspricht, und sie tritt ohne Zutun des Nutzers auf.
 
 **Gefunden:** coderev, bei der Durchsicht der Runde 18 gegen `20eccd4..8478753`.
+
+---
+Resolved: Weg 1, stumm bleiben wie das Entpacken. `zeit_uebernehmen`
+(`crates/krk-core/src/operation/zippen.rs`) nimmt keine `Steuerung` mehr entgegen und ruft
+`ueberspringen` an keiner der drei Stellen mehr: ein unlesbares Aenderungsdatum, ein Zeitpunkt
+ausserhalb von 1980 bis 2107 und ein Zusatzfeld, das nicht in den Eintrag kam, lassen den
+Eintrag mit dem Vorgabedatum stehen und erzeugen keine Zeile. Die Begruendung steht einmal, am
+Doc-Kommentar von `zeit_uebernehmen`, und nennt `super::entpacken` als das andere Ende mit
+derselben Wahl; der Modulkopf verweist dorthin statt sie zu wiederholen. `entpacken.rs` ist
+unveraendert. Die drei Wahlbauer `dateiwahl`, `ordnerwahl` und `verknuepfungswahl` haben damit
+den `Steuerung`-Parameter verloren, den sie nur durchreichten. Die Probe heisst jetzt
+`ein_zeitpunkt_vor_1980_faellt_auf_das_vorgabedatum_und_bleibt_aus_der_abschlussliste`
+(`crates/krk-core/tests/operation.rs`), prueft `uebersprungen.is_empty()` neben Inhalt,
+Vorgabedatum und erweitertem Zeitfeld und ist gegen den alten Stand rot gefahren worden (eine
+Zeile mit dem Grund „ausserhalb dessen, was ein Zip-Eintrag fassen kann").

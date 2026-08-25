@@ -1544,14 +1544,19 @@ fn ein_archiv_mit_allein_dem_alten_info_zip_feld_gibt_sein_datum_her() {
     );
 }
 
-/// Ein Zeitpunkt vor 1980 faellt auf das Vorgabedatum zurueck und wird gemeldet.
+/// Ein Zeitpunkt vor 1980 faellt auf das Vorgabedatum zurueck, und die Abschlussliste
+/// bleibt leer.
 ///
-/// **Abgewiesen wird der Eintrag nicht.** Ein Archiv ohne diese Datei waere die
-/// schlechtere Antwort als eine Datei mit einem Datum, das der Nutzer als falsch
-/// erkennt; das Packen schreibt hier auf, statt abzuweisen. Genau eine Zeile,
-/// denn die Zusatzfelder tragen die Sekunde weiterhin und melden nichts.
+/// **Abgewiesen wird der Eintrag nicht, und gemeldet wird er auch nicht.** Ein
+/// Archiv ohne diese Datei waere die schlechtere Antwort als eine Datei mit
+/// einem Datum, das der Nutzer als falsch erkennt; und eine Zeile in der Liste
+/// der uebersprungenen waere die falsche Auskunft, denn die Datei liegt
+/// vollstaendig im Archiv. Das ist dieselbe Wahl, die `operation::entpacken`
+/// fuer den Fehlschlag beim Datumsetzen trifft, und bis zum 260825 traf das
+/// Packen die entgegengesetzte (`shared/issues/260825-2127_*_ein-gepackter-
+/// eintrag-mit-ersatzdatum-steht-in-der-liste-der-uebersprungenen.md`).
 #[test]
-fn ein_zeitpunkt_vor_1980_faellt_auf_das_vorgabedatum_und_erzeugt_eine_zeile() {
+fn ein_zeitpunkt_vor_1980_faellt_auf_das_vorgabedatum_und_bleibt_aus_der_abschlussliste() {
     let ordner = Pruefordner::neu("zip-vor-1980");
     let alt = ordner.datei("alt.txt", "inhalt");
     // 1. Januar 1970, also 15 Jahre vor dem, was das MS-DOS-Feld fassen kann.
@@ -1561,17 +1566,10 @@ fn ein_zeitpunkt_vor_1980_faellt_auf_das_vorgabedatum_und_erzeugt_eine_zeile() {
     let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![alt.clone()], &archiv));
 
     assert_eq!(bericht.abschluss, Abschluss::Fertig);
-    assert_eq!(
-        bericht.uebersprungen.len(),
-        1,
-        "erwartet ist genau eine Zeile, dasteht: {:?}",
-        bericht.uebersprungen
-    );
-    assert_eq!(bericht.uebersprungen[0].pfad, alt);
     assert!(
-        bericht.uebersprungen[0].grund.contains("Aenderungsdatum"),
-        "die Zeile nennt den Grund nicht: {}",
-        bericht.uebersprungen[0].grund
+        bericht.uebersprungen.is_empty(),
+        "die Datei liegt im Archiv und steht trotzdem in der Liste der uebersprungenen: {:?}",
+        bericht.uebersprungen
     );
     assert_eq!(archivinhalt(&archiv, "alt.txt"), "inhalt");
     let steht_da = archivzeit(&archiv, "alt.txt");
