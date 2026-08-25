@@ -61,9 +61,10 @@
 # Der `[[profil]]`-Block selbst ist die eine Stelle, an der ein unbekannter
 # Schlüssel NICHT gemeldet, sondern übergangen wird. Was er kostet, ist das,
 # was der Schreibfehler weggenommen hat: `kennzeichnen` statt `kennzeichen`
-# lässt das Profil ohne Erkennungsmuster zurück und fällt in die zweite
-# Reichweite, `zeilen` statt `zeile` lässt ein Profil ohne eine einzige Zeile
-# stehen, und das ohne jede Meldung.
+# nimmt dem Profil sein Erkennungsmuster, und es fällt in die zweite Reichweite
+# oder greift, steht ein `pfad` daneben, still über diesen allein; `zeilen`
+# statt `zeile` lässt ein Profil ohne eine einzige Zeile stehen, und das ohne
+# jede Meldung.
 
 # ----------------------------------------------------------------------------
 # Der Aufbau: Profil, Zeile, genau ein Baustein
@@ -626,12 +627,11 @@ kennzeichen = '^_._circle\.md$'
 #
 # DAS IST DIE ERKENNUNG, DIE DAS WURZELPROFIL OBEN FÜR SICH VERWIRFT, und sie
 # hat ihren Preis: ein `kennzeichen` sieht allein die Namen der Einträge und
-# kann nicht in den Ordner hineinsehen. Ein leeres `fusion-workbench`, also
-# der Zustand vor `/fusion:setup`, oder eine Datei dieses Namens genügt, und
-# die Vorschau zeigt statt der Metadaten sieben Zeilen Platzhalter. Der Preis
-# ist in Kauf genommen, weil die Auskunft an einer eingerichteten
-# Projektwurzel ihn aufwiegt; wer ihn nicht zahlen will, streicht dieses
-# Profil und sieht an der Projektwurzel die Metadaten.
+# kann nicht in den Ordner hineinsehen. Ein leeres `fusion-workbench` oder eine
+# Datei dieses Namens genügt, und die Vorschau zeigt statt der Metadaten sieben
+# Zeilen Platzhalter. Der Preis ist in Kauf genommen, weil die Auskunft an
+# einer eingerichteten Projektwurzel ihn aufwiegt; wer ihn nicht zahlen will,
+# streicht dieses Profil und sieht an der Projektwurzel die Metadaten.
 #
 # DIESE SIEBEN ZEILEN SIND DIE DES WURZELPROFILS GANZ OBEN, jede mit
 # `fusion-workbench/` vor der Ortsangabe. Sie stehen zweimal in dieser Datei und

@@ -54,3 +54,9 @@ Schwere **niedrig**: der Satz ändert an keinem Wert etwas, nur an der Begründu
    also ein anderes Verzeichnis und nur der Mechanismus derselbe.
 
 Die erste Möglichkeit kostet ein Wort und behauptet nichts.
+---
+Resolved: Möglichkeit 1 gewählt. Der Halbsatz „also der Zustand vor `/fusion:setup`" ist gestrichen;
+`resources/default-readers.toml:628-634` nennt jetzt zwei Zustände, die vorkommen: ein leeres
+Verzeichnis dieses Namens und eine Datei dieses Namens. Der Preis daneben steht unverändert.
+Der Absatz ist dabei von acht auf sieben Zeilen zurückgegangen. `cargo test -p krk-core --lib
+leseprofile`: 10 grün.

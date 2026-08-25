@@ -67,3 +67,16 @@ erst durch eine Nutzeränderung.
    und gehört zu `coder`, nicht in diese Datei.
 
 Die erste Möglichkeit ist die, die zum Zuschnitt der Runde passt.
+---
+Resolved: Möglichkeit 1 gewählt. `resources/default-readers.toml:61-67` sagt jetzt: „`kennzeichnen`
+statt `kennzeichen` nimmt dem Profil sein Erkennungsmuster, und es fällt in die zweite Reichweite
+oder greift, steht ein `pfad` daneben, still über diesen allein". Der Mechanismus ist nicht
+angefasst; `Profilblock` trägt weiter kein `deny_unknown_fields`. Beide Lagen am 260826-0124 über
+`leseprofil::datei::pruefen` an abgewandelten Fassungen gemessen: `kennzeichnen = 'x'` neben dem
+`pfad` der zwei Speicherprofile → 12 Profile, keine Meldung, `fusion-workbench/shared/history`
+bekommt sein Profil mit 1 Leselauf und 10 Öffnungen; `kennzeichnen` statt `kennzeichen` am
+Wurzelprofil, das keinen `pfad` trägt → 11 Profile und die Meldung „es nennt weder ein Pfadmuster
+noch eine Kennzeichendatei", `fusion-workbench` ohne Profil. `cargo test -p krk-core --lib
+leseprofile`: 10 grün, `die_eingebettete_fassung_besteht_ihre_eigene_pruefung` darunter.
+Die gleichlautende Lücke im Modulkopf von `crates/krk-core/src/leseprofil/datei.rs` („Wo
+`deny_unknown_fields` steht und wo nicht") ist nicht berührt: sie gehört `coder`.
