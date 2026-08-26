@@ -43,3 +43,12 @@ angelegt wurde.
   zweite ändert den Zuschnitt zwischen Ablage und Tastenmodul.
 - Gefunden bei der Umsetzung von Schritt 1; nicht behoben, weil die Änderung den
   Schritt verlässt.
+
+---
+Also seen: 260826-1225 by coderev — gilt am Baumstand `004ff72` unverändert.
+`tasten::belegung::laden` (`crates/krk-core/src/tasten/belegung.rs:1492-1512`) baut die
+`Ersetzung` weiter eine Ebene über `Zugang::laden` und trägt `Beiseite::Nicht`; der Code
+verweist inzwischen selbst auf diesen Datensatz (`belegung.rs:1507-1509`). Die beiden hier
+offengelassenen Wege stehen beide noch offen: `Zugang::beiseite_legen` ist weiter privat
+(`crates/krk-core/src/ablage/mod.rs:862`), und die semantische Prüfung wohnt weiter im
+Tastenmodul.

@@ -38,3 +38,6 @@ path or a table row — where wrapping is not possible. This one is plain prose 
 
 Rewrap the paragraph at the file's prevailing 78 characters, exactly as `b0eee2c` did for
 `resources/default-keymap.toml`.
+
+---
+Also seen: 260826-1221 by coderev — nachgemessen an HEAD 004ff72, `umfang.rs:146` steht unveraendert bei 113 Zeichen.

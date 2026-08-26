@@ -82,3 +82,17 @@ Zeile, weshalb sie hier nicht gegangen werden:
   deshalb hat die Probe den anderen nicht gefunden. Eine Behebung braucht eine
   zweite Probe mit einer Datei aus ungültigen Bytes, etwa `b"name = \"\xe4\"\n"`.
 - Gefunden bei der Durchsicht von Turn 1 der Runde 6; nicht behoben.
+
+---
+Also seen: 260826-1225 by coderev — gilt am Baumstand `004ff72` unverändert: `Zugang::laden`
+liest weiter mit `fs::read_to_string` (`crates/krk-core/src/ablage/mod.rs:628`), und der
+`Err`-Zweig darunter (`:636-646`) trägt für jeden Fehler, `InvalidData` eingeschlossen,
+`Grund::NichtLesbar` und `Beiseite::Nicht`. **Der erste der beiden hier genannten Wege ist
+inzwischen offen:** dieser Datensatz verwarf ihn mit „nur nimmt `atomar::schreiben` heute ein
+`&str`" — seit der Runde 9 nimmt es `&mut impl Read`
+(`crates/krk-core/src/ablage/atomar.rs:174`), und `Zugang::beiseite_legen` reicht bereits einen
+`&[u8]` als Leser herein (`mod.rs:672`). Ein `fs::read` mit anschließender Umwandlung könnte die
+Bytes damit ohne zweiten Schreibweg sichern. Der Weg zu den zwei Zetteldateien geht diesen Weg
+schon: `Textstand::Unlesbar` reicht seinen offenen Deskriptor an dieselbe Funktion
+(`mod.rs:772-773`), und `Unlesbarkeit::KeinText` wird dort ausdrücklich gesichert. Die Lücke
+besteht damit nur noch für die fünf TOML-Dateien, und die dafür genannte Hürde ist gefallen.

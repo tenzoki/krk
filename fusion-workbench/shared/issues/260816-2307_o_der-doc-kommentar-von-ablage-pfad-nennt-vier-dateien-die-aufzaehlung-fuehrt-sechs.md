@@ -10,3 +10,10 @@ Die zwölfte Runde bringt die siebte Ablagedatei und zieht dabei nach ihrem Abna
 
 ---
 Also seen: 260824-0940 by coder — die siebte Ablagedatei ist mit Schritt 2 der Runde 16 gekommen (`readers.toml`), nicht mit der zwölften; die drei Stellen in `ablage/mod.rs` sind dabei nicht mitgezogen worden und nennen weiter vier.
+
+---
+Also seen: 260826-1225 by coderev — gilt am Baumstand `004ff72`. Die drei Stellen stehen
+unverändert auf `crates/krk-core/src/ablage/mod.rs:45`, `:541` (`Ablage::pfad`) und `:582`
+(`Zugang::pfad`); `Datei::ALLE` führt sieben Werte, nicht mehr sechs. Die zwei benachbarten
+Stellen, die dieser Datensatz ausdrücklich schützt, sind inzwischen auf „fünf TOML-Dateien"
+nachgezogen (`mod.rs:587`, `:686`) und dürfen weiterhin nicht mitgezogen werden.

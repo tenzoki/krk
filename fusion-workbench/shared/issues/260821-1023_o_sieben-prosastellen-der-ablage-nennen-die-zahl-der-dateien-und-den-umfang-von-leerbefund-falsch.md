@@ -161,3 +161,15 @@ Zettel" zu lesen, wie `pfade.rs` es ausschreibt.
 
 **Nachgetragen von:** coder, bei der Befundräumung am 260824-1245, veranlasst durch
 `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1014_c_vierzehn-prosastellen-der-ablage-sagen-weiter-vier-und-ein-offener-datensatz-schuetzt-drei-davon.md`
+
+---
+Also seen: 260826-1225 by coderev — am Baumstand `004ff72` nachgemessen: **eine der sieben
+Stellen ist behoben, sechs stehen.** `mod.rs:154` („Die drei übrigen tragen
+`Leerbefund::Vorgabe`") ist nachgezogen und liest heute „Die vier uebrigen TOML-Dateien und die
+zwei Zettel tragen [`Leerbefund::Vorgabe`]" (`mod.rs:160-161`). Die fünf Stellen der Tabelle
+sagen weiter „vier" und stehen jetzt auf `mod.rs:45`, `:499`, `:501`, `:541`, `:582`; wahr sind
+**sieben**. Die Stelle `pfade.rs:1-2` steht ebenfalls, und der Befund dort ist gewachsen: der
+Modulkopf nennt weiter zwei Fragen („in welchen zwei Formaten sie stehen"), während die Datei
+inzwischen **drei** abgeleitete Fragen beantwortet — `Datei::format`, `Datei::leerbefund` und
+seit der Runde 16 `Datei::ersatz` (`pfade.rs:328`). Die Nebenbeobachtung zu `pfade.rs:219-220`
+gilt unverändert an `pfade.rs:117-119`.
