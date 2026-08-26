@@ -15,3 +15,6 @@ Die Frage, welche Tasten die Schaltflächen der Belegungsansicht behalten, ist s
 ## Vorschlag
 
 Reconciler: `Implemented: crates/krk-ui/src/appkit/belegungsansicht.rs:710` eintragen und auf `_i_` setzen, oder dem Nutzer die Annahme vorlegen.
+
+---
+Resolved: Abgleich 260826-1452, am Baum `de1e2db` — die vier zitierten Stellen tragen den Bau (`belegungsansicht.rs:190-206` `SCHALTFLAECHEN` mit Cmd+T / Cmd+R / Cmd+Eingabe, `:710`, `:745-752` mit `Taste::EingabeMitBefehl`; `belegungsmodell.rs:701-709`). Der Datensatz `shared/decisions/260813-0053_*_welche-tasten-behalten-die-schaltflaechen-…` trägt jetzt `Answered:` (Spec C1.16, Empfehlung ohne Nutzerantwort) und `Implemented:` (`ced0ee7`) und steht auf `_i_`. Die Annahme durch den Nutzer ist damit nicht ersetzt; der Vermerk sagt ausdrücklich, dass die Antwort aus dem Bau stammt.

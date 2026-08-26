@@ -38,7 +38,7 @@ Möglichkeit 1. Der Preis von Möglichkeit 2 fällt genau dort an, wo der Nutzen
 Die Runde fährt bis zu einer Antwort auf Möglichkeit 1.
 
 ---
-Answered:
-Implemented:
+Answered: shared/planning/260813-0053_o_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md:183 (C1.16) — Möglichkeit 1, die Empfehlung: die Suche nimmt Leertaste und Eingabetaste, „Zuweisen“ auf Cmd+T, „Fertig“ auf Cmd+Eingabe über `Taste::EingabeMitBefehl`. Keine Nutzerantwort im Datensatz; die Runde 7 hat auf der Empfehlung gebaut (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/history/260813-0647-reconciliation.md:132`). Eingetragen vom Abgleich 260826-1452 nach `shared/issues/260826-1442_*_die-frage-welche-tasten-die-schaltflaechen-behalten-ist-seit-runde-7-gebaut-und-steht-noch-offen.md`.
+Implemented: ced0ee7 — `crates/krk-ui/src/appkit/belegungsansicht.rs:190-206` (`SCHALTFLAECHEN`: Zuweisen Cmd+T, Auslieferungszustand Cmd+R, Fertig Cmd+Eingabe), `:710` (Cmd+T statt Leertaste), `:745-752` (`Taste::EingabeMitBefehl`), `crates/krk-ui/src/belegungsmodell.rs:701-709` (`zeichen_anhaengen` nimmt jedes Zeichen aus `traegt_ein_dateiname`, die Leertaste eingeschlossen). Am Baum `de1e2db` gelesen.
 Deferred:
 Superseded by:

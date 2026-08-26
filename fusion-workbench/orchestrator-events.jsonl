@@ -1680,3 +1680,7 @@
 {"ts":"2026-08-26T12:32:21","event":"task_start","turn":5,"task":"R14","agent":"coderev"}
 {"ts":"2026-08-26T12:45:20","event":"task_done","turn":5,"task":"R14","agent":"coderev","detail":"13/13 Dateien, 13 Defekte (4 mittel, 9 niedrig); Tag bleibt bei Scheitern lokal, blockiert nicht"}
 {"ts":"2026-08-26T12:47:42","event":"task_done","turn":5,"task":"R13","agent":"coderev","detail":"14/14 Dateien, 10 Defekte (2 mittel, 8 niedrig); bereich_des_kommandos 79/79, schiebt_auffrischung_auf 6/6"}
+{"ts":"2026-08-26T12:48:39","event":"commit","turn":5,"detail":"de1e2db — 2 Berichte, 23 Datensaetze"}
+{"ts":"2026-08-26T12:48:39","event":"coherence_review","turn":5,"detail":"verdict=ok; 2 Berichte, 23 Datensaetze, 0 hoch; 155/155 Dateien; 3 offene Entscheidungen gelesen, keine beantwortet, 1 als gebaut-aber-offen gemeldet"}
+{"ts":"2026-08-26T12:48:39","event":"turn_end","turn":5,"detail":"2 Aufgaben erledigt, 23 Datensaetze, 1 Commit; Arbeitsliste leer, konvergiert"}
+{"ts":"2026-08-26T12:55:29","event":"reconciliation","detail":"0 Abweichungen in 15 Stichproben; Urteil review-needed, Empfehlung revise Grounding (Curator ueber CLAUDE.md); 1 Entscheidung _o_->_i_, 1 Defekt _o_->_c_"}

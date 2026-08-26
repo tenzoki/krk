@@ -51,3 +51,6 @@ weiterhin geltende Zusage und den weggefallenen zweiten Beteiligten. Nur der Nac
 In `CLAUDE.md` den Halbsatz ab „und der zweite Greifer ist nicht nur ein zweiter Messlauf" bis
 zum Verweis auf `260810-1925` streichen und die Voraussetzung stehen lassen. Der Doc-Kommentar im
 Code ist bereits die richtige Fassung und kann als Vorlage dienen.
+
+---
+Abgleich 260826-1452, am Baum `de1e2db`: der Datensatz zitiert richtig. `CLAUDE.md:129` trägt den Halbsatz wörtlich („und der zweite Greifer ist nicht nur ein zweiter Messlauf: die Probe `der_messplan_traegt_die_pruefsitzung_…` ruft `plan_schreiben`, also räumt auch `cargo test` ab") mit dem Verweis auf `260810-1925`, und der Verweis zeigt auf `shared/issues/260810-1925_c_…` (Marker `_c_`). `plan_schreiben` steht in `crates/krk-bench/src/messen.rs:1661` und hat genau einen Rufer außerhalb von Doc-Kommentaren, `messen.rs:1029`; die Probe geht über `plan_in_verzeichnis_schreiben` (`messen.rs:2720-2721`), die zweite über `Messplanwaechter::in_verzeichnis` (`messen.rs:2769`). Bleibt `_o_`: die Behebung ist ein Satz in `CLAUDE.md` und gehört dem Curator, nicht dem Abgleich.
