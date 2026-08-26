@@ -254,11 +254,16 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
             lauf.wiederholungen, lauf.runden
         ),
     );
-    zeile("Pruefordner A", &messen::ordner_beschreiben(&lauf.ordner_a));
+    zeile(
+        "Pruefordner A",
+        &messen::ordner_beschreiben_mit_gelesenen(&lauf.ordner_a, ergebnis.eintraege_a),
+    );
+    // B traegt keine eigene kopflose Reihe: er dient dem Fensterwechsel und
+    // wird nicht gelesen. Fuer ihn bleibt der Steckbrief die einzige Auskunft.
     zeile("Pruefordner B", &messen::ordner_beschreiben(&lauf.ordner_b));
     zeile(
         "Pruefordner 100k",
-        &messen::ordner_beschreiben(&lauf.ordner100k),
+        &messen::ordner_beschreiben_mit_gelesenen(&lauf.ordner100k, ergebnis.eintraege_gross),
     );
     zeile(
         "Unterordner L6",
@@ -836,6 +841,8 @@ mod tests {
             bildwiederholrate: 60,
             bildlaenge,
             unterordner: PathBuf::from("/tmp/a-l6"),
+            eintraege_a: 10_000,
+            eintraege_gross: 100_000,
             systemlast_vorher: "{ 1.0 1.0 1.0 }".to_owned(),
             systemlast_nachher: "{ 1.2 1.1 1.0 }".to_owned(),
             zusagen: vec![
@@ -885,6 +892,14 @@ mod tests {
             "vor dem Lauf { 1.0 1.0 1.0 }",
         ] {
             assert!(text.contains(angabe), "im Kopf fehlt {angabe}:\n{text}");
+        }
+        // Die tatsaechlich gelesene Zahl steht im Kopf, nicht nur die
+        // behauptete: ohne sie sagt der Bericht nicht, worauf gemessen wurde.
+        for angabe in ["Eintraege je Lauf: 10000", "Eintraege je Lauf: 100000"] {
+            assert!(
+                text.contains(angabe),
+                "im Kopf fehlt die gelesene Zahl ({angabe}):\n{text}"
+            );
         }
         // Alle zehn Kennungen stehen in der Tabelle.
         for kennung in [

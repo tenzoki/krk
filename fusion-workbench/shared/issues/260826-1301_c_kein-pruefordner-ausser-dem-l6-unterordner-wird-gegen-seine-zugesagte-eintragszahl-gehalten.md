@@ -59,3 +59,6 @@ Steckbrief lesen und A und B gegen 10.000, den dritten gegen 100.000 halten; und
 `Messreihe` die tatsächlich gelesene Zahl gegen den Steckbrief prüfen, statt sie fallen zu
 lassen. Für `messen --kopflos` genügt der zweite Teil, weil dort keine feste Zahl zugesagt ist —
 aber ein Abbruch bei Abweichung ist auch dort richtiger als eine Zeile im Kopf.
+
+---
+Resolved: 260826-2140 — pruefordner_pruefen traegt die zwei Regeln aus unterordner_sicherstellen an einer Stelle; Gesamtlauf::fahren ruft sie fuer A, B und 100k, Messreihe::fahren haelt die gelesene Zahl gegen den Steckbrief, wo einer daliegt, und Gesamtergebnis reicht sie in den Berichtskopf; Probe rot vor der Behebung (Plan 260826-1811 Schritt 6).

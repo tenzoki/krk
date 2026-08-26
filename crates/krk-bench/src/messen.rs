@@ -179,6 +179,26 @@ impl Messreihe {
             }
         }
 
+        // Zwanzig uebereinstimmende Laeufe belegen, dass die Reihe **dasselbe**
+        // gemessen hat, nicht dass sie den zugesagten Bestand gemessen hat. Der
+        // Steckbrief beantwortet die zweite Frage, wenn einer daliegt: ein
+        // hineingerutschter `.DS_Store`, ein von Hand geloeschter Eintrag und
+        // ein Ordner aus einem aelteren Lauf fallen damit auf. Liegt keiner da,
+        // bleibt die Reihe zulaessig — `messen --kopflos` darf auf einen Ordner
+        // zeigen, den es nicht selbst erzeugt hat (siehe
+        // `fixture::steckbrief_lesen`).
+        if let Some(brief) = fixture::steckbrief_lesen(ordner)
+            && brief.eintraege != eintraege
+        {
+            return Err(io::Error::other(format!(
+                "{} traegt laut Steckbrief {} Eintraege, gelesen wurden aber {eintraege}. \
+                 Die Reihe misst nicht den festgehaltenen Bestand und wird verworfen; \
+                 loesche den Ordner samt Steckbrief und erzeuge ihn neu.",
+                ordner.display(),
+                brief.eintraege
+            )));
+        }
+
         Ok(Self {
             ordner: ordner.to_path_buf(),
             cache,
@@ -946,6 +966,19 @@ const STARTWERT_L6: u64 = 4;
 /// Wie viele Eintraege der L6-Unterordner traegt: die Obergrenze der Zusage.
 const EINTRAEGE_L6: usize = 1_000;
 
+/// Wie viele Eintraege die Pruefordner A und B tragen.
+///
+/// Die Zahl ist Bestandteil der Zusage und nicht Beiwerk: L3 sagt 400 ms fuer
+/// **10.000** Eintraege zu. Ein Pruefordner mit 3.000 Eintraegen haelt L3
+/// muehelos und misst dabei etwas anderes, als C8 zusagt.
+const EINTRAEGE_A: usize = 10_000;
+
+/// Wie viele Eintraege der grosse Pruefordner traegt.
+///
+/// Aus demselben Grund wie [`EINTRAEGE_A`]: L10 sagt 4 s fuer **100.000**
+/// Eintraege zu.
+const EINTRAEGE_GROSS: usize = 100_000;
+
 /// Der Gesamtlauf: alle zehn Zusagen aus C8 in einem Bericht.
 ///
 /// Drei Strecken laufen zusammen, und die Zusammenfuehrung ist der Zweck des
@@ -956,11 +989,11 @@ const EINTRAEGE_L6: usize = 1_000;
 pub struct Gesamtlauf {
     /// Das Binaerprogramm im Buendel, `KRK.app/Contents/MacOS/krk`.
     pub programm: PathBuf,
-    /// Pruefordner A mit 10.000 Eintraegen.
+    /// Pruefordner A; traegt [`EINTRAEGE_A`] Eintraege.
     pub ordner_a: PathBuf,
-    /// Pruefordner B mit 10.000 Eintraegen an einem anderen Pfad.
+    /// Pruefordner B an einem anderen Pfad; traegt ebenfalls [`EINTRAEGE_A`].
     pub ordner_b: PathBuf,
-    /// Der Pruefordner mit 100.000 Eintraegen.
+    /// Der grosse Pruefordner; traegt [`EINTRAEGE_GROSS`] Eintraege.
     pub ordner100k: PathBuf,
     /// Das Kopierziel fuer L8 und L9, auf demselben APFS-Datentraeger wie A.
     pub kopierziel: PathBuf,
@@ -973,6 +1006,10 @@ pub struct Gesamtlauf {
 /// Die Rohwerte einer Runde des Gesamtlaufs.
 #[derive(Debug, Clone, Default)]
 struct Gesamtrohrunde {
+    /// Wie viele Eintraege die kopflose Reihe auf Pruefordner A gelesen hat.
+    eintraege_a: usize,
+    /// Wie viele Eintraege die kopflose Reihe auf dem grossen Ordner gelesen hat.
+    eintraege_gross: usize,
     l1: Vec<Duration>,
     l2: Vec<Duration>,
     l3: Vec<Duration>,
@@ -996,6 +1033,12 @@ pub struct Gesamtergebnis {
     pub bildlaenge: Duration,
     /// Der Unterordner, an dem L6 gemessen wurde.
     pub unterordner: PathBuf,
+    /// Wie viele Eintraege die Laeufe auf Pruefordner A tatsaechlich gelesen
+    /// haben. Bis zum 260826 fiel diese Zahl aus der Messreihe heraus, und der
+    /// Bericht wies allein aus, was der Steckbrief **behauptet**.
+    pub eintraege_a: usize,
+    /// Wie viele Eintraege die Laeufe auf dem grossen Pruefordner gelesen haben.
+    pub eintraege_gross: usize,
     /// Die Systemlast unmittelbar vor dem Lauf (`sysctl vm.loadavg`).
     pub systemlast_vorher: String,
     /// Die Systemlast unmittelbar nach dem Lauf.
@@ -1016,13 +1059,21 @@ impl Gesamtergebnis {
 impl Gesamtlauf {
     /// Faehrt alle Runden und setzt das Ergebnis zusammen.
     pub fn fahren(&self) -> io::Result<Gesamtergebnis> {
-        for ordner in [&self.ordner_a, &self.ordner_b, &self.ordner100k] {
+        for (ordner, erwartet) in [
+            (&self.ordner_a, EINTRAEGE_A),
+            (&self.ordner_b, EINTRAEGE_A),
+            (&self.ordner100k, EINTRAEGE_GROSS),
+        ] {
             if !ordner.is_dir() {
                 return Err(io::Error::other(format!(
                     "{} ist kein Verzeichnis",
                     ordner.display()
                 )));
             }
+            // Dieselbe Pruefung, die der L6-Unterordner seit jeher bekommt: ein
+            // Verzeichnis zu sein macht einen Ordner noch nicht zu dem, auf den
+            // sich L3 und L10 beziehen.
+            pruefordner_pruefen(ordner, erwartet)?;
         }
         kopierziel_pruefen(&self.ordner_a, &self.kopierziel)?;
         let unterordner = unterordner_sicherstellen(&self.ordner_a)?;
@@ -1051,11 +1102,20 @@ impl Gesamtlauf {
                 .collect()
         };
         let (bildwiederholrate, bildlaenge) = bildlaenge_bilden(rate)?;
+        let eintraege_a =
+            ueber_runden_einig(&rohrunden, |runde| runde.eintraege_a, "Pruefordner A")?;
+        let eintraege_gross = ueber_runden_einig(
+            &rohrunden,
+            |runde| runde.eintraege_gross,
+            "der grosse Pruefordner",
+        )?;
 
         Ok(Gesamtergebnis {
             bildwiederholrate,
             bildlaenge,
             unterordner,
+            eintraege_a,
+            eintraege_gross,
             systemlast_vorher,
             systemlast_nachher,
             zusagen: vec![
@@ -1204,6 +1264,8 @@ impl Gesamtlauf {
         Ok((
             rate,
             Gesamtrohrunde {
+                eintraege_a: reihe_a.eintraege,
+                eintraege_gross: reihe_gross.eintraege,
                 l1,
                 l2: reihe_a.groessen[0].werte.clone(),
                 l3: reihe_a.groessen[1].werte.clone(),
@@ -1476,36 +1538,96 @@ pub fn kopierziel_pruefen(ordner_a: &Path, kopierziel: &Path) -> io::Result<()> 
     Ok(())
 }
 
-/// Stellt den L6-Unterordner mit 1.000 Eintraegen neben Pruefordner A sicher.
+/// Zieht eine Zahl aus allen Runden zusammen, die in jeder Runde dieselbe sein muss.
+///
+/// Die Eintragszahl eines Pruefordners darf sich zwischen zwei Runden nicht
+/// aendern: taete sie es, haetten die Runden verschiedene Bestaende gemessen und
+/// stuenden trotzdem unter einer Ueberschrift. Der Bericht weist eine Zahl aus,
+/// also muss es eine geben.
+fn ueber_runden_einig(
+    runden: &[Gesamtrohrunde],
+    lesen: fn(&Gesamtrohrunde) -> usize,
+    was: &str,
+) -> io::Result<usize> {
+    let erste = runden.first().map(lesen).ok_or_else(|| {
+        io::Error::other("der Gesamtlauf hat keine einzige Runde gefahren".to_owned())
+    })?;
+    for (nummer, runde) in runden.iter().enumerate() {
+        let gelesen = lesen(runde);
+        if gelesen != erste {
+            return Err(io::Error::other(format!(
+                "Runde {} hat auf {was} {gelesen} Eintraege gelesen, Runde 1 aber {erste}. \
+                 Die Runden messen nicht denselben Bestand; der Lauf wird verworfen.",
+                nummer + 1
+            )));
+        }
+    }
+    Ok(erste)
+}
+
+/// Haelt einen Pruefordner gegen die Eintragszahl, die seine Zusage nennt.
+///
+/// Zwei Regeln, und beide Richtungen sind gemeint:
+///
+/// - Ein Steckbrief mit einer **anderen** Zahl haelt den Lauf an. Die Zahl ist
+///   Bestandteil der Zusage: L3 gilt fuer 10.000 Eintraege, L10 fuer 100.000,
+///   L6 fuer 1.000. Ein Ordner mit 3.000 Eintraegen haelt L3 muehelos und misst
+///   nicht, was zugesagt ist.
+/// - Ein Ordner **ohne** Steckbrief haelt den Lauf ebenso an. Was darin liegt,
+///   ist dann unbekannt, und ein gruenes Gate auf unbekanntem Bestand ist
+///   schlimmer als ein abgebrochener Lauf.
+///
+/// Die Fehlermeldung nennt beide Zahlen, damit der Messende sieht, wo der
+/// Bestand steht und wo er stehen muesste.
+///
+/// **Die kopflose Strecke faehrt diese Pruefung ausdruecklich nicht.** Dort ist
+/// keine feste Zahl zugesagt, und `messen --kopflos` darf auf einen beliebigen
+/// Ordner zeigen; [`Messreihe::fahren`] haelt die gelesene Zahl deshalb nur
+/// dann gegen den Steckbrief, wenn einer daliegt.
+fn pruefordner_pruefen(ordner: &Path, erwartet: usize) -> io::Result<()> {
+    match fixture::steckbrief_lesen(ordner) {
+        Some(brief) if brief.eintraege == erwartet => Ok(()),
+        Some(brief) => Err(io::Error::other(format!(
+            "{} traegt laut Steckbrief {} Eintraege statt der zugesagten {erwartet}. \
+             Loesche den Ordner samt Steckbrief; den L6-Unterordner legt der Lauf \
+             dann selbst neu an, die drei Pruefordner aus C8 erzeugt \
+             `krk-bench fixture --eintraege {erwartet} --out {}`.",
+            ordner.display(),
+            brief.eintraege,
+            ordner.display()
+        ))),
+        None => Err(io::Error::other(format!(
+            "{} steht ohne Steckbrief da; auf unbekanntem Bestand misst diese Strecke nicht. \
+             Loesche den Ordner; den L6-Unterordner legt der Lauf dann selbst neu an, \
+             die drei Pruefordner aus C8 erzeugt \
+             `krk-bench fixture --eintraege {erwartet} --out {}`.",
+            ordner.display(),
+            ordner.display()
+        ))),
+    }
+}
+
+/// Stellt den L6-Unterordner mit [`EINTRAEGE_L6`] Eintraegen neben Pruefordner A
+/// sicher.
 ///
 /// Er entsteht nach demselben Verfahren wie die drei Pruefordner aus C8, mit
 /// eigenem Startwert und Steckbrief, und wird wiederverwendet, wenn er schon
-/// steht. Ein vorhandener Ordner ohne passenden Steckbrief wird abgewiesen,
-/// statt auf unbekanntem Bestand zu messen.
+/// steht. Ob der vorgefundene Bestand der zugesagte ist, beantwortet
+/// [`pruefordner_pruefen`]; hier bleibt allein das Anlegen.
 fn unterordner_sicherstellen(ordner_a: &Path) -> io::Result<PathBuf> {
     let name = ordner_a
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| "pruefordner".to_owned());
     let unterordner = ordner_a.with_file_name(format!("{name}-l6"));
-    match fixture::steckbrief_lesen(&unterordner) {
-        Some(brief) if brief.eintraege == EINTRAEGE_L6 => Ok(unterordner),
-        Some(brief) => Err(io::Error::other(format!(
-            "{} traegt laut Steckbrief {} Eintraege statt {EINTRAEGE_L6}. \
-             Loesche den Ordner samt Steckbrief; der Lauf legt ihn neu an.",
-            unterordner.display(),
-            brief.eintraege
-        ))),
-        None if unterordner.exists() => Err(io::Error::other(format!(
-            "{} steht ohne Steckbrief da; auf unbekanntem Bestand misst L6 nicht. \
-             Loesche den Ordner; der Lauf legt ihn neu an.",
-            unterordner.display()
-        ))),
-        None => {
-            fixture::erzeugen(&unterordner, EINTRAEGE_L6, STARTWERT_L6)?;
-            Ok(unterordner)
-        }
+    // Angelegt wird nur, wo weder Steckbrief noch Ordner steht. Ein Ordner ohne
+    // Steckbrief wird ausdruecklich **nicht** ueberschrieben; er faellt an die
+    // Pruefung und haelt den Lauf an.
+    if fixture::steckbrief_lesen(&unterordner).is_none() && !unterordner.exists() {
+        fixture::erzeugen(&unterordner, EINTRAEGE_L6, STARTWERT_L6)?;
     }
+    pruefordner_pruefen(&unterordner, EINTRAEGE_L6)?;
+    Ok(unterordner)
 }
 
 /// Der geschriebene Messplan, solange der Lauf ihn braucht.
@@ -2100,6 +2222,27 @@ pub(crate) fn ordner_beschreiben(ordner: &Path) -> String {
     }
 }
 
+/// Wie [`ordner_beschreiben`], zusaetzlich mit der tatsaechlich gelesenen Zahl.
+///
+/// Der Steckbrief sagt, was danebenliegen **soll**; die Reihe sagt, was sie
+/// gelesen **hat**. Der Abnahmebericht wies bis zum 260826 allein das erste aus.
+/// Die Form ist dieselbe, die der Bericht der kopflosen Strecke schon nimmt.
+pub(crate) fn ordner_beschreiben_mit_gelesenen(ordner: &Path, gelesen: usize) -> String {
+    match fixture::steckbrief_lesen(ordner) {
+        Some(brief) => format!(
+            "{} (Startwert {}); Eintraege je Lauf: {gelesen} (laut Steckbrief: {})",
+            ordner.display(),
+            brief.startwert,
+            brief.eintraege
+        ),
+        None => format!(
+            "{} (kein Steckbrief daneben; Startwert unbekannt); \
+             Eintraege je Lauf: {gelesen} (laut Steckbrief: keiner)",
+            ordner.display()
+        ),
+    }
+}
+
 /// Was der Bericht ueber sich selbst sagen muss, damit seine Zahlen lesbar sind.
 const LESART: &str = "\
 Lesart
@@ -2648,6 +2791,56 @@ mod tests {
         let fehler = Messreihe::fahren(ordner.pfad(), Cache::Warm, 0)
             .expect_err("das haette scheitern muessen");
         assert_eq!(fehler.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    #[test]
+    fn eine_messreihe_verwirft_einen_ordner_der_seinem_steckbrief_widerspricht() {
+        let ordner = Wegwerfordner::neu("steckbrief-widerspruch");
+        fixture::erzeugen(ordner.pfad(), 10, 1).expect("Erzeugen gescheitert");
+        // Der elfte Eintrag: ein hineingerutschter Fremdling, wie ihn ein
+        // `.DS_Store` oder ein Rest aus einem aelteren Lauf hinterlaesst.
+        fs::write(ordner.pfad().join("zzz-fremdling.txt"), b"x").expect("Schreiben gescheitert");
+
+        let fehler = Messreihe::fahren(ordner.pfad(), Cache::Warm, 2)
+            .expect_err("die Reihe haette den Ordner verwerfen muessen");
+        let text = fehler.to_string();
+        assert!(text.contains("11"), "die gelesene Zahl fehlt: {text}");
+        assert!(
+            text.contains("10"),
+            "die Zahl des Steckbriefs fehlt: {text}"
+        );
+    }
+
+    #[test]
+    fn ein_pruefordner_wird_gegen_seine_zugesagte_eintragszahl_gehalten() {
+        let ordner = Wegwerfordner::neu("zugesagte-zahl");
+        fixture::erzeugen(ordner.pfad(), 3_000, 1).expect("Erzeugen gescheitert");
+
+        // Der Steckbrief sagt 3.000, die Zusage verlangt 10.000: abgewiesen,
+        // und die Meldung nennt beide Zahlen.
+        let fehler = pruefordner_pruefen(ordner.pfad(), EINTRAEGE_A)
+            .expect_err("3.000 Eintraege sind nicht die zugesagten 10.000");
+        let text = fehler.to_string();
+        assert!(
+            text.contains("3000"),
+            "die Zahl des Steckbriefs fehlt: {text}"
+        );
+        assert!(text.contains("10000"), "die zugesagte Zahl fehlt: {text}");
+
+        // Passt der Steckbrief zur Erwartung, kommt der Ordner durch.
+        pruefordner_pruefen(ordner.pfad(), 3_000)
+            .expect("der passende Ordner haette durchgehen muessen");
+
+        // Ein Ordner ohne Steckbrief wird abgewiesen, statt auf unbekanntem
+        // Bestand zu messen.
+        let ohne = Wegwerfordner::neu("ohne-steckbrief");
+        fs::create_dir_all(ohne.pfad()).expect("Anlegen gescheitert");
+        let fehler = pruefordner_pruefen(ohne.pfad(), EINTRAEGE_A)
+            .expect_err("ein Ordner ohne Steckbrief haette abgewiesen werden muessen");
+        assert!(
+            fehler.to_string().contains("ohne Steckbrief"),
+            "die Meldung nennt den fehlenden Steckbrief nicht: {fehler}"
+        );
     }
 
     #[test]
