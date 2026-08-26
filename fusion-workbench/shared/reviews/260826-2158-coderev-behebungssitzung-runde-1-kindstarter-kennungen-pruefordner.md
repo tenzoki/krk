@@ -147,3 +147,16 @@ Nichts blockiert eine Auslieferung; keiner der sechs Befunde ist ein Rückschrit
 ## Verification
 
 `git show <commit>` je Commit und `git diff --stat 9c02863..fc829c8`; die neun geänderten Dateien am Arbeitsbaum gelesen; `grep`/`awk` am Baum für `current_exe`, `--ignored`, `AUFTRAG_`, `pub enum` mit `#[cfg`, `; 79]`, `ordner_b`, `Messreihe::fahren`, `kennung()`; `cargo test --workspace`, `cargo clippy --workspace --all-targets`, `cargo fmt --all --check` gefahren, alle drei grün.
+
+---
+
+**Reconciled: 260826-2205** — die sechs Befunde am Baum `bc5991d` nachgeprüft, alle sechs
+stehen zu Recht offen: die Rufer-`assert!` hinter dem Gate (`crates/krk-core/tests/umfang.rs:264`
+und fünf gleichartige), `--seed` fehlt weiter in beiden Abhilfen (`crates/krk-bench/src/messen.rs:1594`
+und `:1603` gegen `crates/krk-bench/src/main.rs:163`), `Durchstich::fahren` (`messen.rs:763`)
+prüft weiter nichts, B und der L6-Unterordner werden weiter nur gegen ihren Steckbrief gehalten
+(`messen.rs:1063-1077` gegen `:1266-1268`), der Mengenvergleich an
+`crates/krk-core/tests/belegung.rs:1760` kann eine Doppelung weiter nicht sehen, und die Zahl 79
+steht weiter in `crates/krk-core/tests/gemeinsam/mod.rs:377-378` und `tests/belegung.rs:1751-1752`.
+Die vier Behebungen selbst halten. Die Aussage „`make check`: alle vier Kommandos grün" ist beim
+Abgleich unabhängig nachgefahren, über `bc5991d`, Ausstiegscode 0.

@@ -82,3 +82,15 @@ Nichts blockiert. Befund 1 laesst sich mit Schritt 5 in einem Commit erledigen, 
 ## Verification
 
 `git show 26e8039..9c02863` fuer beide Diffs; `git show 9c02863:<pfad>` fuer `operation/kopieren.rs`, `operation/mod.rs`, `operation/verschieben.rs`, `operation/loeschen.rs`, `operation/fortschritt.rs`, `verzeichnis/sys.rs`, `tests/gemeinsam/mod.rs`, `tests/text.rs`, `tests/verzeichnis.rs`, `tests/baum.rs`; `git grep` am Commit fuer `File::open`, `ohne_warten_oeffnen(`, `recv_timeout`, `enum Ablauf`, `uebersprungen.push`. Kein `cargo`-Lauf, kein Zugriff auf den Arbeitsbaum ausser `CLAUDE.md` (unveraendert seit `9c02863`, per `git status` sauber am Start).
+
+---
+
+**Reconciled: 260826-2205** — die drei Befunde am Baum `bc5991d` nachgeprüft, alle drei stehen
+zu Recht offen. Die zwei `Resolved:`-Zeilen tragen weiter Stempel statt Hash (die zwei
+Datensätze, letzte Zeile); `crates/krk-core/tests/verzeichnis.rs` hält weiter zwei eigene
+Zeitschranken-Fassungen neben `gemeinsam::mit_zeitschranke` (`:1714` `inhalt_mit_zeitschranke`,
+`:3505` die Handform, deren Begründung an `:3492` steht, während `:3529` die gemeinsame Fassung
+schon ruft); der Ordinalsatz an `crates/krk-core/src/verzeichnis/sys.rs:902-904` endet weiter
+beim fünften Aufrufer, und `sys.rs:856-857` wie `CLAUDE.md:151` sagen weiter „als einziger
+Öffner mit `File::open`". Die zwei Behebungen selbst halten; die Belege stehen im Reconciliation
+Log von `shared/planning/260826-1811_*_plan-die-fuenf-schweren-befunde-der-vollbaum-durchsicht.md`.

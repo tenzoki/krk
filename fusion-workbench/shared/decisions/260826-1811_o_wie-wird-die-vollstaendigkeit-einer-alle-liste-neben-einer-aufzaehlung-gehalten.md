@@ -34,3 +34,17 @@ Stabiles Rust kennt keine Zählung der Varianten einer Aufzählung (`std::mem::v
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1 für jetzt, mit ausdrücklicher Wiedervorlage, sobald `variant_count` stabilisiert ist oder eine dritte Liste denselben Griff braucht. Der Plan über die fünf schweren Befunde fährt sie an `KENNUNGEN`; sie ist mit Möglichkeit 2 verträglich, weil der Helfer und die Probe bei einem späteren Umstieg gestrichen und nicht umgebaut werden. Möglichkeit 3 raten wir ab: sie ersetzt eine Liste durch zwei.
+
+---
+Reconciled: 260826-2205 — bleibt offen. Der Plan `260826-1811` hat Möglichkeit 1 an **einer**
+Liste gefahren (`crates/krk-core/tests/belegung.rs:1760` gegen `Kommando::KENNUNGEN`), und der
+Helfer `varianten_der_aufzaehlung` (`crates/krk-core/tests/gemeinsam/mod.rs:411`) führt bewusst
+keinen Aufzählungsnamen, damit der zweite Plan ihn an `Wirkungsbereich` wiederverwenden kann.
+Die Frage dieses Datensatzes ist damit **nicht** beantwortet: sie lautet, ob Möglichkeit 1 die
+Bauform für alle elf `ALLE`-Listen wird oder ob das Projekt dafür `strum` einbindet, und das
+entscheidet der Nutzer und nicht ein Planschritt. Gesucht und nicht gefunden: keine
+`Answered:`-Zeile im Datensatz; `shared/planning/` führt keinen zweiten Plan; kein Gate der
+Sitzung `260826-1807` hat die Frage vorgelegt (`orchestrator-events.jsonl`, die zwei
+`gate_response` der Sitzung betreffen die Planfreigabe und das Kohärenz-Gate). Die Antwort
+bindet den zweiten Plan über die 116 übrigen Befunde, unter anderem
+`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`.

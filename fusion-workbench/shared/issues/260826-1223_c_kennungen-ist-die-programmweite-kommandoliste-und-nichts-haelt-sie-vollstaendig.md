@@ -53,3 +53,5 @@ Also seen: 260826-1417 by coderev — die Probe `zulaessigkeit::waehrend_eines_b
 
 ---
 Resolved: 260826-2135 — die Probe jede_variante_von_kommando_steht_genau_einmal_in_kennungen haelt die Varianten aus dem Quelltext der Aufzaehlung gegen KENNUNGEN, in beiden Richtungen; Helfer varianten_der_aufzaehlung ohne Aufzaehlungsnamen, damit der zweite Plan ihn fuer Wirkungsbereich nimmt; Mutation rot vor der Behebung (Plan 260826-1811 Schritt 4).
+
+Reconciled: 260826-2205 — gegen den Baum `bc5991d` geprueft und zutreffend: der Commit ist `9a4e495`, die Probe steht an `crates/krk-core/tests/belegung.rs:1760` und vergleicht beide Richtungen, der Helfer an `crates/krk-core/tests/gemeinsam/mod.rs:411` fuehrt keinen Aufzaehlungsnamen; nachgezaehlt: 79 datenlose Varianten gegen `[(Kommando, &'static str); 79]` an `crates/krk-core/src/tasten/belegung.rs:697`. `make check` ueber `bc5991d` gruen. Der Hash steht hier als Abgleichsbeleg, nicht als Berichtigung der `Resolved:`-Zeile (`shared/issues/260826-1933_*_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md`).

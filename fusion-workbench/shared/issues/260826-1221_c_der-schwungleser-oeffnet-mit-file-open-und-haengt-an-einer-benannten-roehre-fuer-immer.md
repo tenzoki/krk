@@ -108,3 +108,5 @@ hat.
 
 ---
 Resolved: 260826-1930 — Schwungleser::oeffnen nimmt die Huelle ohne_warten_oeffnen, Typpruefung bleibt am Deskriptor; Probe mit benannter Roehre unter 5-s-Schranke, rot vor der Behebung (Plan 260826-1811 Schritt 2).
+
+Reconciled: 260826-2205 — gegen den Baum `bc5991d` geprueft und zutreffend: der Commit ist `9c02863`, `crates/krk-core/src/verzeichnis/sys.rs:240` ruft `ohne_warten_oeffnen`, die Typpruefung an `:241-246` bleibt am Deskriptor, die Probe steht an `crates/krk-core/tests/verzeichnis.rs:3525`; `make check` ueber `bc5991d` gruen. Der Hash steht hier als Abgleichsbeleg, nicht als Berichtigung der `Resolved:`-Zeile (`shared/issues/260826-1933_*_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md`).

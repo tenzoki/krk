@@ -174,3 +174,47 @@ Was dieser Plan **nicht** misst und ehrlich benennt: der `EXDEV`-Abzweig in `ein
 
 - [ ] Quelltextprobe oder Ableitungsmakro für alle elf `ALLE`-Listen: `shared/decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`. Schritt 4 fährt Möglichkeit 1 und hält keinen Planschritt auf; die Antwort bindet den zweiten Plan.
 - [ ] Ob die kopflose Strecke (`messen --kopflos`) einen Ordner **ohne** Steckbrief weiter zulassen soll (Schritt 6 sagt ja, wie der Kopf von `steckbrief_lesen`) oder ihn wie `unterordner_sicherstellen` abweisen soll. Nur dieser Plan braucht die Antwort; bis dahin gilt ja.
+
+---
+
+## Reconciliation Log
+
+### 260826-2205 — Abgleich zum Sitzungsende, Bereich `26e8039..bc5991d`
+
+Gelesen wurde gegen den Baum und nicht gegen die Berichte, die die Erledigung behaupten.
+Grundlage: `fusion-workbench/agentstate.yaml` (sechs Aufgaben `done`), der Ereignisstrom
+`orchestrator-events.jsonl` und die sieben Commits selbst.
+
+Selbst gefahren am 260826-2158: `make check` über `bc5991d`, Ausstiegscode 0, „alle vier
+gruen". Selbst gefahren: `bin/fusion-review-coverage` über den Sitzungsbereich.
+
+**Alle sechs Schritte halten.** Je Schritt die Stelle, an der der Baum die Behauptung trägt:
+
+| Schritt | Commit | Beleg im Baum |
+|---|---|---|
+| 1 Quelle bleibt stehen | `36e54b4` | `operation/fortschritt.rs:355` `uebersprungen_stand` und `:363` `uebersprungen_seit`, beide `#[must_use]`, beide `pub(crate)`; `operation/verschieben.rs:127` merkt den Stand, `:132-146` löscht nur bei leerer Liste und trägt die zweite Zeile nach; drei Proben `:198`, `:233`, `:277` |
+| 2 Schwungleser über die Hülle | `9c02863` | `verzeichnis/sys.rs:240` `ohne_warten_oeffnen(pfad)?`, Typprüfung `:241-246` unverändert am Deskriptor; `tests/gemeinsam/mod.rs:291` `mit_zeitschranke`; `tests/verzeichnis.rs:3525` die Röhrenprobe |
+| 3 Kindstarter mit Gate | `17e5e4e` | `tests/gemeinsam/mod.rs:471` `KINDAUFTRAG`, `:480` `kindauftrag`, `:513` der Starter ohne Auftragsparameter, `:527-537` das Gate über `status.success()` **und** `EIN_KIND_GELAUFEN` in `stdout` |
+| 4 Varianten gegen `KENNUNGEN` | `9a4e495` | `tests/gemeinsam/mod.rs:411` `varianten_der_aufzaehlung` ohne Aufzählungsnamen im Rumpf; `tests/belegung.rs:1760` die Probe, beide Richtungen; `krk-ui/src/appkit/menue.rs:443` zitiert beide Proben |
+| 5 dritte Pflichtstelle in `CLAUDE.md` | `fc829c8` | `CLAUDE.md:133`, ein Satzpaar hinter „Diese Stellen hält der Übersetzer"; keine Zahl darin |
+| 6 Prüfordner gegen die Zusage | `960900d` | `krk-bench/src/messen.rs:974` `EINTRAEGE_A`, `:980` `EINTRAEGE_GROSS`, `:1587` `pruefordner_pruefen`, `:1063-1077` der Ruf für A, B und 100k, `:1266-1268` die gelesene Zahl, `bericht.rs:259` und `:266` der Berichtskopf; Proben `:2797` und `:2815` |
+
+**Ein Schlusskriterium ist verfehlt und trägt einen Datensatz.** „Where this Circle stops"
+verlangt: „Jeder der fünf Datensätze trägt `Resolved:` mit dem Commit." Keiner der fünf tut
+es; vier tragen einen Sitzungsstempel, einer einen Dateipfad. Der Befund steht als
+`shared/issues/260826-1933_*_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md`
+und ist dort mit `Also seen:` auf fünf von fünf erweitert. Der Abgleich hat die fünf Commits
+je Datensatz als eigene `Reconciled:`-Zeile nachgetragen und die `Resolved:`-Zeilen
+unangetastet gelassen: welche der zwei Abhilfen gilt — Hash nachtragen oder das
+Schlusskriterium abschwächen —, ist eine Nutzerfrage und mit dem Nachtrag nicht entschieden.
+
+**Ein zweites Schlusskriterium steht offen, planmäßig.** Der zweite Plan über die 116 übrigen
+Befunde ist nicht geschrieben; der Plan lässt dafür ausdrücklich „in dieser oder der nächsten
+Sitzung" zu.
+
+**Keine Abweichung zwischen Entwurf und Bau.** Jede Datenstruktur des Abschnitts „Data
+Structures" steht mit dem geplanten Namen im Baum; `Ablauf` hat weiter zwei Werte
+(`operation/mod.rs`), kein neuer Rückgabetyp ist entstanden.
+
+`Status: Complete` und der Marker `_c_` bleiben: die sechs Schritte sind gebaut und einzeln
+gegen den Baum gelesen. Die zwei offenen Schlusskriterien stehen oben.

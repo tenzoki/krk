@@ -91,3 +91,5 @@ nachgestellt: dafuer braeuchte es zwei Datentraeger und einen Lauf ausserhalb de
 
 ---
 Resolved: 260826-1900 — ueber_datentraeger merkt den Zaehlstand der uebersprungenen Eintraege vor kopieren_nach und loescht die Quelle nur, wenn er unveraendert ist; drei Proben in verschieben.rs, zwei davon rot vor der Behebung (Plan 260826-1811 Schritt 1).
+
+Reconciled: 260826-2205 — gegen den Baum `bc5991d` geprueft und zutreffend: der Commit ist `36e54b4`, die Behebung steht in `crates/krk-core/src/operation/verschieben.rs:127-146` und `crates/krk-core/src/operation/fortschritt.rs:355-366`, die drei Proben an `verschieben.rs:198`, `:233` und `:277`; `make check` ueber `bc5991d` gruen. Der Hash steht hier als Abgleichsbeleg und nicht als Berichtigung der `Resolved:`-Zeile: welche Form sie tragen soll, bleibt offen (`shared/issues/260826-1933_*_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md`).

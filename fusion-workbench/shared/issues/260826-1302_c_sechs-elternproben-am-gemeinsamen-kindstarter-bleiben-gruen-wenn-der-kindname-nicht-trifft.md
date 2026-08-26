@@ -112,3 +112,5 @@ kennen.
 
 ---
 Resolved: crates/krk-core/tests/gemeinsam/mod.rs, kind_mit_deskriptorgrenze — der Starter haelt status.success() und "test result: ok. 1 passed;" in stdout, und es gibt nur noch einen Auftragsnamen KRK_KINDPROBE_AUFTRAG; beide Mutationen (Kindname, entferntes ignore) rot am Gate, gruen ohne (Plan 260826-1811 Schritt 3, Sitzungseintrag 260826-2010).
+
+Reconciled: 260826-2205 — gegen den Baum `bc5991d` geprueft und zutreffend: der Commit ist `17e5e4e`, das Gate steht an `crates/krk-core/tests/gemeinsam/mod.rs:527-537`, der eine Auftragsname an `:471` und sein einer Leser an `:480`; nachgezaehlt: sechs Rufer von `kind_mit_deskriptorgrenze` in `umfang.rs`, `verzeichnis.rs` und `leseprofil.rs`, keine `AUFTRAG_`-Konstante mehr ausser den drei fremden. `make check` ueber `bc5991d` gruen. Nachlage: die sechs fachlichen `assert!` der Rufer sind seit dem Gate unerreichbar (`shared/issues/260826-2152_*_die-sechs-fachlichen-assert-der-kindstarter-rufer-sind-seit-dem-gate-unerreichbar.md`).
