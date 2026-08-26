@@ -104,3 +104,6 @@ Drei Stellen ziehen mit, und keine davon ist bloß Kosmetik:
   `resources/default-readers.toml`: dort steht heute „Ein Baustein mit `ordner` kostet genau
   einen Leselauf". Das ist der Satz, den der Nutzer beim Schreiben seines Profils liest, und
   er wird mit dieser Änderung falsch.
+
+---
+Implemented: f097e0e — `Lauf` merkt seine Lesungen nach aufgelöstem Pfad statt nur den erkannten Ordner (`crates/krk-core/src/leseprofil/bausteine.rs:361`, `:377`), und `Lauf::am_ort` (`:541`) fragt den Merker, statt bei jeder Ortsangabe unbesehen zu lesen. Der Modulkopf trägt die Regel ohne Ausnahme (`:86`, `:89`). Nachgemessen am 260826-0149 gegen den Baum, `make check` grün.

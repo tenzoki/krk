@@ -91,3 +91,6 @@ Ein dritter Wert `titel-und-datum` wäre nützlich und wird hier **nicht** gebau
 verlangt ihn nicht, und zwei Werte halten die Fallunterscheidung überschneidungsfrei und
 vollständig mit dem kleinsten Bestand. Wer ihn später will, fügt einen dritten Wert hinzu und
 hält den Bau an genau einer Stelle an.
+
+---
+Implemented: 66c779c — `juengste` trägt den Schlüssel `zeigt` mit den zwei Werten `titel` und `datum` (`crates/krk-core/src/leseprofil/datei.rs:270`, `:290`, `:292`); die Aufzählung heißt im Baum `Anzeige` (`crates/krk-core/src/leseprofil/mod.rs:360`) und nicht `Juengsteform` wie im Plan entworfen. Die Datumsform öffnet keine Datei, sieht Einträge jedes Typs und liefert einen `Wert::Text` über `ortszeit` (`crates/krk-core/src/leseprofil/bausteine.rs:788`); ein siebter `Wert` und ein fünfter Baustein sind nicht entstanden. Nachgemessen am 260826-0149 gegen den Baum, `make check` grün.

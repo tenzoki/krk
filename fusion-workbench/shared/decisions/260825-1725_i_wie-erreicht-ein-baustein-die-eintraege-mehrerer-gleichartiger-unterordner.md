@@ -112,3 +112,6 @@ zusammen, `*/issues` 568 aus 19 Ordnern. Beides liegt weit unter der Eintragssch
 2.000. Bei hundert Runden erreicht `*/issues` sie, und dann greift `Wert::UeberGrenze` mit dem
 Satz, den die Runde 16 dafür geschrieben hat: mindestens so viele, und die Lesung wurde
 abgebrochen.
+
+---
+Implemented: 3cadb45 — `Ortsangabe::aus_angabe` nimmt genau ein Stück `*` an und weist zwei oder mehr ab (`crates/krk-core/src/leseprofil/mod.rs:456`, `:467`); `Ortsmangel` trägt dafür den vierten Wert `MehrerePlatzhalter` (`:507`) und bleibt vollständig ohne Auffangzweig. Der Platzhalter greift allein Einträge vom Typ Ordner und folgt keiner Verknüpfung (`:405`), `juengste` und `feld` nehmen ihn nicht an (`:412`). Nachgemessen am 260826-0149 gegen den Baum, `make check` grün.

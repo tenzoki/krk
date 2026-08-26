@@ -84,3 +84,6 @@ Zur Umsetzung gehört, dass der Ordnerwechsel den Weg auch wirklich auslöst. He
 `auswahl_merken` nur, wenn AppKit eine Änderung der Auswahl meldet; war vorher schon nichts
 ausgewählt, meldet es nichts. `nach_lesebeginn` ist die eine Stelle, die Navigation und
 Auffrischung gemeinsam nachzieht, und dort gehört der Anstoß hin.
+
+---
+Implemented: 9322d5d — `DateifensterQuelle::auswahl_merken` meldet über `zu_beschreiben` (`crates/krk-ui/src/appkit/tabelle.rs:488`) ohne Auswahl den angezeigten Ordner statt `None` (`:2189`), und `nach_lesebeginn` stößt den Weg nach `auswahl_anzeigen` an (`:1546`, Begründung `:1549`), damit auch ein Ordnerwechsel ohne Auswahländerung ihn erreicht. Die Regel gilt für jeden Ordner und nicht nur für die Projektwurzel. Zwei Lücken derselben Regel sind gesondert abgelegt und bleiben offen: `shared/issues/260825-1922_*_der-programmstart-und-der-tabwechsel-erreichen-die-neue-vorschauregel-nicht.md` und `shared/issues/260825-1922_*_eine-auffrischung-stoesst-die-vorschau-mit-an-und-die-kosten-sind-ungemessen.md`. Nachgemessen am 260826-0149 gegen den Baum, `make check` grün.

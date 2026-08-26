@@ -82,3 +82,6 @@ Dass diese Runde eine Nutzerhandlung verlangt, ist **kein** Nebenbefund, den ein
 einem Halbsatz erledigt. Ohne sie ist von der halben Runde nichts zu sehen, und der Nutzer
 hätte keinen Anhaltspunkt, warum: eine unveränderte `readers.toml` verhält sich vollkommen
 richtig. Der Bericht der Runde nennt den Weg deshalb ausdrücklich und nicht unter „Details".
+
+---
+Implemented: d04e50f — der Abschnitt `## Neue Leseprofile übernehmen` steht in `README.md:44-73`. Er nennt den vollen Pfad `~/Library/Application Support/KRK/readers.toml`, die drei Schritte in der zugesagten Reihenfolge, ausdrücklich, dass ohne den Handgriff nichts sichtbar wird und keine Meldung kommt, und was ein Löschen statt eines Beiseitelegens kostet. Der `RELEASETEXT` in `xtask/src/veroeffentlichung.rs` ist unberührt. **Damit ist die erste Hälfte der Antwort umgesetzt**; die zweite (Möglichkeit 2, ein Befehl in KRK) ist ausdrücklich Gegenstand einer späteren Runde und trägt hier keinen eigenen Marker. Ob der Nutzer den Handgriff ausgeführt hat, ist Nutzerarbeit und keine Aussage dieses Datensatzes. Nachgemessen am 260826-0149 gegen den Baum, `make check` grün.

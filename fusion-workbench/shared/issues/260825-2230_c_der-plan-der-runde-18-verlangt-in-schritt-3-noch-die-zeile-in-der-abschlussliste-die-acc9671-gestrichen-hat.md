@@ -41,3 +41,15 @@ stehen und bekommt denselben Verweis. Kein Code ist zu ändern.
 Verhalten hängt daran.
 
 **Gefunden:** coderev, bei der Nachdurchsicht der Behebungsrunde gegen `ecd7e4b..1ac5dde`.
+
+---
+Resolved: 260826-0149, reconciler. Schritt 3 des Plans trägt einen zweiten Nachtrag
+(`shared/planning/260825-1725_p_plan-vorschau-vertieft-und-zwei-fehler.md`, „Nachtrag 260826-0149"),
+der das vierte Abnahmekriterium ausdrücklich als bewusst umgekehrt ausweist und den Grund an
+`acc9671`, an den Doc-Kommentar von `zeit_uebernehmen` und an
+`shared/issues/260825-2127_*_ein-gepackter-eintrag-mit-ersatzdatum-steht-in-der-liste-der-uebersprungenen.md`
+hängt. Der Entwurfssatz `:243` und das Kriterium `:251` bleiben als Entwurfsstand stehen, wie der
+Datensatz es unter „Was zu tun wäre" verlangt. Der Baumstand ist einzeln nachgelesen:
+`crates/krk-core/src/operation/zippen.rs` führt `zeit_uebernehmen(wahl, angaben)` ohne `Steuerung`,
+und `crates/krk-core/tests/operation.rs:1570` prüft `bericht.uebersprungen.is_empty()`. Kein Code
+geändert.

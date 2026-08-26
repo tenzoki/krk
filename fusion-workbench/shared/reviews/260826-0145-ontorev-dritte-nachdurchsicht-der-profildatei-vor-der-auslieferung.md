@@ -290,3 +290,15 @@ Auslieferung als „die Berichtigungen sind jetzt bei den Nutzern" liest, liest 
   neuen Hilfen, weil N3 an ihr hängt; die Bewertung der Probendatei gehört `coderev`.
 - **Ob eine bestehende `readers.toml` die berichtigte Fassung je erreicht.** Das ist die
   beantwortete Frage `260825-1725_a_…` und keine Eigenschaft dieser Datei.
+
+---
+
+**Vermerk des reconciler, 260826-0149.** Die Freigabe ist gegen den Baumstand `e5ec81a`
+nachgehalten und bestätigt: `resources/default-readers.toml` führt zwölf Profile, die Zahl
+steht an drei Prüfstellen (`crates/krk-core/src/ablage/leseprofile.rs:181`,
+`crates/krk-core/tests/ablage.rs:2048`, `crates/krk-core/tests/leseprofil.rs:2273`), und
+`make check` läuft grün. Die drei niedrigen Befunde der ersten Durchsicht (`260825-2126_o_*`)
+und der neue (`260826-0139_o_die-fallunterscheidung-des-kennzeichnen-satzes-…`) sind einzeln
+gegen die Datei nachgelesen und unverändert offen; der Satz „dieselben drei Felder wie
+`.fusion-setup`" steht weiter da und ist im Datensatz mit `:646-647` zitiert, während er
+inzwischen auf `:683` gewandert ist.

@@ -103,3 +103,6 @@ startet dieselbe Prüfdatei mit einer gesetzten Umgebungsvariablen noch einmal, 
 zweite unter einer Zone mit Sommerzeit fügen sich in dieses Muster ein, statt eine neue Bauform
 aufzumachen; die zweite ist die einzige, die den Sommerzeitfall überhaupt prüfen kann. Daneben
 trägt eine zonenunabhängige Rundwegprobe, dass der Wert überhaupt ankommt.
+
+---
+Implemented: c0050bf — `localtime_r(3)` ist als sechste Schnittstelle der Systemschicht gebunden (`crates/krk-core/src/verzeichnis/sys.rs:1088`), `ortszeit` liefert die sechs Kalenderfelder (`:1133`), und die drei zugesagten Proben stehen in `crates/krk-core/tests/zeit.rs` (Kindproben unter `TZ=UTC` und `TZ=Europe/Berlin`, dazu die zonenunabhängige). `krk-core` trägt weiter `#![deny(unsafe_code)]` mit genau einer Öffnung, und `Cargo.lock` führt kein `cc` und außer `windows-sys` kein `-sys`-Paket. Nachgemessen am 260826-0149 gegen den Baum, `make check` grün.

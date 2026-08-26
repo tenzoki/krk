@@ -1,7 +1,7 @@
 # Implementation Plan: Die Vorschau vertieft, und zwei Fehler
 
 **Date:** 2026-08-25
-**Status:** In Progress
+**Status:** Gebaut, nicht abgenommen — alle zehn Schritte stehen auf `[DONE]` und sind am 260826-0149 einzeln gegen den Baum gelesen (`e5ec81a`, `make check` grün, alle vier Kommandos); von den neun Schließungsbedingungen unter „Where this Circle stops" halten sechs, zwei sind Nutzerarbeit und ungefahren (der Handgriff mit der `readers.toml` aus Schritt 9 und die Abnahme am laufenden Bündel, darunter der vierteilige Handgriff zum Klick-Fokus), eine steht ausdrücklich außerhalb. Der Dateimarker bleibt auf `_p_` und geht nicht auf `_c_`, solange die zwei Nutzerbedingungen offen sind und `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` die Frage nach der Lesart des Markers offen hält
 **Spec:** keiner — geplant aus einem Rohauftrag des Nutzers vom 260825. Das Schärfen ist ausdrücklich übersprungen; die offenen Fragen sind in diesem Plan beantwortet und in sieben Entscheidungsdatensätzen abgelegt.
 **Decidability:** Die tragende Frage lautet: *kann eine Profil-Zusammenfassung eine Auskunft geben, die über alle Unterordner eines Ordners aggregiert, ohne dass ihre Kosten mit dem Bestand der Werkbank wachsen?* Die Antwort ist **nein**, und zwar nicht aus Unentscheidbarkeit, sondern aus Unbeschränktheit: die Zahl der offenen Defekte über alle Runden ist entscheidbar, kostet aber eine Verzeichnisöffnung je Runde, und die Zahl der Runden wächst. Ein fester Deckel auf Verzeichnisöffnungen kann diese Auskunft deshalb nie dauerhaft tragen. **Der Mechanismus wechselt daher die Einheit, in der er zählt**: nicht mehr die geöffneten Verzeichnisse, sondern die **gelesenen Einträge** begrenzen einen Platzhalter-Lauf, und die Schranke dafür steht seit der Runde 16 als `HOECHSTENS_EINTRAEGE` da, samt der Vokabel für die abgeschnittene Antwort (`Wert::UeberGrenze`: „mindestens N, Lesung abgebrochen"). Damit ist die Auskunft an der heutigen Werkbank exakt (568 von 2.000 Einträgen), bei rund hundert Runden ausdrücklich unvollständig — und sie sagt dann selbst, dass sie es ist, statt eine Zahl zu nennen, die stillschweigend falsch ist.
 
@@ -251,6 +251,7 @@ Sie hängen an nichts aus Strang 2 und 3 und können zuerst laufen. Schritt 1 is
      - Ein Zeitpunkt vor 1980 fällt auf `DateTime::DEFAULT` zurück und erzeugt genau eine Zeile in der Abschlussliste; eine Probe hält beides.
      - `Cargo.lock` wächst um keinen Eintrag; weder `cc` noch ein neues `-sys`-Paket kommt herein.
      - `make check` grün.
+   - **Nachtrag 260826-0149, ein Kriterium ist bewusst umgekehrt.** Das vierte Abnahmekriterium (`:251`) verlangt für einen Zeitpunkt vor 1980 „genau eine Zeile in der Abschlussliste"; der Entwurfssatz darüber (`:243`) begründet sie. Beides gilt seit `acc9671` nicht mehr, und zwar absichtlich: `zeit_uebernehmen` (`crates/krk-core/src/operation/zippen.rs`) nimmt keine `Steuerung` mehr entgegen und meldet den Ersatzzeitpunkt an keiner der drei Stellen. Der Eintrag liegt vollständig im Archiv, also war „übersprungen" die falsche Vokabel; das andere Ende derselben Runde, das Entpacken, trifft dieselbe Wahl und begründet sie. Die Probe heißt jetzt `ein_zeitpunkt_vor_1980_faellt_auf_das_vorgabedatum_und_bleibt_aus_der_abschlussliste` (`crates/krk-core/tests/operation.rs:1559`) und prüft `uebersprungen.is_empty()`. Der Entwurfssatz `:243` und das Kriterium `:251` bleiben als Entwurfsstand stehen; verbindlich ist dieser Nachtrag. Grund und Herleitung: `shared/issues/260825-2127_*_ein-gepackter-eintrag-mit-ersatzdatum-steht-in-der-liste-der-uebersprungenen.md` und der Doc-Kommentar von `zeit_uebernehmen`. Kein Code ist dafür geändert worden.
    - **Nachtrag 260825-1859, Umsetzung.** Alle Kriterien sind erfüllt bis auf eine Hälfte des dritten: der Rundweg erhält das Änderungsdatum jeder Datei und jedes Ordners, **nicht** aber das einer Verknüpfung. `File::set_times` folgt der Verknüpfung und schriebe das Datum auf ihr Ziel; die Zeit am Verweis selbst setzte allein `lutimes(2)`, also eine siebte Schnittstelle der Systemschicht, und die steht nicht in der Dateiliste dieses Schritts. Der Archiveintrag trägt das richtige Datum, das Auspacken legt es nur nicht an, und `/usr/bin/unzip` und `/usr/bin/ditto` verhalten sich an dieser Stelle gemessenermaßen genauso. Abgelegt als `shared/issues/260825-1859_*_eine-entpackte-verknuepfung-bekommt-ihr-aenderungsdatum-nicht.md`, mit derselben Lücke in `operation::kopieren`. Das Merkmal `unreserved` ist aufgenommen worden, `time` nicht; die Messung dazu steht in der Wurzel-`Cargo.toml` und im aufgelösten Defektdatensatz. Daneben ist `shared/issues/260825-1859_*_claude-md-nennt-fuer-zip-das-eine-merkmal-deflate-flate2-es-sind-zwei.md` entstanden: `CLAUDE.md` steht nicht in der Dateiliste dieses Schritts.
 
 ### Strang 2: der Mechanismus der Leseprofile
@@ -493,3 +494,115 @@ Offen und von diesem Plan **nicht** beantwortet, aber von ihm berührt:
 - [ ] `circles/260823-2208-…/decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md` — diese Runde macht die Frage dringender: ein Ordnerwechsel löst jetzt eine Zusammenfassung aus, die es vorher nicht gab, und ein Platzhalter-Lauf öffnet mehr Verzeichnisse als ein gewöhnlicher.
 - [ ] `circles/260823-2208-…/issues/260824-1655_*_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md` — das neue `archive`-Profil erledigt ihn **nicht**. Er spricht über die Speicher unter `archive/<lauf>/shared/`, dieser Plan über `archive/` selbst.
 - [ ] `shared/issues/260823-0731_*_ein-klick-in-das-andere-dateifenster-nimmt-eine-ziehbewegung-zurueck.md` — `aktives_setzen` zieht die Aufteilung nach, ohne vorher `bildschirmbreiten_uebernehmen` zu rufen. Schritt 1 verbreitert ihn nicht; die Frage zur Tableiste täte es, und das ist einer der zwei Gründe, aus denen sie gesondert steht.
+
+## Reconciliation Log
+
+### 260826-0149 — Abgleich zum Sitzungsende, Bereich `20eccd4..e5ec81a`
+
+Gelesen wurde gegen den Baum und nicht gegen die Berichte, die die Erledigung behaupten.
+Grundlage: der Ereignisstrom `fusion-workbench/orchestrator-events.jsonl`, die
+`agentstate.yaml` mit ihren achtzehn erledigten Aufgaben und die Commits selbst.
+
+**Die zehn Planschritte halten alle zehn.** Je Schritt die eine Stelle, an der der Baum die
+Behauptung trägt:
+
+| Schritt | Commit | Beleg im Baum |
+|---|---|---|
+| 1 Tab nimmt den Rang mit | `fd361d7` | `crates/krk-ui/src/appkit/anwendung.rs:3207-3213`, `fokus_setzen(Fokus::Dateifenster)` hinter `fenster_wechseln()`; Zählprobe `der_fensterwechsel_nimmt_den_ersthelferrang_mit` (`:8786`), die auch die Reihenfolge hält |
+| 2 Ortszeit im Kern | `c0050bf` | `crates/krk-core/src/verzeichnis/sys.rs:1088` (`localtime_r`), `:1133` (`ortszeit`); fünf `unsafe extern "C"`-Blöcke, sechs Schnittstellen, zehn Bindungen, drei Proben in `crates/krk-core/tests/zeit.rs` |
+| 3 Zeitstempel beim Packen und Entpacken | `e922c9e` | `zippen.rs:613` (`FELD_ERWEITERTE_ZEIT`), `:624` (`FELD_INFOZIP_UNIX`), `:701`; `entpacken.rs:410-413` (`FileTimes`); `Cargo.toml:203-206` mit `unreserved`; Helfer `archivzeit` (`tests/operation.rs:1306`) |
+| 4 ein Ort, eine Lesung | `f097e0e` | `leseprofil/bausteine.rs:361` (`wurzelstand`), `:377-390` (der Merker), `:541` (`am_ort`) |
+| 5 Platzhalter in der Ortsangabe | `3cadb45` | `leseprofil/mod.rs:456-477` (`aus_angabe`), `:467` und `:507` (vierter Wert `Ortsmangel::MehrerePlatzhalter`, Aufzählung ohne Auffangzweig) |
+| 6 `juengste` zeigt ein Datum | `66c779c` | `leseprofil/datei.rs:270`, `:290`, `:292`; die Aufzählung heißt im Baum `Anzeige` (`mod.rs:360`); `bausteine.rs:788` rechnet über `ortszeit` |
+| 7 Vorschau ohne Auswahl | `9322d5d` | `tabelle.rs:488` (`zu_beschreiben`), `:2189` (der Melder), `:1546-1549` (der Anstoß in `nach_lesebeginn`) |
+| 8 die Auslieferungsfassung | `5595026` | `resources/default-readers.toml` führt zwölf `[[profil]]`-Blöcke; die Zahl steht in `ablage/leseprofile.rs:181`, `tests/ablage.rs:2048` und `tests/leseprofil.rs:2273` |
+| 9 der Weg im README | `d04e50f` | `README.md:44-73`, alle drei Abnahmekriterien nachgelesen; `RELEASETEXT` unberührt |
+| 10 die Kostenmessung | `8478753` | `shared/analyses/260825-2107-was-die-zwoelf-leseprofile-an-der-wirklichen-werkbank-kosten.md` |
+
+Dazu die zwei Arbeiten außerhalb der zehn: die Berichtigung der Entscheidungszahl (`4d6dc9a`)
+und der Klick auf die Tableiste (`d3da6e3`, Aufgabe E-1, aus der beantworteten Entscheidung).
+Für E-1 halten zwei Zählproben, `der_klick_auf_die_tableiste_nimmt_den_ersthelferrang_mit`
+(`anwendung.rs:8863`) und `aktives_setzen_hat_genau_zwei_aufrufer` (`:8957`).
+
+**Selbst gefahren am 260826-0146:** `make check` über `e5ec81a`, Ausstiegscode 0, „alle vier
+gruen". `cargo fmt --all --check` sauber, `cargo clippy --workspace --all-targets -- -D warnings`
+ohne Meldung, `cargo test --workspace` ohne gescheiterte Probe.
+
+**Drei Abweichungen zwischen Plan und Baum, alle in der Benennung und keine in der Sache.**
+Sie stehen hier, weil ein späterer Leser sonst im Baum sucht, was der Plan nennt:
+
+- Schritt 3 entwirft an `SimpleFileOptions`; der Baum baut die Wahl über `FullFileOptions`.
+- Schritt 6 nennt die neue Aufzählung `Juengsteform`; sie heißt `Anzeige`.
+- Die Schritte 8 und 10 sprechen von acht Profilen; es sind zwölf geworden, und beide tragen
+  dafür schon einen Nachtrag.
+
+**Ein Abnahmekriterium ist bewusst umgekehrt** und trägt seit dem 260826-0149 den zweiten
+Nachtrag an Schritt 3. Dieselbe überholte Aussage stand an einer dritten, bis dahin
+unbemerkten Stelle: in der `Resolved:`-Notiz des Defektdatensatzes
+`circles/260825-0711-…/issues/260825-0838_*_jeder-gepackte-eintrag-…`. Sie hat dort einen
+`Revised by:`-Vermerk auf `acc9671` bekommen; der Marker bleibt `_c_`, denn der Defekt ist
+behoben und allein seine Begründung umgezogen.
+
+**Die sieben Entscheidungsdatensätze der Runde stehen jetzt auf umgesetzt** (`_i_`) und nicht
+mehr auf beantwortet (`_a_`). Jeder trägt eine `Implemented:`-Zeile mit Commit und Fundstelle.
+Die Schließungsbedingung verlangte `_a_` oder `_i_` und ist damit übererfüllt.
+
+### Die neun Schließungsbedingungen, einzeln
+
+1. **Zehn Schritte `[DONE]`, jede Erledigung einzeln gegen den Baum gelesen** — erfüllt, siehe
+   die Tabelle oben.
+2. **`make check` grün über den ganzen Workspace** — erfüllt, selbst gefahren am 260826-0146.
+3. **`Cargo.lock` ohne `cc` und ohne `-sys` außer `windows-sys`, gewachsen um höchstens die
+   Einträge aus Schritt 3** — erfüllt und schärfer als verlangt: `git diff 20eccd4..e5ec81a --
+   Cargo.lock` ist leer, die Datei ist um **keinen** Eintrag gewachsen. Das Merkmal `unreserved`
+   ist als `unreserved = []` deklariert und schaltet nichts ein.
+4. **`krk-core` mit `#![deny(unsafe_code)]` und genau einer Öffnung** — erfüllt:
+   `crates/krk-core/src/lib.rs:1` verbietet, `crates/krk-core/src/verzeichnis/sys.rs:130`
+   öffnet, und es ist die einzige Öffnung im Kern.
+5. **Der Defektdatensatz `260825-0838` trägt seine Auflösung und steht auf `_c_`** — erfüllt.
+   Die drei Messbefunde und die zwei widerlegten Vorschläge sind darin ausgeschrieben. Ein
+   Satz seiner Auflösung ist seit `acc9671` überholt und trägt jetzt den `Revised by:`-Vermerk.
+6. **Die sieben Entscheidungen auf `_a_` oder `_i_`** — erfüllt, alle sieben stehen auf `_i_`.
+7. **Der Nutzer hat den Handgriff aus Schritt 9 ausgeführt und die Profile in KRK gesehen** —
+   **offen und für einen Agenten nicht prüfbar.** Der Handgriff geschieht in
+   `~/Library/Application Support/KRK/`, außerhalb dieses Baums, und hinterlässt dort keine
+   Spur, die von hier aus zu lesen wäre. Die Bedingung nennt acht Profile; es sind zwölf.
+8. **Vor einem Auslieferungslauf: Klick-Fokus, der Rundweg durch Zip und Unzip und die vier
+   neuen Zusammenfassungen am laufenden Bündel gesehen** — **offen.** Im Einzelnen unten.
+9. **Der Abnahmelauf gegen die zehn Zeitzusagen aus C8** — ausdrücklich außerhalb, keine der
+   zehn spricht über die Profil-Zusammenfassung.
+
+### Was vor einem Auslieferungslauf nachweislich fehlt
+
+Der Lauf legt in Station 8 eine öffentliche Releaseseite an und lässt sich nicht zurücknehmen.
+Vier Nachweise fehlen, und der erste wiegt schwerer als die drei anderen zusammen.
+
+1. **Der vierteilige Handgriff zum Klick-Fokus ist nicht gefahren.** Er steht nicht unter
+   „nice to have", sondern als Abnahmekriterium von Schritt 1, und der Schritt sagt selbst,
+   was bei einem Widerspruch zu geschehen hat: „Widerlegt er sie schon im ersten Teil, ist
+   dieser Schritt zurückzustellen und die Wurzel neu zu suchen." Die Diagnose, auf der die
+   Schritte 1 und E-1 beruhen, ist an zwei Wegwerfprogrammen in Objective-C gemessen und
+   **nicht an KRK**; die vierte Hälfte, der Klick auf die schon ausgewählte Zeile, ist
+   überhaupt ungemessen. Was `cargo test` abnimmt, ist ausschließlich, dass der Ruf im Zweig
+   steht — nicht, dass er die Wirkung hat, die der Nutzer sucht.
+2. **Der Doppelklick auf ein von KRK gepacktes Archiv im Finder ist ungefahren.** Gemessen
+   sind `/usr/bin/unzip` und `/usr/bin/ditto`; das Archivwerkzeug des Finders ist ein drittes,
+   und dass es sich wie `ditto` verhält, ist eine Vermutung und steht so im Plan.
+3. **Die vier neuen Zusammenfassungen sind am laufenden Bündel nicht gesehen**, und ohne den
+   Handgriff aus Schritt 9 wären sie es auch nicht: eine unveränderte `readers.toml` zeigt die
+   fünf Profile von vorher, ohne jede Meldung.
+4. **Was die Vorschau beim Eintritt in einen Ordner vor der ersten Cursorbewegung zeigt**, ist
+   ungefahren. Zwei Lücken derselben Regel sind schon abgelegt und offen
+   (`shared/issues/260825-1922_*` ×2): der Programmstart und der Tabwechsel erreichen sie nicht.
+
+**Zwei Nachweise, die nicht fehlen**, damit die Liste nicht länger gelesen wird, als sie ist:
+die Durchsicht ist vollständig — jeder Codecommit der Sitzung liegt in einem Durchsichtsbereich,
+`fusion-review-coverage` meldet sieben ungedeckte Commits und alle sieben sind reine
+Werkbankcommits ohne eine Zeile Quelltext —, und beide Durchsichten der letzten Runde geben
+den Stand ausdrücklich frei.
+
+**Zwei betriebliche Hindernisse stehen daneben und sind keine Nachweise**, sondern Handgriffe:
+`v1.2.0` liegt auf `20eccd4` und nicht auf HEAD, also verlangt der Lauf eine neue Zahl (nach
+`README.md` unter „Versionsstufen" eine Minor-Erhöhung, denn die Runde bringt Funktionen);
+und `git status --porcelain --untracked-files=no` meldet `orchestrator-events.jsonl` als
+geändert, woran Station 1 abbricht (`xtask/src/release.rs:300`).

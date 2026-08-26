@@ -252,3 +252,16 @@ Was diese Auskunft **nicht** deckt, und das gehört dazu:
   nicht an diese Durchsicht.
 - Nichts über das Gesehene. Der Abnahmelauf verlangt KRK im Vordergrund und ist
   Nutzerarbeit.
+
+---
+
+**Vermerk des reconciler, 260826-0149.** Die Freigabe ist gegen den Baumstand `e5ec81a`
+nachgehalten und bestätigt: `make check` selbst gefahren, Ausstiegscode 0, „alle vier gruen".
+Die zwei niedrigen Befunde dieser Durchsicht stehen unverändert offen
+(`shared/issues/260826-0139_o_genannte-orte-hat-seit-96e32cb-zwei-rufer-…` und
+`…_zwei-behauptungen-der-c6-7-probe-haengen-an-der-zeilenreihenfolge-…`); beide liegen in
+`crates/krk-core/tests/leseprofil.rs` und berühren kein ausgeliefertes Byte. Über den ganzen
+Sitzungsbereich `20eccd4..e5ec81a` liegt jeder Codecommit in einem Durchsichtsbereich; die
+sieben ungedeckten Commits sind reine Werkbankcommits. Was für einen Auslieferungslauf trotzdem
+fehlt, ist Nutzerarbeit und steht im Reconciliation Log des Plans
+(`shared/planning/260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md`).

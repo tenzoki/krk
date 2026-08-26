@@ -76,3 +76,6 @@ mitzunehmen, der von einer anderen Frage handelt, hieße sie zu verstecken.
 Wer Möglichkeit 2 wählt, bekommt eine Zählprobe mit einer benannten Ausnahme, und die Ausnahme
 gehört dann in den Rumpf der Probe geschrieben, samt diesem Datensatz als Grund — sonst liest
 der nächste sie als Versehen.
+
+---
+Implemented: d3da6e3 — der Klick auf die Tableiste nimmt den Rang mit, und er tut es als eigener Schritt (Aufgabe E-1) und nicht im Tab-Zweig mitgegriffen, wie die Antwort es verlangt. Der Weg läuft über die Aufzählung `Rangmitnahme` (`crates/krk-ui/src/appkit/tabelle.rs`), die den Tableistenklick vom Zeilenklick trennt; `aktives_setzen` setzt den Fokus nach dem Umschreiben von `aktiv` (`crates/krk-ui/src/appkit/anwendung.rs`). Zwei Zählproben halten es: `der_klick_auf_die_tableiste_nimmt_den_ersthelferrang_mit` (`anwendung.rs:8863`) und `aktives_setzen_hat_genau_zwei_aufrufer` (`:8957`). Nachgemessen am 260826-0149 gegen den Baum, `make check` grün.
