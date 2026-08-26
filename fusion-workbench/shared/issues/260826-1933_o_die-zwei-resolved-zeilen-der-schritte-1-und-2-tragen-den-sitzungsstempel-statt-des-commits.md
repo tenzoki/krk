@@ -20,3 +20,5 @@ Der Grund ist die Reihenfolge: die Schliessung landet im selben Commit wie die B
 ## Was zu tun waere
 
 Entweder die zwei Zeilen um den Hash ergaenzen (`Revised by:` ist dafuer nicht die Form, der Inhalt ist nicht widerrufen, nur unvollstaendig), oder das Schlusskriterium des Plans auf „mit dem Sitzungseintrag, der den Commit nennt“ abschwaechen. Fuer die Schritte 3 bis 6 dieselbe Entscheidung vorab.
+
+Also seen: 260826-2158 by coderev — die Schritte 3, 4 und 6 setzen den Befund fort: `260826-1302_c_…` traegt statt eines Commits einen Dateipfad plus Sitzungseintrag, `260826-1223_c_…` den Stempel `260826-2135` und `260826-1301_c_…` den Stempel `260826-2140`; die zugehoerigen Commits sind `17e5e4e`, `9a4e495` und `960900d`. Damit trifft es fuenf von fuenf Datensaetzen des Plans.
