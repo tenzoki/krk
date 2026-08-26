@@ -1709,3 +1709,24 @@
 {"ts":"2026-08-26T17:39:36","event":"commit","turn":1,"task":"S3","agent":"coder","detail":"9c02863 test(core): Kindstarter beweist das Kind"}
 {"ts":"2026-08-26T17:39:36","event":"task_start","turn":1,"task":"S6","agent":"coder","detail":""}
 {"ts":"2026-08-26T17:39:36","event":"task_start","turn":1,"task":"S4","agent":"coder","detail":""}
+{"ts":"2026-08-26T17:40:17","event":"commit","turn":1,"task":"S3","detail":"17e5e4e test(core): Kindstarter — berichtigt: die vorige task_done/commit-Zeile mit 9c02863 war falsch, der git add scheiterte an einer Pfadliste mit Zeilenumbruechen"}
+{"ts":"2026-08-26T19:21:12","event":"session_start","history_file":"shared/history/260826-1807-orchestrator-session.md","detail":"Wiederaufnahme der Sitzung 260826-1807: Turn 1 unterbrochen, S4 und S6 offen, S5 danach; Modus plan, Domaene code, max_turns 12"}
+{"ts":"2026-08-26T19:21:47","event":"task_start","turn":1,"task":"S4","agent":"coder","detail":"Wiederaufnahme nach Unterbrechung"}
+{"ts":"2026-08-26T19:21:47","event":"task_start","turn":1,"task":"S6","agent":"coder","detail":"Wiederaufnahme nach Unterbrechung"}
+{"ts":"2026-08-26T19:36:23","event":"task_done","turn":1,"task":"S4","agent":"coder","detail":"9a4e495"}
+{"ts":"2026-08-26T19:36:23","event":"commit","turn":1,"task":"S4","detail":"9a4e495 test(core): jede Variante von Kommando steht in KENNUNGEN"}
+{"ts":"2026-08-26T19:36:23","event":"task_start","turn":1,"task":"S5","agent":"coder","detail":"CLAUDE.md nennt die dritte Pflichtstelle"}
+{"ts":"2026-08-26T19:41:11","event":"task_done","turn":1,"task":"S6","agent":"coder","detail":"960900d"}
+{"ts":"2026-08-26T19:41:11","event":"commit","turn":1,"task":"S6","detail":"960900d fix(bench): jeder Pruefordner gegen seine zugesagte Eintragszahl"}
+{"ts":"2026-08-26T19:41:11","event":"task_done","turn":1,"task":"S5","agent":"coder","detail":"fc829c8"}
+{"ts":"2026-08-26T19:41:11","event":"commit","turn":1,"task":"S5","detail":"fc829c8 docs: CLAUDE.md nennt KENNUNGEN als dritte Pflichtstelle"}
+{"ts":"2026-08-26T19:41:22","event":"review_start","turn":1,"agent":"coderev","detail":"9c02863..fc829c8, vier ungedeckte Commits"}
+{"ts":"2026-08-26T19:59:07","event":"review_done","turn":1,"agent":"coderev","detail":"9c02863..fc829c8 gedeckt, 6 Befunde gefiltert, keiner ein Rueckschritt; Commit bc5991d"}
+{"ts":"2026-08-26T19:59:54","event":"coherence_review","turn":1,"detail":"verdict=ok; Artefakt-Grundlage: 2 Durchsichten decken 26e8039..HEAD lueckenlos, alle 5 Behebungen halten, 9 Befunde gefiltert; Artefakt-Directive: die 7 Commits erfuellen die erste Haelfte der Directive ganz, der zweite Plan ueber die 116 uebrigen Befunde fehlt noch; Grundlage-Directive: 0 beantwortete Entscheidungen in dieser Runde beruehrt"}
+{"ts":"2026-08-26T19:59:54","event":"gate_response","turn":1,"detail":"Kohaerenz-Gate: Runde annehmen und weitermachen"}
+{"ts":"2026-08-26T19:59:54","event":"turn_end","turn":1,"detail":"6 Aufgaben erledigt, 7 Commits, 9 Befunde gefiltert, 5 Defektdatensaetze geschlossen; Warteschlange leer"}
+{"ts":"2026-08-26T20:11:58","event":"reconciliation","detail":"0 sachliche Abweichungen; Urteil directive-partially-met, Empfehlung accept Bounded Closure; 1 neuer Datensatz (Deckungsmesser am Sitzungs-HEAD); Commit a7764f5"}
+{"ts":"2026-08-26T20:11:58","event":"gate_hit","agent":"user","detail":"Rebalance-Gate: Urteil directive-partially-met"}
+{"ts":"2026-08-26T20:13:53","event":"gate_response","detail":"Rebalance-Gate: hier abschliessen (Accept Bounded Closure)"}
+{"ts":"2026-08-26T20:13:53","event":"bounded_closure_proposed","detail":"Die erste Haelfte der Directive ist gebaut und belegt, die zweite bewusst zurueckgestellt; 116+10 offene Defekte und ein namentlich vorgesehener zweiter Plan als Rueckstand abgelegt"}
+{"ts":"2026-08-26T20:14:10","event":"session_end","detail":"1 Runde, 6 Aufgaben, 9 Commits, 5 Defekte geschlossen, 10 abgelegt, 1 Entscheidung abgelegt; Status Bounded Closure"}
