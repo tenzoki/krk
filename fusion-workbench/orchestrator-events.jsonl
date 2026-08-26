@@ -1643,3 +1643,12 @@
 {"ts":"2026-08-26T10:31:21","event":"task_done","turn":1,"task":"R2","agent":"coderev","detail":"14/14 Dateien, 9 Datensaetze (1 kritisch, 1 hoch, 3 mittel, 2 niedrig, 1 Entscheidung)"}
 {"ts":"2026-08-26T10:32:16","event":"task_done","turn":1,"task":"R4","agent":"coderev","detail":"12/12 Dateien, 10 Datensaetze (1 hoch, 3 mittel, 5 niedrig, 1 Entscheidung)"}
 {"ts":"2026-08-26T10:34:08","event":"task_done","turn":1,"task":"R3","agent":"coderev","detail":"12/12 Dateien, 6 Datensaetze (1 mittel, 4 niedrig, 1 Entscheidung)"}
+{"ts":"2026-08-26T10:52:20","event":"coherence_review","turn":1,"detail":"verdict=ok; Artefakt-Grundlage: 4 Berichte, 34 neue Datensaetze, 1 kritisch; Artefakt-Directive: geht darauf zu, 52/155 Dateien; Grundlage-Directive: 0 aktive Entscheidungen beruehrt, 3 neue offene Fragen"}
+{"ts":"2026-08-26T10:52:20","event":"turn_end","turn":1,"detail":"4 Aufgaben erledigt, 34 Datensaetze gefiltert, 2 Commits"}
+{"ts":"2026-08-26T10:52:33","event":"turn_start","turn":2,"detail":"3 Aufgaben bereit: R5, R6, R15"}
+{"ts":"2026-08-26T10:52:33","event":"task_start","turn":2,"task":"R5","agent":"coderev"}
+{"ts":"2026-08-26T10:52:33","event":"task_start","turn":2,"task":"R6","agent":"coderev"}
+{"ts":"2026-08-26T10:52:33","event":"task_start","turn":2,"task":"R15","agent":"coderev"}
+{"ts":"2026-08-26T11:10:25","event":"task_done","turn":2,"task":"R5","agent":"coderev","detail":"3/3 Dateien, 7 Datensaetze (4 mittel, 3 niedrig) + 1 Nachtrag an fremdem Datensatz"}
+{"ts":"2026-08-26T11:11:35","event":"task_done","turn":2,"task":"R6","agent":"coderev","detail":"13/13 Dateien, 9 Datensaetze (4 mittel, 4 niedrig, 1 Entscheidung)"}
+{"ts":"2026-08-26T11:12:04","event":"task_done","turn":2,"task":"R15","agent":"coderev","detail":"6/6 Dateien, 9 Datensaetze (1 hoch, 5 mittel, 3 niedrig)"}

@@ -66,3 +66,5 @@ ist schlechter als keine.
 
 **Gefunden:** coderev, bei der Durchsicht der Runde 18 gegen `20eccd4..8478753`. Gemessen am
 gebauten Prüfziel, nicht aus dem Quelltext geschlossen.
+
+Also seen: 260826-1302 by coderev — dieselbe Klasse am gemeinsamen Kindstarter `tests/gemeinsam/mod.rs::kind_mit_deskriptorgrenze` und seinen sechs Rufern; eigener Datensatz `260826-1302_*_sechs-elternproben-am-gemeinsamen-kindstarter-bleiben-gruen-wenn-der-kindname-nicht-trifft.md`.
