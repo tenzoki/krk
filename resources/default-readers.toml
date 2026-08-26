@@ -677,11 +677,18 @@ kennzeichen = '^fusion-workbench$'
 # aber ohne Runden und ohne Zustandsmarker im Dateinamen. Die Speicher liegen
 # flach an der Wurzel der Werkbank, und ein Datensatz heißt schlicht
 # `260528-14-40-route-option-a.md`. Jede Zeile, die bei fusion nach Markern
-# aufschlüsselt, hat hier also keinen Gegenstand, und die vier Profile unten
-# sind aus demselben Grund kürzer als ihre Vorbilder.
+# aufschlüsselt, hat hier also keinen Gegenstand, und deshalb stehen unten vier
+# Profile und nicht acht: der Defektspeicher mit seiner Aufschlüsselung nach
+# Markern und die zwei Rundenprofile haben hier nichts zu zeigen, und die
+# Aufgabe des gemeinsamen Speichers fällt dem Wurzelprofil zu, weil eine
+# flight-Werkbank kein `shared/` hat und ihre Speicher flach führt.
 #
-# Die Kennzeichendatei `.flight-setup` trägt dieselben drei Felder wie
-# `.fusion-setup`, also greifen dieselben Muster.
+# `.flight-setup` trägt dieselben Felder wie `.fusion-setup` UND DAZU
+# `setup_pwd`, das fusion nicht mehr schreibt. Alle drei Muster greifen
+# deshalb, aber nicht mit derselben Ausbeute: zwei liefern an beiden Dateien
+# einen Wert, das dritte allein an `.flight-setup`. Die Zeile „Projekt" steht
+# hier also mit einem Wert da und an einer fusion-Werkbank leer; der Absatz
+# beim fusion-Wurzelprofil oben schreibt es aus.
 
 # Die Wurzel einer flight-Werkbank.
 #
@@ -689,8 +696,36 @@ kennzeichen = '^fusion-workbench$'
 # über `.fusion-setup` erkennt: ein Pfadmuster auf den Namen träfe auch einen
 # leeren Ordner.
 #
-# Vier Speicher, vier Zeilen. `stilwerk` bekommt keine: es trägt die
-# Stilprofile, mit denen flight schreibt, und keine Datensätze über die Reise.
+# Vier Speicher, und jeder bekommt ZWEI Zeilen: wie viele Datensätze darin
+# stehen und wann zuletzt einer geschrieben wurde. Das ist der Zuschnitt des
+# Profils „fusion-Werkbank: der gemeinsame Speicher" oben, auf eine
+# flight-Werkbank angewandt — dort liegen die Speicher unter `shared/` und
+# tragen ein eigenes Profil, hier liegen sie flach an der Wurzel und werden von
+# diesem mitgeführt. `stilwerk` bekommt keine Zeile: es trägt die Stilprofile,
+# mit denen flight schreibt, und keine Datensätze über die Reise.
+#
+# Der Ablagespeicher führt seine Läufe als ORDNER, und seine zwei Zeilen tragen
+# deshalb kein `muster`; `zeigt = "datum"` ist dort nicht eine Wahl unter
+# zweien, denn `zeigt = "titel"` öffnete Dateien und sähe in diesem Speicher
+# keinen einzigen Eintrag. Das eigene Profil „flight-Werkbank: der
+# Ablagespeicher" unten schreibt denselben Baustein aus.
+#
+# ELF ZEILEN, FÜNF LESELÄUFE, DREI ÖFFNUNGEN. Die drei Feldzeilen nennen den
+# erkannten Ordner selbst und teilen sich dessen Lesung mit der Erkennung über
+# `.flight-setup`; dazu kommt je ein Lauf für `decisions`, `history`, `memos`
+# und `archive`, und die zwei Zeilen eines Speichers nennen denselben Ort und
+# teilen sich seine Lesung. Von den zwölf erlaubten Läufen bleiben sieben
+# übrig. Die drei Öffnungen gehen allein auf die Feldzeilen: `zeigt = "datum"`
+# liest das Änderungsdatum aus dem Verzeichniseintrag, den der Leselauf ohnehin
+# liefert, und öffnet nichts.
+#
+# DIESE ELF ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
+# „Projektwurzel mit flight-Werkbank" ganz unten, dort jede mit
+# `flight-workbench/` vor der Ortsangabe. Wer hier eine Zeile ändert, ändert sie
+# dort mit; nichts hält die beiden Blöcke aneinander. Der Preis ist bewusst
+# gezahlt, aus dem Grund, den das fusion-Wurzelprofil oben ausschreibt: eine
+# Vererbung oder eine Vorlage wäre ein neuer Mechanismus, und für zwei Blöcke in
+# einer von Hand gepflegten Datei ist ein Hinweis die angemessene Antwort.
 [[profil]]
 name = "flight-Werkbank: die Wurzel"
 kennzeichen = '^\.flight-setup$'
@@ -712,16 +747,32 @@ kennzeichen = '^\.flight-setup$'
   zaehlung = { ordner = "decisions", muster = '\.md$' }
 
   [[profil.zeile]]
+  beschriftung = "Entscheidungen, zuletzt"
+  juengste = { ordner = "decisions", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
   beschriftung = "Verläufe"
   zaehlung = { ordner = "history", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Verläufe, zuletzt"
+  juengste = { ordner = "history", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
   beschriftung = "Notizen"
   zaehlung = { ordner = "memos", muster = '\.md$' }
 
   [[profil.zeile]]
+  beschriftung = "Notizen, zuletzt"
+  juengste = { ordner = "memos", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
   beschriftung = "Ablagen"
   zaehlung = { ordner = "archive" }
+
+  [[profil.zeile]]
+  beschriftung = "Ablagen, zuletzt"
+  juengste = { ordner = "archive", anzahl = 1, zeigt = "datum" }
 
 # Ein Speicher einer flight-Werkbank.
 #
@@ -757,13 +808,22 @@ pfad = 'flight-workbench/archive$'
 
 # Das Verzeichnis, das eine flight-Werkbank enthält.
 #
-# Dieselben sieben Zeilen wie das Wurzelprofil darüber, jede mit
-# `flight-workbench/` vor der Ortsangabe, und derselbe Hinweis gilt: sie stehen
-# zweimal da und können auseinanderlaufen.
+# DIESE ELF ZEILEN SIND DIE DES WURZELPROFILS DARÜBER, jede mit
+# `flight-workbench/` vor der Ortsangabe. Sie stehen zweimal in dieser Datei und
+# können auseinanderlaufen; nichts hält sie aneinander. Wer eine ändert, ändert
+# die andere mit. Der Grund steht oben beim Wurzelprofil.
+#
+# ELF ZEILEN, SECHS LESELÄUFE, DREI ÖFFNUNGEN. Ein Lauf mehr als beim
+# Wurzelprofil, und der Halbsatz „plus einen Lauf für die Erkennung" oben ist
+# der Grund: hier trägt JEDE Zeile eine Ortsangabe, keine nennt den erkannten
+# Ordner selbst, also liest den allein die Erkennung über
+# `kennzeichen = '^flight-workbench$'`. Fünf genannte Orte plus dieser eine Lauf
+# sind sechs, und von den zwölf erlaubten bleiben sechs übrig. Die drei
+# Öffnungen sind dieselben drei Feldzeilen wie oben.
 #
 # Erkannt wird auch hier am Namen, und der Preis ist derselbe wie beim
 # fusion-Projektwurzelprofil oben: ein leeres `flight-workbench` liefert
-# sieben Zeilen Platzhalter statt der Metadaten.
+# elf Zeilen Platzhalter statt der Metadaten.
 #
 # Enthält ein Verzeichnis BEIDE Werkbänke, gewinnt das fusion-Profil, weil es
 # in dieser Datei weiter oben steht. Wer es andersherum will, verschiebt die
@@ -789,13 +849,29 @@ kennzeichen = '^flight-workbench$'
   zaehlung = { ordner = "flight-workbench/decisions", muster = '\.md$' }
 
   [[profil.zeile]]
+  beschriftung = "Entscheidungen, zuletzt"
+  juengste = { ordner = "flight-workbench/decisions", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
   beschriftung = "Verläufe"
   zaehlung = { ordner = "flight-workbench/history", muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Verläufe, zuletzt"
+  juengste = { ordner = "flight-workbench/history", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
   beschriftung = "Notizen"
   zaehlung = { ordner = "flight-workbench/memos", muster = '\.md$' }
 
   [[profil.zeile]]
+  beschriftung = "Notizen, zuletzt"
+  juengste = { ordner = "flight-workbench/memos", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+
+  [[profil.zeile]]
   beschriftung = "Ablagen"
   zaehlung = { ordner = "flight-workbench/archive" }
+
+  [[profil.zeile]]
+  beschriftung = "Ablagen, zuletzt"
+  juengste = { ordner = "flight-workbench/archive", anzahl = 1, zeigt = "datum" }

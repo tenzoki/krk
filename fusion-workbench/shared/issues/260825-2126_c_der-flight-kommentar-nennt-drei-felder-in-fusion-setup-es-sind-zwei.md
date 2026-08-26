@@ -46,3 +46,20 @@ dazu `setup_pwd`, das fusion nicht mehr schreibt; alle drei Muster greifen, und 
 Absatz bei `:248-254` gehört dazu.
 
 **Schwere:** niedrig. Eine Prosaangabe, die der eigenen Datei widerspricht.
+
+---
+
+Resolved: Der Satz steht nicht mehr im Kommentarkopf des flight-Abschnitts von
+`resources/default-readers.toml`. An seiner Stelle steht, was gemessen ist: `.flight-setup`
+trägt dieselben Felder wie `.fusion-setup` **und dazu** `setup_pwd`, das fusion nicht mehr
+schreibt; alle drei Muster greifen, aber nicht mit derselben Ausbeute — zwei liefern an beiden
+Dateien einen Wert, das dritte allein an `.flight-setup`, und die Zeile „Projekt" steht deshalb
+bei flight mit einem Wert da und an einer fusion-Werkbank leer. Der Verweis auf den Absatz beim
+fusion-Wurzelprofil, den dieser Datensatz verlangt, steht im letzten Halbsatz.
+
+Die Prämisse ist damit berichtigt und der Schluss unverändert stehen geblieben: er stimmte
+schon vorher. Nachgemessen an einer Prüfwerkbank mit `.flight-setup` in der Gestalt aus „Was
+gemessen ist": die drei Feldzeilen liefern `Adria`, den Einrichtungszeitpunkt und `0.8.0`, alle
+drei mit Wert.
+
+Bearbeitet von ontocoder im Zuge der Vertiefung der vier flight-Profile.

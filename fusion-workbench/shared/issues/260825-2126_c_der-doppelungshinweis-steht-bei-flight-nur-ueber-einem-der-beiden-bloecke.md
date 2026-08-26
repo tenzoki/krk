@@ -39,3 +39,19 @@ das hält, und für flight steht er an einer von zwei Stellen.
 trägt, mit Verweis auf das Profil „Projektwurzel mit flight-Werkbank" ganz unten.
 
 **Schwere:** niedrig.
+
+---
+
+Resolved: Der Hinweis steht jetzt über **beiden** flight-Blöcken in
+`resources/default-readers.toml`, wie Schritt 8 des Plans der Runde 18 es für die zwei
+fusion-Blöcke verlangt. Über `flight-Werkbank: die Wurzel` steht er in der ausführlichen Form
+mit dem Grund („eine Vererbung oder eine Vorlage wäre ein neuer Mechanismus"), über
+`Projektwurzel mit flight-Werkbank` in der kurzen, die auf diesen Grund zurückverweist — dieselbe
+Aufteilung, die das fusion-Paar trägt.
+
+**Aus sieben Zeilen sind elf geworden**, denn im selben Zug hat jeder der vier flight-Speicher
+seine Datumszeile bekommen. Die Zahl im Hinweis ist in beiden Blöcken nachgezogen, und die
+Zeichengleichheit der zwei Blöcke ist nach der Änderung nachgemessen: normalisiert man das
+vorangestellte `flight-workbench/` weg, sind alle zweiundzwanzig Angaben je Paar zeichengleich.
+
+Bearbeitet von ontocoder.
