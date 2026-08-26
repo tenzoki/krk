@@ -1,7 +1,7 @@
 # Implementation Plan: die fünf schweren Befunde der Vollbaum-Durchsicht vom 260826
 
 **Date:** 2026-08-26
-**Status:** Draft
+**Status:** Complete
 **Spec:** none — planned from raw request (Directive des Nutzers: „Wir beginnen mit den fünf schweren, dann müssen alle anderen gefixt werden.")
 **Decidability:** Je Befund eine Antwort. **Befund 1:** Die tragende Frage lautet „Ist alles angekommen, was in der Quelle stand?", und sie ist aus den Eingaben von `ueber_datentraeger` entscheidbar, weil jeder Weg in `kopieren.rs`, auf dem ein Eintrag nicht ankommt, `Steuerung::ueberspringen` ruft (gelesen an `kopieren.rs:115-118`, `:132-133`, `:138-140`, `:181-183` und an `ziel_klaeren`, `mod.rs:435-450`); der Zählstand der übersprungenen Einträge vor und nach dem Kopieren ist damit ein vollständiger Zeuge, und ein Blick ins Zieldateisystem wäre es nicht. **Befund 2:** „Hängt das Öffnen an einer Röhre?" ist nicht am Pfad entscheidbar und am Deskriptor gegenstandslos; der Mechanismus ist im Baum (`ohne_warten_oeffnen`) und wird nur übernommen. **Befund 3:** „Steht jede Variante in `KENNUNGEN`?" ist aus der Liste allein unentscheidbar, weil die Liste der Gegenstand ist; entscheidbar wird sie aus einer zweiten Quelle, dem Quelltext der Aufzählung, und der Plan wechselt den Mechanismus dorthin. **Befund 4:** „Ist die Kindprobe gelaufen?" ist aus dem Rückgabewert von `libtest` unentscheidbar (0 bei Treffer, bei Nichttreffer und bei verlorenem `#[ignore]`, nachgemessen im Datensatz); entscheidbar ist sie aus der Ausgabe `1 passed`, und der Plan wechselt den Mechanismus dorthin. **Befund 5:** „Misst die Strecke auf dem zugesagten Bestand?" ist aus Steckbrief und gelesener Zahl entscheidbar; heute wird sie nicht gestellt.
 
@@ -105,7 +105,7 @@ Die drei Kanten aus Schritt 1 und aus Schritt 3 sind Ordnung nach Risiko und kei
    - Dependencies: Schritt 3 (Reihenfolge nach Risiko; dieselbe Datei `gemeinsam/mod.rs`).
    - Source: Datensatz 3; Entscheidungsdatensatz `shared/decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md` (Möglichkeit 1, die mit Möglichkeit 2 verträglich bleibt).
 
-5. **Befund 3: `CLAUDE.md` nennt die dritte Pflichtstelle**
+5. [DONE] **Befund 3: `CLAUDE.md` nennt die dritte Pflichtstelle**
    - Executor: `coder`
    - Files: `CLAUDE.md`
    - Changes: Im Absatz „Etliche Fallunterscheidungen sind vollständig und haben keinen Auffangzweig" steht heute: „Jedes neue Kommando braucht eine Zeile in `Kommando::wirkungsbereich` … und in `bereich_des_kommandos`". Der Satz bekommt die dritte Stelle, `Kommando::KENNUNGEN` in derselben Datei wie `wirkungsbereich`, und den Unterschied: die ersten zwei hält der Übersetzer, die dritte hält die Probe `jede_variante_von_kommando_steht_genau_einmal_in_kennungen` in `crates/krk-core/tests/belegung.rs`, und ohne die Zeile dort übersetzt das Kommando, steht in keiner Belegung und bringt `kennung()` und `tag_des_kommandos` zum Absturz. Keine Zahl im Satz.
