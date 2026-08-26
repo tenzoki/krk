@@ -1672,3 +1672,11 @@
 {"ts":"2026-08-26T12:20:48","event":"task_done","turn":4,"task":"R11","agent":"coderev","detail":"12/12 Dateien, 4 Defekte (2 mittel, 2 niedrig); Vier-Kommandos-Probe wuerde rot"}
 {"ts":"2026-08-26T12:21:08","event":"task_done","turn":4,"task":"R9","agent":"coderev","detail":"27/27 Dateien, 8 Defekte (1 mittel, 7 niedrig); Untergrenzen 25/25"}
 {"ts":"2026-08-26T12:21:30","event":"task_done","turn":4,"task":"R12","agent":"coderev","detail":"6/6 Dateien, 7 Defekte (1 mittel, 6 niedrig); alle 7 Altbefunde gelten weiter"}
+{"ts":"2026-08-26T12:24:05","event":"commit","turn":4,"detail":"8bab018 + Nachtrag — 3 Berichte, 19 Datensaetze, 2 Also-seen zurueckgefuehrt"}
+{"ts":"2026-08-26T12:24:05","event":"coherence_review","turn":4,"detail":"verdict=ok; 3 Berichte, 19 Datensaetze, 0 hoch; 130/155 Dateien; 1 offene Entscheidung gelesen, keine beantwortet"}
+{"ts":"2026-08-26T12:32:21","event":"turn_end","turn":4,"detail":"3 Aufgaben erledigt, 19 Datensaetze, 2 Commits"}
+{"ts":"2026-08-26T12:32:21","event":"turn_start","turn":5,"detail":"2 Aufgaben bereit: R13, R14"}
+{"ts":"2026-08-26T12:32:21","event":"task_start","turn":5,"task":"R13","agent":"coderev"}
+{"ts":"2026-08-26T12:32:21","event":"task_start","turn":5,"task":"R14","agent":"coderev"}
+{"ts":"2026-08-26T12:45:20","event":"task_done","turn":5,"task":"R14","agent":"coderev","detail":"13/13 Dateien, 13 Defekte (4 mittel, 9 niedrig); Tag bleibt bei Scheitern lokal, blockiert nicht"}
+{"ts":"2026-08-26T12:47:42","event":"task_done","turn":5,"task":"R13","agent":"coderev","detail":"14/14 Dateien, 10 Defekte (2 mittel, 8 niedrig); bereich_des_kommandos 79/79, schiebt_auffrischung_auf 6/6"}

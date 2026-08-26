@@ -52,3 +52,5 @@ Der billigste Schnitt hält die drei Felder aus dem Wortschatz statt aus der Nut
 Verwandt und **nicht** dasselbe: `shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md` behandelt den **fehlenden** Eintrag, dieser Befund den vorhandenen mit abweichendem Zusteller.
 
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
+
+Also seen: 260826-1442 by coderev — die drei Oberflächen zeigen den freigesetzten Befehl verschieden: Belegungsansicht „(Kürzel des Menüs)“ (`belegungsmodell.rs:530-536`, sachlich falsch, das Menü stellt ihn nicht zu), Markdown „(von KRK nicht eingeordnet)“ (`belegungsausgabe.rs:237,357`), Hauptmenü grau ohne Kommando (`menuemodell.rs:295-300`); keine sagt, dass der Befehl unerreichbar ist.

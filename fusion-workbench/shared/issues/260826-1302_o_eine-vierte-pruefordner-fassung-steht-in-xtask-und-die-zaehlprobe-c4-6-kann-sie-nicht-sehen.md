@@ -68,3 +68,5 @@ Zwei Fragen, und die zweite hängt an der ersten.
 2. **Was wird aus `Wegwerfwurzel`?** Zusammenlegen geht nicht — dieselbe Kistengrenze wie bei den drei anerkannten Fassungen. Sie wäre also die vierte anerkannte, und dann wandert die Zahl aus `CLAUDE.md` und aus der Probe auf vier. Das ist eine Nutzerfrage; dieser Datensatz stellt sie nicht, er meldet nur, dass sie ansteht.
 
 Gefunden bei der Vollbaum-Durchsicht R6 der dreizehn übrigen Probendateien des Kerns, HEAD `4a57028`.
+
+Also seen: 260826-1440 by coderev — an `c13bf1c` nachgelesen: `release.rs:905-932` hat Prozesskennung, Laufnummer und Abräumen in `Drop`, ist gegenüber den drei Fassungen des Kerns nicht auseinandergelaufen; allein die Zählprobe sieht sie weiter nicht.

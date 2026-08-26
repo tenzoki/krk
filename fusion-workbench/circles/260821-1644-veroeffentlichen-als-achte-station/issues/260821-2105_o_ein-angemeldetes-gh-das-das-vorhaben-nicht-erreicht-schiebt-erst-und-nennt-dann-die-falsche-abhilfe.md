@@ -94,3 +94,5 @@ des Befunds und ändert keine Voraussetzung der Kette.
 - `xtask/src/veroeffentlichung.rs:626` — die Meldung des gescheiterten Anlegens.
 - `xtask/src/veroeffentlichung.rs:654` — `release_steht`, Rückgabewert allein.
 - Lauf vom 260821-2101 gegen eine Ersatzgegenseite, Ausgabe oben zitiert.
+
+Also seen: 260826-1440 by coderev — dieselben drei Meldungen (`veroeffentlichung.rs:245-247`, `:626-630`, `:676-680`) nennen mit „Derselbe Aufruf noch einmal" auch keinen Befehl; für den Rufer über `./release.sh` ist das ein vollständiger Neubau samt Neueinreichung, und `cargo xtask veroeffentlichen <zahl>` steht in keiner.

@@ -72,3 +72,5 @@ landet an einer Stelle, die von etwas anderem handelt, und muss erst merken, das
 
 ---
 Resolved:
+
+Also seen: 260826-1440 by coderev — ein viertes Zitat derselben Gattung in `veroeffentlichung.rs:374-375` (`beglaubigung.rs:344`, `:369`, `:379`); am `c13bf1c` stimmen alle drei noch, die nächste eingefügte Zeile in `beglaubigung.rs` kippt sie.
