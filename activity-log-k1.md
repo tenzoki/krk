@@ -21,7 +21,13 @@
 
 ## Grober Verlauf
 
-- **08-20 Do** [5-22] — Runde 14 wird gebaut, vom Nutzer am laufenden Bündel abgenommen und schließt kohärent; danach Auslieferung 0.5.5, der Beglaubigungsweg `./certify-only.sh` und ein Sitzungsabschluss mit Abgleich, Archiv und Kuratorenlauf.
+- **08-26 Mi** [1-17] — Die Vollbaum-Durchsicht: fünfzehn Prüfer lesen alle 155 Rust-Dateien in fünf Runden, 121 Defekte und vier Fragen gefiltert, kein Code geändert. Ein kritischer Datenverlustpfad beim Verschieben über die Datenträgergrenze, und eine Deskriptor-Abnahme, die Ausfall nicht von Erfolg unterscheidet.
+- **08-25 Di** [7-22] — Runde 17 (Zip, Unzip, Finder im Kontextmenü) läuft und schließt beschränkt, Auslieferung 1.2.0; am Abend die Runde 18 ohne Circle: Vorschau vertieft, Klick-Fokus und Zip-Zeitstempel behoben, zwölf Leseprofile.
+- **08-24 Mo** [5-21] — Runde 16: die Vorschau zeigt für erkannte Orte eine Profil-Zusammenfassung, `readers.toml` als siebte Ablagedatei; schließt beschränkt, Auslieferung 1.1.0.
+- **08-23 So** [4-22] — Zwei Einblend-Defekte behoben, `cmd+e` wird der Rundweg, Auslieferungsdurchsicht und Auslieferung 1.0.0.
+- **08-22 Sa** [—]
+- **08-21 Fr** [1-22] — Der Lesezeichenvorfall wird untersucht und beendet; Runde 15 baut das Veröffentlichen als achte Station, wird vom Nutzer mit vierzehn von fünfzehn Kriterien abgenommen und schließt kohärent; der Web-Betrachter fällt weg.
+- **08-20 Do** [5-22] — Runde 14 wird gebaut, vom Nutzer am laufenden Bündel abgenommen und schließt kohärent; danach Auslieferung 0.5.5, der Beglaubigungsweg `./certify-only.sh`, ein Sitzungsabschluss mit Abgleich, Archiv und Kuratorenlauf, und am Abend der Lesezeichenverlust nach der Installation.
 - **08-19 Mi** [8-23] — Die Auslieferung springt auf 0.5.4, ein Klick unter die letzte Zeile holt den Fokus, der Kuratorenlauf zieht dreizehn Aussagen in CLAUDE.md nach — und am Abend wird Runde 14 geformt: die Vorschaufläche soll auswählbar werden.
 - **08-18 Di** [7-25] — Runde 13: `opt+cmd+s` gleicht die Ordner an, und eine Dateiliste nimmt Abwürfe aus fremden Anwendungen. Dabei fällt eine Datenverlustkette im Kern auf, die älter ist als die Runde.
 - **08-17 Mo** [8-28] — Runde 12: ein Löschweg in den Papierkorb, Rückfrage vor jedem Vorgang, endgültiges Löschen fällt aus der Anwendung.
@@ -45,7 +51,8 @@
 
 | Woche ab (Mo) | Aktive Tage | Ø aktive Stunden/Tag |
 |---------------|-------------|----------------------|
-| 2026-08-17    | 4           | 17.5                 |
+| 2026-08-24    | 3           | 15.7                 |
+| 2026-08-17    | 6           | 18.2                 |
 | 2026-08-10    | 7           | 19.6                 |
 | 2026-08-03    | 7           | 15.0                 |
 | 2026-07-27    | 1           | 15.0                 |
@@ -703,9 +710,106 @@ Die erste Antwort des Nutzers zur Zusatztaste (`shift`) hält nicht: macOS veren
 | 16:24 | `./certify-only.sh` — ein fertiges Bündel lässt sich allein beglaubigen | h g |
 | 20:56 | Abgleich zum Sitzungsabschluss: 15 Marker nachgezogen, Verdikt review-needed | h g |
 | 21:15 | neun terminale Datensätze ins Archiv, das Wächterprotokoll mit 124 Zeilen gerollt | w g |
-| 21:27 | Kuratorenlauf: sechs Einträge auf CLAUDE.md, alle angewandt | h |
-| — | 15 Defektdatensätze, 1 Entscheidung, 1 Durchsicht, 14 Sitzungsprotokolle | i d r h |
+| 21:27 | Kuratorenlauf: sechs Einträge auf CLAUDE.md, alle angewandt | h g |
+| 22:00 | Abendsitzung: der Lesezeichenverlust nach der Installation, zwei Defekte an den Startmeldungen | h i |
+| 22:42 | Analyse „Lesezeichenverlust nach Installation", dreizehn Beweisstücke | a |
+| — | 16 Defektdatensätze, 1 Analyse, 1 Durchsicht, 16 Sitzungsprotokolle | i a r h |
+
+## 2026-08-21 (Fr) [1-22]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 01:24 | die Untersuchung zum Lesezeichenverlust geht ein, drei Befunde; eine `bookmarks.toml` ohne Bestand ist kein erster Start | g h i d |
+| 10:07 | der Lesezeichenvorfall ist beendet, nicht aufgeklärt; der Leerbefund-Zweig sichert nichts mehr | g h |
+| 10:31 | Durchsicht des Turns 1, ein Rückschritt an `073448e` | r g |
+| 12:13 | Spec und Plan „Artefakt und Release", vom Nutzer abgenommen | p g h |
+| 12:53 | das Modul `veroeffentlichung` mit Ticketprüfung ohne Netz; `veroeffentlichen` wird Station acht | g h |
+| 13:52 | zwei Durchsichten der Runde 15: neun Befunde, dann drei am Rand | r g |
+| 14:24 | `git` nimmt einen Auftrag statt einer nackten Wortliste; die Aufsicht liest Plätze statt freier Wörter | g h r |
+| 15:40 | Abgleich zum Sitzungsabschluss, Verdikt review-needed | h g |
+| 20:05 | die Runde 15 bekommt ihren Circle, nachgetragen und aktiv; Auslieferung 0.5.6 | k g |
+| 20:49 | die README führt den Nutzer zuerst, 639 auf 407 Zeilen | g |
+| 21:09 | Abnahme der fünfzehn Nutzerkriterien, vierzehn halten; das Portfolio zieht nach, kein Circle aktiv | h g k |
+| 22:02 | der Web-Betrachter fällt weg, das Abgeben an den Systembrowser genügt; das Portfolio hat erstmals keine vorgesehene Arbeit | d g |
+| 22:31 | Kuratorenlauf: fünf Aussagen in CLAUDE.md auf den Stand des Baums | h g |
+| — | 9 Defektdatensätze, 4 Entscheidungen, 5 Durchsichten, 15 Sitzungsprotokolle | i d r h |
+
+## 2026-08-22 (Sa) [—]
+
+## 2026-08-23 (So) [4-22]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 04:42 | Sitzung: das Einblenden erreichte das Fenstermodell und nicht den Schirm | h g |
+| 07:37 | Durchsicht von `df8163d`: vier Befunde, kein Hindernis | r g |
+| 09:44 | der Nutzer hat abgenommen und stellt die Umschaltfrage um; `cmd+e` wird der Rundweg zwischen Dateiliste und Editor | d g h |
+| 10:33 | Durchsicht von `28cbb7b`: sieben Befunde; ein Entscheidungsdatensatz stand unter zwei Markern zugleich | r g |
+| 12:14 | acht Befunde aus zwei Durchsichten behoben, sieben schließen, einer bleibt eine Frage an den Nutzer | g i |
+| 14:20 | Abgleich zum Sitzungsabschluss, eine zehn Tage alte Frage; die Stilprofile auf fusion 10.5.0 | h g |
+| 14:43 | Auslieferungsdurchsicht vor 1.0.0, dann die Auslieferung 1.0.0 | r g |
+| 21:09 | Abschluss der Auslieferungssitzung, zwei eigene Fehler benannt | h g |
+| 22:41 | Portfolio-Lauf über `/fusion:next`, ein Backlog-Eintrag | h b |
+| — | 10 Defektdatensätze, 2 Entscheidungen, 3 Durchsichten, 10 Sitzungsprotokolle | i d r h |
+
+## 2026-08-24 (Mo) [5-21]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 05:30 | Runde 16 wird geformt: die Vorschau zeigt für erkannte Orte eine Profil-Zusammenfassung; neun Entscheidungen gefiltert | h d k |
+| 09:12 | Circle, Spec und Plan der Runde 16; `regex` kommt in den Arbeitsbereich, sein Preis ist gemessen | g p h |
+| 09:38 | `readers.toml` wird die siebte Ablagedatei; zwei Lesewege bekommen ihren Deckel | g h |
+| 10:19 | Durchsicht von Turn 1: drei Befunde, kein Hindernis | r g |
+| 10:45 | die Gestalt der `readers.toml`, die Erkennung in zwei Durchgängen, die vier Bausteine | g h |
+| 12:19 | Durchsicht von Bündel B: fünf Befunde; die Räumung von vierzehn Befunden auf einen Schlag | r g |
+| 13:30 | die Auslieferungsfassung der Leseprofile, fünf Profile gegen die wirkliche Werkbank | g h |
+| 15:34 | die Ablagehälfte der `readers.toml`; zwei Antworten des Nutzers, zwei Entscheidungen gebaut | g h d |
+| 15:47 | der siebte Inhalt reist am Arbeitsfaden mit; die Profile bekommen ihren einen Schreiber | g h |
+| 16:36 | C6 wird belegt statt behauptet, und die Deskriptorprobe misst wirklich | g |
+| 17:18 | zwei Durchsichten über elf unbelesene Commits, fünfzehn Befunde, sieben behoben | r g h |
+| 19:05 | Abgleich zum Rundenabschluss: zwölf Abweichungen und ein falscher Marker | h g |
+| 20:20 | Runde 16 schließt beschränkt, eine Endbedingung hält; Auslieferung 1.1.0 | k g |
+| — | 42 Defektdatensätze, 9 Entscheidungen, 2 Pläne, 4 Durchsichten, 29 Sitzungsprotokolle | i d p r h |
+
+## 2026-08-25 (Di) [7-22]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 07:11 | Runde 17 gefasst und aktiviert: das Kontextmenü trägt Zip, Unzip und Finder; fünf Fragen beantwortet | k d h g |
+| 08:24 | die Kiste `zip` kommt herein, ohne C-Code im Bauziel; `Art::Zippen` erbt die ganze Vorgangsmaschine | g h |
+| 09:10 | `Art::Entpacken`, kein Eintrag kommt aus dem Zielordner heraus; die Regel des Kontextmenüs ohne AppKit | g h |
+| 09:47 | Durchsicht der ersten Runde: fünf Befunde, einer kritisch; ein Archivname aus Punkten | r g i |
+| 11:02 | das Kontextmenü der Dateiliste trägt vier Einträge, das Konfliktblatt zeigt drei Antworten, die Kette ist geschlossen | g h |
+| 11:50 | zweite Durchsicht: vier von fünf Befunden an der Wurzel; ein Archiv ist nicht mehr Kandidat für seinen Inhalt | r g |
+| 12:39 | Abgleich der Runde 17; CLAUDE.md auf dem Stand der Runde 17 | h g |
+| 12:57 | dritte und vierte Durchsicht: sechs Befunde, fünf von sechs wirklich behoben; die Faltung reicht über ASCII hinaus | r g |
+| 14:22 | Runde 17 schließt beschränkt, der Abnahmelauf bleibt Nutzerarbeit; Auslieferung 1.2.0 | k g |
+| 18:32 | Runde 18 ohne Circle: der Tabbefehl nimmt den Ersthelferrang mit; Plan mit sieben Entscheidungen | g p d |
+| 18:38 | `SystemTime` in bürgerliche Ortszeit; ein gepackter Eintrag trägt das Änderungsdatum seiner Quelle | g h |
+| 19:21 | ohne angewählte Zeile beschreibt die Vorschau den Ordner; Platzhalter in der Ortsangabe; `juengste` zeigt ein Datum | g h |
+| 20:54 | die Auslieferungsfassung führt zwölf Leseprofile; was sie an der wirklichen Werkbank kosten | g a |
+| 21:34 | zwei Durchsichten: acht Befunde an den Profilen, sieben am Quelltext | r g |
+| 22:26 | fünf Befunde an der Profildatei behoben, die Probe zu C6.7 misst das kleinste Profil; Nachdurchsichten halten | g h r |
+| — | 36 Defektdatensätze, 5 Entscheidungen, 2 Pläne, 8 Durchsichten, 1 Analyse, 31 Sitzungsprotokolle | i d p r a h |
+
+## 2026-08-26 (Mi) [1-17]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 01:24 | drei Halbsätze im Handbuchteil der Profildatei gerichtet; dritte Nachdurchsichten: der Stand kann ausgeliefert werden | g h r |
+| 08:14 | die vier flight-Speicher tragen ihre Datumszeile; Abgleich der Runde 18, sieben Entscheidungen umgesetzt | g h d |
+| 08:31 | neun Aussagen in CLAUDE.md gegen den Baum nachgezogen | g |
+| 09:07 | die Vorgabe des Dateifilters steht auf tiefer Suche; Durchsicht der neun Aussagen und der Filtervorgabe | g r |
+| 10:32 | Schlussabgleich der wiederaufgenommenen Sitzung; CLAUDE.md sagt, dass die tiefe Suche ab Werk steht | h g |
+| 11:14 | Vollbaum-Durchsicht beginnt: 155 Rust-Dateien in 15 Aufgaben, fünf Runden | h |
+| 12:39 | Runde 1, `krk-core/src`: vier Berichte, 34 Datensätze, ein kritischer Datenverlustpfad beim Verschieben über die Datenträgergrenze | r i g |
+| 13:12 | Runde 2, Proben und Messstrecke: drei Berichte, 25 Datensätze; die Deskriptor-Abnahme unterscheidet Ausfall nicht von Erfolg | r i g |
+| 13:37 | Runde 3, Oberflächenkern: drei Berichte, 24 Datensätze; jedes der 79 Kommandos hat einen Zweig | r i g |
+| 14:22 | Runde 4, übrige Oberfläche: drei Berichte, 19 Datensätze; Untergrenzen-Deckung 25 von 25 | r i g |
+| 14:48 | Runde 5, Wurzelmodule und `xtask`: zwei Berichte, 23 Datensätze; der Baum ist vollständig gelesen | r i g |
+| 14:56 | Schlussabgleich: 15 Stichproben halten, Verdikt review-needed, Empfehlung Curator über CLAUDE.md | h g |
+| 16:32 | Sitzungsbericht vollständig; Sitzungsabschluss: Abgleich, 58 Dateien ins Archiv, Kuratorenlauf über CLAUDE.md | h g w |
+| — | 133 Defektdatensätze, 6 Entscheidungen, 19 Durchsichten, 12 Sitzungsprotokolle | i d r h |
 
 ## Commits gesamt
 
-537 Git-Commits seit Projektbeginn (2026-08-02).
+698 Git-Commits seit Projektbeginn (2026-08-02).
