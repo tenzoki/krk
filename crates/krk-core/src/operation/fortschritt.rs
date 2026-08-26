@@ -346,6 +346,24 @@ impl Steuerung {
         self.senden(Meldung::Uebersprungen(eintrag));
     }
 
+    /// Wie viele Eintraege bis jetzt uebersprungen worden sind.
+    ///
+    /// Ein Stand zum Vormerken: wer eine Teilarbeit anstoesst und danach
+    /// wissen will, ob sie etwas uebersprungen hat, merkt sich diesen Wert
+    /// vorher und fragt danach [`Steuerung::uebersprungen_seit`].
+    #[must_use]
+    pub(crate) fn uebersprungen_stand(&self) -> usize {
+        self.uebersprungen.len()
+    }
+
+    /// Die Eintraege, die seit dem vorgemerkten Stand uebersprungen worden sind.
+    ///
+    /// Leer heisst: seither ist jeder Eintrag angekommen.
+    #[must_use]
+    pub(crate) fn uebersprungen_seit(&self, stand: usize) -> &[Uebersprungen] {
+        &self.uebersprungen[stand.min(self.uebersprungen.len())..]
+    }
+
     /// Loest einen Namenskonflikt auf, notfalls durch Nachfragen.
     ///
     /// Wartet der Vorgang auf eine Antwort und kommt keine, gilt das als

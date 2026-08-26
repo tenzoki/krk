@@ -88,3 +88,6 @@ kennt kein `EXDEV` und keinen zweiten Datentraeger.
 
 Gelesen und Zeile fuer Zeile nachvollzogen (siehe Kette oben). **Nicht** am laufenden Geraet
 nachgestellt: dafuer braeuchte es zwei Datentraeger und einen Lauf ausserhalb des Quellbaums.
+
+---
+Resolved: 260826-1900 — ueber_datentraeger merkt den Zaehlstand der uebersprungenen Eintraege vor kopieren_nach und loescht die Quelle nur, wenn er unveraendert ist; drei Proben in verschieben.rs, zwei davon rot vor der Behebung (Plan 260826-1811 Schritt 1).

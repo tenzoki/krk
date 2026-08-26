@@ -108,18 +108,43 @@ fn verschmelzen(
 }
 
 /// Verschiebt ueber eine Datentraegergrenze hinweg: kopieren, dann loeschen.
+///
+/// Geloescht wird nur, was auch angekommen ist, und der Zeuge dafuer ist der
+/// Zaehlstand der uebersprungenen Eintraege: jeder Weg in `kopieren.rs` und in
+/// [`ziel_klaeren`], der ohne Ankunft am Ziel endet, ruft
+/// `Steuerung::ueberspringen`, und `kopieren_nach` liefert fuer ein
+/// gescheitertes wie fuer ein gegluecktes Kopieren `Ablauf::Weiter`. Ein
+/// Rueckgabewert allein sagt also nichts ueber die Ankunft, der Zaehlstand
+/// sagt es vollstaendig. Wer in `kopieren.rs` einen Fehlerzweig ohne
+/// `ueberspringen` anlegt, bricht diese Zusage; die Proben unten halten sie
+/// fuer den Fall der Datei und den des Ordners mit gescheitertem Kind.
 fn ueber_datentraeger(
     quelle: &Quelle<'_>,
     ziel: &Path,
     art: Uebertragungsart,
     steuerung: &mut Steuerung,
 ) -> Ablauf {
+    let stand = steuerung.uebersprungen_stand();
     if kopieren::kopieren_nach(quelle, ziel, art, steuerung) == Ablauf::Abgebrochen {
         return Ablauf::Abgebrochen;
     }
-    // Geloescht wird nur, was auch angekommen ist. Ist beim Kopieren etwas
-    // uebersprungen worden, steht es noch in der Quelle, und `baum_entfernen`
-    // scheitert daran; der Grund kommt in die Abschlussliste.
+
+    let seither = steuerung.uebersprungen_seit(stand);
+    if !seither.is_empty() {
+        // Etwas ist nicht angekommen; die Quelle gehoert dem Nutzer weiter.
+        // Ist sie selbst schon genannt (Datei, Verknuepfung, `create_dir`),
+        // steht der Grund da. Sonst ist ein Kind oder eine Ordnerangabe
+        // gescheitert, und der Ordner bekommt seine eigene Zeile.
+        let selbst_genannt = seither.iter().any(|eintrag| eintrag.pfad == quelle.pfad);
+        if !selbst_genannt {
+            steuerung.ueberspringen(
+                quelle.pfad,
+                "nicht vollstaendig kopiert, in der Quelle geblieben",
+            );
+        }
+        return Ablauf::Weiter;
+    }
+
     if let Err(fehler) = loeschen::baum_entfernen(quelle.pfad) {
         steuerung.ueberspringen(
             quelle.pfad,
@@ -127,4 +152,155 @@ fn ueber_datentraeger(
         );
     }
     Ablauf::Weiter
+}
+
+#[cfg(test)]
+mod tests {
+    //! Die Proben rufen [`ueber_datentraeger`] direkt und brauchen deshalb
+    //! keinen zweiten Datentraeger: was hier gemessen wird, ist allein die
+    //! Regel, wann die Quelle nach dem Kopieren geloescht wird, und nicht der
+    //! `EXDEV`-Abzweig davor (`shared/issues/260826-1221_*_ein-gescheitertes-kopieren-ueber-die-datentraegergrenze-loescht-die-quelle-trotzdem.md`).
+
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+
+    use super::*;
+    use crate::operation::auftrag::Konfliktregel;
+    use crate::operation::fortschritt::Abschluss;
+
+    /// Ein frischer Ordner unter dem Temporaerverzeichnis, mit Prozesskennung
+    /// und Probennamen, damit die drei Proben nebeneinander laufen koennen.
+    ///
+    /// Bewusst keine vierte Pruefordner-Fassung mit `Drop`: die eine Fassung
+    /// dieser Kiste liegt in `tests/gemeinsam/mod.rs`, und ein Pruefmodul der
+    /// Bibliothek erreicht sie nicht. Abgeraeumt wird deshalb von Hand mit
+    /// [`abraeumen`] am Ende jeder Probe; ein Rest einer abgebrochenen Probe
+    /// faellt beim naechsten Anlegen.
+    fn pruefpfad(probe: &str) -> PathBuf {
+        let pfad =
+            std::env::temp_dir().join(format!("krk-verschieben-{probe}-{}", std::process::id()));
+        abraeumen(&pfad);
+        fs::create_dir_all(&pfad).expect("der Pruefordner laesst sich nicht anlegen");
+        pfad
+    }
+
+    fn abraeumen(pfad: &Path) {
+        let _ = fs::remove_dir_all(pfad);
+    }
+
+    fn steuerung(regel: Konfliktregel) -> Steuerung {
+        Steuerung::neu(Arc::new(AtomicBool::new(false)), None, regel)
+    }
+
+    #[test]
+    fn eine_datei_die_nicht_ankommt_bleibt_in_der_quelle() {
+        let ordner = pruefpfad("datei");
+        let quelle = ordner.join("quelle.txt");
+        fs::write(&quelle, b"inhalt").expect("die Quelle laesst sich nicht schreiben");
+        let ziel = ordner.join("fehlt").join("ziel.txt");
+        let mut steuerung = steuerung(Konfliktregel::Ueberspringen);
+
+        let ablauf = ueber_datentraeger(
+            &Quelle {
+                pfad: &quelle,
+                typ: Typ::Datei,
+                groesse: 6,
+            },
+            &ziel,
+            Uebertragungsart::ImmerBytes,
+            &mut steuerung,
+        );
+
+        assert_eq!(ablauf, Ablauf::Weiter);
+        assert!(
+            quelle.exists(),
+            "die Quelle ist weg, obwohl nichts angekommen ist"
+        );
+        let bericht = steuerung.bericht(Abschluss::Fertig);
+        assert_eq!(
+            bericht.uebersprungen.len(),
+            1,
+            "{:?}",
+            bericht.uebersprungen
+        );
+        assert_eq!(bericht.uebersprungen[0].pfad, quelle);
+        abraeumen(&ordner);
+    }
+
+    #[test]
+    fn ein_ordner_mit_einem_uebersprungenen_kind_bleibt_in_der_quelle() {
+        let ordner = pruefpfad("ordner");
+        let quelle = ordner.join("quelle");
+        fs::create_dir(&quelle).expect("der Quellordner laesst sich nicht anlegen");
+        fs::write(quelle.join("a.txt"), b"a").expect("a.txt");
+        fs::write(quelle.join("b.txt"), b"b").expect("b.txt");
+        let ziel = ordner.join("ziel");
+        // Am Ziel steht `b.txt` schon, und zwar als Ordner: ein Konflikt, den
+        // die Regel "ueberspringen" ohne Nachfrage entscheidet.
+        fs::create_dir_all(ziel.join("b.txt")).expect("der Stoerer laesst sich nicht anlegen");
+        let mut steuerung = steuerung(Konfliktregel::Ueberspringen);
+
+        let ablauf = ueber_datentraeger(
+            &Quelle {
+                pfad: &quelle,
+                typ: Typ::Ordner,
+                groesse: 0,
+            },
+            &ziel,
+            Uebertragungsart::ImmerBytes,
+            &mut steuerung,
+        );
+
+        assert_eq!(ablauf, Ablauf::Weiter);
+        assert!(quelle.join("a.txt").is_file(), "a.txt fehlt in der Quelle");
+        assert!(quelle.join("b.txt").is_file(), "b.txt fehlt in der Quelle");
+        let bericht = steuerung.bericht(Abschluss::Fertig);
+        let pfade: Vec<&Path> = bericht
+            .uebersprungen
+            .iter()
+            .map(|u| u.pfad.as_path())
+            .collect();
+        assert!(
+            pfade.contains(&quelle.join("b.txt").as_path()),
+            "das Kind fehlt im Bericht: {pfade:?}"
+        );
+        assert!(
+            pfade.contains(&quelle.as_path()),
+            "der Ordner fehlt im Bericht: {pfade:?}"
+        );
+        abraeumen(&ordner);
+    }
+
+    #[test]
+    fn ein_angekommener_eintrag_verlaesst_die_quelle() {
+        let ordner = pruefpfad("gegenprobe");
+        let quelle = ordner.join("quelle.txt");
+        fs::write(&quelle, b"inhalt").expect("die Quelle laesst sich nicht schreiben");
+        let ziel = ordner.join("ziel.txt");
+        let mut steuerung = steuerung(Konfliktregel::Ueberspringen);
+
+        let ablauf = ueber_datentraeger(
+            &Quelle {
+                pfad: &quelle,
+                typ: Typ::Datei,
+                groesse: 6,
+            },
+            &ziel,
+            Uebertragungsart::ImmerBytes,
+            &mut steuerung,
+        );
+
+        assert_eq!(ablauf, Ablauf::Weiter);
+        assert!(!quelle.exists(), "die Quelle steht noch");
+        assert!(ziel.is_file(), "das Ziel fehlt");
+        let bericht = steuerung.bericht(Abschluss::Fertig);
+        assert!(
+            bericht.uebersprungen.is_empty(),
+            "{:?}",
+            bericht.uebersprungen
+        );
+        abraeumen(&ordner);
+    }
 }
