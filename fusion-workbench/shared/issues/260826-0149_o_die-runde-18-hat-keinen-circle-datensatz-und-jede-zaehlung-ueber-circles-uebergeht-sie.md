@@ -67,3 +67,16 @@ Ablage.
 `CLAUDE.md` ausdrücklich verlässt, sind stillschweigend unvollständig.
 
 **Gefunden:** reconciler, beim Abgleich der Runde 18 gegen `20eccd4..e5ec81a`.
+
+---
+Also seen: 260826-0923 by coderev — „Die Arbeit der Runde 18 liegt vollständig im gemeinsamen
+Speicher" trifft die Ablage der **erzeugten** Artefakte, nicht alles, was die Runde geschrieben
+hat. Zwei Commits der Runde schreiben in den Circle der Runde 17:
+`git log --name-only 2a77012..HEAD -- fusion-workbench/circles/` liefert `e922c9e` (260825-19:05)
+und `d08dbac` (260826-08:16), beide an
+`circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-0838_c_jeder-gepackte-eintrag-traegt-den-1-januar-1980-….md`
+— also gerade an dem Vorgang, den `CLAUDE.md` Zeile 18 seit `fb50fcd` selbst als Arbeit der
+Runde 18 führt („Zip-Zeitstempel behoben"). Der Halbsatz ist mit `fb50fcd` nach `CLAUDE.md`
+gewandert und steht dort in derselben Fassung. Wer nach den Artefakten der Runde 18 allein unter
+`shared/` sucht, findet diesen einen nicht. Die Folgerung des Datensatzes — die drei Globs
+liefern eine Untergrenze — hängt daran nicht.
