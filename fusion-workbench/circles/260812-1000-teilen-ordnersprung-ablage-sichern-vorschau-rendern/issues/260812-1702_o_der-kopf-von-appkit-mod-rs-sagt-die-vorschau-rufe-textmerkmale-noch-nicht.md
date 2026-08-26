@@ -52,3 +52,5 @@ drei Aussagen bereits und ist die Vorlage.
 
 Gefunden beim Bau von Planschritt 9 der Runde 6; im Bericht jenes Schrittes
 genannt. Herkunft: Circle der Runde 6.
+
+Also seen: 260826-1416 by coderev — `mod.rs:63-65` sagt weiter „Heute ruft allein editor hier herein"; `vorschau.rs:275,745,1187,1212,1530` rufen `textmerkmale` an fünf Stellen.

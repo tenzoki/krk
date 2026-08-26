@@ -26,3 +26,5 @@ Reparatur weiterhin teilweise falsch.
 Wer sie behebt, liest den ganzen Kopf gegen den Baum und nicht nur die drei genannten Sätze:
 die Runde hat drei Module hinzugefügt (`teilen`, `textmerkmale`, dazu die neue Rolle der
 Vorschau), und die Vermutung liegt nahe, dass mehr als drei Sätze veraltet sind.
+
+Also seen: 260826-1416 by coderev — `mod.rs:95-96` sagt weiter „[statuszeile] die Zeile an seinem Fuss"; `fenster.rs:3-7` und `statuszeile.rs:34-42` führen sie als Schwester der Aufteilung über die volle Breite.
