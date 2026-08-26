@@ -41,6 +41,32 @@
 //! `tests/verzeichnis.rs`; seit `tests/umfang.rs` daneben denselben Bedarf hat,
 //! steht er hier, damit es nicht zwei Fassungen davon gibt.
 //!
+//! ## Die drei stillen Wege, und das Gate dagegen
+//!
+//! Bis zum 260826 pruefte jeder Rufer allein `status.success()`, und `libtest`
+//! endet mit 0 auf drei Wegen, auf denen das Kind **nicht** gelaufen ist:
+//!
+//! 1. **Der Name trifft nicht.** `--exact` mit einem Namen, den die Datei nicht
+//!    kennt, laeuft null Proben und meldet `ok`.
+//! 2. **Der Auftrag trifft nicht.** Jedes Kind kehrt ohne seine Umgebungs-
+//!    variable still zurueck; bis dahin stand der Name je Datei als eigene
+//!    Konstante, und ein Schreibfehler auf einer Seite fiel niemandem auf.
+//! 3. **Das `#[ignore]` ist verloren.** `--ignored` faehrt **nur** die
+//!    stillgelegten Proben; ein Kind ohne den Vermerk wird weggefiltert, auch
+//!    wenn Name und Auftrag stimmen.
+//!
+//! Dagegen stehen zwei Dinge. Der zweite Weg ist strukturell zu: es gibt genau
+//! einen Auftragsnamen, [`KINDAUFTRAG`], und genau einen Leser, [`kindauftrag`];
+//! der Starter setzt ihn, das Kind liest ihn, und eine zweite Konstante daneben
+//! ist nicht vorgesehen. Der erste und der dritte enden beide auf `0 passed`,
+//! und deshalb haelt der Starter nach `output()` selbst: `status.success()`
+//! **und** die Zeile `test result: ok. 1 passed;` in `stdout`. Scheitert eines,
+//! bricht er mit Name, stdout und stderr ab. Die Rufer behalten ihr eigenes
+//! `assert!` als die fachliche Zeile; das Gate hier sagt nur, dass genau ein
+//! Kind gelaufen ist. Der Datensatz ist `shared/issues/260826-1302_*_sechs-
+//! elternproben-am-gemeinsamen-kindstarter-bleiben-gruen-wenn-der-kindname-
+//! nicht-trifft.md`.
+//!
 //! # Jedes Ziel nimmt einen anderen Ausschnitt
 //!
 //! `#![allow(dead_code)]` steht deshalb hier und nicht als Ausnahme je Funktion:
@@ -344,14 +370,38 @@ fn quellen_einsammeln(wurzel: &Path, ordner: &Path, gefunden: &mut Vec<(String, 
 // Der Starter der Kindproben unter abgesenkter Deskriptorgrenze
 // ---------------------------------------------------------------------------
 
-/// Startet dieselbe Testdatei noch einmal, mit abgesenkter Deskriptorgrenze.
+/// Der eine Auftragsname fuer jede Kindprobe unter abgesenkter Deskriptorgrenze.
+///
+/// Sein Wert ist der Pruefordner, den das Elternteil angelegt hat. Ein Name fuer
+/// alle sechs Kinder statt je einer je Datei: der Starter setzt ihn, und ein
+/// Kind, das ihn ueber [`kindauftrag`] liest, kann ihn nicht anders schreiben.
+/// Dass zwei Kinder derselben Datei denselben Namen lesen, ist unschaedlich,
+/// denn `--exact` startet je Lauf genau eines.
+pub const KINDAUFTRAG: &str = "KRK_KINDPROBE_AUFTRAG";
+
+/// Der eine Leser von [`KINDAUFTRAG`]: der Pruefordner, den das Elternteil
+/// mitgegeben hat, oder `None`, wenn diese Probe nicht als Kind laeuft.
+///
+/// `None` heisst: `cargo test -- --ignored` hat das Kind ohne Elternteil
+/// gestartet, und dann kehrt es still zurueck. Dass dieser Rueckweg das
+/// Elternteil nicht taeuschen kann, haelt das Gate in
+/// [`kind_mit_deskriptorgrenze`].
+pub fn kindauftrag() -> Option<PathBuf> {
+    std::env::var_os(KINDAUFTRAG).map(PathBuf::from)
+}
+
+/// Die Zeile, mit der `libtest` genau ein gelaufenes Kind meldet.
+const EIN_KIND_GELAUFEN: &str = "test result: ok. 1 passed;";
+
+/// Startet dieselbe Testdatei noch einmal, mit abgesenkter Deskriptorgrenze,
+/// und haelt, dass genau ein Kind gelaufen ist.
 ///
 /// Der Umweg ueber `/bin/sh` ist der einzige ohne `setrlimit(2)`, und
 /// `setrlimit(2)` waere eine sechste Bindung in [`krk_core::verzeichnis::sys`]
 /// fuer etwas, das KRK selbst nicht braucht. `$0` ist die Testdatei, `$1` der
-/// Name der Kindprobe.
+/// Name der Kindprobe. Der Pruefordner reist als [`KINDAUFTRAG`].
 ///
-/// **`grenze` reist als Argument, weil die beiden Rufer verschiedene Zahlen
+/// **`grenze` reist als Argument, weil die Rufer verschiedene Zahlen
 /// brauchen.** Die Proben des Durchlaufs messen unter 64, der Zahl, unter der
 /// ein aus dem Finder gestartetes Buendel ungefaehr laeuft. Die Zaehlung des
 /// Umfangs braucht eine tiefere: ihr Deckel begrenzt die Zahl der geoeffneten
@@ -362,21 +412,35 @@ fn quellen_einsammeln(wurzel: &Path, ordner: &Path, gefunden: &mut Vec<(String, 
 /// Der Aufrufer prueft im Kind zuerst, wie viele Deskriptoren es ueberhaupt
 /// bekommt, und behauptet die abgesenkte Grenze nicht: ohne diese Zusicherung
 /// bestuende jede Probe hier auch dann, wenn `ulimit` nicht gegriffen haette.
-pub fn kind_mit_deskriptorgrenze(
-    grenze: usize,
-    name: &str,
-    auftrag: &str,
-    wert: &Path,
-) -> std::process::Output {
+///
+/// **Das Gate.** `libtest` endet mit 0, wenn der Name nichts trifft und wenn das
+/// Kind sein `#[ignore]` verloren hat; beides meldet `0 passed`. Deshalb bricht
+/// der Starter ab, sobald der Status nicht 0 ist **oder** `stdout` die Zeile
+/// `test result: ok. 1 passed;` nicht traegt. Die Ausgabe kommt zurueck, damit
+/// der Rufer seine fachliche Zusicherung mit derselben Meldung halten kann; die
+/// drei Wege stehen im Modulkopf.
+pub fn kind_mit_deskriptorgrenze(grenze: usize, name: &str, wert: &Path) -> std::process::Output {
     let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
-    std::process::Command::new("/bin/sh")
+    let ergebnis = std::process::Command::new("/bin/sh")
         .arg("-c")
         .arg(format!(
             "ulimit -n {grenze} && exec \"$0\" --exact --ignored --nocapture --test-threads 1 \"$1\""
         ))
         .arg(&selbst)
         .arg(name)
-        .env(auftrag, wert)
+        .env(KINDAUFTRAG, wert)
         .output()
-        .expect("die Kindprobe laesst sich nicht starten")
+        .expect("die Kindprobe laesst sich nicht starten");
+
+    let stdout = String::from_utf8_lossy(&ergebnis.stdout);
+    let stderr = String::from_utf8_lossy(&ergebnis.stderr);
+    assert!(
+        ergebnis.status.success() && stdout.contains(EIN_KIND_GELAUFEN),
+        "die Kindprobe `{name}` ist nicht als genau ein Kind gelaufen \
+         (Status {}, erwartet `{EIN_KIND_GELAUFEN}` in stdout); \
+         trifft der Name nicht, oder fehlt dem Kind sein `#[ignore]`?\n\
+         --- stdout ---\n{stdout}\n--- stderr ---\n{stderr}",
+        ergebnis.status
+    );
+    ergebnis
 }

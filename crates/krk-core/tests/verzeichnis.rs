@@ -23,7 +23,7 @@ use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 mod gemeinsam;
-use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, mit_zeitschranke};
+use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, kindauftrag, mit_zeitschranke};
 
 /// Ein flacher Ordner mit `anzahl` Dateien, deren Namen fest zugeordnet sind.
 fn ordner_mit_dateien(zweck: &str, anzahl: usize) -> Pruefordner {
@@ -2538,10 +2538,6 @@ fn die_abbruchgrenze_steht_vor_jedem_stapel_und_vor_jeder_datei() {
     );
 }
 
-/// Die Umgebungsvariable, die die Kindprobe zum Mangel ueber einer **Datei**
-/// beauftragt. Ihr Wert ist der Ordner, unter dem die drei Auftraege stehen.
-const AUFTRAG_INHALTSMANGEL: &str = "KRK_PROBE_INHALT_DESKRIPTORMANGEL";
-
 /// C3.6: Ein Deskriptormangel **beim Lesen einer Datei** laesst sie
 /// unentschieden.
 ///
@@ -2571,7 +2567,6 @@ fn ein_deskriptormangel_beim_lesen_laesst_die_datei_unentschieden() {
     let ergebnis = kind_mit_deskriptorgrenze(
         DESKRIPTORGRENZE,
         "kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts",
-        AUFTRAG_INHALTSMANGEL,
         ordner.pfad(),
     );
 
@@ -2585,12 +2580,11 @@ fn ein_deskriptormangel_beim_lesen_laesst_die_datei_unentschieden() {
 }
 
 #[test]
-#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_INHALT_DESKRIPTORMANGEL gestartet"]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
 fn kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts() {
-    let Some(ordner) = std::env::var_os(AUFTRAG_INHALTSMANGEL) else {
+    let Some(ordner) = kindauftrag() else {
         return;
     };
-    let ordner = std::path::PathBuf::from(ordner);
     let bestand = || bestand_aus(&[(5, "verweis"), (7, "ziel.txt"), (8, "zweiter.txt")]);
     let auftraege = || {
         vec![
@@ -2721,10 +2715,6 @@ fn der_durchlauf_kennt_keine_tiefengrenze() {
     );
 }
 
-/// Die Umgebungsvariable, die die Deskriptor-Kindprobe beauftragt. Ihr Wert ist
-/// der Ordner, unter dem die tiefe Kette schon steht.
-const AUFTRAG_DESKRIPTOREN: &str = "KRK_PROBE_DESKRIPTOREN";
-
 /// Wie tief die Kette der Deskriptorprobe ist.
 ///
 /// Deutlich mehr als die 64 Deskriptoren, unter denen das Kind laeuft, und
@@ -2783,7 +2773,6 @@ fn die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden() {
     let ergebnis = kind_mit_deskriptorgrenze(
         DESKRIPTORGRENZE,
         "kind_entscheidet_die_tiefe_kette",
-        AUFTRAG_DESKRIPTOREN,
         ordner.pfad(),
     );
 
@@ -2797,12 +2786,11 @@ fn die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden() {
 }
 
 #[test]
-#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_DESKRIPTOREN gestartet"]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
 fn kind_entscheidet_die_tiefe_kette() {
-    let Some(ordner) = std::env::var_os(AUFTRAG_DESKRIPTOREN) else {
+    let Some(ordner) = kindauftrag() else {
         return;
     };
-    let ordner = std::path::PathBuf::from(ordner);
 
     // Erst die Grenze messen, dann die Frage stellen. Genommen wird, bis nichts
     // mehr kommt; was dabei zusammenkommt, ist die Zahl der Deskriptoren, die
@@ -2837,10 +2825,6 @@ fn kind_entscheidet_die_tiefe_kette() {
          freien Deskriptoren aus der Antwort"
     );
 }
-
-/// Die Umgebungsvariable, die die Kindprobe zum Mangel von aussen beauftragt.
-/// Ihr Wert ist der Ordner, unter dem `aussen` und `zweiter` schon stehen.
-const AUFTRAG_MANGEL: &str = "KRK_PROBE_DESKRIPTORMANGEL";
 
 /// C3.15 in der **Vorwaertsrichtung**: ein von aussen herbeigefuehrter Mangel
 /// fuehrt zu keinem Befund.
@@ -2883,7 +2867,6 @@ fn ein_deskriptormangel_von_aussen_laesst_die_ordner_unentschieden() {
     let ergebnis = kind_mit_deskriptorgrenze(
         DESKRIPTORGRENZE,
         "kind_meldet_bei_deskriptormangel_nichts",
-        AUFTRAG_MANGEL,
         ordner.pfad(),
     );
 
@@ -2897,12 +2880,11 @@ fn ein_deskriptormangel_von_aussen_laesst_die_ordner_unentschieden() {
 }
 
 #[test]
-#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_DESKRIPTORMANGEL gestartet"]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
 fn kind_meldet_bei_deskriptormangel_nichts() {
-    let Some(ordner) = std::env::var_os(AUFTRAG_MANGEL) else {
+    let Some(ordner) = kindauftrag() else {
         return;
     };
-    let ordner = std::path::PathBuf::from(ordner);
     let auftraege = || {
         vec![
             Auftrag {

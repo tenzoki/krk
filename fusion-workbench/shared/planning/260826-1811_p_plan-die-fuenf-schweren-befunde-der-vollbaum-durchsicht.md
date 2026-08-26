@@ -81,7 +81,7 @@ Die drei Kanten aus Schritt 1 und aus Schritt 3 sind Ordnung nach Risiko und kei
    - Dependencies: none
    - Source: Datensatz 2; die drei Vorgänger `260809-1652`, `260810-1247`, `260825-0942`.
 
-3. **Befund 4: der Kindstarter beweist, dass das Kind gelaufen ist**
+3. [DONE] **Befund 4: der Kindstarter beweist, dass das Kind gelaufen ist**
    - Executor: `coder`
    - Files: `crates/krk-core/tests/gemeinsam/mod.rs`, `crates/krk-core/tests/umfang.rs`, `crates/krk-core/tests/verzeichnis.rs`, `crates/krk-core/tests/leseprofil.rs`
    - Changes:
@@ -93,7 +93,7 @@ Die drei Kanten aus Schritt 1 und aus Schritt 3 sind Ordnung nach Risiko und kei
    - Dependencies: Schritt 2 (beide schreiben `tests/gemeinsam/mod.rs`; nacheinander, nicht gleichzeitig).
    - Source: Datensatz 4 samt Nachtrag R5.
 
-4. **Befund 3: jede Variante von `Kommando` steht in `KENNUNGEN`**
+4. [IN PROGRESS] **Befund 3: jede Variante von `Kommando` steht in `KENNUNGEN`**
    - Executor: `coder`
    - Files: `crates/krk-core/tests/gemeinsam/mod.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/appkit/menue.rs`
    - Changes:
@@ -113,7 +113,7 @@ Die drei Kanten aus Schritt 1 und aus Schritt 3 sind Ordnung nach Risiko und kei
    - Dependencies: Schritt 4.
    - Source: Datensatz 3; Auftrag des Nutzers im Dispatch.
 
-6. **Befund 5: jeder Prüfordner wird gegen seine zugesagte Eintragszahl gehalten, und die gelesene Zahl erreicht den Bericht**
+6. [IN PROGRESS] **Befund 5: jeder Prüfordner wird gegen seine zugesagte Eintragszahl gehalten, und die gelesene Zahl erreicht den Bericht**
    - Executor: `coder`
    - Files: `crates/krk-bench/src/messen.rs`, `crates/krk-bench/src/bericht.rs`
    - Changes:

@@ -1700,3 +1700,12 @@
 {"ts":"2026-08-26T17:27:55","event":"task_done","turn":1,"task":"S1","agent":"coder","detail":"26e8039"}
 {"ts":"2026-08-26T17:27:55","event":"commit","turn":1,"task":"S1","detail":"26e8039 fix(core): Quelle bleibt bei gescheitertem Kopieren"}
 {"ts":"2026-08-26T17:28:12","event":"commit","turn":1,"task":"S1","detail":"36e54b4 fix(core): Quelle bleibt bei gescheitertem Kopieren — berichtigt: die zwei vorigen Zeilen mit 26e8039 waren falsch, der erste git add scheiterte am nie versionierten _o_-Planpfad"}
+{"ts":"2026-08-26T17:30:01","event":"task_done","turn":1,"task":"S2","agent":"coder","detail":"9c02863"}
+{"ts":"2026-08-26T17:30:01","event":"commit","turn":1,"task":"S2","detail":"9c02863 fix(core): Schwungleser nimmt die Huelle"}
+{"ts":"2026-08-26T17:30:21","event":"review_start","turn":1,"agent":"coderev","detail":"26e8039..9c02863, 7 Codedateien"}
+{"ts":"2026-08-26T17:30:21","event":"task_start","turn":1,"task":"S3","agent":"coder"}
+{"ts":"2026-08-26T17:36:44","event":"review_done","turn":1,"agent":"coderev","detail":"beide Behebungen halten; 3 Befunde, alle niedrig, keiner an der Behebung"}
+{"ts":"2026-08-26T17:39:36","event":"task_done","turn":1,"task":"S3","agent":"coder","detail":"9c02863"}
+{"ts":"2026-08-26T17:39:36","event":"commit","turn":1,"task":"S3","agent":"coder","detail":"9c02863 test(core): Kindstarter beweist das Kind"}
+{"ts":"2026-08-26T17:39:36","event":"task_start","turn":1,"task":"S6","agent":"coder","detail":""}
+{"ts":"2026-08-26T17:39:36","event":"task_start","turn":1,"task":"S4","agent":"coder","detail":""}

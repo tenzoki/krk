@@ -39,7 +39,7 @@ use std::path::PathBuf;
 use krk_core::verzeichnis::umfang::{SCHWELLE, Umfang, zaehlen};
 
 mod gemeinsam;
-use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze};
+use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, kindauftrag};
 
 /// Der Deckel, gegen den [`zaehlen`] zaehlt, in der Sprache der Proben.
 ///
@@ -225,14 +225,6 @@ fn eine_verknuepfung_auf_einen_grossen_baum_zaehlt_eins() {
 /// die Zusicherungen im Kind es und behaupten nichts.
 const GRENZE: usize = 24;
 
-/// Die Umgebungsvariable, die die Kindprobe zum Mangel von aussen beauftragt.
-/// Ihr Wert ist der Ordner, unter dem `aussen` schon steht.
-const AUFTRAG_MANGEL: &str = "KRK_PROBE_UMFANG_MANGEL";
-
-/// Die Umgebungsvariable, die die Kindprobe zur tiefen Kette beauftragt. Ihr
-/// Wert ist der Ordner, unter dem `kette` schon steht.
-const AUFTRAG_KETTE: &str = "KRK_PROBE_UMFANG_KETTE";
-
 /// Wie tief die Kette der Kindprobe ist.
 ///
 /// Mehr als der Deckel, sonst waere die Kette schon vor der Deskriptorgrenze zu
@@ -266,7 +258,6 @@ fn ein_deskriptormangel_von_aussen_laesst_den_umfang_unentschieden() {
     let ergebnis = kind_mit_deskriptorgrenze(
         GRENZE,
         "kind_laesst_den_umfang_bei_deskriptormangel_unentschieden",
-        AUFTRAG_MANGEL,
         ordner.pfad(),
     );
 
@@ -280,12 +271,12 @@ fn ein_deskriptormangel_von_aussen_laesst_den_umfang_unentschieden() {
 }
 
 #[test]
-#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_UMFANG_MANGEL gestartet"]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
 fn kind_laesst_den_umfang_bei_deskriptormangel_unentschieden() {
-    let Some(ordner) = std::env::var_os(AUFTRAG_MANGEL) else {
+    let Some(ordner) = kindauftrag() else {
         return;
     };
-    let auswahl = vec![PathBuf::from(ordner).join("aussen")];
+    let auswahl = vec![ordner.join("aussen")];
 
     // Erster Durchgang, mit freiem Vorrat, und er ist die Gegenprobe: ohne ihn
     // saehe der zweite auch dann so aus, wenn der Baum gar nicht stuende.
@@ -355,7 +346,6 @@ fn die_tiefe_kette_kostet_einen_deskriptor_und_nicht_einen_je_ebene() {
     let ergebnis = kind_mit_deskriptorgrenze(
         GRENZE,
         "kind_zaehlt_die_tiefe_kette_mit_einem_deskriptor",
-        AUFTRAG_KETTE,
         ordner.pfad(),
     );
 
@@ -369,12 +359,12 @@ fn die_tiefe_kette_kostet_einen_deskriptor_und_nicht_einen_je_ebene() {
 }
 
 #[test]
-#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_UMFANG_KETTE gestartet"]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
 fn kind_zaehlt_die_tiefe_kette_mit_einem_deskriptor() {
-    let Some(ordner) = std::env::var_os(AUFTRAG_KETTE) else {
+    let Some(ordner) = kindauftrag() else {
         return;
     };
-    let auswahl = vec![PathBuf::from(ordner).join("kette")];
+    let auswahl = vec![ordner.join("kette")];
 
     // Erst die Grenze messen, dann die Frage stellen. Genommen wird, bis nichts
     // mehr kommt; was dabei zusammenkommt, ist der Vorrat dieses Kindes.

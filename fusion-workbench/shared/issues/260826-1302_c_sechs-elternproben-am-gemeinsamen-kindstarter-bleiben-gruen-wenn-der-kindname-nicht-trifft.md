@@ -109,3 +109,6 @@ es dem filternden Prüfer gehört; wer den Datensatz abarbeitet, sollte die zwei
 kennen.
 
 **Cross-reference:** `shared/reviews/260826-1303-coderev-die-drei-groessten-probendateien-des-kerns.md`, Abschnitt „A1".
+
+---
+Resolved: crates/krk-core/tests/gemeinsam/mod.rs, kind_mit_deskriptorgrenze — der Starter haelt status.success() und "test result: ok. 1 passed;" in stdout, und es gibt nur noch einen Auftragsnamen KRK_KINDPROBE_AUFTRAG; beide Mutationen (Kindname, entferntes ignore) rot am Gate, gruen ohne (Plan 260826-1811 Schritt 3, Sitzungseintrag 260826-2010).

@@ -59,7 +59,7 @@ use krk_core::leseprofil::{
 use krk_core::verzeichnis::sys::ortszeit;
 use krk_core::verzeichnis::{Eintrag, Typ};
 
-use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze};
+use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, kindauftrag};
 
 mod gemeinsam;
 
@@ -3442,10 +3442,6 @@ pfad = '.'
 /// Behauptet wird sie nicht — das Kind misst zuerst, was es bekommt.
 const GRENZE_DESKRIPTOREN: usize = 24;
 
-/// Die Umgebungsvariable, die die Kindprobe beauftragt. Ihr Wert ist der
-/// Pruefordner, den das Elternteil angelegt hat.
-const AUFTRAG_DESKRIPTOREN: &str = "KRK_PROBE_LESEPROFIL_DESKRIPTOREN";
-
 /// Die Zeilen, mit denen die Kindprobe rechnet.
 ///
 /// Alle drei Sorten, die etwas oeffnen oder lesen, und jede an einer anderen
@@ -3487,7 +3483,6 @@ fn eine_zusammenfassung_haelt_nie_mehr_als_einen_deskriptor_zugleich() {
     let ergebnis = kind_mit_deskriptorgrenze(
         GRENZE_DESKRIPTOREN,
         "kind_fasst_mit_einem_freien_deskriptor_zusammen",
-        AUFTRAG_DESKRIPTOREN,
         ordner.pfad(),
     );
 
@@ -3516,12 +3511,11 @@ fn eine_zusammenfassung_haelt_nie_mehr_als_einen_deskriptor_zugleich() {
 /// Feld auf den Platzhalter; die Titel der Verlaufsdateien lauten deshalb
 /// „Verlauf n" und nicht wie ihre Dateien.
 #[test]
-#[ignore = "Kindprobe, vom Elternteil ueber KRK_PROBE_LESEPROFIL_DESKRIPTOREN gestartet"]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
 fn kind_fasst_mit_einem_freien_deskriptor_zusammen() {
-    let Some(ordner) = std::env::var_os(AUFTRAG_DESKRIPTOREN) else {
+    let Some(ordner) = kindauftrag() else {
         return;
     };
-    let ordner = PathBuf::from(ordner);
 
     // Vor dem Mangel: das Uebersetzen der Muster braucht keinen Deskriptor,
     // und danach steht keiner mehr zur Verfuegung.
