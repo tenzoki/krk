@@ -1684,3 +1684,6 @@
 {"ts":"2026-08-26T12:48:39","event":"coherence_review","turn":5,"detail":"verdict=ok; 2 Berichte, 23 Datensaetze, 0 hoch; 155/155 Dateien; 3 offene Entscheidungen gelesen, keine beantwortet, 1 als gebaut-aber-offen gemeldet"}
 {"ts":"2026-08-26T12:48:39","event":"turn_end","turn":5,"detail":"2 Aufgaben erledigt, 23 Datensaetze, 1 Commit; Arbeitsliste leer, konvergiert"}
 {"ts":"2026-08-26T12:55:29","event":"reconciliation","detail":"0 Abweichungen in 15 Stichproben; Urteil review-needed, Empfehlung revise Grounding (Curator ueber CLAUDE.md); 1 Entscheidung _o_->_i_, 1 Defekt _o_->_c_"}
+{"ts":"2026-08-26T12:56:35","event":"gate_hit","agent":"user","detail":"Rebalance-Gate nach Phase 3: Urteil review-needed, Empfehlung revise Grounding"}
+{"ts":"2026-08-26T14:31:30","event":"gate_response","agent":"user","detail":"/fusion:cleanup — abschliessen; der Curator-Lauf ueber CLAUDE.md (revise Grounding) laeuft als Schritt 5 der Pipeline"}
+{"ts":"2026-08-26T14:32:56","event":"session_end","detail":"5 Turns, 15/15 Aufgaben, 122 Defekte + 4 Entscheidungen gefiltert, 8 Commits, 0 Fehler; Uebergabe an /fusion:cleanup"}

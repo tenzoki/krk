@@ -1,8 +1,8 @@
 # Orchestratorsitzung — 260826-1114
 
-**Directive:** noch nicht gesetzt — die Sitzung ist eingerichtet und wartet auf die Aufgabe des Nutzers.
-**Mode:** noch nicht aufgelöst
-**Status:** Läuft
+**Directive:** Tiefe Durchsicht des ganzen Quelltexts: 155 Rust-Dateien, 126.707 Zeilen, gegen Maximen und Architektur statt gegen einen Commit-Bereich.
+**Mode:** review (Vollbaum, Durchsicht ohne Ausführung)
+**Status:** Complete
 
 ## Einrichtung
 
@@ -67,3 +67,121 @@ Berührungen ohne Doppelung, damit ein Coder sie nicht zweimal baut: `1327` und 
 - Offene Defekte (`_o_` + `_p_`): **315** (davon 199 im gemeinsamen Speicher); vor der Sitzung 194, plus 122 aus der Durchsicht, minus 1 (`260826-1442` Schaltflächentasten, geschlossen).
 - Offene Entscheidungen (`_o_`): **40** (davon 19 im gemeinsamen Speicher); vor der Sitzung 37, plus 4 neue, minus 1 (`260813-0053` Schaltflächentasten, jetzt `_i_`).
 - Dazu ein nicht eingecheckter Datensatz `shared/issues/260826-1445_o_the-playmakers-ranking-rewards-a-stale-grounding-…` (englisch, betrifft das Framework und nicht KRK), in den Zahlen oben enthalten.
+
+## Budget
+
+| Metric | Count |
+|--------|-------|
+| Turns | 5 |
+| Tasks resolved | 15 von 15 |
+| Tasks skipped/deferred | 0 |
+| Issues created (by reviewers) | 122 |
+| Issues resolved | 1 |
+| Decisions answered (`_o_`→`_a_`) | 0 |
+| Decisions implemented (`_a_`→`_i_`) | 1 (direkt `_o_`→`_i_`, Reconciler) |
+| Commits | 8 (vor Cleanup) |
+| Agent errors | 0 |
+| Human gates hit | 6 (5 Kohärenz-Fragen, 1 Rebalance) |
+
+Die vier Datensatz-Zeilen sind aus dem Dateibestand gegen den Anker `004ff72` berechnet, nicht mitgezählt: `filed issue 122`, `now_c issue 1`, `now_i decision 1`, `filed decision 4`.
+
+## Per-Turn Log
+
+### Turn 1 — `krk-core/src` (R1–R4, 52 Dateien, 21.863 Zeilen)
+- 4 Berichte, 34 Datensätze (1 kritisch: `ueber_datentraeger` löscht die Quelle nach gescheitertem Kopieren; 2 hoch: Schwungleser an benannter Röhre, `Kommando::KENNUNGEN` ohne Vollständigkeitshalter)
+- Commits: `f22a036`, `4a57028`. Kohärenz: ok. Ein Prüfer musste 14 Zeilenangaben berichtigen (Versatz um die Länge der Vorgängerdatei).
+
+### Turn 2 — Proben und Messstrecke (R5, R6, R15, 22 Dateien, 24.610 Zeilen)
+- 3 Berichte, 25 Datensätze (1 hoch: sechs Elternproben am Kindstarter bleiben grün, wenn der Kindname nicht trifft)
+- Commit: `7ac511a`. Kohärenz: ok. Zwei Angaben der Aufgabenstellung von den Prüfern berichtigt.
+
+### Turn 3 — Oberflächenkern (R7, R8, R10, 14 Dateien, 24.136 Zeilen)
+- 3 Berichte, 24 Datensätze (1 hoch: `Blatt::zeigen` wirft den Blattgriff weg, `Esc` aus dem Stapelblatt trifft den Vorgang dahinter; zweimal unabhängig gefunden)
+- Auffangzweig-Frage beantwortet: 52 + 28 Zweige, jedes der 79 Kommandos hat einen. Commit: `ca8072d`. Kohärenz: ok.
+
+### Turn 4 — übrige Oberfläche (R9, R11, R12, 45 Dateien, 35.573 Zeilen)
+- 3 Berichte, 19 Datensätze (0 hoch). Untergrenzen-Deckung 25/25. Zwei fehlgeleitete `Also seen`-Stummel vom Prüfer zurückgeführt.
+- Commits: `8bab018`, `c13bf1c`. Kohärenz: ok.
+
+### Turn 5 — Wurzelmodule und Auslieferungskette (R13, R14, 25 Dateien, 20.545 Zeilen)
+- 2 Berichte, 23 Datensätze (0 hoch). `bereich_des_kommandos` 79/79, `schiebt_auffrischung_auf` 6/6.
+- Commit: `de1e2db`. Kohärenz: ok. Arbeitsliste leer, konvergiert.
+
+## Review coverage
+
+**Range:** `004ff72..7389b61` — 8 commits
+**Covered by:** 15 Berichte unter `shared/reviews/260826-1[2-4]*-coderev-*.md`, jeder mit `**Reviewed-range:**` über den Sitzungsbereich; `unusable=0`
+**Not covered:** `de1e2db docs(workbench): die Vollbaum-Durchsicht ist vollstaendig, die letzten zwei Berichte und 23 Datensaetze` · `7389b61 docs(workbench): der Schlussabgleich der Vollbaum-Durchsicht` — beide tragen nur Werkbankdateien, keinen Code; der Quellbaum steht unverändert auf `004ff72`.
+**Carried out-of-scope files:** none
+
+## Remaining Work
+
+Keine offene Aufgabe aus dieser Sitzung. Der Bestand nach der Sitzung: 315 offene Defekte (122 aus dieser Sitzung), 40 offene Entscheidungen. Die Befunde sind gefiltert, nicht behoben; das war die Directive.
+
+Die vier, die zuerst dran sein sollten:
+1. `shared/issues/260826-1221_*_ein-gescheitertes-kopieren-ueber-die-datentraegergrenze-loescht-die-quelle-trotzdem.md` — kritisch, Datenverlust.
+2. `shared/issues/260826-1302_*_sechs-elternproben-am-gemeinsamen-kindstarter-bleiben-gruen-wenn-der-kindname-nicht-trifft.md` — die Deskriptor-Abnahme unterscheidet Ausfall nicht von Erfolg.
+3. `shared/issues/260826-1325_*_esc-im-stapel-umbenennen-blatt-mit-fokus-in-der-vorschautabelle-…md` — braucht den Abnahmelauf im Vordergrund, Nutzerarbeit.
+4. Die zwölf `must-use`-Datensätze als ein Durchgang (Liste im `## Coherence`-Abschnitt).
+
+Eine fremde Datei liegt unversioniert im Baum: `shared/issues/260826-1445_o_the-playmakers-ranking-…md`, englisch, betrifft fusion, zitiert Circles, die es hier nicht gibt, von keinem Prüfer dieser Sitzung geschrieben. Nicht committet.
+
+## Commits
+
+| Hash | Message | Task |
+|------|---------|------|
+| `f22a036` | die erste Vollbaum-Durchsicht von krk-core, vier Berichte und 34 Datensätze | R1–R4 |
+| `4a57028` | der Sitzungsbericht und das Ereignisprotokoll | — |
+| `7ac511a` | die Vollbaum-Durchsicht der Proben und der Messstrecke | R5, R6, R15 |
+| `ca8072d` | die Vollbaum-Durchsicht des Oberflächenkerns | R7, R8, R10 |
+| `8bab018` | die Vollbaum-Durchsicht der übrigen Oberfläche | R9, R11, R12 |
+| `c13bf1c` | zwei Also-seen-Zeilen zurückgeführt | R9 |
+| `de1e2db` | die Vollbaum-Durchsicht ist vollständig | R13, R14 |
+| `7389b61` | der Schlussabgleich | Phase 3 |
+
+## Session Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant O as Orchestrator
+    participant CR as Coderev
+    participant R as Reconciler
+
+    U->>O: tiefe Durchsicht, Modus 1: ganzer Quelltext
+    Note over O: Turn 1 — krk-core/src
+    O->>CR: R1 verzeichnis/
+    O->>CR: R2 operation/ + stapelumbenennen/
+    O->>CR: R3 ablage/ + leseprofil/
+    O->>CR: R4 tasten/ + text/
+    CR-->>O: 4 Berichte, 34 Datensätze (1 kritisch)
+    O->>CR: R2 Zeilenangaben berichtigen
+    CR-->>O: 14 von 133 berichtigt
+    O->>U: Kohärenz Turn 1
+    U-->>O: weiter (f22a036, 4a57028)
+    Note over O: Turn 2 — Proben, Messstrecke
+    O->>CR: R5, R6, R15
+    CR-->>O: 3 Berichte, 25 Datensätze
+    O->>U: Kohärenz Turn 2
+    U-->>O: weiter (7ac511a)
+    Note over O: Turn 3 — Oberflächenkern
+    O->>CR: R7, R8, R10
+    CR-->>O: 3 Berichte, 24 Datensätze
+    O->>U: Kohärenz Turn 3
+    U-->>O: weiter (ca8072d)
+    Note over O: Turn 4 — übrige Oberfläche
+    O->>CR: R9, R11, R12
+    CR-->>O: 3 Berichte, 19 Datensätze
+    O->>CR: R9 Also-seen-Stummel zurückführen
+    CR-->>O: 2 übertragen, 2 gelöscht
+    O->>U: Kohärenz Turn 4
+    U-->>O: weiter (8bab018, c13bf1c)
+    Note over O: Turn 5 — Wurzelmodule, xtask
+    O->>CR: R13, R14
+    CR-->>O: 2 Berichte, 23 Datensätze
+    Note over O: Converged (de1e2db)
+    O->>R: Schlussabgleich, Domain code
+    R-->>O: review-needed, revise Grounding (7389b61)
+    O->>U: Rebalance-Frage
+    U-->>O: /fusion:cleanup
+```
