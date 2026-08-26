@@ -63,3 +63,5 @@ Der zweite Weg ist der billigere und der, den dieser Baum sonst geht. Ein dritte
 Rufer erfinden — steht nicht zur Wahl.
 
 Also seen: 260826-1221 by coderev — die gleichnamige Methode `operation::Abschluss::ist_abgebrochen` (`crates/krk-core/src/operation/fortschritt.rs:64-66`) hat im ganzen Arbeitsbereich nicht einmal eine Probe als Rufer; festgehalten in `shared/issues/260826-1221_*_fuenf-oeffentliche-namen-der-zwei-module-haben-keinen-rufer-ausser-hoechstens-ihrer-eigenen-probe.md`.
+
+Also seen: 260826-1417 by coderev — in `kommandos/operationen.rs:577-580` (`abschlusstext`) wird `bericht.abschluss` vollständig über beide Varianten verzweigt; dort muss kein Rufer stehen, ein Prädikat verdeckte den zweiten Zweig. Der Befund bleibt ein toter Helfer im Kern, nicht ein fehlender Rufer in `krk-ui`.

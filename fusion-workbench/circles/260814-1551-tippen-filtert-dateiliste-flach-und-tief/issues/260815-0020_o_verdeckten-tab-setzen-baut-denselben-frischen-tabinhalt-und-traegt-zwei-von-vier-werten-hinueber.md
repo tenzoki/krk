@@ -65,3 +65,5 @@ Stelle übertragen werden, hat der Nutzer nicht beantwortet, und beide Auswege o
 unverändert.
 
 Also seen: 260826-1327 by coderev — der fuenfte Weg, auf dem der Filtertext faellt: `tab_ordner_setzen` (`appkit/tabelle.rs:1377-1387`) ruft fuer den verdeckten Tab `verdeckten_tab_setzen`, und das nimmt Filtertext, Deep und Content mit (`tabs.rs:485-495`); der sichtbare Tab geht ueber `ordner_setzen` (`tabs.rs:653-670`) und behaelt alle drei.
+
+Also seen: 260826-1417 by coderev — am Baum `ca8072d` sind es zwei von **fuenf** Werten (`tabs.rs:485-495` gegen `:653-681`, seit dem Inhaltsfilter kommt `inhalt` dazu), und `Tabliste::schliessen` am letzten Tab (`:560-571`) ist eine dritte Fassung, die null von fuenf traegt: `shared/issues/260826-1419_*_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-…md`.

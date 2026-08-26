@@ -73,3 +73,5 @@ geliefert. Die Dateiliste ist damit die eine Hälfte der Abhilfe und nicht die g
   erklärt wird.
 - Schwesterbefunde: `260813-1258_o_zwei-prosastellen-in-anwendung-rs-zaehlen-noch-drei-werte-und-einen-sonderposten.md`,
   `260813-1420_o_vier-modulkoepfe-ausserhalb-der-dateiliste-von-a1-und-a2-nennen-noch-drei-bestandteile.md`.
+
+Also seen: 260826-1417 by coderev — `zulaessigkeit.rs:587` spricht von „ein kuenftiger dritter Eintrag" der Ausnahmeliste; die Liste führt seit `FensterEinblenden` drei, gemeint ist ein vierter (dieselbe Datei, dieselbe Ursache wie Punkt 2).

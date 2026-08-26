@@ -1662,3 +1662,13 @@
 {"ts":"2026-08-26T11:28:23","event":"task_done","turn":3,"task":"R7","agent":"coderev","detail":"1/1 Datei ganz, 4 Defekte (2 mittel, 2 niedrig); 52 eigene Zweige, 27 im Auffang, alle 27 in tabelle.rs belegt"}
 {"ts":"2026-08-26T11:31:52","event":"task_done","turn":3,"task":"R10","agent":"coderev","detail":"11/11 Dateien, 6 Defekte (2 mittel, 4 niedrig), 5 Nachtraege"}
 {"ts":"2026-08-26T11:36:39","event":"task_done","turn":3,"task":"R8","agent":"coderev","detail":"2/2 Dateien, 14 Defekte (2 mittel, 12 niedrig); 28 eigene Zweige in tabelle.rs"}
+{"ts":"2026-08-26T11:37:27","event":"commit","turn":3,"detail":"ca8072d — 3 Berichte, 24 Datensaetze"}
+{"ts":"2026-08-26T12:08:29","event":"coherence_review","turn":3,"detail":"verdict=ok; 3 Berichte, 24 Datensaetze, 1 hoch; 85/155 Dateien; 4 offene Entscheidungen gelesen, keine beantwortet"}
+{"ts":"2026-08-26T12:08:29","event":"turn_end","turn":3,"detail":"3 Aufgaben erledigt, 24 Datensaetze, 1 Commit"}
+{"ts":"2026-08-26T12:08:29","event":"turn_start","turn":4,"detail":"3 Aufgaben bereit: R9, R11, R12"}
+{"ts":"2026-08-26T12:08:29","event":"task_start","turn":4,"task":"R9","agent":"coderev"}
+{"ts":"2026-08-26T12:08:29","event":"task_start","turn":4,"task":"R11","agent":"coderev"}
+{"ts":"2026-08-26T12:08:29","event":"task_start","turn":4,"task":"R12","agent":"coderev"}
+{"ts":"2026-08-26T12:20:48","event":"task_done","turn":4,"task":"R11","agent":"coderev","detail":"12/12 Dateien, 4 Defekte (2 mittel, 2 niedrig); Vier-Kommandos-Probe wuerde rot"}
+{"ts":"2026-08-26T12:21:08","event":"task_done","turn":4,"task":"R9","agent":"coderev","detail":"27/27 Dateien, 8 Defekte (1 mittel, 7 niedrig); Untergrenzen 25/25"}
+{"ts":"2026-08-26T12:21:30","event":"task_done","turn":4,"task":"R12","agent":"coderev","detail":"6/6 Dateien, 7 Defekte (1 mittel, 6 niedrig); alle 7 Altbefunde gelten weiter"}
