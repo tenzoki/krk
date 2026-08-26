@@ -63,3 +63,5 @@ seither ausdrücklich als einen der drei Wege, die den Filtertext ohne Zutun des
 wegnehmen. **Die Entwurfsfrage dieses Datensatzes bleibt offen**: ob die vier Werte an einer
 Stelle übertragen werden, hat der Nutzer nicht beantwortet, und beide Auswege oben stehen
 unverändert.
+
+Also seen: 260826-1327 by coderev — der fuenfte Weg, auf dem der Filtertext faellt: `tab_ordner_setzen` (`appkit/tabelle.rs:1377-1387`) ruft fuer den verdeckten Tab `verdeckten_tab_setzen`, und das nimmt Filtertext, Deep und Content mit (`tabs.rs:485-495`); der sichtbare Tab geht ueber `ordner_setzen` (`tabs.rs:653-670`) und behaelt alle drei.

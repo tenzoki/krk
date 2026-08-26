@@ -85,3 +85,5 @@ Two ways, and the first is the smaller one:
 
 Both are user choices about how far the derivation goes; neither is urgent, because no caller is
 wrong at `a4d8211`.
+
+Also seen: 260826-1338 by coderev — steht am Stand `7ac511a` unverändert (`mod.rs:764-766`, `stelle == 0`). Dieselbe Zeile wirft daneben den `Blattgriff` weg (`let _griff =`); was das kostet, steht in `shared/issues/260826-1325_*_esc-im-stapel-umbenennen-blatt-mit-fokus-in-der-vorschautabelle-schliesst-das-blatt-nicht-sondern-leert-den-filter-dahinter.md`. Wer die eine Hälfte behebt, hat die andere in der Hand.

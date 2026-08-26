@@ -84,3 +84,5 @@ einem der beiden Zuschnitte:
   (`teilen.rs`, „Diese beiden Huellen tragen keine Probe"). Der Befund ist
   deshalb nur durch Lesen oder am Bündel zu haben.
 - Gefunden bei der Durchsicht von Turn 1 der Runde 6; nicht behoben.
+
+Also seen: 260826-1338 by coderev — gilt am Stand `7ac511a` unverändert: `eintrag_anfuegen` (`crates/krk-ui/src/appkit/teilen.rs:270`) lässt den Wähler weiter nach `standardShareMenuItem` fallen, `anbieten` (`:235-237`) hält seinen im `thread_local!`. Seit der Runde 17 läuft dieser zweite Weg für jedes Kontextmenü der Dateiliste (`tabelle.rs:1236-1243`), neben Zip, Unzip und Finder; der Eintrag ist damit der häufiger benutzte der beiden, und die Frage ist weiter unbeantwortet.

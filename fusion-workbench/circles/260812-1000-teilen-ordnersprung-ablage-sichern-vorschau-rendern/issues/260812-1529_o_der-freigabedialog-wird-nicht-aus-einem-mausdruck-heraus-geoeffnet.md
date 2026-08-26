@@ -70,3 +70,5 @@ Hülle; die Zusage C1.7 und C1.8 wären unberührt.
   worden.
 - Gefunden bei der Durchsicht von Turn 1 der Runde 6; nicht behoben, weil die
   Antwort am Bündel hängt und die Durchsicht nichts repariert.
+
+Also seen: 260826-1338 by coderev — gilt am Stand `7ac511a` unverändert: `teilen::anbieten` (`crates/krk-ui/src/appkit/teilen.rs:230-235`) ruft `showRelativeToRect:ofView:preferredEdge:` weiter aus dem Tastenweg `Anwendungsdelegierter::teilen` (`anwendung.rs:3770-3785`). Der zweite Weg der Runde 17, das Kontextmenü der Dateiliste (`tabelle.rs:1236-1243`, `menuNeedsUpdate:`), geht über `eintrag_anfuegen` und `standardShareMenuItem` und ist von dieser Bedingung wie hier beschrieben nicht betroffen; der Abnahmelauf bleibt Nutzerarbeit.

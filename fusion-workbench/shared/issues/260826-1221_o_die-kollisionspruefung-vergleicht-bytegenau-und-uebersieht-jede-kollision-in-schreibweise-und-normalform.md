@@ -80,3 +80,5 @@ naehme sie ihr.
 ## Umfang
 
 `krk-core`, `stapelumbenennen/kollision.rs`. Die Vorschau selbst bleibt unberuehrt.
+
+Also seen: 260826-1338 by coderev — die Blattseite stellt die Vorschau ohne Vorbehalt als das dar, was der Befehl täte: `stapelumbenennen.rs:398-401` („Die Vorschau zeigt, was der Befehl täte … Einträge mit einem Hinweis bleiben stehen") und `zusammenfassung` (`:452-460`, „N werden umbenannt, K bleiben stehen") tragen die zu niedrige Zahl aus `Vorschau::kollisionen` unverändert zum Nutzer; eine Behebung im Kern reicht, das Blatt rechnet nichts selbst.
