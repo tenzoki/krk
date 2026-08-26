@@ -287,3 +287,22 @@ gestartet hat, ohne dessen Handgriff
 - **Die fünfzehn Dateien des Bereichs, die die Kopfzeile `Not-opened` nennt.** Sie sind
   Werkbankdatensätze aus dem Abgleich und dem Kuratorenlauf derselben Sitzung und stehen
   außerhalb des Gegenstands dieser Durchsicht.
+
+---
+
+## Abgleichvermerk — 260826-1024
+
+Nachgetragen vom `reconciler` beim Schlussabgleich der Sitzung gegen `e5ec81a..c95f28b`. Die
+drei Befunde sind einzeln am Baum nachgeprüft und **alle drei stehen weiter offen**; kein Commit
+der Sitzung hat einen von ihnen berührt.
+
+- **N1** (`shared/issues/260826-0902_o_*`): `grep -rn 'flight' crates/ xtask/ README.md` liefert
+  am 260826-1024 keinen Treffer. Keine Probe im Baum nennt die vier Zahlen.
+- **N2** (`shared/issues/260826-0903_o_*`): unverändert. Die Zeichengleichheit der zwei Paare
+  wird von nichts im Baum gehalten.
+- **N3** (`shared/issues/260826-0904_o_*`): `grep -n 'vor der Ortsangabe'
+  resources/default-readers.toml` liefert die vier Zeilen 298, 637, 724 und 812, also alle vier
+  Halbsätze in ihrer beanstandeten Fassung.
+
+`make check` über `c95f28b` selbst gefahren, alle vier Kommandos grün. Die Freigabe dieser
+Durchsicht („Der Stand kann ausgeliefert werden") ist durch nichts in diesem Abgleich berührt.

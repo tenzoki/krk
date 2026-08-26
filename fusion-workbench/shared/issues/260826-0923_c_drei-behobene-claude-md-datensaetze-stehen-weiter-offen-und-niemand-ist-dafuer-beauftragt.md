@@ -54,3 +54,24 @@ Die zwei vollständig umgesetzten (`260823-1336` nach der Berichtigung seines Ru
 mit dem Commit eintragen. Für `260825-1859` bleibt die eine Zeile in `Cargo.toml` zu richten.
 
 **Gefunden:** coderev, Durchsicht von `e5ec81a..20c9833` am 260826-0923
+
+---
+Resolved: dieser Abgleich (`shared/history/260826-1017-reconciliation.md`) — die drei Marker sind
+nachgezogen, jeder nach eigener Lesung am Baum und nicht nach dem Bericht, der die Erledigung
+behauptet:
+
+- `260823-1336` → `_c_`, mit `Resolved: fb50fcd` und einem `Revised by: c95f28b` für die
+  Runden-Zuschreibung, die der Datensatz zweimal im Rumpf führt. Die Berichtigung ist damit
+  vorgenommen, bevor der Datensatz schließt, wie diese Tabelle es verlangt.
+- `260823-1649` → `_c_`, mit `Resolved: fb50fcd`. Die leere `Resolved:`-Zeile, die der Datensatz
+  seit dem 260823 trug, ist dabei ausgefüllt worden.
+- `260820-2056` → `_c_`, mit `Resolved: 90f8ac1`, also mit dem Commit, der die Aussage schon am
+  260820 gerichtet hat, und nicht mit `fb50fcd`.
+
+Die zwei, die der Datensatz zu Recht offen nennt, sind einzeln nachgeprüft. `260825-1859` bleibt
+offen: `Cargo.toml:157` trägt unverändert „mit dem einen Merkmal `deflate-flate2`", während die
+Merkmalsliste zwei Zeilen weiter zwei führt; das ist Arbeit des `coder`. `260826-0149` ist
+geschlossen, aber nicht durch diesen Weg — der Nutzer hat den Datensatz am 260826-1017 auf seine
+Möglichkeit 3 gekürzt, und die ist mit `fb50fcd` erfüllt.
+
+`make check` über `c95f28b` selbst gefahren, alle vier Kommandos grün.

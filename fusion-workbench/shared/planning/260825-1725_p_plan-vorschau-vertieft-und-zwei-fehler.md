@@ -1,7 +1,7 @@
 # Implementation Plan: Die Vorschau vertieft, und zwei Fehler
 
 **Date:** 2026-08-25
-**Status:** Gebaut, nicht abgenommen — alle zehn Schritte stehen auf `[DONE]` und sind am 260826-0149 einzeln gegen den Baum gelesen (`e5ec81a`, `make check` grün, alle vier Kommandos); von den neun Schließungsbedingungen unter „Where this Circle stops" halten sechs, zwei sind Nutzerarbeit und ungefahren (der Handgriff mit der `readers.toml` aus Schritt 9 und die Abnahme am laufenden Bündel, darunter der vierteilige Handgriff zum Klick-Fokus), eine steht ausdrücklich außerhalb. Der Dateimarker bleibt auf `_p_` und geht nicht auf `_c_`, solange die zwei Nutzerbedingungen offen sind und `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` die Frage nach der Lesart des Markers offen hält
+**Status:** Gebaut, nicht abgenommen — alle zehn Schritte stehen auf `[DONE]` und sind am 260826-0149 einzeln gegen den Baum gelesen (`e5ec81a`, `make check` grün, alle vier Kommandos); der Schlussabgleich am 260826-1024 hat `make check` über `c95f28b` wiederholt (ebenfalls grün) und festgestellt, dass keiner der sieben Commits von `e5ec81a..c95f28b` einen Planschritt berührt; von den neun Schließungsbedingungen unter „Where this Circle stops" halten sechs, zwei sind Nutzerarbeit und ungefahren (der Handgriff mit der `readers.toml` aus Schritt 9 und die Abnahme am laufenden Bündel, darunter der vierteilige Handgriff zum Klick-Fokus), eine steht ausdrücklich außerhalb. Der Dateimarker bleibt auf `_p_` und geht nicht auf `_c_`, solange die zwei Nutzerbedingungen offen sind und `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` die Frage nach der Lesart des Markers offen hält
 **Spec:** keiner — geplant aus einem Rohauftrag des Nutzers vom 260825. Das Schärfen ist ausdrücklich übersprungen; die offenen Fragen sind in diesem Plan beantwortet und in sieben Entscheidungsdatensätzen abgelegt.
 **Decidability:** Die tragende Frage lautet: *kann eine Profil-Zusammenfassung eine Auskunft geben, die über alle Unterordner eines Ordners aggregiert, ohne dass ihre Kosten mit dem Bestand der Werkbank wachsen?* Die Antwort ist **nein**, und zwar nicht aus Unentscheidbarkeit, sondern aus Unbeschränktheit: die Zahl der offenen Defekte über alle Runden ist entscheidbar, kostet aber eine Verzeichnisöffnung je Runde, und die Zahl der Runden wächst. Ein fester Deckel auf Verzeichnisöffnungen kann diese Auskunft deshalb nie dauerhaft tragen. **Der Mechanismus wechselt daher die Einheit, in der er zählt**: nicht mehr die geöffneten Verzeichnisse, sondern die **gelesenen Einträge** begrenzen einen Platzhalter-Lauf, und die Schranke dafür steht seit der Runde 16 als `HOECHSTENS_EINTRAEGE` da, samt der Vokabel für die abgeschnittene Antwort (`Wert::UeberGrenze`: „mindestens N, Lesung abgebrochen"). Damit ist die Auskunft an der heutigen Werkbank exakt (568 von 2.000 Einträgen), bei rund hundert Runden ausdrücklich unvollständig — und sie sagt dann selbst, dass sie es ist, statt eine Zahl zu nennen, die stillschweigend falsch ist.
 
@@ -606,3 +606,38 @@ den Stand ausdrücklich frei.
 `README.md` unter „Versionsstufen" eine Minor-Erhöhung, denn die Runde bringt Funktionen);
 und `git status --porcelain --untracked-files=no` meldet `orchestrator-events.jsonl` als
 geändert, woran Station 1 abbricht (`xtask/src/release.rs:300`).
+
+### 260826-1024 — Schlussabgleich der wiederaufgenommenen Sitzung, Bereich `e5ec81a..c95f28b`
+
+Sieben Commits, und **keiner berührt einen der zehn Planschritte**. Der Eintrag darüber bleibt
+deshalb in jedem Punkt gültig und wird hier nicht wiederholt; nachgetragen ist allein, was der
+neue Bereich am Stand ändert.
+
+**Was die sieben Commits tun.** Drei gehen über die Directive dieses Plans hinaus und stehen auf
+eigener Anweisung des Nutzers aus derselben Sitzung: die Datumszeilen der vier flight-Speicher
+(`180fc53`), der Kuratorenlauf über neun Aussagen in `CLAUDE.md` (`fb50fcd`, dazu `c95f28b` als
+Berichtigung einer seiner Zeilen) und die Vorgabe des Dateifilters auf tiefe Suche (`20c9833`).
+Drei sind Werkbankarbeit an dieser Runde: der Abgleich (`d08dbac`) und die zwei Durchsichten
+(`b792150`, `2dce7d5`). Nichts davon ändert eine Zusage dieses Plans.
+
+**`make check` erneut selbst gefahren**, am 260826-1017 über `c95f28b`: alle vier Kommandos,
+Ausstiegscode 0, „alle vier gruen". Die Abnahme des Eintrags darüber gilt damit auch für den
+neuen Baumstand.
+
+**Die sieben Entscheidungen auf `_i_` sind nachgeprüft, und keine trägt ihre `Implemented:`-Zeile
+zu Unrecht.** Jede Fundstelle ist am 260826-1017 einzeln aufgeschlagen und trifft:
+`bausteine.rs:361`, `:377`, `:541`, `:86`, `:788`; `tabelle.rs:488`, `:2189`, `:1546`;
+`anwendung.rs:8863`, `:8957`; `leseprofil/mod.rs:456`, `:507`, `:360`; `datei.rs:270`, `:290`;
+`sys.rs:1088`, `:1133`; `README.md:44`. Keine Zeilennummer ist durch die sieben Commits
+verschoben worden.
+
+**Die neun Schließungsbedingungen sind unverändert**, und das gilt für beide Richtungen: die
+sechs, die halten, hält auch der neue Stand, und die zwei Nutzerbedingungen sind weiter
+ungefahren. Der Dateimarker bleibt auf `_p_`.
+
+**Was neu dazugekommen ist und nicht an diesem Plan hängt.** Die Vorgabe der tiefen Suche
+(`20c9833`) verschiebt die Schwelle des Inhaltsfilters mit und lässt einen einzigen Anschlag den
+Unterbaum anlaufen. Beides ist außerhalb dieses Plans entstanden und als zwei Entscheidungen
+und ein Defekt abgelegt (`shared/decisions/260826-0859_o_*`,
+`shared/decisions/260826-0923_o_bekommt-der-tiefe-durchlauf-*`,
+`shared/issues/260826-1024_o_claude-md-sagt-nicht-dass-die-tiefe-suche-ab-werk-steht-*`).

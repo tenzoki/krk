@@ -71,3 +71,26 @@ Entwickler sie nachschlägt, und sie ist die Voraussetzung eines offenen Verhalt
 **Verwandt:**
 `shared/issues/260823-0732_*_der-neue-nachzug-laeuft-vor-dem-fokusumzug-*` — der offene
 Verhaltensbefund, der auf dem ungenannten Empfänger steht.
+
+---
+Resolved: fb50fcd — `CLAUDE.md:141` nennt jetzt beide Empfänger in ihrer Laufreihenfolge
+(„erst `aktives_dem_ersthelfer_nachziehen`, das über `aktives_setzen` bis `Aufteilung::anwenden`
+durchgeht, dann `fokusanzeige_nachziehen`"), und die Zusage „ruft weder `anwenden` noch
+`setHidden`" ist ausdrücklich auf `fokusanzeige_nachziehen` beschränkt statt auf die Meldung,
+mit der Probe `der_nachzug_der_anzeige_ruehrt_die_auslegung_nicht_an` als Beleg. Beides ist der
+Vorschlag dieses Datensatzes, Halbsatz für Halbsatz. Am 260826-1017 gegen den Baum gelesen
+(`crates/krk-ui/src/appkit/anwendung.rs:1225-1230`), `make check` über `c95f28b` grün, alle vier
+Kommandos.
+
+---
+Revised by: c95f28b — die Zuschreibung „Runde 14", die dieser Datensatz zweimal führt (im Rumpf
+und in der Belegzeile „`76ceb683` vom 260819 (Runde 14)"), trägt nicht. `76ceb68` landete am
+2026-08-19 um 11:20, zwischen dem Schluss der Runde 13 (08:12, `c09ff3a`) und dem Beginn der
+Runde 14 (22:31, `258bd7c`), und der Commit trägt kein Werkbank-Artefakt unter `circles/`; er
+gehört zu keiner Runde. Der Kuratorenlauf hat die Zuschreibung von hier wörtlich nach
+`CLAUDE.md` getragen, `c95f28b` hat sie dort auf „seit dem 260819 (`76ceb68`)" gestellt. Die
+`Resolved:`-Notiz darüber bleibt unberührt, und die zwei Stellen im Rumpf bleiben stehen, wie
+die Konvention es für eine umgezogene Begründung verlangt: wer den Rumpf liest, liest diese
+Zeile mit. Der Marker steht auf `_c_`, weil der Defekt behoben ist, und nicht wegen dieser
+Berichtigung. Gemessen und abgelegt von `coderev` in
+`shared/issues/260826-0923_*_claude-md-schreibt-den-zweiten-empfaenger-der-runde-14-zu-er-landete-ohne-aktiven-circle.md`.

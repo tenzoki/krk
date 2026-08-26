@@ -72,3 +72,17 @@ Kein Verhalten hängt daran; der Rest des Absatzes bleibt wie er steht und ist a
 liest, und sie steht in demselben Commit, der dieselbe Fehlerklasse an vier Stellen behebt.
 
 **Gefunden:** coderev, Durchsicht von `e5ec81a..20c9833` am 260826-0923
+
+---
+Resolved: c95f28b — `CLAUDE.md:141` sagt jetzt „Am Melder hängen seit dem 260819 zwei Empfänger
+(`76ceb68`)" statt „seit der Runde 14". Am 260826-1017 nachgemessen: `76ceb68` datiert
+2026-08-19 11:20, der Schluss der Runde 13 `c09ff3a` auf 08:12, der Beginn der Runde 14
+`258bd7c` auf 22:31, und `git show --stat 76ceb68` nennt keine Datei unter `circles/`.
+
+Die zweite Hälfte des Vorschlags — dieselbe Berichtigung im Quelldatensatz
+`shared/issues/260823-1336_*_claude-md-nennt-einen-empfaenger-der-ersthelfermeldung-…` — ist als
+`Revised by:`-Vermerk am Ende jenes Datensatzes ausgeführt und nicht als Ersetzung im Rumpf. Die
+Konvention lässt dem Abgleich keine andere Form: er ändert Markierungen, Abgleichprotokolle und
+Belegzeilen und nicht die Beschreibung eines Defekts, und für eine umgezogene Begründung ist der
+`Revised by:`-Vermerk ausdrücklich die vorgesehene Gestalt. Der Vermerk nennt beide Stellen des
+Rumpfs, damit ein späterer Lauf sie vor Augen hat, statt sie ein zweites Mal zu übernehmen.

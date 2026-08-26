@@ -52,3 +52,14 @@ nicht anzufassen. Das ist Kuratorarbeit an einer der drei normativen Flächen, n
 Spec zeichnet auf, was zugesagt war, und die Umbenennung ist nach der Sache eine Einlösung von C6.3
 und kein Bruch — die Probe behält ihre namentliche Liste, nennt den dritten Rufer
 (`krk-core/src/verzeichnis/inhalt.rs`) und ist nicht durch eine bloße Zahl ersetzt.
+
+---
+Resolved: 90f8ac1 — `CLAUDE.md:143` nennt die Probe seit dem 260820 unter ihrem heutigen Namen
+`die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei`, ungekürzt und ohne Auslassungszeichen;
+der Rest des Satzes ist unangetastet, wie dieser Datensatz es verlangt. Der Baum trägt sie unter
+diesem Namen (`crates/krk-core/tests/verzeichnis.rs:3244`), der alte Name kommt unter `crates/`
+nicht mehr vor, und `make check` über `c95f28b` fährt sie grün. Am 260826-1017 gegen den Baum
+gelesen. **Der Marker ist rund sechs Tage nach der Behebung nachgezogen**: der Kuratorenlauf
+`260826-0818` hat den Fall benannt und den Marker dem `reconciler` zugewiesen, abgelegt als
+`shared/issues/260826-0923_*_drei-behobene-claude-md-datensaetze-stehen-weiter-offen-und-niemand-ist-dafuer-beauftragt.md`.
+Der Spec der Runde 11 nennt den alten Namen weiter und bleibt zu Recht unangetastet.

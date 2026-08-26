@@ -350,3 +350,28 @@ cargo fmt --all --check             exit 0
 ```
 
 **Der Stand kann ausgeliefert werden.**
+
+---
+
+## Abgleichvermerk — 260826-1024
+
+Nachgetragen vom `reconciler` beim Schlussabgleich der Sitzung gegen `e5ec81a..c95f28b`. Die
+Befunde selbst sind unverändert; hier steht allein, welche seither erledigt sind.
+
+| Befund | Stand | Beleg |
+|---|---|---|
+| 1 (mittel) — „seit der Runde 14" ist falsch | **erledigt** | `c95f28b` stellt `CLAUDE.md:141` auf „seit dem 260819 (`76ceb68`)"; der Quelldatensatz `shared/issues/260823-1336_*` trägt einen `Revised by: c95f28b`-Vermerk und steht auf `_c_`. Der abgelegte Datensatz `260826-0923_*_claude-md-schreibt-den-zweiten-empfaenger-…` ist geschlossen |
+| 2 (mittel) — drei behobene Datensätze stehen offen | **erledigt** | Die drei Marker sind nachgezogen: `260823-1336` → `_c_` (`fb50fcd`), `260823-1649` → `_c_` (`fb50fcd`), `260820-2056` → `_c_` (`90f8ac1`). Der abgelegte Datensatz `260826-0923_*_drei-behobene-claude-md-datensaetze-…` ist geschlossen. `260825-1859_*` bleibt offen: `Cargo.toml:157` trägt unverändert „mit dem einen Merkmal `deflate-flate2`" |
+| 3 (gering) — „alles unter `shared/`" trifft nicht ganz | steht als `Also seen`-Zeile an `260826-0149_*`, das mit `fb50fcd` geschlossen ist. Die Zeile bleibt dort stehen und trägt weiter | |
+| 4 (gering) — die Ablage-Aufzählung neben ihrem Zeiger | **offen** | `shared/issues/260826-0923_o_die-ablage-aufzaehlung-…` |
+| 5 (gering) — die Pfadregel ist für Zeile 18 nicht total | **offen** | `shared/issues/260826-0923_o_die-pfadregel-nach-der-rundentabelle-…` |
+| 6 (Entscheidungsfrage) — der Durchlauf hat keine Schwelle | **offen und unbeantwortet** | `shared/decisions/260826-0923_o_bekommt-der-tiefe-durchlauf-…` |
+
+**Zwei Feststellungen dieser Durchsicht sind unabhängig nachgeprüft und tragen.** Die Vorbelegung
+steht an genau einer Stelle (`crates/krk-core/src/verzeichnis/modell.rs:374`, mit dem Kommentar
+über der Zeile, der die Nebenwirkung auf die Schwelle benennt), und `filter_steht()` ist ein
+Zeichen (`tabs.rs:897`). `make check` über `c95f28b` selbst gefahren, alle vier Kommandos grün.
+
+**Eine Lücke ist neu abgelegt.** Die Einschätzung „`CLAUDE.md` wird durch die Deep-Änderung nicht
+falsch" hält, und der Abgleich hat sie am Baum ein drittes Mal bestätigt. Was fehlt, ist der
+Satz: `shared/issues/260826-1024_o_claude-md-sagt-nicht-dass-die-tiefe-suche-ab-werk-steht-….md`.

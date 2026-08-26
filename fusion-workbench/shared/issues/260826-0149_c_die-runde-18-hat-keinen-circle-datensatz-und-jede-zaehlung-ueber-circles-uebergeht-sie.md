@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** reconciler, Kai Stalmann <kai@stalmann.org>
-**Cross-references:** `CLAUDE.md` (die Rundentabelle, die Zeile über `ls fusion-workbench/circles/*/_*_circle.md`, der Absatz über den Abnahmelauf); `shared/planning/260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md` (Abschnitt „Where this Circle stops": „Es ist kein Circle aktiv"); `resources/default-readers.toml` (das Profil „fusion-Werkbank: alle Runden")
+**Cross-references:** `CLAUDE.md` (die Rundentabelle, die Zeile über `ls fusion-workbench/circles/*/_*_circle.md`, der Absatz über den Abnahmelauf); `shared/planning/260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md` (Abschnitt „Where this Circle stops": „Es ist kein Circle aktiv"); `resources/default-readers.toml` (die Profile „fusion-Werkbank: alle Runden" und „Projektwurzel mit fusion-Werkbank")
 
 ---
 
@@ -16,7 +16,7 @@ Die Arbeit der Runde 18 liegt vollständig im gemeinsamen Speicher: der Plan in
 liefert am 260826 siebzehn Datensätze, und keiner davon gehört zu dieser Runde.
 
 Das ist nach der Herkunftsregel richtig abgelegt — es war kein Circle aktiv, also gehört alles
-nach `shared/`. Der Befund ist nicht die Ablage, sondern was daraus folgt.
+nach `shared/`. Der Befund ist nicht die Ablage, sondern was `CLAUDE.md` daraus macht.
 
 ## Warum das zählt
 
@@ -35,33 +35,25 @@ Fehlbefund, gegen die `CLAUDE.md` diese Idiome überhaupt eingeführt hat. Die R
 darüber endet bei der 17 und ist damit nicht bloß eine Zeile im Rückstand: sie hat für die 18
 keinen Ort, an dem sie nachziehen könnte.
 
-Dasselbe trifft das mitgelieferte Leseprofil „fusion-Werkbank: alle Runden", das diese Runde
-gerade gebaut hat. Es zählt sechs Zustände über `circles/*/_*_circle.md` und offene Defekte
-über `circles/*/issues`. Die 116 offenen Defekte, die es an dieser Werkbank zeigt, enthalten
-keinen einzigen der rund zwanzig, die diese Runde in `shared/issues/` abgelegt hat. Die Zahl
-ist richtig für das, was sie misst, und wird von einem Leser als Auskunft über die Werkbank
-gelesen.
+**Der Mechanismus der Leseprofile steht dabei nicht zur Debatte.** Das Profil „fusion-Werkbank:
+alle Runden" erkennt `fusion-workbench/circles$` und zählt seine sechs Zustandszeilen über
+`ordner = "*"`; ein Circle ist ein Verzeichnis darunter, und das ist eindeutig. Nichts an
+diesem Befund verlangt daran eine Änderung. Der Leser trifft die Lage sogar besser als
+`CLAUDE.md`: er führt beide Zahlen, nur an zwei Orten. Die offenen Defekte des gemeinsamen
+Speichers zählt das Profil „Projektwurzel mit fusion-Werkbank"
+(`zaehlung = { ordner = "fusion-workbench/shared/issues", … }`), die offenen Defekte über alle
+Runden das Rundenprofil (`zaehlung = { ordner = "*/issues", … }`).
 
-## Möglichkeiten
+Der Befund ist damit eng und trifft allein die Werkbank dieses Projekts: die Arbeit der
+Runde 18 liegt in `shared/`, weil kein Circle aktiv war, und `CLAUDE.md` behauptet trotzdem, die
+drei `ls`-Idiome beantworteten „wie viele Runden sind gefahren" vollständig. Ein falscher Satz
+in `CLAUDE.md`, kein offener Punkt im Vokabular.
 
-1. **Einen Circle-Datensatz für die Runde 18 nachtragen** und die Artefakte hineinbewegen. Das
-   kehrt die Herkunftsregel um, die für den Ablageort auf die Herkunft und nicht auf die
-   spätere Reichweite abstellt; die Regel nennt für so etwas ausdrücklich einen
-   Beförderungsschritt und keine zweite Ablageregel.
-2. **Einen Circle-Datensatz ohne Umzug anlegen**, der allein den Zustand und die Schließung
-   trägt und den Plan im gemeinsamen Speicher zitiert. Billig, und die drei Globs antworten
-   wieder vollständig. Der Preis: ein Circle-Verzeichnis, dessen Speicher leer sind.
-3. **`CLAUDE.md` sagt es aus**: eine Zeile, die festhält, dass nicht jede Runde einen Circle
-   hat und die drei Globs deshalb eine Untergrenze liefern. Kostet nichts und behebt nichts.
-4. **So lassen.** Dann ist „wie viele Runden sind gefahren" an diesem Projekt nicht mehr aus
-   dem Dateibestand zu beantworten, und `CLAUDE.md` sagt das Gegenteil.
+## Was zu tun war
 
-## Empfehlung
-
-Möglichkeit 3 zusammen mit 2, in dieser Reihenfolge: erst der Satz, damit die Auskunft ehrlich
-ist, dann die Entscheidung über den Datensatz. Die Wahl gehört dem Nutzer, weil sie festlegt,
-was ein Circle in diesem Projekt künftig ist — die Einheit der Arbeit oder die Einheit der
-Ablage.
+`CLAUDE.md` sagt es aus: eine Zeile, die festhält, dass nicht jede Runde einen Circle-Datensatz
+hat und jede Zählung über `circles/` in dieser Datei deshalb eine Untergrenze liefert. Das
+kostet nichts und richtet die falsche Auskunft dort, wo sie steht.
 
 **Schwere:** mittel. Kein Verhalten der Anwendung hängt daran; drei Auskünfte, auf die sich
 `CLAUDE.md` ausdrücklich verlässt, sind stillschweigend unvollständig.
@@ -80,3 +72,15 @@ Runde 18 führt („Zip-Zeitstempel behoben"). Der Halbsatz ist mit `fb50fcd` na
 gewandert und steht dort in derselben Fassung. Wer nach den Artefakten der Runde 18 allein unter
 `shared/` sucht, findet diesen einen nicht. Die Folgerung des Datensatzes — die drei Globs
 liefern eine Untergrenze — hängt daran nicht.
+
+---
+Resolved: fb50fcd — `CLAUDE.md` sagt es jetzt an vier Stellen aus, am 260826-1017 einzeln gegen
+den Baum gelesen: die Zeile über `ls fusion-workbench/circles/*/_*_circle.md` trägt den Satz
+„Nicht jede Runde hat einen Circle-Datensatz, und jede Zählung über `circles/` in dieser Datei
+liefert deshalb eine Untergrenze" samt Verweis auf diesen Datensatz (`CLAUDE.md:11`), die
+Rundentabelle hat eine Zeile 18 mit einem Strich in der Circle-Spalte (`:32`), der Absatz über
+die beschränkten und kohärenten Abschlüsse trägt „Beide Listen lassen jede Runde ohne
+Circle-Datensatz aus" (`:71`), und der Absatz über den Abnahmelauf der zehn Zusagen nennt die
+Runde 18 ausdrücklich neben dem Glob (`:85`). Der Datensatz ist am 260826-1017 auf Anweisung
+des Nutzers auf diese eine Möglichkeit gekürzt; die drei anderen, darunter der nachgetragene
+Circle-Datensatz, sind damit nicht offen, sondern verworfen.

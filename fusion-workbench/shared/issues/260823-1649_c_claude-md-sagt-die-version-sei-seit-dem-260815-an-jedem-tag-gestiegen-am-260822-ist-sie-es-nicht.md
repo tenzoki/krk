@@ -62,4 +62,10 @@ falsche Tatsachenbehauptung in der Datei, die jeder Agent zuerst liest.
 `shared/issues/260823-1336_o_claude-md-nennt-einen-empfaenger-der-ersthelfermeldung-der-baum-traegt-seit-dem-260819-zwei.md`
 
 ---
-Resolved:
+Resolved: fb50fcd — der Halbsatz „seit dem 260815 ist sie an jedem Tag mindestens einmal
+gestiegen" ist ersatzlos gestrichen; `CLAUDE.md:46` sagt jetzt nur noch „wie oft sie gestiegen
+ist, sagt `git tag -l --sort=creatordate` und keine Zahl an dieser Stelle". Genau das schlägt
+dieser Datensatz vor („Wer ihn ersatzlos streicht, verliert nichts an der Begründung"), und die
+Begründung, warum die Datei die Versionszahl nicht nennt, steht unverändert da. Am 260826-1017
+gegen den Baum gelesen. Die leere `Resolved:`-Zeile, die dieser Datensatz seit dem 260823 trug,
+ist damit ausgefüllt; sie ist eine von neun ihrer Art und gesondert abgelegt.
