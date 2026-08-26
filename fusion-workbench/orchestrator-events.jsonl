@@ -1631,3 +1631,15 @@
 {"ts":"2026-08-26T08:55:27","event":"rebalance_grounding","turn":5,"agent":"orchestrator","detail":"curator zieht CLAUDE.md zur Deep-Vorgabe nach; Datensatz shared/issues/260826-1024_o_claude-md-sagt-nicht-dass-die-tiefe-suche-ab-werk-steht-..."}
 {"ts":"2026-08-26T09:05:55","event":"task_done","turn":5,"task":"T5-2","agent":"curator","detail":"CLAUDE.md nennt die Deep-Vorgabe"}
 {"ts":"2026-08-26T09:07:55","event":"session_end","turn":5,"agent":"orchestrator","detail":"5 Turns, 35 Commits, 22 Aufgaben; Verdikt review-needed, ein Grundlagenbefund bewusst offen"}
+{"ts":"2026-08-26T09:14:40","event":"session_start","history_file":"shared/history/260826-1114-orchestrator-session.md","detail":"Directive not yet stated; mode unresolved"}
+{"ts":"2026-08-26T10:11:17","event":"scope_resolved","detail":"mode=review (Vollbaum), 15 Aufgaben, 155 Rust-Dateien, 126707 Zeilen; Agenten: coderev"}
+{"ts":"2026-08-26T10:11:17","event":"queue_built","detail":"15 Aufgaben, 0 blockiert"}
+{"ts":"2026-08-26T10:11:40","event":"task_start","turn":1,"task":"R1","agent":"coderev"}
+{"ts":"2026-08-26T10:11:40","event":"task_start","turn":1,"task":"R2","agent":"coderev"}
+{"ts":"2026-08-26T10:11:40","event":"task_start","turn":1,"task":"R3","agent":"coderev"}
+{"ts":"2026-08-26T10:11:40","event":"task_start","turn":1,"task":"R4","agent":"coderev"}
+{"ts":"2026-08-26T10:11:40","event":"turn_start","turn":1,"detail":"4 Aufgaben bereit"}
+{"ts":"2026-08-26T10:29:13","event":"task_done","turn":1,"task":"R1","agent":"coderev","detail":"14/14 Dateien, 9 Defekte (1 hoch, 4 mittel, 4 niedrig)"}
+{"ts":"2026-08-26T10:31:21","event":"task_done","turn":1,"task":"R2","agent":"coderev","detail":"14/14 Dateien, 9 Datensaetze (1 kritisch, 1 hoch, 3 mittel, 2 niedrig, 1 Entscheidung)"}
+{"ts":"2026-08-26T10:32:16","event":"task_done","turn":1,"task":"R4","agent":"coderev","detail":"12/12 Dateien, 10 Datensaetze (1 hoch, 3 mittel, 5 niedrig, 1 Entscheidung)"}
+{"ts":"2026-08-26T10:34:08","event":"task_done","turn":1,"task":"R3","agent":"coderev","detail":"12/12 Dateien, 6 Datensaetze (1 mittel, 4 niedrig, 1 Entscheidung)"}
