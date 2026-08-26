@@ -55,6 +55,8 @@ use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::mpsc;
+use std::time::Duration;
 
 /// Die Laufnummer, die zwei Ordner desselben Zwecks im selben Prozess trennt.
 static ZAEHLER: AtomicU64 = AtomicU64::new(0);
@@ -244,6 +246,35 @@ fn entsperren_und_loeschen(pfad: &Path) -> io::Result<()> {
 // ---------------------------------------------------------------------------
 // Der Quellbaum des Vorhabens als Lesestoff fuer die Zaehlproben
 // ---------------------------------------------------------------------------
+/// Ruft `auftrag` auf einem eigenen Faden und gibt die Antwort nur heraus, wenn
+/// sie innerhalb der Schranke kommt.
+///
+/// **Die eine Fassung fuer alle Huellen um dieselbe Tuer.** Ein blockierendes
+/// `open` liefert kein falsches Ergebnis, sondern gar keines, und ohne Schranke
+/// waere das ein stehender Probelauf statt eines Befundes. Die Rufer
+/// unterscheiden sich in nichts als der gerufenen Funktion; deshalb steht die
+/// Bauform hier einmal und nicht je Rufer, und `was` steht im Meldetext, damit
+/// ein Fehlschlag sagt, welche haengt. Bis zum 260826 stand sie in
+/// `tests/text.rs` mit den drei Textwegen als Rufern; mit dem vierten Rufer,
+/// der Probe des Schwunglesers in `tests/verzeichnis.rs` (Defekt
+/// `260826-1221`), ist sie hierher gezogen, weil jede Datei unter `tests/` eine
+/// eigene Kiste ist und nichts aus einer anderen erreicht.
+///
+/// Der Faden bleibt im Fehlerfall stehen, wo er steht. Er stirbt mit dem
+/// Probelauf, und ein Deskriptor, der nie aufgeht, haelt nichts fest.
+pub fn mit_zeitschranke<T: Send + 'static>(
+    was: &str,
+    schranke: Duration,
+    auftrag: impl FnOnce() -> T + Send + 'static,
+) -> T {
+    let (sender, empfaenger) = mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = sender.send(auftrag());
+    });
+    empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
+        panic!("{was} ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
+    })
+}
 
 /// Jede `.rs`-Datei unter `crates/`, mit ihrem Pfad unterhalb von `crates/` und
 /// ihrem Inhalt, in fester Reihenfolge.

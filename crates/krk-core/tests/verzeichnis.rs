@@ -18,12 +18,12 @@ use krk_core::verzeichnis::leser::{
 };
 use krk_core::verzeichnis::modell::{Befund, Ordnermodell};
 use krk_core::verzeichnis::sortierung::{Richtung, Schluessel, Sortierung};
-use krk_core::verzeichnis::sys::ist_deskriptormangel;
+use krk_core::verzeichnis::sys::{Schwungleser, ist_deskriptormangel};
 use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 mod gemeinsam;
-use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze};
+use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, mit_zeitschranke};
 
 /// Ein flacher Ordner mit `anzahl` Dateien, deren Namen fest zugeordnet sind.
 fn ordner_mit_dateien(zweck: &str, anzahl: usize) -> Pruefordner {
@@ -3525,4 +3525,33 @@ fn eine_roehre_haelt_die_frage_nach_dem_verweisziel_nicht_an() {
     });
 
     assert_eq!(ergebnis, Verweisziel::KeinOrdner);
+}
+
+/// Eine benannte Roehre ohne Schreiber haelt den Schwungleser nicht an.
+///
+/// `Schwungleser::oeffnen` ist der Eingang jedes Lesens, Durchlaufs und
+/// Zaehlens; bis zum Defekt `260826-1221` oeffnete er mit `File::open`, und ein
+/// Pfad, der in diesem Augenblick auf eine Roehre ohne Schreiber zeigt, liess
+/// den Faden fuer immer stehen — vor dem Abbruchkennzeichen, das erst nach dem
+/// Oeffnen gelesen wird. Seither geht er ueber `ohne_warten_oeffnen` wie die
+/// Textwege und die Archivwege, und die Antwort kommt vom `fstat` am
+/// Deskriptor: kein Verzeichnis, ohne Betriebssystemnummer.
+///
+/// Die Zeitschranke macht aus dem Stillstand einen Fehlschlag mit Namen; ohne
+/// Behebung endet die Probe nach fuenf Sekunden in ihrer Panik.
+#[test]
+fn eine_benannte_roehre_ohne_schreiber_haelt_den_schwungleser_nicht_an() {
+    let ordner = Pruefordner::neu("schwungleser-roehre");
+    let roehre = ordner.roehre("ohne-schreiber");
+
+    let ergebnis = mit_zeitschranke("Schwungleser::oeffnen", Duration::from_secs(5), move || {
+        Schwungleser::oeffnen(&roehre).map(|_| ())
+    });
+
+    let fehler = ergebnis.expect_err("eine Roehre ist kein Verzeichnis und gehoert abgewiesen");
+    assert_eq!(fehler.kind(), std::io::ErrorKind::NotADirectory);
+    assert!(
+        fehler.raw_os_error().is_none(),
+        "die Antwort kommt vom Aufrufer und traegt keine Betriebssystemnummer: {fehler:?}"
+    );
 }

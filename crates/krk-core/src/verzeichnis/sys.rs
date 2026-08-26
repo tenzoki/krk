@@ -86,8 +86,10 @@
 //! Grenze mitbringt, und [`crate::text::datei::anlesen`], das eine zu grosse
 //! Datei anliest, statt sie abzuweisen. **Die Archivwege** stehen unter
 //! `operation/`: [`crate::operation::zippen`] liest jede Quelle in ein Archiv,
-//! [`crate::operation::entpacken`] oeffnet jedes Archiv. Alle aus dem gleichen
-//! Grund, naemlich einer benannten Roehre im Ordner,
+//! [`crate::operation::entpacken`] oeffnet jedes Archiv. **Der Verzeichnisleser**
+//! steht seit dem Defekt `260826-1221` in dieser Datei selbst daneben:
+//! [`Schwungleser::oeffnen`] holt seinen Deskriptor ueber dieselbe Huelle. Alle
+//! aus dem gleichen Grund, naemlich einer benannten Roehre im Ordner,
 //! die ein `File::open` bis in alle Ewigkeit anhielte. Die Vorschau und der
 //! Inhaltsfilter der Dateiliste, beide in `krk-ui`, rufen die Huelle und nicht
 //! diese Stelle; bis zur Runde 11 stand die Huelle in `krk-ui`s
@@ -226,8 +228,16 @@ impl Schwungleser {
     ///
     /// Schlaegt fehl, wenn der Pfad nicht existiert, nicht lesbar ist oder kein
     /// Verzeichnis benennt.
+    ///
+    /// Geoeffnet wird ueber [`ohne_warten_oeffnen`] und nicht ueber
+    /// `File::open`: ein Pfad, der in diesem Augenblick auf eine benannte
+    /// Roehre ohne Schreiber zeigt, liesse ein gewoehnliches `open(2)` fuer
+    /// immer warten, und zwar **vor** dem Abbruchkennzeichen, das erst nach
+    /// dem Oeffnen gelesen wird (Defekt `260826-1221`). Die Typpruefung am
+    /// Deskriptor bleibt hier, weil die Huelle sie ausdruecklich dem Aufrufer
+    /// laesst; ihre Antwort ist "kein Verzeichnis" ohne Betriebssystemnummer.
     pub fn oeffnen(pfad: &Path) -> io::Result<Self> {
-        let verzeichnis = File::open(pfad)?;
+        let verzeichnis = ohne_warten_oeffnen(pfad)?;
         if !verzeichnis.metadata()?.is_dir() {
             return Err(io::Error::new(
                 io::ErrorKind::NotADirectory,
@@ -842,7 +852,10 @@ unsafe extern "C" {
 /// uebergebenen Grenze und [`crate::text::datei::anlesen`] fuer die
 /// Profil-Zusammenfassung der Vorschau — und seit der Runde 17 von den zwei
 /// Archivwegen [`crate::operation::zippen`] und
-/// [`crate::operation::entpacken`]. **Alle liegen in `krk-core`**; bis zur
+/// [`crate::operation::entpacken`] — und seit dem Defekt `260826-1221` vom
+/// Verzeichnisleser [`Schwungleser::oeffnen`] in dieser Datei, der bis dahin
+/// als einziger Oeffner mit `File::open` an einer benannten Roehre haengen
+/// blieb. **Alle liegen in `krk-core`**; bis zur
 /// Runde 11 stand die zweite als private Fassung in `krk-ui`s
 /// `vorschaumodell.rs` und hatte deshalb keinen Doku-Verweis. Aufrufer der
 /// Huelle ist heute die Vorschau, mit ihren zwei Grenzen.
@@ -870,8 +883,12 @@ unsafe extern "C" {
 /// traegt auch Roehren, Geraete und Sockel. Der Defekt ist `260825-0942`.) Das
 /// Entpacken fragt gar nicht nach dem Typ, sondern reicht den Deskriptor an
 /// `ZipArchive::new` weiter und laesst die Kiste antworten; ein Ordner scheitert
-/// dort an `EISDIR` und kommt mit ihrem Wortlaut in die Abschlussliste. Keine
-/// dieser Antworten kennt diese Huelle.
+/// dort an `EISDIR` und kommt mit ihrem Wortlaut in die Abschlussliste. Der
+/// Verzeichnisleser fragt `metadata()` am Deskriptor wie die Textwege, verlangt
+/// aber das Gegenteil, `is_dir()`, und antwortet mit "kein Verzeichnis",
+/// [`io::ErrorKind::NotADirectory`] ohne Betriebssystemnummer — die Probe
+/// `nur_emfile_und_enfile_gelten_als_deskriptormangel` haelt das schon fest.
+/// Keine dieser Antworten kennt diese Huelle.
 ///
 /// **Ein weiterer Aufrufer verschiebt die Pruefung damit nicht hierher, sondern
 /// begruendet sie jedes Mal besser.** Eine Typpruefung in dieser Huelle muesste

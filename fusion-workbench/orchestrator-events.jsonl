@@ -1687,3 +1687,16 @@
 {"ts":"2026-08-26T12:56:35","event":"gate_hit","agent":"user","detail":"Rebalance-Gate nach Phase 3: Urteil review-needed, Empfehlung revise Grounding"}
 {"ts":"2026-08-26T14:31:30","event":"gate_response","agent":"user","detail":"/fusion:cleanup — abschliessen; der Curator-Lauf ueber CLAUDE.md (revise Grounding) laeuft als Schritt 5 der Pipeline"}
 {"ts":"2026-08-26T14:32:56","event":"session_end","detail":"5 Turns, 15/15 Aufgaben, 122 Defekte + 4 Entscheidungen gefiltert, 8 Commits, 0 Fehler; Uebergabe an /fusion:cleanup"}
+{"ts":"2026-08-26T16:07:03","event":"session_start","history_file":"shared/history/260826-1807-orchestrator-session.md","detail":"Befunde beheben, zuerst die fuenf schweren; mode custom->plan"}
+{"ts":"2026-08-26T16:07:03","event":"planner_start","detail":"Plan ueber den kritischen und die vier hohen Befunde"}
+{"ts":"2026-08-26T16:18:33","event":"planner_done","detail":"shared/planning/260826-1811_o_plan-die-fuenf-schweren-befunde-der-vollbaum-durchsicht.md, 6 Schritte"}
+{"ts":"2026-08-26T16:18:33","event":"gate_hit","agent":"user","detail":"Plan-Freigabe"}
+{"ts":"2026-08-26T17:16:45","event":"gate_response","detail":"Plan freigegeben"}
+{"ts":"2026-08-26T17:16:45","event":"scope_resolved","detail":"mode=plan, 6 Schritte, Executor coder, 1 Human Gate (CLAUDE.md-Schritte sind Docs, kein Gate)"}
+{"ts":"2026-08-26T17:16:45","event":"queue_built","detail":"6 Aufgaben, 4 blockiert"}
+{"ts":"2026-08-26T17:16:45","event":"turn_start","detail":"1"}
+{"ts":"2026-08-26T17:16:45","event":"task_start","turn":1,"task":"S1","agent":"coder"}
+{"ts":"2026-08-26T17:16:45","event":"task_start","turn":1,"task":"S2","agent":"coder"}
+{"ts":"2026-08-26T17:27:55","event":"task_done","turn":1,"task":"S1","agent":"coder","detail":"26e8039"}
+{"ts":"2026-08-26T17:27:55","event":"commit","turn":1,"task":"S1","detail":"26e8039 fix(core): Quelle bleibt bei gescheitertem Kopieren"}
+{"ts":"2026-08-26T17:28:12","event":"commit","turn":1,"task":"S1","detail":"36e54b4 fix(core): Quelle bleibt bei gescheitertem Kopieren — berichtigt: die zwei vorigen Zeilen mit 26e8039 waren falsch, der erste git add scheiterte am nie versionierten _o_-Planpfad"}

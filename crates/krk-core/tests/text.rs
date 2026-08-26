@@ -70,7 +70,7 @@ use krk_core::text::datei::{Lesehindernis, Textstand, Unlesbarkeit};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
-use gemeinsam::Pruefordner;
+use gemeinsam::{Pruefordner, mit_zeitschranke};
 
 /// Der Durchlauf von Hand: Byte fuer Byte, ohne die Rechnung des Index.
 ///
@@ -548,29 +548,6 @@ fn die_sicherungsform_haengt_genau_einen_umbruch_an_und_raeumt_hinten_nicht_auf(
 fn oeffnen_mit_zeitschranke(pfad: &Path, schranke: Duration) -> Result<String, Abweisung> {
     let pfad = pfad.to_path_buf();
     mit_zeitschranke("oeffnen", schranke, move || datei::oeffnen(&pfad))
-}
-
-/// Ruft `auftrag` auf einem eigenen Faden und gibt die Antwort nur heraus, wenn
-/// sie innerhalb der Schranke kommt.
-///
-/// **Die eine Fassung fuer alle drei Huellen um dieselbe Tuer.** Ein
-/// blockierendes `open` liefert kein falsches Ergebnis, sondern gar keines, und
-/// ohne Schranke waere das ein stehender Probelauf statt eines Befundes. Die
-/// drei Rufer unterscheiden sich in nichts als der gerufenen Funktion; deshalb
-/// steht die Bauform hier einmal und nicht dreimal, und `was` steht im
-/// Meldetext, damit ein Fehlschlag sagt, welche der drei haengt.
-fn mit_zeitschranke<T: Send + 'static>(
-    was: &str,
-    schranke: Duration,
-    auftrag: impl FnOnce() -> T + Send + 'static,
-) -> T {
-    let (sender, empfaenger) = mpsc::channel();
-    std::thread::spawn(move || {
-        let _ = sender.send(auftrag());
-    });
-    empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
-        panic!("{was} ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
-    })
 }
 
 /// Fall 8: ein Ordner wird abgewiesen.

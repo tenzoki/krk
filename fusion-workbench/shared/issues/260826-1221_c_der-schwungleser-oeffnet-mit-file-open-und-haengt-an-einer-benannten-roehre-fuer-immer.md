@@ -105,3 +105,6 @@ Eine Probe dazu: eine Roehre ohne Schreiber im Pruefordner, `Schwungleser::oeffn
 Erwartung ein `Err` und kein Haenger. Sie braucht eine Zeitschranke im Pruefrahmen, sonst haengt
 der Testlauf statt rot zu werden — dasselbe Problem, das `260825-0942` fuer das Packen benannt
 hat.
+
+---
+Resolved: 260826-1930 — Schwungleser::oeffnen nimmt die Huelle ohne_warten_oeffnen, Typpruefung bleibt am Deskriptor; Probe mit benannter Roehre unter 5-s-Schranke, rot vor der Behebung (Plan 260826-1811 Schritt 2).
