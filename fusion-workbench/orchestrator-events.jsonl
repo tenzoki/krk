@@ -1509,3 +1509,125 @@
 {"ts":"2026-08-25T12:22:43","event":"turn_end","turn":4,"agent":"orchestrator","detail":"alle Befunde geschlossen"}
 {"ts":"2026-08-25T12:22:43","event":"circle_closed","agent":"orchestrator","detail":"_t_ -> _b_ : 260825-0711-kontextmenue-traegt-zip-unzip-finder"}
 {"ts":"2026-08-25T12:22:44","event":"session_end","agent":"orchestrator","detail":"Runde 17 beschraenkt geschlossen"}
+{"ts":"2026-08-25T14:59:35","event":"session_start","history_file":"shared/history/260825-1659-orchestrator-session.md","detail":"Vorschau-Erweiterungen und zwei Regressionen; Modus in Phase 0 aufzuloesen"}
+{"ts":"2026-08-25T15:12:14","event":"scope_resolved","agent":"orchestrator","detail":"custom: vier Vorschau-Erweiterungen und zwei Regressionen; Shaping uebersprungen auf Nutzerwahl, Planer beantwortet die offenen Fragen"}
+{"ts":"2026-08-25T15:12:14","event":"planner_start","agent":"orchestrator","detail":"Vorschau-Erweiterungen (circles, archive, shared, Projektwurzel) und zwei Regressionen (Klick-Fokus, Zip-Zeitstempel)"}
+{"ts":"2026-08-25T15:41:28","event":"planner_done","agent":"orchestrator","detail":"shared/planning/260825-1725_o_plan-vorschau-vertieft-und-zwei-fehler.md, 10 Schritte, 6 offene Entscheidungen"}
+{"ts":"2026-08-25T16:18:14","event":"queue_built","agent":"orchestrator","detail":"12 Aufgaben, 7 davon blockiert; ein Human Gate bei T-8 (ontocoder)"}
+{"ts":"2026-08-25T16:18:26","event":"turn_start","turn":1,"agent":"orchestrator","detail":"5 laufbereite Aufgaben: P-0, T-1, T-2, T-4, T-7"}
+{"ts":"2026-08-25T16:18:46","event":"task_start","turn":1,"task":"T-1","agent":"coder","detail":"crates/krk-ui/src/appkit/anwendung.rs"}
+{"ts":"2026-08-25T16:18:46","event":"task_start","turn":1,"task":"T-2","agent":"coder","detail":"crates/krk-core/src/verzeichnis/"}
+{"ts":"2026-08-25T16:33:16","event":"task_done","turn":1,"task":"T-1","agent":"coder","detail":"fd361d7"}
+{"ts":"2026-08-25T16:33:16","event":"commit","turn":1,"task":"T-1","agent":"orchestrator","detail":"fd361d7 der Tabbefehl nimmt den Ersthelferrang mit"}
+{"ts":"2026-08-25T16:34:07","event":"task_start","turn":1,"task":"P-0","agent":"coder","detail":"Plan: fuenf Entscheidungsdatensaetze sind sieben"}
+{"ts":"2026-08-25T16:38:34","event":"task_done","turn":1,"task":"P-0","agent":"coder","detail":"4d6dc9a"}
+{"ts":"2026-08-25T16:38:34","event":"task_done","turn":1,"task":"T-2","agent":"coder","detail":"c0050bf"}
+{"ts":"2026-08-25T16:38:34","event":"commit","turn":1,"task":"T-2","agent":"orchestrator","detail":"c0050bf ortszeit ueber localtime_r"}
+{"ts":"2026-08-25T16:38:52","event":"task_start","turn":1,"task":"T-3","agent":"coder","detail":"crates/krk-core/src/operation/"}
+{"ts":"2026-08-25T16:38:52","event":"task_start","turn":1,"task":"E-1","agent":"coder","detail":"crates/krk-ui/src/appkit/tabelle.rs"}
+{"ts":"2026-08-25T17:00:26","event":"task_done","turn":1,"task":"E-1","agent":"coder","detail":"d3da6e3"}
+{"ts":"2026-08-25T17:00:26","event":"commit","turn":1,"task":"E-1","agent":"orchestrator","detail":"d3da6e3 Tableistenklick nimmt den Rang mit"}
+{"ts":"2026-08-25T17:00:38","event":"task_start","turn":1,"task":"T-7","agent":"coder","detail":"crates/krk-ui/src/appkit/ Vorschau ohne Auswahl"}
+{"ts":"2026-08-25T17:05:31","event":"task_done","turn":1,"task":"T-3","agent":"coder","detail":"e922c9e"}
+{"ts":"2026-08-25T17:05:31","event":"commit","turn":1,"task":"T-3","agent":"orchestrator","detail":"e922c9e Zeitstempel beim Packen, drei Felder"}
+{"ts":"2026-08-25T17:06:08","event":"task_start","turn":1,"task":"T-4","agent":"coder","detail":"crates/krk-core/src/leseprofil/bausteine.rs"}
+{"ts":"2026-08-25T17:21:41","event":"task_done","turn":1,"task":"T-7","agent":"coder","detail":"9322d5d"}
+{"ts":"2026-08-25T17:21:41","event":"commit","turn":1,"task":"T-7","agent":"orchestrator","detail":"9322d5d Vorschau ohne Auswahl beschreibt den Ordner"}
+{"ts":"2026-08-25T17:24:56","event":"task_done","turn":1,"task":"T-4","agent":"coder","detail":"f097e0e"}
+{"ts":"2026-08-25T17:24:56","event":"commit","turn":1,"task":"T-4","agent":"orchestrator","detail":"f097e0e ein Ort wird hoechstens einmal gelesen"}
+{"ts":"2026-08-25T17:24:56","event":"task_start","turn":1,"task":"T-5","agent":"coder","detail":"Platzhalter in der Ortsangabe"}
+{"ts":"2026-08-25T17:58:02","event":"task_done","turn":1,"task":"T-5","agent":"coder","detail":"3cadb45"}
+{"ts":"2026-08-25T17:58:02","event":"commit","turn":1,"task":"T-5","agent":"orchestrator","detail":"3cadb45 Platzhalter in der Ortsangabe"}
+{"ts":"2026-08-25T17:58:02","event":"task_start","turn":1,"task":"T-6","agent":"coder","detail":"juengste zeigt ein Datum"}
+{"ts":"2026-08-25T18:17:12","event":"task_done","turn":1,"task":"T-6","agent":"coder","detail":"66c779c"}
+{"ts":"2026-08-25T18:17:12","event":"commit","turn":1,"task":"T-6","agent":"orchestrator","detail":"66c779c juengste zeigt ein Datum"}
+{"ts":"2026-08-25T18:17:12","event":"gate_hit","turn":1,"task":"T-8","agent":"user","detail":"ontocoder: resources/default-readers.toml"}
+{"ts":"2026-08-25T18:35:01","event":"gate_response","turn":1,"task":"T-8","agent":"user","detail":"proceed; dazu Erweiterung um flight-Profile auf Nutzerwunsch"}
+{"ts":"2026-08-25T18:35:01","event":"task_start","turn":1,"task":"T-8","agent":"ontocoder","detail":"resources/default-readers.toml, acht Profile plus flight"}
+{"ts":"2026-08-25T18:54:42","event":"task_done","turn":1,"task":"T-8","agent":"ontocoder","detail":"5595026 zwoelf Profile"}
+{"ts":"2026-08-25T18:54:42","event":"commit","turn":1,"task":"T-8","agent":"orchestrator","detail":"5595026 zwoelf Leseprofile fuer fusion und flight"}
+{"ts":"2026-08-25T18:54:42","event":"task_start","turn":1,"task":"T-9","agent":"coder","detail":"README.md"}
+{"ts":"2026-08-25T18:54:42","event":"task_start","turn":1,"task":"T-10","agent":"analyst","detail":"Kostenmessung an der wirklichen Werkbank"}
+{"ts":"2026-08-25T18:59:26","event":"task_done","turn":1,"task":"T-9","agent":"coder","detail":"d04e50f"}
+{"ts":"2026-08-25T18:59:26","event":"commit","turn":1,"task":"T-9","agent":"orchestrator","detail":"d04e50f README: neue Leseprofile uebernehmen"}
+{"ts":"2026-08-25T19:14:04","event":"task_done","turn":1,"task":"T-10","agent":"analyst","detail":"8478753"}
+{"ts":"2026-08-25T19:14:04","event":"commit","turn":1,"task":"T-10","agent":"orchestrator","detail":"8478753 Kostenmessung der zwoelf Profile"}
+{"ts":"2026-08-25T19:14:26","event":"review_start","turn":1,"agent":"coderev","detail":"17 Quelldateien, 13 Commits, Bereich 20eccd4..HEAD"}
+{"ts":"2026-08-25T19:14:26","event":"review_start","turn":1,"agent":"ontorev","detail":"resources/default-readers.toml, zwoelf Profile"}
+{"ts":"2026-08-25T19:34:30","event":"review_done","turn":1,"agent":"ontorev","detail":"8 Befunde: 5 mittel, 3 niedrig; fb7db85"}
+{"ts":"2026-08-25T19:35:59","event":"review_done","turn":1,"agent":"coderev","detail":"7 Befunde: 3 mittel, 4 gering; ecd7e4b"}
+{"ts":"2026-08-25T19:36:25","event":"coherence_review","turn":1,"agent":"orchestrator","verdict":"review-needed","detail":"Artefakt<->Grundlage: 15 Befunde gefiled (8 ontorev, 7 coderev), keiner ein Blocker. Artefakt<->Directive: die Commits bewegen sich auf die Directive zu; alle vier Vorschau-Wuensche und beide Fehler sind gebaut, zwei Luecken sind abgelegt statt improvisiert. Grundlage<->Directive: 7 beantwortete Entscheidungen, alle umgesetzt; eine Cons-Behauptung wurde gemessen widerlegt."}
+{"ts":"2026-08-25T20:12:48","event":"gate_response","turn":1,"agent":"user","detail":"Runde 2 fuer die acht mittleren Befunde"}
+{"ts":"2026-08-25T20:12:48","event":"turn_end","turn":1,"agent":"orchestrator","detail":"12 Aufgaben erledigt, 15 Commits, 15 Befunde gefiled"}
+{"ts":"2026-08-25T20:13:21","event":"turn_start","turn":2,"agent":"orchestrator","detail":"4 Aufgaben aus 8 mittleren Befunden; Anker ecd7e4b"}
+{"ts":"2026-08-25T20:13:21","event":"gate_hit","turn":2,"task":"R-1","agent":"user","detail":"ontocoder: default-readers.toml"}
+{"ts":"2026-08-25T20:13:21","event":"gate_response","turn":2,"task":"R-1","agent":"user","detail":"proceed, durch die Wahl der Option 1 (nannte Muster und Kommentarsaetze ausdruecklich)"}
+{"ts":"2026-08-25T20:13:21","event":"task_start","turn":2,"task":"R-1","agent":"orchestrator"}
+{"ts":"2026-08-25T20:13:21","event":"task_start","turn":2,"task":"R-2","agent":"orchestrator"}
+{"ts":"2026-08-25T20:13:21","event":"task_start","turn":2,"task":"R-3","agent":"orchestrator"}
+{"ts":"2026-08-25T20:13:21","event":"task_start","turn":2,"task":"R-4","agent":"orchestrator"}
+{"ts":"2026-08-25T20:23:22","event":"task_done","turn":2,"task":"R-3","agent":"coder","detail":"ecd7e4b"}
+{"ts":"2026-08-25T20:23:22","event":"commit","turn":2,"task":"R-3","agent":"orchestrator","detail":"ecd7e4b Probe an aktives_setzen"}
+{"ts":"2026-08-25T20:23:32","event":"task_done","turn":2,"task":"R-3","agent":"coder","detail":"f8304a7"}
+{"ts":"2026-08-25T20:23:32","event":"commit","turn":2,"task":"R-3","agent":"orchestrator","detail":"f8304a7 Probe an aktives_setzen"}
+{"ts":"2026-08-25T20:26:07","event":"task_done","turn":2,"task":"R-2 coder acc9671","agent":"","detail":""}
+{"ts":"2026-08-25T20:26:07","event":"commit","turn":2,"task":"R-2 coder acc9671","agent":"orchestrator","detail":""}
+{"ts":"2026-08-25T20:26:07","event":"task_done","turn":2,"task":"R-4 coder a9868a2","agent":"","detail":""}
+{"ts":"2026-08-25T20:26:07","event":"commit","turn":2,"task":"R-4 coder a9868a2","agent":"orchestrator","detail":""}
+{"ts":"2026-08-25T20:26:07","event":"task_done","turn":2,"task":"R-1 ontocoder 1ac5dde","agent":"","detail":""}
+{"ts":"2026-08-25T20:26:07","event":"commit","turn":2,"task":"R-1 ontocoder 1ac5dde","agent":"orchestrator","detail":""}
+{"ts":"2026-08-25T20:26:16","event":"review_start","turn":2,"agent":"coderev","detail":"5 Quelldateien, 4 Commits, ecd7e4b..1ac5dde"}
+{"ts":"2026-08-25T20:26:16","event":"review_start","turn":2,"agent":"ontorev","detail":"default-readers.toml nach R-1"}
+{"ts":"2026-08-25T20:33:06","event":"review_done","turn":2,"agent":"coderev","detail":"1 Befund gering; alle drei Behebungen halten; c07fdd7"}
+{"ts":"2026-08-25T20:35:58","event":"review_done","turn":2,"agent":"ontorev","detail":"3 Befunde niedrig; alle fuenf Vermerke halten; 75ba8e2"}
+{"ts":"2026-08-25T20:35:58","event":"coherence_review","turn":2,"agent":"orchestrator","verdict":"ok","detail":"Artefakt<->Grundlage: 4 Befunde niedrig, alle 8 mittleren geschlossen. Artefakt<->Directive: Behebungsrunde, auf die Directive zu. Grundlage<->Directive: 0 Entscheidungen beruehrt."}
+{"ts":"2026-08-25T23:19:29","event":"turn_end","turn":2,"agent":"orchestrator","detail":"4 Aufgaben, 6 Commits, 4 neue Befunde gering"}
+{"ts":"2026-08-25T23:19:29","event":"turn_start","turn":3,"agent":"orchestrator","detail":"2 Aufgaben; Anker 75ba8e2"}
+{"ts":"2026-08-25T23:19:29","event":"gate_hit","turn":3,"task":"S-1","agent":"user","detail":"ontocoder: default-readers.toml"}
+{"ts":"2026-08-25T23:19:29","event":"gate_response","turn":3,"task":"S-1","agent":"user","detail":"proceed, Wahl der Option 2 nannte die Halbsaetze ausdruecklich"}
+{"ts":"2026-08-25T23:19:29","event":"task_start","turn":3,"task":"S-1","agent":"ontocoder"}
+{"ts":"2026-08-25T23:19:29","event":"task_start","turn":3,"task":"S-2","agent":"coder"}
+{"ts":"2026-08-25T23:32:34","event":"task_done","turn":3,"task":"S-1","agent":"ontocoder","detail":"255ad7a"}
+{"ts":"2026-08-25T23:32:34","event":"task_done","turn":3,"task":"S-2","agent":"coder","detail":"96e32cb"}
+{"ts":"2026-08-25T23:32:34","event":"commit","turn":3,"task":"S-1","agent":"orchestrator","detail":"255ad7a"}
+{"ts":"2026-08-25T23:32:34","event":"commit","turn":3,"task":"S-2","agent":"orchestrator","detail":"96e32cb"}
+{"ts":"2026-08-25T23:32:34","event":"review_start","turn":3,"agent":"ontorev","detail":"255ad7a, 9 Zeilen Prosa"}
+{"ts":"2026-08-25T23:32:34","event":"review_start","turn":3,"agent":"coderev","detail":"96e32cb, vierter Probenfall"}
+{"ts":"2026-08-25T23:43:39","event":"review_done","turn":3,"agent":"ontorev","detail":"1 Befund niedrig; Datei kann ausgeliefert werden; c10fc1a"}
+{"ts":"2026-08-25T23:44:08","event":"review_done","turn":3,"agent":"coderev","detail":"2 Befunde gering; Stand kann ausgeliefert werden; f7f156b"}
+{"ts":"2026-08-25T23:44:08","event":"coherence_review","turn":3,"agent":"orchestrator","verdict":"ok","detail":"beide Reviewer geben die Auslieferung ausdruecklich frei; 3 neue Befunde, alle gering"}
+{"ts":"2026-08-25T23:44:08","event":"turn_end","turn":3,"agent":"orchestrator","detail":"2 Aufgaben, 4 Commits"}
+{"ts":"2026-08-26T04:46:06","event":"session_start","history_file":"shared/history/260825-1659-orchestrator-session.md","detail":"Wiederaufnahme der Sitzung 260825-1659 (Runde 18): Warteschlange leer, Abgleich gelaufen, Wiedereinstieg in Phase 3; Modus plan, Domaene code, max_turns 12"}
+{"ts":"2026-08-26T04:47:02","event":"review_done","turn":3,"agent":"orchestrator","detail":"Deckungslesung bei Wiederaufnahme: 7 Commits ohne Durchsicht, alle nur Werkbank-Markdown und Werkzeugdateien; carried=none; keine Durchsicht faellig"}
+{"ts":"2026-08-26T04:47:02","event":"gate_hit","turn":3,"agent":"orchestrator","detail":"Rebalance: Abgleich-Verdikt review-needed, Empfehlung revise Grounding"}
+{"ts":"2026-08-26T05:55:58","event":"gate_response","turn":3,"agent":"orchestrator","detail":"Nutzer verwirft alle drei Vorschlaege: kein Entscheidungsdatensatz. Die Grundlage wird durch einen Satz in CLAUDE.md nachgezogen (Moeglichkeit 3 des Defektdatensatzes), Arbeit des curator. Der Defektdatensatz wird auf Moeglichkeit 3 gekuerzt."}
+{"ts":"2026-08-26T05:55:58","event":"rebalance_grounding","turn":3,"agent":"orchestrator","detail":"kein neuer _o_-Datensatz; Nachzug in CLAUDE.md ueber curator, Kuerzung von shared/issues/260826-0149_o_die-runde-18-hat-keinen-circle-datensatz-..."}
+{"ts":"2026-08-26T05:57:17","event":"turn_start","turn":4,"agent":"orchestrator","detail":"2 Aufgaben: curator an CLAUDE.md, ontocoder an den vier flight-Profilen; Anker e5ec81a"}
+{"ts":"2026-08-26T05:58:06","event":"gate_hit","turn":4,"task":"T4-2","agent":"orchestrator","detail":"ontocoder-Aufgabe an resources/default-readers.toml — Gate durch die Anweisung des Nutzers selbst erfuellt, keine Rueckfrage gestellt"}
+{"ts":"2026-08-26T06:15:24","event":"task_done","turn":4,"task":"T4-2","agent":"ontocoder","detail":"180fc53"}
+{"ts":"2026-08-26T06:15:24","event":"commit","turn":4,"task":"T4-2","agent":"orchestrator","detail":"180fc53 vier flight-Speicher mit Datumszeile, zwei Kommentardefekte geschlossen"}
+{"ts":"2026-08-26T06:16:20","event":"commit","turn":3,"agent":"orchestrator","detail":"d08dbac Abgleich der Runde 18 nachgetragen: 7 Entscheidungen auf umgesetzt, 1 Defekt geschlossen, 2 neu"}
+{"ts":"2026-08-26T06:26:29","event":"gate_response","turn":4,"task":"T4-1","agent":"orchestrator","detail":"Nutzer gibt alle neun Eintraege frei: L01 L02 L03 L04 L05 L06 L07 L08 L09"}
+{"ts":"2026-08-26T06:32:01","event":"task_done","turn":4,"task":"T4-1","agent":"curator","detail":"fb50fcd; neun von neun angewandt"}
+{"ts":"2026-08-26T06:32:01","event":"commit","turn":4,"task":"T4-1","agent":"orchestrator","detail":"fb50fcd neun Aussagen in CLAUDE.md nachgezogen"}
+{"ts":"2026-08-26T06:32:12","event":"review_start","turn":4,"agent":"ontorev","detail":"resources/default-readers.toml, vier flight-Profile, Bereich e5ec81a..fb50fcd"}
+{"ts":"2026-08-26T06:32:12","event":"review_start","turn":4,"agent":"coderev","detail":"CLAUDE.md, neun kuratierte Aussagen, Bereich e5ec81a..fb50fcd"}
+{"ts":"2026-08-26T06:46:27","event":"task_error","turn":4,"agent":"ontorev","detail":"Netzfehler ENOTFOUND, kein Befund, nichts geschrieben; wird neu geschickt"}
+{"ts":"2026-08-26T06:46:27","event":"task_error","turn":4,"agent":"coderev","detail":"Netzfehler ENOTFOUND, kein Befund, nichts geschrieben; wird neu geschickt"}
+{"ts":"2026-08-26T06:48:02","event":"task_start","turn":4,"task":"T4-3","agent":"coder","detail":"Filtervorgabe Deep von false auf true, crates/krk-core/src/verzeichnis/modell.rs"}
+{"ts":"2026-08-26T06:48:02","event":"review_start","turn":4,"agent":"ontorev","detail":"zweiter Anlauf nach dem Netzfehler; resources/default-readers.toml, Bereich e5ec81a..fb50fcd"}
+{"ts":"2026-08-26T07:01:18","event":"review_done","turn":4,"agent":"ontorev","detail":"3 Befunde niedrig; Stand kann ausgeliefert werden; Zahlen unabhaengig nachgemessen"}
+{"ts":"2026-08-26T07:07:31","event":"task_done","turn":4,"task":"T4-3","agent":"coder","detail":"Deep-Vorgabe auf true; 11 Proben nachgezogen, 2 neue halten die Vorgabe"}
+{"ts":"2026-08-26T07:07:31","event":"commit","turn":4,"task":"T4-3","agent":"orchestrator","detail":"Deep-Vorgabe"}
+{"ts":"2026-08-26T07:31:13","event":"review_done","turn":4,"agent":"coderev","detail":"2 Befunde mittel, 2 niedrig, 1 Entscheidungsfrage; Stand kann ausgeliefert werden"}
+{"ts":"2026-08-26T08:06:44","event":"coherence_review","turn":4,"agent":"orchestrator","verdict":"review-needed","detail":"Artefakt/Grundlage: beide Durchsichten geben frei, 9 Befunde, 2 mittel. Artefakt/Directive: 6 Commits, alle auf Anweisung des Nutzers, ueber die Directive der Runde 18 hinaus. Grundlage/Directive: 2 neue offene Fragen, kein Widerspruch."}
+{"ts":"2026-08-26T08:06:44","event":"gate_response","turn":4,"agent":"orchestrator","detail":"Nutzer waehlt: den falschen Halbsatz 'seit der Runde 14' richten, dann Phase 4"}
+{"ts":"2026-08-26T08:06:44","event":"rebalance_artifact","turn":4,"agent":"orchestrator","detail":"neue Aufgabe T5-1: curator richtet die Rundenzuschreibung des zweiten Empfaengers"}
+{"ts":"2026-08-26T08:06:44","event":"turn_start","turn":5,"agent":"orchestrator","detail":"1 Aufgabe: curator richtet 'seit der Runde 14'; Anker 2dce7d5"}
+{"ts":"2026-08-26T08:15:40","event":"task_done","turn":5,"task":"T5-1","agent":"curator","detail":"L01 angewandt, nur die eine Stelle"}
+{"ts":"2026-08-26T08:15:40","event":"turn_end","turn":5,"agent":"orchestrator","detail":"1 Aufgabe, 1 Commit"}
+{"ts":"2026-08-26T08:32:27","event":"reconciliation","turn":5,"agent":"orchestrator","detail":"Verdikt review-needed, Empfehlung revise Grounding; 2 Driftbefunde, beide Grundlage; 6 Datensaetze geschlossen, 2 neu"}
+{"ts":"2026-08-26T08:55:27","event":"gate_response","turn":5,"agent":"orchestrator","detail":"Nutzer waehlt: den Satz zur Deep-Vorgabe nachziehen, dann Phase 4; die acht leeren Resolved-Zeilen bleiben abgelegt"}
+{"ts":"2026-08-26T08:55:27","event":"rebalance_grounding","turn":5,"agent":"orchestrator","detail":"curator zieht CLAUDE.md zur Deep-Vorgabe nach; Datensatz shared/issues/260826-1024_o_claude-md-sagt-nicht-dass-die-tiefe-suche-ab-werk-steht-..."}
+{"ts":"2026-08-26T09:05:55","event":"task_done","turn":5,"task":"T5-2","agent":"curator","detail":"CLAUDE.md nennt die Deep-Vorgabe"}
+{"ts":"2026-08-26T09:07:55","event":"session_end","turn":5,"agent":"orchestrator","detail":"5 Turns, 35 Commits, 22 Aufgaben; Verdikt review-needed, ein Grundlagenbefund bewusst offen"}

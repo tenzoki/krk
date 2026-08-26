@@ -66,3 +66,6 @@ gehört dem `curator`.
 laufenden Vorgangs verschiebt, fehlt in der Datei, die jeder Agent zuerst liest.
 
 **Gefunden:** reconciler, Schlussabgleich der Sitzung `260825-1659` gegen `e5ec81a..c95f28b`.
+
+---
+Resolved: 88f18ed — der Filterabsatz in `CLAUDE.md` sagt jetzt, dass die tiefe Suche ab Werk steht und schon der erste Anschlag den Durchlauf über den Unterbaum anstößt; er zeigt dafür auf `Ordnermodell::neu` statt eine Zahl zu doppeln, und zitiert die offene Frage zur Inhaltsschwelle, ohne sie zu beantworten.
