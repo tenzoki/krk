@@ -1459,6 +1459,9 @@ mod tests {
     fn ein_ordnerwechsel_laesst_den_filtertext_stehen_wenn_die_tiefe_suche_aus_ist() {
         let (hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
+        // Ausdruecklich abgeschaltet: die Vorbelegung von `Ordnermodell::neu`
+        // ist seit dem 260826 "ein", und diese Probe misst den anderen Stand.
+        liste.aktiver_mut().modell_mut().tief_setzen(false);
         liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
         assert!(liste.aktiver().modell().filter_steht());
 
@@ -1587,6 +1590,29 @@ mod tests {
             "ohne Filtertext steht der Schalter und tut nichts"
         );
         assert_eq!(liste.aktiver().modell().filtertext(), "");
+    }
+
+    /// Ein neu geoeffneter Tab traegt die Vorbelegung und nicht den Stand des
+    /// Geschwistertabs.
+    ///
+    /// **Das ist die Antwort des Baumes und keine Antwort auf
+    /// `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`**,
+    /// die offen bleibt: jeder Tab kommt ueber `Tabinhalt::aus_zustand` und
+    /// damit ueber `Ordnermodell::neu`, und `Tabzustand` fuehrt den Stand
+    /// nicht mit. Faellt die offene Frage einmal auf "je Fenster", wird diese
+    /// Probe rot und ist dann zu Recht rot.
+    #[test]
+    fn ein_neuer_tab_traegt_die_vorbelegung_der_tiefen_suche() {
+        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let mut liste = liste(&[&hier]);
+        liste.aktiver_mut().modell_mut().tief_setzen(false);
+
+        liste.oeffnen(&dorthin);
+
+        assert!(
+            liste.aktiver().modell().tief(),
+            "der neue Tab beginnt bei der Vorbelegung, nicht beim Nachbarn"
+        );
     }
 
     /// Der Filter der Tiefe geht auch ohne Filtertext hinueber: er ist ein

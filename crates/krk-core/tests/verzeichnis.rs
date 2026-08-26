@@ -698,8 +698,16 @@ fn filterordner() -> Pruefordner {
     ordner
 }
 
+/// Ein gelesenes Modell mit stehendem Filtertext und **flacher** Suche.
+///
+/// Die tiefe Suche wird ausdruecklich abgeschaltet: die Vorbelegung von
+/// [`Ordnermodell::neu`] ist seit dem 260826 "ein", und die Proben darunter
+/// messen den flachen Zweig. Wer den tiefen misst, ruft danach
+/// `tief_setzen(true)`. Die Vorbelegung selbst haelt
+/// `die_tiefe_suche_ist_die_vorbelegung`.
 fn gefiltert(pfad: &Path, filtertext: &str) -> Ordnermodell {
     let mut modell = geladenes_modell(pfad);
+    modell.tief_setzen(false);
     modell.filtertext_setzen(filtertext);
     modell
 }
@@ -758,7 +766,10 @@ fn bei_flacher_suche_bleibt_jeder_ordner_stehen() {
 
     let modell = gefiltert(ordner.pfad(), "aaa");
 
-    assert!(!modell.tief(), "die flache Suche ist die Vorbelegung");
+    assert!(
+        !modell.tief(),
+        "diese Probe faehrt flach; `gefiltert` schaltet ab"
+    );
     assert_eq!(
         namen(&modell),
         vec![
@@ -768,6 +779,48 @@ fn bei_flacher_suche_bleibt_jeder_ordner_stehen() {
             "bbbaaaccc.rs"
         ],
         "bei flacher Suche steht auch der Ordner ohne Treffer im Namen"
+    );
+}
+
+/// Die tiefe Suche ist die Vorbelegung, der Inhaltsfilter nicht.
+///
+/// **Die Probe haelt die Vorbelegung selbst und nicht ihre Wirkung.** Jede
+/// andere Filterprobe dieser Datei setzt den Stand ausdruecklich, damit sie
+/// den Zweig misst, den ihr Name nennt; keine von ihnen sagt deshalb noch
+/// etwas darueber, womit ein frisches Modell beginnt. Genau das steht hier.
+///
+/// Mitgehalten wird die Folge, die sich niemand gewuenscht hat: die Schwelle
+/// des Inhaltsfilters haengt am Stand der tiefen Suche
+/// ([`krk_core::verzeichnis::filter::inhaltsschwelle`]), und ab Werk gilt
+/// damit die tiefe Fuenf und nicht mehr die flache Drei. Wer die Vorbelegung
+/// zurueckdreht, macht diese Zeile rot und liest den Grund hier.
+#[test]
+fn die_tiefe_suche_ist_die_vorbelegung() {
+    let frisch = Ordnermodell::neu(1);
+
+    assert!(frisch.tief(), "\"Deep\" ist ab Werk eingeschaltet");
+    assert!(!frisch.inhalt(), "\"Content\" ist ab Werk ausgeschaltet");
+
+    let mut modell = handmodell([
+        handeintrag("bbbaaaccc.rs", Typ::Datei),
+        handeintrag("ohne.txt", Typ::Datei),
+    ]);
+    // `handmodell` faehrt flach; hier wird die Vorbelegung wiederhergestellt,
+    // weil es um sie geht.
+    modell.tief_setzen(true);
+    modell.inhalt_setzen(true);
+    modell.filtertext_setzen("aaaa");
+
+    assert!(
+        !modell.inhalt_wirkt(),
+        "ab Werk gilt die Schwelle der tiefen Suche: vier Zeichen reichen nicht"
+    );
+
+    modell.zeichen_anhaengen('a');
+
+    assert!(
+        modell.inhalt_wirkt(),
+        "das fuenfte Zeichen erreicht die tiefe Schwelle"
     );
 }
 
@@ -911,6 +964,7 @@ fn der_filter_wirkt_schon_beim_anhaengen_eines_stapels() {
     let ordner = filterordner();
 
     let mut modell = Ordnermodell::neu(1);
+    modell.tief_setzen(false);
     modell.filtertext_setzen("aaa");
     modell.anhaengen(lesen(ordner.pfad()).expect("Lesen gescheitert"));
 
@@ -1165,6 +1219,10 @@ fn handeintrag(name: &str, typ: Typ) -> Eintrag {
 /// [`krk_core::verzeichnis::inhalt`], und das steht anderswo.
 fn handmodell(eintraege: impl IntoIterator<Item = Eintrag>) -> Ordnermodell {
     let mut modell = Ordnermodell::neu(1);
+    // Flach, aus demselben Grund wie bei `gefiltert` darueber: die Schwelle des
+    // Inhaltsfilters haengt am Stand der tiefen Suche, und die Proben darunter
+    // messen die flache Drei und die tiefe Fuenf einzeln.
+    modell.tief_setzen(false);
     modell.anhaengen(eintraege);
     modell.abschliessen();
     modell

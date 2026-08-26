@@ -290,6 +290,8 @@ pub struct Ordnermodell {
     /// stehen, damit die Navigation bei stehendem Filter nicht abbricht. An
     /// heisst: ein Ordner, dessen Name nicht passt, braucht einen Treffer unter
     /// sich.
+    ///
+    /// Die Vorbelegung steht bei [`Ordnermodell::neu`] und nirgends sonst.
     tief: bool,
     /// Ob der Filter auch den Text einer Datei meint ("Content").
     ///
@@ -339,6 +341,21 @@ pub struct Ordnermodell {
 
 impl Ordnermodell {
     /// Ein leeres Modell fuer die genannte Generation.
+    ///
+    /// # Die Vorgaben der beiden Suchschalter
+    ///
+    /// **Die tiefe Suche steht ab Werk auf "ein", der Inhaltsfilter auf
+    /// "aus".** Das ist die einzige Stelle, an der beide Vorgaben stehen: die
+    /// Sitzung fuehrt keinen der zwei Staende mit (`krk_core::ablage::sitzung`
+    /// kennt sie nicht), und ein neuer Tab erbt nichts vom Geschwistertab,
+    /// sondern kommt ueber diesen Weg. Wer die Vorgabe aendert, aendert sie
+    /// hier und nirgends sonst.
+    ///
+    /// **Sichtbar wird die Vorgabe erst, wenn ein Filtertext steht.** Ohne ihn
+    /// verlaesst `Ordnermodell::zeilengrund_von` den Pruefschritt, bevor die
+    /// Frage nach der Tiefe faellt, und `Tabliste::durchlauf_nachziehen`
+    /// stoesst keinen Durchlauf an. Ein frisch gestartetes KRK liest deshalb
+    /// genau so viel wie zuvor.
     pub fn neu(generation: u64) -> Self {
         Self {
             eintraege: Arc::default(),
@@ -350,7 +367,11 @@ impl Ordnermodell {
             markiert: Vec::new(),
             filtertext: String::new(),
             filter_klein: String::new(),
-            tief: false,
+            // Ab Werk eingeschaltet, siehe den Abschnitt darueber. Damit haengt
+            // an dieser Zeile auch die Schwelle des Inhaltsfilters: sie fragt
+            // `super::filter::inhaltsschwelle` nach dem Stand der tiefen Suche,
+            // und der ist ab Werk `true`.
+            tief: true,
             inhalt: false,
             befund: Vec::new(),
             grund: Vec::new(),
