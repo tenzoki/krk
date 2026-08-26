@@ -93,7 +93,7 @@ Die drei Kanten aus Schritt 1 und aus Schritt 3 sind Ordnung nach Risiko und kei
    - Dependencies: Schritt 2 (beide schreiben `tests/gemeinsam/mod.rs`; nacheinander, nicht gleichzeitig).
    - Source: Datensatz 4 samt Nachtrag R5.
 
-4. [IN PROGRESS] **Befund 3: jede Variante von `Kommando` steht in `KENNUNGEN`**
+4. [DONE] **Befund 3: jede Variante von `Kommando` steht in `KENNUNGEN`**
    - Executor: `coder`
    - Files: `crates/krk-core/tests/gemeinsam/mod.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/appkit/menue.rs`
    - Changes:
@@ -113,7 +113,7 @@ Die drei Kanten aus Schritt 1 und aus Schritt 3 sind Ordnung nach Risiko und kei
    - Dependencies: Schritt 4.
    - Source: Datensatz 3; Auftrag des Nutzers im Dispatch.
 
-6. [IN PROGRESS] **Befund 5: jeder Prüfordner wird gegen seine zugesagte Eintragszahl gehalten, und die gelesene Zahl erreicht den Bericht**
+6. [DONE] **Befund 5: jeder Prüfordner wird gegen seine zugesagte Eintragszahl gehalten, und die gelesene Zahl erreicht den Bericht**
    - Executor: `coder`
    - Files: `crates/krk-bench/src/messen.rs`, `crates/krk-bench/src/bericht.rs`
    - Changes:

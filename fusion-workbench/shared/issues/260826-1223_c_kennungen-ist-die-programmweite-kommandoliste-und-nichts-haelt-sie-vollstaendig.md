@@ -50,3 +50,6 @@ Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`, am Baum geprüft. Geh
 Also seen: 260826-1416 by coderev — in `appkit/menue.rs` liegen elf `KENNUNGEN`-Zeilen (`:44,351,437,442,445,446,459,1069,1080,1085,1109`): vier Prosa, vier im Code (`tag_des_kommandos` mit zwei `expect`, `kommando_zum_tag`), drei in Proben; `:437-440` zitiert `jedes_kommando_traegt_genau_einen_wirkungsbereich` für die Eindeutigkeit, nicht für die Vollständigkeit.
 
 Also seen: 260826-1417 by coderev — die Probe `zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch` (`zulaessigkeit.rs:666-692`) iteriert über `KENNUNGEN` und nicht über die vier, die sie kennt; sie wird für jeden fünften Eintrag rot, der in `KENNUNGEN` steht, und erbt für einen, der dort fehlt, genau diesen blinden Fleck.
+
+---
+Resolved: 260826-2135 — die Probe jede_variante_von_kommando_steht_genau_einmal_in_kennungen haelt die Varianten aus dem Quelltext der Aufzaehlung gegen KENNUNGEN, in beiden Richtungen; Helfer varianten_der_aufzaehlung ohne Aufzaehlungsnamen, damit der zweite Plan ihn fuer Wirkungsbereich nimmt; Mutation rot vor der Behebung (Plan 260826-1811 Schritt 4).

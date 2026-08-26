@@ -8,6 +8,7 @@
 //! hineinwachsen; deshalb waehlt das Abnahmekommando das Testprogramm mit
 //! `--test belegung` und filtert nicht ueber Pruefungsnamen.
 
+use std::collections::BTreeSet;
 use std::fs;
 
 use krk_core::ablage::{Ablage, Ablageort, Datei};
@@ -17,7 +18,7 @@ use krk_core::tasten::parser::{self, Herkunft};
 use krk_core::tasten::{Kombination, Kommando, ModMaske, Nachschlag, Tastendruck, Wirkungsbereich};
 
 mod gemeinsam;
-use gemeinsam::Pruefordner;
+use gemeinsam::{Pruefordner, varianten_der_aufzaehlung};
 
 // ---------------------------------------------------------------------------
 // Hilfsmittel
@@ -1689,10 +1690,20 @@ tasten = ["ctrl+c"]
 /// [`Kommando::wirkungsbereich`] ist eine vollstaendige Fallunterscheidung ohne
 /// Auffangzweig, also nennt jedes Kommando seinen Bereich, und mehr als einen
 /// kann keines nennen. Diese Pruefung traegt die andere Haelfte, die der
-/// Uebersetzer nicht sieht: dass [`Kommando::KENNUNGEN`] jedes Kommando genau
-/// einmal fuehrt. Stuende eines zweimal darin, gaebe es zwei Wege von einer
-/// Kennung zu einem Kommando, und der zweite koennte einen anderen Bereich
-/// bekommen als der erste.
+/// Uebersetzer nicht sieht: dass kein Kommando **zweimal** in
+/// [`Kommando::KENNUNGEN`] steht. Stuende eines zweimal darin, gaebe es zwei
+/// Wege von einer Kennung zu einem Kommando, und der zweite koennte einen
+/// anderen Bereich bekommen als der erste.
+///
+/// **Sie haelt die Eindeutigkeit und nicht die Vollstaendigkeit.** Sie laeuft
+/// ueber `KENNUNGEN`, also ueber die Liste, deren Vollstaendigkeit die Frage
+/// ist; ein Kommando, das dort fehlt, kommt in dieser Schleife nicht vor. Bis
+/// zum 260826 sagte dieser Doc-Kommentar "jedes Kommando genau einmal" und
+/// versprach damit beide Haelften
+/// (`shared/issues/260826-1223_*_kennungen-ist-die-programmweite-kommandoliste-und-nichts-haelt-sie-vollstaendig.md`).
+/// Die Vollstaendigkeit haelt seither
+/// [`jede_variante_von_kommando_steht_genau_einmal_in_kennungen`], und die
+/// liest die Varianten aus dem Quelltext.
 #[test]
 fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
     for (stelle, (kommando, kennung)) in Kommando::KENNUNGEN.into_iter().enumerate() {
@@ -1720,6 +1731,62 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
             "{kennung} traegt keinen der sieben Bereiche"
         );
     }
+}
+
+/// Jede Variante von [`Kommando`] steht in [`Kommando::KENNUNGEN`], und jeder
+/// Eintrag der Liste benennt eine Variante.
+///
+/// **Die Gegenprobe zu [`jedes_kommando_traegt_genau_einen_wirkungsbereich`].**
+/// Jene laeuft ueber `KENNUNGEN` und haelt die Eindeutigkeit; die
+/// Vollstaendigkeit kann sie nicht halten, weil sie ueber die Liste laeuft,
+/// deren Vollstaendigkeit die Frage ist. Diese hier laeuft ueber die
+/// **Varianten** aus dem Quelltext der Aufzaehlung und ist damit die zweite
+/// Quelle, aus der die Frage entscheidbar wird.
+///
+/// **Was eine fehlende Zeile kostet.** `KENNUNGEN` ist die programmweite
+/// Kommandoliste: `Kommando::kennung` endet ohne Eintrag auf `panic!`,
+/// `tag_des_kommandos` in `krk-ui` auf `expect`, und `Kommando::aus_kennung`
+/// liefert `None`, womit der Befehl in der Belegungsansicht steht und nichts
+/// tut. Der Uebersetzer haelt davon nichts: die Laengenangabe
+/// `[(Kommando, &'static str); 79]` zwingt zu 79 Eintraegen und sagt nicht,
+/// welche 79
+/// (`shared/issues/260826-1223_*_kennungen-ist-die-programmweite-kommandoliste-und-nichts-haelt-sie-vollstaendig.md`).
+///
+/// Geprueft werden **beide** Richtungen. Die zweite ist nicht nur Zierrat: sie
+/// faellt aus, wenn eine Variante fortfaellt und ihre Zeile stehen bleibt, und
+/// eine solche Zeile uebersetzt heute noch, solange der Name als Alias
+/// weiterlebt.
+#[test]
+fn jede_variante_von_kommando_steht_genau_einmal_in_kennungen() {
+    let varianten: BTreeSet<String> =
+        varianten_der_aufzaehlung("krk-core/src/tasten/belegung.rs", "Kommando")
+            .into_iter()
+            .collect();
+    let gefuehrt: BTreeSet<String> = Kommando::KENNUNGEN
+        .into_iter()
+        .map(|(kommando, _)| format!("{kommando:?}"))
+        .collect();
+
+    let fehlen: Vec<&str> = varianten
+        .difference(&gefuehrt)
+        .map(String::as_str)
+        .collect();
+    assert!(
+        fehlen.is_empty(),
+        "diese Varianten von Kommando stehen in keiner Zeile von KENNUNGEN \
+         und sind damit unbelegbar: {}",
+        fehlen.join(", ")
+    );
+
+    let ueberzaehlig: Vec<&str> = gefuehrt
+        .difference(&varianten)
+        .map(String::as_str)
+        .collect();
+    assert!(
+        ueberzaehlig.is_empty(),
+        "diese Eintraege von KENNUNGEN benennen keine Variante der Aufzaehlung: {}",
+        ueberzaehlig.join(", ")
+    );
 }
 
 /// Die drei Faelle, die das Abnahmekriterium von C5 namentlich nennt.

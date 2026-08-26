@@ -435,9 +435,18 @@ fn umsetzen(mtm: MainThreadMarker, eintrag: &Eintrag<'_>) -> Retained<NSMenuItem
 /// Der `tag`, unter dem ein Menueeintrag sein Kommando traegt.
 ///
 /// Der Index in [`Kommando::KENNUNGEN`]. Die Liste fuehrt jedes Kommando genau
-/// einmal — `jedes_kommando_traegt_genau_einen_wirkungsbereich` in
-/// `krk-core/tests/belegung.rs` haelt das fest —, und sie ist zur Uebersetzzeit
-/// festgelegt; der Index ist damit im Prozess stabil.
+/// einmal, und sie ist zur Uebersetzzeit festgelegt; der Index ist damit im
+/// Prozess stabil.
+///
+/// **"Genau einmal" haelt keine Probe allein, sondern zwei**, beide in
+/// `krk-core/tests/belegung.rs`:
+/// `jede_variante_von_kommando_steht_genau_einmal_in_kennungen` haelt die
+/// Vollstaendigkeit, indem sie die Varianten aus dem Quelltext der Aufzaehlung
+/// liest, und `jedes_kommando_traegt_genau_einen_wirkungsbereich` haelt die
+/// Eindeutigkeit. Bis zum 260826 stand hier allein die zweite als Beleg; sie
+/// laeuft ueber `KENNUNGEN` und kann eine fehlende Variante nicht sehen, und
+/// das `expect` darunter waere genau daran ausgeloest worden
+/// (`shared/issues/260826-1223_*_kennungen-ist-die-programmweite-kommandoliste-und-nichts-haelt-sie-vollstaendig.md`).
 pub fn tag_des_kommandos(kommando: Kommando) -> NSInteger {
     let stelle = Kommando::KENNUNGEN
         .iter()

@@ -366,6 +366,97 @@ fn quellen_einsammeln(wurzel: &Path, ordner: &Path, gefunden: &mut Vec<(String, 
     }
 }
 
+/// Die Namen der Varianten der Aufzaehlung `name` aus der Datei `datei`, in der
+/// Reihenfolge des Quelltexts.
+///
+/// `datei` ist der Pfad unterhalb von `crates/`, wie [`quelldateien`] ihn
+/// liefert, also etwa `krk-core/src/tasten/belegung.rs`.
+///
+/// **Wozu.** Etliche Listen dieses Baums stehen neben einer Aufzaehlung und
+/// sollen sie vollstaendig fuehren: `Kommando::KENNUNGEN` ist die programmweite
+/// Kommandoliste, und die Laengenangabe `[(Kommando, &'static str); 79]` zwingt
+/// zu 79 Eintraegen und sagt nichts darueber, **welche** 79. Der Uebersetzer
+/// haelt das nicht, und keine Probe kann es aus der Liste allein halten: die
+/// Liste ist der Gegenstand der Frage. Entscheidbar wird sie aus einer zweiten
+/// Quelle, und die ist der Quelltext der Aufzaehlung. Der Helfer traegt deshalb
+/// **keinen** Namen einer bestimmten Aufzaehlung; er liest jede.
+/// (`shared/decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`,
+/// Moeglichkeit 1.)
+///
+/// **Die Lesart ist die des Zaehlkommandos in `CLAUDE.md`**
+/// (`awk '/^pub enum Kommando/,/^}/'`): der Block beginnt an der Zeile
+/// `pub enum <name> {` in Spalte 0 und endet an der ersten schliessenden
+/// Klammer in Spalte 0. Doc-Kommentare, gewoehnliche Kommentare, Attribute und
+/// Leerzeilen bleiben aussen vor; uebrig bleibt je Variante ihr Bezeichner vor
+/// dem Komma.
+///
+/// # Was diese Nadel nicht sieht
+///
+/// Sie liest Text und keinen Syntaxbaum, und `tests/baum.rs` schreibt in seinem
+/// Kopf aus, was das allgemein heisst. Hier im Einzelnen:
+///
+/// - **Eine Aufzaehlung, die nicht `pub` ist oder eingerueckt steht**, wird
+///   nicht gefunden; der Helfer bricht dann ab, statt eine leere Liste zu
+///   liefern.
+/// - **Eine Variante mit Daten** (`Foo(Bar)`, `Foo { … }`) und eine ueber
+///   mehrere Zeilen laesst er nicht durch, sondern bricht mit der Zeile ab. Ein
+///   stilles Ueberspringen waere die Blindheit, gegen die er gebaut ist; wer
+///   sie braucht, erweitert ihn bewusst.
+/// - **Zwei Aufzaehlungen desselben Namens in derselben Datei** kann er nicht
+///   trennen; er nimmt die erste.
+///
+/// Leer laufen kann er nicht: `assert!(!varianten.is_empty())` haelt das fest,
+/// damit ein verschobener oder umbenannter Block die rufende Probe nicht still
+/// bestehen laesst.
+pub fn varianten_der_aufzaehlung(datei: &str, name: &str) -> Vec<String> {
+    let quellen = quelldateien();
+    let (_, inhalt) = quellen
+        .iter()
+        .find(|(pfad, _)| pfad == datei)
+        .unwrap_or_else(|| panic!("unter crates/ steht keine Datei {datei}"));
+
+    let kopf = format!("pub enum {name} {{");
+    let anfang = inhalt
+        .lines()
+        .position(|zeile| zeile == kopf)
+        .unwrap_or_else(|| {
+            panic!("in {datei} steht keine Zeile `{kopf}` in Spalte 0; umbenannt oder verschoben?")
+        });
+
+    let mut varianten = Vec::new();
+    let mut geschlossen = false;
+    for zeile in inhalt.lines().skip(anfang + 1) {
+        if zeile == "}" {
+            geschlossen = true;
+            break;
+        }
+        let rumpf = zeile.trim();
+        if rumpf.is_empty() || rumpf.starts_with("//") || rumpf.starts_with("#[") {
+            continue;
+        }
+        let bezeichner: String = rumpf
+            .chars()
+            .take_while(|zeichen| zeichen.is_ascii_alphanumeric() || *zeichen == '_')
+            .collect();
+        assert!(
+            !bezeichner.is_empty() && &rumpf[bezeichner.len()..] == ",",
+            "in {datei} traegt die Aufzaehlung {name} die Zeile `{rumpf}`; \
+             diese Nadel liest allein datenlose Varianten, je eine Zeile"
+        );
+        varianten.push(bezeichner);
+    }
+    assert!(
+        geschlossen,
+        "der Block `{kopf}` in {datei} endet an keiner schliessenden Klammer in Spalte 0"
+    );
+    assert!(
+        !varianten.is_empty(),
+        "die Aufzaehlung {name} in {datei} liefert keine Variante; \
+         eine leere Liste waere eine Probe, die alles bestaetigt"
+    );
+    varianten
+}
+
 // ---------------------------------------------------------------------------
 // Der Starter der Kindproben unter abgesenkter Deskriptorgrenze
 // ---------------------------------------------------------------------------
