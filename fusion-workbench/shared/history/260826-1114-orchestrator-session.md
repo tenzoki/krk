@@ -64,9 +64,9 @@ Berührungen ohne Doppelung, damit ein Coder sie nicht zweimal baut: `1327` und 
 
 Über beide Speicher, `shared/` und jeden `circles/*/`, per `find … -maxdepth 1`:
 
-- Offene Defekte (`_o_` + `_p_`): **315** (davon 199 im gemeinsamen Speicher); vor der Sitzung 194, plus 122 aus der Durchsicht, minus 1 (`260826-1442` Schaltflächentasten, geschlossen).
+- Offene Defekte (`_o_` + `_p_`): **314** eingecheckt (davon 198 im gemeinsamen Speicher), dazu die eine nicht eingecheckte Fremddatei; vor der Sitzung 194, plus 121 aus der Durchsicht, minus 1 (`260826-1442` Schaltflächentasten, geschlossen).
 - Offene Entscheidungen (`_o_`): **40** (davon 19 im gemeinsamen Speicher); vor der Sitzung 37, plus 4 neue, minus 1 (`260813-0053` Schaltflächentasten, jetzt `_i_`).
-- Dazu ein nicht eingecheckter Datensatz `shared/issues/260826-1445_o_the-playmakers-ranking-rewards-a-stale-grounding-…` (englisch, betrifft das Framework und nicht KRK), in den Zahlen oben enthalten.
+- Dazu ein nicht eingecheckter Datensatz `shared/issues/260826-1445_o_the-playmakers-ranking-rewards-a-stale-grounding-…` (englisch, betrifft das Framework und nicht KRK), in den Zahlen oben **nicht** enthalten. Berichtigt im Abgleich 260826-1633: der Abgleich 260826-1452 hatte ihn als 122. Defekt mitgezählt; `git diff --name-status 004ff72..caa3f23` zählt 121 neu angelegte Defektdatensätze.
 
 ## Budget
 
@@ -75,15 +75,15 @@ Berührungen ohne Doppelung, damit ein Coder sie nicht zweimal baut: `1327` und 
 | Turns | 5 |
 | Tasks resolved | 15 von 15 |
 | Tasks skipped/deferred | 0 |
-| Issues created (by reviewers) | 122 |
+| Issues created (by reviewers) | 121 (der Abgleich 260826-1452 zählte 122; die 122. Datei ist die unversionierte Fremddatei `260826-1445_o_the-playmakers-…`, nicht von einem Prüfer) |
 | Issues resolved | 1 |
 | Decisions answered (`_o_`→`_a_`) | 0 |
 | Decisions implemented (`_a_`→`_i_`) | 1 (direkt `_o_`→`_i_`, Reconciler) |
-| Commits | 8 (vor Cleanup) |
+| Commits | 8 (vor Cleanup); 9 mit `caa3f23`, dem Commit dieses Berichts |
 | Agent errors | 0 |
 | Human gates hit | 6 (5 Kohärenz-Fragen, 1 Rebalance) |
 
-Die vier Datensatz-Zeilen sind aus dem Dateibestand gegen den Anker `004ff72` berechnet, nicht mitgezählt: `filed issue 122`, `now_c issue 1`, `now_i decision 1`, `filed decision 4`.
+Die vier Datensatz-Zeilen sind aus dem Dateibestand gegen den Anker `004ff72` berechnet, nicht mitgezählt: `filed issue 121`, `now_c issue 1`, `now_i decision 1`, `filed decision 4`.
 
 ## Per-Turn Log
 
@@ -111,12 +111,12 @@ Die vier Datensatz-Zeilen sind aus dem Dateibestand gegen den Anker `004ff72` be
 
 **Range:** `004ff72..7389b61` — 8 commits
 **Covered by:** 15 Berichte unter `shared/reviews/260826-1[2-4]*-coderev-*.md`, jeder mit `**Reviewed-range:**` über den Sitzungsbereich; `unusable=0`
-**Not covered:** `de1e2db docs(workbench): die Vollbaum-Durchsicht ist vollstaendig, die letzten zwei Berichte und 23 Datensaetze` · `7389b61 docs(workbench): der Schlussabgleich der Vollbaum-Durchsicht` — beide tragen nur Werkbankdateien, keinen Code; der Quellbaum steht unverändert auf `004ff72`.
+**Not covered:** `de1e2db docs(workbench): die Vollbaum-Durchsicht ist vollstaendig, die letzten zwei Berichte und 23 Datensaetze` · `7389b61 docs(workbench): der Schlussabgleich der Vollbaum-Durchsicht` · `caa3f23 docs(workbench): der Sitzungsbericht der Vollbaum-Durchsicht ist vollstaendig` — alle drei tragen nur Werkbankdateien, keinen Code; der Quellbaum steht unverändert auf `004ff72` (`git diff --name-status 004ff72..caa3f23`: 142 A, 16 M, 1 R, alle unter `fusion-workbench/`).
 **Carried out-of-scope files:** none
 
 ## Remaining Work
 
-Keine offene Aufgabe aus dieser Sitzung. Der Bestand nach der Sitzung: 315 offene Defekte (122 aus dieser Sitzung), 40 offene Entscheidungen. Die Befunde sind gefiltert, nicht behoben; das war die Directive.
+Keine offene Aufgabe aus dieser Sitzung. Der Bestand nach der Sitzung: 314 eingecheckte offene Defekte (121 aus dieser Sitzung) plus die unversionierte Fremddatei, 40 offene Entscheidungen. Die Befunde sind gefiltert, nicht behoben; das war die Directive.
 
 Die vier, die zuerst dran sein sollten:
 1. `shared/issues/260826-1221_*_ein-gescheitertes-kopieren-ueber-die-datentraegergrenze-loescht-die-quelle-trotzdem.md` — kritisch, Datenverlust.
@@ -138,6 +138,7 @@ Eine fremde Datei liegt unversioniert im Baum: `shared/issues/260826-1445_o_the-
 | `c13bf1c` | zwei Also-seen-Zeilen zurückgeführt | R9 |
 | `de1e2db` | die Vollbaum-Durchsicht ist vollständig | R13, R14 |
 | `7389b61` | der Schlussabgleich | Phase 3 |
+| `caa3f23` | der Sitzungsbericht ist vollständig | Cleanup |
 
 ## Session Flow
 
