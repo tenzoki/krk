@@ -223,7 +223,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 8 ist der einzige, der außerh
    - Kriterien: C3.4, C3.9, C3.10
    - Dependencies: Schritt 2
 
-7. **Die Berührung von C2.5 der Runde 16 buchen**
+7. **Die Berührung von C2.5 der Runde 16 buchen** [DONE]
    - Executor: `analyst`
    - Files: ein neuer Defektdatensatz in `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/`, Marker `_o_`
    - Changes: Der Datensatz hält fest, dass C2.5 im Spec der Runde 16 zwei Aussagen trägt und dass die zweite nach dieser Runde nicht mehr zutrifft. Die Aufzählung der sechs Metadatenangaben gilt unverändert, und die Zählzeilen treten unter sie; das Wort „unverändert" bezieht sich im Wortlaut jedoch auf die Anzeige als Ganzes, und die wächst um drei Zeilen. Der Datensatz zitiert den Spec der Runde 16 mit vollem Dateinamen und gesterntem Marker, nennt den Spec dieser Runde als Ursache und sagt ausdrücklich, dass der fremde Spec nicht angefasst wird. Er bleibt offen, weil der Abnahmelauf jener Runde aussteht und die Schließung dem Nutzer gehört.
