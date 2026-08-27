@@ -49,10 +49,12 @@
 //! - **Die ganze Datei faellt weg**, wenn `serde` sie nicht in diese Gestalt
 //!   bringt: ein unbekannter Schluessel an einer der sechs Stellen mit
 //!   `deny_unknown_fields`, eine Zahl ausserhalb ihres Bereichs, ein
-//!   Tischname, den es nicht gibt, und seit der Runde 18 ein Wert fuer
-//!   `zeigt`, den es nicht gibt ([`Anzeigedatei`]). Die Datei gilt dann nach C1.6 als
-//!   beschaedigt, wird beiseitegelegt, und KRK arbeitet ohne jedes Profil
-//!   weiter. **Das ist die weiteste der drei Reichweiten, und ein Buchstaben-
+//!   Tischname, den es nicht gibt, seit der Runde 18 ein Wert fuer `zeigt`,
+//!   den es nicht gibt ([`Anzeigedatei`]), und seit der Runde 19 ebenso ein
+//!   Wert fuer `typ`, den es nicht gibt ([`Typdatei`]), oder ein `versteckt`,
+//!   das kein Wahrheitswert ist (C3.6 jener Runde). Die Datei gilt dann nach
+//!   C1.6 als beschaedigt, wird beiseitegelegt, und KRK arbeitet ohne jedes
+//!   Profil weiter. **Das ist die weiteste der drei Reichweiten, und ein Buchstaben-
 //!   dreher in einem Bausteintisch faellt in sie und nicht in die kleinste.**
 //!   Die Meldung stammt von `serde` und nicht von hier; sie nennt seit dem
 //!   260824 den Schluessel und die erwarteten Namen, denn ohne die unmarkierte
@@ -88,7 +90,7 @@
 use regex::Regex;
 use serde::Deserialize;
 
-use super::{Anzeige, Baustein, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile, Zeile};
+use super::{Anzeige, Baustein, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile, Typ, Zeile};
 
 // ---------------------------------------------------------------------------
 // Die Gestalt der Datei
@@ -239,6 +241,51 @@ pub struct Zaehlungsdatei {
     pub ordner: Option<String>,
     /// Das Muster auf dem Eintragsnamen, oder alle Eintraege.
     pub muster: Option<String>,
+    /// Nur Eintraege dieses Typs. Fehlt er, zaehlen Eintraege jeden Typs,
+    /// wie vor der Runde 19 (C3.2).
+    ///
+    /// Ein Wert, den es nicht gibt, kostet die ganze Datei, aus demselben
+    /// Grund wie bei `zeigt`: `typ = "ordnr"` ist ein Vertipper und keine
+    /// Angabe, siehe [`Typdatei`].
+    pub typ: Option<Typdatei>,
+    /// Ob die Zahl der versteckten Treffer in einer Klammer dahintersteht.
+    /// Fehlt er, steht keine Klammer da, wie vor der Runde 19 (C3.3).
+    ///
+    /// Ein `bool` und kein benannter Wert: es gibt genau eine Wirkung, und
+    /// `versteckt = true` sagt ohne Nachschlagen, was es tut. Ein Wert, der
+    /// kein Wahrheitswert ist, kostet die ganze Datei; das haelt die
+    /// Typpruefung von `serde` und keine Zeile hier (C3.6).
+    pub versteckt: Option<bool>,
+}
+
+/// Der Wert des Schluessels `typ`, wie er in der Datei steht.
+///
+/// **Ein eigener Typ neben [`Typ`] und nicht dieser selbst**, aus demselben
+/// Grund wie [`Anzeigedatei`] neben [`Anzeige`]: `serde` wohnt in dieser
+/// Datei und nicht im Verzeichnisleser, und der Leser soll nicht erfahren,
+/// wie seine drei Werte in einer Profildatei buchstabiert werden. Der Preis
+/// ist eine Zuordnung ([`typ`]), und sie ist vollstaendig ohne Auffangzweig —
+/// ein vierter Wert von [`Typ`] haelt den Bau dort an.
+///
+/// **Die drei Werte stehen in Umschrift**, `verknuepfung` und nicht
+/// `verknüpfung`: jedes Schluesselwort dieser Datei steht so, und ein Umlaut
+/// hier waere die erste Ausnahme (Plan der Runde 19, Festlegung 5).
+///
+/// **Ein Wert, den es nicht gibt, kostet die ganze Datei** (C1.6 der Runde
+/// 16, die weiteste der drei Reichweiten): `serde` bringt den Text dann nicht
+/// in diese Gestalt, und seine Meldung nennt den Schluessel und die drei
+/// erwarteten Namen. Das ist dieselbe Reichweite wie bei einem verschriebenen
+/// Bausteintisch — die Zeile ist nicht zu retten, indem man raet, was gemeint
+/// war.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Typdatei {
+    /// `typ = "datei"`.
+    Datei,
+    /// `typ = "ordner"`.
+    Ordner,
+    /// `typ = "verknuepfung"`.
+    Verknuepfung,
 }
 
 /// Der Tisch `juengste`.
@@ -400,10 +447,8 @@ fn baustein_pruefen(baustein: Bausteindatei) -> Result<Baustein, String> {
         Bausteindatei::Zaehlung(zaehlung) => Ok(Baustein::Zaehlung {
             ort: ortsangabe(zaehlung.ordner.as_deref())?,
             muster: wahlfreies_muster(zaehlung.muster.as_deref())?,
-            // Die zwei Schluessel `typ` und `versteckt` kommen mit Schritt 2
-            // der Runde 19 in die Profildatei; bis dahin gilt die alte Form.
-            typ: None,
-            versteckt: false,
+            typ: typ(zaehlung.typ),
+            versteckt: zaehlung.versteckt.unwrap_or(false),
         }),
         Bausteindatei::Juengste(juengste) => Ok(Baustein::Juengste {
             ort: ortsangabe_ohne_platzhalter(juengste.ordner.as_deref(), "juengste")?,
@@ -518,6 +563,21 @@ fn anzeige(angabe: Option<Anzeigedatei>) -> Anzeige {
     match angabe {
         None | Some(Anzeigedatei::Titel) => Anzeige::Titel,
         Some(Anzeigedatei::Datum) => Anzeige::Datum,
+    }
+}
+
+/// Liest den Schluessel `typ`, auch wenn er fehlt.
+///
+/// Ohne ihn zaehlt der Baustein Eintraege jeden Typs: das ist die Fassung,
+/// die es vor der Runde 19 allein gab (C3.2). Die Fallunterscheidung ist
+/// vollstaendig und hat keinen Auffangzweig; ein vierter Wert von [`Typ`]
+/// haelt den Bau hier an.
+fn typ(angabe: Option<Typdatei>) -> Option<Typ> {
+    match angabe {
+        None => None,
+        Some(Typdatei::Datei) => Some(Typ::Datei),
+        Some(Typdatei::Ordner) => Some(Typ::Ordner),
+        Some(Typdatei::Verknuepfung) => Some(Typ::Verknuepfung),
     }
 }
 
