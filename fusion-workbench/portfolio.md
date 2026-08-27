@@ -1,179 +1,145 @@
 # Portfolio
 
-**Generated:** 260824-2017 (by playmaker session 260824-2017)
+**Generated:** 260827-0403 (by playmaker session 260827-0403-playmaker-direct-dispatch)
 **Domain bias:** code
 
-Bestand: 0 vorgesehen, 0 aktiv, 5 kohärent geschlossen, 11 beschränkt geschlossen,
-0 überholt, 2 zurückgestellt. Summe 18 Circle-Datensätze.
+Bestand: 1 vorgesehen, 0 aktiv, 5 kohärent geschlossen, 12 beschränkt
+geschlossen, 0 überholt, 2 zurückgestellt. Summe 20 Circle-Datensätze. Die Runde
+18 ist ohne Circle-Datensatz gefahren und in keiner dieser Zahlen enthalten.
 
 ## Active (_t_)
 
 (keiner)
 
-`fusion-workbench/.active-circle` fehlt, und kein Datensatz trägt den Marker `_t_`. Das ist
-der reguläre Zustand nach einem Abschluss und keine Zeigerwarnung. Die Runde 16,
-`260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`, ist am 260824-1810
-beschränkt geschlossen worden.
+`.active-circle` fehlt, und kein Datensatz trägt den Aktiv-Marker. Der reguläre
+Zustand nach einem Rundenabschluss.
 
 ## Anticipated (_a_) — ranked
 
-(keiner)
+Recommended next: `260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil` — der einzige vorgesehene Circle, seine Grundlage steht vollständig auf der Platte, und seine zwei offenen Fragen sind vom Nutzer in einem Zug zu beantworten.
 
-**Das Portfolio hat nichts zu rangieren, und das ist eine leere Vorbereitung und kein
-Stillstand.** `ls fusion-workbench/circles/*/_a_circle.md` gibt seit dem Abschluss der Runde
-16 nichts aus. Die beiden Wege dorthin liegen sechzehn Tage auseinander: der Web-Betrachter
-im Vorschaufenster ist am 260821-2202 vom Nutzer abgesagt worden, und der einzige danach
-angelegte vorgesehene Circle ist am 260824 aktiviert und noch am selben Tag geschlossen
-worden. Kein Kandidat wartet auf eine Vorbedingung, keiner ist übergangen worden.
+**1. `260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil`**
+Directive: Die Vorschau zählt den Inhalt eines Ordners in einem eingebauten
+Default-Profil. Abhängigkeiten: zwei genannte Vorläufer, beide beschränkt
+geschlossen, beide vollständig gebaut.
 
-**Was der Nutzer als Nächstes vorhat, trägt kein Datensatz.** Auf einen Neustart und ein
-Update soll eine ausgedehnte Durchsichts- und Behebungsrunde folgen. Sie ist heute weder ein
-Circle noch ein Rückstandseintrag, also kann das Portfolio sie weder rangieren noch zur
-Aktivierung vorschlagen. Zwei Wege machen sie sichtbar: `/fusion:direct <Entwurf>` legt aus
-einem Satz unmittelbar einen vorgesehenen Circle an, `/fusion:memo` legt sie zuerst als
-Rückstandseintrag ab, wenn die Runde vor dem Zuschnitt noch reifen soll. Der Playmaker legt
-selbst keinen Eintrag an; das Einreichen ist die Sache des Nutzers.
-
-**Der Bestand für eine solche Runde liegt bereit, gezählt am 260824-2017.** Offene
-Defektdatensätze: 170, davon 56 im gemeinsamen Speicher und 114 in den Speichern der
-sechzehn gefahrenen Runden. Offene Entscheidungsdatensätze: 35, davon 14 gemeinsam und 21 in
-Circle-Speichern. Gezählt mit `find shared/issues circles/*/issues -maxdepth 1 -name
-'*_o_*.md'` und dem gleichlautenden Aufruf über die Entscheidungsspeicher; `archive/` ist
-darin nicht enthalten und gehört auch nicht hinein. Sechs der offenen Defekte stammen aus
-der eben geschlossenen Runde. Zwei ihrer Befunde betreffen die Sitzungsmechanik und nicht
-KRK und liegen deshalb im gemeinsamen Speicher: der geteilte git-Index
-(`shared/issues/260824-1745_*_ein-commit-des-orchestrators-nimmt-die-git-mv-umbenennungen-eines-laufenden-agenten-mit.md`)
-und Zeitstempel in Dateinamen, die der Uhr um bis zu 208 Minuten vorausliefen
-(`shared/issues/260824-1758_*_die-zeitstempel-in-dateinamen-laufen-der-uhr-voraus-bis-zu-drei-stunden.md`).
-Eine Durchsichtsrunde, die beide mitnimmt, räumt an ihrem eigenen Werkzeug und nicht an KRK.
+Die Runde setzt an einer Stelle an, die gebaut und als Nutzerwille festgehalten
+ist: greift kein Profil aus `readers.toml`, bleibt es heute bei der
+Metadatenanzeige (`crates/krk-core/src/leseprofil/erkennung.rs`). Dort tritt das
+eingebaute Default-Profil hinzu und hängt drei Zählzeilen unter die sechs
+Metadatenangaben. Die Bausteine dafür liegen bereit: `Typ` am `Eintrag` trägt
+genau die drei Werte Ordner, Datei und Verknüpfung, `Eintrag::versteckt` trägt
+das Kennzeichen für die Klammerzahlen, und `verzeichnis::leser::lesen_hoechstens`
+liest einen fremden Ordner einmal, ohne das angezeigte Ordnermodell anzufassen.
+Vier offene Entscheidungen binden die Runde, und keine hält sie auf. Zwei hat
+der Shaper bei der Anlage gestellt und legt sie dem Nutzer zur Aktivierung vor:
+ob die Zählung nach Typ und versteckt eine allgemeine Fähigkeit der Profile wird
+(`decisions/260827-0311_*_bekommen-die-profile-aus-readers-toml-die-zaehlung-nach-typ-und-versteckt.md`)
+und was die Zählzeilen für einen Ordner über der Eintragsschranke von
+zweitausend sagen
+(`decisions/260827-0311_*_was-sagen-die-zaehlzeilen-fuer-einen-ordner-ueber-der-eintragsschranke.md`).
+Die zwei anderen kommen von außerhalb und binden die Runde, ohne sie zu
+blockieren:
+`shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`
+und
+`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md`.
+Beide Vorläufer sind beschränkt geschlossen und nicht kohärent. Für diese Runde
+ist das kein Mangel: geprüft sind die Schließungsnotizen, und beide Vorläufer
+haben ihre Planschritte vollständig belegt und sind allein am nicht gefahrenen
+Abnahmelauf beschränkt geblieben, den kein Agent fahren kann.
 
 ## Backlog — ranked
 
-Recommended to split first: `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md`
-— 2 Ideen, die obere ist `leseoperationen-je-erkanntem-ort`.
+Recommended to shape: (keiner)
 
-**1. `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md`** (`_o_`,
-eingereicht 260823-2136)
+Die Ablage trägt zwei offene Einträge, und beide sind gebaut. Ausgearbeitet
+werden soll keiner; vorgeschlagen ist für beide die Schließung. Ausgeführt ist
+in der Ablage nichts: eine Schließung ist bestätigungspflichtig, und dieser Lauf
+hält für keine der beiden eine Bestätigung.
 
-Profile in einer Definitionsdatei vereinfachen den Zugriff auf Ordner und Dateien: welche
-Orte welche Leseoperationen erfordern, und was im Vorschaufenster erscheint. Der Eintrag
-nennt diese zwei Hälften ausdrücklich. **Die zweite ist seit dem 260824-1810 gebaut**, die
-erste ist unberührt. Der Shaper hat den Eintrag am 260823-2208 offen gelassen, weil eine
-Schließung die erste Hälfte ungelesen mitgenommen hätte; mit dem Abschluss der Runde ist
-diese Lage nicht besser geworden, sondern eindeutiger. Ein `/fusion:direct` auf diesen
-Eintrag machte heute einen Circle aus einer erledigten und einer offenen Hälfte, deshalb
-steht keine Aufrufzeile darunter.
+**Vorgeschlagen, nicht ausgeführt:**
 
-Die verbliebene Hälfte steht besser da als beim letzten Lauf: sie rechnet nicht mehr gegen
-eine Absicht, sondern gegen eine gebaute Maschinerie. `readers.toml` liegt als siebte
-Ablagedatei im Bestandsort, die Erkennung eines Ortes über Pfadmuster und Kennzeichendatei
-läuft, und fünf Profile werden mitgeliefert. Was „welche Leseoperationen ein erkannter Ort
-erfordert" heißen soll, ist damit gegen etwas Vorhandenes zu klären statt gegen eine Skizze.
+`close shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md — cmd+e öffnet seit dem 260823 im Dateifenster denselben ausgewählten Eintrag wie f4`
 
-- Vorgeschlagene Teilung: `leseoperationen-je-erkanntem-ort` — Ein Profil sagt, welche
-  Leseoperationen ein erkannter Ort erfordert; `profil-zusammenfassung-im-vorschaufenster` —
-  Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung. Der zweite
-  Eintrag ist unmittelbar nach seiner Entstehung gegen den Circle
-  `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten` schließbar. Die
-  Schließung legt ein späterer Lauf vor, weil sie einen Pfad nennen muss, den erst die
-  Teilung erzeugt.
+`close shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md — die Runde 16 hat die Leseprofile als readers.toml gebaut, mit zwölf ausgelieferten Profilen für die Werkbank`
 
-**2. `shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md`**
-(`_o_`, eingereicht 260813-2033)
+**Die zwei Einträge im Einzelnen:**
 
-Der Eintrag verlangt eine zweite, besser erreichbare Kombination neben `F4` für den Einstieg
-in den Editor. Die Idee ist gebaut, ohne dass sie je ein Circle war. Im Dateifenster öffnen
-`f4` und `cmd+e` denselben ausgewählten Eintrag und laufen durch denselben Rumpf; nachgelesen
-am 260824-2017 in `resources/default-keymap.toml`, Kommentar am Eintrag `bearbeiten`, Zeilen
-174 bis 177. Auch die Auflage des Eintrags ist erfüllt: der Kommentar, der ein Cmd-Kürzel
-ausdrücklich für entbehrlich erklärte, ist ersetzt und nicht übergangen worden.
-
-- Vorgeschlagene Schließung: der Eintrag ist erledigt.
-
-**Kein Marker ist in diesem Lauf bewegt worden, und beide Einträge stehen weiter auf `_o_`.**
-Der Rang `_p_` empfiehlt einen Eintrag zur Formung als Circle. Der erste ist zur Teilung
-empfohlen und nicht zur Formung, der zweite ist gebaut; für keinen von beiden wäre eine
-Empfehlung zur Formung richtig.
-
-Vorgeschlagen und nicht durchgeführt, weil dieser Lauf keine Bestätigung des Nutzers hält.
-Ein nicht-interaktiver Phase-4-Auftrag trägt keinen Block `**Confirmed operations:**`, und
-der Lauf hat als untergeordneter Agent keinen Kanal zum Nutzer:
-
-```
-split shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md into: leseoperationen-je-erkanntem-ort — Ein Profil sagt, welche Leseoperationen ein erkannter Ort erfordert; profil-zusammenfassung-im-vorschaufenster — Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung
-close shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md — im Dateifenster öffnen f4 und cmd+e denselben Eintrag durch denselben Rumpf; die Idee ist gebaut
-```
-
-Beide standen wortgleich schon im Portfolio vom 260823-2241 und sind seither nicht
-ausgeführt worden. Wer sie ausführen will, ruft `/fusion:next` auf: dort steht der Kanal zum
-Nutzer offen, über den eine Bestätigung entstehen kann.
+- `shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md`
+  — verlangt eine zweite, besser erreichbare Kombination neben `f4` für den
+  Editor-Einstieg. Erfüllt: `resources/default-keymap.toml` trägt den Eintrag
+  `editor_rundweg` auf `cmd+e`, und der Kommentar bei `bearbeiten` hält
+  ausdrücklich fest, dass beide seit dem 260823 im Dateifenster denselben
+  ausgewählten Eintrag öffnen und durch denselben Rumpf laufen. Die
+  Vermutung des Eintrags zur Ursache, die Werksbelegung von `F4` auf
+  Apple-Tastaturen, ist damit gegenstandslos für den Bedarf und weiterhin
+  ungemessen.
+- `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md`
+  — verlangt Leseprofile in einer Definitionsdatei unter
+  `~/Library/Application Support/KRK/`, die je Ort eine Zusammenfassung
+  festlegen, mit der fusion-Werkbank als Beispielfall. Gebaut hat das die Runde
+  16 (`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`),
+  angelegt zweiunddreißig Minuten nach dem Eintrag. `resources/default-readers.toml`
+  trägt heute zwölf Profile, darunter die Wurzel der Werkbank, ein Speicher, ein
+  Defektspeicher, der Ablagespeicher, alle Runden und eine einzelne Runde. Die
+  Skizze des Eintrags ist damit abgedeckt; der Dateiname weicht ab
+  (`readers.toml` statt `krk-rc.yaml`), die Sache nicht.
 
 ## Recently closed (_c_ / _b_)
 
-1. `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten` (`_b_`, 260824-1810) —
-   Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der
-   Metadaten. Gebaut ist, was die Directive verlangt, über vierzehn Planschritte. Beschränkt
-   geschlossen, weil sieben Abnahmekriterien KRK im Vordergrund verlangen. Zwei Reste binden
-   weiter: vier Abnahmekriterien stimmen am Baum, ohne dass eine Probe sie hält
-   (`issues/260824-1852_*`), und wie die Arbeit dieser Runde je gegen die Zeitzusage L7
-   gemessen wird, ist offen
-   (`decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md`).
-2. `260821-1644-veroeffentlichen-als-achte-station` (`_c_`) — Veröffentlichen als achte
-   Station der Auslieferungskette; am 260821-2024 ist `KRK 0.5.6` über sie ausgeliefert und
-   vom Nutzer am laufenden Dienst abgenommen worden.
-3. `260819-2230-auswahl-und-kopieren-in-der-vorschau` (`_c_`) — Die Vorschaufläche ist
-   auswählbar, kopiert wird der Quelltext; abgenommen am gebauten Bündel 0.5.4.
-4. `260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps` (`_c_`) — `opt+cmd+s` gleicht
-   die Ordner der zwei Dateifenster an, und eine Dateiliste nimmt Abwürfe aus fremden
-   Anwendungen entgegen; zehn Prüfungen am Bündel 0.5.2 abgenommen.
-5. `260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb` (`_c_`) — Genau ein
-   Löschweg, er führt in den Papierkorb, und jeder Vorgang fragt einmal nach.
-
-**Der Marker unterscheidet hier die Verfügbarkeit des Nutzers und nicht die Reife der
-Runde.** Elf der sechzehn gefahrenen Runden sind beschränkt geschlossen, und stets aus
-demselben Grund: der Abnahmelauf verlangt KRK im Vordergrund, und kein Agent kann ihn fahren.
-Eine Rangheuristik, die allein `_c_` als erfüllte Vorbedingung zählt, gibt in diesem Projekt
-eine irreführende Auskunft, und dieser Lauf legt keine an.
+1. `260825-0711-kontextmenue-traegt-zip-unzip-finder` (`_b_`, 260825-1422) —
+   das Kontextmenü trägt Zip, Unzip und Finder neben dem Teilen. Der Datensatz
+   trägt keine Schließungsnotiz; die Begründung steht in `git:2a77012`. Siehe
+   `## Warnings`.
+2. `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten` (`_b_`,
+   260824-1810) — gebaut ist, was die Directive verlangt: `readers.toml` als
+   siebte Ablagedatei, die Erkennung in zwei Durchgängen, die vier Bausteine mit
+   ihrem Haushalt. Beschränkt, weil sieben Abnahmekriterien KRK im Vordergrund
+   verlangen.
+3. `260821-1644-veroeffentlichen-als-achte-station` (`_c_`, 260821-2110) —
+   Veröffentlichen als achte Station der Auslieferungskette, mit gefahrenem
+   Abnahmelauf des Nutzers über fünfzehn Kriterien.
+4. `260819-2230-auswahl-und-kopieren-in-der-vorschau` (`_c_`, 260820-1045) —
+   die Vorschaufläche wird auswählbar, kopiert wird der Quelltext.
+5. `260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps` (`_c_`, 260819) —
+   `opt+cmd+s` gleicht die Ordner der zwei Dateifenster an, fremde Anwendungen
+   dürfen abwerfen. Abnahmelauf des Nutzers gefahren.
 
 ## Archived (_s_ / _d_)
 
-- `260816-2255-befehle-absetzen-und-makros-speichern` (`_d_`, zurückgestellt am 260817-0445)
-  — Befehle absetzen und gespeicherte Makros ausführen. Nichts gebaut; Spec mit 54
-  Abnahmekriterien und Plan mit 22 Schritten liegen vollständig vor. Die Runde ist nicht
-  gescheitert, sie war nur nicht dran. Für eine Durchsichtsrunde ist sie damit der einzige
-  Bestand im Portfolio, der ohne neue Klärung wieder aufgenommen werden könnte; der Weg
-  dorthin ist ein neuer Circle, der sie über `## Dependencies` zitiert, denn `_d_` ist
-  terminal.
-- `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` (`_d_`, zurückgestellt am
-  260821-2202) — Eingebauter Web-Betrachter. **Fallengelassen, nicht aufgeschoben.** Der
-  Nutzer hat entschieden, dass das Abgeben an den Systembrowser genügt
-  (`shared/decisions/260821-2202_*_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md`,
-  Möglichkeit 2). Das Vokabular kennt für eine Absage keinen eigenen Marker; wer `_d_` hier
-  als „später" liest, liest es falsch.
+- `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` (`_d_`,
+  260821-2202) — KRK zeigt Web-Seiten in einem eigenen Betrachter. Abgesagt, nicht
+  verschoben: der Nutzer hat das Abgeben an den Systembrowser gewählt
+  (`shared/decisions/260821-2202_*_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md`).
+  Der Marker ist die nächstliegende Entsprechung und nicht die genaue; das
+  Vokabular kennt für eine Absage keinen eigenen Marker.
+- `260816-2255-befehle-absetzen-und-makros-speichern` (`_d_`, 260817-0445) — KRK
+  setzt Befehle ab und führt gespeicherte Makros aus. Nichts ist gebaut. Hier
+  heißt der Marker „später": die Runde war aktiv und ist der Löschabsicherung
+  gewichen.
+
+Überholte Runden (`_s_`) gibt es nicht.
 
 ## Warnings
 
-- `CLAUDE.md` sagt über die vorgesehenen Circles: „Seit dem 260821-2202 gibt das Kommando
-  nichts aus. Der Web-Betrachter im Vorschaufenster (`260804-0933-…`) war der letzte
-  vorgesehene." Der erste Satz stimmt für heute wieder und für die Zeit dazwischen nicht: vom
-  260823-2208 bis zum 260824 gab `ls fusion-workbench/circles/*/_a_circle.md` einen Datensatz
-  aus. Der zweite Satz ist falsch, denn der letzte vorgesehene Circle war
-  `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`.
-- `CLAUDE.md` führt in seiner Rundentabelle fünfzehn Runden; der Dateibestand trägt sechzehn
-  geschlossene. Die Runde 16 fehlt in der Tabelle. Die Tabelle nennt sich selbst ein
-  Verweisregister für die Pfadregel im Absatz darunter, also fehlt mit der Zeile auch der
-  Bezugspunkt für Pfade dieser Runde.
-- Beide Stellen sind Arbeit des Kurators, `/fusion:cleanup --only claude-md`. Der Playmaker
-  schreibt keine Defektdatensätze. Zwei weitere Aussagen in `CLAUDE.md`, die mit der Runde 16
-  falsch geworden sind, trägt bereits
-  `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1852_*_zwei-aussagen-in-claude-md-sind-mit-dieser-runde-falsch-geworden-und-kein-datensatz-traegt-sie.md`.
-- Der Circle-Datensatz `260816-2255-befehle-absetzen-und-makros-speichern` trägt unter
-  `## Closure note` die Platzhalterzeile `(offen)` **über** der ausgeschriebenen Notiz. Ein
-  Leser, der nur die erste Zeile des Abschnitts nimmt, hält die Notiz für ungeschrieben. Der
-  Befund steht seit dem Lauf vom 260823-2241 unverändert.
-- Keine Abhängigkeitszyklen. Der Graph der nicht-terminalen Circles hat in diesem Lauf weder
-  Ecke noch Kante, weil kein Datensatz `_a_` oder `_t_` trägt.
-- Keine veraltete Elterngrundlage. Die Runde 16 ist nach `_b_` gewechselt, und die Prüfung
-  auf Elternteile, deren `## Grounding snapshot` sie zitiert, läuft über dieselbe leere Menge
-  nicht-terminaler Circles. Kein Abschnitt `## Parent grounding stale` geschrieben.
-- Kein Zeigerbefund: `.active-circle` fehlt, und kein Datensatz trägt `_t_`.
+- Der Datensatz der Runde 17,
+  `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md`, trägt
+  keinen Abschnitt `## Closure note` und ein leeres Turn-Protokoll. Der
+  Abschluss am 260825 war eine reine Umbenennung von `_t_circle.md` nach
+  `_b_circle.md` (`git:2a77012`, `similarity index 100%`), die den Rumpf nicht
+  angefasst hat. Er ist der einzige der siebzehn terminalen Datensätze ohne
+  Schließungsnotiz, und was diese Runde erreicht hat und warum sie beschränkt
+  geschlossen ist, steht allein in der Commit-Nachricht.
+- Drei weitere terminale Datensätze tragen ein leeres Turn-Protokoll:
+  `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`,
+  `260819-2230-auswahl-und-kopieren-in-der-vorschau` und, mit einer
+  Platzhalterzeile statt Einträgen, die zwei zurückgestellten Runden.
+- Ein Ablageeintrag kann gebaut werden, ohne dass ihn etwas schließt. Der Shaper
+  schließt einen Eintrag, den er zu einer Runde macht; die Runde 16 ist auf einem
+  anderen Weg entstanden, und ihr Eintrag steht seit dem 260823 offen da, obwohl
+  die Sache seit dem 260824 gebaut ist. Beide heute offenen Einträge sind so
+  entstanden.
+- Kein Abhängigkeitszyklus. Kein Fall einer veralteten Grundlage: der einzige
+  nicht-terminale Datensatz nennt zwei beschränkt geschlossene Vorläufer, aber
+  seine Grundlage ist nach beiden Abschlüssen geschrieben und führt deren
+  Ergebnisse.
