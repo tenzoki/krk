@@ -138,6 +138,26 @@
 #   beschriftung = "Offene Defekte"
 #   zaehlung = { ordner = "issues", muster = '_o_.*\.md$' }
 #
+#   Zwei weitere Schlüssel sind freiwillig. `typ` schränkt die Zählung auf
+#   einen Eintragstyp ein und trägt einen der drei Werte `"datei"`, `"ordner"`
+#   und `"verknuepfung"` (in Umschrift, wie jeder Schlüssel und jeder Wert
+#   dieser Datei); ohne ihn zählt die Zeile Einträge jedes Typs. Ein vierter
+#   Wert kostet die ganze Datei, wie jeder Schlüssel, den es nicht gibt.
+#
+#   `versteckt = true` hängt an die Zahl eine Klammer mit der Zahl der
+#   versteckten Einträge darunter, etwa `14 (3)`: die 14 schließt die 3 ein,
+#   und die Klammer steht auch bei null. Ohne den Schlüssel, oder mit
+#   `versteckt = false`, steht keine Klammer, und die Zahl ist dieselbe.
+#
+#   Liest ein Ordner über die Eintragsschranke hinaus (2.000 Einträge je
+#   Leselauf, siehe unten), entfällt die Klammer ganz, gleich wie `versteckt`
+#   steht: die Zeile sagt dann „mindestens N" mit dem Hinweis, dass die Lesung
+#   abgebrochen wurde, denn mehr entscheidet eine Teillesung nicht.
+#
+#   [[profil.zeile]]
+#   beschriftung = "Dateien"
+#   zaehlung = { typ = "datei", versteckt = true }
+#
 # `juengste` — die `anzahl` Einträge mit dem jüngsten Änderungsdatum. Was über
 # jeden von ihnen dasteht, sagt `zeigt`:
 #
@@ -211,6 +231,25 @@
 # Ein `pfad` geht damit jedem `kennzeichen` vor, gleich wo die beiden Profile in
 # dieser Datei stehen. Wer die Rangfolge unter gleichartigen Profilen ändern
 # will, verschiebt ihre Blöcke.
+
+# ----------------------------------------------------------------------------
+# Das eingebaute Default-Profil
+# ----------------------------------------------------------------------------
+#
+# Trifft kein Profil, zeigt die Vorschau unter den Metadaten des Ordners drei
+# Zählzeilen: „Dateien", „Ordner" und „Verknüpfungen", jede mit der Klammer
+# der versteckten. Das ist das Default-Profil. Es ist in KRK eingebaut, steht
+# in keinem Block dieser Datei und lässt sich weder anpassen noch abschalten:
+# wer seinen Block sucht, findet ihn nicht, und wer die Datei bis auf den
+# letzten Block leert, behält die drei Zeilen trotzdem. Ein Profil dieser
+# Datei, das trifft, verdrängt die drei Zeilen; gezeigt wird dann allein die
+# Zusammenfassung des Profils.
+#
+# Wer die drei Zählzeilen selbst beschreiben will, etwa an einem erkannten Ort
+# neben dessen eigenen Zeilen, schreibt sie in ein eigenes Profil mit denselben
+# Schlüsseln, je Zeile eine `zaehlung` mit `typ` und `versteckt = true`, wie im
+# Beispiel „Dateien" oben. Sie zählt dann genau, was das Default-Profil an
+# demselben Ordner gezählt hätte.
 
 # ----------------------------------------------------------------------------
 # Was eine Zusammenfassung höchstens kostet

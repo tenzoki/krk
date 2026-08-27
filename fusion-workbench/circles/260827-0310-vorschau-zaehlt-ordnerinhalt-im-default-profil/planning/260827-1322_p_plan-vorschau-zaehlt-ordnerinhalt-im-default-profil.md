@@ -216,7 +216,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 8 ist der einzige, der außerh
    - Kriterien: C1.2, C1.3, C1.4, C1.5, C1.6, C1.7, C2.3, C2.4, C2.5, C2.6, C2.7, C2.8, C2.9, C2.10, C2.11, C3.1, C3.2, C3.3, C3.4, C3.5, C3.6, C3.7, C3.8, C4.1, C4.2, C4.3, C4.4, C4.5, C4.7, sowie das zweite Kriterium aus dem Zeitzusagen-Abschnitt
    - Dependencies: Schritt 4
 
-6. **Der Kommentarteil der Auslieferungsfassung**
+6. **Der Kommentarteil der Auslieferungsfassung** [DONE]
    - Executor: `ontocoder`
    - Files: `resources/default-readers.toml`
    - Changes: Der Abschnitt „Die vier Bausteine" beschreibt bei `zaehlung` die zwei neuen Schlüssel an derselben Stelle, an der er heute `ordner` und `muster` beschreibt: welche drei Werte `typ` trägt, dass ohne ihn jeder Typ zählt, dass `versteckt = true` die Klammer setzt und ohne den Schlüssel keine dasteht, und dass die Klammer über der Eintragsschranke ganz entfällt (C3.9). Ein eigener kurzer Abschnitt sagt, dass das Default-Profil in KRK eingebaut ist, in keinem Block dieser Datei steht und sich weder anpassen noch abschalten lässt, und dass ein Nutzer, der die drei Zählzeilen selbst beschreiben will, dafür ein eigenes Profil mit denselben Schlüsseln schreibt (C3.10). Kein `[[profil]]`- und kein `[[profil.zeile]]`-Block wird angefasst; die zwölf mitgelieferten Profile ändern ihre Ausgabe nicht (C3.4).
