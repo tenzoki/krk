@@ -1,7 +1,7 @@
 # Implementierungsplan: Die Vorschau zählt den Ordnerinhalt im eingebauten Default-Profil
 
 **Date:** 2026-08-27
-**Status:** Draft
+**Status:** Gebaut und vom Nutzer am 260827 abgenommen; alle acht Schritte auf [DONE]
 **Spec:** `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_*_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md`, vom Nutzer am 260827 freigegeben, einschließlich der sieben abgeleiteten Festlegungen A1 bis A7
 **Decidability:** Die tragende Frage lautet: *Bekommt dieser Ordner die drei Zählzeilen, und wie viele Einträge jeden Typs trägt er?* Ihre erste Hälfte ist aus den Eingaben entscheidbar, die der Mechanismus hat — `symlink_metadata` am ausgewählten Pfad sagt, ob der Eintrag selbst ein Verzeichnis ist, und `leseprofil::erkennung::erkennen` sagt, ob ein Profil aus `readers.toml` getroffen hat. Ihre zweite Hälfte ist es innerhalb der Eintragsschranke von 2.000 und **jenseits davon nicht**: hinter dem Abbruch der Lesung kann beliebig viel stehen, und keine Zahl der Teillesung entscheidet den Bestand. Der Plan nähert sie dort nicht an, sondern wechselt die Aussage: `Wert::UeberGrenze` sagt „mindestens N (Lesung bei 2000 Einträgen abgebrochen)" und lässt die Klammer mit den versteckten ganz weg. Das ist die Antwort des Nutzers vom 260827-0629 und zugleich die Hausregel der Runde 16, dass nur gesagt wird, was die Teillesung entscheidet.
 
@@ -230,7 +230,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 8 ist der einzige, der außerh
    - Kriterien: keines unmittelbar; er erfüllt die sechste Anweisung aus `## Open for Planner` des Specs
    - Dependencies: Schritt 4
 
-8. **Der Abnahmelauf am laufenden Bündel**
+8. **Der Abnahmelauf am laufenden Bündel** [DONE] — vom Nutzer am 260827 gefahren, alle Punkte halten (Bündel auf c072de7, 1.2.1)
    - Executor: Nutzer (kein Agent; siehe die Vorbemerkung zu dieser Liste)
    - Files: keine; geprüft wird am gebauten `target/KRK.app`
    - Changes: `cargo xtask bundle` bauen und KRK aus einem Terminalfenster im Vordergrund starten. Zu prüfen sind die Kriterien, die eine laufende Oberfläche verlangen: die drei Zählzeilen an einem Ordner ohne Profiltreffer wie `~/Documents` (C1.1), die unveränderte Zusammenfassung an `fusion-workbench/shared/issues` (C1.2), die Zählzeilen nach dem Leeren der Nutzerdatei bis auf den letzten Block und einem Neustart (C1.3), dieselben nach einer absichtlich beschädigten `readers.toml` samt Meldung in der Statuszeile (C1.4), eine Verknüpfung auf einen Ordner ohne Zählzeilen (C1.7), die mitwandernden Zahlen beim Betreten eines Unterordners ohne Auswahl (C1.8), der unveränderte Zustand beim Programmstart und beim Tabwechsel (C1.9), die unveränderten Zahlen beim Umschalten mit `shift+cmd+h` (C2.7), das Stehenbleiben der Zeilen über einen Tabwechsel hin und zurück (C2.12) und die Bedienbarkeit beider Dateifenster und der Lesezeichenleiste, während die Zeilen für einen sehr großen Ordner entstehen (C4.6 und das erste Kriterium aus dem Zeitzusagen-Abschnitt).
