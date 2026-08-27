@@ -154,7 +154,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
-use krk_core::leseprofil::{Profile, zusammenfassen};
+use krk_core::leseprofil::{Auskunft, Profile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
 
@@ -705,8 +705,15 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
         // in denselben Zweig zurueck, der vor der Runde der einzige war —
         // Metadaten mit allen sechs Angaben und kein zweiter Zweig daneben
         // (C2.5).
-        if let Some(zusammenfassung) = zusammenfassen(profile, pfad) {
-            return Inhalt::Zusammenfassung(zusammenfassung);
+        match zusammenfassen(profile, pfad) {
+            Some(Auskunft::Erkannt(zusammenfassung)) => {
+                return Inhalt::Zusammenfassung(zusammenfassung);
+            }
+            // Vorlaeufig, bis Schritt 4 der Runde 19: die Zeilen des
+            // Default-Profils fallen hier noch auf die Metadaten allein.
+            // Die Verzweigung ist vollstaendig, damit der Bau an dieser
+            // Stelle anhaelt, sobald `Inhalt::Metadaten` die Zeilen traegt.
+            Some(Auskunft::Default(_)) | None => {}
         }
         // Ordner und Verknuepfungen erscheinen als Metadaten (C6).
         return Inhalt::Metadaten(metadaten);

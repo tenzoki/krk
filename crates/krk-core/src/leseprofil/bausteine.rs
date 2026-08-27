@@ -11,7 +11,10 @@
 //!   ├─ canonicalize ──────────> die Schranke aus C3.13
 //!   ├─ ist es ein Verzeichnis? ─> sonst None            (C2.6)
 //!   ├─ erkennung::erkennen ───> Profil          (Leselauf 1, auf Verlangen)
-//!   └─ je Zeile ein Baustein ─> Wert oder Wert::Nicht
+//!   │    └─ keines trifft ────> ist der Eintrag selbst ein Verzeichnis?
+//!   │                             ├─ nein (Verknuepfung) ─> None   (A4, C1.7)
+//!   │                             └─ ja ─> das eingebaute Default-Profil
+//!   └─ je Zeile ein Baustein ─> Wert oder Wert::Nicht   (derselbe Lauf)
 //! ```
 //!
 //! Die zweite Zeile des Ablaufs ist die Zusage aus C2.6, und sie steht hier,
@@ -19,6 +22,16 @@
 //! auf den Pfadtext, also traefe sie eine Datei genauso wie den Ordner daneben.
 //! Ein Rufer, der die Frage vor dem Aufruf stellt, haelt die Zusage fuer sich
 //! und nicht fuer den naechsten Rufer.
+//!
+//! **Der Rueckfallzweig laeuft in demselben [`Lauf`]** wie die Erkennung, und
+//! das ist die ganze Bauart hinter C4.2: hat der zweite Erkennungsdurchgang
+//! den Ordner gelesen, um Kennzeichendateien zu pruefen, findet die erste
+//! Zaehlzeile des Default-Profils den Stand in der Merkstelle vor; hat er es
+//! nicht, wird ueberhaupt erst gelesen, wenn sie ihn braucht. Ein zweiter
+//! `Lauf` fuer das Default-Profil waere die einzige Bauart, die einen zweiten
+//! Leselauf erzeugte, und er entsteht nicht. Die drei Zeilen tragen dieselbe
+//! [`Ortsangabe::wurzel`], loesen also auf denselben [`Ort::Einer`] auf und
+//! teilen sich die eine Lesung (C4.1).
 //!
 //! # Ein Ort wird je Zusammenfassung hoechstens einmal gelesen
 //!
@@ -197,22 +210,33 @@ use crate::verzeichnis::leser::{self, Lesestand};
 use crate::verzeichnis::sys::ortszeit;
 use crate::verzeichnis::{Eintrag, Typ};
 
+use super::defaultprofil::defaultprofil;
 use super::erkennung::erkennen;
 use super::{
-    Anzeige, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, Haushalt, Ortsangabe, Profile, Wert,
-    Zusammenfassung, Zusammenfassungszeile,
+    Anzeige, Auskunft, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, Haushalt, Ortsangabe,
+    Profil, Profile, Wert, Zusammenfassung, Zusammenfassungszeile,
 };
 
 // ---------------------------------------------------------------------------
 // Der Einstieg
 // ---------------------------------------------------------------------------
 
-/// Die Zusammenfassung eines ausgewaehlten Ordners, oder `None`.
+/// Die Auskunft ueber einen ausgewaehlten Ordner, oder `None`.
 ///
-/// `None` heisst: kein Profil greift, und die Vorschau zeigt die heutige
-/// Metadatenanzeige (C2.5). Denselben Weg nimmt ein Ordner, der sich nicht
-/// aufloesen laesst, denn ohne aufgeloesten Ordner gibt es keine Schranke, an
-/// der C3.13 zu messen waere.
+/// Sie hat seit der Runde 19 zwei Gestalten, und der Rufer bekommt gesagt,
+/// welche ([`Auskunft`]): erkennt ein Profil aus `readers.toml` den Ordner,
+/// ersetzt seine Zusammenfassung die Metadatenanzeige; erkennt keines ihn,
+/// treten die drei Zeilen des eingebauten [`defaultprofil`] unter sie (C1.1,
+/// C1.2). Der Rueckfallweg ist damit **einer** und liegt hier und nicht beim
+/// Rufer, aus demselben Grund, aus dem C2.6 hier gehalten wird.
+///
+/// `None` heisst: der Eintrag bekommt keine der zwei Auskuenfte, und die
+/// Vorschau zeigt die sechs Metadatenangaben allein. Das trifft einen Ordner,
+/// der sich nicht aufloesen laesst, denn ohne aufgeloesten Ordner gibt es
+/// keine Schranke, an der C3.13 zu messen waere; einen Eintrag, der
+/// aufgeloest kein Verzeichnis ist; und eine **Verknuepfung**, auch auf einen
+/// Ordner (Festlegung A4, C1.7) — ein Profil mit Pfadmuster kann sie sehr
+/// wohl erkennen, das Default-Profil greift auf sie nicht.
 ///
 /// **Ein Eintrag, der aufgeloest kein Verzeichnis ist, bekommt nie eine
 /// Zusammenfassung** (C2.6), auch dann nicht, wenn sein Pfad ein Pfadmuster
@@ -229,10 +253,10 @@ use super::{
 /// Kopfzeile der Zusammenfassung zeigt ihn aus demselben Grund. Gelesen und
 /// verglichen wird dagegen am aufgeloesten Pfad, denn nur er beantwortet, ob
 /// eine Ortsangabe im Ordner bleibt.
-#[must_use = "die Zusammenfassung ist das Ergebnis des ganzen Lesens; wer sie \
+#[must_use = "die Auskunft ist das Ergebnis des ganzen Lesens; wer sie \
               fallen laesst, hat den Ordner umsonst gelesen"]
-pub fn zusammenfassen(profile: &Profile, ordner: &Path) -> Option<Zusammenfassung> {
-    zusammenfassen_gezaehlt(profile, ordner).map(|(zusammenfassung, _)| zusammenfassung)
+pub fn zusammenfassen(profile: &Profile, ordner: &Path) -> Option<Auskunft> {
+    zusammenfassen_gezaehlt(profile, ordner).map(|(auskunft, _)| auskunft)
 }
 
 /// Wie [`zusammenfassen`], aber mit dem verbrauchten [`Haushalt`] daneben.
@@ -254,10 +278,7 @@ pub fn zusammenfassen(profile: &Profile, ordner: &Path) -> Option<Zusammenfassun
 /// des Paares fallen laesst.
 #[must_use = "das Paar ist das Ergebnis des ganzen Lesens; wer es fallen laesst, hat \
               den Ordner umsonst gelesen"]
-pub fn zusammenfassen_gezaehlt(
-    profile: &Profile,
-    ordner: &Path,
-) -> Option<(Zusammenfassung, Haushalt)> {
+pub fn zusammenfassen_gezaehlt(profile: &Profile, ordner: &Path) -> Option<(Auskunft, Haushalt)> {
     let wurzel = std::fs::canonicalize(ordner).ok()?;
     // C2.6, am aufgeloesten Pfad und nicht am ausgewaehlten: eine Verknuepfung
     // auf eine Datei ist eine Datei. Der Aufruf kostet einen Systemaufruf je
@@ -268,23 +289,37 @@ pub fn zusammenfassen_gezaehlt(
     }
     let lauf = Lauf::neu(&wurzel);
 
-    let profil = erkennen(profile, ordner, &|| lauf.eintraege())?;
-    let zeilen = profil
-        .zeilen()
-        .iter()
-        .map(|zeile| {
-            let wert = match zeile.baustein() {
-                Some(baustein) => lauf.rechnen(baustein),
-                // Beim Laden abgewiesen: die Beschriftung bleibt, der Wert ist
-                // der Platzhalter (C3.12).
-                None => Wert::Nicht,
-            };
-            Zusammenfassungszeile::neu(zeile.beschriftung().to_owned(), wert)
-        })
-        .collect();
+    // Beide Zweige rechnen in **diesem** Lauf; der Modulkopf sagt, warum das
+    // die ganze Bauart hinter C4.2 ist.
+    let auskunft = match erkennen(profile, ordner, &|| lauf.eintraege()) {
+        Some(profil) => Auskunft::Erkannt(Zusammenfassung::neu(
+            ordnername(ordner),
+            ordner.to_path_buf(),
+            lauf.zeilen_rechnen(profil),
+        )),
+        None => {
+            if !ist_selbst_ein_verzeichnis(ordner) {
+                return None;
+            }
+            Auskunft::Default(lauf.zeilen_rechnen(defaultprofil()))
+        }
+    };
+    Some((auskunft, lauf.haushalt.get()))
+}
 
-    let zusammenfassung = Zusammenfassung::neu(ordnername(ordner), ordner.to_path_buf(), zeilen);
-    Some((zusammenfassung, lauf.haushalt.get()))
+/// Ob der **ausgewaehlte** Eintrag selbst ein Verzeichnis ist und keine
+/// Verknuepfung auf eines (Festlegung A4, C1.7).
+///
+/// Gefragt wird mit `symlink_metadata` am ausgewaehlten Pfad und nicht am
+/// aufgeloesten: der aufgeloeste ist nach der Pruefung oben immer ein
+/// Verzeichnis, und die Frage ist gerade, ob der Nutzer eine Verknuepfung
+/// darauf ausgewaehlt hat. Der Aufruf kostet einen Systemaufruf und faellt
+/// allein auf dem Rueckfallweg an; er steht hier im Kern und nicht am Zweig
+/// eines Rufers, aus demselben Grund, den der Doc-Kommentar von
+/// [`zusammenfassen`] fuer C2.6 nennt. Ein Fehler beim Fragen zaehlt als
+/// nein: was sich nicht befragen laesst, bekommt keine Zaehlzeilen.
+fn ist_selbst_ein_verzeichnis(ordner: &Path) -> bool {
+    std::fs::symlink_metadata(ordner).is_ok_and(|angaben| angaben.is_dir())
 }
 
 /// Der Name des Ordners fuer die Kopfzeile (Festlegung A6).
@@ -568,6 +603,28 @@ impl<'w> Lauf<'w> {
         };
         let stand = self.stand_am(&aufgeloest)?;
         Some(rechnen(pfad, &stand))
+    }
+
+    /// Rechnet die Zeilen eines Profils in Dateireihenfolge.
+    ///
+    /// Die **eine** Stelle, an der aus einem Profil Zusammenfassungszeilen
+    /// werden; das erkannte Profil und das eingebaute Default-Profil gehen
+    /// beide hier durch, damit es bei einer Maschine bleibt (C3.7).
+    #[must_use = "die Zeilen sind die Antwort des ganzen Profils"]
+    fn zeilen_rechnen(&self, profil: &Profil) -> Vec<Zusammenfassungszeile> {
+        profil
+            .zeilen()
+            .iter()
+            .map(|zeile| {
+                let wert = match zeile.baustein() {
+                    Some(baustein) => self.rechnen(baustein),
+                    // Beim Laden abgewiesen: die Beschriftung bleibt, der Wert
+                    // ist der Platzhalter (C3.12).
+                    None => Wert::Nicht,
+                };
+                Zusammenfassungszeile::neu(zeile.beschriftung().to_owned(), wert)
+            })
+            .collect()
     }
 
     /// Rechnet einen einzelnen Baustein.

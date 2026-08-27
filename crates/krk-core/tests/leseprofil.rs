@@ -52,7 +52,7 @@ use krk_core::ablage::leseprofile::AUSLIEFERUNGSTEXT;
 use krk_core::leseprofil::datei::{Profildatei, pruefen};
 use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{
-    Anzeige, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE,
+    Anzeige, Auskunft, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE,
     HOECHSTENS_LESELAEUFE, HOECHSTENS_OEFFNUNGEN, Haushalt, Profil, Profile, Wert, Zusammenfassung,
     Zusammenfassungszeile, zusammenfassen, zusammenfassen_gezaehlt,
 };
@@ -1151,7 +1151,28 @@ fn zusammengefasst(text: &str, ordner: &Path) -> Zusammenfassung {
 fn gezaehlt(text: &str, ordner: &Path) -> (Zusammenfassung, Haushalt) {
     let (profile, meldungen) = gepruefte(text);
     assert!(meldungen.is_empty(), "unerwartete Meldungen: {meldungen:?}");
-    zusammenfassen_gezaehlt(&profile, ordner).expect("kein Profil greift auf den Pruefordner")
+    gezaehlt_erkannt(&profile, ordner).expect("kein Profil greift auf den Pruefordner")
+}
+
+/// Die Zusammenfassung eines **erkannten** Ordners aus der Auskunft.
+///
+/// Seit der Runde 19 liefert `zusammenfassen` fuer einen Ordner ohne
+/// Profiltreffer die Zeilen des Default-Profils statt `None`; die Proben der
+/// Runde 16 fragen nach dem erkannten Profil und halten hier fest, dass es
+/// eines war.
+fn erkannte(auskunft: Auskunft) -> Zusammenfassung {
+    match auskunft {
+        Auskunft::Erkannt(zusammenfassung) => zusammenfassung,
+        Auskunft::Default(zeilen) => {
+            panic!("kein Profil hat erkannt; das Default-Profil liefert {zeilen:?}")
+        }
+    }
+}
+
+/// Wie [`erkannte`], fuer das Paar aus `zusammenfassen_gezaehlt`.
+fn gezaehlt_erkannt(profile: &Profile, ordner: &Path) -> Option<(Zusammenfassung, Haushalt)> {
+    zusammenfassen_gezaehlt(profile, ordner)
+        .map(|(auskunft, haushalt)| (erkannte(auskunft), haushalt))
 }
 
 /// Die Werte der Zusammenfassung, zu ihren Beschriftungen.
@@ -1593,8 +1614,9 @@ fn das_vorhandensein_antwortet_ja_und_nein_und_die_abgewiesene_zeile_bleibt() {
     ));
     assert_eq!(meldungen.len(), 1, "{meldungen:?}");
 
-    let zusammenfassung =
-        zusammenfassen(&profile, ordner.pfad()).expect("kein Profil greift auf den Pruefordner");
+    let zusammenfassung = erkannte(
+        zusammenfassen(&profile, ordner.pfad()).expect("kein Profil greift auf den Pruefordner"),
+    );
     assert_eq!(
         werte(&zusammenfassung),
         [
@@ -2142,7 +2164,12 @@ kennzeichen = '^\.fusion-nicht-da$'
     );
     assert!(meldungen.is_empty(), "{meldungen:?}");
 
-    assert!(zusammenfassen(&profile, ordner.pfad()).is_none());
+    // Seit der Runde 19 tritt hier das eingebaute Default-Profil ein (C1.1);
+    // ein erkanntes Profil ist es nicht.
+    assert!(matches!(
+        zusammenfassen(&profile, ordner.pfad()),
+        Some(Auskunft::Default(_))
+    ));
     assert!(
         zusammenfassen(&profile, &ordner.unter("gibt-es-nicht")).is_none(),
         "ein Ordner, der sich nicht aufloesen laesst, liefert keine Zusammenfassung"
@@ -3055,7 +3082,7 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
 
     let eine_runde = runde("haushalt-eine-runde");
     let (zusammenfassung, haushalt) =
-        zusammenfassen_gezaehlt(&profile, eine_runde.pfad()).expect("kein Profil greift");
+        gezaehlt_erkannt(&profile, eine_runde.pfad()).expect("kein Profil greift");
     let rundenwerte = werte(&zusammenfassung);
 
     assert_eq!(
@@ -3102,7 +3129,7 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
 
     let wurzel = werkbankwurzel("haushalt-wurzel");
     let (zusammenfassung, haushalt) =
-        zusammenfassen_gezaehlt(&profile, wurzel.pfad()).expect("kein Profil greift");
+        gezaehlt_erkannt(&profile, wurzel.pfad()).expect("kein Profil greift");
     let wurzelwerte = werte(&zusammenfassung);
 
     assert_eq!(
@@ -3160,7 +3187,7 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     );
     let (_speicher, shared) = gemeinsamer_speicher("haushalt-speicher", &orte);
     let (zusammenfassung, haushalt) =
-        zusammenfassen_gezaehlt(&profile, &shared).expect("kein Profil greift");
+        gezaehlt_erkannt(&profile, &shared).expect("kein Profil greift");
     let speicherwerte = werte(&zusammenfassung);
 
     assert_eq!(
@@ -3233,7 +3260,7 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
 
     let projekt = projektwurzel("haushalt-projektwurzel");
     let (zusammenfassung, haushalt) =
-        zusammenfassen_gezaehlt(&profile, projekt.pfad()).expect("kein Profil greift");
+        gezaehlt_erkannt(&profile, projekt.pfad()).expect("kein Profil greift");
     let projektwerte = werte(&zusammenfassung);
 
     assert_eq!(
@@ -3321,7 +3348,7 @@ fn ein_elfter_unterspeicher_kostet_einen_elften_leselauf() {
     assert_eq!(orte.len(), 11, "die Kopie nennt nicht elf Orte: {orte:?}");
     let (_speicher, shared) = gemeinsamer_speicher("haushalt-elfter-speicher", &orte);
     let (zusammenfassung, haushalt) =
-        zusammenfassen_gezaehlt(&profile, &shared).expect("kein Profil greift");
+        gezaehlt_erkannt(&profile, &shared).expect("kein Profil greift");
 
     assert_eq!(
         werte(&zusammenfassung).first().map(|(name, _)| *name),
@@ -3378,7 +3405,7 @@ pfad = '(a+)+$'
     );
     assert!(meldungen.is_empty(), "{meldungen:?}");
     assert!(
-        zusammenfassen(&nur_pfad, &tief).is_none(),
+        !matches!(zusammenfassen(&nur_pfad, &tief), Some(Auskunft::Erkannt(_))),
         "der Pfad endet auf b und darf nicht treffen"
     );
 
@@ -3392,7 +3419,10 @@ kennzeichen = '(a+)+$'
     );
     assert!(meldungen.is_empty(), "{meldungen:?}");
     assert!(
-        zusammenfassen(&nur_kennzeichen, &tief).is_none(),
+        !matches!(
+            zusammenfassen(&nur_kennzeichen, &tief),
+            Some(Auskunft::Erkannt(_))
+        ),
         "der eine Eintrag endet auf b und darf nicht treffen"
     );
 
@@ -3553,12 +3583,13 @@ fn kind_fasst_mit_einem_freien_deskriptor_zusammen() {
          die Bauart"
     );
     assert!(
-        ohne.is_none(),
+        !matches!(ohne, Some(Auskunft::Erkannt(_))),
         "ohne einen freien Deskriptor entsteht eine Zusammenfassung; die Gegenprobe \
          belegt nichts mehr"
     );
 
-    let zusammenfassung = mit.expect("mit einem freien Deskriptor entsteht keine Zusammenfassung");
+    let zusammenfassung =
+        erkannte(mit.expect("mit einem freien Deskriptor entsteht keine Zusammenfassung"));
     let werte = werte(&zusammenfassung);
     assert_eq!(
         werte[0].1,

@@ -8,7 +8,11 @@
 //! danach arbeitet, und die Werte, die sie liefert. Welches Profil ein
 //! ausgewaehlter Ordner bekommt, entscheidet [`erkennung`] in zwei
 //! Durchgaengen; was seine Zeilen dort ergeben, rechnet [`bausteine`] innerhalb
-//! des [`Haushalt`]s, dessen Zahlen weiter unten als Konstanten stehen.
+//! des [`Haushalt`]s, dessen Zahlen weiter unten als Konstanten stehen. Trifft
+//! kein Profil, tritt seit der Runde 19 das eingebaute [`defaultprofil`] ein,
+//! und der Rufer erfaehrt ueber [`Auskunft`], welche der zwei Antworten er
+//! bekommen hat: die erkannte ersetzt die Metadatenanzeige, die des
+//! Default-Profils tritt unter sie.
 //!
 //! ```text
 //! readers.toml ──serde──> datei::Profildatei ──datei::pruefen──> Profile
@@ -16,10 +20,20 @@
 //!                            ausgewaehlter Ordner ──erkennung───────┘
 //!                                                   │
 //!                                    bausteine::zusammenfassen
-//!                                                   │
-//!                                                   v
-//!                                     Zusammenfassung ──als_text──> Vorschau
+//!                                      │                      │
+//!                             Profil trifft         keines trifft, Ordner
+//!                                      │                      │
+//!                                      v                      v
+//!                     Auskunft::Erkannt(Zusammenfassung)   Auskunft::Default(Zeilen)
+//!                                      │                      │
+//!                                  als_text              zeilen_als_text
+//!                                      v                      v
+//!                          ersetzt die Metadaten   tritt unter die Metadaten
 //! ```
+//!
+//! Eine Verknuepfung bekommt keine der zwei Antworten (Festlegung A4, C1.7):
+//! `zusammenfassen` liefert dort `None`, und die Vorschau bleibt bei den
+//! sechs Metadatenangaben allein.
 //!
 //! # Warum die Auswertung im Kern liegt und nicht in `krk-ui`
 //!
@@ -97,9 +111,11 @@ use crate::verzeichnis::Typ;
 
 pub mod bausteine;
 pub mod datei;
+pub mod defaultprofil;
 pub mod erkennung;
 
 pub use bausteine::{zusammenfassen, zusammenfassen_gezaehlt};
+pub use defaultprofil::defaultprofil;
 
 // ---------------------------------------------------------------------------
 // Die Zahlen des Haushalts
@@ -595,20 +611,12 @@ impl Zusammenfassung {
 
     /// Die Zusammenfassung als anzuzeigender Text (C4.2, C4.3).
     ///
-    /// Eine reine Funktion, und die **eine** Stelle, an der aus den Werten
-    /// Zeilen werden. `Name:` und `Pfad:` stehen oben wie in der
+    /// Eine reine Funktion: `Name:` und `Pfad:` stehen oben wie in der
     /// Metadatenanzeige (Festlegung A6); darunter steht je Profilzeile eine
-    /// Zeile aus Beschriftung und Wert.
-    ///
-    /// **Wann ein Wert unter seine Beschriftung rutscht**, ist eine
-    /// vollstaendige und ueberschneidungsfreie Unterscheidung mit zwei Fragen:
-    /// [`Wert::Titel`] steht immer darunter, weil C4.3 einen Block aus bis zu N
-    /// Zeilen verlangt, und jeder andere Wert genau dann, wenn er selbst mehr
-    /// als eine Zeile traegt. Das zweite ist kein Sonderfall, sondern die Folge
-    /// von C3.9: der Feldbaustein greift einen ganzen Absatz, und einer der
-    /// Circle-Datensaetze dieser Werkbank traegt seine Directive auf vier
-    /// Zeilen. Hinter der Beschriftung stehend liefe er in die naechste
-    /// Beschriftung hinein.
+    /// Zeile aus Beschriftung und Wert. Die Zeilen setzt [`zeilen_als_text`],
+    /// die **eine** Stelle, an der aus Werten Zeilen werden — seit der Runde
+    /// 19 herausgezogen, weil die Vorschau dieselben Zeilen auch unter ihre
+    /// Metadatenangaben setzt, und zwei Stellen dafuer auseinanderliefen.
     ///
     /// Der Weg an die Flaeche geht danach durch `text_zeigen` wie jeder andere
     /// Text der Vorschau; damit gilt die Auswaehlbarkeit aus der Runde 14
@@ -616,19 +624,68 @@ impl Zusammenfassung {
     #[must_use = "der Text ist das Ergebnis; wer ihn fallen laesst, zeigt nichts an"]
     pub fn als_text(&self) -> String {
         let mut ausgabe = format!("Name: {}\nPfad: {}", self.name, self.pfad.display());
-        for zeile in &self.zeilen {
-            let wert = zeile.wert().als_text();
-            if matches!(zeile.wert(), Wert::Titel(_)) || wert.contains('\n') {
-                ausgabe.push_str(&format!("\n{}:", zeile.beschriftung()));
-                for teilzeile in wert.lines() {
-                    ausgabe.push_str(&format!("\n{EINRUECKUNG}{teilzeile}"));
-                }
-            } else {
-                ausgabe.push_str(&format!("\n{}: {wert}", zeile.beschriftung()));
-            }
-        }
+        ausgabe.push_str(&zeilen_als_text(&self.zeilen));
         ausgabe
     }
+}
+
+/// Was die Auswertung fuer einen Ordner liefert, und welche der zwei
+/// Antworten es ist.
+///
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: die zwei Werte
+/// unterscheiden sich darin, was die Vorschau mit ihnen tut, und dieser
+/// Unterschied gehoert in den Typ und nicht in eine Prosastelle beim Rufer.
+/// Ein dritter Wert haelt den Bau in `vorschaumodell::laden` an.
+///
+/// Was **keine** Auskunft bekommt, sagt `Option` darum herum: ein Eintrag, der
+/// sich nicht aufloesen laesst oder aufgeloest kein Verzeichnis ist (C2.6 der
+/// Runde 16), und eine Verknuepfung, auch auf einen Ordner (Festlegung A4,
+/// C1.7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Auskunft {
+    /// Ein Profil aus `readers.toml` hat den Ordner erkannt. Die
+    /// Zusammenfassung **ersetzt** die Metadatenanzeige (C1.2).
+    Erkannt(Zusammenfassung),
+    /// Kein Profil hat getroffen, und der Eintrag ist selbst ein Verzeichnis.
+    /// Die Zeilen des eingebauten [`defaultprofil`] treten **unter** die sechs
+    /// Metadatenangaben (C1.1, C2.1); eine Kopfzeile tragen sie nicht, denn
+    /// Name und Pfad stehen schon darueber.
+    Default(Vec<Zusammenfassungszeile>),
+}
+
+/// Zeilen aus Beschriftung und Wert als Text, jede mit fuehrendem Umbruch.
+///
+/// Die **eine** Stelle, an der aus Werten Zeilen werden: [`Zusammenfassung::als_text`]
+/// ruft sie hinter seiner Kopfzeile, und die Vorschau ruft sie fuer die
+/// Zeilen einer [`Auskunft::Default`] hinter ihren sechs Metadatenangaben.
+/// Jede Zeile beginnt mit `\n`, damit beide Rufer sie an ihren Kopf haengen
+/// koennen, ohne selbst einen Umbruch zu setzen; fuer keine Zeile ist die
+/// Ausgabe leer.
+///
+/// **Wann ein Wert unter seine Beschriftung rutscht**, ist eine vollstaendige
+/// und ueberschneidungsfreie Unterscheidung mit zwei Fragen: [`Wert::Titel`]
+/// steht immer darunter, weil C4.3 der Runde 16 einen Block aus bis zu N
+/// Zeilen verlangt, und jeder andere Wert genau dann, wenn er selbst mehr als
+/// eine Zeile traegt. Das zweite ist kein Sonderfall, sondern die Folge von
+/// C3.9 jener Runde: der Feldbaustein greift einen ganzen Absatz, und einer
+/// der Circle-Datensaetze dieser Werkbank traegt seine Directive auf vier
+/// Zeilen. Hinter der Beschriftung stehend liefe er in die naechste
+/// Beschriftung hinein.
+#[must_use = "der Text ist das Ergebnis; wer ihn fallen laesst, zeigt nichts an"]
+pub fn zeilen_als_text(zeilen: &[Zusammenfassungszeile]) -> String {
+    let mut ausgabe = String::new();
+    for zeile in zeilen {
+        let wert = zeile.wert().als_text();
+        if matches!(zeile.wert(), Wert::Titel(_)) || wert.contains('\n') {
+            ausgabe.push_str(&format!("\n{}:", zeile.beschriftung()));
+            for teilzeile in wert.lines() {
+                ausgabe.push_str(&format!("\n{EINRUECKUNG}{teilzeile}"));
+            }
+        } else {
+            ausgabe.push_str(&format!("\n{}: {wert}", zeile.beschriftung()));
+        }
+    }
+    ausgabe
 }
 
 /// Was an der Stelle eines Wertes steht, ueber den nichts zu sagen ist (C3.12).
