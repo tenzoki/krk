@@ -400,6 +400,10 @@ fn baustein_pruefen(baustein: Bausteindatei) -> Result<Baustein, String> {
         Bausteindatei::Zaehlung(zaehlung) => Ok(Baustein::Zaehlung {
             ort: ortsangabe(zaehlung.ordner.as_deref())?,
             muster: wahlfreies_muster(zaehlung.muster.as_deref())?,
+            // Die zwei Schluessel `typ` und `versteckt` kommen mit Schritt 2
+            // der Runde 19 in die Profildatei; bis dahin gilt die alte Form.
+            typ: None,
+            versteckt: false,
         }),
         Bausteindatei::Juengste(juengste) => Ok(Baustein::Juengste {
             ort: ortsangabe_ohne_platzhalter(juengste.ordner.as_deref(), "juengste")?,

@@ -152,7 +152,12 @@ kennzeichen = '^\.fusion-setup$'
     let zeilen = profil.zeilen();
 
     match zeilen[0].baustein().expect("die Zaehlung fehlt") {
-        Baustein::Zaehlung { ort, muster } => {
+        Baustein::Zaehlung {
+            ort,
+            muster,
+            typ: None,
+            versteckt: false,
+        } => {
             assert!(
                 ort.teile().is_empty(),
                 "ohne Angabe gilt der erkannte Ordner"

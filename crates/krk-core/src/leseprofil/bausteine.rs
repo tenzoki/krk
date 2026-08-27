@@ -131,6 +131,11 @@
 //!
 //! - **Zaehlung und Vorhandensein** sehen auf die Namen aller Eintraege, gleich
 //!   welchen Typs. Eine Verknuepfung zaehlt mit, denn sie steht im Ordner.
+//!   Seit der Runde 19 laesst sich die Zaehlung auf **einen** Typ
+//!   einschraenken ([`Baustein::Zaehlung`], Feld `typ`); sie folgt dabei dem
+//!   Typ, den der Leser meldet, und geht keiner Verknuepfung nach: eine
+//!   Verknuepfung auf einen Ordner zaehlt als Verknuepfung und nicht als
+//!   Ordner (C2.9, Festlegung A5). Gelesen wird auch dafuer nichts.
 //! - **Juengste N und Feld** lesen Dateien und nehmen dafuer allein Eintraege
 //!   vom Typ [`Typ::Datei`]. Eine Verknuepfung wird uebergangen, aus demselben
 //!   Grund, aus dem der Durchlauf nicht in sie absteigt: sie fuehrt aus dem
@@ -572,8 +577,15 @@ impl<'w> Lauf<'w> {
     #[must_use = "der Wert ist die Antwort dieser Profilzeile"]
     fn rechnen(&self, baustein: &Baustein) -> Wert {
         match baustein {
-            Baustein::Zaehlung { ort, muster } => self
-                .am_ort(ort, |stand| zaehlen(stand, muster.as_ref()))
+            Baustein::Zaehlung {
+                ort,
+                muster,
+                typ,
+                versteckt,
+            } => self
+                .am_ort(ort, |stand| {
+                    zaehlen(stand, muster.as_ref(), *typ, *versteckt)
+                })
                 .unwrap_or(Wert::Nicht),
             Baustein::Juengste {
                 ort,
@@ -700,26 +712,64 @@ impl<'w> Lauf<'w> {
 // Die zwei Bausteine, die allein auf Namen sehen
 // ---------------------------------------------------------------------------
 
-/// B1: die Zahl der Eintraege, deren Name das Muster erfuellt.
+/// B1: die Zahl der Eintraege, deren Name das Muster erfuellt und die vom
+/// genannten Typ sind.
 ///
-/// Ohne Muster zaehlt sie alle. Sie laeuft flach ueber eine Ebene und nicht
-/// ueber den Unterbaum (Festlegung A2, C3.2).
+/// Ohne Muster und ohne Typ zaehlt sie alle. Sie laeuft flach ueber eine
+/// Ebene und nicht ueber den Unterbaum (Festlegung A2, C3.2; C2.8).
+///
+/// **Ein Durchgang, zwei Zaehler.** Ob ein Eintrag hineinfaellt, entscheidet
+/// [`trifft`] an Muster und Typ zugleich; der Durchgang zaehlt die Treffer und
+/// die versteckten unter ihnen. Das ist der eine Zaehlweg ueber einen
+/// Ordnerbestand nach Typ und nach versteckt, den C3.7 verlangt; das
+/// eingebaute Default-Profil und jedes Profil aus `readers.toml` gehen
+/// hierdurch.
+///
+/// **Die Reihenfolge der zwei Zweige ist die Regel zu C2.10:** eine
+/// abgeschnittene Lesung liefert [`Wert::UeberGrenze`] mit den Treffern
+/// innerhalb der gelesenen Eintraege, gleich wie `versteckt` steht, und die
+/// Klammer entfaellt damit von selbst. Erst eine vollstaendige Lesung fragt
+/// nach `versteckt` und liefert [`Wert::ZahlMitVersteckten`] oder, ohne die
+/// Angabe, [`Wert::Zahl`] wie vor der Runde 19 (C3.3).
 ///
 /// Eine Zahl **0** ist eine Antwort und kein Fehlschlag: der Ordner steht da
 /// und ist gelesen, es trifft nur nichts darin. Der Platzhalter bleibt dem
 /// Fall vorbehalten, in dem der Ordner selbst nicht zu lesen war.
 #[must_use = "der Wert ist die Antwort dieser Profilzeile"]
-fn zaehlen(stand: &Lesestand, muster: Option<&Regex>) -> Wert {
-    let gezaehlt = stand
+fn zaehlen(stand: &Lesestand, muster: Option<&Regex>, typ: Option<Typ>, versteckt: bool) -> Wert {
+    let mut treffer: u64 = 0;
+    let mut versteckte: u64 = 0;
+    for eintrag in stand
         .eintraege
         .iter()
-        .filter(|eintrag| muster.is_none_or(|muster| muster.is_match(&eintrag.name)))
-        .count() as u64;
-    if stand.abgeschnitten {
-        Wert::UeberGrenze(gezaehlt)
-    } else {
-        Wert::Zahl(gezaehlt)
+        .filter(|eintrag| trifft(eintrag, muster, typ))
+    {
+        treffer += 1;
+        if eintrag.versteckt {
+            versteckte += 1;
+        }
     }
+    if stand.abgeschnitten {
+        Wert::UeberGrenze(treffer)
+    } else if versteckt {
+        Wert::ZahlMitVersteckten {
+            zahl: treffer,
+            versteckt: versteckte,
+        }
+    } else {
+        Wert::Zahl(treffer)
+    }
+}
+
+/// Ob ein Eintrag in die Zaehlung faellt: sein Name erfuellt das Muster
+/// **und** er ist vom genannten Typ. Eine fehlende Angabe laesst alles durch.
+///
+/// Der Typ ist der, den der Leser meldet, und der folgt keiner Verknuepfung
+/// (C2.9, Festlegung A5): `Eintrag::typ` sagt `Verknuepfung`, gleich ob sie
+/// auf eine Datei oder auf einen Ordner zeigt.
+fn trifft(eintrag: &Eintrag, muster: Option<&Regex>, typ: Option<Typ>) -> bool {
+    muster.is_none_or(|muster| muster.is_match(&eintrag.name))
+        && typ.is_none_or(|typ| eintrag.typ == typ)
 }
 
 /// B4: ob ein Eintrag das Muster erfuellt.

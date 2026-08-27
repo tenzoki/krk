@@ -93,6 +93,8 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
+use crate::verzeichnis::Typ;
+
 pub mod bausteine;
 pub mod datei;
 pub mod erkennung;
@@ -293,15 +295,29 @@ impl Zeile {
 /// hergeben.
 #[derive(Debug, Clone)]
 pub enum Baustein {
-    /// B1: die Zahl der Eintraege, deren Name das Muster erfuellt.
+    /// B1: die Zahl der Eintraege, deren Name das Muster erfuellt und die vom
+    /// genannten Typ sind.
     ///
-    /// Ohne Muster zaehlt sie alle. Sie laeuft flach ueber eine Ebene und
-    /// nicht ueber den Unterbaum (Festlegung A2, C3.2).
+    /// Ohne Muster und ohne Typ zaehlt sie alle. Sie laeuft flach ueber eine
+    /// Ebene und nicht ueber den Unterbaum (Festlegung A2, C3.2). Seit der
+    /// Runde 19 kann sie auf einen Typ eingeschraenkt werden und die
+    /// versteckten unter den Treffern beziffern; beides ist freiwillig, und
+    /// ohne die zwei Angaben liefert sie, was sie vor jener Runde lieferte
+    /// (C3.2, C3.3).
     Zaehlung {
         /// Wo gezaehlt wird.
         ort: Ortsangabe,
         /// Das Muster auf dem Eintragsnamen, oder alle Eintraege.
         muster: Option<Regex>,
+        /// Nur Eintraege dieses Typs; ohne die Angabe alle (C3.2). Der Typ ist
+        /// der, den der Leser meldet: eine Verknuepfung bleibt eine
+        /// Verknuepfung, gleich worauf sie zeigt (C2.9).
+        typ: Option<Typ>,
+        /// Ob die Klammer mit der Zahl der versteckten dasteht (C3.3). Mit
+        /// der Angabe liefert die Zeile [`Wert::ZahlMitVersteckten`], ohne sie
+        /// [`Wert::Zahl`]; eine abgeschnittene Lesung liefert in beiden Faellen
+        /// [`Wert::UeberGrenze`] (C2.10).
+        versteckt: bool,
     },
     /// B2: die N Eintraege mit dem juengsten Aenderungsdatum.
     ///
@@ -655,12 +671,29 @@ impl Zusammenfassungszeile {
 
 /// Was ein Baustein ergeben hat.
 ///
-/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: ein siebter Wert
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: ein achter Wert
 /// haelt die Anzeige an und erzwingt die Antwort darauf, wie er dasteht.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Wert {
     /// Eine Zahl, genau gezaehlt.
     Zahl(u64),
+    /// Eine Zahl und die Zahl der versteckten Eintraege darunter, in Klammern.
+    ///
+    /// „42 (3)" heisst 42 Treffer insgesamt, davon 3 versteckt: **die Zahl vor
+    /// der Klammer schliesst die in der Klammer ein** (C2.3). Die Klammer
+    /// steht auch bei null versteckten (C2.4), und ein leerer Ordner liefert
+    /// „0 (0)" (C2.5). Versteckt ist, was `Eintrag::versteckt` sagt, also der
+    /// Punkt am Namensanfang und das Kennzeichen des Dateisystems (C2.6).
+    ///
+    /// Eine abgeschnittene Lesung liefert diesen Wert nie, sondern
+    /// [`Wert::UeberGrenze`]; die Klammer entfaellt dort durch die Reihenfolge
+    /// der Zweige in `bausteine::zaehlen` und nicht durch eine zweite Regel.
+    ZahlMitVersteckten {
+        /// Alle getroffenen Eintraege, die versteckten eingeschlossen.
+        zahl: u64,
+        /// Wie viele davon versteckt sind.
+        versteckt: u64,
+    },
     /// Die Lesung wurde bei [`HOECHSTENS_EINTRAEGE`] abgebrochen; die Zahl ist,
     /// was **innerhalb** der gelesenen Eintraege getroffen hat.
     ///
@@ -721,6 +754,7 @@ impl Wert {
     pub fn als_text(&self) -> String {
         match self {
             Wert::Zahl(zahl) => zahl.to_string(),
+            Wert::ZahlMitVersteckten { zahl, versteckt } => format!("{zahl} ({versteckt})"),
             Wert::UeberGrenze(gezaehlt) => {
                 format!(
                     "mindestens {gezaehlt} (Lesung bei {HOECHSTENS_EINTRAEGE} Einträgen abgebrochen)"
