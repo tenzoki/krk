@@ -1,0 +1,35 @@
+{"ts":"2026-08-26T16:14:12.334Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/decisions/260826-1811_o_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md"}
+{"ts":"2026-08-26T16:17:08.493Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/planning/260826-1811_o_plan-die-fuenf-schweren-befunde-der-vollbaum-durchsicht.md"}
+{"ts":"2026-08-26T16:17:25.268Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/planning/260826-1811_o_plan-die-fuenf-schweren-befunde-der-vollbaum-durchsicht.md"}
+{"ts":"2026-08-26T16:17:31.559Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/planning/260826-1811_o_plan-die-fuenf-schweren-befunde-der-vollbaum-durchsicht.md"}
+{"ts":"2026-08-26T16:17:39.422Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/planning/260826-1811_o_plan-die-fuenf-schweren-befunde-der-vollbaum-durchsicht.md"}
+{"ts":"2026-08-26T16:18:05.635Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/history/260826-1811-planner-die-fuenf-schweren-befunde.md"}
+{"ts":"2026-08-26T17:28:12.442Z","event":"staging_drift","detail":"?? shared/backlog/260826-1920_o_vorschau-default-profil-zaehlt-ordnerinhalt.md; ?? shared/history/260826-1930-coder-der-schwungleser-nimmt-die-huelle-ohne-warten-oeffnen.md"}
+{"ts":"2026-08-26T19:35:56.017Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-S4.txt"}
+{"ts":"2026-08-26T19:40:22.321Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-S6.txt"}
+{"ts":"2026-08-26T19:40:29.944Z","event":"staging_drift","detail":"?? shared/history/260826-2245-coder-claude-md-nennt-die-dritte-pflichtstelle.md"}
+{"ts":"2026-08-26T19:40:54.301Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-S5.txt"}
+{"ts":"2026-08-26T19:58:36.499Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-rev1.txt"}
+{"ts":"2026-08-26T20:08:45.799Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.md"}
+{"ts":"2026-08-26T20:10:00.744Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/history/260826-2205-reconciliation.md"}
+{"ts":"2026-08-26T20:11:34.601Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-recon.txt"}
+{"ts":"2026-08-26T20:14:02.457Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-close.txt"}
+{"ts":"2026-08-26T20:45:45.731Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/shared/history/260826-2245-orchestrator-session.md"}
+{"ts":"2026-08-26T20:45:54.286Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-27T04:23:03.568Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-0622-orchestrator-session.md"}
+{"ts":"2026-08-27T04:23:16.065Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-27T04:40:03.655Z","event":"guard_allow","tool":"Write","file":"/tmp/fusion-commit-msg-activation.txt"}
+{"ts":"2026-08-27T04:40:32.787Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-27T04:49:52.202Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_o_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"}
+{"ts":"2026-08-27T04:50:10.083Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_o_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"}
+{"ts":"2026-08-27T04:50:27.077Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_o_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"}
+{"ts":"2026-08-27T04:50:33.837Z","event":"guard_allow","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_o_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"}
+{"ts":"2026-08-27T04:51:11.986Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-0646-shaper-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"}
+{"ts":"2026-08-27T11:13:20.956Z","event":"guard_allow","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-27T13:21:37.863Z","event":"guard_allow","session_id":"d9dc5327-7b89-4844-92ff-1b191ba32a2b","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-27T13:25:50.840Z","event":"guard_allow","session_id":"d9dc5327-7b89-4844-92ff-1b191ba32a2b","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-27T13:26:51.320Z","event":"guard_allow","session_id":"d9dc5327-7b89-4844-92ff-1b191ba32a2b","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/orchestrator-live.md"}
+{"ts":"2026-08-27T13:27:08.255Z","event":"guard_allow","session_id":"d9dc5327-7b89-4844-92ff-1b191ba32a2b","tool":"Write","file":"/tmp/fusion-commit-msg-r19-planung.txt"}
+{"ts":"2026-08-27T13:27:10.471Z","event":"guard_allow","session_id":"d9dc5327-7b89-4844-92ff-1b191ba32a2b","tool":"Write","file":"/tmp/fusion-commit-msg-stilwerk.txt"}
+{"ts":"2026-08-27T13:32:23.851Z","event":"guard_allow","session_id":"d9dc5327-7b89-4844-92ff-1b191ba32a2b","tool":"Edit","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_o_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"}
+{"ts":"2026-08-27T13:33:32.545Z","event":"guard_allow","session_id":"d9dc5327-7b89-4844-92ff-1b191ba32a2b","tool":"Write","file":"/Users/k1/Projects/productive/krk/fusion-workbench/circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-1532-reconciliation.md"}

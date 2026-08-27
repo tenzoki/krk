@@ -1,7 +1,7 @@
 # Spec: Die Vorschau zählt den Inhalt eines Ordners in einem eingebauten Default-Profil
 
 **Date:** 2026-08-27
-**Status:** Draft, wartet auf das Spec-Tor des Nutzers
+**Status:** Vom Nutzer am 260827 freigegeben, A1 bis A7 ohne Einspruch (Ereignisprotokoll `orchestrator-events.jsonl`, `gate_response` 2026-08-27T11:12:58); der Bau hat nicht begonnen
 **Activated from Circle:** 260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil
 **Source:** Die Directive des Circle-Datensatzes `_t_circle.md`, vom Nutzer am 260827 festgelegt und in dieser Runde nicht mehr verhandelbar, dazu die vier Festlegungen desselben Tages und die zwei Entscheidungsdatensätze vom 260827-0629.
 
@@ -265,3 +265,9 @@ Der Spec führt **40** Abnahmekriterien, und keines ist abgehakt. Je Fähigkeit 
 **Die Datei trägt 43 Kästchen und nicht 40.** Die drei übrigen stehen unter `## User Decisions Pending` und sind offene Nutzerfragen, keine Abnahmekriterien. Wer über `- \[ \]` zählt, bekommt 43 und muss die drei abziehen.
 
 Ein Zählweg, der die Überschrift nur auf `### C` setzt, misst falsch: er schlägt die zwei Kriterien aus dem Zeitzusagen-Abschnitt der letzten Fähigkeit zu. Die Falle hat in der Runde 2 schon einmal zugeschlagen (`circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0359_*_die-erweiterungsnotiz-zaehlt-elf-abnahmekriterien-fuer-c11-gebaut-sind-dreizehn.md`).
+
+---
+
+## Reconciliation Log
+
+**260827-1532, reconciler:** Die Statuszeile stand auf „Draft, wartet auf das Spec-Tor des Nutzers", das Tor ist aber am 260827 durchlaufen: `orchestrator-events.jsonl` trägt `gate_hit` „Spec-Freigabe" und `gate_response` „proceed: Spec freigegeben, A1 bis A7 ohne Einspruch" (2026-08-27T11:12:58), und der Planner-Dispatch nennt den Spec freigegeben (`history/260827-1322-planner-vorschau-zaehlt-ordnerinhalt-im-default-profil.md`, Kopf). Die Zeile ist berichtigt. Keines der 40 Kriterien ist gebaut: `git diff eced324..HEAD -- crates/ xtask/ resources/` ist leer, der Dateimarker bleibt `_o_`.

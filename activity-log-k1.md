@@ -21,7 +21,8 @@
 
 ## Grober Verlauf
 
-- **08-26 Mi** [1-17] — Die Vollbaum-Durchsicht: fünfzehn Prüfer lesen alle 155 Rust-Dateien in fünf Runden, 121 Defekte und vier Fragen gefiltert, kein Code geändert. Ein kritischer Datenverlustpfad beim Verschieben über die Datenträgergrenze, und eine Deskriptor-Abnahme, die Ausfall nicht von Erfolg unterscheidet.
+- **08-27 Do** [3-16] — Die Runde 19 entsteht: als Circle angelegt, aktiviert, Spec mit 40 Abnahmekriterien und Plan mit 8 Schritten; nachmittags eine Setup-Sitzung mit Abgleich und Tier-1-Archiv. Kein Code geändert.
+- **08-26 Mi** [1-23] — Die Vollbaum-Durchsicht: fünfzehn Prüfer lesen alle 155 Rust-Dateien in fünf Runden, 121 Defekte und vier Fragen gefiltert. Abends die Behebungsrunde: fünf schwere Befunde behoben, darunter der Datenverlustpfad über die Datenträgergrenze, Auslieferung 1.2.1.
 - **08-25 Di** [7-22] — Runde 17 (Zip, Unzip, Finder im Kontextmenü) läuft und schließt beschränkt, Auslieferung 1.2.0; am Abend die Runde 18 ohne Circle: Vorschau vertieft, Klick-Fokus und Zip-Zeitstempel behoben, zwölf Leseprofile.
 - **08-24 Mo** [5-21] — Runde 16: die Vorschau zeigt für erkannte Orte eine Profil-Zusammenfassung, `readers.toml` als siebte Ablagedatei; schließt beschränkt, Auslieferung 1.1.0.
 - **08-23 So** [4-22] — Zwei Einblend-Defekte behoben, `cmd+e` wird der Rundweg, Auslieferungsdurchsicht und Auslieferung 1.0.0.
@@ -51,7 +52,7 @@
 
 | Woche ab (Mo) | Aktive Tage | Ø aktive Stunden/Tag |
 |---------------|-------------|----------------------|
-| 2026-08-24    | 3           | 15.7                 |
+| 2026-08-24    | 4           | 16.5                 |
 | 2026-08-17    | 6           | 18.2                 |
 | 2026-08-10    | 7           | 19.6                 |
 | 2026-08-03    | 7           | 15.0                 |
@@ -791,7 +792,7 @@ Die erste Antwort des Nutzers zur Zusatztaste (`shift`) hält nicht: macOS veren
 | 22:26 | fünf Befunde an der Profildatei behoben, die Probe zu C6.7 misst das kleinste Profil; Nachdurchsichten halten | g h r |
 | — | 36 Defektdatensätze, 5 Entscheidungen, 2 Pläne, 8 Durchsichten, 1 Analyse, 31 Sitzungsprotokolle | i d p r a h |
 
-## 2026-08-26 (Mi) [1-17]
+## 2026-08-26 (Mi) [1-23]
 
 | Zeit | Thema | Src |
 |------|-------|-----|
@@ -808,8 +809,31 @@ Die erste Antwort des Nutzers zur Zusatztaste (`shift`) hält nicht: macOS veren
 | 14:48 | Runde 5, Wurzelmodule und `xtask`: zwei Berichte, 23 Datensätze; der Baum ist vollständig gelesen | r i g |
 | 14:56 | Schlussabgleich: 15 Stichproben halten, Verdikt review-needed, Empfehlung Curator über CLAUDE.md | h g |
 | 16:32 | Sitzungsbericht vollständig; Sitzungsabschluss: Abgleich, 58 Dateien ins Archiv, Kuratorenlauf über CLAUDE.md | h g w |
-| — | 133 Defektdatensätze, 6 Entscheidungen, 19 Durchsichten, 12 Sitzungsprotokolle | i d r h |
+| 17:01 | vier Abschluss-Commits: Tätigkeitsprotokoll 20.–26., fünf CLAUDE.md-Aussagen, 58 Datensätze ins Archiv, Wächterprotokoll gerollt | g |
+| 19:28 | Behebungsrunde beginnt: ein gescheitertes Kopieren über die Datenträgergrenze lässt die Quelle stehen; der Schwungleser öffnet über die Hülle | g h |
+| 19:40 | der Kindstarter beweist, dass genau ein Kind gelaufen ist | g h |
+| 21:36 | jede Variante von Kommando steht nachweislich in KENNUNGEN; jeder Prüfordner gegen seine zugesagte Eintragszahl | g h |
+| 21:41 | CLAUDE.md nennt KENNUNGEN als dritte Pflichtstelle jedes Kommandos | g |
+| 21:58 | Durchsicht der zweiten Hälfte von Runde 1: sechs Datensätze; Abgleich der Sitzung, sechs Schritte einzeln gegen den Baum | r g h |
+| 22:14 | Sitzungsbericht der Behebungsrunde, beschränkt geschlossen; Auslieferung 1.2.1 | h g |
+| 22:45 | Abendsitzung ohne Direktive gestartet und beendet | h |
+| — | 146 Defektdatensätze, 7 Entscheidungen, 21 Durchsichten, 23 Sitzungsprotokolle, 1 Plan, 1 Rückstandseintrag | i d r h p b |
+
+## 2026-08-27 (Do) [3-16]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 03:13 | die Runde 19 als Circle angelegt (Vorschau zählt Ordnerinhalt im Default-Profil), Rückstandseintrag geschärft | k h |
+| 04:03 | Playmaker-Direktdispatch: Aktivierungsvorschlag für die Runde 19, einziger vorgesehener Circle | h |
+| 06:40 | die Runde 19 ist aktiviert; zwei Entscheidungen des Shapers beantwortet | g k d |
+| 06:46 | Spec mit 40 Abnahmekriterien geschrieben, Spec-Tor durchlaufen | p h |
+| 13:22 | Plan mit 8 Schritten; die Messmodus-Frage als offene Entscheidung abgelegt | p h d |
+| 15:21 | neue Sitzung, nur Setup: vier Stilprofile auf die ausgelieferte Fassung ersetzt | w |
+| 15:27 | zwei Commits: der Planungsstand der Runde 19 und die Stilprofile | g |
+| 15:32 | Abgleich: eine Berichtigung (Spec-Statuszeile), zwei Meldungen, Urteil coherent | h |
+| 15:34 | Archiv Tier 1: 13 geteilte Datensätze, Wächterprotokoll mit 35 Zeilen gerollt | w |
+| — | 3 Entscheidungen, 6 Sitzungsprotokolle, 1 Spec, 1 Plan | d h p |
 
 ## Commits gesamt
 
-698 Git-Commits seit Projektbeginn (2026-08-02).
+707 Git-Commits seit Projektbeginn (2026-08-02).
