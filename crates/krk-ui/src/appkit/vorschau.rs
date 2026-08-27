@@ -257,7 +257,7 @@ use objc2_foundation::{
     NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
 };
 
-use krk_core::leseprofil::Profile;
+use krk_core::leseprofil::{Profile, Zusammenfassungszeile, zeilen_als_text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Typ;
 
@@ -1108,8 +1108,11 @@ impl Vorschaufenster {
                     .quellbezug_setzen(Some(gerendert.quellbezug));
             }
             Inhalt::Hinweis(hinweis) => self.text_zeigen(&hinweis),
-            Inhalt::Metadaten(metadaten) => {
-                let zeilen = self.metadaten_text(&metadaten);
+            Inhalt::Metadaten {
+                metadaten,
+                zaehlzeilen,
+            } => {
+                let zeilen = self.metadaten_text(&metadaten, &zaehlzeilen);
                 self.text_zeigen(&zeilen);
             }
             Inhalt::Bild { daten, metadaten } => self.bild_zeigen(&daten, metadaten.as_ref()),
@@ -1355,7 +1358,7 @@ impl Vorschaufenster {
             }
             None => match metadaten {
                 Some(metadaten) => {
-                    let zeilen = self.metadaten_text(metadaten);
+                    let zeilen = self.metadaten_text(metadaten, &[]);
                     self.text_zeigen(&zeilen);
                 }
                 None => {
@@ -1365,8 +1368,21 @@ impl Vorschaufenster {
         }
     }
 
-    /// Die sechs Metadatenzeilen aus C6.
-    fn metadaten_text(&self, metadaten: &Metadaten) -> String {
+    /// Die sechs Metadatenzeilen aus C6, und seit der Runde 19 darunter die
+    /// Zaehlzeilen des Default-Profils, falls welche mitkommen (C2.1, C2.2).
+    ///
+    /// Die drei Zaehlzeilen entstehen hier und nicht im Kern, weil nur hier
+    /// beide Haelften vorliegen: Groesse und Aenderungsdatum brauchen die
+    /// Formatierer von AppKit, die Zaehlwerte den Leselauf des Kerns. Aus
+    /// Werten Zeilen macht dabei allein
+    /// [`zeilen_als_text`](krk_core::leseprofil::zeilen_als_text), dieselbe
+    /// Stelle, die auch die Zusammenfassung ruft; eine leere Folge haengt
+    /// nichts an, und so bleiben die sechs Zeilen einer Datei, wie sie waren.
+    fn metadaten_text(
+        &self,
+        metadaten: &Metadaten,
+        zaehlzeilen: &[Zusammenfassungszeile],
+    ) -> String {
         // Ein Ordner hat keine eigene Groesse; dieselbe Antwort wie die
         // Groessenspalte aus C1.
         let groesse = if metadaten.typ == Typ::Ordner {
@@ -1388,13 +1404,14 @@ impl Vorschaufenster {
             Err(_) => String::new(),
         };
         format!(
-            "Name: {}\nPfad: {}\nGröße: {}\nGeändert: {}\nRechte: {}\nTyp: {}",
+            "Name: {}\nPfad: {}\nGröße: {}\nGeändert: {}\nRechte: {}\nTyp: {}{}",
             metadaten.name,
             metadaten.pfad.display(),
             groesse,
             geaendert,
             rechte_text(metadaten.rechte),
             typ_beschriften(metadaten.typ),
+            zeilen_als_text(zaehlzeilen),
         )
     }
 
@@ -1475,7 +1492,7 @@ fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a s
         Inhalt::Leer
         | Inhalt::Markdown(_)
         | Inhalt::Bild { .. }
-        | Inhalt::Metadaten(_)
+        | Inhalt::Metadaten { .. }
         | Inhalt::Hinweis(_) => None,
     }
 }
@@ -1620,7 +1637,10 @@ mod tests {
                 daten: Arc::new(Vec::new()),
                 metadaten: Some(metadaten(&quelltext)),
             },
-            Inhalt::Metadaten(metadaten(&quelltext)),
+            Inhalt::Metadaten {
+                metadaten: metadaten(&quelltext),
+                zaehlzeilen: Vec::new(),
+            },
             Inhalt::Hinweis("etwas ging nicht".to_owned()),
         ];
         for inhalt in &uebrige {

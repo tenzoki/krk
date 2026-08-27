@@ -1512,9 +1512,20 @@ impl Anwendungsdelegierter {
     /// im Messmodus bleibt [`AnwendungsIvars::profile`] deshalb leer: alle vier
     /// Aufgaben kehren zurueck, bevor der Durchgang laeuft, also uebergibt
     /// [`Vorschaufenster::profile_setzen`] dort einen leeren Profilsatz. Das ist
-    /// die Folge und kein Versehen — ohne Profil zeigt ein Ordner die
-    /// Metadatenanzeige, die er bis zur Runde 15 immer gezeigt hat, und keine
-    /// der zehn Zeitzusagen misst an einer Zusammenfassung.
+    /// die Folge und kein Versehen — ohne Profil aus der Ablage zeigt kein
+    /// Ordner eine Zusammenfassung.
+    ///
+    /// **Ein leerer Profilsatz heisst seit der Runde 19 nicht mehr, dass die
+    /// Vorschau im Messmodus nur die sechs Metadatenangaben rechnet.** Das
+    /// eingebaute Default-Profil kommt nicht aus der Ablage, sondern aus
+    /// [`krk_core::leseprofil::defaultprofil`], und es tritt fuer jeden
+    /// Ordner ohne Profiltreffer ein, also auch fuer jeden Ordner des
+    /// Messplatzes: seine drei Zaehlzeilen kosten einen Verzeichnisleselauf
+    /// auf dem Arbeitsfaden der Vorschau. Ob das so bleiben soll und was L7
+    /// danach misst, ist eine offene Nutzerfrage, `circles/260827-0310-
+    /// vorschau-zaehlt-ordnerinhalt-im-default-profil/decisions/260827-1322_o_
+    /// faellt-das-default-profil-auch-im-messmodus-an-und-was-misst-l7-
+    /// danach.md`; gebaut ist ohne Ausnahme fuer den Messmodus.
     fn sitzung_laden(&self) -> (Sitzung, Vec<String>) {
         let ivars = self.ivars();
         match &ivars.messaufgabe {

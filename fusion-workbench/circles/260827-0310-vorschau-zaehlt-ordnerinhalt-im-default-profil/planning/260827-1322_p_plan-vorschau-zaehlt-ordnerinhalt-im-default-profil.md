@@ -188,7 +188,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 8 ist der einzige, der außerh
    - Kriterien: C2.3, C2.4, C2.5, C2.8, C2.9, C2.10, C3.3, C3.7
    - Dependencies: keine
 
-2. **Die zwei Schlüssel in der Gestalt der Profildatei**
+2. **Die zwei Schlüssel in der Gestalt der Profildatei** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-core/src/leseprofil/datei.rs`
    - Changes: `Zaehlungsdatei` bekommt `typ: Option<Typdatei>` und `versteckt: Option<bool>`; `deny_unknown_fields` bleibt stehen. Die neue Aufzählung `Typdatei` mit den Werten `Datei`, `Ordner` und `Verknuepfung` trägt `#[serde(rename_all = "lowercase")]` und einen Doc-Kommentar nach dem Vorbild von `Anzeigedatei`, der sagt, warum sie neben `Typ` steht und dass ein Wert, den es nicht gibt, die ganze Datei kostet. Eine Zuordnungsfunktion `typ(Option<Typdatei>) -> Option<Typ>` ist vollständig ohne Auffangzweig; ein vierter Wert von `Typ` hält den Bau dort an. `baustein_pruefen` reicht beide Angaben in den Baustein durch, `versteckt` über `unwrap_or(false)`. Der Modulkopf zieht seine Aufstellung der drei Reichweiten nach: ein unbekannter Wert für `typ` und ein Nicht-Wahrheitswert für `versteckt` fallen in die weiteste, wie `zeigt` seit der Runde 18.
@@ -202,7 +202,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 8 ist der einzige, der außerh
    - Kriterien: C1.1, C1.2, C1.3, C1.4, C1.5, C1.7, C2.1, C2.11, C2.7, C3.5, C4.1, C4.2, C4.3, C4.4, C4.7
    - Dependencies: Schritt 1
 
-4. **Die drei Zeilen treten unter die sechs Metadatenangaben**
+4. **Die drei Zeilen treten unter die sechs Metadatenangaben** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes: `Inhalt::Metadaten` wird zum Strukturwert `{ metadaten: Metadaten, zaehlzeilen: Vec<Zusammenfassungszeile> }`; alle Musterstellen im Modul und in den Proben ziehen mit. `laden` verzweigt im Zweig „kein Dateityp" vollständig über die drei Ausgänge des Kerns: `Auskunft::Erkannt` wird zu `Inhalt::Zusammenfassung`, `Auskunft::Default` zu `Inhalt::Metadaten` mit den drei Zeilen, und `None` zu `Inhalt::Metadaten` mit leerer Folge. Die drei übrigen Erzeuger von `Inhalt::Metadaten` im Dateizweig übergeben die leere Folge; eine Datei bekommt keine Zählzeile (C1.6). `Vorschau::metadaten_text` nimmt die Zeilen entgegen und hängt `zeilen_als_text` an seine sechs Zeilen an, hinter „Typ" (C2.1, C2.2). Der Modulkopf von `vorschaumodell` zieht seinen Abschnitt „Die Zusammenfassung ist der vierte Weg" nach: es sind jetzt zwei Antworten für einen Ordner ohne Profiltreffer, und die eine ersetzt die Metadaten, während die andere unter sie tritt. Der Doc-Kommentar von `Anwendungsdelegierter::sitzung_laden` (`anwendung.rs`) wird berichtigt: sein Satz, im Messmodus bleibe der Profilsatz leer und deshalb messe keine der zehn Zeitzusagen an einer Zusammenfassung, trägt ab dieser Runde nicht mehr, weil das Default-Profil nicht aus der Ablage kommt. Der berichtigte Text nennt den Datensatz aus `## Open Questions`.

@@ -68,13 +68,26 @@
 //! seines Profils ([`Inhalt::Zusammenfassung`]). **Er teilt die Dreiteilung
 //! nicht in vier, sondern besetzt einen Teil des dritten:** Text und Bild
 //! bleiben unberuehrt, und was sich aendert, ist allein, was an der Stelle
-//! „alles Uebrige" fuer einen **erkannten** Ordner steht. Trifft kein Profil,
-//! steht dort weiter die Metadatenanzeige mit ihren sechs Angaben (C2.5), und
-//! auf eine **Datei** greift kein Profil, auch dann nicht, wenn ihr Pfad ein
-//! Pfadmuster erfuellt (C2.6). Die Kopfzeile mit Name und vollem Pfad ist die
-//! eine Auskunft der Metadaten, die die Ersetzung ueberlebt; sie steckt in der
+//! „alles Uebrige" fuer einen **erkannten** Ordner steht. Auf eine **Datei**
+//! greift kein Profil, auch dann nicht, wenn ihr Pfad ein Pfadmuster erfuellt
+//! (C2.6). Die Kopfzeile mit Name und vollem Pfad ist die eine Auskunft der
+//! Metadaten, die die Ersetzung ueberlebt; sie steckt in der
 //! [`Zusammenfassung`](krk_core::leseprofil::Zusammenfassung) selbst
 //! (Festlegung A6).
+//!
+//! **Seit der Runde 19 gibt es fuer einen Ordner ohne Profiltreffer zwei
+//! Antworten, und sie unterscheiden sich in ihrer Richtung.** Die
+//! Zusammenfassung des erkannten Ordners **ersetzt** die sechs
+//! Metadatenangaben; die drei Zaehlzeilen des eingebauten Default-Profils
+//! (Dateien, Ordner, Verknuepfungen) **treten unter** sie (C2.1, C2.2). Die
+//! sechs Angaben aus C2.5 der Runde 16 stehen weiter unveraendert da, und
+//! ihre Anzeige waechst um drei Zeilen. Der Kern sagt in der
+//! [`Auskunft`](krk_core::leseprofil::Auskunft), welche der beiden es ist,
+//! und [`laden`] verzweigt darueber vollstaendig; die Zeilen reisen an
+//! [`Inhalt::Metadaten`] strukturiert mit und werden erst in der Ansicht zu
+//! Text, an derselben Stelle wie die sechs Angaben. Eine Verknuepfung
+//! bekommt keine Zaehlzeile, und eine Datei erst recht nicht (C1.6, C1.7):
+//! beides entscheidet der Kern, nicht dieses Modul.
 //!
 //! **Sie entsteht auf demselben Arbeitsfaden wie das Lesen einer Textdatei,
 //! und aus demselben Grund.** Eine Zusammenfassung kostet bis zu zwoelf
@@ -154,7 +167,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
-use krk_core::leseprofil::{Auskunft, Profile, zusammenfassen};
+use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
 
@@ -272,7 +285,25 @@ pub enum Inhalt {
         metadaten: Option<Metadaten>,
     },
     /// Die Metadaten: alles, was weder Text noch Bild ist, auch Ordner (C6).
-    Metadaten(Metadaten),
+    ///
+    /// **Seit der Runde 19 fahren die Zaehlzeilen des eingebauten
+    /// Default-Profils mit**, und die leere Folge heisst „keine Zaehlzeilen".
+    /// Ein Ordner ohne Profiltreffer bekommt die drei Zeilen des
+    /// [`defaultprofil`](krk_core::leseprofil::defaultprofil), eine Datei
+    /// und eine Verknuepfung bekommen keine (C1.6, C1.7). Ein achter Wert
+    /// von [`Inhalt`] waere der teurere Weg und der schlechtere: jede
+    /// vollstaendige Fallunterscheidung ueber `Inhalt` — die Nummernspalte,
+    /// die Einfaerbung, die Anzeige — muesste eine Frage beantworten, deren
+    /// Antwort ausnahmslos „wie bei den Metadaten" lautet. Der Unterschied
+    /// besteht an genau einer Stelle, beim Bauen des Textes in der Ansicht,
+    /// und dort steht er als Zweiteilung ueber die leere und die nicht leere
+    /// Folge.
+    Metadaten {
+        /// Die sechs Angaben aus C6.
+        metadaten: Metadaten,
+        /// Die drei Zeilen des eingebauten Default-Profils, oder keine.
+        zaehlzeilen: Vec<Zusammenfassungszeile>,
+    },
     /// Die Zeilen eines Leseprofils fuer einen **erkannten** Ordner (C4 der
     /// Runde 16).
     ///
@@ -565,7 +596,7 @@ impl Vorschaumodell {
             Inhalt::Leer
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
-            | Inhalt::Metadaten(_)
+            | Inhalt::Metadaten { .. }
             | Inhalt::Hinweis(_) => false,
         }
     }
@@ -705,18 +736,27 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
         // in denselben Zweig zurueck, der vor der Runde der einzige war —
         // Metadaten mit allen sechs Angaben und kein zweiter Zweig daneben
         // (C2.5).
-        match zusammenfassen(profile, pfad) {
-            Some(Auskunft::Erkannt(zusammenfassung)) => {
-                return Inhalt::Zusammenfassung(zusammenfassung);
-            }
-            // Vorlaeufig, bis Schritt 4 der Runde 19: die Zeilen des
-            // Default-Profils fallen hier noch auf die Metadaten allein.
-            // Die Verzweigung ist vollstaendig, damit der Bau an dieser
-            // Stelle anhaelt, sobald `Inhalt::Metadaten` die Zeilen traegt.
-            Some(Auskunft::Default(_)) | None => {}
-        }
-        // Ordner und Verknuepfungen erscheinen als Metadaten (C6).
-        return Inhalt::Metadaten(metadaten);
+        //
+        // Seit der Runde 19 hat der Kern drei Ausgaenge, und die Verzweigung
+        // ist vollstaendig ohne Auffangzweig: die Zusammenfassung eines
+        // erkannten Ordners ersetzt die Metadaten, die Zeilen des
+        // Default-Profils treten unter sie (C2.1), und eine Verknuepfung
+        // oder ein Ordner, den der Kern nicht lesen kann, behaelt die sechs
+        // Angaben allein (C1.7). Welcher Ausgang es ist, entscheidet der Kern
+        // und nicht dieser Zweig; deshalb faellt hier nirgends ein Ordner
+        // ohne Zaehlzeilen durch, den der Kern zaehlen wollte.
+        return match zusammenfassen(profile, pfad) {
+            Some(Auskunft::Erkannt(zusammenfassung)) => Inhalt::Zusammenfassung(zusammenfassung),
+            Some(Auskunft::Default(zaehlzeilen)) => Inhalt::Metadaten {
+                metadaten,
+                zaehlzeilen,
+            },
+            // Ordner und Verknuepfungen erscheinen als Metadaten (C6).
+            None => Inhalt::Metadaten {
+                metadaten,
+                zaehlzeilen: Vec::new(),
+            },
+        };
     }
     if ist_bildpfad(pfad) {
         // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben; dieselbe
@@ -728,7 +768,10 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
             },
             // Jeder der vier Gruende endet in den Metadaten; welcher es war,
             // fragt die Vorschau nicht.
-            Err(_) => Inhalt::Metadaten(metadaten),
+            Err(_) => Inhalt::Metadaten {
+                metadaten,
+                zaehlzeilen: Vec::new(),
+            },
         };
     }
     // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den Modulkopf.
@@ -753,7 +796,10 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
         },
         // Zu gross, nicht lesbar, keine gewoehnliche Datei oder kein UTF-8, also
         // keine Textdatei im Sinne von C6.
-        None => Inhalt::Metadaten(metadaten),
+        None => Inhalt::Metadaten {
+            metadaten,
+            zaehlzeilen: Vec::new(),
+        },
     }
 }
 
@@ -982,7 +1028,8 @@ mod tests {
     #[test]
     fn ein_ordner_erscheint_als_metadaten() {
         let ordner = Pruefordner::neu("ordner");
-        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad(), Tafel::Hell, &Profile::default())
+        let Inhalt::Metadaten { metadaten, .. } =
+            laden(ordner.pfad(), Tafel::Hell, &Profile::default())
         else {
             panic!("ein Ordner gehoert in die Metadatenanzeige");
         };
@@ -997,7 +1044,8 @@ mod tests {
         let ordner = Pruefordner::neu("gross");
         let pfad = ordner.pfad().join("gross.txt");
         std::fs::write(&pfad, "a".repeat((TEXTGRENZE + 1) as usize)).expect("Probendatei");
-        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell, &Profile::default()) else {
+        let Inhalt::Metadaten { metadaten, .. } = laden(&pfad, Tafel::Hell, &Profile::default())
+        else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
         assert_eq!(metadaten.groesse, TEXTGRENZE + 1);
@@ -1036,7 +1084,8 @@ mod tests {
         let datei = std::fs::File::create(&pfad).expect("Probendatei");
         datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
         drop(datei);
-        let Inhalt::Metadaten(metadaten) = laden(&pfad, Tafel::Hell, &Profile::default()) else {
+        let Inhalt::Metadaten { metadaten, .. } = laden(&pfad, Tafel::Hell, &Profile::default())
+        else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
         assert_eq!(metadaten.groesse, BILDGRENZE + 1);
@@ -1050,7 +1099,7 @@ mod tests {
         std::fs::write(&pfad, [0xFF, 0xFE, 0x00, 0x42]).expect("Probendatei");
         assert!(matches!(
             laden(&pfad, Tafel::Hell, &Profile::default()),
-            Inhalt::Metadaten(_)
+            Inhalt::Metadaten { .. }
         ));
     }
 
@@ -1112,7 +1161,7 @@ mod tests {
 
         let inhalt = laden_mit_zeitschranke(&roehre, Duration::from_secs(5));
 
-        let Inhalt::Metadaten(metadaten) = &inhalt else {
+        let Inhalt::Metadaten { metadaten, .. } = &inhalt else {
             panic!("die Roehre gehoert in die Metadatenanzeige: {inhalt:?}");
         };
         assert_eq!(metadaten.pfad, roehre);
@@ -1222,8 +1271,14 @@ mod tests {
             "ein Hinweis hat keine Dateizeilen"
         );
         assert!(
-            !tab_setzen(Inhalt::Metadaten(probenmetadaten()), Some("/tmp/probe.bin"))
-                .zeigt_dateitext(),
+            !tab_setzen(
+                Inhalt::Metadaten {
+                    metadaten: probenmetadaten(),
+                    zaehlzeilen: Vec::new()
+                },
+                Some("/tmp/probe.bin")
+            )
+            .zeigt_dateitext(),
             "Metadaten stehen fuer eine Datei, sind aber nicht ihr Inhalt"
         );
         assert!(
@@ -1293,7 +1348,8 @@ kennzeichen = '^\.fusion-setup$'
 "#,
         );
 
-        let Inhalt::Metadaten(metadaten) = laden(ordner.pfad(), Tafel::Hell, &profile) else {
+        let Inhalt::Metadaten { metadaten, .. } = laden(ordner.pfad(), Tafel::Hell, &profile)
+        else {
             panic!("ohne Treffer bleibt es beim Zweig von vor der Runde");
         };
         assert_eq!(metadaten.name, titel_von(ordner.pfad()));
@@ -1395,7 +1451,10 @@ pfad = 'werkbank'
             "eine Bilddatei bis 64 MB zeigt weiter ihre Bytes"
         );
         assert!(
-            matches!(laden(&binaer, Tafel::Hell, &profile), Inhalt::Metadaten(_)),
+            matches!(
+                laden(&binaer, Tafel::Hell, &profile),
+                Inhalt::Metadaten { .. }
+            ),
             "alles Uebrige zeigt weiter seine Metadaten"
         );
         // Die Gegenprobe am selben Buendel: der Ordner darum wird erkannt. Ohne
