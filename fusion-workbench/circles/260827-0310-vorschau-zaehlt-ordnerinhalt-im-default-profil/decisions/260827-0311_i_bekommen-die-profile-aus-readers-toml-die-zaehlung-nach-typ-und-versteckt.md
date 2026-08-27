@@ -36,3 +36,4 @@ Möglichkeit 1. Der Grund ist derselbe, aus dem die Runde 18 die Erweiterung in 
 
 ---
 Answered: circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-0622-orchestrator-session.md:47 — Möglichkeit 1: der Baustein `zaehlung` bekommt zwei weitere, freiwillige Kriterien (Typ und Behandlung der versteckten Einträge); das Default-Profil benutzt dieselbe Maschine wie jedes Profil aus `readers.toml`.
+Implemented: 3ee2638 — `Baustein::Zaehlung` trägt die zwei freiwilligen Felder `typ: Option<Typ>` und `versteckt: bool` (`crates/krk-core/src/leseprofil/mod.rs:331,336`); in `9f91f92` kommen die Schlüssel `typ` und `versteckt` in `Zaehlungsdatei` (`datei.rs:250,258`), und das Default-Profil aus `bf3a91d` besteht aus drei `Baustein::Zaehlung` derselben Maschine (`defaultprofil.rs:81-91`).

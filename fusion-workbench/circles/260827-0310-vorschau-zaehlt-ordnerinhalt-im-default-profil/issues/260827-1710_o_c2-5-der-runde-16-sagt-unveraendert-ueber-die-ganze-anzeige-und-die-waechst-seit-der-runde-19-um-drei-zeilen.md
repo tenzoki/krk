@@ -32,3 +32,6 @@ Zwei Aussagen stecken darin.
 ## Schließbedingung
 
 Der Datensatz bleibt offen, weil der Abnahmelauf der Runde 16 aussteht (`_b_circle.md:84`: sieben Kriterien verlangen KRK im Vordergrund) und die Schließung dem Nutzer gehört. Wer C2.5 abnimmt, liest die erste Aussage als das Kriterium und nimmt für die zweite diesen Datensatz als Erklärung: drei Zählzeilen unter den sechs Angaben sind kein Verstoß gegen C2.5, sondern die Runde 19. Geschlossen wird er mit jenem Abnahmelauf.
+
+---
+**260827-1907, reconciler:** Befund gegen den Baum bestätigt: `metadaten_text` hängt `zeilen_als_text(zaehlzeilen)` hinter „Typ" an (`crates/krk-ui/src/appkit/vorschau.rs:1414`), der Spec der Runde 16 ist unverändert (`git log a5c7a46..d444879 -- fusion-workbench/circles/260823-2208-*/planning/` leer). Bleibt `_o_`, per Plan der Runde 19 Schritt 7; die Schließung gehört zum Abnahmelauf der Runde 16.

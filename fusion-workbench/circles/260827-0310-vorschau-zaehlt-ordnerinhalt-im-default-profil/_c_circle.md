@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
-**Claim:** Claimed 260827-0622: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
+**Claim:** Unclaimed
 **Active spec/plan:** circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-1322_*_plan-vorschau-zaehlt-ordnerinhalt-im-default-profil.md
 **Active session history:** circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-1635-orchestrator-session.md
 
@@ -49,6 +49,8 @@ See `**Active spec/plan:**` above. The cited spec or plan states the Directive i
 
 ## Turn log
 
+- **Turn 1 (260827, 16:35–19:10):** alle acht Planschritte gefahren und einzeln committet — S1 `3ee2638`, S3 `bf3a91d`, S2 `9f91f92`, S4 `5e506e6`, S7 `162058f`, S5 `891f313`, S6 `c072de7` (Ontocoder-Tor: ausführen), S8 `d444879` (Abnahmelauf vom Nutzer gefahren, alle Punkte halten). `make check` nach jedem Schritt grün, keine Fehler, kein Bugfixer. Kohärenz im Turn `ok`; Abgleich `coherent`, Empfehlung `none` (`history/260827-1907-reconciliation.md`). Ein Defektdatensatz planmäßig gefilet (Schritt 7).
+
 ## Activation proposal
 
 **Vorgeschlagen am:** 260827-0403
@@ -75,3 +77,7 @@ Vordergrund verlangt und damit Nutzerarbeit ist. Gelesen sind für diese Prüfun
 die Schließungsnotizen und nicht die Marker.
 
 Kein Abhängigkeitszyklus, keine veraltete Grundlage.
+
+## Closure note
+
+**Geschlossen kohärent (`_c_`) am 260827-1920.** Sitzung `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-1635-orchestrator-session.md`, ein Turn, neun Commits `a5c7a46..d444879`. Abgleich `history/260827-1907-reconciliation.md`: Urteil **coherent**, Empfehlung `none`, alle acht Planschritte gegen den Baum belegt. Der Nutzer hat den Abnahmelauf aus Schritt 8 am Bündel auf `c072de7` gefahren und alle Punkte bestätigt; die neun Stop-Bedingungen des Plans gelten nach seiner Lesart alle. Durchsicht `reviews/260827-1911-coderev-durchsicht-runde-19-default-profil-zaehlzeilen.md` deckt den ganzen Bereich (`not-opened: none`) und lässt zwei Low-Befunde als offene Datensätze für eine Folgerunde zurück: `issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-…` (Ontocoder) und `issues/260827-1911_o_erkennung-rs-sagt-none-heisse-die-heutige-metadatenanzeige-…` (Coder). Offen bleiben planmäßig `issues/260827-1710_o_c2-5-der-runde-16-…` (Schließung gehört dem Nutzer nach dem Abnahmelauf der Runde 16) und `decisions/260827-1322_o_faellt-das-default-profil-auch-im-messmodus-an-…` (keine Vorbedingung). Keine Auslieferung in dieser Runde.

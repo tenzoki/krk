@@ -1,7 +1,7 @@
 # Spec: Die Vorschau zählt den Inhalt eines Ordners in einem eingebauten Default-Profil
 
 **Date:** 2026-08-27
-**Status:** Vom Nutzer am 260827 freigegeben, A1 bis A7 ohne Einspruch (Ereignisprotokoll `orchestrator-events.jsonl`, `gate_response` 2026-08-27T11:12:58); der Bau hat nicht begonnen
+**Status:** Complete — vom Nutzer am 260827 freigegeben (A1 bis A7 ohne Einspruch, `gate_response` 2026-08-27T11:12:58), gebaut in `3ee2638..c072de7` und vom Nutzer am 260827 abgenommen (`d444879`); Abgleich `history/260827-1907-reconciliation.md`
 **Activated from Circle:** 260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil
 **Source:** Die Directive des Circle-Datensatzes `_t_circle.md`, vom Nutzer am 260827 festgelegt und in dieser Runde nicht mehr verhandelbar, dazu die vier Festlegungen desselben Tages und die zwei Entscheidungsdatensätze vom 260827-0629.
 
@@ -271,3 +271,5 @@ Ein Zählweg, der die Überschrift nur auf `### C` setzt, misst falsch: er schl�
 ## Reconciliation Log
 
 **260827-1532, reconciler:** Die Statuszeile stand auf „Draft, wartet auf das Spec-Tor des Nutzers", das Tor ist aber am 260827 durchlaufen: `orchestrator-events.jsonl` trägt `gate_hit` „Spec-Freigabe" und `gate_response` „proceed: Spec freigegeben, A1 bis A7 ohne Einspruch" (2026-08-27T11:12:58), und der Planner-Dispatch nennt den Spec freigegeben (`history/260827-1322-planner-vorschau-zaehlt-ordnerinhalt-im-default-profil.md`, Kopf). Die Zeile ist berichtigt. Keines der 40 Kriterien ist gebaut: `git diff eced324..HEAD -- crates/ xtask/ resources/` ist leer, der Dateimarker bleibt `_o_`.
+
+**260827-1907, reconciler:** Gebaut und abgenommen. Die vier Fähigkeiten stehen im Baum (`3ee2638`, `bf3a91d`, `9f91f92`, `5e506e6`, `891f313`, `c072de7`), die Proben ohne Fenster laufen in `make check` grün, und der Nutzer hat den Abnahmelauf am Bündel auf `c072de7` gefahren (`d444879`). Die Zuordnung der vierzig Kriterien zu Stellen im Baum steht im Plan `260827-1322_c_plan-…md`, Schritte 1 bis 8, und im Abgleich dort. Dateimarker `_o_` → `_c_`.

@@ -37,3 +37,4 @@ Keine belastbare Empfehlung ohne eine Messung. Möglichkeit 1 hält die bestehen
 
 ---
 Answered: circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-0622-orchestrator-session.md:50 — Möglichkeit 1: dieselbe Regel wie beim Baustein `zaehlung`. Jede Zeile sagt „mindestens N (Lesung bei 2.000 Einträgen abgebrochen)", die Klammer mit den versteckten entfällt in dieser Lage.
+Implemented: 3ee2638 — `zaehlen` liefert bei abgeschnittenem Lesestand `Wert::UeberGrenze` vor jedem `ZahlMitVersteckten`, gleich wie `versteckt` steht (`crates/krk-core/src/leseprofil/bausteine.rs:796-812`); die Probe `ueber_der_schranke_sagen_die_drei_zeilen_mindestens_und_tragen_keine_klammer` (`891f313`, `tests/leseprofil.rs:2508`) hält es für die drei Zeilen des Default-Profils.
