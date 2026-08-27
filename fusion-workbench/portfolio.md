@@ -1,10 +1,10 @@
 # Portfolio
 
-**Generated:** 260827-1927 (by playmaker session 260827-1927-playmaker-orchestrator-phase4)
+**Generated:** 260827-2101 (by playmaker session 260827-2101-playmaker-user-fusion-next)
 **Domain bias:** code
 
-Bestand: 0 vorgesehen, 0 aktiv, 6 kohärent geschlossen, 12 beschränkt
-geschlossen, 0 überholt, 2 zurückgestellt. Summe 20 Circle-Datensätze. Die Runde
+Bestand: 1 vorgesehen, 0 aktiv, 6 kohärent geschlossen, 12 beschränkt
+geschlossen, 0 überholt, 2 zurückgestellt. Summe 21 Circle-Datensätze. Die Runde
 18 ist ohne Circle-Datensatz gefahren und in keiner dieser Zahlen enthalten.
 
 ## Active (_t_)
@@ -16,49 +16,67 @@ Zustand nach dem Abschluss der Runde 19 am 260827-1920.
 
 ## Anticipated (_a_) — ranked
 
-(none)
+Recommended next: 260827-2028-vorschau-rendert-pdf-als-betrachter — der einzige vorgesehene Circle, alle fünf Abhängigkeiten terminal, zwei offene Fragen in der Grundlage, von denen keine einen Planschritt aufhält.
 
-Es gibt keinen vorgesehenen Circle. Der nächste entsteht aus der Ablage: siehe
-`## Backlog — ranked`.
+**1. `260827-2028-vorschau-rendert-pdf-als-betrachter`** — die Vorschau rendert
+PDF als Betrachter mit Zoom, Seitensprung und Seitenzähler; Text auf der Seite
+lässt sich markieren und über die eine Zwischenablage-Hülle kopieren, die
+Größengrenze ist `BILDGRENZE` von 64 MB. Der Shaper hat den Circle am
+260827-2028 aus dem Ablageeintrag
+`shared/backlog/260827-1925_*_vorschau-rendert-pdf-und-bilder.md` erzeugt und
+den Gegenstand dabei auf PDF verengt, weil JPG und PNG seit der Runde 1
+gerendert werden. Die Grundlage nennt zwei offene Entscheidungsdatensätze:
+`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/decisions/260827-2028_*_welche-tasten-bekommen-zoom-und-seitensprung-des-pdf-betrachters.md`
+ist die Frage nach der Tastenbelegung des Betrachters und gehört in den Spec;
+`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md`
+bindet jede Runde an der Vorschau, seit die Messstrecke ihre Arbeit nicht mehr
+sieht. Zwei beantwortete Datensätze vom 260819-2216 (Quelltextzusage beim
+Ziehen einer Auswahl, Abnahmelauf gegen L7) gelten weiter. Abhängigkeiten: fünf,
+alle terminal. `260819-2230-auswahl-und-kopieren-in-der-vorschau` ist kohärent
+geschlossen; `260802-0842-krk-mac-dateimanager-editor-git`,
+`260811-1304-statusleiste-mit-bereichsschaltern`,
+`260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` und
+`260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten` sind
+beschränkt geschlossen. Die Heuristik "alle Abhängigkeiten kohärent" ist damit
+formal nicht erfüllt, und das trägt hier nichts: in diesem Projekt misst der
+beschränkte Abschluss, dass der Nutzer den Abnahmelauf im Vordergrund nicht
+gefahren hat, und nicht, dass Arbeit offen wäre (CLAUDE.md, Absatz zur
+Rangheuristik). Drei offene Defekte an der Vorschau erbt der Circle und führt
+sie selbst auf: `shared/issues/260825-1922_*_der-programmstart-und-der-tabwechsel-erreichen-die-neue-vorschauregel-nicht.md`,
+`shared/issues/260825-1922_*_eine-auffrischung-stoesst-die-vorschau-mit-an-und-die-kosten-sind-ungemessen.md`
+und `shared/issues/260826-1423_*_zwei-zaehlangaben-zu-inhalt-in-vorschaumodell-rs-sind-seit-der-runde-16-um-eins-falsch.md`;
+der dritte wird mit dem neuen `Inhalt`-Wert erneut falsch und ist im Plan
+nachzuziehen. Wir empfehlen die Aktivierung; der Vorschlag steht als
+`## Activation proposal` am Datensatz
+`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/_*_circle.md`.
 
 ## Backlog — ranked
 
-Recommended to shape: `shared/backlog/260827-1925_*_vorschau-rendert-pdf-und-bilder.md` — der einzige offene Eintrag, dessen Sache nicht gebaut ist; Bilder zeigt die Vorschau seit der Runde 1, PDF nirgends.
-`/fusion:direct shared/backlog/260827-1925_*_vorschau-rendert-pdf-und-bilder.md`
+Recommended to shape: (keiner) — beide lebenden Einträge sind gebaut, und für beide steht unten eine Schließung zur Bestätigung; ein gebauter Gegenstand wird nicht ausgearbeitet.
 
-**1. `shared/backlog/260827-1925_*_vorschau-rendert-pdf-und-bilder.md`**
-(`_p_`, in diesem Lauf empfohlen) — die Vorschau soll beim Navigieren jpg, png
-und vor allem PDF rendern. Die Hälfte davon steht: `Inhalt::Bild` und
-`ist_bildpfad` (`crates/krk-ui/src/vorschaumodell.rs`) nehmen png, jpg, jpeg,
-gif, tiff, heic, heif, bmp und icns bis `BILDGRENZE` von 64 MB an, und die
-Vorschau zeigt sie über eine `NSImageView` (`crates/krk-ui/src/appkit/vorschau.rs`),
-seit C6 der Runde 1. PDF liest kein Weg im Baum. Wir empfehlen, den Eintrag
-auszuarbeiten und den Gegenstand dabei auf PDF zu verengen; ein Spec, der die
-Bildanzeige noch einmal verlangt, beschriebe Gebautes. Die zwei Fragen, die der
-Shaper stellen wird: ob PDF über `PDFKit` (eine weitere AppKit-Klasse mit
-Untergrenzen-Abschnitt) oder als gerasterte Seite über `NSImage` ankommt, und
-ob die Auswahl- und Kopierzusage der Runde 14 (`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau`)
-für Seiten eines PDFs gilt.
-
-**2. `shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md`**
+**1. `shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md`**
 (`_o_`) — verlangt eine zweite Kombination neben `f4` für den Editor-Einstieg.
-Gebaut: `editor_rundweg` auf `cmd+e` öffnet seit dem 260823 denselben
-ausgewählten Eintrag (`resources/default-keymap.toml`, Kommentar bei
-`bearbeiten`).
+Gebaut: `editor_rundweg` auf `cmd+e` öffnet seit dem 260823 im Dateifenster
+denselben ausgewählten Eintrag wie `f4` (`resources/default-keymap.toml`,
+Kommentar bei `bearbeiten`, Zeilen 174 bis 177, Eintrag Zeile 803).
   `close shared/backlog/260813-2033_*_der-editor-einstieg-braucht-ein-erreichbares-kuerzel-neben-f4.md — cmd+e (editor_rundweg) öffnet seit dem 260823 im Dateifenster denselben ausgewählten Eintrag wie f4`
 
-**3. `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md`**
+**2. `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md`**
 (`_o_`) — verlangt Leseprofile in einer Definitionsdatei unter
 `~/Library/Application Support/KRK/`. Gebaut von der Runde 16 als `readers.toml`
 mit zwölf Auslieferungsprofilen (`resources/default-readers.toml`), seit der
 Runde 19 dazu das eingebaute Default-Profil.
   `close shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md — die Runde 16 hat die Leseprofile als readers.toml gebaut, mit zwölf ausgelieferten Profilen für die Werkbank`
 
-Die zwei Schließungen sind Vorschläge, zum zweiten Mal nach dem Lauf 260827-0403.
-Dieser Lauf ist ein Phase-4-Dispatch ohne Nutzer und hält für keine der beiden
-eine Bestätigung; ausgeführt hat er allein die Umbenennung des ersten Eintrags
-auf `_p_`. Ein interaktiver Lauf über `/fusion:next` legt die zwei Zeilen zur
-Bestätigung vor.
+Der dritte Eintrag, `shared/backlog/260827-1925_*_vorschau-rendert-pdf-und-bilder.md`,
+ist seit 260827-2028 geschlossen: der Shaper hat ihn zum Circle
+`260827-2028-vorschau-rendert-pdf-als-betrachter` gemacht.
+
+Die zwei Schließungen sind Vorschläge, zum dritten Mal nach den Läufen
+260827-0403 und 260827-1927. Dieser Lauf hält für keine der beiden eine
+Bestätigung; `/fusion:next` legt die zwei Zeilen zur Bestätigung vor, und der
+zweite Lauf des Relais führt aus, was bestätigt ist. Umbenannt hat dieser Lauf
+nichts: keinen der zwei Einträge empfehlen wir zum Ausarbeiten.
 
 ## Recently closed (_c_ / _b_)
 
@@ -98,7 +116,7 @@ Bestätigung vor.
 ## Warnings
 
 - Der Datensatz der Runde 17,
-  `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md`, trägt
+  `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/_*_circle.md`, trägt
   keinen Abschnitt `## Closure note` und ein leeres Turn-Protokoll. Der
   Abschluss am 260825 war eine reine Umbenennung (`git:2a77012`); was die Runde
   erreicht hat und warum sie beschränkt geschlossen ist, steht allein in der
@@ -108,15 +126,22 @@ Bestätigung vor.
   `260819-2230-auswahl-und-kopieren-in-der-vorschau` und, mit einer
   Platzhalterzeile statt Einträgen, die zwei zurückgestellten Runden.
 - Zwei Ablageeinträge sind gebaut und stehen offen, weil außer der Promotion
-  durch den Shaper kein Weg einen Eintrag schließt; der dritte war zur Hälfte
-  gebaut, als der Nutzer ihn gefilet hat. Die zwei Schließungen stehen oben als
-  Zeilen zur Bestätigung.
+  durch den Shaper kein Weg einen Eintrag ohne Bestätigung schließt. Die zwei
+  Schließungen stehen in `## Backlog — ranked` als Zeilen zur Bestätigung.
 - Die Runde 19 lässt zwei Low-Befunde der Durchsicht als offene Defekte zurück:
   `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_*_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md`
   (Ontocoder) und
-  `…/issues/260827-1911_*_erkennung-rs-sagt-none-heisse-die-heutige-metadatenanzeige-und-das-ist-seit-der-runde-19-der-rueckfallzweig.md`
-  (Coder). Beide sind Aufräumarbeit für eine Folgerunde und keine
-  Vorbedingung.
-- Kein Zeigerfehler, kein Abhängigkeitszyklus, keine veraltete Grundlage: es
-  gibt keinen nicht-terminalen Circle, und der Abschluss der Runde 19 ist
-  kohärent, also keine Bounded-Closure-Propagation.
+  `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_*_erkennung-rs-sagt-none-heisse-die-heutige-metadatenanzeige-und-das-ist-seit-der-runde-19-der-rueckfallzweig.md`
+  (Coder). Beide sind Aufräumarbeit und keine Vorbedingung; der zweite liegt
+  im Rückfallzweig der Vorschau, den der PDF-Betrachter für zu große und
+  unlesbare Dateien mitbenutzt.
+- Der vorgesehene Circle erbt drei offene Defekte an der Vorschau (siehe seinen
+  Eintrag unter `## Anticipated`). Sie sind Gegenstand seines Plans und halten
+  die Aktivierung nicht auf.
+- Kein Zeigerfehler: `.active-circle` fehlt, und kein Datensatz ist aktiv.
+- Kein Abhängigkeitszyklus: der eine nicht-terminale Circle hängt allein an
+  terminalen Circles.
+- Keine veraltete Grundlage: seit dem letzten Lauf hat kein Circle nach `_b_`
+  gewechselt, und die vier beschränkt geschlossenen Runden in der Grundlage des
+  neuen Circles waren beim Schreiben der Grundlage am 260827-2028 längst
+  geschlossen.
