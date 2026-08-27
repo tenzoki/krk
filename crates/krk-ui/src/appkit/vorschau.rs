@@ -1687,6 +1687,53 @@ mod tests {
         );
     }
 
+    /// C2.1 und C2.2 der Runde 19, die Haelfte ohne Instanz: die Zaehlzeilen
+    /// treten in [`Vorschaufenster::metadaten_text`] hinter die Zeile „Typ",
+    /// und aus Werten Zeilen macht dort allein `zeilen_als_text`.
+    ///
+    /// **Was diese Probe nicht sieht, und warum sie so steht.** Der fertige
+    /// Text der sechs Zeilen braucht die zwei Formatierer von AppKit und
+    /// damit eine Instanz; der Kopf dieses Pruefmoduls sagt, dass keine Probe
+    /// dieser Datei den Hauptfaden behauptet, und diese Runde aendert das
+    /// nicht. Gehalten wird deshalb am Quelltext: der eine Rufer von
+    /// `zeilen_als_text` in dieser Datei steht im Rumpf von `metadaten_text`,
+    /// und die Formatzeile dort endet auf `Typ: {}{}`, also auf die sechste
+    /// Angabe und unmittelbar dahinter die Zaehlzeilen. Ob die sechs Zeilen
+    /// richtig dastehen, prueft der Abnahmelauf am Buendel (Schritt 8).
+    #[test]
+    fn die_zaehlzeilen_folgen_in_metadaten_text_auf_die_zeile_typ() {
+        let rufer = concat!("zeilen_als", "_text");
+        let (_, diese_datei) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/vorschau.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let (ohne_proben, _) = diese_datei
+            .split_once("#[cfg(test)]")
+            .expect("das Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
+        assert_eq!(
+            aufrufstellen(ohne_proben, rufer),
+            1,
+            "ausserhalb des Pruefmoduls ruft genau eine Stelle {rufer}"
+        );
+
+        let rumpf = ohne_proben
+            .split_once("fn metadaten_text(")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n    fn "))
+            .map(|(rumpf, _)| rumpf)
+            .expect("metadaten_text steht nicht mehr in dieser Datei");
+        assert_eq!(
+            aufrufstellen(rumpf, rufer),
+            1,
+            "der eine Rufer von {rufer} steht nicht im Rumpf von metadaten_text"
+        );
+        assert!(
+            rumpf.contains(concat!("Typ: {}", "{}\""),),
+            "die Formatzeile von metadaten_text endet nicht auf die Zeile Typ mit den \
+             Zaehlzeilen unmittelbar dahinter"
+        );
+    }
+
     /// Das Merkfeld der Profile hat genau einen Schreiber, und `profile_setzen`
     /// genau einen Rufer, und der steht beim Anwendungsdelegierten (C4.5).
     ///

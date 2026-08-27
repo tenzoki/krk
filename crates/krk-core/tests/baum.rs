@@ -152,6 +152,109 @@ fn genau_drei_pruefordner_fassungen_stehen_im_baum() {
     );
 }
 
+/// C3.7 der Runde 19: Genau eine Stelle im Baum zaehlt einen Ordnerbestand
+/// nach Typ und nach versteckt, und sie steht in `leseprofil/bausteine.rs`.
+///
+/// Gesucht wird nach dem Gegenstand und nicht nach dem Namen einer Funktion:
+/// eine Datei, die in ihren Code-Zeilen das Kennzeichen eines Eintrags liest
+/// (`.versteckt`) **und** nach seinem Typ fragt (`.typ ==`, `== Typ::`,
+/// `.ist_ordner()`, `.ist_verknuepfung()`). Drei Dateien tun beides, und die
+/// Probe nennt sie beim Namen wie
+/// [`genau_zwei_dateien_oeffnen_die_regel_deny_unsafe_code`]: in
+/// `verzeichnis/eintrag.rs` entsteht das Kennzeichen, in
+/// `verzeichnis/modell.rs` liest es der Ausblendeschalter, und in
+/// `leseprofil/bausteine.rs` wird gezaehlt. Die zwei ersten gruppieren nichts,
+/// und die Probe kann das nicht sehen; was sie sieht, ist eine **vierte**
+/// Datei, die beide Fragen stellt, und die ist dann zu lesen.
+///
+/// `leseprofil/datei.rs` traegt `zaehlung.versteckt` und faellt bewusst
+/// heraus: es liest den Schluessel aus der Profildatei und keinen Eintrag, und
+/// nach einem Typ fragt es nicht, sondern ordnet ihn zu. Gezaehlt wird unter
+/// `crates/*/src`, wie C3.7 es sagt: eine Abnahmeprobe unter `tests/` stellt
+/// beide Fragen an einen Eintrag, den sie gelesen hat, und gruppiert nichts.
+///
+/// # Was diese Nadel nicht sieht
+///
+/// Eine Datei, die beide Felder ueber ein Muster bindet
+/// (`Eintrag { typ, versteckt, .. }`) oder den Typ mit `matches!` fragt,
+/// entgeht ihr; der Kopf dieser Datei sagt, warum keine Nadel das leisten
+/// kann.
+#[test]
+fn genau_drei_dateien_lesen_das_kennzeichen_versteckt_und_fragen_nach_dem_typ() {
+    let kennzeichen = concat!(".", "versteckt");
+    let typfragen = [
+        concat!(".typ", " =="),
+        concat!("== ", "Typ::"),
+        concat!(".ist_", "ordner()"),
+        concat!(".ist_", "verknuepfung()"),
+    ];
+    let dateien: Vec<String> = quelldateien()
+        .into_iter()
+        .filter(|(name, inhalt)| {
+            name.contains("/src/")
+                && im_code(inhalt, kennzeichen)
+                && typfragen.iter().any(|frage| im_code(inhalt, frage))
+        })
+        .map(|(name, _)| name)
+        .collect();
+    assert_eq!(
+        dateien,
+        vec![
+            "krk-core/src/leseprofil/bausteine.rs".to_owned(),
+            "krk-core/src/verzeichnis/eintrag.rs".to_owned(),
+            "krk-core/src/verzeichnis/modell.rs".to_owned(),
+        ],
+        "eine andere Datei als die drei benannten liest das Kennzeichen versteckt und fragt \
+         nach dem Typ; steht dort ein zweiter Zaehlweg?"
+    );
+}
+
+/// C2.7 der Runde 19, die strukturelle Haelfte: unter `leseprofil/` erreicht
+/// keine Code-Zeile den Ausblendeschalter des Ordnermodells.
+///
+/// Die Zahlen der drei Zaehlzeilen folgen `shift+cmd+h` nicht, und das ist an
+/// keinem Rueckgabewert abzulesen: eine Zaehlung, die den Schalter fragte,
+/// lieferte bei ausgeblendeten Verstecken dieselben Werte wie eine, die es
+/// nicht tut, solange die Probe den Schalter nicht umlegt. Gehalten wird
+/// deshalb am Baum: das Modul `leseprofil` nennt weder das Ordnermodell noch
+/// eines seiner drei `verstecke_*`-Glieder. Die Gegenprobe daneben haelt fest,
+/// dass die Nadel etwas findet, wo der Schalter wohnt; ohne sie bestaende die
+/// Probe auch nach einer Umbenennung des Schalters.
+///
+/// # Was diese Nadel nicht sieht
+///
+/// Einen Weg ueber einen Zwischentraeger, etwa einen Wahrheitswert, den ein
+/// Rufer aus `krk-ui` dem Kern hereinreicht. Der Kopf dieser Datei sagt, warum
+/// keine Nadel restlos dicht ist.
+#[test]
+fn keine_code_zeile_unter_leseprofil_erreicht_den_ausblendeschalter() {
+    let nadeln = [concat!("verstecke", "_"), concat!("Ordner", "modell")];
+    let baum = quelldateien();
+
+    let (_, modell) = baum
+        .iter()
+        .find(|(name, _)| name == "krk-core/src/verzeichnis/modell.rs")
+        .expect("krk-core/src/verzeichnis/modell.rs steht nicht mehr im Baum");
+    assert!(
+        im_code(modell, nadeln[0]),
+        "der Ausblendeschalter des Ordnermodells heisst nicht mehr verstecke_*; die Nadel \
+         findet nichts mehr und die Probe belegt nichts"
+    );
+
+    let erreicher: Vec<String> = baum
+        .iter()
+        .filter(|(name, inhalt)| {
+            name.starts_with("krk-core/src/leseprofil/")
+                && nadeln.iter().any(|nadel| im_code(inhalt, nadel))
+        })
+        .map(|(name, _)| name.clone())
+        .collect();
+    assert!(
+        erreicher.is_empty(),
+        "unter leseprofil/ erreicht eine Code-Zeile den Ausblendeschalter: {erreicher:?}"
+    );
+}
+
 /// Nur benannte Dateien erreichen [`atomar::schreiben`].
 ///
 /// **Die eine Luecke im Satz „kein Schreibweg an der Sperre vorbei".** Der

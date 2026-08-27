@@ -160,6 +160,56 @@ mod tests {
         );
     }
 
+    /// C3.4 der Runde 19: Keine Zeile der mitgelieferten Profile nennt einen
+    /// der zwei neuen Schluessel, und es bleiben zwoelf Profile.
+    ///
+    /// Gezaehlt wird ueber die **Nicht-Kommentarzeilen**, und das ist der
+    /// Kern der Probe: der Kommentarteil derselben Datei beschreibt `typ`
+    /// und `versteckt` sehr wohl (C3.9), und ein Zaehlweg, der ihn mitlaese,
+    /// waere seit Schritt 6 jener Runde rot. Was hier gehalten wird, ist,
+    /// dass die Ausgabe der zwoelf Profile sich nicht aendert; der Nachweis
+    /// dafuer ist, dass kein `[[profil.zeile]]`-Block die Schluessel traegt.
+    ///
+    /// Ein `#` mitten in einer Zeile beginnt in TOML ebenfalls einen
+    /// Kommentar; die mitgelieferten Zeilen tragen keinen, und die Probe
+    /// schneidet trotzdem hinter dem ersten `#` ab, damit sie einen
+    /// nachgestellten Kommentar nicht fuer eine Angabe haelt.
+    #[test]
+    fn keine_mitgelieferte_zeile_nennt_typ_oder_versteckt() {
+        let nennungen: Vec<&str> = AUSLIEFERUNGSTEXT
+            .lines()
+            .map(|zeile| zeile.split('#').next().unwrap_or(""))
+            .filter(|zeile| zeile.contains("typ =") || zeile.contains("versteckt ="))
+            .collect();
+        assert!(
+            nennungen.is_empty(),
+            "eine mitgelieferte Profilzeile nennt typ oder versteckt: {nennungen:?}"
+        );
+
+        let gelesen: datei::Profildatei =
+            toml::from_str(AUSLIEFERUNGSTEXT).expect("die Auslieferungsfassung ist kein TOML");
+        let (profile, _) = datei::pruefen(gelesen);
+        assert_eq!(profile.zahl(), 12, "es sind nicht mehr die zwoelf Profile");
+        let zaehlungen_mit_neuen_schluesseln = profile
+            .iter()
+            .flat_map(|profil| profil.zeilen())
+            .filter(|zeile| {
+                matches!(
+                    zeile.baustein(),
+                    Some(crate::leseprofil::Baustein::Zaehlung { typ: Some(_), .. })
+                        | Some(crate::leseprofil::Baustein::Zaehlung {
+                            versteckt: true,
+                            ..
+                        })
+                )
+            })
+            .count();
+        assert_eq!(
+            zaehlungen_mit_neuen_schluesseln, 0,
+            "eine gepruefte Zaehlung der Auslieferungsfassung traegt einen Typ oder die Klammer"
+        );
+    }
+
     /// KRK liefert keine Fassung mit, die die eigene Pruefung nicht besteht.
     ///
     /// Die Probe ist der Grund, aus dem ein Tippfehler in

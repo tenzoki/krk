@@ -54,7 +54,7 @@ use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{
     Anzeige, Auskunft, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE,
     HOECHSTENS_LESELAEUFE, HOECHSTENS_OEFFNUNGEN, Haushalt, Profil, Profile, Wert, Zusammenfassung,
-    Zusammenfassungszeile, zusammenfassen, zusammenfassen_gezaehlt,
+    Zusammenfassungszeile, zeilen_als_text, zusammenfassen, zusammenfassen_gezaehlt,
 };
 use krk_core::verzeichnis::sys::ortszeit;
 use krk_core::verzeichnis::{Eintrag, Typ};
@@ -108,7 +108,7 @@ kennzeichen = '^\.fusion-setup$'
 
   [[profil.zeile]]
   beschriftung = "Datensaetze"
-  zaehlung = { muster = '\.md$' }
+  zaehlung = { muster = '\.md$', typ = "datei", versteckt = true }
 
   [[profil.zeile]]
   beschriftung = "Die juengsten zehn"
@@ -155,8 +155,8 @@ kennzeichen = '^\.fusion-setup$'
         Baustein::Zaehlung {
             ort,
             muster,
-            typ: None,
-            versteckt: false,
+            typ: Some(Typ::Datei),
+            versteckt: true,
         } => {
             assert!(
                 ort.teile().is_empty(),
@@ -682,6 +682,63 @@ fn ein_dritter_wert_fuer_zeigt_kostet_die_ganze_datei() {
         "  juengste = { anzahl = 1, zeigt = \"titel\" }\n",
         "  juengste = { anzahl = 1, zeigt = \"datum\" }\n",
         "  juengste = { anzahl = 1 }\n",
+    ] {
+        let (profile, meldungen) = gepruefte(&format!("{vorspann}{zeile}"));
+        assert!(meldungen.is_empty(), "{zeile:?} meldet: {meldungen:?}");
+        assert_eq!(profile.zahl(), 1, "{zeile:?} laesst kein Profil uebrig");
+    }
+}
+
+/// C3.6 der Runde 19: Ein unbekannter Wert fuer `typ` und ein Nicht-
+/// Wahrheitswert fuer `versteckt` kosten die ganze Datei, und die Meldung
+/// nennt den Schluessel.
+///
+/// Dieselbe Reichweite wie bei `zeigt` in der Probe darueber, und dieselbe
+/// Bauart: `serde` weist ab, bevor ein Profil gelesen ist, also faellt nicht
+/// die Zeile und nicht das Profil, sondern die Datei. Der Schluessel steht in
+/// der Meldung, weil `toml` die Quellzeile mitliefert; bei `typ` stehen dazu
+/// die drei Namen, die es gibt, denn die Aufzaehlung nennt sie.
+///
+/// Die zweite Haelfte ist die Gegenprobe: die drei Typwerte, beide
+/// Wahrheitswerte und die Abwesenheit beider Schluessel kommen durch (C3.1).
+#[test]
+fn ein_unbekannter_typ_oder_ein_nicht_wahrheitswert_fuer_versteckt_kostet_die_ganze_datei() {
+    let vorspann = "[[profil]]\nname = \"Ein Speicher\"\npfad = 'analyses$'\n\n[[profil.zeile]]\n  beschriftung = \"Eine Zeile\"\n";
+
+    for wert in ["ordnr", "Datei", "verknüpfung", ""] {
+        let text = format!("{vorspann}  zaehlung = {{ typ = \"{wert}\" }}\n");
+        let Err(fehler) = toml::from_str::<Profildatei>(&text) else {
+            panic!("der Typ {wert:?} kommt durch, obwohl es ihn nicht gibt");
+        };
+        let meldung = fehler.to_string();
+        for gesucht in ["typ", "datei", "ordner", "verknuepfung"] {
+            assert!(
+                meldung.contains(gesucht),
+                "die Meldung zu typ = {wert:?} nennt {gesucht:?} nicht: {meldung}"
+            );
+        }
+    }
+
+    for wert in ["\"ja\"", "1", "\"true\"", "[]"] {
+        let text = format!("{vorspann}  zaehlung = {{ versteckt = {wert} }}\n");
+        let Err(fehler) = toml::from_str::<Profildatei>(&text) else {
+            panic!("versteckt = {wert} kommt durch, obwohl es kein Wahrheitswert ist");
+        };
+        let meldung = fehler.to_string();
+        assert!(
+            meldung.contains("versteckt"),
+            "die Meldung zu versteckt = {wert} nennt den Schluessel nicht: {meldung}"
+        );
+    }
+
+    for zeile in [
+        "  zaehlung = { typ = \"datei\" }\n",
+        "  zaehlung = { typ = \"ordner\" }\n",
+        "  zaehlung = { typ = \"verknuepfung\" }\n",
+        "  zaehlung = { versteckt = true }\n",
+        "  zaehlung = { versteckt = false }\n",
+        "  zaehlung = { typ = \"datei\", versteckt = true }\n",
+        "  zaehlung = { }\n",
     ] {
         let (profile, meldungen) = gepruefte(&format!("{vorspann}{zeile}"));
         assert!(meldungen.is_empty(), "{zeile:?} meldet: {meldungen:?}");
@@ -2177,6 +2234,588 @@ kennzeichen = '^\.fusion-nicht-da$'
 }
 
 // ---------------------------------------------------------------------------
+// Die drei Zaehlzeilen des eingebauten Default-Profils (Runde 19)
+// ---------------------------------------------------------------------------
+
+/// Ein Ordner mit bekanntem Bestand: vier Dateien, drei Unterordner und drei
+/// Verknuepfungen, davon je eine mit Punkt am Namensanfang versteckt.
+///
+/// ```text
+/// <zweck>/
+///   a.txt  b.md  README  .gitignore          vier Dateien, eine versteckt
+///   planning/  history/  .git/               drei Ordner, einer versteckt
+///     planning/ und history/ tragen je fuenfzig Dateien (C2.8)
+///   auf-ordner -> planning/                  drei Verknuepfungen, eine
+///   auf-datei  -> a.txt                        versteckt; die dritte
+///   .ins-leere -> nirgends                     zeigt ins Leere
+/// ```
+///
+/// Zehn Eintraege auf einer Ebene, hundert darunter. Die hundert sind der
+/// Grund fuer die Gestalt: eine Zaehlung ueber den Unterbaum ergaebe hier eine
+/// andere Zahl, und die zwei Verknuepfungen auf einen Ordner und auf eine Datei
+/// unterscheiden eine Zaehlung, die dem Ziel folgt, von einer, die es nicht tut.
+fn zaehlbestand(zweck: &str) -> Pruefordner {
+    let ordner = Pruefordner::neu(zweck);
+    for name in ["a.txt", "b.md", "README", ".gitignore"] {
+        ordner.datei(name, "x");
+    }
+    for name in ["planning", "history"] {
+        let unter = ordner.ordner(name);
+        for nummer in 0..50 {
+            schreiben(&unter, &format!("{nummer:02}.md"), "# Datensatz\n");
+        }
+    }
+    ordner.ordner(".git");
+    ordner.verknuepfung("auf-ordner", ordner.unter("planning"));
+    ordner.verknuepfung("auf-datei", ordner.unter("a.txt"));
+    ordner.verknuepfung(".ins-leere", ordner.unter("nirgends"));
+    ordner
+}
+
+/// Die drei Zeilen des Default-Profils fuer einen Ordner, samt dem Haushalt
+/// des Laufs.
+///
+/// Der Weg ist derselbe wie bei [`gezaehlt`]: `zusammenfassen_gezaehlt` ist
+/// der eine Einstieg, und die Probe liest ab, welchen der zwei Ausgaenge er
+/// genommen hat. Ein erkanntes Profil ist hier ein Fehler der Probe.
+fn default_gezaehlt(profile: &Profile, ordner: &Path) -> (Vec<Zusammenfassungszeile>, Haushalt) {
+    match zusammenfassen_gezaehlt(profile, ordner) {
+        Some((Auskunft::Default(zeilen), haushalt)) => (zeilen, haushalt),
+        Some((Auskunft::Erkannt(zusammenfassung), _)) => {
+            panic!("ein Profil hat den Pruefordner erkannt: {zusammenfassung:?}")
+        }
+        None => panic!("der Ordner {} bekommt keine Auskunft", ordner.display()),
+    }
+}
+
+/// Die drei Zeilen des Default-Profils ohne jedes Profil aus einer Datei.
+fn default_zeilen(ordner: &Path) -> Vec<Zusammenfassungszeile> {
+    default_gezaehlt(&Profile::default(), ordner).0
+}
+
+/// Beschriftung und Wert je Zeile, wie [`werte`] fuer eine Zusammenfassung.
+fn zaehlwerte(zeilen: &[Zusammenfassungszeile]) -> Vec<(&str, &Wert)> {
+    zeilen
+        .iter()
+        .map(|zeile| (zeile.beschriftung(), zeile.wert()))
+        .collect()
+}
+
+/// Die Zahl der Eintraege eines Ordners, ohne KRK und ohne den Leser: die
+/// zweite Quelle, gegen die C2.3 die Summe der drei Zahlen haelt.
+fn eintraege_laut_system(ordner: &Path) -> u64 {
+    std::fs::read_dir(ordner)
+        .expect("der Pruefordner laesst sich nicht lesen")
+        .count() as u64
+}
+
+/// C2.1, C2.3, C2.4, C2.8, C2.9 und die erste Haelfte von C2.6: die drei
+/// Zeilen zaehlen nach Typ, flach, mit Klammer, und folgen keiner
+/// Verknuepfung.
+///
+/// Die Zahl vor der Klammer schliesst die in der Klammer ein (C2.3), und die
+/// Summe der drei Zahlen davor ist die Zahl aller Eintraege, gehalten gegen
+/// `read_dir` und nicht gegen die Zahl, die die Probe beim Anlegen im Kopf
+/// hatte. Die Verknuepfung auf `planning` zaehlt als Verknuepfung und nicht
+/// als Ordner, die auf `a.txt` nicht als Datei (C2.9); die hundert Dateien
+/// unter `planning` und `history` erscheinen in keiner Zeile (C2.8). Ein
+/// Unterordner ohne versteckten Eintrag zeigt die Klammer mit der Null (C2.4).
+#[test]
+fn die_drei_zaehlzeilen_zaehlen_nach_typ_flach_und_beziffern_die_versteckten() {
+    let ordner = zaehlbestand("zaehlzeilen");
+
+    let zeilen = default_zeilen(ordner.pfad());
+    assert_eq!(
+        zaehlwerte(&zeilen),
+        [
+            (
+                "Dateien",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 4,
+                    versteckt: 1
+                }
+            ),
+            (
+                "Ordner",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 3,
+                    versteckt: 1
+                }
+            ),
+            (
+                "Verknüpfungen",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 3,
+                    versteckt: 1
+                }
+            ),
+        ],
+        "die drei Zeilen tragen nicht die drei Beschriftungen in dieser Reihenfolge mit \
+         diesen Werten"
+    );
+
+    let summe: u64 = zeilen
+        .iter()
+        .map(|zeile| match zeile.wert() {
+            Wert::ZahlMitVersteckten { zahl, .. } => *zahl,
+            anderer => panic!("die Zeile {} traegt {anderer:?}", zeile.beschriftung()),
+        })
+        .sum();
+    assert_eq!(
+        summe,
+        eintraege_laut_system(ordner.pfad()),
+        "die Summe der drei Zahlen vor der Klammer ist nicht die Zahl aller Eintraege"
+    );
+
+    assert_eq!(
+        zeilen_als_text(&zeilen),
+        "\nDateien: 4 (1)\nOrdner: 3 (1)\nVerknüpfungen: 3 (1)",
+        "der Text der drei Zeilen"
+    );
+
+    // C2.4 und C2.8 an einem Unterordner: fuenfzig Dateien, keine versteckt.
+    assert_eq!(
+        zaehlwerte(&default_zeilen(&ordner.unter("planning")))
+            .into_iter()
+            .map(|(_, wert)| wert.clone())
+            .collect::<Vec<_>>(),
+        [
+            Wert::ZahlMitVersteckten {
+                zahl: 50,
+                versteckt: 0
+            },
+            Wert::ZahlMitVersteckten {
+                zahl: 0,
+                versteckt: 0
+            },
+            Wert::ZahlMitVersteckten {
+                zahl: 0,
+                versteckt: 0
+            },
+        ],
+        "die Klammer steht auch bei null versteckten, und unter planning liegt kein Ordner"
+    );
+
+    // C2.8 im Wortlaut des Kriteriums: ein Ordner ohne eigene Datei mit zwei
+    // Unterordnern, die zusammen hundert Dateien tragen.
+    let nur_ordner = Pruefordner::neu("zaehlzeilen-nur-ordner");
+    for name in ["links", "rechts"] {
+        let unter = nur_ordner.ordner(name);
+        for nummer in 0..50 {
+            schreiben(&unter, &format!("{nummer:02}.md"), "");
+        }
+    }
+    assert_eq!(
+        zaehlwerte(&default_zeilen(nur_ordner.pfad()))[..2],
+        [
+            (
+                "Dateien",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 0,
+                    versteckt: 0
+                }
+            ),
+            (
+                "Ordner",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 2,
+                    versteckt: 0
+                }
+            ),
+        ],
+        "gezaehlt wird flach und nicht ueber den Unterbaum"
+    );
+}
+
+/// C2.5: Ein leerer Ordner zeigt alle drei Zeilen mit „0 (0)" (Festlegung A3).
+#[test]
+fn ein_leerer_ordner_zeigt_drei_zeilen_mit_null_und_null() {
+    let ordner = Pruefordner::neu("zaehlzeilen-leer");
+    let zeilen = default_zeilen(ordner.pfad());
+    assert_eq!(zeilen.len(), 3, "es sind nicht drei Zeilen: {zeilen:?}");
+    for zeile in &zeilen {
+        assert_eq!(
+            zeile.wert(),
+            &Wert::ZahlMitVersteckten {
+                zahl: 0,
+                versteckt: 0
+            },
+            "die Zeile {} eines leeren Ordners",
+            zeile.beschriftung()
+        );
+        assert_eq!(zeile.wert().als_text(), "0 (0)");
+    }
+}
+
+/// C2.6, zweite Haelfte: ein Eintrag, den das Dateisystem ueber `UF_HIDDEN`
+/// versteckt und der keinen Punkt im Namen traegt, zaehlt wie einer mit Punkt.
+///
+/// Beide Wege stehen nebeneinander in demselben Ordner, damit die Probe nicht
+/// nur sagt, dass das Kennzeichen zaehlt, sondern dass es **gleich** zaehlt:
+/// zwei versteckte von drei Dateien, auf zwei verschiedenen Wegen. Der
+/// Ordner daneben haelt fest, dass das Kennzeichen an einem Ordner dasselbe
+/// tut wie an einer Datei.
+#[test]
+fn ein_ueber_chflags_versteckter_eintrag_zaehlt_wie_einer_mit_punkt() {
+    let ordner = Pruefordner::neu("zaehlzeilen-chflags");
+    ordner.datei("sichtbar", "x");
+    ordner.datei("gekennzeichnet", "x");
+    ordner.datei(".mit-punkt", "x");
+    ordner.verstecken("gekennzeichnet");
+    ordner.ordner("gekennzeichneter-ordner");
+    ordner.verstecken("gekennzeichneter-ordner");
+
+    assert_eq!(
+        zaehlwerte(&default_zeilen(ordner.pfad())),
+        [
+            (
+                "Dateien",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 3,
+                    versteckt: 2
+                }
+            ),
+            (
+                "Ordner",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 1,
+                    versteckt: 1
+                }
+            ),
+            (
+                "Verknüpfungen",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 0,
+                    versteckt: 0
+                }
+            ),
+        ],
+        "das Kennzeichen des Dateisystems zaehlt nicht wie der Punkt am Namensanfang"
+    );
+}
+
+/// C2.10 und C4.4: Ueber der Eintragsschranke sagen alle drei Zeilen
+/// „mindestens N", die Klammer entfaellt, und der eine Leselauf liest nicht
+/// weiter als bis zur Schranke.
+///
+/// N ist die Zahl der Treffer innerhalb der gelesenen Eintraege und nicht die
+/// Grenze: fuer die Ordner und die Verknuepfungen steht deshalb eine Null vor
+/// dem Satz, obwohl die Lesung abgebrochen wurde. Der Wortlaut ist der von
+/// [`Wert::UeberGrenze`], und ein zweiter Satz daneben entsteht nicht; geprueft
+/// wird deshalb am Wert und am Text, der `(` nirgends traegt ausser im Satz
+/// selbst.
+#[test]
+fn ueber_der_schranke_sagen_die_drei_zeilen_mindestens_und_tragen_keine_klammer() {
+    let ordner = Pruefordner::neu("zaehlzeilen-ueber-der-schranke");
+    for nummer in 0..=HOECHSTENS_EINTRAEGE {
+        schreiben(ordner.pfad(), &format!("{nummer:05}.md"), "");
+    }
+
+    let (zeilen, haushalt) = default_gezaehlt(&Profile::default(), ordner.pfad());
+    assert_eq!(
+        zaehlwerte(&zeilen),
+        [
+            ("Dateien", &Wert::UeberGrenze(HOECHSTENS_EINTRAEGE as u64)),
+            ("Ordner", &Wert::UeberGrenze(0)),
+            ("Verknüpfungen", &Wert::UeberGrenze(0)),
+        ],
+        "ueber der Schranke steht nicht in jeder Zeile der Mindestens-Satz mit den Treffern"
+    );
+    assert_eq!(
+        haushalt.leselaeufe(),
+        1,
+        "die drei Zeilen kosten mehr als einen Leselauf"
+    );
+
+    let text = zeilen_als_text(&zeilen);
+    let erwartet = format!(
+        "\nDateien: mindestens {HOECHSTENS_EINTRAEGE} (Lesung bei {HOECHSTENS_EINTRAEGE} Einträgen abgebrochen)\
+         \nOrdner: mindestens 0 (Lesung bei {HOECHSTENS_EINTRAEGE} Einträgen abgebrochen)\
+         \nVerknüpfungen: mindestens 0 (Lesung bei {HOECHSTENS_EINTRAEGE} Einträgen abgebrochen)"
+    );
+    assert_eq!(text, erwartet, "der Text ueber der Schranke");
+}
+
+/// C2.11: Ein Ordner, dessen Eintraege nicht zur Verfuegung stehen, zeigt in
+/// allen drei Zeilen den Platzhalter, und die Beschriftungen bleiben stehen
+/// (Festlegung A7).
+///
+/// Die Rechte werden entzogen und nach der Messung zurueckgegeben, damit der
+/// Pruefordner sich auf dem schnellen Weg abraeumt; `abraeumen` kaeme auch
+/// ohne das zurecht, aber langsamer. Der Leselauf wird gebucht, obwohl er
+/// scheitert: der Haushalt begrenzt die Arbeit und nicht den Erfolg.
+#[test]
+fn ein_ordner_ohne_leserecht_zeigt_drei_platzhalter_unter_ihren_beschriftungen() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let ordner = Pruefordner::neu("zaehlzeilen-ohne-leserecht");
+    let gesperrt = ordner.ordner("gesperrt");
+    schreiben(&gesperrt, "unsichtbar.md", "");
+    std::fs::set_permissions(&gesperrt, std::fs::Permissions::from_mode(0o000))
+        .expect("die Rechte lassen sich nicht entziehen");
+
+    // Scheitert die Zeile darunter, raeumt `Drop` des Pruefordners den
+    // gesperrten Ordner auf dem langsamen Weg ab; die Rechte kommen deshalb
+    // erst nach der Messung zurueck und nicht in einem Fangnetz darum.
+    let (zeilen, haushalt) = default_gezaehlt(&Profile::default(), &gesperrt);
+    std::fs::set_permissions(&gesperrt, std::fs::Permissions::from_mode(0o755))
+        .expect("die Rechte lassen sich nicht zurueckgeben");
+
+    assert_eq!(
+        zaehlwerte(&zeilen),
+        [
+            ("Dateien", &Wert::Nicht),
+            ("Ordner", &Wert::Nicht),
+            ("Verknüpfungen", &Wert::Nicht),
+        ],
+        "ohne Leserecht steht nicht in jeder Zeile der Platzhalter; laeuft die Probe als root?"
+    );
+    assert_eq!(
+        zeilen_als_text(&zeilen),
+        "\nDateien: --\nOrdner: --\nVerknüpfungen: --"
+    );
+    assert_eq!(
+        haushalt.leselaeufe(),
+        1,
+        "der gescheiterte Leselauf ist nicht gebucht worden"
+    );
+}
+
+/// C3.1 bis C3.3: `zaehlung` nimmt `typ` und `versteckt` an, und ohne die zwei
+/// Schluessel zaehlt sie, was sie vor der Runde 19 zaehlte.
+///
+/// Fuenf Zeilen desselben Profils auf demselben Bestand wie
+/// [`zaehlbestand`]: je eine mit einem der drei Typwerte, eine mit der
+/// Klammer allein und eine ohne beides. Die letzte liefert [`Wert::Zahl`] und
+/// keine Klammer (Festlegung A6, C3.3).
+#[test]
+fn die_zaehlung_nimmt_typ_und_versteckt_an_und_zaehlt_ohne_sie_wie_zuvor() {
+    let ordner = zaehlbestand("zaehlung-mit-typ");
+    let zusammenfassung = zusammengefasst(
+        r#"
+[[profil]]
+name = "Trifft ueber den Pfad"
+pfad = 'zaehlung-mit-typ'
+
+  [[profil.zeile]]
+  beschriftung = "Nur Dateien"
+  zaehlung = { typ = "datei" }
+
+  [[profil.zeile]]
+  beschriftung = "Nur Ordner, mit Klammer"
+  zaehlung = { typ = "ordner", versteckt = true }
+
+  [[profil.zeile]]
+  beschriftung = "Nur Verknuepfungen"
+  zaehlung = { typ = "verknuepfung" }
+
+  [[profil.zeile]]
+  beschriftung = "Alle, mit Klammer"
+  zaehlung = { versteckt = true }
+
+  [[profil.zeile]]
+  beschriftung = "Alle, wie vor der Runde 19"
+  zaehlung = { }
+
+  [[profil.zeile]]
+  beschriftung = "Dateien mit Muster"
+  zaehlung = { muster = '\.(txt|md)$', typ = "datei", versteckt = true }
+"#,
+        ordner.pfad(),
+    );
+
+    assert_eq!(
+        werte(&zusammenfassung),
+        [
+            ("Nur Dateien", &Wert::Zahl(4)),
+            (
+                "Nur Ordner, mit Klammer",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 3,
+                    versteckt: 1
+                }
+            ),
+            ("Nur Verknuepfungen", &Wert::Zahl(3)),
+            (
+                "Alle, mit Klammer",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 10,
+                    versteckt: 3
+                }
+            ),
+            ("Alle, wie vor der Runde 19", &Wert::Zahl(10)),
+            // Muster und Typ zugleich: `a.txt` und `b.md`, und nicht die
+            // Verknuepfung `auf-datei`, die auf eine .txt zeigt.
+            (
+                "Dateien mit Muster",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 2,
+                    versteckt: 0
+                }
+            ),
+        ]
+    );
+}
+
+/// C3.5: Ein Profil aus `readers.toml`, das fuer seinen erkannten Ordner eine
+/// Zeile mit `typ = "datei"` und `versteckt = true` schreibt, liefert dieselbe
+/// Zeile, die das Default-Profil als „Dateien" zeigt.
+///
+/// Gehalten wird an demselben Pruefordner in beiden Laeufen: erst ohne Profil,
+/// dann mit dem selbstgeschriebenen. Beide Zahlen stimmen ueberein, und der
+/// Text der Zeile ebenso, weil beide durch dieselbe Zaehlmaschine und
+/// dieselbe Textstelle gehen (C3.7).
+#[test]
+fn ein_eigenes_profil_liefert_dieselbe_zeile_wie_das_default_profil() {
+    let ordner = zaehlbestand("eigenes-profil-gegen-default");
+    ordner.verstecken("README");
+
+    let default = default_zeilen(ordner.pfad());
+    let eigene = zusammengefasst(
+        r#"
+[[profil]]
+name = "Selbst geschrieben"
+pfad = 'eigenes-profil-gegen-default'
+
+  [[profil.zeile]]
+  beschriftung = "Dateien"
+  zaehlung = { typ = "datei", versteckt = true }
+
+  [[profil.zeile]]
+  beschriftung = "Ordner"
+  zaehlung = { typ = "ordner", versteckt = true }
+
+  [[profil.zeile]]
+  beschriftung = "Verknüpfungen"
+  zaehlung = { typ = "verknuepfung", versteckt = true }
+"#,
+        ordner.pfad(),
+    );
+
+    assert_eq!(
+        default[0].wert(),
+        &Wert::ZahlMitVersteckten {
+            zahl: 4,
+            versteckt: 2
+        },
+        "die Vorprobe: der Bestand traegt vier Dateien, zwei davon versteckt"
+    );
+    assert_eq!(
+        zaehlwerte(eigene.zeilen()),
+        zaehlwerte(&default),
+        "das eigene Profil liefert andere Zeilen als das Default-Profil"
+    );
+    assert_eq!(
+        zeilen_als_text(eigene.zeilen()),
+        zeilen_als_text(&default),
+        "der Text der Zeilen weicht ab"
+    );
+}
+
+/// C4.1 und C4.2: Die drei Zaehlzeilen kosten zusammen hoechstens einen
+/// Verzeichnisleselauf und null Dateioeffnungen, und wo die Erkennung den
+/// Ordner schon gelesen hat, benutzen sie dieselbe Lesung.
+///
+/// Vier Profilsaetze, und in jedem steht am Ende ein Lauf und keine Oeffnung.
+/// Der Unterschied liegt darin, **wer** den Lauf bezahlt: bei einem leeren
+/// Satz und bei einem Satz aus lauter Pfadmustern die erste Zaehlzeile, bei
+/// einem Satz mit Kennzeichendatei der zweite Erkennungsdurchgang. Faende die
+/// Zaehlung nach jenem Durchgang einen zweiten Lauf noetig, stuende hier
+/// eine Zwei, und genau das haelt die Tabelle.
+///
+/// Gemessen wird am [`Haushalt`] des Laufs, wie in den Proben zu C6 der Runde
+/// 16, und nicht an einer Uhr (C4.5).
+#[test]
+fn die_drei_zaehlzeilen_kosten_einen_leselauf_und_keine_oeffnung_auch_nach_der_erkennung() {
+    let ordner = zaehlbestand("zaehlzeilen-haushalt");
+
+    let faelle: [(&str, &str); 4] = [
+        ("kein Profil", ""),
+        (
+            "ein Pfadmuster, das nicht trifft",
+            "[[profil]]\nname = \"Trifft nicht\"\npfad = 'gibt-es-nicht$'\n",
+        ),
+        (
+            "eine Kennzeichendatei, die nicht trifft",
+            "[[profil]]\nname = \"Trifft nicht\"\nkennzeichen = '^\\.fusion-nicht-da$'\n",
+        ),
+        (
+            "zwei Profile, Pfadmuster und Kennzeichen, beide ohne Treffer",
+            "[[profil]]\nname = \"Pfad\"\npfad = 'gibt-es-nicht$'\n\n\
+             [[profil]]\nname = \"Kennzeichen\"\nkennzeichen = '^\\.fusion-nicht-da$'\n\n\
+             [[profil]]\nname = \"Noch eines\"\nkennzeichen = '^_._circle\\.md$'\n",
+        ),
+    ];
+
+    for (fall, text) in faelle {
+        let (profile, meldungen) = gepruefte(text);
+        assert!(meldungen.is_empty(), "{fall}: {meldungen:?}");
+        let (zeilen, haushalt) = default_gezaehlt(&profile, ordner.pfad());
+        assert_eq!(
+            haushalt.leselaeufe(),
+            1,
+            "{fall}: {} Leselaeufe statt einem",
+            haushalt.leselaeufe()
+        );
+        assert_eq!(
+            haushalt.oeffnungen(),
+            0,
+            "{fall}: die Zaehlzeilen haben {} Dateien geoeffnet",
+            haushalt.oeffnungen()
+        );
+        assert_eq!(
+            zeilen[0].wert(),
+            &Wert::ZahlMitVersteckten {
+                zahl: 4,
+                versteckt: 1
+            },
+            "{fall}: die erste Zeile zaehlt nicht die vier Dateien"
+        );
+    }
+}
+
+/// C1.7 und Festlegung A4: eine Verknuepfung bekommt keine Zaehlzeilen, auch
+/// wenn sie auf einen Ordner zeigt; ein Profil mit Pfadmuster kann sie
+/// dagegen sehr wohl erkennen.
+///
+/// Die zweite Haelfte ist die Gegenprobe zur ersten: `None` fuer die
+/// Verknuepfung kommt aus dem Rueckfallzweig und nicht aus der Frage, ob der
+/// aufgeloeste Pfad ein Verzeichnis ist, denn die beantwortet das erkannte
+/// Profil daneben mit ja.
+#[test]
+fn eine_verknuepfung_auf_einen_ordner_bekommt_keine_zaehlzeilen() {
+    let ordner = zaehlbestand("verknuepfung-ohne-zaehlzeilen");
+    let verknuepfung = ordner.unter("auf-ordner");
+
+    assert!(
+        zusammenfassen(&Profile::default(), &verknuepfung).is_none(),
+        "die Verknuepfung auf planning bekommt Zaehlzeilen"
+    );
+    assert!(
+        zusammenfassen(&Profile::default(), &ordner.unter("auf-datei")).is_none(),
+        "die Verknuepfung auf a.txt bekommt Zaehlzeilen"
+    );
+    assert!(
+        matches!(
+            zusammenfassen(&Profile::default(), &ordner.unter("planning")),
+            Some(Auskunft::Default(_))
+        ),
+        "das Ziel der Verknuepfung bekommt seine Zaehlzeilen sehr wohl"
+    );
+
+    let (profile, meldungen) = gepruefte(
+        "[[profil]]\nname = \"Trifft die Verknuepfung\"\npfad = 'auf-ordner$'\n\n  \
+         [[profil.zeile]]\n  beschriftung = \"Eintraege\"\n  zaehlung = { }\n",
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+    let erkannt = erkannte(
+        zusammenfassen(&profile, &verknuepfung)
+            .expect("ein Pfadmuster erkennt die Verknuepfung auf einen Ordner nicht mehr"),
+    );
+    assert_eq!(werte(&erkannt), [("Eintraege", &Wert::Zahl(50))]);
+}
+
+// ---------------------------------------------------------------------------
 // Die abzaehlbaren Grenzen aus C6, gezaehlt am Haushalt eines Laufs
 // ---------------------------------------------------------------------------
 
@@ -3566,10 +4205,14 @@ fn kind_fasst_mit_einem_freien_deskriptor_zusammen() {
     }
     let vorrat = gehalten.len();
 
-    // Erst ohne einen freien, dann mit genau einem.
+    // Erst ohne einen freien, dann mit genau einem. Seit der Runde 19 laeuft
+    // jeder Durchgang zweimal: einmal ueber das erkannte Profil und einmal
+    // ueber den Rueckfallweg zum Default-Profil (C4.3 jener Runde).
     let ohne = zusammenfassen(&profile, &ordner);
+    let default_ohne = zusammenfassen(&Profile::default(), &ordner);
     drop(gehalten.pop());
     let mit = zusammenfassen(&profile, &ordner);
+    let default_mit = zusammenfassen(&Profile::default(), &ordner);
     drop(gehalten);
 
     assert!(
@@ -3609,5 +4252,57 @@ fn kind_fasst_mit_einem_freien_deskriptor_zusammen() {
     assert!(
         titel.iter().all(|zeile| zeile.starts_with("Verlauf ")),
         "ein Titel ist auf seinen Dateinamen zurueckgefallen: {titel:?}"
+    );
+
+    // Der Rueckfallweg: ohne einen freien Deskriptor kommt keine Zahl zustande,
+    // mit genau einem kommen alle drei. Ein Ordner, der neben dem Leser offen
+    // bliebe, oder eine Datei, die er dafuer oeffnete, liesse den zweiten
+    // Durchgang scheitern wie den ersten.
+    let zaehlt = |auskunft: &Option<Auskunft>| {
+        matches!(
+            auskunft,
+            Some(Auskunft::Default(zeilen))
+                if zeilen
+                    .iter()
+                    .any(|zeile| matches!(zeile.wert(), Wert::ZahlMitVersteckten { .. }))
+        )
+    };
+    assert!(
+        !zaehlt(&default_ohne),
+        "ohne einen freien Deskriptor zaehlt das Default-Profil; die Gegenprobe belegt \
+         nichts mehr: {default_ohne:?}"
+    );
+    let Some(Auskunft::Default(zeilen)) = &default_mit else {
+        panic!(
+            "mit einem freien Deskriptor liefert der Rueckfallweg keine Zaehlzeilen: {default_mit:?}"
+        );
+    };
+    assert_eq!(
+        zaehlwerte(zeilen),
+        [
+            (
+                "Dateien",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 1,
+                    versteckt: 0
+                }
+            ),
+            (
+                "Ordner",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 3,
+                    versteckt: 0
+                }
+            ),
+            (
+                "Verknüpfungen",
+                &Wert::ZahlMitVersteckten {
+                    zahl: 0,
+                    versteckt: 0
+                }
+            ),
+        ],
+        "mit einem freien Deskriptor zaehlt der Rueckfallweg nicht den Circle-Datensatz und \
+         die drei Unterordner"
     );
 }

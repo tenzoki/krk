@@ -1366,6 +1366,101 @@ kennzeichen = '^\.fusion-setup$'
         let _ = metadaten.groesse;
     }
 
+    /// C1.1, C2.1 und C2.2 der Runde 19: ein Ordner mit leerem Profilsatz
+    /// zeigt seine sechs Angaben und darunter die drei Zaehlzeilen.
+    ///
+    /// Geprueft wird die Uebersetzung der [`Auskunft`] in einen [`Inhalt`]:
+    /// die Zeilen reisen strukturiert mit und tragen ihre Beschriftungen in
+    /// der Reihenfolge aus Festlegung A1; was sie zaehlen, halten die Proben
+    /// im Kern. Die Metadaten daneben bleiben die eines Ordners.
+    #[test]
+    fn ein_ordner_mit_leerem_profilsatz_traegt_drei_zaehlzeilen_unter_seinen_metadaten() {
+        let ordner = Pruefordner::neu("zaehlzeilen");
+        ordner.datei("eins.md", "a");
+        ordner.datei(".zwei", "b");
+        ordner.ordner("drei");
+
+        let Inhalt::Metadaten {
+            metadaten,
+            zaehlzeilen,
+        } = laden(ordner.pfad(), Tafel::Hell, &Profile::default())
+        else {
+            panic!("ein Ordner ohne Profiltreffer bleibt bei den Metadaten");
+        };
+        assert_eq!(metadaten.typ, Typ::Ordner);
+        assert_eq!(metadaten.pfad, ordner.pfad());
+        assert_eq!(
+            zaehlzeilen
+                .iter()
+                .map(|zeile| (zeile.beschriftung(), zeile.wert().clone()))
+                .collect::<Vec<_>>(),
+            [
+                (
+                    "Dateien",
+                    krk_core::leseprofil::Wert::ZahlMitVersteckten {
+                        zahl: 2,
+                        versteckt: 1
+                    }
+                ),
+                (
+                    "Ordner",
+                    krk_core::leseprofil::Wert::ZahlMitVersteckten {
+                        zahl: 1,
+                        versteckt: 0
+                    }
+                ),
+                (
+                    "Verknüpfungen",
+                    krk_core::leseprofil::Wert::ZahlMitVersteckten {
+                        zahl: 0,
+                        versteckt: 0
+                    }
+                ),
+            ],
+            "die drei Zaehlzeilen kommen nicht in der Gestalt an, die der Kern liefert"
+        );
+    }
+
+    /// C1.6 und C1.7 der Runde 19: eine Verknuepfung bekommt keine Zaehlzeile,
+    /// auch wenn sie auf einen Ordner zeigt, und eine Datei erst recht nicht.
+    ///
+    /// Die Verknuepfung zeigt auf denselben Ordner, der in der Probe darueber
+    /// drei Zeilen bekommt; dass hier keine dasteht, liegt damit am
+    /// ausgewaehlten Eintrag und nicht an seinem Ziel (Festlegung A4).
+    #[test]
+    fn eine_verknuepfung_und_eine_datei_tragen_keine_zaehlzeile() {
+        let ordner = Pruefordner::neu("keine-zaehlzeilen");
+        let ziel = ordner.ordner("ziel");
+        std::fs::write(ziel.join("eins.md"), "a").expect("Probendatei");
+        let verknuepfung = ordner.unter("auf-ziel");
+        std::os::unix::fs::symlink(&ziel, &verknuepfung)
+            .expect("die Verknuepfung laesst sich nicht anlegen");
+        let binaer = ordner.datei("roh.bin", [0xFF, 0xFE, 0x00, 0x42]);
+
+        for (pfad, typ) in [(&verknuepfung, Typ::Verknuepfung), (&binaer, Typ::Datei)] {
+            let Inhalt::Metadaten {
+                metadaten,
+                zaehlzeilen,
+            } = laden(pfad, Tafel::Hell, &Profile::default())
+            else {
+                panic!("{} gehoert in die Metadatenanzeige", pfad.display());
+            };
+            assert_eq!(metadaten.typ, typ);
+            assert!(
+                zaehlzeilen.is_empty(),
+                "{} traegt Zaehlzeilen: {zaehlzeilen:?}",
+                pfad.display()
+            );
+        }
+
+        // Die Gegenprobe am Ziel: der Ordner selbst bekommt seine drei Zeilen.
+        let Inhalt::Metadaten { zaehlzeilen, .. } = laden(&ziel, Tafel::Hell, &Profile::default())
+        else {
+            panic!("das Ziel der Verknuepfung gehoert in die Metadatenanzeige");
+        };
+        assert_eq!(zaehlzeilen.len(), 3, "das Ziel bekommt keine drei Zeilen");
+    }
+
     /// Ein Ordner, den ein Profil erkennt, zeigt dessen Zeilen statt der
     /// Metadaten, samt der Kopfzeile aus Festlegung A6.
     #[test]
