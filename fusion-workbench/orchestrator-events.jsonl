@@ -1731,3 +1731,10 @@
 {"ts":"2026-08-26T20:13:53","event":"bounded_closure_proposed","detail":"Die erste Haelfte der Directive ist gebaut und belegt, die zweite bewusst zurueckgestellt; 116+10 offene Defekte und ein namentlich vorgesehener zweiter Plan als Rueckstand abgelegt"}
 {"ts":"2026-08-26T20:14:10","event":"session_end","detail":"1 Runde, 6 Aufgaben, 9 Commits, 5 Defekte geschlossen, 10 abgelegt, 1 Entscheidung abgelegt; Status Bounded Closure"}
 {"ts":"2026-08-26T20:45:50","event":"session_start","history_file":"shared/history/260826-2245-orchestrator-session.md","detail":"Directive noch nicht gesetzt; Modus noch nicht aufgeloest"}
+{"ts":"2026-08-27T04:40:27","event":"scope_resolved","detail":"custom: Circle 260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil; Phase 0b (shaper -> spec, planner -> plan) folgt; 2 Entscheidungen beantwortet"}
+{"ts":"2026-08-27T04:40:27","event":"commit","detail":"ebddb05 Circle-Anlage und Aktivierung"}
+{"ts":"2026-08-27T04:40:27","event":"shaper_start","agent":"shaper","detail":"Spec fuer die Runde 19, Vorschau zaehlt Ordnerinhalt"}
+{"ts":"2026-08-27T11:12:58","event":"shaper_done","agent":"shaper","detail":"circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_o_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md; 40 Abnahmekriterien, 7 abgeleitete Festlegungen"}
+{"ts":"2026-08-27T11:12:58","event":"gate_hit","detail":"Spec-Freigabe"}
+{"ts":"2026-08-27T11:12:58","event":"gate_response","detail":"proceed: Spec freigegeben, A1 bis A7 ohne Einspruch"}
+{"ts":"2026-08-27T11:12:58","event":"planner_start","agent":"planner","detail":"circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_o_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"}

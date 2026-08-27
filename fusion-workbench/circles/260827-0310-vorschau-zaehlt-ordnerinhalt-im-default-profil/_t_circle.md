@@ -4,14 +4,14 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260827-0622: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** (none yet)
+**Active spec/plan:** circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-1322_*_plan-vorschau-zaehlt-ordnerinhalt-im-default-profil.md
 **Active session history:** circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-0622-orchestrator-session.md
 
 ---
 
 ## Directive
 
-Die Vorschau beschreibt einen Ordner, den kein Leseprofil aus `readers.toml` erkennt, nicht mehr allein mit seinen sechs Metadatenangaben. Unter ihnen stehen drei Zählzeilen: die Zahl der Dateien, die der Unterordner und die der Verknüpfungen darin, jede mit der Zahl der versteckten in Klammern. Geliefert werden sie von einem Default-Leseprofil, das in KRK eingebaut ist und in keiner Ablagedatei steht; der Nutzer kann es weder anpassen noch abschalten, und es greift überall dort, wo heute die Metadatenanzeige allein steht. Gezählt wird immer der ganze Ordner, gleich wie der Schalter für die versteckten Einträge steht, denn die Klammer sagt gerade, was beim Hineingehen fehlt, solange er aus ist.
+See `**Active spec/plan:**` above. The cited spec or plan states the Directive in force.
 
 ## Grounding snapshot
 
