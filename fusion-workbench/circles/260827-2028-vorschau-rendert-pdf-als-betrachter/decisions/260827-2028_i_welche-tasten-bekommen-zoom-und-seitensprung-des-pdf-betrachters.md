@@ -40,3 +40,5 @@ Open. Zu beantworten spätestens beim Schärfen (portfolio-activation), bevor de
 
 ---
 Answered: circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0649_o_spec-vorschau-rendert-pdf-als-betrachter.md:1 — Klärungsrunde des Orchestrators mit dem Nutzer am 260828-0044, wörtlich „1b": Möglichkeit 2, verengt auf drei Befehle `cmd+plus`, `cmd+minus`, `cmd+0`; kein Sprungblatt, gesprungen wird durch Blättern, der Seitenzähler in der Statuszeile ist die einzige Seitenauskunft. Ausformuliert im Spec unter `## Warum diese Runde drei Kommandos anlegt und kein Blatt` und C3.
+
+Implemented: 2aee690 — `Kommando::VorschauVergroessern`, `VorschauVerkleinern`, `VorschauAusgangsgroesse` mit `Wirkungsbereich::Vorschau` (`crates/krk-core/src/tasten/belegung.rs:733-747`, `:1037-1039`); 22b8442 — die drei Einträge `cmd+plus`, `cmd+minus`, `cmd+0` in `resources/default-keymap.toml:705-717`; 5ff1ee4 — die drei Ausführungszweige in `crates/krk-ui/src/appkit/anwendung.rs:3439-3441` und `Pdfbetrachter::zoomen` (`crates/krk-ui/src/appkit/betrachter.rs:547`). Kein Sprungblatt gebaut, wie beantwortet. Abgleich 260828-1044.

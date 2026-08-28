@@ -1,7 +1,7 @@
 # Spec: Die Vorschau rendert PDF als Betrachter mit Zoom, Blättern und Seitenzähler
 
 **Date:** 2026-08-28
-**Status:** freigegeben am 260828 (Spec-Tor, A1 bis A10 ohne Einspruch), Planung läuft
+**Status:** Complete — gebaut und vom Nutzer am 260828 abgenommen (Plan `planning/260828-0712_*_plan-vorschau-rendert-pdf-als-betrachter.md`, alle elf Schritte `[DONE]`, Abgleich 260828-1044); die US-Hälfte von C3.2 hängt am offenen Datensatz `decisions/260828-0712_*`
 **Activated from Circle:** 260827-2028-vorschau-rendert-pdf-als-betrachter
 **Source:** Die Directive des Circle-Datensatzes `_t_circle.md`, vom Nutzer am 260827-2028 festgelegt (vier Antworten der Klärungsrunde von `/fusion:direct`), dazu die drei Antworten der Klärungsrunde vom 260828-0044, wörtlich „1b, 2a, 3a", und der Entscheidungsdatensatz `decisions/260827-2028_*_welche-tasten-bekommen-zoom-und-seitensprung-des-pdf-betrachters.md`, der mit der ersten dieser drei Antworten beantwortet ist.
 

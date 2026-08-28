@@ -40,3 +40,6 @@ Der Abschnittsname bleibt „Dreiteilung", weil er den Namen des Kriteriums trä
 ## Schließbedingung
 
 Der Datensatz bleibt offen, weil der Abnahmelauf der Runde 1 aussteht (`_b_circle.md:139`: er verlangt KRK im Vordergrund) und die Schließung dem Nutzer gehört. Wer C6 abnimmt, liest die drei Wege als das Kriterium und nimmt für die Formel „alles andere" diesen Datensatz als Erklärung: ein PDF im Betrachter statt in den Metadaten ist kein Verstoß gegen C6, sondern die Runde 20. Geschlossen wird er mit jenem Abnahmelauf oder mit dem der Runde 20 (Plan, Schritt 11), sobald der Nutzer den Betrachter neben den drei Wegen abgenommen hat.
+
+---
+Abgleich 260828-1044: bleibt offen, die Schließung gehört dem Nutzer. Bestätigt: `crates/krk-ui/src/vorschaumodell.rs:36` sagt „Seit der Runde 20 hat eine Datei vier Wege" (`9d2e457`); `Inhalt::Pdf` steht in `:320`; der fremde Spec der Runde 1 ist unverändert (`git log 2033626..HEAD -- fusion-workbench/circles/260802-0842-*/planning` leer).

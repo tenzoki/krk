@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
-**Claim:** Claimed 260828-0034: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
+**Claim:** Unclaimed
 **Active spec/plan:** circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0712_p_plan-vorschau-rendert-pdf-als-betrachter.md
 **Active session history:** circles/260827-2028-vorschau-rendert-pdf-als-betrachter/history/260828-0035-orchestrator-session.md
 
@@ -42,6 +42,8 @@ See `**Active spec/plan:**` above. The cited spec or plan states the Directive i
 
 ## Turn log
 
+- **Turn 1 (260828, 00:35–10:40):** Phase 0b (Spec `906dcd6`, Plan `4778c8a`), dann alle elf Planschritte in einem Turn: S1 `1df8b8d`, S2+S3b `2aee690`, S3 `22b8442` (Ontocoder-Tor: ausführen), S4 `ae349d1`, S5 `9d2e457`, S6–S9 `5ff1ee4`, S10 `03af590`, S11 `48cd818` (Abnahmelauf vom Nutzer, alle zwölf Punkte). Ein Fehler: der erste Abnahmelauf auf `03af590` stürzte beim Zoom ab (PDFView war sein eigener Delegat), Bugfixer behob es in `8a8e638`, zweiter Lauf bestanden. `make check` grün. Kohärenz im Turn `ok`. Zwei Defekte geschlossen (`260826-1302`, `260826-1423`), zwei planmäßig gefilet (C6 der Runde 1; `make tasten` im Spec), eine Entscheidung beantwortet (Tasten), eine offen (US-Belegung `cmd+plus`).
+
 
 ## Activation proposal
 
@@ -49,3 +51,7 @@ See `**Active spec/plan:**` above. The cited spec or plan states the Directive i
 **Vorgeschlagene Aktivierung:** 260827-2101, über `/fusion:next` nach Bestätigung des Nutzers
 
 Der Circle ist der einzige vorgesehene und wird als nächster empfohlen. Seine Grundlage nennt zwei offene Entscheidungsdatensätze, `decisions/260827-2028_*_welche-tasten-bekommen-zoom-und-seitensprung-des-pdf-betrachters.md` und `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md`; keiner hält einen Planschritt auf, der erste ist im Spec zu beantworten. Alle fünf Abhängigkeiten sind terminal: `260819-2230-auswahl-und-kopieren-in-der-vorschau` kohärent, die vier übrigen beschränkt geschlossen, was in diesem Projekt den ungefahrenen Abnahmelauf des Nutzers und keine offene Arbeit bedeutet. Der Circle erbt drei offene Defekte an der Vorschau, die seine Grundlage selbst aufführt; sie sind Gegenstand seines Plans und keine Vorbedingung.
+
+## Closure note
+
+**Geschlossen kohärent (`_c_`) am 260828-1055.** Sitzung `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/history/260828-0035-orchestrator-session.md`, Phase 0b (Spec `906dcd6`, Plan `4778c8a`) und ein Turn mit elf Schritten, Commits `2033626..48cd818`. Abgleich `history/260828-1044-reconciliation.md`: Urteil **coherent**, Empfehlung `none`, alle elf Schritte und alle zwölf Stop-Klauseln belegt. Der Nutzer hat den Abnahmelauf aus Schritt 11 gefahren: ein erster Lauf auf `03af590` fand den Stapelüberlauf beim Zoom (PDFView war sein eigener Delegat), behoben in `8a8e638`; der zweite Lauf auf `8a8e638` hat alle zwölf Punkte bestätigt, und die zwölf Stop-Klauseln gelten nach seiner Lesart alle. Durchsicht `reviews/260828-1046-coderev-durchsicht-runde-20-pdf-betrachter.md` deckt den ganzen Bereich (`not-opened: none`) und lässt einen Medium- (CLAUDE.md nennt sieben Werte für `Wirkungsbereich`, für den Kurator) und drei Low-Befunde als offene Datensätze unter `issues/` zurück; dazu der Abgleichsbefund zu fünf History-Zeitstempeln nach ihrem Commit. Offen bleiben planmäßig `issues/260828-0744_o_…` (C6 der Runde 1, Schließung gehört dem Nutzer), `issues/260828-0712_o_…` (`make tasten` im Spec) und `decisions/260828-0712_o_…` (US-Belegung `cmd+plus`, keine Vorbedingung). Keine Auslieferung in dieser Runde.

@@ -30,3 +30,5 @@ Zahl, wie `Bereich::seite` in `fenstermodell.rs:157-160` es mit „ein sechster 
 riskiert — dort stimmt die Zahl heute noch.
 
 **Resolved:** 260828, Runde 20 Schritt 5 (Coder). Beide Sätze stehen ohne Zahl: `zeigt_dateitext` sagt „ein weiterer Wert von `Inhalt` haelt den Bau an", `tab_setzen` sagt „erreichen zusammen nicht jeden Wert von `Inhalt`". Der achte Wert `Inhalt::Pdf` ist im selben Schritt hinzugekommen, und keine der zwei Stellen trägt seither eine Zahl, die mit dem neunten falsch würde (Constraint 7 des Specs der Runde 20).
+
+Abgleich 260828-1044: bestätigt gegen `9d2e457` — `grep -n "siebter Inhalt\|alle sechs" crates/krk-ui/src/vorschaumodell.rs` liefert nichts mehr; `zeigt_dateitext` (`:642`) und die Tab-Stelle stehen ohne Zahl. Bleibt `_c_`.

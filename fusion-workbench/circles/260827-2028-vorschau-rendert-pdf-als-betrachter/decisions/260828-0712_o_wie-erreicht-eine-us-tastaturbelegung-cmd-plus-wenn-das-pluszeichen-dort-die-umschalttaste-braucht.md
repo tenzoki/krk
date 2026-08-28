@@ -36,3 +36,6 @@ C3.2 des Specs verlangt, dass auf einer deutschen **und** einer US-amerikanische
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1 und bauen sie im Plan, vorbehaltlich der Antwort: sie kostet keine Zeile am Abgriff, hält die Regel aus `260808-0140` unverändert und trifft das Referenzgerät vollständig. C3.2 wird dabei um die US-Hälfte kleiner, und der Spec sagt heute mehr zu, als der Mechanismus entscheiden kann; der Nutzer sollte das wissen, bevor der Abnahmelauf es zeigt. Fällt die Antwort auf Möglichkeit 2, wächst der Plan um einen Schritt am Abgriff und an `Kombination::aus_tastendruck`, und C3.2 bekommt eine Probe über beide Lesungen.
+
+---
+Abgleich 260828-1044: weiterhin offen. Gesucht in `planning/`, `analyses/` dieses Circles und in `shared/decisions/`; keine Antwort. Der Baum entscheidet die Taste über das gemeldete Zeichen ohne Zusatztaste (`crates/krk-core/src/tasten/parser.rs:211-222`, `zeichen_des_namens`); die US-Hälfte von C3.2 bleibt damit ungebaut, und der Plan nennt das keine Vorbedingung (`## Where this Circle stops`, Klausel 9).
