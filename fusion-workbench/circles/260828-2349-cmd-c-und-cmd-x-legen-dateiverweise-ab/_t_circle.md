@@ -4,14 +4,14 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260828-2351: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** (none yet)
+**Active spec/plan:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/planning/260829-0005_o_spec-cmd-c-und-cmd-x-legen-dateiverweise-ab.md
 **Active session history:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/history/260828-2351-orchestrator-session.md
 
 ---
 
 ## Directive
 
-Nach dieser Runde legt `cmd+c` im Dateifenster die betroffenen Einträge — die Markierung, sonst der Eintrag unter der Zeilenmarke, Dateien wie Ordner — als Dateiverweise in die Zwischenablage, so dass ein `cmd+v` im Finder oder in einer anderen Anwendung, die Dateien annimmt, diese Einträge dorthin kopiert; daneben stehen die bloßen Namen als Text, ein Name je Zeile, wie es der Finder beim Kopieren einer Datei tut. `cmd+x` legt dieselben Verweise ab und sagt in der Statuszeile, dass das Verschieben beim Ziel liegt: macOS kennt keine Zwischenablagesorte, die einer fremden Anwendung „verschieben statt kopieren" mitteilt, der Finder verschiebt kopierte Dateien auf `opt+cmd+v`, und KRK verspricht in der Liste nichts, was ein fremdes Programm nicht einlösen kann. Beide Befehle sind die `copy:`- und `cut:`-Hälfte des Einhängepunkts, den Belegung und Menü „Bearbeiten" seit dem 260805 für die Dateizwischenablage freihalten: das Dateifenster beantwortet die zwei Selektoren, ohne zweiten Menüeintrag, ohne zweite Zeile in der Belegung und ohne neues `Kommando`. Im Editor, in der Vorschau und in jedem Textfeld bleiben `cmd+c` und `cmd+x` die Textbefehle, die sie sind. Ein Einfügen von Dateien **in** KRK baut diese Runde nicht; `paste:` am Dateifenster gehört dem Filter (`260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`).
+See `**Active spec/plan:**` above. The cited spec or plan states the Directive in force.
 
 ## Grounding snapshot
 
