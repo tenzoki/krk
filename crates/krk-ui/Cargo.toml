@@ -31,6 +31,11 @@ objc2-foundation = { workspace = true }
 # Unmittelbar genannt, weil `bildtakt.rs` den Typnamen `CADisplayLink`
 # schreibt: der Takt wird festgehalten, nicht nur einmal gerufen.
 objc2-quartz-core = { workspace = true }
+# Unmittelbar genannt, weil `appkit/betrachter.rs` den Typnamen `PDFView`
+# schreibt: der Betrachter der Vorschau (Runde 20) ist eine Unterklasse davon.
+# Die Begruendung der Kiste, die abgeschalteten Vorgabemerkmale und die vier
+# genannten Klassen stehen an der Versionsangabe in der Wurzel-`Cargo.toml`.
+objc2-pdf-kit = { workspace = true }
 # Die Parametertypen der FSEvents-Bindung in `appkit/fsevents.rs`. Die Kiste
 # verlinkt `CoreFoundation`; `CoreServices`, wo `FSEventStreamCreate` liegt,
 # verlinkt das `#[link]`-Attribut an jenem `extern`-Block.

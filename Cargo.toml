@@ -256,6 +256,40 @@ objc2-quartz-core = { version = "0.3", default-features = false, features = [
     "std",
     "CADisplayLink",
 ] }
+# PDFKit, die PDF-Bibliothek des Systems, fuer den Betrachter der Vorschau
+# (Runde 20). Welche Klasse und welche Kiste, entscheidet der Plan:
+# `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0712_*_plan-vorschau-rendert-pdf-als-betrachter.md`,
+# `## Die zehn Entscheidungen`, Nr. 1 und 2. `appkit/betrachter.rs` schreibt
+# den Typnamen `PDFView`.
+#
+# Der Rahmen steht auf jedem macOS 15 und wird wie AppKit und QuartzCore beim
+# Programmstart abgebildet; ein Laden beim ersten PDF hiesse `dlopen` von Hand.
+# Die Alternative ohne Kiste, `class!("PDFView")` mit `msg_send!` und einem
+# `#[link]`-Block wie fuer CoreServices in `appkit/fsevents.rs`, kostete jede
+# Typangabe an jedem Aufruf und machte aus den gebundenen Methoden
+# handgeschriebene Selektoren mit selbst behaupteten Signaturen.
+#
+# Die Kiste ist derselben Bauart wie `objc2-app-kit`: erzeugte Bindungen,
+# kein `build.rs`, kein C. Die Zusage aus dem Spec (Constraint 4) haelt damit;
+# `Cargo.lock` fuehrt nach der Aufnahme weiterhin kein `cc` und ausser
+# `windows-sys` kein `-sys`-Paket.
+#
+# `default-features = false`, weil der Vorgabesatz alle Anmerkungs-, Formular-
+# und Miniaturenklassen von PDFKit einschaltet, von denen KRK keine nennt.
+# Genannt werden allein die vier Klassen, die der Betrachter anspricht.
+# `objc2-core-foundation` ist noetig, weil `scaleFactor`, `minScaleFactor` und
+# `maxScaleFactor` einen `CGFloat` tragen und die Kiste diese Methoden hinter
+# dem Merkmal verbirgt; `krk-ui` fuehrt die Kiste ohnehin.
+# `objc2-core-graphics` bleibt aus: es wird keine Seite selbst gezeichnet.
+objc2-pdf-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "objc2-app-kit",
+    "objc2-core-foundation",
+    "PDFView",
+    "PDFDocument",
+    "PDFPage",
+    "PDFSelection",
+] }
 # Objective-C-Bloecke. `NSEvent.addLocalMonitorForEventsMatchingMask:handler:`
 # nimmt seinen Rueckruf als Block entgegen; ohne diese Kiste laesst sich keiner
 # bauen. `objc2-app-kit` fuehrt sie ohnehin schon als Vorbedingung, hier steht
