@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 85 Funktionen mit zusammen 90 Kombinationen.
+# Ausgeliefert sind 88 Funktionen mit zusammen 93 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -48,7 +48,10 @@
 # Datei.
 #
 # Tastennamen: f1 bis f12, delete, up, down, left, right, pageup, pagedown,
-# home, end, return, tab, esc, space sowie Buchstaben und Ziffern.
+# home, end, return, tab, esc, space sowie Buchstaben und Ziffern. Seit der
+# Runde 20 dazu plus und minus; die zwei werden wie Buchstaben und Ziffern
+# ueber das Zeichen gefunden, nicht ueber die Stelle, und wirken deshalb auf
+# jeder Tastaturbelegung an der Taste, die + und - erzeugt.
 #
 # Die fn-Taste ist keine Zusatztaste dieser Schreibweise und kommt in keiner
 # Kombination vor. Funktionstasten schlaegt KRK ueber den Tastencode nach, und
@@ -672,6 +675,46 @@ name = "Zum Inhalt der Zwischenablage springen"
 tasten = ["opt+cmd+g"]
 # Steht neben shift+cmd+g, der Pfadeingabe von Hand: dieselbe Handlung mit
 # vorausgefuelltem Wert.
+
+# ── Runde 20: der PDF-Betrachter ─────────────────────────────────────────────
+# Drei Zoombefehle der Vorschau, Wirkungsbereich "Vorschau": sie wirken nur,
+# wenn der Fokus im Vorschaufenster steht, und sind sonst weder ueber die
+# Taste noch ueber das Menue erreichbar. Der Block steht hinter C10, weil die
+# Zwischenablage-Ansicht dort dieselbe Flaeche bespielt.
+#
+# Die Kombinationen sind die von Vorschau.app und Safari. Der Nutzer hat am
+# 260828-0044 die Antwort 1b gewaehlt: nur Zoom und Ausgangsgroesse, kein
+# Sprungblatt und keine eigenen Blaettertasten; gesprungen wird durch Blaettern,
+# und der Seitenzaehler in der Statuszeile ist die einzige Seitenauskunft
+# (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/decisions/260827-2028_*_welche-tasten-bekommen-zoom-und-seitensprung-des-pdf-betrachters.md`).
+#
+# Bild-auf, Bild-ab, Pos1 und Ende bekommen deshalb keinen Eintrag: keine der
+# vier ist ein Kommando von KRK. Mit dem Fokus im Betrachter weist die
+# Zulaessigkeitspruefung sie ab, sie laufen an AppKit weiter und blaettern
+# dort, um einen Ausschnitt oder an den Anfang und das Ende der Rolle (C1.3);
+# `make tasten` gibt fuer pageup, pagedown, home und end vor und nach dieser
+# Runde dieselben Zeilen aus.
+#
+# plus und minus sind seit dieser Runde Tastennamen (Kopf der Datei). Beide
+# werden ueber das Zeichen gefunden und nicht ueber die Stelle, wie Buchstaben
+# und Ziffern: cmd+plus trifft auf jeder Belegung die Taste, die + erzeugt.
+# Alle drei Kombinationen waren am 260828 ueber alle Tastenlisten dieser Datei
+# frei; cmd+1 bis cmd+4 liegen bei der Sortierung, cmd+0 trug nichts.
+
+[[funktion]]
+id = "vorschau_vergroessern"
+name = "Vorschau vergrößern"
+tasten = ["cmd+plus"]
+
+[[funktion]]
+id = "vorschau_verkleinern"
+name = "Vorschau verkleinern"
+tasten = ["cmd+minus"]
+
+[[funktion]]
+id = "vorschau_ausgangsgroesse"
+name = "Vorschau in Ausgangsgröße"
+tasten = ["cmd+0"]
 
 # ── C11: das Terminal im angezeigten Ordner ──────────────────────────────────
 # KRK uebergibt den Ordner des sichtbaren Tabs an eine fremde Anwendung und
