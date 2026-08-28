@@ -196,7 +196,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 9 ist der einzige außerhalb d
    - Kriterien: C5.4, A5
    - Dependencies: Schritt 5
 
-8. **Die Belegungs- und Menüausgabe gegen den Stand vor der Runde**
+8. **Die Belegungs- und Menüausgabe gegen den Stand vor der Runde** [DONE]
    - Executor: `coder`
    - Files: keine im Baum; geprüft wird mit `make tasten` und `make menue`
    - Changes: Vor dem ersten Codeschritt oder auf `83e011c` ausgecheckt schreibt der Coder `make tasten` und `make menue` in zwei Dateien unter dem Scratchpad; nach Schritt 7 dieselben zwei noch einmal; `diff` ist in beiden Fällen leer (C1.11). Das Ergebnis steht als Satz im History-Eintrag des Coders mit den zwei Prüfsummen. Daneben `grep -n 'name = "cc"\|-sys"' Cargo.lock` mit allein `windows-sys` als Treffer (C5.6) und `cargo clippy --workspace --all-targets -- -D warnings` grün (C5.3).
