@@ -10,7 +10,9 @@
 //! [`nichts_zu_teilen`] fuer das Teilen aus C1 der Runde 6, und seit der
 //! Runde 17 [`nichts_zu_packen`], [`kein_archiv`], [`mehrere_archive`] und
 //! [`kein_finder`] fuer die drei Eintraege des Kontextmenues, deren Regel in
-//! [`super::kontextmenue`] steht. Die Texte der
+//! [`super::kontextmenue`] steht, und seit der Runde 22 [`Dateiablage`],
+//! [`namenszeilen`], [`ablagemeldung`] und [`verweise_abgewiesen`] fuer die
+//! Dateiverweise, die `cmd+c` und `cmd+x` im Dateifenster ablegen. Die Texte der
 //! Runde 4 tragen den Zuschnitt der Dateioperationen vollstaendig: ein Befehl,
 //! der auf den sichtbaren Tab des aktiven Dateifensters wirkt und seine
 //! Antwort als Befehlsantwort in die Statuszeile schreibt. **Das Teilen weicht
@@ -967,6 +969,12 @@ pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
 /// C2 verlangt den Wortlaut: die Statuszeile sagt, **dass nichts zu kopieren
 /// war**, und nicht bloss, wie die Lage ist. Der Satz nennt deshalb die Folge
 /// zuerst und die Lage danach.
+///
+/// **Seit der Runde 22 hat der Satz einen weiteren Rufer**, die Dateiablage
+/// ueber `cmd+c` und `cmd+x` (`DateifensterQuelle::dateiverweise_ablegen`):
+/// sie wirkt auf dieselbe Menge wie die zwei Pfadkopierer, naemlich auf
+/// [`betroffene`], und findet auf dieselbe Weise nichts. Ein eigener Satz
+/// daneben saehe wie eine andere Lage aus (C1.7 der Runde 22).
 pub fn nichts_zu_kopieren() -> String {
     nichts_betroffen("kopieren")
 }
@@ -1110,6 +1118,98 @@ fn nichts_betroffen(verb: &str) -> String {
 /// dieser meldet, dass die Ablage selbst nicht stattgefunden hat.
 pub fn ablage_weist_ab() -> String {
     "die Zwischenablage hat den Text nicht angenommen".to_owned()
+}
+
+// ----------------------------------------------------------------------
+// Die Dateiverweise in der Zwischenablage (Runde 22)
+// ----------------------------------------------------------------------
+
+/// Die zwei Befehle, die im Dateifenster Dateiverweise ablegen (Runde 22).
+///
+/// `cmd+c` und `cmd+x`, die `copy:`- und die `cut:`-Haelfte des
+/// Einhaengepunkts, den Belegung und Menue "Bearbeiten" seit dem 260805
+/// freihalten. **Beide legen dasselbe ab, und Ausschneiden verschiebt
+/// nichts** (A4 des Specs): `NSPasteboard` traegt keine Sorte, die
+/// "ausgeschnitten" bedeutet, KRK erfaehrt nie, ob das Ziel nach dem Einfuegen
+/// die Quelle entfernt, und die Dateizelle bekommt keinen dritten Zustand. Der
+/// ganze Unterschied zwischen den zwei Werten ist ein Satz in der Statuszeile,
+/// den [`ablagemeldung`] anhaengt: das Verschieben liegt beim Ziel.
+///
+/// Kein `Kommando`: die zwei Befehle haben keine Zeile in der Belegung, sie
+/// kommen als Aktionsselektoren beim Anwendungsdelegierten an. Der `match`
+/// in [`ablagemeldung`] ist ueber die zwei Werte vollstaendig, damit ein
+/// dritter den Bau anhaelt statt still den Satz des ersten zu bekommen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Dateiablage {
+    /// `cmd+c`, "Bearbeiten › Kopieren".
+    Kopieren,
+    /// `cmd+x`, "Bearbeiten › Ausschneiden": dasselbe Ablegen, ein Satz mehr.
+    Ausschneiden,
+}
+
+/// Die Namen der abgelegten Eintraege als ein Text, einer je Zeile (C2 der
+/// Runde 22).
+///
+/// Die Schwester von [`pfadzeilen`]: `\n`-getrennt, **ohne** Schlusszeilen-
+/// umbruch, in der Reihenfolge der uebergebenen Pfade, also der
+/// Sichtreihenfolge aus [`betroffene`]. Ein Ordner steht ohne abschliessenden
+/// Trenner, weil [`eintragsname`] ihn nicht mitfuehrt.
+///
+/// **Es ist der Name und nicht der Pfad, und das ist keine Sparsamkeit** (A3):
+/// der Pfad ist die Textsorte von `shift+cmd+c`, und zwei Befehle mit
+/// derselben Textsorte waeren einer zu viel. Der Finder legt beim Kopieren
+/// einer Datei ebenfalls ihren Namen als Text daneben. Die Huelle um die
+/// Zwischenablage deutet nicht und bekommt diesen Text fertig herein; so ist
+/// der Name in der Ablage derselbe, den [`ablagemeldung`] in der Statuszeile
+/// nennt.
+pub fn namenszeilen(pfade: &[PathBuf]) -> String {
+    pfade
+        .iter()
+        .map(|pfad| eintragsname(pfad))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Die Meldung nach einem geglueckten Ablegen der Dateiverweise (A6 der
+/// Runde 22).
+///
+/// Bei einem Eintrag nennt sie seinen Namen, bei mehreren ihre Zahl (C1.8);
+/// der Name ist derselbe, der ueber [`namenszeilen`] in der Ablage steht. Nach
+/// [`Dateiablage::Ausschneiden`] haengt derselbe Satz den Zusatz an, dass das
+/// Verschieben beim Ziel liegt (C3.2): KRK verschiebt nichts (A4), und der
+/// Nutzer erfaehrt an dieser Stelle, wo er es bekommt.
+///
+/// Eine leere Menge erreicht diese Funktion nicht: der Rufer faengt sie vorher
+/// mit [`nichts_zu_kopieren`] ab, weil dann auch nichts geschrieben wird.
+#[must_use]
+pub fn ablagemeldung(befehl: Dateiablage, pfade: &[PathBuf]) -> String {
+    let kopiert = match pfade {
+        [einziger] => format!("kopiert: {}", eintragsname(einziger)),
+        mehrere => format!("{} Einträge kopiert", zahl(mehrere.len())),
+    };
+    match befehl {
+        Dateiablage::Kopieren => kopiert,
+        Dateiablage::Ausschneiden => {
+            format!("{kopiert} – verschieben tut das Ziel (Finder: opt+cmd+v)")
+        }
+    }
+}
+
+/// Die Meldung, wenn die Zwischenablage die Dateiverweise nicht annimmt (A6,
+/// A12 der Runde 22).
+///
+/// Nach dem Muster von [`ablage_weist_ab`]: `writeObjects:` und
+/// `setString:forType:` liefern je ein `bool`, und ein Befehl, der still
+/// nichts abgelegt haette, liesse den Nutzer einen alten Inhalt einfuegen, den
+/// er fuer den neuen haelt.
+///
+/// **Sie nennt die Eintraege und nicht den Text**, denn abgelegt werden hier
+/// Verweise, und der Text daneben ist die Beigabe. Wie ihr Vorbild braucht sie
+/// keine Fallunterscheidung nach der Zahl: sie meldet, dass die Ablage nicht
+/// stattgefunden hat, und nicht, was abgelegt wurde.
+#[must_use]
+pub fn verweise_abgewiesen() -> String {
+    "die Zwischenablage hat die Einträge nicht angenommen".to_owned()
 }
 
 // ----------------------------------------------------------------------
@@ -1909,6 +2009,103 @@ mod tests {
             !finder.contains('\n'),
             "die Statuszeile ist einzeilig: {finder}"
         );
+    }
+
+    // ------------------------------------------------------------------
+    // Die Dateiverweise in der Zwischenablage (Runde 22)
+    // ------------------------------------------------------------------
+
+    /// Ein Name je Zeile, ohne Schlusszeilenumbruch, in gegebener Reihenfolge,
+    /// und ein Ordner ohne abschliessenden Trenner (C2.1 bis C2.3).
+    #[test]
+    fn namenszeilen_tragen_namen_ohne_umbruch_am_ende_und_ohne_trenner() {
+        let einer = [PathBuf::from("/tmp/x/a.txt")];
+        assert_eq!(namenszeilen(&einer), "a.txt");
+        assert_eq!(namenszeilen(&einer).matches('\n').count(), 0);
+
+        let drei = [
+            PathBuf::from("/tmp/x/c.txt"),
+            PathBuf::from("/tmp/x/a.txt"),
+            PathBuf::from("/tmp/x/b.txt"),
+        ];
+        assert_eq!(namenszeilen(&drei), "c.txt\na.txt\nb.txt");
+        assert_eq!(namenszeilen(&drei).matches('\n').count(), 2);
+
+        let ordner = [PathBuf::from("/tmp/x/Unterordner/")];
+        assert_eq!(namenszeilen(&ordner), "Unterordner");
+        assert!(!namenszeilen(&ordner).contains(std::path::MAIN_SEPARATOR));
+    }
+
+    /// Die Meldung nach `cmd+c` nennt einen Namen und sonst die Zahl (C1.8, A6).
+    #[test]
+    fn die_ablagemeldung_nach_kopieren_nennt_einen_namen_und_sonst_die_zahl() {
+        let einer = [PathBuf::from("/tmp/x/Übergabe.txt")];
+        assert_eq!(
+            ablagemeldung(Dateiablage::Kopieren, &einer),
+            "kopiert: Übergabe.txt"
+        );
+
+        let drei = [
+            PathBuf::from("/tmp/x/a.txt"),
+            PathBuf::from("/tmp/x/b.txt"),
+            PathBuf::from("/tmp/x/Ordner/"),
+        ];
+        assert_eq!(
+            ablagemeldung(Dateiablage::Kopieren, &drei),
+            "3 Einträge kopiert"
+        );
+    }
+
+    /// Die Meldung nach `cmd+x` traegt den Zusatz, dass das Ziel verschiebt
+    /// (C3.2, A6).
+    #[test]
+    fn die_ablagemeldung_nach_ausschneiden_sagt_dass_das_ziel_verschiebt() {
+        let einer = [PathBuf::from("/tmp/x/Übergabe.txt")];
+        assert_eq!(
+            ablagemeldung(Dateiablage::Ausschneiden, &einer),
+            "kopiert: Übergabe.txt – verschieben tut das Ziel (Finder: opt+cmd+v)"
+        );
+
+        let drei = [
+            PathBuf::from("/tmp/x/a.txt"),
+            PathBuf::from("/tmp/x/b.txt"),
+            PathBuf::from("/tmp/x/Ordner/"),
+        ];
+        assert_eq!(
+            ablagemeldung(Dateiablage::Ausschneiden, &drei),
+            "3 Einträge kopiert – verschieben tut das Ziel (Finder: opt+cmd+v)"
+        );
+    }
+
+    /// Die zwei Befehle unterscheiden sich allein im Zusatz (C3.1, Texthaelfte).
+    ///
+    /// Ausschneiden ist ein Kopieren mit einem Satz (A4): die Meldung nach
+    /// `cmd+x` beginnt mit der ganzen Meldung nach `cmd+c`, und was danach
+    /// kommt, ist der eine Zusatz.
+    #[test]
+    fn die_meldung_nach_ausschneiden_beginnt_mit_der_nach_kopieren() {
+        let zusatz = " – verschieben tut das Ziel (Finder: opt+cmd+v)";
+        let mengen: [&[PathBuf]; 2] = [
+            &[PathBuf::from("/tmp/x/a.txt")],
+            &[PathBuf::from("/tmp/x/a.txt"), PathBuf::from("/tmp/x/b.txt")],
+        ];
+        for pfade in mengen {
+            let kopieren = ablagemeldung(Dateiablage::Kopieren, pfade);
+            let ausschneiden = ablagemeldung(Dateiablage::Ausschneiden, pfade);
+            assert!(ausschneiden.starts_with(&kopieren), "{ausschneiden}");
+            assert_eq!(&ausschneiden[kopieren.len()..], zusatz);
+            assert!(!kopieren.contains("verschieben"), "{kopieren}");
+        }
+    }
+
+    /// Der Satz der abweisenden Ablage nennt die Eintraege (A6, A12).
+    #[test]
+    fn der_satz_der_abgewiesenen_verweise_nennt_die_eintraege() {
+        assert_eq!(
+            verweise_abgewiesen(),
+            "die Zwischenablage hat die Einträge nicht angenommen"
+        );
+        assert_ne!(verweise_abgewiesen(), ablage_weist_ab());
     }
 
     // ------------------------------------------------------------------
