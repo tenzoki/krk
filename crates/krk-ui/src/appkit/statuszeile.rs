@@ -77,17 +77,25 @@
 //! pruefbar ist. Die Lebensdauern der vier Quellen mit eigenem Feld stehen bei
 //! ihren Feldern in `DateifensterQuelle`; hier steht allein die Rangfolge.
 //!
-//! **Die beiden untersten Raenge haben kein Feld.** Der Filterstand aus C4
-//! der Runde 10 und der Markierungsstand aus C2 werden bei jedem Schreiben der
+//! **Die untersten Raenge haben kein Feld.** Der Filterstand aus C4 der
+//! Runde 10 und der Markierungsstand aus C2 werden bei jedem Schreiben der
 //! Zeile aus dem Ordnermodell des sichtbaren Tabs gerechnet, statt gesetzt und
 //! geloescht zu werden. Beide tragen dieselbe Begruendung: ein Feld haette
 //! eine zweite Loeschregel, und beide sind ein Zustand und kein Ereignis. Sie
 //! steht bei `DateifensterQuelle::markierungsstand_text` und bei
-//! [`filterstand_text`].
+//! [`filterstand_text`]. Der Seitenzaehler aus C4 der Runde 20 dazwischen wird
+//! ebenso bei jedem Schreiben gefragt, beim Vorschaufenster statt beim
+//! Ordnermodell; seinen Satz formt [`seitenzaehler_text`].
 //!
-//! **Ein ausgeblendetes Dateifenster bewirbt sich nicht.** Es sind zwoelf
-//! Quellen zweier Dateifenster, aber nur die des sichtbaren treten an; die
-//! Begruendung steht bei [`zeile`].
+//! **Zwei Herkuenfte, eine Rangfolge.** Die Dateifenster tragen die meisten
+//! Raenge, und zwar jedes fuer sich: je Dateifenster-Rang treten zwei Bewerber
+//! an. Der Seitenzaehler kommt aus dem Vorschaufenster, das zu keiner Seite
+//! gehoert, und hat genau einen Bewerber. Wer welchen Rang traegt, sagt
+//! [`Rang::herkunft`] und sonst nichts.
+//!
+//! **Ein ausgeblendeter Bereich bewirbt sich nicht.** Nur die Quellen der
+//! sichtbaren Dateifenster treten an, und der Seitenzaehler nur bei sichtbarer
+//! Vorschau; die Begruendung steht bei [`zeile`].
 //!
 //! # Wie eine Meldung lesbar wird, die breiter ist als das Fenster
 //!
@@ -198,11 +206,14 @@ pub enum Art {
     Vorgang,
 }
 
-/// Die sechs Raenge der Zeile, vom obersten zum untersten.
+/// Die Raenge der Zeile, vom obersten zum untersten.
 ///
-/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: ein siebter Rang
-/// haelt den Bau an und erzwingt die Antwort darauf, wo er einzuordnen ist und
-/// ob er ein Fehler ist (C4.10). Dieselbe Bauart wie `Bereich` und `Fokus`.
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: ein weiterer Rang
+/// haelt den Bau an und erzwingt die Antwort darauf, wo er einzuordnen ist,
+/// ob er ein Fehler ist und wer ihn traegt (C4.10 der Runde 10, C4.6 der
+/// Runde 20). Dieselbe Bauart wie `Bereich` und `Fokus`. **Wie viele es sind,
+/// sagt [`Rang::ALLE`] und kein Doc-Kommentar**: die Zahl ist mit der Runde 20
+/// gestiegen, und jede Nennung hier waere mit ihr falsch geworden.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rang {
     /// Was KRK auf den letzten Tastenbefehl zu sagen hat.
@@ -216,12 +227,35 @@ pub enum Rang {
     /// Der stehende Filtertext und was er von der Liste uebrig laesst (C4 der
     /// Runde 10).
     Filterstand,
+    /// Die aktuelle Seite und die Seitenzahl des PDF, das die Vorschau zeigt
+    /// (C4 der Runde 20).
+    ///
+    /// Der einzige Rang, den kein Dateifenster traegt; siehe
+    /// [`Rang::herkunft`].
+    Seitenzaehler,
     /// Was im sichtbaren Tab markiert ist (C2).
     Markierungsstand,
 }
 
+/// Wer einen Rang traegt: eines der zwei Dateifenster oder das Vorschaufenster.
+///
+/// Eine vollstaendige Fallunterscheidung wie [`Rang`] selbst. Sie ist der
+/// Grund, warum der Seitenzaehler nicht in [`Quellen`] steht: `Quellen` ist,
+/// was **ein Dateifenster** der Zeile anzubieten hat, und der Seitenzaehler
+/// kommt aus einem Bereich, der zu keiner Seite gehoert. Ihn dort
+/// einzutragen, waere eine Luege ueber seine Herkunft, die [`zeilentext`] beim
+/// naechsten Seitenwechsel als "linkes Dateifenster: Seite 3 von 9"
+/// aussprechen wuerde.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Herkunftsart {
+    /// Den Rang traegt jedes Dateifenster fuer sich; es gibt zwei Bewerber.
+    Dateifenster,
+    /// Den Rang traegt allein das Vorschaufenster; es gibt einen Bewerber.
+    Vorschau,
+}
+
 impl Rang {
-    /// Alle sechs, vom obersten zum untersten.
+    /// Alle Raenge, vom obersten zum untersten.
     ///
     /// **Die Reihenfolge ist die Rangfolge**, und [`zeile`] laeuft ohne eine
     /// zweite Vorschrift daneben ueber dieses Feld. Wer sie aendert, aendert
@@ -232,22 +266,29 @@ impl Rang {
     /// `decisions/260814-1552_*_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md`;
     /// faellt sie anders aus als die Empfehlung, wandert diese Zeile und
     /// sonst nichts.
-    pub const ALLE: [Rang; 6] = [
+    ///
+    /// **Der Seitenzaehler steht zwischen beiden** (A5 der Runde 20): ein
+    /// stehender Filtertext ist eine Eingabe des Nutzers, die er sehen muss,
+    /// und verdraengt den Zaehler (C4.5); die Markierung im Dateifenster ist
+    /// eine Auskunft desselben Ranges wie die Seite, und die Seite ist das
+    /// Juengere.
+    pub const ALLE: [Rang; 7] = [
         Rang::Befehlsantwort,
         Rang::Vorgangsanzeige,
         Rang::Fenstermeldung,
         Rang::Tabmeldung,
         Rang::Filterstand,
+        Rang::Seitenzaehler,
         Rang::Markierungsstand,
     ];
 
     /// Ob eine Meldung dieses Ranges ein Fehler ist.
     ///
     /// **Die Art faellt mit dem Rang und wird aus ihm gerechnet statt
-    /// gesetzt.** Ein Fortschritt, eine Filterzahl und eine Markierungszahl
-    /// sind keine Fehler, die drei uebrigen sind welche (C4.2). Ein zweites
-    /// Feld, das jemand setzt, waere die Gelegenheit, eine Markierungszahl rot
-    /// zu faerben.
+    /// gesetzt.** Ein Fortschritt, eine Filterzahl, eine Seitenzahl und eine
+    /// Markierungszahl sind keine Fehler, die drei uebrigen sind welche (C4.2
+    /// der Runde 10, C4.6 der Runde 20). Ein zweites Feld, das jemand setzt,
+    /// waere die Gelegenheit, eine Markierungszahl rot zu faerben.
     pub const fn art(self) -> Art {
         match self {
             Rang::Befehlsantwort => Art::Fehler,
@@ -255,16 +296,36 @@ impl Rang {
             Rang::Fenstermeldung => Art::Fehler,
             Rang::Tabmeldung => Art::Fehler,
             Rang::Filterstand => Art::Vorgang,
+            Rang::Seitenzaehler => Art::Vorgang,
             Rang::Markierungsstand => Art::Vorgang,
+        }
+    }
+
+    /// Wer diesen Rang traegt.
+    ///
+    /// Die eine Stelle, an der ein Rang seiner Herkunft zugeordnet wird;
+    /// [`zeile`] verzweigt darueber, und [`Quellen::text`] antwortet fuer
+    /// jeden Rang der Vorschau mit `None`. Vollstaendig, ohne Auffangzweig.
+    pub const fn herkunft(self) -> Herkunftsart {
+        match self {
+            Rang::Befehlsantwort
+            | Rang::Vorgangsanzeige
+            | Rang::Fenstermeldung
+            | Rang::Tabmeldung
+            | Rang::Filterstand
+            | Rang::Markierungsstand => Herkunftsart::Dateifenster,
+            Rang::Seitenzaehler => Herkunftsart::Vorschau,
         }
     }
 }
 
 /// Was ein Dateifenster der Zeile anzubieten hat.
 ///
-/// Sechs Quellen, je Rang eine. Die vier oberen haelt das Dateifenster in je
-/// einem eigenen Feld mit je einer Loeschregel, die zwei unteren rechnet es bei
-/// jeder Abfrage; `DateifensterQuelle::meldungsquellen` schreibt sie ab.
+/// Je Dateifenster-Rang eine Quelle. Die vier oberen haelt das Dateifenster in
+/// je einem eigenen Feld mit je einer Loeschregel, die zwei unteren rechnet es
+/// bei jeder Abfrage; `DateifensterQuelle::meldungsquellen` schreibt sie ab.
+/// Der Seitenzaehler hat hier kein Feld, weil kein Dateifenster ihn traegt
+/// ([`Rang::herkunft`]).
 ///
 /// **Eigene Zeichenketten und keine Ausleihen.** Der Anwendungsdelegierte holt
 /// beide Saetze nacheinander aus zwei `RefCell`-Feldern und ruft danach
@@ -290,8 +351,8 @@ impl Quellen {
     /// Was dieses Dateifenster auf diesem Rang zu sagen hat.
     ///
     /// Die eine Stelle, die einen Rang auf sein Feld abbildet, und eine
-    /// vollstaendige Fallunterscheidung: ein siebter Rang haelt hier den Bau
-    /// an (C4.10).
+    /// vollstaendige Fallunterscheidung: ein weiterer Rang haelt hier den Bau
+    /// an (C4.10 der Runde 10).
     fn text(&self, rang: Rang) -> Option<&str> {
         match rang {
             Rang::Befehlsantwort => self.befehlsantwort.as_deref(),
@@ -299,6 +360,10 @@ impl Quellen {
             Rang::Fenstermeldung => self.fenstermeldung.as_deref(),
             Rang::Tabmeldung => self.tabmeldung.as_deref(),
             Rang::Filterstand => self.filterstand.as_deref(),
+            // Kein Dateifenster traegt diesen Rang (`Rang::herkunft`); `zeile`
+            // holt ihn beim Vorschaufenster und fragt diese Quellen dafuer gar
+            // nicht erst. Ein Feld hier waere eine Luege ueber die Herkunft.
+            Rang::Seitenzaehler => None,
             Rang::Markierungsstand => self.markierungsstand.as_deref(),
         }
     }
@@ -456,14 +521,44 @@ pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> 
     ))
 }
 
-/// Die eine Aussage, die von zwoelf moeglichen jetzt in der Zeile steht.
+/// Der Satz des Seitenzaehlers: "Seite N von M" (C4.1 der Runde 20).
 ///
-/// Sie traegt ihre Herkunft mit: [`zeilentext`] braucht die Seite, um zu
-/// entscheiden, ob der Satz sie nennen muss.
+/// **Jede Zahl geht durch [`zahl`]** und traegt damit dieselben
+/// Tausenderpunkte wie ein laufender Vorgang, der Filterstand und der
+/// Markierungsstand. Ein zweites Zahlenformat entsteht nicht.
+///
+/// **Sie steht hier und nicht bei der Vorschau**, aus demselben Grund wie
+/// [`filterstand_text`] darueber: der Satz gehoert zu keiner Faehigkeit ausser
+/// der Zeile selbst und ist bei dem Rang, den er fuellt, besser aufgehoben als
+/// ohne ihn. `Vorschaufenster::seitenzaehler` ruft sie und rechnet nichts
+/// selbst; welche Seite die aktuelle ist, sagt PDFKit (C4.3), und wie sie
+/// heisst, sagt diese Zeile.
+pub fn seitenzaehler_text(aktuell: usize, gesamt: usize) -> String {
+    format!("Seite {} von {}", zahl(aktuell), zahl(gesamt))
+}
+
+/// Woher eine Meldung kommt: aus einem der zwei Dateifenster oder aus dem
+/// Vorschaufenster.
+///
+/// Die Herkunft einer **Meldung** und nicht eines Rangs: [`Herkunftsart`]
+/// sagt, wer einen Rang tragen kann, dieser Wert sagt, wer ihn gerade
+/// gewonnen hat, und beim Dateifenster gehoert die Seite dazu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Herkunft {
+    /// Das genannte Dateifenster.
+    Dateifenster(Fensterseite),
+    /// Das Vorschaufenster, das zu keiner Seite gehoert.
+    Vorschau,
+}
+
+/// Die eine Aussage, die von allen Bewerbern jetzt in der Zeile steht.
+///
+/// Sie traegt ihre Herkunft mit: [`zeilentext`] braucht sie, um zu
+/// entscheiden, ob der Satz ein Dateifenster nennen muss.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Meldung<'a> {
-    /// Das Dateifenster, aus dem die Meldung kommt.
-    pub seite: Fensterseite,
+    /// Der Bereich, aus dem die Meldung kommt.
+    pub herkunft: Herkunft,
     /// Der Rang, auf dem sie gewonnen hat.
     pub rang: Rang,
     /// Der Text, wie ihn die Quelle gesetzt hat, ohne Zusatz.
@@ -472,7 +567,8 @@ pub struct Meldung<'a> {
     pub art: Art,
 }
 
-/// Was von den zwoelf Quellen jetzt in der Zeile steht.
+/// Was von allen Bewerbern jetzt in der Zeile steht: zwei je
+/// Dateifenster-Rang und einer fuer den Vorschau-Rang.
 ///
 /// **Die eine Regel, und kein Sonderfall je Meldungsart.** Die Zeile traegt
 /// einen Text. Steht mehr als eine Aussage, gewinnt die, die dem letzten Tun
@@ -484,8 +580,17 @@ pub struct Meldung<'a> {
 /// 3  Fenstermeldung    ein Ereignis am Fenster, das niemand angefordert hat
 /// 4  Tabmeldung        der Zustand des sichtbaren Ordners
 /// 5  Filterstand       der stehende Filtertext und was er uebrig laesst
-/// 6  Markierungsstand  was im sichtbaren Tab markiert ist
+/// 6  Seitenzaehler     die Seite des PDF, das die Vorschau zeigt
+/// 7  Markierungsstand  was im sichtbaren Tab markiert ist
 /// ```
+///
+/// **Der Seitenzaehler steht unter dem Filterstand und ueber dem
+/// Markierungsstand** (A5 der Runde 20). Ein stehender Filtertext verdraengt
+/// ihn und laesst ihn nach dem Fallen zurueck (C4.5); Vorgangsanzeige,
+/// Befehlsantwort und Fenstermeldung stehen ueber ihm wie ueber jeder anderen
+/// Auskunft (C4.6). Er ist der eine Rang, den kein Dateifenster traegt: seinen
+/// Text reicht der Aufrufer als `vorschau` herein, geholt beim
+/// Vorschaufenster, und `None` heisst, dass es kein PDF zeigt (C4.4).
 ///
 /// **Der Filterstand steht ueber dem Markierungsstand und unter der
 /// Tabmeldung** (C4.1). Beide unteren beschreiben einen Zustand des sichtbaren
@@ -518,7 +623,7 @@ pub struct Meldung<'a> {
 /// (`issues/260804-1915_*_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`).
 ///
 /// **Verdraengt wird nichts geloescht.** Jede der acht Quellen mit eigenem Feld
-/// haelt ihren Text dort, und jedes Feld hat genau eine Loeschregel; die vier
+/// haelt ihren Text dort, und jedes Feld hat genau eine Loeschregel; die
 /// gerechneten Raenge koennen gar nicht veralten. Eine verdraengte Aussage
 /// erscheint, sobald alles ueber ihr gefallen ist: die Auswurfmeldung, die
 /// waehrend einer Kopie eintrifft, steht auf Rang 3, wartet die Kopie und deren
@@ -534,12 +639,13 @@ pub struct Meldung<'a> {
 /// inaktiven Dateifensters steht damit ueber einer Markierungszahl des aktiven,
 /// und zwei laufende Vorgaenge entscheidet die aktive Seite.
 ///
-/// Sie ist ueber alle zwoelf Bewerber vollstaendig und ueberschneidungsfrei,
+/// Sie ist ueber alle Bewerber vollstaendig und ueberschneidungsfrei,
 /// und nicht aus Sorgfalt, sondern der Bauart nach: zwei Bewerber desselben
 /// Ranges gehoeren immer verschiedenen Seiten, also entscheidet die zweite
-/// Stelle jeden Gleichstand der ersten. **Die Ordnung steht deshalb in der
+/// Stelle jeden Gleichstand der ersten, und der Vorschau-Rang hat nur einen
+/// Bewerber und damit keinen Gleichstand. **Die Ordnung steht deshalb in der
 /// Schleifenreihenfolge und nicht in einer Vergleichsfunktion** — aussen die
-/// sechs Raenge aus [`Rang::ALLE`], innen die aktive Seite vor der anderen.
+/// Raenge aus [`Rang::ALLE`], innen die aktive Seite vor der anderen.
 ///
 /// **Der Preis ist benannt und vom Nutzer am 260812-1105 angenommen: laufen in
 /// beiden Dateifenstern zugleich Vorgaenge, ist nur der des aktiven zu sehen.**
@@ -575,6 +681,12 @@ pub struct Meldung<'a> {
 /// eine zweite Zuordnung daneben waere genau die, die
 /// [`sichtbar_in`] als die eine abgeloest hat.
 ///
+/// **Dieselbe Regel gilt der Vorschau** (Runde 20): eine ausgeblendete
+/// Vorschau bewirbt sich nicht, gefragt mit derselben Funktion und
+/// [`Bereich::Vorschau`]. Ein Seitenzaehler ueber einen Bereich, den der
+/// Nutzer nicht sieht, waere derselbe Defekt wie der vom 260812-1805, nur
+/// ohne Namenszusatz.
+///
 /// **Das aktive Dateifenster ist immer sichtbar**, und deshalb liefert diese
 /// Funktion nie eine Meldung, der [`zeilentext`] einen Zusatz voranstellen
 /// muesste, waehrend nur ein Dateifenster dasteht. Hergestellt wird die Zusage
@@ -589,26 +701,47 @@ pub fn zeile<'a>(
     rechts: &'a Quellen,
     aktiv: Fensterseite,
     sichtbar: &Sichtbarkeit,
+    vorschau: Option<&'a str>,
 ) -> Option<Meldung<'a>> {
     let quellen = |seite: Fensterseite| match seite {
         Fensterseite::Links => links,
         Fensterseite::Rechts => rechts,
     };
     for rang in Rang::ALLE {
-        // Die aktive Seite zuerst: die zweite Stelle der Ordnung.
-        for seite in [aktiv, aktiv.andere()] {
-            // Wer nicht dasteht, sagt nichts. Die Begruendung steht im Kopf
-            // dieser Funktion.
-            if !sichtbar_in(sichtbar, Bereich::von_seite(seite)) {
-                continue;
+        match rang.herkunft() {
+            Herkunftsart::Dateifenster => {
+                // Die aktive Seite zuerst: die zweite Stelle der Ordnung.
+                for seite in [aktiv, aktiv.andere()] {
+                    // Wer nicht dasteht, sagt nichts. Die Begruendung steht
+                    // im Kopf dieser Funktion.
+                    if !sichtbar_in(sichtbar, Bereich::von_seite(seite)) {
+                        continue;
+                    }
+                    if let Some(text) = quellen(seite).text(rang) {
+                        return Some(Meldung {
+                            herkunft: Herkunft::Dateifenster(seite),
+                            rang,
+                            text,
+                            art: rang.art(),
+                        });
+                    }
+                }
             }
-            if let Some(text) = quellen(seite).text(rang) {
-                return Some(Meldung {
-                    seite,
-                    rang,
-                    text,
-                    art: rang.art(),
-                });
+            Herkunftsart::Vorschau => {
+                // Ein Bewerber, keine zweite Stelle; und eine ausgeblendete
+                // Vorschau bewirbt sich so wenig wie ein ausgeblendetes
+                // Dateifenster.
+                if !sichtbar_in(sichtbar, Bereich::Vorschau) {
+                    continue;
+                }
+                if let Some(text) = vorschau {
+                    return Some(Meldung {
+                        herkunft: Herkunft::Vorschau,
+                        rang,
+                        text,
+                        art: rang.art(),
+                    });
+                }
             }
         }
     }
@@ -637,13 +770,22 @@ pub fn zeile<'a>(
 /// nicht
 /// (`issues/260812-1805_*_die-eine-statuszeile-zeigt-meldungen-eines-ausgeblendeten-dateifensters.md`).
 ///
+/// **Eine Meldung aus der Vorschau traegt nie einen Zusatz** (Runde 20). Die
+/// Regel bleibt eine: genannt wird ein Dateifenster, das nicht das aktive
+/// ist, und die Vorschau ist keines. "Seite 3 von 9" steht deshalb ohne
+/// Vorsatz, gleich welches Dateifenster aktiv ist; einen Namen fuer den
+/// Bereich gibt es hier nicht, weil es nur eine Vorschau gibt und der Satz
+/// selbst sagt, wovon er spricht.
+///
 /// Die beiden Namen stehen hier und nicht im Kern: es sind Anzeigetexte, und
 /// [`Fensterseite`] ist ein Wert der Ablage, der von Anzeige nichts weiss.
 pub fn zeilentext(meldung: &Meldung<'_>, aktiv: Fensterseite) -> String {
-    if meldung.seite == aktiv {
-        return meldung.text.to_owned();
+    match meldung.herkunft {
+        Herkunft::Dateifenster(seite) if seite != aktiv => {
+            format!("{}: {}", seitenname(seite), meldung.text)
+        }
+        Herkunft::Dateifenster(_) | Herkunft::Vorschau => meldung.text.to_owned(),
     }
-    format!("{}: {}", seitenname(meldung.seite), meldung.text)
 }
 
 /// Wie ein Dateifenster im Satz heisst.
@@ -769,8 +911,8 @@ impl Statuszeile {
 #[cfg(test)]
 mod tests {
     use super::{
-        Art, Bereich, Filterstand, Meldung, Quellen, Rang, filterstand_text, sichtbar_in, zeile,
-        zeilentext,
+        Art, Bereich, Filterstand, Herkunft, Herkunftsart, Meldung, Quellen, Rang,
+        filterstand_text, seitenzaehler_text, sichtbar_in, zeile, zeilentext,
     };
     use krk_core::ablage::{Fensterseite, Sichtbarkeit};
 
@@ -806,10 +948,27 @@ mod tests {
             Rang::Fenstermeldung => &mut quellen.fenstermeldung,
             Rang::Tabmeldung => &mut quellen.tabmeldung,
             Rang::Filterstand => &mut quellen.filterstand,
+            Rang::Seitenzaehler => {
+                panic!(
+                    "kein Dateifenster traegt den Seitenzaehler; die Probe fragt `dateifenster_raenge`"
+                )
+            }
             Rang::Markierungsstand => &mut quellen.markierungsstand,
         };
         *feld = Some(text.to_owned());
         quellen
+    }
+
+    /// Die Raenge, die ein Dateifenster traegt, in der Rangfolge.
+    ///
+    /// Aus [`Rang::herkunft`] gelesen und nicht danebengeschrieben: die Proben
+    /// ueber "jeden Rang eines Dateifensters" laufen hierueber, damit sie den
+    /// Vorschau-Rang nicht in ein Dateifenster schreiben und nicht wissen
+    /// muessen, welcher es ist.
+    fn dateifenster_raenge() -> impl Iterator<Item = Rang> {
+        Rang::ALLE
+            .into_iter()
+            .filter(|rang| rang.herkunft() == Herkunftsart::Dateifenster)
     }
 
     /// Die alte Fassung von `zeile`: die vier Felder und der Markierungsstand
@@ -836,7 +995,7 @@ mod tests {
             markierungsstand: markierungsstand.map(str::to_owned),
         };
         let rechts = Quellen::default();
-        zeile(&links, &rechts, Fensterseite::Links, &beide())
+        zeile(&links, &rechts, Fensterseite::Links, &beide(), None)
             .map(|meldung| (meldung.text.to_owned(), meldung.art))
     }
 
@@ -853,7 +1012,7 @@ mod tests {
         aktiv: Fensterseite,
         sichtbar: &Sichtbarkeit,
     ) -> Option<String> {
-        zeile(links, rechts, aktiv, sichtbar).map(|meldung| zeilentext(&meldung, aktiv))
+        zeile(links, rechts, aktiv, sichtbar, None).map(|meldung| zeilentext(&meldung, aktiv))
     }
 
     fn erwartet(meldung: Option<(String, Art)>, text: &str, art: Art) {
@@ -872,7 +1031,8 @@ mod tests {
                 &Quellen::default(),
                 &Quellen::default(),
                 Fensterseite::Rechts,
-                &beide()
+                &beide(),
+                None
             ),
             None
         );
@@ -1056,14 +1216,15 @@ mod tests {
     /// und zwar in der Rangfolge selbst und in der Auswahl, die daraus faellt.
     #[test]
     fn der_filterstand_steht_zwischen_tabmeldung_und_markierungsstand() {
-        assert_eq!(Rang::ALLE.len(), 6);
+        assert_eq!(Rang::ALLE.len(), 7);
         assert!(stelle(Rang::Tabmeldung) < stelle(Rang::Filterstand));
-        assert!(stelle(Rang::Filterstand) < stelle(Rang::Markierungsstand));
+        assert!(stelle(Rang::Filterstand) < stelle(Rang::Seitenzaehler));
+        assert!(stelle(Rang::Seitenzaehler) < stelle(Rang::Markierungsstand));
 
         let leer = Quellen::default();
         let mut quellen = nur(Rang::Filterstand, "Filter „rs“: 12 von 340 angezeigt");
         quellen.markierungsstand = Some("12 markiert, davon 3 Ordner, 4,2 MB".to_owned());
-        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide(), None)
             .expect("zwei Raenge melden etwas");
         assert_eq!(
             meldung.rang,
@@ -1072,7 +1233,7 @@ mod tests {
         );
 
         quellen.tabmeldung = Some("Ordner nicht lesbar".to_owned());
-        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide(), None)
             .expect("drei Raenge melden etwas");
         assert_eq!(
             meldung.rang,
@@ -1088,7 +1249,7 @@ mod tests {
         assert_ne!(Rang::Filterstand.art(), Art::Fehler);
         let quellen = nur(Rang::Filterstand, "Filter „rs“: 12 von 340 angezeigt");
         let leer = Quellen::default();
-        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide(), None)
             .expect("der Filterstand steht als einzige Quelle in der Zeile");
         assert_eq!(meldung.art, Art::Vorgang);
     }
@@ -1161,7 +1322,7 @@ mod tests {
             ..Quellen::default()
         };
         let leer = Quellen::default();
-        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide(), None)
             .expect("der Markierungsstand steht in der Zeile");
         assert_eq!(meldung.rang, Rang::Markierungsstand);
     }
@@ -1308,13 +1469,13 @@ mod tests {
     /// Lesefortschritt wird nicht rot.
     #[test]
     fn der_volle_satz_bleibt_ein_rang_und_kein_fehler() {
-        assert_eq!(Rang::ALLE.len(), 6, "kein siebter Rang");
+        assert_eq!(Rang::ALLE.len(), 7, "sieben Raenge seit der Runde 20");
         let quellen = Quellen {
             filterstand: filterstand_text("notiz", voll(true, 12, 3)),
             ..Quellen::default()
         };
         let leer = Quellen::default();
-        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide())
+        let meldung = zeile(&quellen, &leer, Fensterseite::Links, &beide(), None)
             .expect("der Filterstand steht als einzige Quelle in der Zeile");
         assert_eq!(meldung.rang, Rang::Filterstand);
         assert_eq!(meldung.art, Art::Vorgang);
@@ -1333,14 +1494,23 @@ mod tests {
         assert_eq!(filterstand_text("notiz", ausstehend), None);
     }
 
-    /// C4.10: die Rangfolge traegt sechs verschiedene Werte, und jeder von
-    /// ihnen hat sein Feld in [`Quellen`]. Beide Fallunterscheidungen sind
-    /// damit ueber dieselben sechs Werte vollstaendig; ein siebter Rang haelt
-    /// den Bau an, statt still in einen Auffangzweig zu fallen.
+    /// C4.10 der Runde 10: die Rangfolge traegt lauter verschiedene Werte, und
+    /// jeder Dateifenster-Rang hat sein Feld in [`Quellen`]. Beide
+    /// Fallunterscheidungen sind damit ueber dieselben Werte vollstaendig; ein
+    /// weiterer Rang haelt den Bau an, statt still in einen Auffangzweig zu
+    /// fallen. Der eine Vorschau-Rang hat **kein** Feld, und das ist die
+    /// Aussage von [`Rang::herkunft`].
     #[test]
-    fn jeder_der_sechs_raenge_hat_genau_ein_feld() {
+    fn jeder_dateifenster_rang_hat_genau_ein_feld_und_der_vorschau_rang_keines() {
         for (stelle_im_feld, rang) in Rang::ALLE.iter().enumerate() {
             assert_eq!(stelle(*rang), stelle_im_feld, "kein Rang steht doppelt");
+            if rang.herkunft() == Herkunftsart::Vorschau {
+                assert_eq!(*rang, Rang::Seitenzaehler, "der eine Vorschau-Rang");
+                for quellen in [Quellen::default(), nur(Rang::Filterstand, "Text")] {
+                    assert_eq!(quellen.text(*rang), None, "kein Dateifenster traegt ihn");
+                }
+                continue;
+            }
             let quellen = nur(*rang, "Text");
             let gesetzt = Rang::ALLE
                 .iter()
@@ -1366,8 +1536,8 @@ mod tests {
             (Fensterseite::Rechts, "Kopieren rechts"),
         ] {
             let meldung =
-                zeile(&links, &rechts, aktiv, &beide()).expect("beide Seiten melden etwas");
-            assert_eq!(meldung.seite, aktiv);
+                zeile(&links, &rechts, aktiv, &beide(), None).expect("beide Seiten melden etwas");
+            assert_eq!(meldung.herkunft, Herkunft::Dateifenster(aktiv));
             assert_eq!(meldung.text, text);
         }
     }
@@ -1382,9 +1552,12 @@ mod tests {
             "12 markiert, davon 3 Ordner, 4,2 MB",
         );
         let rechts = nur(Rang::Fenstermeldung, "Datenträger ausgeworfen");
-        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide(), None)
             .expect("beide Seiten melden etwas");
-        assert_eq!(meldung.seite, Fensterseite::Rechts);
+        assert_eq!(
+            meldung.herkunft,
+            Herkunft::Dateifenster(Fensterseite::Rechts)
+        );
         assert_eq!(meldung.rang, Rang::Fenstermeldung);
     }
 
@@ -1395,9 +1568,12 @@ mod tests {
     fn meldet_nur_die_inaktive_seite_steht_ihre_meldung_in_der_zeile() {
         let links = Quellen::default();
         let rechts = nur(Rang::Tabmeldung, "Ordner nicht lesbar");
-        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide(), None)
             .expect("die inaktive Seite meldet etwas");
-        assert_eq!(meldung.seite, Fensterseite::Rechts);
+        assert_eq!(
+            meldung.herkunft,
+            Herkunft::Dateifenster(Fensterseite::Rechts)
+        );
         assert_eq!(meldung.text, "Ordner nicht lesbar");
     }
 
@@ -1406,7 +1582,13 @@ mod tests {
     fn schweigen_beide_seiten_bleibt_die_zeile_leer() {
         for aktiv in Fensterseite::ALLE {
             assert_eq!(
-                zeile(&Quellen::default(), &Quellen::default(), aktiv, &beide()),
+                zeile(
+                    &Quellen::default(),
+                    &Quellen::default(),
+                    aktiv,
+                    &beide(),
+                    None
+                ),
                 None
             );
         }
@@ -1432,10 +1614,10 @@ mod tests {
             (Fensterseite::Links, "Antwort links"),
             (Fensterseite::Rechts, "Antwort rechts"),
         ] {
-            let meldung =
-                zeile(&links, &rechts, aktiv, &beide()).expect("zwoelf Bewerber, einer gewinnt");
+            let meldung = zeile(&links, &rechts, aktiv, &beide(), None)
+                .expect("zwoelf Bewerber, einer gewinnt");
             assert_eq!(meldung.rang, Rang::Befehlsantwort);
-            assert_eq!(meldung.seite, aktiv);
+            assert_eq!(meldung.herkunft, Herkunft::Dateifenster(aktiv));
             assert_eq!(meldung.text, text);
         }
     }
@@ -1448,15 +1630,21 @@ mod tests {
     fn die_verdraengte_meldung_der_inaktiven_seite_erscheint_danach() {
         let mut links = nur(Rang::Befehlsantwort, "es ist nichts ausgewählt");
         let rechts = nur(Rang::Fenstermeldung, "Datenträger ausgeworfen");
-        let meldung =
-            zeile(&links, &rechts, Fensterseite::Links, &beide()).expect("die Antwort gewinnt");
-        assert_eq!(meldung.seite, Fensterseite::Links);
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide(), None)
+            .expect("die Antwort gewinnt");
+        assert_eq!(
+            meldung.herkunft,
+            Herkunft::Dateifenster(Fensterseite::Links)
+        );
         // Der naechste Tastenbefehl raeumt die Befehlsantwort weg. Am
         // Quellensatz der rechten Seite hat sich nichts geaendert.
         links.befehlsantwort = None;
-        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide(), None)
             .expect("die Auswurfmeldung steht noch");
-        assert_eq!(meldung.seite, Fensterseite::Rechts);
+        assert_eq!(
+            meldung.herkunft,
+            Herkunft::Dateifenster(Fensterseite::Rechts)
+        );
         assert_eq!(meldung.text, "Datenträger ausgeworfen");
     }
 
@@ -1464,14 +1652,14 @@ mod tests {
     /// Seiten: die Herkunft faerbt nichts.
     #[test]
     fn die_art_haengt_am_rang_und_nicht_an_der_seite() {
-        for rang in Rang::ALLE {
+        for rang in dateifenster_raenge() {
             for aktiv in Fensterseite::ALLE {
                 let quellen = nur(rang, "Text");
                 let leer = Quellen::default();
-                let links =
-                    zeile(&quellen, &leer, aktiv, &beide()).expect("die linke Seite meldet etwas");
-                let rechts =
-                    zeile(&leer, &quellen, aktiv, &beide()).expect("die rechte Seite meldet etwas");
+                let links = zeile(&quellen, &leer, aktiv, &beide(), None)
+                    .expect("die linke Seite meldet etwas");
+                let rechts = zeile(&leer, &quellen, aktiv, &beide(), None)
+                    .expect("die rechte Seite meldet etwas");
                 assert_eq!(links.art, rang.art());
                 assert_eq!(rechts.art, rang.art());
             }
@@ -1509,7 +1697,7 @@ mod tests {
     /// der fuenf.
     #[test]
     fn der_namenszusatz_gilt_auf_jedem_rang() {
-        for rang in Rang::ALLE {
+        for rang in dateifenster_raenge() {
             let rechts = nur(rang, "Text");
             assert_eq!(
                 text_von(&Quellen::default(), &rechts, Fensterseite::Links).as_deref(),
@@ -1567,7 +1755,8 @@ mod tests {
                 &links,
                 &rechts,
                 Fensterseite::Links,
-                &steht_nur(Fensterseite::Links)
+                &steht_nur(Fensterseite::Links),
+                None
             ),
             None,
             "das ausgeblendete rechte Dateifenster bewirbt sich nicht"
@@ -1581,9 +1770,12 @@ mod tests {
     fn die_meldung_kommt_mit_dem_eingeblendeten_dateifenster_zurueck() {
         let links = Quellen::default();
         let rechts = nur(Rang::Tabmeldung, "Ordner nicht lesbar");
-        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide())
+        let meldung = zeile(&links, &rechts, Fensterseite::Links, &beide(), None)
             .expect("mit beiden Dateifenstern steht die Meldung wieder da");
-        assert_eq!(meldung.seite, Fensterseite::Rechts);
+        assert_eq!(
+            meldung.herkunft,
+            Herkunft::Dateifenster(Fensterseite::Rechts)
+        );
         assert_eq!(meldung.text, "Ordner nicht lesbar");
     }
 
@@ -1591,7 +1783,7 @@ mod tests {
     /// fuenf und in beide Richtungen.
     #[test]
     fn auf_jedem_rang_bewirbt_sich_allein_das_sichtbare_dateifenster() {
-        for rang in Rang::ALLE {
+        for rang in dateifenster_raenge() {
             for sichtbare in Fensterseite::ALLE {
                 let quellen = nur(rang, "Text");
                 let leer = Quellen::default();
@@ -1601,7 +1793,7 @@ mod tests {
                     Fensterseite::Rechts => (quellen, leer),
                 };
                 assert_eq!(
-                    zeile(&links, &rechts, sichtbare, &steht_nur(sichtbare)),
+                    zeile(&links, &rechts, sichtbare, &steht_nur(sichtbare), None),
                     None,
                     "{rang:?} des ausgeblendeten Dateifensters steht in der Zeile"
                 );
@@ -1614,7 +1806,7 @@ mod tests {
     #[test]
     fn der_zusatz_steht_vor_dem_unveraenderten_text() {
         let meldung = Meldung {
-            seite: Fensterseite::Rechts,
+            herkunft: Herkunft::Dateifenster(Fensterseite::Rechts),
             rang: Rang::Befehlsantwort,
             text: "die Zwischenablage ist leer",
             art: Art::Fehler,
@@ -1622,5 +1814,168 @@ mod tests {
         let satz = zeilentext(&meldung, Fensterseite::Links);
         assert!(satz.ends_with("die Zwischenablage ist leer"), "{satz}");
         assert!(satz.starts_with("rechtes Dateifenster"), "{satz}");
+    }
+
+    // ------------------------------------------------------------------
+    // Der siebte Rang: der Seitenzaehler der Vorschau (C4, Runde 20)
+    // ------------------------------------------------------------------
+
+    /// Eine Vorschau, die ein PDF zeigt, ohne dass ein Dateifenster etwas
+    /// zu sagen hat.
+    const SEITE: &str = "Seite 3 von 9";
+
+    /// Der Seitenzaehler steht zwischen Filterstand und Markierungsstand, in
+    /// der Rangfolge selbst und in der Auswahl, die daraus faellt; und er hat
+    /// die Herkunft, die ihn aus den [`Quellen`] heraushaelt.
+    #[test]
+    fn der_seitenzaehler_steht_zwischen_filterstand_und_markierungsstand() {
+        assert_eq!(Rang::ALLE.len(), 7);
+        assert!(stelle(Rang::Filterstand) < stelle(Rang::Seitenzaehler));
+        assert!(stelle(Rang::Seitenzaehler) < stelle(Rang::Markierungsstand));
+        assert_eq!(Rang::Seitenzaehler.herkunft(), Herkunftsart::Vorschau);
+        assert_eq!(dateifenster_raenge().count(), Rang::ALLE.len() - 1);
+
+        let leer = Quellen::default();
+        let meldung = zeile(&leer, &leer, Fensterseite::Links, &beide(), Some(SEITE))
+            .expect("die Vorschau meldet etwas");
+        assert_eq!(meldung.rang, Rang::Seitenzaehler);
+        assert_eq!(meldung.herkunft, Herkunft::Vorschau);
+        assert_eq!(meldung.text, SEITE);
+    }
+
+    /// C4.5: ein stehender Filtertext verdraengt den Zaehler, und faellt der
+    /// Filter, ist er wieder da — verdraengt wird nichts geloescht.
+    #[test]
+    fn ein_stehender_filtertext_verdraengt_den_seitenzaehler_und_gibt_ihn_zurueck() {
+        let leer = Quellen::default();
+        let mit_filter = nur(Rang::Filterstand, "Filter „rs“: 12 von 340 angezeigt");
+        let meldung = zeile(
+            &mit_filter,
+            &leer,
+            Fensterseite::Links,
+            &beide(),
+            Some(SEITE),
+        )
+        .expect("zwei Raenge melden etwas");
+        assert_eq!(meldung.rang, Rang::Filterstand);
+
+        let meldung = zeile(&leer, &leer, Fensterseite::Links, &beide(), Some(SEITE))
+            .expect("die Vorschau meldet noch");
+        assert_eq!(meldung.rang, Rang::Seitenzaehler);
+        assert_eq!(meldung.text, SEITE);
+    }
+
+    /// Der Zaehler steht ueber dem Markierungsstand: beide sind Auskuenfte
+    /// desselben Ranges, und die Seite ist die juengere (A5).
+    #[test]
+    fn der_seitenzaehler_steht_ueber_dem_markierungsstand() {
+        let leer = Quellen::default();
+        let markiert = nur(
+            Rang::Markierungsstand,
+            "12 markiert, davon 3 Ordner, 4,2 MB",
+        );
+        let meldung = zeile(&markiert, &leer, Fensterseite::Links, &beide(), Some(SEITE))
+            .expect("zwei Raenge melden etwas");
+        assert_eq!(meldung.rang, Rang::Seitenzaehler);
+    }
+
+    /// C4.6: Vorgangsanzeige, Befehlsantwort und Fenstermeldung stehen ueber
+    /// dem Zaehler, und zwar auch aus dem inaktiven Dateifenster, weil der
+    /// Rang vor der Seite entscheidet; und der Zaehler ist kein Fehler.
+    #[test]
+    fn vorgang_befehlsantwort_und_fenstermeldung_stehen_ueber_dem_seitenzaehler() {
+        assert_eq!(Rang::Seitenzaehler.art(), Art::Vorgang);
+        let leer = Quellen::default();
+        for hoeherer in [
+            Rang::Befehlsantwort,
+            Rang::Vorgangsanzeige,
+            Rang::Fenstermeldung,
+            Rang::Tabmeldung,
+        ] {
+            let rechts = nur(hoeherer, "Text");
+            let meldung = zeile(&leer, &rechts, Fensterseite::Links, &beide(), Some(SEITE))
+                .expect("zwei Raenge melden etwas");
+            assert_eq!(
+                meldung.rang, hoeherer,
+                "{hoeherer:?} steht ueber dem Zaehler"
+            );
+            assert_eq!(
+                meldung.herkunft,
+                Herkunft::Dateifenster(Fensterseite::Rechts)
+            );
+        }
+        let meldung = zeile(&leer, &leer, Fensterseite::Links, &beide(), Some(SEITE))
+            .expect("die Vorschau meldet etwas");
+        assert_eq!(meldung.art, Art::Vorgang);
+    }
+
+    /// Der Zaehler traegt keinen Seitennamen, gleich welches Dateifenster
+    /// aktiv ist: die Vorschau gehoert zu keiner Seite.
+    #[test]
+    fn der_seitenzaehler_traegt_keinen_seitennamen() {
+        let leer = Quellen::default();
+        for aktiv in Fensterseite::ALLE {
+            let meldung = zeile(&leer, &leer, aktiv, &beide(), Some(SEITE))
+                .expect("die Vorschau meldet etwas");
+            assert_eq!(zeilentext(&meldung, aktiv), SEITE, "{aktiv:?} aktiv");
+        }
+    }
+
+    /// Bei ausgeblendeter Vorschau bewirbt sich der Zaehler nicht, mit
+    /// derselben Frage wie fuer ein ausgeblendetes Dateifenster; und er kommt
+    /// mit der Vorschau zurueck.
+    #[test]
+    fn bei_ausgeblendeter_vorschau_bewirbt_sich_der_seitenzaehler_nicht() {
+        let mut ohne_vorschau = beide();
+        ohne_vorschau.vorschau = false;
+        assert!(!sichtbar_in(&ohne_vorschau, Bereich::Vorschau));
+        let leer = Quellen::default();
+        assert_eq!(
+            zeile(
+                &leer,
+                &leer,
+                Fensterseite::Links,
+                &ohne_vorschau,
+                Some(SEITE)
+            ),
+            None,
+            "die ausgeblendete Vorschau bewirbt sich nicht"
+        );
+        let markiert = nur(Rang::Markierungsstand, "3 markiert, davon 0 Ordner, 6 KB");
+        let meldung = zeile(
+            &markiert,
+            &leer,
+            Fensterseite::Links,
+            &ohne_vorschau,
+            Some(SEITE),
+        )
+        .expect("das Dateifenster meldet etwas");
+        assert_eq!(meldung.rang, Rang::Markierungsstand);
+        let meldung = zeile(&markiert, &leer, Fensterseite::Links, &beide(), Some(SEITE))
+            .expect("mit der Vorschau steht der Zaehler wieder da");
+        assert_eq!(meldung.rang, Rang::Seitenzaehler);
+    }
+
+    /// C4.4: ohne PDF meldet die Vorschau nichts, und die Zeile zeigt, was sie
+    /// vor der Runde 20 zeigte.
+    #[test]
+    fn ohne_pdf_meldet_der_vorschau_rang_nichts() {
+        let leer = Quellen::default();
+        assert_eq!(
+            zeile(&leer, &leer, Fensterseite::Links, &beide(), None),
+            None
+        );
+        let markiert = nur(Rang::Markierungsstand, "3 markiert, davon 0 Ordner, 6 KB");
+        let meldung = zeile(&markiert, &leer, Fensterseite::Links, &beide(), None)
+            .expect("das Dateifenster meldet etwas");
+        assert_eq!(meldung.rang, Rang::Markierungsstand);
+    }
+
+    /// C4.1: der Satz lautet "Seite N von M", und die Zahlen tragen dieselben
+    /// Tausenderpunkte wie jede andere Zahl der Zeile.
+    #[test]
+    fn der_seitenzaehler_satz_nennt_seite_und_seitenzahl_mit_tausenderpunkten() {
+        assert_eq!(seitenzaehler_text(1, 9), "Seite 1 von 9");
+        assert_eq!(seitenzaehler_text(1200, 3400), "Seite 1.200 von 3.400");
     }
 }

@@ -1,5 +1,5 @@
-//! Das Vorschaufenster: Tableiste, Text- und Bildanzeige, angebunden an das
-//! Modell aus [`crate::vorschaumodell`] (C6, C10).
+//! Das Vorschaufenster: Tableiste, Text-, Bild- und PDF-Anzeige, angebunden
+//! an das Modell aus [`crate::vorschaumodell`] (C6, C10; Runde 20).
 //!
 //! ```text
 //! ┌──────────────────────────────┐
@@ -8,9 +8,44 @@
 //! │ Inhaltsflaeche               │  nimmt Klick und Fokus entgegen
 //! │   NSScrollView + Vorschautext│  Text, Metadaten, Hinweise; auswaehlbar
 //! │     + Nummernspalte          │  nur beim rohen Inhalt einer Datei (C10)
-//! │   NSImageView                │  Bilder; je einer von beiden sichtbar
+//! │   NSImageView                │  Bilder
+//! │   Pdfbetrachter              │  PDF (appkit::betrachter), entsteht beim
+//! │                              │  ersten PDF; genau eine der drei sichtbar
 //! └──────────────────────────────┘
 //! ```
+//!
+//! # Die dritte Ansicht und der eine Schalter (Runde 20)
+//!
+//! **Welche der drei Ansichten steht, sagt [`Flaeche`], und gesetzt wird sie
+//! an genau einer Stelle: [`Vorschaufenster::flaeche_zeigen`].** Bis zur
+//! Runde 20 verbargen sich Textrolle und Bildansicht in zwei gegenlaeufigen
+//! `setHidden`-Paaren; mit einer dritten Ansicht waeren das drei Paare, die
+//! einander je zu zweit kennen muessten. Die eine Funktion verzweigt
+//! vollstaendig ueber die Aufzaehlung und ohne Auffangzweig, und die Probe
+//! `set_hidden_steht_in_dieser_datei_allein_in_flaeche_zeigen` haelt fest,
+//! dass kein zweiter Schalter danebensteht. Der Merkposten in
+//! [`VorschaufensterIvars::flaeche`] ist die eine Auskunft darueber, was
+//! steht; `isHidden` wird nicht mehr gelesen.
+//!
+//! **Der Betrachter entsteht beim ersten PDF und nirgends sonst** (Z2). Er
+//! wohnt in einer [`OnceCell`], und der eine Ort, der ihn baut, ist
+//! [`Vorschaufenster::pdf_zeigen`]; der Programmstart, die Textvorschau und
+//! die Bildvorschau erreichen die Klasse nicht. Die Probe
+//! `der_betrachter_wird_allein_in_pdf_zeigen_gebaut` liest das am Baum ab.
+//! Was PDFKit tut und ab welchem macOS, steht im Kopf von
+//! [`super::betrachter`]; **diese Datei spricht keine PDFKit-Klasse an**,
+//! sie haengt die Ansicht ein, gibt ihr die Bytes und verzweigt ueber die
+//! Antwort [`Deutung`]: gesetzt, beschaedigt oder gesperrt, und die zwei
+//! Rueckfaelle zeigen die Metadaten, die mit dem Inhalt mitreisen (A9, C2.3
+//! bis C2.6).
+//!
+//! **Der Seitenzaehler geht ueber einen Melder hinaus und nicht ueber einen
+//! Rueckgriff.** Der Betrachter meldet den Seitenwechsel an
+//! [`Vorschaufenster::seiten_melden`], und das Vorschaufenster gibt ihn an
+//! den Melder weiter, den [`Vorschaufenster::seitenmelder_setzen`] beim
+//! Aufbau der Oberflaeche bekommt; wer zuhoert, fragt
+//! [`Vorschaufenster::seitenzaehler`] und schreibt die Statuszeile (C4.2,
+//! C4.4). Dieselbe Form wie `Hauptfenster::melder_setzen`.
 //!
 //! **Die Nummernspalte ist dieselbe Klasse wie im Editor.**
 //! [`super::nummernspalte`] haelt sie, und C10 sagt eine Anzeige fuer beide
@@ -157,12 +192,20 @@
 //! KRK: der Menueeintrag traegt `copy:` und Ziel `nil`, und die Antwortkette
 //! entscheidet, wer ihn beantwortet — seit dieser Runde auch diese Flaeche.
 //!
-//! **Das Kontextmenue haengt an allen drei Ansichten, und diese Datei baut es
+//! **Das Kontextmenue haengt an allen Ansichten, und diese Datei baut es
 //! nicht.** Seit C1 der Runde 6 ist das Vorschaufenster der Delegierte seiner
 //! Textanzeige und der seines Menues; es beantwortet allein, welche Datei der
 //! aktive Tab zeigt, und laesst [`super::teilen::eintrag_anfuegen`] den
-//! Eintrag setzen. Warum drei und nicht eine, und warum auf zwei
-//! Anschlussarten, steht am Aufbau weiter unten und im Kopf jenes Moduls.
+//! Eintrag setzen. Warum mehrere und nicht eine, und warum auf zwei
+//! Anschlussarten, steht am Aufbau weiter unten und im Kopf jenes Moduls. Der
+//! Betrachter der Runde 20 nimmt einen dritten Anschluss, `menuForEvent:` in
+//! seiner eigenen Klasse, und fragt dafuer [`Vorschaufenster::angezeigter_pfad`]
+//! ueber seinen schwachen Rueckverweis — dieselbe Regel „keine oder eine
+//! Datei", an einer Stelle beantwortet. **Auch das Kopieren aus dem Betrachter
+//! laeuft nicht ueber [`Vorschautext::auswahl_ablegen`]**: `PDFView` ist keine
+//! `NSTextView`, seine Auswahl ist eine `PDFSelection`, und die Abfangstelle
+//! dafuer ist `copy:` in `super::betrachter`. Zwei Abfangstellen fuer zwei
+//! Textsysteme, je genau eine.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -214,11 +257,19 @@
 //! im Kopf des Systems eine Verfuegbarkeitsangabe und steht damit seit 10.0.
 //! Genannt seien sie trotzdem: `setSelectable:` wechselt in dieser Runde sein
 //! Argument, und `initWithFrame:` wird ab jetzt ueber `super` und nicht mehr
-//! am fertigen `NSTextView` gerufen. Dazu kommt der **Leser** einer
-//! Eigenschaft, deren Setzer diese Datei schon lange ruft: `isHidden` ist der
-//! Getter von `hidden` aus `NSView` (`NSView.h:92`), traegt dort ebenfalls
-//! keine Verfuegbarkeitsangabe und steht damit seit 10.0.
-//! [`Vorschaufenster::fokusansicht`] fragt ihn seit der Runde 14.
+//! am fertigen `NSTextView` gerufen. Der Setzer `setHidden:` von `hidden`
+//! aus `NSView` (`NSView.h:92`) traegt ebenfalls keine
+//! Verfuegbarkeitsangabe und steht damit seit 10.0; sein Leser `isHidden`
+//! wurde von der Runde 14 bis zur Runde 20 in
+//! [`Vorschaufenster::fokusansicht`] gefragt und seither nicht mehr, weil
+//! [`VorschaufensterIvars::flaeche`] die Antwort haelt.
+//!
+//! **Die Runde 20 spricht in dieser Datei keine PDFKit-Klasse an.** Der
+//! Betrachter kommt als fertige Ansicht aus [`super::betrachter`], und die
+//! Angaben zu `PDFView`, `PDFDocument` und ihren Methoden stehen im Kopf jener
+//! Datei. Was hier an ihm gerufen wird — `setAutoresizingMask:`,
+//! `setHidden:`, `addSubview:` und `bounds` (`NSView.h:83-110`) —, ist
+//! `NSView` und steht seit 10.0.
 //!
 //! **Die Abfangstelle des Kopierens bringt vier weitere Beruehrungen mit, und
 //! keine davon ist juenger.** `writeSelectionToPasteboard:types:` steht in der
@@ -268,6 +319,7 @@ use crate::hervorhebung::{
 use crate::markdown::Quellbezug;
 use crate::vorschaumodell::{Inhalt, Metadaten, Vorschaumodell, Zwischenablageinhalt, rechte_text};
 
+use super::betrachter::{Deutung, Pdfbetrachter, Zoom};
 use super::nummernspalte::{self, Nummernspalte};
 use super::tabelle::typ_beschriften;
 use super::tableiste::{self, Tableiste};
@@ -287,6 +339,25 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 
 /// Was ein leerer Tab sagt, statt eine leere Flaeche zu zeigen.
 const LEERTEXT: &str = "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.";
+
+/// Welche der drei Ansichten in der Inhaltsflaeche steht (Runde 20).
+///
+/// Genau eine steht zu jeder Zeit, und der eine Schalter ist
+/// [`Vorschaufenster::flaeche_zeigen`]; der Modulkopf sagt, warum ein
+/// Schalter und nicht drei Paare. Die Aufzaehlung wird vollstaendig und ohne
+/// Auffangzweig verzweigt — dort und in [`Vorschaufenster::fokusansicht`] —,
+/// ein vierter Wert haelt den Bau an.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Flaeche {
+    /// Die Bildlaufansicht mit der Textanzeige: Text, Metadaten, Hinweise,
+    /// die Zusammenfassung, der leere Tab.
+    Text,
+    /// Die Bildansicht.
+    Bild,
+    /// Der PDF-Betrachter; nur erreichbar, nachdem [`Vorschaufenster::pdf_zeigen`]
+    /// ihn gebaut hat.
+    Betrachter,
+}
 
 define_class!(
     /// Die Flaeche unter der Tableiste: sie nimmt Klick und Fokus entgegen —
@@ -536,6 +607,29 @@ pub struct VorschaufensterIvars {
     text: Retained<Vorschautext>,
     /// Die Bildanzeige (C6: Bilder ueber `NSImage`).
     bild: Retained<NSImageView>,
+    /// Der PDF-Betrachter (Runde 20), oder noch keiner.
+    ///
+    /// **Leer bis zum ersten PDF, und danach fuer immer derselbe** (Z2,
+    /// C1.7): eine [`OnceCell`], deren einziger Schreiber
+    /// [`Vorschaufenster::pdf_zeigen`] ist. Solange sie leer ist, hat kein
+    /// `PDFView` und kein `PDFDocument` existiert; das ist die Bauart, aus der
+    /// Z2 folgt, und keine Probe, die es behauptet. Ein Betrachter je Tab
+    /// waere die vom Plan nicht gewaehlte Form: die Vorschau zeigt einen Tab,
+    /// und der Betrachter merkt sich ueber die Bytes, ob er das Dokument schon
+    /// traegt.
+    betrachter: OnceCell<Retained<Pdfbetrachter>>,
+    /// Welche der drei Ansichten steht.
+    ///
+    /// Der eine Merkposten, aus dem [`Vorschaufenster::fokusansicht`],
+    /// [`Vorschaufenster::zoomen`] und [`Vorschaufenster::seitenzaehler`]
+    /// ihre Antwort nehmen; geschrieben wird er allein in
+    /// [`Vorschaufenster::flaeche_zeigen`]. Bis zur Runde 20 stand dieselbe
+    /// Auskunft in `isHidden` der Textrolle, und mit einer dritten Ansicht
+    /// beantwortete ein Wahrheitswert die Frage nicht mehr.
+    flaeche: Cell<Flaeche>,
+    /// Der Melder, den [`Vorschaufenster::seitenmelder_setzen`] eintraegt und
+    /// [`Vorschaufenster::seiten_melden`] ruft (C4.2).
+    seitenmelder: RefCell<Option<Box<dyn Fn()>>>,
     /// Die Leiste am Kopf. Sie kommt nach dem Objekt zur Welt, weil ihr
     /// Rueckruf es braucht; dieselbe Reihenfolge wie beim Dateifenster.
     tableiste: RefCell<Option<Tableiste>>,
@@ -729,7 +823,9 @@ impl Vorschaufenster {
             NSAutoresizingMaskOptions::ViewWidthSizable
                 | NSAutoresizingMaskOptions::ViewHeightSizable,
         );
-        bild.setHidden(true);
+        // Nicht hier verborgen: das erste `anzeigen` am Ende dieses Aufbaus
+        // geht durch `flaeche_zeigen`, den einen Schalter, und der stellt die
+        // Textrolle vor die Bildansicht.
         inhaltsflaeche.addSubview(&bild);
 
         bereich.addSubview(&inhaltsflaeche);
@@ -750,6 +846,9 @@ impl Vorschaufenster {
             textrolle,
             text,
             bild,
+            betrachter: OnceCell::new(),
+            flaeche: Cell::new(Flaeche::Text),
+            seitenmelder: RefCell::new(None),
             tableiste: RefCell::new(None),
             modell: RefCell::new(Vorschaumodell::neu()),
             takt: RefCell::new(None),
@@ -833,12 +932,13 @@ impl Vorschaufenster {
     /// Fuer die Fokusabfrage und den Fokuswechsel des Anwendungsdelegierten;
     /// sie wird sonst nirgends nach aussen gereicht.
     ///
-    /// **Seit der Runde 14 beantwortet sie eine Frage mit**: welche der beiden
-    /// Anzeigen steht gerade. Steht die Bildlaufansicht, ist die Antwort die
-    /// Textanzeige; sonst bleibt es bei der Inhaltsflaeche, und damit beim
-    /// heutigen Verhalten fuer ein Bild. Wer den Fokus ueber einen Befehl holt
-    /// statt mit der Maus, bekommt den Ersthelferrang so an die Stelle, an der
-    /// `cmd+a` und `cmd+c` wirken (C1.8 der Runde 14).
+    /// **Seit der Runde 14 beantwortet sie eine Frage mit**: welche Anzeige
+    /// steht gerade. Steht die Bildlaufansicht, ist die Antwort die
+    /// Textanzeige; steht seit der Runde 20 der Betrachter, ist sie der
+    /// Betrachter (C5.6); sonst bleibt es bei der Inhaltsflaeche, und damit
+    /// beim heutigen Verhalten fuer ein Bild. Wer den Fokus ueber einen Befehl
+    /// holt statt mit der Maus, bekommt den Ersthelferrang so an die Stelle,
+    /// an der `cmd+a` und `cmd+c` wirken (C1.8 der Runde 14).
     ///
     /// **Die Fallunterscheidung fragt danach, welche Anzeige steht, und nicht
     /// danach, was der Tab zeigt.** Der Grund ist, was der Anwendungsdelegierte
@@ -849,9 +949,13 @@ impl Vorschaufenster {
     /// fuer keines von beidem: sie nimmt den Rang nicht an, und ein Anker ohne
     /// sichtbares Rechteck setzt den Dialog ins Nichts.
     ///
-    /// Die zwei Zweige sind vollstaendig und ueberschneidungsfrei, weil genau
-    /// eine der beiden Anzeigen sichtbar ist: [`Self::text_zeigen`] und
-    /// [`Self::bild_zeigen`] setzen die beiden Schalter immer gegenlaeufig.
+    /// Die drei Zweige sind vollstaendig und ueberschneidungsfrei, weil
+    /// [`Self::flaeche_zeigen`] genau eine Ansicht stehen laesst und
+    /// [`VorschaufensterIvars::flaeche`] sagt, welche. Der Betrachterzweig
+    /// faellt auf die Inhaltsflaeche zurueck, falls die Zelle leer ist; das
+    /// ist keine erreichbare Lage — [`Self::pdf_zeigen`] setzt die Flaeche
+    /// erst, nachdem es ihn gebaut hat —, aber eine `OnceCell` gibt eine
+    /// `Option` zurueck, und ein `expect` hier stuerzte fuer nichts ab.
     ///
     /// **Es bleibt bei einer Zuordnung von Fokuswert auf Ansicht**, und diese
     /// Verzweigung steht **innerhalb** davon. Eine zweite Zuordnung daneben
@@ -861,10 +965,14 @@ impl Vorschaufenster {
     ///
     /// [`Fokus::Vorschau`]: crate::kommandos::fokus::Fokus::Vorschau
     pub fn fokusansicht(&self) -> &NSView {
-        if self.ivars().textrolle.isHidden() {
-            &self.ivars().inhaltsflaeche
-        } else {
-            &self.ivars().text
+        let ivars = self.ivars();
+        match ivars.flaeche.get() {
+            Flaeche::Text => &ivars.text,
+            Flaeche::Bild => &ivars.inhaltsflaeche,
+            Flaeche::Betrachter => match ivars.betrachter.get() {
+                Some(betrachter) => betrachter,
+                None => &ivars.inhaltsflaeche,
+            },
         }
     }
 
@@ -949,10 +1057,13 @@ impl Vorschaufenster {
 
     /// Welche Datei der aktive Tab zeigt; `None`, wenn keine Datei.
     ///
-    /// Nur zum Ablesen. Drei fragen danach: die Endbedingung von L7 im
+    /// Nur zum Ablesen. Vier fragen danach: die Endbedingung von L7 im
     /// Messmodus, [`crate::angezeigtedatei::welche`] ueber den
-    /// Anwendungsdelegierten, und das Kontextmenue dieser Datei ueber
-    /// [`Self::teilbare_pfade`].
+    /// Anwendungsdelegierten, das Kontextmenue dieser Datei ueber
+    /// [`Self::teilbare_pfade`], und seit der Runde 20 das Kontextmenue des
+    /// Betrachters ueber seinen schwachen Rueckverweis (C5.8) — dieselbe Regel
+    /// „keine oder eine Datei", ohne dass [`Self::teilbare_pfade`] dafuer nach
+    /// aussen gehen muesste.
     pub fn angezeigter_pfad(&self) -> Option<std::path::PathBuf> {
         self.ivars().modell.borrow().aktiver_pfad()
     }
@@ -978,6 +1089,83 @@ impl Vorschaufenster {
     /// Nur zum Ablesen, fuer dieselbe Endbedingung.
     pub fn laedt_noch(&self) -> bool {
         self.ivars().modell.borrow().laedt_noch()
+    }
+
+    /// Fuehrt einen der drei Zoombefehle der Runde 20 aus, falls der
+    /// Betrachter steht (C3.1, C3.7, C3.9).
+    ///
+    /// **Ohne gezeigtes PDF wird nichts getan und `false` geliefert, und das
+    /// ist die ganze Antwort auf C3.7**: der Befehl ist mit dem Fokus in der
+    /// Vorschau zulaessig, wird entgegengenommen, und tut nichts — keine
+    /// Meldung, kein Fehler (A6). Dasselbe `false` kommt vom Betrachter, wenn
+    /// eine Zoomgrenze erreicht ist (C3.9); der Rufer unterscheidet die zwei
+    /// Faelle nicht, weil er in beiden nichts nachzieht.
+    ///
+    /// Gefragt wird [`VorschaufensterIvars::flaeche`] und nicht die Zelle des
+    /// Betrachters: ein gebauter Betrachter, der hinter einer Textdatei
+    /// verborgen steht, traegt noch das vorige Dokument, und ein Zoom darauf
+    /// aenderte etwas, das niemand sieht.
+    ///
+    /// `#[must_use]`, aus demselben Grund wie am Betrachter: ein Rufer, der
+    /// den Wert fallen laesst, kann die Grenze nicht von einem Schritt
+    /// unterscheiden.
+    #[must_use]
+    pub fn zoomen(&self, zoom: Zoom) -> bool {
+        if self.ivars().flaeche.get() != Flaeche::Betrachter {
+            return false;
+        }
+        match self.ivars().betrachter.get() {
+            Some(betrachter) => betrachter.zoomen(zoom),
+            None => false,
+        }
+    }
+
+    /// Die Zeile „Seite N von M" fuer die Statuszeile, oder `None`, wenn kein
+    /// PDF steht (C4.1, C4.4).
+    ///
+    /// **`None` sobald eine andere Ansicht steht**, auch wenn der Betrachter
+    /// gebaut ist und noch ein Dokument traegt: der Zaehler gehoert zum
+    /// Gezeigten, und nach einer Textdatei, einem Bild oder einem Ordner
+    /// verschwindet er ohne Rest (C4.4). Gefragt wird deshalb zuerst
+    /// [`VorschaufensterIvars::flaeche`] und erst dann der Betrachter.
+    ///
+    /// **Den Satz formt [`super::statuszeile::seitenzaehler_text`]** neben dem
+    /// Rang, den er fuellt; hier steht kein Wortlaut und kein Zahlenformat.
+    pub fn seitenzaehler(&self) -> Option<String> {
+        if self.ivars().flaeche.get() != Flaeche::Betrachter {
+            return None;
+        }
+        let (aktuell, gesamt) = self.ivars().betrachter.get()?.seitenstand()?;
+        Some(super::statuszeile::seitenzaehler_text(aktuell, gesamt))
+    }
+
+    /// Traegt den Melder ein, der jeden Seitenwechsel weitergibt (C4.2).
+    ///
+    /// Gerufen vom Anwendungsdelegierten beim Aufbau der Oberflaeche, mit einem
+    /// Rueckruf, der sein Ziel schwach haelt und die Statuszeile nachzieht.
+    /// Derselbe Zuschnitt wie `Hauptfenster::melder_setzen`.
+    pub fn seitenmelder_setzen(&self, melden: Box<dyn Fn()>) {
+        *self.ivars().seitenmelder.borrow_mut() = Some(melden);
+    }
+
+    /// Gibt einen Seitenwechsel weiter, falls jemand zuhoert (C4.2, C4.7).
+    ///
+    /// **Zwei Anlaesse, ein Ausgang.** Der Betrachter ruft hierher, wenn PDFKit
+    /// die Seite wechselt, und [`Self::anzeigen`] ruft am Ende jedes
+    /// Durchgangs — also bei jedem neuen Inhalt und bei jedem Tabwechsel —,
+    /// damit der Zaehler erscheint, sobald ein PDF steht, und verschwindet,
+    /// sobald etwas anderes steht. Der Zuhoerer fragt danach
+    /// [`Self::seitenzaehler`]; gemeldet wird kein Wert, sondern allein, dass
+    /// es Zeit ist zu fragen.
+    ///
+    /// Die Ausleihe steht waehrend des Rufs und ist lesend; der einzige
+    /// schreibende Zugriff auf dieselbe Zelle ist
+    /// [`Self::seitenmelder_setzen`] beim Aufbau.
+    fn seiten_melden(&self) {
+        let melden = self.ivars().seitenmelder.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden();
+        }
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
@@ -1116,6 +1304,10 @@ impl Vorschaufenster {
                 self.text_zeigen(&zeilen);
             }
             Inhalt::Bild { daten, metadaten } => self.bild_zeigen(&daten, metadaten.as_ref()),
+            // Der vierte Weg (Runde 20): die Bytes gehen an den Betrachter, und
+            // ob daraus ein Dokument wird, entscheidet PDFKit dort; die
+            // Metadaten reisen fuer die zwei Rueckfaelle mit (C2.6).
+            Inhalt::Pdf { daten, metadaten } => self.pdf_zeigen(&daten, &metadaten),
             // Derselbe Weg wie Metadaten und Hinweise, und mehr geschieht
             // hier nicht (C4.2, C4.3): `als_text` ist die eine Stelle, an der
             // aus den Werten Zeilen werden, und sie steht in `krk-core`.
@@ -1137,10 +1329,18 @@ impl Vorschaufenster {
         // ersetzt.
         self.einfaerbung_nachfuehren();
 
-        let leiste = self.ivars().tableiste.borrow();
-        if let Some(leiste) = leiste.as_ref() {
-            leiste.setzen(&titel, aktiv);
+        {
+            let leiste = self.ivars().tableiste.borrow();
+            if let Some(leiste) = leiste.as_ref() {
+                leiste.setzen(&titel, aktiv);
+            }
         }
+
+        // Zuletzt, wenn die Flaeche steht: der Zuhoerer fragt
+        // `seitenzaehler`, und das liest die eben gesetzte Flaeche (C4.4,
+        // C4.7). Ein Tabwechsel ueber `tab_waehlen` kommt hier durch und
+        // braucht keinen zweiten Ruf.
+        self.seiten_melden();
     }
 
     /// Schreibt Beschriftungen und aktive Stelle in die Tableiste.
@@ -1188,8 +1388,84 @@ impl Vorschaufenster {
         ivars.text.setString(&NSString::from_str(text));
         ivars.text.quellbezug_setzen(None);
         textmerkmale::zuruecksetzen(&ivars.text, Ansicht::Roh, Darstellungsart::EinfacherText);
-        ivars.textrolle.setHidden(false);
-        ivars.bild.setHidden(true);
+        self.flaeche_zeigen(Flaeche::Text);
+    }
+
+    /// Der eine Schalter zwischen den drei Ansichten (Runde 20).
+    ///
+    /// Vollstaendig ueber [`Flaeche`] und ohne Auffangzweig: je Wert steht
+    /// ausgeschrieben, welche der drei sichtbar ist, und die zwei anderen
+    /// werden verborgen. Der Betrachter wird nur angefasst, wenn es ihn gibt;
+    /// vor dem ersten PDF steht die Zelle leer, und dann gibt es nichts zu
+    /// verbergen. **Kein anderer Ort dieser Datei ruft `setHidden`**, die
+    /// Probe `set_hidden_steht_in_dieser_datei_allein_in_flaeche_zeigen`
+    /// haelt es; der Modulkopf sagt, warum ein Schalter und nicht drei Paare.
+    ///
+    /// Der Merkposten wird **vor** den Setzern geschrieben, damit ein Zuhoerer,
+    /// den AppKit hinter `setHidden:` ruft, schon die neue Lage liest.
+    fn flaeche_zeigen(&self, flaeche: Flaeche) {
+        let ivars = self.ivars();
+        ivars.flaeche.set(flaeche);
+        let (text, bild, betrachter) = match flaeche {
+            Flaeche::Text => (true, false, false),
+            Flaeche::Bild => (false, true, false),
+            Flaeche::Betrachter => (false, false, true),
+        };
+        ivars.textrolle.setHidden(!text);
+        ivars.bild.setHidden(!bild);
+        if let Some(ansicht) = ivars.betrachter.get() {
+            ansicht.setHidden(!betrachter);
+        }
+    }
+
+    /// Gibt die Bytes einer PDF-Datei dem Betrachter, oder faellt auf die
+    /// Metadaten zurueck (Z2, C1.1, C1.2, C1.7, C2.3 bis C2.6, A9).
+    ///
+    /// **Der eine Ort, der den Betrachter baut.** Beim ersten PDF entsteht er
+    /// in der Inhaltsflaeche, mit dem Rueckverweis fuer sein Kontextmenue und
+    /// dem Melder fuer den Seitenwechsel, der das Vorschaufenster **schwach**
+    /// haelt — sonst schloesse sich der Ring Vorschau → Betrachter → Melder →
+    /// Vorschau. Jeder weitere Aufruf findet ihn in der Zelle vor. Die Probe
+    /// `der_betrachter_wird_allein_in_pdf_zeigen_gebaut` haelt fest, dass
+    /// `Pdfbetrachter::` in dieser Datei nirgends sonst steht (Z2).
+    ///
+    /// **Die Verzweigung ueber [`Deutung`] ist vollstaendig und ohne
+    /// Auffangzweig.** `Gesetzt` stellt den Betrachter nach vorn — auch dann,
+    /// wenn es dieselben Bytes wie zuvor sind und er sie bloss verborgen
+    /// weitertraegt, so kommt ein Tabwechsel unveraendert zurueck (C1.7).
+    /// `Beschaedigt` und `Gesperrt` zeigen die Metadaten, die mit dem Inhalt
+    /// mitgereist sind, ohne zweites Lesen (C2.6) und ohne Meldung, welcher
+    /// der beiden Faelle es war (A9): dieselbe Anzeige wie ein Bild, das
+    /// `NSImage` nicht liest.
+    ///
+    /// Das Lesen der Datei liegt hinter dieser Funktion auf dem Arbeitsfaden
+    /// des Modells (C1.8); hier wird auf dem Hauptfaden gedeutet, wie beim
+    /// Bild, und der Plan sagt in Entscheidung 9, warum.
+    fn pdf_zeigen(&self, daten: &Arc<Vec<u8>>, metadaten: &Metadaten) {
+        let ivars = self.ivars();
+        let betrachter = ivars.betrachter.get_or_init(|| {
+            let betrachter = Pdfbetrachter::neu(self.mtm(), ivars.inhaltsflaeche.bounds());
+            betrachter.setAutoresizingMask(
+                NSAutoresizingMaskOptions::ViewWidthSizable
+                    | NSAutoresizingMaskOptions::ViewHeightSizable,
+            );
+            betrachter.ziel_setzen(self);
+            let schwach = Weak::from_retained(&self.retain());
+            betrachter.seitenmelder_setzen(Box::new(move || {
+                if let Some(vorschau) = schwach.load() {
+                    vorschau.seiten_melden();
+                }
+            }));
+            ivars.inhaltsflaeche.addSubview(&betrachter);
+            betrachter
+        });
+        match betrachter.dokument_setzen(daten) {
+            Deutung::Gesetzt => self.flaeche_zeigen(Flaeche::Betrachter),
+            Deutung::Beschaedigt | Deutung::Gesperrt => {
+                let zeilen = self.metadaten_text(metadaten, &[]);
+                self.text_zeigen(&zeilen);
+            }
+        }
     }
 
     /// Traegt eine fertige Formatierung in die Textanzeige (C4 der Runde 6).
@@ -1351,10 +1627,8 @@ impl Vorschaufenster {
         let bild = NSImage::initWithData(NSImage::alloc(), &NSData::with_bytes(daten));
         match bild {
             Some(bild) => {
-                let ivars = self.ivars();
-                ivars.bild.setImage(Some(&bild));
-                ivars.bild.setHidden(false);
-                ivars.textrolle.setHidden(true);
+                self.ivars().bild.setImage(Some(&bild));
+                self.flaeche_zeigen(Flaeche::Bild);
             }
             None => match metadaten {
                 Some(metadaten) => {
@@ -1489,6 +1763,9 @@ fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a s
         // lauf ansetzen koennte. In der Sammelliste darunter stuende er nicht,
         // und der Leser muesste ihn sich aus dem Doc-Kommentar zusammensuchen.
         Inhalt::Zusammenfassung(_) => None,
+        // Der Betrachter zeichnet Seiten; Quelltext zum Einfaerben gibt es
+        // dort nicht (Runde 20).
+        Inhalt::Pdf { .. } => None,
         Inhalt::Leer
         | Inhalt::Markdown(_)
         | Inhalt::Bild { .. }
@@ -1588,12 +1865,13 @@ mod tests {
     ///
     /// **Die Probe zur Anforderungsbedingung, als reine Fallunterscheidung.**
     /// Sie misst die eine Frage, die [`einzufaerben`] beantwortet: aus welchem
-    /// Zustand der Vorschau ein Einfaerbungsfaden entsteht. Sechs der sieben
-    /// Werte von [`Inhalt`] kommen hier vor; der siebte, die Zusammenfassung,
-    /// hat seit der Runde 16 die Probe
-    /// [`eine_zusammenfassung_wird_nicht_eingefaerbt`] daneben. Ein achter
-    /// faellt an der vollstaendigen Fallunterscheidung in [`einzufaerben`]
-    /// auf und nicht erst am Bild.
+    /// Zustand der Vorschau ein Einfaerbungsfaden entsteht. Alle Werte von
+    /// [`Inhalt`] bis auf die Zusammenfassung kommen hier vor, seit der
+    /// Runde 20 auch [`Inhalt::Pdf`], dessen Seiten der Betrachter zeichnet;
+    /// die Zusammenfassung hat seit der Runde 16 die Probe
+    /// [`eine_zusammenfassung_wird_nicht_eingefaerbt`] daneben. Ein weiterer
+    /// Wert faellt an der vollstaendigen Fallunterscheidung in
+    /// [`einzufaerben`] auf und nicht erst am Bild.
     #[test]
     fn eingefaerbt_wird_genau_darstellungsart_code() {
         let quelltext = PathBuf::from("/tmp/beispiel.rs");
@@ -1628,7 +1906,8 @@ mod tests {
             "der Text der Zwischenablage traegt keinen Pfad und wird nicht eingefaerbt"
         );
 
-        // Die uebrigen fuenf Werte von `Inhalt`, jeder mit dem Pfad einer
+        // Die uebrigen Werte von `Inhalt` bis auf die Zusammenfassung, die
+        // ihre eigene Probe darunter hat, jeder mit dem Pfad einer
         // Quelltextdatei daneben: an ihnen liegt es und nicht am Pfad.
         let uebrige = [
             Inhalt::Leer,
@@ -1636,6 +1915,10 @@ mod tests {
             Inhalt::Bild {
                 daten: Arc::new(Vec::new()),
                 metadaten: Some(metadaten(&quelltext)),
+            },
+            Inhalt::Pdf {
+                daten: Arc::new(Vec::new()),
+                metadaten: metadaten(&quelltext),
             },
             Inhalt::Metadaten {
                 metadaten: metadaten(&quelltext),
@@ -2125,6 +2408,140 @@ mod tests {
              Anwendungsdelegierten und in der Vorschau; die Verzweigung nach \
              der sichtbaren Anzeige gehoert in die eine Zuordnung und nicht \
              neben sie"
+        );
+
+        // Die dritte Flaeche der Runde 20 steht innerhalb dieser einen
+        // Zuordnung: der Rumpf verzweigt ueber alle drei Werte von `Flaeche`,
+        // und ein Auffangzweig steht nicht darin. Gelesen wird der Rumpf bis
+        // zur naechsten Erklaerung, wie bei `metadaten_text` oben.
+        let (_, inhalt) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/vorschau.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let rumpf = inhalt
+            .split_once(concat!("pub fn ", "fokusansicht("))
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n    pub fn "))
+            .map(|(rumpf, _)| rumpf)
+            .expect("fokusansicht steht nicht mehr in dieser Datei");
+        for wert in ["Text", "Bild", "Betrachter"] {
+            assert!(
+                rumpf.contains(&format!("Flaeche::{wert} =>")),
+                "fokusansicht verzweigt nicht ueber Flaeche::{wert}"
+            );
+        }
+        assert!(
+            !rumpf.contains("_ =>"),
+            "fokusansicht traegt einen Auffangzweig; eine vierte Flaeche hielte den Bau nicht an"
+        );
+    }
+
+    /// `setHidden` steht in dieser Datei allein in `flaeche_zeigen`, dem einen
+    /// Schalter zwischen den drei Ansichten (Runde 20).
+    ///
+    /// **Eine Zaehlung von Codezeilen, und sie steht hier zu Recht**: zugesagt
+    /// ist, dass es **einen** Schalter gibt und nicht drei gegenlaeufige
+    /// Paare. Ein `setHidden` ausserhalb von `flaeche_zeigen` waere eine zweite
+    /// Meinung darueber, welche Ansicht steht, und
+    /// [`VorschaufensterIvars::flaeche`] sagte dann etwas anderes als die
+    /// Flaechen selbst. Erwartet sind genau drei Zeilen, eine je Ansicht, und
+    /// alle im Rumpf von `flaeche_zeigen`.
+    ///
+    /// # Was diese Nadel nicht sieht
+    ///
+    /// Ein Aufruf, der zwischen Empfaenger und `setHidden` umbricht, oder
+    /// einer ueber `setValue:forKey:`, entgeht ihr; der Kopf von
+    /// [`crate::quellbaum`] sagt, warum keine Suche im Quelltext restlos
+    /// dicht ist.
+    #[test]
+    fn set_hidden_steht_in_dieser_datei_allein_in_flaeche_zeigen() {
+        // Zusammengesetzt, wie oben: als ein Stueck geschrieben faende die
+        // Nadel sich selbst.
+        let nadel = concat!("setHidden", "(");
+        let (_, inhalt) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/vorschau.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let (ohne_proben, _) = inhalt
+            .split_once("#[cfg(test)]")
+            .expect("das Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
+        let codezeilen = |text: &str| -> usize {
+            text.lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(nadel))
+                .count()
+        };
+        let rumpf = ohne_proben
+            .split_once("fn flaeche_zeigen(")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n    fn "))
+            .map(|(rumpf, _)| rumpf)
+            .expect("flaeche_zeigen steht nicht mehr in dieser Datei");
+
+        assert_eq!(
+            codezeilen(rumpf),
+            3,
+            "flaeche_zeigen setzt nicht genau drei Ansichten; eine je Wert von Flaeche"
+        );
+        assert_eq!(
+            codezeilen(ohne_proben),
+            3,
+            "`{nadel}` steht ausserhalb von flaeche_zeigen; der Schalter zwischen den \
+             Ansichten hat genau eine Stelle"
+        );
+    }
+
+    /// Der Betrachter wird in dieser Datei allein in `pdf_zeigen` gebaut (Z2).
+    ///
+    /// **Die Baumhaelfte der Zusage, dass vor dem ersten PDF kein Objekt des
+    /// Betrachters entsteht.** Die Bauart — eine `OnceCell`, gefuellt in
+    /// `pdf_zeigen` — ist die eigentliche Zusage; die Probe haelt fest, dass
+    /// kein zweiter Ort die Klasse anspricht, also weder der Aufbau der
+    /// Oberflaeche noch die Text- oder Bildvorschau. Gezaehlt werden
+    /// Codezeilen mit `Pdfbetrachter::`, und die eine erwartete steht im
+    /// Rumpf von `pdf_zeigen`. Der Typname allein — im Feld der Ivars, im
+    /// `use` — nennt keinen Erzeuger und zaehlt nicht.
+    ///
+    /// # Was diese Nadel nicht sieht
+    ///
+    /// Einen Erzeuger unter einem anderen Namen (`use … as`), und ob PDFKit
+    /// selbst beim Programmstart abgebildet wird — das ist Entscheidung 2 des
+    /// Plans und keine Frage an diesen Baum.
+    #[test]
+    fn der_betrachter_wird_allein_in_pdf_zeigen_gebaut() {
+        // Zusammengesetzt, wie oben: als ein Stueck geschrieben faende die
+        // Nadel sich selbst.
+        let nadel = concat!("Pdfbetrachter", "::");
+        let (_, inhalt) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/vorschau.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let (ohne_proben, _) = inhalt
+            .split_once("#[cfg(test)]")
+            .expect("das Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
+        let codezeilen = |text: &str| -> usize {
+            text.lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(nadel))
+                .count()
+        };
+        let rumpf = ohne_proben
+            .split_once("fn pdf_zeigen(")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n    fn "))
+            .map(|(rumpf, _)| rumpf)
+            .expect("pdf_zeigen steht nicht mehr in dieser Datei");
+
+        assert_eq!(
+            codezeilen(rumpf),
+            1,
+            "pdf_zeigen baut den Betrachter nicht genau einmal"
+        );
+        assert_eq!(
+            codezeilen(ohne_proben),
+            1,
+            "`{nadel}` steht ausserhalb von pdf_zeigen; vor dem ersten PDF darf kein \
+             Objekt des Betrachters entstehen (Z2)"
         );
     }
 }

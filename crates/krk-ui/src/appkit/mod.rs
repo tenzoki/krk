@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Dreissig Module, entlang dessen geschnitten, was AppKit als
+//! Einunddreissig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`] und [`textautomatik`],
 //! die keines fuehren und trotzdem hier liegen, weil die Koordinate, in die das
 //! eine rechnet, AppKits ist und die Einstellungen, die das andere setzt, an
@@ -27,6 +27,7 @@
 //!           ──> teilen
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
 //!           │             ──> nummernspalte
+//!           │             ──> betrachter ──> PDFKit    ──> zwischenablage, teilen
 //!           ──> editor   ──> crate::editormodell
 //!           │             ──> nummernspalte ──> krk-core::text::zeilen
 //!           │             ──> textmerkmale  ──> crate::hervorhebung
@@ -43,7 +44,10 @@
 //! Lesezeichen- und Geraeteleiste aus C5, den zweiten fokussierbaren Bereich.
 //! [`vorschau`] haelt das Vorschaufenster aus C6, den dritten: Text- und
 //! Bildanzeige samt der zweiten Tableiste, waehrend Tabs und Halteverhalten in
-//! `crate::vorschaumodell` wohnen.
+//! `crate::vorschaumodell` wohnen. [`betrachter`] haelt daneben seit der
+//! Runde 20 die dritte Ansicht der Vorschau, eine Unterklasse von `PDFView`
+//! aus PDFKit; was sie selbst beantwortet und was PDFKit bleibt, steht in
+//! ihrem Modulkopf.
 //! [`editor`] haelt die Textflaeche des eingebauten Editors:
 //! eine editierbare `NSTextView` in einer `NSScrollView`, waehrend gehaltene
 //! Datei, Stand, Ansichtswahl und Suchlauf in `crate::editormodell` wohnen. Er
@@ -190,6 +194,7 @@ mod anwendung;
 mod aufteilung;
 mod belegungsansicht;
 mod bereichsleiste;
+mod betrachter;
 mod bildtakt;
 mod blaetter;
 mod editor;

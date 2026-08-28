@@ -259,6 +259,7 @@ use crate::zettelmodell::{self, Zettelmodell};
 use super::aufteilung::Aufteilung;
 use super::belegungsansicht::{self, Belegungsquelle};
 use super::bereichsleiste::Bereichsleiste;
+use super::betrachter::Zoom;
 use super::bildtakt::{self, Zeichenende};
 use super::blaetter::ungesichert::{self, Antwort};
 use super::blaetter::{
@@ -1151,6 +1152,19 @@ impl Anwendungsdelegierter {
         ];
         let leiste = Leiste::bauen(mtm);
         let vorschau = Vorschaufenster::bauen(mtm);
+        // **Der Seitenmelder der Vorschau** (C4.2, C4.7 der Runde 20). Die
+        // Vorschau meldet, dass ein Seitenwechsel, ein neuer Inhalt oder ein
+        // Tabwechsel ansteht, und der eine Schreiber der Statuszeile fragt sie
+        // danach nach dem Zaehler; einen Wert reicht sie nicht mit. Der
+        // Rueckruf haelt den Delegierten **schwach**, aus demselben Grund wie
+        // die uebrigen Melder hier: sonst schloesse sich der Ring
+        // Delegierter → Vorschaufenster → Rueckruf → Delegierter.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        vorschau.seitenmelder_setzen(Box::new(move || {
+            if let Some(selbst) = schwach.load() {
+                selbst.statuszeile_nachziehen();
+            }
+        }));
         let editor = Editorbereich::bauen(mtm);
         // **Der Rueckweg des Editors.** Seit S24 liest er auf einem
         // Arbeitsfaden, und wie ein Oeffnen ausgegangen ist, steht erst fest,
@@ -3408,6 +3422,23 @@ impl Anwendungsdelegierter {
             // geht mit, weil er hier keinen Vorbehalt mehr traegt, sondern die
             // Adresse ist — wie bei `tab_schliessen` darueber.
             Kommando::Teilen => self.teilen(fokus),
+            // Die drei Zoombefehle aus C3 der Runde 20. **Sie stehen hier und
+            // nicht bei `bereichskommando`, obwohl sie
+            // `Wirkungsbereich::Vorschau` tragen und der Fokus in der Vorschau
+            // liegt**: `Vorschaufenster::kommando_ausfuehren` fuehrt allein
+            // die vier Tabbefehle und liesse die drei still hindurchfallen —
+            // genau die Falle des Auffangzweigs darunter, und C3.8 verlangt
+            // deshalb den eigenen Zweig. Ein `false` aus `zoomen` heisst hier
+            // dasselbe wie ueberall in diesem `match`: kein Nachzug der
+            // Aufteilung, keine vorgemerkte Sitzung. Verbraucht ist der
+            // Tastendruck trotzdem, denn er war zulaessig — ohne gezeigtes PDF
+            // und an einer Zoomgrenze tut der Befehl nichts und meldet nichts
+            // (C3.7, C3.9, A6). Die Probe
+            // `zoomproben::die_drei_zoombefehle_haben_genau_hier_ihren_zweig`
+            // haelt die drei Zeilen.
+            Kommando::VorschauVergroessern => self.vorschau().zoomen(Zoom::Groesser),
+            Kommando::VorschauVerkleinern => self.vorschau().zoomen(Zoom::Kleiner),
+            Kommando::VorschauAusgangsgroesse => self.vorschau().zoomen(Zoom::Ausgangsgroesse),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
@@ -4978,7 +5009,7 @@ impl Anwendungsdelegierter {
     /// Meldungswechsel eines der beiden Dateifenster: eine seiner sechs Quellen
     /// hat sich geaendert, und es sagt es ueber den Rueckruf aus dem Aufbau.
     /// Der zweite ist [`Self::aufteilung_nachziehen`], weil die Zeile nicht nur
-    /// von den zwoelf Quellen abhaengt, sondern auch davon, **welches**
+    /// von den Quellen der Dateifenster abhaengt, sondern auch davon, **welches**
     /// Dateifenster das aktive und **welches sichtbar** ist: der Rang der
     /// aktiven Seite entscheidet jeden Gleichstand, der Namenszusatz haengt an
     /// derselben Frage, und ein ausgeblendetes Dateifenster bewirbt sich gar
@@ -4987,11 +5018,15 @@ impl Anwendungsdelegierter {
     /// Dateifensters geht auf beiden Wegen durch ihn: Mausklick ueber
     /// [`Self::aktives_setzen`], Tastenbefehl ueber `Kommando::FensterWechseln`.
     ///
-    /// **Sie entscheidet selbst nichts.** Die Auswahl unter den zwoelf Bewerbern
+    /// **Sie entscheidet selbst nichts.** Die Auswahl unter allen Bewerbern
     /// trifft [`statuszeile::zeile`], den Satz formt
     /// [`statuszeile::zeilentext`]; beide sind reines Rust ohne AppKit und ohne
-    /// Fenster pruefbar. Diese Funktion holt die vier Eingaben und schreibt das
-    /// Ergebnis.
+    /// Fenster pruefbar. Diese Funktion holt die fuenf Eingaben und schreibt
+    /// das Ergebnis. Die fuenfte ist seit der Runde 20 der Seitenzaehler der
+    /// Vorschau, geholt ueber `Vorschaufenster::seitenzaehler`; er hat einen
+    /// dritten Anlass, den Seitenmelder aus dem Aufbau, der bei jedem
+    /// Seitenwechsel, jedem neuen Inhalt und jedem Tabwechsel der Vorschau
+    /// ruft (C4.2, C4.7).
     ///
     /// **Auch das ausgeblendete Dateifenster wird gefragt**, und seine Antwort
     /// verwirft [`statuszeile::zeile`]. Die Bedingung hier zu ziehen waere
@@ -5028,7 +5063,15 @@ impl Anwendungsdelegierter {
             let modell = self.ivars().modell.borrow();
             (modell.aktiv(), modell.sichtbarkeit())
         };
-        let meldung = statuszeile::zeile(&links, &rechts, aktiv, &sichtbar);
+        // Der Seitenzaehler der Vorschau, oder `None`, wenn sie kein PDF zeigt
+        // oder noch nicht steht. Ob sie sichtbar ist, entscheidet `zeile`
+        // ueber dieselbe `Sichtbarkeit` wie fuer die Dateifenster.
+        let vorschau = self
+            .ivars()
+            .vorschau
+            .get()
+            .and_then(|vorschau| vorschau.seitenzaehler());
+        let meldung = statuszeile::zeile(&links, &rechts, aktiv, &sichtbar, vorschau.as_deref());
         // Der Satz bekommt eine eigene Bindung, weil `zeilentext` eine
         // Zeichenkette **baut** und `zeigen` eine ausleiht: ohne die Bindung
         // gaebe es nichts, woraus die Ausleihe genommen werden koennte.
@@ -8579,6 +8622,64 @@ mod zettelproben {
 /// **Was die drei nicht sehen:** eine Wirkung, die aus diesem Rumpf in eine
 /// spaeter gerufene Hilfsfunktion gewandert ist. Sie lesen den Rumpf und nicht
 /// den Aufrufbaum darunter.
+/// Die drei Zoombefehle der Runde 20 haben ihren Ausfuehrungszweig beim
+/// Anwendungsdelegierten und nirgends sonst (C3.8).
+///
+/// Der Ausfuehrungszweig ist die Stelle, die niemand haelt: das `match` in
+/// `kommando_ausfuehren` endet auf einen Auffangzweig, und ein Kommando ohne
+/// eigene Zeile uebersteht Bau und jede Belegungsprobe und tut nichts. Diese
+/// Probe liest den Rumpf von `kommando_ausfuehren` in dieser Datei und
+/// verlangt jede der drei Kennungen als `Kommando::… =>` genau einmal; in
+/// `tabelle.rs` verlangt sie keine, denn dort gehoeren die drei nicht hin —
+/// ein Dateifenster hat keinen Zoom.
+///
+/// **Was sie nicht sieht:** einen Zweig, der zwar steht, aber das Falsche
+/// ruft. Ob `zoomen` das Richtige tut, prueft `betrachter.rs` an seinen
+/// eigenen Proben.
+#[cfg(test)]
+mod zoomproben {
+    use super::zettelproben::{diese_datei, rumpf};
+    use crate::quellbaum::quelldateien;
+
+    const KENNUNGEN: [&str; 3] = [
+        "VorschauVergroessern",
+        "VorschauVerkleinern",
+        "VorschauAusgangsgroesse",
+    ];
+
+    fn zweig(kennung: &str) -> String {
+        format!("{}::{kennung} =>", concat!("Kom", "mando"))
+    }
+
+    #[test]
+    fn die_drei_zoombefehle_haben_genau_hier_ihren_zweig() {
+        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren");
+        for kennung in KENNUNGEN {
+            assert_eq!(
+                rumpf.matches(&zweig(kennung)).count(),
+                1,
+                "{kennung} steht nicht genau einmal als Zweig in kommando_ausfuehren"
+            );
+        }
+    }
+
+    #[test]
+    fn die_dateiliste_traegt_keinen_zoomzweig() {
+        let tabelle = quelldateien()
+            .into_iter()
+            .find(|(name, _)| name == "krk-ui/src/appkit/tabelle.rs")
+            .expect("die Dateiliste steht im Quellbaum")
+            .1;
+        for kennung in KENNUNGEN {
+            assert_eq!(
+                tabelle.matches(&zweig(kennung)).count(),
+                0,
+                "{kennung} hat einen Zweig in tabelle.rs, wo er nicht hingehört"
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod angleichproben {
     use super::zettelproben::{diese_datei, rumpf};
