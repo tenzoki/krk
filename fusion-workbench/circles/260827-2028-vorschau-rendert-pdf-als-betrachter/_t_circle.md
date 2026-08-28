@@ -4,14 +4,14 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260828-0034: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** (none yet)
+**Active spec/plan:** circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0649_o_spec-vorschau-rendert-pdf-als-betrachter.md
 **Active session history:** circles/260827-2028-vorschau-rendert-pdf-als-betrachter/history/260828-0035-orchestrator-session.md
 
 ---
 
 ## Directive
 
-Wer im Dateifenster eine PDF-Datei anwählt, sieht sie im Vorschaufenster gerendert und nicht mehr als Metadatenzeilen: ein Betrachter zeigt die Seiten, lässt sich vergrößern und verkleinern, springt auf eine gewählte Seite, und die Statuszeile am Fensterfuß nennt die aktuelle Seite und die Seitenzahl. Text auf einer Seite lässt sich mit der Maus markieren und mit Cmd+C in die Zwischenablage kopieren, über dieselbe eine Hülle wie jedes andere Kopieren in KRK. Für die Größe gilt dieselbe Grenze wie für Bilder, 64 MB; eine größere PDF-Datei fällt wie ein zu großes Bild auf die Metadaten zurück, ohne gelesen worden zu sein. Die übrigen Wege der Vorschau (Text, Markdown, Bild, Metadaten, Zusammenfassung) bleiben unverändert; Bilder in JPG und PNG rendert die Vorschau bereits seit der Runde 1 und sind kein Gegenstand dieser Runde.
+See `**Active spec/plan:**` above. The cited spec or plan states the Directive in force.
 
 ## Grounding snapshot
 

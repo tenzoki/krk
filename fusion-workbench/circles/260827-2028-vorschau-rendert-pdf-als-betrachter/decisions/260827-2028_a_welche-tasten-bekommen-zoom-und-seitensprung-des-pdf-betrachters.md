@@ -37,3 +37,6 @@ Möglichkeit 1: sie deckt die gewählte Antwort c vollständig und baut auf Beka
 ## Status
 
 Open. Zu beantworten spätestens beim Schärfen (portfolio-activation), bevor der Plan die Kommandos anlegt.
+
+---
+Answered: circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0649_o_spec-vorschau-rendert-pdf-als-betrachter.md:1 — Klärungsrunde des Orchestrators mit dem Nutzer am 260828-0044, wörtlich „1b": Möglichkeit 2, verengt auf drei Befehle `cmd+plus`, `cmd+minus`, `cmd+0`; kein Sprungblatt, gesprungen wird durch Blättern, der Seitenzähler in der Statuszeile ist die einzige Seitenauskunft. Ausformuliert im Spec unter `## Warum diese Runde drei Kommandos anlegt und kein Blatt` und C3.
