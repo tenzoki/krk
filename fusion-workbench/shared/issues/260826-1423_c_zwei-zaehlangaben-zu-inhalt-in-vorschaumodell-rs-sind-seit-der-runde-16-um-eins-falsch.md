@@ -28,3 +28,5 @@ Beides sind Kommentare, kein Verhalten; der Fall ist derselbe wie bei den Zahlen
 „ein siebter" → „ein achter", „alle sechs Werte" → „alle sieben Werte"; oder beide Sätze ohne
 Zahl, wie `Bereich::seite` in `fenstermodell.rs:157-160` es mit „ein sechster Bereich" ebenfalls
 riskiert — dort stimmt die Zahl heute noch.
+
+**Resolved:** 260828, Runde 20 Schritt 5 (Coder). Beide Sätze stehen ohne Zahl: `zeigt_dateitext` sagt „ein weiterer Wert von `Inhalt` haelt den Bau an", `tab_setzen` sagt „erreichen zusammen nicht jeden Wert von `Inhalt`". Der achte Wert `Inhalt::Pdf` ist im selben Schritt hinzugekommen, und keine der zwei Stellen trägt seither eine Zahl, die mit dem neunten falsch würde (Constraint 7 des Specs der Runde 20).

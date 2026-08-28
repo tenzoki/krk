@@ -33,6 +33,16 @@
 //! Metadaten; das Abnahmekriterium des Schritts laesst beide Wege zu, und die
 //! Metadaten sind der ohne zweite Leseregel.
 //!
+//! **Seit der Runde 20 hat eine Datei vier Wege, und der Abschnitt behaelt
+//! seinen Namen, weil C6 der Runde 1 so heisst.** Der vierte ist der
+//! Betrachter: eine Datei mit der Endung `pdf` bis 64 MB reist als
+//! [`Inhalt::Pdf`] mit ihren Bytes in die Ansicht, die sie PDFKit zum Deuten
+//! gibt. Die drei Wege der Runde 1 gelten unveraendert; der dritte traegt
+//! weiter alles Uebrige, und das PDF ueber der Grenze, das kein PDF ist oder
+//! ein Kennwort verlangt, faellt auf ihn zurueck wie ein Bild, das `NSImage`
+//! nicht liest (C2.1 bis C2.6 der Runde 20). Die Grenze ist [`BILDGRENZE`]
+//! und keine zweite Zahl daneben.
+//!
 //! **Beide Grenzen sind dieselbe Regel mit zwei Zahlen.** Bis zum 260806 trug
 //! allein der Text eine; eine Bilddatei wurde ohne jede Pruefung vollstaendig
 //! gelesen, und ein TIFF-Export von mehreren Gigabyte lief damit als Ganzes in
@@ -60,9 +70,9 @@
 //! es verlangt; das ist Weg 2 aus `issues/260803-2007_*_die-metadatenvorschau-
 //! aus-c6-verlangt-rechte-die-der-eintrag-nicht-traegt.md`.
 //!
-//! # Die Zusammenfassung ist der vierte Weg und die vierte Antwort nicht
+//! # Die Zusammenfassung ist ein weiterer Weg und eine weitere Antwort nicht
 //!
-//! Seit der Runde 16 steht neben den drei Wegen ein vierter: ein Ordner, den
+//! Seit der Runde 16 steht neben den drei Wegen ein weiterer: ein Ordner, den
 //! ein Leseprofil aus `readers.toml` an seinem Pfad oder an einer
 //! Kennzeichendatei darin erkennt, zeigt statt der Metadatenzeilen die Zeilen
 //! seines Profils ([`Inhalt::Zusammenfassung`]). **Er teilt die Dreiteilung
@@ -218,6 +228,15 @@ const BILDENDUNGEN: [&str; 10] = [
     "png", "jpg", "jpeg", "gif", "tif", "tiff", "heic", "heif", "bmp", "icns",
 ];
 
+/// Die eine Dateiendung, die den Betrachter erreicht (Runde 20, A10).
+///
+/// Verglichen ohne Ruecksicht auf Gross- und Kleinschreibung, an derselben
+/// Stelle wie die Bildendungen ([`endung_klein`]). Magic Bytes liest die
+/// Vorschau nicht, so wenig wie beim Bild: eine Datei mit dieser Endung, die
+/// kein PDF ist, faellt in der Ansicht auf die Metadaten zurueck, die jede
+/// [`Inhalt::Pdf`]-Meldung dafuer mitfuehrt.
+const PDFENDUNG: &str = "pdf";
+
 /// Die Metadaten eines Eintrags, wie C6 sie fuer alles Uebrige verlangt.
 ///
 /// Fuenf der sechs Angaben kennt auch `Eintrag` aus S2; die Rechte kommen
@@ -283,6 +302,31 @@ pub enum Inhalt {
         daten: Arc<Vec<u8>>,
         /// Die Metadaten der Datei, falls das Bild aus einer kommt.
         metadaten: Option<Metadaten>,
+    },
+    /// Ein PDF, als rohe Bytes fuer den Betrachter der Ansicht (Runde 20).
+    ///
+    /// **Gedeutet wird in der Ansicht und nicht hier.** Ein `PDFDocument` ist
+    /// ein AppKit-Wert, der den Kanal des Arbeitsfadens nicht ueberschreiten
+    /// darf, und diese Datei traegt keine Zeile AppKit. Das Modell sagt
+    /// allein: die Endung ist `pdf`, die Datei liegt unter der Grenze, und
+    /// das sind ihre Bytes. Ob sie ein PDF sind, ob das Dokument gesperrt
+    /// oder beschaedigt ist, entscheidet die Ansicht (C2.3 bis C2.5).
+    ///
+    /// Die Metadaten fahren mit, damit die Ansicht bei jedem dieser
+    /// Rueckfaelle auf sie zurueckfallen kann, ohne ein zweites Mal zu lesen
+    /// (C2.6). Anders als bei [`Inhalt::Bild`] sind sie kein `Option`: ein
+    /// PDF kommt allein vom Dateiweg, und die Zwischenablage aus C10 liefert
+    /// keines.
+    Pdf {
+        /// Die Bytes der PDF-Datei.
+        ///
+        /// **Geteilt und nicht kopiert**, aus demselben Grund wie bei
+        /// [`Inhalt::Bild`]: die Ansicht klont den [`Inhalt`] des aktiven
+        /// Tabs bei jedem Neuzeichnen, und `Arc` macht den Klon zu einem
+        /// Zaehlerschritt.
+        daten: Arc<Vec<u8>>,
+        /// Die Metadaten der Datei, fuer den Rueckfall in der Ansicht.
+        metadaten: Metadaten,
     },
     /// Die Metadaten: alles, was weder Text noch Bild ist, auch Ordner (C6).
     ///
@@ -581,9 +625,9 @@ impl Vorschaumodell {
     /// als das, was neben ihr steht, ist eine falsche Auskunft.
     ///
     /// **Die Fallunterscheidung ist vollstaendig und hat keinen
-    /// Auffangzweig**, wie die uebrigen dieser Art im Programm: ein siebter
-    /// Inhalt haelt den Bau an und erzwingt die Antwort auf die Frage, ob
-    /// neben ihm Zeilennummern stehen.
+    /// Auffangzweig**, wie die uebrigen dieser Art im Programm: ein
+    /// weiterer Wert von [`Inhalt`] haelt den Bau an und erzwingt die Antwort
+    /// auf die Frage, ob neben ihm Zeilennummern stehen.
     pub fn zeigt_dateitext(&self) -> bool {
         match self.aktiver_inhalt() {
             Inhalt::Text(_) => self.aktiver_pfad().is_some(),
@@ -593,6 +637,9 @@ impl Vorschaumodell {
             // diesen Zeilen. Der Tab zeigt einen Ordner, und ein Ordner hat
             // keine Zeilen; die Zeilen daneben sind die des Profils.
             Inhalt::Zusammenfassung(_) => false,
+            // Der Betrachter zeichnet Seiten und keine Zeilen; eine
+            // Nummernspalte daneben zaehlte nichts, was dasteht.
+            Inhalt::Pdf { .. } => false,
             Inhalt::Leer
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
@@ -774,6 +821,24 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
             },
         };
     }
+    if ist_pdfpfad(pfad) {
+        // Dieselbe Grenze und dieselbe Huelle wie beim Bild, und keine zweite
+        // Zahl daneben (C2.1, C2.7 der Runde 20): ueber `BILDGRENZE` wird
+        // nicht gelesen, sondern beschrieben, und unter ihr reisen die Bytes
+        // ungedeutet in die Ansicht.
+        return match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
+            Ok(daten) => Inhalt::Pdf {
+                daten: Arc::new(daten),
+                metadaten,
+            },
+            // Jeder der vier Gruende endet in den Metadaten; welcher es war,
+            // fragt die Vorschau nicht.
+            Err(_) => Inhalt::Metadaten {
+                metadaten,
+                zaehlzeilen: Vec::new(),
+            },
+        };
+    }
     // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den Modulkopf.
     match bis_zur_grenze_lesen(pfad, TEXTGRENZE)
         .ok()
@@ -803,11 +868,24 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
     }
 }
 
-/// Ob der Pfad auf eines der gaengigen Bildformate endet.
-fn ist_bildpfad(pfad: &Path) -> bool {
+/// Die Endung des Pfades in Kleinschreibung, oder keine.
+///
+/// Die eine Stelle, an der die Gross- und Kleinschreibung einer Endung
+/// faellt (C1.5, A10 der Runde 20); [`ist_bildpfad`] und [`ist_pdfpfad`]
+/// vergleichen beide gegen ihr Ergebnis.
+fn endung_klein(pfad: &Path) -> Option<String> {
     pfad.extension()
         .map(|endung| endung.to_string_lossy().to_ascii_lowercase())
-        .is_some_and(|endung| BILDENDUNGEN.contains(&endung.as_str()))
+}
+
+/// Ob der Pfad auf eines der gaengigen Bildformate endet.
+fn ist_bildpfad(pfad: &Path) -> bool {
+    endung_klein(pfad).is_some_and(|endung| BILDENDUNGEN.contains(&endung.as_str()))
+}
+
+/// Ob der Pfad auf `pdf` endet und damit den Betrachter erreicht.
+fn ist_pdfpfad(pfad: &Path) -> bool {
+    endung_klein(pfad).is_some_and(|endung| endung == PDFENDUNG)
 }
 
 /// Der Unix-Modus des Eintrags.
@@ -1092,6 +1170,70 @@ mod tests {
         assert_eq!(metadaten.typ, Typ::Datei);
     }
 
+    /// Z1, C2.1, C2.2 der Runde 20: ein PDF ueber der Grenze wird nicht
+    /// gelesen und faellt auf die Metadaten, mit derselben Konstanten wie das
+    /// Bild.
+    ///
+    /// Die Datei entsteht ueber `set_len` und belegt keine 64 MB; dass die
+    /// Huelle ueber der Grenze kein Byte liest, sondern allein `stat(2)` am
+    /// Deskriptor fragt, misst die Kernprobe
+    /// `eine_datei_ueber_der_grenze_wird_abgewiesen_ohne_gelesen_zu_werden`
+    /// (`crates/krk-core/tests/text.rs`); hier steht die Haelfte, dass der
+    /// PDF-Weg genau diese Huelle mit genau dieser Grenze nimmt.
+    #[test]
+    fn ein_pdf_ueber_der_grenze_faellt_auf_die_metadaten() {
+        let ordner = Pruefordner::neu("pdf-gross");
+        let pfad = ordner.pfad().join("gross.pdf");
+        let datei = std::fs::File::create(&pfad).expect("Probendatei");
+        datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
+        drop(datei);
+        let Inhalt::Metadaten { metadaten, .. } = laden(&pfad, Tafel::Hell, &Profile::default())
+        else {
+            panic!("ueber der Grenze zeigen die Metadaten");
+        };
+        assert_eq!(metadaten.groesse, BILDGRENZE + 1);
+        assert_eq!(metadaten.typ, Typ::Datei);
+    }
+
+    /// C1.5 der Runde 20: die Endung entscheidet ohne Ruecksicht auf Gross-
+    /// und Kleinschreibung.
+    #[test]
+    fn die_pdf_endung_gilt_gross_wie_klein() {
+        let ordner = Pruefordner::neu("pdf-endung");
+        for name in ["Bericht.PDF", "bericht.pdf"] {
+            let pfad = ordner.pfad().join(name);
+            std::fs::write(&pfad, b"%PDF-1.4\n").expect("Probendatei");
+            let Inhalt::Pdf { daten, metadaten } = laden(&pfad, Tafel::Hell, &Profile::default())
+            else {
+                panic!("{name} erreicht den Betrachter");
+            };
+            assert_eq!(*daten, b"%PDF-1.4\n".to_vec());
+            assert_eq!(
+                metadaten.name, name,
+                "die Metadaten fahren als Rueckfall mit"
+            );
+        }
+    }
+
+    /// C2.3 der Runde 20, Modellhaelfte: eine umbenannte Textdatei mit der
+    /// Endung `.pdf` reist als [`Inhalt::Pdf`] mit ihren Bytes in die Ansicht.
+    /// Ob sie ein PDF ist, entscheidet dort PDFKit; das Modell liest keine
+    /// Magic Bytes (A10), und der Rueckfall auf die Metadaten geschieht in der
+    /// Ansicht ohne zweites Lesen (C2.6).
+    #[test]
+    fn eine_umbenannte_textdatei_mit_pdf_endung_reist_als_pdf() {
+        let ordner = Pruefordner::neu("pdf-umbenannt");
+        let pfad = ordner.pfad().join("notiz.pdf");
+        std::fs::write(&pfad, "Erste Zeile\nZweite").expect("Probendatei");
+        let Inhalt::Pdf { daten, metadaten } = laden(&pfad, Tafel::Hell, &Profile::default())
+        else {
+            panic!("die Endung entscheidet, nicht der Inhalt");
+        };
+        assert_eq!(*daten, b"Erste Zeile\nZweite".to_vec());
+        assert_eq!(metadaten.groesse, 18);
+        assert_eq!(metadaten.typ, Typ::Datei);
+    }
+
     #[test]
     fn keine_utf8_datei_faellt_auf_die_metadaten() {
         let ordner = Pruefordner::neu("binaer");
@@ -1219,7 +1361,7 @@ mod tests {
     ///
     /// Die beiden gewoehnlichen Wege dorthin, [`Vorschaumodell::datei_anzeigen`]
     /// und [`Vorschaumodell::zwischenablage_anzeigen`], erreichen zusammen nicht
-    /// alle sechs Werte von [`Inhalt`]: die Metadaten entstehen nur aus einer
+    /// jeden Wert von [`Inhalt`]: die Metadaten entstehen nur aus einer
     /// Datei, die keine Textdatei ist, das Bild nur aus einer lesbaren
     /// Bilddatei. Die Probe unten deckt die Fallunterscheidung vollstaendig ab
     /// und setzt deshalb hier an.
@@ -1291,6 +1433,17 @@ mod tests {
             )
             .zeigt_dateitext(),
             "ein Bild hat keine Zeilen"
+        );
+        assert!(
+            !tab_setzen(
+                Inhalt::Pdf {
+                    daten: Arc::new(vec![b'%', b'P', b'D', b'F']),
+                    metadaten: probenmetadaten(),
+                },
+                Some("/tmp/probe.pdf"),
+            )
+            .zeigt_dateitext(),
+            "der Betrachter zeichnet Seiten und keine Zeilen (Runde 20)"
         );
         assert!(
             !tab_setzen(
