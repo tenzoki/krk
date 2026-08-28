@@ -20,7 +20,12 @@
 //! der Runde 14 erreicht `copy:` als dritte Flaeche die **Textanzeige der
 //! Vorschau**, die seither auswaehlbar ist und das Ablegen in ihrer
 //! Ueberschreibung von `writeSelectionToPasteboard:types:` abfaengt
-//! ([`super::vorschau::Vorschautext`]).
+//! ([`super::vorschau::Vorschautext`]). Seit der Runde 22 erreichen `copy:`
+//! und `cut:` als vierte Flaeche den **Anwendungsdelegierten**, und zwar genau
+//! dann, wenn kein Glied davor antwortet — also mit dem Fokus in der
+//! Dateiliste, deren `NSTableView` keinen der beiden Selektoren traegt; er
+//! legt dort die betroffenen Eintraege als Dateiverweise ab
+//! ([`super::anwendung`], `dateiablage_ausfuehren`).
 //! [`KRK_KOMMANDO`] wie `tastenbelegungSichern:` erreichen den
 //! Anwendungsdelegierten, an dem die Kette endet, und
 //! `orderFrontStandardAboutPanel:` erreicht `NSApplication` und damit eine
@@ -80,14 +85,22 @@
 //! darin steht, liest es aus der `Info.plist` des Buendels. KRK baut dafuer
 //! keine eigene Flaeche und implementiert keine Methode (C5.3, C5.4).
 //!
-//! **Kein zweiter Zweig in `validateMenuItem:`.** Die Ausgrauung am
+//! **Kein Sonderzweig in `validateMenuItem:`.** Die Ausgrauung am
 //! Anwendungsdelegierten fragt zuerst nach der Aktion und antwortet fuer jede
 //! fremde `true`; beide Sonderposten fallen in genau diesen Zweig, und die
-//! Regel nimmt ihnen damit auch bei stehendem Blatt nichts. Das ist die
-//! bestehende Regel und keine Ausnahme fuer einen einzelnen Eintrag — ein
-//! eigener Zweig dort waere die erste. Ob AppKit selbst am Menue etwas
-//! aendert, solange ein Blatt steht, entscheidet diese Regel nicht; das ist am
-//! laufenden Buendel nachzusehen.
+//! Regel nimmt ihnen damit auch bei stehendem Blatt nichts. **Ausgenommen sind
+//! seit der Runde 22 `copy:` und `cut:`**, und die Ausnahme ist keine fuer
+//! einen Eintrag, sondern die Regel fuer jeden Eintrag, den KRK selbst
+//! beantwortet: was der Delegierte ausfuehrt, unterstellt er der einen
+//! Zulaessigkeitsregel aus [`crate::kommandos::zulaessigkeit`], wie er es fuer
+//! jedes `krkKommando:` tut — ueber `dateiablage_zulaessig`, den zweiten
+//! Eingang derselben Regel, weil die zwei Selektoren kein `Kommando` tragen.
+//! Ein Eintrag, den KRK beantwortet und **nicht** der Regel unterstellte,
+//! bliebe waehrend eines Blattes oder mit dem Fokus in der Leiste bedienbar,
+//! obwohl niemand ihn ausfuehrt. `paste:` beantwortet der Delegierte nicht und
+//! bekommt darum weiter `true` wie jede fremde Aktion. Ob AppKit selbst am
+//! Menue etwas aendert, solange ein Blatt steht, entscheidet diese Regel
+//! nicht; das ist am laufenden Buendel nachzusehen.
 //!
 //! **Kein Kuerzel steht hier als Zeichenkette, ohne Ausnahme.** Jedes kommt aus
 //! der Belegung, ueber das Modell. Damit ist `resources/default-keymap.toml` auch fuer
@@ -109,11 +122,18 @@
 //! Dateifenster, schlaegt er in der Belegung nach — und die vom Menue
 //! gehaltenen Funktionen sieht er dabei nicht, weil `Belegung::nachschlag` sie
 //! ueberspringt. Die sechs Textbefehle laufen deshalb auch im Dateifenster ins
-//! Menue und von dort die Antwortkette hinunter, wo heute niemand `paste:`
-//! beantwortet und der Eintrag folglich grau ist. Genau das ist der
-//! Einhaengepunkt der spaeteren Dateizwischenablage: sie beantwortet `copy:`
-//! und `paste:` am Dateifenster und braucht dafuer weder einen zweiten
-//! Menueeintrag noch eine zweite Zeile in der Belegung.
+//! Menue und von dort die Antwortkette hinunter. Genau das war der
+//! Einhaengepunkt der Dateizwischenablage, und die Runde 22 hat ihn zur
+//! Haelfte besetzt: `copy:` und `cut:` beantwortet seither der
+//! Anwendungsdelegierte am Dateifenster und legt Dateiverweise ab, ohne einen
+//! zweiten Menueeintrag und ohne eine zweite Zeile in der Belegung — der
+//! Eintrag ist derselbe, der im Editor Text kopiert, und heisst darum weiter
+//! "Kopieren" und nicht "Dateien kopieren" (Spec der Runde 22, A9). `paste:`
+//! beantwortet am Dateifenster weiter niemand, der Eintrag ist dort folglich
+//! grau; ihn besetzt der vorgesehene Circle
+//! `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`, und was `cmd+v`
+//! mit einem Dateiverweis tut, entscheidet dessen offener Datensatz und nicht
+//! diese Datei.
 //!
 //! # Warum es das Menue "Bearbeiten" ueberhaupt gibt
 //!
@@ -865,6 +885,15 @@ mod tests {
     /// `NSTextField` mitbringt. Genau darauf ruht der Satz im Modulkopf, das
     /// Menue erreiche "den Feldeditor des Textfeldes beziehungsweise die
     /// Textflaeche des Editors".
+    ///
+    /// **Die Tafel misst die sechs AppKit-Klassen aus [`ersthelferklassen`]
+    /// und den Anwendungsdelegierten nicht.** Seit der Runde 22 beantwortet
+    /// der Delegierte `copy:` und `cut:` am Ende der Antwortkette, und die
+    /// Zeilen zu beiden Selektoren bleiben trotzdem, wie sie am 260811 gemessen
+    /// sind: die Tafel sagt, welche **Ersthelfer** antworten, und der
+    /// Delegierte ist keiner. Seine Antwort haelt die Probe aus Schritt 5 der
+    /// Runde 22 ueber `responds_to` an seiner Klasse — `copy:` und `cut:` ja,
+    /// `paste:` nein — und nicht diese Tafel.
     const GEMESSEN: [(&str, &[(&str, &str)]); 6] = [
         ("cut:", &[("NSTextView", "NSText")]),
         ("copy:", &[("NSTextView", "NSText")]),

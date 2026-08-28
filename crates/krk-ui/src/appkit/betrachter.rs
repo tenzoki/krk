@@ -62,8 +62,10 @@
 //! Ueberschreibung hier nimmt ihm das ab und reicht den Text an
 //! [`zwischenablage::text_schreiben`]; **keine Codezeile dieser Datei spricht
 //! `NSPasteboard` an**, und die Zaehlprobe
-//! `nspasteboard_steht_nicht_im_betrachter_und_copy_genau_einmal` haelt das
-//! (C5.2, Constraint 3). Jeder der Wege aus C5.2 und C5.3 endet an dieser
+//! `nspasteboard_steht_nicht_im_betrachter_und_copy_und_cut_stehen_an_genannten_stellen`
+//! haelt das (C5.2, Constraint 3); seit der Runde 22 antwortet daneben der
+//! Anwendungsdelegierte auf `copy:` und `cut:` fuer die Dateiliste, und die
+//! Probe nennt beide Stellen mit Namen. Jeder der Wege aus C5.2 und C5.3 endet an dieser
 //! einen Stelle — `cmd+c` ueber den Menueeintrag mit Ziel `nil`, der Eintrag
 //! „Kopieren" des Hauptmenues, der Eintrag im Kontextmenue von `PDFView` —,
 //! **und das ist Erschliessung aus dem Verhalten von Vorschau.app und der
@@ -710,18 +712,27 @@ mod tests {
         );
     }
 
-    /// Keine Codezeile dieser Datei nennt `NSPasteboard`, und `copy:` ist im
-    /// ganzen Baum genau einmal ueberschrieben, naemlich hier (C5.2,
-    /// Constraint 3).
+    /// Keine Codezeile dieser Datei nennt `NSPasteboard`, und die
+    /// Ueberschreibungen von `copy:` und `cut:` stehen im ganzen Baum an
+    /// genannten Stellen (C5.2, C5.4, Constraint 3).
+    ///
+    /// Seit der Runde 22 ist `copy:` zweimal ueberschrieben: hier fuer die
+    /// Auswahl aus dem PDF und beim Anwendungsdelegierten fuer die
+    /// Dateiliste; `cut:` steht allein beim Delegierten. Beide gehen durch die
+    /// eine Huelle `zwischenablage.rs`. Die Erwartung ist die Lage am 260828
+    /// und keine Zusage ueber spaetere Runden (A5): wer eine dritte Antwort
+    /// baut, traegt sie hier ein und begruendet sie.
     ///
     /// Gezaehlt werden Codezeilen: der Modulkopf **nennt** die Klasse, um zu
     /// sagen, dass er sie nicht anspricht, und das ist keine Beruehrung. Die
     /// Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum, den sie
     /// liest, und als ein Stueck geschrieben faende sie sich selbst.
     #[test]
-    fn nspasteboard_steht_nicht_im_betrachter_und_copy_genau_einmal() {
+    fn nspasteboard_steht_nicht_im_betrachter_und_copy_und_cut_stehen_an_genannten_stellen() {
+        const DELEGIERTER: &str = "krk-ui/src/appkit/anwendung.rs";
         let huelle = concat!("NSPaste", "board");
-        let ueberschreibung = concat!("unsafe(method(co", "py:))");
+        let kopieren = concat!("unsafe(method(co", "py:))");
+        let ausschneiden = concat!("unsafe(method(cu", "t:))");
 
         let dateien = quelldateien();
         let (_, inhalt) = dateien
@@ -736,20 +747,29 @@ mod tests {
             "eine Codezeile des Betrachters nennt `{huelle}`; die eine Huelle ist `zwischenablage.rs`"
         );
 
-        let stellen: Vec<(String, usize)> = dateien
-            .iter()
-            .map(|(datei, inhalt)| {
-                let zahl = codezeilen(inhalt)
-                    .filter(|zeile| zeile.contains(ueberschreibung))
-                    .count();
-                (datei.clone(), zahl)
-            })
-            .filter(|(_, zahl)| *zahl > 0)
-            .collect();
+        // Je Nadel die Dateien mit Trefferzahl, in der Sortierung von
+        // `quelldateien`, ohne die trefferlosen.
+        let stellen_von = |nadel: &str| -> Vec<(String, usize)> {
+            dateien
+                .iter()
+                .map(|(datei, inhalt)| {
+                    let zahl = codezeilen(inhalt)
+                        .filter(|zeile| zeile.contains(nadel))
+                        .count();
+                    (datei.clone(), zahl)
+                })
+                .filter(|(_, zahl)| *zahl > 0)
+                .collect()
+        };
         assert_eq!(
-            stellen,
-            vec![(DIESE_DATEI.to_owned(), 1)],
-            "`copy:` ist nicht allein im Betrachter und dort genau einmal ueberschrieben"
+            stellen_von(kopieren),
+            vec![(DELEGIERTER.to_owned(), 1), (DIESE_DATEI.to_owned(), 1)],
+            "`copy:` steht nicht genau je einmal beim Anwendungsdelegierten und im Betrachter"
+        );
+        assert_eq!(
+            stellen_von(ausschneiden),
+            vec![(DELEGIERTER.to_owned(), 1)],
+            "`cut:` steht nicht genau einmal, beim Anwendungsdelegierten"
         );
     }
 

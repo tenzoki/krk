@@ -75,6 +75,20 @@
 //! Hinweisfenster aus [`super::hinweis`], danach `terminate:`. Der Grund und
 //! der Entscheid des Nutzers stehen an jener Funktion.
 //!
+//! # Zwei Antworten ohne Kommando: `copy:` und `cut:` (Runde 22)
+//!
+//! `cmd+c` und `cmd+x` sind kein [`Kommando`]; das Menue "Bearbeiten" schickt
+//! sie mit Ziel `nil` die Antwortkette hinunter, und mit dem Fokus in einer
+//! Dateiliste endet die Kette hier. Der Delegierte beantwortet beide ueber
+//! **eine** Funktion, [`Anwendungsdelegierter::dateiablage_ausfuehren`], die
+//! [`zulaessigkeit::dateiablage_zulaessig`] auf der einen [`Lage`] fragt und
+//! dann an die Datenquelle des aktiven Dateifensters weiterreicht. `paste:`
+//! beantwortet der Delegierte nicht; die Kombination gehoert dem Circle
+//! `260828-1041`. Die Ausgrauung in `validateMenuItem:` hat dafuer neben dem
+//! Zweig fuer `krkKommando:` einen zweiten, der fuer genau diese zwei
+//! Selektoren dieselbe Regel fragt; jede andere fremde Aktion bekommt weiter
+//! `true`, und AppKit entscheidet ueber sie wie bisher.
+//!
 //! # Der eine Fokusvorbehalt (C5)
 //!
 //! Seit S17 der Editor-Runde gibt es vier fokussierbare Bereiche — die beiden
@@ -192,6 +206,9 @@
 //! `replyToApplicationShouldTerminate:` und
 //! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im
 //! SDK-Kopf gar keine Verfuegbarkeitsangabe und steht damit seit 10.0.
+//! `copy:` und `cut:` sind Aktionsselektoren, die diese Datei seit der Runde
+//! 22 **erklaert** und nicht ruft; sie sprechen keine Klasse an und tragen
+//! deshalb keine Untergrenze.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -244,7 +261,9 @@ use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::kontextmenue::{self, Entpackbefund, Kontextbefehl};
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
-use crate::kommandos::operationen::{self, Anlegeart, Auswahl, Konfliktfrage, Vorgangszustand};
+use crate::kommandos::operationen::{
+    self, Anlegeart, Auswahl, Dateiablage, Konfliktfrage, Vorgangszustand,
+};
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::rundweg::{Rundweg, rundweg};
 use crate::kommandos::zulaessigkeit::{self, Lage};
@@ -858,6 +877,35 @@ define_class!(
         fn tastenbelegung_sichern_aktion(&self, _absender: Option<&AnyObject>) {
             self.tastenbelegung_sichern();
         }
+
+        /// "Bearbeiten › Kopieren" und `cmd+c` mit dem Fokus in der Dateiliste
+        /// (C1 der Runde 22).
+        ///
+        /// Ohne festes Ziel und ueber die Antwortkette, wie die Eintraege
+        /// darueber: mit der Schreibmarke in einer Textflaeche findet AppKit
+        /// `copy:` dort, bevor die Kette den Delegierten erreicht, und die
+        /// Textbedeutung bleibt unberuehrt (A11). Der Rumpf ist ein Aufruf von
+        /// [`Self::dateiablage_ausfuehren`]; **kein `paste:` daneben**
+        /// (Constraint 3 und 5 der Runde 22).
+        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
+        // Argument, der Absender.
+        #[unsafe(method(copy:))]
+        fn dateien_kopieren_aktion(&self, _absender: Option<&AnyObject>) {
+            self.dateiablage_ausfuehren(Dateiablage::Kopieren);
+        }
+
+        /// "Bearbeiten › Ausschneiden" und `cmd+x` mit dem Fokus in der
+        /// Dateiliste (C3 der Runde 22).
+        ///
+        /// Dasselbe Ablegen wie [`Self::dateien_kopieren_aktion`] mit einem
+        /// Satz mehr in der Statuszeile; verschoben wird nichts, das tut das
+        /// Ziel (A4).
+        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
+        // Argument, der Absender.
+        #[unsafe(method(cut:))]
+        fn dateien_ausschneiden_aktion(&self, _absender: Option<&AnyObject>) {
+            self.dateiablage_ausfuehren(Dateiablage::Ausschneiden);
+        }
     }
 
     /// Die Ausgrauung des Hauptmenues, und sie fragt dieselbe Regel wie der
@@ -880,9 +928,19 @@ define_class!(
         /// ist Null, und Null ist ein gueltiger Index in
         /// [`Kommando::KENNUNGEN`]. Fuer jede fremde Aktion antwortet diese
         /// Methode deshalb `true` und ueberlaesst AppKit seine gewohnte
-        /// Entscheidung; die sechs Textbefehle (C2.8) und der Eintrag der
+        /// Entscheidung; die Textbefehle (C2.8) und der Eintrag der
         /// Markdown-Ausgabe (C2.9) behalten damit genau das Verhalten, das sie
         /// heute haben, und ihre Ausgrauung kommt weiter aus der Antwortkette.
+        ///
+        /// **Die Dateiablage ist seit der Runde 22 der zweite Fall, den die
+        /// Regel und nicht AppKit entscheidet.** `copy:` und `cut:` sind kein
+        /// Kommando und tragen keinen `tag`; der Zweig fragt fuer sie
+        /// [`zulaessigkeit::dateiablage_zulaessig`], den zweiten Eingang
+        /// derselben Regel, auf derselben [`Lage`] wie
+        /// [`Self::dateiablage_ausfuehren`] (A11, C4.5). Eine dritte Antwort
+        /// neben der Regel gibt es hier nicht: `paste:` faellt wie jede andere
+        /// fremde Aktion in den letzten Zweig und bleibt AppKit ueberlassen
+        /// (C1.14).
         ///
         /// **Kein Beobachter am Fokus, und das ist kein Versehen.** Eine
         /// Anzeige, die dem Fokus folgt, gehoert nach `CLAUDE.md` an die
@@ -897,7 +955,8 @@ define_class!(
             // Ohne `return`, und das ist kein Geschmack: `define_class!` setzt
             // den Rumpf in eine Huelle mit dem Rueckgabetyp `Bool`, und ein
             // `return` verliesse die Huelle statt den Rumpf.
-            if eintrag.action() == Some(Sel::register(menue::KRK_KOMMANDO)) {
+            let aktion = eintrag.action();
+            if aktion == Some(Sel::register(menue::KRK_KOMMANDO)) {
                 match menue::kommando_zum_tag(eintrag.tag()) {
                     Some(kommando) => zulaessigkeit::zulaessig(kommando, self.lage()),
                     // Ein `tag`, den `KENNUNGEN` nicht fuehrt, ist ein
@@ -905,6 +964,8 @@ define_class!(
                     // Eintrag taete ohnehin nichts.
                     None => false,
                 }
+            } else if aktion == Some(sel!(copy:)) || aktion == Some(sel!(cut:)) {
+                zulaessigkeit::dateiablage_zulaessig(self.lage())
             } else {
                 true
             }
@@ -3101,6 +3162,41 @@ impl Anwendungsdelegierter {
             schluesselfenster_gehoert_krk: schluesselfenster.gehoert_krk(),
             fokus: self.fokus_bei(schluesselfenster),
         }
+    }
+
+    /// Legt die betroffenen Eintraege des aktiven Dateifensters als
+    /// Dateiverweise ab (C1 und C3 der Runde 22).
+    ///
+    /// **Der Spiegel von [`Self::kommando_ausfuehren`] fuer einen Befehl ohne
+    /// [`Kommando`].** `copy:` und `cut:` kommen aus dem Menue "Bearbeiten"
+    /// ueber die Antwortkette an und tragen weder Kennung noch `tag`; beide
+    /// gehen durch diese eine Funktion, und der Unterschied ist der Wert von
+    /// [`Dateiablage`]. Kein `bildschirmbreiten_uebernehmen`, kein Nachzug der
+    /// Aufteilung, keine vorgemerkte Sitzung: der Befehl aendert nichts an
+    /// Fenster oder Sitzung. Die Seite ist dieselbe wie in
+    /// [`Self::bereichskommando`] fuer [`Fokus::Dateifenster`], das aktive
+    /// Dateifenster aus dem Fenstermodell; die Statuszeile schreibt die
+    /// Datenquelle und nicht der Delegierte, wie bei den Pfadkopierern.
+    ///
+    /// **Die Regel wird hier ein zweites Mal gefragt, obwohl AppKit den Eintrag
+    /// eben freigegeben hat**, aus demselben Grund, aus dem `krkKommando:`
+    /// durch `kommando_ausfuehren` geht: die Ausgrauung ist eine Anzeige und
+    /// keine Sperre, und ein Kuerzel kann ankommen, bevor das Menue neu
+    /// gefragt hat. Gefragt wird [`zulaessigkeit::dateiablage_zulaessig`] auf
+    /// der einen [`Lage`] aus [`Self::lage`], derselbe Eingang, den auch
+    /// `validateMenuItem:` fragt (A11, C4.5).
+    fn dateiablage_ausfuehren(&self, befehl: Dateiablage) {
+        let lage = self.lage();
+        if !zulaessigkeit::dateiablage_zulaessig(lage) {
+            return;
+        }
+        // Die eine Loeschregel der Befehlsantwort, wie bei jedem Kommando: was
+        // KRK auf den vorigen Befehl geantwortet hat, faellt mit diesem.
+        self.befehlsantwort_beidseitig_loeschen();
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.dateifenster(aktiv)
+            .quelle()
+            .dateiverweise_ablegen(befehl);
     }
 
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
@@ -9733,6 +9829,39 @@ mod kontextproben {
             "`{nadel}` wird in krk-ui nicht genau einmal und nicht in dieser \
              Datei gestellt; ein zweiter Eingang ginge am Schnitt vorbei, der \
              das Ziel des Laufs aus seinen Quellen nimmt"
+        );
+    }
+}
+
+#[cfg(test)]
+mod dateiablageproben {
+    use objc2::{ClassType, sel};
+
+    use super::Anwendungsdelegierter;
+
+    /// Der Delegierte beantwortet `copy:` und `cut:`, und `paste:` nicht
+    /// (C1.14, C3.8, Constraint 3 der Runde 22).
+    ///
+    /// Gefragt wird die Klasse ueber `responds_to`, nach dem Muster von
+    /// `wer_antwortet` in [`super::menue`]: ohne Fenster, ohne Hauptfaden,
+    /// ohne Vordergrund. Die dritte Zeile ist die Aussage der Probe und keine
+    /// Vollstaendigkeit: `cmd+v` im Dateifenster bleibt beim Circle
+    /// `260828-1041`, und eine Antwort auf `paste:` hier waere der Zweig, den
+    /// diese Runde ausdruecklich nicht legt.
+    #[test]
+    fn der_delegierte_beantwortet_copy_und_cut_und_paste_nicht() {
+        let klasse = Anwendungsdelegierter::class();
+        assert!(
+            klasse.responds_to(sel!(copy:)),
+            "`copy:` bleibt unbeantwortet"
+        );
+        assert!(
+            klasse.responds_to(sel!(cut:)),
+            "`cut:` bleibt unbeantwortet"
+        );
+        assert!(
+            !klasse.responds_to(sel!(paste:)),
+            "`paste:` wird beantwortet; die Kombination gehoert dem Circle 260828-1041"
         );
     }
 }
