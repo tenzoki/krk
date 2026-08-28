@@ -41,3 +41,10 @@ Nach dieser Runde füllt `cmd+v` im Dateifenster den Filtertext des sichtbaren T
 
 ## Turn log
 
+
+## Activation proposal
+
+**Lauf:** 260828-1053-playmaker-orchestrator-phase4 (`shared/history/260828-1053-playmaker-orchestrator-phase4.md`)
+**Vorgeschlagene Aktivierung:** 260828-1053 oder später, auf Bestätigung des Nutzers über `/fusion:next`.
+
+**Begründung.** Der einzige vorgesehene Circle, seit die Runde 20 (`260827-2028-vorschau-rendert-pdf-als-betrachter`) am 260828 kohärent geschlossen hat. Die Grundlage nennt zwei offene Entscheidungsdatensätze, `decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md` und `shared/decisions/260826-0859_*_die-vorgabe-der-tiefen-suche-hebt-die-schwelle-des-inhaltsfilters-von-drei-auf-fuenf.md`; keine der beiden hält einen Planschritt auf, die erste gehört in den Spec. Die drei Abhängigkeiten (`260814-1551-tippen-filtert-dateiliste-flach-und-tief`, `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`, `260802-0842-krk-mac-dateimanager-editor-git`) sind terminal, alle beschränkt geschlossen; in diesem Projekt misst der beschränkte Abschluss die Verfügbarkeit des Nutzers für den Abnahmelauf und nicht offene Arbeit (CLAUDE.md, Absatz zur Rangheuristik). Der Abnahmelauf dieser Runde ist voraussichtlich wieder Nutzerarbeit, die Reinigungsregel und die Pfadzerlegung sind ohne Fenster prüfbar.
