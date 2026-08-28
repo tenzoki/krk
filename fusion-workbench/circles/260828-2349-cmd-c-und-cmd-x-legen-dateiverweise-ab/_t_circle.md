@@ -4,7 +4,7 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260828-2351: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/planning/260829-0005_o_spec-cmd-c-und-cmd-x-legen-dateiverweise-ab.md
+**Active spec/plan:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/planning/260829-0006_p_plan-cmd-c-und-cmd-x-legen-dateiverweise-ab.md
 **Active session history:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/history/260828-2351-orchestrator-session.md
 
 ---
