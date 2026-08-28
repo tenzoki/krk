@@ -4,7 +4,7 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260828-0034: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0649_o_spec-vorschau-rendert-pdf-als-betrachter.md
+**Active spec/plan:** circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0712_p_plan-vorschau-rendert-pdf-als-betrachter.md
 **Active session history:** circles/260827-2028-vorschau-rendert-pdf-als-betrachter/history/260828-0035-orchestrator-session.md
 
 ---
