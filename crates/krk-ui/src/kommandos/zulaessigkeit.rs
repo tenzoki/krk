@@ -295,26 +295,81 @@ mod tests {
     /// Ein Befehl je Wirkungsbereich, und keiner von ihnen steht auf der
     /// Ausnahmeliste oder kommt waehrend eines Blattes durch.
     ///
-    /// Die Tafel unten braucht zu jedem der sieben Wirkungsbereiche ein
+    /// Die Tafel unten braucht zu jedem der acht Wirkungsbereiche ein
     /// Kommando, denn [`zulaessig`] fragt nach einem Kommando und nicht nach
     /// einem Bereich. Die Paarung ist nicht behauptet: die Probe
     /// `jeder_stellvertreter_traegt_den_bereich_den_er_vertritt` haelt sie gegen
     /// [`Kommando::wirkungsbereich`], und sie haelt daneben fest, dass keiner
-    /// der sieben eine der beiden Ausnahmen traegt. Ohne das zweite koennte ein
+    /// der acht eine der beiden Ausnahmen traegt. Ohne das zweite koennte ein
     /// Stellvertreter die drei abweisenden Viertel der Tafel gruen faerben,
     /// ohne dass die Regel sie traegt.
     ///
-    /// Die Feldbreite steht in der Typangabe: ein achter Wirkungsbereich haelt
-    /// den Bau dieser Probe an.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 7] = [
+    /// **Die Feldbreite haelt den Bau nicht an, wenn ein Wert dazukommt**: hier
+    /// steht kein `match`, und ein neunter Wirkungsbereich ohne Zeile bliebe
+    /// von der Tafel unbemerkt. Was ihn faengt, ist die Tafel in
+    /// [`super::super::fokus`], die als `match` ohne Auffangzweig uebersetzt
+    /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
+    /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
+    /// haelt.
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 8] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
         (Wirkungsbereich::Editor, Kommando::EditorSichern),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
         (Wirkungsbereich::Navigator, Kommando::AuswahlHoch),
+        (Wirkungsbereich::Vorschau, Kommando::VorschauVergroessern),
         (Wirkungsbereich::Ueberall, Kommando::LeisteUmschalten),
     ];
+
+    /// Jede Variante von [`Wirkungsbereich`] hat genau einen Stellvertreter.
+    ///
+    /// Die Varianten kommen aus dem Quelltext der Aufzaehlung und nicht aus
+    /// [`STELLVERTRETER`]: eine Probe, die ueber das Feld laeuft, kann die
+    /// Vollstaendigkeit des Feldes nicht halten. Gelesen wird der Block
+    /// `pub enum Wirkungsbereich` in `belegung.rs` ueber [`quelldateien`], nach
+    /// der Lesart von `varianten_der_aufzaehlung` in
+    /// `krk-core/tests/gemeinsam`; jene Fassung erreicht diese Kiste nicht,
+    /// weil `krk-ui` kein Bibliotheksziel hat, und die Aufzaehlung traegt
+    /// keine Variante mit Daten, also genuegt die Zeile bis zum Komma.
+    #[test]
+    fn jeder_wirkungsbereich_hat_einen_stellvertreter() {
+        let quellen = quelldateien();
+        let (_, inhalt) = quellen
+            .iter()
+            .find(|(pfad, _)| pfad == "krk-core/src/tasten/belegung.rs")
+            .expect("unter crates/ steht keine belegung.rs");
+        let varianten: Vec<&str> = inhalt
+            .lines()
+            .skip_while(|zeile| *zeile != "pub enum Wirkungsbereich {")
+            .skip(1)
+            .take_while(|zeile| *zeile != "}")
+            .map(str::trim)
+            .filter(|zeile| {
+                !zeile.is_empty() && !zeile.starts_with("//") && !zeile.starts_with("#[")
+            })
+            .map(|zeile| zeile.trim_end_matches(','))
+            .collect();
+        assert!(
+            !varianten.is_empty(),
+            "die Aufzaehlung ist nicht gefunden worden"
+        );
+        for name in &varianten {
+            let zeilen = STELLVERTRETER
+                .iter()
+                .filter(|(bereich, _)| format!("{bereich:?}") == *name)
+                .count();
+            assert_eq!(
+                zeilen, 1,
+                "Wirkungsbereich::{name} hat {zeilen} Stellvertreter und nicht genau einen"
+            );
+        }
+        assert_eq!(
+            varianten.len(),
+            STELLVERTRETER.len(),
+            "die Stellvertreter zaehlen anders als die Aufzaehlung"
+        );
+    }
 
     /// Die Lage aus vier Werten, kurz geschrieben.
     ///
@@ -377,9 +432,9 @@ mod tests {
         }
     }
 
-    /// Die ganze Regel auf einen Blick: sieben Wirkungsbereiche mal fuenf
+    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal fuenf
     /// Fokuswerte mal zwei Blattstaende mal zwei Ersthelferbefunde mal zwei
-    /// Schluesselfensterbefunde, also 280 Faelle.
+    /// Schluesselfensterbefunde, also 320 Faelle.
     ///
     /// Die Tafel steht in der Form der Tafel aus [`super::super::fokus`], nur um
     /// drei Wahrheitswerte erweitert. Ein Achtel traegt die Zeilen des
@@ -393,26 +448,27 @@ mod tests {
     /// Die Pruefungen darunter zeigen einzelne Felder dieser Tafel mit ihrer
     /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
     #[test]
-    fn die_tafel_aus_zweihundertachtzig_faellen_geht_auf() {
+    fn die_tafel_aus_dreihundertzwanzig_faellen_geht_auf() {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Anderswo.
         // Es ist dieselbe Tafel, die `fokus::wirkt` traegt, und sie steht hier
         // ausgeschrieben und nicht gerechnet: eine gerechnete Erwartung waere
         // die Umsetzung ein zweites Mal.
-        const OHNE_SPERRE: [[bool; 5]; 7] = [
+        const OHNE_SPERRE: [[bool; 5]; 8] = [
             [true, false, false, false, false],
             [false, true, false, false, false],
             [true, false, true, true, false],
             [false, false, false, true, false],
             [true, false, true, false, false],
             [true, true, true, false, false],
+            [false, false, true, false, false],
             [true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 5]; 7] = [[false; 5]; 7];
+        const ALLES_ABGEWIESEN: [[bool; 5]; 8] = [[false; 5]; 8];
 
         // blatt_steht, ersthelfer_gehoert_appkit, schluesselfenster_gehoert_krk,
         // und welches Achtel gilt.
-        let achtel: [(bool, bool, bool, [[bool; 5]; 7]); 8] = [
+        let achtel: [(bool, bool, bool, [[bool; 5]; 8]); 8] = [
             (false, false, true, OHNE_SPERRE),
             (false, false, false, ALLES_ABGEWIESEN),
             (false, true, true, ALLES_ABGEWIESEN),
@@ -437,7 +493,7 @@ mod tests {
                 }
             }
         }
-        assert_eq!(geprueft, 280, "die Tafel deckt nicht alle 280 Faelle ab");
+        assert_eq!(geprueft, 320, "die Tafel deckt nicht alle 320 Faelle ab");
     }
 
     /// Mit dem Fokus im Editor ist ein Befehl des Dateifensters unzulaessig.
@@ -849,6 +905,67 @@ mod tests {
                 zulaessig(kommando, vorschau),
                 "{kommando:?} ist mit dem Fokus in der Vorschau nicht mehr zulaessig"
             );
+        }
+    }
+
+    /// Die drei Zoombefehle des PDF-Betrachters, kurz geschrieben.
+    const ZOOMBEFEHLE: [Kommando; 3] = [
+        Kommando::VorschauVergroessern,
+        Kommando::VorschauVerkleinern,
+        Kommando::VorschauAusgangsgroesse,
+    ];
+
+    /// Mit dem Fokus in der Vorschau sind die drei Zoombefehle zulaessig
+    /// (C3.7 der Runde 20, Probenhaelfte).
+    ///
+    /// **Zulaessig heisst auch hier nicht „zoomt etwas".** Die Lage kennt
+    /// keinen Inhalt, und die Regel fragt nicht danach (A6): mit dem Fokus in
+    /// der Vorschau und ohne angezeigtes PDF werden die drei entgegengenommen
+    /// und tun nichts. Daran haengt dieselbe Zusage wie bei den Pfeiltasten
+    /// darueber: waeren sie unzulaessig, liefen `cmd+plus` und `cmd+minus` an
+    /// AppKit weiter. Ohne die Anmeldung der Textflaeche kommen sie nicht
+    /// durch, wie jeder andere Befehl.
+    #[test]
+    fn die_drei_zoombefehle_wirken_mit_dem_fokus_in_der_vorschau() {
+        let vorschau = lage(false, false, true, Fokus::Vorschau);
+        let ohne_anmeldung = lage(false, true, true, Fokus::Vorschau);
+        for kommando in ZOOMBEFEHLE {
+            assert!(
+                zulaessig(kommando, vorschau),
+                "{kommando:?} wirkt mit dem Fokus in der Vorschau nicht"
+            );
+            assert!(
+                !zulaessig(kommando, ohne_anmeldung),
+                "{kommando:?} kaeme auch ohne die Anmeldung der Textflaeche durch"
+            );
+        }
+    }
+
+    /// Mit dem Fokus im Dateifenster, in der Leiste oder im Editor sind die
+    /// drei Zoombefehle unzulaessig (C3.5 der Runde 20, Probenhaelfte).
+    ///
+    /// Das ist die Zeile `Vorschau` der Tafel, einzeln und mit Begruendung:
+    /// der Betrachter steht allein im Vorschaufenster, und ein Zoom mit dem
+    /// Fokus anderswo haette keinen Gegenstand. Weil `validateMenuItem:`
+    /// dieselbe Regel ruft, sind die drei Menueeintraege dort ausgegraut. Die
+    /// Schriftgroesse von Editor und Textvorschau ruehrt keiner der drei an;
+    /// das ist keine Frage der Zulaessigkeit, sondern der Ausfuehrung, und die
+    /// gibt es fuer die drei allein am Betrachter.
+    #[test]
+    fn die_drei_zoombefehle_wirken_ausserhalb_der_vorschau_nicht() {
+        for fokus in [
+            Fokus::Dateifenster,
+            Fokus::Leiste,
+            Fokus::Editor,
+            Fokus::Anderswo,
+        ] {
+            let anderswo = lage(false, false, true, fokus);
+            for kommando in ZOOMBEFEHLE {
+                assert!(
+                    !zulaessig(kommando, anderswo),
+                    "{kommando:?} kaeme mit dem Fokus in {fokus:?} durch"
+                );
+            }
         }
     }
 }

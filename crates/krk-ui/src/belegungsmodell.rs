@@ -323,11 +323,19 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // "Leiste und Fokus": diese Gliederung fragt nach der Gegend der
         // Anwendung und nicht nach dem Mechanismus, sonst stuende auch
         // `leiste_umschalten` unter "Fenster". Wer wissen will, wie er in die
-        // Vorschau kommt, findet unter "Vorschau" alle drei Befehle, die sie
+        // Vorschau kommt, findet unter "Vorschau" alle Befehle, die sie
         // angehen.
+        //
+        // Die drei Zoombefehle des PDF-Betrachters aus der Runde 20 stehen aus
+        // demselben Satz hier: der Betrachter ist eine Ansicht des
+        // Vorschaufensters, und die drei tragen als einzige
+        // `Wirkungsbereich::Vorschau`.
         Kommando::VorschauUmschalten
         | Kommando::ZwischenablageAnsehen
-        | Kommando::FokusVorschau => Funktionsbereich::Vorschau,
+        | Kommando::FokusVorschau
+        | Kommando::VorschauVergroessern
+        | Kommando::VorschauVerkleinern
+        | Kommando::VorschauAusgangsgroesse => Funktionsbereich::Vorschau,
         // Die Leiste aus C5 samt ihrem Ein- und Ausblenden aus C7 und den
         // beiden Fokusbefehlen, die zwischen ihr und dem Dateifenster
         // wechseln.
@@ -1530,21 +1538,23 @@ mod tests {
 
         // Die Regel, nicht der Einzelfall: keine Zeile der Ansicht beschriftet
         // eine ueber ihr Zeichen nachgeschlagene Taste mit etwas anderem als
-        // diesem Zeichen.
+        // ihrem Namen in der Schreibweise von anzeige(). Fuer Buchstaben und
+        // Ziffern ist das der Grossbuchstabe des Zeichens; `plus` und `minus`
+        // (Runde 20) heissen "Plus" und "Minus", weil ein nacktes `+` in
+        // einer mit `+` gefuegten Anzeigeform nicht lesbar waere und eine
+        // Uebersetzungsliste die zweite Namensliste waere, die der Plan der
+        // Runde 3 ausschliesst.
         for funktion in Belegung::auslieferung().funktionen() {
             for kombination in funktion.tasten() {
-                let Some(zeichen) = kombination.taste().zeichen() else {
+                let taste = kombination.taste();
+                if taste.zeichen().is_none() {
                     continue;
-                };
+                }
                 let beschriftet = anzeige(kombination);
-                let letzter = beschriftet
-                    .rsplit('+')
-                    .next()
-                    .expect("eine Anzeigeform ist nie leer");
-                assert_eq!(
-                    letzter,
-                    zeichen.to_ascii_uppercase().to_string(),
-                    "{} beschriftet eine Zeichentaste falsch: {beschriftet}",
+                let erwartet = teilanfang_gross(taste.name);
+                assert!(
+                    beschriftet.ends_with(&format!("+{erwartet}")),
+                    "{} beschriftet eine Zeichentaste falsch: {beschriftet}, erwartet {erwartet} am Ende",
                     funktion.kennung()
                 );
             }

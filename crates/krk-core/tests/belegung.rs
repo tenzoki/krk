@@ -1231,15 +1231,20 @@ fn eine_funktionstaste_wird_weiter_ueber_ihren_code_gefunden() {
 /// Jede Kombination der Auslieferungsbelegung wird ueber die Art
 /// nachgeschlagen, die zu ihrer Taste gehoert.
 ///
-/// Die Zusage in einem Satz: **Buchstaben und Ziffern ueber das Zeichen, alles
-/// uebrige ueber den Code**, und zwar fuer jede der ausgelieferten
-/// Kombinationen und nicht fuer eine Handvoll Beispiele. Die Probe zaehlt
+/// Die Zusage in einem Satz: **jede Taste, der `zeichen_des_namens` ein
+/// Zeichen zuordnet, ueber dieses Zeichen, alles uebrige ueber den Code**,
+/// und zwar fuer jede der ausgelieferten Kombinationen und nicht fuer eine
+/// Handvoll Beispiele. Welche Namen ein Zeichen tragen, sagt allein
+/// `krk_core::tasten::parser::zeichen_des_namens` (Buchstaben, Ziffern,
+/// `plus`, `minus`); die Probe wiederholt die Regel nicht, sondern haelt
+/// die Kennung jeder Taste gegen dieselbe Funktion. Die Probe zaehlt
 /// beide Sorten mit und besteht nur, wenn beide vorkommen; sonst bestuende sie
 /// auch dann, wenn eine der beiden Nachschlagarten aus der
 /// Auslieferungsbelegung verschwaende.
 #[test]
 fn jede_ausgelieferte_kombination_traegt_die_kennung_ihrer_tastensorte() {
     use krk_core::tasten::Tastenkennung;
+    use krk_core::tasten::parser::zeichen_des_namens;
 
     let belegung = Belegung::auslieferung();
     let (mut ueber_zeichen, mut ueber_code) = (0usize, 0usize);
@@ -1247,22 +1252,23 @@ fn jede_ausgelieferte_kombination_traegt_die_kennung_ihrer_tastensorte() {
     for funktion in belegung.funktionen() {
         for kombination in funktion.tasten() {
             let taste = kombination.taste();
-            let einbuchstabig = taste.name.chars().count() == 1;
             match taste.kennung() {
                 Tastenkennung::Zeichen(zeichen) => {
-                    assert!(
-                        einbuchstabig && zeichen.is_ascii_alphanumeric(),
-                        "{kombination} bei {} geht ueber ein Zeichen, ist aber keine \
-                         Buchstaben- oder Zifferntaste",
+                    assert_eq!(
+                        zeichen_des_namens(taste.name),
+                        Some(zeichen),
+                        "{kombination} bei {} geht ueber ein Zeichen, das nicht das \
+                         Zeichen ihres Namens ist",
                         funktion.kennung()
                     );
-                    assert_eq!(taste.name, zeichen.to_string());
                     ueber_zeichen += 1;
                 }
                 Tastenkennung::Code(code) => {
-                    assert!(
-                        !einbuchstabig,
-                        "{kombination} bei {} ist einbuchstabig und geht ueber die Stelle",
+                    assert_eq!(
+                        zeichen_des_namens(taste.name),
+                        None,
+                        "{kombination} bei {} traegt ein Zeichen und geht trotzdem ueber \
+                         die Stelle",
                         funktion.kennung()
                     );
                     assert_eq!(code, taste.code);
@@ -1712,10 +1718,10 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
             assert_ne!(kennung, weitere, "die Kennung {kennung} steht zweimal");
         }
         // Der Aufruf selbst ist die Probe: er liefert fuer jedes Kommando
-        // einen der sieben Werte und kann keinen zweiten liefern.
+        // einen der acht Werte und kann keinen zweiten liefern.
         // `Tabbereich` kam mit dem Vorschaufenster aus S19 dazu; `Dateibereiche`
         // (bis zum 260823 `Vorschau`), `Editor` und `Navigator` mit dem
-        // eingebauten Editor.
+        // eingebauten Editor, `Vorschau` mit den drei Zoombefehlen der Runde 20.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
@@ -1726,9 +1732,10 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Editor
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
+                    | Wirkungsbereich::Vorschau
                     | Wirkungsbereich::Ueberall
             ),
-            "{kennung} traegt keinen der sieben Bereiche"
+            "{kennung} traegt keinen der acht Bereiche"
         );
     }
 }
@@ -1748,8 +1755,8 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
 /// `tag_des_kommandos` in `krk-ui` auf `expect`, und `Kommando::aus_kennung`
 /// liefert `None`, womit der Befehl in der Belegungsansicht steht und nichts
 /// tut. Der Uebersetzer haelt davon nichts: die Laengenangabe
-/// `[(Kommando, &'static str); 79]` zwingt zu 79 Eintraegen und sagt nicht,
-/// welche 79
+/// `[(Kommando, &'static str); 82]` zwingt zu 82 Eintraegen und sagt nicht,
+/// welche 82
 /// (`shared/issues/260826-1223_*_kennungen-ist-die-programmweite-kommandoliste-und-nichts-haelt-sie-vollstaendig.md`).
 ///
 /// Geprueft werden **beide** Richtungen. Die zweite ist nicht nur Zierrat: sie
@@ -1817,6 +1824,33 @@ fn die_drei_faelle_aus_c5_tragen_die_bereiche_die_c5_verlangt() {
         Wirkungsbereich::Leiste,
         "lesezeichen_loeschen darf bei Fokus im Dateifenster nicht wirken"
     );
+}
+
+/// Die drei Zoombefehle des PDF-Betrachters tragen den Wert fuer die Vorschau
+/// allein, und die drei Faelle aus C5 der Runde 1 bleiben, was sie sind (C3.5
+/// und C3.7 der Runde 20, Kernhaelfte).
+///
+/// Der Wert `Vorschau` war vom 260823 bis zur Runde 20 nicht in der
+/// Aufzaehlung; diese Probe haelt fest, dass er mit den dreien zurueck ist und
+/// dass keiner der drei auf einen der weiteren Werte ausweicht, der die
+/// Vorschau nur **mit** anderen Bereichen fuehrt. Die zweite Haelfte, dass die
+/// Rueckkehr die alten Zusagen nicht verschiebt, steht als Aufruf der Probe
+/// darueber und nicht als Abschrift ihrer vier Zeilen.
+#[test]
+fn die_drei_zoombefehle_tragen_die_vorschau_allein() {
+    for kommando in [
+        Kommando::VorschauVergroessern,
+        Kommando::VorschauVerkleinern,
+        Kommando::VorschauAusgangsgroesse,
+    ] {
+        assert_eq!(
+            kommando.wirkungsbereich(),
+            Wirkungsbereich::Vorschau,
+            "{} wirkt allein im Vorschaufenster",
+            kommando.kennung()
+        );
+    }
+    die_drei_faelle_aus_c5_tragen_die_bereiche_die_c5_verlangt();
 }
 
 /// Der Fokuswechsel wirkt aus jedem Bereich heraus, und das Anlegen eines
@@ -1924,15 +1958,23 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
 }
 
 // ---------------------------------------------------------------------------
-// Die Beschriftung der sieben Wirkungsbereiche (Runde 3, S2, C3)
+// Die Beschriftung der acht Wirkungsbereiche (Runde 3, S2, C3; Runde 20, C3.6)
 // ---------------------------------------------------------------------------
 
-/// Die sieben Bereiche mit dem Text, den die Tastenbelegung als Markdown fuehrt.
+/// Die acht Bereiche mit dem Text, den die Tastenbelegung als Markdown fuehrt.
 ///
 /// Der Nutzer hat am 260811-0115 drei davon genannt, naemlich die drei, deren
-/// Variantenname als Beschriftung unverstaendlich waere; die vier uebrigen
-/// tragen den Namen aus dem Modulkopf von `belegung.rs`.
-const SIEBEN_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 7] = [
+/// Variantenname als Beschriftung unverstaendlich waere; die uebrigen tragen
+/// den Namen aus dem Modulkopf von `belegung.rs`. `Vorschau` ist mit der
+/// Runde 20 dazugekommen und verweist den Leser auf das Vorschaufenster
+/// (C3.6).
+///
+/// **Das Feld ist die Quelle des erwarteten Texts und nicht die Quelle der
+/// Werte.** Welche Werte es gibt, lesen die drei Proben darunter ueber
+/// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
+/// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
+/// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
+const ACHT_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 8] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -1945,18 +1987,22 @@ const SIEBEN_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 7] = [
         Wirkungsbereich::Navigator,
         "Dateifenster, Leiste und Vorschau",
     ),
+    (Wirkungsbereich::Vorschau, "Vorschau"),
     (Wirkungsbereich::Ueberall, "überall"),
 ];
 
-/// Die Stelle eines Bereichs in [`SIEBEN_BESCHRIFTUNGEN`].
+/// Die Stelle eines Bereichs in [`ACHT_BESCHRIFTUNGEN`].
 ///
 /// **Der Grund fuer diese zweite Fallunterscheidung ist die erste.** Eine
 /// Aufzaehlung in einer Probe waechst nicht von selbst mit der Aufzaehlung im
-/// Kern: ein achter Wert bekaeme in `Wirkungsbereich::beschriftung` seine Zeile
-/// vom Uebersetzer abverlangt, in einem Feld darueber aber nicht. Diese
-/// Funktion stellt das her — sie ist ebenfalls ohne Auffangzweig, also
-/// uebersetzt ein achter Wert erst, wenn er auch hier und damit im Feld steht.
-fn stelle_in_den_sieben(bereich: Wirkungsbereich) -> usize {
+/// Kern: ein neunter Wert bekaeme in `Wirkungsbereich::beschriftung` seine
+/// Zeile vom Uebersetzer abverlangt, in einem Feld darueber aber nicht. Diese
+/// Funktion ist ebenfalls ohne Auffangzweig, also uebersetzt ein neunter Wert
+/// erst, wenn er auch hier steht. **Im Feld steht er damit noch nicht**: der
+/// Zweig darf jede Zahl liefern, und das Feld zieht niemand nach. Dass jeder
+/// Wert im Feld steht, haelt [`jeder_wirkungsbereich_im_quelltext`] ueber die
+/// Varianten aus dem Quelltext und nicht ueber das Feld.
+fn stelle_in_den_acht(bereich: Wirkungsbereich) -> usize {
     match bereich {
         Wirkungsbereich::Dateifenster => 0,
         Wirkungsbereich::Leiste => 1,
@@ -1964,11 +2010,51 @@ fn stelle_in_den_sieben(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Editor => 3,
         Wirkungsbereich::Tabbereich => 4,
         Wirkungsbereich::Navigator => 5,
-        Wirkungsbereich::Ueberall => 6,
+        Wirkungsbereich::Vorschau => 6,
+        Wirkungsbereich::Ueberall => 7,
     }
 }
 
-/// Jeder der sieben Bereiche traegt die Beschriftung, die C3 ihm gibt.
+/// Jeder Wirkungsbereich, den der Quelltext der Aufzaehlung nennt, mit seiner
+/// Zeile in [`ACHT_BESCHRIFTUNGEN`].
+///
+/// **Die Varianten kommen aus dem Quelltext und nicht aus dem Feld.** Bis zum
+/// 260828 liefen die drei Beschriftungsproben ueber das Feld selbst, und ein
+/// Wert ohne Feldzeile blieb von allen dreien unberuehrt; sein Doc-Kommentar
+/// behauptete das Gegenteil
+/// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
+/// Diese Funktion ist der eine Weg der drei Proben zu ihren Werten: sie
+/// bricht ab, wenn eine Variante keine Zeile im Feld hat oder eine Zeile keine
+/// Variante benennt, und liefert sonst jede Variante mit ihrer Zeile.
+///
+/// Der Vergleich laeuft ueber `{:?}`, weil [`varianten_der_aufzaehlung`] Namen
+/// liefert und keine Werte; `Debug` einer Variante ohne Daten ist ihr Name.
+fn jeder_wirkungsbereich_im_quelltext() -> Vec<(Wirkungsbereich, &'static str)> {
+    let varianten = varianten_der_aufzaehlung("krk-core/src/tasten/belegung.rs", "Wirkungsbereich");
+    let mut gefunden = Vec::with_capacity(varianten.len());
+    for name in &varianten {
+        let zeilen: Vec<(Wirkungsbereich, &str)> = ACHT_BESCHRIFTUNGEN
+            .into_iter()
+            .filter(|(bereich, _)| format!("{bereich:?}") == *name)
+            .collect();
+        assert_eq!(
+            zeilen.len(),
+            1,
+            "Wirkungsbereich::{name} steht {}-mal im Beschriftungsfeld und nicht genau einmal",
+            zeilen.len()
+        );
+        gefunden.push(zeilen[0]);
+    }
+    for (bereich, _) in ACHT_BESCHRIFTUNGEN {
+        assert!(
+            varianten.contains(&format!("{bereich:?}")),
+            "{bereich:?} steht im Beschriftungsfeld, aber nicht in der Aufzaehlung"
+        );
+    }
+    gefunden
+}
+
+/// Jeder der acht Bereiche traegt die Beschriftung, die C3 ihm gibt.
 ///
 /// Ausgeschrieben und ohne Legende: die Datei nennt "Dateifenster, Leiste und
 /// Vorschau" und nicht "Navigator". Wer einen dieser Texte aendert, aendert
@@ -1976,10 +2062,10 @@ fn stelle_in_den_sieben(bereich: Wirkungsbereich) -> usize {
 /// diese Probe ist die Stelle, an der er es merkt.
 #[test]
 fn jeder_wirkungsbereich_traegt_seine_beschriftung() {
-    for (bereich, erwartet) in SIEBEN_BESCHRIFTUNGEN {
+    for (bereich, erwartet) in jeder_wirkungsbereich_im_quelltext() {
         assert_eq!(
-            stelle_in_den_sieben(bereich),
-            SIEBEN_BESCHRIFTUNGEN
+            stelle_in_den_acht(bereich),
+            ACHT_BESCHRIFTUNGEN
                 .iter()
                 .position(|(anderer, _)| *anderer == bereich)
                 .expect("der Bereich steht nicht im Feld"),
@@ -2001,8 +2087,9 @@ fn jeder_wirkungsbereich_traegt_seine_beschriftung() {
 /// denn zwei Zweige duerfen dieselbe Zeichenkette liefern.
 #[test]
 fn keine_zwei_wirkungsbereiche_teilen_sich_eine_beschriftung() {
-    for (stelle, (bereich, beschriftung)) in SIEBEN_BESCHRIFTUNGEN.into_iter().enumerate() {
-        for (anderer, weitere) in SIEBEN_BESCHRIFTUNGEN.into_iter().skip(stelle + 1) {
+    let alle = jeder_wirkungsbereich_im_quelltext();
+    for (stelle, (bereich, beschriftung)) in alle.iter().copied().enumerate() {
+        for (anderer, weitere) in alle.iter().copied().skip(stelle + 1) {
             assert_ne!(bereich, anderer, "{bereich:?} steht zweimal im Feld");
             assert_ne!(
                 beschriftung, weitere,
@@ -2020,7 +2107,7 @@ fn keine_zwei_wirkungsbereiche_teilen_sich_eine_beschriftung() {
 /// eines von beiden mitbraechte, machte aus einer Zusage einen Zufall.
 #[test]
 fn keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich() {
-    for (bereich, beschriftung) in SIEBEN_BESCHRIFTUNGEN {
+    for (bereich, beschriftung) in jeder_wirkungsbereich_im_quelltext() {
         assert!(
             !beschriftung.is_empty(),
             "{bereich:?} traegt eine leere Beschriftung"

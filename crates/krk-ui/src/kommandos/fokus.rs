@@ -364,6 +364,10 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         Wirkungsbereich::Navigator => {
             matches!(fokus, Fokus::Dateifenster | Fokus::Leiste | Fokus::Vorschau)
         }
+        // Die drei Zoombefehle des PDF-Betrachters (Runde 20). Ob ein PDF
+        // angezeigt wird, fragt die Regel nicht: die Zulaessigkeit haengt am
+        // Fokus und nicht am Inhalt (A6), damit diese Stelle die eine bleibt.
+        Wirkungsbereich::Vorschau => fokus == Fokus::Vorschau,
     }
 }
 
@@ -384,19 +388,19 @@ mod tests {
     /// womoeglich eine andere Menge als die, ueber die das Programm laeuft.
     const JEDER_FOKUS: [Fokus; 5] = Fokus::ALLE;
 
-    /// Die ganze Regel auf einen Blick: sieben Wirkungsbereiche mal fuenf
-    /// Fokuswerte, fuenfunddreissig Paare.
+    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal fuenf
+    /// Fokuswerte, vierzig Paare.
     ///
     /// Die Pruefungen darunter zeigen jeweils eine Zeile dieser Tafel mit ihrer
     /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
-    /// Sie ist die Stelle, an der ein sechster Fokuswert oder ein achter
+    /// Sie ist die Stelle, an der ein sechster Fokuswert oder ein neunter
     /// Wirkungsbereich auffaellt: beide Feldbreiten stehen in der Typangabe,
     /// und eine vergessene Zeile haelt den Bau an.
     #[test]
-    fn die_tafel_aus_sieben_wirkungsbereichen_und_fuenf_fokuswerten_geht_auf() {
+    fn die_tafel_aus_acht_wirkungsbereichen_und_fuenf_fokuswerten_geht_auf() {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 5]); 7] = [
+        const TAFEL: [(Wirkungsbereich, [bool; 5]); 8] = [
             (
                 Wirkungsbereich::Dateifenster,
                 [true, false, false, false, false],
@@ -412,6 +416,10 @@ mod tests {
                 [true, false, true, false, false],
             ),
             (Wirkungsbereich::Navigator, [true, true, true, false, false]),
+            (
+                Wirkungsbereich::Vorschau,
+                [false, false, true, false, false],
+            ),
             (Wirkungsbereich::Ueberall, [true, true, true, true, true]),
         ];
 
@@ -782,9 +790,12 @@ mod tests {
                         "„{kennung}“ wirkt im Editor nicht"
                     );
                 }
+                // Seit der Runde 20 gehoeren die drei Zoombefehle des
+                // PDF-Betrachters mit hierher: sie tragen die Vorschau allein.
                 Wirkungsbereich::Leiste
                 | Wirkungsbereich::Tabbereich
-                | Wirkungsbereich::Navigator => {
+                | Wirkungsbereich::Navigator
+                | Wirkungsbereich::Vorschau => {
                     assert!(
                         !wirkt(kommando.wirkungsbereich(), Fokus::Editor),
                         "„{kennung}“ gehoert einem anderen Bereich und wirkt trotzdem im Editor"

@@ -168,7 +168,7 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 
 /// Welcher Bereich den Eingabefokus haben muss, damit ein Kommando wirkt (C5).
 ///
-/// Sieben Werte, und die Aufzaehlung ist mit ihnen vollstaendig.
+/// Acht Werte, und die Aufzaehlung ist mit ihnen vollstaendig.
 ///
 /// Vier davon tragen die Runde 1. KRK hatte seit Schritt 19 drei fokussierbare
 /// Bereiche, die beiden Dateifenster, die Leiste und das Vorschaufenster, und
@@ -181,7 +181,7 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// [`Wirkungsbereich::Ueberall`] gewechselt, und die Begruendung steht bei
 /// [`Kommando::wirkungsbereich`] an seinem Zweig.
 ///
-/// **Die drei uebrigen kommen mit dem eingebauten Editor.** Jeder von ihnen ist
+/// **Drei weitere kommen mit dem eingebauten Editor.** Jeder von ihnen ist
 /// sachlich begruendet und nicht bequem:
 ///
 /// - [`Wirkungsbereich::Dateibereiche`], weil der Rundweg in den Editor und
@@ -195,13 +195,20 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// **Der erste der drei hiess bis zum 260823 `Vorschau` und wirkte allein im
 /// Vorschaufenster.** Er trug genau einen Befehl, den Uebergang aus der
 /// Vorschau in den Editor; seit der Nutzerentscheid vom 260823-0942 daraus den
-/// Rundweg gemacht hat, wirkt derselbe Befehl in drei Bereichen, und ein Wert
-/// fuer die Vorschau allein haette keinen Traeger mehr. Der Datensatz ist
+/// Rundweg gemacht hat, wirkt derselbe Befehl in drei Bereichen, und der Wert
+/// fuer die Vorschau allein ist mit seinem einzigen Traeger gefallen. Der
+/// Datensatz ist
 /// `shared/decisions/260820-1034_*_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md`.
 ///
+/// **Der achte ist derselbe Wert, mit der Runde 20 zurueckgekommen:**
+/// [`Wirkungsbereich::Vorschau`] traegt die drei Zoombefehle des
+/// PDF-Betrachters, die allein im Vorschaufenster etwas bedeuten. Kein anderer
+/// Wert sagt das: `Dateibereiche` schliesst Dateifenster und Editor ein,
+/// `Tabbereich` das Dateifenster, `Navigator` Dateifenster und Leiste.
+///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
-/// Abfrage je Aufrufstelle wird. Drei neue Werte in einer Aufzaehlung sind
-/// billiger als drei handgeschriebene Sonderfaelle im Code.
+/// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
+/// billiger als handgeschriebene Sonderfaelle im Code.
 ///
 /// **Der Vorbehalt ist stumm.** Ein Kommando, das hier scheitert, tut nichts
 /// und meldet nichts; der Tastendruck geht unveraendert an AppKit weiter, wie
@@ -235,7 +242,8 @@ pub enum Wirkungsbereich {
     /// **Bis zum 260823 hiess der Wert `Vorschau`** und verlangte den Fokus im
     /// Vorschaufenster. Die Vorschau-Richtung des Befehls ist unveraendert
     /// geblieben; hinzugekommen sind die Dateiliste und der Rueckweg aus dem
-    /// Editor.
+    /// Editor. Den Namen traegt seit der Runde 20 wieder ein eigener Wert,
+    /// [`Wirkungsbereich::Vorschau`], mit den drei Zoombefehlen als Traegern.
     Dateibereiche,
     /// Wirkt nur, wenn der Fokus im eingebauten Editor steht (C3 bis C6 der
     /// Editor-Runde).
@@ -282,6 +290,30 @@ pub enum Wirkungsbereich {
     /// schon sind. "Ueberall ausser im Editor" schloesse sie ein, und ein
     /// `up` vor der Loeschrueckfrage bewegte die Auswahl im Ordner dahinter.
     Navigator,
+    /// Wirkt nur, wenn der Fokus im Vorschaufenster steht.
+    ///
+    /// Der Wert der drei Zoombefehle des PDF-Betrachters aus der Runde 20:
+    /// [`Kommando::VorschauVergroessern`], [`Kommando::VorschauVerkleinern`]
+    /// und [`Kommando::VorschauAusgangsgroesse`]. Sie veraendern die Ansicht
+    /// des Betrachters, und der steht allein im Vorschaufenster; mit dem Fokus
+    /// im Dateifenster, in der Leiste oder im Editor haben sie keinen
+    /// Gegenstand, und ihre Menueeintraege sind dort ausgegraut (C3.5 der
+    /// Runde 20).
+    ///
+    /// **Bis zum 260823 stand der Wert schon einmal hier, mit einem Traeger**,
+    /// dem Uebergang aus der Vorschau in den Editor; der ist im Rundweg
+    /// aufgegangen und traegt seither [`Wirkungsbereich::Dateibereiche`]. Der
+    /// Wert ist mit dem Verlust seines Traegers gefallen und mit drei neuen
+    /// zurueckgekommen. Die Alternative, die drei mit
+    /// [`Wirkungsbereich::Ueberall`] durchzulassen und im Ausfuehrungszweig
+    /// nach dem Fokus zu fragen, waere die Abfrage je Aufrufstelle, die der
+    /// Modulkopf ausschliesst, und sie graute den Menueeintrag nicht aus.
+    ///
+    /// Ob ein PDF angezeigt wird, fragt der Wert nicht: die Zulaessigkeit
+    /// haengt am Fokus und nicht am Inhalt (A6 der Runde 20). Mit dem Fokus in
+    /// der Vorschau und ohne PDF werden die drei entgegengenommen und tun
+    /// nichts.
+    Vorschau,
     /// Wirkt ohne Vorbehalt.
     ///
     /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als
@@ -327,6 +359,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Editor => "Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
             Wirkungsbereich::Navigator => "Dateifenster, Leiste und Vorschau",
+            Wirkungsbereich::Vorschau => "Vorschau",
             Wirkungsbereich::Ueberall => "überall",
         }
     }
@@ -689,12 +722,35 @@ pub enum Kommando {
     /// zurueck ist `Esc` ueber den Waechter des Zettels und nicht ein zweiter
     /// Druck auf dieselbe Taste.
     Notizzettel,
+    /// Die Seite im PDF-Betrachter des Vorschaufensters um eine Stufe
+    /// vergroessern (C3 der Runde 20).
+    ///
+    /// Schrittweite, Untergrenze und Obergrenze des Zooms setzt der Betrachter
+    /// (A2); an der Obergrenze aendert ein weiterer Anschlag nichts und meldet
+    /// nichts. Mit dem Fokus in der Vorschau, aber ohne angezeigtes PDF, wird
+    /// der Befehl entgegengenommen und tut nichts (A6): die Zulaessigkeit
+    /// haengt am Fokus, nicht am Inhalt.
+    VorschauVergroessern,
+    /// Die Seite im PDF-Betrachter des Vorschaufensters um eine Stufe
+    /// verkleinern (C3 der Runde 20).
+    ///
+    /// Dieselben Regeln wie bei [`Kommando::VorschauVergroessern`], an der
+    /// Untergrenze (A2, A6).
+    VorschauVerkleinern,
+    /// Die Seite im PDF-Betrachter auf die Ausgangsgroesse stellen (C3 der
+    /// Runde 20).
+    ///
+    /// Die Ausgangsgroesse passt die Seitenbreite in die Breite des
+    /// Vorschaufensters ein und folgt dessen Breite, solange der Nutzer nicht
+    /// gezoomt hat (A1). Ohne angezeigtes PDF wird der Befehl entgegengenommen
+    /// und tut nichts (A6).
+    VorschauAusgangsgroesse,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 79] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 82] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -795,6 +851,12 @@ impl Kommando {
         (Kommando::Beenden, "beenden"),
         (Kommando::WeitereInstanz, "weitere_instanz"),
         (Kommando::Notizzettel, "notizzettel"),
+        (Kommando::VorschauVergroessern, "vorschau_vergroessern"),
+        (Kommando::VorschauVerkleinern, "vorschau_verkleinern"),
+        (
+            Kommando::VorschauAusgangsgroesse,
+            "vorschau_ausgangsgroesse",
+        ),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -967,6 +1029,14 @@ impl Kommando {
             // Zweig; der Wirkungsbereich sagt, ob die Taste durchkommt, und
             // nicht, was sie dann tut.
             Kommando::EditorRundweg => Wirkungsbereich::Dateibereiche,
+            // Die drei Zoombefehle des PDF-Betrachters aus der Runde 20. Der
+            // Betrachter steht allein im Vorschaufenster, und dort allein
+            // bedeuten die drei etwas; mit dem Fokus anderswo sind sie
+            // abgewiesen und im Hauptmenue ausgegraut (C3.5). Ob ein PDF
+            // angezeigt wird, fragt der Bereich nicht (A6).
+            Kommando::VorschauVergroessern
+            | Kommando::VorschauVerkleinern
+            | Kommando::VorschauAusgangsgroesse => Wirkungsbereich::Vorschau,
             // Die acht Befehle, die in der Datei arbeiten, die der Editor
             // haelt (C3 bis C6 der Editor-Runde). Mit dem Fokus anderswo gibt
             // es keine solche Datei.
