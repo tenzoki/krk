@@ -6,13 +6,15 @@
 //! steht hier und ist ohne Fenster pruefbar.
 //!
 //! ```text
-//!  Kommando ─┬─> Wirkungsbereich ─┐
-//!            └─> Ausnahmeliste ───┤
-//!                                 ├──> zulaessig()
-//!  Lage ─────┬─> blatt_steht ─────┤
-//!            ├─> Ersthelferbefund ┤
-//!            ├─> Fokus ───────────┤
-//!            └─> Schluesselfenster┘
+//!  zulaessig(Kommando) ──> Anspruch::Kommando ─┐
+//!  dateiablage_zulaessig() ─> Anspruch::Dateiablage ┤
+//!                                               ├─> Wirkungsbereich ─┐
+//!                                               └─> Ausnahmeliste ───┤
+//!                                                                    ├──> gestattet()
+//!  Lage ─────┬─> blatt_steht ────────────────────────────────────────┤
+//!            ├─> Ersthelferbefund ──────────────────────────────────┤
+//!            ├─> Fokus ──────────────────────────────────────────────┤
+//!            └─> Schluesselfenster ──────────────────────────────────┘
 //! ```
 //!
 //! # Eine Frage, zwei Frager
@@ -25,6 +27,32 @@
 //! eine Funktion ist und nicht zwei Abfragen an zwei Stellen: ein freigegebener
 //! Menueeintrag zu einem abgewiesenen Tastendruck fuehrte den Befehl aus, den
 //! der Abgriff eben verweigert hat.
+//!
+//! # Ein Rumpf, zwei Eingaenge (Runde 22)
+//!
+//! Seit der Runde 22 hat die Regel **einen** Rumpf, [`gestattet`], und zwei
+//! benannte Eingaenge davor. [`zulaessig`] nimmt ein [`Kommando`] und ist der
+//! Eingang der zwei Frager oben; [`dateiablage_zulaessig`] nimmt allein die
+//! [`Lage`] und ist der Eingang fuer die Dateiablage, also fuer `copy:` und
+//! `cut:` in der Dateiliste, die **kein** Kommando sind und keines bekommen
+//! (Constraint 3 der Runde 22). Was der Rumpf vom Befehl wissen will, sind
+//! drei Antworten, und die gibt [`Anspruch`] fuer beide Eingaenge vollstaendig
+//! und ohne Auffangzweig: den Wirkungsbereich, ob der Befehl waehrend eines
+//! Blattes erlaubt ist, ob er immer erreichbar ist. Die Dateiablage antwortet
+//! `Dateifenster`, nein, nein (A11 der Runde 22), und die Ausnahmeliste
+//! waechst nicht.
+//!
+//! **Der zweite Eingang hat seine zwei eigenen Frager, und es sind dieselben
+//! zwei Stellen**: `validateMenuItem:` fuer die Ausgrauung von „Kopieren" und
+//! „Ausschneiden", und `Anwendungsdelegierter::dateiablage_ausfuehren` fuer die
+//! Antwort auf den Selektor. Beide fragen [`dateiablage_zulaessig`] auf
+//! derselben [`Lage`]; die Zaehlprobe
+//! `die_zwei_frager_der_dateiablage_rufen_dieselbe_regel` haelt die Zahl, wie
+//! `beide_frager_rufen_die_eine_regel` sie fuer den Kommando-Eingang haelt.
+//! Ein generisches `zulaessig(impl Into<Anspruch>, Lage)` waere die andere Form
+//! gewesen; sie haette den Kommando-Frager auf drei gehoben und die Tafel aus
+//! 280 Faellen an einen Trait gebunden. Zwei benannte Huellen um einen
+//! privaten Rumpf lassen beides, wie es ist.
 //!
 //! # Die vier Bestandteile
 //!
@@ -111,7 +139,7 @@
 //! fest. Eine Ordnungszahl steht hier bewusst nicht: sie altert mit jedem
 //! neuen Eintrag, die Regel darueber nicht.
 
-use krk_core::tasten::Kommando;
+use krk_core::tasten::{Kommando, Wirkungsbereich};
 
 use super::fokus::{self, Fokus};
 use super::operationen;
@@ -175,14 +203,98 @@ pub struct Lage {
 ///
 /// [`Wirkungsbereich`]: krk_core::tasten::Wirkungsbereich
 pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
-    let kein_blatt_oder_erlaubt =
-        !lage.blatt_steht || operationen::waehrend_blatt_erlaubt(kommando);
-    let durchgelassen = immer_erreichbar(kommando)
+    gestattet(Anspruch::Kommando(kommando), lage)
+}
+
+/// Ob die Dateiablage, also `copy:` und `cut:` in der Dateiliste, in dieser
+/// Lage wirken darf (A11 der Runde 22).
+///
+/// **Der zweite Eingang zur einen Regel, und kein zweiter Rumpf.** Die
+/// Dateiablage ist kein [`Kommando`]: sie haengt an keiner Taste der
+/// Belegung und an keinem `krkKommando:`-Eintrag, sondern an den zwei
+/// Aktionsselektoren, die AppKit dem Anwendungsdelegierten am Ende der
+/// Antwortkette zustellt. Ein Kommando dafuer anzulegen hiesse, `cmd+c` in
+/// `resources/default-keymap.toml` zu binden, und das Ereignis kaeme im
+/// Editor nie mehr beim Textsystem an. Also fragt sie die Regel ohne
+/// Kommando, mit dem [`Anspruch`], den ein Kommando mit
+/// `Wirkungsbereich::Dateifenster` stellte: kein stehendes Blatt, ein
+/// Ersthelfer, der nicht AppKit gehoert, der Fokus im Dateifenster und KRKs
+/// eigenes Schluesselfenster.
+///
+/// Warum eine zweite benannte Huelle und nicht eine generische Signatur an
+/// [`zulaessig`], steht im Modulkopf unter „Ein Rumpf, zwei Eingaenge".
+///
+/// `#[must_use]`, weil ein Rufer, der die Antwort fallen liesse, den Befehl
+/// ausfuehrte, den die Regel eben verweigert hat.
+#[must_use]
+pub fn dateiablage_zulaessig(lage: Lage) -> bool {
+    gestattet(Anspruch::Dateiablage, lage)
+}
+
+/// Was die Regel vom Befehl wissen will, fuer jeden ihrer Eingaenge.
+///
+/// Drei Antworten braucht [`gestattet`], und jede Methode gibt sie als
+/// vollstaendiges `match` ueber die zwei Varianten, ohne Auffangzweig: ein
+/// dritter Eingang haelt den Bau an und bekommt seine Einordnung bewusst.
+/// Fuer ein Kommando kommen die Antworten aus dem Kern und aus
+/// [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt);
+/// die Dateiablage antwortet fest, denn sie hat kein Kommando, das man fragen
+/// koennte.
+///
+/// Privat: die Aufzaehlung ist die Innenseite der Regel, und die Rufer kennen
+/// allein die zwei benannten Eingaenge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Anspruch {
+    /// Ein Tastenbefehl oder ein Eintrag des Hauptmenues.
+    Kommando(Kommando),
+    /// `copy:` und `cut:` in der Dateiliste (Runde 22).
+    Dateiablage,
+}
+
+impl Anspruch {
+    /// Welchen Bereich der Befehl braucht.
+    fn wirkungsbereich(self) -> Wirkungsbereich {
+        match self {
+            Anspruch::Kommando(kommando) => kommando.wirkungsbereich(),
+            Anspruch::Dateiablage => Wirkungsbereich::Dateifenster,
+        }
+    }
+
+    /// Ob der Befehl waehrend eines stehenden Blattes durchkommt.
+    fn waehrend_blatt_erlaubt(self) -> bool {
+        match self {
+            Anspruch::Kommando(kommando) => operationen::waehrend_blatt_erlaubt(kommando),
+            Anspruch::Dateiablage => false,
+        }
+    }
+
+    /// Ob der Befehl auf der Ausnahmeliste steht.
+    ///
+    /// Die Dateiablage steht nicht darauf, und die Liste waechst mit ihr
+    /// nicht (C4.2 der Runde 22).
+    fn immer_erreichbar(self) -> bool {
+        match self {
+            Anspruch::Kommando(kommando) => immer_erreichbar(kommando),
+            Anspruch::Dateiablage => false,
+        }
+    }
+}
+
+/// Der eine Rumpf der Regel: die vier Bestandteile aus dem Modulkopf.
+///
+/// Bis zur Runde 22 war das der Rumpf von [`zulaessig`]; er ist unveraendert
+/// hierher gewandert und fragt seit dem den [`Anspruch`] statt das Kommando.
+/// Beide oeffentlichen Eingaenge sind Einzeiler auf diese Funktion, und die
+/// Zaehlprobe `die_zulaessigkeitsregel_ist_genau_einmal_erklaert` haelt fest,
+/// dass es sie genau einmal gibt.
+fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
+    let kein_blatt_oder_erlaubt = !lage.blatt_steht || anspruch.waehrend_blatt_erlaubt();
+    let durchgelassen = anspruch.immer_erreichbar()
         || (lage.schluesselfenster_gehoert_krk
             && kein_blatt_oder_erlaubt
             && !lage.ersthelfer_gehoert_appkit);
 
-    durchgelassen && fokus::wirkt(kommando.wirkungsbereich(), lage.fokus)
+    durchgelassen && fokus::wirkt(anspruch.wirkungsbereich(), lage.fokus)
 }
 
 /// Die benannte Liste der Befehle, die ein Blatt, ein Textfeld und ein fremdes
@@ -208,8 +320,6 @@ pub fn immer_erreichbar(kommando: Kommando) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use krk_core::tasten::Wirkungsbereich;
-
     use crate::quellbaum::quelldateien;
 
     use super::*;
@@ -227,17 +337,22 @@ mod tests {
     /// `es_gibt_genau_einen_menuebauer` in
     /// [`crate::appkit::teilen`]: als ein Stueck
     /// geschrieben faende sie sich selbst und zaehlte eine Fundstelle zu viel.
+    ///
+    /// **Seit der Runde 22 sind es zwei Nadeln**: der oeffentliche Eingang
+    /// [`zulaessig`] und der private Rumpf [`gestattet`], jeder genau einmal
+    /// erklaert. Die Erklaerung von [`dateiablage_zulaessig`] trifft die erste
+    /// Nadel nicht, weil die Nadel mit dem Schluesselwort und einem
+    /// Leerzeichen beginnt. Beide Nadeln stehen zusammengesetzt da und werden
+    /// in dieser Prosa nicht ausgeschrieben, aus dem Grund im Absatz darueber.
     #[test]
     fn die_zulaessigkeitsregel_ist_genau_einmal_erklaert() {
-        let regel = concat!("fn ", "zulaessig(");
-        let erklaerungen: usize = quelldateien()
-            .iter()
-            .map(|(_, inhalt)| inhalt.matches(regel).count())
-            .sum();
-        assert_eq!(
-            erklaerungen, 1,
-            "die Zulaessigkeitsregel ist nicht genau einmal erklaert"
-        );
+        for regel in [concat!("fn ", "zulaessig("), concat!("fn ", "gestattet(")] {
+            let erklaerungen: usize = quelldateien()
+                .iter()
+                .map(|(_, inhalt)| inhalt.matches(regel).count())
+                .sum();
+            assert_eq!(erklaerungen, 1, "`{regel}` ist nicht genau einmal erklaert");
+        }
     }
 
     /// Genau zwei Stellen rufen die Regel, und es sind der Abgriff und die
@@ -283,6 +398,67 @@ mod tests {
             aufrufe, 2,
             "die Regel hat nicht die zwei Frager Ereignisabgriff und Ausgrauung"
         );
+    }
+
+    /// Der Dateiablage-Eingang hat genau zwei Frager, und es sind dieselben
+    /// zwei Stellen wie beim Kommando-Eingang (C4.5 der Runde 22, Baumhaelfte).
+    ///
+    /// `validateMenuItem:` fragt fuer die Ausgrauung von „Kopieren" und
+    /// „Ausschneiden", `Anwendungsdelegierter::dateiablage_ausfuehren` fuer die
+    /// Antwort auf `copy:` und `cut:`. Beide rufen
+    /// [`dateiablage_zulaessig`] auf derselben [`Lage`], aus demselben Grund
+    /// wie in [`beide_frager_rufen_die_eine_regel`]: ein freigegebener Eintrag
+    /// zu einer abgewiesenen Antwort legte Verweise ab, die die Regel eben
+    /// verweigert hat.
+    ///
+    /// Die Nadel `dateiablage_zulaessig` zaehlt die Nachbarin nicht mit: vor
+    /// deren `zulaessig(` steht ein Unterstrich, und
+    /// [`crate::quellbaum::aufrufstellen`] laesst eine Fundstelle mitten in
+    /// einem Namen heraus. Diese Datei bleibt aussen vor, wie dort.
+    #[test]
+    fn die_zwei_frager_der_dateiablage_rufen_dieselbe_regel() {
+        let zuhause = "krk-ui/src/kommandos/zulaessigkeit.rs";
+        let name = concat!("dateiablage_", "zulaessig");
+        let aufrufe: usize = quelldateien()
+            .iter()
+            .filter(|(datei, _)| datei != zuhause)
+            .map(|(_, inhalt)| crate::quellbaum::aufrufstellen(inhalt, name))
+            .sum();
+        assert_eq!(
+            aufrufe, 2,
+            "die Dateiablage hat nicht die zwei Frager Ausgrauung und Antwortkette"
+        );
+    }
+
+    /// Die Dateiablage wirkt genau mit dem Fokus im Dateifenster, und jedes
+    /// Hindernis der Lage weist sie ab (C4.1 bis C4.4 der Runde 22,
+    /// Probenhaelften).
+    ///
+    /// Ueber [`Fokus::ALLE`] und nicht ueber eine zweite Liste, aus dem Grund
+    /// bei [`JEDER_FOKUS`]. Die Hindernisse sind die sieben aus
+    /// [`HINDERNISSE`]: jede Kombination, in der ein Blatt steht, der
+    /// Ersthelfer AppKit gehoert oder das Schluesselfenster fremd ist, weist
+    /// ab, in jedem Fokus, denn die Dateiablage steht auf keiner
+    /// Ausnahmeliste.
+    #[test]
+    fn die_dateiablage_wirkt_genau_mit_dem_fokus_im_dateifenster() {
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        for fokus in JEDER_FOKUS {
+            assert_eq!(
+                dateiablage_zulaessig(lage(blatt, appkit, krk, fokus)),
+                fokus == Fokus::Dateifenster,
+                "die Dateiablage antwortet mit dem Fokus {fokus:?} falsch"
+            );
+        }
+        for (blatt, appkit, krk) in HINDERNISSE {
+            for fokus in JEDER_FOKUS {
+                assert!(
+                    !dateiablage_zulaessig(lage(blatt, appkit, krk, fokus)),
+                    "die Dateiablage kommt bei Blatt={blatt}, AppKit={appkit}, \
+                     KRK={krk} mit dem Fokus {fokus:?} durch"
+                );
+            }
+        }
     }
 
     /// Die Aufzaehlung der Pruefungen ist die des Programms.
@@ -718,9 +894,22 @@ mod tests {
     /// Zusicherungen darunter das Verschwinden eines der bekannten. Verglichen
     /// wird nicht mit einer festen Reihenfolge, denn die waere die von
     /// `Kommando::KENNUNGEN` und sagt ueber die Zulaessigkeit nichts.
+    ///
+    /// **Seit der Runde 22 steht der zweite Eingang daneben**: die Dateiablage
+    /// ist kein Kommando und kommt in `KENNUNGEN` nicht vor, also haelt die
+    /// Zaehlung sie nicht. Die letzte Zusicherung fragt sie deshalb eigens und
+    /// erwartet die Abweisung (C4.2): die Liste bleibt bei vier.
     #[test]
     fn waehrend_eines_blattes_kommen_genau_diese_vier_durch() {
         let blatt = lage(true, false, true, Fokus::Anderswo);
+        assert!(
+            !dateiablage_zulaessig(blatt),
+            "die Dateiablage kommt waehrend eines Blattes durch"
+        );
+        assert!(
+            !dateiablage_zulaessig(lage(true, false, true, Fokus::Dateifenster)),
+            "die Dateiablage kommt waehrend eines Blattes mit dem Fokus im Dateifenster durch"
+        );
         let durchgelassen: Vec<Kommando> = Kommando::KENNUNGEN
             .into_iter()
             .map(|(kommando, _)| kommando)

@@ -70,7 +70,10 @@
 //! `Anwendungsdelegierter::kommando_ausfuehren` und die Ausgrauung des
 //! Hauptmenues ueber `validateMenuItem:`; dass es eine Funktion ist und nicht
 //! zwei Abfragen, ist der Grund, aus dem ihre Antworten nicht auseinanderlaufen
-//! koennen.
+//! koennen. Seit der Runde 22 hat die Regel einen Rumpf und zwei Eingaenge,
+//! den zweiten fuer die Dateiablage (`copy:` und `cut:` in der Dateiliste),
+//! die kein Kommando ist; dieser Eingang hat seine zwei eigenen Frager an
+//! denselben zwei Stellen.
 //!
 //! **`fokus` steht danach und vor den uebrigen.** Jeder Befehl laeuft durch
 //! diese eine Regel, bevor irgendein anderes Modul ihn zu sehen bekommt. Bis
