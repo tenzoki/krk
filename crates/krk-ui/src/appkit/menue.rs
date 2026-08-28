@@ -601,18 +601,19 @@ fn appkit_paar(kombination: Kombination) -> (Retained<NSString>, NSEventModifier
 
 /// Das Zeichen, mit dem AppKit diese Taste als Menuekuerzel fuehrt.
 ///
-/// Drei Regeln, keine Liste von Sonderfaellen. Ein einbuchstabiger Name ist
-/// sein eigenes Zeichen; das deckt die Buchstaben und die Ziffern ab. `f1` bis
-/// `f12` liegen als `NSF1FunctionKey` aufwaerts lueckenlos hintereinander und
-/// werden gerechnet. Die uebrigen Namen der Tabelle tragen die Zeichen, die
-/// AppKit in `NSEvent.h` unter `NSUpArrowFunctionKey` und Nachbarn fuehrt,
-/// beziehungsweise die alten Steuerzeichen.
+/// Drei Regeln, keine Liste von Sonderfaellen. Eine Zeichentaste traegt ihr
+/// Zeichen aus [`Taste::zeichen`], derselben Regel, nach der der Kern sie
+/// nachschlaegt; das deckt die Buchstaben, die Ziffern, `plus` und `minus` ab,
+/// und eine eigene Abschrift der Regel steht hier seit der Runde 20 nicht
+/// mehr. `f1` bis `f12` liegen als `NSF1FunctionKey` aufwaerts lueckenlos
+/// hintereinander und werden gerechnet. Die uebrigen Namen der Tabelle tragen
+/// die Zeichen, die AppKit in `NSEvent.h` unter `NSUpArrowFunctionKey` und
+/// Nachbarn fuehrt, beziehungsweise die alten Steuerzeichen.
 fn zeichen_der_taste(taste: Taste) -> Option<char> {
-    let name = taste.name;
-    let mut zeichen = name.chars();
-    if let (Some(einziges), None) = (zeichen.next(), zeichen.next()) {
-        return Some(einziges);
+    if let Some(zeichen) = taste.zeichen() {
+        return Some(zeichen);
     }
+    let name = taste.name;
     if let Some(nummer) = name.strip_prefix('f')
         && let Ok(nummer) = nummer.parse::<u32>()
         && (1..=12).contains(&nummer)

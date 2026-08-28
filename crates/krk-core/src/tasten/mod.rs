@@ -68,8 +68,8 @@ pub struct Tastendruck {
     /// Das gemeldete Zeichen, sofern es als Kennung taugt.
     ///
     /// Immer schon durch [`parser::zeichen_als_kennung`] gegangen: ein
-    /// ASCII-Kleinbuchstabe oder eine ASCII-Ziffer, oder `None`. `None` heisst,
-    /// dass dieser Druck ueber seine Stelle nachgeschlagen wird.
+    /// ASCII-Kleinbuchstabe, eine ASCII-Ziffer, `+` oder `-`, oder `None`.
+    /// `None` heisst, dass dieser Druck ueber seine Stelle nachgeschlagen wird.
     pub zeichen: Option<char>,
     /// Die normalisierte Maske der Zusatztasten.
     pub maske: ModMaske,

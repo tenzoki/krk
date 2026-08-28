@@ -8,9 +8,11 @@
 //!    stammt. Wer irgendwo einen Tastencode braucht, holt ihn ueber
 //!    [`code_von`] oder [`code_von_pflicht`] hier ab; eine zweite Zahl daneben
 //!    waere eine zweite Wahrheit ueber dieselbe Taste.
-//! 2. **[`Tastenkennung`], wonach eine Taste nachgeschlagen wird.** Buchstaben
-//!    und Ziffern ueber das gemeldete **Zeichen**, alles uebrige ueber den
-//!    virtuellen **Tastencode**. Der naechste Abschnitt schreibt aus, warum.
+//! 2. **[`Tastenkennung`], wonach eine Taste nachgeschlagen wird.** Buchstaben,
+//!    Ziffern und die zwei Zeichentasten `plus` und `minus` ueber das gemeldete
+//!    **Zeichen**, alles uebrige ueber den virtuellen **Tastencode**. Welcher
+//!    Name welches Zeichen traegt, sagt [`zeichen_des_namens`] an genau einer
+//!    Stelle. Der naechste Abschnitt schreibt aus, warum es zwei Arten sind.
 //! 3. **[`Kombination`], die gelesene Form von `shift+cmd+k`.** Sie traegt die
 //!    Taste und die normalisierte Maske und schreibt sich ueber [`fmt::Display`]
 //!    wieder in genau die Zeichenkette zurueck, aus der sie gelesen wurde.
@@ -31,13 +33,29 @@
 //! **Der Zuschnitt beendet eine Asymmetrie, statt eine zu schaffen.** Das
 //! Hauptmenue schlaegt seit S13b bereits ueber das Zeichen nach:
 //! `NSMenuItem.keyEquivalent` nimmt eine **Zeichenkette** entgegen
-//! (`crates/krk-ui/src/appkit/menue.rs:322-342`, die Zuordnung in
-//! `zeichen_der_taste` dort trennt einbuchstabige Namen von den uebrigen genau
-//! wie [`Taste::kennung`] hier), und genau deshalb wirken `cmd+c` und `cmd+v`
-//! auf jeder Tastaturbelegung an der beschrifteten Stelle. Die zeichenbasierte
+//! (`crates/krk-ui/src/appkit/menue.rs`, `zeichen_der_taste` dort fragt fuer
+//! die Zeichentasten [`Taste::zeichen`] und damit dieselbe Regel wie
+//! [`Taste::kennung`] hier; bis zur Runde 20 trug es eine eigene Abschrift der
+//! Einbuchstabenregel), und genau deshalb wirken `cmd+c` und `cmd+v` auf jeder
+//! Tastaturbelegung an der beschrifteten Stelle. Die zeichenbasierte
 //! Nachschlagart ist im Projekt keine fremde Mechanik, sondern die, die vier
 //! Funktionen schon tragen; bis zum 260809 trug der Ereignisabgriff sie nur
 //! nicht mit.
+//!
+//! **Seit der Runde 20 tragen zwei Namen ein Zeichen, das nicht ihr Name ist:**
+//! `plus` steht fuer `+` und `minus` fuer `-`. Die Zoombefehle des
+//! PDF-Betrachters liegen auf `cmd+plus` und `cmd+minus`, und die Taste mit der
+//! Aufschrift `+` liegt auf der deutschen Belegung rechts neben `ü`, auf der
+//! US-Belegung an einer ganz anderen Stelle; ueber das Zeichen trifft die
+//! Belegung die Aufschrift. Der Tabelleneintrag traegt als Stelle den
+//! Zehnerblock, weil `kVK_ANSI_KeypadPlus` und `kVK_ANSI_KeypadMinus` auf jeder
+//! Belegung dasselbe Zeichen melden; die Stelle braucht allein
+//! [`Tastendruck::neu`](super::Tastendruck::neu) fuer das synthetische
+//! Ereignis. Was der Abgriff dabei nicht entscheiden kann — auf der
+//! US-Belegung braucht `+` die Umschalttaste, und der Abgriff liest das Zeichen
+//! ohne Zusatztasten —, steht offen in
+//! `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/decisions/
+//! 260828-0712_*_wie-erreicht-eine-us-tastaturbelegung-cmd-plus-wenn-das-pluszeichen-dort-die-umschalttaste-braucht.md`.
 //!
 //! **Die Festlegung aus C3 der Runde 1 bleibt und wird gegenstandslos.** KRK
 //! erkennt die Tastaturbauart nicht und liefert keine geraeteabhaengige
@@ -152,10 +170,12 @@ impl Herkunft {
 /// dieselbe Taste `m` ein zweites Mal zu treffen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Tastenkennung {
-    /// Ueber das gemeldete Zeichen: die Buchstaben und die Ziffern.
+    /// Ueber das gemeldete Zeichen: die Buchstaben, die Ziffern, `+` und `-`.
     ///
-    /// Immer ein ASCII-Kleinbuchstabe oder eine ASCII-Ziffer;
-    /// [`zeichen_als_kennung`] stellt das fuer jeden Weg hierher sicher.
+    /// Immer ein Zeichen, das [`zeichen_des_namens`] irgendeinem Namen der
+    /// Tabelle zuordnet, also ein ASCII-Kleinbuchstabe, eine ASCII-Ziffer,
+    /// `+` oder `-`; [`zeichen_als_kennung`] stellt das fuer jeden Weg hierher
+    /// sicher.
     Zeichen(char),
     /// Ueber den virtuellen Tastencode: die Funktionstasten, der Pfeilblock und
     /// die Steuertasten.
@@ -179,22 +199,41 @@ pub struct Taste {
     pub herkunft: Herkunft,
 }
 
+/// Das Zeichen, das ein Name der Schreibweise traegt, falls er eines traegt.
+///
+/// **Die eine Stelle, die Namen und Zeichen aneinander bindet.** Ein
+/// einbuchstabiger Name aus einem ASCII-Kleinbuchstaben oder einer ASCII-Ziffer
+/// ist sein eigenes Zeichen; `plus` traegt `+` und `minus` traegt `-`; jeder
+/// andere Name traegt keines und benennt eine Stelle. [`Taste::kennung`] fragt
+/// sie, [`zeichen_als_kennung`] haelt ein gemeldetes Zeichen gegen sie, und
+/// `zeichen_der_taste` in `crates/krk-ui/src/appkit/menue.rs` bildet aus ihr
+/// das Menuekuerzel: drei Frager, eine Regel.
+pub const fn zeichen_des_namens(name: &str) -> Option<char> {
+    let bytes = name.as_bytes();
+    if bytes.len() == 1 && (bytes[0].is_ascii_lowercase() || bytes[0].is_ascii_digit()) {
+        return Some(bytes[0] as char);
+    }
+    if namen_gleich(name, "plus") {
+        return Some('+');
+    }
+    if namen_gleich(name, "minus") {
+        return Some('-');
+    }
+    None
+}
+
 impl Taste {
     /// Wonach diese Taste nachgeschlagen wird.
     ///
-    /// **Eine Regel und keine Liste von Sonderfaellen.** Ein einbuchstabiger
-    /// Name aus einem ASCII-Kleinbuchstaben oder einer ASCII-Ziffer ist sein
-    /// eigenes Zeichen; jeder andere Name benennt eine Stelle. Das deckt die
-    /// Tabelle vollstaendig ab, weil ihre Namen genau in diese beiden Sorten
-    /// zerfallen, und es ist dieselbe Regel, nach der
-    /// `zeichen_der_taste` in `crates/krk-ui/src/appkit/menue.rs` seit S13b das
-    /// Menuekuerzel bildet.
+    /// **Eine Regel und keine Liste von Sonderfaellen.** Ein Name, dem
+    /// [`zeichen_des_namens`] ein Zeichen zuordnet, ist eine Zeichentaste;
+    /// jeder andere Name benennt eine Stelle. Das deckt die Tabelle
+    /// vollstaendig ab, weil ihre Namen genau in diese beiden Sorten zerfallen.
     pub const fn kennung(self) -> Tastenkennung {
-        let name = self.name.as_bytes();
-        if name.len() == 1 && (name[0].is_ascii_lowercase() || name[0].is_ascii_digit()) {
-            return Tastenkennung::Zeichen(name[0] as char);
+        match zeichen_des_namens(self.name) {
+            Some(zeichen) => Tastenkennung::Zeichen(zeichen),
+            None => Tastenkennung::Code(self.code),
         }
-        Tastenkennung::Code(self.code)
     }
 
     /// Das Zeichen dieser Taste, falls sie ueber eines nachgeschlagen wird.
@@ -231,8 +270,8 @@ const MESSUNG: &str = "spikes/fn-tasten/messung-A.txt";
 ///
 /// Die eine Tabelle. Sie deckt die Funktionstastenreihe `f1` bis `f12`, den
 /// Pfeilblock `up`, `down`, `left` und `right`, dazu `delete`, `pageup`,
-/// `pagedown`, `home`, `end`, `return`, `tab`, `esc`, `space` sowie die
-/// Buchstaben und die Ziffern.
+/// `pagedown`, `home`, `end`, `return`, `tab`, `esc`, `space`, die
+/// Buchstaben und die Ziffern sowie die zwei Zeichentasten `plus` und `minus`.
 ///
 /// Nicht enthalten sind die Satzzeichen und der Zehnerblock. Ein virtueller
 /// Tastencode benennt eine **Stelle** auf der Tastatur, und bei den
@@ -240,7 +279,16 @@ const MESSUNG: &str = "spikes/fn-tasten/messung-A.txt";
 /// weit auseinander: `kVK_ANSI_LeftBracket` traegt auf einer deutschen
 /// Tastatur ein `ü`. Ein Name `bracketleft` bezeichnete fuer einen deutschen
 /// Nutzer eine Taste, die er nicht findet.
-pub const TASTEN: [Taste; 61] = [
+///
+/// **Zwei Ausnahmen mit Grund:** `plus` und `minus` tragen als Stelle
+/// `kVK_ANSI_KeypadPlus` und `kVK_ANSI_KeypadMinus`, also den Zehnerblock. Sie
+/// sind keine Satzzeichen im Sinn des Absatzes darueber, weil sie nicht ueber
+/// die Stelle, sondern ueber das Zeichen nachgeschlagen werden
+/// ([`zeichen_des_namens`]); die Stelle braucht allein
+/// [`Tastendruck::neu`](super::Tastendruck::neu), und der Zehnerblock ist die
+/// einzige, die auf **jeder** Belegung `+` beziehungsweise `-` meldet. Die
+/// Taste rechts neben `ü` hiesse auf der US-Belegung `]`.
+pub const TASTEN: [Taste; 63] = [
     // Die Norton-Reihe. Drei dieser sechs Codes sind gemessen, drei nicht.
     gemessen("f3", 99, "kVK_F3", MESSUNG),
     dokumentiert("f4", 118, "kVK_F4"),
@@ -311,6 +359,10 @@ pub const TASTEN: [Taste; 61] = [
     dokumentiert("7", 26, "kVK_ANSI_7"),
     dokumentiert("8", 28, "kVK_ANSI_8"),
     dokumentiert("9", 25, "kVK_ANSI_9"),
+    // Die zwei Zeichentasten der Runde 20. Der Code ist der Zehnerblock, das
+    // Zeichen die Aufschrift; der Kopf der Tabelle sagt, warum.
+    dokumentiert("plus", 69, "kVK_ANSI_KeypadPlus"),
+    dokumentiert("minus", 78, "kVK_ANSI_KeypadMinus"),
 ];
 
 /// Zeichenweiser Vergleich zweier Namen zur Uebersetzungszeit.
@@ -382,8 +434,10 @@ pub const fn zeichen_der_stelle(code: u16) -> Option<char> {
 /// bringt.** Sie beantwortet zwei Fragen auf einmal: taugt dieses Zeichen
 /// ueberhaupt als Kennung, und in welcher Schreibung. Gross- und Kleinbuchstabe
 /// sind dieselbe Taste — die Umschalttaste steht als eigenes Bit in der Maske,
-/// und ein `Y` neben einem `y` waeren zwei Eintraege fuer eine Taste. Alles
-/// ausserhalb von ASCII faellt weg: die Tabelle fuehrt keine Umlaute und keine
+/// und ein `Y` neben einem `y` waeren zwei Eintraege fuer eine Taste. Als
+/// Kennung taugt genau das Zeichen, das irgendein Name der Tabelle nach
+/// [`zeichen_des_namens`] traegt: die Buchstaben, die Ziffern, `+` und `-`.
+/// Alles andere faellt weg: die Tabelle fuehrt keine Umlaute und keine weiteren
 /// Satzzeichen (siehe [`TASTEN`]), und die Funktionstasten melden Zeichen aus
 /// dem privaten Bereich von Unicode, die zur Stelle und nicht zum Zeichen
 /// gehoeren.
@@ -392,7 +446,10 @@ pub const fn zeichen_der_stelle(code: u16) -> Option<char> {
 /// nachgeschlagen.
 pub fn zeichen_als_kennung(gemeldet: char) -> Option<char> {
     let klein = gemeldet.to_ascii_lowercase();
-    klein.is_ascii_alphanumeric().then_some(klein)
+    TASTEN
+        .into_iter()
+        .any(|taste| zeichen_des_namens(taste.name) == Some(klein))
+        .then_some(klein)
 }
 
 /// Der Tabelleneintrag zu einem Namen der Schreibweise.
@@ -651,6 +708,9 @@ mod tests {
         for ziffer in '0'..='9' {
             assert!(code_von(&ziffer.to_string()).is_some(), "{ziffer} fehlt");
         }
+        for name in ["plus", "minus"] {
+            assert!(benannt.contains(&name), "{name} fehlt in der Tabelle");
+        }
     }
 
     /// Die Fallunterscheidung der beiden Nachschlagarten ist verschieden und
@@ -661,18 +721,19 @@ mod tests {
             match taste.kennung() {
                 Tastenkennung::Zeichen(zeichen) => {
                     assert_eq!(
-                        taste.name,
-                        zeichen.to_string(),
-                        "{} wird ueber ein Zeichen nachgeschlagen, das nicht sein Name ist",
+                        zeichen_des_namens(taste.name),
+                        Some(zeichen),
+                        "{} wird ueber ein Zeichen nachgeschlagen, das sein Name nicht traegt",
                         taste.name
                     );
-                    assert!(zeichen.is_ascii_alphanumeric() && !zeichen.is_ascii_uppercase());
+                    assert!(!zeichen.is_ascii_uppercase());
                 }
                 Tastenkennung::Code(code) => {
                     assert_eq!(code, taste.code);
-                    assert!(
-                        taste.name.len() > 1,
-                        "{} ist einbuchstabig und wird trotzdem ueber die Stelle nachgeschlagen",
+                    assert_eq!(
+                        zeichen_des_namens(taste.name),
+                        None,
+                        "{} traegt ein Zeichen und wird trotzdem ueber die Stelle nachgeschlagen",
                         taste.name
                     );
                 }
@@ -711,12 +772,49 @@ mod tests {
         }
     }
 
+    /// C3.2 der Runde 20, deutsche Haelfte und Zehnerblock: `plus` und `minus`
+    /// werden ueber das Zeichen gefunden, gleich welche Stelle es meldet, und
+    /// eine Stellentaste wie `pageup` weiterhin ueber die Stelle. Die
+    /// US-Haelfte des Kriteriums haengt an der offenen Frage
+    /// `260828-0712_*_wie-erreicht-eine-us-tastaturbelegung-cmd-plus-…` und
+    /// ist hier nicht behauptet.
+    #[test]
+    fn plus_und_minus_gehen_ueber_das_zeichen_und_pageup_ueber_die_stelle() {
+        let cmd = super::super::normalisierung::roh::BEFEHL;
+        for (name, zeichen) in [("plus", '+'), ("minus", '-')] {
+            let gelesen = Kombination::lesen(&format!("cmd+{name}")).expect(name);
+            assert_eq!(gelesen.taste().kennung(), Tastenkennung::Zeichen(zeichen));
+            assert_eq!(gelesen.to_string(), format!("cmd+{name}"));
+            // Die Stelle rechts neben `ü` auf der deutschen Belegung
+            // (`kVK_ANSI_RightBracket`, 30) und der Zehnerblock melden beide
+            // das Zeichen; jede Stelle trifft dieselbe Taste.
+            for code in [30, gelesen.taste().code, 1000] {
+                let druck = Tastendruck::aus_ereignis(code, Some(zeichen), cmd);
+                assert_eq!(Kombination::aus_tastendruck(druck), Some(gelesen));
+            }
+        }
+        // Ohne Zeichen trifft der Zehnerblock-Code die Taste nicht ueber die
+        // Stelle: sie ist eine Zeichentaste und keine Stellentaste.
+        let stumm = Tastendruck::aus_ereignis(69, None, cmd);
+        assert_eq!(Kombination::aus_tastendruck(stumm), None);
+        // `pageup` geht weiterhin ueber die Stelle.
+        let pageup = Kombination::lesen("pageup").expect("pageup");
+        assert_eq!(pageup.taste().kennung(), Tastenkennung::Code(116));
+        let druck = Tastendruck::aus_ereignis(116, Some('\u{F72C}'), 0);
+        assert_eq!(Kombination::aus_tastendruck(druck), Some(pageup));
+    }
+
     /// Was als Kennung taugt, und was auf den Tastencode zurueckfaellt.
     #[test]
-    fn nur_ascii_buchstaben_und_ziffern_taugen_als_zeichenkennung() {
+    fn nur_ascii_buchstaben_ziffern_plus_und_minus_taugen_als_zeichenkennung() {
         assert_eq!(zeichen_als_kennung('y'), Some('y'));
         assert_eq!(zeichen_als_kennung('Y'), Some('y'));
         assert_eq!(zeichen_als_kennung('7'), Some('7'));
+        assert_eq!(zeichen_als_kennung('+'), Some('+'));
+        assert_eq!(zeichen_als_kennung('-'), Some('-'));
+        // Das Gleichheitszeichen: auf der US-Belegung die Stelle, die mit
+        // Umschalttaste `+` traegt. Es steht nicht in der Tabelle.
+        assert_eq!(zeichen_als_kennung('='), None);
         // Ein Umlaut: die Tabelle fuehrt ihn nicht, siehe ihren Kopf.
         assert_eq!(zeichen_als_kennung('ü'), None);
         // Das Zeichen, das AppKit einer F3 beilegt (`NSF3FunctionKey`). Es
