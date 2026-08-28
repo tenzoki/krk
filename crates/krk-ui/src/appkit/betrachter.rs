@@ -99,6 +99,18 @@
 //! Verweis mit anderem Schema tut nichts. Verweise innerhalb der Datei
 //! behandelt PDFKit vor der Delegiertenmethode selbst und blaettert dorthin.
 //!
+//! **Der Delegierte ist ein eigenes Objekt, [`Verweisdelegierter`], und nicht
+//! die Ansicht selbst.** `PDFView` beantwortet mehrere Selektoren, die genau
+//! so heissen wie die Methoden seines Delegierten, etwa
+//! `PDFViewWillChangeScaleFactor:toScale:`, und reicht darin an den
+//! Delegierten weiter, sobald der auf den Selektor antwortet. Eine `PDFView`,
+//! die ihr eigener Delegierter ist, antwortet auf jeden davon — sie erbt die
+//! Fassung, die weiterreicht — und ruft sich beim ersten Zoom selbst, bis der
+//! Stapel ueberlaeuft (Absturzbericht 260828-0912). Das Objekt haelt keinen
+//! Rueckverweis, denn es braucht keinen: seine eine Antwort geht an die
+//! Zwischenablage und nicht an den Betrachter. Die Ansicht haelt es stark im
+//! ivar, weil `PDFView` seinen Delegierten schwach haelt.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! Alle Angaben sind am SDK gelesen (`PDFKit.framework/Headers`), nicht aus
@@ -128,7 +140,9 @@
 //! 11_0)`), `minScaleFactor` (`:194`) und `maxScaleFactor` (`:195`), beide
 //! `10_13`. Dazwischen liegt das Protokoll `PDFViewDelegate` (`:364`, ohne
 //! eigene Angabe) mit der einen beantworteten Methode
-//! `PDFViewWillClickOnLink:withURL:` (`:369`, `PDFKIT_AVAILABLE(10_5, 11_0)`).
+//! `PDFViewWillClickOnLink:withURL:` (`:369`, `PDFKIT_AVAILABLE(10_5, 11_0)`),
+//! beantwortet von [`Verweisdelegierter`], einer Unterklasse von `NSObject`
+//! (`NSObject.h`, seit 10.0) mit dessen `init`.
 //! `pageBreakMargins` und `scaleFactorForSizeToFit`, die der Plan als
 //! 10.13-Stuecke nennt, ruft diese Datei nicht.
 //!
@@ -157,7 +171,8 @@ use objc2::{AnyThread, DefinedClass, MainThreadOnly, Message, define_class, msg_
 use objc2_app_kit::{NSEvent, NSMenu};
 use objc2_core_foundation::CGFloat;
 use objc2_foundation::{
-    MainThreadMarker, NSData, NSNotification, NSNotificationCenter, NSObjectProtocol, NSRect, NSURL,
+    MainThreadMarker, NSData, NSNotification, NSNotificationCenter, NSObject, NSObjectProtocol,
+    NSRect, NSURL,
 };
 use objc2_pdf_kit::{
     PDFDisplayDirection, PDFDisplayMode, PDFDocument, PDFView, PDFViewDelegate,
@@ -236,41 +251,33 @@ pub struct PdfbetrachterIvars {
     bytes: RefCell<Option<Arc<Vec<u8>>>>,
     /// Der Melder, den [`Pdfbetrachter::seitenmelder_setzen`] eintraegt.
     seitenmelder: RefCell<Option<Box<dyn Fn()>>>,
+    /// Der Delegierte der Ansicht, stark gehalten, weil `PDFView` ihn nur
+    /// schwach haelt (`PDFView.h:178`); lebt so lange wie die Ansicht.
+    delegierter: Retained<Verweisdelegierter>,
 }
 
 define_class!(
-    /// Der PDF-Betrachter der Vorschau (Runde 20).
+    /// Der Delegierte des Betrachters: beantwortet allein den Klick auf einen
+    /// Verweis nach draussen (A8, C5.7).
     ///
-    /// Eine `PDFView`, die drei Dinge anders macht als die nackte Klasse: sie
-    /// legt ihr Kopieren ueber die eine Huelle um `NSPasteboard` ab, sie
-    /// haengt den Teilen-Eintrag in ihr Kontextmenue, und sie gibt einen
-    /// Verweis nach draussen an den Systembrowser. Alles Uebrige — Rolle,
-    /// Blaettern, Auswahl ueber Seitengrenzen, Trackpad-Geste — ist PDFKit
-    /// und bleibt es. Der Modulkopf sagt, warum jedes der drei so gebaut ist.
+    /// Ein eigenes Objekt und nicht die Ansicht; warum, steht im Modulkopf
+    /// unter „Verweise". Es hat keine ivars und keinen Rueckverweis.
     // SAFETY:
-    // - Die Oberklasse PDFView stellt an eine Unterklasse keine Bedingung,
-    //   die diese Klasse verletzen koennte: sie ruft den bezeichneten Erzeuger
-    //   `initWithFrame:` der Oberklasse, und ihre zwei Ueberschreibungen
-    //   reichen, was sie nicht selbst beantworten, unveraendert an die
-    //   Oberklasse weiter (`menuForEvent:`) oder ersetzen die Antwort ganz
-    //   (`copy:`, dessen Oberklassenfassung allein die Ablage schriebe, die
-    //   hier durch die Huelle geht).
-    // - Die Klasse implementiert `Drop`: er meldet den einen Beobachter wieder
-    //   ab, ruft keine ueberschriebene Methode und haelt das Objekt nicht ueber
-    //   die Lebensdauer des Aufrufs hinaus fest. Dieselbe Form wie
-    //   `Nummernspalte`.
-    #[unsafe(super = PDFView)]
+    // - Die Oberklasse NSObject stellt an eine Unterklasse keine Bedingung;
+    //   der Erzeuger ruft ihr `init`.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSObject)]
     #[thread_kind = MainThreadOnly]
-    #[ivars = PdfbetrachterIvars]
-    pub struct Pdfbetrachter;
+    pub struct Verweisdelegierter;
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
-    unsafe impl NSObjectProtocol for Pdfbetrachter {}
+    unsafe impl NSObjectProtocol for Verweisdelegierter {}
 
     // SAFETY: `PDFViewDelegate` stellt keine Bedingungen. Die Ansicht haelt
-    // ihren Delegierten schwach (`PDFView.h:178`, `weak`), und der Betrachter
-    // ist sein eigener Delegierter; ein Ring entsteht deshalb nicht.
-    unsafe impl PDFViewDelegate for Pdfbetrachter {
+    // ihren Delegierten schwach (`PDFView.h:178`, `weak`), der Betrachter
+    // haelt ihn stark; das Objekt haelt nichts zurueck, ein Ring entsteht
+    // nicht.
+    unsafe impl PDFViewDelegate for Verweisdelegierter {
         /// Ein Klick auf einen Verweis nach draussen (A8, C5.7).
         ///
         /// PDFKit ruft diese Methode fuer einen Verweis mit Adresse und
@@ -293,6 +300,46 @@ define_class!(
             let _ = zwischenablage::im_browser_oeffnen(&text.to_string());
         }
     }
+);
+
+impl Verweisdelegierter {
+    /// Ein Delegierter ohne Zustand.
+    fn neu(mtm: MainThreadMarker) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(());
+        // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
+        unsafe { msg_send![super(this), init] }
+    }
+}
+
+define_class!(
+    /// Der PDF-Betrachter der Vorschau (Runde 20).
+    ///
+    /// Eine `PDFView`, die drei Dinge anders macht als die nackte Klasse: sie
+    /// legt ihr Kopieren ueber die eine Huelle um `NSPasteboard` ab, sie
+    /// haengt den Teilen-Eintrag in ihr Kontextmenue, und sie gibt einen
+    /// Verweis nach draussen an den Systembrowser. Alles Uebrige — Rolle,
+    /// Blaettern, Auswahl ueber Seitengrenzen, Trackpad-Geste — ist PDFKit
+    /// und bleibt es. Der Modulkopf sagt, warum jedes der drei so gebaut ist.
+    // SAFETY:
+    // - Die Oberklasse PDFView stellt an eine Unterklasse keine Bedingung,
+    //   die diese Klasse verletzen koennte: sie ruft den bezeichneten Erzeuger
+    //   `initWithFrame:` der Oberklasse, sie ist nicht ihr eigener Delegierter
+    //   (siehe `Verweisdelegierter`), und ihre zwei Ueberschreibungen
+    //   reichen, was sie nicht selbst beantworten, unveraendert an die
+    //   Oberklasse weiter (`menuForEvent:`) oder ersetzen die Antwort ganz
+    //   (`copy:`, dessen Oberklassenfassung allein die Ablage schriebe, die
+    //   hier durch die Huelle geht).
+    // - Die Klasse implementiert `Drop`: er meldet den einen Beobachter wieder
+    //   ab, ruft keine ueberschriebene Methode und haelt das Objekt nicht ueber
+    //   die Lebensdauer des Aufrufs hinaus fest. Dieselbe Form wie
+    //   `Nummernspalte`.
+    #[unsafe(super = PDFView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = PdfbetrachterIvars]
+    pub struct Pdfbetrachter;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Pdfbetrachter {}
 
     impl Pdfbetrachter {
         /// Der eine Ausgang jeder Auswahl aus dem Betrachter (C5.2, C5.5).
@@ -365,23 +412,32 @@ impl Pdfbetrachter {
     /// Ein Betrachter mit dem genannten Rahmen, noch ohne Dokument, ohne
     /// Rueckverweis und ohne Melder.
     ///
-    /// Der Delegierte wird hier gesetzt und nicht je Dokument: er gehoert der
-    /// Ansicht, und ein Setzen bei jedem `dokument_setzen` truege dieselbe
-    /// Zeile an einer zweiten Stelle. Der Beobachter fuer den Seitenwechsel
+    /// Der Delegierte, ein [`Verweisdelegierter`], wird hier gebaut und
+    /// gesetzt und nicht je Dokument: er gehoert der Ansicht, und ein Setzen
+    /// bei jedem `dokument_setzen` truege dieselbe Zeile an einer zweiten
+    /// Stelle. Der Beobachter fuer den Seitenwechsel
     /// wird ebenfalls hier angemeldet und in `Drop` wieder abgemeldet.
     pub fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let delegierter = Verweisdelegierter::neu(mtm);
         let this = Self::alloc(mtm).set_ivars(PdfbetrachterIvars {
             vorschau: RefCell::new(None),
             bytes: RefCell::new(None),
             seitenmelder: RefCell::new(None),
+            delegierter,
         });
         // SAFETY: `initWithFrame:` von PDFView hat die hier angenommene
         // Signatur (`NSView.h:83`, bezeichneter Erzeuger).
         let betrachter: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: rahmen] };
 
-        // SAFETY: Der Delegierte wird schwach gehalten (`PDFView.h:178`), und
-        // die Klasse erfuellt das Protokoll.
-        unsafe { betrachter.setDelegate(Some(ProtocolObject::from_ref(&*betrachter))) };
+        // SAFETY: Der Delegierte wird schwach gehalten (`PDFView.h:178`), der
+        // ivar haelt ihn stark ueber die Lebensdauer der Ansicht, und seine
+        // Klasse erfuellt das Protokoll. Die Ansicht selbst darf es nicht
+        // sein; warum, steht im Modulkopf unter „Verweise".
+        unsafe {
+            betrachter.setDelegate(Some(ProtocolObject::from_ref(
+                &*betrachter.ivars().delegierter,
+            )));
+        }
 
         // SAFETY: `betrachter` ist von der Klasse, die den Selektor mit der
         // Signatur einer Meldungsannahme beantwortet. Der Beobachter wird in

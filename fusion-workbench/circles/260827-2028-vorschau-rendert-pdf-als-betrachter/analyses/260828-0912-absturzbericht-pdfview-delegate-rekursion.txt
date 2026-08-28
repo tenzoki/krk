@@ -1,0 +1,8 @@
+Absturzbericht (Auszug, vom Nutzer 260828-0912 eingereicht) — KRK 1.2.1 auf 03af590, Buendel target/KRK.app
+
+Exception Type: EXC_BAD_ACCESS (SIGABRT), KERN_PROTECTION_FAILURE im Stack Guard
+Crashed Thread 0 main:
+  std::sys::pal::unix::stack_overflow::imp::signal_handler -> abort
+  PDFKit -[PDFView delegate] + 24
+  PDFKit -[PDFView PDFViewWillChangeScaleFactor:toScale:] + 32
+  PDFKit -[PDFView PDFViewWillChangeScaleFactor:toScale:] + 89   (wiederholt, unbegrenzt)
