@@ -11,9 +11,13 @@
 //!              │                    Ziel::Web ──> im_browser_oeffnen ──> NSWorkspace
 //!              ├─> inhalt_lesen ──> crate::vorschaumodell (Text, Bild, Leer)
 //!              │
-//!              └<── text_schreiben <── die beiden Pfadkopierer (C1, C2)
-//!                        │
-//!                        └<── text_auf_ablage_schreiben (jede Ablage)
+//!              ├<── text_schreiben <── die beiden Pfadkopierer (C1, C2)
+//!              │          │
+//!              │          └<── text_auf_ablage_schreiben (jede Ablage)
+//!              │
+//!              └<── dateiverweise_schreiben <── cmd+c und cmd+x im
+//!                         │                    Dateifenster (Runde 22)
+//!                         └<── dateiverweise_auf_ablage_schreiben (jede Ablage)
 //!
 //! die Ablage eines Ziehvorgangs
 //! NSDraggingInfo::draggingPasteboard
@@ -25,8 +29,10 @@
 //! Vorschau der Zwischenablage, [`text_schreiben`] seit dem 260811 die
 //! Gegenrichtung, [`dateiverweise`] seit der Runde 13 den Abwurf, und
 //! [`text_auf_ablage_schreiben`] seit der Runde 14 das Schreiben in eine
-//! beliebige Ablage; eine zweite Huelle um `NSPasteboard` entsteht dabei
-//! nicht.
+//! beliebige Ablage und [`dateiverweise_schreiben`] mit
+//! [`dateiverweise_auf_ablage_schreiben`] seit der Runde 22 den zweiten
+//! Ausgang, der Dateiverweise und Namen ablegt; eine zweite Huelle um
+//! `NSPasteboard` entsteht dabei nicht.
 //! Alles in einem Modul, weil es die eine Frage beantwortet: was steht in der
 //! Zwischenablage, und wohin geht KRK damit. Die Frage ist mit der Runde 4 um
 //! eine Richtung breiter geworden und geblieben, was sie war: eine. Denselben
@@ -64,21 +70,26 @@
 //! und C2 jener Runde bestellt haben: [`text_schreiben`] legt den Pfad des
 //! angezeigten Ordners (`opt+cmd+c`) und die Pfade der betroffenen Eintraege
 //! (`shift+cmd+c`) ab. **Cmd+C und Cmd+V tragen keinen der beiden.** Sie
-//! tragen seit dem 260805 die Textbefehle des Menues „Bearbeiten" und sonst
-//! nichts, und genau das haelt sie fuer eine Dateizwischenablage einer
-//! spaeteren Runde frei; der Kopf von `resources/default-keymap.toml` schreibt
-//! den Wechsel aus, und die Reservierung aus C3 der Runde 1 ist damit
-//! eingeloest und nicht gebrochen.
+//! tragen seit dem 260805 die Textbefehle des Menues „Bearbeiten", und genau
+//! das hielt sie bis zur Runde 22 fuer eine Dateizwischenablage frei; der
+//! Kopf von `resources/default-keymap.toml` schreibt den Wechsel aus, und die
+//! Reservierung aus C3 der Runde 1 ist damit eingeloest und nicht gebrochen.
+//! Seit der Runde 22 ist die `copy:`- und die `cut:`-Haelfte dieses
+//! Einhaengepunkts besetzt (der Abschnitt unten), die `paste:`-Haelfte nicht.
 //!
-//! **Geschrieben wird eine einzige Sorte, `NSPasteboardTypeString`.** Kein
-//! Dateiverweis und kein `writeObjects:` — die Nutzerantwort vom 260811-1610
+//! **Die zwei Pfadkopierer schreiben allein Text, `NSPasteboardTypeString`.**
+//! Kein Dateiverweis und kein `writeObjects:` fuer sie — die Nutzerantwort vom
+//! 260811-1610
 //! (`decisions/260811-1552_*_welche-sorten-legt-der-pfadkopierer-in-die-zwischenablage.md`).
 //! Der Grund steht in einem Satz: ein Cmd+V, das im Finder eine Datei ablegt
 //! und in einem Textfeld einen Pfad schreibt, waeren zwei Bedeutungen desselben
 //! Befehls, und die zerstoererische von beiden sieht der Nutzer erst, nachdem
 //! sie eingetreten ist. Eine Sorte heisst: eine Bedeutung. Sie ist zugleich die
 //! Sorte, die [`lesen`] als zweite abfragt, und der Sprung aus der
-//! Zwischenablage nimmt damit genau den Text, den KRK abgelegt hat.
+//! Zwischenablage nimmt damit genau den Text, den KRK abgelegt hat. **Der
+//! Entscheid gilt fort**, auch nachdem die Huelle mit der Runde 22 Verweise
+//! schreiben kann: der Name der zwei Befehle verspricht einen Pfad, und ein
+//! Pfad ist Text.
 //!
 //! **[`text_schreiben`] traegt keine Probe, und das ist Absicht.**
 //! `generalPasteboard` ist die Zwischenablage des angemeldeten Nutzers; eine
@@ -138,12 +149,52 @@
 //! [`dateiverweise`]: die Huelle beantwortet die Frage nach der Zwischenablage,
 //! und welche es ist, entscheidet der Rufer.
 //!
+//! # Seit der Runde 22 schreibt die Huelle zwei Sorten
+//!
+//! `cmd+c` und `cmd+x` im Dateifenster versprechen nicht einen Pfad, sondern
+//! die Datei, und die Sorte, die das einloest, ist der Dateiverweis:
+//! [`dateiverweise_auf_ablage_schreiben`] legt je Eintrag ein Datei-`NSURL`
+//! ueber `writeObjects:` ab und daneben die Namen als Text, einer je Zeile,
+//! wie der Finder es tut (A3 der Runde 22). Ein Einfuegen im Finder legt
+//! damit die Dateien ab, ein Einfuegen in ein Textfeld die Namen; das sind
+//! zwei Sorten fuer zwei Arten von Ziel und nicht zwei Bedeutungen eines
+//! Befehls, denn das Ziel waehlt die Sorte, die es lesen kann. Den Text der
+//! Pfadkopierer beruehrt das nicht (der Abschnitt darueber).
+//!
+//! **Erst `writeObjects:`, dann `setString:forType:`, und das ist keine
+//! Reihenfolge nach Belieben.** `setString:forType:` setzt seine Sorte am
+//! **ersten** Ablageeintrag und legt keinen neuen an (`NSPasteboard.h`, „on
+//! the first pasteboard item"); `writeObjects:` legt je `NSURL` einen Eintrag
+//! an. Kaeme der Text zuerst, laege er auf einem Eintrag ohne Verweis, und die
+//! Verweise folgten als zweiter bis n-ter. So liegen Verweis und Namen auf dem
+//! ersten Eintrag beieinander, und [`lesen`], das `stringForType:` und damit
+//! ebenfalls den ersten Eintrag fragt, findet dort den Dateiverweis vor dem
+//! Text: der Sprung aus der Zwischenablage geht zum ersten kopierten Eintrag
+//! (C2.5 der Runde 22).
+//!
+//! **Die Namen kommen fertig herein, als eine Zeichenkette.** Die Huelle
+//! deutet nicht (der Kopf oben, „Die Deutung steht nicht hier"), und sie
+//! setzt auch keinen Text zusammen; das tut `namenszeilen` in
+//! [`crate::kommandos::operationen`], wo die Statuszeile denselben Namen
+//! bezieht. So ist der Name in der Meldung derselbe wie der in der Ablage.
+//!
+//! **Welche Sorten ein Datei-`NSURL` neben dem Verweis von sich aus ablegt,
+//! ist am Buendel zu messen und nicht hier entschieden.** Die Probe
+//! `der_zweite_ausgang_legt_verweise_und_namen_ab` liest genau
+//! `NSPasteboardTypeString` zurueck und wird rot, sobald eine mitgeschriebene
+//! Sorte die Namenszeilen verdraengt; die Sortenliste selbst nennt der
+//! Abnahmelauf der Runde 22.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSPasteboard`, `NSWorkspace`, `NSString`, `NSURL`, `NSNumber`, `NSArray`,
 //! `NSDictionary` und `NSData` stehen seit macOS 10.0 zur Verfuegung, ebenso
-//! `setString:forType:`, `openURL:`, `path` und `pasteboardWithName:`
-//! (`NSPasteboard.h:160`). Seit 10.6 stehen `clearContents`, `writeObjects:`,
+//! `setString:forType:`, `openURL:`, `path`, `pasteboardWithName:`
+//! (`NSPasteboard.h:160`) und `fileURLWithPath:` (`NSURL.h:52`, ohne
+//! `API_AVAILABLE`, am SDK 15 nachgelesen; die Fassung mit `isDirectory:`
+//! daneben steht seit 10.5 und wird nicht gerufen). Seit 10.6 stehen
+//! `clearContents`, `writeObjects:`, das Protokoll `NSPasteboardWriting`, das
+//! `NSURL` erfuellt (`NSPasteboard.h:386`, `:379`),
 //! `readObjectsForClasses:options:` (`NSPasteboard.h:190`), der
 //! Vorgabeschluessel `NSPasteboardURLReadingFileURLsOnlyKey`
 //! (`NSPasteboard.h:146`) und drei der vier abgefragten Sortenkonstanten:
@@ -165,10 +216,11 @@
 use std::path::PathBuf;
 
 use objc2::ClassType;
-use objc2::runtime::AnyObject;
+use objc2::rc::Retained;
+use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2_app_kit::{
     NSPasteboard, NSPasteboardTypeFileURL, NSPasteboardTypePNG, NSPasteboardTypeString,
-    NSPasteboardTypeTIFF, NSPasteboardURLReadingFileURLsOnlyKey, NSWorkspace,
+    NSPasteboardTypeTIFF, NSPasteboardURLReadingFileURLsOnlyKey, NSPasteboardWriting, NSWorkspace,
 };
 use objc2_foundation::{NSArray, NSDictionary, NSNumber, NSString, NSURL};
 
@@ -271,6 +323,79 @@ pub fn text_schreiben(text: &str) -> bool {
     text_auf_ablage_schreiben(&NSPasteboard::generalPasteboard(), text)
 }
 
+/// Legt Dateiverweise und daneben ihre Namen als Text in eine beliebige
+/// Ablage (C1, C2 der Runde 22).
+///
+/// Liefert, ob die Ablage beides angenommen hat. Der Aufrufer meldet das in
+/// der Statuszeile; wortlos nichts zu tun ist in keinem Fall zulaessig, und
+/// deshalb traegt der Wert `#[must_use]`.
+///
+/// **`clearContents` ist Bedingung und keine Vorsichtsmassnahme**, wie bei
+/// [`text_auf_ablage_schreiben`]: ohne den Aufruf gehoert die Ablage noch dem
+/// vorigen Besitzer, und es ist zugleich die Zusage, dass ein zweites Ablegen
+/// das erste **ersetzt** und nichts anhaengt. `writeObjects:` allein haengte
+/// an: es legt je Objekt einen weiteren Eintrag hinter die bestehenden.
+///
+/// **Die Namen kommen fertig herein und werden nicht aus den Pfaden
+/// gebildet**, weil die Huelle nicht deutet; `namenszeilen` in
+/// [`crate::kommandos::operationen`] baut sie, und die Statuszeile bezieht
+/// ihren Namen aus derselben Quelle. Warum `setString:forType:` **nach**
+/// `writeObjects:` steht und damit am ersten Eintrag landet, steht im
+/// Modulkopf unter „Seit der Runde 22 schreibt die Huelle zwei Sorten".
+///
+/// **`fileURLWithPath:` kostet je Eintrag ein `stat(2)` und kein Oeffnen.**
+/// Der Erzeuger fragt das Dateisystem, ob der Pfad ein Verzeichnis ist, um
+/// den abschliessenden Schraegstrich zu setzen; eine Datei wird dabei nicht
+/// geoeffnet, und eine Verknuepfung nicht aufgeloest: der Verweis nennt den
+/// Pfad der Verknuepfung (A7 der Runde 22). Die Schreibseite ist fuer grosse
+/// Mengen ungemessen; die Leseseite in [`dateiverweise`] nennt ihre Zahlen.
+///
+/// **Die leere Menge entscheidet der Rufer und nicht die Huelle.** Mit leeren
+/// `pfade` legte `writeObjects:` keinen Eintrag an und `setString:forType:`
+/// einen allein mit Text; das waere eine Textablage unter dem Namen einer
+/// Dateiablage. Der Rufer in `appkit/tabelle.rs` meldet die leere Menge
+/// vorher (C1.7 der Runde 22) und erreicht diese Funktion damit nicht.
+#[must_use]
+pub fn dateiverweise_auf_ablage_schreiben(
+    ablage: &NSPasteboard,
+    pfade: &[PathBuf],
+    namen: &str,
+) -> bool {
+    ablage.clearContents();
+
+    let verweise: Vec<Retained<NSURL>> = pfade
+        .iter()
+        .map(|pfad| NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy())))
+        .collect();
+    // `NSURL` erfuellt `NSPasteboardWriting` (`NSPasteboard.h:379`); die
+    // Umwandlung steht hier und nicht beim Aufrufer, damit nichts anderes
+    // hereinkommt.
+    let schreiber: Vec<&ProtocolObject<dyn NSPasteboardWriting>> = verweise
+        .iter()
+        .map(|url| ProtocolObject::from_ref(&**url))
+        .collect();
+    if !ablage.writeObjects(&NSArray::from_slice(&schreiber)) {
+        return false;
+    }
+
+    ablage.setString_forType(&NSString::from_str(namen), unsafe {
+        NSPasteboardTypeString
+    })
+}
+
+/// Legt Dateiverweise und ihre Namen in die Zwischenablage des Nutzers
+/// (`cmd+c` und `cmd+x` im Dateifenster, Runde 22).
+///
+/// Reicht `NSPasteboard::generalPasteboard()` an
+/// [`dateiverweise_auf_ablage_schreiben`] hinein, nach dem Muster von
+/// [`text_schreiben`], und traegt aus demselben Grund keine Probe: eine Probe
+/// an der Ablage des angemeldeten Nutzers wuerfe bei jedem `make check` weg,
+/// was der Entwickler gerade kopiert hat. Der Modulkopf schreibt es aus.
+#[must_use]
+pub fn dateiverweise_schreiben(pfade: &[PathBuf], namen: &str) -> bool {
+    dateiverweise_auf_ablage_schreiben(&NSPasteboard::generalPasteboard(), pfade, namen)
+}
+
 /// Uebergibt eine Web-Adresse an den Systembrowser (C10).
 ///
 /// Liefert, ob das System sie angenommen hat. KRK zeigt selbst keinen
@@ -347,9 +472,6 @@ pub fn dateiverweise(ablage: &NSPasteboard) -> Vec<PathBuf> {
 
 #[cfg(test)]
 mod proben {
-    use objc2::runtime::ProtocolObject;
-    use objc2_app_kit::NSPasteboardWriting;
-
     use super::*;
     use crate::pruefordner::Pruefordner;
     use crate::quellbaum::quelldateien;
@@ -367,8 +489,8 @@ mod proben {
     /// `releaseGlobally` nicht, und eine eindeutig benannte Ablage bliebe damit
     /// beim Pasteboard-Server stehen, ohne dass diese Probe sie wieder abgeben
     /// koennte — je Lauf eine weitere. Ein fester Name je Probe haelt die Zahl
-    /// bei zwei, und `clearContents` macht den Anfangszustand jedes Laufs
-    /// gleich.
+    /// bei der Zahl der Proben, die eine Ablage brauchen, und `clearContents`
+    /// macht den Anfangszustand jedes Laufs gleich.
     fn probenablage(zweck: &str) -> objc2::rc::Retained<NSPasteboard> {
         let ablage = NSPasteboard::pasteboardWithName(&NSString::from_str(&format!(
             "com.krk.probe.{zweck}"
@@ -377,20 +499,22 @@ mod proben {
         ablage
     }
 
-    /// Legt die Pfade als Datei-`NSURL` in die Ablage.
-    fn dateien_ablegen(ablage: &NSPasteboard, pfade: &[&std::path::Path]) {
-        let urls: Vec<_> = pfade
-            .iter()
-            .map(|pfad| NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy())))
-            .collect();
-        let schreiber: Vec<&ProtocolObject<dyn NSPasteboardWriting>> = urls
-            .iter()
-            .map(|url| ProtocolObject::from_ref(&**url))
-            .collect();
+    /// Legt die Pfade ueber den zweiten Ausgang der Huelle in die Ablage.
+    ///
+    /// Bis zur Runde 22 stand hier `dateien_ablegen`, ein eigener Schreiber
+    /// ueber `writeObjects:` allein fuer die Proben; seit die Huelle selbst
+    /// Verweise schreibt, ist er ein zweiter Schreiber neben ihr und faellt.
+    fn dateien_ablegen(ablage: &NSPasteboard, pfade: &[PathBuf], namen: &str) {
         assert!(
-            ablage.writeObjects(&NSArray::from_slice(&schreiber)),
-            "die Probenablage nimmt die Dateiverweise an"
+            dateiverweise_auf_ablage_schreiben(ablage, pfade, namen),
+            "die Probenablage nimmt die Dateiverweise und die Namen an"
         );
+    }
+
+    fn zeichenkette(ablage: &NSPasteboard) -> Option<String> {
+        ablage
+            .stringForType(unsafe { NSPasteboardTypeString })
+            .map(|text| text.to_string())
     }
 
     #[test]
@@ -400,12 +524,82 @@ mod proben {
         let zweite = ordner.datei("zweite.txt", b"zwei");
 
         let ablage = probenablage("dateiverweise");
-        dateien_ablegen(&ablage, &[&erste, &zweite]);
+        dateien_ablegen(&ablage, &[erste.clone(), zweite.clone()], "");
 
         assert_eq!(
             dateiverweise(&ablage),
             vec![erste, zweite],
             "C4: jeder gezogene Eintrag kommt mit seinem Pfad zurueck, in der Reihenfolge der Ablage"
+        );
+    }
+
+    #[test]
+    fn der_zweite_ausgang_legt_verweise_und_namen_ab() {
+        let ordner = Pruefordner::neu("zweiter-ausgang");
+        let erste = ordner.datei("erste.txt", b"eins");
+        let zweite = ordner.datei("zweite.txt", b"zwei");
+
+        let ablage = probenablage("zweiter-ausgang");
+        dateien_ablegen(
+            &ablage,
+            &[erste.clone(), zweite.clone()],
+            "erste.txt\nzweite.txt",
+        );
+
+        assert_eq!(
+            dateiverweise(&ablage),
+            vec![erste, zweite],
+            "C1.4: die Verweise kommen in der Reihenfolge der Pfade zurueck"
+        );
+        assert_eq!(
+            zeichenkette(&ablage).as_deref(),
+            Some("erste.txt\nzweite.txt"),
+            "C2.7: die Namen stehen als Text daneben, einer je Zeile, und keine \
+             vom `NSURL` mitgeschriebene Sorte verdraengt sie"
+        );
+    }
+
+    #[test]
+    fn eine_verknuepfung_wird_als_verknuepfung_abgelegt() {
+        let ordner = Pruefordner::neu("verknuepfung");
+        let ziel = ordner.datei("ziel.txt", b"ziel");
+        let verknuepfung = ordner.unter("verknuepfung.txt");
+        std::os::unix::fs::symlink(&ziel, &verknuepfung)
+            .expect("die Verknuepfung im Pruefordner laesst sich anlegen");
+
+        let ablage = probenablage("verknuepfung");
+        dateien_ablegen(
+            &ablage,
+            std::slice::from_ref(&verknuepfung),
+            "verknuepfung.txt",
+        );
+
+        assert_eq!(
+            dateiverweise(&ablage),
+            vec![verknuepfung],
+            "C1.9: der Verweis nennt die Verknuepfung und nicht ihr Ziel"
+        );
+    }
+
+    #[test]
+    fn ein_zweites_ablegen_ersetzt_das_erste() {
+        let ordner = Pruefordner::neu("ersetzen");
+        let alte = ordner.datei("alte.txt", b"alt");
+        let neue = ordner.datei("neue.txt", b"neu");
+
+        let ablage = probenablage("ersetzen");
+        dateien_ablegen(&ablage, &[alte], "alte.txt");
+        dateien_ablegen(&ablage, std::slice::from_ref(&neue), "neue.txt");
+
+        assert_eq!(
+            dateiverweise(&ablage),
+            vec![neue],
+            "das zweite Ablegen ersetzt die Verweise des ersten und haengt nichts an"
+        );
+        assert_eq!(
+            zeichenkette(&ablage).as_deref(),
+            Some("neue.txt"),
+            "das zweite Ablegen ersetzt auch die Namen des ersten"
         );
     }
 
@@ -450,12 +644,15 @@ mod proben {
     /// naechstliegende und falsche Weg dorthin waere gewesen, dort selbst zu
     /// schreiben.
     ///
-    /// **Zwei Nadeln, weil die Huelle zwei Haelften hat.** Die eine ist das
-    /// Schreiben in eine Ablage, die andere der Griff nach der Ablage des
-    /// angemeldeten Nutzers. Sie koennten einzeln abwandern: wer anderswo in
-    /// eine gereichte Ablage schriebe, umginge die erste; wer sich anderswo die
-    /// allgemeine Ablage holte, die zweite. Der Modulkopf begruendet, warum
-    /// gerade der zweite Griff hier bleiben muss.
+    /// **Drei Nadeln, weil die Huelle seit der Runde 22 drei Griffe hat.**
+    /// Der erste ist das Schreiben von Text in eine Ablage, der zweite der
+    /// Griff nach der Ablage des angemeldeten Nutzers, der dritte seit der
+    /// Runde 22 das Schreiben von Objekten ueber `writeObjects:`. Sie koennten
+    /// einzeln abwandern: wer anderswo in eine gereichte Ablage schriebe,
+    /// umginge den ersten oder den dritten; wer sich anderswo die allgemeine
+    /// Ablage holte, den zweiten. Bis zur Runde 22 stand der dritte Griff
+    /// allein im Pruefmodul dieser Datei und war deshalb keine Nadel. Der
+    /// Modulkopf begruendet, warum gerade der zweite Griff hier bleiben muss.
     ///
     /// **Erwartet wird die Datei und nicht die Zahl der Fundstellen.** Die
     /// Zusage ist eine ueber den Ort und keine ueber eine Menge: dass der Griff
@@ -485,6 +682,7 @@ mod proben {
         // den sie liest, und als ein Stueck geschrieben faende jede sich selbst.
         let schreiben = concat!("setString", "_forType");
         let allgemeine_ablage = concat!("general", "Pasteboard");
+        let objekte_schreiben = concat!("write", "Objects");
         let huelle = "krk-ui/src/appkit/zwischenablage.rs";
 
         let dateien = quelldateien();
@@ -514,6 +712,13 @@ mod proben {
             "`{allgemeine_ablage}` steht nicht allein in der einen Huelle um \
              die Zwischenablage; wer sich die Ablage des Nutzers anderswo holt, \
              umgeht die Huelle an ihrer zweiten Haelfte"
+        );
+        assert_eq!(
+            traeger(objekte_schreiben),
+            vec![huelle.to_owned()],
+            "`{objekte_schreiben}` steht nicht allein in der einen Huelle um die \
+             Zwischenablage; ein zweiter Schreiber von Dateiverweisen daneben \
+             waere eine zweite Meinung darueber, wie ein Verweis abgelegt wird"
         );
     }
 }

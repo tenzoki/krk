@@ -17,6 +17,10 @@
 //! reicht sie ueber [`DateifensterQuelle::meldungsquellen`] heraus und meldet
 //! ueber [`QuelleIvars::meldungswechsel`], dass sich etwas geaendert hat. Die
 //! Auswahl unter den zwoelf Bewerbern trifft [`super::statuszeile::zeile`].
+//! Die Antwort auf einen Befehl schreiben die zwei Pfadkopierer der Runde 4
+//! ueber [`DateifensterQuelle::befehlsantwort_zeigen`], und seit der Runde 22
+//! nimmt die Dateiablage ([`DateifensterQuelle::dateiverweise_ablegen`],
+//! `cmd+c` und `cmd+x` ohne `Kommando`) denselben Weg.
 //!
 //! Zwei Objective-C-Klassen teilen sich die Arbeit, weil AppKit sie an zwei
 //! Protokollen entgegennimmt. [`DateifensterQuelle`] ist die Datenquelle: sie
@@ -259,7 +263,7 @@ use crate::kommandos::abwurfregel::{
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
 use crate::kommandos::kontextmenue::{self, Entpackbefund, Kontextbefehl};
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
-use crate::kommandos::operationen::{self, Umbenennungswunsch};
+use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
@@ -1905,6 +1909,45 @@ impl DateifensterQuelle {
             self.befehlsantwort_zeigen(&operationen::kopiermeldung(&betroffen.pfade));
         } else {
             self.befehlsantwort_zeigen(&operationen::ablage_weist_ab());
+        }
+    }
+
+    /// Legt die betroffenen Eintraege als Dateiverweise in die Zwischenablage,
+    /// daneben ihre Namen als Text (`cmd+c` und `cmd+x`, Runde 22).
+    ///
+    /// **Ein Rumpf fuer beide Befehle** (C3.1): `Kopieren` und `Ausschneiden`
+    /// legen dieselben Verweise und dieselben Namenszeilen ab und unterscheiden
+    /// sich allein im Satz, den [`operationen::ablagemeldung`] anhaengt. Kein
+    /// Auftrag wird gestellt, keine Zeile abgeblendet, Markierung und Auswahl
+    /// bleiben, wie sie standen (C1.6, C3.3): Ausschneiden verschiebt in KRK
+    /// nichts, das Verschieben liegt beim Ziel (A4, Constraint 6 des Specs der
+    /// Runde 22).
+    ///
+    /// Die Menge kommt aus [`Self::betroffene_eintraege`] und damit aus
+    /// [`operationen::betroffene`], mit dem Vorrang der Markierung (C1.3). Eine
+    /// Ordnungszahl unter dessen Abnehmern steht hier nicht: die Zahl liefert
+    /// `grep -rn 'betroffene(\|betroffene_eintraege()' crates/krk-ui/src`,
+    /// und die Doc-Kommentare, die eine nennen, zaehlen den Stand ihres Tages.
+    ///
+    /// **Bei leerer Menge bleibt die Zwischenablage unberuehrt**, und die
+    /// Statuszeile sagt es mit demselben Satz wie beim Pfadkopierer (C1.7,
+    /// C3.6). Weist die Ablage die Verweise ab, sagt die Statuszeile das
+    /// (C5.3); der Wahrheitswert der Huelle wird nie fallen gelassen.
+    ///
+    /// `pub`, weil der Rufer der Anwendungsdelegierte ist, der `copy:` und
+    /// `cut:` beantwortet und die aktive Fensterseite waehlt, wie bei
+    /// [`Self::betroffene_eintraege`].
+    pub fn dateiverweise_ablegen(&self, befehl: Dateiablage) {
+        let betroffen = self.betroffene_eintraege();
+        if betroffen.ist_leer() {
+            self.befehlsantwort_zeigen(&operationen::nichts_zu_kopieren());
+            return;
+        }
+        let namen = operationen::namenszeilen(&betroffen.pfade);
+        if super::zwischenablage::dateiverweise_schreiben(&betroffen.pfade, &namen) {
+            self.befehlsantwort_zeigen(&operationen::ablagemeldung(befehl, &betroffen.pfade));
+        } else {
+            self.befehlsantwort_zeigen(&operationen::verweise_abgewiesen());
         }
     }
 
