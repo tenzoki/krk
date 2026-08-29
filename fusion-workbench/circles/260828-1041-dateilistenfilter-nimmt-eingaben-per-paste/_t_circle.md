@@ -4,7 +4,7 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260829-1047: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1052_o_spec-einfuegen-in-den-filter-und-stern-als-platzhalter.md
+**Active spec/plan:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1102_p_plan-einfuegen-in-den-filter-und-stern-als-platzhalter.md
 **Active session history:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/history/260829-1047-orchestrator-session.md
 
 ---
