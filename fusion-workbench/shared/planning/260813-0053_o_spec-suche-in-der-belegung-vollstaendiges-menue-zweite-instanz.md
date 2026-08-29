@@ -369,3 +369,13 @@ Die Belegungsansicht trägt nach dieser Runde drei Betriebsarten, und `esc` bede
 | 9 · Für die Betriebsarten fehlt ein Diagramm | Gebaut, siehe oben. |
 
 Alle drei Diagramme sind mit `mmdc` 11.16.0 nach SVG und PNG gerendert und angesehen worden, bevor sie hier stehen.
+
+## Reconciliation Log
+
+### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
+
+**Die Runden 21 und 22 haben drei der sechs Textbefehle im Dateifenster einen Antwortenden gegeben, und die Kriterien 8 und 18 bleiben im Wortlaut wahr.** Bis zur Runde 20 beantwortete im Dateifenster niemand `copy:`, `cut:` und `paste:`, weshalb die Einträge dort grau waren. Seit `3722c89` (Runde 21) beantwortet der Anwendungsdelegierte `paste:` für den Filtertext und seit `1644ada` (Runde 22) `copy:` und `cut:` für die Dateiablage (`crates/krk-ui/src/appkit/anwendung.rs:988-989`; Modulkopf von `menue.rs:105-130` nachgezogen mit `Schritt 6` der Runde 22). Die drei bleiben, was Kriterium 8 verlangt: ohne `Kommando`, über die Antwortkette, mit der Ausgrauung durch AppKit — nur dass die Kette im Dateifenster jetzt einen Abnehmer hat und die Einträge dort nicht mehr grau sind. Kriterium 18 („behalten jede Wirkung, die sie heute haben") ist nicht verletzt, sondern erweitert. Die Zulässigkeitsregel hat dafür einen zweiten Eingang bekommen (`dfde98c`, `crates/krk-ui/src/kommandos/zulaessigkeit.rs`), und das berührt den Satz dieses Specs „Sie bekommen keine Zulässigkeitsregel von KRK": die Dateiablage fragt jetzt eine, das Textfeld weiter nicht. Nichts hier wird umgeschrieben (Ortsregel); die Circle-Datensätze der Runden 21 und 22 tragen die Regel.
+
+**Was diesen Spec daneben bindet:** `shared/decisions/260813-0053_o_wie-viele-obermenues-…` und `260813-0053_o_was-teilen-sich-zwei-instanzen-…` sind weiter unbeantwortet; keine der vier Runden hat ein Obermenü hinzugefügt oder die Sitzungsablage berührt (`git diff a5c7a46..HEAD --stat` nennt weder `ablage/sitzung*` noch eine Menüstruktur).
+
+**Statuszeile und Marker.** Die Zeile `**Status:** Überarbeitet nach der Diagrammprüfung` beschreibt den Stand vor dem Bau; die Runde 7 (`circles/260813-0100-…`) ist am 260813 beschränkt geschlossen, und der Bau ist dort gegen den Baum gelesen. Der Marker `_o_` bleibt aus demselben Grund wie an den Nachbarspecs (`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-…`, offen); die Statuszeile wird hier nicht umgeschrieben, weil der Abgleich der Runde 7 die Auskunft im Circle trägt und eine zweite Fassung hier auseinanderliefe.

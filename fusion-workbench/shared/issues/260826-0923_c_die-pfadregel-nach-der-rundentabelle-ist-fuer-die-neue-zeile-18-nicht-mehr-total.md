@@ -56,3 +56,6 @@ Einen Halbsatz an die Regel: Pfade mit dem Vorsatz `shared/` und `circles/` sind
 erlaubt die Kurzform nicht.
 
 **Gefunden:** coderev, Durchsicht von `e5ec81a..20c9833` am 260826-0923
+
+---
+Resolved: `69dfa19` (260826-1701, Kuratorenlauf `shared/history/260826-1637-curator-run.md`, L05) — `CLAUDE.md:34` sagt heute für eine Tabellenzeile ohne Circle-Verzeichnis, dass ihre Datensätze „immer in der langen Form mit `shared/` und nie in der Kurzform" stehen, mit diesem Datensatz als Begründung; die Regel ist damit für die Zeile 18 wieder total. Marker beim Abgleich 260829-1252 gegen `b9d9cbc` bewegt.

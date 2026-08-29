@@ -435,3 +435,7 @@ dabei nicht bewegt worden.
 - `shared/decisions/260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-wie-certify-only-sh.md`
   — weiter offen. Der Baum hat keine Hülle bekommen, und das ist die vorläufige Fassung des
   Specs und keine Antwort.
+
+### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
+
+**Zwei weitere Auslieferungen sind durch die Kette gelaufen, ohne dass sich an ihr etwas geändert hat.** `d2824c5` (1.3.0, nach der Runde 22) und `b9d9cbc` (1.4.0, nach der Runde 21) tragen je allein die Versionszahl; `git diff a5c7a46..HEAD --stat -- xtask/ release.sh certify-only.sh Makefile` ist leer. `git tag -l --sort=creatordate | tail -2` nennt `v1.3.0` und `v1.4.0` auf genau diesen Commits. Die 15 Nutzerkriterien sind damit nicht abgenommen, aber ein weiteres Mal in Gebrauch gewesen. Statuszeile und Marker unverändert; die zwei bindenden Datensätze (`260821-1221_*_c6-3-…`, `260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-…`) sind weiter offen.

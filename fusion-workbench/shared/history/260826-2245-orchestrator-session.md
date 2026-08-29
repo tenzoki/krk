@@ -47,3 +47,17 @@ Um 260827-0622 ist der Circle
 Ab dort führt diese Sitzung ihr Protokoll im Circle weiter:
 `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-0622-orchestrator-session.md`.
 Diese Datei bleibt als Aufsatzpunkt der Sitzung stehen und wird nicht fortgeschrieben.
+
+## Coherence
+<!-- RECONCILER-OWNED -->
+
+Angehängt vom Aufräumlauf `history/260829-1252-reconciliation.md`, am Baum `b9d9cbc`. Diese Datei trägt keine eigene Directive („noch nicht gesetzt"); die zwei Directive-Kanten sind gegen die jüngste gestellte Directive gerechnet, die der Runde 21 (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/history/260829-1047-orchestrator-session.md:3`, Sitzungsbeginn `79d507a`).
+
+**Verdict:** coherent
+
+**Edges:**
+- Artifact↔Grounding: 21 claims verified / 0 drift items / 0 open coderev+ontorev issues aus dieser Sitzung im gemeinsamen Speicher (die Durchsichten der Runden 20–22 liegen in ihren Circles; 197 ältere `_o_` unter `shared/issues/`, 13 davon gegen `b9d9cbc` gelesen und unverändert) — `cargo test --workspace` grün, 0 Fehlschläge; vier Defekte geschlossen, weil `CLAUDE.md` die Berichtigung schon trug (`fb50fcd`, `69dfa19`).
+- Artifact↔Directive: commits move toward the stated Directive — `79d507a..b9d9cbc`: `f4ba58d`, `1b0939a`, `3722c89`, `415ef6f` (Bau der Runde 21), `097abc2`, `8d64859`, `439d66f`, `8652605` (Buchung und Abschluss), `b9d9cbc` (Auslieferung 1.4.0, die die Directive „Abnahmelauf bleibt beim Nutzer" nicht berührt). Kein Commit außerhalb.
+- Grounding↔Directive: 24 active decisions consistent (`shared/decisions/`, 4 `_a_` + 20 `_o_`; `260816-1310_a_`, `260826-0859_o_`, `260826-0923_o_` berühren den Filter und widersprechen nicht; `260826-1223_o_` zum Zehnerblock trägt seit der Runde 20 einen Vermerk, keinen Widerspruch) / 0 potentially conflicting.
+
+**Rebalance recommendation:** none

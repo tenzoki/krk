@@ -61,3 +61,6 @@ Nutzer.
 **Schwere:** mittel.
 
 **Gefunden:** reconciler, beim Abgleich der Runde 18 gegen `20eccd4..e5ec81a`.
+
+---
+Abgleich 260829-1252, am Baum `b9d9cbc`: **zum Teil erledigt, bleibt offen.** Die Tabellenzeile 18 steht seit `fb50fcd` in `CLAUDE.md` und nennt alle fünf Neuerungen in einer Zeile. Was der Datensatz daneben verlangt, fehlt weiter: `CLAUDE.md` trägt keinen Absatz über den Handgriff mit der `readers.toml` (`grep -n beiseite CLAUDE.md` trifft allein die Tabellenzeile 6, „Ablage beiseitelegen") und keinen über die Abweichung zwischen Leseläufen und Verzeichnisöffnungen. So auch der Kuratorenlauf `shared/history/260826-1637-curator-run.md` (Zeile zu diesem Datensatz). Die Änderung gehört dem Curator.

@@ -641,3 +641,7 @@ Unterbaum anlaufen. Beides ist außerhalb dieses Plans entstanden und als zwei E
 und ein Defekt abgelegt (`shared/decisions/260826-0859_o_*`,
 `shared/decisions/260826-0923_o_bekommt-der-tiefe-durchlauf-*`,
 `shared/issues/260826-1024_o_claude-md-sagt-nicht-dass-die-tiefe-suche-ab-werk-steht-*`).
+
+### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
+
+**Zwei Runden haben auf Schritt 7 aufgesetzt, und keine hat einen Schritt dieses Plans zurückgenommen.** Die Runde 19 (`circles/260827-0310-…`, `_c_`) hängt an die Regel „ohne Auswahl beschreibt die Vorschau den angezeigten Ordner" das eingebaute Default-Profil mit drei Zählzeilen (`bf3a91d`, `5e506e6`); die Runde 20 (`circles/260827-2028-…`, `_c_`) legt neben Text- und Bildfläche eine dritte für PDF (`5ff1ee4`). `nach_lesebeginn`, `tab_gewechselt` und `auswahl_merken` in `tabelle.rs` sind seit `a5c7a46` unberührt (`git diff a5c7a46..HEAD -- crates/krk-ui/src/appkit/tabelle.rs` nennt keine der drei), also stehen die zwei Defekte zu Schritt 7 (`shared/issues/260825-1922_o_…`, beide) unverändert offen. Die neun Schließungsbedingungen sind unverändert: sechs halten, die zwei Nutzerbedingungen sind weiter ungefahren, eine liegt außerhalb. Marker `_p_` bleibt.

@@ -43,3 +43,6 @@ Zwei getrennte Stücke, und das erste ist das dringlichere:
 2. Ob das gewollt ist, ist offen und gehört dem Nutzer vorgelegt. Für die Maxime „Steuerung über die Tastatur" spricht, dass eine Ziffer eine Ziffer ist; gegen den Stand spricht, dass die Eingabetaste desselben Blocks genau umgekehrt behandelt wird und niemand das entschieden hat.
 
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
+
+---
+Abgleich 260829-1252, am Baum `b9d9cbc`: **die zitierte Prosa hat mit der Runde 20 eine Fortsetzung bekommen, der Befund bleibt.** `crates/krk-core/src/tasten/parser.rs:276` sagt weiter „Nicht enthalten sind die Satzzeichen und der Zehnerblock", und `:283-290` schreibt jetzt „Zwei Ausnahmen mit Grund" dazu: `plus` und `minus` tragen als Stelle `kVK_ANSI_KeypadPlus` und `kVK_ANSI_KeypadMinus`, werden aber über das Zeichen nachgeschlagen. Der Absatz begründet damit die zwei Ausnahmen, nicht den Ausschluss der Zifferntasten des Blocks, um den es hier geht; die Zifferntasten lösen weiter über das Zeichen aus (`:350`, „Der Zehnerblock traegt eigene Codes und …").

@@ -341,3 +341,7 @@ dem 260820-1045 geschlossen. `_p_` ist von den vier Markern der einzige, der die
 vorwegnimmt, und zugleich der einzige, der eine Tätigkeit behauptet, die es nicht gibt. **Das ist
 kein Rückstand dieses Abgleichs, sondern die Kosten der offenen Frage**, hier ausgeschrieben, damit
 sie beim nächsten Durchgang nicht als Nachlässigkeit gelesen wird.
+
+### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
+
+**Die Runde 20 hat der Vorschau eine dritte Fläche gegeben, und die Quelltextzusage dieses Specs gilt ihr nicht.** Der PDF-Betrachter (`crates/krk-ui/src/appkit/betrachter.rs`, `5ff1ee4`) beantwortet `copy:` selbst über `PDFView` und legt seine Textauswahl ab; er spricht die Hülle `appkit/zwischenablage.rs` nicht an, und die Probe `nspasteboard_steht_nicht_im_betrachter_und_copy_cut_und_paste_stehen_an_genannten_stellen` hält das (`betrachter.rs:61-67`). Kopiert wird dort der Seitentext, nicht ein Quelltext — für ein PDF gibt es keinen. Die Abfangstelle der Textvorschau und ihr Weg über `text_auf_ablage_schreiben` sind unverändert (`git diff a5c7a46..HEAD -- crates/krk-ui/src/appkit/vorschau.rs` ändert die Anzeige, nicht die Abfangstelle). Die Zusage dieses Specs bleibt, was sie war: sie gilt der gerenderten Textvorschau. Marker `_p_` und Statuszeile unverändert; die Begründung steht oben.

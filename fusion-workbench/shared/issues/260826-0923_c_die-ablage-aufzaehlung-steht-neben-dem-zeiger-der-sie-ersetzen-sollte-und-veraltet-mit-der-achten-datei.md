@@ -57,3 +57,6 @@ Zeiger bleiben, wie bei `ohne_warten_oeffnen`. Wer sie behalten will, setzt ein 
 daneben, wie bei `Wirkungsbereich`.
 
 **Gefunden:** coderev, Durchsicht von `e5ec81a..20c9833` am 260826-0923
+
+---
+Resolved: `69dfa19` (260826-1701, Kuratorenlauf `shared/history/260826-1637-curator-run.md`, L04) — `CLAUDE.md:123` trägt keine Aufzählung der Ablagedateien mehr, sondern allein den Zeiger: „Welche Dateien das sind, sagt `Datei::ALLE` (`crates/krk-core/src/ablage/pfade.rs`) und nicht diese Zeile", mit diesem Datensatz als Begründung. Marker beim Abgleich 260829-1252 gegen `b9d9cbc` bewegt.

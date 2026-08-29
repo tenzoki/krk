@@ -23,3 +23,6 @@ noch den Stand davor; ein vierter in derselben Datei zaehlt richtig.
 ## Umfang
 
 `krk-ui`, `appkit/tabelle.rs`, Doc-Kommentare.
+
+---
+Abgleich 260829-1252, am Baum `b9d9cbc`: **gilt weiter.** `crates/krk-ui/src/appkit/tabelle.rs:864` sagt weiter „der oberste der fuenf Raenge"; `Rang::ALLE` trägt seit der Runde 20 sieben Werte (`statuszeile.rs:275`), also ist der Abstand gewachsen. Die Stelle `:3227` („eine der sechs Quellen") stimmt weiter, weil `Quellen` unverändert sechs Felder hat.

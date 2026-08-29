@@ -23,3 +23,6 @@ Rangfolge selbst. Zum Code-Stand der offenen Entscheidung `260814-1552` (wo die 
 die Probe `der_filterstand_steht_zwischen_tabmeldung_und_markierungsstand` (`:1057-1082`) hält
 genau das, und der Doc-Kommentar `:230-234` sagt, dass bei anderem Ausgang „diese Zeile wandert
 und sonst nichts". Weg: „fuenf" → „sechs" oder die Zahl streichen.
+
+---
+Abgleich 260829-1252, am Baum `b9d9cbc`: **gilt weiter, und die Zahl ist ein zweites Mal gewandert.** Die Runde 20 hat einen siebten Rang gelegt (`crates/krk-ui/src/appkit/statuszeile.rs:275`, `pub const ALLE: [Rang; 7]`; Probe `:1472` „sieben Raenge seit der Runde 20"). Von den zwei zitierten Probenköpfen sagt der eine weiter „jedem der fuenf" (`:1694-1695`, `der_namenszusatz_gilt_auf_jedem_rang`); der andere ist umformuliert und zählt jetzt „sechs" (`:1598`, `:1651`) — gegen die sieben von heute ebenso falsch. Der Weg aus dem Datensatz bleibt: die Zahl streichen.

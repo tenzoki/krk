@@ -302,3 +302,7 @@ als Gestalt abgelegt in
 `issues/260816-1935_*_claude-md-nennt-zwei-filterregeln-…`, ist mit diesem Abgleich geschlossen: alle
 vier Aussagen sind von zwei Kuratorenläufen berichtigt und einzeln am heutigen `CLAUDE.md`
 nachgelesen. Es bleiben fünf.
+
+### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
+
+**Die Runde 21 hat den einen Vergleich, den C1.4 „Teilzeichenfolge an jeder Stelle" nennt, in ein Muster mit Platzhalter verwandelt, und der Inhaltsfilter geht denselben Weg.** `traegt_die_folge` nimmt seit `f4ba58d` ein `Muster` statt einer Zeichenkette (`crates/krk-core/src/verzeichnis/filter.rs:190`), ein `*` darin steht für eine beliebige Folge, und `traegt_der_inhalt` (`crates/krk-core/src/verzeichnis/inhalt.rs`) ruft denselben Vergleich mit demselben Muster, „auch ueber Zeilenenden hinweg". Für einen Filtertext ohne `*` ist das Verhalten das von C1.4: Teilzeichenfolge, ohne Rücksicht auf die Schreibung, ohne Faltung. Mit `*` sagt C1.4 etwas Engeres als der Baum. Der Spec der Runde 21 (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1052_*_spec-…`, C5 bis C7, B1 bis B9) trägt die neue Regel; dieser Spec wird nicht umgeschrieben (Ortsregel), der Vermerk hier genügt. Marker `_o_` und Statuszeile unverändert — der Abnahmelauf ist weiter nicht gefahren, und die Lesart des Markers ist weiter offen.
