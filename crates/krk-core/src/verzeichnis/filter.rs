@@ -3,26 +3,47 @@
 //!
 //! ```text
 //! Taste ohne Zusatztaste ──> traegt_ein_dateiname ──> Filtertext des Tabs
-//!                                                            │
-//!                        traegt_die_folge(Text, Filtertext) <┤
-//!                            ^             ^         ^       │
-//!                 modell::zeilengrund_von durchlauf inhalt   │
-//!                                                            │
-//!                        inhaltsschwelle(tief) <─ Zeichenzahl┘
+//! Text aus der Zwischenablage ─┘ (zwischenablage::filtertext_aus)   │
+//!                                                                    │
+//!                                        Muster::aus(Filtertext) <───┤
+//!                                              │                     │
+//!                        traegt_die_folge(Text, &Muster)             │
+//!                            ^             ^         ^               │
+//!                 modell::zeilengrund_von durchlauf inhalt           │
+//!                                                                    │
+//!                        inhaltsschwelle(tief) <─ Zeichenzahl ohne `*`┘
 //!                              ^
 //!                    modell::inhalt_wirkt
 //! ```
 //!
 //! Die Datei traegt alle drei Regeln, weil jede an mehreren Stellen dieselbe
 //! Antwort geben soll und es bei zwei Fassungen nicht mehr taete. Die
-//! Zeichenregel hat zwei Aufrufer, den Filter der Dateiliste und die Tippsuche
-//! der Belegungsansicht aus der Runde 7; der Vergleich hat drei, den
-//! Pruefschritt des Ordnermodells fuer die angezeigte Zeile,
-//! [`super::durchlauf`] fuer den Unterbaum und seit der Runde 11
+//! Zeichenregel hat drei Aufrufer, den Filter der Dateiliste, die Tippsuche
+//! der Belegungsansicht aus der Runde 7 und seit der Runde 21 die Reinigung
+//! des eingefuegten Textes, [`crate::zwischenablage::filtertext_aus`]; der
+//! Vergleich hat drei, den Pruefschritt des Ordnermodells fuer die angezeigte
+//! Zeile, [`super::durchlauf`] fuer den Unterbaum und seit der Runde 11
 //! [`super::inhalt`] fuer den gelesenen Text einer Datei. Die Schwelle hat
 //! einen, [`super::modell::Ordnermodell::inhalt_wirkt`], und der ist
 //! seinerseits die eine Stelle, die alle Frager nach dem Inhaltsfilter
 //! bedient.
+//!
+//! # Der Vergleich ist seit der Runde 21 ein Musterabgleich
+//!
+//! Der Filtertext kennt **genau ein Sonderzeichen**, das `*`, und es steht fuer
+//! eine beliebige, auch leere Zeichenfolge; mehrere `*` sind erlaubt, zwei
+//! nebeneinander bedeuten dasselbe wie eines. Kein `?`, keine Zeichenklassen,
+//! kein Entkommen: ein `*` ist immer der Platzhalter, und ein Name mit
+//! woertlichem `*` wird ueber seine anderen Zeichen gefunden. **Der Vergleich
+//! bleibt an beiden Enden ungebunden**: eine Teilfolge bleibt eine Teilfolge,
+//! `abc` trifft an jeder Stelle des Namens wie vor der Runde, und ein `*` am
+//! Anfang oder am Ende des Filtertexts verankert nichts. Der Filtertext wird
+//! **einmal je Aenderung** in [`Muster`] zerlegt und kleingeschrieben, der
+//! Vergleich laeuft je Eintrag ohne Rueckverfolgung: jedes Stueck wird ab dem
+//! Ende des vorigen genau einmal gesucht. Fuer die Schwelle zaehlt ein `*`
+//! nicht mit; siehe [`inhaltsschwelle`]. Die Tippsuche der Belegungsansicht
+//! teilt mit dem Filter allein die Zeichenregel und kennt den Platzhalter
+//! nicht.
 //!
 //! # Was hier bis zur Runde 10 stand
 //!
@@ -93,8 +114,47 @@ pub fn traegt_ein_dateiname(zeichen: char) -> bool {
         && zeichen != '/'
 }
 
-/// Ob dieser Name den Filtertext traegt: Teilzeichenfolge an jeder Stelle, ohne
-/// Ruecksicht auf die Schreibung, ohne Faltung von Umlauten und Akzenten.
+/// Der zerlegte, kleingeschriebene Filtertext, wie der Vergleich ihn braucht.
+///
+/// **Entsteht einmal je Aenderung des Filtertexts und nicht einmal je
+/// Vergleich**: der Text wird kleingeschrieben und an jedem `*` geteilt, und
+/// diese Stuecke reisen als Wert in den Pruefschritt, in den Durchlauf und an
+/// den Inhaltsbefund. Bei 100.000 Eintraegen waere alles andere 100.000
+/// Zerlegungen desselben kurzen Texts. Die Asymmetrie der beiden Argumente
+/// von [`traegt_die_folge`] haelt damit der Typ und nicht die Disziplin des
+/// Rufers: wer ein `Muster` in der Hand hat, hat einen kleingeschriebenen
+/// Text.
+///
+/// Die Stueckliste ist **nie leer**: ein leerer Filtertext ergibt ein leeres
+/// Stueck, und das steht in jedem Namen. Ein `*` am Anfang, am Ende oder
+/// neben einem zweiten ergibt ebenfalls ein leeres Stueck; `find("")` trifft
+/// sofort und verschiebt nichts, und genau darum verankert der Platzhalter
+/// nichts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Muster {
+    /// Die an `*` getrennten, kleingeschriebenen Stuecke des Filtertexts.
+    stuecke: Vec<String>,
+}
+
+impl Muster {
+    /// Zerlegt den Filtertext einmal: kleinschreiben, an `*` teilen.
+    #[must_use]
+    pub fn aus(filtertext: &str) -> Self {
+        Self {
+            stuecke: filtertext
+                .to_lowercase()
+                .split('*')
+                .map(str::to_owned)
+                .collect(),
+        }
+    }
+}
+
+/// Ob dieser Name das Muster traegt: jedes Stueck des Musters in Reihenfolge
+/// und ohne Ueberlappung, das erste an beliebiger Stelle, jedes weitere hinter
+/// dem Ende des vorigen; ohne Ruecksicht auf die Schreibung, ohne Faltung von
+/// Umlauten und Akzenten. Fuer einen Filtertext ohne `*` ist das genau eine
+/// Suche, also `contains`, wie vor der Runde 21.
 ///
 /// **Der eine Vergleich, und seine Rufer stehen alle im Kern.** Der
 /// Pruefschritt des Ordnermodells entscheidet ueber die angezeigte Zeile,
@@ -107,20 +167,36 @@ pub fn traegt_ein_dateiname(zeichen: char) -> bool {
 /// **Das Argument heisst `name`, weil die ersten beiden Rufer Namen
 /// vergleichen.** Der dritte gibt den gelesenen Text einer Datei herein, und
 /// die Regel ist dieselbe — genau darum steht sie hier einmal und nicht je
-/// Gegenstand einmal.
+/// Gegenstand einmal. Beim Inhalt darf ein `*` deshalb ueber Zeilenenden
+/// hinweg treffen; eine Regel „nur innerhalb einer Zeile" waere ein zweiter
+/// Vergleich.
 ///
-/// `filter_klein` ist **bereits kleingeschrieben** und wird hier nicht noch
-/// einmal umgeschrieben. Das ist der Grund fuer die Asymmetrie der beiden
-/// Argumente: der Filtertext wird einmal je Suche umgeschrieben, der Name
-/// einmal je Vergleich. Wer einen ungeschriebenen Text hereingibt, findet
-/// nichts mit Grossbuchstaben.
+/// **Ohne Rueckverfolgung, und trotzdem vollstaendig.** Gibt es fuer
+/// `s1*s2*…*sn` eine Zerlegung mit Stellen `p1 < p2 < …`, dann liegt die
+/// erste Fundstelle `q1` von `s1` bei `q1 <= p1`, und `s2` steht ab
+/// `p1 + |s1| >= q1 + |s1|` weiterhin im Rest; Induktion ueber die Stuecke.
+/// Die gierige erste Fundstelle verliert also nie eine Zerlegung, die eine
+/// spaetere gefunden haette.
 ///
-/// Ein leerer `filter_klein` traegt jeder Name. Wer nicht filtern will, fragt
+/// Das Muster ist **bereits kleingeschrieben und zerlegt** ([`Muster::aus`]);
+/// der Name wird hier einmal je Vergleich umgeschrieben. Das ist die
+/// Asymmetrie der beiden Argumente: der Filtertext einmal je Aenderung, der
+/// Name einmal je Vergleich.
+///
+/// Ein leeres Muster traegt jeder Name. Wer nicht filtern will, fragt
 /// diese Funktion nicht: der Pruefschritt und der Durchlauf haben den Zweig
 /// „steht ein Filtertext?" davor, und der Inhaltsbefund kommt gar nicht erst
 /// zustande, weil [`inhaltsschwelle`] ohne Filtertext nicht erreicht ist.
-pub fn traegt_die_folge(name: &str, filter_klein: &str) -> bool {
-    name.to_lowercase().contains(filter_klein)
+pub fn traegt_die_folge(name: &str, muster: &Muster) -> bool {
+    let name = name.to_lowercase();
+    let mut ab = 0;
+    for stueck in &muster.stuecke {
+        match name[ab..].find(stueck.as_str()) {
+            Some(stelle) => ab += stelle + stueck.len(),
+            None => return false,
+        }
+    }
+    true
 }
 
 /// Ab wie vielen getippten **Zeichen** der Filter auch den Inhalt einer Datei
@@ -134,9 +210,14 @@ pub fn traegt_die_folge(name: &str, filter_klein: &str) -> bool {
 /// dort, wo die Eingabe am wenigsten aussagt. Die hoehere Schwelle der tiefen
 /// Suche gleicht das aus.
 ///
-/// **Gezaehlt werden Zeichen und keine Bytes.** Ein getipptes `äöü` sind drei
-/// Zeichen und sechs Bytes; die Staffelung spricht von Zeichen, und der eine
-/// Rufer zaehlt deshalb mit `chars().count()`.
+/// **Gezaehlt werden Zeichen und keine Bytes, und das `*` zaehlt nicht.** Ein
+/// getipptes `äöü` sind drei Zeichen und sechs Bytes; die Staffelung spricht
+/// von Zeichen, und der eine Rufer zaehlt deshalb mit `chars()`. Seit der
+/// Runde 21 laesst er dabei jedes `*` aus: der Platzhalter sagt nichts ueber
+/// den Gegenstand aus, `ab*` bezeichnet weniger als `abc` und nicht mehr, und
+/// die Schwelle schuetzt genau davor, bei einer wenig sagenden Eingabe viele
+/// Dateien zu lesen. `ab*cd` sind vier Zeichen, `*****` sind null, und ein
+/// Filtertext aus lauter `*` liest nie eine Datei.
 ///
 /// **Ein Rufer, und der ist selbst die eine Stelle:**
 /// [`super::modell::Ordnermodell::inhalt_wirkt`]. Wer wissen will, ob der
@@ -211,47 +292,157 @@ mod tests {
         }
     }
 
+    /// Kurzform fuer die Proben des Vergleichs.
+    fn trifft(name: &str, filtertext: &str) -> bool {
+        traegt_die_folge(name, &Muster::aus(filtertext))
+    }
+
     /// C1.2: die Folge zaehlt an jeder Stelle des Namens und nicht nur am
     /// Anfang.
     #[test]
     fn die_folge_zaehlt_an_jeder_stelle_des_namens() {
-        assert!(traegt_die_folge("bbbaaaccc.rs", "aaa"), "mittendrin");
-        assert!(traegt_die_folge("aaaccc.rs", "aaa"), "am Anfang");
-        assert!(traegt_die_folge("cccaaa", "aaa"), "am Ende");
-        assert!(!traegt_die_folge("bbbccc.rs", "aaa"));
+        assert!(trifft("bbbaaaccc.rs", "aaa"), "mittendrin");
+        assert!(trifft("aaaccc.rs", "aaa"), "am Anfang");
+        assert!(trifft("cccaaa", "aaa"), "am Ende");
+        assert!(!trifft("bbbccc.rs", "aaa"));
     }
 
     /// C1.2: die Schreibung des Namens spielt keine Rolle.
     #[test]
     fn die_schreibung_des_namens_spielt_keine_rolle() {
-        assert!(traegt_die_folge("LIESMICH.TXT", "liesmich"));
-        assert!(traegt_die_folge("Banane.txt", "nan"));
+        assert!(trifft("LIESMICH.TXT", "liesmich"));
+        assert!(trifft("Banane.txt", "nan"));
     }
 
     /// C1.3: gefaltet wird nichts. `apfel` findet `Äpfel` nicht.
     #[test]
     fn der_vergleich_faltet_keine_umlaute_und_keine_akzente() {
-        assert!(!traegt_die_folge("Äpfel.txt", "apfel"));
-        assert!(!traegt_die_folge("Cafe.txt", "café"));
+        assert!(!trifft("Äpfel.txt", "apfel"));
+        assert!(!trifft("Cafe.txt", "café"));
         assert!(
-            traegt_die_folge("Äpfel.txt", "äpfel"),
+            trifft("Äpfel.txt", "äpfel"),
             "kleingeschrieben findet der Umlaut sich selbst"
         );
     }
 
-    /// Die Asymmetrie der beiden Argumente, ausgeschrieben: der Filtertext
-    /// kommt kleingeschrieben herein, der Name nicht.
+    /// Die Asymmetrie der beiden Argumente, seit der Runde 21 vom Typ
+    /// gehalten: `Muster::aus` schreibt einmal klein, und kein Rufer kann dem
+    /// Vergleich einen ungeschriebenen Text reichen.
     #[test]
-    fn ein_grossgeschriebener_filtertext_findet_nichts() {
-        assert!(
-            !traegt_die_folge("Banane.txt", "Banane"),
-            "der Rufer schreibt den Filtertext einmal je Suche klein"
-        );
+    fn das_muster_schreibt_einmal_klein() {
+        assert!(trifft("Banane.txt", "Banane"));
+        assert_eq!(Muster::aus("BaNaNe"), Muster::aus("banane"));
     }
 
     #[test]
     fn ein_leerer_filtertext_steht_in_jedem_namen() {
-        assert!(traegt_die_folge("beliebig.txt", ""));
+        assert!(trifft("beliebig.txt", ""));
+    }
+
+    /// C5.2 (B1): `*` steht fuer eine beliebige, auch leere Folge, und die
+    /// Reihenfolge der Stuecke zaehlt.
+    #[test]
+    fn ein_stern_steht_fuer_eine_beliebige_auch_leere_folge() {
+        assert!(trifft("ab", "a*b"), "leer");
+        assert!(trifft("a-b", "a*b"));
+        assert!(trifft("a-lange-folge-b", "a*b"));
+        assert!(!trifft("ba", "a*b"), "die Reihenfolge zaehlt");
+    }
+
+    /// C5.3 (B1): zwei `*` nebeneinander sind eines, und lauter `*` treffen
+    /// jeden Namen.
+    #[test]
+    fn zwei_sterne_sind_einer_und_lauter_sterne_treffen_jeden_namen() {
+        for name in ["ab", "a-b", "a-lange-folge-b", "ba"] {
+            assert_eq!(trifft(name, "a**b"), trifft(name, "a*b"), "{name}");
+        }
+        for name in ["", "x", "beliebig.txt", "Äpfel.txt"] {
+            assert!(trifft(name, "*"), "{name:?} gegen `*`");
+            assert!(trifft(name, "***"), "{name:?} gegen `***`");
+        }
+    }
+
+    /// C5.4 (B2): der Platzhalter verankert nichts. `*abc`, `abc*` und `*abc*`
+    /// treffen genau, was `abc` trifft.
+    #[test]
+    fn ein_stern_am_rand_verankert_nichts() {
+        for name in ["abc", "xabc", "abcx", "xabcx", "axbc"] {
+            let erwartet = trifft(name, "abc");
+            for filtertext in ["*abc", "abc*", "*abc*"] {
+                assert_eq!(
+                    trifft(name, filtertext),
+                    erwartet,
+                    "{name} gegen {filtertext}"
+                );
+            }
+        }
+        assert!(
+            trifft("xabcx", "abc"),
+            "die Teilfolge bleibt eine Teilfolge"
+        );
+        assert!(!trifft("axbc", "abc"));
+    }
+
+    /// C5.5 (B3): `?` und `[` sind gewoehnliche Zeichen, und ein woertliches
+    /// `*` im Namen laesst sich nicht gezielt suchen.
+    #[test]
+    fn es_gibt_kein_zweites_sonderzeichen_und_kein_entkommen() {
+        assert!(trifft("a?b.txt", "a?b"));
+        assert!(!trifft("axb.txt", "a?b"), "`?` steht fuer kein Zeichen");
+        assert!(trifft("a[b.txt", "a[b"));
+        assert!(!trifft("ab.txt", "a[b"));
+        assert!(
+            trifft("a*b.txt", "a*b"),
+            "das woertliche `*` trifft der Platzhalter"
+        );
+        assert!(
+            trifft("axb.txt", "a*b"),
+            "und kein Filtertext trifft es allein"
+        );
+        assert!(
+            trifft("a\\*b.txt", "a\\*b"),
+            "der Rueckstrich ist ein Zeichen, kein Entkommen"
+        );
+        assert!(trifft("a\\xb.txt", "a\\*b"));
+    }
+
+    /// C5.6 (B4): Schreibung egal, Faltung keine, auch mit Platzhalter.
+    #[test]
+    fn die_schreibung_bleibt_und_gefaltet_wird_nichts() {
+        assert!(trifft("Äpfel.txt", "Ä*.txt"));
+        assert!(trifft("äpfel.txt", "Ä*.txt"));
+        assert!(!trifft("Äpfel.txt", "a*.txt"));
+        assert!(!trifft("äpfel.txt", "a*.txt"));
+        assert!(trifft("ab", "A*B"));
+    }
+
+    /// C7.3 (B7): jedes Stueck wird ab dem Ende des vorigen genau einmal
+    /// gesucht, und das genuegt.
+    #[test]
+    fn der_vergleich_sucht_jedes_stueck_genau_einmal_ab_dem_ende_des_vorigen() {
+        assert!(trifft("aaa", "a*a*a"));
+        assert!(!trifft("aa", "a*a*a"), "zwei `a` tragen drei Stuecke nicht");
+        assert!(trifft("a-a-a", "a*a*a"));
+        assert!(trifft("aab", "aa*b"), "ohne Ueberlappung");
+        assert!(!trifft("ab", "aa*b"));
+    }
+
+    /// C5.7 (B3): die Zeichenregel nimmt das `*`, vor und nach der Runde.
+    #[test]
+    fn traegt_ein_dateiname_nimmt_den_stern() {
+        assert!(traegt_ein_dateiname('*'));
+    }
+
+    /// C5.1 (B1), Vergleichshaelfte: der Markerfall aus dem Backlog-Eintrag.
+    #[test]
+    fn der_marker_zwischen_zwei_unterstrichen_trifft_jeden_marker_und_keinen_fehlenden() {
+        let filtertext = "260503-1144_*_f1";
+        assert!(trifft("260503-1144_d_f1-zitadel.md", filtertext));
+        assert!(trifft("260503-1144_c_f1-zitadel.md", filtertext));
+        assert!(
+            !trifft("260503-1144-f1-zitadel.md", filtertext),
+            "ohne Marker fehlen die zwei Unterstriche"
+        );
     }
 
     /// Die Staffelung, ausgeschrieben: drei Zeichen flach, fuenf tief.

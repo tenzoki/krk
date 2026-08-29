@@ -71,7 +71,7 @@ use std::path::Path;
 
 use crate::text::datei::{Lesehindernis, bis_zur_grenze_lesen};
 
-use super::filter::traegt_die_folge;
+use super::filter::{Muster, traegt_die_folge};
 
 /// Was das Lesen einer Datei ueber den Filtertext ergeben hat.
 ///
@@ -110,10 +110,10 @@ pub enum Inhaltsbefund {
     Unentschieden,
 }
 
-/// Traegt der Inhalt hinter `pfad` die Folge `filter_klein`?
+/// Traegt der Inhalt hinter `pfad` das Muster?
 ///
-/// `filter_klein` ist **bereits kleingeschrieben**, wie bei
-/// [`traegt_die_folge`]; kleingeschrieben wird hier der gelesene Text. Das ist
+/// Das Muster ist **bereits kleingeschrieben und an `*` zerlegt**, das steckt
+/// im Typ [`Muster`]; kleingeschrieben wird hier der gelesene Text. Das ist
 /// dieselbe Asymmetrie wie beim Namen und aus demselben Grund: der Filtertext
 /// wird einmal je Suche umgeschrieben, der Gegenstand einmal je Vergleich.
 ///
@@ -123,20 +123,21 @@ pub enum Inhaltsbefund {
 ///
 /// **Dieselbe Folge gibt am Namen und am Inhalt dieselbe Antwort**, weil beide
 /// Wege durch [`traegt_die_folge`] laufen: Teilzeichenfolge an jeder Stelle,
-/// ohne Ruecksicht auf die Schreibung, ohne Faltung von Umlauten und Akzenten.
+/// `*` fuer eine beliebige Folge, auch ueber Zeilenenden hinweg, ohne
+/// Ruecksicht auf die Schreibung, ohne Faltung von Umlauten und Akzenten.
 /// Zwei Fassungen davon hiessen, dass ein Nutzer zwei Regeln lernen muesste,
 /// ohne dass ihm jemand die zweite gesagt haette.
 ///
 /// `#[must_use]`, weil der Aufruf ausser dem Lesen nichts tut: wer den Befund
 /// fallen laesst, hat eine Datei umsonst gelesen, und still.
 #[must_use]
-pub fn traegt_der_inhalt(pfad: &Path, filter_klein: &str, grenze: u64) -> Inhaltsbefund {
+pub fn traegt_der_inhalt(pfad: &Path, muster: &Muster, grenze: u64) -> Inhaltsbefund {
     match bis_zur_grenze_lesen(pfad, grenze) {
         Ok(bytes) => match String::from_utf8(bytes) {
             // Gueltiges UTF-8: die Datei ist Text, und der eine Vergleich
             // entscheidet.
             Ok(text) => {
-                if traegt_die_folge(&text, filter_klein) {
+                if traegt_die_folge(&text, muster) {
                     Inhaltsbefund::Traegt
                 } else {
                     Inhaltsbefund::TraegtNicht

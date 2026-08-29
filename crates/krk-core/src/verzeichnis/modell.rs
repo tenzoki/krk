@@ -102,8 +102,8 @@
 //! Der Befundvektor ist eine Sammlung von Antworten, und die Frage steht nicht
 //! bei jeder Antwort dabei. Sie lautet fuer jeden Eintrag gleich — traegt er
 //! den Filtertext unter sich oder in sich, und zaehlt sein Inhalt dabei mit? —,
-//! und sie steckt in zwei Groessen: `filter_klein` und dem, was
-//! [`Ordnermodell::inhalt_wirkt`] sagt. Aendert sich eine von beiden, faellt
+//! und sie steckt in zwei Groessen: dem Muster aus dem Filtertext
+//! ([`filter::Muster`]) und dem, was [`Ordnermodell::inhalt_wirkt`] sagt. Aendert sich eine von beiden, faellt
 //! der ganze Vektor auf `Unentschieden`; das besorgen `filter_uebernehmen` und
 //! `schalter_setzen`, und sonst niemand.
 //!
@@ -134,7 +134,7 @@ use std::sync::Arc;
 
 use super::durchlauf::{Auftrag, Auftragsart};
 use super::eintrag::Eintrag;
-use super::filter::{self, traegt_die_folge};
+use super::filter::{self, Muster, traegt_die_folge};
 use super::sortierung::{Richtung, Schluessel, Sortierung};
 
 /// Was gerade markiert ist, in einem Durchlauf gezaehlt.
@@ -278,12 +278,13 @@ pub struct Ordnermodell {
     /// ein zweiter Wert desselben Namens stuende. Er laeuft nicht ab; es gibt
     /// keinen Zeitgeber und keine Pause, nach der die Eingabe von vorn begaenne.
     filtertext: String,
-    /// Der einmal je Aenderung kleingeschriebene Filtertext.
+    /// Der einmal je Aenderung kleingeschriebene und an `*` zerlegte
+    /// Filtertext.
     ///
     /// Der Vergleich in [`Ordnermodell::sichtbar`] laeuft ueber diesen Wert und
-    /// schreibt nicht je Zeile um. Bei 100.000 Eintraegen waere das 100.000
-    /// Umschreibungen desselben kurzen Texts.
-    filter_klein: String,
+    /// schreibt und zerlegt nicht je Zeile. Bei 100.000 Eintraegen waere das
+    /// 100.000 Umschreibungen desselben kurzen Texts.
+    muster: Muster,
     /// Ob der Filter auch den Unterbaum meint ("Deep").
     ///
     /// Aus heisst: der Name entscheidet jede Datei, und jeder Ordner bleibt
@@ -366,7 +367,7 @@ impl Ordnermodell {
             auswahl: None,
             markiert: Vec::new(),
             filtertext: String::new(),
-            filter_klein: String::new(),
+            muster: Muster::aus(""),
             // Ab Werk eingeschaltet, siehe den Abschnitt darueber. Damit haengt
             // an dieser Zeile auch die Schwelle des Inhaltsfilters: sie fragt
             // `super::filter::inhaltsschwelle` nach dem Stand der tiefen Suche,
@@ -841,7 +842,7 @@ impl Ordnermodell {
     pub fn name_traegt_den_filter(&self, eintragsindex: u32) -> bool {
         self.eintraege
             .get(eintragsindex as usize)
-            .is_some_and(|eintrag| traegt_die_folge(&eintrag.name, &self.filter_klein))
+            .is_some_and(|eintrag| traegt_die_folge(&eintrag.name, &self.muster))
     }
 
     /// Ob dieser Eintrag allein wegen seines Inhalts in der Liste steht.
@@ -923,12 +924,12 @@ impl Ordnermodell {
         &self.filtertext
     }
 
-    /// Der kleingeschriebene Filtertext, wie der Vergleich ihn braucht.
+    /// Das Muster aus dem Filtertext, wie der Vergleich es braucht.
     ///
     /// Wer den Unterbaum abschreitet, vergleicht mit demselben Wert wie
-    /// [`Ordnermodell::sichtbar`] und schreibt ihn nicht ein zweites Mal um.
-    pub fn filter_klein(&self) -> &str {
-        &self.filter_klein
+    /// [`Ordnermodell::sichtbar`] und zerlegt ihn nicht ein zweites Mal.
+    pub fn muster(&self) -> &Muster {
+        &self.muster
     }
 
     /// Ob ein Filtertext steht.
@@ -953,6 +954,23 @@ impl Ordnermodell {
     /// ob KRK den Tastendruck verbraucht hat.
     pub fn zeichen_anhaengen(&mut self, zeichen: char) {
         self.filtertext.push(zeichen);
+        self.filter_uebernehmen();
+    }
+
+    /// Haengt einen ganzen Text an den Filtertext an, in einem Zug.
+    ///
+    /// Der Weg des Einfuegens aus der Zwischenablage (Runde 21). Derselbe
+    /// Vertrag wie bei [`Ordnermodell::zeichen_anhaengen`]: welche Zeichen
+    /// hineinduerfen, hat der Rufer entschieden, hier die Reinigung
+    /// [`crate::zwischenablage::filtertext_aus`], und diese Stelle nimmt
+    /// jedes. **Eine Schleife ueber `zeichen_anhaengen` ist bewusst nicht der
+    /// Weg**: sie riefe `filter_uebernehmen` je Zeichen und baute die Sicht je
+    /// Zeichen ueber den ganzen Bestand neu auf; bei 100.000 Eintraegen und
+    /// zwoelf Zeichen sind das elf Gaenge zu viel. Hier wird einmal
+    /// angehaengt und einmal uebernommen, und fuer die Sicht ist das Einfuegen
+    /// damit ein einzelner Anschlag mit vielen Zeichen.
+    pub fn text_anhaengen(&mut self, text: &str) {
+        self.filtertext.push_str(text);
         self.filter_uebernehmen();
     }
 
@@ -1069,7 +1087,13 @@ impl Ordnermodell {
     ///
     /// Die Schwelle selbst wohnt in [`super::filter::inhaltsschwelle`] und
     /// haengt am Stand der tiefen Suche. **Gezaehlt werden Zeichen und keine
-    /// Bytes**: ein getipptes `äöü` sind drei Zeichen und sechs Bytes.
+    /// Bytes**: ein getipptes `äöü` sind drei Zeichen und sechs Bytes. **Das
+    /// `*` zaehlt seit der Runde 21 nicht mit**: der Platzhalter sagt nichts
+    /// ueber den Gegenstand aus, `ab*cd` sind vier Zeichen, `*****` sind null,
+    /// und ein Filtertext aus lauter `*` liest nie eine Datei. Gezaehlt wird
+    /// der Filtertext und nicht das Muster, weil die Kleinschreibung die
+    /// Zeichenzahl aendern kann (`İ` wird zu zwei Zeichen) und die Schwelle von
+    /// getippten Zeichen spricht; die Zaehlung steht hier und nur hier.
     ///
     /// Gefragt wird bei jeder Bewertung neu. Wer bei vier Zeichen ohne tiefe
     /// Suche Inhaltstreffer vor sich hat und die tiefe Suche einschaltet,
@@ -1077,7 +1101,13 @@ impl Ordnermodell {
     /// zurueck.
     #[must_use]
     pub fn inhalt_wirkt(&self) -> bool {
-        self.inhalt && self.filtertext.chars().count() >= filter::inhaltsschwelle(self.tief)
+        self.inhalt
+            && self
+                .filtertext
+                .chars()
+                .filter(|zeichen| *zeichen != '*')
+                .count()
+                >= filter::inhaltsschwelle(self.tief)
     }
 
     /// Was ueber den Unterbaum dieses Eintrags bekannt ist.
@@ -1135,11 +1165,11 @@ impl Ordnermodell {
     /// Zieht die abgeleiteten Groessen des Filters nach und baut die Sicht neu
     /// auf.
     ///
-    /// Die eine Stelle, an der `filter_klein` entsteht — einmal je Aenderung
+    /// Die eine Stelle, an der das Muster entsteht — einmal je Aenderung
     /// des Filtertexts und nicht einmal je Zeile — und an der die Befunde
     /// zurueckfallen, weil sie Auskuenfte ueber den vorigen Filtertext waeren.
     fn filter_uebernehmen(&mut self) {
-        self.filter_klein = self.filtertext.to_lowercase();
+        self.muster = Muster::aus(&self.filtertext);
         self.befund_zuruecksetzen();
         self.grund_neu_rechnen();
         self.sicht_neu_aufbauen();

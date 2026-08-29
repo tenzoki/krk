@@ -917,7 +917,7 @@ impl Tabliste {
             tab.modell.bestand(),
             auftraege,
             tab.ordner.clone(),
-            tab.modell.filter_klein().to_owned(),
+            tab.modell.muster().clone(),
             // **Die eine Stelle, an der die 1 MB in den Kern reisen**, und sie
             // liegt hier, weil die Zahl in `crate::vorschaumodell` wohnt:
             // `krk-core` bekommt keinen Bezug auf `krk-ui` (C1.7). `None` heisst

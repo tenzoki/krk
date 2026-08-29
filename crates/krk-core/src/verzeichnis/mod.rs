@@ -159,6 +159,7 @@ pub mod verweisziel;
 
 pub use durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
+pub use filter::Muster;
 pub use inhalt::{Inhaltsbefund, traegt_der_inhalt};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
 pub use loeschzielbefund::Loeschzielbefund;

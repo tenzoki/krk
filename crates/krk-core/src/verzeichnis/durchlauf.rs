@@ -158,7 +158,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 
 use super::eintrag::{Eintrag, Typ};
-use super::filter::traegt_die_folge;
+use super::filter::{Muster, traegt_die_folge};
 use super::inhalt::{Inhaltsbefund, traegt_der_inhalt};
 use super::leser::STAPELGROESSE;
 use super::sys::{Schwungleser, ist_deskriptormangel};
@@ -230,8 +230,9 @@ pub struct Durchlauf {
 impl Durchlauf {
     /// Startet den Durchlauf und kehrt sofort zurueck.
     ///
-    /// `filter_klein` ist der bereits kleingeschriebene Filtertext: er wird
-    /// einmal je Suche umgeschrieben und nicht einmal je gelesenem Namen.
+    /// `muster` ist der bereits kleingeschriebene und an `*` zerlegte
+    /// Filtertext: er wird einmal je Suche umgeschrieben und nicht einmal je
+    /// gelesenem Namen.
     ///
     /// `inhaltsgrenze` ist die groesste Zahl Bytes, die je Datei gelesen werden
     /// darf; `None` heisst, dass bei diesem Lauf keine Datei geoeffnet wird.
@@ -253,7 +254,7 @@ impl Durchlauf {
         bestand: Arc<Vec<Eintrag>>,
         auftraege: Vec<Auftrag>,
         ordner: PathBuf,
-        filter_klein: String,
+        muster: Muster,
         inhaltsgrenze: Option<u64>,
         generation: u64,
     ) -> Self {
@@ -269,7 +270,7 @@ impl Durchlauf {
                     bestand: &bestand,
                     auftraege: &auftraege,
                     ordner: &ordner,
-                    filter_klein: filter_klein.as_str(),
+                    muster: &muster,
                     inhaltsgrenze,
                 };
                 durchlauffaden(&lage, &faden_abbruch, &faden_zu_gross, &sender);
@@ -342,8 +343,8 @@ struct Auftragslage<'a> {
     auftraege: &'a [Auftrag],
     /// Der angezeigte Ordner; alle Auftraege liegen unmittelbar in ihm.
     ordner: &'a Path,
-    /// Der bereits kleingeschriebene Filtertext.
-    filter_klein: &'a str,
+    /// Das bereits kleingeschriebene und zerlegte Muster.
+    muster: &'a Muster,
     /// Die groesste Zahl Bytes je Datei, oder `None` fuer „es wird keine Datei
     /// geoeffnet".
     inhaltsgrenze: Option<u64>,
@@ -361,7 +362,7 @@ fn durchlauffaden(
     zu_gross: &AtomicU64,
     sender: &SyncSender<Befundmeldung>,
 ) {
-    let filter_klein = lage.filter_klein;
+    let muster = lage.muster;
     for auftrag in lage.auftraege {
         // Ein Auftrag ohne Eintrag im Bestand ist von diesem Lauf nicht zu
         // beantworten. Die Lage kann nicht auftreten — Auftragsliste und
@@ -375,7 +376,7 @@ fn durchlauffaden(
         // Gestalten der Grenze.
         let entschieden = match (auftrag.art, lage.inhaltsgrenze) {
             (Auftragsart::Unterbaum, grenze) => {
-                unterbaum_entscheiden(&pfad, filter_klein, grenze, abbruch, zu_gross)
+                unterbaum_entscheiden(&pfad, muster, grenze, abbruch, zu_gross)
             }
             (Auftragsart::Inhalt, Some(grenze)) => {
                 // Die zweite Stelle der Abbruchgrenze, hier im flachen Zweig:
@@ -384,7 +385,7 @@ fn durchlauffaden(
                 if abbruch.load(Ordering::Relaxed) {
                     None
                 } else {
-                    datei_entscheiden(&pfad, filter_klein, grenze, zu_gross)
+                    datei_entscheiden(&pfad, muster, grenze, zu_gross)
                 }
             }
             // Ein Inhaltsauftrag ohne Grenze ist von diesem Lauf nicht zu
@@ -429,11 +430,11 @@ fn durchlauffaden(
 /// dauern kann, und machte aus zwei sichtbaren Stellen eine versteckte.
 fn datei_entscheiden(
     pfad: &Path,
-    filter_klein: &str,
+    muster: &Muster,
     grenze: u64,
     zu_gross: &AtomicU64,
 ) -> Option<bool> {
-    match traegt_der_inhalt(pfad, filter_klein, grenze) {
+    match traegt_der_inhalt(pfad, muster, grenze) {
         Inhaltsbefund::Traegt => Some(true),
         Inhaltsbefund::TraegtNicht => Some(false),
         Inhaltsbefund::ZuGross => {
@@ -482,7 +483,7 @@ fn datei_entscheiden(
 /// anderer Gestalt: der Deskriptormangel beim Lesen einer Datei im Unterbaum.
 fn unterbaum_entscheiden(
     wurzel: &Path,
-    filter_klein: &str,
+    muster: &Muster,
     inhaltsgrenze: Option<u64>,
     abbruch: &AtomicBool,
     zu_gross: &AtomicU64,
@@ -536,7 +537,7 @@ fn unterbaum_entscheiden(
             }
 
             for kandidat in lesestand.stapel.by_ref() {
-                if traegt_die_folge(&kandidat.name, filter_klein) {
+                if traegt_die_folge(&kandidat.name, muster) {
                     // Der erste Treffer entscheidet den Auftrag, in welcher
                     // Tiefe er auch liegt. Der offene Leser faellt mit
                     // `lesestand`, die Vormerkungen mit `offen`, und der Rest
@@ -566,7 +567,7 @@ fn unterbaum_entscheiden(
                             return None;
                         }
                         let pfad = lesestand.pfad.join(&kandidat.name);
-                        if datei_entscheiden(&pfad, filter_klein, grenze, zu_gross)? {
+                        if datei_entscheiden(&pfad, muster, grenze, zu_gross)? {
                             return Some(true);
                         }
                     }
