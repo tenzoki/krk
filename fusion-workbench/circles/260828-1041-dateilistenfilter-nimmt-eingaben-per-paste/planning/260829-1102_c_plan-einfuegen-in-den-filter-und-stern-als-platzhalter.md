@@ -1,7 +1,7 @@
 # Implementierungsplan: Der Dateilistenfilter nimmt Eingaben per Cmd+V an und versteht `*` als Platzhalter
 
 **Date:** 2026-08-29
-**Status:** Gebaut und vom Nutzer am 260829 abgenommen; alle zwölf Schritte auf [DONE]
+**Status:** Complete — gebaut und vom Nutzer am 260829 abgenommen; alle zwölf Schritte auf [DONE], Abgleich 260829-1223
 **Spec:** `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1052_*_spec-einfuegen-in-den-filter-und-stern-als-platzhalter.md`, nach der Weisung des Nutzers vom 260829 vorab freigegeben, A1 bis A13 und B1 bis B9 ohne Einspruch
 **Decidability:** Die zwei tragenden Fragen lauten: *Welcher Text aus der Zwischenablage gehört in den Filter, und trägt ein Name oder ein Dateitext das Muster mit `*`?* Beide sind aus den Eingaben entscheidbar, die der Mechanismus hat. Die erste beantwortet eine reine Funktion des Kerns allein aus dem, was die eine Hülle liest, nämlich der Zahl der Dateiverweise und dem Text (`crates/krk-ui/src/appkit/zwischenablage.rs:235-248`, `:446`): jede Regel aus A3 ist eine Eigenschaft der Zeichenkette (Zeilenende am Schluss, Zeilenende mittendrin, Schrägstrich, `file:`-Schema, die Zeichenklassen von `traegt_ein_dateiname`), und keine fragt nach der Herkunft des Textes. **Der Doppelpunkt ist die Stelle, an der der Spec eine Herkunft vermutet** („stammt fast immer aus einem Pfad in Finder-Schreibweise"); die Regel selbst ist trotzdem total, denn sie sagt „beim Einfügen fällt `:`", nicht „falls aus dem Finder". Die zweite Frage beantwortet ein Vergleich ohne Rückverfolgung: für ein Muster, dessen einziges Sonderzeichen `*` ist, findet die Suche jedes Stücks ab dem Ende des vorigen an der jeweils ersten Stelle genau dann eine Zerlegung, wenn es eine gibt; ein Beweis durch Vertauschung steht in Entscheidung 6. Nicht entscheidbar ist, ob der Nutzer ein wörtliches `*` meinte; der Spec hat den Mechanismus dafür schon gewechselt (B3: es gibt kein wörtliches `*` mehr), und der Plan nähert nichts an.
 
@@ -415,3 +415,28 @@ Innerhalb des Arbeitsbereichs ändern sich drei Signaturen des Kerns: `traegt_di
 - [ ] **Was tut `cmd+v` mit einem Dateiverweis, sobald eine Dateizwischenablage gebaut wird?** `decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`, offen; diese Runde besetzt den Einhängepunkt und beantwortet ihn nicht (A6).
 - [ ] **Die Kopplung der Inhaltsschwelle an die tiefe Suche und die eigene Schwelle des Durchlaufs** (`shared/decisions/260826-0859_*_…`, `shared/decisions/260826-0923_*_…`, beide offen): B6 setzt auf beide auf und entscheidet keine.
 - [ ] **Die Schreibweise nutzersichtbarer Meldungen** (`shared/decisions/260826-1225_*_…`, offen): A5 schreibt Umlaute, wie der Baum seit dem 260826, und Schritt 5 folgt A5.
+
+---
+
+## Reconciliation Log
+
+**260829-1223** — Abgleich der zwölf Schritte gegen den Baum auf `8d64859` (Sitzungsanker `79d507a`), `make check` am Arbeitsbaum neu gefahren: 23 Probensätze, 1733 Proben grün, `clippy -D warnings` und `fmt --check` ohne Ausgabe, exit 0.
+
+| Schritt | Commit | Beleg |
+|---|---|---|
+| 1 | `f4ba58d` | `crates/krk-core/src/verzeichnis/filter.rs:134` `pub struct Muster`, `:142` `Muster::aus`, `:190` `traegt_die_folge(name, muster: &Muster)`; `modell.rs:287` Feld `muster`, `:931` `muster()`, `:972` `text_anhaengen`, `:1172` `Muster::aus(&self.filtertext)`; `inhalt.rs:134`, `durchlauf.rs:257/:347/:433`; `crates/krk-ui/src/tabs.rs:920` `muster().clone()` |
+| 2 | `1b0939a` | `crates/krk-core/src/zwischenablage.rs:132` `Einfuegequelle`, `:147` `Einfuegehindernis`, `:163` `filtertext_aus`, `:195` `letzter_bestandteil`, `:205` `tragbar`; `grep objc2` trifft allein die Kommentarzeile `:12`, die das Fehlen der Kiste ausspricht |
+| 3 | `3722c89` | `crates/krk-ui/src/kommandos/zulaessigkeit.rs:10/:38/:48/:230/:276` nennen `paste:`; `:451` `die_zwei_frager_der_dateiablage_rufen_dieselbe_regel` |
+| 4 | `3722c89` | `git diff c6c86cb HEAD -- resources/default-keymap.toml`, Nicht-Kommentarzeilen gefiltert: leer; `--stat` 23+/11− |
+| 5 | `3722c89` | `crates/krk-ui/src/kommandos/operationen.rs:1239` `einfuegen_abgewiesen`, vier Sätze `:1242-1250`, Proben ab `:2152` |
+| 6 | `3722c89` | `crates/krk-ui/src/appkit/zwischenablage.rs:257` `lesen`, `:268` `lesen_aus`, `:332` `einfuegequelle`, `:361` `einfuegequelle_aus` |
+| 7 | `3722c89` | `crates/krk-ui/src/appkit/tabelle.rs:1994` `aus_zwischenablage_einfuegen`, `:2005` Befehlsantwort, `:2204` `nach_filteraenderung` |
+| 8 | `3722c89` | `crates/krk-ui/src/appkit/anwendung.rs:925` `#[unsafe(method(paste:))]`, `:990` `validateMenuItem:`-Zweig, `:3218` `bearbeiten_am_dateifenster`, `:3245` `einfuegen_ausfuehren`, `:9899` `der_delegierte_beantwortet_copy_cut_und_paste` |
+| 9 | `415ef6f` | `crates/krk-core/tests/verzeichnis.rs:3694` `die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei`; neue Proben `:1240`, `:1281`, `:1321`, `:1370`, `:1417`, `:1613`, `:2067`, `:2384`, `:2427`; `traegt_die_folge` in der Datei 0 Treffer |
+| 10 | `3722c89` | `betrachter.rs:734` Probe mit dritter Nadel `:739`; `belegungsmodell.rs:1724` `die_tippsuche_kennt_keinen_platzhalter`; `menue.rs:92/:101/:131/:898`, `kommandos/mod.rs:78` |
+| 11 | `097abc2` | `history/260829-1220-coder-schritt-11-…`; hier nachgefahren: `Cargo.lock`/`Cargo.toml` Diff leer, `-sys` allein `windows-sys` (`Cargo.lock:108/862/872`), L1–L10 beidseits, `Kommando` 167/167, `Kontextbefehl` 3, `NSPasteboard` außerhalb der Hülle 30/30 Stellen zeichengleich |
+| 12 | `8d64859` | Nutzerabnahme, alle zwölf Punkte; Turn log des Circle-Datensatzes (uncommittet) |
+
+**`## Where this Circle stops`:** jede Klausel hält, mit einer Abweichung im Wortlaut: „`grep -rn 'regex' Cargo.lock` ist leer" trifft nicht zu — die Datei trägt 12 Treffer (`fancy-regex`, `regex-automata`, `regex-syntax`, `regex` über `syntect`), und zwar auf `c6c86cb` genauso wie auf HEAD. Die Runde hat keine Kiste hinzugefügt (Diff leer); die Klausel beschreibt die Absicht richtig und das Kommando falsch. Gefilt als `issues/260829-1223_o_die-abschlussklausel-des-plans-verlangt-ein-leeres-grep-nach-regex-in-cargo-lock-und-die-datei-traegt-es-seit-syntect.md`. `shared/issues/260816-2144_o_…` (Leertaste) bleibt offen, wie die Klausel es sagt. Die Klausel „beschränkt, solange der Abnahmelauf nicht gefahren ist" ist mit `8d64859` aufgehoben: der Lauf ist gefahren.
+
+**Drift:** keine. Der Plan verwendet in Schritt 8 den Selektornamen `filter_einfuegen_aktion`, der Baum trägt ihn (`anwendung.rs:926`).

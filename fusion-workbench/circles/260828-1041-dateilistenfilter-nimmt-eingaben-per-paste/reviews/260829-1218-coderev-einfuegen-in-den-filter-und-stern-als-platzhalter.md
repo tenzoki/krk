@@ -74,3 +74,6 @@ true
 ## Recommended sequencing
 
 Kein Release-Blocker. Vor dem Abschluss: nichts zwingend. Nach dem Abschluss: `260829-1216` (Einzeiler-Fix mit Probe), `260829-1217` am CLAUDE.md-Tor, `260829-1215` als Nutzerfrage.
+
+---
+Reconciled 260829-1223: die drei Low-Befunde stehen als `issues/260829-1215_o_…`, `260829-1216_o_…`, `260829-1217_o_…`, alle offen; kein Commit nach `415ef6f` fasst `crates/krk-core/src/zwischenablage.rs` oder `CLAUDE.md` an (`git log 415ef6f..8d64859 --stat` trägt allein Werkbankdateien). Die Verifikationszeile hält am Arbeitsbaum weiter: `make check` exit 0, 1733 Proben grün.

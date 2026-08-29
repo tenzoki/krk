@@ -9,3 +9,6 @@ Der eingefügte Filtertext hat keine Höchstlänge, und eine lange Zeile macht j
 Ein Name im Dateisystem trägt höchstens 255 Bytes; ein Filtertext ohne `*`, der länger ist, kann keinen Namen mehr treffen, wohl aber einen Inhalt. Zwei Wege: eine Grenze in `filtertext_aus` mit einem fünften `Einfuegehindernis` (der `match` in `operationen::einfuegen_abgewiesen` hält den Bau an und verlangt den fünften Satz), oder eine ausdrückliche Festlegung „keine Grenze“ am Doc-Kommentar von `filtertext_aus` und `text_anhaengen`, damit die Lücke gewollt und nicht vergessen ist.
 
 Abnahme: entweder eine Probe `filtertext_aus` gegen einen Text über der Grenze mit dem neuen Hindernis und seinem Satz, oder der Doc-Kommentar beider Funktionen nennt das Fehlen der Grenze und den Grund.
+
+---
+Reconciled 260829-1223: weiter offen. Kein Commit zwischen `79d507a` und `8d64859` fasst die genannte Stelle an; die Lage ist am Baum nachgelesen (siehe `history/260829-1223-reconciliation.md` dieses Circles für den Beleg je Datensatz). Keine Vorbedingung des Abschlusses der Runde 21.

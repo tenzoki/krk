@@ -30,3 +30,6 @@ Die Belegung und das Menü „Bearbeiten" halten `cmd+v` seit dem 260805 für ei
 ## Recommendation
 
 Keine; die Frage gehört der Runde, die die Dateizwischenablage baut, und bindet bis dahin nur insofern, als der Spec dieser Runde die Doppelbelegung nicht als Dauerzustand ausschreibt.
+
+---
+Reconciled 260829-1223: weiter offen, keine Antwort im Baum. Gesucht in `planning/260829-1052_*_spec-…` (A6 besetzt den Einhängepunkt und beantwortet die Frage ausdrücklich nicht), `planning/260829-1102_*_plan-…` (`## Where this Circle stops`, vorletzte Klauseln) und `shared/analyses/` (kein Treffer). Der Baum nach `3722c89` nimmt `cmd+v` mit einem Dateiverweis als Filtertext (`crates/krk-core/src/zwischenablage.rs:163`, `filtertext_aus` auf `Einfuegequelle::Verweise`); genau diese Lage ist der Gegenstand der Frage, keine ihrer drei Möglichkeiten ist gewählt. Keine Vorbedingung dieser Runde; der Datensatz bindet die Runde, die die Dateizwischenablage baut.

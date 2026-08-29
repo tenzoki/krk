@@ -7,3 +7,6 @@ CLAUDE.md nennt die Zählprobe mit ihrem alten Namen und beschreibt den Vergleic
 **Executor:** curator (CLAUDE.md-Tor)
 
 Wirkt mit dem Abschluss der Runde 21, nicht vorher: bis dahin ist der Baum auf `main` noch der alte. Abnahme: `grep -c die_zeichenregel_hat_zwei_rufer CLAUDE.md` liefert 0, und der Absatz nennt den Platzhalter `*` mit Verweis auf den Modulkopf von `filter.rs` statt der Zahl der Rufer oder einer zweiten Beschreibung der Regel.
+
+---
+Reconciled 260829-1223: weiter offen. Kein Commit zwischen `79d507a` und `8d64859` fasst die genannte Stelle an; die Lage ist am Baum nachgelesen (siehe `history/260829-1223-reconciliation.md` dieses Circles für den Beleg je Datensatz). Keine Vorbedingung des Abschlusses der Runde 21.

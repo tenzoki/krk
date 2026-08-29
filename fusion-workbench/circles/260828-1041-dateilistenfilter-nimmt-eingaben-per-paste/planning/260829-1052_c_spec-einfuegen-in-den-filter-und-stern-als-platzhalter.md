@@ -1,7 +1,7 @@
 # Spec: Der Dateilistenfilter nimmt Eingaben per Cmd+V an und versteht `*` als Platzhalter
 
 **Date:** 2026-08-29
-**Status:** freigegeben am 260829 (Spec-Tor vorab, autonome Runde), Planung läuft
+**Status:** Complete — gebaut und vom Nutzer am 260829 abgenommen (Plan `planning/260829-1102_*_plan-einfuegen-in-den-filter-und-stern-als-platzhalter.md`, alle zwölf Schritte `[DONE]`, Abgleich 260829-1223); die Prosa von C6.6 ist unberichtigt und im Spec nicht angefasst (`issues/260829-1201_o_…`)
 **Activated from Circle:** 260828-1041-dateilistenfilter-nimmt-eingaben-per-paste
 **Source:** Zwei Quellen. Erstens die Directive des Circle-Datensatzes `_t_circle.md` samt den Festlegungen seines Grounding snapshot, vom Shaper am 260828 in zwei Klärungsrunden aus dem Backlog-Eintrag `shared/backlog/260828-0909_*_dateilistenfilter-nimmt-eingaben-per-paste.md` geformt. Zweitens der Backlog-Eintrag `shared/backlog/260829-0842_*_dateilistenfilter-versteht-stern-als-platzhalter.md`, in dem der Nutzer am 260829 die Möglichkeit 1 von drei gewählt hat (Glob im ganzen Filtertext) und den der Orchestrator dieser Runde als zweite Fähigkeit zugeschlagen hat; er ist mit diesem Spec promoviert. Der Nutzer hat verlangt, die Runde autonom zu bauen: keine Klärungsrunde, Lücken nach Muster entscheiden, das Spec-Tor gilt als vorab freigegeben. Die Festlegungen des Grounding snapshot stehen hier als A1 bis A6, gegen den Baum nach der Runde 22 gelesen; A7 bis A13 füllen die Lücken des Einfügens, B1 bis B9 die des Platzhalters. Alle sind am Spec-Tor überstimmbar.
 

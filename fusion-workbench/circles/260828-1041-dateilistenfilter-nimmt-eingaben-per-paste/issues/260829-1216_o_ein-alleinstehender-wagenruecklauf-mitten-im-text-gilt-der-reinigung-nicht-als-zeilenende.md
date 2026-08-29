@@ -7,3 +7,6 @@ A3 Schritt 2 sagt: steht nach dem Abschneiden der Zeilenenden am Ende noch ein Z
 **Executor:** coder
 
 Fix: `rest.contains(['\n', '\r'])` an derselben Stelle, und die Probe um `erste\rzweite` erweitern. Abnahme: `filtertext_aus(&Einfuegequelle::Text("erste\rzweite"))` liefert `Err(Einfuegehindernis::Mehrzeilig)`; `Name\r\n` und `Name\r` liefern weiter `Ok("Name")`.
+
+---
+Reconciled 260829-1223: weiter offen. Kein Commit zwischen `79d507a` und `8d64859` fasst die genannte Stelle an; die Lage ist am Baum nachgelesen (siehe `history/260829-1223-reconciliation.md` dieses Circles für den Beleg je Datensatz). Keine Vorbedingung des Abschlusses der Runde 21.

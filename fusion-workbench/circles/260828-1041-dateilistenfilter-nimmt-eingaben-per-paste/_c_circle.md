@@ -3,8 +3,8 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
-**Claim:** Claimed 260829-1047: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1102_p_plan-einfuegen-in-den-filter-und-stern-als-platzhalter.md
+**Claim:** Unclaimed
+**Active spec/plan:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1102_c_plan-einfuegen-in-den-filter-und-stern-als-platzhalter.md
 **Active session history:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/history/260829-1047-orchestrator-session.md
 
 ---
@@ -41,6 +41,8 @@ See `**Active spec/plan:**` above. The cited spec or plan states the Directive i
 
 ## Turn log
 
+- **Turn 1 (260829-1047 bis 1230, autonom):** Phase 0b ohne Tore (Spec `1e44b01`, Plan `bf64cc3`), zwölf Schritte in einem Turn mit bis zu fünf Agenten parallel: S1 `f4ba58d`, S2 `1b0939a`, S3–S8+S10 `3722c89`, S9 `415ef6f`, S11 `097abc2`, S12 (Abnahmelauf vom Nutzer, alle zwölf Punkte). Ontocoder-Schritt S4 nach Vorabfreigabe. `make check` grün, kein Bugfixer. Kohärenz im Turn `ok`. Vier Defekte gefilet (C6.6-Prosa, Höchstlänge, `\r`, CLAUDE.md-Probenname), keine Entscheidung geändert.
+
 
 ## Activation proposal
 
@@ -55,3 +57,7 @@ See `**Active spec/plan:**` above. The cited spec or plan states the Directive i
 **Vorgeschlagene Aktivierung:** 260829-0738 oder später, auf Bestätigung des Nutzers über `/fusion:next`.
 
 **Begründung.** Weiter der einzige vorgesehene Circle, jetzt nach dem kohärenten Abschluss der Runde 22 (`260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab`, 260829-0737). Die Lage aus dem Vorschlag des Laufs 260828-1053 gilt unverändert: zwei offene Entscheidungsdatensätze, die keinen Planschritt aufhalten, drei terminale Abhängigkeiten. Neu ist, dass die Runde 22 `copy:` und `cut:` am Dateifenster beantwortet und die Hülle um `NSPasteboard` einen Ausgang für Dateiverweise trägt (`1644ada`, `3764fb6`); die Sätze der Grundlage „`copy:` bleibt dort unbeantwortet" und „kein Dateiverweis wird abgelegt" beschreiben den Baum davor. Der Spec dieser Runde liest die Grundlage gegen den Baum nach der Runde 22, bevor er die Abgrenzung übernimmt.
+
+## Closure note
+
+**Geschlossen kohärent (`_c_`) am 260829-1226.** Autonome Runde nach Auftrag des Nutzers vom 260829, mit zwei Fähigkeiten: dem Einfügen in den Filter (Directive dieses Circles) und dem `*` als Platzhalter (`shared/backlog/260829-0842_c_…`, promoviert). Sitzung `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/history/260829-1047-orchestrator-session.md`, Phase 0b ohne Tore (Spec `1e44b01`, Plan `bf64cc3`) und ein Turn mit zwölf Schritten, Commits `79d507a..8d64859`. Abgleich `history/260829-1223-reconciliation.md`: Urteil **coherent**, Empfehlung `none`, alle zwölf Schritte und alle 16 Stop-Klauseln belegt (eine Klausel-Prosa gefilet: `issues/260829-1223_o_…`). Der Nutzer hat den Abnahmelauf aus Schritt 12 am Bündel auf `415ef6f` gefahren und alle zwölf Punkte bestätigt. Durchsicht `reviews/260829-1218-coderev-…` deckt `c6c86cb..415ef6f` (`not-opened: none`); offen bleiben vier Low-Befunde (`issues/260829-1201` C6.6-Prosa, `1215` keine Höchstlänge — Nutzerfrage, `1216` `\r` allein, `1217` CLAUDE.md-Probenname — Kurator) und die Entscheidung `decisions/260828-1041_o_…` (Dateizwischenablage, keine Vorbedingung). Auslieferung 1.4.0 folgt auf Wunsch des Nutzers unmittelbar.
