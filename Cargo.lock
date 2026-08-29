@@ -287,7 +287,7 @@ dependencies = [
 
 [[package]]
 name = "krk-bench"
-version = "1.2.2"
+version = "1.3.0"
 dependencies = [
  "krk-core",
  "serde",
@@ -297,7 +297,7 @@ dependencies = [
 
 [[package]]
 name = "krk-core"
-version = "1.2.2"
+version = "1.3.0"
 dependencies = [
  "flate2",
  "icu_collator",
@@ -309,7 +309,7 @@ dependencies = [
 
 [[package]]
 name = "krk-ui"
-version = "1.2.2"
+version = "1.3.0"
 dependencies = [
  "block2",
  "dispatch2",
@@ -897,7 +897,7 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 
 [[package]]
 name = "xtask"
-version = "1.2.2"
+version = "1.3.0"
 
 [[package]]
 name = "yoke"
