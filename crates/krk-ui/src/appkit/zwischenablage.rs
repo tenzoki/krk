@@ -7,9 +7,14 @@
 //! NSPasteboard::generalPasteboard
 //!              │
 //!              ├─> lesen ────────> krk_core::zwischenablage::deuten
-//!              │                            │
+//!              │     │                      │
+//!              │     └<── lesen_aus (jede Ablage)
 //!              │                    Ziel::Web ──> im_browser_oeffnen ──> NSWorkspace
 //!              ├─> inhalt_lesen ──> crate::vorschaumodell (Text, Bild, Leer)
+//!              │
+//!              ├─> einfuegequelle ──> krk_core::zwischenablage::filtertext_aus (Runde 21)
+//!              │     │
+//!              │     └<── einfuegequelle_aus (jede Ablage)
 //!              │
 //!              ├<── text_schreiben <── die beiden Pfadkopierer (C1, C2)
 //!              │          │
@@ -31,8 +36,10 @@
 //! [`text_auf_ablage_schreiben`] seit der Runde 14 das Schreiben in eine
 //! beliebige Ablage und [`dateiverweise_schreiben`] mit
 //! [`dateiverweise_auf_ablage_schreiben`] seit der Runde 22 den zweiten
-//! Ausgang, der Dateiverweise und Namen ablegt; eine zweite Huelle um
-//! `NSPasteboard` entsteht dabei nicht.
+//! Ausgang, der Dateiverweise und Namen ablegt, und [`einfuegequelle`] mit
+//! [`einfuegequelle_aus`] seit der Runde 21 den dritten Leser, der die
+//! Ablage fuer das Einfuegen in den Filtertext zusammensetzt; eine zweite
+//! Huelle um `NSPasteboard` entsteht dabei nicht.
 //! Alles in einem Modul, weil es die eine Frage beantwortet: was steht in der
 //! Zwischenablage, und wohin geht KRK damit. Die Frage ist mit der Runde 4 um
 //! eine Richtung breiter geworden und geblieben, was sie war: eine. Denselben
@@ -75,7 +82,13 @@
 //! Kopf von `resources/default-keymap.toml` schreibt den Wechsel aus, und die
 //! Reservierung aus C3 der Runde 1 ist damit eingeloest und nicht gebrochen.
 //! Seit der Runde 22 ist die `copy:`- und die `cut:`-Haelfte dieses
-//! Einhaengepunkts besetzt (der Abschnitt unten), die `paste:`-Haelfte nicht.
+//! Einhaengepunkts besetzt (der Abschnitt unten), und seit der Runde 21 auch
+//! die `paste:`-Haelfte — **vom Filter und nicht von einer
+//! Dateizwischenablage**: `cmd+v` im Dateifenster liest ueber
+//! [`einfuegequelle`] die Ablage und haengt, was der Kern daraus reinigt, an
+//! den Filtertext; es legt keine Datei ab. Was `cmd+v` mit einem
+//! Dateiverweis tut, sobald eine Dateizwischenablage gebaut ist, bleibt offen
+//! (`decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
 //!
 //! **Die zwei Pfadkopierer schreiben allein Text, `NSPasteboardTypeString`.**
 //! Kein Dateiverweis und kein `writeObjects:` fuer sie — die Nutzerantwort vom
@@ -118,7 +131,11 @@
 //! machte aus einer Funktion mit einer Bedeutung eine mit zweien, und jeder
 //! seiner Aufrufer muesste denselben Wert einsetzen, damit sich nichts
 //! aendert. [`dateiverweise`] nimmt seine Ablage entgegen, weil sie ihm von
-//! AppKit gereicht wird und er sie nicht beschaffen kann.
+//! AppKit gereicht wird und er sie nicht beschaffen kann. **Seit der Runde 21
+//! steht die gereichte Form [`lesen_aus`] daneben**, nach dem Muster von
+//! [`text_schreiben`] und [`text_auf_ablage_schreiben`]: [`lesen`] ist der
+//! Einzeiler darauf mit `generalPasteboard`, und [`einfuegequelle_aus`] wie
+//! die Proben lesen eine gereichte Ablage, ohne an die des Nutzers zu muessen.
 //!
 //! **`stringForType:` traegt hier nicht.** Es liefert **eine** Zeichenkette je
 //! Sorte, und genau das ist der Zuschnitt von [`lesen`]: eine Datei, ein Pfad.
@@ -225,6 +242,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSDictionary, NSNumber, NSString, NSURL};
 
 use crate::vorschaumodell::{BILDGRENZE, Zwischenablageinhalt};
+use krk_core::zwischenablage::Einfuegequelle;
 
 /// Was in der Zwischenablage steht, als eine Zeichenkette.
 ///
@@ -232,8 +250,22 @@ use crate::vorschaumodell::{BILDGRENZE, Zwischenablageinhalt};
 /// Kopieren eines Bildes. Der Aufrufer meldet das als nicht verwertbar; die
 /// Anzeige eines Bildes ist die andere Funktion aus C10 und gehoert zu Schritt
 /// 19.
+///
+/// Reicht `NSPasteboard::generalPasteboard()` an [`lesen_aus`] und aendert
+/// dessen Antwort nicht; warum die Ablage hier im Rumpf und nicht in der
+/// Signatur steht, sagt der Modulkopf.
 pub fn lesen() -> Option<String> {
-    let ablage = NSPasteboard::generalPasteboard();
+    lesen_aus(&NSPasteboard::generalPasteboard())
+}
+
+/// Was in einer beliebigen Ablage steht, als eine Zeichenkette (Runde 21).
+///
+/// Der Rumpf von [`lesen`] bis zur Runde 21, mit der Ablage als Parameter:
+/// erst `NSPasteboardTypeFileURL`, dann `NSPasteboardTypeString`, die
+/// Rangfolge aus dem Modulkopf. Ein Text, der nach dem Abschneiden des
+/// Weissraums leer ist, zaehlt nicht. Welche Ablage es ist, entscheidet der
+/// Rufer, wie bei [`dateiverweise`] und [`text_auf_ablage_schreiben`].
+pub fn lesen_aus(ablage: &NSPasteboard) -> Option<String> {
     for sorte in [unsafe { NSPasteboardTypeFileURL }, unsafe {
         NSPasteboardTypeString
     }] {
@@ -287,6 +319,53 @@ pub fn inhalt_lesen() -> Zwischenablageinhalt {
     match lesen() {
         Some(text) => Zwischenablageinhalt::Text(text),
         None => Zwischenablageinhalt::Leer,
+    }
+}
+
+/// Was in der Zwischenablage des Nutzers steht, fuer das Einfuegen in den
+/// Filtertext zusammengesetzt (A2 der Runde 21).
+///
+/// Reicht `NSPasteboard::generalPasteboard()` an [`einfuegequelle_aus`]; die
+/// Deutung des Werts ist `krk_core::zwischenablage::filtertext_aus` und steht
+/// nicht hier. Der Rufer ist das Einfuegen an der Tabelle (Schritt 7 des
+/// Plans der Runde 21); bis es steht, hat diese Funktion keinen.
+pub fn einfuegequelle() -> Einfuegequelle {
+    einfuegequelle_aus(&NSPasteboard::generalPasteboard())
+}
+
+/// Was in einer beliebigen Ablage steht, fuer das Einfuegen in den Filtertext
+/// zusammengesetzt (A2 der Runde 21).
+///
+/// **Dateiverweise vor Text, die Rangfolge von [`lesen`]**, als
+/// Zusammensetzung der zwei bestehenden Leser und nicht als dritter Griff an
+/// die Ablage: erst [`dateiverweise`], und liegt mindestens einer da, sind es
+/// `Verweise` — **alle und in der Reihenfolge der Ablage**, denn der Kern
+/// weist mehrere ab und braucht dafuer ihre Zahl (A4). Liegt keiner da,
+/// [`lesen_aus`]: `Text`, wenn es etwas liefert, sonst `Leer`. Ein im Finder
+/// oder mit `cmd+c` in KRK kopierter Eintrag traegt den Verweis **und** seinen
+/// Namen als Text, und die Rangfolge sorgt dafuer, dass er als `Verweise` und
+/// nicht als `Text` ankommt.
+///
+/// **Keine dritte Sorte** (A11). [`dateiverweise`] liest `NSURL` unter
+/// `NSPasteboardURLReadingFileURLsOnlyKey`, [`lesen_aus`] liest
+/// `NSPasteboardTypeFileURL` und `NSPasteboardTypeString`; RTF und HTML kommen
+/// nur an, soweit die abgebende Anwendung Text danebenlegt, und ein Bild ist
+/// `Leer`. Ein `file:`-Verweis auf einen fremden Rechner faellt aus dem
+/// ersten Leser heraus und kommt aus dem zweiten als `Text` an; er geht im
+/// Kern durch dieselbe Pfadregel wie ein getippter Pfad, ohne eigenen Zweig.
+///
+/// **Der Aufruf kostet linear in der Zahl der Verweise**: 0,13 ms je Verweis
+/// im Profil `release`, die Messung steht bei [`dateiverweise`]. Ein
+/// `cmd+v` ist ein Tastendruck und kein Weg, der bei jeder Zeigerbewegung
+/// laeuft; die Zahl steht hier als Auskunft und nicht als Warnung.
+pub fn einfuegequelle_aus(ablage: &NSPasteboard) -> Einfuegequelle {
+    let verweise = dateiverweise(ablage);
+    if !verweise.is_empty() {
+        return Einfuegequelle::Verweise(verweise);
+    }
+    match lesen_aus(ablage) {
+        Some(text) => Einfuegequelle::Text(text),
+        None => Einfuegequelle::Leer,
     }
 }
 
@@ -610,6 +689,60 @@ mod proben {
         assert!(
             dateiverweise(&ablage).is_empty(),
             "C7: keine Datei auf dem Datentraeger ist eine Antwort und kein Fehler"
+        );
+    }
+
+    #[test]
+    fn text_allein_kommt_als_einfuegequelle_text() {
+        let ablage = probenablage("einfuegequelle-text");
+        assert!(text_auf_ablage_schreiben(&ablage, "Notizen.md"));
+
+        assert_eq!(
+            einfuegequelle_aus(&ablage),
+            Einfuegequelle::Text("Notizen.md".to_owned()),
+            "A2: ohne Dateiverweis ist der Text die Quelle, wie er dasteht"
+        );
+    }
+
+    #[test]
+    fn zwei_dateiverweise_kommen_als_verweise_in_reihenfolge() {
+        let ordner = Pruefordner::neu("einfuegequelle-verweise");
+        let erste = ordner.datei("erste.txt", b"eins");
+        let zweite = ordner.datei("zweite.txt", b"zwei");
+
+        let ablage = probenablage("einfuegequelle-verweise");
+        dateien_ablegen(&ablage, &[erste.clone(), zweite.clone()], "");
+
+        assert_eq!(
+            einfuegequelle_aus(&ablage),
+            Einfuegequelle::Verweise(vec![erste, zweite]),
+            "A2, A4: alle Verweise kommen mit, in der Reihenfolge der Ablage, damit der Kern ihre Zahl kennt"
+        );
+    }
+
+    #[test]
+    fn ein_verweis_mit_namenszeile_ist_verweise_und_nicht_text() {
+        let ordner = Pruefordner::neu("einfuegequelle-rangfolge");
+        let datei = ordner.datei("Mein Text.md", b"text");
+
+        let ablage = probenablage("einfuegequelle-rangfolge");
+        dateien_ablegen(&ablage, std::slice::from_ref(&datei), "Mein Text.md");
+
+        assert_eq!(
+            einfuegequelle_aus(&ablage),
+            Einfuegequelle::Verweise(vec![datei]),
+            "A2: der Dateiverweis geht dem Namen als Text vor, wie bei `lesen`"
+        );
+    }
+
+    #[test]
+    fn eine_geleerte_ablage_ist_leer() {
+        let ablage = probenablage("einfuegequelle-leer");
+
+        assert_eq!(
+            einfuegequelle_aus(&ablage),
+            Einfuegequelle::Leer,
+            "A11: weder Verweis noch Text ist `Leer`, kein Fehler und keine dritte Sorte"
         );
     }
 

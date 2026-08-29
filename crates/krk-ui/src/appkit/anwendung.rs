@@ -75,19 +75,25 @@
 //! Hinweisfenster aus [`super::hinweis`], danach `terminate:`. Der Grund und
 //! der Entscheid des Nutzers stehen an jener Funktion.
 //!
-//! # Zwei Antworten ohne Kommando: `copy:` und `cut:` (Runde 22)
+//! # Drei Antworten ohne Kommando: `copy:`, `cut:` und `paste:` (Runden 22 und 21)
 //!
-//! `cmd+c` und `cmd+x` sind kein [`Kommando`]; das Menue "Bearbeiten" schickt
-//! sie mit Ziel `nil` die Antwortkette hinunter, und mit dem Fokus in einer
-//! Dateiliste endet die Kette hier. Der Delegierte beantwortet beide ueber
-//! **eine** Funktion, [`Anwendungsdelegierter::dateiablage_ausfuehren`], die
+//! `cmd+c`, `cmd+x` und `cmd+v` sind kein [`Kommando`]; das Menue "Bearbeiten"
+//! schickt sie mit Ziel `nil` die Antwortkette hinunter, und mit dem Fokus in
+//! einer Dateiliste endet die Kette hier. Der Delegierte beantwortet alle drei
+//! ueber **einen** Vorspann,
+//! [`Anwendungsdelegierter::bearbeiten_am_dateifenster`], der
 //! [`zulaessigkeit::dateiablage_zulaessig`] auf der einen [`Lage`] fragt und
-//! dann an die Datenquelle des aktiven Dateifensters weiterreicht. `paste:`
-//! beantwortet der Delegierte nicht; die Kombination gehoert dem Circle
-//! `260828-1041`. Die Ausgrauung in `validateMenuItem:` hat dafuer neben dem
-//! Zweig fuer `krkKommando:` einen zweiten, der fuer genau diese zwei
-//! Selektoren dieselbe Regel fragt; jede andere fremde Aktion bekommt weiter
-//! `true`, und AppKit entscheidet ueber sie wie bisher.
+//! dann an die Datenquelle des aktiven Dateifensters weiterreicht. `copy:` und
+//! `cut:` legen seit der Runde 22 Dateiverweise ab
+//! ([`Anwendungsdelegierter::dateiablage_ausfuehren`]); `paste:` fuellt seit
+//! der Runde 21 den Filtertext des aktiven Tabs aus der Zwischenablage
+//! ([`Anwendungsdelegierter::einfuegen_ausfuehren`]), und was aus der Ablage
+//! zum Filtertext wird, entscheidet der Kern in
+//! `krk_core::zwischenablage::filtertext_aus`. Die Ausgrauung in
+//! `validateMenuItem:` hat dafuer neben dem Zweig fuer `krkKommando:` einen
+//! zweiten, der fuer genau diese drei Selektoren dieselbe Regel fragt; jede
+//! andere fremde Aktion bekommt weiter `true`, und AppKit entscheidet ueber
+//! sie wie bisher.
 //!
 //! # Der eine Fokusvorbehalt (C5)
 //!
@@ -207,8 +213,8 @@
 //! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im
 //! SDK-Kopf gar keine Verfuegbarkeitsangabe und steht damit seit 10.0.
 //! `copy:` und `cut:` sind Aktionsselektoren, die diese Datei seit der Runde
-//! 22 **erklaert** und nicht ruft; sie sprechen keine Klasse an und tragen
-//! deshalb keine Untergrenze.
+//! 22 **erklaert** und nicht ruft, `paste:` seit der Runde 21 der dritte; sie
+//! sprechen keine Klasse an und tragen deshalb keine Untergrenze.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -294,7 +300,7 @@ use super::leiste::Leiste;
 use super::menue;
 use super::papierkorb::{self, Systempapierkorb};
 use super::statuszeile::{self, Statuszeile};
-use super::tabelle::{Dateifenster, Rangmitnahme};
+use super::tabelle::{Dateifenster, DateifensterQuelle, Rangmitnahme};
 use super::teilen;
 use super::terminal;
 use super::volumes::{self, Datentraeger, Datentraegerwache, Wechsel};
@@ -885,8 +891,7 @@ define_class!(
         /// darueber: mit der Schreibmarke in einer Textflaeche findet AppKit
         /// `copy:` dort, bevor die Kette den Delegierten erreicht, und die
         /// Textbedeutung bleibt unberuehrt (A11). Der Rumpf ist ein Aufruf von
-        /// [`Self::dateiablage_ausfuehren`]; **kein `paste:` daneben**
-        /// (Constraint 3 und 5 der Runde 22).
+        /// [`Self::dateiablage_ausfuehren`].
         // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
         // Argument, der Absender.
         #[unsafe(method(copy:))]
@@ -905,6 +910,21 @@ define_class!(
         #[unsafe(method(cut:))]
         fn dateien_ausschneiden_aktion(&self, _absender: Option<&AnyObject>) {
             self.dateiablage_ausfuehren(Dateiablage::Ausschneiden);
+        }
+
+        /// "Bearbeiten › Einfuegen" und `cmd+v` mit dem Fokus in der
+        /// Dateiliste (A1, C1.3 der Runde 21).
+        ///
+        /// Derselbe Weg wie die zwei darueber, mit demselben Fokusvorbehalt:
+        /// mit der Schreibmarke in einer Textflaeche findet AppKit `paste:`
+        /// dort, und die Textbedeutung bleibt (A9, C3.3). Hier fuellt es den
+        /// Filtertext des aktiven Tabs; kein neues [`Kommando`], keine Zeile in
+        /// der Belegung (Constraint 3 und 5).
+        // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
+        // Argument, der Absender.
+        #[unsafe(method(paste:))]
+        fn filter_einfuegen_aktion(&self, _absender: Option<&AnyObject>) {
+            self.einfuegen_ausfuehren();
         }
     }
 
@@ -933,14 +953,15 @@ define_class!(
         /// heute haben, und ihre Ausgrauung kommt weiter aus der Antwortkette.
         ///
         /// **Die Dateiablage ist seit der Runde 22 der zweite Fall, den die
-        /// Regel und nicht AppKit entscheidet.** `copy:` und `cut:` sind kein
-        /// Kommando und tragen keinen `tag`; der Zweig fragt fuer sie
+        /// Regel und nicht AppKit entscheidet, und seit der Runde 21 gehoert
+        /// `paste:` dazu.** `copy:`, `cut:` und `paste:` sind kein Kommando und
+        /// tragen keinen `tag`; der Zweig fragt fuer die drei
         /// [`zulaessigkeit::dateiablage_zulaessig`], den zweiten Eingang
         /// derselben Regel, auf derselben [`Lage`] wie
-        /// [`Self::dateiablage_ausfuehren`] (A11, C4.5). Eine dritte Antwort
-        /// neben der Regel gibt es hier nicht: `paste:` faellt wie jede andere
-        /// fremde Aktion in den letzten Zweig und bleibt AppKit ueberlassen
-        /// (C1.14).
+        /// [`Self::bearbeiten_am_dateifenster`] (A11, C4.5 der Runde 22; C3.1,
+        /// C3.6 der Runde 21). Der letzte Zweig bleibt fuer die drei uebrigen
+        /// zugestellten Funktionen — jede andere fremde Aktion faellt hinein
+        /// und bleibt AppKit ueberlassen.
         ///
         /// **Kein Beobachter am Fokus, und das ist kein Versehen.** Eine
         /// Anzeige, die dem Fokus folgt, gehoert nach `CLAUDE.md` an die
@@ -964,7 +985,10 @@ define_class!(
                     // Eintrag taete ohnehin nichts.
                     None => false,
                 }
-            } else if aktion == Some(sel!(copy:)) || aktion == Some(sel!(cut:)) {
+            } else if aktion == Some(sel!(copy:))
+                || aktion == Some(sel!(cut:))
+                || aktion == Some(sel!(paste:))
+            {
                 zulaessigkeit::dateiablage_zulaessig(self.lage())
             } else {
                 true
@@ -3164,19 +3188,22 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// Legt die betroffenen Eintraege des aktiven Dateifensters als
-    /// Dateiverweise ab (C1 und C3 der Runde 22).
+    /// Der eine Rumpf der drei Selektoren `copy:`, `cut:` und `paste:`
+    /// (Runde 22; Entscheidung 2 der Runde 21).
     ///
     /// **Der Spiegel von [`Self::kommando_ausfuehren`] fuer einen Befehl ohne
-    /// [`Kommando`].** `copy:` und `cut:` kommen aus dem Menue "Bearbeiten"
-    /// ueber die Antwortkette an und tragen weder Kennung noch `tag`; beide
-    /// gehen durch diese eine Funktion, und der Unterschied ist der Wert von
-    /// [`Dateiablage`]. Kein `bildschirmbreiten_uebernehmen`, kein Nachzug der
-    /// Aufteilung, keine vorgemerkte Sitzung: der Befehl aendert nichts an
-    /// Fenster oder Sitzung. Die Seite ist dieselbe wie in
-    /// [`Self::bereichskommando`] fuer [`Fokus::Dateifenster`], das aktive
-    /// Dateifenster aus dem Fenstermodell; die Statuszeile schreibt die
-    /// Datenquelle und nicht der Delegierte, wie bei den Pfadkopierern.
+    /// [`Kommando`].** Die drei kommen aus dem Menue "Bearbeiten" ueber die
+    /// Antwortkette an und tragen weder Kennung noch `tag`; alle gehen durch
+    /// diesen einen Vorspann — Lage, Regel, Loeschregel, Seite —, und was
+    /// danach an der Datenquelle geschieht, bringt der Rufer als `tun` mit:
+    /// [`Self::dateiablage_ausfuehren`] legt Verweise ab,
+    /// [`Self::einfuegen_ausfuehren`] fuellt den Filtertext. Kein
+    /// `bildschirmbreiten_uebernehmen`, kein Nachzug der Aufteilung, keine
+    /// vorgemerkte Sitzung: keiner der drei aendert etwas an Fenster oder
+    /// Sitzung. Die Seite ist dieselbe wie in [`Self::bereichskommando`] fuer
+    /// [`Fokus::Dateifenster`], das aktive Dateifenster aus dem Fenstermodell;
+    /// die Statuszeile schreibt die Datenquelle und nicht der Delegierte, wie
+    /// bei den Pfadkopierern.
     ///
     /// **Die Regel wird hier ein zweites Mal gefragt, obwohl AppKit den Eintrag
     /// eben freigegeben hat**, aus demselben Grund, aus dem `krkKommando:`
@@ -3184,8 +3211,11 @@ impl Anwendungsdelegierter {
     /// keine Sperre, und ein Kuerzel kann ankommen, bevor das Menue neu
     /// gefragt hat. Gefragt wird [`zulaessigkeit::dateiablage_zulaessig`] auf
     /// der einen [`Lage`] aus [`Self::lage`], derselbe Eingang, den auch
-    /// `validateMenuItem:` fragt (A11, C4.5).
-    fn dateiablage_ausfuehren(&self, befehl: Dateiablage) {
+    /// `validateMenuItem:` fragt (A11, C4.5 der Runde 22; C3.6 der Runde 21).
+    /// Die Zaehlprobe `die_zwei_frager_der_dateiablage_rufen_dieselbe_regel`
+    /// in [`zulaessigkeit`] haelt die zwei Frager; ein dritter Selektor bleibt
+    /// deshalb bei dieser Funktion und legt keinen eigenen Vorspann an.
+    fn bearbeiten_am_dateifenster(&self, tun: impl FnOnce(&DateifensterQuelle)) {
         let lage = self.lage();
         if !zulaessigkeit::dateiablage_zulaessig(lage) {
             return;
@@ -3194,9 +3224,26 @@ impl Anwendungsdelegierter {
         // KRK auf den vorigen Befehl geantwortet hat, faellt mit diesem.
         self.befehlsantwort_beidseitig_loeschen();
         let aktiv = self.ivars().modell.borrow().aktiv();
-        self.dateifenster(aktiv)
-            .quelle()
-            .dateiverweise_ablegen(befehl);
+        tun(self.dateifenster(aktiv).quelle());
+    }
+
+    /// Legt die betroffenen Eintraege des aktiven Dateifensters als
+    /// Dateiverweise ab (C1 und C3 der Runde 22).
+    ///
+    /// `copy:` und `cut:` unterscheiden sich allein im Wert von
+    /// [`Dateiablage`]; der Vorspann ist [`Self::bearbeiten_am_dateifenster`].
+    fn dateiablage_ausfuehren(&self, befehl: Dateiablage) {
+        self.bearbeiten_am_dateifenster(|quelle| quelle.dateiverweise_ablegen(befehl));
+    }
+
+    /// Fuellt den Filtertext des aktiven Tabs aus der Zwischenablage (A1 der
+    /// Runde 21).
+    ///
+    /// Die Deutung dessen, was in der Ablage liegt, und die Meldung bei einem
+    /// Hindernis gehoeren der Datenquelle; hier steht allein der Vorspann aus
+    /// [`Self::bearbeiten_am_dateifenster`].
+    fn einfuegen_ausfuehren(&self) {
+        self.bearbeiten_am_dateifenster(|quelle| quelle.aus_zwischenablage_einfuegen());
     }
 
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
@@ -9839,17 +9886,17 @@ mod dateiablageproben {
 
     use super::Anwendungsdelegierter;
 
-    /// Der Delegierte beantwortet `copy:` und `cut:`, und `paste:` nicht
-    /// (C1.14, C3.8, Constraint 3 der Runde 22).
+    /// Der Delegierte beantwortet `copy:`, `cut:` und `paste:` (C3.8 der
+    /// Runde 22; C3.7 der Runde 21).
     ///
     /// Gefragt wird die Klasse ueber `responds_to`, nach dem Muster von
     /// `wer_antwortet` in [`super::menue`]: ohne Fenster, ohne Hauptfaden,
-    /// ohne Vordergrund. Die dritte Zeile ist die Aussage der Probe und keine
-    /// Vollstaendigkeit: `cmd+v` im Dateifenster bleibt beim Circle
-    /// `260828-1041`, und eine Antwort auf `paste:` hier waere der Zweig, den
-    /// diese Runde ausdruecklich nicht legt.
+    /// ohne Vordergrund. Die dritte Zeile stand bis zur Runde 21 verneint —
+    /// `cmd+v` im Dateifenster gehoerte dem Circle `260828-1041` —, und diese
+    /// Runde ist jener Circle: seit ihr fuellt `paste:` den Filtertext, und die
+    /// Probe haelt, dass die Klasse den Selektor traegt.
     #[test]
-    fn der_delegierte_beantwortet_copy_und_cut_und_paste_nicht() {
+    fn der_delegierte_beantwortet_copy_cut_und_paste() {
         let klasse = Anwendungsdelegierter::class();
         assert!(
             klasse.responds_to(sel!(copy:)),
@@ -9860,8 +9907,8 @@ mod dateiablageproben {
             "`cut:` bleibt unbeantwortet"
         );
         assert!(
-            !klasse.responds_to(sel!(paste:)),
-            "`paste:` wird beantwortet; die Kombination gehoert dem Circle 260828-1041"
+            klasse.responds_to(sel!(paste:)),
+            "`paste:` bleibt unbeantwortet; seit der Runde 21 fuellt es den Filtertext"
         );
     }
 }

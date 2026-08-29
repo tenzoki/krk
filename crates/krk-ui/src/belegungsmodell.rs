@@ -1711,6 +1711,55 @@ mod suchproben {
         lage.treffer.clone()
     }
 
+    /// Die Tippsuche kennt keinen Platzhalter (C5.8 der Runde 21, B9).
+    ///
+    /// `a*b` findet allein Zeilen, die `a*b` woertlich tragen; im Filter der
+    /// Dateiliste stuende der Stern seit der Runde 21 fuer eine beliebige
+    /// Folge. Die Suche teilt mit dem Filter die Zeichenregel, die den Stern
+    /// aufnimmt, und nicht den Vergleich. Damit die Probe etwas misst, haelt
+    /// sie daneben, dass die Auslieferungsbelegung Zeilen traegt, die ein `a`
+    /// vor einem `b` fuehren: die Platzhalter-Lesart haette Treffer, und die
+    /// woertliche hat sie nicht.
+    #[test]
+    fn die_tippsuche_kennt_keinen_platzhalter() {
+        let modell = modell();
+        let texte = |stelle: usize| -> Vec<String> {
+            [modell.funktionstext(stelle), modell.tastentext(stelle)]
+                .into_iter()
+                .flatten()
+                .map(|text| text.to_lowercase())
+                .collect()
+        };
+
+        let mut lage = Suchlage::neu();
+        tippen(&mut lage, "a*b", &modell);
+
+        let woertlich: Vec<usize> = (0..modell.zeilen())
+            .filter(|&stelle| texte(stelle).iter().any(|text| text.contains("a*b")))
+            .collect();
+        assert_eq!(
+            trefferzeilen(&lage),
+            woertlich,
+            "die Tippsuche trifft mehr oder weniger als die Zeilen mit woertlichem `a*b`"
+        );
+
+        let mit_a_vor_b = (0..modell.zeilen()).any(|stelle| {
+            texte(stelle).iter().any(|text| {
+                text.find('a')
+                    .is_some_and(|ab| text[ab + 'a'.len_utf8()..].contains('b'))
+            })
+        });
+        assert!(
+            mit_a_vor_b,
+            "keine Zeile traegt ein `a` vor einem `b`; die Probe misst den Platzhalter nicht"
+        );
+        assert_eq!(
+            lage.zielzeile(),
+            woertlich.first().copied(),
+            "die Zielzeile ist nicht der erste woertliche Treffer"
+        );
+    }
+
     /// Die Kennung einer Funktion ist kein Treffer (C1.3).
     ///
     /// Sie steht nicht auf dem Schirm; gesucht wird ueber die zwei Spalten der

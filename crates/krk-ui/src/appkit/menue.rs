@@ -89,18 +89,21 @@
 //! Anwendungsdelegierten fragt zuerst nach der Aktion und antwortet fuer jede
 //! fremde `true`; beide Sonderposten fallen in genau diesen Zweig, und die
 //! Regel nimmt ihnen damit auch bei stehendem Blatt nichts. **Ausgenommen sind
-//! seit der Runde 22 `copy:` und `cut:`**, und die Ausnahme ist keine fuer
-//! einen Eintrag, sondern die Regel fuer jeden Eintrag, den KRK selbst
-//! beantwortet: was der Delegierte ausfuehrt, unterstellt er der einen
-//! Zulaessigkeitsregel aus [`crate::kommandos::zulaessigkeit`], wie er es fuer
-//! jedes `krkKommando:` tut — ueber `dateiablage_zulaessig`, den zweiten
-//! Eingang derselben Regel, weil die zwei Selektoren kein `Kommando` tragen.
-//! Ein Eintrag, den KRK beantwortet und **nicht** der Regel unterstellte,
-//! bliebe waehrend eines Blattes oder mit dem Fokus in der Leiste bedienbar,
-//! obwohl niemand ihn ausfuehrt. `paste:` beantwortet der Delegierte nicht und
-//! bekommt darum weiter `true` wie jede fremde Aktion. Ob AppKit selbst am
-//! Menue etwas aendert, solange ein Blatt steht, entscheidet diese Regel
-//! nicht; das ist am laufenden Buendel nachzusehen.
+//! seit der Runde 22 `copy:` und `cut:` und seit der Runde 21 `paste:`**, und
+//! die Ausnahme ist keine fuer einen Eintrag, sondern die Regel fuer jeden
+//! Eintrag, den KRK selbst beantwortet: was der Delegierte ausfuehrt,
+//! unterstellt er der einen Zulaessigkeitsregel aus
+//! [`crate::kommandos::zulaessigkeit`], wie er es fuer jedes `krkKommando:`
+//! tut — ueber `dateiablage_zulaessig`, den zweiten Eingang derselben Regel,
+//! weil die drei Selektoren kein `Kommando` tragen. Ein Eintrag, den KRK
+//! beantwortet und **nicht** der Regel unterstellte, bliebe waehrend eines
+//! Blattes oder mit dem Fokus in der Leiste bedienbar, obwohl niemand ihn
+//! ausfuehrt. Alle drei beantwortet der Delegierte am Dateifenster; `paste:`
+//! fuellt dabei den Filtertext der Dateiliste und legt keine Datei ab.
+//! Weiter `true` wie jede fremde Aktion bekommen allein die drei uebrigen
+//! zugestellten Funktionen. Ob AppKit selbst am Menue etwas aendert, solange
+//! ein Blatt steht, entscheidet diese Regel nicht; das ist am laufenden
+//! Buendel nachzusehen.
 //!
 //! **Kein Kuerzel steht hier als Zeichenkette, ohne Ausnahme.** Jedes kommt aus
 //! der Belegung, ueber das Modell. Damit ist `resources/default-keymap.toml` auch fuer
@@ -123,17 +126,18 @@
 //! gehaltenen Funktionen sieht er dabei nicht, weil `Belegung::nachschlag` sie
 //! ueberspringt. Die sechs Textbefehle laufen deshalb auch im Dateifenster ins
 //! Menue und von dort die Antwortkette hinunter. Genau das war der
-//! Einhaengepunkt der Dateizwischenablage, und die Runde 22 hat ihn zur
-//! Haelfte besetzt: `copy:` und `cut:` beantwortet seither der
-//! Anwendungsdelegierte am Dateifenster und legt Dateiverweise ab, ohne einen
-//! zweiten Menueeintrag und ohne eine zweite Zeile in der Belegung — der
-//! Eintrag ist derselbe, der im Editor Text kopiert, und heisst darum weiter
-//! "Kopieren" und nicht "Dateien kopieren" (Spec der Runde 22, A9). `paste:`
-//! beantwortet am Dateifenster weiter niemand, der Eintrag ist dort folglich
-//! grau; ihn besetzt der vorgesehene Circle
-//! `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`, und was `cmd+v`
-//! mit einem Dateiverweis tut, entscheidet dessen offener Datensatz und nicht
-//! diese Datei.
+//! Einhaengepunkt der Dateizwischenablage, und er ist in zwei Runden ganz
+//! besetzt worden: `copy:` und `cut:` beantwortet seit der Runde 22 der
+//! Anwendungsdelegierte am Dateifenster und legt Dateiverweise ab, `paste:`
+//! seit der Runde 21 derselbe Delegierte, und es fuellt den Filtertext der
+//! Dateiliste — jeweils ohne einen zweiten Menueeintrag und ohne eine zweite
+//! Zeile in der Belegung. Der Eintrag ist derselbe, der im Editor Text
+//! kopiert oder einfuegt, und heisst darum weiter "Kopieren" und "Einfuegen"
+//! und nicht "Dateien kopieren" (Spec der Runde 22, A9). Der Circle
+//! `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste` ist damit
+//! gefahren; was `cmd+v` mit einem Dateiverweis tut, sobald eine
+//! Dateizwischenablage gebaut ist, entscheidet weiter dessen offener
+//! Datensatz und nicht diese Datei.
 //!
 //! # Warum es das Menue "Bearbeiten" ueberhaupt gibt
 //!
@@ -891,9 +895,11 @@ mod tests {
     /// der Delegierte `copy:` und `cut:` am Ende der Antwortkette, und die
     /// Zeilen zu beiden Selektoren bleiben trotzdem, wie sie am 260811 gemessen
     /// sind: die Tafel sagt, welche **Ersthelfer** antworten, und der
-    /// Delegierte ist keiner. Seine Antwort haelt die Probe aus Schritt 5 der
-    /// Runde 22 ueber `responds_to` an seiner Klasse — `copy:` und `cut:` ja,
-    /// `paste:` nein — und nicht diese Tafel.
+    /// Delegierte ist keiner. Seit der Runde 21 beantwortet er auch `paste:`,
+    /// und die Zeile dazu bleibt aus demselben Grund. Seine Antwort haelt die
+    /// Probe `der_delegierte_beantwortet_copy_cut_und_paste` beim
+    /// Anwendungsdelegierten ueber `responds_to` an seiner Klasse — `copy:`,
+    /// `cut:` und `paste:` ja — und nicht diese Tafel.
     const GEMESSEN: [(&str, &[(&str, &str)]); 6] = [
         ("cut:", &[("NSTextView", "NSText")]),
         ("copy:", &[("NSTextView", "NSText")]),

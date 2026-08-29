@@ -79,10 +79,15 @@
 # Anwendungsdelegierten, so wie der Fokusvorbehalt seit der Runde 7 auch.
 #
 # Cmd+C und Cmd+V standen bis zum 260805 in dieser Aufzaehlung. Sie tragen
-# seither die Textbefehle des Menues "Bearbeiten" und sonst nichts, und genau
-# das haelt sie fuer die Dateizwischenablage einer spaeteren Runde frei: ohne
-# jenes Menue erreicht Cmd+V ueberhaupt kein Textfeld. Die Reservierung aus C3
-# ist damit eingeloest und nicht gebrochen; C3 schreibt aus, warum
+# seither die Textbefehle des Menues "Bearbeiten" und sonst nichts: ohne
+# jenes Menue erreicht Cmd+V ueberhaupt kein Textfeld. Bis zur Runde 22 hielt
+# genau das die beiden fuer eine spaetere Runde frei; seither sind sie am
+# Dateifenster besetzt, und zwar ohne eine weitere Zeile in dieser Datei.
+# `copy:` und `cut:` beantwortet der Anwendungsdelegierte seit der Runde 22
+# und legt Dateiverweise fuer andere Anwendungen ab, `paste:` seit der Runde
+# 21 und haengt den Text oder den Dateinamen aus der Zwischenablage an den
+# Filtertext an; Dateien fuegt KRK nicht ein. Die Reservierung aus C3 ist
+# damit ganz eingeloest und nicht gebrochen; C3 schreibt aus, warum
 # (Nutzerentscheid vom 260805-0000,
 # `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
 #
@@ -659,8 +664,9 @@ tasten = ["ctrl+left"]
 # Cmd+C und Cmd+V bleiben von C10 unberuehrt: C10 liest nur, was schon in der
 # Zwischenablage steht, und legt nichts ab. Ab Werk frei sind die beiden seit
 # dem 260805 nicht mehr; sie tragen die Textbefehle des Menues "Bearbeiten"
-# ganz unten und sonst nichts, und genau das haelt sie fuer die
-# Dateizwischenablage einer spaeteren Runde frei (C3, C10).
+# ganz unten und sonst nichts (C3, C10). Wer sie am Dateifenster beantwortet,
+# steht dort: `copy:` und `cut:` der Anwendungsdelegierte seit der Runde 22,
+# `paste:` seit der Runde 21, als Einfuegen in den Filtertext.
 
 [[funktion]]
 id = "zwischenablage_ansehen"
@@ -990,11 +996,17 @@ tasten = ["f1"]
 # Diese Funktionen fuehrt KRK nicht aus, und sie bekommen nie ein Kommando.
 # Zugestellt werden sie vom Menue "Bearbeiten": ein NSMenuItem traegt die
 # Kombination, und die Antwortkette entscheidet, wer sie beantwortet. Im
-# Textfeld ist das der Feldeditor von AppKit, im Dateifenster heute niemand,
-# weshalb der Eintrag dort grau ist. Genau dieser Punkt ist spaeter der
-# Einhaengepunkt der Dateizwischenablage: wer `copy:` und `paste:` am
-# Dateifenster beantwortet, hat sie, ohne einen zweiten Menueintrag und ohne
-# eine zweite Zeile in dieser Datei.
+# Textfeld ist das der Feldeditor von AppKit, im Dateifenster der
+# Anwendungsdelegierte: `copy:` und `cut:` beantwortet er seit der Runde 22
+# und legt Dateiverweise fuer andere Anwendungen ab, `paste:` seit der Runde
+# 21 und haengt den Text oder den Dateinamen aus der Zwischenablage an den
+# Filtertext an. Bis zur Runde 22 antwortete im Dateifenster niemand, und der
+# Eintrag war dort grau; genau dieser Punkt war als Einhaengepunkt einer
+# Dateizwischenablage vorgemerkt. Besetzt ist er jetzt, ohne einen zweiten
+# Menueintrag und ohne eine zweite Zeile in dieser Datei, und Dateien fuegt
+# KRK dabei nicht ein. Was Cmd+V mit einem Dateiverweis tut, sobald eine
+# Dateizwischenablage gebaut wird, ist offen:
+# `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`.
 #
 # Sie stehen hier, weil C3 zusagt, dass jede Kombination, die in KRK etwas
 # ausloest, in der Belegung steht, von der Konflikterkennung gesehen wird und

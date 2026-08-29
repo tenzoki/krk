@@ -28,8 +28,10 @@
 //! auswahl      Mehrfachauswahl: markieren und weiterruecken (C2)
 //! pfadeingabe  Einen Pfad pruefen und sagen, wohin KRK geht (C2 und C10)
 //! operationen  Der Ablauf der Dateioperationen: Verzug, Buendelung, Texte (C4),
-//!              die Antworten des Terminal-Befehls (C11) und die Texte der
+//!              die Antworten des Terminal-Befehls (C11), die Texte der
 //!              beiden Pfadkopierer und des Oeffners (C1 bis C3 der Runde 4)
+//!              und die vier Saetze, mit denen ein abgewiesenes Einfuegen in
+//!              den Filter in der Statuszeile steht (C2 der Runde 21)
 //! loeschwarnung Der eine Loeschweg vor dem Auftrag: die Stufenfolge bis zur
 //!              Rueckfrage, die Tafel der sechs Ausloeser mit ihrer Rangfolge,
 //!              und die Texte, die daraus entstehen (C2, C3 und C4 der Runde 12)
@@ -72,8 +74,10 @@
 //! zwei Abfragen, ist der Grund, aus dem ihre Antworten nicht auseinanderlaufen
 //! koennen. Seit der Runde 22 hat die Regel einen Rumpf und zwei Eingaenge,
 //! den zweiten fuer die Dateiablage (`copy:` und `cut:` in der Dateiliste),
-//! die kein Kommando ist; dieser Eingang hat seine zwei eigenen Frager an
-//! denselben zwei Stellen.
+//! die kein Kommando ist; seit der Runde 21 bedient derselbe zweite Eingang
+//! auch `paste:`, das den Filtertext der Dateiliste fuellt, also drei
+//! Selektoren und weiter keinen dritten Eingang. Er hat seine zwei eigenen
+//! Frager an denselben zwei Stellen.
 //!
 //! **`fokus` steht danach und vor den uebrigen.** Jeder Befehl laeuft durch
 //! diese eine Regel, bevor irgendein anderes Modul ihn zu sehen bekommt. Bis

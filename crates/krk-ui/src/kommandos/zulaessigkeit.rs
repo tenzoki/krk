@@ -7,7 +7,7 @@
 //!
 //! ```text
 //!  zulaessig(Kommando) ──> Anspruch::Kommando ─┐
-//!  dateiablage_zulaessig() ─> Anspruch::Dateiablage ┤
+//!  dateiablage_zulaessig() ─> Anspruch::Dateiablage ┤   (copy:, cut:, paste:)
 //!                                               ├─> Wirkungsbereich ─┐
 //!                                               └─> Ausnahmeliste ───┤
 //!                                                                    ├──> gestattet()
@@ -33,22 +33,40 @@
 //! Seit der Runde 22 hat die Regel **einen** Rumpf, [`gestattet`], und zwei
 //! benannte Eingaenge davor. [`zulaessig`] nimmt ein [`Kommando`] und ist der
 //! Eingang der zwei Frager oben; [`dateiablage_zulaessig`] nimmt allein die
-//! [`Lage`] und ist der Eingang fuer die Dateiablage, also fuer `copy:` und
-//! `cut:` in der Dateiliste, die **kein** Kommando sind und keines bekommen
-//! (Constraint 3 der Runde 22). Was der Rumpf vom Befehl wissen will, sind
+//! [`Lage`] und ist der Eingang fuer die Dateiablage, also fuer die drei
+//! Selektoren des Menues „Bearbeiten", die der Delegierte am Dateifenster
+//! beantwortet: `copy:` und `cut:` seit der Runde 22, `paste:` seit der
+//! Runde 21. Keiner der drei ist ein Kommando, und keiner bekommt eines
+//! (Constraint 3 der Runde 22, Constraint 3 und 5 der Runde 21). Was der
+//! Rumpf vom Befehl wissen will, sind
 //! drei Antworten, und die gibt [`Anspruch`] fuer beide Eingaenge vollstaendig
 //! und ohne Auffangzweig: den Wirkungsbereich, ob der Befehl waehrend eines
 //! Blattes erlaubt ist, ob er immer erreichbar ist. Die Dateiablage antwortet
 //! `Dateifenster`, nein, nein (A11 der Runde 22), und die Ausnahmeliste
 //! waechst nicht.
 //!
+//! **`paste:` nimmt seit der Runde 21 denselben Eingang und bekommt keinen
+//! dritten Wert von [`Anspruch`].** Das Einfuegen in den Filtertext stellt
+//! byteweise denselben Anspruch wie das Kopieren und das Ausschneiden:
+//! `Wirkungsbereich::Dateifenster`, nicht waehrend eines Blattes, nicht immer
+//! erreichbar (A9 der Runde 21). Ein Wert `Anspruch::Einfuegen` mit denselben
+//! drei Antworten waere eine zweite Kopie der drei Antworten, die sich allein
+//! im Namen unterschiede; darum liest sich `Dateiablage` seit der Runde 21 als
+//! „der Ablage-Einhaengepunkt des Dateifensters" und nicht mehr als „die zwei
+//! Selektoren, die Verweise ablegen". Ob der Name umbenannt gehoert, ist eine
+//! offene Frage des Plans der Runde 21 und keine dieser Datei.
+//!
 //! **Der zweite Eingang hat seine zwei eigenen Frager, und es sind dieselben
-//! zwei Stellen**: `validateMenuItem:` fuer die Ausgrauung von „Kopieren" und
-//! „Ausschneiden", und `Anwendungsdelegierter::dateiablage_ausfuehren` fuer die
-//! Antwort auf den Selektor. Beide fragen [`dateiablage_zulaessig`] auf
-//! derselben [`Lage`]; die Zaehlprobe
-//! `die_zwei_frager_der_dateiablage_rufen_dieselbe_regel` haelt die Zahl, wie
-//! `beide_frager_rufen_die_eine_regel` sie fuer den Kommando-Eingang haelt.
+//! zwei Stellen**: `validateMenuItem:` fuer die Ausgrauung von „Kopieren",
+//! „Ausschneiden" und „Einfuegen", und
+//! `Anwendungsdelegierter::bearbeiten_am_dateifenster` fuer die Antwort auf
+//! den Selektor, seit der Runde 21 der eine Vorspann, durch den alle drei
+//! Selektoren gehen (bis dahin hiess er `dateiablage_ausfuehren` und bediente
+//! zwei). Beide fragen [`dateiablage_zulaessig`] auf derselben [`Lage`]; die
+//! Zaehlprobe `die_zwei_frager_der_dateiablage_rufen_dieselbe_regel` haelt
+//! die Zahl, wie `beide_frager_rufen_die_eine_regel` sie fuer den
+//! Kommando-Eingang haelt. Dass die Zahl mit dem dritten Selektor nicht
+//! gewachsen ist, ist der Zweck des einen Vorspanns.
 //! Ein generisches `zulaessig(impl Into<Anspruch>, Lage)` waere die andere Form
 //! gewesen; sie haette den Kommando-Frager auf drei gehoben und die Tafel aus
 //! 280 Faellen an einen Trait gebunden. Zwei benannte Huellen um einen
@@ -206,23 +224,30 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
     gestattet(Anspruch::Kommando(kommando), lage)
 }
 
-/// Ob die Dateiablage, also `copy:` und `cut:` in der Dateiliste, in dieser
-/// Lage wirken darf (A11 der Runde 22).
+/// Ob die Dateiablage in dieser Lage wirken darf (A11 der Runde 22, A9 der
+/// Runde 21): die drei Selektoren des Menues „Bearbeiten", die der Delegierte
+/// am Dateifenster beantwortet, `copy:` und `cut:` seit der Runde 22 und
+/// `paste:` seit der Runde 21.
 ///
 /// **Der zweite Eingang zur einen Regel, und kein zweiter Rumpf.** Die
 /// Dateiablage ist kein [`Kommando`]: sie haengt an keiner Taste der
-/// Belegung und an keinem `krkKommando:`-Eintrag, sondern an den zwei
+/// Belegung und an keinem `krkKommando:`-Eintrag, sondern an den drei
 /// Aktionsselektoren, die AppKit dem Anwendungsdelegierten am Ende der
-/// Antwortkette zustellt. Ein Kommando dafuer anzulegen hiesse, `cmd+c` in
-/// `resources/default-keymap.toml` zu binden, und das Ereignis kaeme im
-/// Editor nie mehr beim Textsystem an. Also fragt sie die Regel ohne
+/// Antwortkette zustellt. Ein Kommando dafuer anzulegen hiesse, `cmd+c` oder
+/// `cmd+v` in `resources/default-keymap.toml` zu binden, und das Ereignis
+/// kaeme im Editor nie mehr beim Textsystem an. Also fragt sie die Regel ohne
 /// Kommando, mit dem [`Anspruch`], den ein Kommando mit
 /// `Wirkungsbereich::Dateifenster` stellte: kein stehendes Blatt, ein
 /// Ersthelfer, der nicht AppKit gehoert, der Fokus im Dateifenster und KRKs
 /// eigenes Schluesselfenster.
 ///
+/// Das Einfuegen stellt denselben Anspruch wie das Kopieren und das
+/// Ausschneiden, Byte fuer Byte, und bekommt deshalb weder einen eigenen
+/// Eingang noch einen dritten Wert von [`Anspruch`]; der Grund steht im
+/// Modulkopf unter „Ein Rumpf, zwei Eingaenge".
+///
 /// Warum eine zweite benannte Huelle und nicht eine generische Signatur an
-/// [`zulaessig`], steht im Modulkopf unter „Ein Rumpf, zwei Eingaenge".
+/// [`zulaessig`], steht ebenfalls dort.
 ///
 /// `#[must_use]`, weil ein Rufer, der die Antwort fallen liesse, den Befehl
 /// ausfuehrte, den die Regel eben verweigert hat.
@@ -247,7 +272,10 @@ pub fn dateiablage_zulaessig(lage: Lage) -> bool {
 enum Anspruch {
     /// Ein Tastenbefehl oder ein Eintrag des Hauptmenues.
     Kommando(Kommando),
-    /// `copy:` und `cut:` in der Dateiliste (Runde 22).
+    /// Der Ablage-Einhaengepunkt des Dateifensters: `copy:` und `cut:` seit
+    /// der Runde 22, `paste:` seit der Runde 21. Ein eigener Wert fuer das
+    /// Einfuegen entsteht nicht, weil er dieselben drei Antworten gaebe
+    /// (A9 der Runde 21).
     Dateiablage,
 }
 
@@ -401,15 +429,19 @@ mod tests {
     }
 
     /// Der Dateiablage-Eingang hat genau zwei Frager, und es sind dieselben
-    /// zwei Stellen wie beim Kommando-Eingang (C4.5 der Runde 22, Baumhaelfte).
+    /// zwei Stellen wie beim Kommando-Eingang (C4.5 der Runde 22, Baumhaelfte;
+    /// C3.6 der Runde 21).
     ///
-    /// `validateMenuItem:` fragt fuer die Ausgrauung von „Kopieren" und
-    /// „Ausschneiden", `Anwendungsdelegierter::dateiablage_ausfuehren` fuer die
-    /// Antwort auf `copy:` und `cut:`. Beide rufen
+    /// `validateMenuItem:` fragt fuer die Ausgrauung von „Kopieren",
+    /// „Ausschneiden" und „Einfuegen",
+    /// `Anwendungsdelegierter::bearbeiten_am_dateifenster` fuer die Antwort auf
+    /// `copy:`, `cut:` und `paste:`; seit der Runde 21 ist dieser eine
+    /// Vorspann der Rumpf aller drei Selektoren, und deshalb bleibt die Zahl
+    /// beim dritten Selektor bei zwei. Beide rufen
     /// [`dateiablage_zulaessig`] auf derselben [`Lage`], aus demselben Grund
     /// wie in [`beide_frager_rufen_die_eine_regel`]: ein freigegebener Eintrag
-    /// zu einer abgewiesenen Antwort legte Verweise ab, die die Regel eben
-    /// verweigert hat.
+    /// zu einer abgewiesenen Antwort legte Verweise ab oder fuellte den
+    /// Filtertext, was die Regel eben verweigert hat.
     ///
     /// Die Nadel `dateiablage_zulaessig` zaehlt die Nachbarin nicht mit: vor
     /// deren `zulaessig(` steht ein Unterstrich, und
@@ -440,6 +472,10 @@ mod tests {
     /// Ersthelfer AppKit gehoert oder das Schluesselfenster fremd ist, weist
     /// ab, in jedem Fokus, denn die Dateiablage steht auf keiner
     /// Ausnahmeliste.
+    ///
+    /// Seit der Runde 21 haelt die Tafel auch das Einfuegen (C3.2, C3.4, C3.5,
+    /// Probenhaelften): `paste:` fragt denselben Eingang mit demselben
+    /// Anspruch, also ist jede Zeile hier zugleich seine.
     #[test]
     fn die_dateiablage_wirkt_genau_mit_dem_fokus_im_dateifenster() {
         let (blatt, appkit, krk) = OHNE_HINDERNIS;
@@ -898,7 +934,9 @@ mod tests {
     /// **Seit der Runde 22 steht der zweite Eingang daneben**: die Dateiablage
     /// ist kein Kommando und kommt in `KENNUNGEN` nicht vor, also haelt die
     /// Zaehlung sie nicht. Die letzte Zusicherung fragt sie deshalb eigens und
-    /// erwartet die Abweisung (C4.2): die Liste bleibt bei vier.
+    /// erwartet die Abweisung (C4.2): die Liste bleibt bei vier. Das Einfuegen
+    /// der Runde 21 erweitert sie nicht (C3.2): es geht durch denselben
+    /// Eingang, und die Abweisung gilt ihm mit.
     #[test]
     fn waehrend_eines_blattes_kommen_genau_diese_vier_durch() {
         let blatt = lage(true, false, true, Fokus::Anderswo);

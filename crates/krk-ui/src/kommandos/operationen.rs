@@ -12,8 +12,10 @@
 //! [`kein_finder`] fuer die drei Eintraege des Kontextmenues, deren Regel in
 //! [`super::kontextmenue`] steht, und seit der Runde 22 [`Dateiablage`],
 //! [`namenszeilen`], [`ablagemeldung`] und [`verweise_abgewiesen`] fuer die
-//! Dateiverweise, die `cmd+c` und `cmd+x` im Dateifenster ablegen. Die Texte der
-//! Runde 4 tragen den Zuschnitt der Dateioperationen vollstaendig: ein Befehl,
+//! Dateiverweise, die `cmd+c` und `cmd+x` im Dateifenster ablegen, und seit
+//! der Runde 21 [`einfuegen_abgewiesen`] fuer das Einfuegen aus der
+//! Zwischenablage in den Filtertext, das `cmd+v` daneben ausloest. Die Texte
+//! der Runde 4 tragen den Zuschnitt der Dateioperationen vollstaendig: ein Befehl,
 //! der auf den sichtbaren Tab des aktiven Dateifensters wirkt und seine
 //! Antwort als Befehlsantwort in die Statuszeile schreibt. **Das Teilen weicht
 //! in der ersten Haelfte ab und nicht in der zweiten**: es wirkt aus jedem
@@ -112,6 +114,7 @@ use krk_core::operation::{
 };
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Ordnermodell;
+use krk_core::zwischenablage::Einfuegehindernis;
 
 /// Wie lange eine Operation laufen muss, bevor die Vorgangsanzeige erscheint.
 ///
@@ -1213,6 +1216,43 @@ pub fn verweise_abgewiesen() -> String {
 }
 
 // ----------------------------------------------------------------------
+// Das Einfuegen in den Filter (Runde 21)
+// ----------------------------------------------------------------------
+
+/// Der Satz der Statuszeile, wenn `cmd+v` nichts in den Filtertext eingefuegt
+/// hat (A5 der Runde 21).
+///
+/// Vier Hindernisse, vier Saetze, in der Reihenfolge der Aufzaehlung: eine
+/// Ablage ohne Text und ohne Verweis, ein mehrzeiliger Text, mehrere
+/// Dateiverweise, und ein Text, von dem nach der Reinigung kein Zeichen
+/// uebrig ist. Der `match` ist vollstaendig und ohne Auffangzweig, damit ein
+/// fuenftes Hindernis den Bau anhaelt statt still einen der vier Saetze zu
+/// bekommen. Die Zahl der Verweise steht in der Schreibweise von [`zahl`],
+/// wie `<n> Einträge kopiert` in [`ablagemeldung`].
+///
+/// **Ein geglücktes Einfuegen bekommt keinen Satz** (A5, C2.8): seine
+/// Antwort ist der Rang `Filterstand`, der den neuen Filtertext samt Wirkung
+/// zeigt, und eine Befehlsantwort darueber sagte nichts, was jene Zeile nicht
+/// sagt. Diese Funktion schreibt deshalb nur den Fall, in dem der Filtertext
+/// so geblieben ist, wie er war.
+#[must_use]
+pub fn einfuegen_abgewiesen(hindernis: Einfuegehindernis) -> String {
+    match hindernis {
+        Einfuegehindernis::KeinText => {
+            "nichts einzufügen: die Zwischenablage trägt keinen Text".to_owned()
+        }
+        Einfuegehindernis::Mehrzeilig => "nicht eingefügt: der Text hat mehrere Zeilen".to_owned(),
+        Einfuegehindernis::MehrereVerweise(anzahl) => format!(
+            "nicht eingefügt: die Zwischenablage trägt {} Dateiverweise",
+            zahl(anzahl)
+        ),
+        Einfuegehindernis::NichtsTragbar => {
+            "nichts einzufügen: der Text trägt kein Zeichen, das ein Name tragen kann".to_owned()
+        }
+    }
+}
+
+// ----------------------------------------------------------------------
 // Die Uebergabe an das Standardprogramm (C3 der Runde 4)
 // ----------------------------------------------------------------------
 
@@ -2106,6 +2146,51 @@ mod tests {
             "die Zwischenablage hat die Einträge nicht angenommen"
         );
         assert_ne!(verweise_abgewiesen(), ablage_weist_ab());
+    }
+
+    // ------------------------------------------------------------------
+    // Das Einfuegen in den Filter (Runde 21)
+    // ------------------------------------------------------------------
+
+    /// C2.6: die leere Ablage (A5).
+    #[test]
+    fn der_satz_ohne_text_nennt_die_zwischenablage() {
+        assert_eq!(
+            einfuegen_abgewiesen(Einfuegehindernis::KeinText),
+            "nichts einzufügen: die Zwischenablage trägt keinen Text"
+        );
+    }
+
+    /// C2.4: der mehrzeilige Text (A5).
+    #[test]
+    fn der_satz_bei_mehreren_zeilen_nennt_die_zeilen() {
+        assert_eq!(
+            einfuegen_abgewiesen(Einfuegehindernis::Mehrzeilig),
+            "nicht eingefügt: der Text hat mehrere Zeilen"
+        );
+    }
+
+    /// C2.5: mehrere Dateiverweise, die Zahl in der Schreibweise von
+    /// [`zahl`] (A5, C2.9).
+    #[test]
+    fn der_satz_bei_mehreren_verweisen_traegt_die_zahl_mit_tausenderpunkt() {
+        assert_eq!(
+            einfuegen_abgewiesen(Einfuegehindernis::MehrereVerweise(3)),
+            "nicht eingefügt: die Zwischenablage trägt 3 Dateiverweise"
+        );
+        assert_eq!(
+            einfuegen_abgewiesen(Einfuegehindernis::MehrereVerweise(1234)),
+            "nicht eingefügt: die Zwischenablage trägt 1.234 Dateiverweise"
+        );
+    }
+
+    /// C2.7: nach der Reinigung bleibt kein Zeichen (A5).
+    #[test]
+    fn der_satz_ohne_tragbares_zeichen_nennt_den_namen() {
+        assert_eq!(
+            einfuegen_abgewiesen(Einfuegehindernis::NichtsTragbar),
+            "nichts einzufügen: der Text trägt kein Zeichen, das ein Name tragen kann"
+        );
     }
 
     // ------------------------------------------------------------------

@@ -20,7 +20,10 @@
 //! Die Antwort auf einen Befehl schreiben die zwei Pfadkopierer der Runde 4
 //! ueber [`DateifensterQuelle::befehlsantwort_zeigen`], und seit der Runde 22
 //! nimmt die Dateiablage ([`DateifensterQuelle::dateiverweise_ablegen`],
-//! `cmd+c` und `cmd+x` ohne `Kommando`) denselben Weg.
+//! `cmd+c` und `cmd+x` ohne `Kommando`) denselben Weg, seit der Runde 21
+//! auch das abgewiesene Einfuegen in den Filtertext
+//! ([`DateifensterQuelle::aus_zwischenablage_einfuegen`], `cmd+v` ohne
+//! `Kommando`); ein gegluecktes Einfuegen schreibt keinen Satz.
 //!
 //! Zwei Objective-C-Klassen teilen sich die Arbeit, weil AppKit sie an zwei
 //! Protokollen entgegennimmt. [`DateifensterQuelle`] ist die Datenquelle: sie
@@ -1951,6 +1954,59 @@ impl DateifensterQuelle {
         }
     }
 
+    /// Fuegt den Inhalt der Zwischenablage in den Filtertext des sichtbaren
+    /// Tabs ein (`cmd+v` und „Bearbeiten › Einfuegen", Runde 21).
+    ///
+    /// **Der zweite Eingang in den Filtertext**, neben
+    /// [`Self::filterzeichen_tippen`]. Beide enden im selben Feld desselben
+    /// `Ordnermodell`s und auf demselben Weg der Anzeige,
+    /// [`Self::nach_filteraenderung`]; ein eingefuegter Text ist danach von
+    /// getippten Zeichen nicht zu unterscheiden (C1.1, C1.2), und was das
+    /// Tippen ueber den Filtertext zusagt — Rueckschritt, `Esc`,
+    /// Ordnerwechsel, Tabwechsel — gilt ohne Zutun dieser Stelle.
+    ///
+    /// **Der Vertrag der Reinigung.** Die Ablage wird ueber
+    /// [`super::zwischenablage::einfuegequelle`] gelesen und im Kern von
+    /// [`krk_core::zwischenablage::filtertext_aus`] gedeutet: ein Verweis
+    /// oder ein Pfadtext wird auf seinen letzten Bestandteil gekuerzt, und
+    /// jedes Zeichen, das die Zeichenregel `traegt_ein_dateiname` abweist,
+    /// faellt dort heraus. Hier kommt deshalb kein Zeichen an, das das Tippen
+    /// nicht auch angenommen haette, und die Zeichenregel wird an dieser
+    /// Stelle nicht ein zweites Mal gefragt (C1.4 des Specs der Runde 21).
+    ///
+    /// **Die Ausleihe endet vor `nach_filteraenderung`**, wie in
+    /// [`Self::filterzeichen_tippen`]: der Nachzug leiht das Tabmodell selbst
+    /// aus, und eine noch offene veraenderliche Ausleihe liesse `RefCell` in
+    /// Panik geraten. Angehaengt wird in einem Zug ueber `text_anhaengen` und
+    /// nachgezogen genau einmal (A7): die Sicht wird fuer zwoelf eingefuegte
+    /// Zeichen einmal und nicht zwoelfmal aufgebaut.
+    ///
+    /// **Ein gegluecktes Einfuegen schreibt keine Befehlsantwort** (C2.8). Die
+    /// Statuszeile zeigt danach ohnehin den fuenften Rang mit dem neuen
+    /// Filtertext und der Zahl der gezeigten Zeilen, und ein Satz daneben
+    /// sagte dasselbe ein zweites Mal. Allein ein abgewiesenes Einfuegen
+    /// bekommt einen Satz, den [`operationen::einfuegen_abgewiesen`] je
+    /// Hindernis schreibt; der Filtertext bleibt dann, wie er war.
+    ///
+    /// `pub`, weil der Rufer der Anwendungsdelegierte ist, der `paste:`
+    /// beantwortet und die aktive Fensterseite waehlt, wie bei
+    /// [`Self::dateiverweise_ablegen`].
+    pub fn aus_zwischenablage_einfuegen(&self) {
+        let quelle = super::zwischenablage::einfuegequelle();
+        match krk_core::zwischenablage::filtertext_aus(&quelle) {
+            Ok(text) => {
+                {
+                    let mut tabs = self.ivars().tabs.borrow_mut();
+                    tabs.aktiver_mut().modell_mut().text_anhaengen(&text);
+                }
+                self.nach_filteraenderung();
+            }
+            Err(hindernis) => {
+                self.befehlsantwort_zeigen(&operationen::einfuegen_abgewiesen(hindernis));
+            }
+        }
+    }
+
     /// Gibt die Eintraege an das Standardprogramm des Systems (C3).
     ///
     /// **Die eine Umsetzung des Oeffnens.** Sie nimmt die Menge, auf die sie
@@ -2119,7 +2175,9 @@ impl DateifensterQuelle {
     /// weiss, ob die Zeile der Auswahl weggefallen ist.
     ///
     /// **Der eine Weg der Anzeige nach einer Filteraenderung**, gerufen vom
-    /// Tippen und vom Ruecknehmen eines Zeichens. Die Rechnung selbst steht
+    /// Tippen, vom Ruecknehmen eines Zeichens und seit der Runde 21 vom
+    /// Einfuegen aus der Zwischenablage
+    /// ([`Self::aus_zwischenablage_einfuegen`]). Die Rechnung selbst steht
     /// als reine Funktion in [`crate::kommandos::navigation`] neben
     /// `zielzeile`, damit sie ohne `NSTableView` zu pruefen ist; hier bleibt
     /// allein, was AppKit betrifft.
