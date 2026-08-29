@@ -12,6 +12,7 @@ use std::sync::{Arc, mpsc};
 use std::time::{Duration, SystemTime};
 
 use krk_core::verzeichnis::durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
+use krk_core::verzeichnis::filter::Muster;
 use krk_core::verzeichnis::inhalt::{Inhaltsbefund, traegt_der_inhalt};
 use krk_core::verzeichnis::leser::{
     Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen, lesen_hoechstens,
@@ -1191,12 +1192,256 @@ fn der_kleingeschriebene_filtertext_laeuft_mit() {
     assert!(!modell.filter_steht());
     modell.filtertext_setzen("AaA");
     assert_eq!(modell.filtertext(), "AaA");
-    assert_eq!(modell.filter_klein(), "aaa");
+    assert_eq!(modell.muster(), &Muster::aus("AaA"));
     assert!(modell.filter_steht());
 
     modell.filter_leeren();
-    assert_eq!(modell.filter_klein(), "");
+    assert_eq!(modell.muster(), &Muster::aus(""));
     assert!(!modell.filter_steht());
+
+    // Seit der Runde 21 ist der mitlaufende Wert ein zerlegtes Muster: der
+    // Filtertext behaelt sein `*`, das Muster ist seine Zerlegung daran.
+    modell.filtertext_setzen("Ab*Cd");
+    assert_eq!(modell.filtertext(), "Ab*Cd");
+    assert_eq!(modell.muster(), &Muster::aus("Ab*Cd"));
+    assert_ne!(
+        modell.muster(),
+        &Muster::aus("AbCd"),
+        "das Sternchen ist Teil des Musters und kein Zeichen, das faellt"
+    );
+    assert!(modell.filter_steht());
+}
+
+// ---------------------------------------------------------------------------
+// Das Einfuegen in den Filter und der Platzhalter am Modell (Runde 21)
+// ---------------------------------------------------------------------------
+
+/// Der Ordner der Einfuegeproben, von Hand gebaut: zwei Treffer fuer `notiz`,
+/// eine Datei, die nur das Eingefuegte `tiz` traegt, eine ohne Treffer, ein
+/// Ordner.
+fn einfuegemodell() -> Ordnermodell {
+    handmodell([
+        handeintrag("notiz.txt", Typ::Datei),
+        handeintrag("Notizen.md", Typ::Datei),
+        handeintrag("tiz.txt", Typ::Datei),
+        handeintrag("ohne.txt", Typ::Datei),
+        handeintrag("stiller-ordner", Typ::Ordner),
+    ])
+}
+
+/// C1.1 und C1.2, die Modellhaelften: ein eingefuegter Text ist derselbe
+/// Filtertext wie dieselben Zeichen getippt, und er wird **angehaengt** und
+/// ersetzt nicht (A7).
+///
+/// `n`, `o` getippt und `tiz` eingefuegt ergibt `notiz`; Sicht und Muster sind
+/// die des zeichenweisen Wegs. `tiz.txt` steht nicht, denn der Filtertext
+/// lautet `notiz` und nicht `tiz`.
+#[test]
+fn ein_eingefuegter_text_ist_derselbe_filtertext_wie_fuenf_getippte_zeichen() {
+    let mut eingefuegt = einfuegemodell();
+    eingefuegt.zeichen_anhaengen('n');
+    eingefuegt.zeichen_anhaengen('o');
+    eingefuegt.text_anhaengen("tiz");
+
+    let mut getippt = einfuegemodell();
+    for zeichen in "notiz".chars() {
+        getippt.zeichen_anhaengen(zeichen);
+    }
+
+    assert_eq!(
+        eingefuegt.filtertext(),
+        "notiz",
+        "angehaengt, nicht ersetzt (C1.2)"
+    );
+    assert_eq!(eingefuegt.filtertext(), getippt.filtertext());
+    assert_eq!(eingefuegt.muster(), getippt.muster());
+    assert_eq!(
+        namen(&eingefuegt),
+        namen(&getippt),
+        "die Sicht nach dem Einfuegen ist die Sicht nach dem Tippen (C1.1)"
+    );
+    assert_eq!(
+        namen(&eingefuegt),
+        vec!["stiller-ordner", "notiz.txt", "Notizen.md"],
+        "der Ordner bleibt bei flacher Suche stehen, die zwei Treffer stehen, \
+         `tiz.txt` und `ohne.txt` nicht"
+    );
+
+    // Ein leerer Text aendert nichts, und ein zweites Einfuegen haengt weiter an.
+    eingefuegt.text_anhaengen("");
+    assert_eq!(eingefuegt.filtertext(), "notiz");
+    eingefuegt.text_anhaengen(".txt");
+    assert_eq!(eingefuegt.filtertext(), "notiz.txt");
+    assert_eq!(namen(&eingefuegt), vec!["stiller-ordner", "notiz.txt"]);
+}
+
+/// C1.5, die Modellhaelfte: der Rueckschritt nach einem Einfuegen nimmt genau
+/// ein Zeichen und nicht den eingefuegten Block, und das Leeren leert ganz (A8).
+#[test]
+fn der_rueckschritt_nach_einem_einfuegen_nimmt_ein_zeichen() {
+    let mut modell = einfuegemodell();
+    modell.text_anhaengen("notiz");
+
+    assert!(
+        modell.letztes_zeichen_weg(),
+        "es gab ein Zeichen zurueckzunehmen"
+    );
+    assert_eq!(modell.filtertext(), "noti", "das `z` faellt, `noti` bleibt");
+    assert_eq!(modell.muster(), &Muster::aus("noti"));
+    assert_eq!(
+        namen(&modell),
+        vec!["stiller-ordner", "notiz.txt", "Notizen.md"],
+        "`noti` trifft weiter beide Notizen"
+    );
+
+    modell.filter_leeren();
+    assert_eq!(modell.filtertext(), "");
+    assert!(!modell.filter_steht(), "`Esc` leert den Filtertext ganz");
+    assert_eq!(
+        namen(&modell),
+        vec![
+            "stiller-ordner",
+            "notiz.txt",
+            "Notizen.md",
+            "ohne.txt",
+            "tiz.txt"
+        ],
+        "ohne Filtertext steht wieder jede Zeile"
+    );
+}
+
+/// C1.7, die Modellhaelfte: „Content" an, „Deep" an, leerer Filtertext, fuenf
+/// Zeichen eingefuegt — der Inhaltsfilter wirkt sofort, ohne dass ein weiterer
+/// Anschlag noetig waere (A8).
+///
+/// Die Schwelle der tiefen Suche ist fuenf; `hallo` erreicht sie mit dem einen
+/// Einfuegen. Die Zaehlung selbst ist die von `inhalt_wirkt`, die Probe stellt
+/// ihr nur den Weg des Einfuegens gegenueber.
+#[test]
+fn ein_eingefuegter_name_von_fuenf_zeichen_stoesst_den_inhaltsfilter_sofort_an() {
+    let mut modell = Ordnermodell::neu(1);
+    modell.tief_setzen(true);
+    modell.inhalt_setzen(true);
+    modell.anhaengen([
+        handeintrag("gruss.txt", Typ::Datei),
+        handeintrag("hallo-welt.txt", Typ::Datei),
+    ]);
+    modell.abschliessen();
+    assert!(
+        !modell.inhalt_wirkt(),
+        "ohne Filtertext wirkt der Inhaltsfilter nicht"
+    );
+
+    modell.text_anhaengen("hallo");
+
+    assert!(
+        modell.inhalt_wirkt(),
+        "fuenf eingefuegte Zeichen erreichen die Schwelle der tiefen Suche sofort"
+    );
+    let kandidat = index_von(&modell, "gruss.txt");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+    assert!(
+        modell.steht_wegen_des_inhalts(kandidat),
+        "die Datei, deren Text `hallo` traegt und deren Name es nicht tut, \
+         steht wegen ihres Inhalts"
+    );
+    assert_eq!(namen(&modell), vec!["gruss.txt", "hallo-welt.txt"]);
+
+    // Vier eingefuegte Zeichen bleiben darunter, wie vier getippte.
+    let mut kurz = Ordnermodell::neu(1);
+    kurz.tief_setzen(true);
+    kurz.inhalt_setzen(true);
+    kurz.text_anhaengen("hall");
+    assert!(
+        !kurz.inhalt_wirkt(),
+        "vier Zeichen liegen unter der tiefen Schwelle"
+    );
+}
+
+/// C2.10 und C5.1 am Ordnermodell: ein eingefuegter Dateiname mit dem
+/// Sternchen an der Stelle des Markers findet beide Marker und nicht den Namen
+/// ohne Marker (A3, B1).
+///
+/// Der Filtertext behaelt sein `*` — der Platzhalter ist ein Zeichen des
+/// Filtertexts und faellt in keiner Reinigung. Ein Name ohne Marker traegt an
+/// der Stelle einen Bindestrich statt der zwei verlangten Unterstriche und
+/// steht deshalb nicht.
+#[test]
+fn ein_eingefuegter_marker_findet_beide_marker() {
+    let mut modell = handmodell([
+        handeintrag(
+            "260503-1144_d_f1-zitadel-slot-rehost-and-swap-test.md",
+            Typ::Datei,
+        ),
+        handeintrag(
+            "260503-1144_c_f1-zitadel-slot-rehost-and-swap-test.md",
+            Typ::Datei,
+        ),
+        handeintrag(
+            "260503-1144-f1-zitadel-slot-rehost-and-swap-test.md",
+            Typ::Datei,
+        ),
+        handeintrag("260503-1144_c_f2-anderes-thema.md", Typ::Datei),
+    ]);
+
+    // C2.10: der ganze Dateiname, wie er aus einem Verweis kommt.
+    modell.text_anhaengen("260503-1144_*_f1-zitadel-slot-rehost-and-swap-test.md");
+    assert!(
+        modell.filtertext().contains('*'),
+        "der Filtertext traegt das Sternchen"
+    );
+    assert_eq!(
+        namen(&modell),
+        vec![
+            "260503-1144_c_f1-zitadel-slot-rehost-and-swap-test.md",
+            "260503-1144_d_f1-zitadel-slot-rehost-and-swap-test.md",
+        ],
+        "beide Marker stehen, der Name ohne Marker und die andere Nummer nicht"
+    );
+
+    // C5.1: die kurze Form bis zur Nummer.
+    modell.filtertext_setzen("260503-1144_*_f1");
+    assert_eq!(
+        namen(&modell),
+        vec![
+            "260503-1144_c_f1-zitadel-slot-rehost-and-swap-test.md",
+            "260503-1144_d_f1-zitadel-slot-rehost-and-swap-test.md",
+        ],
+        "`_` und `_` um das Sternchen sind verlangt, und `-f1` traegt sie nicht"
+    );
+}
+
+/// C5.4 am Ordnermodell: ein Sternchen am Rand des Filtertexts aendert die
+/// Sicht nicht, denn der Vergleich ist an beiden Enden ungebunden (B2).
+#[test]
+fn ein_stern_am_rand_aendert_die_sicht_nicht() {
+    let bestand = || {
+        handmodell([
+            handeintrag("abc", Typ::Datei),
+            handeintrag("xabc", Typ::Datei),
+            handeintrag("abcx", Typ::Datei),
+            handeintrag("xabcx", Typ::Datei),
+            handeintrag("axbc", Typ::Datei),
+        ])
+    };
+    let mut ohne_stern = bestand();
+    ohne_stern.filtertext_setzen("abc");
+    let erwartet: Vec<String> = namen(&ohne_stern).into_iter().map(str::to_owned).collect();
+    assert_eq!(
+        erwartet,
+        vec!["abc", "abcx", "xabc", "xabcx"],
+        "`abc` trifft an jeder Stelle und `axbc` nicht"
+    );
+
+    for filtertext in ["*abc", "abc*", "*abc*"] {
+        let mut modell = bestand();
+        modell.filtertext_setzen(filtertext);
+        assert_eq!(
+            namen(&modell),
+            erwartet,
+            "{filtertext:?} zeigt eine andere Sicht als `abc`"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1356,6 +1601,53 @@ fn die_schwelle_zaehlt_zeichen_und_keine_bytes() {
     assert!(
         modell.inhalt_wirkt(),
         "drei Zeichen erreichen die flache Schwelle"
+    );
+}
+
+/// C6.4: das Sternchen zaehlt nicht zur Inhaltsschwelle (B6).
+///
+/// Flach liegt die Schwelle bei drei, tief bei fuenf; gezaehlt werden die
+/// Zeichen des Filtertexts ohne die Sternchen. Ein Filtertext aus lauter `*`
+/// zaehlt null und liest deshalb nie eine Datei, gleich wie lang er ist.
+#[test]
+fn das_sternchen_zaehlt_nicht_zur_schwelle() {
+    let mut modell = inhaltsmodell();
+    modell.inhalt_setzen(true);
+    assert!(
+        !modell.tief(),
+        "diese Haelfte misst die flache Schwelle drei"
+    );
+
+    modell.filtertext_setzen("ab*");
+    assert!(
+        !modell.inhalt_wirkt(),
+        "`ab*` sind zwei Zeichen, nicht drei"
+    );
+    modell.filtertext_setzen("ab*c");
+    assert!(modell.inhalt_wirkt(), "`ab*c` sind drei Zeichen");
+    modell.filtertext_setzen("*****");
+    assert!(
+        !modell.inhalt_wirkt(),
+        "lauter Sternchen zaehlen null (flach)"
+    );
+
+    modell.tief_setzen(true);
+    modell.filtertext_setzen("ab*cd");
+    assert!(
+        !modell.inhalt_wirkt(),
+        "`ab*cd` sind vier Zeichen, nicht fuenf"
+    );
+    modell.filtertext_setzen("ab*cde");
+    assert!(modell.inhalt_wirkt(), "`ab*cde` sind fuenf Zeichen");
+    modell.filtertext_setzen("*****");
+    assert!(
+        !modell.inhalt_wirkt(),
+        "lauter Sternchen zaehlen null (tief)"
+    );
+    assert!(
+        modell.filter_steht(),
+        "der Filter steht dabei, denn ein Sternchen ist ein Zeichen; nur die \
+         Inhaltsschwelle zaehlt es nicht"
     );
 }
 
@@ -1719,9 +2011,9 @@ fn inhalt_mit_zeitschranke(
 ) -> Inhaltsbefund {
     let (sender, empfaenger) = mpsc::channel();
     let pfad = pfad.to_path_buf();
-    let filter_klein = filter_klein.to_owned();
+    let muster = Muster::aus(filter_klein);
     std::thread::spawn(move || {
-        let _ = sender.send(traegt_der_inhalt(&pfad, &filter_klein, grenze));
+        let _ = sender.send(traegt_der_inhalt(&pfad, &muster, grenze));
     });
     empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
         panic!("traegt_der_inhalt ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
@@ -1739,19 +2031,19 @@ fn ein_text_mit_der_folge_traegt_sie_und_einer_ohne_nicht() {
 
     let mit = ordner.datei("mit.txt", b"erste Zeile\nzweite mit gesuchtem Wort\n");
     assert_eq!(
-        traegt_der_inhalt(&mit, "gesuchtem", 1024),
+        traegt_der_inhalt(&mit, &Muster::aus("gesuchtem"), 1024),
         Inhaltsbefund::Traegt
     );
 
     let ohne = ordner.datei("ohne.txt", b"erste Zeile\nzweite Zeile\n");
     assert_eq!(
-        traegt_der_inhalt(&ohne, "gesuchtem", 1024),
+        traegt_der_inhalt(&ohne, &Muster::aus("gesuchtem"), 1024),
         Inhaltsbefund::TraegtNicht
     );
 
     let gross = ordner.datei("gross.txt", b"GESUCHTES WORT\n");
     assert_eq!(
-        traegt_der_inhalt(&gross, "gesuchtes", 1024),
+        traegt_der_inhalt(&gross, &Muster::aus("gesuchtes"), 1024),
         Inhaltsbefund::Traegt,
         "die Schreibung des Textes zaehlt so wenig wie die des Namens"
     );
@@ -1764,13 +2056,50 @@ fn ein_text_mit_der_folge_traegt_sie_und_einer_ohne_nicht() {
 /// **Bytes** faende sie. Gefragt ist aber, ob der **Text** sie traegt, und diese
 /// Datei hat keinen. Genau darum liest der Weg die Datei ganz und nicht
 /// streifenweise: die Typfrage ist erst am Ende beantwortet.
+/// C6.2: der Inhalt versteht das Muster, und ein `*` trifft ueber Zeilenenden
+/// hinweg (B5).
+///
+/// Das Muster laeuft ueber den ganzen gelesenen Text; eine Regel „nur innerhalb
+/// einer Zeile" waere ein zweiter Vergleich. `fn*main` trifft eine Datei, in
+/// der irgendwo `fn` und spaeter irgendwo `main` steht, und keine, in der
+/// `main` vor `fn` steht.
+#[test]
+fn der_inhalt_versteht_das_muster_ueber_zeilenenden() {
+    let ordner = Pruefordner::neu("inhalt-muster");
+    let muster = Muster::aus("fn*main");
+
+    let getrennt = ordner.datei(
+        "getrennt.rs",
+        b"use std::io;\n\nfn hilfe() {}\n\n// spaeter, in einer anderen Zeile\nmain();\n",
+    );
+    assert_eq!(
+        traegt_der_inhalt(&getrennt, &muster, 1024),
+        Inhaltsbefund::Traegt,
+        "`fn` und spaeter `main` in einer anderen Zeile tragen das Muster"
+    );
+
+    let verkehrt = ordner.datei("verkehrt.rs", b"main();\n\nfn hilfe() {}\n");
+    assert_eq!(
+        traegt_der_inhalt(&verkehrt, &muster, 1024),
+        Inhaltsbefund::TraegtNicht,
+        "`main` vor `fn` traegt das Muster nicht: die Reihenfolge zaehlt"
+    );
+
+    let eine_zeile = ordner.datei("eine-zeile.rs", b"fn main() {}\n");
+    assert_eq!(
+        traegt_der_inhalt(&eine_zeile, &muster, 1024),
+        Inhaltsbefund::Traegt,
+        "innerhalb einer Zeile trifft das Muster wie zuvor"
+    );
+}
+
 #[test]
 fn eine_datei_ohne_gueltiges_utf8_traegt_nichts() {
     let ordner = Pruefordner::neu("inhalt-kein-text");
     let binaer = ordner.datei("binaer.bin", b"gesuchtes\xff\xfe\x00Wort");
 
     assert_eq!(
-        traegt_der_inhalt(&binaer, "gesuchtes", 1024),
+        traegt_der_inhalt(&binaer, &Muster::aus("gesuchtes"), 1024),
         Inhaltsbefund::TraegtNicht
     );
 }
@@ -1788,11 +2117,11 @@ fn eine_datei_ueber_der_grenze_bleibt_ungelesen() {
     let gross = ordner.datei("gross.txt", b"gesuchtes Wort\n");
 
     assert_eq!(
-        traegt_der_inhalt(&gross, "gesuchtes", 8),
+        traegt_der_inhalt(&gross, &Muster::aus("gesuchtes"), 8),
         Inhaltsbefund::ZuGross
     );
     assert_eq!(
-        traegt_der_inhalt(&gross, "gesuchtes", 15),
+        traegt_der_inhalt(&gross, &Muster::aus("gesuchtes"), 15),
         Inhaltsbefund::Traegt,
         "genau auf der Grenze wird gelesen"
     );
@@ -1814,7 +2143,7 @@ fn die_folge_in_den_letzten_bytes_vor_der_grenze_wird_gefunden() {
     let lang = ordner.datei("lang.txt", &inhalt);
 
     assert_eq!(
-        traegt_der_inhalt(&lang, "gesuchtes", grenze),
+        traegt_der_inhalt(&lang, &Muster::aus("gesuchtes"), grenze),
         Inhaltsbefund::Traegt
     );
 }
@@ -1839,7 +2168,7 @@ fn was_keine_gewoehnliche_datei_ist_traegt_nichts() {
 
     let unterordner = ordner.ordner("unterordner");
     assert_eq!(
-        traegt_der_inhalt(&unterordner, "gesuchtes", 1024),
+        traegt_der_inhalt(&unterordner, &Muster::aus("gesuchtes"), 1024),
         Inhaltsbefund::TraegtNicht
     );
 }
@@ -1866,7 +2195,7 @@ fn eine_datei_ohne_leserecht_traegt_nichts() {
     }
 
     assert_eq!(
-        traegt_der_inhalt(&gesperrt, "gesuchtes", 1024),
+        traegt_der_inhalt(&gesperrt, &Muster::aus("gesuchtes"), 1024),
         Inhaltsbefund::TraegtNicht
     );
 }
@@ -1882,12 +2211,18 @@ fn eine_datei_ohne_leserecht_traegt_nichts() {
 ///
 /// Die Reihe deckt die drei Eigenschaften des Vergleichs ab: die Folge zaehlt an
 /// jeder Stelle, die Schreibung spielt keine Rolle, und gefaltet wird nichts.
+/// **Seit der Runde 21 laeuft sie ein zweites Mal mit Mustern** (C6.3): das
+/// Sternchen, die Wiederholung des Sternchens, das Sternchen am Rand, der
+/// Umlaut vor dem Sternchen und ein Muster ohne Rueckverfolgung geben am Namen
+/// und am Inhalt dieselbe Antwort, weil beide Wege denselben Vergleich rufen.
 #[test]
 fn der_name_und_der_inhalt_geben_dieselbe_antwort() {
     let ordner = Pruefordner::neu("inhalt-neben-namen");
     let gegenstaende = ["Banane", "Äpfel", "LIESMICH", "Cafe", "Café", "bbbaaaccc"];
     let folgen = [
         "nan", "äpfel", "apfel", "liesmich", "café", "cafe", "aaa", "xyz",
+        // Mit Platzhalter (C6.3).
+        "b*n", "b**e", "*nan*", "ä*l", "a*l", "c*é", "c*e*", "a*a*a", "b*a*c", "*", "x*z", "e*b",
     ];
 
     for (nummer, gegenstand) in gegenstaende.iter().enumerate() {
@@ -1897,7 +2232,7 @@ fn der_name_und_der_inhalt_geben_dieselbe_antwort() {
             modell.filtertext_setzen(folge);
             let am_namen = modell.name_traegt_den_filter(0);
             let am_inhalt =
-                traegt_der_inhalt(&datei, modell.filter_klein(), 1024) == Inhaltsbefund::Traegt;
+                traegt_der_inhalt(&datei, modell.muster(), 1024) == Inhaltsbefund::Traegt;
 
             assert_eq!(
                 am_namen, am_inhalt,
@@ -1965,7 +2300,7 @@ fn einen_auftrag_entscheiden(
         bestand_aus(&[(7, name)]),
         auftraege,
         wurzel.to_path_buf(),
-        filter_klein.to_owned(),
+        Muster::aus(filter_klein),
         inhaltsgrenze,
         1,
     );
@@ -2036,6 +2371,127 @@ fn ein_treffer_tief_unten_entscheidet_den_ordner() {
             treffer: true
         }],
         "der Treffer liegt fuenf Ebenen tiefer und entscheidet den Ordner trotzdem"
+    );
+}
+
+/// C6.1: der Durchlauf versteht das Muster (B5).
+///
+/// „Deep" an, Filtertext `a*z`: ein Ordner, in dessen Unterbaum `anzeige.txt`
+/// liegt, wird getroffen; einer, in dessen Unterbaum nur `zebra.txt` liegt,
+/// nicht — `zebra` traegt ein `a` erst nach seinem `z`, und die Reihenfolge
+/// der Stuecke zaehlt.
+#[test]
+fn der_durchlauf_versteht_das_muster() {
+    let ordner = Pruefordner::neu("durchlauf-muster");
+    let mit = ordner.ordner("mit");
+    fs::create_dir_all(mit.join("tief")).expect("Unterordner");
+    fs::write(mit.join("tief").join("anzeige.txt"), b"x").expect("Datei");
+    let ohne = ordner.ordner("ohne");
+    fs::create_dir_all(ohne.join("tief")).expect("Unterordner");
+    fs::write(ohne.join("tief").join("zebra.txt"), b"x").expect("Datei");
+
+    assert_eq!(
+        einen_ordner_entscheiden(ordner.pfad(), "mit", "a*z"),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: true
+        }],
+        "`anzeige.txt` im Unterbaum traegt `a*z`"
+    );
+    assert_eq!(
+        einen_ordner_entscheiden(ordner.pfad(), "ohne", "a*z"),
+        vec![Befundmeldung {
+            index: 7,
+            treffer: false
+        }],
+        "`zebra.txt` traegt `a*z` nicht, denn sein `a` steht hinter dem `z`"
+    );
+}
+
+/// C6.6: ein einzelnes Sternchen stoesst den Durchlauf an und entscheidet
+/// jeden Ordner mit dem ersten Eintrag (B6).
+///
+/// Die Probe steht am `Durchlauf` mit von Hand vergebenen Auftraegen, und der
+/// Grund gehoert dazu: **das Ordnermodell vergibt bei `*` keinen einzigen
+/// Auftrag.** Der Kurzschluss des Namens steht im Pruefschritt vor dem
+/// Unterbaumzweig, bei `*` traegt jeder Ordnername das Muster, und jede Zeile
+/// steht deshalb schon wegen ihres Namens — der Durchlauf bekommt nichts zu
+/// entscheiden. Die erste Haelfte haelt genau das fest. Die zweite haelt, was
+/// B6 ueber den Durchlauf sagt, fuer den Fall, dass ihn jemand mit `*` ruft:
+/// er entscheidet jeden Ordner mit dem ersten Eintrag und laesst den Rest
+/// liegen. **Dass er liegen bleibt, misst der Zaehler der ungelesenen
+/// Dateien:** jeder Ordner traegt eine Datei ueber der Inhaltsgrenze, und sie
+/// zaehlte, wuerde der Durchlauf sie ansehen; er tut es nicht, weil der
+/// Kurzschluss des Namens vor dem Lesen greift.
+#[test]
+fn ein_einzelnes_sternchen_stoesst_den_durchlauf_an_und_entscheidet_jeden_ordner_mit_dem_ersten_eintrag()
+ {
+    let ordner = Pruefordner::neu("durchlauf-stern");
+    let namen_der_ordner = ["erster", "zweiter", "dritter"];
+    for name in namen_der_ordner {
+        let pfad = ordner.ordner(name);
+        fs::write(pfad.join("gross.txt"), vec![b'x'; 4 * 1024]).expect("Datei");
+        fs::create_dir_all(pfad.join("unten")).expect("Unterordner");
+        fs::write(pfad.join("unten").join("gross.txt"), vec![b'x'; 4 * 1024]).expect("Datei");
+    }
+
+    // Am Modell: `*` ist ein Zeichen, der Filter steht, und jede Zeile steht
+    // schon wegen ihres Namens — es gibt keinen Auftrag.
+    let mut modell = Ordnermodell::neu(1);
+    modell.tief_setzen(true);
+    modell.inhalt_setzen(true);
+    modell.anhaengen(namen_der_ordner.map(|name| handeintrag(name, Typ::Ordner)));
+    modell.anhaengen([handeintrag("blatt.txt", Typ::Datei)]);
+    modell.abschliessen();
+    modell.zeichen_anhaengen('*');
+    assert!(
+        modell.filter_steht(),
+        "ein Sternchen ist ein Zeichen, und der Filter steht"
+    );
+    assert!(
+        modell.auftraege().is_empty(),
+        "bei `*` traegt jeder Name das Muster, und der Kurzschluss des Namens \
+         laesst keinen Auftrag uebrig"
+    );
+    assert_eq!(
+        namen(&modell),
+        vec!["dritter", "erster", "zweiter", "blatt.txt"],
+        "jede Zeile steht in der Liste, ohne einen Befund abzuwarten"
+    );
+
+    // Am Durchlauf: mit von Hand vergebenen Auftraegen entscheidet er jeden
+    // Ordner am ersten Eintrag und liest keine Datei.
+    let auftraege: Vec<Auftrag> = (0..namen_der_ordner.len() as u32)
+        .map(|index| Auftrag {
+            index,
+            art: Auftragsart::Unterbaum,
+        })
+        .collect();
+    let durchlauf = Durchlauf::starten(
+        Arc::new(modell.eintraege().to_vec()),
+        auftraege.clone(),
+        ordner.pfad().to_path_buf(),
+        Muster::aus("*"),
+        Some(64),
+        1,
+    );
+    let mut befunde = befunde_einsammeln(&durchlauf);
+    befunde.sort_by_key(|befund| befund.index);
+    let erwartet: Vec<Befundmeldung> = auftraege
+        .iter()
+        .map(|auftrag| Befundmeldung {
+            index: auftrag.index,
+            treffer: true,
+        })
+        .collect();
+    assert_eq!(
+        befunde, erwartet,
+        "jeder Ordner ist entschieden, und jeder trifft"
+    );
+    assert_eq!(
+        durchlauf.zu_gross(),
+        0,
+        "keine Datei ist angesehen worden: der erste Eintrag hat jeden Ordner entschieden"
     );
 }
 
@@ -2157,7 +2613,7 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
         bestand(),
         auftrag(),
         ordner.pfad().to_path_buf(),
-        "gibt-es-hier-nicht".to_owned(),
+        Muster::aus("gibt-es-hier-nicht"),
         None,
         1,
     );
@@ -2175,7 +2631,7 @@ fn der_abbruch_greift_in_einem_ordner_ohne_unterordner() {
         bestand(),
         auftrag(),
         ordner.pfad().to_path_buf(),
-        "gibt-es-hier-nicht".to_owned(),
+        Muster::aus("gibt-es-hier-nicht"),
         None,
         2,
     );
@@ -2226,7 +2682,7 @@ fn jeder_auftrag_bekommt_genau_einen_befund() {
             })
             .collect(),
         ordner.pfad().to_path_buf(),
-        "gesuchtes".to_owned(),
+        Muster::aus("gesuchtes"),
         None,
         1,
     );
@@ -2610,7 +3066,7 @@ fn kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts() {
         bestand(),
         auftraege(),
         ordner.clone(),
-        "gesuchtes".to_owned(),
+        Muster::aus("gesuchtes"),
         Some(PROBENGRENZE),
         1,
     ));
@@ -2635,7 +3091,7 @@ fn kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts() {
         bestand(),
         auftraege(),
         ordner.clone(),
-        "gesuchtes".to_owned(),
+        Muster::aus("gesuchtes"),
         Some(PROBENGRENZE),
         2,
     ));
@@ -2911,7 +3367,7 @@ fn kind_meldet_bei_deskriptormangel_nichts() {
         bestand(),
         auftraege(),
         ordner.clone(),
-        "gesuchtes".to_owned(),
+        Muster::aus("gesuchtes"),
         None,
         1,
     ));
@@ -2940,7 +3396,7 @@ fn kind_meldet_bei_deskriptormangel_nichts() {
         bestand(),
         auftraege(),
         ordner.clone(),
-        "gesuchtes".to_owned(),
+        Muster::aus("gesuchtes"),
         None,
         2,
     ));
@@ -3197,8 +3653,9 @@ fn die_sprungmarke_steht_nirgends_mehr_im_baum() {
     }
 }
 
-/// C1.4 und C6.3: Die eine Zeichenregel steht einmal und hat genau zwei
-/// Aufrufer, der eine Vergleich steht einmal und hat genau drei.
+/// C1.4 und C6.3 der Runde 11, C4.3 und C7.1 der Runde 21: Die eine
+/// Zeichenregel steht einmal und hat genau drei Aufrufer, der eine Vergleich
+/// steht einmal und hat genau drei.
 ///
 /// Die Zeichenregel wird in `krk-core/src/verzeichnis/filter.rs` erklaert und
 /// von der Senke des Tippens in der Dateiliste und von der Tippsuche der
@@ -3206,7 +3663,18 @@ fn die_sprungmarke_steht_nirgends_mehr_im_baum() {
 /// nicht Aufrufe**: welche Datei fragt, ist die Aussage des Kriteriums; wie oft
 /// sie innerhalb ihrer selbst fragt, ist es nicht. Der Inhaltsfilter aendert an
 /// ihr nichts — welche Zeichen in den Filtertext kommen, ist dieselbe Frage
-/// geblieben, und ihre Zahl bleibt deshalb bei zwei (C6.4).
+/// geblieben, und ihre Zahl blieb deshalb bis zur Runde 21 bei zwei (C6.4 der
+/// Runde 11).
+///
+/// **Mit der Runde 21 werden es drei, und der dritte ist
+/// `krk-core/src/zwischenablage.rs`.** Die Reinigung `filtertext_aus` fragt
+/// je Zeichen des eingefuegten Textes dieselbe Regel wie die Senke des
+/// Tippens und nimmt den Doppelpunkt dazu, statt die Regel um einen Schalter
+/// zu erweitern (A3 Schritt 4, C4.3): welche Zeichen ein Dateiname traegt,
+/// bleibt eine Frage mit einer Antwort, und das Einfuegen stellt sie an einer
+/// dritten Stelle. Die Reinigung ist ein Rufer im Kern und keiner in `krk-ui`,
+/// weil sie allein aus dem Text entscheidet und die Huelle um die Ablage sie
+/// nur ruft.
 ///
 /// Der Vergleich hat dieselbe Bauart und steht ebenfalls einmal in `filter.rs`.
 /// Bis zum 260815 stand er zweimal da, einmal je Rufer; seither hat er zwei,
@@ -3223,7 +3691,7 @@ fn die_sprungmarke_steht_nirgends_mehr_im_baum() {
 /// drei, und nur die zweite Auskunft faengt einen Rufer, der an die Stelle
 /// eines anderen getreten ist.
 #[test]
-fn die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei() {
+fn die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei() {
     let zeichenregel = concat!("traegt_ein_", "dateiname");
     let vergleich = concat!("traegt_die", "_folge");
     let heimat = "krk-core/src/verzeichnis/filter.rs";
@@ -3256,10 +3724,12 @@ fn die_zeichenregel_hat_zwei_rufer_und_der_vergleich_drei() {
     assert_eq!(
         zeichenrufer,
         vec![
+            "krk-core/src/zwischenablage.rs".to_owned(),
             "krk-ui/src/appkit/tabelle.rs".to_owned(),
             "krk-ui/src/belegungsmodell.rs".to_owned(),
         ],
-        "die Zeichenregel hat andere Rufer als den Filter und die Tippsuche"
+        "die Zeichenregel hat andere Rufer als die Reinigung des Einfuegens, \
+         den Filter und die Tippsuche"
     );
     assert_eq!(
         vergleichsrufer,
