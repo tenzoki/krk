@@ -263,7 +263,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 12 ist der einzige außerhalb 
     - Kriterien: C4.5 (menue.rs), C5.8, B9
     - Dependencies: Schritt 8
 
-11. **Der Bau, die Zählungen und die zwei Ausgaben gegen den Stand vor der Runde**
+11. **Der Bau, die Zählungen und die zwei Ausgaben gegen den Stand vor der Runde** [DONE]
     - Executor: `coder`
     - Files: keine im Baum; geprüft wird mit Kommandos
     - Changes: `make check` grün, darunter `cargo clippy --workspace --all-targets -- -D warnings` (C4.4). `git diff c6c86cb HEAD -- resources/default-keymap.toml` zeigt allein Kommentarzeilen (Schritt 4); `git diff c6c86cb HEAD -- Cargo.lock Cargo.toml` leer und `grep -n 'name = "cc"\|-sys"' Cargo.lock` allein `windows-sys` (C7.4). `awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs | grep -c ','` vor und nach der Runde gleich; `grep -rn 'Kontextbefehl' crates/krk-ui/src/kommandos/kontextmenue.rs` zeigt drei Werte (A12). `make menue` auf `c6c86cb` und auf HEAD in zwei Dateien unter dem Scratchpad, `diff` leer (C1.9); `make tasten` ebenso, oder, falls es wie in der Runde 22 nicht kopflos läuft, der leere Diff der Belegungsquelle ohne Kommentare (`grep -v '^#' resources/default-keymap.toml` beidseits). `grep -rn NSPasteboard crates/krk-ui/src` außerhalb von `zwischenablage.rs` liefert vor und nach der Runde dieselben Stellen (C4.1). `grep -oE '"L[0-9]+"' crates/krk-bench/src/messen.rs | sort -u` liefert dieselben zehn. Das Ergebnis steht mit Prüfsummen im History-Eintrag des Coders.
