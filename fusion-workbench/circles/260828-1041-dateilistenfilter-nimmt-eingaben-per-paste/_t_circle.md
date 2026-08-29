@@ -4,14 +4,14 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260829-1047: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** (none yet)
+**Active spec/plan:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1052_o_spec-einfuegen-in-den-filter-und-stern-als-platzhalter.md
 **Active session history:** circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/history/260829-1047-orchestrator-session.md
 
 ---
 
 ## Directive
 
-Nach dieser Runde füllt `cmd+v` im Dateifenster den Filtertext des sichtbaren Tabs aus der Zwischenablage, so wie ein Tastendruck ihn heute zeichenweise füllt: der eingefügte Text wird an einen stehenden Filtertext angehängt und nicht an seine Stelle gesetzt, und die Liste zeigt danach denselben Stand, den dasselbe Getippte gezeigt hätte. Was die Zwischenablage trägt, entscheidet, was ankommt. Ein Text, der wie ein Name aussieht, kommt ganz; ein Pfad, ob als Text oder als Dateiverweis aus dem Finder, kommt allein mit seinem letzten Bestandteil, dem Dateinamen; aus dem Ankommenden fallen der Tabulator, der Schrägstrich und der Doppelpunkt heraus, weil kein Eintrag sie tragen kann. Ein Inhalt über mehrere Zeilen wird nicht eingefügt, und der Filtertext bleibt dann, wie er war. Das Menü „Bearbeiten" führt den Eintrag „Einfügen" im Dateifenster nicht mehr grau, sondern als das, was `cmd+v` dort tut. Ein Filtertext, der per `cmd+v` entstanden ist, verhält sich in allem Weiteren wie ein getippter: er übersteht den Ordnerwechsel, fällt zeichenweise mit dem Rückschritt, ganz mit `Esc`, und die Zahl seiner Zeichen entscheidet wie bisher, ab wann der Inhaltsfilter mitliest.
+See `**Active spec/plan:**` above. The cited spec or plan states the Directive in force.
 
 ## Grounding snapshot
 
