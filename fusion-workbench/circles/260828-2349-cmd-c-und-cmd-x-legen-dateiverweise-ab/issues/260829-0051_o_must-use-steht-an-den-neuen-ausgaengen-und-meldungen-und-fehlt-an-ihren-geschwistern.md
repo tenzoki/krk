@@ -14,3 +14,6 @@ Befund am `38aa652`:
 - `crates/krk-ui/src/appkit/anwendung.rs:3135-3140`, Doc-Kommentar von `lage()`: „Drei Abnehmer lesen sie" und die Liste von dreien; seit `1644ada` ist `dateiablage_ausfuehren` (`:3188`) der vierte, und `validateMenuItem:` fragt in zwei Zweigen (`:961`, `:968`).
 
 **Abnahme:** Die Funktionen der zwei Listen tragen das Attribut oder ihr Doc-Kommentar sagt, warum nicht; `cargo clippy --workspace --all-targets -- -D warnings` bleibt grün; der Doc-Kommentar von `lage()` nennt seine Abnehmer ohne Zahl oder mit der Zahl, die die Liste hat.
+
+---
+Abgleich 260829-0734: bleibt offen. Keiner der Commits nach `38aa652` (`35b95b3`) fasst Code an; `operationen.rs` trägt neun `#[must_use]`, `text_schreiben` (`zwischenablage.rs`) weiter keines, `lage()` zählt weiter drei Abnehmer.

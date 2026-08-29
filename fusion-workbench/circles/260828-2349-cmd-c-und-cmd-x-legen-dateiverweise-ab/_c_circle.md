@@ -3,8 +3,8 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
-**Claim:** Claimed 260828-2351: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/planning/260829-0006_p_plan-cmd-c-und-cmd-x-legen-dateiverweise-ab.md
+**Claim:** Unclaimed
+**Active spec/plan:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/planning/260829-0006_c_plan-cmd-c-und-cmd-x-legen-dateiverweise-ab.md
 **Active session history:** circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/history/260828-2351-orchestrator-session.md
 
 ---
@@ -42,3 +42,9 @@ Die Runde ist ohne Klärungsrunde geformt, auf Weisung des Nutzers vom 260828 (�
 
 ## Turn log
 
+- **Turn 1 (260828-2351 bis 260829, autonom):** Phase 0b ohne Tore (Spec `4cfb454`, Plan `5b2a5ce`, beide vom Nutzer vorab freigegeben), dann alle neun Schritte in einem Turn: S1 `4455af7`, S2 `dfde98c`, S3+S4 `3764fb6`, S5–S7 `1644ada`, Plan/History `023ee64`, S8 `38aa652`, S9 `35b95b3` (Abnahmelauf vom Nutzer, alle zehn Punkte; Terminal fügt den Namen ein). Bis zu vier Coder parallel, `make check` grün, kein Bugfixer. Kohärenz im Turn `ok`. Vier Defekte gefilet (drei Spec-Aussagen, Probenablagen bei parallelen Testläufen, zwei Low aus der Durchsicht), eine Entscheidung beantwortet (Terminal).
+
+
+## Closure note
+
+**Geschlossen kohärent (`_c_`) am 260829-0737.** Autonome Runde nach Auftrag des Nutzers vom 260828: Spec- und Plan-Tor vorab freigegeben, Sitzung `circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/history/260828-2351-orchestrator-session.md`, Phase 0b (Spec `4cfb454`, Plan `5b2a5ce`) und ein Turn mit neun Schritten, Commits `4bd0084..35b95b3`. Abgleich `history/260829-0734-reconciliation.md`: Urteil **coherent**, Empfehlung `none`, alle neun Schritte und alle 13 Stop-Klauseln belegt. Der Nutzer hat den Abnahmelauf aus Schritt 9 am Bündel auf `023ee64` gefahren und alle zehn Punkte bestätigt (das Terminal fügt den Namen ein; `decisions/260829-0053_a_…` beantwortet, ohne Codeänderung). Durchsicht `reviews/260829-0051-coderev-runde-22-dateiverweise-in-der-zwischenablage.md` deckt den ganzen Bereich (`not-opened: none`), Ablagesorten am Server nachgemessen; zwei Low-Befunde bleiben offen (`issues/260829-0051_o_…` must_use-Geschwister, `issues/260829-0052_o_…` Abweisungsmeldung), dazu `issues/260829-0006_o_…` (drei Spec-Aussagen, eine davon inzwischen überholt) und `issues/260829-0041_o_…` (Probenablagen bei parallelen Testläufen). Für den Kurator: CLAUDE.md nennt die Hülle nur als Textschreiber, die Rundentabelle endet bei 18, und `copy:`/`cut:` sind ein dritter Weg ohne Taste. Auslieferung 1.3.0 folgt auf Wunsch des Nutzers unmittelbar nach dem Abschluss.

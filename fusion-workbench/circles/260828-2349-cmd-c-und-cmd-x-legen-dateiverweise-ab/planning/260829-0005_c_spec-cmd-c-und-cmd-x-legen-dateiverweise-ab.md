@@ -1,7 +1,7 @@
 # Spec: Cmd+C und Cmd+X in der Dateiliste legen Dateiverweise für andere Anwendungen ab
 
 **Date:** 2026-08-29
-**Status:** freigegeben am 260829 (Spec-Tor vorab durch den Nutzer, autonome Runde), Planung läuft
+**Status:** Complete — gebaut und vom Nutzer am 260829 abgenommen (Plan `planning/260829-0006_*_plan-cmd-c-und-cmd-x-legen-dateiverweise-ab.md`, alle neun Schritte `[DONE]`, Abgleich 260829-0734); die drei Baumaussagen aus `issues/260829-0006_o_…` sind unberichtigt und im Spec nicht angefasst
 **Activated from Circle:** 260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab
 **Source:** Die Directive des Circle-Datensatzes `_t_circle.md`, vom Shaper am 260828-2349 ohne Klärungsrunde aus dem Backlog-Eintrag `shared/backlog/260828-2345_*_cmd-c-und-cmd-x-kopieren-dateien-fuer-andere-apps.md` geformt, auf Weisung des Nutzers vom 260828 („autonom fertigstellen"). Die fünf Festlegungen des Grounding snapshot sind hier A1 bis A5; A6 bis A12 füllen die Lücken, die der Datensatz gelassen hat. Alle zwölf sind am Spec-Tor überstimmbar, und das Tor gilt nach derselben Weisung als vorab freigegeben.
 
@@ -234,3 +234,9 @@ Der Spec führt **40** Abnahmekriterien, und keines ist abgehakt. Je Fähigkeit 
 **Die Datei trägt 43 Kästchen und nicht 40.** Die drei übrigen stehen unter `## User Decisions Pending` und sind offene Nutzerfragen, keine Abnahmekriterien.
 
 **Der Abnahmelauf am Bündel ist Nutzerarbeit**, wie in jeder Runde dieses Projekts: Einfügen im Finder, in Mail und in einem Terminal verlangt KRK im Vordergrund und eine fremde Anwendung daneben. Ohne Fenster prüfbar sind C1.3, C1.4, C1.7, C1.8, C1.9, C1.10, C1.11, C2.2, C2.3, C2.7, C3.1, C3.2, C3.6, C4.2, C4.5, C5.1, C5.3, C5.4, C5.6. Die Runde schließt voraussichtlich als beschränkter Abschluss.
+
+---
+
+## Reconciliation Log
+
+**260829-0734** — Der Plan zu diesem Spec steht auf `_c_`, jeder seiner neun Schritte ist gegen `35b95b3` gelesen, der Abnahmelauf ist vom Nutzer gefahren (Plan, Schritt 9; `decisions/260829-0053_a_…`: das Terminal fügt den Namen ein, C2.1 hält wie geschrieben). Die 43 Kästchen bleiben unangehakt: 40 Kriterien und drei Nutzerfragen, die Abnahme ist im Plan und im Turn log des Circle-Datensatzes gebucht und wird hier nicht ein zweites Mal ausgezählt. Drei Baumaussagen (Abnehmerzählung, C5.5, C5.1-Nachzählung) sind laut `issues/260829-0006_o_…` unrichtig und stehen unverändert; der Defekt ist offen. Marker `_o_` → `_c_`, nach dem Vorgehen der Runde 20 (`circles/260827-2028-…/planning/260828-0649_c_spec-…`), und mit derselben Einschränkung: welche Lesart `_c_` an einem Spec trägt, ist offen (`shared/decisions/260819-1440_o_…`); hier heißt es „gebaut und abgenommen".

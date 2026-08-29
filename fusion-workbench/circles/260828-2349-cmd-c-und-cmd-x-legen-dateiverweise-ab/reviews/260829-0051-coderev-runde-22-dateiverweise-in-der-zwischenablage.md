@@ -83,3 +83,6 @@ Das ist kein Defekt dieser Runde, sondern ein Bestand, den sie um eine Runde ver
 ## Recommended sequencing
 
 Kein Release-Blocker. Die Runde kann schließen, wie der Plan es vorsieht (beschränkt, bis der Nutzer Schritt 9 gefahren hat). Vor dem Abnahmelauf lohnt die Nutzerfrage zu C2.1, damit der Lauf im Terminal gegen das richtige Kriterium prüft. Die zwei Defekte sind Aufräumarbeit für eine spätere Sitzung des `coder`; keiner ändert eine Zusage.
+
+---
+Abgleich 260829-0734: Themen 1 und 2 als `issues/260829-0051_o_…` und `issues/260829-0052_o_…` offen, Thema 3 im ersten enthalten, Thema 4 als `decisions/260829-0053_a_…` vom Nutzer beantwortet (Terminal fügt den Namen ein; die `inference:` der Durchsicht hat sich am Bündel nicht bestätigt, das Kriterium hält). Reviewed-range `83e011c..38aa652` deckt jeden Codecommit der Runde; `35b95b3` fasst keinen Code an.

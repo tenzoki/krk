@@ -11,3 +11,6 @@ Der Spec `planning/260829-0005_*_spec-cmd-c-und-cmd-x-legen-dateiverweise-ab.md`
 3. **C5.1: „`grep -rn NSPasteboard crates/krk-ui/src` trifft außerhalb der Hülle allein diese zwei Dateien und den Betrachter, dort im Kommentar."** Der Befehl trifft außerdem `crates/krk-ui/src/appkit/mod.rs:111`, `:121`, `:136` und `crates/krk-ui/src/appkit/teilen.rs:20-21`, `:297-300`, alle in Kommentaren. Die Aussage, die C5.1 halten will (keine Codezeile außerhalb der Hülle liest oder schreibt eine Ablage), bleibt wahr; der Wortlaut der Nachzählung ist es nicht.
 
 **Abnahme:** Der Spec nennt an den drei Stellen keine Zahl, die der Baum nicht deckt, oder er zitiert den Befehl, der sie liefert.
+
+---
+Abgleich 260829-0734: bleibt offen. Der Spec steht an den drei Stellen unverändert (`planning/260829-0005_*_spec-…`, A2/`## Open for Planner`, C5.5, C5.1). Punkt 2 ist im Baum inzwischen anders gelagert: `zwischenablage.rs:193` nennt `fileURLWithPath:` seit `3764fb6` im Untergrenzen-Abschnitt — die Spec-Aussage „stehen darin schon" ist damit heute wahr, war es am 260829-0006 nicht; das Kriterium hält, der Wortlaut des Specs bleibt eine Aussage über den falschen Tag. Punkte 1 und 3 unverändert.

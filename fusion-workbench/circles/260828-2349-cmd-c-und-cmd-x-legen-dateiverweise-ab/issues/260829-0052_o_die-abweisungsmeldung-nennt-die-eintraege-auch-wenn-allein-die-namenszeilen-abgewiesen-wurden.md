@@ -12,3 +12,6 @@ Stellen am `38aa652`: `crates/krk-ui/src/appkit/zwischenablage.rs:375-384` (die 
 Zwei Wege, der erste kleiner: die Hülle ruft bei abgewiesenem Text `clearContents` und liefert dann `false`, so dass „nicht angenommen" wieder stimmt und ein Ablegen ganz oder gar nicht ist; oder sie liefert, was angenommen wurde, und der Rufer meldet es je Lage.
 
 **Abnahme:** Nach `false` aus `dateiverweise_auf_ablage_schreiben` trägt die Ablage keinen Verweis, gehalten von einer Probe auf einer benannten Probenablage, die `writeObjects:` annehmen und den Text abweisen lässt oder den ersten Weg anders belegt; oder die Meldung unterscheidet die zwei Lagen und eine Probe hält beide Sätze.
+
+---
+Abgleich 260829-0734: bleibt offen. `dateiverweise_auf_ablage_schreiben` (`zwischenablage.rs:359-384`) liefert unverändert `false` in beiden Lagen, der Rufer `tabelle.rs:1950` meldet weiter einen Satz.

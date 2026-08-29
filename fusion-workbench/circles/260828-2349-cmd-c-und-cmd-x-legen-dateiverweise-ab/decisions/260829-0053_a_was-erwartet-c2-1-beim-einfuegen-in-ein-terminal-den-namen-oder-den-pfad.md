@@ -32,3 +32,5 @@ Die Ablageseite bleibt, wie sie gebaut ist: je Eintrag ein Datei-`NSURL`, danebe
 Option 1, und die Prüfung am Bündel entscheidet, ob die Erschließung trägt: zeigt das Terminal den Namen, bleibt C2.1, wie es ist, und dieser Datensatz wird mit dem Befund geschlossen; zeigt es den Pfad, wird C2.1 auf ein Textfeld umformuliert und das Diagramm zieht nach.
 
 **Answered:** 260829, vom Nutzer im Abnahmelauf: das Terminal fügt den Namen ein, C2.1 hält wie geschrieben; der Code bleibt.
+
+Abgleich 260829-0734: Antwort belegt (Plan Schritt 9, `35b95b3`; Circle-Datensatz, Turn log). Kein `Implemented:` — die Antwort ändert kein Kriterium und keinen Code, die Ablageseite steht seit `3764fb6` so, wie der Datensatz sie unter `## Constraints` voraussetzt. Der Marker bleibt `_a_`: es gibt nichts umzusetzen, und `_i_` verspräche einen Commit, den es nicht gibt.
