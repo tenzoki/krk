@@ -21,7 +21,9 @@
 
 ## Grober Verlauf
 
-- **08-27 Do** [3-16] — Die Runde 19 entsteht: als Circle angelegt, aktiviert, Spec mit 40 Abnahmekriterien und Plan mit 8 Schritten; nachmittags eine Setup-Sitzung mit Abgleich und Tier-1-Archiv. Kein Code geändert.
+- **08-29 Sa** [0-13] — Runde 22 (Cmd+C/Cmd+X legen Dateiverweise ab) und Runde 21 (Cmd+V in den Filter, `*` als Platzhalter) autonom gebaut, abgenommen und kohärent geschlossen; Auslieferungen 1.3.0 und 1.4.0; Cleanup mit Abgleich, Archiv und Kurator.
+- **08-28 Fr** [0.5-24] — Runde 20: der PDF-Betrachter mit Zoom, Seitenzähler und Textauswahl in einem Turn gebaut, ein Delegat-Absturz im Abnahmelauf behoben, kohärent geschlossen; Nutzer liefert 1.2.2 aus; Runden 21 und 22 als Circles angelegt.
+- **08-27 Do** [3-19.5] — Runde 19 (die Vorschau zählt den Ordnerinhalt im Default-Profil): Spec, Plan, acht Schritte, Abnahmelauf, kohärent geschlossen; abends Runde 20 als Circle angelegt.
 - **08-26 Mi** [1-23] — Die Vollbaum-Durchsicht: fünfzehn Prüfer lesen alle 155 Rust-Dateien in fünf Runden, 121 Defekte und vier Fragen gefiltert. Abends die Behebungsrunde: fünf schwere Befunde behoben, darunter der Datenverlustpfad über die Datenträgergrenze, Auslieferung 1.2.1.
 - **08-25 Di** [7-22] — Runde 17 (Zip, Unzip, Finder im Kontextmenü) läuft und schließt beschränkt, Auslieferung 1.2.0; am Abend die Runde 18 ohne Circle: Vorschau vertieft, Klick-Fokus und Zip-Zeitstempel behoben, zwölf Leseprofile.
 - **08-24 Mo** [5-21] — Runde 16: die Vorschau zeigt für erkannte Orte eine Profil-Zusammenfassung, `readers.toml` als siebte Ablagedatei; schließt beschränkt, Auslieferung 1.1.0.
@@ -52,7 +54,7 @@
 
 | Woche ab (Mo) | Aktive Tage | Ø aktive Stunden/Tag |
 |---------------|-------------|----------------------|
-| 2026-08-24    | 4           | 16.5                 |
+| 2026-08-24    | 6           | 17.7                 |
 | 2026-08-17    | 6           | 18.2                 |
 | 2026-08-10    | 7           | 19.6                 |
 | 2026-08-03    | 7           | 15.0                 |
@@ -819,21 +821,61 @@ Die erste Antwort des Nutzers zur Zusatztaste (`shift`) hält nicht: macOS veren
 | 22:45 | Abendsitzung ohne Direktive gestartet und beendet | h |
 | — | 146 Defektdatensätze, 7 Entscheidungen, 21 Durchsichten, 23 Sitzungsprotokolle, 1 Plan, 1 Rückstandseintrag | i d r h p b |
 
-## 2026-08-27 (Do) [3-16]
+## 2026-08-27 (Do) [3-19.5]
 
 | Zeit | Thema | Src |
 |------|-------|-----|
-| 03:13 | die Runde 19 als Circle angelegt (Vorschau zählt Ordnerinhalt im Default-Profil), Rückstandseintrag geschärft | k h |
-| 04:03 | Playmaker-Direktdispatch: Aktivierungsvorschlag für die Runde 19, einziger vorgesehener Circle | h |
+| 03:13 | die Runde 19 als Circle angelegt (Vorschau zählt Ordnerinhalt im Default-Profil), Rückstandseintrag geschärft | k b h |
 | 06:40 | die Runde 19 ist aktiviert; zwei Entscheidungen des Shapers beantwortet | g k d |
 | 06:46 | Spec mit 40 Abnahmekriterien geschrieben, Spec-Tor durchlaufen | p h |
 | 13:22 | Plan mit 8 Schritten; die Messmodus-Frage als offene Entscheidung abgelegt | p h d |
-| 15:21 | neue Sitzung, nur Setup: vier Stilprofile auf die ausgelieferte Fassung ersetzt | w |
 | 15:27 | zwei Commits: der Planungsstand der Runde 19 und die Stilprofile | g |
-| 15:32 | Abgleich: eine Berichtigung (Spec-Statuszeile), zwei Meldungen, Urteil coherent | h |
-| 15:34 | Archiv Tier 1: 13 geteilte Datensätze, Wächterprotokoll mit 35 Zeilen gerollt | w |
-| — | 3 Entscheidungen, 6 Sitzungsprotokolle, 1 Spec, 1 Plan | d h p |
+| 15:32 | Abgleich, Archiv Tier 1 (13 Datensätze), Wächterprotokoll gerollt | h w |
+| 16:35 | neue Sitzung: der Aufräumstand committet, Runde 19 gestartet | g h |
+| 16:46 | S1–S4 der Runde 19: `zaehlung` nach Typ, Default-Profil, zwei Schlüssel, drei Zählzeilen unter den Metadaten | g |
+| 17:11 | S5–S7: Proben, Defektdatensatz zu C2.5 der Runde 16, Kommentarteil der Auslieferungsfassung (Ontocoder-Tor) | g i |
+| 19:05 | Abnahmelauf vom Nutzer gefahren, alle Punkte halten | g |
+| 19:25 | Abgleich coherent, Durchsicht (2 Low), Stop-Klauseln bestätigt, Runde 19 schließt kohärent | h r i k |
+| 19:29 | Sitzungsbericht und Portfolio; Memo und Backlog-Idee „Vorschau rendert PDF" | g h w b |
+| 20:28 | `/fusion:direct`: die Runde 20 als Circle angelegt (PDF-Betrachter), Backlog-Eintrag promoviert | k h d b |
+| 21:01 | Playmaker: Aktivierungsvorschlag für die Runde 20 | h |
+| — | 5 Entscheidungen, 14 Sitzungsprotokolle, 2 Specs, 2 Pläne, 4 Defekte, 1 Durchsicht | d h p i r |
+
+## 2026-08-28 (Fr) [0.5-24]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 00:35 | die Runde 20 aktiviert, Sitzung gestartet | g k h |
+| 00:49 | Spec des PDF-Betrachters, zwei Klärungsrunden (Tasten, Rolle, Pfeile); Tastenfrage beantwortet | p h d |
+| 07:00 | Spec freigegeben; Plan mit elf Schritten und zehn Planerantworten (PDFView über objc2-pdf-kit) | g p h d i |
+| 07:35 | vier Coder parallel: Tastenalphabet plus/minus, Wirkungsbereich::Vorschau, objc2-pdf-kit, Inhalt::Pdf | h |
+| 09:06 | Belegungseinträge cmd+plus/minus/0 (Ontocoder-Tor), Nachzüge; sieben Commits 1df8b8d..03af590 | g h |
+| 09:12 | Absturz im Abnahmelauf: PDFView war sein eigener Delegat — Bugfixer behebt es (8a8e638) | a h g |
+| 10:12 | Pdfbetrachter-Modul, dritte Ansicht, siebter Statuszeilen-Rang, Ausführungszweige; Defekt zu C6 der Runde 1 | h i |
+| 10:40 | Abnahmelauf bestanden, alle zwölf Punkte; Abgleich coherent, Durchsicht (1 Medium, 3 Low), Runde 20 schließt kohärent | g h r i k |
+| 10:56 | Sitzungsbericht, Portfolio; Nutzer liefert 1.2.2 aus | g h |
+| 09:09 | Backlog: Dateilistenfilter nimmt Eingaben per Paste; `/fusion:direct` mit drei Klärungsrunden → Runde 21 als Circle | b k d h |
+| 23:45 | Feature Cmd+C/Cmd+X: Backlog-Eintrag, Shaper ohne Rückfrage → Runde 22 als Circle, aktiviert, autonom | b k g h |
+| — | 4 Entscheidungen, 22 Sitzungsprotokolle, 2 Specs, 1 Plan, 7 Defekte, 1 Durchsicht, 1 Absturzbericht | d h p i r a |
+
+## 2026-08-29 (Sa) [0-13]
+
+| Zeit | Thema | Src |
+|------|-------|-----|
+| 00:02 | Spec der Runde 22 ohne Klärungsrunde (A1–A12, cmd+x verschiebt nicht), vorab freigegeben; Plan mit neun Schritten | g p h i |
+| 00:23 | drei Coder parallel: Dateiablage-Texte, zweiter Eingang der Zulässigkeitsregel, Hülle schreibt NSURL-Verweise | h |
+| 00:41 | Tabelle, copy:/cut: beim Anwendungsdelegierten, Menü-Prosa, Zählprobe; fünf Commits 4455af7..023ee64 | g h |
+| 00:46 | Menü und Belegung gegen 83e011c gehalten; Durchsicht misst die Ablagesorten am Server (2 Low, 1 Frage) | g h r i d |
+| 07:31 | Abnahmelauf bestanden (Finder, Mail, Terminal); Abgleich coherent, Runde 22 schließt kohärent | g h k |
+| 07:41 | Release v1.3.0: universell, beglaubigt, Tag und Releaseseite | g |
+| 08:42 | Backlog: der Filter versteht `*` als Platzhalter (Frage nach `260503-1144_*_…`) | g b |
+| 10:47 | Runde 21 aktiviert, mit dem Platzhalter als zweiter Fähigkeit; Spec (52 Kriterien) und Plan (zwölf Schritte) vorab freigegeben | g k p h |
+| 11:40 | bis zu fünf Agenten parallel: Muster im Kern, Reinigung, Zulässigkeits-Doc, Belegungskommentare, Statuszeilensätze, Hülle liest Einfügequelle, Tabelle, paste: am Delegierten, Kernproben, Prosa | h |
+| 12:10 | vier Commits f4ba58d..415ef6f; Vergleich gegen c6c86cb; Durchsicht (3 Low) | g h r i |
+| 12:21 | Abnahmelauf bestanden, Abgleich coherent, Runde 21 schließt kohärent; Release v1.4.0 | g h k |
+| 12:52 | Cleanup: Abgleich über den gemeinsamen Speicher (vier CLAUDE.md-Defekte geschlossen), Archiv Tier 1 (8 Datensätze, Wächterprotokoll 97 Zeilen), Kurator-Umfrage | h w |
+| — | 2 Entscheidungen, 27 Sitzungsprotokolle, 2 Specs, 2 Pläne, 10 Defekte, 2 Durchsichten | d h p i r |
 
 ## Commits gesamt
 
-707 Git-Commits seit Projektbeginn (2026-08-02).
+764 Git-Commits seit Projektbeginn (2026-08-02).
