@@ -460,3 +460,98 @@ two-face = { version = "0.5.2", default-features = false, features = ["syntect-f
 # `Text`-Ereignisse mit ihren Zwischenraeumen, getrennt durch weiche Umbrueche,
 # und das Quelltextraster entsteht von selbst statt ueber eine Sonderregel.
 pulldown-cmark = { version = "0.13", default-features = false }
+
+# Die Git-Anbindung der Stufe A (Runde 23): Repository finden, Branchname,
+# Commit-Verlauf, Status je Datei. Gelesen wird, geschrieben nicht.
+# Die Machbarkeitsanalyse dazu ist
+# `fusion-workbench/shared/analyses/260830-1006-gix-als-git-anbindung-stufe-a.md`;
+# sie hat die vier Auskuenfte am laufenden Programm geprueft und nicht aus der
+# Dokumentation abgeschrieben.
+#
+# Keine bestehende Abhaengigkeit leistet auch nur eine der vier: `icu_collator`
+# sortiert, `regex` vergleicht Muster, `toml` zerlegt, `zip` packt,
+# `pulldown-cmark` rendert Markdown, `syntect` faerbt ein, `signal-hook` faengt
+# Signale, die `objc2`-Kisten reichen AppKit durch. Ein eigener Leser des
+# Git-Formats waere ein Vorhaben und keine Zeile: der Status allein verlangt den
+# Index, den Verzeichnisdurchlauf, die Ignoriermuster, die Attribute und den
+# Blobvergleich.
+#
+# **`default-features = false` ist hier Sparsamkeit und nicht die Bedingung der
+# Einbindung** — anders als bei `syntect` und `zip`, wo der Vorgabesatz eine
+# Bibliothek in C hereingezogen haette. Der Vorgabesatz von `gix` lautet
+# `["max-performance-safe", "comfort", "basic", "extras", "auto-chain-error",
+# "sha1"]` und traegt kein Netzmerkmal; er kostet Flaeche und keine
+# Bauvoraussetzung. Die fuenf gewaehlten Merkmale sind die, die die vier
+# Auskuenfte brauchen: `status` (zieht `dirwalk`, `index`, `blob-diff`,
+# `attributes` und `excludes` mit), `revision` fuer den Verlauf,
+# `max-performance-safe`, `parallel` und `sha1`.
+#
+# **Die C-Freiheit haengt an keinem Merkmal, und das ist der Befund, an dem die
+# ganze Wahl hing.** Die Kompression liegt in `gix-zlib`, einer *nicht
+# abwaehlbaren* Abhaengigkeit von `gix` (`gix-0.87.1/Cargo.toml:473`), und die
+# haengt an `zlib-rs`, der Neufassung von zlib in reinem Rust; `zlib-rs 0.6.7`
+# traegt `build = false`, also kein Bauskript und keine Uebersetzungseinheit in
+# C. Das aeltere Merkmalspaar `max-performance` / `max-pure`, das genau diese
+# Wahl trug, ist zu `max-performance = ["max-performance-safe"]` zusammen-
+# gefallen und schaltet nichts mehr um. Wer die README des Projekts liest und
+# dort `max-pure` findet, liest einen ueberholten Stand. Die Kryptografie ist
+# derselbe Fall: `sha1` bindet `gix-hash/sha1` und darunter `sha1 0.10.7` und
+# `sha1-checked 0.10.0`, beide aus der `RustCrypto`-Familie und beide ohne C.
+#
+# **Der Befund zu `cc` und `-sys`, am Projektbaum gemessen und nicht am
+# Pruef-Workspace.** Am 260830 nach der Aufnahme:
+# `cargo tree --target x86_64-apple-darwin -e normal,build` und derselbe Lauf
+# gegen `aarch64-apple-darwin` fuehren **weder `cc` noch ein Paket mit einem
+# Namen auf `-sys`**; beide Laeufe liefern null Treffer. `Cargo.lock` gewinnt
+# dagegen einen Eintrag `linux-raw-sys`, ueber `rustix`. Er haengt am
+# Linux-Ziel, kommt auf keinem der beiden Mac-Ziele im Baum an und uebersetzt
+# dort nie. Die Zusage dieses Projekts bezieht sich seit der Runde 23 deshalb
+# auf das **Bauziel** und nicht mehr auf `Cargo.lock`; das Pruefmittel ist
+# `cargo tree --target <ziel> -e normal,build`.
+#
+# **Was der Satz an Paketen kostet, ist gezaehlt und nicht geschaetzt.** Am
+# 260830 auf diesem Geraet erhoben, mit `cargo tree --target <ziel> -e
+# normal,build` gegen denselben Lauf ueber einen Auszug des Standes `4f6b880`:
+#
+# - **Der Baum des Bauziels waechst von 96 auf 197 Eintraege, also um 101**,
+#   auf beiden Mac-Zielen dieselben. `gix` selbst und 50 Kisten mit dem Vorsatz
+#   `gix-` sind 51 davon; die uebrigen 50 sind fremde, darunter die
+#   `crossbeam`-Familie, `rustix`, `parking_lot`, `jiff`, `memmap2`, `tempfile`,
+#   `bstr` und `zlib-rs`. Zwei weitere Fassungen von `hashbrown` (0.14.5 und
+#   0.16.1) stehen neben der vorhandenen 0.17.1. `Cargo.lock`, das alle Ziele
+#   fuehrt, waechst von 101 auf 219 Eintraege.
+# - **Die Machbarkeitsanalyse nennt 98 und hat an einem Wegwerf-Workspace
+#   gemessen**, dessen Aufloesung eine andere war. Die Zahl hier ist die am
+#   Projektbaum gemessene und geht der aelteren vor; die Groessenordnung ist
+#   dieselbe.
+# - **Das ist mit Abstand der groesste Zuwachs, den dieser Baum je aufgenommen
+#   hat.** `syntect` und `two-face` zusammen brachten 21, `zip` brachte zwei.
+#   Der Preis ist die Flaeche und nicht die Geschwindigkeit: `gix` ist in jedem
+#   von der Analyse gemessenen Fall so schnell wie `git status` oder schneller.
+# - **`krk-core` bekommt `libc` in seinen Teilbaum**, ueber `rustix` und
+#   `gix-fs`. Bis zur Runde 23 fuehrte `cargo tree -p krk-core` null Vorkommen;
+#   `libc` stand ohnehin im Gesamtbaum, ueber `objc2` und `signal-hook`, aber
+#   nicht unter dem Kern. Das ist eine Aussage ueber die Kistenwahl und keine
+#   ueber C-Code: `libc` bindet, es uebersetzt nicht. `krk-core` nennt den Namen
+#   an keiner Stelle selbst und behaelt seine sechs eigenen Bindungen in
+#   `verzeichnis/sys.rs`.
+#
+# **Die Fassung ist auf `"0.87"` festgenagelt und nicht auf `"0"`, und das ist
+# der zweitgroesste Posten dieser Aufnahme.** Unter 1.0 darf jede kleine Fassung
+# brechen, und `gix` nimmt das Recht wahr: seit dem 2025-10-22 sind vierzehn
+# kleine Fassungen erschienen, von 0.74.0 bis 0.87.1, also im Schnitt eine je
+# Monat (erhoben von der Machbarkeitsanalyse am 260830 ueber
+# `https://crates.io/api/v1/crates/gix/versions`). `"0"` liesse `cargo update`
+# ueber eine solche Grenze springen und den Bau brechen; `"0.87"` bindet auf
+# `0.87.x`. Damit nimmt dieses Projekt eine wiederkehrende Pflege an, die es bei
+# keiner seiner uebrigen fremden Kisten hat: `syntect` steht seit der Runde 2 auf
+# 5.3.0, `pulldown-cmark` seit der Runde 6 auf 0.13.
+#
+# Die Mindestfassung passt: `rust-version = "1.85"`, das Projekt faehrt 1.97.1.
+gix = { version = "0.87", default-features = false, features = [
+    "status",
+    "revision",
+    "max-performance-safe",
+    "parallel",
+    "sha1",
+] }

@@ -35,3 +35,12 @@ zip = { workspace = true }
 # `zip`, denn auf die Merkmalsvereinigung ueber den Workspace ist kein Verlass:
 # sie liesse `cargo build --workspace` gruen und `cargo test -p krk-core` rot.
 flate2 = { workspace = true }
+# Die Git-Anbindung der Stufe A. Sie steht hier und nicht in `krk-ui`, weil der
+# Leser im Kern liegt: `git::leser` haelt das `Repository` und ist die einzige
+# Stelle, die die Kiste nennt. `krk-ui` hat kein Bibliotheksziel, eine Datei
+# unter `crates/krk-ui/tests/` erreicht also nichts aus jener Kiste, und die
+# Sonderzustaende eines Repositorys — abgeloester HEAD, ungeborener HEAD, ein
+# Unterordner statt der Wurzel — waeren dort gegen ein angelegtes
+# Pruefrepository nicht zu belegen. Die Merkmalswahl und der Befund zu `cc` und
+# `-sys` stehen in der Wurzel-`Cargo.toml`.
+gix = { workspace = true }

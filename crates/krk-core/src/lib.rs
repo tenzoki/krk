@@ -26,6 +26,7 @@
 //! Runde 18 `localtime_r` hinzugebracht haben.
 
 pub mod ablage;
+pub mod git;
 pub mod leseprofil;
 pub mod operation;
 pub mod stapelumbenennen;

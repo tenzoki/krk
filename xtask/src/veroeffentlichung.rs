@@ -506,7 +506,8 @@ fn ohne_tag_meldung(tags_auf_head: &str, tag: &str) -> String {
 /// schieben, und die gehoert hierher.
 ///
 /// **Der Aufruf geht durch [`git::rufen`]** und legt keine zweite
-/// Git-Aufrufstelle an; die Probe `xtask_ruft_git_an_genau_einer_stelle` in
+/// Git-Aufrufstelle an; die Probe
+/// `git_wird_ausserhalb_der_probenordner_an_genau_einer_stelle_gerufen` in
 /// `release` haelt ihre Zahl auf eins.
 ///
 /// **Was schiefgehen kann, geht laut schief.** Ein losgeloester HEAD, ein

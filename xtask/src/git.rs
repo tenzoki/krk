@@ -1,7 +1,11 @@
 //! Der eine Zugang zu `git`.
 //!
-//! **Hier steht der einzige Prozessaufruf von `git` im ganzen Baum.** Die Probe
-//! `xtask_ruft_git_an_genau_einer_stelle` in `release` haelt die Zahl auf eins.
+//! **Hier steht der einzige Prozessaufruf von `git` im ausgelieferten Code.**
+//! Die Probe `git_wird_ausserhalb_der_probenordner_an_genau_einer_stelle_gerufen`
+//! in `release` haelt die Zahl auf eins. Sie liest seit dem 260830 alles ausser
+//! `crates/*/tests/`, wo die Abnahmeproben des Gitlesers ihre Pruefrepositorys
+//! mit dem Werkzeug des Systems anlegen; der Preis dieser Grenze steht bei der
+//! Probe.
 //! Bis zum 260813 stand der Aufruf in `release`, weil `release` der einzige
 //! Abnehmer war; seit `version` einen Stand eintraegt und taggt, sind es zwei,
 //! und der Aufruf ist an die Stelle gewandert, die beide gemeinsam haben. Eine
@@ -63,10 +67,12 @@
 //!    Das ist eine Verbotsliste und wird nie beweisbar vollstaendig.
 //!
 //! *Allein eine Probe haelt*, dass kein zweiter Prozessaufruf an [`rufen`]
-//! vorbeigeht: `xtask_ruft_git_an_genau_einer_stelle` zaehlt im ganzen Baum den
-//! Aufruf von `Command` mit dem festen Pfad zu `git` und laesst ihn genau
-//! einmal zu — der Uebersetzer haelt hier gar nichts, und einen Aufruf, dessen
-//! Programmname aus einer Variablen kaeme, saehe auch die Probe nicht.
+//! vorbeigeht: `git_wird_ausserhalb_der_probenordner_an_genau_einer_stelle_gerufen`
+//! zaehlt ausserhalb von `crates/*/tests/` den Aufruf von `Command` mit dem
+//! festen Pfad zu `git` und laesst ihn genau einmal zu — der Uebersetzer haelt
+//! hier gar nichts, einen Aufruf, dessen Programmname aus einer Variablen
+//! kaeme, saehe auch die Probe nicht, und einen unter `crates/*/tests/` sieht
+//! sie seit dem 260830 nicht mehr.
 //!
 //! **Dass an einem festen Wort eine Verbotsliste steht, ist kein Rest, sondern
 //! die Einteilung selbst.** Ein belegter Platz nimmt einen Wert von aussen

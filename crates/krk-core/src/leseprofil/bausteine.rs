@@ -890,8 +890,16 @@ fn daten(kandidaten: &[&Eintrag]) -> Wert {
 ///
 /// `None` heisst, dass der Zeitpunkt sich nicht in einen Kalendertag
 /// uebersetzen laesst; siehe [`ortszeit`].
+///
+/// **Seit der Runde 23 hat sie einen zweiten Rufer und ist deshalb `pub`**:
+/// [`crate::git::texte::verlaufszeile`] schreibt das Datum eines Commits, und
+/// das ist dieselbe Frage — ein Zeitpunkt ohne AppKit als Text. Eine zweite
+/// Fassung daneben waere eine zweite Antwort darauf, wie dieses Vorhaben ein
+/// Datum schreibt, und die beiden liefen auseinander. Der Ort bleibt dieses
+/// Modul, weil hier der einzige weitere Rufer steht; wer einen dritten
+/// hinzufuegt, verschiebt sie bewusst.
 #[must_use = "die Zeitangabe ist die halbe Antwort dieser Profilzeile"]
-fn kalendertext(zeitpunkt: SystemTime) -> Option<String> {
+pub fn kalendertext(zeitpunkt: SystemTime) -> Option<String> {
     let zeit = ortszeit(zeitpunkt)?;
     Some(format!(
         "{:04}-{:02}-{:02} {:02}:{:02}",

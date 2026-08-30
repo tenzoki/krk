@@ -1073,7 +1073,8 @@ mod tests {
         );
     }
 
-    /// Genau ein Aufruf von `git` im ganzen Baum (C3.13).
+    /// Genau ein Aufruf von `git` ausserhalb der Probenordner der Kisten
+    /// (C3.13).
     ///
     /// Die Nadel steht als `concat!`, weil die Probe in derselben Datei liegt,
     /// die sie liest: ausgeschrieben zaehlte sie sich selbst mit.
@@ -1082,12 +1083,28 @@ mod tests {
     /// Werkzeug hat einen zweiten Abnehmer bekommen, `version`, und der
     /// schreibt. Die Zahl bleibt eins, und die Probe bleibt hier, weil die
     /// Zusage aus dem Abnahmekriterium dieser Station stammt.
+    ///
+    /// **Seit dem 260830 bleibt `crates/*/tests/` ungelesen**, weil die
+    /// Abnahmeproben des Gitlesers ihre Pruefrepositorys mit dem Werkzeug des
+    /// Systems anlegen muessen: der Leser schreibt nicht und kann sich keines
+    /// bauen. Der Preis dafuer steht im Entscheidungsdatensatz
+    /// `260830-1612_*_darf-eine-probe-git-rufen-oder-bleibt-es-bei-genau-einer-aufrufstelle-im-ganzen-baum.md`
+    /// und ist zweiteilig. Ein zweiter Rufer unter `crates/*/tests/` faellt
+    /// danach nie mehr auf. Und die Grenze trifft nicht alles, was sie zu
+    /// treffen vorgibt: `krk-ui` fuehrt kein Bibliotheksziel und prueft deshalb
+    /// in `#[cfg(test)]`-Modulen unter `src/`, die ebensowenig ausgeliefert
+    /// werden und weiter gezaehlt bleiben; ein spaeterer Aufruf von `git` dort
+    /// macht die Probe wieder rot.
     #[test]
-    fn xtask_ruft_git_an_genau_einer_stelle() {
+    fn git_wird_ausserhalb_der_probenordner_an_genau_einer_stelle_gerufen() {
         let nadel = concat!("Command", "::new(\"/usr/bin/git\")");
         let nackt = concat!("Command", "::new(\"git\")");
+        let wurzel = bundle::wurzel();
         let mut stellen = Vec::new();
-        for datei in rust_dateien(&bundle::wurzel()) {
+        for datei in rust_dateien(&wurzel) {
+            if liegt_im_probenordner_einer_kiste(&datei, &wurzel) {
+                continue;
+            }
             let inhalt = fs::read_to_string(&datei).expect("die Datei ist lesbar");
             let zahl = inhalt.matches(nadel).count() + inhalt.matches(nackt).count();
             for _ in 0..zahl {
@@ -1259,6 +1276,20 @@ mod tests {
         sammeln(wurzel, &mut gefunden);
         gefunden.sort();
         gefunden
+    }
+
+    /// Liegt die Datei unter `crates/<kiste>/tests/`?
+    ///
+    /// Die eine Stelle, an der die Grenze aus dem Entscheidungsdatensatz
+    /// `260830-1612_*_darf-eine-probe-git-rufen-oder-bleibt-es-bei-genau-einer-aufrufstelle-im-ganzen-baum.md`
+    /// steht. Gefragt ist der Ort und nicht die Bauart: ein `#[cfg(test)]`-Modul
+    /// unter `src/` liegt nicht darunter und wird weiter gelesen.
+    fn liegt_im_probenordner_einer_kiste(datei: &Path, wurzel: &Path) -> bool {
+        let Ok(rest) = datei.strip_prefix(wurzel) else {
+            return false;
+        };
+        let teile: Vec<_> = rest.components().collect();
+        teile.len() > 3 && teile[0].as_os_str() == "crates" && teile[2].as_os_str() == "tests"
     }
 
     /// Der Quellbaum nennt die alte Stationszahl nicht mehr (C6.3).

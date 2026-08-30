@@ -275,7 +275,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
    - Kriterien: C5.1, C5.2, C5.8, C5.9, C5.10, C6.3 (Bauhälfte), Bedingung 1
    - Dependencies: Schritt 1 (`bereichsleiste.rs` und `fenstermodell.rs` werden von beiden angefasst)
 
-3. **`gix` als Abhängigkeit und der Gitleser im Kern**
+3. **`gix` als Abhängigkeit und der Gitleser im Kern** [DONE]
    - Executor: `coder`
    - Files: `Cargo.toml`, `crates/krk-core/Cargo.toml`, `crates/krk-core/src/lib.rs`, `crates/krk-core/src/git/mod.rs` (neu), `crates/krk-core/src/git/leser.rs` (neu), `crates/krk-core/src/git/texte.rs` (neu), `crates/krk-core/tests/git.rs` (neu)
    - Changes: `gix` in die Wurzel-`Cargo.toml` mit `default-features = false` und den Merkmalen `status`, `revision`, `max-performance-safe`, `parallel`, `sha1`, auf eine kleine Fassung festgenagelt (`"0.87"`, nicht `"0"`) (C8.2); die Begründung daneben, wie bei jeder fremden Kiste dieses Projekts, mit der Merkmalswahl, den 98 zusätzlichen Paketen auf dem Bauziel, der Fassungskadenz von vierzehn kleinen Fassungen in zehn Monaten und dem Befund zu `cc` und `-sys` (C8.3). `krk-core/Cargo.toml` nimmt sie auf, `lib.rs` das Modul; der Workspace bleibt bei vier Mitgliedern (C8.1).

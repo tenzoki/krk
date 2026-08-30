@@ -95,3 +95,23 @@ von `Cargo.lock`.** Sie lautet fortan, dass auf den beiden Mac-Zielen weder `cc`
 `cargo tree --target <ziel> -e normal,build` statt eines `grep` in `Cargo.lock`, und
 `windows-sys` verliert seinen Ausnahmestatus: es ist der erste Fall der Regel statt der
 Ausnahme von ihr. Fünf Prosastellen sind nachzuziehen; das gehört in den Plan der Runde.
+
+## Der Blocker in Schritt 3 und die Antwort des Nutzers
+
+Schritt 3 hat `gix` aufgenommen und ist an einer Probe der Runde 8 hängengeblieben.
+`xtask_ruft_git_an_genau_einer_stelle` (`xtask/src/release.rs`) liest jede `.rs`-Datei
+unter der Projektwurzel und verlangt genau einen `git`-Aufruf; die zwei Prüfrepositorys
+in `crates/krk-core/tests/git.rs` bringen zwei weitere. Unvermeidlich, weil die Stufe A
+nicht schreibt und `gix` deshalb kein Repository anlegen kann.
+
+**Der Nutzer hat entschieden: die Prüfung klammert `crates/*/tests/` aus.** Die Zusage
+bleibt damit eine Zahl statt einer Liste und sagt danach, was sie meint: ein Eingang zu
+`git` im Programm und im Bauwerkzeug. Zwei Möglichkeiten sind ausdrücklich verworfen,
+die Ausnahmeliste nach dem Muster der Prüfordner-Zählprobe und die Beschränkung der
+Prüfung auf `xtask/`.
+
+**Der Preis ist benannt und angenommen.** Ein zweiter `git`-Rufer unter `crates/*/tests/`
+fällt danach nie mehr auf. Und die Grenze trifft nicht, was sie zu treffen vorgibt:
+`krk-ui` führt kein Bibliotheksziel und prüft deshalb in `#[cfg(test)]`-Modulen unter
+`src/`, die ebensowenig ausgeliefert werden und weiter gezählt bleiben. Ein späterer
+Test dort, der `git` ruft, macht die Probe wieder rot.
