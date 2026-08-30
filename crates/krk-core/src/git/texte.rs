@@ -1,10 +1,11 @@
 //! Die Woerter des Git-Bereichs: reine Funktionen mit Proben, und die einzige
 //! Stelle, an der sie stehen.
 //!
-//! Vier Texte, und jeder beantwortet genau eine Frage der Anzeige: was oben
+//! Fuenf Texte, und jeder beantwortet genau eine Frage der Anzeige: was oben
 //! steht ([`kopfzeile`]), was darunter steht ([`zusammenfassung`]), was eine
-//! Zeile der Verlaufsliste traegt ([`verlaufszeile`]), und was in einem Ordner
-//! ohne Repository dasteht ([`KEIN_REPOSITORY`]).
+//! Zeile der Verlaufsliste traegt ([`verlaufszeile`]), was die Flaeche unter
+//! der Liste fuer den ausgewaehlten Commit traegt ([`einzelheiten`]), und was
+//! in einem Ordner ohne Repository dasteht ([`KEIN_REPOSITORY`]).
 //!
 //! **Sie stehen im Kern und nicht in `krk-ui`, damit sie eine Probe haben.**
 //! `krk-ui` hat kein Bibliotheksziel; eine Datei unter `crates/krk-ui/tests/`
@@ -117,6 +118,39 @@ pub fn verlaufszeile(commit: &Commit) -> String {
         kurzhash.as_str(),
     ]
     .join(TRENNER)
+}
+
+/// Die Flaeche unter der Verlaufsliste fuer den ausgewaehlten Commit (E13,
+/// C3.4).
+///
+/// Vier Angaben und dieselben vier wie in [`verlaufszeile`], nur jede in ihrer
+/// vollen Form: die **vollstaendige** Nachricht statt der ersten Zeile, der
+/// Autor **mit** E-Mail, das Datum und der **volle** Hash. Die Zeile oben ist
+/// die Wiedererkennung, diese Flaeche die Auskunft; dass beide dieselben
+/// Angaben tragen, ist der Grund, aus dem eine Auswahl in der Liste ueberhaupt
+/// etwas hinzufuegt.
+///
+/// **Die Nachricht steht oben und ungekuerzt.** Sie ist die einzige der vier
+/// Angaben, die mehr als eine Zeile braucht, und eine Kuerzung hier waere die
+/// zweite Kurzbeschreibung neben der, die es schon gibt. Abgeschnitten wird
+/// allein der Zeilenumbruch am Ende, den `git` an jede Nachricht haengt: ohne
+/// das stuende zwischen Nachricht und Autor eine Leerzeile mehr als hier
+/// geschrieben.
+///
+/// Das Datum kommt aus [`kalendertext`], wie in der Zeile darueber; eine
+/// zweite Datumsform waere eine zweite Antwort auf dieselbe Frage. Laesst der
+/// Zeitpunkt sich nicht in einen Kalendertag uebersetzen, bleibt die Zeile
+/// leer statt einen Platzhalter zu erfinden — dieselbe Regel wie dort.
+#[must_use = "die Einzelheiten sind die Anzeige und keine Nebenwirkung"]
+pub fn einzelheiten(commit: &Commit) -> String {
+    let datum = kalendertext(commit.zeit).unwrap_or_default();
+    format!(
+        "{}\n\n{} <{}>\n{datum}\n{}",
+        commit.nachricht.trim_end(),
+        commit.autor,
+        commit.email,
+        commit.id
+    )
 }
 
 /// Das Wort, mit dem die Zusammenfassung einen Markenzustand nennt.
@@ -311,6 +345,68 @@ mod tests {
             Marke::Konflikt.rang() > Marke::Umbenannt.rang()
                 && Marke::Umbenannt.rang() > Marke::Neu.rang(),
             "die Umbenennung faellt hinter Konflikt und vor Neu"
+        );
+    }
+
+    /// C3.4, E13: die vier Angaben in ihrer vollen Form, und die Nachricht
+    /// ungekuerzt oben.
+    #[test]
+    fn die_einzelheiten_tragen_die_vier_angaben_in_voller_form() {
+        let commit = commit("Der Bereich liest", "Kai Stalmann", 1_770_000_000);
+        let text = einzelheiten(&commit);
+        let zeilen: Vec<&str> = text.lines().collect();
+
+        assert_eq!(
+            zeilen.first().copied(),
+            Some("Der Bereich liest"),
+            "die Nachricht steht nicht oben: {text}"
+        );
+        assert!(
+            text.contains("Rumpf"),
+            "die Nachricht ist gekuerzt statt vollstaendig: {text}"
+        );
+        assert!(
+            text.contains("Kai Stalmann <wer@example.org>"),
+            "der Autor steht ohne seine E-Mail da: {text}"
+        );
+        assert!(
+            text.contains(
+                &kalendertext(SystemTime::UNIX_EPOCH + Duration::from_secs(1_770_000_000))
+                    .expect("der Zeitpunkt liegt im Kalender")
+            ),
+            "das Datum ist nicht das der einen Datumsform dieses Vorhabens: {text}"
+        );
+        assert_eq!(
+            zeilen.last().copied(),
+            Some(commit.id.to_string().as_str()),
+            "der volle Hash steht nicht in der letzten Zeile: {text}"
+        );
+    }
+
+    /// Der Zeilenumbruch, den `git` an jede Nachricht haengt, erzeugt keine
+    /// zweite Leerzeile vor dem Autor.
+    #[test]
+    fn der_umbruch_am_ende_der_nachricht_erzeugt_keine_leerzeile() {
+        let commit = commit("Titel", "Wer", 1_770_000_000);
+        assert!(
+            commit.nachricht.ends_with('\n'),
+            "die Vorlage traegt den Umbruch nicht, den diese Probe pruefen soll"
+        );
+        let text = einzelheiten(&commit);
+        let zeilen: Vec<&str> = text.lines().collect();
+        assert_eq!(
+            zeilen,
+            vec![
+                "Titel",
+                "",
+                "Rumpf",
+                "",
+                "Wer <wer@example.org>",
+                kalendertext(SystemTime::UNIX_EPOCH + Duration::from_secs(1_770_000_000))
+                    .expect("der Zeitpunkt liegt im Kalender")
+                    .as_str(),
+                commit.id.to_string().as_str(),
+            ]
         );
     }
 }

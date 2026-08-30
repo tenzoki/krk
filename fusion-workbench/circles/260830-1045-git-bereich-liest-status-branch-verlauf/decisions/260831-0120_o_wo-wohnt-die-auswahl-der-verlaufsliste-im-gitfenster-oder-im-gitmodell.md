@@ -1,0 +1,85 @@
+# Wo wohnt die Auswahl der Verlaufsliste — im `Gitfenster` oder im `Gitmodell`?
+
+---
+**Domain:** code
+**Filed by:** coder, Kai Stalmann <kai@stalmann.org>
+**Cross-references:** `260830-1317_*_plan-git-bereich-liest-status-branch-verlauf.md` (Entscheidung 5, Schritt 7, Schritt 8); `260830-1251_*_spec-git-bereich-liest-status-branch-verlauf.md` (C3.4, C3.5, C4.2, C4.6); `crates/krk-ui/src/appkit/git.rs` (Modulkopf `# Die Auswahl wohnt in der Liste`, `GitfensterIvars::auswahl`); `crates/krk-ui/src/gitmodell.rs` (Feld `auswahl`, `auswahl`, `auswahl_setzen`, `ausgewaehlter_commit`); `crates/krk-ui/src/tabs.rs` (`Tabinhalt::gitmodell`, „Nur zu lesen"); `history/260831-0100-coder-schritt-6-der-lauf-am-tab-und-die-markenzelle.md`
+
+---
+
+## Question
+
+Schritt 6 hat der Auswahl im `Gitmodell` ein Feld gegeben, Schritt 7 hat sie in
+den `Gitfenster`-Ivars gebaut, und beide stehen jetzt nebeneinander. Der Grund
+ist keine Nachlässigkeit, sondern ein Schnitt, den die zwei Schritte
+verschieden gelesen haben: der Kommentar am `expect(dead_code)` in
+`gitmodell.rs` nennt `auswahl_setzen` unter den Ablesern von
+`Gitfenster::zeigen`, aber `zeigen` bekommt das Modell nach dem Plan **lesend**
+(`zeigen(&Gitmodell)`), und `kommando_ausfuehren(kommando)` bekommt es
+überhaupt nicht. Ein Schreiber aus dem Git-Bereich heraus gibt es damit nicht,
+und `Tabinhalt::gitmodell` sagt ausdrücklich, dass ein Schreiber von außen eine
+zweite Quelle für denselben Stand wäre.
+
+Die Frage muss jetzt beantwortet werden, weil sie **Verhalten** entscheidet, das
+der Nutzer sieht, und weil Schritt 8 den Anwendungsdelegierten baut, der den
+Rückweg tragen müsste: es gibt ein `Gitfenster` für das ganze Fenster, aber ein
+`Gitmodell` je Tab. Wohnt die Auswahl in der Ansicht, fällt sie beim Tabwechsel;
+wohnt sie im Modell, kommt sie beim Zurückwechseln wieder.
+
+## Options
+
+1. **Sie bleibt in der Ansicht** (der gebaute Stand aus Schritt 7)
+   - Pros: keine zweite Meldung und kein zweiter Melder; `zeigen` bleibt lesend
+     und `Tabinhalt::gitmodell` bleibt „nur zu lesen"; die Zusagen C3.5, C4.2
+     und C4.6 hält der Schritt heute schon, weil `zeigen` die Auswahl nur dort
+     stehen lässt, wo die Zeile wortgleich dieselbe geblieben ist.
+   - Cons: die Auswahl überlebt keinen Tabwechsel und keinen Wechsel des
+     aktiven Dateifensters; `Gitmodell::auswahl`, `auswahl_setzen` und
+     `ausgewaehlter_commit` behalten nach dieser Runde keinen Rufer im
+     ausgelieferten Bau, und das `expect(dead_code)` in `gitmodell.rs` bleibt
+     mit einem Grund stehen, der einen erledigten Schritt nennt.
+
+2. **Sie zieht in das `Gitmodell`, und der Git-Bereich meldet sie nach oben**
+   - Pros: eine Heimat für einen Stand; die Auswahl überlebt den Tabwechsel,
+     wie es das „ein Gitmodell je Tab" aus dem Modulkopf für Kopf und Verlauf
+     schon zusagt; die drei Leser bekommen ihren Rufer und das
+     `expect(dead_code)` fällt.
+   - Cons: ein zweiter Melder neben dem Nachlademelder, den Entscheidung 5
+     nicht vorsieht; der Anwendungsdelegierte braucht einen schreibenden Zugang
+     zum Gitmodell des sichtbaren Tabs, also eine Ausnahme von „nur zu lesen";
+     zwischen dem Tastendruck und dem nächsten `zeigen` steht die Liste einen
+     Augenblick auf einem Stand, den das Modell noch nicht trägt.
+
+3. **Sie zieht in das `Gitmodell`, und `zeigen` bekommt es veränderlich**
+   - Pros: kein zweiter Melder; genau die sieben Ableser, die der
+     History-Eintrag von Schritt 6 aufzählt.
+   - Cons: `zeigen(&mut Gitmodell)` und `kommando_ausfuehren` bräuchte es
+     ebenso; damit fiele die Zusage aus `Tabinhalt::gitmodell` ganz, und die
+     Ansicht schriebe in den Stand, den der Einzugstakt füllt — genau die zwei
+     Schreiber, die jene Zeile ausschließt.
+
+## Constraints
+
+- C3.5 bleibt: ohne Auswahl bleibt die Fläche der Einzelheiten leer, und es
+  steht kein Platzhaltertext.
+- C4.2 bleibt: am letzten Eintrag bewegt sich nichts, die Liste springt nicht,
+  und der Nachschlag wird angefordert.
+- C4.6 bleibt: ein Ordnerwechsel lässt keine Auswahl des vorigen Ordners stehen.
+- A8 bleibt: während des Laufs steht nichts da.
+- Was auch immer gewählt wird, es gibt danach **eine** Heimat für die Auswahl
+  und nicht zwei.
+
+## Recommendation
+
+Möglichkeit 1, solange kein Nutzerurteil dagegen steht — und das ist eine
+Empfehlung über die **Kosten** und nicht über die Sache. Der sichtbare
+Unterschied ist ein einziger: ob eine Auswahl im Verlauf einen Tabwechsel
+übersteht. Keine Zeile des Specs verlangt das, und Möglichkeit 2 kauft es mit
+einem zweiten Melder und einer Ausnahme von einer Zusage, die `tabs.rs` gerade
+erst geschrieben hat.
+
+Fällt die Wahl auf 1, gehören zwei Aufräumschritte dazu: das Feld `auswahl` und
+seine drei Leser fallen aus dem `Gitmodell`, und mit ihnen das
+`expect(dead_code)` und die Probe `eine_auswahl_jenseits_des_verlaufs_bleibt_leer`,
+deren Gegenstand dann in `crates/krk-ui/src/appkit/git.rs` steht und dort schon
+eine Probe hat.

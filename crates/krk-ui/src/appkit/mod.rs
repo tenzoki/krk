@@ -7,7 +7,7 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Einunddreissig Module, entlang dessen geschnitten, was AppKit als
+//! Zweiunddreissig Module, entlang dessen geschnitten, was AppKit als
 //! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`] und [`textautomatik`],
 //! die keines fuehren und trotzdem hier liegen, weil die Koordinate, in die das
 //! eine rechnet, AppKits ist und die Einstellungen, die das andere setzt, an
@@ -201,6 +201,7 @@ mod editor;
 mod ereignisse;
 mod fenster;
 mod fsevents;
+mod git;
 mod hinweis;
 mod koordinaten;
 mod leiste;

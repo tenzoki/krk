@@ -2363,15 +2363,25 @@ mod tests {
     /// daneben, haette zwei Wahrheiten darueber, welche Flaeche zu
     /// `Fokus::Vorschau` gehoert — und keine Aufruferzahl saehe das.
     ///
-    /// **Die zweite Fundstelle ist erwartet und kein Fehlschlag.**
-    /// `Anwendungsdelegierter::fokusansicht` traegt denselben Namen und
-    /// beantwortet die andere Haelfte derselben Frage: welcher Fokuswert
-    /// welchem Bereich gehoert. Die Probe schreibt beide Stellen aus, statt
-    /// eine Zahl zu erwarten, die die Lage nicht trifft; der Plan der Runde 14
-    /// spricht an dieser Stelle nur von der Vorschau, und eine Erwartung ohne
-    /// den Delegierten waere von Anfang an rot. Denselben Fehlgriff hat die
-    /// Probe `die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort`
-    /// darueber schon einmal abgewehrt.
+    /// **Die zweite und die dritte Fundstelle sind erwartet und kein
+    /// Fehlschlag.** `Anwendungsdelegierter::fokusansicht` traegt denselben
+    /// Namen und beantwortet die andere Haelfte derselben Frage: welcher
+    /// Fokuswert welchem Bereich gehoert. `Gitfenster::fokusansicht`
+    /// (`super::git`, Runde 23) beantwortet dieselbe Frage wie die hiesige,
+    /// aber fuer einen **anderen** Bereich, und ist deshalb keine zweite
+    /// Wahrheit ueber die Vorschau. Die Probe schreibt alle drei Stellen aus,
+    /// statt eine Zahl zu erwarten, die die Lage nicht trifft; der Plan der
+    /// Runde 14 spricht an dieser Stelle nur von der Vorschau, und eine
+    /// Erwartung ohne den Delegierten waere von Anfang an rot. Denselben
+    /// Fehlgriff hat die Probe
+    /// `die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort` darueber
+    /// schon einmal abgewehrt.
+    ///
+    /// **Was die Liste damit haelt und was nicht.** Sie haelt, dass in
+    /// **dieser** Datei genau eine Zuordnung steht — die Zusage aus C1.8 der
+    /// Runde 14 —, und dass keine vierte Datei unbemerkt eine dazubaut. Ein
+    /// weiterer fokussierbarer Bereich traegt seine eigene Zeile, und wer ihn
+    /// baut, traegt sie hier ein.
     ///
     /// # Was diese Nadel nicht sieht
     ///
@@ -2402,12 +2412,13 @@ mod tests {
             stellen,
             vec![
                 ("krk-ui/src/appkit/anwendung.rs".to_owned(), 1),
+                ("krk-ui/src/appkit/git.rs".to_owned(), 1),
                 ("krk-ui/src/appkit/vorschau.rs".to_owned(), 1),
             ],
             "`{erklaerung}` steht nicht genau je einmal beim \
-             Anwendungsdelegierten und in der Vorschau; die Verzweigung nach \
-             der sichtbaren Anzeige gehoert in die eine Zuordnung und nicht \
-             neben sie"
+             Anwendungsdelegierten, im Git-Bereich und in der Vorschau; die \
+             Verzweigung nach der sichtbaren Anzeige gehoert in die eine \
+             Zuordnung und nicht neben sie"
         );
 
         // Die dritte Flaeche der Runde 20 steht innerhalb dieser einen

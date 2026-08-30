@@ -117,22 +117,32 @@ impl Gitmodell {
     }
 }
 
-// **Die Leseseite steht in einem eigenen Block, und sie hat in diesem Schritt
-// noch keinen Ableser im ausgelieferten Bau.** Sie gehoert dem Git-Bereich, und
-// der entsteht als Ansicht in Schritt 7 des Plans der Runde 23: `zeigen(&Gitmodell)`
-// ist der eine Schreiber seiner drei Flaechen und ruft von hier `kopfzeile`,
-// `zusammenfassung`, `verlaufslaenge`, `verlaufszeile`, `auswahl`,
-// `auswahl_setzen` und `ausgewaehlter_commit`.
+// **Die Leseseite steht in einem eigenen Block, und sie gehoert dem
+// Git-Bereich.** `Gitfenster::zeigen` (`crate::appkit`) ist der eine Schreiber
+// seiner drei Flaechen und ruft von hier `kopfzeile`, `zusammenfassung`,
+// `erschoepft`, `verlaufslaenge`, `verlaufszeile` und `einzelheiten`;
+// `letzter_commit` und `erschoepft` ruft daneben `Tabliste::verlauf_nachladen`.
 //
-// Die Ausnahme steht als `expect` und nicht als `allow`, und das ist ihr
-// Ablaufdatum: sobald Schritt 7 die Rufer bringt, meldet der Uebersetzer die
-// Erwartung als unerfuellt und zwingt zum Entfernen der Zeile. Das
-// `cfg_attr(not(test))` davor grenzt sie auf den ausgelieferten Bau ein, denn
-// im Probenbau sind die Stellen schon heute gerufen — die Proben unten sind
-// ihre ersten Leser.
+// **Drei Stuecke haben nach Schritt 7 keinen Rufer im ausgelieferten Bau:**
+// `auswahl`, `auswahl_setzen` und `ausgewaehlter_commit`. Der Git-Bereich haelt
+// die Auswahl seiner Liste in seinen eigenen Ivars, weil `zeigen` das Modell
+// lesend bekommt und `Tabinhalt::gitmodell` einen Schreiber von aussen
+// ausschliesst; welche der beiden Heimaten die richtige ist, ist eine
+// Nutzerfrage und als Datensatz gefilt
+// (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`).
+// Bis sie beantwortet ist, traegt dieser Block seine Ausnahme weiter.
+//
+// Sie steht als `expect` und nicht als `allow`, und das ist ihr Ablaufdatum:
+// bekommen die drei ihren Rufer, meldet der Uebersetzer die Erwartung als
+// unerfuellt und zwingt zum Entfernen der Zeile. Das `cfg_attr(not(test))`
+// davor grenzt sie auf den ausgelieferten Bau ein, denn im Probenbau sind die
+// Stellen schon heute gerufen — die Proben unten sind ihre ersten Leser.
 #[cfg_attr(
     not(test),
-    expect(dead_code, reason = "Ableser ist Gitfenster::zeigen aus Schritt 7")
+    expect(
+        dead_code,
+        reason = "auswahl, auswahl_setzen und ausgewaehlter_commit warten auf 260831-0120"
+    )
 )]
 impl Gitmodell {
     /// Der letzte gehaltene Commit, hinter dem ein Nachschlag ansetzt.
@@ -202,6 +212,24 @@ impl Gitmodell {
     #[must_use]
     pub fn verlaufszeile(&self, zeile: usize) -> Option<String> {
         self.verlauf.get(zeile).map(texte::verlaufszeile)
+    }
+
+    /// Was die Flaeche unter der Liste fuer den Commit an dieser Stelle traegt
+    /// (E13, C3.4).
+    ///
+    /// **Nach der Stelle gefragt und nicht nach der Auswahl**, anders als
+    /// [`Self::ausgewaehlter_commit`] daneben: der Git-Bereich haelt die
+    /// Auswahl seiner Liste selbst — der Modulkopf von
+    /// [`crate::appkit`]`::git` sagt, warum —, und er braucht die Einzelheiten
+    /// deshalb zu **jeder** Zeile, nicht zu der einen, die dieses Modell
+    /// gewaehlt hat.
+    ///
+    /// `None` heisst „diese Zeile gibt es nicht", und der Rufer laesst die
+    /// Flaeche dann leer (C3.5). Der Text kommt wie die drei anderen aus
+    /// [`krk_core::git::texte`] und wird hier nicht geformt.
+    #[must_use]
+    pub fn einzelheiten(&self, zeile: usize) -> Option<String> {
+        self.verlauf.get(zeile).map(texte::einzelheiten)
     }
 }
 

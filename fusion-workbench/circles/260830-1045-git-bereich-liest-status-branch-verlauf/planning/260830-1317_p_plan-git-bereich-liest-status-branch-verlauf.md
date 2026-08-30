@@ -314,12 +314,14 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
    - Kriterien: C4.6, C5.3 (Zellenhälfte), C5.11 (Bauhälfte), C6.3 (Verhaltenshälfte), C7.3 (Bauhälfte), C7.10, C7.11
    - Dependencies: Schritte 1, 2, 4, 5
 
-7. **Der Git-Bereich als Ansicht**
+7. **Der Git-Bereich als Ansicht** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/git.rs` (neu), `crates/krk-ui/src/appkit/mod.rs`, `crates/krk-ui/src/appkit/aufteilung.rs`
    - Changes: `Gitfenster` nach dem Muster von `Vorschaufenster`, mit den drei Flächen aus Entscheidung 5: Kopf als `NSTextField`-Etikett, Verlaufsliste als einspaltige `NSTableView` ohne Kopfzeile in einer `NSScrollView`, Einzelheiten als mehrzeiliges Etikett in einer `NSScrollView`. `bauen(mtm)`, `sicht()`, `fokusansicht()` (die Verlaufsliste), `zeigen(&Gitmodell)` als der eine Schreiber der drei Flächen, `kommando_ausfuehren(kommando)` für `AuswahlHoch` und `AuswahlRunter`, `nachlademelder_setzen`. Ohne Auswahl bleibt die Fläche der Einzelheiten leer und es steht kein Platzhaltertext (C3.5); während des Nachladens erscheint keine Platzhalterzeile und kein Fortschrittsanzeiger (C4.4); der Bereich blendet sich nie selbst aus, und keine Zeile dieser Datei ruft `sichtbar_setzen` (C6.4). Keine Meldung geht in die Statuszeile, kein Hinweisfenster, nichts auf die Standardfehlerausgabe (C6.6).
      `Aufteilung::bauen` nimmt die Ansicht als sechsten Parameter und rahmt sie wie die fünf anderen; damit trägt der Bereich seinen `NSBox` und die Rahmenregel aus C9 der Runde 2 färbt ihn über `rahmenrolle` mit (C1.6), und `bereich_des_ersthelfers` findet ihn über `Bereich::ALLE` (C2.4).
      Der Modulkopf trägt den Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` mit jeder angesprochenen Klasse und Methode und ihrer Untergrenze aus dem SDK, und keine liegt über macOS 15 (C9.9, Bedingung 8). Er trägt daneben den Satz, warum die Fläche der Einzelheiten kein `NSTextView` ist und deshalb nicht bei `ist_eigene_textflaeche` angemeldet wird.
+     **Der gebaute Stand weicht in drei Punkten von dieser Dateiliste ab, und alle drei stehen im History-Eintrag `history/260831-0120-coder-schritt-7-der-git-bereich-als-ansicht.md`.** `appkit/aufteilung.rs` ist **nicht** angefasst: Schritt 1 hat den sechsten Parameter, den sechsten `NSBox` und die Rahmenregel dort schon gesetzt, und es blieb für diesen Schritt nichts zu tun. Dafür sind zwei Dateien hinzugekommen, die diese Liste nicht führt: `crates/krk-core/src/git/texte.rs` bekommt `einzelheiten(&Commit)` samt zwei Proben (C3.4 verlangt einen Text, den Schritt 3 nicht angelegt hat, und der Kopf jener Datei ist der Grund, warum er im Kern steht und nicht hier), und `crates/krk-ui/src/gitmodell.rs` den durchreichenden Ableser dazu. Daneben zieht die Zählprobe `die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal` (`appkit/vorschau.rs`) ihre Erwartungsliste um `git.rs` nach — `Gitfenster::fokusansicht` ist die dritte Datei mit diesem Namen und keine zweite Wahrheit über die Vorschau.
+     **Der Platzhalter in `appkit/anwendung.rs` bleibt stehen und fällt mit Schritt 8.** Ihn hier zu ersetzen hieße, `Gitfenster::bauen` zu rufen und das Ergebnis in den Ivars des Anwendungsdelegierten zu halten, und das ist die Einhängung, die Schritt 8 trägt. Solange sie fehlt, hat die ganze Datei `appkit/git.rs` keinen Rufer und trägt deshalb **eine** Ausnahme von der Totprüfung an ihrem Kopf, mit `Gitfenster::bauen` als dem einen Eingang, von dem aus jedes Stück erreichbar ist; Schritt 8 entfernt sie.
    - Kriterien: C1.6 (Rahmen), C2.4 (Ansichtshälfte), C3.4 (Bauhälfte), C3.5 (Bauhälfte), C4.2 (Auslöser), C4.4 (Bauhälfte), C6.4, C6.6 (Bauhälfte), C9.9
    - Dependencies: Schritte 1, 6
 
@@ -546,6 +548,25 @@ pub struct Gitmodell {                                  // Kopf, Verlauf, Auswah
     erschoepft: bool,
     zusammenfassung: Option<String>,                    //   aus `texte::zusammenfassung`, fuer die
 }                                                       //   zweite Zeile des Bereichs (A3, A8)
+
+// crates/krk-ui/src/appkit/git.rs (neu)
+pub type Nachlademelder = Box<dyn Fn()>;                // Schritt 7 setzt ihn, Schritt 8 fuellt ihn
+impl Gitfenster {                                       // NSObject, zugleich Quelle und Delegierter
+    pub fn bauen(mtm: MainThreadMarker) -> Retained<Self>;   //   der Tabelle; `Gitsicht` ist der
+    pub fn sicht(&self) -> &NSView;                          //   Traeger, `Einzelheitenflaeche` der
+    pub fn fokusansicht(&self) -> &NSView;                   //   umgedrehte Inhalt der unteren Rolle
+    pub fn nachlademelder_setzen(&self, melden: Nachlademelder);
+    pub fn zeigen(&self, modell: &Gitmodell);           // der eine Schreiber der drei Flaechen
+    #[must_use] pub fn kommando_ausfuehren(&self, kommando: Kommando) -> bool;
+}
+
+// crates/krk-core/src/git/texte.rs
+#[must_use] pub fn einzelheiten(commit: &Commit) -> String;  // die Flaeche unter der Liste (E13)
+
+// crates/krk-ui/src/gitmodell.rs
+impl Gitmodell {
+    #[must_use] pub fn einzelheiten(&self, zeile: usize) -> Option<String>;
+}
 
 // crates/krk-ui/src/belegungsmodell.rs
 pub enum Funktionsbereich { …, Git, … }                 // zehnter Wert, hinter Editor
