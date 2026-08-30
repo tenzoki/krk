@@ -366,6 +366,50 @@ fn quellen_einsammeln(wurzel: &Path, ordner: &Path, gefunden: &mut Vec<(String, 
     }
 }
 
+/// Zaehlt die Aufrufstellen einer Funktion in einer Datei, unabhaengig davon,
+/// **wie** der Aufruf geschrieben ist.
+///
+/// Eine Aufruferzaehlung, die die Nadel `modul::funktion(` sucht, zaehlt einen
+/// Aufrufer nicht mit, der die Funktion ueber ein `use` in den Geltungsbereich
+/// geholt hat, und ein `contains` ueber `funktion(` zaehlt jeden laengeren
+/// Namen mit, der auf dieselben Zeichen endet — `gueltige_marken(` ist kein
+/// Aufruf von `marken`. Diese Funktion zaehlt den Namen mit oeffnender Klammer
+/// und zieht die drei Sorten Fundstellen ab, die keine Aufrufe sind:
+/// Fundstellen mitten in einem laengeren Bezeichner (entschieden am Zeichen
+/// davor), die Erklaerung selbst (erkannt am `fn` unmittelbar davor) und
+/// Nennungen in Kommentaren.
+///
+/// **Was bleibt:** ein Aufruf unter einem anderen Namen, also ein
+/// `use … as anders;`. Der Kopf von `tests/baum.rs` sagt, warum keine Suche im
+/// Quelltext restlos dicht ist.
+///
+/// **Das ist nicht dieselbe Funktion wie `krk_ui::quellbaum::aufrufstellen`**,
+/// und sie ist es aus demselben Grund nicht, aus dem [`quelldateien`] es nicht
+/// ist: jene ist `pub(crate)` in einer Kiste mit nur einem Binaerziel, und ein
+/// Testziel erreicht sie nicht. Wer eine der beiden aendert, aendert die andere
+/// mit; der Kopf von `krk-ui/src/quellbaum.rs` traegt die ausfuehrliche
+/// Herleitung samt dem Defekt, aus dem diese Bauform stammt
+/// (`issues/260813-0540_*_zwei-aufruferzaehlungen-haengen-an-der-schreibweise-des-aufrufs.md`).
+pub fn aufrufstellen(inhalt: &str, name: &str) -> usize {
+    let nadel = format!("{name}(");
+    inhalt
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        .map(|zeile| {
+            zeile
+                .match_indices(&nadel)
+                .filter(|(stelle, _)| {
+                    let davor = &zeile[..*stelle];
+                    let letztes = davor.chars().next_back();
+                    let teil_eines_namens =
+                        letztes.is_some_and(|zeichen| zeichen.is_alphanumeric() || zeichen == '_');
+                    !teil_eines_namens && !davor.trim_end().ends_with("fn")
+                })
+                .count()
+        })
+        .sum()
+}
+
 /// Die Namen der Varianten der Aufzaehlung `name` aus der Datei `datei`, in der
 /// Reihenfolge des Quelltexts.
 ///

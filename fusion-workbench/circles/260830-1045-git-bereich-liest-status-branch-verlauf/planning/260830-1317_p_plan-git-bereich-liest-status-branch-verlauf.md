@@ -287,7 +287,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
    - Kriterien: C3.1 (Probenhälfte), C3.2 (Textfunktion), C3.3 (Zeilenform), C3.6, C3.7, C3.8, C3.10, C4.1, C4.5, C5.3 (Probenhälfte), C6.1 (Textfunktion), C6.5, C6.7 (Bauhälfte), C7.7, C7.8, C7.9, C8.1, C8.2, C8.3, C8.5, C8.6, C10.3 (Bauhälfte), Bedingung 2, Bedingung 9
    - Dependencies: keine
 
-4. **Der Gitlauf: ein Faden, ein Kanal, zwei Fragen**
+4. **Der Gitlauf: ein Faden, ein Kanal, zwei Fragen** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-core/src/git/lauf.rs` (neu), `crates/krk-core/src/git/mod.rs`, `crates/krk-core/tests/git.rs`
    - Changes: `Gitlauf` nach der Bauform von `Durchlauf`: `starten(ordner, frage, generation)`, `meldungen() -> &Receiver<Gitmeldung>`, `abbrechen()`, `impl Drop`, Faden `krk-gitlauf-<n>`, `sync_channel(3)`. `Gitfrage { Ganz, WeitererVerlauf { ab: ObjectId } }` und `Gitmeldung { Kopf, Verlauf, Marken }`, beide vollständig und ohne Auffangzweig. Der Faden ruft die Funktionen aus Schritt 3 in der Reihenfolge Kopf, Verlauf, Marken und prüft das Abbruchkennzeichen vor jeder der drei; ein abgebrochener Lauf meldet nichts mehr, und der geschlossene Kanal ohne Markenmeldung heißt „nicht entschieden" und nicht „keine Marken", genau wie beim Durchlauf. Der Modulkopf schreibt die Unterschiede zum Durchlauf aus: die Kanaltiefe ist die Zahl der Antworten und kein Rückstaumaß, und die Marken kommen in einem Stück, aus den zwei Gründen in Entscheidung 3.

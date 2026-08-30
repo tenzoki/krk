@@ -20,13 +20,21 @@
 //! des Benutzers: [`git`] setzt `HOME` auf den Pruefordner und `user.name`,
 //! `user.email` und `init.defaultBranch` je Aufruf. Sonst entschiede die
 //! `~/.gitconfig` des Geraets, welchen Branchnamen die Probe erwartet.
+//!
+//! # Zwei Gegenstaende in einer Datei
+//!
+//! Die Proben des synchronen Lesers (Schritt 3 der Runde 23) und die des
+//! nebenlaeufigen Laufs (Schritt 4) stehen hier zusammen, weil beide dasselbe
+//! Pruefrepository brauchen und `repository` es an genau einer Stelle anlegt.
+//! Die Abschnittsueberschriften trennen sie.
 
 mod gemeinsam;
 
 use std::path::Path;
 use std::process::Command;
 
-use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, kindauftrag};
+use gemeinsam::{Pruefordner, aufrufstellen, kind_mit_deskriptorgrenze, kindauftrag};
+use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung, VERLAUFSSCHRITT};
 use krk_core::git::leser::{Gitleser, Oeffnung};
 use krk_core::git::texte::zusammenfassung;
 use krk_core::git::{Kopf, Marke};
@@ -536,4 +544,252 @@ fn kind_liest_unter_abgesenkter_deskriptorgrenze() {
         "die Marken bleiben unentschieden"
     );
     drop(gehalten);
+}
+
+// ---------------------------------------------------------------------------
+// Schritt 4: der Gitlauf
+// ---------------------------------------------------------------------------
+
+/// Alle Meldungen eines Laufs, bis sein Kanal schliesst.
+///
+/// `iter()` und nicht `recv_timeout`: der Faden endet von selbst, und ein
+/// Zeitmass hier waere eine zweite Zusage neben der, die geprueft wird.
+fn meldungen_einsammeln(lauf: &Gitlauf) -> Vec<Gitmeldung> {
+    lauf.meldungen().iter().collect()
+}
+
+/// Wie eine Meldung heisst, ohne ihre Nutzlast.
+///
+/// Die Reihenfolgeproben vergleichen Namen und nicht Werte: was in der
+/// Verlaufsliste steht, haelt die Probe des Lesers, und hier ist gefragt,
+/// **welche** Meldung wann kommt.
+fn art(meldung: &Gitmeldung) -> &'static str {
+    match meldung {
+        Gitmeldung::Kopf(_) => "Kopf",
+        Gitmeldung::Verlauf(_) => "Verlauf",
+        Gitmeldung::Marken(_) => "Marken",
+    }
+}
+
+/// C6.1 (Laufhaelfte), A8: Ein ganzer Lauf meldet Kopf, Verlauf und Marken —
+/// genau drei Meldungen, in dieser Reihenfolge.
+///
+/// Die Reihenfolge ist die ihrer gemessenen Kosten und zugleich die, die A8
+/// verlangt: Branch und Verlauf stehen schon, waehrend die Markenspalte noch
+/// leer ist. Eine Probe, die nur die Menge der Meldungen pruefte, liesse die
+/// umgekehrte Reihenfolge durch.
+#[test]
+fn ein_ganzer_lauf_meldet_kopf_verlauf_und_marken_in_dieser_reihenfolge() {
+    let ordner = repository("lauf-ganz");
+    ordner.datei("neu.txt", "neu\n");
+
+    let lauf = Gitlauf::starten(ordner.pfad().to_path_buf(), Gitfrage::Ganz, 1);
+    let gemeldet = meldungen_einsammeln(&lauf);
+
+    let arten: Vec<&str> = gemeldet.iter().map(art).collect();
+    assert_eq!(
+        arten,
+        vec!["Kopf", "Verlauf", "Marken"],
+        "der Lauf meldet nicht genau die drei Auskuenfte in ihrer Reihenfolge"
+    );
+    assert_eq!(
+        gemeldet[0],
+        Gitmeldung::Kopf(Kopf::Branch(BRANCH.to_owned())),
+        "die Kopfmeldung nennt nicht den Branch"
+    );
+    let Gitmeldung::Verlauf(verlauf) = &gemeldet[1] else {
+        panic!("die zweite Meldung ist kein Verlauf");
+    };
+    assert_eq!(
+        verlauf.len(),
+        1,
+        "der Verlauf traegt nicht den einen Commit"
+    );
+    assert_eq!(
+        gemeldet[2],
+        Gitmeldung::Marken(vec![("neu.txt".to_owned(), Marke::Neu)]),
+        "die Markenmeldung traegt nicht den unverfolgten Eintrag"
+    );
+}
+
+/// C4.2, C4.3: Ein Nachschlag meldet allein den Verlauf, und genau einmal.
+///
+/// Der Kopf steht schon, die Marken stehen schon; sie ein zweites Mal zu holen
+/// hiesse, den teuersten der drei Wege ohne Anlass zu fahren. Und die
+/// Nachladeregel aus C4.3 haengt an der Laenge: der Nachschlag hinter dem
+/// aeltesten Commit ist leer, und daran erkennt der Rufer, dass nichts mehr
+/// folgt.
+#[test]
+fn ein_nachschlag_meldet_allein_den_verlauf() {
+    let ordner = repository("lauf-nachschlag");
+    ordner.datei("neu.txt", "neu\n");
+    for nummer in 2..=3 {
+        ordner.datei("erste.txt", format!("stand {nummer}\n"));
+        git(ordner.pfad(), &["add", "erste.txt"]);
+        git(
+            ordner.pfad(),
+            &["commit", "-q", "-m", &format!("Commit {nummer}")],
+        );
+    }
+    let juengster = leser(ordner.pfad())
+        .verlauf(None, VERLAUFSSCHRITT)
+        .expect("kein Verlauf")[0]
+        .id;
+
+    let lauf = Gitlauf::starten(
+        ordner.pfad().to_path_buf(),
+        Gitfrage::WeitererVerlauf { ab: juengster },
+        2,
+    );
+    let gemeldet = meldungen_einsammeln(&lauf);
+
+    assert_eq!(
+        gemeldet.iter().map(art).collect::<Vec<&str>>(),
+        vec!["Verlauf"],
+        "der Nachschlag meldet nicht genau eine Verlaufsmeldung"
+    );
+    let Gitmeldung::Verlauf(verlauf) = &gemeldet[0] else {
+        panic!("die Meldung ist kein Verlauf");
+    };
+    assert_eq!(
+        verlauf.len(),
+        2,
+        "der Nachschlag liefert nicht die zwei aelteren Commits"
+    );
+    assert!(
+        !verlauf.iter().any(|commit| commit.id == juengster),
+        "der Nachschlag doppelt den Commit, hinter dem er ansetzt"
+    );
+
+    // Und hinter dem aeltesten kommt nichts mehr: die leere Liste ist die
+    // entschiedene Antwort, an der C4.3 haengt.
+    let aeltester = verlauf.last().expect("die Liste ist leer").id;
+    let am_ende = Gitlauf::starten(
+        ordner.pfad().to_path_buf(),
+        Gitfrage::WeitererVerlauf { ab: aeltester },
+        3,
+    );
+    assert_eq!(
+        meldungen_einsammeln(&am_ende),
+        vec![Gitmeldung::Verlauf(Vec::new())],
+        "hinter dem aeltesten Commit meldet der Lauf nicht die leere Liste"
+    );
+}
+
+/// Ein abgebrochener Lauf meldet nichts mehr.
+///
+/// Geprueft wird ueber [`Gitlauf::abbrechen`], und `Drop` ruft nichts anderes:
+/// ein Lauf, dessen [`Gitlauf`] faellt, nimmt denselben Weg, nur dass sein
+/// Empfaenger dann mitfaellt und keine Meldung mehr entgegennehmen koennte.
+///
+/// **Wovon diese Probe abhaengt, und der Satz gehoert dazu:** das
+/// Abbruchkennzeichen wird auf dem Hauptfaden gesetzt, waehrend der Arbeitsfaden
+/// erst noch anlaeuft. Sie misst damit, dass die Pruefung **vor** der ersten
+/// Einheit steht und nicht erst danach — dieselbe Form und dieselbe
+/// Voraussetzung wie `der_abbruch_greift_in_einem_ordner_ohne_unterordner` in
+/// `tests/verzeichnis.rs`. Ein Faden, der zwischen `starten` und `abbrechen`
+/// bereits eine Auskunft fertig haette, liesse sie rot werden; das Anlegen des
+/// Fadens allein kostet mehr als der Speicherzugriff daneben.
+#[test]
+fn ein_abgebrochener_lauf_meldet_nichts_mehr() {
+    let ordner = repository("lauf-abbruch");
+    ordner.datei("neu.txt", "neu\n");
+
+    // Kontrollauf: derselbe Ordner meldet ohne Abbruch alle drei Auskuenfte.
+    let ungestoert = Gitlauf::starten(ordner.pfad().to_path_buf(), Gitfrage::Ganz, 4);
+    assert_eq!(
+        meldungen_einsammeln(&ungestoert).len(),
+        3,
+        "ohne Abbruch meldet der Lauf nicht alle drei Auskuenfte"
+    );
+
+    let lauf = Gitlauf::starten(ordner.pfad().to_path_buf(), Gitfrage::Ganz, 5);
+    lauf.abbrechen();
+    assert_eq!(
+        meldungen_einsammeln(&lauf),
+        Vec::new(),
+        "ein abgebrochener Lauf meldet weiter; ein ausbleibender Befund heisst \
+         unentschieden, ein gemeldeter waere eine Aussage"
+    );
+}
+
+/// C6.1 (Laufhaelfte), E5: Ein Ordner ohne Repository meldet
+/// [`Kopf::KeinRepository`] und danach nichts.
+///
+/// Die eine entschiedene Verneinung des Laufs. Sie steht **vor** Verlauf und
+/// Marken und nicht an ihrer Stelle: ein Ordner ohne Repository hat keinen
+/// Verlauf und keine Marken, und das ist keine Auskunft, sondern die Folge der
+/// ersten.
+#[test]
+fn ein_ordner_ohne_repository_meldet_kein_repository_und_danach_nichts() {
+    let ordner = Pruefordner::neu("lauf-ohnerepo");
+    ordner.datei("gewoehnlich.txt", "nichts mit Git\n");
+
+    let lauf = Gitlauf::starten(ordner.pfad().to_path_buf(), Gitfrage::Ganz, 6);
+    assert_eq!(
+        meldungen_einsammeln(&lauf),
+        vec![Gitmeldung::Kopf(Kopf::KeinRepository)],
+        "ein Ordner ohne Repository meldet nicht genau die eine entschiedene Verneinung"
+    );
+}
+
+/// C7.1: Ausserhalb von `krk-core/src/git/` fragt kein ausgelieferter Code den
+/// Statusweg des Gitlesers.
+///
+/// **Warum das die pruefbare Gestalt von C7.1 ist.** „Keine Statusabfrage laeuft
+/// auf dem Hauptfaden" ist am Quelltext nicht unmittelbar zu entscheiden — auf
+/// welchem Faden eine Zeile laeuft, sagt keine Nadel. Entscheidbar ist die
+/// Frage dahinter: gibt es ueberhaupt einen zweiten Weg an den Status, neben
+/// dem Kanal? [`Gitleser::marken`] ist der teure der vier Wege — 12 bis 164 ms
+/// gemessen —, und wenn ihn allein `git/lauf.rs` ruft, kann ihn niemand sonst
+/// auf den Hauptfaden legen.
+///
+/// Gezaehlt werden **Aufrufstellen** und keine Erklaerungen: die Zahl der
+/// Erklaerungen ist eins, und das ist hier nicht die Frage.
+/// [`gemeinsam::aufrufstellen`] zaehlt jede Empfaengerform und jeden Pfad und
+/// laesst einen laengeren Bezeichner aus, der auf dieselben Zeichen endet —
+/// `gueltige_marken(` in `krk-ui/src/leistenmodell.rs` ist kein Aufruf von
+/// `marken`.
+///
+/// Gelesen wird unter `crates/*/src`, also der Code, der ausgeliefert wird.
+/// Diese Datei selbst faellt damit heraus, und das ist gewollt: eine Probe, die
+/// den Leser prueft, ruft ihn, und sie laeuft auf keinem Zeichendurchgang. Es
+/// ist dieselbe Grenze, die der Nutzer am 260830 fuer
+/// `git_wird_ausserhalb_der_probenordner_an_genau_einer_stelle_gerufen` gewaehlt
+/// hat.
+///
+/// # Was diese Nadel nicht sieht
+///
+/// Ein `use … as anders;`, das den Namen wechselt, und ein
+/// `#[cfg(test)]`-Modul unter `src/`, das mitgezaehlt wird, obwohl es nicht
+/// ausgeliefert wird. Der Kopf von `tests/baum.rs` sagt, warum keine Suche im
+/// Quelltext restlos dicht ist.
+#[test]
+fn keine_statusabfrage_steht_ausserhalb_des_gitmoduls() {
+    let nadel = concat!("mar", "ken");
+    let baum = gemeinsam::quelldateien();
+
+    // Gegenprobe zuerst: findet die Nadel ueberhaupt etwas, wo der eine Rufer
+    // steht? Ohne sie bestuende die Probe auch nach einer Umbenennung.
+    let (_, lauf) = baum
+        .iter()
+        .find(|(name, _)| name == "krk-core/src/git/lauf.rs")
+        .expect("krk-core/src/git/lauf.rs steht nicht mehr im Baum");
+    assert!(
+        aufrufstellen(lauf, nadel) > 0,
+        "der Gitlauf ruft den Statusweg nicht mehr unter diesem Namen; die Nadel findet \
+         nichts und die Probe belegt nichts"
+    );
+
+    let fremde: Vec<(String, usize)> = baum
+        .iter()
+        .filter(|(name, _)| name.contains("/src/") && !name.starts_with("krk-core/src/git/"))
+        .map(|(name, inhalt)| (name.clone(), aufrufstellen(inhalt, nadel)))
+        .filter(|(_, zahl)| *zahl > 0)
+        .collect();
+    assert!(
+        fremde.is_empty(),
+        "ausserhalb von krk-core/src/git/ fragt ausgelieferter Code den Statusweg unmittelbar: \
+         {fremde:?}; der eine Weg herein ist der Kanal des Gitlaufs"
+    );
 }

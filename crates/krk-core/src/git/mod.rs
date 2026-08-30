@@ -38,13 +38,18 @@
 //! Ordner liegt in keinem Repository"; das ist derselbe Defekt, den der
 //! Durchlauf mit `260815-0211` einmal getragen hat.
 //!
-//! # Was hier nicht wohnt
+//! # Der eine Weg herein: der Kanal
 //!
-//! Der nebenlaeufige Lauf, der diese vier Funktionen auf einem Arbeitsfaden ruft
-//! und seine Befunde ueber einen Kanal meldet, ist Schritt 4 der Runde 23 und
-//! kommt als `git/lauf.rs` daneben. Die Funktionen hier sind **synchron** und
-//! sollen es bleiben: sie kennen weder Faden noch Kanal noch Abbruchkennzeichen.
+//! Die Funktionen in [`leser`] sind **synchron** und sollen es bleiben: sie
+//! kennen weder Faden noch Kanal noch Abbruchkennzeichen. Wer sie ruft, steht
+//! dafuer ein, dass er nicht auf dem Hauptfaden steht — und genau einer tut
+//! das, [`lauf::Gitlauf`]. Kein Weg ausserhalb dieses Moduls fragt den Leser
+//! unmittelbar; was der Git-Bereich und die Markenspalte zeigen, kommt ueber
+//! den Kanal (C7.1 der Runde 23). Die Zaehlprobe
+//! `keine_statusabfrage_steht_ausserhalb_des_gitmoduls` in
+//! `crates/krk-core/tests/git.rs` haelt es fest.
 
+pub mod lauf;
 pub mod leser;
 pub mod texte;
 
