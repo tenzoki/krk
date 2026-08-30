@@ -40,3 +40,6 @@ Für die **Dateiliste**:
 ## Recommendation
 
 Wir empfehlen je Anzeige die erste Möglichkeit: ein Satz im Bereich, ein Ankreuzfeld, das eine Einstellung zeigt und keine Lage, und eine Markenspalte, die steht und leer bleibt. Alle drei halten die Anzeige beim Ordnerwechsel ruhig, und Ruhe beim Wechsel ist in einem Programm, dessen Zusagen in Einzelbildern gemessen werden, kein Geschmack, sondern eine Eigenschaft.
+
+---
+Answered: circles/260830-1045-git-bereich-liest-status-branch-verlauf/_a_circle.md:14 — je die erste Möglichkeit: ein Satz im Git-Bereich, ein Ankreuzfeld, das eingeschaltet bleibt und nicht wirkt, eine Markenspalte, die steht und leer bleibt.

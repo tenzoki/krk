@@ -34,3 +34,6 @@ Der Bereich zeigt nach der Directive den Verlauf **als Liste**. Ob diese Liste b
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1, vorbehaltlich der Kosten, die sie ausschreibt. Möglichkeit 2 spart die vier stillen Stellen nicht, sondern verschiebt sie in die Stufe B, und sie kostet dafür die Tastaturbedienung einer Liste, in einem Programm, dessen Maxime die Tastatur ist. Möglichkeit 3 raten wir ab: sie macht die Frage, in welchem Bereich der Fokus steht, mehrdeutig.
+
+---
+Answered: circles/260830-1045-git-bereich-liest-status-branch-verlauf/_a_circle.md:14 — Möglichkeit 1, ein sechster Fokuswert `Fokus::Git`; die zehn Nachzugsstellen samt der vier stillen sind ausdrücklich in Kauf genommen.
