@@ -4,14 +4,14 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260830-1100: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** (none yet)
+**Active spec/plan:** 260830-1251_*_spec-git-bereich-liest-status-branch-verlauf.md
 **Active session history:** 260830-0950-orchestrator-session.md
 
 ---
 
 ## Directive
 
-KRK zeigt den Git-Zustand des angezeigten Ordners, ohne ins Repository zu schreiben. Ein sechster Bereich der Fensterzeile trägt den Namen des Branch, eine Zusammenfassung des Status und den Commit-Verlauf als Liste; er bewirbt sich als dritter um dieselbe Fläche wie Vorschau und Editor, folgt dem aktiven Dateifenster und nimmt den Tastaturfokus als sechster Wert `Fokus::Git`, damit die Verlaufsliste mit den Pfeiltasten zu durchlaufen ist. Die Dateiliste beider Dateifenster trägt eine fünfte Spalte mit einer Marke je Zeile, die fünf Zustände unterscheidet (geändert, vorgemerkt, neu, in Konflikt, umbenannt) und über ein weiteres Ankreuzfeld der Bereichsleiste zuschaltbar ist. In einem Ordner ohne Repository bleibt die Anzeige ruhig: ein Satz im Git-Bereich, ein Ankreuzfeld, das eingeschaltet bleibt und nicht wirkt, eine Spalte, die steht und leer bleibt. Gelesen wird mit `gix`; Hinzufügen, Committen, Verwerfen und der Versions-Schieberegler sind die nächste Runde und liegen außerhalb dieser.
+See `**Active spec/plan:**` above. The cited spec or plan states the Directive in force.
 
 ## Grounding snapshot
 
