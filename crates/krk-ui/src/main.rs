@@ -14,7 +14,7 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Siebzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
+//! Achtzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
@@ -58,6 +58,11 @@
 //! der Nutzer schreiben darf. Die Aufzaehlung liegt hier und nicht unter
 //! `appkit`, weil zwei Leser an ihr haengen, die Tabelle und die
 //! Bereichsleiste, und der zweite die Tabelle nicht braucht.
+//! `gitmodell` haelt daneben, was der Git-Bereich der Runde 23 fuer einen Tab
+//! zeigt: worauf HEAD steht, die geholten Commits, die Auswahl darin und die
+//! Zusammenfassung des Status. Es liegt hier und nicht unter `appkit`, weil der
+//! Bereich seine drei Flaechen aus diesem einen Stand schreibt und der Stand
+//! ohne Fenster pruefbar bleiben soll.
 //! `zettelmodell` haelt zuletzt, was KRK ueber die beiden Notizzettel der
 //! Runde 9 weiss: welcher offen ist, was beim Oeffnen aus der Datei kam und was
 //! seither in der Textflaeche steht. Der Unterschied zwischen den beiden
@@ -73,6 +78,7 @@ mod belegungsmodell;
 mod editormodell;
 mod fenstermodell;
 mod fenstertitel;
+mod gitmodell;
 mod hervorhebung;
 mod kommandos;
 mod leistenmodell;

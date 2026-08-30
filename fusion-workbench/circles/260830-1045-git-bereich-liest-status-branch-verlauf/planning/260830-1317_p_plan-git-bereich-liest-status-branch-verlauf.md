@@ -303,7 +303,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
    - Kriterien: C5.3 (Modellhälfte), C7.4, C7.5, C7.6, Bedingung 5
    - Dependencies: Schritt 3
 
-6. **Der Lauf am Tab, das Gitmodell und die gefüllte Markenzelle**
+6. **Der Lauf am Tab, das Gitmodell und die gefüllte Markenzelle** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/gitmodell.rs` (neu), `crates/krk-ui/src/main.rs`, `crates/krk-ui/src/appkit/tabelle.rs`
    - Changes: `Tabinhalt` bekommt `gitlauf: Option<Gitlauf>` und `gitmodell: Gitmodell`; `Tabliste` bekommt `git_gefragt: bool` mit Setzer und `letzter_gitlauf: u64`. `gitmodell.rs` hält ohne AppKit, was der Bereich zeigt: den `Kopf`, den Verlauf als `Vec<Commit>`, die Auswahl als Index, ob der Verlauf erschöpft ist, und die Textformen aus Schritt 3 als Leseseite.
@@ -539,7 +539,13 @@ pub struct Breiten { …, pub git: Option<f64> }          // sechstes Feld
 pub struct Spaltensichtbarkeit { …, pub marke: bool }   // viertes Feld, ab Werk true
 
 // crates/krk-ui/src/gitmodell.rs (neu, ohne AppKit)
-pub struct Gitmodell { … }                              // Kopf, Verlauf, Auswahl, erschoepft
+pub struct Gitmodell {                                  // Kopf, Verlauf, Auswahl, erschoepft
+    kopf: Option<Kopf>,                                 //   `None` heisst „noch nicht beantwortet";
+    verlauf: Vec<Commit>,                               //   `Kopf::KeinRepository` ist eine Antwort
+    auswahl: Option<usize>,
+    erschoepft: bool,
+    zusammenfassung: Option<String>,                    //   aus `texte::zusammenfassung`, fuer die
+}                                                       //   zweite Zeile des Bereichs (A3, A8)
 
 // crates/krk-ui/src/belegungsmodell.rs
 pub enum Funktionsbereich { …, Git, … }                 // zehnter Wert, hinter Editor

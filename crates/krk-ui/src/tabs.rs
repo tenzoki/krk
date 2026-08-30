@@ -37,8 +37,12 @@
 use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
+use krk_core::git::Marke;
+use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung};
 use krk_core::verzeichnis::modell::Befund;
 use krk_core::verzeichnis::{Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell};
+
+use crate::gitmodell::Gitmodell;
 
 /// Die Generation, mit der ein noch nicht gelesener Tab anfaengt.
 const GENERATION_LEER: u64 = 0;
@@ -93,6 +97,51 @@ pub struct Tabinhalt {
     /// Kennzeichen liesse er sich von einem ungelesenen nicht unterscheiden,
     /// und jeder Wechsel auf ihn stiesse einen neuen Lesevorgang an.
     gelesen: bool,
+    /// Der Gitlauf ueber den Ordner dieses Tabs, falls einer laeuft.
+    ///
+    /// **Hoechstens einer je Dateifenster** (A10, C7.11), und deshalb ein Feld
+    /// und keine Sammlung: das Feld zu setzen laesst den alten fallen, und sein
+    /// `Drop` bricht ihn ab. Zwei Laeufe koennen damit nicht nebeneinander
+    /// stehen, ohne dass eine Zeile es verhinderte.
+    ///
+    /// Neben `lesevorgang` und nicht in ihm, wie der Durchlauf: die beiden
+    /// beantworten verschiedene Fragen und beginnen zwar zugleich, enden aber
+    /// nicht zugleich. Wer ihn faellen laesst, steht bei
+    /// [`Tabliste::gitlauf_nachziehen_an`].
+    gitlauf: Option<Gitlauf>,
+    /// Was der Git-Bereich fuer diesen Tab zeigt.
+    gitmodell: Gitmodell,
+    /// Die Generation des Lesevorgangs, zu dem der laufende Gitlauf gehoert.
+    ///
+    /// **Sie reist nicht im Kanal mit, und der Grund steht bei
+    /// [`Gitlauf::starten`]:** jeder Tab liest allein aus dem Kanal des Laufs,
+    /// den er selbst haelt. Gebraucht wird sie trotzdem, weil der Befund einen
+    /// **Namen** traegt, den auch ein neuer Ordner fuehren kann;
+    /// `Ordnermodell::gitmarken_setzen` haelt sie deshalb gegen die Generation
+    /// des Bestands (C7.5). Gesetzt wird sie an der einen Stelle, an der ein
+    /// Lauf entsteht, und dort aus dem Modell des Tabs.
+    gitgeneration: u64,
+    /// Die Markenmeldung, solange der Bestand sie noch nicht annehmen kann.
+    ///
+    /// **Warum sie hier liegt und nicht im Kanal.** Der Plan der Runde 23 sagt,
+    /// die Meldung werde erst aus dem Kanal genommen, wenn der Tab gelesen ist.
+    /// Wortwoertlich ist das mit `std::sync::mpsc::Receiver` nicht zu bauen: er
+    /// kennt kein Vorausschauen, und die drei Meldungen teilen sich einen Kanal
+    /// in fester Reihenfolge. Wer wartete, bis der Tab gelesen ist, hielte
+    /// **Kopf und Verlauf** genauso lange zurueck — und genau das soll dieser
+    /// Schritt vermeiden, denn der Branchname wartete dann in einem Ordner mit
+    /// hunderttausend Eintraegen vier Sekunden auf einen Bestand, den er nicht
+    /// braucht.
+    ///
+    /// Das Feld ist deshalb dieselbe Wartestelle, einen Schritt spaeter, mit
+    /// derselben Zusage: **nichts erreicht das Ordnermodell, bevor der Bestand
+    /// steht** (A8, C7.4). Sie eintreffend zu verwerfen waere die Alternative
+    /// gewesen, und sie waere falsch: `gitmarken_setzen` weist ab, solange der
+    /// Ersatz aussteht, und der Befund waere danach fuer immer weg.
+    ///
+    /// Sie faellt mit dem Lauf, zu dem sie gehoert; wo, steht bei
+    /// [`Tabliste::gitlauf_nachziehen_an`].
+    wartende_marken: Option<Vec<(String, Marke)>>,
 }
 
 impl Tabinhalt {
@@ -112,6 +161,10 @@ impl Tabinhalt {
             bildlauf_offen: zustand.bildlauf > 0.0,
             meldung: None,
             gelesen: false,
+            gitlauf: None,
+            gitmodell: Gitmodell::neu(),
+            gitgeneration: GENERATION_LEER,
+            wartende_marken: None,
         }
     }
 
@@ -131,6 +184,25 @@ impl Tabinhalt {
     /// fuer versteckte Eintraege.
     pub fn modell_mut(&mut self) -> &mut Ordnermodell {
         &mut self.modell
+    }
+
+    /// Was der Git-Bereich fuer diesen Tab zeigt.
+    ///
+    /// **Nur zu lesen.** Geschrieben wird das Gitmodell allein aus dem
+    /// Einzugstakt und aus [`Tabliste::gitlauf_nachziehen_an`]; ein Schreiber
+    /// von aussen waere eine zweite Quelle fuer denselben Stand.
+    // Der Ableser ist `Anwendungsdelegierter::gitanzeige_nachziehen`, und der
+    // entsteht mit dem Git-Bereich in Schritt 8 des Plans der Runde 23. Bis
+    // dahin gibt es keine Ansicht, die den Stand zeigte. Die Ausnahme steht als
+    // `expect` und traegt damit ihr Ablaufdatum in sich: sobald der Rufer da
+    // ist, meldet der Uebersetzer sie als unerfuellt. Sie gilt allein dem
+    // ausgelieferten Bau, denn im Probenbau ist die Stelle schon gerufen.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "Ableser ist gitanzeige_nachziehen aus Schritt 8")
+    )]
+    pub fn gitmodell(&self) -> &Gitmodell {
+        &self.gitmodell
     }
 
     /// Ob gerade ein Lesevorgang laeuft.
@@ -345,9 +417,10 @@ pub enum Auswahlversuch {
 /// Wert wortlos, bleibt die Meldung an AppKit aus, und die `NSTableView` steht
 /// weiter mit dem Bestand von vorhin da, waehrend das Modell laengst den neuen
 /// fuehrt. Kein zweiter Weg meldet das nach, und der Bau waere dabei gruen.
-/// Heute bindet der eine Aufrufer den Wert und wertet alle fuenf Felder aus
-/// (`Dateitabelle::einziehen` in `crate::appkit::tabelle`); das `#[must_use]`
-/// haelt das fuer den zweiten fest.
+/// Heute bindet der eine Aufrufer den Wert und wertet jedes Feld aus, das schon
+/// eine Ansicht hat (`Dateitabelle::einziehen` in `crate::appkit::tabelle`); das
+/// `#[must_use]` haelt das fuer den zweiten fest. Die eine Ausnahme ist
+/// [`Einzug::gitkopf_neu`], und sie ist an ihrem Feld begruendet.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[must_use = "hat sich am sichtbaren Tab etwas geaendert, ist die NSTableView nachzuziehen"]
 pub struct Einzug {
@@ -372,6 +445,23 @@ pub struct Einzug {
     /// `noteNumberOfRowsChanged` liesse die alten Inhalte stehen; es braucht
     /// `reloadData` (C3.11).
     pub befunde_neu: bool,
+    /// Der Gitlauf des sichtbaren Tabs hat Kopf, Verlauf oder Zusammenfassung
+    /// geliefert.
+    ///
+    /// **Das eine Feld ohne Ableser in der Tabelle**, und das ist kein
+    /// Versaeumnis: was daran haengt, sind die drei Flaechen des Git-Bereichs,
+    /// und die schreibt `Anwendungsdelegierter::gitanzeige_nachziehen` aus
+    /// Schritt 8 des Plans der Runde 23. Die Dateiliste hat damit nichts zu
+    /// tun — Kopf und Verlauf stehen in keiner ihrer Spalten.
+    pub gitkopf_neu: bool,
+    /// Der Gitlauf des sichtbaren Tabs hat Marken in sein Ordnermodell
+    /// getragen.
+    ///
+    /// Neben `befunde_neu`, weil die Ansicht darauf **anders** antwortet: eine
+    /// Marke entscheidet nicht, ob eine Zeile steht, sondern nur, was in einer
+    /// ihrer Zellen steht. Die Sichtreihenfolge bleibt, die ausgewaehlte Zeile
+    /// behaelt ihre Stelle, und `auswahl_anzeigen` bleibt deshalb aus.
+    pub gitmarken_neu: bool,
 }
 
 /// Was die Lesereihenfolge von einem Dateifenster wissen muss.
@@ -401,6 +491,29 @@ pub struct Tabliste {
     letzter_durchlauf: u64,
     /// Ob die verdeckten Tabs noch auf ihre Lesevorgaenge warten.
     nachzuegler_offen: bool,
+    /// Ob ueberhaupt jemand den Gitbefund sehen will.
+    ///
+    /// Wahr, sobald der Git-Bereich steht **oder** die Markenspalte steht; die
+    /// Oder-Verknuepfung rechnet der Anwendungsdelegierte, denn hier ist weder
+    /// die Sichtbarkeit eines Bereichs noch die einer Spalte bekannt. Steht
+    /// keines von beidem, entsteht kein Lauf: ein Statusabruf, dessen Antwort
+    /// niemand anzeigt, kostete Faeden und Deskriptoren fuer nichts.
+    ///
+    /// **Ab Werk falsch, und das ist der Anfangswert und nicht der
+    /// Auslieferungszustand.** Die Markenspalte steht ab Werk (A13), also wird
+    /// der Wert beim Aufbau der Oberflaeche sofort auf wahr gezogen; ihn hier
+    /// vorwegzunehmen hiesse, eine Sichtbarkeit zu behaupten, die diese Datei
+    /// nicht kennt und die aus einer `session.toml` auch anders kommen kann.
+    git_gefragt: bool,
+    /// Die laufende Nummer des zuletzt gestarteten Gitlaufs.
+    ///
+    /// Eine eigene Zaehlung neben `letzte_generation` und `letzter_durchlauf`,
+    /// aus demselben Grund wie dort: sie benennt allein den Arbeitsfaden
+    /// (`krk-gitlauf-<n>`), damit zwei Laeufe desselben Tabs in einem
+    /// Fadenprotokoll auseinanderzuhalten sind. Was der Befund gegen den
+    /// Bestand haelt, ist die **Generation** und nicht diese Nummer; sie steht
+    /// am Tab in `gitgeneration`.
+    letzter_gitlauf: u64,
 }
 
 impl Tabliste {
@@ -424,6 +537,8 @@ impl Tabliste {
             letzte_generation: GENERATION_LEER,
             letzter_durchlauf: 0,
             nachzuegler_offen: true,
+            git_gefragt: false,
+            letzter_gitlauf: 0,
         }
     }
 
@@ -524,7 +639,18 @@ impl Tabliste {
         // Stelle ist die Antwort seit dem Nutzerentscheid vom 260816-1410
         // immer "nein", und der Ruf steht hier des Abbruchs wegen.
         let _ = self.durchlauf_nachziehen_an(verlassen);
+        // Und der Gitlauf des verlassenen Tabs faellt an derselben Stelle und
+        // aus demselben Grund: die Sichtbarkeit ist eine seiner Bedingungen.
+        let _ = self.gitlauf_nachziehen_an(verlassen);
         self.ungelesenen_aktiven_nachlesen();
+        // Der Tabwechsel ist einer der vier Ausloeser aus A9, also bekommt der
+        // neue sichtbare Tab seinen Lauf. Hat der Nachleser darueber schon
+        // einen Lesevorgang gestartet, steht er bereits — `lesen_starten`
+        // stoesst ihn zugleich mit dem Lesen an —, und ein zweiter waere
+        // derselbe Lauf ein zweites Mal.
+        if self.tabs[stelle].gitlauf.is_none() {
+            let _ = self.gitlauf_nachziehen_an(stelle);
+        }
         true
     }
 
@@ -805,13 +931,23 @@ impl Tabliste {
 
     /// Ob irgendein Tab dieses Fensters noch etwas einzuziehen hat.
     ///
-    /// **Die eine Bedingung des Einzugstakts**, und sie zaehlt beide Kanaele:
-    /// den des Lesevorgangs und den des Durchlaufs. Der Takt bedient beide, und
-    /// eine Bedingung, die nur den ersten kennte, hielte ihn an, waehrend die
-    /// Befunde des zweiten noch unterwegs sind — die Liste bliebe dann stehen
-    /// und wuechse erst beim naechsten Anlass weiter.
+    /// **Die eine Bedingung des Einzugstakts**, und sie zaehlt alle drei
+    /// Kanaele: den des Lesevorgangs, den des Durchlaufs und den des Gitlaufs.
+    /// Der Takt bedient alle drei, und eine Bedingung, die einen ausliesse,
+    /// hielte ihn an, waehrend dessen Befunde noch unterwegs sind — die Liste
+    /// bliebe dann stehen und wuechse erst beim naechsten Anlass weiter.
+    ///
+    /// **Der dritte Kanal ist der laengste.** Ein Statuslauf kostet gemessen 12
+    /// bis 164 ms und ueberlebt damit den Lesevorgang eines kleinen Ordners um
+    /// ein Vielfaches; ohne ihn hier hielte der Takt an, bevor die Marken da
+    /// sind, und die Spalte bliebe leer, bis irgendetwas anderes ihn wieder
+    /// anwirft.
     pub fn arbeitet_noch(&self) -> bool {
-        self.liest_noch() || self.tabs.iter().any(|tab| tab.durchlauf.is_some())
+        self.liest_noch()
+            || self
+                .tabs
+                .iter()
+                .any(|tab| tab.durchlauf.is_some() || tab.gitlauf.is_some())
     }
 
     /// Bricht den Durchlauf des sichtbaren Tabs ab und stoesst, wenn seine
@@ -932,6 +1068,138 @@ impl Tabliste {
         true
     }
 
+    /// Sagt, ob der Gitbefund ueberhaupt angezeigt wird, und zieht den Lauf
+    /// nach.
+    ///
+    /// Gerufen vom Anwendungsdelegierten, der als einziger weiss, ob der
+    /// Git-Bereich steht oder die Markenspalte; die Oder-Verknuepfung rechnet
+    /// er, hier steht die Antwort. Zwei der vier Ausloeser aus A9 kommen ueber
+    /// diese Stelle herein, das Einschalten des Bereichs und das der Spalte.
+    ///
+    /// **Ein Wechsel und kein Wiederholen.** Steht der Wert schon, geschieht
+    /// nichts: sonst stiesse jeder Nachzug der Aufteilung — und der laeuft bei
+    /// jedem Wechsel des aktiven Dateifensters — einen weiteren Lauf an, ohne
+    /// dass sich etwas geaendert haette.
+    ///
+    /// **Liefert, ob jetzt ein Gitlauf laeuft.** Wie bei
+    /// [`Tabliste::durchlauf_nachziehen`] sagt der Wert dem Aufrufer, ob er den
+    /// Einzugstakt anwerfen muss; faellt er still, bliebe der Befund im Kanal
+    /// stehen und die Spalte leer.
+    // Der Rufer ist `Anwendungsdelegierter::gitbedarf_nachziehen`, und der
+    // entsteht mit den drei Kommandos in Schritt 8 des Plans der Runde 23. Zur
+    // Form der Ausnahme siehe `Tabinhalt::gitmodell` darueber.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "Rufer ist gitbedarf_nachziehen aus Schritt 8")
+    )]
+    #[must_use = "laeuft jetzt ein Gitlauf, ist der Einzugstakt anzuwerfen"]
+    pub fn git_gefragt_setzen(&mut self, gefragt: bool) -> bool {
+        if self.git_gefragt == gefragt {
+            return false;
+        }
+        self.git_gefragt = gefragt;
+        let stelle = self.aktiv;
+        self.gitlauf_nachziehen_an(stelle)
+    }
+
+    /// Holt die naechsten Commits hinter dem zuletzt gehaltenen (E12, C4.2).
+    ///
+    /// Der Rueckweg des Nachlademelders aus dem Git-Bereich: die Auswahl steht
+    /// am letzten Eintrag der Liste, und der Nutzer drueckt weiter `down`.
+    ///
+    /// **Drei Fragen, und jede kann den Nachschlag abweisen.** Ist der Verlauf
+    /// leer, gibt es keine Stelle, ab der nachzuladen waere. Ist er erschoepft,
+    /// folgt nichts mehr (C4.3), und ein Lauf braechte eine leere Liste
+    /// zurueck. Und **laeuft schon einer, faengt keiner an**: zwei Statuslaeufe
+    /// fuer dasselbe Dateifenster stehen nie nebeneinander (A10, C7.11), und
+    /// hier waere der Schaden ein besonderer — der laufende haelt womoeglich
+    /// noch die Markenmeldung im Kanal, und ein Nachschlag, der ihn ersetzte,
+    /// naehme sie mit.
+    ///
+    /// Der Verlauf **waechst** dabei und faengt nicht neu an; das Gitmodell
+    /// wird deshalb nicht zurueckgesetzt.
+    // Der Rufer ist der Nachlademelder des Git-Bereichs, und der entsteht in
+    // Schritt 7 und wird in Schritt 8 des Plans der Runde 23 eingehaengt. Zur
+    // Form der Ausnahme siehe `Tabinhalt::gitmodell` darueber.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "Rufer ist der Nachlademelder aus Schritt 7 und 8")
+    )]
+    #[must_use = "laeuft jetzt ein Gitlauf, ist der Einzugstakt anzuwerfen"]
+    pub fn verlauf_nachladen(&mut self) -> bool {
+        let stelle = self.aktiv;
+        let tab = &self.tabs[stelle];
+        if tab.gitlauf.is_some() || tab.gitmodell.erschoepft() {
+            return false;
+        }
+        let Some(ab) = tab.gitmodell.letzter_commit().map(|commit| commit.id) else {
+            return false;
+        };
+        self.letzter_gitlauf += 1;
+        let nummer = self.letzter_gitlauf;
+        let tab = &mut self.tabs[stelle];
+        tab.gitlauf = Some(Gitlauf::starten(
+            tab.ordner.clone(),
+            Gitfrage::WeitererVerlauf { ab },
+            nummer,
+        ));
+        true
+    }
+
+    /// Bricht den Gitlauf eines Tabs ab und stoesst, wenn seine Bedingungen
+    /// stehen, einen neuen an.
+    ///
+    /// **Die eine Stelle, an der ein Gitlauf entsteht und vergeht**, bis auf
+    /// den Nachschlag in [`Tabliste::verlauf_nachladen`], der keinen Befund
+    /// verwirft, sondern an ihn anhaengt. Der bisherige Lauf faellt in jedem
+    /// Fall zuerst; sein `Drop` setzt das Abbruchkennzeichen, und sein
+    /// Empfaenger geht mit, also kann kein Befund des alten Ordners mehr
+    /// ankommen (A10). Mit ihm faellt die zurueckgehaltene Markenmeldung: sie
+    /// gehoert dem Bestand, den es gleich nicht mehr gibt.
+    ///
+    /// **Und mit ihm faellt der Verlauf auf die ersten fuenfzig zurueck**
+    /// (C4.6). Die Nachladehoehe gehoert dem Lauf und nicht dem Dateifenster;
+    /// sie ueber zwei Ordner hinweg zu halten hiesse, den Verlauf eines
+    /// Repositorys mit der Blaettertiefe eines anderen anzuzeigen.
+    ///
+    /// # Drei Bedingungen, und die dritte ist schwaecher als beim Durchlauf
+    ///
+    /// Sichtbar muss der Tab sein, gefragt muss der Befund sein, und der Ordner
+    /// muss stehen. Die dritte heisst hier **nicht** „der Bestand ist gelesen":
+    /// der Gitlauf braucht allein den **Pfad** — `gix::discover` sucht von dort
+    /// aufwaerts, und die Pfadmuster des Status rechnen gegen ihn —, und er
+    /// beginnt deshalb zugleich mit dem Lesevorgang. Mit der staerkeren
+    /// Bedingung wartete der Branchname in einem Ordner mit hunderttausend
+    /// Eintraegen vier Sekunden auf einen Bestand, den er nicht braucht (A8:
+    /// Branch und Verlauf stehen schon, waehrend die Markenspalte noch leer
+    /// ist).
+    ///
+    /// Was auf den gelesenen Bestand wartet, ist allein das **Eintragen** der
+    /// Marken, und es wartet im Einzugstakt und nicht hier.
+    fn gitlauf_nachziehen_an(&mut self, stelle: usize) -> bool {
+        self.tabs[stelle].gitlauf = None;
+        self.tabs[stelle].wartende_marken = None;
+        self.tabs[stelle].gitmodell.zuruecksetzen();
+        if stelle != self.aktiv || !self.git_gefragt {
+            return false;
+        }
+        // Der Ordner steht. Ein leerer Pfad kommt aus einer von Hand
+        // geaenderten `session.toml` und ist kein Ordner, den `gix::discover`
+        // sinnvoll befragte; der Lauf faellt dann aus, statt aufwaerts vom
+        // Arbeitsverzeichnis zu suchen.
+        if self.tabs[stelle].ordner.as_os_str().is_empty() {
+            return false;
+        }
+        self.letzter_gitlauf += 1;
+        let nummer = self.letzter_gitlauf;
+        let tab = &mut self.tabs[stelle];
+        // Die Generation des Bestands, dem der Befund gelten wird. Sie steht
+        // hier und nicht in der Meldung; der Grund steht am Feld.
+        tab.gitgeneration = tab.modell.generation();
+        tab.gitlauf = Some(Gitlauf::starten(tab.ordner.clone(), Gitfrage::Ganz, nummer));
+        true
+    }
+
     /// Bricht jeden laufenden Lesevorgang und jeden Durchlauf ab und schliesst
     /// die Modelle ab.
     ///
@@ -940,13 +1208,15 @@ impl Tabliste {
     /// weiter, die niemand mehr sieht. Fuer den Durchlauf gilt dasselbe, und
     /// sein Abbruch braucht keine eigene Zeile ausser dieser: das Feld
     /// zurueckzusetzen laesst ihn fallen, und sein `Drop` setzt das
-    /// Abbruchkennzeichen.
+    /// Abbruchkennzeichen. Fuer den Gitlauf gilt Zeile fuer Zeile dasselbe.
     pub fn abbrechen(&mut self) {
         for tab in &mut self.tabs {
             if let Some(vorgang) = tab.lesevorgang.take() {
                 vorgang.abbrechen();
             }
             tab.durchlauf = None;
+            tab.gitlauf = None;
+            tab.wartende_marken = None;
             tab.modell.abschliessen();
             tab.gelesen = true;
         }
@@ -1014,6 +1284,13 @@ impl Tabliste {
         tab.meldung = None;
         tab.gelesen = false;
         tab.lesevorgang = Some(Lesevorgang::starten(&tab.ordner, generation));
+        // **Zugleich mit dem Lesevorgang und nicht nach ihm**, und danach, weil
+        // der neue Lauf die eben gesetzte Generation mitbekommen muss. Der
+        // Gitlauf braucht allein den Pfad; darauf zu warten, dass hunderttausend
+        // Eintraege gelesen sind, hiesse den Branchnamen vier Sekunden lang
+        // zurueckzuhalten. Der Wert sagt, ob der Einzugstakt anzuwerfen ist —
+        // er laeuft hier ohnehin, denn der Lesevorgang darueber braucht ihn.
+        let _ = self.gitlauf_nachziehen_an(stelle);
     }
 
     /// Liest den sichtbaren Tab nach, falls er noch nie gelesen wurde.
@@ -1030,15 +1307,115 @@ impl Tabliste {
 
 /// Holt die wartenden Meldungen eines einzelnen Tabs ab.
 ///
-/// Zwei Kanaele, in dieser Reihenfolge: erst die Stapel des Lesevorgangs, dann
-/// die Befunde des Durchlaufs. Die Reihenfolge traegt nichts — die beiden
-/// koennen nie zugleich laufen, weil ein Durchlauf erst nach dem Abschluss des
-/// Lesevorgangs beginnt —, und sie steht so herum, weil der Lesevorgang den
-/// Bestand liefert, auf den sich jeder Befund bezieht.
+/// Drei Kanaele, in dieser Reihenfolge: erst die Stapel des Lesevorgangs, dann
+/// die Befunde des Durchlaufs, zuletzt die Meldungen des Gitlaufs. Die
+/// Reihenfolge der ersten beiden traegt nichts — sie koennen nie zugleich
+/// laufen, weil ein Durchlauf erst nach dem Abschluss des Lesevorgangs
+/// beginnt —, und sie steht so herum, weil der Lesevorgang den Bestand
+/// liefert, auf den sich jeder Befund bezieht.
+///
+/// **Beim dritten traegt sie sehr wohl etwas**, und deshalb steht er hinten:
+/// der Gitlauf laeuft im Gegensatz zum Durchlauf **zugleich** mit dem
+/// Lesevorgang, und seine Marken duerfen erst in einen Bestand, der steht. Wer
+/// ihn vor `lesemeldungen_einziehen` zoege, liesse den Abschluss desselben
+/// Takts ungenutzt und traege die Marken erst einen Takt spaeter ein.
 fn einzug_je_tab(tab: &mut Tabinhalt) -> Einzug {
     let mut einzug = lesemeldungen_einziehen(tab);
     einzug.befunde_neu = befunde_einziehen(tab);
+    let gitzug = gitmeldungen_einziehen(tab);
+    einzug.gitkopf_neu = gitzug.kopf_neu;
+    einzug.gitmarken_neu = gitzug.marken_neu;
     einzug
+}
+
+/// Was ein Takt am Gitstand eines Tabs veraendert hat.
+#[derive(Default)]
+struct Gitzug {
+    /// Der Git-Bereich zeigt etwas anderes als vorher.
+    kopf_neu: bool,
+    /// Das Ordnermodell hat Marken bekommen.
+    marken_neu: bool,
+}
+
+/// Holt die wartenden Meldungen des Gitlaufs ab.
+///
+/// **Zwei Takte in einem, und sie haengen an verschiedenen Bedingungen.** Kopf
+/// und Verlauf gehen sofort in das Gitmodell: sie brauchen den Bestand nicht,
+/// und A8 verlangt ausdruecklich, dass sie schon dastehen, waehrend die
+/// Markenspalte noch leer ist. Die Marken warten dagegen, bis der Bestand
+/// steht — `tab.gelesen && !tab.liest()` —, denn sie werden ueber den **Namen**
+/// zugeordnet, und waehrend eines Lesevorgangs zeigt das Modell noch den alten
+/// Ordner.
+///
+/// Wo die wartende Meldung liegt und warum nicht im Kanal, steht am Feld
+/// `wartende_marken`.
+///
+/// **Der geschlossene Kanal raeumt den Lauf weg**, wie beim Durchlauf: er sagt,
+/// dass der Arbeitsfaden geendet hat, und das Feld stehen zu lassen hielte den
+/// Einzugstakt fuer immer am Laufen. Was danach an Meldungen fehlt, heisst
+/// **nicht** „dieser Ordner hat keine Marken", sondern „der Befund steht aus";
+/// der Modulkopf von [`krk_core::git::lauf`] schreibt die Regel aus.
+///
+/// **Die zurueckgehaltene Meldung haelt den Lauf nicht am Leben.** Der Kanal
+/// ist drei tief, der Arbeitsfaden blockiert also an keiner der drei Meldungen
+/// und endet auch dann, wenn niemand sie holt; das Feld faellt mit dem Lauf
+/// weg, sobald der Kanal schliesst — und der Tab, dessen Ordner sich nicht
+/// lesen laesst, ist nach `abschliessen` trotzdem gelesen, sodass die Marken
+/// ihren Weg finden.
+fn gitmeldungen_einziehen(tab: &mut Tabinhalt) -> Gitzug {
+    use std::sync::mpsc::TryRecvError;
+
+    let mut zug = Gitzug::default();
+    // Erst holen, dann eintragen. Der Lauf wird dafuer ausgeliehen, und das
+    // Eintragen fasst den Tab veraenderlich an; beides in einer Schleife hielte
+    // zwei einander ausschliessende Ausleihen zugleich. Dieselbe Zweiteilung
+    // steht in `befunde_einziehen` darueber.
+    let mut eingetroffen = Vec::new();
+    let mut kanal_zu = false;
+    if let Some(lauf) = tab.gitlauf.as_ref() {
+        loop {
+            match lauf.meldungen().try_recv() {
+                Ok(meldung) => eingetroffen.push(meldung),
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => {
+                    kanal_zu = true;
+                    break;
+                }
+            }
+        }
+    }
+    if kanal_zu {
+        tab.gitlauf = None;
+    }
+    for meldung in eingetroffen {
+        match meldung {
+            Gitmeldung::Kopf(kopf) => {
+                tab.gitmodell.kopf_setzen(kopf);
+                zug.kopf_neu = true;
+            }
+            Gitmeldung::Verlauf(commits) => {
+                tab.gitmodell.verlauf_anhaengen(commits);
+                zug.kopf_neu = true;
+            }
+            Gitmeldung::Marken(marken) => tab.wartende_marken = Some(marken),
+        }
+    }
+    if !tab.gelesen || tab.liest() {
+        return zug;
+    }
+    let Some(marken) = tab.wartende_marken.take() else {
+        return zug;
+    };
+    // Die Zusammenfassung des Git-Bereichs und die Buchstaben der Spalte kommen
+    // aus **einer** Meldung; sie ein zweites Mal zu holen hiesse, den Status ein
+    // zweites Mal zu fragen.
+    tab.gitmodell.marken_setzen(&marken);
+    zug.kopf_neu = true;
+    // Die Generation entscheidet, ob der Befund noch zu diesem Bestand gehoert
+    // (C7.5). Weist das Modell ab, bleibt die Spalte leer, und die Ansicht hat
+    // nichts nachzuziehen.
+    zug.marken_neu = tab.modell.gitmarken_setzen(tab.gitgeneration, &marken);
+    zug
 }
 
 /// Traegt die wartenden Befunde des Durchlaufs in das Modell ein.
@@ -2455,5 +2832,343 @@ mod tests {
                 }
             }
         }
+    }
+
+    // ── Der Gitlauf am Tab (Runde 23, Schritt 6) ────────────────────────────
+
+    /// Ein Commit fuer die Proben unten; der Objektname entsteht aus der
+    /// Nummer.
+    fn gitcommit(nummer: u8) -> krk_core::git::Commit {
+        let hex = format!("{nummer:02x}").repeat(20);
+        krk_core::git::Commit {
+            id: krk_core::git::ObjectId::from_hex(hex.as_bytes())
+                .expect("vierzig Hexziffern sind ein Objektname"),
+            kurzbeschreibung: format!("Commit {nummer}"),
+            nachricht: format!("Commit {nummer}"),
+            autor: "Wer".to_owned(),
+            email: "wer@example.invalid".to_owned(),
+            zeit: std::time::SystemTime::UNIX_EPOCH,
+        }
+    }
+
+    /// Wie viele Tabs der Liste gerade einen Gitlauf halten.
+    fn stehende_gitlaeufe(liste: &Tabliste) -> usize {
+        liste
+            .tabs
+            .iter()
+            .filter(|tab| tab.gitlauf.is_some())
+            .count()
+    }
+
+    /// Der Kern des Schritts: der Gitlauf beginnt **zugleich** mit dem
+    /// Lesevorgang und wartet nicht auf den gelesenen Bestand.
+    ///
+    /// Die dritte Bedingung ist damit schwaecher als beim Durchlauf, der auf
+    /// `gelesen && !liest()` wartet. Ohne diesen Unterschied wartete der
+    /// Branchname in einem Ordner mit hunderttausend Eintraegen vier Sekunden
+    /// auf etwas, das er nicht braucht (A8).
+    #[test]
+    fn der_gitlauf_beginnt_zugleich_mit_dem_lesevorgang() {
+        let ordner = crate::pruefordner::Pruefordner::neu("gitlauf-zugleich");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let _ = liste.git_gefragt_setzen(true);
+
+        liste.sichtbaren_lesen();
+
+        assert!(
+            liste.tabs[0].gitlauf.is_some(),
+            "der Gitlauf steht, obwohl der Bestand noch nicht gelesen ist"
+        );
+        assert!(
+            !liste.tabs[0].gelesen,
+            "der Tab ist zu diesem Zeitpunkt gerade nicht gelesen"
+        );
+        assert!(
+            liste.tabs[0].durchlauf.is_none(),
+            "der Durchlauf wartet dagegen auf den Bestand"
+        );
+        assert!(liste.arbeitet_noch(), "der Einzugstakt hat zu tun");
+    }
+
+    /// Ohne seine drei Bedingungen beginnt kein Gitlauf.
+    #[test]
+    fn ohne_seine_drei_bedingungen_beginnt_kein_gitlauf() {
+        let ordner = crate::pruefordner::Pruefordner::neu("gitlauf-bedingungen");
+        let pfad = ordner.pfad().display().to_string();
+
+        // Niemand fragt nach dem Befund: kein Bereich, keine Spalte.
+        let mut ungefragt = liste(&[&pfad, &pfad]);
+        ungefragt.sichtbaren_lesen();
+        assert_eq!(
+            stehende_gitlaeufe(&ungefragt),
+            0,
+            "ohne Bereich und ohne Spalte laeuft nichts"
+        );
+
+        // Gefragt, aber der Tab ist verdeckt.
+        let mut verdeckt = liste(&[&pfad, &pfad]);
+        let _ = verdeckt.git_gefragt_setzen(true);
+        assert!(
+            !verdeckt.gitlauf_nachziehen_an(1),
+            "Tab 1 ist verdeckt, und der sichtbare ist Tab 0"
+        );
+        assert!(
+            verdeckt.tabs[1].gitlauf.is_none(),
+            "und er haelt danach auch keinen"
+        );
+
+        // Gefragt und sichtbar, aber ohne Ordner.
+        let mut ohne_ordner = liste(&[""]);
+        let _ = ohne_ordner.git_gefragt_setzen(true);
+        assert!(
+            !ohne_ordner.gitlauf_nachziehen_an(0),
+            "ein leerer Pfad ist kein Ordner, den gix::discover befragte"
+        );
+        assert_eq!(stehende_gitlaeufe(&ohne_ordner), 0);
+    }
+
+    /// C7.11: zwei schnell aufeinanderfolgende Ordnerwechsel lassen nie zwei
+    /// Laeufe stehen.
+    #[test]
+    fn zwei_schnelle_ordnerwechsel_lassen_nie_zwei_gitlaeufe_stehen() {
+        let erster = crate::pruefordner::Pruefordner::neu("gitlauf-erster");
+        let zweiter = crate::pruefordner::Pruefordner::neu("gitlauf-zweiter");
+        let mut liste = liste(&[&erster.pfad().display().to_string()]);
+        let _ = liste.git_gefragt_setzen(true);
+
+        liste.ordner_setzen(erster.pfad(), None);
+        liste.ordner_setzen(zweiter.pfad(), None);
+
+        assert_eq!(
+            stehende_gitlaeufe(&liste),
+            1,
+            "der zweite Wechsel laesst den ersten Lauf fallen"
+        );
+        assert_eq!(
+            liste.aktiver().ordner(),
+            zweiter.pfad(),
+            "und der stehende gilt dem angezeigten Ordner"
+        );
+    }
+
+    /// C4.6: ein Ordnerwechsel setzt den Verlauf auf die ersten fuenfzig
+    /// zurueck; die Nachladehoehe wird nicht ueber zwei Ordner hinweg gehalten.
+    #[test]
+    fn ein_ordnerwechsel_setzt_den_verlauf_auf_die_ersten_fuenfzig_zurueck() {
+        use krk_core::git::Kopf;
+        use krk_core::git::lauf::VERLAUFSSCHRITT;
+
+        let erster = crate::pruefordner::Pruefordner::neu("gitverlauf-erster");
+        let zweiter = crate::pruefordner::Pruefordner::neu("gitverlauf-zweiter");
+        let mut liste = liste(&[&erster.pfad().display().to_string()]);
+        let _ = liste.git_gefragt_setzen(true);
+
+        // Zwei volle Schwuenge nachgeladen, dazu Kopf und Zusammenfassung.
+        let gitmodell = &mut liste.tabs[0].gitmodell;
+        gitmodell.kopf_setzen(Kopf::Branch("main".to_owned()));
+        for schwung in 0..2 {
+            gitmodell.verlauf_anhaengen(
+                (0..VERLAUFSSCHRITT)
+                    .map(|nummer| {
+                        gitcommit(u8::try_from((schwung * 7 + nummer) % 256).expect("unter 256"))
+                    })
+                    .collect(),
+            );
+        }
+        gitmodell.marken_setzen(&[("a.txt".to_owned(), Marke::Geaendert)]);
+        assert_eq!(
+            liste.aktiver().gitmodell().verlaufslaenge(),
+            2 * VERLAUFSSCHRITT
+        );
+
+        liste.ordner_setzen(zweiter.pfad(), None);
+
+        let gitmodell = liste.aktiver().gitmodell();
+        assert_eq!(
+            gitmodell.verlaufslaenge(),
+            0,
+            "der neue Ordner faengt bei den ersten fuenfzig an"
+        );
+        assert_eq!(
+            gitmodell.kopfzeile(),
+            "",
+            "und traegt den Kopf des alten nicht"
+        );
+        assert_eq!(gitmodell.zusammenfassung(), "");
+        assert!(!gitmodell.erschoepft());
+    }
+
+    /// C7.5, Tabhaelfte: ein verspaeteter Befund schreibt keine Marke in den
+    /// neuen Bestand.
+    ///
+    /// Die Zuordnung laeuft ueber den **Namen**, und derselbe Name kann im
+    /// neuen Ordner ebenso stehen; der Schutz ist deshalb die Generation und
+    /// nicht der Bestand.
+    #[test]
+    fn ein_verspaeteter_gitbefund_schreibt_nichts_in_den_neuen_bestand() {
+        let marken = vec![("a.txt".to_owned(), Marke::Geaendert)];
+
+        // Fremde Generation: der Befund gehoert zum vorigen Lesevorgang.
+        let mut liste = gelesene_liste(&["a.txt"]);
+        liste.tabs[0].gelesen = true;
+        liste.tabs[0].gitgeneration = liste.aktiver().modell().generation() + 1;
+        liste.tabs[0].wartende_marken = Some(marken.clone());
+        let einzug = liste.einziehen();
+        assert!(
+            !einzug.gitmarken_neu,
+            "ein Befund fremder Generation traegt nichts ein"
+        );
+        assert_eq!(liste.aktiver().modell().gitmarke(0), None);
+
+        // Gegenprobe: dieselbe Meldung mit der eigenen Generation kommt an.
+        let mut liste = gelesene_liste(&["a.txt"]);
+        liste.tabs[0].gelesen = true;
+        liste.tabs[0].gitgeneration = liste.aktiver().modell().generation();
+        liste.tabs[0].wartende_marken = Some(marken);
+        let einzug = liste.einziehen();
+        assert!(
+            einzug.gitmarken_neu,
+            "sonst belegt die Probe darueber nichts"
+        );
+        assert_eq!(
+            liste.aktiver().modell().gitmarke(0),
+            Some(Marke::Geaendert),
+            "und der Buchstabe steht am Eintrag"
+        );
+    }
+
+    /// A8 und C7.3: die Marken warten, bis der Bestand steht, und gehen dabei
+    /// nicht verloren.
+    ///
+    /// Kopf und Verlauf stehen in dieser Spanne schon; das haelt die Probe
+    /// `der_gitlauf_beginnt_zugleich_mit_dem_lesevorgang` darueber fest.
+    #[test]
+    fn die_marken_warten_auf_den_bestand_und_gehen_dabei_nicht_verloren() {
+        let mut liste = gelesene_liste(&["a.txt"]);
+        liste.tabs[0].gitgeneration = liste.aktiver().modell().generation();
+        liste.tabs[0].wartende_marken = Some(vec![("a.txt".to_owned(), Marke::Neu)]);
+
+        // Solange der Lesevorgang laeuft, wird nichts eingetragen — und nichts
+        // weggeworfen.
+        liste.tabs[0].gelesen = false;
+        let einzug = liste.einziehen();
+        assert!(!einzug.gitmarken_neu, "der Bestand steht noch nicht");
+        assert_eq!(liste.aktiver().modell().gitmarke(0), None);
+        assert!(
+            liste.tabs[0].wartende_marken.is_some(),
+            "die Meldung liegt weiter bereit und ist nicht verworfen"
+        );
+
+        // Sobald er steht, kommt der Befund an.
+        liste.tabs[0].lesevorgang = None;
+        liste.tabs[0].gelesen = true;
+        let einzug = liste.einziehen();
+        assert!(einzug.gitmarken_neu);
+        assert_eq!(liste.aktiver().modell().gitmarke(0), Some(Marke::Neu));
+        assert!(liste.tabs[0].wartende_marken.is_none());
+    }
+
+    /// E12 und C7.11: der Nachschlag haengt an drei Fragen, und jede kann ihn
+    /// abweisen.
+    ///
+    /// Die dritte ist die tragende: **laeuft schon ein Lauf, faengt keiner
+    /// an.** Sonst naehme der Nachschlag dem laufenden die Markenmeldung mit,
+    /// die womoeglich noch auf den gelesenen Bestand wartet.
+    #[test]
+    fn ein_nachschlag_faengt_nur_an_wenn_kein_lauf_steht() {
+        use krk_core::git::lauf::VERLAUFSSCHRITT;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("gitverlauf-nachschlag");
+        let pfad = ordner.pfad().display().to_string();
+
+        // Ohne Verlauf gibt es keine Stelle, ab der nachzuladen waere.
+        let mut leer = liste(&[&pfad]);
+        assert!(!leer.verlauf_nachladen(), "der Verlauf ist leer");
+
+        // Ein erschoepfter Verlauf laedt nicht nach (C4.3).
+        let mut erschoepft = liste(&[&pfad]);
+        erschoepft.tabs[0]
+            .gitmodell
+            .verlauf_anhaengen(vec![gitcommit(1)]);
+        assert!(
+            !erschoepft.verlauf_nachladen(),
+            "der Rest ist da, es folgt nichts mehr"
+        );
+
+        // Ein voller Schwung laesst offen: hier faengt der Nachschlag an.
+        let mut offen = liste(&[&pfad]);
+        offen.tabs[0].gitmodell.verlauf_anhaengen(
+            (0..VERLAUFSSCHRITT)
+                .map(|nummer| gitcommit(u8::try_from(nummer % 256).expect("unter 256")))
+                .collect(),
+        );
+        assert!(
+            offen.verlauf_nachladen(),
+            "hinter dem letzten geht es weiter"
+        );
+        assert_eq!(stehende_gitlaeufe(&offen), 1);
+        assert!(
+            !offen.verlauf_nachladen(),
+            "und ein zweiter stellt sich nicht daneben"
+        );
+        assert_eq!(stehende_gitlaeufe(&offen), 1);
+    }
+
+    /// C7.10: der Gitlauf wird an genau den Stellen angestossen, die A9 nennt,
+    /// und an keiner weiteren.
+    ///
+    /// **Eine Aufruferzaehlung und ausdruecklich die richtige Form:** C7.10
+    /// sagt die Zahl der Stellen selbst zu ("ueber keinen zweiten Weg"). Der
+    /// Kopf von [`crate::quellbaum`] sagt, wann eine solche Zaehlung gehoert
+    /// und wann nicht.
+    ///
+    /// Zwei Zaehlungen. Die erste haelt fest, dass ein Lauf im ganzen Baum
+    /// allein in dieser Datei entsteht. Die zweite nennt die vier Anlaesse
+    /// namentlich, aus denen der Nachzug gerufen wird: `lesen_starten` (jedes
+    /// Neulesen eines Ordners, und damit der eine Auffrischungspfad und jede
+    /// Navigation), `waehlen` zweimal (der Abbruch am verlassenen Tab und der
+    /// Anstoss am neuen) und `git_gefragt_setzen` (das Einschalten des
+    /// Bereichs oder der Spalte).
+    ///
+    /// **Ihre Blindheit** gehoert dazu: ein Aufruf unter anderem Namen — ein
+    /// `use … as anders;` — entgeht ihr, wie jeder Suche im Quelltext.
+    #[test]
+    fn der_gitlauf_wird_an_genau_den_stellen_aus_a9_angestossen() {
+        use crate::quellbaum::{aufrufstellen, quelldateien};
+
+        let start = concat!("Gitlauf::star", "ten");
+        let nachzug = concat!("gitlauf_nachziehen", "_an");
+
+        let rufer: Vec<(String, usize)> = quelldateien()
+            .into_iter()
+            .filter(|(name, _)| name.contains("/src/"))
+            .map(|(name, inhalt)| {
+                let zahl = aufrufstellen(&inhalt, start);
+                (name, zahl)
+            })
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+        assert_eq!(
+            rufer,
+            vec![("krk-ui/src/tabs.rs".to_owned(), 2)],
+            "ein Gitlauf entsteht ausserhalb von tabs.rs oder oefter als in \
+             Tabliste::gitlauf_nachziehen_an und Tabliste::verlauf_nachladen"
+        );
+
+        let diese_datei = quelldateien()
+            .into_iter()
+            .find(|(name, _)| name == "krk-ui/src/tabs.rs")
+            .map(|(_, inhalt)| inhalt)
+            .expect("krk-ui/src/tabs.rs steht nicht mehr im Baum");
+        let code = diese_datei
+            .split(concat!("#[cfg(", "test)]"))
+            .next()
+            .unwrap_or(&diese_datei);
+        assert_eq!(
+            aufrufstellen(code, nachzug),
+            4,
+            "der Nachzug hat andere Anlaesse als die vier aus A9: lesen_starten, \
+             waehlen zweimal und git_gefragt_setzen"
+        );
     }
 }

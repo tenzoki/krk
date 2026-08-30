@@ -252,6 +252,7 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
+use krk_core::git::Marke;
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
 use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
@@ -1595,8 +1596,12 @@ impl DateifensterQuelle {
         self.meldung_gewechselt();
         self.tableiste_nachziehen();
         // Der Wechsel kann einen ungelesenen Tab getroffen haben; dann laeuft
-        // seit `waehlen` ein Lesevorgang, den der Takt einziehen muss.
-        if self.ivars().tabs.borrow().liest_noch() {
+        // seit `waehlen` ein Lesevorgang, den der Takt einziehen muss. Gefragt
+        // wird `arbeitet_noch` und nicht `liest_noch`, seit der Tabwechsel auch
+        // einen Gitlauf anstoesst: der laeuft gerade dann, wenn der neue Tab
+        // schon gelesen ist und kein Lesevorgang beginnt, und mit der engeren
+        // Frage bliebe sein Befund im Kanal stehen.
+        if self.ivars().tabs.borrow().arbeitet_noch() {
             self.einzug_starten();
         }
         // Ein anderer Tab heisst ein anderer Ordner auf dem Schirm, und die
@@ -3163,6 +3168,26 @@ impl DateifensterQuelle {
             .is_some_and(|index| modell.ist_markiert(index))
     }
 
+    /// Die Gitmarke des Eintrags dieser Zeile, falls eine steht.
+    ///
+    /// Die Umrechnung von der Zeile in den Eintragsindex, genau wie
+    /// [`Self::zeile_markiert`] daneben: die Marke haengt am Eintrag und nicht
+    /// an seiner Stelle in der Sicht, denn Sortierung und Filter verschieben
+    /// die Zeilen unter ihr weg.
+    ///
+    /// `None` heisst „kein Befund fuer diesen Eintrag", und das deckt drei
+    /// Lagen mit derselben leeren Zelle: der Ordner liegt in keinem Repository,
+    /// der Statuslauf ist noch unterwegs, oder der Eintrag ist unveraendert.
+    /// Die Zelle unterscheidet sie nicht, und das ist die Zusage aus A8 und
+    /// A11: was der Nutzer sieht, ist Ruhe.
+    fn zeile_gitmarke(&self, zeile: usize) -> Option<Marke> {
+        let tabs = self.ivars().tabs.borrow();
+        let modell = tabs.aktiver().modell();
+        modell
+            .eintragsindex(zeile)
+            .and_then(|index| modell.gitmarke(index))
+    }
+
     /// Ob der Eintrag dieser Zeile allein wegen seines Inhalts dasteht (C5).
     ///
     /// **Die Regel wird hier nicht nachgebaut.** Sie steht als
@@ -3510,6 +3535,22 @@ impl DateifensterQuelle {
             self.auswahl_anzeigen();
         } else if einzug.angehaengt {
             self.ivars().tabelle.noteNumberOfRowsChanged();
+        }
+        // Die Marken des Gitlaufs, und sie bekommen einen eigenen Zweig neben
+        // den dreien darueber. `reloadData` **ohne** `auswahl_anzeigen`: eine
+        // Marke entscheidet nicht, ob eine Zeile steht, sondern nur, was in
+        // einer ihrer Zellen steht. Die Sichtreihenfolge bleibt damit
+        // unveraendert, und die ausgewaehlte Zeile behaelt ihre Stelle — sie
+        // neu zu zeigen hiesse, den Bildlauf auf sie zu ziehen, obwohl sich
+        // nichts an ihr geaendert hat, was ihn rechtfertigte.
+        //
+        // Der Zweig steht **nicht** in der Kette darueber, weil er mit ihr
+        // zusammenfallen kann: derselbe Takt kann den Abschluss des
+        // Lesevorgangs und die Marken bringen, und dann ist beides zu tun.
+        // Zweimal `reloadData` in einem Takt ist dabei kein Schaden, den es
+        // abzuwenden lohnte.
+        if einzug.gitmarken_neu {
+            self.ivars().tabelle.reloadData();
         }
         // Die Tabmeldung wechselt selten, der fuenfte Rang bei jedem Stapel:
         // er nennt die Zahl der gezeigten und die der vorhandenen Eintraege,
@@ -4124,7 +4165,7 @@ impl DateifensterDelegierter {
         let text = self
             .ivars()
             .quelle
-            .mit_zeile(zeile, |eintrag| self.beschriften(spalte, eintrag))?;
+            .mit_zeile(zeile, |eintrag| self.beschriften(spalte, eintrag, zeile))?;
         let feld = self.feld(tabelle, spalte);
         feld.setStringValue(&NSString::from_str(&text));
         // Die Markierung aus C2 sichtbar machen. Ohne ein Zeichen auf dem
@@ -4291,17 +4332,29 @@ impl DateifensterDelegierter {
 
     /// Der Text, der in dieser Spalte fuer diesen Eintrag steht.
     ///
-    /// **[`Spalte::Marke`] liefert die leere Zeichenkette, und das ist kein
-    /// Platzhalter.** Es ist das Zielverhalten des einen von zwei Faellen: ein
-    /// Ordner, der in keinem Git-Repository liegt, laesst diese Spalte
-    /// dauerhaft leer, und sie wird trotzdem nicht eingezogen (E5, C6.3 der
-    /// Git-Runde). Den zweiten Fall — der Ordner liegt in einem Repository,
-    /// und der nebenlaeufige Statuslauf hat fuer diesen Eintrag einen
-    /// Buchstaben nachgetragen — traegt Schritt 6 jener Runde nach: dann liest
-    /// dieser Zweig `Ordnermodell::gitmarke` und faellt auf die leere
-    /// Zeichenkette zurueck, wo kein Befund steht. Bis dahin ist der leere
-    /// Zweig vollstaendig richtig und nicht halbfertig.
-    fn beschriften(&self, spalte: Spalte, eintrag: &Eintrag) -> String {
+    /// **[`Spalte::Marke`] liefert die leere Zeichenkette, wo kein Befund
+    /// steht, und das ist kein Platzhalter.** Es ist das Zielverhalten von zwei
+    /// Faellen, und beide sind zugesagt: ein Ordner, der in keinem
+    /// Git-Repository liegt, laesst diese Spalte **dauerhaft** leer und wird
+    /// trotzdem nicht eingezogen (E5, C6.3 der Git-Runde); und ein Eintrag, den
+    /// der Statuslauf nicht genannt hat, ist unveraendert und traegt keine
+    /// sechste Marke fuer den Normalfall (A11). Dieselbe leere Zelle steht
+    /// drittens in der Spanne, in der der nebenlaeufige Lauf noch unterwegs ist
+    /// (A8, C7.3).
+    ///
+    /// **Die Zeile kommt als eigener Parameter herein und nicht aus dem
+    /// Eintrag.** Die Marke steht in einem Vektor parallel zu den Eintraegen
+    /// und wird ueber den **Eintragsindex** angesprochen, den der Eintrag
+    /// selbst nicht kennt; die Umrechnung von der Zeile dorthin macht
+    /// [`DateifensterQuelle::zeile_gitmarke`], wie sie
+    /// [`DateifensterQuelle::zeile_markiert`] daneben macht.
+    ///
+    /// **Die Zelle bekommt kein drittes Kennzeichen** (C5.11). Farbe und
+    /// Schrift setzt [`Self::zellenansicht`] fuer alle fuenf Spalten gleich; ein
+    /// eigener Zweig fuer die Marke waere ein Kennzeichen neben den zweien, die
+    /// die markierte Zeile schon traegt, und der Buchstabe bliebe dort dann
+    /// gerade nicht lesbar.
+    fn beschriften(&self, spalte: Spalte, eintrag: &Eintrag, zeile: usize) -> String {
         match spalte {
             // Ein Ordner traegt hier einen Schraegstrich hinter dem Namen; wie
             // die Anzeigeform entsteht und warum sie nie ein Name ist, steht
@@ -4325,7 +4378,10 @@ impl DateifensterDelegierter {
             // Leer, solange kein Gitbefund im Ordnermodell steht — und in
             // einem Ordner ohne Repository fuer immer. Die Begruendung steht
             // im Doc-Kommentar dieser Funktion.
-            Spalte::Marke => String::new(),
+            Spalte::Marke => self
+                .quelle()
+                .zeile_gitmarke(zeile)
+                .map_or_else(String::new, |marke| marke.buchstabe().to_string()),
         }
     }
 
