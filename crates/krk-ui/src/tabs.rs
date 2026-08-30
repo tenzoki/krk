@@ -2352,7 +2352,10 @@ mod tests {
         );
     }
 
-    /// C2.9: die Dateiliste bleibt eine flache Tabelle mit vier Spalten.
+    /// C2.9: die Dateiliste bleibt eine flache Tabelle. Die Zahl ihrer Spalten
+    /// steht seit der Git-Runde bei fuenf (C5.1) und war bis dahin vier; die
+    /// Zusage von C2.9 ist die **Flachheit** und nicht die Zahl, und deshalb
+    /// zieht diese Probe die Zahl nach, statt sie zu verteidigen.
     ///
     /// Gezaehlt an zwei Stellen statt behauptet: die Zahl der Spalten am
     /// Aufzaehlungstyp, der sie fuehrt, und das Vorkommen von `NSOutlineView`
@@ -2377,8 +2380,8 @@ mod tests {
     /// diese Zaehlung nicht. Der Bezug auf `spalten::Spalte::ALLE` haengt
     /// dagegen am Aufzaehlungstyp und nicht an seinem Namen im Text.
     #[test]
-    fn die_dateiliste_bleibt_flach_und_hat_vier_spalten() {
-        assert_eq!(crate::spalten::Spalte::ALLE.len(), 4);
+    fn die_dateiliste_bleibt_flach_und_hat_fuenf_spalten() {
+        assert_eq!(crate::spalten::Spalte::ALLE.len(), 5);
         let aufklappansicht = concat!("NSOutline", "View");
         for (name, inhalt) in crate::quellbaum::quelldateien() {
             let treffer: Vec<&str> = inhalt

@@ -329,6 +329,7 @@ fn kennung(spalte: Spalte) -> &'static NSString {
         Spalte::Groesse => ns_string!("groesse"),
         Spalte::Geaendert => ns_string!("geaendert"),
         Spalte::Typ => ns_string!("typ"),
+        Spalte::Marke => ns_string!("marke"),
     }
 }
 
@@ -339,40 +340,50 @@ fn kennung(spalte: Spalte) -> &'static NSString {
 /// [`Spalte::Geaendert`] weicht ab, und das ist gewollt: ueber der Spalte
 /// steht "Änderungsdatum", der Schalter der Bereichsleiste heisst "Datum". Die
 /// Ueberschrift hat die Breite dafuer und die Zelle darunter zeigt neben dem
-/// Datum die Uhrzeit; die Leiste ist 18 Punkte hoch, traegt neun Schalter
+/// Datum die Uhrzeit; die Leiste ist 18 Punkte hoch, traegt ihre Schalter
 /// nebeneinander, und "Datum" ist der Name, den der Nutzer dem Schalter
 /// gegeben hat.
 ///
 /// Der Rueckgabewert ist deshalb kein `&'static NSString` aus `ns_string!`:
 /// dieses Makro verlangt ein Literal an Ort und Stelle, und damit stuenden die
-/// drei uebernommenen Texte ein zweites Mal da. Gebaut wird die Zeichenkette
-/// achtmal, beim Aufbau der vier Spalten der beiden Dateifenster.
+/// uebernommenen Texte ein zweites Mal da. Gebaut wird die Zeichenkette beim
+/// Aufbau der Spalten der beiden Dateifenster.
 fn titel(spalte: Spalte) -> Retained<NSString> {
     let text = match spalte {
         Spalte::Geaendert => "Änderungsdatum",
-        Spalte::Name | Spalte::Groesse | Spalte::Typ => spalte.beschriftung(),
+        Spalte::Name | Spalte::Groesse | Spalte::Typ | Spalte::Marke => spalte.beschriftung(),
     };
     NSString::from_str(text)
 }
 
 /// Anfangsbreite und Mindestbreite in Punkten.
+///
+/// **Bei [`Spalte::Marke`] setzt die Ueberschrift das Mass und nicht der
+/// Inhalt.** In der Zelle steht ein einzelner Buchstabe oder nichts (E11, A11
+/// der Git-Runde); ueber ihr steht das Wort "Marke", und danach richten sich
+/// die 60 und die 45 Punkte. Eine Spalte, die auf die Breite ihres Inhalts
+/// gezogen waere, schnitte ihre eigene Ueberschrift ab.
 fn breiten(spalte: Spalte) -> (f64, f64) {
     match spalte {
         Spalte::Name => (240.0, 100.0),
         Spalte::Groesse => (80.0, 60.0),
         Spalte::Geaendert => (130.0, 100.0),
         Spalte::Typ => (90.0, 60.0),
+        Spalte::Marke => (60.0, 45.0),
     }
 }
 
 /// Wie der Text in der Zelle ausgerichtet wird.
 ///
 /// Groessen stehen rechtsbuendig, damit die Ziffern untereinander liegen
-/// und zwei Zahlen sich der Laenge nach vergleichen lassen.
+/// und zwei Zahlen sich der Laenge nach vergleichen lassen. Der Buchstabe der
+/// Markenspalte steht linksbuendig wie jeder andere Text: rechtsbuendig
+/// stuende er am Rand zur naechsten Spalte, und untereinander liegen einzelne
+/// Zeichen ohnehin.
 fn ausrichtung(spalte: Spalte) -> NSTextAlignment {
     match spalte {
         Spalte::Groesse => NSTextAlignment::Right,
-        Spalte::Name | Spalte::Geaendert | Spalte::Typ => NSTextAlignment::Left,
+        Spalte::Name | Spalte::Geaendert | Spalte::Typ | Spalte::Marke => NSTextAlignment::Left,
     }
 }
 
@@ -4279,6 +4290,17 @@ impl DateifensterDelegierter {
     }
 
     /// Der Text, der in dieser Spalte fuer diesen Eintrag steht.
+    ///
+    /// **[`Spalte::Marke`] liefert die leere Zeichenkette, und das ist kein
+    /// Platzhalter.** Es ist das Zielverhalten des einen von zwei Faellen: ein
+    /// Ordner, der in keinem Git-Repository liegt, laesst diese Spalte
+    /// dauerhaft leer, und sie wird trotzdem nicht eingezogen (E5, C6.3 der
+    /// Git-Runde). Den zweiten Fall — der Ordner liegt in einem Repository,
+    /// und der nebenlaeufige Statuslauf hat fuer diesen Eintrag einen
+    /// Buchstaben nachgetragen — traegt Schritt 6 jener Runde nach: dann liest
+    /// dieser Zweig `Ordnermodell::gitmarke` und faellt auf die leere
+    /// Zeichenkette zurueck, wo kein Befund steht. Bis dahin ist der leere
+    /// Zweig vollstaendig richtig und nicht halbfertig.
     fn beschriften(&self, spalte: Spalte, eintrag: &Eintrag) -> String {
         match spalte {
             // Ein Ordner traegt hier einen Schraegstrich hinter dem Namen; wie
@@ -4300,6 +4322,10 @@ impl DateifensterDelegierter {
             // Anzeige und Ordnung uebereinstimmen. Ein Eintrag ohne Endung
             // laesst die Zelle leer.
             Spalte::Typ => eintrag.endung().to_owned(),
+            // Leer, solange kein Gitbefund im Ordnermodell steht — und in
+            // einem Ordner ohne Repository fuer immer. Die Begruendung steht
+            // im Doc-Kommentar dieser Funktion.
+            Spalte::Marke => String::new(),
         }
     }
 
@@ -4741,7 +4767,7 @@ impl Dateifenster {
         tabelle.setUsesAlternatingRowBackgroundColors(true);
         tabelle.setStyle(NSTableViewStyle::FullWidth);
         // Die Namensspalte nimmt die Breite auf, die beim Vergroessern des
-        // Fensters frei wird; die drei rechten tragen feste Inhalte.
+        // Fensters frei wird; die rechts von ihr tragen feste Inhalte.
         tabelle.setColumnAutoresizingStyle(
             NSTableViewColumnAutoresizingStyle::FirstColumnOnlyAutoresizingStyle,
         );
@@ -4944,7 +4970,7 @@ impl Dateifenster {
     /// **Die Regel stammt vom Nutzer**, Moeglichkeit 1 seines Entscheids vom
     /// 260812-0910:
     /// `shared/decisions/260812-0910_*_wie-werden-die-spaltenbreiten-nach-dem-wegschalten-verteilt.md`.
-    /// Groesse 80, Datum 130 und Typ 90 Punkte stehen bei **jeder**
+    /// Groesse 80, Datum 130, Typ 90 und Marke 60 Punkte stehen bei **jeder**
     /// Schalterstellung gleich, damit dieselbe Spalte immer an derselben Stelle
     /// und in derselben Breite steht; Name nimmt den Rest und faellt dabei nicht
     /// unter seine Mindestbreite. Eine Verhaeltnisrechnung ueber alle Spalten
@@ -5274,8 +5300,12 @@ mod tests {
     #[test]
     fn die_namensspalte_nimmt_auf_was_bis_zur_sichtflaeche_fehlt() {
         let (natuerlich, mindestens) = breiten(Spalte::Name);
-        // Vier Spalten in ihrer natuerlichen Breite enden bei 603 Punkten
-        // (gemessen am 260812); in einer Sichtflaeche von 700 fehlen 97.
+        // Die vier Spalten der Bereichsleisten-Runde enden in ihrer
+        // natuerlichen Breite bei 603 Punkten (gemessen am 260812); in einer
+        // Sichtflaeche von 700 fehlen 97. Die Zahlen sind Eingaben dieser
+        // Probe und keine Summe, die sie rechnet: `namensbreite` ist rein und
+        // bekommt den gemessenen Rand hereingereicht, und die fuenfte Spalte
+        // der Git-Runde aendert daran nichts.
         assert_eq!(namensbreite(natuerlich, mindestens, 603.0, 700.0), 337.0);
         // Ohne Groesse und Typ endet dieselbe Reihe bei 399 Punkten.
         assert_eq!(namensbreite(natuerlich, mindestens, 399.0, 500.0), 341.0);

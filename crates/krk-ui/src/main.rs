@@ -53,7 +53,7 @@
 //! schreibt sie unteilbar und formuliert die Meldung fuer die Statuszeile
 //! (Runde 3); dass es keine `objc2`-Kiste nennt, ist der Grund, aus dem der
 //! ganze Inhalt der Datei ohne Fenster pruefbar ist.
-//! `spalten` nennt zuletzt die vier Spalten des Dateifensters: welche es gibt,
+//! `spalten` nennt zuletzt die fuenf Spalten des Dateifensters: welche es gibt,
 //! in welcher Reihenfolge sie stehen, wie ihr kurzer Name lautet und in welcher
 //! der Nutzer schreiben darf. Die Aufzaehlung liegt hier und nicht unter
 //! `appkit`, weil zwei Leser an ihr haengen, die Tabelle und die

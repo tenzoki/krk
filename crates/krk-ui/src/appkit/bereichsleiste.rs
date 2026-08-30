@@ -188,14 +188,23 @@ const fn kommando_des_bereichs(bereich: Bereich) -> Option<Kommando> {
 /// **Die andere Haelfte der Aufbautabelle, und zugleich die eine Stelle, die
 /// sagt, welche Spalten schaltbar sind.** `None` fuer die Namensspalte: eine
 /// Dateiliste ohne sie zeigt nichts, was den Eintrag benennt (C3.1). Auch das
-/// eine vollstaendige Fallunterscheidung ohne Auffangzweig — eine fuenfte
+/// eine vollstaendige Fallunterscheidung ohne Auffangzweig — eine neue
 /// Spalte haelt den Bau an, statt still ohne Schalter zu bleiben.
+///
+/// **`None` fuer [`Spalte::Marke`] ist ein Zwischenstand dieser Runde und kein
+/// Dauerzustand**, dieselbe Lage wie beim Git-Bereich in
+/// [`kommando_des_bereichs`] darueber: `Kommando::SpalteMarkeUmschalten`
+/// entsteht erst in Schritt 8, und ein Schritt, der an einem Typ haengt, den
+/// es noch nicht gibt, drehte die Reihenfolge des Plans um. Bis dahin ist die
+/// Markenspalte gebaut, steht ab Werk und traegt kein Ankreuzfeld; Schritt 8
+/// gibt ihr das vierte, und dann sagt A2 seine Aufschrift: „Marke".
 const fn kommando_der_spalte(spalte: Spalte) -> Option<Kommando> {
     match spalte {
         Spalte::Name => None,
         Spalte::Groesse => Some(Kommando::SpalteGroesseUmschalten),
         Spalte::Geaendert => Some(Kommando::SpalteDatumUmschalten),
         Spalte::Typ => Some(Kommando::SpalteTypUmschalten),
+        Spalte::Marke => None,
     }
 }
 
@@ -452,6 +461,24 @@ pub struct Bereichsleiste {
     bereichsschalter: [Retained<NSButton>; 6],
     /// Die Schalter der drei schaltbaren Spalten, in der Reihenfolge, die
     /// [`spaltenfach`] nennt.
+    ///
+    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    ///
+    /// **Hier haelt sie nichts.** Anders als bei [`Self::bereichsschalter`]
+    /// darueber entsteht dieses Feld nicht ueber `ALLE.map(…)`, sondern aus
+    /// einer gefilterten Liste mit `try_into`; die Zahl ist deshalb eine
+    /// Zusicherung zur **Laufzeit** und keine Bedingung des Baus. Traegt
+    /// [`kommando_der_spalte`] eines Tages vier Kommandos, waehrend hier `3`
+    /// steht, uebersetzt die Datei anstandslos und das `expect` in
+    /// [`Bereichsleiste::bauen`] bricht beim Start ab — laut, aber eben erst
+    /// dort. Was den Bau statt dessen haelt, ist die Zaehlprobe
+    /// `tests::genau_drei_spalten_sind_schaltbar` im Pruefmodul dieser Datei,
+    /// und deshalb steht sie da.
+    ///
+    /// **Schritt 8 der Git-Runde hebt beides auf vier**: die Feldbreite, das
+    /// `Vec::with_capacity`, den Text des `expect` und die Zaehlprobe, alle
+    /// vier zusammen mit `Kommando::SpalteMarkeUmschalten`. Wer nur eines
+    /// davon anfasst, merkt es nicht beim Uebersetzen.
     spaltenschalter: [Retained<NSButton>; 3],
     /// Der Schalter der tiefen Suche (C2.1).
     ///
@@ -522,7 +549,9 @@ impl Bereichsleiste {
         }
         // Die Laenge ist keine Annahme ueber die Zukunft: sie folgt aus
         // `kommando_der_spalte`, und die Probe `genau_drei_spalten_sind_schaltbar`
-        // haelt beide aneinander.
+        // haelt beide aneinander. Sie haelt sie zur Laufzeit und nicht beim
+        // Bau; warum das hier so ist und bei den Bereichsschaltern nicht,
+        // steht am Feld `spaltenschalter`.
         let spaltenschalter: [Retained<NSButton>; 3] = spaltenschalter
             .try_into()
             .expect("genau drei Spalten tragen ein Kommando");
@@ -846,7 +875,14 @@ mod tests {
     /// tragen ein Kommando, und die Namensspalte ist nicht darunter (C3.1).
     ///
     /// Ohne diese Probe haenge das `expect` in [`Bereichsleiste::bauen`] an
-    /// einer Annahme statt an einer geprueften Aussage.
+    /// einer Annahme statt an einer geprueften Aussage — die Feldbreite selbst
+    /// haelt hier nichts, und warum, steht am Feld
+    /// [`Bereichsleiste::spaltenschalter`].
+    ///
+    /// **Zwei Spalten stehen ohne Kommando da und nicht mehr eine.** Die
+    /// Markenspalte bekommt ihres in Schritt 8 der Git-Runde; bis dahin steht
+    /// sie in der Dateiliste und hat kein Ankreuzfeld in der Leiste. Schritt 8
+    /// hebt diese Probe zusammen mit der Feldbreite auf vier.
     #[test]
     fn genau_drei_spalten_sind_schaltbar() {
         let schaltbar: Vec<Spalte> = Spalte::ALLE
@@ -858,6 +894,11 @@ mod tests {
             vec![Spalte::Groesse, Spalte::Geaendert, Spalte::Typ]
         );
         assert_eq!(kommando_der_spalte(Spalte::Name), None);
+        assert_eq!(
+            kommando_der_spalte(Spalte::Marke),
+            None,
+            "die Markenspalte traegt ihr Kommando erst nach Schritt 8"
+        );
     }
 
     /// Die Aufbautabelle nennt fuer jeden Schalter **genau ein** Kommando, und
@@ -910,5 +951,10 @@ mod tests {
         assert_eq!(spaltenfach(Spalte::Groesse), Some(0));
         assert_eq!(spaltenfach(Spalte::Geaendert), Some(1));
         assert_eq!(spaltenfach(Spalte::Typ), Some(2));
+        assert_eq!(
+            spaltenfach(Spalte::Marke),
+            None,
+            "die Markenspalte hat bis Schritt 8 kein Fach, weil sie kein Kommando traegt"
+        );
     }
 }

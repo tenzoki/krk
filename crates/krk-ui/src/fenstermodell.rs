@@ -70,7 +70,7 @@
 //! # Die Spalten der beiden Dateilisten
 //!
 //! Neben den fuenf Bereichen haelt dieses Modell seit der Bereichsleisten-Runde
-//! auch, welche Spalten die Dateilisten zeigen: [`Spaltensichtbarkeit`] mit drei
+//! auch, welche Spalten die Dateilisten zeigen: [`Spaltensichtbarkeit`] mit vier
 //! Feldern, geschaltet ueber [`Fenstermodell::spalte_umschalten`], gelesen ueber
 //! [`spalte_sichtbar_in`]. **Eine Angabe fuer beide Listen** (Nutzerentscheid
 //! vom 260812-0306), und **die Sortierung bleibt davon unberuehrt**: ein
@@ -250,7 +250,7 @@ impl Bereich {
 
     /// Die Breite, unter die sich der Bereich nicht ziehen laesst.
     ///
-    /// Ein Dateifenster braucht mehr, weil vier Spalten hineinpassen muessen;
+    /// Ein Dateifenster braucht mehr, weil fuenf Spalten hineinpassen muessen;
     /// die beiden Randbereiche tragen je eine Liste mit einer Spalte.
     ///
     /// **Der Editor steht mit 320 ueber der Vorschau mit ihren 160**, und der
@@ -396,9 +396,10 @@ fn breite_in(breiten: &Breiten, bereich: Bereich) -> Option<f64> {
 /// Leseseite zu [`Fenstermodell::spalte_umschalten`].
 ///
 /// **Vollstaendig und mit [`Spalte::Name`] darin, obwohl jene kein Feld hat.**
-/// Die Aufzaehlung traegt vier Werte, die Ablage drei; ohne diesen Zweig
+/// Die Aufzaehlung traegt einen Wert mehr als die Ablage Felder; ohne diesen
+/// Zweig
 /// braeuchte jeder Aufrufer einen eigenen, oder die Fallunterscheidung bekaeme
-/// einen Auffangzweig und eine fuenfte Spalte fiele still unter den Tisch. Die
+/// einen Auffangzweig und eine neue Spalte fiele still unter den Tisch. Die
 /// Namensspalte steht immer, und der Grund steht an [`Spaltensichtbarkeit`]:
 /// eine Dateiliste ohne sie zeigt nichts, was den Eintrag benennt.
 ///
@@ -411,6 +412,7 @@ pub fn spalte_sichtbar_in(spalten: &Spaltensichtbarkeit, spalte: Spalte) -> bool
         Spalte::Groesse => spalten.groesse,
         Spalte::Geaendert => spalten.geaendert,
         Spalte::Typ => spalten.typ,
+        Spalte::Marke => spalten.marke,
     }
 }
 
@@ -625,7 +627,7 @@ impl Fenstermodell {
         self.sichtbar
     }
 
-    /// Die Sichtbarkeit der drei schaltbaren Spalten.
+    /// Die Sichtbarkeit der vier schaltbaren Spalten.
     ///
     /// Sie gilt fuer **beide** Dateilisten; die Begruendung steht an
     /// [`Spaltensichtbarkeit`]. Wer eine einzelne Spalte fragt, nimmt
@@ -643,8 +645,8 @@ impl Fenstermodell {
     /// diesem Modell: die Namensspalte traegt keinen Schalter, weil eine
     /// Dateiliste ohne sie nichts zeigt, was den Eintrag benennt. Sie hier
     /// abzuweisen statt sie gar nicht erst anzubieten ist der Preis dafuer,
-    /// dass die Aufzaehlung vier Werte hat und die Ablage drei; die Alternative
-    /// waere eine zweite Aufzaehlung der schaltbaren Spalten neben
+    /// dass die Aufzaehlung einen Wert mehr traegt als die Ablage Felder; die
+    /// Alternative waere eine zweite Aufzaehlung der schaltbaren Spalten neben
     /// [`Spalte::ALLE`].
     ///
     /// **Die Sortierung wird nicht angefasst.** Das ist Kriterium C3.3 und der
@@ -659,8 +661,15 @@ impl Fenstermodell {
     ///
     /// **Kein [`Zeilenmass`]**, anders als bei [`Self::umschalten`]: eine
     /// Spalte liegt in der Dateiliste und nicht in der Fensterzeile. Die
-    /// Breiten der fuenf Bereiche stehen vorher und nachher gleich (C3.4), und
+    /// Breiten der Bereiche stehen vorher und nachher gleich (C3.4), und
     /// deshalb gibt es hier auch keine Abweisung an den Mindestbreiten.
+    ///
+    /// **[`Spalte::Marke`] schaltet wie die drei aelteren**, auch in einem
+    /// Ordner, der in keinem Repository liegt: das Ankreuzfeld bleibt dort
+    /// eingeschaltet und wirkt nicht, und die Spalte steht leer, statt
+    /// eingezogen zu werden (E5, C6.2, C6.3 der Git-Runde). Ein Modell, das
+    /// den Schalter nach dem Ordner unter der Hand umstellte, machte aus einer
+    /// Einstellung des Nutzers eine Vermutung von KRK.
     #[must_use = "die Abweisung an der Namensspalte bleibt stumm; wer sie nicht liest, haelt eine Spalte fuer geschaltet, die das Modell nicht angefasst hat"]
     pub fn spalte_umschalten(&mut self, spalte: Spalte) -> bool {
         match spalte {
@@ -675,6 +684,10 @@ impl Fenstermodell {
             }
             Spalte::Typ => {
                 self.spalten.typ = !self.spalten.typ;
+                true
+            }
+            Spalte::Marke => {
+                self.spalten.marke = !self.spalten.marke;
                 true
             }
         }
@@ -2920,9 +2933,15 @@ mod tests {
     // Die Spalten der beiden Dateilisten (C3 der Bereichsleisten-Runde)
     // -------------------------------------------------------------------
 
-    /// Ab Werk stehen alle vier Spalten (Kriterium C7.2, zweiter Halbsatz).
+    /// Ab Werk steht jede Spalte (Kriterium C7.2, zweiter Halbsatz; C5.10 der
+    /// Git-Runde fuer [`Spalte::Marke`]).
+    ///
+    /// **Der Name traegt keine Zahl mehr.** Bis zur Git-Runde hiess die Probe
+    /// `..._alle_vier_spalten`; die Zahl stand neben der Liste, die sie zaehlt,
+    /// und ist mit der fuenften Spalte falsch geworden. Der Durchgang laeuft
+    /// ohnehin ueber [`Spalte::ALLE`] und deckt jede weitere von selbst mit.
     #[test]
-    fn der_auslieferungszustand_zeigt_alle_vier_spalten() {
+    fn der_auslieferungszustand_zeigt_jede_spalte() {
         let modell = modell();
         for spalte in Spalte::ALLE {
             assert!(
@@ -2932,11 +2951,19 @@ mod tests {
         }
     }
 
-    /// Jede der drei schaltbaren Spalten kippt und kommt zurueck, und keine
-    /// nimmt eine andere mit.
+    /// Jede schaltbare Spalte kippt und kommt zurueck, und keine nimmt eine
+    /// andere mit.
+    ///
+    /// **Die Liste der Geschalteten wird abgeleitet und nicht hingeschrieben.**
+    /// Bis zur Git-Runde stand hier `[Spalte::Groesse, Spalte::Geaendert,
+    /// Spalte::Typ]`, und eine fuenfte Spalte waere still ungeprueft geblieben:
+    /// der Bau haelt eine Liste in einem Probenrumpf nicht. Geschaltet ist in
+    /// diesem Modell jede Spalte ausser [`Spalte::Name`], und dass die
+    /// abgewiesen wird, haelt
+    /// [`die_namensspalte_laesst_sich_nicht_wegschalten`] daneben.
     #[test]
     fn jede_schaltbare_spalte_kippt_fuer_sich() {
-        for geschaltet in [Spalte::Groesse, Spalte::Geaendert, Spalte::Typ] {
+        for geschaltet in Spalte::ALLE.into_iter().filter(|s| *s != Spalte::Name) {
             let mut modell = modell();
             assert!(
                 modell.spalte_umschalten(geschaltet),

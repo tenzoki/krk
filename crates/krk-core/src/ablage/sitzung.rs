@@ -286,7 +286,8 @@ impl Default for Sichtbarkeit {
 
 /// Welche der schaltbaren Spalten der beiden Dateilisten stehen.
 ///
-/// **Drei Felder und nicht vier: die Spalte Name traegt keinen Schalter.** Eine
+/// **Ein Feld weniger als die Aufzaehlung Werte hat: die Spalte Name traegt
+/// keinen Schalter.** Eine
 /// Dateiliste ohne sie zeigt nichts, was den Eintrag benennt, und ein Wert, den
 /// niemand aendern kann, gehoert nicht in eine Datei, die der Nutzer nach C7
 /// von Hand liest. **Das ist etwas anderes als die Luecke, die
@@ -316,20 +317,31 @@ pub struct Spaltensichtbarkeit {
     pub geaendert: bool,
     /// Die Spalte mit der Dateiendung.
     pub typ: bool,
+    /// Die Spalte mit der Git-Marke des Eintrags.
+    ///
+    /// Mit der Git-Runde dazugekommen; eine `session.toml` aus der Zeit davor
+    /// bleibt lesbar und nimmt hier den Vorgabewert `true` an, das fehlende
+    /// Feld heisst also "steht" (A13, C5.9). Die Probe dazu steht in
+    /// `tests/ablage.rs`.
+    pub marke: bool,
 }
 
 impl Default for Spaltensichtbarkeit {
-    /// Der Auslieferungszustand: alle drei stehen, also die Lage vor der
-    /// Bereichsleisten-Runde.
+    /// Der Auslieferungszustand: jede schaltbare Spalte steht.
     ///
     /// Damit heisst ein fehlender Abschnitt `[spalten]` dasselbe wie der
     /// bisherige Zustand, und eine `session.toml` aus der Zeit davor geht
-    /// unveraendert auf.
+    /// unveraendert auf. **Die Markenspalte folgt darin den drei aelteren**
+    /// (A13, C5.10): sie steht ab Werk, waehrend der Git-Bereich ab Werk
+    /// ausgeblendet ist. Der Unterschied hat einen Grund — eine Spalte in der
+    /// Dateiliste nimmt dem Fenster ein paar Punkte Breite, ein Bereich der
+    /// Fensterzeile nimmt ihm eine Flaeche.
     fn default() -> Self {
         Self {
             groesse: true,
             geaendert: true,
             typ: true,
+            marke: true,
         }
     }
 }
@@ -403,7 +415,7 @@ pub struct Sitzung {
 impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, der Editor
-    /// ausgeblendet und ohne Datei, alle vier Spalten sichtbar, links aktiv,
+    /// ausgeblendet und ohne Datei, alle fuenf Spalten sichtbar, links aktiv,
     /// der erste Notizzettel offen.
     fn default() -> Self {
         Self {

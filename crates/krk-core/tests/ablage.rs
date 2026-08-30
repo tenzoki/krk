@@ -189,6 +189,7 @@ fn beispielsitzung() -> Sitzung {
             groesse: false,
             geaendert: true,
             typ: false,
+            marke: false,
         },
         fenster: [
             Dateifenster {
@@ -392,6 +393,10 @@ fn der_auslieferungszustand_der_sitzung_erfuellt_c1() {
     assert!(
         !sitzung.sichtbar.git,
         "der Git-Bereich ist ab Werk ausgeblendet (A13, C1.8 der Git-Runde)"
+    );
+    assert!(
+        sitzung.spalten.marke,
+        "die Markenspalte steht ab Werk wie die drei aelteren (A13, C5.10 der Git-Runde)"
     );
 }
 
@@ -860,10 +865,58 @@ aktiver_tab = 0
     assert_eq!(
         geladen.wert.spalten,
         Spaltensichtbarkeit::default(),
-        "der fehlende Abschnitt heisst: alle drei stehen"
+        "der fehlende Abschnitt heisst: jede schaltbare Spalte steht"
     );
     assert!(geladen.wert.spalten.groesse);
     assert!(geladen.wert.spalten.geaendert);
+    assert!(geladen.wert.spalten.typ);
+    assert!(geladen.wert.spalten.marke);
+}
+
+/// Eine `session.toml` aus der Zeit vor der Git-Runde bleibt lesbar, und die
+/// Markenspalte steht (C5.9, A13).
+///
+/// Der Unterschied zur Probe darueber ist der Abschnitt `[spalten]`: dort
+/// fehlt er ganz, hier steht er da und fuehrt die drei Felder der
+/// Bereichsleisten-Runde, aber kein `marke`. Genau diese Datei schreibt jeder
+/// Nutzer, der KRK vor dieser Runde einmal beendet hat, und ein fehlendes Feld
+/// darf ihm die neue Spalte weder wegnehmen noch die Datei als beschaedigt
+/// gelten lassen.
+#[test]
+fn eine_sitzung_ohne_das_markenfeld_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("vor-der-markenspalte");
+    let alt = "\
+aktiv = \"links\"
+
+[spalten]
+groesse = true
+geaendert = false
+typ = true
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die Datei vor der Git-Runde gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert!(
+        geladen.wert.spalten.marke,
+        "die Markenspalte ist ohne eigenes Feld eingeschaltet und nicht eingezogen"
+    );
+    assert!(geladen.wert.spalten.groesse);
+    assert!(
+        !geladen.wert.spalten.geaendert,
+        "die Felder, die dastehen, gelten unveraendert weiter"
+    );
     assert!(geladen.wert.spalten.typ);
 }
 
@@ -889,6 +942,7 @@ fn die_spaltensichtbarkeit_ueberlebt_den_rundlauf_byteweise() {
     assert!(zuerst.contains("groesse = false"), "{zuerst}");
     assert!(zuerst.contains("geaendert = true"), "{zuerst}");
     assert!(zuerst.contains("typ = false"), "{zuerst}");
+    assert!(zuerst.contains("marke = true"), "{zuerst}");
 
     let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     assert!(!geladen.ist_ersetzt());
