@@ -167,7 +167,7 @@ pub enum Quelle {
     Nichts,
 }
 
-/// Die Fokusverzweigung des Teilens, vollstaendig ueber alle fuenf Fokuswerte
+/// Die Fokusverzweigung des Teilens, vollstaendig ueber alle Fokuswerte
 /// (C1, zweites Kriterium).
 ///
 /// **Der Fokus entscheidet nicht, ob der Befehl wirkt, sondern worauf.** Dass
@@ -175,7 +175,7 @@ pub enum Quelle {
 /// mit `Wirkungsbereich::Ueberall` schon entschieden; diese Rechnung
 /// beantwortet die zweite Frage und keine davon ein zweites Mal.
 ///
-/// Fuenf Werte, drei Antworten:
+/// Sechs Werte, drei Antworten:
 ///
 /// - [`Fokus::Dateifenster`] nimmt die betroffenen Eintraege des aktiven
 ///   Dateifensters. Das ist die Regel der Runde 4, und Teilen wird damit der
@@ -190,16 +190,18 @@ pub enum Quelle {
 ///   Welche das ist, beantwortet [`crate::angezeigtedatei::welche`] aus der
 ///   Sichtbarkeit der beiden Bereiche und nicht aus dem Fokus; der Fokus sagt
 ///   hier allein, dass die Datei gemeint ist und nicht die Liste.
-/// - [`Fokus::Leiste`] findet nichts. Ein Lesezeichen ist ein Ort und kein
-///   Eintrag, den ein Freigabedienst annaehme, und die Liste der Geraete
-///   daneben erst recht nicht. Der Befehl wirkt trotzdem und meldet es;
-///   wortlos nichts zu tun ist nach C2 der Runde 1 nicht zulaessig.
+/// - [`Fokus::Leiste`] und [`Fokus::Git`] finden nichts. Ein Lesezeichen ist
+///   ein Ort und kein Eintrag, den ein Freigabedienst annaehme, und die Liste
+///   der Geraete daneben erst recht nicht; ein Commit ist ebenso wenig einer,
+///   und der Git-Bereich haelt keine Datei, auf die der Befehl ausweichen
+///   duerfte. Der Befehl wirkt trotzdem und meldet es; wortlos nichts zu tun
+///   ist nach C2 der Runde 1 nicht zulaessig.
 #[must_use]
 pub fn worauf(fokus: Fokus) -> Quelle {
     match fokus {
         Fokus::Dateifenster | Fokus::Anderswo => Quelle::BetroffeneEintraege,
         Fokus::Vorschau | Fokus::Editor => Quelle::AngezeigteDatei,
-        Fokus::Leiste => Quelle::Nichts,
+        Fokus::Leiste | Fokus::Git => Quelle::Nichts,
     }
 }
 
@@ -316,17 +318,18 @@ mod tests {
     /// stillschweigend mit; dieselbe Erwaegung, die
     /// `der_bereich_editor_fuehrt_genau_die_befehle_des_editors` in
     /// `belegungsmodell.rs` ihre Liste von Hand schreiben laesst.
-    const TAFEL: [(Fokus, Quelle); 5] = [
+    const TAFEL: [(Fokus, Quelle); 6] = [
         (Fokus::Dateifenster, Quelle::BetroffeneEintraege),
         (Fokus::Leiste, Quelle::Nichts),
         (Fokus::Vorschau, Quelle::AngezeigteDatei),
         (Fokus::Editor, Quelle::AngezeigteDatei),
+        (Fokus::Git, Quelle::Nichts),
         (Fokus::Anderswo, Quelle::BetroffeneEintraege),
     ];
 
-    /// Die Fokusverzweigung als Tafel ueber alle fuenf Werte, an einem Stueck.
+    /// Die Fokusverzweigung als Tafel ueber alle Werte, an einem Stueck.
     #[test]
-    fn jeder_der_fuenf_fokuswerte_traegt_seine_quelle() {
+    fn jeder_fokuswert_traegt_seine_quelle() {
         for (fokus, erwartet) in TAFEL {
             assert_eq!(
                 worauf(fokus),
@@ -340,7 +343,7 @@ mod tests {
     ///
     /// Die zweite Haelfte der Vollstaendigkeit: der Uebersetzer erzwingt, dass
     /// [`worauf`] jeden Wert beantwortet, aber nicht, dass die Tafel jeden
-    /// nennt. Ohne diese Probe liefe ein sechster Fokuswert ungeprueft mit,
+    /// nennt. Ohne diese Probe liefe ein siebter Fokuswert ungeprueft mit,
     /// obwohl `worauf` ihn einordnen musste.
     #[test]
     fn die_tafel_nennt_jeden_fokuswert_genau_einmal() {
@@ -354,21 +357,24 @@ mod tests {
         assert_eq!(TAFEL.len(), Fokus::ALLE.len());
     }
 
-    /// Allein die Leiste findet nichts.
+    /// Die Leiste und der Git-Bereich finden nichts, und sonst niemand.
     ///
     /// Der Fall, um dessentwillen die Verzweigung drei Antworten hat und nicht
-    /// zwei: mit dem Fokus in der Leiste gibt es weder betroffene Eintraege
-    /// noch eine angezeigte Datei, auf die der Befehl ausweichen duerfte. Ein
-    /// Rueckfall auf das aktive Dateifenster waere hier moeglich und ist
-    /// ausdruecklich nicht gewaehlt — er teilte etwas, das der Nutzer nicht vor
-    /// sich hat.
+    /// zwei: mit dem Fokus in der Leiste oder im Git-Bereich gibt es weder
+    /// betroffene Eintraege noch eine angezeigte Datei, auf die der Befehl
+    /// ausweichen duerfte. Ein Rueckfall auf das aktive Dateifenster waere hier
+    /// moeglich und ist ausdruecklich nicht gewaehlt — er teilte etwas, das der
+    /// Nutzer nicht vor sich hat.
+    ///
+    /// Der Git-Bereich steht seit der Git-Runde bei der Leiste: ein Commit ist
+    /// kein Eintrag, den ein Freigabedienst annaehme.
     #[test]
-    fn allein_die_leiste_findet_nichts() {
+    fn die_leiste_und_der_git_bereich_finden_nichts() {
         let ohne_quelle: Vec<Fokus> = Fokus::ALLE
             .into_iter()
             .filter(|fokus| worauf(*fokus) == Quelle::Nichts)
             .collect();
-        assert_eq!(ohne_quelle, vec![Fokus::Leiste]);
+        assert_eq!(ohne_quelle, vec![Fokus::Leiste, Fokus::Git]);
     }
 
     /// Diese Datei ist die einzige, die den Freigabewaehler baut (C1, siebtes

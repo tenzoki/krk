@@ -4,29 +4,29 @@
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile. Die
 //! Ansicht dazu ist [`crate::appkit::aufteilung`], die aus den Zahlen hier
-//! Rahmen fuer die fuenf Bereiche einer `NSSplitView` macht.
+//! Rahmen fuer die sechs Bereiche einer `NSSplitView` macht.
 //!
-//! # Die fuenf Bereiche
+//! # Die sechs Bereiche
 //!
 //! ```text
-//! ┌───────────┬──────────────────┬──────────────────┬───────────┬───────────┐
-//! │ Lesezei-  │ linkes           │ rechtes          │ Vorschau  │ Editor    │
-//! │ chen (C5) │ Dateifenster     │ Dateifenster     │ (C6)      │ (C1)      │
-//! └───────────┴──────────────────┴──────────────────┴───────────┴───────────┘
-//!  min 120         min 240            min 240          min 160     min 320
+//! ┌───────────┬──────────────┬──────────────┬──────────┬─────────┬────────┐
+//! │ Lesezei-  │ linkes       │ rechtes      │ Vorschau │ Editor  │ Git    │
+//! │ chen (C5) │ Dateifenster │ Dateifenster │ (C6)     │ (C1)    │        │
+//! └───────────┴──────────────┴──────────────┴──────────┴─────────┴────────┘
+//!  min 120       min 240        min 240       min 160    min 320   min 340
 //! ```
 //!
-//! Vorschau und Editor teilen sich dieselbe Stelle am rechten Rand und sind
-//! nie zugleich sichtbar. Der gegenseitige Ausschluss steht in
-//! [`Bereich::teilt_flaeche_mit`] und wirkt ueber die eine Schreibstelle
+//! Vorschau, Editor und Git-Bereich teilen sich dieselbe Stelle am rechten
+//! Rand und sind nie zu zweit sichtbar. Der gegenseitige Ausschluss steht in
+//! [`Bereich::flaeche`] und wirkt ueber die eine Schreibstelle
 //! [`Fenstermodell::sichtbar_setzen`]: zur Laufzeit ueber
 //! [`Fenstermodell::umschalten`], durch das auch [`Fenstermodell::einblenden`]
 //! geht, und beim Start ueber [`Fenstermodell::aus_sitzung`] fuer eine von Hand
 //! geschriebene `session.toml`. Damit ist das erste Abnahmekriterium von C1 der
-//! Editor-Runde eingeloest, einschliesslich seines dritten Satzes: beide
-//! zugleich sichtbar zu haben ist ueber keinen Weg erreichbar.
+//! Editor-Runde eingeloest, einschliesslich seines dritten Satzes: zwei von
+//! ihnen zugleich sichtbar zu haben ist ueber keinen Weg erreichbar.
 //!
-//! **Alle fuenf teilen sich die Zeile im Verhaeltnis ihrer gespeicherten
+//! **Alle sechs teilen sich die Zeile im Verhaeltnis ihrer gespeicherten
 //! Breiten**; die Regel steht in [`bereichsbreiten`], und die Zahl unter der
 //! Skizze ist das Mindestmass, das gegen den Anteil gewinnt. Eine gespeicherte
 //! Breite ist damit ein Wunsch und keine Zusage in Punkten: was ein Bereich
@@ -98,7 +98,7 @@ use crate::tabs::Tabuebersicht;
 /// Anschlaege, ein groesserer spraenge ueber die gesuchte Breite hinweg.
 pub const BREITENSCHRITT: f64 = 40.0;
 
-/// Einer der fuenf Bereiche der Fensterzeile.
+/// Einer der sechs Bereiche der Fensterzeile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Bereich {
     /// Die Lesezeichen- und Geraeteleiste ganz links (C5).
@@ -115,16 +115,54 @@ pub enum Bereich {
     /// Fensterzeile einnimmt: beide sitzen am rechten Rand und sind nie
     /// zugleich sichtbar.
     Editor,
+    /// Der Git-Bereich (C1 der Git-Runde).
+    ///
+    /// Er steht **hinter** dem Editor, aus demselben Grund, aus dem der Editor
+    /// hinter der Vorschau steht: er nimmt dieselbe Stelle am rechten Rand
+    /// ein, und die Reihenfolge dieser Aufzaehlung ist die der Fensterzeile
+    /// von links nach rechts (A1).
+    Git,
+}
+
+/// Die Stelle der Fensterzeile, um die sich ein Bereich bewirbt.
+///
+/// **Eine Aequivalenzklasse und keine Paarbeziehung**, und das ist der
+/// Unterschied zu `Bereich::teilt_flaeche_mit`, das bis zur Git-Runde an
+/// dieser Stelle stand. Jenes lieferte `Option<Bereich>` und konnte drei
+/// Bewerber um den rechten Rand nicht ausdruecken; eine Liste von Gegenuebern
+/// koennte es, waere aber nicht mehr von selbst symmetrisch, und genau die
+/// Symmetrie haelt die Probe `der_ausschluss_ist_gegenseitig` fest.
+///
+/// "Teilt sich die Flaeche mit" heisst seitdem "traegt dieselbe [`Flaeche`] und
+/// ist nicht derselbe Bereich". Gleichheit ist symmetrisch und transitiv, also
+/// faellt die Symmetrie aus der Bauform an, statt von einer Probe bewacht zu
+/// werden, und ein vierter Bewerber um den rechten Rand kostet spaeter eine
+/// Zeile statt einer Umschreibung.
+///
+/// **Eine eigene Aufzaehlung und keine Zahl.** Ein `usize` waere eine zweite
+/// Stelle in der Fensterzeile neben [`Bereich::index`], und die beiden liefen
+/// auseinander, sobald ein Bereich seine Stelle wechselt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Flaeche {
+    /// Ganz links, allein von der Lesezeichen- und Geraeteleiste beansprucht.
+    Lesezeichen,
+    /// Die Stelle des linken Dateifensters.
+    LinkesDateifenster,
+    /// Die Stelle des rechten Dateifensters.
+    RechtesDateifenster,
+    /// Der rechte Rand, um den sich Vorschau, Editor und Git-Bereich bewerben.
+    RechterRand,
 }
 
 impl Bereich {
-    /// Alle fuenf, von links nach rechts.
-    pub const ALLE: [Bereich; 5] = [
+    /// Alle sechs, von links nach rechts.
+    pub const ALLE: [Bereich; 6] = [
         Bereich::Lesezeichen,
         Bereich::Links,
         Bereich::Rechts,
         Bereich::Vorschau,
         Bereich::Editor,
+        Bereich::Git,
     ];
 
     /// Die Stelle des Bereichs in der Fensterzeile.
@@ -135,6 +173,7 @@ impl Bereich {
             Bereich::Rechts => 2,
             Bereich::Vorschau => 3,
             Bereich::Editor => 4,
+            Bereich::Git => 5,
         }
     }
 
@@ -162,38 +201,51 @@ impl Bereich {
         match self {
             Bereich::Links => Some(Fensterseite::Links),
             Bereich::Rechts => Some(Fensterseite::Rechts),
-            Bereich::Lesezeichen | Bereich::Vorschau | Bereich::Editor => None,
+            Bereich::Lesezeichen | Bereich::Vorschau | Bereich::Editor | Bereich::Git => None,
         }
     }
 
-    /// Der Bereich, der sich mit diesem dieselbe Flaeche teilt.
+    /// Die Stelle der Fensterzeile, um die sich dieser Bereich bewirbt.
     ///
     /// **Die eine Stelle des gegenseitigen Ausschlusses aus C1 der
-    /// Editor-Runde.** Vorschau und Editor sitzen beide am rechten Rand und
-    /// teilen sich die Flaeche zeitlich statt raeumlich: wird einer von beiden
-    /// sichtbar, geht der andere. Die Directive nennt ausdruecklich nur die
-    /// eine Richtung, dass der Editor die Vorschau schliesst; die andere folgt
-    /// daraus, dass sonst ein Weg bliebe, auf dem beide dieselbe Flaeche
-    /// beanspruchen. Der Spec fuehrt sie unter `## Was die Abnahme
-    /// mitentscheidet` als Ableitung, die der Nutzer am Gate umstossen kann.
+    /// Editor-Runde, und seit der Git-Runde eine Aequivalenzklasse statt einer
+    /// Paarbeziehung.** Vorschau, Editor und Git-Bereich sitzen alle drei am
+    /// rechten Rand und teilen sich die Flaeche zeitlich statt raeumlich: wird
+    /// einer von ihnen sichtbar, gehen die anderen. Warum das eine Klasse ist
+    /// und keine Liste von Gegenuebern, steht an [`Flaeche`].
     ///
-    /// Der Editor bekommt einen fuenften Platz in den Feldern und keinen
+    /// Der Git-Bereich bekommt einen sechsten Platz in den Feldern und keinen
     /// zweiten Rechenweg daneben: [`bereichsbreiten`] behandelt ihn wie jeden
-    /// anderen sichtbaren Bereich.
+    /// anderen sichtbaren Bereich, wie zuvor schon den Editor.
     ///
-    /// Die Beziehung ist symmetrisch; die Probe `der_ausschluss_ist_gegenseitig`
-    /// haelt es fest, damit ein einseitiger Eintrag nicht eine Richtung stumm
-    /// verliert.
+    /// Die Beziehung ist symmetrisch, und zwar aus der Bauform heraus und
+    /// nicht aus einem sorgfaeltig gepflegten Eintrag: sie ist die Gleichheit
+    /// zweier [`Flaeche`]-Werte. Die Probe `der_ausschluss_ist_gegenseitig`
+    /// haelt sie trotzdem fest, weil ein falsch eingeordneter Bereich sie
+    /// nicht verletzte, sondern die falschen Paare bildete.
     ///
     /// **Vollstaendig und ohne Auffangzweig**, wie die uebrigen
-    /// Fallunterscheidungen ueber [`Bereich`]: ein sechster Bereich haelt den
-    /// Bau an und erzwingt die Antwort darauf, ob er sich eine Flaeche teilt.
-    pub const fn teilt_flaeche_mit(self) -> Option<Bereich> {
+    /// Fallunterscheidungen ueber [`Bereich`]: ein siebter Bereich haelt den
+    /// Bau an und erzwingt die Antwort darauf, um welche Flaeche er sich
+    /// bewirbt.
+    pub const fn flaeche(self) -> Flaeche {
         match self {
-            Bereich::Vorschau => Some(Bereich::Editor),
-            Bereich::Editor => Some(Bereich::Vorschau),
-            Bereich::Lesezeichen | Bereich::Links | Bereich::Rechts => None,
+            Bereich::Lesezeichen => Flaeche::Lesezeichen,
+            Bereich::Links => Flaeche::LinkesDateifenster,
+            Bereich::Rechts => Flaeche::RechtesDateifenster,
+            Bereich::Vorschau | Bereich::Editor | Bereich::Git => Flaeche::RechterRand,
         }
+    }
+
+    /// Ob dieser Bereich und der genannte sich dieselbe Flaeche teilen.
+    ///
+    /// Die Leseseite zu [`Bereich::flaeche`], und der eine Ausdruck, den die
+    /// drei Rufer sonst je fuer sich schrieben: dieselbe Flaeche, und nicht
+    /// derselbe Bereich. Aus der Gleichheit folgt die Symmetrie, die C1.5
+    /// verlangt.
+    #[must_use]
+    pub fn bewirbt_sich_mit(self, anderer: Bereich) -> bool {
+        self != anderer && self.flaeche() == anderer.flaeche()
     }
 
     /// Die Breite, unter die sich der Bereich nicht ziehen laesst.
@@ -212,6 +264,7 @@ impl Bereich {
             Bereich::Links | Bereich::Rechts => 240.0,
             Bereich::Vorschau => 160.0,
             Bereich::Editor => 320.0,
+            Bereich::Git => 340.0,
         }
     }
 
@@ -235,6 +288,7 @@ impl Bereich {
             Bereich::Links | Bereich::Rechts => 420.0,
             Bereich::Vorschau => 260.0,
             Bereich::Editor => 460.0,
+            Bereich::Git => 420.0,
         }
     }
 
@@ -258,6 +312,7 @@ impl Bereich {
             Bereich::Rechts => "Rechts",
             Bereich::Vorschau => "Vorschau",
             Bereich::Editor => "Editor",
+            Bereich::Git => "Git",
         }
     }
 
@@ -279,6 +334,7 @@ impl Bereich {
             Bereich::Rechts => "Rechtes Dateifenster",
             Bereich::Vorschau => "Vorschaufenster",
             Bereich::Editor => "Eingebauter Editor",
+            Bereich::Git => "Git-Bereich",
         }
     }
 }
@@ -309,6 +365,7 @@ pub fn sichtbar_in(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
         Bereich::Rechts => sichtbar.zweites_dateifenster,
         Bereich::Vorschau => sichtbar.vorschau,
         Bereich::Editor => sichtbar.editor,
+        Bereich::Git => sichtbar.git,
     }
 }
 
@@ -328,6 +385,7 @@ fn breite_in(breiten: &Breiten, bereich: Bereich) -> Option<f64> {
         Bereich::Rechts => breiten.rechts,
         Bereich::Vorschau => breiten.vorschau,
         Bereich::Editor => breiten.editor,
+        Bereich::Git => breiten.git,
     }
 }
 
@@ -394,13 +452,22 @@ impl Fenstermodell {
     /// Nutzer sonst nach dem Start als Auswahl, Eingabefokus und Ziel jeder
     /// Dateioperation in einem Dateifenster, das er nicht sieht.
     ///
-    /// **Vorschau und Editor stehen nie zugleich.** `vorschau = true` neben
-    /// `editor = true` waere sonst der eine Weg, den das erste Abnahmekriterium
-    /// von C1 der Editor-Runde ausschliesst. Weichen muss der Editor: er haelt
-    /// beim Start keine Datei, und ein sichtbarer leerer Editor naehme den
-    /// Dateifenstern Platz fuer nichts — dieselbe Wahl und dieselbe
-    /// Begruendung, die `Sichtbarkeit::default` fuer den Auslieferungszustand
-    /// trifft.
+    /// **Von den Bewerbern um eine Flaeche steht hoechstens einer.**
+    /// `vorschau = true` neben `editor = true` waere sonst der eine Weg, den
+    /// das erste Abnahmekriterium von C1 der Editor-Runde ausschliesst, und
+    /// seit der Git-Runde bewerben sich drei um den rechten Rand. Wer stehen
+    /// bleibt, sagt die Reihenfolge von [`Bereich::ALLE`]: der erste sichtbare
+    /// seiner Flaeche gewinnt, die uebrigen weichen. Fuer den rechten Rand
+    /// heisst das Vorschau vor Editor vor Git, und das ist dieselbe Wahl und
+    /// dieselbe Begruendung, die `Sichtbarkeit::default` fuer den
+    /// Auslieferungszustand trifft: der Editor haelt beim Start keine Datei,
+    /// der Git-Bereich hat ohne Repository nichts zu zeigen, und ein sichtbarer
+    /// leerer Bereich naehme den Dateifenstern Platz fuer nichts.
+    ///
+    /// **Eine Regel ueber alle Flaechen und keine Sonderregel fuer den rechten
+    /// Rand.** Die drei Bereiche, die ihre Flaeche allein beanspruchen, laufen
+    /// durch dieselbe Schleife und veraendern nichts; ein vierter Bewerber
+    /// braucht hier keine Zeile.
     ///
     /// **Die Reihenfolge der ersten beiden zaehlt.** Erst stehen die
     /// Dateifenster fest, dann das aktive: die zweite Zusicherung schickt die
@@ -425,8 +492,10 @@ impl Fenstermodell {
             // hergestellt hat.
             modell.aktiv = modell.aktiv.andere();
         }
-        if modell.sichtbar(Bereich::Vorschau) {
-            modell.gegenueber_raeumen(Bereich::Vorschau);
+        for bereich in Bereich::ALLE {
+            if modell.sichtbar(bereich) {
+                modell.mitbewerber_raeumen(bereich);
+            }
         }
         modell
     }
@@ -513,7 +582,7 @@ impl Fenstermodell {
     /// Setzt die Sichtbarkeit eines Bereichs.
     ///
     /// **Die eine Stelle, die ein Feld von [`Sichtbarkeit`] schreibt.** Der
-    /// gegenseitige Ausschluss aus [`Bereich::teilt_flaeche_mit`] wirkt ueber
+    /// gegenseitige Ausschluss aus [`Bereich::flaeche`] wirkt ueber
     /// sie und nicht neben ihr; wer sie umgeht, hat eine zweite Wahrheit
     /// darueber, welche Bereiche stehen.
     ///
@@ -528,20 +597,30 @@ impl Fenstermodell {
             Bereich::Rechts => self.sichtbar.zweites_dateifenster = sichtbar,
             Bereich::Vorschau => self.sichtbar.vorschau = sichtbar,
             Bereich::Editor => self.sichtbar.editor = sichtbar,
+            Bereich::Git => self.sichtbar.git = sichtbar,
         }
     }
 
-    /// Blendet den Bereich aus, der sich mit dem genannten die Flaeche teilt.
+    /// Blendet jeden Bereich aus, der sich mit dem genannten die Flaeche
+    /// teilt.
     ///
-    /// Zu rufen, nachdem der genannte Bereich sichtbar geworden ist. Teilt er
-    /// sich seine Flaeche mit keinem, geschieht nichts.
-    fn gegenueber_raeumen(&mut self, bereich: Bereich) {
-        if let Some(gegenueber) = bereich.teilt_flaeche_mit() {
-            self.sichtbar_setzen(gegenueber, false);
+    /// Zu rufen, nachdem der genannte Bereich sichtbar geworden ist. Bewirbt
+    /// sich niemand sonst um seine Flaeche, geschieht nichts.
+    ///
+    /// **Bis zur Git-Runde hiess die Funktion `gegenueber_raeumen` und raeumte
+    /// hoechstens einen.** Der Name trug die Paarbeziehung mit, die
+    /// `Bereich::teilt_flaeche_mit` ausdrueckte; seit drei Bereiche sich den
+    /// rechten Rand teilen, sind es Mitbewerber und kein Gegenueber. Sie geht
+    /// weiter durch [`Self::sichtbar_setzen`], den einen Schreiber.
+    fn mitbewerber_raeumen(&mut self, bereich: Bereich) {
+        for mitbewerber in Bereich::ALLE {
+            if bereich.bewirbt_sich_mit(mitbewerber) {
+                self.sichtbar_setzen(mitbewerber, false);
+            }
         }
     }
 
-    /// Die Sichtbarkeit aller fuenf Bereiche, von links nach rechts.
+    /// Die Sichtbarkeit aller sechs Bereiche, von links nach rechts.
     pub fn sichtbarkeit(&self) -> Sichtbarkeit {
         self.sichtbar
     }
@@ -634,12 +713,13 @@ impl Fenstermodell {
     /// War der ausgeblendete Bereich das aktive Dateifenster, wandert die
     /// Aktivitaet auf das andere.
     ///
-    /// **Wird der Bereich sichtbar, weicht sein Gegenueber.** Das ist der
+    /// **Wird der Bereich sichtbar, weichen seine Mitbewerber.** Das ist der
     /// gegenseitige Ausschluss aus C1 der Editor-Runde, und er steht hier fuer
-    /// beide Richtungen in einer Zeile: Vorschau und Editor sind dasselbe Paar,
-    /// gleich von welcher Seite man kommt. [`Self::einblenden`] geht durch
-    /// diese Funktion und erbt ihn damit, statt ihn ein zweites Mal
-    /// aufzuschreiben. Welches Paar es ist, sagt [`Bereich::teilt_flaeche_mit`].
+    /// jede Richtung in einer Zeile: Vorschau, Editor und Git-Bereich tragen
+    /// dieselbe [`Flaeche`], gleich von welcher Seite man kommt.
+    /// [`Self::einblenden`] geht durch diese Funktion und erbt ihn damit, statt
+    /// ihn ein zweites Mal aufzuschreiben. Wer wem weicht, sagt
+    /// [`Bereich::flaeche`].
     ///
     /// **Ein verdraengter Editor verliert nichts.** Der Wechsel der
     /// Sichtbarkeit setzt `hidden` an den Ansichten und fasst das
@@ -675,7 +755,7 @@ impl Fenstermodell {
             _ => self.sichtbar_setzen(bereich, jetzt_sichtbar),
         }
         if jetzt_sichtbar {
-            self.gegenueber_raeumen(bereich);
+            self.mitbewerber_raeumen(bereich);
         }
         true
     }
@@ -684,8 +764,8 @@ impl Fenstermodell {
     /// dazukommt.
     ///
     /// Gefragt wird nach der Lage **nach** dem Einschalten: der genannte
-    /// Bereich steht dann, sein Gegenueber aus [`Bereich::teilt_flaeche_mit`]
-    /// steht dann nicht, und alle uebrigen stehen wie bisher. Aus dieser einen
+    /// Bereich steht dann, seine Mitbewerber um dieselbe [`Flaeche`] stehen
+    /// dann nicht, und alle uebrigen stehen wie bisher. Aus dieser einen
     /// Menge folgen beide Groessen der Frage — die Summe der Mindestbreiten und
     /// die Anzahl der Trennlinien, die [`Zeilenmass::verfuegbar`] abzieht.
     ///
@@ -694,12 +774,17 @@ impl Fenstermodell {
     /// entscheidet allein, dass der Editor 320 Punkte verlangt und die Vorschau
     /// 160. Genau deshalb kann der Aufrufer die Frage nicht stellen: er kennt
     /// die Menge nicht, die nach seinem Befehl steht.
+    ///
+    /// **Gefiltert wird ueber die Flaeche und nicht ueber ein Gegenueber.** Bis
+    /// zur Git-Runde stand hier `Some(*kandidat) != weicht`, und das konnte
+    /// genau einen Bewerber ausnehmen; um den rechten Rand bewerben sich seit
+    /// dieser Runde drei.
     fn mindestbreiten_passen(&self, bereich: Bereich, mass: Zeilenmass) -> bool {
-        let weicht = bereich.teilt_flaeche_mit();
         let danach: Vec<Bereich> = Bereich::ALLE
             .into_iter()
             .filter(|kandidat| {
-                *kandidat == bereich || (Some(*kandidat) != weicht && self.sichtbar(*kandidat))
+                *kandidat == bereich
+                    || (!bereich.bewirbt_sich_mit(*kandidat) && self.sichtbar(*kandidat))
             })
             .collect();
         let mindestsumme: f64 = danach.iter().map(|bereich| bereich.mindestbreite()).sum();
@@ -917,7 +1002,17 @@ impl Fenstermodell {
     /// mehr, und die Rueckrechnung machte die gedeckelte Breite zum neuen
     /// Wunsch. Das ist der Datensatz
     /// `issues/260812-0539_*_ein-zusammengezogenes-fenster-ersetzt-die-aufteilung-des-nutzers-dauerhaft.md`.
-    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 5], mass: Zeilenmass) {
+    ///
+    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    ///
+    /// **Sie haelt nichts.** `[f64; 6]` steht auf beiden Seiten des Aufrufs —
+    /// hier und in `Aufteilung::gemessene_breiten` —, und beide Seiten blieben
+    /// stumm bei fuenf: der Uebersetzer prueft, dass die Laengen zueinander
+    /// passen, und nie, dass sie zu [`Bereich::ALLE`] passen. Ein sechster
+    /// Bereich, der hier fehlte, uebersetzte und liefe. Gehalten wird die
+    /// Uebereinstimmung von den Proben ueber [`bereichsbreiten`], die den
+    /// Anteil je Bereich aus [`Bereich::ALLE`] heraus indizieren.
+    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 6], mass: Zeilenmass) {
         if !traegt_eine_ziehbewegung(mass, &self.breiten, &self.sichtbar, &gemessen) {
             return;
         }
@@ -983,6 +1078,7 @@ impl Fenstermodell {
             Bereich::Rechts => &mut self.breiten.rechts,
             Bereich::Vorschau => &mut self.breiten.vorschau,
             Bereich::Editor => &mut self.breiten.editor,
+            Bereich::Git => &mut self.breiten.git,
         };
         *feld = Some(breite);
     }
@@ -1016,7 +1112,7 @@ impl Zeilenmass {
     }
 }
 
-/// Verteilt den Platz der Fensterzeile auf die fuenf Bereiche.
+/// Verteilt den Platz der Fensterzeile auf die sechs Bereiche.
 ///
 /// **Die eine Breitenregel des Programms.** Sie steht hier und nirgends sonst;
 /// [`crate::appkit::aufteilung`] setzt nur um, was hier herauskommt.
@@ -1050,10 +1146,22 @@ impl Zeilenmass {
 ///    sondern allein dadurch, dass der Nutzer das Fenster schmaler zieht, als
 ///    die Mindestbreiten erlauben.
 ///
-/// Die Summe der fuenf Werte ist in beiden Zweigen genau die verfuegbare
+/// Die Summe der sechs Werte ist in beiden Zweigen genau die verfuegbare
 /// Breite; dafuer bekommt der jeweils letzte Bereich den Rest und nicht seinen
 /// gerundeten Anteil (siehe [`anteilig`]).
-pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 5] {
+///
+/// # Was die Feldbreite haelt, und was sie nicht haelt
+///
+/// **Sie haelt nichts.** `[f64; 6]` ist hier ein Ergebnistyp und keine
+/// Zusicherung ueber [`Bereich::ALLE`]: das Feld entsteht als `[0.0_f64; 6]`,
+/// also aus einer Zahl im Quelltext und nicht aus der Aufzaehlung. Ein sechster
+/// Bereich, den jemand hinzufuegte, ohne diese Zahl zu erhoehen, haelte den Bau
+/// nicht an, sondern liefe zur Laufzeit auf `index out of bounds`, sobald ein
+/// Aufrufer ueber [`Bereich::index`] hineingriffe. Der Unterschied zu
+/// `Bereichsleiste::bereichsschalter` ist die Bauform und nicht die Zahl: dort
+/// entsteht das Feld ueber `Bereich::ALLE.map(…)`, und dessen Laenge folgt aus
+/// der Aufzaehlung.
+pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 6] {
     // Ein Modell allein, um an `sichtbare()` heranzukommen. Die beiden Felder,
     // die die Breitenrechnung nicht liest, stehen auf ihrem Vorgabewert: die
     // Spalten liegen in der Dateiliste und nicht in der Fensterzeile, und
@@ -1064,7 +1172,7 @@ pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbark
         sichtbar: *sichtbar,
         spalten: Spaltensichtbarkeit::default(),
     };
-    let mut ergebnis = [0.0_f64; 5];
+    let mut ergebnis = [0.0_f64; 6];
 
     // Welche Bereiche etwas bekommen, sagt allein die Sichtbarkeit. Bis zur
     // Editor-Runde stand hier die Literalliste der festen Bereiche als zweite
@@ -1134,7 +1242,7 @@ pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbark
 /// ist die Summe der ausgegebenen Breiten genau `gesamt` und nicht `gesamt`
 /// plus n Rundungsfehler. Die Aufteilung rechnet aus diesen Breiten die Lage
 /// jeder Trennlinie, und ein halber Punkt am rechten Rand waere dort zu sehen.
-fn anteilig(ergebnis: &mut [f64; 5], anteile: &[(Bereich, f64)], gesamt: f64) {
+fn anteilig(ergebnis: &mut [f64; 6], anteile: &[(Bereich, f64)], gesamt: f64) {
     let Some(((letzter, _), vordere)) = anteile.split_last() else {
         return;
     };
@@ -1187,7 +1295,7 @@ fn traegt_eine_ziehbewegung(
     mass: Zeilenmass,
     breiten: &Breiten,
     sichtbar: &Sichtbarkeit,
-    gemessen: &[f64; 5],
+    gemessen: &[f64; 6],
 ) -> bool {
     let ausgelegt = bereichsbreiten(mass, breiten, sichtbar);
     Bereich::ALLE.into_iter().any(|bereich| {
@@ -1304,7 +1412,7 @@ mod tests {
     /// Breite von 0 heisst "steht nicht im Fenster" und liefert `None`. Proben
     /// ueber `wuensche_nachfuehren` brauchen sie, weil jene Funktion in der
     /// Anwendung eine gemessene Zeile bekommt und keine gerechnete.
-    fn gemessen(breiten: [f64; 5]) -> Breiten {
+    fn gemessen(breiten: [f64; 6]) -> Breiten {
         let feld = |bereich: Bereich| {
             let breite = breiten[bereich.index()];
             (breite > 0.0).then_some(breite)
@@ -1315,16 +1423,17 @@ mod tests {
             rechts: feld(Bereich::Rechts),
             vorschau: feld(Bereich::Vorschau),
             editor: feld(Bereich::Editor),
+            git: feld(Bereich::Git),
         }
     }
 
-    /// Vergleicht fuenf Breiten mit den erwarteten, auf einen tausendstel
-    /// Punkt genau.
+    /// Vergleicht die Breiten aller Bereiche mit den erwarteten, auf einen
+    /// tausendstel Punkt genau.
     ///
     /// Die Anteilsregel liefert Bruchzahlen; ein `assert_eq!` auf die volle
     /// Genauigkeit haenge an der letzten Stelle der Gleitkommarechnung.
     #[track_caller]
-    fn breiten_gleich(ist: [f64; 5], soll: [f64; 5]) {
+    fn breiten_gleich(ist: [f64; 6], soll: [f64; 6]) {
         for bereich in Bereich::ALLE {
             let a = ist[bereich.index()];
             let b = soll[bereich.index()];
@@ -1356,15 +1465,17 @@ mod tests {
     /// Der Auslieferungszustand zeigt die vier Bereiche der Runde 1 und
     /// blendet den Editor aus.
     ///
-    /// Der Editor ist der einzige Bereich, der beim allerersten Start nicht
-    /// steht: er haelt keine Datei, und ein sichtbarer leerer Editor naehme den
-    /// Dateifenstern Platz fuer nichts.
+    /// Editor und Git-Bereich sind die beiden Bereiche, die beim allerersten
+    /// Start nicht stehen: der Editor haelt keine Datei, der Git-Bereich hat
+    /// ohne Repository nichts zu zeigen, und beide bewerben sich um den
+    /// rechten Rand, an dem die Vorschau steht (A13, C1.8).
     #[test]
-    fn der_auslieferungszustand_zeigt_alle_bereiche_ausser_dem_editor() {
+    fn der_auslieferungszustand_zeigt_alle_bereiche_ausser_editor_und_git() {
+        const AUSGEBLENDET: [Bereich; 2] = [Bereich::Editor, Bereich::Git];
         let modell = modell();
         for bereich in Bereich::ALLE {
-            if bereich == Bereich::Editor {
-                assert!(!modell.sichtbar(bereich), "der Editor steht schon");
+            if AUSGEBLENDET.contains(&bereich) {
+                assert!(!modell.sichtbar(bereich), "{bereich:?} steht schon");
                 continue;
             }
             assert!(modell.sichtbar(bereich), "{bereich:?} ist ausgeblendet");
@@ -1715,7 +1826,7 @@ mod tests {
         schalten(&mut modell, Bereich::Lesezeichen);
         schalten(&mut modell, Bereich::Vorschau);
         let breiten = bereichsbreiten(mass(1400.0), &modell.breiten(), &modell.sichtbarkeit());
-        assert_eq!(breiten, [0.0, 1400.0, 0.0, 0.0, 0.0]);
+        assert_eq!(breiten, [0.0, 1400.0, 0.0, 0.0, 0.0, 0.0]);
     }
 
     /// Der eingeblendete Editor bekommt seinen Anteil, und die uebrigen
@@ -1735,7 +1846,7 @@ mod tests {
         assert!(modell.sichtbar(Bereich::Editor));
 
         let breiten = bereichsbreiten(mass(1280.0), &modell.breiten(), &modell.sichtbarkeit());
-        breiten_gleich(breiten, [155.676, 363.243, 363.243, 0.0, 397.838]);
+        breiten_gleich(breiten, [155.676, 363.243, 363.243, 0.0, 397.838, 0.0]);
         for bereich in Bereich::ALLE {
             if !modell.sichtbar(bereich) {
                 continue;
@@ -1768,7 +1879,7 @@ mod tests {
         schalten(&mut modell, Bereich::Editor);
 
         let breiten = bereichsbreiten(mass(1020.0), &modell.breiten(), &modell.sichtbarkeit());
-        breiten_gleich(breiten, [123.529, 288.235, 288.235, 0.0, 320.0]);
+        breiten_gleich(breiten, [123.529, 288.235, 288.235, 0.0, 320.0, 0.0]);
         assert_eq!(
             breiten[Bereich::Editor.index()],
             Bereich::Editor.mindestbreite(),
@@ -1810,6 +1921,63 @@ mod tests {
         breiten_gleich(nachher, vorher);
     }
 
+    /// Die Breitenregel rechnet den Git-Bereich mit, wenn er steht, und laesst
+    /// ihn aus, wenn er ausgeblendet ist (C1.11).
+    ///
+    /// Zwei Zusagen an einem Stueck, beide aus C7 der Runde 1 und beide
+    /// ausdruecklich fuer den sechsten Bereich wiederholt, weil er der erste
+    /// ist, der nach der Anteilsregel hinzukommt:
+    ///
+    /// 1. **Ausgeblendet bekommt er nichts** und kostet die uebrigen nichts:
+    ///    die Zeile vor dem Einblenden und nach dem Ausblenden ist dieselbe.
+    /// 2. **Eingeblendet bekommt er einen Anteil**, und die uebrigen behalten
+    ///    ihr Verhaeltnis zueinander — er nimmt allen dasselbe ab und nicht
+    ///    einem alles.
+    ///
+    /// Gefahren wird von der Lage aus, in der die Vorschau ausgeblendet ist:
+    /// sonst verdraengte das Einblenden des Git-Bereichs sie, und gemessen
+    /// waere ein Tausch statt eines Zuwachses.
+    #[test]
+    fn die_breitenregel_rechnet_den_git_bereich_mit_wenn_er_steht() {
+        let zeile = mass(1600.0);
+        let mut modell = modell();
+        schalten(&mut modell, Bereich::Vorschau);
+        assert!(!modell.sichtbar(Bereich::Git), "die Probe beginnt ohne Git");
+
+        let ohne = bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit());
+        assert_eq!(
+            ohne[Bereich::Git.index()],
+            0.0,
+            "der ausgeblendete Git-Bereich bekommt Breite: {ohne:?}"
+        );
+
+        schalten(&mut modell, Bereich::Git);
+        let mit = bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit());
+        assert!(
+            mit[Bereich::Git.index()] > 0.0,
+            "der eingeblendete Git-Bereich bekommt nichts: {mit:?}"
+        );
+        // Sein Anteil geht zulasten aller uebrigen im selben Verhaeltnis: die
+        // Anteilsregel teilt dieselbe Zeile auf einen Wunsch mehr auf.
+        for bereich in [Bereich::Lesezeichen, Bereich::Links, Bereich::Rechts] {
+            assert!(
+                mit[bereich.index()] < ohne[bereich.index()],
+                "{bereich:?} hat durch den Git-Bereich nichts abgegeben: {mit:?} statt {ohne:?}"
+            );
+        }
+        let verhaeltnis = |breiten: [f64; 6]| {
+            breiten[Bereich::Links.index()] / breiten[Bereich::Lesezeichen.index()]
+        };
+        assert!(
+            (verhaeltnis(mit) - verhaeltnis(ohne)).abs() < 0.001,
+            "das Verhaeltnis der uebrigen hat sich verschoben: {mit:?} statt {ohne:?}"
+        );
+
+        schalten(&mut modell, Bereich::Git);
+        let wieder = bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit());
+        breiten_gleich(wieder, ohne);
+    }
+
     /// Die Lesezeichenleiste teilt sich die Zeile mit dem Editor, statt ihm
     /// vorzugehen.
     ///
@@ -1844,8 +2012,8 @@ mod tests {
         // nur als Ungleichung dasteht. Offen: 1280 Punkte auf die Wuensche
         // 180 + 420 + 420 + 460 = 1480. Zu: 1280 Punkte auf 420 + 420 + 460 =
         // 1300.
-        breiten_gleich(offen, [155.676, 363.243, 363.243, 0.0, 397.838]);
-        breiten_gleich(zu, [0.0, 413.538, 413.538, 0.0, 452.923]);
+        breiten_gleich(offen, [155.676, 363.243, 363.243, 0.0, 397.838, 0.0]);
+        breiten_gleich(zu, [0.0, 413.538, 413.538, 0.0, 452.923, 0.0]);
 
         assert!(
             zu[Bereich::Editor.index()] > offen[Bereich::Editor.index()],
@@ -1889,7 +2057,7 @@ mod tests {
         }
         // 1600 Punkte auf die Wuensche 180 + 420 + 420 + 260 = 1280, also das
         // 1,25-Fache jedes Wunsches.
-        breiten_gleich(breiten, [225.0, 525.0, 525.0, 325.0, 0.0]);
+        breiten_gleich(breiten, [225.0, 525.0, 525.0, 325.0, 0.0, 0.0]);
     }
 
     /// Die Zuordnung von Bereich und Fensterseite laeuft in beide Richtungen,
@@ -2019,14 +2187,14 @@ mod tests {
         let zeile = mass(800.0);
         let mut modell = modell();
         let vorher = bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit());
-        breiten_gleich(vorher, [120.0, 259.636, 259.636, 160.727, 0.0]);
+        breiten_gleich(vorher, [120.0, 259.636, 259.636, 160.727, 0.0, 0.0]);
 
         modell.breite_aendern(Bereich::Links, BREITENSCHRITT, zeile);
         assert_eq!(modell.breiten().links, Some(456.0));
         assert_eq!(modell.breiten().rechts, Some(384.0));
         breiten_gleich(
             bereichsbreiten(zeile, &modell.breiten(), &modell.sichtbarkeit()),
-            [120.0, 280.0, 240.0, 160.0, 0.0],
+            [120.0, 280.0, 240.0, 160.0, 0.0, 0.0],
         );
     }
 
@@ -2049,7 +2217,7 @@ mod tests {
         let mut modell = modell();
         let vorher = modell.breiten();
         let gemessen = bereichsbreiten(zeile, &vorher, &modell.sichtbarkeit());
-        breiten_gleich(gemessen, [94.737, 189.474, 189.474, 126.316, 0.0]);
+        breiten_gleich(gemessen, [94.737, 189.474, 189.474, 126.316, 0.0, 0.0]);
 
         modell.breiten_uebernehmen(gemessen, zeile);
         assert_eq!(
@@ -2083,18 +2251,18 @@ mod tests {
 
         let gehalten = modell.breiten();
         let bei_1280 = bereichsbreiten(weit, &gehalten, &sichtbar);
-        breiten_gleich(bei_1280, [180.0, 420.0, 420.0, 260.0, 0.0]);
+        breiten_gleich(bei_1280, [180.0, 420.0, 420.0, 260.0, 0.0, 0.0]);
 
         // Der Nutzer zieht das Fenster auf 600 Punkte zusammen.
         let gehalten = wuensche_nachfuehren(gehalten, gemessen(bei_1280), weit, &sichtbar);
         let bei_600 = bereichsbreiten(eng, &gehalten, &sichtbar);
-        breiten_gleich(bei_600, [94.737, 189.474, 189.474, 126.316, 0.0]);
+        breiten_gleich(bei_600, [94.737, 189.474, 189.474, 126.316, 0.0, 0.0]);
 
         // Und wieder auf 1280 auf.
         let gehalten = wuensche_nachfuehren(gehalten, gemessen(bei_600), eng, &sichtbar);
         breiten_gleich(
             bereichsbreiten(weit, &gehalten, &sichtbar),
-            [180.0, 420.0, 420.0, 260.0, 0.0],
+            [180.0, 420.0, 420.0, 260.0, 0.0, 0.0],
         );
     }
 
@@ -2123,7 +2291,7 @@ mod tests {
         let gehalten = wuensche_nachfuehren(modell.breiten(), gemessen(gezogen), weit, &sichtbar);
         breiten_gleich(
             bereichsbreiten(mass(1600.0), &gehalten, &sichtbar),
-            [225.0, 600.0, 450.0, 325.0, 0.0],
+            [225.0, 600.0, 450.0, 325.0, 0.0, 0.0],
         );
     }
 
@@ -2133,7 +2301,7 @@ mod tests {
     /// **Die Probe zum Befund 3 der Durchsicht vom 260812-0539.**
     /// `appkit::aufteilung` fuehrte bis dahin eine zweite, gleichlautende
     /// Fassung; sie ist weg, und diese Probe haelt fest, dass die verbliebene
-    /// jedes der fuenf Felder trifft und keine zwei Bereiche auf dasselbe zeigt.
+    /// jedes Feld trifft und keine zwei Bereiche auf dasselbe zeigen.
     #[test]
     fn die_zuordnung_von_bereich_auf_sichtbarkeit_trifft_jedes_feld() {
         for bereich in Bereich::ALLE {
@@ -2143,6 +2311,7 @@ mod tests {
                 zweites_dateifenster: false,
                 vorschau: false,
                 editor: false,
+                git: false,
             };
             match bereich {
                 Bereich::Lesezeichen => sichtbar.lesezeichen = true,
@@ -2150,6 +2319,7 @@ mod tests {
                 Bereich::Rechts => sichtbar.zweites_dateifenster = true,
                 Bereich::Vorschau => sichtbar.vorschau = true,
                 Bereich::Editor => sichtbar.editor = true,
+                Bereich::Git => sichtbar.git = true,
             }
             for anderer in Bereich::ALLE {
                 assert_eq!(
@@ -2182,7 +2352,7 @@ mod tests {
                 "{bereich:?}: {breiten:?}"
             );
         }
-        breiten_gleich(breiten, [120.0, 259.636, 259.636, 160.727, 0.0]);
+        breiten_gleich(breiten, [120.0, 259.636, 259.636, 160.727, 0.0, 0.0]);
         let summe: f64 = breiten.iter().sum();
         assert!((summe - 800.0).abs() < 0.001, "{breiten:?}");
     }
@@ -2320,12 +2490,12 @@ mod tests {
         modell.breite_setzen(Bereich::Lesezeichen, 400.0);
         modell.breite_setzen(Bereich::Links, 200.0);
 
-        let verhaeltnis = |breiten: [f64; 5]| {
+        let verhaeltnis = |breiten: [f64; 6]| {
             breiten[Bereich::Lesezeichen.index()] / breiten[Bereich::Links.index()]
         };
 
         let zwei = bereichsbreiten(mass(1200.0), &modell.breiten(), &modell.sichtbarkeit());
-        breiten_gleich(zwei, [800.0, 400.0, 0.0, 0.0, 0.0]);
+        breiten_gleich(zwei, [800.0, 400.0, 0.0, 0.0, 0.0, 0.0]);
         assert!((verhaeltnis(zwei) - 2.0).abs() < 0.001, "{zwei:?}");
 
         schalten(&mut modell, Bereich::Vorschau);
@@ -2392,6 +2562,7 @@ mod tests {
                 240.0 * faktor,
                 160.0 * faktor,
                 0.0,
+                0.0,
             ],
         );
         for bereich in Bereich::ALLE {
@@ -2448,23 +2619,58 @@ mod tests {
     }
 
     /// Der Ausschluss aus C1 ist gegenseitig, und die Zuordnung sagt es in
-    /// beide Richtungen.
+    /// jede Richtung (C1.4, C1.5).
     ///
-    /// Ein einseitiger Eintrag traege die Regel nur fuer den einen Weg, und die
-    /// Probe darunter faende ihn erst an einer von zwei Aufrufreihenfolgen.
+    /// Zwei Zusagen, und die zweite ist die, aus der die erste folgt.
+    ///
+    /// **Die Menge der Paare steht ausgeschrieben und wird nicht aus
+    /// [`Bereich::flaeche`] gerechnet.** Eine gerechnete Erwartung waere die
+    /// Umsetzung ein zweites Mal und liefe mit jeder Aenderung stillschweigend
+    /// mit; dieselbe Erwaegung, die die Tafeln in
+    /// [`crate::kommandos::fokus`] und [`crate::appkit::teilen`] von Hand
+    /// schreiben laesst. Erwartet werden die drei ungeordneten Paare aus
+    /// C1.4 — Vorschau/Editor, Vorschau/Git, Editor/Git — und damit die sechs
+    /// geordneten.
+    ///
+    /// **Die Symmetrie faellt seit der Git-Runde aus der Bauform an** und wird
+    /// nicht mehr von einem sorgfaeltig gepflegten Eintrag getragen: sie ist
+    /// die Gleichheit zweier [`Flaeche`]-Werte. Geprueft wird sie trotzdem
+    /// ueber jedes geordnete Paar, weil eine spaetere Umstellung sie wieder
+    /// verlieren koennte.
     #[test]
     fn der_ausschluss_ist_gegenseitig() {
-        assert_eq!(Bereich::Vorschau.teilt_flaeche_mit(), Some(Bereich::Editor));
-        assert_eq!(Bereich::Editor.teilt_flaeche_mit(), Some(Bereich::Vorschau));
-        for bereich in Bereich::ALLE {
-            let Some(gegenueber) = bereich.teilt_flaeche_mit() else {
-                continue;
-            };
-            assert_eq!(
-                gegenueber.teilt_flaeche_mit(),
-                Some(bereich),
-                "{bereich:?} teilt sich die Flaeche mit {gegenueber:?}, aber nicht umgekehrt"
+        const PAARE: [(Bereich, Bereich); 6] = [
+            (Bereich::Vorschau, Bereich::Editor),
+            (Bereich::Editor, Bereich::Vorschau),
+            (Bereich::Vorschau, Bereich::Git),
+            (Bereich::Git, Bereich::Vorschau),
+            (Bereich::Editor, Bereich::Git),
+            (Bereich::Git, Bereich::Editor),
+        ];
+        for (einer, anderer) in PAARE {
+            assert!(
+                einer.bewirbt_sich_mit(anderer),
+                "{einer:?} und {anderer:?} teilen sich die Flaeche nicht mehr"
             );
+        }
+
+        for einer in Bereich::ALLE {
+            assert!(
+                !einer.bewirbt_sich_mit(einer),
+                "{einer:?} bewirbt sich mit sich selbst"
+            );
+            for anderer in Bereich::ALLE {
+                assert_eq!(
+                    einer.bewirbt_sich_mit(anderer),
+                    anderer.bewirbt_sich_mit(einer),
+                    "{einer:?} und {anderer:?} sind sich ueber ihre Flaeche nicht einig"
+                );
+                assert_eq!(
+                    einer.bewirbt_sich_mit(anderer),
+                    PAARE.contains(&(einer, anderer)),
+                    "{einer:?} und {anderer:?} stehen nicht in der erwarteten Paarmenge"
+                );
+            }
         }
     }
 
@@ -2499,38 +2705,56 @@ mod tests {
         }
     }
 
-    /// Das erste Abnahmekriterium von C1 der Editor-Runde, Satz eins und zwei:
-    /// wer den einen einblendet, blendet den anderen aus.
+    /// Das erste Abnahmekriterium von C1 der Editor-Runde, Satz eins und zwei,
+    /// und C1.4 der Git-Runde: wer einen der drei einblendet, blendet die
+    /// beiden anderen aus.
+    ///
+    /// Gefahren ueber die sechs geordneten Paare aus C1.4, jedes von der Lage
+    /// aus, in der genau der erste steht.
     #[test]
-    fn der_editor_schliesst_die_vorschau_und_die_vorschau_den_editor() {
-        let mut modell = modell();
-        assert!(modell.sichtbar(Bereich::Vorschau), "die Probe beginnt so");
-        assert!(!modell.sichtbar(Bereich::Editor));
+    fn jeder_bewerber_um_den_rechten_rand_verdraengt_die_beiden_anderen() {
+        const RECHTER_RAND: [Bereich; 3] = [Bereich::Vorschau, Bereich::Editor, Bereich::Git];
 
-        assert!(modell.einblenden(Bereich::Editor, weit()));
-        assert!(modell.sichtbar(Bereich::Editor));
-        assert!(
-            !modell.sichtbar(Bereich::Vorschau),
-            "der geoeffnete Editor hat die Vorschau nicht geschlossen"
-        );
+        for zuerst in RECHTER_RAND {
+            for dann in RECHTER_RAND {
+                if zuerst == dann {
+                    continue;
+                }
+                let mut modell = modell();
+                // Die Vorschau steht ab Werk schon; `einblenden` liefert dann
+                // `false`, weil sich nichts geaendert hat. Gefragt ist hier
+                // die Lage und nicht der Rueckgabewert.
+                let _ = modell.einblenden(zuerst, weit());
+                assert!(modell.sichtbar(zuerst), "die Probe beginnt mit {zuerst:?}");
 
-        assert!(modell.einblenden(Bereich::Vorschau, weit()));
-        assert!(modell.sichtbar(Bereich::Vorschau));
-        assert!(
-            !modell.sichtbar(Bereich::Editor),
-            "die eingeblendete Vorschau hat den Editor nicht verdraengt"
-        );
+                assert!(
+                    modell.einblenden(dann, weit()),
+                    "{dann:?} liess sich nicht einblenden"
+                );
+                assert!(modell.sichtbar(dann));
+                for verdraengt in RECHTER_RAND {
+                    if verdraengt == dann {
+                        continue;
+                    }
+                    assert!(
+                        !modell.sichtbar(verdraengt),
+                        "{dann:?} hat {verdraengt:?} nicht verdraengt"
+                    );
+                }
+            }
+        }
     }
 
     /// Das erste Abnahmekriterium von C1, Satz drei: "Beide zugleich sichtbar
-    /// zu haben ist ueber keinen Weg erreichbar."
+    /// zu haben ist ueber keinen Weg erreichbar." Seit der Git-Runde gilt es
+    /// fuer je zwei der drei Bewerber um den rechten Rand.
     ///
     /// Erreichbar sind zur Laufzeit genau zwei Aufrufe, und die Probe faehrt
     /// jedes Paar aus zweien ueber jeden Bereich, vom Auslieferungszustand aus.
     /// Geprueft wird nach **jedem** der beiden Aufrufe, damit auch ein
     /// Zwischenzustand nicht durchgeht.
     #[test]
-    fn keine_folge_aus_zwei_aufrufen_zeigt_editor_und_vorschau_zugleich() {
+    fn keine_folge_aus_zwei_aufrufen_zeigt_zwei_bewerber_zugleich() {
         type Aufruf = fn(&mut Fenstermodell, Bereich, Zeilenmass) -> bool;
         const AUFRUFE: [(&str, Aufruf); 2] = [
             ("umschalten", Fenstermodell::umschalten),
@@ -2558,11 +2782,22 @@ mod tests {
         }
     }
 
+    /// Von je zwei Bereichen derselben Flaeche steht hoechstens einer.
+    ///
+    /// **Ueber [`Bereich::bewirbt_sich_mit`] und nicht ueber ein genanntes
+    /// Paar.** Bis zur Git-Runde stand hier der Vergleich von Vorschau und
+    /// Editor; ein dritter Bewerber waere davon nicht erfasst worden.
     fn beide_nicht_zugleich(modell: &Fenstermodell, spur: &str) {
-        assert!(
-            !(modell.sichtbar(Bereich::Vorschau) && modell.sichtbar(Bereich::Editor)),
-            "Vorschau und Editor stehen zugleich nach: {spur}"
-        );
+        for einer in Bereich::ALLE {
+            for anderer in Bereich::ALLE {
+                assert!(
+                    !(einer.bewirbt_sich_mit(anderer)
+                        && modell.sichtbar(einer)
+                        && modell.sichtbar(anderer)),
+                    "{einer:?} und {anderer:?} stehen zugleich nach: {spur}"
+                );
+            }
+        }
     }
 
     /// Eine von Hand geschriebene `session.toml` bringt die beiden nicht
@@ -2572,24 +2807,44 @@ mod tests {
     /// Dateifenster darueber: `serde` liest jede Feldkombination ein, und die
     /// Zusicherung gehoert an die Stelle, die sie einloest.
     #[test]
-    fn eine_von_hand_gesetzte_sitzung_zeigt_nicht_beide_zugleich() {
+    fn eine_von_hand_gesetzte_sitzung_zeigt_nicht_zwei_zugleich() {
+        // Alle drei angekreuzt: der erste in `Bereich::ALLE` gewinnt.
         let mut sitzung = Sitzung::default();
         sitzung.sichtbar.vorschau = true;
         sitzung.sichtbar.editor = true;
+        sitzung.sichtbar.git = true;
         let modell = Fenstermodell::aus_sitzung(&sitzung);
         assert!(modell.sichtbar(Bereich::Vorschau));
         assert!(
             !modell.sichtbar(Bereich::Editor),
             "der Editor haelt beim Start keine Datei und weicht der Vorschau"
         );
+        assert!(
+            !modell.sichtbar(Bereich::Git),
+            "der Git-Bereich weicht der Vorschau wie der Editor"
+        );
+        beide_nicht_zugleich(&modell, "vorschau + editor + git aus der Sitzung");
 
-        // Die Gegenprobe: ohne Vorschau bleibt der Editor stehen.
+        // Die Gegenprobe: ohne Vorschau bleibt der Editor stehen und der
+        // Git-Bereich weicht ihm.
         let mut sitzung = Sitzung::default();
         sitzung.sichtbar.vorschau = false;
         sitzung.sichtbar.editor = true;
+        sitzung.sichtbar.git = true;
         let modell = Fenstermodell::aus_sitzung(&sitzung);
         assert!(modell.sichtbar(Bereich::Editor));
         assert!(!modell.sichtbar(Bereich::Vorschau));
+        assert!(!modell.sichtbar(Bereich::Git));
+
+        // Und die dritte Lage: allein der Git-Bereich steht, und er bleibt.
+        let mut sitzung = Sitzung::default();
+        sitzung.sichtbar.vorschau = false;
+        sitzung.sichtbar.editor = false;
+        sitzung.sichtbar.git = true;
+        let modell = Fenstermodell::aus_sitzung(&sitzung);
+        assert!(modell.sichtbar(Bereich::Git));
+        assert!(!modell.sichtbar(Bereich::Vorschau));
+        assert!(!modell.sichtbar(Bereich::Editor));
     }
 
     /// Eine verstellte Editorbreite steht in `session.toml` und kommt beim

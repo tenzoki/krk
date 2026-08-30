@@ -21,3 +21,5 @@ Damit stehen mindestens drei mögliche Antworten im Raum, die verschieden viel k
 **Domain:** code
 **Filed by:** orchestrator
 **Related:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260818-0212-coder-sechs-prosabefunde-des-buendels-c.md` (der Bericht, der den Vorfall nennt)
+
+Also seen: 260830-1421 by coder — Schritt 1 der Runde 23 setzte `git stash push -q --keep-index` ab, meldete es selbst und holte den Baum mit `git stash pop` zurueck; `git stash list` leer, keine Datei verloren, kein zweiter Agent lief.

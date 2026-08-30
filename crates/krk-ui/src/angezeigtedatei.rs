@@ -29,7 +29,7 @@ use std::path::PathBuf;
 /// einblendet, nimmt dem Editor die Flaeche, nicht seine Datei; beide koennen
 /// danach einen Pfad halten, und "wer haelt eine Datei?" hat dann zwei
 /// Antworten. Sichtbar ist dagegen nach
-/// [`Bereich::teilt_flaeche_mit`](crate::fenstermodell::Bereich::teilt_flaeche_mit)
+/// [`Bereich::flaeche`](crate::fenstermodell::Bereich::flaeche)
 /// hoechstens einer von beiden, und damit hat die Frage genau eine Antwort.
 /// Wer diese Abfrage spaeter auf `haelt_datei` umbaut, holt sich die zwei
 /// Antworten zurueck.
@@ -75,8 +75,9 @@ mod tests {
     /// Die Tafel steht zusammen da, damit ein fehlender Fall auffaellt: zwei
     /// Wahrheitswerte und zwei Pfade, die es gibt oder nicht, ergeben acht
     /// Lagen, und jede traegt hier ihre Antwort. Die Lage "beide sichtbar"
-    /// kommt nicht vor, weil `Bereich::teilt_flaeche_mit` sie ausschliesst;
-    /// die Tafel fragt deshalb je Bereich getrennt.
+    /// kommt nicht vor, weil `Bereich::flaeche` sie ausschliesst: beide
+    /// tragen `Flaeche::RechterRand`. Die Tafel fragt deshalb je Bereich
+    /// getrennt.
     #[test]
     fn alle_acht_kombinationen_tragen_ihre_antwort() {
         let v = vorschaudatei();

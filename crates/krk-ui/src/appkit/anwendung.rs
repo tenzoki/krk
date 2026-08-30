@@ -215,6 +215,12 @@
 //! `copy:` und `cut:` sind Aktionsselektoren, die diese Datei seit der Runde
 //! 22 **erklaert** und nicht ruft, `paste:` seit der Runde 21 der dritte; sie
 //! sprechen keine Klasse an und tragen deshalb keine Untergrenze.
+//!
+//! Seit der Git-Runde baut diese Datei daneben eine leere `NSView` als
+//! Platzhalter des Git-Bereichs; `NSView::alloc` und `initWithFrame:` tragen im
+//! SDK-Kopf keine Verfuegbarkeitsangabe und stehen damit seit 10.0. `NSRect`,
+//! `NSPoint` und `NSSize` sind Strukturen und keine Klassen und tragen deshalb
+//! keine Untergrenze.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -233,8 +239,8 @@ use objc2_app_kit::{
     NSWindow,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSRunLoop, NSRunLoopCommonModes,
-    NSString, NSTimer,
+    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRect, NSRunLoop,
+    NSRunLoopCommonModes, NSSize, NSString, NSTimer,
 };
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
@@ -1267,12 +1273,26 @@ impl Anwendungsdelegierter {
                 selbst.editorausgang_behandeln(ausgang, herkunft);
             }
         }));
+        // **Der Platzhalter des Git-Bereichs, und er faellt mit Schritt 7.**
+        // Der sechste Bereich steht seit Schritt 1 in `Bereich::ALLE`, in der
+        // Bereichsleiste, in der Breitenrechnung und in der `session.toml`;
+        // was ihm bis Schritt 7 fehlt, ist sein Inhalt. Eine leere `NSView`
+        // haelt seine Stelle in der Aufteilung, damit die Zuordnung von
+        // `Bereich::index` auf die Unteransicht schon jetzt stimmt und
+        // `bereich_des_ersthelfers` nicht ins Leere greift. Sie nimmt keinen
+        // Ersthelferrang an, weil sie nichts enthaelt, was einen naehme, und
+        // sie ist ab Werk ausgeblendet (`Sichtbarkeit::default`).
+        let git_platzhalter = NSView::initWithFrame(
+            NSView::alloc(mtm),
+            NSRect::new(NSPoint::ZERO, NSSize::new(400.0, 400.0)),
+        );
         let aufteilung = Aufteilung::bauen(
             mtm,
             [&dateifenster[0], &dateifenster[1]],
             leiste.sicht(),
             vorschau.sicht(),
             editor.sicht(),
+            &git_platzhalter,
         );
         let fenster_delegierter = FensterDelegierter::neu(
             mtm,
@@ -2473,12 +2493,18 @@ impl Anwendungsdelegierter {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 Some(self.ivars().dateifenster.get()?[aktiv.index()].liste())
             }
+            // **Bis Schritt 7 dieser Runde `None`.** Die Fokusflaeche des
+            // Git-Bereichs ist seine Verlaufsliste, und die entsteht erst mit
+            // dem `Gitfenster`; Schritt 8 traegt sie hier ein. `None` heisst
+            // solange dasselbe wie bei einem noch nicht gebauten Randbereich:
+            // `fokus_setzen` findet keine Ansicht und setzt den Fokus nicht.
+            Fokus::Git => None,
             Fokus::Anderswo => None,
         }
     }
 
-    /// Setzt den Eingabefokus in einen der vier Bereiche (C5, C6, C1 der
-    /// Editor-Runde).
+    /// Setzt den Eingabefokus in einen der Bereiche (C5, C6, C1 der
+    /// Editor-Runde, C2 der Git-Runde).
     ///
     /// Die eine Stelle, die den Fokus **setzt**, so wie
     /// [`Anwendungsdelegierter::fokus`] die eine ist, die ihn liest. Welche
@@ -3084,7 +3110,7 @@ impl Anwendungsdelegierter {
                             .quelle()
                             .filterzeichen_tippen(zeichen)
                     }
-                    // Keiner dieser vier Bereiche traegt einen Filtertext. Der
+                    // Keiner dieser Bereiche traegt einen Filtertext. Der
                     // Rueckgabewert `false` ist die Zusage: nur ein nicht
                     // ausgefuehrter Tastendruck laeuft unveraendert an AppKit
                     // weiter, und nur dann tippt die Textflaeche des Editors
@@ -3092,7 +3118,11 @@ impl Anwendungsdelegierter {
                     // 260809 stillschweigend die damalige Sprungmarke des
                     // Dateifensters bedient; das endet mit derselben Zeile,
                     // wie S17 es vorsieht.
-                    Fokus::Leiste | Fokus::Vorschau | Fokus::Editor | Fokus::Anderswo => false,
+                    Fokus::Leiste
+                    | Fokus::Vorschau
+                    | Fokus::Editor
+                    | Fokus::Git
+                    | Fokus::Anderswo => false,
                 }
             }
         }
@@ -3643,6 +3673,16 @@ impl Anwendungsdelegierter {
             // zu einem Zeichen noch zu einer Bewegung der Schreibmarke; er tut
             // nichts, und das ist die Wahl der Runde 7 und kein Versehen.
             Fokus::Editor => false,
+            // **Bis Schritt 8 dieser Runde `false`.** Dort bekommt der
+            // Git-Bereich seinen Zweig
+            // `self.git().kommando_ausfuehren(kommando)`, gebaut wie der der
+            // Leiste: er fuehrt aus, was er kennt, und meldet fuer alles
+            // uebrige `false`. Solange es kein `Gitfenster` gibt, gibt es
+            // nichts, woran der Befehl zu richten waere; `false` heisst hier
+            // wie ueberall in diesem `match` allein "kein Nachzug der
+            // Aufteilung und keine vorgemerkte Sitzung", und der Tastendruck
+            // ist trotzdem verbraucht.
+            Fokus::Git => false,
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.dateifenster(aktiv)
@@ -3655,19 +3695,20 @@ impl Anwendungsdelegierter {
     /// Schliesst den aktiven Tab, aus jedem Fokus heraus (C4 der Runde 4).
     ///
     /// **Die eine Verzweigung des Befehls, und sie hat zwei Ausgaenge.** Ueber
-    /// die fuenf Fokuswerte ist sie vollstaendig und ueberschneidungsfrei:
+    /// die Fokuswerte ist sie vollstaendig und ueberschneidungsfrei:
     ///
     /// - [`Fokus::Dateifenster`] und [`Fokus::Vorschau`] gehen an
     ///   [`Self::bereichskommando`], also an den Bereich vor dem Nutzer. Das
     ///   ist die Zuordnung aus C6 der Runde 1, und C4 sagt ausdruecklich zu,
     ///   dass sie fuer diese beiden gueltig bleibt: an diesen Tastendruck
     ///   aendert die Runde 4 nichts.
-    /// - [`Fokus::Leiste`], [`Fokus::Editor`] und [`Fokus::Anderswo`] gehen an
-    ///   den sichtbaren Tab der aktiven Fensterseite. Fuer die ersten beiden
-    ///   ist das die bestellte Luecke (Nutzerantwort vom 260811-1505);
-    ///   `Anderswo` steht bei ihnen, weil es kein Bereich mit Tabs ist und
-    ///   "der Bereich vor dem Nutzer" dort keine Antwort hat, waehrend die
-    ///   aktive Fensterseite immer eine ist.
+    /// - [`Fokus::Leiste`], [`Fokus::Editor`], [`Fokus::Git`] und
+    ///   [`Fokus::Anderswo`] gehen an den sichtbaren Tab der aktiven
+    ///   Fensterseite. Fuer die ersten beiden ist das die bestellte Luecke
+    ///   (Nutzerantwort vom 260811-1505); der Git-Bereich reiht sich bei ihnen
+    ///   ein, weil er keine Tabs hat, und `Anderswo` steht bei ihnen, weil es
+    ///   kein Bereich mit Tabs ist und "der Bereich vor dem Nutzer" dort keine
+    ///   Antwort hat, waehrend die aktive Fensterseite immer eine ist.
     ///
     /// **Der Editor wird auf keinem der beiden Wege angefasst.** Er behaelt
     /// seine Datei und seinen Stand; `cmd+w` schliesst dort einen Tab des
@@ -3688,7 +3729,7 @@ impl Anwendungsdelegierter {
             Fokus::Dateifenster | Fokus::Vorschau => {
                 self.bereichskommando(fokus, Kommando::TabSchliessen)
             }
-            Fokus::Leiste | Fokus::Editor | Fokus::Anderswo => {
+            Fokus::Leiste | Fokus::Editor | Fokus::Git | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.dateifenster(aktiv).quelle().tab_schliessen();
                 true

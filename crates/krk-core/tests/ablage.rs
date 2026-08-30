@@ -175,6 +175,7 @@ fn beispielsitzung() -> Sitzung {
             rechts: Some(520.5),
             vorschau: None,
             editor: Some(480.0),
+            git: Some(360.0),
         },
         sichtbar: Sichtbarkeit {
             lesezeichen: false,
@@ -182,6 +183,7 @@ fn beispielsitzung() -> Sitzung {
             zweites_dateifenster: true,
             vorschau: false,
             editor: true,
+            git: true,
         },
         spalten: Spaltensichtbarkeit {
             groesse: false,
@@ -386,6 +388,10 @@ fn der_auslieferungszustand_der_sitzung_erfuellt_c1() {
     assert!(
         !sitzung.sichtbar.editor,
         "der Editor haelt beim allerersten Start keine Datei und ist ausgeblendet"
+    );
+    assert!(
+        !sitzung.sichtbar.git,
+        "der Git-Bereich ist ab Werk ausgeblendet (A13, C1.8 der Git-Runde)"
     );
 }
 
@@ -671,6 +677,65 @@ aktiver_tab = 0
         geladen.wert.sichtbar.erstes_dateifenster,
         "ohne eigenes Feld steht das linke Dateifenster"
     );
+}
+
+/// Eine `session.toml` aus der Zeit vor der Git-Runde bleibt lesbar, und der
+/// Git-Bereich bleibt ausgeblendet (C1.7 der Git-Runde).
+///
+/// Die Datei tritt so auf, wie die Runde 22 sie geschrieben hat: mit den
+/// Editorfeldern, aber ohne `git` in `[breiten]` und `[sichtbar]`. Sie gilt
+/// nicht als beschaedigt, der Nutzer verliert nichts, und das fehlende Feld
+/// heisst hier "ausgeblendet" und nicht "sichtbar" — anders als beim ersten
+/// Dateifenster, dessen Vorgabewert `true` ist. Der Grund steht an
+/// `Sichtbarkeit::default`: der Git-Bereich bewirbt sich um den rechten Rand,
+/// und dort steht ab Werk die Vorschau.
+#[test]
+fn eine_sitzung_ohne_die_gitfelder_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("vor-dem-git-bereich");
+    let alt = "\
+aktiv = \"links\"
+
+[breiten]
+lesezeichen = 180.0
+links = 420.0
+rechts = 420.0
+vorschau = 260.0
+editor = 460.0
+
+[sichtbar]
+lesezeichen = true
+erstes_dateifenster = true
+zweites_dateifenster = true
+vorschau = true
+editor = false
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die Datei vor der Git-Runde gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert!(
+        !geladen.wert.sichtbar.git,
+        "der Git-Bereich ist ohne eigenes Feld ausgeblendet und nicht sichtbar"
+    );
+    assert_eq!(
+        geladen.wert.breiten.git, None,
+        "eine nie gesetzte Breite des Git-Bereichs bleibt ungesetzt"
+    );
+    assert_eq!(geladen.wert.breiten.editor, Some(460.0));
+    assert_eq!(geladen.wert.breiten.vorschau, Some(260.0));
+    assert!(geladen.wert.sichtbar.vorschau);
+    assert!(geladen.wert.sichtbar.lesezeichen);
 }
 
 /// Eine `session.toml` aus der Zeit vor der Bereichsleisten-Runde bleibt

@@ -500,9 +500,9 @@ mod tests {
     /// Die Aufzaehlung der Pruefungen ist die des Programms.
     ///
     /// Dieselbe Begruendung wie in [`super::super::fokus`]: eine zweite Liste
-    /// derselben fuenf Werte pruefte womoeglich eine andere Menge als die, ueber
+    /// derselben Werte pruefte womoeglich eine andere Menge als die, ueber
     /// die das Programm laeuft.
-    const JEDER_FOKUS: [Fokus; 5] = Fokus::ALLE;
+    const JEDER_FOKUS: [Fokus; 6] = Fokus::ALLE;
 
     /// Ein Befehl je Wirkungsbereich, und keiner von ihnen steht auf der
     /// Ausnahmeliste oder kommt waehrend eines Blattes durch.
@@ -644,9 +644,15 @@ mod tests {
         }
     }
 
-    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal fuenf
+    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal sechs
     /// Fokuswerte mal zwei Blattstaende mal zwei Ersthelferbefunde mal zwei
-    /// Schluesselfensterbefunde, also 320 Faelle.
+    /// Schluesselfensterbefunde.
+    ///
+    /// **Die Zahl der Faelle steht nicht mehr im Namen, sondern wird
+    /// gerechnet.** Sie stand bis zur Git-Runde auf 320 und ist mit dem
+    /// sechsten Fokuswert falsch geworden; die Zusicherung am Ende haelt die
+    /// gezaehlten Faelle gegen das Produkt der drei Aufzaehlungen, statt gegen
+    /// eine Zahl im Quelltext.
     ///
     /// Die Tafel steht in der Form der Tafel aus [`super::super::fokus`], nur um
     /// drei Wahrheitswerte erweitert. Ein Achtel traegt die Zeilen des
@@ -660,27 +666,33 @@ mod tests {
     /// Die Pruefungen darunter zeigen einzelne Felder dieser Tafel mit ihrer
     /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
     #[test]
-    fn die_tafel_aus_dreihundertzwanzig_faellen_geht_auf() {
+    fn die_tafel_aus_allen_faellen_geht_auf() {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
-        // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Anderswo.
-        // Es ist dieselbe Tafel, die `fokus::wirkt` traegt, und sie steht hier
-        // ausgeschrieben und nicht gerechnet: eine gerechnete Erwartung waere
-        // die Umsetzung ein zweites Mal.
-        const OHNE_SPERRE: [[bool; 5]; 8] = [
-            [true, false, false, false, false],
-            [false, true, false, false, false],
-            [true, false, true, true, false],
-            [false, false, false, true, false],
-            [true, false, true, false, false],
-            [true, true, true, false, false],
-            [false, false, true, false, false],
-            [true, true, true, true, true],
+        // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
+        // Anderswo. Es ist dieselbe Tafel, die `fokus::wirkt` traegt, und sie
+        // steht hier ausgeschrieben und nicht gerechnet: eine gerechnete
+        // Erwartung waere die Umsetzung ein zweites Mal.
+        //
+        // **Die sechste Spalte steht von Hand da und faellt nicht aus `zip`
+        // an**: `JEDER_FOKUS.into_iter().zip(zeile)` bricht bei der kuerzeren
+        // Seite ab, und fuenfspaltige Zeilen liessen den sechsten Fokuswert
+        // ungeprueft. Die Zusicherung unter der Tafel haelt die Spaltenzahl
+        // gegen `Fokus::ALLE`.
+        const OHNE_SPERRE: [[bool; 6]; 8] = [
+            [true, false, false, false, false, false],
+            [false, true, false, false, false, false],
+            [true, false, true, true, false, false],
+            [false, false, false, true, false, false],
+            [true, false, true, false, false, false],
+            [true, true, true, false, true, false],
+            [false, false, true, false, false, false],
+            [true, true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 5]; 8] = [[false; 5]; 8];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 8] = [[false; 6]; 8];
 
         // blatt_steht, ersthelfer_gehoert_appkit, schluesselfenster_gehoert_krk,
         // und welches Achtel gilt.
-        let achtel: [(bool, bool, bool, [[bool; 5]; 8]); 8] = [
+        let achtel: [(bool, bool, bool, [[bool; 6]; 8]); 8] = [
             (false, false, true, OHNE_SPERRE),
             (false, false, false, ALLES_ABGEWIESEN),
             (false, true, true, ALLES_ABGEWIESEN),
@@ -694,6 +706,12 @@ mod tests {
         let mut geprueft = 0usize;
         for (blatt, ersthelfer, schluessel, tafel) in achtel {
             for ((_, kommando), zeile) in STELLVERTRETER.into_iter().zip(tafel) {
+                assert_eq!(
+                    zeile.len(),
+                    Fokus::ALLE.len(),
+                    "die Zeile {kommando:?} hat nicht so viele Spalten wie Fokus::ALLE Werte \
+                     fuehrt"
+                );
                 for (fokus, erwartet) in JEDER_FOKUS.into_iter().zip(zeile) {
                     assert_eq!(
                         zulaessig(kommando, lage(blatt, ersthelfer, schluessel, fokus)),
@@ -705,7 +723,11 @@ mod tests {
                 }
             }
         }
-        assert_eq!(geprueft, 320, "die Tafel deckt nicht alle 320 Faelle ab");
+        assert_eq!(
+            geprueft,
+            achtel.len() * STELLVERTRETER.len() * Fokus::ALLE.len(),
+            "die Tafel deckt nicht jeden Fall ab"
+        );
     }
 
     /// Mit dem Fokus im Editor ist ein Befehl des Dateifensters unzulaessig.
@@ -1013,7 +1035,7 @@ mod tests {
     /// Die drei Zusicherungen ueber der Schleife nennen die Herleitung, damit
     /// ein Fehlschlag sagt, **welche** der drei Voraussetzungen gewichen ist.
     /// Die Schleife selbst haelt daneben die Gegenrichtung fest: ohne Blatt
-    /// wirkt der Befehl aus jedem der fuenf Fokuswerte, und genau dafuer traegt
+    /// wirkt der Befehl aus jedem Fokuswert, und genau dafuer traegt
     /// er [`Wirkungsbereich::Ueberall`].
     #[test]
     fn der_notizzettel_kommt_bei_stehendem_blatt_nicht_durch() {
@@ -1184,6 +1206,7 @@ mod tests {
             Fokus::Dateifenster,
             Fokus::Leiste,
             Fokus::Editor,
+            Fokus::Git,
             Fokus::Anderswo,
         ] {
             let anderswo = lage(false, false, true, fokus);

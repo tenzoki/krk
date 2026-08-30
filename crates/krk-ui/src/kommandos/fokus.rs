@@ -68,9 +68,10 @@ use crate::fenstermodell::Bereich;
 
 /// Wo der Eingabefokus steht.
 ///
-/// Die Antwort der Oberflaeche auf den [`Wirkungsbereich`] des Kerns. Fuenf
+/// Die Antwort der Oberflaeche auf den [`Wirkungsbereich`] des Kerns. Sechs
 /// Werte, und sie decken das Fenster vollstaendig ab: die beiden Dateilisten,
-/// die Leiste, das Vorschaufenster, der eingebaute Editor, und alles uebrige.
+/// die Leiste, das Vorschaufenster, der eingebaute Editor, der Git-Bereich,
+/// und alles uebrige.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fokus {
     /// In einer der beiden Dateilisten.
@@ -110,6 +111,19 @@ pub enum Fokus {
     /// seinen Ersthelferrang an den Feldeditor ab, und der ist dieselbe Art wie
     /// die Textflaeche des Editors, aber nicht dasselbe Objekt.
     Editor,
+    /// Im Git-Bereich (C2 der Git-Runde), dem sechsten fokussierbaren Ort.
+    ///
+    /// Hierhin kommt der Fokus per Mausklick in die Verlaufsliste und ueber
+    /// den Tastenbefehl `fokus_git`. Die Fokusflaeche ist die Verlaufsliste
+    /// des Bereichs, nicht seine Kopfzeile und nicht die Flaeche der
+    /// Einzelheiten: sie allein traegt eine Auswahl, die der Auf- und der
+    /// Ab-Pfeil bewegen.
+    ///
+    /// **Er steht vor [`Fokus::Anderswo`] und nicht dahinter.** `Anderswo` ist
+    /// ein Befund und kein Bereich; die Reihenfolge dieser Aufzaehlung fuehrt
+    /// erst die Orte und dann den Befund, und die Spalten der beiden Tafeln in
+    /// [`super::zulaessigkeit`] und hier stehen in ebendieser Reihenfolge.
+    Git,
     /// Irgendwo sonst: in einem Blatt oder in einem Textfeld.
     ///
     /// Ein Kommando, das einen Bereich braucht, wirkt hier nicht. Der Fall ist
@@ -139,19 +153,28 @@ impl Fokus {
     /// eine eigene Liste derselben fuenf Werte. Die Tafel pruefte dann
     /// womoeglich eine andere Menge als die, ueber die das Programm laeuft.
     ///
-    /// **Die Feldbreite steht in der Typangabe.** Ein sechster Wert haelt
+    /// **Die Feldbreite steht in der Typangabe.** Ein siebter Wert haelt
     /// damit den Bau der Proben an, wie die Feldbreite von
     /// [`Kommando::KENNUNGEN`](krk_core::tasten::Kommando::KENNUNGEN) es fuer
     /// die Befehle tut; die Aufzaehlung selbst erzwingt der Uebersetzer nicht.
     /// [`Fokus::Anderswo`] steht darin wie die uebrigen, denn genau bei ihm
     /// haben die Proben etwas festzuhalten: kein Bereich traegt dann die
     /// Anzeige.
+    ///
+    /// **Was die Feldbreite nicht haelt, sind die Spalten der Tafeln, die
+    /// ueber diese Liste laufen.** `JEDER_FOKUS.into_iter().zip(zeile)` bricht
+    /// bei der kuerzeren Seite ab, und eine sechswertige Liste gegen
+    /// fuenfspaltige Zeilen pruefte fuenf von sechs Werten und wuerde gruen.
+    /// Beide Tafeln — hier und in [`super::zulaessigkeit`] — halten ihre
+    /// Spaltenzahl deshalb mit einer eigenen Zusicherung gegen
+    /// `Fokus::ALLE.len()`.
     #[cfg(test)]
-    pub const ALLE: [Fokus; 5] = [
+    pub const ALLE: [Fokus; 6] = [
         Fokus::Dateifenster,
         Fokus::Leiste,
         Fokus::Vorschau,
         Fokus::Editor,
+        Fokus::Git,
         Fokus::Anderswo,
     ];
 }
@@ -216,6 +239,9 @@ pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
         Fokus::Leiste => Some(Bereich::Lesezeichen),
         Fokus::Vorschau => Some(Bereich::Vorschau),
         Fokus::Editor => Some(Bereich::Editor),
+        // Der Git-Bereich steht ab Werk ausgeblendet (A13), und der
+        // Fokusbefehl holt ihn hervor wie die drei vor ihm.
+        Fokus::Git => Some(Bereich::Git),
         Fokus::Dateifenster | Fokus::Anderswo => None,
     }
 }
@@ -232,7 +258,7 @@ pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
 /// (`issues/260809-1738_*_der-rueckfall-in-fokus-antwortet-dateifenster-fuer-jede-unteransicht-eines-randbereichs.md`).
 ///
 /// **Zwei Bereiche auf einen Wert, und das ist keine Ungenauigkeit.** Es gibt
-/// fuenf Bereiche und vier fokussierbare Orte: die beiden Dateifenster teilen
+/// sechs Bereiche und fuenf fokussierbare Orte: die beiden Dateifenster teilen
 /// sich [`Fokus::Dateifenster`], weil das Fenstermodell sagt, welches der
 /// beiden gemeint ist, und weil jeder Befehl mit
 /// [`Wirkungsbereich::Dateifenster`] fuer beide dieselbe Regel traegt.
@@ -246,6 +272,7 @@ pub const fn in_bereich(bereich: Bereich) -> Fokus {
         Bereich::Links | Bereich::Rechts => Fokus::Dateifenster,
         Bereich::Vorschau => Fokus::Vorschau,
         Bereich::Editor => Fokus::Editor,
+        Bereich::Git => Fokus::Git,
     }
 }
 
@@ -271,7 +298,7 @@ pub const fn in_bereich(bereich: Bereich) -> Fokus {
 pub const fn bereich_mit_fokus(fokus: Fokus, aktiv: Fensterseite) -> Option<Bereich> {
     match fokus {
         Fokus::Dateifenster => Some(Bereich::von_seite(aktiv)),
-        Fokus::Leiste | Fokus::Vorschau | Fokus::Editor => holt_hervor(fokus),
+        Fokus::Leiste | Fokus::Vorschau | Fokus::Editor | Fokus::Git => holt_hervor(fokus),
         Fokus::Anderswo => None,
     }
 }
@@ -308,7 +335,7 @@ pub enum Rahmenrolle {
 /// steht in `super::super::appkit::aufteilung`; diese Funktion kennt keine
 /// Farbe, und die Probe darunter deckt sie ohne Fenster ab.
 ///
-/// Drei Zusagen, die die Probe `die_fuenfzig_paare_der_rahmenrolle_gehen_auf`
+/// Drei Zusagen, die die Probe `jedes_paar_der_rahmenrolle_geht_auf`
 /// festhaelt: bei jedem Fokuswert ausser [`Fokus::Anderswo`] traegt genau ein
 /// Bereich [`Rahmenrolle::Fokussiert`]; das aktive Dateifenster traegt nie
 /// [`Rahmenrolle::Ruhig`]; und bei [`Fokus::Anderswo`], also bei einem
@@ -361,8 +388,16 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         // stehender Loeschrueckfrage bewegte die Auswahl im Ordner dahinter.
         // Die Begruendung im Langen steht an
         // [`Wirkungsbereich::Navigator`].
+        // **Der Git-Bereich steht seit der Git-Runde in dieser Zeile** (C2.5,
+        // C2.10). Der Verlauf ist eine Liste mit einer Auswahl, und der Auf-
+        // und der Ab-Pfeil bewegen die Auswahl der Liste, vor der der Nutzer
+        // steht — dieselbe Regel, die Leiste und Vorschau schon tragen. Ein
+        // neunter `Wirkungsbereich` entsteht dafuer nicht.
         Wirkungsbereich::Navigator => {
-            matches!(fokus, Fokus::Dateifenster | Fokus::Leiste | Fokus::Vorschau)
+            matches!(
+                fokus,
+                Fokus::Dateifenster | Fokus::Leiste | Fokus::Vorschau | Fokus::Git
+            )
         }
         // Die drei Zoombefehle des PDF-Betrachters (Runde 20). Ob ein PDF
         // angezeigt wird, fragt die Regel nicht: die Zulaessigkeit haengt am
@@ -382,48 +417,72 @@ mod tests {
 
     /// Die Aufzaehlung der Pruefungen ist die des Programms.
     ///
-    /// Bis zum 260809 stand hier eine zweite Liste derselben fuenf Werte.
+    /// Bis zum 260809 stand hier eine zweite Liste derselben Werte.
     /// Seit [`Fokus::ALLE`] die Fokusabfrage traegt, waere sie eine zweite
     /// Wahrheit darueber, welche Werte es gibt, und die Tafel unten pruefte
     /// womoeglich eine andere Menge als die, ueber die das Programm laeuft.
-    const JEDER_FOKUS: [Fokus; 5] = Fokus::ALLE;
+    const JEDER_FOKUS: [Fokus; 6] = Fokus::ALLE;
 
-    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal fuenf
-    /// Fokuswerte, vierzig Paare.
+    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal sechs
+    /// Fokuswerte.
     ///
     /// Die Pruefungen darunter zeigen jeweils eine Zeile dieser Tafel mit ihrer
     /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
-    /// Sie ist die Stelle, an der ein sechster Fokuswert oder ein neunter
+    /// Sie ist die Stelle, an der ein siebter Fokuswert oder ein neunter
     /// Wirkungsbereich auffaellt: beide Feldbreiten stehen in der Typangabe,
     /// und eine vergessene Zeile haelt den Bau an.
+    ///
+    /// **Die Spaltenzahl steht daneben ausdruecklich zur Pruefung**, weil
+    /// `zip` bei der kuerzeren Seite abbricht: eine Zeile mit einer Spalte zu
+    /// wenig liesse den letzten Fokuswert ungeprueft und die Probe gruen. Die
+    /// Feldbreite `[bool; 6]` haelt die Laenge jeder Zeile, aber nicht ihre
+    /// Uebereinstimmung mit [`Fokus::ALLE`].
     #[test]
-    fn die_tafel_aus_acht_wirkungsbereichen_und_fuenf_fokuswerten_geht_auf() {
+    fn die_tafel_aus_acht_wirkungsbereichen_und_sechs_fokuswerten_geht_auf() {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
-        // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 5]); 8] = [
+        // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
+        // Anderswo.
+        const TAFEL: [(Wirkungsbereich, [bool; 6]); 8] = [
             (
                 Wirkungsbereich::Dateifenster,
-                [true, false, false, false, false],
+                [true, false, false, false, false, false],
             ),
-            (Wirkungsbereich::Leiste, [false, true, false, false, false]),
+            (
+                Wirkungsbereich::Leiste,
+                [false, true, false, false, false, false],
+            ),
             (
                 Wirkungsbereich::Dateibereiche,
-                [true, false, true, true, false],
+                [true, false, true, true, false, false],
             ),
-            (Wirkungsbereich::Editor, [false, false, false, true, false]),
+            (
+                Wirkungsbereich::Editor,
+                [false, false, false, true, false, false],
+            ),
             (
                 Wirkungsbereich::Tabbereich,
-                [true, false, true, false, false],
+                [true, false, true, false, false, false],
             ),
-            (Wirkungsbereich::Navigator, [true, true, true, false, false]),
+            (
+                Wirkungsbereich::Navigator,
+                [true, true, true, false, true, false],
+            ),
             (
                 Wirkungsbereich::Vorschau,
-                [false, false, true, false, false],
+                [false, false, true, false, false, false],
             ),
-            (Wirkungsbereich::Ueberall, [true, true, true, true, true]),
+            (
+                Wirkungsbereich::Ueberall,
+                [true, true, true, true, true, true],
+            ),
         ];
 
         for (bereich, zeile) in TAFEL {
+            assert_eq!(
+                zeile.len(),
+                Fokus::ALLE.len(),
+                "die Zeile {bereich:?} hat nicht so viele Spalten wie Fokus::ALLE Werte fuehrt"
+            );
             for (fokus, erwartet) in JEDER_FOKUS.into_iter().zip(zeile) {
                 assert_eq!(wirkt(bereich, fokus), erwartet, "{bereich:?} in {fokus:?}");
             }
@@ -644,6 +703,7 @@ mod tests {
         assert_eq!(holt_hervor(Fokus::Leiste), Some(Bereich::Lesezeichen));
         assert_eq!(holt_hervor(Fokus::Vorschau), Some(Bereich::Vorschau));
         assert_eq!(holt_hervor(Fokus::Editor), Some(Bereich::Editor));
+        assert_eq!(holt_hervor(Fokus::Git), Some(Bereich::Git));
         assert_eq!(holt_hervor(Fokus::Dateifenster), None);
         assert_eq!(holt_hervor(Fokus::Anderswo), None);
     }
@@ -699,9 +759,9 @@ mod tests {
     /// bestand. Ein doppelter Wert kostete nur einen Vergleich, faellt hier
     /// aber mit auf.
     ///
-    /// Die Feldbreite `[Fokus; 5]` haelt den Bau an, wenn ein sechster Wert
-    /// dazukommt; diese Pruefung deckt die andere Haelfte ab, dass die fuenf
-    /// Plaetze mit fuenf **verschiedenen** Werten belegt sind.
+    /// Die Feldbreite `[Fokus; 6]` haelt den Bau an, wenn ein siebter Wert
+    /// dazukommt; diese Pruefung deckt die andere Haelfte ab, dass die sechs
+    /// Plaetze mit sechs **verschiedenen** Werten belegt sind.
     #[test]
     fn die_aufzaehlung_der_fokuswerte_ist_vollstaendig_und_doppelt_keinen() {
         for wert in [
@@ -709,6 +769,7 @@ mod tests {
             Fokus::Leiste,
             Fokus::Vorschau,
             Fokus::Editor,
+            Fokus::Git,
             Fokus::Anderswo,
         ] {
             assert_eq!(
@@ -846,10 +907,14 @@ mod tests {
     ///
     /// Die beiden Dateifensterbereiche stehen daneben, weil sie sich einen
     /// Fokuswert teilen und [`holt_hervor`] fuer ihn `None` liefert.
+    ///
+    /// **Der Git-Bereich steht seit der Git-Runde in der Schleife.** Ohne ihn
+    /// fuehrte `shift+cmd+b` in einen Bereich, den die Fokusabfrage danach
+    /// anders benennt.
     #[test]
     fn das_enthaltensein_und_das_hervorholen_kehren_einander_um() {
-        for ziel in [Fokus::Leiste, Fokus::Vorschau, Fokus::Editor] {
-            let bereich = holt_hervor(ziel).expect("die drei Randbereiche holen einen Bereich");
+        for ziel in [Fokus::Leiste, Fokus::Vorschau, Fokus::Editor, Fokus::Git] {
+            let bereich = holt_hervor(ziel).expect("die vier Randbereiche holen einen Bereich");
             assert_eq!(
                 in_bereich(bereich),
                 ziel,
@@ -861,9 +926,9 @@ mod tests {
         }
     }
 
-    /// Jeder der fuenf Bereiche traegt genau einen Fokuswert (S43).
+    /// Jeder Bereich traegt genau einen Fokuswert (S43).
     ///
-    /// Die Gegenprobe zur Zusage, auf der die Fokusabfrage steht: die fuenf
+    /// Die Gegenprobe zur Zusage, auf der die Fokusabfrage steht: die
     /// Teilbaeume der Aufteilung sind zueinander fremd, ein Ersthelfer liegt in
     /// hoechstens einem, und deshalb genuegt der erste Treffer.
     #[test]
@@ -878,8 +943,14 @@ mod tests {
         }
     }
 
-    /// Die ganze Rahmenregel auf einen Blick: fuenf Bereiche mal fuenf
-    /// Fokuswerte mal zwei aktive Seiten, fuenfzig Paare (S44).
+    /// Die ganze Rahmenregel auf einen Blick: jeder Bereich mal jeder
+    /// Fokuswert mal beide aktive Seiten (S44).
+    ///
+    /// **Eine Zahl steht hier nicht.** Sie stand bis zur Git-Runde auf
+    /// fuenfzig und waere mit dem sechsten Bereich und dem sechsten Fokuswert
+    /// zweimal in einem Diff falsch geworden; gezaehlt wird ueber
+    /// [`Bereich::ALLE`] und [`Fokus::ALLE`], und die Erwartung folgt aus der
+    /// Regel und nicht aus einer Multiplikation im Namen.
     ///
     /// Drei Zusagen stehen darin, und jede von ihnen traegt ein
     /// Abnahmekriterium von C9. Die zweite ist die, die den offenen Datensatz
@@ -887,7 +958,7 @@ mod tests {
     /// Bereiche eine Markierung, und "die Anzeige" im zweiten
     /// Abnahmekriterium meint die volle Akzentfarbe.
     #[test]
-    fn die_fuenfzig_paare_der_rahmenrolle_gehen_auf() {
+    fn jedes_paar_der_rahmenrolle_geht_auf() {
         for aktiv in Fensterseite::ALLE {
             for fokus in Fokus::ALLE {
                 let fokussierte = Bereich::ALLE

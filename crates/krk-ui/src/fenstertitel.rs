@@ -23,6 +23,7 @@
 //!          ├─ Leiste ────────> der Ordner des aktiven Dateifensters
 //!          ├─ Editor ────────> seine Datei, sonst der Ordner
 //!          ├─ Vorschau ──────> ihre Datei, sonst der Ordner
+//!          ├─ Git ───────────> der Ordner des aktiven Dateifensters
 //!          └─ Anderswo ──────> None, also: den Titel stehen lassen
 //! ```
 //!
@@ -37,10 +38,12 @@
 //!
 //! # Zwei Antworten, die keine Auffangzweige sind
 //!
-//! Die Leiste und ein Bereich ohne Pfad fallen auf den Ordner des aktiven
-//! Dateifensters, und beide Male aus einem Grund und nicht aus Verlegenheit.
-//! Die Auswahl in der Leiste **setzt** den Ordner des aktiven Dateifensters;
-//! ihr Zusammenhang ist also genau jenes Fenster. Und wer in einem Bereich
+//! Die Leiste, der Git-Bereich und ein Bereich ohne Pfad fallen auf den Ordner
+//! des aktiven Dateifensters, und jedes Mal aus einem Grund und nicht aus
+//! Verlegenheit. Die Auswahl in der Leiste **setzt** den Ordner des aktiven
+//! Dateifensters; ihr Zusammenhang ist also genau jenes Fenster. Der
+//! Git-Bereich zeigt den Zustand ebendieses Ordners und hat keinen eigenen
+//! Pfad: ein Commit ist kein Ort im Dateisystem. Und wer in einem Bereich
 //! steht, der nichts haelt, entscheidet seine naechste Handlung an ebendiesem
 //! Ordner.
 //!
@@ -63,8 +66,8 @@ use crate::kommandos::fokus::Fokus;
 
 /// Der Fenstertitel zu diesem Fokus, oder `None` fuer "stehen lassen".
 ///
-/// **Eine erschoepfende Fallunterscheidung ueber die fuenf Fokuswerte, ohne
-/// Auffangzweig.** Ein sechster Wert haelt den Bau an und erzwingt die Antwort
+/// **Eine erschoepfende Fallunterscheidung ueber die Fokuswerte, ohne
+/// Auffangzweig.** Ein weiterer Wert haelt den Bau an und erzwingt die Antwort
 /// darauf, was der Titel dann zeigt.
 ///
 /// `None` heisst nicht "leerer Titel", sondern "nicht anfassen". Es ist die
@@ -74,8 +77,8 @@ use crate::kommandos::fokus::Fokus;
 /// an.
 ///
 /// `aktiver_ordner` ist der Ordner, den das **aktive** Dateifenster zeigt. Er
-/// wird in vier der fuenf Faelle gebraucht und deshalb nicht als `Option`
-/// gefuehrt: ein Dateifenster zeigt immer einen Ordner.
+/// wird in jedem Fall ausser [`Fokus::Anderswo`] gebraucht und deshalb nicht
+/// als `Option` gefuehrt: ein Dateifenster zeigt immer einen Ordner.
 pub fn titel(
     fokus: Fokus,
     aktiver_ordner: &Path,
@@ -89,6 +92,10 @@ pub fn titel(
         Fokus::Leiste => aktiver_ordner,
         Fokus::Editor => editordatei.unwrap_or(aktiver_ordner),
         Fokus::Vorschau => vorschaudatei.unwrap_or(aktiver_ordner),
+        // Der Git-Bereich zeigt den Zustand des aktiven Ordners und haelt
+        // keinen eigenen Pfad (C2.3); dieselbe Antwort und derselbe Grund wie
+        // bei der Leiste.
+        Fokus::Git => aktiver_ordner,
         Fokus::Anderswo => return None,
     };
     Some(pfad.display().to_string())
@@ -104,10 +111,10 @@ mod tests {
         PathBuf::from("/Users/k1/Projekte")
     }
 
-    /// Jeder der fuenf Fokuswerte bekommt seine Antwort, und `Anderswo` keine.
+    /// Jeder Fokuswert bekommt seine Antwort, und `Anderswo` keine.
     ///
     /// Die Tafel steht an einem Stueck da, damit ein fehlender Wert auffaellt:
-    /// die Feldbreite `[Fokus; 5]` in `Fokus::ALLE` haelt den Bau an, und
+    /// die Feldbreite `[Fokus; 6]` in `Fokus::ALLE` haelt den Bau an, und
     /// diese Probe deckt die andere Haelfte ab, naemlich dass jeder Wert eine
     /// Antwort traegt, die zu ihm gehoert.
     #[test]
@@ -130,6 +137,11 @@ mod tests {
         assert_eq!(
             fuer(Fokus::Vorschau).as_deref(),
             Some("/Users/k1/Bilder/schirm.png")
+        );
+        assert_eq!(
+            fuer(Fokus::Git).as_deref(),
+            Some("/Users/k1/Projekte"),
+            "der Git-Bereich zeigt den Zustand des aktiven Ordners und hat keinen eigenen Pfad"
         );
         assert_eq!(fuer(Fokus::Anderswo), None);
     }

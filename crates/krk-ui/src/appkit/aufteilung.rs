@@ -1,24 +1,25 @@
-//! Die Fensterzeile: eine `NSSplitView` mit fuenf Bereichen.
+//! Die Fensterzeile: eine `NSSplitView` mit sechs Bereichen.
 //!
 //! ```text
-//! ┌───────────┬──────────────────┬──────────────────┬───────────┬──────────┐
-//! │ Lesezei-  │ Dateifenster     │ Dateifenster     │ Vorschau  │ Editor   │
-//! │ chen (C5) │ links            │ rechts           │ (C6)      │          │
-//! └───────────┴──────────────────┴──────────────────┴───────────┴──────────┘
+//! ┌───────────┬──────────────┬──────────────┬──────────┬────────┬────────┐
+//! │ Lesezei-  │ Dateifenster │ Dateifenster │ Vorschau │ Editor │ Git    │
+//! │ chen (C5) │ links        │ rechts       │ (C6)     │        │        │
+//! └───────────┴──────────────┴──────────────┴──────────┴────────┴────────┘
 //! ```
 //!
-//! Die beiden rechten Bereiche teilen sich denselben Platz: der Editor nimmt
-//! die Stelle der Vorschau ein, und C1 der Editor-Runde sagt zu, dass beide
-//! nie zugleich zu sehen sind. Die Regel dazu wohnt in
-//! [`crate::fenstermodell`] und nicht hier; dieses Modul verteilt Breiten und
-//! Sichtbarkeit und faellt keine Entscheidung darueber, welcher Bereich steht.
+//! Die drei rechten Bereiche teilen sich denselben Platz: Editor und
+//! Git-Bereich nehmen die Stelle der Vorschau ein, und C1 der Editor-Runde wie
+//! C1 der Git-Runde sagen zu, dass nie zwei von ihnen zugleich zu sehen sind.
+//! Die Regel dazu wohnt in [`crate::fenstermodell`] und nicht hier; dieses
+//! Modul verteilt Breiten und Sichtbarkeit und faellt keine Entscheidung
+//! darueber, welcher Bereich steht.
 //!
-//! **Jeder der fuenf Bereiche steht in einem `NSBox`**, und dessen Rahmen ist
+//! **Jeder der sechs Bereiche steht in einem `NSBox`**, und dessen Rahmen ist
 //! die Anzeige aus C9: er sagt, welcher Bereich die Tasten annimmt, und
 //! daneben, welches Dateifenster das aktive ist. Die Anzeige haengt am Rahmen
 //! und nicht am Inhalt, damit sie auch dann eindeutig ist, wenn beide
-//! Dateifenster denselben Ordner zeigen; und sie ist fuer alle fuenf dieselbe
-//! Form, weil zwei der fuenf gar keine Auswahl haben, an der sich eine
+//! Dateifenster denselben Ordner zeigen; und sie ist fuer alle sechs dieselbe
+//! Form, weil nicht jeder von ihnen eine Auswahl hat, an der sich eine
 //! Auswahlfarbe zeigen liesse.
 //!
 //! Bis zum 260809 trugen allein die beiden Dateifenster einen Kasten, und die
@@ -236,28 +237,39 @@ pub struct Aufteilung {
     /// Er haelt daneben die Wuensche, aus denen ausgelegt wird, und deshalb
     /// spricht [`Aufteilung::anwenden`] ihn an.
     delegierter: Retained<AufteilungsDelegierter>,
-    /// Die Kaesten aller fuenf Bereiche, in der Reihenfolge von
+    /// Die Kaesten aller sechs Bereiche, in der Reihenfolge von
     /// [`Bereich::ALLE`].
     ///
-    /// Die Feldbreite steht in der Typangabe: ein sechster Bereich haelt hier
-    /// den Bau an, wie bei [`crate::fenstermodell::Bereich::ALLE`] selbst.
-    rahmen: [Retained<NSBox>; 5],
+    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    ///
+    /// **Sie haelt nichts.** Das Feld entsteht in [`Aufteilung::bauen`] aus
+    /// einem Literal mit sechs Gliedern und nicht aus `Bereich::ALLE.map(…)`;
+    /// die Zahl `6` steht damit im Quelltext und folgt nicht aus der
+    /// Aufzaehlung. Ein siebter Bereich, den jemand hinzufuegte, ohne dieses
+    /// Literal zu erweitern, uebersetzte anstandslos und liefe beim Start auf
+    /// `index out of bounds`, sobald [`Aufteilung::rahmen_setzen`] ueber
+    /// `Bereich::ALLE` griffe. Anders als bei
+    /// `Bereichsleiste::bereichsschalter`, dessen Feld ueber
+    /// `Bereich::ALLE.map(…)` entsteht und dessen Laenge deshalb der Bau
+    /// haelt.
+    rahmen: [Retained<NSBox>; 6],
 }
 
 impl Aufteilung {
-    /// Baut die fuenf Bereiche um die beiden Dateifenster, die Leiste, die
-    /// Vorschau und den Editor.
+    /// Baut die sechs Bereiche um die beiden Dateifenster, die Leiste, die
+    /// Vorschau, den Editor und den Git-Bereich.
     ///
-    /// Leiste, Vorschau und Editor kommen fertig herein und werden hier nicht
-    /// gebaut: alle drei sind eigene fokussierbare Bereiche mit eigenem Inhalt,
-    /// und dieses Modul verteilt Breiten und Sichtbarkeit. Dieselbe
-    /// Aufgabenteilung wie bei den beiden Dateifenstern.
+    /// Leiste, Vorschau, Editor und Git-Bereich kommen fertig herein und werden
+    /// hier nicht gebaut: alle vier sind eigene fokussierbare Bereiche mit
+    /// eigenem Inhalt, und dieses Modul verteilt Breiten und Sichtbarkeit.
+    /// Dieselbe Aufgabenteilung wie bei den beiden Dateifenstern.
     pub fn bauen(
         mtm: MainThreadMarker,
         dateifenster: [&Dateifenster; 2],
         leiste: &NSView,
         vorschau: &NSView,
         editor: &NSView,
+        git: &NSView,
     ) -> Self {
         let teiler = NSSplitView::initWithFrame(
             NSSplitView::alloc(mtm),
@@ -269,17 +281,22 @@ impl Aufteilung {
                 | NSAutoresizingMaskOptions::ViewHeightSizable,
         );
 
-        // Alle fuenf gehen durch dieselbe Funktion, seit C9 die Anzeige auf
-        // alle fuenf ausdehnt. Die beiden Dateifenster bringen ihren Inhalt
+        // Alle sechs gehen durch dieselbe Funktion, seit C9 die Anzeige auf
+        // alle Bereiche ausdehnt. Die beiden Dateifenster bringen ihren Inhalt
         // nicht fertig mit, sondern in drei Stuecken; `dateifensterinhalt`
         // legt sie uebereinander, und eingerahmt wird danach wie bei den
-        // uebrigen drei.
+        // uebrigen vier.
+        //
+        // **Die Reihenfolge dieses Literals ist die von `Bereich::ALLE`, und
+        // der Uebersetzer haelt das nicht**; die Warnung dazu steht an
+        // `Aufteilung::rahmen`.
         let rahmen = [
             gerahmt(mtm, leiste),
             gerahmt(mtm, &dateifensterinhalt(mtm, dateifenster[0])),
             gerahmt(mtm, &dateifensterinhalt(mtm, dateifenster[1])),
             gerahmt(mtm, vorschau),
             gerahmt(mtm, editor),
+            gerahmt(mtm, git),
         ];
         // Die Reihenfolge ist die von `Bereich::ALLE` und die einzige, in der
         // die Rechenvorschrift der Breiten die Bereiche wiederfindet.
@@ -349,8 +366,17 @@ impl Aufteilung {
     ///
     /// Der Weg, auf dem eine mit der Maus verschobene Trennlinie in die Sitzung
     /// kommt: sie steht in den Rahmen der Ansichten und nirgends sonst.
-    pub fn gemessene_breiten(&self) -> [f64; 5] {
-        let mut breiten = [0.0; 5];
+    ///
+    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    ///
+    /// **Sie haelt nichts.** `[0.0; 6]` ist eine Zahl im Quelltext, und die
+    /// Schleife darunter greift ueber [`Bereich::index`] hinein. Ein siebter
+    /// Bereich, der diese Zahl nicht erhoehte, uebersetzte und liefe zur
+    /// Laufzeit auf `index out of bounds`. Auch die Gegenseite haelt nichts:
+    /// `Fenstermodell::breiten_uebernehmen` nimmt `[f64; 6]`, und beide Seiten
+    /// blieben stumm bei fuenf.
+    pub fn gemessene_breiten(&self) -> [f64; 6] {
+        let mut breiten = [0.0; 6];
         for bereich in Bereich::ALLE {
             if let Some(ansicht) = bereichsansicht(&self.teiler, bereich.index()) {
                 breiten[bereich.index()] = ansicht.frame().size.width;
@@ -363,20 +389,19 @@ impl Aufteilung {
     ///
     /// **Der Preis der Enthaltensfrage aus S43, und er faellt genau einmal
     /// an.** `Anwendungsdelegierter::fokus` fragt seit dem 260809 nicht mehr,
-    /// welche eine Ansicht den Ersthelferrang traegt, sondern in welchem der
-    /// fuenf Teilbaeume er liegt; dafuer muss die Wurzel jedes Bereichs nach
+    /// welche eine Ansicht den Ersthelferrang traegt, sondern in welchem
+    /// Teilbaum er liegt; dafuer muss die Wurzel jedes Bereichs nach
     /// aussen. Sie liegt bereits vor, naemlich als Unteransicht der Aufteilung
     /// an der Stelle [`Bereich::index`], und deshalb entsteht hier keine zweite
     /// Aufzaehlung neben [`Bereich::ALLE`].
     ///
-    /// Die fuenf Teilbaeume sind zueinander fremd, weil es die fuenf
-    /// Unteransichten einer `NSSplitView` sind; ein Ersthelfer liegt in
-    /// hoechstens einem.
+    /// Die Teilbaeume sind zueinander fremd, weil es die Unteransichten einer
+    /// `NSSplitView` sind; ein Ersthelfer liegt in hoechstens einem.
     pub fn bereichssicht(&self, bereich: Bereich) -> Option<Retained<NSView>> {
         bereichsansicht(&self.teiler, bereich.index())
     }
 
-    /// Faerbt die Rahmen aller fuenf Bereiche (C9).
+    /// Faerbt die Rahmen aller sechs Bereiche (C9).
     ///
     /// **Ein Schreiber, drei Angaben, keine Entscheidung.** Welche Rolle ein
     /// Bereich traegt, rechnet [`rahmenrolle`] ausserhalb von `appkit`; welche
@@ -522,7 +547,7 @@ fn steht_im(teiler: &NSSplitView, bereich: Bereich) -> bool {
 ///
 /// Ein Bereich, dessen Unteransicht die Aufteilung nicht traegt, liefert `None`
 /// und behaelt damit seine gespeicherte Breite. Seit Schritt 16 der
-/// Editor-Runde stehen alle fuenf Unteransichten; `None` bleibt damit der Fall
+/// Editor-Runde stehen alle Unteransichten; `None` bleibt damit der Fall
 /// eines ausgeblendeten Bereichs, dessen Rahmen die Breite 0 traegt.
 fn gemessene_breiten(teiler: &NSSplitView) -> Breiten {
     let breite = |stelle: usize| {
@@ -537,6 +562,7 @@ fn gemessene_breiten(teiler: &NSSplitView) -> Breiten {
         rechts: breite(Bereich::Rechts.index()),
         vorschau: breite(Bereich::Vorschau.index()),
         editor: breite(Bereich::Editor.index()),
+        git: breite(Bereich::Git.index()),
     }
 }
 
@@ -548,6 +574,7 @@ fn gemessene_sichtbarkeit(teiler: &NSSplitView) -> Sichtbarkeit {
         zweites_dateifenster: steht_im(teiler, Bereich::Rechts),
         vorschau: steht_im(teiler, Bereich::Vorschau),
         editor: steht_im(teiler, Bereich::Editor),
+        git: steht_im(teiler, Bereich::Git),
     }
 }
 

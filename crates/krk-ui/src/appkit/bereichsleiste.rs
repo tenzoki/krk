@@ -150,22 +150,36 @@ const GRUPPENABSTAND: f64 = 24.0;
 /// Auslegen. Dieselbe Rolle wie `AUFBAUGROESSE` in [`super::aufteilung`].
 const AUFBAUBREITE: f64 = 1280.0;
 
-/// Welches Kommando der Schalter dieses Bereichs schickt.
+/// Welches Kommando der Schalter dieses Bereichs schickt, falls er schon eines
+/// hat.
 ///
 /// **Die eine Haelfte der Aufbautabelle**, und eine vollstaendige
-/// Fallunterscheidung ohne Auffangzweig: ein sechster Bereich haelt hier den
+/// Fallunterscheidung ohne Auffangzweig: ein siebter Bereich haelt hier den
 /// Bau an und erzwingt die Antwort darauf, womit sein Schalter zu bedienen
 /// waere. Ein Auffangzweig gaebe ihm still den Schalter eines anderen.
 ///
-/// Alle fuenf tragen `Wirkungsbereich::Ueberall` (C2.6); die Probe
+/// **`None` ist ein Zwischenstand dieser Runde und kein Dauerzustand.** Bis zur
+/// Git-Runde lieferte diese Zuordnung ein `Kommando` und kein `Option`, weil
+/// jeder Bereich eines trug. Der Git-Bereich bekommt sein
+/// `Kommando::GitBereichUmschalten` erst in Schritt 8 dieser Runde; bis dahin
+/// steht sein Schalter in der Leiste, zeigt seine Sichtbarkeit an und schickt
+/// nichts. **Der Schalter wird trotzdem gebaut**, damit
+/// [`Bereichsleiste::bereichsschalter`] weiter ueber `Bereich::ALLE.map(…)`
+/// entsteht: das ist die eine Stelle im Baum, an der die Feldbreite den Bau
+/// wirklich anhaelt, wenn die Aufzaehlung waechst, und ein Umbau auf eine
+/// gefilterte Liste gaebe sie fuer eine Laufzeitpruefung her. Schritt 8 macht
+/// die Zuordnung wieder total.
+///
+/// Alle tragen `Wirkungsbereich::Ueberall` (C2.6); die Probe
 /// `jeder_schalter_wirkt_aus_jedem_fokus` haelt es fest.
-const fn kommando_des_bereichs(bereich: Bereich) -> Kommando {
+const fn kommando_des_bereichs(bereich: Bereich) -> Option<Kommando> {
     match bereich {
-        Bereich::Lesezeichen => Kommando::LeisteUmschalten,
-        Bereich::Links => Kommando::ErstesFensterUmschalten,
-        Bereich::Rechts => Kommando::ZweitesFensterUmschalten,
-        Bereich::Vorschau => Kommando::VorschauUmschalten,
-        Bereich::Editor => Kommando::EditorUmschalten,
+        Bereich::Lesezeichen => Some(Kommando::LeisteUmschalten),
+        Bereich::Links => Some(Kommando::ErstesFensterUmschalten),
+        Bereich::Rechts => Some(Kommando::ZweitesFensterUmschalten),
+        Bereich::Vorschau => Some(Kommando::VorschauUmschalten),
+        Bereich::Editor => Some(Kommando::EditorUmschalten),
+        Bereich::Git => None,
     }
 }
 
@@ -274,7 +288,7 @@ define_class!(
     unsafe impl NSObjectProtocol for Leistenquelle {}
 
     impl Leistenquelle {
-        /// Der Nutzer hat einen der fuenf Bereichsschalter angeklickt.
+        /// Der Nutzer hat einen der sechs Bereichsschalter angeklickt.
         ///
         /// **Der Absender nennt sich ueber seine `tag`**, und die ist die
         /// Stelle des Bereichs in [`Bereich::ALLE`]. Damit entsteht keine
@@ -284,9 +298,13 @@ define_class!(
         // Argument, der Absender.
         #[unsafe(method(bereichGedrueckt:))]
         fn bereich_gedrueckt(&self, absender: &NSButton) {
+            // `and_then` und nicht `map`: der Schalter des Git-Bereichs traegt
+            // bis Schritt 8 kein Kommando, und ein Klick auf ihn meldet dann
+            // nichts, statt zu raten. Dieselbe Form wie beim Spaltenschalter
+            // darunter.
             let kommando = stelle_des_absenders(absender)
                 .and_then(|stelle| Bereich::ALLE.get(stelle).copied())
-                .map(kommando_des_bereichs);
+                .and_then(kommando_des_bereichs);
             self.geklickt(absender, kommando);
         }
 
@@ -412,12 +430,26 @@ fn stelle_des_absenders(absender: &NSButton) -> Option<usize> {
 /// allein den Melder und keine Ansicht.
 pub struct Bereichsleiste {
     sicht: Retained<NSView>,
-    /// Die Schalter der fuenf Bereiche, in der Reihenfolge von
+    /// Die Schalter der sechs Bereiche, in der Reihenfolge von
     /// [`Bereich::ALLE`].
     ///
-    /// Die Feldbreite steht in der Typangabe: ein sechster Bereich haelt hier
-    /// den Bau an, dasselbe Muster wie `Aufteilung::rahmen`.
-    bereichsschalter: [Retained<NSButton>; 5],
+    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    ///
+    /// **Hier haelt sie den Bau, und sie ist die einzige der vier Stellen, die
+    /// es tut.** Das Feld entsteht in [`Bereichsleiste::bauen`] ueber
+    /// `Bereich::ALLE.map(…)`, und die Laenge eines so gebauten Feldes folgt
+    /// aus der Aufzaehlung: ein siebter Bereich liefert `[_; 7]`, und der
+    /// Uebersetzer meldet `expected an array with a size of 6`. `Aufteilung::rahmen`,
+    /// `Aufteilung::gemessene_breiten` und
+    /// `Fenstermodell::breiten_uebernehmen` tragen dieselbe Zahl und halten
+    /// nichts, weil ihre Felder aus einem Literal beziehungsweise aus `[0.0; n]`
+    /// entstehen; die Warnung steht an jeder der drei.
+    ///
+    /// **Deshalb bleibt `map` hier stehen, auch solange ein Schalter kein
+    /// Kommando traegt.** Eine gefilterte Liste mit `try_into` — die Bauform
+    /// der Spaltenschalter — machte aus der einen Bauzeitpruefung dieses Baums
+    /// eine Laufzeitpruefung.
+    bereichsschalter: [Retained<NSButton>; 6],
     /// Die Schalter der drei schaltbaren Spalten, in der Reihenfolge, die
     /// [`spaltenfach`] nennt.
     spaltenschalter: [Retained<NSButton>; 3],
@@ -698,22 +730,26 @@ mod tests {
 
     use krk_core::tasten::Wirkungsbereich;
 
-    use crate::kommandos::fokus::Fokus;
+    use crate::kommandos::fokus::{Fokus, in_bereich};
 
-    /// Alle zehn Schalter dieser Leiste, mit dem Kommando, das sie schicken,
-    /// in der Reihenfolge, in der [`Bereichsleiste::bauen`] sie einhaengt.
+    /// Die Schalter dieser Leiste, die ein Kommando tragen, mit ebendiesem
+    /// Kommando und in der Reihenfolge, in der [`Bereichsleiste::bauen`] sie
+    /// einhaengt.
     ///
     /// Die Proben lesen dieselben Quellen, aus denen [`Bereichsleiste::bauen`]
     /// die Schalter baut: die beiden Aufbautabellen und, fuer die zwei
     /// letzten, [`KOMMANDO_DER_TIEFE`] samt [`AUFSCHRIFT_DER_TIEFE`] und
     /// [`KOMMANDO_DES_INHALTS`] samt [`AUFSCHRIFT_DES_INHALTS`]. Eine
     /// Aufstellung daneben pruefte sich selbst.
+    ///
+    /// **Die Leiste zeigt einen Schalter mehr, als diese Liste fuehrt.** Der
+    /// Git-Bereich traegt sein Kommando erst nach Schritt 8 dieser Runde; sein
+    /// Schalter ist gebaut, zeigt die Sichtbarkeit an und schickt nichts. Die
+    /// Begruendung steht an [`kommando_des_bereichs`].
     fn alle_schalter() -> Vec<(String, Kommando)> {
-        let bereiche = Bereich::ALLE.into_iter().map(|bereich| {
-            (
-                bereich.beschriftung().to_owned(),
-                kommando_des_bereichs(bereich),
-            )
+        let bereiche = Bereich::ALLE.into_iter().filter_map(|bereich| {
+            kommando_des_bereichs(bereich)
+                .map(|kommando| (bereich.beschriftung().to_owned(), kommando))
         });
         let spalten = Spalte::ALLE.into_iter().filter_map(|spalte| {
             kommando_der_spalte(spalte).map(|kommando| (spalte.beschriftung().to_owned(), kommando))
@@ -725,13 +761,17 @@ mod tests {
 
     /// C2.1 der Inhaltsfilter-Runde, C2.1 der Filter-Runde, C2.1 und C3.1 der
     /// Bereichsleisten-Runde: fuenf plus drei plus zwei, und keiner doppelt.
+    ///
+    /// **Der sechste Bereichsschalter zaehlt hier bis Schritt 8 nicht mit**,
+    /// weil er kein Kommando traegt; die Begruendung steht an
+    /// [`alle_schalter`]. Auf dem Schirm stehen elf Felder.
     #[test]
-    fn die_leiste_traegt_zehn_schalter() {
+    fn zehn_schalter_der_leiste_tragen_ein_kommando() {
         let schalter = alle_schalter();
         assert_eq!(
             schalter.len(),
             10,
-            "fuenf Bereiche, drei Spalten, die tiefe Suche und der Inhaltsfilter"
+            "fuenf Bereiche mit Kommando, drei Spalten, die tiefe Suche und der Inhaltsfilter"
         );
     }
 
@@ -772,24 +812,34 @@ mod tests {
         );
     }
 
-    /// C2.2 beider Runden: die Leiste bekommt einen zehnten Schalter und
-    /// [`Fokus`] keinen sechsten Wert.
+    /// C2.2 beider Runden: kein Schalter dieser Leiste traegt einen eigenen
+    /// Fokuswert.
     ///
     /// **Der Ersthelferrang ist die tragende Entscheidung dieses Moduls**, und
     /// ihr Grund steht im Modulkopf unter `# Kein Schalter nimmt den
     /// Ersthelferrang an`: `Anwendungsdelegierter::ersthelferbereich` laeuft
-    /// ueber [`Bereich::ALLE`], und die Leiste liegt in keinem der fuenf
-    /// Teilbaeume. Der zehnte Schalter geht dafuer durch dieselbe eine
-    /// Bauzeile wie die neun vorhandenen — [`schalter_bauen`] setzt
-    /// `setRefusesFirstResponder(true)` fuer jeden —, und dass er sie damit
-    /// wirklich traegt, ist am laufenden Buendel zu sehen und hier nicht.
+    /// ueber [`Bereich::ALLE`], und die Leiste liegt in keinem dieser
+    /// Teilbaeume. Jeder Schalter geht dafuer durch dieselbe eine
+    /// Bauzeile — [`schalter_bauen`] setzt `setRefusesFirstResponder(true)`
+    /// fuer jeden —, und dass er sie damit wirklich traegt, ist am laufenden
+    /// Buendel zu sehen und hier nicht.
+    ///
+    /// **Die Probe zaehlt nicht mehr die Fokuswerte, sondern leitet ab.** Bis
+    /// zur Git-Runde stand hier `Fokus::ALLE.len() == 5`; die Zahl hat nichts
+    /// mit den Schaltern zu tun, und der sechste Fokuswert jener Runde kommt
+    /// vom Git-Bereich und nicht von einem Schalter. Gefragt wird deshalb, was
+    /// gemeint war: jeder Fokuswert ausser [`Fokus::Anderswo`] gehoert einem
+    /// Bereich der Aufteilung, und die Bereichsleiste ist keiner.
     #[test]
-    fn der_zehnte_schalter_gibt_fokus_keinen_sechsten_wert() {
-        assert_eq!(
-            Fokus::ALLE.len(),
-            5,
-            "die Leiste ist kein fokussierbarer Bereich"
-        );
+    fn kein_schalter_der_leiste_traegt_einen_eigenen_fokuswert() {
+        let aus_bereichen: Vec<Fokus> = Bereich::ALLE.into_iter().map(in_bereich).collect();
+        for fokus in Fokus::ALLE {
+            assert!(
+                fokus == Fokus::Anderswo || aus_bereichen.contains(&fokus),
+                "{fokus:?} gehoert keinem Bereich der Aufteilung und koennte damit nur von \
+                 einem Schalter dieser Leiste stammen"
+            );
+        }
     }
 
     /// Die Zusage der Feldbreite `[Retained<NSButton>; 3]`: genau drei Spalten

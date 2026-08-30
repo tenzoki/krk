@@ -36,7 +36,8 @@
 //!   Nachfrage aus C4 aus. Der Nutzer hat die Wahl mit diesem Preis vorgelegt
 //!   bekommen und so getroffen; wer sie umdreht, dreht eine bewusste Wahl um
 //!   und kein Versehen.
-//! - **[`Fokus::Leiste`] und [`Fokus::Anderswo`]** — kein Ausgang. In der
+//! - **[`Fokus::Leiste`], [`Fokus::Git`] und [`Fokus::Anderswo`]** — kein
+//!   Ausgang. In der
 //!   Lesezeichen- und Geraeteleiste gibt es keine Datei, die der Befehl meinte,
 //!   und `Anderswo` heisst ein stehendes Blatt oder ein Textfeld.
 //!
@@ -104,12 +105,13 @@ pub enum Rundweg {
 /// | [`Fokus::Vorschau`] | [`Rundweg::AusDerVorschau`] |
 /// | [`Fokus::Editor`] | [`Rundweg::ZurueckInDieDateiliste`] |
 /// | [`Fokus::Leiste`] | `None` |
+/// | [`Fokus::Git`] | `None` |
 /// | [`Fokus::Anderswo`] | `None` |
 ///
-/// **Die fuenf Zeilen decken alle fuenf Fokuswerte ab**, die
+/// **Die Zeilen decken jeden Fokuswert ab**, die
 /// Fallunterscheidung ist ueberschneidungsfrei und vollstaendig, und einen
-/// Auffangzweig gibt es nicht; ein sechster Fokuswert haelt den Bau an. Die
-/// Probe `die_tafel_aus_fuenf_faellen_geht_auf` schreibt alle fuenf aus, aus
+/// Auffangzweig gibt es nicht; ein siebter Fokuswert haelt den Bau an. Die
+/// Probe `die_tafel_aus_sechs_faellen_geht_auf` schreibt alle aus, aus
 /// demselben Grund, aus dem die Tafeln in [`super::zulaessigkeit`] und
 /// [`super::rueckschritt`] ausgeschrieben dastehen: eine gerechnete Erwartung
 /// waere die Umsetzung ein zweites Mal.
@@ -134,11 +136,12 @@ pub fn rundweg(fokus: Fokus) -> Option<Rundweg> {
         // Der Rueckweg. Er schliesst und blendet nicht aus; die Begruendung
         // steht im Modulkopf.
         Fokus::Editor => Some(Rundweg::ZurueckInDieDateiliste),
-        // In der Leiste gibt es keine Datei, die der Befehl meinte, und
-        // `Anderswo` ist ein stehendes Blatt oder ein Textfeld. Beide erreicht
-        // der Befehl heute gar nicht erst; warum sie hier trotzdem eine Antwort
-        // bekommen, steht im Modulkopf.
-        Fokus::Leiste | Fokus::Anderswo => None,
+        // In der Leiste und im Git-Bereich gibt es keine Datei, die der Befehl
+        // meinte — ein Commit ist keine —, und `Anderswo` ist ein stehendes
+        // Blatt oder ein Textfeld. Alle drei erreicht der Befehl heute gar
+        // nicht erst; warum sie hier trotzdem eine Antwort bekommen, steht im
+        // Modulkopf.
+        Fokus::Leiste | Fokus::Git | Fokus::Anderswo => None,
     }
 }
 
@@ -157,7 +160,7 @@ mod tests {
     /// [`super::super::zulaessigkeit`]: eine zweite Liste derselben fuenf Werte
     /// pruefte womoeglich eine andere Menge als die, ueber die das Programm
     /// laeuft.
-    const JEDER_FOKUS: [Fokus; 5] = Fokus::ALLE;
+    const JEDER_FOKUS: [Fokus; 6] = Fokus::ALLE;
 
     /// Genau eine Stelle im Baum ruft die Regel.
     ///
@@ -193,22 +196,28 @@ mod tests {
         );
     }
 
-    /// Die ganze Regel auf einen Blick: fuenf Fokuswerte, fuenf Ausgaenge.
+    /// Die ganze Regel auf einen Blick: sechs Fokuswerte, sechs Ausgaenge.
     ///
     /// Die Tafel steht in der Form der Tafeln aus [`super::super::fokus`] und
     /// [`super::super::rueckschritt`]. Sie zeigt, dass keine Zeile fehlt und
     /// keine zweimal beantwortet wird; die Proben darunter zeigen einzelne
     /// Zeilen mit ihrer Begruendung.
     #[test]
-    fn die_tafel_aus_fuenf_faellen_geht_auf() {
-        const TAFEL: [(Fokus, Option<Rundweg>); 5] = [
+    fn die_tafel_aus_sechs_faellen_geht_auf() {
+        const TAFEL: [(Fokus, Option<Rundweg>); 6] = [
             (Fokus::Dateifenster, Some(Rundweg::AusDerDateiliste)),
             (Fokus::Leiste, None),
             (Fokus::Vorschau, Some(Rundweg::AusDerVorschau)),
             (Fokus::Editor, Some(Rundweg::ZurueckInDieDateiliste)),
+            (Fokus::Git, None),
             (Fokus::Anderswo, None),
         ];
 
+        assert_eq!(
+            TAFEL.len(),
+            Fokus::ALLE.len(),
+            "die Tafel nennt nicht jeden Fokuswert"
+        );
         for (fokus, ausgang) in TAFEL {
             assert_eq!(rundweg(fokus), ausgang, "fokus={fokus:?}");
         }
@@ -260,14 +269,15 @@ mod tests {
         assert_ne!(ausgang, Some(Rundweg::AusDerVorschau));
     }
 
-    /// Die beiden Werte ohne Ausgang.
+    /// Die drei Werte ohne Ausgang.
     ///
-    /// In der Leiste gibt es keine Datei, die der Befehl meinte; `Anderswo`
-    /// heisst ein stehendes Blatt oder ein Textfeld, und dort wirkt kein
-    /// Befehl, der einen Bereich braucht.
+    /// In der Leiste und im Git-Bereich gibt es keine Datei, die der Befehl
+    /// meinte; `Anderswo` heisst ein stehendes Blatt oder ein Textfeld, und
+    /// dort wirkt kein Befehl, der einen Bereich braucht.
     #[test]
-    fn die_leiste_und_das_blatt_tragen_keinen_rundweg() {
+    fn die_leiste_der_git_bereich_und_das_blatt_tragen_keinen_rundweg() {
         assert_eq!(rundweg(Fokus::Leiste), None);
+        assert_eq!(rundweg(Fokus::Git), None);
         assert_eq!(rundweg(Fokus::Anderswo), None);
     }
 

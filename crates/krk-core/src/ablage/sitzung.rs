@@ -168,7 +168,7 @@ impl Dateifenster {
     }
 }
 
-/// Die Breiten der fuenf Bereiche in Punkten, soweit KRK sie schon kennt.
+/// Die Breiten der sechs Bereiche in Punkten, soweit KRK sie schon kennt.
 ///
 /// `None` heisst "noch nie gesetzt": dann waehlt der Aufbau der Oberflaeche
 /// die Breite. Eine gespeicherte Zahl gilt auch fuer einen ausgeblendeten
@@ -200,11 +200,20 @@ pub struct Breiten {
     /// traegt; die Probe dazu steht in `tests/ablage.rs`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub editor: Option<f64>,
+    /// Der Git-Bereich, der sich die Stelle ganz rechts mit dem
+    /// Vorschaufenster und dem Editor teilt.
+    ///
+    /// Das Feld ist mit der Git-Runde dazugekommen und steht wie die uebrigen
+    /// auf `None`, solange niemand eine Breite gesetzt hat. Eine
+    /// `session.toml` aus der Zeit davor bleibt lesbar, weil diese Struktur
+    /// `#[serde(default)]` traegt; die Probe dazu steht in `tests/ablage.rs`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git: Option<f64>,
 }
 
-/// Welche der fuenf Bereiche sichtbar sind.
+/// Welche der sechs Bereiche sichtbar sind.
 ///
-/// **Alle fuenf tragen ein Feld, die beiden Dateifenster eingeschlossen.** Bis
+/// **Alle sechs tragen ein Feld, die beiden Dateifenster eingeschlossen.** Bis
 /// zur Bereichsleisten-Runde fehlte das linke mit Absicht, weil es sich nicht
 /// ausblenden liess; seit dem Nutzerentscheid vom 260812-0306
 /// (`decisions/260811-1305_*_traegt-das-linke-dateifenster-einen-schalter.md`)
@@ -244,16 +253,25 @@ pub struct Sichtbarkeit {
     /// Mit der Editor-Runde dazugekommen; eine `session.toml` aus der Zeit
     /// davor bleibt lesbar und nimmt hier den Vorgabewert an.
     pub editor: bool,
+    /// Der Git-Bereich.
+    ///
+    /// Mit der Git-Runde dazugekommen; eine `session.toml` aus der Zeit davor
+    /// bleibt lesbar und nimmt hier den Vorgabewert `false` an, das fehlende
+    /// Feld heisst also "ausgeblendet". Die Probe dazu steht in
+    /// `tests/ablage.rs`.
+    pub git: bool,
 }
 
 impl Default for Sichtbarkeit {
     /// Der Auslieferungszustand: die vier Bereiche der Runde 1 sichtbar, der
-    /// Editor ausgeblendet.
+    /// Editor und der Git-Bereich ausgeblendet.
     ///
-    /// **Der Editor steht als einziger auf `false`**, und das ist kein
-    /// Versehen: beim allerersten Start haelt er keine Datei, und ein
-    /// sichtbarer leerer Editor naehme den Dateifenstern Platz fuer nichts. Er
-    /// kommt hervor, wenn ihn jemand verlangt.
+    /// **Die beiden Mitbewerber der Vorschau stehen auf `false`**, und das ist
+    /// kein Versehen: beim allerersten Start haelt der Editor keine Datei, und
+    /// ein sichtbarer leerer Editor naehme den Dateifenstern Platz fuer
+    /// nichts; derselbe Grund gilt dem Git-Bereich, der sich dieselbe Flaeche
+    /// teilt und ohne Repository nichts zu zeigen haette (A13). Beide kommen
+    /// hervor, wenn sie jemand verlangt.
     fn default() -> Self {
         Self {
             lesezeichen: true,
@@ -261,6 +279,7 @@ impl Default for Sichtbarkeit {
             zweites_dateifenster: true,
             vorschau: true,
             editor: false,
+            git: false,
         }
     }
 }
