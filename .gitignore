@@ -50,3 +50,4 @@ fusion-workbench/.guard-state/
 # Binaerprogramme baut und jeder Bau dieselben Abhaengigkeiten treffen soll.
 /target/
 **/*.rs.bk
+!fusion-workbench/.fusion-setup
