@@ -116,6 +116,33 @@
 //! **Die Verstecke gehoeren erst recht nicht dazu.** Sie aendern den
 //! Zeilengrund und damit die Auftragsliste, aber keine einzige Antwort.
 //!
+//! # Zwei Befundvektoren, zwei Ungueltigkeitsregeln
+//!
+//! Neben `befund` steht `gitmarke`, und die beiden fallen zu **verschiedenen**
+//! Anlaessen. Der Filterbefund faellt mit der **Frage**: aendert sich das
+//! Muster oder das, was [`Ordnermodell::inhalt_wirkt`] sagt, ist jede Antwort
+//! im Vektor eine Auskunft ueber einen Filtertext, den es nicht mehr gibt
+//! (`befund_zuruecksetzen`, gerufen von `filter_uebernehmen` und
+//! [`Ordnermodell::schalter_setzen`]). Die Gitmarke faellt mit dem
+//! **Bestand**: sie sagt etwas ueber eine Datei auf der Platte, und diese
+//! Auskunft ueberlebt jedes Tippen, aber keinen Ordnerwechsel
+//! (`ersatz_einloesen`).
+//!
+//! ```text
+//!                        befund      gitmarke
+//! Filtertext getippt      faellt      bleibt
+//! "Content" umgelegt      faellt      bleibt
+//! Verstecke umgelegt      bleibt      bleibt
+//! Ordnerwechsel           faellt      faellt
+//! ```
+//!
+//! **Ein gemeinsamer Vektor waere die eine Frage mit der anderen
+//! weggeworfen.** Ein getipptes Zeichen wuerde den Statuslauf entwerten, der
+//! Sekunden gekostet hat und nichts mit dem Filter zu tun hat; ein
+//! Ordnerwechsel wuerde umgekehrt zu wenig wegwerfen, wenn die Marke am
+//! Filterrhythmus haengt. `befund_zuruecksetzen` fasst `gitmarke` deshalb
+//! ausdruecklich nicht an, und `ersatz_einloesen` leert beide.
+//!
 //! # Die beiden Treffergruende ueberschneiden sich nicht
 //!
 //! Eine Zeile steht entweder, weil ihr **Name** die Folge traegt, oder weil ihr
@@ -130,12 +157,14 @@
 //! Pruefschritt, sondern derselbe Rumpf mit den Vorbedingungen davor, die der
 //! Pruefschritt an dieser Stelle schon hinter sich hat.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::durchlauf::{Auftrag, Auftragsart};
 use super::eintrag::Eintrag;
 use super::filter::{self, Muster, traegt_die_folge};
 use super::sortierung::{Richtung, Schluessel, Sortierung};
+use crate::git::Marke;
 
 /// Was gerade markiert ist, in einem Durchlauf gezaehlt.
 ///
@@ -331,6 +360,25 @@ pub struct Ordnermodell {
     /// an — vor dem 260816 rechnete der Neuaufbau die Namensfrage jedes Mal
     /// mit, also bis zu sechzigmal in der Sekunde, solange ein Durchlauf lief.
     grund: Vec<Zeilengrund>,
+    /// Die Gitmarke je Eintrag, oder `None`, wenn keine dasteht.
+    ///
+    /// Parallel zu `eintraege`, in derselben Bauart wie `markiert`, `befund`
+    /// und `grund`, und aus demselben Grund: die Marke haengt am Eintragsindex
+    /// und ueberlebt damit jedes Umsortieren und jedes Ein- und Ausblenden der
+    /// versteckten Eintraege.
+    ///
+    /// **`None` ist keine sechste Marke fuer "unveraendert", sondern die
+    /// Aussage, dass hier nichts steht** (A11 der Runde 23): ein Eintrag ohne
+    /// Befund traegt eine leere Zelle. Er traegt sie in zwei Lagen, die die
+    /// Zelle nicht auseinanderhaelt und die Zelle auch nicht auseinanderhalten
+    /// soll — der Eintrag ist gegenueber dem Index unveraendert, oder der
+    /// Befund steht noch aus. Der Unterschied gehoert dem Kanal des Gitlaufs,
+    /// nicht dieser Spalte.
+    ///
+    /// **Der zweite Vektor ist kein Doppelbau, sondern die zweite
+    /// Ungueltigkeitsregel**; der Modulkopf schreibt sie unter
+    /// `# Zwei Befundvektoren, zwei Ungueltigkeitsregeln` aus.
+    gitmarke: Vec<Option<Marke>>,
     /// Ob der begonnene Lesevorgang seinen Bestand noch abloesen muss.
     ///
     /// Gesetzt von [`Ordnermodell::lesevorgang_beginnen`], eingeloest von
@@ -376,6 +424,7 @@ impl Ordnermodell {
             inhalt: false,
             befund: Vec::new(),
             grund: Vec::new(),
+            gitmarke: Vec::new(),
             ersatz_ausstehend: false,
         }
     }
@@ -429,11 +478,18 @@ impl Ordnermodell {
 
     /// Loest einen vorgemerkten Ersatz ein: der alte Bestand faellt.
     ///
-    /// Auswahl, Markierung und Befund fallen mit, und zwar hier und nicht schon
-    /// beim Beginn des Lesevorgangs. Alle drei haengen am Eintragsindex; ein
-    /// Index, der den Ersatz uebersteht, zeigte danach auf einen beliebigen
-    /// Eintrag des neuen Ordners. Was die Auswahl ueber einen Lesevorgang hinweg
-    /// traegt, ist der **Name** in `krk-ui`s `Tabinhalt::wunschauswahl`.
+    /// Auswahl, Markierung, Filterbefund und Gitmarke fallen mit, und zwar hier
+    /// und nicht schon beim Beginn des Lesevorgangs. Alle vier haengen am
+    /// Eintragsindex; ein Index, der den Ersatz uebersteht, zeigte danach auf
+    /// einen beliebigen Eintrag des neuen Ordners. Was die Auswahl ueber einen
+    /// Lesevorgang hinweg traegt, ist der **Name** in `krk-ui`s
+    /// `Tabinhalt::wunschauswahl`.
+    ///
+    /// **Dies ist die ganze Ungueltigkeitsregel der Gitmarke**: sie faellt mit
+    /// dem Bestand, dem sie gilt, und mit nichts sonst. Der Filterbefund faellt
+    /// daneben ein zweites Mal, naemlich wenn die Frage sich aendert; der
+    /// Modulkopf haelt die beiden Regeln unter
+    /// `# Zwei Befundvektoren, zwei Ungueltigkeitsregeln` auseinander.
     ///
     /// **Der Filtertext faellt hier nicht mit.** Er gehoert dem Tab und nicht
     /// dem Bestand; ob ein Ordnerwechsel ihn stehen laesst, entscheidet der
@@ -452,6 +508,7 @@ impl Ordnermodell {
         self.markiert.clear();
         self.befund.clear();
         self.grund.clear();
+        self.gitmarke.clear();
         self.auswahl = None;
     }
 
@@ -472,6 +529,7 @@ impl Ordnermodell {
             Arc::make_mut(&mut self.eintraege).push(eintrag);
             self.markiert.push(false);
             self.befund.push(Befund::Unentschieden);
+            self.gitmarke.push(None);
             // Erst anhaengen, dann fragen: `zeilengrund_von` liest den Eintrag
             // aus dem Bestand, und es soll dieselbe Frage sein, die
             // `grund_neu_rechnen` stellt, und nicht eine zweite Fassung.
@@ -1150,6 +1208,78 @@ impl Ordnermodell {
         }
     }
 
+    /// Die Gitmarke des genannten Eintrags, oder `None`.
+    ///
+    /// `None` fuer jeden Index ausserhalb des Bestands, wie es
+    /// [`Ordnermodell::befund`] fuer einen solchen Index `Unentschieden`
+    /// liefert: ueber einen Eintrag, den es nicht gibt, ist nichts bekannt.
+    #[must_use]
+    pub fn gitmarke(&self, eintragsindex: u32) -> Option<Marke> {
+        self.gitmarke.get(eintragsindex as usize).copied().flatten()
+    }
+
+    /// Traegt die Marken eines Gitlaufs ein, ueber den **Namen** zugeordnet.
+    ///
+    /// Liefert, ob ueberhaupt etwas eingetragen wurde. Der Weg, auf dem der
+    /// Befund des Gitlaufs hereinkommt; ein Name, den der Bestand nicht fuehrt,
+    /// wird verworfen, ohne die uebrigen zu verhindern.
+    ///
+    /// # Zwei Unterschiede zu [`Ordnermodell::befunde_setzen`]
+    ///
+    /// Die beiden Setzer stehen nebeneinander und sehen gleich aus; sie
+    /// unterscheiden sich in zwei Punkten, und beide sind tragend.
+    ///
+    /// **Erstens: die Zuordnung laeuft ueber den Namen und nicht ueber den
+    /// Eintragsindex, und deshalb wird die Generation gegengehalten.**
+    /// [`Ordnermodell::lesevorgang_beginnen`] leert den Bestand nicht vorab,
+    /// sondern merkt den Ersatz vor; in dieser Spanne steht noch der **alte**
+    /// Ordner da. Ein Filterbefund kommt darueber von selbst hinweg, weil sein
+    /// Eintragsindex am Bestandsende durchfaellt, sobald der neue Ordner
+    /// kuerzer ist — und wo er nicht durchfaellt, faellt er mit dem Ersatz.
+    /// Ein Name hat diesen Schutz nicht: derselbe Name kann im neuen Ordner
+    /// ebenso stehen. Die Pruefung auf `generation` und `ersatz_ausstehend` ist
+    /// deshalb keine Doppelung der Kanalzusage, sondern der Ersatz fuer einen
+    /// Schutz, den es hier nicht gibt (C7.4 und C7.5 der Runde 23).
+    ///
+    /// **Zweitens: die Sicht wird nicht neu aufgebaut.** Eine Marke
+    /// entscheidet nicht, **ob** eine Zeile steht, sondern nur, **was** in
+    /// einer ihrer Zellen steht; `sichtbar` fragt sie nicht. `sicht_neu_aufbauen`
+    /// liefe ueber alle Eintraege samt `sort_unstable_by` und ordnete die Liste
+    /// fuer nichts — bei 100.000 Eintraegen auf dem Hauptfaden. Die Ansicht
+    /// antwortet stattdessen mit `reloadData` und **ohne** `auswahl_anzeigen`:
+    /// die Sichtreihenfolge bleibt, und die ausgewaehlte Zeile behaelt ihre
+    /// Stelle.
+    ///
+    /// # Einmal ein Nachschlagewerk und nicht einmal je Name
+    ///
+    /// Die `HashMap` ueber den Bestand entsteht einmal je Aufruf. Der Gitlauf
+    /// liefert seine Marken deshalb in **einem** Stueck und nicht Eintrag fuer
+    /// Eintrag; der Modulkopf von [`crate::git::lauf`] schreibt den zweiten
+    /// Grund dazu.
+    #[must_use = "die Antwort sagt, ob der Befund noch zu diesem Bestand gehoert hat"]
+    pub fn gitmarken_setzen(&mut self, generation: u64, marken: &[(String, Marke)]) -> bool {
+        if generation != self.generation || self.ersatz_ausstehend {
+            return false;
+        }
+        let stellen: HashMap<&str, usize> = self
+            .eintraege
+            .iter()
+            .enumerate()
+            .map(|(index, eintrag)| (eintrag.name.as_str(), index))
+            .collect();
+        let mut eingetragen = false;
+        for (name, marke) in marken {
+            let Some(index) = stellen.get(name.as_str()) else {
+                continue;
+            };
+            if let Some(stelle) = self.gitmarke.get_mut(*index) {
+                *stelle = Some(*marke);
+                eingetragen = true;
+            }
+        }
+        eingetragen
+    }
+
     /// Setzt jeden Befund auf `Unentschieden` zurueck.
     ///
     /// Zu rufen, wann immer die Frage eine andere wird, und **nur** dann. Die
@@ -1158,6 +1288,12 @@ impl Ordnermodell {
     /// [`Ordnermodell::schalter_setzen`], dazu der Abbruch eines Durchlaufs von
     /// aussen. Die Sicht baut diese Methode **nicht** neu auf; ihre Rufer tun es
     /// unmittelbar danach, und zweimal zu bauen waere zweimal dieselbe Arbeit.
+    ///
+    /// **`gitmarke` wird hier nicht angefasst** (C7.6 der Runde 23). Die Marke
+    /// ist keine Antwort auf den Filtertext, sondern eine Auskunft ueber die
+    /// Datei auf der Platte; sie beim Tippen wegzuwerfen hiesse, einen
+    /// Statuslauf zu entwerten, der Sekunden gekostet hat und mit der
+    /// geaenderten Frage nichts zu tun hat. Ihr Anlass ist `ersatz_einloesen`.
     pub fn befund_zuruecksetzen(&mut self) {
         self.befund.fill(Befund::Unentschieden);
     }
@@ -1440,5 +1576,257 @@ mod tests {
             .auswahl_zeile()
             .expect("die Auswahl ist verloren gegangen");
         assert_eq!(name_in_zeile(&modell, zeile), Some(".versteckt.txt"));
+    }
+
+    // ---- Die Gitmarke: ein zweiter Befundvektor mit eigener Ungueltigkeitsregel
+    //
+    // Die Proben zu Schritt 5 der Runde 23. Keine von ihnen ruft `git`: sie
+    // reichen die Marken von Hand herein, so wie der Gitlauf sie ueber seinen
+    // Kanal liefert. Die Laeufe gegen ein angelegtes Repository stehen in
+    // `crates/krk-core/tests/git.rs`.
+
+    /// Ein Modell mit fuenf benannten Eintraegen, abgeschlossen und sortiert.
+    fn fuenf_eintraege() -> Ordnermodell {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([
+            eintrag("geaendert.txt", Typ::Datei),
+            eintrag("vorgemerkt.txt", Typ::Datei),
+            eintrag("neu.txt", Typ::Datei),
+            eintrag("konflikt.txt", Typ::Datei),
+            eintrag("umbenannt.txt", Typ::Datei),
+            eintrag("unveraendert.txt", Typ::Datei),
+        ]);
+        modell.abschliessen();
+        modell
+    }
+
+    /// Die fuenf Marken in der Reihenfolge von [`Marke::ALLE`], an den fuenf
+    /// gleichnamigen Eintraegen.
+    fn fuenf_marken() -> Vec<(String, Marke)> {
+        [
+            ("geaendert.txt", Marke::Geaendert),
+            ("vorgemerkt.txt", Marke::Vorgemerkt),
+            ("neu.txt", Marke::Neu),
+            ("konflikt.txt", Marke::Konflikt),
+            ("umbenannt.txt", Marke::Umbenannt),
+        ]
+        .into_iter()
+        .map(|(name, marke)| (name.to_owned(), marke))
+        .collect()
+    }
+
+    /// Die Marke des Eintrags mit dem genannten Namen.
+    fn marke_von(modell: &Ordnermodell, name: &str) -> Option<Marke> {
+        let index = modell
+            .bestand()
+            .iter()
+            .position(|eintrag| eintrag.name == name)
+            .expect("den Eintrag gibt es nicht");
+        modell.gitmarke(index as u32)
+    }
+
+    /// C5.3 (Modellhaelfte) und A11: die fuenf Zustaende stehen an den fuenf
+    /// Eintraegen, und der unveraenderte traegt **keine** Marke.
+    #[test]
+    fn die_fuenf_marken_stehen_an_ihren_eintraegen_und_der_unveraenderte_traegt_keine() {
+        let mut modell = fuenf_eintraege();
+
+        assert!(
+            modell.gitmarken_setzen(1, &fuenf_marken()),
+            "der Befund gehoert zu diesem Bestand und muss eingetragen werden"
+        );
+
+        assert_eq!(marke_von(&modell, "geaendert.txt"), Some(Marke::Geaendert));
+        assert_eq!(
+            marke_von(&modell, "vorgemerkt.txt"),
+            Some(Marke::Vorgemerkt)
+        );
+        assert_eq!(marke_von(&modell, "neu.txt"), Some(Marke::Neu));
+        assert_eq!(marke_von(&modell, "konflikt.txt"), Some(Marke::Konflikt));
+        assert_eq!(marke_von(&modell, "umbenannt.txt"), Some(Marke::Umbenannt));
+        assert_eq!(
+            marke_von(&modell, "unveraendert.txt"),
+            None,
+            "ein Eintrag ohne Befund traegt eine leere Zelle und keine sechste Marke"
+        );
+
+        let buchstaben: Vec<char> = Marke::ALLE
+            .into_iter()
+            .map(|marke| marke.buchstabe())
+            .collect();
+        assert_eq!(
+            buchstaben.len(),
+            Marke::ALLE.len(),
+            "die Buchstaben stehen fuer alle fuenf Werte"
+        );
+    }
+
+    /// C7.5: ein Befund, dessen Ordner nicht mehr angezeigt wird, schreibt
+    /// nichts in den neuen Ordner. Hier die Modellhaelfte: eine fremde
+    /// Generation traegt nichts ein.
+    #[test]
+    fn ein_befund_mit_fremder_generation_traegt_keine_marke_ein() {
+        let mut modell = fuenf_eintraege();
+
+        assert!(
+            !modell.gitmarken_setzen(2, &fuenf_marken()),
+            "die Generation 2 gehoert einem anderen Lesevorgang"
+        );
+
+        for (name, _) in fuenf_marken() {
+            assert_eq!(
+                marke_von(&modell, &name),
+                None,
+                "der verspaetete Befund hat {name} markiert"
+            );
+        }
+    }
+
+    /// C7.4: ein Befund, der eintrifft, waehrend `lesevorgang_beginnen` den
+    /// Ersatz noch vormerkt, schreibt keine Marke in den alten Bestand — auch
+    /// dann nicht, wenn er die neue Generation nennt und der neue Ordner
+    /// dieselben Namen fuehrt.
+    #[test]
+    fn ein_befund_waehrend_des_vorgemerkten_ersatzes_schreibt_nichts_in_den_alten_bestand() {
+        let mut modell = fuenf_eintraege();
+        modell.lesevorgang_beginnen(2);
+
+        assert!(
+            modell.ersetzt_beim_naechsten_stapel(),
+            "die Probe traegt nur, solange der alte Bestand noch dasteht"
+        );
+        assert!(
+            modell.gehoert_dazu(2),
+            "die Generation gehoert schon dem neuen Lauf, der Inhalt noch dem alten"
+        );
+
+        assert!(
+            !modell.gitmarken_setzen(2, &fuenf_marken()),
+            "der Befund darf den alten Bestand nicht markieren, obwohl die \
+             Generation stimmt"
+        );
+        for (name, _) in fuenf_marken() {
+            assert_eq!(
+                marke_von(&modell, &name),
+                None,
+                "der Befund hat {name} im alten Bestand markiert"
+            );
+        }
+
+        // Nach dem eingeloesten Ersatz nimmt dasselbe Modell denselben Befund an.
+        modell.anhaengen([eintrag("geaendert.txt", Typ::Datei)]);
+        modell.abschliessen();
+        assert!(
+            modell.gitmarken_setzen(2, &fuenf_marken()),
+            "nach dem Ersatz gehoert der Befund zum Bestand"
+        );
+        assert_eq!(marke_von(&modell, "geaendert.txt"), Some(Marke::Geaendert));
+    }
+
+    /// C7.6: zwei Vektoren, zwei Ungueltigkeitsregeln. Ein Tippen im Filter
+    /// wirft allein den Filterbefund weg, ein Ordnerwechsel beide.
+    #[test]
+    fn ein_tippen_wirft_nur_den_filterbefund_weg_ein_ordnerwechsel_beide() {
+        let mut modell = fuenf_eintraege();
+        assert!(modell.gitmarken_setzen(1, &fuenf_marken()));
+        let index = modell
+            .bestand()
+            .iter()
+            .position(|eintrag| eintrag.name == "geaendert.txt")
+            .expect("den Eintrag gibt es nicht") as u32;
+        modell.befunde_setzen([(index, Befund::Treffer)]);
+        assert_eq!(modell.befund(index), Befund::Treffer);
+
+        // Getippt: die Frage des Filters ist eine andere, die Datei auf der
+        // Platte ist dieselbe.
+        modell.zeichen_anhaengen('g');
+
+        assert_eq!(
+            modell.befund(index),
+            Befund::Unentschieden,
+            "der Filterbefund gilt der alten Frage und muss fallen"
+        );
+        assert_eq!(
+            modell.gitmarke(index),
+            Some(Marke::Geaendert),
+            "die Gitmarke haengt am Bestand und nicht am Filtertext"
+        );
+
+        // Ordnerwechsel: beide fallen.
+        modell.lesevorgang_beginnen(2);
+        modell.anhaengen([eintrag("geaendert.txt", Typ::Datei)]);
+        modell.abschliessen();
+
+        assert_eq!(modell.befund(0), Befund::Unentschieden);
+        assert_eq!(
+            modell.gitmarke(0),
+            None,
+            "der Ordnerwechsel wirft die Gitmarken mit dem Bestand weg"
+        );
+    }
+
+    /// Ein Name, den der Bestand nicht fuehrt, wird verworfen, ohne die
+    /// uebrigen zu verhindern.
+    #[test]
+    fn ein_unbekannter_name_wird_verworfen_ohne_die_uebrigen_zu_verhindern() {
+        let mut modell = fuenf_eintraege();
+        let mut marken = vec![("gibtesnicht.txt".to_owned(), Marke::Konflikt)];
+        marken.extend(fuenf_marken());
+        marken.push(("auchnicht.txt".to_owned(), Marke::Neu));
+
+        assert!(
+            modell.gitmarken_setzen(1, &marken),
+            "die fuenf bekannten Namen sind einzutragen"
+        );
+
+        assert_eq!(marke_von(&modell, "geaendert.txt"), Some(Marke::Geaendert));
+        assert_eq!(marke_von(&modell, "umbenannt.txt"), Some(Marke::Umbenannt));
+        assert_eq!(marke_von(&modell, "unveraendert.txt"), None);
+
+        // Und ein Befund, der **nur** unbekannte Namen nennt, traegt nichts ein.
+        let mut leeres = Ordnermodell::neu(1);
+        leeres.anhaengen([eintrag("a.txt", Typ::Datei)]);
+        leeres.abschliessen();
+        assert!(
+            !leeres.gitmarken_setzen(1, &[("b.txt".to_owned(), Marke::Neu)]),
+            "kein einziger Name passt, also ist nichts eingetragen"
+        );
+        assert_eq!(leeres.gitmarke(0), None);
+    }
+
+    /// Der zweite Unterschied zu `befunde_setzen`, an der einen Lage gemessen,
+    /// in der er sichtbar ist: waehrend eines Lesevorgangs steht die Sicht in
+    /// **Lesereihenfolge**, und erst `abschliessen` sortiert sie. Ein Setzer,
+    /// der die Sicht neu aufbaute, sortierte sie hier vorzeitig um.
+    #[test]
+    fn gitmarken_setzen_baut_die_sicht_nicht_neu_auf() {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([
+            eintrag("zzz.txt", Typ::Datei),
+            eintrag("aaa.txt", Typ::Datei),
+        ]);
+        assert_eq!(
+            name_in_zeile(&modell, 0),
+            Some("zzz.txt"),
+            "die Probe traegt nur, solange die Sicht noch in Lesereihenfolge steht"
+        );
+
+        assert!(modell.gitmarken_setzen(1, &[("aaa.txt".to_owned(), Marke::Neu)]));
+
+        assert_eq!(
+            name_in_zeile(&modell, 0),
+            Some("zzz.txt"),
+            "die Sicht ist umsortiert worden, also wurde sie neu aufgebaut"
+        );
+
+        // Die Gegenprobe an demselben Modell: `befunde_setzen` baut auf und
+        // sortiert damit um. Ohne sie hinge diese Probe an der Annahme, dass
+        // ein Neuaufbau hier ueberhaupt sichtbar waere.
+        modell.befunde_setzen([(0, Befund::Treffer)]);
+        assert_eq!(
+            name_in_zeile(&modell, 0),
+            Some("aaa.txt"),
+            "befunde_setzen baut die Sicht neu auf und sortiert dabei"
+        );
     }
 }

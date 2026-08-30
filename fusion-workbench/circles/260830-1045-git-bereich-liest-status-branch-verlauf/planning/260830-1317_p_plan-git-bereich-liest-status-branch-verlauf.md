@@ -295,7 +295,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
    - Kriterien: C4.2 (die zweite Frage), C4.3 (Nachladeregel), C6.1 (Laufhälfte), C7.1, Bedingung 3
    - Dependencies: Schritt 3
 
-5. **Der Gitbefund im Ordnermodell**
+5. **Der Gitbefund im Ordnermodell** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-core/src/verzeichnis/modell.rs`
    - Changes: `gitmarke: Vec<Option<Marke>>` parallel zu `eintraege`, in der Bauart von `markiert`, `befund` und `grund`; `anhaengen` hängt je Eintrag ein `None` an, `ersatz_einloesen` leert ihn mit den drei anderen, `befund_zuruecksetzen` fasst ihn nicht an. `#[must_use] pub fn gitmarken_setzen(&mut self, generation: u64, marken: &[(String, Marke)]) -> bool` weist ab, solange `generation != self.generation` oder `ersatz_ausstehend` steht, baut sonst einmal eine `HashMap<&str, u32>` über den Bestand, trägt ein und liefert, ob etwas eingetragen wurde; **sie baut die Sicht nicht neu auf**, und der Doc-Kommentar nennt beide Unterschiede zu `befunde_setzen` (Entscheidung 4). `pub fn gitmarke(&self, eintragsindex: u32) -> Option<Marke>` als Leseseite. Der Modulkopf bekommt einen Abschnitt `# Zwei Befundvektoren, zwei Ungültigkeitsregeln`, der ausschreibt, dass der Filterbefund mit der Frage fällt und die Marke mit dem Bestand.
@@ -509,18 +509,19 @@ impl Marke { #[must_use] pub const fn buchstabe(self) -> char; }
 pub enum Kopf { Branch(String), Abgeloest(String), OhneCommit(String), KeinRepository }
 pub struct Commit { pub id: ObjectId, pub kurzbeschreibung: String, pub nachricht: String,
                     pub autor: String, pub email: String, pub zeit: SystemTime }
-pub struct Gitleser;                                   // haelt ein gix::Repository
+pub enum Oeffnung { Offen(Box<Gitleser>), KeinRepository, Unentschieden }
+pub struct Gitleser { repo: gix::Repository }          // haelt ein gix::Repository
 impl Gitleser {
-    pub fn oeffnen(ordner: &Path) -> Option<Self>;
-    #[must_use] pub fn kopf(&self) -> Kopf;
-    #[must_use] pub fn verlauf(&self, ab: Option<ObjectId>, zahl: usize) -> Vec<Commit>;
-    #[must_use] pub fn marken(&self, ordner: &Path) -> Vec<(String, Marke)>;
+    #[must_use] pub fn oeffnen(ordner: &Path) -> Oeffnung;
+    #[must_use] pub fn kopf(&self) -> Option<Kopf>;
+    #[must_use] pub fn verlauf(&self, ab: Option<ObjectId>, zahl: usize) -> Option<Vec<Commit>>;
+    #[must_use] pub fn marken(&self, ordner: &Path) -> Option<Vec<(String, Marke)>>;
 }
 pub enum Gitfrage { Ganz, WeitererVerlauf { ab: ObjectId } }
 pub enum Gitmeldung { Kopf(Kopf), Verlauf(Vec<Commit>), Marken(Vec<(String, Marke)>) }
 pub struct Gitlauf;
 impl Gitlauf {
-    pub fn starten(ordner: PathBuf, frage: Gitfrage, generation: u64) -> Self;
+    #[must_use] pub fn starten(ordner: PathBuf, frage: Gitfrage, generation: u64) -> Self;
     pub fn meldungen(&self) -> &Receiver<Gitmeldung>;
     pub fn abbrechen(&self);
 }
@@ -546,6 +547,8 @@ pub enum Funktionsbereich { …, Git, … }                 // zehnter Wert, hin
 // crates/krk-core/src/tasten/belegung.rs
 pub enum Kommando { …, GitBereichUmschalten, FokusGit, SpalteMarkeUmschalten }
 ```
+
+**Dreiwertig statt zweiwertig, und `Option` an den drei Fragen: das ist der gebaute Stand und nicht der ursprünglich geplante.** Der Entwurf dieses Abschnitts führte `oeffnen -> Option<Self>` und drei Fragen ohne `Option`. Schritt 3 ist davon abgewichen und hat den Grund gemessen: unter `ulimit -n 64` mit belegter Deskriptortabelle scheitert `gix::discover` an einem **echten** Repository, und eine zweiwertige Antwort müsste diesen Zustand des eigenen Prozesses als „dieser Ordner liegt in keinem Repository" ausgeben — genau die Verwechslung, die C7.8 verbietet und die der Durchlauf mit `260815-0211` einmal getragen hat. `Oeffnung::Unentschieden` und das `None` der drei Fragen heißen deshalb überall dasselbe: **die Frage ist nicht beantwortet**, und der Rufer meldet nichts, statt eine Verneinung auszugeben. Beleg und Messung stehen im History-Eintrag `history/260830-1620-coder-schritt-3-gix-und-der-gitleser.md`, die Regel im Modulkopf von `crates/krk-core/src/git/mod.rs` unter `# \`None\` heisst „unentschieden" und nie „nichts gefunden"`. Die Schritte 5, 6 und 7 lesen ihre Rufer aus **diesem** Stand (`260830-2358_*_die-datenstrukturen-des-plans-fuehren-vier-gitleser-signaturen-die-schritt-3-verworfen-hat.md`, geschlossen).
 
 ---
 
