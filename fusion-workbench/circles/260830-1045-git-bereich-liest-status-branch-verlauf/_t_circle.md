@@ -3,9 +3,9 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
-**Claim:** Unclaimed
+**Claim:** Claimed 260830-1100: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
 **Active spec/plan:** (none yet)
-**Active session history:** (none yet)
+**Active session history:** 260830-0950-orchestrator-session.md
 
 ---
 

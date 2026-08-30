@@ -35,3 +35,6 @@ Der Workspace führt vier Mitglieder, und genau eines davon ist die Bibliothek o
 Wir empfehlen Möglichkeit 1. Die Regel, nach der dieses Projekt seine Kisten schneidet, ist die Prüfbarkeit ohne Fenster, und sie ist an drei fremden Kisten schon angewandt worden; eine vierte Kiste einzuführen, um eine Abhängigkeitszahl zu drücken, ersetzt eine klare Regel durch eine Ermessensfrage. Der genannte Nachteil ist real und messbar, aber er trifft die Bauzeit und nicht die Ausführung.
 
 Wer Möglichkeit 2 wählt, sollte die Regel dazu ausschreiben, nach der künftig zwischen `krk-core` und `krk-git` entschieden wird; ohne sie ist die zweite Kiste die teurere Antwort.
+
+---
+Answered: shared/history/260830-0950-orchestrator-session.md:83 — Möglichkeit 1: Modul `krk-core/src/git/` mit `gix` als Abhängigkeit des Kerns; die fünfte Kiste `krk-git` ist abgelehnt, die 98 Pakete und `libc` im Teilbaum des Kerns sind angenommen.

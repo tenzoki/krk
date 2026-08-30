@@ -73,3 +73,25 @@ Entscheidungsdatensätze stehen:
 ## Verlauf
 
 - Analyst zur Machbarkeit von `gix` für Stufe A dispatcht.
+
+## Zwei Entscheidungen vor dem Plan, vom Nutzer am 260830 beantwortet
+
+Der Shaper hatte sie ausdrücklich nicht in die Klärung der Direktive genommen, weil
+beide nicht berühren, was der Nutzer am Programm sieht. Vorgelegt hat sie der
+Orchestrator, der Nutzer hat mit `1a 2a` geantwortet.
+
+**Die Git-Anbindung wohnt in `krk-core/src/git/`, mit `gix` als Abhängigkeit des
+Kerns.** Das ist dieselbe Einordnung, die `icu_collator`, `regex` und `zip` bekommen
+haben, und sie folgt der Regel, nach der dieses Projekt seine Kisten schneidet: alles
+ohne Fensterwerkzeug gehört in den Kern und wird dort geprüft. Ein Gitleser liefert
+Namen, Marken, Hashes und Zeitpunkte, also keine Darstellung. Der Preis ist benannt und
+angenommen: `cargo test -p krk-core` übersetzt 98 zusätzliche Pakete mit, und `libc`
+kommt in den Teilbaum des Kerns. Eine fünfte Kiste `krk-git` ist damit abgelehnt.
+
+**Die C-Freiheits-Zusage bezieht sich künftig auf das Bauziel und nicht auf den Inhalt
+von `Cargo.lock`.** Sie lautet fortan, dass auf den beiden Mac-Zielen weder `cc` noch ein
+`-sys`-Paket im Abhängigkeitsbaum ankommt, während `Cargo.lock` daneben `windows-sys` und
+`linux-raw-sys` führt, beide an fremden Zielen. Das Prüfmittel wird
+`cargo tree --target <ziel> -e normal,build` statt eines `grep` in `Cargo.lock`, und
+`windows-sys` verliert seinen Ausnahmestatus: es ist der erste Fall der Regel statt der
+Ausnahme von ihr. Fünf Prosastellen sind nachzuziehen; das gehört in den Plan der Runde.

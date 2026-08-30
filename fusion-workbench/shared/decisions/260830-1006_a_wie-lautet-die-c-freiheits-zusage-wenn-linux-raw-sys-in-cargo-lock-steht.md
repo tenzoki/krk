@@ -36,3 +36,6 @@ Die Frage ist vor der Aufnahme von `gix` zu entscheiden, weil sonst fünf Prosas
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1. Die Zusage misst heute einen Stellvertreter für das, was sie sichern will, und der Stellvertreter versagt beim ersten zielgebundenen Paket. Möglichkeit 2 verlängert eine Liste, deren Wachstum keine Grenze hat, und lässt den Messfehler stehen.
+
+---
+Answered: shared/history/260830-0950-orchestrator-session.md:91 — Möglichkeit 1: die Zusage bezieht sich auf das Bauziel; Prüfmittel ist `cargo tree --target <ziel> -e normal,build`, `windows-sys` wird vom Ausnahmefall zum ersten Fall der Regel, fünf Prosastellen sind im Plan nachzuziehen.
