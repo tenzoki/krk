@@ -33,3 +33,5 @@ impl Bereich {
 **Filed by:** analyst, Kai Stalmann <kai@stalmann.org>
 Gefunden bei der Machbarkeitsanalyse zu `gix`, Frage 7: `shared/analyses/260830-1006-gix-als-git-anbindung-stufe-a.md`. Der Befund bindet den Plan der Git-Runde, weil ein sechster `Bereich` ohne Eintrag in `Bereich::ALLE` übersetzt, jede Probe besteht und keinen `NSBox`, keinen Schalter, keinen Breitenanteil und keinen Ersthelferbereich bekommt.
 Verwandt: `260826-1420_*_zwei-probenkoepfe-in-statuszeile-rs-zaehlen-fuenf-raenge-und-rang-alle-traegt-sechs.md` (derselbe Befundtyp an anderer Stelle).
+
+Also seen: 260830-1317 by planner — eigenständig übersetzt gemessen hält von den vier Feldbreiten unter „Was wirklich hält" genau eine den Bau an, `Bereichsleiste::bereichsschalter` über `ALLE.map`; `Aufteilung::rahmen`, `gemessene_breiten` und `breiten_uebernehmen` übersetzen grün und brechen erst am Index (`260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md`).
