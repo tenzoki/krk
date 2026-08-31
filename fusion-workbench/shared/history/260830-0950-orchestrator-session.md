@@ -3,7 +3,7 @@
 **Filed by:** orchestrator, Kai Stalmann <kai@stalmann.org>
 **Directive:** KRK bekommt eine Git-Anbindung, in Stufen. Stufe A zuerst: ein Git-Bereich am rechten Rand als sechster Wert von `Bereich`, der den Status des angezeigten Ordners, den aktuellen Branch und den Verlauf anzeigt; die Statusmarken in der Dateiliste sind über ein Ankreuzfeld der Bereichsleiste zuschaltbar. Danach Stufe B, die vier Operationen der Runde 1 (hinzufügen, committen, Änderungen verwerfen, Versions-Schieberegler), danach eine Auslieferung. Stufe C (Branches wechseln) ist möglich, Stufe E (PRs und Review-Freigabe) unwahrscheinlich. Bibliothek: `gix` (gitoxide) wird probiert. Dass die zehn Zeitzusagen aus C8 dabei fallen können, hat der Nutzer ausdrücklich in Kauf genommen.
 **Mode:** custom — erst Machbarkeitsanalyse, dann Shaper
-**Status:** In Arbeit — die Bounded Closure vom 260831-1430 ist zurückgenommen, nachdem die Durchsicht zwei ernste Defekte fand
+**Status:** Bounded Closure: der Abnahmelauf am laufenden Bündel ist Nutzerarbeit und nicht gefahren; 25 der 90 Abnahmekriterien bleiben unabgenommen
 
 ## Ausgangslage
 
@@ -262,3 +262,130 @@ Vergleich steht an der Konfliktprüfung schon als offener Defekt.
 **Der Nutzer hat entschieden, beide vor der Auslieferung zu beheben.** Die Bounded Closure
 ist damit zurückgenommen, der Circle bleibt aktiv, und die Auslieferung von 1.5.0 folgt
 nach den zwei Behebungen und einer erneuten Abnahme.
+
+---
+
+## Budget
+
+| Größe | Zahl |
+|---|---|
+| Turns | 3 |
+| Planschritte erledigt | 16 von 17 |
+| Defekte gefilt | 32 |
+| Defekte geschlossen | 20 |
+| Entscheidungen gefilt | 12 |
+| Entscheidungen umgesetzt (`_i_`) | 8 |
+| Commits | 37 |
+| Auslieferungen | 2 (`v1.5.0`, `v1.6.0`) |
+| Agentenfehler | 0 |
+| Nutzergates | 14 |
+
+Die vier Datensatzzahlen sind über beide Speicher erhoben, den des Circles und den
+gemeinsamen, mit `d1fbaac` als Anker und `260830-0950` als Sitzungsbeginn. Nach der
+Schließung des Circles nennt `bin/fusion-paths` allein den gemeinsamen Speicher; wer
+allein ihm folgt, zählt die Datensätze der Runde nicht mit.
+
+## Review coverage
+
+**Bereich:** `d1fbaac..HEAD` — 37 Commits
+**Abgedeckt von:** `circles/260830-1045-git-bereich-liest-status-branch-verlauf/reviews/260831-1444-coderev-git-bereich-runde-23.md`, Bereich `d1fbaac..0a25ee0`, 25 Commits
+**Nicht abgedeckt:** 12 Commits — die vier Behebungen der Durchsichtsbefunde, der Commit
+der Durchsicht selbst, die zwei Auslieferungsläufe samt ihrer Versionscommits, die
+verschiebbare Grenze und die Werkbank-Commits des Abschlusses.
+**Getragene, nicht geöffnete Dateien:** `Cargo.lock` — 1 523 Zeilen erzeugter Sperrstand,
+dessen Aussage die Durchsicht am Bauziel statt an der Datei geprüft hat.
+
+Der Nutzer hat die ungedeckte Spanne am 260831 ausdrücklich in Kauf genommen. Jede der
+vier Behebungen ist gegen einen ausgeschriebenen Abnahmetest gebaut, und jede ihrer Proben
+wurde **vor** der Änderung gegen den alten Stand gemessen: 56 von 62 Commits, kein
+einziger Befund bei den zerlegten Namen, `KeinRepository` statt unentschieden.
+
+## Remaining Work
+
+- **Der Abnahmelauf**, 25 Kriterien am laufenden Bündel. Er ist der Grund für den
+  beschränkten Abschluss und kann nur vom Nutzer gefahren werden.
+- **Elf Defekte und drei Entscheidungen** im geschlossenen Circle.
+- **Zwei Kommentare in `resources/default-keymap.toml`** sagen „wie die drei
+  Spaltenschalter darüber", und seit Schritt 9 stehen dort vier.
+- **Sieben Leseprofile fehlen der Nutzerdatei.** Die Auslieferungsfassung führt zwölf,
+  `~/Library/Application Support/KRK/readers.toml` fünf. Daraus ist die Directive für
+  einen künftigen Circle entstanden, die noch nicht festgehalten ist.
+
+## Session Flow
+
+```mermaid
+sequenceDiagram
+    participant U as Nutzer
+    participant O as Orchestrator
+    participant S as Shaper
+    participant P as Planner
+    participant C as Coder
+    participant OC as Ontocoder
+    participant CR as Coderev
+    participant A as Analyst
+    participant R as Reconciler
+    participant PM as Playmaker
+
+    U->>O: Vorschlag fuer eine Git-Anbindung
+    O->>A: Machbarkeit gix fuer Stufe A
+    A-->>O: gix 0.87.1 traegt alles, C-frei (76c04fc)
+    O->>U: GATE Circle anlegen?
+    U-->>O: ja
+    O->>S: Directive schaerfen
+    S-->>O: vier Fragen
+    O->>U: GATE vier Fragen
+    U-->>O: 1a 2a 3a 4b
+    S-->>O: Circle 260830-1045 (ec9fe92)
+    O->>S: Spec
+    S-->>O: 90 Abnahmekriterien (2059138)
+    O->>U: GATE Spec
+    U-->>O: freigegeben
+    O->>P: Plan
+    P-->>O: 17 Schritte; C1.1 widerlegt (1af7886)
+    O->>U: GATE Plan
+    U-->>O: freigegeben
+
+    Note over O: Turn 1 — neun Schritte
+    O->>C: P-1 bis P-8
+    C-->>O: neun stille Stellen von Hand
+    O->>U: GATE Probe der Runde 8 kollidiert
+    U-->>O: tests/ ausklammern
+    O->>U: GATE ontocoder aendert Daten
+    U-->>O: freigegeben
+    O->>OC: P-9 Auslieferungsbelegung
+    OC-->>O: drei Eintraege (5a1cbe8)
+
+    Note over O: Turn 2 — sieben Schritte
+    O->>C: P-10 Messung
+    C-->>O: Posten kostet das 1,7- bis 9,5-fache
+    O->>U: GATE Endbedingung greift
+    U-->>O: nicht zurueckschreiben
+    O->>C: P-11 bis P-14, P-16
+    O->>A: P-15 Nachtraege
+    A-->>O: drei Aufzeichnungen ergaenzt
+
+    Note over O: Phase 3
+    O->>R: Abgleich
+    R-->>O: review-needed, vier Abweichungen
+    O->>U: GATE Rebalance
+    U-->>O: Bounded Closure
+    O->>CR: Durchsicht ueber 24 Commits
+    CR-->>O: 13 Defekte, einer hoch
+    O->>U: Release trotz Befunden?
+    U-->>O: erst beheben
+
+    Note over O: Turn 3 — Behebung
+    O->>C: 13 Befunde in vier Auftraegen
+    C-->>O: alle behoben, Proben vorher gemessen
+    O->>U: GATE Endbedingungen
+    U-->>O: schliessen
+    Note over O: Circle _b_ geschlossen
+    O->>U: Auslieferung 1.5.0
+    U-->>O: ja
+    Note over O: v1.5.0 beglaubigt und veroeffentlicht
+    U->>O: Aufteilung im Git-Bereich zu klein
+    O->>C: verschiebbare Grenze
+    C-->>O: NSSplitView, Anteil in session.toml
+    Note over O: v1.6.0 beglaubigt und veroeffentlicht
+    O->>PM: Portfolio nach der Schliessung
+```
