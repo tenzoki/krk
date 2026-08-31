@@ -370,7 +370,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
     - Kriterien: C9.4 (zweite Hälfte), C9.7
     - Dependencies: Schritt 11
 
-13. **Die C-Freiheits-Zusage an ihren sechs Stellen**
+13. **Die C-Freiheits-Zusage an ihren sechs Stellen** [DONE]
     - Executor: `coder`
     - Files: `Cargo.toml`, `CLAUDE.md`, `crates/krk-core/src/verzeichnis/sys.rs`
     - Changes: Die sechs Stellen aus dem Defekt `issues/260830-1106_*_der-entscheid-zur-c-freiheits-zusage-nennt-fuenf-prosastellen-im-baum-stehen-sechs.md` — `Cargo.toml:91-95`, `:150-153`, `:274-275`, `:352-356`, `CLAUDE.md:87` und `crates/krk-core/src/verzeichnis/sys.rs:66` — tragen danach die neugefasste Form aus E7: auf den beiden Mac-Zielen kommt weder `cc` noch ein Paket mit einem Namen auf `-sys` im Baum an; `Cargo.lock` führt daneben `windows-sys` und `linux-raw-sys`, beide an fremden Zielen. Prüfmittel ist `cargo tree --target <ziel> -e normal,build` und nicht mehr ein `grep` über `Cargo.lock` (C9.1). **Keine der sechs Stellen nennt danach eine Zahl der Prosastellen**; an ihre Stelle tritt die Erhebungsvorschrift, die der Defekt ausschreibt, und der Schritt prüft, dass das dortige `grep` läuft und seine Treffer mit der Aufzählung übereinstimmen (C9.2). Die sechste Stelle, `sys.rs:66`, behauptet den Rang „erstes `-sys`-Paket neben `windows-sys`" für eine künftige Zeitkiste; sie sagt danach, dass der Rang mit dieser Runde an `linux-raw-sys` gefallen ist und dass die Frage ohnehin am Bauziel und nicht in `Cargo.lock` entschieden wird. Der Defekt schließt mit diesem Schritt und mit Schritt 15 zusammen.

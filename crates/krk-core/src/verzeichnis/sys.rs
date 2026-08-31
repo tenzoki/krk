@@ -62,9 +62,21 @@
 //! Maerzdatei aus einem Archiv eine Stunde daneben ab, weil es den heute
 //! geltenden Sommerzeitversatz auf ein Datum anwendet, an dem er nicht galt.
 //! Die Standardbibliothek kennt keine Zeitzone, `NSDateFormatter` liegt in
-//! AppKit und damit ausserhalb des Kerns, und eine Zeitkiste braechte auf macOS
-//! das erste `-sys`-Paket neben `windows-sys` herein; die Gegenueberstellung
-//! steht in `shared/decisions/260825-1725_*_wo-wohnt-die-umrechnung-von-*`.
+//! AppKit und damit ausserhalb des Kerns, und eine Zeitkiste braechte eine
+//! fremde Abhaengigkeit fuer eine Frage herein, die das System schon
+//! beantwortet; die Gegenueberstellung steht in
+//! `shared/decisions/260825-1725_*_wo-wohnt-die-umrechnung-von-*`.
+//!
+//! **Den Rang, den jene Gegenueberstellung der Zeitkiste zuschrieb, hat die
+//! Zeitkiste nicht mehr.** Dort hiess sie das erste `-sys`-Paket neben
+//! `windows-sys`; seit der Runde 23 steht `linux-raw-sys` ueber `gix` und
+//! `rustix` in `Cargo.lock`, und der Rang gehoert ihm. Entschieden wird die Frage ohnehin
+//! nicht in `Cargo.lock`, sondern am Bauziel: auf den beiden Mac-Zielen kommt
+//! weder `cc` noch ein Paket mit einem Namen auf `-sys` im Baum an, und
+//! `Cargo.lock` fuehrt `windows-sys` und `linux-raw-sys` daneben an fremden
+//! Zielen. Pruefmittel ist `cargo tree --target <ziel> -e normal,build` und
+//! nicht ein `grep` ueber `Cargo.lock`
+//! (`shared/decisions/260830-1006_*_wie-lautet-die-c-freiheits-zusage-*`).
 //!
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
 //! Kerns und nicht allein die des Lesers. Die Zeile zu `fcntl(2)` traegt die
