@@ -377,7 +377,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
     - Kriterien: C9.1, C9.2
     - Dependencies: Schritt 3
 
-14. **CLAUDE.md: die Runde 23 und die Absätze, die sie falsch macht**
+14. **CLAUDE.md: die Runde 23 und die Absätze, die sie falsch macht** [DONE]
     - Executor: `coder`
     - Files: `CLAUDE.md`
     - Changes: Die Rundentabelle bekommt die Zeile 23 mit dem Circle-Verzeichnis und dem Gegenstand. Die Absätze, die diese Runde falsch macht, ziehen nach; welche das sind, sagt die Erhebung aus Schritt 11 und keine Aufzählung an dieser Stelle (C9.10). Zu erwarten sind mindestens: der Absatz zu `syntect`, `two-face` und `zip` bekommt `gix` mit seiner Merkmalsbegründung; der Absatz über die gewachsenen Aufzählungen nennt `Bereich`, `Fokus` und `Spalte` mit ihrer neuen Zahl oder mit ihrem Zählbefehl; der Absatz über den Ereignisabgriff und die zwei eigenen Textflächen bleibt bei zwei, weil der Git-Bereich keine dritte anmeldet, und sagt es; der Absatz über die Ablage bleibt unberührt, weil diese Runde keine achte Ablagedatei anlegt. Die C-Freiheits-Zeile hat Schritt 13 schon gesetzt und wird hier nicht ein zweites Mal angefasst.
