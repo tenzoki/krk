@@ -36,3 +36,6 @@ Zu entscheiden ist die Frage vor dem Plan, weil sie den Umfang der Stufe A berü
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1 für die Stufe A, mit ausdrücklicher Wiedervorlage, sobald der Posten gemessen ist. Eine Einstellung oder einen Schreibweg für Kosten zu bauen, deren Größe niemand kennt, ist die Reihenfolge verkehrt herum. Die Messung gehört in dieselbe Runde, die den Status baut, denn dann steht die Messstrecke schon da.
+
+---
+Implemented: shared/history/260830-0950-orchestrator-session.md:150 — Möglichkeit 1: Stufe A bleibt schreibfrei. Der Posten ist in `messungen/260831-0855-needsupdate.txt` beziffert (Faktor 1,7 bis 9,5 gegenüber der Statusabfrage) und in dieser Höhe angenommen; `grep -rn 'write_changes(' crates/` liefert null Aufrufstellen.

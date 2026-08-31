@@ -138,3 +138,25 @@ Feld setzte: die Ansicht und den Einzugstakt.
 **Nichts davon berührt das Repository.** Geschrieben wird eine Zahl in ein Feld im
 Arbeitsspeicher. Bedingung 2 der Runde steht unverändert: kein Weg dieser Runde ruft eine
 schreibende `gix`-Funktion.
+
+## Der gemessene Posten und die Antwort des Nutzers
+
+Schritt 10 hat den Posten beziffert, den die Machbarkeitsanalyse ausdrücklich ungemessen
+gelassen hatte. Er kostet das 1,7- bis 9,5-fache der Statusabfrage selbst und fällt bei
+jedem Ordnerwechsel erneut an: 56 gegen 12 Millisekunden im KRK-Klon, 36 gegen 21 bei
+zehntausend Einträgen, 1369 gegen 147 bei hunderttausend. Damit griff die zweite
+Endbedingung der Runde, und die drei Möglichkeiten lagen dem Nutzer erneut vor.
+
+**Der Nutzer hat Möglichkeit 1 gewählt: nicht zurückschreiben, Stufe A bleibt
+schreibfrei.** Der Preis ist jetzt beziffert statt unbekannt und in dieser Form
+angenommen. Kein Schreibweg, keine Sperrdatei, kein Konflikt mit einem gleichzeitig
+laufenden `git` im Terminal, und kein Fall, in dem ein Repository eines anderen Benutzers
+eine Fehlerbehandlung verlangte, die es nicht gibt.
+
+Ausschlaggebend waren die zwei Fälle, die ein Schreibweg mitbrächte. Der seltene ist das
+fremde Repository, dessen Dateirechte den Schreibversuch abweisen; der häufige ist die
+Sperrdatei `.git/index.lock`, die ein `git commit` im Terminal scheitern ließe, und zwar
+gerade in dem Repository, das der Nutzer in KRK offen hat.
+
+**Die Antwort ist unmittelbar realisiert**, weil der Baum sie schon trägt: `write_changes(`
+hat null Aufrufstellen unter `crates/`, nachgezählt am 260831.
