@@ -27,3 +27,6 @@ Der Lauf trägt daneben `**Status:** In Arbeit` in seinem eigenen Kopf, was auf 
 **Filed by:** orchestrator, Kai Stalmann <kai@stalmann.org>
 **Domain:** code
 Gefunden beim Sitzungsabschluss der Runde 23, als der Portfolio-Lauf nach der Schließung des Circles nachgeholt wurde. Der Orchestrator hatte den Playmaker mit `Agent(fusion:playmaker)` direkt beauftragt, nicht über `/fusion:next`.
+
+---
+Resolved: Fehlbefund, zurückgenommen am 260831-2216. Der Playmaker hatte nicht aufgehört zu arbeiten — der Orchestrator hat gemessen, während der Lauf noch lief, und seine Abschlussmeldung nicht abgewartet. Sie kam wenige Minuten später, und `portfolio.md` trägt seither `**Generated:** 260831-2211`. Alle drei Messungen des Datensatzes waren zum Zeitpunkt ihrer Erhebung richtig und beschrieben einen Zwischenstand, keinen Endstand. Der Datensatz bleibt als Aufzeichnung stehen, weil er einen Fehler des Orchestrators festhält und nicht einen des Playmakers: eine Momentaufnahme eines laufenden Agenten ist kein Befund über sein Ergebnis.
