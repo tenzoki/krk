@@ -121,7 +121,9 @@ impl Gitmodell {
 // Git-Bereich.** `Gitfenster::zeigen` (`crate::appkit`) ist der eine Schreiber
 // seiner drei Flaechen und ruft von hier `kopfzeile`, `zusammenfassung`,
 // `erschoepft`, `verlaufslaenge`, `verlaufszeile` und `einzelheiten`;
-// `letzter_commit` und `erschoepft` ruft daneben `Tabliste::verlauf_nachladen`.
+// `verlaufslaenge` und `erschoepft` ruft daneben `Tabliste::verlauf_nachladen`,
+// das erste als die Zahl der schon angezeigten Commits, ab der der Nachschlag
+// weiterzaehlt.
 //
 // **`auswahl` und `auswahl_setzen` haben ihren Rufer seit Schritt 8**, und der
 // ist der Auswahlmelder des Git-Bereichs: die Verlaufsliste bewegt ihre
@@ -131,15 +133,6 @@ impl Gitmodell {
 // (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
 // Moeglichkeit 2), damit sie den Tabwechsel uebersteht.
 impl Gitmodell {
-    /// Der letzte gehaltene Commit, hinter dem ein Nachschlag ansetzt.
-    ///
-    /// `None`, solange der Verlauf leer ist: dann gibt es keine Stelle, ab der
-    /// nachzuladen waere.
-    #[must_use]
-    pub fn letzter_commit(&self) -> Option<&Commit> {
-        self.verlauf.last()
-    }
-
     /// Ob der Verlauf erschoepft ist und ein Nachschlag nichts mehr braechte
     /// (C4.3).
     #[must_use]

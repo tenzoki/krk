@@ -94,7 +94,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 
 use super::leser::{Gitleser, Oeffnung};
-use super::{Commit, Kopf, Marke, ObjectId};
+use super::{Commit, Kopf, Marke};
 
 /// Wie viele Commits ein Lauf holt, beim ersten Mal und bei jedem Nachschlag.
 ///
@@ -117,15 +117,20 @@ pub const VERLAUFSSCHRITT: usize = 50;
 /// der Git-Bereich und die Markenspalte zeigen, entsteht neu.
 /// [`Gitfrage::WeitererVerlauf`] ist das Nachladen aus E12: der Kopf steht
 /// schon, die Marken stehen schon, gefragt sind allein die naechsten
-/// [`VERLAUFSSCHRITT`] Commits.
+/// [`VERLAUFSSCHRITT`] Commits hinter den schon angezeigten.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Gitfrage {
     /// Kopf, Verlauf und Marken, in dieser Reihenfolge.
     Ganz,
-    /// Allein die naechsten Commits, hinter dem zuletzt angezeigten.
+    /// Allein die naechsten Commits, hinter den schon angezeigten.
     WeitererVerlauf {
-        /// Der letzte schon angezeigte Commit. Er kommt nicht noch einmal mit.
-        ab: ObjectId,
+        /// Wie viele Commits schon dastehen. Sie kommen nicht noch einmal mit.
+        ///
+        /// **Die Zahl und nicht der letzte Commit**: ein Lauf, der beim
+        /// zuletzt angezeigten Commit ansetzte, lieferte allein dessen
+        /// Vorfahren und verloere jeden Nebenzweig, der beim Schwungende noch
+        /// in der Warteschlange stand. [`Gitleser::verlauf`] schreibt es aus.
+        bereits: usize,
     },
 }
 
@@ -253,9 +258,9 @@ fn gitlauffaden(
 
     // Vollstaendig und ohne Auffangzweig: der ganze Lauf holt alle drei, der
     // Nachschlag allein den Verlauf.
-    let (kopf_holen, marken_holen, ab) = match frage {
-        Gitfrage::Ganz => (true, true, None),
-        Gitfrage::WeitererVerlauf { ab } => (false, false, Some(*ab)),
+    let (kopf_holen, marken_holen, bereits) = match frage {
+        Gitfrage::Ganz => (true, true, 0),
+        Gitfrage::WeitererVerlauf { bereits } => (false, false, *bereits),
     };
 
     if kopf_holen {
@@ -273,7 +278,7 @@ fn gitlauffaden(
     if abbruch.load(Ordering::Relaxed) {
         return;
     }
-    let Some(verlauf) = leser.verlauf(ab, VERLAUFSSCHRITT) else {
+    let Some(verlauf) = leser.verlauf(bereits, VERLAUFSSCHRITT) else {
         return;
     };
     if sender.send(Gitmeldung::Verlauf(verlauf)).is_err() {

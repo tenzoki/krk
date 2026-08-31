@@ -163,6 +163,7 @@ use std::sync::Arc;
 use super::durchlauf::{Auftrag, Auftragsart};
 use super::eintrag::Eintrag;
 use super::filter::{self, Muster, traegt_die_folge};
+use super::kollation;
 use super::sortierung::{Richtung, Schluessel, Sortierung};
 use crate::git::Marke;
 
@@ -1256,6 +1257,30 @@ impl Ordnermodell {
     /// liefert seine Marken deshalb in **einem** Stueck und nicht Eintrag fuer
     /// Eintrag; der Modulkopf von [`crate::git::lauf`] schreibt den zweiten
     /// Grund dazu.
+    ///
+    /// # Zwei Nachschlagewerke, und das zweite entsteht nur, wenn es gebraucht wird
+    ///
+    /// **Die beiden Seiten stammen aus verschiedenen Quellen**, und deshalb
+    /// genuegt der Bytevergleich nicht: der Bestand kommt unveraendert aus
+    /// `readdir`, der Befund kommt aus `gix`, das `core.precomposeUnicode`
+    /// anwendet und **vorkomponierte** Namen liefert. Eine Datei, die auf der
+    /// Platte zerlegt benannt ist — nach einem Entpacken, nach einer
+    /// Uebertragung von einem aelteren Dateisystem —, traegt damit auf den zwei
+    /// Seiten verschiedene Bytes und bekaeme keine Marke.
+    ///
+    /// Gefragt wird deshalb zweimal: erst bytegenau, und erst bei einem
+    /// Fehlschlag ueber [`kollation::namensschluessel`], unter dem zwei
+    /// kanonisch gleiche Namen derselbe Name sind.
+    ///
+    /// **Die Reihenfolge ist tragend und keine Sparmassnahme.** Ein Ordner
+    /// kann beide Schreibweisen desselben Namens zugleich tragen; APFS haelt
+    /// sie auseinander. Der bytegenaue Treffer geht deshalb vor, und das
+    /// zweite Werk entscheidet allein die Faelle, die er nicht trifft. Wo es
+    /// zwei kanonisch gleiche Eintraege gibt, gewinnt darin der erste des
+    /// Bestands.
+    ///
+    /// **Und es entsteht erst beim ersten Fehlschlag**: ein Ordner, dessen
+    /// Namen alle bytegenau treffen, zahlt keinen einzigen Kollationsschluessel.
     #[must_use = "die Antwort sagt, ob der Befund noch zu diesem Bestand gehoert hat"]
     pub fn gitmarken_setzen(&mut self, generation: u64, marken: &[(String, Marke)]) -> bool {
         if generation != self.generation || self.ersatz_ausstehend {
@@ -1267,12 +1292,29 @@ impl Ordnermodell {
             .enumerate()
             .map(|(index, eintrag)| (eintrag.name.as_str(), index))
             .collect();
+        let eintraege = &self.eintraege;
+        let mut kanonische: Option<HashMap<Box<[u8]>, usize>> = None;
         let mut eingetragen = false;
         for (name, marke) in marken {
-            let Some(index) = stellen.get(name.as_str()) else {
-                continue;
+            let index = match stellen.get(name.as_str()) {
+                Some(index) => *index,
+                None => {
+                    let werk = kanonische.get_or_insert_with(|| {
+                        let mut werk: HashMap<Box<[u8]>, usize> =
+                            HashMap::with_capacity(eintraege.len());
+                        for (index, eintrag) in eintraege.iter().enumerate() {
+                            werk.entry(kollation::namensschluessel(&eintrag.name))
+                                .or_insert(index);
+                        }
+                        werk
+                    });
+                    let Some(index) = werk.get(kollation::namensschluessel(name).as_ref()) else {
+                        continue;
+                    };
+                    *index
+                }
             };
-            if let Some(stelle) = self.gitmarke.get_mut(*index) {
+            if let Some(stelle) = self.gitmarke.get_mut(index) {
                 *stelle = Some(*marke);
                 eingetragen = true;
             }
@@ -1623,6 +1665,51 @@ mod tests {
             .position(|eintrag| eintrag.name == name)
             .expect("den Eintrag gibt es nicht");
         modell.gitmarke(index as u32)
+    }
+
+    /// Ein zerlegt benannter Eintrag bekommt den vorkomponiert gemeldeten
+    /// Befund.
+    ///
+    /// Der Lauf gegen ein angelegtes Repository steht in
+    /// `crates/krk-core/tests/git.rs`; hier wird die Zuordnung allein geprueft,
+    /// mit den zwei Schreibweisen von Hand hereingereicht.
+    #[test]
+    fn ein_zerlegt_benannter_eintrag_bekommt_den_vorkomponierten_befund() {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([eintrag("U\u{308}bung.txt", Typ::Datei)]);
+        modell.abschliessen();
+
+        assert!(
+            modell.gitmarken_setzen(1, &[("\u{dc}bung.txt".to_owned(), Marke::Geaendert)]),
+            "der vorkomponiert gemeldete Befund findet den zerlegten Eintrag nicht"
+        );
+        assert_eq!(
+            marke_von(&modell, "U\u{308}bung.txt"),
+            Some(Marke::Geaendert)
+        );
+    }
+
+    /// Traegt der Ordner beide Schreibweisen, gewinnt der bytegenaue Treffer.
+    ///
+    /// APFS haelt die zwei auseinander, also sind es zwei Zeilen, und der
+    /// Befund gehoert der, deren Bytes er traegt. Ohne den Vorrang des
+    /// bytegenauen Nachschlags landete die Marke an der falschen Zeile.
+    #[test]
+    fn bei_zwei_schreibweisen_gewinnt_der_bytegenaue_treffer() {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([
+            eintrag("U\u{308}bung.txt", Typ::Datei),
+            eintrag("\u{dc}bung.txt", Typ::Datei),
+        ]);
+        modell.abschliessen();
+
+        assert!(modell.gitmarken_setzen(1, &[("\u{dc}bung.txt".to_owned(), Marke::Neu)]));
+        assert_eq!(marke_von(&modell, "\u{dc}bung.txt"), Some(Marke::Neu));
+        assert_eq!(
+            marke_von(&modell, "U\u{308}bung.txt"),
+            None,
+            "der Befund ist an der falschen der zwei Zeilen gelandet"
+        );
     }
 
     /// C5.3 (Modellhaelfte) und A11: die fuenf Zustaende stehen an den fuenf

@@ -79,7 +79,7 @@ use std::time::{Duration, SystemTime};
 use gix::Repository;
 use gix::bstr::{BStr, BString, ByteSlice};
 
-use super::{Commit, Kopf, Marke, ObjectId};
+use super::{Commit, Kopf, Marke};
 use crate::verzeichnis::sys::ist_deskriptormangel;
 
 /// Wie viele Zeichen ein Kurzhash traegt.
@@ -175,11 +175,33 @@ impl Gitleser {
         Some(Kopf::Branch(branchname(&kopf)?))
     }
 
-    /// Die naechsten `zahl` Commits vor `ab`, oder vor HEAD, wenn `ab` fehlt.
+    /// Die naechsten `zahl` Commits, nachdem `bereits` viele uebergangen sind.
     ///
-    /// `ab` ist der **letzte schon angezeigte** Commit und kommt nicht noch
-    /// einmal mit; so setzt das Nachladen aus E12 dort an, wo die Liste
-    /// aufgehoert hat, ohne eine Zeile zu doppeln.
+    /// **Jeder Schwung laeuft von HEAD los und ueberspringt, was schon
+    /// dasteht**, so wie `git log --skip`. Der Nachschlag aus E12 setzt damit
+    /// dort an, wo die Liste aufgehoert hat, ohne eine Zeile zu doppeln — und
+    /// ohne einen Nebenzweig zu verlieren.
+    ///
+    /// **Die Zahl und nicht der letzte Commit, und der Grund ist tragend.** Ein
+    /// Lauf, der beim zuletzt angezeigten Commit ansetzte, lieferte allein
+    /// dessen **Vorfahren**; der letzte Eintrag eines Schwungs beherrscht den
+    /// Graphen aber nicht. Wo mehrere Zweige nebeneinander in der
+    /// Warteschlange stehen, faellt jeder Commit dauerhaft heraus, der beim
+    /// Schwungende darin stand und kein Vorfahre des letzten angezeigten ist.
+    /// Ein Lauf, der immer bei HEAD beginnt, kann das nicht: `rev_walk` gibt
+    /// jeden erreichbaren Commit genau einmal aus, also zerlegen die Schwuenge
+    /// ihn in Stuecke statt ihn zu beschneiden. Gemessen an einem
+    /// Pruefrepository mit zwei Zweigen von je dreissig Commits und einer
+    /// Zusammenfuehrung darueber: der Ansatz am letzten Commit sah 56 von 62.
+    ///
+    /// **Und der Preis ist die Wiederholung der uebersprungenen Schritte**, die
+    /// der Lauf am Graphen und nicht am Objektspeicher zahlt: gelesen und
+    /// zerlegt werden allein die `zahl` genommenen Commits.
+    ///
+    /// **Dieselbe Bauform traegt eine Sortierung, sobald eine gewaehlt ist**
+    /// (`260831-1444_*_der-verlauf-laeuft-in-graphenreihenfolge-und-nicht-nach-commit-zeit.md`):
+    /// ein `.sorting(…)` am Lauf gilt dann jedem Schwung gleich, weil jeder
+    /// Schwung derselbe Lauf von HEAD aus ist.
     ///
     /// **Woran der Rufer erkennt, dass nichts mehr folgt** (C4.3): die Liste
     /// ist kuerzer als `zahl`. Ein eigenes Kennzeichen daneben waere eine
@@ -191,22 +213,16 @@ impl Gitleser {
     /// Der Verlauf ist repositoryweit und nicht auf einen Ordner beschraenkt
     /// (A4): eine Beschraenkung verlangte einen Vergleich je Commit.
     #[must_use = "der Verlauf ist die Liste in der Mitte des Git-Bereichs"]
-    pub fn verlauf(&self, ab: Option<ObjectId>, zahl: usize) -> Option<Vec<Commit>> {
-        let anfang = match ab {
-            Some(id) => id,
-            None => {
-                let kopf = self.repo.head().ok()?;
-                if kopf.is_unborn() {
-                    return Some(Vec::new());
-                }
-                self.repo.head_id().ok()?.detach()
-            }
-        };
-        let ueberspringen = usize::from(ab.is_some());
+    pub fn verlauf(&self, bereits: usize, zahl: usize) -> Option<Vec<Commit>> {
+        let kopf = self.repo.head().ok()?;
+        if kopf.is_unborn() {
+            return Some(Vec::new());
+        }
+        let anfang = self.repo.head_id().ok()?.detach();
         let lauf = self.repo.rev_walk([anfang]).all().ok()?;
 
         let mut gefunden = Vec::with_capacity(zahl);
-        for stand in lauf.skip(ueberspringen).take(zahl) {
+        for stand in lauf.skip(bereits).take(zahl) {
             let stand = stand.ok()?;
             let commit = self.repo.find_commit(stand.id).ok()?;
             gefunden.push(commit_lesen(&commit)?);

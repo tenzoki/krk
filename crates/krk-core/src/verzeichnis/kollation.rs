@@ -39,7 +39,7 @@
 
 use std::sync::OnceLock;
 
-use icu_collator::options::CollatorOptions;
+use icu_collator::options::{CollatorOptions, Strength};
 use icu_collator::{Collator, CollatorBorrowed, CollatorPreferences};
 
 /// Der Kollator, einmal je Prozess.
@@ -87,6 +87,51 @@ pub fn schluessel(text: &str) -> Box<[u8]> {
     bytes.into_boxed_slice()
 }
 
+/// Der Kollator der Namensgleichheit, einmal je Prozess.
+///
+/// Derselbe Aufbau wie [`KOLLATOR`] und eine einzige Abweichung: die Stufe
+/// [`Strength::Identical`] haengt an jeden Schluessel die NFD-Form des Textes
+/// an. Damit trennt er, was die Sortierstufe zusammenzieht — vollstaendig
+/// uebergehbare Zeichen etwa, ein weiches Trennzeichen mitten im Namen —, und
+/// zieht allein zusammen, was kanonisch gleich ist.
+static NAMENSKOLLATOR: OnceLock<CollatorBorrowed<'static>> = OnceLock::new();
+
+fn namenskollator() -> &'static CollatorBorrowed<'static> {
+    NAMENSKOLLATOR.get_or_init(|| {
+        let mut einstellungen = CollatorOptions::default();
+        einstellungen.strength = Some(Strength::Identical);
+        Collator::try_new(CollatorPreferences::default(), einstellungen)
+            .expect("die CLDR-Wurzelordnung ist ueber `compiled_data` mit einkompiliert")
+    })
+}
+
+/// Baut den Schluessel, unter dem zwei Namen **derselbe Name** sind.
+///
+/// Zwei Schluessel sind genau dann gleich, wenn die beiden Namen kanonisch
+/// gleich sind: `Ü` als ein Zeichen und `U` mit Kombinationszeichen ergeben
+/// denselben, `Ue` und `ü` nicht. Das ist die Frage, die ein Vergleich ueber
+/// Dateinamen auf einem Mac stellen muss und die ein Bytevergleich nicht
+/// beantwortet: dasselbe Zeichen kommt vorkomponiert und zerlegt vor, je
+/// nachdem, welches Programm die Datei angelegt oder uebertragen hat.
+///
+/// **Die Stelle ist diese und keine zweite daneben.** Dieses Modul ist die eine
+/// Stelle, an der `krk-core` Unicode ueber den Bytevergleich hinaus befragt;
+/// eine eigene Normalisierung neben ihm liefe mit ihm auseinander, und die
+/// Kiste dafuer steht hier schon.
+///
+/// **Kein Ersatz fuer [`schluessel`]**: dieser Schluessel taugt zum
+/// Nachschlagen und nicht zum Sortieren. Die angehaengte NFD-Form macht ihn
+/// laenger, und die Ordnung, die er ergibt, ist bis auf die kanonisch gleichen
+/// Faelle dieselbe — sie zu benutzen hiesse, fuer nichts mehr Bytes zu
+/// vergleichen.
+#[must_use = "der Schluessel ist der Nachschlagewert; ihn fallenzulassen tut nichts"]
+pub fn namensschluessel(text: &str) -> Box<[u8]> {
+    let mut bytes = Vec::with_capacity(text.len() * 2 + 4);
+    // Wie bei `schluessel`: der Fehlertyp von `Vec<u8>` als Senke ist unbewohnt.
+    let Ok(()) = namenskollator().write_sort_key_to(text, &mut bytes);
+    bytes.into_boxed_slice()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,6 +156,38 @@ mod tests {
     fn kanonisch_gleiche_namen_ergeben_denselben_schluessel() {
         // Einmal als ein Zeichen, einmal als `a` mit Kombinationszeichen.
         assert_eq!(schluessel("\u{e4}"), schluessel("a\u{308}"));
+    }
+
+    #[test]
+    fn der_namensschluessel_zieht_genau_die_kanonisch_gleichen_namen_zusammen() {
+        // Vorkomponiert und zerlegt sind derselbe Name ...
+        assert_eq!(
+            namensschluessel("\u{dc}bung.txt"),
+            namensschluessel("U\u{308}bung.txt")
+        );
+        // ... und alles andere ist es nicht.
+        assert_ne!(
+            namensschluessel("Uebung.txt"),
+            namensschluessel("\u{dc}bung.txt")
+        );
+        assert_ne!(
+            namensschluessel("\u{dc}bung.txt"),
+            namensschluessel("\u{fc}bung.txt")
+        );
+        assert_ne!(namensschluessel("a.txt"), namensschluessel("b.txt"));
+    }
+
+    /// Der Grund, aus dem der Nachschlag nicht den Sortierschluessel nimmt.
+    ///
+    /// Die Sortierstufe uebergeht ein weiches Trennzeichen vollstaendig und
+    /// zoege damit zwei verschiedene Dateinamen auf eine Zeile zusammen; die
+    /// Stufe der Namensgleichheit trennt sie.
+    #[test]
+    fn der_sortierschluessel_zieht_zusammen_was_der_namensschluessel_trennt() {
+        let mit = "a\u{ad}b.txt";
+        let ohne = "ab.txt";
+        assert_eq!(schluessel(mit), schluessel(ohne));
+        assert_ne!(namensschluessel(mit), namensschluessel(ohne));
     }
 
     #[test]

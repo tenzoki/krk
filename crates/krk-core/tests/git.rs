@@ -38,6 +38,7 @@ use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung, VERLAUFSSCHRITT};
 use krk_core::git::leser::{Gitleser, Oeffnung};
 use krk_core::git::texte::zusammenfassung;
 use krk_core::git::{Kopf, Marke};
+use krk_core::verzeichnis::{Ordnermodell, lesen};
 
 /// Die Deskriptorgrenze der Kindproben.
 ///
@@ -168,7 +169,7 @@ fn ein_abgeloester_kopf_traegt_den_kurzhash() {
         "der Kurzhash {kurzhash} ist kein Anfang von {voll}"
     );
     assert_eq!(
-        leser.verlauf(None, 50).expect("kein Verlauf").len(),
+        leser.verlauf(0, 50).expect("kein Verlauf").len(),
         1,
         "der Verlauf steht bei abgeloestem HEAD nicht wie sonst"
     );
@@ -194,7 +195,7 @@ fn ein_repository_ohne_commit_nennt_den_branch_und_liefert_keinen_verlauf() {
         "ein ungeborener HEAD wird nicht vom gewoehnlichen getrennt"
     );
     assert_eq!(
-        leser.verlauf(None, 50),
+        leser.verlauf(0, 50),
         Some(Vec::new()),
         "ein Repository ohne Commit liefert keinen leeren Verlauf, sondern etwas anderes"
     );
@@ -267,11 +268,11 @@ fn der_erste_aufruf_liefert_fuenfzig_commits() {
     }
 
     let leser = leser(ordner.pfad());
-    let erste = leser.verlauf(None, 50).expect("kein Verlauf");
+    let erste = leser.verlauf(0, 50).expect("kein Verlauf");
     assert_eq!(erste.len(), 50, "der erste Aufruf liefert nicht fuenfzig");
 
     let letzter = erste.last().expect("die Liste ist leer").id;
-    let weitere = leser.verlauf(Some(letzter), 50).expect("kein Nachschlag");
+    let weitere = leser.verlauf(50, 50).expect("kein Nachschlag");
     assert_eq!(
         weitere.len(),
         10,
@@ -311,18 +312,103 @@ fn drei_commits_liefern_drei_und_melden_das_ende() {
     }
 
     let leser = leser(ordner.pfad());
-    let verlauf = leser.verlauf(None, 50).expect("kein Verlauf");
+    let verlauf = leser.verlauf(0, 50).expect("kein Verlauf");
     assert_eq!(verlauf.len(), 3, "drei Commits liefern nicht drei Zeilen");
     assert!(
         verlauf.len() < 50,
         "die Laenge meldet nicht, dass nichts mehr folgt"
     );
 
-    let letzter = verlauf.last().expect("die Liste ist leer").id;
     assert_eq!(
-        leser.verlauf(Some(letzter), 50),
+        leser.verlauf(3, 50),
         Some(Vec::new()),
         "hinter dem aeltesten Commit kommt noch etwas"
+    );
+}
+
+/// C4.2, C4.3: Die Vereinigung aller Schwuenge traegt jeden Commit genau
+/// einmal, auch wo der Graph sich verzweigt.
+///
+/// **Eine lineare Kette kann das nicht messen.** Ein Nachschlag, der beim
+/// zuletzt angezeigten Commit ansetzt, liefert allein dessen Vorfahren; wo
+/// mehrere Zweige nebeneinander in der Warteschlange stehen, faellt jeder
+/// Commit dauerhaft heraus, der beim Schwungende darin stand und kein Vorfahre
+/// des letzten angezeigten ist. Das Pruefrepository hier traegt deshalb zwei
+/// Zweige von je dreissig Commits und eine Zusammenfuehrung darueber, also mehr
+/// als [`VERLAUFSSCHRITT`]: der erste Schwung endet mitten in der Verzweigung.
+///
+/// Der Sollstand kommt von `git rev-list HEAD` und nicht aus einer Zahl in
+/// dieser Probe: gefragt ist, ob KRK dasselbe sieht wie `git`.
+#[test]
+fn die_vereinigung_aller_schwuenge_traegt_jeden_commit_genau_einmal() {
+    let ordner = repository("zusammenfuehrung");
+    let pfad = ordner.pfad().to_owned();
+
+    git(&pfad, &["branch", "zweig"]);
+    for nummer in 1..=30 {
+        ordner.datei("haupt.txt", format!("stand {nummer}\n"));
+        git(&pfad, &["add", "-A"]);
+        git(&pfad, &["commit", "-q", "-m", &format!("Haupt {nummer}")]);
+    }
+    git(&pfad, &["checkout", "-q", "zweig"]);
+    for nummer in 1..=30 {
+        ordner.datei("zweig.txt", format!("stand {nummer}\n"));
+        git(&pfad, &["add", "-A"]);
+        git(&pfad, &["commit", "-q", "-m", &format!("Zweig {nummer}")]);
+    }
+    git(&pfad, &["checkout", "-q", BRANCH]);
+    git(
+        &pfad,
+        &[
+            "merge",
+            "-q",
+            "--no-ff",
+            "-m",
+            "die Zusammenfuehrung",
+            "zweig",
+        ],
+    );
+
+    let soll: Vec<String> = git(&pfad, &["rev-list", "HEAD"])
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    assert!(
+        soll.len() > VERLAUFSSCHRITT,
+        "das Pruefrepository traegt nicht mehr Commits als ein Schwung: {}",
+        soll.len()
+    );
+
+    let leser = leser(&pfad);
+    let mut gesehen: Vec<String> = Vec::new();
+    let mut bereits = 0;
+    loop {
+        let schwung = leser
+            .verlauf(bereits, VERLAUFSSCHRITT)
+            .expect("der Verlauf ist unentschieden geblieben");
+        let laenge = schwung.len();
+        gesehen.extend(schwung.into_iter().map(|commit| commit.id.to_string()));
+        bereits += laenge;
+        if laenge < VERLAUFSSCHRITT {
+            break;
+        }
+    }
+
+    let mut gesehen_sortiert = gesehen.clone();
+    gesehen_sortiert.sort_unstable();
+    let vorher = gesehen_sortiert.len();
+    gesehen_sortiert.dedup();
+    assert_eq!(
+        vorher,
+        gesehen_sortiert.len(),
+        "ein Commit steht in zwei Schwuengen"
+    );
+
+    let mut soll_sortiert = soll.clone();
+    soll_sortiert.sort_unstable();
+    assert_eq!(
+        gesehen_sortiert, soll_sortiert,
+        "die Schwuenge tragen nicht jeden Commit des Repositorys genau einmal"
     );
 }
 
@@ -396,6 +482,69 @@ fn die_fuenf_zustaende_tragen_ihre_fuenf_buchstaben() {
     assert!(
         !gefunden.iter().any(|(name, _)| name == "erste.txt"),
         "ein unveraenderter Eintrag traegt eine Marke; A11 sagt: leere Zelle"
+    );
+}
+
+/// C5.3 (Zuordnungshaelfte): Ein Eintrag, dessen Name auf der Platte zerlegt
+/// vorliegt, bekommt seine Marke.
+///
+/// **Die beiden Seiten stammen aus verschiedenen Quellen**, und das ist der
+/// ganze Fall: der Bestand kommt unveraendert aus `readdir`, der Befund kommt
+/// aus `gix`, das `core.precomposeUnicode` anwendet und den vorkomponierten
+/// Namen liefert. Eine Datei, die als `U+0055 U+0308` auf der Platte steht,
+/// heisst im Befund `U+00DC` und traegt eine andere Bytefolge.
+///
+/// Die zwei Zusicherungen vor dem eigentlichen Vergleich halten genau diese
+/// Voraussetzung fest: ohne sie liefe die Probe auch dann gruen, wenn die
+/// beiden Seiten laengst dieselbe Schreibweise fuehrten, und sie sagte dann
+/// nichts mehr ueber den Fall aus, fuer den sie steht.
+#[test]
+fn ein_zerlegt_benannter_eintrag_bekommt_seine_marke() {
+    /// Der Name, wie er auf der Platte steht: `U` mit Kombinationszeichen.
+    const ZERLEGT: &str = "U\u{308}bung.txt";
+    /// Derselbe Name vorkomponiert, wie `gix` ihn meldet.
+    const VORKOMPONIERT: &str = "\u{dc}bung.txt";
+
+    let ordner = repository("zerlegter-name");
+    let pfad = ordner.pfad().to_owned();
+    ordner.datei(ZERLEGT, "grund\n");
+    git(&pfad, &["add", "-A"]);
+    git(
+        &pfad,
+        &["commit", "-q", "-m", "der zerlegt benannte Eintrag"],
+    );
+    ordner.datei(ZERLEGT, "geaendert\n");
+
+    let bestand = lesen(&pfad).expect("der Ordner laesst sich nicht lesen");
+    assert!(
+        bestand.iter().any(|eintrag| eintrag.name == ZERLEGT),
+        "die Platte traegt den Namen nicht zerlegt; die Voraussetzung der Probe steht nicht"
+    );
+    let marken = leser(&pfad)
+        .marken(&pfad)
+        .expect("die Marken sind unentschieden geblieben");
+    assert!(
+        marken.iter().any(|(name, _)| name == VORKOMPONIERT),
+        "gix meldet den Namen nicht vorkomponiert; die Voraussetzung der Probe steht nicht: {marken:?}"
+    );
+
+    let mut modell = Ordnermodell::neu(1);
+    modell.anhaengen(bestand);
+    modell.abschliessen();
+    assert!(
+        modell.gitmarken_setzen(1, &marken),
+        "kein einziger Befund ist eingetragen worden"
+    );
+
+    let index = modell
+        .bestand()
+        .iter()
+        .position(|eintrag| eintrag.name == ZERLEGT)
+        .expect("den zerlegt benannten Eintrag gibt es im Bestand nicht");
+    assert_eq!(
+        modell.gitmarke(index as u32),
+        Some(Marke::Geaendert),
+        "der zerlegt benannte Eintrag traegt keine Marke"
     );
 }
 
@@ -536,7 +685,7 @@ fn kind_liest_unter_abgesenkter_deskriptorgrenze() {
     };
     assert!(leser.kopf().is_some(), "der Kopf bleibt unentschieden");
     assert!(
-        leser.verlauf(None, 50).is_some(),
+        leser.verlauf(0, 50).is_some(),
         "der Verlauf bleibt unentschieden"
     );
     assert!(
@@ -632,13 +781,13 @@ fn ein_nachschlag_meldet_allein_den_verlauf() {
         );
     }
     let juengster = leser(ordner.pfad())
-        .verlauf(None, VERLAUFSSCHRITT)
+        .verlauf(0, VERLAUFSSCHRITT)
         .expect("kein Verlauf")[0]
         .id;
 
     let lauf = Gitlauf::starten(
         ordner.pfad().to_path_buf(),
-        Gitfrage::WeitererVerlauf { ab: juengster },
+        Gitfrage::WeitererVerlauf { bereits: 1 },
         2,
     );
     let gemeldet = meldungen_einsammeln(&lauf);
@@ -663,10 +812,9 @@ fn ein_nachschlag_meldet_allein_den_verlauf() {
 
     // Und hinter dem aeltesten kommt nichts mehr: die leere Liste ist die
     // entschiedene Antwort, an der C4.3 haengt.
-    let aeltester = verlauf.last().expect("die Liste ist leer").id;
     let am_ende = Gitlauf::starten(
         ordner.pfad().to_path_buf(),
-        Gitfrage::WeitererVerlauf { ab: aeltester },
+        Gitfrage::WeitererVerlauf { bereits: 3 },
         3,
     );
     assert_eq!(

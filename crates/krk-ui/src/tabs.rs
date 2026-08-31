@@ -1141,15 +1141,16 @@ impl Tabliste {
         if tab.gitlauf.is_some() || tab.gitmodell.erschoepft() {
             return false;
         }
-        let Some(ab) = tab.gitmodell.letzter_commit().map(|commit| commit.id) else {
+        let bereits = tab.gitmodell.verlaufslaenge();
+        if bereits == 0 {
             return false;
-        };
+        }
         self.letzter_gitlauf += 1;
         let nummer = self.letzter_gitlauf;
         let tab = &mut self.tabs[stelle];
         tab.gitlauf = Some(Gitlauf::starten(
             tab.ordner.clone(),
-            Gitfrage::WeitererVerlauf { ab },
+            Gitfrage::WeitererVerlauf { bereits },
             nummer,
         ));
         true
