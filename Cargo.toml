@@ -10,7 +10,7 @@ members = [
 # Gemeinsame Paketangaben. Jedes Mitglied erbt sie ueber `field.workspace = true`,
 # damit Version und Edition an einer Stelle stehen.
 [workspace.package]
-version = "1.5.0"
+version = "1.6.0"
 edition = "2024"
 rust-version = "1.97.1"
 publish = false
