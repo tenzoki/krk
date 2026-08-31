@@ -390,6 +390,32 @@ pub struct Sitzung {
     /// bleibt lesbar, weil diese Struktur `#[serde(default)]` traegt, und
     /// ergibt den ersten Zettel.
     pub zettel: pfade::Zettel,
+    /// Wie der Git-Bereich die Flaeche unter seinem Kopf teilt: der Anteil, den
+    /// die Verlaufsliste davon bekommt.
+    ///
+    /// **Ein Anteil und keine Punktzahl, anders als bei [`Breiten`] daneben**,
+    /// und das ist kein Bruch mit der Waehrung dieser Datei, sondern eine
+    /// andere Groesse. Die Breiten teilen die Fensterzeile, deren Zahl von
+    /// aussen kommt; hier wird eine Flaeche geteilt, deren Hoehe mit jeder
+    /// Fenstergroesse eine andere ist. Eine Punktzahl gaelte nur fuer die Hoehe,
+    /// bei der sie entstanden ist, und der Nutzer, der diese Datei nach C7 von
+    /// Hand liest, kann `0.5` deuten und `181.0` nicht.
+    ///
+    /// `None` heisst "noch nie gesetzt", wie bei [`Breiten`]: dann teilt der
+    /// Git-Bereich haelftig. Der Wert liegt zwischen 0 und 1; was davon uebrig
+    /// bleibt, gehoert der Flaeche der Einzelheiten. Die Mindesthoehen der
+    /// beiden Flaechen deckeln ihn beim Anwenden, und die kennt allein
+    /// `krk_ui::appkit::git`.
+    ///
+    /// Es ist mit dem Nutzerbefund vom 260831 dazugekommen. Eine `session.toml`
+    /// aus der Zeit davor bleibt lesbar, weil diese Struktur
+    /// `#[serde(default)]` traegt; die Probe dazu steht in `tests/ablage.rs`.
+    ///
+    /// **Vor den drei Tabellen**, aus dem Grund, den [`Sitzung::editor`]
+    /// ausschreibt: TOML verlangt, dass die Werte einer Tabelle vor ihren
+    /// Untertabellen stehen.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gitanteil: Option<f64>,
     /// Die Breiten der sechs Bereiche.
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
@@ -416,12 +442,14 @@ impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, Editor und
     /// Git-Bereich ausgeblendet und der Editor ohne Datei, alle fuenf Spalten
-    /// sichtbar, links aktiv, der erste Notizzettel offen.
+    /// sichtbar, links aktiv, der erste Notizzettel offen, der Git-Bereich
+    /// ungeteilt gelassen.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),
             editor: None,
             zettel: pfade::Zettel::default(),
+            gitanteil: None,
             breiten: Breiten::default(),
             sichtbar: Sichtbarkeit::default(),
             spalten: Spaltensichtbarkeit::default(),

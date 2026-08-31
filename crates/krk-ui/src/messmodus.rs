@@ -137,7 +137,15 @@ pub enum Aufgabe {
     /// L1, L5, L6, L7, L8 und L9 auf der Pruefsitzung aus C8 (S21).
     Sitzung {
         /// Der eingelesene Messplan.
-        plan: Messplan,
+        ///
+        /// **Verpackt und nicht eingebettet.** Ein [`Messplan`] traegt eine
+        /// ganze [`krk_core::ablage::Sitzung`], und eingebettet machte er diese
+        /// Aufzaehlung so gross wie seine groesste Moeglichkeit — auch fuer die
+        /// drei Aufgaben, die nichts als ihren Namen tragen. Die Verpackung
+        /// kostet eine Belegung beim Start des Messmodus und keine Zeile an den
+        /// Lesestellen, denn `&Box<Messplan>` faellt an jede von ihnen als
+        /// `&Messplan` durch.
+        plan: Box<Messplan>,
     },
     /// L4 auf der Pruefsitzung: `session.toml` wiederherstellen und melden,
     /// wann beide sichtbaren Tabs ihre erste Bildschirmseite zeigen (S21).
@@ -175,7 +183,7 @@ impl Aufgabe {
             })),
             "sitzungsstart" => Ok(Some(Aufgabe::SitzungsStart)),
             planpfad => Ok(Some(Aufgabe::Sitzung {
-                plan: Messplan::lesen(Path::new(planpfad))?,
+                plan: Box::new(Messplan::lesen(Path::new(planpfad))?),
             })),
         }
     }
@@ -1952,7 +1960,7 @@ mod tests {
     fn der_hintergrund_bricht_die_erste_messung_ab() {
         let ordner = Planordner::neu("hintergrund-abbruch");
         let mut lauf = Messlauf::neu(Aufgabe::Sitzung {
-            plan: ordner.plan(),
+            plan: Box::new(ordner.plan()),
         });
         lauf.sitzungsstelle = lauf
             .sitzungsschritte
@@ -1982,7 +1990,7 @@ mod tests {
     fn eine_l1_messung_endet_mit_der_umgesprungenen_auswahl() {
         let ordner = Planordner::neu("l1");
         let mut lauf = Messlauf::neu(Aufgabe::Sitzung {
-            plan: ordner.plan(),
+            plan: Box::new(ordner.plan()),
         });
         // Bis zur ersten L1-Messung vorspulen.
         lauf.sitzungsstelle = lauf
@@ -2021,7 +2029,7 @@ mod tests {
     fn eine_l8_messung_endet_mit_der_sichtbaren_vorgangsanzeige() {
         let ordner = Planordner::neu("l8");
         let mut lauf = Messlauf::neu(Aufgabe::Sitzung {
-            plan: ordner.plan(),
+            plan: Box::new(ordner.plan()),
         });
         lauf.sitzungsstelle = lauf
             .sitzungsschritte
@@ -2056,7 +2064,7 @@ mod tests {
     fn l9_bricht_ab_wenn_keine_kopie_mehr_laeuft() {
         let ordner = Planordner::neu("l9");
         let mut lauf = Messlauf::neu(Aufgabe::Sitzung {
-            plan: ordner.plan(),
+            plan: Box::new(ordner.plan()),
         });
         lauf.sitzungsstelle = lauf
             .sitzungsschritte
@@ -2081,7 +2089,7 @@ mod tests {
     fn ein_warteschritt_haelt_bis_seine_bedingung_steht() {
         let ordner = Planordner::neu("warten");
         let mut lauf = Messlauf::neu(Aufgabe::Sitzung {
-            plan: ordner.plan(),
+            plan: Box::new(ordner.plan()),
         });
         // Der erste Schritt wartet auf den gelesenen linken Tab.
         let noch_leer = Zustand {
@@ -2183,7 +2191,9 @@ mod tests {
     fn eine_abgewiesene_auswahl_bricht_den_lauf_ab() {
         let ordner = Planordner::neu("auswahl-abgewiesen");
         let plan = ordner.plan();
-        let mut lauf = Messlauf::neu(Aufgabe::Sitzung { plan: plan.clone() });
+        let mut lauf = Messlauf::neu(Aufgabe::Sitzung {
+            plan: Box::new(plan.clone()),
+        });
         // Bis zur ersten Auswahl-Vorbereitung der L6-Reihe vorspulen.
         lauf.sitzungsstelle = lauf
             .sitzungsschritte

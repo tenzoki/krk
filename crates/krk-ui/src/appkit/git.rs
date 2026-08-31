@@ -4,21 +4,47 @@
 //! ```text
 //! ┌──────────────────────────────┐
 //! │ Kopf (NSTextField, 2 Zeilen) │  Branch/Kurzhash, darunter die
-//! ├──────────────────────────────┤  Zusammenfassung des Status
+//! ├──────────────────────────────┤  Zusammenfassung des Status; feste Hoehe
 //! │ Verlaufsliste                │  NSTableView, eine Spalte, keine
 //! │   NSScrollView + NSTableView │  Kopfzeile; nimmt den Ersthelferrang
 //! │                              │
-//! ├──────────────────────────────┤
+//! ╞══════════════════════════════╡  die verschiebbare Grenze
 //! │ Einzelheiten                 │  mehrzeiliges Etikett in einer Rolle;
 //! │   NSScrollView + NSTextField │  leer, solange nichts ausgewaehlt ist
 //! └──────────────────────────────┘
 //! ```
 //!
-//! Die drei Flaechen stehen untereinander in der Traegeransicht, mit
-//! Autoresizing und **ohne zweite `NSSplitView`**: der Nutzer soll sie nicht
-//! gegeneinander verschieben, und ein Schieberegler im Bereich waere ein
-//! Bedienelement, das der Spec nicht verlangt. Kopf und Einzelheiten haben
-//! feste Hoehen, die Liste bekommt, was uebrig bleibt.
+//! # Die Grenze zwischen Liste und Einzelheiten ist verschiebbar
+//!
+//! Der Kopf haengt mit fester Hoehe am oberen Rand der Traegeransicht. Was
+//! darunter bleibt, teilt eine **waagerechte `NSSplitView`** zwischen der
+//! Verlaufsliste oben und den Einzelheiten unten; ab Werk haelftig
+//! ([`ANFANGSANTEIL`]), danach so, wie der Nutzer die Trennlinie gezogen hat.
+//! Wie weit er ziehen kann, sagen [`MINDESTHOEHE_LISTE`] und
+//! [`MINDESTHOEHE_EINZELHEITEN`] ueber [`trennlinienspanne`], und beide sind
+//! begruendet: eine Grenze, die sich bis auf null ziehen liesse, versteckte eine
+//! Flaeche ohne Weg zurueck. Es ist die Form, die `Bereich::mindestbreite` fuer
+//! die Fensterzeile hat, eine Achse weiter.
+//!
+//! **Bis zum Nutzerbefund vom 260831 stand hier das Gegenteil**, und zwar mit
+//! Begruendung: die drei Flaechen stuenden untereinander, mit Autoresizing und
+//! ohne zweite `NSSplitView`, der Nutzer solle sie nicht gegeneinander
+//! verschieben, und ein Schieberegler im Bereich waere ein Bedienelement, das
+//! der Spec nicht verlangt. Die Annahme stammt aus dem Spec der Runde 23 und
+//! **der Nutzer hat sie am laufenden Programm verworfen**: die feste Hoehe der
+//! Einzelheiten von 120 Punkten liess der Liste bei der Aufbauhoehe rund zwei
+//! Drittel, und die untere Flaeche war damit zu klein fuer das, wozu E13 sie
+//! verlangt. Was der Spec nicht verlangt hat, verlangt der Gebrauch; die
+//! Aufteilung steht deshalb jetzt hier und nicht in der Traegeransicht.
+//!
+//! **Die Teilung uebersteht das Beenden** und steht als Anteil in
+//! `krk_core::ablage::Sitzung::gitanteil`. Sie wohnt dabei nicht in einem Feld
+//! dieses Objekts, sondern in den Rahmen der beiden Rollen — dieselbe Wahl wie
+//! bei den Breiten der Fensterzeile, die in den Rahmen ihrer Bereiche stehen;
+//! [`Gitfenster::listenanteil`] misst sie dort, und
+//! [`Gitfenster::listenanteil_setzen`] merkt eine gelesene vor. Warum eine
+//! gelesene vorgemerkt und nicht sofort gesetzt wird, steht an
+//! [`GitfensterIvars::offener_anteil`].
 //!
 //! # Ein Schreiber der drei Flaechen
 //!
@@ -129,17 +155,20 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSTextField`,
-//! `NSFont`, `NSColor`, `NSIndexSet`, `NSNotification`, `NSObject` und
-//! `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso die vier bedienten
-//! Protokolle `NSObjectProtocol`, `NSTableViewDataSource`,
-//! `NSTableViewDelegate` und `NSControlTextEditingDelegate` und die
+//! `NSView`, `NSScrollView`, `NSSplitView`, `NSTableView`, `NSTableColumn`,
+//! `NSTextField`, `NSFont`, `NSColor`, `NSIndexSet`, `NSNotification`,
+//! `NSObject` und `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso die
+//! fuenf bedienten Protokolle `NSObjectProtocol`, `NSTableViewDataSource`,
+//! `NSTableViewDelegate`, `NSControlTextEditingDelegate` und
+//! `NSSplitViewDelegate` und die
 //! Aufzaehlungen `NSAutoresizingMaskOptions`, `NSTableColumnResizingOptions`,
 //! `NSLineBreakMode` (`NSParagraphStyle.h:25`) und `NSTextAlignment`. Ohne
 //! eigene Verfuegbarkeitsangabe und damit seit 10.0 stehen die hier gerufenen
 //! Methoden `alloc`, `init`, `initWithFrame:`, `addSubview:`, `setFrame:`,
 //! `frame`, `setAutoresizingMask:`, `resizeSubviewsWithOldSize:`
-//! (`NSView.h:122`), `isFlipped` (`NSView.h:141`), `setDocumentView:`,
+//! (`NSView.h:122`), `isFlipped` (`NSView.h:141`), `setVertical:`
+//! (`NSSplitView.h:31`), `dividerThickness` (`NSSplitView.h:60`),
+//! `setDocumentView:`,
 //! `documentView` (`NSScrollView.h:48`), `contentSize` (`NSScrollView.h:47`),
 //! `setHasVerticalScroller:`, `setAutohidesScrollers:`, `setRowHeight:`
 //! (`NSTableView.h:206`), `setHeaderView:` (`:156`),
@@ -151,10 +180,12 @@
 //! `setResizingMask:`, `setDataSource:`, `setDelegate:`, `setStringValue:`,
 //! `setFont:`, `setTextColor:`, `setAlignment:` (`NSControl.h:66`), `sizeToFit`
 //! (`NSControl.h:44`), `smallSystemFontSize`, `systemFontOfSize:` und
-//! `indexSetWithIndex:`, dazu die zwei hier **gebauten** Protokollmethoden
-//! `numberOfRowsInTableView:` (`NSTableView.h:743`) und
-//! `tableViewSelectionDidChange:` (`:717`). Das Buendel zielt auf 15.0
-//! (`.cargo/config.toml`).
+//! `indexSetWithIndex:`, dazu die vier hier **gebauten** Protokollmethoden
+//! `numberOfRowsInTableView:` (`NSTableView.h:743`),
+//! `tableViewSelectionDidChange:` (`:717`),
+//! `splitView:constrainMinCoordinate:ofSubviewAt:` (`NSSplitView.h:148`) und
+//! `splitView:constrainMaxCoordinate:ofSubviewAt:` (`:154`). Das Buendel zielt
+//! auf 15.0 (`.cargo/config.toml`).
 //!
 //! **Die Liste ist die Vorkehrung und keine Zusammenfassung**, und sie ist
 //! deshalb gegen den Rumpf dieser Datei erhoben und nicht fortgeschrieben: bis
@@ -180,6 +211,7 @@
 //!   bleibt dort, weil sie den `unsafe`-Block traegt.
 //! - `maximumNumberOfLines` seit 10.11 (`NSTextField.h:49`)
 //! - `NSTextField::labelWithString:` seit 10.12 (`NSTextField.h:93`)
+//! - `setPosition:ofDividerAtIndex:` seit 10.5 (`NSSplitView.h:81`)
 //! - `setUsesAutomaticRowHeights:` seit 10.13 (`NSTableView.h:574`)
 //! - `tableView:viewForTableColumn:row:` seit 10.7 (`NSTableView.h:593`)
 //! - `NSTableViewStyle` samt `setStyle:` seit 11.0 (`NSTableView.h:77`
@@ -197,9 +229,9 @@ use objc2::runtime::ProtocolObject;
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightRegular,
-    NSLineBreakMode, NSScrollView, NSTableColumn, NSTableColumnResizingOptions, NSTableView,
-    NSTableViewDataSource, NSTableViewDelegate, NSTableViewStyle, NSTextAlignment, NSTextField,
-    NSView,
+    NSLineBreakMode, NSScrollView, NSSplitView, NSSplitViewDelegate, NSTableColumn,
+    NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
+    NSTableViewStyle, NSTextAlignment, NSTextField, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
@@ -221,12 +253,39 @@ const AUFBAUGROESSE: NSSize = NSSize::new(420.0, 400.0);
 /// Die Hoehe des Kopfes: zwei Zeilen und der Rand darum.
 const KOPFHOEHE: f64 = 38.0;
 
-/// Die Hoehe der Flaeche der Einzelheiten.
+/// Wie die Flaeche unter dem Kopf geteilt ist, solange der Nutzer die
+/// Trennlinie nicht angefasst hat: der Anteil, den die Verlaufsliste bekommt.
 ///
-/// Fest und nicht am Inhalt gemessen: eine Flaeche, die mit der Laenge der
-/// Commit-Nachricht waechst, verschoebe bei jedem Wechsel der Auswahl die
-/// Liste darueber. Was nicht hineinpasst, wird gerollt.
-const EINZELHEITENHOEHE: f64 = 120.0;
+/// **Haelftig, und das ist der Nutzerbefund vom 260831.** Bis dahin trug die
+/// Flaeche der Einzelheiten feste 120 Punkte und die Liste den Rest, bei der
+/// Aufbauhoehe also rund zwei zu eins; der Nutzer hat das am laufenden Programm
+/// als zu wenig befunden. Die Zahl gilt nur, bis jemand zieht; danach gilt der
+/// Anteil aus `krk_core::ablage::Sitzung::gitanteil`.
+const ANFANGSANTEIL: f64 = 0.5;
+
+/// Die kleinste Hoehe, auf die sich die Verlaufsliste ziehen laesst.
+///
+/// Drei Zeilen. In dieser Liste bewegt der Nutzer eine Auswahl, und zwar mit
+/// `AuswahlHoch` und `AuswahlRunter`; unter drei Zeilen sieht er den Eintrag
+/// ueber und unter dem ausgewaehlten nicht mehr zugleich, und die Bewegung
+/// verliert ihren Bezugspunkt.
+const MINDESTHOEHE_LISTE: f64 = 3.0 * ZEILENHOEHE;
+
+/// Die Hoehe, die eine Zeile des Einzelheiten-Etiketts in der kleinen
+/// Systemschrift belegt.
+///
+/// Nicht [`ZEILENHOEHE`]: die gilt der Tabelle, deren Zeilenhoehe KRK selbst
+/// setzt. Diese Zahl beschreibt, was die Schrift belegt, und sie steht allein
+/// zur Herleitung von [`MINDESTHOEHE_EINZELHEITEN`] hier.
+const EINZELHEITENZEILE: f64 = 14.0;
+
+/// Die kleinste Hoehe, auf die sich die Flaeche der Einzelheiten ziehen laesst.
+///
+/// Die vier Angaben aus E13 in ihrer kuerzesten Gestalt: eine Zeile Nachricht,
+/// die Leerzeile darunter, Autor mit Anschrift, Datum, Objektname — fuenf
+/// Zeilen, dazu die zwei Raender. Wer weniger sieht, sieht von den vier Angaben
+/// nicht mehr alle, und die Flaeche verfehlt, wozu E13 sie verlangt.
+const MINDESTHOEHE_EINZELHEITEN: f64 = 5.0 * EINZELHEITENZEILE + 2.0 * RAND;
 
 /// Der Rand um Kopf und Einzelheiten.
 const RAND: f64 = 6.0;
@@ -290,12 +349,14 @@ struct Verlaufszeile {
 define_class!(
     /// Die Traegeransicht des Bereichs, die in die Aufteilung gehaengt wird.
     ///
-    /// Sie ist eine eigene Klasse aus **einem** Grund: sie meldet ihre
-    /// Groessenaenderung. Die Flaeche der Einzelheiten traegt ein umbrechendes
-    /// Etikett, dessen Hoehe von seiner Breite abhaengt, und ohne diese Meldung
-    /// bliebe die Hoehe auf dem Stand des letzten [`Gitfenster::zeigen`]
-    /// stehen — beim Schmalerziehen des Fensters waeren die untersten Zeilen
-    /// abgeschnitten.
+    /// Sie ist eine eigene Klasse, weil sie ihre Groessenaenderung meldet, und
+    /// zwei Nachzuege haengen an dieser einen Meldung. Die Flaeche der
+    /// Einzelheiten traegt ein umbrechendes Etikett, dessen Hoehe von seiner
+    /// Breite abhaengt, und ohne die Meldung bliebe die Hoehe auf dem Stand des
+    /// letzten [`Gitfenster::zeigen`] stehen — beim Schmalerziehen des Fensters
+    /// waeren die untersten Zeilen abgeschnitten. Und ein aus der Sitzung
+    /// uebernommener Anteil wird hier eingeloest, weil erst hier die wirkliche
+    /// Hoehe des Bereichs feststeht ([`GitfensterIvars::offener_anteil`]).
     ///
     /// Die Rueckverbindung ist **schwach**, sonst schloesse sich der Ring
     /// Gitfenster → Traegeransicht → Rueckverweis → Gitfenster. Dieselbe
@@ -312,10 +373,13 @@ define_class!(
     unsafe impl NSObjectProtocol for Gitsicht {}
 
     impl Gitsicht {
-        /// AppKit legt die drei Flaechen neu aus.
+        /// AppKit legt Kopf und Teiler neu aus.
         ///
-        /// Erst die Oberklasse, die die Autoresizing-Masken anwendet, dann das
-        /// Einpassen des Etiketts in seine neue Breite.
+        /// Erst die Oberklasse, die die Autoresizing-Masken anwendet und dabei
+        /// den Teiler auf seine neue Hoehe bringt, dann der noch offene Anteil,
+        /// der jetzt eine wirkliche Hoehe vorfindet, dann das Einpassen des
+        /// Etiketts in seine neue Breite. Die Reihenfolge ist tragend: das
+        /// Einpassen misst die Rolle, deren Hoehe der Anteil gerade gesetzt hat.
         // SAFETY: Die Signatur entspricht der von NSView (`NSView.h:122`).
         #[unsafe(method(resizeSubviewsWithOldSize:))]
         fn unteransichten_auslegen(&self, alte_groesse: NSSize) {
@@ -325,6 +389,7 @@ define_class!(
                 let _: () = msg_send![super(self), resizeSubviewsWithOldSize: alte_groesse];
             }
             if let Some(fenster) = self.gitfenster() {
+                fenster.anteil_einloesen();
                 fenster.einzelheiten_einpassen();
             }
         }
@@ -398,6 +463,17 @@ pub struct GitfensterIvars {
     bereich: Retained<Gitsicht>,
     /// Der Kopf: Branch oder Kurzhash, darunter die Zusammenfassung (A6, A3).
     kopf: Retained<NSTextField>,
+    /// Die Trennlinie zwischen Verlaufsliste und Einzelheiten.
+    ///
+    /// Sie traegt genau zwei Unteransichten, [`GitfensterIvars::listenrolle`]
+    /// oben und [`GitfensterIvars::einzelheitenrolle`] unten, und hat deshalb
+    /// genau eine Trennlinie mit der Nummer 0.
+    teiler: Retained<NSSplitView>,
+    /// Die Rolle um die Verlaufsliste, die obere Haelfte des Teilers.
+    ///
+    /// Sie steht hier, damit [`Gitfenster::listenanteil`] die zwei Hoehen ohne
+    /// den Umweg ueber `subviews` messen kann.
+    listenrolle: Retained<NSScrollView>,
     /// Die Verlaufsliste. Sie ist die Flaeche, die den Ersthelferrang nimmt.
     liste: Retained<NSTableView>,
     /// Die Rolle unter der Liste, deren Inhalt das Etikett traegt.
@@ -427,11 +503,31 @@ pub struct GitfensterIvars {
     /// Kein Feld fuer die Auswahl selbst daneben: sie wohnt im [`Gitmodell`],
     /// und der Modulkopf sagt, warum.
     auswahlmelder: RefCell<Option<Auswahlmelder>>,
+    /// Der aus der Sitzung uebernommene Anteil, solange er noch nicht angewandt
+    /// ist.
+    ///
+    /// **Kein Feld fuer die Teilung selbst.** Die steht in den Rahmen der
+    /// beiden Rollen und nirgends sonst, wie die Breiten der Fensterzeile in
+    /// denen ihrer Bereiche; [`Gitfenster::listenanteil`] misst sie dort.
+    /// Dieses Feld haelt allein den Wunsch, der noch nicht angekommen ist.
+    ///
+    /// **Eingeloest wird er beim ersten Auslegen und nicht beim Aufbau**, und
+    /// das ist der Grund, aus dem er ueberhaupt gehalten wird: beim Aufbau
+    /// traegt der Bereich die [`AUFBAUGROESSE`], und ein Anteil, der an ihr
+    /// gegen eine der beiden Mindesthoehen liefe, verlore genau dort seinen
+    /// Wert — noch bevor das Fenster seine wirkliche Hoehe hat.
+    offener_anteil: Cell<Option<f64>>,
 }
 
 define_class!(
-    /// Der Git-Bereich: Datenquelle, Delegierter und Halter der drei Flaechen
-    /// in einem Objekt.
+    /// Der Git-Bereich: Datenquelle, die zwei Delegiertenrollen und Halter der
+    /// drei Flaechen in einem Objekt.
+    ///
+    /// **Die zweite Delegiertenrolle ist die des Teilers** und kommt mit der
+    /// verschiebbaren Grenze dazu. Sie gehoert aus demselben Grund hierher wie
+    /// die der Tabelle: was sie beantwortet, sind die zwei Mindesthoehen dieses
+    /// Bereichs, und ein eigenes Objekt dafuer waere ein zweiter Halter
+    /// derselben Auskunft.
     ///
     /// Wie bei der Lesezeichenleiste und anders als beim Dateifenster, wo
     /// Quelle und Delegierter getrennt sind: dort haelt der Delegierte zwei
@@ -500,6 +596,38 @@ define_class!(
             self.auswahl_uebernehmen(self.angezeigte_auswahl());
         }
     }
+
+    // SAFETY: `NSSplitViewDelegate` stellt keine Bedingungen.
+    unsafe impl NSSplitViewDelegate for Gitfenster {
+        /// Wie weit sich die Trennlinie nach oben ziehen laesst.
+        ///
+        /// Der Vorschlag wird verworfen wie in [`super::aufteilung`]: was
+        /// erlaubt ist, sagen die zwei Mindesthoehen und nicht AppKit.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSSplitView.h:148`).
+        #[unsafe(method(splitView:constrainMinCoordinate:ofSubviewAt:))]
+        fn mindestlage(
+            &self,
+            teiler: &NSSplitView,
+            _vorschlag: f64,
+            _trennlinie: NSInteger,
+        ) -> f64 {
+            trennlinienspanne(teiler.frame().size.height, teiler.dividerThickness()).0
+        }
+
+        /// Wie weit sich die Trennlinie nach unten ziehen laesst.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSSplitView.h:154`).
+        #[unsafe(method(splitView:constrainMaxCoordinate:ofSubviewAt:))]
+        fn hoechstlage(
+            &self,
+            teiler: &NSSplitView,
+            _vorschlag: f64,
+            _trennlinie: NSInteger,
+        ) -> f64 {
+            trennlinienspanne(teiler.frame().size.height, teiler.dividerThickness()).1
+        }
+    }
 );
 
 impl Gitfenster {
@@ -523,34 +651,42 @@ impl Gitfenster {
         );
         bereich.addSubview(&kopf);
 
-        // Die Einzelheiten unten, festgemacht am unteren Rand.
-        let einzelheitenrahmen = NSRect::new(
-            NSPoint::ZERO,
-            NSSize::new(AUFBAUGROESSE.width, EINZELHEITENHOEHE),
+        // Der Teiler unter dem Kopf, mit der Liste oben und den Einzelheiten
+        // unten. Er nimmt, was der Kopf uebrig laesst, und waechst mit dem
+        // Bereich in beide Richtungen mit.
+        let teilbar = (AUFBAUGROESSE.height - KOPFHOEHE).max(1.0);
+        let teiler = NSSplitView::initWithFrame(
+            NSSplitView::alloc(mtm),
+            NSRect::new(NSPoint::ZERO, NSSize::new(AUFBAUGROESSE.width, teilbar)),
         );
-        let einzelheitenrolle =
-            NSScrollView::initWithFrame(NSScrollView::alloc(mtm), einzelheitenrahmen);
+        // Waagerecht: die Trennlinie liegt quer, und die Unteransichten stehen
+        // von oben nach unten in der Reihenfolge, in der sie hinzukommen
+        // (`NSSplitView.h:71`). Die Fensterzeile in `super::aufteilung` ist die
+        // senkrechte Gegenform.
+        teiler.setVertical(false);
+        teiler.setAutoresizingMask(
+            NSAutoresizingMaskOptions::ViewWidthSizable
+                | NSAutoresizingMaskOptions::ViewHeightSizable,
+        );
+
+        let halbe = NSSize::new(AUFBAUGROESSE.width, teilbar / 2.0);
+        let (listenrolle, liste) = verlaufsliste(mtm, NSRect::new(NSPoint::ZERO, halbe));
+        teiler.addSubview(&listenrolle);
+
+        let einzelheitenrolle = NSScrollView::initWithFrame(
+            NSScrollView::alloc(mtm),
+            NSRect::new(NSPoint::ZERO, halbe),
+        );
         einzelheitenrolle.setHasVerticalScroller(true);
         einzelheitenrolle.setAutohidesScrollers(true);
-        einzelheitenrolle.setAutoresizingMask(
-            NSAutoresizingMaskOptions::ViewWidthSizable | NSAutoresizingMaskOptions::ViewMaxYMargin,
-        );
-        let einzelheitentraeger =
-            Einzelheitenflaeche::neu(mtm, NSRect::new(NSPoint::ZERO, einzelheitenrahmen.size));
+        let einzelheitentraeger = Einzelheitenflaeche::neu(mtm, NSRect::new(NSPoint::ZERO, halbe));
         einzelheitentraeger.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
-        let einzelheiten = einzelheitenetikett(mtm, AUFBAUGROESSE.width);
+        let einzelheiten = einzelheitenetikett(mtm, AUFBAUGROESSE.width, halbe.height);
         einzelheitentraeger.addSubview(&einzelheiten);
         einzelheitenrolle.setDocumentView(Some(&einzelheitentraeger));
-        bereich.addSubview(&einzelheitenrolle);
+        teiler.addSubview(&einzelheitenrolle);
 
-        // Die Liste dazwischen; sie bekommt, was uebrig bleibt.
-        let listenhoehe = AUFBAUGROESSE.height - KOPFHOEHE - EINZELHEITENHOEHE;
-        let listenrahmen = NSRect::new(
-            NSPoint::new(0.0, EINZELHEITENHOEHE),
-            NSSize::new(AUFBAUGROESSE.width, listenhoehe),
-        );
-        let (listenrolle, liste) = verlaufsliste(mtm, listenrahmen);
-        bereich.addSubview(&listenrolle);
+        bereich.addSubview(&teiler);
 
         kopf.setFrame(NSRect::new(
             NSPoint::new(0.0, AUFBAUGROESSE.height - KOPFHOEHE),
@@ -560,6 +696,8 @@ impl Gitfenster {
         let this = Self::alloc(mtm).set_ivars(GitfensterIvars {
             bereich,
             kopf,
+            teiler,
+            listenrolle,
             liste,
             einzelheitenrolle,
             einzelheiten,
@@ -568,6 +706,11 @@ impl Gitfenster {
             setzt_selbst: Cell::new(false),
             nachlademelder: RefCell::new(None),
             auswahlmelder: RefCell::new(None),
+            // Der Anfangsanteil geht denselben Weg wie ein gespeicherter: er
+            // wird beim ersten Auslegen eingeloest, an der wirklichen Hoehe.
+            // Ein zweiter Weg fuer die Vorgabe waere eine zweite Stelle, an der
+            // dieser Bereich geteilt wird.
+            offener_anteil: Cell::new(Some(ANFANGSANTEIL)),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -590,6 +733,16 @@ impl Gitfenster {
                 .liste
                 .setDelegate(Some(ProtocolObject::from_ref(&*this)));
         }
+        // Der dritte Rang desselben Objekts, und aus demselben Grund wie die
+        // beiden darueber: die zwei Mindesthoehen sind ein Zustand dieses
+        // Bereichs, und ein eigenes Objekt dafuer waere ein zweiter Halter
+        // desselben. `NSSplitView.delegate` ist eine nullende schwache
+        // Eigenschaft ("This is a weak property",
+        // `objc2-app-kit-0.3.2/src/generated/NSSplitView.rs:129-137`), und das
+        // Gitfenster haelt den Teiler selbst fest.
+        this.ivars()
+            .teiler
+            .setDelegate(Some(ProtocolObject::from_ref(&*this)));
         this
     }
 
@@ -626,6 +779,75 @@ impl Gitfenster {
     /// [`Self::nachlademelder_setzen`] darueber.
     pub fn auswahlmelder_setzen(&self, melden: Auswahlmelder) {
         *self.ivars().auswahlmelder.borrow_mut() = Some(melden);
+    }
+
+    /// Der Anteil, den die Verlaufsliste von der Flaeche unter dem Kopf hat.
+    ///
+    /// **Gemessen und nicht gehalten**: die Teilung steht in den Rahmen der
+    /// beiden Rollen, so wie die Breiten der Fensterzeile in denen ihrer
+    /// Bereiche stehen (`Aufteilung::gemessene_breiten`). Auf diesem Weg kommt
+    /// eine mit der Maus verschobene Trennlinie in `session.toml`.
+    ///
+    /// **Ein noch offener Wunsch geht vor der Messung.** Solange er nicht
+    /// eingeloest ist, tragen die Rahmen die Teilung des Aufbaus und nicht die
+    /// des Nutzers; ihn zu messen schriebe die gespeicherte Teilung mit der
+    /// Aufbauteilung zu, bevor sie je zu sehen war.
+    ///
+    /// `None` heisst „die Flaeche ist noch nicht ausgelegt"; dann steht in
+    /// `session.toml` keine Zeile, und der naechste Start teilt haelftig.
+    #[must_use = "der Anteil ist eine Auskunft ohne Nebenwirkung"]
+    pub fn listenanteil(&self) -> Option<f64> {
+        if let Some(offen) = self.ivars().offener_anteil.get() {
+            return Some(offen);
+        }
+        let ivars = self.ivars();
+        anteil(
+            ivars.listenrolle.frame().size.height,
+            ivars.einzelheitenrolle.frame().size.height,
+        )
+    }
+
+    /// Uebernimmt den Anteil aus der Sitzung.
+    ///
+    /// **Er wird hier nicht angewandt, sondern vorgemerkt.** Angewandt wird er
+    /// beim naechsten Auslegen der Traegeransicht, und der Grund steht an
+    /// [`GitfensterIvars::offener_anteil`]: erst dort steht die wirkliche
+    /// Hoehe, an der die zwei Mindesthoehen etwas bedeuten.
+    ///
+    /// `None` laesst den Aufbauwert stehen; eine `session.toml` ohne die Zeile
+    /// heisst „noch nie gesetzt" und nicht „Anteil null".
+    pub fn listenanteil_setzen(&self, anteil: Option<f64>) {
+        if let Some(anteil) = anteil {
+            self.ivars().offener_anteil.set(Some(anteil));
+        }
+    }
+
+    /// Legt einen vorgemerkten Anteil auf die Trennlinie, einmal.
+    ///
+    /// Gerufen von [`Gitsicht`] nach jedem Auslegen. Ohne Vormerkung geschieht
+    /// nichts, und das ist der Normalfall: nach dem ersten Auslegen gehoert die
+    /// Trennlinie dem Nutzer, und AppKit haelt ihr Verhaeltnis ueber jede
+    /// weitere Groessenaenderung von selbst (`NSSplitView.h:63`).
+    ///
+    /// **Eine Hoehe, die die beiden Mindesthoehen nicht traegt, loest nicht
+    /// ein.** Der Wunsch bleibt dann stehen und kommt beim naechsten Auslegen
+    /// wieder dran; eingeloest wuerde er hier gegen eine Spanne, die auf einen
+    /// Punkt zusammengefallen ist, und waere danach verloren.
+    fn anteil_einloesen(&self) {
+        let ivars = self.ivars();
+        let Some(anteil) = ivars.offener_anteil.get() else {
+            return;
+        };
+        let hoehe = ivars.teiler.frame().size.height;
+        let dicke = ivars.teiler.dividerThickness();
+        let (kleinste, groesste) = trennlinienspanne(hoehe, dicke);
+        if groesste <= kleinste {
+            return;
+        }
+        ivars.offener_anteil.set(None);
+        ivars
+            .teiler
+            .setPosition_ofDividerAtIndex(trennlinienlage(anteil, hoehe, dicke), 0);
     }
 
     /// Schreibt den Stand eines Tabs in die drei Flaechen.
@@ -813,6 +1035,15 @@ impl Gitfenster {
     /// Hoehe aendert: ein neuer Text ([`Self::einzelheiten_schreiben`]) und
     /// eine neue Breite ([`Gitsicht`]). Der Traeger nimmt danach die Hoehe des
     /// Etiketts, damit die Rolle weiss, wie weit sie rollen kann.
+    ///
+    /// **Die Flaeche selbst waechst dabei nicht mit dem Text.** Wie hoch sie
+    /// ist, sagt die Trennlinie, und die bewegt der Nutzer; was nicht
+    /// hineinpasst, wird gerollt. Der Grund hat die Runde 23 ueberlebt, in der
+    /// die Hoehe noch fest war: eine Flaeche, die mit der Laenge der
+    /// Commit-Nachricht waechst, verschoebe bei jedem Wechsel der Auswahl die
+    /// Liste darueber. **Eine verschiebbare Grenze hebt das nicht auf, sondern
+    /// bestaetigt es** — sie hat jetzt einen Beweger, und der ist der Nutzer und
+    /// nicht der Inhalt.
     fn einzelheiten_einpassen(&self) {
         let ivars = self.ivars();
         let breite = ivars.einzelheitenrolle.contentSize().width;
@@ -944,6 +1175,59 @@ fn ziel(auswahl: Option<usize>, laenge: usize, schritt: isize) -> Option<usize> 
     }
 }
 
+/// Die kleinste und die groesste Lage der Trennlinie bei der genannten Hoehe.
+///
+/// Gemessen vom oberen Rand des Teilers, denn dort liegt bei einer waagerechten
+/// `NSSplitView` die Trennlinie mit der Nummer 0 (`NSSplitView.h:71`). Die
+/// kleinste Lage ist die Mindesthoehe der Liste, die groesste laesst den
+/// Einzelheiten die ihre.
+///
+/// **Beide Grenzen zusammen, und nicht je eine Funktion**, weil die Zusage an
+/// ihnen beiden haengt: die kleinste Lage ist nie groesser als die groesste,
+/// auch nicht in einem Bereich, der zu niedrig ist, um beide Mindesthoehen zu
+/// tragen. Getrennt geschrieben waere das eine Behauptung ueber zwei Funktionen;
+/// so ist es eine ueber eine.
+///
+/// Ist der Bereich zu niedrig, fallen beide auf die Mindesthoehe der Liste
+/// zusammen: die Trennlinie steht dann fest, statt sich in einer verkehrten
+/// Spanne zu bewegen. Die Mindesthoehe des Fensters laesst diesen Fall nicht zu
+/// (`super::fenster::MINDESTGROESSE`); er steht hier, weil eine Spanne mit
+/// vertauschten Enden schlimmer ist als eine leere.
+#[must_use = "die Spanne ist eine Auskunft ohne Nebenwirkung"]
+fn trennlinienspanne(hoehe: f64, trennerdicke: f64) -> (f64, f64) {
+    let groesste = (hoehe - trennerdicke - MINDESTHOEHE_EINZELHEITEN).max(MINDESTHOEHE_LISTE);
+    (MINDESTHOEHE_LISTE, groesste)
+}
+
+/// Die Lage der Trennlinie, die der Liste den genannten Anteil gibt.
+///
+/// Der Anteil bezieht sich auf die teilbare Hoehe, also auf das, was neben der
+/// Trennlinie selbst uebrig bleibt. Gedeckelt wird auf die Spanne aus
+/// [`trennlinienspanne`]: ein Anteil aus einer von Hand geschriebenen
+/// `session.toml` kann jede Zahl sein, und ein Ausreisser soll die Flaeche
+/// deckeln und nicht verschwinden lassen.
+#[must_use = "die Lage ist eine Auskunft ohne Nebenwirkung"]
+fn trennlinienlage(anteil: f64, hoehe: f64, trennerdicke: f64) -> f64 {
+    let teilbar = (hoehe - trennerdicke).max(0.0);
+    let (kleinste, groesste) = trennlinienspanne(hoehe, trennerdicke);
+    (anteil * teilbar).clamp(kleinste, groesste)
+}
+
+/// Der Anteil, den die Liste von der teilbaren Hoehe hat.
+///
+/// `None` heisst „da ist nichts zu teilen": beide Flaechen sind hoehenlos, und
+/// das ist die Lage vor dem ersten Auslegen. Eine Null waere dort eine Aussage
+/// ueber eine Teilung, die es noch nicht gibt.
+///
+/// Die Trennlinie zaehlt nicht mit, weil sie in [`trennlinienlage`] ebenso
+/// abgezogen wird: die beiden Rechnungen sind Hin- und Rueckweg derselben
+/// Groesse.
+#[must_use = "der Anteil ist eine Auskunft ohne Nebenwirkung"]
+fn anteil(listenhoehe: f64, einzelheitenhoehe: f64) -> Option<f64> {
+    let teilbar = listenhoehe + einzelheitenhoehe;
+    (teilbar > 0.0).then(|| listenhoehe / teilbar)
+}
+
 /// Das Etikett des Kopfes: zwei Zeilen, linksbuendig, in der Grundfarbe.
 fn kopfetikett(mtm: MainThreadMarker, breite: f64) -> Retained<NSTextField> {
     let etikett = NSTextField::labelWithString(ns_string!(""), mtm);
@@ -963,7 +1247,10 @@ fn kopfetikett(mtm: MainThreadMarker, breite: f64) -> Retained<NSTextField> {
 }
 
 /// Das Etikett der Einzelheiten: beliebig viele Zeilen, umbrechend, gedaempft.
-fn einzelheitenetikett(mtm: MainThreadMarker, breite: f64) -> Retained<NSTextField> {
+///
+/// Die Hoehe ist die des Aufbaus und nicht die endgueltige:
+/// [`Gitfenster::einzelheiten_einpassen`] setzt sie mit dem ersten Text neu.
+fn einzelheitenetikett(mtm: MainThreadMarker, breite: f64, hoehe: f64) -> Retained<NSTextField> {
     let etikett = NSTextField::labelWithString(ns_string!(""), mtm);
     etikett.setFont(Some(&NSFont::systemFontOfSize(
         NSFont::smallSystemFontSize(),
@@ -979,7 +1266,7 @@ fn einzelheitenetikett(mtm: MainThreadMarker, breite: f64) -> Retained<NSTextFie
     etikett.setPreferredMaxLayoutWidth(innen);
     etikett.setFrame(NSRect::new(
         NSPoint::new(RAND, RAND),
-        NSSize::new(innen, EINZELHEITENHOEHE - 2.0 * RAND),
+        NSSize::new(innen, (hoehe - 2.0 * RAND).max(1.0)),
     ));
     etikett
 }
@@ -1113,6 +1400,91 @@ mod tests {
         assert_eq!(ziel(None, 0, 1), None);
         assert_eq!(ziel(None, 0, -1), None);
         assert_eq!(ziel(Some(0), 0, 1), None);
+    }
+
+    /// Ab Werk teilt der Bereich haelftig (Nutzerbefund vom 260831).
+    ///
+    /// Gemessen an der Lage der Trennlinie und nicht an der Konstanten: die
+    /// Zusage lautet, dass die Einzelheiten die Haelfte bekommen, und die
+    /// Trennlinie liegt dafuer in der Mitte der teilbaren Hoehe.
+    #[test]
+    fn ab_werk_bekommen_beide_flaechen_die_haelfte() {
+        let hoehe = 400.0;
+        let dicke = 9.0;
+        let lage = trennlinienlage(ANFANGSANTEIL, hoehe, dicke);
+        assert_eq!(lage, (hoehe - dicke) / 2.0);
+        let einzelheiten = hoehe - dicke - lage;
+        assert_eq!(
+            lage, einzelheiten,
+            "die zwei Flaechen sind nicht gleich hoch"
+        );
+    }
+
+    /// Die Grenze laesst sich an keinem Ende auf null ziehen.
+    ///
+    /// Beide Flaechen behalten ihre Mindesthoehe, gleich welchen Anteil jemand
+    /// verlangt: eine Flaeche der Hoehe null waere verschwunden, und kein
+    /// Bedienelement brachte sie zurueck.
+    #[test]
+    fn keine_der_beiden_flaechen_laesst_sich_wegziehen() {
+        let hoehe = 400.0;
+        let dicke = 9.0;
+        for anteil in [-1.0, 0.0, 0.01, 0.99, 1.0, 2.0] {
+            let lage = trennlinienlage(anteil, hoehe, dicke);
+            assert!(
+                lage >= MINDESTHOEHE_LISTE,
+                "die Liste faellt bei {anteil} unter ihre Mindesthoehe: {lage}"
+            );
+            assert!(
+                hoehe - dicke - lage >= MINDESTHOEHE_EINZELHEITEN,
+                "die Einzelheiten fallen bei {anteil} unter ihre Mindesthoehe: {lage}"
+            );
+        }
+    }
+
+    /// Die Spanne hat nie vertauschte Enden, auch nicht in einem Bereich, der
+    /// zu niedrig fuer beide Mindesthoehen ist.
+    #[test]
+    fn die_spanne_der_trennlinie_steht_nie_verkehrt() {
+        for hoehe in [
+            0.0,
+            20.0,
+            100.0,
+            MINDESTHOEHE_LISTE + MINDESTHOEHE_EINZELHEITEN,
+            400.0,
+        ] {
+            let (kleinste, groesste) = trennlinienspanne(hoehe, 9.0);
+            assert!(
+                kleinste <= groesste,
+                "bei der Hoehe {hoehe} steht die Spanne verkehrt: {kleinste} bis {groesste}"
+            );
+        }
+    }
+
+    /// Lage und Anteil sind Hin- und Rueckweg derselben Groesse.
+    #[test]
+    fn der_gemessene_anteil_ist_der_gesetzte() {
+        let hoehe = 600.0;
+        let dicke = 9.0;
+        for gesetzt in [0.25, 0.5, 0.75] {
+            let lage = trennlinienlage(gesetzt, hoehe, dicke);
+            let gemessen = anteil(lage, hoehe - dicke - lage).expect("die Flaeche ist nicht leer");
+            assert!(
+                (gemessen - gesetzt).abs() < 1e-9,
+                "aus {gesetzt} wurde {gemessen}"
+            );
+        }
+    }
+
+    /// Vor dem ersten Auslegen gibt es keine Teilung und keine Null.
+    ///
+    /// Eine Null waere eine Aussage ueber eine Teilung, die es noch nicht gibt,
+    /// und schriebe eine Zeile in `session.toml`, die der naechste Start als
+    /// „die Liste bekommt nichts" laese.
+    #[test]
+    fn zwei_hoehenlose_flaechen_tragen_keinen_anteil() {
+        assert_eq!(anteil(0.0, 0.0), None);
+        assert_eq!(anteil(1.0, 0.0), Some(1.0));
     }
 
     /// C4.6: die Zeilen eines anderen Ordners sind andere Zeilen.

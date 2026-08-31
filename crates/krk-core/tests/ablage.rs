@@ -169,6 +169,7 @@ fn beispielsitzung() -> Sitzung {
         aktiv: Fensterseite::Rechts,
         editor: Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md")),
         zettel: Zettel::Zweiter,
+        gitanteil: Some(0.375),
         breiten: Breiten {
             lesezeichen: Some(180.0),
             links: Some(520.5),
@@ -741,6 +742,89 @@ aktiver_tab = 0
     assert_eq!(geladen.wert.breiten.vorschau, Some(260.0));
     assert!(geladen.wert.sichtbar.vorschau);
     assert!(geladen.wert.sichtbar.lesezeichen);
+}
+
+/// Eine `session.toml` aus der Zeit vor der verschiebbaren Grenze im
+/// Git-Bereich bleibt lesbar, und die Teilung bleibt ungesetzt.
+///
+/// Die Datei tritt so auf, wie die Runde 23 sie geschrieben hat: mit den
+/// Gitfeldern in `[breiten]` und `[sichtbar]`, aber ohne `gitanteil`. Genau
+/// diese Datei schreibt jeder Nutzer, der KRK vor dem Befund vom 260831 einmal
+/// beendet hat; das fehlende Feld heisst "noch nie verschoben" und fuehrt beim
+/// naechsten Start zur haelftigen Teilung.
+#[test]
+fn eine_sitzung_ohne_den_gitanteil_bleibt_lesbar() {
+    let (_ordner, ablage) = ablage("vor-der-gitgrenze");
+    let alt = "\
+aktiv = \"links\"
+zettel = \"erster\"
+
+[breiten]
+lesezeichen = 180.0
+links = 420.0
+rechts = 420.0
+vorschau = 260.0
+editor = 460.0
+git = 420.0
+
+[sichtbar]
+lesezeichen = true
+erstes_dateifenster = true
+zweites_dateifenster = true
+vorschau = false
+editor = false
+git = true
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die Datei vor der verschiebbaren Grenze gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(
+        geladen.wert.gitanteil, None,
+        "eine nie verschobene Grenze bleibt ungesetzt"
+    );
+    assert!(geladen.wert.sichtbar.git);
+    assert_eq!(geladen.wert.breiten.git, Some(420.0));
+}
+
+/// Eine gesetzte Teilung steht in der Datei, eine nicht gesetzte nicht (C7).
+///
+/// Dieselbe Zusage wie fuer die Breiten und den Editorpfad: `None` heisst "noch
+/// nie gesetzt", und eine erfundene Zahl waere in einer Datei, die der Nutzer
+/// nach C7 von Hand liest, eine Falschaussage.
+#[test]
+fn der_gitanteil_steht_nur_dann_in_der_datei_wenn_eine_teilung_gesetzt_ist() {
+    let (_ordner, ablage) = ablage("gitanteil-zeile");
+
+    gesichert(&ablage, Datei::Sitzung, &Sitzung::default()).expect("schreiben gescheitert");
+    let ohne = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert!(
+        !ohne.lines().any(|zeile| zeile.starts_with("gitanteil")),
+        "ohne gesetzte Teilung steht eine in session.toml: {ohne}"
+    );
+
+    let sitzung = Sitzung {
+        gitanteil: Some(0.375),
+        ..Sitzung::default()
+    };
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("zweites Schreiben gescheitert");
+    let mit = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    let zeilen: Vec<&str> = mit
+        .lines()
+        .filter(|zeile| zeile.starts_with("gitanteil"))
+        .collect();
+    assert_eq!(zeilen, ["gitanteil = 0.375"], "{mit}");
 }
 
 /// Eine `session.toml` aus der Zeit vor der Bereichsleisten-Runde bleibt

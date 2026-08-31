@@ -525,16 +525,25 @@ impl Fenstermodell {
     /// Modell kennt vom Zettel nichts, denn er ist ein Blatt und kein Bereich
     /// der Fensterzeile. Was mitgeht, ist allein die Merkung und nie der Text
     /// (C4 der Runde 9).
+    ///
+    /// **Die Teilung des Git-Bereichs kommt aus demselben Grund von aussen.**
+    /// Dieses Modell haelt vom Git-Bereich Breite und Sichtbarkeit, also seinen
+    /// Platz in der Fensterzeile; wie er die Flaeche unter seinem Kopf zwischen
+    /// Verlaufsliste und Einzelheiten teilt, steht in den Rahmen seiner
+    /// Ansichten und nirgends sonst. Der Weg von dort hierher ist
+    /// `krk_ui::appkit::git::Gitfenster::listenanteil`.
     pub fn sitzung(
         &self,
         fenster: [Fensterzustand; 2],
         editor: Option<PathBuf>,
         zettel: Zettel,
+        gitanteil: Option<f64>,
     ) -> Sitzung {
         Sitzung {
             aktiv: self.aktiv,
             editor,
             zettel,
+            gitanteil,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
             spalten: self.spalten,
@@ -2882,7 +2891,7 @@ mod tests {
         let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
         assert_eq!(modell.breiten().editor, Some(gewuenscht));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         assert!(
             text.contains("editor"),
@@ -3037,7 +3046,7 @@ mod tests {
         let mut modell = modell();
         assert!(modell.spalte_umschalten(Spalte::Groesse));
 
-        let sitzung = modell.sitzung(fenster, None, Zettel::Erster);
+        let sitzung = modell.sitzung(fenster, None, Zettel::Erster, None);
         assert!(
             !sitzung.spalten.groesse,
             "die Spalte Groesse ist nicht weggeschaltet"
@@ -3059,7 +3068,7 @@ mod tests {
         assert!(modell.spalte_umschalten(Spalte::Groesse));
         assert!(modell.spalte_umschalten(Spalte::Typ));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
         let wieder = Fenstermodell::aus_sitzung(&gelesen);

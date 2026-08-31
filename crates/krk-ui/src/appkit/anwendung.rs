@@ -1285,6 +1285,11 @@ impl Anwendungsdelegierter {
             }
         }));
         let git = Gitfenster::bauen(mtm);
+        // Die Teilung zwischen Verlaufsliste und Einzelheiten aus der Sitzung
+        // (Nutzerbefund vom 260831). Sie wird hier vorgemerkt und nicht
+        // gesetzt: der Bereich traegt noch seine Aufbaugroesse, und der Grund
+        // steht an `GitfensterIvars::offener_anteil`.
+        git.listenanteil_setzen(sitzung.gitanteil);
         // **Die zwei Rueckwege des Git-Bereichs.** Er kennt die Tabliste nicht
         // — so wenig wie die Lesezeichenleiste die Dateifenster kennt —, und
         // beide Meldungen enden deshalb hier, wo das aktive Dateifenster
@@ -8100,10 +8105,22 @@ impl Anwendungsdelegierter {
         ];
         let editor = self.editordatei();
         let zettel = self.ivars().zettel.borrow().offener();
+        let gitanteil = self.gitanteil();
         self.ivars()
             .modell
             .borrow()
-            .sitzung(fenster, editor, zettel)
+            .sitzung(fenster, editor, zettel, gitanteil)
+    }
+
+    /// Wie der Git-Bereich seine Flaeche unter dem Kopf teilt.
+    ///
+    /// **Aus dem Bereich und nicht aus dem Fenstermodell**, das vom Git-Bereich
+    /// allein Breite und Sichtbarkeit kennt. Solange kein Bereich gebaut ist —
+    /// vor `oberflaeche_aufbauen` und im Messmodus — steht dort `None`, und das
+    /// ist dieselbe Aussage wie die einer nie verschobenen Trennlinie. Derselbe
+    /// Zuschnitt wie bei `editordatei` darueber.
+    fn gitanteil(&self) -> Option<f64> {
+        self.ivars().git.get().and_then(|git| git.listenanteil())
     }
 
     /// Merkt den Sitzungszustand vor; geschrieben wird gebuendelt.
