@@ -17,6 +17,8 @@ if kanal_zu { tab.gitlauf = None; }
 
 **Abnahmetest:** der Satz nennt sein Bezugswort und die Stelle, an der `wartende_marken` fällt, und nicht den Kanalschluss.
 
+**Resolved:** 260831. Der letzte Absatz des Doc-Kommentars von `gitmeldungen_einziehen` (`crates/krk-ui/src/tabs.rs`) nennt sein Bezugswort ausdrücklich und sagt das Gegenteil des alten Satzes: „**Der Kanalschluss nimmt `wartende_marken` nicht mit**", er räume allein `tab.gitlauf` weg. Dazu der Grund, den der Datensatz nennt: in einem großen Ordner schließt der Kanal regelmäßig, bevor der Bestand gelesen ist, und fiele der Befund mit ihm, wäre er für immer weg — genau die Alternative, die das Feld `wartende_marken` als verworfen ausschreibt. Die zwei Stellen, an denen das Feld wirklich fällt, stehen jetzt namentlich da: `Tabliste::gitlauf_nachziehen_an` und `Tabliste::abbrechen`. Die Aussage über den drei tiefen Kanal bleibt, weil sie stimmt und die Überschrift des Absatzes trägt; sie steht jetzt als eigener Satz und teilt sich kein Semikolon mehr mit der falschen Hälfte. Die Mehrdeutigkeit, die der zweite Teil des Befunds nennt, ist damit weg: `tab.gitlauf` und `wartende_marken` stehen beide beim Namen.
+
 ---
 **Filed by:** coderev, Kai Stalmann <kai@stalmann.org>
 **Domain:** code

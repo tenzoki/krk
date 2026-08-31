@@ -109,15 +109,7 @@ use gix::bstr::{BStr, BString, ByteSlice};
 use gix::revision::walk::Sorting;
 use gix::traverse::commit::simple::CommitTimeOrder;
 
-use super::{Commit, Kopf, Marke};
-
-/// Wie viele Zeichen ein Kurzhash traegt.
-///
-/// Sieben, wie `git log --oneline` sie schreibt, und **fest** statt ueber
-/// `ObjectId::shorten()`: jene Laenge haengt vom Bestand des Repositorys ab und
-/// aendert sich mit dem naechsten Commit. Eine Spaltenbreite, die mit dem
-/// Bestand wandert, waere in der Verlaufsliste eine Unruhe ohne Gegenwert.
-const KURZHASHLAENGE: usize = 7;
+use super::{Commit, KURZHASHLAENGE, Kopf, Marke};
 
 /// Wie gross der Objektzwischenspeicher eines geoeffneten Repositorys ist.
 ///

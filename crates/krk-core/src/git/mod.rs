@@ -68,10 +68,31 @@ use std::time::SystemTime;
 /// Der Objektname eines Commits, weitergereicht aus `gix`.
 ///
 /// Er steht hier als Wiederausfuhr, damit `krk-ui` den Verlauf halten kann,
-/// ohne `gix` selbst als Abhaengigkeit zu fuehren: die Oberflaeche merkt sich
-/// den letzten angezeigten Commit, um beim Nachladen dort weiterzumachen, und
-/// braucht dafuer den Namen und sonst nichts aus der Kiste.
+/// ohne `gix` selbst als Abhaengigkeit zu fuehren: [`Commit`] traegt den Namen
+/// als Feld, die Oberflaeche haelt eine Liste solcher Commits und zeigt den
+/// vollen Namen in der Flaeche der Einzelheiten. Sie braucht dafuer den Namen
+/// und sonst nichts aus der Kiste.
+///
+/// **Zum Nachladen braucht sie ihn nicht mehr.** Bis zum 260831 setzte der
+/// Nachschlag am zuletzt angezeigten Commit an; seither zaehlt
+/// [`lauf::Gitfrage::WeitererVerlauf`] die schon angezeigten, und der Grund
+/// steht dort.
 pub use gix::ObjectId;
+
+/// Wie viele Zeichen ein Kurzhash traegt.
+///
+/// Sieben, wie `git log --oneline` sie schreibt, und **fest** statt ueber
+/// `ObjectId::shorten()`: jene Laenge haengt vom Bestand des Repositorys ab und
+/// aendert sich mit dem naechsten Commit. Eine Spaltenbreite, die mit dem
+/// Bestand wandert, waere in der Verlaufsliste eine Unruhe ohne Gegenwert.
+///
+/// **Sie steht hier und nicht bei einem der beiden Schreiber**, weil es zwei
+/// sind: [`leser::Gitleser::kopf`] schreibt den Kurzhash des abgeloesten HEAD,
+/// [`texte::verlaufszeile`] den jeder Zeile der Verlaufsliste. Bis zum 260831
+/// stand die Laenge in `leser` und ein zweites Mal als nackte Sieben in
+/// `texte`; wer sie geaendert haette, haette den einen Kurzhash verschoben und
+/// den anderen stehen lassen.
+pub(crate) const KURZHASHLAENGE: usize = 7;
 
 /// Die Marke, die ein Eintrag der Dateiliste traegt.
 ///

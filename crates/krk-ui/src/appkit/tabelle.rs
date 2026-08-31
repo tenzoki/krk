@@ -3675,9 +3675,10 @@ impl DateifensterQuelle {
             self.ivars().tabs.borrow_mut().nachzuegler_starten();
         }
         // Gefragt wird `arbeitet_noch` und nicht `liest_noch`: der Takt bedient
-        // zwei Kanaele, und ein Durchlauf laeuft gerade dann, wenn kein
-        // Lesevorgang mehr laeuft. Mit der engeren Frage hielte der Takt an,
-        // bevor der erste Befund da ist.
+        // drei Kanaele — Lesevorgang, Durchlauf und Gitlauf, wie
+        // `Tabliste::arbeitet_noch` sie aufzaehlt —, und die beiden anderen
+        // laufen gerade dann, wenn kein Lesevorgang mehr laeuft. Mit der
+        // engeren Frage hielte der Takt an, bevor der erste Befund da ist.
         if !self.ivars().tabs.borrow().arbeitet_noch() {
             self.einzug_beenden();
         }

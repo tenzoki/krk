@@ -21,10 +21,10 @@
 //! 260823-0942 so verlangt
 //! (`shared/decisions/260820-1034_*_wie-kommt-eine-taste-zum-umschalten-zwischen-editor-und-vorschau.md`).
 //!
-//! # Eine Groesse, fuenf Werte
+//! # Eine Groesse, und jeder ihrer Werte bekommt eine Antwort
 //!
-//! Die Regel haengt an nichts als am [`Fokus`]. Drei seiner fuenf Werte tragen
-//! einen Ausgang, zwei tragen keinen:
+//! Die Regel haengt an nichts als am [`Fokus`]. Drei seiner Werte tragen einen
+//! Ausgang — je einen der drei [`Rundweg`]-Werte —, die uebrigen tragen keinen:
 //!
 //! - **[`Fokus::Dateifenster`]** — der ausgewaehlte Eintrag der Liste geht in
 //!   den Editor. Es ist derselbe Rumpf wie bei `f4`, und das ist die Zusage:
@@ -37,8 +37,8 @@
 //!   bekommen und so getroffen; wer sie umdreht, dreht eine bewusste Wahl um
 //!   und kein Versehen.
 //! - **[`Fokus::Leiste`], [`Fokus::Git`] und [`Fokus::Anderswo`]** — kein
-//!   Ausgang. In der
-//!   Lesezeichen- und Geraeteleiste gibt es keine Datei, die der Befehl meinte,
+//!   Ausgang. In der Lesezeichen- und Geraeteleiste gibt es keine Datei, die
+//!   der Befehl meinte; im Git-Bereich ebenso wenig, denn ein Commit ist keine;
 //!   und `Anderswo` heisst ein stehendes Blatt oder ein Textfeld.
 //!
 //! # Woran die Regel nicht haengt
@@ -56,13 +56,15 @@
 //!   `Anwendungsdelegierter::anlass_beginnen`, hinter dieser Regel und nicht
 //!   in ihr.
 //!
-//! # Die beiden ausgangslosen Werte sind heute unerreichbar, und das bleibt
+//! # Die ausgangslosen Werte sind heute unerreichbar, und das bleibt
 //! nicht zugesagt
 //!
 //! `Kommando::EditorRundweg` traegt
 //! [`Wirkungsbereich::Dateibereiche`](krk_core::tasten::Wirkungsbereich), und
-//! [`super::fokus::wirkt`] weist die Leiste und das Blatt schon vor dieser Regel
-//! ab. [`rundweg`] antwortet trotzdem fuer alle fuenf Werte, aus demselben Grund,
+//! [`super::fokus::wirkt`] laesst dort allein `Dateifenster`, `Vorschau` und
+//! `Editor` durch: die Leiste, den Git-Bereich und das Blatt weist es schon vor
+//! dieser Regel ab. [`rundweg`] antwortet trotzdem fuer jeden Wert aus
+//! `Fokus::ALLE`, aus demselben Grund,
 //! aus dem [`super::fokus::rahmenrolle`] auch fuer `Anderswo` antwortet: erst
 //! damit kann die Tafel darunter die Frage ueberhaupt stellen. Wer den
 //! Wirkungsbereich spaeter weitet, findet hier eine Antwort vor statt einer
@@ -157,7 +159,7 @@ mod tests {
     /// Die Aufzaehlung der Pruefungen ist die des Programms.
     ///
     /// Dieselbe Begruendung wie in [`super::super::fokus`] und
-    /// [`super::super::zulaessigkeit`]: eine zweite Liste derselben fuenf Werte
+    /// [`super::super::zulaessigkeit`]: eine zweite Liste derselben Werte
     /// pruefte womoeglich eine andere Menge als die, ueber die das Programm
     /// laeuft.
     const JEDER_FOKUS: [Fokus; 6] = Fokus::ALLE;

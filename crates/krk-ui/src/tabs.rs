@@ -1384,10 +1384,18 @@ struct Gitzug {
 ///
 /// **Die zurueckgehaltene Meldung haelt den Lauf nicht am Leben.** Der Kanal
 /// ist drei tief, der Arbeitsfaden blockiert also an keiner der drei Meldungen
-/// und endet auch dann, wenn niemand sie holt; das Feld faellt mit dem Lauf
-/// weg, sobald der Kanal schliesst — und der Tab, dessen Ordner sich nicht
-/// lesen laesst, ist nach `abschliessen` trotzdem gelesen, sodass die Marken
-/// ihren Weg finden.
+/// und endet auch dann, wenn niemand sie holt.
+///
+/// **Der Kanalschluss nimmt `wartende_marken` nicht mit**, und das ist die
+/// Zusage und kein Versehen: er raeumt allein `tab.gitlauf` weg, wie der Absatz
+/// darueber sagt. In einem grossen Ordner schliesst der Kanal regelmaessig,
+/// **bevor** der Bestand gelesen ist; fiele der Befund mit ihm, waere er fuer
+/// immer weg — genau die Alternative, die das Feld `wartende_marken` als
+/// verworfen ausschreibt. Er faellt stattdessen mit dem Lauf, zu dem er gehoert,
+/// und das sind [`Tabliste::gitlauf_nachziehen_an`] und
+/// [`Tabliste::abbrechen`]. Und der Tab, dessen Ordner sich nicht lesen laesst,
+/// ist nach `abschliessen` trotzdem gelesen, sodass die Marken ihren Weg
+/// finden.
 fn gitmeldungen_einziehen(tab: &mut Tabinhalt) -> Gitzug {
     use std::sync::mpsc::TryRecvError;
 

@@ -19,7 +19,7 @@
 //! (`shared/decisions/260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md`),
 //! und A14 der Runde 23 folgt bis dahin dem Baum.
 
-use super::{Commit, Kopf, Marke};
+use super::{Commit, KURZHASHLAENGE, Kopf, Marke};
 use crate::leseprofil::bausteine::kalendertext;
 
 /// Was der Git-Bereich in einem Ordner ohne Repository zeigt (A14).
@@ -110,7 +110,7 @@ pub fn zusammenfassung(marken: &[(String, Marke)]) -> String {
 #[must_use = "die Zeile ist die Anzeige und keine Nebenwirkung"]
 pub fn verlaufszeile(commit: &Commit) -> String {
     let datum = kalendertext(commit.zeit).unwrap_or_default();
-    let kurzhash: String = commit.id.to_hex_with_len(7).to_string();
+    let kurzhash: String = commit.id.to_hex_with_len(KURZHASHLAENGE).to_string();
     [
         commit.kurzbeschreibung.as_str(),
         commit.autor.as_str(),
@@ -269,8 +269,8 @@ mod tests {
         );
         assert_eq!(
             teile[3].len(),
-            7,
-            "der Kurzhash traegt nicht sieben Zeichen"
+            KURZHASHLAENGE,
+            "der Kurzhash traegt nicht die eine Kurzhashlaenge"
         );
     }
 

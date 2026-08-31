@@ -516,10 +516,11 @@ pub struct Gitleser { repo: gix::Repository }          // haelt ein gix::Reposit
 impl Gitleser {
     #[must_use] pub fn oeffnen(ordner: &Path) -> Oeffnung;
     #[must_use] pub fn kopf(&self) -> Option<Kopf>;
-    #[must_use] pub fn verlauf(&self, ab: Option<ObjectId>, zahl: usize) -> Option<Vec<Commit>>;
-    #[must_use] pub fn marken(&self, ordner: &Path) -> Option<Vec<(String, Marke)>>;
+    #[must_use] pub fn verlauf(&self, bereits: usize, zahl: usize) -> Option<Vec<Commit>>;
+    #[must_use] pub fn marken(&self, ordner: &Path,
+                              abbruch: &AtomicBool) -> Option<Vec<(String, Marke)>>;
 }
-pub enum Gitfrage { Ganz, WeitererVerlauf { ab: ObjectId } }
+pub enum Gitfrage { Ganz, WeitererVerlauf { bereits: usize } }
 pub enum Gitmeldung { Kopf(Kopf), Verlauf(Vec<Commit>), Marken(Vec<(String, Marke)>) }
 pub struct Gitlauf;
 impl Gitlauf {
@@ -593,6 +594,8 @@ pub enum Kommando { …, GitBereichUmschalten, FokusGit, SpalteMarkeUmschalten }
 ```
 
 **Dreiwertig statt zweiwertig, und `Option` an den drei Fragen: das ist der gebaute Stand und nicht der ursprünglich geplante.** Der Entwurf dieses Abschnitts führte `oeffnen -> Option<Self>` und drei Fragen ohne `Option`. Schritt 3 ist davon abgewichen und hat den Grund gemessen: unter `ulimit -n 64` mit belegter Deskriptortabelle scheitert `gix::discover` an einem **echten** Repository, und eine zweiwertige Antwort müsste diesen Zustand des eigenen Prozesses als „dieser Ordner liegt in keinem Repository" ausgeben — genau die Verwechslung, die C7.8 verbietet und die der Durchlauf mit `260815-0211` einmal getragen hat. `Oeffnung::Unentschieden` und das `None` der drei Fragen heißen deshalb überall dasselbe: **die Frage ist nicht beantwortet**, und der Rufer meldet nichts, statt eine Verneinung auszugeben. Beleg und Messung stehen im History-Eintrag `history/260830-1620-coder-schritt-3-gix-und-der-gitleser.md`, die Regel im Modulkopf von `crates/krk-core/src/git/mod.rs` unter `# \`None\` heisst „unentschieden" und nie „nichts gefunden"`. Die Schritte 5, 6 und 7 lesen ihre Rufer aus **diesem** Stand (`260830-2358_*_die-datenstrukturen-des-plans-fuehren-vier-gitleser-signaturen-die-schritt-3-verworfen-hat.md`, geschlossen).
+
+**Drei weitere Zeilen sind mit der Durchsicht der Runde 23 nachgezogen, und beide Male hat ein Befund den Baum bewegt und nicht den Plan.** `verlauf` nimmt `bereits: usize` statt `ab: Option<ObjectId>`, und `Gitfrage::WeitererVerlauf` trägt dieselbe Zahl: ein Nachschlag, der beim zuletzt angezeigten Commit ansetzte, lieferte allein dessen Vorfahren und verlöre jeden Nebenzweig, der beim Schwungende noch in der Warteschlange stand (`issues/260831-1444_*_der-nachschlag-des-verlaufs-setzt-am-letzten-commit-an-und-verliert-jeden-nebenzweig.md`, geschlossen). `marken` nimmt zusätzlich ein `&AtomicBool`, weil A10 dem Halter galt und nicht dem Faden: ein abgebrochener Lauf lief die teuerste der vier Auskünfte zu Ende (`issues/260831-1444_*_ein-abgebrochener-gitlauf-laeuft-weiter-und-a10-gilt-nur-dem-halter-und-nicht-dem-faden.md`, geschlossen). Der Plan sagte bis zum 260831 beide Male das Gegenteil (`issues/260831-1652_*_drei-signaturen-in-den-datenstrukturen-des-plans-sind-mit-den-durchsichtsbefunden-wieder-veraltet.md`).
 
 ---
 

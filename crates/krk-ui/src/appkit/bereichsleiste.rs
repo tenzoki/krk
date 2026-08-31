@@ -8,11 +8,15 @@
 //! Dateilisten (C3, gereiht ueber die Werte von [`Spalte::ALLE`], fuer die
 //! [`kommando_der_spalte`] ein Kommando liefert), einem fuer die tiefe Suche
 //! seit der Filter-Runde (C2.1) und einem fuer den Inhaltsfilter seit der
-//! Inhaltsfilter-Runde (C2.1). Gezaehlt werden sie mit
-//! `Bereichsleiste::alle_schalter().len()`, das ueber dieselben zwei
-//! Aufzaehlungen laeuft, aus denen [`Bereichsleiste::bauen`] baut; die Probe
-//! `tests::zwoelf_schalter_der_leiste_tragen_ein_kommando` haelt die Zahl
-//! gegen den heutigen Stand und traegt sie in ihrem Namen. Jeder Schalter
+//! Inhaltsfilter-Runde (C2.1). Gezaehlt werden sie von der Probe
+//! `tests::zwoelf_schalter_der_leiste_tragen_ein_kommando`, die dafuer
+//! `tests::alle_schalter()` ueber dieselben zwei Aufzaehlungen laufen laesst,
+//! aus denen [`Bereichsleiste::bauen`] baut; sie traegt die Zahl in ihrem Namen
+//! und wird rot, sobald ein Schalter hinzukommt. Auszufuehren mit
+//! `cargo test -p krk-ui zwoelf_schalter_der_leiste_tragen_ein_kommando`.
+//! **`alle_schalter` steht im Pruefmodul dieser Datei und ist von aussen nicht
+//! zu rufen**; bis zum 260831 nannte dieser Absatz eine Methode
+//! `Bereichsleiste::alle_schalter`, die es nie gab. Jeder Schalter
 //! zeigt, ob sein Gegenstand steht, und schickt bei
 //! einem Klick **ein Kommando** los; ausgefuehrt wird es dort, wo auch der
 //! Tastenbefehl ausgefuehrt wird. Einen zweiten Weg an den Pruefungen vorbei

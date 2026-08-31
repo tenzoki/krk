@@ -11,6 +11,8 @@ Der Kommentar liegt in `appkit/tabelle.rs`, das die Dateiliste von Schritt 12 de
 
 **Abnahmetest:** der Satz nennt drei Kanäle oder keine Zahl.
 
+**Resolved:** 260831. Der Kommentar am Ende von `DateifensterQuelle::einziehen` (`crates/krk-ui/src/appkit/tabelle.rs`) nennt drei Kanäle und schreibt sie aus — Lesevorgang, Durchlauf und Gitlauf —, mit dem Verweis auf `Tabliste::arbeitet_noch`, dessen Rumpf sie aufzählt und dessen Doc-Kommentar sie schon zählte. Die Zahl bleibt eine Zahl und wird keine Erhebungsvorschrift: sie ist an die drei Zweige jener einen Methode gebunden, und ein vierter Kanal ginge dort durch dieselbe Zeile. Der Nachsatz ist mitgezogen, weil er die Zahl trug: aus „ein Durchlauf laeuft gerade dann, wenn kein Lesevorgang mehr laeuft" ist „die beiden anderen laufen gerade dann" geworden.
+
 ---
 **Filed by:** coderev, Kai Stalmann <kai@stalmann.org>
 **Domain:** code

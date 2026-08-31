@@ -124,27 +124,42 @@
 //!
 //! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSTextField`,
 //! `NSFont`, `NSColor`, `NSIndexSet`, `NSNotification`, `NSObject` und
-//! `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso die drei bedienten
-//! Protokolle `NSTableViewDataSource`, `NSTableViewDelegate` und
-//! `NSControlTextEditingDelegate` und die Aufzaehlungen
-//! `NSAutoresizingMaskOptions`, `NSTableColumnResizingOptions`, `NSLineBreakMode`
-//! (`NSParagraphStyle.h:25`) und `NSTextAlignment`. Ohne eigene
-//! Verfuegbarkeitsangabe und damit seit 10.0 stehen die hier gerufenen
-//! Methoden `initWithFrame:`, `addSubview:`, `setFrame:`, `frame`,
-//! `setAutoresizingMask:`, `resizeSubviewsWithOldSize:` (`NSView.h:122`),
-//! `isFlipped` (`NSView.h:236`), `window`, `makeFirstResponder:`,
-//! `setDocumentView:`, `contentSize` (`NSScrollView.h:47`),
+//! `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso die vier bedienten
+//! Protokolle `NSObjectProtocol`, `NSTableViewDataSource`,
+//! `NSTableViewDelegate` und `NSControlTextEditingDelegate` und die
+//! Aufzaehlungen `NSAutoresizingMaskOptions`, `NSTableColumnResizingOptions`,
+//! `NSLineBreakMode` (`NSParagraphStyle.h:25`) und `NSTextAlignment`. Ohne
+//! eigene Verfuegbarkeitsangabe und damit seit 10.0 stehen die hier gerufenen
+//! Methoden `alloc`, `init`, `initWithFrame:`, `addSubview:`, `setFrame:`,
+//! `frame`, `setAutoresizingMask:`, `resizeSubviewsWithOldSize:`
+//! (`NSView.h:122`), `isFlipped` (`NSView.h:141`), `setDocumentView:`,
+//! `documentView` (`NSScrollView.h:48`), `contentSize` (`NSScrollView.h:47`),
 //! `setHasVerticalScroller:`, `setAutohidesScrollers:`, `setRowHeight:`
-//! (`NSTableView.h:206`), `setHeaderView:` (`:156`), `addTableColumn:` (`:226`),
-//! `reloadData` (`:256`), `scrollRowToVisible:` (`:250`),
-//! `selectRowIndexes:byExtendingSelection:` (`:353`), `selectedRow` (`:361`),
+//! (`NSTableView.h:206`), `setHeaderView:` (`:156`),
+//! `initWithIdentifier:` (`NSTableColumn.h:31`), `addTableColumn:`
+//! (`NSTableView.h:226`), `reloadData` (`:256`), `scrollRowToVisible:` (`:250`),
+//! `selectRowIndexes:byExtendingSelection:` (`:353`), `deselectAll:` (`:338`),
+//! `selectedRow` (`:361`),
 //! `allowsEmptySelection` (`:330`), `allowsMultipleSelection` (`:326`),
 //! `setResizingMask:`, `setDataSource:`, `setDelegate:`, `setStringValue:`,
 //! `setFont:`, `setTextColor:`, `setAlignment:` (`NSControl.h:66`), `sizeToFit`
 //! (`NSControl.h:44`), `smallSystemFontSize`, `systemFontOfSize:` und
-//! `indexSetWithIndex:`. Das Buendel zielt auf 15.0 (`.cargo/config.toml`).
+//! `indexSetWithIndex:`, dazu die zwei hier **gebauten** Protokollmethoden
+//! `numberOfRowsInTableView:` (`NSTableView.h:743`) und
+//! `tableViewSelectionDidChange:` (`:717`). Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`).
 //!
-//! **Zehn Beruehrungen sind juenger als ihre Klasse, und alle liegen unter dem
+//! **Die Liste ist die Vorkehrung und keine Zusammenfassung**, und sie ist
+//! deshalb gegen den Rumpf dieser Datei erhoben und nicht fortgeschrieben: bis
+//! zum 260831 fuehrte sie `window` und `makeFirstResponder:`, die hier nirgends
+//! gerufen werden, und liess `deselectAll:`, `documentView` und
+//! `initWithIdentifier:` aus. Wer sie nachzieht, erhebt die gerufenen Namen
+//! neu und liest jede Untergrenze am SDK nach, statt der bisherigen Liste zu
+//! glauben; die Kandidaten nennt
+//! `grep -oE '\.[a-zA-Z_]+\(|::[a-zA-Z_]+\(' crates/krk-ui/src/appkit/git.rs | sort -u`,
+//! und was davon eine Objective-C-Nachricht ist, entscheidet der Leser.
+//!
+//! **Diese Beruehrungen sind juenger als ihre Klasse, und alle liegen unter dem
 //! Zielsystem:**
 //!
 //! - `preferredMaxLayoutWidth` seit 10.8 (`NSTextField.h:45`)

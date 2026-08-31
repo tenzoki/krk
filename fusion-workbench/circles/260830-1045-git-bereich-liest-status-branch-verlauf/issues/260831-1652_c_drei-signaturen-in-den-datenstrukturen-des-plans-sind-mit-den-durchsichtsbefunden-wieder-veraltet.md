@@ -15,6 +15,8 @@ Dasselbe ist an demselben Abschnitt schon einmal aufgelaufen und dort begründet
 
 **Abnahmetest:** die drei Zeilen nennen die Formen, die `crates/krk-core/src/git/leser.rs` und `crates/krk-core/src/git/lauf.rs` tragen, oder der Absatz unter dem Codeblock nennt die Abweichung samt dem Datensatz, der sie verursacht hat.
 
+**Resolved:** 260831. `## Data Structures` des Plans der Runde 23 nennt die drei Formen, die der Baum trägt: `verlauf(&self, bereits: usize, zahl: usize)`, `marken(&self, ordner: &Path, abbruch: &AtomicBool)` und `Gitfrage::WeitererVerlauf { bereits: usize }`. Ein Absatz unter dem Codeblock nennt beide Abweichungen samt dem Datensatz, der sie verursacht hat — `260831-1444_*_der-nachschlag-des-verlaufs-setzt-am-letzten-commit-an-und-verliert-jeden-nebenzweig.md` für die Zahl statt des Commits, `260831-1444_*_ein-abgebrochener-gitlauf-laeuft-weiter-und-a10-gilt-nur-dem-halter-und-nicht-dem-faden.md` für das Abbruchkennzeichen — und steht neben dem Absatz, den die erste Runde desselben Befunds hinterlassen hat. Die Abnahme ist damit auf beiden Wegen erfüllt.
+
 ---
 **Filed by:** coder, Kai Stalmann <kai@stalmann.org>
 **Domain:** code

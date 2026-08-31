@@ -11,6 +11,8 @@ Der Nachzug hat damit eine Zahl, die veraltet, gegen eine Vorschrift getauscht, 
 
 **Abnahmetest:** der Modulkopf nennt einen Befehl oder einen Probennamen, der sich ohne Umbau ausführen lässt und die Zahl liefert.
 
+**Resolved:** 260831. Der Modulkopf von `crates/krk-ui/src/appkit/bereichsleiste.rs` nennt statt der nie vorhandenen Methode `Bereichsleiste::alle_schalter` die Probe, die wirklich zählt, samt dem Befehl, der sie fährt: `cargo test -p krk-ui zwoelf_schalter_der_leiste_tragen_ein_kommando`. Ausgeführt und grün (1 passed, 884 filtered out). Daneben steht jetzt, dass `alle_schalter` die freie Funktion des Prüfmoduls dieser Datei ist und von außen nicht zu rufen — die Auskunft, deren Fehlen den falschen Verweis erst möglich gemacht hat —, und dass der Absatz bis zum 260831 eine Methode nannte, die es nie gab. Die Zusammensetzung der Zahl aus `Bereich::ALLE`, den schaltbaren Werten von `Spalte::ALLE` und den zwei einzelnen Feldern bleibt unverändert; C9.2 verlangt eine ausführbare Vorschrift, und der Probenname mit seinem `cargo test` ist eine.
+
 ---
 **Filed by:** coderev, Kai Stalmann <kai@stalmann.org>
 **Domain:** code

@@ -36,8 +36,14 @@ zip = { workspace = true }
 # sie liesse `cargo build --workspace` gruen und `cargo test -p krk-core` rot.
 flate2 = { workspace = true }
 # Die Git-Anbindung der Stufe A. Sie steht hier und nicht in `krk-ui`, weil der
-# Leser im Kern liegt: `git::leser` haelt das `Repository` und ist die einzige
-# Stelle, die die Kiste nennt. `krk-ui` hat kein Bibliotheksziel, eine Datei
+# Leser im Kern liegt: `git::leser` haelt das `Repository` und traegt fast jede
+# Nennung der Kiste. **Die einzige Stelle ist er nicht**, und die zweite ist
+# keine Nebensache: `git::mod` fuehrt `gix::ObjectId` mit `pub use` wieder aus,
+# und ueber diese Wiederausfuhr traegt `krk-ui` den Objektnamen jedes Commits,
+# ohne `gix` selbst zu fuehren; dazu kommt `gix::hash::Kind::Sha1` im Pruefmodul von
+# `git::texte`. Wer die Kiste aus dem Kern loesen will, erhebt die Stellen mit
+# `grep -rn 'gix::' crates/krk-core/src` und verlaesst sich nicht auf eine Zahl
+# an dieser Stelle. `krk-ui` hat kein Bibliotheksziel, eine Datei
 # unter `crates/krk-ui/tests/` erreicht also nichts aus jener Kiste, und die
 # Sonderzustaende eines Repositorys — abgeloester HEAD, ungeborener HEAD, ein
 # Unterordner statt der Wurzel — waeren dort gegen ein angelegtes
