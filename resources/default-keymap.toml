@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 88 Funktionen mit zusammen 93 Kombinationen.
+# Ausgeliefert sind 91 Funktionen mit zusammen 95 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -399,17 +399,17 @@ tasten = ["shift+cmd+h"]
 # Der Finder legt das auf cmd+shift+Punkt. Die Schreibweise dieser Datei kennt
 # keinen Namen fuer die Punkt-Taste, deshalb steht hier h wie "hidden".
 
-# Die drei Spaltenschalter bleiben ab Werk ohne Kombination, und zwar mit
-# leerer Tastenliste und nicht mit `reserviert_fuer`: dieses Feld heisst
-# "benannt, aber einer spaeteren Runde vorbehalten", und diese drei Funktionen
-# gibt es. Sie schalten in beiden Dateifenstern zugleich und stehen wie jede
-# andere Funktion in der Belegungsansicht am Schirm.
+# Die Spaltenschalter bleiben ab Werk ohne Kombination, und zwar mit leerer
+# Tastenliste und nicht mit `reserviert_fuer`: dieses Feld heisst "benannt,
+# aber einer spaeteren Runde vorbehalten", und diese Funktionen gibt es. Sie
+# schalten in beiden Dateifenstern zugleich und stehen wie jede andere Funktion
+# in der Belegungsansicht am Schirm.
 #
 # In der Markdown-Ausgabe der Runde 3 stehen sie dagegen nicht: die nimmt eine
 # Funktion nur auf, wenn sie mindestens eine Kombination traegt (Umfang
 # Moeglichkeit 1, Nutzerantwort vom 260811-0110,
 # `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260809-2040_*_was-steht-in-der-ausgabe-und-wonach-ist-sie-gegliedert.md`).
-# Wer einer der drei eine Kombination zuweist, findet sie danach auch dort.
+# Wer einem von ihnen eine Kombination zuweist, findet sie danach auch dort.
 #
 # Der Grund fuer die leere Liste ist die Knappheit: die Auslieferung fuehrt 39
 # frei gewaehlte Kombinationen
@@ -424,7 +424,10 @@ tasten = ["shift+cmd+h"]
 # genannten Datensatz und meinen die 39 von damals 52 Kombinationen, die der
 # Spec der Runde 1 offengelassen hat; die uebrigen sieben schreibt C3 fest.
 # Schon als dieser Absatz am 260812 geschrieben wurde, fuehrte die Datei 85
-# Kombinationen, heute sind es 90. Die Zahl waechst trotzdem nicht mit: sie
+# Kombinationen; wie viele es heute sind, sagt die Zeile "# Ausgeliefert sind
+# ..." im Kopf dieser Datei, und eine Probe haelt sie gegen den Bestand. Bis
+# zum 260831 stand die heutige Zahl hier ein zweites Mal, und sie war um drei
+# zu niedrig, als jemand sie zuletzt las. Die 39 waechst trotzdem nicht mit: sie
 # benennt den Umfang jener Annahme und nicht den Umfang der Auslieferung, und
 # wer sie beim Eintragen einer Kombination hochzaehlt, loest den Verweis auf
 # den Datensatz von seinem Gegenstand. Am 260818 geprueft, als opt+cmd+s
@@ -447,6 +450,15 @@ tasten = []
 id = "spalte_typ_umschalten"
 name = "Spalte Typ ein- und ausblenden"
 tasten = []
+
+[[funktion]]
+id = "spalte_marke_umschalten"
+name = "Spalte Marke ein- und ausblenden"
+tasten = []
+# Der vierte Spaltenschalter, ohne Kombination wie die drei darueber: der
+# Absatz vor "spalte_groesse_umschalten" begruendet die leere Tastenliste, und
+# die Begruendung gilt ihm unveraendert. Sein Weg ist der Schalter der
+# Bereichsleiste.
 
 # Der Schalter "Deep" der Bereichsleiste steht hier und nicht bei den
 # Sortierbefehlen: er bestimmt, was die Dateiliste zeigt, wie die drei
@@ -581,6 +593,43 @@ tasten = ["shift+cmd+y"]
 # (F6). Nutzerentscheid vom 260807,
 # `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-2216_*_tastenweg-des-fokus-in-das-vorschaufenster.md`.
 
+[[funktion]]
+id = "fokus_git"
+name = "Fokus in den Git-Bereich"
+tasten = ["shift+cmd+b"]
+# Der fuenfte Fokusbefehl, neben shift+cmd+l fuer die Leiste, shift+cmd+d fuer
+# das Dateifenster, shift+cmd+y fuer die Vorschau und shift+cmd+e fuer den
+# Editor. b wie "Branch". shift+cmd+b ist ab Werk frei; am 260831 gegen jede
+# tasten-Zeile dieser Datei nachgezaehlt, keine andere nennt es. Der Nutzer hat
+# die Kombination gewaehlt, Festlegung E10 des Specs
+# (`circles/260830-1045-git-bereich-liest-status-branch-verlauf/planning/260830-1251_*_spec-git-bereich-liest-status-branch-verlauf.md`).
+#
+# **Den Buchstaben erbt dieser Befehl nicht, und erben kann er ihn auch nicht.**
+# Bei der Leiste, dem Dateifenster und der Vorschau traegt der Fokusbefehl den
+# Buchstaben seines Umschalters: opt+cmd+l gegen shift+cmd+l, opt+cmd+d gegen
+# shift+cmd+d, cmd+y gegen shift+cmd+y. Beim Editor ist das Muster schon
+# gebrochen, opt+cmd+b gegen shift+cmd+e. Der Git-Bereich schaltet auf
+# opt+cmd+r, und shift+cmd+r traegt "editor_ersetzen".
+#
+# **Eine Unsauberkeit bleibt, und der Nutzer hat sie angenommen:** b steht in
+# der Umschaltfamilie fuer den Editor (opt+cmd+b) und mit diesem Eintrag in der
+# Fokusfamilie fuer Git. Derselbe Buchstabe, zwei Bereiche, unterschieden
+# allein durch die Zusatztaste. Ein Konflikt ist das nicht, denn die
+# Kombinationen sind verschieden; eine Stelle, an der jemand danebengreift, ist
+# es trotzdem. Wer sie fuer ein Versehen haelt und "berichtigt", dreht eine
+# bewusste Wahl um.
+#
+# Am 260831 frei geblieben sind in der Fokusfamilie f, j, m, o, p, q, t und x.
+# Keiner dieser Buchstaben ist fuer "Git" oder "Repository" sprechend, und g
+# und r sind beide vergeben. Welche Kombinationen die Familie heute fuehrt,
+# sagt die Datei und kein Kommentar:
+#   grep '^tasten' resources/default-keymap.toml | grep -o 'shift+cmd+[a-z]*' | sort -u
+#
+# Der Eintrag steht hier bei den drei aeltesten Fokusbefehlen, angezeigt wird
+# er unter "Git": welche Gruppe eine Funktion bekommt, sagt
+# `belegungsmodell::bereich_des_kommandos`, und die Reihenfolge dieser Datei
+# ordnet nur innerhalb der Gruppe.
+
 # ── C7: Sichtbarkeit und Breiten der Bereiche ────────────────────────────────
 # Das Ein- und Ausblenden der Vorschau steht oben bei "vorschau_umschalten":
 # C7 nennt es ausdruecklich dieselbe Funktion wie "Vorschau anzeigen" aus C3.
@@ -615,6 +664,26 @@ tasten = ["opt+cmd+d", "opt+cmd+right"]
 # Name der zweite waere: eine keymap.toml des Nutzers, die eine unbekannte
 # Kennung nennt, wird als Ganzes abgewiesen, und er stuende ohne seine Belegung
 # da.
+
+[[funktion]]
+id = "git_bereich_umschalten"
+name = "Git-Bereich ein- und ausblenden"
+tasten = ["opt+cmd+r"]
+# r wie "Repository". opt+cmd+r ist ab Werk frei; am 260831 gegen jede
+# tasten-Zeile dieser Datei nachgezaehlt, keine andere nennt es. Der Nutzer hat
+# die Kombination gewaehlt, Festlegung E10 des Specs
+# (`circles/260830-1045-git-bereich-liest-status-branch-verlauf/planning/260830-1251_*_spec-git-bereich-liest-status-branch-verlauf.md`).
+#
+# Die opt+cmd-Reihe ist keine einzige Familie; das schreibt der Kommentar bei
+# "ordner_der_datei" schon aus, samt dem Zaehlkommando fuer ihren heutigen
+# Bestand. Dieser Befehl gehoert zu ihrer Umschaltseite, die die Bereiche der
+# Fensterzeile ein- und ausblendet, und steht deshalb hier bei den uebrigen
+# Umschaltern.
+#
+# Angezeigt wird er unter "Git" und nicht unter "Fenster", wo die zwei
+# Dateifenster stehen: welche Gruppe eine Funktion bekommt, sagt
+# `belegungsmodell::bereich_des_kommandos`, und die Reihenfolge dieser Datei
+# ordnet nur innerhalb der Gruppe.
 
 [[funktion]]
 id = "fenster_einblenden"

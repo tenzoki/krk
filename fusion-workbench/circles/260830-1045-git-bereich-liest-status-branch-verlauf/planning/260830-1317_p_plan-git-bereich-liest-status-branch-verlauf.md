@@ -337,7 +337,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
    - Kriterien: C1.2 (Bauhälfte), C1.10 (Nachzug), C2.2 (Bauhälfte), C2.7 (Route), C2.11, C2.12 (Sperre), C3.9 (Nachzug), C5.5 (Bauhälfte), C5.6 (Bauhälfte), C5.7, C6.2 (Bauhälfte)
    - Dependencies: Schritte 2, 7
 
-9. **Die drei Einträge in der Auslieferungsbelegung**
+9. **Die drei Einträge in der Auslieferungsbelegung** [DONE]
    - Executor: `ontocoder`
    - Files: `resources/default-keymap.toml`
    - Changes: Drei `[[funktion]]`-Blöcke. `git_bereich_umschalten` mit `name = "Git-Bereich ein- und ausblenden"` und `tasten = ["opt+cmd+r"]`, eingeordnet bei den übrigen Bereichsumschaltern, mit dem Kommentar, warum der Buchstabe `r` („Repository") und dass er zur Umschaltfamilie `opt+cmd+<Buchstabe>` gehört (E10). `fokus_git` mit `name = "Fokus in den Git-Bereich"` und `tasten = ["shift+cmd+b"]`, eingeordnet bei den vier vorhandenen Fokusbefehlen, mit dem Kommentar, warum `b` („Branch") und dass er zur Fokusfamilie `shift+cmd+<Buchstabe>` gehört, und mit dem Hinweis, dass der Buchstabe hier **nicht** vom Umschalter geerbt wird, anders als bei Leiste, Dateifenster und Vorschau — `shift+cmd+r` ist die naheliegende Form und der Nutzer hat `b` gewählt (E10). `spalte_marke_umschalten` mit `name = "Spalte Marke ein- und ausblenden"` und `tasten = []`, unmittelbar hinter `spalte_typ_umschalten`.

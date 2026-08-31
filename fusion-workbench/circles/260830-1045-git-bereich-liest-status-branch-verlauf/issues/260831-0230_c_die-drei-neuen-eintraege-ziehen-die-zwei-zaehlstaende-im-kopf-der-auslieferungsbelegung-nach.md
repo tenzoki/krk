@@ -41,3 +41,18 @@ und liegen beide in Rust, also außerhalb dieses Datensatzes:
 Literal in `belegungsausgabe::tests::jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte`
 (`crates/krk-ui/src/belegungsausgabe.rs`) führen `spalte_marke_umschalten`
 seit Schritt 8, jeweils unmittelbar hinter `spalte_typ_umschalten`.
+
+---
+Resolved: Die Kopfzeile von `resources/default-keymap.toml` nennt seit dem 260831-0808
+91 Funktionen mit zusammen 95 Kombinationen. Gezählt und nicht gerechnet: die Zahlen
+stammen aus einem Durchlauf über `^[[funktion]]` und die Einträge jeder `tasten`-Zeile
+derselben Datei, nicht aus 88+3 und 93+2.
+`die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` ist grün, `make check`
+exit 0.
+
+Im selben Absatz stand eine zweite Kombinationszahl („heute sind es 90", geschrieben am
+260818 in `18af77f`). Sie war schon vor dieser Runde um drei zu niedrig und wäre mit den
+drei neuen Einträgen um fünf danebengelegen. Sie ist nicht nachgezogen, sondern gefallen:
+an ihrer Stelle steht der Zeiger auf die Kopfzeile, die eine Probe hält. Aus demselben
+Grund nennt der Einleitungsabsatz der Spaltenschalter keine „drei" mehr, die dieser
+Schritt auf vier gebracht hätte.
