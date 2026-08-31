@@ -70,10 +70,14 @@ pub enum Spalte {
     /// eine von zwei Zielzustaenden.** Ein Ordner, der in keinem Repository
     /// liegt, laesst sie dauerhaft leer, und die Spalte wird trotzdem nicht
     /// eingezogen (E5, C6.3); den zweiten Fall — der Ordner liegt in einem
-    /// Repository und der Statuslauf hat einen Buchstaben geliefert — traegt
-    /// Schritt 6 der Git-Runde nach. Bis dahin liefert
-    /// `appkit::tabelle::Tabellenquelle::beschriften` fuer diese Spalte immer
-    /// die leere Zeichenkette, und das ist an jener Stelle vermerkt.
+    /// Repository und der Statuslauf hat einen Buchstaben geliefert — schreibt
+    /// `appkit::tabelle::Tabellenquelle::beschriften` seit Schritt 6 der
+    /// Git-Runde aus dem Ordnermodell.
+    ///
+    /// **Ihr Ankreuzfeld traegt seit Schritt 8 der Git-Runde
+    /// [`Kommando::SpalteMarkeUmschalten`]**(krk_core::tasten::Kommando) und
+    /// steht als viertes in der Reihe der Spaltenschalter; ab Werk steht die
+    /// Spalte (A13).
     ///
     /// **Nach ihr wird nicht sortiert** (A12): [`krk_core::verzeichnis::Schluessel`]
     /// bleibt bei vier Werten. Die Sortierung dieses Projekts laeuft ueber

@@ -115,3 +115,26 @@ fällt danach nie mehr auf. Und die Grenze trifft nicht, was sie zu treffen vorg
 `krk-ui` führt kein Bibliotheksziel und prüft deshalb in `#[cfg(test)]`-Modulen unter
 `src/`, die ebensowenig ausgeliefert werden und weiter gezählt bleiben. Ein späterer
 Test dort, der `git` ruft, macht die Probe wieder rot.
+
+## Wo die Auswahl der Verlaufsliste wohnt
+
+Schritt 7 hat sie in die Ivars des `Gitfenster` gelegt und die Frage gefilt, weil die
+Signaturen aus Entscheidung 5 dem Bereich keinen Schreibweg ins Gitmodell geben. Der
+sichtbare Unterschied ist einer: ob eine Auswahl im Verlauf einen Tabwechsel übersteht.
+
+**Der Nutzer hat Möglichkeit 2 gewählt: die Auswahl zieht in das `Gitmodell`, und der
+Git-Bereich meldet sie nach oben.** Damit überlebt sie den Tabwechsel und den Wechsel des
+aktiven Dateifensters, wie es das Halteverhalten der Tabs in KRK überall sonst tut und wie
+das Gitmodell es für Kopf und Verlauf schon zusagt. Die drei Leser `auswahl`,
+`auswahl_setzen` und `ausgewaehlter_commit` bekommen damit ihren Rufer, und die
+Ablaufmarke in `gitmodell.rs` fällt.
+
+Der Preis ist benannt und angenommen: ein zweiter Melder neben dem Nachlademelder, den
+Entscheidung 5 nicht vorsieht, und ein schreibender Zugang des Anwendungsdelegierten zum
+Gitmodell des sichtbaren Tabs, also eine Ausnahme von der Zusage „nur zu lesen" an
+`Tabinhalt::gitmodell`. Möglichkeit 3 ist verworfen, weil sie zwei Schreiber auf dasselbe
+Feld setzte: die Ansicht und den Einzugstakt.
+
+**Nichts davon berührt das Repository.** Geschrieben wird eine Zahl in ein Feld im
+Arbeitsspeicher. Bedingung 2 der Runde steht unverändert: kein Weg dieser Runde ruft eine
+schreibende `gix`-Funktion.

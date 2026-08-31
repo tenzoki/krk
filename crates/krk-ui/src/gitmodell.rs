@@ -123,27 +123,13 @@ impl Gitmodell {
 // `erschoepft`, `verlaufslaenge`, `verlaufszeile` und `einzelheiten`;
 // `letzter_commit` und `erschoepft` ruft daneben `Tabliste::verlauf_nachladen`.
 //
-// **Drei Stuecke haben nach Schritt 7 keinen Rufer im ausgelieferten Bau:**
-// `auswahl`, `auswahl_setzen` und `ausgewaehlter_commit`. Der Git-Bereich haelt
-// die Auswahl seiner Liste in seinen eigenen Ivars, weil `zeigen` das Modell
-// lesend bekommt und `Tabinhalt::gitmodell` einen Schreiber von aussen
-// ausschliesst; welche der beiden Heimaten die richtige ist, ist eine
-// Nutzerfrage und als Datensatz gefilt
-// (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`).
-// Bis sie beantwortet ist, traegt dieser Block seine Ausnahme weiter.
-//
-// Sie steht als `expect` und nicht als `allow`, und das ist ihr Ablaufdatum:
-// bekommen die drei ihren Rufer, meldet der Uebersetzer die Erwartung als
-// unerfuellt und zwingt zum Entfernen der Zeile. Das `cfg_attr(not(test))`
-// davor grenzt sie auf den ausgelieferten Bau ein, denn im Probenbau sind die
-// Stellen schon heute gerufen — die Proben unten sind ihre ersten Leser.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "auswahl, auswahl_setzen und ausgewaehlter_commit warten auf 260831-0120"
-    )
-)]
+// **`auswahl` und `auswahl_setzen` haben ihren Rufer seit Schritt 8**, und der
+// ist der Auswahlmelder des Git-Bereichs: die Verlaufsliste bewegt ihre
+// Auswahl, meldet sie nach oben, und der Anwendungsdelegierte schreibt sie
+// ueber `Tabinhalt::gitauswahl_setzen` hierher zurueck. Der Nutzer hat die
+// Auswahl am 260831 hierher gelegt und nicht in die Ansicht
+// (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
+// Moeglichkeit 2), damit sie den Tabwechsel uebersteht.
 impl Gitmodell {
     /// Der letzte gehaltene Commit, hinter dem ein Nachschlag ansetzt.
     ///
@@ -181,12 +167,6 @@ impl Gitmodell {
         self.auswahl = stelle.filter(|stelle| *stelle < self.verlauf.len());
     }
 
-    /// Der ausgewaehlte Commit, falls einer ausgewaehlt ist.
-    #[must_use]
-    pub fn ausgewaehlter_commit(&self) -> Option<&Commit> {
-        self.auswahl.and_then(|stelle| self.verlauf.get(stelle))
-    }
-
     /// Die obere Zeile des Git-Bereichs, oder die leere Zeichenkette, solange
     /// nichts beantwortet ist (A8).
     #[must_use]
@@ -217,12 +197,12 @@ impl Gitmodell {
     /// Was die Flaeche unter der Liste fuer den Commit an dieser Stelle traegt
     /// (E13, C3.4).
     ///
-    /// **Nach der Stelle gefragt und nicht nach der Auswahl**, anders als
-    /// [`Self::ausgewaehlter_commit`] daneben: der Git-Bereich haelt die
-    /// Auswahl seiner Liste selbst — der Modulkopf von
-    /// [`crate::appkit`]`::git` sagt, warum —, und er braucht die Einzelheiten
-    /// deshalb zu **jeder** Zeile, nicht zu der einen, die dieses Modell
-    /// gewaehlt hat.
+    /// **Nach der Stelle gefragt und nicht nach der Auswahl**: der Git-Bereich
+    /// uebernimmt mit
+    /// jedem `zeigen` den **ganzen** Verlauf in seine Zeilen und schreibt die
+    /// Flaeche darunter danach aus der Zeile, auf der die Auswahl steht. Er
+    /// braucht die Einzelheiten deshalb zu **jeder** Zeile und nicht zu der
+    /// einen, die dieses Modell gewaehlt hat.
     ///
     /// `None` heisst „diese Zeile gibt es nicht", und der Rufer laesst die
     /// Flaeche dann leer (C3.5). Der Text kommt wie die drei anderen aus
@@ -323,12 +303,30 @@ mod tests {
         modell.verlauf_anhaengen(vec![commit(1), commit(2)]);
         modell.auswahl_setzen(Some(5));
         assert_eq!(modell.auswahl(), None);
-        assert!(modell.ausgewaehlter_commit().is_none());
         modell.auswahl_setzen(Some(1));
+        assert_eq!(modell.auswahl(), Some(1));
         assert_eq!(
-            modell.ausgewaehlter_commit().map(|commit| commit.id),
-            Some(commit(2).id)
+            modell.einzelheiten(1),
+            Some(texte::einzelheiten(&commit(2))),
+            "die Flaeche darunter zeigt den Commit, auf dem die Auswahl steht"
         );
+    }
+
+    /// C4.2: ein nachgeladener Schwung haengt hinten an und laesst die Auswahl
+    /// auf dem Eintrag stehen, auf dem sie stand.
+    ///
+    /// **Die Probe steht hier und nicht im Git-Bereich**, seit die Auswahl im
+    /// Modell wohnt (Nutzerentscheid vom 260831): sie haengt daran, dass
+    /// [`Gitmodell::verlauf_anhaengen`] das Feld nicht anfasst, und das ist eine
+    /// Aussage ueber diese Datei.
+    #[test]
+    fn ein_nachschlag_laesst_die_auswahl_stehen() {
+        let mut modell = Gitmodell::neu();
+        modell.verlauf_anhaengen(vec![commit(1), commit(2)]);
+        modell.auswahl_setzen(Some(1));
+        modell.verlauf_anhaengen(vec![commit(3)]);
+        assert_eq!(modell.auswahl(), Some(1));
+        assert_eq!(modell.verlaufslaenge(), 3);
     }
 
     /// Die Verlaufszeile kommt aus dem Kern und wird hier nur durchgereicht.

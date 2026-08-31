@@ -122,6 +122,21 @@ pub enum Funktionsbereich {
     /// Ansichten, das Sichern, der Zeilensprung, Suchen und Ersetzen (C1 bis
     /// C6 der Editor-Runde).
     Editor,
+    /// Der Git-Bereich: sein Ein- und Ausblenden und der Fokus hinein (C1 und
+    /// C2 der Runde 23).
+    ///
+    /// **Steht unmittelbar hinter [`Funktionsbereich::Editor`]**, damit die
+    /// drei Bereiche am rechten Rand des Fensters im Menue in derselben Folge
+    /// stehen wie in der Fensterzeile: Vorschau, Editor, Git. Die Reihenfolge
+    /// dieser Aufzaehlung ist die Reihenfolge der Obermenues, und die
+    /// Belegungsansicht wie die Markdown-Ausgabe folgen ihr.
+    ///
+    /// **Ob der Git-Bereich einen eigenen Bereich bekommt, ist eine offene
+    /// Nutzerfrage** (`260830-1317_*_bekommt-der-git-bereich-einen-eigenen-funktionsbereich-und-damit-ein-zehntes-obermenue.md`).
+    /// Bis zu ihrer Antwort steht er hier, weil die Regel dieses Moduls ihn
+    /// verlangt: die Gliederung fragt nach der **Gegend der Anwendung**, und
+    /// wer den Git-Bereich sucht, sucht ihn nicht unter "Fenster".
+    Git,
     /// Die sechs Textbefehle, die das Menue "Bearbeiten" zustellt (C2, und
     /// Rueckgaengig und Wiederholen aus der Editor-Runde).
     ///
@@ -143,7 +158,7 @@ impl Funktionsbereich {
     ///
     /// Dieselbe Folge wie die Aufzaehlung darueber, und dort steht auch, warum
     /// sie seit der Runde 7 eine Mac-Menueleiste beschreibt.
-    pub const ALLE: [Funktionsbereich; 9] = [
+    pub const ALLE: [Funktionsbereich; 10] = [
         Funktionsbereich::Anwendung,
         Funktionsbereich::Dateilisting,
         Funktionsbereich::Dateioperationen,
@@ -151,6 +166,7 @@ impl Funktionsbereich {
         Funktionsbereich::Vorschau,
         Funktionsbereich::LeisteUndFokus,
         Funktionsbereich::Editor,
+        Funktionsbereich::Git,
         Funktionsbereich::Textbefehle,
         Funktionsbereich::Fenster,
     ];
@@ -183,6 +199,7 @@ impl Funktionsbereich {
             Funktionsbereich::Vorschau => "Vorschau",
             Funktionsbereich::LeisteUndFokus => "Leiste und Fokus",
             Funktionsbereich::Editor => "Editor",
+            Funktionsbereich::Git => "Git",
             Funktionsbereich::Textbefehle => "Bearbeiten",
             Funktionsbereich::Fenster => "Fenster",
         }
@@ -269,6 +286,12 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::SpalteGroesseUmschalten
         | Kommando::SpalteDatumUmschalten
         | Kommando::SpalteTypUmschalten
+        // Der vierte Spaltenschalter aus C5 der Runde 23 steht bei den drei
+        // anderen, und aus demselben Satz: er bestimmt, was die Liste zeigt.
+        // Dass sein Inhalt aus einem Repository kommt, macht keinen zweiten Ort
+        // auf — diese Gliederung fragt nach der Gegend der Anwendung, und die
+        // ist die Dateiliste, deren Spalte er schaltet.
+        | Kommando::SpalteMarkeUmschalten
         // Der Schalter "Deep" aus C5 der Filter-Runde steht mit hier: er
         // bestimmt, was die Liste zeigt, wie das Ein- und Ausblenden der
         // versteckten Eintraege und die drei Spaltenschalter darueber. Damit
@@ -405,6 +428,19 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EditorRueckwaertsSuchen
         | Kommando::EditorErsetzen
         | Kommando::EditorAlleErsetzen => Funktionsbereich::Editor,
+        // Der Git-Bereich, und die zwei Befehle folgen demselben Satz wie das
+        // Ein- und Ausblenden der Vorschau und des Editors weiter oben: die
+        // Gliederung fragt nach der **Gegend der Anwendung**, und wer den
+        // Git-Bereich sucht, sucht unter "Git". Der Umschalter steht deshalb
+        // nicht unter "Fenster", wo sein Gegenstueck fuer die beiden
+        // Dateifenster steht, und der Fokusbefehl nicht unter "Leiste und
+        // Fokus", wo die zwei aeltesten stehen.
+        //
+        // **Der vierte Spaltenschalter steht ausdruecklich nicht hier**,
+        // obwohl er den Gitbefund zeigt: geschaltet wird eine Spalte der
+        // Dateiliste, und der Nutzer sucht sie bei den drei anderen
+        // Spaltenschaltern.
+        Kommando::GitBereichUmschalten | Kommando::FokusGit => Funktionsbereich::Git,
     }
 }
 

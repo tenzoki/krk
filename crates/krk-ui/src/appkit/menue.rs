@@ -1298,10 +1298,10 @@ mod tests {
     ///
     /// Die **Gesamtzahl** daneben haengt an keinem Empfaenger:
     /// [`crate::quellbaum::aufrufstellen`] zaehlt jeden Aufruf des Namens im
-    /// Baum, gleich wer ihn ruft. Heute sind es acht — die drei oben und fuenf
-    /// Weiterreichungen an Tabelle, Leiste und Vorschau. Ein neunter macht die
-    /// Probe rot, wie auch immer er geschrieben ist, und zwingt zu der Frage,
-    /// welche der beiden Zahlen sich geaendert hat.
+    /// Baum, gleich wer ihn ruft. Heute sind es neun — die drei oben und sechs
+    /// Weiterreichungen an Tabelle, Leiste, Vorschau und Git-Bereich. Ein
+    /// zehnter macht die Probe rot, wie auch immer er geschrieben ist, und
+    /// zwingt zu der Frage, welche der beiden Zahlen sich geaendert hat.
     #[test]
     fn der_delegierte_wird_an_genau_drei_stellen_um_einen_befehl_gebeten() {
         let name = concat!("kommando_", "ausfuehren");
@@ -1327,10 +1327,10 @@ mod tests {
             .map(|(_, inhalt)| crate::quellbaum::aufrufstellen(inhalt, name))
             .sum();
         assert_eq!(
-            alle, 8,
+            alle, 9,
             "die Zahl der Aufrufe von {name} im Baum hat sich geaendert: erwartet \
-             sind die drei am Delegierten und fuenf Weiterreichungen an Tabelle, \
-             Leiste und Vorschau"
+             sind die drei am Delegierten und sechs Weiterreichungen an Tabelle, \
+             Leiste, Vorschau und Git-Bereich"
         );
     }
 

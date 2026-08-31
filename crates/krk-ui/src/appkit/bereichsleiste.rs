@@ -150,36 +150,29 @@ const GRUPPENABSTAND: f64 = 24.0;
 /// Auslegen. Dieselbe Rolle wie `AUFBAUGROESSE` in [`super::aufteilung`].
 const AUFBAUBREITE: f64 = 1280.0;
 
-/// Welches Kommando der Schalter dieses Bereichs schickt, falls er schon eines
-/// hat.
+/// Welches Kommando der Schalter dieses Bereichs schickt.
 ///
 /// **Die eine Haelfte der Aufbautabelle**, und eine vollstaendige
 /// Fallunterscheidung ohne Auffangzweig: ein siebter Bereich haelt hier den
 /// Bau an und erzwingt die Antwort darauf, womit sein Schalter zu bedienen
 /// waere. Ein Auffangzweig gaebe ihm still den Schalter eines anderen.
 ///
-/// **`None` ist ein Zwischenstand dieser Runde und kein Dauerzustand.** Bis zur
-/// Git-Runde lieferte diese Zuordnung ein `Kommando` und kein `Option`, weil
-/// jeder Bereich eines trug. Der Git-Bereich bekommt sein
-/// `Kommando::GitBereichUmschalten` erst in Schritt 8 dieser Runde; bis dahin
-/// steht sein Schalter in der Leiste, zeigt seine Sichtbarkeit an und schickt
-/// nichts. **Der Schalter wird trotzdem gebaut**, damit
-/// [`Bereichsleiste::bereichsschalter`] weiter ueber `Bereich::ALLE.map(…)`
-/// entsteht: das ist die eine Stelle im Baum, an der die Feldbreite den Bau
-/// wirklich anhaelt, wenn die Aufzaehlung waechst, und ein Umbau auf eine
-/// gefilterte Liste gaebe sie fuer eine Laufzeitpruefung her. Schritt 8 macht
-/// die Zuordnung wieder total.
+/// **Wieder total seit Schritt 8 der Git-Runde.** Zwischen Schritt 1 und
+/// Schritt 8 lieferte sie ein `Option`, weil der Git-Bereich sein
+/// [`Kommando::GitBereichUmschalten`] noch nicht hatte; sein Schalter stand in
+/// der Leiste, zeigte seine Sichtbarkeit an und schickte nichts. Jeder der
+/// sechs traegt jetzt sein Kommando, und damit ist der Zwischenstand weg.
 ///
 /// Alle tragen `Wirkungsbereich::Ueberall` (C2.6); die Probe
 /// `jeder_schalter_wirkt_aus_jedem_fokus` haelt es fest.
-const fn kommando_des_bereichs(bereich: Bereich) -> Option<Kommando> {
+const fn kommando_des_bereichs(bereich: Bereich) -> Kommando {
     match bereich {
-        Bereich::Lesezeichen => Some(Kommando::LeisteUmschalten),
-        Bereich::Links => Some(Kommando::ErstesFensterUmschalten),
-        Bereich::Rechts => Some(Kommando::ZweitesFensterUmschalten),
-        Bereich::Vorschau => Some(Kommando::VorschauUmschalten),
-        Bereich::Editor => Some(Kommando::EditorUmschalten),
-        Bereich::Git => None,
+        Bereich::Lesezeichen => Kommando::LeisteUmschalten,
+        Bereich::Links => Kommando::ErstesFensterUmschalten,
+        Bereich::Rechts => Kommando::ZweitesFensterUmschalten,
+        Bereich::Vorschau => Kommando::VorschauUmschalten,
+        Bereich::Editor => Kommando::EditorUmschalten,
+        Bereich::Git => Kommando::GitBereichUmschalten,
     }
 }
 
@@ -191,20 +184,17 @@ const fn kommando_des_bereichs(bereich: Bereich) -> Option<Kommando> {
 /// eine vollstaendige Fallunterscheidung ohne Auffangzweig — eine neue
 /// Spalte haelt den Bau an, statt still ohne Schalter zu bleiben.
 ///
-/// **`None` fuer [`Spalte::Marke`] ist ein Zwischenstand dieser Runde und kein
-/// Dauerzustand**, dieselbe Lage wie beim Git-Bereich in
-/// [`kommando_des_bereichs`] darueber: `Kommando::SpalteMarkeUmschalten`
-/// entsteht erst in Schritt 8, und ein Schritt, der an einem Typ haengt, den
-/// es noch nicht gibt, drehte die Reihenfolge des Plans um. Bis dahin ist die
-/// Markenspalte gebaut, steht ab Werk und traegt kein Ankreuzfeld; Schritt 8
-/// gibt ihr das vierte, und dann sagt A2 seine Aufschrift: „Marke".
+/// **[`Spalte::Marke`] traegt ihr Kommando seit Schritt 8 der Git-Runde**, und
+/// ihr Ankreuzfeld ist damit das vierte der Reihe; seine Aufschrift lautet
+/// „Marke" (A2 der Runde 23) und kommt wie die der drei anderen aus
+/// [`Spalte::beschriftung`].
 const fn kommando_der_spalte(spalte: Spalte) -> Option<Kommando> {
     match spalte {
         Spalte::Name => None,
         Spalte::Groesse => Some(Kommando::SpalteGroesseUmschalten),
         Spalte::Geaendert => Some(Kommando::SpalteDatumUmschalten),
         Spalte::Typ => Some(Kommando::SpalteTypUmschalten),
-        Spalte::Marke => None,
+        Spalte::Marke => Some(Kommando::SpalteMarkeUmschalten),
     }
 }
 
@@ -248,11 +238,12 @@ const AUFSCHRIFT_DES_INHALTS: &str = "Content";
 /// Die Stelle, an der der Schalter dieser Spalte in
 /// [`Bereichsleiste::spaltenschalter`] steht.
 ///
-/// **Abgeleitet und nicht hingeschrieben.** Die Reihenfolge der drei Schalter
+/// **Abgeleitet und nicht hingeschrieben.** Die Reihenfolge der Spaltenschalter
 /// ist die Reihenfolge der schaltbaren Werte in [`Spalte::ALLE`], und diese
 /// Funktion rechnet sie aus derselben Quelle aus, aus der [`Bereichsleiste::bauen`]
-/// sie baut. Eine Tabelle mit drei festen Zahlen daneben waere eine zweite
-/// Aufzaehlung und liefe beim naechsten Nachtrag auseinander.
+/// sie baut. Eine Tabelle mit festen Zahlen daneben waere eine zweite
+/// Aufzaehlung und liefe beim naechsten Nachtrag auseinander — die Runde 23 ist
+/// genau so ein Nachtrag gewesen.
 fn spaltenfach(gesucht: Spalte) -> Option<usize> {
     Spalte::ALLE
         .into_iter()
@@ -307,13 +298,13 @@ define_class!(
         // Argument, der Absender.
         #[unsafe(method(bereichGedrueckt:))]
         fn bereich_gedrueckt(&self, absender: &NSButton) {
-            // `and_then` und nicht `map`: der Schalter des Git-Bereichs traegt
-            // bis Schritt 8 kein Kommando, und ein Klick auf ihn meldet dann
-            // nichts, statt zu raten. Dieselbe Form wie beim Spaltenschalter
-            // darunter.
+            // `map` und nicht `and_then`: jeder der sechs Bereiche traegt sein
+            // Kommando, seit Schritt 8 der Git-Runde die Zuordnung wieder total
+            // gemacht hat. Das `Option` hier stammt allein aus der `tag`, die
+            // eine Stelle jenseits von `Bereich::ALLE` nennen koennte.
             let kommando = stelle_des_absenders(absender)
                 .and_then(|stelle| Bereich::ALLE.get(stelle).copied())
-                .and_then(kommando_des_bereichs);
+                .map(kommando_des_bereichs);
             self.geklickt(absender, kommando);
         }
 
@@ -468,18 +459,18 @@ pub struct Bereichsleiste {
     /// darueber entsteht dieses Feld nicht ueber `ALLE.map(…)`, sondern aus
     /// einer gefilterten Liste mit `try_into`; die Zahl ist deshalb eine
     /// Zusicherung zur **Laufzeit** und keine Bedingung des Baus. Traegt
-    /// [`kommando_der_spalte`] eines Tages vier Kommandos, waehrend hier `3`
+    /// [`kommando_der_spalte`] eines Tages fuenf Kommandos, waehrend hier `4`
     /// steht, uebersetzt die Datei anstandslos und das `expect` in
     /// [`Bereichsleiste::bauen`] bricht beim Start ab — laut, aber eben erst
     /// dort. Was den Bau statt dessen haelt, ist die Zaehlprobe
-    /// `tests::genau_drei_spalten_sind_schaltbar` im Pruefmodul dieser Datei,
+    /// `tests::genau_vier_spalten_sind_schaltbar` im Pruefmodul dieser Datei,
     /// und deshalb steht sie da.
     ///
-    /// **Schritt 8 der Git-Runde hebt beides auf vier**: die Feldbreite, das
-    /// `Vec::with_capacity`, den Text des `expect` und die Zaehlprobe, alle
-    /// vier zusammen mit `Kommando::SpalteMarkeUmschalten`. Wer nur eines
-    /// davon anfasst, merkt es nicht beim Uebersetzen.
-    spaltenschalter: [Retained<NSButton>; 3],
+    /// **Schritt 8 der Git-Runde hat die Zahl von drei auf vier gehoben**, und
+    /// zwar an vier Stellen zugleich: die Feldbreite, das `Vec::with_capacity`,
+    /// den Text des `expect` und die Zaehlprobe. Wer beim naechsten Nachtrag
+    /// nur eines davon anfasst, merkt es nicht beim Uebersetzen.
+    spaltenschalter: [Retained<NSButton>; 4],
     /// Der Schalter der tiefen Suche (C2.1).
     ///
     /// **Ein einzelnes Feld und keine dritte Reihung.** Die Begruendung steht
@@ -526,7 +517,7 @@ impl Bereichsleiste {
         });
 
         links += GRUPPENABSTAND - ABSTAND;
-        let mut spaltenschalter = Vec::with_capacity(3);
+        let mut spaltenschalter = Vec::with_capacity(4);
         for (stelle, spalte) in Spalte::ALLE.into_iter().enumerate() {
             // Die Namensspalte traegt keinen Schalter (C3.1); welche Spalten
             // einen tragen, sagt allein `kommando_der_spalte`.
@@ -548,13 +539,13 @@ impl Bereichsleiste {
             spaltenschalter.push(schalter);
         }
         // Die Laenge ist keine Annahme ueber die Zukunft: sie folgt aus
-        // `kommando_der_spalte`, und die Probe `genau_drei_spalten_sind_schaltbar`
+        // `kommando_der_spalte`, und die Probe `genau_vier_spalten_sind_schaltbar`
         // haelt beide aneinander. Sie haelt sie zur Laufzeit und nicht beim
         // Bau; warum das hier so ist und bei den Bereichsschaltern nicht,
         // steht am Feld `spaltenschalter`.
-        let spaltenschalter: [Retained<NSButton>; 3] = spaltenschalter
+        let spaltenschalter: [Retained<NSButton>; 4] = spaltenschalter
             .try_into()
-            .expect("genau drei Spalten tragen ein Kommando");
+            .expect("genau vier Spalten tragen ein Kommando");
 
         // Die dritte Gruppe, und deshalb noch einmal [`GRUPPENABSTAND`]: der
         // Schalter der tiefen Suche schaltet weder eine Flaeche des Fensters
@@ -771,14 +762,15 @@ mod tests {
     /// [`KOMMANDO_DES_INHALTS`] samt [`AUFSCHRIFT_DES_INHALTS`]. Eine
     /// Aufstellung daneben pruefte sich selbst.
     ///
-    /// **Die Leiste zeigt einen Schalter mehr, als diese Liste fuehrt.** Der
-    /// Git-Bereich traegt sein Kommando erst nach Schritt 8 dieser Runde; sein
-    /// Schalter ist gebaut, zeigt die Sichtbarkeit an und schickt nichts. Die
-    /// Begruendung steht an [`kommando_des_bereichs`].
+    /// **Die Liste fuehrt jeden Schalter, den die Leiste zeigt.** Bis Schritt 8
+    /// der Git-Runde stand sie um einen kuerzer, weil der Git-Bereich noch kein
+    /// Kommando trug; [`kommando_des_bereichs`] ist seither wieder total.
     fn alle_schalter() -> Vec<(String, Kommando)> {
-        let bereiche = Bereich::ALLE.into_iter().filter_map(|bereich| {
-            kommando_des_bereichs(bereich)
-                .map(|kommando| (bereich.beschriftung().to_owned(), kommando))
+        let bereiche = Bereich::ALLE.into_iter().map(|bereich| {
+            (
+                bereich.beschriftung().to_owned(),
+                kommando_des_bereichs(bereich),
+            )
         });
         let spalten = Spalte::ALLE.into_iter().filter_map(|spalte| {
             kommando_der_spalte(spalte).map(|kommando| (spalte.beschriftung().to_owned(), kommando))
@@ -789,18 +781,19 @@ mod tests {
     }
 
     /// C2.1 der Inhaltsfilter-Runde, C2.1 der Filter-Runde, C2.1 und C3.1 der
-    /// Bereichsleisten-Runde: fuenf plus drei plus zwei, und keiner doppelt.
+    /// Bereichsleisten-Runde, C1.2 und C5.5 der Git-Runde: sechs plus vier plus
+    /// zwei, und keiner doppelt.
     ///
-    /// **Der sechste Bereichsschalter zaehlt hier bis Schritt 8 nicht mit**,
-    /// weil er kein Kommando traegt; die Begruendung steht an
-    /// [`alle_schalter`]. Auf dem Schirm stehen elf Felder.
+    /// **Jeder Schalter auf dem Schirm traegt sein Kommando**, seit Schritt 8
+    /// der Git-Runde dem Git-Bereich und der Markenspalte ihres gegeben hat;
+    /// bis dahin standen zwei Felder ohne eines da.
     #[test]
-    fn zehn_schalter_der_leiste_tragen_ein_kommando() {
+    fn zwoelf_schalter_der_leiste_tragen_ein_kommando() {
         let schalter = alle_schalter();
         assert_eq!(
             schalter.len(),
-            10,
-            "fuenf Bereiche mit Kommando, drei Spalten, die tiefe Suche und der Inhaltsfilter"
+            12,
+            "sechs Bereiche, vier Spalten, die tiefe Suche und der Inhaltsfilter"
         );
     }
 
@@ -836,8 +829,9 @@ mod tests {
         );
         assert_eq!(
             namen.get(namen.len() - 3).copied(),
-            Some(Spalte::Typ.beschriftung()),
-            "und links von beiden der Schalter der Spalte »Typ«"
+            Some(Spalte::Marke.beschriftung()),
+            "und links von beiden der letzte Spaltenschalter, seit Schritt 8 der \
+             Git-Runde der der Spalte »Marke«"
         );
     }
 
@@ -871,34 +865,34 @@ mod tests {
         }
     }
 
-    /// Die Zusage der Feldbreite `[Retained<NSButton>; 3]`: genau drei Spalten
-    /// tragen ein Kommando, und die Namensspalte ist nicht darunter (C3.1).
+    /// Die Zusage der Feldbreite `[Retained<NSButton>; 4]`: genau vier Spalten
+    /// tragen ein Kommando, und die Namensspalte ist nicht darunter (C3.1,
+    /// C5.5 der Git-Runde).
     ///
     /// Ohne diese Probe haenge das `expect` in [`Bereichsleiste::bauen`] an
     /// einer Annahme statt an einer geprueften Aussage — die Feldbreite selbst
     /// haelt hier nichts, und warum, steht am Feld
     /// [`Bereichsleiste::spaltenschalter`].
     ///
-    /// **Zwei Spalten stehen ohne Kommando da und nicht mehr eine.** Die
-    /// Markenspalte bekommt ihres in Schritt 8 der Git-Runde; bis dahin steht
-    /// sie in der Dateiliste und hat kein Ankreuzfeld in der Leiste. Schritt 8
-    /// hebt diese Probe zusammen mit der Feldbreite auf vier.
+    /// **Die Namensspalte ist die eine ohne Kommando**, und sie bleibt es: eine
+    /// Dateiliste ohne sie zeigt nichts, was den Eintrag benennt. Die
+    /// Markenspalte hat ihres in Schritt 8 der Git-Runde bekommen.
     #[test]
-    fn genau_drei_spalten_sind_schaltbar() {
+    fn genau_vier_spalten_sind_schaltbar() {
         let schaltbar: Vec<Spalte> = Spalte::ALLE
             .into_iter()
             .filter(|spalte| kommando_der_spalte(*spalte).is_some())
             .collect();
         assert_eq!(
             schaltbar,
-            vec![Spalte::Groesse, Spalte::Geaendert, Spalte::Typ]
+            vec![
+                Spalte::Groesse,
+                Spalte::Geaendert,
+                Spalte::Typ,
+                Spalte::Marke
+            ]
         );
         assert_eq!(kommando_der_spalte(Spalte::Name), None);
-        assert_eq!(
-            kommando_der_spalte(Spalte::Marke),
-            None,
-            "die Markenspalte traegt ihr Kommando erst nach Schritt 8"
-        );
     }
 
     /// Die Aufbautabelle nennt fuer jeden Schalter **genau ein** Kommando, und
@@ -953,8 +947,8 @@ mod tests {
         assert_eq!(spaltenfach(Spalte::Typ), Some(2));
         assert_eq!(
             spaltenfach(Spalte::Marke),
-            None,
-            "die Markenspalte hat bis Schritt 8 kein Fach, weil sie kein Kommando traegt"
+            Some(3),
+            "die Markenspalte hat ihr Fach seit Schritt 8 der Git-Runde"
         );
     }
 }

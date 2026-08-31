@@ -83,3 +83,8 @@ seine drei Leser fallen aus dem `Gitmodell`, und mit ihnen das
 `expect(dead_code)` und die Probe `eine_auswahl_jenseits_des_verlaufs_bleibt_leer`,
 deren Gegenstand dann in `crates/krk-ui/src/appkit/git.rs` steht und dort schon
 eine Probe hat.
+
+---
+Answered: shared/history/260830-0950-orchestrator-session.md:125 — Möglichkeit 2: die Auswahl zieht in das `Gitmodell` und der Git-Bereich meldet sie nach oben; sie übersteht damit den Tabwechsel. Der zweite Melder und der schreibende Zugang zum Gitmodell des sichtbaren Tabs sind angenommen, Möglichkeit 3 ist wegen der zwei Schreiber auf einem Feld verworfen.
+
+Implemented: `crates/krk-ui/src/appkit/git.rs` — das `Gitfenster` hält keine Auswahl mehr; `GitfensterIvars::auswahl` ist gefallen, `zeigen` nimmt sie aus `Gitmodell::auswahl` und `auswahl_uebernehmen` (der eine Weg für Pfeil und Mausklick) meldet sie über den neuen `Auswahlmelder` nach oben. Der Anwendungsdelegierte trägt sie über `DateifensterQuelle::gitauswahl_setzen` → `Tabliste::gitauswahl_setzen` → `Tabinhalt::gitauswahl_setzen` in das Gitmodell des sichtbaren Tabs; die benannte Ausnahme von „Nur zu lesen" steht im Doc-Kommentar von `Tabinhalt::gitmodell` (`crates/krk-ui/src/tabs.rs`), wo die Zusage steht. Das `expect(dead_code)` in `crates/krk-ui/src/gitmodell.rs` ist entfernt, `ausgewaehlter_commit` gefallen. `zeigen` bekommt das Modell weiterhin lesend (Möglichkeit 3 verworfen); `haelt_die_auswahl` und seine drei Ansichtsproben sind weg, C4.2 und C4.6 halten die Proben am Modell.

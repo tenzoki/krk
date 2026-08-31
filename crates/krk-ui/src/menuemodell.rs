@@ -539,7 +539,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // C2.3: neun Obermenues, ihre Folge und ihre Titel
+    // C2.3: je besetztem Bereich ein Obermenue, ihre Folge und ihre Titel
     // -----------------------------------------------------------------------
 
     /// Je besetztem Bereich ein Obermenue, in der Reihenfolge und mit den
@@ -555,8 +555,8 @@ mod tests {
             .collect();
         assert_eq!(
             titel, erwartet,
-            "ab Werk ist jeder Bereich besetzt, also stehen alle neun in ihrer \
-             Reihenfolge"
+            "ab Werk ist jeder Bereich besetzt, also steht jeder von ihnen in \
+             seiner Reihenfolge"
         );
     }
 

@@ -994,6 +994,18 @@ mod tests {
                 "{kommando:?} kommt waehrend eines Blattes nicht mehr durch"
             );
         }
+        // C2.11 der Runde 23: die beiden Befehle des Git-Bereichs sind bei
+        // stehendem Blatt abgewiesen. Sie tragen `Wirkungsbereich::Ueberall`
+        // wie die fuenf anderen Bereichsumschalter und die vier anderen
+        // Fokusbefehle, und `immer_erreichbar` ist fuer sie ausdruecklich
+        // **nicht** gewachsen: ein Bereich, der sich hinter einer stehenden
+        // Rueckfrage ein- und ausblenden liesse, waere die Ausnahme ohne Grund.
+        for kommando in [Kommando::GitBereichUmschalten, Kommando::FokusGit] {
+            assert!(
+                !durchgelassen.contains(&kommando),
+                "{kommando:?} kommt waehrend eines Blattes durch"
+            );
+        }
     }
 
     /// Steht die Schreibmarke im Textfeld eines Blattes, ist auch der Abbruch

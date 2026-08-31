@@ -216,11 +216,12 @@
 //! 22 **erklaert** und nicht ruft, `paste:` seit der Runde 21 der dritte; sie
 //! sprechen keine Klasse an und tragen deshalb keine Untergrenze.
 //!
-//! Seit der Git-Runde baut diese Datei daneben eine leere `NSView` als
-//! Platzhalter des Git-Bereichs; `NSView::alloc` und `initWithFrame:` tragen im
-//! SDK-Kopf keine Verfuegbarkeitsangabe und stehen damit seit 10.0. `NSRect`,
-//! `NSPoint` und `NSSize` sind Strukturen und keine Klassen und tragen deshalb
-//! keine Untergrenze.
+//! **Seit Schritt 8 der Git-Runde baut diese Datei keine eigene `NSView`
+//! mehr.** Zwischen Schritt 1 und Schritt 8 hielt hier eine leere Ansicht die
+//! Stelle des Git-Bereichs in der Aufteilung; jetzt kommt sie aus
+//! `Gitfenster::bauen`, und die Klassen jenes Bereichs stehen mit ihren
+//! Untergrenzen im Kopf von [`super::git`]. Eine zweite Aufzaehlung hier waere
+//! eine zweite Wahrheit ueber dieselben Klassen.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
@@ -239,8 +240,8 @@ use objc2_app_kit::{
     NSWindow,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRect, NSRunLoop,
-    NSRunLoopCommonModes, NSSize, NSString, NSTimer,
+    MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSRunLoop, NSRunLoopCommonModes,
+    NSString, NSTimer,
 };
 
 use krk_core::ablage::sitzung::Sitzungsschreiber;
@@ -301,6 +302,7 @@ use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft};
 use super::ereignisse::{self, Anschlag, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::fsevents::Dateisystemwache;
+use super::git::Gitfenster;
 use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
@@ -657,6 +659,13 @@ pub struct AnwendungsIvars {
     /// Ereignisabgriff fragt ihn nach der Naemlichkeit, und `appkit::ereignisse`
     /// kennt den Editor nicht.
     editor: OnceCell<Retained<Editorbereich>>,
+    /// Der Git-Bereich, der sechste Bereich der Fensterzeile (Runde 23).
+    ///
+    /// Er steht hier wie die drei Randbereiche darueber, und aus zwei Gruenden.
+    /// Es gibt **einen** Git-Bereich und **ein Gitmodell je Tab**, also ist der
+    /// Anwendungsdelegierte die eine Stelle, die beide sieht; und seine zwei
+    /// Melder brauchen ein Ziel, das das aktive Dateifenster kennt.
+    git: OnceCell<Retained<Gitfenster>>,
     /// Der Pfad, den die ausgeblendete Vorschau beim Einblenden nachholt (C6,
     /// C7).
     ///
@@ -1200,6 +1209,7 @@ impl Anwendungsdelegierter {
             leiste: OnceCell::new(),
             vorschau: OnceCell::new(),
             editor: OnceCell::new(),
+            git: OnceCell::new(),
             vorschau_nachtrag: RefCell::new(None),
             ablage: RefCell::new(None),
             sitzungsrecht: OnceCell::new(),
@@ -1273,26 +1283,40 @@ impl Anwendungsdelegierter {
                 selbst.editorausgang_behandeln(ausgang, herkunft);
             }
         }));
-        // **Der Platzhalter des Git-Bereichs, und er faellt mit Schritt 7.**
-        // Der sechste Bereich steht seit Schritt 1 in `Bereich::ALLE`, in der
-        // Bereichsleiste, in der Breitenrechnung und in der `session.toml`;
-        // was ihm bis Schritt 7 fehlt, ist sein Inhalt. Eine leere `NSView`
-        // haelt seine Stelle in der Aufteilung, damit die Zuordnung von
-        // `Bereich::index` auf die Unteransicht schon jetzt stimmt und
-        // `bereich_des_ersthelfers` nicht ins Leere greift. Sie nimmt keinen
-        // Ersthelferrang an, weil sie nichts enthaelt, was einen naehme, und
-        // sie ist ab Werk ausgeblendet (`Sichtbarkeit::default`).
-        let git_platzhalter = NSView::initWithFrame(
-            NSView::alloc(mtm),
-            NSRect::new(NSPoint::ZERO, NSSize::new(400.0, 400.0)),
-        );
+        let git = Gitfenster::bauen(mtm);
+        // **Die zwei Rueckwege des Git-Bereichs.** Er kennt die Tabliste nicht
+        // — so wenig wie die Lesezeichenleiste die Dateifenster kennt —, und
+        // beide Meldungen enden deshalb hier, wo das aktive Dateifenster
+        // bekannt ist. Der erste fordert den naechsten Schwung Commits an
+        // (C4.2), der zweite traegt eine bewegte Auswahl in das Gitmodell des
+        // sichtbaren Tabs (Nutzerentscheid vom 260831). Beide Rueckrufe halten
+        // den Delegierten **schwach**, aus demselben Grund wie die uebrigen
+        // Melder hier: sonst schloesse sich der Ring
+        // Delegierter → Gitfenster → Rueckruf → Delegierter.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        git.nachlademelder_setzen(Box::new(move || {
+            if let Some(selbst) = schwach.load() {
+                let aktiv = selbst.ivars().modell.borrow().aktiv();
+                selbst.dateifenster(aktiv).quelle().verlauf_nachladen();
+            }
+        }));
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        git.auswahlmelder_setzen(Box::new(move |stelle| {
+            if let Some(selbst) = schwach.load() {
+                let aktiv = selbst.ivars().modell.borrow().aktiv();
+                selbst
+                    .dateifenster(aktiv)
+                    .quelle()
+                    .gitauswahl_setzen(stelle);
+            }
+        }));
         let aufteilung = Aufteilung::bauen(
             mtm,
             [&dateifenster[0], &dateifenster[1]],
             leiste.sicht(),
             vorschau.sicht(),
             editor.sicht(),
-            &git_platzhalter,
+            git.sicht(),
         );
         let fenster_delegierter = FensterDelegierter::neu(
             mtm,
@@ -1383,6 +1407,7 @@ impl Anwendungsdelegierter {
         vorschau.profile_setzen(Arc::clone(&ivars.profile.borrow()));
         let _ = ivars.vorschau.set(vorschau);
         let _ = ivars.editor.set(editor);
+        let _ = ivars.git.set(git);
         let _ = ivars.aufteilung.set(aufteilung);
         let _ = ivars.bereichsleiste.set(bereichsleiste);
         let _ = ivars.statuszeile.set(statuszeile);
@@ -1431,6 +1456,28 @@ impl Anwendungsdelegierter {
                         // der Leiste steht: jede dieser Funktionen hat genau
                         // einen Gegenstand.
                         selbst.bereichsleiste_nachziehen();
+                        // **Und die drei Flaechen des Git-Bereichs**, aus
+                        // demselben Satz: er zeigt den Ordner des sichtbaren
+                        // Tabs im aktiven Dateifenster, und ein Tab- oder
+                        // Ordnerwechsel setzt dessen Gitmodell zurueck, ohne
+                        // dass ein Befehl gelaufen waere (C4.6). Der Nachzug
+                        // steht **neben** den dreien darueber und nicht in
+                        // ihnen, aus demselben Grund wie dort: jede dieser
+                        // Funktionen hat genau einen Gegenstand.
+                        selbst.gitanzeige_nachziehen();
+                    }
+                }));
+            // Die Antwort des Gitlaufs, der dritte Anlass des Git-Bereichs. Sie
+            // trifft ein, waehrend der Nutzer nichts tut, und erreicht die drei
+            // Flaechen deshalb ueber keinen der beiden Anlaesse darueber; der
+            // Grund im Langen steht an `gitanzeige_nachziehen`. Auch dieser
+            // Rueckruf haelt den Delegierten **schwach**.
+            let schwach = objc2::rc::Weak::from_retained(&self.retain());
+            self.dateifenster(seite)
+                .quelle()
+                .gitwechsel_setzen(Box::new(move || {
+                    if let Some(selbst) = schwach.load() {
+                        selbst.gitanzeige_nachziehen();
                     }
                 }));
             // Was das Dateifenster zu beschreiben gibt, fuellt den aktiven
@@ -1812,6 +1859,14 @@ impl Anwendungsdelegierter {
             .vorschau
             .get()
             .expect("das Vorschaufenster steht seit `oberflaeche_aufbauen`")
+    }
+
+    /// Der Git-Bereich (C1 der Runde 23).
+    fn git(&self) -> &Gitfenster {
+        self.ivars()
+            .git
+            .get()
+            .expect("der Git-Bereich steht seit `oberflaeche_aufbauen`")
     }
 
     /// Fuellt den aktiven Vorschau-Tab mit dem, was das Dateifenster meldet
@@ -2493,12 +2548,11 @@ impl Anwendungsdelegierter {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 Some(self.ivars().dateifenster.get()?[aktiv.index()].liste())
             }
-            // **Bis Schritt 7 dieser Runde `None`.** Die Fokusflaeche des
-            // Git-Bereichs ist seine Verlaufsliste, und die entsteht erst mit
-            // dem `Gitfenster`; Schritt 8 traegt sie hier ein. `None` heisst
-            // solange dasselbe wie bei einem noch nicht gebauten Randbereich:
-            // `fokus_setzen` findet keine Ansicht und setzt den Fokus nicht.
-            Fokus::Git => None,
+            // Die Fokusflaeche des Git-Bereichs ist seine Verlaufsliste: sie
+            // ist die einzige seiner drei Flaechen, in der ein Tastendruck
+            // etwas bewegt. Kopf und Einzelheiten sind Etiketten und nehmen den
+            // Ersthelferrang nicht an.
+            Fokus::Git => Some(self.ivars().git.get()?.fokusansicht()),
             Fokus::Anderswo => None,
         }
     }
@@ -3428,6 +3482,16 @@ impl Anwendungsdelegierter {
             Kommando::SpalteGroesseUmschalten => self.spalte_umschalten(Spalte::Groesse),
             Kommando::SpalteDatumUmschalten => self.spalte_umschalten(Spalte::Geaendert),
             Kommando::SpalteTypUmschalten => self.spalte_umschalten(Spalte::Typ),
+            // Der vierte Spaltenschalter aus C5 der Runde 23. Er geht denselben
+            // Weg wie die drei darueber und aus demselben Grund: er trifft
+            // beide Dateilisten, und ein einzelnes Dateifenster kommt an das
+            // andere nicht heran.
+            Kommando::SpalteMarkeUmschalten => self.spalte_umschalten(Spalte::Marke),
+            // Der sechste Bereichsumschalter aus C1 der Runde 23, gebaut wie
+            // die fuenf darueber. Passt die Mindestbreite des Git-Bereichs
+            // nicht ins Fenster, weist das Fenstermodell ihn ab; das ist die
+            // Abweisung, die C1.11 der Bereichsleisten-Runde schon kennt.
+            Kommando::GitBereichUmschalten => self.bereich_umschalten(Bereich::Git),
             // Der Schalter "Deep" aus C5 der Filter-Runde. **Ein eigener
             // Zweig, und der Uebersetzer haette ihn nicht verlangt** (C5.6):
             // das `match` endet mit einem Auffangzweig auf `bereichskommando`,
@@ -3498,6 +3562,13 @@ impl Anwendungsdelegierter {
             // anzufassen.
             Kommando::FokusVorschau => self.fokus_holen(Fokus::Vorschau),
             Kommando::FokusEditor => self.fokus_editor_holen(),
+            // Der fuenfte Fokusbefehl aus C2 der Runde 23. Er geht ueber
+            // `fokus_holen` wie die drei ohne Zusatzbedingung: der Git-Bereich
+            // wird hervorgeholt, wenn er ausgeblendet war (C2.2), und danach
+            // nimmt seine Verlaufsliste den Ersthelferrang. **Keine Bedingung
+            // wie beim Editor**: der Bereich zeigt in jedem Ordner etwas, auch
+            // den Satz aus A14, und haelt nichts, was er aufgeben muesste.
+            Kommando::FokusGit => self.fokus_holen(Fokus::Git),
             // Der erste der beiden Einstiege in den Editor (C2). Er steht hier
             // und nicht bei `bereichskommando`, obwohl er
             // `Wirkungsbereich::Dateifenster` traegt: er nimmt dessen
@@ -3673,16 +3744,17 @@ impl Anwendungsdelegierter {
             // zu einem Zeichen noch zu einer Bewegung der Schreibmarke; er tut
             // nichts, und das ist die Wahl der Runde 7 und kein Versehen.
             Fokus::Editor => false,
-            // **Bis Schritt 8 dieser Runde `false`.** Dort bekommt der
-            // Git-Bereich seinen Zweig
-            // `self.git().kommando_ausfuehren(kommando)`, gebaut wie der der
-            // Leiste: er fuehrt aus, was er kennt, und meldet fuer alles
-            // uebrige `false`. Solange es kein `Gitfenster` gibt, gibt es
-            // nichts, woran der Befehl zu richten waere; `false` heisst hier
-            // wie ueberall in diesem `match` allein "kein Nachzug der
-            // Aufteilung und keine vorgemerkte Sitzung", und der Tastendruck
-            // ist trotzdem verbraucht.
-            Fokus::Git => false,
+            // Der Git-Bereich, gebaut wie der Zweig der Leiste: er fuehrt die
+            // zwei Auswahlbefehle auf seiner Verlaufsliste aus und meldet fuer
+            // alles uebrige `false`. Genau dafuer nennt
+            // `Wirkungsbereich::Navigator` seit dieser Runde auch `Fokus::Git`
+            // — `up` und `down` kommen damit hier an und nicht im Dateifenster
+            // (C2.7).
+            //
+            // Ein `false` heisst hier wie ueberall in diesem `match` allein
+            // "kein Nachzug der Aufteilung und keine vorgemerkte Sitzung"; der
+            // Tastendruck ist trotzdem verbraucht.
+            Fokus::Git => self.git().kommando_ausfuehren(kommando),
             Fokus::Dateifenster | Fokus::Anderswo => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.dateifenster(aktiv)
@@ -4534,6 +4606,90 @@ impl Anwendungsdelegierter {
             // Zwischenstandes, und die vier Rechnungen ueberschrieben einander.
             self.dateifenster(seite).spaltenbreiten_verteilen();
         }
+        // **Der dritte der vier Ausloeser aus A9**: das Umschalten der
+        // Markenspalte. Er faellt hier an und nicht in
+        // [`Self::aufteilung_nachziehen`], weil eine Spalte nicht in der
+        // Fensterzeile liegt und jener Nachzug eine unveraenderte Sichtbarkeit
+        // vorfaende. Der vierte, der Ordnerwechsel, ist kein Fall fuer den
+        // Bedarf, sondern fuer den Lauf selbst; er steht in
+        // `Tabliste::lesen_starten`.
+        self.gitbedarf_nachziehen();
+    }
+
+    /// Sagt beiden Dateifenstern, ob der Gitbefund ueberhaupt angezeigt wird
+    /// (A9, C7.10).
+    ///
+    /// **Die Oder-Verknuepfung steht hier und nirgends sonst**: der Git-Bereich
+    /// ist eine Flaeche der Fensterzeile, die Markenspalte eine Spalte beider
+    /// Dateilisten, und der Anwendungsdelegierte ist die eine Stelle, die beide
+    /// Sichtbarkeiten sieht. Die Tabliste kennt keine von beiden und bekommt
+    /// deshalb einen fertigen Wahrheitswert.
+    ///
+    /// **An beide Dateifenster und nicht nur an das aktive.** Die Markenspalte
+    /// steht in beiden Listen, also braucht auch das nicht aktive seinen
+    /// Gitlauf; und ein Wechsel des aktiven Fensters faende sonst ein
+    /// Dateifenster vor, das nie gefragt hat.
+    ///
+    /// **Zwei Rufer und kein dritter**: [`Self::aufteilung_nachziehen`] deckt
+    /// das Umschalten des Bereichs und den Wechsel des aktiven Dateifensters
+    /// ab, [`Self::spaltenanzeige_nachziehen`] das Umschalten der Spalte. Der
+    /// vierte Ausloeser aus A9, der Ordnerwechsel, gehoert nicht hierher: dort
+    /// aendert sich nicht, **ob** gefragt wird, sondern **wonach**.
+    ///
+    /// Ohne Dateifenster gibt es nichts zu sagen; der Aufbau ruft beide
+    /// Nachzuege, sobald sie stehen.
+    fn gitbedarf_nachziehen(&self) {
+        if self.ivars().dateifenster.get().is_none() {
+            return;
+        }
+        let gefragt = {
+            let modell = self.ivars().modell.borrow();
+            modell.sichtbar(Bereich::Git)
+                || spalte_sichtbar_in(&modell.spaltensichtbarkeit(), Spalte::Marke)
+        };
+        for seite in Fensterseite::ALLE {
+            self.dateifenster(seite).quelle().gitbedarf_setzen(gefragt);
+        }
+    }
+
+    /// Schreibt den Stand des sichtbaren Tabs in die drei Flaechen des
+    /// Git-Bereichs (C1.10, C3.9).
+    ///
+    /// **Der eine Schreiber, mit drei Anlaessen**, nach dem Vorbild von
+    /// [`Self::bereichsleiste_nachziehen`]. Die ersten zwei teilt er mit jener:
+    /// [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten Kommando folgt
+    /// und damit auch jedem Wechsel des aktiven Dateifensters, und der
+    /// Ordnerwechsel-Rueckruf eines Dateifensters, der den Tabwechsel und die
+    /// Navigation mit abdeckt.
+    ///
+    /// **Der dritte ist die Antwort des Arbeitsfadens**, und er kam mit dieser
+    /// Runde dazu: Kopf, Verlauf und Zusammenfassung treffen ein, waehrend der
+    /// Nutzer nichts tut, und keiner der zwei anderen Anlaesse faellt dann an.
+    /// Der Weg ist der Melder `gitwechsel` in [`super::tabelle`], den der
+    /// Einzugstakt auf `Einzug::gitkopf_neu` hin feuert.
+    ///
+    /// **Das aktive Dateifenster und nicht das fokussierte** (E1): der
+    /// Git-Bereich folgt dem aktiven, wie die Bereichsleiste ihre zwei letzten
+    /// Schalter von dort nimmt. Steht der Fokus im Git-Bereich selbst, ist das
+    /// aktive Dateifenster dasjenige, das der Nutzer zuletzt bedient hat, und
+    /// genau dessen Ordner meint er.
+    ///
+    /// **Es schreibt auch bei ausgeblendetem Bereich.** Eine Abfrage der
+    /// Sichtbarkeit davor waere eine zweite Stelle, an der sie zaehlt, und der
+    /// Gewinn waere das Ersparen von drei Zuweisungen an unsichtbare Flaechen;
+    /// dafuer stuende der Bereich beim Einblenden einen Takt lang leer, weil
+    /// das Einblenden selbst kein neues `zeigen` ausloeste.
+    fn gitanzeige_nachziehen(&self) {
+        let Some(git) = self.ivars().git.get() else {
+            return;
+        };
+        if self.ivars().dateifenster.get().is_none() {
+            return;
+        }
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.dateifenster(aktiv)
+            .quelle()
+            .mit_gitmodell(|modell| git.zeigen(modell));
     }
 
     /// Holt einen ausgeblendeten Bereich hervor und blendet nie einen aus.
@@ -5059,6 +5215,16 @@ impl Anwendungsdelegierter {
         aufteilung.anwenden(&breiten, &sichtbar);
         self.fokusanzeige_nachziehen();
         self.bereichsleiste_nachziehen();
+        // **Und der Git-Bereich, in beiden Hinsichten.** `gitbedarf_nachziehen`
+        // deckt hier zwei der vier Ausloeser aus A9 ab, das Umschalten des
+        // Bereichs und den Wechsel des aktiven Dateifensters;
+        // `gitanzeige_nachziehen` schreibt danach die drei Flaechen, denn nach
+        // einem Fensterwechsel zeigt der Bereich einen anderen Ordner (C1.10,
+        // C3.9). Die Reihenfolge ist die naheliegende und nicht tragend: der
+        // Lauf, den der Bedarf anstoesst, antwortet ohnehin erst spaeter, und
+        // seine Antwort kommt ueber den Melder des Einzugstakts.
+        self.gitbedarf_nachziehen();
+        self.gitanzeige_nachziehen();
         // **Auch die Statuszeile**, und seit dem 260812 aus zwei Gruenden:
         // die Sichtbarkeit entscheidet mit, wer sich um die Zeile bewirbt, und
         // das aktive Dateifenster kann sich mit demselben Anlass geaendert

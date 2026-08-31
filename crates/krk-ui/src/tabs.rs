@@ -188,21 +188,39 @@ impl Tabinhalt {
 
     /// Was der Git-Bereich fuer diesen Tab zeigt.
     ///
-    /// **Nur zu lesen.** Geschrieben wird das Gitmodell allein aus dem
-    /// Einzugstakt und aus [`Tabliste::gitlauf_nachziehen_an`]; ein Schreiber
-    /// von aussen waere eine zweite Quelle fuer denselben Stand.
-    // Der Ableser ist `Anwendungsdelegierter::gitanzeige_nachziehen`, und der
-    // entsteht mit dem Git-Bereich in Schritt 8 des Plans der Runde 23. Bis
-    // dahin gibt es keine Ansicht, die den Stand zeigte. Die Ausnahme steht als
-    // `expect` und traegt damit ihr Ablaufdatum in sich: sobald der Rufer da
-    // ist, meldet der Uebersetzer sie als unerfuellt. Sie gilt allein dem
-    // ausgelieferten Bau, denn im Probenbau ist die Stelle schon gerufen.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "Ableser ist gitanzeige_nachziehen aus Schritt 8")
-    )]
+    /// **Nur zu lesen, mit einer benannten Ausnahme.** Kopf, Verlauf und
+    /// Zusammenfassung schreibt allein der Einzugstakt, und zurueckgesetzt wird
+    /// das Modell allein aus [`Tabliste::gitlauf_nachziehen_an`]; ein zweiter
+    /// Schreiber dieser Felder waere eine zweite Quelle fuer denselben Stand.
+    ///
+    /// **Die Ausnahme ist die Auswahl**, und sie geht ueber
+    /// [`Self::gitauswahl_setzen`] darunter und ueber keinen anderen Weg. Der
+    /// Nutzer hat sie am 260831 hierher gelegt statt in die Ansicht
+    /// (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
+    /// Moeglichkeit 2), damit sie den Tabwechsel uebersteht: es gibt **ein**
+    /// Gitfenster und **ein Gitmodell je Tab**. Sie ist damit das eine Feld,
+    /// das der Git-Bereich fuellt und der Einzugstakt nicht — kein zweiter
+    /// Schreiber auf demselben Feld, sondern ein zweites Feld mit einem eigenen
+    /// Schreiber. Genau daran ist Moeglichkeit 3 des Datensatzes gescheitert,
+    /// die `zeigen` das Modell veraenderlich gegeben haette.
     pub fn gitmodell(&self) -> &Gitmodell {
         &self.gitmodell
+    }
+
+    /// Waehlt den Commit an dieser Stelle des Verlaufs aus (C3.4, C4.2).
+    ///
+    /// **Die benannte Ausnahme von der Zusage darueber**, und der einzige Weg,
+    /// auf dem ein Schreiber von aussen an das Gitmodell kommt. Der Weg hinein
+    /// ist der Auswahlmelder des Git-Bereichs: die Verlaufsliste bewegt ihre
+    /// Auswahl, meldet sie nach oben, und der Anwendungsdelegierte traegt sie
+    /// hier ein. Geschrieben wird eine Zahl im Arbeitsspeicher; das Repository
+    /// bleibt unberuehrt (E8).
+    ///
+    /// Eine Stelle jenseits des Verlaufs raeumt die Auswahl, statt sie auf
+    /// einen Commit zu setzen, den es nicht gibt; die Regel steht in
+    /// [`Gitmodell::auswahl_setzen`] und nicht hier.
+    pub fn gitauswahl_setzen(&mut self, stelle: Option<usize>) {
+        self.gitmodell.auswahl_setzen(stelle);
     }
 
     /// Ob gerade ein Lesevorgang laeuft.
@@ -420,7 +438,8 @@ pub enum Auswahlversuch {
 /// Heute bindet der eine Aufrufer den Wert und wertet jedes Feld aus, das schon
 /// eine Ansicht hat (`Dateitabelle::einziehen` in `crate::appkit::tabelle`); das
 /// `#[must_use]` haelt das fuer den zweiten fest. Die eine Ausnahme ist
-/// [`Einzug::gitkopf_neu`], und sie ist an ihrem Feld begruendet.
+/// [`Einzug::gitkopf_neu`]: es zeichnet in der Tabelle nichts neu, sondern
+/// reist als Meldung weiter, und die Begruendung steht an seinem Feld.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 #[must_use = "hat sich am sichtbaren Tab etwas geaendert, ist die NSTableView nachzuziehen"]
 pub struct Einzug {
@@ -448,11 +467,15 @@ pub struct Einzug {
     /// Der Gitlauf des sichtbaren Tabs hat Kopf, Verlauf oder Zusammenfassung
     /// geliefert.
     ///
-    /// **Das eine Feld ohne Ableser in der Tabelle**, und das ist kein
-    /// Versaeumnis: was daran haengt, sind die drei Flaechen des Git-Bereichs,
-    /// und die schreibt `Anwendungsdelegierter::gitanzeige_nachziehen` aus
-    /// Schritt 8 des Plans der Runde 23. Die Dateiliste hat damit nichts zu
-    /// tun — Kopf und Verlauf stehen in keiner ihrer Spalten.
+    /// **Das eine Feld, das die Tabelle nur weiterreicht.** Die Dateiliste hat
+    /// damit nichts zu tun — Kopf und Verlauf stehen in keiner ihrer Spalten —,
+    /// und sie zeichnet auf dieses Feld hin nichts neu; sie meldet es ueber
+    /// ihren `gitwechsel`-Rueckruf an
+    /// `Anwendungsdelegierter::gitanzeige_nachziehen`, der die drei Flaechen
+    /// des Git-Bereichs schreibt. **Der Weg ueber die Tabelle ist der einzige,
+    /// den es gibt**: der Einzugstakt haengt an ihr, und der
+    /// Anwendungsdelegierte kaeme sonst nie zu dem Zeitpunkt, an dem die
+    /// Antwort eintrifft.
     pub gitkopf_neu: bool,
     /// Der Gitlauf des sichtbaren Tabs hat Marken in sein Ordnermodell
     /// getragen.
@@ -1085,13 +1108,6 @@ impl Tabliste {
     /// [`Tabliste::durchlauf_nachziehen`] sagt der Wert dem Aufrufer, ob er den
     /// Einzugstakt anwerfen muss; faellt er still, bliebe der Befund im Kanal
     /// stehen und die Spalte leer.
-    // Der Rufer ist `Anwendungsdelegierter::gitbedarf_nachziehen`, und der
-    // entsteht mit den drei Kommandos in Schritt 8 des Plans der Runde 23. Zur
-    // Form der Ausnahme siehe `Tabinhalt::gitmodell` darueber.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "Rufer ist gitbedarf_nachziehen aus Schritt 8")
-    )]
     #[must_use = "laeuft jetzt ein Gitlauf, ist der Einzugstakt anzuwerfen"]
     pub fn git_gefragt_setzen(&mut self, gefragt: bool) -> bool {
         if self.git_gefragt == gefragt {
@@ -1118,13 +1134,6 @@ impl Tabliste {
     ///
     /// Der Verlauf **waechst** dabei und faengt nicht neu an; das Gitmodell
     /// wird deshalb nicht zurueckgesetzt.
-    // Der Rufer ist der Nachlademelder des Git-Bereichs, und der entsteht in
-    // Schritt 7 und wird in Schritt 8 des Plans der Runde 23 eingehaengt. Zur
-    // Form der Ausnahme siehe `Tabinhalt::gitmodell` darueber.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "Rufer ist der Nachlademelder aus Schritt 7 und 8")
-    )]
     #[must_use = "laeuft jetzt ein Gitlauf, ist der Einzugstakt anzuwerfen"]
     pub fn verlauf_nachladen(&mut self) -> bool {
         let stelle = self.aktiv;
@@ -1144,6 +1153,17 @@ impl Tabliste {
             nummer,
         ));
         true
+    }
+
+    /// Traegt die Auswahl der Verlaufsliste in den sichtbaren Tab ein.
+    ///
+    /// Der Rueckweg des Auswahlmelders aus dem Git-Bereich. **Der sichtbare Tab
+    /// und nicht ein genannter**: der Git-Bereich zeigt den Stand des
+    /// sichtbaren Tabs im aktiven Dateifenster, also gehoert die Auswahl, die
+    /// er meldet, ebendiesem Tab. Die Zusage und ihre eine Ausnahme stehen an
+    /// [`Tabinhalt::gitmodell`].
+    pub fn gitauswahl_setzen(&mut self, stelle: Option<usize>) {
+        self.aktiver_mut().gitauswahl_setzen(stelle);
     }
 
     /// Bricht den Gitlauf eines Tabs ab und stoesst, wenn seine Bedingungen

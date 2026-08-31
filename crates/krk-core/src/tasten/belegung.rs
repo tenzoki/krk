@@ -271,9 +271,14 @@ pub enum Wirkungsbereich {
     /// steht; sie entsteht dann aber beim Aufrufer und nicht mehr hier. Die
     /// Begruendung im Langen steht bei [`Kommando::wirkungsbereich`].
     Tabbereich,
-    /// Wirkt in den Bereichen des Navigators aus der Runde 1, also im
-    /// Dateifenster, in der Leiste und im Vorschaufenster, aber nicht im
-    /// Editor.
+    /// Wirkt in den Bereichen des Navigators, also im Dateifenster, in der
+    /// Leiste, im Vorschaufenster und im Git-Bereich, aber nicht im Editor.
+    ///
+    /// **Der Git-Bereich ist seit der Runde 23 dabei**, und aus der Regel, die
+    /// die drei anderen schon traegt: der Verlauf ist eine Liste mit einer
+    /// Auswahl, und der Auf- und der Ab-Pfeil bewegen die Auswahl der Liste,
+    /// vor der der Nutzer steht. Ein neunter Wirkungsbereich waere dafuer ein
+    /// eigener Wert fuer eine Regel, die es schon gibt.
     ///
     /// Der Wert der Befehle, deren Taste im Editor der Textflaeche gehoert:
     /// `fenster_wechseln` auf `tab`, `auswahl_hoch` auf `up` und
@@ -335,8 +340,8 @@ impl Wirkungsbereich {
     /// **Fuer den Nutzer bestimmt und nicht fuer den Programmtext.** Der Name
     /// der Variante ist die Auskunft an den Leser dieser Datei; die
     /// Beschriftung ist die an den Leser der Tastenbelegung als Markdown.
-    /// Deshalb steht hier "Dateifenster, Leiste und Vorschau" und nicht
-    /// "Navigator": eine Datei, die ihre Spalte erst ueber eine Legende
+    /// Deshalb steht hier "Dateifenster, Leiste, Vorschau und Git-Bereich" und
+    /// nicht "Navigator": eine Datei, die ihre Spalte erst ueber eine Legende
     /// verstaendlich macht, verlangt vom Leser genau das Wissen, das sie ihm
     /// geben soll. Ausgeschrieben, ohne Legende, Nutzerentscheid vom
     /// 260811-0115.
@@ -358,7 +363,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Dateibereiche => "Dateifenster, Vorschau und Editor",
             Wirkungsbereich::Editor => "Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
-            Wirkungsbereich::Navigator => "Dateifenster, Leiste und Vorschau",
+            Wirkungsbereich::Navigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
             Wirkungsbereich::Vorschau => "Vorschau",
             Wirkungsbereich::Ueberall => "überall",
         }
@@ -745,12 +750,45 @@ pub enum Kommando {
     /// gezoomt hat (A1). Ohne angezeigtes PDF wird der Befehl entgegengenommen
     /// und tut nichts (A6).
     VorschauAusgangsgroesse,
+    /// Den Git-Bereich ein- und ausblenden (C1 der Runde 23).
+    ///
+    /// Der sechste Bereichsumschalter, und er traegt
+    /// [`Wirkungsbereich::Ueberall`] aus derselben Erwaegung wie die fuenf
+    /// vorhandenen: ein Umschalter braucht seinen Bereich nicht, er stellt ihn
+    /// her, und sein Schalter in der Bereichsleiste muss aus jedem Fokus
+    /// wirken.
+    ///
+    /// Passt die Mindestbreite des Git-Bereichs nicht in das Fenster, weist
+    /// das Fenstermodell das Einblenden ab und der Befehl tut nichts; das ist
+    /// dieselbe Abweisung, die die fuenf anderen Umschalter kennen, und sie
+    /// steht dort und nicht hier.
+    GitBereichUmschalten,
+    /// Den Eingabefokus in den Git-Bereich setzen (C2 der Runde 23).
+    ///
+    /// Der fuenfte Fokusbefehl. Er holt einen ausgeblendeten Git-Bereich
+    /// hervor, wie es die vier vorhandenen fuer ihren Bereich tun, und traegt
+    /// aus demselben Grund wie sie [`Wirkungsbereich::Ueberall`]: ein Befehl,
+    /// der den Fokus **holt**, kann nicht voraussetzen, wo er gerade steht.
+    ///
+    /// **Der Buchstabe wird nicht vom Umschalter geerbt**, anders als bei
+    /// Leiste, Dateifenster und Vorschau. Wo die Kombination steht, sagt
+    /// allein `resources/default-keymap.toml`; hier stuende sie als zweite
+    /// Wahrheit.
+    FokusGit,
+    /// Die Spalte Marke in beiden Dateilisten ein- und ausblenden (C5 der
+    /// Runde 23).
+    ///
+    /// Der vierte Spaltenschalter. Alles Weitere steht an
+    /// [`Kommando::SpalteGroesseUmschalten`]: er trifft **beide** Dateilisten
+    /// zugleich, setzt deshalb kein Dateifenster im Fokus voraus und traegt ab
+    /// Werk keine Kombination.
+    SpalteMarkeUmschalten,
 }
 
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 82] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 85] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -857,6 +895,9 @@ impl Kommando {
             Kommando::VorschauAusgangsgroesse,
             "vorschau_ausgangsgroesse",
         ),
+        (Kommando::GitBereichUmschalten, "git_bereich_umschalten"),
+        (Kommando::FokusGit, "fokus_git"),
+        (Kommando::SpalteMarkeUmschalten, "spalte_marke_umschalten"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -942,6 +983,16 @@ impl Kommando {
             | Kommando::SpalteGroesseUmschalten
             | Kommando::SpalteDatumUmschalten
             | Kommando::SpalteTypUmschalten
+            // Der vierte Spaltenschalter aus C5 der Runde 23 steht neben den
+            // drei anderen und aus genau derselben Erwaegung: er trifft beide
+            // Dateilisten zugleich, und ein Befehl, der beide angeht, kann
+            // keine von ihnen im Fokus voraussetzen.
+            | Kommando::SpalteMarkeUmschalten
+            // Der sechste Bereichsumschalter aus C1 der Runde 23 steht bei den
+            // fuenf anderen und aus derselben Erwaegung wie sie: er braucht
+            // seinen Bereich nicht, er stellt ihn her, und sein Schalter in der
+            // Bereichsleiste faellt aus jedem Fokus an.
+            | Kommando::GitBereichUmschalten
             // Der Schalter "Deep" aus C5 der Filter-Runde steht neben den drei
             // Spaltenschaltern darueber und aus derselben Erwaegung: er ist ein
             // Schalter der Bereichsleiste, und ein Klick auf die Leiste faellt
@@ -1013,6 +1064,11 @@ impl Kommando {
             | Kommando::FokusDateifenster
             | Kommando::FokusVorschau
             | Kommando::FokusEditor
+            // Der fuenfte Fokusbefehl aus C2 der Runde 23. Er steht hier aus
+            // demselben Satz wie die vier darueber, und der Satz gilt ihm
+            // woertlich: ein Befehl, der den Fokus in den Git-Bereich holt,
+            // waere mit `Wirkungsbereich::Git` allein von dort aus erreichbar.
+            | Kommando::FokusGit
             | Kommando::LesezeichenAnlegen => Wirkungsbereich::Ueberall,
             // Der Rundweg in den Editor und zurueck (C2 der Editor-Runde,
             // Nutzerentscheid vom 260823-0942), der einzige Befehl mit diesem

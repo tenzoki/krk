@@ -325,7 +325,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
    - Kriterien: C1.6 (Rahmen), C2.4 (Ansichtshälfte), C3.4 (Bauhälfte), C3.5 (Bauhälfte), C4.2 (Auslöser), C4.4 (Bauhälfte), C6.4, C6.6 (Bauhälfte), C9.9
    - Dependencies: Schritte 1, 6
 
-8. **Die drei Kommandos, der zehnte Funktionsbereich und die Einhängung**
+8. **Die drei Kommandos, der zehnte Funktionsbereich und die Einhängung** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/bereichsleiste.rs`, `crates/krk-ui/src/spalten.rs`
    - Changes: Drei neue `Kommando`-Varianten — `GitBereichUmschalten`, `FokusGit`, `SpalteMarkeUmschalten` — mit ihren **drei Pflichtstellen** je Kommando: `Kommando::wirkungsbereich` (alle drei `Ueberall`, wie die fünf Umschalter und die vier Fokusbefehle), `belegungsmodell::bereich` und `Kommando::KENNUNGEN` (`"git_bereich_umschalten"`, `"fokus_git"`, `"spalte_marke_umschalten"`). Die dritte hält der Übersetzer nicht; sie hält `jede_variante_von_kommando_steht_genau_einmal_in_kennungen` (C5.7).
@@ -541,6 +541,8 @@ pub struct Breiten { …, pub git: Option<f64> }          // sechstes Feld
 pub struct Spaltensichtbarkeit { …, pub marke: bool }   // viertes Feld, ab Werk true
 
 // crates/krk-ui/src/gitmodell.rs (neu, ohne AppKit)
+//   `ausgewaehlter_commit` ist mit Schritt 8 gefallen: `auswahl` und
+//   `einzelheiten(zeile)` beantworten dieselbe Frage fuer den einen Rufer.
 pub struct Gitmodell {                                  // Kopf, Verlauf, Auswahl, erschoepft
     kopf: Option<Kopf>,                                 //   `None` heisst „noch nicht beantwortet";
     verlauf: Vec<Commit>,                               //   `Kopf::KeinRepository` ist eine Antwort
@@ -551,13 +553,28 @@ pub struct Gitmodell {                                  // Kopf, Verlauf, Auswah
 
 // crates/krk-ui/src/appkit/git.rs (neu)
 pub type Nachlademelder = Box<dyn Fn()>;                // Schritt 7 setzt ihn, Schritt 8 fuellt ihn
+pub type Auswahlmelder = Box<dyn Fn(Option<usize>)>;    // der zweite Melder, aus 260831-0120
 impl Gitfenster {                                       // NSObject, zugleich Quelle und Delegierter
     pub fn bauen(mtm: MainThreadMarker) -> Retained<Self>;   //   der Tabelle; `Gitsicht` ist der
     pub fn sicht(&self) -> &NSView;                          //   Traeger, `Einzelheitenflaeche` der
     pub fn fokusansicht(&self) -> &NSView;                   //   umgedrehte Inhalt der unteren Rolle
     pub fn nachlademelder_setzen(&self, melden: Nachlademelder);
-    pub fn zeigen(&self, modell: &Gitmodell);           // der eine Schreiber der drei Flaechen
-    #[must_use] pub fn kommando_ausfuehren(&self, kommando: Kommando) -> bool;
+    pub fn auswahlmelder_setzen(&self, melden: Auswahlmelder);
+    pub fn zeigen(&self, modell: &Gitmodell);           // der eine Schreiber der drei Flaechen,
+    #[must_use] pub fn kommando_ausfuehren(&self, kommando: Kommando) -> bool;  // lesend
+}
+
+// crates/krk-ui/src/tabs.rs — der eine schreibende Zugang von aussen
+impl Tabinhalt { pub fn gitauswahl_setzen(&mut self, stelle: Option<usize>); }
+impl Tabliste  { pub fn gitauswahl_setzen(&mut self, stelle: Option<usize>); }
+
+// crates/krk-ui/src/appkit/tabelle.rs — die vier Zugaenge der Quelle
+impl DateifensterQuelle {
+    pub fn gitbedarf_setzen(&self, gefragt: bool);      // A9, mit Einzugstakt
+    pub fn verlauf_nachladen(&self);                    // C4.2, mit Einzugstakt
+    pub fn gitauswahl_setzen(&self, stelle: Option<usize>);
+    pub fn mit_gitmodell<T>(&self, lesen: impl FnOnce(&Gitmodell) -> T) -> T;
+    pub fn gitwechsel_setzen(&self, melden: Box<dyn Fn()>);  // der dritte Anlass der Anzeige
 }
 
 // crates/krk-core/src/git/texte.rs
@@ -581,7 +598,9 @@ pub enum Kommando { …, GitBereichUmschalten, FokusGit, SpalteMarkeUmschalten }
 
 ## API Changes
 
-`Bereich::teilt_flaeche_mit` **fällt** und wird durch `Bereich::flaeche` ersetzt; das ist die einzige Signatur, die verschwindet. Vier Signaturen wechseln ihre Feldbreite von fünf auf sechs: `Aufteilung::gemessene_breiten`, `Fenstermodell::breiten_uebernehmen`, `bereichsbreiten` und `Aufteilung::rahmen`. `Aufteilung::bauen` nimmt einen sechsten Parameter, die Ansicht des Git-Bereichs. `Bereichsleiste::spaltenschalter` wechselt von drei auf vier. `Wirkungsbereich::beschriftung` liefert für `Navigator` einen anderen Text, und der steht in einer Datei, die der Nutzer liest. Alles übrige wächst um Varianten und Felder und ändert keine Signatur.
+`Bereich::teilt_flaeche_mit` **fällt** und wird durch `Bereich::flaeche` ersetzt; das ist die einzige Signatur, die verschwindet. Vier Signaturen wechseln ihre Feldbreite von fünf auf sechs: `Aufteilung::gemessene_breiten`, `Fenstermodell::breiten_uebernehmen`, `bereichsbreiten` und `Aufteilung::rahmen`. `Aufteilung::bauen` nimmt einen sechsten Parameter, die Ansicht des Git-Bereichs. `Bereichsleiste::spaltenschalter` wechselt von drei auf vier. `Wirkungsbereich::beschriftung` liefert für `Navigator` einen anderen Text, und der steht in einer Datei, die der Nutzer liest. **`bereichsleiste::kommando_des_bereichs` liefert wieder ein `Kommando` statt eines `Option<Kommando>`** — der Zwischenstand aus Schritt 1 ist mit Schritt 8 weg. Alles übrige wächst um Varianten und Felder und ändert keine Signatur.
+
+**Zwei Signaturen sind mit dem Nutzerentscheid vom 260831-0120 dazugekommen und eine gefallen.** `Gitfenster::auswahlmelder_setzen` ist der zweite Melder des Bereichs, `Tabinhalt::gitauswahl_setzen` die benannte Ausnahme von der Zusage „nur zu lesen" an `Tabinhalt::gitmodell`, und `Gitmodell::ausgewaehlter_commit` ist gefallen, weil `auswahl` und `einzelheiten(zeile)` dieselbe Frage für den einen Rufer beantworten. `Gitfenster::zeigen` nimmt das Modell weiterhin **lesend**; Möglichkeit 3 des Datensatzes ist verworfen.
 
 ---
 

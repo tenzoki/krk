@@ -1,27 +1,3 @@
-// **Das ganze Modul haengt an einem Rufer, und der kommt in Schritt 8.**
-// `Gitfenster::bauen` ist sein einziger Eingang; von dort aus ist jedes Stueck
-// dieser Datei erreichbar, und ohne ihn ist keines es. Die Einhaengung beim
-// Anwendungsdelegierten — der Bau des Bereichs, `fokusansicht`,
-// `bereichskommando` und der Nachlademelder — steht in Schritt 8 des Plans der
-// Runde 23; bis dahin haelt der Platzhalter aus Schritt 1 die Stelle in der
-// Aufteilung.
-//
-// Die Ausnahme steht als `expect` und nicht als `allow`, und das ist ihr
-// Ablaufdatum: sobald Schritt 8 `bauen` ruft, ist jedes Stueck lebendig, der
-// Uebersetzer meldet die Erwartung als unerfuellt und zwingt zum Entfernen
-// dieser Zeile. Dieselbe Form wie in `crate::gitmodell` und in `crate::tabs`.
-//
-// **Sie steht ohne `cfg_attr(not(test))`, anders als dort**, und der Grund
-// gehoert dazu: die Proben unten reichen an die reinen Funktionen heran und
-// nicht an die AppKit-Haelfte, denn `libtest` gibt den Hauptfaden nicht her,
-// den `NSTableView` und `NSTextField` verlangen. Im Probenbau ist die
-// AppKit-Haelfte also genauso ungerufen wie im ausgelieferten, und eine auf
-// `not(test)` beschraenkte Ausnahme liesse `cargo clippy --all-targets` unter
-// `-D warnings` rot werden.
-#![expect(
-    dead_code,
-    reason = "Rufer ist die Einhaengung beim Anwendungsdelegierten aus Schritt 8"
-)]
 //! Der Git-Bereich: Kopf, Verlaufsliste und Einzelheiten, angebunden an das
 //! Modell aus [`crate::gitmodell`] (C1, C3, C4; Runde 23).
 //!
@@ -87,26 +63,36 @@
 //! markieren und nicht kopieren. E13 verlangt eine Flaeche, die die vier
 //! Angaben **zeigt**, und mehr nicht.
 //!
-//! # Die Auswahl wohnt in der Liste
+//! # Die Auswahl wohnt im Gitmodell und nicht hier
 //!
-//! Der Git-Bereich haelt die Stelle, die in seiner Liste blau steht, selbst —
-//! [`GitfensterIvars::auswahl`] —, und schreibt sie **nicht** in das
-//! [`Gitmodell`] zurueck. Der Grund ist der Zuschnitt dieses Schritts:
-//! [`Gitfenster::zeigen`] bekommt das Modell lesend, und `Tabinhalt::gitmodell`
-//! sagt ausdruecklich, dass ein Schreiber von aussen eine zweite Quelle fuer
-//! denselben Stand waere. Die Folge ist benannt und angenommen: die Auswahl
-//! ueberlebt keinen Tabwechsel, weil ein Gitfenster fuer alle Tabs steht,
-//! waehrend das Gitmodell je Tab eines ist. Ob sie das soll, ist eine
-//! Nutzerfrage und als Datensatz gefilt.
+//! Diese Datei haelt **keine** Auswahl. Was in der Liste blau steht, kommt mit
+//! jedem [`Gitfenster::zeigen`] aus [`Gitmodell::auswahl`], und was der Nutzer
+//! bewegt, geht ueber den [`Auswahlmelder`] nach oben, wo der
+//! Anwendungsdelegierte es in das Gitmodell des sichtbaren Tabs schreibt. Eine
+//! Heimat fuer einen Stand, und die `NSTableView` ist die Anzeige davon.
 //!
-//! **Sie ueberlebt dafuer keinen Ordnerwechsel und keinen Tabwechsel
-//! unbemerkt.** [`Gitfenster::zeigen`] behaelt sie nur, wenn die Zeile an
-//! ihrer Stelle **wortgleich** dieselbe geblieben ist; die Zeile traegt den
-//! Kurzhash (A5), also heisst „derselbe Text an derselben Stelle" hier
-//! „derselbe Commit". Ein nachgeladener Schwung haengt hinten an und laesst
-//! die vorderen Zeilen stehen, die Auswahl bleibt; ein neuer Ordner ersetzt
-//! sie, die Auswahl faellt. Die Frage ist damit aus den Eingaben entscheidbar,
-//! die `zeigen` hat, und braucht keine zweite Meldung.
+//! **Der Nutzer hat das am 260831 so entschieden**
+//! (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
+//! Moeglichkeit 2), und der sichtbare Unterschied ist einer: es gibt **ein**
+//! Gitfenster und **ein Gitmodell je Tab**, also uebersteht die Auswahl den
+//! Tabwechsel und den Wechsel des aktiven Dateifensters, wie es das
+//! Halteverhalten der Tabs in KRK ueberall sonst tut. Ein Ordnerwechsel setzt
+//! das Modell zurueck und nimmt sie mit (C4.6); ein nachgeladener Schwung
+//! haengt hinten an und laesst sie stehen (C4.2). Beide Regeln stehen im
+//! Gitmodell, wo die Auswahl wohnt, und nicht hier.
+//!
+//! **Moeglichkeit 3 des Datensatzes ist verworfen**, und das gehoert dazu:
+//! `zeigen` bekommt das Modell weiterhin **lesend**. Bekaeme es das Modell
+//! veraenderlich, schriebe die Ansicht in denselben Stand, den der Einzugstakt
+//! fuellt — zwei Schreiber auf einem Feld, und genau die schliesst
+//! `Tabinhalt::gitmodell` aus. Die Auswahl ist stattdessen ein Feld mit einem
+//! eigenen Schreiber, und der Weg dorthin ist eine Meldung.
+//!
+//! **Zwischen dem Tastendruck und dem naechsten `zeigen` steht die Liste einen
+//! Augenblick auf einem Stand, den das Modell noch nicht traegt.** Das ist der
+//! benannte Preis der gewaehlten Moeglichkeit und kein Versehen: der Melder
+//! feuert innerhalb desselben Aufrufs, also traegt das Modell den Stand, bevor
+//! der Anwendungsdelegierte seinen Nachzug faehrt.
 //!
 //! # Der Rueckweg ist ein Melder und keine Kenntnis der Tabliste
 //!
@@ -249,13 +235,28 @@ const AUFBAUBREITE: f64 = 400.0;
 /// kennt es nicht.
 pub type Nachlademelder = Box<dyn Fn()>;
 
+/// Was der Git-Bereich seinem Halter ueber die Auswahl meldet.
+///
+/// **Der zweite Melder, und er entsteht aus dem Nutzerentscheid vom 260831**
+/// (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
+/// Moeglichkeit 2): die Auswahl wohnt im [`Gitmodell`], und diese Datei erfaehrt
+/// von ihr allein ueber [`Gitfenster::zeigen`]. Wer sie bewegt — der Pfeil oder
+/// der Mausklick —, meldet sie hier nach oben; wohin sie dann geht, entscheidet
+/// der Anwendungsdelegierte, denn er kennt das aktive Dateifenster und dessen
+/// sichtbaren Tab.
+///
+/// `None` heisst „keine Zeile ausgewaehlt" und ist die Antwort, die eine
+/// abgewaehlte Liste meldet.
+pub type Auswahlmelder = Box<dyn Fn(Option<usize>)>;
+
 /// Eine Zeile des Verlaufs, wie der Bereich sie haelt.
 ///
 /// **Beide Texte kommen fertig aus [`krk_core::git::texte`]** und werden hier
 /// nicht geformt. Sie stehen nebeneinander, weil die Liste den einen und die
 /// Flaeche darunter den anderen zeigt und weil
-/// [`Gitfenster::kommando_ausfuehren`] die Auswahl bewegt, ohne das Modell in
-/// der Hand zu haben.
+/// [`Gitfenster::kommando_ausfuehren`] die Flaeche darunter neu schreibt, ohne
+/// das Modell in der Hand zu haben: der Tastendruck erreicht diese Datei ueber
+/// [`Kommando`] und nicht ueber einen Stand.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Verlaufszeile {
     /// Die einzeilige Form fuer die Liste (A5).
@@ -384,11 +385,6 @@ pub struct GitfensterIvars {
     /// Die Zeilen des Verlaufs, wie [`Gitfenster::zeigen`] sie zuletzt
     /// uebernommen hat.
     zeilen: RefCell<Vec<Verlaufszeile>>,
-    /// Die Stelle, die in der Liste blau steht.
-    ///
-    /// Der Modulkopf sagt, warum sie hier wohnt und nicht im [`Gitmodell`],
-    /// und wie [`Gitfenster::zeigen`] sie gegen einen Ordnerwechsel haelt.
-    auswahl: Cell<Option<usize>>,
     /// Ob der Verlauf erschoepft ist und ein Nachschlag nichts mehr braechte
     /// (C4.3).
     ///
@@ -404,6 +400,11 @@ pub struct GitfensterIvars {
     setzt_selbst: Cell<bool>,
     /// Der Melder, den [`Gitfenster::nachlademelder_setzen`] eintraegt.
     nachlademelder: RefCell<Option<Nachlademelder>>,
+    /// Der Melder, den [`Gitfenster::auswahlmelder_setzen`] eintraegt.
+    ///
+    /// Kein Feld fuer die Auswahl selbst daneben: sie wohnt im [`Gitmodell`],
+    /// und der Modulkopf sagt, warum.
+    auswahlmelder: RefCell<Option<Auswahlmelder>>,
 }
 
 define_class!(
@@ -459,17 +460,22 @@ define_class!(
         ///
         /// Die Tastatur laeuft nicht hierueber, sondern ueber
         /// [`Gitfenster::kommando_ausfuehren`]; beide muenden in
-        /// [`Gitfenster::einzelheiten_schreiben`], damit es genau eine Stelle
-        /// gibt, die aus einer Auswahl die Flaeche darunter macht.
+        /// [`Gitfenster::auswahl_uebernehmen`], damit es genau eine Stelle
+        /// gibt, die aus einer Auswahl die Flaeche darunter und die Meldung
+        /// nach oben macht.
+        ///
+        /// **`setzt_selbst` faengt jede Meldung ab, die aus dieser Datei
+        /// stammt** — das Setzen der Auswahl ebenso wie das `reloadData` in
+        /// [`Gitfenster::zeigen`]. Ohne diese Sperre liefe die Meldung eines
+        /// selbst geschriebenen Standes zurueck nach oben, und der Nachzug, der
+        /// gerade laeuft, schriebe in das Modell, aus dem er liest.
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(tableViewSelectionDidChange:))]
         fn auswahl_geaendert(&self, _meldung: &NSNotification) {
             if self.ivars().setzt_selbst.get() {
                 return;
             }
-            let zeile = self.ivars().liste.selectedRow();
-            self.ivars().auswahl.set(usize::try_from(zeile).ok());
-            self.einzelheiten_schreiben();
+            self.auswahl_uebernehmen(self.angezeigte_auswahl());
         }
     }
 );
@@ -536,10 +542,10 @@ impl Gitfenster {
             einzelheitenrolle,
             einzelheiten,
             zeilen: RefCell::new(Vec::new()),
-            auswahl: Cell::new(None),
             erschoepft: Cell::new(false),
             setzt_selbst: Cell::new(false),
             nachlademelder: RefCell::new(None),
+            auswahlmelder: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -589,17 +595,31 @@ impl Gitfenster {
         *self.ivars().nachlademelder.borrow_mut() = Some(melden);
     }
 
+    /// Traegt den Melder ein, der eine bewegte Auswahl nach oben gibt.
+    ///
+    /// **Der zweite Melder dieses Bereichs**, und er ist die eine Verbindung
+    /// von der Liste zurueck in das [`Gitmodell`], in dem die Auswahl wohnt.
+    /// Gerufen vom Anwendungsdelegierten beim Aufbau der Oberflaeche, mit einem
+    /// Rueckruf, der sein Ziel schwach haelt — derselbe Zuschnitt wie bei
+    /// [`Self::nachlademelder_setzen`] darueber.
+    pub fn auswahlmelder_setzen(&self, melden: Auswahlmelder) {
+        *self.ivars().auswahlmelder.borrow_mut() = Some(melden);
+    }
+
     /// Schreibt den Stand eines Tabs in die drei Flaechen.
     ///
-    /// **Die eine Stelle, die aus einem [`Gitmodell`] Anzeige macht.** Sie
-    /// nimmt das Modell lesend: die Auswahl wohnt in dieser Datei, und der
-    /// Modulkopf sagt, warum.
+    /// **Die eine Stelle, die aus einem [`Gitmodell`] Anzeige macht**, und sie
+    /// nimmt das Modell **lesend**: auch die Auswahl kommt von dort, und
+    /// zurueck geht sie ueber den [`Auswahlmelder`] und nicht ueber eine
+    /// veraenderliche Ausleihe. Der Modulkopf sagt, warum.
     ///
-    /// Die Auswahl ueberlebt den Durchgang genau dann, wenn die Zeile an ihrer
-    /// Stelle wortgleich dieselbe geblieben ist; der Modulkopf schreibt die
-    /// Regel und ihre Begruendung aus.
+    /// **Der ganze Rumpf steht unter `setzt_selbst`.** `reloadData` und das
+    /// Setzen der Auswahl loesen beide `tableViewSelectionDidChange:` aus, und
+    /// ohne die Sperre meldete dieser Nachzug den Stand, den er gerade
+    /// geschrieben hat, an das Modell zurueck, aus dem er ihn genommen hat.
     pub fn zeigen(&self, modell: &Gitmodell) {
         let ivars = self.ivars();
+        ivars.setzt_selbst.set(true);
         ivars
             .kopf
             .setStringValue(&NSString::from_str(&kopftext(modell)));
@@ -611,16 +631,14 @@ impl Gitfenster {
                 einzelheiten: modell.einzelheiten(stelle).unwrap_or_default(),
             })
             .collect();
-        let auswahl = ivars
-            .auswahl
-            .get()
-            .filter(|stelle| haelt_die_auswahl(&ivars.zeilen.borrow(), &neu, *stelle));
 
+        // Die Ausleihe endet an ihrem Semikolon: `reloadData` fragt die Zeilen
+        // gleich darauf ueber `zellenansicht` lesend ab.
         *ivars.zeilen.borrow_mut() = neu;
-        ivars.auswahl.set(auswahl);
         ivars.liste.reloadData();
-        self.auswahl_anzeigen();
+        self.auswahl_anzeigen(modell.auswahl());
         self.einzelheiten_schreiben();
+        ivars.setzt_selbst.set(false);
     }
 
     /// Fuehrt einen der beiden Auswahlbefehle auf der Verlaufsliste aus.
@@ -640,14 +658,13 @@ impl Gitfenster {
             Kommando::AuswahlRunter => 1,
             _ => return false,
         };
-        let ivars = self.ivars();
-        let laenge = ivars.zeilen.borrow().len();
-        match ziel(ivars.auswahl.get(), laenge, schritt) {
-            Some(stelle) => {
-                ivars.auswahl.set(Some(stelle));
-                self.auswahl_anzeigen();
-                self.einzelheiten_schreiben();
-            }
+        // Gefragt wird die **angezeigte** Auswahl und nicht ein gehaltener
+        // Wert: die Auswahl wohnt im Gitmodell, und der Tastendruck erreicht
+        // diese Datei ohne es. Was auf dem Schirm steht, ist der Stand, von dem
+        // aus der Nutzer sich bewegt.
+        let laenge = self.ivars().zeilen.borrow().len();
+        match ziel(self.angezeigte_auswahl(), laenge, schritt) {
+            Some(stelle) => self.auswahl_uebernehmen(Some(stelle)),
             // Am Rand bewegt sich nichts, und der Tastendruck ist trotzdem
             // verbraucht: sonst raeumte AppKit ihn an die `NSTableView` weiter,
             // die daraufhin ihre eigene Auswahl bewegte. Dieselbe Ueberlegung
@@ -659,6 +676,41 @@ impl Gitfenster {
             }
         }
         true
+    }
+
+    /// Die Stelle, die die Liste gerade blau zeigt.
+    ///
+    /// **Die Anzeige und nicht der Stand**: der Stand wohnt im [`Gitmodell`].
+    /// `selectedRow` liefert `-1` fuer „nichts ausgewaehlt", und die Umwandlung
+    /// nach `usize` macht daraus `None` — ein eigener Zweig dafuer waere die
+    /// zweite Schreibweise derselben Antwort.
+    #[must_use = "die angezeigte Auswahl ist eine Auskunft ohne Nebenwirkung"]
+    fn angezeigte_auswahl(&self) -> Option<usize> {
+        usize::try_from(self.ivars().liste.selectedRow()).ok()
+    }
+
+    /// Uebernimmt eine vom Nutzer bewegte Auswahl: anzeigen, beschreiben,
+    /// melden.
+    ///
+    /// **Die eine Stelle, an der eine Auswahl aus dieser Datei herauskommt.**
+    /// Beide Wege des Nutzers muenden hier — der Pfeil ueber
+    /// [`Self::kommando_ausfuehren`] und der Mausklick ueber
+    /// `tableViewSelectionDidChange:` —, damit es genau eine Stelle gibt, die
+    /// aus einer Auswahl die Flaeche darunter und die Meldung nach oben macht.
+    ///
+    /// **Die Reihenfolge ist tragend**: erst die Anzeige, dann die Meldung. Der
+    /// Empfaenger schreibt das Gitmodell und faehrt danach seinen Nachzug, der
+    /// [`Self::zeigen`] ruft; stuende die Meldung vorn, schriebe `zeigen` die
+    /// Liste aus einem Modell, das den neuen Stand schon traegt, und das
+    /// Ergebnis waere dasselbe — aber der Weg dorthin liefe zweimal durch
+    /// dieselbe Zeile.
+    fn auswahl_uebernehmen(&self, stelle: Option<usize>) {
+        self.auswahl_anzeigen(stelle);
+        self.einzelheiten_schreiben();
+        let melden = self.ivars().auswahlmelder.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden(stelle);
+        }
     }
 
     /// Fordert die naechsten Commits an, falls jemand zuhoert (C4.2, C4.3).
@@ -676,15 +728,23 @@ impl Gitfenster {
         }
     }
 
-    /// Setzt die Auswahl der Tabelle auf die gehaltene Stelle.
+    /// Setzt die Auswahl der Tabelle auf die genannte Stelle.
+    ///
+    /// **Die Stelle kommt als Argument und nicht aus einem Feld**, denn diese
+    /// Datei haelt keines: sie kommt entweder aus dem [`Gitmodell`] (ueber
+    /// [`Self::zeigen`]) oder aus dem Zug, den der Nutzer gerade gemacht hat
+    /// (ueber [`Self::auswahl_uebernehmen`]).
     ///
     /// Waehrend des Setzens steht das Kennzeichen `setzt_selbst`: AppKit meldet
     /// jede Aenderung, auch die selbst gesetzte, und ohne das Kennzeichen liefe
-    /// die Meldung hierher zurueck.
-    fn auswahl_anzeigen(&self) {
+    /// die Meldung hierher zurueck. Es wird am Ende auf den Stand vor dem
+    /// Aufruf zurueckgesetzt und nicht auf `false` — [`Self::zeigen`] haelt es
+    /// ueber seinen ganzen Rumpf, und ein blindes `false` hier hoebe seine
+    /// Sperre mitten darin auf.
+    fn auswahl_anzeigen(&self, stelle: Option<usize>) {
         let ivars = self.ivars();
-        ivars.setzt_selbst.set(true);
-        match ivars.auswahl.get() {
+        let vorher = ivars.setzt_selbst.replace(true);
+        match stelle {
             Some(zeile) => {
                 let stelle = NSIndexSet::indexSetWithIndex(zeile);
                 ivars
@@ -699,7 +759,7 @@ impl Gitfenster {
             // Bindung ist unsicher, weil der Absender ein `AnyObject` ist.
             None => unsafe { ivars.liste.deselectAll(None) },
         }
-        ivars.setzt_selbst.set(false);
+        ivars.setzt_selbst.set(vorher);
     }
 
     /// Schreibt die Einzelheiten des ausgewaehlten Commits in ihre Flaeche.
@@ -709,9 +769,8 @@ impl Gitfenster {
     /// sondern das, was `None` liefert.
     fn einzelheiten_schreiben(&self) {
         let ivars = self.ivars();
-        let text = ivars
-            .auswahl
-            .get()
+        let text = self
+            .angezeigte_auswahl()
             .and_then(|stelle| {
                 ivars
                     .zeilen
@@ -860,20 +919,6 @@ fn ziel(auswahl: Option<usize>, laenge: usize, schritt: isize) -> Option<usize> 
     match neu < laenge {
         true => Some(neu),
         false => None,
-    }
-}
-
-/// Ob die Auswahl an dieser Stelle den Wechsel des Bestands ueberlebt.
-///
-/// Sie ueberlebt genau dann, wenn dort **wortgleich** dieselbe Zeile steht.
-/// Die Zeile traegt den Kurzhash (A5), also heisst das „derselbe Commit". Ein
-/// nachgeladener Schwung haengt hinten an und laesst die vorderen Zeilen
-/// stehen; ein neuer Ordner ersetzt sie.
-#[must_use = "die Antwort entscheidet ueber die Auswahl"]
-fn haelt_die_auswahl(alt: &[Verlaufszeile], neu: &[Verlaufszeile], stelle: usize) -> bool {
-    match (alt.get(stelle), neu.get(stelle)) {
-        (Some(alt), Some(neu)) => alt.zeile == neu.zeile,
-        _ => false,
     }
 }
 
@@ -1048,22 +1093,19 @@ mod tests {
         assert_eq!(ziel(Some(0), 0, 1), None);
     }
 
-    /// C4.2: ein nachgeladener Schwung haengt hinten an, die Auswahl bleibt
-    /// auf dem Eintrag, auf dem sie stand.
+    /// C4.6: die Zeilen eines anderen Ordners sind andere Zeilen.
+    ///
+    /// **Die Auswahl selbst prueft diese Probe nicht mehr**: sie wohnt seit dem
+    /// Nutzerentscheid vom 260831 im [`Gitmodell`], und dass ein Ordnerwechsel
+    /// sie mitnimmt, haelt dort `das_zuruecksetzen_laesst_nichts_vom_vorigen_ordner_stehen`.
+    /// Hier bleibt die Aussage, an der diese Datei haengt: was `zeigen`
+    /// uebernimmt, ist der Verlauf des Modells, das es bekommt, und keine
+    /// Fortschreibung des vorigen.
+    ///
+    /// Sie sichert zuerst zu, dass beide Ordner **gleich viele** Commits
+    /// haben; ohne die Zeile bewiese sie nur, dass eine Laengenpruefung greift.
     #[test]
-    fn ein_nachschlag_laesst_die_auswahl_stehen() {
-        let mut modell = Gitmodell::neu();
-        modell.verlauf_anhaengen(vec![commit(1), commit(2)]);
-        let alt = zeilen_aus(&modell);
-        modell.verlauf_anhaengen(vec![commit(3)]);
-        let neu = zeilen_aus(&modell);
-        assert!(haelt_die_auswahl(&alt, &neu, 1));
-    }
-
-    /// C4.6, C3.5: ein anderer Ordner nimmt die Auswahl mit, auch wenn er
-    /// gleich viele Commits hat.
-    #[test]
-    fn ein_anderer_ordner_nimmt_die_auswahl_mit() {
+    fn ein_anderer_ordner_traegt_andere_zeilen() {
         let mut alter = Gitmodell::neu();
         alter.verlauf_anhaengen(vec![commit(1), commit(2)]);
         let mut neuer = Gitmodell::neu();
@@ -1075,20 +1117,8 @@ mod tests {
             neu.len(),
             "die Probe misst die Laenge und nicht den Inhalt"
         );
-        assert!(!haelt_die_auswahl(&alt, &neu, 0));
-        assert!(!haelt_die_auswahl(&alt, &neu, 1));
-    }
-
-    /// C4.6: ein leerer Verlauf laesst keine Auswahl stehen.
-    #[test]
-    fn ein_zurueckgesetzter_verlauf_laesst_keine_auswahl_stehen() {
-        let mut modell = Gitmodell::neu();
-        modell.verlauf_anhaengen(vec![commit(1), commit(2)]);
-        let alt = zeilen_aus(&modell);
-        modell.zuruecksetzen();
-        let neu = zeilen_aus(&modell);
-        assert!(!haelt_die_auswahl(&alt, &neu, 0));
-        assert!(!haelt_die_auswahl(&alt, &neu, 1));
+        assert_ne!(alt[0], neu[0]);
+        assert_ne!(alt[1], neu[1]);
     }
 
     /// E13, C3.4: die Flaeche der Einzelheiten bekommt ihren Text aus dem

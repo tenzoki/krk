@@ -534,10 +534,13 @@ mod tests {
     /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
     /// 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`),
     /// und seit dem 260816 `inhaltssuche_umschalten`, das Ankreuzfeld
-    /// "Content" der Inhaltsfilter-Runde, das derselben Nutzerantwort folgt:
-    /// fuenf. Die Aufzaehlung steht hier ausgeschrieben statt als Zahl: eine
-    /// Zahl sagte nicht, **welche** Funktion aus der Datei faellt, und genau
-    /// das ist die Auskunft, die ein Leser dieser Probe braucht.
+    /// "Content" der Inhaltsfilter-Runde, das derselben Nutzerantwort folgt.
+    /// Seit dem 260831 tritt `spalte_marke_umschalten` hinzu, der vierte
+    /// Spaltenschalter aus C5 der Git-Runde, der derselben Nutzerantwort vom
+    /// 260812-0306 folgt wie die drei vor ihm. Die Aufzaehlung steht hier
+    /// ausgeschrieben statt als Zahl: eine Zahl sagte nicht, **welche**
+    /// Funktion aus der Datei faellt, und genau das ist die Auskunft, die ein
+    /// Leser dieser Probe braucht.
     ///
     /// **Dieselbe Aufzaehlung steht ein zweites Mal**, als
     /// `OHNE_KOMBINATION_AB_WERK` in `crates/krk-core/tests/belegung.rs`. Diese
@@ -574,11 +577,11 @@ mod tests {
             );
         }
 
-        // Ab Werk sind genau diese fuenf Funktionen unbelegt; jede andere
-        // steht in der Datei. Die Reihenfolge ist die der Belegungsdatei: die
-        // tiefe Suche steht dort hinter den drei Spaltenschaltern, weil sie wie
-        // diese bestimmt, was die Dateiliste zeigt, und die Inhaltssuche hinter
-        // der tiefen Suche, weil die beiden Schalter in der Bereichsleiste eine
+        // Ab Werk sind genau diese Funktionen unbelegt; jede andere steht in
+        // der Datei. Die Reihenfolge ist die der Belegungsdatei: die tiefe
+        // Suche steht dort hinter den Spaltenschaltern, weil sie wie diese
+        // bestimmt, was die Dateiliste zeigt, und die Inhaltssuche hinter der
+        // tiefen Suche, weil die beiden Schalter in der Bereichsleiste eine
         // Reihe bilden.
         let unbelegt: Vec<&str> = belegung
             .funktionen()
@@ -592,10 +595,11 @@ mod tests {
                 "spalte_groesse_umschalten",
                 "spalte_datum_umschalten",
                 "spalte_typ_umschalten",
+                "spalte_marke_umschalten",
                 "tiefe_suche_umschalten",
                 "inhaltssuche_umschalten",
             ],
-            "ab Werk sind andere Funktionen unbelegt als die drei Spaltenschalter, \
+            "ab Werk sind andere Funktionen unbelegt als die vier Spaltenschalter, \
              die tiefe Suche und die Inhaltssuche"
         );
     }
@@ -638,7 +642,7 @@ mod tests {
             .collect();
         assert_eq!(
             ueberschriften, erwartet,
-            "ab Werk ist jeder Bereich besetzt, also stehen alle neun in ihrer Reihenfolge"
+            "ab Werk ist jeder Bereich besetzt, also stehen alle zehn in ihrer Reihenfolge"
         );
     }
 

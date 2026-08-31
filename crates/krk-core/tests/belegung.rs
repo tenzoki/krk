@@ -115,14 +115,16 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 ///
 /// **Sie steht hier und nicht in `resources/default-keymap.toml`.** Das Feld
 /// `reserviert_fuer` der Datei heisst "benannt, aber einer spaeteren Runde
-/// vorbehalten", und diese fuenf Funktionen gibt es; es passt also nicht. Die
+/// vorbehalten", und diese Funktionen gibt es; es passt also nicht. Die
 /// Ausnahme ist damit eine Aussage der Pruefungen ueber die Auslieferung, und
 /// **zwei Pruefungen brauchen sie**, weshalb sie einmal hier steht und nicht
 /// zweimal in je einem Rumpf: `jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`
 /// liest sie von der Seite der Belegungsdatei her,
 /// `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` von der Seite
-/// der gebauten Kommandos. Wer eine sechste Funktion ohne Kombination
-/// ausliefert, traegt sie mit ihrem Datensatz hier nach.
+/// der gebauten Kommandos. Wer eine weitere Funktion ohne Kombination
+/// ausliefert, traegt sie mit ihrem Datensatz hier nach; die Runde 23 hat es
+/// fuer `spalte_marke_umschalten` getan, den vierten Spaltenschalter, der der
+/// Nutzerantwort vom 260812-0306 folgt wie die drei vor ihm.
 ///
 /// **Eine dritte Pruefung fuehrt dieselbe Aufzaehlung ein zweites Mal**, als
 /// Literal im Rumpf von `belegungsausgabe::tests::
@@ -133,10 +135,11 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// Listen eine werden, ist die Frage `circles/
 /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
 /// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`.
-const OHNE_KOMBINATION_AB_WERK: [&str; 5] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 6] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
+    "spalte_marke_umschalten",
     "tiefe_suche_umschalten",
     "inhaltssuche_umschalten",
 ];
@@ -1985,7 +1988,7 @@ const ACHT_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 8] = [
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
     (
         Wirkungsbereich::Navigator,
-        "Dateifenster, Leiste und Vorschau",
+        "Dateifenster, Leiste, Vorschau und Git-Bereich",
     ),
     (Wirkungsbereich::Vorschau, "Vorschau"),
     (Wirkungsbereich::Ueberall, "überall"),
@@ -2056,8 +2059,9 @@ fn jeder_wirkungsbereich_im_quelltext() -> Vec<(Wirkungsbereich, &'static str)> 
 
 /// Jeder der acht Bereiche traegt die Beschriftung, die C3 ihm gibt.
 ///
-/// Ausgeschrieben und ohne Legende: die Datei nennt "Dateifenster, Leiste und
-/// Vorschau" und nicht "Navigator". Wer einen dieser Texte aendert, aendert
+/// Ausgeschrieben und ohne Legende: die Datei nennt "Dateifenster, Leiste,
+/// Vorschau und Git-Bereich" und nicht "Navigator". Wer einen dieser Texte
+/// aendert, aendert
 /// den Text, den der Nutzer in `~/Downloads/KRK-Tastenbelegung.md` liest, und
 /// diese Probe ist die Stelle, an der er es merkt.
 #[test]

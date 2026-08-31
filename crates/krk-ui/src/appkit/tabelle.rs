@@ -261,6 +261,7 @@ use krk_core::verzeichnis::{
 };
 use krk_core::zwischenablage::{self, Ziel};
 
+use crate::gitmodell::Gitmodell;
 use crate::kommandos::abwurfregel::{
     self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang,
 };
@@ -846,6 +847,21 @@ pub struct QuelleIvars {
     /// Ordner nicht, und sie laeuft im Rueckruf des Stroms: den Strom von dort
     /// aus freizugeben hiesse, ihn mitten in seinem eigenen Aufruf abzubauen.
     ordnerwechsel: RefCell<Option<Box<dyn Fn()>>>,
+    /// Was gerufen wird, wenn der Gitlauf dieses Dateifensters Kopf, Verlauf
+    /// oder Zusammenfassung geliefert hat (Runde 23).
+    ///
+    /// **Der dritte Anlass des Git-Bereichs**, neben den zweien, die
+    /// `Anwendungsdelegierter::gitanzeige_nachziehen` mit
+    /// `bereichsleiste_nachziehen` teilt. Die beiden decken jeden Befehl und
+    /// jeden Ordnerwechsel ab; sie decken **nicht** ab, dass eine Antwort des
+    /// Arbeitsfadens eintrifft, waehrend der Nutzer nichts tut, und genau das
+    /// ist der Regelfall. `Einzug::gitkopf_neu` nennt den Ableser namentlich,
+    /// und dieser Rueckruf ist der Weg zu ihm.
+    ///
+    /// Er traegt die Seite nicht mit: der Nachzug fragt ohnehin das aktive
+    /// Dateifenster, wie es `meldungswechsel` daneben mit beiden Quellen haelt.
+    /// Wahlfrei, weil die Quelle vor dem Anwendungsdelegierten zur Welt kommt.
+    gitwechsel: RefCell<Option<Box<dyn Fn()>>>,
     /// Was gerufen wird, wenn die Vorschau etwas anderes zu beschreiben hat
     /// (C6).
     ///
@@ -1282,6 +1298,7 @@ impl DateifensterQuelle {
             einzug: RefCell::new(None),
             aktivierung: RefCell::new(None),
             ordnerwechsel: RefCell::new(None),
+            gitwechsel: RefCell::new(None),
             auswahlmelder: RefCell::new(None),
             umbenennung: RefCell::new(None),
             befehlsantwort: RefCell::new(None),
@@ -1316,6 +1333,11 @@ impl DateifensterQuelle {
     /// Hinterlegt, was nach einem Ordnerwechsel dieses Dateifensters zu tun ist.
     pub fn ordnerwechsel_setzen(&self, melden: Box<dyn Fn()>) {
         *self.ivars().ordnerwechsel.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, was nach einer Antwort des Gitlaufs zu tun ist (Runde 23).
+    pub fn gitwechsel_setzen(&self, melden: Box<dyn Fn()>) {
+        *self.ivars().gitwechsel.borrow_mut() = Some(melden);
     }
 
     /// Hinterlegt, was mit einem umbenannten Eintrag zu geschehen hat (C4).
@@ -1412,6 +1434,19 @@ impl DateifensterQuelle {
     /// gehaltene Ausleihe des Tabmodells waere der doppelte Zugriff.
     fn ordnerwechsel_melden(&self) {
         let melden = self.ivars().ordnerwechsel.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden();
+        }
+    }
+
+    /// Meldet, dass der Gitlauf dieses Dateifensters geantwortet hat.
+    ///
+    /// Wie [`Self::ordnerwechsel_melden`] darueber: die Ausleihe ist lesend und
+    /// steht waehrend des Rufs, und der Empfaenger fragt das aktive
+    /// Dateifenster selbst ab. Der einzige schreibende Zugriff auf dieselbe
+    /// Zelle ist [`Self::gitwechsel_setzen`] beim Aufbau.
+    fn gitwechsel_melden(&self) {
+        let melden = self.ivars().gitwechsel.borrow();
         if let Some(melden) = melden.as_ref() {
             melden();
         }
@@ -3116,6 +3151,68 @@ impl DateifensterQuelle {
         true
     }
 
+    /// Sagt der Tabliste, ob der Gitbefund ueberhaupt angezeigt wird, und wirft
+    /// den Einzugstakt an, falls daraufhin ein Gitlauf beginnt (A9).
+    ///
+    /// **Der ganze AppKit-Anteil an dieser Stelle**, wie bei
+    /// [`Self::durchlauf_nachziehen`] darunter: die Regel, wann ein Gitlauf
+    /// faellt und wann einer beginnt, steht in
+    /// [`Tabliste::git_gefragt_setzen`](crate::tabs::Tabliste::git_gefragt_setzen).
+    /// Hier bleibt allein der Zeitgeber, denn der ist AppKit; ohne ihn liefe
+    /// der Arbeitsfaden, und sein Befund bliebe im Kanal stehen.
+    ///
+    /// Die Oder-Verknuepfung aus Bereich und Spalte rechnet der
+    /// Anwendungsdelegierte: hier ist weder die Sichtbarkeit eines Bereichs
+    /// noch die einer Spalte bekannt.
+    pub fn gitbedarf_setzen(&self, gefragt: bool) {
+        let laeuft = self.ivars().tabs.borrow_mut().git_gefragt_setzen(gefragt);
+        if laeuft {
+            self.einzug_starten();
+        }
+    }
+
+    /// Holt die naechsten Commits des sichtbaren Tabs (E12, C4.2, C4.3).
+    ///
+    /// Der Rueckweg des Nachlademelders aus dem Git-Bereich. Ob ueberhaupt
+    /// nachzuladen ist, entscheidet
+    /// [`Tabliste::verlauf_nachladen`](crate::tabs::Tabliste::verlauf_nachladen)
+    /// mit seinen drei Fragen; hier bleibt der Zeitgeber, wie bei
+    /// [`Self::gitbedarf_setzen`] darueber.
+    pub fn verlauf_nachladen(&self) {
+        let laeuft = self.ivars().tabs.borrow_mut().verlauf_nachladen();
+        if laeuft {
+            self.einzug_starten();
+        }
+    }
+
+    /// Traegt die gemeldete Auswahl der Verlaufsliste in den sichtbaren Tab ein.
+    ///
+    /// Der Rueckweg des Auswahlmelders aus dem Git-Bereich. **Der eine
+    /// schreibende Zugang zum Gitmodell von aussen**, und die Zusage samt ihrer
+    /// benannten Ausnahme steht an
+    /// [`Tabinhalt::gitmodell`](crate::tabs::Tabinhalt::gitmodell).
+    ///
+    /// Kein Zeitgeber und kein Nachzug: geschrieben wird eine Zahl im
+    /// Arbeitsspeicher, und die Liste zeigt den Stand schon.
+    pub fn gitauswahl_setzen(&self, stelle: Option<usize>) {
+        self.ivars().tabs.borrow_mut().gitauswahl_setzen(stelle);
+    }
+
+    /// Reicht das Gitmodell des sichtbaren Tabs zum Lesen weiter.
+    ///
+    /// **Ein Rueckruf und kein `&Gitmodell`**, denn das Modell steht in einer
+    /// [`RefCell`]: eine herausgereichte Ausleihe muesste ueber den Aufruf
+    /// hinaus leben. Der Rueckruf haelt sie genau so lange, wie der Leser sie
+    /// braucht.
+    ///
+    /// **Der Leser darf von hier aus nicht in die Tabliste zurueckgreifen.**
+    /// Die Ausleihe steht waehrend des Rufs, und ein Schreiber darunter waere
+    /// der doppelte Zugriff; `Gitfenster::zeigen` haelt seine Meldungen deshalb
+    /// ueber `setzt_selbst` an.
+    pub fn mit_gitmodell<T>(&self, lesen: impl FnOnce(&Gitmodell) -> T) -> T {
+        lesen(self.ivars().tabs.borrow().aktiver().gitmodell())
+    }
+
     /// Zieht den Durchlauf des sichtbaren Tabs nach und wirft den Einzugstakt
     /// an, falls jetzt einer laeuft.
     ///
@@ -3551,6 +3648,16 @@ impl DateifensterQuelle {
         // abzuwenden lohnte.
         if einzug.gitmarken_neu {
             self.ivars().tabelle.reloadData();
+        }
+        // Kopf, Verlauf und Zusammenfassung gehen nicht in diese Tabelle,
+        // sondern in die drei Flaechen des Git-Bereichs; geschrieben werden sie
+        // von `Anwendungsdelegierter::gitanzeige_nachziehen`, und dieser Melder
+        // ist der Weg dorthin. **Ohne ihn stuende der Branchname erst da,
+        // sobald der Nutzer den naechsten Befehl gibt** — die zwei anderen
+        // Anlaesse jenes Nachzugs haengen beide an einer Handlung, und die
+        // Antwort des Arbeitsfadens kommt ohne eine.
+        if einzug.gitkopf_neu {
+            self.gitwechsel_melden();
         }
         // Die Tabmeldung wechselt selten, der fuenfte Rang bei jedem Stapel:
         // er nennt die Zahl der gezeigten und die der vorhandenen Eintraege,
