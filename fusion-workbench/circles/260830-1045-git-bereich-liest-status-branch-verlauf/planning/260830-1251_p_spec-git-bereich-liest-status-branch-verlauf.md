@@ -1,7 +1,7 @@
 # Spec: Der Git-Bereich liest Status, Branch und Verlauf (Stufe A)
 
 **Date:** 2026-08-30
-**Status:** Draft
+**Status:** Partially Complete
 **Activated from Circle:** 260830-1045-git-bereich-liest-status-branch-verlauf
 **Source:** Die Directive des Circle-Datensatzes `_t_circle.md`, vom Nutzer am 260830-1045 geschärft und hier nicht noch einmal angefasst. Dazu die Machbarkeitsanalyse `260830-1006-gix-als-git-anbindung-stufe-a.md`, die vier beantworteten Entscheidungen unter dem Stempel `260830-1006` und die vier Antworten des Nutzers vom 260830 („1a 2a 3b 4b"). Die dreizehn Festlegungen des Nutzers stehen unten als E1 bis E13; A1 bis A14 füllen die Lücken, die keine von ihnen benennt, und sind am Spec-Tor überstimmbar.
 
@@ -394,3 +394,17 @@ Der Spec führt **90** Abnahmekriterien, und keines ist abgehakt. Je Fähigkeit 
 **Nutzerarbeit am laufenden Bündel sind diese 25:** C1.2, C1.3, C1.6, C1.10, C2.2, C2.4, C2.7, C2.8, C3.1, C3.3, C3.4, C3.5, C3.9, C4.2, C4.4, C5.4, C5.5, C5.11, C6.1, C6.2, C6.3, C6.6, C6.7, C7.2, C7.3. Etliche von ihnen tragen daneben eine Probe ohne Fenster für den Teil, der ohne Anzeige prüfbar ist; C2.3, C3.1, C3.3, C4.3 und C6.5 sind so geschnitten und in der Liste oben deshalb nicht geführt. Der Grund für die Länge der Liste ist derselbe wie in jeder Runde dieses Projekts: die Wirkungsbereichs-Prüfung weist aus dem Hintergrund jeden fokusgebundenen Befehl ab, und die Anzeige selbst hat kein Prüfziel ohne Fenster. **Die Runde schließt deshalb voraussichtlich als beschränkter Abschluss** (`_b_`), wie die meisten vor ihr.
 
 **Ohne Fenster prüfbar oder vom Bau gehalten sind die übrigen 65.** Darunter fallen alle Kriterien von C8, C9 und C10, die Aufzählungs- und Tafelkriterien von C1, C2 und C5, die drei Sonderzustände aus C3.6, C3.7 und C3.10 und die Nebenläufigkeitskriterien aus C7 mit Ausnahme von C7.2 und C7.3.
+
+---
+
+## Reconciliation Log
+
+### 260831-1417 — Abgleich zum Abschluss der Runde 23
+
+**Status auf `Partially Complete` gesetzt.** Von den 90 Abnahmekriterien tragen **65** eine Stelle im Baum oder eine Probe und sind belegt; **25** sind Nutzerarbeit am laufenden Bündel und mit dem nicht gefahrenen Abnahmelauf aus Schritt 17 offen. Von den 25 haben 23 eine Bau- oder Probenhälfte, die belegt ist; C5.4 und C7.2 liegen ganz beim Nutzer. Der Schnitt ist am Plan nachgerechnet und deckt sich mit dem, was der Abschnitt `## Nutzerarbeit` dieses Specs selbst nennt.
+
+**Die Kästchen bleiben `- [ ]`.** Ein Kriterium, dessen Anzeigehälfte niemand gesehen hat, ist nicht abgenommen, und ein halb angehaktes Kästchen wäre keine Auskunft. Welche 65 belegt sind und woran, steht im Abgleichsprotokoll des Plans und in `history/260831-1417-reconciliation.md`.
+
+**Drei Aussagen dieses Specs sind unrichtig und als Defekt gefilt; keine hält den Abschluss auf.** C1.1 nennt vier Feldbreiten, die den Bau anhalten, gemessen hält genau eine (`260830-1317_*_c1-1-nennt-vier-feldbreiten-…`). C8.3 nennt 98 zusätzliche Pakete, am Projektbaum sind es 101 (`260830-1613_*_c8-3-nennt-98-zusaetzliche-pakete-…`). C3.8 verlangt null Treffer für `write_changes`, C10.3 verlangt Treffer, die die Lesestelle nennen; der Baum gibt C10.3 recht (`260830-1614_*_c3-8-verlangt-null-treffer-…`). Dazu die Begründung im Abschnitt zu den zehn Zeitzusagen, die auf zwei Schalterständen ruht, von denen einer steht (`260830-1317_*_der-spec-schuetzt-die-messstrecke-…`), und die Unstimmigkeit der 25er-Liste (`260830-1317_*_die-25er-liste-der-nutzerarbeit-…`).
+
+**Der Spec bleibt inhaltlich unverändert.** Er ist eine Aufzeichnung seines Standes; berichtigt wird über Defektdatensätze und Nachträge, nicht durch Überschreiben.

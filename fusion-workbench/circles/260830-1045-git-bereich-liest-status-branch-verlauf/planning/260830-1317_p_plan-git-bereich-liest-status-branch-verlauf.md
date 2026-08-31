@@ -1,7 +1,7 @@
 # Implementierungsplan: Der Git-Bereich liest Status, Branch und Verlauf (Stufe A)
 
 **Date:** 2026-08-30
-**Status:** Draft
+**Status:** Partially Complete
 **Spec:** `260830-1251_*_spec-git-bereich-liest-status-branch-verlauf.md`, vom Nutzer am 260830 unverändert freigegeben; A1 bis A14 gelten, E1 bis E13 stehen fest.
 **Decidability:** Die tragende Frage lautet: *Welche Marke trägt dieser Eintrag, und gehört der eintreffende Befund noch zu dem Ordner, der jetzt dasteht?* Beide Hälften sind aus den Eingaben entscheidbar, die der Mechanismus hat. Die erste beantwortet der Statusstrom von `gix`, der je Eintrag genau einen der drei Fälle liefert und für einen unveränderten Eintrag gar nichts; die zweite beantwortet die Generation des Lesevorgangs, die der Lauf mitführt und die `Ordnermodell::generation` gegenhält — und sie ist hier tragend und nicht bloß Zierat, weil die Zuordnung über den **Namen** läuft und ein Name im neuen Ordner einen gleichnamigen Eintrag träfe, während der Eintragsindex des Filterbefunds am Bestandsende von selbst durchfällt. **Nicht entscheidbar ist, ob der angezeigte Befund noch der wahre Zustand des Repositorys ist.** Ein `git commit` in einem Terminal ändert nichts im angezeigten Unterordner, FSEvents meldet nichts, und KRK hat keine Eingabe, aus der es die Veralterung ableiten könnte. Der Spec hat den Mechanismus dafür schon gewechselt (A9): KRK sagt nicht zu, aktuell zu sein, sondern beantwortet die andere, entscheidbare Frage — *was stand hier, als dieser Ordner zuletzt gelesen wurde* —, und die offene Nutzerfrage nach einem Beobachter auf `.git` ist als Datensatz gefilt. Der Plan nähert an dieser Stelle nichts an.
 
@@ -642,3 +642,69 @@ pub enum Kommando { …, GitBereichUmschalten, FokusGit, SpalteMarkeUmschalten }
 - [ ] **Welche Bauform hält die Vollständigkeit der `ALLE`-Listen?** `260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`, offen. Diese Runde trägt in drei von ihnen einen Wert ein und greift nicht vor; sie liefert der Frage aber ein neues Datum, nämlich dass `ALLE.map` den Bau hält und ein Literal nicht.
 - [ ] **Die Schreibweise nutzersichtbarer deutscher Meldungen** (`260826-1225_*_…`, offen). A14 schreibt Umlaute, wie der Baum seit dem 260826, und Schritt 3 folgt A14.
 - [ ] **Ob die vierte Prüfordner-Fassung in `xtask/src/release.rs` anerkannt wird oder fällt** (`260826-1302_*_…`, offen). Von dieser Runde nicht berührt; Bedingung 9 sagt es.
+
+---
+
+## Reconciliation Log
+
+### 260831-1417 — Abgleich zum Abschluss der Runde 23
+
+Gefahren vom `reconciler` gegen den Baum am Stand `2976520`, Stand vor der Runde `d1fbaac`, 24 Commits dazwischen.
+
+**Status auf `Partially Complete` gesetzt.** Sechzehn der siebzehn Schritte stehen auf `[DONE]`, der siebzehnte ist der Abnahmelauf am laufenden Bündel und damit Nutzerarbeit. Der Dateimarker bleibt `_p_`, weil nicht alle Schritte stehen; `_c_` wäre erst nach Schritt 17 richtig.
+
+**Die sechzehn Erledigungen sind einzeln gelesen, und keine ist unbelegt.** Stichproben mit Beleg, je Schritt die tragende:
+
+| Schritt | Beleg im Baum |
+|---|---|
+| 1 | `Bereich` sechs Werte, `Bereich::ALLE: [Bereich; 6]` (`fenstermodell.rs:161`); `Flaeche` vier Werte, `teilt_flaeche_mit` nur noch in zwei Doc-Kommentaren; `Fokus::Git` (`kommandos/fokus.rs`); `JEDER_FOKUS: [Fokus; 6]` (`:458`), `TAFEL: [(Wirkungsbereich, [bool; 6]); 8]` (`:487`), `OHNE_SPERRE: [[bool; 6]; 8]` (`zulaessigkeit.rs:688`); `Sichtbarkeit.git` und `Breiten.git` (`sitzung.rs:262`, `:211`) |
+| 2 | `Spalte::Marke` als fünfter Wert, `Spalte::ALLE: [Spalte; 5]` (`spalten.rs:122`); `Spaltensichtbarkeit.marke` (`sitzung.rs:326`) |
+| 3 | `crates/krk-core/src/git/{mod,leser,texte}.rs`; `gix = { workspace = true }` (`krk-core/Cargo.toml:46`); `pub mod git` (`lib.rs:29`); Merkmalswahl und Begründung in der Wurzel-`Cargo.toml:477-516` |
+| 4 | `git/lauf.rs` mit `Gitlauf::starten`, `Gitfrage`, `Gitmeldung`; Probe `ein_ganzer_lauf_meldet_kopf_verlauf_und_marken_in_dieser_reihenfolge` (`tests/git.rs:582`) |
+| 5 | `Ordnermodell::gitmarke` (`modell.rs:1217`) und `gitmarken_setzen` (`:1260`) mit `#[must_use]` und Generationsprüfung |
+| 6 | `Tabinhalt.gitmodell`, `Tabliste::gitlauf_nachziehen_an` (`tabs.rs:1199`); Proben `zwei_schnelle_ordnerwechsel_lassen_nie_zwei_gitlaeufe_stehen` (`:2953`), `ein_verspaeteter_gitbefund_schreibt_nichts_in_den_neuen_bestand` (`:3028`), `der_gitlauf_wird_an_genau_den_stellen_aus_a9_angestossen` (`:3156`) |
+| 7 | `crates/krk-ui/src/appkit/git.rs` mit dem Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` (`:123-160`), zehn Berührungen jünger als ihre Klasse, keine über macOS 15 |
+| 8 | `Kommando::GitBereichUmschalten`, `FokusGit`, `SpalteMarkeUmschalten` in `KENNUNGEN` (`belegung.rs:898-900`); `Funktionsbereich::Git` als zehnter Wert (`belegungsmodell.rs:101`); `spaltenschalter: [Retained<NSButton>; 4]` (`bereichsleiste.rs:492`), Zählprobe heißt jetzt `genau_vier_spalten_sind_schaltbar` (`:900`) |
+| 9 | drei `[[funktion]]`-Blöcke in `resources/default-keymap.toml` (`:455`, `:597`, `:669`); die Datei führt 91 Funktionen mit 95 Kombinationen, vorher 88 |
+| 10 | `messungen/260831-0855-needsupdate.txt`, Referenzgerät MacBookPro15,1, Profil `release`, drei Bäume, zwei Läufe |
+| 11 | Erhebungsprogramm im History-Eintrag, 462 Treffer vor und 438 nach der Arbeit, 58 angefasst; `belegungsausgabe.rs` nennt keine „sieben Beschriftungen" mehr |
+| 12 | 167 Treffer gelesen, 138 danach; `spalten.rs:35-58` trägt den Abschnitt „Die eine Stelle, die der Uebersetzer nicht haelt: `Spalte::ALLE`" |
+| 13 | die Zusage steht an sieben Stellen, jede mit der Wendung „Namen auf `-sys`"; die Erhebungsvorschrift aus `CLAUDE.md:89` findet alle sieben, nachgefahren |
+| 14 | `CLAUDE.md:37` trägt die Zeile 23; `:89` trägt `gix` mit Merkmalsbegründung und die neugefasste C-Freiheits-Zusage |
+| 15 | die drei Nachträge stehen; `shared/history/260830-0950-orchestrator-session.md` trägt „Nachtrag 260831-1321: die fünf Prosastellen sind sieben" |
+| 16 | `make check` grün nachgefahren: `cargo build --workspace`, `cargo test --workspace` (kein roter Lauf über alle 24 Ziele), `cargo clippy --workspace --all-targets -- -D warnings` exit 0, `cargo fmt --all --check` exit 0. `#[must_use]`: 139 vor der Runde, 169 danach, beide mit `grep -rE '^[[:space:]]*#\[must_use' crates/*/src` gezählt |
+
+**Die 90 Abnahmekriterien, aufgeteilt.** Die `Kriterien:`-Zeilen der Schritte 1 bis 16 nennen 88 der 90, die Zeile von Schritt 17 nennt 25. Keines der 90 steht ohne Zuordnung. Der Schnitt: **65 tragen allein eine Stelle im Baum oder eine Probe** und sind belegt; **23 sind geteilt** — Bau- oder Probenhälfte in den Schritten 1 bis 16 belegt, Anzeigehälfte in Schritt 17 offen; **2 liegen ganz bei Schritt 17**, nämlich C5.4 (zwei Ordner aus zwei Repositorys nebeneinander) und C7.2 (die erste Bildschirmseite steht nicht später da als vor der Runde). Die Zahlen decken sich mit dem, was der Spec unter `## Nutzerarbeit` selbst ausschreibt.
+
+**Die Kästchen des Specs sind nicht angehakt.** Sie bleiben `- [ ]`, solange der Abnahmelauf nicht gefahren ist; der Schnitt oben ist die Auskunft, und ein halb angehaktes Kriterium wäre keine.
+
+**Die Endbedingungen aus `## Where this Circle stops`, einzeln.**
+
+| Bedingung | Stand |
+|---|---|
+| alle siebzehn Schritte `[DONE]` | **steht nicht** — sechzehn stehen, Schritt 17 ist Nutzerarbeit. Das ist der Grund für `_b_` |
+| jede Erledigung einzeln gegen den Baum gelesen, Abgleich unter `history/` | steht — dieser Abgleich |
+| `make check` grün | steht, nachgefahren am 260831-1417 |
+| jedes der 90 Kriterien hat eine benannte Stelle | steht — 90 von 90 zugeordnet, 65 belegt |
+| `cargo tree` gegen beide Mac-Ziele ohne `cc` und ohne `-sys` | steht, nachgefahren: je 197 Pakete, null Treffer. Die Bedingung greift nicht |
+| Messbericht aus Schritt 10 unter `messungen/` | steht; die Bedingung **hat gegriffen**, der Nutzer hat am 260831 entschieden (`1888ef0`, Datensatz auf `_i_`) |
+| Erhebung aus C9.4 mit erweitertem Muster, vor dem Zählen | steht — Muster erweitert, dann erhoben, dann gezählt; die Zahlen stehen im History-Eintrag von Schritt 11 |
+| `write_changes` ohne Fundstelle, `NeedsUpdate` mit Lesestelle | steht — `grep -rn 'write_changes(' crates/` leer, `EntryStatus::NeedsUpdate(_) => return None` an genau einer Stelle (`git/leser.rs:398`) |
+| `"L1"` bis `"L10"` unverändert, keine elfte | steht — dieselbe Zehnermenge wie vor der Runde |
+| `Schluessel` vier Werte | steht — `Name`, `Groesse`, `Geaendert`, `Typ` (`verzeichnis/sortierung.rs:29`) |
+| jede angefasste Datei unter `appkit/` mit Untergrenzen-Abschnitt, keine über 15.0 | steht — die zwei begründeten Ausnahmen bleiben `koordinaten.rs` und `mod.rs`, sonst keine Lücke |
+| `genau_drei_pruefordner_fassungen_stehen_im_baum` grün | steht — `tests/baum.rs` grün |
+| die vier gefilten Defekte vorgelegt, der zur Feldbreiten-Behauptung mit Schritt 11 geschlossen | steht — `260830-1006_c_fuenf-prosastellen-…` ist `_c_`; die drei übrigen stehen offen und halten nicht auf |
+| die zwei gefilten Entscheidungen bleiben `_o_` | steht — beide unverändert, mit Abgleichsbeleg versehen |
+| beschränkter Abschluss, solange Schritt 17 nicht gefahren ist | steht — `_b_` ist der richtige Marker |
+| keine Auslieferung vor dem Abschluss | steht — `version = "1.4.0"` unverändert, HEAD trägt keinen Tag, jüngster Tag `v1.4.0` |
+
+**Abweichungen der Buchführung, alle drei berichtigt.**
+
+1. Plan und Spec trugen `**Status:** Draft`, während sechzehn Schritte auf `[DONE]` standen. Beide auf `Partially Complete` gesetzt.
+2. Drei Entscheidungsdatensätze standen auf `_a_`, während der Baum ihre Antwort trägt. Auf `_i_` gezogen, je mit Commit und Stelle: `260830-1006_*_bekommt-der-git-bereich-einen-sechsten-fokuswert-…` (`c99d433`), `260830-1006_*_wohnt-die-git-anbindung-in-krk-core-…` (`1d84f2b`), `260830-1006_*_was-zeigen-git-bereich-ankreuzfeld-und-dateiliste-…` (`7264daf`).
+3. Der Spec-Absatz zu den zehn Zeitzusagen begründet die Freiheit von der Messstrecke mit zwei Schalterständen, und die Markenspalte steht ab Werk. Der Defekt war schon gefilt (`260830-1317_*_der-spec-schuetzt-die-messstrecke-mit-einem-schalterstand-den-a13-auf-ein-stellt.md`); der Abgleich hat ihn am gebauten Baum belegt und den Beleg angehängt. Er bleibt offen.
+
+**Ein neuer Defekt, und er betrifft die Runde als ganze:** keine Durchsicht ist gefahren, `bin/fusion-review-coverage` meldet `uncovered=24`. Gefilt als `260831-1417_*_die-runde-23-schliesst-ohne-durchsicht-und-vierundzwanzig-commits-sind-ungedeckt.md`. Der Plan verlangt keine, und die Bindung in `CLAUDE.md` hängt an einer Auslieferung, die nicht gefahren ist — er hält den Abschluss deshalb nicht auf.
+
+**Keine Abweichung zwischen Plan und gebautem Stand, die nicht schon dastünde.** Die drei Punkte, in denen Schritt 7 von seiner Dateiliste abweicht, schreibt der Plan an Ort und Stelle aus; sie sind gegen `history/260831-0120-coder-schritt-7-…` gelesen und stimmen.

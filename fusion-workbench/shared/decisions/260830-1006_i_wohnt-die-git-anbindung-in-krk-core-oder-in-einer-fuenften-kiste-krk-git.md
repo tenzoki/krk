@@ -38,3 +38,5 @@ Wer Möglichkeit 2 wählt, sollte die Regel dazu ausschreiben, nach der künftig
 
 ---
 Answered: shared/history/260830-0950-orchestrator-session.md:83 — Möglichkeit 1: Modul `krk-core/src/git/` mit `gix` als Abhängigkeit des Kerns; die fünfte Kiste `krk-git` ist abgelehnt, die 98 Pakete und `libc` im Teilbaum des Kerns sind angenommen.
+
+Implemented: 1d84f2b — das Modul steht als `crates/krk-core/src/git/` (`mod.rs`, `leser.rs`, `texte.rs`, dazu `lauf.rs` aus `437fd69`), `gix = { workspace = true }` steht in `crates/krk-core/Cargo.toml:46`, `pub mod git` in `crates/krk-core/src/lib.rs:29`, und der Workspace führt weiter vier Mitglieder (`Cargo.toml:3-8`). Die fünfte Kiste `krk-git` ist nicht entstanden; die Proben liegen in `crates/krk-core/tests/git.rs` und nehmen den Prüfordner aus `tests/gemeinsam/mod.rs`, eine vierte Fassung ist nicht dazugekommen.

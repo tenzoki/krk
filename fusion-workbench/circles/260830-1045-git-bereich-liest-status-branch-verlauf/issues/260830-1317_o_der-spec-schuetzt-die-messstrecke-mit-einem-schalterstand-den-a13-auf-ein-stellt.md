@@ -31,3 +31,9 @@ Der Plan der Runde 23 führt diese Prüfung in seinem Schritt 16.
 **Filed by:** planner, Kai Stalmann <kai@stalmann.org>
 Gefunden beim Schreiben des Plans der Runde 23, bei der stellengenauen Erhebung für `messmodus.rs`
 (Frage 8 aus `## Open for Planner`).
+
+---
+Abgleich 260831-1417: Der Befund steht, und der gebaute Baum belegt jetzt beide Hälften.
+Die Markenspalte steht ab Werk (`Spaltensichtbarkeit::default`, `crates/krk-core/src/ablage/sitzung.rs:344`, `marke: true`), und der Bedarf ist eine Oder-Verknüpfung: `Anwendungsdelegierter::gitbedarf_nachziehen` (`crates/krk-ui/src/appkit/anwendung.rs:4642`) rechnet `modell.sichtbar(Bereich::Git) || spalte_sichtbar_in(…, Spalte::Marke)` und reicht das Ergebnis an `Tabliste::git_gefragt_setzen`; `gitlauf_nachziehen_an` (`crates/krk-ui/src/tabs.rs:1199`) stößt daraufhin bei jedem Ordnerwechsel des sichtbaren Tabs einen `Gitlauf` an. Der Datensatz nennt daneben die `session.toml` des Nutzers als Grund, warum „ab Werk" nichts über den Stand während einer Messung sagt; die Prüfsitzung schließt die Lücke nicht, denn `messmodus::tests::pruefsitzung` baut sie über `..Sitzung::default()` und erbt damit ebenfalls `marke: true`.
+Auch die erste Hälfte der Spec-Begründung trägt nicht: `messmodus.rs` nennt weder Bereich noch Spalte, hält aber nach seinem eigenen Modulkopf nur, „was kein AppKit beruehrt"; `Aufgabe::Spannen` und `Aufgabe::Sitzung` messen „innerhalb eines Prozesses" der laufenden Anwendung und damit über denselben Anwendungsdelegierten.
+Die im Datensatz verlangte Prüfung ist gefahren und liefert, was sie soll: `git -C ~/Library/Caches/krk-messplatz rev-parse --show-toplevel` bricht mit exit 128 ab (`260831-1334-coder-schritt-16-die-abnahmekommandos-ohne-fenster.md`). Der Ort des Messplatzes trägt die Aussage, der Schalterstand nicht. Der Spec-Absatz ist unverändert; der Defekt bleibt offen.

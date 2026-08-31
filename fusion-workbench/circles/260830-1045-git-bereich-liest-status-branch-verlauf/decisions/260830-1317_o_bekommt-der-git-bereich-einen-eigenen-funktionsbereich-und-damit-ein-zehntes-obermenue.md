@@ -80,3 +80,6 @@ real und vorübergehend: das Obermenü ist bis zur Runde 24 dünn, und danach tr
 Wer Möglichkeit 2 wählt, sollte die Regel dazu ausschreiben, nach der künftig entschieden wird,
 welcher Bereich einen eigenen `Funktionsbereich` bekommt und welcher nicht; ohne sie ist die
 Einreihung die teurere Antwort.
+
+---
+Abgleich 260831-1417: Der Marker bleibt `_o_`, und das ist Absicht. Die Vorbelegung des Plans (Entscheidung 8) ist mit Schritt 8 gebaut — `Funktionsbereich::Git` steht als zehnter Wert in `crates/krk-ui/src/belegungsmodell.rs:101`, `make menue` führt das zehnte Obermenü an achter Stelle zwischen „Editor" und „Bearbeiten" (`260831-1334-coder-schritt-16-die-abnahmekommandos-ohne-fenster.md`) —, aber gebaut ist nicht beantwortet: der Plan schreibt unter `## Where this Circle stops` aus, dass dieser Datensatz nach der Runde weiter auf `_o_` steht, sofern der Nutzer ihn nicht beantwortet. Ein `_a_` oder `_i_` nähme ihn aus der Suche nach aktiver Grundlage heraus, und die Frage wäre der Sache nach entschieden, ohne dass jemand sie entschieden hätte.

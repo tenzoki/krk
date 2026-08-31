@@ -3,7 +3,7 @@
 **Filed by:** orchestrator, Kai Stalmann <kai@stalmann.org>
 **Directive:** KRK bekommt eine Git-Anbindung, in Stufen. Stufe A zuerst: ein Git-Bereich am rechten Rand als sechster Wert von `Bereich`, der den Status des angezeigten Ordners, den aktuellen Branch und den Verlauf anzeigt; die Statusmarken in der Dateiliste sind über ein Ankreuzfeld der Bereichsleiste zuschaltbar. Danach Stufe B, die vier Operationen der Runde 1 (hinzufügen, committen, Änderungen verwerfen, Versions-Schieberegler), danach eine Auslieferung. Stufe C (Branches wechseln) ist möglich, Stufe E (PRs und Review-Freigabe) unwahrscheinlich. Bibliothek: `gix` (gitoxide) wird probiert. Dass die zehn Zeitzusagen aus C8 dabei fallen können, hat der Nutzer ausdrücklich in Kauf genommen.
 **Mode:** custom — erst Machbarkeitsanalyse, dann Shaper
-**Status:** In Arbeit
+**Status:** Bounded Closure: der Abnahmelauf am laufenden Bündel ist Nutzerarbeit und nicht gefahren; 25 der 90 Abnahmekriterien bleiben unabgenommen
 
 ## Ausgangslage
 
@@ -193,3 +193,23 @@ Belege: `260830-1106_*_der-entscheid-zur-c-freiheits-zusage-nennt-fuenf-prosaste
 `260831-1258-coder-die-c-freiheits-zusage-an-ihren-sechs-stellen.md`,
 `260830-1006_*_wie-lautet-die-c-freiheits-zusage-wenn-linux-raw-sys-in-cargo-lock-steht.md`
 (derselbe Nachtrag).
+
+---
+
+## Coherence
+
+<!-- RECONCILER-OWNED -->
+
+Erhoben vom `reconciler` am 260831-1417, Domäne `code`, Circle `260830-1045-git-bereich-liest-status-branch-verlauf`, Stand `d1fbaac..2976520` (24 Commits), zwei Turns.
+
+**Verdict:** review-needed
+
+**Edges:**
+
+- Artifact↔Grounding: 16 von 16 `[DONE]`-Schritten gegen den Baum gelesen und belegt, 65 von 90 Abnahmekriterien mit Stelle oder Probe belegt (die übrigen 25 sind Nutzerarbeit aus Schritt 17 und keine Lücke), `make check` nachgefahren und grün (`cargo build/test/clippy -D warnings/fmt`, je exit 0) / **4 Abweichungen (Grundlage im Fehler)**: `Status: Draft` an Plan und Spec bei sechzehn erledigten Schritten (berichtigt auf `Partially Complete`), drei Entscheidungsdatensätze auf `_a_`, während der Baum ihre Antwort trägt (`260830-1006_*_bekommt-der-git-bereich-einen-sechsten-fokuswert-…` → `c99d433`, `…_wohnt-die-git-anbindung-in-krk-core-…` → `1d84f2b`, `…_was-zeigen-git-bereich-ankreuzfeld-…` → `7264daf`; alle drei auf `_i_` gezogen), und der Spec-Absatz zu den zehn Zeitzusagen, dessen Begründung auf zwei Schalterständen ruht, während die Markenspalte ab Werk steht (`Spaltensichtbarkeit::default`, `crates/krk-core/src/ablage/sitzung.rs:344`; `gitbedarf_nachziehen`, `crates/krk-ui/src/appkit/anwendung.rs:4642`) — gefilt und offen / **0 Befunde aus coderev und ontorev, weil keine Durchsicht gelaufen ist**: `bin/fusion-review-coverage` meldet `commits=24 reviews=0 uncovered=24 verdict=uncovered`, gefilt als `260831-1417_*_die-runde-23-schliesst-ohne-durchsicht-und-vierundzwanzig-commits-sind-ungedeckt.md`. Kein einziger Befund liegt am Baum; alle vier sind Buchführung, drei davon in diesem Lauf berichtigt.
+- Artifact↔Directive: **Die Commits bewegen sich auf die Directive zu.** Dreiundzwanzig der vierundzwanzig tragen die Stufe A und nichts sonst: `c99d433` (sechster Bereich, sechster Fokuswert), `4f6b880` (fünfte Spalte), `1d84f2b` und `437fd69` (`gix` im Kern, Gitleser und Gitlauf), `7ad8978` (Befundvektor im Ordnermodell), `3090441` (Lauf am Tab, Markenzelle), `7264daf` (die drei Flächen), `7079519` und `5a1cbe8` (drei Befehle, zehnter Funktionsbereich, drei Belegungseinträge), `d1f86ba` und `1888ef0` (Messung und Entscheid zum Index-Posten), `c68f843`, `2ab5328`, `ad7c2f2`, `9566973`, `6c3927e`, `63aa690` (Nachzüge, C-Freiheits-Zusage, CLAUDE.md, Abnahme) sowie die sechs Workbench-Commits der Vorbereitung. Der einzige, der nicht auf die Directive zeigt, ist `2976520`: ein vom Nutzer während der Sitzung beauftragter Nebengang zu den Leseprofilen, der keine Zeile im Baum geändert hat und nach der Herkunftsregel in `shared/` gefilt ist. Kein Commit bewegt sich von der Directive weg.
+- Grounding↔Directive: **59 aktive Entscheidungen (`_o_` und `_a_`) über beide Speicher, keine widersprechend.** Zwei berühren die Directive unmittelbar und stützen sie: `260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md` ist der Grund, aus dem Schritt 17 Nutzerarbeit bleibt, und `260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md` hat durch diese Runde ihren härtesten Beleg bekommen (neun stille Stellen, von Hand nachgezogen, vom Übersetzer keine genannt). `260802-0842_*_git-verwerfen-bedeutung.md` bindet die Stufe B und ist von der schreibfreien Stufe A nicht berührt. Eine Aussage hat die Runde bewegt, ohne sie zu widerlegen: `260813-0053_*_wie-viele-obermenues-traegt-die-menueleiste-fuer-81-funktionen.md` fragt über einen Stand von 81 Funktionen und neun Obermenüs, während die Belegung jetzt 91 Funktionen und zehn Obermenüs führt; der Datensatz ist eine Aufzeichnung seines Standes und behält ihn nach der Ortsregel, die Frage selbst bleibt offen und gültig.
+
+**Rebalance recommendation:** revise Grounding
+
+Die Empfehlung ist beratend. Sie zielt auf zwei Stellen und nicht auf die Runde: der Spec-Absatz zu den zehn Zeitzusagen begründet ein richtiges Ergebnis falsch, und vierundzwanzig Commits stehen ohne Durchsicht. Beides ist gefilt, keines hält den beschränkten Abschluss auf. Die Directive selbst ist nicht zu berichtigen: sie ist gestellt, im Baum erreicht und allein in ihrer Anzeigehälfte unabgenommen, und genau das drückt der Marker `_b_` aus.

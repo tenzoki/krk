@@ -73,3 +73,6 @@ zu suchen.
 Was die Wiedervorlage braucht, ist eine Beobachtung und keine Ableitung: ein Ordner mit
 hunderttausend Einträgen in einem Repository, in beiden Dateifenstern, mit eingeschalteter
 Markenspalte, und die Frage, ob die erste Bildschirmseite später dasteht als vor der Runde (C7.2).
+
+---
+Abgleich 260831-1417: Der Marker bleibt `_o_`, aus demselben Grund wie beim Schwesterdatensatz zum zehnten Obermenü. Die Vorbelegung des Plans (Entscheidung 7) ist gebaut: `Platform::index_worktree_options_mut().thread_limit` wird nirgends gesetzt, der Modulkopf von `crates/krk-core/src/git/leser.rs` schreibt aus, warum nicht. Gemessen ist die Fadenzahl weiterhin nicht, und die Frage bleibt damit dem Nutzer vorbehalten.

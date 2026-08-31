@@ -37,3 +37,5 @@ Wir empfehlen Möglichkeit 1, vorbehaltlich der Kosten, die sie ausschreibt. Mö
 
 ---
 Answered: circles/260830-1045-git-bereich-liest-status-branch-verlauf/_a_circle.md:14 — Möglichkeit 1, ein sechster Fokuswert `Fokus::Git`; die zehn Nachzugsstellen samt der vier stillen sind ausdrücklich in Kauf genommen.
+
+Implemented: c99d433 — `Fokus::Git` steht als sechster Wert in `crates/krk-ui/src/kommandos/fokus.rs`, `Fokus::ALLE` trägt sechs Einträge, und die vier stillen Stellen sind von Hand nachgezogen: `fokus::wirkt` nennt den Wert in jedem Zweig, in dem er gilt, `TAFEL` (`fokus.rs`) und `OHNE_SPERRE` (`zulaessigkeit.rs`) tragen ihre sechste Spalte als `[bool; 6]`, und `JEDER_FOKUS: [Fokus; 6]` hält die Länge jeder Zeile. Der Fokusweg selbst steht mit `fokus_git` (`shift+cmd+b`) in `resources/default-keymap.toml` und mit `Kommando::FokusGit` in `belegung.rs`. Die Anzeigehälfte (C2.2, C2.4, C2.7, C2.8) ist Nutzerarbeit aus Schritt 17 und noch nicht abgenommen.
