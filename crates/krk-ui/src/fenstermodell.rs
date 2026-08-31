@@ -57,8 +57,10 @@
 //! [`Sichtbarkeit`] trug kein Feld dafuer, und `umschalten` wies jeden Befehl
 //! auf [`Bereich::Links`] ab. Der Nutzerentscheid vom 260812-0306
 //! (`decisions/260811-1305_*_traegt-das-linke-dateifenster-einen-schalter.md`)
-//! hat das aufgehoben, damit alle fuenf Schalter der Bereichsleiste dieselbe
-//! Bedeutung tragen; das fuenfte Feld ist der Preis.
+//! hat das aufgehoben, damit jeder Bereichsschalter der Bereichsleiste
+//! dieselbe Bedeutung traegt; ein eigenes Feld fuer das linke Dateifenster ist
+//! der Preis. **Eine Zahl der Schalter steht hier nicht**: sie folgt der Zahl
+//! der Bereiche und ist seit jenem Entscheid zweimal gestiegen.
 //!
 //! Die Regel steht an zwei Stellen, weil es zwei Wege zu ihr gibt: zur Laufzeit
 //! in [`Fenstermodell::umschalten`], und beim Start in
@@ -69,7 +71,7 @@
 //!
 //! # Die Spalten der beiden Dateilisten
 //!
-//! Neben den fuenf Bereichen haelt dieses Modell seit der Bereichsleisten-Runde
+//! Neben den sechs Bereichen haelt dieses Modell seit der Bereichsleisten-Runde
 //! auch, welche Spalten die Dateilisten zeigen: [`Spaltensichtbarkeit`] mit vier
 //! Feldern, geschaltet ueber [`Fenstermodell::spalte_umschalten`], gelesen ueber
 //! [`spalte_sichtbar_in`]. **Eine Angabe fuer beide Listen** (Nutzerentscheid
@@ -194,9 +196,11 @@ impl Bereich {
     /// genau das.
     ///
     /// **Eine vollstaendige Fallunterscheidung und kein `matches!`.** Ein
-    /// sechster Bereich haelt hier den Bau an und erzwingt die Einordnung, wie
+    /// siebter Bereich haelt hier den Bau an und erzwingt die Einordnung, wie
     /// es die uebrigen vollstaendigen Fallunterscheidungen dieses Projekts auch
-    /// tun.
+    /// tun. Gehalten ist damit der zweite Schritt und nicht der erste: der
+    /// Uebersetzer sieht die neue Variante erst, wenn sie in der Aufzaehlung
+    /// [`Bereich`] steht, und den Eintrag in [`Bereich::ALLE`] haelt er nicht.
     pub const fn seite(self) -> Option<Fensterseite> {
         match self {
             Bereich::Links => Some(Fensterseite::Links),
@@ -302,7 +306,7 @@ impl Bereich {
     /// Verweilen erscheint.
     ///
     /// **Vollstaendig und ohne Auffangzweig**, wie die uebrigen
-    /// Fallunterscheidungen ueber [`Bereich`]: ein sechster Bereich haelt den
+    /// Fallunterscheidungen ueber [`Bereich`]: ein siebter Bereich haelt den
     /// Bau an und erzwingt einen Namen fuer seinen Schalter, statt ihn still
     /// namenlos zu lassen.
     pub const fn beschriftung(self) -> &'static str {
@@ -419,7 +423,7 @@ pub fn spalte_sichtbar_in(spalten: &Spaltensichtbarkeit, spalte: Spalte) -> bool
 /// Das gehaltene Fenstermodell.
 ///
 /// Es traegt, was nicht zu den Tabs gehoert: das aktive Dateifenster, die
-/// Sichtbarkeit der fuenf Bereiche, ihre Breiten und die Sichtbarkeit der
+/// Sichtbarkeit der sechs Bereiche, ihre Breiten und die Sichtbarkeit der
 /// Spalten beider Dateilisten. Die Tabs selbst haelt [`Tabliste`], je eine
 /// Liste je Dateifenster.
 ///
@@ -573,7 +577,7 @@ impl Fenstermodell {
     /// sie und meinen dieselbe Menge: die Anteilsregel in [`bereichsbreiten`],
     /// die Rueckrechnung in [`Self::breiten_uebernehmen`] und der Massstab in
     /// [`Self::massstab`]. Dreimal ausgeschrieben waere sie dreimal
-    /// nachzuziehen, sobald ein sechster Bereich dazukommt.
+    /// nachzuziehen, sobald ein siebter Bereich dazukommt.
     fn sichtbare(&self) -> Vec<Bereich> {
         Bereich::ALLE
             .into_iter()

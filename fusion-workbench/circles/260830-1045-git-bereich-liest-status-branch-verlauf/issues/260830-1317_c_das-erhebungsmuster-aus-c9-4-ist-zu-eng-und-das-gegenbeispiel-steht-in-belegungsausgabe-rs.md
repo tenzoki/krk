@@ -37,3 +37,12 @@ Gefunden beim Schreiben des Plans der Runde 23, bei der stellengenauen Erhebung 
 Verwandt: `260810-1851_*_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md`
 (derselbe Befundtyp: fünf Erhebungen haben dieselben acht Stellen nicht gesehen, weil ihr Muster zu
 eng geschnitten war).
+
+---
+Resolved: Das Muster ist in Schritt 11 der Runde 23 erweitert, die Erhebung damit vor dem Zählen neu gefahren, und `crates/krk-ui/src/belegungsausgabe.rs:233-239` nennt keine Zahl mehr, sondern das Zählkommando `awk '/^pub enum Wirkungsbereich/,/^}/' crates/krk-core/src/tasten/belegung.rs`.
+
+**Zwei Erweiterungen, und die zweite hat dieser Datensatz nicht vorhergesehen.** Die Wortformen allein hätten das Gegenbeispiel weiter nicht gefunden: „die sieben" und „Beschriftungen" stehen in **zwei aufeinanderfolgenden Zeilen** desselben Doc-Kommentars, und kein zeilenweises `grep` findet das, gleich welche Wortformen es führt. Das erweiterte Muster ist deshalb kein `grep` mehr, sondern ein Programm mit einem Fenster von zwei Zeilen, das den Kommentarvorsatz der Folgezeile abräumt, bevor es vergleicht.
+
+Die erste Erweiterung geht über die zehn Wortformen dieses Datensatzes hinaus: statt je Aussage die **heutige** Zahl zu suchen, lässt das Muster jedes Zahlwort in jeder Form zu (Grundzahl, Ordnungszahl, mit und ohne Umlaut, `genau ein…`) und zählt die Trägerwörter der Aufzählungen auf, um die es geht — dazu die Wörter, mit denen der Baum dieselben Mengen sonst benennt: Beschriftung, Kasten, Rahmen, Teilbaum, NSBox, Fläche, Rang, Wert, fokussierbar. Das war die eigentliche Falle, die der Datensatz am Ende benennt: ein Muster, das nur die heutige Zahl sucht, findet die morgige nicht.
+
+Zahlen: das Muster aus C9.4 findet am Stand nach Schritt 10 noch 57 Stellen (92 waren es am Stand `2059138`, Schritt 1 hat die Prosa seiner zwölf Dateien mitgezogen). Das erweiterte Muster findet **462 Stellen in 71 Dateien**, und die 57 sind darin restlos enthalten. Nach Schritt 11 sind es 438 in 71 Dateien. Das Erhebungsprogramm ist im History-Eintrag `260831-1212-coder-schritt-11-zaehlaussagen-bereiche-und-fokuswerte.md` ausgeschrieben.

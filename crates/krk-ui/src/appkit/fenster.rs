@@ -6,14 +6,15 @@
 //! [`super::statuszeile`] und ganz unten die Bereichsleiste aus
 //! [`super::bereichsleiste`]. Bis zum 260812 war die Aufteilung selbst die
 //! Inhaltsansicht; die Bereichsleiste kam mit der Runde 5 dazu, die
-//! Statuszeile mit der Runde 6. Die Aufteilung traegt seit Schritt 16 der
-//! Editor-Runde **fuenf** Bereiche und nicht mehr die vier der Runde 1;
-//! zugleich zu sehen sind hoechstens vier, weil C1 jener Runde zusagt, dass
-//! die Vorschau und der Editor sich dieselbe Flaeche teilen.
+//! Statuszeile mit der Runde 6. Die Aufteilung traegt seit der Git-Runde
+//! **sechs** Bereiche und nicht mehr die vier der Runde 1; zugleich zu sehen
+//! sind hoechstens vier, weil C1 der Editor-Runde wie C1 der Git-Runde
+//! zusagen, dass Vorschau, Editor und Git-Bereich sich dieselbe Flaeche
+//! teilen.
 //!
 //! ```text
 //! ┌──────────────────────────────────────────────┐
-//! │ Fensterzeile (NSSplitView, fuenf Bereiche)   │  nimmt, was uebrig bleibt
+//! │ Fensterzeile (NSSplitView, sechs Bereiche)   │  nimmt, was uebrig bleibt
 //! ├──────────────────────────────────────────────┤
 //! │ Statuszeile                                  │  18 pt, volle Breite
 //! ├──────────────────────────────────────────────┤
@@ -165,8 +166,9 @@ const ANFANGSGROESSE: NSSize = NSSize::new(1280.0, 720.0);
 /// `H − Bereichsleiste − Tableiste − eigene Statuszeile` und misst danach
 /// `H − Bereichsleiste − Statuszeile − Tableiste`, also denselben Ausdruck: was
 /// die neue Zeile der Fensterzeile nimmt, gibt jedes Dateifenster mit dem
-/// Wegfall seiner eigenen zurueck. Die drei Bereiche **ohne** eigene Zeile —
-/// Lesezeichenleiste, Vorschau und Editor — verlieren dagegen 18 Punkte, und
+/// Wegfall seiner eigenen zurueck. Die Bereiche **ohne** eigene Zeile —
+/// Lesezeichenleiste, Vorschau, Editor und seit der Git-Runde der Git-Bereich —
+/// verlieren dagegen 18 Punkte, und
 /// genau die holt dieser Summand ihnen zurueck (C5.3). Dieselbe Begruendung,
 /// die die Runde 5 fuer den Schritt von 300 auf 318 gegeben hat.
 const MINDESTGROESSE: NSSize = NSSize::new(
@@ -346,13 +348,13 @@ impl FensterDelegierter {
 /// zum unteren Rand ([`NSAutoresizingMaskOptions::ViewMaxYMargin`] laesst
 /// allein den Abstand nach oben wachsen), die Fensterzeile nimmt, was darueber
 /// frei wird. Ohne die Hoehenaenderung an [`MINDESTGROESSE`] verloeren die
-/// fuenf Bereiche dabei die 36 Punkte, die Leiste und Zeile bekommen.
+/// sechs Bereiche dabei die 36 Punkte, die Leiste und Zeile bekommen.
 ///
 /// **Beide sind keine Unteransicht der Fensterzeile, sondern ihre
 /// Schwestern**, und das ist keine Geschmacksfrage: `ersthelferbereich` sucht
-/// den Ersthelfer in den fuenf Bereichen der `NSSplitView`, und eine Ansicht
-/// darin waere entweder ein sechster Bereich oder ein blinder Fleck. Aus
-/// demselben Grund bekommt `Fokus` keinen sechsten Wert.
+/// den Ersthelfer in den sechs Bereichen der `NSSplitView`, und eine Ansicht
+/// darin waere entweder ein siebter Bereich oder ein blinder Fleck. Aus
+/// demselben Grund bekommt `Fokus` keinen siebten Wert fuer sie.
 ///
 /// **Die Zeile beginnt beim Einzug und nicht am Rand.** Denselben Abstand hielt
 /// sie am Fuss eines Dateifensters, und die Leiste haelt ihn ebenso; sie steht

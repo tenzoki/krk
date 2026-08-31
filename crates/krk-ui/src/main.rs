@@ -17,7 +17,7 @@
 //! Achtzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
 //! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
-//! Sichtbarkeit der fuenf Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
+//! Sichtbarkeit der sechs Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
 //! Dateifensters samt ihrem Inhalt und der Reihenfolge, in der sie gelesen
 //! werden. `vorschaumodell` haelt die Tabs des Vorschaufensters aus C6 samt
 //! Halteverhalten und dem Lesen der Vorschaudatei auf dem Arbeitsfaden.

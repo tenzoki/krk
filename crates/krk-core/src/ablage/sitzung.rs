@@ -390,7 +390,7 @@ pub struct Sitzung {
     /// bleibt lesbar, weil diese Struktur `#[serde(default)]` traegt, und
     /// ergibt den ersten Zettel.
     pub zettel: pfade::Zettel,
-    /// Die Breiten der fuenf Bereiche.
+    /// Die Breiten der sechs Bereiche.
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
     pub sichtbar: Sichtbarkeit,
@@ -414,9 +414,9 @@ pub struct Sitzung {
 
 impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
-    /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, der Editor
-    /// ausgeblendet und ohne Datei, alle fuenf Spalten sichtbar, links aktiv,
-    /// der erste Notizzettel offen.
+    /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, Editor und
+    /// Git-Bereich ausgeblendet und der Editor ohne Datei, alle fuenf Spalten
+    /// sichtbar, links aktiv, der erste Notizzettel offen.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),

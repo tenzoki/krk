@@ -664,7 +664,14 @@ mod tests {
     /// darueber haelt ihre beiden Voraussetzungen fest.
     ///
     /// Die Pruefungen darunter zeigen einzelne Felder dieser Tafel mit ihrer
-    /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
+    /// Begruendung; die Tafel zeigt fuer die heutigen acht mal sechs, dass
+    /// keine Zeile und keine Spalte fehlt, und fuer keine andere Zahl. **Die
+    /// beiden Feldbreiten sichern das nicht**: `[[bool; 6]; 8]` zwingt zu acht
+    /// Zeilen zu je sechs Spalten und sagt nichts darueber, welche acht und
+    /// welche sechs. Ein neunter Wirkungsbereich faellt an der Zaehlprobe
+    /// `jeder_wirkungsbereich_hat_einen_stellvertreter` auf und ein siebter
+    /// Fokuswert an der Zusicherung unter der Tafel, die die Spaltenzahl gegen
+    /// `Fokus::ALLE.len()` haelt; keiner von beiden am Bau.
     #[test]
     fn die_tafel_aus_allen_faellen_geht_auf() {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge

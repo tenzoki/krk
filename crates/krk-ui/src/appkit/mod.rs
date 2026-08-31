@@ -77,12 +77,14 @@
 //! eine zweite Umrechnung daneben muesste die Zusage ueber die Zeichengrenzen
 //! ein zweites Mal tragen.
 //! [`aufteilung`] haelt
-//! die `NSSplitView` mit den fuenf Bereichen aus C7, ihre Mindestbreiten und die
+//! die `NSSplitView` mit den sechs Bereichen aus C7, ihre Mindestbreiten und die
 //! Markierung des aktiven Dateifensters.
 //! [`bereichsleiste`] haelt die Leiste am Fensterfuss aus C1 bis C3 der
-//! Bereichsleisten-Runde und C2 der Filter-Runde: neun Ankreuzfelder, fuenf
-//! fuer die Bereiche, drei fuer die schaltbaren Spalten und einer fuer die
-//! tiefe Suche. Sie liegt **neben** der Aufteilung und nicht
+//! Bereichsleisten-Runde und C2 der Filter-Runde: Ankreuzfelder, je eines je
+//! Bereich, je eines je schaltbarer Spalte, dazu die tiefe Suche und den
+//! Inhaltsfilter. **Eine Zahl steht hier nicht**, weil sie mit jedem Bereich
+//! und jeder Spalte waechst; gezaehlt wird sie an
+//! `Bereichsleiste::bauen`. Sie liegt **neben** der Aufteilung und nicht
 //! darin — beide sind Unteransichten der Traegerflaeche, die
 //! `fenster::fensterinhalt` baut —, und keiner ihrer Schalter nimmt den
 //! Ersthelferrang an; die Begruendung steht in ihrem Modulkopf.

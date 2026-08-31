@@ -37,16 +37,21 @@
 //! von beiden eine Meldung bekam, sagte ihre Lage: die Meldung des linken
 //! Dateifensters stand links. Seit der Runde 6 gibt es genau eine Zeile, und
 //! sie liegt unter der Fensterzeile ueber die volle Breite, zwischen der
-//! Bereichsleiste und den fuenf Bereichen. Der Nutzer hat den Preis dieser
+//! Bereichsleiste und den sechs Bereichen. Der Nutzer hat den Preis dieser
 //! Zusammenlegung am 260812-1105 vorgelegt bekommen und angenommen; er steht
 //! ausgeschrieben bei [`zeile`] und bei [`zeilentext`].
 //!
 //! Die Zeile gehoert damit dem Fenster und keinem Bereich. Sie ist kein
-//! sechster Wert von [`crate::kommandos::fokus::Fokus`] und kein sechster
+//! weiterer Wert von [`crate::kommandos::fokus::Fokus`] und kein siebter
 //! Bereich der Fensterzeile, sondern deren Schwester unter der Inhaltsflaeche,
-//! genau wie die Bereichsleiste; `ersthelferbereich` geht die fuenf Bereiche
-//! der `NSSplitView` durch, und eine Zeile darin waere ein sechster Bereich
+//! genau wie die Bereichsleiste; `ersthelferbereich` geht die sechs Bereiche
+//! der `NSSplitView` durch, und eine Zeile darin waere ein siebter Bereich
 //! oder ein blinder Fleck.
+//!
+//! **Das ist der Grund und nicht die Zahl.** Der Git-Bereich der Runde 23 hat
+//! einen Fokuswert bekommen, weil er in einem der Teilbaeume liegt, die
+//! `ersthelferbereich` durchgeht; diese Zeile liegt in keinem, und deshalb
+//! bekommt sie keinen — gleich wie viele Bereiche die Fensterzeile traegt.
 //!
 //! **Den Ersthelferrang nimmt sie nicht an** (C5.11), und getragen wird das
 //! allein davon, was `labelWithString:` baut: der Kopf des Systems nennt es

@@ -323,8 +323,8 @@ pub enum Wirkungsbereich {
     ///
     /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als
     /// ganzem und keinem Bereich darin: beenden, ein Fenster schliessen, einen
-    /// Bereich ein- und ausblenden. Die anderen sind die vier Fokusbefehle und
-    /// das Anlegen eines Lesezeichens: ein Befehl, der den Fokus **holt**,
+    /// Bereich ein- und ausblenden. Die anderen sind die fuenf Fokusbefehle
+    /// und das Anlegen eines Lesezeichens: ein Befehl, der den Fokus **holt**,
     /// kann nicht voraussetzen, wo er gerade steht.
     ///
     /// Der Auf- und der Ab-Pfeil standen bis zum eingebauten Editor hier, weil
@@ -932,7 +932,7 @@ impl Kommando {
     /// [`Kommando::LesezeichenAnlegen`] liest den Ordner des aktiven
     /// Dateifensters oder die Zeile der Schreibmarke im Editor und schreibt
     /// beides in die Leiste, braucht also keinen Bereich im Fokus; und die
-    /// vier Fokusbefehle koennen nicht voraussetzen, wo der Fokus steht.
+    /// fuenf Fokusbefehle koennen nicht voraussetzen, wo der Fokus steht.
     ///
     /// **Ein dritter ist mit C4 der Runde 4 dazugekommen:**
     /// [`Kommando::TabSchliessen`] hat den Zweig der Tabbefehle verlassen und
@@ -1055,7 +1055,7 @@ impl Kommando {
             }
             // Der Fokuswechsel selbst und das Anlegen eines Lesezeichens (C5).
             //
-            // Alle vier Fokusbefehle stehen hier, und sie muessen es: ein
+            // Jeder Fokusbefehl steht hier, und sie muessen es: ein
             // Befehl, der den Fokus **holt**, kann nicht voraussetzen, wo er
             // gerade steht. Traege einer von ihnen den Bereich, in den er
             // fuehrt, waere er allein von dort aus erreichbar und damit

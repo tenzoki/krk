@@ -77,7 +77,7 @@
 //! # Die drei Werte von [`Quelle`] sind die ganze Fokusverzweigung
 //!
 //! Worauf das Teilen wirkt, entscheidet der Fokus, und [`worauf`] beantwortet
-//! es als reine Rechnung ueber alle fuenf Fokuswerte. Sie steht hier und nicht
+//! es als reine Rechnung ueber alle sechs Fokuswerte. Sie steht hier und nicht
 //! beim Anwendungsdelegierten, weil sie ohne Fenster pruefbar ist und dort
 //! nicht mehr waere; der Delegierte verzweigt danach nur noch ueber die drei
 //! Werte, die sie liefert, und holt zu jedem seine Pfade.
@@ -182,7 +182,7 @@ pub enum Quelle {
 ///   siebte Abnehmer von [`crate::kommandos::operationen::betroffene`]; eine
 ///   zweite Auswahlregel entsteht nicht.
 /// - [`Fokus::Anderswo`] geht denselben Weg. Es ist kein Bereich, sondern ein
-///   Befund: der Ersthelfer gehoert keinem der vier Bereiche. "Der Bereich vor
+///   Befund: der Ersthelfer gehoert keinem Bereich der Fensterzeile. "Der Bereich vor
 ///   dem Nutzer" hat dann keine Antwort, das aktive Dateifenster aber immer
 ///   eine — dieselbe Erwaegung, die `cmd+w` seit C4 der Runde 4 dorthin
 ///   fuehrt.

@@ -145,7 +145,7 @@ define_class!(
     /// Er haelt die Wuensche, aus denen die Zeile ausgelegt wird (siehe
     /// [`AufteilungsIvars::wuensche`]). Alles uebrige steht in der
     /// `NSSplitView`, die AppKit ihm bei jedem Aufruf mitgibt: die Rahmen der
-    /// fuenf Bereiche und ihre Sichtbarkeit.
+    /// sechs Bereiche und ihre Sichtbarkeit.
     // SAFETY:
     // - Die Oberklasse NSObject stellt keine Bedingungen an Unterklassen.
     // - Die Klasse implementiert `Drop` nicht.
@@ -487,8 +487,8 @@ fn gerahmt(mtm: MainThreadMarker, inhalt: &NSView) -> Retained<NSBox> {
 /// nach.
 ///
 /// **Das Einrahmen steht nicht mehr darin.** Bis zum 260809 hiess diese
-/// Funktion `gerahmtes_dateifenster` und tat beides; seit alle fuenf Bereiche
-/// einen Kasten tragen, ist das Einrahmen [`gerahmt`] und gilt fuer alle. Die
+/// Funktion `gerahmtes_dateifenster` und tat beides; seit jeder Bereich einen
+/// Kasten traegt, ist das Einrahmen [`gerahmt`] und gilt fuer alle. Die
 /// drei Randbereiche kommen fertig herein und brauchen diese Haelfte nicht.
 fn dateifensterinhalt(mtm: MainThreadMarker, dateifenster: &Dateifenster) -> Retained<NSView> {
     let inhalt = NSView::initWithFrame(

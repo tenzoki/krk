@@ -36,11 +36,13 @@
 //!
 //! # Die Gegenrichtung: was ein Fokusbefehl selbst tut
 //!
-//! Die drei Fokusbefehle aus C5 und C2 sind die Ausnahme von nichts, aber sie
-//! stellen die Frage andersherum: nicht "wirkt dieser Befehl hier", sondern
-//! "wohin fuehrt er, und steht der Bereich dort ueberhaupt auf dem Schirm".
-//! [`holt_hervor`] beantwortet die zweite Haelfte, und zwar fuer alle drei mit
-//! derselben Zeile.
+//! Die Fokusbefehle sind die Ausnahme von nichts, aber sie stellen die Frage
+//! andersherum: nicht "wirkt dieser Befehl hier", sondern "wohin fuehrt er, und
+//! steht der Bereich dort ueberhaupt auf dem Schirm". [`holt_hervor`]
+//! beantwortet die zweite Haelfte fuer jeden von ihnen mit derselben Zeile.
+//! **Eine Zahl steht hier nicht**: es ist einer je fokussierbarem Ort, also
+//! [`Fokus::ALLE`] ohne den Befund [`Fokus::Anderswo`], und die Zahl ist mit
+//! dem Editor und mit dem Git-Bereich zweimal gestiegen.
 //!
 //! # Vier Zuordnungen zwischen Fokus und Bereich, und keine davon doppelt
 //!
@@ -93,8 +95,15 @@ pub enum Fokus {
     /// Anwendungsdelegierten —, und die beiden Zwischenablage-Befehle aus C10
     /// loesen nichts aus, wie ihr Abnahmekriterium es verlangt.
     Vorschau,
-    /// Im eingebauten Editor (C1 der Editor-Runde), dem fuenften
-    /// fokussierbaren Bereich.
+    /// Im eingebauten Editor (C1 der Editor-Runde), dem vierten
+    /// fokussierbaren Ort.
+    ///
+    /// **Vierter und nicht fuenfter**: gezaehlt sind die fokussierbaren Orte,
+    /// also die Werte dieser Aufzaehlung ohne [`Fokus::Anderswo`], und die
+    /// beiden Dateilisten teilen sich einen. Auf der anderen Skala, der der
+    /// Bereiche in [`Bereich`](crate::fenstermodell::Bereich), ist der Editor
+    /// der fuenfte; wer beide Skalen unter demselben Wort fuehrt, bekommt zwei
+    /// Antworten auf eine Frage.
     ///
     /// Hierhin kommt der Fokus per Mausklick in die Textflaeche, ueber den
     /// Tastenbefehl `fokus_editor` und auf den beiden Einstiegswegen, die eine
@@ -111,7 +120,8 @@ pub enum Fokus {
     /// seinen Ersthelferrang an den Feldeditor ab, und der ist dieselbe Art wie
     /// die Textflaeche des Editors, aber nicht dasselbe Objekt.
     Editor,
-    /// Im Git-Bereich (C2 der Git-Runde), dem sechsten fokussierbaren Ort.
+    /// Im Git-Bereich (C2 der Git-Runde), dem fuenften fokussierbaren Ort und
+    /// dem sechsten Bereich der Fensterzeile.
     ///
     /// Hierhin kommt der Fokus per Mausklick in die Verlaufsliste und ueber
     /// den Tastenbefehl `fokus_git`. Die Fokusflaeche ist die Verlaufsliste
@@ -134,7 +144,7 @@ pub enum Fokus {
 }
 
 impl Fokus {
-    /// Alle fuenf Fokuswerte, in einer festen Reihenfolge.
+    /// Alle sechs Fokuswerte, in einer festen Reihenfolge.
     ///
     /// **Die eine Aufzaehlung, und seit S43 nur noch fuer die Proben.** Sie
     /// entstand mit S17, weil die Fokusabfrage sie durchlief: statt drei
@@ -142,32 +152,55 @@ impl Fokus {
     /// [`Fokus::Dateifenster`] fallen zu lassen, ging sie ueber diese Liste.
     /// S43 hat die Abfrage auf die Enthaltensfrage umgestellt, und die laeuft
     /// ueber [`Bereich::ALLE`] statt hierueber: gefragt ist, in welchem der
-    /// fuenf Teilbaeume der Ersthelfer liegt, und die Antwort darauf ist ein
+    /// sechs Teilbaeume der Ersthelfer liegt, und die Antwort darauf ist ein
     /// Bereich. Das Programm zaehlt die Fokuswerte damit nirgends mehr auf,
     /// und deshalb steht `#[cfg(test)]` daran statt eines `#[allow(dead_code)]`
     /// mit einer Ankuendigung.
     ///
     /// **Die Aufgabe, die geblieben ist, ist keine kleine.** Vier Proben gehen
-    /// ueber diese Liste — die Tafel des Fokusvorbehalts, die fuenfzig Paare
-    /// der Rahmenrolle und zwei weitere —, und ohne sie fuehrte jede von ihnen
-    /// eine eigene Liste derselben fuenf Werte. Die Tafel pruefte dann
-    /// womoeglich eine andere Menge als die, ueber die das Programm laeuft.
+    /// ueber diese Liste — die Tafel des Fokusvorbehalts, die Paare der
+    /// Rahmenrolle und zwei weitere —, und ohne sie fuehrte jede von ihnen eine
+    /// eigene Liste derselben Werte. Die Tafel pruefte dann womoeglich eine
+    /// andere Menge als die, ueber die das Programm laeuft.
     ///
-    /// **Die Feldbreite steht in der Typangabe.** Ein siebter Wert haelt
-    /// damit den Bau der Proben an, wie die Feldbreite von
-    /// [`Kommando::KENNUNGEN`](krk_core::tasten::Kommando::KENNUNGEN) es fuer
-    /// die Befehle tut; die Aufzaehlung selbst erzwingt der Uebersetzer nicht.
-    /// [`Fokus::Anderswo`] steht darin wie die uebrigen, denn genau bei ihm
-    /// haben die Proben etwas festzuhalten: kein Bereich traegt dann die
-    /// Anzeige.
+    /// # Was die Feldbreite haelt, und was sie nicht haelt
     ///
-    /// **Was die Feldbreite nicht haelt, sind die Spalten der Tafeln, die
-    /// ueber diese Liste laufen.** `JEDER_FOKUS.into_iter().zip(zeile)` bricht
-    /// bei der kuerzeren Seite ab, und eine sechswertige Liste gegen
-    /// fuenfspaltige Zeilen pruefte fuenf von sechs Werten und wuerde gruen.
-    /// Beide Tafeln — hier und in [`super::zulaessigkeit`] — halten ihre
-    /// Spaltenzahl deshalb mit einer eigenen Zusicherung gegen
-    /// `Fokus::ALLE.len()`.
+    /// **Sie haelt den Eintrag in diese Liste nicht.** `[Fokus; 6]` zwingt zu
+    /// sechs Gliedern und sagt nichts darueber, welche sechs; ein siebter Wert
+    /// der Aufzaehlung, den niemand hier eintraegt, uebersetzt vorbei. Die
+    /// Runde 23 hat das eigenstaendig uebersetzt gemessen, und der Bau hat von
+    /// den neun Stellen, die sie deshalb von Hand nachziehen musste, keine
+    /// einzige genannt.
+    ///
+    /// **Und keine Probe haelt es an dieser Liste**, anders als bei
+    /// [`Kommando::KENNUNGEN`](krk_core::tasten::Kommando::KENNUNGEN) und bei
+    /// `Marke::ALLE`, deren Zaehlproben die Varianten aus dem Quelltext der
+    /// Aufzaehlung lesen. Die stehen unter `crates/krk-core/tests/`, und
+    /// `krk-ui` hat kein Bibliotheksziel: eine Datei dort erreicht diese
+    /// Aufzaehlung nicht. Die Probe
+    /// `die_aufzaehlung_der_fokuswerte_ist_vollstaendig_und_doppelt_keinen`
+    /// unten fuehrt ihre eigene Liste derselben sechs Werte und faenge einen
+    /// siebten deshalb ebenfalls nicht. Welche Bauform das kuenftig haelt, ist
+    /// die offene Nutzerfrage
+    /// `260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`.
+    ///
+    /// **Was eine Feldbreite ueberhaupt haelt, haelt sie erst im zweiten
+    /// Schritt.** Steht der neue Wert in dieser Liste, dann haelt jedes Feld,
+    /// das ueber `Fokus::ALLE.map(…)` daraus entsteht; ein Literal und ein
+    /// `[x; N]` halten auch dann nichts und brechen zur Laufzeit am Index. Die
+    /// eine Stelle im Baum, die es ueber `ALLE.map` baut, ist
+    /// `Bereichsleiste::bereichsschalter`.
+    ///
+    /// [`Fokus::Anderswo`] steht in dieser Liste wie die uebrigen, denn genau
+    /// bei ihm haben die Proben etwas festzuhalten: kein Bereich traegt dann
+    /// die Anzeige.
+    ///
+    /// **Die Spalten der Tafeln, die ueber diese Liste laufen, haelt ebenfalls
+    /// keine Feldbreite.** `JEDER_FOKUS.into_iter().zip(zeile)` bricht bei der
+    /// kuerzeren Seite ab, und eine siebenwertige Liste gegen sechsspaltige
+    /// Zeilen pruefte sechs von sieben Werten und wuerde gruen. Beide Tafeln —
+    /// hier und in [`super::zulaessigkeit`] — halten ihre Spaltenzahl deshalb
+    /// mit einer eigenen Zusicherung gegen `Fokus::ALLE.len()`.
     #[cfg(test)]
     pub const ALLE: [Fokus; 6] = [
         Fokus::Dateifenster,
@@ -251,7 +284,7 @@ pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
 /// Die Zuordnung, die `Anwendungsdelegierter::fokus` seit S43 liest. Sie
 /// beantwortet die Enthaltensfrage und nicht die Naemlichkeitsfrage: gefragt
 /// ist nicht, welche eine Ansicht den Ersthelferrang traegt, sondern in
-/// welchem der fuenf Teilbaeume der Rang ueberhaupt liegt. Bis zum 260809
+/// welchem der sechs Teilbaeume der Rang ueberhaupt liegt. Bis zum 260809
 /// stand statt dessen ein Vergleich gegen fuenf genannte Ansichten, und jeder
 /// Ersthelfer innerhalb eines Randbereichs, der nicht dessen genannte Ansicht
 /// war — eine Bildlaufleiste etwa —, galt als Dateifenster
@@ -264,8 +297,9 @@ pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
 /// [`Wirkungsbereich::Dateifenster`] fuer beide dieselbe Regel traegt.
 ///
 /// **Vollstaendig und ohne Auffangzweig**, wie die uebrigen
-/// Fallunterscheidungen ueber [`Bereich`]: ein sechster Bereich haelt hier den
-/// Bau an und erzwingt seine Einordnung.
+/// Fallunterscheidungen ueber [`Bereich`]: ein siebter Bereich haelt hier den
+/// Bau an und erzwingt seine Einordnung, sobald er in der Aufzaehlung
+/// [`Bereich`] steht.
 pub const fn in_bereich(bereich: Bereich) -> Fokus {
     match bereich {
         Bereich::Lesezeichen => Fokus::Leiste,
@@ -316,7 +350,7 @@ pub const fn bereich_mit_fokus(fokus: Fokus, aktiv: Fensterseite) -> Option<Bere
 /// `decisions/260809-2043_*_bedeutet-der-akzentrahmen-kuenftig-den-fokus-oder-das-aktive-dateifenster.md`
 /// ist offen und haelt diesen Bau nicht auf. Waehlt der Nutzer die dritte
 /// Moeglichkeit, den Rahmen allein fuer den Fokus, entfaellt [`Self::AktivOhneFokus`]
-/// aus [`rahmenrolle`] und wird [`Self::Ruhig`]; die fuenf Kaesten, der
+/// aus [`rahmenrolle`] und wird [`Self::Ruhig`]; die sechs Kaesten, der
 /// Ausloesepunkt und [`bereich_mit_fokus`] bleiben unberuehrt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rahmenrolle {
@@ -427,10 +461,18 @@ mod tests {
     /// Fokuswerte.
     ///
     /// Die Pruefungen darunter zeigen jeweils eine Zeile dieser Tafel mit ihrer
-    /// Begruendung; die Tafel zeigt, dass keine Zeile und keine Spalte fehlt.
-    /// Sie ist die Stelle, an der ein siebter Fokuswert oder ein neunter
-    /// Wirkungsbereich auffaellt: beide Feldbreiten stehen in der Typangabe,
-    /// und eine vergessene Zeile haelt den Bau an.
+    /// Begruendung; die Tafel zeigt fuer die heutigen acht mal sechs, dass
+    /// keine Zeile und keine Spalte fehlt, und fuer keine andere Zahl.
+    ///
+    /// **Was einen siebten Fokuswert oder einen neunten Wirkungsbereich
+    /// auffallen laesst, sind nicht die beiden Feldbreiten.** Eine Feldbreite
+    /// `[T; N]` zwingt zu N Gliedern und sagt nichts darueber, welche N: der
+    /// neue Wert kaeme in der Aufzaehlung an, ohne dass diese Tafel eine Zeile
+    /// oder eine Spalte dafuer bekaeme, und der Bau bliebe gruen. Was ihn
+    /// faengt, ist zweierlei und beides steht daneben: [`wirkt`] ist ein
+    /// `match` ueber [`Wirkungsbereich`] ohne Auffangzweig, und die Zusicherung
+    /// unter der Tafel haelt die Spaltenzahl jeder Zeile gegen
+    /// `Fokus::ALLE.len()`.
     ///
     /// **Die Spaltenzahl steht daneben ausdruecklich zur Pruefung**, weil
     /// `zip` bei der kuerzeren Seite abbricht: eine Zeile mit einer Spalte zu
@@ -759,9 +801,13 @@ mod tests {
     /// bestand. Ein doppelter Wert kostete nur einen Vergleich, faellt hier
     /// aber mit auf.
     ///
-    /// Die Feldbreite `[Fokus; 6]` haelt den Bau an, wenn ein siebter Wert
-    /// dazukommt; diese Pruefung deckt die andere Haelfte ab, dass die sechs
-    /// Plaetze mit sechs **verschiedenen** Werten belegt sind.
+    /// **Die Feldbreite `[Fokus; 6]` sichert das nicht.** Sie zwingt zu sechs
+    /// Gliedern und sagt nichts darueber, welche sechs; ein siebter Wert der
+    /// Aufzaehlung uebersetzt daran vorbei, solange niemand ihn eintraegt.
+    /// Diese Pruefung deckt ab, dass die sechs Plaetze mit sechs
+    /// **verschiedenen** Werten belegt sind — und auch sie nur fuer die sechs,
+    /// die ihr Rumpf aufzaehlt. Der Doc-Kommentar an [`Fokus::ALLE`] sagt, was
+    /// daraus folgt.
     #[test]
     fn die_aufzaehlung_der_fokuswerte_ist_vollstaendig_und_doppelt_keinen() {
         for wert in [

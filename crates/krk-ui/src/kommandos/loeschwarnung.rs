@@ -247,9 +247,11 @@
 //! dazu sagt.
 //!
 //! **Die Bereichsleiste ist keiner dieser Wege**, obwohl auch sie Kommandos
-//! meldet: `crate::appkit::bereichsleiste` schickt zehn, und alle zehn sind
-//! Umschalter — fuenf Bereiche, drei Spalten, die tiefe Suche und der
-//! Inhaltsfilter. `Kommando::InPapierkorb` ist keines davon, und wer sie in
+//! meldet: `crate::appkit::bereichsleiste` schickt ausschliesslich Umschalter
+//! — je einen je Bereich, je einen je schaltbarer Spalte, dazu die tiefe Suche
+//! und den Inhaltsfilter. **Eine Zahl steht hier nicht**, weil sie mit jedem
+//! Bereich und jeder Spalte waechst und seit der Bereichsleisten-Runde mehrfach
+//! gewachsen ist. `Kommando::InPapierkorb` ist keiner davon, und wer sie in
 //! dieser Aufzaehlung mitzaehlt, sucht einen Loeschweg, der nie bestand.
 //!
 //! **`f8` ist mit Buendel D dazugekommen.** Mit dem Wegfall des endgueltigen

@@ -113,9 +113,11 @@ mod tests {
 
     /// Jeder Fokuswert bekommt seine Antwort, und `Anderswo` keine.
     ///
-    /// Die Tafel steht an einem Stueck da, damit ein fehlender Wert auffaellt:
-    /// die Feldbreite `[Fokus; 6]` in `Fokus::ALLE` haelt den Bau an, und
-    /// diese Probe deckt die andere Haelfte ab, naemlich dass jeder Wert eine
+    /// Die Tafel steht an einem Stueck da, damit ein fehlender Wert auffaellt.
+    /// **Die Feldbreite `[Fokus; 6]` in `Fokus::ALLE` haelt das nicht**: sie
+    /// zwingt zu sechs Gliedern und sagt nichts darueber, welche sechs. Was
+    /// haelt, ist [`titel`] selbst, ein `match` ueber [`Fokus`] ohne
+    /// Auffangzweig; diese Probe deckt daneben ab, dass jeder Wert eine
     /// Antwort traegt, die zu ihm gehoert.
     #[test]
     fn jeder_fokuswert_bekommt_seinen_pfad() {

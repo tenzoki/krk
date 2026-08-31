@@ -63,16 +63,24 @@
 //!
 //! Jeder Schalter traegt `setRefusesFirstResponder(true)` (C1.4). Das ist
 //! keine Vorsicht, sondern die tragende Entscheidung dieses Moduls, und der
-//! Plan begruendet sie unter `## Warum die Leiste keinen sechsten Fokuswert
-//! bekommt`: `Anwendungsdelegierter::ersthelferbereich` laeuft ueber
-//! [`Bereich::ALLE`] und faellt auf `Fokus::Dateifenster` zurueck, wenn der
-//! Ersthelfer in keinem der fuenf Teilbaeume liegt. Die Leiste liegt in
-//! keinem — sie ist keine Unteransicht der `NSSplitView`, sondern ihre
-//! Schwester unter der Inhaltsflaeche. Naehme ein Schalter den Rang an,
-//! antwortete `fokus()` weiter "Dateifenster", waehrend die Tasten beim
-//! Schalter ankaemen: eine falsche Auskunft ueber den Fokus, und die ist
-//! teurer als ein Absturz. `Fokus` bekommt deshalb keinen sechsten Wert,
-//! sondern der Fall wird ausgeschlossen.
+//! Plan begruendet sie unter `## Warum die Leiste keinen Fokuswert bekommt`:
+//! `Anwendungsdelegierter::ersthelferbereich` laeuft ueber [`Bereich::ALLE`]
+//! und faellt auf `Fokus::Dateifenster` zurueck, wenn der Ersthelfer in keinem
+//! der sechs Teilbaeume liegt. Die Leiste liegt in keinem — sie ist keine
+//! Unteransicht der `NSSplitView`, sondern ihre Schwester unter der
+//! Inhaltsflaeche. Naehme ein Schalter den Rang an, antwortete `fokus()`
+//! weiter "Dateifenster", waehrend die Tasten beim Schalter ankaemen: eine
+//! falsche Auskunft ueber den Fokus, und die ist teurer als ein Absturz. Der
+//! Fall wird deshalb ausgeschlossen, statt ihn zu benennen.
+//!
+//! **Der Unterschied zum Git-Bereich liegt im Ansichtsbaum und nicht in der
+//! Zahl der Werte.** Die Runde 23 hat [`Fokus`](crate::kommandos::fokus::Fokus)
+//! einen Wert fuer den Git-Bereich gegeben, und das ist kein Widerspruch zu
+//! diesem Absatz: der Git-Bereich **ist** eine Unteransicht der `NSSplitView`
+//! und liegt damit in einem der Teilbaeume, die `ersthelferbereich` durchgeht.
+//! Wer dort den Ersthelferrang haelt, bekommt eine richtige Auskunft ueber den
+//! Fokus; wer ihn hier haelt, bekommt eine falsche. Die Leiste bekaeme deshalb
+//! auch dann keinen Fokuswert, wenn die Fensterzeile noch weiter waechst.
 //!
 //! # Warum Ankreuzfelder
 //!
@@ -140,8 +148,10 @@ const ABSTAND: f64 = 10.0;
 /// Der Abstand zwischen den Bereichs- und den Spaltenschaltern.
 ///
 /// Groesser als [`ABSTAND`], weil die beiden Gruppen verschiedene Dinge
-/// schalten: die fuenf die Flaechen des Fensters, die drei die Spalten in zwei
-/// von ihnen.
+/// schalten: die einen die Flaechen des Fensters, die anderen die Spalten in
+/// zwei von ihnen. **Zahlen stehen hier nicht**: die eine Gruppe folgt
+/// [`Bereich::ALLE`], die andere den schaltbaren Spalten, und beide sind seit
+/// der Bereichsleisten-Runde gewachsen.
 const GRUPPENABSTAND: f64 = 24.0;
 
 /// Die Breite, mit der die Leiste aufgebaut wird.

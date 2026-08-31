@@ -12,7 +12,7 @@
 //! ```text
 //! Anwendungsdelegierter
 //!   ├─ Fenstermodell        aktives Dateifenster, Sichtbarkeit, Breiten
-//!   ├─ Aufteilung           die NSSplitView mit ihren vier Bereichen
+//!   ├─ Aufteilung           die NSSplitView mit ihren sechs Bereichen
 //!   ├─ Dateifenster × 2     Tableiste, Dateiliste, Statuszeile, Tabs
 //!   ├─ Leiste               Lesezeichen und Geraete, der zweite Bereich (C5)
 //!   ├─ NSWindow             genau eines, siehe unten
@@ -97,8 +97,9 @@
 //!
 //! # Der eine Fokusvorbehalt (C5)
 //!
-//! Seit S17 der Editor-Runde gibt es vier fokussierbare Bereiche — die beiden
-//! Dateilisten, die Leiste, die Vorschau und die Textflaeche des Editors —, und
+//! Seit C2 der Git-Runde gibt es fuenf fokussierbare Bereiche — die beiden
+//! Dateilisten, die Leiste, die Vorschau, die Textflaeche des Editors und die
+//! Verlaufsliste des Git-Bereichs —, und
 //! [`Anwendungsdelegierter::kommando_ausfuehren`] fragt **einmal**, wo der
 //! Fokus steht:
 //!
@@ -1234,7 +1235,7 @@ impl Anwendungsdelegierter {
         unsafe { msg_send![super(this), init] }
     }
 
-    /// Baut die vier Bereiche, stellt die Sitzung her und liest die Ordner.
+    /// Baut die sechs Bereiche, stellt die Sitzung her und liest die Ordner.
     fn oberflaeche_aufbauen(&self) {
         let mtm = self.mtm();
         let ivars = self.ivars();
@@ -1328,8 +1329,8 @@ impl Anwendungsdelegierter {
         // **Die Leiste am Fensterfuss, darueber die eine Statuszeile, darueber
         // die Fensterzeile.** Alle drei liegen in derselben Traegerflaeche;
         // weder Leiste noch Zeile sind eine Unteransicht der Aufteilung, weil
-        // `ersthelferbereich` deren fuenf Bereiche durchgeht und eine Ansicht
-        // darin ein sechster Bereich waere.
+        // `ersthelferbereich` deren sechs Bereiche durchgeht und eine Ansicht
+        // darin ein siebter Bereich waere.
         let bereichsleiste = Bereichsleiste::bauen(mtm);
         let statuszeile = Statuszeile::bauen(mtm);
         let inhalt = fenster::fensterinhalt(
@@ -2403,7 +2404,7 @@ impl Anwendungsdelegierter {
     /// Fuehrt einen Fokusbefehl aus: erst den Bereich hervorholen, dann den
     /// Fokus setzen (C2, C5, C6).
     ///
-    /// Der Weg aller drei Fokusbefehle, und sie gehen ihn ohne Sonderfall.
+    /// Der Weg jedes Fokusbefehls, und sie gehen ihn ohne Sonderfall.
     /// In welchem Bereich ein Fokuswert wohnt, sagt
     /// [`fokus::bereich_mit_fokus`](crate::kommandos::fokus::bereich_mit_fokus)
     /// und sonst nichts; dort steht auch, warum ein Fokusbefehl seinen Bereich
@@ -2456,7 +2457,7 @@ impl Anwendungsdelegierter {
     /// [`crate::kommandos::fokus::holt_hervor`].** Jene ist eine reine
     /// Zuordnung von einem Fokusziel auf einen Bereich und kennt keinen
     /// Zustand; ihr Doc-Kommentar sagt es ausdruecklich, und ein
-    /// Zustandsvorbehalt darin traefe die drei uebrigen Fokusbefehle mit.
+    /// Zustandsvorbehalt darin traefe die uebrigen Fokusbefehle mit.
     ///
     /// Steht der Editor schon auf dem Schirm, geht der Fokus hinein, auch ohne
     /// Datei: der Nutzer sieht die Flaeche und soll erfahren, wo seine Tasten
@@ -2512,7 +2513,7 @@ impl Anwendungsdelegierter {
     /// (`issues/260809-1640_*_der-fokus-kennt-den-editor-nicht-obwohl-der-abgriff-ihn-seit-s4-durchlaesst.md`).
     ///
     /// **Die Fallunterscheidung ist erschoepfend und ohne Auffangzweig.** Ein
-    /// sechster Fokuswert haelt hier den Bau an, wie bei
+    /// siebter Fokuswert haelt hier den Bau an, wie bei
     /// [`Kommando::wirkungsbereich`] und
     /// [`crate::kommandos::fokus::holt_hervor`]; genau diese Erzwingung fehlte
     /// der `if`-Kette, die vorher las.
@@ -3629,7 +3630,7 @@ impl Anwendungsdelegierter {
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Der Notizzettel aus C1 der Runde 9. Er steht hier und nicht bei
             // `bereichskommando`, weil er `Wirkungsbereich::Ueberall` traegt
-            // und keinem Bereich gehoert: er geht aus jedem der fuenf Fokuswerte
+            // und keinem Bereich gehoert: er geht aus jedem der sechs Fokuswerte
             // auf, und ein einzelnes Dateifenster wuesste mit ihm nichts
             // anzufangen. **Ohne diesen Zweig fiele der Befehl durch den
             // Auffangzweig unten und taete nichts**, und der Uebersetzer sagte
@@ -4035,7 +4036,7 @@ impl Anwendungsdelegierter {
     ///
     /// **Worauf der Befehl wirkt, entscheidet der Fokus, und die Verzweigung
     /// steht nicht hier.** [`teilen::worauf`] beantwortet sie als reine
-    /// Rechnung ueber alle fuenf Fokuswerte und ist damit ohne Fenster
+    /// Rechnung ueber alle sechs Fokuswerte und ist damit ohne Fenster
     /// pruefbar; diese Stelle verzweigt nur noch ueber die drei Werte, die
     /// dabei herauskommen, und holt zu jedem seine Pfade. Es ist **keine
     /// zweite Fokusabfrage**: der Wert kommt aus der einen in
@@ -4556,7 +4557,7 @@ impl Anwendungsdelegierter {
     ///
     /// **Kein [`Zeilenmass`] und kein `aufteilung_nachziehen` von hier aus.**
     /// Eine Spalte liegt in der Dateiliste und nicht in der Fensterzeile, die
-    /// Breiten der fuenf Bereiche stehen vorher und nachher gleich (Kriterium
+    /// Breiten der sechs Bereiche stehen vorher und nachher gleich (Kriterium
     /// C3.4). Den Nachzug der Aufteilung ruft [`Self::kommando_ausfuehren`]
     /// ohnehin fuer jedes ausgefuehrte Kommando; er findet dann eine
     /// unveraenderte Sichtbarkeit vor.
@@ -4865,7 +4866,7 @@ impl Anwendungsdelegierter {
     /// Lesezeichenleiste und die Vorschau bekamen ihre Breite mit der Maus, und
     /// C7 verlangte nichts anderes. Das dritte Abnahmekriterium von C1 verlangt
     /// es jetzt fuer den Editor, "solange er den Fokus hat", und die Antwort
-    /// darauf ist dieselbe Regel fuer alle vier Bereiche und keine Ausnahme fuer
+    /// darauf ist dieselbe Regel fuer jeden Bereich und keine Ausnahme fuer
     /// einen. Ein eigenes Kuerzelpaar fuer den Editor entsteht dafuer nicht:
     /// `bereich_verbreitern` und `bereich_verschmaelern` tragen
     /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
@@ -5431,7 +5432,7 @@ impl Anwendungsdelegierter {
         zeile.zeigen(satz.as_ref().map(|(text, art)| (text.as_str(), *art)));
     }
 
-    /// Schreibt die Rahmenfarben der fuenf Bereiche und den Fenstertitel (C9,
+    /// Schreibt die Rahmenfarben der sechs Bereiche und den Fenstertitel (C9,
     /// C11).
     ///
     /// **Der eine Schreiber der Anzeige, mit zwei Anlaessen.** Der erste ist
@@ -5477,7 +5478,7 @@ impl Anwendungsdelegierter {
     /// Fenstertitel (C11).
     ///
     /// **Die Regel steht nicht hier.** [`crate::fenstertitel::titel`] ist eine
-    /// reine Funktion ueber die fuenf Fokuswerte, ohne AppKit und ohne
+    /// reine Funktion ueber die sechs Fokuswerte, ohne AppKit und ohne
     /// Auffangzweig; diese Funktion sammelt die drei Pfade ein und schreibt das
     /// Ergebnis. `None` heisst "den Titel stehen lassen".
     ///
@@ -6298,8 +6299,8 @@ impl Anwendungsdelegierter {
     /// [`Bereich::ALLE`], holt zu jedem Wert die Wurzelansicht ueber
     /// [`Aufteilung::bereichssicht`] und fragt `isDescendantOf:`; von
     /// [`Bereich`] auf [`Fokus`] kommt die erschoepfende Zuordnung
-    /// [`fokus::in_bereich`](crate::kommandos::fokus::in_bereich). Die fuenf
-    /// Teilbaeume sind zueinander fremd, weil es die fuenf Unteransichten einer
+    /// [`fokus::in_bereich`](crate::kommandos::fokus::in_bereich). Die sechs
+    /// Teilbaeume sind zueinander fremd, weil es die sechs Unteransichten einer
     /// `NSSplitView` sind; ein Ersthelfer liegt deshalb in hoechstens einem,
     /// und der erste Treffer ist die Antwort.
     ///
@@ -6368,7 +6369,7 @@ impl Anwendungsdelegierter {
     ///
     /// Der Durchgang selbst steht in [`Self::bereich_des_ersthelfers`]; diese
     /// Funktion ist nur noch seine Uebersetzung in einen Fokuswert. **Ein
-    /// Ersthelfer, der in keinem der fuenf Bereiche liegt, gilt weiter als
+    /// Ersthelfer, der in keinem der sechs Bereiche liegt, gilt weiter als
     /// Dateifenster**, und das ist der Rueckfall, den es seit S43 gibt: das
     /// Fenster selbst etwa traegt den Rang, bevor der Aufbau den Fokus gesetzt
     /// hat.
@@ -6379,7 +6380,7 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// In welchem der fuenf Bereiche der Ersthelfer liegt, wenn er in einem
+    /// In welchem der sechs Bereiche der Ersthelfer liegt, wenn er in einem
     /// liegt.
     ///
     /// **Die eine Stelle, die den Ersthelferrang auf einen Bereich abbildet**,
@@ -7943,7 +7944,7 @@ impl Anwendungsdelegierter {
     ///
     /// **Nicht dasselbe wie [`Self::editor_schliessen`] darueber.** Der Weg
     /// geht durch [`Self::bereich_umschalten`] und damit durch dieselbe Stelle
-    /// wie die vier anderen Bereiche: die Flaeche verschwindet, der Editor
+    /// wie die fuenf anderen Bereiche: die Flaeche verschwindet, der Editor
     /// behaelt seine Datei samt Stand, und keine Nachfrage erscheint. Ein
     /// ungesicherter Stand ist danach nicht verloren, sondern nur unsichtbar;
     /// wer ihn aufgeben will, nimmt das Schliessen.

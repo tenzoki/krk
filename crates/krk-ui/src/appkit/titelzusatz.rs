@@ -31,9 +31,12 @@
 //! unveraendert allein das Ergebnis von [`crate::fenstertitel::titel`], und
 //! dieses Modul ruft `setTitle:` nicht.
 //!
-//! Der Bereich ist **kein sechster Bereich der Fensterzeile**. Er liegt in der
+//! Der Bereich ist **kein siebter Bereich der Fensterzeile**. Er liegt in der
 //! Titelleiste und nicht in der `NSSplitView`, [`super::aufteilung`] kennt ihn
-//! nicht, und `Bereich` wie `Fokus` bleiben bei fuenf Werten.
+//! nicht, und weder `Bereich` noch `Fokus` haben seinetwegen je einen Wert
+//! bekommen. **Die Zahl der Werte steht hier nicht**, weil sie mit diesem
+//! Bereich nichts zu tun hat und sie seit der Titelleisten-Runde gestiegen
+//! ist; was sie heute ist, sagen `Bereich::ALLE` und `Fokus::ALLE`.
 //!
 //! # Der Text steht einmal da und wird nie nachgeschrieben
 //!

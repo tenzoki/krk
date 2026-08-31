@@ -231,8 +231,12 @@ fn maskiert(text: &str) -> String {
 /// unterscheidbar, und der Leser der Datei hat keinen Weg, das zu merken.
 ///
 /// **Der Wortlaut ist mit Bedacht keine Ortsangabe.** Die uebrigen Zellen
-/// dieser Spalte nennen Orte — "Editor", "Textfelder und Editor", die sieben
-/// Beschriftungen von [`Wirkungsbereich`](krk_core::tasten::Wirkungsbereich).
+/// dieser Spalte nennen Orte — "Editor", "Textfelder und Editor", je eine
+/// Beschriftung von [`Wirkungsbereich`](krk_core::tasten::Wirkungsbereich). Eine
+/// Zahl steht hier nicht: sie stand bis zur Git-Runde auf sieben und war mit
+/// `Wirkungsbereich::Vorschau` aus der Runde 20 schon falsch; gezaehlt wird
+/// sie mit
+/// `awk '/^pub enum Wirkungsbereich/,/^}/' crates/krk-core/src/tasten/belegung.rs`.
 /// Dieser hier nennt stattdessen KRK selbst und steht in Klammern, damit ihn
 /// niemand fuer eine Aussage darueber haelt, **wo** der Befehl wirkt: er sagt
 /// allein, dass KRK die Funktion nicht einordnen konnte. "Eingeordnet" ist

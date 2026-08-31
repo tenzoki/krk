@@ -354,7 +354,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
     - Kriterien: C10.1, C10.3, C3.8 (Prüfhälfte)
     - Dependencies: Schritt 3
 
-11. **Der Nachzug: die Zählaussagen über Bereiche und Fokuswerte**
+11. **Der Nachzug: die Zählaussagen über Bereiche und Fokuswerte** [DONE]
     - Executor: `coder`
     - Files: die sechzehn Dateien der ersten Hälfte aus Entscheidung 9, dazu `crates/krk-ui/src/belegungsausgabe.rs`
     - Changes: **Zuerst das Muster erweitern, dann erheben, dann zählen** — die dritte Bedingung aus `## Stops when`, und der Anlass ist gefunden: `belegungsausgabe.rs:234-235` sagt „die sieben Beschriftungen von `Wirkungsbereich`", der Baum trägt acht, und das Muster aus C9.4 findet die Stelle nicht. Ergänzt werden mindestens `sieben Beschriftungen`, `acht Wirkungsbereiche`, `vier fokussierbaren`, `fuenf Kaesten`, `fuenf Rahmen`, `fuenf Teilbaeume`, `fuenf Werten`, `fuenf Bereichen`, `sechs Bereiche`. Die neue Zahl steht im History-Eintrag.
