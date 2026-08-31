@@ -6,7 +6,7 @@
 //! │ Tableiste (appkit::tableiste)│  ein Abschnitt je Tab
 //! ├──────────────────────────────┤
 //! │ NSScrollView                 │  der Inhalt des sichtbaren Tabs
-//! │   NSTableView, vier Spalten  │
+//! │   NSTableView, fuenf Spalten │
 //! └──────────────────────────────┘
 //! ```
 //!
@@ -4282,7 +4282,7 @@ impl DateifensterDelegierter {
         // zwei blaue Kennzeichen liessen sich nicht unterscheiden.
         //
         // **Zwei Kennzeichen und nicht nur die Farbe.** Eine markierte Zeile
-        // steht in allen vier Spalten fett; wer die Farbe nicht unterscheiden
+        // steht in allen fuenf Spalten fett; wer die Farbe nicht unterscheiden
         // kann, sieht die Form (S16c). Beide Eigenschaften werden in **jedem**
         // Durchgang gesetzt und nicht nur im markierten Fall: die
         // Zellenansichten sind wiederverwendet, und eine ungesetzte Eigenschaft
@@ -4515,8 +4515,10 @@ impl DateifensterDelegierter {
     /// Eintraegen ohne Ruckeln blaettert: AppKit haelt nur die sichtbaren
     /// Ansichten und reicht die aus dem Bild gelaufenen zurueck.
     ///
-    /// **Alle vier Spalten ruecken gleich weit ein, und das ist gemessen.** Am
-    /// 260811 auf macOS 15.7.7, an vier Feldern aus dieser Methode: die
+    /// **Alle Spalten ruecken gleich weit ein, und das ist gemessen.** Am
+    /// 260811 auf macOS 15.7.7, an den damals vier Feldern aus dieser Methode;
+    /// die Markenspalte der Git-Runde geht durch dieselbe Zeile und ist nicht
+    /// eigens nachgemessen. Gemessen wurde: die
     /// Zeichenflaeche der Zelle beginnt in jeder Spalte bei 0 und nimmt die
     /// volle Breite, die Randabstaende sind ueberall 2 Punkt links wie rechts,
     /// die Grundlinie liegt ueberall 13 Punkt unter der Oberkante. Das
@@ -4539,8 +4541,8 @@ impl DateifensterDelegierter {
         let mtm = self.mtm();
         // Die beschreibbare Spalte bekommt die Unterklasse [`Namensfeld`]: ihre
         // Zelle ist zugleich der Editor des Umbenennens und muss das
-        // Ordnerzeichen beim Beginn einer Bearbeitung ablegen. Die drei
-        // uebrigen Spalten bleiben, was sie waren. Es ist dieselbe Bedingung
+        // Ordnerzeichen beim Beginn einer Bearbeitung ablegen. Die uebrigen
+        // Spalten bleiben, was sie waren. Es ist dieselbe Bedingung
         // wie beim `setEditable(true)` weiter unten, weil es dieselbe Sache
         // ist.
         let feld = if spalte.beschreibbar() {
@@ -4856,7 +4858,7 @@ impl Namensfeld {
     /// Ein leeres Feld der Namensspalte.
     ///
     /// **Ueber `+labelWithString:` und nicht ueber `initWithFrame:`**, damit
-    /// diese Zelle in jeder Eigenschaft die des Vorbilds bleibt, das die drei
+    /// diese Zelle in jeder Eigenschaft die des Vorbilds bleibt, das die
     /// uebrigen Spalten weiter unmittelbar bauen. Die Sammelmethode legt ueber
     /// die empfangende Klasse an und liefert deshalb ein `Namensfeld`; am
     /// 260815 gemessen, zusammen mit dem Vergleich beider Wege: sie
@@ -5152,8 +5154,10 @@ impl Dateifenster {
     ///   Zellenabstand der Namensspalte zu: bei 700 Punkten Sichtflaeche waechst
     ///   Name von 337 auf 434 (Groesse weg) und auf 541 (Typ zusaetzlich weg).
     ///   Der Gewinn erreicht die Sichtflaeche also nie. Steht die Tabelle
-    ///   vorher schon breiter als ihre Sichtflaeche — vier Spalten brauchen
-    ///   rund 603 Punkte, zwei Dateifenster nebeneinander sind schmaler —, dann
+    ///   vorher schon breiter als ihre Sichtflaeche — die vier Spalten der
+    ///   Bereichsleisten-Runde brauchten rund 603 Punkte (gemessen am 260812),
+    ///   und die Markenspalte kommt seither dazu; zwei Dateifenster
+    ///   nebeneinander sind schmaler —, dann
     ///   bleibt sie es auch nach dem Wegschalten, und die letzte sichtbare
     ///   Spalte steht weiter ausserhalb des Bildes. Genau das war der Defekt
     ///   `shared/issues/260812-0907_*`.

@@ -1,9 +1,18 @@
-//! Die Bereichsleiste am Fensterfuss: zehn Ankreuzfelder, sonst nichts.
+//! Die Bereichsleiste am Fensterfuss: Ankreuzfelder, sonst nichts.
 //!
-//! Fuenf Schalter fuer die Bereiche der Fensterzeile (C2 der
-//! Bereichsleisten-Runde), drei fuer die schaltbaren Spalten der Dateilisten
-//! (C3), seit der Filter-Runde einer fuer die tiefe Suche (C2.1) und seit der
-//! Inhaltsfilter-Runde einer fuer den Inhaltsfilter (C2.1). Jeder
+//! **Wie viele es sind, steht hier nicht.** Die Zahl ist seit der
+//! Bereichsleisten-Runde viermal gewachsen, und die naechste Spalte oder der
+//! naechste Bereich macht sie wieder falsch. Sie setzt sich zusammen aus je
+//! einem Schalter je Bereich der Fensterzeile (C2 der Bereichsleisten-Runde,
+//! gereiht ueber [`Bereich::ALLE`]), je einem je schaltbarer Spalte der
+//! Dateilisten (C3, gereiht ueber die Werte von [`Spalte::ALLE`], fuer die
+//! [`kommando_der_spalte`] ein Kommando liefert), einem fuer die tiefe Suche
+//! seit der Filter-Runde (C2.1) und einem fuer den Inhaltsfilter seit der
+//! Inhaltsfilter-Runde (C2.1). Gezaehlt werden sie mit
+//! `Bereichsleiste::alle_schalter().len()`, das ueber dieselben zwei
+//! Aufzaehlungen laeuft, aus denen [`Bereichsleiste::bauen`] baut; die Probe
+//! `tests::zwoelf_schalter_der_leiste_tragen_ein_kommando` haelt die Zahl
+//! gegen den heutigen Stand und traegt sie in ihrem Namen. Jeder Schalter
 //! zeigt, ob sein Gegenstand steht, und schickt bei
 //! einem Klick **ein Kommando** los; ausgefuehrt wird es dort, wo auch der
 //! Tastenbefehl ausgefuehrt wird. Einen zweiten Weg an den Pruefungen vorbei
@@ -29,7 +38,7 @@
 //! beiden, weil sein Selektor sein Kommando schon kennt.
 //!
 //! **Sie sind auch die zwei Groessen dieser Leiste, die nicht fensterweit
-//! gelten.** Die acht anderen stehen im
+//! gelten.** Alle uebrigen stehen im
 //! [`Fenstermodell`](crate::fenstermodell::Fenstermodell),
 //! diese beiden stehen am `Ordnermodell` des sichtbaren Tabs im **aktiven**
 //! Dateifenster. Daran haengen die drei Anlaesse, die
@@ -88,8 +97,8 @@
 //! `buttonWithTitle:target:action:`, also ueber dieselbe Familie bequemer
 //! Erzeuger; ein Ankreuzfeld ist deren zweistufiges Geschwister und zeigt
 //! seinen Zustand von sich aus. Ein `NSSegmentedControl` waere kompakter,
-//! fuehrte aber einen im Baum unbekannten Bedienelementtyp ein und stellte die
-//! zehn Schalter ueber eine Segmentnummer statt ueber eine gehaltene Ansicht
+//! fuehrte aber einen im Baum unbekannten Bedienelementtyp ein und stellte
+//! jeden Schalter ueber eine Segmentnummer statt ueber eine gehaltene Ansicht
 //! je Bereich zu.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
@@ -239,8 +248,8 @@ const KOMMANDO_DES_INHALTS: Kommando = Kommando::InhaltssucheUmschalten;
 /// Die Aufschrift des Schalters des Inhaltsfilters (C2.1 der
 /// Inhaltsfilter-Runde).
 ///
-/// **Englisch wie "Deep" und nicht uebersetzt**, waehrend die acht Schalter
-/// der beiden Gruppen deutsch beschriftet sind. Die Kennung des Befehls heisst
+/// **Englisch wie "Deep" und nicht uebersetzt**, waehrend die Schalter der
+/// beiden Gruppen deutsch beschriftet sind. Die Kennung des Befehls heisst
 /// dagegen `inhaltssuche_umschalten` und folgt der Schreibweise der uebrigen
 /// Befehle; Aufschrift und Kennung sind zwei verschiedene Dinge.
 const AUFSCHRIFT_DES_INHALTS: &str = "Content";
@@ -285,7 +294,7 @@ pub struct LeistenquellenIvars {
 }
 
 define_class!(
-    /// Das Ziel, das der Klick auf einen der zehn Schalter anspricht.
+    /// Das Ziel, das der Klick auf einen Schalter dieser Leiste anspricht.
     // SAFETY:
     // - Die Oberklasse NSObject stellt keine Bedingungen an Unterklassen.
     // - Die Klasse implementiert `Drop` nicht.
@@ -318,7 +327,7 @@ define_class!(
             self.geklickt(absender, kommando);
         }
 
-        /// Der Nutzer hat einen der drei Spaltenschalter angeklickt.
+        /// Der Nutzer hat einen der Spaltenschalter angeklickt.
         ///
         /// Die `tag` ist hier die Stelle in [`Spalte::ALLE`], aus demselben
         /// Grund wie oben. Eine Spalte ohne Kommando kann hier nicht
@@ -379,7 +388,7 @@ impl Leistenquelle {
         unsafe { msg_send![super(this), init] }
     }
 
-    /// Was bei jedem Klick geschieht, gleich auf welchen der zehn Schalter und
+    /// Was bei jedem Klick geschieht, gleich auf welchen Schalter und
     /// gleich, ob daraus ein Kommando wird.
     ///
     /// **Zuerst die Selbstkippung zuruecknehmen, dann melden.** Ein
@@ -460,7 +469,7 @@ pub struct Bereichsleiste {
     /// der Spaltenschalter — machte aus der einen Bauzeitpruefung dieses Baums
     /// eine Laufzeitpruefung.
     bereichsschalter: [Retained<NSButton>; 6],
-    /// Die Schalter der drei schaltbaren Spalten, in der Reihenfolge, die
+    /// Die Schalter der schaltbaren Spalten, in der Reihenfolge, die
     /// [`spaltenfach`] nennt.
     ///
     /// # Was die Feldbreite haelt, und was sie nicht haelt
@@ -499,7 +508,7 @@ pub struct Bereichsleiste {
 }
 
 impl Bereichsleiste {
-    /// Baut die Leiste mit ihren zehn Schaltern.
+    /// Baut die Leiste mit ihren Schaltern.
     ///
     /// Die Schalter stehen nebeneinander von links nach rechts, jeder so
     /// breit, wie seine Aufschrift ihn macht. Ihre Zustaende sind nach dem Bau
@@ -613,7 +622,7 @@ impl Bereichsleiste {
         *self.quelle.ivars().melden.borrow_mut() = Some(melden);
     }
 
-    /// Schreibt die zehn Schalterzustaende aus dem Modell.
+    /// Schreibt die Schalterzustaende aus dem Modell.
     ///
     /// **Der eine Schreiber, und er schreibt nichts als Zustaende.** Er ruft
     /// weder `anwenden` noch `setHidden` und fasst den Ersthelfer nicht an,
@@ -621,7 +630,7 @@ impl Bereichsleiste {
     /// eine ausgeblendete Ansicht, die den Rang haelt, laesst AppKit ihn neu
     /// vergeben und die Meldung ein zweites Mal ausloesen.
     ///
-    /// **Immer alle zehn und nie nur der geaenderte.** Ein Befehl kann zwei
+    /// **Immer alle und nie nur der geaenderte.** Ein Befehl kann zwei
     /// Schalter bewegen (Vorschau und Editor teilen sich die Flaeche, C2.3),
     /// und der erste Ruf ueberhaupt schreibt die ganze geladene Sitzung in die
     /// Leiste, ohne dass jemand geklickt haette. Die Frage "welcher hat sich

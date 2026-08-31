@@ -165,7 +165,7 @@ define_class!(
     ///
     /// Anders als beim Dateifenster, wo Quelle und Delegierter getrennt sind:
     /// dort haelt der Delegierte zwei Formatierer und zwei Schriften fuer die
-    /// vier Spalten, hier gibt es eine Spalte mit einer Beschriftung. Zwei
+    /// fuenf Spalten, hier gibt es eine Spalte mit einer Beschriftung. Zwei
     /// Objekte dafuer waeren zwei Halter fuer denselben Zustand.
     // SAFETY:
     // - Die Oberklasse NSObject stellt keine Bedingungen an Unterklassen.

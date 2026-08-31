@@ -1592,7 +1592,7 @@ impl Anwendungsdelegierter {
 
         self.aufteilung_nachziehen();
         // **Einmal beim Aufbau, damit die geladene Sitzung ankommt** (C7.2 der
-        // Bereichsleisten-Runde). Die Tabelle baut ihre vier Spalten immer
+        // Bereichsleisten-Runde). Die Tabelle baut ihre fuenf Spalten immer
         // sichtbar; welche davon der Nutzer weggeschaltet hatte, steht im
         // Modell und erreicht die Anzeige allein ueber diese Zeile.
         self.spaltenanzeige_nachziehen();
@@ -3504,7 +3504,7 @@ impl Anwendungsdelegierter {
             // Er kippt das Kennzeichen am Modell des sichtbaren Tabs im
             // **aktiven** Dateifenster und nicht im fokussierten: geklickt wird
             // das Kaestchen in der Bereichsleiste, und der Fokus steht dabei,
-            // wo er eben steht. Denselben Weg gehen die drei Spaltenschalter
+            // wo er eben steht. Denselben Weg gehen die Spaltenschalter
             // darueber.
             //
             // Liefert immer `true`. Der Befehl war zustaendig, auch wenn kein
@@ -3657,7 +3657,7 @@ impl Anwendungsdelegierter {
             // `Wirkungsbereich::Dateifenster` und stuende damit scheinbar dem
             // Auffangzweig zu; das Ziel ist aber das **andere** Dateifenster,
             // und an das kommt ein einzelnes nicht heran. Denselben Weg gehen
-            // die drei Spaltenschalter weiter oben, aus demselben Grund.
+            // die Spaltenschalter weiter oben, aus demselben Grund.
             Kommando::OrdnerAngleichen => self.ordner_angleichen(),
             // Das Teilen aus C1 der Runde 6. Es steht hier und nicht bei
             // `bereichskommando`, aus demselben Grund wie die beiden Befehle
@@ -4550,7 +4550,7 @@ impl Anwendungsdelegierter {
     /// Blendet eine Spalte beider Dateilisten aus oder wieder ein (C3 der
     /// Bereichsleisten-Runde).
     ///
-    /// **Die eine Stelle, durch die alle drei Spaltenbefehle gehen.** Der Klick
+    /// **Die eine Stelle, durch die jeder Spaltenbefehl geht.** Der Klick
     /// auf einen Schalter der Bereichsleiste geht durch dasselbe Kommando und
     /// damit durch dieselbe Zeile; einen zweiten Weg an der Abweisung des
     /// Modells vorbei gibt es nicht.
@@ -4577,10 +4577,10 @@ impl Anwendungsdelegierter {
     /// geladene Sitzung ankommt, und [`Self::spalte_umschalten`] fuer jede
     /// spaetere Aenderung. Das Modell ist die Quelle, die Anzeige folgt ihm.
     ///
-    /// **Sie schreibt alle vier Spalten und nicht nur die geaenderte**, obwohl
+    /// **Sie schreibt alle fuenf Spalten und nicht nur die geaenderte**, obwohl
     /// die Namensspalte nie verborgen wird. Der Durchgang laeuft ueber
     /// [`Spalte::ALLE`], damit der Aufbau und der Schalter dieselbe Zeile
-    /// nehmen; eine Liste der drei schaltbaren daneben waere eine zweite
+    /// nehmen; eine Liste der schaltbaren daneben waere eine zweite
     /// Aufzaehlung, und [`spalte_sichtbar_in`] beantwortet die Namensspalte
     /// ohnehin mit `true`.
     ///
@@ -5235,9 +5235,13 @@ impl Anwendungsdelegierter {
         self.statuszeile_nachziehen();
     }
 
-    /// Schreibt die zehn Schalterzustaende der Bereichsleiste aus dem Modell
+    /// Schreibt die Schalterzustaende der Bereichsleiste aus dem Modell
     /// (C2.1, C3.1; C2.1 der Filter-Runde; C2.1 und C2.3 der
     /// Inhaltsfilter-Runde).
+    ///
+    /// Wie viele es sind, sagt der Modulkopf von [`super::bereichsleiste`] und
+    /// keine Zahl hier: sie waechst mit jedem Bereich und mit jeder schaltbaren
+    /// Spalte.
     ///
     /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
     /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`].
@@ -5248,24 +5252,26 @@ impl Anwendungsdelegierter {
     /// einmal.** [`Self::sichtbarkeit_aendern`] zieht den Nachzug selbst, damit
     /// eine Fortsetzung ausserhalb von [`Self::kommando_ausfuehren`] den Schirm
     /// nicht schuldig bleibt; ein Befehl, der einen Bereich umschaltet, kommt
-    /// damit zweimal hier an. Geschrieben werden beide Male dieselben zehn
+    /// damit zweimal hier an. Geschrieben werden beide Male dieselben
     /// Zustaende aus demselben Modell, und die Begruendung fuer den Preis steht
     /// an jener Funktion.
     ///
     /// **Der zweite ist der Ordnerwechsel eines Dateifensters**, und er kam mit
-    /// dem neunten Schalter dazu. Die acht ersten stehen im
+    /// dem Schalter der tiefen Suche dazu. Die Schalter der Bereiche und der
+    /// Spalten stehen im
     /// [`Fenstermodell`](crate::fenstermodell::Fenstermodell) und aendern sich
-    /// nur ueber einen Befehl; der neunte und der zehnte stehen am
-    /// `Ordnermodell` des sichtbaren Tabs im aktiven Dateifenster und wechseln
-    /// damit auch ohne Befehl. Drei Anlaesse haben sie, und
+    /// nur ueber einen Befehl; die zwei Sucheinstellungen "Deep" und "Content"
+    /// stehen am `Ordnermodell` des sichtbaren Tabs im aktiven Dateifenster und
+    /// wechseln damit auch ohne Befehl. Drei Anlaesse haben sie, und
     /// `ordnerwechsel_melden` in [`super::tabelle`] deckt zwei davon ab: den
     /// Tabwechsel und den Ordnerwechsel, auch die mit der Maus. **Der dritte,
     /// der Wechsel des aktiven Dateifensters, braucht keine Zeile**: er laeuft
     /// ueber [`Self::aktives_setzen`] oder ueber `Kommando::FensterWechseln`,
     /// und beide rufen [`Self::aufteilung_nachziehen`], den ersten Anlass.
     ///
-    /// **Der zehnte Schalter hat deshalb keinen vierten Anlass gebracht**: der
-    /// Stand von "Content" haengt am selben `Ordnermodell` wie der von "Deep",
+    /// **Der Schalter des Inhaltsfilters hat deshalb keinen vierten Anlass
+    /// gebracht**: der Stand von "Content" haengt am selben `Ordnermodell` wie
+    /// der von "Deep",
     /// und damit ist C2.3 der Inhaltsfilter-Runde ohne eine eigene Zeile
     /// erfuellt.
     ///
@@ -5592,8 +5598,8 @@ impl Anwendungsdelegierter {
     ///    Belegungsansicht, das Hauptmenue und die Markdown-Ausgabe fuehren
     ///    fuer die Taste weiter genau einen Eintrag (C1.19, C6.11). Die
     ///    Bereichsleiste ist kein zweiter solcher Weg, obwohl auch sie ohne
-    ///    Anschlag meldet: ihre zehn Kommandos sind Umschalter, und
-    ///    [`Kommando::InPapierkorb`] ist keines davon.
+    ///    Anschlag meldet: ihre Kommandos sind samt und sonders Umschalter,
+    ///    und [`Kommando::InPapierkorb`] ist keines davon.
     /// 2. **Eine Zusatztaste heisst Papierkorb.** `cmd+delete` faellt an
     ///    [`Anschlag::ist_nackter_rueckschritt`] heraus und raeumt in jeder
     ///    Lage, auch bei stehendem Filtertext (C1.17). `f8` faellt an derselben

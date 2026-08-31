@@ -443,7 +443,7 @@ pub enum Kommando {
     /// Die Spalte Groesse in beiden Dateilisten ein- und ausblenden (C3 der
     /// Bereichsleisten-Runde).
     ///
-    /// **Die drei Spaltenschalter treffen beide Dateilisten zugleich** und
+    /// **Die Spaltenschalter treffen beide Dateilisten zugleich** und
     /// setzen deshalb kein Dateifenster im Fokus voraus; Nutzerentscheid vom
     /// 260812-0306. Ab Werk tragen sie keine Kombination, ebenfalls nach
     /// Entscheid vom 260812-0306: die freien Kombinationen sind knapp, und eine

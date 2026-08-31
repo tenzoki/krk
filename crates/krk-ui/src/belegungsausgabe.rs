@@ -664,7 +664,8 @@ mod tests {
         // Die unbelegten fallen aus der Erwartung, wie sie aus der Datei
         // fallen: `nach_bereichen` ordnet **jede** Funktion einem Abschnitt zu,
         // die Ausgabe schreibt nur die mit einer Kombination. Ab Werk sind das
-        // seit dem 260812 die drei Spaltenschalter; welche es genau sind, sagt
+        // seit dem 260812 die Spaltenschalter und die beiden Sucheinstellungen;
+        // welche es genau sind, sagt
         // `jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte`, diese
         // Probe misst allein die Reihenfolge.
         let erwartet: Vec<&str> = nach_bereichen(&belegung)

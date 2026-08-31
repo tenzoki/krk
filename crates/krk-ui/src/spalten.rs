@@ -22,8 +22,38 @@
 //! Ausrichtung, Zellentext und die Frage, ob man in ihr schreiben darf. Ein
 //! `_ =>` irgendwo darunter machte aus der neuen Spalte still eine
 //! linksbuendige, unbeschreibbare Namenlose. Die Git-Runde ist der Beleg
-//! dafuer, dass die Vorkehrung traegt: der Uebersetzer hat die sieben Stellen
-//! einzeln genannt, und jede hat ihre Antwort von Hand bekommen.
+//! dafuer, dass die Vorkehrung traegt: der Uebersetzer hat diese sieben
+//! Stellen einzeln genannt, dazu `spalte_sichtbar_in` und `spalte_umschalten`
+//! (`crate::fenstermodell`), `kommando_der_spalte`
+//! (`crate::appkit::bereichsleiste`) und ein Strukturliteral in
+//! `crates/krk-core/tests/ablage.rs`, und jede hat ihre Antwort von Hand
+//! bekommen. Wer die Zahl der gehaltenen Stellen heute braucht, zaehlt sie mit
+//! `grep -rn 'Spalte::Marke =>' crates/krk-ui/src`, dem letzten Wert der
+//! Aufzaehlung, statt sie hier abzulesen: sie waechst mit jeder
+//! Fallunterscheidung, die jemand hinzufuegt.
+//!
+//! # Die eine Stelle, die der Uebersetzer nicht haelt: [`Spalte::ALLE`]
+//!
+//! **Und sie ist die, die entscheidet, ob die neue Spalte ueberhaupt
+//! erscheint.** Wer eine sechste Variante anlegt und die Fallunterscheidungen
+//! darueber alle beantwortet hat, hat eine uebersetzbare Datei; [`Spalte::ALLE`]
+//! steht dabei weiter auf `[Spalte; 5]`, und die neue Spalte hat danach weder
+//! eine Zelle in der Tabelle noch ein Ankreuzfeld in der Bereichsleiste, weil
+//! beide ueber diese Liste reihen. Der Bau meldet nichts.
+//!
+//! **Keine Probe faengt diesen Fall**, und die naheliegende faengt den
+//! umgekehrten: `tabs::tests::die_dateiliste_bleibt_flach_und_hat_fuenf_spalten`
+//! haelt `Spalte::ALLE.len()` gegen eine hingeschriebene Zahl und wird rot,
+//! wenn jemand die Liste erweitert, ohne die Probe nachzuziehen — nicht, wenn
+//! jemand die Aufzaehlung erweitert, ohne die Liste nachzuziehen. Eine Probe,
+//! die die Varianten aus dem **Quelltext** der Aufzaehlung liest, wie
+//! `Kommando::KENNUNGEN` und `Marke::ALLE` sie haben
+//! (`crates/krk-core/tests/belegung.rs`, `crates/krk-core/tests/git.rs`), kann
+//! [`Spalte::ALLE`] nicht bekommen: die stehen unter `crates/krk-core/tests/`,
+//! und `krk-ui` hat kein Bibliotheksziel. Welche Bauform die Vollstaendigkeit
+//! einer `ALLE`-Liste kuenftig haelt, ist eine offene Nutzerfrage
+//! (`shared/decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`);
+//! bis dahin ist die Vorkehrung das Lesen dieses Absatzes.
 //!
 //! Die Reihenfolge in [`Spalte::ALLE`] ist die Reihenfolge im Fenster. Zwei
 //! Stellen leiten daraus etwas ab, statt es hinzuschreiben: die Stelle der

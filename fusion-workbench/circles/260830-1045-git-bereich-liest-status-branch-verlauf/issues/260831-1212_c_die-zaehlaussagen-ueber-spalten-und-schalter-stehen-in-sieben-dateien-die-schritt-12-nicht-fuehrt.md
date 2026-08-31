@@ -23,3 +23,16 @@ Zwei Stellen sind mit Schritt 11 schon gefallen, weil sie „fünf Bereiche" und
 **Domain:** code
 Gefunden beim Nachzug von Schritt 11, weil das dort erweiterte Muster mehr Dateien erreicht als die Dateiliste von Schritt 12 führt. Schritt 12 kann den Defekt mit erledigen; er ist gefilt, damit die Stellen nicht zwischen den beiden Dateilisten hindurchfallen.
 Verwandt: `260830-1317_*_das-erhebungsmuster-aus-c9-4-ist-zu-eng-und-das-gegenbeispiel-steht-in-belegungsausgabe-rs.md` (derselbe Befundtyp, andere Hälfte der Erhebung).
+
+---
+Resolved: Schritt 12 der Runde 23 hat die Erhebung selbst gefahren, statt einer der beiden Dateilisten zu folgen, und den Nachzug über die Vereinigung beider gelegt. Angefasst sind **39 Prosastellen in zehn Quelldateien**; die Erhebung liefert danach für Spalten und Schalter keine unrichtige Aussage mehr, mit einer benannten Ausnahme, die diesem Schritt nicht gehört (siehe unten).
+
+**Die Aufzählung dieses Datensatzes ist an drei Stellen berichtigt worden**, und zwar durch Lesen und nicht durch Übernehmen:
+
+1. `crates/krk-ui/src/fenstermodell.rs:75` — „[`Spaltensichtbarkeit`] mit vier Feldern" ist **richtig** und nicht, wie hier behauptet, seit Schritt 2 fünf. Die Struktur (`crates/krk-core/src/ablage/sitzung.rs:313-327`) trägt `groesse`, `geaendert`, `typ` und `marke`; die Namensspalte hat kein Feld, weil sie sich nicht wegschalten lässt. Die Stelle steht unverändert.
+2. `crates/krk-ui/src/belegungsausgabe.rs:532` — „seither sind es die drei Spaltenschalter" ist **richtig**: der Satz ist datiert („Bis zum 260812 war die Antwort darauf »keine«; seither…") und wird zehn Zeilen weiter fortgeschrieben, wo `spalte_marke_umschalten` als vierter hinzutritt. Die Stelle steht unverändert. Unrichtig war dagegen `:667`, das dieser Datensatz nicht führt; sie ist nachgezogen.
+3. `crates/krk-core/tests/belegung.rs:90` — „Die drei Spaltenschalter der Bereichsleisten-Runde" ist eine historische Aussage über jene Runde und steht nach der Regel, die der Auftrag von Schritt 12 selbst ausschreibt. Unverändert.
+
+**Sieben Stellen kommen hinzu, die dieser Datensatz nicht führt** und die dieselbe Erhebung findet: `appkit/tabelle.rs:9` (die Skizze im Modulkopf), `:4285`, `:4518`, `:4542`, `:4859`, `:5155`, `appkit/leiste.rs:168`, `belegungsmodell.rs:297` und `:299`, `krk-core/src/tasten/belegung.rs:446`, `belegungsausgabe.rs:667`, dazu drei Breiten- und Feldaussagen in `crates/krk-core/tests/ablage.rs` (`:830`, `:985`, `:1034`) und zwei in `fenstermodell.rs` (`:489`, `:2531`), die das Muster aus Schritt 11 nicht sah, weil sein Trägerwortsatz weder `Feld` noch `Breite` führte. Der Nachzug für die zweite Hälfte hat den Satz um diese beiden Wörter erweitert; das Programm steht im History-Eintrag `260831-1355-coder-schritt-12-zaehlaussagen-spalten-und-schalter.md`.
+
+**Offen bleibt eine Sorte Stelle, und sie liegt außerhalb dieses Schritts:** `resources/default-keymap.toml:464` und `:478` sagen „wie die drei Spaltenschalter darueber", und darüber stehen seit Schritt 8 vier. Die Datei ist eine Belegungsdatendatei und gehört dem `ontocoder`; gefilt als `260831-1355_o_zwei-kommentare-in-default-keymap-toml-nennen-drei-spaltenschalter-und-darueber-stehen-vier.md`.

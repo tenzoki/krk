@@ -827,7 +827,7 @@ fn das_ausgeblendete_erste_dateifenster_ueberlebt_den_rundlauf_byteweise() {
 /// Bis zur Bereichsleisten-Runde liessen sich die Spalten nicht schalten, und
 /// die Datei trug den Abschnitt gar nicht. Eine Datei aus jener Zeit darf weder
 /// als beschaedigt gelten noch mit einer weggeschalteten Spalte aufgehen; der
-/// Vorgabewert aller drei Felder ist `true`, also der bisherige Zustand
+/// Vorgabewert jedes Feldes ist `true`, also der bisherige Zustand
 /// (Kriterium C7.4).
 #[test]
 fn eine_sitzung_ohne_den_spaltenabschnitt_bleibt_lesbar() {
@@ -982,7 +982,7 @@ fn die_editorbreite_ueberlebt_den_rundlauf_byteweise() {
 
 /// Eine nicht gesetzte Editorbreite steht gar nicht in der Datei.
 ///
-/// Dieselbe Zusage wie fuer die uebrigen vier Breiten: `None` heisst "noch nie
+/// Dieselbe Zusage wie fuer die uebrigen Breiten: `None` heisst "noch nie
 /// gesetzt", und eine Zeile mit einer erfundenen Zahl waere in einer Datei, die
 /// der Nutzer nach C7 von Hand liest, eine Falschaussage.
 #[test]
@@ -1031,7 +1031,7 @@ fn die_geoeffnete_editordatei_ueberlebt_den_rundlauf_byteweise() {
 
 /// Ein gesetzter Editorpfad steht in der Datei, ein nicht gesetzter nicht (C7).
 ///
-/// Dieselbe Zusage wie fuer die fuenf Breiten: `None` heisst "der Editor haelt
+/// Dieselbe Zusage wie fuer die Breiten: `None` heisst "der Editor haelt
 /// keine Datei", und eine Zeile mit einem erfundenen Pfad waere in einer Datei,
 /// die der Nutzer nach C7 von Hand liest, eine Falschaussage.
 ///

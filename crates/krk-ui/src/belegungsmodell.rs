@@ -294,9 +294,9 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::SpalteMarkeUmschalten
         // Der Schalter "Deep" aus C5 der Filter-Runde steht mit hier: er
         // bestimmt, was die Liste zeigt, wie das Ein- und Ausblenden der
-        // versteckten Eintraege und die drei Spaltenschalter darueber. Damit
+        // versteckten Eintraege und die Spaltenschalter darueber. Damit
         // steht er im Hauptmenue dort, wo der Nutzer ihn sucht, naemlich bei
-        // den drei Schaltern, mit denen er in der Bereichsleiste eine Reihe
+        // den Schaltern, mit denen er in der Bereichsleiste eine Reihe
         // bildet.
         | Kommando::TiefeSucheUmschalten
         // Der Schalter "Content" aus C2 der Inhaltsfilter-Runde steht neben

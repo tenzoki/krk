@@ -299,9 +299,11 @@ impl Bereich {
     /// Der kurze Name des Bereichs, wie ihn ein Schalter der Bereichsleiste
     /// traegt.
     ///
-    /// **Kurz, weil die Leiste 18 Punkte hoch ist** und neun Schalter
+    /// **Kurz, weil die Leiste 18 Punkte hoch ist** und ihre Schalter
     /// nebeneinander traegt; ausgeschriebene Namen passten bei der
-    /// Mindestbreite des Fensters nicht mehr in eine Zeile. Was der Schalter
+    /// Mindestbreite des Fensters nicht mehr in eine Zeile. Wie viele es sind,
+    /// sagt der Modulkopf von [`crate::appkit::bereichsleiste`] und keine Zahl
+    /// hier: sie waechst mit jedem Bereich und mit jeder schaltbaren Spalte. Was der Schalter
     /// meint, sagt der Hinweistext aus [`Bereich::langname`], der beim
     /// Verweilen erscheint.
     ///
@@ -485,9 +487,9 @@ impl Fenstermodell {
             aktiv: sitzung.aktiv,
             breiten: sitzung.breiten,
             sichtbar: sitzung.sichtbar,
-            // Ohne Zusicherung uebernommen: jede der acht Kombinationen der
-            // drei Felder ist eine Lage, die der Nutzer auch ueber die
-            // Schalter herstellen kann, und die Namensspalte steht ohnehin.
+            // Ohne Zusicherung uebernommen: jede Kombination der Felder von
+            // `Spaltensichtbarkeit` ist eine Lage, die der Nutzer auch ueber
+            // die Schalter herstellen kann, und die Namensspalte steht ohnehin.
             spalten: sitzung.spalten,
         };
         if !modell.sichtbar(Bereich::Links) && !modell.sichtbar(Bereich::Rechts) {
@@ -2528,7 +2530,7 @@ mod tests {
         );
     }
 
-    /// Die Summe der fuenf Breiten ist immer genau die verfuegbare Breite.
+    /// Die Summe der sechs Breiten ist immer genau die verfuegbare Breite.
     ///
     /// Ueber vier Lagen der Sichtbarkeit, fuenf Fensterbreiten und drei
     /// Trennlinienbreiten, also auch weit unter der Summe der Mindestbreiten.
@@ -2691,8 +2693,9 @@ mod tests {
         }
     }
 
-    /// Kriterium C2.1 der Bereichsleisten-Runde: fuenf Schalter, und jeder
-    /// nennt seinen Bereich.
+    /// Kriterium C2.1 der Bereichsleisten-Runde: ein Schalter je Bereich, und
+    /// jeder nennt seinen. Der Durchgang laeuft ueber [`Bereich::ALLE`] und
+    /// deckt jeden weiteren von selbst mit.
     ///
     /// Zwei Schalter mit derselben Aufschrift waeren fuer den Nutzer nicht zu
     /// unterscheiden, und ein leerer traege gar keine Auskunft.

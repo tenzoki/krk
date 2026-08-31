@@ -363,7 +363,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
     - Kriterien: C9.4 (erste Hälfte), C9.5, C9.6, C9.8
     - Dependencies: Schritt 9
 
-12. **Der Nachzug: die Zählaussagen über Spalten und Schalter**
+12. **Der Nachzug: die Zählaussagen über Spalten und Schalter** [DONE]
     - Executor: `coder`
     - Files: `crates/krk-ui/src/spalten.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/bereichsleiste.rs`, `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-ui/src/kommandos/loeschwarnung.rs`
     - Changes: Dieselbe Arbeit für die zweite Hälfte. Namentlich: der Modulkopf von `spalten.rs` nennt `Spalte::ALLE` als die Stelle, die der Übersetzer **nicht** hält, neben den sieben, die er hält; der heutige Kopf zählt die sieben auf und lässt die eine aus, die entscheidet, ob die Spalte überhaupt erscheint (C9.7). Die Zahl der Ankreuzfelder in der Bereichsleiste tritt hinter eine Erhebungsvorschrift zurück: sie ist seit der Runde 5 viermal gewachsen, und die nächste Spalte oder der nächste Bereich macht sie wieder falsch. Der Doc-Kommentar an `Bereichsleiste::spaltenschalter` sagt, dass die Umwandlung zur Laufzeit bricht und nicht beim Bau.
