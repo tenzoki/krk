@@ -384,7 +384,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
     - Kriterien: C9.10
     - Dependencies: Schritte 11, 12, 13
 
-15. **Die drei Workbench-Aufzeichnungen tragen ihren Nachtrag**
+15. **Die drei Workbench-Aufzeichnungen tragen ihren Nachtrag** [DONE]
     - Executor: `analyst`
     - Files: `260830-1006_*_wie-lautet-die-c-freiheits-zusage-…`, `260830-0950-orchestrator-session.md`, `260830-1006_*_darf-stufe-a-den-aufgefrischten-index-zurueckschreiben-…`
     - Changes: Die Zahl „fünf Prosastellen" in den ersten beiden wird durch einen **Nachtrag** berichtigt und nicht durch Überschreiben; beide Aufzeichnungen behalten ihren Stand nach der Ortsregel, und der Nachtrag nennt die sechs Stellen oder die Erhebungsvorschrift (C9.3). Damit schließt der Defekt aus C9.1. Der dritte Datensatz trägt danach die in Schritt 10 gemessene Zahl; er bekommt seine Antwort **nicht** von diesem Schritt, sondern bleibt mit dem gemessenen Posten in der Wiedervorlage offen, und der Marker bleibt `_o_` (C10.2). Welches von beiden — Antwort oder Wiedervorlage — entscheidet der Nutzer und kein Planschritt.

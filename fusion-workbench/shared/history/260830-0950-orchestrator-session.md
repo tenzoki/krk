@@ -160,3 +160,36 @@ gerade in dem Repository, das der Nutzer in KRK offen hat.
 
 **Die Antwort ist unmittelbar realisiert**, weil der Baum sie schon trägt: `write_changes(`
 hat null Aufrufstellen unter `crates/`, nachgezählt am 260831.
+
+## Nachtrag 260831-1321: die fünf Prosastellen sind sieben
+
+Eingetragen in Schritt 15 der Runde 23 (`analyst`, Kriterium C9.3). Der Abschnitt über die
+zwei vor dem Plan beantworteten Entscheidungen sagt oben: „Fünf Prosastellen sind
+nachzuziehen; das gehört in den Plan der Runde." **Die Zahl ist falsch. Sie bleibt als Stand
+vom 260830 stehen und wird hier berichtigt und nicht überschrieben.**
+
+Im Baum standen am 260830 sechs Stellen, und seit der Aufnahme von `gix` in Schritt 3 sind
+es sieben. An die Stelle der Zahl tritt eine Erhebungsvorschrift, die seit Schritt 13 an
+einer Stelle steht, in `CLAUDE.md` beim Absatz zur Zusage:
+
+```sh
+grep -rn --exclude-dir=fusion-workbench --include='*.md' --include='*.toml' --include='*.rs' 'Namen auf `-sys`' .
+```
+
+Ihre sieben Treffer, am 260831-1321 gegen den Stand `9566973` nachgefahren: `Cargo.toml:93`
+(Begründung zu `regex`), `:153` (`zip`), `:279` (`objc2-pdf-kit`), `:361` (`syntect` und
+`two-face`), `:515` (`gix`), `CLAUDE.md:89` und
+`crates/krk-core/src/verzeichnis/sys.rs:75`.
+
+**Der Befund ist nicht die Zahl, sondern der Grund, aus dem sie danebenlag.** Die Erhebung,
+die dieser Sitzung zugrunde lag, suchte nach dem Wortlaut der alten Zusage, und genau die
+sechste Stelle führte die Zusage ohne diesen Wortlaut: `crates/krk-core/src/verzeichnis/sys.rs`
+sprach vom „ersten `-sys`-Paket neben `windows-sys`" und blieb deshalb für jede Suche nach
+der zitierten Form unsichtbar. Die neue Vorschrift ist nur deshalb vollständig, weil jede
+der sieben Stellen die Wendung „Namen auf `-sys`" führt. Wer eine achte schreibt, schreibt
+die Wendung mit; sonst läuft dieselbe Erhebung ein zweites Mal an ihr vorbei.
+
+Belege: `260830-1106_*_der-entscheid-zur-c-freiheits-zusage-nennt-fuenf-prosastellen-im-baum-stehen-sechs.md`,
+`260831-1258-coder-die-c-freiheits-zusage-an-ihren-sechs-stellen.md`,
+`260830-1006_*_wie-lautet-die-c-freiheits-zusage-wenn-linux-raw-sys-in-cargo-lock-steht.md`
+(derselbe Nachtrag).

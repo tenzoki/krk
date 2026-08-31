@@ -39,3 +39,43 @@ Wir empfehlen Möglichkeit 1 für die Stufe A, mit ausdrücklicher Wiedervorlage
 
 ---
 Implemented: shared/history/260830-0950-orchestrator-session.md:150 — Möglichkeit 1: Stufe A bleibt schreibfrei. Der Posten ist in `messungen/260831-0855-needsupdate.txt` beziffert (Faktor 1,7 bis 9,5 gegenüber der Statusabfrage) und in dieser Höhe angenommen; `grep -rn 'write_changes(' crates/` liefert null Aufrufstellen.
+
+---
+Nachtrag 260831-1321 (Schritt 15 der Runde 23, `analyst`, Kriterium C10.2): **Der Posten,
+den die Möglichkeit 1 oben als „ungemessen" führt und den die Bedingungen vor einer Antwort
+auf die Möglichkeiten 2 und 3 verlangen, ist gemessen.** Der Satz bleibt als Stand vom
+260830 stehen; berichtigt wird durch diesen Nachtrag und nicht durch Überschreiben. Der
+Marker ist davon unberührt: die Antwort des Nutzers vom 260831 steht in der
+`Implemented:`-Zeile darüber.
+
+Messbericht: `messungen/260831-0855-needsupdate.txt`, Referenzgerät MacBookPro15,1, Profil
+`release`, zwei vollständige Läufe zu je drei Durchgängen über drei Bäume. Der Posten ist
+die Differenz zwischen `Gitleser::marken` bei veraltetem und bei frischem Index, also
+zwischen dem, was die Stufe A je Ordnerwechsel zahlt, und der synchronen Statusabfrage
+selbst:
+
+| Baum | Posten | Statusabfrage | Verhältnis |
+|---|---|---|---|
+| KRK-Klon, 2 239 verfolgte Dateien | 56,3 / 59,0 ms | 12,7 / 11,2 ms | 4,4 und 5,3 |
+| 10 000 Einträge | 35,8 / 41,3 ms | 21,0 / 15,2 ms | 1,7 und 2,7 |
+| 100 000 Einträge | 1 369 / 1 367 ms | 147 / 144 ms | 9,3 und 9,5 |
+
+In allen drei Bäumen und in beiden Läufen übersteigt der Posten die Vergleichsgröße, im
+kleinsten Fall um den Faktor 1,7, im größten um 9,5. Er fällt bei jeder Abfrage erneut an;
+die Reihe A des Berichts zeigt drei Durchgänge hintereinander auf demselben Baum zu je
+derselben Dauer. Das Zurückschreiben selbst kostet 2,7 bis 6,5 ms bei den kleinen Bäumen
+und 58 bis 96 ms bei hunderttausend Einträgen, also einmal etwa ein Drittel bis die Hälfte
+einer Statusabfrage statt des Postens bei jeder folgenden. Gemessen ist dabei die obere
+Kante des Falls: jede verfolgte Datei ist angefasst. Die untere Kante ist null, und wo
+dazwischen ein typischer Arbeitsablauf liegt, sagt dieser Lauf nicht.
+
+**Nebenbefund des Berichts, und er trifft die Begründung der Möglichkeit 1 in ihrem
+Mechanismus.** `gix` 0.87.1 reicht den `NeedsUpdate`-Posten gar nicht an den Rufer durch:
+sein Statusiterator fängt ihn selbst ab (`gix-0.87.1/src/status/iter/mod.rs:296`,
+`maybe_keep_index_change`), legt ihn in `Outcome::changes` und liefert nach außen allein
+`Outcome::has_changes()`. Der Zweig `EntryStatus::NeedsUpdate(_) => return None` in
+`crates/krk-core/src/git/leser.rs`, den drei Prosastellen als Träger der Schreibfreiheit
+beschreiben, ist damit unerreichbar. Die Schreibfreiheit der Stufe A trägt allein, dass
+niemand `write_changes` ruft; `grep -rn 'write_changes(' crates/` bleibt ohne Fundstelle,
+und das ist die Prüfung, die trägt. Der Datensatz dazu ist
+`260831-0855_*_der-zweig-fuer-needsupdate-in-posten-deuten-ist-unerreichbar-gix-faengt-den-posten-vorher-ab.md`.

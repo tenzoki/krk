@@ -39,3 +39,41 @@ Wir empfehlen Möglichkeit 1. Die Zusage misst heute einen Stellvertreter für d
 
 ---
 Answered: shared/history/260830-0950-orchestrator-session.md:91 — Möglichkeit 1: die Zusage bezieht sich auf das Bauziel; Prüfmittel ist `cargo tree --target <ziel> -e normal,build`, `windows-sys` wird vom Ausnahmefall zum ersten Fall der Regel, fünf Prosastellen sind im Plan nachzuziehen.
+
+---
+Nachtrag 260831-1321 (Schritt 15 der Runde 23, `analyst`, Kriterium C9.3): **Die Zahl
+„fünf Prosastellen" ist falsch. Sie wird hier berichtigt und nicht überschrieben.** Sie
+steht dreimal in diesem Datensatz, in der Frage („an fünf Stellen in derselben Form"), im
+Nachteil der Möglichkeit 1 („fünf Prosastellen sind nachzuziehen") und in der Antwortzeile.
+Alle drei bleiben als Stand vom 260830 stehen.
+
+Im Baum standen am 260830 sechs Stellen, und seit der Aufnahme von `gix` in Schritt 3 sind
+es sieben. An die Stelle der Zahl tritt eine Erhebungsvorschrift, die seit Schritt 13 an
+einer Stelle steht, in `CLAUDE.md` beim Absatz zur Zusage:
+
+```sh
+grep -rn --exclude-dir=fusion-workbench --include='*.md' --include='*.toml' --include='*.rs' 'Namen auf `-sys`' .
+```
+
+Ihre sieben Treffer, am 260831-1321 gegen den Stand `9566973` nachgefahren: `Cargo.toml:93`
+(Begründung zu `regex`), `:153` (`zip`), `:279` (`objc2-pdf-kit`), `:361` (`syntect` und
+`two-face`), `:515` (`gix`), `CLAUDE.md:89` und
+`crates/krk-core/src/verzeichnis/sys.rs:75`. Die Zeilenlage in `CLAUDE.md` liegt zwei Zeilen
+tiefer als in der Erhebung von Schritt 13, weil Schritt 14 die Rundentabelle um die Zeile 23
+erweitert hat; die Stelle selbst ist dieselbe.
+
+**Der Befund ist nicht die Zahl, sondern der Grund, aus dem sie danebenlag.** Die Erhebung
+dieses Datensatzes suchte nach dem Wortlaut der alten Zusage, und genau die sechste Stelle
+führte die Zusage ohne diesen Wortlaut: `crates/krk-core/src/verzeichnis/sys.rs` sprach vom
+„ersten `-sys`-Paket neben `windows-sys`" und blieb deshalb für jede Suche nach der
+zitierten Form unsichtbar. Die neue Vorschrift ist nur deshalb vollständig, weil jede der
+sieben Stellen die Wendung „Namen auf `-sys`" führt. Wer eine achte schreibt, schreibt die
+Wendung mit; sonst läuft dieselbe Erhebung ein zweites Mal an ihr vorbei.
+
+Belege: `260830-1106_*_der-entscheid-zur-c-freiheits-zusage-nennt-fuenf-prosastellen-im-baum-stehen-sechs.md`
+(die Aufzählung der sechs Stellen und der Nachtrag zur siebten),
+`260831-1258-coder-die-c-freiheits-zusage-an-ihren-sechs-stellen.md` (die drei
+`cargo tree`-Läufe und was Schritt 13 an den sieben Stellen geschrieben hat).
+
+---
+Implemented: ad7c2f2 — die neugefasste Zusage steht an allen sieben Stellen des Baums; Prüfmittel ist `cargo tree --target <ziel> -e normal,build` statt eines `grep` über `Cargo.lock`, und `windows-sys` ist der erste Fall der Regel statt ihrer Ausnahme. Die Erhebungsvorschrift in `CLAUDE.md` findet die sieben Stellen; nachgefahren am 260831-1321.

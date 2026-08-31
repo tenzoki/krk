@@ -78,3 +78,18 @@ Prosastellen. `make check` grün, Exit 0.
 **Der Marker bleibt `_o_`.** Der Abnahmetest dieses Datensatzes verlangt den Nachtrag in
 `260830-1006_*_wie-lautet-die-c-freiheits-zusage-…` und in `260830-0950-orchestrator-session.md`,
 und beide sind Schritt 15 der Runde 23 zugeteilt. Mit ihm schließt der Defekt.
+
+---
+Resolved (zweite Hälfte, Schritt 15 der Runde 23, `analyst`, 260831-1321): Die
+Workbench-Hälfte steht. Beide Aufzeichnungen tragen den Nachtrag, und keine ist
+überschrieben:
+`260830-1006_*_wie-lautet-die-c-freiheits-zusage-wenn-linux-raw-sys-in-cargo-lock-steht.md`
+hinter seiner `Answered:`-Zeile, `260830-0950-orchestrator-session.md` als eigener Abschnitt
+am Ende. Beide nennen statt einer Zahl die Erhebungsvorschrift aus `CLAUDE.md`, ihre sieben
+Treffer vom 260831-1321 gegen den Stand `9566973` (`Cargo.toml:93`, `:153`, `:279`, `:361`,
+`:515`, `CLAUDE.md:89`, `crates/krk-core/src/verzeichnis/sys.rs:75`) und den Grund, aus dem
+die alte Erhebung zu kurz griff: sie suchte den Wortlaut der alten Zusage, und die sechste
+Stelle führte die Zusage ohne ihn. Die drei Vorkommen der Zahl im Entscheid und das eine in
+der Sitzungsaufzeichnung bleiben nach der Ortsregel unangetastet. Die Vorschrift ist selbst
+gefahren, nicht abgeschrieben; `CLAUDE.md:89` liegt zwei Zeilen tiefer als in der Erhebung
+von Schritt 13, weil Schritt 14 die Rundentabelle erweitert hat. **Der Marker geht auf `_c_`.**
