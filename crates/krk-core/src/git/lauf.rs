@@ -26,7 +26,8 @@
 //! abgebrochen?          ─ ja ──> nichts
 //!            │ nein
 //! Marken?               ─ Some ─> Marken(…)    (nur bei Gitfrage::Ganz)
-//!                       └ None ─> nichts
+//!   je Posten des Stroms  └ None ─> nichts
+//!   erneut: abgebrochen?    (darunter: der Abbruch mitten im Strom)
 //! ```
 //!
 //! # Die Bauform ist die des Durchlaufs, und zwei Dinge sind anders
@@ -76,11 +77,25 @@
 //! # Geprueft wird vor jeder Einheit, die dauern kann
 //!
 //! Die Abbruchzusage haengt nicht an der Kanaltiefe, sondern an den Einheiten
-//! des Laufs — die Regel steht so im Kopf des Durchlaufs. Hier sind es
-//! **vier**: das Oeffnen und die drei Auskuenfte. Das Oeffnen zaehlt mit, weil
-//! `gix::discover` im positiven Fall gemessen 346 bis 900 µs kostet und je
-//! Ebene bis zur Wurzel nach `.git` sieht; ein Lauf, der erst danach nach dem
-//! Abbruch fragte, liefe an einem tiefen Pfad ueber die Zusage hinaus.
+//! des Laufs — die Regel steht so im Kopf des Durchlaufs. Hier sind es das
+//! Oeffnen, jede der drei Auskuenfte und, **innerhalb** der Marken, jeder
+//! Posten des Statusstroms. Das Oeffnen zaehlt mit, weil `gix::discover` im
+//! positiven Fall gemessen 346 bis 900 µs kostet und je Ebene bis zur Wurzel
+//! nach `.git` sieht; ein Lauf, der erst danach nach dem Abbruch fragte, liefe
+//! an einem tiefen Pfad ueber die Zusage hinaus.
+//!
+//! **Die letzte Einheit liegt als einzige nicht in dieser Datei**, und sie ist
+//! die teuerste: [`Gitleser::marken`] kostet gemessen 12 bis 164 ms und lief
+//! bis zum 260831 nach dem Eintritt in jedem Fall zu Ende, gleich ob der Lauf
+//! aufgegeben war. Das Kennzeichen reist deshalb bis dorthin mit; der Datensatz
+//! ist
+//! `260831-1444_*_ein-abgebrochener-gitlauf-laeuft-weiter-und-a10-gilt-nur-dem-halter-und-nicht-dem-faden.md`.
+//!
+//! **Was das haelt und was nicht.** Ein aufgegebener Lauf bricht beim naechsten
+//! Posten ab, statt den ganzen Status zu lesen. Nebeneinander laufen koennen
+//! zwei Faeden trotzdem, und zwar so lange, wie der aeltere fuer einen Posten
+//! und den Aufbau seines Stroms braucht: `Drop` wartet ausdruecklich nicht, und
+//! ein Warten waere genau die Bildzeit, die dieser Lauf vermeidet.
 //!
 //! # Kein `warten`
 //!
@@ -101,8 +116,10 @@ use super::{Commit, Kopf, Marke};
 /// Fuenfzig (E12, C4.1 der Runde 23), und die Zahl steht hier, weil dieses
 /// Modul der einzige Rufer von [`Gitleser::verlauf`] ist: eine zweite Zahl beim
 /// Anzeigenden liefe mit dieser auseinander, sobald eine von beiden sich
-/// aendert. Gemessen kosten fuenfzig Commits 3,9 ms, also weniger als ein
-/// Viertelbild.
+/// aendert. Gemessen kosten fuenfzig Commits 2,5 bis 3,2 ms, also weniger als
+/// ein Fuenftelbild; die Messung steht bei
+/// [`leser::OBJEKTSPEICHER`](super::leser), und sie ist am 260831 mit der
+/// Sortierung neu genommen worden (davor 3,9 ms).
 ///
 /// **Woran der Rufer erkennt, dass nichts mehr folgt** (C4.3): die gemeldete
 /// Liste ist kuerzer als diese Zahl. Ein eigenes Kennzeichen daneben waere eine
@@ -198,8 +215,9 @@ impl Gitlauf {
 
     /// Bricht den Lauf ab.
     ///
-    /// Der Arbeitsfaden bemerkt es vor der naechsten der vier Einheiten und
-    /// meldet nichts mehr. Bereits gesendete Meldungen bleiben gueltig.
+    /// Der Arbeitsfaden bemerkt es vor der naechsten Einheit — der Modulkopf
+    /// zaehlt sie auf — und meldet nichts mehr. Bereits gesendete Meldungen
+    /// bleiben gueltig.
     pub fn abbrechen(&self) {
         self.abbruch.store(true, Ordering::Relaxed);
     }
@@ -212,7 +230,9 @@ impl Drop for Gitlauf {
     /// Ordners wartet — genau die Bildzeit, die dieser Lauf vermeiden soll. Der
     /// Faden endet von selbst: entweder bemerkt er das Abbruchkennzeichen, oder
     /// sein naechstes Senden scheitert, weil der Empfaenger mit dem [`Gitlauf`]
-    /// gefallen ist.
+    /// gefallen ist. **Bemerkt wird es auch mitten im Status**, seit
+    /// [`Gitleser::marken`] das Kennzeichen entgegennimmt; vorher lief die
+    /// teuerste Einheit nach ihrem Eintritt in jedem Fall zu Ende.
     fn drop(&mut self) {
         self.abbrechen();
     }
@@ -289,7 +309,7 @@ fn gitlauffaden(
         if abbruch.load(Ordering::Relaxed) {
             return;
         }
-        let Some(marken) = leser.marken(ordner) else {
+        let Some(marken) = leser.marken(ordner, abbruch) else {
             return;
         };
         let _ = sender.send(Gitmeldung::Marken(marken));

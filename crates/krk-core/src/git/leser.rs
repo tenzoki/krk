@@ -4,7 +4,9 @@
 //! [`Gitleser::kopf`], [`Gitleser::verlauf`] und [`Gitleser::marken`] fragen es.
 //! Alle drei sind **synchron** und kennen weder Faden noch Kanal: wer sie ruft,
 //! ist dafuer verantwortlich, dass er nicht auf dem Hauptfaden steht. Der Lauf,
-//! der das tut, ist `git/lauf.rs`.
+//! der das tut, ist `git/lauf.rs`. Die teuerste der drei nimmt daneben ein
+//! Abbruchkennzeichen entgegen; ihr eigener Doc-Kommentar sagt, warum genau
+//! sie.
 //!
 //! **Das Repository wird festgehalten und nicht je Frage neu geoeffnet**, und
 //! das ist gemessen: das erste `index_or_empty()` auf einem Baum mit 100 000
@@ -17,8 +19,12 @@
 //! Alle gegen `gix` 0.87.1 geprueft, das die Wurzel-`Cargo.toml` auf `0.87`
 //! festnagelt: `gix::discover`, `Repository::head`, `Repository::head_id`,
 //! `Repository::rev_walk`, `Repository::find_commit`, `Repository::status`,
-//! `Platform::into_iter`. Die Kiste fuehrt unter 1.0 keine Zusage ueber kleine
-//! Fassungen; wer die Zahl in der `Cargo.toml` hebt, liest diese Liste nach.
+//! `Repository::object_cache_size_if_unset`, `revision::walk::Platform::sorting`,
+//! `Platform::into_iter`. Dazu die zwei Aufzaehlungen, ueber die
+//! [`entschiedene_verneinung`] vollstaendig zerlegt, `gix::discover::Error` und
+//! `gix::discover::upwards::Error`: eine Variante mehr haelt dort den Bau an.
+//! Die Kiste fuehrt unter 1.0 keine Zusage ueber kleine Fassungen; wer die Zahl
+//! in der `Cargo.toml` hebt, liest diese Liste nach.
 //!
 //! # Drei Voreinstellungen, die stehen bleiben, und warum
 //!
@@ -52,35 +58,58 @@
 //! die Begruendung und der offene Datensatz stehen im Kopf von
 //! [`crate::git`](super).
 //!
-//! # Ein Deskriptormangel entscheidet nichts
+//! # Ein Fehlschlag beim Oeffnen entscheidet nur in einer Lage
 //!
-//! `EMFILE` und `ENFILE` sprechen ueber die Deskriptortabelle des Prozesses und
-//! nicht ueber den Pfad; jeder andere Fehler beim Oeffnen spricht ueber den
-//! Pfad. Die Unterscheidung trifft [`crate::verzeichnis::sys::ist_deskriptormangel`]
-//! und keine zweite Regel daneben; [`fehlerkette_meldet_deskriptormangel`]
-//! sucht sie in der Fehlerkette von `gix`, weil die Kiste ihre `io::Error` in
-//! eigene Fehler einwickelt.
+//! **Entschieden ist allein: bis zur Wurzel gesucht und nichts gefunden.**
+//! Jeder andere Fehlschlag von `gix::discover` laesst die Frage offen, und
+//! [`entschiedene_verneinung`] zerlegt sie dafuer ueber die Varianten der
+//! beiden Fehleraufzaehlungen, vollstaendig und ohne Auffangzweig. Bis zum
+//! 260831 stand es umgekehrt: der Auffangzweig war die Verneinung, und ein
+//! defektes Repository, ein Rechteproblem oder ein `gitdir:`-Verweis ins Leere
+//! kamen beim Nutzer als „Dieser Ordner liegt in keinem Git-Repository" an
+//! (`260831-1444_*_jeder-fehlschlag-von-discover-ausser-dem-deskriptormangel-wird-als-kein-repository-ausgegeben.md`).
+//!
+//! **Zwei Lagen erreichen diese Unterscheidung nicht, weil `gix` sie vorher
+//! zusammenzieht.** Ein `.git`-Verzeichnis, das sich nicht lesen laesst, und
+//! ein `.git`, das als Datei einen `gitdir:`-Verweis ins Leere traegt, melden
+//! beide `NoGitRepository`, und diese Variante traegt einen Pfad und keine
+//! Ursache. Sie kommen deshalb weiter als entschiedene Verneinung beim Nutzer
+//! an; der Datensatz ist
+//! `260831-1652_*_gix-zieht-ein-unlesbares-git-verzeichnis-und-einen-toten-gitdir-verweis-selbst-zu-kein-repository-zusammen.md`,
+//! und er traegt die Messung aller fuenf gemessenen Lagen.
+//!
+//! **Der Deskriptormangel braucht dafuer keine eigene Regel mehr, und das ist
+//! kein Verzicht, sondern die Folge.** `EMFILE` und `ENFILE` sprechen ueber die
+//! Deskriptortabelle des Prozesses und nicht ueber den Pfad; sie erreichen
+//! `discover` als `io::Error`, und die drei Varianten, die einen solchen
+//! ueberhaupt tragen koennen — `CurrentDir`, `CheckTrust` und
+//! [`gix::discover::Error::Open`] —, sind samt und sonders unentschieden. Die
+//! drei Varianten der entschiedenen Verneinung tragen dagegen nichts als Pfade.
+//! Eine zweite Liste von Fehlernummern daneben liefe mit der ersten
+//! auseinander; bis zum 260831 stand sie hier und wurde von der
+//! Fallunterscheidung ueberholt.
 //!
 //! **Gemessen und nicht vermutet:** unter `ulimit -n 64` mit belegter
 //! Deskriptortabelle scheitert `gix::discover` an einem echten Repository mit
-//! „Could not obtain the current working directory", und die Fehlerkette traegt
-//! `errno 24`. Wer diesen Fehlschlag als [`Oeffnung::KeinRepository`] ausgaebe,
-//! machte aus einem Zustand des eigenen Prozesses die Auskunft „dieser Ordner
-//! liegt in keinem Repository" — derselbe Defekt, den der Durchlauf mit
-//! `260815-0211` einmal getragen hat. Er bekommt deshalb
-//! [`Oeffnung::Unentschieden`], und die drei Fragefunktionen liefern in
-//! derselben Lage `None`.
+//! „Could not obtain the current working directory", also an `CurrentDir`. Wer
+//! diesen Fehlschlag als [`Oeffnung::KeinRepository`] ausgaebe, machte aus
+//! einem Zustand des eigenen Prozesses die Auskunft „dieser Ordner liegt in
+//! keinem Repository" — derselbe Defekt, den der Durchlauf mit `260815-0211`
+//! einmal getragen hat. Er bekommt [`Oeffnung::Unentschieden`], und die drei
+//! Fragefunktionen liefern in derselben Lage `None`; die Kindprobe
+//! `kind_liest_unter_abgesenkter_deskriptorgrenze` misst es.
 
-use std::error::Error;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 
 use gix::Repository;
 use gix::bstr::{BStr, BString, ByteSlice};
+use gix::revision::walk::Sorting;
+use gix::traverse::commit::simple::CommitTimeOrder;
 
 use super::{Commit, Kopf, Marke};
-use crate::verzeichnis::sys::ist_deskriptormangel;
 
 /// Wie viele Zeichen ein Kurzhash traegt.
 ///
@@ -89,6 +118,36 @@ use crate::verzeichnis::sys::ist_deskriptormangel;
 /// aendert sich mit dem naechsten Commit. Eine Spaltenbreite, die mit dem
 /// Bestand wandert, waere in der Verlaufsliste eine Unruhe ohne Gegenwert.
 const KURZHASHLAENGE: usize = 7;
+
+/// Wie gross der Objektzwischenspeicher eines geoeffneten Repositorys ist.
+///
+/// **Gemessen und nicht gesetzt.** Der Lauf ueber den Verlauf schlaegt jeden
+/// Commit zweimal nach — einmal die Sortierung, um an seine Zeit zu kommen,
+/// einmal [`Gitleser::verlauf`] selbst, um seine sechs Felder zu lesen —, und
+/// `gix` nennt den Zwischenspeicher fuer genau diesen Fall (`gix-0.87.1`,
+/// `src/revision/walk.rs:50-53`).
+///
+/// **Die Messung**, an KRKs eigenem Repository mit 800 Commits, je Messung ein
+/// frisch geoeffneter Leser, sieben Messungen je Stand, Profil `release`, drei
+/// Laeufe: der erste Schwung von fuenfzig Commits kostet im Mittel
+///
+/// | Stand | erster Schwung | tiefer Schwung (750 uebersprungen) |
+/// |---|---|---|
+/// | Graphenordnung, ohne Zwischenspeicher (bis 260831) | 4,1 bis 4,9 ms | 2,81 bis 2,83 ms |
+/// | nach Zeit sortiert, ohne Zwischenspeicher | 5,9 bis 6,2 ms | 4,6 bis 4,8 ms |
+/// | nach Zeit sortiert, mit diesem Zwischenspeicher | 2,5 bis 3,2 ms | 2,9 bis 3,6 ms |
+///
+/// Die Sortierung allein kostet also rund 1,8 ms, und der Zwischenspeicher gibt
+/// mehr zurueck, als sie nimmt.
+///
+/// Ein Viertel Megabyte, und dieselbe Messung bei 64 KiB lieferte dasselbe:
+/// gebraucht wird wenig, weil der Zwischenspeicher allein die Spanne zwischen
+/// den beiden Nachschlaegen ueberbruecken muss. Er lebt so lange wie der Leser,
+/// also die Dauer eines Laufs.
+///
+/// `object_cache_size_if_unset` und nicht `object_cache_size`: ein Repository,
+/// das `gitoxide.objects.cacheLimit` selbst setzt, behaelt seine Zahl.
+const OBJEKTSPEICHER: usize = 256 * 1024;
 
 /// Die Antwort auf die Frage, ob dieser Ordner in einem Repository liegt.
 ///
@@ -109,8 +168,12 @@ pub enum Oeffnung {
     Offen(Box<Gitleser>),
     /// Der Ordner liegt bis zur Wurzel in keinem Repository. **Entschieden.**
     KeinRepository,
-    /// Es liess sich nicht feststellen, weil dem Prozess die Deskriptoren
-    /// ausgegangen sind. **Nicht entschieden**; der Rufer meldet nichts.
+    /// Es liess sich nicht feststellen. **Nicht entschieden**; der Rufer meldet
+    /// nichts.
+    ///
+    /// Hierher faellt jeder Fehlschlag, der nicht sagt „bis zur Wurzel gesucht
+    /// und nichts gefunden": der Deskriptormangel des eigenen Prozesses ebenso
+    /// wie ein gefundenes Repository, das sich nicht oeffnen liess.
     Unentschieden,
 }
 
@@ -143,12 +206,18 @@ impl Gitleser {
     ///
     /// Die Kosten steigen mit der Zahl der Ebenen bis zum Wurzelverzeichnis,
     /// weil `discover` je Ebene nach `.git` sieht.
+    /// **Die entschiedene Verneinung haengt an der Fehlervariante und nicht an
+    /// einer Fehlernummer**; [`entschiedene_verneinung`] traegt die
+    /// Fallunterscheidung, und der Modulkopf sagt, warum sie so faellt.
     #[must_use = "die Antwort sagt, ob ueberhaupt ein Repository dasteht"]
     pub fn oeffnen(ordner: &Path) -> Oeffnung {
         match gix::discover(ordner) {
-            Ok(repo) => Oeffnung::Offen(Box::new(Self { repo })),
-            Err(fehler) if fehlerkette_meldet_deskriptormangel(&fehler) => Oeffnung::Unentschieden,
-            Err(_) => Oeffnung::KeinRepository,
+            Ok(mut repo) => {
+                repo.object_cache_size_if_unset(OBJEKTSPEICHER);
+                Oeffnung::Offen(Box::new(Self { repo }))
+            }
+            Err(fehler) if entschiedene_verneinung(&fehler) => Oeffnung::KeinRepository,
+            Err(_) => Oeffnung::Unentschieden,
         }
     }
 
@@ -198,10 +267,22 @@ impl Gitleser {
     /// der Lauf am Graphen und nicht am Objektspeicher zahlt: gelesen und
     /// zerlegt werden allein die `zahl` genommenen Commits.
     ///
-    /// **Dieselbe Bauform traegt eine Sortierung, sobald eine gewaehlt ist**
-    /// (`260831-1444_*_der-verlauf-laeuft-in-graphenreihenfolge-und-nicht-nach-commit-zeit.md`):
-    /// ein `.sorting(…)` am Lauf gilt dann jedem Schwung gleich, weil jeder
-    /// Schwung derselbe Lauf von HEAD aus ist.
+    /// **Die Reihenfolge ist die der Commit-Zeit und nicht die des Graphen.**
+    /// `rev_walk` laeuft ohne `sorting` breitenzuerst, also in der Reihenfolge
+    /// des Commit-Graphen; wo zwei Zweige nebeneinander in der Warteschlange
+    /// stehen, greift er abwechselnd zu, und die Liste steht dann nicht nach
+    /// Zeit. Ein Nutzer, der eine Verlaufsliste liest, erwartet die zeitliche
+    /// Ordnung, und `git log` liefert sie ab Werk.
+    ///
+    /// **Sortiert wird nach der Zeit des Committers, angezeigt wird die des
+    /// Autors** ([`Commit::zeit`]) — dieselbe Trennung, die `git log` traegt.
+    /// Sie faellt auseinander, wo ein Commit umgesetzt worden ist; die
+    /// Reihenfolge folgt dann dem, was `git log` an derselben Stelle zeigt.
+    ///
+    /// **Und die Sortierung gilt jedem Schwung gleich**, weil jeder Schwung
+    /// derselbe Lauf von HEAD aus ist. Was sie kostet, haengt am
+    /// Objektzwischenspeicher und ist bei [`OBJEKTSPEICHER`] gemessen: mit ihm
+    /// ist der sortierte Lauf schneller als der unsortierte ohne ihn.
     ///
     /// **Woran der Rufer erkennt, dass nichts mehr folgt** (C4.3): die Liste
     /// ist kuerzer als `zahl`. Ein eigenes Kennzeichen daneben waere eine
@@ -219,7 +300,12 @@ impl Gitleser {
             return Some(Vec::new());
         }
         let anfang = self.repo.head_id().ok()?.detach();
-        let lauf = self.repo.rev_walk([anfang]).all().ok()?;
+        let lauf = self
+            .repo
+            .rev_walk([anfang])
+            .sorting(Sorting::ByCommitTime(CommitTimeOrder::NewestFirst))
+            .all()
+            .ok()?;
 
         let mut gefunden = Vec::with_capacity(zahl);
         for stand in lauf.skip(bereits).take(zahl) {
@@ -270,8 +356,25 @@ impl Gitleser {
     /// Ein Repository ohne Arbeitsbaum liefert `Some(Vec::new())`: dort gibt es
     /// keine Arbeitskopie, deren Zustand eine Marke haette, und das ist eine
     /// entschiedene Antwort.
+    ///
+    /// # `abbruch` ist die eine Ausnahme von „der Leser kennt kein Kennzeichen"
+    ///
+    /// Diese Auskunft ist die einzige, die lange genug dauert, dass ein
+    /// aufgegebener Lauf sie noch zu Ende laufen liesse: gemessen 12 bis 164 ms
+    /// an einem Baum mit 100 000 Eintraegen, in einem groesseren mehr. Wer
+    /// schnell durch Ordner geht, stapelte damit Statuslaeufe, deren Ergebnis
+    /// niemand mehr annimmt, und jeder von ihnen nimmt so viele Faeden, wie das
+    /// Geraet Kerne hat. Das Kennzeichen kommt deshalb bis hier herein, in der
+    /// Form, die
+    /// [`verzeichnis::durchlauf`](crate::verzeichnis::durchlauf) traegt: ein
+    /// `&AtomicBool`, gelesen mit [`Ordering::Relaxed`] vor jeder Einheit, die
+    /// dauern kann. Hier ist das der naechste Posten des Statusstroms; der
+    /// Eintritt selbst ist beim Rufer geprueft, wie beim Durchlauf.
+    ///
+    /// Ein Abbruch liefert `None` und keine halbe Liste: die halbe waere von
+    /// „diese Eintraege sind unveraendert" nicht zu unterscheiden.
     #[must_use = "die Marken sind der Befund, den das Ordnermodell nachtraegt"]
-    pub fn marken(&self, ordner: &Path) -> Option<Vec<(String, Marke)>> {
+    pub fn marken(&self, ordner: &Path, abbruch: &AtomicBool) -> Option<Vec<(String, Marke)>> {
         let Some(arbeitsbaum) = self.repo.workdir() else {
             return Some(Vec::new());
         };
@@ -297,6 +400,12 @@ impl Gitleser {
 
         let mut gefunden: Vec<(String, Marke)> = Vec::new();
         for posten in strom {
+            // Die Abbruchgrenze dieser Auskunft: ein Ordner traegt beliebig
+            // viele Posten, und ohne diese Zeile liest ein aufgegebener Lauf
+            // sie alle.
+            if abbruch.load(Ordering::Relaxed) {
+                return None;
+            }
             let posten = posten.ok()?;
             let Some((pfad, marke)) = posten_deuten(&posten) else {
                 continue;
@@ -486,23 +595,50 @@ fn systemzeit(zeit: gix::date::Time) -> Option<SystemTime> {
     }
 }
 
-/// Ob irgendein Glied der Fehlerkette einen Deskriptormangel meldet.
+/// Ob dieser Fehlschlag von `gix::discover` die **entschiedene** Auskunft
+/// „dieser Ordner liegt in keinem Repository" traegt.
 ///
-/// `gix` wickelt seine `io::Error` in eigene Fehler ein, oft zwei Lagen tief;
-/// die Kette wird deshalb ueber [`Error::source`] abgelaufen und jedes Glied
-/// auf einen `io::Error` geprueft. Was ein Mangel ist, entscheidet
-/// [`ist_deskriptormangel`] und nicht diese Funktion: eine zweite Liste von
-/// Fehlernummern daneben liefe mit der ersten auseinander.
-#[must_use]
-pub fn fehlerkette_meldet_deskriptormangel(fehler: &(dyn Error + 'static)) -> bool {
-    let mut glied = Some(fehler);
-    while let Some(dieses) = glied {
-        if let Some(io) = dieses.downcast_ref::<std::io::Error>()
-            && ist_deskriptormangel(io)
-        {
-            return true;
-        }
-        glied = dieses.source();
+/// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: eine
+/// Variante, die `gix` hinzufuegt, haelt den Bau an und erzwingt eine bewusste
+/// Einordnung, statt still in die Verneinung zu fallen. Die Wurzel-`Cargo.toml`
+/// nagelt die Kiste dafuer auf `0.87` fest.
+///
+/// **Wahr wird genau eine Lage: bis zur Wurzel gesucht und nichts gefunden.**
+/// Die drei Varianten, die das sagen, unterscheiden sich allein darin, wo die
+/// Suche geendet hat — an der Wurzel, an einer Deckelung, an der
+/// Dateisystemgrenze —, und alle drei heissen dasselbe.
+///
+/// Alles andere ist **nicht entschieden**, und jeder Fall aus eigenem Grund:
+///
+/// - `CurrentDir` spricht ueber den laufenden Prozess und nicht ueber den Pfad.
+/// - `InvalidInput` und `InaccessibleDirectory` heissen, dass gar nicht erst
+///   gesucht werden konnte.
+/// - `NoMatchingCeilingDir` heisst, dass die Suche mit einer wirkungslosen
+///   Deckelung gelaufen ist.
+/// - `NoTrustedGitRepository` heisst, dass eines **gefunden** und wegen seiner
+///   Vertrauensstufe verworfen wurde, und `CheckTrust`, dass die Stufe nicht zu
+///   ermitteln war.
+/// - [`gix::discover::Error::Open`] heisst, dass eines gefunden wurde und sich
+///   nicht oeffnen liess: eine unlesbare Konfiguration, eine unbekannte
+///   Erweiterung, ein `gitdir:`-Verweis ins Leere.
+fn entschiedene_verneinung(fehler: &gix::discover::Error) -> bool {
+    use gix::discover::Error as Fehlschlag;
+    use gix::discover::upwards::Error as Suche;
+
+    match fehler {
+        Fehlschlag::Discover(
+            Suche::NoGitRepository { .. }
+            | Suche::NoGitRepositoryWithinCeiling { .. }
+            | Suche::NoGitRepositoryWithinFs { .. },
+        ) => true,
+        Fehlschlag::Discover(
+            Suche::CurrentDir(_)
+            | Suche::InvalidInput { .. }
+            | Suche::InaccessibleDirectory { .. }
+            | Suche::NoMatchingCeilingDir
+            | Suche::NoTrustedGitRepository { .. }
+            | Suche::CheckTrust { .. },
+        ) => false,
+        Fehlschlag::Open(_) => false,
     }
-    false
 }

@@ -17,3 +17,14 @@ Die Probe `zwei_schnelle_ordnerwechsel_lassen_nie_zwei_gitlaeufe_stehen` (`crate
 **Filed by:** coderev, Kai Stalmann <kai@stalmann.org>
 **Domain:** code
 Gefunden in der Durchsicht der Runde 23, beim Prüfen der Nebenläufigkeitszusagen aus C7. Der Befund ist gelesen und nicht gemessen: wie viele Läufe sich bei schneller Navigation tatsächlich stapeln, ist am laufenden Bündel zu sehen und hier nicht.
+
+---
+Resolved: 260831, auf dem ersten der beiden Wege, die der Abnahmetest nennt. `Gitleser::marken` nimmt ein `&AtomicBool` entgegen und liest es vor jedem Posten des Statusstroms — genau an der Schleife, die der Datensatz benennt —; ein gesetztes Kennzeichen bricht ab und liefert `None`, also „unentschieden" und keine halbe Liste. `gitlauffaden` reicht sein Kennzeichen dorthin durch.
+
+Die Form ist die des Durchlaufs und keine zweite daneben: `&AtomicBool`, `Ordering::Relaxed`, geprüft vor jeder Einheit, die dauern kann, der Eintritt selbst beim Rufer geprüft (`crates/krk-core/src/verzeichnis/durchlauf.rs`). Der Modulkopf von `crates/krk-core/src/git/mod.rs` sagt jetzt, dass genau eine der drei Auskünfte ein Kennzeichen kennt, und warum diese.
+
+Die Probe ist `ein_gesetztes_abbruchkennzeichen_bricht_den_markenlauf_ab` (`crates/krk-core/tests/git.rs`); ihre Gegenprobe mit einem Kennzeichen auf `false` liefert am selben Ordner eine nicht leere Liste. Sie sieht ihren Fall: mit einer Fassung, die das Kennzeichen entgegennimmt und nicht liest, meldet sie `Some([("unverfolgt.txt", Neu)])` statt `None`.
+
+**Was das hält und was nicht — die zweite Hälfte des Datensatzes bleibt wahr.** Ein aufgegebener Lauf bricht beim nächsten Posten ab, statt die vollen 12 bis 164 ms zu Ende zu lesen. Nebeneinander *laufen* können zwei Fäden trotzdem, so lange wie der ältere für einen Posten und den Aufbau seines Stroms braucht: `Gitlauf::drop` wartet ausdrücklich nicht auf den Faden, und ein Warten wäre genau die Bildzeit, die der Lauf vermeidet. Die wörtliche Fassung von A10 und C7.11 („laufen nie nebeneinander") ist damit weiter stärker als das Gebaute; der Modulkopf von `crates/krk-core/src/git/lauf.rs` und der Doc-Kommentar an `Tabinhalt::gitlauf` schreiben beides aus, den Halter und den Faden. Die zwei Spec-Zeilen sind unverändert und gehören zur Prosadurchsicht.
+
+Die Deskriptorfrage aus C7.9 ist damit nicht beantwortet, nur kleiner: wie viele Läufe sich bei schneller Navigation tatsächlich überschneiden, ist am laufenden Bündel zu sehen und hier nicht gemessen. Die Nutzerfrage nach dem Fadendeckel steht weiter offen (`260830-1317_*_wird-die-fadenzahl-von-gix-gedeckelt-und-woran-waere-die-zahl-zu-messen.md`).

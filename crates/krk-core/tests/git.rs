@@ -32,6 +32,7 @@ mod gemeinsam;
 
 use std::path::Path;
 use std::process::Command;
+use std::sync::atomic::AtomicBool;
 
 use gemeinsam::{Pruefordner, aufrufstellen, kind_mit_deskriptorgrenze, kindauftrag};
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung, VERLAUFSSCHRITT};
@@ -50,23 +51,51 @@ const GRENZE_DESKRIPTOREN: usize = 64;
 /// Der Branchname, auf dem jedes Pruefrepository steht.
 const BRANCH: &str = "haupt";
 
+/// Das Abbruchkennzeichen eines Laufs, der **nicht** abgebrochen ist.
+///
+/// Es steht einmal da und nicht je Probe: `Gitleser::marken` nimmt seit dem
+/// 260831 eines entgegen, und die Proben, die den Abbruch nicht messen,
+/// reichen dasselbe stehende `false` herein. Wer den Abbruch misst, legt sich
+/// sein eigenes an; die Probe
+/// `ein_gesetztes_abbruchkennzeichen_bricht_den_markenlauf_ab` tut das.
+static LAEUFT: AtomicBool = AtomicBool::new(false);
+
 // ---------------------------------------------------------------------------
 // Pruefrepositorys anlegen
 // ---------------------------------------------------------------------------
 
-/// Ruft `git` im genannten Ordner und haelt, dass der Aufruf gelungen ist.
-fn git(ordner: &Path, argumente: &[&str]) -> String {
-    let ergebnis = Command::new("/usr/bin/git")
+/// Der eine `git`-Aufruf dieser Datei; die drei Huellen darunter unterscheiden
+/// sich allein darin, was sie mit dem Ergebnis anfangen und ob sie eine Zeit
+/// vorgeben.
+///
+/// `zeit` ist der Zeitstempel in Sekunden seit 1970, den Autor und Committer
+/// gemeinsam bekommen. `None` heisst „die Uhr des Geraets"; das ist der
+/// Normalfall, und genau eine Probe braucht die Vorgabe, naemlich die ueber die
+/// Reihenfolge des Verlaufs.
+fn git_roh(ordner: &Path, zeit: Option<i64>, argumente: &[&str]) -> std::process::Output {
+    let mut befehl = Command::new("/usr/bin/git");
+    befehl
         .current_dir(ordner)
         .env("HOME", ordner)
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_AUTHOR_NAME", "Probe")
         .env("GIT_AUTHOR_EMAIL", "probe@example.org")
         .env("GIT_COMMITTER_NAME", "Probe")
-        .env("GIT_COMMITTER_EMAIL", "probe@example.org")
+        .env("GIT_COMMITTER_EMAIL", "probe@example.org");
+    if let Some(sekunden) = zeit {
+        let stempel = format!("@{sekunden} +0000");
+        befehl
+            .env("GIT_AUTHOR_DATE", &stempel)
+            .env("GIT_COMMITTER_DATE", &stempel);
+    }
+    befehl
         .args(argumente)
         .output()
-        .expect("git laesst sich nicht starten");
+        .expect("git laesst sich nicht starten")
+}
+
+/// Haelt, dass der Aufruf gelungen ist, und gibt seine Ausgabe zurueck.
+fn gelungen(ordner: &Path, argumente: &[&str], ergebnis: &std::process::Output) -> String {
     assert!(
         ergebnis.status.success(),
         "git {argumente:?} in {} ist gescheitert\n--- stdout ---\n{}\n--- stderr ---\n{}",
@@ -77,22 +106,24 @@ fn git(ordner: &Path, argumente: &[&str]) -> String {
     String::from_utf8_lossy(&ergebnis.stdout).trim().to_owned()
 }
 
+/// Ruft `git` im genannten Ordner und haelt, dass der Aufruf gelungen ist.
+fn git(ordner: &Path, argumente: &[&str]) -> String {
+    let ergebnis = git_roh(ordner, None, argumente);
+    gelungen(ordner, argumente, &ergebnis)
+}
+
+/// Dasselbe mit vorgegebener Zeit fuer Autor und Committer.
+fn git_zur_zeit(ordner: &Path, sekunden: i64, argumente: &[&str]) -> String {
+    let ergebnis = git_roh(ordner, Some(sekunden), argumente);
+    gelungen(ordner, argumente, &ergebnis)
+}
+
 /// Dasselbe, aber ein Fehlschlag ist erlaubt; die Ausgabe faellt weg.
 ///
 /// Genau ein Aufruf braucht das, naemlich der `merge`, der den Konflikt
 /// herstellt: er endet mit 1, und das ist sein Zweck.
 fn git_darf_scheitern(ordner: &Path, argumente: &[&str]) {
-    let _ = Command::new("/usr/bin/git")
-        .current_dir(ordner)
-        .env("HOME", ordner)
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("GIT_AUTHOR_NAME", "Probe")
-        .env("GIT_AUTHOR_EMAIL", "probe@example.org")
-        .env("GIT_COMMITTER_NAME", "Probe")
-        .env("GIT_COMMITTER_EMAIL", "probe@example.org")
-        .args(argumente)
-        .output()
-        .expect("git laesst sich nicht starten");
+    let _ = git_roh(ordner, None, argumente);
 }
 
 /// Ein frisches Repository mit einem ersten Commit.
@@ -121,7 +152,7 @@ fn leser(ordner: &Path) -> Gitleser {
 /// Die Marken eines Ordners als sortierte Paare, fuer den Vergleich.
 fn marken_sortiert(leser: &Gitleser, ordner: &Path) -> Vec<(String, Marke)> {
     let mut gefunden = leser
-        .marken(ordner)
+        .marken(ordner, &LAEUFT)
         .expect("die Marken sind unentschieden geblieben");
     gefunden.sort_by(|links, rechts| links.0.cmp(&rechts.0));
     gefunden
@@ -412,6 +443,110 @@ fn die_vereinigung_aller_schwuenge_traegt_jeden_commit_genau_einmal() {
     );
 }
 
+/// C4, M1 der Durchsicht: die Verlaufsliste steht nach der Commit-Zeit und
+/// nicht nach der Reihenfolge des Graphen.
+///
+/// Das Pruefrepository ist eigens so gebaut, dass die beiden Reihenfolgen
+/// auseinandergehen — in einer linearen Kette fallen sie zusammen, und eine
+/// Probe daran belegte nichts. Zwei Zweige mit **verschraenkten** Zeiten und
+/// verschieden vielen Commits, eine Zusammenfuehrung darueber:
+///
+/// ```text
+/// c0 ── h1 ── h2 ── h3 ─────────── h4 ── m
+///   \                                  /
+///    └── z1 ── z2 ── z3 ──────────────┘
+///
+/// Zeit:  c0=+0  h1=+10 h2=+20 h3=+30
+///        z1=+40 z2=+50 z3=+60 h4=+70 m=+80
+/// ```
+///
+/// Breitenzuerst greift abwechselnd in beide Zweige und liefert
+/// `m, h4, z3, h3, z2, h2, z1, h1, c0`; nach der Zeit heisst es
+/// `m, h4, z3, z2, z1, h3, h2, h1, c0`. Die erste Abweichung steht an der
+/// vierten Stelle.
+///
+/// **Zwei Zusicherungen, und die zweite ist der Massstab von aussen:** die
+/// Kurzbeschreibungen stehen in der erwarteten Reihenfolge, und die Objektnamen
+/// stehen in derselben Reihenfolge wie die von `git rev-list HEAD`, das seine
+/// Liste ab Werk nach der Commit-Zeit ordnet. Jeder Commit traegt dafuer eine
+/// eigene Sekunde; bei gleichen Zeiten entschiede die Reihenfolge der
+/// Warteschlange, und die ist zwischen `git` und `gix` nichts Zugesagtes.
+#[test]
+fn der_verlauf_steht_nach_der_zeit_und_nicht_nach_dem_graphen() {
+    let ordner = repository("zeitordnung");
+    let pfad = ordner.pfad().to_owned();
+
+    // Die Zeit des ersten Commits ist der Nullpunkt; alles Weitere liegt
+    // dahinter, damit die Kette nicht rueckwaerts laeuft.
+    let basis: i64 = git(&pfad, &["log", "-1", "--format=%ct"])
+        .parse()
+        .expect("die Zeit des ersten Commits ist keine Zahl");
+
+    let commit = |zweig_datei: &str, nummer: u32, versatz: i64, nachricht: &str| {
+        ordner.datei(zweig_datei, format!("stand {nummer}\n"));
+        git(&pfad, &["add", "-A"]);
+        git_zur_zeit(&pfad, basis + versatz, &["commit", "-q", "-m", nachricht]);
+    };
+
+    git(&pfad, &["branch", "zweig"]);
+    commit("haupt.txt", 1, 10, "haupt 1");
+    commit("haupt.txt", 2, 20, "haupt 2");
+    commit("haupt.txt", 3, 30, "haupt 3");
+    git(&pfad, &["checkout", "-q", "zweig"]);
+    commit("zweig.txt", 1, 40, "zweig 1");
+    commit("zweig.txt", 2, 50, "zweig 2");
+    commit("zweig.txt", 3, 60, "zweig 3");
+    git(&pfad, &["checkout", "-q", BRANCH]);
+    commit("haupt.txt", 4, 70, "haupt 4");
+    git_zur_zeit(
+        &pfad,
+        basis + 80,
+        &[
+            "merge",
+            "-q",
+            "--no-ff",
+            "-m",
+            "die Zusammenfuehrung",
+            "zweig",
+        ],
+    );
+
+    let leser = leser(&pfad);
+    let verlauf = leser
+        .verlauf(0, VERLAUFSSCHRITT)
+        .expect("der Verlauf ist unentschieden geblieben");
+
+    let gesehen: Vec<&str> = verlauf
+        .iter()
+        .map(|commit| commit.kurzbeschreibung.as_str())
+        .collect();
+    assert_eq!(
+        gesehen,
+        vec![
+            "die Zusammenfuehrung",
+            "haupt 4",
+            "zweig 3",
+            "zweig 2",
+            "zweig 1",
+            "haupt 3",
+            "haupt 2",
+            "haupt 1",
+            "der erste Commit",
+        ],
+        "die Liste steht nicht nach der Commit-Zeit"
+    );
+
+    let soll: Vec<String> = git(&pfad, &["rev-list", "HEAD"])
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    let ist: Vec<String> = verlauf.iter().map(|commit| commit.id.to_string()).collect();
+    assert_eq!(
+        ist, soll,
+        "die Reihenfolge weicht von der von `git rev-list HEAD` ab"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // C5: die fuenf Markenzustaende
 // ---------------------------------------------------------------------------
@@ -521,7 +656,7 @@ fn ein_zerlegt_benannter_eintrag_bekommt_seine_marke() {
         "die Platte traegt den Namen nicht zerlegt; die Voraussetzung der Probe steht nicht"
     );
     let marken = leser(&pfad)
-        .marken(&pfad)
+        .marken(&pfad, &LAEUFT)
         .expect("die Marken sind unentschieden geblieben");
     assert!(
         marken.iter().any(|(name, _)| name == VORKOMPONIERT),
@@ -689,10 +824,80 @@ fn kind_liest_unter_abgesenkter_deskriptorgrenze() {
         "der Verlauf bleibt unentschieden"
     );
     assert!(
-        leser.marken(&ordner).is_some(),
+        leser.marken(&ordner, &LAEUFT).is_some(),
         "die Marken bleiben unentschieden"
     );
     drop(gehalten);
+}
+
+/// M2 der Durchsicht: ein gesetztes Abbruchkennzeichen bricht den Markenlauf
+/// ab, statt ihn zu Ende laufen zu lassen.
+///
+/// **Die Gegenprobe steht voran und traegt die Probe:** derselbe Leser, derselbe
+/// Ordner, ein Kennzeichen auf `false` — dabei kommt eine nicht leere Liste
+/// heraus. Ohne sie bestuende die Probe auch dann, wenn `marken` an diesem
+/// Ordner grundsaetzlich `None` lieferte.
+///
+/// `None` und keine halbe Liste: eine halbe waere von „diese Eintraege sind
+/// unveraendert" nicht zu unterscheiden.
+#[test]
+fn ein_gesetztes_abbruchkennzeichen_bricht_den_markenlauf_ab() {
+    let ordner = repository("markenabbruch");
+    let pfad = ordner.pfad().to_owned();
+    ordner.datei("unverfolgt.txt", "neu\n");
+
+    let leser = leser(&pfad);
+
+    let laeuft = AtomicBool::new(false);
+    let voll = leser
+        .marken(&pfad, &laeuft)
+        .expect("die Marken sind ohne Abbruch unentschieden geblieben");
+    assert!(
+        !voll.is_empty(),
+        "Gegenprobe: ohne Abbruch traegt der Ordner mindestens eine Marke"
+    );
+
+    let aufgegeben = AtomicBool::new(true);
+    assert_eq!(
+        leser.marken(&pfad, &aufgegeben),
+        None,
+        "ein aufgegebener Lauf liest den Statusstrom zu Ende, statt abzubrechen"
+    );
+}
+
+/// M3 der Durchsicht: ein Repository, das gefunden wird und sich nicht oeffnen
+/// laesst, bleibt **unentschieden** und wird nicht verneint.
+///
+/// Die Konfiguration wird unlesbar **im Sinne des Zerlegers** gemacht und nicht
+/// im Sinne der Rechte: `gix::discover` liefert an einer `.git/config` mit
+/// `chmod 000` gemessen `Ok`, uebergeht die Datei also, waehrend eine Datei, die
+/// kein INI ist, `discover::Error::Open(Config(…))` liefert — genau die
+/// Variante, an der die Fallunterscheidung haengt.
+///
+/// **Die Gegenprobe steht voran:** derselbe Ordner liefert vor dem Zerschlagen
+/// einen Leser. Ohne sie bestuende die Probe auch dann, wenn der Ordner nie
+/// eines gewesen waere.
+#[test]
+fn ein_nicht_zu_oeffnendes_repository_bleibt_unentschieden() {
+    let ordner = repository("kaputtekonfiguration");
+    let pfad = ordner.pfad().to_owned();
+
+    let vorher = Gitleser::oeffnen(&pfad);
+    assert!(
+        matches!(vorher, Oeffnung::Offen(_)),
+        "Gegenprobe: der Ordner liefert vor dem Zerschlagen {vorher:?} statt eines Lesers"
+    );
+
+    std::fs::write(pfad.join(".git/config"), "das ist kein ini\n[[[\n")
+        .expect("die Konfiguration laesst sich nicht ueberschreiben");
+
+    let antwort = Gitleser::oeffnen(&pfad);
+    assert!(
+        matches!(antwort, Oeffnung::Unentschieden),
+        "ein gefundenes, nicht zu oeffnendes Repository liefert {antwort:?}; \
+         „kein Repository\" waere eine entschiedene Verneinung ueber einen Ordner, \
+         der eines traegt"
+    );
 }
 
 // ---------------------------------------------------------------------------

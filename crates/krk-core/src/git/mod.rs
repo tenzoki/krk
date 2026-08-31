@@ -34,18 +34,28 @@
 //! Der Gegenfall steht daneben und ist ebenso ausdruecklich:
 //! [`leser::Oeffnung::KeinRepository`] ist eine **entschiedene** Antwort, und
 //! [`leser::Oeffnung::Unentschieden`] ist es nicht. Wer die beiden zusammenzoege,
-//! machte aus einem Deskriptormangel des eigenen Prozesses die Auskunft „dieser
-//! Ordner liegt in keinem Repository"; das ist derselbe Defekt, den der
-//! Durchlauf mit `260815-0211` einmal getragen hat.
+//! machte aus einem Deskriptormangel des eigenen Prozesses, aus einem
+//! Rechteproblem oder aus einem defekten Repository die Auskunft „dieser Ordner
+//! liegt in keinem Repository"; das ist derselbe Defekt, den der Durchlauf mit
+//! `260815-0211` einmal getragen hat. Woran die beiden auseinandergehalten
+//! werden, sagt `leser::entschiedene_verneinung`.
 //!
 //! # Der eine Weg herein: der Kanal
 //!
 //! Die Funktionen in [`leser`] sind **synchron** und sollen es bleiben: sie
-//! kennen weder Faden noch Kanal noch Abbruchkennzeichen. Wer sie ruft, steht
-//! dafuer ein, dass er nicht auf dem Hauptfaden steht — und genau einer tut
-//! das, [`lauf::Gitlauf`]. Kein Weg ausserhalb dieses Moduls fragt den Leser
-//! unmittelbar; was der Git-Bereich und die Markenspalte zeigen, kommt ueber
-//! den Kanal (C7.1 der Runde 23). Die Zaehlprobe
+//! kennen weder Faden noch Kanal. Wer sie ruft, steht dafuer ein, dass er nicht
+//! auf dem Hauptfaden steht — und genau einer tut das, [`lauf::Gitlauf`].
+//!
+//! **Ein Abbruchkennzeichen kennt genau eine von ihnen**, und der Grund steht
+//! bei ihr: [`leser::Gitleser::marken`] ist die einzige Auskunft, die lange
+//! genug dauert, dass ein aufgegebener Lauf sie noch zu Ende laufen liesse. Ein
+//! `&AtomicBool` ist dabei weder Faden noch Kanal, sondern dieselbe Form, die
+//! [`crate::verzeichnis::durchlauf`] traegt; eine zweite daneben entstuende
+//! sonst fuer dieselbe Sache.
+//!
+//! Kein Weg ausserhalb dieses Moduls fragt den Leser unmittelbar; was der
+//! Git-Bereich und die Markenspalte zeigen, kommt ueber den Kanal (C7.1 der
+//! Runde 23). Die Zaehlprobe
 //! `keine_statusabfrage_steht_ausserhalb_des_gitmoduls` in
 //! `crates/krk-core/tests/git.rs` haelt es fest.
 

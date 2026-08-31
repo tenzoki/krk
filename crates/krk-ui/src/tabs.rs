@@ -102,7 +102,12 @@ pub struct Tabinhalt {
     /// **Hoechstens einer je Dateifenster** (A10, C7.11), und deshalb ein Feld
     /// und keine Sammlung: das Feld zu setzen laesst den alten fallen, und sein
     /// `Drop` bricht ihn ab. Zwei Laeufe koennen damit nicht nebeneinander
-    /// stehen, ohne dass eine Zeile es verhinderte.
+    /// **stehen**, ohne dass eine Zeile es verhinderte.
+    ///
+    /// **Zwei Faeden koennen sich trotzdem kurz ueberschneiden**, und das Feld
+    /// sagt darueber nichts: `Drop` fordert den Abbruch an und wartet nicht.
+    /// Wie lange der aeltere Faden noch laeuft, sagt `git/lauf.rs`; seit dem
+    /// 260831 bricht er mitten im Statusstrom ab statt erst an dessen Ende.
     ///
     /// Neben `lesevorgang` und nicht in ihm, wie der Durchlauf: die beiden
     /// beantworten verschiedene Fragen und beginnen zwar zugleich, enden aber

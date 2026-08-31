@@ -50,8 +50,11 @@ pub struct Gitmodell {
     /// `None` heisst „noch nicht beantwortet"; der Modulkopf sagt, warum das
     /// nicht dasselbe ist wie [`Kopf::KeinRepository`].
     kopf: Option<Kopf>,
-    /// Die geholten Commits, die juengsten zuerst, in der Reihenfolge des
-    /// Laufs ueber die Vorfahren von HEAD.
+    /// Die geholten Commits, die juengsten zuerst.
+    ///
+    /// Die Reihenfolge kommt aus dem Lauf ueber die Vorfahren von HEAD und
+    /// steht dort nach der Commit-Zeit, wie `git log` sie zeigt;
+    /// `Gitleser::verlauf` sagt, warum nicht nach der des Graphen.
     verlauf: Vec<Commit>,
     /// Die Stelle des ausgewaehlten Commits im Verlauf.
     ///
