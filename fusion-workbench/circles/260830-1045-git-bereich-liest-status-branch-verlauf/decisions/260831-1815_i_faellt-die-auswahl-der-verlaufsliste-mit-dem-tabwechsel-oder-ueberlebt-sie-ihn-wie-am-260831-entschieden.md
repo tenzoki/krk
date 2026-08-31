@@ -82,3 +82,10 @@ Keine. Die Frage ist nicht die zwischen einem richtigen und einem falschen
 Stand, sondern die, welche der beiden Aussagen des Entscheids vom 260831 die
 verbindliche war: die über die Heimat der Auswahl (gebaut) oder die über den
 Tabwechsel (nicht gebaut). Das kann nur der Nutzer sagen, der sie getroffen hat.
+
+---
+Answered: 260831-1820-coder-der-dreizehnte-befund-die-prosa-folgt-dem-baum.md:34 — Möglichkeit 2, entschieden vom Nutzer am 260831-1755: die Auswahl der Verlaufsliste fällt mit dem Tabwechsel. Der gebaute Zustand ist der gewollte, kein Verhalten ändert sich, und die Prosa zieht nach. Von den zwei Aussagen der Antwortzeile vom 260831-0120 bleibt damit die erste verbindlich — die Heimat der Auswahl im `Gitmodell` —, und die zweite über den Tabwechsel ist zurückgenommen; Möglichkeit 1 mit ihrer Aufspaltung von `gitlauf_nachziehen_an` ist verworfen.
+
+Implemented: `crates/krk-ui/src/gitmodell.rs`, `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/git.rs` — vier Prosastellen sagen jetzt beide Hälften: die Auswahl übersteht den Wechsel des aktiven Dateifensters (jede `Tabliste` hält ihr eigenes Gitmodell) und fällt mit dem Tabwechsel (`Tabliste::waehlen` ruft für den verlassenen Tab `gitlauf_nachziehen_an`, dessen dritte Zeile `zuruecksetzen` unbedingt ausführt). Die vierte ist der Modulkopf `# Ein Gitmodell je Tab` in `gitmodell.rs`, den der Defektdatensatz nicht führte und der dieselbe Aussage in einer Begründung trug. Keine Zeile Code; `make check` — exit 0. Der Defekt `260831-1444_*_drei-prosastellen-sagen-die-auswahl-der-verlaufsliste-uebersteht-den-tabwechsel-sie-faellt-mit-ihm.md` ist damit geschlossen, und `260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md` trägt den Nachtrag.
+
+**Warum `_i_` und nicht `_a_`:** die Antwort lautet „der gebaute Zustand gilt", und ihre einzige Realisierung ist der Nachzug der Prosa. Der ist vollständig auf der Platte und oben mit Pfaden zitiert; ein `_a_` behauptete, es stünde noch etwas aus.

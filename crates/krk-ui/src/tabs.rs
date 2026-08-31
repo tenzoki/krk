@@ -202,9 +202,17 @@ impl Tabinhalt {
     /// [`Self::gitauswahl_setzen`] darunter und ueber keinen anderen Weg. Der
     /// Nutzer hat sie am 260831 hierher gelegt statt in die Ansicht
     /// (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
-    /// Moeglichkeit 2), damit sie den Tabwechsel uebersteht: es gibt **ein**
-    /// Gitfenster und **ein Gitmodell je Tab**. Sie ist damit das eine Feld,
-    /// das der Git-Bereich fuellt und der Einzugstakt nicht — kein zweiter
+    /// Moeglichkeit 2): es gibt **ein** Gitfenster und **ein Gitmodell je
+    /// Dateifenster und Tab**. **Wie weit sie damit reicht, hat der Nutzer am
+    /// 260831 ein zweites Mal entschieden**
+    /// (`260831-1815_*_faellt-die-auswahl-der-verlaufsliste-mit-dem-tabwechsel-oder-ueberlebt-sie-ihn-wie-am-260831-entschieden.md`,
+    /// Moeglichkeit 2), und die Antwort hat zwei Haelften: sie **uebersteht
+    /// den Wechsel des aktiven Dateifensters**, weil jede [`Tabliste`] ihr
+    /// eigenes Gitmodell haelt — und sie **faellt mit dem Tabwechsel**, weil
+    /// [`Tabliste::waehlen`] fuer den verlassenen Tab
+    /// [`Tabliste::gitlauf_nachziehen_an`] ruft und das dessen Gitmodell
+    /// unbedingt zuruecksetzt. Sie ist damit das eine Feld, das der
+    /// Git-Bereich fuellt und der Einzugstakt nicht — kein zweiter
     /// Schreiber auf demselben Feld, sondern ein zweites Feld mit einem eigenen
     /// Schreiber. Genau daran ist Moeglichkeit 3 des Datensatzes gescheitert,
     /// die `zeigen` das Modell veraenderlich gegeben haette.

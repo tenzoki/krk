@@ -73,13 +73,20 @@
 //!
 //! **Der Nutzer hat das am 260831 so entschieden**
 //! (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
-//! Moeglichkeit 2), und der sichtbare Unterschied ist einer: es gibt **ein**
-//! Gitfenster und **ein Gitmodell je Tab**, also uebersteht die Auswahl den
-//! Tabwechsel und den Wechsel des aktiven Dateifensters, wie es das
-//! Halteverhalten der Tabs in KRK ueberall sonst tut. Ein Ordnerwechsel setzt
-//! das Modell zurueck und nimmt sie mit (C4.6); ein nachgeladener Schwung
-//! haengt hinten an und laesst sie stehen (C4.2). Beide Regeln stehen im
-//! Gitmodell, wo die Auswahl wohnt, und nicht hier.
+//! Moeglichkeit 2). Es gibt **ein** Gitfenster und **ein Gitmodell je
+//! Dateifenster und Tab**, und wie weit die Auswahl damit reicht, ist die
+//! zweite Nutzerfrage
+//! (`260831-1815_*_faellt-die-auswahl-der-verlaufsliste-mit-dem-tabwechsel-oder-ueberlebt-sie-ihn-wie-am-260831-entschieden.md`,
+//! Moeglichkeit 2). Die Antwort hat zwei Haelften, und beide gehoeren
+//! hierher: **die Auswahl uebersteht den Wechsel des aktiven Dateifensters**,
+//! weil jede `Tabliste` ihr eigenes Gitmodell haelt und der Bereich beim
+//! Zurueckwechseln wieder anzeigt, was dort steht — und **sie faellt mit dem
+//! Tabwechsel**, weil `Tabliste::waehlen` fuer den verlassenen Tab
+//! `gitlauf_nachziehen_an` ruft und das dessen Gitmodell unbedingt
+//! zuruecksetzt. Ein Ordnerwechsel setzt das Modell ebenso zurueck und nimmt
+//! sie mit (C4.6); ein nachgeladener Schwung haengt hinten an und laesst sie
+//! stehen (C4.2). Alle diese Regeln stehen im Gitmodell und in der Tabliste,
+//! wo die Auswahl wohnt und wo sie geraeumt wird, und nicht hier.
 //!
 //! **Moeglichkeit 3 des Datensatzes ist verworfen**, und das gehoert dazu:
 //! `zeigen` bekommt das Modell weiterhin **lesend**. Bekaeme es das Modell

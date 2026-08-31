@@ -12,9 +12,18 @@
 //! Es wohnt im [`Tabinhalt`](crate::tabs) neben dem [`Ordnermodell`], und aus
 //! demselben Grund: der Git-Bereich folgt dem aktiven Dateifenster (E1 der
 //! Runde 23), und dessen sichtbarer Tab bestimmt den Ordner. Ein Modell beim
-//! Fenster statt beim Tab muesste bei jedem Tabwechsel neu gefuellt werden und
-//! haette den Stand des verlassenen Tabs schon weggeworfen, bevor der Nutzer
-//! zurueckwechselt.
+//! Git-Bereich statt beim Tab waere **ein** Stand fuer zwei Dateifenster und
+//! muesste bei jedem Wechsel des aktiven Dateifensters neu gefuellt werden; so
+//! haelt jede [`Tabliste`](crate::tabs) ihren eigenen, und der Bereich zeigt
+//! beim Zurueckwechseln, was dort steht.
+//!
+//! **Ueber den Tabwechsel hinweg gilt das ausdruecklich nicht.**
+//! `Tabliste::waehlen` ruft fuer den verlassenen Tab
+//! `gitlauf_nachziehen_an`, und das setzt dessen Gitmodell unbedingt zurueck:
+//! Kopf, Verlauf, Zusammenfassung und Auswahl fallen, und beim Zurueckwechseln
+//! entsteht der Befund neu. Der Nutzer hat diesen Stand am 260831 bestaetigt
+//! (`260831-1815_*_faellt-die-auswahl-der-verlaufsliste-mit-dem-tabwechsel-oder-ueberlebt-sie-ihn-wie-am-260831-entschieden.md`,
+//! Moeglichkeit 2).
 //!
 //! # Der Kopf ist ein `Option`, und `KeinRepository` ist nicht der Anfang
 //!
@@ -134,7 +143,15 @@ impl Gitmodell {
 // ueber `Tabinhalt::gitauswahl_setzen` hierher zurueck. Der Nutzer hat die
 // Auswahl am 260831 hierher gelegt und nicht in die Ansicht
 // (`260831-0120_*_wo-wohnt-die-auswahl-der-verlaufsliste-im-gitfenster-oder-im-gitmodell.md`,
-// Moeglichkeit 2), damit sie den Tabwechsel uebersteht.
+// Moeglichkeit 2). **Wie weit sie damit reicht, hat er am selben Tag ein
+// zweites Mal entschieden**
+// (`260831-1815_*_faellt-die-auswahl-der-verlaufsliste-mit-dem-tabwechsel-oder-ueberlebt-sie-ihn-wie-am-260831-entschieden.md`,
+// Moeglichkeit 2), und die Antwort hat zwei Haelften: die Auswahl uebersteht
+// den Wechsel des **aktiven Dateifensters**, weil jede `Tabliste` ihr eigenes
+// Gitmodell haelt — und sie **faellt mit dem Tabwechsel**, weil
+// `Tabliste::waehlen` fuer den verlassenen Tab `gitlauf_nachziehen_an` ruft
+// und dessen dritte Zeile `zuruecksetzen` unbedingt ausfuehrt: mit Kopf,
+// Verlauf und Zusammenfassung faellt auch die Auswahl.
 impl Gitmodell {
     /// Ob der Verlauf erschoepft ist und ein Nachschlag nichts mehr braechte
     /// (C4.3).
