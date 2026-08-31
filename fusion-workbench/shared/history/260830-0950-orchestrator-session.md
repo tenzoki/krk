@@ -3,7 +3,7 @@
 **Filed by:** orchestrator, Kai Stalmann <kai@stalmann.org>
 **Directive:** KRK bekommt eine Git-Anbindung, in Stufen. Stufe A zuerst: ein Git-Bereich am rechten Rand als sechster Wert von `Bereich`, der den Status des angezeigten Ordners, den aktuellen Branch und den Verlauf anzeigt; die Statusmarken in der Dateiliste sind über ein Ankreuzfeld der Bereichsleiste zuschaltbar. Danach Stufe B, die vier Operationen der Runde 1 (hinzufügen, committen, Änderungen verwerfen, Versions-Schieberegler), danach eine Auslieferung. Stufe C (Branches wechseln) ist möglich, Stufe E (PRs und Review-Freigabe) unwahrscheinlich. Bibliothek: `gix` (gitoxide) wird probiert. Dass die zehn Zeitzusagen aus C8 dabei fallen können, hat der Nutzer ausdrücklich in Kauf genommen.
 **Mode:** custom — erst Machbarkeitsanalyse, dann Shaper
-**Status:** Bounded Closure: der Abnahmelauf am laufenden Bündel ist Nutzerarbeit und nicht gefahren; 25 der 90 Abnahmekriterien bleiben unabgenommen
+**Status:** In Arbeit — die Bounded Closure vom 260831-1430 ist zurückgenommen, nachdem die Durchsicht zwei ernste Defekte fand
 
 ## Ausgangslage
 
@@ -213,3 +213,52 @@ Erhoben vom `reconciler` am 260831-1417, Domäne `code`, Circle `260830-1045-git
 **Rebalance recommendation:** revise Grounding
 
 Die Empfehlung ist beratend. Sie zielt auf zwei Stellen und nicht auf die Runde: der Spec-Absatz zu den zehn Zeitzusagen begründet ein richtiges Ergebnis falsch, und vierundzwanzig Commits stehen ohne Durchsicht. Beides ist gefilt, keines hält den beschränkten Abschluss auf. Die Directive selbst ist nicht zu berichtigen: sie ist gestellt, im Baum erreicht und allein in ihrer Anzeigehälfte unabgenommen, und genau das drückt der Marker `_b_` aus.
+
+## Die Auslieferung ohne Abnahmelauf
+
+Der Nutzer hat am 260831 entschieden, die Fassung 1.5.0 auszuliefern, **ohne** den
+Abnahmelauf aus Schritt 17 gefahren zu haben. Die Wahl ist ihm mit ihren Folgen vorgelegt
+worden und hier festgehalten, weil sie über diese Runde hinaus wirkt.
+
+**Was damit ungeprüft veröffentlicht wird:** 25 der 90 Abnahmekriterien, und es sind die
+sichtbaren. Dass der Git-Bereich erscheint und seine drei Flächen füllt, dass die
+Markenspalte die fünf Buchstaben an den richtigen Zeilen zeigt, dass `opt+cmd+r` und
+`shift+cmd+b` tun, was die Belegung verspricht, dass beim Ordnerwechsel nichts flackert
+und die erste Bildschirmseite nicht später steht als vor der Runde. Geprüft ist der Bau:
+`make check` grün, `cargo xtask bundle` signiert, 65 Kriterien durch Proben oder Stellen
+im Baum belegt.
+
+**Zwei Bedingungen sind eingehalten worden.** Die Durchsicht der Runde geht der
+Auslieferung voraus und nicht umgekehrt — der Plan verlangt es ausdrücklich, weil der
+umgekehrte Fall in diesem Projekt schon eingetreten ist (v10.0.0 wurde getaggt und
+geschoben, bevor die Durchsicht lief). Und die Zahl hat der Nutzer gewählt: 1.5.0 nach der
+Minor-Regel des README, weil die Runde eine neue Fähigkeit bringt und keine Tastenbedeutung
+ändert.
+
+**Die Runde bleibt beschränkt geschlossen.** Eine Auslieferung nimmt den Abnahmelauf nicht
+vorweg; sie macht ihn dringlicher.
+
+## Die Durchsicht nimmt die Bounded Closure zurück
+
+Die Durchsicht der Runde ist über die vollen 24 Commits gelaufen und hat 13 Defekte
+gefunden, 50 der 51 Dateien geöffnet. Damit steht die Deckung des Bereichs auf
+`uncovered=0`. Zwei der Befunde haben den Nutzer seine Entscheidung ändern lassen, und die
+Reihenfolge ist der Grund: er hatte die Auslieferung ohne Abnahmelauf gewählt, während die
+Durchsicht noch lief.
+
+**Der Nachschlag des Verlaufs verliert jeden Nebenzweig.** Er setzt am letzten angezeigten
+Commit an und läuft über dessen Vorfahren; bei der Vorbelegung `BreadthFirst` stehen
+mehrere Zweige nebeneinander in der Warteschlange, und jeder Commit, der beim Schwungende
+darin stand und kein Vorfahre des letzten ist, kommt nie mehr in die Liste. **KRKs eigenes
+Repository ist linear, und der Abnahmelauf hätte den Fehler dort nicht gesehen** — er wäre
+erst einem Nutzer mit verzweigter Historie aufgefallen.
+
+**Dateien mit zerlegten Namen bekommen keine Marke.** Der Bestand kommt aus `readdir`, der
+Befund aus `gix`, und `gix` liefert vorkomponiert, weil `git` auf macOS
+`core.precomposeUnicode` ab Werk setzt. Ein Name in NFD trägt eine andere Bytefolge und
+fällt durch; die Zeile bleibt leer und zählt in der Zusammenfassung nicht mit. Derselbe
+Vergleich steht an der Konfliktprüfung schon als offener Defekt.
+
+**Der Nutzer hat entschieden, beide vor der Auslieferung zu beheben.** Die Bounded Closure
+ist damit zurückgenommen, der Circle bleibt aktiv, und die Auslieferung von 1.5.0 folgt
+nach den zwei Behebungen und einer erneuten Abnahme.

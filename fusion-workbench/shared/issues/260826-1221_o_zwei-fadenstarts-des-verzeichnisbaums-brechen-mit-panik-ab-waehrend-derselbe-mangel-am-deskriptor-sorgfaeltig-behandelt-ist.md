@@ -70,3 +70,5 @@ restlichen Auftraege keinen Treffer tragen: er heisst, dass sie nicht entschiede
 
 `crates/krk-core/src/operation/mod.rs:165` traegt dieselbe Zeile und liegt ausserhalb dieser
 Durchsicht; wer die zwei hier anfasst, sieht sie mit an.
+
+Also seen: 260831-1444 by coderev — `Gitlauf::starten` (`crates/krk-core/src/git/lauf.rs:174-181`) ist die vierte Stelle derselben Form: `thread::Builder::new().spawn(…).expect(…)` in einer Funktion, die `Self` liefert, während der Deskriptormangel im selben Modul sorgfältig als `Oeffnung::Unentschieden` getrennt wird.
