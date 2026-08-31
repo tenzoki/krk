@@ -391,7 +391,7 @@ Jeder Schritt nennt genau einen Executor. Schritt 17 ist der einzige außerhalb 
     - Kriterien: C9.3, C10.2
     - Dependencies: Schritte 10, 13
 
-16. **Die Abnahmekommandos ohne Fenster**
+16. **Die Abnahmekommandos ohne Fenster** [DONE]
     - Executor: `coder`
     - Files: keine im Baum
     - Changes: `make check` als ganzes, also `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace --all-targets` unter `-D warnings` und `cargo fmt --all --check` (C8.7). `cargo xtask bundle` baut und signiert unverändert (C8.8). `cargo tree --target x86_64-apple-darwin -e normal,build` und derselbe Lauf gegen `aarch64-apple-darwin` führen weder `cc` noch ein Paket mit einem Namen auf `-sys`; **beide Läufe sind das Prüfmittel der neugefassten Zusage und stehen namentlich in der Abnahme** (C8.4). Findet einer von beiden doch einen Treffer, hält die Runde an und die Bibliothekswahl geht an den Nutzer zurück — die erste Bedingung aus `## Stops when`.
