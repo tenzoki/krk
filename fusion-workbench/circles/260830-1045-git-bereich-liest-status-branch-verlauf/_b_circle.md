@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
-**Claim:** Claimed 260830-1100: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
+**Claim:** Unclaimed
 **Active spec/plan:** 260830-1317_*_plan-git-bereich-liest-status-branch-verlauf.md
 **Active session history:** 260830-0950-orchestrator-session.md
 
@@ -36,3 +36,49 @@ See `**Active spec/plan:**` above. The cited spec or plan states the Directive i
 - `shared/decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md` — offen, nennt elf `ALLE`-Listen; `Bereich::ALLE` und `Fokus::ALLE` fallen darunter, und diese Runde fasst beide an.
 
 ## Turn log
+
+## Closure note
+
+**Beschränkt geschlossen am 260831-2024.** Der Git-Bereich der Stufe A steht: ein sechster Bereich
+der Fensterzeile mit Branch, Statuszusammenfassung, Verlaufsliste und den Einzelheiten des
+ausgewählten Commits, `Fokus::Git` als sechster Fokuswert auf `shift+cmd+b`, der
+Umschalter auf `opt+cmd+r`, eine fünfte Spalte mit fünf Markenzuständen in beiden
+Dateifenstern, gelesen mit `gix` 0.87.1 und ohne jeden Schreibweg ins Repository.
+
+**Warum beschränkt und nicht kohärent:** der Abnahmelauf am laufenden Bündel ist nicht
+gefahren. 25 der 90 Abnahmekriterien verlangen KRK im Vordergrund, weil die
+Wirkungsbereichs-Prüfung aus dem Hintergrund jeden fokusgebundenen Befehl abweist; kein
+Agent kann sie fahren. Sechzehn der siebzehn Planschritte stehen auf `[DONE]`, der
+siebzehnte ist dieser Lauf. Vierzehn der fünfzehn Endbedingungen halten, nachgefahren und
+nicht abgelesen; die eine offene ist derselbe Schritt.
+
+**Was die Runde über ihren Gegenstand hinaus gelernt hat**, und das ist das Artefakt des
+beschränkten Abschlusses:
+
+Eine `ALLE`-Liste hält den Bau nur, wenn sie über `ALLE.map` gebaut ist. Ein Literal und
+ein Feld fester Länge halten ihn nicht — sie brechen erst beim Start —, und ein fester
+Parameter hält gar nichts. Fünf Prosastellen im Baum behaupteten das Gegenteil. Die Coder
+dieser Runde haben deshalb neun stille Stellen von Hand nachziehen müssen, ohne dass der
+Übersetzer eine einzige genannt hätte. Der Befund steht jetzt in `CLAUDE.md` unter „Was
+man nicht sieht".
+
+Und ein Erhebungsmuster, das seine Zahl aus einem zeilenweisen `grep` zieht, findet die
+Stelle nicht, die ihre Zahl und ihr Trägerwort auf zwei Zeilen verteilt. Das alte Muster
+fand 57 Stellen, das erweiterte 462 in 71 Dateien, und die 57 sind darin restlos enthalten.
+
+**Die Durchsicht ist gelaufen** (`reviews/260831-1444-coderev-git-bereich-runde-23.md`,
+50 von 51 Dateien geöffnet) und hat dreizehn Defekte gefunden. **Alle dreizehn sind
+behoben**, darunter zwei, die ein Abnahmelauf an KRKs eigenem, linearem Repository nicht
+gefunden hätte: der Nachschlag des Verlaufs verlor jeden Nebenzweig, und Dateien mit
+zerlegt geschriebenen Namen bekamen keine Marke.
+
+**Ungedeckt bleiben fünf Commits** — die vier Behebungen und der Commit der Durchsicht
+selbst. Der Nutzer hat das am 260831-2024 ausdrücklich in Kauf genommen; jede Behebung ist gegen
+einen ausgeschriebenen Abnahmetest gebaut und ihre Probe vor der Änderung gegen den alten
+Stand gemessen. `Cargo.lock` hat auch die erste Durchsicht nicht geöffnet.
+
+**Elf Defekte und drei Entscheidungen bleiben offen** und gehen an die nächste Runde. Keiner
+hält etwas auf; zwei bestanden schon vor dieser Runde und sind von ihr nur sichtbar gemacht.
+
+**Sitzungsaufzeichnung:** `shared/history/260830-0950-orchestrator-session.md`
+**Abgleich:** `history/260831-1417-reconciliation.md`
