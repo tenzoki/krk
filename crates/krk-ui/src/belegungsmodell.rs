@@ -388,7 +388,18 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // und diese Gliederung fragt nach der Gegend der Anwendung. Der Zettel
         // haengt als Blatt am Hauptfenster und gehoert damit der Anwendung als
         // ganze, so wie die Belegungsansicht daneben.
+        //
+        // Die Belegungsdatei steht neben der Belegungsansicht und **nicht**
+        // unter `Vorschau`, obwohl sie dort erscheint. Diese Gliederung fragt
+        // nach der Gegend der Anwendung und nicht nach dem Mechanismus: wer
+        // seine Tastaturdefinition sucht, sucht sie bei den beiden Eintraegen,
+        // die sie schon fuehren — der Belegungsansicht und der
+        // Markdown-Ausgabe —, und nicht bei den Befehlen des Vorschaufensters.
+        // Bei `Kommando::ZwischenablageAnsehen` faellt dieselbe Frage anders
+        // aus, und der Unterschied ist der Gegenstand: die Zwischenablage hat
+        // keine eigene Gegend, ihr Befehl sagt allein, was die Vorschau zeigt.
         Kommando::BelegungAnsehen
+        | Kommando::BelegungsdateiAnsehen
         | Kommando::Beenden
         | Kommando::WeitereInstanz
         | Kommando::Notizzettel => Funktionsbereich::Anwendung,
@@ -1299,6 +1310,26 @@ mod tests {
             Kommando::aus_kennung("belegung_ansehen"),
             Some(Kommando::BelegungAnsehen)
         );
+    }
+
+    /// Die Belegungsdatei steht bei der Anwendung und **nicht** bei der
+    /// Vorschau (Nutzerauftrag vom 260901).
+    ///
+    /// Sie erscheint im Vorschaufenster und steht trotzdem im Obermenue
+    /// „Anwendung", weil diese Gliederung nach der Gegend der Anwendung fragt
+    /// und nicht nach dem Mechanismus: wer seine Tastaturdefinition sucht,
+    /// sucht sie neben der Belegungsansicht. Die zweite Zusicherung ist die
+    /// tragende — sie faellt aus, sobald jemand den Befehl zu den
+    /// Vorschaubefehlen umzieht, weil er dort erscheint.
+    ///
+    /// Die Nachbarschaft steht mit dabei: beide Kommandos betreffen dieselbe
+    /// Belegung, und sie duerfen nicht in zwei Obermenues auseinanderfallen.
+    #[test]
+    fn die_belegungsdatei_steht_bei_der_anwendung_und_nicht_bei_der_vorschau() {
+        let bereich = bereich_des_kommandos(Kommando::BelegungsdateiAnsehen);
+        assert_eq!(bereich, Funktionsbereich::Anwendung);
+        assert_ne!(bereich, Funktionsbereich::Vorschau);
+        assert_eq!(bereich, bereich_des_kommandos(Kommando::BelegungAnsehen));
     }
 
     /// Die Ansicht fuehrt genau die Befehle des Editors unter der Ueberschrift

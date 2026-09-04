@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 91 Funktionen mit zusammen 95 Kombinationen.
+# Ausgeliefert sind 92 Funktionen mit zusammen 95 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1060,6 +1060,39 @@ tasten = ["f1"]
 # anders als bei den fuenf Cmd-Kuerzeln der Norton-Reihe oben. Die Ansicht
 # dahinter entsteht spaeter in dieser Runde; bis dahin loest die Taste nichts
 # aus und nimmt dem System das Ereignis nicht weg (C3).
+
+[[funktion]]
+id = "belegungsdatei_ansehen"
+name = "Tastaturdefinition öffnen"
+tasten = []
+# Der Befehl stellt die Belegungsdatei des Nutzers,
+# `~/Library/Application Support/KRK/keymap.toml`, in die Vorschau und holt
+# den Fokus dorthin, damit cmd+e von dort in den Editor fuehrt. Gezeigt wird
+# die Datei des Nutzers und nicht die Auslieferungsfassung: die liegt im
+# Buendel ueberhaupt nicht als Datei, sondern ist zur Bauzeit einkompiliert
+# (`include_str!` auf genau diese Datei hier).
+#
+# Ausgeliefert wird keine Kombination, mit leerer Tastenliste wie die
+# Spaltenschalter und die Schalter der Bereichsleiste darueber und nicht mit
+# `reserviert_fuer`: die Funktion gibt es, sie ist nur keiner spaeteren Runde
+# vorbehalten. Ihr Weg ist das Hauptmenue. Nutzerentscheid vom 260901,
+# festgehalten in
+# `shared/history/260901-0734-menueeintrag-tastaturdefinition-oeffnen.md`.
+# Wie jeder Eintrag ohne Kombination faellt er damit aus der Markdown-Ausgabe
+# der Runde 3, die eine Funktion nur aufnimmt, wenn sie mindestens eine
+# Kombination traegt.
+#
+# **Die Datei hat zwei Schreiber**, und ein spaeterer Leser sieht das sonst
+# nicht. KRK liest sie einmal beim Start und laedt sie im Betrieb nicht nach
+# (`krk_core::tasten::belegung::fuer_den_betrieb`); eine Aenderung von Hand
+# wirkt deshalb erst beim naechsten Start. Und die Belegungsansicht auf f1
+# schreibt beim Verlassen **mit einer Aenderung** die ganze Arbeitskopie
+# zurueck, die sie aus dem Stand des Starts gebaut hat
+# (`Anwendungsdelegierter::belegungsansicht_verlassen`); jede Handaenderung
+# seither ist danach fort. Ohne Aenderung bleibt die Datei unberuehrt. Der
+# Befehl sagt es beim Oeffnen in der Statuszeile. Ob KRK mehr dagegen tun soll
+# (Neuladen im Betrieb, Sperre, Warnung beim Ueberschreiben), ist offen:
+# `shared/decisions/260901-0734_*_haelt-krk-die-belegungsdatei-gegen-ihren-zweiten-schreiber-oder-bleibt-es-beim-hinweis.md`.
 
 # ── C2: die Textbefehle des Menüs "Bearbeiten" ───────────────────────────────
 # Diese Funktionen fuehrt KRK nicht aus, und sie bekommen nie ein Kommando.

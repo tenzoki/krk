@@ -3633,6 +3633,14 @@ impl Anwendungsdelegierter {
             Kommando::EditorErsetzen => self.editorbefehl(Editorbereich::treffer_ersetzen),
             Kommando::EditorAlleErsetzen => self.editorbefehl(Editorbereich::alle_treffer_ersetzen),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
+            // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
+            // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**:
+            // das `match` endet mit einem Auffangzweig auf `bereichskommando`,
+            // und dort fiele der Befehl stillschweigend hindurch und taete
+            // nichts. Er traegt `Wirkungsbereich::Ueberall` und kommt damit aus
+            // jedem Fokus an, wo `bereichskommando` kein Ziel wuesste; er holt
+            // die Vorschau selbst hervor, statt sie vorauszusetzen.
+            Kommando::BelegungsdateiAnsehen => self.belegungsdatei_ansehen(),
             // Der Notizzettel aus C1 der Runde 9. Er steht hier und nicht bei
             // `bereichskommando`, weil er `Wirkungsbereich::Ueberall` traegt
             // und keinem Bereich gehoert: er geht aus jedem der sechs Fokuswerte
@@ -4168,6 +4176,100 @@ impl Anwendungsdelegierter {
             let aktiv = self.ivars().modell.borrow().aktiv();
             self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Die Belegungsdatei in der Vorschau (Nutzerauftrag vom 260901)
+    // ------------------------------------------------------------------
+
+    /// Der Pfad einer Ablagedatei, **ohne** die Schreibsperre zu nehmen.
+    ///
+    /// Die Schwester von [`Self::unter_der_sperre`] fuer die eine Frage, die
+    /// die Platte nicht anfasst: [`Ablage::pfad`] rechnet einen Pfad aus dem
+    /// Ablageort und liest nichts. Ein Durchgang dafuer naehme die Sperre und
+    /// **wartete** dabei auf eine zweite Instanz, die gerade schreibt — auf dem
+    /// Hauptfaden, fuer eine Zeichenkette.
+    ///
+    /// `None` heisst „KRK laeuft ohne Ablageordner": im Messmodus, und wenn
+    /// `~/Library/Application Support/KRK/` beim Start nicht zu oeffnen war.
+    /// Derselbe Fall, den [`Sperrhindernis::OhneOrdner`] fuer die schreibenden
+    /// Wege benennt.
+    #[must_use]
+    fn ablagepfad(&self, welche: Datei) -> Option<PathBuf> {
+        self.ivars()
+            .ablage
+            .borrow()
+            .as_ref()
+            .map(|ablage| ablage.pfad(welche))
+    }
+
+    /// Stellt die Belegungsdatei des Nutzers in das Vorschaufenster
+    /// (Nutzerauftrag vom 260901).
+    ///
+    /// **Gezeigt wird `keymap.toml` aus dem Ablageordner und nicht die
+    /// eingebaute Auslieferungsbelegung.** `resources/default-keymap.toml` ist
+    /// zur Bauzeit einkompiliert und liegt im ausgelieferten Buendel nicht als
+    /// Datei; der Pfad kommt deshalb aus [`Self::ablagepfad`] mit
+    /// [`Datei::Belegung`] und an keiner zweiten Stelle zustande.
+    ///
+    /// # Drei Ausgaenge, und die Frage dahinter ist „gibt es eine Datei zu
+    /// zeigen"
+    ///
+    /// Ohne Ablageordner gibt es keinen Ort, an dem sie stehen koennte; steht
+    /// der Ordner und fehlt die Datei, ist das der erste Start, und sie entsteht
+    /// erst mit der ersten gesicherten Umbelegung. Beide Faelle antworten mit
+    /// einem Satz in der Statuszeile und lassen die Vorschau unberuehrt — dort
+    /// stuende sonst „liess sich nicht lesen: No such file or directory", was
+    /// die Lage nennt und nicht erklaert. Der dritte Ausgang zeigt.
+    ///
+    /// **Ein `Err` beim Nachsehen zaehlt zum dritten und nicht zum zweiten.**
+    /// `try_exists` liefert es, wenn die Frage nicht zu entscheiden war; dann
+    /// antwortet die Vorschau auf ihrem eigenen Weg, statt dass diese Stelle
+    /// „gibt es noch nicht" behauptet, was sie nicht weiss.
+    ///
+    /// # Der Weg in die Vorschau ist der vorhandene
+    ///
+    /// Geschrieben wird ueber
+    /// [`Vorschaufenster::datei_anzeigen`](super::vorschau::Vorschaufenster::datei_anzeigen),
+    /// also in den **aktiven** Tab und in keinen anderen; das ist die eine Regel
+    /// des Halteverhaltens aus dem Kopf von [`crate::vorschaumodell`]. Ein
+    /// vorgemerkter Nachtrag faellt davor, aus demselben Grund wie bei
+    /// [`Self::zwischenablage_ansehen`]: die Datei ist die neuere Quelle
+    /// desselben Tabs, und das Einblenden holte den vorgemerkten Pfad sonst
+    /// nach und ueberschriebe sie sofort wieder.
+    ///
+    /// **Hervorgeholt und fokussiert wird ueber [`Self::fokus_holen`]**, den
+    /// einen Weg jedes Fokusbefehls: er blendet die Vorschau ein, falls sie aus
+    /// war, und setzt danach den Ersthelferrang hinein. Ausgeblendet wird nie —
+    /// dafuer bleibt `f3`, und zwei umschaltende Befehle waeren zwei Wahrheiten
+    /// ueber denselben Bereich. Der Fokus ist dabei kein Beiwerk: `cmd+e` traegt
+    /// [`Wirkungsbereich::Dateibereiche`](krk_core::tasten::Wirkungsbereich)
+    /// und bedeutet in der Dateiliste etwas anderes als in der Vorschau, naemlich
+    /// den ausgewaehlten Eintrag statt der angezeigten Datei. Ohne ihn oeffnete
+    /// der Rundweg die falsche Datei im Editor.
+    ///
+    /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur einen
+    /// Satz hinterlaesst. Ueber die Zulaessigkeit hat der Wirkungsbereich
+    /// entschieden und nicht das Ergebnis.
+    fn belegungsdatei_ansehen(&self) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let Some(pfad) = self.ablagepfad(Datei::Belegung) else {
+            self.antwort_zeigen(aktiv, &operationen::belegungsdatei_ohne_ablageordner());
+            return true;
+        };
+        if matches!(pfad.try_exists(), Ok(false)) {
+            self.antwort_zeigen(aktiv, &operationen::keine_belegungsdatei());
+            return true;
+        }
+        self.vorschau().datei_anzeigen(&pfad);
+        *self.ivars().vorschau_nachtrag.borrow_mut() = None;
+        let _ = self.fokus_holen(Fokus::Vorschau);
+        // **Nach dem Hervorholen und nicht davor.** `fokus_holen` geht durch
+        // `sichtbarkeit_aendern`, und das ruft fuer jeden bewegten Bereich
+        // `nach_dem_sichtbarkeitswechsel`; die Befehlsantwort steht danach da,
+        // wo sie stehen bleibt.
+        self.antwort_zeigen(aktiv, &operationen::belegungsdatei_hat_zwei_schreiber());
+        true
     }
 
     // ------------------------------------------------------------------

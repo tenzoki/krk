@@ -14,7 +14,10 @@
 //! [`namenszeilen`], [`ablagemeldung`] und [`verweise_abgewiesen`] fuer die
 //! Dateiverweise, die `cmd+c` und `cmd+x` im Dateifenster ablegen, und seit
 //! der Runde 21 [`einfuegen_abgewiesen`] fuer das Einfuegen aus der
-//! Zwischenablage in den Filtertext, das `cmd+v` daneben ausloest. Die Texte
+//! Zwischenablage in den Filtertext, das `cmd+v` daneben ausloest, und seit dem
+//! 260901 [`belegungsdatei_hat_zwei_schreiber`], [`keine_belegungsdatei`] und
+//! [`belegungsdatei_ohne_ablageordner`] fuer den Menuebefehl, der die
+//! Belegungsdatei des Nutzers in die Vorschau stellt. Die Texte
 //! der Runde 4 tragen den Zuschnitt der Dateioperationen vollstaendig: ein Befehl,
 //! der auf den sichtbaren Tab des aktiven Dateifensters wirkt und seine
 //! Antwort als Befehlsantwort in die Statuszeile schreibt. **Das Teilen weicht
@@ -108,6 +111,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::SyncSender;
 use std::time::{Duration, Instant};
 
+use krk_core::ablage::Datei;
 use krk_core::operation::{
     Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Uebersprungen,
     name_pruefen,
@@ -1319,6 +1323,86 @@ pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> Strin
     }
 }
 
+// ----------------------------------------------------------------------
+// Die Belegungsdatei in der Vorschau (Nutzerauftrag vom 260901)
+// ----------------------------------------------------------------------
+
+/// Der Name der Belegungsdatei, wie er in den drei Saetzen darunter steht.
+///
+/// Er kommt aus [`Datei::Belegung`] und steht nicht als Zeichenkette in den
+/// Saetzen: der Dateiname wohnt in `krk_core::ablage::pfade`, und eine zweite
+/// Schreibweise daneben liefe beim naechsten Umbenennen aus dem Tritt.
+fn belegungsdateiname() -> &'static str {
+    Datei::Belegung.dateiname()
+}
+
+/// Der Satz, der beim Oeffnen der Belegungsdatei vor ihren zwei Schreibern
+/// warnt (Nutzerauftrag vom 260901).
+///
+/// **Die Datei hat zwei Schreiber, und keiner von beiden weiss vom anderen.**
+/// KRK liest sie einmal beim Start
+/// (`krk_core::tasten::belegung::fuer_den_betrieb`) und laedt sie im Betrieb
+/// nicht nach; eine Aenderung von Hand wirkt deshalb erst beim naechsten Start.
+/// Die Belegungsansicht auf `f1` schreibt beim Verlassen die ganze Arbeitskopie
+/// zurueck, die sie aus dem Stand des **Starts** gebaut hat
+/// (`Anwendungsdelegierter::belegungsansicht_verlassen`); jede Handaenderung
+/// seither ist danach fort.
+///
+/// **KRK tut nichts dagegen und sagt es** — die vom Nutzer angenommene
+/// Vorbelegung. Ein Neuladen im Betrieb, eine Sperre und eine Warnung beim
+/// Ueberschreiben stehen ausserhalb dieses Auftrags; die Frage ist als
+/// `260901-0734_*_haelt-krk-die-belegungsdatei-gegen-ihren-zweiten-schreiber-oder-bleibt-es-beim-hinweis.md`
+/// im gemeinsamen Speicher aufgehoben.
+#[must_use]
+pub fn belegungsdatei_hat_zwei_schreiber() -> String {
+    format!(
+        "{} hat zwei Schreiber: eine Änderung von Hand wirkt erst beim nächsten Start, \
+         und die Belegungsansicht (F1) überschreibt sie beim Verlassen",
+        belegungsdateiname()
+    )
+}
+
+/// Der Satz, wenn es die Belegungsdatei noch nicht gibt (Nutzerauftrag vom
+/// 260901).
+///
+/// **Der Regelfall und kein Fehler.** KRK legt `keymap.toml` beim ersten Start
+/// nicht an, anders als `settings.toml` und `readers.toml`: eine fehlende
+/// Belegungsdatei ist der erste Start und liefert die Auslieferungsbelegung
+/// ohne Meldung (`krk_core::tasten::belegung::laden`). Wer nie eine Taste
+/// umbelegt hat, hat deshalb keine, und der Satz sagt ihm, woher sie kaeme.
+///
+/// **Er nennt nicht die eingebaute Auslieferungsbelegung als Ersatz**, denn die
+/// liegt im Buendel nicht als Datei; ein Verweis darauf schickte den Nutzer an
+/// einen Ort, an dem nichts steht.
+#[must_use]
+pub fn keine_belegungsdatei() -> String {
+    format!(
+        "{} gibt es noch nicht: sie entsteht, sobald die Belegungsansicht (F1) \
+         mit einer Änderung verlassen wird",
+        belegungsdateiname()
+    )
+}
+
+/// Der Satz, wenn KRK ohne Ablageordner laeuft (Nutzerauftrag vom 260901).
+///
+/// Der dritte und letzte Ausgang des Befehls, und er ist ein anderer als
+/// [`keine_belegungsdatei`] daneben: ohne Ablageordner gibt es die Datei nicht
+/// nur noch nicht, sondern es gibt auch keinen Ort, an dem sie entstehen
+/// koennte. Der Satz von nebenan schickte den Nutzer dann in eine
+/// Belegungsansicht, deren Sicherung ebenfalls scheitert.
+///
+/// Der Start hat den unerreichbaren Ablageordner schon gemeldet; **diese
+/// Wiederholung ist gewollt**, weil der Nutzer hier selbst nach der Datei
+/// gefragt hat und eine Antwort schuldet ist. Still nichts zu tun waere der
+/// Fehler, den die Meldung vermeidet.
+#[must_use]
+pub fn belegungsdatei_ohne_ablageordner() -> String {
+    format!(
+        "{} ist nicht zu zeigen: KRK läuft ohne Ablageordner",
+        belegungsdateiname()
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2273,6 +2357,82 @@ mod tests {
             !teilen.contains('\n'),
             "die Statuszeile ist einzeilig: {teilen}"
         );
+    }
+
+    // ------------------------------------------------------------------
+    // Die Belegungsdatei in der Vorschau (Nutzerauftrag vom 260901)
+    // ------------------------------------------------------------------
+
+    /// Der Hinweis nennt **beide** Schreiber und beide Folgen.
+    ///
+    /// Die ganze Zusage des Auftrags steht in diesem einen Satz: wer die Datei
+    /// von Hand aendert, sieht die Wirkung erst beim naechsten Start, und wer
+    /// danach in der Belegungsansicht etwas zuweist, verliert sie. Faellt eine
+    /// der beiden Haelften weg, bleibt eine halbe Warnung stehen, die den
+    /// Nutzer in genau den Verlust laufen laesst, vor dem sie warnen soll.
+    ///
+    /// **Die Taste steht mit im Satz.** Der Nutzer soll die zweite Schreibstelle
+    /// finden, ohne den Namen „Belegungsansicht" erst in einem Menue suchen zu
+    /// muessen.
+    #[test]
+    fn der_hinweis_nennt_beide_schreiber_der_belegungsdatei() {
+        let satz = belegungsdatei_hat_zwei_schreiber();
+        assert!(satz.contains("keymap.toml"), "{satz}");
+        assert!(satz.contains("Hand"), "{satz}");
+        assert!(satz.contains("Start"), "{satz}");
+        assert!(satz.contains("Belegungsansicht"), "{satz}");
+        assert!(satz.contains("F1"), "{satz}");
+        assert!(
+            !satz.contains('\n'),
+            "die Statuszeile ist einzeilig: {satz}"
+        );
+    }
+
+    /// Die drei Saetze nennen die Datei bei ihrem Namen aus der Ablage.
+    ///
+    /// Der Name steht in keinem der drei als Zeichenkette, sondern kommt aus
+    /// [`Datei::Belegung`]; diese Probe ist die Gegenprobe dazu. Wer die Datei
+    /// dort umbenennt, bekommt hier keine Zeile zu aendern — und ein Satz, der
+    /// den alten Namen weiterschriebe, faellt auf.
+    #[test]
+    fn die_drei_saetze_nennen_die_datei_aus_der_ablage() {
+        let name = Datei::Belegung.dateiname();
+        for satz in [
+            belegungsdatei_hat_zwei_schreiber(),
+            keine_belegungsdatei(),
+            belegungsdatei_ohne_ablageordner(),
+        ] {
+            assert!(satz.contains(name), "{satz}");
+            assert!(
+                !satz.contains('\n'),
+                "die Statuszeile ist einzeilig: {satz}"
+            );
+        }
+    }
+
+    /// Die zwei Saetze ohne Datei sagen Verschiedenes und nennen die
+    /// Auslieferungsbelegung nicht.
+    ///
+    /// Sie beantworten zwei Lagen, die der Nutzer verschieden beheben muss: die
+    /// fehlende Datei entsteht mit der ersten gesicherten Umbelegung, der
+    /// fehlende Ablageordner tut es nicht. Ein gemeinsamer Satz schickte die
+    /// zweite Haelfte in eine Belegungsansicht, deren Sicherung ebenfalls
+    /// scheitert.
+    ///
+    /// **Keiner der beiden verweist auf `default-keymap.toml`.** Sie ist zur
+    /// Bauzeit einkompiliert und liegt im ausgelieferten Buendel nicht als
+    /// Datei; ein Verweis darauf schickte den Nutzer an einen leeren Ort.
+    #[test]
+    fn die_zwei_saetze_ohne_datei_sagen_verschiedenes() {
+        let fehlt = keine_belegungsdatei();
+        let ohne_ordner = belegungsdatei_ohne_ablageordner();
+        assert_ne!(fehlt, ohne_ordner);
+        assert!(fehlt.contains("F1"), "{fehlt}");
+        assert!(ohne_ordner.contains("Ablageordner"), "{ohne_ordner}");
+        assert!(!ohne_ordner.contains("F1"), "{ohne_ordner}");
+        for satz in [&fehlt, &ohne_ordner] {
+            assert!(!satz.contains("default-keymap"), "{satz}");
+        }
     }
 
     // ------------------------------------------------------------------

@@ -710,6 +710,25 @@ pub enum Kommando {
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
     /// aenderbar und zuruecksetzbar (C3).
     BelegungAnsehen,
+    /// Die Belegungsdatei des Nutzers im Vorschaufenster zeigen
+    /// (Nutzerauftrag vom 260901).
+    ///
+    /// **Nicht zu verwechseln mit [`Kommando::BelegungAnsehen`] daneben.** Jenes
+    /// zeigt die geltende Belegung als aenderbare Tabelle in einem Blatt; dieses
+    /// zeigt die Datei, aus der sie beim Start gelesen wurde,
+    /// `~/Library/Application Support/KRK/keymap.toml`, als Text in der
+    /// Vorschau. Der Weg von dort in den Editor ist `cmd+e`, der Rundweg, und
+    /// deshalb holt der Befehl den Fokus in die Vorschau.
+    ///
+    /// **Die eingebaute Auslieferungsbelegung meint er nicht.**
+    /// `resources/default-keymap.toml` ist zur Bauzeit einkompiliert und liegt
+    /// im ausgelieferten Buendel nicht als Datei; ein Befehl, der sie zeigte,
+    /// haette am Referenzgeraet nichts zu oeffnen.
+    ///
+    /// **Ab Werk ohne Kombination**, wie die vier Spaltenschalter und die zwei
+    /// Filterschalter: erreichbar ueber das Hauptmenue, und wer eine Taste will,
+    /// vergibt sie in der Belegungsansicht.
+    BelegungsdateiAnsehen,
     /// Die Anwendung beenden (C3).
     Beenden,
     /// Eine weitere, eigenstaendige Instanz von KRK starten (C3 der Runde 7).
@@ -788,7 +807,7 @@ pub enum Kommando {
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 85] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 86] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -886,6 +905,7 @@ impl Kommando {
         (Kommando::EditorErsetzen, "editor_ersetzen"),
         (Kommando::EditorAlleErsetzen, "editor_alle_ersetzen"),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
+        (Kommando::BelegungsdateiAnsehen, "belegungsdatei_ansehen"),
         (Kommando::Beenden, "beenden"),
         (Kommando::WeitereInstanz, "weitere_instanz"),
         (Kommando::Notizzettel, "notizzettel"),
@@ -1020,6 +1040,15 @@ impl Kommando {
             | Kommando::BereichVerschmaelern
             | Kommando::Abbrechen
             | Kommando::BelegungAnsehen
+            // Die Belegungsdatei steht hier aus demselben Grund wie die
+            // Belegungsansicht darueber: sie ist Bestand der Anwendung und
+            // gehoert keinem der sechs Bereiche. Der Befehl **holt** die
+            // Vorschau hervor und den Fokus hinein; ein
+            // `Wirkungsbereich::Vorschau` verlangte damit genau den Zustand,
+            // den er selbst herstellt, und der Nutzer bekaeme seine Datei aus
+            // dem Dateifenster heraus nicht mehr zu sehen. Dieselbe Erwaegung
+            // traegt schon `Kommando::FokusVorschau`.
+            | Kommando::BelegungsdateiAnsehen
             | Kommando::Beenden
             // Die weitere Instanz aus C3 der Runde 7 steht hier aus demselben
             // Grund wie das Beenden daneben: sie betrifft die Anwendung als

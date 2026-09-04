@@ -106,6 +106,13 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// Wahl ist nicht dasselbe wie eine bewusst gesparte Kombination, und der Grund
 /// steht deshalb daneben und nicht in derselben Klammer.
 ///
+/// **Seit dem 260901 tritt eine siebte hinzu, und ihr Grund ist ein anderer als
+/// der der sechs davor.** `belegungsdatei_ansehen` stellt die Belegungsdatei des
+/// Nutzers in die Vorschau, und der Nutzer hat sie im Auftrag desselben Tages
+/// ausdruecklich ohne Kombination bestellt: erreichbar ueber das Hauptmenue, wie
+/// die vier Spaltenschalter. Die sechs davor folgen einer offen gelassenen Wahl,
+/// diese einer getroffenen; die Form ist dieselbe, die Herleitung nicht.
+///
 /// **Seit dem 260816 tritt eine fuenfte hinzu, und sie hat denselben Grund wie
 /// die vierte.** `inhaltssuche_umschalten` ist das Ankreuzfeld "Content" der
 /// Inhaltsfilter-Runde, der zweite Schalter derselben Art neben "Deep". Es
@@ -135,13 +142,14 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// Listen eine werden, ist die Frage `circles/
 /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
 /// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`.
-const OHNE_KOMBINATION_AB_WERK: [&str; 6] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 7] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
     "spalte_marke_umschalten",
     "tiefe_suche_umschalten",
     "inhaltssuche_umschalten",
+    "belegungsdatei_ansehen",
 ];
 
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.
@@ -1854,6 +1862,31 @@ fn die_drei_zoombefehle_tragen_die_vorschau_allein() {
         );
     }
     die_drei_faelle_aus_c5_tragen_die_bereiche_die_c5_verlangt();
+}
+
+/// Die Belegungsdatei ist aus jedem Fokus zu bekommen (Nutzerauftrag vom
+/// 260901).
+///
+/// **Nicht `Wirkungsbereich::Vorschau`, obwohl sie dort erscheint.** Der Befehl
+/// **holt** die Vorschau hervor und den Fokus hinein; ein Vorbehalt auf das
+/// Vorschaufenster verlangte damit genau den Zustand, den er selbst herstellt,
+/// und der Nutzer bekaeme seine Belegungsdatei aus dem Dateifenster heraus nie
+/// zu sehen. Dieselbe Erwaegung traegt `fokus_vorschau` in der Probe darunter.
+///
+/// Er steht daneben ohne Kombination in der Auslieferung und ist ueber das
+/// Hauptmenue erreichbar; das Menue fragt dieselbe Regel wie der
+/// Ereignisabgriff, und ein enger Wirkungsbereich graute seinen Eintrag aus.
+#[test]
+fn die_belegungsdatei_ist_aus_jedem_fokus_zu_bekommen() {
+    assert_eq!(
+        Kommando::BelegungsdateiAnsehen.wirkungsbereich(),
+        Wirkungsbereich::Ueberall,
+        "die Belegungsdatei braucht keinen bestimmten Bereich im Fokus"
+    );
+    assert_ne!(
+        Kommando::BelegungsdateiAnsehen.wirkungsbereich(),
+        Wirkungsbereich::Vorschau
+    );
 }
 
 /// Der Fokuswechsel wirkt aus jedem Bereich heraus, und das Anlegen eines

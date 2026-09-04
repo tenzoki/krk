@@ -541,7 +541,11 @@ mod tests {
     /// "Content" der Inhaltsfilter-Runde, das derselben Nutzerantwort folgt.
     /// Seit dem 260831 tritt `spalte_marke_umschalten` hinzu, der vierte
     /// Spaltenschalter aus C5 der Git-Runde, der derselben Nutzerantwort vom
-    /// 260812-0306 folgt wie die drei vor ihm. Die Aufzaehlung steht hier
+    /// 260812-0306 folgt wie die drei vor ihm. Seit dem 260901 tritt
+    /// `belegungsdatei_ansehen` hinzu, das die Belegungsdatei des Nutzers in die
+    /// Vorschau stellt; es steht **am Ende** der Aufzaehlung, weil diese
+    /// Reihenfolge die der Belegungsdatei ist und der Eintrag dort hinter
+    /// `belegung_ansehen` steht, also hinter den sechs davor. Die Aufzaehlung steht hier
     /// ausgeschrieben statt als Zahl: eine Zahl sagte nicht, **welche**
     /// Funktion aus der Datei faellt, und genau das ist die Auskunft, die ein
     /// Leser dieser Probe braucht.
@@ -602,9 +606,10 @@ mod tests {
                 "spalte_marke_umschalten",
                 "tiefe_suche_umschalten",
                 "inhaltssuche_umschalten",
+                "belegungsdatei_ansehen",
             ],
             "ab Werk sind andere Funktionen unbelegt als die vier Spaltenschalter, \
-             die tiefe Suche und die Inhaltssuche"
+             die tiefe Suche, die Inhaltssuche und die Belegungsdatei"
         );
     }
 
