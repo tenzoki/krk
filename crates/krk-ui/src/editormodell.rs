@@ -548,7 +548,18 @@ struct Zurueckgehalten {
 /// neunte Abnahmekriterium von C4 zwei Sachen zugleich verlangt: den Grund in
 /// der Statuszeile und einen Stand, der stehen bleibt. Wer beides in "es hat
 /// nicht geklappt" zusammenzoege, koennte das erste nicht liefern.
+///
+/// **`#[must_use]`, und der Grund steht in der Zusage darueber.** Der Wert
+/// traegt bei [`Self::Gescheitert`] den einzigen Satz, den der Nutzer ueber
+/// einen misslungenen Schreibvorgang je zu sehen bekommt; wer ihn fallen laesst,
+/// hinterlaesst genau den stillen Fehlschlag, den die Zusage ausschliesst — eine
+/// Datei, die ungesichert weiterlaeuft, ohne dass ein Wort darueber faellt. Bis
+/// zum 260904 hielt diese Zusage allein die Prosa dieses Kommentars, und ein
+/// nackter Ruf an [`Editormodell::sichern`] uebersetzte gruen
+/// (`shared/issues/260904-1827_*_sichern-auf-einem-netzlaufwerk-schlaegt-still-fehl-*`).
+/// Wer den Wert bewusst nicht braucht, schreibt `let _ =` davor.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "der Grund eines gescheiterten Sicherns gehoert in die Statuszeile"]
 pub enum Sicherungsausgang {
     /// Geschrieben. Der Editor meldet danach keinen ungesicherten Stand mehr.
     ///

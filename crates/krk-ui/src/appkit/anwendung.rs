@@ -7604,7 +7604,11 @@ impl Anwendungsdelegierter {
         if self.ivars().editor.get().is_none() {
             return false;
         }
-        self.editor_stand_sichern();
+        // `cmd+s` fragt nicht nach dem Ausgang: es gibt keinen Anlass, der auf
+        // dieses Sichern gewartet haette. Gemeldet ist er in jedem Fall schon,
+        // von `editor_stand_sichern` selbst. Das `let _ =` sagt genau das, seit
+        // der Rueckgabewert `#[must_use]` traegt.
+        let _ = self.editor_stand_sichern();
         true
     }
 
@@ -7621,6 +7625,12 @@ impl Anwendungsdelegierter {
     /// Stand, den ein Anlass verlieren koennte, also darf er laufen. Erreichbar
     /// ist der Zweig aus der Nachfrage heraus nicht: sie steht nur, wenn der
     /// Editor ungesicherten Stand haelt, und den haelt er nur mit einer Datei.
+    ///
+    /// **`#[must_use]`, seit dem 260904.** Der Wert entscheidet darueber, ob ein
+    /// Anlass den ungesicherten Stand mitnimmt; wer ihn stillschweigend fallen
+    /// laesst, laesst den Anlass laufen, obwohl das Schreiben gescheitert ist.
+    /// Der eine Rufer, der ihn wirklich nicht braucht, sagt es mit `let _ =`.
+    #[must_use = "der Ausgang entscheidet, ob ein Anlass laufen darf"]
     fn editor_stand_sichern(&self) -> bool {
         let Some(editor) = self.ivars().editor.get() else {
             return false;
