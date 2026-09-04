@@ -15,3 +15,25 @@ Der Ort ist `~/Library/CloudStorage/GoogleDrive-<konto>`, also eine FileProvider
 **Filed by:** user, Kai Stalmann <kai@stalmann.org>
 **Domain:** code
 Gemeldet am 260904 aus dem laufenden Programm, Fassung v1.6.0. Der Ort ist auf diesem Gerät vorhanden und der Fall damit reproduzierbar.
+
+---
+Resolved: Das Netzlaufwerk war es nicht. Der Schreibweg trägt, dreimal gefahren, kein
+`errno` (`260904-1905-bugfix-sichern-auf-google-drive.md`, drei Läufe
+gegen `~/Library/CloudStorage/GoogleDrive-…`, darunter der Ordner des Nutzerfalls);
+`nachbarpfad`, `File::create`, `rename(2)` und `text::datei::sichern` gehen dort alle
+vier durch, und der neue Inhalt stand danach unverändert auf der Platte. Der beobachtete
+Ausgang — kein Wort, kein Schreiben — ist mit keinem der drei Ausgänge von
+`Editormodell::sichern` vereinbar, denn alle drei enden in der Statuszeile. Er ist allein
+damit vereinbar, dass `sichern` gar nicht gelaufen ist, und der Nutzer hat am 260904
+bestätigt, was das bedeutet: **es stand ein Blatt offen.** Der Zulässigkeitsvorbehalt am
+Kopf von `Anwendungsdelegierter::kommando_ausfuehren` hat `cmd+s` abgewiesen und dazu
+nichts gesagt. Behoben ist deshalb nicht der Schreibweg, sondern das Schweigen der
+Blattsperre: `crates/krk-ui/src/kommandos/blattmeldung.rs` ist die eine Regel, die
+entscheidet, ob eine Abweisung einen Satz bekommt, und `kommando_ausfuehren` stellt ihn
+als Befehlsantwort in die Statuszeile. Ein abgewiesenes `cmd+s` meldet seitdem „nicht
+ausgeführt: über dem Fenster steht ein Blatt". Was ein Blatt bedient — `tab`, `space`,
+`return`, `esc` und der Pfeilblock samt `pageup`, `pagedown`, `home` und `end` — schweigt
+weiter, und der Menüweg ebenso, weil dort die Ausgrauung die Antwort ist.
+Offen bleibt daneben `260904-2047_*_wohin-geht-die-blattmeldung-wenn-das-blatt-die-statuszeile-verdeckt.md`:
+beim Anfangsmaß des Fensters ist die Statuszeile neben jedem Blatt dieses Baums sichtbar,
+bei einem klein gezogenen Fenster nicht.

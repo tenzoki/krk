@@ -272,6 +272,7 @@ use crate::fenstermodell::{
 };
 use crate::fenstertitel;
 use crate::kommandos::abwurfregel::Abwurfvorgang;
+use crate::kommandos::blattmeldung;
 use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::kontextmenue::{self, Entpackbefund, Kontextbefehl};
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
@@ -3396,6 +3397,34 @@ impl Anwendungsdelegierter {
         // grob.
         let lage = self.lage();
         if !zulaessigkeit::zulaessig(kommando, lage) {
+            // **Eine Abweisung durch die Blattsperre sagt, dass sie abgewiesen
+            // hat.** Bis zum 260904 stand hier ein nacktes `return false`: kein
+            // Wort, keine Wirkung. Bei einem Navigationsbefehl faellt das nicht
+            // auf, bei `cmd+s` kostet es Arbeit, denn der Nutzer haelt die
+            // Datei fuer gesichert und schliesst sie
+            // (`shared/issues/260904-1827_*_sichern-auf-einem-netzlaufwerk-*`).
+            // Welche Abweisung meldet und welche schweigt, entscheidet
+            // `kommandos::blattmeldung` und keine Bedingung an dieser Stelle;
+            // die drei uebrigen Bestandteile der Zulaessigkeitsregel melden
+            // nicht, und der Grund steht im Kopf jenes Moduls.
+            //
+            // **Der Menueweg bekommt die Meldung nicht ab**, und zwar ohne
+            // einen Zweig dafuer: er reicht `None` als Anschlag herein, und die
+            // Regel schweigt darauf. Seine Antwort ist die Ausgrauung.
+            if let Some(text) = blattmeldung::blattmeldung(
+                lage.blatt_steht,
+                kommando,
+                anschlag.map(|anschlag| anschlag.druck),
+            ) {
+                // Dieselbe Loeschregel wie beim ausgefuehrten Befehl weiter
+                // unten: die Antwort auf den vorigen Befehl faellt, bevor
+                // dieser seine eigene setzt. Sie steht **innerhalb** des
+                // Zweiges, damit eine stumme Abweisung — jeder Pfeildruck im
+                // Editor — die stehende Antwort nicht wegraeumt.
+                self.befehlsantwort_beidseitig_loeschen();
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.antwort_zeigen(aktiv, &text);
+            }
             return false;
         }
 

@@ -17,6 +17,9 @@
 //! zulaessigkeit Ob ein Befehl hier gerade wirken darf: kein Blatt, der
 //!              Ersthelfer gehoert nicht AppKit, und der Fokus passt (C2 der
 //!              Runde 7)
+//! blattmeldung Was die Blattsperre sagt, wenn sie einen Tastenbefehl abweist:
+//!              der eine Satz und die vier Wahrheitswerte, die ihn ausloesen
+//!              (Nutzerbefund vom 260904)
 //! fokus        Ob ein Befehl dort wirkt, wo der Nutzer steht (C5)
 //! rueckschritt Was die nackte Rueckschritt-Taste bedeutet: ein Zeichen des
 //!              Filtertextes zurueck, nichts, oder in den Papierkorb (C1 und C6
@@ -103,6 +106,17 @@
 //! dasselbe `Kommando::InPapierkorb`. Eine Antwort dort traefe beide Wege
 //! zugleich und graute den Menueeintrag aus, was C1.19 und C6.11 ausschliessen.
 //!
+//! **`blattmeldung` steht neben `rueckschritt` und `rundweg`, und es ist die
+//! dritte Regel hinter `zulaessigkeit` — die einzige davon, die den Fall
+//! behandelt, in dem die Zulaessigkeit **nein** gesagt hat.** Die zwei anderen
+//! entscheiden, was eine durchgekommene Taste tut; diese entscheidet, ob eine
+//! abgewiesene ein Wort bekommt. Warum sie nicht in `zulaessigkeit` steht, ist
+//! derselbe Grund, aus dem `rueckschritt` nicht dort steht: eine Antwort in der
+//! Regel traefe beide Frager zugleich, und der Menueeintrag beantwortet seine
+//! Abweisung schon durch die Ausgrauung. Ihr Anlass ist der Nutzerbefund vom
+//! 260904, in dem ein `cmd+s` vor einem stehenden Blatt stumm verfiel und der
+//! Nutzer die Datei fuer gesichert hielt.
+//!
 //! **`pfadeingabe` ist die eine Stelle, die einen Pfad prueft.** Zwei Ausloeser
 //! benutzen sie, die Pfadeingabe von Hand auf Shift+Cmd+G und der Sprung zum
 //! Inhalt der Zwischenablage auf Opt+Cmd+G. Der Unterschied ist allein, woher
@@ -116,6 +130,7 @@
 
 pub mod abwurfregel;
 pub mod auswahl;
+pub mod blattmeldung;
 pub mod fokus;
 pub mod kontextmenue;
 pub mod loeschwarnung;
