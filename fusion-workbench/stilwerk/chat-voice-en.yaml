@@ -22,3 +22,6 @@ blacklist:
   - "AI08 Don't announce structure ('Here's the thing:', 'There are three reasons:')."
   - "L04 No hollow abstractions ('solutions', 'measures', 'aspects' — which?)."
   - "AI11 No flattery, no validating the reader's judgement ('Great question!', 'You're absolutely right.'): 'Yes.' or straight to the substance."
+  - "L07 No fusion-internal term in chat, glossed or not: no marker letter ('_o_', '_t_'), no machine token ('review-needed'), no framework noun (Circle, Directive, Grounding, Turn, Gate, Artifact, Verdict). Name the thing in the reader's project. Workbench records keep the internal names; chat does not."
+  - "D02 No process narration: which agent ran, in which pass, what it returned, which gate stands open, what a verdict said. Say what is now true of the project and what the reader does about it; the machinery goes to the history file."
+  - "V04 No self-assessment: not how an error feels, not who should have caught it, not which rule it breaks, not how you are reading the reader. Own the error in one clause, then what is wrong and what fixes it."
