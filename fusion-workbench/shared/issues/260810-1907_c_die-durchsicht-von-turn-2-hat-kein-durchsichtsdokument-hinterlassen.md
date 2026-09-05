@@ -118,3 +118,6 @@ genau die Zwischenstufe, deren Fehlen dieser Datensatz beklagt.
 Regel: eine Aufgabenstellung an einen pruefenden Agenten nennt den Ablageort des Berichts
 ausdruecklich. Ein einzelner Fall, in dem es geklappt hat, loest die Regel nicht ein. Wer ihn
 schliessen will, schliesst ihn als Lage angenommen und nicht als behoben.
+
+---
+Resolved: Die Ursache ist weg: seit `$FUSION_PLUGIN_ROOT/rules/review-contract.md` beziehen `coderev` und `ontorev` Ablageort und Pflichtfelder ihrer Durchsichtsdatei aus dem eigenen Setup und nicht mehr aus der Formulierung des Auftrags, sodass eine Durchsicht ohne Dokument in dieser Form nicht mehr entsteht. Das Dokument von Turn 2 der Sitzung 260810-1647 ist damit nicht wiederhergestellt und bleibt verloren; geschlossen wird der Datensatz an der Ursache, nicht am Verlust. Abgleich 260905-2108.

@@ -33,3 +33,6 @@ nicht dastehen soll.
 oben mit Zeilennummer genannt.
 
 Gefunden beim Abgleich zum Abschluss der Runde 16, 260824-1852.
+
+---
+Resolved: CLAUDE.md nennt für die Hülle `ohne_warten_oeffnen` keine feste Aufruferzahl mehr, sondern verweist auf `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src` (CLAUDE.md:159), und die Aufzählung der Ablagedateien verweist auf `Datei::ALLE` statt eine eigene, unvollständige Liste zu führen (CLAUDE.md:129). Abgleich 260905-2032.

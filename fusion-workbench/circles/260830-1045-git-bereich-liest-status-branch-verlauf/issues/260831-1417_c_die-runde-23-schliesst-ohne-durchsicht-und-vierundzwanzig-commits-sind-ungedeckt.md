@@ -23,3 +23,6 @@ commits=24  reviews=0  unusable=0  uncovered=24  verdict=uncovered
 **Domain:** code
 Gefunden beim Abgleich zum Abschluss der Runde 23, mit `bin/fusion-review-coverage` gegen den Stand vor der Runde.
 Verwandt: `260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` — dieselbe Trennung zwischen „gebaut" und „geprüft", eine Ebene höher.
+
+---
+Resolved: Die Durchsicht liegt vor: `260831-1444-coderev-git-bereich-runde-23.md` im Durchsichtsspeicher dieser Runde, und der Circle ist mit Schließungsnotiz auf `_b_` geschlossen. Abgleich 260905-2108.

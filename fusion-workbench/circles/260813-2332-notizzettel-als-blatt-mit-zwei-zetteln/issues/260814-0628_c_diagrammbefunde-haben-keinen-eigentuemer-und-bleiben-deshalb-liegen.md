@@ -55,3 +55,6 @@ Runde schließt. Ein Umzug nach `shared/issues/` vor dem Rundenabschluss nähme 
   Schlussbemerkung der Prüfung `reviews/260814-0000-conceptrev-spec-notizzettel-als-blatt-mit-zwei-zetteln.md`.
 - Der Befund an diesem Spec selbst ist behoben; siehe den Abschnitt „Was der Nachtrag vom
   260814 geändert hat" in `planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`.
+
+---
+Resolved: Der Agent, dessen beratende und nicht ablegende Rolle den Befund erzeugte, gibt es im fusion-Werkzeugkasten nicht mehr; `$FUSION_PLUGIN_ROOT/agents/` führt ihn nicht. Die Diagrammprüfung ist heute ein Selbstcheck von Shaper und Planner vor der eigenen Fertigstellung (`$FUSION_PLUGIN_ROOT/rules/design-diagrams.md`), und ein Befund daraus gehört damit dem Agenten, der ihn findet. Abgleich 260905-2108.

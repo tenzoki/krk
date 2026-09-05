@@ -48,3 +48,6 @@ getrennt abgelegt: der Circle-Datensatz der Runde 5 trägt sieben solcher Stelle
 **Gewicht:** niedrig einzeln, mittel als Klasse — sie wächst mit jeder Runde.
 
 **Herkunft:** Abgleich der Runde 6 am 260812-2253.
+
+---
+Resolved: Beide Zeigerstellen stehen heute in Sternform: die Kopfzeile `**Active spec/plan:**` des Circle-Datensatzes von `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` nennt `260812-1145_*_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md`, und der Plan zitiert `260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md` (Zeilen 367, 537 und 571). Beide Ziele sind seither weitergewandert, ohne dass ein Zitat gestorben wäre. Abgleich 260905-2108.

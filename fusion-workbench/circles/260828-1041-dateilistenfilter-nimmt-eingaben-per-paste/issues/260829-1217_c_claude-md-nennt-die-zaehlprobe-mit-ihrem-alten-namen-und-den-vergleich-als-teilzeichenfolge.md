@@ -10,3 +10,6 @@ Wirkt mit dem Abschluss der Runde 21, nicht vorher: bis dahin ist der Baum auf `
 
 ---
 Reconciled 260829-1223: weiter offen. Kein Commit zwischen `79d507a` und `8d64859` fasst die genannte Stelle an; die Lage ist am Baum nachgelesen (siehe `history/260829-1223-reconciliation.md` dieses Circles für den Beleg je Datensatz). Keine Vorbedingung des Abschlusses der Runde 21.
+
+---
+Resolved: CLAUDE.md nennt die Zählprobe unter ihrem heutigen Namen `die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei` und beschreibt den Vergleich als Musterabgleich mit `*` statt als Teilzeichenfolge (CLAUDE.md:151). Abgleich 260905-2032.

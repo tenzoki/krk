@@ -83,3 +83,6 @@ Fünf der sechs sind die hier aufgezählten Defektdatensätze; die sechste,
 **Der Abgleich hat aus dem Befund eine Vorkehrung gezogen** und die zehn Markerwechsel dieser
 Sitzung mit `mv` statt `git mv` gefahren, damit der Index unberührt bleibt. Das ist Möglichkeit 3
 in der Praxis eines einzelnen Laufs und keine Entscheidung über die Regel.
+
+---
+Resolved: Der Orchestrator leert den Index vor jedem eigenen Commit und stagt danach allein seine ausgeschriebene Pfadliste; das gehaltene Kommando beginnt mit `git reset -q` (`$FUSION_PLUGIN_ROOT/agents/orchestrator.md` `## Phase 3`, Schritt 5). Ein `git mv` eines parallel laufenden Agenten kann damit nicht mehr in einen fremden Commit geraten. Abgleich 260905-2108.

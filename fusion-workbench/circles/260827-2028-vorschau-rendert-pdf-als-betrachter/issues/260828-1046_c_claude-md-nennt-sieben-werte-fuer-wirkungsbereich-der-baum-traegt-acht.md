@@ -16,3 +16,6 @@ CLAUDE.md nennt für `Wirkungsbereich` sieben Werte; der Baum trägt acht
 Der Plan der Runde 20 (`planning/260828-0712_*`, Entscheidung 4 und Risikotabelle) hat den Fehler vorausgesagt und dem Kurator zugewiesen, weil `curator` nicht in der Executor-Menge steht. Dieser Datensatz macht ihn für das Tor von `/fusion:cleanup` auffindbar. Fix: entweder „acht Werte" mit dem Datum des Nachzählens, oder die Zahl durch das `awk`-Kommando ersetzen, wie die Datei es für `Kommando` und `Art` schon tut. Der Absatz zu den zwei Textflächen bleibt unverändert.
 
 Offener Nachbar: `shared/issues/260826-0149_o_claude-md-sagt-nichts-ueber-die-fuenf-neuerungen-der-runde-18-an-der-vorschau.md` nennt nach dieser Runde eine Neuerung mehr (den Betrachter); dieser Datensatz hier betrifft allein die Zahl.
+
+---
+Resolved: CLAUDE.md nennt für `Wirkungsbereich` keine feste Zahl mehr, sondern verweist auf das Zählkommando `awk '/^pub enum Wirkungsbereich/,/^}/' crates/krk-core/src/tasten/belegung.rs` (CLAUDE.md:87). Abgleich 260905-2032.

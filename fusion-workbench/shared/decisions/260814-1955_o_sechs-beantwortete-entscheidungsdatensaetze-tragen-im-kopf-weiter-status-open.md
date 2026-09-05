@@ -111,3 +111,5 @@ Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **der Entscheidungsbesta
 
 ---
 Umgelegt am 260819 vom Defekt- in den Entscheidungsspeicher, auf Befund des Abgleichs 260819-1440: der Text sagt selbst, dass zu entscheiden und nicht zu beheben ist. Der Datensatz behaelt vorerst die Gestalt eines Defektberichts; die Abschnitte Options, Constraints und Recommendation fehlen ihm und sind nachzutragen, wenn die Frage vorgelegt wird.
+
+Answer located: `260826-0818-curator-run.md` `### K02` und `$FUSION_PLUGIN_ROOT/rules/fusion-workbench-conventions.md` `## Decision Record Template` — das Kopffeld `**Status:**` ist im Rahmenwerk ersatzlos abgeschafft, ein vorhandenes bleibt bewusst unangetastet; die Frage nach dem Abgleich von Kopffeld und Marker hat damit keinen Gegenstand mehr. Abgleich 260905-2101, Marker unverändert.

@@ -126,3 +126,6 @@ damit nicht der Grund:** `e843d90` und `9ac41ea` legen ebenfalls eine Durchsicht
 beide ihr `commit`-Ereignis. Die Lücke sitzt in den Turns 1 und 2 und im Nachlauf, nicht an einer
 Commit-Art. `task_start`/`task_done` stehen bei 15/16, und die Paarung geht nicht auf: `F-7` und `R-3`
 tragen ein `task_done` ohne `task_start`, `F-5` ein `task_error` statt eines `task_done`.
+
+---
+Resolved: Die Aufgabenereignisse werden geschrieben: `orchestrator-events.jsonl` führt in den letzten 400 Zeilen 83 `task_start` und 82 `task_done`, gemessen am 260905-2108. Sie stammen nicht mehr aus einer Anweisung im Orchestrator-Prompt, die unter Aufgabendruck ausfallen kann, sondern aus den Dispatch-Hooks. Abgleich 260905-2108.

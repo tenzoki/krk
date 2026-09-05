@@ -46,3 +46,6 @@ Beide liegen in `issues/` und behalten ihren damaligen Marker; zu ziehen ist an 
 
 - Gefunden beim Abgleich der Runde 9, `history/260814-1002-reconciliation.md`.
 - Gemessen mit `grep -rln '260814-0656_o_plan-notizzettel' fusion-workbench/` am Stand `79dab20`.
+
+---
+Resolved: Der erste Zeiger steht in Sternform: die Kopfzeile `**Active spec/plan:**` des Circle-Datensatzes von `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln` nennt `260814-0656_*_plan-notizzettel-als-blatt-mit-zwei-zetteln.md`. Der zweite lag in `agentstate.yaml`, deren Felder `plan_context.plan_file` und `current_task.source_file` es in der heutigen Fassung nicht mehr gibt. Abgleich 260905-2108.
