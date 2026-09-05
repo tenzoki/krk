@@ -16,3 +16,6 @@ Beide Sätze um „noch als ausgeschriebener Pfad" ergänzen.
 
 **Schwere:** Low.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, L5
+
+---
+Abgleich 260905-2254 (coder, Baumstand `8779a25`): **zur Hälfte erledigt, bleibt offen.** Die Stationstabelle in `README.md` nennt jetzt beide Hälften der Prüfung: „`objc2` steht außerhalb von `crates/krk-ui/src/appkit/` nirgends, weder als `use`-Zeile noch als ausgeschriebener Pfad". Der Hilfetext steht weiter auf der halben Aussage — `xtask/src/main.rs:85`, „prueft die AppKit-Grenze (keine `use objc2`-Zeile ausserhalb von …)" —, und `xtask/` lag außerhalb der Grenze dieses Durchgangs.

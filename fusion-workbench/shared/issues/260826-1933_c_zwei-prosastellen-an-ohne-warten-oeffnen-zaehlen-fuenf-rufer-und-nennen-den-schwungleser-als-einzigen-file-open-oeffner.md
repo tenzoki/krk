@@ -33,3 +33,6 @@ Den Ordinalsatz an `sys.rs:900-902` um den sechsten Rufer ergaenzen oder auf das
 ## Was geprueft ist
 
 Gelesen am Baum `9c02863` mit `git show` und `git grep`; kein Lauf.
+
+---
+Resolved: Die dritte und letzte Fundstelle, `CLAUDE.md`, Abschnitt „Was man nicht sieht, wenn man es nicht weiß", Absatz „Die Prüfung dessen, was da geöffnet wurde, steht am Deskriptor und nicht am Pfad": „einziger Öffner" ist auf „einziger Öffner **dieser Datei**" eingeengt, und die Einengung ist begründet — `File::open` steht daneben noch im Kopieren und im Entpacken unter `krk-core/src/operation/`, je auf einem Pfad, den der Code kurz zuvor selbst angelegt hat, und dort hängt nur, wer ihn dazwischen durch eine Röhre ersetzt. Die zwei Stellen in `crates/krk-core/src/verzeichnis/sys.rs` waren am Baum `8779a25` schon geräumt: der Ordinalsatz nennt den sechsten Rufer und verweist auf das Zählkommando, die Aussage über `File::open` trägt „dieser Datei" und dieselbe Begründung.

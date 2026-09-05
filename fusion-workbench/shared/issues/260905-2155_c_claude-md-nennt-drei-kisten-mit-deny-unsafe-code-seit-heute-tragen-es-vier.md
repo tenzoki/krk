@@ -32,3 +32,6 @@ Ausnahmen stehen namentlich. Gezaehlt wird mit
 ## Abnahme
 
 Der Satz in `CLAUDE.md` nennt keine Kistenliste mehr, oder er nennt `xtask` mit.
+
+---
+Resolved: `CLAUDE.md`, Abschnitt „Projektstand", letzter Absatz vor „Bauen und prüfen": die Kistenliste ist gefallen und durch die Regel samt Zählkommando ersetzt („Jedes Mitglied des Workspace trägt `#![deny(unsafe_code)]` an seiner Kistenwurzel, `xtask` seit dem 260905 als letztes … `grep -rn '^#!\[deny(unsafe_code)\]' crates/*/src/*.rs xtask/src/*.rs`"). Am Baum `8779a25` liefert das Kommando vier Zeilen, eine je Eintrag unter `members` der Wurzel-`Cargo.toml`. Der Satz zu den zwei `#![allow(unsafe_code)]`-Ausnahmen nennt jetzt die Probe, die sie namentlich hält (`genau_zwei_dateien_oeffnen_die_regel_deny_unsafe_code`, `crates/krk-core/tests/baum.rs`), und dazu ihre Reichweite: sie liest allein `crates/` und sähe eine Ausnahme in `xtask` nicht.

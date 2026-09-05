@@ -22,3 +22,6 @@ Den Handgriff je Tag schreiben — `git push origin refs/tags/v<zahl>` für jede
 
 **Schwere:** Medium — eine Handanweisung, die eine Wirkung über das Gerät hinaus hat und die das Werkzeug sich selbst untersagt.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, M4
+
+---
+Resolved: `README.md`, Abschnitt „Einmal vor dem ersten Lauf: die alten Tags nachschieben". `git push origin --tags` ist aus dem Block gefallen; an seiner Stelle steht der Handgriff je Tag, `git push origin refs/tags/v<zahl>`, mit dem Satz, dass jeder von `comm` ausgegebene Name einzeln zu prüfen und einzeln zu schieben ist. Der verwaiste Tag ist als Fall benannt: wie er entsteht (`cargo xtask version` setzt den Tag vor dem Bau, ein Abbruch lässt ihn stehen, der nächste Lauf mit einer anderen Zahl sieht ihn nicht mehr an), und was mit ihm geschieht — „Ein Tag, zu dem keine Releaseseite gehört, wird nicht nachgeschoben, sondern gelöscht", `git tag -d v<zahl>`. Dazu der Grund, aus dem die Sammelmarke nicht bloß unpraktisch ist: `--tags` steht in `xtask/src/git.rs` in der Liste `MARKEN`, die das Bauwerkzeug sich selbst untersagt, und käme aus ihm nie hinaus.

@@ -12,3 +12,6 @@ Seit dem 260905 reist `HowTo.md` im Releasepaket mit (`xtask/src/veroeffentlichu
 ---
 **Filed by:** coder, Kai Stalmann <kai@stalmann.org>
 **Domain:** code
+
+---
+Resolved: `CLAUDE.md`, Abschnitt „Was man nicht sieht, wenn man es nicht weiß", erster Absatz. Die Zahl ist gefallen; an ihrer Stelle steht das Erhebungskommando ``grep -rnE --exclude-dir=fusion-workbench --exclude-dir=target '[Dd]ie alte.{0,24}löschen' .`` und der Satz, der es vollständig hält: jede Stelle führt die Wendung „die alte … löschen", wer eine neue schreibt, schreibt sie mit. Genannt sind daneben die Stellen, die heute antworten — der Kopf der `README.md`, die Anleitung `HowTo.md` samt ihrem Weg ins Paket (`xtask/src/veroeffentlichung.rs`, `paket_stellen`) und `RELEASETEXT` in derselben Datei. Am Baum `8779a25` gibt das Kommando genau diese drei aus, dazu `CLAUDE.md` selbst.

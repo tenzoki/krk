@@ -3,8 +3,11 @@
 KRK ist ein Dateimanager mit eingebautem Editor für macOS, in der Tradition der
 Norton-Commander-Bedienung: zwei Dateifenster nebeneinander, Lesezeichen- und
 Geräteleiste links, Vorschau rechts, alles über die Tastatur erreichbar bei
-zusätzlicher Maus- und Trackpad-Unterstützung. Eine Git-Anbindung ist vorgesehen
-und noch nicht gebaut.
+zusätzlicher Maus- und Trackpad-Unterstützung. Die Git-Anbindung liest und
+schreibt nicht: ein eigener Bereich zeigt Branch, Statuszusammenfassung und
+Verlauf, und die Dateiliste trägt die Git-Marke jedes Eintrags. Hinzufügen,
+Committen, Änderungen verwerfen und der Versions-Schieberegler sind nicht
+gebaut.
 
 **Voraussetzung: macOS 15 oder neuer.** Das ausgelieferte Bündel ist beglaubigt
 und trägt den Nachweis von Apple angeheftet; es startet deshalb ohne Rückfrage,
@@ -267,7 +270,7 @@ mit einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt.
 | | Station | Was sie tut |
 |---|---|---|
 | 1 | Stand prüfen | HEAD trägt `v<version>` passend zu `[workspace.package]`, keine verfolgte Datei ist geändert, `gh` ist vorhanden und angemeldet |
-| 2 | AppKit-Grenze | keine `use objc2`-Zeile außerhalb von `crates/krk-ui/src/appkit/` |
+| 2 | AppKit-Grenze | `objc2` steht außerhalb von `crates/krk-ui/src/appkit/` nirgends, weder als `use`-Zeile noch als ausgeschriebener Pfad |
 | 3 | Übersetzen | `x86_64-apple-darwin` und `aarch64-apple-darwin`, dieselben zwei wie in `rust-toolchain.toml` |
 | 4 | `lipo` | die zwei Binärdateien zu `target/universal/krk`, geprüft mit `lipo -archs` |
 | 5 | Montage | dasselbe Bündel wie `cargo xtask bundle`, nur mit der universellen Binärdatei |
@@ -315,8 +318,13 @@ Für den Fall, dass der Lauf **erst an Station 7** gescheitert ist: das
 universelle, mit Developer-ID und gehärteter Laufzeitumgebung signierte Bündel
 liegt fertig unter `target/KRK.app`, und allein das Ticket fehlt. So geschehen am
 260820, als der Upload zu Apple in einen Zeitüberlauf lief. **Ein zweites
-`./release.sh` hilft hier nicht:** es bräche an Station 1 ab und übersetzte
-überdies beide Ziele neu, um dasselbe Bündel herzustellen.
+`./release.sh` hilft hier nicht:** es übersetzte beide Ziele neu, um dasselbe
+Bündel herzustellen, und reichte es ein zweites Mal bei Apple ein. An Station 1
+hält es dabei nur an, wenn seit dem ersten Lauf etwas eingetragen oder geändert
+wurde — `stand_pruefen` fragt allein nach einem passenden Tag auf HEAD und einem
+sauberen Arbeitsbaum, und mehrere Tags auf HEAD stören sie nicht. Der Aufwand
+ist der Grund für diesen Weg, nicht ein Abbruch, auf den man sich verlassen
+könnte.
 
 Geprüft wird zweierlei, und beides am Bündel, das dort liegt:
 
@@ -384,9 +392,25 @@ getan:
 ```sh
 comm -23 <(git tag -l | sort) \
          <(git ls-remote --tags origin | sed 's|.*refs/tags/||' | sort)
-
-git push origin --tags
 ```
+
+**Jeder ausgegebene Name ist einzeln zu prüfen und einzeln zu schieben:**
+
+```sh
+git push origin refs/tags/v<zahl>
+```
+
+`git push origin --tags` steht hier bewusst nicht. Es schiebt jeden lokalen Tag
+und damit auch einen verwaisten. Ein verwaister entsteht so: `cargo xtask
+version` setzt den Tag, bevor gebaut wird; scheitert danach eine Station, bleiben
+Eintrag und Tag stehen, und wählt der Nutzer für den nächsten Anlauf eine andere
+Zahl, sieht dieser Lauf den alten Tag nicht mehr an. Er benennt dann einen lokal
+eingetragenen, nie ausgelieferten Stand. **Ein Tag, zu dem keine Releaseseite
+gehört, wird nicht nachgeschoben, sondern gelöscht** — `git tag -d v<zahl>`.
+
+Dieselbe Sammelmarke `--tags` steht in `xtask/src/git.rs` in der Liste `MARKEN`,
+die das Bauwerkzeug sich selbst untersagt: aus dem Werkzeug käme sie nie hinaus.
+Von Hand ist sie so wenig am Platz.
 
 ## Versionspflege
 

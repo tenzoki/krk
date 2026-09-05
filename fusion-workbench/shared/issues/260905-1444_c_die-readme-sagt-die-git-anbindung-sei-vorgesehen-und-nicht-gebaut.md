@@ -16,3 +16,6 @@ Sie ist gebaut. Die Runde 23 (`circles/260830-1045-git-bereich-liest-status-bran
 ---
 **Filed by:** orchestrator, Kai Stalmann <kai@stalmann.org>
 **Domain:** code
+
+---
+Resolved: `README.md`, erster Absatz. Der Satz „Eine Git-Anbindung ist vorgesehen und noch nicht gebaut." ist ersetzt durch die Abgrenzung, die er meinte: „Die Git-Anbindung liest und schreibt nicht: ein eigener Bereich zeigt Branch, Statuszusammenfassung und Verlauf, und die Dateiliste trägt die Git-Marke jedes Eintrags. Hinzufügen, Committen, Änderungen verwerfen und der Versions-Schieberegler sind nicht gebaut." Keine Zahl, weder für das Gebaute noch für das Ausstehende; die vier ausstehenden Operationen sind namentlich genannt, wie es die Directive der Runde 1 tut.
