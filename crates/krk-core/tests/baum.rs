@@ -43,7 +43,7 @@
 //! Probe dieser Art.
 
 mod gemeinsam;
-use gemeinsam::quelldateien;
+use gemeinsam::{aufrufstellen, quelldateien};
 
 /// Ob eine Nadel in einer **Code**-Zeile der Datei steht und nicht in einem
 /// Kommentar.
@@ -316,26 +316,123 @@ fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
     );
 }
 
+/// Kein Fadenstart im Baum wirft seinen Rueckgabewert weg.
+///
+/// **Was hier gehalten wird.** `thread::Builder` liefert seinen Fadenstart als
+/// `io::Result` — anders als `thread::spawn`, das selbst in Panik geraet — und
+/// es gibt ihn genau dafuer, dass der Aufrufer den Fehlschlag behandeln kann.
+/// Ein `.expect(…)` oder `.unwrap()` daran nimmt dem Aufrufer die Wahl wieder
+/// ab und laesst den **rufenden** Faden in Panik geraten, der in diesem Projekt
+/// ueberall der Hauptfaden ist: die Sitzung endet samt allem, was
+/// `krk_core::ablage` noch nicht geschrieben hat
+/// (`shared/issues/260826-1221_*_zwei-fadenstarts-des-verzeichnisbaums-brechen-mit-panik-ab-waehrend-derselbe-mangel-am-deskriptor-sorgfaeltig-behandelt-ist.md`).
+///
+/// **Warum eine Probe und nicht der Uebersetzer.** `Result` traegt `#[must_use]`,
+/// und ein `.expect(…)` verbraucht den Wert; der Bau ist damit zufrieden. Die
+/// Zusage ist keine ueber den Typ, sondern eine ueber die Behandlung, und die
+/// haelt hier niemand ausser dieser Stelle.
+///
+/// **Wo die Kette endet, und warum nicht am naechsten Strichpunkt.** Der erste
+/// Entwurf dieser Probe las vom Bauer bis zum naechsten `;` und sah keine der
+/// vier Stellen: der Rumpf des uebergebenen Abschlusses traegt selbst einen
+/// Strichpunkt, und die Kette war zu Ende, bevor ihr letztes Glied gelesen war.
+/// Eine Probe, die die falsche Stelle liest, ist schlimmer als keine, denn sie
+/// bestaetigt. Gelesen wird deshalb bis zum ersten Strichpunkt **ausserhalb
+/// jeder Klammer**; nachgeprueft ist es, indem `.expect(…)` versuchsweise
+/// wieder eingesetzt wurde und die Probe rot wurde.
+///
+/// **Was die Nadel nicht sieht.** Ein Fadenstart, dessen `Result` erst mehrere
+/// Anweisungen spaeter ausgepackt wird, entgeht ihr; `krk-ui` schreibt genau so
+/// (`let gestartet = …; if let Err(fehler) = gestartet`), und das ist die
+/// richtige Behandlung und keine Umgehung. Die Probe faengt die Form, die den
+/// Defekt getragen hat, und behauptet nicht mehr.
+#[test]
+fn kein_fadenstart_im_baum_wirft_seinen_rueckgabewert_weg() {
+    let bauer = concat!("Builder", "::new()");
+    let weggeworfen = [concat!(".exp", "ect("), concat!(".unw", "rap(")];
+    let mut fundstellen: Vec<String> = Vec::new();
+    for (name, inhalt) in quelldateien() {
+        // Kommentarzeilen fallen vorab: die Doc-Kommentare dieser Datei nennen
+        // jede Nadel im Klartext, und ohne den Schnitt faende die Probe sich
+        // selbst.
+        let code: String = inhalt
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        for (anfang, _) in code.match_indices(bauer) {
+            let mut tiefe = 0i32;
+            let mut ende = code.len();
+            for (versatz, zeichen) in code[anfang..].char_indices() {
+                match zeichen {
+                    '(' | '[' | '{' => tiefe += 1,
+                    ')' | ']' | '}' => tiefe -= 1,
+                    ';' if tiefe <= 0 => {
+                        ende = anfang + versatz;
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            let kette = &code[anfang..ende];
+            if weggeworfen.iter().any(|nadel| kette.contains(nadel)) {
+                fundstellen.push(format!(
+                    "{name}: {}",
+                    kette.split_whitespace().collect::<Vec<_>>().join(" ")
+                ));
+            }
+        }
+    }
+    assert!(
+        fundstellen.is_empty(),
+        "ein Fadenstart wirft seinen Rueckgabewert weg und laesst den rufenden \
+         Faden in Panik geraten: {fundstellen:#?}"
+    );
+}
+
 /// C3.14: Ueber der Ablage stehen genau zwei Absprachen und keine dritte.
 ///
 /// Die Schreibsperre und das Sitzungsrecht, jede auf ihrer eigenen Datei im
-/// Ablageordner. Gezaehlt werden die **erklaerten** Sperrdateinamen: eine
-/// dritte Absprache braeuchte eine dritte Datei, und sie faellt hier auf.
+/// Ablageordner.
+///
+/// # Gesucht wird der Gegenstand und nicht der Name
+///
+/// Bis zum 260905 las diese Probe **eine** Datei, `ablage/sperre.rs`, und
+/// zaehlte darin die Zeilen, die mit `pub const` anfingen und auf `.lock`
+/// endeten. Zwei Verengungen uebereinander, und beide standen nicht im
+/// Doc-Kommentar: eine dritte Absprache, deren Name in `ablage/mod.rs` oder in
+/// `einstellungen.rs` stuende, war unsichtbar, und eine, die `pub(crate) const`
+/// hiesse, in einem `impl`-Block staende, von `rustfmt` umgebrochen waere oder
+/// nicht auf `.lock` endete, entging dem Filter auch innerhalb von `sperre.rs`
+/// (`shared/issues/260826-1302_*_die-probe-ueber-die-zwei-absprachen-liest-nur-sperre-rs-und-saehe-eine-dritte-daneben-nicht.md`).
+///
+/// Gesucht wird deshalb der **Gegenstand**: jede Sperrdatei entsteht ueber
+/// `sperre::sperrdatei_oeffnen`, und die Probe laeuft ueber den ganzen
+/// Quellbaum und haelt die Aufrufstellen als ausgeschriebene Liste. Eine dritte
+/// Absprache faellt damit auf, gleich wie ihre Konstante geschrieben ist, wo sie
+/// steht und worauf ihr Name endet.
+///
+/// **Was auch das nicht findet**, und der Satz gehoert dazu: eine Sperre, die
+/// `OpenOptions` selbst aufmacht statt ueber die eine Huelle zu gehen. Der Kopf
+/// dieser Datei sagt, warum keine Nadel restlos dicht ist.
 #[test]
 fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
-    let nadel = concat!(".lo", "ck\"");
-    let (_, sperre) = quelldateien()
-        .into_iter()
-        .find(|(name, _)| name == "krk-core/src/ablage/sperre.rs")
-        .expect("krk-core/src/ablage/sperre.rs steht nicht mehr im Baum");
-    let benannt: Vec<&str> = sperre
-        .lines()
-        .filter(|zeile| zeile.trim_start().starts_with("pub const") && zeile.contains(nadel))
+    let huelle = concat!("sperrdatei", "_oeffnen");
+    let mut stellen: Vec<(String, usize)> = quelldateien()
+        .iter()
+        .map(|(name, inhalt)| (name.clone(), aufrufstellen(inhalt, huelle)))
+        .filter(|(_, zahl)| *zahl > 0)
         .collect();
+    stellen.sort();
     assert_eq!(
-        benannt.len(),
-        2,
-        "ueber der Ablage stehen nicht mehr genau zwei Absprachen: {benannt:?}"
+        stellen,
+        vec![
+            // Die Schreibsperre ueber einem vollstaendigen Durchgang.
+            ("krk-core/src/ablage/mod.rs".to_owned(), 1),
+            // Das Sitzungsrecht, genommen in `Schreibsperre::nehmen`.
+            ("krk-core/src/ablage/sperre.rs".to_owned(), 1),
+        ],
+        "ueber der Ablage stehen nicht mehr genau zwei Absprachen"
     );
     assert_eq!(
         krk_core::ablage::sperre::SCHREIBSPERRE,

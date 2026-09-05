@@ -1,6 +1,6 @@
 //! Der Gitlauf: die vier Auskuenfte des Lesers auf einem eigenen Faden.
 //!
-//! [`leser::Gitleser`] ist synchron, und `marken()` kostet an einem Baum mit
+//! [`super::leser::Gitleser`] ist synchron, und `marken()` kostet an einem Baum mit
 //! 100 000 Eintraegen gemessen 12 bis 164 ms — ein Vielfaches eines Bildes. Auf
 //! dem Hauptfaden gerufen hielte es den Zeichendurchgang an. Dieses Modul ist
 //! die eine Stelle, die den Leser trotzdem ruft: ein Arbeitsfaden je Lauf, ein
@@ -67,7 +67,7 @@
 //! wie sie vorher war, und schreibt nichts.
 //!
 //! Die eine entschiedene Verneinung ist [`Kopf::KeinRepository`], und sie kommt
-//! aus [`leser::Oeffnung::KeinRepository`]. Sie steht am Anfang jedes Laufs und
+//! aus [`super::leser::Oeffnung::KeinRepository`]. Sie steht am Anfang jedes Laufs und
 //! nicht nur beim ganzen: **jeder** Lauf muss oeffnen, also beantwortet jeder
 //! die Frage, ob dieser Ordner ueberhaupt in einem Repository liegt. Ein
 //! Nachschlag auf einen Ordner, dessen Repository inzwischen weg ist, meldet
@@ -189,17 +189,26 @@ impl Gitlauf {
     /// auch ein neuer Ordner fuehren kann, waehrend der Durchlauf einen
     /// Eintragsindex traegt, den das Modell am Bestandsende von selbst
     /// verwirft.
+    ///
+    /// **Ein gescheiterter Fadenstart laesst jeden Befund unentschieden und
+    /// geraet nicht in Panik.** Der Fadenvorrat ist die Schwestergroesse der
+    /// Deskriptortabelle: prozessweit, geteilt, von aussen erschoepfbar, und
+    /// der naechste Versuch kann gelingen. Dieses Modul trennt den
+    /// Deskriptormangel schon als [`Oeffnung::Unentschieden`] von jeder
+    /// Verneinung ab; der ausgebliebene Faden ist derselbe Fall. `sender`
+    /// faellt hier, der Kanal schliesst sofort, und das ist genau die Lage, die
+    /// [`Gitlauf::meldungen`] schon ausschreibt
+    /// (`shared/issues/260826-1221_*_zwei-fadenstarts-des-verzeichnisbaums-brechen-mit-panik-ab-waehrend-derselbe-mangel-am-deskriptor-sorgfaeltig-behandelt-ist.md`).
     #[must_use = "ein sofort fallengelassener Lauf bricht sich selbst ab und meldet nichts"]
     pub fn starten(ordner: PathBuf, frage: Gitfrage, generation: u64) -> Self {
         let abbruch = Arc::new(AtomicBool::new(false));
         let (sender, meldungen) = sync_channel(KANALTIEFE);
         let faden_abbruch = Arc::clone(&abbruch);
-        thread::Builder::new()
+        let _ = thread::Builder::new()
             .name(format!("krk-gitlauf-{generation}"))
             .spawn(move || {
                 gitlauffaden(&ordner, &frage, &faden_abbruch, &sender);
-            })
-            .expect("Arbeitsfaden fuer den Gitlauf laesst sich nicht starten");
+            });
         Self { abbruch, meldungen }
     }
 

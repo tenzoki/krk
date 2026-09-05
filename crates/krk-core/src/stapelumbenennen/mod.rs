@@ -15,7 +15,7 @@
 //!
 //! Hier steht, **welchen neuen Namen** ein Eintrag bekaeme und **was daran
 //! nicht geht**. Das Umbenennen selbst steht in
-//! [`crate::operation::umbenennen`] aus S15 und wird je Eintrag von dort
+//! [`mod@crate::operation::umbenennen`] aus S15 und wird je Eintrag von dort
 //! gerufen; ein zweiter Umbenennungsweg entsteht nicht. Auch die Namenspruefung
 //! ist dieselbe: [`crate::operation::name_pruefen`] entscheidet hier wie dort,
 //! was kein Name ist.

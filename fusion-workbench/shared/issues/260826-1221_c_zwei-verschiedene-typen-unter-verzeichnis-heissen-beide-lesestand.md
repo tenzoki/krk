@@ -59,3 +59,6 @@ kommt davor, so wie bei `Inhaltsbefund` und `Loeschzielbefund`: `Ordnerlesestand
 
 Der Absatz in `mod.rs:109-122` waere dabei um die zweite Familie zu erweitern, sonst zaehlt er
 weiter eine Doppelung vollstaendig auf und uebergeht die daneben.
+
+---
+Resolved: `durchlauf::Lesestand` heisst jetzt `Ordnerlesestand` (`crates/krk-core/src/verzeichnis/durchlauf.rs`), nach den Kriterien des `Befund`-Entscheids vom 260817: umbenannt wurde der juengere und engere von beiden, also der private mit seinen Fundstellen in einer einzigen Datei. Der oeffentliche `leser::Lesestand` bleibt, wie er ist; keine Ruferstelle in `leseprofil/` oder in `crates/krk-core/tests/` musste angefasst werden. Der Typ traegt die Begruendung an seinem eigenen Doc-Kommentar, und der Absatz in `crates/krk-core/src/verzeichnis/mod.rs`, der die `Befund`-Familie vollstaendig auffuehrte und diese Doppelung uebersah, fuehrt sie jetzt mit — samt der Auflage, eine dritte Familie dort einzutragen.

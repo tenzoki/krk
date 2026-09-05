@@ -41,3 +41,6 @@ Wird sie überschritten, gibt es keinen lauten Fall: `KENNUNGEN` ist nach der L�
 Nicht erreichbar am heutigen Baum; gemeldet, weil die Schranke unbenannt ist und der Fehlfall still wäre.
 
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
+
+---
+Resolved: Beide im Abschnitt „Vorschlag" genannten Handgriffe, nicht nur der billigere. `Kommando::kennung` (`crates/krk-core/src/tasten/belegung.rs`) vergleicht ueber `as u16`, und ein `const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);` unmittelbar unter der Aufzaehlung benennt die Schranke, statt sie bloss zu verschieben. Der Doc-Kommentar an `kennung` schreibt jetzt beides aus: warum ueberhaupt umgewandelt wird (`PartialEq` ist keine `const`-Faehigkeit) und was ein Abschneiden kostete. Gehalten wird `KENNUNGEN` und nicht die Aufzaehlung selbst; dass beide dieselbe Menge sind, haelt `jede_variante_von_kommando_steht_genau_einmal_in_kennungen` in `crates/krk-core/tests/belegung.rs`.

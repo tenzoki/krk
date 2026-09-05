@@ -50,3 +50,6 @@ Null nimmt keiner anderen Zeile etwas weg.
 
 **Gefunden:** coderev, Vollbaum-Durchsicht von `crates/krk-core/src/{ablage,leseprofil}/` am
 260826-1225.
+
+---
+Resolved: `gekappte_anzahl` (`crates/krk-core/src/leseprofil/datei.rs`) liefert jetzt `Result<u8, String>` und weist `anzahl = 0` mit der Meldung „juengste mit anzahl = 0 kann nie einen Eintrag zeigen" ab; die Kappung nach oben bleibt unveraendert stumm. Die Reichweite ist die dritte, wie im Abschnitt „Zu entscheiden ist die Reichweite und nicht das Ob" empfohlen: die Zeile behaelt ihre Beschriftung, verliert ihren Baustein, das Profil und die Nachbarzeilen bleiben stehen. Der Modulkopf von `datei.rs` fuehrt den Fall in seiner Aufzaehlung der dritten Reichweite mit, und `Juengstedatei::anzahl` nennt ihn an seinem Feld. Gehalten von `eine_anzahl_von_null_kostet_der_zeile_ihren_baustein_und_wird_gemeldet` in `crates/krk-core/tests/leseprofil.rs`, die den Gegensatz zur Nachbarprobe fuer die ueberhoehte Zahl ausschreibt.

@@ -90,7 +90,10 @@
 //!   nicht ueber die Datei: eine Ortsangabe mit **zwei** Platzhaltern
 //!   ([`super::Ortsmangel::MehrerePlatzhalter`]) und ein Platzhalter in der
 //!   Ortsangabe von `juengste` oder `feld`
-//!   ([`ortsangabe_ohne_platzhalter`]). Die Zeile steht dann in jeder
+//!   ([`ortsangabe_ohne_platzhalter`]). Seit dem 260905 faellt `anzahl = 0` in
+//!   `juengste` dazu: eine Zeile, die nie einen Eintrag zeigen kann, ist
+//!   derselbe Satz eine Ebene tiefer als beim Profil ohne Erkennung
+//!   (`gekappte_anzahl`). Die Zeile steht dann in jeder
 //!   Zusammenfassung mit ihrem Platzhalter, und die uebrigen Zeilen bleiben
 //!   unberuehrt (C3.12).
 //!
@@ -315,7 +318,8 @@ pub struct Juengstedatei {
     pub ordner: Option<String>,
     /// Das Muster auf dem Eintragsnamen, oder alle Eintraege.
     pub muster: Option<String>,
-    /// Wie viele. Ueber [`HOECHSTENS_JUENGSTE`] wird gekappt.
+    /// Wie viele. Ueber [`HOECHSTENS_JUENGSTE`] wird gekappt, die Null kostet
+    /// der Zeile ihren Baustein; siehe `gekappte_anzahl`.
     ///
     /// `u64` und nicht `u8`, damit eine ueberhoehte Zahl in der Datei die
     /// Kappung erreicht, statt schon am Zahlenbereich zu scheitern und die
@@ -469,7 +473,7 @@ fn baustein_pruefen(baustein: Bausteindatei) -> Result<Baustein, String> {
         Bausteindatei::Juengste(juengste) => Ok(Baustein::Juengste {
             ort: ortsangabe_ohne_platzhalter(juengste.ordner.as_deref(), "juengste")?,
             muster: wahlfreies_muster(juengste.muster.as_deref())?,
-            anzahl: gekappte_anzahl(juengste.anzahl),
+            anzahl: gekappte_anzahl(juengste.anzahl)?,
             zeigt: anzeige(juengste.zeigt),
         }),
         Bausteindatei::Feld(feld) => Ok(Baustein::Feld {
@@ -597,14 +601,30 @@ fn typ(angabe: Option<Typdatei>) -> Option<Typ> {
     }
 }
 
-/// Kappt eine ueberhoehte Zahl auf [`HOECHSTENS_JUENGSTE`] (C6.3).
+/// Kappt eine ueberhoehte Zahl auf [`HOECHSTENS_JUENGSTE`] (C6.3) und weist
+/// die Null ab.
 ///
-/// Ohne Meldung: die Zahl ist nicht falsch, sie verlangt nur mehr, als die
-/// Zusammenfassung hergibt.
-fn gekappte_anzahl(anzahl: u64) -> u8 {
-    u8::try_from(anzahl)
+/// **Nach oben ohne Meldung, nach unten mit, und der Unterschied ist kein
+/// Zufall.** Eine ueberhoehte Zahl ist keine falsche Angabe, sondern eine, die
+/// mehr verlangt, als die Zusammenfassung hergibt; sie bekommt, was da ist.
+/// Die Null verlangt nichts und bekaeme nichts: `Lauf::juengste` schnitte die
+/// Liste auf null, und die Zeile stuende in **jeder** Zusammenfassung mit
+/// ihrem Platzhalter `--`, ohne dass der Nutzer erfuehre, warum. Zwischen „ich
+/// will null Eintraege sehen" und einem Vertipper unterscheidet die Datei
+/// nicht, und dieselbe Erwaegung hat bei `zeigt` schon zur strengen Antwort
+/// gefuehrt
+/// (`shared/issues/260826-1225_*_juengste-mit-anzahl-null-wird-still-angenommen-und-kann-nie-etwas-sagen.md`).
+///
+/// **Die Reichweite ist die dritte und nicht die weiteste**: eine Null nimmt
+/// keiner anderen Zeile etwas weg, also verliert diese Zeile ihren Baustein,
+/// behaelt ihre Beschriftung, und die Datei bleibt stehen.
+fn gekappte_anzahl(anzahl: u64) -> Result<u8, String> {
+    if anzahl == 0 {
+        return Err("juengste mit anzahl = 0 kann nie einen Eintrag zeigen".to_owned());
+    }
+    Ok(u8::try_from(anzahl)
         .unwrap_or(HOECHSTENS_JUENGSTE)
-        .min(HOECHSTENS_JUENGSTE)
+        .min(HOECHSTENS_JUENGSTE))
 }
 
 /// Die Meldung des Uebersetzers, auf eine Zeile gebracht.

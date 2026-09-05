@@ -258,6 +258,16 @@ fn prozent_dekodieren(text: &str) -> Option<String> {
     while stelle < roh.len() {
         if roh[stelle] == b'%' {
             let ziffern = text.get(stelle + 1..stelle + 3)?;
+            // **Beide Zeichen werden vorab gehalten, und das ist keine
+            // Doppelpruefung.** `u8::from_str_radix` nimmt ein fuehrendes `+`
+            // an; `%+A` wurde damit bis zum 260905 zu einem Zeilenumbruch statt
+            // zu `None`, und aus einem beschaedigten Verweis wurde ein Pfad,
+            // den es nicht gibt — genau das Ergebnis, das der Doc-Kommentar
+            // darueber ausschliesst
+            // (`shared/issues/260826-1223_*_die-prozentschreibweise-nimmt-ein-vorzeichen-an-und-macht-aus-einem-kaputten-verweis-einen-pfad.md`).
+            if !ziffern.bytes().all(|zeichen| zeichen.is_ascii_hexdigit()) {
+                return None;
+            }
             gelesen.push(u8::from_str_radix(ziffern, 16).ok()?);
             stelle += 3;
         } else {
@@ -297,6 +307,23 @@ mod tests {
     fn eine_kaputte_prozentfolge_liefert_keinen_pfad() {
         assert_eq!(deuten("file:///Users/k1/%zz"), Ziel::Nichts);
         assert_eq!(deuten("file:///Users/k1/%"), Ziel::Nichts);
+    }
+
+    /// Ein Vorzeichen hinter dem Prozentzeichen ist keine Ziffer.
+    ///
+    /// `u8::from_str_radix` nimmt ein fuehrendes `+` an, und bis zum 260905 kam
+    /// `%+A` damit als Zeilenumbruch durch: aus `file:///tmp/a%+Ab` wurde der
+    /// Pfad `/tmp/a\nb`, und der Nutzer las „diesen Pfad gibt es nicht" statt
+    /// „die Zwischenablage traegt nichts Verwertbares"
+    /// (`shared/issues/260826-1223_*_die-prozentschreibweise-nimmt-ein-vorzeichen-an-und-macht-aus-einem-kaputten-verweis-einen-pfad.md`).
+    /// Das Minuszeichen scheiterte auch damals schon am vorzeichenlosen Typ und
+    /// steht hier, damit die Probe beide Vorzeichen und nicht nur das gefundene
+    /// haelt.
+    #[test]
+    fn ein_vorzeichen_in_der_prozentfolge_liefert_keinen_pfad() {
+        assert_eq!(deuten("file:///tmp/a%+Ab"), Ziel::Nichts);
+        assert_eq!(deuten("file:///tmp/a%+5b"), Ziel::Nichts);
+        assert_eq!(deuten("file:///tmp/a%-5b"), Ziel::Nichts);
     }
 
     // Die Reinigung fuer das Einfuegen in den Filter (Runde 21, C4.2):

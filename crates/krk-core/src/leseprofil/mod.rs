@@ -9,7 +9,7 @@
 //! ausgewaehlter Ordner bekommt, entscheidet [`erkennung`] in zwei
 //! Durchgaengen; was seine Zeilen dort ergeben, rechnet [`bausteine`] innerhalb
 //! des [`Haushalt`]s, dessen Zahlen weiter unten als Konstanten stehen. Trifft
-//! kein Profil, tritt seit der Runde 19 das eingebaute [`defaultprofil`] ein,
+//! kein Profil, tritt seit der Runde 19 das eingebaute [`defaultprofil()`] ein,
 //! und der Rufer erfaehrt ueber [`Auskunft`], welche der zwei Antworten er
 //! bekommen hat: die erkannte ersetzt die Metadatenanzeige, die des
 //! Default-Profils tritt unter sie.
@@ -647,7 +647,7 @@ pub enum Auskunft {
     /// Zusammenfassung **ersetzt** die Metadatenanzeige (C1.2).
     Erkannt(Zusammenfassung),
     /// Kein Profil hat getroffen, und der Eintrag ist selbst ein Verzeichnis.
-    /// Die Zeilen des eingebauten [`defaultprofil`] treten **unter** die sechs
+    /// Die Zeilen des eingebauten [`defaultprofil()`] treten **unter** die sechs
     /// Metadatenangaben (C1.1, C2.1); eine Kopfzeile tragen sie nicht, denn
     /// Name und Pfad stehen schon darueber.
     Default(Vec<Zusammenfassungszeile>),

@@ -43,3 +43,6 @@ Zwei der sechs Fälle liefern einen Pfad, wo `None` stünde. Der Weg dorthin ist
 Niedrig. Kein Schalenaufruf hängt daran, der erzeugte Pfad geht durch `pfadeingabe::pruefen` und wird dort abgewiesen; der Schaden ist die falsche Meldung und ein Verweis, den KRK anders liest als jedes andere Werkzeug. Der Befund steht trotzdem, weil er die Aussage des eigenen Doc-Kommentars widerlegt und weil die Behebung eine Zeile ist: die zwei Zeichen vor dem `from_str_radix` gegen `is_ascii_hexdigit` halten.
 
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
+
+---
+Resolved: `prozent_dekodieren` (`crates/krk-core/src/zwischenablage.rs`) haelt die zwei Zeichen gegen `is_ascii_hexdigit`, bevor `u8::from_str_radix` sie sieht; `%+A` und `%+5` liefern jetzt `None`, wie der Doc-Kommentar darueber es zusagt. Neue Probe `ein_vorzeichen_in_der_prozentfolge_liefert_keinen_pfad` in derselben Datei, sie haelt beide Vorzeichen und nicht nur das gefundene: das Minuszeichen scheiterte auch vorher schon am vorzeichenlosen Typ, und eine Probe ueber `+` allein liesse den Tag ungedeckt, an dem der Typ wechselt.

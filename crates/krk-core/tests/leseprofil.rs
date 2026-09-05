@@ -600,6 +600,55 @@ pfad = 'history$'
     assert_eq!(anzahlen, [HOECHSTENS_JUENGSTE, 3]);
 }
 
+/// Die Null geht den anderen Weg als die ueberhoehte Zahl: sie kostet der
+/// Zeile ihren Baustein und wird gemeldet.
+///
+/// **Der Gegensatz zur Probe darueber ist der Gegenstand.** Nach oben wird
+/// gekappt und geschwiegen, weil die Angabe nur mehr verlangt, als die
+/// Zusammenfassung hergibt. Die Null verlangt nichts: bis zum 260905 kam sie
+/// still durch, `Lauf::juengste` schnitt die Liste auf null, und die Zeile
+/// stand in jeder Zusammenfassung mit ihrem Platzhalter, ohne dass jemand
+/// erfuhr, warum
+/// (`shared/issues/260826-1225_*_juengste-mit-anzahl-null-wird-still-angenommen-und-kann-nie-etwas-sagen.md`).
+///
+/// Die Reichweite ist die dritte: die Beschriftung bleibt, das Profil bleibt,
+/// die Nachbarzeile bleibt unberuehrt.
+#[test]
+fn eine_anzahl_von_null_kostet_der_zeile_ihren_baustein_und_wird_gemeldet() {
+    let (profile, meldungen) = gepruefte(
+        r#"
+[[profil]]
+name = "Ein Speicher"
+pfad = 'history$'
+
+  [[profil.zeile]]
+  beschriftung = "Die juengsten null"
+  juengste = { anzahl = 0 }
+
+  [[profil.zeile]]
+  beschriftung = "Die juengsten drei"
+  juengste = { anzahl = 3 }
+"#,
+    );
+
+    assert_eq!(meldungen.len(), 1, "genau eine Meldung: {meldungen:?}");
+    assert!(
+        meldungen[0].contains("anzahl = 0"),
+        "die Meldung nennt die Angabe nicht: {:?}",
+        meldungen[0]
+    );
+    let zeilen = profile.iter().next().expect("das Profil fehlt").zeilen();
+    assert_eq!(zeilen.len(), 2, "beide Zeilen behalten ihre Beschriftung");
+    assert!(
+        zeilen[0].baustein().is_none(),
+        "die Zeile mit der Null behaelt ihren Baustein"
+    );
+    assert!(
+        zeilen[1].baustein().is_some(),
+        "die Nachbarzeile verliert ihren Baustein mit"
+    );
+}
+
 /// C3: Eine Zeile traegt genau einen Baustein, und keiner wie zwei sind ein
 /// Grund mit Meldung.
 ///
@@ -726,8 +775,15 @@ fn ein_dritter_wert_fuer_zeigt_kostet_die_ganze_datei() {
     let vorspann = "[[profil]]\nname = \"Ein Speicher\"\npfad = 'analyses$'\n\n[[profil.zeile]]\n  beschriftung = \"Eine Zeile\"\n";
     for wert in ["titelchen", "Datum", ""] {
         let text = format!("{vorspann}  juengste = {{ anzahl = 1, zeigt = \"{wert}\" }}\n");
-        let fehler = toml::from_str::<Profildatei>(&text)
-            .expect_err("der Wert {wert:?} kommt durch, obwohl es ihn nicht gibt");
+        // `expect_err` nimmt eine Zeichenkette und keine Formatvorlage; der
+        // Platzhalter reiste bis zum 260905 woertlich in die Abbruchmeldung und
+        // verschwieg gerade, welcher der drei Durchgaenge gefallen war. Das
+        // `let Err(…) else` haelt den Fehler fest, den die Probe braucht; ein
+        // `unwrap_or_else` an dieser Stelle liefe genau andersherum und liesse
+        // die Probe an jedem der drei Werte fallen.
+        let Err(fehler) = toml::from_str::<Profildatei>(&text) else {
+            panic!("der Wert {wert:?} kommt durch, obwohl es ihn nicht gibt")
+        };
         let meldung = fehler.to_string();
         for gesucht in ["zeigt", "titel", "datum"] {
             assert!(

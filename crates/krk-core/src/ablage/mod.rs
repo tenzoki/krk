@@ -62,7 +62,7 @@
 //!
 //! `settings.toml` aus Schritt 18c und, seit der Runde 16, `readers.toml` sind
 //! die von Hand gepflegten Dateien, und sie gehen als einzige **nicht** ueber
-//! [`Ablage::sichern`]: die Anlage beim ersten Start schreibt die eingebettete
+//! [`Zugang::sichern`]: die Anlage beim ersten Start schreibt die eingebettete
 //! Auslieferungsfassung woertlich, samt deren Kommentaren, die `serde` nicht
 //! kennt. Der Weg dorthin ist derselbe [`atomar::schreiben`], allein die
 //! Nutzlast ist eine andere; siehe den Kopf von [`einstellungen`]. Fuer
@@ -73,7 +73,7 @@
 //!
 //! # Ein beschaedigter Bestand laesst KRK starten
 //!
-//! [`Ablage::laden`] liefert keinen Fehler, sondern immer einen Wert. Eine
+//! [`Zugang::laden`] liefert keinen Fehler, sondern immer einen Wert. Eine
 //! fehlende Datei ist der erste Start und keine Meldung wert. Eine nicht
 //! lesbare oder beschaedigte Datei fuehrt zum Auslieferungszustand und
 //! zu einer [`Ersetzung`], die die Datei benennt. Die Datei auf der Platte
@@ -90,7 +90,7 @@
 //! versteht, liest sie als beschaedigt, arbeitet auf dem Auslieferungszustand
 //! weiter und schreibt ihn beim Beenden darueber.
 //!
-//! [`Ablage::laden`] legt den gelesenen Text deshalb unter
+//! [`Zugang::laden`] legt den gelesenen Text deshalb unter
 //! [`atomar::beiseitepfad`] daneben, bevor der Auslieferungszustand einspringt,
 //! und [`Ersetzung::beiseite`] sagt, was dabei herauskam. Vier Regeln tragen
 //! den Vorgang, und jede beantwortet eine Frage, die sonst geraten wuerde:

@@ -49,3 +49,6 @@ Meldeweg, den es schon gibt.
 
 ---
 Also seen: 260826-1221 by coderev — dieselbe Form an zwei weiteren Stellen, `verzeichnis/leser.rs:117` und `verzeichnis/durchlauf.rs:277`, gemeldet in `shared/issues/260826-1221_*_zwei-fadenstarts-des-verzeichnisbaums-brechen-mit-panik-ab-*`.
+
+---
+Resolved: `operation::starten` (`crates/krk-core/src/operation/mod.rs`) nimmt die im Abschnitt „Was daran haengt" genannte zweite Fassung: kein `expect`, keine geaenderte Signatur, kein angefasster Rufer. Scheitert `spawn`, geht ueber den Meldekanal genau eine `Meldung::Fertig` mit einem `Bericht` ueber null Eintraege und null Bytes, dessen Abschlussliste je Quelle eine Zeile „kein Arbeitsfaden frei: <Grund des Systems>" traegt, uebersetzt ueber das vorhandene `grund`. Der Abschluss ist `Abschluss::Fertig` und nicht `Abgebrochen`: der Abbruch heisst an diesem Typ „der Nutzer hat abgebrochen", und das waere eine falsche Aussage ueber den Nutzer. Der Auftrag reist dafuer als `Arc` an den Faden, damit seine Quellen den gescheiterten Start ueberleben; `Lauf::neu` nimmt den Faden als `Option`. Gehalten von `kein_fadenstart_im_baum_wirft_seinen_rueckgabewert_weg` in `crates/krk-core/tests/baum.rs`.

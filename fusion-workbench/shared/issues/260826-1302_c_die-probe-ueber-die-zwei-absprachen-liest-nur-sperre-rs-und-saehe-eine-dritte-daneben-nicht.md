@@ -51,3 +51,6 @@ Die drei Nachbarproben zeigen die Form: über `quelldateien()` laufen, in **Code
 Solange das nicht geschieht, gehört der Satz „eine dritte Absprache bräuchte eine dritte Datei, und sie fällt hier auf" so eingeschränkt, wie er trägt: sie fällt auf, wenn sie in `sperre.rs` als `pub const` mit der Endung `.lock` steht.
 
 Gefunden bei der Vollbaum-Durchsicht R6 der dreizehn übrigen Probendateien des Kerns, HEAD `4a57028`.
+
+---
+Resolved: `ueber_der_ablage_stehen_genau_zwei_absprachen` (`crates/krk-core/tests/baum.rs`) laeuft jetzt ueber `quelldateien()` als Ganzes und sucht den **Gegenstand** statt des Namens, wie im Abschnitt „Richtung" verlangt: gezaehlt werden die Aufrufstellen von `sperre::sperrdatei_oeffnen`, ueber `gemeinsam::aufrufstellen`, und gehalten wird die ausgeschriebene Liste der zwei Fundstellen statt einer Zahl. Damit faellt eine dritte Absprache auf, gleich ob ihre Konstante `pub const` oder `pub(crate) const` heisst, wo sie steht und worauf ihr Name endet. Der Doc-Kommentar schreibt die alte Verengung, ihre Behebung und die verbliebene Blindheit aus: eine Sperre, die `OpenOptions` selbst aufmacht statt ueber die eine Huelle zu gehen, sieht auch diese Nadel nicht. Die zwei Zusicherungen auf die Werte der Konstanten bleiben unveraendert daneben stehen.

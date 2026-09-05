@@ -35,3 +35,6 @@ Die drei Aufrufer bringen kleine Konstanten mit: `krk-ui/src/vorschaumodell.rs:7
 `grenze.saturating_add(1)`. Eine Zeile, kein Verhaltensunterschied für jeden heutigen Aufruf.
 
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
+
+---
+Resolved: `bis_zur_grenze_lesen` (`crates/krk-core/src/text/datei.rs`) rechnet `grenze.saturating_add(1)`, wie im Abschnitt „Vorschlag" genannt; der Kommentar daneben nennt den Ueberlauf und seine stille Antwort. Kein Verhaltensunterschied fuer die drei heutigen Aufrufer. Eine Probe steht nicht daneben: sie muesste eine Datei von `u64::MAX` Bytes vortaeuschen, und die Zusage ist an dieser Stelle eine ueber die Rechnung und nicht ueber das Dateisystem.

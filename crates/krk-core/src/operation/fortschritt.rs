@@ -216,15 +216,23 @@ pub struct Lauf {
 }
 
 impl Lauf {
+    /// Ein Lauf um einen Arbeitsfaden, oder um keinen.
+    ///
+    /// **`None` ist keine Bequemlichkeit, sondern der Fadenmangel.** Scheitert
+    /// `thread::Builder::spawn` in [`super::starten`], weil dem Prozess die
+    /// Faeden ausgegangen sind, entsteht ein Lauf ohne Faden und mit
+    /// geschlossenem Kanal. Er meldet nichts, [`Lauf::warten`] hat nichts zu
+    /// erwarten, und der Rufer liest die Lage aus dem geschlossenen Kanal
+    /// (`shared/issues/260826-1221_*_zwei-fadenstarts-des-verzeichnisbaums-brechen-mit-panik-ab-waehrend-derselbe-mangel-am-deskriptor-sorgfaeltig-behandelt-ist.md`).
     pub(crate) fn neu(
         abbruch: Arc<AtomicBool>,
         meldungen: Receiver<Meldung>,
-        faden: JoinHandle<()>,
+        faden: Option<JoinHandle<()>>,
     ) -> Self {
         Self {
             abbruch,
             meldungen,
-            faden: Some(faden),
+            faden,
         }
     }
 

@@ -25,7 +25,7 @@
 //!
 //! Kein Sonderfall, keine Ausnahme. Jeder Auftrag laeuft auf einem eigenen
 //! Arbeitsfaden, der Fortschritt und uebersprungene Eintraege ueber einen Kanal
-//! meldet und ueber ein [`AtomicBool`](std::sync::atomic::AtomicBool)
+//! meldet und ueber ein [`AtomicBool`]
 //! abgebrochen wird. Damit haelt die Zusage L9 strukturell und nicht durch
 //! Sorgfalt. Sie lautet seit dem 260807-1900: waehrend einer laufenden Kopie
 //! erreicht jede Eingabe spaetestens das zweite Bild, und mindestens 65 Prozent
@@ -149,20 +149,72 @@ pub(crate) enum Zielentscheid {
 ///
 /// Der [`Lauf`] ist der Griff daran: er traegt den Kanal mit den Meldungen und
 /// den Abbruch. Wird er fallen gelassen, endet der Vorgang.
+///
+/// **Ein gescheiterter Fadenstart meldet jede Quelle als uebersprungen und
+/// geraet nicht in Panik.** Der Fadenvorrat ist die Schwestergroesse der
+/// Deskriptortabelle: prozessweit, geteilt, von aussen erschoepfbar, und der
+/// naechste Versuch kann gelingen. Wie ein Deskriptormangel den Befund
+/// **unentschieden** laesst, statt ihn negativ zu entscheiden
+/// ([`crate::verzeichnis::sys::ist_deskriptormangel`]), laesst ein
+/// gescheiterter Fadenstart den Vorgang ungetan
+/// (`shared/issues/260826-1221_*_der-arbeitsfaden-einer-dateioperation-wird-mit-expect-gestartet-und-reisst-die-anwendung-mit.md`).
+///
+/// **Gemeldet wird ueber den Weg, den es schon gibt, und nicht ueber eine neue
+/// Signatur.** Der Rufer bekommt einen [`Lauf`] ohne Faden, und in dessen Kanal
+/// steht bereits die eine [`Meldung::Fertig`], die er ohnehin erwartet: ein
+/// [`Bericht`] ueber null Eintraege und null Bytes, dessen Abschlussliste je
+/// Quelle eine Zeile mit dem Grund des Systems traegt. Damit bleibt jeder Rufer
+/// unveraendert, und der Nutzer liest, **warum** nichts geschehen ist, statt
+/// eines schweigenden Abbruchs.
+///
+/// **[`Abschluss::Fertig`] und nicht [`Abschluss::Abgebrochen`]**: der Abbruch
+/// heisst an diesem Typ „der Nutzer hat abgebrochen", und das waere hier eine
+/// falsche Aussage ueber den Nutzer. Der Stapel ist an sein Ende gekommen, und
+/// jede Position traegt ihren Grund; genau das ist der Fall, den
+/// [`Abschluss::Fertig`] beschreibt.
 pub fn starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
     let abbruch = Arc::new(AtomicBool::new(false));
     let faden_abbruch = Arc::clone(&abbruch);
     let (sender, empfaenger) = channel();
     let abschlusssender = sender.clone();
+    // Der dritte Sender bleibt beim Rufer und ist der einzige, der den
+    // gescheiterten Start noch melden kann: scheitert `spawn`, faellt der
+    // Abschluss samt der zwei Sender darin.
+    let notsender = sender.clone();
+    // Der Auftrag geht geteilt und nicht kopiert an den Faden. Sonst waere er
+    // beim gescheiterten Start mit dem Abschluss gefallen, und die
+    // Abschlussliste haette keine Quellen mehr zu nennen.
+    let auftrag = Arc::new(auftrag);
+    let fuer_faden = Arc::clone(&auftrag);
 
     let faden = thread::Builder::new()
         .name("krk-operation".to_owned())
         .spawn(move || {
-            let mut steuerung = Steuerung::neu(faden_abbruch, Some(sender), auftrag.konfliktregel);
-            let abschluss = ausfuehren(&auftrag, papierkorb.as_ref(), &mut steuerung);
+            let mut steuerung =
+                Steuerung::neu(faden_abbruch, Some(sender), fuer_faden.konfliktregel);
+            let abschluss = ausfuehren(&fuer_faden, papierkorb.as_ref(), &mut steuerung);
             let _ = abschlusssender.send(Meldung::Fertig(steuerung.bericht(abschluss)));
-        })
-        .expect("Arbeitsfaden fuer eine Dateioperation laesst sich nicht starten");
+        });
+
+    let faden = match faden {
+        Ok(faden) => Some(faden),
+        Err(fehler) => {
+            let _ = notsender.send(Meldung::Fertig(Bericht {
+                abschluss: Abschluss::Fertig,
+                eintraege: 0,
+                bytes: 0,
+                uebersprungen: auftrag
+                    .quellen
+                    .iter()
+                    .map(|pfad| Uebersprungen {
+                        pfad: pfad.clone(),
+                        grund: format!("kein Arbeitsfaden frei: {}", grund(&fehler)),
+                    })
+                    .collect(),
+            }));
+            None
+        }
+    };
 
     Lauf::neu(abbruch, empfaenger, faden)
 }

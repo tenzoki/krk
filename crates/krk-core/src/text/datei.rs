@@ -639,8 +639,15 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
     }
 
     let mut bytes = Vec::with_capacity(angaben.len() as usize);
+    // `saturating_add` und nicht `+`: die Grenze ist ein `u64` des Aufrufers,
+    // und bei `u64::MAX` braeche die Addition im Profil `debug` ab und liefe im
+    // Profil `release` auf `take(0)` ueber. Die Huelle antwortete dann mit
+    // `Ok(Vec::new())`, also mit einer leeren Datei, wo der Vertrag die Bytes
+    // zusagt — genau die stille falsche Antwort, gegen die die Schranke
+    // darueber argumentiert
+    // (`shared/issues/260826-1223_*_bis-zur-grenze-lesen-rechnet-grenze-plus-eins-ohne-schutz-und-antwortet-bei-ueberlauf-mit-null-bytes.md`).
     datei
-        .take(grenze + 1)
+        .take(grenze.saturating_add(1))
         .read_to_end(&mut bytes)
         .map_err(|_| Lesehindernis::Fehler)?;
     if bytes.len() as u64 > grenze {

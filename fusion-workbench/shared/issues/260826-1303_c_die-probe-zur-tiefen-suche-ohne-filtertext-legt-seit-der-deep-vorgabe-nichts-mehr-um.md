@@ -62,3 +62,6 @@ zwei sind von der Vorgabe unberührt, die dritte trägt einen eigenen Datensatz.
 
 **Gefunden:** coderev, Vollbaum-Durchsicht R5, auf die Suche nach demselben
 Muster geschickt, das `260826-1221` beschreibt.
+
+---
+Resolved: `ohne_filtertext_aendert_die_tiefe_suche_nichts` (`crates/krk-core/tests/verzeichnis.rs`) stellt den Schalter jetzt vor der Aufnahme von `vorher` ausdruecklich auf `false`, wie im Abschnitt „Was zu tun waere" genannt; das `tief_setzen(true)` darunter ist wieder ein Uebergang und die Zusicherung `assert!(modell.tief())` haelt wieder den Setzer statt der Vorgabe. Der Kommentar an der neuen Zeile nennt den Grund und den Commit `20c9833`, damit sie beim naechsten Aufraeumen nicht als ueberfluessig faellt. Die allgemeinere Frage, ob `geladenes_modell` die Vorgabe wie seine zwei Geschwister ausdruecklich stellen sollte, ist hier nicht beantwortet und bleibt bei `260826-1221_*_die-tiefe-suche-ab-werk-nimmt-jede-verknuepfung-beim-ersten-anschlag-aus-der-liste.md`.

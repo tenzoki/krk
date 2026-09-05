@@ -108,19 +108,43 @@ pub struct Lesevorgang {
 
 impl Lesevorgang {
     /// Startet den Lesevorgang und kehrt sofort zurueck.
+    ///
+    /// **Ein gescheiterter Fadenstart meldet [`Abschluss::Fehler`] und geraet
+    /// nicht in Panik.** Der Fadenvorrat ist die Schwestergroesse der
+    /// Deskriptortabelle: prozessweit, geteilt, von aussen erschoepfbar, und
+    /// der naechste Versuch kann gelingen. Ein Lesevorgang, der gar nicht erst
+    /// angelaufen ist, ist der Sache nach ein gescheiterter Lesevorgang, und
+    /// dafuer steht die Variante schon da. Der Rufer bekommt sie ueber
+    /// denselben Kanal wie jeden anderen Abschluss und braucht keinen zweiten
+    /// Weg
+    /// (`shared/issues/260826-1221_*_zwei-fadenstarts-des-verzeichnisbaums-brechen-mit-panik-ab-waehrend-derselbe-mangel-am-deskriptor-sorgfaeltig-behandelt-ist.md`).
     pub fn starten(pfad: impl Into<PathBuf>, generation: u64) -> Self {
         let pfad = pfad.into();
         let abbruch = Arc::new(AtomicBool::new(false));
         let (sender, meldungen) = sync_channel(KANALTIEFE);
         let faden_abbruch = Arc::clone(&abbruch);
-        let faden = thread::Builder::new()
+        let faden = match thread::Builder::new()
             .name(format!("krk-verzeichnisleser-{generation}"))
-            .spawn(move || lesefaden(&pfad, generation, &faden_abbruch, &sender))
-            .expect("Arbeitsfaden fuer den Verzeichnisleser laesst sich nicht starten");
+            .spawn({
+                let sender = sender.clone();
+                move || lesefaden(&pfad, generation, &faden_abbruch, &sender)
+            }) {
+            Ok(faden) => Some(faden),
+            Err(fehler) => {
+                // Der Kanal traegt KANALTIEFE >= 1, dieses eine Senden haelt
+                // also nicht an. Danach faellt `sender`, und der Kanal
+                // schliesst hinter der Meldung.
+                let _ = sender.send(Meldung::Fertig {
+                    generation,
+                    abschluss: Abschluss::Fehler(fehler),
+                });
+                None
+            }
+        };
         Self {
             abbruch,
             meldungen,
-            faden: Some(faden),
+            faden,
         }
     }
 

@@ -69,3 +69,6 @@ Unterschied, den der Name behauptet.
 
 **Gefunden:** coderev, Vollbaum-Durchsicht R5 der drei größten Probendateien des
 Kerns.
+
+---
+Resolved: `ein_zeichen_zurueck_laesst_die_liste_wieder_wachsen` (`crates/krk-core/tests/verzeichnis.rs`) haelt jetzt Gleichheiten statt der Ungleichung und misst die Folge 2 -> 3 -> 3 -> 4 ueber die drei Ruecknahmen. **Abweichend vom Abschnitt „Was zu tun waere" ist der sechste Eintrag nicht in `filterordner` gewandert:** jener Bestand wird von elf weiteren Proben geteilt, deren Erwartungen ein zusaetzlicher Eintrag verschoben haette. Diese eine Probe bekommt stattdessen ihren eigenen Bestand `ruecknahmeordner` mit vier Dateien, darunter `baaz.txt`, das `aa` traegt und `aaa` nicht. Nur Dateien, damit unter der tiefen Suche kein Ordner unter Vorbehalt steht, solange kein Durchlauf antwortet. Der Doc-Kommentar an beiden schreibt aus, warum der Bestand danebensteht und warum eine Ungleichung auch mit ihm nicht genuegte.

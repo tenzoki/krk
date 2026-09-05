@@ -838,6 +838,14 @@ fn die_tiefe_suche_ist_die_vorbelegung() {
 fn ohne_filtertext_aendert_die_tiefe_suche_nichts() {
     let ordner = filterordner();
     let mut modell = geladenes_modell(ordner.pfad());
+    // **Der Schalter wird ausdruecklich abgestellt, sonst misst die Probe
+    // keinen Uebergang mehr.** `geladenes_modell` stellt ihn nicht, und seit
+    // `20c9833` steht `tief` in `Ordnermodell::neu` ab Werk auf ein; das
+    // `tief_setzen(true)` weiter unten war damit eine Nulloperation, und die
+    // Zusicherung darunter las die Vorgabe zurueck statt der Wirkung des
+    // Setzers
+    // (`shared/issues/260826-1303_*_die-probe-zur-tiefen-suche-ohne-filtertext-legt-seit-der-deep-vorgabe-nichts-mehr-um.md`).
+    modell.tief_setzen(false);
     // Eigene Zeichenketten: `namen` leiht aus dem Modell, und die Ausleihe
     // ueberstuende die Aenderungen darunter nicht.
     let vorher: Vec<String> = namen(&modell).into_iter().map(str::to_owned).collect();
@@ -1089,31 +1097,80 @@ fn die_markierbefehle_behalten_ihren_zuschnitt_unter_dem_filter() {
     );
 }
 
+/// Der Ordner fuer die Ruecknahme eines Zeichens, mit einer Stufe je Zeichen.
+///
+/// **Er steht neben [`filterordner`] und nicht darin.** Der dortige Bestand
+/// traegt keinen Namen, der `aa` fuehrt und `aaa` nicht; jede Ruecknahme laesst
+/// dort dieselbe Zahl Zeilen stehen. Ein sechster Eintrag in jenem Ordner
+/// haette die Erwartungen der elf uebrigen Proben verschoben, die ihn teilen,
+/// also bekommt diese eine Probe ihren eigenen Bestand. Nur Dateien: ein
+/// Ordner ohne Namenstreffer stuende unter tiefer Suche unter Vorbehalt und
+/// waere unsichtbar, solange kein Durchlauf antwortet, und in dieser Probe
+/// laeuft keiner.
+///
+/// | Name | traegt `aaa` | traegt `aa` | traegt `a` |
+/// |---|---|---|---|
+/// | `aaa-eins.txt` | ja | ja | ja |
+/// | `aaa-zwei.txt` | ja | ja | ja |
+/// | `baaz.txt`     | nein | ja | ja |
+/// | `ohne.txt`     | nein | nein | nein |
+fn ruecknahmeordner() -> Pruefordner {
+    let ordner = Pruefordner::neu("ruecknahme");
+    ordner.fuelldatei("aaa-eins.txt", 1);
+    ordner.fuelldatei("aaa-zwei.txt", 1);
+    ordner.fuelldatei("baaz.txt", 1);
+    ordner.fuelldatei("ohne.txt", 1);
+    ordner
+}
+
 /// C1.14: die Ruecknahme eines Zeichens laesst die Liste wieder wachsen, und
 /// bei leerem Filtertext ist nichts wegzunehmen.
+///
+/// **Gehalten wird eine Gleichheit und keine Ungleichung.** Bis zum 260905
+/// stand hier `zeilenzahl() >= eng`, und das war bei Gleichstand erfuellt — der
+/// Fall, der an [`filterordner`] eintrat. Die Zusicherung hielt damit auch
+/// dann, wenn die Ruecknahme den Filtertext zwar kuerzte, die Sicht aber gar
+/// nicht neu aufbaute, und sogar dann, wenn der Filter ueberhaupt nie eine
+/// Zeile weggenommen haette; sie war nie eine ueber das Wachsen
+/// (`shared/issues/260826-1303_*_die-probe-zum-zeichen-zurueck-misst-kein-wachsen-ihre-zusicherung-haelt-bei-gleichstand.md`).
+/// Eine Ungleichung genuegt hier auch mit dem neuen Bestand nicht: sie
+/// unterscheidet „gewachsen" nicht von „unveraendert", und genau das ist der
+/// Unterschied, den der Name behauptet.
 #[test]
 fn ein_zeichen_zurueck_laesst_die_liste_wieder_wachsen() {
-    let ordner = filterordner();
+    let ordner = ruecknahmeordner();
     let mut modell = geladenes_modell(ordner.pfad());
 
     modell.zeichen_anhaengen('a');
     modell.zeichen_anhaengen('a');
     modell.zeichen_anhaengen('a');
     assert_eq!(modell.filtertext(), "aaa");
-    let eng = modell.zeilenzahl();
+    assert_eq!(
+        modell.zeilenzahl(),
+        2,
+        "unter `aaa` stehen die zwei mit aaa"
+    );
 
     assert!(modell.letztes_zeichen_weg(), "es war etwas wegzunehmen");
     assert_eq!(modell.filtertext(), "aa");
-    assert!(
-        modell.zeilenzahl() >= eng,
-        "die Liste waechst um die Eintraege, die wieder passen"
+    assert_eq!(
+        modell.zeilenzahl(),
+        3,
+        "die Liste waechst um den Eintrag, der wieder passt"
     );
 
     assert!(modell.letztes_zeichen_weg());
+    assert_eq!(modell.filtertext(), "a");
+    assert_eq!(
+        modell.zeilenzahl(),
+        3,
+        "`a` nimmt keinen weiteren Eintrag hinzu"
+    );
+
     assert!(modell.letztes_zeichen_weg());
     assert_eq!(
         modell.zeilenzahl(),
-        5,
+        4,
         "ohne Filtertext steht alles wieder da"
     );
     assert!(

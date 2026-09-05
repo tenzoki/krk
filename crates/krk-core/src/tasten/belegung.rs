@@ -24,7 +24,7 @@
 //! Abweichungen vom Auslieferungszustand. Wer eine Zeile daraus loescht, hat die
 //! Funktion unbelegt gemacht; wer die Datei loescht, bekommt beim naechsten
 //! Start die Auslieferungsbelegung. Der Weg dorthin ist [`laden`], und er geht
-//! ueber [`Ablage::laden`] aus Schritt 10: ein zweiter Ablageweg entsteht nicht,
+//! ueber [`Zugang::laden`] aus Schritt 10: ein zweiter Ablageweg entsteht nicht,
 //! und jede Meldung nimmt [`ablage::melden`](crate::ablage::melden).
 //!
 //! Eine Belegung des Nutzers wird gegen den **Wortschatz** der
@@ -805,6 +805,23 @@ pub enum Kommando {
     SpalteMarkeUmschalten,
 }
 
+/// Die Aufzaehlung passt in die Umwandlung, ueber die [`Kommando::kennung`]
+/// vergleicht.
+///
+/// **Die Schranke steht hier und nicht als stille Nebenwirkung eines
+/// Umwandlungsoperators.** `kennung` ist eine `const fn` und kann `PartialEq`
+/// deshalb nicht rufen; sie vergleicht ueber `self as u16`. Waechst die
+/// Aufzaehlung darueber hinaus, schnitte die Umwandlung ab, zwei Kommandos
+/// vergleichen sich gleich, und `kennung` lieferte die Kennung des falschen,
+/// statt anzuhalten. Bis zum 260905 stand dort `as u8` und die Schranke lag bei
+/// 256, ohne dass eine Stelle im Baum sie genannt haette
+/// (`shared/issues/260826-1223_*_kommando-kennung-vergleicht-ueber-as-u8-und-liefert-oberhalb-von-256-varianten-still-die-falsche-kennung.md`).
+///
+/// Gehalten wird `KENNUNGEN` und nicht die Aufzaehlung selbst, und das ist
+/// dieselbe Menge: `jede_variante_von_kommando_steht_genau_einmal_in_kennungen`
+/// (`crates/krk-core/tests/belegung.rs`) haelt beide gegeneinander.
+const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
+
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
@@ -1261,12 +1278,27 @@ impl Kommando {
     }
 
     /// Die Kennung dieses Kommandos in der Belegungsdatei.
+    ///
+    /// **Verglichen wird ueber die Zahl der Variante und nicht ueber
+    /// `PartialEq`**, weil `PartialEq` keine `const`-Faehigkeit ist und diese
+    /// Funktion zur Uebersetzungszeit auswertbar bleiben soll.
+    ///
+    /// **`u16` und nicht `u8`, und die Schranke steht daneben statt still zu
+    /// sein.** Ueber `as u8` schnitt die Umwandlung ab der 257. Variante ab:
+    /// zwei Kommandos verglichen sich gleich, und die Funktion lieferte die
+    /// Kennung des falschen, statt anzuhalten — im Hauptmenue, in der
+    /// Belegungsansicht und in der Belegungsausgabe. Die Aufzaehlung hat keine
+    /// gesetzte Obergrenze und waechst mit fast jeder Runde, also darf die
+    /// einzige Schranke im Code nicht die Nebenwirkung eines
+    /// Umwandlungsoperators sein. Die Zusicherung unmittelbar unter der
+    /// Aufzaehlung [`Kommando`] haelt sie beim Uebersetzen
+    /// (`shared/issues/260826-1223_*_kommando-kennung-vergleicht-ueber-as-u8-und-liefert-oberhalb-von-256-varianten-still-die-falsche-kennung.md`).
     #[must_use]
     pub const fn kennung(self) -> &'static str {
         let mut stelle = 0;
         while stelle < Self::KENNUNGEN.len() {
             let (kommando, kennung) = Self::KENNUNGEN[stelle];
-            if kommando as u8 == self as u8 {
+            if kommando as u16 == self as u16 {
                 return kennung;
             }
             stelle += 1;
@@ -1810,7 +1842,7 @@ pub struct Belegungsdatei {
 impl Default for Belegungsdatei {
     /// Die eingebettete Auslieferungsbelegung.
     ///
-    /// Damit liefert [`Ablage::laden`] bei fehlender oder kaputter
+    /// Damit liefert [`Zugang::laden`] bei fehlender oder kaputter
     /// `keymap.toml` den Auslieferungszustand und nicht eine leere Belegung, in
     /// der keine Taste mehr etwas tut.
     fn default() -> Self {

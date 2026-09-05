@@ -129,7 +129,7 @@
 //! aus dem Finder gestartetes Buendel bekommt sie klein. Der Stapel `offen`
 //! haelt dagegen je vorgemerktem Ordner einen Pfad, und das ist weniger, als
 //! das Ordnermodell fuer denselben Ordner ohnehin haelt: dort steht je Eintrag
-//! ein [`Eintrag`](super::eintrag::Eintrag) mit zwei Sortierschluesseln.
+//! ein [`Eintrag`] mit zwei Sortierschluesseln.
 //!
 //! # Was dieses Modul nicht hat, und warum
 //!
@@ -250,6 +250,17 @@ impl Durchlauf {
     /// demselben Modell nimmt, nicht kommen; er endet trotzdem in einem eigenen
     /// Zweig, weil ein stillschweigend uebergangener Auftrag ein Befund waere,
     /// den niemand je bekommt.
+    ///
+    /// **Ein gescheiterter Fadenstart laesst jeden Auftrag unentschieden und
+    /// geraet nicht in Panik.** Der Fadenvorrat ist die Schwestergroesse der
+    /// Deskriptortabelle: prozessweit, geteilt, von aussen erschoepfbar, und
+    /// der naechste Versuch kann gelingen. Wie ein Deskriptormangel den
+    /// Unterbaum unentschieden laesst, statt ihn negativ zu entscheiden
+    /// ([`super::sys::ist_deskriptormangel`]), laesst der ausgebliebene Faden
+    /// alle Auftraege unentschieden: `sender` faellt hier, der Kanal schliesst
+    /// sofort, und das ist genau die Lage, die [`Durchlauf::befunde`] schon
+    /// ausschreibt
+    /// (`shared/issues/260826-1221_*_zwei-fadenstarts-des-verzeichnisbaums-brechen-mit-panik-ab-waehrend-derselbe-mangel-am-deskriptor-sorgfaeltig-behandelt-ist.md`).
     pub fn starten(
         bestand: Arc<Vec<Eintrag>>,
         auftraege: Vec<Auftrag>,
@@ -263,7 +274,7 @@ impl Durchlauf {
         let (sender, befunde) = sync_channel(STAPELGROESSE);
         let faden_abbruch = Arc::clone(&abbruch);
         let faden_zu_gross = Arc::clone(&zu_gross);
-        thread::Builder::new()
+        let _ = thread::Builder::new()
             .name(format!("krk-durchlauf-{generation}"))
             .spawn(move || {
                 let lage = Auftragslage {
@@ -274,8 +285,7 @@ impl Durchlauf {
                     inhaltsgrenze,
                 };
                 durchlauffaden(&lage, &faden_abbruch, &faden_zu_gross, &sender);
-            })
-            .expect("Arbeitsfaden fuer den Durchlauf laesst sich nicht starten");
+            });
         Self {
             abbruch,
             zu_gross,
@@ -518,7 +528,7 @@ fn unterbaum_entscheiden(
             Err(_) => continue,
         };
 
-        let mut lesestand = Lesestand::neu(leser, pfad);
+        let mut lesestand = Ordnerlesestand::neu(leser, pfad);
         loop {
             // Hier und nur hier steht die Abbruchgrenze, und sie gilt auch fuer
             // einen Ordner, der keinen einzigen Unterordner traegt: ein frisch
@@ -615,7 +625,18 @@ struct Kandidat {
 /// aus dem Modulkopf: ein offener Deskriptor, gleich wie tief der Baum ist. Wer
 /// hier wieder einen Stapel daraus macht, holt sich den Defekt `260815-0211`
 /// zurueck.
-struct Lesestand {
+///
+/// **Er heisst ausdruecklich nicht `Lesestand`, denn dieser Name gehoert hier
+/// einem anderen Typ.** [`super::leser::Lesestand`] ist der oeffentliche
+/// Rueckgabewert von `lesen_hoechstens` und traegt `eintraege` samt
+/// `abgeschnitten`; er reist aus dem Modul heraus und wird in
+/// `leseprofil/bausteine.rs` unqualifiziert gefuehrt. Die zwei haben kein Feld
+/// gemeinsam und beantworten verschiedene Fragen. Umbenannt wurde nach denselben
+/// Kriterien wie am 260817 bei `Befund` der **juengere und engere** von beiden,
+/// und das ist dieser hier: privat, mit seinen Fundstellen in einer einzigen
+/// Datei
+/// (`shared/issues/260826-1221_*_zwei-verschiedene-typen-unter-verzeichnis-heissen-beide-lesestand.md`).
+struct Ordnerlesestand {
     leser: Schwungleser,
     /// Der Ordner, um die Namen seiner Eintraege anzuhaengen.
     pfad: PathBuf,
@@ -633,7 +654,7 @@ struct Lesestand {
     erschoepft: bool,
 }
 
-impl Lesestand {
+impl Ordnerlesestand {
     fn neu(leser: Schwungleser, pfad: PathBuf) -> Self {
         Self {
             leser,
@@ -646,7 +667,7 @@ impl Lesestand {
 
     /// Holt den naechsten Stapel von hoechstens [`STAPELGROESSE`] Eintraegen.
     ///
-    /// `Ok(false)` heisst: der Ordner ist zu Ende, dieser Lesestand ist
+    /// `Ok(false)` heisst: der Ordner ist zu Ende, dieser Ordnerlesestand ist
     /// fertig.
     fn stapel_holen(&mut self) -> io::Result<bool> {
         let Self {

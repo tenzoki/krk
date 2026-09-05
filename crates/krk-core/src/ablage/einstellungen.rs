@@ -25,7 +25,7 @@
 //! # Die Datei entsteht einmal und wird danach nicht mehr geschrieben
 //!
 //! [`laden`] legt sie beim ersten Start an, und zwar **woertlich aus
-//! [`AUSLIEFERUNGSTEXT`]** und nicht ueber [`Ablage::sichern`]. Der Unterschied
+//! [`AUSLIEFERUNGSTEXT`]** und nicht ueber [`Zugang::sichern`]. Der Unterschied
 //! ist der ganze Zweck der Datei: `serde` kennt keine Kommentare, und eine
 //! Serialisierung von [`Einstellungen`] hinterliesse eine Datei mit einer
 //! einzigen Zeile. Die fuenfzig Kommentarzeilen der Auslieferungsfassung sind

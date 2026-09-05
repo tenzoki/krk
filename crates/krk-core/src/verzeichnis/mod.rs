@@ -121,6 +121,19 @@
 //! Welcher der beiden umbenannt wurde und warum nicht der andere, steht im
 //! Modulkopf von [`loeschzielbefund`].
 //!
+//! **Dieselbe Doppelung stand seit der Runde 16 daneben, und dieser Absatz
+//! zaehlte sie nicht mit.** `leser::Lesestand` aus der Runde 16 und
+//! `durchlauf::Lesestand` aus der Runde 10 trugen denselben Namen und kein
+//! gemeinsames Feld; der erste ist der oeffentliche Rueckgabewert von
+//! `lesen_hoechstens` und reist bis nach `leseprofil/bausteine.rs`, der zweite
+//! war der private Stand des einen gerade offenen Ordners. Am 260905 ist der
+//! zweite zu `Ordnerlesestand` geworden, nach den Kriterien des `Befund`-Falls:
+//! umbenannt wird der juengere und engere
+//! (`shared/issues/260826-1221_*_zwei-verschiedene-typen-unter-verzeichnis-heissen-beide-lesestand.md`).
+//! Wer eine dritte Familie anlegt, traegt sie hier ein: dieser Absatz ist die
+//! Stelle, an der die Namensdoppelungen dieses Modulbaums gefuehrt werden, und
+//! er war einmal unvollstaendig.
+//!
 //! [`arbeitsbaum`] beantwortet den fuenften Ausloeser derselben Runde: beruehrt
 //! dieser Loeschvorgang einen Git-Arbeitsbaum? Es ist das einzige lesende Modul
 //! hier, das **nicht** ueber [`sys`] liest, und es liest auch nicht ueber

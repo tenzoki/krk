@@ -48,3 +48,6 @@ schon mehrfach so, etwa `tests/verzeichnis.rs:717-718` und
 
 **Gefunden:** coderev, Vollbaum-Durchsicht R5 der drei größten Probendateien des
 Kerns.
+
+---
+Resolved: `crates/krk-core/tests/leseprofil.rs`, in `ein_dritter_wert_fuer_zeigt_kostet_die_ganze_datei`, geht jetzt ueber `let Err(fehler) = … else { panic!("der Wert {wert:?} …") }`; der Platzhalter wird formatiert und nennt den gefallenen Durchgang. **Der im Abschnitt „Was zu tun waere" vorgeschlagene Handgriff ist verkehrt herum und wurde nicht uebernommen:** `unwrap_or_else(|_| panic!(…))` liefert den Ok-Wert und paniert im Fehlerfall, waehrend diese Probe gerade den Fehler festhalten muss — sie waere an allen drei Werten gefallen. Der Grund fuer die Verwechslung ist, dass die zwei zitierten Vorbilder (`tests/verzeichnis.rs`, `tests/gemeinsam/mod.rs`) `unwrap_or_else` an Stellen fuehren, die den Ok-Wert brauchen.
