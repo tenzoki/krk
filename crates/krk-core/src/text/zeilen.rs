@@ -77,6 +77,7 @@ pub struct Zeilenindex {
 
 impl Zeilenindex {
     /// Baut den Index ueber den ganzen Text.
+    #[must_use]
     pub fn neu(text: &str) -> Self {
         let mut anfaenge = vec![0];
         anfaenge.extend(text.match_indices('\n').map(|(stelle, _)| stelle + 1));
@@ -87,6 +88,7 @@ impl Zeilenindex {
     }
 
     /// Wie viele Zeilen der Text hat, die leere letzte mitgezaehlt.
+    #[must_use]
     pub fn zeilenzahl(&self) -> usize {
         self.anfaenge.len()
     }
@@ -97,6 +99,7 @@ impl Zeilenindex {
     /// `nummer` zaehlt ab 1. Die 0 fuehrt an den Textanfang, eine Nummer ueber
     /// der Zeilenzahl an das Textende; beide Faelle stehen im Kennzeichen
     /// [`Zeilensprung::lage`], damit der Aufrufer sie melden kann.
+    #[must_use]
     pub fn anfang_der_zeile(&self, nummer: usize) -> Zeilensprung {
         if nummer == 0 {
             return Zeilensprung {
@@ -158,6 +161,7 @@ impl Zeilenindex {
     /// Ein Versatz hinter dem Textende liefert die letzte Zeile: er entsteht
     /// nur aus einem ueberholten Stand, und die letzte Zeile ist die
     /// nachweisbar naechstgelegene Antwort.
+    #[must_use]
     pub fn zeile_am_versatz(&self, versatz: usize) -> usize {
         // `partition_point` zaehlt die Anfaenge bis einschliesslich des
         // eigenen, und das ist bereits die ab 1 gezaehlte Nummer. Sie ist nie

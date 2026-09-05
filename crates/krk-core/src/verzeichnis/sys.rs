@@ -16,12 +16,13 @@
 //!                                             ├─> text::datei::bis_zur_grenze_lesen
 //!                                             ├─> text::datei::anlesen
 //!                                             ├─> operation::zippen
-//!                                             └─> operation::entpacken
+//!                                             ├─> operation::entpacken
+//!                                             └─> Schwungleser (in dieser Datei)
 //! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
 //!                        sperre_versuchen
 //!                        sperre_abgeben
-//! localtime_r(3)     ──> ortszeit             ──> (noch ohne Rufer im Baum,
-//!                                                  siehe den Absatz dazu)
+//! localtime_r(3)     ──> ortszeit             ──> operation::zippen
+//!                                             └─> leseprofil::bausteine
 //! ```
 //!
 //! **Sechs ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
@@ -35,14 +36,6 @@
 //! nachgezogen, die fuenfte Schnittstelle die Runde 7 und die sechste die
 //! Runde 18. Gebunden sind alle zehn in den fuenf `unsafe extern "C"`-Bloecken
 //! dieses Moduls.
-//!
-//! **Gerufen sind neun davon aus dem Baum, und die zehnte ist es noch nicht.**
-//! [`ortszeit`] steht seit der Runde 18 bereit und bekommt ihre Rufer mit dem
-//! Zeitstempel des Packens und mit der Datumszeile eines Leseprofils, beide in
-//! derselben Runde und beide nach dieser Stelle. Bis dahin ruft sie allein die
-//! Probe. Wer den Satz spaeter liest und die zwei Rufer im Baum findet,
-//! streicht diesen Absatz; wer sie nicht findet, hat einen Rueckbau vor sich
-//! und keinen toten Zweig.
 //!
 //! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
 //! oder schreibt, sondern eine Absprache zwischen zwei Prozessen traegt.** An
@@ -866,8 +859,12 @@ unsafe extern "C" {
 /// Archivwegen [`crate::operation::zippen`] und
 /// [`crate::operation::entpacken`] — und seit dem Defekt `260826-1221` vom
 /// Verzeichnisleser [`Schwungleser::oeffnen`] in dieser Datei, der bis dahin
-/// als einziger Oeffner mit `File::open` an einer benannten Roehre haengen
-/// blieb. **Alle liegen in `krk-core`**; bis zur
+/// als einziger Oeffner **dieser Datei** mit `File::open` an einer benannten
+/// Roehre haengen blieb. Die Einengung gehoert dazu: `File::open` steht daneben
+/// noch im Kopieren und im Entpacken unter `crate::operation`, je auf einem
+/// Pfad, den der Code kurz zuvor selbst angelegt hat. Dort haengt
+/// nur, wer den Pfad dazwischen durch eine Roehre ersetzt, und das ist ein
+/// Wettlauf und kein gewoehnlicher Weg. **Alle liegen in `krk-core`**; bis zur
 /// Runde 11 stand die zweite als private Fassung in `krk-ui`s
 /// `vorschaumodell.rs` und hatte deshalb keinen Doku-Verweis. Aufrufer der
 /// Huelle ist heute die Vorschau, mit ihren zwei Grenzen.
@@ -911,9 +908,13 @@ unsafe extern "C" {
 ///
 /// Der Defekt, der die Funktion verlangt hat, ist `260809-1652`; der zweite
 /// Aufrufer ist mit `260810-1247` dazugekommen, der dritte mit der Runde 16, der
-/// vierte und der fuenfte mit der Runde 17. **Eine Zahl steht hier trotzdem
-/// nicht als Zusage**: sie waechst mit jeder Runde, die einen weiteren Leser
-/// baut, und der Modulkopf nennt das Zaehlkommando
+/// vierte und der fuenfte mit der Runde 17, der sechste mit dem Defekt
+/// `260826-1221`. **Wie viele es heute sind, steht hier trotzdem nicht**: die
+/// Zahl waechst mit jeder Runde, die einen weiteren Leser baut, gezaehlt wird
+/// sie mit `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src`, und der
+/// Ordinalsatz oben ist die Herkunft und keine Zusage ueber den heutigen Stand
+/// (`shared/issues/260826-1933_*_zwei-prosastellen-an-ohne-warten-oeffnen-zaehlen-fuenf-rufer-*`).
+/// Der Modulkopf nennt dasselbe Zaehlkommando
 /// (`shared/issues/260825-0727_*_claude-md-nennt-zwei-aufrufer-von-ohne-warten-oeffnen-*`).
 pub fn ohne_warten_oeffnen(pfad: &Path) -> io::Result<File> {
     let datei = OpenOptions::new()

@@ -46,3 +46,13 @@ sie einzeln aufzählt: eine sechste Variante hält den Bau ohnehin an.
 
 **Gefunden:** coderev, Vollbaum-Durchsicht R5 der drei größten Probendateien des
 Kerns.
+
+---
+Resolved: Der erste Satz in `crates/krk-core/tests/ablage.rs` steht auf fuenf: „Jede der
+fuenf Lagen traegt ihren eigenen Satz, und keiner ist mehrzeilig (C3.7, C3.8)." Damit sagen
+Name, beide Absaetze und der Rumpf dasselbe.
+**Die Zahl ist berichtigt und nicht ersetzt**, und der Datensatz begruendet, warum das hier
+traegt: `Beiseite` ist eine vollstaendige Fallunterscheidung, die Probe zaehlt ihre Werte
+einzeln auf, und eine sechste Variante haelt den Bau ohnehin an. Eine eigene Verankerung
+braucht es daneben nicht — der Uebersetzer ist sie.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

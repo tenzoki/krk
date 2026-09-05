@@ -85,3 +85,21 @@ Baum stehen, waechst die Liste oben mit jeder Runde weiter. Der billige erste Sc
 Paar `tief`/`inhalt`: dort ist keine Lesart denkbar, unter der die zwei verschieden ausgehen.
 
 Also seen: 260826-1221 by coderev — dieselbe Luecke in der Vorgangsmaschine und im Stapelumbenennen: `shared/issues/260826-1221_*_must-use-fehlt-an-fast-jeder-reinen-antwort-der-vorgangsmaschine-und-des-stapelumbenennens.md`. Die zwei Datensaetze sind derselbe Befund an zwei Umfaengen und keine Doppelung.
+
+---
+Resolved: Die Marke steht jetzt an jedem reinen Leser und Erzeuger unter
+`crates/krk-core/src/verzeichnis/`, nicht nur an den im Datensatz aufgezaehlten. Der
+Abschnitt „Richtung" fragt, welche der zwei Lesarten gilt; die weitere ist genommen, weil
+CLAUDE.md die Regel als „ein Rueckgabewert, dessen stilles Fallenlassen unbemerkt bliebe"
+fuehrt und das auf jede Antwort ohne Nebenwirkung zutrifft. Das Paar `tief`/`inhalt`
+(`modell.rs`, `Ordnermodell`) geht damit gleich aus, und die drei Regeln in `filter.rs`
+(`traegt_ein_dateiname`, `traegt_die_folge`, `inhaltsschwelle`) ebenfalls.
+Betroffen: `modell.rs`, `filter.rs`, `leser.rs`, `eintrag.rs`, `kollation.rs`,
+`sortierung.rs`, `mod.rs`, `durchlauf.rs`. Zwei der neuen Marken tragen einen eigenen Text,
+weil `impl Iterator` schon `#[must_use]` ist und Clippys `double_must_use` einen nackten
+Vermerk abweist: `Ordnermodell::zeilen` und `Sortierung::alle`.
+Nicht angefasst sind die Wege, die `Result` oder `Option` liefern: dort traegt die
+Standardbibliothek die Marke schon, und ein zweiter Vermerk bricht an `double_must_use`.
+Geprueft mit `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo test -p krk-core` (Rueckgabe 0); kein Rufer in `krk-ui` oder `krk-bench` liess einen
+der neuen Werte fallen.

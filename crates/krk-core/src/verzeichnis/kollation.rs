@@ -72,6 +72,7 @@ fn kollator() -> &'static CollatorBorrowed<'static> {
 /// Der leere Text ergibt den leeren Schluessel, und der belegt keinen Speicher.
 /// Ohne diesen Fall traegt jede Datei ohne Endung eine Zuteilung von vier Bytes
 /// fuer nichts.
+#[must_use]
 pub fn schluessel(text: &str) -> Box<[u8]> {
     if text.is_empty() {
         return Box::default();

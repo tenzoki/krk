@@ -52,3 +52,28 @@ Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
 
 ---
 Also seen: 260826-1225 durch coderev (Parallellauf auf `ablage/`) — `shared/issues/260826-1225_*_geladen-traegt-kein-must-use-und-vier-der-fuenf-ladewege-koennen-ihre-ersetzung-still-fallen-lassen.md` findet dieselbe Regel an einem Typ in `ablage/` verletzt. Zwei Datensätze und nicht einer, weil die Gegenstände verschieden sind: dort eine benannte Stelle mit einer benannten Wirkung, hier die Deckung zweier ganzer Module. Wer den einen behebt, behebt den anderen nicht.
+
+---
+Resolved: `tasten/`, `text/` und `zwischenablage.rs` tragen die Marke jetzt. Die im
+Datensatz benannten Stellen alle: `Belegung::konflikte`, `text::suche::{alle,
+einen_ersetzen, alle_ersetzen}`, `text::marke::wiederfinden`,
+`text::datei::{sicherungsform, gehaltene_form, in_gehaltene_form, ist_in_gehaltener_form,
+versatz_nach_der_wandlung}`, `text::zeilen::{neu, anfang_der_zeile, zeile_am_versatz,
+zeilenzahl}`, `tasten::normalisierung::normalisieren`,
+`tasten::parser::{code_von_pflicht, Kombination::neu, Taste::kennung, Tastendruck::kennung}`
+und `zwischenablage::deuten`, dazu die uebrigen reinen Leser derselben Bauart.
+Zwei Abweichungen von der Liste des Datensatzes, beide aus demselben Grund: `Option` ist in
+der Standardbibliothek selbst `#[must_use]`, also bricht ein zweiter Vermerk an Clippys
+`double_must_use`. Betroffen sind `suche::{erster_ab, naechster, voriger, erster_ab_stelle,
+naechster_stelle}`, `datei::einlesen`, `zeilen::inhalt_der_zeile`,
+`parser::{code_von, zeichen_der_stelle, zeichen_als_kennung, taste_mit_namen, taste_mit_code,
+taste_mit_zeichen}` und `Kombination::aus_tastendruck`. Sie sind bereits gedeckt, wie der
+Datensatz es fuer `Result` schon festhaelt; die Liste dort haette sie mitnennen muessen.
+`belegung::laden` liefert `Geladen<Belegung>` und ist ueber die Marke am Typ gedeckt, die
+`shared/issues/260826-1225_*_geladen-traegt-kein-must-use-und-vier-der-fuenf-ladewege-koennen-ihre-ersetzung-still-fallen-lassen.md`
+gesetzt hat.
+`stapelumbenennen/`, das der Datensatz ausdruecklich in denselben Durchgang legt, ist mit
+`shared/issues/260826-1221_*_must-use-fehlt-an-fast-jeder-reinen-antwort-der-vorgangsmaschine-und-des-stapelumbenennens.md`
+mitgeraeumt.
+Geprueft mit `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo test -p krk-core` (Rueckgabe 0).

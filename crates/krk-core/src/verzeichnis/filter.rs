@@ -108,6 +108,7 @@ const FUNKTIONSTASTEN_ENDE: char = '\u{F8FF}';
 /// keinem Namen vorkommen kann, den ein Dateisystem hergibt;
 /// [`crate::operation::name_pruefen`] weist ihn aus demselben
 /// Grund ab.
+#[must_use]
 pub fn traegt_ein_dateiname(zeichen: char) -> bool {
     !zeichen.is_control()
         && !(FUNKTIONSTASTEN_ANFANG..=FUNKTIONSTASTEN_ENDE).contains(&zeichen)
@@ -187,6 +188,7 @@ impl Muster {
 /// diese Funktion nicht: der Pruefschritt und der Durchlauf haben den Zweig
 /// „steht ein Filtertext?" davor, und der Inhaltsbefund kommt gar nicht erst
 /// zustande, weil [`inhaltsschwelle`] ohne Filtertext nicht erreicht ist.
+#[must_use]
 pub fn traegt_die_folge(name: &str, muster: &Muster) -> bool {
     let name = name.to_lowercase();
     let mut ab = 0;

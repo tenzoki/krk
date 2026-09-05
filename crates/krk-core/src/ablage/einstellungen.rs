@@ -1,4 +1,7 @@
-//! `settings.toml`: die eine Ablagedatei, die der Nutzer von Hand pflegt (C11).
+//! `settings.toml`: die erste Ablagedatei, die der Nutzer von Hand pflegt
+//! (C11). Die zweite ist `readers.toml` seit der Runde 16, siehe
+//! [`super::leseprofile`]; welche Datei welchen Weg geht, sagt
+//! [`super::pfade::Datei`].
 //!
 //! ```text
 //! resources/default-settings.toml ──include_str!──> AUSLIEFERUNGSTEXT

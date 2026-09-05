@@ -288,6 +288,7 @@ impl Durchlauf {
     /// Er schliesst, wenn der Arbeitsfaden geendet hat. Ein geschlossener Kanal
     /// ohne weitere Meldung heisst nicht, dass die restlichen Auftraege keinen
     /// Treffer tragen: er heisst, dass sie nicht entschieden sind.
+    #[must_use]
     pub fn befunde(&self) -> &Receiver<Befundmeldung> {
         &self.befunde
     }
@@ -304,6 +305,7 @@ impl Durchlauf {
     /// nicht in der Liste, und sie steht auch nicht als Nichttreffer da — sie
     /// wurde nicht angesehen, und diese Zahl ist der Satzteil der Statuszeile,
     /// der das sagt.
+    #[must_use]
     pub fn zu_gross(&self) -> u64 {
         self.zu_gross.load(Ordering::Relaxed)
     }
@@ -547,12 +549,17 @@ fn unterbaum_entscheiden(
                     return Some(true);
                 }
                 // Die Fallunterscheidung ueber den Typ ist vollstaendig und hat
-                // keinen Auffangzweig. `Ordner` ist auch eine Verknuepfung auf
-                // einen Ordner; es ist derselbe Schnitt, den die Sichtbarkeit
-                // zieht. Erst der Zweig fuer `Verknuepfung` trennt die beiden,
-                // und er steht am Kopf dieser Funktion fuer den Auftrag und
-                // hier fuer den Abstieg: in eine Verknuepfung wird weder
-                // abgestiegen noch hineingelesen, sie traegt damit nichts bei.
+                // keinen Auffangzweig. `Ordner` und `Verknuepfung` sind hier
+                // zwei getrennte Werte: `kandidat.typ` kommt aus
+                // `typ_aus_objtype`, und `getattrlistbulk(2)` folgt einer
+                // Verknuepfung nicht — ein Eintrag, der auf einen Ordner zeigt,
+                // kommt als `VLNK` und damit als `Typ::Verknuepfung`. `offen`
+                // erreicht also keine. Die Zusammenfassung der beiden gehoert
+                // der Sichtbarkeit in `modell::zeilengrund_von` und nicht dem
+                // Typ des Lesers. Der Zweig fuer `Verknuepfung` steht am Kopf
+                // dieser Funktion fuer den Auftrag und hier fuer den Abstieg:
+                // in eine Verknuepfung wird weder abgestiegen noch
+                // hineingelesen, sie traegt damit nichts bei.
                 match kandidat.typ {
                     Typ::Ordner => offen.push(lesestand.pfad.join(&kandidat.name)),
                     Typ::Datei => {

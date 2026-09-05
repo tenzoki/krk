@@ -80,9 +80,11 @@
 //!
 //! # Der Preis dieser Wahl, ausgeschrieben
 //!
-//! KRK schreibt beim Sichern **immer** Unix-Zeilenenden, **immer** einen
-//! abschliessenden Umbruch und **nie** eine Bytefolgenmarke, unabhaengig von
-//! der Form, die die Datei mitbrachte. Der Nutzer hat das am 260808-0043
+//! KRK schreibt beim Sichern **immer** Unix-Zeilenenden, einen abschliessenden
+//! Umbruch, **sobald der Stand eine Zeile traegt**, und **nie** eine
+//! Bytefolgenmarke, unabhaengig von der Form, die die Datei mitbrachte. Die
+//! eine Ausnahme steht bei [`sicherungsform`] und wird hier nicht ein zweites
+//! Mal begruendet: der leere Stand bleibt leer. Der Nutzer hat das am 260808-0043
 //! entschieden und ist damit der Empfehlung des Datensatzes
 //! `decisions/260808-0021_*_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md`
 //! **nicht** gefolgt; empfohlen war, dass die Datei ihre Form behaelt und der
@@ -256,6 +258,7 @@ impl Abweisung {
     /// Kiste. Ihn hier nachzubauen hiesse, zwei Schreibweisen fuer dieselbe
     /// Groesse zu haben; die Ansicht kann stattdessen aus den Feldern des
     /// Wertes ihren eigenen Satz bauen, wenn sie einen schoeneren will.
+    #[must_use]
     pub fn meldung(&self) -> String {
         match self {
             Abweisung::KeinGueltigesZiel { pfad, grund } => {
@@ -741,6 +744,7 @@ pub fn einlesen(bytes: Vec<u8>) -> Option<String> {
 /// siehe den Modulkopf. Zwei Formulierungen derselben Frage waeren die erste
 /// Gelegenheit, sie verschieden zu schreiben, und die Wandlung liefe dann gegen
 /// eine andere Bedingung als die Pruefung.
+#[must_use]
 pub fn ist_in_gehaltener_form(text: &str) -> bool {
     !text.starts_with(BYTEFOLGENMARKE) && !text.contains('\r')
 }
@@ -770,6 +774,7 @@ pub fn ist_in_gehaltener_form(text: &str) -> bool {
 /// nahm es dafuer eine uebernommene Zeichenkette und legte den Rest eines
 /// 16-MB-Textes auch dann an, wenn die Wandlung ihn unveraendert zurueckgab.
 /// Der Defekt dazu ist `260810-0424`.
+#[must_use]
 pub fn gehaltene_form(text: &str) -> Cow<'_, str> {
     if ist_in_gehaltener_form(text) {
         return Cow::Borrowed(text);
@@ -799,6 +804,7 @@ pub fn gehaltene_form(text: &str) -> Cow<'_, str> {
 /// Kopie zurueck. Die Fallunterscheidung unten ist genau dafuer da: eine
 /// geliehene Antwort heisst "nichts zu wandeln", und dann geht die uebernommene
 /// Zeichenkette zurueck, statt aus der Leihe abgeschrieben zu werden.
+#[must_use]
 pub fn in_gehaltene_form(text: String) -> String {
     match gehaltene_form(&text) {
         Cow::Borrowed(_) => text,
@@ -847,6 +853,7 @@ pub fn in_gehaltene_form(text: String) -> String {
 /// allein mit zwei Marken in einem Text, von denen die erste ganz vorn steht;
 /// ein Sonderfall dafuer waere genau die Regelwiederholung, die der Absatz
 /// darueber vermeidet.
+#[must_use]
 pub fn versatz_nach_der_wandlung(vorher: &str, versatz: usize, nachher: &str) -> usize {
     // Ein Versatz hinter dem Text oder neben einer Zeichengrenze hat keinen
     // Rest; die Antwort ist dann das Ende des gewandelten Textes.
@@ -872,6 +879,7 @@ pub fn versatz_nach_der_wandlung(vorher: &str, versatz: usize, nachher: &str) ->
 ///   Nutzers, und "genau ein abschliessender Umbruch" heisst, dass genau einer
 ///   **angehaengt** wird, nicht dass hinten aufgeraeumt wird.
 /// - **Jeder andere Stand bekommt einen `\n` angehaengt.**
+#[must_use]
 pub fn sicherungsform(stand: &str) -> Cow<'_, str> {
     if stand.is_empty() || stand.ends_with('\n') {
         Cow::Borrowed(stand)

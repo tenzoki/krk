@@ -80,3 +80,32 @@ zusammengezogenen Zeilen und ohne sich auf das Wort „Dateien" zu verlassen.
 
 **Gefunden:** coderev, Vollbaum-Durchsicht von `crates/krk-core/src/{ablage,leseprofil}/` am
 260826-1225.
+
+---
+Resolved: Die drei Stellen tragen keine Zahl mehr.
+`crates/krk-core/src/ablage/sperre.rs`, Modulkopf: „greifen zwei Prozesse auf dieselben
+Ablagedateien unter `~/Library/Application Support/KRK/` zu" und „**nicht** auf den
+Nutzdateien"; die Zwischenueberschrift heisst jetzt „Zwei Sperrdateien, und die Sperre gilt
+dem Ordner" statt „Zwei Dateien, …", weil dort die zwei Sperrdateien gemeint sind und nicht
+die Ablagedateien. `crates/krk-core/src/ablage/einstellungen.rs`, erste Zeile: „`settings.toml`:
+die **erste** Ablagedatei, die der Nutzer von Hand pflegt (C11). Die zweite ist `readers.toml`
+seit der Runde 16"; der Widerspruch zu `leseprofile.rs:1-2` ist damit aufgeloest. Der
+Abschnitt „# Warum eine vierte Datei" ist unangetastet geblieben, wie der Datensatz es
+verlangt.
+
+**Der eigentliche Befund — dass keine Erhebung sie finden konnte — ist mit einer Probe
+beantwortet und nicht mit einem besseren Muster im Kopf des naechsten Durchgangs.**
+`keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien`
+(`crates/krk-core/tests/baum.rs`) zieht die Doc-Kommentare unter
+`crates/krk-core/src/ablage/` **zeilenuebergreifend** zu einem Text zusammen und faengt damit
+genau die Bauform, an der jede zeilenweise Suche gescheitert ist; sie sucht neben „Dateien"
+auch „Ablagedateien", „Nutzdateien" und „TOML-Dateien"; und ihre Erwartung kommt aus
+`Datei::ALLE` und aus `Datei::format`, nicht aus einem Literal. Gegengeprueft mit einem
+wieder eingesetzten „vier" an genau der Stelle in `sperre.rs`, die den Zeilenumbruch traegt:
+die Probe wird rot und nennt Datei und Wortlaut.
+Zwei Grenzen der Probe stehen an ihrem Doc-Kommentar: ein Zahlwort ohne Hauptwort erreicht
+sie nicht, und ein Zitat einer frueheren Fassung erkennt sie nur, wenn das oeffnende `„`
+innerhalb der achtzig Zeichen davor steht.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0),
+`cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo fmt -p krk-core -- --check` (Rueckgabe 0).

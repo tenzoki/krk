@@ -45,3 +45,22 @@ Am 260826 nachgezählt: `awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tas
 Die Zahl aus beiden Doc-Kommentaren nehmen und die Längenangabe als Form zitieren (`[(Kommando, &'static str); N]`). Wer die aktuelle Zahl braucht, liest sie an `belegung.rs:697` oder zählt sie mit dem Kommando aus `CLAUDE.md`.
 
 Gefunden bei der Durchsicht der Behebungsrunde 1, zweiter Teil, Bereich `9c02863..fc829c8`.
+
+---
+Resolved: Die Zahl steht in beiden Doc-Kommentaren nicht mehr, und die Laengenangabe ist als
+**Form** zitiert, wie der Vorschlag es sagt.
+`crates/krk-core/tests/gemeinsam/mod.rs`, `varianten_der_aufzaehlung`, Abschnitt „Wozu":
+„die Laengenangabe `[(Kommando, &'static str); N]` zwingt zu so vielen Eintraegen, wie sie
+nennt, und sagt nichts darueber, **welche**." Daneben steht jetzt ausdruecklich, warum hier
+keine Zahl steht: der Helfer liest jede Aufzaehlung, und die des `Kommando` ist die, die
+`CLAUDE.md` als in vier Tagen viermal falsch gewordene fuehrt.
+`crates/krk-core/tests/belegung.rs`,
+`jede_variante_von_kommando_steht_genau_einmal_in_kennungen`: derselbe Satz in derselben
+Form.
+**Der Befund war bei der Behebung schon einmal gewandert:** beide Stellen standen inzwischen
+auf 82 und nicht mehr auf 79, weil die Aufzaehlung seit dem 260826 weiter gewachsen ist. Das
+ist der Beleg dafuer, dass die Zahl an dieser Stelle nicht zu halten war.
+Wer den heutigen Stand braucht, liest ihn an der Laengenangabe in
+`crates/krk-core/src/tasten/belegung.rs` oder zaehlt ihn mit dem `awk`-Kommando aus
+`CLAUDE.md`.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

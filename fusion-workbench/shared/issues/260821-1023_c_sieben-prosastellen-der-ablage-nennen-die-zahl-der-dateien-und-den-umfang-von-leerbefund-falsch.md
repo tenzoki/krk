@@ -173,3 +173,43 @@ Modulkopf nennt weiter zwei Fragen („in welchen zwei Formaten sie stehen"), w�
 inzwischen **drei** abgeleitete Fragen beantwortet — `Datei::format`, `Datei::leerbefund` und
 seit der Runde 16 `Datei::ersatz` (`pfade.rs:328`). Die Nebenbeobachtung zu `pfade.rs:219-220`
 gilt unverändert an `pfade.rs:117-119`.
+
+---
+Resolved: Alle sieben Stellen sind geraeumt, und wo es ging, ist die Zahl **ersetzt** statt
+berichtigt.
+
+Die fuenf Stellen der Tabelle: `mod.rs:45` sowie die zwei `pfad`-Doc-Kommentare zeigen jetzt
+auf `Datei::ALLE`, statt eine Zahl zu nennen (Einzelheiten in der `Resolved:`-Notiz von
+`shared/issues/260816-2307_*_der-doc-kommentar-von-ablage-pfad-nennt-vier-dateien-die-aufzaehlung-fuehrt-sechs.md`,
+demselben Befund an denselben drei Stellen). Der Doc-Kommentar von `Ablage` liest jetzt „Der
+Ablageordner mit den Ablagedateien aus [`Datei::ALLE`], samt der Schreibsperre darueber" und
+„Wer eine von ihnen anfassen will, geht durch [`Ablage::durchgang`]".
+`mod.rs:154` war schon am 260826 nachgezogen; der Datensatz haelt es fest.
+
+`pfade.rs:1-2`: der Modulkopf traegt jetzt einen eigenen Absatz fuer die drei abgeleiteten
+Fragen — `Datei::format`, `Datei::leerbefund` und `Datei::ersatz` —, den der Nachtrag vom
+260826 als gewachsen beschrieben hat.
+
+Die Nebenbeobachtung zu `Datei::leerbefund` ist mit erledigt: der Doc-Kommentar sagt jetzt
+ausdruecklich, dass die Antwort fuer `Datei::Zettel` nie gelesen wird, dass „kein einziger
+oberster Schluessel" an einer Textdatei keine beantwortbare Frage ist und dass der Zweig
+allein wegen der Vollstaendigkeit dasteht.
+
+**Verankerung, damit der Befund nicht zum siebten Mal wiederkommt.** Wo die Zahl die Aussage
+traegt und nicht ersetzbar ist („sieben Ablagedateien in zwei Formaten", „die fuenf
+TOML-Dateien gehen ueber `Zugang::laden`"), steht sie jetzt unter einer Probe:
+`keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien` in
+`crates/krk-core/tests/baum.rs`. Sie zieht die Doc-Kommentare unter
+`crates/krk-core/src/ablage/` zu einem Text zusammen, sucht jedes Zahlwort unmittelbar vor
+`Ablagedateien`, `Dateien`, `Nutzdateien` oder `TOML-Dateien` und haelt es gegen
+`Datei::ALLE.len()` beziehungsweise gegen die Zahl der Werte mit `Format::Toml`. Die
+Erwartung ist damit aus dem Baum gerechnet und kein Literal; eine achte Ablagedatei laesst
+die Probe rot werden und nennt jede Stelle, die nachzuziehen ist. Gegengeprueft: mit einem
+eingesetzten „vier" in `sperre.rs` wird sie rot und nennt die Stelle.
+Damit die Probe eindeutige Hauptwoerter vorfindet, sind ein paar mehrdeutige Wendungen
+umgeschrieben — „Fuenf Dateien tragen TOML" zu „Die fuenf TOML-Dateien gehen ueber …", „Die
+sieben Dateien" zu „Die sieben Ablagedateien", „# Zwei Dateien, und die Sperre gilt dem
+Ordner" zu „# Zwei Sperrdateien, …".
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0),
+`cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo fmt -p krk-core -- --check` (Rueckgabe 0).

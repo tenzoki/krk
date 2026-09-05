@@ -42,6 +42,7 @@ pub enum Namensfehler {
 
 impl Namensfehler {
     /// Der Grund im Klartext, so wie ihn die Oberflaeche zeigt.
+    #[must_use]
     pub fn grund(self) -> &'static str {
         match self {
             Namensfehler::Leer => "der Name ist leer",
@@ -138,6 +139,7 @@ const HOECHSTE_KOPIE: u32 = 1_000;
 ///
 /// `bericht.txt` wird zu `bericht Kopie.txt`, dann `bericht Kopie 2.txt`. Die
 /// Endung bleibt hinten, damit die Kopie einer Textdatei eine Textdatei bleibt.
+#[must_use]
 pub fn freier_name(ziel: &Path) -> String {
     let Some(name) = ziel.file_name().and_then(|teil| teil.to_str()) else {
         return "Kopie".to_owned();
@@ -174,6 +176,7 @@ pub fn freier_name(ziel: &Path) -> String {
 ///
 /// Ein fuehrender Punkt zaehlt nicht als Endung: `.gitignore` ist ein Stamm
 /// ohne Endung und nicht eine Endung ohne Stamm.
+#[must_use]
 pub fn namen_teilen(name: &str) -> (&str, &str) {
     match name.rfind('.') {
         Some(stelle) if stelle > 0 => name.split_at(stelle),

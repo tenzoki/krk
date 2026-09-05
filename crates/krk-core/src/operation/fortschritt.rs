@@ -61,6 +61,7 @@ pub enum Abschluss {
 
 impl Abschluss {
     /// Wahr, wenn der Vorgang abgebrochen wurde.
+    #[must_use]
     pub fn ist_abgebrochen(self) -> bool {
         self == Abschluss::Abgebrochen
     }
@@ -113,6 +114,7 @@ pub struct Konfliktentscheid {
 
 impl Konfliktentscheid {
     /// Eine Antwort, die nur fuer diesen einen Eintrag gilt.
+    #[must_use]
     pub fn einmal(antwort: Konfliktantwort) -> Self {
         Self {
             antwort,
@@ -121,6 +123,7 @@ impl Konfliktentscheid {
     }
 
     /// Eine Antwort, die fuer jeden weiteren Konflikt dieses Vorgangs gilt.
+    #[must_use]
     pub fn fuer_alle(antwort: Konfliktantwort) -> Self {
         Self {
             antwort,
@@ -199,6 +202,13 @@ impl Abbruchgriff {
 }
 
 /// Ein laufender Vorgang auf einem eigenen Arbeitsfaden.
+///
+/// **`#[must_use]` steht am Typ und nicht an [`super::starten`]**, das ihn
+/// heute als einziges liefert: der Griff traegt den Meldungskanal und den
+/// Abbruch, und ein fallen gelassener Lauf beendet den Vorgang, ohne dass
+/// jemand davon erfaehrt. Ein zweiter Erzeuger erbt die Marke damit von
+/// selbst.
+#[must_use = "der Lauf ist der einzige Griff an den Vorgang; fallen gelassen endet er"]
 pub struct Lauf {
     abbruch: Arc<AtomicBool>,
     meldungen: Receiver<Meldung>,
@@ -219,6 +229,7 @@ impl Lauf {
     }
 
     /// Der Kanal, aus dem der Hauptfaden die Meldungen holt.
+    #[must_use]
     pub fn meldungen(&self) -> &Receiver<Meldung> {
         &self.meldungen
     }
@@ -228,6 +239,7 @@ impl Lauf {
     /// Fuer den Aufrufer, der den Lauf einem anderen Faden gibt und trotzdem
     /// abbrechen koennen muss; siehe [`Abbruchgriff`]. Beliebig oft abrufbar,
     /// jeder Griff zeigt auf dasselbe Kennzeichen.
+    #[must_use]
     pub fn abbruchgriff(&self) -> Abbruchgriff {
         Abbruchgriff {
             kennzeichen: Arc::clone(&self.abbruch),

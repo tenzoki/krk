@@ -98,6 +98,7 @@ pub struct Sammelersetzung {
 /// Alle Treffer der Zeichenfolge `gesucht` im Text, in Textreihenfolge.
 ///
 /// Ein leerer Suchtext liefert keinen Treffer.
+#[must_use]
 pub fn alle(text: &str, gesucht: &str) -> Vec<Treffer> {
     if gesucht.is_empty() {
         return Vec::new();
@@ -211,6 +212,7 @@ fn umlaufen(anzahl: usize, stelle: usize) -> Option<usize> {
 /// eben eingesetzt hat. Gesucht wird deshalb ab dem Ende des eingesetzten
 /// Textes; hinter dem letzten Treffer ist der Durchgang zu Ende, und der
 /// Aufrufer meldet das.
+#[must_use]
 pub fn einen_ersetzen(text: &str, gesucht: &str, ersatz: &str, treffer: Treffer) -> Ersetzung {
     let mut stand =
         String::with_capacity(text.len() - (treffer.ende - treffer.anfang) + ersatz.len());
@@ -232,6 +234,7 @@ pub fn einen_ersetzen(text: &str, gesucht: &str, ersatz: &str, treffer: Treffer)
 /// was der Ersatz an neuen Treffern erzeugt, kann er deshalb nicht mehr
 /// erreichen. Ein Lauf, der nach jedem Ersatz erneut suchte, ersetzte `foo`
 /// durch `foofoo` bis zum Speicherende.
+#[must_use]
 pub fn alle_ersetzen(text: &str, gesucht: &str, ersatz: &str) -> Sammelersetzung {
     let treffer = alle(text, gesucht);
     if treffer.is_empty() {

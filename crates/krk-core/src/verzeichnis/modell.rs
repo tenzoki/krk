@@ -11,9 +11,21 @@
 //! Zeilennummer.
 //!
 //! **Die Auswahl wohnt deshalb hier und nicht in der Tabelle der Oberflaeche.**
-//! Das Modell fuehrt sie als Eintragsindex; die Oberflaeche fragt vor jedem
-//! Zeichendurchgang mit [`Ordnermodell::auswahl_zeile`] nach der Zeile, in der
-//! der ausgewaehlte Eintrag gerade steht. Laege sie als Zeilennummer in der
+//! Das Modell fuehrt sie als Eintragsindex; die Oberflaeche rechnet ihn mit
+//! [`Ordnermodell::auswahl_zeile`] in die Zeile um, in der der ausgewaehlte
+//! Eintrag gerade steht, **wenn sie die Auswahl setzt oder die Sicht sich
+//! geaendert hat** — nicht in einem Zeichendurchgang. Der Anlass steht hier und
+//! nicht die Zahl der Rufer; die zaehlt
+//! `grep -rn 'auswahl_zeile()' crates/krk-ui/src`.
+//!
+//! **Der Unterschied ist keine Wortwahl.** [`Ordnermodell::auswahl_zeile`] geht
+//! ueber [`Ordnermodell::zeile_von`], und das ist eine lineare Suche ueber die
+//! Sichtreihenfolge. Je Ereignis ist das nichts; je Zeichendurchgang waere es
+//! bei hunderttausend Eintraegen der teuerste Posten des Zeichnens und stuende
+//! gegen L3 und L10. Bis zum 260826 stand hier „vor jedem Zeichendurchgang",
+//! und der Satz lud zu einem Zwischenspeicher gegen eine Last ein, die nirgends
+//! anfaellt
+//! (`shared/issues/260826-1221_*_der-modulkopf-des-ordnermodells-sagt-die-oberflaeche-frage-vor-jedem-zeichendurchgang-nach-der-auswahlzeile.md`). Laege sie als Zeilennummer in der
 //! `NSTableView`, zeigte dieselbe Nummer nach jedem [`Ordnermodell::abschliessen`]
 //! und nach jedem [`Ordnermodell::sortierung_setzen`] auf einen anderen Eintrag.
 //!
@@ -189,6 +201,7 @@ pub struct Markierungsstand {
 
 impl Markierungsstand {
     /// Ob ueberhaupt etwas markiert ist.
+    #[must_use]
     pub fn ist_leer(&self) -> bool {
         self.zahl == 0
     }
@@ -406,6 +419,7 @@ impl Ordnermodell {
     /// Frage nach der Tiefe faellt, und `Tabliste::durchlauf_nachziehen`
     /// stoesst keinen Durchlauf an. Ein frisch gestartetes KRK liest deshalb
     /// genau so viel wie zuvor.
+    #[must_use]
     pub fn neu(generation: u64) -> Self {
         Self {
             eintraege: Arc::default(),
@@ -440,11 +454,13 @@ impl Ordnermodell {
     /// nur einen Lesevorgang und liest allein aus dessen Kanal. Der Modulkopf
     /// von `krk-ui/src/appkit/tabelle.rs` schreibt aus, was einen Ordnerwechsel
     /// mitten im Lesen stattdessen traegt.
+    #[must_use]
     pub fn generation(&self) -> u64 {
         self.generation
     }
 
     /// Wahr, wenn der Stapel zu diesem Modell gehoert.
+    #[must_use]
     pub fn gehoert_dazu(&self, generation: u64) -> bool {
         generation == self.generation
     }
@@ -473,6 +489,7 @@ impl Ordnermodell {
     /// einen Stapel nicht als blosse neue Zeilenzahl melden darf: die Auswahl
     /// der Tabelle zeigte sonst auf eine Zeile, die es nach dem Ersatz nicht
     /// mehr gibt.
+    #[must_use]
     pub fn ersetzt_beim_naechsten_stapel(&self) -> bool {
         self.ersatz_ausstehend && !self.sichtreihenfolge.is_empty()
     }
@@ -558,6 +575,7 @@ impl Ordnermodell {
     }
 
     /// Die aktuelle Sortierung.
+    #[must_use]
     pub fn sortierung(&self) -> Sortierung {
         self.sortierung
     }
@@ -580,6 +598,7 @@ impl Ordnermodell {
     }
 
     /// Wahr, wenn versteckte Eintraege ausgeblendet sind.
+    #[must_use]
     pub fn verstecke_ausgeblendet(&self) -> bool {
         self.verstecke_ausblenden
     }
@@ -605,21 +624,25 @@ impl Ordnermodell {
     }
 
     /// Alle gelesenen Eintraege in Lesereihenfolge, auch die ausgeblendeten.
+    #[must_use]
     pub fn eintraege(&self) -> &[Eintrag] {
         &self.eintraege
     }
 
     /// Die Sichtreihenfolge als Indizes in [`Ordnermodell::eintraege`].
+    #[must_use]
     pub fn sichtreihenfolge(&self) -> &[u32] {
         &self.sichtreihenfolge
     }
 
     /// Die Zahl der angezeigten Zeilen.
+    #[must_use]
     pub fn zeilenzahl(&self) -> usize {
         self.sichtreihenfolge.len()
     }
 
     /// Der Eintrag in der genannten Zeile.
+    #[must_use]
     pub fn zeile(&self, zeile: usize) -> Option<&Eintrag> {
         let index = *self.sichtreihenfolge.get(zeile)? as usize;
         self.eintraege.get(index)
@@ -629,11 +652,13 @@ impl Ordnermodell {
     ///
     /// Die Auswahl haengt an diesem Index und nicht an der Zeilennummer; nur
     /// deshalb ueberlebt sie einen Sortierwechsel.
+    #[must_use]
     pub fn eintragsindex(&self, zeile: usize) -> Option<u32> {
         self.sichtreihenfolge.get(zeile).copied()
     }
 
     /// Die Zeile, in der der genannte Eintrag steht, falls er sichtbar ist.
+    #[must_use]
     pub fn zeile_von(&self, eintragsindex: u32) -> Option<usize> {
         self.sichtreihenfolge
             .iter()
@@ -644,6 +669,7 @@ impl Ordnermodell {
     ///
     /// Die Oberflaeche braucht ihn, wenn sie die Tabelle gleich neu laden
     /// laesst: waehrend des Neuladens gibt es keine tragfaehige Zeilennummer.
+    #[must_use]
     pub fn auswahl(&self) -> Option<u32> {
         self.auswahl
     }
@@ -664,6 +690,7 @@ impl Ordnermodell {
     /// gerade ausgeblendet ist. Im zweiten Fall bleibt der gemerkte Eintrag
     /// stehen: blendet der Nutzer die versteckten Eintraege wieder ein, ist
     /// seine Auswahl wieder da, statt beim Umschalten verloren zu gehen.
+    #[must_use]
     pub fn auswahl_zeile(&self) -> Option<usize> {
         self.zeile_von(self.auswahl?)
     }
@@ -674,6 +701,7 @@ impl Ordnermodell {
     /// Zwischenablage nennt eine Datei, und gesucht ist ihre Zeile. Auch die
     /// ausgeblendeten Eintraege zaehlen; ob der gefundene sichtbar ist, sagt
     /// danach [`Ordnermodell::zeile_von`].
+    #[must_use]
     pub fn index_von_namen(&self, name: &str) -> Option<u32> {
         self.eintraege
             .iter()
@@ -686,6 +714,7 @@ impl Ordnermodell {
     // ------------------------------------------------------------------
 
     /// Ob dieser Eintrag markiert ist.
+    #[must_use]
     pub fn ist_markiert(&self, eintragsindex: u32) -> bool {
         self.markiert
             .get(eintragsindex as usize)
@@ -700,6 +729,7 @@ impl Ordnermodell {
     ///
     /// Ein Durchlauf fuer alle drei Werte, und deshalb eine Struktur statt
     /// dreier Methoden; die Begruendung steht bei [`Markierungsstand`].
+    #[must_use]
     pub fn markierungsstand(&self) -> Markierungsstand {
         let mut stand = Markierungsstand::default();
         for (index, markiert) in self.markiert.iter().enumerate() {
@@ -898,6 +928,7 @@ impl Ordnermodell {
     /// die Frage gegenstandslos**: der Rufer stellt sie erst hinter dem Zweig
     /// „steht ein Filtertext?", und der leere Text steckt der Sache nach in
     /// jedem Namen.
+    #[must_use]
     pub fn name_traegt_den_filter(&self, eintragsindex: u32) -> bool {
         self.eintraege
             .get(eintragsindex as usize)
@@ -979,6 +1010,7 @@ impl Ordnermodell {
     }
 
     /// Der Filtertext, so wie der Nutzer ihn getippt hat.
+    #[must_use]
     pub fn filtertext(&self) -> &str {
         &self.filtertext
     }
@@ -987,11 +1019,13 @@ impl Ordnermodell {
     ///
     /// Wer den Unterbaum abschreitet, vergleicht mit demselben Wert wie
     /// [`Ordnermodell::sichtbar`] und zerlegt ihn nicht ein zweites Mal.
+    #[must_use]
     pub fn muster(&self) -> &Muster {
         &self.muster
     }
 
     /// Ob ein Filtertext steht.
+    #[must_use]
     pub fn filter_steht(&self) -> bool {
         !self.filtertext.is_empty()
     }
@@ -1056,6 +1090,7 @@ impl Ordnermodell {
     }
 
     /// Ob der Filter auch den Unterbaum meint ("Deep").
+    #[must_use]
     pub fn tief(&self) -> bool {
         self.tief
     }
@@ -1173,6 +1208,7 @@ impl Ordnermodell {
     ///
     /// `Unentschieden` fuer jeden Index ausserhalb des Bestands: ueber einen
     /// Eintrag, den es nicht gibt, ist nichts bekannt.
+    #[must_use]
     pub fn befund(&self, eintragsindex: u32) -> Befund {
         self.befund
             .get(eintragsindex as usize)
@@ -1354,6 +1390,7 @@ impl Ordnermodell {
     }
 
     /// Alle sichtbaren Eintraege in Sichtreihenfolge.
+    #[must_use = "die Zeilen sind der ganze Ertrag des Aufrufs; ein fallen gelassener Iterator laeuft nie"]
     pub fn zeilen(&self) -> impl Iterator<Item = &Eintrag> {
         self.sichtreihenfolge
             .iter()

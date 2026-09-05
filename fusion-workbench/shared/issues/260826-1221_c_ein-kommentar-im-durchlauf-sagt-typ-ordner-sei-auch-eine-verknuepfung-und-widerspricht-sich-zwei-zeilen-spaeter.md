@@ -75,3 +75,16 @@ Der Satz wird auf den Wert bezogen, ueber den er spricht: an dieser Stelle sind 
 Sichtbarkeit in `modell.rs:757` und nicht dem Typ des Lesers. Der Rest des Kommentars — der
 Zweig `Verknuepfung` traegt nichts bei, und die Fallunterscheidung ist ohne Auffangzweig — steht
 richtig da und bleibt.
+
+---
+Resolved: Der Kommentar in `crates/krk-core/src/verzeichnis/durchlauf.rs` ueber der
+Fallunterscheidung `match kandidat.typ` ist auf den Wert bezogen, ueber den er spricht, wie
+der Abschnitt „Richtung" es verlangt. Er sagt jetzt: `Ordner` und `Verknuepfung` sind hier
+zwei getrennte Werte, `kandidat.typ` kommt aus `typ_aus_objtype`, `getattrlistbulk(2)`
+folgt einer Verknuepfung nicht, ein Eintrag auf einen Ordner kommt als `VLNK` und damit als
+`Typ::Verknuepfung`, und `offen` erreicht folglich keine. Dass die Zusammenfassung der
+beiden der Sichtbarkeit in `modell::zeilengrund_von` gehoert und nicht dem Typ des Lesers,
+steht daneben.
+Der Rest des Kommentars steht unveraendert: die Fallunterscheidung ohne Auffangzweig, und
+dass in eine Verknuepfung weder abgestiegen noch hineingelesen wird.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

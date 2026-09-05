@@ -418,8 +418,11 @@ pub fn aufrufstellen(inhalt: &str, name: &str) -> usize {
 ///
 /// **Wozu.** Etliche Listen dieses Baums stehen neben einer Aufzaehlung und
 /// sollen sie vollstaendig fuehren: `Kommando::KENNUNGEN` ist die programmweite
-/// Kommandoliste, und die Laengenangabe `[(Kommando, &'static str); 79]` zwingt
-/// zu 79 Eintraegen und sagt nichts darueber, **welche** 79. Der Uebersetzer
+/// Kommandoliste, und die Laengenangabe `[(Kommando, &'static str); N]` zwingt
+/// zu so vielen Eintraegen, wie sie nennt, und sagt nichts darueber, **welche**.
+/// Eine Zahl steht hier nicht: dieser Helfer liest jede Aufzaehlung, und die des
+/// `Kommando` ist die, die `CLAUDE.md` als in vier Tagen viermal falsch
+/// gewordene fuehrt. Der Uebersetzer
 /// haelt das nicht, und keine Probe kann es aus der Liste allein halten: die
 /// Liste ist der Gegenstand der Frage. Entscheidbar wird sie aus einer zweiten
 /// Quelle, und die ist der Quelltext der Aufzaehlung. Der Helfer traegt deshalb

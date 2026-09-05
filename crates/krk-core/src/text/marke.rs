@@ -138,6 +138,7 @@ pub struct Markensprung {
 /// Der Zeilenindex entsteht hier und wird nicht hereingereicht: ein Sprung
 /// geschieht einmal je Tastendruck, und ein hereingereichter Index koennte zu
 /// einem anderen Text gehoeren als der uebergebene.
+#[must_use]
 pub fn wiederfinden(text: &str, zeile: u32, zeileninhalt: &str) -> Markensprung {
     let index = Zeilenindex::neu(text);
     let steht_auf =

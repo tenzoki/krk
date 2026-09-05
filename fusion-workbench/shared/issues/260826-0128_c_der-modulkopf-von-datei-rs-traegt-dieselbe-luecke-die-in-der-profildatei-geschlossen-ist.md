@@ -52,3 +52,19 @@ Fall festhält, gibt es bisher nicht.
 Offen. Gefunden vom Ontocoder der Aufgabe S-1 an einer Datei, die für ihn
 gesperrt war, und vom Reviewer der Nachdurchsicht als Beobachtung ohne eigenen
 Datensatz festgehalten. Hält keine Auslieferung auf.
+
+---
+Resolved: Der Modulkopf von `crates/krk-core/src/leseprofil/datei.rs`, Abschnitt „Wo
+`deny_unknown_fields` steht und wo nicht", traegt jetzt beide Haelften nach dem Wortlaut, den
+`resources/default-readers.toml` im Kommentarkopf fuehrt: ohne `pfad` daneben faellt das
+Profil mit Meldung weg, mit `pfad` daneben wird derselbe Schreibfehler still uebergangen und
+das Profil greift ueber den Pfad allein. `zeilen` statt `zeile` steht als zweites Beispiel
+dabei.
+
+**Und die zwei Lagen sind jetzt gemessen**, was der Abschnitt „Was zu tun waere" als offen
+festhaelt: `ein_verschriebener_schluessel_im_profilblock_faellt_nur_ohne_pfad_daneben_auf`
+in `crates/krk-core/tests/leseprofil.rs` prueft beide — ohne `pfad` null Profile und genau
+eine Meldung, mit `pfad` ein Profil, keine Meldung, Pfadmuster da und Kennzeichen weg. Die
+Probe haelt die Lage fest und nicht einen Wunsch: wer `Profilblock` eines Tages
+`deny_unknown_fields` gibt, macht sie rot und entscheidet dann bewusst.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

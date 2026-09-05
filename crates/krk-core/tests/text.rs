@@ -184,6 +184,10 @@ fn treffer_in_umlauten_und_emojis_liegen_auf_zeichengrenzen() {
     for gesucht in ["Äpfel", "🍎", "Birnen"] {
         let treffer = suche::alle(text, gesucht);
         assert!(!treffer.is_empty(), "{gesucht} nicht gefunden");
+        // Kein Treffer liegt mitten in einem Mehrbytezeichen: gesucht wird
+        // ueber Zeichen und nicht ueber Bytes. Das haelt diese Schleife und
+        // nicht eine Zusicherung ueber eine gueltige Teilzeichenfolge — ein
+        // `&str` traegt keine halben Zeichen, an denen sich das messen liesse.
         for fund in &treffer {
             assert!(
                 text.is_char_boundary(fund.anfang) && text.is_char_boundary(fund.ende),
@@ -202,9 +206,9 @@ fn treffer_in_umlauten_und_emojis_liegen_auf_zeichengrenzen() {
     let zweiter = suche::alle(text, "Äpfel")[1];
     assert_eq!(index.zeile_am_versatz(zweiter.anfang), 2);
 
-    // Ein Bytepaar mitten in einem Mehrbytezeichen ist kein Treffer: gesucht
-    // wird ueber Zeichen und nicht ueber Bytes.
-    assert!(suche::alle(text, "pfel 🍎 und").len() == 1);
+    // Eine Teilzeichenfolge ueber ein Mehrbytezeichen hinweg kommt genau
+    // einmal vor.
+    assert_eq!(suche::alle(text, "pfel 🍎 und").len(), 1);
 }
 
 /// Fall 4: ein Ersetzen ueber alle Treffer, bei dem der Ersatztext den

@@ -111,16 +111,19 @@ impl ModMaske {
     ];
 
     /// Die gesetzten Bits als Zahl.
+    #[must_use]
     pub const fn bits(self) -> u8 {
         self.0
     }
 
     /// Wahr, wenn keine Zusatztaste gehalten ist.
+    #[must_use]
     pub const fn ist_leer(self) -> bool {
         self.0 == 0
     }
 
     /// Wahr, wenn alle Bits der genannten Maske gesetzt sind.
+    #[must_use]
     pub const fn enthaelt(self, andere: Self) -> bool {
         self.0 & andere.0 == andere.0
     }
@@ -178,6 +181,7 @@ impl fmt::Debug for ModMaske {
 ///
 /// `rohe_flaggen` ist der Wert aus `NSEvent.modifierFlags`. Alles ausserhalb
 /// der vier gehaltenen Zusatztasten faellt weg, siehe den Modulkopf.
+#[must_use]
 pub fn normalisieren(rohe_flaggen: u64) -> ModMaske {
     let mut maske = ModMaske::LEER;
     if rohe_flaggen & roh::BEFEHL != 0 {

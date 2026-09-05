@@ -1,9 +1,16 @@
-//! Wo die sieben Ablagedateien liegen, in welchen zwei Formaten sie stehen, und
+//! Wo die sieben Ablagedateien liegen, in welchen zwei Formaten sie stehen und
 //! wie der Ordner beim ersten Start entsteht.
+//!
+//! Drei abgeleitete Fragen stehen daneben, je eine vollstaendige
+//! Fallunterscheidung ohne Auffangzweig: [`Datei::format`] sagt, welches Format
+//! eine Datei traegt, [`Datei::leerbefund`], was eine Datei ohne einen einzigen
+//! obersten Schluessel bedeutet, und [`Datei::ersatz`], was an die Stelle einer
+//! beschaedigten tritt. Wer eine achte Ablagedatei aufnimmt, beantwortet alle
+//! drei, sonst haelt der Uebersetzer ihn an.
 //!
 //! # Zwei Formate, und warum die Zettel kein TOML tragen
 //!
-//! Fuenf Dateien tragen TOML und gehen ueber [`super::Zugang::laden`] und
+//! Die fuenf TOML-Dateien gehen ueber [`super::Zugang::laden`] und
 //! [`super::Zugang::sichern`]; die zwei Zetteldateien der Runde 9 tragen den
 //! Text des Zettels und sonst nichts. [`Datei::format`] sagt, welche welche
 //! ist, und wer beide Sorten verschieden behandeln muss, fragt diese abgeleitete
@@ -138,7 +145,7 @@ pub enum Leerbefund {
 /// **Der Wert traegt die Auskunft, weil sie sonst niemand traegt.** Bis zum
 /// 260824 stand sie als feststehende Prosa im Formatierer von
 /// [`Ersetzung`](super::Ersetzung) und sagte in jedem Zweig „und wird durch den
-/// Auslieferungszustand ersetzt". Fuer sechs der sieben Dateien stimmte das;
+/// Auslieferungszustand ersetzt". Fuer sechs der sieben Ablagedateien stimmte das;
 /// mit `readers.toml` ist die erste dazugekommen, fuer die es nicht stimmt.
 /// [`Grund`](super::Grund) kann sie nicht tragen — derselbe Grund trifft jede
 /// Datei, und beschaedigt ist beschaedigt, gleich was danach einspringt.
@@ -176,9 +183,9 @@ impl Ersatz {
     }
 }
 
-/// Die sieben Dateien, die KRK unter `Application Support` ablegt.
+/// Die sieben Ablagedateien, die KRK unter `Application Support` ablegt.
 ///
-/// Eine Aufzaehlung statt sieben loser Namen: wer alle anfassen muss, laeuft
+/// Eine Aufzaehlung statt loser Namen: wer alle anfassen muss, laeuft
 /// ueber [`Datei::ALLE`] und kann keine vergessen. Eine Ablagedatei, die in
 /// keiner Aufzaehlung steht, gibt es nicht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -237,7 +244,7 @@ impl Datei {
     ///
     /// Die zwei Zettelnamen folgen der englischsprachigen Kleinschreibung der
     /// vier bestehenden; der Bindestrich mit Ziffer ist die knappste Form, zwei
-    /// Dateien derselben Art zu unterscheiden.
+    /// gleichartige Dateien zu unterscheiden.
     pub const fn dateiname(self) -> &'static str {
         match self {
             Datei::Belegung => "keymap.toml",
@@ -300,6 +307,16 @@ impl Datei {
     /// `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`;
     /// bis zu ihrer Antwort steht hier die Fassung, die nichts am Verhalten
     /// aendert.
+    ///
+    /// **Die Antwort fuer [`Datei::Zettel`] wird nie gelesen**, und das gehoert
+    /// dazu. Einziger Rufer ist [`super::Zugang::laden`], und der weist ein
+    /// Textformat vorher ab; „kein einziger oberster Schluessel" ist an einer
+    /// Textdatei ohnehin keine beantwortbare Frage, denn dort gibt es keine
+    /// Schluessel. Der Zweig steht da, weil die Fallunterscheidung vollstaendig
+    /// ist und keinen Auffangzweig hat — nicht, weil er etwas steuert. Fuer
+    /// eine achte Ablagedatei im Textformat haelt der Uebersetzer damit eine
+    /// Einordnung an, die nichts entscheidet; das ist der Preis der
+    /// Vollstaendigkeit und ist gesehen.
     pub const fn leerbefund(self) -> Leerbefund {
         match self {
             Datei::Lesezeichen => Leerbefund::Beschaedigt,
@@ -410,7 +427,7 @@ pub fn gekuerzt_fuer_anzeige(pfad: &Path, benutzerverzeichnis: Option<&Path>) ->
     }
 }
 
-/// Der Ordner, in dem die sieben Dateien liegen.
+/// Der Ordner, in dem die sieben Ablagedateien liegen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ablageort {
     wurzel: PathBuf,
@@ -447,7 +464,7 @@ impl Ablageort {
         &self.wurzel
     }
 
-    /// Der Pfad einer der sieben Dateien.
+    /// Der Pfad einer der sieben Ablagedateien.
     pub fn datei(&self, welche: Datei) -> PathBuf {
         self.wurzel.join(welche.dateiname())
     }

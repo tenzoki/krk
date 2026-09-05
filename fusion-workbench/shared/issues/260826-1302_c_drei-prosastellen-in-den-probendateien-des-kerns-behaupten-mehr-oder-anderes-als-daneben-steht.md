@@ -54,3 +54,23 @@ Drei Einzelkorrekturen, keine davon berührt eine Zusicherung:
 3. `/tmp` durch „unter dem Temporärverzeichnis" ersetzen, in der Sprache, die `tests/gemeinsam/mod.rs` schon führt.
 
 Gefunden bei der Vollbaum-Durchsicht R6 der dreizehn übrigen Probendateien des Kerns, HEAD `4a57028`.
+
+---
+Resolved: Alle drei, nach den drei Einzelkorrekturen des Abschnitts „Richtung".
+
+1. `crates/krk-core/tests/belegung.rs`, Doc-Kommentar von `frei()`: der tote Verweis auf
+   `keine_unbelegte_kombination_mit_zusatztaste_faellt_auf_die_sprungmarke` ist weg. An seiner
+   Stelle steht „aus demselben Grund, den der Datensatz unten traegt", also der Verweis auf
+   `260805-0820_*_die-belegungspruefung-nimmt-cmd-q-als-beispiel-fuer-eine-unbelegte-kombination.md`,
+   der zwei Zeilen tiefer ohnehin schon dasteht und die Begruendung wirklich traegt. Ein
+   Verweis auf die heutige Nachfolgerin waere der zweite Name, der eines Tages wandert.
+2. `crates/krk-core/tests/text.rs`: der Kommentar ueber die Zeichengrenzen steht jetzt an der
+   Schleife, die `is_char_boundary` an beiden Enden jedes Treffers prueft, und sagt
+   ausdruecklich, warum eine Zusicherung ueber eine gueltige Teilzeichenfolge das nicht messen
+   kann. Die Zeile darunter traegt einen Kommentar, der sagt, was sie wirklich prueft, und ist
+   auf `assert_eq!` gezogen.
+3. `crates/krk-core/tests/operation.rs`, Modulkopf: „Beide entstehen im `Pruefordner` unter
+   dem Temporaerverzeichnis, das `std::env::temp_dir()` nennt — auf macOS also unter
+   `/var/folders/…/T` und nicht unter `/tmp`". Die Aussage „auf demselben APFS-Datentraeger
+   wie ihr Ziel" steht unveraendert daneben.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

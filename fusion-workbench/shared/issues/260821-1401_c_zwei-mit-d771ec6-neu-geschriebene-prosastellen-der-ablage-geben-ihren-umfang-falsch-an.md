@@ -153,3 +153,29 @@ Beleg dafür, dass eine Zahl an dieser Stelle nicht zu halten ist. Wer den Befun
 **keine** Sieben ein.
 
 **Nachgetragen von:** reconciler, Abgleich 260821-1532, Baumstand `4e810f9`.
+
+---
+Resolved: Beide Stellen sind geraeumt, und beide nach dem Vorschlag des Datensatzes.
+
+**Regel 1 im Modulkopf** (`crates/krk-core/src/ablage/mod.rs`, Abschnitt „Eine beschaedigte
+Datei wird zur Seite gelegt") traegt den Vorbehalt jetzt in der Form, die nicht altert: „eine
+Datei ohne einen einzigen obersten Schluessel gilt genau dann als beschaedigt, wenn
+[`pfade::Datei::leerbefund`] fuer sie [`Leerbefund::Beschaedigt`] sagt — heute allein
+`bookmarks.toml`, und welche es morgen sind, sagt jene Fallunterscheidung und keine
+Aufzaehlung hier." Der Satz sieben Zeilen weiter unten hat den Zusatz bekommen, den der
+Datensatz anbietet: „Nur der Ausloeser der ersten Regel kennt eine — er kommt aus
+[`pfade::Datei::leerbefund`], siehe den Vorbehalt dort oben." Der Widerspruch zwischen
+Regel 1 und dem Abschnitt „Beschaedigt heisst nicht ‚ungueltiges TOML'" ist damit weg.
+
+**Der Doc-Kommentar an `Beiseite::Nicht`** zaehlt nicht mehr, sondern nennt die Regel, wie
+der Datensatz und sein Nachtrag es verlangen: „Der Wert jeder [`Ersetzung`], aus der es
+nichts zu sichern gibt." Daneben steht, wie die Erzeuger zu finden sind
+(`grep -rn 'Beiseite::Nicht' crates/krk-core/src`), und warum hier keine Zahl mehr steht —
+mit Verweis auf diesen Datensatz. Der Fall „eine fehlende Datei ist der erste Start" ist aus
+der Aufzaehlung heraus und steht jetzt ausdruecklich als Gegenbeispiel: sie erzeugt in
+`Zugang::laden` gar keine `Ersetzung`; nur wo sie sich zusaetzlich nicht anlegen laesst,
+entsteht eine, mit `Grund::NichtAnlegbar`. **Keine Sieben eingesetzt**, wie der Nachtrag vom
+260821-1532 es fordert.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0),
+`cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo fmt -p krk-core -- --check` (Rueckgabe 0).

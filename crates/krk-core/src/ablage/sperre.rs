@@ -1,7 +1,7 @@
 //! Die zwei Absprachen ueber dem Ablageordner, und es sind genau zwei.
 //!
-//! Sobald KRK ein zweites Mal laeuft, greifen zwei Prozesse auf dieselben vier
-//! Dateien unter `~/Library/Application Support/KRK/` zu. Zwei Dinge sind dabei
+//! Sobald KRK ein zweites Mal laeuft, greifen zwei Prozesse auf dieselben
+//! Ablagedateien unter `~/Library/Application Support/KRK/` zu. Zwei Dinge sind dabei
 //! auseinanderzuhalten, und bis zum 260813 trugen sie ein Wort:
 //!
 //! ```text
@@ -34,10 +34,10 @@
 //! `#![allow(unsafe_code)]`. Eine zweite Datei mit dieser Ausnahme entsteht
 //! nicht.
 //!
-//! # Zwei Dateien, und die Sperre gilt dem Ordner
+//! # Zwei Sperrdateien, und die Sperre gilt dem Ordner
 //!
 //! Die Griffe liegen auf [`SCHREIBSPERRE`] und [`SITZUNGSRECHT`] im
-//! Ablageordner und **nicht** auf den vier Nutzdateien. Der Grund ist die
+//! Ablageordner und **nicht** auf den Nutzdateien. Der Grund ist die
 //! Nachbardatei: `atomar::schreiben` ersetzt die Zieldatei ueber ein `rename`,
 //! und ein Griff auf die Zieldatei selbst haenge danach an einem Deskriptor, den
 //! kein Name mehr nennt. Eine eigene Sperrdatei wird nie umbenannt und nie

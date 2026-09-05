@@ -59,6 +59,7 @@ pub struct Nummerierung {
 
 impl Nummerierung {
     /// Eine Nummerierung ab diesem Startwert mit dieser Stellenzahl.
+    #[must_use]
     pub fn neu(start: u32, stellen: u8) -> Self {
         Self {
             start,
@@ -71,6 +72,7 @@ impl Nummerierung {
     /// `lauf` zaehlt ab 0 in Sichtreihenfolge. Der Ueberlauf saettigt: ein
     /// Startwert nahe der Obergrenze von `u32` soll den Stapel nicht in einen
     /// Absturz laufen lassen.
+    #[must_use]
     pub fn ziffern(self, lauf: u32) -> String {
         let breite = self.stellen as usize;
         format!("{:0breite$}", self.start.saturating_add(lauf))
@@ -94,6 +96,7 @@ pub struct Regel {
 
 impl Regel {
     /// Ob die Regel jeden Namen unveraendert liesse.
+    #[must_use]
     pub fn ist_wirkungslos(&self) -> bool {
         self.suchen.is_empty() && self.nummerierung.is_none()
     }
@@ -103,6 +106,7 @@ impl Regel {
     /// `lauf` zaehlt ab 0 in Sichtreihenfolge. Gesucht wird ueber den ganzen
     /// Namen einschliesslich der Endung: wer `.jpeg` durch `.jpg` ersetzen
     /// will, soll das tun koennen.
+    #[must_use]
     pub fn anwenden(&self, name: &str, lauf: u32) -> String {
         let ersetzt = if self.suchen.is_empty() {
             name.to_owned()

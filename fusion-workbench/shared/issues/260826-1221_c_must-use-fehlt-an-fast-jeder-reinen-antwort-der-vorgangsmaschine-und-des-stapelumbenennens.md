@@ -64,3 +64,22 @@ Zeichen: die Regel wird pro Runde angewandt, in der jemand daran denkt, und nich
 Verhaltensunterschied — ausser dort, wo der Bau danach einen echten Ausfall findet.
 
 Also seen: 260826-1221 by coderev — dieselbe Luecke im Verzeichnisbaum: `shared/issues/260826-1221_*_must-use-traegt-sieben-praedikate-des-verzeichnisbaums-und-zwanzig-gleichartige-daneben-nicht.md`. Die zwei Datensaetze sind derselbe Befund an zwei Umfaengen und keine Doppelung.
+
+---
+Resolved: Die vier schaerfsten Faelle des Datensatzes tragen die Marke, und die reinen
+Antworten daneben ebenso. `Vorschau::auszufuehren` (`stapelumbenennen/vorschau.rs`) mit
+eigenem Text, weil `impl Iterator` schon `#[must_use]` ist; `Regel::anwenden`
+(`stapelumbenennen/regel.rs`), `kollision::pruefen` (`stapelumbenennen/kollision.rs`),
+`vorschau::vorschau` und `Abschluss::ist_abgebrochen` (`operation/fortschritt.rs`) mit einem
+schlichten Vermerk. Dazu die uebrigen reinen Leser und Erzeuger in `operation/auftrag.rs`,
+`operation/umbenennen.rs`, `operation/fortschritt.rs`, `stapelumbenennen/vorschau.rs`,
+`stapelumbenennen/regel.rs` und `stapelumbenennen/kollision.rs`.
+Ueber den Datensatz hinaus: `Lauf` (`operation/fortschritt.rs`) traegt die Marke am **Typ**
+statt an `operation::starten`, das ihn heute als einziges liefert. Der Doc-Kommentar von
+`starten` sagt selbst „Wird er fallen gelassen, endet der Vorgang"; ein Vermerk am Typ deckt
+jeden kuenftigen Erzeuger mit.
+Nicht angefasst sind `anlegen.rs`, `kopieren.rs`, `verschieben.rs`, `loeschen.rs` und
+`entpacken.rs`: sie fuehren keine oeffentliche reine Antwort, ihre Wege liefern `io::Result`,
+und die Standardbibliothek traegt die Marke dort schon.
+Geprueft mit `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo test -p krk-core` (Rueckgabe 0).

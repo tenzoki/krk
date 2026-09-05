@@ -103,7 +103,7 @@ pub struct Lesezeichen {
 ///   die sich jemand halten muesste. Es gibt deshalb keinen Konstruktor, der
 ///   beide Sorten zugleich annimmt.
 /// - **Die Datei bleibt von Hand lesbar**, wie C7 und C11 der Runde 1 es fuer
-///   alle vier Ablagedateien zusagen: keine Sortenkennung, kein
+///   die Ablagedateien zusagen: keine Sortenkennung, kein
 ///   `typ = "textstelle"`, keine geschachtelte Tabelle.
 ///
 /// # Der Vorbehalt zu `flatten` und der Ausweg dazu

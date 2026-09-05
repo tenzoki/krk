@@ -6,6 +6,12 @@
 //! und kein Schreibweg an der Schreibsperre vorbei. An keinem Wert ist
 //! abzulesen, dass es keine weitere gibt; geprueft wird deshalb am Baum.
 //!
+//! Daneben steht eine Probe anderer Art: sie sagt keine Zahl zu, sondern haelt
+//! die Zahlen, die die **Prosa** des Ablagemoduls nennt, gegen die, die der
+//! Baum fuehrt. Ihre Erwartung ist deshalb kein Literal, sondern
+//! `Datei::ALLE`; siehe
+//! `keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien`.
+//!
 //! # Gezaehlt werden Erklaerungen und keine Aufrufer
 //!
 //! Die Unterscheidung ist nicht kosmetisch, und `krk_ui::quellbaum` schreibt sie
@@ -260,9 +266,9 @@ fn keine_code_zeile_unter_leseprofil_erreicht_den_ausblendeschalter() {
 /// **Die eine Luecke im Satz „kein Schreibweg an der Sperre vorbei".** Der
 /// Modulkopf von `krk_core::ablage` schreibt aus, was die Typen halten und was
 /// nicht: `atomar::schreiben` ist `pub`, weil zwei Schreiber ausserhalb des
-/// Ablageordners es brauchen, und `Ablage::pfad` liefert den Pfad einer der vier
-/// Dateien ohne Durchgang. Beides zusammen ergibt einen Schreibweg an der Sperre
-/// vorbei, den kein Typ versperrt.
+/// Ablageordners es brauchen, und `Ablage::pfad` liefert den Pfad jeder
+/// Ablagedatei ohne Durchgang. Beides zusammen ergibt einen Schreibweg an der
+/// Sperre vorbei, den kein Typ versperrt.
 ///
 /// **Diese Zaehlung haengt ausnahmsweise nicht an einer Schreibweise, und das
 /// ist der Grund, aus dem sie hier steht.** Es gibt in Rust genau zwei Wege an
@@ -341,4 +347,193 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
         "sitzungsrecht.lock",
         "das Sitzungsrecht hat seinen Dateinamen gewechselt"
     );
+}
+
+/// Jede Prosastelle unter `ablage/`, die eine Zahl von Ablagedateien nennt,
+/// nennt die Zahl, die [`Datei::ALLE`] fuehrt.
+///
+/// **Die Zahl selbst ist hier nicht ersetzbar, und deshalb steht sie unter
+/// einer Probe.** An etlichen Stellen des Ablagemoduls traegt die Zahl die
+/// Aussage — „sieben Ablagedateien in zwei Formaten", „die fuenf TOML-Dateien
+/// gehen ueber `Zugang::laden`" —, und ein Zeiger auf `Datei::ALLE` naehme dem
+/// Satz seinen Inhalt. Ohne eine Probe daneben ist eine solche Zahl die zweite
+/// Fassung einer Liste, und die zweite Fassung ist die, die veraltet: fuenf
+/// Erhebungen in Folge haben Stellen mit „vier Dateien" nachgezogen und dabei
+/// jedes Mal welche stehen lassen
+/// (`shared/issues/260826-1225_*_drei-prosastellen-der-ablage-nennen-die-zahl-der-dateien-falsch-und-jedes-bisherige-suchmuster-musste-sie-uebersehen.md`).
+///
+/// **Die Erwartung kommt aus dem Baum und nicht aus dieser Datei:**
+/// `Datei::ALLE.len()` fuer die Ablagedateien, und die Zahl der Werte mit
+/// [`Format::Toml`] fuer die TOML-Dateien. Eine achte Ablagedatei laesst die
+/// Probe rot werden und nennt jede Stelle, die nachzuziehen ist.
+///
+/// # Was gelesen wird
+///
+/// Nur die Doc-Kommentare (`//!` und `///`) unter `krk-core/src/ablage/`, mit
+/// abgezogenem Kommentarzeichen und zu einem Text zusammengezogen. Der
+/// Zusammenzug ist der Punkt: die Stelle in `ablage/sperre.rs` stand ueber
+/// einen Zeilenumbruch verteilt („dieselben vier\n Dateien") und ist deshalb
+/// jeder zeilenweisen Suche entgangen, die sie haette finden sollen.
+///
+/// # Was nicht gezaehlt wird, und wo die Probe blind ist
+///
+/// - **Ein Zahlwort vor „der"** — „sechs der sieben Ablagedateien" nennt eine
+///   Teilmenge und keine Gesamtzahl. Es faellt heraus, weil gesucht wird, wo
+///   ein Zahlwort **unmittelbar** vor einem der vier Hauptwoerter steht.
+/// - **Ein Zitat einer frueheren Fassung.** Das Modul zitiert an einer Stelle
+///   eine Begruendung, die bis zum 260824 dastand; sie nennt die damalige Zahl
+///   und soll es weiter tun. Erkannt wird das an einem `„` in den 80 Zeichen
+///   davor, ohne schliessendes `"` dazwischen. Ein laengeres Zitat faellt aus
+///   diesem Fenster heraus und laesst die Probe rot werden; das ist der
+///   gewollte Ausgang, denn eine unbemerkte Ausnahme waere teurer als eine
+///   Probe, die einmal von Hand zu lesen ist.
+/// - **Ein Zahlwort ohne Hauptwort** („Alle sieben, in fester Reihenfolge")
+///   erreicht die Probe nicht. Die Zeile darunter ist dort das Feldliteral
+///   `[Datei; 7]`, das der Uebersetzer haelt.
+#[test]
+fn keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien() {
+    use krk_core::ablage::pfade::{Datei, Format};
+
+    let alle = Datei::ALLE.len();
+    let toml = Datei::ALLE
+        .iter()
+        .filter(|datei| datei.format() == Format::Toml)
+        .count();
+
+    let zahlwoerter = [
+        ("ein", 1),
+        ("eine", 1),
+        ("einer", 1),
+        ("zwei", 2),
+        ("drei", 3),
+        ("vier", 4),
+        ("fuenf", 5),
+        ("sechs", 6),
+        ("sieben", 7),
+        ("acht", 8),
+        ("neun", 9),
+        ("zehn", 10),
+    ];
+    let hauptwoerter = [
+        ("Ablagedateien", alle),
+        ("Nutzdateien", alle),
+        ("Dateien", alle),
+        ("TOML-Dateien", toml),
+    ];
+
+    let mut falsch: Vec<String> = Vec::new();
+    for (name, inhalt) in quelldateien() {
+        if !name.starts_with("krk-core/src/ablage/") {
+            continue;
+        }
+        let prosa = prosa_zusammengezogen(&inhalt);
+        for (stelle, wort) in wortstellen(&prosa) {
+            let Some((_, gezaehlt)) = zahlwoerter
+                .iter()
+                .find(|(zahlwort, _)| wort.eq_ignore_ascii_case(zahlwort))
+            else {
+                continue;
+            };
+            let Some((hauptwort, erwartet)) =
+                naechstes_hauptwort(&prosa, stelle, &wort).and_then(|folgt| {
+                    hauptwoerter
+                        .iter()
+                        .find(|(hauptwort, _)| *hauptwort == folgt)
+                })
+            else {
+                continue;
+            };
+            if steht_im_zitat(&prosa, stelle) {
+                continue;
+            }
+            if gezaehlt != erwartet {
+                falsch.push(format!(
+                    "{name}: \"{wort} {hauptwort}\" — der Baum fuehrt {erwartet}"
+                ));
+            }
+        }
+    }
+
+    assert!(
+        falsch.is_empty(),
+        "Prosastellen unter ablage/ nennen eine andere Zahl als der Baum: {falsch:#?}"
+    );
+}
+
+/// Die Doc-Kommentare einer Quelldatei, ohne Kommentarzeichen und zu einem
+/// Text zusammengezogen.
+///
+/// Der Zusammenzug ueber die Zeilengrenze hinweg ist Absicht; der Doc-Kommentar
+/// der Probe darueber sagt, warum.
+fn prosa_zusammengezogen(inhalt: &str) -> String {
+    let mut prosa = String::new();
+    for zeile in inhalt.lines() {
+        let getrimmt = zeile.trim_start();
+        let Some(rest) = getrimmt
+            .strip_prefix("//!")
+            .or_else(|| getrimmt.strip_prefix("///"))
+        else {
+            continue;
+        };
+        prosa.push(' ');
+        prosa.push_str(rest.trim());
+    }
+    prosa
+}
+
+/// Jedes Wort des Textes mit seinem Byteversatz, von Satzzeichen befreit.
+fn wortstellen(prosa: &str) -> Vec<(usize, String)> {
+    let mut worte = Vec::new();
+    let mut anfang = None;
+    for (versatz, zeichen) in prosa.char_indices() {
+        if zeichen.is_whitespace() {
+            if let Some(start) = anfang.take() {
+                worte.push((start, prosa[start..versatz].to_owned()));
+            }
+        } else if anfang.is_none() {
+            anfang = Some(versatz);
+        }
+    }
+    if let Some(start) = anfang {
+        worte.push((start, prosa[start..].to_owned()));
+    }
+    worte
+        .into_iter()
+        .map(|(versatz, wort)| {
+            (
+                versatz,
+                wort.trim_matches(|zeichen: char| {
+                    !zeichen.is_alphanumeric() && zeichen != '-' && zeichen != '_'
+                })
+                .to_owned(),
+            )
+        })
+        .collect()
+}
+
+/// Das Wort, das dem Zahlwort an `stelle` unmittelbar folgt, ohne Satzzeichen.
+fn naechstes_hauptwort(prosa: &str, stelle: usize, zahlwort: &str) -> Option<String> {
+    let rest = prosa.get(stelle..)?;
+    let hinter_dem_zahlwort = rest.find(zahlwort)? + zahlwort.len();
+    let folgt = rest.get(hinter_dem_zahlwort..)?.split_whitespace().next()?;
+    Some(
+        folgt
+            .trim_matches(|zeichen: char| {
+                !zeichen.is_alphanumeric() && zeichen != '-' && zeichen != '_'
+            })
+            .to_owned(),
+    )
+}
+
+/// Ob die Stelle in einem Zitat einer frueheren Fassung steht.
+///
+/// Gesucht wird ein `„` in den 80 Zeichen davor, ohne schliessendes `"`
+/// dazwischen. Die Schranke steht im Doc-Kommentar der rufenden Probe.
+fn steht_im_zitat(prosa: &str, stelle: usize) -> bool {
+    let davor: String = prosa[..stelle].chars().rev().take(80).collect();
+    match (davor.find('„'), davor.find('"')) {
+        (Some(_), None) => true,
+        (Some(auf), Some(zu)) => auf < zu,
+        _ => false,
+    }
 }

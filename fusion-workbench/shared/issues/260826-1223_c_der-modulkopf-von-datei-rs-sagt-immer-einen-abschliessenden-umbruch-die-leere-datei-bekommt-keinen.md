@@ -31,3 +31,13 @@ Niedrig, und trotzdem zu richten: dieser Kopf ist die Stelle, an die `CLAUDE.md`
 Vorschlag: das zweite „immer" auf „einen abschließenden Umbruch, sobald der Stand eine Zeile trägt" bringen und für die Ausnahme auf `sicherungsform` zeigen, statt die Begründung ein zweites Mal zu schreiben.
 
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
+
+---
+Resolved: Der Modulkopf von `crates/krk-core/src/text/datei.rs`, Abschnitt „Der Preis dieser
+Wahl, ausgeschrieben", sagt jetzt „einen abschliessenden Umbruch, **sobald der Stand eine
+Zeile traegt**" und zeigt fuer die Ausnahme auf `sicherungsform`, statt sie ein zweites Mal
+zu begruenden — genau der Vorschlag des Datensatzes. Die zweite Stelle an `sicherungsform`
+bleibt unveraendert; sie ist die, die gilt.
+Kein zweites „immer einen abschliessenden Umbruch" steht im Baum, nachgesehen mit
+`grep -rn 'abschliessenden Umbruch' crates/krk-core/src`.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

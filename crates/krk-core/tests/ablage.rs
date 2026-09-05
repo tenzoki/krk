@@ -1554,7 +1554,7 @@ fn ein_gescheitertes_zur_seite_legen_wird_gemeldet_und_verspricht_keine_datei() 
     assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
 }
 
-/// Jede der vier Lagen traegt ihren eigenen Satz, und keiner ist mehrzeilig
+/// Jede der fuenf Lagen traegt ihren eigenen Satz, und keiner ist mehrzeilig
 /// (C3.7, C3.8).
 ///
 /// Die Saetze werden an gebauten Werten geprueft und nicht an einem Ablauf:

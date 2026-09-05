@@ -282,6 +282,66 @@ kennzeichen = '^_._circle\.md$'
     );
 }
 
+/// Ein verschriebener Schluessel im `[[profil]]`-Block geht laut oder still
+/// aus, und woran das haengt, ist die zweite Angabe daneben.
+///
+/// `Profilblock` ist der eine Tisch ohne `deny_unknown_fields`, und der
+/// Modulkopf von `krk_core::leseprofil::datei` sagt, warum. Was er kostet,
+/// stand bis zum 260826 nur halb da: `kennzeichnen` statt `kennzeichen` nimmt
+/// dem Profil sein Erkennungsmuster, und **ohne** ein `pfad` daneben faellt es
+/// mit Meldung weg — das ist die Haelfte, die schon
+/// [`ein_profil_ohne_erkennung_faellt_weg_und_die_uebrigen_bleiben`] haelt.
+/// **Mit** einem `pfad` daneben wird derselbe Schreibfehler still uebergangen:
+/// das Profil greift ueber den Pfad allein weiter, und keine Meldung sagt, dass
+/// sein Kennzeichen nie geprueft worden ist.
+///
+/// Die stille Haelfte war bis hierher durch nichts gemessen
+/// (`shared/issues/260826-0128_*_der-modulkopf-von-datei-rs-traegt-dieselbe-luecke-die-in-der-profildatei-geschlossen-ist.md`).
+/// Die Probe haelt sie als **Lage** fest und nicht als Wunsch: wer
+/// `Profilblock` eines Tages `deny_unknown_fields` gibt, macht sie rot und
+/// entscheidet dann bewusst, statt die Aenderung unbemerkt zu tun.
+#[test]
+fn ein_verschriebener_schluessel_im_profilblock_faellt_nur_ohne_pfad_daneben_auf() {
+    let (ohne_pfad, meldungen_ohne) = gepruefte(
+        r#"
+[[profil]]
+name = "Nur ein Kennzeichen, und das verschrieben"
+kennzeichnen = '^_._circle\.md$'
+"#,
+    );
+    assert_eq!(
+        ohne_pfad.zahl(),
+        0,
+        "ohne `pfad` daneben nimmt der Schreibfehler dem Profil jede Erkennung"
+    );
+    assert_eq!(meldungen_ohne.len(), 1, "{meldungen_ohne:?}");
+    assert!(
+        meldungen_ohne[0].contains("Nur ein Kennzeichen, und das verschrieben"),
+        "{:?}",
+        meldungen_ohne[0]
+    );
+
+    let (mit_pfad, meldungen_mit) = gepruefte(
+        r#"
+[[profil]]
+name = "Ein Pfad daneben"
+pfad = 'fusion-workbench/circles/[^/]+$'
+kennzeichnen = '^_._circle\.md$'
+"#,
+    );
+    assert!(
+        meldungen_mit.is_empty(),
+        "der Schreibfehler mit `pfad` daneben meldet sich nicht: {meldungen_mit:?}"
+    );
+    assert_eq!(mit_pfad.zahl(), 1, "das Profil steht weiter");
+    let profil = mit_pfad.iter().next().expect("das eine Profil fehlt");
+    assert!(profil.pfad().is_some(), "der Pfad ist angekommen");
+    assert!(
+        profil.kennzeichen().is_none(),
+        "das verschriebene Kennzeichen ist still weggefallen"
+    );
+}
+
 /// C3.10: Ein Feldmuster mit mehr als einer Fanggruppe nimmt der Zeile ihren
 /// Baustein und laesst ihre Beschriftung stehen.
 ///
@@ -3592,12 +3652,18 @@ fn speicherprofil_der_auslieferung(profile: &Profile) -> &Profil {
 /// Die verschiedenen Orte, die die Zeilen eines Profils nennen, in der
 /// Reihenfolge des ersten Auftretens und ohne Wiederholung.
 ///
-/// **Die Zahl der Unterspeicher kommt aus der Profildatei und nicht aus der
-/// Probe.** Wer dem Profil einen Unterspeicher hinzufuegt, aendert damit den
-/// Pruefordner mit; die Probe misst dann elf Orte und sagt es, statt an einem
-/// Ordner mit zehn zu messen und zu schweigen. Ein Ort mit Platzhalter waere
-/// hier keine einzelne Lesung mehr; das Speicherprofil fuehrt keinen, und
-/// die Probe haelt den Bau an, sobald es einen fuehrt.
+/// **Die Zahl der Orte kommt aus der Profildatei und nicht aus der Probe.** Wer
+/// dem Profil einen Ort hinzufuegt, aendert damit den Pruefordner mit; die
+/// Probe misst dann einen Ort mehr und sagt es, statt am alten Bestand zu
+/// messen und zu schweigen. Ein Ort mit Platzhalter waere hier keine einzelne
+/// Lesung mehr; die Probe haelt an, sobald ein Profil einen fuehrt.
+///
+/// **Der Helfer spricht ueber das Profil, das er bekommt, und nicht ueber ein
+/// bestimmtes.** Seit `96e32cb` hat er zwei Rufer — das Profil des gemeinsamen
+/// Speichers und das der Projektwurzel —, und die Abbruchmeldung nennt deshalb
+/// `profil.name()` statt eines festen Namens: sonst zeigte sie beim zweiten
+/// Rufer auf das falsche Profil, und die Suche begaenne an der falschen Stelle
+/// (`shared/issues/260826-0139_*_genannte-orte-hat-seit-96e32cb-zwei-rufer-und-nennt-in-doc-und-meldung-nur-das-speicherprofil.md`).
 fn genannte_orte(profil: &Profil) -> Vec<String> {
     let mut orte: Vec<String> = Vec::new();
     for zeile in profil.zeilen() {
@@ -3609,8 +3675,9 @@ fn genannte_orte(profil: &Profil) -> Vec<String> {
         };
         assert!(
             !ort.traegt_platzhalter(),
-            "ein Ort des Speicherprofils traegt einen Platzhalter; die Rechnung \
-             „ein Ort, ein Leselauf\" gilt fuer ihn nicht mehr"
+            "ein Ort des Profils \"{}\" traegt einen Platzhalter; die Rechnung \
+             „ein Ort, ein Leselauf\" gilt fuer ihn nicht mehr",
+            profil.name()
         );
         let name = ort.teile().join("/");
         if !orte.contains(&name) {

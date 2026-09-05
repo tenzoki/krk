@@ -30,6 +30,7 @@ pub struct Funktionsname {
 
 impl Funktionsname {
     /// Ein Name aus Kennung und Beschriftung.
+    #[must_use]
     pub fn neu(kennung: impl Into<String>, name: impl Into<String>) -> Self {
         Self {
             kennung: kennung.into(),

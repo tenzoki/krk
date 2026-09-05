@@ -103,6 +103,7 @@ pub enum Ziel {
 }
 
 /// Deutet den Inhalt der Zwischenablage (C10).
+#[must_use]
 pub fn deuten(inhalt: &str) -> Ziel {
     let text = inhalt.trim();
     if text.is_empty() {

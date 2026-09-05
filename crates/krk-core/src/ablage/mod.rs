@@ -1,7 +1,7 @@
-//! Die Ablage: sieben Dateien in zwei Formaten unter
+//! Die Ablage: sieben Ablagedateien in zwei Formaten unter
 //! `~/Library/Application Support/KRK/`.
 //!
-//! Fuenf tragen TOML und gehen ueber [`Zugang::laden`] und [`Zugang::sichern`];
+//! Die fuenf TOML-Dateien gehen ueber [`Zugang::laden`] und [`Zugang::sichern`];
 //! die zwei Notizzettel der Runde 9 tragen nackten Text und gehen ueber
 //! [`Zugang::text_laden`] und [`Zugang::text_sichern`]. Welche Datei welches
 //! Format traegt, sagt [`pfade::Datei::format`], und der Kopf von [`pfade`]
@@ -9,7 +9,8 @@
 //! und nicht uebereinander: TOML und Text unterscheiden sich im Lesen, im
 //! Auslieferungszustand und in dem, was eine beschaedigte Datei bedeutet.
 //!
-//! Sieben Module, in der Reihenfolge, in der ein Wert sie durchlaeuft:
+//! Die Module, in der Reihenfolge, in der ein Wert sie durchlaeuft — die
+//! Skizze ist die Aufzaehlung, und eine Zahl daneben waere ihre zweite Fassung:
 //!
 //! ```text
 //! pfade ──> mod (Ablage ──> Zugang: laden, sichern, melden) ──> atomar
@@ -42,10 +43,10 @@
 //! Sie versperren die anderen Wege nicht. [`atomar::schreiben`] ist `pub`, weil
 //! zwei Schreiber **ausserhalb** des Ablageordners es brauchen — die
 //! Markdown-Ausgabe der Tastenbelegung nach `~/Downloads` und das Sichern der
-//! Editordatei —, und [`Ablage::pfad`] liefert den Pfad einer der vier Dateien
-//! ohne Durchgang, weil etliche Meldungen und Proben ihn zum **Lesen** brauchen.
-//! Wer beides zusammennimmt, kann an der Sperre vorbeischreiben; der Uebersetzer
-//! haelt ihn nicht auf.
+//! Editordatei —, und [`Ablage::pfad`] liefert den Pfad **jeder** Ablagedatei
+//! aus [`pfade::Datei::ALLE`] ohne Durchgang, weil etliche Meldungen und Proben
+//! ihn zum **Lesen** brauchen. Wer beides zusammennimmt, kann an der Sperre
+//! vorbeischreiben; der Uebersetzer haelt ihn nicht auf.
 //!
 //! Diese eine Luecke bewacht deshalb eine Probe und kein Typ:
 //! `nur_benannte_dateien_erreichen_das_atomare_schreiben` in
@@ -106,11 +107,16 @@
 //!   die ersten 16 MB da, und [`Beiseite::Gekuerzt`] sagt es dem Nutzer. Der
 //!   Preis ist angenommen, die Begruendung steht bei
 //!   [`Zugang::beiseite_legen`].
-//!   **Seit dem 260821 faellt umgekehrt ein Fall wieder heraus**: eine Datei
-//!   ohne einen einzigen obersten Schluessel gilt als beschaedigt und wird
-//!   trotzdem nicht gesichert, denn sie kann keinen Bestand tragen und
-//!   sperrte den einen Platz gegen die Sicherung, die ihn traegt. Die
-//!   Begruendung steht bei [`Beiseite::Nicht`].
+//!   **Seit dem 260821 faellt umgekehrt ein Fall wieder heraus**, und er haengt
+//!   an der Datei und nicht an der Regel: eine Datei ohne einen einzigen
+//!   obersten Schluessel gilt genau dann als beschaedigt, wenn
+//!   [`pfade::Datei::leerbefund`] fuer sie [`Leerbefund::Beschaedigt`] sagt —
+//!   heute allein `bookmarks.toml`, und welche es morgen sind, sagt jene
+//!   Fallunterscheidung und keine Aufzaehlung hier. Gesichert wird sie
+//!   trotzdem nicht, denn sie kann keinen Bestand tragen und sperrte den einen
+//!   Platz gegen die Sicherung, die ihn traegt. Die Begruendung steht bei
+//!   [`Beiseite::Nicht`], die Einordnung je Datei im Abschnitt „Beschaedigt
+//!   heisst nicht ‚ungueltiges TOML'".
 //! - **Der Text wird kopiert und die Datei nicht verschoben.** Ein `rename`
 //!   waere kuerzer und naehme dem Nutzer die Datei unter der Hand weg, an der er
 //!   gerade tippt; siehe den Abschnitt darueber.
@@ -119,8 +125,10 @@
 //! - **Der Weg dorthin ist [`atomar::schreiben`]**, also derselbe wie fuer jede
 //!   andere Datei dieses Moduls. Ein zweiter Schreibweg entsteht nicht.
 //!
-//! Alle fuenf TOML-Dateien gehen durch [`Zugang::laden`], und die vier Regeln
-//! gelten dort fuer alle gleich: das Sichern selbst kennt keine Datei. Die
+//! Jede TOML-Datei aus [`pfade::Datei::ALLE`] geht durch [`Zugang::laden`], und
+//! die vier Regeln gelten dort fuer alle gleich: das Sichern selbst kennt keine
+//! Datei. Nur der Ausloeser der ersten Regel kennt eine — er kommt aus
+//! [`pfade::Datei::leerbefund`], siehe den Vorbehalt dort oben. Die
 //! zwei Zettel gehen durch [`Zugang::text_laden`], und die vier Regeln gelten
 //! dort unveraendert weiter — [`Zugang::beiseite_legen`] ist dieselbe Funktion
 //! und hat mit dem Zettel ihren zweiten Aufrufer bekommen.
@@ -246,10 +254,10 @@ pub enum Grund {
     /// Dateisystems.
     ///
     /// Nur `settings.toml` und, seit der Runde 16, `readers.toml` koennen ihn
-    /// tragen. Sie sind die zwei Dateien, die KRK beim ersten Start von sich
-    /// aus anlegt, weil keine Ansicht sie schreibt und der Nutzer sonst nichts
-    /// zu pflegen haette. Bei den drei uebrigen ist eine fehlende Datei der
-    /// erste Start und keine Meldung wert.
+    /// tragen. Sie sind die beiden, die KRK beim ersten Start von sich aus
+    /// anlegt, weil keine Ansicht sie schreibt und der Nutzer sonst nichts zu
+    /// pflegen haette. Bei jeder anderen Ablagedatei ist eine fehlende Datei
+    /// der erste Start und keine Meldung wert.
     NichtAnlegbar(String),
     /// Die Datei ist groesser als [`EDITORGRENZE`] und wurde deshalb gar nicht
     /// erst gelesen.
@@ -313,12 +321,26 @@ impl Grund {
 pub enum Beiseite {
     /// Es wurde nichts zur Seite gelegt, und das ist richtig so.
     ///
-    /// Drei Faelle, und der dritte ist seit dem 260821 dabei: von einer Datei,
-    /// die sich nicht lesen liess, gibt es keinen Inhalt zu sichern; eine
-    /// fehlende Datei ist der erste Start; und aus einer Datei ohne einen
-    /// einzigen obersten Schluessel gibt es keinen **Bestand** zu sichern.
-    /// Zeichen mag sie tragen, den Schluessel, unter dem der Bestand steht,
-    /// traegt sie definitionsgemaess nicht — er ist genau der, der fehlt.
+    /// **Der Wert jeder [`Ersetzung`], aus der es nichts zu sichern gibt.** Eine
+    /// Regel und keine Zaehlung: wer die Erzeuger sehen will, sucht sie mit
+    /// `grep -rn 'Beiseite::Nicht' crates/krk-core/src`, und ein weiterer faellt
+    /// unter dieselbe Regel, ohne dass hier eine Zahl nachzuziehen waere. Bis
+    /// zum 260821-1401 stand hier eine Zaehlung, und sie war schon bei ihrem
+    /// Entstehen falsch
+    /// (`shared/issues/260821-1401_*_zwei-mit-d771ec6-neu-geschriebene-prosastellen-der-ablage-geben-ihren-umfang-falsch-an.md`).
+    ///
+    /// Zwei Gestalten, an denen die Regel sichtbar wird: von einer Datei, die
+    /// dasteht und sich nicht lesen liess, gibt es keinen Inhalt zu sichern;
+    /// und aus einer Datei ohne einen einzigen obersten Schluessel gibt es
+    /// keinen **Bestand** zu sichern. Zeichen mag sie tragen, den Schluessel,
+    /// unter dem der Bestand steht, traegt sie definitionsgemaess nicht — er
+    /// ist genau der, der fehlt.
+    ///
+    /// **Eine fehlende Datei gehoert nicht hierher.** Sie ist der erste Start
+    /// und erzeugt in [`Zugang::laden`] gar keine [`Ersetzung`], also auch
+    /// keinen `Beiseite`-Wert. Nur wo sie sich zusaetzlich nicht anlegen laesst,
+    /// entsteht eine — mit [`Grund::NichtAnlegbar`], und dann faellt sie unter
+    /// die Regel oben wie jede andere.
     ///
     /// **Warum der dritte Fall nicht doch sichert.** Es gibt je Ablagedatei
     /// genau einen Sicherungsplatz, und die zuerst dort abgelegte Fassung
@@ -375,7 +397,7 @@ pub enum Beiseite {
 /// meldet. Der Weg dorthin ist [`melden`].
 ///
 /// **Wodurch ersetzt, sagt [`Datei::ersatz`] und nicht dieser Satz.** Fuer
-/// sechs der sieben Dateien ist es der Auslieferungszustand, fuer
+/// sechs der sieben Ablagedateien ist es der Auslieferungszustand, fuer
 /// `readers.toml` nichts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ersetzung {
@@ -471,6 +493,16 @@ pub fn melden(ersetzung: &Ersetzung) -> String {
 
 /// Das Ergebnis eines Ladevorgangs: immer ein Wert, dazu die Meldung, falls
 /// eine noetig war.
+///
+/// Die Marke steht am Typ und nicht an den Ladewegen, die ihn liefern: das
+/// Feld `ersetzung` ist die einzige Auskunft darueber, dass eine Ablagedatei
+/// beschaedigt war, beiseite gelegt wurde und durch den Auslieferungszustand
+/// ersetzt ist. Wer den Wert fallen laesst, verschweigt dem Nutzer einen
+/// bereits geschriebenen Verlust. Ein Vermerk je Ladeweg waere je Ladeweg eine
+/// Stelle, an der der naechste vergessen werden kann.
+#[must_use = "die `ersetzung` ist die einzige Meldung darueber, dass eine \
+              Ablagedatei beiseite gelegt und durch den Auslieferungszustand \
+              ersetzt worden ist"]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Geladen<T> {
     /// Der gelesene Wert, oder der Auslieferungszustand.
@@ -481,6 +513,7 @@ pub struct Geladen<T> {
 
 impl<T> Geladen<T> {
     /// Ob der Auslieferungszustand eingesprungen ist.
+    #[must_use]
     pub fn ist_ersetzt(&self) -> bool {
         self.ersetzung.is_some()
     }
@@ -490,15 +523,22 @@ impl<T> Geladen<T> {
     /// Die Vorgaengerin `gemeldet` hat den Satz selbst geschrieben. Sie ist mit
     /// Schritt 12 entfallen, weil der Kern keinen Ausgabekanal mehr hat: wer
     /// laedt, bekommt den Text und stellt ihn in seine Statuszeile.
+    ///
+    /// Eigener Vermerk, weil das Paar kein [`Geladen`] mehr ist und die Marke
+    /// des Typs es deshalb nicht mehr deckt.
+    #[must_use = "die zweite Haelfte des Paares ist der Satz fuer die \
+                  Statuszeile; wer ihn fallen laesst, verschweigt dem Nutzer \
+                  die Ersetzung"]
     pub fn mit_meldung(self) -> (T, Option<String>) {
         let meldung = self.ersetzung.as_ref().map(melden);
         (self.wert, meldung)
     }
 }
 
-/// Der Ablageordner mit den vier Dateien, samt der Schreibsperre darueber.
+/// Der Ablageordner mit den Ablagedateien aus [`Datei::ALLE`], samt der
+/// Schreibsperre darueber.
 ///
-/// **Sie laedt und schreibt nicht selbst.** Wer eine der vier Dateien anfassen
+/// **Sie laedt und schreibt nicht selbst.** Wer eine von ihnen anfassen
 /// will, geht durch [`Ablage::durchgang`] und bekommt einen [`Zugang`]; siehe
 /// den Abschnitt „Jeder Weg auf die Platte geht durch die Schreibsperre" im
 /// Modulkopf.
@@ -538,7 +578,8 @@ impl Ablage {
         &self.ort
     }
 
-    /// Der Pfad einer der vier Dateien.
+    /// Der Pfad einer der Ablagedateien aus [`Datei::ALLE`], welcher auch
+    /// immer.
     ///
     /// Eine Frage an den Ort und kein Zugriff auf die Platte; sie braucht die
     /// Sperre deshalb nicht.
@@ -579,7 +620,8 @@ pub struct Zugang<'a> {
 }
 
 impl Zugang<'_> {
-    /// Der Pfad einer der vier Dateien.
+    /// Der Pfad einer der Ablagedateien aus [`Datei::ALLE`], welcher auch
+    /// immer.
     pub fn pfad(&self, welche: Datei) -> PathBuf {
         self.ort.datei(welche)
     }

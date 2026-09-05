@@ -82,6 +82,7 @@ impl Tastendruck {
     /// die Stelle `code` an einer Tastatur, die so belegt ist wie
     /// [`parser::TASTEN`] es fuehrt. Wer ein wirklich gemeldetes Zeichen hat,
     /// nimmt [`Tastendruck::aus_ereignis`].
+    #[must_use]
     pub const fn neu(code: u16, maske: ModMaske) -> Self {
         Self {
             code,
@@ -95,6 +96,7 @@ impl Tastendruck {
     /// `rohe_flaggen` ist der Wert aus `NSEvent.modifierFlags`, `gemeldet` das
     /// Zeichen, das die gedrueckte Taste **ohne Zusatztasten** meldet. Dies ist
     /// der einzige Weg, auf dem ein Ereignis in den Nachschlag gelangt.
+    #[must_use]
     pub fn aus_ereignis(code: u16, gemeldet: Option<char>, rohe_flaggen: u64) -> Self {
         Self {
             code,
@@ -107,6 +109,7 @@ impl Tastendruck {
     ///
     /// Die eine Ableitung, und die einzige Stelle, an der die beiden
     /// Nachschlagarten fuer einen Tastendruck auseinandergehen.
+    #[must_use]
     pub const fn kennung(self) -> Tastenkennung {
         match self.zeichen {
             Some(zeichen) => Tastenkennung::Zeichen(zeichen),

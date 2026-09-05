@@ -58,3 +58,21 @@ schreibt aus, warum, und nennt den `grep`, mit dem man zählt.
 **Schwere:** gering. Kein Verhalten, aber eine Prosastelle, die zum Rückbau einlädt.
 
 **Gefunden:** coderev, bei der Durchsicht der Runde 18 gegen `20eccd4..8478753`.
+
+---
+Resolved: Beide Stellen sind geraeumt, nach dem Vorschlag des Datensatzes.
+Die Kaestchenzeile in `crates/krk-core/src/verzeichnis/sys.rs` traegt jetzt ihre Aufrufer wie
+die fuenf anderen:
+
+```
+//! localtime_r(3)     ──> ortszeit             ──> operation::zippen
+//!                                             └─> leseprofil::bausteine
+```
+
+Der Absatz „Gerufen sind neun davon aus dem Baum, und die zehnte ist es noch nicht" ist
+gestrichen; er hat seine eigene Bedingung genannt, und sie ist mit `e922c9e` und `66c779c`
+erfuellt. Nachgezaehlt mit `grep -rn 'ortszeit(' crates/ --include='*.rs'`:
+`operation/zippen.rs` und `leseprofil/bausteine.rs` rufen sie aus dem Produktivcode, dazu
+vier Probenstellen. Eine Zahl der Rufer steht nicht in der Prosa, wie der Datensatz es
+verlangt.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

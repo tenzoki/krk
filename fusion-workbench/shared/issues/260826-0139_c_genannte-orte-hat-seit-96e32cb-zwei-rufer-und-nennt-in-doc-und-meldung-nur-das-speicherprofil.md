@@ -50,3 +50,14 @@ Schwere **gering**.
 
 Möglichkeit 1, in der Form über `profil.name()`, kostet eine Zeile und macht die
 Meldung an beiden Rufern richtig.
+
+---
+Resolved: Moeglichkeit 1 in der Form ueber `profil.name()`, wie der Datensatz sie empfiehlt.
+`genannte_orte` in `crates/krk-core/tests/leseprofil.rs` formatiert den Profilnamen jetzt in
+die Abbruchmeldung: „ein Ort des Profils \"{}\" traegt einen Platzhalter; die Rechnung ‚ein
+Ort, ein Leselauf' gilt fuer ihn nicht mehr". Kein zusaetzlicher Parameter noetig, die
+Funktion haelt das Profil schon.
+Der Doc-Kommentar spricht nicht mehr vom Speicherprofil und nicht mehr von Unterspeichern,
+sondern vom Profil, das der Helfer bekommt; ein Absatz nennt die zwei Rufer seit `96e32cb`
+und diesen Datensatz als Grund.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

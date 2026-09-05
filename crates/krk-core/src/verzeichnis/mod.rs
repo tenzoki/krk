@@ -185,6 +185,7 @@ pub use verweisziel::Verweisziel;
 /// `None` fuer die Wurzel, die keinen uebergeordneten Ordner hat. Ein Aufstieg
 /// von `/` ist damit kein Sonderfall mit eigener Meldung, sondern schlicht
 /// keine Bewegung.
+#[must_use]
 pub fn aufwaerts(ordner: &Path) -> Option<(PathBuf, String)> {
     let name = ordner.file_name()?.to_string_lossy().into_owned();
     let eltern = ordner.parent()?;

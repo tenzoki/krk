@@ -17,3 +17,19 @@ unverändert auf `crates/krk-core/src/ablage/mod.rs:45`, `:541` (`Ablage::pfad`)
 (`Zugang::pfad`); `Datei::ALLE` führt sieben Werte, nicht mehr sechs. Die zwei benachbarten
 Stellen, die dieser Datensatz ausdrücklich schützt, sind inzwischen auf „fünf TOML-Dateien"
 nachgezogen (`mod.rs:587`, `:686`) und dürfen weiterhin nicht mitgezogen werden.
+
+---
+Resolved: Die drei Stellen tragen keine Zahl mehr, sondern den Zeiger auf die Aufzaehlung,
+die die Antwort haelt. `crates/krk-core/src/ablage/mod.rs`, Modulkopf, Abschnitt „Jeder Weg
+auf die Platte geht durch die Schreibsperre": „[`Ablage::pfad`] liefert den Pfad **jeder**
+Ablagedatei aus [`pfade::Datei::ALLE`] ohne Durchgang"; dazu die Doc-Kommentare von
+`Ablage::pfad` und `Zugang::pfad`, beide jetzt „Der Pfad einer der Ablagedateien aus
+[`Datei::ALLE`], welcher auch immer." Damit steht die Zahl an dieser Stelle nicht mehr da und
+kann mit der achten Ablagedatei nicht wieder falsch werden.
+Die zwei benachbarten Stellen, die der Datensatz schuetzt, sind nicht mitgezogen: sie
+sprechen ueber die TOML-Dateien, und der Nachtrag vom 260824 hat sie auf fuenf gesetzt.
+Der Doc-Kommentar der Probe `nur_benannte_dateien_erreichen_das_atomare_schreiben`
+(`crates/krk-core/tests/baum.rs`) trug dieselbe Stelle im Zitat und ist mitgezogen.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0),
+`cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo fmt -p krk-core -- --check` (Rueckgabe 0).

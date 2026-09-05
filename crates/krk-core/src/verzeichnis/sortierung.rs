@@ -69,6 +69,7 @@ impl Richtung {
     pub const ALLE: [Richtung; 2] = [Richtung::Aufsteigend, Richtung::Absteigend];
 
     /// Die jeweils andere Richtung.
+    #[must_use]
     pub fn umgekehrt(self) -> Self {
         match self {
             Richtung::Aufsteigend => Richtung::Absteigend,
@@ -99,6 +100,7 @@ impl Default for Sortierung {
 
 impl Sortierung {
     /// Baut eine Sortierung aus Schluessel und Richtung.
+    #[must_use]
     pub fn neu(schluessel: Schluessel, richtung: Richtung) -> Self {
         Self {
             schluessel,
@@ -107,6 +109,7 @@ impl Sortierung {
     }
 
     /// Alle acht Sortierungen, in fester Reihenfolge.
+    #[must_use = "die Aufzaehlung ist der ganze Ertrag des Aufrufs; ein fallen gelassener Iterator laeuft nie"]
     pub fn alle() -> impl Iterator<Item = Sortierung> {
         Schluessel::ALLE.into_iter().flat_map(|schluessel| {
             Richtung::ALLE.map(|richtung| Sortierung::neu(schluessel, richtung))
@@ -122,6 +125,7 @@ impl Sortierung {
     /// Jeder der vier Faelle vergleicht nur vorberechnete Werte. Die
     /// sprachsensitive Kollation laeuft beim Lesen, nicht hier; siehe
     /// [`super::kollation`].
+    #[must_use]
     pub fn vergleiche(&self, links: &Eintrag, rechts: &Eintrag) -> Ordering {
         let gruppen = gruppe(links).cmp(&gruppe(rechts));
         if gruppen != Ordering::Equal {

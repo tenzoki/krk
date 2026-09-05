@@ -144,6 +144,7 @@ pub enum Herkunft {
 
 impl Herkunft {
     /// Der Name aus der Carbon-Tabelle, in beiden Faellen.
+    #[must_use]
     pub const fn kvk(self) -> &'static str {
         match self {
             Herkunft::Gemessen { kvk, .. } | Herkunft::Dokumentiert { kvk } => kvk,
@@ -151,6 +152,7 @@ impl Herkunft {
     }
 
     /// Wahr, wenn das Projekt diesen Tastencode selbst gemessen hat.
+    #[must_use]
     pub const fn ist_gemessen(self) -> bool {
         matches!(self, Herkunft::Gemessen { .. })
     }
@@ -229,6 +231,7 @@ impl Taste {
     /// [`zeichen_des_namens`] ein Zeichen zuordnet, ist eine Zeichentaste;
     /// jeder andere Name benennt eine Stelle. Das deckt die Tabelle
     /// vollstaendig ab, weil ihre Namen genau in diese beiden Sorten zerfallen.
+    #[must_use]
     pub const fn kennung(self) -> Tastenkennung {
         match zeichen_des_namens(self.name) {
             Some(zeichen) => Tastenkennung::Zeichen(zeichen),
@@ -406,6 +409,7 @@ pub const fn code_von(name: &str) -> Option<u16> {
 /// Fuer Konstanten, deren Name im Programmtext steht und den die Tabelle
 /// deshalb kennen muss. Ein Tippfehler wird zum Uebersetzungsfehler und nicht
 /// zu einer toten Taste.
+#[must_use]
 pub const fn code_von_pflicht(name: &str) -> u16 {
     match code_von(name) {
         Some(code) => code,
@@ -558,6 +562,7 @@ pub struct Kombination {
 
 impl Kombination {
     /// Eine Kombination aus einem Tabelleneintrag und einer Maske.
+    #[must_use]
     pub const fn neu(taste: Taste, maske: ModMaske) -> Self {
         Self { taste, maske }
     }
@@ -634,11 +639,13 @@ impl Kombination {
     }
 
     /// Der Tabelleneintrag der Taste.
+    #[must_use]
     pub const fn taste(self) -> Taste {
         self.taste
     }
 
     /// Die normalisierte Maske der Zusatztasten.
+    #[must_use]
     pub const fn maske(self) -> ModMaske {
         self.maske
     }
@@ -648,6 +655,7 @@ impl Kombination {
     /// Er traegt beides: die Stelle und, fuer eine Buchstaben- oder
     /// Zifferntaste, das Zeichen. Welches von beidem der Nachschlag vergleicht,
     /// entscheidet [`Tastendruck::kennung`].
+    #[must_use]
     pub const fn tastendruck(self) -> Tastendruck {
         Tastendruck {
             code: self.taste.code,

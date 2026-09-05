@@ -35,6 +35,7 @@ impl Vorschauzeile {
     ///
     /// Eine Kollision haelt sie zurueck, und ein unveraenderter Name gibt
     /// nichts zu tun.
+    #[must_use]
     pub fn wird_umbenannt(&self) -> bool {
         self.kollision.is_none() && self.neu != self.alt
     }
@@ -48,11 +49,13 @@ pub struct Vorschau {
 
 impl Vorschau {
     /// Alle Zeilen, in Sichtreihenfolge.
+    #[must_use]
     pub fn zeilen(&self) -> &[Vorschauzeile] {
         &self.zeilen
     }
 
     /// Wie viele Eintraege einen Grund tragen, der sie zurueckhaelt.
+    #[must_use]
     pub fn kollisionen(&self) -> usize {
         self.zeilen
             .iter()
@@ -61,6 +64,8 @@ impl Vorschau {
     }
 
     /// Die Zeilen, die die Ausfuehrung anfasst, in Sichtreihenfolge.
+    #[must_use = "die Auskunft darueber, was die Ausfuehrung anfasst, steht \
+                  nur hier; ein fallen gelassener Iterator laeuft nie"]
     pub fn auszufuehren(&self) -> impl Iterator<Item = &Vorschauzeile> {
         self.zeilen.iter().filter(|zeile| zeile.wird_umbenannt())
     }
@@ -71,6 +76,7 @@ impl Vorschau {
 /// `markierte` sind die Namen der markierten Eintraege in Sichtreihenfolge;
 /// sie bestimmen zugleich die Reihenfolge der fortlaufenden Nummer. `bestand`
 /// sind alle Namen des Ordners, auch die ausgeblendeten.
+#[must_use]
 pub fn vorschau(regel: &Regel, markierte: &[String], bestand: &[String]) -> Vorschau {
     let neue: Vec<String> = markierte
         .iter()

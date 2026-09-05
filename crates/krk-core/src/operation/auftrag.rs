@@ -128,16 +128,19 @@ pub struct Auftrag {
 
 impl Auftrag {
     /// Kopieren in den genannten Ordner.
+    #[must_use]
     pub fn kopieren(quellen: Vec<PathBuf>, ziel: impl Into<PathBuf>) -> Self {
         Self::neu(quellen, Art::Kopieren { ziel: ziel.into() })
     }
 
     /// Verschieben in den genannten Ordner.
+    #[must_use]
     pub fn verschieben(quellen: Vec<PathBuf>, ziel: impl Into<PathBuf>) -> Self {
         Self::neu(quellen, Art::Verschieben { ziel: ziel.into() })
     }
 
     /// In den Papierkorb des Systems raeumen.
+    #[must_use]
     pub fn in_den_papierkorb(quellen: Vec<PathBuf>) -> Self {
         Self::neu(quellen, Art::InDenPapierkorb)
     }
@@ -148,6 +151,7 @@ impl Auftrag {
     /// Listen gar nicht erst getrennt uebergeben werden koennen. Aufgetrennt
     /// werden sie hier, einmal, und danach laufen sie Stelle fuer Stelle
     /// nebeneinander.
+    #[must_use]
     pub fn umbenennen_im_stapel(paare: Vec<(PathBuf, String)>) -> Self {
         let (quellen, neue_namen): (Vec<PathBuf>, Vec<String>) = paare.into_iter().unzip();
         Self::neu(quellen, Art::UmbenennenImStapel { neue_namen })
@@ -157,6 +161,7 @@ impl Auftrag {
     ///
     /// `ziel` ist der volle Pfad des Archivs und kein Ordner; die Namensbildung
     /// gehoert der Oberflaeche.
+    #[must_use]
     pub fn zippen(quellen: Vec<PathBuf>, ziel: impl Into<PathBuf>) -> Self {
         Self::neu(quellen, Art::Zippen { ziel: ziel.into() })
     }
@@ -169,6 +174,7 @@ impl Auftrag {
     /// nebeneinander.
     ///
     /// Die Zielordner rechnet die Oberflaeche; der Kern legt sie an.
+    #[must_use]
     pub fn entpacken(paare: Vec<(PathBuf, PathBuf)>) -> Self {
         let (quellen, ziele): (Vec<PathBuf>, Vec<PathBuf>) = paare.into_iter().unzip();
         Self::neu(quellen, Art::Entpacken { ziele })
@@ -223,6 +229,7 @@ impl Auftrag {
     /// Entpacken hat **jede Quelle** ihren eigenen Zielordner; einer davon waere
     /// eine willkuerliche Wahl, und die Stelle, die danach fragt, ist
     /// [`Auftrag::entpackziel`].
+    #[must_use]
     pub fn zielordner(&self) -> Option<&PathBuf> {
         match &self.art {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => Some(ziel),

@@ -66,11 +66,13 @@ pub enum Abschluss {
 
 impl Abschluss {
     /// Wahr, wenn der Lesevorgang abgebrochen wurde.
+    #[must_use]
     pub fn ist_abgebrochen(&self) -> bool {
         matches!(self, Abschluss::Abgebrochen)
     }
 
     /// Wahr, wenn das Verzeichnis vollstaendig gelesen ist.
+    #[must_use]
     pub fn ist_vollstaendig(&self) -> bool {
         matches!(self, Abschluss::Vollstaendig)
     }
@@ -123,6 +125,7 @@ impl Lesevorgang {
     }
 
     /// Der Kanal, aus dem der Hauptfaden die Stapel holt.
+    #[must_use]
     pub fn meldungen(&self) -> &Receiver<Meldung> {
         &self.meldungen
     }

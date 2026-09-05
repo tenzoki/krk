@@ -8,7 +8,9 @@
 //! # Die grossen Pruefdateien
 //!
 //! Zwei der vier Abnahmepunkte brauchen eine 200-MB- und eine 500-MB-Datei.
-//! Beide entstehen unter `/tmp`, auf demselben APFS-Datentraeger wie ihr Ziel,
+//! Beide entstehen im [`Pruefordner`] unter dem Temporaerverzeichnis, das
+//! `std::env::temp_dir()` nennt — auf macOS also unter `/var/folders/…/T` und
+//! nicht unter `/tmp` —, auf demselben APFS-Datentraeger wie ihr Ziel,
 //! und werden am Ende des jeweiligen Laufs wieder abgeraeumt. In den Quellbaum
 //! kommt keine von beiden.
 //!

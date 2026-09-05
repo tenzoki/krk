@@ -356,6 +356,7 @@ impl Wirkungsbereich {
     /// eine Spalte, die zwei verschiedene Regeln gleich benennt; die Probe
     /// `keine_zwei_wirkungsbereiche_teilen_sich_eine_beschriftung` haelt es
     /// fest.
+    #[must_use]
     pub const fn beschriftung(self) -> &'static str {
         match self {
             Wirkungsbereich::Dateifenster => "Dateifenster",
@@ -969,6 +970,7 @@ impl Kommando {
     /// die Quelle nicht am Fokus; bei ihm haengt sie daran, und gerade deshalb
     /// muss er ueberall durchkommen. Der Grund steht als Kommentar an seinem
     /// Zweig.
+    #[must_use]
     pub const fn wirkungsbereich(self) -> Wirkungsbereich {
         match self {
             // Das Fenster als ganzes. Die Belegungsansicht aus C3 steht hier,
@@ -1259,6 +1261,7 @@ impl Kommando {
     }
 
     /// Die Kennung dieses Kommandos in der Belegungsdatei.
+    #[must_use]
     pub const fn kennung(self) -> &'static str {
         let mut stelle = 0;
         while stelle < Self::KENNUNGEN.len() {
@@ -1285,16 +1288,19 @@ pub struct Funktion {
 
 impl Funktion {
     /// Der maschinenlesbare Bezeichner, unter dem `keymap.toml` sie fuehrt.
+    #[must_use]
     pub fn kennung(&self) -> &str {
         &self.kennung
     }
 
     /// Die deutsche Beschriftung fuer die Belegungsansicht.
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Alle Kombinationen, die diese Funktion ausloesen.
+    #[must_use]
     pub fn tasten(&self) -> &[Kombination] {
         &self.tasten
     }
@@ -1329,6 +1335,7 @@ impl Funktion {
     }
 
     /// Wie eine Meldung diese Funktion benennt.
+    #[must_use]
     pub fn benennung(&self) -> Funktionsname {
         Funktionsname::neu(&self.kennung, &self.name)
     }
@@ -1365,6 +1372,7 @@ pub struct Belegung {
 
 impl Belegung {
     /// Die eingebettete Auslieferungsbelegung.
+    #[must_use]
     pub fn auslieferung() -> Self {
         AUSLIEFERUNG.clone()
     }
@@ -1382,6 +1390,7 @@ impl Belegung {
     }
 
     /// Alle Funktionen, in der Reihenfolge der Datei.
+    #[must_use]
     pub fn funktionen(&self) -> &[Funktion] {
         &self.funktionen
     }
@@ -1441,6 +1450,7 @@ impl Belegung {
     ///    Ein Nachschlag, der beides gegen den Code fuehrte, traefe auf einer
     ///    franzoesischen Tastatur zwei verschiedene Tasten auf derselben
     ///    Funktion, und die Konflikterkennung saehe das nie.
+    #[must_use]
     pub fn nachschlag(&self, druck: Tastendruck) -> Nachschlag<'_> {
         for funktion in &self.funktionen {
             if funktion.gehalten_von.is_some() {
@@ -1531,6 +1541,7 @@ impl Belegung {
     /// der Modulkopf schreibt die Regel aus. Ausgeliefert gibt es genau einen
     /// Fall: `cmd+a` markiert im Dateifenster alle Eintraege und waehlt im
     /// Textfeld den Text aus.
+    #[must_use]
     pub fn konflikte(&self) -> Vec<Konflikt> {
         let mut gefunden = Vec::new();
         for (stelle, funktion) in self.funktionen.iter().enumerate() {
@@ -1677,6 +1688,7 @@ pub fn laden(zugang: &Zugang<'_>) -> Geladen<Belegung> {
 /// zweite Ausgabestelle entsteht nicht. Geschrieben wird sie hier nicht: der
 /// Kern hat seit Schritt 12 keinen Ausgabekanal, und der Aufrufer in `krk-ui`
 /// setzt den Satz in die Statuszeile.
+#[must_use]
 pub fn fuer_den_betrieb() -> (Belegung, Option<String>) {
     match Ablage::im_benutzerverzeichnis() {
         // **Der Durchgang umfasst hier nur das Laden, und das ist kein

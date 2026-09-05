@@ -80,3 +80,16 @@ raeumen**; nur dieser hier ist mit einem einzigen Vermerk am Typ erledigt.
 
 **Gefunden:** coderev, Vollbaum-Durchsicht von `crates/krk-core/src/{ablage,leseprofil}/` am
 260826-1225.
+
+---
+Resolved: Die Marke steht am Typ, wie der Datensatz es verlangt. `Geladen<T>` traegt
+`#[must_use = "die `ersetzung` ist die einzige Meldung darueber, dass eine Ablagedatei
+beiseite gelegt und durch den Auslieferungszustand ersetzt worden ist"]`
+(`crates/krk-core/src/ablage/mod.rs`, Doc-Kommentar von `Geladen`), und damit sind
+`Zugang::laden`, `Zugang::text_laden`, `einstellungen::laden`, `belegung::laden` und die
+erste Haelfte des Paares aus `leseprofile::laden` auf einmal gedeckt; ein sechster Ladeweg
+erbt die Marke von selbst. `Geladen::mit_meldung` hat den eigenen Vermerk bekommen, den der
+Datensatz fordert, weil das Paar `(T, Option<String>)` kein `Geladen` mehr ist, und
+`ist_ersetzt` daneben ein schlichtes `#[must_use]`. Geprueft mit
+`cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und
+`cargo test -p krk-core` (Rueckgabe 0).

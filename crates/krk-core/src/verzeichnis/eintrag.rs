@@ -68,6 +68,7 @@ impl Eintrag {
     /// Schluessel nicht zu seinem Namen passt, sortiert falsch, ohne dass es
     /// auffiele; die Struktur laesst sich deshalb nicht Feld fuer Feld
     /// zusammensetzen.
+    #[must_use]
     pub fn neu(name: String, groesse: u64, geaendert: SystemTime, typ: Typ) -> Self {
         let versteckt = name.starts_with('.');
         Self::mit_versteckt(name, groesse, geaendert, typ, versteckt)
@@ -78,6 +79,7 @@ impl Eintrag {
     /// Der Leser braucht diese Form, weil ein Eintrag auch ohne fuehrenden
     /// Punkt versteckt sein kann: das Dateisystem kennzeichnet ihn dann mit
     /// `UF_HIDDEN`.
+    #[must_use]
     pub fn mit_versteckt(
         name: String,
         groesse: u64,
@@ -103,16 +105,19 @@ impl Eintrag {
     /// nach Typ.
     ///
     /// Leer, wo es keine gibt. Was als Endung zaehlt, steht bei [`endung_ab`].
+    #[must_use]
     pub fn endung(&self) -> &str {
         &self.name[self.endung_ab as usize..]
     }
 
     /// Wahr, wenn der Eintrag ein Verzeichnis ist.
+    #[must_use]
     pub fn ist_ordner(&self) -> bool {
         self.typ == Typ::Ordner
     }
 
     /// Wahr, wenn der Eintrag eine symbolische Verknuepfung ist.
+    #[must_use]
     pub fn ist_verknuepfung(&self) -> bool {
         self.typ == Typ::Verknuepfung
     }

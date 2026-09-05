@@ -55,6 +55,7 @@ impl Kollision {
     /// Grund steht in einer Spalte der Vorschau; ein Satz, der dort abgeschnitten
     /// wird, nennt den Grund nicht mehr. Am laufenden Buendel gemessen am
     /// 260804-2033: bei 240 Punkten Spaltenbreite passen rund dreissig Zeichen.
+    #[must_use]
     pub fn grund(self) -> &'static str {
         match self {
             Kollision::Unzulaessig(fehler) => fehler.grund(),
@@ -75,6 +76,7 @@ impl Kollision {
 /// Zuerst, ob der Name ueberhaupt einer ist; dann, ob der Ordner ihn schon
 /// traegt; zuletzt, ob die Regel ihn zweimal vergibt. Trifft mehr als eines zu,
 /// steht der erste Grund da: er ist der, den der Nutzer zuerst beheben muss.
+#[must_use]
 pub fn pruefen(alte: &[String], neue: &[String], bestand: &[String]) -> Vec<Option<Kollision>> {
     let vorhanden: HashSet<&str> = bestand.iter().map(String::as_str).collect();
     let mut haeufigkeit: HashMap<&str, usize> = HashMap::with_capacity(neue.len());

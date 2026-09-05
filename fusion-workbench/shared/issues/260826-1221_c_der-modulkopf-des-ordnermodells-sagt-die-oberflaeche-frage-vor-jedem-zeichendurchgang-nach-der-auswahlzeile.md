@@ -56,3 +56,17 @@ allein „vor jedem Zeichendurchgang". Eine Formulierung, die nicht mit dem naec
 wieder falsch wird, nennt den Anlass statt der Haeufigkeit, etwa „die Oberflaeche rechnet sie
 um, wenn sie die Auswahl setzt oder die Sicht sich geaendert hat" — dieselbe Bauform, in der
 `filter.rs` und `sys.rs` ihre Ruferzahlen inzwischen durch das Zaehlkommando ersetzt haben.
+
+---
+Resolved: Der Modulkopf von `crates/krk-core/src/verzeichnis/modell.rs` nennt jetzt den
+Anlass statt der Haeufigkeit, wie der Abschnitt „Richtung" es vorschlaegt: „die Oberflaeche
+rechnet ihn mit `Ordnermodell::auswahl_zeile` in die Zeile um, … **wenn sie die Auswahl
+setzt oder die Sicht sich geaendert hat** — nicht in einem Zeichendurchgang", dazu das
+Zaehlkommando `grep -rn 'auswahl_zeile()' crates/krk-ui/src` statt einer Zahl der Rufer.
+Der tragende Teil des Absatzes — die Auswahl haengt am Eintragsindex und nicht an der
+Zeilennummer — steht unveraendert.
+Ein zweiter Absatz daneben schreibt aus, warum der Unterschied keine Wortwahl ist: der Weg
+ueber `zeile_von` ist eine lineare Suche, je Ereignis nichts und je Zeichendurchgang der
+teuerste Posten des Zeichnens, und der alte Satz lud damit zu einem Zwischenspeicher gegen
+eine Last ein, die nirgends anfaellt. Der Datensatz ist dort zitiert.
+Geprueft mit `cargo test -p krk-core` (Rueckgabe 0), `cargo clippy -p krk-core --all-targets -- -D warnings` (Rueckgabe 0) und `cargo fmt -p krk-core -- --check` (Rueckgabe 0).

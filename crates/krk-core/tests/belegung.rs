@@ -189,8 +189,8 @@ fn ausgeliefert(kennung: &str) -> Kombination {
 /// Eine Kombination mit Zusatztaste, die die Auslieferungsbelegung keiner
 /// Funktion gibt.
 ///
-/// Gesucht statt hingeschrieben, und aus demselben Grund wie in
-/// [`keine_unbelegte_kombination_mit_zusatztaste_faellt_auf_die_sprungmarke`]:
+/// Gesucht statt hingeschrieben, und aus demselben Grund, den der Datensatz
+/// unten traegt:
 /// jede hingeschriebene Kombination kann eines Tages belegt werden, und dann
 /// faellt eine Pruefung um, die von der Belegung gar nicht handelt. `cmd+q` hat
 /// genau das am 260805 getan
@@ -1766,8 +1766,8 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
 /// `tag_des_kommandos` in `krk-ui` auf `expect`, und `Kommando::aus_kennung`
 /// liefert `None`, womit der Befehl in der Belegungsansicht steht und nichts
 /// tut. Der Uebersetzer haelt davon nichts: die Laengenangabe
-/// `[(Kommando, &'static str); 82]` zwingt zu 82 Eintraegen und sagt nicht,
-/// welche 82
+/// `[(Kommando, &'static str); N]` zwingt zu so vielen Eintraegen, wie sie
+/// nennt, und sagt nicht, welche
 /// (`shared/issues/260826-1223_*_kennungen-ist-die-programmweite-kommandoliste-und-nichts-haelt-sie-vollstaendig.md`).
 ///
 /// Geprueft werden **beide** Richtungen. Die zweite ist nicht nur Zierrat: sie

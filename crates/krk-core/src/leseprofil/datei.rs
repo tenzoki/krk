@@ -27,10 +27,26 @@
 //! # Wo `deny_unknown_fields` steht und wo nicht
 //!
 //! An [`Profildatei`], an [`Zeilendatei`] und an jedem der vier
-//! Bausteintische; allein [`Profilblock`] traegt ihn nicht, und das kostet
-//! nichts: ein verschriebenes `pfad` laesst das Profil ohne Pfadmuster und
-//! ohne Kennzeichen zurueck, und genau das weist [`pruefen`] mit einer Meldung
-//! ab.
+//! Bausteintische; allein [`Profilblock`] traegt ihn nicht.
+//!
+//! **Was das kostet, haengt davon ab, ob eine zweite Angabe danebensteht, und
+//! die eine Haelfte kostet sehr wohl etwas.** Ein verschriebenes `kennzeichnen`
+//! laesst das Profil ohne Pfadmuster und ohne Kennzeichen zurueck, wenn es
+//! sonst nichts nennt, und genau das weist [`pruefen`] mit einer Meldung ab.
+//! Steht ein `pfad` daneben, wird derselbe Schreibfehler **still uebergangen**:
+//! das Profil greift weiter, allein ueber den Pfad, und niemand erfaehrt, dass
+//! sein Kennzeichen nie geprueft worden ist. Dasselbe gilt fuer `zeilen` statt
+//! `zeile`, das ein Profil ohne eine einzige Zeile stehen laesst.
+//! `resources/default-readers.toml` schreibt die Fallunterscheidung im
+//! Kommentarkopf aus, dort, wo der Nutzer sie liest; hier steht sie, weil dies
+//! die Stelle ist, an der ein Entwickler nachliest, warum [`Profilblock`] als
+//! einziger Block ohne die Marke steht.
+//!
+//! **Gemessen ist die stille Haelfte bisher nicht.** Die Behebung in der
+//! Profildatei hat beide Lagen von Hand gemessen (elf Profile statt zwoelf
+//! ohne `pfad`, zwoelf ohne Meldung mit `pfad`); eine Probe, die den stillen
+//! Fall festhaelt, steht nicht im Baum
+//! (`shared/issues/260826-0128_*_der-modulkopf-von-datei-rs-traegt-dieselbe-luecke-die-in-der-profildatei-geschlossen-ist.md`).
 //!
 //! **An der Zeile stand er bis zum 260824 nicht**, weil ihre Bausteinhaelfte
 //! ueber `#[serde(flatten)]` in eine unmarkierte Auswahl lief und die beiden
