@@ -694,7 +694,7 @@ fn zusammenfuegen(vorlage: &bundle::Vorlage) -> Result<PathBuf, Abbruch> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
 
     /// Die Ziele des `Makefile`, deren Hilfezeile das Schieben nennen muss.
     ///
@@ -903,12 +903,20 @@ mod tests {
     }
 
     /// Ein Wegwerf-Wurzelordner, wie ihn die Proben des Kerns benutzen.
-    struct Wegwerfwurzel {
+    ///
+    /// **Er ist seit dem 260905 ueber die Modulgrenze zu haben**, und das ist
+    /// die Antwort auf die eine Frage, die eine zweite Probe in `xtask` sonst
+    /// gestellt haette: `veroeffentlichung::tests` packt wirklich und braucht
+    /// dafuer einen Ordner, der sich selbst abraeumt. Geliehen wird deshalb
+    /// dieser, statt eine weitere Fassung danebenzustellen — es waere die
+    /// fuenfte im Baum, und schon ueber die vierte laeuft eine Nutzerfrage
+    /// (`shared/issues/260826-1302_*_eine-vierte-pruefordner-fassung-steht-in-xtask-und-die-zaehlprobe-c4-6-kann-sie-nicht-sehen.md`).
+    pub(crate) struct Wegwerfwurzel {
         pfad: PathBuf,
     }
 
     impl Wegwerfwurzel {
-        fn pfad(&self) -> &Path {
+        pub(crate) fn pfad(&self) -> &Path {
             &self.pfad
         }
     }
@@ -919,7 +927,7 @@ mod tests {
         }
     }
 
-    fn wegwerfwurzel(zweck: &str) -> Wegwerfwurzel {
+    pub(crate) fn wegwerfwurzel(zweck: &str) -> Wegwerfwurzel {
         let laufnummer = ZAEHLER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let pfad = std::env::temp_dir().join(format!(
             "krk-xtask-test-{zweck}-{}-{laufnummer}",

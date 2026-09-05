@@ -17,6 +17,11 @@
 //! als [`Tagfrage`] da: der eigenstaendige Weg fragt selbst, ob `v<zahl>` auf
 //! HEAD steht, weil vor ihm keine Station stand.
 //!
+//! **Neben dem Buendel reist die Anleitung `HowTo.md` mit.** Sie liegt im Zip
+//! nicht lose neben der App, sondern mit ihr in einem Ordner, der so heisst wie
+//! das Zip ohne seine Endung; wie sie dorthin kommt und warum, steht bei
+//! [`paket_stellen`].
+//!
 //! **Er baut nichts.** Kein Uebersetzungslauf, kein `lipo`, keine Montage,
 //! keine Signierung. Findet er kein Buendel, bricht er ab und nennt den ganzen
 //! Weg.
@@ -107,7 +112,7 @@ pub(crate) fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
 /// 1. `gh` ist vorhanden und angemeldet.
 /// 2. Der Tag `v<zahl>` steht auf HEAD — allein bei [`Tagfrage::Stellen`].
 /// 3. Das Buendel liegt da und traegt das angeheftete Ticket.
-/// 4. `target/KRK-<zahl>.zip` entsteht.
+/// 4. `target/KRK-<zahl>.zip` entsteht, aus dem Buendel und der Anleitung.
 /// 5. HEAD und `refs/tags/v<zahl>` gehen in einem Aufruf zur Gegenseite.
 /// 6. Die Releaseseite entsteht, nachdem die Existenzfrage verneint ist.
 ///
@@ -367,7 +372,99 @@ fn ohne_ticket_meldung(buendel: &Path, zahl: &str, befund: &str) -> String {
     )
 }
 
-/// Packt das Buendel zu `target/KRK-<zahl>.zip`.
+/// Der Name der Anleitung, im Paket wie im Quellbaum.
+///
+/// Sie behaelt ihren Namen: wer sie im Paket sucht, sucht die Datei, von der
+/// die `README.md` und die Releaseseite sprechen.
+const ANLEITUNG: &str = "HowTo.md";
+
+/// Der Inhalt der Anleitung, beim Uebersetzen eingebacken.
+///
+/// **Warum eingebacken und nicht zur Laufzeit gelesen.** Zur Laufzeit waere die
+/// Datei ein Fund oder ein Fehlschlag, und der Fehlschlag traefe den Lauf an
+/// der Stelle, an der das Buendel gebaut, signiert und beglaubigt ist — also
+/// spaet und teuer. Eingebacken gibt es den Fall nicht: fehlt die Datei,
+/// uebersetzt `xtask` nicht, und das faellt vor jedem Lauf auf. Dasselbe
+/// Verfahren wie bei `resources/default-keymap.toml`, das
+/// `krk_core::tasten::belegung` einbackt, und bei `resources/Info.plist`, das
+/// die Probe in [`crate::bundle`] liest.
+///
+/// **Was ausgeliefert wird, ist damit der eingecheckte Stand** und nicht der
+/// Arbeitsstand: `cargo` uebersetzt `xtask` neu, sobald sich die Datei aendert,
+/// und Station 1 von [`crate::release`] laesst ohnehin keinen Lauf mit einer
+/// geaenderten verfolgten Datei durch.
+const ANLEITUNGSTEXT: &str = include_str!("../../HowTo.md");
+
+/// Stellt das Paket zusammen: das Buendel und die Anleitung in einem Ordner.
+///
+/// **Warum ueberhaupt ein Ordner.** `ditto -c -k --keepParent` packt eine
+/// Quelle und nicht zwei, und ein zweites Werkzeug, das die Anleitung
+/// nachtraeglich in das fertige Zip legt, waere ein zweiter Archivierer an
+/// derselben Datei. Gepackt wird deshalb weiter mit demselben einen Aufruf und
+/// denselben drei Schaltern; was sich aendert, ist allein seine Quelle. Der
+/// Ordnername kommt aus [`paketname`], also traegt das Zip in seiner Wurzel
+/// genau einen Eintrag, und der heisst wie das Zip ohne seine Endung.
+///
+/// **Was der Nutzer sieht.** Nach dem Doppelklick auf `KRK-<zahl>.zip` liegt
+/// ein Ordner `KRK-<zahl>` da, darin `KRK.app` und daneben `HowTo.md`. Bis zu
+/// dieser Aenderung lag die App selbst da. Der Ordner ist die Absicht und nicht
+/// die Nebenwirkung: eine Datei namens `HowTo.md` lose im Ladeordner sagt
+/// nicht, zu welchem Programm sie gehoert, und ein Archiv mit mehreren
+/// Eintraegen in der Wurzel ueberliesse die Gruppierung dem Entpacker.
+///
+/// **Kopiert wird mit `ditto` und nicht mit `cp`.** Am Buendel haengen
+/// symbolische Verweise und erweiterte Attribute, und an ihnen haengt, ob die
+/// Signatur nach dem Entpacken noch traegt; `ditto` ist dasselbe Werkzeug, dem
+/// das Packen selbst anvertraut ist. Das angeheftete Ticket ist eine
+/// gewoehnliche Datei im Buendel und reist als solche mit.
+///
+/// **Ein Rest aus einem frueheren Lauf wird abgeraeumt und nicht ueberbaut.**
+/// Sonst truege das Paket ein Buendel von vorgestern neben dem von heute.
+fn paket_stellen(buendel: &Path, paket: &Path) -> Result<(), Abbruch> {
+    let name = buendel
+        .file_name()
+        .ok_or_else(|| Abbruch::Lauf(format!("{} nennt kein Buendel", buendel.display())))?;
+    if paket.exists() {
+        fs::remove_dir_all(paket).map_err(|fehler| {
+            Abbruch::Lauf(format!(
+                "{} liegt aus einem frueheren Lauf und laesst sich nicht abraeumen: {fehler}",
+                paket.display()
+            ))
+        })?;
+    }
+    fs::create_dir_all(paket).map_err(|fehler| {
+        Abbruch::Lauf(format!(
+            "{} laesst sich nicht anlegen: {fehler}",
+            paket.display()
+        ))
+    })?;
+
+    let kopiert = Command::new("/usr/bin/ditto")
+        .arg(buendel)
+        .arg(paket.join(name))
+        .output()
+        .map_err(|fehler| Abbruch::Lauf(format!("ditto laesst sich nicht starten: {fehler}")))?;
+    if !kopiert.status.success() {
+        return Err(Abbruch::Lauf(format!(
+            "ditto ist beim Kopieren des Buendels gescheitert ({}): {}\n\
+             \n\
+             Es ist nichts veroeffentlicht.",
+            kopiert.status,
+            String::from_utf8_lossy(&kopiert.stderr).trim()
+        )));
+    }
+
+    fs::write(paket.join(ANLEITUNG), ANLEITUNGSTEXT).map_err(|fehler| {
+        Abbruch::Lauf(format!(
+            "Die Anleitung laesst sich nicht nach {} schreiben: {fehler}\n\
+             \n\
+             Es ist nichts veroeffentlicht.",
+            paket.join(ANLEITUNG).display()
+        ))
+    })
+}
+
+/// Packt Buendel und Anleitung zu `target/KRK-<zahl>.zip`.
 ///
 /// **Warum ein zweites Mal gepackt wird.** Die Beglaubigung packt zwar auch,
 /// aber das Ergebnis ist zu diesem Zeitpunkt nicht mehr da und waere auch das
@@ -383,16 +480,28 @@ fn ohne_ticket_meldung(buendel: &Path, zahl: &str, befund: &str) -> String {
 /// fuehrt: es haelt die Buendelstruktur samt Verweisen und
 /// erweiterten Attributen, und ein gewoehnliches `zip` tut das nicht. Die Datei
 /// wird bei jedem Lauf neu geschrieben.
+///
+/// **Die Quelle ist seit dem 260905 das Paket und nicht mehr das Buendel**, und
+/// der Aufruf ist derselbe geblieben: dieselben drei Schalter, dasselbe
+/// Werkzeug, ein Verzeichnis als Quelle wie zuvor. Was [`paket_stellen`] stellt,
+/// raeumt dieser Weg gleich nach dem Packen wieder ab; im Zip steht es, unter
+/// `target/` braucht es niemand.
 fn zip_packen(buendel: &Path, zahl: &str) -> Result<PathBuf, Abbruch> {
     let ziel = buendel.with_file_name(zipname(zahl));
+    let paket = buendel.with_file_name(paketname(zahl));
+    paket_stellen(buendel, &paket)?;
+
     let gepackt = Command::new("/usr/bin/ditto")
         .arg("-c")
         .arg("-k")
         .arg("--keepParent")
-        .arg(buendel)
+        .arg(&paket)
         .arg(&ziel)
         .output()
         .map_err(|fehler| Abbruch::Lauf(format!("ditto laesst sich nicht starten: {fehler}")))?;
+    // Derselbe Handgriff wie bei der Einreichung, die ihr Zip nach dem Absenden
+    // abraeumt: was gepackt ist, wird hier nicht mehr gebraucht.
+    let _ = fs::remove_dir_all(&paket);
     if !gepackt.status.success() {
         return Err(Abbruch::Lauf(format!(
             "ditto ist gescheitert ({}): {}\n\
@@ -405,13 +514,23 @@ fn zip_packen(buendel: &Path, zahl: &str) -> Result<PathBuf, Abbruch> {
     Ok(ziel)
 }
 
+/// Der Name des Ordners, den das Zip in seiner Wurzel traegt.
+///
+/// Die Zahl steht im Namen, damit ein entpacktes Paket auch ausserhalb des Zips
+/// noch sagt, welchen Stand es traegt.
+#[must_use]
+fn paketname(zahl: &str) -> String {
+    format!("KRK-{zahl}")
+}
+
 /// Der Name des weitergebbaren Zips zu einer Versionszahl.
 ///
-/// Die Zahl steht im Namen, damit ein geladenes Zip auch ausserhalb der
-/// Releaseseite noch sagt, welchen Stand es traegt.
+/// Er ist der Paketname und die Endung, und die Fuegung steht hier statt einer
+/// zweiten Einsetzung der Zahl: wer `KRK-<zahl>.zip` entpackt, bekommt
+/// `KRK-<zahl>/`, und die zwei Namen koennen nicht auseinanderlaufen.
 #[must_use]
 fn zipname(zahl: &str) -> String {
-    format!("KRK-{zahl}.zip")
+    format!("{}.zip", paketname(zahl))
 }
 
 /// Der Tagname zu einer Versionszahl.
@@ -559,9 +678,16 @@ deshalb ohne Rückfrage, auch auf einem Mac ohne Netzverbindung.
 
 ## Installieren
 
-1. `KRK-{zahl}.zip` herunterladen und entpacken.
+1. `KRK-{zahl}.zip` herunterladen und entpacken. Der Ordner `KRK-{zahl}` trägt danach
+   `KRK.app` und daneben die Anleitung `HowTo.md`.
 2. KRK beenden, falls es läuft.
 3. Die neue Fassung über die alte in `/Applications` kopieren und das Ersetzen bestätigen.
+
+## Die Anleitung liegt im Paket
+
+`HowTo.md` beschreibt die Bedienung: die Bereiche des Fensters, die Griffe, die man sich
+schlecht merkt, und die Stellen, an denen die naheliegende Annahme falsch ist. Die
+vollständige Tastenbelegung gibt die laufende Anwendung selbst aus, mit **F1**.
 
 ## Die alte Fassung vorher nicht löschen
 
@@ -944,6 +1070,81 @@ mod tests {
         assert_eq!(zipname("1.0.0"), "KRK-1.0.0.zip");
     }
 
+    /// Das Paket heisst wie das Zip ohne seine Endung.
+    ///
+    /// Daran haengt die Zusage der Releaseseite: wer `KRK-<zahl>.zip` entpackt,
+    /// bekommt einen Ordner `KRK-<zahl>`. Geprueft ist die Fuegung und nicht
+    /// bloss der Wortlaut beider Namen — deshalb die dritte Behauptung.
+    #[test]
+    fn das_paket_heisst_wie_das_zip_ohne_endung() {
+        assert_eq!(paketname("0.5.6"), "KRK-0.5.6");
+        assert_eq!(paketname("1.0.0"), "KRK-1.0.0");
+        for zahl in ["0.5.6", "1.0.0", "12.3.45"] {
+            assert_eq!(zipname(zahl), format!("{}.zip", paketname(zahl)));
+        }
+    }
+
+    /// Das Zip traegt in seiner Wurzel den Paketordner, und darin liegt die
+    /// Anleitung neben dem Buendel.
+    ///
+    /// **Sie packt wirklich**, mit demselben `ditto`, das der Lauf faehrt, und
+    /// entpackt das Ergebnis wieder: eine Probe ueber den Quelltext saehe die
+    /// Wirkung von `--keepParent` nicht. Das Buendel ist dabei ein
+    /// nachgemachtes aus zwei Dateien, denn gefragt ist die Auslegung des
+    /// Archivs und nicht die Signatur; ob die ein echtes Buendel uebersteht,
+    /// entscheidet `codesign --verify` an einem gebauten und beglaubigten
+    /// Buendel und keine Probe unter `make check`.
+    ///
+    /// Geprueft ist daneben, dass der gestellte Ordner nach dem Packen wieder
+    /// weg ist: er ist Mittel und nicht Ergebnis.
+    #[test]
+    fn das_zip_traegt_die_anleitung_neben_dem_buendel() {
+        let wurzel = crate::release::tests::wegwerfwurzel("paket");
+        let buendel = wurzel.pfad().join("KRK.app/Contents");
+        schreiben(&buendel.join("MacOS/krk"), "kein echtes Binaerprogramm");
+        schreiben(&buendel.join("Info.plist"), "<?xml version=\"1.0\"?>");
+        let buendel = wurzel.pfad().join("KRK.app");
+
+        let zip = zip_packen(&buendel, "0.5.6").expect("das Packen gelingt");
+        assert_eq!(zip, wurzel.pfad().join("KRK-0.5.6.zip"));
+        assert!(
+            !wurzel.pfad().join("KRK-0.5.6").exists(),
+            "der gestellte Ordner steht nach dem Packen noch da"
+        );
+
+        let aus = wurzel.pfad().join("aus");
+        let entpackt = Command::new("/usr/bin/ditto")
+            .arg("-x")
+            .arg("-k")
+            .arg(&zip)
+            .arg(&aus)
+            .output()
+            .expect("ditto laesst sich starten");
+        assert!(entpackt.status.success(), "{entpackt:?}");
+
+        let paket = aus.join("KRK-0.5.6");
+        assert!(
+            paket.join("KRK.app/Contents/MacOS/krk").is_file(),
+            "das Buendel fehlt im Paket"
+        );
+        assert_eq!(
+            fs::read_to_string(paket.join("HowTo.md")).expect("die Anleitung liegt im Paket"),
+            ANLEITUNGSTEXT
+        );
+    }
+
+    /// Legt eine Datei samt ihrer Ordner an.
+    ///
+    /// Dieselbe Handreichung, die `release::tests` fuehrt; sie steht hier ein
+    /// zweites Mal, weil ein `use` ueber die Modulgrenze fuer drei Zeilen mehr
+    /// kostet als er spart. Der Wegwerfordner dagegen wird geliehen und nicht
+    /// nachgebaut: eine weitere Fassung davon waere die fuenfte im Baum.
+    fn schreiben(pfad: &Path, inhalt: &str) {
+        fs::create_dir_all(pfad.parent().expect("die Datei hat einen Ordner"))
+            .expect("der Ordner laesst sich nicht anlegen");
+        fs::write(pfad, inhalt).expect("die Datei laesst sich nicht schreiben");
+    }
+
     /// Der Releasetext traegt jede seiner Aussagen, jede einzeln behauptet.
     ///
     /// **Je Aussage eine eigene Behauptung, und jede mit ihrem Namen.** Faellt
@@ -962,6 +1163,9 @@ mod tests {
             ("dass es ohne Rueckfrage startet", "ohne Rückfrage"),
             ("die Datei, die zu laden ist", "`KRK-0.5.6.zip`"),
             ("das Entpacken", "entpacken"),
+            ("den Ordner, der dabei entsteht", "Ordner `KRK-0.5.6`"),
+            ("die Anleitung neben der App", "`HowTo.md`"),
+            ("wo die volle Belegung steht", "mit **F1**"),
             ("das Ueberkopieren", "über die alte"),
             (
                 "dass die alte nicht vorher zu loeschen ist",

@@ -16,10 +16,18 @@ Das jeweils neueste Bündel liegt als Zip auf der Releaseseite:
 
 <https://github.com/tenzoki/krk/releases/latest>
 
-1. `KRK-<version>.zip` herunterladen und entpacken.
+1. `KRK-<version>.zip` herunterladen und entpacken. Der Ordner
+   `KRK-<version>` trägt danach `KRK.app` und daneben die Anleitung
+   `HowTo.md`.
 2. KRK beenden, falls es läuft.
 3. Die neue Fassung über die alte in `/Applications` kopieren und das Ersetzen
    bestätigen.
+
+Die Anleitung reist im Paket mit, damit sie zur Hand ist, wo die App ankommt.
+Sie beschreibt die Bedienung; die vollständige Tastenbelegung gibt die laufende
+Anwendung selbst aus, mit **F1**. Im Quellbaum liegt dieselbe Datei als
+`HowTo.md` in der Wurzel, und `xtask` backt sie beim Übersetzen ein — fehlt sie,
+übersetzt das Bauwerkzeug nicht, statt ein Paket ohne sie auszuliefern.
 
 **Die alte Fassung vorher nicht löschen.** Ein Überkopieren ist gefahrlos, ein
 Löschen ist es nicht. Werkzeuge, die eine App samt ihrer Stützdateien entfernen
@@ -265,7 +273,7 @@ mit einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt.
 | 5 | Montage | dasselbe Bündel wie `cargo xtask bundle`, nur mit der universellen Binärdatei |
 | 6 | Signieren | Developer-ID, gehärtete Laufzeitumgebung, gesicherter Zeitstempel |
 | 7 | Beglaubigen | `xcrun notarytool submit --wait`, danach `xcrun stapler staple` |
-| 8 | Veröffentlichen | Zip packen, HEAD und Tag schieben, Releaseseite anlegen |
+| 8 | Veröffentlichen | Zip aus Bündel und Anleitung packen, HEAD und Tag schieben, Releaseseite anlegen |
 
 Drei Dinge daran sind nicht offensichtlich:
 
@@ -350,7 +358,7 @@ einmal setzt, tut es mit `export PATH="$HOME/.cargo/bin:$PATH"`.
 | `gh` prüfen | vorhanden (`gh --version` startet) und angemeldet (`gh auth status` gibt null zurück) |
 | Tag prüfen | `v<zahl>` steht auf HEAD |
 | Ticket prüfen | `target/KRK.app/Contents/CodeResources` beginnt mit den vier Bytes `s8ch` |
-| packen | `target/KRK-<zahl>.zip` mit `ditto -c -k --keepParent` |
+| packen | `target/KRK-<zahl>.zip` mit `ditto -c -k --keepParent`, gepackt wird der Ordner `KRK-<zahl>` aus `KRK.app` und `HowTo.md` |
 | schieben | `git push origin HEAD refs/tags/v<zahl>`, ein Aufruf |
 | anlegen | `gh release create v<zahl>`, öffentlich, mit dem Zip als einziger Datei |
 

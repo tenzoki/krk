@@ -1,8 +1,6 @@
 # KRK — Bedienung
 
-Diese Datei beschreibt die Arbeit **mit** KRK. Die Arbeit **am** Programm, also
-Bauen, Signieren, Ausliefern und Versionspflege, steht in `README.md` und wird
-hier nicht wiederholt.
+Diese Datei beschreibt die Arbeit **mit** KRK.
 
 Sie ist kein Vollverzeichnis der Belegung. Die verbindliche Auskunft darüber,
 welche Taste welchen Befehl auslöst, gibt `resources/default-keymap.toml`; in
@@ -16,10 +14,7 @@ falsch ist.
 
 Die neue Fassung über die alte kopieren und die alte **nicht vorher löschen**.
 Werkzeuge, die eine App samt ihrer Stützdateien entfernen, nehmen KRKs
-Ablageordner mit, und darin liegt alles, was sich das Programm merkt. Der volle
-Wortlaut samt Begründung steht in `README.md` unter „Herunterladen und
-installieren"; er steht dort und im festen Text jeder Releaseseite, und eine
-dritte Fassung an dieser Stelle liefe mit der Zeit von beiden weg.
+Ablageordner mit, und darin liegt alles, was sich das Programm merkt.
 
 ---
 
@@ -48,7 +43,7 @@ darinsteht. Für die Einstellungen ist das gewollt, denn ein Schreibpfad löscht
 die Kommentare, die den Sinn der Datei ausmachen; ein Feld, das die eigene Datei
 nicht nennt, kommt ohnehin aus der Auslieferungsfassung.
 
-**Für die Leseprofile hat es einen Preis, den man einmal schmerzhaft lernt.**
+**Für die Leseprofile hat es einen Preis.**
 Eine neue KRK-Fassung bringt neue Profile mit, und wer KRK schon einmal
 gestartet hat, sieht nach der Installation trotzdem weiter genau die Profile von
 vorher. Eine Meldung darüber gibt es nicht, und es wäre auch keine am Platz:
