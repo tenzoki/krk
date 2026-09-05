@@ -813,10 +813,6 @@ fn release_steht_meldung(tag: &str, zip: &Path) -> String {
 mod tests {
     use super::*;
 
-    fn buendel() -> &'static Path {
-        Path::new("/Users/k1/Projects/productive/krk/target/KRK.app")
-    }
-
     /// Das Argument ist genau eines, und es ist eine Versionszahl.
     ///
     /// Dieselbe Bauart wie `beglaubigen_nimmt_genau_ein_argument`: kein
@@ -844,7 +840,7 @@ mod tests {
     /// nicht die Beglaubigung, die selbst schon ein Buendel braucht.
     #[test]
     fn ohne_buendel_nennt_die_meldung_den_ganzen_weg() {
-        let meldung = ohne_buendel_meldung(buendel(), "0.5.6");
+        let meldung = ohne_buendel_meldung(&bundle::pruefbuendel(), "0.5.6");
         assert!(meldung.contains("liegt kein Buendel"), "{meldung}");
         assert!(meldung.contains("baut selbst nichts"), "{meldung}");
         assert!(meldung.contains("./release.sh 0.5.6"), "{meldung}");
@@ -1050,7 +1046,7 @@ mod tests {
     #[test]
     fn ohne_ticket_nennt_die_meldung_den_handgriff() {
         let meldung = ohne_ticket_meldung(
-            buendel(),
+            &bundle::pruefbuendel(),
             "0.5.6",
             "/Users/k1/Projects/productive/krk/target/KRK.app/Contents/CodeResources ist nicht \
              zu lesen: No such file or directory (os error 2)",

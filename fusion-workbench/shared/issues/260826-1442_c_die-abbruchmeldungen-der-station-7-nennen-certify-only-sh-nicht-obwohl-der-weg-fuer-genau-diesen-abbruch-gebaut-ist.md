@@ -26,3 +26,14 @@ In beide späten Zweige dieselbe Abhilfezeile wie in `:335-336`: „Wiederaufnah
 
 **Schwere:** Medium — der Weg existiert, die Meldung, die auf ihn zeigen müsste, schweigt.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, M2
+
+---
+Resolved: Beide spaeten Zweige nennen den Weg. `beglaubigen` (`xtask/src/beglaubigung.rs`) nimmt
+die Versionszahl als zweites Argument — `ausfuehren` reicht sein Argument durch, `release` die
+Zahl aus `env!("CARGO_PKG_VERSION")`, gegen die Station 1 den Tag gehalten hat. Die zwei Meldungen
+sind als reine Funktionen herausgezogen, `einreichungsmeldung` und `heftmeldung`, wie
+`version_pruefen` und `signaturstand_pruefen` daneben; beide enden auf `wiederaufnahme(zahl)`,
+"Wiederaufnahme ohne Neubau, sie reicht dasselbe Buendel noch einmal ein: ./certify-only.sh
+<zahl>". Dass der Weg im Heftzweig mehr tut als heften, steht im Doc-Kommentar von
+`wiederaufnahme`. Der Zweig "Profil fehlt" nennt die Zahl jetzt ebenfalls, statt `<zahl>`
+auszuschreiben. Gehalten von `jeder_abbruch_der_station_sieben_nennt_die_wiederaufnahme`.

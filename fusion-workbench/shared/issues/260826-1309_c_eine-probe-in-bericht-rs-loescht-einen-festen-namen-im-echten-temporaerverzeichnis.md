@@ -41,3 +41,11 @@ Einen `Wegwerfordner` nehmen und den Pfad **darin** wählen (der Wegwerfordner l
 passt hier genau), statt einen festen Namen im Temporärverzeichnis. Drei Zeilen, und die Kiste
 hat danach genau zwei Stellen, die `std::env::temp_dir` nennen: `plan_schreiben` und
 `Wegwerfordner::neu`.
+
+---
+Resolved: `ohne_messungenordner_wird_kein_bericht_geschrieben`
+(`crates/krk-bench/src/bericht.rs`) nimmt ihren Pfad aus einem `Wegwerfordner` und loescht nichts
+mehr; der Wegwerfordner legt nichts an, was hier genau passt. Die Kiste nennt
+`std::env::temp_dir` seither an genau zwei ausfuehrenden Stellen, `plan_schreiben`
+(`messen.rs`) und `Wegwerfordner::neu` (`wegwerfordner.rs`); nachgezaehlt mit
+`grep -rn 'env::temp_dir' crates/krk-bench/src`, die uebrigen Treffer sind Prosa.

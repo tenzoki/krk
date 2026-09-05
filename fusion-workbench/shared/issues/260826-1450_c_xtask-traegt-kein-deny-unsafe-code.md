@@ -17,3 +17,9 @@ Die drei `krk-*`-Kisten erzwingen die Grenze an ihrer Wurzel; das Bauwerkzeug ni
 
 **Schwere:** Low.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, L6
+
+---
+Resolved: `#![deny(unsafe_code)]` steht an der Kistenwurzel, `xtask/src/main.rs`, mit der
+Begruendung als Kommentar darueber. Die zweite Haelfte der Abhilfe, der Satz in `CLAUDE.md` ueber
+die drei Kisten, liegt ausserhalb der Grenze dieses Durchgangs und ist als eigener Befund
+abgelegt: `260905-2155_*_claude-md-nennt-drei-kisten-mit-deny-unsafe-code-seit-heute-tragen-es-vier.md`.

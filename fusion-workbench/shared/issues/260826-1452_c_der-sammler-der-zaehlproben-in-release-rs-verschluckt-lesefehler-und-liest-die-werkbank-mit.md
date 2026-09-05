@@ -18,3 +18,11 @@ Lesefehler in `sammeln` mit `expect` zum Ausfall machen; die Ausschlussliste um 
 
 **Schwere:** Low.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, L8
+
+---
+Resolved: `sammeln` (`xtask/src/release.rs`, Pruefmodul) bricht bei einem unlesbaren Verzeichnis
+und bei einem unlesbaren Eintrag mit einer Meldung ab, die den Pfad nennt, statt still
+zurueckzukehren. Die Ausschlussliste steht als `NICHT_BETRETEN` und fuehrt neben `target` und
+`.git` jetzt `fusion-workbench` und `spikes`; die Begruendung von
+`der_quellbaum_nennt_die_alte_stationszahl_nicht_mehr` steht dort, wo jeder Abnehmer sie erbt.
+Heute traegt keiner der vier Ordner eine `.rs`-Datei. Die drei Abnehmer laufen gruen.

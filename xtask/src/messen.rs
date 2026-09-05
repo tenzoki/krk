@@ -67,7 +67,7 @@ fn kopflos_fahren(argumente: &[String]) -> Result<(), Abbruch> {
 /// gegen keine Zusage abnehmbar ist; der Berichtskopf von `krk-bench` weist
 /// die Bauart zusaetzlich selbst aus.
 fn krk_bench(argumente: &[String]) -> Result<(), Abbruch> {
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
+    let cargo = bundle::cargo();
     let status = Command::new(&cargo)
         .args(["run", "--release", "--package", "krk-bench", "--"])
         .args(argumente)

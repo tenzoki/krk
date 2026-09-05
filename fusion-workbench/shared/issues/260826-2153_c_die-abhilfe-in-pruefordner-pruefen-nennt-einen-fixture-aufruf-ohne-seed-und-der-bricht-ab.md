@@ -52,3 +52,11 @@ A und B tragen dieselbe Eintragszahl und unterscheiden sich allein im Startwert.
 Den Startwert aus dem gelesenen Steckbrief in die Meldung nehmen, wo es einen gibt, und im `None`-Zweig auf den Modulkopf von `main.rs` verweisen statt einen unvollständigen Aufruf zu nennen. Die Form, die `fixture::steckbrief_schreiben` (`fixture.rs:532-534`) in den Steckbrief selbst schreibt, ist vollständig und steht schon da: `cargo run -p krk-bench -- fixture --eintraege N --seed S --out PFAD`.
 
 Gefunden bei der Durchsicht der Behebungsrunde 1, zweiter Teil, Bereich `9c02863..fc829c8`.
+
+---
+Resolved: Beide Zweige von `pruefordner_pruefen` (`crates/krk-bench/src/messen.rs`) nennen den
+Aufruf ueber `neu_erzeugen`. Wo der Steckbrief noch dasteht, traegt die Meldung dessen Startwert
+(`--seed 7`); ohne Steckbrief ist er nicht mehr zu erfahren, und dann nennt sie
+`--seed <startwert>` und verweist auf den Modulkopf von `crates/krk-bench/src/main.rs`, wo die
+drei Aufrufe vollstaendig stehen — statt einen unvollstaendigen Aufruf zu nennen, den `fixture`
+abweist. Gehalten von `die_abhilfe_nennt_den_startwert`, die beide Zweige misst.

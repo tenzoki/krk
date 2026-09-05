@@ -57,6 +57,12 @@ impl Drop for Wegwerfordner {
         // Der Steckbrief liegt **neben** dem Ordner und faellt deshalb nicht
         // mit ihm; ohne diese Zeile blieben Dateien im Temporaerverzeichnis
         // liegen.
+        //
+        // Die zweite Nachbardatei, `<ordner>.zeitmarke`, steht hier bewusst
+        // nicht: sie hat seit dem 260905 ihren eigenen Waechter im Erzeuger
+        // (`fixture::Zeitmarkenwaechter`), und der deckt auch die Rufer
+        // ausserhalb der Proben ab — der Wegwerfordner sieht einen
+        // `krk-bench fixture --out <pfad>` nie.
         if let Ok(steckbrief) = fixture::steckbriefpfad(&self.pfad) {
             let _ = fs::remove_file(steckbrief);
         }

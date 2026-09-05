@@ -55,3 +55,13 @@ weisen je eine Rate aus und könnten den Fall gar nicht zeigen.
 Statt `rate.or(…)` die gemeldete Rate je Runde sammeln und vor `bildlaenge_bilden` auf
 Übereinstimmung prüfen; bei Abweichung abbrechen mit derselben Begründung wie bei einer fehlenden
 Rate. Beide Fundstellen sind zwei Zeilen, `messen.rs:749` und `messen.rs:1042`.
+
+---
+Resolved: `rate.or(gemeldete_rate)` ist an beiden Stellen gefallen. Die je Runde gemeldete Rate
+wird gesammelt und von `rate_ueber_runden` (`crates/krk-bench/src/messen.rs`) auf eine gezogen;
+zwei verschiedene Angaben halten den Lauf an, mit derselben Begruendung, aus der
+`bildlaenge_bilden` bei einer fehlenden Rate abbricht. `Ok(None)` heisst weiterhin "keine Runde
+hat eine gemeldet" und faellt an `bildlaenge_bilden`. Die Meldung nennt beide Raten mit ihrer
+Rundennummer. Der Bedingungskopf beider Berichte (`bericht.rs`, `rate_beschreiben`) sagt jetzt
+"in jeder Runde dieselbe", und dafuer steht die Pruefung ein. Gehalten von
+`zwei_verschiedene_raten_halten_den_lauf_an`.

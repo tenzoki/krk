@@ -44,3 +44,14 @@ mit, wie er die erste trägt — dann bleibt der schmale Weg im Erzeuger selbst 
 außerhalb der Proben. Oder `verknuepfungszeiten_setzen` bekommt einen Wächter derselben Bauform
 wie `Messplanwaechter`: Name zuerst, Wächter zuerst, dann anlegen. Die zweite Fassung deckt beide
 Rufer ab und ist die, die diese Kiste an ihrer anderen Stelle schon gewählt hat.
+
+---
+Resolved: Die zweite der zwei Moeglichkeiten, die den schmalen Weg im Erzeuger selbst schliesst.
+`verknuepfungszeiten_setzen` (`crates/krk-bench/src/fixture.rs`) nimmt den Namen ueber
+`Zeitmarkenwaechter::neben`, bevor `File::create` laeuft; sein `Drop` raeumt die Marke auf jedem
+Weg ab, den `?` nimmt, und beim Abwickeln einer Panik. Dieselbe Bauform wie beim
+`Messplanwaechter`, samt `#[must_use]`. `Wegwerfordner::drop` bleibt unveraendert und sagt im
+Kommentar, warum die zweite Nachbardatei dort nicht steht: sie hat ihren Waechter im Erzeuger, und
+der deckt auch `krk-bench fixture --out <pfad>` ab, das der Wegwerfordner nie sieht. Gehalten von
+`neben_dem_pruefordner_bleibt_keine_zeitmarke_liegen` und
+`der_zeitmarkenwaechter_raeumt_auch_bei_einem_abbruch_ab`.

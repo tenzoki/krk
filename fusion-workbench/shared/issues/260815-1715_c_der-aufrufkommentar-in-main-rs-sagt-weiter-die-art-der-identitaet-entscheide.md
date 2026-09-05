@@ -55,3 +55,9 @@ die Bemerkung zur Architektur (`main.rs:148-152`) trifft zu.
 
 Gemeinsamer Speicher. Betrifft den Bauweg des ganzen Projekts und nicht die Directive einer
 Runde.
+
+---
+Resolved: Der Halbsatz im Aufrufkommentar von `xtask/src/main.rs` sagt jetzt, was
+`sign::weitergabehinweis` tut: entschieden wird am **Namen** der Identitaet und nicht an ihrer
+Art, und die Art wird bewusst nicht aufgeloest. Derselbe Verweis auf die Funktion steht
+unveraendert daneben.

@@ -233,7 +233,7 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         buendel.display()
     );
 
-    beglaubigung::beglaubigen(&buendel)?;
+    beglaubigung::beglaubigen(&buendel, env!("CARGO_PKG_VERSION"))?;
     println!("Beglaubigt und angeheftet: {}", buendel.display());
 
     // Station 8 nimmt die Zahl aus `env!("CARGO_PKG_VERSION")`, denn `release`
@@ -489,6 +489,7 @@ fn dateien_pruefen(
 /// genau die Sammlung von Sonderfaellen, die "supersimpel" ausschliesst.
 /// Nachgesehen am 260807: keine `Cargo.toml` des Workspace benennt eine Kiste
 /// um, und keine Datei unter `crates/` schreibt `extern crate`.
+#[must_use]
 fn verletzt_grenze(zeile: &str) -> bool {
     let inhalt = zeile.trim_start();
     if inhalt.starts_with('/') {
@@ -507,6 +508,7 @@ fn verletzt_grenze(zeile: &str) -> bool {
 ///
 /// Die Zeile wird nicht auf Kommentare geprueft; das erledigt
 /// `verletzt_grenze` vorher.
+#[must_use]
 fn nennt_objc2_pfad(zeile: &str) -> bool {
     let bytes = zeile.as_bytes();
     let mut ab = 0;
@@ -532,6 +534,7 @@ fn nennt_objc2_pfad(zeile: &str) -> bool {
 /// Nur die ASCII-Haelfte: ein Bezeichner darf zwar auch Unicode tragen, aber
 /// keine Kiste des Vorhabens tut das, und ein Fortsetzungsbyte einer deutschen
 /// Umlaut-Kommentarzeile gilt so als Grenze statt als Bezeichnerzeichen.
+#[must_use]
 fn ist_bezeichnerzeichen(zeichen: u8) -> bool {
     zeichen.is_ascii_alphanumeric() || zeichen == b'_'
 }
@@ -552,6 +555,7 @@ fn ist_bezeichnerzeichen(zeichen: u8) -> bool {
 /// Verbraucher die eigene `use objc2`-Zeile erspart. Einen Verstoss gab es
 /// nicht, die Luecke war trotzdem da
 /// (`issues/260806-0834_*_die-appkit-grenzpruefung-uebersieht-pub-use-und-use-mit-fuehrendem-doppelpunkt.md`).
+#[must_use]
 fn ist_objc2_use(zeile: &str) -> bool {
     let ohne_sichtbarkeit = sichtbarkeit_abstreifen(zeile.trim_start());
     let Some(nach_use) = ohne_sichtbarkeit.strip_prefix("use") else {
@@ -573,6 +577,7 @@ fn ist_objc2_use(zeile: &str) -> bool {
 /// `pub`, `pub(crate)`, `pub(super)`, `pub(in ::eine::stelle)` — alles, was
 /// vor `use` stehen darf. Steht keines da oder faengt das Wort nur mit `pub`
 /// an (`public_use`), kommt die Zeile unveraendert zurueck.
+#[must_use]
 fn sichtbarkeit_abstreifen(zeile: &str) -> &str {
     let Some(nach_pub) = zeile.strip_prefix("pub") else {
         return zeile;
@@ -1340,15 +1345,41 @@ pub(crate) mod tests {
         );
     }
 
+    /// Ordner, die der Sammler nicht betritt.
+    ///
+    /// `target` und `.git` sind Bauergebnis und Verwaltung. `fusion-workbench`
+    /// und `spikes` sind Aufzeichnungen eines vergangenen Standes: die Werkbank
+    /// haelt nach der Ortsregel aus `CLAUDE.md` ihren damaligen Wortlaut, und
+    /// die Vorstudien unter `spikes/` sind verworfen und als Aufzeichnung
+    /// behalten. Dieselbe Begruendung fuehrt
+    /// [`der_quellbaum_nennt_die_alte_stationszahl_nicht_mehr`], das sich
+    /// deshalb selbst auf `xtask/` beschraenkt hat; sie steht jetzt hier, wo
+    /// jeder Abnehmer sie erbt. Keiner der vier Ordner traegt heute eine
+    /// `.rs`-Datei — die Liste haelt sie draussen, bevor der erste dort landet.
+    const NICHT_BETRETEN: [&str; 4] = ["target", ".git", "fusion-workbench", "spikes"];
+
+    /// Sammelt die `.rs`-Dateien unter `ordner`, ohne [`NICHT_BETRETEN`].
+    ///
+    /// **Ein Lesefehler bricht ab und wird nicht verschluckt.** Die Abnehmer
+    /// sind Zaehlproben, und eine Zaehlprobe, die weniger liest, als da ist,
+    /// haelt weniger, als sie behauptet: bis zum 260905 kehrte der Sammler bei
+    /// einem unlesbaren Verzeichnis still zurueck, und die zwei Proben darueber
+    /// liefen mit weniger Dateien gruen
+    /// (`shared/issues/260826-1452_*_der-sammler-der-zaehlproben-in-release-rs-verschluckt-lesefehler-und-liest-die-werkbank-mit.md`).
     fn sammeln(ordner: &Path, gefunden: &mut Vec<PathBuf>) {
-        let Ok(eintraege) = fs::read_dir(ordner) else {
-            return;
-        };
-        for eintrag in eintraege.flatten() {
+        let eintraege = fs::read_dir(ordner)
+            .unwrap_or_else(|fehler| panic!("{} ist nicht lesbar: {fehler}", ordner.display()));
+        for eintrag in eintraege {
+            let eintrag = eintrag.unwrap_or_else(|fehler| {
+                panic!(
+                    "ein Eintrag unter {} ist nicht lesbar: {fehler}",
+                    ordner.display()
+                )
+            });
             let pfad = eintrag.path();
             let name = eintrag.file_name();
             if pfad.is_dir() {
-                if name == "target" || name == ".git" {
+                if NICHT_BETRETEN.iter().any(|aus| name == *aus) {
                     continue;
                 }
                 sammeln(&pfad, gefunden);

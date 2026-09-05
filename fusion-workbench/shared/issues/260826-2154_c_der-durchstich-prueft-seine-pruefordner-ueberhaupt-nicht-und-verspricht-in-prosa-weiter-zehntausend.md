@@ -39,3 +39,12 @@ Damit gilt für den Durchstich unverändert, was der Datensatz `260826-1301` fü
 `pruefordner_pruefen` ist schon eine freie Funktion in derselben Datei und nimmt Ordner und erwartete Zahl. Zwei Zeilen am Anfang von `Durchstich::fahren` decken den Weg — oder eine bewusste Gegenentscheidung mit einem Satz am Typ, warum der Durchstich als Frühmessung ohne Zusage-Bindung ohne die Prüfung auskommt. Die beiden Doc-Kommentare `:709` und `:711` ziehen in jedem Fall auf `EINTRAEGE_A` und `EINTRAEGE_GROSS` nach, sonst stehen zwei Zahlen im Baum, die der Commit anderswo gerade entfernt hat.
 
 Gefunden bei der Durchsicht der Behebungsrunde 1, zweiter Teil, Bereich `9c02863..fc829c8`.
+
+---
+Resolved: `Durchstich::fahren` (`crates/krk-bench/src/messen.rs`) haelt seine zwei Pruefordner
+vor der Rundenschleife, mit `is_dir()` und `pruefordner_pruefen`, wie `Gesamtlauf::fahren` es seit
+`960900d` tut. Die zwei Doc-Kommentare der Felder nennen `EINTRAEGE_A` und `EINTRAEGE_GROSS`
+statt "10.000" und "100.000". Der Doc-Kommentar von `fahren` schreibt aus, was dieser Weg **nicht**
+deckt: die zweite Haelfte, der Abgleich der gelesenen Zahl gegen den Steckbrief, steht in
+`Messreihe::fahren`, und der Durchstich ruft keine `Messreihe`. Gehalten von
+`der_durchstich_haelt_seine_pruefordner_gegen_die_zugesagte_zahl`.

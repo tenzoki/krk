@@ -20,3 +20,15 @@ Kein stilles Ausweichen: der Wert kommt vom Nutzer. Die Regel ist für die drei 
 
 **Schwere:** Low.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, L2
+
+---
+Resolved: Der Strich wird benennend abgewiesen, die erste der zwei Moeglichkeiten. `aus_umgebung`
+(`xtask/src/sign.rs`) liefert jetzt `Result<Option<String>, Abbruch>`; die reine Haelfte `aus_wert`
+weist den Wert `-` (Konstante `ADHOC`) mit einer Anleitung ab, statt ihn als Namen durchzureichen.
+Ein `None` waere die falsche Antwort gewesen: die Suche liefe weiter und naehme eine Identitaet,
+die der Nutzer nicht gemeint hat. Der Satz in `sign.rs` und der Hilfetext in `main.rs` bleiben
+absolut und sind damit wahr; der Modulkopf sagt die Regel fuer die ausdrueckliche Angabe eigens.
+Gehalten von `der_strich_signiert_nicht_ad_hoc` und
+`ein_leerer_wert_geht_weiter_und_ein_name_wird_genommen`. Die reine Haelfte ist getrennt, weil
+`std::env::set_var` in dieser Ausgabe von Rust `unsafe` ist und die Kiste seit heute
+`#![deny(unsafe_code)]` traegt.

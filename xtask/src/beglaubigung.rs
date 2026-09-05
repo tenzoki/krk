@@ -138,7 +138,7 @@ pub(crate) fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
          Das Buendel ist damit nicht durch die Vorpruefungen der Auslieferungskette gegangen."
     );
 
-    beglaubigen(&buendel)?;
+    beglaubigen(&buendel, zahl)?;
     println!("Beglaubigt und angeheftet: {}", buendel.display());
     Ok(())
 }
@@ -313,7 +313,7 @@ fn traegt_gehaertete_laufzeitumgebung(anzeige: &str) -> bool {
 /// bewusst erst hier geprueft: fehlt eine, bleibt das gebaute, signierte
 /// Buendel liegen, und die Meldung benennt, was fehlt. Siehe den Modulkopf von
 /// `release`.
-pub(crate) fn beglaubigen(buendel: &Path) -> Result<(), Abbruch> {
+pub(crate) fn beglaubigen(buendel: &Path, zahl: &str) -> Result<(), Abbruch> {
     werkzeug_pruefen("notarytool", buendel)?;
     werkzeug_pruefen("stapler", buendel)?;
 
@@ -332,8 +332,8 @@ pub(crate) fn beglaubigen(buendel: &Path) -> Result<(), Abbruch> {
                  \n\
                  Danach denselben Aufruf noch einmal. Die beiden Huellen setzen die Variable \
                  selbst:\n\
-                 \x20      ./release.sh <zahl>       der ganze Weg\n\
-                 \x20      ./certify-only.sh <zahl>  allein die Beglaubigung",
+                 \x20      ./release.sh {zahl}       der ganze Weg\n\
+                 \x20      ./certify-only.sh {zahl}  allein die Beglaubigung",
                 buendel.display()
             )));
         }
@@ -368,11 +368,10 @@ pub(crate) fn beglaubigen(buendel: &Path) -> Result<(), Abbruch> {
         .map_err(|fehler| Abbruch::Lauf(format!("xcrun laesst sich nicht starten: {fehler}")))?;
     let _ = fs::remove_file(&zip);
     if !eingereicht.success() {
-        return Err(Abbruch::Lauf(format!(
-            "xcrun notarytool submit --wait ist gescheitert ({eingereicht}). Das gebaute und \
-             signierte Buendel liegt unter {}; das Protokoll der Einreichung nennt \
-             \"xcrun notarytool log\" mit der oben gemeldeten Einreichungskennung.",
-            buendel.display()
+        return Err(Abbruch::Lauf(einreichungsmeldung(
+            buendel,
+            zahl,
+            &eingereicht.to_string(),
         )));
     }
 
@@ -382,13 +381,76 @@ pub(crate) fn beglaubigen(buendel: &Path) -> Result<(), Abbruch> {
         .status()
         .map_err(|fehler| Abbruch::Lauf(format!("xcrun laesst sich nicht starten: {fehler}")))?;
     if !angeheftet.success() {
-        return Err(Abbruch::Lauf(format!(
-            "xcrun stapler staple ist gescheitert ({angeheftet}), das Buendel unter {} ist \
-             beglaubigt, traegt die Beglaubigung aber nicht angeheftet.",
-            buendel.display()
+        return Err(Abbruch::Lauf(heftmeldung(
+            buendel,
+            zahl,
+            &angeheftet.to_string(),
         )));
     }
     Ok(())
+}
+
+/// Die Abbruchmeldung, wenn die Einreichung bei Apple gescheitert ist.
+///
+/// Die reine Haelfte des zweiten spaeten Zweigs, aus demselben Grund
+/// herausgezogen wie [`version_pruefen`] und [`signaturstand_pruefen`]: kein
+/// Prozessaufruf, kein Buendel, also an der Funktion abnehmbar. **Das ist der
+/// Fall vom 260820**, fuer den `certify-only.sh` gebaut wurde; der Modulkopf
+/// schreibt ihn aus.
+#[must_use]
+fn einreichungsmeldung(buendel: &Path, zahl: &str, status: &str) -> String {
+    format!(
+        "xcrun notarytool submit --wait ist gescheitert ({status}). Das gebaute und signierte \
+         Buendel liegt unter {}; das Protokoll der Einreichung nennt \"xcrun notarytool log\" \
+         mit der oben gemeldeten Einreichungskennung.\n\
+         \n\
+         {}",
+        buendel.display(),
+        wiederaufnahme(zahl)
+    )
+}
+
+/// Die Abbruchmeldung, wenn das Anheften des Tickets gescheitert ist.
+///
+/// Dieselbe Bauart wie [`einreichungsmeldung`]. Das Buendel ist hier bereits
+/// beglaubigt und traegt den Nachweis nur nicht angeheftet; die Wiederaufnahme
+/// reicht es trotzdem neu ein, denn einen Weg, der allein heftet, gibt es
+/// nicht. [`wiederaufnahme`] sagt es.
+#[must_use]
+fn heftmeldung(buendel: &Path, zahl: &str, status: &str) -> String {
+    format!(
+        "xcrun stapler staple ist gescheitert ({status}), das Buendel unter {} ist beglaubigt, \
+         traegt die Beglaubigung aber nicht angeheftet.\n\
+         \n\
+         {}",
+        buendel.display(),
+        wiederaufnahme(zahl)
+    )
+}
+
+/// Die Abhilfezeile, die von einem gescheiterten Station-7-Lauf weiterfuehrt.
+///
+/// **Der Weg, den sie nennt, ist fuer genau diesen Abbruch gebaut.** Der
+/// Modulkopf schreibt es aus: am 260820 ist die Einreichung am Zeitueberlauf
+/// des Uploads gescheitert, das fertige Buendel lag da, und es fehlte allein
+/// das Ticket. Bis zum 260905 nannte allein der Zweig „Profil fehlt" den Weg,
+/// waehrend die zwei spaeten Zweige — die, die jemand im Fall vom 260820
+/// wirklich liest — Buendelpfad und `notarytool log` nannten und keinen
+/// Wiederaufnahmebefehl
+/// (`shared/issues/260826-1442_*_die-abbruchmeldungen-der-station-7-nennen-certify-only-sh-nicht-obwohl-der-weg-fuer-genau-diesen-abbruch-gebaut-ist.md`).
+///
+/// **Sie steht auch im Heftzweig, obwohl der Weg mehr tut als heften.** Einen
+/// Befehl, der allein heftet, gibt es nicht; `certify-only.sh` reicht neu ein.
+/// Das ist gesagt, statt es dem Leser als Ueberraschung zu lassen.
+///
+/// Die Zahl kommt vom Rufer: `ausfuehren` hat sie im Argument, `release` nimmt
+/// dieselbe, gegen die Station 1 den Tag gehalten hat.
+#[must_use]
+fn wiederaufnahme(zahl: &str) -> String {
+    format!(
+        "Wiederaufnahme ohne Neubau, sie reicht dasselbe Buendel noch einmal ein:\n\
+         \x20      ./certify-only.sh {zahl}"
+    )
 }
 
 /// Prueft, dass `xcrun` das genannte Werkzeug findet.
@@ -490,13 +552,50 @@ Sealed Resources version=2 rules=13 files=1
 Internal requirements count=1 size=176
 ";
 
-    fn buendel() -> &'static Path {
-        Path::new("/Users/k1/Projects/productive/krk/target/KRK.app")
+    /// Jeder Abbruch der Station 7 nennt den Weg, der weiterfaehrt.
+    ///
+    /// **Alle drei Zweige, und nicht mehr nur der erste.** Der Weg
+    /// `./certify-only.sh` ist fuer den zweiten gebaut — die gescheiterte
+    /// Einreichung vom 260820 —, und gerade dort schwieg die Meldung bis zum
+    /// 260905
+    /// (`shared/issues/260826-1442_*_die-abbruchmeldungen-der-station-7-nennen-certify-only-sh-nicht-obwohl-der-weg-fuer-genau-diesen-abbruch-gebaut-ist.md`).
+    /// Der erste Zweig steht als Meldung im Rumpf von [`beglaubigen`] und wird
+    /// deshalb am Quelltext gemessen; die zwei spaeten sind reine Funktionen
+    /// und werden gerufen.
+    #[test]
+    fn jeder_abbruch_der_station_sieben_nennt_die_wiederaufnahme() {
+        let buendel = bundle::pruefbuendel();
+        for meldung in [
+            einreichungsmeldung(&buendel, "1.7.2", "exit status: 1"),
+            heftmeldung(&buendel, "1.7.2", "exit status: 65"),
+        ] {
+            assert!(meldung.contains("./certify-only.sh 1.7.2"), "{meldung}");
+            assert!(meldung.contains("ohne Neubau"), "{meldung}");
+            assert!(
+                meldung.contains(&buendel.display().to_string()),
+                "{meldung}"
+            );
+        }
+        // Der Zweig "Profil fehlt" nennt beide Huellen mit der Zahl; die
+        // Nadeln stehen als `concat!`, weil die Probe in derselben Datei liegt.
+        let quelle = include_str!("beglaubigung.rs");
+        for nadel in [
+            concat!("./certify-only.sh {", "zahl}"),
+            concat!("./release.sh {", "zahl}"),
+        ] {
+            assert!(
+                quelle.contains(nadel),
+                "der Profilzweig nennt {nadel} nicht"
+            );
+        }
     }
 
     #[test]
     fn dieselbe_zahl_laesst_die_beglaubigung_durch() {
-        assert_eq!(version_pruefen("0.5.5", "0.5.5", buendel()), Ok(()));
+        assert_eq!(
+            version_pruefen("0.5.5", "0.5.5", &bundle::pruefbuendel()),
+            Ok(())
+        );
     }
 
     /// Der teuerste Fehler dieses Weges, und die Meldung dazu.
@@ -505,7 +604,7 @@ Internal requirements count=1 size=176
     /// Buendel wuesste der Nutzer nicht, welchen Stand er vor sich hat.
     #[test]
     fn eine_abweichende_zahl_haelt_die_beglaubigung_an() {
-        let meldung = version_pruefen("0.5.6", "0.5.5", buendel())
+        let meldung = version_pruefen("0.5.6", "0.5.5", &bundle::pruefbuendel())
             .expect_err("das Buendel traegt eine andere Zahl");
         assert!(meldung.contains("gereicht ist 0.5.6"), "{meldung}");
         assert!(meldung.contains("traegt 0.5.5"), "{meldung}");
@@ -522,14 +621,17 @@ Internal requirements count=1 size=176
 
     #[test]
     fn das_ausgelieferte_buendel_ist_beglaubigungsfaehig() {
-        assert_eq!(signaturstand_pruefen(AUSGELIEFERT, buendel()), Ok(()));
+        assert_eq!(
+            signaturstand_pruefen(AUSGELIEFERT, &bundle::pruefbuendel()),
+            Ok(())
+        );
     }
 
     /// Ein Buendel aus `cargo xtask bundle` kommt hier nicht durch, und die
     /// Meldung nennt beide Gruende.
     #[test]
     fn ein_entwicklungsbau_haelt_die_beglaubigung_an() {
-        let meldung = signaturstand_pruefen(AUS_DEM_ENTWICKLUNGSBAU, buendel())
+        let meldung = signaturstand_pruefen(AUS_DEM_ENTWICKLUNGSBAU, &bundle::pruefbuendel())
             .expect_err("Entwicklungsidentitaet ohne Haertung");
         assert!(
             meldung.contains(sign::DEVELOPER_ID_PRAEFIX),
@@ -550,7 +652,7 @@ Internal requirements count=1 size=176
     /// Identitaet.
     #[test]
     fn eine_developer_id_ohne_haertung_haelt_die_beglaubigung_an() {
-        let meldung = signaturstand_pruefen(OHNE_HAERTUNG, buendel())
+        let meldung = signaturstand_pruefen(OHNE_HAERTUNG, &bundle::pruefbuendel())
             .expect_err("ohne gehaertete Laufzeitumgebung nimmt Apple nichts an");
         assert!(meldung.contains("gehaertete Laufzeitumgebung"), "{meldung}");
         assert!(

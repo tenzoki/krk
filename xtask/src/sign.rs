@@ -8,6 +8,12 @@
 //! Hash; das System haelt dann jeden Bau fuer eine andere Anwendung und fragt
 //! den Nutzer jedes Mal erneut. Fehlt eine Identitaet, bricht der Bau mit einer
 //! Anleitung ab, statt still auf den bequemen Weg auszuweichen.
+//!
+//! **Die Regel gilt auch fuer die ausdrueckliche Angabe.** `KRK_SIGN_IDENTITY`
+//! schlaegt die Suche, und der Wert `-` waere fuer `codesign --sign` die
+//! Ad-hoc-Identitaet; [`aus_wert`] weist ihn benennend ab. Ohne diese Stelle
+//! deckte der Satz oben die drei Suchstufen und nicht den Weg, auf dem der
+//! Nutzer selbst waehlt.
 
 use std::path::Path;
 use std::process::Command;
@@ -46,7 +52,7 @@ pub struct Identitaet {
 /// der Bau nimmt sie und schreibt hin, welche. Bei null oder mehr als einer
 /// bricht er ab, denn erst dort waere die Wahl geraten.
 pub fn bestimmen() -> Result<Identitaet, Abbruch> {
-    if let Some(name) = aus_umgebung() {
+    if let Some(name) = aus_umgebung()? {
         return Ok(Identitaet {
             name,
             herkunft: UMGEBUNGSVARIABLE.to_owned(),
@@ -79,7 +85,7 @@ pub fn bestimmen() -> Result<Identitaet, Abbruch> {
 /// benennend abbricht — genau der Abnahmeweg, den der Plan fuer diesen Fall
 /// vorschreibt.
 pub fn bestimmen_fuer_release() -> Result<Identitaet, Abbruch> {
-    if let Some(name) = aus_umgebung() {
+    if let Some(name) = aus_umgebung()? {
         return Ok(Identitaet {
             name,
             herkunft: UMGEBUNGSVARIABLE.to_owned(),
@@ -127,6 +133,7 @@ pub fn bestimmen_fuer_release() -> Result<Identitaet, Abbruch> {
 }
 
 /// Liest aus einer Namensliste die Developer-ID-Identitaeten.
+#[must_use]
 fn developer_id_namen(namen: &[String]) -> Vec<String> {
     namen
         .iter()
@@ -251,13 +258,60 @@ fn signieren_mit(buendel: &Path, identitaet: &Identitaet, zusatz: &[&str]) -> Re
     Ok(())
 }
 
-fn aus_umgebung() -> Option<String> {
-    let gesetzt = std::env::var(UMGEBUNGSVARIABLE).ok()?;
+/// Die Ad-hoc-Identitaet, wie `codesign --sign` sie schreibt.
+///
+/// Ein einzelner Strich. `codesign` liest ihn nicht als Namen im
+/// Schluesselbund, sondern als Auftrag, ohne Zertifikat zu signieren.
+const ADHOC: &str = "-";
+
+/// Die ausdrueckliche Angabe aus der Umgebung, falls eine dasteht.
+///
+/// `Ok(None)` heisst: nichts gesetzt oder nur Zwischenraum, die naechste Stufe
+/// ist an der Reihe. Ein leerer Wert ist keine Wahl, sondern eine Variable, die
+/// jemand geloescht hat.
+///
+/// **Der Strich wird benennend abgewiesen und nicht still uebergangen.** Er ist
+/// [`ADHOC`], und das Modul signiert nicht ad hoc; der Modulkopf und der
+/// Hilfetext in `main.rs` sagen es ohne Einschraenkung. Bis zum 260905 kam er
+/// als nichtleerer Wert durch die erste Stufe, und der Bau signierte ad hoc,
+/// waehrend beide Prosastellen das Gegenteil zusagten
+/// (`shared/issues/260826-1446_*_krk-sign-identity-mit-einem-strich-signiert-ad-hoc-und-keine-stelle-sagt-es.md`).
+/// Ein `None` an dieser Stelle waere die falsche Antwort: die Suche liefe
+/// weiter und naehme eine Identitaet, die der Nutzer gerade nicht gemeint hat.
+fn aus_umgebung() -> Result<Option<String>, Abbruch> {
+    let Ok(gesetzt) = std::env::var(UMGEBUNGSVARIABLE) else {
+        return Ok(None);
+    };
+    aus_wert(&gesetzt)
+}
+
+/// Die reine Haelfte von [`aus_umgebung`]: der gesetzte Wert hinein.
+///
+/// Getrennt, weil `std::env::set_var` in dieser Ausgabe von Rust `unsafe` ist
+/// und die Kiste `#![deny(unsafe_code)]` traegt; eine Probe an der Entscheidung
+/// braucht die Umgebung gar nicht.
+fn aus_wert(gesetzt: &str) -> Result<Option<String>, Abbruch> {
     let getrimmt = gesetzt.trim();
     if getrimmt.is_empty() {
-        return None;
+        return Ok(None);
     }
-    Some(getrimmt.to_owned())
+    if getrimmt == ADHOC {
+        return Err(Abbruch::Lauf(format!(
+            "{UMGEBUNGSVARIABLE}={ADHOC:?} waehlt die Ad-hoc-Identitaet, und KRK wird nicht ad \
+             hoc signiert: eine Ad-hoc-Signatur bekommt bei jedem Bau einen anderen Hash, und \
+             der Systemmechanismus fuer Transparenz, Zustimmung und Kontrolle fragt dann bei \
+             jedem Start erneut nach dem Zugriff auf Schreibtisch, Dokumente und Downloads. Es \
+             entsteht kein Buendel.\n\
+             \n\
+             Entweder eine Identitaet beim Namen nennen:\n\
+             \x20      {UMGEBUNGSVARIABLE}=\"<Name der Identitaet>\" cargo xtask bundle\n\
+             \x20      Welche es gibt, zeigt: security find-identity -p codesigning\n\
+             \n\
+             Oder die Variable leeren und die Suche fahren lassen:\n\
+             \x20      unset {UMGEBUNGSVARIABLE}"
+        )));
+    }
+    Ok(Some(getrimmt.to_owned()))
 }
 
 /// Fragt den Schluesselbund nach allen Identitaeten fuer die Codesignatur.
@@ -313,6 +367,7 @@ const ABSCHNITT_GUELTIGE: &str = "Valid identities only";
 /// Sollte Apple die Form eines Tages aendern, ist zu viel zu lesen das kleinere
 /// Uebel: es fuehrt auf denselben benennenden Abbruch wie bisher, waehrend eine
 /// leer gelesene Liste die Suche in die falsche Stufe schickte.
+#[must_use]
 fn abschnitt_der_treffer(liste: &str) -> &str {
     let ab_treffern = match liste.find(ABSCHNITT_TREFFER) {
         Some(stelle) => &liste[stelle + ABSCHNITT_TREFFER.len()..],
@@ -360,6 +415,7 @@ fn security_fragen(argumente: &[&str]) -> Result<String, Abbruch> {
 /// Geprueft wird auf den Namen samt seiner Anfuehrungszeichen, wie
 /// `find-identity` ihn ausgibt. Ohne sie wuerde "KRK Entwicklung" auch auf
 /// "KRK Entwicklung Alt" passen, und signiert wuerde mit der falschen.
+#[must_use]
 fn enthaelt_identitaet(liste: &str, name: &str) -> bool {
     liste.contains(&format!("\"{name}\""))
 }
@@ -371,6 +427,7 @@ fn enthaelt_identitaet(liste: &str, name: &str) -> bool {
 /// eindeutig: `codesign --sign` lehnt einen mehrdeutigen Namen ab. Ein
 /// Zusammenfassen nach Namen wuerde die Mehrdeutigkeit verstecken, statt sie zu
 /// melden.
+#[must_use]
 fn gueltige_namen(liste: &str) -> Vec<String> {
     liste.lines().filter_map(eintragsname).collect()
 }
@@ -389,6 +446,7 @@ fn gueltige_namen(liste: &str) -> Vec<String> {
 /// durchgehen. Der Name steht zwischen dem ersten und dem letzten
 /// Anfuehrungszeichen nach der Klammer; er darf selbst Klammern enthalten, wie
 /// die Team-Kennung im Beispiel zeigt.
+#[must_use]
 fn eintragsname(zeile: &str) -> Option<String> {
     let getrimmt = zeile.trim_start();
     let klammer = getrimmt.find(')')?;
@@ -410,6 +468,7 @@ fn eintragsname(zeile: &str) -> Option<String> {
 /// Zwei Faelle mit verschiedenem Kopf. "Keine gefunden" waere bei mehreren
 /// gueltigen Identitaeten falsch, und eine falsche Meldung ist genau der
 /// Defekt, den die dritte Stufe behebt.
+#[must_use]
 fn anleitung(gueltige: &[String]) -> String {
     let (kopf, nachtrag) = if gueltige.is_empty() {
         (
@@ -621,6 +680,41 @@ Policy: Code Signing
         assert!(!text.contains("bleibt auf dieser Maschine"), "{text}");
     }
 
+    /// Der Strich wird benennend abgewiesen und kommt nicht als Name durch.
+    ///
+    /// `-` ist fuer `codesign --sign` die Ad-hoc-Identitaet. Bis zum 260905
+    /// nahm die erste Suchstufe jeden nichtleeren Wert, und der Bau signierte
+    /// ad hoc, waehrend Modulkopf und Hilfetext die Regel „nicht ad hoc" ohne
+    /// Einschraenkung fuehrten
+    /// (`shared/issues/260826-1446_*_krk-sign-identity-mit-einem-strich-signiert-ad-hoc-und-keine-stelle-sagt-es.md`).
+    #[test]
+    fn der_strich_signiert_nicht_ad_hoc() {
+        let Err(Abbruch::Lauf(meldung)) = aus_wert(ADHOC) else {
+            panic!("der Strich haelt den Bau an");
+        };
+        assert!(meldung.contains("Ad-hoc"), "{meldung}");
+        assert!(meldung.contains(UMGEBUNGSVARIABLE), "{meldung}");
+        assert!(meldung.contains("Es entsteht kein Buendel"), "{meldung}");
+        // Umgeben von Zwischenraum ist es derselbe Wert: getrimmt wird vorher.
+        assert!(matches!(aus_wert("  -  "), Err(Abbruch::Lauf(_))));
+    }
+
+    /// Leer heisst „naechste Stufe", ein Name heisst „diese Identitaet".
+    ///
+    /// Die zwei Zweige neben dem Strich, damit die Abweisung nicht als „jeder
+    /// kurze Wert faellt" durchgeht.
+    #[test]
+    fn ein_leerer_wert_geht_weiter_und_ein_name_wird_genommen() {
+        assert_eq!(aus_wert("").ok(), Some(None));
+        assert_eq!(aus_wert("   ").ok(), Some(None));
+        assert_eq!(
+            aus_wert(&format!("  {ENTWICKLUNGSIDENTITAET}  ")).ok(),
+            Some(Some(ENTWICKLUNGSIDENTITAET.to_owned()))
+        );
+        // Ein Name, der mit dem Strich nur anfaengt, ist keine Ad-hoc-Angabe.
+        assert_eq!(aus_wert("-KRK").ok(), Some(Some("-KRK".to_owned())),);
+    }
+
     /// Bei einer Developer-ID faellt der Warnsatz zur Signatur weg.
     ///
     /// Wer `bundle` ueber die Umgebungsvariable mit einer Developer-ID
@@ -657,10 +751,17 @@ Policy: Code Signing
             assert!(text.contains("keine Beglaubigung annimmt"), "{text}");
             assert!(text.contains("und gehaerteter Laufzeitumgebung"), "{text}");
         }
-        // Eine Beschreibung von `release`, nicht zwei: der Hilfetext traegt
-        // dieselbe Wendung. Faellt sie dort, faellt diese Probe.
+        // Der Hilfetext beschreibt `release` ausfuehrlicher als dieser
+        // Schlusssatz, und das ist in Ordnung. Gekoppelt ist die eine Wendung,
+        // die beide fuehren: faellt sie im Hilfetext, faellt diese Probe.
+        //
+        // Gemessen wird gegen die Konstante `HILFE` und nicht mehr gegen den
+        // Quelltext von `main.rs`: ueber die ganze Datei bliebe die Probe auch
+        // dann gruen, wenn die Wendung aus dem Hilfetext in einen Kommentar
+        // wanderte
+        // (`shared/issues/260815-1716_*_die-include-str-bindung-koppelt-eine-wendung-und-der-kommentar-verspricht-eine-beschreibung.md`).
         assert!(
-            include_str!("main.rs").contains("und gehaerteter Laufzeitumgebung"),
+            crate::HILFE.contains("und gehaerteter Laufzeitumgebung"),
             "der Hilfetext in main.rs nennt die gehaertete Laufzeitumgebung nicht mehr"
         );
     }

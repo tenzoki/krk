@@ -83,9 +83,18 @@ const SYMBOLWERKSTATT: &str = "krk-symbol.iconset";
 /// **Warum erzeugt und nicht eingecheckt.** Eine eingecheckte `.icns` waere
 /// dieselbe Grafik ein zweites Mal im Baum, und die zweite Fassung veraltet
 /// still, sobald jemand ein PNG austauscht. `iconutil` gehoert zum Basissystem
-/// von macOS und liegt unter `/usr/bin/iconutil`, wie `codesign`, ohne das der
-/// Buendelbau ohnehin nicht durchlaeuft; es kommt also keine Voraussetzung
-/// hinzu, die dieses Projekt nicht schon haette.
+/// von macOS, wie `codesign`, ohne das der Buendelbau ohnehin nicht
+/// durchlaeuft; es kommt also keine Voraussetzung hinzu, die dieses Projekt
+/// nicht schon haette.
+///
+/// **Gerufen wird es ueber den Suchpfad und nicht mit vollem Pfad**, anders als
+/// `codesign`, `security`, `ditto`, `xcrun` und `git`. Bis zum 260905 sagten
+/// dieser Satz und die Abbruchmeldung darunter `/usr/bin/iconutil` und
+/// beschrieben damit eine Gewohnheit, die der Aufruf nicht teilt
+/// (`shared/issues/260826-1448_*_iconutil-wird-ueber-den-suchpfad-gerufen-waehrend-kommentar-und-meldung-usr-bin-iconutil-sagen-und-messen-rs-liest-cargo-ein-zweites-mal.md`).
+/// Ob daraus eine Regel wird, ist offen und hier nicht entschieden
+/// (`shared/decisions/260821-1221_*_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`,
+/// dazu `shared/issues/260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`).
 ///
 /// **Die Zuordnung der Kantenlaengen.** Apple erwartet je Punktgroesse eine
 /// einfache und eine `@2x`-Fassung, und `@2x` heisst die doppelte Kantenlaenge
@@ -257,6 +266,7 @@ impl Vorlage {
     ///
     /// Die eine Stelle, die `Contents/MacOS/<CFBundleExecutable>` bildet: die
     /// Montage legt es dorthin, und die Messstrecke ruft es von dort.
+    #[must_use]
     pub(crate) fn binaer_im_buendel(&self, buendel: &Path) -> PathBuf {
         buendel
             .join("Contents")
@@ -272,9 +282,15 @@ impl Vorlage {
 /// aeusseren — und auf diesem Geraet ueberhaupt auffindbar, denn `cargo` steht
 /// hier nicht auf dem Standard-PATH.
 ///
-/// Beide inneren Aufrufe lesen ihn hier: die Uebersetzung in [`uebersetzen`]
-/// und das Auffrischen der `Cargo.lock` in `version`. Zwei Arten, `cargo` zu
-/// finden, waeren zwei Werkzeugketten in einem Lauf.
+/// Jeder innere Aufruf liest ihn hier: die Uebersetzung in [`uebersetzen`],
+/// das Auffrischen der `Cargo.lock` in `version` und der Ruf nach `krk-bench`
+/// in `messen`. Zwei Arten, `cargo` zu finden, waeren zwei Werkzeugketten in
+/// einem Lauf; `messen` hat den Ausdruck bis zum 260905 nachgebaut, statt diese
+/// Funktion zu rufen
+/// (`shared/issues/260826-1448_*_iconutil-wird-ueber-den-suchpfad-gerufen-waehrend-kommentar-und-meldung-usr-bin-iconutil-sagen-und-messen-rs-liest-cargo-ein-zweites-mal.md`).
+/// Eine Zahl steht hier nicht: sie waere mit dem naechsten inneren Aufruf
+/// falsch. Nachgezaehlt wird mit `grep -rn 'bundle::cargo()' xtask/src`.
+#[must_use]
 pub(crate) fn cargo() -> String {
     std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
 }
@@ -291,11 +307,28 @@ pub(crate) fn buendelpfad(wurzel: &Path) -> PathBuf {
     wurzel.join("target").join(BUENDELNAME)
 }
 
+/// Der Buendelpfad fuer die Meldungsproben der beiden spaeten Stationen.
+///
+/// Die Proben in `beglaubigung` und `veroeffentlichung` reichen einen Pfad in
+/// eine reine Meldungsfunktion; welcher, ist fuer ihr Urteil gleichgueltig, und
+/// gerade deshalb standen dort bis zum 260905 zwei Helfer mit dem
+/// ausgeschriebenen Pfad des Referenzgeraets
+/// (`shared/issues/260826-1453_*_zwei-pruefhelfer-und-eine-konstante-in-xtask-tragen-den-absoluten-pfad-des-referenzgeraets.md`).
+/// Der Weg ueber [`buendelpfad`] und [`wurzel`] liefert denselben Wert auf
+/// jedem Geraet und laesst die eine Stelle, die `target/KRK.app`
+/// zusammensetzt, die eine bleiben.
+#[cfg(test)]
+#[must_use]
+pub(crate) fn pruefbuendel() -> PathBuf {
+    buendelpfad(&wurzel())
+}
+
 /// Die Projektwurzel.
 ///
 /// Aus dem Manifestordner von `xtask` abgeleitet und nicht aus dem
 /// Arbeitsverzeichnis: `cargo xtask` laesst sich aus jedem Unterordner rufen,
 /// und das Buendel soll trotzdem immer an derselben Stelle entstehen.
+#[must_use]
 pub(crate) fn wurzel() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -432,7 +465,8 @@ fn symbol_bauen(wurzel: &Path, ziel: &Path) -> Result<(), Abbruch> {
         .map_err(|fehler| {
             Abbruch::Lauf(format!(
                 "iconutil laesst sich nicht starten: {fehler}. Es gehoert zum Basissystem von \
-                 macOS und liegt unter /usr/bin/iconutil."
+                 macOS und wird ueber den Suchpfad gerufen; steht /usr/bin nicht auf PATH, \
+                 findet der Aufruf es nicht."
             ))
         })?;
     if !status.success() {
@@ -462,6 +496,7 @@ fn symbol_bauen(wurzel: &Path, ziel: &Path) -> Result<(), Abbruch> {
 /// folgt. Steht zwischen Schluessel und Wert ein weiterer `<key>`, ist der
 /// gesuchte Schluessel nicht mit einer Zeichenkette belegt, und die Funktion
 /// liefert nichts, statt den Wert des naechsten Schluessels auszugeben.
+#[must_use]
 pub(crate) fn plist_zeichenkette(plist: &str, schluessel: &str) -> Option<String> {
     let marke = format!("<key>{schluessel}</key>");
     let hinter_schluessel = plist.split_once(&marke)?.1;
@@ -519,6 +554,7 @@ pub(crate) fn uebersetzen(
 /// unter `target/<tripel>/<profil>/`. Der Pfad wird hier hergeleitet und nicht
 /// in `release` ein zweites Mal, damit ein geaendertes Profil beide
 /// Unterbefehle gleichzeitig trifft.
+#[must_use]
 pub(crate) fn zielpfad(wurzel: &Path, ziel: Option<&str>, binaername: &str) -> PathBuf {
     let mut pfad = wurzel.join("target");
     if let Some(tripel) = ziel {
@@ -547,6 +583,38 @@ mod tests {
     #[test]
     fn die_ausgelieferte_plist_traegt_den_platzhalter() {
         assert!(version_einsetzen(AUSGELIEFERTE_PLIST).is_ok());
+    }
+
+    /// `CARGO` wird an genau einer Stelle gelesen, und die ist [`cargo`].
+    ///
+    /// Die Zusage des Doc-Kommentars von [`cargo`] steht sonst als Prosa da und
+    /// haelt nichts: `messen.rs` hat den Ausdruck bis zum 260905 nachgebaut,
+    /// und keine Probe hat es gemerkt. Die Nadel steht als `concat!`, weil die
+    /// Probe in derselben Datei liegt, die sie liest; ausgeschrieben zaehlte sie
+    /// sich selbst mit.
+    #[test]
+    fn die_umgebungsvariable_cargo_wird_an_genau_einer_stelle_gelesen() {
+        let nadel = concat!("env::var(\"", "CARGO\")");
+        let ordner = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut stellen = Vec::new();
+        let mut eintraege: Vec<PathBuf> = fs::read_dir(&ordner)
+            .expect("xtask/src ist lesbar")
+            .map(|eintrag| eintrag.expect("der Eintrag ist lesbar").path())
+            .filter(|pfad| pfad.extension().is_some_and(|endung| endung == "rs"))
+            .collect();
+        eintraege.sort();
+        for datei in eintraege {
+            let inhalt = fs::read_to_string(&datei).expect("die Datei ist lesbar");
+            for _ in 0..inhalt.matches(nadel).count() {
+                stellen.push(datei.clone());
+            }
+        }
+        assert_eq!(stellen.len(), 1, "CARGO wird gelesen in {stellen:?}");
+        assert!(
+            stellen[0].ends_with("bundle.rs"),
+            "{:?} statt bundle.rs",
+            stellen[0]
+        );
     }
 
     #[test]

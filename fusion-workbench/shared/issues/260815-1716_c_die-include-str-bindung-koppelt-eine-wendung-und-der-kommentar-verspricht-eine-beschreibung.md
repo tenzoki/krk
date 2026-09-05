@@ -61,3 +61,11 @@ Befund an drei Stellen und gehören in einen Durchgang.
 
 Gemeinsamer Speicher. Betrifft den Bauweg des ganzen Projekts und nicht die Directive einer
 Runde.
+
+---
+Resolved: Beide Haelften. Die Zusicherung in
+`beide_faelle_nennen_die_fehlende_gehaertete_laufzeitumgebung` (`xtask/src/sign.rs`) laeuft gegen
+`crate::HILFE` statt gegen `include_str!("main.rs")`; damit misst sie die Stellung und nicht mehr
+die blosse Mitgliedschaft in der Datei. Der Kommentar daneben sagt nicht mehr "Eine Beschreibung
+von `release`, nicht zwei", sondern was er haelt: der Hilfetext ist ausfuehrlicher, gekoppelt ist
+die eine Wendung, die beide fuehren.

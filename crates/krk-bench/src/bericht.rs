@@ -196,8 +196,44 @@ pub fn schreiben(ziel: &Path, reihe: &Messreihe, text: &str) -> io::Result<PathB
         crate::messen::Cache::Warm => "warm",
     };
     let pfad = ziel.join(format!("{kennung}-kopflos-{ordnername}-{zustand}.txt"));
-    fs::write(&pfad, text)?;
+    ohne_ueberschreiben(&pfad, text)?;
     Ok(pfad)
+}
+
+/// Schreibt den Bericht, und nur dorthin, wo noch keiner steht.
+///
+/// **Der Dateiname hat Minutengenauigkeit, und zwei Laeufe in derselben Minute
+/// bildeten denselben.** `fs::write` legt an oder kuerzt: der zweite Lauf
+/// ueberschrieb den ersten ohne ein Wort. Fuer `messen --kopflos` ist das kein
+/// entlegener Fall — auf einem kleinen Pruefordner sind zwanzig Wiederholungen
+/// in Sekunden durch, und der uebliche Weg, eine Streuung anzusehen, ist, den
+/// Befehl zweimal hintereinander zu geben
+/// (`shared/issues/260826-1307_*_ein-messbericht-kann-einen-frueheren-still-ueberschreiben-der-dateiname-hat-minutengenauigkeit.md`).
+///
+/// **Abgebrochen wird und keine Laufnummer angehaengt.** Dieselbe Haltung wie
+/// bei [`crate::fixture`]s `pruefen_dass_leer`: der Erzeuger ueberschreibt
+/// nichts. Ein Bericht ist der einzige Beleg dafuer, dass eine Zusage gehalten
+/// hat, und ein verlorener Beleg ist an nichts zu erkennen — die Datei steht
+/// da, sie traegt die richtige Zeit, sie enthaelt nur nicht mehr den Lauf, den
+/// jemand meint. Der Abbruch kostet eine Minute Wartezeit.
+///
+/// Die drei Berichtsschreiber der Kiste gehen hier durch: [`schreiben`],
+/// [`gesamt_schreiben`] und `messen::durchstich_schreiben`.
+pub(crate) fn ohne_ueberschreiben(pfad: &Path, text: &str) -> io::Result<()> {
+    if pfad.exists() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            format!(
+                "{} steht schon da. Der Dateiname traegt die Zeit auf die Minute genau, und \
+                 ein zweiter Lauf in derselben Minute wuerde den ersten ueberschreiben; ein \
+                 Bericht ist der einzige Beleg dafuer, dass eine Zusage gehalten hat. Warte \
+                 eine Minute und wiederhole den Lauf, oder raeume die Datei weg, wenn sie \
+                 nicht mehr gebraucht wird. Es wird nichts geschrieben.",
+                pfad.display()
+            ),
+        ));
+    }
+    fs::write(pfad, text)
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +273,7 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
         "Bildwiederholrate",
         &format!(
             "{} Hz, gelesen aus NSScreen.maximumFramesPerSecond am Bildschirm des \
-             gemessenen Fensters; eine Bildlaenge sind damit {}",
+             gemessenen Fensters, in jeder Runde dieselbe; eine Bildlaenge sind damit {}",
             ergebnis.bildwiederholrate,
             spanne(ergebnis.bildlaenge)
         ),
@@ -258,8 +294,16 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
         "Pruefordner A",
         &messen::ordner_beschreiben_mit_gelesenen(&lauf.ordner_a, ergebnis.eintraege_a),
     );
-    // B traegt keine eigene kopflose Reihe: er dient dem Fensterwechsel und
-    // wird nicht gelesen. Fuer ihn bleibt der Steckbrief die einzige Auskunft.
+    // B wird von der **Anwendung** gelesen und von `krk-bench` nicht: der
+    // Messplan schreibt ihn als Tab in beide Dateifenster der Pruefsitzung, und
+    // KRK liest ihn bei jedem L5-Tabwechsel und jedem L5-Fensterwechsel. Genau
+    // deshalb ist seine Eintragszahl Bestandteil der Zusage. Weil aber keine
+    // `Messreihe` ueber ihn laeuft, gibt es hier keine gelesene Zahl, und der
+    // Steckbrief bleibt die einzige Auskunft — dieselbe Lage wie beim
+    // L6-Unterordner darunter. Der Satz sagte bis zum 260905 "er dient dem
+    // Fensterwechsel und wird nicht gelesen", und wer ihn las, hielt B fuer
+    // einen Ordner, dessen Inhalt gleichgueltig ist
+    // (`shared/issues/260826-2155_*_pruefordner-b-und-der-l6-unterordner-werden-nur-gegen-ihren-steckbrief-gehalten-und-der-kommentar-sagt-b-werde-nicht-gelesen.md`).
     zeile("Pruefordner B", &messen::ordner_beschreiben(&lauf.ordner_b));
     zeile(
         "Pruefordner 100k",
@@ -501,7 +545,7 @@ pub fn gesamt_schreiben(ziel: &Path, text: &str) -> io::Result<PathBuf> {
         "{}-alle-zusagen.txt",
         kurzstempel(SystemTime::now())
     ));
-    fs::write(&pfad, text)?;
+    ohne_ueberschreiben(&pfad, text)?;
     Ok(pfad)
 }
 
@@ -702,6 +746,7 @@ pub fn spanne(dauer: Duration) -> String {
 mod tests {
     use super::*;
     use crate::messen::{Cache, Messgroesse};
+    use crate::wegwerfordner::Wegwerfordner;
 
     fn probe_reihe() -> Messreihe {
         let werte: Vec<Duration> = (1..=20).map(Duration::from_millis).collect();
@@ -934,12 +979,44 @@ mod tests {
         );
     }
 
+    /// Ohne Messungenordner entsteht kein Bericht.
+    ///
+    /// **Der Pfad kommt aus einem [`Wegwerfordner`] und traegt keinen festen
+    /// Namen.** Der Wegwerfordner legt nichts an, was hier genau passt: der
+    /// Pfad soll ja fehlen. Bis zum 260905 baute die Probe sich
+    /// `std::env::temp_dir().join("krk-bench-gibt-es-nicht")` und rief darauf
+    /// `fs::remove_dir_all` — ein Loeschen auf einen von aussen waehlbaren,
+    /// festen Pfad im echten Temporaerverzeichnis, und genau in dieser Form ist
+    /// derselbe Schaden in dieser Kiste schon zweimal entstanden
+    /// (`shared/issues/260826-1309_*_eine-probe-in-bericht-rs-loescht-einen-festen-namen-im-echten-temporaerverzeichnis.md`).
     #[test]
     fn ohne_messungenordner_wird_kein_bericht_geschrieben() {
-        let fehlt = std::env::temp_dir().join("krk-bench-gibt-es-nicht");
-        let _ = fs::remove_dir_all(&fehlt);
+        let fehlt = Wegwerfordner::neu("kein-messungenordner");
         let fehler =
-            schreiben(&fehlt, &probe_reihe(), "egal").expect_err("haette scheitern muessen");
+            schreiben(fehlt.pfad(), &probe_reihe(), "egal").expect_err("haette scheitern muessen");
         assert_eq!(fehler.kind(), io::ErrorKind::NotFound);
+    }
+
+    /// Ein zweiter Bericht ueberschreibt den ersten nicht.
+    ///
+    /// Der Name traegt die Zeit auf die Minute genau; zwei Laeufe in derselben
+    /// Minute bilden denselben Pfad. Gemessen wird an der Wache selbst und
+    /// nicht ueber zwei Laeufe, denn ein Lauf dauert Sekunden und die Minute
+    /// waere nicht sicher dieselbe.
+    #[test]
+    fn ein_stehender_bericht_wird_nicht_ueberschrieben() {
+        let ordner = Wegwerfordner::neu("berichtsziel");
+        fs::create_dir_all(ordner.pfad()).expect("der Ordner laesst sich anlegen");
+        let pfad = ordner.pfad().join("260905-1200-alle-zusagen.txt");
+
+        ohne_ueberschreiben(&pfad, "der erste Lauf").expect("der erste Bericht wird geschrieben");
+        let fehler =
+            ohne_ueberschreiben(&pfad, "der zweite Lauf").expect_err("haette scheitern muessen");
+        assert_eq!(fehler.kind(), io::ErrorKind::AlreadyExists);
+        assert!(fehler.to_string().contains("Es wird nichts geschrieben"));
+        assert_eq!(
+            fs::read_to_string(&pfad).expect("der erste Bericht steht noch"),
+            "der erste Lauf"
+        );
     }
 }

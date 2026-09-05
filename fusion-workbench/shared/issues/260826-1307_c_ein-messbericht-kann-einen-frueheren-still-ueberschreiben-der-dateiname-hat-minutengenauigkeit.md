@@ -47,3 +47,11 @@ Vor dem Schreiben prüfen, ob der Pfad schon steht, und dann entweder abbrechen 
 wie `pruefen_dass_leer` in `fixture.rs:373-392`: „Der Erzeuger ueberschreibt nichts") oder eine
 Laufnummer anhängen. Der Abbruch passt besser zur Haltung dieser Kiste; er kostet den Messenden
 eine Minute Wartezeit und keinen Beleg.
+
+---
+Resolved: Abbruch statt Laufnummer, die Haltung von `pruefen_dass_leer`. Alle drei
+Berichtsschreiber gehen ueber `bericht::ohne_ueberschreiben` (`crates/krk-bench/src/bericht.rs`):
+`schreiben`, `gesamt_schreiben` und `messen::durchstich_schreiben`. Steht der Pfad schon,
+liefert es `io::ErrorKind::AlreadyExists` mit der Abhilfe "warte eine Minute" und schreibt
+nichts. Gehalten von `ein_stehender_bericht_wird_nicht_ueberschrieben`, die auch nachsieht, dass
+der erste Bericht unveraendert dasteht.

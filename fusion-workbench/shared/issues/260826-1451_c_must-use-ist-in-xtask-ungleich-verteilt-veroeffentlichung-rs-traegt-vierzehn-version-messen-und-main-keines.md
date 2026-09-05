@@ -24,3 +24,11 @@ Heute lässt kein Rufer eine davon fallen; der Befund ist die Regel aus `CLAUDE.
 
 **Schwere:** Low.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, L7
+
+---
+Resolved: `#[must_use]` steht an jeder der 31 reinen Antworten, die der Befund
+auffuehrt — zehn in `xtask/src/git.rs`, sieben in `sign.rs`, fuenf in `bundle.rs`, fuenf in
+`release.rs`, vier in `version.rs`. Nachgezaehlt mit `grep -c '#\[must_use\]' xtask/src/*.rs`.
+`messen.rs` und `main.rs` fuehren keine reine Antwort und bekommen keines; der Titel nennt sie
+als Zaehlbefund und die Tabelle des Befunds fuehrt fuer sie keine Zeile. `cargo clippy -p xtask
+--all-targets -- -D warnings` laeuft gruen, kein Rufer laesst einen der Werte fallen.

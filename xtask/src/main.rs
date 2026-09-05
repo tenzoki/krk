@@ -14,6 +14,14 @@
 //! Zusage zum Zugriff auf geschuetzte Ordner ist deshalb nur am signierten
 //! Buendel pruefbar, und das Buendel steht daher vor dem ersten Fenster.
 
+// Dieselbe Grenze wie an der Wurzel von `krk-core`, `krk-ui` und `krk-bench`.
+// Das Werkzeug hat heute keine `unsafe`-Stelle und braucht keine: es ruft
+// fremde Programme und schreibt Dateien, beides ohne fremde
+// Anwendungsschnittstelle. Ohne die Zeile fiele eine spaeter eingebaute Stelle
+// gerade in der Kiste nicht auf, die in den Arbeitsbaum schreibt und
+// ausliefert.
+#![deny(unsafe_code)]
+
 mod beglaubigung;
 mod bundle;
 mod git;
@@ -212,8 +220,9 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
             // Der Abschlusshinweis haengt an diesem Unterbefehl und nicht an
             // `bundle::bauen`: `messen --alle` baut dasselbe Buendel fuer eine
             // Messung und gibt es nicht weiter, und `release` faehrt genau den
-            // Weg, auf den der Hinweis zeigt. Was er sagt, entscheidet die Art
-            // der Identitaet; siehe [`sign::weitergabehinweis`].
+            // Weg, auf den der Hinweis zeigt. Was er sagt, entscheidet der
+            // **Name** der Identitaet und nicht ihre Art: aufgeloest wird die
+            // Art bewusst nicht; siehe [`sign::weitergabehinweis`].
             //
             // Die Architektur der Baumaschine steht schon beim Uebersetzen
             // fest, wird aber unter dem Namen gemeldet, den `lipo` benutzt:

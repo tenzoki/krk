@@ -19,3 +19,19 @@ Für 1 entweder den Aufruf auf `/usr/bin/iconutil` stellen oder die zwei Sätze 
 
 **Schwere:** Low.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, L4
+
+---
+Resolved: Beide Punkte, und der Entscheid `260821-1221_*_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`
+bleibt unberuehrt offen.
+
+1. Der Aufruf steht unveraendert auf dem Suchpfad; die zwei Prosastellen sagen jetzt, was er tut.
+   Der Doc-Kommentar bei `SYMBOLGROESSEN` (`xtask/src/bundle.rs`) nennt `iconutil` als Werkzeug
+   des Basissystems ohne den festen Pfad und schreibt aus, dass es ueber den Suchpfad gerufen
+   wird, mit Verweis auf den offenen Entscheid und auf
+   `260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`.
+   Die Abbruchmeldung in `symbol_bauen` nennt statt `/usr/bin/iconutil` den Suchpfad.
+2. `xtask/src/messen.rs` ruft `bundle::cargo()`, statt den Ausdruck ein drittes Mal nachzubauen.
+   Der Doc-Kommentar von `cargo()` nennt keine Zahl mehr, sondern die Regel und das Kommando, das
+   sie zaehlt. Verankert ist sie durch die Probe
+   `die_umgebungsvariable_cargo_wird_an_genau_einer_stelle_gelesen` (`bundle.rs`), die rot wird,
+   sobald ein zweiter Leser dazukommt.

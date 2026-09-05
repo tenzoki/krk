@@ -1,0 +1,34 @@
+`CLAUDE.md` nennt drei Kisten mit `#![deny(unsafe_code)]`, seit heute tragen es vier
+---
+`xtask` hat die Zeile bekommen; der Satz in `CLAUDE.md` zaehlt weiter `krk-core`, `krk-ui` und `krk-bench` auf und uebergeht sie.
+---
+**Filed by:** coder, Kai Stalmann <kai@stalmann.org>
+**Domain:** code
+**Schwere:** Niedrig
+**Betroffen:** `CLAUDE.md`, Abschnitt „Projektstand", letzter Absatz vor „Bauen und pruefen"
+**Cross-references:** `260826-1450_*_xtask-traegt-kein-deny-unsafe-code.md` (geschlossen; die zweite Haelfte seiner Abhilfe steht hier)
+
+## Befund
+
+`CLAUDE.md` sagt: „`krk-core`, `krk-ui` und `krk-bench` tragen `#![deny(unsafe_code)]` an ihrer
+Kistenwurzel; die Ausnahme `#![allow(unsafe_code)]` steht nur in `krk-core/src/verzeichnis/sys.rs`
+und `krk-ui/src/appkit/mod.rs`. Der Bau erzwingt diese Grenze."
+
+`xtask/src/main.rs` traegt die Zeile seit dem 260905. Die Aufzaehlung ist damit unvollstaendig,
+und der Satz daneben liest sich als Grenze, die fuer das Bauwerkzeug nicht gilt — gerade fuer die
+Kiste, die neun fremde Programme ruft und in den Arbeitsbaum schreibt.
+
+Der geschlossene Befund `260826-1450` nennt beide Haelften der Abhilfe: die Zeile in `main.rs` und
+„den `CLAUDE.md`-Satz auf ‚vier Kisten' oder auf die Regel stellen". Die erste ist getan, die
+zweite lag ausserhalb der Grenze jenes Durchgangs.
+
+## Abhilfe
+
+Den Satz auf die Regel stellen statt auf eine Aufzaehlung, die mit der naechsten Kiste wieder
+falsch wird: jede Kiste des Workspace traegt `#![deny(unsafe_code)]` an ihrer Wurzel, und die
+Ausnahmen stehen namentlich. Gezaehlt wird mit
+`grep -rn '#!\[deny(unsafe_code)\]' crates/*/src/*.rs xtask/src/main.rs`.
+
+## Abnahme
+
+Der Satz in `CLAUDE.md` nennt keine Kistenliste mehr, oder er nennt `xtask` mit.

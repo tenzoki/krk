@@ -45,3 +45,12 @@ nicht. Für die Kennzahlen (`bestes_perzentil`, `minimum`, `maximum`) ist der R�
 für sich genommen vertretbar, solange das Urteil ihn nicht mehr als „schnell" liest — geprüft
 werden sollte trotzdem, ob der Bericht an solchen Stellen `-` schreiben kann, wie er es für die
 Spalten „im Bild" und „hoechstwert" schon tut (`messen.rs:1925` und `1929`).
+
+---
+Resolved: Der Perzentil-Zweig von `Zusage::gehalten_in` (`crates/krk-bench/src/messen.rs`) traegt
+dieselbe Wache wie der Anteils-Zweig daneben: eine Runde ohne Werte haelt nicht. Der Nenner bleibt
+`self.runden.len()` und ist derselbe wie zuvor. Die Kennzahlen `bestes_perzentil`, `minimum` und
+`maximum` fallen weiter auf null zurueck; der Befund haelt das fuer vertretbar, solange das Urteil
+den Rueckfall nicht mehr als "schnell" liest, und genau das ist jetzt der Fall. Gehalten von
+`eine_runde_ohne_werte_haelt_bei_keinem_der_zwei_masse`, die beide Masse an derselben Eingabe
+misst.

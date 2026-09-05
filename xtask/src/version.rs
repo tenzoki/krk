@@ -269,6 +269,7 @@ fn mit_ruecknahme(fehler: Abbruch, voriger: &[(PathBuf, String)]) -> Abbruch {
 }
 
 /// Schreibt die gemerkten Staende zurueck und meldet, ob es gelungen ist.
+#[must_use]
 fn zuruecknehmen(voriger: &[(PathBuf, String)]) -> String {
     let misslungen: Vec<String> = voriger
         .iter()
@@ -385,6 +386,7 @@ fn vorhaben_bestimmen(
 /// den Leser suchen; vier Dateien beim Namen sagen ihm in einer Zeile, ob er
 /// vergessene Arbeit vor sich hat oder den bekannten Befund aus
 /// `shared/issues/260813-1515_*`, den kein Agentenlauf loslaesst.
+#[must_use]
 fn arbeitsbaum_meldung(geaendert: &[&str], zahl: &str) -> String {
     let aufzaehlung: Vec<String> = geaendert
         .iter()
@@ -512,6 +514,7 @@ fn versionsfeld_finden(inhalt: &str) -> Result<(Range<usize>, &str), String> {
 ///
 /// Steht getrennt, weil sie die einzige Stelle mit Byteversaetzen ist und ihre
 /// Faelle sich einzeln nachsehen lassen.
+#[must_use]
 fn wertspanne(zeile: &str) -> Option<Range<usize>> {
     let nach_namen = zeile.strip_prefix("version")?;
     // `versionsnummer = …` faengt genauso an und ist etwas anderes.
@@ -528,6 +531,7 @@ fn wertspanne(zeile: &str) -> Option<Range<usize>> {
 /// Die Meldung des Eintrags.
 ///
 /// Deutsch hinter dem englischen Typ, wie jeder Eintrag dieses Baums.
+#[must_use]
 fn eintragsmeldung(neu: &str) -> String {
     format!("chore(release): die Version steht auf {neu}")
 }

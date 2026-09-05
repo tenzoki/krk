@@ -18,3 +18,10 @@ Beide Helfer auf `bundle::buendelpfad(&bundle::wurzel())` stellen; einer davon g
 
 **Schwere:** Low.
 **Gefunden:** coderev, Durchsicht `shared/reviews/260826-1440-coderev-vollbaum-xtask-und-die-huellen.md`, L9
+
+---
+Resolved: Die zwei Helfer `buendel()` sind gefallen; an ihre Stelle tritt ein Helfer,
+`bundle::pruefbuendel()` in `xtask/src/bundle.rs`, `#[cfg(test)] pub(crate)`, der ueber
+`buendelpfad(&wurzel())` geht. Beide Probenmodule rufen ihn (`beglaubigung.rs`,
+`veroeffentlichung.rs`). Die aufgezeichnete `codesign`-Ausgabe `AUSGELIEFERT` traegt den Pfad
+weiter; dort ist er Datum, wie der Befund selbst festhaelt.

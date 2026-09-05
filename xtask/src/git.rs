@@ -170,6 +170,7 @@ impl Gestalt {
     ///
     /// Vollstaendige Fallunterscheidung ohne Auffangzweig: eine fuenfte Gestalt
     /// haelt hier den Bau an.
+    #[must_use]
     fn befund(self, wert: &str) -> Option<String> {
         match self {
             Gestalt::Tagname => tagnamenbefund(wert),
@@ -211,6 +212,7 @@ impl Gestalt {
 /// Antwort auf dieselbe Frage. Was dieses Werkzeug taggt, ist ausschliesslich
 /// ein Stand mit einer Versionszahl — wer es anders braucht, aendert die
 /// Gestalt hier und weiss dann, was er tut.
+#[must_use]
 fn tagnamenbefund(name: &str) -> Option<String> {
     let Some(zahl) = name.strip_prefix('v') else {
         return Some(format!(
@@ -223,6 +225,7 @@ fn tagnamenbefund(name: &str) -> Option<String> {
 }
 
 /// Warum dieser Wert ein Steuerzeichen traegt, oder `None`.
+#[must_use]
 fn steuerzeichenbefund(was: &str, wert: &str) -> Option<String> {
     let zeichen = wert.chars().find(|zeichen| zeichen.is_control())?;
     Some(format!(
@@ -543,6 +546,7 @@ const GEWALTBUCHSTABEN: [char; 3] = ['f', 'd', 'a'];
 /// was ihn haelt, ist die Aufzaehlung [`Auftrag`] und der Blick dessen, der
 /// eine Variante hinzufuegt. Und ein Prozessaufruf an [`rufen`] vorbei erreicht
 /// sie gar nicht — dazu der Modulkopf.
+#[must_use]
 fn aufsichtsbefund(wirkung: Wirkung, plaetze: &[Wort<'_>]) -> Option<String> {
     let Some(erstes) = plaetze.first() else {
         return Some("es steht gar kein Unterbefehl da".to_owned());
@@ -606,6 +610,7 @@ fn aufsichtsbefund(wirkung: Wirkung, plaetze: &[Wort<'_>]) -> Option<String> {
 ///
 /// Vollstaendige Fallunterscheidung ohne Auffangzweig: eine fuenfte Gestalt
 /// haelt hier den Bau an und muss sagen, wo sie stehen darf.
+#[must_use]
 fn stellungsbefund(gestalt: Gestalt, davor: &[Wort<'_>]) -> Option<String> {
     match gestalt {
         Gestalt::Meldung => (davor.last() != Some(&Wort::Fest("-m"))).then(|| {
@@ -624,6 +629,7 @@ fn stellungsbefund(gestalt: Gestalt, davor: &[Wort<'_>]) -> Option<String> {
 /// Die innerste Haelfte der Aufsicht, getrennt, weil ihre fuenf Faelle sich
 /// einzeln nachsehen lassen. **Sie gilt nur fuer feste Woerter** — der
 /// Vorbehalt, unter dem sie steht, haengt am Doc-Kommentar von [`MARKEN`].
+#[must_use]
 fn gewaltbefund(wort: &str) -> Option<String> {
     if wort == TRENNER {
         return None;
@@ -686,6 +692,7 @@ fn markenmeldung(wort: &str, eintrag: &str, wirkt: &str) -> String {
 /// und die Eintragsmeldung braucht `-m`. Kurze Gruppen liest [`kurze_marke`],
 /// Buchstabe fuer Buchstabe. Der Trenner `--` ist der Anfang jeder langen
 /// Marke und faellt ebenfalls heraus; ihn haelt [`gewaltbefund`] vorweg ab.
+#[must_use]
 fn verwandte_marke<'l>(liste: &'l [&'l str], wort: &str) -> Option<&'l str> {
     let kern = wort.split('=').next().unwrap_or(wort);
     if kern == TRENNER || !kern.starts_with(TRENNER) {
@@ -701,6 +708,7 @@ fn verwandte_marke<'l>(liste: &'l [&'l str], wort: &str) -> Option<&'l str> {
 ///
 /// Eine kurze Gruppe ist ein Strich und danach nur Buchstaben: `-f`, `-fd`,
 /// `-m`. Der Trenner `--`, jede lange Marke und jeder Pfad fallen heraus.
+#[must_use]
 fn kurze_marke(wort: &str) -> Option<&str> {
     let ohne_strich = wort.strip_prefix('-')?;
     if ohne_strich.is_empty()
@@ -770,6 +778,7 @@ pub(crate) fn rufen(wurzel: &Path, auftrag: &Auftrag<'_>) -> Result<String, Abbr
 /// `--porcelain` voranstellt. Leerzeilen fallen weg; der Rest bleibt so
 /// stehen, wie `git` ihn schreibt, damit die Meldung die Datei so nennt, wie
 /// der Nutzer sie im naechsten `git status` wiederfindet.
+#[must_use]
 pub(crate) fn geaenderte_dateien(ausgabe: &str) -> Vec<&str> {
     ausgabe
         .lines()
@@ -782,6 +791,7 @@ pub(crate) fn geaenderte_dateien(ausgabe: &str) -> Vec<&str> {
 ///
 /// Verglichen wird die ganze Zeile und nicht ihr Anfang: sonst deckte
 /// `v0.1.0-rc1` die Auslieferung von `0.1.0`.
+#[must_use]
 pub(crate) fn tag_steht(tags_auf_head: &str, erwartet: &str) -> bool {
     tags_auf_head.lines().any(|zeile| zeile.trim() == erwartet)
 }

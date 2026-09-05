@@ -446,17 +446,64 @@ fn verknuepfungszeiten_setzen(
         return Ok(());
     }
 
-    let marke = markenpfad(ziel)?;
+    // Der Waechter steht, bevor irgendetwas angelegt wird — dieselbe Bauform
+    // wie beim Messplanwaechter, und aus demselben Grund. Bis zum 260905 raeumte
+    // die Zeile hinter `touch_laufen_lassen` ab, und genau ein Weg lief daran
+    // vorbei: `File::create` gelingt, `set_times` scheitert, das `?` kehrt
+    // zurueck, und die eben angelegte Marke bleibt liegen — als
+    // `<pruefordner>.zeitmarke` im Messplatz, neben einem Ordner, der bis zum
+    // naechsten Abnahmelauf steht
+    // (`shared/issues/260826-1308_*_der-wegwerfordner-raeumt-den-steckbrief-neben-sich-ab-die-zweite-nachbardatei-zeitmarke-nicht.md`).
+    let marke = Zeitmarkenwaechter::neben(ziel)?;
     let mut zufall = Zufall::neu(startwert ^ 0x3C3C_3C3C_3C3C_3C3C);
     let zeitpunkt =
         UNIX_EPOCH + Duration::from_secs(zufall.zwischen(ZEITBASIS, ZEITBASIS + ZEITSPANNE));
-    let datei = File::create(&marke)?;
+    let datei = File::create(marke.pfad())?;
     datei.set_times(zeiten(zeitpunkt))?;
     drop(datei);
 
-    let ergebnis = touch_laufen_lassen(&marke, verknuepfungen);
-    let _ = fs::remove_file(&marke);
-    ergebnis
+    touch_laufen_lassen(marke.pfad(), verknuepfungen)
+}
+
+/// Die Zeitmarke neben dem Pruefordner, solange `touch` sie braucht.
+///
+/// **Warum ein Waechter und keine Zeile am Ende.** Sie ist eine Hilfsdatei und
+/// sagt nichts aus; anders als der Steckbrief sieht sie nur aus, als gehoerte
+/// sie dazu. Bleibt sie liegen, liegt sie dauerhaft im Messplatz unter
+/// `~/Library/Caches/krk-messplatz`. Der Waechter deckt jeden Weg heraus, den
+/// `?` nimmt, und das Abwickeln einer Panik dazu; dieselbe Ueberlegung wie bei
+/// [`crate::messen`]s Messplanwaechter und bei
+/// [`crate::wegwerfordner::Wegwerfordner`].
+///
+/// **Der Name steht fest, bevor die Datei entsteht.** Entstuende der Waechter
+/// erst aus dem Ergebnis von `File::create`, kehrte das `?` vorher zurueck und
+/// deckte gerade den Weg nicht ab, um den es geht. Ein [`Drop`] auf eine nie
+/// angelegte Datei ist folgenlos: `remove_file` liefert `NotFound`, und der
+/// Rueckgabewert wird verworfen.
+#[must_use]
+struct Zeitmarkenwaechter {
+    pfad: PathBuf,
+}
+
+impl Zeitmarkenwaechter {
+    /// Ein Pfad neben dem Pruefordner. Angelegt wird hier nichts.
+    fn neben(ziel: &Path) -> io::Result<Self> {
+        Ok(Self {
+            pfad: markenpfad(ziel)?,
+        })
+    }
+
+    fn pfad(&self) -> &Path {
+        &self.pfad
+    }
+}
+
+impl Drop for Zeitmarkenwaechter {
+    fn drop(&mut self) {
+        // Ungemeldet: eine nicht geloeschte Marke kostet eine Datei, und eine
+        // Meldung stuende vor dem Erzeugungslauf, um den es geht.
+        let _ = fs::remove_file(&self.pfad);
+    }
 }
 
 fn touch_laufen_lassen(marke: &Path, verknuepfungen: &[PathBuf]) -> io::Result<()> {
@@ -586,6 +633,49 @@ mod tests {
     use std::collections::HashSet;
 
     use crate::wegwerfordner::Wegwerfordner;
+
+    /// Neben dem Pruefordner bleibt nur der Steckbrief stehen.
+    ///
+    /// Die Zeitmarke ist eine Hilfsdatei und sagt nichts aus; sie sieht nur
+    /// aus, als gehoerte sie dazu. Ihr Waechter raeumt sie auf jedem Weg
+    /// heraus, den `?` nimmt, und nicht mehr nur auf den zwei gewoehnlichen
+    /// (`shared/issues/260826-1308_*_der-wegwerfordner-raeumt-den-steckbrief-neben-sich-ab-die-zweite-nachbardatei-zeitmarke-nicht.md`).
+    #[test]
+    fn neben_dem_pruefordner_bleibt_keine_zeitmarke_liegen() {
+        let wurzel = Wegwerfordner::neu("zeitmarke");
+        fs::create_dir_all(wurzel.pfad()).expect("Anlegen gescheitert");
+        let ziel = wurzel.pfad().join("a");
+        let erzeugt = erzeugen(&ziel, 400, 1).expect("Erzeugen gescheitert");
+        assert!(
+            erzeugt.verknuepfungen > 0,
+            "ohne Verknuepfungen entsteht gar keine Marke; die Probe misst dann nichts"
+        );
+
+        let marke = markenpfad(&ziel).expect("der Markenpfad steht");
+        assert!(!marke.exists(), "{} liegt noch da", marke.display());
+        assert!(steckbriefpfad(&ziel).expect("Pfad").exists());
+    }
+
+    /// Der Waechter raeumt auch dann ab, wenn nach ihm etwas scheitert.
+    ///
+    /// Der schmale Weg des Befunds: die Marke ist angelegt, der naechste
+    /// Schritt kehrt mit `?` zurueck. Nachgestellt wird er, indem der Waechter
+    /// selbst faellt, waehrend die Datei steht — dieselbe Bahn, die ein `?`
+    /// nimmt.
+    #[test]
+    fn der_zeitmarkenwaechter_raeumt_auch_bei_einem_abbruch_ab() {
+        let wurzel = Wegwerfordner::neu("zeitmarke-abbruch");
+        fs::create_dir_all(wurzel.pfad()).expect("Anlegen gescheitert");
+        let ziel = wurzel.pfad().join("a");
+
+        let marke = {
+            let waechter = Zeitmarkenwaechter::neben(&ziel).expect("der Pfad steht");
+            File::create(waechter.pfad()).expect("die Marke laesst sich anlegen");
+            assert!(waechter.pfad().exists());
+            waechter.pfad().to_path_buf()
+        };
+        assert!(!marke.exists(), "{} liegt noch da", marke.display());
+    }
 
     #[test]
     fn die_groessenklassen_gehen_auf_tausend_auf() {

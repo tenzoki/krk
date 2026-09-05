@@ -597,9 +597,21 @@ impl Zusage {
     pub fn gehalten_in(&self) -> Option<(usize, usize)> {
         match self.mass {
             Abnahmemass::Perzentil(grenze) => {
-                let perzentile = self.perzentile();
-                let gehalten = perzentile.iter().filter(|wert| **wert <= grenze).count();
-                Some((gehalten, perzentile.len()))
+                // Eine Runde ohne Werte haelt nicht — dieselbe Wache wie im
+                // Anteils-Zweig darunter, und aus demselben Grund. `perzentil`
+                // liefert fuer eine leere Reihe `Duration::ZERO`, und null
+                // unterbietet jede Grenze: eine abwesende Messung waere von
+                // einer unendlich schnellen nicht zu unterscheiden. Bis zum
+                // 260905 fiel dieselbe Eingabe bei den zwei Abnahmemassen
+                // entgegengesetzt aus, verfehlt beim Anteil und gehalten beim
+                // Perzentil
+                // (`shared/issues/260826-1303_*_der-perzentil-zweig-hat-keine-wache-gegen-eine-runde-ohne-werte-der-anteils-zweig-danebe.md`).
+                let gehalten = self
+                    .runden
+                    .iter()
+                    .filter(|werte| !werte.is_empty() && perzentil(werte, PERZENTIL) <= grenze)
+                    .count();
+                Some((gehalten, self.runden.len()))
             }
             Abnahmemass::AnteilImBild {
                 bildlaenge,
@@ -679,6 +691,50 @@ fn in_bildern(spanne: Duration, bildlaenge: Duration) -> f64 {
 /// naechstes Bild erreicht hat. Dieselbe Haltung wie bei `--kalt` ohne Rechte
 /// und bei einem Fenster ohne Bildschirm. Plan S8, Punkt 2 der Umstellung, und
 /// `### Frage 5`.
+/// Zieht die je Runde gemeldeten Bildwiederholraten auf eine zusammen.
+///
+/// **Zwei widersprechende Angaben sind derselbe Fall wie keine.**
+/// [`bildlaenge_bilden`] bricht ab, statt 60 Hz zu unterstellen; eine Rate, die
+/// zwischen den Runden wechselt, ist die Lage aus der anderen Richtung, und sie
+/// wird ebenso abgebrochen. Bis zum 260905 stand hier `rate.or(gemeldete_rate)`
+/// an zwei Stellen: es behielt die Rate der **ersten** Runde und verwarf die
+/// aller weiteren, ohne sie anzusehen
+/// (`shared/issues/260826-1304_*_die-bildlaenge-fuer-l1-und-l9-stammt-aus-der-ersten-runde-und-jede-spaetere-meldung-fae.md`).
+/// An dieser einen Zahl haengt das Urteil ueber L1 und L9: die Bildlaenge ist
+/// ihr Kehrwert, und gegen sie wird je Einzelwert entschieden.
+///
+/// **Wie ein Wechsel eintritt.** `maximumFramesPerSecond` ist eine Eigenschaft
+/// des Bildschirms, und jede Runde startet einen neuen Prozess; wo dessen
+/// Fenster aufgeht, entscheidet das System. Ein zwischen zwei Runden
+/// angeschlossener Bildschirm genuegt.
+///
+/// `Ok(None)` heisst: keine Runde hat eine Rate gemeldet. Die Meldung dazu
+/// gehoert [`bildlaenge_bilden`] und wird hier nicht wiederholt.
+fn rate_ueber_runden(raten: &[Option<i64>]) -> io::Result<Option<i64>> {
+    let mut erste: Option<(usize, i64)> = None;
+    for (stelle, gemeldet) in raten.iter().enumerate() {
+        let Some(hertz) = *gemeldet else {
+            continue;
+        };
+        match erste {
+            None => erste = Some((stelle, hertz)),
+            Some((_, bekannt)) if bekannt == hertz => {}
+            Some((wo, bekannt)) => {
+                return Err(io::Error::other(format!(
+                    "Runde {} hat eine Bildwiederholrate von {hertz} Hz gemeldet, Runde {} aber \
+                     {bekannt} Hz. Die Bildlaenge ist der Kehrwert dieser Zahl, und L1 und L9 \
+                     werden gegen sie abgenommen; zwei Raten heissen zwei Bildlaengen, und die \
+                     Runden haetten gegen verschiedene Massstaebe gemessen. Der Lauf wird \
+                     verworfen.",
+                    stelle + 1,
+                    wo + 1
+                )));
+            }
+        }
+    }
+    Ok(erste.map(|(_, hertz)| hertz))
+}
+
 fn bildlaenge_bilden(rate: Option<i64>) -> io::Result<(i64, Duration)> {
     match rate {
         Some(hertz) if hertz > 0 => Ok((hertz, Duration::from_secs_f64(1.0 / hertz as f64))),
@@ -706,9 +762,9 @@ pub struct Durchstich {
     /// Zahl zurueck. Defekt
     /// `issues/260803-1309_*_tastenprotokoll-ueber-open-ist-nicht-lesbar.md`.
     pub programm: PathBuf,
-    /// Pruefordner A mit 10.000 Eintraegen.
+    /// Pruefordner A; traegt [`EINTRAEGE_A`] Eintraege.
     pub ordner_a: PathBuf,
-    /// Der Pruefordner mit 100.000 Eintraegen.
+    /// Der grosse Pruefordner; traegt [`EINTRAEGE_GROSS`] Eintraege.
     pub ordner100k: PathBuf,
     /// Wie oft jede Zusage innerhalb einer Runde gemessen wird. C8 sagt zwanzig.
     pub wiederholungen: usize,
@@ -751,6 +807,11 @@ pub struct Durchstichergebnis {
 
 impl Durchstichergebnis {
     /// Ob jede abgefragte Zusage ihre Zahl in jeder Runde haelt.
+    ///
+    /// Das Urteil des Gates. Ein stilles Fallenlassen bliebe unbemerkt: der Lauf
+    /// schriebe seinen Bericht und endete auf null, gleich wie die Zahlen
+    /// stehen.
+    #[must_use]
     pub fn bestanden(&self) -> bool {
         self.zusagen
             .iter()
@@ -760,15 +821,42 @@ impl Durchstichergebnis {
 
 impl Durchstich {
     /// Faehrt alle Runden und setzt das Ergebnis zusammen.
+    ///
+    /// **Die zwei Pruefordner werden vorab gehalten, wie im [`Gesamtlauf`].**
+    /// Der Durchstich misst L2, L3 und L10 auf denselben zwei Ordnern, und die
+    /// Eintragszahl ist Bestandteil der Zusage: ein Ordner mit 3.000 Eintraegen
+    /// haelt L3 muehelos und misst nicht, was zugesagt ist. Bis zum 260905
+    /// prueft dieser Weg gar nichts — kein `is_dir`, keinen Steckbrief, keine
+    /// Zahl —, waehrend der Gesamtlauf die Pruefung seit `960900d` traegt
+    /// (`shared/issues/260826-2154_*_der-durchstich-prueft-seine-pruefordner-ueberhaupt-nicht-und-verspricht-in-prosa-weiter-zehntausend.md`).
+    ///
+    /// Die zweite Haelfte der Deckung, der Abgleich der **gelesenen** Zahl
+    /// gegen den Steckbrief, gibt es hier nicht: sie steht in
+    /// [`Messreihe::fahren`], und der Durchstich ruft keine `Messreihe`. Was
+    /// dieser Weg haelt, ist der Steckbrief gegen die Zusage.
     pub fn fahren(&self) -> io::Result<Durchstichergebnis> {
+        for (ordner, erwartet) in [
+            (&self.ordner_a, EINTRAEGE_A),
+            (&self.ordner100k, EINTRAEGE_GROSS),
+        ] {
+            if !ordner.is_dir() {
+                return Err(io::Error::other(format!(
+                    "{} ist kein Verzeichnis",
+                    ordner.display()
+                )));
+            }
+            pruefordner_pruefen(ordner, erwartet)?;
+        }
+
         let mut rohrunden = Vec::with_capacity(self.runden);
-        let mut rate = None;
+        let mut raten = Vec::with_capacity(self.runden);
         for nummer in 1..=self.runden {
             eprintln!("krk-bench: Runde {nummer} von {}", self.runden);
             let (gemeldete_rate, runde) = self.eine_runde()?;
-            rate = rate.or(gemeldete_rate);
+            raten.push(gemeldete_rate);
             rohrunden.push(runde);
         }
+        let rate = rate_ueber_runden(&raten)?;
 
         let sammeln = |waehlen: fn(&Rohrunde) -> &Vec<Duration>| -> Vec<Vec<Duration>> {
             rohrunden
@@ -1049,6 +1137,10 @@ pub struct Gesamtergebnis {
 
 impl Gesamtergebnis {
     /// Ob jede abgefragte Zusage ihr Mass in jeder Runde haelt.
+    ///
+    /// Das Urteil des Gates, wie bei [`Durchstichergebnis::bestanden`], und aus
+    /// demselben Grund mit `#[must_use]`.
+    #[must_use]
     pub fn bestanden(&self) -> bool {
         self.zusagen
             .iter()
@@ -1086,13 +1178,14 @@ impl Gesamtlauf {
 
         let systemlast_vorher = systemlast();
         let mut rohrunden = Vec::with_capacity(self.runden);
-        let mut rate = None;
+        let mut raten = Vec::with_capacity(self.runden);
         for nummer in 1..=self.runden {
             eprintln!("krk-bench: Runde {nummer} von {}", self.runden);
             let (gemeldete_rate, runde) = self.eine_gesamtrunde(plan.pfad())?;
-            rate = rate.or(gemeldete_rate);
+            raten.push(gemeldete_rate);
             rohrunden.push(runde);
         }
+        let rate = rate_ueber_runden(&raten)?;
         let systemlast_nachher = systemlast();
 
         let sammeln = |waehlen: fn(&Gesamtrohrunde) -> &Vec<Duration>| -> Vec<Vec<Duration>> {
@@ -1375,6 +1468,16 @@ fn sitzung_zurueckspielen() {
 /// Sein Ende ist der regulaere Weg zurueck, und er greift auf denselben drei
 /// Wegen wie bisher: am Ende von [`Gesamtlauf::fahren`], beim `?`-Abbruch einer
 /// Runde und beim Abwickeln einer Panik.
+///
+/// **`#[must_use]` wie beim [`Messplanwaechter`], und hier waere das Fallen
+/// teurer.** `let _ = Sitzungssicherung::anlegen()?;` uebersetzt und laesst den
+/// Waechter sofort fallen; die Pruefsitzung aus C8 waere dann zurueckgenommen,
+/// **bevor** die erste Runde laeuft, und die zwanzig L4-Starts danach maessen
+/// das Wiederherstellen der Sitzung des Nutzers. Der Lauf braeche dabei nicht
+/// ab: er lieferte zwanzig Zahlen, ein Gate-Urteil und einen Bericht, dessen
+/// Kopf die Pruefsitzung als hergestellt ausweist
+/// (`shared/issues/260826-1305_*_krk-bench-traegt-ein-einziges-must-use-und-der-sitzungswaechter-ist-nicht-das-eine.md`).
+#[must_use]
 struct Sitzungswaechter;
 
 impl Drop for Sitzungswaechter {
@@ -1590,20 +1693,47 @@ fn pruefordner_pruefen(ordner: &Path, erwartet: usize) -> io::Result<()> {
         Some(brief) => Err(io::Error::other(format!(
             "{} traegt laut Steckbrief {} Eintraege statt der zugesagten {erwartet}. \
              Loesche den Ordner samt Steckbrief; den L6-Unterordner legt der Lauf \
-             dann selbst neu an, die drei Pruefordner aus C8 erzeugt \
-             `krk-bench fixture --eintraege {erwartet} --out {}`.",
+             dann selbst neu an, die drei Pruefordner aus C8 erzeugt {}.",
             ordner.display(),
             brief.eintraege,
-            ordner.display()
+            neu_erzeugen(ordner, erwartet, Some(brief.startwert))
         ))),
         None => Err(io::Error::other(format!(
             "{} steht ohne Steckbrief da; auf unbekanntem Bestand misst diese Strecke nicht. \
              Loesche den Ordner; den L6-Unterordner legt der Lauf dann selbst neu an, \
-             die drei Pruefordner aus C8 erzeugt \
-             `krk-bench fixture --eintraege {erwartet} --out {}`.",
+             die drei Pruefordner aus C8 erzeugt {}.",
             ordner.display(),
-            ordner.display()
+            neu_erzeugen(ordner, erwartet, None)
         ))),
+    }
+}
+
+/// Der Aufruf, mit dem ein Pruefordner neu entsteht.
+///
+/// **Der Startwert gehoert dazu, und `fixture` bricht ohne ihn ab.** Bis zum
+/// 260905 nannten beide Zweige von [`pruefordner_pruefen`] einen Aufruf ohne
+/// `--seed`; wer der Meldung folgte, stand vor dem naechsten Abbruch, „--seed
+/// fehlt"
+/// (`shared/issues/260826-2153_*_die-abhilfe-in-pruefordner-pruefen-nennt-einen-fixture-aufruf-ohne-seed-und-der-bricht-ab.md`).
+/// Beiwerk ist er ohnehin nicht: Pruefordner A und B tragen dieselbe
+/// Eintragszahl und unterscheiden sich allein im Startwert, damit der zweite
+/// Lesevorgang der Pruefsitzung nicht schon im Cache des Systems liegt.
+///
+/// Wo der Steckbrief noch dasteht, nennt die Meldung dessen Startwert; ohne
+/// Steckbrief ist er nicht mehr zu erfahren, und dann verweist sie auf den
+/// Modulkopf von `main.rs`, wo die drei Aufrufe vollstaendig stehen.
+fn neu_erzeugen(ordner: &Path, erwartet: usize, startwert: Option<u64>) -> String {
+    match startwert {
+        Some(wert) => format!(
+            "`krk-bench fixture --eintraege {erwartet} --seed {wert} --out {}`",
+            ordner.display()
+        ),
+        None => format!(
+            "`krk-bench fixture --eintraege {erwartet} --seed <startwert> --out {}`; welchen \
+             Startwert welcher der drei Ordner traegt, sagt der Modulkopf von \
+             crates/krk-bench/src/main.rs",
+            ordner.display()
+        ),
     }
 }
 
@@ -2131,7 +2261,7 @@ pub fn durchstich_schreiben(ziel: &Path, text: &str) -> io::Result<PathBuf> {
         "{}-durchstich.txt",
         bericht::kurzstempel(SystemTime::now())
     ));
-    std::fs::write(&pfad, text)?;
+    bericht::ohne_ueberschreiben(&pfad, text)?;
     Ok(pfad)
 }
 
@@ -2197,10 +2327,15 @@ seither eingegangenen Bildgrenzen und trennt damit ein stehendes Bild von einer
 langsamen Oberflaeche.
 ";
 
+/// Die eine Rate des Laufs, fuer den Bedingungskopf.
+///
+/// **Eine Zahl ohne Rundenangabe, und sie gilt fuer jede Runde.** Dafuer steht
+/// [`rate_ueber_runden`] ein: es haelt die Meldungen aller Runden gegeneinander
+/// und bricht bei Abweichung ab, statt die erste zu behalten.
 fn rate_beschreiben(ergebnis: &Durchstichergebnis) -> String {
     format!(
         "{} Hz, gelesen aus NSScreen.maximumFramesPerSecond am Bildschirm des \
-         gemessenen Fensters; eine Bildlaenge sind damit {}",
+         gemessenen Fensters, in jeder Runde dieselbe; eine Bildlaenge sind damit {}",
         ergebnis.bildwiederholrate,
         bericht::spanne(ergebnis.bildlaenge)
     )
@@ -2809,6 +2944,143 @@ mod tests {
             text.contains("10"),
             "die Zahl des Steckbriefs fehlt: {text}"
         );
+    }
+
+    /// Die Abhilfe nennt einen `fixture`-Aufruf, den `fixture` annimmt.
+    ///
+    /// `fixture_bauen` verlangt alle drei Angaben und bricht ohne `--seed` ab;
+    /// eine Meldung ohne den Startwert schickte den Messenden in den naechsten
+    /// Abbruch
+    /// (`shared/issues/260826-2153_*_die-abhilfe-in-pruefordner-pruefen-nennt-einen-fixture-aufruf-ohne-seed-und-der-bricht-ab.md`).
+    #[test]
+    fn die_abhilfe_nennt_den_startwert() {
+        let ordner = Wegwerfordner::neu("abhilfe-mit-seed");
+        fixture::erzeugen(ordner.pfad(), 3_000, 7).expect("Erzeugen gescheitert");
+        let text = pruefordner_pruefen(ordner.pfad(), EINTRAEGE_A)
+            .expect_err("3.000 sind nicht 10.000")
+            .to_string();
+        assert!(text.contains("--seed 7"), "der Startwert fehlt: {text}");
+        assert!(text.contains("--eintraege 10000"), "{text}");
+        assert!(text.contains("--out"), "{text}");
+
+        // Ohne Steckbrief ist der Startwert nicht mehr zu erfahren; dann
+        // verweist die Meldung auf den Modulkopf statt einen zu erfinden.
+        let ohne = Wegwerfordner::neu("abhilfe-ohne-steckbrief");
+        fs::create_dir_all(ohne.pfad()).expect("Anlegen gescheitert");
+        let text = pruefordner_pruefen(ohne.pfad(), EINTRAEGE_A)
+            .expect_err("ohne Steckbrief wird abgewiesen")
+            .to_string();
+        assert!(text.contains("--seed <startwert>"), "{text}");
+        assert!(text.contains("main.rs"), "{text}");
+    }
+
+    /// Der Durchstich haelt seine zwei Pruefordner vorab, wie der Gesamtlauf.
+    ///
+    /// Gemessen wird an der Vorpruefung und nicht an einem Lauf: sie steht vor
+    /// der Rundenschleife, also kommt das Binaerprogramm gar nicht erst an die
+    /// Reihe, und der Pfad darf ins Leere zeigen
+    /// (`shared/issues/260826-2154_*_der-durchstich-prueft-seine-pruefordner-ueberhaupt-nicht-und-verspricht-in-prosa-weiter-zehntausend.md`).
+    #[test]
+    fn der_durchstich_haelt_seine_pruefordner_gegen_die_zugesagte_zahl() {
+        let wurzel = Wegwerfordner::neu("durchstich-pruefordner");
+        let a = wurzel.pfad().join("a");
+        let gross = wurzel.pfad().join("gross");
+        fixture::erzeugen(&a, 3_000, 1).expect("Erzeugen gescheitert");
+        fixture::erzeugen(&gross, 3_000, 3).expect("Erzeugen gescheitert");
+
+        let durchstich = Durchstich {
+            programm: PathBuf::from("/gibt/es/nicht/krk"),
+            ordner_a: a.clone(),
+            ordner100k: gross,
+            wiederholungen: 1,
+            runden: 1,
+        };
+        let text = durchstich
+            .fahren()
+            .expect_err("3.000 Eintraege sind nicht die zugesagten 10.000")
+            .to_string();
+        assert!(text.contains("3000"), "{text}");
+        assert!(text.contains("10000"), "{text}");
+
+        // Ein fehlender Ordner wird als solcher benannt.
+        let fehlt = Durchstich {
+            programm: PathBuf::from("/gibt/es/nicht/krk"),
+            ordner_a: wurzel.pfad().join("nicht-da"),
+            ordner100k: a,
+            wiederholungen: 1,
+            runden: 1,
+        };
+        let text = fehlt
+            .fahren()
+            .expect_err("ein fehlender Ordner haelt den Lauf an")
+            .to_string();
+        assert!(text.contains("kein Verzeichnis"), "{text}");
+    }
+
+    /// Eine Runde ohne Werte haelt bei **beiden** Abnahmemassen nicht.
+    ///
+    /// `perzentil` liefert fuer eine leere Reihe `Duration::ZERO`, und null
+    /// unterbietet jede Grenze: ohne diese Wache las sich die abwesende Messung
+    /// als die schnellste, waehrend derselbe Fall beim Anteilsmass daneben als
+    /// verfehlt zaehlte
+    /// (`shared/issues/260826-1303_*_der-perzentil-zweig-hat-keine-wache-gegen-eine-runde-ohne-werte-der-anteils-zweig-danebe.md`).
+    #[test]
+    fn eine_runde_ohne_werte_haelt_bei_keinem_der_zwei_masse() {
+        let leer_und_gut = vec![Vec::new(), vec![Duration::from_millis(1); 20]];
+
+        let perzentil_zusage = Zusage {
+            kennung: "LX",
+            was: "Probe",
+            mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
+            runden: leer_und_gut.clone(),
+        };
+        assert_eq!(perzentil_zusage.gehalten_in(), Some((1, 2)));
+        assert_eq!(perzentil_zusage.immer_gehalten(), Some(false));
+
+        let anteils_zusage = Zusage {
+            kennung: "LY",
+            was: "Probe",
+            mass: Abnahmemass::AnteilImBild {
+                bildlaenge: Duration::from_millis(16),
+                mindestanteil_prozent: 95,
+                obergrenze_bilder: None,
+            },
+            runden: leer_und_gut,
+        };
+        assert_eq!(anteils_zusage.gehalten_in(), Some((1, 2)));
+    }
+
+    /// Zwei verschiedene Bildwiederholraten halten den Lauf an.
+    ///
+    /// `rate.or(gemeldete_rate)` behielt die Rate der ersten Runde und verwarf
+    /// jede weitere ungesehen; an dieser einen Zahl haengt das Urteil ueber L1
+    /// und L9
+    /// (`shared/issues/260826-1304_*_die-bildlaenge-fuer-l1-und-l9-stammt-aus-der-ersten-runde-und-jede-spaetere-meldung-fae.md`).
+    #[test]
+    fn zwei_verschiedene_raten_halten_den_lauf_an() {
+        assert_eq!(
+            rate_ueber_runden(&[Some(120), Some(120)]).expect("gleiche Raten gehen durch"),
+            Some(120)
+        );
+        // Keine Runde meldet eine: das entscheidet `bildlaenge_bilden`.
+        assert_eq!(
+            rate_ueber_runden(&[None, None]).expect("keine Rate ist hier kein Fehler"),
+            None
+        );
+
+        let text = rate_ueber_runden(&[Some(120), Some(60)])
+            .expect_err("zwei Raten sind zwei Bildlaengen")
+            .to_string();
+        assert!(text.contains("120"), "{text}");
+        assert!(text.contains("60"), "{text}");
+        assert!(text.contains("Runde 2"), "{text}");
+        // Die erste gemeldete Rate benennt die Meldung mit ihrer Runde, auch
+        // wenn eine fruehere Runde gar keine gemeldet hat.
+        let text = rate_ueber_runden(&[None, Some(60), Some(120)])
+            .expect_err("zwei Raten sind zwei Bildlaengen")
+            .to_string();
+        assert!(text.contains("Runde 2"), "{text}");
+        assert!(text.contains("Runde 3"), "{text}");
     }
 
     #[test]
