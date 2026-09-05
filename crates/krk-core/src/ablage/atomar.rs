@@ -37,6 +37,31 @@
 //! Wer eine Zeichenkette hat, uebergibt `&mut text.as_bytes()`; `&[u8]` ist
 //! selbst ein Leser. Eine zweite Schreibfunktion neben dieser waere der zweite
 //! Schreibweg, den der Datensatz vom 260812-1105 ausschliesst.
+//!
+//! # Die Rechte der Zieldatei ueberleben das Schreiben
+//!
+//! `rename` ersetzt die Datei, und alles, was am ersetzten Eintrag hing, haengt
+//! danach am neuen. Bis zum 260905 hiess das: die Nachbardatei kam aus
+//! `fs::File::create`, trug also `0666 & ~umask`, und dieser Modus stand nach
+//! dem Umbenennen an der Stelle des Ziels. Eine Datei auf `600` war danach fuer
+//! jeden Nutzer des Geraetes lesbar, und ein Script auf `755` lief nicht mehr
+//! (`shared/issues/260904-1902_*_das-atomare-schreiben-weitet-die-rechte-einer-600-datei-auf-644.md`).
+//!
+//! [`vorbereiten`] uebertraegt deshalb die neun Rechtebits eines **bestehenden**
+//! Ziels auf die Nachbardatei, und zwar **bevor** der Inhalt in sie flieszt. Die
+//! Reihenfolge ist der Punkt: stuende die Uebertragung erst vor dem `rename`,
+//! laege der Inhalt einer `600`-Datei fuer die Dauer des Schreibens unter `644`
+//! neben ihr.
+//!
+//! **Was diese Datei nicht uebertraegt, uebertraegt niemand**, und das steht
+//! hier, damit ein spaeterer Leser nicht danach sucht: Besitzer und Gruppe, die
+//! erweiterten Attribute samt Finder-Marken, die Zugriffslisten, die
+//! Dateiflags, das Anlagedatum und die harten Verweise auf denselben Inhalt
+//! gehen mit dem ersetzten Eintrag verloren; die drei Sonderbits `setuid`,
+//! `setgid` und `sticky` bleiben absichtlich aussen vor, siehe [`RECHTEMASKE`].
+//! Das Aenderungsdatum steht danach auf jetzt, und das ist richtig: die Datei
+//! **ist** gerade geaendert worden. Der Datensatz dazu ist
+//! `shared/issues/260905-0406_*_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.md`.
 
 use std::fs;
 use std::io::{self, Read};
@@ -48,11 +73,29 @@ pub const NACHBARENDUNG: &str = "neu";
 /// Die Endung, unter der eine beschaedigte Datei zur Seite gelegt wird.
 pub const BESCHAEDIGTENDUNG: &str = "beschaedigt";
 
+/// Die Bits des Dateimodus, die diese Datei uebertraegt: die neun Rechtebits
+/// und **nichts** darueber hinaus.
+///
+/// Ausserhalb der Maske liegen zwei Dinge, und sie bleiben aus zwei
+/// verschiedenen Gruenden draussen.
+///
+/// - **Die Typbits.** `metadata().permissions().mode()` liefert das ganze
+///   `st_mode`, also auch `S_IFREG`. `chmod(2)` laesst die Wirkung dieser Bits
+///   ausdruecklich unspezifiziert; sie mitzureichen hiesse, sich auf etwas zu
+///   verlassen, das keine Zusage ist.
+/// - **Die Sonderbits `setuid`, `setgid` und `sticky`.** Sie bleiben bewusst
+///   aussen vor. Die Nachbardatei gehoert dem schreibenden Nutzer, das
+///   ersetzte Ziel muss ihm nicht gehoert haben; ein mitgetragenes `setuid`
+///   uebertruege das Recht eines fremden Besitzers auf einen Inhalt, den dieser
+///   Nutzer geschrieben hat. Verloren geht dabei nichts, was heute erhalten
+///   bliebe: vor dem 260905 fielen alle zwoelf Bits.
+pub const RECHTEMASKE: u32 = 0o777;
+
 /// Der Pfad der Nachbardatei zu einem Ziel.
 ///
 /// Der Name ist fest abgeleitet und traegt keine Laufnummer. Ein Absturz
 /// hinterlaesst damit hoechstens eine einzige liegengebliebene Datei statt
-/// einer wachsenden Reihe, und der naechste Schreibvorgang ueberschreibt sie.
+/// einer wachsenden Reihe, und der naechste Schreibvorgang raeumt sie ab.
 /// Gelesen wird sie von niemandem.
 ///
 /// **Der Nachbar [`beiseitepfad`] traegt ebenfalls keine Laufnummer, aber aus
@@ -148,6 +191,62 @@ impl Drop for Nachbardatei {
     }
 }
 
+/// Die neun Rechtebits eines offenen Deskriptors.
+fn rechte_am_deskriptor(datei: &fs::File) -> io::Result<u32> {
+    use std::os::unix::fs::PermissionsExt;
+    Ok(datei.metadata()?.permissions().mode() & RECHTEMASKE)
+}
+
+/// Setzt die Rechte eines bestehenden Ziels auf die Nachbardatei.
+///
+/// Gefragt wird ueber `metadata` und nicht ueber `symlink_metadata`, also nach
+/// dem, worauf eine Verknuepfung zeigt. Dieselbe Wahl wie in
+/// `text::datei::oeffnen`, und sie muss dieselbe sein: sonst laese der Editor
+/// die eine Datei und erbte die Rechte der anderen.
+///
+/// **Gibt es das Ziel noch nicht, bleibt es bei den Vorgaberechten des
+/// Prozesses**, also bei `0666 & ~umask` aus [`fs::File::create`]. Eine neu
+/// angelegte Datei hat nichts zu erben, und eine Zahl an dieser Stelle waere
+/// eine Vorgabe, die diese Datei sich selbst ausdaechte, statt die des Nutzers
+/// zu nehmen.
+///
+/// # Ein Fehlschlag haelt das Schreiben an
+///
+/// Und zwar auch dann, wenn `set_permissions` selbst `Ok` meldet: gefragt wird
+/// danach ein zweites Mal am Deskriptor, und stimmt der Modus dann nicht,
+/// scheitert der ganze Vorgang. Ein Dateisystem, das `chmod` still
+/// wegwirft, wuerde sonst genau den Defekt zurueckbringen, der hier behoben
+/// ist — und dieses Projekt hat am 260904 einen stillen Fehlschlag beim
+/// Sichern behoben und baut keinen zweiten ein.
+///
+/// **Der Preis ist benannt und bewusst getragen:** auf einem Dateisystem ohne
+/// Rechteverwaltung scheitert das Sichern, statt die Datei mit fremden Rechten
+/// hinzulegen. Der Nutzer verliert dabei nichts — die alte Datei steht
+/// unveraendert, sein Stand steht im Editor —, er bekommt eine Meldung. Und
+/// der Fall bleibt eng: gefragt wird nur, wenn der Modus wirklich abweicht.
+/// Ein Dateisystem, das ohnehin fuer jede Datei denselben Modus meldet, kommt
+/// hier nie vorbei.
+fn rechte_uebernehmen(ziel: &Path, nachbar: &fs::File) -> io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let soll = match fs::metadata(ziel) {
+        Ok(angaben) => angaben.permissions().mode() & RECHTEMASKE,
+        Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(fehler) => return Err(fehler),
+    };
+    if rechte_am_deskriptor(nachbar)? == soll {
+        return Ok(());
+    }
+    nachbar.set_permissions(fs::Permissions::from_mode(soll))?;
+    let gesetzt = rechte_am_deskriptor(nachbar)?;
+    if gesetzt != soll {
+        return Err(io::Error::other(format!(
+            "die Rechte {soll:o} von {} lassen sich nicht uebertragen; die Nachbardatei steht auf {gesetzt:o}",
+            ziel.display()
+        )));
+    }
+    Ok(())
+}
+
 /// Der erste Schritt: den Inhalt vollstaendig in die Nachbardatei schreiben.
 ///
 /// Nach der Rueckkehr stehen die Daten auf der Platte, das Ziel ist noch alt.
@@ -157,17 +256,40 @@ impl Drop for Nachbardatei {
 /// Die Quelle wird bis zu ihrem Ende gelesen, und eine eigene Obergrenze setzt
 /// diese Funktion nicht; wer eine braucht, reicht einen begrenzten Leser
 /// herein. Warum ein Leser und keine Zeichenkette, steht im Modulkopf.
+///
+/// # Drei Schritte in dieser Reihenfolge, und jeder aus einem Grund
+///
+/// 1. **Eine liegengebliebene Nachbardatei kommt weg**, statt ueberschrieben zu
+///    werden. `fs::File::create` oeffnet zum Schreiben und scheitert an einer
+///    Datei ohne Schreibrecht mit `EACCES`; ein Rest, den ein Absturz nach der
+///    Rechteuebernahme eines `444`-Ziels hinterlaesst, sperrte sonst jedes
+///    weitere Sichern dieser Datei, bis der Nutzer ihn von Hand entfernt. Der
+///    Rueckgabewert faellt weg, weil der haeufigste Fall "es lag nichts da"
+///    ist; scheitert das Abraeumen aus einem anderen Grund, meldet das
+///    `create` in der Zeile darunter.
+/// 2. **Die Rechte des Ziels gehen auf die Nachbardatei**, siehe
+///    [`rechte_uebernehmen`].
+/// 3. **Dann erst flieszt der Inhalt.** Die Rechtepruefung eines offenen
+///    Deskriptors steht beim Oeffnen; ein `chmod` auf `400` dazwischen nimmt
+///    dem schon offenen `datei` das Schreiben nicht.
 pub fn vorbereiten(ziel: &Path, quelle: &mut impl Read) -> io::Result<Nachbardatei> {
     let nachbar = nachbarpfad(ziel)?;
+    let _ = fs::remove_file(&nachbar);
     let mut datei = fs::File::create(&nachbar)?;
-    io::copy(quelle, &mut datei)?;
-    datei.sync_all()?;
-    drop(datei);
-    Ok(Nachbardatei {
+    // Ab hier haelt der Wert die Nachbardatei, und sein `Drop` raeumt sie ab.
+    // Er steht vor den drei Schritten und nicht hinter ihnen, damit ein
+    // Fehlschlag in ihnen keinen Rest hinterlaesst; `datei` bleibt dabei offen,
+    // was auf einer bereits entfernten Datei nichts ausmacht.
+    let angelegt = Nachbardatei {
         ziel: ziel.to_path_buf(),
         nachbar,
         abraeumen: true,
-    })
+    };
+    rechte_uebernehmen(ziel, &datei)?;
+    io::copy(quelle, &mut datei)?;
+    datei.sync_all()?;
+    drop(datei);
+    Ok(angelegt)
 }
 
 /// Schreibt den Inhalt atomar auf das Ziel.

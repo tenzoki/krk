@@ -2604,6 +2604,154 @@ fn eine_fallengelassene_nachbardatei_raeumt_sich_ab() {
 }
 
 // ---------------------------------------------------------------------------
+// Die Rechte der Zieldatei
+// ---------------------------------------------------------------------------
+
+/// Die Rechtebits eines Pfades, ohne den Dateityp und ohne die Sonderbits.
+///
+/// Dieselbe Maske, die `atomar::vorbereiten` anlegt; steht sie hier ein zweites
+/// Mal als Zahl, laufen Probe und Code auseinander, sobald eine der beiden
+/// Seiten sie aendert. Die Probe greift deshalb auf die Konstante des Kerns zu.
+fn rechte(pfad: &Path) -> u32 {
+    use std::os::unix::fs::PermissionsExt;
+    fs::metadata(pfad)
+        .expect("kein Zugriff auf die Rechte")
+        .permissions()
+        .mode()
+        & atomar::RECHTEMASKE
+}
+
+/// Setzt die Rechte eines Pfades.
+fn rechte_setzen(pfad: &Path, modus: u32) {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(pfad, fs::Permissions::from_mode(modus)).expect("chmod gescheitert");
+}
+
+/// Ein ausfuehrbares Script bleibt nach dem Sichern ausfuehrbar.
+///
+/// **Der schwerere der beiden gemeldeten Faelle.** Vor dem 260905 legte
+/// `vorbereiten` die Nachbardatei mit `fs::File::create` an, also mit
+/// `0666 & ~umask`, und das `rename` setzte diesen Modus an die Stelle des
+/// Ziels: ein `755`-Script stand danach auf `644` und lief nicht mehr.
+#[test]
+fn das_atomare_schreiben_erhaelt_das_ausfuehrungsrecht() {
+    let ordner = Pruefordner::neu("rechte-755");
+    let ziel = ordner.pfad().join("start.sh");
+    fs::write(&ziel, "#!/bin/sh\necho alt\n").expect("schreiben gescheitert");
+    rechte_setzen(&ziel, 0o755);
+
+    atomar::schreiben(&ziel, &mut "#!/bin/sh\necho neu\n".as_bytes())
+        .expect("schreiben gescheitert");
+
+    assert_eq!(
+        fs::read_to_string(&ziel).expect("lesen gescheitert"),
+        "#!/bin/sh\necho neu\n"
+    );
+    assert_eq!(
+        rechte(&ziel),
+        0o755,
+        "das Ausfuehrungsrecht ist beim Sichern verlorengegangen"
+    );
+}
+
+/// Eine eng gestellte Datei bleibt eng gestellt.
+///
+/// Der gefilte Fall: `600` stand nach dem Sichern auf `644` und war damit fuer
+/// jeden Nutzer des Geraetes lesbar.
+#[test]
+fn das_atomare_schreiben_weitet_enge_rechte_nicht_auf() {
+    let ordner = Pruefordner::neu("rechte-600");
+    let ziel = ordner.pfad().join("geheim.txt");
+    fs::write(&ziel, "alt\n").expect("schreiben gescheitert");
+    rechte_setzen(&ziel, 0o600);
+
+    atomar::schreiben(&ziel, &mut "neu\n".as_bytes()).expect("schreiben gescheitert");
+
+    assert_eq!(
+        fs::read_to_string(&ziel).expect("lesen gescheitert"),
+        "neu\n"
+    );
+    assert_eq!(
+        rechte(&ziel),
+        0o600,
+        "die engen Rechte sind beim Sichern aufgeweitet worden"
+    );
+}
+
+/// Ein Ziel, das es noch nicht gibt, bekommt die Vorgaberechte des Prozesses.
+///
+/// Eine neu angelegte Datei hat keine Rechte zu erben; dann gilt, was vorher
+/// galt. Verglichen wird gegen eine im selben Ordner frisch geschriebene Datei
+/// statt gegen eine Zahl: die Vorgabe haengt an der `umask` der Sitzung, und
+/// eine Zahl hier machte die Probe von der Umgebung des Laufs abhaengig.
+#[test]
+fn ein_noch_nicht_bestehendes_ziel_bekommt_die_vorgaberechte() {
+    let ordner = Pruefordner::neu("rechte-neu");
+    let vergleich = ordner.pfad().join("vergleich.txt");
+    fs::write(&vergleich, "x\n").expect("schreiben gescheitert");
+
+    let ziel = ordner.pfad().join("frisch.txt");
+    atomar::schreiben(&ziel, &mut "neu\n".as_bytes()).expect("schreiben gescheitert");
+
+    assert_eq!(rechte(&ziel), rechte(&vergleich));
+}
+
+/// Die Nachbardatei traegt die Rechte des Ziels, bevor der Inhalt in sie
+/// flieszt.
+///
+/// **Die Reihenfolge ist der Gegenstand dieser Probe und keine Feinheit.**
+/// Stuende die Uebernahme erst vor dem `rename`, so laege der Inhalt einer
+/// `600`-Datei fuer die Dauer des Schreibens unter `644` neben ihr — bei einer
+/// grossen Datei sind das keine Mikrosekunden. Die Zusage prueft sich in der
+/// Luecke, die [`atomar::vorbereiten`] genau dafuer offenlaesst.
+#[test]
+fn die_nachbardatei_traegt_die_rechte_des_ziels_schon_vor_dem_umbenennen() {
+    let ordner = Pruefordner::neu("rechte-luecke");
+    let ziel = ordner.pfad().join("geheim.txt");
+    fs::write(&ziel, "alt\n").expect("schreiben gescheitert");
+    rechte_setzen(&ziel, 0o600);
+
+    let vorbereitet =
+        atomar::vorbereiten(&ziel, &mut "neu\n".as_bytes()).expect("vorbereiten gescheitert");
+    assert_eq!(
+        rechte(vorbereitet.nachbarpfad()),
+        0o600,
+        "die Nachbardatei liegt offener da als das Ziel"
+    );
+    vorbereitet.umbenennen().expect("umbenennen gescheitert");
+}
+
+/// Eine liegengebliebene Nachbardatei ohne Schreibrecht haelt den naechsten
+/// Lauf nicht auf.
+///
+/// **Diese Probe gehoert zur Rechteuebernahme und nicht zum Aufraeumen.** Seit
+/// die Nachbardatei die Rechte des Ziels traegt, kann ein Absturz eine
+/// Nachbardatei ohne Schreibrecht hinterlassen — bei einem `444`-Ziel etwa —,
+/// und `fs::File::create` scheitert an einer solchen Datei mit `EACCES`. Ohne
+/// das Abraeumen vor dem Anlegen waere jedes weitere Sichern dieser Datei
+/// blockiert, bis der Nutzer den Nachbarn von Hand entfernt.
+#[test]
+fn eine_liegengebliebene_nachbardatei_ohne_schreibrecht_blockiert_nicht() {
+    let ordner = Pruefordner::neu("rechte-rest");
+    let ziel = ordner.pfad().join("nurlesen.txt");
+    fs::write(&ziel, "alt\n").expect("schreiben gescheitert");
+    rechte_setzen(&ziel, 0o444);
+
+    let nachbar = atomar::nachbarpfad(&ziel).expect("kein Nachbarpfad");
+    fs::write(&nachbar, "rest\n").expect("schreiben gescheitert");
+    rechte_setzen(&nachbar, 0o444);
+
+    atomar::schreiben(&ziel, &mut "neu\n".as_bytes()).expect("schreiben gescheitert");
+
+    assert_eq!(
+        fs::read_to_string(&ziel).expect("lesen gescheitert"),
+        "neu\n"
+    );
+    assert_eq!(rechte(&ziel), 0o444);
+    assert!(!nachbar.exists(), "die Nachbardatei liegt noch da");
+}
+
+// ---------------------------------------------------------------------------
 // Die Pruefung mit eigenem Prozess
 // ---------------------------------------------------------------------------
 
