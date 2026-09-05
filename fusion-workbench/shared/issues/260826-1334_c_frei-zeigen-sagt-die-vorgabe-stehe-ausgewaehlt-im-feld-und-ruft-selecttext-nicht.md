@@ -24,3 +24,15 @@ neuen Namen an den alten an.
 
 Denkbarer Weg: dieselbe Zeile wie in `pfadeingabe.rs:67`, oder der Satz im Doc-Kommentar
 sagt, dass die Auswahl AppKit überlassen ist.
+
+---
+Resolved: `frei_zeigen` in
+`crates/krk-ui/src/appkit/blaetter/namenseingabe.rs` ruft jetzt
+`feld.selectText(None)` im selben Zweig, der die Vorgabe setzt — dieselbe Zeile
+und derselbe SAFETY-Kommentar wie in `pfadeingabe.rs` und `suche.rs`. Die
+Zusage im Doc-Kommentar bleibt damit stehen und ist eingelöst, statt der
+Annahme über AppKit überlassen zu sein. Der Kommentar an der Stelle nennt die
+zwei Nachbarblätter und diesen Datensatz.
+
+Beide Rufer mit Vorgabe (Lesezeichen umbenennen und anlegen) gehen über diese
+eine Stelle; ein zweiter Weg entsteht nicht.

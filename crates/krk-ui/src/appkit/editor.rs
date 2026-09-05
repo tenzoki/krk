@@ -65,7 +65,7 @@
 //! `NSLayoutManager` zurueckfallen. KRKs Flaeche ist deshalb TextKit 1, und das
 //! ist seit dem 260810-1243 **Absicht mit ihrem Grund**: [`textflaeche_bauen`]
 //! fasst den Verwalter eigens an, und
-//! [`die_gebaute_flaeche_steht_auf_textkit_1`](tests::die_gebaute_flaeche_steht_auf_textkit_1)
+//! `die_gebaute_flaeche_steht_auf_textkit_1`
 //! haelt den Bau an, wenn jemand den Rueckfall wegnimmt. Vorher entstand er als
 //! Nebenwirkung von `textmerkmale::zuruecksetzen` und von
 //! [`super::nummernspalte`], die den Verwalter aus einem anderen Grund
@@ -755,7 +755,7 @@ impl Editormeldung {
 ///
 /// Die Zahlen stehen nicht hier, weil sie hier geglaubt werden sollen, sondern
 /// weil
-/// [`ein_umkehrpunkt_traegt_den_geaenderten_bereich_und_nicht_den_ganzen_stand`](tests::ein_umkehrpunkt_traegt_den_geaenderten_bereich_und_nicht_den_ganzen_stand)
+/// `ein_umkehrpunkt_traegt_den_geaenderten_bereich_und_nicht_den_ganzen_stand`
 /// sie an derselben Grenze nachrechnet und den Bau anhaelt, wenn eine spaetere
 /// Fassung wieder den ganzen Stand aufhebt.
 ///
@@ -888,7 +888,7 @@ impl Umkehrpunkt {
 ///
 /// Gemessen ist die erste Zeile, an der Editorgrenze und mit den Staenden, die
 /// `ctrl+cmd+r` herstellt:
-/// [`der_stapel_haelt_hoechstens_das_budget_und_die_letzte_handlung`](tests::der_stapel_haelt_hoechstens_das_budget_und_die_letzte_handlung).
+/// `der_stapel_haelt_hoechstens_das_budget_und_die_letzte_handlung`.
 /// Die beiden darunter sind dieselbe Teilung und keine zweite Messung.
 ///
 /// Die obere Schranke ist damit `STAPELBUDGET` **plus eine Handlung** und nicht
@@ -2082,7 +2082,7 @@ impl Editorbereich {
     /// die eine Handlung, die danach darin steht, ist die gueltige. Dass eine
     /// Anmeldung nach `removeAllActions` stehen bleibt und wirkt, ist
     /// **gemessen** und nicht angenommen:
-    /// [`eine_anmeldung_nach_dem_leeren_steht_im_stapel`](tests::eine_anmeldung_nach_dem_leeren_steht_im_stapel).
+    /// `eine_anmeldung_nach_dem_leeren_steht_im_stapel`.
     ///
     /// Die beiden aelteren Anlaesse behalten ihre Reihenfolge Zeile fuer Zeile:
     /// [`Verlauf::Faellt`] leert **nach** dem Schreiben, [`Verlauf::Traegt`]

@@ -307,7 +307,7 @@ pub enum Auszeichnung {
     /// Betonung, `*so*` geschrieben: kursiv in der Grundgroesse.
     ///
     /// **Sie entsteht allein in [`crate::markdown`]** und nicht in
-    /// [`formatieren`]: die Formatansicht des Editors zeigt den Quelltext mit
+    /// `formatieren`: die Formatansicht des Editors zeigt den Quelltext mit
     /// seinen Sternchen und faerbt sie ein, die Vorschau der Runde 6 nimmt sie
     /// weg und traegt die Betonung stattdessen als Merkmal. Beide Wege enden
     /// in derselben Umsetzung in `crate::appkit::textmerkmale`.
@@ -416,7 +416,7 @@ fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
 /// Welche Besetzung der Formatansicht diese Datei bekommt (C3).
 ///
 /// **Die eine Stelle, die es entscheidet.** `crate::appkit::editor` fragt sie
-/// fuer die Grundschrift und den Umbruch, [`formatieren`] fuer die Einfaerbung;
+/// fuer die Grundschrift und den Umbruch, `formatieren` fuer die Einfaerbung;
 /// zwei Antworten nebeneinander waeren eine Datei mit fester Schrift ohne
 /// Einfaerbung oder umgekehrt.
 pub fn art(pfad: Option<&Path>, typ: Dateityp) -> Darstellungsart {
@@ -1282,7 +1282,7 @@ fn rechnen(
 
 /// Schreibt den vorigen Durchgang fort, statt ihn zu wiederholen (C3).
 ///
-/// **Der Weg, den das laufende Programm geht.** [`formatieren`] daneben ist
+/// **Der Weg, den das laufende Programm geht.** `formatieren` daneben ist
 /// derselbe Durchgang ohne Vorlage; es steht fuer den Pruefcode und fuer den
 /// ersten Durchgang einer Datei.
 ///
@@ -1807,9 +1807,17 @@ mod tests {
     /// Das ist die eine Zusage, an der das Fortschreiben haengt. Sie wird an
     /// jeder Aenderung gemessen, die die Probe darunter aufzaehlt, und nicht an
     /// einer.
+    ///
+    /// **`fall` benennt die Aenderung und `name` die Datei.** Bis zum Befund
+    /// `260826-1442_*_die-fortschreibungsprobe-nennt-den-fall-im-fehlertext-nicht-und-wirft-den-namen-mit-let-unterstrich-weg.md`
+    /// gab es allein `name`, und die Rufer reichten dort den Dateinamen
+    /// weiter, waehrend der Fallname mit `let _ = name;` fiel: eine
+    /// fehlgeschlagene Zusage meldete "a.rs" und den ganzen Quelltext statt der
+    /// Aenderung, die sie gebrochen hat.
     fn fortschreiben_gleicht_vollem_durchgang(
         vorher: &str,
         nachher: &str,
+        fall: &str,
         name: &str,
         typ: Dateityp,
     ) {
@@ -1827,17 +1835,17 @@ mod tests {
         assert_eq!(
             fortgeschrieben.formatierung().laenge,
             voll.laenge,
-            "die Laenge weicht ab, {name}: {vorher:?} -> {nachher:?}"
+            "die Laenge weicht ab, {fall} ({name}): {vorher:?} -> {nachher:?}"
         );
         assert_eq!(
             wirkung(fortgeschrieben.formatierung()),
             wirkung(&voll),
-            "die Wirkung weicht ab, {name}: {vorher:?} -> {nachher:?}"
+            "die Wirkung weicht ab, {fall} ({name}): {vorher:?} -> {nachher:?}"
         );
         assert_eq!(
             fortgeschrieben.formatierung().art,
             voll.art,
-            "die Besetzung weicht ab, {name}"
+            "die Besetzung weicht ab, {fall} ({name})"
         );
     }
 
@@ -1888,11 +1896,22 @@ mod tests {
             ),
         ];
 
-        for (name, nachher) in faelle {
-            fortschreiben_gleicht_vollem_durchgang(quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+        for (fall, nachher) in faelle {
+            fortschreiben_gleicht_vollem_durchgang(
+                quelle,
+                &nachher,
+                fall,
+                "a.rs",
+                Dateityp::Sonstiges,
+            );
             // Und die Gegenrichtung: aus der Aenderung zurueck in die Quelle.
-            fortschreiben_gleicht_vollem_durchgang(&nachher, quelle, "a.rs", Dateityp::Sonstiges);
-            let _ = name;
+            fortschreiben_gleicht_vollem_durchgang(
+                &nachher,
+                quelle,
+                fall,
+                "a.rs",
+                Dateityp::Sonstiges,
+            );
         }
     }
 
@@ -1911,9 +1930,22 @@ mod tests {
             format!("{quelle}\n- noch ein Punkt\n"),
             quelle.replace("Schluss", "Schluss mit `Code`"),
         ];
-        for nachher in faelle {
-            fortschreiben_gleicht_vollem_durchgang(quelle, &nachher, "lies.md", Dateityp::Markdown);
-            fortschreiben_gleicht_vollem_durchgang(&nachher, quelle, "lies.md", Dateityp::Markdown);
+        for (nummer, nachher) in faelle.into_iter().enumerate() {
+            let fall = format!("Markdown-Aenderung {nummer}");
+            fortschreiben_gleicht_vollem_durchgang(
+                quelle,
+                &nachher,
+                &fall,
+                "lies.md",
+                Dateityp::Markdown,
+            );
+            fortschreiben_gleicht_vollem_durchgang(
+                &nachher,
+                quelle,
+                &fall,
+                "lies.md",
+                Dateityp::Markdown,
+            );
         }
     }
 
@@ -1936,13 +1968,25 @@ mod tests {
             let mut geaendert = zeilen.clone();
             geaendert[stelle] = format!("let x = \"{}\";", stelle);
             let nachher = format!("{}\n", geaendert.join("\n"));
-            fortschreiben_gleicht_vollem_durchgang(&quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+            fortschreiben_gleicht_vollem_durchgang(
+                &quelle,
+                &nachher,
+                &format!("geaenderte Zeile {stelle}"),
+                "a.rs",
+                Dateityp::Sonstiges,
+            );
         }
         // Und eine Zeile mitten heraus, damit die Zeilen dahinter sich
         // verschieben und der Wiederanschluss die Verschiebung mitrechnen muss.
         zeilen.remove(3 * ZUSTANDSABSTAND);
         let nachher = format!("{}\n", zeilen.join("\n"));
-        fortschreiben_gleicht_vollem_durchgang(&quelle, &nachher, "a.rs", Dateityp::Sonstiges);
+        fortschreiben_gleicht_vollem_durchgang(
+            &quelle,
+            &nachher,
+            "eine Zeile mitten heraus",
+            "a.rs",
+            Dateityp::Sonstiges,
+        );
     }
 
     /// Die Zusage haelt auch, wenn die Kiste an einer Zeile abbricht.
@@ -1981,8 +2025,21 @@ mod tests {
             let mut geaendert = zeilen.clone();
             geaendert[stelle] = format!("let x = \"{stelle}\";");
             let nachher = format!("{}\n", geaendert.join("\n"));
-            fortschreiben_gleicht_vollem_durchgang(&quelle, &nachher, "a.rs", Dateityp::Sonstiges);
-            fortschreiben_gleicht_vollem_durchgang(&nachher, &quelle, "a.rs", Dateityp::Sonstiges);
+            let fall = format!("geaenderte Zeile {stelle} bei Abbruch in {abbruch_bei}");
+            fortschreiben_gleicht_vollem_durchgang(
+                &quelle,
+                &nachher,
+                &fall,
+                "a.rs",
+                Dateityp::Sonstiges,
+            );
+            fortschreiben_gleicht_vollem_durchgang(
+                &nachher,
+                &quelle,
+                &fall,
+                "a.rs",
+                Dateityp::Sonstiges,
+            );
         }
     }
 

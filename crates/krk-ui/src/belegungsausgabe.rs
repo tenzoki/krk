@@ -46,7 +46,7 @@
 //! Einteilung einer Lage heisst ueberall dasselbe**: im Modulkopf, an den
 //! Zweigen von [`wirkung`] und in der Probe
 //! `die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander`. Die erste
-//! Lage traegt jede Funktion mit [`Kommando`] (so viele, wie
+//! Lage traegt jede Funktion mit [`Kommando`](krk_core::tasten::Kommando) (so viele, wie
 //! `Kommando::KENNUNGEN` Eintraege hat; die Probe haelt beide Zahlen
 //! aneinander, und eine Zahl steht deshalb nicht hier, sie wuerde mit jedem
 //! neuen Kommando falsch), die zweite bis vierte verteilen die sechs
@@ -57,7 +57,7 @@
 //!
 //! | Lage | Funktionen | Zelle | woher die Aussage kommt |
 //! |---|---|---|---|
-//! | 1 | jede mit [`Kommando`] | [`Wirkungsbereich::beschriftung`] | aus der Belegung **entscheidbar**, ohne Naeherung |
+//! | 1 | jede mit [`Kommando`](krk_core::tasten::Kommando) | [`Wirkungsbereich::beschriftung`](krk_core::tasten::belegung::Wirkungsbereich::beschriftung) | aus der Belegung **entscheidbar**, ohne Naeherung |
 //! | 2 | `text_ausschneiden`, `text_kopieren`, `text_einfuegen` | "Textfelder und Editor" | in S1 am Laufzeitsystem **gemessen**, zuzueglich eines `inference:`-Schrittes ueber den Feldeditor (siehe unten) |
 //! | 3 | `text_alles_auswaehlen` | leer | S1 hat die Ableitung **gebrochen** |
 //! | 4 | `text_rueckgaengig`, `text_wiederholen` | "Editor" | **Nutzerentscheid** vom 260811-0935, am Code belegt |
@@ -164,9 +164,9 @@ const TABELLENTRENNER: &str = "|---|---|---|";
 /// aus der Datei, statt darin als unbelegt zu erscheinen.
 ///
 /// Gliederung und Reihenfolge kommen aus
-/// [`nach_bereichen`](crate::belegungsmodell::nach_bereichen), die
+/// [`nach_bereichen`], die
 /// Schreibweise der Kombinationen aus
-/// [`tastenliste`](crate::belegungsmodell::tastenliste) und damit aus
+/// [`tastenliste`] und damit aus
 /// `anzeige`. Beide sind mit der Bildschirmansicht geteilt und nicht
 /// abgeschrieben; eine zweite Aufbereitung schliesst die Directive aus.
 ///

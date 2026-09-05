@@ -130,7 +130,7 @@ pub struct AufteilungsIvars {
     /// traegt den des Fenstermodells ein, und das Auslegen nach einer
     /// Groessenaenderung uebernimmt eine mit der Maus verschobene Trennlinie.
     /// Welche der beiden Zahlen gilt, entscheidet
-    /// [`wuensche_nachfuehren`](crate::fenstermodell::wuensche_nachfuehren) und
+    /// [`wuensche_nachfuehren`] und
     /// nicht diese Datei.
     ///
     /// **Kein Rueckweg in das Fenstermodell und kein Ring.** Der Delegierte

@@ -63,7 +63,7 @@
 //! die ausfuehrende ist; solange die Huelle eine unbekannte Antwort auf die
 //! letzte Stelle abbildete, ergab sie hier den Loeschauftrag
 //! (`issues/260817-1106_*`). Die Huelle fragt seit dem 260817 die
-//! [`Wirkung`](super::Wirkung) der Schaltflaechen und nicht ihre Reihenfolge;
+//! [`Wirkung`] der Schaltflaechen und nicht ihre Reihenfolge;
 //! [`schaltflaechen`] traegt sie, und die Probe darunter liest nach, dass die
 //! ungefaehrliche Stelle nicht die ausfuehrende ist.
 //!

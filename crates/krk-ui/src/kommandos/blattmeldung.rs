@@ -29,7 +29,7 @@
 //!
 //! # Warum allein die Blattsperre und nicht alle vier Bestandteile
 //!
-//! [`zulaessigkeit`](super::zulaessigkeit) fragt vier Dinge, und drei davon
+//! [`zulaessigkeit`] fragt vier Dinge, und drei davon
 //! weisen im Sekundentakt ab, ohne dass etwas verlorenginge:
 //!
 //! - **Der Fokusvorbehalt** trennt die Bereiche. `up` und `down` liegen in
@@ -78,19 +78,17 @@
 //! in der Statuszeile daneben waere dieselbe Auskunft ein zweites Mal.
 //!
 //! Die Regel steht aus demselben Grund **hinter**
-//! [`zulaessigkeit::zulaessig`](super::zulaessigkeit::zulaessig) und nicht
+//! [`zulaessigkeit::zulaessig`] und nicht
 //! darin: eine Antwort dort traefe beide Frager zugleich, den Ereignisabgriff
 //! und die Ausgrauung ueber `validateMenuItem:`.
 //!
 //! # Der eine Aufrufer
 //!
 //! `Anwendungsdelegierter::kommando_ausfuehren` (`crate::appkit::anwendung`)
-//! ist der einzige, und die Probe [`die_regel_hat_genau_einen_aufrufer`] haelt
+//! ist der einzige, und die Probe `die_regel_hat_genau_einen_aufrufer` haelt
 //! die Zahl fest. Ein zweiter waere ein zweiter Weg, dieselbe Meldung zu
 //! setzen, und die erste Abweichung zwischen beiden waere ein Fehler ohne
 //! Pruefung.
-//!
-//! [`die_regel_hat_genau_einen_aufrufer`]: tests::die_regel_hat_genau_einen_aufrufer
 
 use krk_core::tasten::{Kommando, Tastendruck, code_von_pflicht};
 
@@ -140,7 +138,7 @@ const BEDIENT_EIN_BLATT: [u16; 12] = [
 /// einer reinen Funktion eine mit Bestand.
 ///
 /// Er steht hier und nicht bei den uebrigen Befehlsantworten in
-/// [`operationen`](super::operationen), weil Regel und Satz hier zusammen eine
+/// [`operationen`], weil Regel und Satz hier zusammen eine
 /// Sache sind — dieselbe Bauart wie bei
 /// [`loeschwarnung`](super::loeschwarnung), das seine Stufenfolge und die Texte
 /// daraus ebenfalls in einem Modul haelt.

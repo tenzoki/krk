@@ -3,7 +3,7 @@
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile, wie
 //! in `fenstermodell` und `tabs` daneben. Die Ansicht dazu ist
-//! [`crate::appkit::vorschau`], die aus einem [`Inhalt`] Text, ein `NSImage`
+//! `crate::appkit::vorschau`, die aus einem [`Inhalt`] Text, ein `NSImage`
 //! oder die Metadatenzeilen macht.
 //!
 //! # Das Halteverhalten, aus dem Zustandsdiagramm des Specs
@@ -92,7 +92,7 @@
 //! (Dateien, Ordner, Verknuepfungen) **treten unter** sie (C2.1, C2.2). Die
 //! sechs Angaben aus C2.5 der Runde 16 stehen weiter unveraendert da, und
 //! ihre Anzeige waechst um drei Zeilen. Der Kern sagt in der
-//! [`Auskunft`](krk_core::leseprofil::Auskunft), welche der beiden es ist,
+//! [`Auskunft`], welche der beiden es ist,
 //! und [`laden`] verzweigt darueber vollstaendig; die Zeilen reisen an
 //! [`Inhalt::Metadaten`] strukturiert mit und werden erst in der Ansicht zu
 //! Text, an derselben Stelle wie die sechs Angaben. Eine Verknuepfung
@@ -120,11 +120,11 @@
 //! # Gelesen wird ueber den Deskriptor und nicht ueber den Pfad
 //!
 //! Der eine Weg von einem Pfad zu den Bytes ist
-//! [`krk_core::text::datei::bis_zur_grenze_lesen`](krk_core::text::datei::bis_zur_grenze_lesen),
+//! [`krk_core::text::datei::bis_zur_grenze_lesen`],
 //! und er oeffnet ueber
-//! [`krk_core::verzeichnis::sys::ohne_warten_oeffnen`](krk_core::verzeichnis::sys::ohne_warten_oeffnen)
+//! [`krk_core::verzeichnis::sys::ohne_warten_oeffnen`]
 //! — dasselbe Stueck, das
-//! [`krk_core::text::datei::oeffnen`](krk_core::text::datei::oeffnen) fuer den
+//! [`krk_core::text::datei::oeffnen`] fuer den
 //! Editor nimmt. Ein eigener Oeffnungsweg der Vorschau entsteht damit nicht:
 //! es ist derselbe Eingang mit einer anderen Grenze, und die beiden Grenzen
 //! sind der eine Unterschied zwischen Ansehen und Bearbeiten (siehe
@@ -333,7 +333,7 @@ pub enum Inhalt {
     /// **Seit der Runde 19 fahren die Zaehlzeilen des eingebauten
     /// Default-Profils mit**, und die leere Folge heisst „keine Zaehlzeilen".
     /// Ein Ordner ohne Profiltreffer bekommt die drei Zeilen des
-    /// [`defaultprofil`](krk_core::leseprofil::defaultprofil), eine Datei
+    /// [`defaultprofil`](fn@krk_core::leseprofil::defaultprofil), eine Datei
     /// und eine Verknuepfung bekommen keine (C1.6, C1.7). Ein achter Wert
     /// von [`Inhalt`] waere der teurere Weg und der schlechtere: jede
     /// vollstaendige Fallunterscheidung ueber `Inhalt` — die Nummernspalte,
@@ -757,7 +757,7 @@ fn zu_gross_text(groesse: u64) -> String {
 /// die Metadaten sind fuer alle vier die Antwort, und sie waren es schon fuer
 /// die letzten drei. Deshalb steht die Groessenschranke nicht mehr als eigener
 /// Zweig hier, sondern in
-/// [`krk_core::text::datei::bis_zur_grenze_lesen`](krk_core::text::datei::bis_zur_grenze_lesen)
+/// [`krk_core::text::datei::bis_zur_grenze_lesen`]
 /// neben den anderen Gruenden; vier Wege zu derselben Antwort brauchen keine
 /// vier Verzweigungen.
 ///

@@ -76,12 +76,12 @@
 //!
 //! 1. **Es steht kein Blatt**, oder der Befehl ist waehrend eines Blattes
 //!    erlaubt. Die zweite Haelfte beantwortet
-//!    [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt)
+//!    [`operationen::waehrend_blatt_erlaubt`]
 //!    und keine zweite Fassung daneben.
 //! 2. **Der Ersthelfer des Schluesselfensters gehoert nicht AppKit.** Dieselbe
 //!    Frage, die der Fokusvorbehalt bis zum 260813 im Ereignisabgriff selbst
 //!    gestellt hat; sie ist hierher gewandert und steht nicht mehr daneben.
-//! 3. **[`fokus::wirkt`](super::fokus::wirkt) sagt ja** zum Wirkungsbereich des
+//! 3. **[`fokus::wirkt`] sagt ja** zum Wirkungsbereich des
 //!    Befehls und zum Fokus des Augenblicks.
 //! 4. **Das Schluesselfenster gehoert KRK.** Es ist das Hauptfenster oder ein
 //!    Blatt, das daran haengt; steht ein fremdes Fenster vorn, wirkt kein
@@ -151,7 +151,7 @@
 //!
 //! Dass sie den dritten Bestandteil nicht aufhebt, faellt heute nicht auf:
 //! jeder Eintrag der Liste traegt `Wirkungsbereich::Ueberall`, und
-//! [`fokus::wirkt`](super::fokus::wirkt) sagt dafuer in jedem Fokus ja. Sobald
+//! [`fokus::wirkt`] sagt dafuer in jedem Fokus ja. Sobald
 //! ein Eintrag der Liste einen Bereich braucht, faellt der Unterschied an, und
 //! die Probe `die_ausnahmeliste_hebt_den_fokusvorbehalt_nicht_auf` haelt ihn
 //! fest. Eine Ordnungszahl steht hier bewusst nicht: sie altert mit jedem
@@ -193,7 +193,7 @@ pub struct Lage {
     /// **Ein anhaengendes Blatt meldet hier `true`**, denn es ist selbst das
     /// Schluesselfenster; ueber das Blatt entscheidet allein
     /// [`blatt_steht`](Self::blatt_steht) zusammen mit
-    /// [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt).
+    /// [`operationen::waehrend_blatt_erlaubt`].
     /// Die beiden Felder sind unabhaengig: steht ein Blatt und oeffnet der
     /// Nutzer den Ueber-Dialog, ist `blatt_steht` wahr und dieses Feld `false`.
     ///
@@ -215,7 +215,7 @@ pub struct Lage {
 /// Eine Sonderbehandlung fuer ein einzelnes Kommando gibt es hier nicht:
 /// welcher Bereich noetig ist, sagt der [`Wirkungsbereich`] des Kerns, was
 /// waehrend eines Blattes durchkommt, sagt
-/// [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt),
+/// [`operationen::waehrend_blatt_erlaubt`],
 /// und was ohne Ruecksicht auf beides erreichbar bleibt, sagt
 /// [`immer_erreichbar`].
 ///
@@ -263,7 +263,7 @@ pub fn dateiablage_zulaessig(lage: Lage) -> bool {
 /// vollstaendiges `match` ueber die zwei Varianten, ohne Auffangzweig: ein
 /// dritter Eingang haelt den Bau an und bekommt seine Einordnung bewusst.
 /// Fuer ein Kommando kommen die Antworten aus dem Kern und aus
-/// [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt);
+/// [`operationen::waehrend_blatt_erlaubt`];
 /// die Dateiablage antwortet fest, denn sie hat kein Kommando, das man fragen
 /// koennte.
 ///

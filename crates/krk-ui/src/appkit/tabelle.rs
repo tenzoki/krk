@@ -2211,7 +2211,7 @@ impl DateifensterQuelle {
     /// kann, ist deshalb nicht verbraucht.
     ///
     /// **Die Zeichenregel bleibt
-    /// [`traegt_ein_dateiname`](krk_core::verzeichnis::filter::traegt_ein_dateiname)**
+    /// [`traegt_ein_dateiname`]**
     /// (C1.4), dieselbe, die die Tippsuche der Belegungsansicht aus der Runde 7
     /// liest. Gefragt wird sie hier und nicht im Kern: `zeichen_anhaengen` hat
     /// keinen Rueckgabewert, und ein dort still verworfenes Zeichen waere ein
@@ -2335,7 +2335,7 @@ impl DateifensterQuelle {
     ///
     /// Der Weg von der Zeile zum Eintrag laeuft genau hier und sonst nirgends.
     /// Gerufen wird er von jeder Stelle, an der sich die Auswahl der Tabelle
-    /// aendert: von [`DateifensterQuelle::auswahl_verschieben`] und vom
+    /// aendert: von [`DateifensterQuelle::auswahl_bewegen`] und vom
     /// Auswahlrueckruf des Delegierten, den die Maus ausloest — und seit dem
     /// 260825 von [`Self::nach_lesebeginn`], damit ein Ordnerwechsel den Weg
     /// auch dann nimmt, wenn AppKit keine Aenderung zu melden hat.
@@ -3809,7 +3809,7 @@ impl DateifensterQuelle {
     ///
     /// **Warum der Abwurf ueberhaupt beide Seiten braucht**, wo der Doppelklick
     /// daneben ausdruecklich nur seine eigene raeumt, steht am Ziel dieses
-    /// Rueckrufs: [`statuszeile::zeile`](super::statuszeile::zeile) nimmt
+    /// Rueckrufs: [`statuszeile::zeile`] nimmt
     /// innerhalb eines Rangs die aktive Seite zuerst, und eine Meldung, die im
     /// **nicht** aktiven Dateifenster steht, verliert gegen jede stehende
     /// Befehlsantwort im aktiven.
@@ -4133,8 +4133,16 @@ define_class!(
     impl DateifensterDelegierter {
         /// Die Aktion der bearbeitbaren Namenszelle (C4).
         ///
-        /// AppKit schickt sie, wenn die Bearbeitung mit Return endet oder die
-        /// Zelle den Fokus verliert, und ausdruecklich **nicht** nach Escape.
+        /// **AppKit schickt sie allein nach Return.** Jedes uebrige Ende der
+        /// Bearbeitung — Escape, der Fokuswechsel, ein `reloadData` — schickt
+        /// `textDidEndEditing:` und keine Aktion. Bis zum Befund
+        /// `260826-1327_*_der-doc-kommentar-an-umbenennungbeendet-sagt-die-aktion-komme-auch-beim-fokusverlust-die-messtafel-sagt-nur-nach-return.md`
+        /// stand hier "oder die Zelle den Fokus verliert"; die zweite Haelfte
+        /// war falsch und ist aus dem Kopf von
+        /// [`DateifensterQuelle::umbenennung_beenden`] schon einmal entfernt
+        /// worden, waehrend diese Kopie stehen blieb. Welcher Anlass welche
+        /// Rueckrufe schickt, sagt die Messtafel am `Namensfeld` in derselben
+        /// Datei und nicht dieser Satz.
         // SAFETY: Die Signatur passt zu der, die NSControl an sein Ziel
         // schickt: ein Argument, der Absender.
         #[unsafe(method(umbenennungBeendet:))]
@@ -5592,27 +5600,6 @@ mod tests {
         );
     }
 
-    /// Die Tafel der Abwurfmeldung, vollstaendig: sechs gemerkte Gruende mal
-    /// sechs eben gefaellte (C7).
-    ///
-    /// Sie schreibt aus, was die erste Zeile der Tafel an [`abwurfmeldung`] mit
-    /// „gleich `jetzt`" zusammenfasst, und zeigt, dass keine Kombination fehlt.
-    /// Die Erwartungen stehen als Werte da und werden nicht gerechnet: eine
-    /// gerechnete Erwartung waere die Umsetzung ein zweites Mal. Dieselbe
-    /// Bauform tragen die Tafeln in [`abwurfregel`] und
-    /// [`crate::kommandos::rueckschritt`].
-    ///
-    /// **Was sie misst, ist die Zusage des Spec unter C7:** die Meldung darf
-    /// nicht bei jeder Zeigerbewegung neu geschrieben werden. In der Tafel ist
-    /// das die Hauptdiagonale — gleicher Grund, keine Meldung —, und sie ist
-    /// der einzige Teil, den ein Ziehvorgang oft durchlaeuft: `validateDrop:`
-    /// laeuft bei jeder Bewegung, und der Grund aendert sich dabei selten.
-    ///
-    /// **Was sie nicht misst**, und der Satz gehoert dazu: ob die Meldung
-    /// wirklich in der Statuszeile ankommt und ob sie im richtigen
-    /// Dateifenster steht. Beides verlangt ein stehendes Fenster und einen
-    /// Ziehvorgang aus einer zweiten Anwendung; es steht als Nutzerarbeit im
-    /// Plan der Runde 13.
     /// Die ganze Tafel des Abwurfziels: zwei Zeilenlagen mal vier
     /// Zeilenbefunde, also acht Faelle (C4).
     ///
@@ -5696,6 +5683,27 @@ mod tests {
         );
     }
 
+    /// Die Tafel der Abwurfmeldung, vollstaendig: sechs gemerkte Gruende mal
+    /// sechs eben gefaellte (C7).
+    ///
+    /// Sie schreibt aus, was die erste Zeile der Tafel an [`abwurfmeldung`] mit
+    /// „gleich `jetzt`" zusammenfasst, und zeigt, dass keine Kombination fehlt.
+    /// Die Erwartungen stehen als Werte da und werden nicht gerechnet: eine
+    /// gerechnete Erwartung waere die Umsetzung ein zweites Mal. Dieselbe
+    /// Bauform tragen die Tafeln in [`abwurfregel`] und
+    /// [`crate::kommandos::rueckschritt`].
+    ///
+    /// **Was sie misst, ist die Zusage des Spec unter C7:** die Meldung darf
+    /// nicht bei jeder Zeigerbewegung neu geschrieben werden. In der Tafel ist
+    /// das die Hauptdiagonale — gleicher Grund, keine Meldung —, und sie ist
+    /// der einzige Teil, den ein Ziehvorgang oft durchlaeuft: `validateDrop:`
+    /// laeuft bei jeder Bewegung, und der Grund aendert sich dabei selten.
+    ///
+    /// **Was sie nicht misst**, und der Satz gehoert dazu: ob die Meldung
+    /// wirklich in der Statuszeile ankommt und ob sie im richtigen
+    /// Dateifenster steht. Beides verlangt ein stehendes Fenster und einen
+    /// Ziehvorgang aus einer zweiten Anwendung; es steht als Nutzerarbeit im
+    /// Plan der Runde 13.
     #[test]
     fn die_tafel_der_abwurfmeldung_geht_auf() {
         const GRUENDE: [Option<Abwurfgrund>; 6] = [

@@ -1124,7 +1124,7 @@ pub fn mehrere_archive() -> String {
 /// einer, der nicht angekommen ist.
 /// **Ein Rufer**, der Finder-Zweig des Kontextmenues
 /// (`Anwendungsdelegierter::im_finder_zeigen`), wenn
-/// [`crate::appkit::terminal::ordner_oeffnen`] `false` liefert.
+/// `crate::appkit::terminal::ordner_oeffnen` `false` liefert.
 #[must_use]
 pub fn kein_finder() -> String {
     "der Finder ist nicht erreichbar: das System hat keine Anwendung dafür genannt".to_owned()
@@ -1318,7 +1318,7 @@ fn eintragsname(pfad: &Path) -> String {
 /// keine Umstaendlichkeit.** `NSWorkspace::openURL:` meldet synchron allein, ob
 /// das System die Adresse angenommen hat; ob das aufgeloeste Programm danach
 /// startet, erfuehre KRK nur ueber einen Rueckruf, den es nicht fuehrt (siehe
-/// [`crate::appkit::standardprogramm`]). Die Meldung behauptet deshalb genau
+/// `crate::appkit::standardprogramm`). Die Meldung behauptet deshalb genau
 /// das, was die Rueckgabe hergibt, und keinen Schritt mehr.
 ///
 /// Bei einem Eintrag nennt sie seinen **Namen** und nicht seinen Pfad — anders

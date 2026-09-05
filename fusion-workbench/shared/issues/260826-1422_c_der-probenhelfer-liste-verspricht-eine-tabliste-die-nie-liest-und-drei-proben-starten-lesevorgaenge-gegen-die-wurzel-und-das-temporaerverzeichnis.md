@@ -45,3 +45,36 @@ führt denselben Griff ins echte Temporärverzeichnis für `krk-bench`.
 `zwei_vorhandene_ordner` und `gelesene_liste` bauen ihre Ordner mit `Pruefordner::neu`, wie die
 Durchlaufproben derselben Datei; der Doc-Kommentar von `liste` sagt dann wahr, was er heute
 verspricht, oder er fällt.
+
+---
+Resolved: Beide Hälften, und eine dritte, die der Befund nicht führt.
+
+**Kein Griff mehr ins echte Temporärverzeichnis und keiner an die Wurzel.**
+`grep -c 'std::env::temp_dir' crates/krk-ui/src/tabs.rs` liefert 0, vorher 4 —
+der Befund nennt zwei davon (`gelesene_liste`, `zwei_vorhandene_ordner`), die
+zwei anderen standen in `eine_auffrischung_nimmt_ordner_auswahl_und_bildlauf_mit`
+und `eine_auffrischung_laesst_die_liste_stehen_bis_ihr_erster_stapel_da_ist`
+und sind mitgegangen. Der Pfad `"/"` als zweiter Ordner ist ebenfalls gefallen.
+
+**Ein Bauplatz statt vier.** Neu ist der Helfer `vorhandene_ordner(namen)`, der
+so viele Unterordner unter einem `crate::pruefordner::Pruefordner` anlegt, wie
+Namen hereinkommen, und ihn mit herausgibt; `zwei_vorhandene_ordner` ist die
+Abkürzung darauf. `gelesene_liste` legt sich seinen eigenen Prüfordner an.
+Beide Helfer geben den `Pruefordner` zurück, weil sein `Drop` sonst abräumte,
+während der Faden noch liest; die 14 Rufer binden ihn als `_ordner`.
+
+**Auch die Leseläufe gegen `/a`, `/b`, `/c` sind weg**, obwohl der Befund sie
+nur benennt und sein "Weg" sie nicht verlangt: `der_naechste_und_der_vorige_tab_laufen_um`
+und `das_schliessen_ruecht_die_sichtbare_stelle_nach` fahren jetzt über
+`vorhandene_ordner(&["a", "b", "c"])` und vergleichen gegen die gelieferten
+Pfade statt gegen die Zeichenketten. Damit gibt es in dieser Datei nur noch eine
+Praxis, und das war der eigentliche Befund.
+
+**Der Doc-Kommentar von `liste` sagt jetzt, was zutrifft:** der Helfer startet
+keinen Lesevorgang, `waehlen`, `schliessen` und `ordner_setzen` auf dem Ergebnis
+sehr wohl, und wer einen davon ruft, gibt der Probe vorhandene Ordner. Wer
+allein die Tabverwaltung prüft, darf weiter erfundene Namen nehmen; das steht
+dort als Regel und nicht mehr als Zusage, die die Probe bricht.
+
+Beleg: `cargo test -p krk-ui tabs` → 56 bestanden;
+`cargo clippy -p krk-ui --all-targets -- -D warnings` → 0.

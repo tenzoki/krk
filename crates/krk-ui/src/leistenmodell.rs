@@ -2,9 +2,9 @@
 //! welcher Reihenfolge, und welche Zeile ausgewaehlt ist (C5).
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile. Die
-//! Ansicht dazu ist [`crate::appkit::leiste`], die aus den Zeilen hier eine
+//! Ansicht dazu ist `crate::appkit::leiste`, die aus den Zeilen hier eine
 //! `NSTableView` macht; die Datentraeger, die den unteren Teil fuellen, zaehlt
-//! [`crate::appkit::volumes`] auf und reicht sie als gewoehnliche Rust-Werte
+//! `crate::appkit::volumes` auf und reicht sie als gewoehnliche Rust-Werte
 //! herein.
 //!
 //! # Zwei Teile, eine Liste

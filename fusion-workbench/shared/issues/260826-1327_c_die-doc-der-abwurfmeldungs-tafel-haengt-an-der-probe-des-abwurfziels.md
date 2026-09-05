@@ -22,3 +22,11 @@ steht 65 Zeilen tiefer ohne jede Doc.
 ## Umfang
 
 `krk-ui`, `appkit/tabelle.rs`, Pruefmodul.
+
+---
+Resolved: Die zwei Doc-Blöcke im Prüfmodul von
+`crates/krk-ui/src/appkit/tabelle.rs` stehen jetzt je über ihrer eigenen Probe:
+"Die Tafel der Abwurfmeldung, vollständig" über
+`die_tafel_der_abwurfmeldung_geht_auf`, "Die ganze Tafel des Abwurfziels" über
+`die_tafel_des_abwurfziels_geht_auf`. Verschoben ist allein der erste Block;
+sein Wortlaut ist unverändert. Keine Probe steht mehr ohne Doc.

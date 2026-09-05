@@ -4,7 +4,7 @@
 //! es nennt keine `objc2`-Kiste. Was hier entsteht, ist die **Beschreibung**
 //! der Leiste: welche Obermenues es gibt, wie sie heissen, welche Eintraege sie
 //! tragen, welche Beschriftung und welche Kombination jeder Eintrag bekommt und
-//! wer ihn ausfuehrt. [`super::appkit::menue`] setzt diese Beschreibung danach
+//! wer ihn ausfuehrt. `super::appkit::menue` setzt diese Beschreibung danach
 //! in `NSMenu` und `NSMenuItem` um und tut sonst nichts mehr.
 //!
 //! ```text
@@ -46,7 +46,7 @@
 //!   `Anwendungsdelegierter::kommando_ausfuehren`, also ueber denselben einen
 //!   Ausfuehrungsweg wie der Tastendruck (C2.14). Sein Kommando steht am
 //!   `NSMenuItem` im `tag`; die Uebersetzung dorthin und zurueck macht
-//!   [`super::appkit::menue`] und nicht dieses Modul, denn `tag` ist ein
+//!   `super::appkit::menue` und nicht dieses Modul, denn `tag` ist ein
 //!   AppKit-Begriff.
 //! - **[`Eintrag::Textbefehl`]** traegt statt eines Kommandos den Namen eines
 //!   AppKit-Selektors und laeuft ueber die Antwortkette (C2.8). Es sind genau
@@ -134,7 +134,7 @@ const UEBER_SELEKTOR: &CStr = c"orderFrontStandardAboutPanel:";
 /// `gehalten_von = "menue"` fuehrt und die deshalb kein [`Kommando`] tragen: wo
 /// sie wirken, entscheidet die Antwortkette von AppKit und nicht KRK. Welche
 /// Klasse jeden von ihnen beantwortet, ist gemessen und steht im Modulkopf von
-/// [`super::appkit::menue`].
+/// `super::appkit::menue`.
 const ZUSTELLER: [(&str, &CStr); 6] = [
     ("text_ausschneiden", c"cut:"),
     ("text_kopieren", c"copy:"),
@@ -161,7 +161,7 @@ pub struct Obermenue<'a> {
 /// Ein Eintrag eines Obermenues.
 ///
 /// **Vollstaendig und ohne Auffangzweig.** Die Umsetzung in
-/// [`super::appkit::menue`] zaehlt jede Sorte auf; eine neue haelt dort den Bau
+/// `super::appkit::menue` zaehlt jede Sorte auf; eine neue haelt dort den Bau
 /// an und erzwingt eine bewusste Einordnung, statt still nicht im Menue zu
 /// erscheinen.
 ///
@@ -225,7 +225,7 @@ pub enum Eintrag<'a> {
 /// **Eine reine Rechnung.** Sie liest die Belegung und sonst nichts; dieselbe
 /// Belegung liefert dieselbe Leiste. Aufgerufen wird sie an den zwei Stellen,
 /// die das Menue bauen — beim Start und nach einer Aenderung in der
-/// Belegungsansicht (C2.11) —, und zwar aus [`super::appkit::menue::hauptmenue`].
+/// Belegungsansicht (C2.11) —, und zwar aus `super::appkit::menue::hauptmenue`.
 ///
 /// Jede Funktion der Belegung bekommt genau einen Eintrag (C2.1); die Zahl
 /// steht nirgends im Programmtext, sie ergibt sich aus der Belegung. Ein

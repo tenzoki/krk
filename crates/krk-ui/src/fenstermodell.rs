@@ -3,7 +3,7 @@
 //! zeigen und in welcher Reihenfolge beim Start gelesen wird.
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile. Die
-//! Ansicht dazu ist [`crate::appkit::aufteilung`], die aus den Zahlen hier
+//! Ansicht dazu ist `crate::appkit::aufteilung`, die aus den Zahlen hier
 //! Rahmen fuer die sechs Bereiche einer `NSSplitView` macht.
 //!
 //! # Die sechs Bereiche
@@ -308,7 +308,7 @@ impl Bereich {
     /// **Kurz, weil die Leiste 18 Punkte hoch ist** und ihre Schalter
     /// nebeneinander traegt; ausgeschriebene Namen passten bei der
     /// Mindestbreite des Fensters nicht mehr in eine Zeile. Wie viele es sind,
-    /// sagt der Modulkopf von [`crate::appkit::bereichsleiste`] und keine Zahl
+    /// sagt der Modulkopf von `crate::appkit::bereichsleiste` und keine Zahl
     /// hier: sie waechst mit jedem Bereich und mit jeder schaltbaren Spalte. Was der Schalter
     /// meint, sagt der Hinweistext aus [`Bereich::langname`], der beim
     /// Verweilen erscheint.
@@ -367,7 +367,7 @@ impl Bereich {
 /// koennen es zwei sein.
 ///
 /// **"Die eine" gilt seit dem 260812 wieder wortwoertlich.**
-/// [`crate::appkit::aufteilung`] fuehrte bis dahin eine zweite Fassung
+/// `crate::appkit::aufteilung` fuehrte bis dahin eine zweite Fassung
 /// (`sichtbar_im`), die sich anfangs in einem Zweig unterschied; als Schritt 3
 /// der Bereichsleisten-Runde diesen Unterschied beseitigte, standen beide Zeile
 /// fuer Zeile gleich da. Die Aufteilung ruft jetzt diese hier
@@ -436,7 +436,7 @@ pub fn spalte_sichtbar_in(spalten: &Spaltensichtbarkeit, spalte: Spalte) -> bool
 ///
 /// Es traegt, was nicht zu den Tabs gehoert: das aktive Dateifenster, die
 /// Sichtbarkeit der sechs Bereiche, ihre Breiten und die Sichtbarkeit der
-/// Spalten beider Dateilisten. Die Tabs selbst haelt [`Tabliste`], je eine
+/// Spalten beider Dateilisten. Die Tabs selbst haelt [`Tabliste`](crate::tabs::Tabliste), je eine
 /// Liste je Dateifenster.
 ///
 /// **Die Spalten stehen hier und nicht bei den Tabs**, weil ein Spaltenschalter
@@ -1135,7 +1135,7 @@ impl Fenstermodell {
 ///
 /// **Die eine Stelle, an der "n sichtbare Bereiche brauchen n minus eine
 /// Trennlinie" gerechnet wird.** Bis zur Bereichsleisten-Runde stand die
-/// Rechnung in [`crate::appkit::aufteilung`], also dort, wo die beiden Zahlen
+/// Rechnung in `crate::appkit::aufteilung`, also dort, wo die beiden Zahlen
 /// aus AppKit kommen, und [`bereichsbreiten`] bekam allein das Ergebnis. Damit
 /// konnte das Modell nicht beantworten, was eine **andere** Anzahl sichtbarer
 /// Bereiche kosten wuerde — genau die Frage, die eine Abweisung an den
@@ -1163,7 +1163,7 @@ impl Zeilenmass {
 /// Verteilt den Platz der Fensterzeile auf die sechs Bereiche.
 ///
 /// **Die eine Breitenregel des Programms.** Sie steht hier und nirgends sonst;
-/// [`crate::appkit::aufteilung`] setzt nur um, was hier herauskommt.
+/// `crate::appkit::aufteilung` setzt nur um, was hier herauskommt.
 ///
 /// Ein ausgeblendeter Bereich bekommt `0.0`; seine gespeicherte Breite bleibt
 /// unangetastet und steht beim Wiedereinblenden wieder zur Verfuegung.
@@ -1356,7 +1356,7 @@ fn traegt_eine_ziehbewegung(
 /// auszulegen ist.
 ///
 /// **Die Entscheidung hinter `splitView:resizeSubviewsWithOldSize:`**, und sie
-/// steht hier statt in [`crate::appkit::aufteilung`], weil sie zur Breitenregel
+/// steht hier statt in `crate::appkit::aufteilung`, weil sie zur Breitenregel
 /// gehoert und ohne Fenster pruefbar sein soll.
 ///
 /// `gehalten` sind die Wuensche, aus denen die Zeile zuletzt ausgelegt wurde,

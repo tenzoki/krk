@@ -3,8 +3,8 @@
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile und
 //! kein `unsafe`. Sie haelt die Entscheidung, die Ansicht dazu sind
-//! [`crate::appkit::fsevents`] fuer die Beobachtung des Dateisystems und
-//! [`crate::appkit::volumes`] fuer die der Datentraeger.
+//! `crate::appkit::fsevents` fuer die Beobachtung des Dateisystems und
+//! `crate::appkit::volumes` fuer die der Datentraeger.
 //!
 //! # Eine Funktion, zwei Ausloeser
 //!
@@ -89,7 +89,7 @@ use krk_core::operation::Art;
 /// Was der Auffrischungspfad von den beiden Dateifenstern braucht.
 ///
 /// Die Umsetzung steht am Anwendungsdelegierten in
-/// [`crate::appkit::anwendung`] und ist dort in jeder Methode eine Zeile. Der
+/// `crate::appkit::anwendung` und ist dort in jeder Methode eine Zeile. Der
 /// Umweg ueber diese Schnittstelle ist der Grund, aus dem die Entscheidung
 /// darueber, welches Dateifenster ein Pfad angeht, ohne Fenster pruefbar ist.
 pub trait Dateifenstersicht {
@@ -793,10 +793,17 @@ mod tests {
         }
     }
 
-    /// Die drei Arten, die nicht aufschieben, in einer Liste; so faellt beim
-    /// Hinzukommen einer vierten auf, dass sie hier fehlt.
-    fn die_gemaechlichen() -> [Art; 3] {
-        [
+    /// Die Arten, die nicht aufschieben, in einer Liste.
+    ///
+    /// **Wie viele es sind, sagt die Aufzaehlung [`Art`] und nicht dieser
+    /// Satz.** Bis zur Runde 17 stand hier "die drei" mit dem Zusatz, beim
+    /// Hinzukommen einer vierten falle das Fehlen auf; die Runde hat zwei
+    /// hinzugefuegt, und aufgefallen ist es nicht
+    /// (`shared/issues/260826-1442_*_die-liste-der-gemaechlichen-arten-in-auffrischung-rs-traegt-drei-von-fuenf-und-verspricht-das-gegenteil.md`).
+    /// Was das Fehlen kuenftig anhaelt, ist keine Zahl in diesem Kommentar,
+    /// sondern [`die_liste_der_gemaechlichen_deckt_jede_art_ausser_dem_stapel_umbenennen`].
+    fn die_gemaechlichen() -> Vec<Art> {
+        vec![
             Art::Kopieren {
                 ziel: PathBuf::from("/ziel"),
             },
@@ -804,12 +811,117 @@ mod tests {
                 ziel: PathBuf::from("/ziel"),
             },
             Art::InDenPapierkorb,
+            Art::Zippen {
+                ziel: PathBuf::from("/ziel.zip"),
+            },
+            Art::Entpacken {
+                ziele: vec![PathBuf::from("/quelle.zip")],
+            },
         ]
     }
 
+    /// Die Varianten der Aufzaehlung `Art` aus dem Quelltext von `krk-core`.
+    ///
+    /// **Gelesen und nicht aufgezaehlt.** Eine Liste hier waere die zweite
+    /// Fassung derselben Aufstellung und veraltete mit der naechsten Variante,
+    /// genau wie die Zahl, die dieser Baustein ersetzt. Die Nadel ist die
+    /// Kopfzeile `pub enum Art {` in Spalte 0; der Block endet an der
+    /// schliessenden Klammer in Spalte 0, und gezaehlt wird jede Zeile mit
+    /// einer Einrueckung von genau vier Leerzeichen, die mit einem
+    /// Grossbuchstaben beginnt. Damit zaehlen datentragende Varianten mit, und
+    /// die Felder darin, um eine Ebene tiefer eingerueckt, nicht.
+    ///
+    /// Leer laufen kann sie nicht: beide Zusicherungen unten lassen die Probe
+    /// rot werden, statt sie still bestehen zu lassen.
+    fn varianten_von_art() -> Vec<String> {
+        let datei = "krk-core/src/operation/auftrag.rs";
+        let quellen = crate::quellbaum::quelldateien();
+        let (_, inhalt) = quellen
+            .iter()
+            .find(|(pfad, _)| pfad == datei)
+            .unwrap_or_else(|| panic!("unter crates/ steht keine Datei {datei}"));
+        let anfang = inhalt
+            .lines()
+            .position(|zeile| zeile == "pub enum Art {")
+            .unwrap_or_else(|| {
+                panic!(
+                    "in {datei} steht keine Zeile `pub enum Art {{` in Spalte 0; \
+                     umbenannt oder verschoben?"
+                )
+            });
+        let mut varianten = Vec::new();
+        let mut geschlossen = false;
+        for zeile in inhalt.lines().skip(anfang + 1) {
+            if zeile == "}" {
+                geschlossen = true;
+                break;
+            }
+            let Some(rumpf) = zeile.strip_prefix("    ") else {
+                continue;
+            };
+            if !rumpf.starts_with(|zeichen: char| zeichen.is_ascii_uppercase()) {
+                continue;
+            }
+            varianten.push(
+                rumpf
+                    .chars()
+                    .take_while(|zeichen| zeichen.is_ascii_alphanumeric() || *zeichen == '_')
+                    .collect(),
+            );
+        }
+        assert!(
+            geschlossen,
+            "der Block `pub enum Art {{` in {datei} endet an keiner \
+             schliessenden Klammer in Spalte 0"
+        );
+        assert!(
+            !varianten.is_empty(),
+            "in {datei} traegt die Aufzaehlung Art keine Variante; die Nadel greift nicht mehr"
+        );
+        varianten
+    }
+
+    /// Jede Variante von `Art` steht entweder in [`die_gemaechlichen`] oder ist
+    /// das Stapel-Umbenennen.
+    ///
+    /// **Die Probe darunter prueft eine Zuordnung, diese hier ihre
+    /// Vollstaendigkeit.** Der Uebersetzer haelt allein
+    /// [`schiebt_auffrischung_auf`]: eine siebte Variante haelt dort den Bau
+    /// an. Er haelt **nicht**, dass die Probe sie auch anfasst — eine
+    /// hinzugekommene Art bekaeme dort ihre Einordnung und bliebe hier
+    /// ungeprueft, und genau das ist in der Runde 17 zweimal geschehen.
+    #[test]
+    fn die_liste_der_gemaechlichen_deckt_jede_art_ausser_dem_stapel_umbenennen() {
+        let varianten = varianten_von_art();
+        let gefuehrt: Vec<String> = die_gemaechlichen()
+            .iter()
+            .chain(std::iter::once(&ein_umbenennen()))
+            .map(|art| {
+                format!("{art:?}")
+                    .chars()
+                    .take_while(|zeichen| zeichen.is_ascii_alphanumeric() || *zeichen == '_')
+                    .collect()
+            })
+            .collect();
+        let fehlen: Vec<&String> = varianten
+            .iter()
+            .filter(|variante| !gefuehrt.contains(variante))
+            .collect();
+        assert!(
+            fehlen.is_empty(),
+            "diese Varianten von Art fasst keine Probe dieses Moduls an: {fehlen:?}"
+        );
+        assert_eq!(
+            gefuehrt.len(),
+            varianten.len(),
+            "die Proben fuehren {gefuehrt:?}, die Aufzaehlung Art traegt {varianten:?}"
+        );
+    }
+
     /// Die Zuordnung "schnell / nicht schnell" steht an einer Stelle; diese
-    /// Pruefung geht sie fuer alle vier Operationsarten durch
-    /// (`issues/260806-1331_*`).
+    /// Pruefung geht sie fuer jede Operationsart durch
+    /// (`issues/260806-1331_*`). Dass die Liste darunter wirklich jede traegt,
+    /// haelt [`die_liste_der_gemaechlichen_deckt_jede_art_ausser_dem_stapel_umbenennen`].
     #[test]
     fn allein_das_stapel_umbenennen_schiebt_die_auffrischung_auf() {
         assert!(

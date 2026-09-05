@@ -26,3 +26,13 @@ Haelfte davon war falsch"); die Kopie am Delegierten blieb stehen.
 ## Umfang
 
 `krk-ui`, `appkit/tabelle.rs`.
+
+---
+Resolved: Der Doc-Kommentar an `umbenennungBeendet:` in
+`crates/krk-ui/src/appkit/tabelle.rs` (im `define_class!` des
+`DateifensterDelegierter`) sagt jetzt "AppKit schickt sie allein nach Return"
+und zählt Escape, Fokuswechsel und `reloadData` als die Anlässe auf, die
+`textDidEndEditing:` und keine Aktion schicken. Er verweist für die
+Einzelheiten auf die Messtafel am `Namensfeld` in derselben Datei, statt sie
+ein zweites Mal zu behaupten, und nennt diesen Datensatz als Herkunft der
+Berichtigung.

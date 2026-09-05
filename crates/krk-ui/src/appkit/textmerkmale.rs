@@ -413,7 +413,7 @@ fn feste_schrift(groesse: f64) -> Retained<NSFont> {
 /// **Ueber die Beschreibung der Schrift und nicht ueber `NSFontManager`.** Der
 /// Verwalter ist die Maschinerie hinter dem Schriftfenster; er baut beim ersten
 /// Zugriff einen gemeinsamen Zustand auf, den KRK nirgends sonst braucht.
-/// [`NSFontDescriptor`] beantwortet dieselbe Frage ohne diesen Anhang: er nimmt
+/// `NSFontDescriptor` beantwortet dieselbe Frage ohne diesen Anhang: er nimmt
 /// die Beschreibung der Grundschrift, setzt das Merkmal `TraitItalic` und laesst
 /// das System die passende Schnittfassung suchen.
 ///

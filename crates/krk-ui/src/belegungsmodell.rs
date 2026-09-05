@@ -48,7 +48,7 @@
 //!
 //! # Die Beschriftung geht ueber die Tastentabelle
 //!
-//! Eine Kombination schreibt sich ueber ihre [`fmt::Display`]-Form
+//! Eine Kombination schreibt sich ueber ihre [`fmt::Display`](std::fmt::Display)-Form
 //! (`shift+cmd+k`), und die kennt allein die Namen aus
 //! `krk_core::tasten::parser::TASTEN`. Die Anzeigeform [`anzeige`] setzt
 //! darauf nur Grossbuchstaben an den Teilanfang: `Shift+Cmd+K`, `F3`. Eine

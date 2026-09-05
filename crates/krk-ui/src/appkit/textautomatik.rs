@@ -9,7 +9,7 @@
 //! ```
 //!
 //! **Ein Modul, weil es zwei Flaechen gibt.** Bis zur Runde 8 stand die Frage
-//! mitten in [`super::editor::textflaeche_bauen`], und das war richtig, solange
+//! mitten in `super::editor::textflaeche_bauen`, und das war richtig, solange
 //! es genau eine bearbeitbare `NSTextView` gab. Mit dem Notizzettel der Runde 9
 //! gibt es zwei, und zwei Aufzaehlungen derselben Einstellungen waeren zwei
 //! Wahrheiten darueber, was „abgeschaltet" heisst. Der Zettel haelt Pfade und

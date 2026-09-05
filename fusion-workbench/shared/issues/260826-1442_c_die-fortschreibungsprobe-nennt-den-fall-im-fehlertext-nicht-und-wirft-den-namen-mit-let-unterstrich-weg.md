@@ -21,3 +21,19 @@ Der Helfer `:1810-1842` formatiert `{name}` als Dateinamen. Das `let _ =` steht 
 ## Vorschlag
 
 Dem Helfer einen fünften Parameter `fall: &str` geben und ihn in die drei Meldungen schreiben; das `let _ =` fällt damit weg.
+
+---
+Resolved: `fortschreiben_gleicht_vollem_durchgang` in
+`crates/krk-ui/src/hervorhebung.rs` nimmt jetzt fünf Argumente; `fall: &str`
+steht vor `name: &str`, und alle drei Meldungen der Funktion schreiben
+`{fall} ({name})`. Das `let _ = name;` in
+`ein_fortgeschriebener_durchgang_gleicht_dem_vollen` ist damit gefallen: die
+Schleife bindet den Fallnamen als `fall` und reicht ihn durch.
+
+Die übrigen Rufer haben ihren Fallnamen mitbekommen, statt einen leeren Platz
+zu füllen: die Markdown-Probe nummeriert ihre Änderungen, die Probe für den
+weiten Wiedereinstieg nennt die geänderte Zeile, die Abbruchprobe nennt Zeile
+und Abbruchstelle. Ein Doc-Absatz an der Funktion sagt, warum es zwei Namen
+gibt und was vorher fehlte.
+
+Beleg: `cargo test -p krk-ui hervorhebung` → 22 bestanden.

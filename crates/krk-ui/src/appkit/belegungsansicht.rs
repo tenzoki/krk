@@ -42,7 +42,7 @@
 //!
 //! Seit der Runde 7 sucht jedes getippte Zeichen in dieser Ansicht (C1). Die
 //! Rechnung dazu steht ohne AppKit in
-//! [`Suchlage`](crate::belegungsmodell::Suchlage); dieses Modul haelt einen
+//! [`Suchlage`]; dieses Modul haelt einen
 //! Wert davon, gibt ihm die drei Ereignisse weiter und zeigt danach seine
 //! Zielzeile und seine Meldung an. Auch dafuer gibt es keine eigene
 //! `keyDown:`-Behandlung: der Faenger bekommt eine **zweite Station** hinter
@@ -140,15 +140,23 @@ const ZEILENHOEHE: f64 = 20.0;
 const BREITE: f64 = 560.0;
 
 /// Die Hoehe der Tabelle in Punkten. Sie fasst fuenfzehn Zeilen zu je
-/// [`ZEILENHOEHE`]; die Belegung ist mit ihren Funktionen und den neun
+/// [`ZEILENHOEHE`]; die Belegung ist mit ihren Funktionen und den
 /// Bereichsueberschriften laenger und braucht deshalb einen Rollbalken. Die
 /// Zahl hier bestimmt nur, wie viele Zeilen ohne Rollen sichtbar sind, nicht
 /// wie viele es gibt.
 ///
-/// Die Zahl der Funktionen stand hier bis zum 260807 als feste Zahl und lief
-/// mit dem ersten Nachtrag an `resources/default-keymap.toml` auseinander
-/// (`issues/260807-1015_*_der-kommentar-zur-tabellenhoehe-nennt-57-funktionen-und-die-belegung-fuehrt-58.md`).
-/// Sie steht nicht wieder hier, weil die Konstante nie an ihr hing.
+/// **Weder die Zahl der Funktionen noch die der Ueberschriften steht hier, und
+/// beide Male aus demselben Grund: die Konstante haengt an keiner von beiden.**
+/// Die Zahl der Funktionen stand bis zum 260807 als feste Zahl da und lief mit
+/// dem ersten Nachtrag an `resources/default-keymap.toml` auseinander
+/// (`issues/260807-1015_*_der-kommentar-zur-tabellenhoehe-nennt-57-funktionen-und-die-belegung-fuehrt-58.md`);
+/// die Zahl der Ueberschriften stand bis zum Befund
+/// `260826-1442_*_das-kuerzelzeichen-der-schaltflaechen-der-belegungsansicht-steht-an-der-aufrufstelle-und-die-anzeige-in-der-tafel.md`
+/// als "neun" daneben und war beim Befund schon falsch: die Git-Runde hat
+/// `Funktionsbereich::Git` hinzugefuegt, und der Befund selbst hat die Zahl
+/// noch als stimmend gefuehrt. Wer sie braucht, zaehlt sie mit
+/// `awk '/pub enum Funktionsbereich/,/^}/' crates/krk-ui/src/belegungsmodell.rs`;
+/// wer die Funktionen braucht, fragt `make tasten`.
 const TABELLENHOEHE: f64 = 300.0;
 
 /// Der Tastencode der Escape-Taste, aus der einen Tastentabelle des Kerns.
@@ -165,8 +173,65 @@ struct Schaltflaechentaste {
     /// Ob die Befehlstaste dazugehoert. Fuer alle drei wahr, siehe
     /// [`SCHALTFLAECHEN`].
     mit_befehl: bool,
-    /// Die Kombination in der Anzeigeform, fuer die Erlaeuterungszeile.
-    anzeige: &'static str,
+    /// Die Taste selbst, aus der beide Abnehmer ihre Form rechnen.
+    zeichen: Schaltflaechenzeichen,
+}
+
+impl Schaltflaechentaste {
+    /// Die Kombination, wie die Erlaeuterungszeile sie nennt.
+    ///
+    /// **Gerechnet und nicht danebengeschrieben.** Der Satz unter der
+    /// Ueberschrift und die gesetzte Tastenentsprechung kommen damit aus
+    /// demselben Wert; eine zweite Zeichenkette daneben waere die Stelle, an
+    /// der beide auseinanderlaufen.
+    fn anzeige(self) -> String {
+        self.zeichen.anzeige(self.mit_befehl)
+    }
+}
+
+/// Die Taste einer Schaltflaeche, in der Form, aus der beide Abnehmer rechnen.
+///
+/// **Sie steht hier als Wert und nicht zweimal als Zeichenkette.** Bis zum
+/// Befund
+/// `260826-1442_*_das-kuerzelzeichen-der-schaltflaechen-der-belegungsansicht-steht-an-der-aufrufstelle-und-die-anzeige-in-der-tafel.md`
+/// trug [`Schaltflaechentaste`] ein Feld `anzeige` mit dem fertigen Satzstueck
+/// ("Cmd+T"), waehrend das gesetzte Zeichen als `ns_string!("t")` an der
+/// Aufrufstelle von [`taste_setzen`] stand. Wer die Schaltflaeche auf eine
+/// andere Taste legte, aenderte die eine Stelle und nicht die andere, und die
+/// Probe, die den Satz gegen die Tafel hielt, sah die Aufrufstelle nicht.
+///
+/// Beide Fallunterscheidungen darueber sind vollstaendig und ohne
+/// Auffangzweig: ein dritter Wert haelt den Bau an.
+#[derive(Debug, Clone, Copy)]
+enum Schaltflaechenzeichen {
+    /// Ein Buchstabe, klein gesetzt, wie `setKeyEquivalent` ihn nimmt.
+    Buchstabe(char),
+    /// Die Eingabetaste. Sie kommt ueber [`Taste::EingabeMitBefehl`] am Blatt
+    /// und nicht ueber `setKeyEquivalent`; siehe [`SCHALTFLAECHEN`].
+    Eingabetaste,
+}
+
+impl Schaltflaechenzeichen {
+    /// Das Zeichen, das `setKeyEquivalent` bekommt.
+    fn tastenzeichen(self) -> String {
+        match self {
+            Schaltflaechenzeichen::Buchstabe(zeichen) => zeichen.to_string(),
+            Schaltflaechenzeichen::Eingabetaste => "\r".to_owned(),
+        }
+    }
+
+    /// Die Kombination, wie die Erlaeuterungszeile sie nennt.
+    fn anzeige(self, mit_befehl: bool) -> String {
+        let taste = match self {
+            Schaltflaechenzeichen::Buchstabe(zeichen) => zeichen.to_ascii_uppercase().to_string(),
+            Schaltflaechenzeichen::Eingabetaste => "Eingabe".to_owned(),
+        };
+        if mit_befehl {
+            format!("Cmd+{taste}")
+        } else {
+            taste
+        }
+    }
 }
 
 /// Die drei Schaltflaechen der Belegungsansicht mit ihren Tasten (C1.16).
@@ -192,17 +257,17 @@ const SCHALTFLAECHEN: [Schaltflaechentaste; 3] = [
     Schaltflaechentaste {
         titel: "Zuweisen",
         mit_befehl: true,
-        anzeige: "Cmd+T",
+        zeichen: Schaltflaechenzeichen::Buchstabe('t'),
     },
     Schaltflaechentaste {
         titel: "Auslieferungszustand",
         mit_befehl: true,
-        anzeige: "Cmd+R",
+        zeichen: Schaltflaechenzeichen::Buchstabe('r'),
     },
     Schaltflaechentaste {
         titel: "Fertig",
         mit_befehl: true,
-        anzeige: "Cmd+Eingabe",
+        zeichen: Schaltflaechenzeichen::Eingabetaste,
     },
 ];
 
@@ -227,11 +292,11 @@ fn erlaeuterung() -> String {
          alles zurück. {} ({}) oder esc verlässt die Ansicht und sichert die \
          Änderungen.",
         SCHALTFLAECHEN[ZUWEISEN].titel,
-        SCHALTFLAECHEN[ZUWEISEN].anzeige,
+        SCHALTFLAECHEN[ZUWEISEN].anzeige(),
         SCHALTFLAECHEN[ZURUECKSETZEN].titel,
-        SCHALTFLAECHEN[ZURUECKSETZEN].anzeige,
+        SCHALTFLAECHEN[ZURUECKSETZEN].anzeige(),
         SCHALTFLAECHEN[FERTIG].titel,
-        SCHALTFLAECHEN[FERTIG].anzeige,
+        SCHALTFLAECHEN[FERTIG].anzeige(),
     )
 }
 
@@ -612,11 +677,14 @@ impl Belegungsquelle {
 /// Legt die Tastenentsprechung einer Schaltflaeche aus ihrem Eintrag in
 /// [`SCHALTFLAECHEN`] fest.
 ///
-/// Die Zusatztaste kommt aus dem Eintrag und nicht aus der Aufrufstelle, damit
-/// die Zusage aus C1.16 an einem Wert haengt, den die Probe lesen kann, und
-/// nicht an zwei Zeilen, die einzeln zu vergessen waeren.
-fn taste_setzen(knopf: &NSButton, zeichen: &NSString, angabe: Schaltflaechentaste) {
-    knopf.setKeyEquivalent(zeichen);
+/// Zusatztaste **und** Zeichen kommen aus dem Eintrag und nicht aus der
+/// Aufrufstelle, damit die Zusage aus C1.16 an einem Wert haengt, den die Probe
+/// lesen kann, und nicht an zwei Zeilen, die einzeln zu vergessen waeren. Das
+/// Zeichen stand bis zum Befund
+/// `260826-1442_*_das-kuerzelzeichen-der-schaltflaechen-der-belegungsansicht-steht-an-der-aufrufstelle-und-die-anzeige-in-der-tafel.md`
+/// als drittes Argument hier und war genau die zweite Zeile.
+fn taste_setzen(knopf: &NSButton, angabe: Schaltflaechentaste) {
+    knopf.setKeyEquivalent(&NSString::from_str(&angabe.zeichen.tastenzeichen()));
     if angabe.mit_befehl {
         knopf.setKeyEquivalentModifierMask(NSEventModifierFlags::Command);
     }
@@ -709,7 +777,7 @@ pub fn zeigen(
     };
     // Cmd+T statt der Leertaste: die Leertaste ist ein Zeichen und gehoert
     // seit der Runde 7 der Suche. Siehe `SCHALTFLAECHEN`.
-    taste_setzen(&zuweisen, ns_string!("t"), SCHALTFLAECHEN[ZUWEISEN]);
+    taste_setzen(&zuweisen, SCHALTFLAECHEN[ZUWEISEN]);
     zuweisen.setFrame(NSRect::new(
         NSPoint::new(0.0, 46.0),
         NSSize::new(160.0, 30.0),
@@ -723,11 +791,7 @@ pub fn zeigen(
             mtm,
         )
     };
-    taste_setzen(
-        &zuruecksetzen,
-        ns_string!("r"),
-        SCHALTFLAECHEN[ZURUECKSETZEN],
-    );
+    taste_setzen(&zuruecksetzen, SCHALTFLAECHEN[ZURUECKSETZEN]);
     zuruecksetzen.setFrame(NSRect::new(
         NSPoint::new(170.0, 46.0),
         NSSize::new(220.0, 30.0),
@@ -841,10 +905,10 @@ mod tests {
                 "die Erlaeuterung nennt »{}« nicht: {satz}",
                 angabe.titel
             );
+            let anzeige = angabe.anzeige();
             assert!(
-                satz.contains(angabe.anzeige),
-                "die Erlaeuterung nennt {} nicht: {satz}",
-                angabe.anzeige
+                satz.contains(&anzeige),
+                "die Erlaeuterung nennt {anzeige} nicht: {satz}"
             );
         }
         for genannt in ["Zeichen sucht", "Eingabetaste", "Rücktaste"] {

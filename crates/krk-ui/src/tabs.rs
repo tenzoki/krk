@@ -3,7 +3,7 @@
 //!
 //! **Keine Zeile AppKit.** In dieser Datei steht keine `use objc2`-Zeile, und
 //! das ist nachpruefbar, nicht nur gemeint. Sie haelt das Modell; die Ansicht
-//! dazu ist [`crate::appkit::tabelle`], die den Inhalt des sichtbaren Tabs in
+//! dazu ist `crate::appkit::tabelle`, die den Inhalt des sichtbaren Tabs in
 //! eine `NSTableView` stellt.
 //!
 //! # Ein Tab traegt seinen eigenen Ordnerinhalt
@@ -422,7 +422,7 @@ impl Tabinhalt {
 /// tun. Wer die Auskunft wirklich nicht braucht, schreibt `let _ =` davor und
 /// sagt damit ausdruecklich, dass er sie nicht braucht. Dieselbe Erzwingung
 /// aus demselben Grund traegt
-/// [`crate::editormodell::EditorModell::bearbeiten`] seit dem Defekt
+/// [`crate::editormodell::Editormodell::bearbeiten`] seit dem Defekt
 /// `260810-0423`.
 ///
 /// **Die fruehere Konvention gilt nicht mehr.** Bis zum Defekt `260810-1906`
@@ -1587,6 +1587,7 @@ mod tests {
     use krk_core::verzeichnis::{Auftrag, Auftragsart};
 
     use super::*;
+    use crate::pruefordner::Pruefordner;
 
     /// Ein Fensterzustand mit den genannten Ordnern, der erste ist sichtbar.
     fn zustand(ordner: &[&str]) -> Fensterzustand {
@@ -1596,11 +1597,24 @@ mod tests {
         }
     }
 
-    /// Eine Tabliste, die nie liest.
+    /// Eine Tabliste auf den genannten Ordnern, ohne selbst zu lesen.
     ///
-    /// Die Proben unten pruefen die Verwaltung der Tabs und nicht das Lesen;
-    /// ein Lesevorgang je Probe startete einen Arbeitsfaden gegen einen Ordner,
-    /// den es nicht gibt.
+    /// **Der Helfer startet keinen Lesevorgang; die Probe darauf kann es
+    /// sehr wohl.** Bis zum Befund
+    /// `260826-1442_*_der-probenhelfer-liste-verspricht-eine-tabliste-die-nie-liest-und-drei-proben-starten-lesevorgaenge-gegen-die-wurzel-und-das-temporaerverzeichnis.md`
+    /// stand hier "eine Tabliste, die nie liest", und der Satz galt dem
+    /// Helfer, waehrend die Rufer ihn als Zusage ueber die Probe lasen:
+    /// [`Tabliste::waehlen`], [`Tabliste::schliessen`] und
+    /// [`Tabliste::ordner_setzen`] starten je einen Arbeitsfaden gegen den
+    /// Ordner, der danach dransteht.
+    ///
+    /// **Wer eine Probe schreibt, die einen dieser drei ruft, gibt ihr
+    /// vorhandene Ordner** — ueber [`crate::pruefordner::Pruefordner`], wie
+    /// [`gelesene_liste`] und [`zwei_vorhandene_ordner`] es tun, und nicht ueber
+    /// `/`, `/a` oder das echte Temporaerverzeichnis. Wer allein die Verwaltung
+    /// der Tabs prueft, darf mit erfundenen Namen arbeiten: der Faden gegen
+    /// einen Ordner, den es nicht gibt, laeuft ins Leere und wird von `Drop`
+    /// abgebrochen.
     fn liste(ordner: &[&str]) -> Tabliste {
         Tabliste::aus_zustand(&zustand(ordner))
     }
@@ -1634,7 +1648,10 @@ mod tests {
 
     #[test]
     fn der_naechste_und_der_vorige_tab_laufen_um() {
-        let mut liste = liste(&["/a", "/b", "/c"]);
+        // Vorhandene Ordner, weil `naechster` und `voriger` den neu sichtbaren
+        // Tab lesen lassen.
+        let (_ordner, pfade) = vorhandene_ordner(&["a", "b", "c"]);
+        let mut liste = liste(&pfade.iter().map(String::as_str).collect::<Vec<_>>());
         assert!(liste.naechster());
         assert_eq!(liste.aktive_stelle(), 1);
         assert!(liste.naechster());
@@ -1671,15 +1688,18 @@ mod tests {
 
     #[test]
     fn das_schliessen_ruecht_die_sichtbare_stelle_nach() {
-        let mut liste = liste(&["/a", "/b", "/c"]);
+        // Vorhandene Ordner, weil `waehlen` und `schliessen` den neu sichtbaren
+        // Tab lesen lassen.
+        let (_ordner, pfade) = vorhandene_ordner(&["a", "b", "c"]);
+        let mut liste = liste(&pfade.iter().map(String::as_str).collect::<Vec<_>>());
         let _ = liste.waehlen(2);
         let _ = liste.schliessen();
-        assert_eq!(ordnernamen(&liste), ["/a", "/b"]);
+        assert_eq!(ordnernamen(&liste), pfade[..2]);
         assert_eq!(liste.aktive_stelle(), 1, "der letzte Tab war sichtbar");
 
         let _ = liste.waehlen(0);
         let _ = liste.schliessen();
-        assert_eq!(ordnernamen(&liste), ["/b"]);
+        assert_eq!(ordnernamen(&liste), pfade[1..2]);
         assert_eq!(liste.aktive_stelle(), 0);
     }
 
@@ -1716,7 +1736,8 @@ mod tests {
     fn eine_auffrischung_nimmt_ordner_auswahl_und_bildlauf_mit() {
         // Ein Ordner, den es gibt: `aktiven_neu_lesen` startet einen
         // Lesevorgang, und der soll nicht gegen ein Nichts laufen.
-        let vorhanden = std::env::temp_dir().display().to_string();
+        let (_ordner, pfade) = vorhandene_ordner(&["einer"]);
+        let vorhanden = pfade[0].clone();
         let mut liste = liste(&[&vorhanden]);
         liste.aktiver_mut().wunschauswahl = Some("bild.jpg".to_owned());
         liste.aktiver_mut().bildlauf_setzen(240.0);
@@ -1743,8 +1764,8 @@ mod tests {
     fn eine_auffrischung_laesst_die_liste_stehen_bis_ihr_erster_stapel_da_ist() {
         use krk_core::verzeichnis::{Eintrag, Typ};
 
-        let vorhanden = std::env::temp_dir().display().to_string();
-        let mut liste = liste(&[&vorhanden]);
+        let (_ordner, pfade) = vorhandene_ordner(&["einer"]);
+        let mut liste = liste(&[&pfade[0]]);
         let modell = liste.aktiver_mut().modell_mut();
         modell.anhaengen([
             Eintrag::neu(
@@ -1789,13 +1810,20 @@ mod tests {
     /// startet und der nicht gegen ein Nichts laufen soll. Geliefert hat er in
     /// den Proben nie etwas: `einziehen` wird nicht gerufen, der Ersatz steht
     /// also fuer die ganze Probe aus. Genau das ist die Spanne, um die es geht.
-    fn gelesene_liste(namen: &[&str]) -> Tabliste {
-        let vorhanden = std::env::temp_dir().display().to_string();
-        let mut liste = liste(&[&vorhanden]);
+    ///
+    /// **Der Ordner ist ein [`crate::pruefordner::Pruefordner`] und nicht mehr
+    /// das echte Temporaerverzeichnis**, das der Lesevorgang mit allem las, was
+    /// gerade darin lag
+    /// (`260826-1442_*_der-probenhelfer-liste-verspricht-eine-tabliste-die-nie-liest-und-drei-proben-starten-lesevorgaenge-gegen-die-wurzel-und-das-temporaerverzeichnis.md`).
+    /// Er kommt deshalb mit heraus: faellt er beim Rufer, raeumt sein `Drop`
+    /// ihn ab, waehrend der Faden noch liest.
+    fn gelesene_liste(namen: &[&str]) -> (Pruefordner, Tabliste) {
+        let ordner = Pruefordner::neu("tabliste");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
         let modell = liste.aktiver_mut().modell_mut();
         modell.anhaengen(namen.iter().map(|name| datei(name)));
         modell.abschliessen();
-        liste
+        (ordner, liste)
     }
 
     /// Der deterministische Fall aus
@@ -1814,7 +1842,7 @@ mod tests {
     /// `NSTableView` setzen —, faellt bei `Vorgemerkt` ohnehin weg.
     #[test]
     fn der_erste_neue_name_eines_stapel_umbenennens_wird_vorgemerkt() {
-        let mut liste = gelesene_liste(&["IMG_1.jpg", "IMG_2.jpg"]);
+        let (_ordner, mut liste) = gelesene_liste(&["IMG_1.jpg", "IMG_2.jpg"]);
         let index = liste
             .aktiver()
             .modell()
@@ -1844,7 +1872,7 @@ mod tests {
     /// zwei Auffrischungen vor dem ersten Stapel, mit einem Vormerken dazwischen.
     #[test]
     fn eine_zweite_auffrischung_laesst_den_vorgemerkten_namen_stehen() {
-        let mut liste = gelesene_liste(&["alt.txt"]);
+        let (_ordner, mut liste) = gelesene_liste(&["alt.txt"]);
         let index = liste
             .aktiver()
             .modell()
@@ -1870,7 +1898,7 @@ mod tests {
     /// kennt, ist eine Auskunft an den Nutzer.
     #[test]
     fn ohne_lesevorgang_waehlt_der_name_seine_zeile() {
-        let mut liste = gelesene_liste(&["b.txt", "a.txt"]);
+        let (_ordner, mut liste) = gelesene_liste(&["b.txt", "a.txt"]);
 
         assert_eq!(
             liste.auswahl_auf_namen("b.txt"),
@@ -1884,15 +1912,44 @@ mod tests {
     // Der Filtertext ueber einen Ordner-, Tab- und Auffrischungswechsel
     // ------------------------------------------------------------------
 
-    /// Zwei Ordner, die es gibt.
+    /// Zwei Ordner, die es gibt, als Unterordner eines Pruefordners.
     ///
     /// `ordner_setzen` und `waehlen` starten einen Lesevorgang, und der soll
     /// nicht gegen ein Nichts laufen. Geliefert hat er in diesen Proben nie
     /// etwas: `einziehen` wird nicht gerufen, der Bestand bleibt also der von
     /// Hand angehaengte.
-    fn zwei_vorhandene_ordner() -> (String, String) {
-        let einer = std::env::temp_dir().display().to_string();
-        (einer, "/".to_owned())
+    ///
+    /// **Zwei eigene Ordner und nicht das echte Temporaerverzeichnis und die
+    /// Wurzel des Dateisystems.** Bis zum Befund
+    /// `260826-1442_*_der-probenhelfer-liste-verspricht-eine-tabliste-die-nie-liest-und-drei-proben-starten-lesevorgaenge-gegen-die-wurzel-und-das-temporaerverzeichnis.md`
+    /// las jede Probe darauf `/tmp` und `/` mit allem, was dort lag. Beide
+    /// liegen unter einem [`crate::pruefordner::Pruefordner`], damit der
+    /// Aufstieg aus dem ersten einen uebergeordneten Ordner findet; der
+    /// Pruefordner kommt mit heraus, weil sein `Drop` sonst abraeumte, waehrend
+    /// der Faden noch liest.
+    fn zwei_vorhandene_ordner() -> (Pruefordner, String, String) {
+        let (ordner, pfade) = vorhandene_ordner(&["einer", "anderer"]);
+        let [einer, anderer] = pfade
+            .try_into()
+            .unwrap_or_else(|_| unreachable!("zwei Namen hinein, zwei Pfade heraus"));
+        (ordner, einer, anderer)
+    }
+
+    /// So viele vorhandene Ordner, wie Namen hereinkommen, alle unter einem
+    /// Pruefordner.
+    ///
+    /// Der eine Bauplatz fuer jeden Ordner, den eine Probe dieses Moduls
+    /// wirklich lesen laesst; [`zwei_vorhandene_ordner`] ist die Abkuerzung
+    /// darauf fuer die zwei, die der Filtertext braucht. Der Pruefordner kommt
+    /// mit heraus, weil sein `Drop` sonst abraeumte, waehrend der Faden noch
+    /// liest.
+    fn vorhandene_ordner(namen: &[&str]) -> (Pruefordner, Vec<String>) {
+        let ordner = Pruefordner::neu("tabordner");
+        let pfade = namen
+            .iter()
+            .map(|name| ordner.ordner(name).display().to_string())
+            .collect();
+        (ordner, pfade)
     }
 
     /// C1.9: der Filtertext uebersteht den Ordnerwechsel auch bei
@@ -1903,7 +1960,7 @@ mod tests {
     /// Moeglichkeit 2). Bis dahin pruefte diese Probe das Gegenteil.
     #[test]
     fn ein_ordnerwechsel_laesst_den_filtertext_stehen_wenn_die_tiefe_suche_aus_ist() {
-        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let (_ordner, hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
         // Ausdruecklich abgeschaltet: die Vorbelegung von `Ordnermodell::neu`
         // ist seit dem 260826 "ein", und diese Probe misst den anderen Stand.
@@ -1938,9 +1995,9 @@ mod tests {
     /// verlassenen Ordners als `auswahl`.
     #[test]
     fn der_aufstieg_laesst_den_filtertext_stehen_wie_der_einstieg() {
-        let (hier, _) = zwei_vorhandene_ordner();
+        let (_ordner, hier, _) = zwei_vorhandene_ordner();
         let (eltern, verlassen) = krk_core::verzeichnis::aufwaerts(Path::new(&hier))
-            .expect("das Temporaerverzeichnis hat einen uebergeordneten Ordner");
+            .expect("der Pruefordner hat einen uebergeordneten Ordner");
         let mut liste = liste(&[&hier]);
         liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
 
@@ -1966,7 +2023,7 @@ mod tests {
     /// verloere.
     #[test]
     fn mit_tiefer_suche_ueberlebt_der_filtertext_den_ordnerwechsel() {
-        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let (_ordner, hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
         let modell = liste.aktiver_mut().modell_mut();
         modell.filtertext_setzen("rs");
@@ -1995,7 +2052,7 @@ mod tests {
     /// Inhaltsfilter dort gar nicht.
     #[test]
     fn ein_ordnerwechsel_traegt_den_stand_von_content() {
-        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let (_ordner, hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
         let modell = liste.aktiver_mut().modell_mut();
         modell.filtertext_setzen("notiz");
@@ -2024,7 +2081,7 @@ mod tests {
     /// Text.
     #[test]
     fn der_inhaltsfilter_geht_auch_ohne_filtertext_hinueber() {
-        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let (_ordner, hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
         liste.aktiver_mut().modell_mut().inhalt_setzen(true);
 
@@ -2049,7 +2106,7 @@ mod tests {
     /// Probe rot und ist dann zu Recht rot.
     #[test]
     fn ein_neuer_tab_traegt_die_vorbelegung_der_tiefen_suche() {
-        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let (_ordner, hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
         liste.aktiver_mut().modell_mut().tief_setzen(false);
 
@@ -2065,7 +2122,7 @@ mod tests {
     /// Schalter des Tabs und keine Beigabe zum Text.
     #[test]
     fn die_tiefe_suche_geht_auch_ohne_filtertext_hinueber() {
-        let (hier, dorthin) = zwei_vorhandene_ordner();
+        let (_ordner, hier, dorthin) = zwei_vorhandene_ordner();
         let mut liste = liste(&[&hier]);
         liste.aktiver_mut().modell_mut().tief_setzen(true);
 
@@ -2079,7 +2136,7 @@ mod tests {
     /// auch bei ausgeschalteter tiefer Suche nicht.
     #[test]
     fn eine_auffrischung_laesst_den_filtertext_stehen() {
-        let mut liste = gelesene_liste(&["a.rs", "b.txt"]);
+        let (_ordner, mut liste) = gelesene_liste(&["a.rs", "b.txt"]);
         liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
         assert_eq!(liste.aktiver().modell().zeilenzahl(), 1);
 
@@ -2102,8 +2159,8 @@ mod tests {
     /// Tabs.
     #[test]
     fn der_filtertext_gehoert_dem_tab_und_nicht_dem_fenster() {
-        let vorhanden = std::env::temp_dir().display().to_string();
-        let mut liste = liste(&[&vorhanden, &vorhanden]);
+        let (_ordner, pfade) = vorhandene_ordner(&["einer", "anderer"]);
+        let mut liste = liste(&pfade.iter().map(String::as_str).collect::<Vec<_>>());
         liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
 
         assert!(liste.waehlen(1));
@@ -3078,7 +3135,7 @@ mod tests {
         let marken = vec![("a.txt".to_owned(), Marke::Geaendert)];
 
         // Fremde Generation: der Befund gehoert zum vorigen Lesevorgang.
-        let mut liste = gelesene_liste(&["a.txt"]);
+        let (_ordner, mut liste) = gelesene_liste(&["a.txt"]);
         liste.tabs[0].gelesen = true;
         liste.tabs[0].gitgeneration = liste.aktiver().modell().generation() + 1;
         liste.tabs[0].wartende_marken = Some(marken.clone());
@@ -3090,7 +3147,7 @@ mod tests {
         assert_eq!(liste.aktiver().modell().gitmarke(0), None);
 
         // Gegenprobe: dieselbe Meldung mit der eigenen Generation kommt an.
-        let mut liste = gelesene_liste(&["a.txt"]);
+        let (_ordner, mut liste) = gelesene_liste(&["a.txt"]);
         liste.tabs[0].gelesen = true;
         liste.tabs[0].gitgeneration = liste.aktiver().modell().generation();
         liste.tabs[0].wartende_marken = Some(marken);
@@ -3113,7 +3170,7 @@ mod tests {
     /// `der_gitlauf_beginnt_zugleich_mit_dem_lesevorgang` darueber fest.
     #[test]
     fn die_marken_warten_auf_den_bestand_und_gehen_dabei_nicht_verloren() {
-        let mut liste = gelesene_liste(&["a.txt"]);
+        let (_ordner, mut liste) = gelesene_liste(&["a.txt"]);
         liste.tabs[0].gitgeneration = liste.aktiver().modell().generation();
         liste.tabs[0].wartende_marken = Some(vec![("a.txt".to_owned(), Marke::Neu)]);
 

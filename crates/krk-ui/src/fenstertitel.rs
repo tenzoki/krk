@@ -14,7 +14,7 @@
 //! geaendert, neun stehen woertlich wie dort. Zwei Zusagen ueber dieselbe
 //! Titelleiste waeren zwei Wahrheiten. Der Anlass: Name und Version stehen
 //! seither in einem eigenen Bereich links in der Leiste
-//! ([`crate::appkit::titelzusatz`]), und was `setTitle:` bekommt, ist
+//! (`crate::appkit::titelzusatz`), und was `setTitle:` bekommt, ist
 //! unveraendert allein das Ergebnis von [`titel`] — diese Datei aendert sich
 //! dafuer in keiner Zeile ausser dieser.
 //!

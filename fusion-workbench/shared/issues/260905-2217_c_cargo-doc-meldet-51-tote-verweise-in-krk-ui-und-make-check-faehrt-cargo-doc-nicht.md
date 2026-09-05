@@ -56,3 +56,45 @@ Zwei Haelften, und die zweite haengt an einer Nutzerfrage.
    naechsten Umbenennen wieder auseinander. Ohne die zweite Haelfte ist die erste eine
    Berichtigung ohne Verankerung, genau die schwaechste der drei Moeglichkeiten, die
    `CLAUDE.md` fuer Zahlen in Prosa beschreibt.
+
+---
+Resolved: Die erste Hälfte der Abnahme ist erfüllt und mit ihr mehr, als der
+Datensatz gemessen hat. Die zweite bleibt offen und hat einen anderen Ort.
+
+**Die 51 sind 0.** Der Lauf aus dem Abschnitt „Gemessen" liefert am heutigen
+Baum 0 statt 51:
+
+```
+export PATH="$HOME/.cargo/bin:$PATH"
+touch crates/krk-ui/src/main.rs
+cargo doc -p krk-ui --no-deps --document-private-items 2>&1 | grep -c 'unresolved link'
+-> 0
+```
+
+**Der Datensatz misst dabei nur eine der vier Arten.** `krk-ui` trug 85
+Doc-Warnungen und nicht 51: 51 unaufgelöste Verweise, 30 überflüssige
+Verweisziele und 4 mehrdeutige Namen (Funktion zugleich Modul). Die 51 sind
+richtig gezählt für das, was das Kommando zählt; die anderen 34 hätten
+`RUSTDOCFLAGS="-D warnings"` genauso rot gehalten. Alle 85 sind geräumt:
+`RUSTDOCFLAGS="-D warnings" cargo doc -p krk-ui --no-deps` gibt Exit 0 und keine
+Warnung aus.
+
+Die vierte Art, „public documentation for … links to private item", kommt in
+`krk-ui` nicht vor und konnte es nicht: die Kiste hat kein Bibliotheksziel und
+keine öffentliche Fläche, an der rustdoc die Meldung stellen könnte. Ihre
+`crate::appkit::…`-Verweise meldet rustdoc stattdessen als `unresolved link`,
+und zwar auch unter `--document-private-items` — nachgemessen —, denn
+`crate::appkit::fsevents` ist von `crate::auffrischung` aus sichtbarkeitshalber
+kein gültiger Pfad. `#![allow(rustdoc::private_intra_doc_links)]` hätte in
+dieser Kiste keine einzige Meldung gedeckt. Sie sind zu Fließtext geworden, was
+der Empfehlung von
+`shared/decisions/260905-2336_*_wird-ein-privates-element-oeffentlich-oder-der-verweis-darauf-zu-fliesstext.md`
+für genau diese Gruppe entspricht (dort Option 2 für die Modulverweise);
+`appkit/mod.rs` schreibt kistenübergreifende Verweise seit jeher so.
+
+**Die zweite Hälfte ist nicht beantwortet und steht weiter zur Entscheidung.**
+Ob `cargo doc` als fünftes Kommando in `make check` kommt, gehört dem Nutzer und
+liegt in demselben Entscheid `260905-2336`, Abschnitt „Randbedingungen" und
+„Empfehlung". Der Datensatz hier wird geschlossen, weil sein Defekt nicht mehr
+besteht; die Frage bleibt an ihrem Ort offen. Ohne sie fällt die Räumung beim
+nächsten Umbenennen wieder auseinander, und das ist ausdrücklich nicht behoben.

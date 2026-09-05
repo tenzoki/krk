@@ -6,7 +6,7 @@
 //! das ist ihr Zweck: [`Spalte`] hat seit der Bereichsleisten-Runde zwei
 //! Leser, die Tabelle und die Bereichsleiste, und der zweite braucht die
 //! Aufzaehlung, nicht die Tabelle. Was AppKit-Typen nennt, bleibt drueben in
-//! [`crate::appkit::tabelle`] und steht dort als freie Funktion ueber dieser
+//! `crate::appkit::tabelle` und steht dort als freie Funktion ueber dieser
 //! Aufzaehlung: die Kennung, die Ueberschrift, die beiden Breiten, die
 //! Ausrichtung und der Weg von einer Kennung zurueck zur Spalte. Dasselbe
 //! Muster tragen `aufteilung::sichtbar_im` und `aufteilung::rahmenfarbe`, die
@@ -105,7 +105,7 @@ pub enum Spalte {
     /// Git-Runde aus dem Ordnermodell.
     ///
     /// **Ihr Ankreuzfeld traegt seit Schritt 8 der Git-Runde
-    /// [`Kommando::SpalteMarkeUmschalten`]**(krk_core::tasten::Kommando) und
+    /// [`Kommando::SpalteMarkeUmschalten`](krk_core::tasten::belegung::Kommando::SpalteMarkeUmschalten)** und
     /// steht als viertes in der Reihe der Spaltenschalter; ab Werk steht die
     /// Spalte (A13).
     ///

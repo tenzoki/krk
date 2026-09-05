@@ -1657,7 +1657,7 @@ impl Vorschaufenster {
     /// beide Haelften vorliegen: Groesse und Aenderungsdatum brauchen die
     /// Formatierer von AppKit, die Zaehlwerte den Leselauf des Kerns. Aus
     /// Werten Zeilen macht dabei allein
-    /// [`zeilen_als_text`](krk_core::leseprofil::zeilen_als_text), dieselbe
+    /// [`zeilen_als_text`], dieselbe
     /// Stelle, die auch die Zusammenfassung ruft; eine leere Folge haengt
     /// nichts an, und so bleiben die sechs Zeilen einer Datei, wie sie waren.
     fn metadaten_text(

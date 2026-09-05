@@ -187,7 +187,7 @@
 //!
 //! **Der Nachschlag geht seit Schritt 11 in die Belegung und nicht mehr in eine
 //! verdrahtete Tabelle.** Die [`Belegung`] kommt beim Einrichten von aussen:
-//! der Aufrufer laedt sie ueber [`belegung::fuer_den_betrieb`] und stellt die
+//! der Aufrufer laedt sie ueber [`belegung::fuer_den_betrieb`](krk_core::tasten::belegung::fuer_den_betrieb) und stellt die
 //! Meldung, falls es eine gab, in die Statuszeile.
 //!
 //! **Geschluckt wird, was zulaessig war, und nicht mehr, was gewirkt hat.**

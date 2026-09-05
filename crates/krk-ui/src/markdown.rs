@@ -2464,13 +2464,26 @@ mod tests {
 
     /// Der Satz von Beispielen, an dem die Kachelung nachgemessen wird.
     ///
-    /// Zehn Faelle, und jeder steht fuer einen Weg, auf dem Quelltext in den
-    /// Durchgang kommt: der gewoehnliche Absatz, die Ueberschrift, die starke
-    /// Betonung und der Verweis, die Liste ueber zwei Ebenen, der Zitatblock,
-    /// der Quelltextblock, die Verweisdefinition, das Stueck in fester Schrift
-    /// und ein Text, dessen Zeichen mehr als ein Byte und mehr als eine
-    /// UTF-16-Einheit brauchen.
-    const KACHELBEISPIELE: [&str; 10] = [
+    /// **Je ein Fall fuer einen Weg, auf dem Quelltext in den Durchgang
+    /// kommt**, und wie viele es sind, sagt die Laengenangabe der Liste und
+    /// nicht dieser Satz. Die Reihenfolge ist die des Feldes: der gewoehnliche
+    /// Absatz, die Ueberschrift, die starke Betonung und der Verweis, die
+    /// Liste ueber zwei Ebenen, der Zitatblock, der Quelltextblock, die
+    /// Verweisdefinition, das Stueck in fester Schrift, ein Text mit Zeichen
+    /// ueber einem Byte und ueber einer UTF-16-Einheit, der Punkt am
+    /// Dateianfang.
+    ///
+    /// **Die sechs dahinter sind die woertlichen und die uebersprungenen
+    /// Wege**, die bis zum Befund
+    /// `260826-1442_*_die-kachelungsprobe-nennt-sich-beweis-der-totalitaet-und-laesst-jeden-woertlichen-zweig-aus.md`
+    /// fehlten, waehrend die Probe darunter sich "Beweis der Totalitaet"
+    /// nannte: das Bild und der HTML-Block laufen ueber `Behandlung::Woertlich`
+    /// mit `bis_zum_ende_ueberspringen`, die Trennlinie und das eingebettete
+    /// HTML ueber `Event::Rule` und `Event::InlineHtml`, der leere Listenpunkt
+    /// ueber `nur_das_merkzeichen`, und der harte Umbruch ueber
+    /// `Event::HardBreak`. Jeder von ihnen traegt Quelltext auf einem anderen
+    /// Pfad ab als die zehn davor.
+    const KACHELBEISPIELE: [&str; 16] = [
         "Ein gewoehnlicher Absatz. Und noch ein Satz dahinter.\n",
         "# Titel\n\nDarunter steht ein Absatz.\n",
         "Ein **fetter** Text mit [Verweis](https://example.com) darin.\n",
@@ -2481,6 +2494,12 @@ mod tests {
         "Ein `code` und *kursiv* im selben Absatz.\n",
         "Grüße 😀 an *dich*.\n",
         "- Punkt am Dateianfang\n\nund ein Absatz mit Umbruch am Ende.\n",
+        "Davor ![Alt](bild.png) danach.\n",
+        "<div>\nx\n</div>\n",
+        "---\n",
+        "- \n",
+        "> eins\n>\n> zwei\n",
+        "a  \nb\n",
     ];
 
     /// Misst die beiden Zusagen der Kachelung an einer Quelle nach.
@@ -2546,9 +2565,18 @@ mod tests {
 
     /// C2.6: die Kachelung deckt beide Seiten vollstaendig.
     ///
-    /// Diese Probe ist der Beweis der Totalitaet und keine Aufzaehlung von
-    /// Faellen: sie faengt jeden Ereignisfall, der Quelltext abtraegt, ohne
-    /// einen Abschnitt anzulegen.
+    /// Die Probe misst die zwei Zusagen an jedem Beispiel aus
+    /// [`KACHELBEISPIELE`], und der Satz von Beispielen nennt je einen Weg, auf
+    /// dem Quelltext abgetragen wird, ohne einen Abschnitt anzulegen.
+    ///
+    /// **Sie ist damit eine Aufzaehlung von Faellen und kein Beweis der
+    /// Totalitaet, und das stand hier bis zum Befund
+    /// `260826-1442_*_die-kachelungsprobe-nennt-sich-beweis-der-totalitaet-und-laesst-jeden-woertlichen-zweig-aus.md`
+    /// anders.** Der Anspruch war nicht einzuloesen: kein Durchgang ueber eine
+    /// Beispielliste faengt einen Ereignisfall, den kein Beispiel ausloest, und
+    /// gefehlt haben sechs. Was der Bau haelt, ist die Fallunterscheidung in
+    /// `kacheln` selbst; was diese Probe haelt, ist, dass die Wege, die der
+    /// Satz nennt, ihre zwei Zusagen einhalten.
     #[test]
     fn die_kachelung_deckt_quelle_und_text_lueckenlos() {
         for quelle in KACHELBEISPIELE {

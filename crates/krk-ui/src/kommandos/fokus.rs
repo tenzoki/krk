@@ -45,13 +45,13 @@
 //! steht der Bereich dort ueberhaupt auf dem Schirm". [`holt_hervor`]
 //! beantwortet die zweite Haelfte fuer jeden von ihnen mit derselben Zeile.
 //! **Eine Zahl steht hier nicht**: es ist einer je fokussierbarem Ort, also
-//! [`Fokus::ALLE`] ohne den Befund [`Fokus::Anderswo`], und die Zahl ist mit
+//! `Fokus::ALLE` ohne den Befund [`Fokus::Anderswo`], und die Zahl ist mit
 //! dem Editor und mit dem Git-Bereich zweimal gestiegen.
 //!
 //! # Vier Zuordnungen zwischen Fokus und Bereich, und keine davon doppelt
 //!
 //! Seit C9 den Fokus sichtbar macht, wird die Beziehung zwischen
-//! [`Fokus`] und [`Bereich`](crate::fenstermodell::Bereich) in beide
+//! [`Fokus`] und [`Bereich`] in beide
 //! Richtungen gebraucht. Sie steht deshalb hier vollstaendig und nicht
 //! verstreut bei den Aufrufern:
 //!
@@ -105,7 +105,7 @@ pub enum Fokus {
     /// **Vierter und nicht fuenfter**: gezaehlt sind die fokussierbaren Orte,
     /// also die Werte dieser Aufzaehlung ohne [`Fokus::Anderswo`], und die
     /// beiden Dateilisten teilen sich einen. Auf der anderen Skala, der der
-    /// Bereiche in [`Bereich`](crate::fenstermodell::Bereich), ist der Editor
+    /// Bereiche in [`Bereich`], ist der Editor
     /// der fuenfte; wer beide Skalen unter demselben Wort fuehrt, bekommt zwei
     /// Antworten auf eine Frage.
     ///

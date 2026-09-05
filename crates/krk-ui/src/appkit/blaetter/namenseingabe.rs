@@ -109,6 +109,17 @@ pub fn frei_zeigen(
     );
     if !vorgabe.is_empty() {
         feld.setStringValue(&NSString::from_str(vorgabe));
+        // Die Vorgabe steht ausgewaehlt da: wer sie behalten will, bestaetigt,
+        // wer nicht, tippt darueber. Ohne diese Zeile haengt der neue Name an
+        // den alten an. Dieselbe Zeile aus demselben Grund tragen
+        // `super::pfadeingabe` und `super::suche`; dass AppKit den Inhalt von
+        // sich aus auswaehlt, sobald `setInitialFirstResponder:` den Rang
+        // vergibt, ist an keinem Buendel gemessen
+        // (`260826-1334_*_frei-zeigen-sagt-die-vorgabe-stehe-ausgewaehlt-im-feld-und-ruft-selecttext-nicht.md`).
+        // SAFETY: `selectText:` ist eine gewoehnliche Aktion von `NSControl`;
+        // sie stellt keine Bedingung an ihren Absender, und `None` ist der
+        // Wert, den ein programmatischer Aufruf dafuer setzt.
+        unsafe { feld.selectText(None) };
     }
 
     let mut blatt = Blatt::neu(mtm, frage, bestaetigen);

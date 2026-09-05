@@ -9,7 +9,7 @@
 //!
 //! # Ein Gitmodell je Tab
 //!
-//! Es wohnt im [`Tabinhalt`](crate::tabs) neben dem [`Ordnermodell`], und aus
+//! Es wohnt im [`Tabinhalt`](crate::tabs) neben dem [`Ordnermodell`](krk_core::verzeichnis::Ordnermodell), und aus
 //! demselben Grund: der Git-Bereich folgt dem aktiven Dateifenster (E1 der
 //! Runde 23), und dessen sichtbarer Tab bestimmt den Ordner. Ein Modell beim
 //! Git-Bereich statt beim Tab waere **ein** Stand fuer zwei Dateifenster und

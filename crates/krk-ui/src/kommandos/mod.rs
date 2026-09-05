@@ -2,7 +2,7 @@
 //!
 //! **Keine Zeile AppKit.** In diesem Verzeichnis steht keine `use objc2`-Zeile,
 //! und das ist nachpruefbar, nicht nur gemeint. Es haelt die Rechnung hinter
-//! den Tastenbefehlen; die Ansicht dazu ist [`crate::appkit::tabelle`], die das
+//! den Tastenbefehlen; die Ansicht dazu ist `crate::appkit::tabelle`, die das
 //! Ergebnis in eine `NSTableView` stellt und die Blaetter am Fenster zeigt.
 //!
 //! Die Module sind entlang dessen geschnitten, was ein Tastenbefehl bewegt —

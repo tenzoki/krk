@@ -15,3 +15,28 @@ Ich habe die vier Wege am Code nachvollzogen: `woertlich` läuft über `schreibe
 ## Vorschlag
 
 Die Beispiele um `"Davor ![Alt](bild.png) danach.\n"`, `"<div>\nx\n</div>\n"`, `"---\n"`, `"- \n"`, `"> eins\n>\n> zwei\n"` und `"a  \nb\n"` erweitern, oder den Satz im Doc-Kommentar auf „an zehn Beispielen“ zurücknehmen.
+
+---
+Resolved: Beide Hälften des Vorschlags, und nicht die eine oder die andere.
+
+`KACHELBEISPIELE` in `crates/krk-ui/src/markdown.rs` ist von zehn auf sechzehn
+Einträge gewachsen; die sechs neuen sind genau die aus dem Vorschlag:
+`"Davor ![Alt](bild.png) danach.\n"`, `"<div>\nx\n</div>\n"`, `"---\n"`,
+`"- \n"`, `"> eins\n>\n> zwei\n"` und `"a  \nb\n"`. Sie decken
+`Behandlung::Woertlich` mit `bis_zum_ende_ueberspringen`, `Event::Rule`,
+`Event::InlineHtml`, `nur_das_merkzeichen` und `Event::HardBreak`. Alle sechs
+laufen grün: die zwei Zusagen der Kachelung halten auf diesen Wegen, und das
+ist jetzt gemessen statt am Code nachvollzogen.
+
+Der Anspruch im Doc-Kommentar von `die_kachelung_deckt_quelle_und_text_lueckenlos`
+ist trotzdem zurückgenommen. "Beweis der Totalität" war nicht einzulösen: ein
+Durchgang über eine Beispielliste fängt keinen Ereignisfall, den kein Beispiel
+auslöst — sechs zu übersehen war der Beleg. Der Kommentar sagt jetzt, dass der
+Bau die Fallunterscheidung in `kacheln` hält und die Probe hält, dass die
+genannten Wege ihre zwei Zusagen einhalten.
+
+Die Zahl "Zehn Fälle" am Doc-Kommentar von `KACHELBEISPIELE` ist gefallen und
+nicht durch "Sechzehn" ersetzt: der Satz verweist jetzt auf die Längenangabe des
+Feldes, die der Übersetzer hält.
+
+Beleg: `cargo test -p krk-ui markdown` → 66 bestanden.

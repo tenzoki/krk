@@ -600,7 +600,7 @@ pub struct AnwendungsIvars {
     /// Sie haengen hier, wo schon die Belegung und die Sitzung haengen: einmal
     /// beim Start geladen, danach unveraendert. Kein Weg in dieser Runde
     /// schreibt sie, und keiner liest die Datei ein zweites Mal. Bis
-    /// [`Self::sitzung_laden`] gelaufen ist, steht hier die eingebettete
+    /// [`Anwendungsdelegierter::sitzung_laden`] gelaufen ist, steht hier die eingebettete
     /// Auslieferungsfassung; im Messmodus bleibt es dabei, weil dort nichts
     /// geladen wird.
     einstellungen: RefCell<Einstellungen>,
@@ -616,7 +616,7 @@ pub struct AnwendungsIvars {
     /// des Vorschaumodells mit; dieselbe Ueberlegung traegt [`Inhalt::Bild`]
     /// seine Bytes.
     ///
-    /// Bis [`Self::sitzung_laden`] gelaufen ist, steht hier der leere Satz, und
+    /// Bis [`Anwendungsdelegierter::sitzung_laden`] gelaufen ist, steht hier der leere Satz, und
     /// im Messmodus bleibt es dabei. Er heisst „keine Profile" und ist kein
     /// Fehlerfall: dann zeigt auch ein erkennbarer Ordner seine Metadaten.
     ///
@@ -711,7 +711,7 @@ pub struct AnwendungsIvars {
     tastenabgriff: RefCell<Option<Tastenabgriff>>,
     /// Die offene Belegungsansicht aus C3, falls eine steht.
     ///
-    /// Ihr Blattgriff liegt daneben in [`Self::offenes_blatt`], damit `esc`
+    /// Ihr Blattgriff liegt daneben in [`AnwendungsIvars::offenes_blatt`], damit `esc`
     /// sie wie jede Rueckfrage schliesst. Hier steht die Quelle, weil der
     /// Faenger des Ereignisabgriffs sie waehrend der Aufnahme braucht und der
     /// Abschluss ihr die Arbeitskopie abnimmt.
@@ -772,8 +772,8 @@ pub struct AnwendungsIvars {
     /// dasselbe Faktum N-mal da.
     ///
     /// Fortgeschrieben wird es allein von der Regel in
-    /// [`Self::papierkorb_oder_zeichen_zurueck`]; zurueckgesetzt wird es von
-    /// jeder anderen Eingabe, am Kopf von [`Self::eingabe_ausfuehren`].
+    /// [`Anwendungsdelegierter::papierkorb_oder_zeichen_zurueck`]; zurueckgesetzt wird es von
+    /// jeder anderen Eingabe, am Kopf von [`Anwendungsdelegierter::eingabe_ausfuehren`].
     rueckschritt_merker: Cell<bool>,
     /// Die Stelle, auf die der laufende Ladevorgang des Editors springen soll
     /// (C6): gemerkte Zeilennummer und gemerkter Zeileninhalt.
@@ -1697,7 +1697,7 @@ impl Anwendungsdelegierter {
     /// **Ein leerer Profilsatz heisst seit der Runde 19 nicht mehr, dass die
     /// Vorschau im Messmodus nur die sechs Metadatenangaben rechnet.** Das
     /// eingebaute Default-Profil kommt nicht aus der Ablage, sondern aus
-    /// [`krk_core::leseprofil::defaultprofil`], und es tritt fuer jeden
+    /// [`fn@krk_core::leseprofil::defaultprofil`], und es tritt fuer jeden
     /// Ordner ohne Profiltreffer ein, also auch fuer jeden Ordner des
     /// Messplatzes: seine drei Zaehlzeilen kosten einen Verzeichnisleselauf
     /// auf dem Arbeitsfaden der Vorschau. Ob das so bleiben soll und was L7
@@ -2418,7 +2418,7 @@ impl Anwendungsdelegierter {
     ///
     /// Der Weg jedes Fokusbefehls, und sie gehen ihn ohne Sonderfall.
     /// In welchem Bereich ein Fokuswert wohnt, sagt
-    /// [`fokus::bereich_mit_fokus`](crate::kommandos::fokus::bereich_mit_fokus)
+    /// [`fokus::bereich_mit_fokus`]
     /// und sonst nichts; dort steht auch, warum ein Fokusbefehl seinen Bereich
     /// seit dem Nutzerentscheid vom 260807 hervorholt, statt ihn stumm
     /// abzuweisen.
@@ -2759,7 +2759,7 @@ impl Anwendungsdelegierter {
     /// ihr Ersthelfer AppKit gehoert, bleibt `Kommando::Abbrechen` unzulaessig,
     /// der Tastendruck laeuft unveraendert weiter, und `Esc` schliesst den
     /// Notizzettel. Eine Anmeldung kehrte beides um. Die Kette im Einzelnen
-    /// steht im Modulkopf von [`blaetter::zettel`](super::blaetter::zettel).
+    /// steht im Modulkopf von [`blaetter::zettel`].
     /// Wer die Warnung in `CLAUDE.md` ohne diese Fallunterscheidung liest,
     /// meldet die falsche Flaeche an.
     ///
@@ -3265,7 +3265,7 @@ impl Anwendungsdelegierter {
     /// [`ereignisse::ersthelfer_gehoert_appkit`].** Drei Abnehmer lesen sie: der
     /// Kommandozweig in [`Self::kommando_ausfuehren`] gibt sie an
     /// [`zulaessigkeit::zulaessig`], der Zeichenzweig von
-    /// [`Self::eingabe_ausfuehren`] liest drei der vier Werte einzeln heraus,
+    /// [`Anwendungsdelegierter::eingabe_ausfuehren`] liest drei der vier Werte einzeln heraus,
     /// und die Ausgrauung des Hauptmenues fragt dieselbe Regel auf demselben
     /// Wert. Zwei Erhebungen desselben Augenblicks koennten auseinanderlaufen;
     /// eine kann es nicht.
@@ -3381,7 +3381,7 @@ impl Anwendungsdelegierter {
     /// Ereignisabgriffs reicht einen Anschlag durch.
     ///
     /// Gebraucht wird er von genau einem Zweig,
-    /// [`Self::papierkorb_oder_zeichen_zurueck`]. Der Grund steht dort und in
+    /// [`Anwendungsdelegierter::papierkorb_oder_zeichen_zurueck`]. Der Grund steht dort und in
     /// [`crate::kommandos::rueckschritt`]: `resources/default-keymap.toml` legt
     /// `delete` und `cmd+delete` auf dieselbe Funktion, und beide werden im
     /// Nachschlag zu demselben [`Kommando`], bevor irgendjemand fragen kann.
@@ -4341,7 +4341,7 @@ impl Anwendungsdelegierter {
     /// Zettel — [`Zettelmodell::oeffnen`](crate::zettelmodell::Zettelmodell::oeffnen)
     /// traegt die Regel und liefert den Text der Flaeche.
     ///
-    /// **Der Blattgriff geht in [`Self::offenes_blatt`]** wie der jedes anderen
+    /// **Der Blattgriff geht in [`AnwendungsIvars::offenes_blatt`]** wie der jedes anderen
     /// Blattes. Damit schliesst der Abbruchbefehl den Zettel auf demselben Weg
     /// wie jede Rueckfrage, und es entsteht kein zweiter Weg zum Schliessen.
     ///
@@ -5257,7 +5257,7 @@ impl Anwendungsdelegierter {
     /// geht.
     ///
     /// **Das Blatt wird hier nicht abgeraeumt.** Bleibt es stehen, weil AppKit
-    /// das Schliessen verweigert, waere ein geleerter [`Self::offenes_blatt`] die
+    /// das Schliessen verweigert, waere ein geleerter [`AnwendungsIvars::offenes_blatt`] die
     /// Lage, in der der Abbruchbefehl das sichtbare Blatt nicht mehr schliessen
     /// koennte. Geht das Fenster dagegen zu, kommt der Abschlussblock des
     /// Blattes von selbst hierher zurueck und raeumt beides ab.
@@ -5423,7 +5423,7 @@ impl Anwendungsdelegierter {
     /// **Der zweite ist der Ordnerwechsel eines Dateifensters**, und er kam mit
     /// dem Schalter der tiefen Suche dazu. Die Schalter der Bereiche und der
     /// Spalten stehen im
-    /// [`Fenstermodell`](crate::fenstermodell::Fenstermodell) und aendern sich
+    /// [`Fenstermodell`] und aendern sich
     /// nur ueber einen Befehl; die zwei Sucheinstellungen "Deep" und "Content"
     /// stehen am `Ordnermodell` des sichtbaren Tabs im aktiven Dateifenster und
     /// wechseln damit auch ohne Befehl. Drei Anlaesse haben sie, und
@@ -5787,7 +5787,7 @@ impl Anwendungsdelegierter {
     /// Wegen angefasst.
     ///
     /// **Der Merker wird hier fortgeschrieben und sonst nur zurueckgesetzt**;
-    /// die eine Ruecksetzzeile steht am Kopf von [`Self::eingabe_ausfuehren`].
+    /// die eine Ruecksetzzeile steht am Kopf von [`Anwendungsdelegierter::eingabe_ausfuehren`].
     /// Er ist nicht "steht ein Filtertext" in Verkleidung: nach dem Anschlag,
     /// der den Filtertext leert, steht keiner mehr, und der Merker traegt
     /// trotzdem die Sperre fuer die weiteren Anschlaege derselben Wiederholung.
@@ -5924,7 +5924,7 @@ impl Anwendungsdelegierter {
     /// (`issues/260817-2243_*_the-delete-body-takes-an-art-that-admits-three-values-*.md`).
     ///
     /// **Der Typ selbst kann die Einschraenkung nicht tragen.**
-    /// [`Art`](krk_core::operation::Art) gehoert `krk-core` und fuehrt die vier
+    /// [`Art`] gehoert `krk-core` und fuehrt die vier
     /// Arten, die die Dateioperationen dieses Programms kennen; ein zweiter Typ
     /// daneben, der nur einen Wert kennt, waere eine Aufzaehlung mit einer
     /// Variante samt Ruecktausch an der einen Uebergabestelle. Der kleinste
@@ -6352,14 +6352,14 @@ impl Anwendungsdelegierter {
     /// Benennt den Eintrag um, den der Nutzer in der Liste bearbeitet hat (C4).
     ///
     /// Dieselbe Reihenfolge wie beim Anlegen, und aus denselben Gruenden: erst
-    /// [`krk_core::operation::umbenennen`] aus S15, dann
+    /// [`fn@krk_core::operation::umbenennen`] aus S15, dann
     /// [`auffrischung::ordner_neu_lesen`], der eine Auffrischungspfad aus S14,
     /// dann die Auswahl auf den neuen Namen ueber die eine Stelle, die eine
     /// Zeile anhand ihres Namens waehlt. Auch hier steht deren Lesevorgang
     /// noch aus, ihre Antwort ist also `Vorgemerkt` und nie `Unbekannt`.
     ///
     /// **Ob der Name schon vergeben ist, beantwortet das Dateisystem.**
-    /// `umbenennen` scheitert dann mit [`io::ErrorKind::AlreadyExists`], und
+    /// `umbenennen` scheitert dann mit [`io::ErrorKind::AlreadyExists`](std::io::ErrorKind::AlreadyExists), und
     /// der Grund geht in die Statuszeile. Eine Vorabprueferei gegen die
     /// gelesene Liste waere eine zweite Wahrheit ueber denselben Ordner.
     fn umbenennen_ausfuehren(&self, seite: Fensterseite, alt: &str, neu: &str) {
@@ -6417,7 +6417,7 @@ impl Anwendungsdelegierter {
     ///
     /// Der **zweite**, ausdrueckliche Befehl aus C4. Bis S17c lief hier eine
     /// Schleife auf dem Hauptfaden: je Zeile ein
-    /// [`krk_core::operation::umbenennen`], ohne Arbeitsfaden, ohne Fortschritt
+    /// [`fn@krk_core::operation::umbenennen`], ohne Arbeitsfaden, ohne Fortschritt
     /// und ohne Abbruch. Ueber wenige Dutzend Eintraege war das richtig; ueber
     /// 5.000 brauchte es auf dem Referenzgeraet 525 ms, und so lange stand der
     /// Hauptfaden. Das verfehlte zwei Zusagen aus C4 und L9 aus C8,
@@ -6476,7 +6476,7 @@ impl Anwendungsdelegierter {
     /// [`Bereich::ALLE`], holt zu jedem Wert die Wurzelansicht ueber
     /// [`Aufteilung::bereichssicht`] und fragt `isDescendantOf:`; von
     /// [`Bereich`] auf [`Fokus`] kommt die erschoepfende Zuordnung
-    /// [`fokus::in_bereich`](crate::kommandos::fokus::in_bereich). Die sechs
+    /// [`fokus::in_bereich`]. Die sechs
     /// Teilbaeume sind zueinander fremd, weil es die sechs Unteransichten einer
     /// `NSSplitView` sind; ein Ersthelfer liegt deshalb in hoechstens einem,
     /// und der erste Treffer ist die Antwort.
@@ -6769,7 +6769,7 @@ impl Anwendungsdelegierter {
     /// eine Quelle nur ihre eigene Seite erreicht.
     ///
     /// **Verzweigt wird vollstaendig und ohne Auffangzweig.** Ein vierter
-    /// [`Kontextbefehl`](kontextmenue::Kontextbefehl) haelt damit den Bau an,
+    /// [`Kontextbefehl`] haelt damit den Bau an,
     /// statt still nichts zu tun — die Falle, die `CLAUDE.md` fuer
     /// Tastenbefehle beschreibt und die hier ein `NSMenuItem` waere, dessen
     /// Selektor nirgends ankommt. Der Uebersetzer haelt allerdings nur, dass
