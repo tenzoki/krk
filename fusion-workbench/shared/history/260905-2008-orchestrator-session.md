@@ -87,6 +87,44 @@ ist beziffert:** er betrifft 9 bis 16 der 286 Datensätze, drei bis sechs Prozen
 Sitzung kann die übrigen 270 anfassen. Für die 16 ist die richtige Handlung nicht, sie
 doch zu schließen, sondern sie als benannte Liste zusammenzustellen.
 
+### Nutzerentscheidung zu den Verweisen auf private Elemente
+
+Der Nutzer hat am 260906 entschieden, nachdem `krk-core` 53 Doc-Warnungen als
+Entwurfsfrage vorgelegt hatte: **die Elemente bleiben privat.** Seine Vorgabe für die
+Verweise lautete „werden Fließtext" (Option 2 des Datensatzes
+`260905-2336_*_wird-ein-privates-element-oeffentlich-oder-der-verweis-darauf-zu-fliesstext.md`),
+ausdrücklich verbunden mit der Erlaubnis, im begründeten Fall anders zu entscheiden.
+
+**Es ist für die 49 privaten Elemente anders entschieden worden, und der Grund ist eine
+Messung.** Der Datensatz führt gegen Option 3 an, ein `#![allow(rustdoc::private_intra_doc_links)]`
+an der Kistenwurzel decke künftig auch die Verweise, die wirklich falsch sind. Das stimmt
+nicht. `private_intra_doc_links` und `broken_intra_doc_links` sind zwei getrennte Prüfer,
+und das `allow` für den ersten lässt den zweiten unberührt. Zweimal unabhängig an einer
+Wegwerfkiste gemessen, vom Orchestrator und vom ausführenden Agenten: mit dem `allow` an
+der Wurzel bricht `RUSTDOCFLAGS="-D warnings" cargo doc` weiterhin an einem Verweis auf
+einen nicht existierenden Namen ab.
+
+Damit hält Option 3 den tragenden Satz der Nutzerentscheidung — die Elemente bleiben
+privat — und gibt zusätzlich die Namensprüfung nicht auf, die Option 2 für 53 Stellen
+dauerhaft aufgegeben hätte. Die Abweichung betrifft die Klasse und nicht einen Einzelfall;
+sie ist dem Nutzer gemeldet und mit einer Zeile umkehrbar.
+
+Die vier Meldungen an den privaten Modulen `zippen` und `entpacken` sind nach der Vorgabe
+des Nutzers Fließtext geworden. Dort hilft das `allow` nachweislich nicht: rustdoc führt
+ein privates Modul als unauflösbar und nicht als privat.
+
+**Die zweite Hälfte derselben Frage ist durch Messung entschieden.** Der Datensatz nennt
+als Randbedingung, ein Tor in `make check` verlängere jeden Abnahmelauf. Gemessen am warmen
+Baum kostet `cargo doc --workspace --no-deps` 0,3 bis 0,8 Sekunden gegen 45 Sekunden für
+`cargo clippy --workspace --all-targets` allein. `cargo doc` ist deshalb fünftes
+Abnahmekommando geworden. Ohne es wäre die Räumung von 157 Warnungen beim nächsten
+Umbenennen wieder zerfallen.
+
+Der ausführende Agent hat das Tor absichtlich gebrochen und rot werden sehen, bevor er es
+für erledigt erklärte. Die `note`-Zeile im Fehlertext belegt, dass `RUSTDOCFLAGS` den
+`cargo`-Aufruf erreicht und nicht nur gesetzt ist — ein Tor, das grün ist, weil es nichts
+prüft, wäre schlimmer als keines.
+
 **Der Consultant konnte nicht eingesetzt werden.** Er ist nutzergesteuert und für den
 Orchestrator nicht dispatchbar. An seine Stelle sind der Analyst für die fachliche
 Abwägung getreten und eine gebündelte Fragenliste an den Nutzer für die Entscheidungen,

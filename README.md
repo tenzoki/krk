@@ -113,12 +113,21 @@ cargo build --workspace          # übersetzt alle vier Mitglieder
 cargo test  --workspace          # fährt die Tests
 cargo clippy --workspace --all-targets
 cargo fmt --all --check
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 ```
 
 Der Workspace hat vier Mitglieder: `crates/krk-core` (Kern, kein AppKit),
 `crates/krk-ui` (das Binärziel `krk`), `crates/krk-bench` (Prüfordner und
-kopflose Messstrecke) und `xtask` (dieses Bauwerkzeug). Dieselben vier Kommandos
+kopflose Messstrecke) und `xtask` (dieses Bauwerkzeug). Dieselben fünf Kommandos
 in einem Zug fährt `make check`; die übrigen Ziele listet `make help`.
+
+Das fünfte, `cargo doc`, ist seit dem 260906 dabei. Es hält die Verweise in den
+Dokumentationskommentaren gegen den Baum: ein Verweis auf einen Namen, den es
+nicht mehr gibt, etwa nach einer Umbenennung, bricht den Lauf mit Exit 101 ab.
+`--no-deps` gehört
+dazu, sonst dokumentiert der Lauf auch die fremden Kisten und meldet deren
+Warnungen, die dieses Projekt nicht beheben kann. Am warmen Baum kostet das Ziel
+unter einer Sekunde.
 
 `.cargo/config.toml` setzt `MACOSX_DEPLOYMENT_TARGET = "15.0"` für jeden Bau.
 Nachweisen lässt sich das am fertigen Binärprogramm:

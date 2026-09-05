@@ -52,9 +52,26 @@ fmt: ## Quelltext formatieren
 fmt-check: ## Formatierung pruefen, ohne zu aendern
 	$(CARGO) fmt --all --check
 
+# RUSTDOCFLAGS steht als Zuweisung vor dem Aufruf und nicht als eigene
+# make-Variable: eine Zuweisung im Rezept vor dem Kommando reicht die Variable in
+# genau dessen Umgebung weiter, und das ist die einzige Form, in der rustdoc sie
+# sieht. Ein `export RUSTDOCFLAGS := …` weiter oben taete dasselbe, gaelte dann
+# aber auch fuer `build`, `test` und `lint`, die davon nichts wissen sollen.
+#
+# --no-deps gehoert dazu: ohne es dokumentiert der Lauf auch die fremden Kisten
+# und meldet deren Warnungen, die dieses Projekt nicht beheben kann.
+#
+# Das Tor ist noetig, weil kein anderes Abnahmekommando rustdoc faehrt. Bis zum
+# 260905 brach `cargo doc` mit 157 Warnungen ab, waehrend `make check` gruen
+# durchlief; drei Behebungslaeufe haben sie auf null gebracht, und ohne dieses
+# Ziel zerfaellt die Raeumung beim naechsten Umbenennen wieder.
+.PHONY: doc
+doc: ## Dokumentation uebersetzen, Warnungen sind Fehler
+	RUSTDOCFLAGS="-D warnings" $(CARGO) doc --workspace --no-deps
+
 .PHONY: check
-check: build test fmt-check lint ## Die vier Abnahmekommandos, in der Reihenfolge der Schritte
-	@echo "alle vier gruen"
+check: build test fmt-check lint doc ## Die fuenf Abnahmekommandos, in der Reihenfolge der Schritte
+	@echo "alle fuenf gruen"
 
 # Die Schritte stehen als $(MAKE)-Aufrufe und nicht als Voraussetzungen, und
 # das ist der Punkt: make darf Voraussetzungen in beliebiger Reihenfolge

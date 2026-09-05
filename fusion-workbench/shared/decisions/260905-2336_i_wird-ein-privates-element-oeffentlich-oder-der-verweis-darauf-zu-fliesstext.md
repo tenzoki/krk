@@ -156,3 +156,9 @@ kuenftig auch einen falschen privaten Verweis. Er deckt **nicht** den unaufgeloe
 Verweis, das ueberfluessige Ziel und den mehrdeutigen Namen — die drei Arten, die
 diese Sitzung geraeumt hat, bleiben scharf. Und mit `cargo doc` in `make check`
 bleiben sie scharf gemessen statt behauptet.
+
+---
+Answered: `260905-2008-orchestrator-session.md` `### Nutzerentscheidung zu den Verweisen auf private Elemente` — die Elemente bleiben privat; fuer die 49 Meldungen der Art `private_intra_doc_links` gilt Option 3 (`allow` an der Kistenwurzel), fuer die vier an den privaten Modulen `zippen` und `entpacken` Option 2 (Fliesstext), und `cargo doc` wird fuenftes Kommando in `make check`. Die Abweichung von der woertlichen Nutzervorgabe (Option 2 fuer alle) betrifft die 49 und beruht auf einer Messung: das `allow` deckt `broken_intra_doc_links` nicht, entgegen dem Contra dieses Datensatzes, sodass Option 3 die Namenspruefung erhaelt, die Option 2 aufgegeben haette; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 59d0688 — `#![allow(rustdoc::private_intra_doc_links)]` an der Wurzel von `krk-core` mit begruendendem Kommentar, die vier Modulverweise in `verzeichnis/sys.rs` als Fliesstext; das Tor steht in allen vier Kisten auf null Warnungen (vorher 157). Die Toraufnahme in `make check` folgt im Commit dieses Laufs, gegengeprueft durch einen absichtlich eingebauten kaputten Verweis, an dem `make check` mit Exit 2 abbrach.
