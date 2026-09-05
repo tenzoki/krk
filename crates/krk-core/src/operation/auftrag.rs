@@ -181,18 +181,37 @@ impl Auftrag {
     }
 
     /// Der neue Name der Quelle an dieser Stelle, sofern die Art einen kennt.
+    ///
+    /// **Die Unterscheidung ist vollstaendig und hat keinen Auffangzweig**, wie
+    /// die von [`Auftrag::zielordner`] zwei Bildschirmseiten tiefer. Eine
+    /// siebte Art, die wie diese eine Angabe **je Stelle** zu den Quellen
+    /// fuehrt, haelt damit den Bau an. Mit `_ => None` uebersetzte sie
+    /// anstandslos und meldete je Eintrag "es fehlt der neue Name" in die
+    /// Abschlussliste statt in die Fehlerliste des Uebersetzers
+    /// (Defekt `260826-1221`).
     pub(crate) fn neuer_name(&self, stelle: usize) -> Option<&str> {
         match &self.art {
             Art::UmbenennenImStapel { neue_namen } => neue_namen.get(stelle).map(String::as_str),
-            _ => None,
+            Art::Kopieren { .. }
+            | Art::Verschieben { .. }
+            | Art::InDenPapierkorb
+            | Art::Zippen { .. }
+            | Art::Entpacken { .. } => None,
         }
     }
 
     /// Der Zielordner des Archivs an dieser Stelle, sofern die Art einen kennt.
+    ///
+    /// Vollstaendig und ohne Auffangzweig, aus dem Grund, den
+    /// [`Auftrag::neuer_name`] ausschreibt.
     pub(crate) fn entpackziel(&self, stelle: usize) -> Option<&Path> {
         match &self.art {
             Art::Entpacken { ziele } => ziele.get(stelle).map(PathBuf::as_path),
-            _ => None,
+            Art::Kopieren { .. }
+            | Art::Verschieben { .. }
+            | Art::InDenPapierkorb
+            | Art::UmbenennenImStapel { .. }
+            | Art::Zippen { .. } => None,
         }
     }
 

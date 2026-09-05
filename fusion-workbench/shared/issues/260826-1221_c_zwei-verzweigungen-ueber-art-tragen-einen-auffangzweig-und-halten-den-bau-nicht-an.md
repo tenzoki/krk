@@ -69,3 +69,13 @@ kostet nichts.
 ## Umfang
 
 `krk-core`, `operation/auftrag.rs`.
+
+---
+Resolved: 260906-0055 — beide Auffangzweige sind gefallen. `Auftrag::neuer_name` und
+`Auftrag::entpackziel` (`crates/krk-core/src/operation/auftrag.rs`) zaehlen die uebrigen
+fuenf Arten jetzt einzeln auf, wie `Auftrag::zielordner` es zwei Bildschirmseiten tiefer
+schon tat; eine siebte Art haelt damit den Bau an, statt still `None` zu liefern. Der
+Doc-Kommentar an `neuer_name` schreibt den Grund aus und nennt diesen Datensatz,
+`entpackziel` verweist darauf. Geprueft mit `cargo test -p krk-core` (Exit 0),
+`cargo clippy -p krk-core --all-targets -- -D warnings` (Exit 0) und
+`cargo fmt -p krk-core -- --check` (Exit 0).

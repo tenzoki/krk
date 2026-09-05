@@ -54,3 +54,13 @@ spaeter gegen eine Abbildung tauschen will, rechnet sonst mit der falschen Groes
 
 **Gefunden:** coderev, Vollbaum-Durchsicht von `crates/krk-core/src/{ablage,leseprofil}/` am
 260826-1225.
+
+---
+Resolved: 260906-0055 — die Begruendung ist berichtigt. Der Doc-Kommentar an `Lauf::staende`
+(`crates/krk-core/src/leseprofil/bausteine.rs`) nennt als Schranke jetzt die Zahl der
+verschiedenen Ortsangaben des erkannten Profils und schreibt ausdruecklich aus, dass es
+**nicht** `HOECHSTENS_LESELAEUFE` ist, mit dem Grund (`stand_am` merkt auch den Ort, an dem
+der Haushalt erschoepft war) und mit der Probe, die die Liste ueber die Leselaufgrenze treibt.
+Kein Verhalten geaendert. Geprueft mit `cargo test -p krk-core` (Exit 0),
+`cargo clippy -p krk-core --all-targets -- -D warnings` (Exit 0) und
+`cargo fmt -p krk-core -- --check` (Exit 0).

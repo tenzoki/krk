@@ -380,8 +380,19 @@ struct Lauf<'w> {
     /// Ort scheiterte genauso und kostete einen weiteren Leselauf.
     ///
     /// Eine Liste und keine Abbildung: es sind hoechstens so viele Eintraege,
-    /// wie [`super::HOECHSTENS_LESELAEUFE`] zulaesst, und bei zwoelf davon ist
-    /// das Durchgehen der guenstigere Weg als das Streuen.
+    /// wie das erkannte Profil verschiedene Ortsangaben traegt, und bei so
+    /// wenigen ist das Durchgehen der guenstigere Weg als das Streuen.
+    ///
+    /// **Die Schranke ist nicht [`super::HOECHSTENS_LESELAEUFE`]**, und das ist
+    /// die Berichtigung des Defekts `260826-1225`. `stand_am` merkt jeden
+    /// verschiedenen Ort, auch den, an dem gar nicht gelesen wurde, weil der
+    /// Haushalt erschoepft war — der Absatz darueber schreibt das aus. Die Zahl
+    /// der Eintraege folgt damit den Ortsangaben und nicht den gelungenen
+    /// Lesungen. Die Probe
+    /// `dreizehn_zaehlbausteine_erreichen_die_grenze_und_der_rest_traegt_den_platzhalter`
+    /// (`crates/krk-core/tests/leseprofil.rs`) treibt die Liste ueber die
+    /// Leselaufgrenze hinaus, ohne dass etwas daran haengt. Wer die Liste
+    /// spaeter gegen eine Abbildung tauscht, rechnet mit dieser Groesse.
     ///
     /// Der [`Lesestand`] steht unter [`Rc`], weil ihn zwei Stellen brauchen:
     /// diese Liste haelt ihn, und ein Rufer bekommt ihn geliehen. Ohne den

@@ -90,8 +90,8 @@
 //! [`crate::text::datei::bis_zur_grenze_lesen`] fuer jeden, der seine eigene
 //! Grenze mitbringt, und [`crate::text::datei::anlesen`], das eine zu grosse
 //! Datei anliest, statt sie abzuweisen. **Die Archivwege** stehen unter
-//! `operation/`: [`crate::operation::zippen`] liest jede Quelle in ein Archiv,
-//! [`crate::operation::entpacken`] oeffnet jedes Archiv. **Der Verzeichnisleser**
+//! `operation/`: `crate::operation::zippen` liest jede Quelle in ein Archiv,
+//! `crate::operation::entpacken` oeffnet jedes Archiv. **Der Verzeichnisleser**
 //! steht seit dem Defekt `260826-1221` in dieser Datei selbst daneben:
 //! [`Schwungleser::oeffnen`] holt seinen Deskriptor ueber dieselbe Huelle. Alle
 //! aus dem gleichen Grund, naemlich einer benannten Roehre im Ordner,
@@ -856,8 +856,8 @@ unsafe extern "C" {
 /// Editors, [`crate::text::datei::bis_zur_grenze_lesen`] als Huelle mit der
 /// uebergebenen Grenze und [`crate::text::datei::anlesen`] fuer die
 /// Profil-Zusammenfassung der Vorschau — und seit der Runde 17 von den zwei
-/// Archivwegen [`crate::operation::zippen`] und
-/// [`crate::operation::entpacken`] — und seit dem Defekt `260826-1221` vom
+/// Archivwegen `crate::operation::zippen` und
+/// `crate::operation::entpacken` — und seit dem Defekt `260826-1221` vom
 /// Verzeichnisleser [`Schwungleser::oeffnen`] in dieser Datei, der bis dahin
 /// als einziger Oeffner **dieser Datei** mit `File::open` an einer benannten
 /// Roehre haengen blieb. Die Einengung gehoert dazu: `File::open` steht daneben

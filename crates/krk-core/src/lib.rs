@@ -1,4 +1,32 @@
 #![deny(unsafe_code)]
+// Die Modulkoepfe dieses Projekts erklaeren die Mechanik, und die Mechanik wohnt
+// haeufig in einer privaten Funktion. Rustdoc kann einen solchen Verweis in der
+// **oeffentlichen** Dokumentation nicht aufloesen und bricht daran ab. Die
+// Verweise bleiben trotzdem Verweise: sie werden weder zu Fliesstext, noch wird
+// ihr Ziel dafuer oeffentlich. Wer diese Koepfe liest, liest sie mit
+// `--document-private-items` oder im Quelltext, und dort loesen sie auf.
+//
+// **Diese Zeile stellt keine Namenspruefung still.**
+// `rustdoc::private_intra_doc_links` und `rustdoc::broken_intra_doc_links` sind
+// zwei Pruefer, und nur der erste steht hier. Der zweite bleibt scharf: ein
+// Verweis auf einen Namen, den es nicht gibt, laesst
+// `RUSTDOCFLAGS="-D warnings" cargo doc` weiterhin abbrechen. Nachgemessen am
+// 260906-0034 an einer Wegwerfkiste, drei Laeufe: privater Verweis ohne diese
+// Zeile Exit 101, mit ihr Exit 0, und ein kaputter Verweis daneben trotz ihrer
+// Exit 101 unter `-D rustdoc::broken-intra-doc-links`.
+//
+// Wie viele Verweisstellen die Zeile deckt, zaehlt nach ihrem Entfernen
+//   RUSTDOCFLAGS="-D warnings" cargo doc -p krk-core --no-deps 2>&1 \
+//     | grep -c 'links to private item'
+// und keine Zahl an dieser Stelle.
+//
+// Entscheid:
+// `260905-2336_*_wird-ein-privates-element-oeffentlich-oder-der-verweis-darauf-zu-fliesstext.md`
+// (Option 3 fuer die privaten Elemente; die vier Verweise auf die privaten
+// Module `zippen` und `entpacken` fuehrt rustdoc als `unresolved link`, sie
+// deckt diese Zeile nicht und sie sind in `verzeichnis/sys.rs` zu Fliesstext
+// geworden).
+#![allow(rustdoc::private_intra_doc_links)]
 //! Der Kern von KRK: Verzeichnisleser, Ordnermodell, Belegungstabelle,
 //! Operationsmaschine, das Regelmodell fuer das Umbenennen im Stapel, die
 //! Textrechnung des Editors, die Leseprofile des Vorschaufensters und die
