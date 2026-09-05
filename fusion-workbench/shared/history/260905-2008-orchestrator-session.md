@@ -37,7 +37,60 @@ Der Circle-Hinweis blieb aus, weil weder eine vorgesehene noch eine aktive Runde
 
 ## Verlauf
 
-(wird je Schleife fortgeschrieben)
+### Schleife 1 — 20:08 bis 23:07
+
+**Aufbau:** ein Abgleich, dann drei Behebungsbahnen parallel nach Kiste, dann die
+Dokumentation seriell, dann eine Standanalyse. Die Bahnen waren nach Kisten getrennt,
+weil das die einzige Grenze ist, an der drei Agenten gleichzeitig schreiben können,
+ohne sich an einer Datei zu treffen.
+
+| Commit | Gegenstand | geschlossen |
+|---|---|---|
+| `3136d02` | Abgleich gegen den Baum | 10 |
+| `1c29826` | `xtask` und `krk-bench` | 16 |
+| `c5f6fab` | `krk-ui` | 21 |
+| `8779a25` | `krk-core` | 17 von 18 |
+| `84d626b` | `CLAUDE.md` und `README.md` | 7 von 11 |
+
+**71 Datensätze geschlossen, 4 neu abgelegt, 2 neue Fragen.** Der Bestand fällt von 347
+auf 280. Alle vier Kisten sind grün: Proben, `cargo clippy --all-targets -- -D warnings`,
+Formatprüfung.
+
+**Die tragende Entscheidung dieser Schleife** war, eine falsche Zahl in der Prosa nicht
+durch die richtige zu ersetzen, sondern durch das Zählkommando, das sie aus dem Baum
+holt. `CLAUDE.md` hat denselben Zug an sich selbst 43-mal vollzogen. Über alle fünf
+Commits ist genau eine Zahl berichtigt worden, und dort ist der Übersetzer die
+Verankerung. Drei neue Proben halten, was vorher Prosa war; eine davon zieht
+Doc-Kommentare zeilenübergreifend zusammen und fängt damit die über einen Umbruch
+verteilte Stelle in `sperre.rs`, an der fünf frühere Erhebungen gescheitert sind.
+
+**Was die Schleife über den Bestand gelernt hat**, steht in der Standanalyse
+`260905-2307-woran-die-naechste-schleife-ansetzt.md`. Drei Punkte daraus binden die
+weitere Arbeit:
+
+1. Der Bestand hat keinen gleichmäßigen Zufluss, sondern einen Tag. Am 260826 haben
+   fünfzehn Durchsichtsläufe 108 Datensätze abgelegt; ein Planer hat fünf davon in einen
+   Plan gefasst und einen zweiten Plan für „die 116 übrigen" angekündigt, der nie
+   geschrieben wurde. Zehn Tage später war keiner der 108 geschlossen. Diese Schleife hat
+   36 davon an einem Abend geschlossen. Es fehlt kein Können, es fehlte der Schritt, der
+   den Ausstoß einer Durchsicht aufnimmt.
+2. Vier von zehn Zeilen des Baums sind Doku, 8150 davon führen eine Zahl, 2470 in
+   Modulköpfen, und nichts hält sie. Das ist die Fläche, aus der die Durchsichten
+   schöpfen, und sie versiegt nicht.
+3. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` bricht heute mit Exit 101
+   und 157 Warnungen ab, während `make check` grün ist. Kein Abnahmekommando dieses
+   Projekts fährt `cargo doc`. Das ist die einzige Gruppe des Bestands, bei der eine
+   einmalige Handlung eine Fläche dauerhaft schließt.
+
+**Der Widerspruch zwischen der Anweisung „vollständig autonom" und dem Vordergrundlauf
+ist beziffert:** er betrifft 9 bis 16 der 286 Datensätze, drei bis sechs Prozent. Die
+Sitzung kann die übrigen 270 anfassen. Für die 16 ist die richtige Handlung nicht, sie
+doch zu schließen, sondern sie als benannte Liste zusammenzustellen.
+
+**Der Consultant konnte nicht eingesetzt werden.** Er ist nutzergesteuert und für den
+Orchestrator nicht dispatchbar. An seine Stelle sind der Analyst für die fachliche
+Abwägung getreten und eine gebündelte Fragenliste an den Nutzer für die Entscheidungen,
+die ihm gehören.
 
 ## Coherence
 
