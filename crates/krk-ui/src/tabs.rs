@@ -174,11 +174,13 @@ impl Tabinhalt {
     }
 
     /// Der Ordner, den dieser Tab zeigt.
+    #[must_use]
     pub fn ordner(&self) -> &Path {
         &self.ordner
     }
 
     /// Der Inhalt des Ordners.
+    #[must_use]
     pub fn modell(&self) -> &Ordnermodell {
         &self.modell
     }
@@ -187,6 +189,7 @@ impl Tabinhalt {
     ///
     /// Die Ansicht setzt darueber die Auswahl, die Sortierung und den Filter
     /// fuer versteckte Eintraege.
+    #[must_use]
     pub fn modell_mut(&mut self) -> &mut Ordnermodell {
         &mut self.modell
     }
@@ -216,6 +219,7 @@ impl Tabinhalt {
     /// Schreiber auf demselben Feld, sondern ein zweites Feld mit einem eigenen
     /// Schreiber. Genau daran ist Moeglichkeit 3 des Datensatzes gescheitert,
     /// die `zeigen` das Modell veraenderlich gegeben haette.
+    #[must_use]
     pub fn gitmodell(&self) -> &Gitmodell {
         &self.gitmodell
     }
@@ -237,6 +241,7 @@ impl Tabinhalt {
     }
 
     /// Ob gerade ein Lesevorgang laeuft.
+    #[must_use]
     pub fn liest(&self) -> bool {
         self.lesevorgang.is_some()
     }
@@ -250,6 +255,7 @@ impl Tabinhalt {
     /// Ihr einer Ableser ist der Groessenhinweis der Statuszeile: er faellt in
     /// `appkit::statuszeile::Filterstand::zu_gross` und von dort in den Satz
     /// des Filterstands.
+    #[must_use]
     pub fn zu_gross(&self) -> u64 {
         self.zu_gross
     }
@@ -267,6 +273,7 @@ impl Tabinhalt {
     /// **Die Frage steht hier und nicht beim Ableser**, weil allein dieser Typ
     /// den [`Durchlauf`] haelt und weil sie hier ohne AppKit pruefbar ist. Ihr
     /// Ableser ist `appkit::statuszeile::Filterstand::liest_inhalt`.
+    #[must_use]
     pub fn liest_inhalt(&self) -> bool {
         self.durchlauf.is_some() && self.modell.inhalt_wirkt()
     }
@@ -287,6 +294,7 @@ impl Tabinhalt {
     /// Nutzer lesen und von Hand aendern koennen soll, und eine negative Zahl
     /// fuer "ganz oben" waere dort eine Stolperstelle
     /// (`issues/260804-1040_*_die-bildlaufposition-in-der-session-toml-steht-am-oberen-rand-auf-minus-28.md`).
+    #[must_use]
     pub fn bildlauf(&self) -> f64 {
         self.bildlauf
     }
@@ -303,6 +311,7 @@ impl Tabinhalt {
     }
 
     /// Ob die Ansicht die gemerkte Bildlaufposition noch herstellen muss.
+    #[must_use]
     pub fn bildlauf_ausstehend(&self) -> bool {
         self.bildlauf_offen
     }
@@ -314,6 +323,7 @@ impl Tabinhalt {
     }
 
     /// Was die Statuszeile fuer diesen Tab zeigt.
+    #[must_use]
     pub fn meldung(&self) -> Option<&str> {
         self.meldung.as_deref()
     }
@@ -322,6 +332,7 @@ impl Tabinhalt {
     ///
     /// Der letzte Namensteil des Ordners. Fuer die Wurzel gibt es keinen, und
     /// dort steht der Pfad selbst.
+    #[must_use]
     pub fn titel(&self) -> String {
         match self.ordner.file_name() {
             Some(name) => name.to_string_lossy().into_owned(),
@@ -558,6 +569,7 @@ impl Tabliste {
     /// Liest nichts. Den ersten Lesevorgang stoesst
     /// [`Tabliste::sichtbaren_lesen`] an, die verdeckten folgen ueber
     /// [`Tabliste::nachzuegler_starten`].
+    #[must_use]
     pub fn aus_zustand(zustand: &Fensterzustand) -> Self {
         let mut tabs: Vec<Tabinhalt> = zustand.tabs.iter().map(Tabinhalt::aus_zustand).collect();
         if tabs.is_empty() {
@@ -579,6 +591,7 @@ impl Tabliste {
     }
 
     /// Der gespeicherte Zustand dieses Dateifensters.
+    #[must_use]
     pub fn zustand(&self) -> Fensterzustand {
         Fensterzustand {
             aktiver_tab: self.aktiv,
@@ -587,26 +600,31 @@ impl Tabliste {
     }
 
     /// Wie viele Tabs es gibt. Nie null.
+    #[must_use]
     pub fn zahl(&self) -> usize {
         self.tabs.len()
     }
 
     /// Die Stelle des sichtbaren Tabs.
+    #[must_use]
     pub fn aktive_stelle(&self) -> usize {
         self.aktiv
     }
 
     /// Der sichtbare Tab.
+    #[must_use]
     pub fn aktiver(&self) -> &Tabinhalt {
         &self.tabs[self.aktiv]
     }
 
     /// Der sichtbare Tab, veraenderlich.
+    #[must_use]
     pub fn aktiver_mut(&mut self) -> &mut Tabinhalt {
         &mut self.tabs[self.aktiv]
     }
 
     /// Die Beschriftungen aller Tabs, in der Reihenfolge der Leiste.
+    #[must_use]
     pub fn titel(&self) -> Vec<String> {
         self.tabs.iter().map(Tabinhalt::titel).collect()
     }
@@ -615,6 +633,7 @@ impl Tabliste {
     ///
     /// Neben [`Tabliste::aktiver`], weil der Auswurf eines Datentraegers jeden
     /// Tab trifft und nicht nur den sichtbaren.
+    #[must_use]
     pub fn tabordner(&self) -> Vec<PathBuf> {
         self.tabs.iter().map(|tab| tab.ordner.clone()).collect()
     }
@@ -646,6 +665,7 @@ impl Tabliste {
     }
 
     /// Was die Lesereihenfolge von diesem Dateifenster wissen muss.
+    #[must_use]
     pub fn uebersicht(&self) -> Tabuebersicht {
         Tabuebersicht {
             zahl: self.zahl(),
@@ -665,6 +685,7 @@ impl Tabliste {
     /// eine der Bedingungen jener Methode, also faellt der Lauf dort und
     /// beginnt nicht neu. Ein Zweig nach der Art des Laufs faellt hier nicht
     /// an; die Regel steht ganz in der einen Methode.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht ihren Inhalt austauschen"]
     pub fn waehlen(&mut self, stelle: usize) -> bool {
         if stelle >= self.tabs.len() || stelle == self.aktiv {
             return false;
@@ -691,12 +712,14 @@ impl Tabliste {
     }
 
     /// Wechselt zum naechsten Tab und laeuft am Ende auf den ersten um.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht ihren Inhalt austauschen"]
     pub fn naechster(&mut self) -> bool {
         let stelle = (self.aktiv + 1) % self.tabs.len();
         self.waehlen(stelle)
     }
 
     /// Wechselt zum vorigen Tab und laeuft am Anfang auf den letzten um.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht ihren Inhalt austauschen"]
     pub fn voriger(&mut self) -> bool {
         let stelle = (self.aktiv + self.tabs.len() - 1) % self.tabs.len();
         self.waehlen(stelle)
@@ -719,6 +742,7 @@ impl Tabliste {
     /// Beim letzten Tab bleibt das Dateifenster stehen und zeigt den
     /// Standardordner, wie C1 es verlangt. Liefert, ob danach ein anderer
     /// Ordner im Fenster steht.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht ihren Inhalt austauschen"]
     pub fn schliessen(&mut self) -> bool {
         if self.tabs.len() == 1 {
             let standard = Tabzustand::default();
@@ -943,6 +967,7 @@ impl Tabliste {
     ///
     /// Wahr, sobald der sichtbare Tab bedienbar ist und noch verdeckte Tabs
     /// ungelesen sind.
+    #[must_use]
     pub fn nachzuegler_faellig(&self) -> bool {
         self.nachzuegler_offen && self.aktiver().ist_bedienbar()
     }
@@ -961,6 +986,7 @@ impl Tabliste {
     }
 
     /// Ob irgendein Tab dieses Fensters gerade liest.
+    #[must_use]
     pub fn liest_noch(&self) -> bool {
         self.tabs.iter().any(Tabinhalt::liest)
     }
@@ -978,6 +1004,7 @@ impl Tabliste {
     /// ein Vielfaches; ohne ihn hier hielte der Takt an, bevor die Marken da
     /// sind, und die Spalte bliebe leer, bis irgendetwas anderes ihn wieder
     /// anwirft.
+    #[must_use]
     pub fn arbeitet_noch(&self) -> bool {
         self.liest_noch()
             || self
@@ -1645,13 +1672,13 @@ mod tests {
     #[test]
     fn das_schliessen_ruecht_die_sichtbare_stelle_nach() {
         let mut liste = liste(&["/a", "/b", "/c"]);
-        liste.waehlen(2);
-        liste.schliessen();
+        let _ = liste.waehlen(2);
+        let _ = liste.schliessen();
         assert_eq!(ordnernamen(&liste), ["/a", "/b"]);
         assert_eq!(liste.aktive_stelle(), 1, "der letzte Tab war sichtbar");
 
-        liste.waehlen(0);
-        liste.schliessen();
+        let _ = liste.waehlen(0);
+        let _ = liste.schliessen();
         assert_eq!(ordnernamen(&liste), ["/b"]);
         assert_eq!(liste.aktive_stelle(), 0);
     }

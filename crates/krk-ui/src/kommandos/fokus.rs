@@ -31,8 +31,12 @@
 //! weiter, wie jeder, den die Belegung nicht kennt. Die drei Abnahmekriterien
 //! aus C5 verlangen von `delete`, `right` und `lesezeichen_loeschen`
 //! ausdruecklich nur, dass sie nichts tun; eine Meldung waere eine Sonderregel
-//! mit eigenem Text, und sie muesste fuer jeden der rund fuenfzig Befehle
-//! entscheiden, wann sie zu laut wird.
+//! mit eigenem Text, und sie muesste fuer **jeden** Befehl entscheiden, wann sie
+//! zu laut wird. **Wie viele das sind, steht hier nicht**, aus demselben Grund,
+//! aus dem `CLAUDE.md` fuer [`krk_core::tasten::Kommando`] keine Zahl mehr
+//! nennt: die Aufzaehlung waechst mit fast jeder Runde, und die Zahl an dieser
+//! Stelle stand seit der Runde 2 auf "rund fuenfzig". Gezaehlt wird sie mit
+//! `awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs`.
 //!
 //! # Die Gegenrichtung: was ein Fokusbefehl selbst tut
 //!
@@ -267,6 +271,7 @@ pub const BEIM_START: Fokus = Fokus::Dateifenster;
 /// dahin liess sich das linke gar nicht ausblenden.
 /// Fuer [`Fokus::Dateifenster`] ist deshalb nichts hervorzuholen, und
 /// [`Fokus::Anderswo`] ist kein Ziel eines Befehls, sondern ein Befund.
+#[must_use]
 pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
     match ziel {
         Fokus::Leiste => Some(Bereich::Lesezeichen),
@@ -300,6 +305,7 @@ pub const fn holt_hervor(ziel: Fokus) -> Option<Bereich> {
 /// Fallunterscheidungen ueber [`Bereich`]: ein siebter Bereich haelt hier den
 /// Bau an und erzwingt seine Einordnung, sobald er in der Aufzaehlung
 /// [`Bereich`] steht.
+#[must_use]
 pub const fn in_bereich(bereich: Bereich) -> Fokus {
     match bereich {
         Bereich::Lesezeichen => Fokus::Leiste,
@@ -329,6 +335,7 @@ pub const fn in_bereich(bereich: Bereich) -> Fokus {
 /// dann alles stehen, die Breitenaenderung faellt auf das aktive Dateifenster.
 ///
 /// **Vollstaendig und ohne Auffangzweig.**
+#[must_use]
 pub const fn bereich_mit_fokus(fokus: Fokus, aktiv: Fensterseite) -> Option<Bereich> {
     match fokus {
         Fokus::Dateifenster => Some(Bereich::von_seite(aktiv)),
@@ -384,6 +391,7 @@ pub enum Rahmenrolle {
 /// Verglichen wird ueber [`Bereich::index`] und nicht mit `==`: `PartialEq`
 /// ist nicht `const`, und diese Zuordnung soll zur Uebersetzungszeit
 /// nachrechenbar bleiben wie ihre Nachbarn.
+#[must_use]
 pub const fn rahmenrolle(bereich: Bereich, fokus: Fokus, aktiv: Fensterseite) -> Rahmenrolle {
     if let Some(mit_fokus) = bereich_mit_fokus(fokus, aktiv)
         && mit_fokus.index() == bereich.index()
@@ -401,6 +409,7 @@ pub const fn rahmenrolle(bereich: Bereich, fokus: Fokus, aktiv: Fensterseite) ->
 /// Die eine Regel, und die eine Stelle, an der die beiden Halbwahrheiten
 /// zusammenkommen: der Kern weiss, welchen Bereich ein Befehl braucht, die
 /// Oberflaeche, welcher ihn gerade hat.
+#[must_use = "fallengelassen laeuft der Befehl ohne den Fokusvorbehalt weiter"]
 pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
     match bereich {
         Wirkungsbereich::Ueberall => true,

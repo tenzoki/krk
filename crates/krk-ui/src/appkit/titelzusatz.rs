@@ -142,6 +142,7 @@ const RAND: f64 = 8.0;
 ///
 /// Eine reine Funktion ohne AppKit. Sie ist damit ohne Fenster pruefbar, und
 /// das ist die halbe Abnahme von C1.
+#[must_use]
 pub fn beschriftung() -> String {
     concat!("KRK ", env!("CARGO_PKG_VERSION")).to_owned()
 }

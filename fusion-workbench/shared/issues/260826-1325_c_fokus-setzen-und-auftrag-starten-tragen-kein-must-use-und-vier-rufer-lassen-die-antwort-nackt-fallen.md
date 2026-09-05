@@ -33,3 +33,7 @@ Die drei nackten Rufer bei `3210`, `4468` und `4584` sind genau die Stellen, an 
 `#[must_use = "eine Abweisung bleibt stumm; …"]` an `fokus_setzen`, dann `let _ =` mit einer Zeile Begründung an `1458`, `3210`, `4468`, `4584` — oder, wo die Antwort tragend ist (`3210`, `4584`), sie lesen und den Fall benennen. An `5868` `let _ =` wie bei den fünf Geschwistern.
 
 Gefunden bei der Vollbaum-Durchsicht R7 an HEAD `7ac511a`.
+
+
+---
+Resolved: `Anwendungsdelegierter::fokus_setzen` traegt `#[must_use]` mit Meldungstext (`crates/krk-ui/src/appkit/anwendung.rs`, an der Signatur), und alle vier nackten Rufer schreiben jetzt `let _ =` mit je einer eigenen Begruendung: der Aufbau, `Kommando::FensterWechseln`, `nach_dem_sichtbarkeitswechsel` und `aktives_setzen` (`Rangmitnahme::Krk`). `auftrag_starten` hat die Marke ebenfalls bekommen, mit dem Grund im Doc-Kommentar, dass die Antwort heute immer `true` ist und fuenf der sechs Rufer schon `let _ =` schrieben; der sechste, `stapel_beauftragen`, schreibt es jetzt auch. Gepruefte Abnahme: `cargo clippy -p krk-ui --all-targets -- -D warnings` — exit 0.

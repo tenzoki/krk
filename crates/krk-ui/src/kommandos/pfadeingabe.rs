@@ -49,6 +49,7 @@ pub enum Ergebnis {
 /// Nutzer liegt: dann wechselt KRK den Ordner nicht.
 ///
 /// Der Pfad muss absolut sein. Diese Regel ist die von C2, und C10 erbt sie.
+#[must_use]
 pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
     if !pfad.is_absolute() {
         return Ergebnis::Meldung(format!("{} ist kein absoluter Pfad", pfad.display()));

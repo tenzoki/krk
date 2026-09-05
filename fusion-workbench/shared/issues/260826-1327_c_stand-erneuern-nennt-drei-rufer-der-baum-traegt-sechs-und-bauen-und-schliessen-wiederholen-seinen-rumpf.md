@@ -46,3 +46,7 @@ Stand bringen oder — wie CLAUDE.md es fuer Zahlen dieser Art vorsieht — durc
 ## Umfang
 
 `krk-ui`, `appkit/editor.rs`.
+
+
+---
+Resolved: Beide Haelften behoben. **Der Rumpf steht nicht mehr doppelt:** `Editorbereich::bauen` und `::schliessen` (`crates/krk-ui/src/appkit/editor.rs`) rufen jetzt `stand_erneuern(Verlauf::Faellt)` statt die drei Zeilen von Hand hinzuschreiben; die Begruendungen der einzelnen Zeilen sind in je einen Kommentar zusammengezogen. **Die drei Zaehlungen sind durch den `grep` ersetzt**, wie `CLAUDE.md` es fuer diese Sorte vorsieht: der Kopf von `stand_erneuern` sagt „wer ruft, sagt es an sich selbst" und nennt `grep -n 'stand_erneuern(' crates/krk-ui/src/appkit/editor.rs`; `kopf_nachziehen` und `darstellung_nachziehen` ebenso, beide zusaetzlich mit dem Zweig ueber `stand_erneuern` ausgeschrieben, den ihre alten Zaehlungen uebersahen. Gepruefte Abnahme: `cargo test -p krk-ui` — exit 0 (902 Proben).

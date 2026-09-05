@@ -309,6 +309,7 @@ impl Zettelwaechter {
 ///
 /// Alles Uebrige, darunter jede Bewegung der Schreibmarke, bleibt bei der
 /// Flaeche.
+#[must_use]
 fn uebernimmt(befehl: Sel) -> bool {
     befehl == sel!(cancelOperation:)
 }
@@ -317,6 +318,7 @@ fn uebernimmt(befehl: Sel) -> bool {
 ///
 /// `None` fuer eine Stelle, die es nicht gibt — `NSSegmentedControl` liefert
 /// `-1`, solange keiner ausgewaehlt ist. Lieber nichts tun als raten.
+#[must_use]
 fn zettel_an_stelle(stelle: isize) -> Option<Zettel> {
     usize::try_from(stelle)
         .ok()
@@ -438,6 +440,7 @@ pub fn zeigen(
 }
 
 /// Der Rahmen, in dem Bildlaufansicht und Textflaeche gebaut werden.
+#[must_use]
 fn textrahmen() -> NSRect {
     NSRect::new(NSPoint::ZERO, NSSize::new(BREITE, TEXTHOEHE))
 }

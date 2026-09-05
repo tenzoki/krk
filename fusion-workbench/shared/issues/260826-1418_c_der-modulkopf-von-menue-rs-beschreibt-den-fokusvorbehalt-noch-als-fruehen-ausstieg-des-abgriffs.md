@@ -26,3 +26,7 @@ Beschreibung und führt den nächsten Leser auf denselben Weg. Der Ausgang der S
 Textbefehle erreichen das Menü, weil `Belegung::nachschlag` sie überspringt) bleibt richtig; nur
 der Mechanismus davor ist falsch beschrieben. Weg: die zwei Absätze auf die Zulässigkeitsregel
 umschreiben und auf `ereignisse.rs` „Der Fokusvorbehalt" verweisen.
+
+
+---
+Resolved: Beide Absaetze sind auf die Zulaessigkeitsregel umgeschrieben (`crates/krk-ui/src/appkit/menue.rs`). Der erste sagt jetzt, dass seit der Runde 7 an der Senke entschieden wird, dass der Abgriff nach dem Ersthelfer gar nicht mehr fragt, und dass ein Befehl mit der Schreibmarke im Textfeld unzulaessig ausfaellt statt geschluckt zu werden; er verweist auf den Abschnitt „Der Fokusvorbehalt" in `ereignisse.rs`. **Der zweite war doppelt falsch und ist entsprechend berichtigt:** mit dem Fokus in der Leiste weist `alle_markieren` nicht der Fokusvorbehalt ab, sondern der Bestandteil (3) von `zulaessigkeit::zulaessig` — `Kommando::AlleMarkieren` traegt `Wirkungsbereich::Dateifenster` (nachgesehen in `crates/krk-core/src/tasten/belegung.rs`), und eine `NSTableView` stellt dem Vorbehalt gar keinen Ersthelfer, an dem er greifen koennte. Der Ausgang der Saetze — der Eintrag ist in der Leiste bedienbar — bleibt unveraendert richtig.

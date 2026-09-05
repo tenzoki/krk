@@ -56,6 +56,7 @@
 /// **Ein Koordinatenwechsel und keine Zaehlung.** Welche Stellen gemeint sind,
 /// sagt allein der Aufrufer; diese Funktion laeuft einmal ueber den Text und
 /// zaehlt dabei Einheiten statt Bytes.
+#[must_use]
 pub fn in_utf16(text: &str, byteversaetze: &[usize]) -> Vec<usize> {
     let mut umgerechnet = Vec::with_capacity(byteversaetze.len());
     let mut naechster = 0usize;
@@ -87,6 +88,7 @@ pub fn in_utf16(text: &str, byteversaetze: &[usize]) -> Vec<usize> {
 /// Schnittstelle aber zulaesst —, ist die Antwort der Anfang jenes Zeichens.
 /// Beide Antworten liegen auf einer Zeichengrenze, und das ist die Bedingung
 /// jeder Verwendung in `krk_core::text`.
+#[must_use]
 pub fn in_bytes(text: &str, utf16versatz: usize) -> usize {
     let mut gezaehlt = 0usize;
     for (byte, zeichen) in text.char_indices() {

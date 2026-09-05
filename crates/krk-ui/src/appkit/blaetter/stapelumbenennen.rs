@@ -150,6 +150,7 @@ impl Spalte {
     const ALLE: [Spalte; 3] = [Spalte::Alt, Spalte::Neu, Spalte::Grund];
 
     /// Die Kennung, unter der AppKit die Spalte fuehrt.
+    #[must_use]
     fn kennung(self) -> &'static NSString {
         match self {
             Spalte::Alt => ns_string!("alt"),
@@ -159,6 +160,7 @@ impl Spalte {
     }
 
     /// Die Ueberschrift, die der Nutzer liest.
+    #[must_use]
     fn titel(self) -> &'static NSString {
         match self {
             Spalte::Alt => ns_string!("Bisher"),
@@ -173,6 +175,7 @@ impl Spalte {
     /// abgeschnittener Grund nennt den Grund nicht. Die beiden Namensspalten
     /// vertragen den Schnitt, weil derselbe Name daneben in der Dateiliste
     /// steht.
+    #[must_use]
     fn breite(self) -> f64 {
         match self {
             Spalte::Alt | Spalte::Neu => 155.0,
@@ -181,6 +184,7 @@ impl Spalte {
     }
 
     /// Die Spalte zu einer Kennung.
+    #[must_use]
     fn aus_kennung(kennung: &NSString) -> Option<Spalte> {
         Spalte::ALLE
             .into_iter()
@@ -220,6 +224,7 @@ struct Regelfelder {
 
 impl Regelfelder {
     /// Die Regel, die gerade in den Feldern steht.
+    #[must_use = "der Regelfehler gehoert in die Hinweiszeile des Blattes; fallengelassen bleibt eine unbrauchbare Regel unbemerkt"]
     fn regel(&self) -> Result<Regel, krk_core::stapelumbenennen::Regelfehler> {
         Regel::aus_eingabe(
             &self.suchen.stringValue().to_string(),
@@ -323,6 +328,7 @@ impl Vorschauquelle {
     /// Der Wert, den das Blatt bei "Umbenennen" zurueckgibt. Ausgefuehrt wird
     /// genau das, was der Nutzer gesehen hat: es gibt keinen zweiten
     /// Rechendurchgang zwischen dem Tastendruck und dem Dateisystem.
+    #[must_use]
     fn ergebnis(&self) -> Vorschau {
         self.ivars().stand.borrow().clone()
     }
@@ -441,6 +447,7 @@ pub fn zeigen(
 }
 
 /// Die Frage in der Kopfzeile des Blattes.
+#[must_use]
 fn frage(eintraege: usize) -> String {
     match eintraege {
         1 => "Einen Eintrag umbenennen".to_owned(),
@@ -449,6 +456,7 @@ fn frage(eintraege: usize) -> String {
 }
 
 /// Die Zeile ueber der Vorschau, wenn die Regel lesbar ist.
+#[must_use]
 fn zusammenfassung(stand: &Vorschau) -> String {
     let zeilen = stand.zeilen().len();
     let kollisionen = stand.kollisionen();

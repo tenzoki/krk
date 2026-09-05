@@ -44,3 +44,7 @@ den Absturz, den `objc2` nicht abfaengt, und eine falsche wird geglaubt" — so 
 ## Umfang
 
 `krk-ui`, `appkit/editor.rs`, Modulkopf.
+
+
+---
+Resolved: Alle drei Stellen berichtigt, jede gegen das SDK nachgelesen (`$(xcrun --show-sdk-path)`, 260905). `NSUndoManager` steht jetzt in der Klassenliste bei den Klassen seit macOS 10.0 (`NSUndoManager.h:28` traegt keine Angabe). `registerUndoWithTarget:handler:` ist als **sechste** juengere Methode aufgenommen, mit 10.11 und der SDK-Zeile (`NSUndoManager.h:161`); der Satz darunter zaehlt jetzt „Sechs Methoden … fuenf von ihnen liegen auf oder unter dem Zielsystem" und `setAllowsWritingToolsAffordance:` ist entsprechend „die sechste". Der Satz ueber die Proben ist um einen Absatz ergaenzt, der die zwei gebundenen Beruehrungen des Pruefmoduls nennt: `enabledTextCheckingTypes` seit 10.6 (`NSTextView.h:466`) und dieselbe Anmeldemethode seit 10.11 (`crates/krk-ui/src/appkit/editor.rs`, Abschnitt „Ab welchem macOS die angesprochenen Klassen stehen").

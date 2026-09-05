@@ -41,3 +41,7 @@ Die Trennlinie ist das Datum: alle Module, die nach dem Nutzerentscheid vom 2608
 `#[must_use]` an alle 24, mit der Begründung im Wortlaut der Nachbarn (`rueckschritt.rs:152-156`, `loeschwarnung.rs:359`). Bei den vier Zulässigkeitsantworten mit Meldungstext: „fallengelassen läuft der Befehl ungeprüft weiter".
 
 Schwere: mittel.
+
+
+---
+Resolved: Alle sechs Module tragen die Marke. Die vier Zulaessigkeitsantworten haben sie mit dem im Datensatz vorgeschlagenen Meldungstext: `zulaessigkeit::zulaessig`, `zulaessigkeit::immer_erreichbar` (beide Eingaenge), `operationen::waehrend_blatt_erlaubt` und `fokus::wirkt`. Daneben markiert sind die vier Fokus-Zuordnungen in `crates/krk-ui/src/kommandos/fokus.rs`, `Buendelung::melden` mit dem Hinweis auf den Zeichendurchgang, die zwei Antworten in `navigation.rs`, die zwei in `auswahl.rs`, `pfadeingabe::pruefen` und die Textbausteine samt Praedikaten in `operationen.rs` (42 Stellen dort). Gepruefte Abnahme: `cargo clippy -p krk-ui --all-targets -- -D warnings` — exit 0.

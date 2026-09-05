@@ -358,6 +358,7 @@ impl Aufteilung {
     ///
     /// Gelesen wird ueber [`zeilenmass`], also durch dieselbe eine Stelle, aus
     /// der auch [`auslegen`] die beiden Zahlen nimmt.
+    #[must_use]
     pub fn zeilenmass(&self) -> Zeilenmass {
         zeilenmass(&self.teiler)
     }
@@ -375,6 +376,7 @@ impl Aufteilung {
     /// Laufzeit auf `index out of bounds`. Auch die Gegenseite haelt nichts:
     /// `Fenstermodell::breiten_uebernehmen` nimmt `[f64; 6]`, und beide Seiten
     /// blieben stumm bei fuenf.
+    #[must_use]
     pub fn gemessene_breiten(&self) -> [f64; 6] {
         let mut breiten = [0.0; 6];
         for bereich in Bereich::ALLE {
@@ -397,6 +399,7 @@ impl Aufteilung {
     ///
     /// Die Teilbaeume sind zueinander fremd, weil es die Unteransichten einer
     /// `NSSplitView` sind; ein Ersthelfer liegt in hoechstens einem.
+    #[must_use]
     pub fn bereichssicht(&self, bereich: Bereich) -> Option<Retained<NSView>> {
         bereichsansicht(&self.teiler, bereich.index())
     }

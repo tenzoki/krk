@@ -54,3 +54,7 @@ die sechs Modelle ohne AppKit, die keiner davon nennt.
 Die Marke an die vier fetten Stellen zuerst, mit Begründung im Attribut wie an `umschalten`;
 danach die Prädikate „ob sich etwas geändert hat" in einem Zug. Wer den Wert dann wirklich nicht
 braucht, schreibt `let _ =` — die Konvention steht schon (`tabs.rs:314-323`).
+
+
+---
+Resolved: Alle sechs Modelldateien unter `crates/krk-ui/src/` sind durchgegangen; die vier fett gesetzten Stellen tragen die Marke mit dem Meldungstext, den der Datensatz verlangt: `Zettelmodell::wechseln`, `Editormodell::sichern`, `Vorschaumodell::einziehen` und `Leistenmodell::gueltigkeit_pruefen`. Daneben markiert sind die uebrigen genannten Antworten und die gleichartigen Praedikate derselben Dateien (fenstermodell 21, tabs 27, editormodell 30, vorschaumodell 14, leistenmodell 18, zettelmodell 2). Der Lauf unter `-D warnings` hat drei Rufer gefunden, die den Wert wirklich nicht brauchen, und alle drei schreiben jetzt `let _ =` mit Begruendung: `Leistenmodell::orte_setzen` auf `gueltigkeit_pruefen`, `Editorbereich::ansicht_umschalten` auf `Editormodell::ansicht_umschalten` und die drei Tabzweige von `Vorschaufenster::kommando_ausfuehren`; dazu 23 Aufrufe in Pruefmodulen. Zwei Marken sind wieder gefallen, weil `clippy::double_must_use` sie als Wiederholung einer Marke am Rueckgabetyp zaehlt: `Tabliste::auswahl_auf_namen` (`Auswahlversuch`) und `Tabliste::einziehen` (`Einzug`) — beide Typen tragen sie schon. Gepruefte Abnahme: `cargo clippy -p krk-ui --all-targets -- -D warnings` — exit 0, `cargo test -p krk-ui` — exit 0.

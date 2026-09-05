@@ -294,6 +294,7 @@ impl Rang {
     /// Markierungszahl sind keine Fehler, die drei uebrigen sind welche (C4.2
     /// der Runde 10, C4.6 der Runde 20). Ein zweites Feld, das jemand setzt,
     /// waere die Gelegenheit, eine Markierungszahl rot zu faerben.
+    #[must_use]
     pub const fn art(self) -> Art {
         match self {
             Rang::Befehlsantwort => Art::Fehler,
@@ -490,6 +491,7 @@ pub struct Filterstand {
 /// gehoert zu keiner Faehigkeit ausser der Zeile selbst und ist bei dem Rang,
 /// den sie fuellt, besser aufgehoben als ohne ihn. AppKit ruft sie so wenig wie
 /// jene, und beide sind ohne Fenster pruefbar.
+#[must_use]
 pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> {
     // Dieselbe Frage wie `Ordnermodell::filter_steht`, an demselben Wert
     // gestellt: der Aufrufer reicht den Filtertext herein, statt die Antwort
@@ -701,6 +703,7 @@ pub struct Meldung<'a> {
 /// [`Fenstermodell::aus_sitzung`](crate::fenstermodell::Fenstermodell::aus_sitzung)
 /// zieht sie nach, wenn eine von Hand geschriebene `session.toml` sie auf ein
 /// ausgeblendetes zeigen laesst.
+#[must_use]
 pub fn zeile<'a>(
     links: &'a Quellen,
     rechts: &'a Quellen,
@@ -784,6 +787,7 @@ pub fn zeile<'a>(
 ///
 /// Die beiden Namen stehen hier und nicht im Kern: es sind Anzeigetexte, und
 /// [`Fensterseite`] ist ein Wert der Ablage, der von Anzeige nichts weiss.
+#[must_use]
 pub fn zeilentext(meldung: &Meldung<'_>, aktiv: Fensterseite) -> String {
     match meldung.herkunft {
         Herkunft::Dateifenster(seite) if seite != aktiv => {
@@ -1599,10 +1603,12 @@ mod tests {
         }
     }
 
-    /// Die Ordnung ist ueber alle zwoelf Bewerber vollstaendig und
-    /// ueberschneidungsfrei: melden beide Seiten auf jedem der sechs Raenge,
+    /// Die Ordnung ist ueber alle Bewerber vollstaendig und
+    /// ueberschneidungsfrei: melden beide Seiten auf jedem Dateifenster-Rang,
     /// gewinnt genau eine Aussage, und es ist die des obersten Ranges der
-    /// aktiven Seite.
+    /// aktiven Seite. Die Zahl der Bewerber ist zweimal die Laenge von
+    /// [`Quellen`] und steht hier aus demselben Grund nicht als Zahl wie bei
+    /// [`der_namenszusatz_gilt_auf_jedem_rang`].
     #[test]
     fn ueber_alle_zwoelf_bewerber_gewinnt_genau_eine_aussage() {
         let voll = |kennung: &str| Quellen {
@@ -1653,8 +1659,8 @@ mod tests {
         assert_eq!(meldung.text, "Datenträger ausgeworfen");
     }
 
-    /// Jeder der sechs Raenge traegt seine Art, und zwar dieselbe auf beiden
-    /// Seiten: die Herkunft faerbt nichts.
+    /// Jeder Rang aus [`dateifenster_raenge`] traegt seine Art, und zwar
+    /// dieselbe auf beiden Seiten: die Herkunft faerbt nichts.
     #[test]
     fn die_art_haengt_am_rang_und_nicht_an_der_seite() {
         for rang in dateifenster_raenge() {
@@ -1698,8 +1704,15 @@ mod tests {
         );
     }
 
-    /// Der Zusatz haengt an der Seite und nicht am Rang: er steht auf jedem
-    /// der fuenf.
+    /// Der Zusatz haengt an der Seite und nicht am Rang: er steht auf jedem,
+    /// den [`dateifenster_raenge`] liefert.
+    ///
+    /// **Eine Zahl steht hier nicht**, und der Grund ist die Erfahrung dieser
+    /// Datei: die Prosa sagte "fuenf", solange [`Rang::ALLE`] fuenf Werte trug,
+    /// und ist mit der Runde 10 und noch einmal mit der Runde 20 falsch
+    /// geworden, ohne dass die Probe daneben je etwas anderes getan haette als
+    /// zu iterieren
+    /// (`issues/260826-1420_*_zwei-probenkoepfe-in-statuszeile-rs-zaehlen-fuenf-raenge-und-rang-alle-traegt-sechs.md`).
     #[test]
     fn der_namenszusatz_gilt_auf_jedem_rang() {
         for rang in dateifenster_raenge() {

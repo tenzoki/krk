@@ -71,3 +71,7 @@ genannten Funktionen; danach `cargo clippy --workspace --all-targets` mit `-D wa
 ## Umfang
 
 `krk-ui`, `appkit/tabelle.rs`, `appkit/editor.rs`, `editormodell.rs`; Rufer in `appkit/anwendung.rs`.
+
+
+---
+Resolved: `crates/krk-ui/src/appkit/editor.rs` traegt jetzt 26 Marken statt keiner: die 25 genannten reinen Antworten und die Aufzaehlung `Editormeldung` selbst, letztere mit Meldungstext. `Ladeausgang` (`crates/krk-ui/src/editormodell.rs`) hat die Marke bekommen; `Sicherungsausgang` trug sie schon. In `crates/krk-ui/src/appkit/tabelle.rs` tragen `kommando_ausfuehren` und `filterzeichen_tippen` sie mit Meldungstext, dazu die zwanzig genannten Praedikate und Spaltenfunktionen. Der Lauf unter `-D warnings` hat genau die zwei im Datensatz benannten Stellen gefangen, `messhandlung` im Messmodus (`Handlung::Listenanfaenge` und `Handlung::AlleMarkieren`, `crates/krk-ui/src/appkit/anwendung.rs`); dort ist `let _ =` die richtige Antwort und steht jetzt mit Begruendung: beide Kommandos landen im `true`-Schwanz von `kommando_ausfuehren` und koennen `false` gar nicht liefern. Gepruefte Abnahme: `cargo clippy -p krk-ui --all-targets -- -D warnings` — exit 0, `cargo test -p krk-ui` — exit 0.

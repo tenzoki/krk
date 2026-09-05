@@ -7,11 +7,22 @@
 //! Teilbaum `src/appkit/` ab, und keine Datei darunter braucht die Ausnahme
 //! ein zweites Mal.
 //!
-//! Zweiunddreissig Module, entlang dessen geschnitten, was AppKit als
-//! eigenstaendige Objekte fuehrt — bis auf [`koordinaten`] und [`textautomatik`],
-//! die keines fuehren und trotzdem hier liegen, weil die Koordinate, in die das
-//! eine rechnet, AppKits ist und die Einstellungen, die das andere setzt, an
-//! AppKits Textflaeche haengen:
+//! Die Module dieses Verzeichnisses sind entlang dessen geschnitten, was AppKit
+//! als eigenstaendige Objekte fuehrt — bis auf [`koordinaten`] und
+//! [`textautomatik`], die keines fuehren und trotzdem hier liegen, weil die
+//! Koordinate, in die das eine rechnet, AppKits ist und die Einstellungen, die
+//! das andere setzt, an AppKits Textflaeche haengen. **Eine Zahl steht hier
+//! nicht**: sie ist mit jeder Runde falsch geworden, die ein Modul dazugelegt
+//! hat, und sie stand zuletzt zwei daneben
+//! (`issues/260826-1419_*_drei-zaehlungen-in-den-modulkoepfen-von-appkit-sind-veraltet-neun-ankreuzfelder-fuenf-module-und-ein-ueberblick-ohne-zwei-module.md`);
+//! die Liste sind die `mod`-Zeilen am Fuss dieser Datei.
+//!
+//! **Der Ueberblick darunter zeichnet Wertefluesse und ist kein Modulverzeichnis.**
+//! Er nennt nicht jedes Modul: [`abwurf`], [`weitereinstanz`], [`git`],
+//! [`leiste`] und [`koordinaten`] stehen nicht darin, obwohl es sie gibt, weil
+//! ihr Fluss entweder in einem Kasten aufgeht oder nur aus einer Antwort an den
+//! Rufer besteht. Wer eine vollstaendige Liste braucht, nimmt die `mod`-Zeilen
+//! und nicht dieses Bild; der Fliesstext dahinter beschreibt jedes Modul einzeln.
 //!
 //! ```text
 //! anwendung ──> menue
@@ -150,6 +161,13 @@
 //! Stelle, an der ein Aufruf von unten nach oben laeuft: die
 //! Operationsmaschine im Kern bekommt ihn ueber eine Schnittstelle
 //! hereingereicht, die AppKit nicht kennt.
+//! [`git`] haelt den Git-Bereich aus der Runde 23, den sechsten der
+//! Fensterzeile: Kopf, Verlaufsliste und Einzelheiten, angebunden an
+//! `crate::gitmodell`. Gelesen wird dort mit `gix`, geschrieben wird nichts.
+//! [`weitereinstanz`] haelt die eine aus C3 der Runde 7: den Start einer
+//! zweiten KRK-Instanz ueber `NSWorkspaceOpenConfiguration`. Ein eigenes Modul
+//! in der Reihe von [`terminal`], [`standardprogramm`] und [`teilen`], nach
+//! derselben Regel: ein Modul je Frage.
 //!
 //! **Jeder Weg aus diesem Verzeichnis heraus traegt nur gewoehnliche
 //! Rust-Werte; keines der Ziele nennt eine `objc2`-Kiste.** Das ist die

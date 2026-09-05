@@ -1628,7 +1628,13 @@ impl Anwendungsdelegierter {
         // gespeichert, die Begruendung steht an `fokus::BEIM_START`. Aus der
         // Sitzung kommt allein, **welches** der beiden Dateifenster das aktive
         // ist.
-        self.fokus_setzen(fokus::BEIM_START);
+        //
+        // `let _ =`: beim Aufbau gibt es keinen Ausweichfokus, auf den eine
+        // Abweisung fuehren koennte. `BEIM_START` zeigt auf das aktive
+        // Dateifenster, das nie ausgeblendet ist, also kann sie hier nur
+        // eintreten, wenn Fenster oder Ansicht fehlen — und dann steht die
+        // Oberflaeche ohnehin nicht.
+        let _ = self.fokus_setzen(fokus::BEIM_START);
         // **Der Fenstertitel als letzte Handlung des Aufbaus (C11).** Erst
         // jetzt steht der Fokus, und der Titel folgt ihm. `appkit::fenster`
         // setzt ihn beim Aufbau des Fensters einmal auf die leere
@@ -2279,7 +2285,7 @@ impl Anwendungsdelegierter {
     /// Zwei Fehler kann der Nutzer beheben, und beide stellt der Befehl vor dem
     /// Aufruf fest: der Ordner ist nicht mehr da, oder zu der eingestellten
     /// Buendelkennung ist keine Anwendung installiert. Beide gehen als
-    /// Befehlsantwort in die Statuszeile, den ersten der sechs Raenge; ein
+    /// Befehlsantwort in die Statuszeile, auf ihren obersten Rang; ein
     /// eigenes Blatt entsteht nicht. Der dritte Fehler aus C11, die beschaedigte
     /// `settings.toml`, hat sich beim Start gemeldet, denn dort faellt er an.
     ///
@@ -2309,8 +2315,8 @@ impl Anwendungsdelegierter {
     /// `false` hier ausfallen liesse und was nicht.
     ///
     /// Der eine Fall, den der Nutzer sieht, ist der Entwicklungslauf ohne
-    /// Buendel; er geht als Befehlsantwort in die Statuszeile, den ersten der
-    /// sechs Raenge.
+    /// Buendel; er geht als Befehlsantwort in die Statuszeile, auf ihren
+    /// obersten Rang.
     fn weitere_instanz_starten(&self) -> bool {
         if let Some(meldung) = weitereinstanz::starten() {
             let seite = self.ivars().modell.borrow().aktiv();
@@ -2584,9 +2590,17 @@ impl Anwendungsdelegierter {
     /// welchem Bereich ein Fokuswert wohnt. Das aktive Dateifenster ist nie
     /// ausgeblendet und faellt deshalb hier nie durch.
     ///
-    /// Drei Aufrufer: die Fokusbefehle ueber [`Self::fokus_holen`], das
-    /// Ausblenden eines Randbereichs, und der Aufbau der Oberflaeche mit
-    /// [`crate::kommandos::fokus::BEIM_START`].
+    /// **Wer ruft, sagt es an sich selbst, und eine Zahl steht hier nicht.** Sie
+    /// stand auf drei und war es schon vor dem 260825 nicht mehr; die
+    /// Rangmitnahme jenes Tages hat zwei weitere Rufer gelegt, ohne dass jemand
+    /// sie nachgezogen haette
+    /// (`issues/260826-1325_*_fuenf-zahlen-in-der-prosa-des-anwendungsdelegierten-sind-mit-dem-fuenften-bereich-und-den-nachzuegen-vom-260825-falsch-geworden.md`).
+    /// Genannt werden die Zeilen von
+    /// `grep -n 'fokus_setzen(' crates/krk-ui/src/appkit/anwendung.rs`; die
+    /// Anlaesse sind die Fokusbefehle ueber [`Self::fokus_holen`], das
+    /// Ausblenden eines Randbereichs, der Aufbau der Oberflaeche mit
+    /// [`crate::kommandos::fokus::BEIM_START`] und seit dem 260825 die
+    /// Rangmitnahme aus [`Self::aktives_setzen`] und dem Fensterwechsel.
     ///
     /// **Die Anzeige zieht diese Funktion nicht selbst nach.** Sie ruft
     /// `makeFirstResponder`, und die Ueberschreibung in
@@ -2594,6 +2608,7 @@ impl Anwendungsdelegierter {
     /// Wechsel an [`Self::fokusanzeige_nachziehen`]. Es gibt einen
     /// Ausloesepunkt und nicht zwei; ein Nachzug an dieser Stelle waere der
     /// zweite und liesse den Mausklick weiter aussen vor.
+    #[must_use = "eine Abweisung bleibt stumm; wer sie nicht liest, haelt den Fokus fuer gesetzt, waehrend Rang und aktives Dateifenster auseinanderlaufen"]
     fn fokus_setzen(&self, ziel: Fokus) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
@@ -3494,7 +3509,12 @@ impl Anwendungsdelegierter {
             Kommando::FensterWechseln => {
                 let gewechselt = self.ivars().modell.borrow_mut().fenster_wechseln();
                 if gewechselt {
-                    self.fokus_setzen(Fokus::Dateifenster);
+                    // `let _ =`: das aktive Dateifenster ist nie ausgeblendet,
+                    // und `fenster_wechseln` hat gerade eines dazu gemacht.
+                    // Eine Abweisung hiesse hier, dass Fenster oder Ansicht
+                    // fehlen; der Befehl gilt trotzdem als ausgefuehrt, weil
+                    // das Modell gewechselt hat.
+                    let _ = self.fokus_setzen(Fokus::Dateifenster);
                 }
                 gewechselt
             }
@@ -4984,7 +5004,11 @@ impl Anwendungsdelegierter {
         // nicht sein eigener Befehl, sondern die eingeblendete Vorschau
         // verdraengt hat.
         if bereich.seite().is_none() && !self.ivars().modell.borrow().sichtbar(bereich) {
-            self.fokus_setzen(Fokus::Dateifenster);
+            // `let _ =`: der Fokus soll aus dem gerade ausgeblendeten
+            // Randbereich heraus, und das Ziel ist das aktive Dateifenster, das
+            // nie ausgeblendet ist. Eine Abweisung liesse den Fokus stehen, wo
+            // er ist, und dagegen hat diese Stelle kein zweites Mittel.
+            let _ = self.fokus_setzen(Fokus::Dateifenster);
         }
         // Die eingeblendete Vorschau holt nach, was sie im ausgeblendeten
         // Zustand ausgesetzt hat; die Begruendung steht an
@@ -5100,7 +5124,11 @@ impl Anwendungsdelegierter {
             match mitnahme {
                 Rangmitnahme::Appkit => {}
                 Rangmitnahme::Krk => {
-                    self.fokus_setzen(Fokus::Dateifenster);
+                    // `let _ =`: `aktiv_setzen` hat gerade das Ziel zum aktiven
+                    // Dateifenster gemacht, und ein aktives ist nie
+                    // ausgeblendet. Eine Abweisung hiesse, dass Fenster oder
+                    // Ansicht fehlen, und dann gibt es keinen Rang zu vergeben.
+                    let _ = self.fokus_setzen(Fokus::Dateifenster);
                 }
             }
         }
@@ -5624,10 +5652,15 @@ impl Anwendungsdelegierter {
     /// Auffangzweig; diese Funktion sammelt die drei Pfade ein und schreibt das
     /// Ergebnis. `None` heisst "den Titel stehen lassen".
     ///
-    /// Vier Anlaesse rufen sie, drei davon ueber
-    /// [`Self::fokusanzeige_nachziehen`] hinaus: der Ordner- und Tabwechsel
-    /// eines Dateifensters ueber den Melder aus dem Aufbau, der Dateiwechsel im
-    /// Editor, und der Tabwechsel der Vorschau.
+    /// **Wer ruft, sagt es an sich selbst, und eine Zahl steht hier nicht.** Sie
+    /// stand auf vier Anlaessen und uebersah den Aufbau und das Ausblenden des
+    /// Editors
+    /// (`issues/260826-1325_*_fuenf-zahlen-in-der-prosa-des-anwendungsdelegierten-sind-mit-dem-fuenften-bereich-und-den-nachzuegen-vom-260825-falsch-geworden.md`).
+    /// Die Zeilen nennt
+    /// `grep -n 'titel_nachziehen(' crates/krk-ui/src/appkit/anwendung.rs`.
+    /// Ueber [`Self::fokusanzeige_nachziehen`] hinaus rufen sie der Ordner- und
+    /// Tabwechsel eines Dateifensters ueber den Melder aus dem Aufbau, der
+    /// Dateiwechsel im Editor und der Tabwechsel der Vorschau.
     ///
     /// **Die Bewegung der Auswahl ruft sie nicht**, und das ist eine Zusage und
     /// kein Vergessen: L1 aus C8 der Runde 1 misst die Spanne vom Tastendruck
@@ -6412,7 +6445,9 @@ impl Anwendungsdelegierter {
             return;
         }
         let auftrag = Auftrag::umbenennen_im_stapel(paare);
-        self.auftrag_starten(
+        // `let _ =`: dieser Weg kommt vom Blatt und nicht von einem
+        // Tastendruck, also hat die Antwort „verbraucht" hier keinen Empfaenger.
+        let _ = self.auftrag_starten(
             seite,
             auftrag,
             ordner.to_path_buf(),
@@ -6916,6 +6951,15 @@ impl Anwendungsdelegierter {
     /// Nachlaessigkeit: allein die zwei Zweige des Kontextmenues nehmen einen
     /// markierten Eintrag aus dem Lauf. Was die Zahl bedeutet und warum sie erst
     /// im Abschlusstext erscheint, steht bei [`Vorgang::ausgelassen`].
+    ///
+    /// **`#[must_use]`, obwohl die Antwort heute immer `true` ist.** Sie sagt
+    /// „der Tastendruck ist verbraucht", und fuenf der sechs Rufer schrieben
+    /// dafuer schon `let _ =` mit Begruendung, waehrend der sechste nackt rief:
+    /// dieselbe Sache in zwei Formen, und keine hielt der Bau
+    /// (`issues/260826-1325_*_fokus-setzen-und-auftrag-starten-tragen-kein-must-use-und-vier-rufer-lassen-die-antwort-nackt-fallen.md`).
+    /// Die Marke macht die eine Form verbindlich und faengt den Tag, an dem der
+    /// Wert aufhoert, immer `true` zu sein.
+    #[must_use = "die Antwort sagt, ob der Tastendruck verbraucht ist; wer sie nicht braucht, schreibt `let _ =` und sagt warum"]
     fn auftrag_starten(
         &self,
         seite: Fensterseite,
@@ -7242,7 +7286,7 @@ impl Anwendungsdelegierter {
     /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile des
     /// genannten Dateifensters.
     ///
-    /// Rang 1, der oberste der sechs Raenge, siehe
+    /// Rang 1, der oberste der Rangfolge, siehe
     /// [`crate::appkit::statuszeile::zeile`]. Nicht zu verwechseln mit
     /// [`Dateifenstersicht::melden`] weiter unten: das ist der Weg der
     /// Ereignisse, die niemand angefordert hat, und der schreibt die
@@ -8425,7 +8469,12 @@ impl Anwendungsdelegierter {
         match handlung {
             Handlung::Listenanfaenge => {
                 for seite in Fensterseite::ALLE {
-                    self.dateifenster(seite)
+                    // `let _ =`: `Listenanfang` ist ein Zweig, den jedes
+                    // Dateifenster kennt, und der Zweig endet auf `true`. Ein
+                    // `false` gaebe es nur fuer ein Kommando, das dieses
+                    // Dateifenster nichts angeht, und dieses geht es an.
+                    let _ = self
+                        .dateifenster(seite)
                         .quelle()
                         .kommando_ausfuehren(Kommando::Listenanfang);
                 }
@@ -8453,7 +8502,9 @@ impl Anwendungsdelegierter {
                 }
             }
             Handlung::AlleMarkieren => {
-                self.dateifenster(aktiv)
+                // `let _ =`: derselbe Grund wie bei `Listenanfaenge` darueber.
+                let _ = self
+                    .dateifenster(aktiv)
                     .quelle()
                     .kommando_ausfuehren(Kommando::AlleMarkieren);
             }

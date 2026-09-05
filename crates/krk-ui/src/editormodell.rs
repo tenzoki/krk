@@ -274,6 +274,7 @@ impl Ansicht {
     /// Die jeweils andere Ansicht.
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
+    #[must_use]
     pub fn andere(self) -> Self {
         match self {
             Ansicht::Roh => Ansicht::Format,
@@ -320,6 +321,7 @@ const MARKDOWNENDUNGEN: [&str; 4] = ["md", "markdown", "mdown", "mkd"];
 
 impl Dateityp {
     /// Was der Pfad ueber die Datei sagt.
+    #[must_use]
     pub fn von_pfad(pfad: &Path) -> Self {
         let endung = pfad
             .extension()
@@ -354,6 +356,7 @@ impl Stempel {
     /// dem behandelt wird, worauf sie zeigt. Dieselbe Wahl wie in
     /// `krk_core::text::datei::oeffnen`, und sie muss dieselbe sein: sonst
     /// verglichen Oeffnen und Stempel zwei verschiedene Dateien.
+    #[must_use]
     pub fn von_pfad(pfad: &Path) -> Option<Self> {
         let roh = std::fs::metadata(pfad).ok()?;
         Some(Self {
@@ -384,16 +387,19 @@ pub struct Suchlauf {
 
 impl Suchlauf {
     /// Wonach gesucht wird.
+    #[must_use]
     pub fn gesucht(&self) -> &str {
         &self.gesucht
     }
 
     /// Wie viele Treffer die Datei enthaelt (C5).
+    #[must_use]
     pub fn zahl(&self) -> usize {
         self.treffer.len()
     }
 
     /// Der angesteuerte Treffer.
+    #[must_use]
     pub fn angesteuert(&self) -> Option<Treffer> {
         self.angesteuert.map(|stelle| self.treffer[stelle])
     }
@@ -403,6 +409,7 @@ impl Suchlauf {
     /// Ab 1, weil die Zahl der Nutzer liest; die Versaetze daneben zaehlen
     /// Bytes ab 0. Dieselbe Trennung wie bei den Zeilennummern in
     /// `krk_core::text`.
+    #[must_use]
     pub fn nummer(&self) -> Option<usize> {
         self.angesteuert.map(|stelle| stelle + 1)
     }
@@ -413,6 +420,7 @@ impl Suchlauf {
     /// angesteuerten Treffer, dann steht seine Nummer und die Gesamtzahl da,
     /// oder es gibt keinen, dann steht der Suchtext da und der Nutzer weiss,
     /// wonach vergeblich gesucht wurde.
+    #[must_use]
     pub fn meldung(&self) -> String {
         match self.nummer() {
             Some(nummer) => format!("Treffer {nummer} von {}", self.zahl()),
@@ -499,6 +507,7 @@ impl Ladevorgang {
 /// tat F4 bis zum 260809
 /// (`issues/260809-2029_*_eine-ungesicherte-aenderung-ist-fort-wenn-die-vorschau-dieselbe-datei-zeigt.md`).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "der Ausgang sagt, ob die Datei angenommen wurde; fallengelassen bleibt eine Abweisung stumm"]
 pub enum Ladeausgang {
     /// Die Datei steht; die Ansicht traegt den Stand in die Textflaeche.
     Geoeffnet,
@@ -624,16 +633,19 @@ pub struct Editormodell {
 
 impl Editormodell {
     /// Ein Editor, der keine Datei haelt.
+    #[must_use]
     pub fn neu() -> Self {
         Self::default()
     }
 
     /// Die gehaltene Datei; `None`, solange keine gehalten wird.
+    #[must_use]
     pub fn pfad(&self) -> Option<&Path> {
         self.pfad.as_deref()
     }
 
     /// Ob der Editor eine Datei haelt.
+    #[must_use]
     pub fn haelt_datei(&self) -> bool {
         self.pfad.is_some()
     }
@@ -649,11 +661,13 @@ impl Editormodell {
     /// der Vergleich einmal daneben, liest der Editor neu — der Fehler faellt
     /// also auf die Seite des bisherigen Verhaltens und nicht auf die eines
     /// falsch stehengelassenen Standes.
+    #[must_use]
     pub fn haelt_bereits(&self, pfad: &Path) -> bool {
         self.pfad.as_deref() == Some(pfad)
     }
 
     /// Der gehaltene Stand.
+    #[must_use]
     pub fn stand(&self) -> &str {
         &self.stand
     }
@@ -663,21 +677,25 @@ impl Editormodell {
     /// Das ist die Frage, die an den drei Anlaessen aus C4 gestellt wird und an
     /// der die Anzeige aus dem zweiten Abnahmekriterium haengt. Warum sie eine
     /// Marke liest und keinen Vergleich fuehrt, steht im Modulkopf.
+    #[must_use]
     pub fn hat_ungesicherten_stand(&self) -> bool {
         self.abweichung
     }
 
     /// Welche Ansicht gewaehlt ist (C3).
+    #[must_use]
     pub fn ansicht(&self) -> Ansicht {
         self.ansicht
     }
 
     /// Was der Pfad ueber die gehaltene Datei sagt (C3).
+    #[must_use]
     pub fn typ(&self) -> Dateityp {
         self.typ
     }
 
     /// Der laufende Suchlauf (C5).
+    #[must_use]
     pub fn suchlauf(&self) -> Option<&Suchlauf> {
         self.suchlauf.as_ref()
     }
@@ -688,6 +706,7 @@ impl Editormodell {
     /// Ansichtswechsel kann keine ungesicherte Aenderung verlieren, weil er
     /// nichts anfasst, worin eine stecken koennte. Weder [`Self::stand`] noch
     /// die Abweichungsmarke noch der Suchlauf aendern sich.
+    #[must_use]
     pub fn ansicht_umschalten(&mut self) -> Ansicht {
         self.ansicht = self.ansicht.andere();
         self.ansicht
@@ -755,6 +774,7 @@ impl Editormodell {
     /// keinen zu; die Aenderung von aussen traegt S31. Die Nachfrage aus C4
     /// greift auf dieser Abkuerzung nicht, und sie soll es nicht: es wird
     /// nichts gelesen und nichts ersetzt, also ist auch nichts zu verlieren.
+    #[must_use]
     pub fn oeffnen(&mut self, pfad: &Path) -> Option<Ladeausgang> {
         if self.haelt_bereits(pfad) {
             // Der Nutzer hat die gehaltene Datei verlangt; ein Lesen, das noch
@@ -831,6 +851,7 @@ impl Editormodell {
     /// Die Uebernahme geht durch [`Self::uebernehmen`] wie jede andere; es gibt
     /// keinen zweiten Uebergang in den gehaltenen Stand. `None` heisst: es
     /// wartete nichts, und dann ist auch nichts zu tun.
+    #[must_use]
     pub fn zurueckgehaltenes_uebernehmen(&mut self) -> Option<Ladeausgang> {
         let wartend = self.zurueckgehalten.take()?;
         Some(self.uebernehmen(wartend.pfad, wartend.geladen))
@@ -846,6 +867,7 @@ impl Editormodell {
     }
 
     /// Ob ein Ladevorgang laeuft.
+    #[must_use]
     pub fn laedt_noch(&self) -> bool {
         self.ladevorgang.is_some()
     }
@@ -863,6 +885,7 @@ impl Editormodell {
     /// mehr passen. Bei [`Ladeausgang::Zurueckgehalten`] hat sich dagegen
     /// nichts bewegt, und der Aufrufer hat zu fragen; siehe
     /// [`Self::uebernehmen_oder_zurueckhalten`].
+    #[must_use]
     pub fn einziehen(&mut self) -> Option<Ladeausgang> {
         let vorgang = self.ladevorgang.as_ref()?;
         let geladener_pfad = vorgang.pfad.clone();
@@ -994,6 +1017,7 @@ impl Editormodell {
     /// ein fremder Schreiber zuschlagen kann. Diese Pruefung macht das Fenster
     /// klein; zu schliessen waere es allein mit einer Sperre auf der Datei, und
     /// die sagt weder C4 noch der Spec zu.
+    #[must_use = "der Ausgang traegt den Grund eines gescheiterten Sicherns; fallengelassen glaubt der Nutzer, die Datei stehe auf der Platte"]
     pub fn sichern(&mut self) -> Sicherungsausgang {
         let Some(pfad) = self.pfad.as_ref() else {
             return Sicherungsausgang::NichtsGehalten;
@@ -1044,6 +1068,7 @@ impl Editormodell {
     /// verschwunden oder unlesbar geworden ist, gilt als geaendert: auch das
     /// ist eine Aenderung von aussen, ueber die C4 den Nutzer nicht im Unklaren
     /// lassen will. Haelt der Editor keine Datei, ist die Antwort `false`.
+    #[must_use]
     pub fn fremd_geaendert(&self) -> bool {
         let (Some(pfad), Some(gemerkt)) = (self.pfad.as_ref(), self.stempel) else {
             return false;
@@ -1084,6 +1109,7 @@ impl Editormodell {
     /// oder neu geoeffnet hat, kommt kein zweiter Satz. Das ist richtig herum
     /// falsch: die Aussage "die Datei auf der Platte weicht ab" gilt weiter, und
     /// das Sichern haelt sie ohnehin zurueck.
+    #[must_use]
     pub fn fremdaenderung_melden(&mut self) -> Option<String> {
         if !self.fremd_geaendert() {
             self.fremd_gemeldet = false;
@@ -1114,6 +1140,7 @@ impl Editormodell {
     /// auf der Platte; das neunte Abnahmekriterium von C5 verlangt es, und es
     /// faellt von selbst an, weil `suche::alle` einen Pfad gar nicht
     /// entgegennehmen kann.
+    #[must_use]
     pub fn suche_starten(&mut self, gesucht: &str, ab_versatz: usize) -> Option<Treffer> {
         let treffer = suche::alle(&self.stand, gesucht);
         let angesteuert = suche::erster_ab(&treffer, ab_versatz);
@@ -1129,11 +1156,13 @@ impl Editormodell {
     ///
     /// Ohne laufenden Suchlauf und ohne Treffer `None`; die Schreibmarke bleibt
     /// dann stehen, wie das fuenfte Abnahmekriterium von C5 es verlangt.
+    #[must_use]
     pub fn weitersuchen(&mut self) -> Option<Treffer> {
         self.weiter_mit(suche::naechster)
     }
 
     /// Steuert den vorigen Treffer an und laeuft vor dem ersten um (C5).
+    #[must_use]
     pub fn rueckwaerts_suchen(&mut self) -> Option<Treffer> {
         self.weiter_mit(suche::voriger)
     }
@@ -1188,6 +1217,7 @@ impl Editormodell {
     /// Abnahmekriterium von C5 verlangt beides.
     ///
     /// Ohne laufenden Suchlauf und ohne angesteuerten Treffer geschieht nichts.
+    #[must_use]
     pub fn treffer_ersetzen(&mut self, ersatz: &str) -> Option<Treffer> {
         let angesteuert = self.suchlauf.as_ref()?.angesteuert()?;
         let (gesucht, ersatz) = self.ersetzung_vorbereiten(ersatz)?;
@@ -1221,6 +1251,7 @@ impl Editormodell {
     /// dann nicht die Zahl der verbliebenen Treffer waere.
     ///
     /// Ohne laufenden Suchlauf geschieht nichts, und die Zahl ist 0.
+    #[must_use]
     pub fn alle_treffer_ersetzen(&mut self, ersatz: &str) -> usize {
         let Some((gesucht, ersatz)) = self.ersetzung_vorbereiten(ersatz) else {
             return 0;
@@ -1385,7 +1416,7 @@ mod tests {
 
         let mut modell = geoeffnet(&erste);
         assert_eq!(modell.typ(), Dateityp::Markdown);
-        modell.ansicht_umschalten();
+        let _ = modell.ansicht_umschalten();
         assert_eq!(modell.ansicht(), Ansicht::Roh);
 
         assert_eq!(modell.oeffnen(&zweite), None);
@@ -1993,7 +2024,7 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "eins zwei eins\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.suche_starten("eins", 0);
+        let _ = modell.suche_starten("eins", 0);
         let naechster = modell.treffer_ersetzen("drei");
         assert_eq!(modell.stand(), "drei zwei eins\n");
         assert_eq!(
@@ -2018,8 +2049,8 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "foo bar foo\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.suche_starten("foo", 0);
-        modell.treffer_ersetzen("foofoo");
+        let _ = modell.suche_starten("foo", 0);
+        let _ = modell.treffer_ersetzen("foofoo");
         assert_eq!(modell.stand(), "foofoo bar foo\n");
         let lauf = modell.suchlauf().expect("der Suchlauf steht");
         assert_eq!(lauf.zahl(), 3, "zwei aus dem Ersatz und der unberuehrte");
@@ -2036,7 +2067,7 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "a b a b a\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.suche_starten("a", 0);
+        let _ = modell.suche_starten("a", 0);
         assert_eq!(modell.alle_treffer_ersetzen("x"), 3);
         assert_eq!(modell.stand(), "x b x b x\n");
         assert!(modell.hat_ungesicherten_stand());
@@ -2126,7 +2157,7 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "eins zwei eins\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.suche_starten("eins", 0);
+        let _ = modell.suche_starten("eins", 0);
         let naechster = modell.treffer_ersetzen("A\r\nB");
         assert_eq!(modell.stand(), "A\nB zwei eins\n");
         assert_eq!(
@@ -2142,7 +2173,7 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "a b a\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.suche_starten("a", 0);
+        let _ = modell.suche_starten("a", 0);
         assert_eq!(modell.alle_treffer_ersetzen("x\r\ny"), 2);
         assert_eq!(modell.stand(), "x\ny b x\ny\n");
     }
@@ -2155,7 +2186,7 @@ mod tests {
         let pfad = ordner.datei("stand.txt", "eins zwei eins\n");
         let mut modell = geoeffnet(&pfad);
 
-        modell.suche_starten("eins", 0);
+        let _ = modell.suche_starten("eins", 0);
         assert!(modell.suchlauf().is_some());
         let _ = modell.bearbeiten("kurz\n".to_owned());
         assert!(modell.suchlauf().is_none());

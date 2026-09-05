@@ -43,6 +43,7 @@ pub enum Bewegung {
 /// kommt.** Pfeil ab setzt auf die erste Zeile, Pfeil auf auf die letzte. Der
 /// erste Tastendruck in einer frisch gelesenen Liste tut damit das, was er
 /// aussieht.
+#[must_use]
 pub fn zielzeile(bewegung: Bewegung, jetzt: isize, zeilen: usize) -> Option<usize> {
     let letzte = isize::try_from(zeilen.checked_sub(1)?).ok()?;
     let ziel = match bewegung {
@@ -86,6 +87,7 @@ pub fn zielzeile(bewegung: Bewegung, jetzt: isize, zeilen: usize) -> Option<usiz
 /// weggefallenen am naechsten liegt, waere eine Rechnung ueber eine Ordnung,
 /// die der Filter gerade zerrissen hat: die Eintraege dazwischen sind weg, und
 /// „daneben" hiesse in der alten Sicht etwas anderes als in der neuen.
+#[must_use]
 pub fn ersatzzeile(
     hatte_auswahl: bool,
     zeile_jetzt: Option<usize>,

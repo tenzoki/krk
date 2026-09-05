@@ -26,3 +26,7 @@ noch den Stand davor; ein vierter in derselben Datei zaehlt richtig.
 
 ---
 Abgleich 260829-1252, am Baum `b9d9cbc`: **gilt weiter.** `crates/krk-ui/src/appkit/tabelle.rs:864` sagt weiter „der oberste der fuenf Raenge"; `Rang::ALLE` trägt seit der Runde 20 sieben Werte (`statuszeile.rs:275`), also ist der Abstand gewachsen. Die Stelle `:3227` („eine der sechs Quellen") stimmt weiter, weil `Quellen` unverändert sechs Felder hat.
+
+
+---
+Resolved: Alle drei Stellen in `crates/krk-ui/src/appkit/tabelle.rs` tragen jetzt statt der Zahl den Zeiger auf die Quelle: „eine der Meldungsquellen … welche das sind, sagt `statuszeile::Quellen` mit seinen Feldern", „der oberste Rang der Zeile" statt „der oberste der fuenf Raenge", und „Eine der beiden Quellen der Zeile ohne eigenes Feld" statt „Die einzige", mit dem Filterstand namentlich daneben. Die vierte, richtige Stelle („eine der sechs Quellen") ist aus demselben Grund entnumeriert worden. **Ein Befund kam beim Beheben dazu und ist mit erledigt:** dieselbe Doc sagte „Der sechste Rang der Statuszeile" ueber den Markierungsstand, der in `Rang::ALLE` seit der Runde 20 der siebte ist; sie sagt jetzt „Der unterste Rang" und verweist auf `Rang::ALLE`.

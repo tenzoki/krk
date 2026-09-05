@@ -118,12 +118,22 @@
 //! Ausnahme ist mit ihr weggefallen
 //! (`issues/260805-0753_*_cmd-q-loest-etwas-aus-und-steht-in-keiner-tastenliste.md`).
 //!
-//! Welchen der beiden Wege ein Tastendruck geht, entscheidet der Fokus. Der
-//! Ereignisabgriff aus [`super::ereignisse`] sieht ihn vor der Menuebehandlung
-//! von `NSApplication`. Steht die Schreibmarke in einem Textfeld, kehrt er
-//! sofort zurueck und reicht weiter; dann wirkt das Menue. Steht sie im
-//! Dateifenster, schlaegt er in der Belegung nach — und die vom Menue
-//! gehaltenen Funktionen sieht er dabei nicht, weil `Belegung::nachschlag` sie
+//! Welchen der beiden Wege ein Tastendruck geht, entscheidet der Fokus, und
+//! **entschieden wird das seit der Runde 7 an der Senke und nicht mehr im
+//! Abgriff**. Der Ereignisabgriff aus [`super::ereignisse`] sieht jeden
+//! Tastendruck vor der Menuebehandlung von `NSApplication`, fragt dabei aber
+//! nicht mehr nach dem Ersthelfer: er schlaegt in der Belegung nach und reicht
+//! beide Ausgaenge unveraendert an den Anwendungsdelegierten weiter. Dort
+//! entscheidet [`crate::kommandos::zulaessigkeit::zulaessig`], und ihr
+//! Bestandteil (2) ist der Fokusvorbehalt. Steht die Schreibmarke in einem
+//! Textfeld, faellt der Befehl damit unzulaessig aus, der Abgriff schluckt ihn
+//! nicht, und der Tastendruck erreicht unveraendert das Menue. Der Modulkopf von
+//! [`super::ereignisse`] schreibt die Kette unter "Der Fokusvorbehalt" aus; wer
+//! den Vorbehalt fuer einen fruehen Ausstieg des Abgriffs haelt, sucht die
+//! Sperre an der falschen Stelle.
+//!
+//! Die vom Menue gehaltenen Funktionen sieht der Nachschlag dabei ueberhaupt
+//! nicht, weil `Belegung::nachschlag` sie
 //! ueberspringt. Die sechs Textbefehle laufen deshalb auch im Dateifenster ins
 //! Menue und von dort die Antwortkette hinunter. Genau das war der
 //! Einhaengepunkt der Dateizwischenablage, und er ist in zwei Runden ganz
@@ -161,8 +171,15 @@
 //!
 //! # Wer die sechs Textbefehle beantwortet
 //!
-//! Die sechs sind die einzigen der 85 Funktionen ohne
-//! [`krk_core::tasten::Kommando`] und damit ohne Wirkungsbereich. Wo sie wirken,
+//! Die sechs sind die einzigen Funktionen der Belegung ohne
+//! [`krk_core::tasten::Kommando`] und damit ohne Wirkungsbereich. **Wie viele
+//! Funktionen die Belegung ueberhaupt fuehrt, steht hier nicht als Zahl**: sie
+//! waechst mit fast jeder Runde und ist an dieser Stelle schon einmal falsch
+//! geworden
+//! (`issues/260905-2046_*_drei-prosastellen-in-menue-rs-nennen-85-funktionen-die-belegung-fuehrt-92.md`).
+//! Gezaehlt wird sie mit `grep -c '^id = ' resources/default-keymap.toml`, und
+//! die sechs ohne `Kommando` mit
+//! `grep -c 'gehalten_von = "menue"' resources/default-keymap.toml`. Wo sie wirken,
 //! entscheidet zur Laufzeit die Antwortkette, in die die Belegung keine Eingabe
 //! hat. Die Tastenbelegung als Markdown-Datei aus der Runde 3 muss es dem Nutzer
 //! trotzdem in ihre dritte Spalte schreiben, und **statt zu naehern, ist
@@ -195,8 +212,13 @@
 //!
 //! **Zweitens: `NSTableView` beantwortet `selectAll:` von sich aus.** Die
 //! Lesezeichen- und Geraeteleiste ist eine `NSTableView`, und mit dem Fokus dort
-//! weist der stumme Fokusvorbehalt `alle_markieren` ab, sodass der Tastendruck
-//! unveraendert an AppKit geht und den Menueeintrag erreicht. Der Eintrag ist in
+//! faellt `alle_markieren` unzulaessig aus: `Kommando::AlleMarkieren` traegt
+//! `Wirkungsbereich::Dateifenster`, also weist es der Bestandteil (3) von
+//! [`crate::kommandos::zulaessigkeit::zulaessig`] ab — nicht der Fokusvorbehalt,
+//! der Bestandteil (2) ist und nach dem Ersthelfer fragt, den eine `NSTableView`
+//! ihm nicht stellt. Der Abgriff schluckt seit der Runde 7 nach Zulaessigkeit,
+//! also geht der Tastendruck
+//! unveraendert an AppKit und erreicht den Menueeintrag. Der Eintrag ist in
 //! der Leiste also **bedienbar**, und "Textfelder und Editor" ist fuer diesen
 //! einen der sechs keine gemessene Aussage mehr. Ob er dort auch etwas
 //! **bewirkt**, ist eine zweite Frage; sie braucht eine Instanz und ist hier
@@ -388,6 +410,7 @@ pub const KRK_KOMMANDO: &CStr = c"krkKommando:";
 /// Gerufen wird sie an genau zwei Stellen: beim Start (`starten`) und nach einer
 /// Aenderung in der Belegungsansicht (`Anwendungsdelegierter::menue_neu_bauen`).
 /// Ein Kuerzel, das der Nutzer umbelegt, steht danach im Menue (C2.11).
+#[must_use]
 pub fn hauptmenue(mtm: MainThreadMarker, belegung: &Belegung) -> Retained<NSMenu> {
     let hauptmenue = NSMenu::new(mtm);
     for obermenue in menuemodell::aufbau(belegung) {
@@ -471,6 +494,7 @@ fn umsetzen(mtm: MainThreadMarker, eintrag: &Eintrag<'_>) -> Retained<NSMenuItem
 /// laeuft ueber `KENNUNGEN` und kann eine fehlende Variante nicht sehen, und
 /// das `expect` darunter waere genau daran ausgeloest worden
 /// (`shared/issues/260826-1223_*_kennungen-ist-die-programmweite-kommandoliste-und-nichts-haelt-sie-vollstaendig.md`).
+#[must_use]
 pub fn tag_des_kommandos(kommando: Kommando) -> NSInteger {
     let stelle = Kommando::KENNUNGEN
         .iter()
@@ -487,6 +511,7 @@ pub fn tag_des_kommandos(kommando: Kommando) -> NSInteger {
 /// erste Kommando der Liste zugesprochen. Der Rueckgabetyp bleibt trotzdem eine
 /// Moeglichkeit und keine Zusicherung: ein `tag`, der aus der Liste faellt, ist
 /// ein Programmfehler und darf keinen Absturz auf dem Referenzgeraet ausloesen.
+#[must_use]
 pub fn kommando_zum_tag(tag: NSInteger) -> Option<Kommando> {
     let stelle = usize::try_from(tag).ok()?;
     Kommando::KENNUNGEN
@@ -862,9 +887,10 @@ mod tests {
     ///
     /// Dieselben sechs, die [`hauptmenue`] unter "Bearbeiten" eintraegt, und
     /// dieselben sechs, die `resources/default-keymap.toml` mit
-    /// `gehalten_von = "menue"` fuehrt. Sie tragen als einzige der 85
-    /// Funktionen kein [`krk_core::tasten::Kommando`] und damit keinen
-    /// Wirkungsbereich.
+    /// `gehalten_von = "menue"` fuehrt. Sie tragen als einzige Funktionen der
+    /// Belegung kein [`krk_core::tasten::Kommando`] und damit keinen
+    /// Wirkungsbereich; wie viele Funktionen sie insgesamt fuehrt, sagt der
+    /// Modulkopf mit dem Zaehlkommando und keine Zahl an dieser Stelle.
     fn die_sechs_zugestellten() -> [(&'static str, Sel); 6] {
         [
             ("cut:", sel!(cut:)),
@@ -941,10 +967,10 @@ mod tests {
 
     /// Die Messung aus S1 der Runde 3, als mitlaufende Zusicherung.
     ///
-    /// **Sie misst, statt zu naehern.** Fuer 79 der 85 Funktionen ist der
-    /// Wirkungsbereich aus der Belegung entscheidbar; fuer diese sechs ist er es
-    /// nicht, weil sie kein Kommando tragen und die Antwortkette von AppKit zur
-    /// Laufzeit entscheidet, wo sie wirken. Was die Ausgabe aus C3 in ihre
+    /// **Sie misst, statt zu naehern.** Fuer jede Funktion der Belegung, die ein
+    /// Kommando traegt, ist der Wirkungsbereich aus ihr entscheidbar; fuer diese
+    /// sechs ist er es nicht, weil sie keines tragen und die Antwortkette von
+    /// AppKit zur Laufzeit entscheidet, wo sie wirken. Was die Ausgabe aus C3 in ihre
     /// dritte Spalte schreibt, ruht deshalb auf dieser Zahlenreihe und nicht auf
     /// einer Ableitung aus der Zugehoerigkeit zum Menue "Bearbeiten".
     ///

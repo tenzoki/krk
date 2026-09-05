@@ -964,6 +964,7 @@ impl Vorschaufenster {
     /// `Anwendungsdelegierter::fokusansicht`.
     ///
     /// [`Fokus::Vorschau`]: crate::kommandos::fokus::Fokus::Vorschau
+    #[must_use]
     pub fn fokusansicht(&self) -> &NSView {
         let ivars = self.ivars();
         match ivars.flaeche.get() {
@@ -1064,6 +1065,7 @@ impl Vorschaufenster {
     /// Betrachters ueber seinen schwachen Rueckverweis (C5.8) — dieselbe Regel
     /// „keine oder eine Datei", ohne dass [`Self::teilbare_pfade`] dafuer nach
     /// aussen gehen muesste.
+    #[must_use]
     pub fn angezeigter_pfad(&self) -> Option<std::path::PathBuf> {
         self.ivars().modell.borrow().aktiver_pfad()
     }
@@ -1087,6 +1089,7 @@ impl Vorschaufenster {
     /// Ob ein Vorschau-Tab noch auf seinen Arbeitsfaden wartet.
     ///
     /// Nur zum Ablesen, fuer dieselbe Endbedingung.
+    #[must_use]
     pub fn laedt_noch(&self) -> bool {
         self.ivars().modell.borrow().laedt_noch()
     }
@@ -1182,21 +1185,26 @@ impl Vorschaufenster {
     /// Alles andere geht zurueck an den Aufrufer: die Vorschau traegt keine
     /// Auswahl und keine Liste, und ein hier nicht ausgefuehrtes Kommando
     /// laeuft wie ein unbelegtes weiter.
+    #[must_use = "die Antwort sagt, ob die Vorschau den Befehl ausgefuehrt hat; fallengelassen laeuft der Tastendruck ungeprueft weiter"]
     pub fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
         {
             let mut modell = self.ivars().modell.borrow_mut();
+            // `let _ =` an den drei Zweigen: die Antwort sagt, ob sich der
+            // gezeigte Tab geaendert hat, und `anzeigen()` unten laeuft in
+            // jedem Fall — der Befehl gilt als ausgefuehrt, auch wenn der
+            // letzte Tab schon der einzige war.
             match kommando {
                 Kommando::TabNeu => {
                     modell.oeffnen();
                 }
                 Kommando::TabSchliessen => {
-                    modell.schliessen();
+                    let _ = modell.schliessen();
                 }
                 Kommando::TabNaechster => {
-                    modell.naechster();
+                    let _ = modell.naechster();
                 }
                 Kommando::TabVoriger => {
-                    modell.voriger();
+                    let _ = modell.voriger();
                 }
                 _ => return false,
             }

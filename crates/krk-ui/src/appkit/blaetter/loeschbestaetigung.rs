@@ -106,6 +106,7 @@ const AUSFUEHRENDE_STELLE: usize = 1;
 /// Beschriftung, eine Taste und eine [`Wirkung`]. Der Bauplan des Blattes ist
 /// die eine Angabe, an der die Zusage "eine unbekannte Antwort loescht nichts"
 /// haengt (`issues/260817-1106_*`).
+#[must_use]
 fn schaltflaechen(vorgang: &str) -> [Schaltflaeche<'_>; 2] {
     [
         Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),

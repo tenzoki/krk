@@ -139,6 +139,7 @@ pub const ANZEIGEVERZUG: Duration = Duration::from_millis(150);
 const HOECHSTENS_EINZELN: usize = 12;
 
 /// Ob die Vorgangsanzeige jetzt faellig ist.
+#[must_use]
 pub fn anzeige_faellig(begonnen: Instant, jetzt: Instant) -> bool {
     jetzt.duration_since(begonnen) >= ANZEIGEVERZUG
 }
@@ -159,11 +160,13 @@ pub struct Auswahl {
 
 impl Auswahl {
     /// Ob gar nichts betroffen ist.
+    #[must_use]
     pub fn ist_leer(&self) -> bool {
         self.pfade.is_empty()
     }
 
     /// Wie viele Eintraege betroffen sind.
+    #[must_use]
     pub fn zahl(&self) -> usize {
         self.pfade.len()
     }
@@ -176,6 +179,7 @@ impl Auswahl {
 /// einmal statt in jedem der vier Befehle. Gezaehlt werden allein die
 /// *sichtbaren* Eintraege, in Sichtreihenfolge: eine Markierung, die der Nutzer
 /// beim Druecken der Taste nicht vor sich hatte, gehoert nicht in den Auftrag.
+#[must_use]
 pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
     let mut auswahl = Auswahl::default();
     for zeile in 0..modell.zeilenzahl() {
@@ -289,6 +293,7 @@ pub fn rechtsklick_zielzeile(modell: &Ordnermodell, angeklickt: isize) -> Option
 /// zu sperren, und die Bedienbarkeit waehrend der Operation ist genau die
 /// Zusage aus C4, um die es geht. Der Name bleibt und trifft ab hier genau:
 /// die Regel gilt fuer ein stehendes Blatt.
+#[must_use = "fallengelassen laeuft der Befehl an der Blattsperre vorbei"]
 pub fn waehrend_blatt_erlaubt(kommando: Kommando) -> bool {
     kommando == Kommando::Abbrechen
 }
@@ -310,6 +315,7 @@ pub struct Buendelung {
 
 impl Buendelung {
     /// Eine Buendelung ohne ausstehenden Weckruf.
+    #[must_use]
     pub const fn neu() -> Self {
         Self {
             offen: AtomicBool::new(false),
@@ -321,6 +327,7 @@ impl Buendelung {
     /// Der Tausch ist atomar, damit zwei Arbeitsfaeden nicht beide `false`
     /// lesen und beide wecken. KRK laeuft heute mit einem, und die Richtigkeit
     /// haengt nicht daran.
+    #[must_use = "die Antwort ist der Weckruf, und der Aufruf schaltet dabei `offen` um; fallengelassen geht der Zeichendurchgang verloren"]
     pub fn melden(&self) -> bool {
         !self.offen.swap(true, Ordering::AcqRel)
     }
@@ -336,6 +343,7 @@ impl Buendelung {
 
     /// Ob gerade ein Weckruf aussteht. Nur zum Ablesen und fuer die Pruefung.
     #[cfg(test)]
+    #[must_use]
     pub fn steht_aus(&self) -> bool {
         self.offen.load(Ordering::Acquire)
     }
@@ -390,6 +398,7 @@ pub struct Vorgangszustand {
 
 impl Vorgangszustand {
     /// Ein leerer Zustand zu einem eben gestarteten Lauf.
+    #[must_use]
     pub fn neu(abbruch: Abbruchgriff) -> Self {
         Self {
             buendelung: Buendelung::neu(),
@@ -437,6 +446,7 @@ const TRENNER: &str = " · ";
 const ABBRUCHHINWEIS: &str = "Esc bricht ab";
 
 /// Womit eine Operation in der Zeile benannt wird.
+#[must_use]
 fn ueberschrift(art: &Art) -> &'static str {
     match art {
         Art::Kopieren { .. } => "Kopieren",
@@ -514,6 +524,7 @@ pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
 /// `issues/260804-1649_*_die-gemeldete-eintragszahl-bedeutet-beim-verschieben-etwas-anderes-als-beim-kopieren.md`
 /// festgehalten; dieser Schritt entscheidet ihn nicht, er zeigt beide Zahlen
 /// nebeneinander und benennt sie.
+#[must_use]
 pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: usize) -> String {
     let was = ueberschrift(art);
     let Some(fortschritt) = fortschritt else {
@@ -539,6 +550,7 @@ pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: u
 /// Der Vorgang laeuft bis zu seinem Bericht weiter; die Zeile sagt das, statt
 /// stehen zu bleiben, als waere nichts geschehen. Der Abbruchhinweis faellt
 /// weg, weil er beantwortet ist.
+#[must_use]
 pub fn abbruchzeile(art: &Art) -> String {
     format!(
         "{} wird abgebrochen, der Vorgang endet gleich …",
@@ -551,6 +563,7 @@ pub fn abbruchzeile(art: &Art) -> String {
 ///
 /// KRK haelt genau einen Vorgang. Eine Warteschlange waere die andere Antwort;
 /// sie baut einen Zustand mehr, den keine Zusage verlangt.
+#[must_use]
 pub fn schon_ein_vorgang(art: &Art) -> String {
     format!("es läuft bereits eine Operation: {}", ueberschrift(art))
 }
@@ -570,6 +583,7 @@ pub fn schon_ein_vorgang(art: &Art) -> String {
 /// (`issues/260825-1249_*_der-schnitt-nimmt-markierte-eintraege-aus-dem-lauf-*`).
 /// Jeder andere Weg reicht hier null herein; welche und warum, steht bei
 /// `Vorgang::ausgelassen`.
+#[must_use]
 pub fn abschlusstext(
     art: &Art,
     bericht: &Bericht,
@@ -605,6 +619,7 @@ pub fn abschlusstext(
 /// Die Abschlussliste der uebersprungenen Eintraege mit ihrem Grund (C4).
 ///
 /// `None`, wenn nichts uebersprungen wurde: dann gibt es kein Blatt.
+#[must_use]
 pub fn uebersprungenliste(uebersprungen: &[Uebersprungen]) -> Option<(String, String)> {
     if uebersprungen.is_empty() {
         return None;
@@ -653,6 +668,7 @@ pub enum Anlegeart {
 
 impl Anlegeart {
     /// Die Frage in der Kopfzeile des Eingabeblattes.
+    #[must_use]
     pub fn frage(self) -> &'static str {
         match self {
             Anlegeart::Ordner => "Wie soll der neue Ordner heißen?",
@@ -661,11 +677,13 @@ impl Anlegeart {
     }
 
     /// Die Beschriftung der bestaetigenden Schaltflaeche.
+    #[must_use]
     pub fn bestaetigen(self) -> &'static str {
         "Anlegen"
     }
 
     /// Wie eine Meldung den angelegten Eintrag benennt.
+    #[must_use]
     pub fn benennung(self) -> &'static str {
         match self {
             Anlegeart::Ordner => "Ordner",
@@ -675,6 +693,7 @@ impl Anlegeart {
 }
 
 /// Die Meldung, wenn ein Eintrag angelegt wurde (C4).
+#[must_use]
 pub fn angelegt_text(art: Anlegeart, name: &str) -> String {
     format!("{} „{name}“ angelegt", art.benennung())
 }
@@ -687,6 +706,7 @@ pub fn angelegt_text(art: Anlegeart, name: &str) -> String {
 /// wie in `krk_core::operation::grund`, die hier nicht wiederverwendet werden
 /// kann, weil sie kistenintern ist und weil sie den Namen des Eintrags nicht
 /// nennt.
+#[must_use]
 pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
     match fehler.kind() {
         io::ErrorKind::AlreadyExists => schon_vergeben(name),
@@ -706,6 +726,7 @@ pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
 /// Beide Befehle scheitern am selben Zustand des Ordners und sagen deshalb
 /// denselben Satz. Zwei Formulierungen dafuer waeren zwei Erklaerungen fuer
 /// dieselbe Lage.
+#[must_use]
 fn schon_vergeben(name: &str) -> String {
     format!("es gibt schon einen Eintrag namens „{name}“")
 }
@@ -743,6 +764,7 @@ pub enum Umbenennungswunsch {
 /// waere eine zweite Wahrheit ueber denselben Ordner und ginge zwischen Lesen
 /// und Umbenennen ohnehin ins Leere. Den Satz dazu liefert
 /// [`umbenennungsfehler`].
+#[must_use]
 pub fn umbenennung_pruefen(alt: &str, eingabe: &str) -> Umbenennungswunsch {
     let neu = eingabe.trim();
     if neu == alt {
@@ -760,6 +782,7 @@ pub fn umbenennung_pruefen(alt: &str, eingabe: &str) -> Umbenennungswunsch {
 /// der neue ist der, an dem es lag. Der bereits vergebene Name bekommt denselben
 /// Satz wie beim Anlegen; die uebrigen behalten den Systemwortlaut, dieselbe
 /// Abwaegung wie in [`anlegefehler`].
+#[must_use]
 pub fn umbenennungsfehler(neuer_name: &str, fehler: &io::Error) -> String {
     match fehler.kind() {
         io::ErrorKind::AlreadyExists => schon_vergeben(neuer_name),
@@ -773,6 +796,7 @@ pub fn umbenennungsfehler(neuer_name: &str, fehler: &io::Error) -> String {
 /// Die Meldung nach einem ausgefuehrten Stapel-Umbenennen (C4).
 ///
 /// "ein Eintrag" beziehungsweise "4.812 Einträge".
+#[must_use]
 fn eintraege_text(eintraege: usize) -> String {
     match eintraege {
         1 => "ein Eintrag".to_owned(),
@@ -781,6 +805,7 @@ fn eintraege_text(eintraege: usize) -> String {
 }
 
 /// "3 Positionen" beziehungsweise "eine Position".
+#[must_use]
 fn positionen_text(positionen: usize) -> String {
     match positionen {
         1 => "eine ausgewählte Position".to_owned(),
@@ -795,6 +820,7 @@ fn positionen_text(positionen: usize) -> String {
 /// sie hier und nicht in [`super::auswahl`]. Seit der Runde 12 nimmt sie
 /// [`super::loeschwarnung`] mit, dem die Loeschfrage gehoert; die Wendung
 /// bleibt trotzdem hier, denn sie ist ein Zahlwort und kein Loeschtext.
+#[must_use]
 pub(crate) fn ordner_text(ordner: usize) -> String {
     match ordner {
         1 => "ein Ordner".to_owned(),
@@ -812,6 +838,7 @@ pub(crate) fn ordner_text(ordner: usize) -> String {
 /// **`pub(crate)` und nicht `pub(super)`**, und das ist kein Versehen: der
 /// dritte Aufrufer ist `crate::appkit::statuszeile` und liegt ausserhalb von
 /// [`super`]. Die enge Sichtbarkeit haelt der Uebersetzer dort nicht ein.
+#[must_use]
 pub(crate) fn zahl(wert: usize) -> String {
     let ziffern = wert.to_string();
     let mut aus = String::with_capacity(ziffern.len() + ziffern.len() / 3);
@@ -830,6 +857,7 @@ pub(crate) fn zahl(wert: usize) -> String {
 /// formatiert ueber `NSByteCountFormatter` und bleibt dabei; sie beschriftet
 /// eine Zelle fester Breite, und diese Zeile beschriftet einen Satz. Zwei
 /// Aufrufer, zwei Anforderungen, und diese hier soll ohne AppKit pruefbar sein.
+#[must_use]
 fn menge(bytes: u64) -> String {
     const EINHEITEN: [(u64, &str); 4] = [
         (1_000_000_000_000, "TB"),
@@ -874,6 +902,7 @@ fn menge(bytes: u64) -> String {
 /// dieser Befehl nicht braucht und nicht auswerten wuerde. Sie verlangte zudem
 /// das Leserecht, das weder eine Terminal-Sitzung noch ein Finder-Fenster in
 /// einem Ordner braucht.
+#[must_use]
 pub fn ordner_fehlt(ordner: &Path) -> Option<String> {
     match std::fs::metadata(ordner) {
         Ok(angaben) if angaben.is_dir() => None,
@@ -899,6 +928,7 @@ pub fn ordner_fehlt(ordner: &Path) -> Option<String> {
 /// nicht zu Ende: der Nutzer behebt den Tippfehler, drueckt erneut Ctrl+O und
 /// bekommt dieselbe Meldung, ohne dass etwas auf den fehlenden Neustart deutet.
 /// Ein zweiter Lesepfad entsteht daraus ausdruecklich nicht.
+#[must_use]
 pub fn kein_terminal(kennung: &str) -> String {
     format!(
         "keine Anwendung mit der Bündelkennung „{kennung}“ installiert; \
@@ -931,6 +961,7 @@ pub fn kein_terminal(kennung: &str) -> String {
 /// die Anzeigenfunktion aus `krk_core::ablage::pfade`, die aus dem
 /// Benutzerverzeichnis eine Tilde macht: eine Tilde gehoert nicht in die
 /// Zwischenablage, und die Meldung nennt denselben Text, der abgelegt wurde.
+#[must_use]
 pub fn pfadtext(pfad: &Path) -> String {
     let text = pfad.display().to_string();
     let ohne_trenner = text.trim_end_matches(std::path::MAIN_SEPARATOR);
@@ -948,6 +979,7 @@ pub fn pfadtext(pfad: &Path) -> String {
 /// mit dem Pfad, damit ein Einfuegen in ein Terminal nicht von sich aus die
 /// Eingabetaste mitbringt. Die Reihenfolge ist die der uebergebenen Pfade, also
 /// die Sichtreihenfolge aus [`betroffene`].
+#[must_use]
 pub fn pfadzeilen(pfade: &[PathBuf]) -> String {
     pfade
         .iter()
@@ -964,6 +996,7 @@ pub fn pfadzeilen(pfade: &[PathBuf]) -> String {
 ///
 /// Eine leere Menge erreicht diese Funktion nicht: beide Aufrufer fangen sie
 /// vorher mit [`nichts_zu_kopieren`] ab, weil dann auch nichts geschrieben wird.
+#[must_use]
 pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
     match pfade {
         [einziger] => format!("Pfad kopiert: {}", pfadtext(einziger)),
@@ -982,6 +1015,7 @@ pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
 /// sie wirkt auf dieselbe Menge wie die zwei Pfadkopierer, naemlich auf
 /// [`betroffene`], und findet auf dieselbe Weise nichts. Ein eigener Satz
 /// daneben saehe wie eine andere Lage aus (C1.7 der Runde 22).
+#[must_use]
 pub fn nichts_zu_kopieren() -> String {
     nichts_betroffen("kopieren")
 }
@@ -991,6 +1025,7 @@ pub fn nichts_zu_kopieren() -> String {
 /// Dasselbe fuer die andere Folge. C3 verlangt keinen Wortlaut fuer die leere
 /// Menge; der Satz folgt trotzdem dem des Kopierers, weil derselbe Anlass zwei
 /// verschieden gebaute Saetze sonst wie zwei verschiedene Lagen aussaehe.
+#[must_use]
 pub fn nichts_zu_oeffnen() -> String {
     nichts_betroffen("öffnen")
 }
@@ -1029,6 +1064,7 @@ pub fn nichts_zu_packen() -> String {
 /// Der Satz nennt deshalb das **Ergebnis** und keine Ursache, wie es der
 /// Ordnersprung aus C2 derselben Runde tut. Er stimmt in allen drei Lagen und
 /// bleibt einzeilig.
+#[must_use]
 pub fn nichts_zu_teilen() -> String {
     "nichts zu teilen: hier steht nichts, was an die Freigabedienste ginge".to_owned()
 }
@@ -1106,6 +1142,7 @@ pub fn kein_finder() -> String {
 /// einem vollen Ordner, naemlich waehrend eines Lesevorgangs, nachdem
 /// `Ordnermodell::ersatz_einloesen` Markierung und Auswahl geleert hat und
 /// bevor die Auswahl wieder steht.
+#[must_use]
 fn nichts_betroffen(verb: &str) -> String {
     format!("nichts zu {verb}: nichts markiert und nichts ausgewählt")
 }
@@ -1123,6 +1160,7 @@ fn nichts_betroffen(verb: &str) -> String {
 /// keine Fallunterscheidung nach der Zahl, waehrend [`kopiermeldung`] und
 /// [`oeffnungsmeldung`] sie tragen: die beiden melden, was abgelegt wurde,
 /// dieser meldet, dass die Ablage selbst nicht stattgefunden hat.
+#[must_use]
 pub fn ablage_weist_ab() -> String {
     "die Zwischenablage hat den Text nicht angenommen".to_owned()
 }
@@ -1169,6 +1207,7 @@ pub enum Dateiablage {
 /// Zwischenablage deutet nicht und bekommt diesen Text fertig herein; so ist
 /// der Name in der Ablage derselbe, den [`ablagemeldung`] in der Statuszeile
 /// nennt.
+#[must_use]
 pub fn namenszeilen(pfade: &[PathBuf]) -> String {
     pfade
         .iter()
@@ -1265,6 +1304,7 @@ pub fn einfuegen_abgewiesen(hindernis: Einfuegehindernis) -> String {
 /// Ein Pfad ohne letzten Bestandteil ist das Wurzelverzeichnis oder endet auf
 /// `..`; dann steht der Pfad in der Meldung, denn ein leerer Name benennte
 /// nichts.
+#[must_use]
 fn eintragsname(pfad: &Path) -> String {
     match pfad.file_name() {
         Some(name) => name.to_string_lossy().into_owned(),
@@ -1291,6 +1331,7 @@ fn eintragsname(pfad: &Path) -> String {
 /// Sind beide Mengen leer, faellt die Meldung auf [`nichts_zu_oeffnen`] zurueck;
 /// der Aufrufer faengt den Fall schon vorher ab, weil dann auch nichts
 /// uebergeben wird.
+#[must_use]
 pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> String {
     let angenommen = match uebergeben {
         [] => None,
@@ -1332,6 +1373,7 @@ pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> Strin
 /// Er kommt aus [`Datei::Belegung`] und steht nicht als Zeichenkette in den
 /// Saetzen: der Dateiname wohnt in `krk_core::ablage::pfade`, und eine zweite
 /// Schreibweise daneben liefe beim naechsten Umbenennen aus dem Tritt.
+#[must_use]
 fn belegungsdateiname() -> &'static str {
     Datei::Belegung.dateiname()
 }

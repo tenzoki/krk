@@ -31,3 +31,7 @@ hätte an den fünf Aufrufern eine bewusste Entscheidung erzwungen, statt eines 
 
 Denkbarer Weg: `#[must_use]` an den Typ `Blattgriff` und an die aufgezählten reinen Antworten,
 nach der Regel des Nutzers vom 260811-2140.
+
+
+---
+Resolved: Der Typ `Blattgriff` (`crates/krk-ui/src/appkit/blaetter/mod.rs`) traegt `#[must_use]` mit dem Meldungstext, dass ein fallender Griff dem Abbruchbefehl sein Blatt nimmt. Die im Datensatz aufgezaehlten reinen Antworten tragen die Marke ebenfalls: `Taste::zeichen`, `::zusatztasten`, `Schaltflaeche::neu`, `standardschaltflaechen`, `Blattgriff::abbruchweg`, `antwort_von_stelle`; `konflikt::schaltflaechen`, `::antwort`, `::tastenhinweis`, `AntwortAblesen::name`; `loeschbestaetigung::schaltflaechen`; die vier `Spalte`-Funktionen, `Regelfelder::regel`, `Vorschauquelle::ergebnis`, `frage` und `zusammenfassung` in `stapelumbenennen.rs`; `uebernimmt`, `zettel_an_stelle` und `textrahmen` in `zettel.rs`. Zwei davon brauchten einen Meldungstext, weil ihr Rueckgabetyp die Marke schon traegt (`abbruchweg` liefert einen Abschluss, `regel` ein `Result`). **Nicht behoben und ausdruecklich nicht angefasst** ist `Blatt::zeigen` (`let _griff =`): die Bindung faengt die Marke ab, und was dort wirklich fehlt, ist der Griff selbst, was der Datensatz `260826-1325_*_esc-im-stapel-umbenennen-blatt-…` fuehrt. Gepruefte Abnahme: `cargo clippy -p krk-ui --all-targets -- -D warnings` — exit 0.

@@ -102,6 +102,7 @@ fn eigenes_buendel() -> Option<Retained<NSURL>> {
 /// Liefert `None`, wenn der Start angestossen wurde, und den Satz fuer die
 /// Statuszeile, wenn nichts gestartet worden ist. Was danach geschieht,
 /// entscheidet LaunchServices; der Rueckruf bleibt leer, siehe den Modulkopf.
+#[must_use = "die Antwort ist der Satz fuer die Statuszeile; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn starten() -> Option<&'static str> {
     let Some(adresse) = eigenes_buendel() else {
         return Some(OHNE_BUENDEL);

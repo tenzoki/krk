@@ -30,3 +30,7 @@ Tafel halten.
 ## Umfang
 
 `krk-ui`, `appkit/editor.rs`.
+
+
+---
+Resolved: Der Absatz „Sie ist heute kurz, weil erst zwei der sechs Ausloeser gebaut sind" ist gefallen; an seiner Stelle steht „**Seit S39 ist jeder Ausloeser gebaut**" mit dem Verweis auf diesen Datensatz. Die Spalte `gebaut` ist aus der Tafel genommen, weil sie an jeder Zeile dasselbe sagte. „nicht bei den sechs Befehlen" ist auf „nicht bei jedem Befehl" umgestellt, und ein neuer Absatz trennt die zwei Zahlen, die der alte Text vermengte: die Tafel zaehlt Ausloeser, die Aufzaehlung zaehlt Varianten, und ein Ausloeser wie die Zeilennummer traegt drei davon. Fuer beide steht statt einer Zahl das Zaehlkommando (`crates/krk-ui/src/appkit/editor.rs`, Doc an `Editormeldung`).

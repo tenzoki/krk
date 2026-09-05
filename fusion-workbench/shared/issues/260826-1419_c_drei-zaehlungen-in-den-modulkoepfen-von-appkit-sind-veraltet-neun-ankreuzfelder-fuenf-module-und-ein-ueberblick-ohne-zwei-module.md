@@ -26,3 +26,7 @@ Schalter dazugibt, und keine Probe zählt Prosa. `CLAUDE.md` hat für genau dies
 weglassen; in `bildtakt.rs` „die uebrigen Module" ohne Zahl; die zwei Module in den Überblick
 aufnehmen oder den Überblick als unvollständig kennzeichnen, wie `mod.rs:171` es für die
 `use crate::`-Liste schon tut („ohne den Anspruch, alle zu sein").
+
+
+---
+Resolved: Punkt 2 und 3 sind behoben, Punkt 1 bestand nicht mehr. **Punkt 1:** `crates/krk-ui/src/appkit/mod.rs` sagt zu den Ankreuzfeldern seit einer frueheren Runde schon „**Eine Zahl steht hier nicht**, weil sie mit jedem Bereich und jeder Spalte waechst; gezaehlt wird sie an `Bereichsleiste::bauen`". Nichts geaendert. **Punkt 2:** `crates/krk-ui/src/appkit/bildtakt.rs` sagt jetzt „wie die uebrigen Module dieses Verzeichnisses" ohne Zahl und verweist auf die `mod`-Zeilen am Fuss von `mod.rs`. **Punkt 3:** der Ueberblick ist als das gekennzeichnet, was er ist — eine Zeichnung der Wertefluesse und kein Modulverzeichnis —, und der Kopf nennt die fuenf Module, die nicht darin stehen (`abwurf`, `weitereinstanz`, `git`, `leiste`, `koordinaten`); es waren nicht zwei, sondern fuenf. Zwei davon fehlten auch im Fliesstext dahinter und haben dort jetzt einen Absatz: `git` und `weitereinstanz`. Die Zahl „Zweiunddreissig Module" im Kopf ist aus demselben Grund gefallen wie die in `bildtakt.rs`.

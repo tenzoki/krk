@@ -201,10 +201,24 @@ impl Kontextbefehl {
     /// Reihenfolge im Menue dieselbe Angabe wie die Reihenfolge hier, und ein
     /// vierter Befehl erscheint, ohne dass jemand eine zweite Stelle nachzieht.
     ///
-    /// **Die Feldbreite steht in der Typangabe.** Ein vierter Wert haelt damit
-    /// den Bau an, wie es die Aufzaehlungen dieses Baums durchweg tun; die
-    /// Vollstaendigkeit der Liste selbst erzwingt der Uebersetzer nicht, und
-    /// dafuer steht die Probe `die_tafel_nennt_jeden_befehl_genau_einmal`.
+    /// **Die Feldbreite in der Typangabe haelt den Bau nicht an.**
+    /// `[Kontextbefehl; 3]` zwingt zu drei Gliedern und sagt nichts darueber,
+    /// welche drei: eine vierte Variante von [`Kontextbefehl`], die niemand hier
+    /// eintraegt, uebersetzt vorbei. Bis zum 260831 stand hier das Gegenteil
+    /// (`issues/260831-1212_*_kontextmenue-rs-behauptet-eine-feldbreite-halte-den-bau-an-und-ist-die-siebte-stelle-dieser-art.md`),
+    /// und gemessen ist die Behauptung in
+    /// `issues/260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md`.
+    ///
+    /// **Was den Bau anhaelt, sind die vollstaendigen Fallunterscheidungen ueber
+    /// den Wert**, und keine davon steht hier: [`Kontextbefehl::titel`],
+    /// [`Kontextbefehl::menuemarke`] und der Ausfuehrungszweig beim
+    /// Anwendungsdelegierten verzweigen je vollstaendig und ohne Auffangzweig,
+    /// also erzwingt ein vierter Wert eine Einordnung an drei Stellen. **Dass er
+    /// auch in dieser Liste landet, erzwingt nichts**: die Probe
+    /// `die_tafel_nennt_jeden_befehl_genau_einmal` laeuft ueber `ALLE` und haelt
+    /// die Tafel dagegen, nicht `ALLE` gegen die Aufzaehlung. Wie eine
+    /// `ALLE`-Liste kuenftig vollstaendig gehalten wird, ist die offene Frage
+    /// `decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`.
     pub const ALLE: [Kontextbefehl; 3] = [
         Kontextbefehl::Zippen,
         Kontextbefehl::Entpacken,

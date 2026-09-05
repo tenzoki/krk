@@ -25,3 +25,7 @@ Fünf Zahlen in der Prosa des Anwendungsdelegierten sind mit dem fünften Bereic
 Die drei „vier Bereiche" auf „fünf" oder auf „die Bereiche der Fensterzeile" ohne Zahl; die zwei Aufruferlisten entweder um die fehlenden Rufer ergänzen oder auf „wer ruft, sagt es an sich selbst" umstellen, wie `bildschirmbreiten_uebernehmen` es nach demselben Fehlschlag getan hat (`4760-4764`).
 
 Gefunden bei der Vollbaum-Durchsicht R7 an HEAD `7ac511a`.
+
+
+---
+Resolved: Die zwei Aufruferzahlen sind auf „wer ruft, sagt es an sich selbst" umgestellt, mit dem `grep`, das die Zeilen nennt, und mit der Aufzaehlung der Anlaesse ohne Zahl: an `fokus_setzen` und an `titel_nachziehen` (`crates/krk-ui/src/appkit/anwendung.rs`). **Die drei „vier Bereiche" bestanden am heutigen Baum nicht mehr**: der Nachzugsschritt der Runde 23 hat sie erledigt, `:15` liest „die NSSplitView mit ihren sechs Bereichen", `:1239` „Baut die sechs Bereiche", und die Aufzaehlung der fokussierbaren Bereiche steht unter „Seit C2 der Git-Runde gibt es fuenf fokussierbare Bereiche" mit einer Aufzaehlung, die zu den fuenf Fokuswerten ohne `Fokus::Anderswo` passt. Am Code dazu nichts geaendert.

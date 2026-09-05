@@ -11,3 +11,7 @@ Der Modulkopf von `fokus.rs` spricht von „rund fünfzig Befehlen", der Baum tr
 Die Aussage des Absatzes trägt ohne die Zahl: „für jeden Befehl". Vorschlag: die Zahl streichen, wie es `mod.rs:10-14` für die Modulzahl getan hat.
 
 Schwere: niedrig.
+
+
+---
+Resolved: Der Absatz `# Was ein abgewiesenes Kommando tut` in `crates/krk-ui/src/kommandos/fokus.rs` sagt jetzt „fuer **jeden** Befehl" und traegt keine Zahl mehr; daneben steht, warum keine dasteht, und das Zaehlkommando `awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs`, wie `CLAUDE.md` es fuer dieselbe Groesse tut.

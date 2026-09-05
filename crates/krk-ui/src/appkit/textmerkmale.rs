@@ -351,6 +351,7 @@ pub fn zuruecksetzen(text: &NSTextView, ansicht: Ansicht, art: Darstellungsart) 
 /// weggefallene Auszeichnung zurueckzunehmen. Zwei Rechnungen daneben waeren die
 /// erste Gelegenheit, dass eine geloeschte Ueberschrift in einer anderen Schrift
 /// landete als der, in der ihre Zeile getippt wird.
+#[must_use]
 pub fn grundschrift(ansicht: Ansicht, art: Darstellungsart) -> Retained<NSFont> {
     let (fest, groesse) = match (ansicht, art) {
         (Ansicht::Roh, _) | (Ansicht::Format, Darstellungsart::Code) => {
@@ -383,6 +384,7 @@ pub fn grundschrift(ansicht: Ansicht, art: Darstellungsart) -> Retained<NSFont> 
 /// Gefragt wird nach der **Ansicht** und nicht nach der Anwendung: das
 /// Erscheinungsbild ist eine Eigenschaft der Ansichtenkette, und ein Fenster
 /// kann eines tragen, das von dem der Anwendung abweicht.
+#[must_use]
 pub fn tafel_der_erscheinung(sicht: &NSView) -> Tafel {
     // SAFETY: Zwei Fremdsymbole von AppKit, die Namen der beiden
     // Erscheinungsbilder. Sie werden gelesen und nicht geschrieben.

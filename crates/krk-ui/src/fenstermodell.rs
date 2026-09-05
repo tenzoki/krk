@@ -168,6 +168,7 @@ impl Bereich {
     ];
 
     /// Die Stelle des Bereichs in der Fensterzeile.
+    #[must_use]
     pub const fn index(self) -> usize {
         match self {
             Bereich::Lesezeichen => 0,
@@ -180,6 +181,7 @@ impl Bereich {
     }
 
     /// Der Bereich eines Dateifensters.
+    #[must_use]
     pub const fn von_seite(seite: Fensterseite) -> Self {
         match seite {
             Fensterseite::Links => Bereich::Links,
@@ -201,6 +203,7 @@ impl Bereich {
     /// tun. Gehalten ist damit der zweite Schritt und nicht der erste: der
     /// Uebersetzer sieht die neue Variante erst, wenn sie in der Aufzaehlung
     /// [`Bereich`] steht, und den Eintrag in [`Bereich::ALLE`] haelt er nicht.
+    #[must_use]
     pub const fn seite(self) -> Option<Fensterseite> {
         match self {
             Bereich::Links => Some(Fensterseite::Links),
@@ -232,6 +235,7 @@ impl Bereich {
     /// Fallunterscheidungen ueber [`Bereich`]: ein siebter Bereich haelt den
     /// Bau an und erzwingt die Antwort darauf, um welche Flaeche er sich
     /// bewirbt.
+    #[must_use]
     pub const fn flaeche(self) -> Flaeche {
         match self {
             Bereich::Lesezeichen => Flaeche::Lesezeichen,
@@ -262,6 +266,7 @@ impl Bereich {
     /// Zeile Text noch lesbar ist". Bei der festen Schrift der Rohansicht in
     /// Systemgroesse traegt diese Breite rund 40 Zeichen. Die Vorschau kommt
     /// mit weniger aus, weil sie Metadaten zeigt und keine Zeilen.
+    #[must_use]
     pub const fn mindestbreite(self) -> f64 {
         match self {
             Bereich::Lesezeichen => 120.0,
@@ -286,6 +291,7 @@ impl Bereich {
     /// die vier sichtbaren Bereiche zusammen 1480, der Editor bekommt also
     /// 460/1480 der Zeile, knapp 31 Prozent. Die Zahl gilt nur beim
     /// allerersten Start; danach gilt die Breite des Nutzers.
+    #[must_use]
     pub const fn anfangsbreite(self) -> f64 {
         match self {
             Bereich::Lesezeichen => 180.0,
@@ -311,6 +317,7 @@ impl Bereich {
     /// Fallunterscheidungen ueber [`Bereich`]: ein siebter Bereich haelt den
     /// Bau an und erzwingt einen Namen fuer seinen Schalter, statt ihn still
     /// namenlos zu lassen.
+    #[must_use]
     pub const fn beschriftung(self) -> &'static str {
         match self {
             Bereich::Lesezeichen => "Lesezeichen",
@@ -333,6 +340,7 @@ impl Bereich {
     ///
     /// **Vollstaendig und ohne Auffangzweig**, aus demselben Grund wie
     /// [`Bereich::beschriftung`].
+    #[must_use]
     pub const fn langname(self) -> &'static str {
         match self {
             Bereich::Lesezeichen => "Lesezeichen- und Geräteleiste",
@@ -364,6 +372,7 @@ impl Bereich {
 /// der Bereichsleisten-Runde diesen Unterschied beseitigte, standen beide Zeile
 /// fuer Zeile gleich da. Die Aufteilung ruft jetzt diese hier
 /// (`issues/260812-0539_*_die-zuordnung-von-bereich-auf-sichtbarkeit-steht-seit-schritt-3-zweimal-gleich-da.md`).
+#[must_use]
 pub fn sichtbar_in(sichtbar: &Sichtbarkeit, bereich: Bereich) -> bool {
     match bereich {
         Bereich::Lesezeichen => sichtbar.lesezeichen,
@@ -412,6 +421,7 @@ fn breite_in(breiten: &Breiten, bereich: Bereich) -> Option<f64> {
 /// Frei und nicht an [`Fenstermodell`] gebunden, aus demselben Grund wie
 /// [`sichtbar_in`]: ein Aufrufer braucht sie fuer einen Stand, der nicht der
 /// gehaltene ist.
+#[must_use]
 pub fn spalte_sichtbar_in(spalten: &Spaltensichtbarkeit, spalte: Spalte) -> bool {
     match spalte {
         Spalte::Name => true,
@@ -482,6 +492,7 @@ impl Fenstermodell {
     /// Aktivitaet auf das andere Dateifenster und braucht dafuer eines, das
     /// sichtbar ist. Umgekehrt gerechnet koennte sie auf ein Fenster zeigen,
     /// das die erste erst danach hervorholt — oder auf keines.
+    #[must_use]
     pub fn aus_sitzung(sitzung: &Sitzung) -> Self {
         let mut modell = Self {
             aktiv: sitzung.aktiv,
@@ -554,6 +565,7 @@ impl Fenstermodell {
     /// Welches Dateifenster gerade das aktive ist.
     ///
     /// Bei Dateioperationen ist es die Quelle und das andere das Ziel (C1).
+    #[must_use]
     pub fn aktiv(&self) -> Fensterseite {
         self.aktiv
     }
@@ -561,6 +573,7 @@ impl Fenstermodell {
     /// Macht das genannte Dateifenster zum aktiven, falls es sichtbar ist.
     ///
     /// Liefert, ob sich dadurch etwas geaendert hat.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann sind Aufteilung, Sitzung und Rang nachzuziehen"]
     pub fn aktiv_setzen(&mut self, seite: Fensterseite) -> bool {
         if seite == self.aktiv || !self.sichtbar(Bereich::von_seite(seite)) {
             return false;
@@ -573,11 +586,13 @@ impl Fenstermodell {
     ///
     /// Ist das andere ausgeblendet, geschieht nichts: ein aktives Dateifenster,
     /// das niemand sieht, waere ein Fenster ohne sichtbare Auswahl.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann ist der Fokus mitzunehmen"]
     pub fn fenster_wechseln(&mut self) -> bool {
         self.aktiv_setzen(self.aktiv.andere())
     }
 
     /// Ob der Bereich sichtbar ist.
+    #[must_use]
     pub fn sichtbar(&self, bereich: Bereich) -> bool {
         sichtbar_in(&self.sichtbar, bereich)
     }
@@ -638,6 +653,7 @@ impl Fenstermodell {
     }
 
     /// Die Sichtbarkeit aller sechs Bereiche, von links nach rechts.
+    #[must_use]
     pub fn sichtbarkeit(&self) -> Sichtbarkeit {
         self.sichtbar
     }
@@ -648,6 +664,7 @@ impl Fenstermodell {
     /// [`Spaltensichtbarkeit`]. Wer eine einzelne Spalte fragt, nimmt
     /// [`spalte_sichtbar_in`] und bekommt auch fuer [`Spalte::Name`] eine
     /// Antwort.
+    #[must_use]
     pub fn spaltensichtbarkeit(&self) -> Spaltensichtbarkeit {
         self.spalten
     }
@@ -853,6 +870,7 @@ impl Fenstermodell {
     }
 
     /// Die gespeicherten Breiten.
+    #[must_use]
     pub fn breiten(&self) -> Breiten {
         self.breiten
     }
@@ -1077,6 +1095,7 @@ impl Fenstermodell {
     /// Zuerst der sichtbare Tab jedes sichtbaren Dateifensters, danach alles
     /// uebrige. Die Reihenfolge folgt aus C8: L4 endet, sobald die sichtbaren
     /// Tabs ihre erste Bildschirmseite zeigen.
+    #[must_use]
     pub fn lesereihenfolge(&self, fenster: [Tabuebersicht; 2]) -> Vec<(Fensterseite, usize)> {
         let mut reihenfolge = Vec::new();
         for seite in Fensterseite::ALLE {
@@ -1134,6 +1153,7 @@ impl Zeilenmass {
     ///
     /// Zwischen n sichtbaren Bereichen liegen n minus eine Trennlinie; bei
     /// keinem und bei einem liegt keine. Nie weniger als nichts.
+    #[must_use]
     pub fn verfuegbar(&self, anzahl_sichtbar: usize) -> f64 {
         let trenner = self.trennerbreite * anzahl_sichtbar.saturating_sub(1) as f64;
         (self.gesamt - trenner).max(0.0)
@@ -1189,6 +1209,7 @@ impl Zeilenmass {
 /// `Bereichsleiste::bereichsschalter` ist die Bauform und nicht die Zahl: dort
 /// entsteht das Feld ueber `Bereich::ALLE.map(…)`, und dessen Laenge folgt aus
 /// der Aufzaehlung.
+#[must_use]
 pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 6] {
     // Ein Modell allein, um an `sichtbare()` heranzukommen. Die beiden Felder,
     // die die Breitenrechnung nicht liest, stehen auf ihrem Vorgabewert: die

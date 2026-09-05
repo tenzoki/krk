@@ -33,3 +33,7 @@ denen ein nackter Aufruf ebenfalls nichts bewirkte: `zwischenablage::lesen`, `::
 `text_schreiben` steht schon in `260820-0739`. Die vier Fremdprogramm-Antworten sind der Teil
 mit Nutzerfolge; die übrigen sind derselbe Befund, den sechs Prüfer dieser Sitzung je Kiste
 gemeldet haben (`260826-1221`, `-1223`, `-1305`, `-1325`, `-1327`, `-1335`).
+
+
+---
+Resolved: Die vier Fremdprogramm-Huellen tragen `#[must_use]` mit je einem Meldungstext, der die Nutzerfolge nennt: `standardprogramm::oeffnen`, `terminal::ordner_oeffnen`, `zwischenablage::im_browser_oeffnen` und `weitereinstanz::starten`. Die im Datensatz daneben aufgezaehlten reinen Antworten haben die Marke ebenfalls bekommen: `zwischenablage::lesen`, `::inhalt_lesen`, `::dateiverweise`; `volumes::eingehaengte`; `koordinaten::in_utf16`, `::in_bytes`; `aufteilung::zeilenmass`, `::gemessene_breiten`, `::bereichssicht`; `statuszeile::filterstand_text`, `::zeile`, `::zeilentext`, `Rang::art`; `menue::hauptmenue`, `::tag_des_kommandos`, `::kommando_zum_tag`; `bildtakt::bildwiederholrate`; `textmerkmale::grundschrift`, `::tafel_der_erscheinung`; `titelzusatz::beschriftung`; `leiste::lesezeichenliste`, `::gewaehltes_lesezeichen`, `Leistenquelle::kommando_ausfuehren`; `Vorschaufenster::kommando_ausfuehren`, `::angezeigter_pfad`, `::laedt_noch`, `::fokusansicht`. `zwischenablage::text_schreiben` bleibt unberuehrt, weil der Datensatz es ausdruecklich an `260820-0739` abgibt. Gepruefte Abnahme: `cargo clippy -p krk-ui --all-targets -- -D warnings` — exit 0.

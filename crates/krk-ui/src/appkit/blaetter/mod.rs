@@ -1,7 +1,8 @@
 //! Die gemeinsame Huelle fuer die Blaetter am Fenster.
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
-//! es blockiert, solange er steht. AppKit nennt das ein Sheet. KRK hat zehn:
+//! es blockiert, solange er steht. AppKit nennt das ein Sheet. In diesem
+//! Verzeichnis liegen zehn:
 //! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
 //! dem Raeumen in den Papierkorb, Abschlussliste der uebersprungenen Eintraege
 //! und seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen
@@ -11,6 +12,18 @@
 //! Zeilennummer ([`zeilennummer`]) und die nach Such- und Ersatztext
 //! ([`suche`]), beide C5 der Editor-Runde. Das zehnte ist der Notizzettel der
 //! Runde 9 ([`zettel`]).
+//!
+//! **Ein elftes Blatt liegt ausserhalb dieses Verzeichnisses**, und wer nach
+//! diesem Kopf „alle Blaetter" durchgeht, uebersieht genau dieses eine:
+//! [`super::belegungsansicht`] baut die Tastaturbelegung aus C3 mit
+//! [`Blatt::mit_schaltflaechen`], haengt sie an dasselbe Fenster, legt denselben
+//! Griff nach `offenes_blatt` und loest dieselbe Sperre aus. Der Abschnitt
+//! „Welche Schaltflaeche die ungefaehrliche ist" weiter unten fuehrt sie selbst
+//! mit auf. Die Zaehlprobe
+//! `jedes_blatt_nennt_seine_liegenlassende_schaltflaeche` sieht sie,
+//! weil sie ueber den Quellbaum und nicht ueber dieses Verzeichnis laeuft;
+//! gemeldet war der Abstand als
+//! `issues/260826-1336_*_der-modulkopf-der-blaetter-zaehlt-zehn-und-die-belegungsansicht-ist-das-elfte-blatt-desselben-bauers.md`.
 //!
 //! **Das zehnte ist das erste mit einem eigenen Waechter**, und der traegt die
 //! halbe Regel des [`Eingabewaechter`] darunter: `Esc` schliesst, die
@@ -331,6 +344,7 @@ pub enum Taste {
 
 impl Taste {
     /// Das Zeichen, das `NSButton.keyEquivalent` dafuer traegt.
+    #[must_use]
     fn zeichen(self) -> &'static NSString {
         match self {
             Taste::Eingabe | Taste::EingabeMitBefehl | Taste::EingabeMitWahl => ns_string!("\r"),
@@ -339,6 +353,7 @@ impl Taste {
     }
 
     /// Die Zusatztasten, die dazu gehalten werden muessen.
+    #[must_use]
     fn zusatztasten(self) -> NSEventModifierFlags {
         match self {
             Taste::EingabeMitBefehl => NSEventModifierFlags::Command,
@@ -385,6 +400,7 @@ pub struct Schaltflaeche<'a> {
 impl<'a> Schaltflaeche<'a> {
     /// Eine Schaltflaeche mit dieser Beschriftung, dieser Taste und dieser
     /// Wirkung.
+    #[must_use]
     pub fn neu(titel: &'a str, taste: Taste, wirkung: Wirkung) -> Self {
         Self {
             titel,
@@ -493,6 +509,7 @@ pub fn bestaetigungsstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> usize {
 /// die Rueckfrage vor dem Raeumen in den Papierkorb die Eingabetaste auf
 /// "Abbrechen" gelegt hat. Wer den Griff nicht braucht, laesst ihn fallen; das
 /// schadet nicht, weil AppKit das Blatt haelt, solange es steht.
+#[must_use = "ein Griff, der faellt, nimmt dem Abbruchbefehl sein Blatt; wer ihn nicht braucht, sagt es mit `let _ =`"]
 pub struct Blattgriff {
     warnung: Retained<NSAlert>,
     fenster: Retained<NSWindow>,
@@ -528,6 +545,7 @@ impl Blattgriff {
     /// Zeile, was [`Blattgriff::abbrechen`] tut, und beide muenden in denselben
     /// Abschlussblock von AppKit. Ein zweiter Ruf, nachdem das Blatt schon zu
     /// ist, trifft ein Fenster ohne anhaengendes Blatt und tut nichts.
+    #[must_use = "der Abschluss schliesst das Blatt erst, wenn ihn jemand ruft; fallengelassen ist er ein Aufruf ohne Wirkung"]
     pub fn abbruchweg(&self) -> impl Fn() + use<> {
         let warnung = self.warnung.clone();
         let fenster = self.fenster.clone();
@@ -573,6 +591,7 @@ pub struct Blatt {
 ///
 /// Die Reihenfolge ist bindend und steht bei [`Blatt::neu`] begruendet: die
 /// erste bestaetigt und traegt die Eingabetaste, die zweite bricht ab.
+#[must_use]
 fn standardschaltflaechen(bestaetigen: &str) -> [Schaltflaeche<'_>; 2] {
     [
         Schaltflaeche::neu(bestaetigen, Taste::Eingabe, Wirkung::Ausfuehren),
@@ -842,6 +861,7 @@ impl Blatt {
 /// AppKit zaehlt sie ab `NSAlertFirstButtonReturn` fortlaufend hoch. Die
 /// Umrechnung steht hier einmal, damit keine Zaehlung mit den Zahlen von AppKit
 /// rechnet.
+#[must_use]
 fn antwort_von_stelle(stelle: usize) -> NSModalResponse {
     NSAlertFirstButtonReturn + stelle as NSModalResponse
 }

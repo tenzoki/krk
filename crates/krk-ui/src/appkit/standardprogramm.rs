@@ -87,6 +87,7 @@ use objc2_foundation::{NSString, NSURL};
 /// Aufrufer. Der Gegenentwurf waere eine Pruefung nach dem Vorbild von
 /// [`crate::kommandos::operationen::ordner_fehlt`]; die steht dort, weil
 /// jener Aufruf **keine** Antwort liefert, und hier liefert er eine.
+#[must_use = "die Antwort sagt, ob das System den Eintrag angenommen hat; fallengelassen bleibt der Nutzer ohne Meldung vor einem Programm, das nicht aufgeht"]
 pub fn oeffnen(pfad: &Path) -> bool {
     let ziel = NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy()));
     NSWorkspace::sharedWorkspace().openURL(&ziel)

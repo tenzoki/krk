@@ -178,6 +178,7 @@ use crate::leistenmodell::Ort;
 ///
 /// Ein Datentraeger ohne lesbaren Pfad wird uebergangen und nicht geraten,
 /// ebenfalls wie dort.
+#[must_use]
 pub fn eingehaengte() -> Vec<Ort> {
     // SAFETY: Ein Fremdsymbol von Foundation, der Schluesselname des
     // Datentraegernamens. Es wird gelesen und nicht geschrieben.

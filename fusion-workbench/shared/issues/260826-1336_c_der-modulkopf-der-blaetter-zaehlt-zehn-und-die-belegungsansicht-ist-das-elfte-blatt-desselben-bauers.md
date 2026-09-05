@@ -24,3 +24,7 @@ Verzeichnisses liegt.
 
 Denkbarer Weg: „zehn" streichen oder „zehn hier und eines in `belegungsansicht.rs`" schreiben,
 nach der Regel aus `CLAUDE.md`, dass Zahlen in Prosa mit der nächsten Runde falsch werden.
+
+
+---
+Resolved: Der Kopf von `crates/krk-ui/src/appkit/blaetter/mod.rs` sagt jetzt „In diesem Verzeichnis liegen zehn" und traegt darunter einen eigenen Absatz zum elften: die Belegungsansicht, mit dem Hinweis, dass sie am selben Fenster haengt, denselben Griff nach `offenes_blatt` legt und dieselbe Sperre ausloest, und mit dem Satz, dass genau dieses eine uebersieht, wer nach dem Kopf „alle Blaetter" durchgeht. Daneben steht, dass die Zaehlprobe `jedes_blatt_nennt_seine_liegenlassende_schaltflaeche` sie sieht, weil sie ueber den Quellbaum laeuft.

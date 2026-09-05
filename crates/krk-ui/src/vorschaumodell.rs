@@ -476,6 +476,7 @@ impl Default for Vorschaumodell {
 
 impl Vorschaumodell {
     /// Ein Vorschaufenster mit einem leeren Tab.
+    #[must_use]
     pub fn neu() -> Self {
         Self {
             tabs: vec![Vorschautab::leer()],
@@ -488,21 +489,25 @@ impl Vorschaumodell {
     /// Heute allein von den Pruefungen gelesen; die Ansicht kommt ueber
     /// [`Vorschaumodell::titel`] an dieselbe Zahl.
     #[cfg(test)]
+    #[must_use]
     pub fn zahl(&self) -> usize {
         self.tabs.len()
     }
 
     /// Die Stelle des aktiven Tabs.
+    #[must_use]
     pub fn aktive_stelle(&self) -> usize {
         self.aktiv
     }
 
     /// Was der aktive Tab zeigt.
+    #[must_use]
     pub fn aktiver_inhalt(&self) -> &Inhalt {
         &self.tabs[self.aktiv].inhalt
     }
 
     /// Die Beschriftungen aller Tabs, in der Reihenfolge der Leiste.
+    #[must_use]
     pub fn titel(&self) -> Vec<String> {
         self.tabs.iter().map(|tab| tab.titel.clone()).collect()
     }
@@ -519,6 +524,7 @@ impl Vorschaumodell {
     /// Beim letzten Tab bleibt das Vorschaufenster stehen und zeigt wieder
     /// einen leeren Tab, wie C1 es fuer die Dateifenster verlangt. Liefert,
     /// ob sich etwas geaendert hat.
+    #[must_use]
     pub fn schliessen(&mut self) -> bool {
         if self.tabs.len() == 1 {
             if self.tabs[0].inhalt == Inhalt::Leer && self.tabs[0].ladevorgang.is_none() {
@@ -535,11 +541,13 @@ impl Vorschaumodell {
     }
 
     /// Wechselt zum naechsten Tab und laeuft am Ende auf den ersten um.
+    #[must_use]
     pub fn naechster(&mut self) -> bool {
         self.waehlen((self.aktiv + 1) % self.tabs.len())
     }
 
     /// Wechselt zum vorigen Tab und laeuft am Anfang auf den letzten um.
+    #[must_use]
     pub fn voriger(&mut self) -> bool {
         self.waehlen((self.aktiv + self.tabs.len() - 1) % self.tabs.len())
     }
@@ -549,6 +557,7 @@ impl Vorschaumodell {
     /// Eine Stelle ausserhalb der Liste und die des aktiven Tabs werden
     /// uebergangen. Der Inhalt des verlassenen Tabs bleibt unveraendert
     /// stehen; genau das ist das Halteverhalten aus dem Modulkopf.
+    #[must_use]
     pub fn waehlen(&mut self, stelle: usize) -> bool {
         if stelle >= self.tabs.len() || stelle == self.aktiv {
             return false;
@@ -598,6 +607,7 @@ impl Vorschaumodell {
     }
 
     /// Ob irgendein Tab noch auf seinen Arbeitsfaden wartet.
+    #[must_use]
     pub fn laedt_noch(&self) -> bool {
         self.tabs.iter().any(|tab| tab.ladevorgang.is_some())
     }
@@ -605,6 +615,7 @@ impl Vorschaumodell {
     /// Welche Datei der aktive Tab zeigt; `None`, wenn keine Datei.
     ///
     /// Nur zum Ablesen, fuer die Endbedingung von L7 im Messmodus.
+    #[must_use]
     pub fn aktiver_pfad(&self) -> Option<PathBuf> {
         self.tabs[self.aktiv].pfad.clone()
     }
@@ -628,6 +639,7 @@ impl Vorschaumodell {
     /// Auffangzweig**, wie die uebrigen dieser Art im Programm: ein
     /// weiterer Wert von [`Inhalt`] haelt den Bau an und erzwingt die Antwort
     /// auf die Frage, ob neben ihm Zeilennummern stehen.
+    #[must_use]
     pub fn zeigt_dateitext(&self) -> bool {
         match self.aktiver_inhalt() {
             Inhalt::Text(_) => self.aktiver_pfad().is_some(),
@@ -653,6 +665,7 @@ impl Vorschaumodell {
     /// Liefert, ob sich der **aktive** Tab dabei geaendert hat; nur dann muss
     /// die Ansicht neu zeichnen. Ein inaktiver Tab fuellt sich still, wie die
     /// verdeckten Tabs eines Dateifensters.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht neu zeichnen"]
     pub fn einziehen(&mut self) -> bool {
         let mut aktiver_geaendert = false;
         for (stelle, tab) in self.tabs.iter_mut().enumerate() {
@@ -913,6 +926,7 @@ fn typ_von(roh: &std::fs::Metadata) -> Typ {
 /// Fenster pruefbar. Die Sonderbits erscheinen wie bei `ls`: setuid und
 /// setgid als `s` beziehungsweise `S` auf der Ausfuehrstelle, das Sticky-Bit
 /// als `t` beziehungsweise `T`.
+#[must_use]
 pub fn rechte_text(modus: u32) -> String {
     let mut zeichen = String::with_capacity(9);
     let gruppen = [

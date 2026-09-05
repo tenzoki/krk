@@ -54,3 +54,7 @@ Zeile mehr liefert, die eine Gesamtzahl behauptet.
 **Gefunden:** beim Abgleich am 260905-2046, bei der Nachprüfung von
 `260815-1448_*_die-neun-berichtigten-zahlen-stehen-weiter-unverankert-…`. Acht der neun dort
 genannten Stellen sind inzwischen zahlenfrei; diese eine ist geblieben und hat sich neu verzählt.
+
+
+---
+Resolved: Alle drei Stellen tragen statt der Zahl den Zeiger auf die Erhebung. Der Modulkopf (`crates/krk-ui/src/appkit/menue.rs`, Abschnitt „Wer die sechs Textbefehle beantwortet") sagt jetzt, die sechs seien die einzigen Funktionen der Belegung ohne `Kommando`, und nennt die zwei Zaehlkommandos `grep -c '^id = ' resources/default-keymap.toml` und `grep -c 'gehalten_von = "menue"' resources/default-keymap.toml`. Der Doc-Kommentar an `die_sechs_zugestellten` verweist auf den Modulkopf, und der an `die_sechs_zugestellten_textbefehle_werden_von_diesen_klassen_beantwortet` sagt jetzt „fuer jede Funktion der Belegung, die ein Kommando traegt" statt „fuer 79 der 85". Die Sechs bleibt, weil die Probe daneben sie haelt. Nachgeprueft: `grep -n '85' crates/krk-ui/src/appkit/menue.rs` liefert keine Zeile mehr, die eine Gesamtzahl behauptet.

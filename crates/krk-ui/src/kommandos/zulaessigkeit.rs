@@ -220,6 +220,7 @@ pub struct Lage {
 /// [`immer_erreichbar`].
 ///
 /// [`Wirkungsbereich`]: krk_core::tasten::Wirkungsbereich
+#[must_use = "fallengelassen laeuft der Befehl ungeprueft weiter"]
 pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
     gestattet(Anspruch::Kommando(kommando), lage)
 }
@@ -281,6 +282,7 @@ enum Anspruch {
 
 impl Anspruch {
     /// Welchen Bereich der Befehl braucht.
+    #[must_use]
     fn wirkungsbereich(self) -> Wirkungsbereich {
         match self {
             Anspruch::Kommando(kommando) => kommando.wirkungsbereich(),
@@ -289,6 +291,7 @@ impl Anspruch {
     }
 
     /// Ob der Befehl waehrend eines stehenden Blattes durchkommt.
+    #[must_use]
     fn waehrend_blatt_erlaubt(self) -> bool {
         match self {
             Anspruch::Kommando(kommando) => operationen::waehrend_blatt_erlaubt(kommando),
@@ -300,6 +303,7 @@ impl Anspruch {
     ///
     /// Die Dateiablage steht nicht darauf, und die Liste waechst mit ihr
     /// nicht (C4.2 der Runde 22).
+    #[must_use]
     fn immer_erreichbar(self) -> bool {
         match self {
             Anspruch::Kommando(kommando) => immer_erreichbar(kommando),
@@ -315,6 +319,7 @@ impl Anspruch {
 /// Beide oeffentlichen Eingaenge sind Einzeiler auf diese Funktion, und die
 /// Zaehlprobe `die_zulaessigkeitsregel_ist_genau_einmal_erklaert` haelt fest,
 /// dass es sie genau einmal gibt.
+#[must_use = "fallengelassen laeuft der Befehl ungeprueft weiter"]
 fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
     let kein_blatt_oder_erlaubt = !lage.blatt_steht || anspruch.waehrend_blatt_erlaubt();
     let durchgelassen = anspruch.immer_erreichbar()
@@ -339,6 +344,7 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
 /// Herleitung steht im Modulkopf. Die Liste hebt die Bestandteile (1), (2) und (4) auf und
 /// den dritten nicht: sie hebt jede Sperre auf, die nach der Lage fragt, und
 /// keine, die nach dem Wirkungsbereich fragt.
+#[must_use = "fallengelassen laeuft der Befehl ungeprueft weiter"]
 pub fn immer_erreichbar(kommando: Kommando) -> bool {
     matches!(
         kommando,

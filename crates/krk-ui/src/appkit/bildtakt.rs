@@ -1,7 +1,11 @@
 //! Der Bildtakt: die beiden Beruehrungen mit AppKit, die eine Messung braucht.
 //!
-//! Geschnitten wie die fuenf uebrigen Module dieses Verzeichnisses, naemlich
-//! nach dem, was AppKit als eigenstaendiges Objekt fuehrt:
+//! Geschnitten wie die uebrigen Module dieses Verzeichnisses, naemlich
+//! nach dem, was AppKit als eigenstaendiges Objekt fuehrt. **Wie viele es sind,
+//! steht hier nicht**: die Zahl stand auf fuenf, als das Verzeichnis sechs
+//! Module hatte, und ist seither mit jeder Runde falscher geworden
+//! (`issues/260826-1419_*_drei-zaehlungen-in-den-modulkoepfen-von-appkit-sind-veraltet-neun-ankreuzfelder-fuenf-module-und-ein-ueberblick-ohne-zwei-module.md`);
+//! die `mod`-Zeilen am Fuss von [`super`] sind die Liste.
 //!
 //! - [`Zeichenende`] haelt den `CADisplayLink` auf einer Ansicht. Er nimmt beim
 //!   Einrichten eine gewoehnliche Rust-Senke entgegen und meldet ihr jedes
@@ -155,6 +159,7 @@ impl Drop for Zeichenende {
 /// `MacBookPro15,1` fuehrt es zum eingebauten Bildschirm keine Zeile
 /// `Refresh Rate`, festgehalten im geschlossenen Defekt
 /// `260802-1900_*_bildwiederholrate-am-referenzgeraet-nicht-per-system-profiler-erhebbar.md`.
+#[must_use]
 pub fn bildwiederholrate(fenster: &NSWindow) -> Option<isize> {
     fenster
         .screen()

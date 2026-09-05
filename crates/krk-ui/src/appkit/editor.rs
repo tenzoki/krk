@@ -169,7 +169,7 @@
 //! fertige Zeile an eine Flaeche.** [`Editormeldung`] benennt es; wohin es
 //! geht, weiss diese Datei nicht. Der Anwendungsdelegierte nimmt den Wert und
 //! stellt ihn in die **eine** Meldeflaeche des Fensters aus C1 der Runde 1, auf
-//! den obersten ihrer sechs Raenge. Eine zweite Meldeflaeche neben ihr entsteht
+//! ihren obersten Rang. Eine zweite Meldeflaeche neben ihr entsteht
 //! nicht: die Uebergabe an diese Runde sagt das zu, und C1 wiederholt es unter
 //! "Der Editor bekommt keine eigene Meldezeile".
 //!
@@ -375,7 +375,8 @@
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSScrollView`, `NSTextView`, `NSTextContainer`,
-//! `NSTextField`, `NSFont`, `NSColor` und `NSTimer` stehen seit macOS 10.0 zur
+//! `NSTextField`, `NSFont`, `NSColor`, `NSTimer` und `NSUndoManager` stehen seit
+//! macOS 10.0 zur
 //! Verfuegung, seit C1 der Runde 6 ebenso `NSMenu` und `NSEvent`, die der
 //! Menuehaken entgegennimmt. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`). Keine von ihnen ist nach macOS 15 hinzugekommen,
@@ -411,15 +412,20 @@
 //! Zurueckgeben eines Menues — traegt im Kopf des Systems keine Angabe und
 //! steht damit seit 10.0.
 //!
-//! Fuenf **Methoden** sind juenger als ihre Klasse, und **vier von ihnen liegen
+//! Sechs **Methoden** sind juenger als ihre Klasse, und **fuenf von ihnen liegen
 //! auf oder unter dem Zielsystem** und brauchen deshalb keine Pruefung:
 //! `setInlinePredictionType:` steht seit macOS 14,
 //! `setMathExpressionCompletionType:` und `setWritingToolsBehavior:` seit macOS
-//! 15, und `NSTextView.textLayoutManager` seit macOS 12 — die letzte fragt allein
+//! 15, `NSTextView.textLayoutManager` seit macOS 12 — die fragt allein
 //! die Probe, die den Rueckfall auf TextKit 1 festhaelt, und
-//! `NSTextLayoutManager` selbst wird nirgends benannt.
+//! `NSTextLayoutManager` selbst wird nirgends benannt —, und
+//! `registerUndoWithTarget:handler:` seit macOS 10.11
+//! (`NSUndoManager.h:161`). Die letzte fehlte in dieser Aufzaehlung bis zum
+//! 260826, obwohl `Editorbereich::umkehrung_anmelden` und zwei Proben sie
+//! rufen
+//! (`issues/260826-1327_*_der-untergrenzen-abschnitt-von-editor-rs-nennt-nsundomanager-nicht-und-registerundowithtarget-handler-steht-seit-10-11.md`).
 //!
-//! **Die fuenfte liegt darueber und ist die einzige gehuetete Beruehrung dieser
+//! **Die sechste liegt darueber und ist die einzige gehuetete Beruehrung dieser
 //! Datei.** `setAllowsWritingToolsAffordance:` fuehrt das SDK erst ab macOS 15.4
 //! und nur an `NSTextField`; die Laufzeit von 15.7.7 antwortet an `NSTextView`
 //! darauf, aber undokumentiert. Sie geht deshalb ueber
@@ -436,6 +442,11 @@
 //! ist deshalb kein Absturz, sondern ein Fund der Probe — und darin liegt ihr
 //! Zweck. Eine Zahl fuer die Untergrenze von `NSTextInputTraits` steht hier
 //! bewusst nicht: sie wird nirgends gebunden, sondern nachgefragt.
+//!
+//! **Zwei Beruehrungen der Proben sind gebunden und nicht nachgefragt**, und
+//! beide liegen weit unter dem Zielsystem: `enabledTextCheckingTypes` steht seit
+//! macOS 10.6 (`NSTextView.h:466`) und
+//! `registerUndoWithTarget:handler:` seit 10.11, wie oben.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
@@ -479,25 +490,33 @@ use super::textmerkmale;
 ///
 /// **Ein Wert und keine Zeichenkette am Meldeort.** Jede Meldung des Editors
 /// ist die Antwort auf einen Tastenbefehl, und jede geht denselben einen Weg
-/// nach oben; der Wortlaut steht deshalb hier an einer Stelle und nicht bei den
-/// sechs Befehlen, die ihn ausloesen. Wer eine siebte Meldung braucht, setzt
+/// nach oben; der Wortlaut steht deshalb hier an einer Stelle und nicht bei
+/// jedem Befehl, der ihn ausloest. Wer eine weitere Meldung braucht, setzt
 /// eine Variante dazu und bekommt vom Uebersetzer die fehlende Zeile in
 /// [`Self::text`] angezeigt.
 ///
 /// **Die Aufzaehlung ist vollstaendig und hat keinen Auffangzweig**, wie die
-/// drei uebrigen dieser Art im Programm. Sie ist heute kurz, weil erst zwei der
-/// sechs Ausloeser gebaut sind; die vier uebrigen kommen mit ihren Schritten und
-/// tragen ihre Variante bei:
+/// drei uebrigen dieser Art im Programm. **Seit S39 ist jeder Ausloeser
+/// gebaut**; bis dahin stand hier, erst zwei der sechs seien es, und die Tafel
+/// darunter widersprach dem Satz schon vor der Berichtigung
+/// (`issues/260826-1327_*_der-kopf-von-editormeldung-sagt-zwei-von-sechs-ausloesern-seien-gebaut-die-tafel-darunter-fuehrt-sieben-als-gebaut.md`).
+/// Die Ausloeser, in der Reihenfolge, in der sie gebaut wurden:
 ///
 /// ```text
-///  gebaut    Abweisung beim Oeffnen        krk_core::text::datei::oeffnen (S10)
-///  gebaut    Markenstelle geaendert        krk_core::text::marke (S12)
-///  gebaut    gelungenes Sichern            krk_core::text::datei::sichern (S9)
-///  gebaut    gescheitertes Sichern         dieselbe Stelle (S25)
-///  gebaut    Zeilennummer ausserhalb       krk_core::text::zeilen (S35)
-///  gebaut    Stand der Suche               crate::editormodell::Suchlauf (S36)
-///  gebaut    Zahl der ersetzten Treffer    krk_core::text::suche (S37)
+///  Abweisung beim Oeffnen        krk_core::text::datei::oeffnen (S10)
+///  Markenstelle geaendert        krk_core::text::marke (S12)
+///  gelungenes Sichern            krk_core::text::datei::sichern (S9)
+///  gescheitertes Sichern         dieselbe Stelle (S25)
+///  Zeilennummer ausserhalb       krk_core::text::zeilen (S35)
+///  Stand der Suche               crate::editormodell::Suchlauf (S36)
+///  Zahl der ersetzten Treffer    krk_core::text::suche (S37)
 /// ```
+///
+/// **Die Tafel zaehlt Ausloeser, die Aufzaehlung darunter zaehlt Varianten, und
+/// die zwei Zahlen sind nicht dieselbe**: ein Ausloeser wie die Zeilennummer
+/// traegt drei Varianten. Eine Zahl steht fuer keine von beiden hier; gezaehlt
+/// werden die Varianten mit
+/// `awk '/^pub enum Editormeldung/,/^}/' crates/krk-ui/src/appkit/editor.rs`.
 ///
 /// **Das gelungene Sichern meldet sich, obwohl der Kopf es schon zeigt.** Die
 /// beiden sagen Verschiedenes: der Kopf traegt den Zustand, naemlich dass nichts
@@ -518,6 +537,7 @@ use super::textmerkmale;
 /// gefallen; ihr Ausloeser war nie F4, und die Ankuendigung aus S21, S22 loese
 /// beide ab, war fuer die Haelfte richtig.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "eine Editormeldung ist die ganze Antwort des Befehls; fallengelassen tut er kommentarlos nichts, und genau das verbieten C2.10 und C6.8"]
 pub enum Editormeldung {
     /// Der Editor nimmt die Datei nicht an (C2).
     ///
@@ -645,6 +665,7 @@ impl Editormeldung {
     ///
     /// Die drei Saetze stehen in [`Self::text`]; die Fallunterscheidung ueber
     /// die Lage ist dort vollstaendig und ohne Auffangzweig.
+    #[must_use]
     pub fn markenstelle(sprung: &Markensprung) -> Option<Self> {
         match sprung.fund {
             Fund::Getroffen | Fund::Verschoben => None,
@@ -659,6 +680,7 @@ impl Editormeldung {
     ///
     /// Vollstaendig und ohne Auffangzweig: eine neue Variante haelt den Bau an
     /// und erzwingt ihren Satz, statt still einen fremden zu bekommen.
+    #[must_use]
     pub fn text(&self) -> String {
         match self {
             Self::Abgewiesen(abweisung) => abweisung.meldung(),
@@ -786,6 +808,7 @@ impl Umkehrpunkt {
     ///
     /// Die beiden Staende werden geliehen und nicht genommen: der Punkt haelt
     /// danach allein den Unterschied.
+    #[must_use]
     fn zwischen(vorher: &str, nachher: &str, auswahl: NSRange) -> Self {
         let anfang = gemeinsamer_anfang(vorher, nachher);
         let schwanz = gemeinsamer_schwanz(vorher, nachher, anfang);
@@ -806,6 +829,7 @@ impl Umkehrpunkt {
     /// waere in Rust keine falsche Anzeige, sondern eine Panik mitten in der
     /// Ereignisbehandlung. Dass er passt, haelt die Zusicherung fest; dass er
     /// notfalls nicht abstuerzt, der Schnitt.
+    #[must_use]
     fn angewandt_auf(&self, stand: &str) -> String {
         let anfang = bis_zur_zeichengrenze(stand, self.anfang);
         let bis = bis_zur_zeichengrenze(stand, self.anfang + self.eingefuegt);
@@ -831,6 +855,7 @@ impl Umkehrpunkt {
     /// liest sie einzeln. Eine zweite Rechnung neben dieser gaebe es nicht
     /// umsonst: die Zahl, die der Zaehler fuehrt, waere dann eine andere als die,
     /// die die Probe nachrechnet.
+    #[must_use]
     fn getragene_bytes(&self) -> usize {
         self.entfernt.len()
     }
@@ -974,6 +999,7 @@ impl Drop for Stapellast {
 ///
 /// Der Vergleich ist `>` und nicht `>=`: ein Punkt, der das Budget genau
 /// ausfuellt, passt hinein.
+#[must_use]
 fn verlauf_fuer_umbau(punkt: Umkehrpunkt, gehalten: usize) -> Verlauf {
     if gehalten + punkt.getragene_bytes() > STAPELBUDGET {
         Verlauf::TraegtNurDiese(punkt)
@@ -991,6 +1017,7 @@ fn verlauf_fuer_umbau(punkt: Umkehrpunkt, gehalten: usize) -> Verlauf {
 /// andere ein Folgebyte. Ein Schnitt dort waere eine Panik beim Zerschneiden,
 /// und die Abrundung endet spaetestens bei 0, weil dort jeder Text eine Grenze
 /// hat.
+#[must_use]
 fn gemeinsamer_anfang(vorher: &str, nachher: &str) -> usize {
     let mut anfang = vorher
         .as_bytes()
@@ -1010,6 +1037,7 @@ fn gemeinsamer_anfang(vorher: &str, nachher: &str) -> usize {
 /// `ab` ist der gemeinsame Anfang aus [`gemeinsamer_anfang`]; ohne diese Schranke
 /// koennten sich Anfang und Schwanz ueberlappen und der herausgeschnittene
 /// Bereich haette eine negative Laenge.
+#[must_use]
 fn gemeinsamer_schwanz(vorher: &str, nachher: &str, ab: usize) -> usize {
     let mut schwanz = vorher.as_bytes()[ab..]
         .iter()
@@ -1030,6 +1058,7 @@ fn gemeinsamer_schwanz(vorher: &str, nachher: &str, ab: usize) -> usize {
 /// beginnt.
 ///
 /// `is_char_boundary(0)` ist an jedem Text wahr, also endet die Schleife.
+#[must_use]
 fn bis_zur_zeichengrenze(text: &str, versatz: usize) -> usize {
     let mut versatz = versatz.min(text.len());
     while !text.is_char_boundary(versatz) {
@@ -1231,6 +1260,7 @@ impl Oeffnungsherkunft {
         clippy::match_like_matches_macro,
         reason = "`matches!` prueft die Vollstaendigkeit nicht, und genau die ist hier der Zweck"
     )]
+    #[must_use]
     pub fn ist_aus_sitzung(self) -> bool {
         match self {
             Oeffnungsherkunft::Sitzung => true,
@@ -1540,16 +1570,15 @@ impl Editorbereich {
 
         // Die Flaeche zeigt von der ersten Zeichnung an den Stand des Modells
         // und nicht irgendeinen. Beim Aufbau ist er leer, weil der Editor keine
-        // Datei haelt; die Zeile steht trotzdem hier, damit es genau einen Weg
+        // Datei haelt; der Ruf steht trotzdem hier, damit es genau einen Weg
         // vom Modell in die Flaeche gibt und keinen Anfangszustand daneben. Der
-        // Kopf und die Ansicht folgen derselben Regel.
+        // Kopf und die Ansicht folgen derselben Regel, und `stand_erneuern`
+        // haelt die drei in ihrer Reihenfolge zusammen.
         //
         // `Faellt` ist hier ohne Wirkung und trotzdem die richtige Antwort: die
         // Flaeche haengt noch in keinem Fenster, hat also keinen Verwalter, und
         // es gibt keinen Umbau, den ein `cmd+z` zuruecknehmen koennte.
-        this.stand_einsetzen(Verlauf::Faellt);
-        this.kopf_nachziehen();
-        this.darstellung_nachziehen();
+        this.stand_erneuern(Verlauf::Faellt);
         this
     }
 
@@ -1599,6 +1628,7 @@ impl Editorbereich {
     /// Datei holt er nicht hervor. Die Frage geht an das Modell und wird hier
     /// nicht aus der Textflaeche beantwortet — ein leerer Text ist keine
     /// fehlende Datei.
+    #[must_use]
     pub fn haelt_datei(&self) -> bool {
         self.ivars().modell.borrow().haelt_datei()
     }
@@ -1608,6 +1638,7 @@ impl Editorbereich {
     /// Die Frage der drei Anlaesse aus C4: der Anwendungsdelegierte stellt sie,
     /// bevor er einen Anlass ausfuehrt, der den Stand verloere. Sie geht an das
     /// Modell und wird hier nicht aus der Textflaeche beantwortet.
+    #[must_use]
     pub fn hat_ungesicherten_stand(&self) -> bool {
         self.ivars().modell.borrow().hat_ungesicherten_stand()
     }
@@ -1623,6 +1654,7 @@ impl Editorbereich {
     /// Der Pfad wird abgeschrieben und nicht ausgeliehen: die Ausleihe des
     /// Modells endet mit dieser Zeile, und der Aufrufer traegt den Wert durch
     /// AppKit-Aufrufe, die hierher zuruecklaufen koennen.
+    #[must_use]
     pub fn pfad(&self) -> Option<PathBuf> {
         self.ivars().modell.borrow().pfad().map(Path::to_path_buf)
     }
@@ -1636,6 +1668,7 @@ impl Editorbereich {
     /// Die Flaeche wird dabei nicht angefasst. Was der Nutzer getippt hat,
     /// bleibt stehen: C4 sagt zu, ihn zu **unterrichten**, und nicht, ihm seinen
     /// Stand wegzunehmen.
+    #[must_use = "die Meldung ueber die Fremdaenderung geht nur ueber diese Antwort nach oben"]
     pub fn fremdaenderung_melden(&self) -> Option<String> {
         self.ivars().modell.borrow_mut().fremdaenderung_melden()
     }
@@ -1705,6 +1738,7 @@ impl Editorbereich {
     ///
     /// Die Ausleihe des Modells endet vor dem Ruf an den Kopf, wie ueberall in
     /// dieser Datei.
+    #[must_use = "ein gescheitertes Sichern meldet sich nur ueber diesen Ausgang; fallengelassen glaubt der Nutzer, die Datei stehe auf der Platte"]
     pub fn sichern(&self) -> Sicherungsausgang {
         let ausgang = self.ivars().modell.borrow_mut().sichern();
         if matches!(ausgang, Sicherungsausgang::Gesichert(_)) {
@@ -1764,13 +1798,12 @@ impl Editorbereich {
     /// jedem anderen Wechsel des Gehaltenen.
     pub fn schliessen(&self) {
         self.ivars().modell.borrow_mut().schliessen();
-        // Die Datei ist aufgegeben, und mit ihr ihr Verlauf.
-        self.stand_einsetzen(Verlauf::Faellt);
-        self.kopf_nachziehen();
-        // Ohne Datei gibt es keine Sprache und nichts einzufaerben; der Ruf
-        // raeumt die gesetzten Merkmale ab und laesst einen laufenden
-        // Einfaerbungsfaden fallen.
-        self.darstellung_nachziehen();
+        // Die Datei ist aufgegeben, und mit ihr ihr Verlauf. Die dritte der
+        // drei Zeilen, die `stand_erneuern` zusammenhaelt, taugt hier
+        // besonders: ohne Datei gibt es keine Sprache und nichts einzufaerben,
+        // und `darstellung_nachziehen` raeumt die gesetzten Merkmale ab und
+        // laesst einen laufenden Einfaerbungsfaden fallen.
+        self.stand_erneuern(Verlauf::Faellt);
     }
 
     /// Holt die Meldung des Arbeitsfadens ab (C2).
@@ -1990,9 +2023,18 @@ impl Editorbereich {
     /// Schreibt Dateiname und Abweichungszeichen in den Kopf (C4).
     ///
     /// **Die eine Stelle, die den Kopf beschreibt.** Sie wird gerufen, wo sich
-    /// eine der beiden Angaben aendern kann: beim Aufbau, nach einem gelungenen
-    /// Oeffnen, beim Uebergang in den ungesicherten Stand, nach einem
-    /// gelungenen Sichern und seit S28 nach dem Schliessen.
+    /// eine der beiden Angaben aendern kann: beim Uebergang in den
+    /// ungesicherten Stand, nach einem gelungenen Sichern, und ueber
+    /// [`Self::stand_erneuern`] bei jedem Wechsel des Gehaltenen — dem Aufbau,
+    /// dem gelungenen Oeffnen, dem Schliessen, dem Umkehren, dem Richten der
+    /// Zeilenenden und dem Ersetzen.
+    ///
+    /// **Eine Zaehlung steht hier nicht.** Sie sprach von fuenf Anlaessen und
+    /// uebersah den Zweig ueber [`Self::stand_erneuern`], der mit S37 drei
+    /// weitere hereingebracht hat
+    /// (`issues/260826-1327_*_stand-erneuern-nennt-drei-rufer-der-baum-traegt-sechs-und-bauen-und-schliessen-wiederholen-seinen-rumpf.md`);
+    /// `grep -n 'kopf_nachziehen(' crates/krk-ui/src/appkit/editor.rs` nennt die
+    /// unmittelbaren Rufer.
     ///
     /// Was dort steht, entscheidet [`kopfzeile`] ohne AppKit und ist deshalb
     /// ohne Fenster pruefbar.
@@ -2227,11 +2269,17 @@ impl Editorbereich {
     /// beiden Anzeigen nach.
     ///
     /// **Die drei Schritte, die zusammengehoeren**, und die eine Stelle, an der
-    /// sie stehen: der Text, der Kopf, die Darstellung. Drei Aufrufer gehen
-    /// durch sie — ein gelungenes Oeffnen, die uebernommene zurueckgehaltene
-    /// Datei und seit S37 das Ersetzen —, und ohne diese Funktion waeren es
-    /// drei Stellen mit derselben Reihenfolge und der ersten Gelegenheit, sie
-    /// verschieden zu schreiben.
+    /// sie stehen: der Text, der Kopf, die Darstellung. Ohne diese Funktion
+    /// waere jeder Aufrufer eine Stelle mit derselben Reihenfolge und der
+    /// ersten Gelegenheit, sie verschieden zu schreiben — und genau das ist
+    /// zweimal geschehen: [`Self::bauen`] und [`Self::schliessen`] schrieben
+    /// die drei Zeilen bis zum 260826 von Hand hin, waehrend der Doc-Kommentar
+    /// hier von drei Aufrufern sprach und der Baum sechs trug
+    /// (`issues/260826-1327_*_stand-erneuern-nennt-drei-rufer-der-baum-traegt-sechs-und-bauen-und-schliessen-wiederholen-seinen-rumpf.md`).
+    ///
+    /// **Wer ruft, sagt es an sich selbst**, und eine Zahl steht hier deshalb
+    /// nicht: `grep -n 'stand_erneuern(' crates/krk-ui/src/appkit/editor.rs`
+    /// nennt die Zeilen.
     ///
     /// **Sie gilt nicht fuer den Nutzer, der tippt.** Dessen Weg ist der
     /// umgekehrte: die Flaeche traegt den Stand schon, und
@@ -2353,6 +2401,7 @@ impl Editorbereich {
     /// Der Aufrufer steht seit S38: `cmd+d` mit dem Fokus im Editor baut sein
     /// `krk_core::ablage::Ziel::Textstelle` aus dieser Auskunft und aus
     /// [`Self::pfad`].
+    #[must_use]
     pub fn schreibmarkenzeile(&self) -> Option<(u32, String)> {
         let stelle = self.schreibmarke_in_utf16();
         let modell = self.ivars().modell.borrow();
@@ -2435,6 +2484,7 @@ impl Editorbereich {
     ///
     /// `None` heisst: es gibt nichts zu melden, weil der Sprung eine Zeile
     /// getroffen hat oder gar nicht stattfand.
+    #[must_use = "eine Zeilennummer ausserhalb der Datei meldet sich nur ueber diese Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
     pub fn zeile_anspringen(&self, eingabe: &str) -> Option<Editormeldung> {
         let eingabe = eingabe.trim();
         if eingabe.is_empty() {
@@ -2487,6 +2537,7 @@ impl Editorbereich {
     ///
     /// `None` heisst: es gibt nichts zu melden, weil der Sprung die gemerkte
     /// Stelle wiedergefunden hat.
+    #[must_use = "der Sprung meldet ueber diese Antwort, was er gefunden hat; fallengelassen bleibt der Nutzer ohne Auskunft"]
     pub fn marke_anspringen(&self, zeile: u32, zeileninhalt: &str) -> Option<Editormeldung> {
         let sprung = {
             let modell = self.ivars().modell.borrow();
@@ -2504,6 +2555,7 @@ impl Editorbereich {
     /// Die beiden Startwerte des Blattes aus S36. Der Suchtext kommt aus dem
     /// Modell, weil dort steht, wonach gesucht wird; laeuft keine Suche, ist er
     /// leer.
+    #[must_use]
     pub fn suchtexte(&self) -> (String, String) {
         let gesucht = self
             .ivars()
@@ -2530,6 +2582,7 @@ impl Editorbereich {
     ///
     /// Angesteuert wird der erste Treffer ab der Schreibmarke; hinter dem
     /// letzten laeuft die Suche um. Die Regel steht in `krk_core::text::suche`.
+    #[must_use = "der Stand der Suche steht allein in dieser Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
     pub fn suche_beginnen(&self, gesucht: &str, ersatz: &str) -> Editormeldung {
         let stelle = self.schreibmarke_in_utf16();
         let treffer = {
@@ -2543,11 +2596,13 @@ impl Editorbereich {
     }
 
     /// `cmd+g`: steuert den naechsten Treffer an (C5).
+    #[must_use = "der Stand der Suche steht allein in dieser Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
     pub fn weitersuchen(&self) -> Editormeldung {
         self.weiter_mit(Editormodell::weitersuchen)
     }
 
     /// `ctrl+cmd+g`: steuert den vorigen Treffer an (C5).
+    #[must_use = "der Stand der Suche steht allein in dieser Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
     pub fn rueckwaerts_suchen(&self) -> Editormeldung {
         self.weiter_mit(Editormodell::rueckwaerts_suchen)
     }
@@ -2597,6 +2652,7 @@ impl Editorbereich {
     /// `cmd+z` nach einem Ersetzen den vorigen Stand samt Schreibmarke **und den
     /// Suchlauf** zeigt und ein zweites den Anschlag davor —, nicht mehr die
     /// Frage, ob die Handlung angemeldet wird.
+    #[must_use = "die Zahl der ersetzten Treffer steht allein in dieser Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
     pub fn treffer_ersetzen(&self) -> Editormeldung {
         let steht_an = self
             .ivars()
@@ -2683,6 +2739,7 @@ impl Editorbereich {
     /// Dateigroesse statt so vieler, wie der Nutzer Rufe abgibt. Was der Nutzer
     /// davon merkt: das erste `cmd+z` nimmt das letzte Sammelersetzen zurueck, ein
     /// zweites tut nichts.
+    #[must_use = "die Zahl der ersetzten Treffer steht allein in dieser Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
     pub fn alle_treffer_ersetzen(&self) -> Editormeldung {
         let Some(anstehend) = self.ivars().modell.borrow().suchlauf().map(Suchlauf::zahl) else {
             return Editormeldung::KeineSuche;
@@ -2761,17 +2818,28 @@ impl Editorbereich {
     /// haengt an Zeichenstellen des Textspeichers, und der bleibt Zeichen fuer
     /// Zeichen derselbe. Das elfte Abnahmekriterium von C3 faellt daraus an.
     pub fn ansicht_umschalten(&self) {
-        self.ivars().modell.borrow_mut().ansicht_umschalten();
+        // `let _ =`: die Antwort ist die neue Ansicht, und die liest
+        // `darstellung_nachziehen` gleich darunter selbst aus dem Modell. Ein
+        // zweiter Weg dorthin waere die Gelegenheit, beide auseinanderlaufen zu
+        // lassen.
+        let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
         self.darstellung_nachziehen();
     }
 
     /// Setzt Grundschrift, Umbruch und Merkmale auf die gewaehlte Ansicht (C3).
     ///
-    /// **Die eine Stelle, an der die Darstellung entsteht**, und sie kennt vier
-    /// Aufrufer: den Aufbau, ein gelungenes Oeffnen, das Schliessen und den
-    /// Ansichtswechsel. Alle vier stellen dieselbe Frage — welche Ansicht,
-    /// welche Datei —, und eine zweite Stelle daneben waere die erste
-    /// Gelegenheit, sie verschieden zu beantworten.
+    /// **Die eine Stelle, an der die Darstellung entsteht.** Ihre Aufrufer sind
+    /// der Ansichtswechsel und, ueber [`Self::stand_erneuern`], jeder Wechsel
+    /// des Gehaltenen: der Aufbau, ein gelungenes Oeffnen, das Schliessen, das
+    /// Umkehren, das Richten der Zeilenenden und das Ersetzen. Alle stellen
+    /// dieselbe Frage — welche Ansicht, welche Datei —, und eine zweite Stelle
+    /// daneben waere die erste Gelegenheit, sie verschieden zu beantworten.
+    ///
+    /// **Eine Zahl steht hier nicht.** Sie sprach von vier Aufrufern und zaehlte
+    /// den Zweig ueber [`Self::stand_erneuern`] als einen mit
+    /// (`issues/260826-1327_*_stand-erneuern-nennt-drei-rufer-der-baum-traegt-sechs-und-bauen-und-schliessen-wiederholen-seinen-rumpf.md`);
+    /// `grep -n 'darstellung_nachziehen(' crates/krk-ui/src/appkit/editor.rs`
+    /// nennt die unmittelbaren Rufer.
     ///
     /// Die drei Sachen, die sich aendern, stehen in `### Frage 7` des Plans: die
     /// Schrift, der Umbruch und die Merkmale. Sie werden hier in dieser
@@ -3060,6 +3128,7 @@ impl Editorbereich {
 ///
 /// Ohne Datei bleibt der Kopf leer: der Editor zeigt dann nichts, was einen
 /// Namen haette, und ein Platzhalter waere ein Wort ueber ein Nichts.
+#[must_use]
 fn kopfzeile(pfad: Option<&Path>, ungesichert: bool) -> String {
     let Some(pfad) = pfad else {
         return String::new();
@@ -3422,7 +3491,7 @@ mod tests {
     /// kommentarlos nichts zu tun. Die drei Faelle, in denen die Nummer keine
     /// Zeile bezeichnet, tragen deshalb drei verschiedene Saetze.
     #[test]
-    fn die_drei_verfehlten_zeilensprünge_tragen_drei_verschiedene_saetze() {
+    fn die_drei_verfehlten_zeilenspruenge_tragen_drei_verschiedene_saetze() {
         let saetze = [
             Editormeldung::KeineZeilennummer {
                 eingabe: "zwölf".to_owned(),
@@ -3686,7 +3755,7 @@ mod tests {
     /// Funktion, die hinter `ctrl+cmd+r` steht. Die Staende sind deshalb die, die
     /// der Befehl herstellt, und nicht von Hand gebaute daneben.
     ///
-    /// # Was sie messt und was sie nicht schaetzt
+    /// # Was sie misst und was sie nicht schaetzt
     ///
     /// Zwei Durchgaenge ueber dieselbe Folge von Rufen. Der erste haelt die Punkte
     /// nicht und summiert allein ihre Bytes: ohne Budget faellt keiner von ihnen,
@@ -3785,7 +3854,7 @@ mod tests {
 
     /// Das Tippen bleibt unbegrenzt, und der Zaehler ist der Grund.
     ///
-    /// **Sie messt eine Abwesenheit**, und deshalb steht sie hier: das Budget
+    /// **Sie misst eine Abwesenheit**, und deshalb steht sie hier: das Budget
     /// greift ueber [`Stapellast`], und eine Handlung, die die `NSTextView` fuer
     /// einen Anschlag selbst anmeldet, geht durch keine [`Stapellast`]. Ein
     /// Zaehler, der bei null steht, kann keine Raeumung ausloesen — `0` plus ein
@@ -4252,7 +4321,7 @@ mod tests {
         /// getippt hat.
         ///
         /// Dass sie an der gebauten Flaeche wirklich aus steht, misst
-        /// [`die_sieben_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`].
+        /// [`die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`].
         Abgeschaltet,
         /// Sie darf anbleiben, weil sie den Textspeicher nicht anfasst.
         Geduldet,
@@ -4583,7 +4652,7 @@ mod tests {
     /// **Weder Flaeche noch Fenster.** Klasse, Protokoll und Selektoren stehen
     /// fuer sich, und die Aufzaehlung braucht keine Instanz. Dass die sieben
     /// Zeilen in [`textflaeche_bauen`] wirken, misst sie nicht — das misst
-    /// [`die_sieben_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`].
+    /// [`die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`].
     #[test]
     fn keine_unbekannte_einstellung_steht_an_der_textflaeche() {
         let getragen = getragene_einstellungen();

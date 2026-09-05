@@ -254,6 +254,7 @@ use krk_core::zwischenablage::Einfuegequelle;
 /// Reicht `NSPasteboard::generalPasteboard()` an [`lesen_aus`] und aendert
 /// dessen Antwort nicht; warum die Ablage hier im Rumpf und nicht in der
 /// Signatur steht, sagt der Modulkopf.
+#[must_use]
 pub fn lesen() -> Option<String> {
     lesen_aus(&NSPasteboard::generalPasteboard())
 }
@@ -300,6 +301,7 @@ pub fn lesen_aus(ablage: &NSPasteboard) -> Option<String> {
 /// Gefragt wird die Laenge des `NSData`, nicht seine Bytes; die Daten bleiben
 /// dabei im Pasteboard-Server liegen, wo sie ohnehin schon stehen. Die Zahl
 /// selbst kommt aus [`BILDGRENZE`], eine zweite entsteht nicht.
+#[must_use]
 pub fn inhalt_lesen() -> Zwischenablageinhalt {
     let ablage = NSPasteboard::generalPasteboard();
     for sorte in [unsafe { NSPasteboardTypePNG }, unsafe {
@@ -486,6 +488,7 @@ pub fn dateiverweise_schreiben(pfade: &[PathBuf], namen: &str) -> bool {
 /// Deutung im Kern, und der Grund ist C9: gaebe KRK ein `smb:` oder `ftp:` an
 /// das System, baute es ueber einen Umweg die Serververbindung auf, die C9
 /// ausschliesst.
+#[must_use = "die Antwort sagt, ob der Systembrowser die Adresse angenommen hat; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn im_browser_oeffnen(adresse: &str) -> bool {
     let Some(url) = NSURL::URLWithString(&NSString::from_str(adresse)) else {
         return false;
@@ -522,6 +525,7 @@ pub fn im_browser_oeffnen(adresse: &str) -> bool {
 /// Zusagedatei aus C7 ab, ohne dass KRK eine solche je einordnen muesste: es
 /// misst, was ihm gereicht wird, statt der abgebenden Anwendung eine Diagnose
 /// zu stellen. Ein `NSURL` ohne `path` faellt aus demselben Grund still weg.
+#[must_use]
 pub fn dateiverweise(ablage: &NSPasteboard) -> Vec<PathBuf> {
     let klassen = NSArray::from_slice(&[NSURL::class()]);
     let ja = NSNumber::new_bool(true);

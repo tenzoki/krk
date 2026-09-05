@@ -325,6 +325,7 @@ const EINZUGSTAKT: NSTimeInterval = 1.0 / 60.0;
 /// Die Kennung dient zugleich als Kennung der wiederverwendeten Zellenansicht:
 /// eine Ansicht, die aus der Namensspalte zurueckkommt, landet nur wieder in
 /// der Namensspalte und behaelt damit ihre Ausrichtung.
+#[must_use]
 fn kennung(spalte: Spalte) -> &'static NSString {
     match spalte {
         Spalte::Name => ns_string!("name"),
@@ -350,6 +351,7 @@ fn kennung(spalte: Spalte) -> &'static NSString {
 /// dieses Makro verlangt ein Literal an Ort und Stelle, und damit stuenden die
 /// uebernommenen Texte ein zweites Mal da. Gebaut wird die Zeichenkette beim
 /// Aufbau der Spalten der beiden Dateifenster.
+#[must_use]
 fn titel(spalte: Spalte) -> Retained<NSString> {
     let text = match spalte {
         Spalte::Geaendert => "Änderungsdatum",
@@ -365,6 +367,7 @@ fn titel(spalte: Spalte) -> Retained<NSString> {
 /// der Git-Runde); ueber ihr steht das Wort "Marke", und danach richten sich
 /// die 60 und die 45 Punkte. Eine Spalte, die auf die Breite ihres Inhalts
 /// gezogen waere, schnitte ihre eigene Ueberschrift ab.
+#[must_use]
 fn breiten(spalte: Spalte) -> (f64, f64) {
     match spalte {
         Spalte::Name => (240.0, 100.0),
@@ -382,6 +385,7 @@ fn breiten(spalte: Spalte) -> (f64, f64) {
 /// Markenspalte steht linksbuendig wie jeder andere Text: rechtsbuendig
 /// stuende er am Rand zur naechsten Spalte, und untereinander liegen einzelne
 /// Zeichen ohnehin.
+#[must_use]
 fn ausrichtung(spalte: Spalte) -> NSTextAlignment {
     match spalte {
         Spalte::Groesse => NSTextAlignment::Right,
@@ -393,6 +397,7 @@ fn ausrichtung(spalte: Spalte) -> NSTextAlignment {
 ///
 /// Der Parameter heisst `gesucht` und nicht `kennung`: der Name der Funktion
 /// darueber waere sonst in diesem Rumpf verdeckt.
+#[must_use]
 fn aus_kennung(gesucht: &NSString) -> Option<Spalte> {
     Spalte::ALLE
         .into_iter()
@@ -805,8 +810,13 @@ pub struct QuelleIvars {
     tabelle: Retained<NSTableView>,
     /// Die Bildlaufansicht um die Tabelle. Sie traegt die Bildlaufposition.
     sicht: Retained<NSScrollView>,
-    /// Was gerufen wird, wenn eine der fuenf Meldungsquellen dieses
+    /// Was gerufen wird, wenn eine der Meldungsquellen dieses
     /// Dateifensters sich geaendert hat.
+    ///
+    /// Welche das sind, sagt [`crate::appkit::statuszeile::Quellen`] mit seinen
+    /// Feldern und keine Zahl an dieser Stelle: sie stand bis zur Runde 10 auf
+    /// fuenf
+    /// (`issues/260826-1327_*_drei-prosastellen-in-tabelle-rs-zaehlen-fuenf-raenge-und-eine-quelle-ohne-feld-die-zeile-hat-sechs-und-zwei.md`).
     ///
     /// **Der Ersatz fuer die eigene Statuszeile am Fuss** (C5 der Runde 6).
     /// Dieses Dateifenster haelt seine Quellen weiter und entscheidet weiter
@@ -889,7 +899,7 @@ pub struct QuelleIvars {
     umbenennung: RefCell<Option<Umbenennungsmelder>>,
     /// Was KRK auf den letzten Tastenbefehl des Nutzers zu sagen hat.
     ///
-    /// Der oberste der fuenf Raenge und der einzige, der ueber der
+    /// Der oberste Rang der Zeile und der einzige, der ueber der
     /// Vorgangsanzeige steht: "es laeuft bereits eine Operation", "es ist
     /// nichts ausgewaehlt", "die Zwischenablage ist leer", der Abschlusstext
     /// eines Vorgangs. Der Nutzer hat eben eine Taste gedrueckt und sieht auf
@@ -1666,6 +1676,7 @@ impl DateifensterQuelle {
     /// meldet, und sie ist zugleich die Antwort auf die Frage, ob die erste
     /// Bildschirmseite steht: der Einzugstakt haengt den Stapel an und meldet
     /// der Tabelle im selben Zug die neue Zeilenzahl.
+    #[must_use]
     pub fn zeilen(&self) -> usize {
         self.ivars().tabs.borrow().aktiver().modell().zeilenzahl()
     }
@@ -1674,6 +1685,7 @@ impl DateifensterQuelle {
     ///
     /// Nur zum Ablesen. `false` heisst: gelesen **und** sortiert, denn der
     /// Einzugstakt gibt den Vorgang erst nach `abschliessen` frei.
+    #[must_use]
     pub fn liest_noch(&self) -> bool {
         self.ivars().tabs.borrow().aktiver().liest()
     }
@@ -1683,6 +1695,7 @@ impl DateifensterQuelle {
     /// Nur zum Ablesen, und ausdruecklich von der `NSTableView` und nicht vom
     /// Modell: die Messung von L1 fragt, welche Zeile der Nutzer *sieht*, und
     /// das ist die der Tabelle.
+    #[must_use]
     pub fn auswahlzeile(&self) -> isize {
         self.ivars().tabelle.selectedRow()
     }
@@ -1691,6 +1704,7 @@ impl DateifensterQuelle {
     ///
     /// Nur zum Ablesen, fuer die Endbedingung von L7: die Vorschau ist
     /// fertig, wenn sie genau diesen Pfad zeigt.
+    #[must_use]
     pub fn auswahl_pfad(&self) -> Option<PathBuf> {
         let zeile = self.ivars().tabelle.selectedRow();
         if zeile < 0 {
@@ -1707,6 +1721,7 @@ impl DateifensterQuelle {
     ///
     /// Nur zum Ablesen, fuer die Endbedingung von L8: die Zeile erscheint mit
     /// dem naechsten Zeichendurchgang, nachdem sie hier gesetzt wurde.
+    #[must_use]
     pub fn vorgang_sichtbar(&self) -> bool {
         self.ivars().vorgangsanzeige.borrow().is_some()
     }
@@ -1732,6 +1747,7 @@ impl DateifensterQuelle {
     /// Fenster als ganzes angeht, das Wechseln des aktiven Dateifensters und
     /// das Ein- und Ausblenden der Bereiche, faengt der Anwendungsdelegierte
     /// vorher ab; es kommt hier nicht an.
+    #[must_use = "die Antwort sagt, ob dieses Dateifenster den Befehl ausgefuehrt hat; fallengelassen laeuft der Tastendruck ungeprueft weiter"]
     pub fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
         match kommando {
             Kommando::AuswahlHoch => self.auswahl_bewegen(Bewegung::Um(-1)),
@@ -2205,6 +2221,7 @@ impl DateifensterQuelle {
     /// verbraucht.** Die Liste ist dann leer, und der naechste Rueckschritt
     /// gibt sie zurueck; ein Zeichen, das bei fehlendem Treffer an AppKit
     /// weiterliefe, machte den Filtertext von seinen Treffern abhaengig.
+    #[must_use = "die Antwort sagt, ob der Anschlag verbraucht ist; fallengelassen geht ein verbrauchtes Zeichen ein zweites Mal an AppKit"]
     pub fn filterzeichen_tippen(&self, zeichen: char) -> bool {
         if !traegt_ein_dateiname(zeichen) {
             return false;
@@ -2277,6 +2294,7 @@ impl DateifensterQuelle {
     /// Mindestmass von einer Zeile faengt den Fall ab, dass die Tabelle noch
     /// keine Groesse hat; eine Seitentaste, die um null Zeilen springt, waere
     /// eine tote Taste.
+    #[must_use]
     fn seitenhoehe(&self) -> isize {
         let tabelle = &self.ivars().tabelle;
         let sichtbare = tabelle.rowsInRect(tabelle.visibleRect()).length as isize;
@@ -2498,6 +2516,7 @@ impl DateifensterQuelle {
     ///
     /// Die Ausleihe des Tabmodells endet mit der Rueckgabe: der Pfad ist
     /// eigener Besitz, und der Aufrufer darf danach AppKit rufen.
+    #[must_use]
     fn eintrag_in_zeile(&self, zeile: usize) -> Option<(PathBuf, Typ)> {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
@@ -2559,12 +2578,12 @@ impl DateifensterQuelle {
             Ziel::Web(adresse) => {
                 if !super::zwischenablage::im_browser_oeffnen(&adresse) {
                     self.befehlsantwort_zeigen(&format!(
-                        "{adresse} liess sich nicht an den Systembrowser uebergeben"
+                        "{adresse} ließ sich nicht an den Systembrowser übergeben"
                     ));
                 }
             }
             Ziel::Nichts => self.befehlsantwort_zeigen(
-                "die Zwischenablage traegt weder einen absoluten Pfad noch eine Web-Adresse",
+                "die Zwischenablage trägt weder einen absoluten Pfad noch eine Web-Adresse",
             ),
         }
     }
@@ -2837,6 +2856,7 @@ impl DateifensterQuelle {
     }
 
     /// Ob in diesem Dateifenster gerade eine Namenszelle bearbeitet wird (C4).
+    #[must_use]
     pub fn namenszelle_in_bearbeitung(&self) -> bool {
         self.ivars().namensbearbeitung.get()
     }
@@ -3002,6 +3022,7 @@ impl DateifensterQuelle {
     /// [`Self::tiefe_suche_umschalten`] schreibt. Zwei verschiedene Adressen
     /// fuer Schreiben und Lesen zeigten einen Stand, den der Klick nicht
     /// gekippt hat.
+    #[must_use]
     pub fn tiefe_suche_steht(&self) -> bool {
         let tabs = self.ivars().tabs.borrow();
         tabs.aktiver().modell().tief()
@@ -3062,6 +3083,7 @@ impl DateifensterQuelle {
     /// **Der Aufrufer waehlt das Dateifenster**, und er waehlt das aktive und
     /// nicht das fokussierte — dieselbe Adresse, an die
     /// [`Self::inhaltssuche_umschalten`] schreibt.
+    #[must_use]
     pub fn inhaltssuche_steht(&self) -> bool {
         let tabs = self.ivars().tabs.borrow();
         tabs.aktiver().modell().inhalt()
@@ -3078,6 +3100,7 @@ impl DateifensterQuelle {
     /// **Ob der Filtertext Treffer hat, sagt sie nicht**, und das ist Absicht:
     /// ein Filtertext ohne Treffer schuetzt genauso wie einer mit Treffern
     /// (C6.10).
+    #[must_use]
     pub fn filter_steht(&self) -> bool {
         let tabs = self.ivars().tabs.borrow();
         tabs.aktiver().modell().filter_steht()
@@ -3257,6 +3280,7 @@ impl DateifensterQuelle {
     }
 
     /// Ob der Eintrag dieser Zeile markiert ist (C2).
+    #[must_use]
     fn zeile_markiert(&self, zeile: usize) -> bool {
         let tabs = self.ivars().tabs.borrow();
         let modell = tabs.aktiver().modell();
@@ -3293,6 +3317,7 @@ impl DateifensterQuelle {
     /// in den Eintragsindex um und fragt, genau wie [`Self::zeile_markiert`]
     /// daneben. Eine zweite Fassung in `krk-ui` waere die zweite Antwort auf
     /// dieselbe Frage und liefe irgendwann von der ersten weg.
+    #[must_use]
     fn zeile_steht_wegen_des_inhalts(&self, zeile: usize) -> bool {
         let tabs = self.ivars().tabs.borrow();
         let modell = tabs.aktiver().modell();
@@ -3357,8 +3382,9 @@ impl DateifensterQuelle {
         self.ivars().sicht.reflectScrolledClipView(&inhalt);
     }
 
-    /// Meldet, dass eine der sechs Quellen dieses Dateifensters sich geaendert
-    /// hat.
+    /// Meldet, dass eine der Quellen dieses Dateifensters sich geaendert
+    /// hat; welche es gibt, sagen die Felder von
+    /// [`crate::appkit::statuszeile::Quellen`].
     ///
     /// **Sie schreibt nichts und entscheidet nichts.** Bis zur Runde 6 hiess
     /// diese Methode `meldung_anzeigen` und setzte die eigene Zeile am Fuss
@@ -3450,11 +3476,13 @@ impl DateifensterQuelle {
         (markierung, modell.filtertext().to_owned(), filterstand)
     }
 
-    /// Der sechste Rang der Statuszeile: was im sichtbaren Tab markiert ist
-    /// (C2).
+    /// Der unterste Rang der Statuszeile: was im sichtbaren Tab markiert ist
+    /// (C2). Wo er in der Rangfolge steht, sagt [`crate::appkit::statuszeile::Rang::ALLE`].
     ///
-    /// **Die einzige Quelle der Zeile ohne eigenes Feld, und das ist der
-    /// Entwurf.** Die vier anderen halten je einen Text, den jemand setzt und
+    /// **Eine der beiden Quellen der Zeile ohne eigenes Feld, und das ist der
+    /// Entwurf.** Die zweite ist der Filterstand aus C4 der Runde 10; beide
+    /// rechnet [`Self::gerechnete_raenge`] in einem Durchlauf. Die uebrigen
+    /// Quellen halten je einen Text, den jemand setzt und
     /// eine Regel loescht. Ein Feld haette hier vier Schreiber, die vier
     /// Markierungsbefehle, die Auffrischung, den Tabwechsel und den
     /// Sortierwechsel, und damit vier Gelegenheiten, veraltet zu sein. Die
@@ -4896,6 +4924,7 @@ impl Namensfeld {
     /// genau diesen Delegierten kommt. Wer `None` melden wollte, brauchte das,
     /// was `None` gerade sagt, dass es fehlt. Gehalten wird der Fall deshalb
     /// nicht von einer Meldung, sondern von der Notiz an der Setzstelle.
+    #[must_use]
     fn delegierter(&self) -> Option<Retained<DateifensterDelegierter>> {
         let ziel = self.target()?;
         ziel.downcast::<DateifensterDelegierter>().ok()
@@ -5240,6 +5269,7 @@ fn spaltenkopf(mtm: MainThreadMarker, spalte: Spalte) -> Retained<NSTableColumn>
 /// Einziger Aufrufer ist die Metadatenanzeige der Vorschau (C6), die die
 /// Eintragsart weiterhin zusagt. Die Spalte `Typ` der Tabelle zeigt seit dem
 /// Entscheid vom 260806 die Dateiendung und ruft diese Wortliste nicht mehr.
+#[must_use]
 pub(super) fn typ_beschriften(typ: Typ) -> &'static str {
     match typ {
         Typ::Ordner => "Ordner",

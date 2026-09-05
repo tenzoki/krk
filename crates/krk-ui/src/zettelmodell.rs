@@ -99,6 +99,7 @@ pub struct Zettelmodell {
 
 impl Zettelmodell {
     /// Welcher Zettel gerade offen ist.
+    #[must_use]
     pub fn offener(&self) -> Zettel {
         self.offener
     }
@@ -215,6 +216,7 @@ impl Zettelmodell {
     /// [`zu_sichern`](Self::zu_sichern) nennt ihn ohnehin beim Namen; der
     /// Rueckgabewert hier sagt, ob ueberhaupt zu sichern ist, **bevor** der
     /// Aufrufer einen Durchgang durch die Ablage nimmt.
+    #[must_use = "der Wechsel kann ein Sichern verlangen; fallengelassen faellt der Stand des verlassenen Zettels unbemerkt weg"]
     pub fn wechseln(&mut self, ziel: Zettel) -> Wechsel {
         if ziel == self.offener {
             return Wechsel::Derselbe;

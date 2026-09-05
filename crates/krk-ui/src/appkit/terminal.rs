@@ -87,6 +87,7 @@ use objc2_foundation::{NSArray, NSString, NSURL};
 ///
 /// Die eine Stelle des Programms, die eine Buendelkennung in einen
 /// Anwendungsort aufloest.
+#[must_use = "die Antwort sagt, ob eine Anwendung dieser Kennung installiert ist; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
     let arbeitsflaeche = NSWorkspace::sharedWorkspace();
     let Some(anwendung) =

@@ -307,6 +307,7 @@ impl Leistenquelle {
     }
 
     /// Die Lesezeichen, wie sie auf die Platte gehoeren.
+    #[must_use]
     pub fn lesezeichenliste(&self) -> krk_core::ablage::Lesezeichenliste {
         self.ivars().modell.borrow().lesezeichenliste()
     }
@@ -316,6 +317,7 @@ impl Leistenquelle {
     /// Das Ziel der drei Befehle, die ein vorhandenes Lesezeichen aendern. Der
     /// Eintrag und nicht seine Stelle; der Grund steht bei
     /// [`Leistenmodell::gewaehltes_lesezeichen_wert`].
+    #[must_use]
     pub fn gewaehltes_lesezeichen(&self) -> Option<krk_core::ablage::Lesezeichen> {
         self.ivars().modell.borrow().gewaehltes_lesezeichen_wert()
     }
@@ -342,6 +344,7 @@ impl Leistenquelle {
     /// gehoert nicht hierher: entweder hat der Wirkungsbereich es schon
     /// abgewiesen, oder es ist ein Befehl des Fensters, den der
     /// Anwendungsdelegierte selbst ausfuehrt.
+    #[must_use = "die Antwort sagt, ob die Leiste den Befehl ausgefuehrt hat; fallengelassen laeuft der Tastendruck ungeprueft weiter"]
     pub fn kommando_ausfuehren(&self, kommando: Kommando) -> bool {
         let schritt = match kommando {
             Kommando::AuswahlHoch => -1,

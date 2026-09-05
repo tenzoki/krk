@@ -69,6 +69,7 @@ pub struct Ort {
 
 impl Ort {
     /// Ein Ort aus Name und Pfad.
+    #[must_use]
     pub fn neu(name: impl Into<String>, pfad: impl Into<PathBuf>) -> Self {
         Self {
             name: name.into(),
@@ -90,6 +91,7 @@ pub enum Zeile {
 
 impl Zeile {
     /// Ob der Nutzer diese Zeile auswaehlen kann.
+    #[must_use]
     pub fn waehlbar(self) -> bool {
         !matches!(self, Zeile::Ueberschrift(_))
     }
@@ -106,6 +108,7 @@ pub enum Teil {
 
 impl Teil {
     /// Die Beschriftung der Ueberschriftszeile.
+    #[must_use]
     pub fn ueberschrift(self) -> &'static str {
         match self {
             Teil::Lesezeichen => UEBERSCHRIFT_LESEZEICHEN,
@@ -174,6 +177,7 @@ impl Auswahl {
     /// Dateisystem, und welcher Art er waere, sagt der Satz nicht. Wer die
     /// Sorte braucht, sieht auf [`Self::ziel`] und bekommt dort eine
     /// vollstaendige Fallunterscheidung.
+    #[must_use]
     pub fn pfad(&self) -> &Path {
         match &self.ziel {
             Ziel::Ordner { ordner } => ordner,
@@ -239,6 +243,7 @@ pub struct Leistenmodell {
 
 impl Leistenmodell {
     /// Ein leeres Modell mit den beiden Ueberschriften.
+    #[must_use]
     pub fn neu() -> Self {
         let mut modell = Self::default();
         modell.zeilen_bauen();
@@ -270,7 +275,9 @@ impl Leistenmodell {
     /// neu. Er zaehlt allein am vierten Anlass, wo nichts weiter passiert ist.
     pub fn orte_setzen(&mut self, orte: Vec<Ort>) {
         self.orte = orte;
-        self.gueltigkeit_pruefen();
+        // `let _ =`: der Grund steht im Absatz darueber — die Ortsliste hat sich
+        // ohnehin geaendert, die Ansicht zeichnet danach in jedem Fall neu.
+        let _ = self.gueltigkeit_pruefen();
         self.zeilen_bauen();
     }
 
@@ -300,6 +307,7 @@ impl Leistenmodell {
     /// etwas tut. Loescht ein **fremdes** Programm den Ordner, steht die Marke
     /// deshalb weiterhin bis zur naechsten Auswahl falsch; die Zusage aus C5
     /// haelt auch dann, weil die Auswahl den Grund immer meldet.
+    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht neu zeichnen"]
     pub fn gueltigkeit_pruefen(&mut self) -> bool {
         let mut geaendert = false;
         for gemerkt in &mut self.lesezeichen {
@@ -311,6 +319,7 @@ impl Leistenmodell {
     }
 
     /// Die Lesezeichen, wie sie auf die Platte gehoeren.
+    #[must_use]
     pub fn lesezeichenliste(&self) -> Lesezeichenliste {
         Lesezeichenliste::aus(
             self.lesezeichen
@@ -321,16 +330,19 @@ impl Leistenmodell {
     }
 
     /// Alle Zeilen, von oben nach unten.
+    #[must_use]
     pub fn zeilen(&self) -> &[Zeile] {
         &self.zeilen
     }
 
     /// Die Zeile an dieser Stelle.
+    #[must_use]
     pub fn zeile(&self, stelle: usize) -> Option<Zeile> {
         self.zeilen.get(stelle).copied()
     }
 
     /// Die Beschriftung einer Zeile, so wie sie in der Leiste steht.
+    #[must_use]
     pub fn beschriftung(&self, stelle: usize) -> Option<String> {
         match self.zeile(stelle)? {
             Zeile::Ueberschrift(teil) => Some(teil.ueberschrift().to_owned()),
@@ -349,6 +361,7 @@ impl Leistenmodell {
     ///
     /// Die Leiste faerbt sie danach; der Zusatz im Text kommt aus
     /// [`Leistenmodell::beschriftung`].
+    #[must_use]
     pub fn ungueltig(&self, stelle: usize) -> bool {
         match self.zeile(stelle) {
             Some(Zeile::Lesezeichen(stelle)) => {
@@ -369,6 +382,7 @@ impl Leistenmodell {
     /// Eintrag; ob sein Ziel noch da ist, beantwortet
     /// [`Leistenmodell::ungueltig`] aus der Marke, die
     /// [`Gemerkt::nachpruefen`] gesetzt hat.
+    #[must_use]
     pub fn sinnbild(&self, stelle: usize) -> Option<Sinnbild> {
         match self.zeile(stelle)? {
             Zeile::Ueberschrift(_) => None,
@@ -386,6 +400,7 @@ impl Leistenmodell {
     }
 
     /// Die ausgewaehlte Zeile.
+    #[must_use]
     pub fn auswahl(&self) -> Option<usize> {
         self.auswahl
     }
@@ -395,6 +410,7 @@ impl Leistenmodell {
     /// Liefert, ob sich die Auswahl dadurch geaendert hat. Eine Ueberschrift
     /// laesst die Auswahl stehen: sie ist keine, und der Mausklick auf sie soll
     /// die vorige nicht wegnehmen.
+    #[must_use]
     pub fn waehlen(&mut self, stelle: usize) -> bool {
         if !self.zeile(stelle).is_some_and(Zeile::waehlbar) || self.auswahl == Some(stelle) {
             return false;
@@ -409,6 +425,7 @@ impl Leistenmodell {
     /// Liefert, ob sie sich bewegt hat. Ohne Auswahl faengt sie bei der ersten
     /// waehlbaren Zeile an, gleich in welche Richtung: die Leiste hat gerade
     /// den Fokus bekommen, und der Nutzer erwartet einen sichtbaren Anfang.
+    #[must_use]
     pub fn auswahl_bewegen(&mut self, schritt: isize) -> bool {
         let Some(jetzt) = self.auswahl else {
             let erste = self.naechste_waehlbare(0, 1);
@@ -442,6 +459,7 @@ impl Leistenmodell {
     ///
     /// `None` bleibt fuer eine Ueberschrift: sie oeffnet nichts, wie das
     /// fehlende Sinnbild in [`Self::sinnbild`] es schon sagt.
+    #[must_use]
     pub fn gewaehlt(&self) -> Option<Auswahl> {
         match self.zeile(self.auswahl?)? {
             Zeile::Ueberschrift(_) => None,
@@ -471,6 +489,7 @@ impl Leistenmodell {
     /// `None`, wenn die Auswahl auf einer Ueberschrift oder einem Geraet steht.
     /// Die vier Befehle, die ein Lesezeichen aendern, wirken dann nicht; sie
     /// melden das nicht, wie der Wirkungsbereich es auch nicht tut.
+    #[must_use]
     pub fn gewaehltes_lesezeichen(&self) -> Option<usize> {
         match self.zeile(self.auswahl?)? {
             Zeile::Lesezeichen(stelle) => Some(stelle),
@@ -486,6 +505,7 @@ impl Leistenmodell {
     /// eine Zahl in **dieser** Liste, und geschrieben wird auf die frisch von
     /// der Platte gelesene, in der an derselben Stelle ein anderes stehen kann.
     /// Der Modulkopf von [`krk_core::ablage::lesezeichen`] schreibt es aus.
+    #[must_use]
     pub fn gewaehltes_lesezeichen_wert(&self) -> Option<Lesezeichen> {
         let stelle = self.gewaehltes_lesezeichen()?;
         self.lesezeichen
@@ -698,13 +718,13 @@ mod tests {
     #[test]
     fn am_rand_haelt_die_auswahl_an() {
         let mut modell = modell();
-        modell.waehlen(1);
+        let _ = modell.waehlen(1);
         assert!(
             !modell.auswahl_bewegen(-1),
             "oberhalb steht die Ueberschrift"
         );
         assert_eq!(modell.auswahl(), Some(1));
-        modell.waehlen(5);
+        let _ = modell.waehlen(5);
         assert!(!modell.auswahl_bewegen(1), "darunter steht nichts mehr");
         assert_eq!(modell.auswahl(), Some(5));
     }
@@ -712,7 +732,7 @@ mod tests {
     #[test]
     fn eine_ueberschrift_laesst_sich_nicht_waehlen() {
         let mut modell = modell();
-        modell.waehlen(1);
+        let _ = modell.waehlen(1);
         assert!(!modell.waehlen(0));
         assert!(!modell.waehlen(3));
         assert_eq!(modell.auswahl(), Some(1));
@@ -721,7 +741,7 @@ mod tests {
     #[test]
     fn die_auswahl_nennt_ordner_und_gueltigkeit() {
         let mut modell = modell();
-        modell.waehlen(2);
+        let _ = modell.waehlen(2);
         assert_eq!(
             modell.gewaehlt(),
             Some(Auswahl {
@@ -733,7 +753,7 @@ mod tests {
             }),
             "/zwei gibt es nicht, also ist das Lesezeichen ungueltig"
         );
-        modell.waehlen(5);
+        let _ = modell.waehlen(5);
         assert_eq!(
             modell.gewaehlt(),
             Some(Auswahl {
@@ -868,7 +888,7 @@ mod tests {
         let mut modell = modell();
         // Die Auswahl steht auf einem Geraet: es gibt kein Ziel, und die drei
         // Befehle, die eines brauchen, kommen gar nicht erst zum Rechnen.
-        modell.waehlen(4);
+        let _ = modell.waehlen(4);
         assert!(modell.gewaehltes_lesezeichen_wert().is_none());
         assert!(
             gewaehltes_aendern(&mut modell, |welches| Aenderung::Umbenennen {
@@ -1089,7 +1109,7 @@ mod tests {
     #[test]
     fn die_auswahl_wandert_mit_dem_verschobenen_lesezeichen() {
         let mut modell = modell();
-        modell.waehlen(2);
+        let _ = modell.waehlen(2);
         assert_eq!(
             gewaehltes_aendern(&mut modell, |welches| Aenderung::Verschieben {
                 welches,
@@ -1116,7 +1136,7 @@ mod tests {
             "Eins", "/eins",
         )]));
         modell.orte_setzen(vec![Ort::neu("Benutzer", "/Users/pruefung")]);
-        modell.waehlen(1);
+        let _ = modell.waehlen(1);
 
         assert_eq!(
             gewaehltes_aendern(&mut modell, |welches| Aenderung::Loeschen { welches }),
@@ -1134,7 +1154,7 @@ mod tests {
     #[test]
     fn ein_geraet_mehr_laesst_die_auswahl_stehen() {
         let mut modell = modell();
-        modell.waehlen(2);
+        let _ = modell.waehlen(2);
         modell.orte_setzen(vec![
             Ort::neu("Benutzer", "/Users/pruefung"),
             Ort::neu("Macintosh HD", "/"),
@@ -1158,11 +1178,11 @@ mod tests {
         assert!(modell.ungueltig(1));
 
         ordner.anlegen();
-        modell.gueltigkeit_pruefen();
+        let _ = modell.gueltigkeit_pruefen();
         assert!(!modell.ungueltig(1));
 
         ordner.loeschen();
-        modell.gueltigkeit_pruefen();
+        let _ = modell.gueltigkeit_pruefen();
         assert!(modell.ungueltig(1));
     }
 

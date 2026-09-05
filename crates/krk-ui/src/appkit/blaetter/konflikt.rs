@@ -136,6 +136,7 @@ const FELDHOEHE: f64 = 24.0;
 ///
 /// `genau_ein_ziel` ist die Auskunft aus
 /// [`crate::kommandos::operationen::erzeugt_genau_ein_ziel`].
+#[must_use]
 fn schaltflaechen(genau_ein_ziel: bool) -> Vec<Schaltflaeche<'static>> {
     if genau_ein_ziel {
         vec![
@@ -191,6 +192,7 @@ fn schaltflaechen(genau_ein_ziel: bool) -> Vec<Schaltflaeche<'static>> {
 /// Grund, den [`super::bestaetigungsstelle`] fuer ihre zweite Tafelzeile
 /// ausschreibt: lieber nichts tun als raten. Eine vollstaendige
 /// Fallunterscheidung ohne Auffangzweig ist ueber `usize` nicht zu haben.
+#[must_use]
 fn antwort(stelle: usize, genau_ein_ziel: bool, name: &str) -> Konfliktantwort {
     if genau_ein_ziel {
         match stelle {
@@ -214,6 +216,7 @@ fn antwort(stelle: usize, genau_ein_ziel: bool, name: &str) -> Konfliktantwort {
 /// [`schaltflaechen`] anlegt. Bis zur Runde 17 sagte er in beiden Faellen
 /// "Return überspringt"; in der gekuerzten Gestalt gibt es kein Überspringen
 /// mehr, und der Satz nennt die Eingabetaste dort beim Abbruch.
+#[must_use]
 fn tastenhinweis(genau_ein_ziel: bool) -> &'static str {
     if genau_ein_ziel {
         "Return und Esc brechen ab, Cmd+Return überschreibt, Opt+Return benennt um."
@@ -293,6 +296,7 @@ struct AntwortAblesen {
 
 impl AntwortAblesen {
     /// Der Name, den der Nutzer stehen gelassen oder getippt hat.
+    #[must_use]
     fn name(&self) -> String {
         self.feld.stringValue().to_string().trim().to_owned()
     }

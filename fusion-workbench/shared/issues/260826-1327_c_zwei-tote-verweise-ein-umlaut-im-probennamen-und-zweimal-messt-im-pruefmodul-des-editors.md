@@ -25,3 +25,7 @@ Umlaut im Bezeichner, und zwei Ueberschriften schreiben "messt".
 ## Umfang
 
 `krk-ui`, `appkit/editor.rs`, Pruefmodul.
+
+
+---
+Resolved: Alle vier Stellen in `crates/krk-ui/src/appkit/editor.rs` berichtigt. Die zwei toten Verweise zeigen jetzt auf `die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus`, den Namen, den die Probe seit dem Umbau auf neun traegt. Der einzige Bezeichner mit Umlaut heisst jetzt `die_drei_verfehlten_zeilenspruenge_tragen_drei_verschiedene_saetze` und steht damit in derselben Umschrift wie `saetze` im selben Namen; `grep -rnP 'fn [a-z_]*[^\x00-\x7F]' crates/krk-ui/src/` liefert nichts mehr. Die zwei Ueberschriften sagen „misst" statt „messt". Gepruefte Abnahme: `cargo test -p krk-ui` — exit 0, und `cargo doc -p krk-ui --no-deps --document-private-items` meldet die zwei Verweise nicht mehr.

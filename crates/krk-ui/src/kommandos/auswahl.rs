@@ -21,6 +21,7 @@ use super::operationen::{ordner_text, zahl};
 /// bleibt sie stehen, wie bei jeder anderen Bewegung auch: der Eintrag ist
 /// markiert, und ein Umlauf an den Listenanfang begaenne eine zweite Runde, in
 /// der jeder Tastendruck die Markierung wieder abraeumte.
+#[must_use]
 pub fn markieren_und_weiter(modell: &mut Ordnermodell, zeile: usize) -> Option<usize> {
     let eintrag = modell.eintragsindex(zeile)?;
     modell.markierung_umschalten(eintrag);
@@ -41,6 +42,7 @@ pub fn markieren_und_weiter(modell: &mut Ordnermodell, zeile: usize) -> Option<u
 /// Die Ordnerzahl steht auch dann da, wenn sie null ist. Sie wegzulassen waere
 /// eine zweite Wortform mit einer eigenen Bedingung, und der Nutzer muesste aus
 /// ihrer Abwesenheit schliessen, dass kein Ordner markiert ist.
+#[must_use]
 pub fn markierungsstand_text(stand: Markierungsstand, groesse: &str) -> Option<String> {
     if stand.ist_leer() {
         return None;
