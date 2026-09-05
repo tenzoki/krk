@@ -40,13 +40,23 @@
 //! gebaut wurde, den er gleich schiebt.
 //!
 //! **`gh` wird ueber den Suchpfad gerufen und nicht mit vollem Pfad.** Das
-//! weicht von der Gewohnheit dieses Baums ab, der `/usr/bin/git`,
-//! `/usr/bin/codesign`, `/usr/bin/ditto` und `/usr/bin/xcrun` mit vollem Pfad
-//! ruft, und die Abweichung hat einen Grund: jene vier liefert das System, `gh`
-//! wird nachinstalliert. Es liegt je nach Mac-Architektur unter
-//! `/opt/homebrew/bin` oder unter `/usr/local/bin`, ein fester Pfad waere also
-//! auf einem der beiden Geraete falsch. Die Frage, ob das die Regel fuer jedes
-//! kuenftige fremde Werkzeug wird, liegt dem Nutzer vor:
+//! weicht von der Gewohnheit dieses Baums ab, der die Werkzeuge des
+//! Basissystems mit vollem Pfad ruft; welche das sind, zaehlt
+//! `grep -rhoE 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u`, und
+//! eine Aufzaehlung steht hier deshalb nicht. Die Abweichung hat einen Grund:
+//! jene liefert das System, `gh` wird nachinstalliert. Es liegt je nach
+//! Mac-Architektur unter `/opt/homebrew/bin` oder unter `/usr/local/bin`, ein
+//! fester Pfad waere also auf einem der beiden Geraete falsch.
+//!
+//! **`gh` ist dabei nicht die erste Ausnahme.** `iconutil`
+//! (`bundle::symbol_bauen`) und `rustup` (`release::ziele_pruefen`) gehen
+//! denselben Weg und sind aelter; welche Werkzeuge ueber den Suchpfad gerufen
+//! werden, zaehlt `grep -rn 'Command::new("[a-z]' xtask/src` neben dieser
+//! Konstanten. Drei Prosastellen haben `gh` bis zum 260826 als die erste
+//! genannt
+//! (`shared/issues/260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`).
+//! Die Frage, ob der Suchpfad die Regel fuer jedes kuenftige fremde Werkzeug
+//! wird, liegt dem Nutzer vor:
 //! `shared/decisions/260821-1221_o_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`.
 
 use std::fs;
@@ -190,6 +200,54 @@ pub(crate) fn gh_pruefen() -> Result<(), Abbruch> {
         return Err(Abbruch::Lauf(nicht_angemeldet_meldung()));
     }
     Ok(())
+}
+
+/// Fragt vorab, ob die Releaseseite zu dieser Zahl schon steht.
+///
+/// **Die zweite aeussere Voraussetzung der achten Station, an Station 1
+/// gestellt.** Sie steht aus demselben Grund vorn wie [`gh_pruefen`]: eine
+/// fehlende Voraussetzung soll auffallen, solange nichts geschehen ist. Ohne
+/// sie lief ein irrtuemlich wiederholtes `./release.sh <zahl>` durch drei
+/// Uebersetzungslaeufe, die Signierung und eine Einreichung bei Apple und
+/// hielt erst an der Existenzfrage der achten Station
+/// (`shared/issues/260826-1443_*_eine-irrtuemliche-wiederholung-einer-schon-veroeffentlichten-zahl-wird-erst-nach-bau-und-einreichung-angehalten.md`).
+///
+/// **Nur der `release`-Weg ruft sie.** Der eigenstaendige Weg
+/// (`cargo xtask veroeffentlichen`) behaelt seine Frage unmittelbar vor dem
+/// Anlegen, wo sie ohnehin steht; eine zweite davor waere derselbe Aufruf
+/// zweimal in einem Lauf, der nichts dazwischen tut.
+///
+/// Sie liest allein und laesst den Baum, wie er ist.
+pub(crate) fn release_frei_pruefen(wurzel: &Path, zahl: &str) -> Result<(), Abbruch> {
+    let tag = tagname(zahl);
+    if release_steht(wurzel, &tag)? {
+        return Err(Abbruch::Lauf(release_steht_vorab_meldung(&tag)));
+    }
+    println!("Die Gegenseite fuehrt noch kein Release {tag}.");
+    Ok(())
+}
+
+/// Die Meldung, wenn das Release schon steht und noch nichts geschehen ist.
+///
+/// Getrennt von [`release_steht_meldung`], und der Grund ist derselbe, aus dem
+/// [`vorab_ohne_gh_meldung`] und [`spaet_ohne_gh_meldung`] zwei sind: der Stand
+/// des Laufs ist an den zwei Stellen verschieden. Hier ist nichts gepackt,
+/// nichts geschoben und nichts eingereicht — und genau das ist die Auskunft,
+/// die den Abbruch hier von dem an der achten Station unterscheidet.
+#[must_use]
+fn release_steht_vorab_meldung(tag: &str) -> String {
+    format!(
+        "Auf der Gegenseite steht bereits ein Release {tag}. Eine Auslieferung darauf haette \
+         nichts anzulegen.\n\
+         \n\
+         Es ist nichts uebersetzt, nichts signiert, nichts bei Apple eingereicht und nichts \
+         geschoben; der Abbruch steht an Station 1, damit genau das so bleibt.\n\
+         \n\
+         Abhilfe ist eine neue Versionszahl:\n\
+         \x20      ./release.sh <zahl>\n\
+         \n\
+         Eine stehende Seite ueberschreibt auch `cargo xtask veroeffentlichen` nicht."
+    )
 }
 
 /// Die Meldung, wenn `gh` nicht zu starten ist.
@@ -693,9 +751,8 @@ vollständige Tastenbelegung gibt die laufende Anwendung selbst aus, mit **F1**.
 
 Ein Überkopieren ist gefahrlos, ein Löschen ist es nicht. Werkzeuge, die eine App samt
 ihrer Stützdateien entfernen — der App Deleter von ForkLift ist eines —, nehmen dabei den
-Ordner `~/Library/Application Support/KRK/` mit. Dort hält KRK alles, was es sich merkt:
-die Lesezeichen, die gesicherte Sitzung, die abweichende Tastenbelegung und die zwei
-Notizzettel. Nach so einem Löschen sind sie fort.
+Ordner `~/Library/Application Support/KRK/` mit. Dort hält KRK alles, was es sich merkt.
+Nach so einem Löschen ist es fort.
 
 Wer doch löschen will, kopiert vorher den Ordner `~/Library/Application Support/KRK/` an
 eine andere Stelle und schreibt die Kopie nach der Installation zurück.
@@ -897,6 +954,37 @@ mod tests {
         for meldung in [&vorab, &spaet] {
             assert!(meldung.contains("brew install gh"), "{meldung}");
             assert!(meldung.contains(grund), "{meldung}");
+        }
+    }
+
+    /// Die zwei Meldungen zum stehenden Release nennen je ihren eigenen Stand.
+    ///
+    /// Derselbe Schnitt wie bei den `gh`-Meldungen darueber: an Station 1 ist
+    /// nichts geschehen, an der achten liegt das Zip und ist geschoben. Ein
+    /// gemeinsamer Wortlaut waere an einer der beiden Stellen das Gegenteil
+    /// dessen, was auf der Platte steht.
+    #[test]
+    fn die_zwei_meldungen_zum_stehenden_release_nennen_je_ihren_stand() {
+        let vorab = release_steht_vorab_meldung("v1.2.0");
+        assert!(vorab.contains("nichts uebersetzt"), "{vorab}");
+        assert!(vorab.contains("nichts geschoben"), "{vorab}");
+        assert!(vorab.contains("Station 1"), "{vorab}");
+        assert!(!vorab.contains("Gepackt ist"), "{vorab}");
+
+        let spaet = release_steht_meldung("v1.2.0", Path::new("/ziel/KRK-1.2.0.zip"));
+        assert!(spaet.contains("Gepackt ist"), "{spaet}");
+        assert!(spaet.contains("geschoben ist ebenfalls schon"), "{spaet}");
+        assert!(!spaet.contains("Station 1"), "{spaet}");
+
+        // Beide sagen, dass nichts ueberschrieben wird; der Satzbau trennt sie.
+        assert!(vorab.contains("ueberschreibt"), "{vorab}");
+        assert!(spaet.contains("nicht ueberschrieben"), "{spaet}");
+
+        // Und beide tragen, was an beiden Stellen stimmt: die Lage und die
+        // Abhilfe.
+        for meldung in [&vorab, &spaet] {
+            assert!(meldung.contains("Release v1.2.0"), "{meldung}");
+            assert!(meldung.contains("./release.sh <zahl>"), "{meldung}");
         }
     }
 
@@ -1171,12 +1259,6 @@ mod tests {
                 "den Ordner, den ein Loeschen mitnimmt",
                 "~/Library/Application Support/KRK/",
             ),
-            (
-                "was in ihm liegt",
-                "die Lesezeichen, die gesicherte Sitzung",
-            ),
-            ("die Tastenbelegung", "Tastenbelegung"),
-            ("die zwei Notizzettel", "Notizzettel"),
             ("die Absicherung", "kopiert vorher den Ordner"),
         ] {
             assert!(
@@ -1187,6 +1269,22 @@ mod tests {
         assert!(
             !text.contains(ZAHLPLATZHALTER),
             "eine Fuegestelle ist ungefuellt geblieben: {text}"
+        );
+
+        // Was in dem Ordner liegt, steht als **eine** Aussage da und nicht als
+        // Aufzaehlung. Bis zum 260905 nannte der Text vier der sieben Dateien
+        // aus `Datei::ALLE` und las sich dabei vollstaendig; wer weder
+        // Lesezeichen noch Zettel pflegt, aber Leseprofile von Hand
+        // geschrieben hat, hielt die Regel danach fuer unerheblich
+        // (`shared/issues/260826-1444_*_der-releasetext-nennt-vier-von-sieben-ablagedateien-und-die-probe-haelt-die-unvollstaendige-liste.md`).
+        // Eine Liste hier haette eine achte Ablagedatei ueberlebt, ohne sie zu
+        // nennen; „alles" ueberlebt sie richtig. Der Vergleich laeuft ueber die
+        // zusammengezogenen Leerzeichen, damit der Zeilenumbruch des Textes ihn
+        // nicht entscheidet.
+        let gezogen = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        assert!(
+            gezogen.contains("Dort hält KRK alles, was es sich merkt. Nach so einem Löschen"),
+            "der Releasetext zaehlt wieder auf, was in dem Ordner liegt: {text}"
         );
     }
 

@@ -57,3 +57,27 @@ legt nahe, dass die Kiste bei ihrer Einführung schlicht übergangen worden ist.
 `#[must_use]` auf `Sitzungswaechter` setzen; das ist eine Zeile und hat keinen Rufer, der bricht.
 Für `Wegwerfordner` zuerst entscheiden, ob alle drei Prüfordner-Fassungen es bekommen. Für die
 beiden `bestanden` eine eigene Betrachtung, weil sie kein Wächter, sondern ein Urteil sind.
+
+---
+Resolved: Der Befund selbst — „der Sitzungswächter ist nicht das eine" — besteht nicht mehr, und
+der Rest des denkbaren Wegs hängt an einer Nutzerfrage, die inzwischen ihren eigenen Datensatz
+hat. Nachgeprüft am Baumstand `ba0c6bd`, ohne Änderung am Code in diesem Durchgang.
+
+Was der Baum trägt (`grep -rn '#\[must_use' crates/krk-bench/src`):
+
+- `Sitzungswaechter` (`messen.rs`) trägt `#[must_use]`. Sein Doc-Kommentar schreibt aus, was ein
+  zu frühes Fallen kostet — die zurückgenommene Prüfsitzung vor der ersten Runde, zwanzig
+  L4-Starts auf der Sitzung des Nutzers, ein Bericht, dessen Kopf die Prüfsitzung trotzdem als
+  hergestellt ausweist — und verweist auf diesen Datensatz.
+- `Durchstichergebnis::bestanden` und `Gesamtergebnis::bestanden` tragen es ebenfalls, mit der
+  Begründung „das Urteil des Gates". Das war im Befund als Ermessensfrage offengelassen und ist
+  zugunsten des Attributs entschieden worden.
+- `Messplanwaechter` (`messen.rs`) und `Zeitmarkenwaechter` (`fixture.rs`) tragen es.
+
+Offen bleibt allein `Wegwerfordner`, und das ist keine halbe Schließung, sondern die Grenze, die
+der Befund selbst zieht: „Wer hier eines setzt, setzt es an allen dreien oder erzeugt eine vierte
+Abweichung zwischen den drei Fassungen, die es ausdrücklich nur dreimal geben soll." Zwei der drei
+Fassungen liegen in `krk-ui` und `krk-core`. Die Frage steht als
+`shared/decisions/260905-2155_*_bekommen-die-drei-pruefordner-fassungen-must-use-oder-keine.md`
+und ist dort mit Optionen niedergelegt; sie ist vom nächsten `#[must_use]`-Durchgang zu
+beantworten und nicht von diesem Defektdatensatz.

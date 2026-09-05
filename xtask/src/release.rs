@@ -6,10 +6,11 @@
 //! spaeteren Station dient. Die Reihenfolge unten ist die des Quelltextes in
 //! [`ausfuehren`].
 //!
-//! 1. **Tag, Arbeitsbaum und `gh` pruefen:** HEAD traegt einen Tag
-//!    `v<version>` mit der Zahl aus `[workspace.package]`, keine verfolgte
-//!    Datei ist geaendert, und das GitHub-Kommandozeilenwerkzeug ist vorhanden
-//!    und angemeldet. Die billigste Station des Weges und die, die am
+//! 1. **Tag, Arbeitsbaum, `gh` und die freie Zahl pruefen:** HEAD traegt einen
+//!    Tag `v<version>` mit der Zahl aus `[workspace.package]`, keine verfolgte
+//!    Datei ist geaendert, das GitHub-Kommandozeilenwerkzeug ist vorhanden
+//!    und angemeldet, und die Gegenseite fuehrt noch kein Release
+//!    `v<version>`. Die billigste Station des Weges und die, die am
 //!    haeufigsten anschlaegt; sie steht ganz vorn, damit ein Abbruch dieser Art
 //!    keinen Uebersetzungslauf kostet. Was sie fragt, steht bei
 //!    [`auslieferungsstand_pruefen`], der Vergleich selbst bei
@@ -24,6 +25,15 @@
 //!    bekommt keine neue Vorbedingung, und `make check` keine Abhaengigkeit
 //!    von `gh`. Die achte Station behaelt ihre eigene Pruefung, denn sie hat
 //!    einen zweiten Rufer, vor dem keine Station steht.
+//!
+//!    **Die Frage nach der schon stehenden Releaseseite steht seit dem 260905
+//!    daneben**, aus demselben Grund und mit demselben Gewinn: ein
+//!    irrtuemlich wiederholtes `./release.sh <zahl>` lief bis dahin durch drei
+//!    Uebersetzungslaeufe, die Signierung und eine abgeschlossene Einreichung
+//!    bei Apple und hielt erst an der Existenzfrage der achten Station
+//!    (`shared/issues/260826-1443_*_eine-irrtuemliche-wiederholung-einer-schon-veroeffentlichten-zahl-wird-erst-nach-bau-und-einreichung-angehalten.md`).
+//!    Sie steht bei [`veroeffentlichung::release_frei_pruefen`]; auch sie liest
+//!    allein und laesst den Baum, wie er ist.
 //!
 //!    **Sie liest, und sie liest jetzt gegen etwas Geschriebenes.** Den Tag
 //!    setzt seit dem 260813 `cargo xtask version <zahl>`, der Halbschritt vor
@@ -123,7 +133,7 @@ const ZIELE: [&str; 2] = ["x86_64-apple-darwin", "aarch64-apple-darwin"];
 /// Aufzaehlungen paarweise, und wer eine davon umsortiert, sortiert die andere
 /// mit. Die Probe `die_beiden_ziele_tragen_die_namen_die_lipo_dafuer_meldet`
 /// faengt es.
-const ARCHITEKTUREN: [&str; 2] = ["x86_64", "arm64"];
+pub(crate) const ARCHITEKTUREN: [&str; 2] = ["x86_64", "arm64"];
 
 /// Paare haben gleich viele Glieder; sonst waeren es keine.
 const _: () = assert!(ZIELE.len() == ARCHITEKTUREN.len());
@@ -208,6 +218,11 @@ pub fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     // trotzdem noch einmal — sie hat einen zweiten Rufer, vor dem keine Station
     // steht.
     veroeffentlichung::gh_pruefen()?;
+
+    // Die zweite aeussere Voraussetzung der achten Station, aus demselben Grund
+    // hier vorn: eine irrtuemlich wiederholte Zahl soll auffallen, bevor drei
+    // Uebersetzungslaeufe und eine Einreichung bei Apple dafuer bezahlt sind.
+    veroeffentlichung::release_frei_pruefen(&bundle::wurzel(), bundle::VERSION)?;
 
     let vorlage = bundle::vorbereiten()?;
     appkit_grenze_pruefen(&vorlage.wurzel)?;
@@ -605,6 +620,20 @@ fn sichtbarkeit_abstreifen(zeile: &str) -> &str {
 /// selbst nicht (etwa bei einer Werkzeugkette ohne `rustup`), faellt die
 /// Vorpruefung aus, und der Uebersetzungslauf meldet ein fehlendes Ziel
 /// selbst.
+///
+/// **`rustup` wird ueber den Suchpfad gerufen und nicht mit vollem Pfad**,
+/// anders als die Werkzeuge des Basissystems, die `grep -rhoE
+/// 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u` aufzaehlt. Der Grund
+/// ist derselbe wie bei `gh` (Modulkopf von [`crate::veroeffentlichung`]): das
+/// Werkzeug gehoert nicht zu macOS, sondern wird nachinstalliert, und es liegt
+/// unter `$HOME/.cargo/bin` — ein Ordner, den `CLAUDE.md` ausdruecklich als
+/// nicht auf dem Standard-`PATH` liegend fuehrt und dessen Pfad je Nutzer ein
+/// anderer ist. Ein fester Pfad waere hier also falsch und nicht bloss
+/// unbequem. `rustup` und `iconutil` (`bundle::symbol_bauen`) sind die zwei
+/// aelteren Ausnahmen, die vor `gh` entstanden sind; ob daraus eine Regel
+/// wird, ist offen
+/// (`shared/decisions/260821-1221_*_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`,
+/// dazu `shared/issues/260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`).
 fn ziele_pruefen() -> Result<(), Abbruch> {
     let Ok(ausgabe) = Command::new("rustup")
         .args(["target", "list", "--installed"])

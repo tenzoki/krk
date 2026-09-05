@@ -88,7 +88,10 @@ const SYMBOLWERKSTATT: &str = "krk-symbol.iconset";
 /// nicht schon haette.
 ///
 /// **Gerufen wird es ueber den Suchpfad und nicht mit vollem Pfad**, anders als
-/// `codesign`, `security`, `ditto`, `xcrun` und `git`. Bis zum 260905 sagten
+/// die Werkzeuge des Basissystems, die
+/// `grep -rhoE 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u`
+/// aufzaehlt; eine Namensliste steht hier nicht, weil sie mit dem naechsten
+/// Werkzeug falsch waere. Bis zum 260905 sagten
 /// dieser Satz und die Abbruchmeldung darunter `/usr/bin/iconutil` und
 /// beschrieben damit eine Gewohnheit, die der Aufruf nicht teilt
 /// (`shared/issues/260826-1448_*_iconutil-wird-ueber-den-suchpfad-gerufen-waehrend-kommentar-und-meldung-usr-bin-iconutil-sagen-und-messen-rs-liest-cargo-ein-zweites-mal.md`).

@@ -51,3 +51,27 @@ sagt dasselbe. Wer den Rückgabewert aus einem Skript liest, sieht 0.
 `self.runden == 0` in beiden `fahren` abweisen, in derselben Form wie `Messreihe::fahren` es tut.
 Die Wachen in `main.rs` können bleiben; sie liefern die bessere Meldung. Der zweite Halbsatz
 gehört zu `260826-1303_*_der-perzentil-zweig-hat-keine-wache-gegen-eine-runde-ohne-werte`.
+
+---
+Resolved: Der denkbare Weg ist gefahren. `Durchstich::fahren` und `Gesamtlauf::fahren`
+(`crates/krk-bench/src/messen.rs`) weisen `self.runden == 0` jetzt in sich selbst ab, in
+derselben Form wie `Messreihe::fahren`: `io::ErrorKind::InvalidInput` mit „ein Durchstich ohne
+Runden ergibt keine Zahl" beziehungsweise „eine Messung ohne Runden ergibt keine Zahl". Die
+Wachen stehen vor jedem Dateizugriff, also vor `pruefordner_pruefen` und vor dem Messplan.
+
+Drei `fahren`, eine Haltung — der Rufer muss nicht mehr wissen, welche gilt. Die zwei Wachen in
+`main.rs` (`:288`, `:364`) bleiben stehen; sie liefern die bessere Meldung an der Befehlszeile,
+und der Befund verlangt ausdrücklich nicht ihren Wegfall.
+
+Gehalten von zwei neuen Proben in `messen.rs`:
+`ein_durchstich_ohne_runden_wird_abgelehnt` und `ein_gesamtlauf_ohne_runden_wird_abgelehnt`. Beide
+bauen die Struktur mit erfundenen Pfaden und prüfen, dass der Abbruch `InvalidInput` trägt und
+nicht die andere Fehlerart, die ein fehlendes Verzeichnis liefern würde.
+
+Der zweite Halbsatz des Befunds — die fehlende Wache im Perzentil-Zweig — gehört weiter zu
+`260826-1303_*_der-perzentil-zweig-hat-keine-wache-gegen-eine-runde-ohne-werte` und ist hier
+nicht angefasst.
+
+Geprüft: `cargo test -p krk-bench` (67 Proben, Exit 0), `cargo clippy -p xtask -p krk-bench
+--all-targets -- -D warnings` (Exit 0), `cargo fmt -p xtask -p krk-bench -- --check` (Exit 0).
+Baumstand `ba0c6bd`.

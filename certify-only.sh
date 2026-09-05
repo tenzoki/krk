@@ -19,8 +19,13 @@
 # gescheitert ist — etwa am Zeitueberlauf des Uploads zu Apple —, waehrend das
 # universelle, mit Developer-ID und gehaerteter Laufzeitumgebung signierte
 # Buendel fertig unter target/KRK.app liegt und allein das Ticket fehlt. Ein
-# zweites ./release.sh <zahl> braeche in dieser Lage an Station 1 ab, weil der
-# Tag v<zahl> nach dem Lauf nicht mehr allein auf HEAD steht.
+# zweites ./release.sh <zahl> uebersetzte in dieser Lage beide Ziele neu, um
+# dasselbe Buendel ein zweites Mal herzustellen, und reichte es ein zweites Mal
+# bei Apple ein. An Station 1 haelt es dabei nur an, wenn seit dem ersten Lauf
+# etwas eingetragen oder geaendert wurde: stand_pruefen fragt allein nach einem
+# passenden Tag auf HEAD und einem sauberen Arbeitsbaum, und mehrere Tags auf
+# HEAD stoeren sie nicht. Der Aufwand ist der Grund fuer diesen Weg, nicht ein
+# Abbruch, auf den man sich verlassen koennte.
 #
 # **Und darin liegt seine Grenze.** Dieser Weg prueft weder Tag noch
 # Arbeitsbaum; ein so beglaubigtes Buendel ist nicht durch die Vorpruefungen

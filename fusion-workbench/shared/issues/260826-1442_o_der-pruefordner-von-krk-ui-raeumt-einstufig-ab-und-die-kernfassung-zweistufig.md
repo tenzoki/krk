@@ -17,3 +17,20 @@ Der Prüfordner von `krk-ui` räumt einstufig ab, die Kernfassung zweistufig
 ## Vorschlag
 
 `abraeumen` und `entsperren_und_loeschen` in `pruefordner.rs` übernehmen (etwa vierzig Zeilen) und `nur_name` sowie `Drop` darauf setzen; die Handarbeit in `pfadeingabe.rs:221` kann dann bleiben oder fallen. Ob `krk-bench/src/wegwerfordner.rs` dieselbe Lücke hat, habe ich nicht geöffnet.
+
+---
+Abgleich 260906-0008 (coder, Baumstand `ba0c6bd`): **offen, und die eine offen gelassene Frage
+ist beantwortet.** Der Vorschlag betrifft `crates/krk-ui/` und `crates/krk-core/`, beide
+ausserhalb der Grenze dieses Durchgangs; am Code ist nichts geändert.
+
+Zum Schlusssatz „Ob `krk-bench/src/wegwerfordner.rs` dieselbe Lücke hat, habe ich nicht
+geöffnet": **die Bauform ist dieselbe, der Fall tritt dort aber nicht ein.** `Wegwerfordner::drop`
+räumt einstufig ab, wie die Fassung von `krk-ui`: `let _ = fs::remove_dir_all(&self.pfad)`, dazu
+`remove_file` für den Steckbrief daneben. Rechte dreht in dieser Kiste jedoch niemand zurück —
+`grep -rn 'set_permissions\|0o000\|from_mode' crates/krk-bench/src` gibt keine Zeile aus —, und
+ohne einen Ordner mit `0o000` hat das einstufige Abräumen nichts, woran es scheitern könnte. Wer
+die drei Fassungen angleicht, gleicht `krk-bench` mit an; wer es nicht tut, lässt dort keinen
+Defekt stehen, sondern eine Fassung ohne den Fall.
+
+Die verwandte Frage, ob die drei Fassungen `#[must_use]` bekommen, steht als
+`shared/decisions/260905-2155_*_bekommen-die-drei-pruefordner-fassungen-must-use-oder-keine.md`.

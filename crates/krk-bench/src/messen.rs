@@ -834,7 +834,23 @@ impl Durchstich {
     /// gegen den Steckbrief, gibt es hier nicht: sie steht in
     /// [`Messreihe::fahren`], und der Durchstich ruft keine `Messreihe`. Was
     /// dieser Weg haelt, ist der Steckbrief gegen die Zusage.
+    ///
+    /// **Ein Lauf ohne Runden wird abgewiesen, und die Wache steht hier.**
+    /// Ohne sie liefe die Rundenschleife nicht, `sammeln` gaebe je Zusage eine
+    /// leere Liste, [`Zusage::gehalten_in`] `Some((0, 0))`, `immer_gehalten`
+    /// `Some(true)` — und [`Durchstichergebnis::bestanden`] sagte fuer jede
+    /// Zusage „gehalten", ueber null Messungen. `main` faengt den Fall zwar
+    /// schon an der Befehlszeile ab, aber diese Funktion ist `pub`: die
+    /// Zusicherung gehoert an das Urteil und nicht an einen ihrer Rufer.
+    /// Dieselbe Haltung wie in [`Messreihe::fahren`]
+    /// (`shared/issues/260826-1302_*_ein-lauf-ohne-runden-besteht-das-gate-alle-zehn-zusagen-gelten-in-allen-null-runden-als-gehalten.md`).
     pub fn fahren(&self) -> io::Result<Durchstichergebnis> {
+        if self.runden == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "ein Durchstich ohne Runden ergibt keine Zahl",
+            ));
+        }
         for (ordner, erwartet) in [
             (&self.ordner_a, EINTRAEGE_A),
             (&self.ordner100k, EINTRAEGE_GROSS),
@@ -1150,7 +1166,18 @@ impl Gesamtergebnis {
 
 impl Gesamtlauf {
     /// Faehrt alle Runden und setzt das Ergebnis zusammen.
+    ///
+    /// **Ein Lauf ohne Runden wird abgewiesen**, aus demselben Grund und in
+    /// derselben Form wie bei [`Durchstich::fahren`]: ohne die Wache bestuende
+    /// das Gate ueber null Messungen, und [`Gesamtergebnis::bestanden`] sagte
+    /// fuer jede der zehn Zusagen „gehalten".
     pub fn fahren(&self) -> io::Result<Gesamtergebnis> {
+        if self.runden == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "eine Messung ohne Runden ergibt keine Zahl",
+            ));
+        }
         for (ordner, erwartet) in [
             (&self.ordner_a, EINTRAEGE_A),
             (&self.ordner_b, EINTRAEGE_A),
@@ -1770,7 +1797,7 @@ fn unterordner_sicherstellen(ordner_a: &Path) -> io::Result<PathBuf> {
 /// Zahlen. Auf dem Referenzgeraet lagen deshalb neun Plaene im
 /// Temporaerverzeichnis, der aelteste fuenf Tage alt. Es ist dieselbe
 /// Ueberlegung, aus der [`Sitzungssicherung`] in [`Drop`] zurueckspielt, und
-/// dieselbe Bauform wie [`crate::wegwerfordner::Wegwerfordner`]: Erfolgsweg und
+/// dieselbe Bauform wie `wegwerfordner::Wegwerfordner`: Erfolgsweg und
 /// Abbruchweg fallen zusammen, und eine Panik wickelt ueber dieselbe Bahn ab.
 ///
 /// **Was der eigene Lauf bei einem Signal nicht mehr schafft.** SIGINT, SIGTERM
@@ -1827,14 +1854,14 @@ impl Messplanwaechter {
     ///
     /// **Das Verzeichnis ist ein Argument und keine feste Groesse.** Der
     /// Messlauf reicht ueber [`plan_schreiben`] das Temporaerverzeichnis
-    /// herein, die Proben einen [`crate::wegwerfordner::Wegwerfordner`]. Ein
+    /// herein, die Proben einen `wegwerfordner::Wegwerfordner`. Ein
     /// zweiter Einstieg, der `std::env::temp_dir` selbst nennt, gehoert nicht
     /// hierher: bis zum 260811 gab es ihn, und die Probe zum Messplan raeumte
     /// darueber das echte Temporaerverzeichnis ab
     /// (`shared/issues/260810-1925_*_eine-probe-schreibt-ins-echte-temporaerverzeichnis-…`).
     ///
     /// **Der Name steht fest, bevor irgendetwas angelegt wird**, wie bei
-    /// [`crate::wegwerfordner::Wegwerfordner::neu`]. Damit deckt der Waechter
+    /// `wegwerfordner::Wegwerfordner::neu`. Damit deckt der Waechter
     /// auch das Schreiben selbst ab: `std::fs::write` ist `File::create` und
     /// `write_all`, und scheitert der zweite Teil nach dem ersten, steht die
     /// angelegte Datei da. Wuerde der Waechter erst aus dem Ergebnis des
@@ -1846,7 +1873,7 @@ impl Messplanwaechter {
     ///
     /// **Beim Anlegen faellt jeder fremde Plan mit**, also jede
     /// `krk-messplan-*.toml` im Verzeichnis, die nicht die eigene ist.
-    /// Es ist dieselbe Zeile, die [`crate::wegwerfordner::Wegwerfordner::neu`]
+    /// Es ist dieselbe Zeile, die `wegwerfordner::Wegwerfordner::neu`
     /// schon traegt, nur ueber das Verzeichnis statt ueber den einen Namen. Sie
     /// deckt die Ausgaenge ab, an die kein [`Drop`] heranreicht: das
     /// `std::process::exit` der Signalwache, SIGKILL, den Stromausfall. Nicht
@@ -1866,7 +1893,7 @@ impl Messplanwaechter {
     /// Messplan traf das Temporaerverzeichnis trotzdem, weil sie
     /// [`plan_schreiben`] rief; ein `cargo test` nahm damit einem nebenher
     /// laufenden Messlauf den Plan weg. Seither geht jede Probe ueber diese
-    /// Funktion und einen [`crate::wegwerfordner::Wegwerfordner`], und das
+    /// Funktion und einen `wegwerfordner::Wegwerfordner`, und das
     /// Temporaerverzeichnis steht an einer einzigen Stelle im Baum, naemlich
     /// in [`plan_schreiben`].
     fn in_verzeichnis(verzeichnis: &Path) -> Self {
@@ -1883,7 +1910,7 @@ impl Messplanwaechter {
 
 impl Drop for Messplanwaechter {
     fn drop(&mut self) {
-        // Ungemeldet wie in [`crate::wegwerfordner::Wegwerfordner`]: bleibt der
+        // Ungemeldet wie in `wegwerfordner::Wegwerfordner`: bleibt der
         // Plan liegen, kostet das eine Datei im Temporaerverzeichnis, und eine
         // Meldung an dieser Stelle verdeckte den Fehler, der den Lauf gerade
         // abbricht.
@@ -2925,6 +2952,42 @@ mod tests {
         fixture::erzeugen(ordner.pfad(), 10, 1).expect("Erzeugen gescheitert");
         let fehler = Messreihe::fahren(ordner.pfad(), Cache::Warm, 0)
             .expect_err("das haette scheitern muessen");
+        assert_eq!(fehler.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    /// Ein Durchstich ohne Runden faellt an der Wache und nicht durch das Gate.
+    ///
+    /// Die Wache steht vor jedem Dateizugriff, deshalb genuegen erfundene
+    /// Pfade: kaeme der Abbruch von einem fehlenden Ordner, traege er nicht
+    /// [`io::ErrorKind::InvalidInput`].
+    #[test]
+    fn ein_durchstich_ohne_runden_wird_abgelehnt() {
+        let durchstich = Durchstich {
+            programm: PathBuf::from("/gibt-es-nicht/krk"),
+            ordner_a: PathBuf::from("/gibt-es-nicht/a"),
+            ordner100k: PathBuf::from("/gibt-es-nicht/gross"),
+            wiederholungen: WIEDERHOLUNGEN,
+            runden: 0,
+        };
+        let fehler = durchstich
+            .fahren()
+            .expect_err("das haette scheitern muessen");
+        assert_eq!(fehler.kind(), io::ErrorKind::InvalidInput);
+    }
+
+    /// Dasselbe fuer den Gesamtlauf, an dem das Gate der zehn Zusagen haengt.
+    #[test]
+    fn ein_gesamtlauf_ohne_runden_wird_abgelehnt() {
+        let lauf = Gesamtlauf {
+            programm: PathBuf::from("/gibt-es-nicht/krk"),
+            ordner_a: PathBuf::from("/gibt-es-nicht/a"),
+            ordner_b: PathBuf::from("/gibt-es-nicht/b"),
+            ordner100k: PathBuf::from("/gibt-es-nicht/gross"),
+            kopierziel: PathBuf::from("/gibt-es-nicht/ziel"),
+            wiederholungen: WIEDERHOLUNGEN,
+            runden: 0,
+        };
+        let fehler = lauf.fahren().expect_err("das haette scheitern muessen");
         assert_eq!(fehler.kind(), io::ErrorKind::InvalidInput);
     }
 

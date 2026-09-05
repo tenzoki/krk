@@ -84,3 +84,51 @@ eine offene Entscheidung steht auf einer Voraussetzung, die nicht zutrifft.
 
 **Herkunft:** gemeinsamer Speicher. Kein Circle war in dieser Sitzung aktiv, und der Befund
 betrifft den Bauweg des ganzen Projekts.
+
+---
+Resolved: Beide Handgriffe sind gefahren, und der Entscheid
+`260821-1221_*_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`
+bleibt unberührt offen. Entschieden ist hier nichts; berichtigt ist, was die Frage falsch
+voraussetzte.
+
+**Handgriff 1 — die Prosastellen.**
+
+1. Der Entscheidungsdatensatz trägt den Nachtrag vom 260821-1532 samt der Tabelle mit
+   `bundle.rs` (`iconutil`) und `release.rs` (`rustup`) und ihren Commits. Nichts zu tun.
+2. Die Risikotabelle des Plans „Artefakt und Release" ist **nicht mehr erreichbar**: die Datei
+   liegt seit dem Aufräumlauf 260826-1637 unter
+   `archive/260826-1637-safe-cleanup-tier-1/shared/planning/260821-1221_c_plan-artefakt-und-release.md`.
+   Ein Archivstand ist die Aufzeichnung eines vergangenen Standes und wird nicht berichtigt; der
+   Satz „anders als jedes andere fremde Werkzeug dieses Baums" bleibt dort als das stehen, was am
+   260821 geschrieben wurde. Die lebende Fassung derselben Aussage stand im Modulkopf von
+   `veroeffentlichung.rs` und ist unter Handgriff 2 mitbehoben.
+3. Der Modulkopf von `xtask/src/veroeffentlichung.rs` — im Befund als „nicht falsch, aber als
+   vollständig lesbar" geführt — nennt keine Werkzeugliste mehr. Er verweist für die Werkzeuge
+   mit vollem Pfad auf `grep -rhoE 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u` und
+   trägt einen eigenen Absatz „**`gh` ist dabei nicht die erste Ausnahme.**", der `iconutil` und
+   `rustup` beim Namen nennt und auf diesen Datensatz verweist.
+
+**Handgriff 2 — die zwei Aufrufstellen.**
+
+1. `iconutil` (`xtask/src/bundle.rs`, `symbol_bauen` und der Doc-Kommentar bei `SYMBOLGROESSEN`)
+   ist am 260905 über `260826-1448_c_iconutil-wird-ueber-den-suchpfad-gerufen-…` begründet
+   worden: der Aufruf steht unverändert auf dem Suchpfad, und die zwei Prosastellen sagen jetzt,
+   was er tut. Die dortige Aufzählung „anders als `codesign`, `security`, `ditto`, `xcrun` und
+   `git`" überging `lipo` und ist in diesem Durchgang durch dasselbe Zählkommando ersetzt.
+2. `rustup` (`xtask/src/release.rs`, `ziele_pruefen`) trägt jetzt den fehlenden Satz. Er nennt
+   den Grund, den der Befund oben schon richtig gesehen hat — `rustup` gehört nicht zu macOS und
+   liegt unter `$HOME/.cargo/bin`, einem Ordner, dessen Pfad je Nutzer ein anderer ist —, verweist
+   für den Vergleich auf dasselbe Zählkommando, nennt `iconutil` als die zweite ältere Ausnahme
+   und verweist auf den offenen Entscheid und auf diesen Datensatz.
+
+**Was an Zahlen stehen blieb:** keine. Die drei Aufzählungen der Werkzeuge mit vollem Pfad, die
+je einen Namen übergingen, sind an allen drei Stellen durch
+`grep -rhoE 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u` ersetzt; das Kommando ist am
+Baumstand `ba0c6bd` gefahren und gibt genau die sechs Werkzeuge aus, die `Command::new` mit
+vollem Pfad ruft (codesign, ditto, git, lipo, security, xcrun) — keine Doc-Zeile, keine Probe und
+keine Prosastelle zählen mit, weil das Muster den Aufrufausdruck verlangt und nicht den blossen
+Pfad.
+
+Geprüft: `cargo test -p xtask -p krk-bench` (Exit 0), `cargo clippy -p xtask -p krk-bench
+--all-targets -- -D warnings` (Exit 0), `cargo fmt -p xtask -p krk-bench -- --check` (Exit 0).
+Baumstand `ba0c6bd`.

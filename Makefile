@@ -143,9 +143,14 @@ release: ## Bauen, signieren, beglaubigen, HEAD und Tag zu origin schieben, vero
 
 # Der Nur-Beglaubigungsweg: fuer den Lauf, der erst an der siebten Station
 # gescheitert ist, waehrend das fertige Buendel unter $(BUENDEL) liegt und
-# allein das Ticket fehlt. `make release` faengt in dieser Lage von vorn an und
-# braeche zuvor an Station 1 ab, weil der Tag nach dem Lauf nicht mehr allein
-# auf HEAD steht.
+# allein das Ticket fehlt. `make release` faengt in dieser Lage von vorn an:
+# es uebersetzte beide Ziele neu, um dasselbe Buendel ein zweites Mal
+# herzustellen, und reichte es ein zweites Mal bei Apple ein. An Station 1
+# haelt es dabei nur an, wenn seit dem ersten Lauf etwas eingetragen oder
+# geaendert wurde -- `stand_pruefen` fragt allein nach einem passenden Tag auf
+# HEAD und einem sauberen Arbeitsbaum, und mehrere Tags auf HEAD stoeren sie
+# nicht. Der Aufwand ist der Grund fuer dieses Ziel, nicht ein Abbruch, auf den
+# man sich verlassen koennte.
 #
 # Die Zahl ist kein Zierat: xtask haelt sie gegen die Info.plist des gebauten
 # Buendels, damit nicht ein $(BUENDEL) von vorgestern bei Apple landet. Das

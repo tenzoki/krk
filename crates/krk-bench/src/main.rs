@@ -31,6 +31,17 @@ mod fixture;
 mod messen;
 /// Der Wegwerfordner der Proben. Nur im Probenbau uebersetzt, weil ihn kein
 /// ausgeliefertes Programm braucht.
+///
+/// **Deshalb steht er in Doc-Kommentaren als Code und nie als Verweis.**
+/// `cargo doc` uebersetzt ohne `cfg(test)`, das Modul gibt es dort also nicht,
+/// und ein Verweis der Form `[crate::wegwerfordner::Wegwerfordner]` bricht den Lauf unter
+/// `RUSTDOCFLAGS="-D warnings"` ab. Sechs solcher Verweise standen bis zum
+/// 260905 in `fixture.rs` und `messen.rs` und waren die einzigen sechs
+/// Doc-Warnungen dieser Kiste; nachgezaehlt wird mit
+/// `RUSTDOCFLAGS="-D warnings" cargo doc -p krk-bench --no-deps`. Ein
+/// `#[cfg(any(test, doc))]` hier hilft nicht: das Modul ist privat, und
+/// rustdoc traegt dann `private_intra_doc_links` statt
+/// `broken_intra_doc_links` vor.
 #[cfg(test)]
 mod wegwerfordner;
 

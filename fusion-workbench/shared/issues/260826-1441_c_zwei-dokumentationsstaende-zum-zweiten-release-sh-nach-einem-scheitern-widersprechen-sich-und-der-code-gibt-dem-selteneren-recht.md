@@ -31,3 +31,32 @@ Die Begründung an den fünf Stellen auf den Aufwand stellen („übersetzt beid
 Abgleich 260905-2254 (coder, Baumstand `8779a25`): **zur Hälfte erledigt, bleibt offen.** Zwei der fünf Stellen der Seite B tragen die Begründung jetzt richtig. `CLAUDE.md`, Absatz „Seit dem 260820 steht daneben ein zweiter Weg", stellt sie schon länger auf den Aufwand und schreibt die Station-1-Bedingung aus, samt dem Hinweis, dass mehrere Tags auf HEAD nicht stören. `README.md`, Abschnitt „Nur beglaubigen", ist in diesem Durchgang nachgezogen: „es übersetzte beide Ziele neu, um dasselbe Bündel herzustellen, und reichte es ein zweites Mal bei Apple ein. An Station 1 hält es dabei nur an, wenn seit dem ersten Lauf etwas eingetragen oder geändert wurde — `stand_pruefen` fragt allein nach einem passenden Tag auf HEAD und einem sauberen Arbeitsbaum, und mehrere Tags auf HEAD stören sie nicht."
 
 Offen bleiben die drei Stellen außerhalb der Dokumentationsdateien, die dieser Durchgang nicht anfassen durfte: `certify-only.sh:22` („braeche in dieser Lage an Station 1 ab, weil der …"), `Makefile:147` (dieselbe Begründung) und `xtask/src/main.rs:139` („Station 1 von release haelt eine Wiederholung in dieser Lage an"). `xtask/src/beglaubigung.rs:15-18` nennt beide Bedingungen und ist damit als einzige schon vollständig; sie ist die Vorlage für die drei.
+
+---
+Resolved: Die drei offenen Stellen der Seite B tragen jetzt die Begründung, die `stand_pruefen`
+deckt, und die vierte Stelle dazu.
+
+- `certify-only.sh`, Abschnitt „Wofuer dieser Weg da ist": „Ein zweites ./release.sh <zahl>
+  uebersetzte in dieser Lage beide Ziele neu, um dasselbe Buendel ein zweites Mal herzustellen,
+  und reichte es ein zweites Mal bei Apple ein. An Station 1 haelt es dabei nur an, wenn seit dem
+  ersten Lauf etwas eingetragen oder geaendert wurde: stand_pruefen fragt allein nach einem
+  passenden Tag auf HEAD und einem sauberen Arbeitsbaum, und mehrere Tags auf HEAD stoeren sie
+  nicht. Der Aufwand ist der Grund fuer diesen Weg, nicht ein Abbruch, auf den man sich verlassen
+  koennte."
+- `Makefile`, Kommentar über dem Ziel `beglaubigen`: dieselbe Aussage, auf `make release`
+  bezogen.
+- `xtask/src/main.rs`, Hilfetext zu `cargo xtask beglaubigen`, Absatz „Und es prueft weder Tag
+  noch Arbeitsbaum": dieselbe Aussage.
+- `xtask/src/beglaubigung.rs`, Modulkopf: **auch berichtigt, obwohl der Abgleich vom 260905-2254
+  sie als Vorlage geführt hat.** Ihr zweiter Halbsatz war die dritte Bedingung der Seite B („den
+  Tag `v<zahl>` traegt HEAD nach dem Lauf nicht mehr allein"), und der Befund oben sagt
+  ausdrücklich, dass `stand_pruefen` diese Bedingung nicht kennt. Sie war damit nicht vollständig,
+  sondern zur einen Hälfte richtig und zur anderen falsch. Der Modulkopf trägt jetzt einen
+  eigenen Absatz mit beiden Bedingungen, dem Grund und dem Verweis auf diesen Datensatz.
+
+Der Wortlaut folgt an allen vier Stellen dem des README-Abschnitts „Nur beglaubigen" aus dem
+Durchgang vom 260905, damit die fünf Stellen nicht ein zweites Mal auseinanderlaufen.
+
+Geprüft: `cargo test -p xtask -p krk-bench` (164 + 67, Exit 0), `cargo clippy -p xtask -p
+krk-bench --all-targets -- -D warnings` (Exit 0), `cargo fmt -p xtask -p krk-bench -- --check`
+(Exit 0). Baumstand `ba0c6bd`.

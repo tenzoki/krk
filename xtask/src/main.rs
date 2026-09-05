@@ -82,8 +82,9 @@ xtask — Bauwerkzeug fuer KRK
 
   cargo xtask release
       Baut das Auslieferungspaket (Schritt 23) in acht Stationen: prueft Tag
-      und Arbeitsbaum, prueft die AppKit-Grenze (keine `use objc2`-Zeile
-      ausserhalb von crates/krk-ui/src/appkit/), uebersetzt beide Mac-Ziele,
+      und Arbeitsbaum, prueft die AppKit-Grenze (objc2 steht ausserhalb von
+      crates/krk-ui/src/appkit/ nirgends, weder als use-Zeile noch als
+      ausgeschriebener Pfad), uebersetzt beide Mac-Ziele,
       fuegt sie mit lipo zu einer universellen Binaerdatei zusammen, baut
       dasselbe Buendel wie `bundle`, signiert mit einer
       Developer-ID-Identitaet und gehaerteter Laufzeitumgebung, reicht ueber
@@ -99,16 +100,16 @@ xtask — Bauwerkzeug fuer KRK
       Station 1 ist die Vorpruefung, und sie steht ganz vorn, damit ein
       Abbruch keinen Uebersetzungslauf kostet: HEAD muss einen Tag v<version>
       mit der Zahl aus [workspace.package] tragen, keine verfolgte Datei darf
-      geaendert sein, und gh muss vorhanden und angemeldet sein. Unbeachtete
-      Dateien zaehlen nicht mit. Sie liest allein; geschrieben hat der
-      Halbschritt davor, \"cargo xtask version\". `cargo xtask bundle` fragt
-      nach keinem der drei.
+      geaendert sein, gh muss vorhanden und angemeldet sein, und die Gegenseite
+      darf noch kein Release v<version> fuehren. Unbeachtete Dateien zaehlen
+      nicht mit. Sie liest allein; geschrieben hat der Halbschritt davor,
+      \"cargo xtask version\". `cargo xtask bundle` fragt nach keiner davon.
 
-      Dass gh schon hier gefragt wird und nicht erst in Station 8, hat einen
-      Grund: eine fehlende Voraussetzung soll auffallen, solange nichts
-      geschehen ist, und am Kopf der achten Station waere die Einreichung bei
-      Apple bereits gelaufen. Station 8 fragt trotzdem noch einmal, weil ihr
-      zweiter Rufer keine Station vor sich hat.
+      Dass gh und die stehende Releaseseite schon hier gefragt werden und nicht
+      erst in Station 8, hat einen Grund: eine fehlende Voraussetzung soll
+      auffallen, solange nichts geschehen ist, und am Kopf der achten Station
+      waere die Einreichung bei Apple bereits gelaufen. Station 8 fragt
+      trotzdem noch einmal, weil ihr zweiter Rufer keine Station vor sich hat.
 
       Die Identitaetssuche laeuft in denselben drei Stufen wie bei `bundle`,
       nur sucht die zweite nach dem Namensanfang \"Developer ID Application\".
@@ -124,20 +125,25 @@ xtask — Bauwerkzeug fuer KRK
       dasteht. Das Skript reicht an \"make beglaubigen VERSION=<zahl>\" weiter.
 
   cargo xtask beglaubigen <zahl>
-      Dasselbe ohne die zwei Huellen. Es prueft zweierlei am gebauten Buendel
-      und reicht es dann ein: die Versionszahl gegen die Info.plist des
-      Buendels, damit nicht ein altes target/KRK.app von vorgestern bei Apple
-      landet, und den Signaturstand gegen die zwei Bedingungen der
-      Beglaubigung, naemlich eine Developer-ID in der Signaturkette und die
-      gehaertete Laufzeitumgebung. Danach laeuft dieselbe Station 7 wie bei
-      release: \"xcrun notarytool submit --wait\" und \"xcrun stapler staple\".
+      Dasselbe ohne die zwei Huellen. Es prueft das gebaute Buendel und reicht
+      es dann ein: die Versionszahl gegen die Info.plist des Buendels, damit
+      nicht ein altes target/KRK.app von vorgestern bei Apple landet, und den
+      Signaturstand gegen das, was eine Auslieferung zusagt, naemlich eine
+      Developer-ID in der Signaturkette, die gehaertete Laufzeitumgebung und
+      beide Architekturen in einer universellen Binaerdatei. Danach laeuft
+      dieselbe Station 7 wie bei release: \"xcrun notarytool submit --wait\"
+      und \"xcrun stapler staple\".
 
       **Es baut nichts** — kein Uebersetzungslauf, kein lipo, keine Montage,
       keine Signierung; ohne Buendel bricht es ab und nennt release.
 
       **Und es prueft weder Tag noch Arbeitsbaum.** Genau darin liegt sein
-      Zweck: Station 1 von release haelt eine Wiederholung in dieser Lage an,
-      weil der Tag v<zahl> nach dem Lauf nicht mehr allein auf HEAD steht.
+      Zweck. Ein zweites ./release.sh <zahl> uebersetzte in dieser Lage beide
+      Ziele neu, um dasselbe Buendel ein zweites Mal herzustellen, und reichte
+      es ein zweites Mal bei Apple ein; an Station 1 haelt es dabei nur an,
+      wenn seit dem ersten Lauf etwas eingetragen oder geaendert wurde, denn
+      stand_pruefen fragt allein nach einem passenden Tag auf HEAD und einem
+      sauberen Arbeitsbaum, und mehrere Tags auf HEAD stoeren sie nicht.
       Daraus folgt die Grenze: ein so beglaubigtes Buendel ist nicht durch die
       Vorpruefungen der Auslieferungskette gegangen, und es ist nicht gesagt,
       dass ein Tag den Stand benennt, aus dem es gebaut wurde.

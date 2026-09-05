@@ -473,7 +473,7 @@ fn verknuepfungszeiten_setzen(
 /// `~/Library/Caches/krk-messplatz`. Der Waechter deckt jeden Weg heraus, den
 /// `?` nimmt, und das Abwickeln einer Panik dazu; dieselbe Ueberlegung wie bei
 /// [`crate::messen`]s Messplanwaechter und bei
-/// [`crate::wegwerfordner::Wegwerfordner`].
+/// `wegwerfordner::Wegwerfordner`.
 ///
 /// **Der Name steht fest, bevor die Datei entsteht.** Entstuende der Waechter
 /// erst aus dem Ergebnis von `File::create`, kehrte das `?` vorher zurueck und

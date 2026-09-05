@@ -12,15 +12,22 @@
 //! (`HTTPClientError.deadlineExceeded`). Das universelle, mit Developer-ID und
 //! gehaerteter Laufzeitumgebung signierte Buendel lag fertig unter
 //! `target/KRK.app`, und es fehlte allein das Ticket. Ein zweites
-//! `./release.sh <zahl>` haette dort nicht wieder angesetzt, sondern an
-//! Station 1 abgebrochen: den Tag `v<zahl>` traegt HEAD nach dem Lauf nicht
-//! mehr allein, und der Arbeitsbaum ist inzwischen ein anderer. Der ganze Weg
-//! noch einmal haette zudem beide Ziele neu uebersetzt, um dasselbe Buendel
-//! ein zweites Mal herzustellen.
+//! `./release.sh <zahl>` haette dort nicht wieder angesetzt: es haette beide
+//! Ziele neu uebersetzt, um dasselbe Buendel ein zweites Mal herzustellen, und
+//! es ein zweites Mal bei Apple eingereicht.
+//!
+//! **An Station 1 haette es dabei nur angehalten, wenn seit dem ersten Lauf
+//! etwas eingetragen oder geaendert worden waere.** `stand_pruefen` fragt
+//! allein nach einem passenden Tag auf HEAD und einem sauberen Arbeitsbaum;
+//! mehrere Tags auf HEAD stoeren sie nicht, und ein gescheiterter Lauf bewegt
+//! HEAD nicht. Am 260820 traf die Bedingung zu, weil zwischen den Laeufen
+//! Werkbankdateien dazugekommen waren. Der Aufwand ist der Grund fuer diesen
+//! Weg, nicht ein Abbruch, auf den man sich verlassen koennte
+//! (`shared/issues/260826-1441_*_zwei-dokumentationsstaende-zum-zweiten-release-sh-nach-einem-scheitern-widersprechen-sich-und-der-code-gibt-dem-selteneren-recht.md`).
 //!
 //! **Was dieser Weg ausdruecklich nicht prueft: Tag und Arbeitsbaum.** Genau
-//! das ist sein Zweck. Station 1 von `release` fragt beides, und sie ist es,
-//! die eine Wiederholung in dieser Lage anhaelt; hier wird sie uebergangen.
+//! das ist sein Zweck. Station 1 von `release` fragt beides, hier wird sie
+//! uebergangen.
 //! Das ist keine Nachlaessigkeit, sondern die Daseinsberechtigung des Wegs —
 //! und zugleich seine Grenze: **ein so beglaubigtes Buendel ist nicht durch
 //! die Vorpruefungen der Auslieferungskette gegangen.** Weder ist gesagt, dass
@@ -30,7 +37,7 @@
 //!
 //! **Er baut nichts.** Kein Uebersetzungslauf, kein `lipo`, keine Montage,
 //! keine Signierung. Findet er kein Buendel, bricht er ab und nennt den ganzen
-//! Weg. Was von `release` bleibt, sind die zwei Pruefungen, die das gebaute
+//! Weg. Was von `release` bleibt, sind die Pruefungen, die das gebaute
 //! Buendel gegen die Erwartung des Nutzers halten:
 //!
 //! 1. **Die Versionszahl gegen die `Info.plist` des Buendels.** Das ist die
@@ -42,6 +49,10 @@
 //!    `cargo xtask bundle` gebautes Buendel traegt eine Entwicklungsidentitaet
 //!    und keine gehaertete Laufzeitumgebung; Apple weist es ab. Der Abbruch
 //!    hier spart die Einreichung.
+//! 3. **Die Bauform gegen das, was dieser Modulkopf zusagt.** Ein Buendel aus
+//!    `cargo xtask bundle` ist duenn und nicht universell. Welche Fragen an
+//!    die Signaturanzeige gehen, steht bei [`signaturstand_pruefen`]; eine
+//!    Zahl steht hier nicht, weil sie mit der naechsten Frage falsch waere.
 //!
 //! Die Beglaubigung selbst steht in diesem Modul und wird von beiden Wegen
 //! gerufen: von [`crate::release::ausfuehren`] als Station 7 und von
@@ -54,6 +65,7 @@ use std::process::Command;
 
 use crate::Abbruch;
 use crate::bundle;
+use crate::release;
 use crate::sign;
 use crate::version;
 
@@ -80,6 +92,15 @@ const AUTORITAET: &str = "Authority=";
 /// der Zahl: `flags=0x10000(runtime)`. Gesetzt hat es
 /// [`sign::signieren_gehaertet`] ueber `--options runtime`.
 const GEHAERTET: &str = "runtime";
+
+/// Der Zeilenanfang, unter dem `codesign --display` die Bauform des Programms
+/// meldet.
+///
+/// Vollstaendig lautet die Zeile
+/// `Format=app bundle with Mach-O universal (x86_64 arm64)`; in den Klammern
+/// steht, welche Architekturen darin liegen. Eine duenne Binaerdatei meldet
+/// dort `thin` und genau einen Namen.
+const FORMAT: &str = "Format=";
 
 /// Beglaubigt ein bereits gebautes Buendel: `cargo xtask beglaubigen <zahl>`.
 pub(crate) fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
@@ -131,7 +152,8 @@ pub(crate) fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
     signaturstand_pruefen(&anzeige, &buendel).map_err(Abbruch::Lauf)?;
     println!(
         "Signaturstand geprueft: das Buendel traegt eine Developer-ID und die gehaertete \
-         Laufzeitumgebung."
+         Laufzeitumgebung, und es traegt beide Architekturen ({}).",
+        release::ARCHITEKTUREN.join(" ")
     );
     println!(
         "Weder Tag noch Arbeitsbaum sind geprueft: dieser Weg setzt hinter der Signierung an. \
@@ -208,16 +230,18 @@ fn signaturanzeige(buendel: &Path) -> Result<String, Abbruch> {
     Ok(String::from_utf8_lossy(&ausgabe.stderr).into_owned())
 }
 
-/// Prueft die Signaturanzeige gegen die zwei Bedingungen der Beglaubigung.
+/// Prueft die Signaturanzeige gegen die Bedingungen der Beglaubigung.
 ///
 /// Die reine Haelfte der zweiten Pruefung: eine Zeichenkette hinein, `Ok(())`
-/// im gruenen Fall, sonst die fertige Abbruchmeldung. Beide Befunde stehen in
-/// einer Meldung, wenn beide zutreffen — dasselbe Muster wie bei
+/// im gruenen Fall, sonst die fertige Abbruchmeldung. Jeder zutreffende Befund
+/// steht in derselben Meldung — dasselbe Muster wie bei
 /// `release::stand_pruefen`.
 ///
-/// Gefragt sind die zwei Bedingungen, an denen ein Buendel aus
-/// `cargo xtask bundle` scheitert: die Signaturkette beginnt mit einer
-/// Developer-ID, und die gehaertete Laufzeitumgebung steht. Erkannt wird die
+/// Gefragt ist, woran ein Buendel aus `cargo xtask bundle` scheitert: die
+/// Signaturkette beginnt mit einer Developer-ID, die gehaertete
+/// Laufzeitumgebung steht, und beide Architekturen liegen in einer
+/// universellen Binaerdatei. Eine Zahl steht hier nicht; die Fragen sind die
+/// `traegt_*`-Funktionen unter dieser, und der Rumpf zaehlt sie auf. Erkannt wird die
 /// erste am Namensanfang [`sign::DEVELOPER_ID_PRAEFIX`], also mit derselben
 /// Regel, mit der `sign::bestimmen_fuer_release` die Identitaet im
 /// Schluesselbund auswaehlt; eine zweite Regel daneben waere die zweite
@@ -226,12 +250,21 @@ fn signaturanzeige(buendel: &Path) -> Result<String, Abbruch> {
 /// **Der gesicherte Zeitstempel wird nicht eigens gefragt**, obwohl Apple ihn
 /// verlangt. [`sign::signieren_gehaertet`] setzt `--options runtime` und
 /// `--timestamp` in einem Aufruf; die zwei sind nicht einzeln zu haben, und
-/// die Merkmalsliste beantwortet damit beide Fragen. Eine dritte Pruefung
+/// die Merkmalsliste beantwortet damit beide Fragen. Eine weitere Pruefung
 /// truege nichts bei, was die zweite nicht schon traegt.
+///
+/// **Die Universalitaet dagegen wird seit dem 260905 gefragt.** Dieser Weg und
+/// der Modulkopf sprechen vom universellen Buendel, und die Auskunft steht in
+/// derselben Ausgabe, die schon dazuliegt: die Zeile [`FORMAT`]. Ein Buendel
+/// aus `cargo xtask bundle` ist nicht universell; von Hand mit
+/// `codesign --options runtime` und einer Developer-ID nachsigniert bestuende
+/// es die zwei aelteren Fragen und ginge duenn bei Apple ein
+/// (`shared/issues/260826-1447_*_beglaubigen-prueft-die-universalitaet-nicht-obwohl-die-signaturanzeige-sie-mitliefert.md`).
 fn signaturstand_pruefen(anzeige: &str, buendel: &Path) -> Result<(), String> {
     let developer_id = traegt_developer_id(anzeige);
     let gehaertet = traegt_gehaertete_laufzeitumgebung(anzeige);
-    if developer_id && gehaertet {
+    let universell = traegt_beide_architekturen(anzeige);
+    if developer_id && gehaertet && universell {
         return Ok(());
     }
 
@@ -249,6 +282,14 @@ fn signaturstand_pruefen(anzeige: &str, buendel: &Path) -> Result<(), String> {
             "Die Merkmalsliste der Zeile CodeDirectory nennt {GEHAERTET:?} nicht, das Buendel \
              ist also ohne gehaertete Laufzeitumgebung signiert. Ohne sie nimmt Apple keine \
              Beglaubigung an."
+        ));
+    }
+    if !universell {
+        befunde.push(format!(
+            "Die Zeile {FORMAT} nennt nicht beide Architekturen ({}), das Buendel ist also \
+             nicht universell. Beglaubigt wuerde es trotzdem — und liefe danach auf der \
+             Haelfte der Macs nicht.",
+            release::ARCHITEKTUREN.join(" ")
         ));
     }
 
@@ -303,6 +344,43 @@ fn traegt_gehaertete_laufzeitumgebung(anzeige: &str) -> bool {
         .filter_map(|wert| wert.split_once('('))
         .filter_map(|(_, liste)| liste.strip_suffix(')'))
         .any(|liste| liste.split(',').any(|merkmal| merkmal.trim() == GEHAERTET))
+}
+
+/// Ob die Anzeige beide Architekturen aus [`release::ARCHITEKTUREN`] meldet.
+///
+/// Gelesen wird die Klammer der Zeile [`FORMAT`]:
+/// `Format=app bundle with Mach-O universal (x86_64 arm64)` traegt beide,
+/// `Format=app bundle with Mach-O thin (arm64)` eine. Verglichen werden ganze
+/// Woerter und nicht Teilzeichenfolgen, aus demselben Grund wie bei
+/// [`traegt_gehaertete_laufzeitumgebung`].
+///
+/// **Gefragt sind die Namen und nicht das Wort `universal`.** Eine duenne
+/// Binaerdatei nennt genau eine Architektur, gleich wie `codesign` die Bauform
+/// benennt; die Namensliste ist damit die schaerfere Frage und haengt nicht an
+/// einem Wortlaut, den ein spaeteres `codesign` aendern koennte. Die Namen
+/// stehen dabei nicht ein zweites Mal in diesem Modul, sondern kommen aus
+/// [`release::ARCHITEKTUREN`], wo sie schon die Pruefbedingung des
+/// Zusammenfuegens sind.
+///
+/// **Steht hinter [`FORMAT`] keine Klammer, gilt das Buendel als nicht
+/// universell.** Dieselbe Richtung wie bei der gehaerteten Laufzeitumgebung:
+/// sagt die Anzeige nichts, waere ein Raten zur bequemen Seite eine
+/// Einreichung auf gut Glueck.
+#[must_use]
+fn traegt_beide_architekturen(anzeige: &str) -> bool {
+    let Some(gemeldet) = anzeige
+        .lines()
+        .filter_map(|zeile| zeile.trim().strip_prefix(FORMAT))
+        .find_map(|wert| {
+            wert.split_once('(')
+                .and_then(|(_, rest)| rest.strip_suffix(')'))
+        })
+    else {
+        return false;
+    };
+    release::ARCHITEKTUREN
+        .iter()
+        .all(|name| gemeldet.split_whitespace().any(|wort| wort == *name))
 }
 
 /// Reicht das Buendel zur Beglaubigung ein und heftet das Ergebnis an.
@@ -534,8 +612,8 @@ Internal requirements count=1 size=176
     /// Der gemischte Fall, den die dritte Stufe der Identitaetssuche und
     /// [`sign::UMGEBUNGSVARIABLE`] moeglich machen: die Identitaet stimmt, das
     /// Merkmal fehlt. Am 260820 gemessen, ebenfalls an einer neu signierten
-    /// Kopie. Er ist der Grund, warum die Pruefung zwei Fragen stellt und
-    /// nicht eine.
+    /// Kopie. Er ist der Grund, warum die Pruefung die Identitaet und die
+    /// Haertung getrennt fragt und nicht in einem.
     const OHNE_HAERTUNG: &str = "\
 Executable=/tmp/B.app/Contents/MacOS/krk
 Identifier=org.stalmann.krk
@@ -659,6 +737,70 @@ Internal requirements count=1 size=176
             !meldung.contains("Apple beglaubigt"),
             "der Befund zur Identitaet steht zu Unrecht da: {meldung}"
         );
+    }
+
+    /// Die Anzeige eines duennen Buendels, wie `cargo xtask bundle` es baut.
+    ///
+    /// Aus [`OHNE_HAERTUNG`] abgeleitet, mit der `Format=`-Zeile eines
+    /// Buendels ohne `lipo` und mit gesetzter Haertung: **allein die
+    /// Universalitaet fehlt.** Genau der Fall, den die dritte Frage abfaengt
+    /// und den die zwei aelteren durchlassen — von Hand mit
+    /// `codesign --options runtime` und einer Developer-ID nachsigniert, ginge
+    /// er sonst duenn bei Apple ein.
+    const NUR_ARM: &str = "\
+Executable=/tmp/C.app/Contents/MacOS/krk
+Identifier=org.stalmann.krk
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20500 size=61372 flags=0x10000(runtime) hashes=1911+3 location=embedded
+Signature size=8993
+Authority=Developer ID Application: Kai Stalmann (QYMPYB7MWM)
+Authority=Developer ID Certification Authority
+Authority=Apple Root CA
+Timestamp=20. Aug 2026 at 16:05:49
+Info.plist entries=18
+TeamIdentifier=QYMPYB7MWM
+Sealed Resources version=2 rules=13 files=1
+Internal requirements count=1 size=176
+";
+
+    /// Ein duennes Buendel kommt nicht durch, obwohl es sonst alles traegt.
+    ///
+    /// Die Rechtfertigung der dritten Frage, gebaut wie die der zweiten: die
+    /// Meldung nennt allein den zutreffenden Befund.
+    #[test]
+    fn ein_duennes_buendel_haelt_die_beglaubigung_an() {
+        let meldung = signaturstand_pruefen(NUR_ARM, &bundle::pruefbuendel())
+            .expect_err("ein duennes Buendel liefe auf der Haelfte der Macs nicht");
+        assert!(meldung.contains("nicht universell"), "{meldung}");
+        for name in release::ARCHITEKTUREN {
+            assert!(meldung.contains(name), "{meldung}");
+        }
+        // Der Schlusssatz der Meldung nennt die Haertung immer; gemeint ist
+        // hier der Befund, und der beginnt an der Merkmalsliste.
+        assert!(
+            !meldung.contains("Merkmalsliste"),
+            "der Befund zur Haertung steht zu Unrecht da: {meldung}"
+        );
+        assert!(
+            !meldung.contains("Apple beglaubigt"),
+            "der Befund zur Identitaet steht zu Unrecht da: {meldung}"
+        );
+    }
+
+    /// Die Bauform wird an den Namen gemessen und nicht am Wort `universal`.
+    ///
+    /// Vier Faelle: die aufgezeichnete Anzeige eines universellen Buendels,
+    /// die eines duennen, eine Zeile ohne Klammer und eine leere Anzeige. Die
+    /// letzten zwei sagen nichts ueber die Bauform, und ein Raten zur bequemen
+    /// Seite hiesse, eine Einreichung auf gut Glueck loszuschicken.
+    #[test]
+    fn die_bauform_wird_an_den_architekturnamen_gemessen() {
+        assert!(traegt_beide_architekturen(AUSGELIEFERT));
+        assert!(!traegt_beide_architekturen(NUR_ARM));
+        assert!(!traegt_beide_architekturen(
+            "Format=app bundle with Mach-O universal\n"
+        ));
+        assert!(!traegt_beide_architekturen(""));
     }
 
     #[test]
