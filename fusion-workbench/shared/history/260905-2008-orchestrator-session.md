@@ -125,6 +125,26 @@ für erledigt erklärte. Die `note`-Zeile im Fehlertext belegt, dass `RUSTDOCFLA
 `cargo`-Aufruf erreicht und nicht nur gesetzt ist — ein Tor, das grün ist, weil es nichts
 prüft, wäre schlimmer als keines.
 
+### Eine Zahl in einem Commit dieser Sitzung stimmt nicht
+
+Die Commitnachricht von `26dac51` nennt für die Abschlussvermerke 692 geschlossen, 633 in
+Konventionsform, 18 mit verschobenem Doppelpunkt, 38 in Fettform, 9 ohne Zeile. Die zweite
+Standanalyse hat an demselben Commit nachgerechnet und kommt auf **691 / 632 / 19 / 30 /
+10**. Der ausliefernde Lauf selbst trägt die richtige Zahl im Code: der Modulkopf von
+`xtask/src/werkbank.rs` sagt „59 in drei Schreibweisen", und 19 + 30 + 10 ist 59.
+
+Die Richtung des Befunds ändert das nicht — die Fettform ist eine echte vierte Klasse, die
+fünf frühere Erhebungen übersehen haben, und ihre elf Fälle aus der Runde 23 machen sie zu
+einer laufenden und nicht bloß historischen Quelle. Eine Commitnachricht ist unveränderlich;
+die Berichtigung steht deshalb hier und in der Analyse
+`260906-0239-der-boden-des-bestands.md` `### 3. Die zwei nachgemessenen Zahlen: wer recht
+hat`.
+
+**Auch der Orchestrator hat in dieser Sitzung eine Zahl aus dem Kopf statt aus dem Bestand
+genannt**: nach Schleife 3 im Chat 195 offene Befunde, gezählt sind es 209. Das ist derselbe
+Fehler, den diese Sitzung an rund fünfzig Prosastellen behoben hat, begangen von der Stelle,
+die ihn behebt.
+
 **Der Consultant konnte nicht eingesetzt werden.** Er ist nutzergesteuert und für den
 Orchestrator nicht dispatchbar. An seine Stelle sind der Analyst für die fachliche
 Abwägung getreten und eine gebündelte Fragenliste an den Nutzer für die Entscheidungen,
