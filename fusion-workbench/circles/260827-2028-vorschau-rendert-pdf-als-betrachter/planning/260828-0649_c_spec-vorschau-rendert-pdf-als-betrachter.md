@@ -261,3 +261,29 @@ Der Spec führt **45** Abnahmekriterien, und keines ist abgehakt. Je Fähigkeit 
 **Die Datei trägt 48 Kästchen und nicht 45.** Die drei übrigen stehen unter `## User Decisions Pending` und sind offene Nutzerfragen, keine Abnahmekriterien. Wer über `- \[ \]` zählt, bekommt 48 und muss die drei abziehen.
 
 **Der Abnahmelauf am Bündel ist Nutzerarbeit**, wie in jeder Runde dieses Projekts; die Kriterien, die eine Probe ohne Fenster halten kann (Z1, Z2, C2.1, C2.2, C2.7, C3.2, C3.3, C3.4, C3.8, C4.6, C5.2), nennen die Probe. Die Runde schließt voraussichtlich als beschränkter Abschluss.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde abgenommen wurde.
+Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**C1.3 und C3.6 nennen `make tasten` für ein Erzeugnis, das aus dem Hauptmenü kommt.** Beide
+sagen „die Tastenbelegung als Markdown (`make tasten`)" beziehungsweise „`make tasten` gibt …
+dieselben Zeilen aus". `make tasten` ist der **interaktive Tastenlogger**: gemessen mit
+`grep -n -A3 '^tasten:' Makefile` steht dort `tasten: bundle ## Tastencodes protokollieren,
+Beenden mit Cmd+Q` und darunter `$(BINAER) --tasten-protokoll` — ein Protokoll der gedrückten
+Tastencodes am laufenden Bündel, ohne Markdown. Die Datei
+`~/Downloads/KRK-Tastenbelegung.md` entsteht aus dem Menüeintrag „Tastenbelegung als Markdown
+sichern" (`crates/krk-ui/src/appkit/anwendung.rs:901`, `tastenbelegungSichern:`) über
+`crates/krk-ui/src/belegungsausgabe.rs`; die dritte Spalte kommt dort aus
+`Wirkungsbereich::beschriftung` (`belegungsausgabe.rs:271`). **Der Plan dieser Runde ordnet
+beide Kriterien richtig zu**, nämlich der Ausgabe aus `belegungsausgabe.rs` und nicht dem
+Makefile-Ziel; der Abnahmelauf von Schritt 11 (`48cd818`) ist über den Menüeintrag gefahren.
+`make tasten` wird für C1.3 und C3.6 nicht gefahren. Anlass:
+`issues/260828-0712_*_der-spec-nennt-make-tasten-fuer-die-markdown-ausgabe-der-belegung-die-aus-dem-menue-kommt.md`.

@@ -1360,6 +1360,89 @@ pub(crate) mod tests {
         }
     }
 
+    /// Der Abschnitt `### Versionsstufen` steht unter `## Versionspflege` und
+    /// traegt die Aussagen, die C4 der Runde 8 von ihm verlangt.
+    ///
+    /// **Wozu.** C4 des Spec der Runde 8 kennzeichnet seine sieben Kriterien
+    /// mit **(Probe)**, und das heisst in jenem Spec ausdruecklich „eine
+    /// Pruefung im Baum weist es nach". Es gab keine; der Abgleich jener Runde
+    /// hat den Mangel festgehalten
+    /// (`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_*_neun-abnahmekriterien-tragen-probe-und-haben-keine.md`),
+    /// und der Datensatz nennt als Weg genau diese Probe: Nadeln an der Sache
+    /// und nicht an ganzen Saetzen, damit eine Umformulierung sie nicht rot
+    /// macht.
+    ///
+    /// **Was sie haelt, ist der heutige Stand und nicht der von 260813.** Zwei
+    /// der sieben Aussagen sind seither vom Nutzer ueberholt worden: den Tag
+    /// setzt seit dem 260813-1534 das Werkzeug und nicht der Nutzer (C4.3), und
+    /// `v0.1.0` benennt in der `README.md` nichts mehr (C4.4). Eine Probe, die
+    /// den Wortlaut von damals einforderte, waere heute rot, ohne dass etwas
+    /// kaputt waere. Der Nachsatz am Spec jener Runde schreibt beides aus.
+    ///
+    /// **Die Nadeln.** Der Abschnittstitel, die drei Stufennamen, die drei
+    /// Flaechen, an denen Major haengt (Tastenbefehl, Ablageordner,
+    /// Mindest-Zielsystem), die Tagform `v<version>`, und die zwei Aussagen zur
+    /// Reichweite der Pruefung aus Station 1 (unbeachtete Dateien; `bundle`
+    /// baut ohne Tag). Die Aussage, dass die angezeigte Zahl an jedem Bau
+    /// dieselbe ist, steht im Abschnitt darueber und wird dort gesucht.
+    #[test]
+    fn die_readme_traegt_den_abschnitt_ueber_die_versionsstufen() {
+        let readme = fs::read_to_string(bundle::wurzel().join("README.md"))
+            .expect("die README.md ist lesbar");
+
+        let pflege = readme
+            .find("\n## Versionspflege\n")
+            .expect("die README.md fuehrt den Abschnitt Versionspflege");
+        let stufen = readme
+            .find("\n### Versionsstufen\n")
+            .expect("die README.md fuehrt den Abschnitt Versionsstufen");
+        assert!(
+            pflege < stufen,
+            "die Versionsstufen stehen unter der Versionspflege und nicht davor"
+        );
+
+        // Der Abschnitt reicht bis zur naechsten Ueberschrift derselben oder
+        // einer hoeheren Ebene; heute ist es das Dateiende.
+        let rest = &readme[stufen + 1..];
+        let ende = rest[1..]
+            .find("\n## ")
+            .map_or(rest.len(), |stelle| stelle + 1);
+        let abschnitt = &rest[..ende];
+
+        for nadel in [
+            "**Major**",
+            "**Minor**",
+            "**Patch**",
+            "Tastenbefehl",
+            "~/Library/Application Support/KRK/",
+            "Mindest-Zielsystem",
+            "`v<version>`",
+            "Unbeachtete Dateien",
+            "cargo xtask bundle",
+        ] {
+            assert!(
+                abschnitt.contains(nadel),
+                "der Abschnitt Versionsstufen nennt {nadel} nicht mehr"
+            );
+        }
+
+        // C4.7: die Herkunft der Zahl steht weiterhin an genau einer Stelle,
+        // und das ist die Versionspflege und nicht der neue Abschnitt.
+        let einleitung = &readme[pflege..stufen];
+        assert!(
+            einleitung.contains("Die Version steht an **einer** Stelle"),
+            "die Versionspflege sagt nicht mehr, wo die Zahl wohnt"
+        );
+        assert!(
+            !abschnitt.contains("[workspace.package]"),
+            "der Abschnitt Versionsstufen wiederholt die Herkunft der Zahl, statt auf sie zu verweisen"
+        );
+        assert!(
+            einleitung.contains("an jedem Bau dieselbe"),
+            "die Aussage aus C4.6 ueber die Zahl an jedem Bau steht nicht mehr da"
+        );
+    }
+
     /// Alle `.rs`-Dateien des Baums, ohne `target/` und ohne das
     /// Git-Verzeichnis.
     fn rust_dateien(wurzel: &Path) -> Vec<PathBuf> {

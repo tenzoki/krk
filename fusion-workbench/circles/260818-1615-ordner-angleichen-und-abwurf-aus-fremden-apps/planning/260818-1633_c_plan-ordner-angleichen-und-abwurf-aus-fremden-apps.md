@@ -560,3 +560,42 @@ nicht am Zitat scheitert.
 Abnahmekriterien von C4 bis C7 sind sämtlich Nutzerarbeit, dazu zwei in C1 und zwei in C2 und
 die zwei Kriterien an der Stelle einer elften Zeitzusage. Kein Agent kann einen Ziehvorgang aus
 einer zweiten Anwendung erheben oder ein Fenster an seiner Breite ziehen.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut und abgenommen
+wurde. Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. Die Abnahmezeile von Schritt 1 sagt, die Proben blieben grün; sie fallen zu 51.** Die
+Begründung dort prüft die falsche Zählstelle. `belegungsausgabe.rs` zählt Kommandos gegen
+Kennungen, und eine Funktion ohne `Kommando` bringt keines von beidem mit — dort bleibt es
+gleich. Die Stelle, die bricht, ist `crates/krk-ui/src/belegungsmodell.rs`: sie verlangt zu
+**jeder** Funktion der Belegungsdatei einen Funktionsbereich, und den setzt erst
+`bereich_des_kommandos` in Schritt 2. Gemessen am 260818 gegen `b47355e` plus Schritt 1 und 3:
+`cargo test --workspace` endet mit `635 passed; 51 failed`, alle 51 auf denselben Panic in drei
+Modulen (`belegungsausgabe`, `belegungsmodell`, `menuemodell`); die Meldung steht heute in
+`crates/krk-ui/src/belegungsmodell.rs:896` und `:1029`
+(`grep -rn 'hat keinen Funktionsbereich' crates/krk-ui/src/belegungsmodell.rs`). **Eine
+Funktion ohne `Kommando` ist damit kein bekannter Zustand des Modells, sondern ein Abbruch.**
+Folgenlos geblieben ist es allein deshalb, weil der Plan die Schritte 1 und 2 in einen Commit
+legt. Richtig gelesen sagt die Zeile: der rote Zwischenstand ist erwartet, und er wird vom
+gemeinsamen Commit mit Schritt 2 getragen. Die Kopfzusage des Plans, Bau und Proben stünden
+nach **jedem einzelnen** Schritt grün, gilt für Schritt 1 nicht. Anlass:
+`issues/260818-1704_*_der-plan-sagt-die-proben-blieben-nach-schritt-1-gruen-sie-fallen-zu-51.md`.
+
+**2. Der Abwurf ist nicht der dritte Rufer von `auftrag_starten`, sondern war der vierte und ist
+heute der sechste.** Der Plan sagt an drei Stellen „dritter": in `Current State` („heute drei
+Rufer"), in Punkt 5 des Ansatzes und in der Überschrift von Schritt 9. Drei vorhandene plus ein
+neuer sind vier. Gemessen mit `grep -rn 'self\.auftrag_starten(' crates/krk-ui/src`: **sechs**
+Rufer (`crates/krk-ui/src/appkit/anwendung.rs:6215`, `:6475`, `:6651`, `:6782`, `:6868`,
+`:6919`). **Die Ordnungszahl gehört nicht in den Plantext**, sondern das Zählkommando — sie war
+beim Schreiben falsch, beim letzten Abgleich als „vierter" richtig und ist heute wieder falsch.
+Der Doc-Kommentar von `abwurf_ausfuehren` nennt den Stand korrekt und sagt ausdrücklich, dass
+der Plan ihn den dritten nennt. Anlass:
+`issues/260818-2228_*_step-9-of-the-plan-calls-the-new-caller-the-third-and-its-own-current-state-counts-three-already.md`.

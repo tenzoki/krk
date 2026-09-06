@@ -288,3 +288,27 @@ Der Spec führt **52** Abnahmekriterien, und keines ist abgehakt. Je Fähigkeit 
 **Die Datei trägt 56 Kästchen und nicht 52.** Die vier übrigen stehen unter `## User Decisions Pending` und sind offene Nutzerfragen, keine Abnahmekriterien.
 
 **Der Abnahmelauf am Bündel ist Nutzerarbeit**, wie in jeder Runde dieses Projekts: `cmd+v` verlangt KRK im Vordergrund und eine gefüllte Zwischenablage des Nutzers, die keine Probe beschreiben darf. Ohne Fenster prüfbar sind C1.2, C1.4 (soweit am Modell), C1.5, C1.7, C1.9, C2.1 (ohne den Finder-Fall), C2.2, C2.3, C2.4, C2.7, C2.9, C2.10, C3.2, C3.6, C3.7, C4.1 bis C4.5, C5.1 bis C5.8, C6.1 bis C6.6, C7.1, C7.3, C7.4, C7.5. Der Platzhalter ist damit fast ganz ohne Fenster abzunehmen; das Einfügen nicht, und die Runde schließt voraussichtlich als beschränkter Abschluss.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde abgenommen wurde.
+Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**C6.6 und B6: ein einzelnes `*` stößt den tiefen Durchlauf nicht an, und das ist günstiger als
+beschrieben.** Beide Stellen formulieren, ein einzelnes `*` als Filtertext stoße den Durchlauf
+an und dieser entscheide jeden Ordner am ersten Eintrag. **Die erste Hälfte trifft am Modell
+nicht zu.** Der Kurzschluss über den Namen in `Ordnermodell::zeilengrund_von`
+(`crates/krk-core/src/verzeichnis/modell.rs:812`) steht **vor** dem Unterbaumzweig; bei `*`
+trägt jeder Ordnername das Muster, `auftraege()` bleibt leer, und der Durchlauf bekommt gar
+nichts. **Die zweite Hälfte hält**, sobald man dem Durchlauf Aufträge von Hand gibt. Beides so,
+wie es ist, hält die Probe
+`ein_einzelnes_sternchen_stoesst_den_durchlauf_an_und_entscheidet_jeden_ordner_mit_dem_ersten_eintrag`
+(`crates/krk-core/tests/verzeichnis.rs:2484`), deren Name die Formulierung des Spec übernimmt
+und deren Rumpf die tatsächliche Lage prüft. Anlass:
+`issues/260829-1201_*_c6-6-sagt-ein-einzelnes-sternchen-stoesst-den-durchlauf-an-und-das-modell-schickt-ihm-nichts.md`.

@@ -481,3 +481,44 @@ Drei Arten von Beleg, und der Plan trennt sie an jedem Schritt.
 - [ ] `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_o_wo-steht-die-filterzahl-in-der-rangfolge-der-einen-statuszeile.md` — steht offen, während die Rangfolge gebaut ist. Der Filterstand liegt auf Rang 5 von 6, und vier Ränge über ihm verdrängen ihn samt der zwei neuen Satzteile.
 - [ ] `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-2326_o_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md` — E1 trägt die neue Kennung in beide Listen nach und bestätigt damit die Doppelung, statt sie zu beheben.
 - [ ] `shared/decisions/260811-2050_o_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` — die neue Datei `crates/krk-ui/src/appkit/bereichsleiste.rs` ist nicht neu, aber E3 fasst sie an; ihr Abschnitt über die macOS-Untergrenzen der angesprochenen Klassen ist beim Hinzufügen des Schalters zu prüfen. `NSButton` und `setRefusesFirstResponder` liegen weit unter macOS 15 und ändern nichts an der Angabe.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut und abgenommen
+wurde. Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**Die `Erfüllt:`-Felder der zwölf Schritte nennen 55 der 57 Abnahmekriterien; C4.3 und C6.2
+stehen in keinem.** Beide halten am Baum, und beide sind belegt — die Lücke liegt in der
+Zuordnung und nicht im Bau. Sie hat einen erkennbaren Grund: wer die Schritte danach fragt, was
+sie **ändern**, findet die zwei in keinem, denn ihr Weg stammt vollständig aus der Runde 10 und
+hat in dieser Runde keine Zeile bekommen.
+
+- **C4.3** — „`Esc` räumt den Filtertext weg und beendet damit den Durchlauf." Der Weg geht
+  durch drei Stellen: der dritte Rang von `Anwendungsdelegierter::abbrechen` ruft
+  `DateifensterQuelle::filter_leeren`, das über `Ordnermodell::filter_leeren` nach
+  `nach_filteraenderung` geht, und dort steht `durchlauf_nachziehen` an erster Stelle;
+  `Tabliste::durchlauf_nachziehen_an` setzt `durchlauf = None` unbedingt als erste Zeile.
+  Gemessen mit
+  `grep -n 'fn filter_leeren' crates/krk-ui/src/appkit/tabelle.rs crates/krk-core/src/verzeichnis/modell.rs`
+  und `grep -n 'fn durchlauf_nachziehen_an' crates/krk-ui/src/tabs.rs`; die Zeilennummern des
+  Befunds sind seit dem 260816 gewandert, die Namen nicht. Gehalten wird der zweite Teil von
+  `ohne_seine_drei_bedingungen_beginnt_kein_durchlauf` (`crates/krk-ui/src/tabs.rs`).
+- **C6.2** — „Der Filtertext wird einmal je Suche kleingeschrieben und nicht einmal je gelesener
+  Datei." Die Zusage hält, ihr Träger heißt seit der Runde 21 anders: `Muster::aus`
+  (`crates/krk-core/src/verzeichnis/filter.rs`) schreibt den Filtertext einmal je Änderung
+  klein und zerlegt ihn an `*`; `traegt_die_folge` in derselben Datei schreibt den verglichenen
+  Text einmal je Vergleich klein, und das ist der vom Plan unter `## Risks & Mitigations`
+  benannte und angenommene Preis. `Ordnermodell::filter_uebernehmen` und `filter_klein` aus dem
+  Befund gibt es in dieser Form nicht mehr. Gemessen mit
+  `grep -rn 'to_lowercase\|to_ascii_lowercase' crates/krk-core/src/verzeichnis/{filter,inhalt,durchlauf,modell}.rs crates/krk-ui/src/tabs.rs`:
+  **zwei** Stellen, beide in `filter.rs` (`:146` für das Muster, `:193` für den verglichenen
+  Text). Die erste Hälfte hält `der_kleingeschriebene_filtertext_laeuft_mit`
+  (`crates/krk-core/tests/verzeichnis.rs`).
+
+Anlass: `issues/260816-2020_*_zwei-abnahmekriterien-sind-keinem-schritt-des-plans-zugewiesen.md`.

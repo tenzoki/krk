@@ -125,6 +125,42 @@ für erledigt erklärte. Die `note`-Zeile im Fehlertext belegt, dass `RUSTDOCFLA
 `cargo`-Aufruf erreicht und nicht nur gesetzt ist — ein Tor, das grün ist, weil es nichts
 prüft, wäre schlimmer als keines.
 
+### Nutzerentscheidung zu den Datensätzen über eingefrorene Spec- und Plantexte
+
+Drei Behebungsbahnen haben unabhängig voneinander insgesamt 33 offene Defektdatensätze als
+„Aussage über einen eingefrorenen Spec- oder Plantext, deshalb nicht behebbar" eingeordnet und
+auf `_o_` stehen lassen. **Der Nutzer hat diese Einordnung am 260906 zurückgewiesen, und zwar
+zu Recht.**
+
+Zwei der 33 sind im Volltext gegengelesen worden, und sie sind nicht dieselbe Art von Sache:
+
+- `260814-1002` sagt, ein Abnahmekriterium zitiere `EDITORGRENZE` an `datei.rs:153`; sie steht
+  an `:164`, weil dieselbe Runde die Datei um 232 Zeilen wachsen ließ. Die Zusage des
+  Kriteriums hält — die Konstante steht wirklich genau einmal. Falsch ist allein der
+  Wegweiser, und am Erzeugnis ist nichts kaputt.
+- `260813-1345` sagt, neun Abnahmekriterien trügen die Kennzeichnung `(Probe)` und hätten
+  keine. Alle neun halten in der Sache, aber keines wird beim nächsten Umbau rot. **Das ist
+  ein echter Mangel, und er liegt im lebenden Baum**: zu beheben ist er, indem die neun Proben
+  geschrieben werden. Am Spec ist dafür nichts zu ändern.
+
+**Der Fehlschluss der Bahnen war, „ich darf den Spec einer geschlossenen Runde nicht
+umschreiben" als „dieser Befund ist nicht behebbar" zu lesen.** Die Regel in
+`rules/circle-records.md` bindet den Ort, an dem geschrieben werden darf, und sagt über den
+Baum nichts. Wo ein Datensatz einen Mangel im Baum benennt und den eingefrorenen Text nur als
+Fundstelle zitiert, ist er ganz gewöhnliche Arbeit.
+
+**Die Antwort des Nutzers auf `260906-0203`: ja, ein Agent darf berichtigen, als Nachsatz und
+nicht im Text.** Der ursprüngliche Wortlaut bleibt lesbar, die Berichtigung ist als spätere
+Zutat erkennbar. Damit ist auch die Hälfte der Klasse erledigt, die aus veralteten Zeigern
+besteht.
+
+**Der Anteil, der fusion selbst gehört, ist als Bugreport an das Plugin gegangen.** Das
+Markervokabular für Defekte kennt offen, in Arbeit, geschlossen und zurückgestellt und keinen
+Zustand für „stimmt, und wird nie zu tun sein"; `_d_` heißt „später" und ist damit falsch.
+Genau diese fehlende Vokabel hat die Bahnen in den falschen Eimer gedrückt. Dazu fehlt in
+`rules/circle-records.md` der Satz, der „der eingefrorene Text wird nicht umgeschrieben" von
+„der Mangel, den er dokumentiert, kann im Baum liegen" trennt.
+
 ### Eine Zahl in einem Commit dieser Sitzung stimmt nicht
 
 Die Commitnachricht von `26dac51` nennt für die Abschlussvermerke 692 geschlossen, 633 in

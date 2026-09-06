@@ -408,3 +408,91 @@ Der Spec führt **90** Abnahmekriterien, und keines ist abgehakt. Je Fähigkeit 
 **Drei Aussagen dieses Specs sind unrichtig und als Defekt gefilt; keine hält den Abschluss auf.** C1.1 nennt vier Feldbreiten, die den Bau anhalten, gemessen hält genau eine (`260830-1317_*_c1-1-nennt-vier-feldbreiten-…`). C8.3 nennt 98 zusätzliche Pakete, am Projektbaum sind es 101 (`260830-1613_*_c8-3-nennt-98-zusaetzliche-pakete-…`). C3.8 verlangt null Treffer für `write_changes`, C10.3 verlangt Treffer, die die Lesestelle nennen; der Baum gibt C10.3 recht (`260830-1614_*_c3-8-verlangt-null-treffer-…`). Dazu die Begründung im Abschnitt zu den zehn Zeitzusagen, die auf zwei Schalterständen ruht, von denen einer steht (`260830-1317_*_der-spec-schuetzt-die-messstrecke-…`), und die Unstimmigkeit der 25er-Liste (`260830-1317_*_die-25er-liste-der-nutzerarbeit-…`).
 
 **Der Spec bleibt inhaltlich unverändert.** Er ist eine Aufzeichnung seines Standes; berichtigt wird über Defektdatensätze und Nachträge, nicht durch Überschreiben.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, nach dem Bau angehängt. Der Bestandstext darüber ist Zeichen für Zeichen
+unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut wurde. Zulässig nach der
+Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. C1.1 nennt vier Feldbreiten, die den Bau anhalten; es hält genau eine.** Das Kriterium
+sagt, `Aufteilung::rahmen`, `Bereichsleiste::bereichsschalter`, `Aufteilung::gemessene_breiten`
+und `Fenstermodell::breiten_uebernehmen` hielten den Bau an, sobald `Bereich::ALLE` gewachsen
+ist. **Der Unterschied ist die Bauform und nicht die Feldbreite.** Allein
+`Bereichsleiste::bereichsschalter` baut sein Feld aus `Bereich::ALLE.map(…)`; dessen Länge folgt
+aus der Aufzählung, und die Zuweisung an ein Feld anderer Länge ist ein Typfehler. Ein Literal
+(`Aufteilung::rahmen`), ein `[0.0; N]` (`Aufteilung::gemessene_breiten`, ebenso
+`Fenstermodell::bereichsbreiten`) und ein fester Parameter
+(`Fenstermodell::breiten_uebernehmen`) übersetzen anstandslos weiter; die ersten beiden brechen
+beim Start an `index out of bounds`, der dritte bleibt still. Gemessen am 260830-1300 in einem
+eigenständig übersetzten Wegwerf-Workspace außerhalb des Projektbaums, mit einer sechswertigen
+Aufzählung und den vier Bauformen nebeneinander; die Erweiterung der Runde 23 ist inzwischen
+gefahren, gemessen mit `awk '/pub enum Bereich/,/^}/' crates/krk-ui/src/fenstermodell.rs`:
+**sechs** Werte. **Wer nach dem Eintrag in `Bereich::ALLE` die Fehlerliste des Übersetzers
+abarbeitet und dann fertig ist, liefert ein Bündel, das beim Start abstürzt.** Anlass:
+`issues/260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md`;
+die offene Frage nach der künftigen Bauform steht in
+`shared/decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`.
+
+**2. `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`: die Messstrecke ist nicht durch
+einen Schalterstand geschützt, sondern durch den Ort des Messplatzes.** Der Absatz sagt, „beide
+Schalter stehen ab Werk so, dass die Strecke sie nicht anfasst". A13 desselben Spec stellt die
+Markenspalte ab Werk auf **ein**, und C5.10 macht daraus ein Abnahmekriterium; gemessen mit
+`grep -n 'marke: true' crates/krk-core/src/ablage/sitzung.rs` (`:344`, in
+`Spaltensichtbarkeit::default`). Der Bedarf ist eine Oder-Verknüpfung:
+`Anwendungsdelegierter::gitbedarf_nachziehen` (`crates/krk-ui/src/appkit/anwendung.rs:4823`)
+rechnet `modell.sichtbar(Bereich::Git) || spalte_sichtbar_in(…, Spalte::Marke)`, und
+`Tabliste::gitlauf_nachziehen_an` stößt daraufhin bei jedem Ordnerwechsel einen `Gitlauf` an.
+Dazu kommt, dass die Strecke am gebauten Bündel gegen die `session.toml` des Nutzers läuft, „ab
+Werk" also über den Stand während einer Messung ohnehin nichts sagt. **Was trägt, ist prüfbar:**
+`git -C ~/Library/Caches/krk-messplatz rev-parse --show-toplevel` bricht mit **exit 128** ab, es
+liegt dort bis zur Wurzel kein `.git`, `gix::discover` antwortet in gemessenen 21 bis 82 µs mit
+„kein Repository", und es entsteht kein Lauf. Wer den Messplatz eines Tages in ein Repository
+legt, bekommt bei eingeschalteter Markenspalte einen Statuslauf je Ordnerwechsel mitten in einer
+Zeitmessung — und der Schalterstand hätte ihn nicht gewarnt. Anlass:
+`issues/260830-1317_*_der-spec-schuetzt-die-messstrecke-mit-einem-schalterstand-den-a13-auf-ein-stellt.md`.
+
+**3. `## Zur Zählung der Abnahmekriterien`: der zweite Satz nennt zwei Kriterien zu Unrecht als
+Gegenbeispiele.** Die 25er-Liste der Nutzerarbeit führt C3.1 und C3.3, und der Satz zwei Zeilen
+darunter sagt von denselben zwei, sie stünden nicht darin. **Die Liste ist die richtige
+Hälfte**: sie zählt 25 Einträge, und 25 + 65 = 90 geht auf; C3.1 und C3.3 sind wie C6.1
+geschnitten — Nutzerarbeit am Bündel und daneben eine Probe ohne Fenster —, und C6.1 steht in
+der Liste. Richtig nennt der zweite Satz allein **C2.3, C4.3 und C6.5**. Der Plan dieser Runde
+folgt der Liste und führt C3.1 und C3.3 in Schritt 17. Ein Leser, der dem zweiten Satz folgt,
+streicht zwei Kriterien aus dem Abnahmelauf, und der Branchname und die Form der Verlaufszeile
+werden am laufenden Bündel nie angesehen. Anlass:
+`issues/260830-1317_*_die-25er-liste-der-nutzerarbeit-fuehrt-c3-1-und-c3-3-und-der-satz-darunter-sagt-sie-seien-nicht-gefuehrt.md`.
+
+**4. C8.3 nennt 98 zusätzliche Pakete; am Projektbaum sind es 101.** Die 98 stammen aus
+`shared/analyses/260830-1006-gix-als-git-anbindung-stufe-a.md` und sind dort an einem
+Wegwerf-Workspace **außerhalb** des Projektbaums erhoben, in dem weder `syntect` noch `zip`
+noch `objc2` standen; `cargo` vereinigt Fassungen über den ganzen Baum, und daher die
+Abweichung. Gemessen mit
+`cargo tree --target aarch64-apple-darwin -e normal,build | grep -oE '[a-zA-Z0-9_-]+ v[0-9]+\.[0-9.]+' | sort -u | wc -l`:
+**197** — vorher 96, also 101 neue Einträge, für beide Mac-Ziele dieselben. Davon sind `gix`
+selbst und 50 Kisten mit dem Vorsatz `gix-` zusammen 51; zwei der übrigen sind weitere Fassungen
+von `hashbrown`, also 100 neue Namen. `Cargo.lock` wächst von 101 auf 219 Einträge, also um 118
+und nicht um die von der Analyse genannten 119. **C8.3 soll keine Zahl mehr nennen, sondern die
+Erhebungsvorschrift**, wie E7 es für die C-Freiheits-Zusage verlangt und wie `CLAUDE.md` es für
+`Kommando`, `Wirkungsbereich` und `Art` hält; die Begründung in der Wurzel-`Cargo.toml` nennt
+101 und sagt, wie die Zahl erhoben ist. Anlass:
+`issues/260830-1613_*_c8-3-nennt-98-zusaetzliche-pakete-am-projektbaum-gemessen-sind-es-101.md`.
+
+**5. C3.8 und C10.3 schreiben demselben `grep` zwei verschiedene Ergebnisse vor; C10.3 hat
+recht.** C3.8 verlangt für `grep -rn 'write_changes' crates/` **keine** Fundstelle, C10.3 für
+`grep -rn 'NeedsUpdate\|write_changes' crates/` Treffer, die die Lesestelle nennen. Beide sind
+nicht zugleich erfüllbar, solange der Plan den begründenden Modulkopf anordnet — und er ordnet
+ihn ausdrücklich an, weil er den offenen Datensatz im Code auffindbar macht. Gemessen mit
+`grep -rn 'write_changes' crates/`: **drei** Treffer, alle in Prosa
+(`crates/krk-core/src/git/mod.rs:17`, `crates/krk-core/src/git/leser.rs:56` und `:496`).
+**Die tragende Prüfung ist die auf den Aufruf:** `grep -rn 'write_changes(' crates/` bleibt ohne
+Fundstelle, gemessen null. **Ein zweiter Riss steckt im selben Muster und ist älter als diese
+Runde:** `grep -rn 'NeedsUpdate' crates/` liefert 15 Treffer, davon **elf** auf
+`menuNeedsUpdate:`, den Selektor des Kontextmenüs, die mit `gix` nichts zu tun haben. Das Muster
+gehört an eine Wortgrenze gebunden (`grep -rnw` oder `EntryStatus::NeedsUpdate`). Anlass:
+`issues/260830-1614_*_c3-8-verlangt-null-treffer-fuer-write-changes-c10-3-verlangt-treffer-die-die-lesestelle-nennen.md`.

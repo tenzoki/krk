@@ -693,3 +693,53 @@ fn steht_im_zitat(prosa: &str, stelle: usize) -> bool {
         _ => false,
     }
 }
+
+/// C4.8 der Runde 7: Beide Sperrgriffe der Ablage tragen `#[must_use]`, und
+/// beide tragen eine Begruendung.
+///
+/// **Was das Kriterium zusagt.** Ein Griff, dessen Fallenlassen die Sperre
+/// abgibt, gehoert in eine Bindung, die so lange lebt wie der Durchgang. Beide
+/// Typen unter `krk-core/src/ablage/sperre.rs` sind von dieser Bauart:
+/// `Schreibgriff` haelt die Schreibsperre ueber dem Ablageordner,
+/// `Sitzungsrecht` das Recht, die Sitzung zu schreiben. Faellt einer von ihnen
+/// still weg, laeuft der Durchgang ungeschuetzt weiter beziehungsweise haelt
+/// eine zweite Instanz sich fuer die erste — beides ohne Meldung.
+///
+/// **Warum eine Probe und nicht der Bau.** `unused_must_use` ist erst unter
+/// `-D warnings` ein Fehler, und er faellt nur an, wo ein Rueckgabewert
+/// tatsaechlich fallengelassen wird. Verschwindet das Attribut, bleibt der Bau
+/// gruen, solange kein Aufrufer es ausnutzt — und der naechste, der es tut,
+/// bekommt keine Warnung mehr. C4.8 traegt die Kennzeichnung **(Probe)**, und
+/// der Abgleich der Runde 7 hat festgehalten, dass es keine gab
+/// (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0647_*_neun-abnahmekriterien-versprechen-eine-probe-und-haben-keine.md`).
+///
+/// **Gefordert ist die Begruendung und nicht nur das Attribut.** Ein nacktes
+/// `#[must_use]` meldet „unused return value"; die Begruendung sagt dem
+/// naechsten Leser, was er verliert. Dieses Projekt schreibt sie an beiden
+/// Stellen aus, und die Probe haelt das fest.
+#[test]
+fn beide_sperrgriffe_der_ablage_tragen_must_use_mit_begruendung() {
+    let (_, sperre) = quelldateien()
+        .into_iter()
+        .find(|(name, _)| name == "krk-core/src/ablage/sperre.rs")
+        .expect("krk-core/src/ablage/sperre.rs steht im Baum");
+
+    let zeilen: Vec<&str> = sperre.lines().collect();
+    for typ in ["pub struct Schreibgriff", "pub struct Sitzungsrecht"] {
+        let stelle = zeilen
+            .iter()
+            .position(|zeile| zeile.starts_with(typ))
+            .unwrap_or_else(|| panic!("{typ} steht nicht mehr in sperre.rs"));
+        // Zwischen Attribut und Typ steht heute `#[derive(Debug)]`; gesucht
+        // wird deshalb in den Zeilen davor bis zum Ende des Doc-Kommentars.
+        let traegt_marke = zeilen[..stelle]
+            .iter()
+            .rev()
+            .take_while(|zeile| zeile.starts_with("#[") || zeile.starts_with("///"))
+            .any(|zeile| zeile.starts_with(concat!("#[must", "_use = \"")));
+        assert!(
+            traegt_marke,
+            "{typ} traegt kein must_use mit Begruendung; ein fallengelassener Griff gibt seine Sperre still ab"
+        );
+    }
+}

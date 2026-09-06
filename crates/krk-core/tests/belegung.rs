@@ -1918,6 +1918,45 @@ fn der_fokuswechsel_wirkt_aus_jedem_bereich_heraus() {
     }
 }
 
+/// Die fuenf Befehle, die die Anwendung als ganze angehen, tragen
+/// [`Wirkungsbereich::Ueberall`].
+///
+/// Sie sind keine Gruppe des Fensters, sondern der Anwendung: das Beenden, die
+/// weitere Instanz, der Notizzettel und die zwei Wege in die Tastenbelegung.
+/// Keiner von ihnen setzt einen Bereich voraus, und ein engerer Bereich waere
+/// bei jedem von ihnen genau dann eine Sperre, wenn der Nutzer ihn braucht —
+/// wer ein zweites KRK aus dem Editor heraus ruft, will nicht den Editor
+/// verlassen.
+///
+/// **Wozu diese Probe.** C3.3 des Spec der Runde 7 sagt zu, dass
+/// `WeitereInstanz` `Ueberall` traegt, und kennzeichnet die Zusage mit
+/// **(Probe)**; der Abgleich jener Runde hat festgehalten, dass es keine gab
+/// (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0647_*_neun-abnahmekriterien-versprechen-eine-probe-und-haben-keine.md`).
+/// Die vier daneben stehen im Quelltext im selben Zweig und aus derselben
+/// Begruendung; eine Probe, die allein die weitere Instanz naehme, liesse die
+/// Begruendung ungeprueft, die sie traegt.
+///
+/// [`jedes_kommando_traegt_genau_einen_wirkungsbereich`] haelt daneben, dass
+/// **jedes** Kommando einen Bereich traegt; welchen, sagt es nicht. Diese Probe
+/// sagt es fuer diese fuenf.
+#[test]
+fn die_anwendungsweiten_befehle_wirken_aus_jedem_bereich_heraus() {
+    for kommando in [
+        Kommando::Beenden,
+        Kommando::WeitereInstanz,
+        Kommando::Notizzettel,
+        Kommando::BelegungAnsehen,
+        Kommando::BelegungsdateiAnsehen,
+    ] {
+        assert_eq!(
+            kommando.wirkungsbereich(),
+            Wirkungsbereich::Ueberall,
+            "{} betrifft die Anwendung als ganze und darf keinen Bereich voraussetzen",
+            kommando.kennung()
+        );
+    }
+}
+
 /// Die drei Befehle, deren Taste im Editor der Textflaeche gehoert, tragen den
 /// Navigator und nicht mehr `Ueberall`.
 ///

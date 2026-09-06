@@ -1,0 +1,67 @@
+Der Plan schreibt Zählerwartungen, ohne sie gegen den Baum zu halten — dreimal in einer Runde
+
+---
+
+Der Plan der Runde 14 verlangt an mehreren Stellen Zählproben über `crate::quellbaum` und
+schreibt ihre Erwartung gleich mit aus: „kommt im Baum nicht mehr vor", „steht genau einmal".
+Drei dieser Erwartungen waren am Baum nicht erfüllbar, und zwar aus drei verschiedenen Gründen.
+Jedes Mal hat der ausführende `coder` es beim Bauen gemerkt und die Erwartung an die
+tatsächliche Lage angepasst.
+
+---
+
+**Gefilt von:** orchestrator, Sitzung `260819-2026`
+**Schwere:** niedrig im Schaden, mittel in der Wiederholung. Kein falscher Code ist entstanden;
+die Kosten sind ein Erkennungs- und Berichtigungsdurchgang je Fall, und das Risiko, dass ein
+weniger aufmerksamer Executor die Erwartung erzwingt statt sie zu berichtigen — also den Baum
+an die Probe anpasst statt die Probe an den Baum.
+**Baumstand:** `1b85538`.
+
+## Die drei Fälle
+
+| Schritt | Erwartung im Plan | Warum sie nicht zutrifft |
+|---|---|---|
+| 3 | `setSelectable(false)` kommt im Baum nicht mehr vor | `appkit/belegungsansicht.rs:677` setzt es an der Meldungszeile des Belegungsblattes, einem `NSTextField`, und das soll stehen bleiben |
+| 5 | `fn fokusansicht` steht genau einmal | `Anwendungsdelegierter::fokusansicht` trägt denselben Namen für die andere Hälfte derselben Frage; es sind zwei |
+| 6 | `text_auf_ablage_schreiben` hat bis Schritt 7 keinen Rufer, braucht also `expect(dead_code)` | `text_schreiben` ruft sie sofort, und zwar durch die Verdrahtung, die derselbe Schritt zwei Sätze vorher verlangt |
+
+Der dritte Fall ist keine Zählprobe, gehört aber zur selben Gestalt: eine Aussage über den
+Bestand des Baums, im Plan behauptet statt am Baum gelesen.
+
+## Was daran nicht das Problem ist
+
+**Die Zählproben selbst sind richtig und sollen bleiben.** Dieses Projekt hält mit ihnen seine
+„es gibt genau eine Stelle"-Zusagen, und sie haben in der Runde 10 einen echten Defekt
+gefangen. Der Befund richtet sich allein gegen die *Erwartungszahl*, die der Plan vorwegnimmt.
+
+**Die ausführenden Coder haben richtig gehandelt**, alle drei: Lage am Baum erhoben, Erwartung
+daran angepasst, Befund belegt. Zwei haben dafür einen eigenen Datensatz abgelegt.
+
+## Mögliche Richtungen
+
+Nicht entschieden, hier nur festgehalten:
+
+- Der Plan nennt die Zusage („diese Frage steht an einer Stelle") und überlässt die Zahl dem
+  Schritt, der sie am Baum erhebt. Das ist die kleinste Änderung und trifft alle drei Fälle.
+- Der Planner erhebt jede Zählerwartung selbst am Baum, bevor er sie ausschreibt. Genauer,
+  aber die Zahl veraltet zwischen Plan und Ausführung, sobald ein früherer Schritt sie ändert —
+  und genau das ist im Fall von Schritt 6 passiert.
+- Die Dispatch des Orchestrators trägt den Hinweis mit, die Lage vor der Erwartung zu prüfen.
+  Das ist ab Schritt 7 dieser Runde geschehen und hat gewirkt, ist aber eine Gewohnheit und
+  keine Vorkehrung.
+
+---
+Abgleich 260820-0834: **trifft zu und bindet kuenftige Arbeit, nicht diese Runde.** Alle drei
+Faelle sind am Baum nachgelesen und zugunsten des Baums geloest: `setSelectable(false)` steht
+weiter genau einmal, an der Meldungszeile des Belegungsblattes
+(`crates/krk-ui/src/appkit/belegungsansicht.rs`), und die berichtigte Probe
+`die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort`
+(`crates/krk-ui/src/appkit/vorschau.rs:1620`) zaehlt Fundstellen je Datei statt eine Null zu
+erwarten; `fn fokusansicht` steht zweimal, und die Probe
+`die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal` (`vorschau.rs:1846`) misst
+darum die Vorschau statt des Baums; die `expect(dead_code)`-Zeile aus Schritt 6 ist weggelassen,
+weil `text_schreiben` die neue Funktion sofort ruft. Der Befund richtet sich gegen die Gestalt
+des Planens und nicht gegen diese Umsetzung. Er bleibt offen.
+
+---
+Resolved: Der Plantext ist als Nachsatz berichtigt (`planning/260819-2245_c_plan-…`), nach der Nutzerentscheidung zu `shared/decisions/260906-0203_*`; die Baumseite war schon vor diesem Lauf erledigt. Alle drei Erwartungen sind am 260906 neu gemessen: `grep -rn "setSelectable(false)" crates/` → weiterhin genau eine Stelle, `crates/krk-ui/src/appkit/belegungsansicht.rs:745`, und sie soll dort bleiben; `grep -rn "fn fokusansicht" crates/` → **drei** Stellen (`vorschau.rs:968`, `git.rs:760`, `anwendung.rs:2560`), zur Bauzeit zwei, die dritte hat die Runde 23 gebracht — und dass die Probe `die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal` die Vorschau statt des Baums misst, ist genau der Grund, warum die dritte sie nicht rot gemacht hat; `text_auf_ablage_schreiben` hat seinen Rufer sofort (`grep -n` in `crates/krk-ui/src/appkit/zwischenablage.rs` → Erklaerung `:392`, Aufruf aus `text_schreiben` `:411`), die `expect(dead_code)`-Zeile ist weggelassen. **Was der Befund gegen die Gestalt des Planens sagt, bleibt gueltig und bindet kuenftige Arbeit**; der Nachsatz nennt die kleinste Abhilfe, naemlich die Zusage im Plan und die Zahl beim Schritt, der sie am Baum erhebt.

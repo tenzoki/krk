@@ -597,3 +597,49 @@ Ein Defekt ist beim Erheben der Grundlage aufgefallen und liegt im Circle: `issu
 **Damit stehen alle vierzehn Schritte auf `[DONE]`**, die Kopfzeile `**Status:**` ist von `Entwurf` auf `Complete` gezogen und der Dateiname auf den Marker `_c_`. Der Plan war der einzige einer geschlossenen Runde, der noch `_o_` trug; alle acht Pläne der Runden 1 bis 9 stehen auf `_c_`. Der Abnahmelauf am laufenden Bündel bleibt davon unberührt: die Zeile unter Strang G hält ausdrücklich fest, dass `[DONE]` den Schritt des Ausführenden bezeichnet und nicht die Abnahme, und die Runde ist genau deswegen beschränkt geschlossen.
 
 **Zwei Verweise dieses Plans nennen einen Marker, den ihr Ziel nicht mehr trägt.** In der Liste der offenen Nutzerentscheidungen steht `decisions/260814-1830_*_bleibt-der-filtertext-…`, das Ziel trägt seit `9a2d0e0` `_i_`; im Verzeichnis der Datensätze steht `decisions/260814-2102_*_gehoert-die-fallunterscheidung-…` (heute `_i_`) und `issues/260814-2102_*_der-pruefschritt-fuer-die-sichtbarkeit-…` (heute `_c_`). Sie sind hier nicht berichtigt, weil sie in der Prosa des Plans stehen und diese dem Planer gehört; aufgenommen sind sie mit den sechs übrigen Fundstellen in `shared/issues/260815-1216_*_sieben-verweise-dieser-sitzung-nennen-einen-marker-den-ihr-ziel-nicht-mehr-traegt.md`.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut und abgenommen
+wurde. Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. Die `Files:`-Zeilen von fünf der vierzehn Schritte sind zu kurz, und die Ursachen sind
+drei.** Wer die Zeile als Umfangsgrenze liest — für eine Zuständigkeitsprüfung, für eine
+Abgleichszählung —, bekommt bei diesen fünf eine zu kurze Antwort.
+
+- **C2, E1 und E3** nennen `crates/krk-ui/src/appkit/tabelle.rs` nicht, und der Weg an das
+  Modell des sichtbaren Tabs führt durch sie: die Tabliste steht im modulprivaten Ivar
+  `QuelleIvars::tabs`, und ein `impl`-Block in `anwendung.rs` erreicht ihn nicht. Die drei
+  Schritte sind ohne diese Datei nicht ausführbar. Gemessen mit
+  `grep -n 'pub fn tiefe_suche_umschalten\|pub fn filter_steht\|pub fn letztes_filterzeichen_weg' crates/krk-ui/src/appkit/tabelle.rs`:
+  `:2989`, `:3104`, `:3134` — die drei öffentlichen Methoden, die die Umsetzer dort angelegt
+  haben, unmittelbar neben `verstecke_umschalten` (`:2959`) und in derselben Bauart.
+- **B1** nennt die dritte Datei im Fließtext seines Abschnitts `Changes:` und lässt sie in
+  seiner `Files:`-Zeile aus; die zwei Teile desselben Schritts widersprechen sich, und der
+  Fehler sitzt allein in der Zeile. Es ist `crates/krk-ui/src/kommandos/navigation.rs`, wohin
+  die reine Funktion `ersatzzeile` für C1.11 gezogen wurde
+  (`grep -n 'fn ersatzzeile' crates/krk-ui/src/kommandos/navigation.rs` → `:91`).
+- **D1** setzt einen Rang **zwischen** zwei bestehende und verschiebt damit die Nummern aller
+  darunter; die zwei zusätzlichen Dateien tragen je eine Zeile Prosa und sind die Folge des
+  Schritts und keine Abweichung von ihm.
+
+Anlass: `issues/260814-2303_*_e1-und-e3-nennen-drei-dateien-der-weg-an-das-tabmodell-fuehrt-durch-eine-vierte.md`
+und `issues/260814-2357_*_c2-nennt-zwei-dateien-der-weg-an-den-filtertext-des-tabs-fuehrt-durch-eine-dritte.md`,
+das die fünf Fälle sammelt.
+
+**2. Die Reihenfolge von E1 und E2 erzwingt einen roten Zwischenstand.** E1 trägt die Kennung
+in `Kommando::KENNUNGEN` ein, E2 den Eintrag in `resources/default-keymap.toml`, und
+`jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` hält beide gegeneinander;
+zwischen den Schritten ist die Zusicherung gebrochen. Die zwei Schritte gehören überdies zwei
+Ausführenden — E1 dem `coder`, E2 dem `ontocoder` —, keiner kann die Zusicherung allein halten,
+und ein Bericht ohne `exit 0` hält die Übergabe an. **Richtig ist die umgekehrte Reihenfolge:**
+die Belegungsdatei verträgt einen Eintrag ohne zugehöriges `Kommando`, denn die Probe prüft
+diese Richtung nicht und `Kommando::aus_kennung` antwortet dafür ausdrücklich `None` mit der
+Bedeutung „noch nicht gebaut". Umgekehrt geht es nicht. Anlass:
+`issues/260814-2303_*_e1-und-e2-teilen-eine-zusicherung-die-eine-probe-haelt-und-lassen-den-baum-dazwischen-rot.md`.

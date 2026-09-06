@@ -640,3 +640,60 @@ Arbeit, die dahinter noch liegt. Die Runde selbst schließt als **beschränkter 
 ihre sechs Vorgängerinnen und aus demselben Grund: der Abnahmelauf verlangt KRK im Vordergrund
 und ist Nutzerarbeit. Alles, was der Spec mit **(Bündel)** kennzeichnet, bleibt bis dahin
 unabgenommen.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut und abgenommen
+wurde. Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. Der Abschnitt `### Die Abnahmeliste für den Lauf am Bündel` führt zehn Zeilen und lässt die
+zwei hingenommenen Verluste dieser Runde aus.** Nachzutragen wären zwei Zeilen:
+
+| Gegenstand | Woher |
+|---|---|
+| `esc` im Editor während einer laufenden Zusammensetzung einer Eingabemethode — es bricht sie seit S3 nicht mehr ab | `decisions/260813-0320_*_esc-im-editor-erreicht-heute-die-textflaeche-und-wird-nach-s3-geschluckt.md` |
+| Ein Klick auf den Vorschau-Schalter der Bereichsleiste mitten in einer Umbenennung — er wirkt seit S2 nicht mehr | `issues/260813-0311_*_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md` |
+
+Gemessen am 260813-0642: die Wörter „Bereichsleiste", „Zusammensetzung", „Eingabemethode" und
+„Vorschau-Schalter" kommen im ganzen Plan nicht vor. **Ein Verlust, den niemand nachsieht, gilt
+danach als geprüft, ohne geprüft worden zu sein**, und beide sind bisher abgeleitet und nicht
+gemessen. Der Schlussabsatz von `issues/260813-0311_*` behauptet, der Klick stehe auf der
+Abnahmeliste; das trifft nicht zu, und jener Datensatz ist geschlossen und wird nach der
+Ortsregel nicht angefasst.
+
+**2. Die Randbedingung des Spec, an der beide hängen, sagt mehr zu, als die Runde hält.**
+`## Randbedingungen` des Spec (`shared/planning/260813-0053_*_spec-…`) verlangt „Kein Verlust
+gegenüber heute" und lässt zwei Auswege: der Befehl steht auf der benannten Liste aus C2.5, oder
+der Spec sagt, warum der Weg keine Wirkung hatte. **Beide Verluste erfüllen keinen von beiden.**
+`abbrechen` und die Bereichskommandos stehen nicht auf der Ausnahmeliste, und beide Wege hatten
+eine Wirkung. Gemessen mit
+`grep -n -A6 'fn immer_erreichbar' crates/krk-ui/src/kommandos/zulaessigkeit.rs`: die Liste führt
+heute **drei** Befehle — `Beenden`, `FensterSchliessen`, `FensterEinblenden` —, gehalten von
+`die_ausnahmeliste_fuehrt_dieselben_drei_befehle_wie_vor_dieser_runde` in derselben Datei. **Die
+Randbedingung liegt in `shared/planning/` und damit außerhalb der Reichweite dieses Nachsatzes**;
+der Befund bleibt insoweit offen. Anlass für 1 und 2:
+`issues/260813-0642_*_zwei-hingenommene-verluste-stehen-auf-keiner-abnahmeliste.md`.
+
+**3. Neun Abnahmekriterien des Spec tragen **(Probe)** und hatten keine; drei haben seit dem
+260906 eine.** Gebaut sind
+`die_anwendungsweiten_befehle_wirken_aus_jedem_bereich_heraus`
+(`crates/krk-core/tests/belegung.rs`, für C3.3: `WeitereInstanz` trägt
+`Wirkungsbereich::Ueberall`), `das_hauptfenster_entsteht_an_genau_einer_stelle`
+(`crates/krk-ui/src/appkit/fenster.rs`, für C3.12) und
+`beide_sperrgriffe_der_ablage_tragen_must_use_mit_begruendung`
+(`crates/krk-core/tests/baum.rs`, für C4.8). **Die übrigen sechs bleiben ohne Probe, und die
+Gründe sind je verschieden**, kein einziger davon Nachlässigkeit: C2.12 und C2.13 verlangen
+`--menue-protokoll` am laufenden Bündel und sind damit Nutzerarbeit; C2.15 hat der Plan selbst
+auf **(Bündel)** verschoben, während der Spec **(Probe)** sagt; C4.1 und C4.3 sind Aussagen über
+einen **Diff** dieser Runde und am heutigen Baum gar nicht mehr zu stellen; C4.4 hängt an der
+offenen Frage
+`shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` und ist dort
+aufgehoben. **Von den acht „nur teilweise gedeckten" Zeilen ist C2.5 inzwischen ganz gedeckt**,
+nämlich von der unter 2 genannten Probe. Anlass:
+`issues/260813-0647_*_neun-abnahmekriterien-versprechen-eine-probe-und-haben-keine.md`.

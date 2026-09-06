@@ -516,3 +516,48 @@ beantwortet statt umgesetzt. Der gewichtigste Befund widerlegt die Erschließung
 die eine Abfangstelle trägt die Zwischenablage, das Ziehen und die Dienste trägt sie nicht. Der Plan
 ist abgearbeitet; die Runde ist damit nicht rückstandsfrei. Beides steht nebeneinander und das eine
 hebt das andere nicht auf.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut und abgenommen
+wurde. Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**Drei Zählerwartungen dieses Plans waren am Baum nicht erfüllbar, und keine ist erzwungen
+worden.** Die Ausführer haben jedes Mal die Lage erhoben und die Erwartung an den Baum
+angepasst statt umgekehrt; hier steht, was gilt.
+
+- **Schritt 3** erwartet, `setSelectable(false)` komme im Baum nicht mehr vor. Gemessen mit
+  `grep -rn 'setSelectable(false)' crates/`: die Zeile steht weiterhin genau einmal, nämlich an
+  der Meldungszeile des Belegungsblattes
+  (`crates/krk-ui/src/appkit/belegungsansicht.rs:745`, ein `NSTextField`), und sie soll dort
+  stehen bleiben. Gebaut ist deshalb `die_zwei_schalter_stehen_je_an_genau_einer_stelle_und_dort`
+  (`crates/krk-ui/src/appkit/vorschau.rs`), die Fundstellen je Datei zählt, statt eine Null zu
+  erwarten.
+- **Schritt 5** erwartet, `fn fokusansicht` stehe genau einmal. Gemessen mit
+  `grep -rn 'fn fokusansicht' crates/`: **drei** Stellen —
+  `crates/krk-ui/src/appkit/vorschau.rs:968`, `crates/krk-ui/src/appkit/git.rs:760` und
+  `crates/krk-ui/src/appkit/anwendung.rs:2560`, das die andere Hälfte derselben Frage
+  beantwortet. Zur Zeit des Baus waren es zwei; die dritte hat die Runde 23 mit dem Git-Bereich
+  gebracht. Die Probe `die_zuordnung_auf_eine_ansicht_steht_in_der_vorschau_genau_einmal`
+  (`vorschau.rs`) misst darum die Vorschau und nicht den Baum, und genau deshalb ist sie von der
+  dritten Stelle unberührt geblieben.
+- **Schritt 6** erwartet, `text_auf_ablage_schreiben` habe bis Schritt 7 keinen Rufer und
+  brauche `expect(dead_code)`. `text_schreiben` ruft sie sofort, und zwar durch die
+  Verdrahtung, die derselbe Schritt zwei Sätze vorher verlangt; gemessen mit
+  `grep -n 'text_auf_ablage_schreiben' crates/krk-ui/src/appkit/zwischenablage.rs` (`:392` die
+  Erklärung, `:411` der Aufruf aus `text_schreiben`). Die Zeile ist weggelassen worden.
+
+**Was der Befund misst, ist die Gestalt des Planens und nicht diese Umsetzung.** Eine
+Erwartungszahl, die der Plan vorwegnimmt, veraltet zwischen Plan und Ausführung, sobald ein
+früherer Schritt sie ändert — im Fall von Schritt 6 ist genau das geschehen —, und sie lädt den
+weniger aufmerksamen Ausführer ein, den Baum an die Probe anzupassen statt die Probe an den
+Baum. Die kleinste Abhilfe für alle drei: der Plan nennt die Zusage („diese Frage steht an
+einer Stelle") und überlässt die Zahl dem Schritt, der sie am Baum erhebt. Anlass:
+`issues/260820-0646_*_der-plan-schreibt-zaehlerwartungen-ohne-sie-gegen-den-baum-zu-halten-dreimal-in-einer-runde.md`;
+er bleibt offen, weil er künftige Arbeit bindet und nicht diese Runde.

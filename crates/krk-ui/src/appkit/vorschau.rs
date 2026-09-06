@@ -2563,4 +2563,44 @@ mod tests {
              Objekt des Betrachters entstehen (Z2)"
         );
     }
+
+    /// C4.5 der Runde 6: keine Web-Ansicht im ganzen Baum.
+    ///
+    /// **Das Kriterium schreibt seine Pruefform selbst vor** — „Die Pruefung
+    /// zaehlt den Klassennamen im Baum" — und traegt die Kennzeichnung
+    /// **(Probe)**; die Pruefstrategie jenes Plans zaehlt sie unter fuenf
+    /// Zaehlproben auf. Gebaut war sie nie
+    /// (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_*_drei-der-fuenf-zaehlproben-der-pruefstrategie-sind-nicht-gebaut.md`).
+    ///
+    /// **Warum sie hier steht und nicht bei den Zaehlproben des Kerns.** Die
+    /// Zusage wohnt in dieser Datei: die Vorschau rendert Markdown selbst, und
+    /// die Versuchung, sie ueber eine Darstellungsschicht des Systems zu
+    /// loesen, trifft sie und keine andere. Der Web-Betrachter im
+    /// Vorschaufenster stand als eigener Circle im Portfolio und ist am
+    /// 260821-2202 abgesagt worden; wer ihn eines Tages doch baut, soll hier
+    /// anhalten und nicht anderswo.
+    ///
+    /// **Die Nadeln stehen zusammengesetzt da**, wie bei
+    /// `allein_diese_datei_baut_den_freigabewaehler` in
+    /// [`crate::appkit::teilen`] und aus demselben Grund: dieser Doc-Kommentar
+    /// schreibt die Namen im Klartext aus, und eine ungeteilte Nadel faende
+    /// diese Probe selbst.
+    #[test]
+    fn keine_datei_des_baums_baut_eine_web_ansicht() {
+        for nadel in [
+            concat!("WKWeb", "View"),
+            concat!("Web", "Kit"),
+            concat!("objc2_web", "kit"),
+        ] {
+            let stellen: Vec<String> = quelldateien()
+                .into_iter()
+                .filter(|(_, inhalt)| inhalt.contains(nadel))
+                .map(|(name, _)| name)
+                .collect();
+            assert!(
+                stellen.is_empty(),
+                "{nadel} steht in {stellen:?}; die Vorschau rendert selbst und gibt Web-Inhalt an den Systembrowser ab"
+            );
+        }
+    }
 }

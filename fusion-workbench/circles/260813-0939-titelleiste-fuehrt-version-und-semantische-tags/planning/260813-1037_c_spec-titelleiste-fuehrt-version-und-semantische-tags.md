@@ -398,3 +398,53 @@ Ebenso gehalten: die Runde hat keine elfte Zeitzusage gesetzt und keine der zehn
 sie hat keine der vier vollständigen Aufzählungen wachsen lassen. Beim Abgleich nachgezählt:
 `Kommando` 76, `Wirkungsbereich` 7, `Bereich` 5, `Fokus` 5, `Funktionsbereich` 9,
 `resources/default-keymap.toml` 82 Funktionen mit 88 Kombinationen.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde abgenommen wurde; wer
+die Abnahmenotiz jener Runde liest, liest sie weiterhin gegen denselben Text. Zulässig nach der
+Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. Der Auslieferungsweg ist nicht sechs Stationen lang, sondern acht.** Die Prosa sagt zweimal
+„sechs Stationen", und das Stationsbild führt `S0` ohne Zahl und dann `1 · AppKit-Grenze` bis
+`6 · beglaubigen und anheften`. Der Plan dieser Runde hat in D3 auf sieben durchgehend
+numerierte Stationen festgelegt, und die Runde 15 hat mit dem Veröffentlichen die achte
+angebaut. Gemessen mit
+`grep -rn 'sechs Stationen\|sieben Stationen\|acht Stationen' README.md Makefile xtask/src/*.rs`:
+sieben Treffer, alle „acht", keiner „sieben", keiner „sechs" (`README.md:236`, `:274`, `:276`;
+`xtask/src/main.rs:89`; `xtask/src/version.rs:11`, `:61`; `xtask/src/release.rs:3`). Der Spec
+zeigt den Stand **vor** seinem eigenen Plan und ist damit zwei Zählungen hinter dem Baum.
+Anlass: `issues/260813-1345_*_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`.
+Der Titel jenes Datensatzes nennt sieben und ist selbst überholt.
+
+**2. Die drei Diagrammbefunde B1, B2 und B6 stehen unberichtigt im Text und werden hier
+beantwortet statt am Bild.** Die Diagrammprüfung
+(`reviews/260813-1049-conceptrev-spec-titelleiste-fuehrt-version-und-semantische-tags.md`) hat
+sie als „an Ort und Stelle zu beheben" ausgewiesen, und niemand hat sie behoben. Richtig zu
+lesen sind sie so: **B1** — in Bild 1 lesen sich `Q -->|erbt| ENV` und `PL -->|liest| UE`
+entgegen der Pfeilrichtung, `ENV -->|schreibt| TL` mit ihr; gemeint ist durchweg die Richtung
+des Pfeils. **B2** — der Teilgraph `BILLIG` schreibt „bricht ab, bevor etwas kostet", und nur
+`S0` trägt eine Kante nach `ABBRUCH`; abbrechen können alle vier Knoten der billigen Phase.
+**B6** — die Prosa über Bild 1 sagt „drei Abnehmer statt einen, und einen Prüfer", während `Q`
+im Bild den Ausgangsgrad 3 hat; die Prosa zählt einen Abnehmer mehr, als das Bild zeichnet.
+Am Bild selbst ist nichts verschoben. Anlass: derselbe Datensatz.
+
+**3. Zwei der sieben Aussagen von C4 sind vom Nutzer überholt, und die Kennzeichnung
+**(Probe)** an C2.8 und C2.10 ist nicht einlösbar.** C4.3 sagt, den Tag `v<version>` setze der
+Nutzer und das Werkzeug erzeuge keinen; seit dem 260813-1534 setzt ihn das Werkzeug
+(`shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`),
+und `README.md:466` schreibt es so aus. C4.4 verlangt eine Aussage über `v0.1.0`; gemessen mit
+`grep -n 'v0\.1\.0' README.md`: kein Treffer, die Datei sagt dazu nichts mehr. **Die übrigen
+fünf C4-Kriterien haben seit dem 260906 ihre Probe**, nämlich
+`die_readme_traegt_den_abschnitt_ueber_die_versionsstufen` in `xtask/src/release.rs`; sie hält
+den heutigen Stand des Abschnitts `### Versionsstufen` und nicht den Wortlaut von damals.
+C2.8 und C2.10 dagegen hängen an AppKit-Code in einer Kiste ohne Bibliotheksziel und sind
+maschinell nicht abzunehmen; ihre Kennzeichnung ist der Sache nach **(Bündel)** und nicht
+**(Probe)**. Anlass:
+`issues/260813-1345_*_neun-abnahmekriterien-tragen-probe-und-haben-keine.md`.

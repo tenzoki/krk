@@ -2573,3 +2573,104 @@ mod tests {
         assert_eq!(oeffnungsmeldung(&keiner, &keiner), nichts_zu_oeffnen());
     }
 }
+
+/// Die Probenhaelfte von C1.7 der Runde 10: die Rangfolge des Abbruchbefehls.
+///
+/// **Wozu ein eigenes Modul.** Der Gegenstand ist nicht eine reine Funktion
+/// dieser Datei, sondern die Reihenfolge dreier Raenge in
+/// `Anwendungsdelegierter::abbrechen`, und die steht in einer anderen. Die
+/// Probe wohnt trotzdem hier, wie es der Befund vorgeschlagen hat
+/// (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_*_c1-7-verlangt-eine-probe-fuer-die-reihenfolge-von-esc-und-b2-hat-keinen-ort-dafuer.md`):
+/// neben `waehrend_blatt_erlaubt` und `abbruchzeile`, den zwei anderen reinen
+/// Stuecken desselben Befehls. Eine sechste Datei unter `kommandos/` entsteht
+/// nicht.
+///
+/// **Warum am Quelltext und nicht am Verhalten.** Die Rangfolge haengt an drei
+/// Ivars des Anwendungsdelegierten und ist ohne laufendes AppKit nicht zu
+/// stellen; `krk-ui` hat kein Bibliotheksziel, eine Probe daneben muesste einen
+/// Anwendungsdelegierten bauen. Der Befund nennt als Ausweg eine reine
+/// Funktion samt Tafel ueber acht Faelle und haelt dagegen, dass sie einen
+/// siebten Typ der Runde erzwaenge und jeden Zweig den Wert zweimal holen
+/// liesse — eine Entwurfsfrage, die dem Planner gehoert. Diese Probe geht den
+/// dritten Weg: sie misst die **Reihenfolge**, und genau die sagt C1.7 zu.
+/// Was sie nicht misst, ist, ob jeder Rang das Richtige tut; dafuer steht die
+/// Buendelhaelfte in G2.
+#[cfg(test)]
+mod abbruchrangfolge {
+    use crate::quellbaum::quelldateien;
+
+    /// Der Rumpf von `Anwendungsdelegierter::abbrechen`.
+    fn rumpf_von_abbrechen() -> String {
+        let (_, anwendung) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/anwendung.rs")
+            .expect("krk-ui/src/appkit/anwendung.rs steht im Quellbaum");
+        let (_, ab_hier) = anwendung
+            .split_once("    fn abbrechen(&self) -> bool {")
+            .expect("abbrechen steht in anwendung.rs");
+        let (rumpf, _) = ab_hier
+            .split_once("\n    }\n")
+            .expect("der Rumpf von abbrechen endet an einer schliessenden Klammer");
+        rumpf.to_owned()
+    }
+
+    /// Die drei Raenge stehen in der zugesagten Reihenfolge: Blatt, Vorgang,
+    /// Filtertext.
+    ///
+    /// Gesucht wird je Rang das Stueck, an dem er seinen Gegenstand holt, und
+    /// verglichen werden die Fundstellen. Ein vertauschter Rang verschiebt die
+    /// Reihenfolge und laesst die Probe rot werden; ein Rang, der ganz
+    /// verschwindet, laesst sie an seiner eigenen Zusicherung scheitern.
+    #[test]
+    fn die_drei_raenge_stehen_in_der_zugesagten_reihenfolge() {
+        let rumpf = rumpf_von_abbrechen();
+        let stelle = |nadel: &str| {
+            rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{nadel} steht nicht mehr im Rumpf von abbrechen"))
+        };
+
+        let blatt = stelle("offenes_blatt");
+        let vorgang = stelle("ivars().vorgang");
+        let filter = stelle("filter_leeren()");
+
+        assert!(
+            blatt < vorgang,
+            "das offene Blatt steht nicht mehr vor der laufenden Operation"
+        );
+        assert!(
+            vorgang < filter,
+            "die laufende Operation steht nicht mehr vor dem Filtertext"
+        );
+    }
+
+    /// Die zwei vorderen Raenge springen frueh zurueck, und der dritte ist der
+    /// letzte Ausdruck.
+    ///
+    /// Ohne den fruehen Ruecksprung waere die Reihenfolge keine: ein Blatt und
+    /// ein laufender Vorgang wuerden beide abgebrochen, und der Filtertext
+    /// dazu. Gezaehlt werden deshalb die zwei `return true;` vor dem dritten
+    /// Rang.
+    ///
+    /// **Ein vierter Rang haelt die Probe an** (C3.5): das Anhalten des
+    /// Durchlaufs bekommt keinen eigenen, weil das Loeschen des Filtertexts
+    /// ihn beendet.
+    #[test]
+    fn die_zwei_vorderen_raenge_springen_frueh_zurueck() {
+        let rumpf = rumpf_von_abbrechen();
+        let filter = rumpf
+            .find("filter_leeren()")
+            .expect("der dritte Rang steht nicht mehr im Rumpf von abbrechen");
+
+        let ruecksprunge = rumpf[..filter].matches("return true;").count();
+        assert_eq!(
+            ruecksprunge, 2,
+            "vor dem dritten Rang stehen {ruecksprunge} fruehe Ruecksprunge und nicht zwei"
+        );
+        assert_eq!(
+            rumpf.matches("filter_leeren()").count(),
+            1,
+            "der dritte Rang steht nicht genau einmal da"
+        );
+    }
+}

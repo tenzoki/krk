@@ -508,3 +508,62 @@ Datensatz). Die drei neuen aus dem C5-Nachtrag halten ohne Einschränkung, beleg
 **Die 72 Kästchen sind weiterhin nicht abgehakt**, und das gilt jetzt auch für die drei neuen.
 Ein Häkchen behauptete eine Abnahme; welche Kriterien sie haben und welche nicht, steht in den
 zwei Datensätzen oben.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde abgenommen wurde; wer
+die Abnahmenotiz jener Runde liest, liest sie weiterhin gegen denselben Text. Zulässig nach der
+Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. C1, zweites Kriterium der ersten Liste: „keine Kombination steht danach zweimal" ist als
+Aussage über den ganzen Dateibestand falsch und als Aussage über diese Runde richtig.** `cmd+a`
+steht in `resources/default-keymap.toml` zweimal, und die Doppelung ist älter als diese Runde
+und ausdrücklich gewollt: die zwei Funktionen tragen verschiedene Wirkungsbereiche und begegnen
+einander nie, und die Datei schreibt es an drei Stellen aus. Gemessen mit
+`grep -o 'tasten = \[[^]]*\]' resources/default-keymap.toml | grep -c '"cmd+a"'`: **2**. Zu
+lesen ist das Kriterium als „und die zwei neuen Kombinationen stehen an keiner anderen
+Funktion"; so gelesen hält es, denn `f2` und `cmd+k` waren am 260814 frei. Anlass:
+`issues/260814-1002_*_c1-verlangt-dass-keine-kombination-zweimal-steht-cmd-a-steht-zweimal.md`.
+
+**2. C3, sechstes Kriterium der ersten Liste: die Regel kennt seit der Runde 14 nicht mehr eine
+Ausnahme, sondern zwei.** Das Kriterium sagt eine Probe zu, „dass die Regel nach dieser Runde
+genau eine Ausnahme kennt, nämlich die Textfläche des Editors". Die Runde 14 hat die
+Textanzeige der Vorschau dazugenommen, und die Regel heißt seitdem `ist_eigene_textflaeche`
+statt `ist_editorflaeche`. Die Zusage selbst — die Textfläche des Zettels ist **nicht**
+angemeldet — hält unverändert, und sie ist der Punkt des Kriteriums; falsch ist allein die
+Zahl daneben. Gemessen mit `grep -c 'isEqual(Some(' crates/krk-ui/src/appkit/anwendung.rs`:
+vier Fundstellen, davon zwei in `ist_eigene_textflaeche`, nämlich Editor und Vorschau. **Eine
+Probe über die Zahl der Ausnahmen entsteht bewusst nicht**: `die_menge_der_eigenen_textflaechen_steht_an_genau_einer_stelle`
+(`crates/krk-ui/src/appkit/ereignisse.rs`) schreibt in ihrem Doc-Kommentar aus, warum eine
+dritte eigene Fläche eine zulässige Änderung wäre und keine zweite Fassung. **Die zweite in
+diesem Kriterienpaar zugesagte Probe steht seit `210e4c1` im Baum**, nämlich
+`im_zettel_steht_keine_der_vier_ausgeschlossenen_faehigkeiten`
+(`crates/krk-ui/src/appkit/blaetter/zettel.rs`). Anlass:
+`issues/260814-1002_*_zwei-in-c3-zugesagte-proben-stehen-nicht-im-baum.md`.
+
+**3. C5, achtes Kriterium der zweiten Liste: die Fundstelle `datei.rs:153` trifft nicht, und
+`:164` inzwischen auch nicht mehr.** Die Zusage des Kriteriums hält — `EDITORGRENZE` steht über
+alle `crates/` hinweg an genau einer Stelle, und jede weitere Fundstelle liest den Namen, statt
+die Zahl zu wiederholen. Falsch ist allein der Wegweiser. Gemessen mit
+`grep -n 'pub const EDITORGRENZE' crates/krk-core/src/text/datei.rs`:
+`crates/krk-core/src/text/datei.rs:186`. Die Konstante ist damit seit dem 260814 ein zweites
+Mal gewandert; **die Zeilennummer gehört nicht in das Kriterium**, denn der Name findet sie
+eindeutig, und eine Zahl, die mit jeder Änderung der Datei mitwächst, veraltet wieder. Anlass:
+`issues/260814-1002_*_c5-zitiert-editorgrenze-an-zeile-153-sie-steht-an-164.md`.
+
+**4. Die Grundmenge der Abnahme ist 77 und nicht 72.** Die Abnahmeliste vom 260814-1100
+(`history/260814-1100-abnahmeliste-notizzettel.md`) rechnet gegen 72; der Nachtrag vom
+260814-1010 hat drei Kriterien in die erste Liste von C5 eingetragen und die Zahl damit noch am
+Tag ihrer Aufschreibung überholt. Gezählt an dieser Datei mit
+`grep -c '^- \[ \]' <diese Datei>`: **77** Kästchen. Darin enthalten sind die zwei Kriterien
+unter `## Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1`, die dieser Spec ausdrücklich
+zur Abnahme dieser Runde zählt; ohne sie sind es 75. **Die Zählung mit 77 ist damit die
+richtige**, weil der Spec selbst sagt, dass die zwei dazugehören. Der Reconciliation Log
+darüber nennt 75 und 77 nebeneinander, ohne zu wählen; hier ist gewählt. Anlass:
+`issues/260814-1247_*_die-abnahmeliste-rechnet-gegen-72-kriterien-der-spec-fuehrt-nach-dem-c5-nachtrag-75.md`.

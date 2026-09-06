@@ -240,3 +240,45 @@ Der Spec führt **40** Abnahmekriterien, und keines ist abgehakt. Je Fähigkeit 
 ## Reconciliation Log
 
 **260829-0734** — Der Plan zu diesem Spec steht auf `_c_`, jeder seiner neun Schritte ist gegen `35b95b3` gelesen, der Abnahmelauf ist vom Nutzer gefahren (Plan, Schritt 9; `decisions/260829-0053_a_…`: das Terminal fügt den Namen ein, C2.1 hält wie geschrieben). Die 43 Kästchen bleiben unangehakt: 40 Kriterien und drei Nutzerfragen, die Abnahme ist im Plan und im Turn log des Circle-Datensatzes gebucht und wird hier nicht ein zweites Mal ausgezählt. Drei Baumaussagen (Abnehmerzählung, C5.5, C5.1-Nachzählung) sind laut `issues/260829-0006_o_…` unrichtig und stehen unverändert; der Defekt ist offen. Marker `_o_` → `_c_`, nach dem Vorgehen der Runde 20 (`circles/260827-2028-…/planning/260828-0649_c_spec-…`), und mit derselben Einschränkung: welche Lesart `_c_` an einem Spec trägt, ist offen (`shared/decisions/260819-1440_o_…`); hier heißt es „gebaut und abgenommen".
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde abgenommen wurde.
+Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**Drei Aussagen dieses Spec über den Baum decken sich mit ihm nicht. Keine hat die Planung
+aufgehalten; jede schickte einen Coder, der den Spec als Baumauskunft liest, an eine falsche
+Stelle.**
+
+**1. A2 und `## Open for Planner`: die Abnehmer von `betroffene()` sind nicht sechs, sieben und
+acht.** Beide Stellen sagen, die Specs der Runden 4 und 17 zählten bis sechs und `cmd+c` und
+`cmd+x` würden der siebte und achte. Schon am 260829 zählte der Baum bis sieben — das Teilen der
+Runde 6 nennt sich selbst den siebten. Gemessen mit
+`grep -rn 'betroffene(\|betroffene_eintraege()' crates/krk-ui/src`: **18** Zeilen in vier
+Dateien (`tabs.rs`, `kommandos/operationen.rs`, `appkit/tabelle.rs`, `appkit/anwendung.rs`).
+**Die Ordnungszahl gehört nicht in den Spec**, sondern das Zählkommando; der Plan dieser Runde
+vergibt aus genau diesem Grund keine.
+
+**2. C5.5: „`writeObjects:` und `fileURLWithPath:` stehen darin schon" war am 260829 falsch und
+ist heute wahr.** Der Untergrenzen-Abschnitt von `crates/krk-ui/src/appkit/zwischenablage.rs`
+nannte `writeObjects:`, aber nicht `fileURLWithPath:`; letzteres stand allein im Prüfmodul, das
+keinen solchen Abschnitt hat. Seit `3764fb6` steht es dort, gemessen mit
+`grep -n 'fileURLWithPath' crates/krk-ui/src/appkit/zwischenablage.rs` (`:210` im
+Untergrenzen-Abschnitt, `:456` der Aufruf). Das Kriterium hält; der Wortlaut bleibt eine
+Aussage über den falschen Tag.
+
+**3. C5.1: die Nachzählung zu `NSPasteboard` ist zu kurz.** Der Spec sagt, der Befehl treffe
+außerhalb der Hülle allein zwei Dateien und den Betrachter im Kommentar. Gemessen mit
+`grep -rn 'NSPasteboard' crates/krk-ui/src | grep -v 'appkit/zwischenablage.rs'`: **30** Zeilen
+in **sieben** Dateien (`vorschaumodell.rs`, `kommandos/operationen.rs`, `appkit/teilen.rs`,
+`appkit/abwurf.rs`, `appkit/vorschau.rs`, `appkit/betrachter.rs`, `appkit/mod.rs`), sämtlich in
+Kommentaren. **Die Aussage, die C5.1 halten will, bleibt wahr** — keine Codezeile außerhalb der
+Hülle liest oder schreibt eine Ablage —, der Wortlaut der Nachzählung ist es nicht.
+
+Anlass: `issues/260829-0006_*_drei-baumaussagen-des-specs-der-runde-22-stimmen-mit-dem-baum-nicht-ueberein.md`.

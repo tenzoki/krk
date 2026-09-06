@@ -466,3 +466,53 @@ pub fn hauptfenster(
     fenster.center();
     fenster
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// KRK baut sein Anwendungsfenster an genau einer Stelle, und diese Stelle
+    /// hat genau einen Aufrufer (C3.12 der Runde 7).
+    ///
+    /// **Was das Kriterium zusagt.** „Genau ein Anwendungsfenster je Prozess."
+    /// Der Modulkopf von [`crate::appkit::anwendung`] schreibt es aus, und der
+    /// Nutzer hat es am 260804-0830 festgelegt: das Fenster ueberlebt sein
+    /// Schliessen, und zwei Wege holen es zurueck. Belegt war es bis hierher
+    /// allein durch Prosa; C3.12 traegt die Kennzeichnung **(Probe)**, und der
+    /// Abgleich der Runde 7 hat festgehalten, dass es keine gab
+    /// (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0647_*_neun-abnahmekriterien-versprechen-eine-probe-und-haben-keine.md`).
+    ///
+    /// **Was sie prueft und was nicht.** Sie zaehlt zwei Dinge im Quelltext:
+    /// [`hauptfenster`] wird genau einmal gerufen, und
+    /// `oberflaeche_aufbauen`, der einzige Rufer, ebenso. Damit ist der Weg
+    /// vom Programmstart zum Fenster einstellig. Sie prueft **nicht**, dass zur
+    /// Laufzeit nur ein Fenster steht — das koennte nur ein Lauf am Buendel,
+    /// und der ist Nutzerarbeit. Ein zweiter Aufruf im Quelltext ist die
+    /// Bedingung, unter der ein zweites Fenster ueberhaupt entstehen kann, und
+    /// genau die faengt sie.
+    ///
+    /// **Die Kiste heisst `krk-ui` und hat kein Bibliotheksziel**, deshalb
+    /// steht die Probe hier neben dem Gegenstand und nicht unter `tests/`.
+    #[test]
+    fn das_hauptfenster_entsteht_an_genau_einer_stelle() {
+        let quellen = quelldateien();
+
+        let bauaufrufe: usize = quellen
+            .iter()
+            .map(|(_, inhalt)| aufrufstellen(inhalt, "hauptfenster"))
+            .sum();
+        assert_eq!(
+            bauaufrufe, 1,
+            "der Fensterbau wird {bauaufrufe}-mal gerufen; ein zweiter Aufruf ist ein zweites Fenster"
+        );
+
+        let aufbauaufrufe: usize = quellen
+            .iter()
+            .map(|(_, inhalt)| aufrufstellen(inhalt, "oberflaeche_aufbauen"))
+            .sum();
+        assert_eq!(
+            aufbauaufrufe, 1,
+            "der Aufbau der Oberflaeche wird {aufbauaufrufe}-mal gerufen und nicht einmal"
+        );
+    }
+}

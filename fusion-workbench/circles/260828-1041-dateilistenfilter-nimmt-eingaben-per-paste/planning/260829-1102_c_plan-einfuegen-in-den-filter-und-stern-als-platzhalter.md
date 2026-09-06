@@ -440,3 +440,29 @@ Innerhalb des Arbeitsbereichs ändern sich drei Signaturen des Kerns: `traegt_di
 **`## Where this Circle stops`:** jede Klausel hält, mit einer Abweichung im Wortlaut: „`grep -rn 'regex' Cargo.lock` ist leer" trifft nicht zu — die Datei trägt 12 Treffer (`fancy-regex`, `regex-automata`, `regex-syntax`, `regex` über `syntect`), und zwar auf `c6c86cb` genauso wie auf HEAD. Die Runde hat keine Kiste hinzugefügt (Diff leer); die Klausel beschreibt die Absicht richtig und das Kommando falsch. Gefilt als `issues/260829-1223_o_die-abschlussklausel-des-plans-verlangt-ein-leeres-grep-nach-regex-in-cargo-lock-und-die-datei-traegt-es-seit-syntect.md`. `shared/issues/260816-2144_o_…` (Leertaste) bleibt offen, wie die Klausel es sagt. Die Klausel „beschränkt, solange der Abnahmelauf nicht gefahren ist" ist mit `8d64859` aufgehoben: der Lauf ist gefahren.
 
 **Drift:** keine. Der Plan verwendet in Schritt 8 den Selektornamen `filter_einfuegen_aktion`, der Baum trägt ihn (`anwendung.rs:926`).
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut und abgenommen
+wurde. Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**Die fünfte Klausel unter `## Where this Circle stops` verlangt ein Prüfmittel, das schon vor
+dieser Runde nicht zutraf.** Sie sagt: „`grep -rn 'regex' Cargo.lock` ist leer." Gemessen mit
+`grep -c 'regex' Cargo.lock`: **13** Zeilen, vier Paketnamen — `fancy-regex` (`:303`), `regex`
+(`:1833`), `regex-automata` (`:1845`) und `regex-syntax`. Sie kommen seit der Runde 2 über
+`syntect` herein und stehen am Stand vor dieser Runde (`c6c86cb`) genauso wie danach.
+
+**Die Absicht der Klausel hält, das genannte Kommando misst sie nur nicht.** Gemeint ist: diese
+Runde zieht für den Musterabgleich keine Regex-Kiste herein. Das tragende Prüfmittel ist der
+**leere Diff** — `git diff c6c86cb HEAD -- Cargo.lock Cargo.toml` — und nicht das `grep`;
+`traegt_die_folge` (`crates/krk-core/src/verzeichnis/filter.rs:196`) arbeitet mit `str::find`.
+**Ein späterer Plan soll das Kommando nicht abschreiben.** Der Reconciliation Log dieses Plans
+schreibt die Sache bereits aus; der Nachsatz fehlte allein an der Klausel selbst, die ein
+Nachfahrer wörtlich übernimmt. Anlass:
+`issues/260829-1223_*_die-abschlussklausel-des-plans-verlangt-ein-leeres-grep-nach-regex-in-cargo-lock-und-die-datei-traegt-es-seit-syntect.md`.

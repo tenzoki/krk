@@ -486,3 +486,40 @@ Kriterienlisten. Was fehlt, ist die Auskunft über AppKits Verhalten für eine s
 Schließweg.
 
 `make check` beim zweiten Abgleich wiederholt: Rückgabewert 0, „alle vier gruen".
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut und abgenommen
+wurde. Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. Die `**Spec:**`-Zeile im Kopf nennt die falsche Fassung.** Sie nennt die Fassung vom
+260814-0925 mit dem Nachtrag an C4; der Spec trägt seit `a6098d9` einen dritten Nachtrag vom
+260814-1010 an C5 und am Abschnitt über die zehn Zeitzusagen. Maßgeblich ist die Fassung vom
+**260814-1010**. Die drei Kriterien jenes Nachtrags — die Begrenzung der Kopie, die
+Unterscheidbarkeit einer gekürzten Sicherung, der Grenzfall von genau `EDITORGRENZE` Bytes —
+sind **außerhalb der sechzehn Planschritte** gebaut, nämlich über die Behebung des Defekts
+`issues/260814-0910_c_*` in Turn 3. Anlass:
+`issues/260814-1247_*_der-plan-nennt-als-spec-fassung-die-vom-0925-es-gibt-eine-vom-1010.md`.
+
+**2. Die `**Decidability:**`-Zeile im Kopf nennt eine Eingabe zu wenig.** Sie führt „den beim
+Öffnen gelesenen Text, den Stand der Textfläche und den offenen Zettel". Seit dem Nachtrag vom
+260814-0925 ist die Frage „in welche Datei" über **beide** Zettel zu beantworten: der gehaltene
+Stand des nicht offenen Zettels steht im Modell und nicht in der Textfläche. Gemessen mit
+`grep -n -A6 'fn zu_sichern' crates/krk-ui/src/zettelmodell.rs`: `Zettelmodell::zu_sichern`
+läuft ab `:250` über `Zettel::ALLE` und liest je Zettel `stand.gehalten`. Die dritte Eingabe
+lautet damit „der gehaltene Stand beider Zettel". Die tragende Aussage der Zeile hält
+unverändert: alle Eingaben liegen im selben Augenblick vor, und keine wird vorhergesagt.
+
+**3. `## Testing Strategy`, Absatz „Am Modell, ohne Fenster", nennt drei Gegenstände und lässt
+den vierten aus.** Er führt Wechsel, Änderungserkennung und „derselbe Tab schreibt nichts". Der
+vierte ist die Regel „der getippte Stand gewinnt", die Schritt 14 seit dem Nachtrag vom
+260814-0941 verlangt. Gemessen mit
+`grep -n 'das_oeffnen_setzt_den_abweichenden_stand_nicht_zurueck\|ein_sauberer_zettel_bekommt_den_neuen_dateiinhalt\|jeder_abweichende_zettel_steht_zur_sicherung_an' crates/krk-ui/src/zettelmodell.rs`:
+drei Proben an `:419`, `:440` und `:458`. Anlass für 2 und 3:
+`issues/260814-1002_*_zwei-stellen-des-plans-sind-mit-dem-nachtrag-vom-0941-nicht-mitgezogen-worden.md`.

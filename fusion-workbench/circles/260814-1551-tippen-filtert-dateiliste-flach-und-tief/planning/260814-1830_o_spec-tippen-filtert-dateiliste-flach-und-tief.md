@@ -534,3 +534,56 @@ Die Ausgangslage ist am 260814-1830 auf dem Stand `43dfe90` am Baum erhoben, und
 **Zwei Verweise in C1.9 nennen einen Marker, den ihr Ziel nicht mehr trägt**: `decisions/260814-1830_*_bleibt-der-filtertext-…` trägt heute `_i_`, `shared/issues/260815-1047_*_c1-9-und-der-doc-kommentar-…` trägt heute `_c_`. Dieselbe Abweichung steht in der Tabelle der offenen Fragen weiter unten. Berichtigt sind sie hier nicht, weil sie in der Prosa des Spec stehen; aufgenommen sind sie in `shared/issues/260815-1216_*_sieben-verweise-dieser-sitzung-nennen-einen-marker-den-ihr-ziel-nicht-mehr-traegt.md`.
 
 **Der Marker dieser Datei bleibt `_o_`.** Vier der neun geschlossenen Runden führen ihren Spec auf `_c_`, fünf auf `_o_`; eine Regel, die den einen Stand erzwänge, steht nirgends, und die Umbenennung ohne Regel hinterließe allein neue Verweise ins Leere.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, lange nach dem Rundenabschluss angehängt. Der Bestandstext darüber ist Zeichen
+für Zeichen unverändert** und bleibt der Wortlaut, gegen den diese Runde abgenommen wurde.
+Zulässig nach der Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**1. `## Wie eine Zeile entsteht`, Absatz „Für „Ordner" gibt es einen Schnitt und nicht zwei":
+die Begründung „denn der Nutzer navigiert in sie hinein" trifft für diesen Baum nicht zu.**
+KRK navigiert nicht in eine symbolische Verknüpfung hinein: `Eintrag::ist_ordner` ist
+`self.typ == Typ::Ordner`, und eine `Typ::Verknuepfung` fällt nicht darunter, gemessen mit
+`grep -n -A4 'fn ist_ordner' crates/krk-core/src/verzeichnis/eintrag.rs` (`:115-117`); der
+Doppelklick in `crates/krk-ui/src/appkit/tabelle.rs:461` fragt genau diese Funktion und gibt
+eine Verknüpfung an das System ab. **Die Regel selbst hält, nur anders begründet und weiter
+gefasst als der Absatz sagt:** `Ordnermodell::sichtbar` zählt **jede** Verknüpfung für die
+Sichtbarkeit als Ordner, gemessen mit
+`grep -n 'ist_ordner() || .*ist_verknuepfung()' crates/krk-core/src/verzeichnis/modell.rs`
+(`:847`), und die Probe `eine_verknuepfung_zaehlt_fuer_die_sichtbarkeit_als_ordner`
+(`crates/krk-core/tests/verzeichnis.rs`) hält den Zuschnitt fest. „Auf einen Ordner" wäre am
+Modell gar nicht entscheidbar: `Eintrag` trägt drei Typwerte und kein Ziel, und die Frage
+kostete ein `stat(2)` je Zeile. Der Preis ist eine Übermenge — auch eine Verknüpfung auf eine
+**Datei** bleibt bei ausgeschaltetem „Deep" stehen —, und kein Kriterium dieses Spec spricht
+diesen Fall an. Anlass:
+`issues/260814-2145_*_die-begruendung-des-spec-fuer-verknuepfungen-in-der-sichtbarkeit-haelt-am-baum-nicht.md`.
+
+**2. C1.7, die Hälfte **(Probe** für die Reihenfolge**)**, hat seit dem 260906 einen
+Träger.** Der Plan dieser Runde hatte für sie keinen Ort: Schritt B2 nennt in seinen `Changes`
+allein, dass `Esc` seine Stelle in `Anwendungsdelegierter::abbrechen` bekommt, und die
+`## Testing Strategy` zählt fünf reine Funktionen auf, unter denen die Rangfolge des
+Abbruchbefehls nicht vorkommt. Gebaut sind jetzt zwei Zählproben am Quelltext,
+`die_drei_raenge_stehen_in_der_zugesagten_reihenfolge` und
+`die_zwei_vorderen_raenge_springen_frueh_zurueck` im Modul `abbruchrangfolge` von
+`crates/krk-ui/src/kommandos/operationen.rs`, also neben `waehrend_blatt_erlaubt` und
+`abbruchzeile`, den zwei anderen reinen Stücken desselben Befehls. **Sie messen die
+Reihenfolge und nicht das Verhalten je Rang**; dafür steht weiterhin die Bündelhälfte in G2.
+Der dritte Weg ist bewusst gewählt: der Befund nennt als Ausweg eine reine Funktion samt Tafel
+über acht Fälle und hält dagegen, dass sie einen siebten Typ der Runde erzwänge — eine
+Entwurfsfrage, die dem Planer gehört und mit diesem Nachsatz nicht entschieden ist. Anlass:
+`issues/260815-0020_*_c1-7-verlangt-eine-probe-fuer-die-reihenfolge-von-esc-und-b2-hat-keinen-ort-dafuer.md`.
+
+**3. Wegweiser, keine Berichtigung: diese Datei trägt zwei Abschnitte mit der Überschrift
+`## Reconciliation Log`**, den ersten mit den vier Einträgen von 260814 und 260815-0246, den
+zweiten mit dem Abgleich des reconciler vom 260815-1216. Eine Suche nach der Überschrift
+findet nur den ersten. Der zugehörige Befund
+(`shared/issues/260819-1440_*_ein-spec-traegt-zwei-reconciliation-log-ueberschriften-und-eine-suche-findet-nur-die-erste.md`)
+verlangt eine Umbenennung im Bestandstext und **bleibt offen**: die Nutzerentscheidung vom
+260906 erlaubt den Nachsatz unter dem unangetasteten Wortlaut und nicht das Umschreiben einer
+Überschrift.

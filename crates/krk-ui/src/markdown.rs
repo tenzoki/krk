@@ -2904,3 +2904,123 @@ mod tests {
             .collect()
     }
 }
+
+/// Die zwei Zaehlproben, die C2.3 und C2.4 der Runde 14 zusagen.
+///
+/// Sie stehen in einem eigenen Modul und nicht bei den Renderproben darueber,
+/// weil sie einen anderen Gegenstand haben: die dort messen, was `rendern`
+/// liefert, die hier messen, **wie oft** der Baum die Quelle liest.
+///
+/// **Wozu.** C2.3 und C2.4 tragen im Spec der Runde 14 die Kennzeichnung
+/// **(Probe)** und schreiben sogar aus, was zu zaehlen ist. Gebaut war keine,
+/// und der Abgleich jener Runde hat es festgehalten
+/// (`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0737_*_zwei-abnahmekriterien-mit-probenkennzeichnung-haben-keine-probe.md`).
+/// Das Gewicht liegt nicht im heutigen Baum, sondern in der Rolle der zwei
+/// Kriterien: sie sind der Ersatz fuer den Abnahmelauf gegen die Zusage L7, den
+/// diese Runde ausdruecklich nicht schuldet
+/// (`shared/decisions/260819-2216_*_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md`).
+/// Eine Zusage, die kein Kommando prueft, haelt nur so lange, wie niemand einen
+/// zweiten Durchgang danebenstellt.
+#[cfg(test)]
+mod durchgaenge {
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    /// Diese Datei ohne ihre Pruefmodule.
+    ///
+    /// Die Proben und die Doc-Kommentare nennen die gesuchten Namen im
+    /// Klartext; gezaehlt werden soll, wer sie **benutzt**.
+    fn diese_datei_ohne_proben() -> String {
+        let (_, inhalt) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/markdown.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let (ohne_proben, _) = inhalt
+            .split_once("#[cfg(test)]")
+            .expect("das erste Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
+        ohne_proben.to_owned()
+    }
+
+    /// C2.4: Es gibt genau einen Durchgang ueber die Quelle, im ganzen Baum.
+    ///
+    /// **Was das Kriterium zusagt.** „Die Abbildung entsteht in dem Durchgang,
+    /// der rendert, und nicht in einem zweiten danach. Ein zweiter Durchgang
+    /// ueber die Quelle entsteht nicht."
+    ///
+    /// Gezaehlt wird der Einstieg in den Ereignisstrom der Markdown-Kiste. Wer
+    /// einen zweiten Durchgang baut, kommt an ihm nicht vorbei: die Kiste
+    /// liefert ihre Ereignisse nur so. Die Nadel steht zusammengesetzt da,
+    /// damit der Modulkopf dieser Datei, der den Aufruf in seinem Bild
+    /// abzeichnet, nicht mitzaehlt.
+    #[test]
+    fn genau_ein_durchgang_liest_die_markdown_quelle() {
+        let nadel = concat!("into_offset", "_iter");
+        let ohne_proben = diese_datei_ohne_proben();
+        assert_eq!(
+            aufrufstellen(&ohne_proben, nadel),
+            1,
+            "{nadel} wird nicht genau einmal gerufen; ein zweiter Durchgang bricht C2.4"
+        );
+
+        let anderswo: Vec<String> = quelldateien()
+            .into_iter()
+            .filter(|(datei, _)| datei != "krk-ui/src/markdown.rs")
+            .filter(|(_, inhalt)| aufrufstellen(inhalt, nadel) > 0)
+            .map(|(datei, _)| datei)
+            .collect();
+        assert!(
+            anderswo.is_empty(),
+            "ein zweiter Durchgang ueber die Markdown-Quelle steht in {anderswo:?}"
+        );
+    }
+
+    /// C2.3: Der Quelltext neben dem gerenderten Text wird nicht ein zweites
+    /// Mal von der Platte gelesen.
+    ///
+    /// **Was das Kriterium zusagt.** „Er ist die Eingabe des Renderns und
+    /// bleibt stehen."
+    ///
+    /// Gemessen wird an zwei Enden. Erstens: diese Datei oeffnet nichts — kein
+    /// Weg des Dateisystems steht in ihr, weder die eigene Huelle des Kerns
+    /// noch ein Aufruf der Standardbibliothek. Zweitens: die eine Stelle, die
+    /// den Quelltext an den Quellbezug weiterreicht, nimmt ihn aus dem Stand
+    /// des laufenden Durchgangs (`self.quelle`) und nicht aus einem Aufruf.
+    ///
+    /// **Was sie nicht sieht**, und der Satz gehoert dazu: einen Leser, den
+    /// eine andere Datei baut und dessen Ergebnis sie hierher reicht. Das waere
+    /// kein zweiter Lesevorgang **dieser** Kiste, sondern ein anderer Aufrufer
+    /// von `rendern`, und den faengt C2.4 daneben.
+    #[test]
+    fn der_quelltext_wird_kein_zweites_mal_von_der_platte_gelesen() {
+        let ohne_proben = diese_datei_ohne_proben();
+        for nadel in [
+            concat!("read_to", "_string"),
+            concat!("File::", "open"),
+            concat!("ohne_warten", "_oeffnen"),
+            concat!("bis_zur_grenze", "_lesen"),
+        ] {
+            assert_eq!(
+                aufrufstellen(&ohne_proben, nadel),
+                0,
+                "{nadel} steht in markdown.rs; das Rendern liest nicht selbst von der Platte"
+            );
+        }
+
+        let abschliessen = ohne_proben
+            .split_once("fn abschliessen(")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n    fn "))
+            .map_or_else(
+                || {
+                    ohne_proben
+                        .split_once("fn abschliessen(")
+                        .map(|(_, rest)| rest.to_owned())
+                        .expect("abschliessen steht in dieser Datei")
+                },
+                |(rumpf, _)| rumpf.to_owned(),
+            );
+        assert!(
+            abschliessen.contains("quelle: self.quelle.to_owned()"),
+            "der Quellbezug nimmt seine Quelle nicht mehr aus dem Stand des Durchgangs"
+        );
+    }
+}

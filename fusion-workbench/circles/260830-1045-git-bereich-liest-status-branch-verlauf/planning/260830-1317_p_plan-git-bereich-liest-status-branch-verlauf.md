@@ -711,3 +711,47 @@ Gefahren vom `reconciler` gegen den Baum am Stand `2976520`, Stand vor der Runde
 **Ein neuer Defekt, und er betrifft die Runde als ganze:** keine Durchsicht ist gefahren, `bin/fusion-review-coverage` meldet `uncovered=24`. Gefilt als `260831-1417_*_die-runde-23-schliesst-ohne-durchsicht-und-vierundzwanzig-commits-sind-ungedeckt.md`. Der Plan verlangt keine, und die Bindung in `CLAUDE.md` hängt an einer Auslieferung, die nicht gefahren ist — er hält den Abschluss deshalb nicht auf.
 
 **Keine Abweichung zwischen Plan und gebautem Stand, die nicht schon dastünde.** Die drei Punkte, in denen Schritt 7 von seiner Dateiliste abweicht, schreibt der Plan an Ort und Stelle aus; sie sind gegen `history/260831-0120-coder-schritt-7-…` gelesen und stimmen.
+
+---
+
+## Nachsatz vom 260906-0448
+
+**Spätere Zutat, nach dem Bau angehängt. Der Bestandstext darüber ist Zeichen für Zeichen
+unverändert** und bleibt der Wortlaut, gegen den diese Runde gebaut wurde. Zulässig nach der
+Nutzerentscheidung zu
+`shared/decisions/260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`:
+berichtigt wird als Nachsatz und nicht im Text. Jede Angabe hier ist am Baumstand `5cb5110`
+gemessen, und das Kommando steht dabei.
+
+**Schritt 16 und Entscheidung 2 nennen `make tasten` und `docs/tastenbelegung.md` für eine
+Tabelle, die aus keiner der beiden kommt.** Schritt 16 verlangt, `make tasten` vor und nach der
+Codeänderung zu schreiben und in der dritten Spalte den Wechsel bei `fenster_wechseln`,
+`auswahl_hoch` und `auswahl_runter` abzulesen; Entscheidung 2 sagt dasselbe.
+
+- **`make tasten` ist der interaktive Tastenlogger.** Gemessen mit
+  `grep -n -A3 '^tasten:' Makefile`: `tasten: bundle ## Tastencodes protokollieren, Beenden mit
+  Cmd+Q`, darunter `$(BINAER) --tasten-protokoll`. Die Ausgabe entsteht in
+  `ereignisse::protokollieren` (`crates/krk-ui/src/appkit/ereignisse.rs:820`) und lautet je
+  **empfangenem Tastendruck** eine Zeile `tastencode=… zeichen=… maske=… kombination=…
+  funktion=…`. Keine Tabelle, keine Spalten, kein `Wirkungsbereich`. Der Lauf öffnet ein Fenster,
+  endet erst mit `Cmd+Q` und verlangt KRK im Vordergrund; **kein Agent kann ihn fahren**, und
+  Schritt 16 führt ihn trotzdem unter den Abnahmekommandos ohne Fenster.
+- **`docs/tastenbelegung.md` gibt es in diesem Baum nicht**, und ein Verzeichnis `docs/` auch
+  nicht (`ls docs` → `No such file or directory`).
+- **Die Fläche, die es wirklich gibt**, ist die Markdown-Ausgabe der Runde 3:
+  `belegungsausgabe::markdown` (`crates/krk-ui/src/belegungsausgabe.rs:174`) baut die Tabelle,
+  deren dritte Spalte in der ersten Begründungslage `kommando.wirkungsbereich().beschriftung()`
+  liest (`:271`). Geschrieben wird sie in den Ordner „Downloads", ausgelöst vom Menüeintrag
+  „Tastenbelegung als Markdown sichern" (Selektor `tastenbelegungSichern:`) — also ebenfalls aus
+  der laufenden Anwendung heraus und nicht kopflos.
+
+**Was Schritt 16 stattdessen belegt hat, trägt die Zusage vollständig:** die erwartete Änderung
+ist an ihren zwei Eingaben geprüft, und die beiden zusammen legen die Tabellenzeilen fest.
+`Wirkungsbereich::beschriftung` hat genau eine ihrer acht Zeilen geändert, die für `Navigator`,
+und `Wirkungsbereich` trägt vor und nach der Runde acht Werte
+(`awk '/^pub enum Wirkungsbereich/,/^}/' crates/krk-core/src/tasten/belegung.rs` → 8); genau
+drei Kommandos tragen `Wirkungsbereich::Navigator`, nämlich `FensterWechseln`, `AuswahlHoch` und
+`AuswahlRunter`. **Ob der Vergleich der Tabelle in die Nutzerarbeit von Schritt 17 wandert oder
+ob die Fläche einen kopflosen Aufruf bekommt, ist eine Frage für den Nutzer** und mit diesem
+Nachsatz nicht entschieden. Anlass:
+`issues/260831-1334_*_make-tasten-ist-der-interaktive-tastenlogger-und-traegt-keine-dritte-spalte.md`.
