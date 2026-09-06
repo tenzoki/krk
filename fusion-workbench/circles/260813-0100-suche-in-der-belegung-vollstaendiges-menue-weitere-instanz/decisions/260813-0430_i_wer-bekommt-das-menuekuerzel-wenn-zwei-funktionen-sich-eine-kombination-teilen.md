@@ -97,3 +97,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — bei geteilter Kombination zeigt die Textfeld-Funktion das Menuekuerzel, der KRK-Befehl keines; es geht keine Wirkung verloren, weil KRK jeden Tastendruck vor dem Menue sieht; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-ui/src/menuemodell.rs:236,339 — die Regel wird bei jedem Menueaufbau gefragt; die Doppelbelegung bleibt in resources/default-keymap.toml:352,1174.

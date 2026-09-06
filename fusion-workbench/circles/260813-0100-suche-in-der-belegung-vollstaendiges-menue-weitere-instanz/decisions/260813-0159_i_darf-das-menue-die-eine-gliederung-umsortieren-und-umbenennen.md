@@ -91,3 +91,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — das Hauptmenue darf die eine Gliederung umsortieren und den Bereich der Textbefehle Bearbeiten nennen; Belegungsansicht und Markdown-Ausgabe folgen derselben Ordnung; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 16c0924, a949ff1 — crates/krk-ui/src/belegungsmodell.rs:178-205 fuehrt Anwendung zuerst, Fenster zuletzt und den Bereich Bearbeiten.

@@ -41,3 +41,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — ein Obermenue je Bereich der einen Gliederung, keine Sammelmenues und keine zweite von Hand gepflegte Zuordnung; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-ui/src/belegungsmodell.rs:169 — die Aufzaehlung fuehrt seit der Git-Runde zehn Bereiche.

@@ -57,3 +57,9 @@ Superseded by:
 **Zwei Angaben im Rumpf sind damit überholt** und stehen bewusst unverändert, weil dieser Datensatz die Frage stellt und nicht den Stand beschreibt: der Abschnitt `## Question` spricht von der Aufzählung „mit ihren fünf Werten", der Baum hat sechs; die Kopfzeile `**Cross-references:**` nennt `statuszeile.rs:197-240` als „die fünf Ränge".
 
 **Neu hinzugekommen ist ein zweiter Abhängiger.** Die Sitzung vom 260815 hat den Filtertext jeden Ordnerwechsel überstehen lassen (`decisions/260814-1830_i_bleibt-der-filtertext-…`, Möglichkeit 2, umgesetzt in `897605e`). Die Bedingung dieses Entscheids ist, dass der stehende Filtertext zu sehen ist — und sichtbar ist er nur, solange keiner der vier Ränge über ihm steht. Der Nutzer hat die Lage am 260815-1055 festgehalten statt sie zu beheben (`shared/issues/260815-1047_d_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`, Möglichkeit 3). Damit hängt an der Rangfolge jetzt nicht mehr nur C4.1 der Runde 10, sondern auch die Tragfähigkeit des Filters im gewöhnlichen Gebrauch: ein vergessener Filtertext, den die Zeile nicht nennt, war bis zum 260815 die Ausnahme und ist seither der Regelfall.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — die Filterzahl steht ueber dem Markierungsstand, weil eine verkuerzte Liste die Auskunft ist, ohne die ein fehlender Eintrag wie ein Defekt aussieht; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-ui/src/appkit/statuszeile.rs:280-288 — Platz 5 von sieben, unmittelbar ueber dem Markierungsstand.

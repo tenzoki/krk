@@ -129,3 +129,9 @@ Answer located: `rules/fusion-workbench-conventions.md` `## Filename Patterns` u
 Die Unentscheidbarkeit, an der Möglichkeit 3 hier scheitern sollte, ist dort anders aufgelöst: `## Marker globs` verlangt für eine Stelle, die etwas **über** ein Zitat aussagt, nicht die Sternform, sondern die Nennung der zitierenden Zeile (`datei.md:24`) oder einen Codeblock um den wörtlichen Wortlaut. Damit wird nicht mehr je Absatz geurteilt, ob ein Zitat ein Zeiger oder eine Aussage ist — die Aussage bekommt eine eigene Gestalt, und die ist von außen zu sehen.
 
 **Der Marker bleibt `_o_`.** Der Regelkorpus ist bindend, aber diesen Datensatz schließt der Nutzer oder der Orchestrator, nicht ein ausführender Agent; und die dritte Zusage des Datensatzes, die Prüfung, ist von der Regel nicht mitbeantwortet. Eingetragen vom coder am 260906-0200.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — der Platzhalter gilt fuer jedes Zitat und nicht nur fuer die Querverweiszeile; eine Aussage ueber ein Zitat bekommt eine von aussen erkennbare Gestalt; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Retired: rules/fusion-workbench-conventions.md `## Filename Patterns` und `## Marker globs` — die Regel gilt ohne Ausnahme nach Speicher, und die Pruefung steht als bin/fusion-citation-check neben bin/fusion-citation-sweep.

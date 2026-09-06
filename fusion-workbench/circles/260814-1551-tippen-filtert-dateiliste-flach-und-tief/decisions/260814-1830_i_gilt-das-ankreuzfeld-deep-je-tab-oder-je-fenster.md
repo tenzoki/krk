@@ -42,3 +42,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — Deep gilt je Tab und ueberlebt die Sitzung nicht, weil der Schalter nicht das Fenster beschreibt sondern die Suche, und die gehoert dem Tab; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-core/src/verzeichnis/modell.rs:339 — der Stand sitzt im Ordnermodell, jeder Tab haelt sein eigenes; in die Sitzungsdatei geht er nicht.

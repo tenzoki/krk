@@ -200,3 +200,77 @@ die ihm gehören.
 **Rebalance recommendation:** revise Grounding
 
 **Belege:** `260905-2054-reconciliation.md` (Prüfumfang, die zehn Schließungen, die drei nicht übernommenen Meldungen, die 140 ungeprüften Datensätze).
+
+## Elf Entscheidungen am 260906-2147 beantwortet
+
+Der Nutzer hat die 56 offenen Fragen in drei Bahnen aufbereiten lassen
+(`260906-2102-neunzehn-offene-entscheidungsfragen-zur-vorlage.md`,
+`260906-2115-neunzehn-offene-fragen-zur-vorlage.md`,
+`260906-2100-achtzehn-offene-fragen-zur-vorlage-im-chat.md`) und elf davon in einem Zug
+beantwortet. Sie zerfallen in drei Gruppen, und die Gruppe entscheidet, welchen Vermerk der
+jeweilige Datensatz bekommt.
+
+### Sechs Fragen: der Baum fährt die Antwort, der Nutzer bestätigt sie
+
+Bei diesen sechs steht die Umsetzung seit Runden im Baum, ohne dass die Frage je beantwortet
+worden wäre. Der Nutzer bestätigt das Gebaute; die Datensätze gehen deshalb auf umgesetzt.
+
+1. **Das Hauptmenü darf die eine Gliederung umsortieren und einen Bereich umbenennen.**
+   „Anwendung" steht an erster, „Fenster" an letzter Stelle, der Bereich der Textbefehle heißt
+   „Bearbeiten" (`crates/krk-ui/src/belegungsmodell.rs:178-205`, gesetzt in `16c0924` und
+   `a949ff1`). Belegungsansicht und Markdown-Ausgabe folgen derselben Ordnung.
+2. **Teilen sich zwei Funktionen eine Tastenkombination, zeigt die Textfeld-Funktion das
+   Menükürzel und der KRK-Befehl keines.** Die Regel wird bei jedem Menüaufbau gefragt
+   (`crates/krk-ui/src/menuemodell.rs:236,339`); die Doppelbelegung von `cmd+a` bleibt in
+   `resources/default-keymap.toml:352,1174` stehen, weil KRK jeden Tastendruck vor dem Menü
+   sieht und keine Wirkung verlorengeht.
+3. **Das Ankreuzfeld „Deep" gilt je Tab und überlebt die Sitzung nicht.** Der Stand sitzt im
+   Ordnermodell (`crates/krk-core/src/verzeichnis/modell.rs:339`), jeder Tab hält sein eigenes,
+   in die Sitzungsdatei geht er nicht. Seit dem 260826 steht er ab Werk auf ein (`modell.rs:438`).
+4. **Der Git-Bereich bekommt einen eigenen Funktionsbereich und damit ein eigenes Obermenü.**
+   Gebaut in `crates/krk-ui/src/belegungsmodell.rs:139,169,454`. Das ist dieselbe Regel, die das
+   Projekt für den Editor schon einmal gegen dieselbe Bequemlichkeit durchgehalten hat; sie bindet
+   die schreibende Git-Runde mit ihren vier Operationen.
+5. **Zwei gleichzeitig laufende KRK-Fenster teilen sich die Ablage über eine Schreibsperre, das
+   Sitzungsrecht bekommt nur eines.** Gebaut als `Schreibgriff`
+   (`crates/krk-core/src/ablage/sperre.rs:113`) und `Sitzungsrecht` (`:163`), namentlich gehalten
+   von `crates/krk-core/tests/baum.rs:454,703`. Die zweite Instanz merkt sich ihre
+   Fensteraufteilung damit nicht — das ist der bewusst gezahlte Preis.
+6. **Die Menüleiste trägt ein Obermenü je Bereich.** Die Gliederung steht als Aufzählung in
+   `crates/krk-ui/src/belegungsmodell.rs:169` und führt seit der Git-Runde zehn Werte.
+
+### Zwei Fragen: der Baum fährt die empfohlene Antwort, der Nutzer setzt sie in Kraft
+
+7. **Die Filterzahl steht in der Statuszeile über dem Markierungsstand.** Platz 5 von sieben
+   (`crates/krk-ui/src/appkit/statuszeile.rs:280-288`). Begründung: eine verkürzte Liste ist die
+   Auskunft, ohne die der Nutzer das Fehlen eines Eintrags für einen Defekt hält. Der
+   zurückgestellte Befund `260815-1047_*_…` bleibt davon unberührt — vier Ränge stehen weiter über
+   dem Filterstand.
+8. **`Esc` räumt den Filtertext zuletzt**, nach dem offenen Blatt und dem laufenden Vorgang
+   (`crates/krk-ui/src/appkit/anwendung.rs:6253-6278`). Begründung: `Esc` heißt in KRK „halte an,
+   was läuft", und ein Filtertext läuft nicht.
+
+### Drei Fragen: der Gegenstand ist weg, es wird nichts mehr umgesetzt
+
+Diese drei bekommen den Antwortvermerk und zusätzlich einen `Retired:`-Vermerk, weil ihr
+Gegenstand entfallen ist, bevor jemand dagegen gebaut hat. Der Marker bleibt danach auf
+beantwortet.
+
+9. **Die Zustandsangabe im Kopf eines Entscheidungsdatensatzes wird nicht nachgezogen — es gibt
+    sie nicht mehr.** fusion hat das Kopffeld ersatzlos gestrichen
+    (`rules/fusion-workbench-conventions.md` `## Decision Record Template`); ein vorhandenes bleibt
+    bewusst unangetastet, weil die auseinandergelaufenen Köpfe der Beleg für die Streichung sind.
+    Damit gibt es keine zweite Quelle mehr, die dem Dateinamen widersprechen könnte.
+10. **Querverweise zwischen Datensätzen schreiben den Zustandsbuchstaben als Platzhalter** — und
+    zwar nicht nur in der Querverweiszeile, sondern in jedem Zitat
+    (`rules/fusion-workbench-conventions.md` `## Filename Patterns`). Die Unentscheidbarkeit, an der
+    die dritte Möglichkeit des Datensatzes hing, ist anders gelöst: eine Aussage *über* ein Zitat
+    bekommt eine von außen erkennbare Gestalt. Die offene zweite Hälfte, die Prüfung, steht
+    ebenfalls (`bin/fusion-citation-check`, `bin/fusion-citation-sweep`).
+11. **Defektdatensätze über nicht mehr änderbare Spec- und Plantexte werden geschlossen, nicht
+    offengehalten.** Die Entscheidung des Nutzers vom 260906 zur Nachsatzregel hat das beantwortet;
+    die vierte Behebungsschleife hat 30 von 36 solcher Datensätze geschlossen, 29 davon über einen
+    Nachsatz unter dem unveränderten Bestandstext (`8276170`).
+
+**Was offen bleibt:** 45 der 56 Fragen. Sie entscheiden wirklich etwas und werden einzeln
+vorgelegt.

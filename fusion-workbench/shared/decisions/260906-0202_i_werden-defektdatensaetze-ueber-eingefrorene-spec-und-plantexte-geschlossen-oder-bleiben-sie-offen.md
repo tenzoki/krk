@@ -45,3 +45,9 @@ Keine Möglichkeit ist hier gewählt. Der Ausführer hat die neun unangetastet a
 ## Was daran nicht die Frage ist
 
 Ob der Text berichtigt wird. Er wird es nicht; `CLAUDE.md` entscheidet das, und dieser Datensatz rührt daran nicht. Gefragt ist allein, wie der Befund darüber im Bestand geführt wird.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — solche Datensaetze werden geschlossen und nicht offengehalten; die Nachsatzregel vom 260906 traegt die Berichtigung unter dem unveraenderten Bestandstext; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 8276170 — die vierte Behebungsschleife hat 30 von 36 dieser Datensaetze geschlossen, 29 davon ueber einen Nachsatz.

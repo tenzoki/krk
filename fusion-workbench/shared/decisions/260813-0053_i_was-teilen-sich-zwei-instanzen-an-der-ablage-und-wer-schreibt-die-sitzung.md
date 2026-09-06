@@ -57,3 +57,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — eine Schreibsperre ueber der Ablage und ein Sitzungsrecht daneben; die zweite Instanz merkt sich ihre Fensteraufteilung nicht, und das ist der bewusst gezahlte Preis; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-core/src/ablage/sperre.rs:113 (Schreibgriff) und :163 (Sitzungsrecht), namentlich gehalten von crates/krk-core/tests/baum.rs:454,703.
