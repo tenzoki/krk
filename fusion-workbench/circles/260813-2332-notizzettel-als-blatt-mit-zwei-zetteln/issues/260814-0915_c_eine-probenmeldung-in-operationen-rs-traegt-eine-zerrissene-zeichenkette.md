@@ -35,3 +35,6 @@ Zeilenende:
 - Der Satz erscheint nur im Fehlschlagsfall dieser Probe, also genau dann, wenn jemand
   `waehrend_blatt_erlaubt` um den Notizzettel erweitert hat — der Augenblick, in dem er
   lesbar sein soll.
+
+---
+Resolved: Behoben, in der vorgeschlagenen Form. Die Zusicherung in `waehrend_eines_blattes_bleibt_es_bei_dem_einen_abbruch` (`crates/krk-ui/src/kommandos/operationen.rs`) traegt die Zeichenkette jetzt mit `\\` am Zeilenende und einem Leerzeichen zwischen "schliesst" und "mit esc", in der Form der Nachbarn. Die vierzehn Leerzeichen sind weg. Geprueft: cargo fmt -p krk-ui --check Exit 0, cargo test -p krk-ui 908 gruen, clippy/doc je Exit 0.

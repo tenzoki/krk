@@ -46,3 +46,6 @@ je Methode zu schreiben — dort stehen `attachedSheet` und fünf weitere schon 
   von Hand, die zwei neu angesprochene Methoden nicht mitnimmt, ist ein zweiter Beleg für deren
   dritte Stufe. Der erste steht als
   `260813-1258_o_der-modulkopf-von-titelzusatz-laesst-die-bedingung-fuer-left-weg.md`.
+
+---
+Resolved: Behoben auf dem Weg, den der Datensatz vorschlaegt: beide Namen sind in die Aufzaehlung des Pauschalsatzes aufgenommen und nicht als eigene Zeile je Methode. Der Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` in `crates/krk-ui/src/appkit/anwendung.rs` fuehrt jetzt "seit der Titelleisten-Runde \`NSApplication::keyWindow\` (\`NSApplication.h:202\`) und \`isEqual:\` (\`objc/NSObject.h:17\`, am Protokoll \`NSObject\`)" neben `attachedSheet` und den uebrigen. Am SDK nachgelesen und nicht dem Datensatz geglaubt: `NSApplication.h:202` traegt an `keyWindow` keine Verfuegbarkeitsangabe, und `isEqual:` steht in `usr/include/objc/NSObject.h:17` ebenfalls ohne. Beide fallen damit unter den Pauschalsatz, wie er es sagt. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

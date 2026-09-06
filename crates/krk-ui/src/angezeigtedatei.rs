@@ -70,16 +70,22 @@ mod tests {
         PathBuf::from("/Users/k1/Projekte/krk/README.md")
     }
 
-    /// Alle acht Kombinationen der vier Eingaben, an einem Stueck.
+    /// Alle zwoelf erreichbaren Kombinationen der vier Eingaben, an einem
+    /// Stueck.
     ///
-    /// Die Tafel steht zusammen da, damit ein fehlender Fall auffaellt: zwei
-    /// Wahrheitswerte und zwei Pfade, die es gibt oder nicht, ergeben acht
-    /// Lagen, und jede traegt hier ihre Antwort. Die Lage "beide sichtbar"
-    /// kommt nicht vor, weil `Bereich::flaeche` sie ausschliesst: beide
-    /// tragen `Flaeche::RechterRand`. Die Tafel fragt deshalb je Bereich
-    /// getrennt.
+    /// Die Tafel steht zusammen da, damit ein fehlender Fall auffaellt. **Die
+    /// Rechnung dahinter:** zwei Wahrheitswerte und zwei Pfade, die es gibt
+    /// oder nicht, ergeben sechzehn Lagen. Vier davon sind "beide sichtbar",
+    /// und die schliesst `Bereich::flaeche` aus: beide tragen
+    /// `Flaeche::RechterRand`. Bleiben zwoelf, und jede traegt hier ihre
+    /// Antwort — acht mit genau einem sichtbaren Bereich, vier ohne einen.
+    ///
+    /// Die Tafel sagte bis zum 260906 "acht" und pruefte auch acht; die vier
+    /// Lagen ohne sichtbaren Bereich standen bis auf eine in keiner Probe, und
+    /// der Anspruch "damit ein fehlender Fall auffaellt" loeste sich damit
+    /// nicht ein.
     #[test]
-    fn alle_acht_kombinationen_tragen_ihre_antwort() {
+    fn alle_zwoelf_kombinationen_tragen_ihre_antwort() {
         let v = vorschaudatei();
         let e = editordatei();
 
@@ -118,6 +124,18 @@ mod tests {
             "der sichtbare Editor ohne Datei laesst die unsichtbare Vorschau nicht gewinnen"
         );
         assert_eq!(welche(false, None, true, None), None);
+
+        // Keiner der beiden Bereiche steht. Die Funktion fragt in beiden
+        // Zweigen zuerst die Sichtbarkeit, also fallen alle vier auf `None` —
+        // gleich, welche Datei ein ausgeblendeter Bereich noch haelt.
+        assert_eq!(
+            welche(false, Some(v.clone()), false, Some(e.clone())),
+            None,
+            "ohne sichtbaren Bereich gewinnt auch eine gehaltene Datei nicht"
+        );
+        assert_eq!(welche(false, Some(v), false, None), None);
+        assert_eq!(welche(false, None, false, Some(e)), None);
+        assert_eq!(welche(false, None, false, None), None);
     }
 
     /// Ein unsichtbarer Editor mit gehaltener Datei gewinnt nicht.

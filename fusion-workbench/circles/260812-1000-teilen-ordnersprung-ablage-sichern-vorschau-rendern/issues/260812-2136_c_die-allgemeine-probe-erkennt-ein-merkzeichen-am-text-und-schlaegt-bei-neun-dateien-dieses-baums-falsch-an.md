@@ -70,3 +70,6 @@ Quellen, die kein Merkzeichen wörtlich enthalten — und dass sein Doc-Kommenta
 das nicht sagt.
 
 **Herkunft:** Circle der Runde 6, Turn 5, `2c0b2a6`.
+
+---
+Resolved: Behoben, soweit der Befund reicht: "der Befund ist, dass er nicht weiter zu fuellen ist als bis zu Quellen, die kein Merkzeichen woertlich enthalten — und dass sein Doc-Kommentar das nicht sagt". Der Doc-Kommentar von `kein_merkzeichen_liegt_im_bereich_eines_stueckes` (`crates/krk-ui/src/markdown.rs`) sagt es jetzt: dass `beginnt_mit_merkzeichen` am Text und nicht am gerenderten Merkzeichen entscheidet, dass die Liste deshalb keine Quelle mit woertlichem Merkzeichen aufnehmen darf (mit Verweis auf die neun Fehlalarme, die dieser Datensatz am 260812 gemessen hat — die Messung ist zitiert und nicht wiederholt), und dass der Zuschnitt ueber die Schreibstellen von `merkzeichen_einloesen` fuehrte. Die beiden Dinge, die der Gurt zusaetzlich nicht sieht (ein Merkzeichen mitten in einem Bereich, der umgekehrte Fehler an `Listenzeile`), stehen jetzt ebenfalls dort. Der Erkenner selbst ist unveraendert; ihn zu ersetzen ist der Zuschnitt, den der Datensatz ausdruecklich nicht waehlt. Geprueft: cargo test -p krk-ui 908 gruen, clippy/fmt/doc je Exit 0.

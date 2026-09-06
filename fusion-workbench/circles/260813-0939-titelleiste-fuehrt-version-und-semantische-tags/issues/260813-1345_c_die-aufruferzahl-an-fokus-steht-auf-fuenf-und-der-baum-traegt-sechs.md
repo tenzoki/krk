@@ -44,3 +44,6 @@ geschlossenen Datensatz.
 - Die Aussage, um die es sachlich geht, hält: `lage` erhebt das Schlüsselfenster genau einmal
   (`anwendung.rs:2664`) und reicht es an `fokus_bei` weiter (`:2672`). Falsch ist allein die Zahl
   der Aufrufer, die die Hülle noch braucht.
+
+---
+Resolved: Behoben, aber ohne die Zahl sechs einzusetzen: der Doc-Kommentar an `Anwendungsdelegierter::fokus_bei` (`crates/krk-ui/src/appkit/anwendung.rs`) sagt jetzt "fuer die uebrigen Aufrufer" ohne Ordnungszahl. Die Begruendung ist die Lehre dieses Datensatzes selbst: die Zahl haengt an der Schreibweise des Empfaengers und ist zweimal an derselben Blindheit bestaetigt worden. Nachgezaehlt am `2fa1d0e` mit `grep -nE '\b(self|selbst)\.fokus\(\)' crates/krk-ui/src/appkit/anwendung.rs`: neun Treffer, davon drei in Prosa (Doc- und Rumpfkommentare), also sechs Aufrufe — `:1455`, `:1644`, `:2245`, `:5067`, `:7556`, `:8060`, darunter das `selbst.fokus()` im Rueckruf des Ordnerwechsels, das dem Muster des Plans entging. Die Sache, um die es geht, haelt unveraendert. Eine Zaehlprobe nach der Sache statt nach der Schreibweise ist nicht gebaut; sie ist im Datensatz als Kuer und nicht als Pflicht genannt. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

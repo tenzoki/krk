@@ -37,3 +37,6 @@ erreicht; das Erste ist eine Zeile.
 - Ohne Rückstellung wäre ein wirklich abgewiesener Wechsel eine Auseinanderentwicklung von
   Anzeige und Modell: der Tab zeigte den einen Zettel, die Textfläche und
   `Zettelmodell::offener` den anderen, und das Getippte ginge in den falschen.
+
+---
+Resolved: Behoben auf dem ersten der beiden Wege: der Kommentar sagt jetzt, wofuer das Feld wirklich da ist. `ZettelwaechterIvars::schalter` (`crates/krk-ui/src/appkit/blaetter/zettel.rs`) lautet jetzt "um die angeklickte Stelle an ihm selbst zu lesen, statt dem Absender des Rueckrufs zu trauen", und ein Absatz darunter haelt fest, dass eine Rueckstellung der Anzeige nicht daran haengt, dass `tab_gewechselt` `selectedSegment` liest und an keiner Stelle `setSelectedSegment` ruft, und dass beide Abweisungszweige heute unerreichbar sind. Am Baum nachgelesen: `setSelectedSegment` steht in dieser Datei allein im Aufbau (`schalter.setSelectedSegment(…)`), nicht in `tab_gewechselt`. Die beschriebene Rueckstellung ist nicht gebaut; das ist der zweite Weg und im Datensatz als der teurere fuer einen Fall bezeichnet, den heute nichts erreicht. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

@@ -53,3 +53,6 @@ im Code, die etwas anderes sagt als der Code —, und der Doc-Kommentar ist die
 Stelle, die ein Leser zuerst liest.
 
 **Herkunft:** Circle der Runde 6, Turn 5, `2c0b2a6`.
+
+---
+Resolved: Behoben. Der Doc-Kommentar von `Zerlegung::luecke_bis` (`crates/krk-ui/src/markdown.rs`) teilt den Satz jetzt an derselben Grenze, an der der Rumpf ihn teilt: innerhalb eines Elements faellt weg, was die Umgebung wiederholt (`ohne_umgebungszeichen`), auf Dokumentebene schneidet `str::trim` allein an den beiden Enden der ganzen Luecke, und der Einzug einer Zeile bleibt dort stehen. Damit sagen Doc-Kommentar, Rumpfkommentar und Rumpf dasselbe. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

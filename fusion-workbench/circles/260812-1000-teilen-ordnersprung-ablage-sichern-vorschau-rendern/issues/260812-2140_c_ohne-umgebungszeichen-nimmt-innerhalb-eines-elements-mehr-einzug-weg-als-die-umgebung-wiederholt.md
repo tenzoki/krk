@@ -41,3 +41,6 @@ ist behoben.
 
 **Herkunft:** Circle der Runde 6, Turn 5; abgetrennt beim Beheben von
 `260812-2019_c_ohne-umgebungszeichen-laeuft-auch-auf-dokumentebene-und-nimmt-dort-einzug-weg-der-inhalt-ist.md`.
+
+---
+Resolved: Behoben, soweit der Befund reicht: "Der Befund ist die verbliebene Abweichung zwischen dem Doc-Kommentar und dem, was die Funktion tut." Der Doc-Kommentar von `ohne_umgebungszeichen` (`crates/krk-ui/src/markdown.rs`) verspricht nicht mehr, es falle weg, was die Umgebung wiederholt; die Ueberschrift lautet jetzt "Nimmt einer Luecke jeden fuehrenden Leerraum und jedes \`>\`", und der Absatz darunter schreibt den Unterschied samt dem gemessenen Beispiel (zwei Leerzeichen Einzug, sechs weggenommen) und dem Verweis auf diesen Datensatz aus. Der Zuschnitt (kuerzester fuehrender Lauf ueber alle nichtleeren Zeilen) ist nicht gebaut; er ist im Datensatz ausdruecklich nicht gewaehlt und beruehrt daneben 260812-2134. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

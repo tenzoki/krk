@@ -28,3 +28,6 @@ Abgleich 260820-0834, gegen `05cb614`: **trifft unveraendert zu.** `zwischenabla
 `b28cdd6` unberuehrt. Nachgelesen: `#[must_use]` steht in Zeile 258 ueber
 `text_auf_ablage_schreiben`, und `text_schreiben` (`:270`) traegt keines, obwohl es denselben
 Wahrheitswert weiterreicht. Der Befund bleibt offen.
+
+---
+Resolved: Behoben. `text_schreiben` (`crates/krk-ui/src/appkit/zwischenablage.rs`) traegt jetzt `#[must_use]` wie die Schwester `text_auf_ablage_schreiben` darueber, und ihr Doc-Kommentar sagt den Grund samt der Feststellung, dass der ungeschuetzte Weg der war, den die beiden Pfadkopierer der Runde 4 nehmen. Die drei Rufer sind unveraendert und werten den Wert alle aus: `tabelle.rs:1950` und `:1978` je in einem `if`, `betrachter.rs:372` mit `let _ =`; `cargo clippy -p krk-ui --all-targets -- -D warnings` bleibt auf Exit 0, also faengt die Marke heute keinen Fall und schuetzt den naechsten Rufer. Geprueft: cargo test -p krk-ui 908 gruen, clippy/fmt/doc je Exit 0.

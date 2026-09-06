@@ -400,6 +400,13 @@ pub fn text_auf_ablage_schreiben(ablage: &NSPasteboard, text: &str) -> bool {
 /// hinein; das Verhalten fuer die beiden Pfadkopierer aus C1 und C2 der Runde 4
 /// bleibt dabei unveraendert. Warum diese Funktion keine Probe traegt, steht im
 /// Modulkopf.
+///
+/// `#[must_use]` aus demselben Grund wie an [`text_auf_ablage_schreiben`]: es
+/// ist derselbe Wahrheitswert mit derselben Bedeutung, und wortlos nichts zu
+/// tun ist auf keinem der beiden Wege zulaessig. Die Marke stand bis zum
+/// 260906 allein an der gerufenen Haelfte, obwohl der ungeschuetzte Weg der
+/// ist, den die beiden Pfadkopierer der Runde 4 nehmen.
+#[must_use]
 pub fn text_schreiben(text: &str) -> bool {
     text_auf_ablage_schreiben(&NSPasteboard::generalPasteboard(), text)
 }

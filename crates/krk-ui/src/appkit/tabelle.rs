@@ -316,7 +316,7 @@ const EINZUGSTAKT: NSTimeInterval = 1.0 / 60.0;
 ///
 /// Die Aufzaehlung selbst steht in [`crate::spalten`] und nennt keine
 /// `objc2`-Kiste; hier stehen die fuenf Funktionen, die eine nennen. Dasselbe
-/// Muster tragen `aufteilung::sichtbar_im` und `aufteilung::rahmenfarbe` ueber
+/// Muster traegt `aufteilung::rahmenfarbe` ueber
 /// [`crate::fenstermodell::Bereich`]. Freie Funktionen und keine Methoden:
 /// eine Methode zoege `NSString`, `NSTextAlignment` und damit AppKit an eine
 /// Aufzaehlung, die seit der Bereichsleisten-Runde zwei Leser hat und deren

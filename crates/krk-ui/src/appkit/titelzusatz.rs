@@ -60,10 +60,16 @@
 //! Uebersetzer sagt dazu nichts**, weil die Eigenschaft den ganzen
 //! Aufzaehlungstyp `NSLayoutAttribute` mit seinen zwoelf Werten nimmt. Der Kopf
 //! des Systems (`NSTitlebarAccessoryViewController.h:23-30`) laesst davon
-//! allein `Bottom` (die Vorgabe), `Right` und `Left` zu, dazu `Leading` und
-//! `Trailing` fuer Anwendungen ab 10.12 und `Top` ab 10.13, letzteres nur
+//! allein `Bottom` (die Vorgabe) und `Right` unbedingt zu, dazu `Left` fuer
+//! Anwendungen ab 10.11, `Leading` und
+//! `Trailing` ab 10.12 und `Top` ab 10.13, letzteres nur
 //! zusammen mit `NSWindowStyleMaskFullSizeContentView`. Woertlich: "All other
 //! values are currently invalid and will assert."
+//!
+//! **Auch der gesetzte Wert traegt also eine Bedingung**, und sie ist erfuellt:
+//! `.cargo/config.toml` bindet gegen `MACOSX_DEPLOYMENT_TARGET=15.0`, und 15.0
+//! liegt ueber 10.11. Woertlich sagt der Kopf: "For applications linked on
+//! Mac OS 10.11 or later, NSLayoutAttributeLeft is also supported".
 //!
 //! Gewaehlt ist `Left`. Es setzt den Bereich unmittelbar rechts neben die drei
 //! Fensterknoepfe und behaelt diese Seite; `Leading` wechselte sie mit der
@@ -130,7 +136,11 @@ const RAND: f64 = 8.0;
 
 /// Was in der Titelleiste steht: der Name, ein Leerzeichen, die Versionszahl.
 ///
-/// **Die einzige Stelle im Baum, die Name und Version zusammensetzt.** Der
+/// **Die einzige Stelle im Baum, die KRKs Namen und die Version
+/// zusammensetzt.** Die Einengung gehoert dazu: `crates/krk-bench/` setzt an
+/// mehreren Stellen `"krk-bench {}"` mit derselben Zahl zusammen, und die
+/// Zaehlprobe sieht sie nur deshalb nicht, weil ihre Nadel auf den
+/// Anwendungsnamen festgelegt ist. Genau das sagt C5.4 auch zu. Der
 /// Ueber-Dialog von AppKit setzt seine eigene Zeile aus der `Info.plist`
 /// zusammen und bekommt sie nicht von hier; dass es dabei bei einer Stelle
 /// bleibt, haelt eine Zaehlprobe fest.
@@ -240,7 +250,11 @@ mod tests {
         );
     }
 
-    /// Genau eine Stelle im Baum setzt Namen und Version zusammen (C5.4).
+    /// Genau eine Stelle unter `crates/` setzt KRKs Namen und die Version
+    /// zusammen (C5.4).
+    ///
+    /// **Die Reichweite ist `crates/` und nicht der Baum**, denn
+    /// `quellbaum::quelldateien` liest genau das; `xtask/` liegt ausserhalb.
     ///
     /// Der Eintrag „Über KRK" im Anwendungsmenue oeffnet den Standard-Dialog
     /// von AppKit. Was der zeigt, liest AppKit aus der `Info.plist` des
@@ -267,7 +281,7 @@ mod tests {
     /// KRK nichts und liest die Zahl ueber den Platzhalter aus derselben
     /// `Cargo.toml`.
     #[test]
-    fn nur_eine_stelle_im_baum_setzt_namen_und_version_zusammen() {
+    fn nur_eine_stelle_unter_crates_setzt_namen_und_version_zusammen() {
         let nadel = concat!("\"KRK \", env!(", "\"CARGO_PKG_VERSION\")");
         let dateien: Vec<String> = quelldateien()
             .into_iter()
@@ -287,8 +301,19 @@ mod tests {
         );
     }
 
-    /// Die Versionszahl steht in keiner `.rs`-Datei des Baums als Zeichenkette
-    /// (C1.2).
+    /// Die Versionszahl steht in keiner `.rs`-Datei unter `crates/` als
+    /// Zeichenkette (C1.2).
+    ///
+    /// **`crates/` und nicht der Baum**, denn `quellbaum::quelldateien` liest
+    /// genau das. `xtask/` liegt ausserhalb und fuehrt die Zahl woertlich als
+    /// Pruefstoff: woertliche Ausgaben von `git` und der `Info.plist`, gegen
+    /// die eine reine Funktion geprueft wird, die ihre Sollversion daneben als
+    /// Argument bekommt. Sie veralten mit einer steigenden Zahl in der
+    /// `Cargo.toml` nicht, und die Probe zu erweitern wuerde sie rot machen,
+    /// ohne dass an C1.2 etwas faul waere. Wo sie heute stehen, sagt
+    /// ``grep -rn "$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" xtask/src``
+    /// und keine Aufzaehlung hier; sie ist zwischen den Runden schon einmal von
+    /// einer Datei in eine andere gewandert.
     ///
     /// Die Nadel wird zur Pruefzeit aus `env!("CARGO_PKG_VERSION")` genommen
     /// und nicht hingeschrieben; deshalb findet die Probe sich nicht selbst,

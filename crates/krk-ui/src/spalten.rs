@@ -9,9 +9,10 @@
 //! `crate::appkit::tabelle` und steht dort als freie Funktion ueber dieser
 //! Aufzaehlung: die Kennung, die Ueberschrift, die beiden Breiten, die
 //! Ausrichtung und der Weg von einer Kennung zurueck zur Spalte. Dasselbe
-//! Muster tragen `aufteilung::sichtbar_im` und `aufteilung::rahmenfarbe`, die
-//! ueber [`crate::fenstermodell::Bereich`] rechnen, ohne dass die Aufzaehlung
-//! unter `appkit/` liegen muesste.
+//! Muster traegt `aufteilung::rahmenfarbe`, das
+//! ueber [`crate::fenstermodell::Bereich`] rechnet, ohne dass die Aufzaehlung
+//! unter `appkit/` liegen muesste. `aufteilung::sichtbar_im` stand hier bis
+//! `026c665` daneben und ist mit ihm ersatzlos entfallen.
 //!
 //! # Vollstaendige Fallunterscheidung ohne Auffangzweig
 //!

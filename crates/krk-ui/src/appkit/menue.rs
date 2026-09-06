@@ -1232,7 +1232,7 @@ mod tests {
     /// **Die Umkehrung von C2.5, und sie ist eine Zaehlung und keine Rechnung.**
     /// Dass der Abgriff und die Ausgrauung nie verschiedene Antworten geben,
     /// folgt daraus, dass beide dieselbe reine Funktion auf derselben `Lage`
-    /// fragen; die Tafel aus 280 Faellen dazu steht in
+    /// fragen; die Tafel ueber alle Faelle dazu steht in
     /// [`crate::kommandos::zulaessigkeit`], und die zwei Aufrufer zaehlt die
     /// Probe daneben. Was **hier** zu halten ist, ist die andere Haelfte: dass
     /// niemand die Freigabe eines Eintrags an einer zweiten Stelle **setzt**.
@@ -1310,10 +1310,12 @@ mod tests {
     /// Weg, der den Rumpf eines Befehls an dieser Stelle vorbei erreicht, laesst
     /// die Probe rot werden.
     ///
-    /// **Zwei Zahlen, weil eine von beiden an der Schreibweise haengt.**
+    /// **Die Zahl haengt an der Schreibweise, und das ist ihre benannte
+    /// Blindheit.**
     ///
     /// Der Name `kommando_ausfuehren` heisst daneben auch je eine Methode an der
-    /// Tabelle, an der Leiste und an der Vorschau, an die der Delegierte
+    /// Tabelle, an der Leiste, an der Vorschau und am Git-Bereich, an die der
+    /// Delegierte
     /// weiterreicht; das sind keine zweiten Ausfuehrungswege, sondern die
     /// Fortsetzung dieses einen. Die **drei** trennt deshalb der Empfaenger,
     /// `self.` oder `selbst.`. Genau daran haengt diese Zahl aber auch: ein
@@ -1322,12 +1324,21 @@ mod tests {
     /// bliebe unsichtbar
     /// (`issues/260813-0540_*_zwei-aufruferzaehlungen-haengen-an-der-schreibweise-des-aufrufs.md`).
     ///
-    /// Die **Gesamtzahl** daneben haengt an keinem Empfaenger:
-    /// [`crate::quellbaum::aufrufstellen`] zaehlt jeden Aufruf des Namens im
-    /// Baum, gleich wer ihn ruft. Heute sind es neun — die drei oben und sechs
-    /// Weiterreichungen an Tabelle, Leiste, Vorschau und Git-Bereich. Ein
-    /// zehnter macht die Probe rot, wie auch immer er geschrieben ist, und
-    /// zwingt zu der Frage, welche der beiden Zahlen sich geaendert hat.
+    /// **Eine zweite Zahl ueber alle Aufrufe steht hier nicht mehr.** Sie stand
+    /// bis zum 260906 daneben, erst auf acht und dann auf neun, und sie sagte
+    /// kein Abnahmekriterium zu: der Kopf von [`crate::quellbaum`] verlangt
+    /// eine Aufruferzaehlung „nur dort, wo ein Abnahmekriterium die Zahl selbst
+    /// zusagt, und nirgends als Stellvertreter fuer ‚es gibt keinen
+    /// Doppelbau'". Genau als Stellvertreter war sie beschriftet („ein
+    /// zehnter macht die Probe rot"), und der billigste Weg zurueck ins Gruene
+    /// war jedes Mal das Hochzaehlen. Ihre Erklaerung stimmte daneben nicht:
+    /// sie zaehlte die zwei Aufrufe des Messmodus an
+    /// `Tabellenquelle::kommando_ausfuehren` als Weiterreichungen mit, obwohl
+    /// die am Delegierten und damit an der Zulaessigkeitsregel vorbeigehen —
+    /// gewollt, weil ein Messlauf eine Handlung setzt und keinen Befehl
+    /// ausloest, aber etwas anderes als eine Fortsetzung dieses einen Weges.
+    /// Wer die Aufrufe heute sehen will, nimmt
+    /// ``grep -rn 'kommando_ausfuehren(' crates/krk-ui/src``.
     #[test]
     fn der_delegierte_wird_an_genau_drei_stellen_um_einen_befehl_gebeten() {
         let name = concat!("kommando_", "ausfuehren");
@@ -1346,17 +1357,6 @@ mod tests {
             vom_delegierten, 3,
             "der eine Ausfuehrungsweg hat nicht die drei Aufrufer Tastendruck, \
              Menueeintrag und Bereichsleiste"
-        );
-
-        let alle: usize = dateien
-            .iter()
-            .map(|(_, inhalt)| crate::quellbaum::aufrufstellen(inhalt, name))
-            .sum();
-        assert_eq!(
-            alle, 9,
-            "die Zahl der Aufrufe von {name} im Baum hat sich geaendert: erwartet \
-             sind die drei am Delegierten und sechs Weiterreichungen an Tabelle, \
-             Leiste, Vorschau und Git-Bereich"
         );
     }
 

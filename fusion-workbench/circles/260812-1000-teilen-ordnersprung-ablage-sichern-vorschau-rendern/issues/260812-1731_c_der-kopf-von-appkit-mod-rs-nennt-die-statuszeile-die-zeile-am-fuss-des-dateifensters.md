@@ -28,3 +28,6 @@ die Runde hat drei Module hinzugefügt (`teilen`, `textmerkmale`, dazu die neue 
 Vorschau), und die Vermutung liegt nahe, dass mehr als drei Sätze veraltet sind.
 
 Also seen: 260826-1416 by coderev — `mod.rs:95-96` sagt weiter „[statuszeile] die Zeile an seinem Fuss"; `fenster.rs:3-7` und `statuszeile.rs:34-42` führen sie als Schwester der Aufteilung über die volle Breite.
+
+---
+Resolved: Behoben, in einem Zug mit 260812-1702 wie verlangt. `crates/krk-ui/src/appkit/mod.rs` beschreibt `statuszeile` jetzt als die eine Zeile am **Fensterfuss**, ueber die volle Breite unter der Fensterzeile, dem Fenster und keinem Bereich gehoerend, und sagt dazu, dass die zwei Zeilen an den Fuessen der Dateifenster mit der Runde 6 gefallen sind. Das deckt sich mit `crates/krk-ui/src/appkit/statuszeile.rs:34-42` ("Eine Zeile ueber die volle Fensterbreite, nicht zwei an zwei Fuessen"). Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

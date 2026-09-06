@@ -50,3 +50,6 @@ Die Proben selbst bleiben, wie sie sind; sie messen richtig.
 - Muttersatz: `260813-1258_o_die-versionszahlprobe-sagt-baum-und-liest-nur-crates.md`, offen.
 - Dieselbe Verwechslung von „im Baum" mit „in dieser einen Kiste" ist am 260813-0540 schon
   einmal als Defekt aufgetreten und hat `quelldateien` von `krk-ui/src` auf `crates/` gezogen.
+
+---
+Resolved: Behoben, in einem Zug mit dem Muttersatz 260813-1258_o_die-versionszahlprobe-sagt-baum-und-liest-nur-crates. Punkt 1: `titelzusatz.rs` sagt jetzt "Die einzige Stelle im Baum, die KRKs Namen und die Version zusammensetzt" und schreibt die Einengung aus — `crates/krk-bench/` setzt an mehreren Stellen `\"krk-bench {}\"` mit derselben Zahl zusammen, und die Nadel ist auf den Anwendungsnamen festgelegt. Nachgezaehlt am `2fa1d0e`: `bericht.rs:110`, `:336`, `messen.rs:2143` und `fixture.rs:589`, also die vier des Datensatzes. Punkt 2: der Doc-Kommentar bei der Probe sagt "Genau eine Stelle unter \`crates/\` setzt KRKs Namen und die Version zusammen" samt Begruendung der Reichweite, und die Probe heisst jetzt `nur_eine_stelle_unter_crates_setzt_namen_und_version_zusammen`. Die fuenfte Fundstelle ausserhalb `crates/` ist im Muttersatz durch ein Kommando ersetzt, weil sie inzwischen woanders steht. Die Proben messen unveraendert. Geprueft: cargo test -p krk-ui 908 gruen, clippy/fmt/doc je Exit 0.

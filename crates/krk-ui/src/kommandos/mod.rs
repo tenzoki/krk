@@ -70,7 +70,9 @@
 //! sie es mit `rundweg` geworden ist
 //! (`shared/issues/260823-1032_*_zwei-zahlen-im-modulkopf-der-kommandos-*`).
 //! Sie ist seit der Runde 7 die erste Frage jedes Befehls, und `fokus` ist
-//! einer ihrer drei Bestandteile geworden statt der einen Regel daneben. Zwei
+//! einer ihrer Bestandteile geworden statt der einen Regel daneben; welche das
+//! sind, zaehlt der Abschnitt „Die vier Bestandteile" im Kopf von
+//! `zulaessigkeit` einzeln auf, und eine Zahl steht deshalb hier nicht. Zwei
 //! Frager stellen sie, der Ereignisabgriff ueber
 //! `Anwendungsdelegierter::kommando_ausfuehren` und die Ausgrauung des
 //! Hauptmenues ueber `validateMenuItem:`; dass es eine Funktion ist und nicht

@@ -43,3 +43,6 @@ Stellen im Präsens.
 
 Weg 1 und Weg 2 schließen einander nicht aus; zusammen kosten sie dieselben zwei Zeilen und
 lassen die nächste Entfernung auffliegen.
+
+---
+Resolved: Weg 1 gefahren. `crates/krk-ui/src/spalten.rs:12` und `crates/krk-ui/src/appkit/tabelle.rs:319` nennen als Vorbild nur noch `aufteilung::rahmenfarbe` (`crates/krk-ui/src/appkit/aufteilung.rs:441`, steht); `sichtbar_im` ist an beiden Stellen aus dem Praesens genommen, in `spalten.rs` mit dem Zusatz, dass es mit `026c665` entfallen ist. Weg 2 (eckiger Verweis) ist in dieser Kiste nicht gangbar: `krk-ui` hat kein Bibliotheksziel, rustdoc kann einen Verweis auf `crate::appkit::…` nicht aufloesen, und `rahmenfarbe` ist ausserdem privat. `fenstermodell.rs:371` bleibt unberuehrt, es spricht im Rueckblick. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

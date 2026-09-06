@@ -38,6 +38,7 @@
 //!           ──> teilen
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
 //!           │             ──> nummernspalte
+//!           │             ──> textmerkmale  ──> crate::hervorhebung
 //!           │             ──> betrachter ──> PDFKit    ──> zwischenablage, teilen
 //!           ──> editor   ──> crate::editormodell
 //!           │             ──> nummernspalte ──> krk-core::text::zeilen
@@ -75,8 +76,9 @@
 //! und Unterstreichung. Ein eigenes Modul aus demselben Grund wie die
 //! Nummernspalte darunter — eine Ueberschrift sieht im Editor und in der
 //! Vorschau gleich aus, und zwei Umsetzungen waeren zwei Wahrheiten darueber.
-//! Heute ruft allein [`editor`] hier herein; die Vorschau kommt mit dem
-//! Schritt dazu, der ihr gerendertes Markdown traegt.
+//! **Editor und Vorschau rufen hier herein**, seit die Vorschau ihr
+//! gerendertes Markdown traegt (Runde 6); wo sie es tun, sagt
+//! ``grep -rn 'textmerkmale::' crates/krk-ui/src``.
 //! [`nummernspalte`] haelt die Zeilennummern aus C10, und zwar als **eine**
 //! Klasse fuer beide Textflaechen: Editor und Vorschau haengen dieselbe
 //! `NSRulerView`-Unterklasse in die senkrechte Linealstelle ihrer
@@ -108,8 +110,11 @@
 //! die das Fenster aufbaut.
 //! [`tabelle`] haelt das Dateifenster:
 //! `NSTableView` in einer `NSScrollView`, Datenquelle und Delegierter, und die
-//! Anbindung an das Tabmodell. [`tableiste`] ist die Leiste an seinem Kopf,
-//! [`statuszeile`] die Zeile an seinem Fuss. [`ereignisse`] haelt den lokalen
+//! Anbindung an das Tabmodell. [`tableiste`] ist die Leiste an seinem Kopf.
+//! [`statuszeile`] haelt die eine Zeile am **Fensterfuss**: seit der Runde 6
+//! liegt sie ueber die volle Breite unter der Fensterzeile und gehoert dem
+//! Fenster und keinem Bereich; die zwei Zeilen an den Fuessen der Dateifenster
+//! sind mit ihr gefallen. [`ereignisse`] haelt den lokalen
 //! Ereignisabgriff und ist der einzige Eintrittspunkt fuer Tastendruecke; er
 //! schlaegt sie im Kern nach und reicht das Kommando an eine gewoehnliche
 //! Rust-Senke weiter. [`bildtakt`] haelt den `CADisplayLink` und den Nachschlag
@@ -202,7 +207,9 @@
 //! [`vorschau`] und [`zwischenablage`] den Inhalt aus `crate::vorschaumodell`,
 //! [`editor`] den Stand aus `crate::editormodell` und die Einfaerbung aus
 //! `crate::hervorhebung`, [`textmerkmale`] setzt dieselbe Einfaerbung und die
-//! Ansichtswahl aus `crate::editormodell` in Merkmale um, [`aufteilung`] rechnet die Breiten mit
+//! Ansichtswahl aus `crate::editormodell` in Merkmale um und traegt seit dem
+//! 260812 daneben die Wahl zwischen den beiden Farbtafeln
+//! (`textmerkmale::tafel_der_erscheinung`), [`aufteilung`] rechnet die Breiten mit
 //! `crate::fenstermodell` und die Rahmenrolle mit `crate::kommandos::fokus`,
 //! [`belegungsansicht`] haelt die Arbeitskopie der Belegung aus
 //! `crate::belegungsmodell`, [`teilen`] verzweigt ueber

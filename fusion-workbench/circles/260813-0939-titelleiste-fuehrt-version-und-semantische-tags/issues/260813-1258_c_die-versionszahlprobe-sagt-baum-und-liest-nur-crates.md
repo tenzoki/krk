@@ -56,3 +56,6 @@ zusammen. Dazu kommt eine fünfte wörtliche Fundstelle der Zahl ausserhalb `cra
 Datensatz nicht aufzählt: `xtask/src/bundle.rs:587`. Abgelegt als
 `260813-1345_o_zwei-weitere-stellen-sagen-im-baum-und-meinen-crates-eine-davon-ist-widerlegt.md`;
 beide gehören in einen Zug behoben, weil es dieselbe Datei und dieselbe Ursache ist.
+
+---
+Resolved: Behoben, in einem Zug mit 260813-1345_o_zwei-weitere-stellen-sagen-im-baum, wie beide Datensaetze es verlangen. Der Doc-Kommentar von `die_versionszahl_steht_in_keiner_quelldatei` (`crates/krk-ui/src/appkit/titelzusatz.rs`) sagt jetzt "in keiner \`.rs\`-Datei unter \`crates/\`" und begruendet die Reichweite mit `quellbaum::quelldateien`; ein Absatz sagt, dass `xtask/` ausserhalb liegt und die Zahl dort woertlich als Pruefstoff steht, dass diese Konstanten mit einer steigenden Zahl nicht veralten und dass eine Erweiterung der Probe sie rot machen wuerde, ohne dass an C1.2 etwas faul waere. **Statt einer Dateiliste steht dort das Kommando**, und der Grund ist gemessen: der Datensatz nennt `xtask/src/release.rs` und der Schwesterdatensatz `xtask/src/bundle.rs:587`; am `2fa1d0e` trifft `grep -rn 1.7.2 xtask/src` keine dieser beiden, sondern drei Stellen in `xtask/src/beglaubigung.rs`. Die Probe selbst ist unveraendert. Geprueft: cargo test -p krk-ui 908 gruen, clippy/fmt/doc je Exit 0.

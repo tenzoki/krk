@@ -63,3 +63,6 @@ sie neu in die Datei gebracht haben. Abgelegt als
 `260813-1345_o_keywindow-und-isequal-stehen-nicht-im-untergrenzen-abschnitt-von-anwendung-rs.md`.
 Beide zusammen sind der zweite und dritte Beleg für die dritte Stufe der offenen Frage
 `shared/decisions/260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md`.
+
+---
+Resolved: Behoben. Der Abschnitt "\`Left\` und nicht \`Leading\`" in `crates/krk-ui/src/appkit/titelzusatz.rs` zaehlt `Left` nicht mehr unter den unbedingt zulaessigen Werten: unbedingt sind `Bottom` und `Right`, `Left` gilt fuer Anwendungen ab 10.11, `Leading`/`Trailing` ab 10.12, `Top` ab 10.13. Ein zweiter Absatz sagt, dass die Bedingung erfuellt ist (`MACOSX_DEPLOYMENT_TARGET=15.0`), und zitiert den SDK-Kopf woertlich. Am SDK selbst nachgelesen und nicht dem Datensatz geglaubt: `NSTitlebarAccessoryViewController.h:23` traegt "For applications linked on Mac OS 10.11 or later, NSLayoutAttributeLeft is also supported". Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

@@ -43,3 +43,6 @@ argument the sentence makes gets weaker with the correction, not stronger — on
 thinner reason for a separate function than two pieces were. Whether the cut still earns its
 keep is a separate question and not this record's; `schaltflaeche` has one caller and one value,
 which is the same shape the commit used to justify dropping `art`.
+
+---
+Resolved: Behoben, wie unter Direction verlangt. Der Doc-Kommentar von `loeschen_nach_rueckfrage` (`crates/krk-ui/src/appkit/anwendung.rs`) sagt jetzt "die eine Angabe des Befehls" statt "die zwei Angaben des Befehls"; damit stimmt er mit seinem eigenen ersten Satz ("bringt weiterhin ein Stueck mit") und mit der Signatur `fn loeschen_nach_rueckfrage(&self, schaltflaeche: &str) -> bool` ueberein. Dass das Argument fuer den Schnitt mit der Berichtigung schwaecher wird, ist im Datensatz benannt und bleibt eine eigene Frage; sie ist hier nicht beantwortet. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

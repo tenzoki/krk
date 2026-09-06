@@ -786,7 +786,16 @@ fn bis_zum_ende_ueberspringen(ereignisse: &mut pulldown_cmark::OffsetIter<'_>) {
     }
 }
 
-/// Nimmt einer Luecke, was ihre Umgebung auf jeder ihrer Zeilen wiederholt.
+/// Nimmt einer Luecke jeden fuehrenden Leerraum und jedes `>`.
+///
+/// **Das ist mehr, als die Umgebung wiederholt, und der Unterschied ist
+/// gemessen.** `trim_start_matches` schneidet den ganzen fuehrenden Lauf und
+/// keine gezaehlte Menge; wie viel die Umgebung wiederholt, weiss diese
+/// Funktion nicht, denn sie bekommt die Luecke und sonst nichts. Steht in einem
+/// Listenpunkt mit zwei Leerzeichen Einzug eine Zeile mit sechs, so verliert
+/// sie alle sechs statt zwei. Der Fall ist selten und kostet keinen Inhalt, nur
+/// den zusaetzlichen Einzug; der Datensatz dazu ist
+/// `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2140_*`.
 ///
 /// Zeilenweise faellt vorn weg, was ein Zitatblock und ein Einzug dort
 /// ohnehin stehen haben — `>` und Leerraum. Was uebrig bleibt, ist der
@@ -1290,8 +1299,15 @@ impl<'q> Zerlegung<'q> {
     /// ([`Abschnittsart::Woertlich`]) und rundet nicht mehr auf die
     /// Auszeichnungszeichen davor auf.
     ///
-    /// **Leerraum faellt weg**, und mit ihm, was die Umgebung auf jeder Zeile
-    /// wiederholt ([`ohne_umgebungszeichen`]). Die Abstaende zwischen den
+    /// **Leerraum faellt weg, und die Grenze dafuer ist die Umgebung.**
+    /// Innerhalb eines Elements faellt mit ihm, was die Umgebung auf jeder
+    /// Zeile wiederholt ([`ohne_umgebungszeichen`]); auf Dokumentebene
+    /// wiederholt keine Umgebung etwas, dort schneidet [`str::trim`] allein an
+    /// den beiden Enden der ganzen Luecke, und der Einzug einer Zeile bleibt
+    /// stehen, weil er dort Inhalt ist. Der Rumpf teilt an
+    /// `self.offen.is_empty()`, und dieser Satz teilt an derselben Stelle; bis
+    /// zum 260906 sagte er die eine Haelfte fuer beide. Die Abstaende zwischen
+    /// den
     /// Bloecken rechnet [`Zerlegung::absetzen`] aus dem Wunsch des Blocks; der
     /// Leerraum der Quelle daneben ergaebe Leerzeilen. Was uebrig bleibt, ist
     /// ein Block und wird wie einer abgesetzt.
@@ -1952,6 +1968,30 @@ mod tests {
     /// es — sie ist das Absatzmerkmal, dem der Einzug gilt. Waere diese Probe
     /// zur Zeit von `c35f8b1` dagewesen, haette sie den Defekt gefangen, ohne
     /// dass jemand den einzelnen Fall haette nennen muessen.
+    ///
+    /// **Ihre Grenze: sie erkennt am Text und nicht am gerenderten
+    /// Merkzeichen.** [`beginnt_mit_merkzeichen`] fragt, ob ein Ausgabestueck
+    /// mit dem Aufzaehlungszeichen oder mit Ziffer-Punkt-Leerzeichen anfaengt;
+    /// steht dieselbe Zeichenfolge woertlich in der Quelle, etwa als
+    /// ``` `• ` ``` in fester Schrift, haelt sie sie fuer ein Merkzeichen. Der
+    /// Gurt laesst sich damit **nicht** mit beliebigen Quellen weiten: der
+    /// Datensatz
+    /// `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2136_*`
+    /// hat den Erkenner am 260812 ueber alle Markdown-Dateien dieses Baums
+    /// laufen lassen und neun Fehlalarme gezaehlt, und eine Datei dieses
+    /// Projekts ist die naheliegendste
+    /// realistische Quelle. Wer die Liste unten fuellt, waehlt Quellen ohne
+    /// woertliches Merkzeichen oder ersetzt den Erkenner durch die Stellen, an
+    /// denen [`Zerlegung::merkzeichen_einloesen`] schreibt.
+    ///
+    /// **Zwei Dinge sieht sie ausserdem nicht.** Geprueft wird nur der Anfang
+    /// eines Bereichs, nicht seine Mitte; dass ein Merkzeichen heute gar nicht
+    /// in die Mitte geraten kann, haengt daran, dass jeder Vorfahre eines
+    /// Listenpunkts ein Containerblock ist und niemals eine Betonung, eine
+    /// Ueberschrift oder ein Verweis. Und den umgekehrten Fehler — eine
+    /// [`Auszeichnung::Listenzeile`], die ihr eigenes Merkzeichen verliert —
+    /// sieht sie nicht, weil genau diese Art ausgenommen ist; ihn messen die
+    /// Einzelproben darueber.
     #[test]
     fn kein_merkzeichen_liegt_im_bereich_eines_stueckes() {
         let quellen = [

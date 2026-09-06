@@ -59,3 +59,6 @@ zusammengeführten drei") genügt.
 **Punkt 1 des Schwesterbefunds ist weiterhin offen.** `menue.rs:1132` sagt „die Tafel aus 140
 Faellen", obwohl Strang C dieselbe Datei geöffnet und fünf andere Prosastellen darin nachgezogen
 hat; die Tafel deckt 280 (`zulaessigkeit.rs:435`).
+
+---
+Resolved: Behoben, alle drei Stellen des Datensatzes samt der dritten aus dem Abgleich vom 260813-1345. (1) Der Zeichenzweig in `Anwendungsdelegierter::eingabe_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs`) sagt jetzt "drei der vier Werte" statt "dieselben drei" und "alle drei", und ein Satz sagt, warum der vierte hier nicht eigens gefragt wird — am Baum nachgelesen: `fokus_bei` antwortet fuer `Schluesselfenster::Fremd` `Fokus::Anderswo`, und der `match` darunter liefert dafuer `false`. (2) Die Aufzaehlung an `validateMenuItem:` nennt jetzt beide Sonderposten, "Über KRK" (C5.1) und die Markdown-Ausgabe (C2.9), und verweist auf den Modulkopf von `menue.rs`, der sie fuehrt. (3) Der Grenzfall im Doc-Kommentar von `kommando_ausfuehren` sagt jetzt "die damals zusammengefuehrten drei" und nennt daneben, dass die Regel seit der Runde 8 einen Bestandteil mehr hat. Geprueft: cargo test -p krk-ui 908 gruen, clippy/fmt/doc je Exit 0.

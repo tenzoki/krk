@@ -54,3 +54,6 @@ Gefunden beim Bau von Planschritt 9 der Runde 6; im Bericht jenes Schrittes
 genannt. Herkunft: Circle der Runde 6.
 
 Also seen: 260826-1416 by coderev — `mod.rs:63-65` sagt weiter „Heute ruft allein editor hier herein"; `vorschau.rs:275,745,1187,1212,1530` rufen `textmerkmale` an fünf Stellen.
+
+---
+Resolved: Alle drei Stellen in `crates/krk-ui/src/appkit/mod.rs` behoben, zusammen mit dem Schwesterdatensatz 260812-1731 in einem Zug. (1) Der Absatz sagt jetzt "Editor und Vorschau rufen hier herein" und nennt statt einer Zahl das Kommando `grep -rn 'textmerkmale::' crates/krk-ui/src`. (2) Das Kastenbild fuehrt `textmerkmale` jetzt auch unter `vorschau`. (3) Der Absatz unter "Wer wen kennt" nennt die Wahl zwischen den beiden Farbtafeln (`textmerkmale::tafel_der_erscheinung`). Der ganze Kopf ist dabei gegen den Baum gelesen worden, wie der Datensatz es verlangt; die `betrachter`-Zeile und die Zeilen zu Abwurf, Git und Bereichsleiste stimmen. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

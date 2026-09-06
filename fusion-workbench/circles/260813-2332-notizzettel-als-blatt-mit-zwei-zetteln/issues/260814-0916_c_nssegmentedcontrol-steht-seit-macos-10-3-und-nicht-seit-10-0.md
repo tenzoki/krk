@@ -36,3 +36,6 @@ den beiden Berührungen mit eigener Zahl stellen.
   Datei `System/Library/Frameworks/AppKit.framework/Headers/NSSegmentedControl.h`. Die
   Klassendeklaration selbst trägt dort kein `API_AVAILABLE` — die Einführung in 10.3 steht
   in Apples Dokumentation, nicht im Kopf.
+
+---
+Resolved: Behoben. `NSSegmentedControl` ist aus der 10.0-Liste im Abschnitt `# Ab welchem macOS die angesprochenen Klassen stehen` von `crates/krk-ui/src/appkit/blaetter/zettel.rs` herausgenommen und steht jetzt bei den Beruehrungen mit eigener Zahl; aus "Zwei Beruehrungen sind juenger als 10.0" sind drei geworden. Am SDK nachgelesen und nicht dem Datensatz geglaubt: `NSSegmentedControl.h:53` traegt an der Klassendeklaration kein `API_AVAILABLE` (die 10.3 kommt aus Apples Dokumentation, und der Modulkopf sagt das jetzt), `:103` traegt an `indexOfSelectedItem` `API_AVAILABLE(macos(10.4))` und schliesst 10.0 damit aus, `:91` traegt an `segmentStyle` 10.5 und `:130` an `segmentedControlWithLabels:trackingMode:target:action:` 10.12. Die drei Zeilennummern stehen jetzt im Kopf. Geprueft: cargo test/clippy/fmt/doc -p krk-ui je Exit 0.

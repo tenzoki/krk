@@ -210,7 +210,9 @@
 //!
 //! **Nichts in dieser Datei liegt ueber 15.0.** Alles Uebrige — darunter
 //! `attachedSheet`, `makeFirstResponder:`, `firstResponder`, `performClose:`,
-//! `replyToApplicationShouldTerminate:` und
+//! `replyToApplicationShouldTerminate:`, seit der Titelleisten-Runde
+//! `NSApplication::keyWindow` (`NSApplication.h:202`) und `isEqual:`
+//! (`objc/NSObject.h:17`, am Protokoll `NSObject`) und
 //! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im
 //! SDK-Kopf gar keine Verfuegbarkeitsangabe und steht damit seit 10.0.
 //! `copy:` und `cut:` sind Aktionsselektoren, die diese Datei seit der Runde
@@ -965,9 +967,12 @@ define_class!(
         /// ist Null, und Null ist ein gueltiger Index in
         /// [`Kommando::KENNUNGEN`]. Fuer jede fremde Aktion antwortet diese
         /// Methode deshalb `true` und ueberlaesst AppKit seine gewohnte
-        /// Entscheidung; die Textbefehle (C2.8) und der Eintrag der
-        /// Markdown-Ausgabe (C2.9) behalten damit genau das Verhalten, das sie
+        /// Entscheidung; die Textbefehle (C2.8) und die beiden Sonderposten des
+        /// Anwendungsmenues, „Über KRK" (C5.1) und die Markdown-Ausgabe (C2.9),
+        /// behalten damit genau das Verhalten, das sie
         /// heute haben, und ihre Ausgrauung kommt weiter aus der Antwortkette.
+        /// Welche Eintraege ohne Kennung dastehen, sagt der Modulkopf von
+        /// [`super::menue`] unter „Eine Quelle, zwei sichtbare Wege".
         ///
         /// **Die Dateiablage ist seit der Runde 22 der zweite Fall, den die
         /// Regel und nicht AppKit entscheidet, und seit der Runde 21 gehoert
@@ -1393,7 +1398,10 @@ impl Anwendungsdelegierter {
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         bereichsleiste.melder_setzen(Box::new(move |kommando| {
             if let Some(selbst) = schwach.load() {
-                selbst.kommando_ausfuehren(kommando, None);
+                // `let _ =`: der Melder hat keinen Ort fuer die Antwort. Ein
+                // Klick auf einen Schalter ist kein Tastendruck, der
+                // unveraendert an AppKit weiterliefe, wenn niemand ihn nimmt.
+                let _ = selbst.kommando_ausfuehren(kommando, None);
             }
         }));
 
@@ -3163,10 +3171,13 @@ impl Anwendungsdelegierter {
                 self.kommando_ausfuehren(kommando, Some(anschlag))
             }
             Eingabe::Zeichen(zeichen) => {
-                // **Dieselbe Erhebung wie im Kommandozweig, und dieselben drei
+                // **Dieselbe Erhebung wie im Kommandozweig, und drei der vier
                 // Werte.** Ein getipptes Zeichen ist kein Kommando: es traegt
                 // keinen Wirkungsbereich, und `zulaessig` hat ihm nichts zu
-                // sagen. Die Eingaben der Frage braucht es trotzdem alle drei.
+                // sagen. Die uebrigen Eingaben der Frage braucht es trotzdem.
+                // Nach dem vierten Wert fragt dieser Zweig nicht eigens: vor
+                // einem fremden Schluesselfenster antwortet `fokus_bei` schon
+                // `Fokus::Anderswo`, und der `match` darunter weist das ab.
                 //
                 // Ein Zeichen gehoert dem Blatt, solange eines steht: der
                 // Filter verkuerzt eine Liste, die der Nutzer gerade nicht
@@ -3262,12 +3273,19 @@ impl Anwendungsdelegierter {
     /// Die vier Eingaben der Zulaessigkeitsfrage, an einer Stelle erhoben.
     ///
     /// **Die eine Erhebung, und die eine Aufrufstelle von
-    /// [`ereignisse::ersthelfer_gehoert_appkit`].** Drei Abnehmer lesen sie: der
+    /// [`ereignisse::ersthelfer_gehoert_appkit`].** Ihre Abnehmer sind
+    /// namentlich: der
     /// Kommandozweig in [`Self::kommando_ausfuehren`] gibt sie an
     /// [`zulaessigkeit::zulaessig`], der Zeichenzweig von
     /// [`Anwendungsdelegierter::eingabe_ausfuehren`] liest drei der vier Werte einzeln heraus,
-    /// und die Ausgrauung des Hauptmenues fragt dieselbe Regel auf demselben
-    /// Wert. Zwei Erhebungen desselben Augenblicks koennten auseinanderlaufen;
+    /// [`Self::bearbeiten_am_dateifenster`] gibt sie an
+    /// [`zulaessigkeit::dateiablage_zulaessig`], und die Ausgrauung des
+    /// Hauptmenues in `eintrag_pruefen` fragt beide Eingaenge derselben Regel
+    /// auf demselben
+    /// Wert. Eine Ordnungszahl steht hier nicht; wer die Stellen zaehlen will,
+    /// nimmt ``grep -n 'self\.lage()' crates/krk-ui/src/appkit/anwendung.rs``
+    /// und findet dabei die zwei Zweige von `eintrag_pruefen` einzeln. Zwei
+    /// Erhebungen desselben Augenblicks koennten auseinanderlaufen;
     /// eine kann es nicht.
     ///
     /// **Das Schluesselfenster wird ebenfalls einmal erhoben**, und aus
@@ -3368,8 +3386,11 @@ impl Anwendungsdelegierter {
     /// fragt**, und sie fragt [`zulaessigkeit::zulaessig`] mit der einen
     /// [`Lage`] aus [`Self::lage`]. Bis zur Runde 7 standen hier zwei getrennte
     /// Vorbehalte, das stehende Blatt und der Fokus, waehrend der dritte
-    /// Bestandteil im Ereignisabgriff wohnte; alle drei stehen jetzt in der
-    /// einen Regel, die auch das Hauptmenue fragt.
+    /// Bestandteil im Ereignisabgriff wohnte; die damals zusammengefuehrten
+    /// drei stehen jetzt in der einen Regel, die auch das Hauptmenue fragt.
+    /// **Die Regel hat seit der Runde 8 einen Bestandteil mehr**, das eigene
+    /// Schluesselfenster; ihren vollstaendigen Umfang zaehlt der Abschnitt „Die
+    /// vier Bestandteile" im Kopf von [`zulaessigkeit`] auf.
     ///
     /// # Warum der Anschlag mitkommt
     ///
@@ -3387,10 +3408,11 @@ impl Anwendungsdelegierter {
     /// Nachschlag zu demselben [`Kommando`], bevor irgendjemand fragen kann.
     ///
     /// **Die Zulaessigkeitsregel bekommt ihn nicht.** Sie bleibt unveraendert,
-    /// und ihre Tafel aus 280 Faellen behaelt ihre Bedeutung; eine Antwort dort
-    /// traefe beide Wege zugleich und graute den Menueeintrag aus. Der
+    /// und ihre Tafel ueber alle Faelle behaelt ihre Bedeutung; eine Antwort
+    /// dort traefe beide Wege zugleich und graute den Menueeintrag aus. Der
     /// Datensatz dazu ist
     /// `decisions/260814-2102_*_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
+    #[must_use = "ein nicht ausgefuehrtes Kommando laeuft weiter"]
     fn kommando_ausfuehren(&self, kommando: Kommando, anschlag: Option<Anschlag>) -> bool {
         // Die vier Bestandteile und ihre Herleitung stehen in
         // `kommandos::zulaessigkeit`. Kurz: die Blattsperre laesst allein den
@@ -3882,9 +3904,12 @@ impl Anwendungsdelegierter {
     /// Bereichen, die sie halten. Das Teilen aus C1 fragt dieselbe Funktion,
     /// und eine zweite Rechnung daneben gaebe zwei Antworten auf eine Frage.
     ///
-    /// **Der Sprung geht durch `DateifensterQuelle::ordner_lesen`** und wird deren
-    /// dritter Aufrufer neben dem Aufstieg aus C2 der Runde 1 und dem Sprung
-    /// aus der Zwischenablage aus C10. Er wechselt den Ordner des **aktiven
+    /// **Der Sprung geht durch `DateifensterQuelle::ordner_lesen`** und legt
+    /// keinen zweiten Navigationsweg daneben; das ist die Zusage, und eine
+    /// Ordnungszahl unter den Aufrufern ist es nicht. Wie viele es sind, sagt
+    /// ``grep -rn '\.ordner_lesen(' crates/krk-ui/src``, und die Zahl stand
+    /// hier einmal auf drei, waehrend der Baum schon zweistellig zaehlte.
+    /// Er wechselt den Ordner des **aktiven
     /// Tabs** und oeffnet keinen neuen; die Navigation dieses Programms behaelt
     /// damit ihre eine Regel.
     ///
@@ -5937,7 +5962,7 @@ impl Anwendungsdelegierter {
     /// **Der Schnitt zu [`Self::in_den_papierkorb`] bleibt trotzdem**, und der
     /// Befehl bringt weiterhin ein Stueck mit: die Beschriftung der zweiten
     /// Schaltflaeche. Zusammengelegt truege eine Funktion die Stufenregel und
-    /// die zwei Angaben des Befehls in einem Rumpf.
+    /// die eine Angabe des Befehls in einem Rumpf.
     ///
     /// Liefert `true`, auch wenn nichts geschehen ist: der Tastendruck ist
     /// verbraucht, und die Statuszeile sagt warum. `false` allein dann, wenn es
@@ -6515,7 +6540,7 @@ impl Anwendungsdelegierter {
     /// Bestandteil der Zulaessigkeitsregel ist; riefe es danach [`Self::fokus`],
     /// fragte AppKit denselben Augenblick ein zweites Mal, und die beiden
     /// Antworten koennten auseinanderlaufen. [`Self::fokus`] bleibt fuer die
-    /// fuenf uebrigen Aufrufer stehen, die den Wert nicht schon in der Hand
+    /// uebrigen Aufrufer stehen, die den Wert nicht schon in der Hand
     /// haben.
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig:

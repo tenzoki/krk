@@ -68,8 +68,8 @@
 //! Kommando-Eingang haelt. Dass die Zahl mit dem dritten Selektor nicht
 //! gewachsen ist, ist der Zweck des einen Vorspanns.
 //! Ein generisches `zulaessig(impl Into<Anspruch>, Lage)` waere die andere Form
-//! gewesen; sie haette den Kommando-Frager auf drei gehoben und die Tafel aus
-//! 280 Faellen an einen Trait gebunden. Zwei benannte Huellen um einen
+//! gewesen; sie haette den Kommando-Frager auf drei gehoben und die Tafel ueber
+//! alle Faelle an einen Trait gebunden. Zwei benannte Huellen um einen
 //! privaten Rumpf lassen beides, wie es ist.
 //!
 //! # Die vier Bestandteile
@@ -165,14 +165,17 @@ use super::operationen;
 /// Was die Oberflaeche im Augenblick der Frage ueber sich weiss.
 ///
 /// Die vier Eingaben der Zulaessigkeitsfrage an **einer** Stelle, damit die
-/// Frage rein bleibt und die Tafel aus 280 Faellen sie ohne Fenster stellen
+/// Frage rein bleibt und die Tafel ueber alle Faelle sie ohne Fenster stellen
 /// kann. Erhoben werden sie von `Anwendungsdelegierter::lage`, und zwar einmal
 /// je Eingabe: der Kommandozweig gibt die `Lage` an [`zulaessig`], der
 /// Zeichenzweig liest drei davon heraus. Zwei Erhebungen
 /// desselben Augenblicks koennten auseinanderlaufen, eine kann es nicht.
 ///
-/// `Copy`, weil der Wert vier kleine Felder traegt und die Tafel ihn
-/// zweihundertachtzigmal durchreicht.
+/// `Copy`, weil der Wert vier kleine Felder traegt und die Tafel ihn einmal je
+/// Fall durchreicht. **Wie viele Faelle das sind, steht hier nicht**, sondern
+/// rechnet `die_tafel_aus_allen_faellen_geht_auf` in dieser Datei aus dem
+/// Produkt der drei Aufzaehlungen; die Zahl stand einmal auf 140, dann auf 280,
+/// dann auf 320 und ist jedes Mal mit der naechsten Runde falsch geworden.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Lage {
     /// Ob am Hauptfenster gerade ein Blatt haengt.
@@ -416,8 +419,8 @@ mod tests {
     ///
     /// **Diese Datei bleibt aussen vor**, so wie
     /// `das_menue_wird_an_zwei_anlaessen_gebaut` `menue.rs` aussen vor laesst:
-    /// hier stehen die Erklaerung und die Tafel aus 280 Faellen, die
-    /// [`zulaessig`] zweihundertachtzigmal ruft. Ein dritter Frager **in** dieser
+    /// hier stehen die Erklaerung und die Tafel ueber alle Faelle, die
+    /// [`zulaessig`] einmal je Fall ruft. Ein dritter Frager **in** dieser
     /// Datei waere Teil der Regel und nicht ein zweiter Weg an ihr vorbei.
     #[test]
     fn beide_frager_rufen_die_eine_regel() {
@@ -519,7 +522,7 @@ mod tests {
     /// `jeder_stellvertreter_traegt_den_bereich_den_er_vertritt` haelt sie gegen
     /// [`Kommando::wirkungsbereich`], und sie haelt daneben fest, dass keiner
     /// der acht eine der beiden Ausnahmen traegt. Ohne das zweite koennte ein
-    /// Stellvertreter die drei abweisenden Viertel der Tafel gruen faerben,
+    /// Stellvertreter die sieben abweisenden Achtel der Tafel gruen faerben,
     /// ohne dass die Regel sie traegt.
     ///
     /// **Die Feldbreite haelt den Bau nicht an, wenn ein Wert dazukommt**: hier
@@ -764,7 +767,7 @@ mod tests {
     /// Beim Umbenennen direkt in der Liste ist derselbe Befehl unzulaessig,
     /// obwohl kein Blatt steht und der Fokus im Dateifenster liegt.
     ///
-    /// **Der Fall, um dessentwillen die Regel drei Bestandteile hat.** Der
+    /// **Der Fall, um dessentwillen die Regel den Bestandteil (2) hat.** Der
     /// Feldeditor der Namensspalte haelt den Ersthelferrang, es steht kein
     /// Blatt, und `Anwendungsdelegierter::fokus` antwortet `Dateifenster`. Ohne
     /// Bestandteil (2) waere hier jeder Befehl des Dateifensters freigegeben.
@@ -887,7 +890,7 @@ mod tests {
     /// Liste geht ueber [`Kommando`], und alle drei heutigen Eintraege tragen
     /// `Wirkungsbereich::Ueberall`, fuer das `wirkt` in jedem Fokus ja sagt. Ein
     /// Befehl mit einem engeren Bereich laesst sich nicht dazuerfinden. Traegt
-    /// ein kuenftiger dritter Eintrag einen engeren Bereich, faellt der
+    /// ein kuenftiger weiterer Eintrag einen engeren Bereich, faellt der
     /// Unterschied an, und diese Probe misst ihn dann; heute haelt sie fest,
     /// dass die Rechnung ihn ueberhaupt stellt.
     #[test]

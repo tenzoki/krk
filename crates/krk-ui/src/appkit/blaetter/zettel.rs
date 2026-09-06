@@ -76,7 +76,7 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSSegmentedControl`, `NSScrollView`, `NSTextView`, `NSView`, `NSWindow`,
+//! `NSScrollView`, `NSTextView`, `NSView`, `NSWindow`,
 //! `NSObject`, `NSString`, `NSArray` und `NSUndoManager` stehen seit macOS 10.0
 //! zur Verfuegung, ebenso das Protokoll `NSTextViewDelegate` samt der hier
 //! beantworteten Methode `textView:doCommandBySelector:`, die Aufzaehlung
@@ -87,10 +87,15 @@
 //! `removeAllActions` (`NSSegmentedControl.h`, `NSScrollView.h`,
 //! `NSTextView.h`, `NSResponder.h`, `NSWindow.h`, `NSUndoManager.h`).
 //!
-//! **Zwei Beruehrungen sind juenger als 10.0**, und beide liegen weit unter dem
-//! Zielsystem: `setSegmentStyle:` seit 10.5 und
+//! **Drei Beruehrungen sind juenger als 10.0**, und alle drei liegen weit unter
+//! dem Zielsystem: die Klasse `NSSegmentedControl` selbst seit 10.3,
+//! `setSegmentStyle:` seit 10.5 (`NSSegmentedControl.h:91`) und
 //! `segmentedControlWithLabels:trackingMode:target:action:` seit 10.12
-//! (`NSSegmentedControl.h`).
+//! (`:130`). **Die 10.3 steht nicht im SDK-Kopf**: die
+//! Klassendeklaration (`:53`) traegt dort kein `API_AVAILABLE`, die Zahl kommt
+//! aus Apples Dokumentation. Dass 10.0 ausscheidet, sagt der Kopf dagegen
+//! selbst, denn `indexOfSelectedItem` an derselben Klasse traegt
+//! `API_AVAILABLE(macos(10.4))` (`:103`).
 //!
 //! Was der Zettel an Einstellungen seiner Textflaeche setzt, geht durch
 //! [`super::super::textautomatik`]; die Untergrenzen dazu nennt dessen Modulkopf
@@ -154,8 +159,18 @@ pub struct ZettelwaechterIvars {
     /// Stark gehalten, und die Gegenrichtung ist schwach: eine `NSTextView`
     /// haelt ihren Delegierten schwach, ein Ring entsteht deshalb nicht.
     flaeche: Retained<NSTextView>,
-    /// Der Tabschalter, damit ein abgewiesener Wechsel die Anzeige nicht
-    /// stehen laesst, wo sie nicht hingehoert.
+    /// Der Tabschalter, um die angeklickte Stelle an ihm selbst zu lesen,
+    /// statt dem Absender des Rueckrufs zu trauen.
+    ///
+    /// **Eine Rueckstellung der Anzeige haengt nicht daran**, und der Kommentar
+    /// hat sie bis zum 260906 behauptet: [`Zettelwaechter::tab_gewechselt`]
+    /// liest `selectedSegment` und ruft an keiner Stelle `setSelectedSegment`.
+    /// In den beiden Zweigen, in denen der Wechsel abgewiesen wird, kehrt die
+    /// Methode zurueck und laesst den Schalter dort, wo der Klick ihn
+    /// hingestellt hat. Beide Zweige sind heute unerreichbar: eine Stelle
+    /// waehlt der Klick immer aus, und `tabklick` ist allein zwischen
+    /// [`Zettelwaechter::neu`] und dem Setzen des Rueckrufs leer, waehrend der
+    /// Schalter in keinem Fenster haengt.
     schalter: Retained<NSSegmentedControl>,
     /// Was beim Klick auf einen Tab zu tun ist: den verlassenen Zettel sichern
     /// und den Text des Ziels liefern. `None` heisst „nichts zu tun" — der

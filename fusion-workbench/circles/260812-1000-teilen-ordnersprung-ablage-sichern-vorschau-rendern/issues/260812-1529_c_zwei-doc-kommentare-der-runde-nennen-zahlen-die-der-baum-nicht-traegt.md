@@ -78,3 +78,6 @@ Lagen aber nicht ein, und der Satz sagt das Gegenteil.
   Abnehmer angelegt, den Tastenweg und `menuNeedsUpdate:`, und damit stimmt die
   Zahl sieben im Baum. Nachgezählt an `4d4402d` und an `d6eff4b`.
 - Gefunden bei der Durchsicht von Turn 1 der Runde 6; nicht behoben.
+
+---
+Resolved: Beide Stellen behoben. Erstens: der Doc-Kommentar von `ordner_der_datei_zeigen` (`crates/krk-ui/src/appkit/anwendung.rs`) nennt keine Ordnungszahl mehr, sondern die Zusage (kein zweiter Navigationsweg) und das Kommando, das die Aufrufer zaehlt — `grep -rn '\.ordner_lesen(' crates/krk-ui/src` gibt am `2fa1d0e` elf Stellen, nicht die drei des Kommentars und nicht die zehn des Datensatzes. Zweitens: `crates/krk-ui/src/angezeigtedatei.rs` prueft jetzt alle zwoelf erreichbaren Lagen statt acht — die vier Lagen ohne sichtbaren Bereich sind in die Tafel aufgenommen, die Probe heisst `alle_zwoelf_kombinationen_tragen_ihre_antwort`, und der Doc-Kommentar rechnet 16 minus 4 gleich 12 aus. Geprueft: cargo test -p krk-ui 908 gruen, clippy/fmt/doc je Exit 0.

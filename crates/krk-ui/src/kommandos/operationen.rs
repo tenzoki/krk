@@ -1750,7 +1750,8 @@ mod tests {
         );
         assert!(
             !waehrend_blatt_erlaubt(Kommando::Notizzettel),
-            "der Notizzettelbefehl steht in der Ausnahme; der Zettel schliesst              mit esc und nicht mit der Taste, mit der er kommt"
+            "der Notizzettelbefehl steht in der Ausnahme; der Zettel schliesst mit esc und \
+             nicht mit der Taste, mit der er kommt"
         );
     }
 

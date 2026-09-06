@@ -115,9 +115,10 @@
 //! ein Textfeld, kehrte [`behandeln`] auf der Stelle zurueck. Der Abgriff fragt
 //! danach ueberhaupt nicht mehr nach dem Ersthelfer. Er reicht beide Ausgaenge
 //! des Nachschlags unveraendert an die Senke, und die Senke erhebt einmal je
-//! Eingabe die `Lage` aus Blattstand, Ersthelferbefund und Fokus. Der
+//! Eingabe die `Lage` aus Blattstand, Ersthelferbefund, Fokus und der Frage,
+//! ob das Schluesselfenster KRK gehoert. Der
 //! Kommandozweig gibt sie an `kommandos::zulaessigkeit::zulaessig`, der
-//! Zeichenzweig liest dieselben drei Werte heraus. Zwei
+//! Zeichenzweig liest die ersten drei dieser Werte heraus. Zwei
 //! Stellen, die dieselbe Frage stellen, gibt es damit nicht mehr, und
 //! [`ersthelfer_gehoert_appkit`] hat genau eine Aufrufstelle,
 //! `Anwendungsdelegierter::lage`.
@@ -133,7 +134,9 @@
 //! Anwendungsdelegierte, und `zulaessig` setzt sie zusammen: Bestandteil (1)
 //! fragt, ob ein Blatt steht (`kommandos::operationen::waehrend_blatt_erlaubt`
 //! sagt, was dann durchkommt), Bestandteil (2) fragt, wem die Taste gehoert,
-//! Bestandteil (3) fragt, ob der Fokus zum Wirkungsbereich passt. Wer nur diese
+//! Bestandteil (3) fragt, ob der Fokus zum Wirkungsbereich passt, und
+//! Bestandteil (4) seit der Runde 8, ob das Schluesselfenster KRK gehoert. Wer
+//! nur diese
 //! Datei liest, haelt den Vorbehalt sonst fuer die einzige Sperre und schliesst
 //! daraus auf einen Defekt, den es nicht gibt — genau so entstand
 //! `issues/260810-1102_*_ein-befehl-waehrend-der-nachfrage-aus-c4-wird-von-der-antwort-still-ueberschrieben.md`.
