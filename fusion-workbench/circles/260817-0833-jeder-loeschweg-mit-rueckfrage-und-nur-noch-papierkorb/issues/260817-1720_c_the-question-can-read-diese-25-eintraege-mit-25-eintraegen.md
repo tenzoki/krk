@@ -100,3 +100,6 @@ Möglichkeit 2.
 
 Am Baum ist nichts geändert. `crates/krk-ui/src/kommandos/loeschwarnung.rs:604-605` trägt
 beide Wortlaute unverändert.
+
+---
+Resolved: 260818 (coder, Bündel C/D-Nachzug) — als Entscheidungsfrage weitergereicht, nicht gebaut; am Baum ist nichts geändert. Die Begründung steht oben unter „Closed 260818", die Frage in `260818-0512_*_wie-lautet-die-frage-wenn-der-umfang-der-genannte-grund-ist-und-die-zahl-doppelt-dasteht.md`.

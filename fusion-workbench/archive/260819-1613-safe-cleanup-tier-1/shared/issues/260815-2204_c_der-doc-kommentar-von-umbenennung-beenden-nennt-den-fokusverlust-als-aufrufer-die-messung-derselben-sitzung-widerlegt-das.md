@@ -41,7 +41,7 @@ Stelle, an der heute eine unvollständige steht.
 
 ---
 
-**Resolved:** 260816-1017, der Vorschlag ist umgesetzt. Der Doc-Kommentar von
+Resolved: 260816-1017, der Vorschlag ist umgesetzt. Der Doc-Kommentar von
 `umbenennung_beenden` zählt jetzt die drei Ausgänge einzeln auf, jeden mit seinem Weg:
 Return schickt die Aktion und landet dort; Escape läuft über `abortEditing` und landet bei
 `Namensfeld::bearbeitung_abbrechen`; jedes übrige Ende schickt keine Aktion und landet bei

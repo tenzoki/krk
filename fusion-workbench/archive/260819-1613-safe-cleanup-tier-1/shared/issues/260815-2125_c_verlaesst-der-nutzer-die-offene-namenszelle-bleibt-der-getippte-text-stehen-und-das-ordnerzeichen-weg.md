@@ -165,7 +165,7 @@ am Feld wird für die Behebung nicht gebraucht.
 
 ---
 
-**Resolved:** 260816-1017. Der dritte Ausgang ist verdrahtet, und beide Hälften sind
+Resolved: 260816-1017. Der dritte Ausgang ist verdrahtet, und beide Hälften sind
 abgetragen.
 
 **Die Verwerfen-Hälfte war schon da und ist nicht gebaut, sondern gemessen worden:** ein

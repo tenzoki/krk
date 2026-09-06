@@ -70,9 +70,6 @@ getrennt sein müssen sie auch im **Index**.
 **Gefunden:** Orchestrator, an der Staging-Prüfung nach `79209c8`
 
 ---
-Resolved:
-
----
 **Nachgeprüft beim Abgleich zum Abschluss der Runde 16, 260824-1852: die Beschreibung stimmt
 Stelle für Stelle.** `git show --name-status 79209c8` führt acht Dateien: die geänderte
 `crates/krk-core/src/leseprofil/bausteine.rs`, die neue Verlaufsdatei und sechs Umbenennungen.

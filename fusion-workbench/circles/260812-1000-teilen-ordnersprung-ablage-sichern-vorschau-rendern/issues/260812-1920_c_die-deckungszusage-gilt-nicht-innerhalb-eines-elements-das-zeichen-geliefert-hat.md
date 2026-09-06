@@ -87,7 +87,7 @@ Listenpunkt —, aber die falsche Zusage wiegt unabhängig von der Häufigkeit.
 
 ---
 
-**Resolved 260812** — beides ist getan: die Luecke ist geschlossen, soweit sie
+Resolved: 260812 — beides ist getan: die Luecke ist geschlossen, soweit sie
 mechanisch zu schliessen war, und der Modulkopf sagt jetzt genau, wo die
 Deckung endet.
 

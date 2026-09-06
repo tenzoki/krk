@@ -24,7 +24,7 @@ Diese Begründung trägt, und trotzdem entsteht ein Nebeneffekt, den niemand gew
 
 ---
 
-**Resolved:** 260813-1818 — der Nutzer hat den **Konventionsweg** gewählt, also Möglichkeit 1. Die `.gitignore` trägt jetzt die Trennung, die `rules/fusion-workbench-conventions.md` unter `### Which of them a tracked workbench tracks` festlegt, und nennt diesen Abschnitt im Kommentar als ihre Quelle.
+Resolved: 260813-1818 — der Nutzer hat den **Konventionsweg** gewählt, also Möglichkeit 1. Die `.gitignore` trägt jetzt die Trennung, die `rules/fusion-workbench-conventions.md` unter `### Which of them a tracked workbench tracks` festlegt, und nennt diesen Abschnitt im Kommentar als ihre Quelle.
 
 **Aus dem Index gegangen sind zehn Dateien**, alle mit `git rm --cached`, also unverändert auf der Platte:
 

@@ -99,9 +99,6 @@ gehört dem `playmaker` und dem `shaper`, und der Orchestrator schreibt dort
 allein die Abschlussnotiz des eigenen Circles.
 
 ---
-Resolved:
-
----
 Resolved: Beide Haelften sind abgearbeitet.
 
 **Erste Haelfte (Circle-Datensaetze und portfolio.md).** Der Bestand war erheblich groesser als

@@ -77,7 +77,7 @@ Verweisdefinitionen kommt in jeder README vor, die Verweise in Kurzform führt.
 
 ---
 
-**Resolved 260812** — beide gemessenen Faelle nachgeprueft und behoben, mit
+Resolved: 260812 — beide gemessenen Faelle nachgeprueft und behoben, mit
 **einem** Mechanismus statt zweier Sonderregeln.
 
 **Nachgemessen.** Alle drei Ausgaben des Datensatzes stimmen am Baum genau so,

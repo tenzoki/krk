@@ -88,7 +88,7 @@ Auskunft über den Inhalt.
 
 ---
 
-**Resolved 260812** — der wörtliche Zweig in `Zerlegung::schliessen` greift
+Resolved: 260812 — der wörtliche Zweig in `Zerlegung::schliessen` greift
 jetzt nur noch, wenn der Quellbereich des Punktes **mehr** trägt als sein
 Merkzeichen. Trägt er nichts weiter, wird der Wunsch eingelöst, und alle drei
 Dinge des Datensatzes fallen mit einem Griff weg.

@@ -56,7 +56,7 @@ keeps the five-stage rule readable next to the two pieces the command contribute
 executor's note says the separation was deliberate.
 
 ---
-Resolved 260818 (coder, Bündel C/D-Nachzug): **der Parameter ist gefallen; Möglichkeit 1 des
+Resolved: 260818 (coder, Bündel C/D-Nachzug) — **der Parameter ist gefallen; Möglichkeit 1 des
 Datensatzes, und zwar zur Hälfte.**
 
 **Kann der Typ die Einschränkung tragen?** Nein, und der Umbau dafür wäre größer als der

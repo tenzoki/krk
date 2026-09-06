@@ -50,3 +50,8 @@ Den Absatz aus der Durchsicht an `260812-1527` anhängen, mit Datum und Herkunft
 Berichtigung jener Datei den dritten Gegenbeleg mitnimmt. Das ist eine Zeile Arbeit und keine
 Entscheidung; die Entscheidung, welche Lesart der `opt+cmd`-Reihe gilt, liegt weiterhin in
 `260812-1527` selbst.
+
+---
+Resolved: 260906 — der Absatz aus der Durchsicht steht jetzt an seinem Ziel. `260812-1527_*_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md` trägt am Ende einen Abschnitt „Zutrag der Runde 7, 260813-0532 (ontorev)" mit dem dritten Gegenbeleg `weitere_instanz`, der Achsenverschiebung des neuen Kommentars und der Empfehlung, die Berichtigung darauf auszudehnen; dazu der Satz, dass der dortige Abschnitt „Nicht betroffen" um eine Stelle zu kurz ist.
+
+Das war, wie dieser Datensatz sagt, eine Zeile Arbeit und keine Entscheidung: welche Lesart der `opt+cmd`-Reihe gilt, liegt unverändert bei `260812-1527_*`, und dessen Behebung gehört dem `ontocoder`, weil sie `resources/default-keymap.toml` anfasst.

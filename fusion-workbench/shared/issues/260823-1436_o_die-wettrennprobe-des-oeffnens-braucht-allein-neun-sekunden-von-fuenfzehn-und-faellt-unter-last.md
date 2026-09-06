@@ -122,9 +122,6 @@ Codegrund rot werden kann, ist um so viel weniger wert.
 `shared/issues/260810-1925_*_eine-probe-schreibt-ins-echte-temporaerverzeichnis-*`
 
 ---
-Resolved:
-
----
 Also seen: 260824-1130 by coder — auf diesem Gerät laufen seit dem 15. und dem 16.08. **22
 verwaiste Endlosschleifen** aus zwei früheren Sitzungen, je bei rund 65 Prozent einer Kerns,
 gefunden mit `ps -Ao pid,pcpu,etime,command | awk '$3>30'`. Es sind die Lastschleifen zweier

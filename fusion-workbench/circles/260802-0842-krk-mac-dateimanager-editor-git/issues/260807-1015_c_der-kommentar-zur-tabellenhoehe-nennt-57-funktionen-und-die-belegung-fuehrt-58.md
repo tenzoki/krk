@@ -37,8 +37,7 @@ auseinander, und die Zahl in einem Kommentar zu führen ist selbst der Grund
 dafür.
 
 ---
-Resolved:
- Der Kommentar der Konstanten `TABELLENHOEHE`
+Resolved: Der Kommentar der Konstanten `TABELLENHOEHE`
 (`crates/krk-ui/src/appkit/belegungsansicht.rs:76-86`) nennt gar keine Zahl der
 Funktionen mehr, statt 57 durch 58 zu ersetzen. Der Nachtrag haette den Wert
 richtiggestellt und die Ursache stehen lassen: die Konstante steht auf 300,0

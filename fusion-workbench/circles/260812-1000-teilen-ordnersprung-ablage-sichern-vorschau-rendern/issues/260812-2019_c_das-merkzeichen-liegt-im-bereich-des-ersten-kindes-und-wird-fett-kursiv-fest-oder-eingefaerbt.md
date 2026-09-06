@@ -116,7 +116,7 @@ Zuschnitt 2).
 
 ---
 
-**Resolved 260812** — `Zerlegung::merkzeichen_einloesen` zieht den `Offen::anfang`
+Resolved: 260812 — `Zerlegung::merkzeichen_einloesen` zieht den `Offen::anfang`
 jetzt nach, und zwar für die **inneren** Einträge und nur für sie.
 
 **Die Behebung an einer Stelle.** Das Einlösen läuft nicht mehr über eine

@@ -43,7 +43,7 @@ Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert.**
 `blaetter::abbruchstelle` (`:416`) berechnet wird.
 
 ---
-Resolved 260818 (coder, Bündel C/D-Nachzug): **die bestätigende Seite ist abgeleitet und
+Resolved: 260818 (coder, Bündel C/D-Nachzug) — **die bestätigende Seite ist abgeleitet und
 nicht mehr angenommen.**
 
 Gebaut in der Richtung, die dieser Datensatz nennt: `blaetter::bestaetigungsstelle`

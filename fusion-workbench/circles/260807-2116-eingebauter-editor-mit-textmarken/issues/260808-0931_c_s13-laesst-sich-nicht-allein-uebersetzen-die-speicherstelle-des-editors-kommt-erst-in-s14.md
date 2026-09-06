@@ -104,3 +104,6 @@ acht.
 
 **Was von S19 offen bleibt**, ist im Plan bei S19 vermerkt: der
 `anwendung.rs`-Anteil mit `breite_aendern` und `sitzung_bauen`.
+
+---
+Resolved: 260808 — geschlossen: S13, S14 und der `aufteilung.rs`-Anteil von S19 sind als ein Übersetzungsstand gelandet. Die Einzelheiten stehen oben unter „Abschlussnotiz, 260808".

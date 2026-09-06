@@ -55,7 +55,7 @@ geschlossenen Datensätze gegen den Baum.
 
 ---
 
-**Resolved 260812** — berichtigt, aber nicht so, wie der Datensatz es unter
+Resolved: 260812 — berichtigt, aber nicht so, wie der Datensatz es unter
 „Was zu tun ist" vorschlug.
 
 Der Vorschlag lautete, „die sechs Stellen der Abschlussnotiz auf `Inhaltsart`

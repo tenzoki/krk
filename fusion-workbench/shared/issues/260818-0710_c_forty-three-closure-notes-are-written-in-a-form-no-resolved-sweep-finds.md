@@ -100,3 +100,26 @@ diese. Der Datensatz bleibt offen.
 
 ---
 Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, Zähler unverändert, Nenner gewachsen.** Erneut erhoben: 444 geschlossene Defektdatensätze, davon 401 mit einer Zeile `^Resolved:`, **43 abweichend**. Die 43 sind dieselben wie bei beiden früheren Messungen; gewachsen ist allein die Grundmenge, von 429 auf 444. Neue Schließungen schreiben ihre Notiz also in der gesuchten Form, und der Rückstand ist ein fester Altbestand und keine laufende Quelle.
+
+---
+Resolved: 260906 — die schmale Hälfte ist gefahren: jeder geschlossene Defektdatensatz der Werkbank trägt jetzt eine Zeile `Resolved: …`, Wortlaut unverändert. **Nachgemessen vorher und nachher** über `find fusion-workbench -name '*_c_*.md' -path '*/issues/*'`, Archiv eingeschlossen.
+
+| Form | vorher (260906-0130) | nachher |
+|---|---|---|
+| `^Resolved:` — die Konvention | 633 | 692 |
+| `^Resolved <kopf>:` — der Doppelpunkt steht hinter dem Agenten | 18 | 0 |
+| `**Resolved:**` oder `**Resolved <stempel>** —` — die Beschriftung ist fett | 38 | 0 |
+| keine Zeile, die mit `Resolved` beginnt | 9 | 0 |
+| geschlossene Datensätze insgesamt | 692 | 692 |
+
+**Der Nenner dieses Datensatzes war zu klein und die Aufteilung zu grob.** Die Erhebungen vom 260818 und 260819 rechneten gegen 428 bis 444 Datensätze und kannten zwei abweichende Formen; gemessen sind heute 692 und drei Formen. Die dritte, die fette Beschriftung, fiel bisher in den Eimer „keine Zeile" und ist mit 38 Fällen die größte — allein elf davon aus der Runde 23, die Form ist also kein Altbestand, sondern eine laufende Quelle. Der Anteil der abweichenden Schreibweisen lag damit bei 8,5 Prozent und nicht bei den zuletzt genannten 9,7.
+
+**Drei Berichtigungen, je nach Form:**
+
+1. `Resolved 260817-1302 (coder, T2): <text>` → `Resolved: 260817-1302 (coder, T2) — <text>`. 18 Dateien, alle in `260817-0833-jeder-loeschweg-…`.
+2. `**Resolved 260812** — <text>` und `**Resolved:** <text>` → `Resolved: <text>`. 38 Dateien.
+3. Neun Datensätze trugen gar keine solche Zeile, ihre Notiz aber sehr wohl — als Überschrift (`## Abschlussnotiz, 260808`, `## Behoben am 260809 mit S43`), als `Closed 260818 (coder, …):` oder als `Übergeben:`. Ihnen ist eine `Resolved:`-Zeile **angehängt** worden, die die Notiz in einem Satz nennt und auf sie zeigt. Angehängt und nicht umgeschrieben, weil die vorhandene Prosa an drei dieser Stellen eine Aussage über ihre eigene Gestalt trifft — `260805-1130_*_der-groessenformatierer-schreibt-zero-kb-auf-englisch.md` hält ausdrücklich fest, dass dort `Übergeben:` steht, wo die Konvention `Resolved:` erwartet; wer die Zeile umschriebe, machte den Absatz darüber falsch.
+
+**Kein Wortlaut ist gekürzt, keine Aussage geändert, kein Marker bewegt.** Die neun angehängten Zeilen sind der einzige neue Text.
+
+**Die dauerhafte Hälfte, die Prüfung, ist gebaut:** `jeder_geschlossene_defektdatensatz_traegt_einen_abschlussvermerk` in `xtask/src/werkbank.rs` fährt bei jedem `cargo test --workspace` mit und hält die Zusage, die dieser Datensatz als „the durable half" benennt.

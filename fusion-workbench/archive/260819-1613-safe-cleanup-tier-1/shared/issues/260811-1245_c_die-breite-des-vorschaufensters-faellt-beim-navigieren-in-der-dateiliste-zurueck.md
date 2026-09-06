@@ -114,3 +114,6 @@ Vorhersage. Das gehoert in die Abnahme der naechsten Runde, die die Aufteilung a
 **Folge fuer einen anderen Datensatz:** die Frage
 `circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/260811-1305_*_wird-der-vorschaubreiten-defekt-in-dieser-runde-behoben.md`
 ist damit gegenstandslos geworden und im selben Abgleich auf beantwortet gezogen.
+
+---
+Resolved: 260811 — die Ursache ist am Programmtext benannt und die Behebung beschrieben; am laufenden Bündel ist nichts davon gemessen, und das gehört in die Abnahme der nächsten Runde, die die Aufteilung anfasst. Die Einzelheiten stehen oben.

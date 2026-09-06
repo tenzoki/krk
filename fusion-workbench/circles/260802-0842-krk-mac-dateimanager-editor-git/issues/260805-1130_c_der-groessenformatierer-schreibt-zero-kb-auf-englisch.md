@@ -48,3 +48,6 @@ ist umgesetzt: `resources/Info.plist` führt jetzt `CFBundleLocalizations` mit
 `512 Byte`. Der Marker `_c_` dieses Eintrags trägt damit rückwirkend auch seine
 erste Lesart. Behoben wurde es an der Bündelbeschreibung und nicht hier, weil
 der Weg über `setAllowsNonnumericFormatting` gemessen und verworfen ist.
+
+---
+Resolved: übergeben an `260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md` und dort am 260807 umgesetzt. Die Zeile `Übergeben:` oben bleibt unangetastet, weil ein Absatz dieses Datensatzes eine Aussage über ihre Gestalt trifft.

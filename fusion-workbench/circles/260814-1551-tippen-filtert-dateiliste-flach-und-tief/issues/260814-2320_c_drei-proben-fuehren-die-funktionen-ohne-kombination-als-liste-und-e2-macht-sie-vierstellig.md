@@ -70,7 +70,7 @@ hält.
 
 ---
 
-**Resolved:** 260814-2333, vom `coder` im Nachzug E2b (kein eigener Planschritt, er fällt
+Resolved: 260814-2333, vom `coder` im Nachzug E2b (kein eigener Planschritt, er fällt
 zwischen E1 und E2). Punkt 1: `OHNE_KOMBINATION_AB_WERK` steht auf `[&str; 4]` und trägt
 `tiefe_suche_umschalten`; der Kommentar darüber führt den Grund getrennt von dem der drei
 Spaltenschalter, weil er ein anderer ist — eine offen gelassene Wahl und keine gesparte

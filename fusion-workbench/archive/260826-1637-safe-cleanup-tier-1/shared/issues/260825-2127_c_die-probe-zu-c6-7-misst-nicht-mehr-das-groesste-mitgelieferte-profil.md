@@ -61,7 +61,7 @@ Schranke am kleinsten ist, und die einzige, die durch nichts gehalten wird.
 
 ---
 
-**Resolved:** 260825-2222, coder, Aufgabe R-4. Die Probe heißt jetzt
+Resolved: 260825-2222, coder, Aufgabe R-4. Die Probe heißt jetzt
 `die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen`
 (`crates/krk-core/tests/leseprofil.rs:2967`) und misst als dritten Fall das Profil
 `fusion-Werkbank: der gemeinsame Speicher` an einem Prüfordner `fusion-workbench/shared`, dessen

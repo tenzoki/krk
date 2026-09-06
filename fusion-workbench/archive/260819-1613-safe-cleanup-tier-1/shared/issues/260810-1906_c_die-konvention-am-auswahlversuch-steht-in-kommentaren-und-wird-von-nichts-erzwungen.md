@@ -134,3 +134,6 @@ nicht behauptet.
 unterscheidet die Schreibweise des Aufrufs, und nichts erzwingt sie" (`CLAUDE.md:98`) beschreibt die
 Lage vor `b2a6c2e`, samt dem Satz „`Auswahlversuch` traegt kein `#[must_use]`". Er ist seit dem
 260811-2155 falsch. `CLAUDE.md` ist in dieser Sitzung nicht nachgezogen worden.
+
+---
+Resolved: 260811-2155 (Commit `b2a6c2e`) — der Nutzer hat am 260811-2140 `#[must_use]` gewählt; der Übersetzer erzwingt die Behandlung seither. Die Einzelheiten stehen oben unter „Behebung 260811-2155".

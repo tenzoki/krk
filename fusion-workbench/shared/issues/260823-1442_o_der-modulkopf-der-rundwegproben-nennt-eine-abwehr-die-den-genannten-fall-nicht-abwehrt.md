@@ -93,6 +93,3 @@ gegen die `52fba42` selbst geschrieben ist.
 **Domain:** code
 
 **Cross-references:** `shared/issues/260823-1034_c_das-neue-feld-vorschau-danach-haelt-keine-probe-*`
-
----
-Resolved:

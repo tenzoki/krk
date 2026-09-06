@@ -30,7 +30,7 @@ und kennt die beiden Verschiebungen dieses Bündels nicht.
 Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Beide Stellen stehen unverändert: `anwendung.rs:5526` („derselbe Satz, den `endgueltig_loeschen` seit der Runde 1 fuer die leere Auswahl fuehrt") und `:6276` (`Self::endgueltig_loeschen` liest `aktiv`).
 
 ---
-Resolved 260817-1302 (coder, T2): **behoben, beide Stellen.** Der Kommentar im Zweig der
+Resolved: 260817-1302 (coder, T2) — **behoben, beide Stellen.** Der Kommentar im Zweig der
 leeren Auswahl von `im_editor_oeffnen` nennt den Satz jetzt als den, den KRK seit der Runde 1
 fuehrt, und dazu die Stelle, die ihn fuer den Loeschweg seit dem 260817 traegt:
 `loeschen_nach_rueckfrage` und nicht mehr `endgueltig_loeschen`, das ihn an jenen gemeinsamen

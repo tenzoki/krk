@@ -105,3 +105,21 @@ Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **offen, und die Erhebun
 **Die zwei Zeiger in der Sitzungsstandsdatei sind gegenstandslos geworden:** `fusion-workbench/agentstate.yaml` besteht nicht mehr, weil der Orchestrator sie beim sauberen Sitzungsende löscht — genau der Verlauf, den dieser Datensatz vorhergesagt hat. **Kein neuer toter Zeiger ist dazugekommen.** Die eine zusätzliche Meldung der Erhebung, `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_c_plan-suche-….md:625`, ist ein Berichtigungsvermerk, der zitiert, was die Zeile früher sagte, und fällt damit unter die Ausnahme „der Marker ist die Aussage selbst".
 
 **Ein Hinweis für die nächste Erhebung:** die ersten zwei der vierzehn Zeiger stehen in der Kurzform mit Auslassung und entgehen einem einfachen Suchmuster über den vollen Namensteil. Das ist dieselbe Falle, die `shared/issues/260810-1851_*_acht-verweise-in-spec-und-plan-der-runde-2-stehen-in-kurzform-und-entgehen-jeder-suche.md` beschreibt.
+
+---
+**Zur Hälfte behoben am 260906, und der Marker bleibt deshalb auf `_o_`.**
+
+**Die Zeiger sind auf die Sternform gezogen.** Sechzehn statt der genannten vierzehn, in denselben fünf Dateien; die Erhebung ist über alle 73 lebenden Werkbankdateien wiederholt, mit Auflösung nach Zeitstempel **und** Namensteil und mit den Kurzformen über ihr Präfix.
+
+**Zwei Abweichungen zur Tabelle dieses Datensatzes, beide nachgemessen:**
+
+- Zwei Stellen kommen hinzu, die die Tabelle nicht führt: `260816-1321-…/_b_circle.md:68` (`260816-1310_a_welche-vorhandene-groessengrenze-…`, steht `_i_`) und `260816-2255-…/planning/260816-2307_*_plan-befehle-…md:267` (`260816-2307_o_der-doc-kommentar-von-ablage-pfad-…`, steht `_c_`). Beide sind seit dem 260819 gestorben.
+- Die zweite der zwei Kurzformen ist **kein** toter Zeiger: `260813-2332-…/planning/260814-0656_*_plan-notizzettel-….md:394` zitiert `shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-…`, und dieser Datensatz steht unverändert auf `_o_`. Tot war allein die Stelle an `:402`.
+
+Ein siebzehnter Ersatz betrifft keinen toten Zeiger: die vierte Zeile derselben Aufzählung im `_b_circle.md` der Runde 11 ist mitgezogen, weil drei Sterne neben einem ausgeschriebenen Buchstaben in derselben Liste schlechter lesbar sind als vier Sterne.
+
+**`**Active spec/plan:**` der Runde 16 ist auf den Buchstaben nachgezogen, den die Datei trägt** (`_o_` → `_p_`, `circles/260823-2208-…/_b_circle.md:6`). Das Feld ist ein wörtlich gelesener Pfad und bleibt beim Buchstaben, wie `260818-0753_*_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md` es beschreibt; tot war es trotzdem. Dass Plan und Spec jener geschlossenen Runde auf `_p_` und `_o_` stehen, ist ein eigener Befund und abgelegt.
+
+**Die Vorbedingung, auf die der `## Fix` wartet, ist nicht eingetreten und war für diese sechzehn auch nicht nötig.** `260818-0201_*_does-a-cross-references-line-…` fragt nach der `**Cross-references:**`-Zeile in einem eingefrorenen Speicher. Keine der sechzehn Stellen ist eine; alle stehen in Plänen, Spec-Dateien und Circle-Datensätzen, und für die gilt die Antwort vom 260815-1230 unmittelbar — sie nennt „die Circle-Datensätze und die Spec- und Plandateien unter `planning/`" in ihrem Geltungsbereich.
+
+**Offen bleibt der breite Fix, und er ist jetzt genauer beschreibbar.** Über die lebenden Werkbankdateien stehen **110 Zitate mit ausgeschriebenem Marker in 34 Dateien** (gemessen am 260906-0210); sieben davon zeigen ins Leere, und die sieben sind sämtlich die Klasse „der Marker ist die Aussage": sechs Zeilen der Tafel `## Datensätze` im Plan der Runde 14, deren Spalten „Marker heute" und „Marker danach" heißen, und ein Berichtigungsvermerk im Plan der Runde 7. Eine Probe, die die Auflösung erzwingt, muss diese Klasse mechanisch erkennen können, und dafür fehlen zwei Antworten: die Ausnahme für wörtlich gelesene Kopffelder (`260818-0753_*_…`, offen) und die Gestalt, in der eine Aussage über ein Zitat geschrieben wird (`260818-0201_*_…`, offen). Solange beide offen sind, wäre die Probe entweder rot an sieben richtigen Stellen oder trüge eine Ausnahmeliste, die niemand pflegt.

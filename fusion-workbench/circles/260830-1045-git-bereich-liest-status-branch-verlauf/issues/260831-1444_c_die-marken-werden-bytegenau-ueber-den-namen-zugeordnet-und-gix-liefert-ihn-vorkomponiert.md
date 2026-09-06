@@ -18,7 +18,7 @@ Das ist derselbe Vergleich, den der offene Defekt `shared/issues/260826-1221_*_d
 
 **Abnahmetest:** ein Prüfrepository mit einer geänderten Datei, deren Name ein zerlegtes Zeichen trägt (etwa `U+0055 U+0308` statt `U+00DC`); `marken` und `gitmarken_setzen` zusammen setzen die Marke an die Zeile dieses Eintrags. Die Probe `die_fuenf_zustaende_tragen_ihre_fuenf_buchstaben` (`crates/krk-core/tests/git.rs:345`) arbeitet heute mit reinen ASCII-Namen und kann den Fall nicht sehen.
 
-**Resolved:** 260831. `Ordnermodell::gitmarken_setzen` fragt jetzt zweimal: erst bytegenau wie
+Resolved: 260831. `Ordnermodell::gitmarken_setzen` fragt jetzt zweimal: erst bytegenau wie
 bisher, und erst bei einem Fehlschlag über ein zweites Nachschlagewerk, dessen Schlüssel
 `verzeichnis::kollation::namensschluessel` baut. Zwei solche Schlüssel sind genau dann gleich, wenn
 die Namen kanonisch gleich sind.

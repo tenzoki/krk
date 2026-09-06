@@ -119,7 +119,7 @@ Die vier Fähigkeiten sind in dieser Reihenfolge zu bauen. Nach C1 allein ist di
 - [ ] C2.3: KRK schreibt die Datei nach ihrer Anlage nie. Kein Befehl, kein Beenden und kein Neu-Einlesen ändert eine Zeile darin.
 - [ ] C2.4: Ein Eintrag trägt einen Namen und einen Befehlstext. Der Name erscheint in der Auswahlliste und in der Statuszeile, der Befehlstext läuft.
 - [ ] C2.5: Vier Platzhalter tragen den Zusammenhang: der angezeigte Ordner, der angezeigte Ordner der anderen Seite, die ausgewählten Einträge und der Eintrag unter dem Cursor.
-- [ ] C2.6: Jeder eingesetzte Wert wird in Einzelanführung gesetzt, und ein Anführungszeichen im Wert wird verdoppelt. Ein Dateiname mit Leerzeichen, mit `'`, mit `$`, mit einem Rückwärtsstrich und mit einem Zeilenumbruch kommt bei `printf '%s\n'` als genau ein Wert an.
+- [ ] C2.6: Jeder eingesetzte Wert wird in Einzelanführung gesetzt, und ein Anführungszeichen im Wert wird durch die vier Zeichen `'\''` ersetzt — die Anführung schließen, das Zeichen mit einem Rückwärtsstrich schützen, die Anführung wieder öffnen. Ein Dateiname mit Leerzeichen, mit `'`, mit `$`, mit einem Rückwärtsstrich und mit einem Zeilenumbruch kommt bei `printf '%s\n'` als genau ein Wert an.
 - [ ] C2.7: Mehrere ausgewählte Einträge werden als mehrere je einzeln angeführte Werte eingesetzt, durch Leerzeichen getrennt. Bei drei markierten Dateien zählt `printf '%s\n' {auswahl} | wc -l` drei.
 - [ ] C2.8: Ein Makro, dessen Vorlage die Auswahl oder den Eintrag unter dem Cursor verlangt und nichts vorfindet, läuft nicht. Die Statuszeile sagt es, nach dem Muster von `nichts_zu_kopieren` und `nichts_zu_teilen` in `crates/krk-ui/src/kommandos/operationen.rs`.
 - [ ] C2.9: Der Befehlstext selbst bleibt ungeprüft und ungedeutet. KRK sagt nicht voraus, was ein Makro anfassen wird, und weist keines wegen seines Inhalts ab.
@@ -139,7 +139,7 @@ Die vier Fähigkeiten sind in dieser Reihenfolge zu bauen. Nach C1 allein ist di
 - [ ] C3.4: Verlangt die gewählte Vorlage freie Argumente, öffnet sich ein zweites Blatt und fragt sie nach, eines je erklärtem Argument, mit dessen Beschriftung. Erst danach beginnt der Lauf.
 - [ ] C3.5: Das Nachfrageblatt nennt den Namen des Makros, damit die Frage für sich steht.
 - [ ] C3.6: `Esc` im Nachfrageblatt bricht ab, ohne etwas zu starten.
-- [ ] C3.7: Ein freies Argument wird nach derselben Regel eingesetzt wie ein Dateiname, also einzeln angeführt mit verdoppeltem Anführungszeichen. Ein Argument mit einem Leerzeichen kommt als ein Wert an.
+- [ ] C3.7: Ein freies Argument wird nach derselben Regel eingesetzt wie ein Dateiname, also einzeln angeführt und mit der Vierzeichenfolge aus C2.6 für jedes Anführungszeichen im Wert. Ein Argument mit einem Leerzeichen kommt als ein Wert an.
 - [ ] C3.8: Ein leer gelassenes freies Argument wird als leerer Wert eingesetzt und weist den Lauf nicht ab. Wer ein Argument nicht nennen will, bricht mit `Esc` ab.
 - [ ] C3.9: Der gestartete Lauf verhält sich in jeder Hinsicht wie C1: dieselbe Anzeige, dieselbe Grenze, dieselbe Umgebung, derselbe Abbruch, dieselbe Abweisung bei einem laufenden Vorgang.
 - [ ] C3.10: Die Statuszeile nennt beim Start den Namen des Makros, und der Titel des Vorschau-Tabs trägt ihn ebenfalls.
@@ -245,3 +245,6 @@ Zwei offene Datensätze binden diese Runde, ohne sie aufzuhalten:
 
 - `shared/decisions/260813-0053_o_wie-viele-obermenues-traegt-die-menueleiste-fuer-81-funktionen.md` — die Runde folgt der Empfehlung und schließt den Datensatz nicht.
 - `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1830_o_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md` — die Runde fügt `Esc` keine Bedeutung hinzu und berührt die Frage nicht.
+
+---
+Berichtigt am 260906: die Beschreibung in C2.6 nennt jetzt die Vierzeichenfolge `'\''` statt der Verdopplung, und C3.7 verweist auf sie statt „mit verdoppeltem Anführungszeichen" zu sagen. Der Nachweis in C2.6 ist unverändert; er war von Anfang an richtig. Grundlage: `260816-2307_*_c2-6-beschreibt-das-verdoppeln-des-anfuehrungszeichens-die-shell-verliert-es-dabei.md`.

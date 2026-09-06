@@ -72,6 +72,3 @@ dem Absatz, der sie für diese Klasse zu schließen unternimmt.
 
 **Cross-references:** `shared/issues/260823-0730_c_drei-prosastellen-um-den-neuen-nachzug-*`,
 `shared/issues/260823-0731_o_ein-klick-in-das-andere-dateifenster-*` (nicht angefasst)
-
----
-Resolved:

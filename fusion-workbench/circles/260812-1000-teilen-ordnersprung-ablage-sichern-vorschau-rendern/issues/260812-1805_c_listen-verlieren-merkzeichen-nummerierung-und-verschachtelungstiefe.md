@@ -75,7 +75,7 @@ Struktur der Datei etwas anderes, als in ihr steht.
 
 ---
 
-**Resolved 260812** — alle drei verlorenen Dinge sind zurueck: Merkzeichen,
+Resolved: 260812 — alle drei verlorenen Dinge sind zurueck: Merkzeichen,
 Nummer und Tiefe. Gewaehlt sind **Zuschnitt 1 und 2 zusammen**; Zuschnitt 3,
 die Beschraenkung aufzuschreiben, faellt damit weg.
 

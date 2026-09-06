@@ -62,7 +62,7 @@ fehlende Sperre für die nächste Variante.
 
 ---
 
-**Resolved 260812** — die beiden `matches!` sind weg. An ihre Stelle tritt
+Resolved: 260812 — die beiden `matches!` sind weg. An ihre Stelle tritt
 `Inhaltsart::deckt_luecken`, eine Methode mit erschöpfendem `match` und ohne
 Auffangzweig; das ist der Zuschnitt, den der Datensatz vorgeschlagen hat.
 

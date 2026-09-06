@@ -48,7 +48,7 @@ Gemeldet von: `coder`, bei der Umsetzung von S21.
 
 ---
 
-Resolved am 260810-0204 bei der Umsetzung von S39, dem im Befund benannten
+Resolved: am 260810-0204 bei der Umsetzung von S39, dem im Befund benannten
 ersten und einzigen Aufrufer.
 
 **Der Vorschlag des Befundes hat gehalten, seine Begründung ist stärker

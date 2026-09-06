@@ -56,3 +56,19 @@ Der erste Weg ist der kleinste und der einzige, der die Frage wirklich beantwort
   allen drei Stellen nachgezogen, D1 kommt ohne Verzeichnis aus, der Anfangstitel steht auf der
   leeren Zeichenkette (`fenster.rs:455`), und die vier Aufzählungen sind bei 76, 7, 5 und 5
   geblieben — beim Abgleich einzeln nachgezählt.
+
+---
+Resolved: 260906 — **Weg 1 ist gefahren: die Messung ist gemacht, und die `inference:` ist keine mehr.** `bundle::VERSION` veraltet nicht.
+
+**Gemessen am 260906-0201**, in einem Wegwerf-Workspace ausserhalb des Projektbaums, wie es dieses Projekt für Fragen an den Übersetzer hält. Aufbau: ein Workspace mit `[workspace.package] version = "0.0.1"` und einem Mitglied, das `version.workspace = true` erbt und allein `env!("CARGO_PKG_VERSION")` ausgibt.
+
+| Schritt | Ausgabe | Prüfsumme des Binärziels |
+|---|---|---|
+| `cargo build`, dann laufen lassen | `0.0.1` | `f9adabc4a26889ac` |
+| nur die Zahl im Workspace-Manifest auf `9.9.9` gehoben, keine Quelldatei angefasst, `cargo build`, laufen lassen | `9.9.9` | `24ac53869e2f8031` |
+
+Die Änderungszeit von `main.rs` blieb dabei unberührt. Cargo übersetzt die Kiste also allein auf die Manifeständerung hin neu, und die eingebackene Zahl zieht mit. Das ist genau die Annahme, die die Risikotafel als `inference:` geführt hat.
+
+**Der Wegwerf-Workspace statt des Projektbaums, und der Grund ist derselbe wie 260813.** Die Zahl im Projektmanifest probeweise anzuheben, hieße, sie mitten in einer Sitzung zu verstellen, in der zwei weitere Agenten im selben Baum schreiben. Der Wegwerf-Workspace beantwortet dieselbe Frage — es ist eine Frage an Cargo und nicht an KRK — und fasst den Baum nicht an. Der Bündelbau, an dem der Verzicht von 260813 hing, kommt in dieser Form gar nicht vor.
+
+**Nicht angefasst ist die Risikotafel des Plans.** Ihre Zeile sagt weiter, D2 messe es einmal, und D2 hat es nicht getan. Ob ein Plan einer geschlossenen Runde nachträglich berichtigt wird, ist eine eigene Frage und liegt beim Nutzer (`260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`); die Messung steht deshalb hier und nicht dort.

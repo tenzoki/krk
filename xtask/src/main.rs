@@ -30,6 +30,11 @@ mod release;
 mod sign;
 mod veroeffentlichung;
 mod version;
+// Traegt keinen Code fuer die Auslieferung, sondern zwei Formproben ueber
+// `fusion-workbench/`. Deshalb nur unter `cfg(test)`: das ausgelieferte
+// Werkzeug soll die Werkbank nicht kennen.
+#[cfg(test)]
+mod werkbank;
 
 use std::process::ExitCode;
 

@@ -76,3 +76,16 @@ gewandert, korrigiert wurde keiner. Neu hinzugekommen ist einer aus der Sitzung 
 `shared/decisions/260823-1137_*_holt-der-rueckweg-von-cmd-e-die-vorschau-*`. Erhoben über alle
 161 Datensätze in `shared/decisions/` und `circles/*/decisions/` mit der Bedingung „erste leere
 Vorlagenzeile steht vor der ersten gefüllten".
+
+---
+Resolved: 260906 — **als Lage angenommen, nicht geräumt.** Weg 2 ist oberhalb dieses Projekts vollzogen, und derselbe Regeltext verbietet Weg 1 ausdrücklich.
+
+**Nachgemessen am 260906-0155**, über alle 197 Entscheidungsdatensätze in `shared/decisions/` und `circles/*/decisions/` ohne Archiv, mit derselben Bedingung („ein Schlüssel steht mindestens zweimal, die erste Fundstelle ist leer, eine spätere ist gefüllt"): **39 Dateien mit 69 Schlüsselfällen**, verteilt auf `Answered` 32, `Implemented` 33, `Deferred` 2, `Superseded by` 2. Mit dem Archiv sind es 45 Dateien und 79 Fälle bei 232 Datensätzen.
+
+**Der Abgleich vom 260823-1336 verglich zwei verschiedene Größen und meldete deshalb einen Rückgang, den es nicht gab.** Er nannte 28 gegen die 30 des ersten Durchgangs — Dateien gegen Dateien —, während die Zahl 69 in späteren Berichten als Fortschreibung derselben Reihe gelesen wurde. Zu vergleichen sind 30 Dateien mit 46 Fällen (260820) gegen 39 mit 69 (heute). Der Bestand ist also gewachsen und nicht gefallen, um neun Dateien.
+
+**Weg 2 ist vollzogen, und zwar in fusion selbst.** `rules/fusion-workbench-conventions.md` `## Decision Record Template` trägt den Vorlagenblock nicht mehr: „No footer: a record gains its annotation line at the transition." Der Zufluss ist damit versiegt, und das ist am Bestand nachprüfbar und nicht bloß behauptet — der jüngste Datensatz mit dem Block trägt den Stempel `260824-1900`, und keiner der 44 seither angelegten hat ihn. Die Regelkollision, die dieser Datensatz beschreibt, besteht nicht mehr.
+
+**Weg 1 ist von derselben Regel ausgeschlossen.** Der Satz unmittelbar danach lautet: „A stub left by the old placeholder footer stays as it stands." Er kennt keine Bedingung, also auch keine für den Fall, dass eine gefüllte Zeile desselben Schlüssels darunter steht. Die 39 Dateien bleiben deshalb unangetastet.
+
+**Was für den Leser bleibt, ist die Abfrageregel, die dieser Datensatz schon gibt:** nicht `grep -m1`, sondern die letzte Fundstelle lesen (`grep 'Answered:' <datei> | tail -1`). Sie gilt weiter, und sie gilt jetzt für einen festen Altbestand statt für einen wachsenden.

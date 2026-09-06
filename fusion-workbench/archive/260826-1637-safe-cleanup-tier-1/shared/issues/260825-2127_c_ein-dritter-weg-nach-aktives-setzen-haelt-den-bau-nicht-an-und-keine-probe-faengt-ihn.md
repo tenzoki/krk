@@ -66,7 +66,7 @@ diese Zusage hält an dieser Naht nichts.
 
 ---
 
-**Resolved:** 260825, coder, Aufgabe R-3 der Runde 18.
+Resolved: 260825, coder, Aufgabe R-3 der Runde 18.
 
 1. **Die Zahl ist belegt.** Die Zaehlprobe `aktives_setzen_hat_genau_zwei_aufrufer` im Modul
    `aktivschreiberproben` (`crates/krk-ui/src/appkit/anwendung.rs:8957`) zaehlt ueber

@@ -354,8 +354,9 @@ fn stand_pruefen(version: &str, tags_auf_head: &str, geaenderte: &str) -> Result
              \n\
              {}\n\
              \n\
-             Ein Buendel aus diesem Baum traegt die Version {version} und ist nicht aus dem \
-             Stand gebaut, den {erwartet} benennt. Abhilfe: die Aenderungen eintragen oder \
+             Ein Buendel aus diesem Baum traegt die Version {version} aus der Cargo.toml und \
+             ist nicht aus dem Stand gebaut, den {erwartet} benennt. Abhilfe: die Aenderungen \
+             eintragen oder \
              wegstellen:\n\
              \x20      git commit -a\n\
              \x20      git stash",
@@ -986,6 +987,10 @@ pub(crate) mod tests {
     /// So sieht der Baum am 260813 aus, denn er traegt keinen einzigen Tag.
     const TAG_FEHLT: &str = "";
 
+    /// Der passende Tag zu der Zahl, mit der die zwei Zweigproben zu C3.8
+    /// rechnen. [`TAG_PASST`] traegt `v0.1.0` und passt zu `1.2.3` nicht.
+    const TAG_PASST_ZU_123: &str = "v1.2.3\n";
+
     /// Mehrere Tags auf demselben Commit, der passende in der Mitte. `git tag`
     /// gibt sie sortiert und je Zeile aus.
     const TAG_UNTER_MEHREREN: &str = "release-2026-08\nv0.1.0\nvorletzter-stand\n";
@@ -1087,7 +1092,16 @@ pub(crate) mod tests {
         );
     }
 
-    /// Die drei Bestandteile aus C3.8, und was die Meldung nicht nennt.
+    /// Die drei Bestandteile aus C3.8 im kombinierten Fall, und was die Meldung
+    /// nicht nennt.
+    ///
+    /// **Der kombinierte Fall allein nimmt C3.8 nicht ab**, und bis zum 260906
+    /// hat er es allein getan. Steht der Tag und ist nur der Baum schmutzig,
+    /// faellt der Tag-Zweig weg — und mit ihm bis zum 260906 die einzige
+    /// Nennung der `Cargo.toml`. Die Luecke war deshalb unsichtbar: die Probe
+    /// las eine Meldung, in der beide Zweige standen. Die zwei Proben darunter
+    /// fahren jeden Zweig einzeln, damit derselbe Fehler beim naechsten Umbau
+    /// der Meldung auffaellt statt gruen durchzugehen.
     #[test]
     fn die_meldung_nennt_bedingung_version_und_abhilfe() {
         let meldung = stand_pruefen("1.2.3", TAG_FEHLT, BAUM_GEAENDERT)
@@ -1113,6 +1127,41 @@ pub(crate) mod tests {
             meldung.contains("Es entsteht kein Auslieferungspaket."),
             "{meldung}"
         );
+    }
+
+    /// C3.8 am Tag-Zweig allein: der Baum ist sauber, der Tag fehlt.
+    #[test]
+    fn der_tag_zweig_allein_nennt_bedingung_version_quelle_und_abhilfe() {
+        let meldung = stand_pruefen("1.2.3", TAG_FEHLT, BAUM_SAUBER).expect_err("der Tag fehlt");
+        assert!(meldung.contains("kein Tag v1.2.3"), "{meldung}");
+        assert!(meldung.contains("Version 1.2.3"), "{meldung}");
+        assert!(meldung.contains("Cargo.toml"), "{meldung}");
+        assert!(meldung.contains("./release.sh 1.2.3"), "{meldung}");
+        // Der andere Zweig steht nicht mit in der Meldung.
+        assert!(
+            !meldung.contains("weicht vom eingetragenen Stand ab"),
+            "{meldung}"
+        );
+    }
+
+    /// C3.8 am Baum-Zweig allein: der Tag steht, der Baum ist schmutzig.
+    ///
+    /// Der Zweig nannte bis zum 260906 die Zahl, aber nicht ihre Quelle, und
+    /// keine Probe sah es
+    /// (`260813-1345_*_der-baumzweig-der-abbruchmeldung-nennt-die-version-aber-nicht-die-cargo-toml.md`).
+    #[test]
+    fn der_baum_zweig_allein_nennt_bedingung_version_quelle_und_abhilfe() {
+        let meldung = stand_pruefen("1.2.3", TAG_PASST_ZU_123, BAUM_GEAENDERT)
+            .expect_err("der Baum weicht ab");
+        assert!(
+            meldung.contains("weicht vom eingetragenen Stand ab"),
+            "{meldung}"
+        );
+        assert!(meldung.contains("Version 1.2.3"), "{meldung}");
+        assert!(meldung.contains("Cargo.toml"), "{meldung}");
+        assert!(meldung.contains("git commit -a"), "{meldung}");
+        // Der andere Zweig steht nicht mit in der Meldung.
+        assert!(!meldung.contains("kein Tag"), "{meldung}");
     }
 
     /// Genau ein Aufruf von `git` ausserhalb der Probenordner der Kisten

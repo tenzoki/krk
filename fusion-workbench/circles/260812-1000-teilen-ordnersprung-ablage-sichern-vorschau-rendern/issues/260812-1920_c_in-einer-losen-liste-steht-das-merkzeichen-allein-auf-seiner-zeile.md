@@ -85,7 +85,7 @@ ausdrücklich zu.
 
 ---
 
-**Resolved 260812** — gewaehlt ist **Zuschnitt 2**: das Merkzeichen ist jetzt
+Resolved: 260812 — gewaehlt ist **Zuschnitt 2**: das Merkzeichen ist jetzt
 ein Wunsch und kein Text. `Zerlegung::punkt_oeffnen` schreibt es nicht mehr,
 sondern merkt es am `Offen` des Punktes vor (`Offen::merkzeichen`);
 `Zerlegung::schreiben` loest es ein, und zwar **nach** `absetzen` und **vor**

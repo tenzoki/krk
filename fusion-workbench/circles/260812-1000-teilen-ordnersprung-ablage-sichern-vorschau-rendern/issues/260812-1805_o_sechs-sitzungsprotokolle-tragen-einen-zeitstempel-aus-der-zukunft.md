@@ -49,3 +49,5 @@ nicht mehr, für die sie da ist.
 
 **Herkunft:** Circle der Runde 6, beim Durchsehen von Turn 2 gefunden; vier der
 sechs Dateien stammen aus Turn 2, zwei aus Turn 1.
+
+Also seen: 260906-0206 by coder — die Frage „umbenennen oder vermerken", an der dieser Datensatz und drei weitere hängen, ist jetzt als Entscheidung abgelegt: `260906-0206_*_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md`. Vier Datensätze aus vier Runden beschreiben denselben Vorgang; keiner ist ohne diese Antwort zu schließen.

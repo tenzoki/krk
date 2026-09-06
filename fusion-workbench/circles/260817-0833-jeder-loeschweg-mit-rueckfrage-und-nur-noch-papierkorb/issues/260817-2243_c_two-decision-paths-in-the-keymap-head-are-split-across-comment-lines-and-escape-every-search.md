@@ -54,7 +54,7 @@ constraint in this file, and a citation that a path search cannot find is the on
 survives a review while being useless.
 
 ---
-Resolved 260818 (ontocoder, tree state `48bb57f`): **every path in
+Resolved: 260818 (ontocoder, tree state `48bb57f`) — **every path in
 `resources/default-keymap.toml` now stands whole on one comment line, and every one of them
 resolves to a file that exists.**
 

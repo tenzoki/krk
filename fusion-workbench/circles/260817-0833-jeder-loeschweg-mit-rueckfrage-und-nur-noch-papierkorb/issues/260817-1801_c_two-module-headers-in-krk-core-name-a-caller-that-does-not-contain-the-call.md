@@ -53,7 +53,7 @@ review and its nine records and nothing else (`git show --stat e313841`). The ci
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
 
 ---
-Resolved 260818 (coder, tree state `ae665e5`): both sections name the function that holds the call
+Resolved: 260818 (coder, tree state `ae665e5`) — both sections name the function that holds the call
 and keep the claim about where in the body it sits.
 
 `crates/krk-core/src/verzeichnis/umfang.rs:136-149` and

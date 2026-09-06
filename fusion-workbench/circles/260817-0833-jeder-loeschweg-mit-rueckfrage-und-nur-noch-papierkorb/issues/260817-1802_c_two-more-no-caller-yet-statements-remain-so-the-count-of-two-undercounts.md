@@ -84,7 +84,7 @@ review and its nine records and nothing else (`git show --stat e313841`). The ci
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
 
 ---
-Resolved 260818 (coder, tree state `ae665e5`): both sentences corrected, and the search this record
+Resolved: 260818 (coder, tree state `ae665e5`) — both sentences corrected, and the search this record
 asks for was run over all of `crates/` rather than over the files one task touched.
 
 **`crates/krk-core/src/verzeichnis/loeschzielbefund.rs:121-144`**, section "Wer ihn beantwortet".

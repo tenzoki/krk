@@ -122,9 +122,6 @@ anderen Stellen desselben Baums; das ist genau die Klasse, gegen die `260823-103
 `shared/reviews/260823-1040-coderev-cmd-e-wird-der-rundweg.md`
 
 ---
-Resolved:
-
----
 
 **Abgleich 260823-1649 (Baumstand `7d86420`, Tag `v1.0.0`).** Der Datensatz bleibt `_o_`, und
 die Hälfte, die ihn offen hält, ist die im Quelltext.

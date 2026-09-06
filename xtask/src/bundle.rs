@@ -36,7 +36,7 @@ use crate::sign;
 /// `Cargo.toml`. `xtask` erbt sie ueber `version.workspace = true`, `env!` holt
 /// sie beim Uebersetzen aus dem Manifest, und diese Zeichenkette markiert die
 /// Stelle, an der sie in die Kopie im Buendel wandert.
-pub const PLATZHALTER: &str = "__KRK_VERSION__";
+pub(crate) const PLATZHALTER: &str = "__KRK_VERSION__";
 
 /// Die Version aus `[workspace.package]`, geerbt ueber `version.workspace = true`.
 ///

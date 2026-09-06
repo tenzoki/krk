@@ -13,7 +13,7 @@ Beim Nachziehen ist die Liste zu zählen und nicht die Zahl im Satz fortzuschrei
 **Related:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260818-0530-coder-sechs-befunde-der-buendel-c-und-d.md` (der Bericht, der die Stelle nennt)
 
 ---
-Resolved 260818-0350 (coder): **die Ordnungszahl ist weg, und mit ihr die zweite Zahl im selben
+Resolved: 260818-0350 (coder) — **die Ordnungszahl ist weg, und mit ihr die zweite Zahl im selben
 Absatz.**
 
 Gezählt wurde die Liste und nicht die Zahl im Satz fortgeschrieben: `immer_erreichbar`

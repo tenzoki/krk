@@ -65,10 +65,10 @@ Kein anderer Circle ist Voraussetzung. Zitiert und bindend sind:
   dieser Runde. Er bleibt im gemeinsamen Speicher, weil er dort entstanden ist;
   dieser Circle nimmt ihn über das Feld `Active spec/plan:` an, statt ihn zu
   verschieben (Herkunftsregel: Reichweite wird zitiert, nicht verlegt).
-- `shared/decisions/260816-1310_a_welche-vorhandene-groessengrenze-gilt-fuer-den-inhaltsfilter.md`
-- `shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md`
-- `shared/decisions/260816-1310_o_was-zeigt-die-eine-statuszeile-waehrend-der-inhalt-gelesen-wird.md`
-- `shared/decisions/260816-1310_o_sieht-der-nutzer-ob-eine-zeile-wegen-des-namens-oder-wegen-des-inhalts-steht.md`
+- `shared/decisions/260816-1310_*_welche-vorhandene-groessengrenze-gilt-fuer-den-inhaltsfilter.md`
+- `shared/decisions/260816-1310_*_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md`
+- `shared/decisions/260816-1310_*_was-zeigt-die-eine-statuszeile-waehrend-der-inhalt-gelesen-wird.md`
+- `shared/decisions/260816-1310_*_sieht-der-nutzer-ob-eine-zeile-wegen-des-namens-oder-wegen-des-inhalts-steht.md`
 
 Alle vier Entscheidungsdatensätze sind vor diesem Circle entstanden und bleiben
 aus demselben Grund im gemeinsamen Speicher.

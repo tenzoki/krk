@@ -65,7 +65,7 @@ review and its nine records and nothing else (`git show --stat e313841`). The ci
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
 
 ---
-Resolved 260818 (coder, tree state `ae665e5`): the enumeration lists handlings instead of counting
+Resolved: 260818 (coder, tree state `ae665e5`) — the enumeration lists handlings instead of counting
 callers, and the third handling is in it.
 
 `crates/krk-core/src/ablage/pfade.rs:187-209`. The sentence "Zwei Aufrufer haengen daran" is gone.

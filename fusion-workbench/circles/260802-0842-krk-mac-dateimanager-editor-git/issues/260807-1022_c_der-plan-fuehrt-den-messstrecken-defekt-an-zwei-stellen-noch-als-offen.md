@@ -54,9 +54,6 @@ zehn Zahlen aus C8 ändert sich. Aber der Plan ist die Stelle, an der der
 Rundenabschluss abgelesen wird, und er widerspricht dort dem Code.
 
 ---
-Resolved:
-
----
 Resolved: In `planning/260802-1428_*_plan-navigator-geruest-runde-1.md` sind zwei Stellen
 berichtigt. Zeile 25 haelt weiter fest, dass der Nachzug vom 260807-0832 einen Defekt
 hinterliess — sonst erklaerte sich dieser Datensatz nicht mehr — und nennt im selben Satz seine

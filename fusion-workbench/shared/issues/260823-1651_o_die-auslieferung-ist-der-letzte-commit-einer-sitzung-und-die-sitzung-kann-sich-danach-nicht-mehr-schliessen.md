@@ -71,6 +71,3 @@ Aufzeichnung, und die ist in diesem Projekt das, wogegen jeder Abgleich prüft.
 **Cross-references:** `shared/history/260823-1424-orchestrator-session.md`,
 `shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.md`,
 `README.md` `### Versionsstufen`, `xtask/src/version.rs`
-
----
-Resolved:

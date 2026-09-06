@@ -99,3 +99,6 @@ Belegt durch die Probe
 `der_navigator_endet_am_editor_und_ueberall_nicht` in
 `crates/krk-ui/src/kommandos/fokus.rs` nennt S5 weiterhin als den Schritt, der
 sich auf ihre Regel stützt; das bleibt richtig und ist kein offener Rest.
+
+---
+Resolved: 260809-1527 — gegenstandslos durch S5; die Einzelheiten stehen oben unter „Resolved: 260809-1527, gegenstandslos durch S5".

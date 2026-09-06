@@ -22,7 +22,7 @@
 
 ---
 
-**Resolved:** 260815, in Schritt F2. Die vorgeschlagene Gegenmaßnahme ist gebaut: `Ordnermodell::befund_setzen` heißt jetzt `befunde_setzen` und nimmt eine Reihe von Paaren aus Eintragsindex und Befund entgegen; `sicht_neu_aufbauen` läuft **einmal** je Reihe und nur dann, wenn wenigstens ein Index im Bestand lag. Gerufen wird es einmal je Einzugstakt aus `tabs::befunde_einziehen`, nachdem der Befundkanal in einem Zug leergeräumt ist.
+Resolved: 260815, in Schritt F2. Die vorgeschlagene Gegenmaßnahme ist gebaut: `Ordnermodell::befund_setzen` heißt jetzt `befunde_setzen` und nimmt eine Reihe von Paaren aus Eintragsindex und Befund entgegen; `sicht_neu_aufbauen` läuft **einmal** je Reihe und nur dann, wenn wenigstens ein Index im Bestand lag. Gerufen wird es einmal je Einzugstakt aus `tabs::befunde_einziehen`, nachdem der Befundkanal in einem Zug leergeräumt ist.
 
 **Gebaut und nicht gemessen, und der Grund ist die Rechnung und nicht eine Messung.** Der Einzugstakt hat die Reihe ohnehin schon in der Hand — er räumt den Kanal mit einer Schleife über `try_recv` leer —, der Setzer kostet vier Zeilen, und damit sinkt die Zahl der Sortierläufe auf dem Hauptfaden von „einer je entschiedenem Ordner" auf „höchstens einer je Takt". Die Alternative wäre gewesen, erst zu messen; dafür bräuchte es den Abnahmelauf am Bündel, und der ist Nutzerarbeit. Eine Gegenmaßnahme, die weniger kostet als ihre Messung, wird gebaut und nicht terminiert.
 

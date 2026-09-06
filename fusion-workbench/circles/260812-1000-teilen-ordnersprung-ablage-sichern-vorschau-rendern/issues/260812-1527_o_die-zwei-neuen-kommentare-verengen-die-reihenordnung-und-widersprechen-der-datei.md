@@ -72,3 +72,12 @@ Beschreibung aufgeht, gehört in dieselbe Berichtigung.
 
 **Nicht betroffen:** die Wahl der beiden Kombinationen und der Platz der beiden Blöcke.
 Beide Befehle liegen nach der zweigliedrigen Lesart richtig.
+
+---
+**Zutrag der Runde 7, 260813-0532 (ontorev), am 260906 hier eingetragen.** Die Durchsicht `260813-0532-ontorev-belegungsdatei-weitere-instanz.md`, Abschnitt „`opt+cmd`: der neue Block ist der dritte Gegenbeleg zu einer Reihenordnung, die die Datei behauptet", sagt ausdrücklich „kein zweiter Datensatz — aber die dort empfohlene Berichtigung greift zu kurz":
+
+`weitere_instanz` auf `opt+cmd+n` (`:688` ff.) ist nach `opt+cmd+delete` (`:133`) und `opt+cmd+e` (`:688`) der **dritte** Gegenbeleg zu dem Satz an `:246-249`, die `opt+cmd`-Reihe trage, „was einen Ordner herstellt oder liefert". Der Kommentar des neuen Blocks geht der Frage nicht nach, sondern wechselt die Achse und begründet über den Grundbuchstaben („Das `n` ist in dieser Datei die Taste des Neuen") statt über die Zusatztastenreihe. Für sich ist das schlüssig und nachgeprüft; es lässt die Datei aber mit **drei** Lesarten ihrer eigenen Ordnung zurück, wo dieser Datensatz zwei gezählt hat.
+
+**Empfehlung des ontorev:** die Berichtigung auf den neuen Block ausdehnen. Gilt die zweigliedrige Fassung („`opt+cmd+X` wirkt auf Ordner und Bereiche"), dann ist `weitere_instanz` die zweite benannte Ausnahme neben `opt+cmd+delete` und gehört genannt statt übergangen.
+
+Der Abschnitt „Nicht betroffen" oben ist damit um eine Stelle zu kurz: wer diesen Datensatz behebt, nimmt den Block `weitere_instanz` mit.

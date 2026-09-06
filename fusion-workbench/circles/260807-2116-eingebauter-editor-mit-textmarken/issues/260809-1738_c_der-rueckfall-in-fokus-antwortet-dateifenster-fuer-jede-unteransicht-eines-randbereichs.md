@@ -128,3 +128,6 @@ für einen ganzen Teilbaum.
 **Was am laufenden Bündel noch zu prüfen ist:** in die Bildlaufleiste der
 Vorschau klicken und `up` drücken. Die Auswahl im Dateifenster bewegt sich danach
 nicht mehr, und der Rahmen aus C9 steht auf der Vorschau.
+
+---
+Resolved: 260809 — behoben mit S43: `Anwendungsdelegierter::fokus` fragt nach dem Enthaltensein statt nach fünf genannten Ansichten. Die Einzelheiten stehen oben unter „Behoben am 260809 mit S43".

@@ -22,3 +22,5 @@ Der Sprung ist hier größer als beim ersten Mal, 113 Minuten gegen 27, was gege
 **Domain:** code
 **Filed by:** orchestrator
 **Related:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260817-1807_*_two-history-filenames-and-four-closure-notes-carry-timestamps-that-no-clock-produced.md` (dieselbe Klasse, in dieser Sitzung geschlossen)
+
+Also seen: 260906-0206 by coder — die Frage „umbenennen oder vermerken", an der dieser Datensatz und drei weitere hängen, ist jetzt als Entscheidung abgelegt: `260906-0206_*_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md`. Vier Datensätze aus vier Runden beschreiben denselben Vorgang; keiner ist ohne diese Antwort zu schließen.

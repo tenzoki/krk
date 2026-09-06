@@ -445,9 +445,9 @@ hat seine Prüfnotiz bekommen. Ebenso die zwei offenen im gemeinsamen Speicher.
 
 **Zwei Abweichungen sind neu abgelegt**, beide in diesem Speicher:
 
-- `260825-1230_o_claude-md-fuehrt-die-runden-nur-bis-15-*` — zwei Aussagen in `CLAUDE.md` sind mit
+- `260825-1230_*_claude-md-fuehrt-die-runden-nur-bis-15-*` — zwei Aussagen in `CLAUDE.md` sind mit
   dieser Runde falsch geworden.
-- `260825-1230_o_der-groesste-codecommit-nach-der-letzten-durchsicht-ist-ungelesen-*` — `dd74b0e`
+- `260825-1230_*_der-groesste-codecommit-nach-der-letzten-durchsicht-ist-ungelesen-*` — `dd74b0e`
   liegt hinter dem Bereich beider Durchsichten.
 
 **Was ausdrücklich kein Befund ist:** der ausstehende Abnahmelauf am gebauten Bündel (er verlangt

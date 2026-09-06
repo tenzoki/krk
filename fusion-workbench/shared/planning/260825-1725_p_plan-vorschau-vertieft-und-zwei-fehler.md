@@ -640,7 +640,7 @@ ungefahren. Der Dateimarker bleibt auf `_p_`.
 Unterbaum anlaufen. Beides ist außerhalb dieses Plans entstanden und als zwei Entscheidungen
 und ein Defekt abgelegt (`shared/decisions/260826-0859_o_*`,
 `shared/decisions/260826-0923_o_bekommt-der-tiefe-durchlauf-*`,
-`shared/issues/260826-1024_o_claude-md-sagt-nicht-dass-die-tiefe-suche-ab-werk-steht-*`).
+`shared/issues/260826-1024_*_claude-md-sagt-nicht-dass-die-tiefe-suche-ab-werk-steht-*`).
 
 ### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
 

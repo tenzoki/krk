@@ -36,7 +36,7 @@ lässt die Bedienfolge aber bestehen.
 
 ---
 
-**Resolved:** 260815-2240, Weg 1. Die Vorpruefung ist am Dateibestand gefahren und faellt
+Resolved: 260815-2240, Weg 1. Die Vorpruefung ist am Dateibestand gefahren und faellt
 zugunsten von Weg 1 aus: `resources/default-keymap.toml` traegt den Schraegstrich in
 keiner Zeile ausserhalb der Kommentare, und die Tastentabelle
 `krk_core::tasten::parser::TASTEN` fuehrt ihn unter ihren 61 Namen ueberhaupt nicht, also

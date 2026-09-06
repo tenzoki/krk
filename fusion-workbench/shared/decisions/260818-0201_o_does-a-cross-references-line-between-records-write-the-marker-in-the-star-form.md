@@ -120,3 +120,12 @@ Fünf der sieben stehen nicht in einer `**Cross-references:**`-Zeile, sondern in
 `Resolved:`-Vermerk und in einer `Answered:`-Zeile. **Das ist Sachstand zu dieser Frage und keine
 Antwort auf sie**: der Zerfall trifft breiter als die eine Kopfzeile, um die die Frage gestellt ist,
 und jede Antwort, die allein `**Cross-references:**` umstellt, ließe fünf dieser sieben stehen.
+
+---
+Answer located: `rules/fusion-workbench-conventions.md` `## Filename Patterns` und `## Marker globs` — der Regelkorpus beantwortet die Frage seit dem 260905 breiter, als sie gestellt ist, und in der Richtung von Möglichkeit 3.
+
+`## Filename Patterns` sagt: „Cite a record by its storeless basename with the state marker wildcarded, `YYMMDD-HHMM_*_<topic>.md`, so the citation survives every marker move and every archive sweep." Der Satz kennt keine Ausnahme nach dem Speicher, also auch keine für `decisions/`, und er nimmt daneben den Speicherpfad aus dem Zitat heraus, was diese Frage gar nicht gestellt hatte. Er trifft jedes Zitat und nicht die eine Kopfzeile.
+
+Die Unentscheidbarkeit, an der Möglichkeit 3 hier scheitern sollte, ist dort anders aufgelöst: `## Marker globs` verlangt für eine Stelle, die etwas **über** ein Zitat aussagt, nicht die Sternform, sondern die Nennung der zitierenden Zeile (`datei.md:24`) oder einen Codeblock um den wörtlichen Wortlaut. Damit wird nicht mehr je Absatz geurteilt, ob ein Zitat ein Zeiger oder eine Aussage ist — die Aussage bekommt eine eigene Gestalt, und die ist von außen zu sehen.
+
+**Der Marker bleibt `_o_`.** Der Regelkorpus ist bindend, aber diesen Datensatz schließt der Nutzer oder der Orchestrator, nicht ein ausführender Agent; und die dritte Zusage des Datensatzes, die Prüfung, ist von der Regel nicht mitbeantwortet. Eingetragen vom coder am 260906-0200.

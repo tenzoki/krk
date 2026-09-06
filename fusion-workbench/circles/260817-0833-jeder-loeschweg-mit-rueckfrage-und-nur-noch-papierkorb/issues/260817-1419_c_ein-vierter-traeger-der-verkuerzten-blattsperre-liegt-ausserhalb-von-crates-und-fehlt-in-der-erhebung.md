@@ -167,7 +167,7 @@ halb erledigter Datensatz wird nicht geschlossen. Wer sie nachzieht, schließt d
 `make check` — Exit 0.
 
 ---
-Resolved 260818-0350 (coder): **`CLAUDE.md:124` ist nachgezogen, und damit sind alle sechs
+Resolved: 260818-0350 (coder) — **`CLAUDE.md:124` ist nachgezogen, und damit sind alle sechs
 Träger der Tabelle darüber erledigt.**
 
 Der Satz sagte, `Anwendungsdelegierter::kommando_ausfuehren` weise „jedes Kommando außer dem

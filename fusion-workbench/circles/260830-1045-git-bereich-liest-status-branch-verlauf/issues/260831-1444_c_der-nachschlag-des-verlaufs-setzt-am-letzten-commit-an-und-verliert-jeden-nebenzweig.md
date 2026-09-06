@@ -18,7 +18,7 @@ KRKs eigenes Repository ist linear, und der Abnahmelauf aus Schritt 17 sähe den
 
 **Abnahmetest:** ein Prüfrepository mit einer Zusammenführung zweier Zweige und mehr Commits als `VERLAUFSSCHRITT`; die Vereinigung aller Schwünge trägt jeden Commit des Repositorys genau einmal. Eine Probe dieser Form steht heute nicht in `crates/krk-core/tests/git.rs`: `der_erste_aufruf_liefert_fuenfzig_commits` und `drei_commits_liefern_drei_und_melden_das_ende` messen beide an einer linearen Kette.
 
-**Resolved:** 260831. `Gitleser::verlauf` nimmt jetzt `bereits: usize` statt `ab: Option<ObjectId>`
+Resolved: 260831. `Gitleser::verlauf` nimmt jetzt `bereits: usize` statt `ab: Option<ObjectId>`
 und läuft in jedem Schwung von HEAD los, wie `git log --skip`: `rev_walk` gibt jeden erreichbaren
 Commit genau einmal aus, also zerlegen die Schwünge den Verlauf in Stücke, statt ihn am letzten
 angezeigten Commit zu beschneiden. `Gitfrage::WeitererVerlauf` trägt dieselbe Zahl,

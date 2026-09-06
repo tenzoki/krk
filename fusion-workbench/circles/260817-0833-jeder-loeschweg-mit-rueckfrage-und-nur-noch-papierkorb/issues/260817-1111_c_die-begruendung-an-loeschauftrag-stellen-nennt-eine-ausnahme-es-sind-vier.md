@@ -38,7 +38,7 @@ beiden mitgezogen werden.
 Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Die verkürzte Begründung steht unverändert an `anwendung.rs:4676-4678` („jedes Kommando ausser dem Abbruch ab"), während `zulaessigkeit::immer_erreichbar` weiter vier Kommandos durchlässt.
 
 ---
-Resolved 260817-1302 (coder, T2): **behoben.** Die Begruendung an `loeschauftrag_stellen`
+Resolved: 260817-1302 (coder, T2) — **behoben.** Die Begruendung an `loeschauftrag_stellen`
 steht jetzt ausgeschrieben und sagt voran, warum sie es hier tut: die Zusage einer
 zerstoerenden Handlung haengt daran. Sie nennt die vier durchgelassenen Kommandos mit ihren
 beiden Quellen — `Abbrechen` ueber `operationen::waehrend_blatt_erlaubt`, `Beenden`,

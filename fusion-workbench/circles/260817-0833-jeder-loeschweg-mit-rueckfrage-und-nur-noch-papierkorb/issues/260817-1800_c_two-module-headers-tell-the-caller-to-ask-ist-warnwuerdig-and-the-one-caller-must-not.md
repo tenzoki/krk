@@ -95,7 +95,7 @@ review and its nine records and nothing else (`git show --stat e313841`). The ci
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
 
 ---
-Resolved 260818 (coder, tree state `ae665e5`): both sentences now say what holds and why.
+Resolved: 260818 (coder, tree state `ae665e5`) — both sentences now say what holds and why.
 
 `crates/krk-core/src/verzeichnis/arbeitsbaum.rs:91-113` keeps "auf der ersten Polaritaet" and
 replaces the flat claim "Der Aufrufer fragt `ist_warnwuerdig`" with: the question **would** be

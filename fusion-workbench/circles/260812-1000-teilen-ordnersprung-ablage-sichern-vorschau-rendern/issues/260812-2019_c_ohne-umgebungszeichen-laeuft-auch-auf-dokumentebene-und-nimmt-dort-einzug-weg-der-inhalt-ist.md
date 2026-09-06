@@ -70,7 +70,7 @@ zwischen dem Doc-Kommentar und dem Aufrufort.
 
 ---
 
-**Resolved 260812** — `luecke_bis` ruft `ohne_umgebungszeichen` nur noch
+Resolved: 260812 — `luecke_bis` ruft `ohne_umgebungszeichen` nur noch
 innerhalb eines Elements; auf Dokumentebene bleibt es beim `trim()` der
 Vorfassung. Das ist der Zuschnitt, den der Datensatz erwogen und nicht gewählt
 hat, und der Einwand dagegen trägt bei näherem Hinsehen nicht.

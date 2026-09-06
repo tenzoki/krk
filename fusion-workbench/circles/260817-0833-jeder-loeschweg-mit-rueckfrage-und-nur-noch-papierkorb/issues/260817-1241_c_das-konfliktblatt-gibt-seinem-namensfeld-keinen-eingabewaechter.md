@@ -55,7 +55,7 @@ Abgleich 260817-1833 (reconciler, Baumstand `e313841`): **offen, unverändert.**
 `textfeld_setzen` noch `waechter_anhaengen` kommen in der Datei vor.
 
 ---
-Resolved 260818 (coder, Bündel C/D-Nachzug): **das Namensfeld hat seinen Wächter, und
+Resolved: 260818 (coder, Bündel C/D-Nachzug) — **das Namensfeld hat seinen Wächter, und
 `260817-1242` war die Vorbedingung dafür.**
 
 **Die Reihenfolge war nicht beliebig.** Dieser Datensatz nennt die Frage, die zuerst zu

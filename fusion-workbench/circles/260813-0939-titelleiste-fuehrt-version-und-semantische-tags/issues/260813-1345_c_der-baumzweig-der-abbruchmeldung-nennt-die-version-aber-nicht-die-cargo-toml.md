@@ -51,3 +51,14 @@ Zwei Wege, und der zweite ist der, der die Lücke schliesst:
 - Die übrigen Zusagen an der Meldung halten und sind geprüft: beide Befunde stehen in einer
   Meldung (`release.rs:277`), kein `--force` und kein Umgehungsweg (Probe `:1068-1070`), keine
   Umlaute.
+
+---
+Resolved: 260906 — beide Wege sind gegangen, und der zweite ist der, der die Lücke schließt.
+
+**Der Baum-Zweig nennt die Quelle** (`xtask/src/release.rs`, `stand_pruefen`): „Ein Buendel aus diesem Baum traegt die Version {version} **aus der Cargo.toml** und ist nicht aus dem Stand gebaut, den {erwartet} benennt."
+
+**Die Probe zu C3.8 fährt jetzt jeden Zweig einzeln.** Neben `die_meldung_nennt_bedingung_version_und_abhilfe`, die den kombinierten Fall behält, stehen `der_tag_zweig_allein_nennt_bedingung_version_quelle_und_abhilfe` (Tag fehlt, Baum sauber) und `der_baum_zweig_allein_nennt_bedingung_version_quelle_und_abhilfe` (Tag steht, Baum schmutzig). Jede prüft die drei Bestandteile und dazu, dass der jeweils andere Zweig **nicht** mit in der Meldung steht — ohne diese zweite Zusicherung wäre eine Probe wieder blind für genau diesen Fehler. Dafür ist ein Vorrat dazugekommen, `TAG_PASST_ZU_123`, weil `TAG_PASST` auf `v0.1.0` steht und zu der Zahl `1.2.3` der Proben nicht passt.
+
+Der Doc-Kommentar der kombinierten Probe sagt jetzt, warum sie C3.8 allein nicht abnimmt.
+
+**Abnahme:** `cargo test -p xtask` 169 Proben grün, `cargo clippy -p xtask --all-targets -- -D warnings` Exit 0, `cargo fmt -p xtask -- --check` Exit 0.

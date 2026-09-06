@@ -66,7 +66,7 @@ review and its nine records and nothing else (`git show --stat e313841`). The ci
 therefore the lines the review read. `make check` at 260817-1833: exit 0, "alle vier gruen".
 
 ---
-Resolved 260818 (coder, tree state `ae665e5`), in the part that is this record's to make: the code
+Resolved: 260818 (coder, tree state `ae665e5`), in the part that is this record's to make — the code
 file no longer says "Folgen".
 
 `crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs:10-23` now names the third difference the

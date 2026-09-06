@@ -11,3 +11,5 @@ Der Commit `03af590` ist um 09:06 am 260828 eingetragen und enthält unter `circ
 **Betroffen:** fünf Dateinamen und Kopfzeilen unter `history/` dieses Circles; kein Code
 
 Wirkung: allein die Lesbarkeit der Sitzungsspur. Die Inhalte stimmen mit den Commits überein (jeder Schritt findet sich in `1df8b8d`, `2aee690`, `22b8442`, `5ff1ee4`). Nach der Ortsregel behalten Aufzeichnungen ihren Stand; ob die Namen umbenannt werden oder ein Vermerk genügt, entscheidet der Nutzer. Ursache vermutlich: parallel dispatchte Executor haben ihren Stempel geschätzt statt `date` zu rufen.
+
+Also seen: 260906-0206 by coder — die Frage „umbenennen oder vermerken", an der dieser Datensatz und drei weitere hängen, ist jetzt als Entscheidung abgelegt: `260906-0206_*_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md`. Vier Datensätze aus vier Runden beschreiben denselben Vorgang; keiner ist ohne diese Antwort zu schließen.

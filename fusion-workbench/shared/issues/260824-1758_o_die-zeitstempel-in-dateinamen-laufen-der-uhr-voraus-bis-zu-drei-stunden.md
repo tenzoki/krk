@@ -63,9 +63,6 @@ und die Verweise nachziehen; (3) eine Prüfung bauen, die den Stempel gegen die 
 **Gefunden:** analyst, beim Nachziehen von Spec und Plan; nachgemessen vom Orchestrator
 
 ---
-Resolved:
-
----
 **Nachgeprüft beim Abgleich zum Abschluss der Runde 16, 260824-1852: die Beschreibung stimmt, und
 der offene Teil ist unverändert offen.** Die sechs Verlaufsdateien tragen ihre vorauslaufenden
 Stempel weiter (`260824-2100`, `-2010`, `-1902`, `-1755`, `-1650`, `-1612` unter `history/` der
@@ -77,3 +74,5 @@ Entscheidungsdatensätze tragen die Commitzeiten 1546 und 1554.
 den umbenannten Datensatz weiter unter seinem alten Namen `260824-2115_o_…`, also einen Pfad, der
 ins Leere zeigte. Das Zitat steht jetzt in der Sternform auf `260824-1745`. Die Umbenennung nach
 Möglichkeit 2 zieht solche Verweise nach sich; dieser eine ist der erste gemessene Fall.
+
+Also seen: 260906-0206 by coder — die Frage „umbenennen oder vermerken", an der dieser Datensatz und drei weitere hängen, ist jetzt als Entscheidung abgelegt: `260906-0206_*_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md`. Vier Datensätze aus vier Runden beschreiben denselben Vorgang; keiner ist ohne diese Antwort zu schließen.

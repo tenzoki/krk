@@ -50,9 +50,6 @@ Einzelfall bleibt, gehört mitentschieden.
 sie die Frage nach dem Ladezeitpunkt neu, und dieser Defekt fällt mit ihr weg.
 
 ---
-Resolved:
-
----
 Resolved: Der Nutzer hat am 260810-1717 die erste der beiden Moeglichkeiten gewaehlt: die
 Meldung nennt den Ladezeitpunkt. `kein_terminal` (`crates/krk-ui/src/kommandos/operationen.rs`)
 meldet jetzt "keine Anwendung mit der Buendelkennung ... installiert; settings.toml nennt sie

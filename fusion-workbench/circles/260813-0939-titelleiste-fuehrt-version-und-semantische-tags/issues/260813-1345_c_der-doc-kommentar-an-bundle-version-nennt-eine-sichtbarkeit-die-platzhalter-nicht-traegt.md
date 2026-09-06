@@ -38,3 +38,10 @@ gelesen, und `xtask` hat kein Bibliotheksziel, an dem `pub` etwas bedeutete.
 - Die Sache, um die es D2 ging, hält: es gibt genau eine Quelle der Versionszahl, und `release`
   liest sie über `bundle::VERSION` (`xtask/src/release.rs:200`), statt die `Cargo.toml` zu
   zerteilen.
+
+---
+Resolved: 260906 — der zweite der beiden Wege, wie der Datensatz ihn empfiehlt: `PLATZHALTER` steht jetzt auf `pub(crate)` (`xtask/src/bundle.rs`), und der Satz „`pub(crate)` wie [`PLATZHALTER`]" am Doc-Kommentar von `VERSION` stimmt, ohne dass jemand ihn anfassen musste.
+
+**Die kleinere Aussage, und sie kostet nichts.** `xtask` hat kein Bibliotheksziel; ausserhalb der Kiste liest niemand die Konstante, und `pub` erreichte dort dasselbe. Der einzige weitere Nenner im Baum ist ein Doc-Verweis in `xtask/src/beglaubigung.rs`, also innerhalb der Kiste.
+
+**Abnahme:** `cargo test -p xtask` 169 Proben grün, `cargo clippy -p xtask --all-targets -- -D warnings` Exit 0, `cargo fmt -p xtask -- --check` Exit 0.

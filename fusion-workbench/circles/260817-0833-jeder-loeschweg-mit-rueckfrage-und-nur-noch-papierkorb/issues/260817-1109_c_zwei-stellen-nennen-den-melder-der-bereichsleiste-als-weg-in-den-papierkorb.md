@@ -37,7 +37,7 @@ Bündel D kommt `f8` als dritte Taste hinzu.
 Abgleich 260817-1129 (reconciler): **offen, am Baum nachgelesen.** Der Modulkopf `kommandos/loeschwarnung.rs:47-49` nennt den Melder der Bereichsleiste unverändert. Die zweite Stelle an `papierkorb_oder_zeichen_zurueck` steht ebenfalls noch.
 
 ---
-Resolved 260817-1302 (coder, T2): **behoben, beide Stellen.** Der Modulkopf
+Resolved: 260817-1302 (coder, T2) — **behoben, beide Stellen.** Der Modulkopf
 `kommandos/loeschwarnung.rs` nennt jetzt „die beiden Tasten `delete` und `cmd+delete` und der
 Menueeintrag" und traegt zwei neue Absaetze: dass die Bereichsleiste keiner dieser Wege ist,
 mit der Zaehlung ihrer Umschalter, und dass `f8` erst mit Buendel D dazukommt. Punkt 1 des

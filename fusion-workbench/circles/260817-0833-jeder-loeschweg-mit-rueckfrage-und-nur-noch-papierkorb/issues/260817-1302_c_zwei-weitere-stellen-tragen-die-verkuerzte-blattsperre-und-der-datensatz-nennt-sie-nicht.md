@@ -71,7 +71,7 @@ haben Zeilen davor eingefügt. Die dritte und vierte Stelle derselben Formulieru
 mitträgt.
 
 ---
-Resolved 260818 (coder, Bündel C/D-Nachzug): **beide genannten Stellen nachgezogen, und die
+Resolved: 260818 (coder, Bündel C/D-Nachzug) — **beide genannten Stellen nachgezogen, und die
 Erhebung hat zwei weitere gefunden, die kein Datensatz nennt.**
 
 Behoben:

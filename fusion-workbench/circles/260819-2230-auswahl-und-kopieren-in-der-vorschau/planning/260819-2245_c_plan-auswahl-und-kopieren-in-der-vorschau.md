@@ -56,7 +56,7 @@ Die Art eines Abschnitts ist eine vollständige und überschneidungsfreie Fallun
 
 ### Die Klammerregel: was an den Rändern einer Auswahl mitfährt
 
-Die Kachelung allein liefert an den Rändern kaputtes Markdown, und der bindende Datensatz `shared/decisions/260819-2216_a_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md` beantwortet das mit Möglichkeit b: eine berührte Auszeichnung fährt ganz mit. Der Plan setzt sie als **Fixpunkt über die Quellelemente** um.
+Die Kachelung allein liefert an den Rändern kaputtes Markdown, und der bindende Datensatz `shared/decisions/260819-2216_*_welche-auszeichnungszeichen-fahren-an-den-raendern-der-auswahl-mit.md` beantwortet das mit Möglichkeit b: eine berührte Auszeichnung fährt ganz mit. Der Plan setzt sie als **Fixpunkt über die Quellelemente** um.
 
 Jedes Element, das der Durchgang öffnet, hinterlässt seinen Quellbereich und einen Wahrheitswert, die **Klammer**: sie ist wahr, wenn der Quellbereich des Elements Bytes trägt, die in seinem gerenderten Bereich nicht erscheinen. Eine Überschrift trägt eine Klammer (`# `), eine starke Betonung trägt zwei (`**`), ein Verweis trägt `[` und `](Ziel)`, ein Listenpunkt trägt sein Merkzeichen. Ein gewöhnlicher Absatz trägt keine.
 

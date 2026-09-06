@@ -118,3 +118,6 @@ gibt fuenf Aufruferzeilen (`text/datei.rs:434,620,692`, `operation/zippen.rs:362
 `operation/entpacken.rs:118`), dazu die Erklaerung, die Pruefzeile und die zwei Zeilen des
 Modulkopfs, die das Muster selbst nennen. Die Zeile in `zippen.rs` stand am 260825-1230
 noch auf 348; verschoben hat sie diese Sitzung, die dem Modulkopf Prosa hinzugefuegt hat. `make check` Exit 0.
+
+---
+Resolved: 260825 — vollständig behoben, beide Hälften: der Absatz in `CLAUDE.md` und der Modulkopf von `crates/krk-core/src/verzeichnis/sys.rs`. Die Einzelheiten stehen oben unter „Vollstaendig behoben am 260825".

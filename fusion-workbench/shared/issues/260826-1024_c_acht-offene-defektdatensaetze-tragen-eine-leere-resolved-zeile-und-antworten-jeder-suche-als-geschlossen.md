@@ -74,3 +74,20 @@ statt gestrichen worden, weil dort eine Notiz hingehörte.
 bleibt.
 
 **Gefunden:** reconciler, Schlussabgleich der Sitzung `260825-1659` gegen `e5ec81a..c95f28b`.
+
+---
+Resolved: Die leeren Vorlagenzeilen sind am lebenden Bestand gestrichen, samt ihren Trennern, wo diese dadurch verwaist wären. **Nachgemessen am 260906-0140**, Suchmuster `^\*{0,2}Resolved:\*{0,2}[[:space:]]*$` über `shared/issues` und `circles/*/issues`.
+
+**Der Bestand war kleiner als erhoben: sieben statt acht offene Datensätze.** Der achte der Tabelle, `260824-1745_*_ein-commit-des-orchestrators-nimmt-die-git-mv-umbenennungen-eines-laufenden-agenten-mit.md`, ist am 260905-2108 geschlossen worden und trägt seine Notiz in der Konvention; seine leere Zeile stand zusätzlich darüber und ist mit diesem Durchgang gefallen. Grundmenge heute 251 offene Defektdatensätze statt 194.
+
+Geräumt sind damit:
+
+- die sieben offenen (`260823-1433`, `260823-1436`, `260823-1439`, `260823-1442`, `260823-1445`, `260823-1651`, `260824-1758`, alle unter `shared/issues/`),
+- fünf geschlossene, an denen die leere Zeile zusätzlich zu einer gefüllten stand: `shared/issues/260824-1745_*`, `circles/260802-0842-…/issues/260807-1022_*_der-plan-fuehrt-den-messstrecken-defekt-…`, `…/260807-0930_*`, `…/260807-1022_*_zweiundzwanzig-verweise-…`,
+- einer, dessen Notiz auf der Folgezeile begann und jetzt hinter dem Doppelpunkt steht: `circles/260802-0842-…/issues/260807-1015_*_der-kommentar-zur-tabellenhoehe-…`. Er gehört der Sache nach zu `260818-0710_*` und ist hier mitgenommen.
+
+**Eine Stelle bleibt stehen, und zwar bewusst:** `archive/260826-1637-safe-cleanup-tier-1/shared/issues/260823-1650_*_die-releaseseite-der-1-0-0-schweigt-…` trägt dieselbe leere Zeile über einer gefüllten. Archivierter Bestand ist eingefroren; ihn anzufassen ist eine eigene Frage, und keine Suche über den lebenden Speicher erreicht die Datei.
+
+**Die zweite Hälfte des Befunds — die Prüfung, die jeden Marker gegen seine Rumpfzeile hält — ist nicht gebaut.** Sie steht als offene Hälfte in `260818-0710_*` und bleibt dort.
+
+**Auch die zweite Richtung hält jetzt eine Probe:** `kein_offener_defektdatensatz_traegt_eine_leere_abschlusszeile` (`xtask/src/werkbank.rs`) fällt, sobald ein offener Datensatz wieder eine leere Zeile `Resolved:` trägt. Sie läuft mit `cargo test --workspace` und damit mit `make check`.

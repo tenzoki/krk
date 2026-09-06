@@ -86,9 +86,6 @@ worden ist.
 `xtask/src/veroeffentlichung.rs:531-575`
 
 ---
-Resolved:
-
----
 Resolved: Als Lage angenommen, nicht behoben. Der Nutzer hat am 260823-1710 entschieden, dass die
 Ladezahlen der Releaseseite keine betroffenen Nutzer bedeuten: die Downloads sind seine eigenen.
 Damit trifft der Verlust der Tastenbelegung niemanden, und die Seite bekommt keinen Hinweis.

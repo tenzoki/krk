@@ -155,3 +155,6 @@ Abkürzung den S28-Anlass nicht stillschweigend mitnimmt.
 
 **Nebenbefund, eigener Datensatz:**
 `issues/260809-2148_o_s25-sichern-schriebe-den-plattenstand-weil-die-rueckschreibung-erst-s26-baut.md`.
+
+---
+Resolved: 260809-2148 — geschlossen: die drei Fragen sind am Code beantwortet, die Ursache benannt und die kleinste Änderung gebaut, die den Verlust beendet. Die Einzelheiten stehen oben unter „Abschlussnotiz, 260809-2148".

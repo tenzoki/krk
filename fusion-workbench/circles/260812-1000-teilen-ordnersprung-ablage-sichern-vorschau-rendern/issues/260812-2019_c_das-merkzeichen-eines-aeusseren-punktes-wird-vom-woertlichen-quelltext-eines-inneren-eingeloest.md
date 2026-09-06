@@ -66,7 +66,7 @@ abgelegt hat.
 
 ---
 
-**Resolved 260812** — die falsche Zusage ist berichtigt, die Ausgabe ist von
+Resolved: 260812 — die falsche Zusage ist berichtigt, die Ausgabe ist von
 einer Probe festgeschrieben, und zwei der drei gemessenen Formen kommen
 nebenbei richtig heraus. **Das Verhalten des ersten Falles bleibt, und zwar
 mit Absicht**; der Grund steht unten und jetzt auch im Doc-Kommentar.
