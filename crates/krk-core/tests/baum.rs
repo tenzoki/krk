@@ -316,6 +316,65 @@ fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
     );
 }
 
+/// C3.14: Der Leseweg der Leseprofile oeffnet keine Datei ueber ihren Pfad.
+///
+/// **Was das Kriterium sagt und was diese Probe misst, ist nicht dasselbe, und
+/// das steht hier ausgeschrieben.** C3.14 sagt „keine neue Stelle **im Baum**";
+/// gemessen wird der Leseweg der Leseprofile, also `krk-core/src/leseprofil/`
+/// und `krk-core/src/ablage/leseprofile.rs`. Die weitere Zusage ueber den
+/// ganzen Baum haelt diese Probe **nicht**: Kopieren, Entpacken, der
+/// Verzeichnisleser und die Proben oeffnen ueber ihren Pfad, jeder aus einem
+/// eigenen Grund, und eine Aufzaehlung darueber waere eine Liste ueber zwei
+/// Kisten, die bei jeder Aenderung in der anderen rot wird, ohne dass an ihr
+/// abzulesen waere, warum. Was C3.14 fuer die Zukunft schuetzen will, ist der
+/// fuenfte Baustein, der `std::fs::read` ruft, und genau der faellt hier auf
+/// (`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1852_*_c3-14-nennt-seinen-eigenen-nachweis-und-nichts-im-baum-fuehrt-ihn.md`).
+///
+/// **Eine leere Menge und keine Aufzaehlung.** Der Leseweg liest ueber
+/// `text::datei::anlesen` und `verzeichnis::leser::lesen_hoechstens`, und die
+/// gehen beide durch `verzeichnis::sys::ohne_warten_oeffnen`, also ueber den
+/// Deskriptor. Eine erlaubte Ausnahme gibt es hier nicht, deshalb steht keine
+/// Liste da, die jemand stillschweigend verlaengern koennte.
+///
+/// Die Nadeln stehen zusammengesetzt da, aus dem Grund, den der Kopf dieser
+/// Datei nennt; gesucht wird in Code-Zeilen, damit dieser Kommentar sie nennen
+/// darf.
+#[test]
+fn der_leseweg_der_leseprofile_oeffnet_keine_datei_ueber_ihren_pfad() {
+    let wege = [
+        concat!("File::", "open"),
+        concat!("fs::", "read("),
+        concat!("read_to", "_string"),
+        concat!("Open", "Options"),
+    ];
+    let leseweg = [
+        "krk-core/src/leseprofil/",
+        "krk-core/src/ablage/leseprofile.rs",
+    ];
+
+    let alle = quelldateien();
+    let gelesen: Vec<&(String, String)> = alle
+        .iter()
+        .filter(|(name, _)| leseweg.iter().any(|teil| name.starts_with(*teil)))
+        .collect();
+    assert!(
+        gelesen.len() > 1,
+        "unter {leseweg:?} steht kein Leseweg; die Probe haette nichts zu pruefen"
+    );
+
+    let mit_pfadoeffnung: Vec<&str> = gelesen
+        .iter()
+        .filter(|(_, inhalt)| wege.iter().any(|weg| im_code(inhalt, weg)))
+        .map(|(name, _)| name.as_str())
+        .collect();
+    assert!(
+        mit_pfadoeffnung.is_empty(),
+        "der Leseweg der Leseprofile oeffnet in {mit_pfadoeffnung:?} eine Datei ueber ihren \
+         Pfad; gelesen wird ueber text::datei::anlesen und verzeichnis::leser::lesen_hoechstens, \
+         und beide gehen ueber den Deskriptor"
+    );
+}
+
 /// Kein Fadenstart im Baum wirft seinen Rueckgabewert weg.
 ///
 /// **Was hier gehalten wird.** `thread::Builder` liefert seinen Fadenstart als

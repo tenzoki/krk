@@ -53,10 +53,12 @@
 //! **diese Zeile ist die Stelle, an der der Deckel spaeter steht**, und sie
 //! steht hier namentlich, damit der Umbau eine Zeile bleibt und keine Bauform.
 //!
-//! **`Outcome::write_changes` wird nicht gerufen, und
-//! `EntryStatus::NeedsUpdate` wird gelesen und verworfen.** Die Stufe A liest;
-//! die Begruendung und der offene Datensatz stehen im Kopf von
-//! [`crate::git`](super).
+//! **`Outcome::write_changes` wird nicht gerufen.** Das allein traegt die
+//! Zusage der Stufe A; die Begruendung und der offene Datensatz stehen im Kopf
+//! von [`crate::git`](super). Der Zweig fuer `EntryStatus::NeedsUpdate` in
+//! `posten_deuten` traegt sie **nicht** und kann es nicht: `gix` haelt einen
+//! solchen Posten in seinem eigenen Statusiterator zurueck, bevor er hier
+//! ankommt.
 //!
 //! # Ein Fehlschlag beim Oeffnen entscheidet nur in einer Lage
 //!
@@ -485,8 +487,18 @@ fn eintragsname(rela_path: &BStr, praefix: &[u8]) -> Option<String> {
 /// darunter, und jeder aus einem eigenen Grund:
 ///
 /// - **`EntryStatus::NeedsUpdate`**: der Eintrag hat sich nicht geaendert, nur
-///   sein Stat-Zwischenspeicher waere aufzufrischen. Er wird gelesen und
-///   verworfen; die Stufe A schreibt nicht (E8).
+///   sein Stat-Zwischenspeicher waere aufzufrischen. **Dieser Zweig loest
+///   nicht aus, und er steht trotzdem hier.** `gix` 0.87.1 faengt einen solchen
+///   Posten in seinem eigenen Statusiterator ab, legt ihn in `Iter::index_changes`
+///   und liefert `None` an den Rufer weiter
+///   (`gix-0.87.1/src/status/iter/mod.rs`, `Iter::maybe_keep_index_change`); er
+///   kommt hier also gar nicht erst an. Verworfen wird er dadurch, dass KRK
+///   `Outcome::write_changes` nicht ruft, und durch nichts sonst (E8). Der
+///   Zweig haelt allein die Fallunterscheidung vollstaendig, falls eine
+///   spaetere `gix`-Fassung den Posten wieder durchreicht — ohne ihn faellt ein
+///   neuer `EntryStatus`-Wert still durch, statt den Bau anzuhalten. Gemessen
+///   am 260831
+///   (`circles/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-0855_*_der-zweig-fuer-needsupdate-in-posten-deuten-ist-unerreichbar-gix-faengt-den-posten-vorher-ab.md`).
 /// - **`Status::Ignored` und `Status::Pruned`** aus dem Verzeichnisdurchlauf:
 ///   ein ignorierter Eintrag ist kein neuer.
 /// - **`Status::Tracked`**: der Durchlauf hat einen Eintrag gefunden, den der

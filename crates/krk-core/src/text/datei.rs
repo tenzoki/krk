@@ -897,8 +897,9 @@ pub fn sicherungsform(stand: &str) -> Cow<'_, str> {
 
 /// Schreibt den Stand des Editors in die Datei.
 ///
-/// Geschrieben wird ueber [`crate::ablage::atomar`], denselben Weg, den die
-/// vier Ablagedateien nehmen: erst vollstaendig in eine Nachbardatei, dann
+/// Geschrieben wird ueber [`crate::ablage::atomar`], denselben Weg, den jede
+/// Ablagedatei aus [`crate::ablage::pfade::Datei::ALLE`] nimmt: erst
+/// vollstaendig in eine Nachbardatei, dann
 /// `rename`. Ein Absturz mittendrin laesst die alte Datei stehen, wie sie war,
 /// und ein zweiter Schreibweg im Programm entsteht nicht.
 ///

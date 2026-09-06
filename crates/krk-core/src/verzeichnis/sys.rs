@@ -1316,6 +1316,17 @@ mod tests {
     ///
     /// Geprueft wird mit [`sperre_versuchen`], weil ein wartendes
     /// [`sperre_nehmen`] die Probe genau hier haengen liesse.
+    ///
+    /// **Eine der zwei benannten Ausnahmen von der Regel, dass Pruefdateien
+    /// nicht ins echte Temporaerverzeichnis gehoeren** (die andere ist
+    /// `ein_geoeffneter_deskriptor_traegt_o_nonblock_nicht_mehr` in derselben
+    /// Datei). Die anerkannte Pruefordner-Fassung des Kerns liegt unter
+    /// `crates/krk-core/tests/gemeinsam/`, und von einem `#[cfg(test)]`-Modul
+    /// im Quelltext ist sie nicht zu erreichen — sie gehoert einer anderen
+    /// Kiste. Unschaedlich ist die Ausnahme, weil beide Namen die
+    /// Prozesskennung tragen und `Messplanwaechter` sie nicht abraeumt: er
+    /// nimmt allein `krk-messplan-*.toml`. Der Datensatz dazu ist
+    /// `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0644_*_ein-rest-ist-in-einem-geschlossenen-fremden-datensatz-aufgehoben-worden.md`.
     #[test]
     fn ein_zweiter_deskriptor_auf_dieselbe_datei_bekommt_die_sperre_nicht() {
         let pfad = std::env::temp_dir().join(format!("krk-sys-flock-{}", std::process::id()));
@@ -1403,6 +1414,10 @@ mod tests {
     /// nicht selbst nachsehen kann: `O_NONBLOCK` dient dem Oeffnen und darf das
     /// Lesen nicht erreichen. Gefragt wird der Deskriptor selbst und nicht der
     /// Quelltext daneben.
+    ///
+    /// **Die zweite der zwei benannten Ausnahmen**; die Begruendung steht bei
+    /// `ein_zweiter_deskriptor_auf_dieselbe_datei_bekommt_die_sperre_nicht` und
+    /// wird hier nicht wiederholt.
     #[test]
     fn ein_geoeffneter_deskriptor_traegt_o_nonblock_nicht_mehr() {
         let pfad = std::env::temp_dir().join(format!("krk-sys-nonblock-{}", std::process::id()));

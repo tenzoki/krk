@@ -36,3 +36,6 @@ Platzhalter. Arbeit für den `coder`. Oder, wenn der Nutzer sie am laufenden Bü
 zwei Zeilen in `## Nutzerarbeit` des Plans.
 
 Gefunden beim Abgleich zum Abschluss der Runde 16, 260824-1852.
+
+---
+Resolved: Beide Proben gebaut, beide gegen `ausgelieferte()` und damit gegen `resources/default-readers.toml` und nicht gegen einen Nachbau; `ausgelieferte()` hat damit drei Rufer statt einem. In `crates/krk-core/tests/leseprofil.rs`: `ohne_orchestrator_live_zeigt_allein_die_sitzungszeile_ihren_platzhalter` benennt `orchestrator-live.md` in einer `werkbankwurzel` um, wie C5.8 den Pruefweg selbst ausschreibt, und haelt die sieben Beschriftungen und die sieben Werte gegeneinander: allein die Zeile "Sitzung" traegt `Wert::Nicht`, die sechs uebrigen stehen unveraendert. Umbenannt und nicht geloescht, damit der Ordner genauso viele Eintraege behaelt und die Zeile am Muster faellt und nicht am leeren Ordner. `die_mitgelieferten_profile_greifen_ausserhalb_einer_werkbank_nicht` legt einen gewoehnlichen Pruefordner mit den Unterordnern `issues`, `decisions`, `planning`, `circles` und `archive` an, also mit Namen, die in einer Werkbank einen Speicher benennten, und verlangt fuer den Ordner selbst und drei seiner Unterordner `Auskunft::Default` statt eines erkannten Profils. Die Wahl "zwei Zeilen in `## Nutzerarbeit`" ist damit nicht gezogen worden.

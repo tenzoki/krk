@@ -3,9 +3,12 @@
 //! Ein Profil erkennt seinen Ort ueber ein **Pfadmuster** auf dem vollen Pfad
 //! des Ordners oder ueber eine **Kennzeichendatei**, also ein Muster auf den
 //! Namen der Eintraege darin, oder ueber beides. [`erkennen`] ist die eine
-//! Stelle, an der diese Frage beantwortet wird; greift kein Profil, bleibt es
-//! bei der heutigen Metadatenanzeige, und das ist kein Fehlerfall, sondern der
-//! Nutzerwille vom 260823.
+//! Stelle, an der diese Frage beantwortet wird; greift kein Profil, antwortet
+//! sie mit `None`, und das ist kein Fehlerfall, sondern der Nutzerwille vom
+//! 260823. **Was der Rufer daraus macht, steht hier nicht**, sondern in
+//! [`super::bausteine::zusammenfassen_gezaehlt`]: eine zweite Fassung jener
+//! Fallunterscheidung an dieser Stelle liefe mit jeder Runde auseinander, und
+//! genau das ist zwischen der Runde 16 und der Runde 19 geschehen.
 //!
 //! # Zwei Durchgaenge, und der zweite ist kein Nachtrag zum ersten
 //!
@@ -21,7 +24,7 @@
 //! ```text
 //! Durchgang 1:  Profil 1 … Profil n,  je nur das Pfadmuster
 //! Durchgang 2:  Profil 1 … Profil n,  je nur die Kennzeichendatei
-//! sonst:        die heutige Metadatenanzeige
+//! sonst:        `None`, und der Rufer verzweigt weiter
 //! ```
 //!
 //! **Ein dritter Durchgang entsteht nicht, und ein einziger genuegte nicht.**
@@ -91,9 +94,12 @@ use super::{Profil, Profile};
 /// naemlich beim ersten Profil mit Kennzeichendatei; `None` heisst, dass die
 /// Eintraege nicht zur Verfuegung stehen. Der Modulkopf schreibt beides aus.
 ///
-/// `None` als Rueckgabe heisst: kein Profil greift, und die Vorschau zeigt die
-/// heutige Metadatenanzeige (C2.5). Das ist derselbe Zweig, den sie ohne diese
-/// Runde ohnehin genommen haette.
+/// `None` als Rueckgabe heisst allein: **kein Profil greift.** Was die Vorschau
+/// daraus macht, entscheidet der Rufer und nicht diese Funktion; der
+/// Rueckfallzweig steht in [`super::bausteine::zusammenfassen_gezaehlt`]. Bis
+/// zur Runde 19 stand hier, `None` fuehre zur Metadatenanzeige (C2.5); seither
+/// bekommt ein Verzeichnis das Default-Profil, und der Satz war falsch, ohne
+/// dass etwas ihn angehalten haette.
 #[must_use = "wer das erkannte Profil fallen laesst, hat den Ordner umsonst gelesen \
               und zeigt dem Nutzer Metadaten, obwohl ein Profil greift"]
 pub fn erkennen<'p, 'e>(

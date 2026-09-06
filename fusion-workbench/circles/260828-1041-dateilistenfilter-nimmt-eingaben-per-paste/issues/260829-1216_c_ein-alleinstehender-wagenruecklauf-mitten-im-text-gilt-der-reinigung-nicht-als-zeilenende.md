@@ -10,3 +10,6 @@ Fix: `rest.contains(['\n', '\r'])` an derselben Stelle, und die Probe um `erste\
 
 ---
 Reconciled 260829-1223: weiter offen. Kein Commit zwischen `79d507a` und `8d64859` fasst die genannte Stelle an; die Lage ist am Baum nachgelesen (siehe `history/260829-1223-reconciliation.md` dieses Circles für den Beleg je Datensatz). Keine Vorbedingung des Abschlusses der Runde 21.
+
+---
+Resolved: Der vorgeschlagene Fix uebernommen und am Baum geprueft. `filtertext_aus` (`crates/krk-core/src/zwischenablage.rs`) fragt jetzt `rest.contains(['\n', '\r'])`, also nach denselben zwei Zeichen, die eine Zeile darueber am Ende abgeschnitten werden; der Kommentar daneben nennt den Grund und den alten Ausgang `erstezweite`. Der Modulkopf, Schritt 2 der fuenf, sagt es ebenso und schreibt aus, dass die zwei Zeichen an beiden Stellen dieselben sein muessen. Proben erweitert: `ein_inneres_zeilenende_ist_mehrzeilig` haelt jetzt zusaetzlich `erste\rzweite` und `erste\r\nzweite` gegen `Einfuegehindernis::Mehrzeilig`, `zeilenenden_am_ende_fallen` zusaetzlich `Name\r` gegen `Ok("Name")`. Die Abnahme des Datensatzes ist damit vollstaendig gemessen.

@@ -30,3 +30,6 @@ Beispielzeile fordern, also die Zeilen mit führendem `#` einsammeln und in ihne
 für den `coder`.
 
 Gefunden beim Abgleich zum Abschluss der Runde 16, 260824-1852.
+
+---
+Resolved: Die Probe `die_auslieferungsfassung_nennt_jeden_bausteinnamen` (`crates/krk-core/src/ablage/leseprofile.rs`) sammelt jetzt zuerst die Kommentarzeilen ein und sucht allein in ihnen; je Baustein verlangt sie zwei Dinge, die Nennung des Namens und eine Zeile mit `<name> = {`, also das Beispiel, das C5.10 in seiner zweiten Haelfte fordert. Am 260906 am Baum gemessen, bevor die Probe geschrieben wurde: alle vier Bausteine haben im Kommentarteil von `resources/default-readers.toml` mindestens eine solche Zeile. Die Untergrenze von hundert Kommentarzeilen bleibt daneben stehen. Der Name der Probe bleibt unveraendert, obwohl sie mehr misst: vier Werkbankdatensaetze nennen ihn, und die werden nicht nachgezogen; der Doc-Kommentar sagt das.

@@ -137,26 +137,53 @@ fn anlegen_falls_fehlt(zugang: &Zugang<'_>) -> io::Result<()> {
 mod tests {
     use super::*;
 
-    /// Die Auslieferungsfassung nennt jeden der vier Bausteine (C5.10).
+    /// Der **Kommentarteil** der Auslieferungsfassung erklaert jeden der vier
+    /// Bausteine und zeigt je einen an einem Beispiel (C5.10).
     ///
     /// Ohne die Kommentarzeilen stuende dort eine Datei, deren Sprache der
     /// Nutzer nirgends nachschlagen kann; dieselbe Zusage haelt
     /// `die_auslieferungsfassung_traegt_ihre_kommentare` fuer `settings.toml`.
+    ///
+    /// **Gesucht wird allein in den Kommentarzeilen, und das ist der Kern der
+    /// Probe.** Bis zum 260906 lief die Suche ueber den ganzen Text; jeder der
+    /// vier Namen steht ohnehin in den Profilbloecken, also bestand sie auch an
+    /// einer Fassung ohne eine einzige erklaerende Zeile, und die zweite
+    /// Haelfte des Kriteriums — „je einen an einem Beispiel zeigen" — war gar
+    /// nicht gemessen
+    /// (`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1852_*_die-probe-zu-c5-10-liest-den-ganzen-text-und-misst-die-haelfte-des-kriteriums-nicht.md`).
+    /// Als Beispiel zaehlt eine Kommentarzeile, die den Baustein in seiner
+    /// Schreibweise als Tabelle zeigt, also `<name> = {`; die blosse Nennung
+    /// des Namens im Fliesstext genuegt nicht.
+    ///
+    /// Der Name der Probe bleibt, obwohl sie jetzt mehr misst: vier
+    /// Werkbankdatensaetze nennen ihn, und die werden nicht nachgezogen.
     #[test]
     fn die_auslieferungsfassung_nennt_jeden_bausteinnamen() {
+        let kommentarzeilen: Vec<&str> = AUSLIEFERUNGSTEXT
+            .lines()
+            .map(str::trim_start)
+            .filter(|zeile| zeile.starts_with('#'))
+            .collect();
+
         for name in ["zaehlung", "juengste", "feld", "vorhandensein"] {
             assert!(
-                AUSLIEFERUNGSTEXT.contains(name),
-                "die Auslieferungsfassung nennt den Baustein {name} nicht"
+                kommentarzeilen.iter().any(|zeile| zeile.contains(name)),
+                "keine Kommentarzeile der Auslieferungsfassung nennt den Baustein {name}"
+            );
+            let beispiel = format!("{name} = {{");
+            assert!(
+                kommentarzeilen
+                    .iter()
+                    .any(|zeile| zeile.contains(&beispiel)),
+                "keine Kommentarzeile zeigt den Baustein {name} an einem Beispiel \
+                 (gesucht: {beispiel})"
             );
         }
-        let kommentarzeilen = AUSLIEFERUNGSTEXT
-            .lines()
-            .filter(|zeile| zeile.trim_start().starts_with('#'))
-            .count();
+
         assert!(
-            kommentarzeilen > 100,
-            "die Auslieferungsfassung traegt nur {kommentarzeilen} Kommentarzeilen"
+            kommentarzeilen.len() > 100,
+            "die Auslieferungsfassung traegt nur {} Kommentarzeilen",
+            kommentarzeilen.len()
         );
     }
 

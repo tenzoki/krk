@@ -14,8 +14,16 @@
 //! an dem das etwas kostet, ist benannt und gemessen: `git` schreibt nach einem
 //! Status den aufgefrischten Stat-Zwischenspeicher in den Index zurueck, damit
 //! der naechste Lauf billiger wird, und `gix` bietet dasselbe ueber
-//! `Outcome::write_changes` an. **Dieses Modul ruft es nicht**, und
-//! `EntryStatus::NeedsUpdate` wird gelesen und verworfen. Ob die Stufe A das
+//! `Outcome::write_changes` an. **Dieses Modul ruft es nicht, und darauf allein
+//! beruht die Zusage**: gesucht wird nach dem Namen mit angehaengter oeffnender
+//! Klammer, und diese Suche bleibt ueber `crates/` ohne Fundstelle. Der Name
+//! steht deshalb an keiner Prosastelle des Baums in der Aufrufform — sie waere
+//! die erste Fundstelle und braeche die eigene Pruefung, wie es der Modulkopf
+//! von `ablage` fuer das Ausgabemakro schon einmal beschreibt. Der Zweig fuer
+//! `EntryStatus::NeedsUpdate` in `leser::posten_deuten` traegt die Zusage
+//! nicht: `gix` haelt einen solchen Posten zurueck, bevor er KRK erreicht, und
+//! der Zweig haelt allein die Fallunterscheidung vollstaendig. Der
+//! Doc-Kommentar jener Funktion schreibt die Messung aus. Ob die Stufe A das
 //! Zurueckschreiben bekommen soll, ist eine offene Nutzerfrage
 //! (`shared/decisions/260830-1006_*_darf-stufe-a-den-aufgefrischten-index-zurueckschreiben-oder-zahlt-sie-die-wiederholung.md`);
 //! solange sie offen ist, zahlt jede Abfrage die Auffrischung erneut.

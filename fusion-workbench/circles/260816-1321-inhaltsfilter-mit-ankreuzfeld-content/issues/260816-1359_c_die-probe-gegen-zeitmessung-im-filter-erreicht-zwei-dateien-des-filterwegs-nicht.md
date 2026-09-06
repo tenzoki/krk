@@ -23,3 +23,6 @@ oder die Zusage von „im Filter steht keine Zeitmessung" auf „in den Dateien,
 besitzt, steht keine" zurücknehmen und das ausschreiben. Die erste Möglichkeit ist eine Suche im
 Quelltext, die eine Bedeutungsfrage entscheiden soll; `crates/krk-core/tests/baum.rs` schreibt im
 Modulkopf aus, warum das nicht trägt.
+
+---
+Resolved: Beide Haelften erledigt, jede auf ihrem Weg. `crates/krk-core/src/verzeichnis/leser.rs` ist am 260906 als frei von allen drei Nadeln gemessen (`grep -n 'Instant\|Duration\|::now(' crates/krk-core/src/verzeichnis/leser.rs` ohne Fundstelle) und steht seither in der Liste von `im_filter_steht_keine_zeitmessung` (`crates/krk-core/tests/verzeichnis.rs`). `crates/krk-core/src/verzeichnis/sys.rs` bleibt draussen: dieselbe Suche liefert dort acht Zeilen, und die Nadel `Duration` kann die Umrechnung der Aenderungszeit nicht von einer Messung trennen. Gegangen ist damit der zweite der zwei Wege des Datensatzes und nicht der erste; der erste ist verworfen, weil er eine Bedeutungsfrage im Quelltext entscheiden muesste, und der Modulkopf von `crates/krk-core/tests/baum.rs` schreibt aus, warum das nicht traegt. Der Doc-Kommentar der Probe traegt jetzt beides: den Namen der ausgeschlossenen Datei mit ihrem Grund und den Satz, dass die Zusage genau die aufgezaehlten Dateien deckt und nicht jede, die ein getipptes Zeichen beruehrt.

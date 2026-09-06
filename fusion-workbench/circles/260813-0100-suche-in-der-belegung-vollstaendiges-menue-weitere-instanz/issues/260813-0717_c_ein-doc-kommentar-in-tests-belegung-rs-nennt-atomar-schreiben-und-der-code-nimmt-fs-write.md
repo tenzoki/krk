@@ -51,3 +51,6 @@ Wer stattdessen wirklich `atomar::schreiben` nehmen will, trägt
 `krk-core/tests/belegung.rs` in die Liste von
 `nur_benannte_dateien_erreichen_das_atomare_schreiben` ein. Das ist die teurere Antwort und
 kauft für eine Probe, die eine Datei anlegt, nichts.
+
+---
+Resolved: Der Halbsatz an `ablage_mit` (`crates/krk-core/tests/belegung.rs`) sagt jetzt, dass der Pfad aus dem `Zugang` kommt und unter der Schreibsperre geschrieben wird, und nennt `fs::write` als den Vorgang. Dazu steht dort der Grund, den der Datensatz als teurere Antwort verwirft: ein `atomar::schreiben` von dieser Stelle machte die Datei zur naechsten, die `nur_benannte_dateien_erreichen_das_atomare_schreiben` (`crates/krk-core/tests/baum.rs`) aufzunehmen haette. Der Vergleich mit `settings.toml`, der die falsche Schreibfunktion behauptete, ist gefallen.

@@ -52,10 +52,13 @@
 //!    `MehrereVerweise(n)`, das Gegenstueck zum mehrzeiligen Text, denn der
 //!    Finder legt beim Kopieren mehrerer Eintraege die Namen als Zeilen ab.
 //!    Ein einzelner Verweis geht als Pfadtext weiter zu Schritt 4.
-//! 2. Bei Text fallen die Zeilenenden am Ende, `\r\n` wie `\n`; ein aus einem
-//!    Terminal kopierter Name bringt eines mit. Steht danach noch ein `\n`
-//!    im Text, ist er `Mehrzeilig`, und eingefuegt wird nichts — ganz oder gar
-//!    nicht, eine halbe erste Zeile waere ein Sonderfall mit eigener Regel.
+//! 2. Bei Text fallen die Zeilenenden am Ende, `\r\n` wie `\n` wie `\r`; ein
+//!    aus einem Terminal kopierter Name bringt eines mit. Steht danach noch
+//!    eines dieser zwei Zeichen im Text, ist er `Mehrzeilig`, und eingefuegt
+//!    wird nichts — ganz oder gar nicht, eine halbe erste Zeile waere ein
+//!    Sonderfall mit eigener Regel. **Die zwei Zeichen sind an beiden Stellen
+//!    dieselben**, sonst gaelte derselbe Wagenruecklauf am Ende als Zeilenende
+//!    und mittendrin nicht.
 //! 3. Ein `file:`-Verweis, den `verweis_zu_pfad` aufloest, ist als Pfad der
 //!    Pfadtext, Prozentzeichen aufgeloest; jeder andere Text ist sein eigener
 //!    Pfadtext. **Einen Zweig fuer `http:` gibt es nicht**: eine Adresse ist
@@ -173,7 +176,14 @@ pub fn filtertext_aus(quelle: &Einfuegequelle) -> Result<String, Einfuegehindern
         },
         Einfuegequelle::Text(text) => {
             let rest = text.trim_end_matches(['\n', '\r']);
-            if rest.contains('\n') {
+            // **Dieselben zwei Zeichen wie eine Zeile darueber, und das ist
+            // der Punkt.** Bis zum 260906 fragte diese Zeile allein nach
+            // `\n`; ein alleinstehender `\r` mitten im Text galt damit am
+            // Ende als Zeilenende und mittendrin nicht, fiel in Schritt 5
+            // still als Steuerzeichen heraus, und aus `erste\rzweite` wurde
+            // der Filtertext `erstezweite`
+            // (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/issues/260829-1216_*_ein-alleinstehender-wagenruecklauf-mitten-im-text-gilt-der-reinigung-nicht-als-zeilenende.md`).
+            if rest.contains(['\n', '\r']) {
                 return Err(Einfuegehindernis::Mehrzeilig);
             }
             match ohne_schema(rest, "file").and_then(verweis_zu_pfad) {
@@ -375,6 +385,7 @@ mod tests {
     fn zeilenenden_am_ende_fallen() {
         assert_eq!(text("Name\n"), Ok("Name".to_owned()));
         assert_eq!(text("Name\r\n"), Ok("Name".to_owned()));
+        assert_eq!(text("Name\r"), Ok("Name".to_owned()));
     }
 
     #[test]
@@ -382,12 +393,20 @@ mod tests {
         assert_eq!(text("a\tb:c"), Ok("abc".to_owned()));
     }
 
+    /// Beide Zeichen, die am Ende als Zeilenende fallen, gelten auch mittendrin
+    /// als eines.
+    ///
+    /// Der alleinstehende Wagenruecklauf kommt aus Terminalausgaben und alten
+    /// Mac-Exporten. Bis zum 260906 fragte die Regel mittendrin allein nach
+    /// `\n`, und `erste\rzweite` wurde zu `erstezweite`.
     #[test]
     fn ein_inneres_zeilenende_ist_mehrzeilig() {
         assert_eq!(
             text("erste Zeile\nzweite Zeile"),
             Err(Einfuegehindernis::Mehrzeilig)
         );
+        assert_eq!(text("erste\rzweite"), Err(Einfuegehindernis::Mehrzeilig));
+        assert_eq!(text("erste\r\nzweite"), Err(Einfuegehindernis::Mehrzeilig));
     }
 
     #[test]

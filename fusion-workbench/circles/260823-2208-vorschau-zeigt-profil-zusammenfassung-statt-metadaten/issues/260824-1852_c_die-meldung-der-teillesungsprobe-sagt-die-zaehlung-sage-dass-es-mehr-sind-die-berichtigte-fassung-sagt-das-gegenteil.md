@@ -29,3 +29,6 @@ erscheint nur, wenn jemand die Zusage bricht und dann die falsche Begründung li
 ziehen. Eine Zeile Arbeit für den `coder`; der Abgleich darf Code nicht anfassen.
 
 Gefunden beim Abgleich zum Abschluss der Runde 16, 260824-1852.
+
+---
+Resolved: Die Meldung lautet jetzt "die Zaehlung nennt die Treffer und den Abbruch, nicht eine Zahl" (`crates/krk-core/tests/leseprofil.rs`, die Zusicherung auf `Wert::UeberGrenze(HOECHSTENS_EINTRAEGE as u64)` in der Teillesungsprobe). Damit sagt sie dasselbe wie die Berichtigung von C6.5 vom 260824-1722, der Doc-Kommentar von `Wert::UeberGrenze` und der Modulkopf von `leseprofil/bausteine.rs`. Der letzte Rest der Fassung "ueber 2.000" ist damit weg.

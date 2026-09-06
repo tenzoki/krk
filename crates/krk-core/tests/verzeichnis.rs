@@ -3634,6 +3634,23 @@ fn quelltext_von(name: &str) -> String {
 /// Sie steht deshalb nicht in der Liste, und damit deckt keine Nadel den ganzen
 /// Weg. Gedeckt ist der Filter selbst.
 ///
+/// **Und eine Datei des Filterwegs kann die Liste nicht betreten:**
+/// `krk-core/src/verzeichnis/sys.rs`, ueber die jeder Ordner geoeffnet wird.
+/// Sie fuehrt `Duration` mehrfach, und zwar zur Umrechnung der Aenderungszeit
+/// eines Eintrags und nicht zur Messung. Die Nadel kann die beiden
+/// Verwendungen nicht trennen — dieselbe Grenze, die der Modulkopf von
+/// `crates/krk-core/tests/baum.rs` ausschreibt —, und die Datei einzutragen
+/// erzeugte einen Fehlalarm, der die Probe dauerhaft rot liesse. Der Datensatz
+/// dazu ist
+/// `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1359_*_die-probe-gegen-zeitmessung-im-filter-erreicht-zwei-dateien-des-filterwegs-nicht.md`;
+/// die zweite dort genannte Datei, `verzeichnis/leser.rs`, ist am 260906 frei
+/// von allen drei Nadeln und steht seither in der Liste.
+///
+/// **Was die Probe damit zusagt, ist genau das und nicht mehr:** in den
+/// aufgezaehlten Dateien steht keine Zeitmessung. Ihr Name spricht vom Filter;
+/// wer ihn als Zusage ueber jede Datei liest, die ein getipptes Zeichen
+/// beruehrt, liest mehr, als hier gemessen wird.
+///
 /// **`SystemTime` ist ausdruecklich keine Nadel**, und das ist keine Nachsicht,
 /// sondern der Unterschied zwischen einer Uhr und einem Datum: ein
 /// [`Eintrag`] traegt seine Aenderungszeit als `SystemTime`, und das
@@ -3657,6 +3674,7 @@ fn im_filter_steht_keine_zeitmessung() {
         "krk-core/src/verzeichnis/modell.rs",
         "krk-core/src/verzeichnis/durchlauf.rs",
         "krk-core/src/verzeichnis/inhalt.rs",
+        "krk-core/src/verzeichnis/leser.rs",
         "krk-core/src/text/datei.rs",
         "krk-ui/src/appkit/tabelle.rs",
         "krk-ui/src/tabs.rs",

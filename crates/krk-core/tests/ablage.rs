@@ -1520,6 +1520,48 @@ fn eine_fehlende_und_eine_nicht_lesbare_datei_werden_nicht_zur_seite_gelegt() {
     );
 }
 
+/// Eine TOML-Ablagedatei mit ungueltigem UTF-8 geht zur Seite.
+///
+/// **Sie steht da, sie ist vollstaendig, und sie traegt die Arbeit des
+/// Nutzers.** Bis zum 260906 las [`Zugang::laden`] mit `fs::read_to_string`,
+/// und das scheitert bei ungueltigen Bytes mit `InvalidData`; die Datei fiel
+/// damit in denselben Zweig wie eine, die sich gar nicht oeffnen laesst, ging
+/// nicht zur Seite, und der naechste gewoehnliche Schreibvorgang schrieb sie
+/// ueber — bei `bookmarks.toml` und `session.toml` also jedes Beenden
+/// (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_*_eine-ablagedatei-mit-ungueltigem-utf-8-wird-nicht-zur-seite-gelegt.md`).
+///
+/// **Der Weg dorthin ist nicht ausgedacht.** `keymap.toml` und `settings.toml`
+/// pflegt der Nutzer von Hand; ein Editor, der beim Sichern auf Latin-1 faellt,
+/// macht aus dem Umlaut in einem Lesezeichennamen genau diese Bytefolge. Die
+/// Probe nimmt deshalb ein sonst gueltiges TOML und setzt ein einzelnes
+/// `0xE4` an die Stelle des Umlauts.
+///
+/// Die Probe des Nachbarn oben prueft den Zweig mit einem **Ordner** an der
+/// Stelle der Datei, also den Fall, fuer den die Begruendung „es gibt keinen
+/// Inhalt zu sichern" stimmt; deshalb hat sie diesen hier nicht gefunden.
+#[test]
+fn eine_ablagedatei_mit_ungueltigem_utf_8_geht_zur_seite() {
+    let (_ordner, ablage) = ablage("beiseite-kein-utf8");
+
+    let roh: Vec<u8> = b"eintraege = [{ name = \"Caf\xe9\", pfad = \"/tmp\" }]\n".to_vec();
+    fs::write(ablage.pfad(Datei::Lesezeichen), &roh).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    let ersetzung = geladen.ersetzung.expect("keine Meldung");
+    assert!(
+        matches!(&ersetzung.grund, Grund::Beschaedigt(satz) if satz == "keine gueltige UTF-8-Folge"),
+        "{ersetzung:?}"
+    );
+
+    let sicherung = beiseitepfad(&ablage, Datei::Lesezeichen);
+    assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
+    assert_eq!(
+        fs::read(&sicherung).expect("die Sicherung laesst sich nicht lesen"),
+        roh,
+        "die Sicherung traegt nicht die Bytes der Datei"
+    );
+}
+
 /// Scheitert das Zur-Seite-Legen, sagt die Meldung es und verspricht keine
 /// Datei (C3.6, C3.8).
 ///

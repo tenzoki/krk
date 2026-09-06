@@ -39,7 +39,11 @@ use gemeinsam::{Pruefordner, varianten_der_aufzaehlung};
 /// (`issues/260813-0540_*_kein-schreibweg-an-der-sperre-vorbei-ist-nicht-typgesichert-und-ungeprueft.md`).
 /// Geschrieben wird ein roher Text und keine Serialisierung, weil die Proben
 /// auch fehlerhafte `keymap.toml` brauchen; der Pfad kommt deshalb aus dem
-/// [`Zugang`] und der Vorgang aus `atomar::schreiben`, wie bei `settings.toml`.
+/// [`Zugang`], und geschrieben wird unter der Schreibsperre. Der Vorgang selbst
+/// ist `fs::write` und nicht `atomar::schreiben`: die Probe legt die Datei
+/// einmal an, und ein `atomar::schreiben` von hier aus machte diese Datei zur
+/// naechsten, die `nur_benannte_dateien_erreichen_das_atomare_schreiben`
+/// (`crates/krk-core/tests/baum.rs`) aufzunehmen haette.
 fn ablage_mit(ordner: &Pruefordner, keymap: &str) -> Ablage {
     let ablage =
         Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");

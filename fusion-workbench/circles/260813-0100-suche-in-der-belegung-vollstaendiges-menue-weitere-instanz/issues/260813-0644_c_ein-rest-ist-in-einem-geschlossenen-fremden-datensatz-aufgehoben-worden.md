@@ -58,3 +58,6 @@ danach vollständiger, als sie ist.
 
 Weg 1 kostet nichts und ist die Buchführung. Weg 2 beseitigt die Ausnahme und ist eine eigene
 kleine Arbeit.
+
+---
+Resolved: Weg 1, und die Buchfuehrung steht jetzt am Code und nicht nur in diesem Datensatz. Weg 2 ist am 260906 als undurchfuehrbar gemessen: die anerkannte Pruefordner-Fassung des Kerns liegt in `crates/krk-core/tests/gemeinsam/mod.rs` und gehoert damit einer anderen Kiste; ein `#[cfg(test)]`-Modul in `crates/krk-core/src/verzeichnis/sys.rs` erreicht sie nicht, gleich ob eine Sperrdatei sich unter einem Pruefordner oeffnen liesse. Der Doc-Kommentar von `ein_zweiter_deskriptor_auf_dieselbe_datei_bekommt_die_sperre_nicht` (`crates/krk-core/src/verzeichnis/sys.rs`) benennt beide Ausnahmen, ihren Grund und ihre Unschaedlichkeit (Prozesskennung im Namen, und `Messplanwaechter` nimmt allein `krk-messplan-*.toml`) und zeigt auf diesen Datensatz; `ein_geoeffneter_deskriptor_traegt_o_nonblock_nicht_mehr` verweist auf ihn. Damit stehen die zwei Ausnahmen dort, wo jemand sie findet, naemlich an ihnen selbst. Die Fundstellenkorrektur des Datensatzes (zwei Proben, nicht eine) ist damit uebernommen.

@@ -177,6 +177,14 @@
 //! [`Beiseite::Nicht`]: es gibt keinen Inhalt zu sichern, und der naechste
 //! Schreibvorgang schreibt trotzdem. Der Datensatz dazu ist
 //! `shared/issues/260821-0142_*_eine-nicht-lesbare-ablagedatei-wird-nicht-gesichert-und-vom-naechsten-schreibvorgang-ueberschrieben.md`.
+//!
+//! **Eine Gestalt weniger seit dem 260906.** Bytes, die kein gueltiges UTF-8
+//! sind, zaehlten bis dahin als „nicht lesbar", obwohl die Datei dasteht und
+//! ihren Bestand traegt; [`Zugang::laden`] liest deshalb in Bytes und wandelt
+//! selbst um, und dieser Fall geht als [`Grund::Beschaedigt`] zur Seite. Der
+//! Zettelweg tat es ueber [`Unlesbarkeit::KeinText`] schon seit der Runde 9,
+//! und die zwei Wege sagen jetzt denselben Satz.
+//!
 //! Die Datei ohne obersten Schluessel steht daneben und ist derselbe Ausgang
 //! aus dem umgekehrten Grund: dort gibt es einen Inhalt, aber keinen Bestand.
 //! Was alle diese Gestalten teilen, ist der Schlusssatz — der naechste
@@ -282,7 +290,7 @@ impl Grund {
     /// Der Satzteil, der den Grund benennt.
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: ein
-    /// fuenfter Grund haelt den Bau an und erzwingt einen fuenften Satzteil.
+    /// weiterer Grund haelt den Bau an und erzwingt einen weiteren Satzteil.
     fn beschreibung(&self) -> &'static str {
         match self {
             Grund::NichtLesbar(_) => "ist nicht lesbar",
@@ -297,8 +305,10 @@ impl Grund {
     /// **`Cow` und nicht `&str`, seit [`Grund::ZuGross`] dazugekommen ist.** Er
     /// traegt eine Zahl und keinen Satz, und der Satz entsteht hier statt beim
     /// Erzeugen: sonst stuende die Grenze ein zweites Mal im Baum, an der
-    /// Stelle, die den Wert baut. Die vier uebrigen Gruende reichen ihren Text
-    /// weiter und kosten weiterhin keine Kopie.
+    /// Stelle, die den Wert baut. Jeder andere Grund traegt seinen Text schon
+    /// und reicht ihn weiter; die Kopie kostet allein [`Grund::ZuGross`]. Eine
+    /// Regel und keine Zaehlung: ein weiterer Grund mit Text faellt unter
+    /// dieselbe Regel, ohne dass hier eine Zahl nachzuziehen waere.
     pub fn einzelheit(&self) -> Cow<'_, str> {
         match self {
             Grund::NichtLesbar(text) | Grund::Beschaedigt(text) | Grund::NichtAnlegbar(text) => {
@@ -633,8 +643,16 @@ impl Zugang<'_> {
     /// eine [`Ersetzung`]; eine fehlende Datei ist der erste Start.
     ///
     /// **Zur Seite gelegt wird allein im Zweig [`Grund::Beschaedigt`]**, denn
-    /// nur dort gibt es einen gelesenen Text zu sichern. Die beiden uebrigen
-    /// Zweige tragen [`Beiseite::Nicht`]; siehe den Modulkopf.
+    /// nur dort gibt es Bytes zu sichern. Die beiden uebrigen Zweige tragen
+    /// [`Beiseite::Nicht`]; siehe den Modulkopf.
+    ///
+    /// **Bytes und nicht ein gelesener Text**, und der Unterschied ist seit dem
+    /// 260906 tragend: eine Datei, deren Bytes kein gueltiges UTF-8 sind, faellt
+    /// ebenfalls unter [`Grund::Beschaedigt`] und geht ebenfalls zur Seite. Sie
+    /// steht da, sie ist vollstaendig, und ihr Bestand ist genauso zu retten
+    /// wie der einer Datei mit kaputtem TOML. Der Zweig
+    /// [`Grund::NichtLesbar`] bleibt dem vorbehalten, wobei das Lesen selbst
+    /// scheitert.
     ///
     /// **Und auch dort nicht in beiden Haelften.** Eine Datei ohne einen
     /// einzigen obersten Schluessel traegt keinen Bestand und traegt deshalb
@@ -667,8 +685,20 @@ impl Zugang<'_> {
             welche.dateiname()
         );
         let pfad = self.pfad(welche);
-        let text = match fs::read_to_string(&pfad) {
-            Ok(text) => text,
+        // **Gelesen wird in Bytes und erst danach umgewandelt.** Bis zum 260906
+        // stand hier `fs::read_to_string`, und das scheitert nicht nur an einem
+        // Zugriffsfehler, sondern auch mit `InvalidData`, wenn die Bytes kein
+        // gueltiges UTF-8 sind. Beides fiel in den Zweig darunter: eine Datei,
+        // die dasteht, vollstaendig ist und die Arbeit des Nutzers traegt, ging
+        // damit nicht zur Seite, und der naechste gewoehnliche Schreibvorgang
+        // schrieb sie ueber
+        // (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_*_eine-ablagedatei-mit-ungueltigem-utf-8-wird-nicht-zur-seite-gelegt.md`).
+        // Der Weg dorthin ist der von `keymap.toml` und `settings.toml`: der
+        // Nutzer pflegt sie von Hand, und ein Editor, der auf eine
+        // Einbyte-Kodierung faellt, macht aus einem Umlaut eine Bytefolge, die
+        // kein UTF-8 ist. KRK schreibt so etwas nie selbst.
+        let rohbytes = match fs::read(&pfad) {
+            Ok(bytes) => bytes,
             Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => {
                 return Geladen {
                     wert: T::default(),
@@ -682,7 +712,28 @@ impl Zugang<'_> {
                         datei: pfad,
                         welche,
                         grund: Grund::NichtLesbar(fehler.to_string()),
+                        // Jetzt traegt dieser Zweig, was er behauptet: das
+                        // Lesen selbst ist gescheitert, es gibt keine Bytes.
                         beiseite: Beiseite::Nicht,
+                    }),
+                };
+            }
+        };
+        let text = match String::from_utf8(rohbytes) {
+            Ok(text) => text,
+            Err(fehler) => {
+                let rohbytes = fehler.into_bytes();
+                let beiseite = self.beiseite_legen(&pfad, &mut rohbytes.as_slice());
+                return Geladen {
+                    wert: T::default(),
+                    ersetzung: Some(Ersetzung {
+                        datei: pfad,
+                        welche,
+                        // Woertlich derselbe Satz wie im Zettelweg von
+                        // [`text_laden`](Self::text_laden): eine Sache, eine
+                        // Formulierung.
+                        grund: Grund::Beschaedigt(String::from("keine gueltige UTF-8-Folge")),
+                        beiseite,
                     }),
                 };
             }

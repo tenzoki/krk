@@ -2253,7 +2253,7 @@ fn eine_abgeschnittene_lesung_sagt_nur_was_sie_entscheidet() {
     assert_eq!(
         werte[0].1,
         &Wert::UeberGrenze(HOECHSTENS_EINTRAEGE as u64),
-        "die Zaehlung sagt, dass es mehr sind, und keine Zahl"
+        "die Zaehlung nennt die Treffer und den Abbruch, nicht eine Zahl"
     );
     assert_eq!(
         werte[1].1,
@@ -4074,6 +4074,110 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
          gelesen hat; eine Zeile, die nichts findet, oeffnet auch nichts, und die \
          fuenf Oeffnungen darueber waeren dann keine fuenf Treffer"
     );
+}
+
+/// C5.8: Liegt `orchestrator-live.md` unter einem anderen Namen, zeigt allein
+/// die Zeile „Sitzung" ihren Platzhalter; die uebrigen sechs stimmen weiter.
+///
+/// **Geprueft wird an der Auslieferungsfassung und nicht an einem nachgebauten
+/// Profil.** Die Zusage aus C5.8 spricht ueber die **mitgelieferten** Profile,
+/// und `das_feld_zieht_die_erste_fanggruppe_des_ersten_treffers` misst dieselbe
+/// Mechanik an einem von Hand gebauten Profilsatz: bis zum 260906 war das der
+/// einzige Beleg, und was die mitgelieferten Profile in dieser Lage tun, mass
+/// niemand
+/// (`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1852_*_zwei-abnahmekriterien-aus-c5-sind-weder-durch-eine-probe-belegt-noch-stehen-sie-unter-nutzerarbeit.md`).
+///
+/// **Umbenannt und nicht geloescht**, weil das Kriterium den Pruefweg selbst
+/// ausschreibt: „geprueft wird, indem man `orchestrator-live.md` unter einen
+/// anderen Namen legt". Der Unterschied ist keine Kleinigkeit — der Ordner
+/// traegt danach genauso viele Eintraege wie vorher, und die Zeile „Sitzung"
+/// faellt am Muster und nicht daran, dass nichts mehr dasteht.
+#[test]
+fn ohne_orchestrator_live_zeigt_allein_die_sitzungszeile_ihren_platzhalter() {
+    let profile = ausgelieferte();
+    let wurzel = werkbankwurzel("c5-8-ohne-sitzung");
+    std::fs::rename(
+        wurzel.unter("orchestrator-live.md"),
+        wurzel.unter("orchestrator-live.md.alt"),
+    )
+    .expect("die Sitzungsdatei laesst sich nicht umbenennen");
+
+    let (zusammenfassung, _haushalt) =
+        gezaehlt_erkannt(&profile, wurzel.pfad()).expect("das Wurzelprofil greift nicht mehr");
+    let werte = werte(&zusammenfassung);
+
+    assert_eq!(
+        werte.iter().map(|(name, _)| *name).collect::<Vec<_>>(),
+        [
+            "Projekt",
+            "Eingerichtet",
+            "fusion-Fassung",
+            "Aktive Runde",
+            "Sitzung",
+            "Runden",
+            "Offene Defekte, gemeinsam"
+        ],
+        "gemessen wurde nicht das Profil der Werkbankwurzel"
+    );
+    assert_eq!(
+        werte
+            .iter()
+            .map(|(_, wert)| (*wert).clone())
+            .collect::<Vec<_>>(),
+        [
+            Wert::Text("krk".to_owned()),
+            Wert::Text("260801-0900".to_owned()),
+            Wert::Text("5.3.1".to_owned()),
+            Wert::Text("circles/260823-2208-vorschau".to_owned()),
+            // Die eine Zeile, der ihre Datei fehlt.
+            Wert::Nicht,
+            Wert::Zahl(3),
+            Wert::Zahl(2),
+        ],
+        "eine fehlende Sitzungsdatei nimmt mehr als ihre eigene Zeile mit"
+    );
+}
+
+/// C5.9: Das **mitgelieferte** Profil greift nur in einer Werkbank.
+///
+/// Ein gewoehnlicher Ordner bekommt das eingebaute Default-Profil und kein
+/// erkanntes, und zwar auch dann, wenn er Unterordner traegt, die in einer
+/// Werkbank einen Speicher benennten. Zwei Sperren halten das, und die Probe
+/// prueft beide: die sechs Profile mit Pfadmuster verlangen `fusion-workbench/`
+/// oder `flight-workbench/` **im Pfad**, die sechs mit Kennzeichendatei
+/// verlangen einen der vier Eintraege `.fusion-setup`, `_._circle.md`,
+/// `fusion-workbench` und `.flight-setup` beziehungsweise `flight-workbench`
+/// **im Ordner**.
+///
+/// **Ohne diese Probe war die Zusage nur fuer heute nachgesehen.** Ein
+/// siebentes Pfadmuster, das den Werkbanknamen weglaesst, ergaebe einen gruenen
+/// Bau und eine gruene Probenreihe; derselbe Datensatz wie bei C5.8.
+#[test]
+fn die_mitgelieferten_profile_greifen_ausserhalb_einer_werkbank_nicht() {
+    let profile = ausgelieferte();
+    let fremd = Pruefordner::neu("c5-9-fremder-ordner");
+    fremd.datei("Notizen.md", "# Notizen\n");
+    fremd.datei(".versteckt", "");
+    for name in ["issues", "decisions", "planning", "circles", "archive"] {
+        let unterordner = fremd.ordner(name);
+        schreiben(&unterordner, "260906-1200_o_ein Datensatz.md", "Text\n");
+    }
+
+    for ordner in [
+        fremd.pfad().to_path_buf(),
+        fremd.unter("issues"),
+        fremd.unter("circles"),
+        fremd.unter("archive"),
+    ] {
+        assert!(
+            matches!(
+                zusammenfassen(&profile, &ordner),
+                Some(Auskunft::Default(_))
+            ),
+            "ein mitgeliefertes Profil greift ausserhalb einer Werkbank: {}",
+            ordner.display()
+        );
+    }
 }
 
 /// Die Gegenprobe zu C6.7 am Speicherprofil: ein elfter Unterspeicher kostet
