@@ -83,3 +83,6 @@ Baum von heute.
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1651 beantwortet` — Moeglichkeit 2: zwei Typen fuer zwei Fragen, damit die Verdrehung unuebersetzbar wird. Preis: ein Typ mehr und eine Umrechnung an inzwischen vier Pruefstellen. Der guenstige Zeitpunkt ist verstrichen, und der Nutzer waehlt trotzdem den starken Weg — die Verwechslung ist einmal eingetreten, und gefunden hat sie er und keine Probe; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: f8ebeae — `Warnbefund` und `Erlaubnisbefund` (crates/krk-core/src/verzeichnis/loeschzielbefund.rs) sind zwei eigenstaendige Aufzaehlungen; der dritte Wert steht in beiden. Der Uebersetzer hat die Verdrehung waehrend der Umstellung an zwei Stellen in `loeschwarnung.rs` selbst gefangen. Ein `compile_fail`-Doktest haelt sie, gepaart mit einem gewoehnlichen; die Verwechslung zweier Fragen derselben Richtung bleibt nicht ausdrueckbar und steht als solche im Modulkopf.

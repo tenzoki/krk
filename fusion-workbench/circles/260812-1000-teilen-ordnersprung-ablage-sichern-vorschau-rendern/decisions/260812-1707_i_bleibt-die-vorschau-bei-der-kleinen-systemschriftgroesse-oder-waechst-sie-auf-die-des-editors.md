@@ -68,3 +68,6 @@ Superseded by:
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1651 beantwortet` — Moeglichkeit 3: beide Flaechen gehen auf die kleine Systemschriftgroesse. Der Nutzer holt nicht die alte Ungleichheit zurueck, sondern zieht Editor und Vorschau gemeinsam herunter; die Groesse, die der Editor seit seiner Runde bewusst trug, faellt damit, und das ist mitentschieden; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: f8ebeae — `grundmerkmale` (crates/krk-ui/src/appkit/textmerkmale.rs) rechnet aus `NSFont::smallSystemFontSize()`; Editor und Vorschau gehen gemeinsam herunter, in Roh- und Formatansicht. Zwei weitere Rechnungen mit eigenem Literal sind im selben Zug an die eine Stelle gezogen. Die sichtbare Seite ist damit nicht abgenommen: sie verlangt das laufende Buendel.
