@@ -71,7 +71,7 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
         // Ordnerwechsel in eine leere Liste waere die wortlose Variante.
         if let Err(fehler) = std::fs::read_dir(pfad) {
             return Ergebnis::Meldung(format!(
-                "{} laesst sich nicht lesen: {fehler}",
+                "{} lässt sich nicht lesen: {fehler}",
                 pfad.display()
             ));
         }

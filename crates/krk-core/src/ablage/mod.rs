@@ -294,9 +294,9 @@ impl Grund {
     fn beschreibung(&self) -> &'static str {
         match self {
             Grund::NichtLesbar(_) => "ist nicht lesbar",
-            Grund::Beschaedigt(_) => "ist beschaedigt",
-            Grund::NichtAnlegbar(_) => "liess sich nicht anlegen",
-            Grund::ZuGross { .. } => "ist zu gross",
+            Grund::Beschaedigt(_) => "ist beschädigt",
+            Grund::NichtAnlegbar(_) => "ließ sich nicht anlegen",
+            Grund::ZuGross { .. } => "ist zu groß",
         }
     }
 
@@ -467,19 +467,19 @@ impl fmt::Display for Ersetzung {
             ),
             Beiseite::Gekuerzt(pfad) => write!(
                 ausgabe,
-                "Die bisherige Fassung liegt gekuerzt unter {}, gesichert sind allein ihre \
+                "Die bisherige Fassung liegt gekürzt unter {}, gesichert sind allein ihre \
                  ersten {EDITORGRENZE} Bytes; {datei} {beschreibung} {ersatz}: {einzelheit}",
                 pfad.display()
             ),
             Beiseite::SchonVorhanden(pfad) => write!(
                 ausgabe,
-                "Die bisherige Fassung liegt seit einem frueheren Start unter {} und bleibt dort; \
+                "Die bisherige Fassung liegt seit einem früheren Start unter {} und bleibt dort; \
                  {datei} {beschreibung} {ersatz}: {einzelheit}",
                 pfad.display()
             ),
             Beiseite::Gescheitert(fehler) => write!(
                 ausgabe,
-                "Der Inhalt liess sich nicht zur Seite legen ({fehler}); {datei} {beschreibung} \
+                "Der Inhalt ließ sich nicht zur Seite legen ({fehler}); {datei} {beschreibung} \
                  {ersatz}: {einzelheit}"
             ),
         }
@@ -732,7 +732,7 @@ impl Zugang<'_> {
                         // Woertlich derselbe Satz wie im Zettelweg von
                         // [`text_laden`](Self::text_laden): eine Sache, eine
                         // Formulierung.
-                        grund: Grund::Beschaedigt(String::from("keine gueltige UTF-8-Folge")),
+                        grund: Grund::Beschaedigt(String::from("keine gültige UTF-8-Folge")),
                         beiseite,
                     }),
                 };
@@ -745,7 +745,7 @@ impl Zugang<'_> {
                     datei: pfad,
                     welche,
                     grund: Grund::Beschaedigt(String::from(
-                        "die Datei traegt keinen einzigen obersten Schluessel, \
+                        "die Datei trägt keinen einzigen obersten Schlüssel, \
                          und KRK schreibt sie nie so",
                     )),
                     // Hier wird nichts zur Seite gelegt, und der Grund steht
@@ -867,7 +867,7 @@ impl Zugang<'_> {
                 let grund = match grund {
                     Unlesbarkeit::ZuGross(groesse) => Grund::ZuGross { groesse },
                     Unlesbarkeit::KeinText => {
-                        Grund::Beschaedigt(String::from("keine gueltige UTF-8-Folge"))
+                        Grund::Beschaedigt(String::from("keine gültige UTF-8-Folge"))
                     }
                 };
                 Geladen {

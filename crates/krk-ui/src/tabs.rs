@@ -1563,7 +1563,7 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
             Meldung::Fertig { abschluss, .. } => {
                 if let Abschluss::Fehler(fehler) = &abschluss {
                     tab.meldung = Some(format!(
-                        "{} liess sich nicht vollstaendig lesen: {fehler}",
+                        "{} ließ sich nicht vollständig lesen: {fehler}",
                         tab.ordner.display()
                     ));
                     einzug.meldung_neu = true;

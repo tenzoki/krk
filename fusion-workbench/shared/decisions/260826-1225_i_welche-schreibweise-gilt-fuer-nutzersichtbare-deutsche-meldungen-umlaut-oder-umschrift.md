@@ -114,3 +114,6 @@ misst an derselben Ablage, was ein Wortmuster hier übersieht.
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0703 beantwortet` — Umlaute in allem, was ein Mensch liest; die Umschrift bleibt fuer Kommentare und Bezeichner. Die Trennlinie ist an jeder Zeichenkette entscheidbar, und die Oberflaeche traegt schon heute mehrheitlich Umlaute; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-0826-umlaute-in-nutzersichtbarem-text.md `## Was geaendert ist` — 61 Zeichenketten in `krk-core` und `krk-ui`, die durch KRKs Oberflaeche gehen, tragen Umlaute; acht Proben auf den Wortlaut ziehen mit. Zwei Fragen bleiben offen und stehen als eigene Datensaetze: der Umfang jenseits der Oberflaeche (`260907-0826_*_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md`) und die Haltung der Naht (`260907-0826_*_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md`).

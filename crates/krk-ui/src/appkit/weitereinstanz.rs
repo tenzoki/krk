@@ -73,7 +73,7 @@ use objc2_foundation::{NSBundle, NSURL};
 /// Probe ihn nennen kann, ohne ihn abzuschreiben: [`starten`] selbst laesst
 /// sich ohne laufendes Buendel nicht pruefen.
 pub const OHNE_BUENDEL: &str =
-    "KRK laeuft nicht aus einem Buendel; eine weitere Instanz startet nur das gebaute KRK.app";
+    "KRK läuft nicht aus einem Bündel; eine weitere Instanz startet nur das gebaute KRK.app";
 
 /// Der Ort des Buendels, in dem die laufende Instanz steckt.
 ///
@@ -158,6 +158,6 @@ mod tests {
             eigenes_buendel().is_none(),
             "der Probenlauf steckt unerwartet in einem Buendel"
         );
-        assert!(OHNE_BUENDEL.contains("Buendel"));
+        assert!(OHNE_BUENDEL.contains("Bündel"));
     }
 }

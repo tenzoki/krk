@@ -1219,7 +1219,7 @@ fn als_c_pfad(pfad: &Path) -> io::Result<CString> {
     CString::new(pfad.as_os_str().as_bytes()).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("{} enthaelt ein Nullbyte", pfad.display()),
+            format!("{} enthält ein Nullbyte", pfad.display()),
         )
     })
 }

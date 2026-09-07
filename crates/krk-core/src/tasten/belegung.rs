@@ -1789,7 +1789,7 @@ impl fmt::Display for Belegungsfehler {
                 fehler,
             } => write!(
                 ausgabe,
-                "die Funktion {kennung} traegt die Kombination \"{text}\": {fehler}"
+                "die Funktion {kennung} trägt die Kombination \"{text}\": {fehler}"
             ),
             Belegungsfehler::UnbekannteFunktion(kennung) => {
                 write!(ausgabe, "KRK kennt keine Funktion namens {kennung}")

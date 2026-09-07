@@ -139,7 +139,7 @@ fn ueber_datentraeger(
         if !selbst_genannt {
             steuerung.ueberspringen(
                 quelle.pfad,
-                "nicht vollstaendig kopiert, in der Quelle geblieben",
+                "nicht vollständig kopiert, in der Quelle geblieben",
             );
         }
         return Ablauf::Weiter;

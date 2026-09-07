@@ -329,7 +329,7 @@ fn einen_abarbeiten(
         // Auffangzweig hat; sein Rumpf meldet statt stillzuschweigen, damit ein
         // spaeterer Umbau der Verzweigung nicht unbemerkt hier landet.
         Art::Zippen { .. } => {
-            steuerung.ueberspringen(pfad, "das Packen laeuft nicht Quelle fuer Quelle");
+            steuerung.ueberspringen(pfad, "das Packen läuft nicht Quelle für Quelle");
             Ablauf::Weiter
         }
     }
@@ -511,7 +511,7 @@ pub(crate) fn ziel_klaeren(
             Err(fehler) => {
                 steuerung.ueberspringen(
                     quelle.pfad,
-                    format!("das Ziel liess sich nicht ersetzen: {}", grund(&fehler)),
+                    format!("das Ziel ließ sich nicht ersetzen: {}", grund(&fehler)),
                 );
                 Zielentscheid::Ueberspringen
             }
@@ -555,7 +555,7 @@ pub(crate) fn grund(fehler: &io::Error) -> String {
         io::ErrorKind::PermissionDenied => "keine Rechte".to_owned(),
         io::ErrorKind::NotFound => "gibt es nicht mehr".to_owned(),
         io::ErrorKind::AlreadyExists => "am Ziel steht schon ein Eintrag".to_owned(),
-        io::ErrorKind::StorageFull => "kein Platz mehr auf dem Datentraeger".to_owned(),
+        io::ErrorKind::StorageFull => "kein Platz mehr auf dem Datenträger".to_owned(),
         _ => fehler.to_string(),
     }
 }

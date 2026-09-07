@@ -2119,7 +2119,7 @@ mod tests {
         );
         assert_eq!(
             umbenennung_pruefen("alt.txt", "unter/ordner"),
-            Umbenennungswunsch::Abgelehnt("ein Name darf keinen Schraegstrich enthalten")
+            Umbenennungswunsch::Abgelehnt("ein Name darf keinen Schrägstrich enthalten")
         );
         assert_eq!(
             umbenennung_pruefen("alt.txt", ".."),

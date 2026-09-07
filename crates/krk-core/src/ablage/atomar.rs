@@ -138,7 +138,7 @@ fn mit_endung(ziel: &Path, endung: &str) -> io::Result<PathBuf> {
     let Some(name) = ziel.file_name() else {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("{} traegt keinen Dateinamen", ziel.display()),
+            format!("{} trägt keinen Dateinamen", ziel.display()),
         ));
     };
     let mut nachbarname = name.to_os_string();
@@ -240,7 +240,7 @@ fn rechte_uebernehmen(ziel: &Path, nachbar: &fs::File) -> io::Result<()> {
     let gesetzt = rechte_am_deskriptor(nachbar)?;
     if gesetzt != soll {
         return Err(io::Error::other(format!(
-            "die Rechte {soll:o} von {} lassen sich nicht uebertragen; die Nachbardatei steht auf {gesetzt:o}",
+            "die Rechte {soll:o} von {} lassen sich nicht übertragen; die Nachbardatei steht auf {gesetzt:o}",
             ziel.display()
         )));
     }

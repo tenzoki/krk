@@ -203,7 +203,7 @@ fn zielordner_klaeren(
                 steuerung.ueberspringen(
                     quelle.pfad,
                     format!(
-                        "das Ziel liess sich nicht in den Papierkorb raeumen: {}",
+                        "das Ziel ließ sich nicht in den Papierkorb räumen: {}",
                         grund(&fehler)
                     ),
                 );
@@ -269,7 +269,7 @@ fn eintraege_entpacken(
             drop(eintrag);
             steuerung.ueberspringen(
                 archivpfad,
-                format!("«{name}» fuehrt aus dem Zielordner heraus und ist ausgelassen"),
+                format!("«{name}» führt aus dem Zielordner heraus und ist ausgelassen"),
             );
             continue;
         };
@@ -315,7 +315,7 @@ fn eintraege_entpacken(
             drop(eintrag);
             steuerung.ueberspringen(
                 archivpfad,
-                format!("«{name}»: am Ziel steht schon eine Verknuepfung"),
+                format!("«{name}»: am Ziel steht schon eine Verknüpfung"),
             );
             continue;
         }
@@ -437,20 +437,20 @@ fn kette_anlegen(wurzel: &Path, kette: &Path) -> io::Result<()> {
         // hier die Sperre selbst waere, die aufgehoben wird.
         let Component::Normal(name) = teil else {
             return Err(io::Error::other(
-                "der Weg zum Eintrag traegt einen unzulaessigen Bestandteil",
+                "der Weg zum Eintrag trägt einen unzulässigen Bestandteil",
             ));
         };
         hier.push(name);
         match fs::symlink_metadata(&hier) {
             Ok(vorhanden) if vorhanden.is_symlink() => {
                 return Err(io::Error::other(
-                    "der Weg zum Eintrag fuehrt durch eine Verknuepfung aus dem Zielordner heraus",
+                    "der Weg zum Eintrag führt durch eine Verknüpfung aus dem Zielordner heraus",
                 ));
             }
             Ok(vorhanden) if vorhanden.is_dir() => {}
             Ok(_) => {
                 return Err(io::Error::other(
-                    "auf dem Weg zum Eintrag steht eine Datei, wo ein Ordner stehen muesste",
+                    "auf dem Weg zum Eintrag steht eine Datei, wo ein Ordner stehen müsste",
                 ));
             }
             Err(_) => fs::create_dir(&hier)?,
@@ -473,7 +473,7 @@ fn verknuepfung_ablegen(eintrag: &mut impl Read, pfad: &Path) -> io::Result<()> 
     // fordern.
     eintrag.take(1024).read_to_end(&mut verweis)?;
     let verweis = String::from_utf8(verweis)
-        .map_err(|_| io::Error::other("das Verweisziel ist kein gueltiger Text"))?;
+        .map_err(|_| io::Error::other("das Verweisziel ist kein gültiger Text"))?;
     std::os::unix::fs::symlink(verweis, pfad)
 }
 
@@ -537,7 +537,7 @@ fn halbe_datei_wegraeumen(pfad: &Path, steuerung: &mut Steuerung) {
     {
         steuerung.ueberspringen(
             pfad,
-            format!("nach dem Abbruch nicht weggeraeumt: {}", grund(&fehler)),
+            format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
         );
     }
 }

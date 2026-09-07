@@ -2029,7 +2029,7 @@ fn eine_benannte_roehre_mit_schreiber_haelt_das_packen_nicht_an() {
         bericht.uebersprungen
     );
     assert_eq!(bericht.uebersprungen[0].pfad, roehre);
-    assert_eq!(bericht.uebersprungen[0].grund, "keine gewoehnliche Datei");
+    assert_eq!(bericht.uebersprungen[0].grund, "keine gewöhnliche Datei");
     assert_eq!(
         archivnamen(&archiv),
         vec!["quelle/".to_owned(), "quelle/datei.txt".to_owned()],
@@ -2262,7 +2262,7 @@ fn ein_eintrag_der_aus_dem_zielordner_herausfuehrt_entsteht_nirgends() {
     assert!(
         gruende
             .iter()
-            .all(|grund| grund.contains("fuehrt aus dem Zielordner heraus")),
+            .all(|grund| grund.contains("führt aus dem Zielordner heraus")),
         "die Gruende nennen den Ausbruch nicht: {gruende:?}"
     );
     assert!(
@@ -2312,7 +2312,7 @@ fn ein_eintrag_hinter_einer_verknuepfung_schreibt_nicht_aus_dem_zielordner_herau
     );
     assert_eq!(bericht.uebersprungen.len(), 1);
     assert!(
-        bericht.uebersprungen[0].grund.contains("Verknuepfung"),
+        bericht.uebersprungen[0].grund.contains("Verknüpfung"),
         "der Grund nennt den Weg nicht: {}",
         bericht.uebersprungen[0].grund
     );

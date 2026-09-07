@@ -96,7 +96,7 @@ fn datei(
             {
                 steuerung.ueberspringen(
                     ziel,
-                    format!("nach dem Abbruch nicht weggeraeumt: {}", grund(&fehler)),
+                    format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
                 );
             }
             Ablauf::Abgebrochen

@@ -286,7 +286,7 @@ fn zielarchiv_klaeren(
                 steuerung.ueberspringen(
                     ziel,
                     format!(
-                        "das Ziel liess sich nicht in den Papierkorb raeumen: {}",
+                        "das Ziel ließ sich nicht in den Papierkorb räumen: {}",
                         grund(&fehler)
                     ),
                 );
@@ -321,7 +321,7 @@ fn halbes_archiv_wegraeumen(archiv: &Path, steuerung: &mut Steuerung) {
     {
         steuerung.ueberspringen(
             archiv,
-            format!("nach dem Abbruch nicht weggeraeumt: {}", grund(&fehler)),
+            format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
         );
     }
 }
@@ -406,7 +406,7 @@ fn datei_packen(
     let angaben = match gelesen.metadata() {
         Ok(angaben) if angaben.is_file() => angaben,
         Ok(_) => {
-            steuerung.ueberspringen(quelle.pfad, "keine gewoehnliche Datei");
+            steuerung.ueberspringen(quelle.pfad, "keine gewöhnliche Datei");
             return Packschritt::Weiter;
         }
         Err(fehler) => {

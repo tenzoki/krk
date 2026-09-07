@@ -346,7 +346,7 @@ const FINDERKENNUNG: &str = "com.apple.finder";
 /// braucht einen Ablageordner und ein Fenster und ist ohne beides nicht zu
 /// pruefen. **Dass der Satz in der Statuszeile ankommt, sieht der Nutzer am
 /// laufenden Buendel**; er geht denselben Weg wie jede andere Startmeldung.
-const OHNE_SITZUNGSRECHT: &str = "eine weitere Instanz von KRK laeuft schon; Tabs und Aufteilung \
+const OHNE_SITZUNGSRECHT: &str = "eine weitere Instanz von KRK läuft schon; Tabs und Aufteilung \
                                   dieses Fensters werden nicht gesichert";
 
 /// Welche Station des Faengers einen Tastendruck der Belegungsansicht bekommt.
@@ -1771,7 +1771,7 @@ impl Anwendungsdelegierter {
             Ok(ablage) => ablage,
             Err(fehler) => {
                 meldungen.push(format!(
-                    "der Ablageordner liess sich nicht oeffnen, die Sitzung wird nicht gesichert: {fehler}"
+                    "der Ablageordner ließ sich nicht öffnen, die Sitzung wird nicht gesichert: {fehler}"
                 ));
                 return (Sitzung::default(), meldungen);
             }
@@ -1790,7 +1790,7 @@ impl Anwendungsdelegierter {
             Ok(recht) => recht,
             Err(fehler) => {
                 meldungen.push(format!(
-                    "das Sitzungsrecht laesst sich nicht anfordern, die Sitzung wird nicht \
+                    "das Sitzungsrecht lässt sich nicht anfordern, die Sitzung wird nicht \
                      gesichert: {fehler}"
                 ));
                 Sitzungsrecht::ohne()
@@ -1843,7 +1843,7 @@ impl Anwendungsdelegierter {
             Ok(alle_drei) => alle_drei,
             Err(fehler) => {
                 meldungen.push(format!(
-                    "die Schreibsperre der Ablage laesst sich nicht nehmen, es wird nichts \
+                    "die Schreibsperre der Ablage lässt sich nicht nehmen, es wird nichts \
                      geladen und nichts gesichert: {fehler}"
                 ));
                 return (Sitzung::default(), meldungen);
@@ -1979,7 +1979,7 @@ impl Anwendungsdelegierter {
             Err(Sperrhindernis::OhneOrdner) => Lesezeichenliste::default(),
             Err(Sperrhindernis::Gesperrt(fehler)) => {
                 meldungen.push(format!(
-                    "die Lesezeichen liessen sich nicht laden, die Schreibsperre der Ablage \
+                    "die Lesezeichen ließen sich nicht laden, die Schreibsperre der Ablage \
                      ist nicht zu nehmen: {fehler}"
                 ));
                 Lesezeichenliste::default()
@@ -2130,7 +2130,7 @@ impl Anwendungsdelegierter {
                 self.antwort_zeigen(
                     seite,
                     &format!(
-                        "die Lesezeichen liessen sich nicht aendern, die Schreibsperre der \
+                        "die Lesezeichen ließen sich nicht ändern, die Schreibsperre der \
                          Ablage ist nicht zu nehmen: {fehler}"
                     ),
                 );
@@ -2164,14 +2164,14 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(
                 seite,
                 "dieses Lesezeichen steht nicht mehr so in der Liste; eine andere Instanz \
-                 von KRK hat es geaendert oder geloescht",
+                 von KRK hat es geändert oder gelöscht",
             );
             return;
         }
         if let Some(Err(fehler)) = geschrieben {
             self.antwort_zeigen(
                 seite,
-                &format!("die Lesezeichen liessen sich nicht sichern: {fehler}"),
+                &format!("die Lesezeichen ließen sich nicht sichern: {fehler}"),
             );
         }
     }
@@ -2969,7 +2969,7 @@ impl Anwendungsdelegierter {
             self.dateifenster(self.ivars().modell.borrow().aktiv())
                 .quelle()
                 .meldung_zeigen(
-                    "die Ordner lassen sich nicht beobachten; fremde Aenderungen erscheinen erst nach einem Ordnerwechsel",
+                    "die Ordner lassen sich nicht beobachten; fremde Änderungen erscheinen erst nach einem Ordnerwechsel",
                 );
         }
         *self.ivars().dateisystemwache.borrow_mut() = wache;
@@ -4228,7 +4228,7 @@ impl Anwendungsdelegierter {
         let meldung = match self.unter_der_sperre(|zugang| belegung.sichern(zugang)) {
             Ok(Ok(())) => None,
             Ok(Err(fehler)) => Some(format!(
-                "die Belegung gilt, liess sich aber nicht sichern: {fehler}"
+                "die Belegung gilt, ließ sich aber nicht sichern: {fehler}"
             )),
             Err(Sperrhindernis::OhneOrdner) => Some(
                 "die Belegung gilt, ist aber ohne Ablageordner nicht gesichert und geht mit dem Beenden verloren"
@@ -4236,7 +4236,7 @@ impl Anwendungsdelegierter {
             ),
             Err(Sperrhindernis::Gesperrt(fehler)) => Some(format!(
                 "die Belegung gilt, ist aber nicht gesichert: die Schreibsperre der Ablage \
-                 laesst sich nicht nehmen ({fehler})"
+                 lässt sich nicht nehmen ({fehler})"
             )),
         };
         *self.ivars().belegung.borrow_mut() = belegung;
@@ -4440,7 +4440,7 @@ impl Anwendungsdelegierter {
             Err(Sperrhindernis::Gesperrt(fehler)) => (
                 String::new(),
                 Some(format!(
-                    "der Notizzettel ist nicht lesbar: die Schreibsperre der Ablage laesst sich \
+                    "der Notizzettel ist nicht lesbar: die Schreibsperre der Ablage lässt sich \
                      nicht nehmen ({fehler})"
                 )),
             ),
@@ -4593,7 +4593,7 @@ impl Anwendungsdelegierter {
                 // ersten sagt ueber ihn nichts.
                 Err(fehler) => {
                     meldung.get_or_insert_with(|| {
-                        format!("der Notizzettel liess sich nicht sichern: {fehler}")
+                        format!("der Notizzettel ließ sich nicht sichern: {fehler}")
                     });
                 }
             }
@@ -4638,7 +4638,7 @@ impl Anwendungsdelegierter {
                 Some("der Notizzettel ist ohne Ablageordner nicht gesichert".to_owned())
             }
             Err(Sperrhindernis::Gesperrt(fehler)) => Some(format!(
-                "der Notizzettel ist nicht gesichert: die Schreibsperre der Ablage laesst sich \
+                "der Notizzettel ist nicht gesichert: die Schreibsperre der Ablage lässt sich \
                  nicht nehmen ({fehler})"
             )),
         };
@@ -7064,7 +7064,7 @@ impl Anwendungsdelegierter {
             // hat noch nichts angefasst.
             self.antwort_zeigen(
                 seite,
-                &format!("die Operation liess sich nicht starten: {fehler}"),
+                &format!("die Operation ließ sich nicht starten: {fehler}"),
             );
             return true;
         }
@@ -8427,7 +8427,7 @@ impl Anwendungsdelegierter {
             // In die Zeile des aktiven Dateifensters, aus demselben Grund wie
             // die Startmeldungen: die Sitzung gehoert der Anwendung und keiner
             // Seite, und der Nutzer sieht auf die Seite, in der er arbeitet.
-            let meldung = format!("die Sitzung liess sich nicht sichern: {fehler}");
+            let meldung = format!("die Sitzung ließ sich nicht sichern: {fehler}");
             let aktiv = self.ivars().modell.borrow().aktiv();
             self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }

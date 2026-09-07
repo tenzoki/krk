@@ -46,7 +46,7 @@ impl Namensfehler {
     pub fn grund(self) -> &'static str {
         match self {
             Namensfehler::Leer => "der Name ist leer",
-            Namensfehler::Schraegstrich => "ein Name darf keinen Schraegstrich enthalten",
+            Namensfehler::Schraegstrich => "ein Name darf keinen Schrägstrich enthalten",
             Namensfehler::Nullbyte => "ein Name darf kein Nullbyte enthalten",
             Namensfehler::Punktname => "'.' und '..' sind keine Namen",
         }

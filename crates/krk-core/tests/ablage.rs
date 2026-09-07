@@ -1549,7 +1549,7 @@ fn eine_ablagedatei_mit_ungueltigem_utf_8_geht_zur_seite() {
     let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     let ersetzung = geladen.ersetzung.expect("keine Meldung");
     assert!(
-        matches!(&ersetzung.grund, Grund::Beschaedigt(satz) if satz == "keine gueltige UTF-8-Folge"),
+        matches!(&ersetzung.grund, Grund::Beschaedigt(satz) if satz == "keine gültige UTF-8-Folge"),
         "{ersetzung:?}"
     );
 
@@ -1617,7 +1617,7 @@ fn die_meldung_unterscheidet_die_fuenf_lagen_und_bleibt_einzeilig() {
     assert_eq!(
         bau(Beiseite::Nicht).to_string(),
         format!(
-            "{} ist beschaedigt und wird durch den Auslieferungszustand ersetzt: \
+            "{} ist beschädigt und wird durch den Auslieferungszustand ersetzt: \
              Zeile 3, Spalte 7",
             datei.display()
         )
@@ -2048,7 +2048,7 @@ fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_gekuerzt_beiseite() {
         "die Meldung nennt Groesse und Grenze nicht: {text}"
     );
     assert!(
-        text.contains("gekuerzt"),
+        text.contains("gekürzt"),
         "die Meldung verschweigt, dass die Sicherung nicht vollstaendig ist: {text}"
     );
 }
@@ -3321,7 +3321,7 @@ fn die_ersetzung_kommt_als_text_zurueck_und_landet_auf_keinem_kanal() {
     assert_eq!(sitzung, Sitzung::default());
     let meldung = meldung.expect("eine beschaedigte Datei muss eine Meldung tragen");
     assert!(meldung.contains("session.toml"), "{meldung}");
-    assert!(meldung.contains("ist beschaedigt"), "{meldung}");
+    assert!(meldung.contains("ist beschädigt"), "{meldung}");
     assert!(meldung.contains("Auslieferungszustand"), "{meldung}");
     assert!(
         !meldung.starts_with("krk: "),

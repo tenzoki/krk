@@ -60,8 +60,8 @@ impl fmt::Display for Konflikt {
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             ausgabe,
-            "die Kombination {} gehoert schon der Funktion {} und laesst sich nicht \
-             zusaetzlich der Funktion {} zuweisen",
+            "die Kombination {} gehört schon der Funktion {} und lässt sich nicht \
+             zusätzlich der Funktion {} zuweisen",
             self.kombination, self.andere, self.bewerber
         )
     }

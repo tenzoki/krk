@@ -430,7 +430,7 @@ pub fn pruefen(datei: Profildatei) -> (Profile, Vec<String>) {
         if pfad.is_none() && kennzeichen.is_none() {
             meldungen.push(profilmeldung(
                 &name,
-                "es nennt weder ein Pfadmuster noch eine Kennzeichendatei und koennte damit nie \
+                "es nennt weder ein Pfadmuster noch eine Kennzeichendatei und könnte damit nie \
                  treffen",
             ));
             continue;
@@ -506,14 +506,14 @@ fn erkennungsmuster(text: Option<&str>, was: &str) -> Result<Option<Regex>, Stri
         None => Ok(None),
         Some(text) => uebersetzen(text)
             .map(Some)
-            .map_err(|grund| format!("{was} {text:?} laesst sich nicht uebersetzen: {grund}")),
+            .map_err(|grund| format!("{was} {text:?} lässt sich nicht übersetzen: {grund}")),
     }
 }
 
 /// Uebersetzt ein Muster, das in einem Baustein dastehen muss.
 fn muster(text: &str) -> Result<Regex, String> {
     uebersetzen(text)
-        .map_err(|grund| format!("das Muster {text:?} laesst sich nicht uebersetzen: {grund}"))
+        .map_err(|grund| format!("das Muster {text:?} lässt sich nicht übersetzen: {grund}"))
 }
 
 /// Uebersetzt ein Muster, das in einem Baustein fehlen darf.
@@ -537,7 +537,7 @@ fn feldmuster(text: &str) -> Result<Regex, String> {
         return Ok(ausdruck);
     }
     Err(format!(
-        "das Feldmuster {text:?} traegt {gruppen} Fanggruppen und nicht genau eine"
+        "das Feldmuster {text:?} trägt {gruppen} Fanggruppen und nicht genau eine"
     ))
 }
 
@@ -566,9 +566,9 @@ fn ortsangabe_ohne_platzhalter(angabe: Option<&str>, baustein: &str) -> Result<O
     match angabe.filter(|_| ort.traegt_platzhalter()) {
         None => Ok(ort),
         Some(text) => Err(format!(
-            "die Ortsangabe {text:?} traegt einen Platzhalter, und der Baustein \
-             \u{201e}{baustein}\u{201c} nimmt keinen an: er liest Dateien und braucht dafuer \
-             ihren Pfad, den ein zusammengelegter Lesestand nicht traegt"
+            "die Ortsangabe {text:?} trägt einen Platzhalter, und der Baustein \
+             \u{201e}{baustein}\u{201c} nimmt keinen an: er liest Dateien und braucht dafür \
+             ihren Pfad, den ein zusammengelegter Lesestand nicht trägt"
         )),
     }
 }

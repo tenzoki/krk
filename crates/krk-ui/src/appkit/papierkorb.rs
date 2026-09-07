@@ -129,7 +129,7 @@ impl Papierkorb for Systempapierkorb {
         let Some(text) = pfad.to_str() else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("{} ist kein gueltiger UTF-8-Pfad", pfad.display()),
+                format!("{} ist kein gültiger UTF-8-Pfad", pfad.display()),
             ));
         };
         let url = NSURL::fileURLWithPath(&NSString::from_str(text));

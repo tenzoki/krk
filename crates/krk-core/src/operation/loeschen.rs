@@ -62,7 +62,7 @@ pub struct OhnePapierkorb;
 impl Papierkorb for OhnePapierkorb {
     fn in_den_papierkorb(&self, _pfad: &Path) -> io::Result<PathBuf> {
         Err(io::Error::other(
-            "kein Papierkorb eingehaengt; es wurde nichts geloescht",
+            "kein Papierkorb eingehängt; es wurde nichts gelöscht",
         ))
     }
 }

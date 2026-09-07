@@ -775,7 +775,7 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
         Ok(roh) => roh,
         Err(fehler) => {
             return Inhalt::Hinweis(format!(
-                "{} liess sich nicht lesen: {fehler}",
+                "{} ließ sich nicht lesen: {fehler}",
                 pfad.display()
             ));
         }

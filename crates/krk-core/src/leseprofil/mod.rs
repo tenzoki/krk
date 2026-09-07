@@ -559,11 +559,11 @@ impl Ortsmangel {
     pub fn grund(self) -> &'static str {
         match self {
             Ortsmangel::Absolut => "ist ein absoluter Pfad",
-            Ortsmangel::LeeresStueck => "traegt ein leeres Stueck",
-            Ortsmangel::Punktstueck => "traegt ein Stueck . oder ..",
+            Ortsmangel::LeeresStueck => "trägt ein leeres Stück",
+            Ortsmangel::Punktstueck => "trägt ein Stück . oder ..",
             Ortsmangel::MehrerePlatzhalter => {
-                "traegt mehr als einen Platzhalter * und damit Kosten, die erst am Bestand \
-                 feststuenden"
+                "trägt mehr als einen Platzhalter * und damit Kosten, die erst am Bestand \
+                 feststünden"
             }
         }
     }
