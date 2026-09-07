@@ -39,25 +39,22 @@
 //! Nur-Beglaubigungsweg: es ist nicht gesagt, dass das Buendel aus dem Stand
 //! gebaut wurde, den er gleich schiebt.
 //!
-//! **`gh` wird ueber den Suchpfad gerufen und nicht mit vollem Pfad.** Das
-//! weicht von der Gewohnheit dieses Baums ab, der die Werkzeuge des
-//! Basissystems mit vollem Pfad ruft; welche das sind, zaehlt
-//! `grep -rhoE 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u`, und
-//! eine Aufzaehlung steht hier deshalb nicht. Die Abweichung hat einen Grund:
-//! jene liefert das System, `gh` wird nachinstalliert. Es liegt je nach
-//! Mac-Architektur unter `/opt/homebrew/bin` oder unter `/usr/local/bin`, ein
-//! fester Pfad waere also auf einem der beiden Geraete falsch.
+//! **`gh` wird ueber den Suchpfad gerufen und nicht mit vollem Pfad**, und das
+//! ist seit dem 260907 die Regel und keine Ausnahme mehr: macOS liefert `gh`
+//! nicht mit, es wird nachinstalliert. Die Regel steht im Kopf von
+//! [`crate`] und hier nicht ein zweites Mal; dort steht auch, warum das
+//! Kriterium die Herkunft des Programms ist und keine Namensliste. Ortsfest ist
+//! an dieser Stelle allein, wohin eine Homebrew-Installation `gh` legt: auf
+//! Apple Silicon unter `/opt/homebrew/bin`, auf Intel unter `/usr/local/bin`.
+//! Ein fester Pfad waere auf einem der beiden Geraete falsch.
 //!
-//! **`gh` ist dabei nicht die erste Ausnahme.** `iconutil`
-//! (`bundle::symbol_bauen`) und `rustup` (`release::ziele_pruefen`) gehen
-//! denselben Weg und sind aelter; welche Werkzeuge ueber den Suchpfad gerufen
-//! werden, zaehlt `grep -rn 'Command::new("[a-z]' xtask/src` neben dieser
-//! Konstanten. Drei Prosastellen haben `gh` bis zum 260826 als die erste
-//! genannt
+//! **Bis zum 260826 haben drei Prosastellen `gh` als die erste Ausnahme
+//! genannt**; `iconutil` (`bundle::symbol_bauen`) und `rustup`
+//! (`release::ziele_pruefen`) gingen denselben Weg und waren aelter
 //! (`shared/issues/260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`).
-//! Die Frage, ob der Suchpfad die Regel fuer jedes kuenftige fremde Werkzeug
-//! wird, liegt dem Nutzer vor:
-//! `shared/decisions/260821-1221_o_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`.
+//! Mit der Regel ist die Zaehlung gegenstandslos geworden: `gh` und `rustup`
+//! liegen auf ihrer Seite, `iconutil` liegt auf der falschen und ist als Befund
+//! abgelegt.
 
 use std::fs;
 use std::path::{Path, PathBuf};

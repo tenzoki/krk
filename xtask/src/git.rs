@@ -741,11 +741,11 @@ fn aufsichtsmeldung(worte: &[&str], befund: &str) -> String {
 
 /// Ruft `git` im Projektverzeichnis und liefert seine Standardausgabe.
 ///
-/// Nach dem Muster von `security_fragen` in `sign`: absoluter Pfad, weil der
-/// Baum jedes Systemwerkzeug so ruft, `.current_dir` auf die Projektwurzel,
-/// weil die Antwort sonst am Arbeitsverzeichnis des Aufrufers haengt.
-/// Startfehler und ein Rueckgabewert ungleich null werden beide zum
-/// Laufabbruch.
+/// Nach dem Muster von `security_fragen` in `sign`: absoluter Pfad, weil macOS
+/// `git` mitliefert und die Regel im Kopf von [`crate`] dafuer den vollen Pfad
+/// vorsieht; `.current_dir` auf die Projektwurzel, weil die Antwort sonst am
+/// Arbeitsverzeichnis des Aufrufers haengt. Startfehler und ein Rueckgabewert
+/// ungleich null werden beide zum Laufabbruch.
 ///
 /// **Vor dem Prozessaufruf steht die Aufsicht.** Sie liest die Wortplaetze des
 /// Auftrags, nicht seinen Namen; ein Auftrag, den niemand nachgesehen hat,

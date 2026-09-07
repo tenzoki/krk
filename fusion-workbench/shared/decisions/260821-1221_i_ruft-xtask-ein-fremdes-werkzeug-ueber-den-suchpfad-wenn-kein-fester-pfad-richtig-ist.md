@@ -119,3 +119,8 @@ Heute stehen sie auf `xtask/src/veroeffentlichung.rs:177` (`gh --version`), `:18
 (`gh auth status`), `:612` (`gh release create`) und `:655` (`gh release view`), alle über
 `const GH` (`:59`). Die Folgerung der Durchsicht hält unabhängig von der Zahl: eine spätere
 Umstellung auf eine Stufensuche berührt genau eine Zeile, was die Kosten von Option 2 senkt.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1301 beantwortet` — Moeglichkeit 1: Suchpfad fuer nachinstallierte Programme, fester Pfad fuer die mit macOS gelieferten, und die Regel wird ausgeschrieben. Der Datensatz nennt gh als erste Ausnahme; heute sind es vier Faelle und keine Ausnahme mehr; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+Implemented: `xtask/src/main.rs` `## Wie dieses Werkzeug ein fremdes Programm ruft` — die Regel steht im Kopf der Kistenwurzel und an keiner zweiten Stelle; sie nennt das Kriterium (mitgeliefert gegen nachinstalliert) statt einer Namensliste und die zwei Zählkommandos. Die vier Stellen, die die Begründung bis dahin je einzeln trugen (`bundle.rs` bei `SYMBOLGROESSEN` und bei `cargo`, `release.rs` bei `ziele_pruefen`, `veroeffentlichung.rs` im Modulkopf, `git.rs` bei `rufen`), zeigen jetzt dorthin und behalten nur, was ortsfest ist. Die eine Abweichung, `iconutil`, ist als Befund abgelegt und nicht behoben: `260907-1307_*_iconutil-liegt-nach-der-neuen-aufrufregel-auf-der-falschen-seite-und-wird-ueber-den-suchpfad-gerufen.md`.

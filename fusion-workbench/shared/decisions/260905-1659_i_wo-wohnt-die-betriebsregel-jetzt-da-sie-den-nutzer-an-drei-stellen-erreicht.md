@@ -30,3 +30,9 @@ Der Wortlaut auf der Releaseseite bleibt vollständig lesbar ohne jeden Download
 ## Recommendation
 
 Keine. Der Weg 3 klingt sparsam und macht die ausgelieferte Anleitung zu einer anderen Datei als die eingecheckte; Weg 2 bricht die Zusage aus den Constraints an genau der Stelle, an der sie erkämpft wurde. Weg 1 ist der heutige Zustand und kostet die Pflege. Die Wahl hängt daran, was dem Nutzer mehr wert ist: ein Wortlaut oder drei erreichbare Leser.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1301 beantwortet` — Moeglichkeit 1, drei Stellen bleiben, jede mit ihrem eigenen Lesemoment; die Gegenmoeglichkeit haette die Zusage gebrochen, dass die Regel auf der Releaseseite ohne Download lesbar ist. Dass die drei Wortlaute auseinanderlaufen koennen, ist mitentschieden; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: der Baum traegt es: README.md Kopf, HowTo.md im Releasepaket und die Konstante RELEASETEXT in xtask/src/veroeffentlichung.rs. Zu bauen ist nichts.

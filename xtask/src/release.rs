@@ -622,19 +622,13 @@ fn sichtbarkeit_abstreifen(zeile: &str) -> &str {
 /// Vorpruefung aus, und der Uebersetzungslauf meldet ein fehlendes Ziel
 /// selbst.
 ///
-/// **`rustup` wird ueber den Suchpfad gerufen und nicht mit vollem Pfad**,
-/// anders als die Werkzeuge des Basissystems, die `grep -rhoE
-/// 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u` aufzaehlt. Der Grund
-/// ist derselbe wie bei `gh` (Modulkopf von [`crate::veroeffentlichung`]): das
-/// Werkzeug gehoert nicht zu macOS, sondern wird nachinstalliert, und es liegt
-/// unter `$HOME/.cargo/bin` — ein Ordner, den `CLAUDE.md` ausdruecklich als
-/// nicht auf dem Standard-`PATH` liegend fuehrt und dessen Pfad je Nutzer ein
-/// anderer ist. Ein fester Pfad waere hier also falsch und nicht bloss
-/// unbequem. `rustup` und `iconutil` (`bundle::symbol_bauen`) sind die zwei
-/// aelteren Ausnahmen, die vor `gh` entstanden sind; ob daraus eine Regel
-/// wird, ist offen
-/// (`shared/decisions/260821-1221_*_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`,
-/// dazu `shared/issues/260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`).
+/// **`rustup` wird ueber den Suchpfad gerufen und nicht mit vollem Pfad**, wie
+/// die Regel im Kopf von [`crate`] es fuer ein nachinstalliertes Programm
+/// vorsieht; sie steht dort und hier nicht ein zweites Mal. Ortsfest ist an
+/// dieser Stelle allein, wo `rustup` liegt: unter `$HOME/.cargo/bin`, einem
+/// Ordner, den `CLAUDE.md` ausdruecklich als nicht auf dem Standard-`PATH`
+/// liegend fuehrt und dessen Pfad je Nutzer ein anderer ist. Ein fester Pfad
+/// waere hier also falsch und nicht bloss unbequem.
 fn ziele_pruefen() -> Result<(), Abbruch> {
     let Ok(ausgabe) = Command::new("rustup")
         .args(["target", "list", "--installed"])

@@ -13,6 +13,74 @@
 //! des Systemmechanismus fuer Transparenz, Zustimmung und Kontrolle aus. Jede
 //! Zusage zum Zugriff auf geschuetzte Ordner ist deshalb nur am signierten
 //! Buendel pruefbar, und das Buendel steht daher vor dem ersten Fenster.
+//!
+//! # Wie dieses Werkzeug ein fremdes Programm ruft
+//!
+//! **Mit vollem Pfad, wenn macOS es mitliefert. Ueber den Suchpfad, wenn es
+//! nachinstalliert wird.** Das ist die Regel des ganzen Werkzeugs, und sie
+//! steht hier und an keiner zweiten Stelle. Die Aufrufe verteilen sich ueber
+//! die Module; welche sie tragen, sagt das Kommando im naechsten Absatz, und
+//! ein Modul, das sie buendelte und dessen Kopf die Regel tragen koennte, gibt
+//! es nicht.
+//!
+//! **Das Kriterium ist die Herkunft des Programms und keine Namensliste.** An
+//! jedem Programm ist es entscheidbar, ohne dass jemand eine Aufzaehlung
+//! pflegt, und eine Aufzaehlung der heutigen Faelle waere mit dem naechsten
+//! Programm falsch. Den ganzen Bestand nennt `grep -rn 'Command::new(' xtask/src`;
+//! an jeder Stelle ist dann zu lesen, welche Seite sie nimmt. Die Namen der
+//! mitgelieferten allein zaehlt
+//! `grep -rhoE 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u`.
+//! **Ein Muster auf `Command::new("` faende nicht alle**, denn ein Aufruf kann
+//! seinen Programmnamen aus einer Konstanten oder aus einer Funktion beziehen,
+//! und genau so stehen die Aufrufe von `gh` und `cargo` da.
+//!
+//! **Warum die Grenze dort liegt.** Ein mitgeliefertes Programm steht auf jedem
+//! Mac unter demselben Pfad in `/usr/bin`. Der volle Pfad ist dort richtig und
+//! nimmt dem Lauf die Frage ab, welches Programm dieses Namens `PATH` gerade
+//! zuerst findet. Ein nachinstalliertes steht je nach Mac-Bauart und
+//! Installationsweg woanders: `gh` liegt aus Homebrew auf Apple Silicon unter
+//! `/opt/homebrew/bin` und auf Intel unter `/usr/local/bin`, `rustup` und
+//! `cargo` liegen unter `$HOME/.cargo/bin`, also je Nutzer anderswo. Dieses
+//! Projekt baut fuer beide Mac-Bauarten; ein fester Pfad waere dort auf einer
+//! der beiden falsch. Eine Stufensuche ueber zwei bekannte Orte waere eine
+//! Liste, die jemand pflegen muss, und traefe eine Installation ueber MacPorts,
+//! ueber Nix oder von Hand nach `~/bin` trotzdem nicht. Der Fehlerfall des
+//! Suchpfads ist dagegen sauber: findet die Suche nichts, scheitert schon der
+//! Start des Prozesses, und der Aufrufer meldet das Programm mit Namen.
+//!
+//! **Was der Suchpfad kostet.** `PATH` ist Umgebung und von aussen steuerbar;
+//! wer den Namen `gh` auf etwas anderes zeigen laesst, wird gerufen. Der
+//! Einwand traegt hier wenig: `xtask` laeuft von demselben Nutzer in demselben
+//! Terminal, aus dem auch `cargo` geholt wird, und `make` setzt `PATH`, um
+//! `cargo` ueberhaupt zu finden. Fuer die mitgelieferten Programme wird der
+//! Preis trotzdem nicht bezahlt, weil er dort nichts einbringt.
+//!
+//! **`cargo` stellt die Umgebung vor den Suchpfad, und das ist keine dritte
+//! Regel.** Cargo setzt `CARGO` auf den Pfad, unter dem es selbst laeuft;
+//! [`bundle::cargo`] nimmt ihn und faellt erst ohne die Variable auf den
+//! Suchpfad zurueck. Der Suchpfad bleibt also die Regel fuer dieses
+//! nachinstallierte Programm, davor steht bloss eine genauere Auskunft aus der
+//! Umgebung. Warum sie ueberhaupt gilt, steht dort und nicht hier: sie haelt
+//! jeden inneren Aufruf auf derselben Werkzeugkette wie den aeusseren.
+//!
+//! **Eine Ausnahme wird an ihrem Aufrufort begruendet**, nicht hier: die Regel
+//! bleibt sonst nicht die Regel, sondern eine von mehreren Moeglichkeiten. Der
+//! Baum traegt heute eine Stelle, die auf der falschen Seite liegt, und sie ist
+//! keine begruendete Ausnahme, sondern ein Befund:
+//! `iconutil` (`bundle::symbol_bauen`) liefert macOS mit und wird ueber den
+//! Suchpfad gerufen
+//! (`shared/issues/260907-1307_*_iconutil-liegt-nach-der-neuen-aufrufregel-auf-der-falschen-seite-und-wird-ueber-den-suchpfad-gerufen.md`).
+//!
+//! **Was diese Regel nicht haelt.** Keine Probe im Baum prueft sie, und keine
+//! kann es: ob macOS ein Programm mitliefert, steht nicht im Quelltext der
+//! Aufrufstelle, sondern auf dem Geraet. Was eine Probe stattdessen haelt, ist
+//! die Zahl der Aufrufstellen eines einzelnen Programms — so
+//! `git_wird_ausserhalb_der_probenordner_an_genau_einer_stelle_gerufen` in
+//! `release` und `die_umgebungsvariable_cargo_wird_an_genau_einer_stelle_gelesen`
+//! in `bundle`.
+//!
+//! Entschieden am 260907, Moeglichkeit 1:
+//! `shared/decisions/260821-1221_*_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`.
 
 // Dieselbe Grenze wie an der Wurzel von `krk-core`, `krk-ui` und `krk-bench`.
 // Das Werkzeug hat heute keine `unsafe`-Stelle und braucht keine: es ruft

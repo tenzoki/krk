@@ -40,3 +40,6 @@ Der Schaden ist derselbe in allen vier Fällen und liegt nicht am Inhalt: `histo
 ## Recommendation
 
 Möglichkeit 2 für den Bestand, und Möglichkeit 4 als eigene Frage daneben. Der Schaden ist die falsche Sortierung eines Speichers, den Agenten überfliegen; er ist real, aber er ist kleiner als der Preis, neunzehn Aufzeichnungen umzubenennen und dabei jeden Verweis über ein Suchmuster nachzuziehen, das in diesem Projekt fünfmal zu eng war. Für Möglichkeit 1 spräche, wenn die Reihenfolge einmal wirklich zu einem Fehlschluss geführt hätte; das ist in keinem der vier Datensätze belegt.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1301 beantwortet` — Moeglichkeit 2 fuer den Bestand: Vermerk am jeweiligen Datensatz, die Namen bleiben. Umbenennen kostet neunzehn Aufzeichnungen und jeden Verweis ueber ein Suchmuster, das hier schon fuenfmal zu eng war. Zugleich ist Moeglichkeit 4 als eigene Frage bestellt: die Ursache pruefbar machen; ruled by user, Kai Stalmann <kai@stalmann.org>.

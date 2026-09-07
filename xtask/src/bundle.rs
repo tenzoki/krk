@@ -87,17 +87,17 @@ const SYMBOLWERKSTATT: &str = "krk-symbol.iconset";
 /// durchlaeuft; es kommt also keine Voraussetzung hinzu, die dieses Projekt
 /// nicht schon haette.
 ///
-/// **Gerufen wird es ueber den Suchpfad und nicht mit vollem Pfad**, anders als
-/// die Werkzeuge des Basissystems, die
-/// `grep -rhoE 'Command::new\("/usr/bin/[a-z]+"' xtask/src | sort -u`
-/// aufzaehlt; eine Namensliste steht hier nicht, weil sie mit dem naechsten
-/// Werkzeug falsch waere. Bis zum 260905 sagten
-/// dieser Satz und die Abbruchmeldung darunter `/usr/bin/iconutil` und
-/// beschrieben damit eine Gewohnheit, die der Aufruf nicht teilt
+/// **Gerufen wird es ueber den Suchpfad und nicht mit vollem Pfad, und seit dem
+/// 260907 liegt es damit auf der falschen Seite der Regel.** Die Regel steht im
+/// Kopf von [`crate`]: mit vollem Pfad, was macOS mitliefert, ueber den
+/// Suchpfad, was nachinstalliert wird. `iconutil` liefert macOS mit, der Aufruf
+/// nimmt trotzdem den Suchpfad. Das ist keine begruendete Ausnahme, sondern ein
+/// Befund, und er ist in dieser Runde bewusst nicht behoben worden
+/// (`shared/issues/260907-1307_*_iconutil-liegt-nach-der-neuen-aufrufregel-auf-der-falschen-seite-und-wird-ueber-den-suchpfad-gerufen.md`).
+/// Bis zum 260905 sagten dieser Satz und die Abbruchmeldung darunter
+/// `/usr/bin/iconutil` und beschrieben damit eine Gewohnheit, die der Aufruf
+/// nicht teilt
 /// (`shared/issues/260826-1448_*_iconutil-wird-ueber-den-suchpfad-gerufen-waehrend-kommentar-und-meldung-usr-bin-iconutil-sagen-und-messen-rs-liest-cargo-ein-zweites-mal.md`).
-/// Ob daraus eine Regel wird, ist offen und hier nicht entschieden
-/// (`shared/decisions/260821-1221_*_ruft-xtask-ein-fremdes-werkzeug-ueber-den-suchpfad-wenn-kein-fester-pfad-richtig-ist.md`,
-/// dazu `shared/issues/260821-1532_*_zwei-fremde-werkzeuge-werden-seit-langem-ueber-den-suchpfad-gerufen-und-drei-stellen-nennen-gh-als-die-erste-ausnahme.md`).
 ///
 /// **Die Zuordnung der Kantenlaengen.** Apple erwartet je Punktgroesse eine
 /// einfache und eine `@2x`-Fassung, und `@2x` heisst die doppelte Kantenlaenge
@@ -284,6 +284,11 @@ impl Vorlage {
 /// uebernehmen haelt jeden inneren Aufruf auf derselben Werkzeugkette wie den
 /// aeusseren — und auf diesem Geraet ueberhaupt auffindbar, denn `cargo` steht
 /// hier nicht auf dem Standard-PATH.
+///
+/// **Der Rueckfall auf den blossen Namen ist der Suchpfad**, und damit die
+/// Seite, auf die die Regel im Kopf von [`crate`] ein nachinstalliertes
+/// Programm stellt. Die Variable davor ist keine zweite Regel, sondern eine
+/// genauere Auskunft aus der Umgebung.
 ///
 /// Jeder innere Aufruf liest ihn hier: die Uebersetzung in [`uebersetzen`],
 /// das Auffrischen der `Cargo.lock` in `version` und der Ruf nach `krk-bench`

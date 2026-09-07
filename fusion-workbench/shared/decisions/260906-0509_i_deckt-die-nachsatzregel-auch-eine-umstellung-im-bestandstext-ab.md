@@ -68,3 +68,9 @@ sie bei jedem Fall zu entscheiden gewesen wäre, ob eine Änderung noch Form ode
 Der Nachsatz, den die Schleife im Spec der Runde 10 gesetzt hat, nennt beide Abschnitte und ihre
 Stelle; wer maschinell sucht, findet über ihn den Hinweis. Das ist weniger als eine Behebung und
 mehr als nichts.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1301 beantwortet` — Moeglichkeit 1, die Regel deckt es nicht; der eine Datensatz ueber die doppelte Ueberschrift bleibt offen. Der Gewinn ist eine Regel, die nach dem Ort entscheidbar bleibt und keine Auslegung braucht; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: nichts zu aendern: die Regel bleibt, wie sie am 260906 entschieden wurde, und 260819-1440_*_ein-spec-traegt-zwei-reconciliation-log-ueberschriften-… bleibt offen. Das ist der beschlossene Zustand und keine ausstehende Arbeit.

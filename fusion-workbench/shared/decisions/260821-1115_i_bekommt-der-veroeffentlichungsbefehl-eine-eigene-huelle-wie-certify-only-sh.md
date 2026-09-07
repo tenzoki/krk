@@ -82,3 +82,9 @@ schmalste Fassung und eine bewusste Wahl ist, dass die Frage dem Nutzer vorliegt
 Aufruf deshalb den vollen Pfad zu `cargo` braucht, samt dem Handgriff `export PATH=…`. Wer
 Option 2 oder 3 wählt, zieht diese Zeilen mit — das erhöht die Kosten beider gegenüber dem, was
 der Datensatz unter „Contra" annimmt, um eine Stelle in der `README.md`.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1301 beantwortet` — Moeglichkeit 1, keine neue Huelle; der Befehl bleibt cargo xtask veroeffentlichen <zahl> mit vollem Pfad. Ein Makefile-Ziel laesst sich in zwei Zeilen nachziehen, sobald der Weg zum ersten Mal wirklich gebraucht wurde; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: der Baum traegt Moeglichkeit 1 seit der Runde 15; die Projektwurzel fuehrt kein publish-only.sh und das Makefile kein Ziel veroeffentlichen, und README.md `### Nur veroeffentlichen` begruendet es ausgeschrieben. Die Antwort macht aus der vollendeten Tatsache eine Entscheidung; zu bauen ist nichts.

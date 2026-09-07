@@ -392,3 +392,42 @@ Fachvokabular neu geschrieben worden.
     einzuordnen.
 
 **Was offen bleibt:** 30 der 56 Fragen, dazu die Reichweitenfrage aus der zweiten Runde.
+
+## Fuenf weitere Entscheidungen am 260907-1301 beantwortet
+
+Vierte Vorlagerunde, Werkzeug und Auslieferung. Der Nutzer ist allen fuenf Empfehlungen
+gefolgt; bei der ersten hat er nach der Sache gefragt, bevor er sie beantwortet hat.
+
+16. **Der Veroeffentlichungsbefehl bekommt keine Kurzform.** Er bleibt als
+    `cargo xtask veroeffentlichen <zahl>` erreichbar, mit vollem Pfad zu `cargo`, waehrend
+    die zwei Nachbarwege je zwei Huellen haben. Der unbequemste der drei Wege bleibt damit
+    der, den man in einer Stoerung braucht — das ist der bewusst gezahlte Preis. Ein
+    Makefile-Ziel laesst sich in zwei Zeilen nachziehen, sobald der Weg zum ersten Mal
+    wirklich gebraucht wurde, und dann steht auch fest, ob er sich unbequem angefuehlt hat.
+    Der Baum faehrt das schon, und die `README.md` begruendet es unter „Nur
+    veroeffentlichen"; die Antwort macht aus der vollendeten Tatsache eine Entscheidung.
+17. **Das Bauwerkzeug ruft ein nachinstalliertes Programm ueber den Suchpfad, und die Regel
+    wird ausgeschrieben:** mit macOS geliefert heisst fester Pfad, nachinstalliert heisst
+    Suchpfad. Nur sie trifft auf beiden Mac-Bauarten und ueber jeden Installationsweg. Der
+    Datensatz nennt `gh` als erste Ausnahme; heute rufen auch `rustup`, `iconutil` und
+    `cargo` ueber den Suchpfad, es sind also vier Faelle und keine Ausnahme mehr.
+18. **Die Betriebsregel gegen den Datenverlust bleibt an drei Stellen ausformuliert**, jede
+    mit ihrem eigenen Lesemoment: Kopf der `README.md`, Anleitung im Releasepaket, fester
+    Text jeder Releaseseite. **Der Preis ist mitentschieden:** die drei Wortlaute werden
+    nicht aneinander gehalten und koennen auseinanderlaufen. Die Gegenmoeglichkeit haette die
+    Regel zur einen Quelle gemacht und dabei genau die Zusage gebrochen, an der sie
+    erkaempft wurde — auf der Releaseseite ohne Download lesbar zu sein.
+19. **Neunzehn Verlaufsdateien mit geschaetztem Zeitstempel werden nicht umbenannt, sondern
+    bekommen einen Vermerk am jeweiligen Datensatz.** Der Schaden ist real — der
+    Verlaufsspeicher wird nach dem Namen sortiert gelesen, und dort erscheint Schritt 2 nach
+    Schritt 7 —, aber kleiner als der Preis, neunzehn Aufzeichnungen umzubenennen und jeden
+    Verweis ueber ein Suchmuster nachzuziehen, das in diesem Projekt schon fuenfmal zu eng
+    war. **Der Nutzer hat zugleich die vierte Moeglichkeit als eigene Frage bestellt:** die
+    Ursache pruefbar zu machen, damit der naechste Fall nicht entsteht.
+20. **Die Nachsatzregel deckt keine Umstellung im Bestandstext.** Der eine Datensatz ueber
+    die doppelte Ueberschrift bleibt offen. Der Preis ist ein einzelner offener Datensatz
+    geringer Schwere; der Gewinn ist eine Regel, die nach dem Ort entscheidbar bleibt und
+    keine Auslegung braucht. Die vierte Behebungsschleife hat 30 von 36 Faellen nur deshalb
+    geschlossen, weil die Regel scharf war.
+
+**Was offen bleibt:** 25 der 56 Fragen, dazu die Reichweitenfrage aus der zweiten Runde.
