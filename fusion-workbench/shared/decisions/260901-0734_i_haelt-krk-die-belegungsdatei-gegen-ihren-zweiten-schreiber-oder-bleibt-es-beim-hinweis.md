@@ -70,3 +70,9 @@ wägen: die zweite kauft die Bequemlichkeit mit einem neuen Beobachter, die drit
 Schutz mit einer weiteren Rückfrage. Möglichkeit 1 ist der gebaute Stand und braucht keine
 Entscheidung, um zu gelten — sie braucht eine, um zu **bleiben**, und deshalb steht dieser
 Datensatz hier.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2238 beantwortet` — Moeglichkeit 1: es bleibt beim Hinweis in der Statuszeile. Der Preis ist mitentschieden: wer die Datei ausserhalb von KRK oeffnet, wird nicht gewarnt, und der Hinweis faellt mit dem naechsten Tastenbefehl. Ein Nachladen kostete einen zweiten Dateibeobachter, eine Rueckfrage vor dem Sichern eine weitere Rueckfrage; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-ui/src/kommandos/operationen.rs traegt den Hinweis, gerufen aus dem Anwendungsdelegierten; ein Nachladen oder eine Rueckfrage gibt es nicht. Der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

@@ -107,6 +107,17 @@
 //! eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; `NSObjectProtocol` ist der Kistenname des
+//! Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene Angabe); `NSPoint`,
+//! `NSRect` und `NSSize` sind C-Strukturen (`NSGeometry.h:23`, `:33` und
+//! `:28`); das Protokoll `NSTextDelegate` (`NSText.h:200`) traegt keine eigene
+//! Angabe; die Aufzaehlung `NSAutoresizingMaskOptions` (`NSView.h:33`)
+//! schliesst mit blossem `};`, `NSSegmentStyle` (`NSSegmentedControl.h:25`)
+//! dagegen mit `API_AVAILABLE(macos(10.5))`; alle uebrigen tragen im SDK keine
+//! eigene Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
 use std::cell::RefCell;
 

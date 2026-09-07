@@ -447,6 +447,37 @@
 //! beide liegen weit unter dem Zielsystem: `enabledTextCheckingTypes` steht seit
 //! macOS 10.6 (`NSTextView.h:466`) und
 //! `registerUndoWithTarget:handler:` seit 10.11, wie oben.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Zeichenkette beim Uebersetzen und hat keines; `NSObjectProtocol` ist der
+//! Kistenname des Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene
+//! Angabe); `NSPoint`, `NSRect` und `NSSize` sind C-Strukturen
+//! (`NSGeometry.h:23`, `:33` und `:28`); `NSRange` ist eine C-Struktur
+//! (`NSRange.h:12`), `NSTimeInterval` ein `double` (`NSDate.h:14`) und
+//! `NSUInteger` ein Ganzzahltyp (`objc/NSObjCRuntime.h:14`); die Klassen
+//! `NSString` (`NSString.h:103`), `NSDate` (`NSDate.h:18`), `NSNotification`
+//! (`NSNotification.h:15`), `NSRunLoop` (`NSRunLoop.h:16`) und `NSView`
+//! (`NSView.h:81`) tragen keine
+//! eigene Angabe; die Protokolle `NSTextDelegate` (`NSText.h:200`) und
+//! `NSTextViewDelegate` (`NSTextView.h:576`) ebenso; die Aufzaehlung
+//! `NSTextAlignment` (`NSText.h:47`) traegt `API_AVAILABLE(macos(10.0))`,
+//! `NSAutoresizingMaskOptions` (`NSView.h:33`) schliesst mit blossem `};`; die
+//! Konstante `NSDefaultRunLoopMode` (`NSRunLoop.h:13`) traegt keine Angabe,
+//! `NSRunLoopCommonModes` (`:14`) steht seit 10.5; alle uebrigen tragen im SDK
+//! keine eigene Verfuegbarkeitsangabe und stehen damit seit 10.0.
+//!
+//! **Drei Namen kommen erst im Pruefmodul dieser Datei herein**, ueber eine
+//! eingerueckte `use`-Zeile, und stehen deshalb hier und nicht oben:
+//! `NSNumber` (`NSValue.h:42`, ohne eigene Angabe), die Aufzaehlung
+//! `NSTextInputTraitType` (`NSTextCheckingClient.h:22`, schliesst mit blossem
+//! `};`) und `NSWritingToolsBehavior` (`:28`, `API_AVAILABLE(macos(15.0))` —
+//! auf dem Zielsystem und nicht darueber). Die Probe
+//! `jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt`
+//! (`krk-core/tests/baum.rs`) sieht eine eingerueckte `use`-Zeile **nicht**;
+//! diese drei stehen hier, weil ein Mensch sie nachgetragen hat, und nicht,
+//! weil ein Prueflauf sie eingefordert haette.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};

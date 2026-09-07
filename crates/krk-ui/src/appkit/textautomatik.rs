@@ -78,6 +78,15 @@
 //! zur Laufzeit. `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der
 //! Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist die
 //! Gegenmassnahme.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `NSObjectProtocol` ist der Kistenname
+//! des Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene Angabe); die
+//! Aufzaehlung `NSTextInputTraitType` (`NSTextCheckingClient.h:22`) schliesst
+//! mit blossem `};` und traegt keine Angabe, waehrend die Setzer, die sie
+//! annehmen, die 14.0 und 15.0 aus dem Absatz darueber tragen;
+//! `NSWritingToolsBehavior` (`:28`) traegt dagegen selbst
+//! `API_AVAILABLE(macos(15.0))`.
 
 use std::ffi::CString;
 

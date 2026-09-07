@@ -1030,3 +1030,267 @@ fn gelistete_namen(datei: &str, inhalt: &str, aufzaehlung: &str, zeile: usize) -
     );
     namen
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Die Untergrenzen-Angabe in den Modulkoepfen unter `krk-ui/src/appkit/`
+// ───────────────────────────────────────────────────────────────────────────
+
+/// Die Ueberschrift, unter der ein AppKit-Modul seine Untergrenzen nennt.
+///
+/// Sie steht zusammengesetzt da, aus dem Grund, den der Kopf dieser Datei
+/// nennt: als ein Stueck faende sie sich hier selbst. Der Pfadfilter in
+/// [`appkit_dateien`] schliesst diese Datei ohnehin aus, doch wer den Filter
+/// spaeter weitet, soll die Nadel nicht mitzaehlen.
+const UNTERGRENZEN_UEBERSCHRIFT: &str =
+    concat!("# Ab welchem macOS die angesprochenen ", "Klassen stehen");
+
+/// Die Dateien unter `krk-ui/src/appkit/`, in die Tiefe, je Name und Inhalt.
+#[must_use]
+fn appkit_dateien() -> Vec<(String, String)> {
+    let gefunden: Vec<(String, String)> = quelldateien()
+        .into_iter()
+        .filter(|(name, _)| name.replace('\\', "/").starts_with("krk-ui/src/appkit/"))
+        .collect();
+    assert!(
+        gefunden.len() > 1,
+        "unter krk-ui/src/appkit/ steht keine Datei; die Probe haette nichts zu pruefen"
+    );
+    gefunden
+}
+
+/// Die `//!`-Zeilen am Kopf einer Datei, ohne den Vorsatz.
+///
+/// Vor dem Kopf duerfen Leerzeilen und Kistenattribute (`#![…]`) stehen —
+/// `appkit/mod.rs` traegt `#![allow(unsafe_code)]` als erste Zeile. Die erste
+/// Zeile, die weder das eine noch das andere ist, beendet den Kopf.
+#[must_use]
+fn modulkopf(inhalt: &str) -> Vec<&str> {
+    let mut kopf = Vec::new();
+    for zeile in inhalt.lines() {
+        let gestutzt = zeile.trim();
+        if let Some(rumpf) = gestutzt.strip_prefix("//!") {
+            kopf.push(rumpf.trim());
+        } else if gestutzt.is_empty() || gestutzt.starts_with("#!") {
+            continue;
+        } else {
+            break;
+        }
+    }
+    kopf
+}
+
+/// Der Text unter [`UNTERGRENZEN_UEBERSCHRIFT`] im Modulkopf, oder `None`,
+/// wenn die Ueberschrift dort nicht steht.
+///
+/// Gelesen wird bis zur naechsten Ueberschrift derselben Ebene oder bis zum
+/// Ende des Kopfes. Die Ueberschrift selbst gehoert nicht zum Text: sonst
+/// zaehlte das Wort „Klassen“ aus ihr als Nennung.
+#[must_use]
+fn untergrenzen_abschnitt(inhalt: &str) -> Option<String> {
+    let mut drin = false;
+    let mut gesammelt: Vec<&str> = Vec::new();
+    for zeile in modulkopf(inhalt) {
+        if zeile.starts_with("# ") {
+            if drin {
+                break;
+            }
+            drin = zeile == UNTERGRENZEN_UEBERSCHRIFT;
+            continue;
+        }
+        if drin {
+            gesammelt.push(zeile);
+        }
+    }
+    drin.then(|| gesammelt.join(" "))
+}
+
+/// Die Namen, die die `use`-Zeilen auf oberster Ebene aus einer
+/// **Frameworkbindung** hereinholen.
+///
+/// Eine Frameworkbindung ist eine Kiste, deren Name auf `objc2_` beginnt —
+/// `objc2_app_kit`, `objc2_foundation`, `objc2_pdf_kit`, `objc2_quartz_core`,
+/// `objc2_core_foundation`. Die Kernkiste `objc2` steht nicht darunter, und
+/// das ist am Kistennamen entschieden und nicht an einer Liste: sie fuehrt
+/// Rust-Werkzeug (`Retained`, `ProtocolObject`, `msg_send!`), das kein
+/// macOS-Alter hat.
+///
+/// # Warum nicht nach Klassen gefragt wird
+///
+/// Ob ein hereingeholter Name eine Objective-C-Klasse benennt, ist am
+/// Quelltext **nicht** entscheidbar: `NSPoint` und `NSPasteboard` sehen gleich
+/// aus, das eine ist eine C-Struktur und das andere eine Klasse, und nichts in
+/// der `use`-Zeile trennt sie. Gefragt wird deshalb die Frage, die der Baum
+/// beantworten kann — steht jeder hereingeholte Name im Abschnitt —, und ihre
+/// Antwort ist eine Obermenge: jede Klasse ist ein hereingeholter Name. Der
+/// Preis ist, dass der Abschnitt auch das nennen muss, was keine Klasse ist;
+/// der Gewinn ist, dass keine Ausnahmeliste danebensteht, die jemand pflegen
+/// muesste.
+///
+/// # Was diese Nadel nicht sieht
+///
+/// Eine `use`-Zeile **innerhalb** eines Moduls (die Pruefmodule am Dateiende
+/// schreiben sie eingerueckt) und einen voll ausgeschriebenen Pfad mitten im
+/// Rumpf (`objc2_foundation::NSNotification` als Argumenttyp). Beide holen
+/// einen Namen herein, den diese Probe nicht einfordert.
+#[must_use]
+fn frameworknamen(inhalt: &str) -> std::collections::BTreeSet<String> {
+    let mut namen = std::collections::BTreeSet::new();
+    let zeilen: Vec<&str> = inhalt.lines().collect();
+    let mut nummer = 0;
+    while nummer < zeilen.len() {
+        let zeile = zeilen[nummer];
+        if !zeile.starts_with("use objc2") {
+            nummer += 1;
+            continue;
+        }
+        let mut anweisung = zeile.to_owned();
+        while !anweisung.contains(';') {
+            nummer += 1;
+            let weiter = zeilen
+                .get(nummer)
+                .expect("eine use-Zeile endet vor dem Dateiende auf ein Semikolon");
+            anweisung.push(' ');
+            anweisung.push_str(weiter.trim());
+        }
+        nummer += 1;
+
+        let rumpf = anweisung
+            .trim_start_matches("use ")
+            .split(';')
+            .next()
+            .expect("ein split liefert immer ein erstes Stueck");
+        let (kiste, rest) = rumpf
+            .split_once("::")
+            .unwrap_or_else(|| panic!("die Zeile `{anweisung}` traegt keinen Pfad mit `::`"));
+        if !kiste.trim().starts_with("objc2_") {
+            continue;
+        }
+        for stueck in rest.split(|zeichen: char| !zeichen.is_ascii_alphanumeric() && zeichen != '_')
+        {
+            if !stueck.is_empty() {
+                namen.insert(stueck.to_owned());
+            }
+        }
+    }
+    namen
+}
+
+/// Ob `name` im Text als ganzes Wort steht, und nicht bloss als Dateiname
+/// einer SDK-Kopfzeile.
+///
+/// Ganz und nicht als Teil: sonst deckte `NSRect` die Nennung von
+/// `NSRectEdge` mit ab und `NSString` die von `NSStringDrawing`.
+///
+/// # Warum `NSAlert.h` keine Nennung von `NSAlert` ist
+///
+/// Die Abschnitte belegen ihre Zahlen mit der Kopfzeile, in der sie stehen,
+/// und eine solche Angabe traegt den Klassennamen mit: `NSAlert.h:22` steht
+/// dort, um die Aufzaehlung `NSAlertStyle` zu belegen, und nicht, um etwas
+/// ueber `NSAlert` zu sagen. Eine Wortsuche ohne diese Einschraenkung nahm die
+/// Angabe als Nennung — die Gegenprobe am 260907 blieb gruen, nachdem
+/// `NSAlert` aus dem Abschnitt von `appkit/hinweis.rs` entfernt war, weil
+/// `NSAlert.h` danebenstand. Ein Name unmittelbar vor `.h` zaehlt deshalb
+/// nicht.
+#[must_use]
+fn steht_als_wort(text: &str, name: &str) -> bool {
+    let zeichen: Vec<char> = text.chars().collect();
+    let gesucht: Vec<char> = name.chars().collect();
+    let wortzeichen = |z: char| z.is_ascii_alphanumeric() || z == '_';
+    zeichen
+        .windows(gesucht.len())
+        .enumerate()
+        .any(|(i, fenster)| {
+            let nach = i + gesucht.len();
+            let kopfzeile = zeichen.get(nach) == Some(&'.') && zeichen.get(nach + 1) == Some(&'h');
+            fenster == gesucht.as_slice()
+                && !(i > 0 && wortzeichen(zeichen[i - 1]))
+                && !zeichen.get(nach).copied().is_some_and(wortzeichen)
+                && !kopfzeile
+        })
+}
+
+/// Moeglichkeit 1 des Entscheids `260811-2050`: der Abschnitt steht da.
+///
+/// `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, der Uebersetzer haelt
+/// die Untergrenze macOS 15 also nicht, und wer eine spaeter hinzugekommene
+/// Methode anspricht, bekommt keine Warnung, sondern einen Absturz auf dem
+/// Referenzgeraet. Die Gegenmassnahme ist der Abschnitt im Modulkopf, und sie
+/// war eine blosse Gewohnheit: die Deckung war bis zum 260811 auf fuenf
+/// Dateien abgesunken und ist von Hand wiederhergestellt worden.
+///
+/// # Die zwei Ausnahmen stehen nicht als Liste da
+///
+/// `appkit/koordinaten.rs` rechnet auf einer Zeichenkette und `appkit/mod.rs`
+/// haengt Module ein; keine der beiden holt einen Namen aus einer
+/// Frameworkbindung herein, und keine schuldet deshalb einen Abschnitt. Die
+/// Bedingung ist die Eigenschaft und nicht der Dateiname: eine dritte Datei
+/// ohne solchen Import faellt von selbst heraus, und `koordinaten.rs` schuldet
+/// den Abschnitt in dem Augenblick, in dem sie den ersten hereinholt.
+///
+/// # Was diese Probe nicht haelt
+///
+/// **Die Richtigkeit der Zahl.** Sie sieht, dass die Ueberschrift dasteht,
+/// nicht ob unter ihr etwas Wahres steht. Die Zahl am SDK zu pruefen waere
+/// Moeglichkeit 3 des Entscheids, verlangte Xcode und waere ein halber
+/// Uebersetzer; der Nutzer hat sie ausdruecklich verworfen. Die Richtigkeit
+/// der Zahl bleibt eine Zusage des Menschen.
+#[test]
+fn jede_appkit_datei_mit_frameworkimport_traegt_den_untergrenzen_abschnitt() {
+    let mut ohne: Vec<String> = Vec::new();
+    for (name, inhalt) in appkit_dateien() {
+        if frameworknamen(&inhalt).is_empty() {
+            continue;
+        }
+        if untergrenzen_abschnitt(&inhalt).is_none() {
+            ohne.push(name);
+        }
+    }
+    assert!(
+        ohne.is_empty(),
+        "diesen Dateien fehlt im Modulkopf der Abschnitt \
+         `{UNTERGRENZEN_UEBERSCHRIFT}`, obwohl sie eine Frameworkbindung ansprechen: {ohne:?}"
+    );
+}
+
+/// Moeglichkeit 2 des Entscheids `260811-2050`: jeder hereingeholte Name steht
+/// namentlich im Abschnitt.
+///
+/// Das faengt den zweithaeufigsten Fehler, die **vergessene** Klasse. Was ein
+/// hereingeholter Name ist und warum nicht nach Klassen gefragt wird, steht an
+/// [`frameworknamen`]; was ein Abschnitt ist, an [`untergrenzen_abschnitt`].
+///
+/// # Was diese Probe nicht haelt
+///
+/// **Die Richtigkeit der Zahl** — siehe die Probe darueber; das gilt hier
+/// genauso und ist der Grund, warum der Name dieser Probe von `steht` spricht
+/// und nicht von `stimmt`.
+///
+/// **Den Satz um den Namen herum.** Geprueft ist, dass der Name im Abschnitt
+/// als ganzes Wort vorkommt. Ein Satz, der ihn nennt, um zu sagen, dass die
+/// Datei ihn *nicht mehr* anspricht, deckt ihn genauso ab wie eine Angabe.
+///
+/// **Die Formen, die [`frameworknamen`] nicht sieht** — die eingerueckte
+/// `use`-Zeile eines Pruefmoduls und den voll ausgeschriebenen Pfad im Rumpf.
+/// Sie sind dort einzeln benannt.
+#[test]
+fn jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt() {
+    let mut fehlend: Vec<String> = Vec::new();
+    for (name, inhalt) in appkit_dateien() {
+        let Some(abschnitt) = untergrenzen_abschnitt(&inhalt) else {
+            continue;
+        };
+        let ungenannt: Vec<String> = frameworknamen(&inhalt)
+            .into_iter()
+            .filter(|gesucht| !steht_als_wort(&abschnitt, gesucht))
+            .collect();
+        if !ungenannt.is_empty() {
+            fehlend.push(format!("{name}: {}", ungenannt.join(", ")));
+        }
+    }
+    assert!(
+        fehlend.is_empty(),
+        "diese Namen kommen aus einer Frameworkbindung herein, ohne im Abschnitt \
+         `{UNTERGRENZEN_UEBERSCHRIFT}` genannt zu sein:\n{}",
+        fehlend.join("\n")
+    );
+}

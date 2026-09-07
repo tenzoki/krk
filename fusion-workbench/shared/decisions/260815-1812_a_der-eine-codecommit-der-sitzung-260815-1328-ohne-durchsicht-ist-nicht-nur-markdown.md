@@ -122,3 +122,6 @@ Der Fall `f5300f4` zeigt, dass diese Voraussetzung nicht immer trägt — wer di
 beantwortet sie also für einen Teil der Commits dieses Baums und nicht für alle. **Ob `f5300f4` eine
 Durchsicht bekommen soll, entscheidet dieser Abgleich nicht**; er stellt fest, dass keine liegt und
 dass kein Werkzeug es sagen würde.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2238 beantwortet` — Die Zuordnung wird aus dem Dateibestand des Commits abgeleitet statt von Hand gesetzt; git show --name-only beantwortet es in einer Zeile. Nicht in diesem Projekt umsetzbar: das Werkzeug ist bin/fusion-review-coverage und gehoert dem Rahmenwerk. Die Antwort bindet, wer es aendert. Sie greift ausserdem zu kurz, was der Datensatz nicht sieht: Arbeit ausserhalb einer Sitzung ist fuer die Deckungsmessung strukturell unsichtbar, und das Werkzeug meldet dann ungeprueft, was sich wie nichts zu beanstanden liest; ruled by user, Kai Stalmann <kai@stalmann.org>.

@@ -107,6 +107,22 @@
 //! tragende Angabe und nicht eine unter mehreren: eine Methode, die es auf dem
 //! Zielsystem nicht gaebe, ueberschriebe nichts, und der Ausloesepunkt der
 //! Fokusanzeige bliebe stumm, statt abzustuerzen.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Zeichenkette beim Uebersetzen und hat keines; `NSObjectProtocol` ist der
+//! Kistenname des Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene
+//! Angabe); `NSPoint`, `NSRect` und `NSSize` sind C-Strukturen
+//! (`NSGeometry.h:23`, `:33` und `:28`); `NSNotification` steht seit 10.0
+//! (`NSNotification.h:15`); die Aufzaehlungen `NSAutoresizingMaskOptions`
+//! (`NSView.h:33`), `NSBackingStoreType` (`NSGraphics.h:94`) und
+//! `NSWindowStyleMask` (`NSWindow.h:54`) schliessen mit blossem `};`; die zwei
+//! letzten sind der Fall, vor dem der Entscheid
+//! `260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` warnt,
+//! weil ein naives `grep` ihnen die Zahl der naechsten Aufzaehlung gaebe; alle
+//! uebrigen tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen damit
+//! seit 10.0.
 
 use std::cell::RefCell;
 

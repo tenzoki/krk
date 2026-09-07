@@ -107,6 +107,29 @@
 //! also **nicht** mehr sein Rueckgaengig weg. Zu klaeren bleibt allein die
 //! Einfaerbung aus dem Absatz darueber, denn die legt ihre voruebergehenden
 //! Merkmale weiter in den aelteren Verwalter.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; `NSObjectProtocol` ist der Kistenname des
+//! Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene Angabe); `NSPoint`,
+//! `NSRect` und `NSSize` sind C-Strukturen (`NSGeometry.h:23`, `:33` und
+//! `:28`); `NSRange` ist eine C-Struktur (`NSRange.h:12`); die Klassen
+//! `NSObject` (`objc/NSObject.h`), `NSString` (`NSString.h:103`),
+//! `NSDictionary` (`NSDictionary.h:14`), `NSColor` (`NSColor.h:77`), `NSFont`
+//! (`NSFont.h:24`), `NSScrollView` (`NSScrollView.h:25`), `NSTextView`
+//! (`NSTextView.h:76`), `NSNotification` (`NSNotification.h:15`) und
+//! `NSNotificationCenter` (`NSNotification.h:37`) tragen keine eigene Angabe;
+//! `NSStringDrawing` und `NSObjectNSDelayedPerforming` sind die Kistennamen
+//! der Kategorien `NSString(NSStringDrawing)` (`NSStringDrawing.h:38`) und
+//! `NSObject(NSDelayedPerforming)` (`NSRunLoop.h:61`); die hier gerufenen
+//! Methoden beider tragen 10.0 oder keine Angabe; die Aufzaehlung
+//! `NSRulerOrientation` (`NSRulerView.h:17`) schliesst mit blossem `};`; die
+//! Merkmalsschluessel `NSFontAttributeName` (`NSAttributedString.h:26`) und
+//! `NSForegroundColorAttributeName` (`:28`) tragen `macos(10.0)`, ebenso die
+//! Meldung `NSTextStorageDidProcessEditingNotification`
+//! (`NSTextStorage.h:111`); `NSViewBoundsDidChangeNotification`
+//! (`NSView.h:658`) traegt keine Angabe; alle uebrigen tragen im SDK keine
+//! eigene Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
 use std::cell::{Cell, RefCell};
 

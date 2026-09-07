@@ -221,6 +221,15 @@
 //! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
 //! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
 //! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Zeichenkette beim Uebersetzen und hat keines; `NSPoint`, `NSRect` und
+//! `NSSize` sind C-Strukturen (`NSGeometry.h:23`, `:33` und `:28`);
+//! `NSInteger` ist ein Ganzzahltyp (`objc/NSObjCRuntime.h:13`); alle uebrigen
+//! tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen damit seit
+//! 10.0.
 
 use std::cell::{Cell, RefCell};
 

@@ -113,6 +113,11 @@
 //! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `NSRect` ist eine C-Struktur
+//! (`NSGeometry.h:33`) ohne eigene Verfuegbarkeitsangabe und steht damit seit
+//! 10.0.
 
 use std::cell::RefCell;
 use std::path::PathBuf;

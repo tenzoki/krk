@@ -98,3 +98,9 @@ es keinen Befund gibt. Möglichkeit 3 ist der billigste Zusatz, wenn sich
 herausstellt, dass die Lücke jemanden trifft; sie ersetzt den Satz nicht,
 sondern zeigt auf ihn. Der Auslöser, der diese Frage wieder aufmacht, ist ein
 zweiter Nutzerbefund über eine Abweisung, die niemand gesehen hat.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2238 beantwortet` — Moeglichkeit 1: die Meldung bleibt in der Statuszeile. Bei der gemessenen Startgroesse bleibt die Zeile frei, und fuer die Luecke bei klein gezogenem Fenster liegt kein Befund vor. Alle elf Blaetter eine eigene Meldestelle tragen zu lassen ist der teure Weg; ein Ton waere der billigste Zusatz, falls sie doch jemanden trifft; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-ui/src/kommandos/blattmeldung.rs traegt den Satz an einer Stelle; ein zweiter Weg oder ein Ton ist nicht gebaut. Der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

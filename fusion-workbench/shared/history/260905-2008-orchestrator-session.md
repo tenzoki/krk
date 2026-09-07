@@ -558,3 +558,48 @@ ausloest.
     Meldung in der Statuszeile.
 
 **Was offen bleibt:** 10 der 56 Fragen, dazu die Reichweitenfrage.
+
+## Fuenf weitere Entscheidungen am 260907-2238 beantwortet
+
+Achte Vorlagerunde. Der Nutzer ist allen fuenf Empfehlungen gefolgt; bei der zweiten hat er
+die zusammengesetzte Empfehlung (a und b, nicht c) uebernommen. **Eine der fuenf laesst sich
+in diesem Projekt nicht umsetzen**, und das steht unten bei ihr.
+
+36. **Ob ein Commit eine Durchsicht braucht, wird aus seinem Dateibestand abgeleitet** statt
+    von Hand zugeordnet. `git show --name-only` beantwortet die Frage in einer Zeile, und die
+    Fehlzuordnung ist an derselben Stelle mehrfach aufgetreten: sieben Commits galten als
+    reine Werkbank-Arbeit, einer davon aenderte ausgelieferten Code.
+    **Nicht hier umsetzbar:** das Werkzeug ist `bin/fusion-review-coverage` und gehoert dem
+    Rahmenwerk, nicht diesem Projekt. Die Antwort ist notiert und bindet, wer das Werkzeug
+    aendert. **Und sie greift zu kurz**, was der Datensatz nicht sieht: beide Moeglichkeiten
+    setzen voraus, dass es ueberhaupt eine gemessene Spanne gibt. Arbeit ausserhalb einer
+    Sitzung ist fuer die Deckungsmessung strukturell unsichtbar; das Werkzeug meldet dann
+    „ungeprueft", und das liest sich in einem Bericht wie „nichts zu beanstanden".
+37. **Ein Prueflauf erzwingt kuenftig beides: dass jede Oberflaechendatei den Abschnitt mit
+    ihrer macOS-Untergrenze traegt, und dass jede darin angesprochene Klasse genannt ist.**
+    Die dritte Moeglichkeit — auch die Zahlen zu pruefen — ist verworfen: sie braeuchte
+    Xcode und waere ein halber Uebersetzer. **Die Richtigkeit der Zahl bleibt damit in jedem
+    Fall eine Zusage des Menschen, und der Prueflauf darf nicht so heissen, als pruefe er
+    mehr.** Die Gewohnheit war schon einmal auf fuenf von 31 Dateien abgesunken und ist von
+    Hand wiederhergestellt worden.
+38. **Das Profil fuer den Archivordner behaelt seine eine Zeile, und der Kommentar erklaert
+    die Luecke.** Die zweite Lesart von „Eintraegen" — die archivierten Dateien — ist mit dem
+    festgelegten Bausteinsatz nicht zaehlbar, weil die Zaehlung nur eine Ebene tief geht. Die
+    naheliegende Ersatzzahl waere irrefuehrend: 5 Laeufe neben 15 abgelegten Speichern liest
+    sich wie eine feinere Aufloesung und ist keine, denn die wahre Dateizahl ist 167. Eine
+    Tiefenangabe im Bausteinsatz waere sachlich richtig und ein Eingriff in den Kern.
+39. **KRK haelt die Belegungsdatei nicht gegen ihren zweiten Schreiber; es bleibt beim
+    Hinweis in der Statuszeile.** Die Datei hat zwei Schreiber, die nichts voneinander
+    wissen: den Nutzer mit einem Editor, und die Belegungsansicht auf `f1`. **Der Preis ist
+    mitentschieden:** wer die Datei ausserhalb von KRK oeffnet, wird nicht gewarnt, und der
+    Hinweis faellt mit dem naechsten Tastenbefehl. Ein Nachladen kostete einen zweiten
+    Dateibeobachter, eine Rueckfrage vor dem Sichern eine weitere Rueckfrage.
+40. **Eine Meldung, die entsteht, waehrend ein Blatt die Statuszeile verdeckt, bleibt in der
+    Statuszeile.** Bei der gemessenen Startgroesse 1280 × 720 bleibt die Zeile frei; bei
+    klein gezogenem Fenster verdeckt schon das Stapelumbenennen sie ganz, und dann sieht der
+    Nutzer die Meldung nicht. Fuer diese Luecke liegt kein Befund vor. Alle elf Blaetter eine
+    eigene Meldestelle tragen zu lassen ist der teure Weg; ein Ton waere der billigste
+    Zusatz, falls sie doch jemanden trifft.
+
+**Was offen bleibt:** 5 der 56 Fragen, dazu die Reichweitenfrage und die drei Fragen, die
+die Arbeit dieses Tages neu aufgeworfen hat.

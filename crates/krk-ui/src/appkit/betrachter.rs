@@ -154,7 +154,8 @@
 //! und `menuForEvent:` (`NSView.h:291`), `NSMenu` (`NSMenu.h:56`) und `NSEvent`
 //! (`NSEvent.h:317`), `NSNotificationCenter` (`NSNotification.h:37`) mit
 //! `addObserver:selector:name:object:` (`:41`) und
-//! `removeObserver:name:object:` (`:48`), `NSData`s `initWithBytes:length:`
+//! `removeObserver:name:object:` (`:48`), die Meldung selbst als
+//! `NSNotification` (`:15`), `NSData`s `initWithBytes:length:`
 //! (`NSData.h:113`, ueber `NSData::with_bytes` der Kiste) und an `NSURL`
 //! `absoluteString` (`NSURL.h:108`) und `scheme` (`:115`): keines traegt eine
 //! Verfuegbarkeitsangabe, alle stehen seit 10.0.
@@ -164,6 +165,14 @@
 //! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
 //! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme. Das
 //! Buendel zielt auf 15.0 (`.cargo/config.toml`).
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; `NSObjectProtocol` ist der Kistenname des
+//! Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene Angabe); `NSRect` ist
+//! eine C-Struktur (`NSGeometry.h:33`) und `CGFloat` ein Gleitkommatyp
+//! (`CGBase.h:326`); alle uebrigen tragen im SDK keine eigene
+//! Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
 use std::cell::RefCell;
 use std::path::PathBuf;

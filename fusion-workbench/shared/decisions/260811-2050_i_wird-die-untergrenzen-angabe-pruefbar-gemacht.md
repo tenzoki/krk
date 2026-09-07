@@ -68,3 +68,23 @@ Zahlen in Kommentaren, die keine Prüfung hält; hier um dasselbe für die Unter
 2 sind der Beleg, dass es für diese eine Sorte Kommentar doch geht — für die andere (die Zahl der
 Ränge, der Module, der Funktionen) gilt das Argument nicht, weil dort kein Import danebensteht,
 an dem sich vergleichen ließe.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2238 beantwortet` — Moeglichkeit 1 und 2 zusammen, Moeglichkeit 3 nicht: der Prueflauf haelt, dass der Abschnitt dasteht und dass jede angesprochene Klasse darin genannt ist. Die Zahlen selbst zu pruefen braeuchte Xcode und waere ein halber Uebersetzer. Die Richtigkeit der Zahl bleibt damit eine Zusage des Menschen, und der Prueflauf darf nicht so heissen, als pruefe er mehr; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-2256-untergrenzen-prueflauf.md — zwei Proben in
+`crates/krk-core/tests/baum.rs` halten Möglichkeit 1 und 2:
+`jede_appkit_datei_mit_frameworkimport_traegt_den_untergrenzen_abschnitt` und
+`jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt`. Die Ausnahmeliste, die
+`## Optionen` unter Möglichkeit 2 als Kosten veranschlagt, ist nicht entstanden: statt zu
+fragen, ob ein Name eine Klasse ist — was am Quelltext nicht entscheidbar ist —, fordert
+der Prüflauf jeden Namen ein, den eine `use`-Zeile auf oberster Ebene aus einer
+`objc2_`-Kiste hereinholt, und die Antwort darauf ist eine Obermenge. Die zwei begründeten
+Ausnahmen `koordinaten.rs` und `mod.rs` folgen aus derselben Eigenschaft und stehen
+nirgends als Liste. Die 196 Lücken, die die Erhebung dabei aufdeckte, sind in
+`260907-2256_*_die-untergrenzen-abschnitte-nannten-196-hereingeholte-namen-nicht-und-27-von-42-appkit-dateien-waren-betroffen.md`
+belegt und geschlossen; was der Prüflauf nicht sieht, steht in
+`260907-2258_*_deckt-der-untergrenzen-prueflauf-auch-eingerueckte-use-zeilen-und-voll-ausgeschriebene-pfade.md`.
+Möglichkeit 3 ist nicht gebaut, und weder ein Probenname noch ein Meldetext noch ein
+Modulkopf behauptet mehr: die Richtigkeit der Zahl bleibt eine Zusage des Menschen.

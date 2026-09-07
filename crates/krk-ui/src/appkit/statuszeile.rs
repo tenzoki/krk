@@ -179,6 +179,15 @@
 //! eigene Angabe; `setAutoresizingMask:` ruft diese Datei nicht, und `setFrame:`
 //! ruft sie beim Aufbau und um jede Messung herum, die sie unmittelbar danach
 //! wieder zuruecknimmt.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Zeichenkette beim Uebersetzen und hat keines; `NSPoint`, `NSRect` und
+//! `NSSize` sind C-Strukturen (`NSGeometry.h:23`, `:33` und `:28`); die
+//! Aufzaehlung `NSTextAlignment` (`NSText.h:47`) traegt
+//! `API_AVAILABLE(macos(10.0))`; alle uebrigen tragen im SDK keine eigene
+//! Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
 use objc2::rc::Retained;
 use objc2_app_kit::{NSColor, NSFont, NSTextAlignment, NSTextField, NSView};

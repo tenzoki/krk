@@ -241,6 +241,14 @@
 //! `Gitfenster::bauen`, und die Klassen jenes Bereichs stehen mit ihren
 //! Untergrenzen im Kopf von [`super::git`]. Eine zweite Aufzaehlung hier waere
 //! eine zweite Wahrheit ueber dieselben Klassen.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; die Aufzaehlung
+//! `NSApplicationTerminateReply` (`NSApplication.h:384`) schliesst mit blossem
+//! `};` und traegt damit keine Angabe; `NSMenuItem` (`NSMenuItem.h:23`) und
+//! `NSTextView` (`NSTextView.h:76`) stehen ohne eigene Angabe seit 10.0; das
+//! Protokoll `NSMenuItemValidation` (`NSMenu.h:259`) ebenso.
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};

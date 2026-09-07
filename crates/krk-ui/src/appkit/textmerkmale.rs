@@ -96,6 +96,19 @@
 //! (`:90`) und der Name `NSAppearanceNameAqua` (`:63`). Seit macOS 10.14 stehen
 //! `bestMatchFromAppearancesWithNames:` (`:56`) und `NSAppearanceNameDarkAqua`
 //! (`:64`) — die beiden juengsten Angaben im Kopf dieser Datei.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `NSRange` ist eine C-Struktur
+//! (`NSRange.h:12`); die Klassen `NSString` (`NSString.h:103`), `NSNumber`
+//! (`NSValue.h:42`) und `NSDictionary` (`NSDictionary.h:14`) tragen keine
+//! eigene Angabe; die Aufzaehlung `NSFontDescriptorSymbolicTraits`
+//! (`NSFontDescriptor.h:21`) schliesst mit blossem `};`, `NSUnderlineStyle`
+//! (`NSAttributedString.h:62`) traegt `API_AVAILABLE(macos(10.0))`; die drei
+//! Merkmalsschluessel `NSFontAttributeName` (`NSAttributedString.h:26`),
+//! `NSForegroundColorAttributeName` (`:28`), `NSParagraphStyleAttributeName`
+//! (`:27`) und `NSUnderlineStyleAttributeName` (`:34`) tragen `macos(10.0)`;
+//! alle uebrigen tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen
+//! damit seit 10.0.
 
 use std::collections::HashMap;
 

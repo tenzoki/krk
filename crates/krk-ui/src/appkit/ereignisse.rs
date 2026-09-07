@@ -266,6 +266,16 @@
 //! unter der Untergrenze, und `charactersByApplyingModifiers:` antwortet auf
 //! jedem Zielsystem; der Rueckfall gilt den selbst gebauten Ereignissen aus
 //! [`ereignis_senden`], und der Grund dafuer steht dort.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; `NSObjectProtocol` ist der Kistenname des
+//! Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene Angabe); `NSPoint`
+//! ist eine C-Struktur (`NSGeometry.h:23`); die drei Aufzaehlungen
+//! `NSEventType` (`NSEvent.h:24`), `NSEventMask` (`:93`) und
+//! `NSEventModifierFlags` (`:167`) schliessen mit blossem `};`; alle uebrigen
+//! tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen damit seit
+//! 10.0.
 
 use std::ptr::NonNull;
 

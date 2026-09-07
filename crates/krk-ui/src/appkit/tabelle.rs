@@ -234,6 +234,18 @@
 //! und `minWidth` (`NSTableColumn.h:42` und `:48`). `objc2` fuehrt keine Verfuegbarkeitsangaben mit
 //! sich, und der Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist
 //! die Gegenmassnahme.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Zeichenkette beim Uebersetzen und hat keines; die Aufzaehlungen
+//! `NSAutoresizingMaskOptions` (`NSView.h:33`),
+//! `NSTableViewColumnAutoresizingStyle` (`NSTableView.h:30`),
+//! `NSByteCountFormatterCountStyle` (`NSByteCountFormatter.h:27`) und
+//! `NSDateFormatterStyle` (`NSDateFormatter.h:46`) schliessen mit blossem
+//! `};`, `NSTextAlignment` (`NSText.h:47`) traegt
+//! `API_AVAILABLE(macos(10.0))`; alle uebrigen tragen im SDK keine eigene
+//! Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
 use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};

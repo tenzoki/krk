@@ -76,6 +76,17 @@
 //! braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt
 //! keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die
 //! Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; `NSObjectProtocol` ist der Kistenname des
+//! Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene Angabe); `NSPoint`,
+//! `NSRect` und `NSSize` sind C-Strukturen (`NSGeometry.h:23`, `:33` und
+//! `:28`); `NSInteger` ist ein Ganzzahltyp (`objc/NSObjCRuntime.h:13`); die
+//! Aufzaehlungen `NSAutoresizingMaskOptions` (`NSView.h:33`), `NSBoxType`
+//! (`NSBox.h:26`) und `NSTitlePosition` (`NSBox.h:16`) schliessen mit blossem
+//! `};`; alle uebrigen tragen im SDK keine eigene Verfuegbarkeitsangabe und
+//! stehen damit seit 10.0.
 
 use std::cell::Cell;
 

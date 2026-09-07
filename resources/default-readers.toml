@@ -498,6 +498,33 @@ pfad = 'fusion-workbench/circles$'
 # Ein Ablagelauf ist ein ORDNER, und `zeigt = "datum"` ist die Form von
 # `juengste`, die Einträge jedes Typs sieht. Mit `zeigt = "titel"` stünde hier
 # der Platzhalter, denn dieser Speicher enthält keine Dateien.
+#
+# WAS HIER NICHT STEHT, UND WARUM ES NICHT NACHZUTRAGEN IST: die Zahl der
+# archivierten Dateien. Verlangt waren beide Lesarten von „Einträgen", die
+# Ablageläufe und die Datensätze darunter, und die zweite ist mit diesen vier
+# Bausteinen nicht zu haben. Die Ablage liegt drei Ebenen tief
+# (`archive/<lauf>/shared/<speicher>/<datensatz>.md`), `zaehlung` läuft flach
+# über eine Ebene, und eine Ortsangabe nimmt höchstens einen Platzhalter an:
+# `*/shared/*` wäre der zweite und wird beim Laden abgewiesen. Wer die Zahl
+# braucht, zählt sie außerhalb von KRK, etwa mit
+# `find fusion-workbench/archive -type f | wc -l`.
+#
+# Die naheliegende Ersatzzeile wäre nicht bloß ungenau, sondern IRREFÜHREND,
+# und deshalb bleibt die Lücke stehen. Erreichbar wäre eine Ebene tiefer
+# `zaehlung = { ordner = "*/shared" }`, also die Zahl der abgelegten
+# Speicherordner. Sie stünde unter „Läufe" und läse sich wie deren feinere
+# Auflösung, ist es aber nicht: wer am Bestand des 260907 die 15 neben den 5
+# sähe, schlösse auf drei abgelegte Datensätze je Lauf, und es sind rund
+# dreiunddreißig — 167 Dateien, mit dem `find` oben gezählt. Sie setzte
+# außerdem voraus, dass jeder Lauf seinen Bestand unter `shared/` ablegt; ein
+# Lauf, der eine Runde mitnimmt, fiele aus der Zählung. Eine Zeile, die in die
+# falsche Richtung gelesen wird, ist schlechter als keine.
+#
+# Die sachlich richtige Antwort wäre eine Tiefenangabe am Baustein. Sie ist ein
+# Eingriff in den Kern und nicht in diese Datei, und sie kostet, was erst am
+# Bestand feststeht, während der Haushalt oben in Leseläufen rechnet, die am
+# Profil ablesbar sind. So entschieden vom Nutzer am 260907; der Datensatz ist
+# `260831-1353_*_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.md`.
 [[profil]]
 name = "fusion-Werkbank: der Ablagespeicher"
 pfad = 'fusion-workbench/archive$'

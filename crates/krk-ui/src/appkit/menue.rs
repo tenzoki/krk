@@ -275,6 +275,15 @@
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
 //!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Zeichenkette beim Uebersetzen und hat keines; `NSInteger` ist ein
+//! Ganzzahltyp (`objc/NSObjCRuntime.h:13`); die Aufzaehlung
+//! `NSEventModifierFlags` (`NSEvent.h:167`) schliesst mit blossem `};`; alle
+//! uebrigen tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen damit
+//! seit 10.0.
+//!
 //! # Drei Eintraege trugen einen eigenen Selektor, und warum keiner mehr
 //!
 //! "Fenster schliessen", "Fenster einblenden" und "KRK beenden" liefen bis zur
