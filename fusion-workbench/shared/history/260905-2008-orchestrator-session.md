@@ -431,3 +431,40 @@ gefolgt; bei der ersten hat er nach der Sache gefragt, bevor er sie beantwortet 
     geschlossen, weil die Regel scharf war.
 
 **Was offen bleibt:** 25 der 56 Fragen, dazu die Reichweitenfrage aus der zweiten Runde.
+
+## Fuenf weitere Entscheidungen am 260907-1355 beantwortet
+
+Fuenfte Vorlagerunde: die fuenf Fragen, die an einer Messung haengen. Der Nutzer ist allen
+fuenf Empfehlungen gefolgt. **Zwei davon sind Antworten mit Wiedervorlage** — sie halten den
+heutigen Zustand fest und benennen den Anlass, der die Frage neu aufmacht; wer sie spaeter
+liest, liest sie als Entscheidung und nicht als Versaeumnis.
+
+21. **Die Messstrecke bekommt einen Ordnersprung.** Die Vorschau kostet seit der Runde 16 je
+    Ordner einen zusaetzlichen Verzeichnisdurchlauf, und die Messstrecke waehlt fuer die
+    betroffene Zeitzusage eine **Datei**, sieht diese Arbeit also nie. Der Ordnersprung misst
+    genau den Preis, den jeder Ordner in jedem Projekt zahlt, und braucht weder eine
+    Profildatei noch einen Eingriff in den Messmodus. Die Zahl ist danach nur ueber einen
+    Abnahmelauf zu haben, und den faehrt der Nutzer.
+22. **Der Messmodus wertet den Ordner weiter aus wie die ausgelieferte Fassung, und der Kopf
+    des naechsten Messberichts nennt die Aenderung.** Der Lauf vom 260810 und der naechste
+    messen damit nicht mehr genau dasselbe; das ist der Preis. Die Gegenmoeglichkeit haette
+    eine Sonderfassung vermessen und eine Zahl ausgegeben, die besser ist als die des
+    Nutzers, ohne dass man ihr das ansieht.
+23. **Der Git-Bereich bekommt keinen Beobachter auf `.git`; er frischt sich weiter mit dem
+    Ordner auf.** Committet der Nutzer im Terminal, waehrend KRK einen Unterordner des
+    Repositorys zeigt, zeigt der Bereich bis zum naechsten Ordnerwechsel den alten Stand.
+    **Wiedervorlage:** nachdem der Nutzer das gebaute Buendel im Alltag benutzt hat. Ob der
+    veraltete Stand stoert, ist eine Beobachtung am laufenden Programm und keine Ableitung.
+24. **Die Fadenzahl des Git-Status bleibt ungedeckelt.** Die Bibliothek verteilt den Lauf auf
+    so viele Faeden, wie das Geraet Kerne hat; ob das dem Zeichnen der Oberflaeche Bilder
+    wegnimmt, ist ungemessen, und eine geratene Grenze waere auf vier Kernen zu niedrig und
+    auf sechzehn zu hoch. **Wiedervorlage:** nach dem ersten Abnahmelauf mit dem Git-Bereich.
+    Die Grenze ist danach eine Zeile und kein Umbau; die Stelle steht namentlich im Code.
+25. **Die Sitzungsdatei wird streng behandelt, Tastenbelegung und Einstellungen bleiben
+    nachsichtig** — aber **erst nach der Messung, die der Datensatz verlangt**: schreibt KRK
+    je eine Sitzungsdatei ohne obersten Eintrag? Solange die offen ist, wird nichts
+    umgestellt. **Und die Rueckwaertsrichtung braucht eine Probe:** eine Sitzungsdatei aus
+    einer spaeteren KRK-Fassung darf in einer aelteren nicht dazu fuehren, dass der Nutzer
+    seine Sitzung verliert, auch nicht mit Meldung.
+
+**Was offen bleibt:** 20 der 56 Fragen, dazu die Reichweitenfrage aus der zweiten Runde.

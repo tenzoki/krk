@@ -110,9 +110,10 @@
 //!   **Seit dem 260821 faellt umgekehrt ein Fall wieder heraus**, und er haengt
 //!   an der Datei und nicht an der Regel: eine Datei ohne einen einzigen
 //!   obersten Schluessel gilt genau dann als beschaedigt, wenn
-//!   [`pfade::Datei::leerbefund`] fuer sie [`Leerbefund::Beschaedigt`] sagt —
-//!   heute allein `bookmarks.toml`, und welche es morgen sind, sagt jene
-//!   Fallunterscheidung und keine Aufzaehlung hier. Gesichert wird sie
+//!   [`pfade::Datei::leerbefund`] fuer sie [`Leerbefund::Beschaedigt`] sagt.
+//!   Welche das sind, sagt jene Fallunterscheidung und keine Aufzaehlung hier;
+//!   sie ist waehrend der Runde 23 gewachsen, und eine Zahl an dieser Stelle
+//!   waere mit ihr falsch geworden. Gesichert wird sie
 //!   trotzdem nicht, denn sie kann keinen Bestand tragen und sperrte den einen
 //!   Platz gegen die Sicherung, die ihn traegt. Die Begruendung steht bei
 //!   [`Beiseite::Nicht`], die Einordnung je Datei im Abschnitt „Beschaedigt
@@ -156,21 +157,30 @@
 //!   fuenf TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei`, seit
 //!   dem 260821 [`Lesezeichenliste`] und seit der Runde 16
 //!   `leseprofil::datei::Profildatei`, ueber die `readers.toml` denselben
-//!   Ladeweg geht. `session.toml` traegt es nicht; ob die strenge Lesart auch
-//!   dorthin gehoert, ist die offene Frage
-//!   `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`.
+//!   Ladeweg geht. **`session.toml` traegt es nicht, und das ist entschieden
+//!   und keine Luecke**: der Nutzerentscheid vom 260907
+//!   (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`)
+//!   bindet die Strenge dieser Datei an die Bedingung, dass eine `session.toml`
+//!   aus einer **spaeteren** Fassung von KRK in einer frueheren die Sitzung
+//!   nicht kostet, und `deny_unknown_fields` kostete sie genau dort. Die Frage,
+//!   ob dieser Datei eine Fassungsangabe die Strenge doch erlaubt, steht als
+//!   eigener Datensatz.
 //! - **Kein einziger oberster Schluessel** heisst je nach Datei etwas anderes,
 //!   und deshalb steht die Antwort in [`pfade::Datei::leerbefund`] — einer
 //!   vollstaendigen Fallunterscheidung ohne Auffangzweig, wie
-//!   [`pfade::Datei::format`] daneben. `bookmarks.toml` traegt dort
-//!   [`Leerbefund::Beschaedigt`], weil KRK selbst eine leere Liste als
-//!   `eintraege = []` schreibt und die Datei nie ohne obersten Schluessel
-//!   hinterlaesst. Die vier uebrigen TOML-Dateien und die zwei Zettel tragen
+//!   [`pfade::Datei::format`] daneben. `bookmarks.toml` und `session.toml`
+//!   tragen dort [`Leerbefund::Beschaedigt`], weil KRK sie selbst schreibt und
+//!   dabei nie ohne obersten Schluessel hinterlaesst — die leere Liste als
+//!   `eintraege = []`, die aermste Sitzung als sechs oberste Schluessel. Die
+//!   drei uebrigen TOML-Dateien und die zwei Zettel tragen
 //!   [`Leerbefund::Vorgabe`]: `keymap.toml`, `settings.toml` und `readers.toml`
-//!   pflegt der Nutzer von Hand und darf sie leerraeumen, ein leerer Zettel ist
-//!   ein leerer Zettel, und `session.toml` ist auf Nachsicht gegenueber einer
-//!   aelteren Fassung gebaut. Ob die strenge Lesart auch dorthin gehoert, ist
-//!   dieselbe offene Frage wie eine Zeile weiter oben.
+//!   pflegt der Nutzer von Hand und darf sie leerraeumen, und ein leerer Zettel
+//!   ist ein leerer Zettel.
+//!
+//!   **Die zwei Haelften greifen `session.toml` deshalb verschieden weit, und
+//!   das ist der Zuschnitt und kein Versehen.** Einen fehlenden obersten
+//!   Schluessel schreibt KRK nie, also ist er ein Befund; einen unbekannten
+//!   schreibt vielleicht die naechste Fassung, also ist er keiner.
 //!
 //! **Die Zusage deckt weiterhin nicht jede Gestalt des Verlusts.** Eine Datei,
 //! die dasteht und sich nicht lesen laesst, traegt [`Grund::NichtLesbar`] und

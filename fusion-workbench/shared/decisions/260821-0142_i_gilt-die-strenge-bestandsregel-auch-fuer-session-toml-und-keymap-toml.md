@@ -121,3 +121,43 @@ unberührt: dort wird weiter gesichert.
 
 Verwandt: `shared/issues/260821-1401_*_der-leerbefund-zweig-verschweigt-eine-dastehende-sicherung-die-den-bestand-traegt.md`
 — derselbe Zweig, eine Auskunft, die mit derselben Zeile weggefallen ist.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1355 beantwortet` — Moeglichkeit 2: die Sitzungsdatei wird streng, Tastenbelegung und Einstellungen bleiben nachsichtig — **aber erst nach der Messung, die der Datensatz verlangt** (schreibt KRK je eine Sitzungsdatei ohne obersten Eintrag?). Die Rueckwaertsrichtung braucht dabei eine Probe: eine Sitzungsdatei aus einer spaeteren Fassung darf in einer aelteren nicht die Sitzung kosten; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Messung 260907-1407 (coder, Baumstand `c3ade60`): **nein, KRK schreibt keine
+`session.toml` ohne obersten Schlüssel.** Jeder Schreibweg der Datei mündet in
+`Sitzungsschreiber::schreiben` → `Zugang::sichern(Datei::Sitzung, …)` → `toml::to_string`;
+der Messmodus geht ausdrücklich denselben Weg, `krk-bench` spielt gelesene Bytes zurück
+statt zu serialisieren, und `nur_benannte_dateien_erreichen_das_atomare_schreiben` hält
+fest, dass keine weitere Datei des Baums an `atomar::schreiben` herankommt. Die ärmste
+überhaupt konstruierbare `Sitzung` serialisiert zu sechs obersten Schlüsseln: `aktiv` und
+`zettel` tragen kein `skip_serializing_if`, die drei Tische und die Tischfolge
+`[[fenster]]` stehen unbedingt daneben. Eine leere Tabliste, ein fehlender Ordner, ein
+Abbruch mitten im Schreiben und der Erstlauf ändern daran nichts — der Text entsteht ganz
+im Speicher, bevor etwas auf die Platte geht, und die fehlende Datei ist der erste Start.
+Die Messung steht als Probe
+`jede_geschriebene_session_toml_traegt_einen_obersten_schluessel` im Baum.
+
+---
+Implemented: 260907-1407-coder-die-messung-vor-der-strengen-sitzungsdatei-und-iconutil.md
+— `Datei::Sitzung` trägt `Leerbefund::Beschaedigt`; die Rückwärtsrichtung hält die Probe
+`eine_session_toml_aus_einer_spaeteren_fassung_behaelt_ihre_sitzung`.
+
+**Eine Hälfte von Möglichkeit 2 ist dabei nicht gebaut, und das folgt aus der Antwort
+selbst.** `Sitzung` bekommt **kein** `#[serde(deny_unknown_fields)]`: die Antwort bindet die
+Strenge an die Bedingung, dass eine `session.toml` aus einer späteren Fassung in einer
+früheren die Sitzung nicht kostet, und genau das kostet die Marke — dieser Datensatz nennt
+es unter Contra seiner eigenen Möglichkeit 2. Die zwei Hälften der Bestandsregel greifen
+`session.toml` deshalb verschieden weit, und der Schnitt ist entscheidbar: einen
+**fehlenden** obersten Schlüssel schreibt KRK nie, einen **unbekannten** schreibt vielleicht
+die nächste Fassung. Ob eine Fassungsangabe in der Datei die erste Hälfte doch erlaubte,
+ist die eigene Frage
+`260907-1407_*_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md`.
+
+**Was der Nachtrag vom 260821-1532 vorhergesagt hat, ist eingetreten:** der Hauptgrund
+dieses Datensatzes trägt für die gebaute Hälfte schwächer, als er bei seiner Ablage tat.
+Seit `d771ec6` wird eine Datei ohne obersten Schlüssel nicht mehr gesichert, sondern nur
+gemeldet; der Gewinn ist eine Meldung und keine Sicherung. Für die andere Hälfte,
+`deny_unknown_fields`, wäre er unberührt gewesen — die ist aber nicht gebaut.

@@ -51,3 +51,9 @@ Die Sache ist klein und die Frage trotzdem nicht. Die angelegten Unterordner sin
 Möglichkeit 1, und die Begründung ist nicht die Bequemlichkeit, sondern die Richtung des Fehlers. Eine Messstrecke, die eine Sonderfassung der Anwendung vermisst, gibt eine Zahl aus, die besser ist als die des Nutzers, und niemand sieht der Zahl das an. Der Unterschied, den diese Runde einbringt, geht in die andere Richtung: die gemessene Anwendung rückt näher an die ausgelieferte heran.
 
 Der Preis ist zu nennen und nicht kleinzureden. Die Reihe vom 260810 und die nächste messen zwei verschiedene Endbedingungen, und das gehört in den Kopf des nächsten Berichts, nicht in einen Datensatz, den beim Vergleichen niemand liest. Wer Möglichkeit 2 vorzieht, wählt die Vergleichbarkeit zweier Reihen über die Aussagekraft jeder einzelnen, und das ist eine vertretbare Wahl, solange die Senkung von L9 noch aussteht.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1355 beantwortet` — Moeglichkeit 1: der Messmodus wertet den Ordner weiter aus wie die ausgelieferte Fassung, und der Kopf des naechsten Messberichts nennt die Aenderung. Dass der Lauf vom 260810 und der naechste nicht mehr genau dasselbe messen, ist mitentschieden; eine Sonderfassung zu vermessen gaebe eine Zahl aus, die besser ist als die des Nutzers, ohne dass man ihr das ansieht; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-1422-ordnersprung-in-der-messstrecke-und-berichtskopf.md `## Der Berichtskopf` — der Kopf des Abnahmeberichts traegt die Zeile „Messgegenstand L7" und nennt beide Aenderungen samt der Folge, dass die Reihe vom 260810 nicht gegen diese zu halten ist.

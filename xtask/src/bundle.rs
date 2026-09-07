@@ -87,17 +87,10 @@ const SYMBOLWERKSTATT: &str = "krk-symbol.iconset";
 /// durchlaeuft; es kommt also keine Voraussetzung hinzu, die dieses Projekt
 /// nicht schon haette.
 ///
-/// **Gerufen wird es ueber den Suchpfad und nicht mit vollem Pfad, und seit dem
-/// 260907 liegt es damit auf der falschen Seite der Regel.** Die Regel steht im
-/// Kopf von [`crate`]: mit vollem Pfad, was macOS mitliefert, ueber den
-/// Suchpfad, was nachinstalliert wird. `iconutil` liefert macOS mit, der Aufruf
-/// nimmt trotzdem den Suchpfad. Das ist keine begruendete Ausnahme, sondern ein
-/// Befund, und er ist in dieser Runde bewusst nicht behoben worden
-/// (`shared/issues/260907-1307_*_iconutil-liegt-nach-der-neuen-aufrufregel-auf-der-falschen-seite-und-wird-ueber-den-suchpfad-gerufen.md`).
-/// Bis zum 260905 sagten dieser Satz und die Abbruchmeldung darunter
-/// `/usr/bin/iconutil` und beschrieben damit eine Gewohnheit, die der Aufruf
-/// nicht teilt
-/// (`shared/issues/260826-1448_*_iconutil-wird-ueber-den-suchpfad-gerufen-waehrend-kommentar-und-meldung-usr-bin-iconutil-sagen-und-messen-rs-liest-cargo-ein-zweites-mal.md`).
+/// Gerufen wird es als `/usr/bin/iconutil`, also mit vollem Pfad, wie die Regel
+/// im Kopf von [`crate`] es fuer ein mitgeliefertes Programm vorsieht. Eine
+/// eigene Begruendung braucht das hier nicht; sie stuende an dieser Stelle nur,
+/// wenn der Aufruf von der Regel abwiche.
 ///
 /// **Die Zuordnung der Kantenlaengen.** Apple erwartet je Punktgroesse eine
 /// einfache und eine `@2x`-Fassung, und `@2x` heisst die doppelte Kantenlaenge
@@ -465,16 +458,17 @@ fn symbol_bauen(wurzel: &Path, ziel: &Path) -> Result<(), Abbruch> {
         })?;
     }
 
-    let status = Command::new("iconutil")
+    let status = Command::new("/usr/bin/iconutil")
         .args(["--convert", "icns", "--output"])
         .arg(ziel)
         .arg(&werkstatt)
         .status()
         .map_err(|fehler| {
             Abbruch::Lauf(format!(
-                "iconutil laesst sich nicht starten: {fehler}. Es gehoert zum Basissystem von \
-                 macOS und wird ueber den Suchpfad gerufen; steht /usr/bin nicht auf PATH, \
-                 findet der Aufruf es nicht."
+                "/usr/bin/iconutil laesst sich nicht starten: {fehler}. Es gehoert zum \
+                 Basissystem von macOS und wird deshalb nach der Aufrufregel im Kopf von \
+                 xtask/src/main.rs mit vollem Pfad gerufen; fehlt es dort, ist die \
+                 Installation des Systems unvollstaendig."
             ))
         })?;
     if !status.success() {

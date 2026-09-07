@@ -94,3 +94,9 @@ Implemented:
 Deferred:
 Superseded by:
 Retired:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1355 beantwortet` — Moeglichkeit 2: die Messstrecke bekommt einen Ordnersprung, damit die Zusammenfassung ueberhaupt in die gemessene Spanne faellt. Sie misst den Preis, den jeder Ordner zahlt, und braucht weder eine Profildatei noch einen Eingriff in den Messmodus; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-1422-ordnersprung-in-der-messstrecke-und-berichtskopf.md `## Der Ablauf des Sprungs` — die Sitzungsstrecke misst L7 seit dem 260907 an zwei Spannen, dem Dateisprung und einem Ordnersprung auf den L6-Unterordner; keine elfte Zusage und keine geaenderte Zahl.

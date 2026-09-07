@@ -65,10 +65,9 @@
 //!
 //! **Eine Ausnahme wird an ihrem Aufrufort begruendet**, nicht hier: die Regel
 //! bleibt sonst nicht die Regel, sondern eine von mehreren Moeglichkeiten. Der
-//! Baum traegt heute eine Stelle, die auf der falschen Seite liegt, und sie ist
-//! keine begruendete Ausnahme, sondern ein Befund:
-//! `iconutil` (`bundle::symbol_bauen`) liefert macOS mit und wird ueber den
-//! Suchpfad gerufen
+//! Baum traegt heute keine. Die eine Stelle, die auf der falschen Seite lag,
+//! ist seit dem 260907 nachgezogen: `iconutil` (`bundle::symbol_bauen`) wird
+//! als `/usr/bin/iconutil` gerufen
 //! (`shared/issues/260907-1307_*_iconutil-liegt-nach-der-neuen-aufrufregel-auf-der-falschen-seite-und-wird-ueber-den-suchpfad-gerufen.md`).
 //!
 //! **Was diese Regel nicht haelt.** Keine Probe im Baum prueft sie, und keine

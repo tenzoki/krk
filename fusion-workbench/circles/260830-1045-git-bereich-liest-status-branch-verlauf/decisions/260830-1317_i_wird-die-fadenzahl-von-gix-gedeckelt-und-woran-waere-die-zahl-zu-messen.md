@@ -76,3 +76,9 @@ Markenspalte, und die Frage, ob die erste Bildschirmseite später dasteht als vo
 
 ---
 Abgleich 260831-1417: Der Marker bleibt `_o_`, aus demselben Grund wie beim Schwesterdatensatz zum zehnten Obermenü. Die Vorbelegung des Plans (Entscheidung 7) ist gebaut: `Platform::index_worktree_options_mut().thread_limit` wird nirgends gesetzt, der Modulkopf von `crates/krk-core/src/git/leser.rs` schreibt aus, warum nicht. Gemessen ist die Fadenzahl weiterhin nicht, und die Frage bleibt damit dem Nutzer vorbehalten.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1355 beantwortet` — Moeglichkeit 1: keine Grenze. Eine geratene Zahl waere auf vier Kernen zu niedrig und auf sechzehn zu hoch, und die Wirkung auf die Bildrate ist ungemessen. **Mit Wiedervorlage** nach dem ersten Abnahmelauf mit dem Git-Bereich; die Grenze ist danach eine Zeile und kein Umbau; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-core/src/git/leser.rs schreibt aus, dass keine Grenze gesetzt ist und wo der erste Hebel liegt; der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

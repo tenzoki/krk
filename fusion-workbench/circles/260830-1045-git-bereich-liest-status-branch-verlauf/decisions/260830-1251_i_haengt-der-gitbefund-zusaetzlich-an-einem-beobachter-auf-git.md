@@ -35,3 +35,9 @@ Zu entscheiden ist die Frage nicht vor dem Plan, sondern nach der ersten Abnahme
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1 für diese Runde, mit Wiedervorlage nach der ersten Abnahme am Bündel. Ob der veraltete Stand stört, ist eine Beobachtung am laufenden Programm und keine Ableitung; einen zweiten Beobachter samt Dämpfung zu bauen, bevor jemand den Mangel gespürt hat, ist die Reihenfolge verkehrt herum. Möglichkeit 3 raten wir ab: sie macht die Aktualität zur Aufgabe des Nutzers.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1355 beantwortet` — Moeglichkeit 1: kein Beobachter auf .git, der Git-Bereich frischt sich weiter mit dem Ordner auf. **Mit Wiedervorlage**, nachdem der Nutzer das gebaute Buendel im Alltag benutzt hat — ob der veraltete Stand stoert, ist eine Beobachtung am laufenden Programm und keine Ableitung; die Wiedervorlage geschieht als neuer Datensatz, weil dieser terminal ist; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-ui/src/auffrischung.rs kennt keine .git-Quelle; der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

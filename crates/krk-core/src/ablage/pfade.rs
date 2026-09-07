@@ -284,11 +284,30 @@ impl Datei {
     /// erzwingt. Wer sie beantwortet, beantwortet sie **je Datei** und leitet
     /// sie nicht von einer anderen ab.
     ///
-    /// **`bookmarks.toml` ist die eine mit [`Leerbefund::Beschaedigt`]**, und
-    /// die Antwort ist gemessen und nicht geraten: eine leere
+    /// **`bookmarks.toml` und `session.toml` tragen
+    /// [`Leerbefund::Beschaedigt`]**, und beide Antworten sind gemessen und
+    /// nicht geraten. Eine leere
     /// [`Lesezeichenliste`](super::Lesezeichenliste) serialisiert zu
-    /// `eintraege = []` und damit zu einem obersten Schluessel. Eine
-    /// `bookmarks.toml` ohne einen einzigen hat KRK nie geschrieben.
+    /// `eintraege = []` und damit zu einem obersten Schluessel; eine
+    /// `bookmarks.toml` ohne einen einzigen hat KRK nie geschrieben. Fuer
+    /// [`Sitzung`](super::Sitzung) traegt die Messung weiter: die aermste
+    /// ueberhaupt konstruierbare Sitzung serialisiert zu sechs obersten
+    /// Schluesseln, denn `aktiv` und `zettel` tragen kein
+    /// `skip_serializing_if`, und die drei Tische und die Tischfolge
+    /// `[[fenster]]` stehen unbedingt daneben. Die Probe dazu ist
+    /// `jede_geschriebene_session_toml_traegt_einen_obersten_schluessel` in
+    /// `krk-core/tests/ablage.rs`.
+    ///
+    /// **Die Strenge greift allein diese eine Haelfte, und der Sitzung fehlt
+    /// die zweite mit Absicht.** `Sitzung` traegt kein
+    /// `#[serde(deny_unknown_fields)]`, und das ist keine Auslassung, sondern
+    /// die Bedingung des Nutzerentscheids vom 260907: eine `session.toml`, die
+    /// eine **spaetere** Fassung von KRK mit einem neuen obersten Feld
+    /// geschrieben hat, darf in einer frueheren die Sitzung nicht kosten. Ein
+    /// unbekannter oberster Schluessel und ein fehlender sind hier verschiedene
+    /// Befunde: den fehlenden schreibt KRK nie, den unbekannten schreibt es
+    /// vielleicht morgen. Gehalten wird die Zusage von der Probe
+    /// `eine_session_toml_aus_einer_spaeteren_fassung_behaelt_ihre_sitzung`.
     ///
     /// **`readers.toml` steht mit [`Leerbefund::Vorgabe`] neben
     /// `settings.toml` und `keymap.toml` und nicht neben `bookmarks.toml`**
@@ -297,16 +316,14 @@ impl Datei {
     /// KRK schreibt sie im Betrieb nie, also kann eine Datei ohne obersten
     /// Schluessel hier kein Zeichen fuer einen Schaden sein.
     ///
-    /// **Die vier uebrigen TOML-Dateien und die zwei Zettel tragen
-    /// [`Leerbefund::Vorgabe`]**, und zwar vorlaeufig: `settings.toml` und
-    /// `keymap.toml` aendert der Nutzer von Hand und darf sie leerraeumen,
-    /// `session.toml` traegt an jeder Struktur `#[serde(default)]` und ist auf
-    /// Nachsicht gegenueber einer aelteren Fassung gebaut. Ob die strenge
-    /// Lesart auf `session.toml` und `keymap.toml` gehoert, ist die offene
-    /// Frage
-    /// `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`;
-    /// bis zu ihrer Antwort steht hier die Fassung, die nichts am Verhalten
-    /// aendert.
+    /// **Die drei uebrigen TOML-Dateien und die zwei Zettel tragen
+    /// [`Leerbefund::Vorgabe`]**, und die Trennung folgt einem Kriterium:
+    /// schreibt KRK die Datei selbst, oder pflegt der Nutzer sie von Hand?
+    /// `keymap.toml`, `settings.toml` und `readers.toml` aendert der Nutzer von
+    /// Hand und darf sie bis auf ihre Kommentare leerraeumen — das heisst dort
+    /// „nimm die Vorgabe" und ist kein Schaden. So entschieden am 260907
+    /// (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`,
+    /// Moeglichkeit 2).
     ///
     /// **Die Antwort fuer [`Datei::Zettel`] wird nie gelesen**, und das gehoert
     /// dazu. Einziger Rufer ist [`super::Zugang::laden`], und der weist ein
@@ -319,12 +336,10 @@ impl Datei {
     /// Vollstaendigkeit und ist gesehen.
     pub const fn leerbefund(self) -> Leerbefund {
         match self {
-            Datei::Lesezeichen => Leerbefund::Beschaedigt,
-            Datei::Belegung
-            | Datei::Sitzung
-            | Datei::Einstellungen
-            | Datei::Leser
-            | Datei::Zettel(_) => Leerbefund::Vorgabe,
+            Datei::Lesezeichen | Datei::Sitzung => Leerbefund::Beschaedigt,
+            Datei::Belegung | Datei::Einstellungen | Datei::Leser | Datei::Zettel(_) => {
+                Leerbefund::Vorgabe
+            }
         }
     }
 

@@ -347,6 +347,27 @@ impl Default for Spaltensichtbarkeit {
 }
 
 /// Der ganze Sitzungszustand, wie er in `session.toml` steht.
+///
+/// **Eine `session.toml` ohne einen einzigen obersten Schluessel gilt seit dem
+/// 260907 als beschaedigt** ([`Datei::leerbefund`](super::Datei::leerbefund)),
+/// und die Antwort ist gemessen: die aermste ueberhaupt konstruierbare Sitzung
+/// serialisiert zu sechs obersten Schluesseln, weil [`Sitzung::aktiv`] und
+/// [`Sitzung::zettel`] kein `skip_serializing_if` tragen und die drei Tische
+/// und die Tischfolge unbedingt danebenstehen. Eine Datei ohne einen einzigen
+/// kann deshalb nicht aus KRKs Feder stammen.
+///
+/// **`#[serde(deny_unknown_fields)]` steht hier bewusst nicht.** Die Strenge
+/// greift den fehlenden obersten Schluessel und nicht den unbekannten, und die
+/// zwei sind verschiedene Befunde: den fehlenden schreibt KRK nie, den
+/// unbekannten schreibt vielleicht die naechste Fassung. Ein `Sitzung` mit
+/// `deny_unknown_fields` liesse den Nutzer beim Zuruecksprung auf eine aeltere
+/// Fassung seine Sitzung verlieren, und genau das schliesst der Nutzerentscheid
+/// vom 260907 aus
+/// (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`).
+/// Wer die Marke im Vorbeigehen nachtraegt, nimmt die Bedingung jenes
+/// Entscheids zurueck; die Probe
+/// `eine_session_toml_aus_einer_spaeteren_fassung_behaelt_ihre_sitzung` in
+/// `krk-core/tests/ablage.rs` wird dabei rot.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Sitzung {

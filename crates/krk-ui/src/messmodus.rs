@@ -21,7 +21,9 @@
 //! - [`Aufgabe::Sitzung`] ist die Strecke aus S21: sie stellt die
 //!   Pruefsitzung aus C8 her und misst L1, L5, L6, L7, L8 und L9 auf ihr,
 //!   jede Groesse als Spanne vom Ausloeser bis zum Ende des
-//!   Zeichendurchgangs, der die Aenderung traegt.
+//!   Zeichendurchgangs, der die Aenderung traegt. L7 hat auf ihr seit dem
+//!   260907 zwei Spannen, den Dateisprung und den Ordnersprung; welche
+//!   Zusagen die Strecke misst, sagt [`Sitzungsgroesse`].
 //! - [`Aufgabe::SitzungsStart`] ist das L4 der Pruefsitzung: die Anwendung
 //!   stellt die Sitzung aus `session.toml` wieder her — geschrieben hat sie
 //!   der Sitzungslauf davor — und meldet den Zeitpunkt, an dem beide
@@ -547,10 +549,17 @@ struct Werte {
 // Die Sitzungsstrecke (S21)
 // ---------------------------------------------------------------------------
 
-/// Eine der sechs Messgroessen der Sitzungsstrecke.
+/// Eine gemessene Spanne der Sitzungsstrecke.
 ///
-/// L5 steht zweimal, weil C8 es zweimal misst: einmal fuer den Wechsel auf
-/// den verdeckten Tab und einmal fuer den Wechsel des aktiven Dateifensters.
+/// Eine Zusage aus C8 steht hier mehrfach, wo sie mehrere Spannen deckt, und
+/// keine dieser Spannen ist eine eigene Zusage: die zehn Zahlen aus C8 bleiben
+/// zehn. L5 steht zweimal, weil C8 es zweimal misst, einmal fuer den Wechsel
+/// auf den verdeckten Tab und einmal fuer den Wechsel des aktiven
+/// Dateifensters. L7 steht seit dem 260907 zweimal, weil die Vorschau eines
+/// **Ordners** seit der Runde 16 andere Arbeit kostet als die einer Datei und
+/// der Dateisprung allein sie nicht sieht
+/// (`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md`,
+/// Moeglichkeit 2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Sitzungsgroesse {
     L1,
@@ -558,6 +567,8 @@ enum Sitzungsgroesse {
     L5Fenster,
     L6,
     L7,
+    /// L7, gemessen am Sprung auf einen Ordner statt auf eine Datei.
+    L7Ordner,
     L8,
     L9,
 }
@@ -572,6 +583,7 @@ impl Sitzungsgroesse {
             Self::L5Fenster => "l5-fenster",
             Self::L6 => "l6",
             Self::L7 => "l7",
+            Self::L7Ordner => "l7-ordner",
             Self::L8 => "l8",
             Self::L9 => "l9",
         }
@@ -611,6 +623,19 @@ enum Bedingung {
     AktivZeigt(PathBuf),
     /// Der sichtbare Tab des aktiven Fensters ist gelesen und traegt Zeilen.
     AktivGelesen,
+    /// Die Vorschau steht — kein Ladevorgang mehr, und sie zeigt den
+    /// ausgewaehlten Eintrag —, und dieser Eintrag ist ein **anderer** als der
+    /// genannte Pfad.
+    ///
+    /// **Der genannte Pfad ist der Grund, aus dem es die Bedingung gibt.** Ein
+    /// blosses „die Vorschau steht" waere im Stand unmittelbar davor schon
+    /// erfuellt: der Ordnersprung setzt vor jede gemessene Taste einen
+    /// ungemessenen Druck, der die Auswahl vom Zielordner wegnimmt, und
+    /// solange dieser Druck die Ereignisschlange noch nicht verlassen hat,
+    /// steht die Vorschau unveraendert auf dem Zielordner. Der Warteschritt
+    /// ginge dann sofort durch, und die gemessene Taste faende die Auswahl
+    /// noch dort vor, wo sie hinspringen soll.
+    VorschauStehtWoanders(PathBuf),
     /// Keine Dateioperation laeuft mehr.
     VorgangVorbei,
 }
@@ -628,6 +653,12 @@ impl Bedingung {
                 &lage.ordner_aktiv == pfad && !lage.liest_aktiv && lage.zeilen_aktiv > 0
             }
             Bedingung::AktivGelesen => !lage.liest_aktiv && lage.zeilen_aktiv > 0,
+            Bedingung::VorschauStehtWoanders(pfad) => {
+                lage.auswahl_pfad.is_some()
+                    && lage.auswahl_pfad == lage.vorschau_pfad
+                    && !lage.vorschau_laedt
+                    && lage.vorschau_pfad.as_deref() != Some(pfad.as_path())
+            }
             Bedingung::VorgangVorbei => !lage.vorgang_laeuft,
         }
     }
@@ -675,6 +706,7 @@ struct Sitzungswerte {
     l5_fenster: Vec<Duration>,
     l6: Vec<Duration>,
     l7: Vec<Duration>,
+    l7_ordner: Vec<Duration>,
     l8: Vec<Duration>,
     l9: Vec<Duration>,
 }
@@ -687,18 +719,20 @@ impl Sitzungswerte {
             Sitzungsgroesse::L5Fenster => self.l5_fenster.push(wert),
             Sitzungsgroesse::L6 => self.l6.push(wert),
             Sitzungsgroesse::L7 => self.l7.push(wert),
+            Sitzungsgroesse::L7Ordner => self.l7_ordner.push(wert),
             Sitzungsgroesse::L8 => self.l8.push(wert),
             Sitzungsgroesse::L9 => self.l9.push(wert),
         }
     }
 
-    fn alle(&self) -> [(&'static str, &Vec<Duration>); 7] {
+    fn alle(&self) -> [(&'static str, &Vec<Duration>); 8] {
         [
             ("l1", &self.l1),
             ("l5-tab", &self.l5_tab),
             ("l5-fenster", &self.l5_fenster),
             ("l6", &self.l6),
             ("l7", &self.l7),
+            ("l7-ordner", &self.l7_ordner),
             ("l8", &self.l8),
             ("l9", &self.l9),
         ]
@@ -735,6 +769,18 @@ fn sitzungsmessung_fertig(
                 && lage.auswahl_pfad == lage.vorschau_pfad
                 && !lage.vorschau_laedt
         }
+        // Dieselbe Endbedingung wie bei L7, nur auf **diesen** Ordner
+        // festgenagelt statt auf „den ausgewaehlten Eintrag": der Sprung soll
+        // genau den Ordner treffen, dessen Zusammenfassung etwas kostet.
+        // Landet die Auswahl woanders, steht die Bedingung nie und der Lauf
+        // bricht nach der Geduld unter dem Namen `l7-ordner` ab, statt eine
+        // Zahl auszugeben, die etwas anderes gemessen hat.
+        Sitzungsgroesse::L7Ordner => {
+            lage.auswahl_aktiv != vorher.auswahl
+                && lage.auswahl_pfad.as_deref() == Some(unterordner)
+                && lage.vorschau_pfad.as_deref() == Some(unterordner)
+                && !lage.vorschau_laedt
+        }
         Sitzungsgroesse::L8 => lage.vorgang_sichtbar,
     }
 }
@@ -751,8 +797,9 @@ fn messung_unmoeglich(groesse: Sitzungsgroesse, lage: &Sitzungslage) -> Option<S
     if !lage.im_vordergrund {
         return Some(NICHT_IM_VORDERGRUND.to_owned());
     }
+    let liste_leer = lage.zeilen_aktiv == 0;
     match groesse {
-        Sitzungsgroesse::L1 | Sitzungsgroesse::L7 => (lage.zeilen_aktiv == 0)
+        Sitzungsgroesse::L1 | Sitzungsgroesse::L7 | Sitzungsgroesse::L7Ordner => liste_leer
             .then(|| "die Liste ist leer; ein Tastendruck kann keine Auswahl bewegen".to_owned()),
         Sitzungsgroesse::L9 => (!lage.vorgang_laeuft).then(|| {
             "die Kopie ist schon fertig; L9 misst die Tastatur waehrend einer laufenden \
@@ -794,11 +841,11 @@ pub fn auswahl_ohne_eintrag(name: &str, ordner: &Path, zeilen: usize) -> String 
 /// Baut die Schrittliste der Sitzungsstrecke.
 ///
 /// Die Reihenfolge folgt der Pruefsitzung: erst die Messungen, die auf der
-/// unveraenderten Sitzung laufen (L1, L7, L5), dann L6 mit seinen
-/// Ordnerwechseln, zuletzt L8 und L9, weil sie das rechte Fenster auf das
-/// Kopierziel stellen. Vor jeder Reihe steht ein ungemessener Vorlauf, wo
-/// der erste von zwanzig Laeufen sonst eine kalte Zahl in eine warme Reihe
-/// truege — dieselbe Regel wie bei [`Schritt::Vorlauf`].
+/// unveraenderten Sitzung laufen (L1, L7, L5), dann L6 und der Ordnersprung
+/// von L7 mit ihren Ordnerwechseln, zuletzt L8 und L9, weil sie das rechte
+/// Fenster auf das Kopierziel stellen. Vor jeder Reihe steht ein ungemessener
+/// Vorlauf, wo der erste von zwanzig Laeufen sonst eine kalte Zahl in eine
+/// warme Reihe truege — dieselbe Regel wie bei [`Schritt::Vorlauf`].
 fn sitzungsschritte(plan: &Messplan) -> Vec<Sitzungsschritt> {
     use Sitzungsschritt as S;
     let ordner_a = plan.ordner_a().to_path_buf();
@@ -890,6 +937,60 @@ fn sitzungsschritte(plan: &Messplan) -> Vec<Sitzungsschritt> {
         schritte.push(S::Handeln(Handlung::AktivLesen(ordner_a.clone())));
         schritte.push(S::Warten(Bedingung::AktivZeigt(ordner_a.clone())));
     }
+
+    // L7, zweiter Fall: der Sprung auf einen **Ordner** statt auf eine Datei.
+    //
+    // Gemessen wird derselbe Weg wie beim Dateisprung darueber, vom Pfeil ab
+    // bis zum Ende des Zeichendurchgangs, der die Vorschau des neuen Eintrags
+    // traegt. Der Unterschied liegt im Eintrag: fuer einen Ordner rechnet die
+    // Vorschau seit der Runde 16 eine Zusammenfassung, und die kostet einen
+    // Verzeichnisleselauf auf ihrem Arbeitsfaden. Die Reihe darueber sieht
+    // diese Arbeit nie, weil `a/datei-2` und seine Nachbarn Dateien sind.
+    //
+    // **Der Ordner ist der L6-Unterordner, und die Wahl ist keine
+    // Bequemlichkeit.** Im Messmodus laedt die Anwendung `readers.toml` nicht
+    // (`Anwendungsdelegierter::sitzung_laden`), also erkennt kein Profil aus
+    // der Datei hier irgendetwas, und was jeden Ordner auswertet, ist das
+    // eingebaute Default-Profil: drei Zaehlzeilen auf den Ordner selbst, also
+    // ein Leselauf ueber seinen ganzen Inhalt. Was dieser Leselauf kostet,
+    // haengt damit allein an der Eintragszahl — und der L6-Unterordner ist der
+    // einzige Ordner des Messplatzes, dessen Eintragszahl der Messplan zusagt
+    // und die Pruefung vor dem Lauf haelt (1.000 Eintraege). Die Unterordner
+    // in Pruefordner A sind dagegen leer; ein Sprung auf einen von ihnen
+    // maesse einen Leselauf ohne Ergebnis, also fast dasselbe wie der
+    // Dateisprung darueber.
+    //
+    // Der Ablauf: in den Elternordner, den Unterordner ungemessen auswaehlen
+    // und seine Vorschau abwarten (der Vorlauf, der die kalte Zahl aus der
+    // warmen Reihe haelt), danach je Wiederholung ein ungemessener Pfeil hoch,
+    // die abgewartete Vorschau des Nachbarn, und der gemessene Pfeil ab
+    // zurueck auf den Unterordner. Pfeil hoch und Pfeil ab landen wieder auf
+    // demselben Eintrag, gleich welcher Nachbar darueber steht; die Reihe
+    // haengt damit an keiner Sortierannahme, sondern nur daran, dass ueber dem
+    // Unterordner ueberhaupt eine Zeile steht. Pruefordner A ist sein
+    // Geschwister und traegt den Namen, aus dem seiner gebildet ist
+    // (`<a>-l6`), steht in jeder Sortierung vor ihm und erfuellt das.
+    schritte.push(S::Handeln(Handlung::AktivLesen(eltern.clone())));
+    schritte.push(S::Warten(Bedingung::AktivZeigt(eltern.clone())));
+    schritte.push(S::Handeln(Handlung::Auswaehlen(unterordner_name.clone())));
+    schritte.push(S::Warten(Bedingung::VorschauStehtWoanders(
+        ordner_a.clone(),
+    )));
+    for _ in 0..WIEDERHOLUNGEN {
+        schritte.push(S::Taste {
+            funktion: "auswahl_hoch",
+            messung: None,
+        });
+        schritte.push(S::Warten(Bedingung::VorschauStehtWoanders(
+            plan.unterordner.clone(),
+        )));
+        schritte.push(S::Taste {
+            funktion: "auswahl_runter",
+            messung: Some(Sitzungsgroesse::L7Ordner),
+        });
+    }
+    schritte.push(S::Handeln(Handlung::AktivLesen(ordner_a.clone())));
+    schritte.push(S::Warten(Bedingung::AktivZeigt(ordner_a.clone())));
 
     // L8 und L9: das rechte Fenster zeigt das Kopierziel, links sind alle
     // Eintraege markiert. Je Wiederholung: F5 gemessen bis zur sichtbaren
@@ -1883,6 +1984,7 @@ mod tests {
             Sitzungsgroesse::L5Fenster,
             Sitzungsgroesse::L6,
             Sitzungsgroesse::L7,
+            Sitzungsgroesse::L7Ordner,
             Sitzungsgroesse::L8,
             Sitzungsgroesse::L9,
         ] {
@@ -1924,6 +2026,7 @@ mod tests {
             Sitzungsgroesse::L5Fenster,
             Sitzungsgroesse::L6,
             Sitzungsgroesse::L7,
+            Sitzungsgroesse::L7Ordner,
             Sitzungsgroesse::L8,
             Sitzungsgroesse::L9,
         ] {
@@ -1943,6 +2046,7 @@ mod tests {
             Sitzungsgroesse::L5Fenster,
             Sitzungsgroesse::L6,
             Sitzungsgroesse::L7,
+            Sitzungsgroesse::L7Ordner,
             Sitzungsgroesse::L8,
         ] {
             assert_eq!(
@@ -2175,6 +2279,101 @@ mod tests {
             &vorschau_da,
             &plan.unterordner
         ));
+    }
+
+    /// Der Ordnersprung endet erst an der Vorschau **dieses** Ordners.
+    ///
+    /// Die Endbedingung ist auf den L6-Unterordner festgenagelt und nicht auf
+    /// „irgendeinen ausgewaehlten Eintrag": eine Auswahl, die woanders landet,
+    /// soll den Lauf anhalten und keine Zahl liefern, die die Zusammenfassung
+    /// eines anderen Ordners gemessen hat.
+    #[test]
+    fn der_ordnersprung_endet_an_der_vorschau_des_unterordners() {
+        let ordner = Planordner::neu("l7-ordner");
+        let plan = ordner.plan();
+        let vorher = Vorher {
+            auswahl: 0,
+            tab: 0,
+            aktiv_links: true,
+        };
+        let angekommen = Sitzungslage {
+            auswahl_aktiv: 1,
+            auswahl_pfad: Some(plan.unterordner.clone()),
+            vorschau_pfad: Some(plan.unterordner.clone()),
+            vorschau_laedt: false,
+            ..lage(&ordner)
+        };
+        assert!(sitzungsmessung_fertig(
+            Sitzungsgroesse::L7Ordner,
+            vorher,
+            &angekommen,
+            &plan.unterordner
+        ));
+        // Die Zusammenfassung steht noch aus: der Arbeitsfaden der Vorschau
+        // liest gerade den Ordner, und genau diese Arbeit soll in der Spanne
+        // liegen.
+        let laedt_noch = Sitzungslage {
+            vorschau_laedt: true,
+            ..angekommen.clone()
+        };
+        assert!(!sitzungsmessung_fertig(
+            Sitzungsgroesse::L7Ordner,
+            vorher,
+            &laedt_noch,
+            &plan.unterordner
+        ));
+        // Ein anderer Eintrag zaehlt nicht, auch wenn seine Vorschau steht.
+        let woanders = Sitzungslage {
+            auswahl_pfad: Some(ordner.unter("a")),
+            vorschau_pfad: Some(ordner.unter("a")),
+            ..angekommen
+        };
+        assert!(!sitzungsmessung_fertig(
+            Sitzungsgroesse::L7Ordner,
+            vorher,
+            &woanders,
+            &plan.unterordner
+        ));
+    }
+
+    /// Der Warteschritt vor dem Ordnersprung laesst den alten Stand nicht
+    /// durchgehen.
+    ///
+    /// Der ungemessene Pfeil hoch braucht einen Takt, bis er die Auswahl
+    /// bewegt hat. Solange steht die Vorschau unveraendert auf dem Zielordner,
+    /// und eine Bedingung, die nur „die Vorschau steht" fragte, ginge in
+    /// diesem Stand durch.
+    #[test]
+    fn der_warteschritt_vor_dem_ordnersprung_haelt_den_alten_stand_an() {
+        let ordner = Planordner::neu("l7-ordner-warten");
+        let plan = ordner.plan();
+        let bedingung = Bedingung::VorschauStehtWoanders(plan.unterordner.clone());
+
+        let noch_auf_dem_ziel = mit_lage(Sitzungslage {
+            auswahl_pfad: Some(plan.unterordner.clone()),
+            vorschau_pfad: Some(plan.unterordner.clone()),
+            ..lage(&ordner)
+        });
+        assert!(!bedingung.steht(&noch_auf_dem_ziel));
+
+        // Der Nachbar ist erreicht, seine Vorschau steht: der Ablauf rueckt
+        // weiter.
+        let beim_nachbarn = mit_lage(Sitzungslage {
+            auswahl_pfad: Some(ordner.unter("a")),
+            vorschau_pfad: Some(ordner.unter("a")),
+            ..lage(&ordner)
+        });
+        assert!(bedingung.steht(&beim_nachbarn));
+
+        // Der Nachbar ist erreicht, seine Zusammenfassung laeuft noch: nicht
+        // weiterruecken, sonst begaenne die Messung auf einem halben Stand.
+        let nachbar_laedt = mit_lage(Sitzungslage {
+            auswahl_pfad: Some(ordner.unter("a")),
+            vorschau_pfad: Some(ordner.unter("a")),
+            vorschau_laedt: true,
+            ..lage(&ordner)
+        });
+        assert!(!bedingung.steht(&nachbar_laedt));
     }
 
     /// Eine abgewiesene Auswahl bricht ab, statt in die Geduld zu laufen.

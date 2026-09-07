@@ -2269,7 +2269,7 @@ fn eine_nicht_anlegbare_settings_toml_meldet_sich() {
 /// und niemand bemerkte es.
 ///
 /// Der zweite Teil ist der **veraenderte** Fall aus C1.2. Den leergeraeumten
-/// prueft [`eine_leere_datei_meldet_bei_den_vier_uebrigen_toml_dateien_nichts`]
+/// prueft [`eine_leere_datei_meldet_bei_den_drei_von_hand_gepflegten_nichts`]
 /// und er steht hier nicht ein zweites Mal.
 #[test]
 fn eine_fehlende_readers_toml_entsteht_byteweise_und_bleibt_beim_zweiten_start_liegen() {
@@ -3757,32 +3757,230 @@ farbe = \"rot\"
     );
 }
 
-/// Die vier uebrigen TOML-Dateien bleiben bei einer leeren Datei still
-/// (C1.5 der Runde 16).
+// ---------------------------------------------------------------------------
+// Die strenge Bestandsregel an `session.toml` (Nutzerentscheid vom 260907)
+// ---------------------------------------------------------------------------
+//
+// `session.toml` steht seit dem 260907 neben `bookmarks.toml`: eine Datei ohne
+// einen einzigen obersten Schluessel ist ein Schaden und kein erster Start
+// (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`,
+// Moeglichkeit 2). Der Entscheid bindet die Strenge an zwei Bedingungen, und
+// jede hat hier ihre Probe: die Messung, die ihm vorausgehen musste, und die
+// Rueckwaertsrichtung, die er ausdruecklich nicht bezahlen wollte.
+
+/// Die Messung, an die der Nutzerentscheid vom 260907 die Strenge gebunden hat:
+/// KRK schreibt keine `session.toml` ohne obersten Schluessel.
+///
+/// **Die Gegenprobe zu den drei darunter**, und ohne sie waere die neue Regel
+/// gefaehrlicher als die Luecke, die sie schliesst: schriebe KRK je eine solche
+/// Datei, machte die Strenge KRKs eigene Ausgabe zum Schadensfall.
+///
+/// Gemessen wird an der **aermsten** ueberhaupt konstruierbaren Sitzung und
+/// nicht am Auslieferungszustand: jedes `Option` auf `None`, jeder Wahrheitswert
+/// auf `false`, beide Tabreihen leer. [`Sitzung::aktiv`] und
+/// [`Sitzung::zettel`] tragen kein `skip_serializing_if` und stehen deshalb
+/// unbedingt in der Datei; die drei Tische und die Tischfolge `[[fenster]]`
+/// stehen daneben. Die Strukturen sind ausgeschrieben und nicht ueber `..` und
+/// `Default` gebaut, damit ein neues Feld diese Probe anhaelt und die Messung
+/// erneut erzwingt.
+#[test]
+fn jede_geschriebene_session_toml_traegt_einen_obersten_schluessel() {
+    let (_ordner, ablage) = ablage("sitzung-oberster-schluessel");
+    let aermste = Sitzung {
+        aktiv: Fensterseite::Links,
+        editor: None,
+        zettel: Zettel::Erster,
+        gitanteil: None,
+        breiten: Breiten::default(),
+        sichtbar: Sichtbarkeit {
+            lesezeichen: false,
+            erstes_dateifenster: false,
+            zweites_dateifenster: false,
+            vorschau: false,
+            editor: false,
+            git: false,
+        },
+        spalten: Spaltensichtbarkeit {
+            groesse: false,
+            geaendert: false,
+            typ: false,
+            marke: false,
+        },
+        fenster: [
+            Dateifenster {
+                aktiver_tab: 0,
+                tabs: Vec::new(),
+            },
+            Dateifenster {
+                aktiver_tab: 0,
+                tabs: Vec::new(),
+            },
+        ],
+    };
+
+    for sitzung in [Sitzung::default(), aermste] {
+        gesichert(&ablage, Datei::Sitzung, &sitzung).expect("schreiben gescheitert");
+        let text = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+        let dokument: toml::Table = toml::from_str(&text).expect("KRK schreibt gueltiges TOML");
+        assert!(
+            !dokument.is_empty(),
+            "KRK hat eine session.toml ohne obersten Schluessel geschrieben: {text:?}"
+        );
+    }
+}
+
+/// Eine `session.toml` von 0 Bytes gilt als beschaedigt.
+///
+/// KRK schreibt sie nie so; das misst
+/// [`jede_geschriebene_session_toml_traegt_einen_obersten_schluessel`] daneben.
+/// Eine Datei ohne einen einzigen obersten Schluessel kann deshalb nicht aus
+/// KRKs Feder stammen und ist kein erster Start.
+#[test]
+fn eine_leere_session_toml_gilt_als_beschaedigt() {
+    beschaedigte_sitzung("sitzung-null-bytes", "");
+}
+
+/// Dieselbe Regel mit Zeichen in der Datei: nur Kommentare und Umbrueche.
+///
+/// Die Datei ist nicht leer, und die Frage „steht ueberhaupt ein oberster
+/// Schluessel darin" ist trotzdem mit nein zu beantworten. Deshalb steht sie am
+/// TOML-Dokument und nicht an der Dateilaenge.
+#[test]
+fn eine_session_toml_aus_lauter_kommentaren_gilt_als_beschaedigt() {
+    beschaedigte_sitzung(
+        "sitzung-nur-kommentare",
+        "# hier stand einmal eine Sitzung\n\n# und jetzt nicht mehr\n",
+    );
+}
+
+/// Die Rueckwaertsrichtung: eine `session.toml` aus einer **spaeteren** Fassung
+/// kostet in einer frueheren die Sitzung nicht.
+///
+/// **Die Bedingung, unter der der Nutzer am 260907 die Strenge zugelassen
+/// hat**, und ohne sie ist der Umbau nicht abgenommen. Der Entscheid nennt
+/// diesen Preis als Contra seiner eigenen Moeglichkeit 2: `Sitzung` traegt
+/// deshalb **kein** `#[serde(deny_unknown_fields)]`, und diese Probe ist die
+/// Stelle, an der ein spaeteres Nachtragen der Marke rot wird.
+///
+/// Die zwei Haelften der Bestandsregel greifen `session.toml` damit verschieden
+/// weit, und das ist der Zuschnitt und kein Versehen: einen **fehlenden**
+/// obersten Schluessel schreibt KRK nie, einen **unbekannten** schreibt
+/// vielleicht die naechste Fassung.
+#[test]
+fn eine_session_toml_aus_einer_spaeteren_fassung_behaelt_ihre_sitzung() {
+    let (_ordner, ablage) = ablage("sitzung-spaetere-fassung");
+
+    // Was eine spaetere Fassung schreiben koennte: ein neues oberstes Feld und
+    // ein neuer Tisch, beide vor den Tischen dieser Fassung, wie TOML es
+    // verlangt.
+    let spaeter = "\
+aktiv = \"rechts\"
+zettel = \"zweiter\"
+klangschema = \"gedaempft\"
+
+[seitenleiste]
+breite = 220.0
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster]]
+aktiver_tab = 0
+";
+    fs::write(ablage.pfad(Datei::Sitzung), spaeter).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine session.toml aus einer spaeteren Fassung gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert!(
+        !beiseitepfad(&ablage, Datei::Sitzung)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "eine session.toml aus einer spaeteren Fassung wurde zur Seite gelegt"
+    );
+
+    // Und die Felder, die diese Fassung kennt, sind angekommen: der Nutzer
+    // behaelt seine Sitzung und bekommt nicht den Auslieferungszustand.
+    assert_eq!(geladen.wert.aktiv, Fensterseite::Rechts);
+    assert_eq!(geladen.wert.zettel, Zettel::Zweiter);
+}
+
+/// Prueft, dass eine `session.toml` als beschaedigt gilt, und was dabei unter
+/// dem Beiseitepfad steht.
+///
+/// Die Gegenstuecke sind [`beschaedigte_lesezeichen`] und dessen
+/// [`Sicherungslage::Frei`]. Ein Wahlwert steht hier nicht daneben: die beiden
+/// Rufer treffen beide die Haelfte „kein einziger oberster Schluessel", und die
+/// traegt seit `d771ec6` immer [`Beiseite::Nicht`] — aus null obersten
+/// Schluesseln ist kein Bestand zu sichern, und der eine Sicherungsplatz bliebe
+/// gegen die Sicherung gesperrt, die ihn traegt.
+fn beschaedigte_sitzung(zweck: &str, inhalt: &str) {
+    let (_ordner, ablage) = ablage(zweck);
+    fs::write(ablage.pfad(Datei::Sitzung), inhalt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+    assert_eq!(geladen.wert, Sitzung::default());
+
+    let ersetzung = geladen
+        .ersetzung
+        .expect("die Datei wurde ohne Meldung als Auslieferungszustand gelesen");
+    assert!(
+        matches!(ersetzung.grund, Grund::Beschaedigt(_)),
+        "{ersetzung:?}"
+    );
+
+    let sicherung = beiseitepfad(&ablage, Datei::Sitzung);
+    assert_eq!(ersetzung.beiseite, Beiseite::Nicht);
+    assert!(
+        !sicherung.try_exists().expect("try_exists gescheitert"),
+        "der eine Sicherungsplatz ist mit einer Datei ohne Bestand belegt"
+    );
+    let meldung = melden(&ersetzung);
+    assert!(
+        !meldung.contains(&sicherung.display().to_string()),
+        "die Meldung verspricht eine Sicherung, die es nicht gibt: {meldung}"
+    );
+
+    assert_eq!(
+        fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert"),
+        inhalt,
+        "die Datei wurde ueberschrieben"
+    );
+}
+
+/// Die drei von Hand gepflegten TOML-Dateien bleiben bei einer leeren Datei
+/// still (C1.5 der Runde 16).
 ///
 /// **Die sichtbar gesetzte Antwort und keine stillschweigende
 /// Verallgemeinerung.** `Datei::leerbefund` beantwortet die Frage je Datei, und
 /// diese Probe schreibt die heutige Antwort aus: `settings.toml`,
 /// `readers.toml` und `keymap.toml` aendert der Nutzer von Hand und darf sie
-/// leerraeumen, `session.toml` ist auf Nachsicht gegenueber einer aelteren
-/// Fassung gebaut. Ob die strenge Lesart dorthin gehoert, ist die offene Frage
-/// `shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`;
-/// bis zu ihrer Antwort laesst diese Probe die vier rot werden, die sie im
-/// Vorbeigehen mitnaehme.
+/// leerraeumen. Die Trennung folgt seit dem 260907 einem Kriterium — schreibt
+/// KRK die Datei selbst, oder pflegt der Nutzer sie von Hand?
+///
+/// **`session.toml` ist mit demselben Entscheid aus dieser Gruppe
+/// ausgeschieden** und steht jetzt neben `bookmarks.toml`; die Probe dazu ist
+/// [`eine_leere_session_toml_gilt_als_beschaedigt`]
+/// (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`,
+/// Moeglichkeit 2).
 ///
 /// Fuer `readers.toml` sagt C1.5 mehr als „keine Meldung": eine leergeraeumte
 /// Datei ergibt **kein Profil**, und jeder Ordner zeigt dann seine
 /// Metadatenanzeige. Die zweite Haelfte steht deshalb unten als eigene
 /// Zusicherung.
 #[test]
-fn eine_leere_datei_meldet_bei_den_vier_uebrigen_toml_dateien_nichts() {
-    let (_ordner, ablage) = ablage("leerbefund-die-vier-uebrigen");
-    for welche in toml_dateien().filter(|welche| *welche != Datei::Lesezeichen) {
+fn eine_leere_datei_meldet_bei_den_drei_von_hand_gepflegten_nichts() {
+    let (_ordner, ablage) = ablage("leerbefund-die-von-hand-gepflegten");
+    for welche in
+        toml_dateien().filter(|welche| !matches!(welche, Datei::Lesezeichen | Datei::Sitzung))
+    {
         fs::write(ablage.pfad(welche), "").expect("schreiben gescheitert");
     }
 
     let belegung: Geladen<BelegungStellvertreter> = geladen(&ablage, Datei::Belegung);
-    let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     let eingestellt = geladene_einstellungen(&ablage);
     let (profile, meldungen) = geladene_leseprofile_mit_meldungen(&ablage);
 
@@ -3803,7 +4001,6 @@ fn eine_leere_datei_meldet_bei_den_vier_uebrigen_toml_dateien_nichts() {
 
     for (welche, ersetzt, ersetzung) in [
         (Datei::Belegung, belegung.ist_ersetzt(), belegung.ersetzung),
-        (Datei::Sitzung, sitzung.ist_ersetzt(), sitzung.ersetzung),
         (
             Datei::Einstellungen,
             eingestellt.ist_ersetzt(),

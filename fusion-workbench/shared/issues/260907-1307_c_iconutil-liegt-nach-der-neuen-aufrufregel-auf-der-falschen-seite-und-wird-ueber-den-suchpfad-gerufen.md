@@ -39,3 +39,15 @@ PATH, findet der Aufruf es nicht", und beide Halbsätze wären danach falsch. De
 `cargo xtask bundle` erzeugt weiterhin `target/KRK.app/Contents/Resources/KRK.icns`.
 
 **Schwere:** Low.
+
+---
+Resolved: 260907-1407 vom coder. `xtask/src/bundle.rs` (`symbol_bauen`) ruft
+`Command::new("/usr/bin/iconutil")`. Die Abbruchmeldung darunter ist mitgezogen: sie nennt
+statt des Suchpfads die Aufrufregel im Kopf von `xtask/src/main.rs` und sagt, dass ein
+fehlendes `/usr/bin/iconutil` eine unvollständige Systeminstallation ist. Der Doc-Kommentar
+bei `SYMBOLGROESSEN` nennt den Aufruf jetzt als regelkonform statt als Befund; der Absatz
+zur Ausnahme im Kopf von `xtask/src/main.rs` sagt statt der einen falsch liegenden Stelle,
+dass der Baum keine trägt.
+
+Abnahme gefahren: `grep -rnE 'Command::new\("[a-z]' xtask/src` nennt nur noch `rustup`
+(`xtask/src/release.rs:633`).

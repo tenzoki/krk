@@ -1122,6 +1122,10 @@ struct Gesamtrohrunde {
     l5_fenster: Vec<Duration>,
     l6: Vec<Duration>,
     l7: Vec<Duration>,
+    /// Die zweite Spanne von L7: der Sprung auf einen Ordner statt auf eine
+    /// Datei. Keine elfte Zusage, sondern ein zweiter gemessener Weg unter der
+    /// Zusage L7, so wie L5 und L10 je zwei tragen.
+    l7_ordner: Vec<Duration>,
     l8: Vec<Duration>,
     l9: Vec<Duration>,
     l10_erste: Vec<Duration>,
@@ -1288,9 +1292,21 @@ impl Gesamtlauf {
                 },
                 Zusage {
                     kennung: "L7",
-                    was: "Vorschau des ausgewaehlten Eintrags sichtbar",
+                    was: "Vorschau des ausgewaehlten Eintrags sichtbar (Datei)",
                     mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
                     runden: sammeln(|runde| &runde.l7),
+                },
+                // Dieselbe Kennung, dieselbe Zahl, ein zweiter gemessener Weg:
+                // L7 sagt die Vorschau des ausgewaehlten **Eintrags** zu, und
+                // ein Ordner ist ein Eintrag. Seit der Runde 16 kostet er
+                // dabei eine Zusammenfassung, die die Zeile darueber nie
+                // beruehrt. Die Zeile ist deshalb keine elfte Zusage, wie es
+                // die zweiten Zeilen von L5 und L10 auch nicht sind.
+                Zusage {
+                    kennung: "L7",
+                    was: "Vorschau des ausgewaehlten Eintrags sichtbar (Ordner, 1.000 Eintraege)",
+                    mass: Abnahmemass::Perzentil(Duration::from_millis(100)),
+                    runden: sammeln(|runde| &runde.l7_ordner),
                 },
                 Zusage {
                     kennung: "L8",
@@ -1367,6 +1383,7 @@ impl Gesamtlauf {
         let l5_fenster = hole("l5-fenster")?;
         let l6 = hole("l6")?;
         let l7 = hole("l7")?;
+        let l7_ordner = hole("l7-ordner")?;
         let l8 = hole("l8")?;
         let l9 = hole("l9")?;
 
@@ -1394,6 +1411,7 @@ impl Gesamtlauf {
                 l5_fenster,
                 l6,
                 l7,
+                l7_ordner,
                 l8,
                 l9,
                 l10_erste: reihe_gross.groessen[0].werte.clone(),

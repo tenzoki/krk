@@ -322,6 +322,7 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
         ),
     );
     zeile("Pruefsitzung", PRUEFSITZUNG);
+    zeile("Messgegenstand L7", MESSGEGENSTAND_L7);
     zeile(
         "Systemlast",
         &format!(
@@ -555,6 +556,33 @@ sichtbar und B dahinter, rechts umgekehrt; Auswahl in beiden sichtbaren Tabs auf
 ersten Eintrag, Lesezeichenleiste und Vorschau eingeblendet, Breiten im \
 Auslieferungszustand. Hergestellt ueber session.toml, in derselben Serialisierung, \
 die die Anwendung beim Beenden schreibt";
+
+/// Was sich am Messgegenstand von L7 seit dem Lauf vom 260810 geaendert hat.
+///
+/// **Der Satz steht im Kopf und nicht in einem Datensatz**, weil er dort
+/// gebraucht wird, wo jemand zwei Reihen nebeneinanderlegt. Zwei Aenderungen
+/// haben sich seit der letzten Reihe angesammelt, und keine von beiden sieht
+/// man einer Zahl an: die Vorschau wertet seit der Runde 19 jeden Ordner mit
+/// dem eingebauten Default-Profil aus, im Messmodus wie ueberall
+/// (`circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/decisions/260827-1322_*_faellt-das-default-profil-auch-im-messmodus-an-und-was-misst-l7-danach.md`,
+/// Moeglichkeit 1), und die Strecke misst seit dem 260907 neben dem
+/// Dateisprung einen Ordnersprung
+/// (`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/decisions/260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md`,
+/// Moeglichkeit 2). Beide vergroessern, was in die Endbedingung von L7 faellt.
+///
+/// **Die Zusage selbst ist unberuehrt**: L7 sagt weiterhin 100 ms fuer die
+/// sichtbare Vorschau des ausgewaehlten Eintrags zu, und C8 traegt weiterhin
+/// zehn Zahlen. Was gewachsen ist, ist die gemessene Arbeit, nicht die
+/// Schwelle.
+const MESSGEGENSTAND_L7: &str = "gegenueber dem Lauf vom 260810 in zwei Punkten \
+erweitert. Erstens wertet die Vorschau seit der Runde 19 jeden ausgewaehlten Ordner mit \
+dem eingebauten Default-Profil aus, auch im Messmodus; ein Ordner kostet damit einen \
+Verzeichnisleselauf, den die Reihe vom 260810 nicht enthielt. Zweitens misst L7 seit dem \
+260907 zwei Spannen statt einer: den Sprung auf eine Datei und den Sprung auf den \
+L6-Unterordner mit 1.000 Eintraegen, dessen Zusammenfassung genau diesen Leselauf kostet. \
+Die Zusage ist dieselbe geblieben (100 ms, zehn Zahlen in C8); gewachsen ist die gemessene \
+Arbeit. Die Reihe vom 260810 und diese messen deshalb nicht dasselbe und sind nicht \
+gegeneinander zu halten";
 
 /// Was der Bericht ueber seine eigenen Zahlen sagen muss.
 const GESAMT_LESART: &str = "\
@@ -906,7 +934,8 @@ mod tests {
                 zusage("L5", "Tabwechsel", p(50)),
                 zusage("L5", "Fensterwechsel", p(50)),
                 zusage("L6", "Unterordner", p(100)),
-                zusage("L7", "Vorschau", p(100)),
+                zusage("L7", "Vorschau (Datei)", p(100)),
+                zusage("L7", "Vorschau (Ordner)", p(100)),
                 zusage("L8", "Fortschritt", p(200)),
                 zusage(
                     "L9",
@@ -937,6 +966,20 @@ mod tests {
             "vor dem Lauf { 1.0 1.0 1.0 }",
         ] {
             assert!(text.contains(angabe), "im Kopf fehlt {angabe}:\n{text}");
+        }
+        // Der Kopf nennt, was L7 seit dem 260810 mehr misst, und dass die zwei
+        // Reihen deshalb nicht gegeneinander zu halten sind. Ohne diesen Satz
+        // liest ein spaeterer Vergleich zwei Endbedingungen als eine.
+        for aussage in [
+            "Messgegenstand L7",
+            "Default-Profil",
+            "zwei Spannen statt einer",
+            "nicht gegeneinander zu halten",
+        ] {
+            assert!(
+                text.contains(aussage),
+                "der Kopf sagt nichts ueber den geaenderten Messgegenstand ({aussage}):\n{text}"
+            );
         }
         // Die tatsaechlich gelesene Zahl steht im Kopf, nicht nur die
         // behauptete: ohne sie sagt der Bericht nicht, worauf gemessen wurde.
