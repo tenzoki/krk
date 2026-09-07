@@ -40,3 +40,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2009 beantwortet` — Moeglichkeit 1: es bleibt bei der sprachneutralen Grundordnung. Der Systemsprache zu folgen braechte die Ordnung aus der Oberflaeche in den Kern und verlangte, den Sortierschluessel bei jedem Sprachwechsel neu zu bauen; daran haengen zwei gemessene Zeitzusagen, und es gibt bislang keinen Nutzer, der die andere Ordnung braucht; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-core/src/verzeichnis/kollation.rs faehrt unveraendert auf der Grundordnung; der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

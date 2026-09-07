@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 92 Funktionen mit zusammen 95 Kombinationen.
+# Ausgeliefert sind 93 Funktionen mit zusammen 96 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -81,15 +81,21 @@
 # Cmd+C und Cmd+V standen bis zum 260805 in dieser Aufzaehlung. Sie tragen
 # seither die Textbefehle des Menues "Bearbeiten" und sonst nichts: ohne
 # jenes Menue erreicht Cmd+V ueberhaupt kein Textfeld. Bis zur Runde 22 hielt
-# genau das die beiden fuer eine spaetere Runde frei; seither sind sie am
-# Dateifenster besetzt, und zwar ohne eine weitere Zeile in dieser Datei.
+# genau das die beiden fuer eine spaetere Runde frei; seither ist Cmd+C am
+# Dateifenster besetzt, und zwar ohne eine weitere Zeile in dieser Datei:
 # `copy:` und `cut:` beantwortet der Anwendungsdelegierte seit der Runde 22
-# und legt Dateiverweise fuer andere Anwendungen ab, `paste:` seit der Runde
-# 21 und haengt den Text oder den Dateinamen aus der Zwischenablage an den
-# Filtertext an; Dateien fuegt KRK nicht ein. Die Reservierung aus C3 ist
-# damit ganz eingeloest und nicht gebrochen; C3 schreibt aus, warum
+# und legt Dateiverweise fuer andere Anwendungen ab. Cmd+V war es von der
+# Runde 21 bis zum 260907 ebenso, ueber `paste:` als Einfuegen in den
+# Filtertext. Seit dem Nutzerentscheid vom 260907-2009 traegt das Einfuegen
+# in den Filtertext cmd+f mit einer eigenen Zeile weiter oben
+# ("filter_einfuegen"), und Cmd+V schweigt im Dateifenster, bis eine spaetere
+# Runde die Dateizwischenablage baut; im Textfeld fuegt es unveraendert ein.
+# Dateien fuegt KRK nach wie vor nicht ein. Die Reservierung aus C3 ist damit
+# fuer Cmd+V wieder offen und nicht gebrochen; C3 schreibt aus, warum
 # (Nutzerentscheid vom 260805-0000,
-# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`),
+# und wofuer sie offen ist, sagt der Entscheid vom 260907-2009
+# (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
 #
 # Eine Kombination kann im Textfeld etwas anderes bedeuten als im Dateifenster,
 # und das ist kein zweiter Mechanismus, sondern der Fokusvorbehalt aus C2.
@@ -121,12 +127,18 @@
 # haben; der Fokusvorbehalt teilt jeden Tastendruck genau einem der beiden zu,
 # und zwei Funktionen mit verschiedenen Zustellern begegnen einander nie. Zwei
 # vom Menue gehaltene Funktionen auf einer Kombination bleiben ein Konflikt,
-# zwei Funktionen des Dateifensters erst recht. Ausgeliefert gibt es genau
-# einen Fall der Doppelung: cmd+a markiert im Dateifenster ueber
+# zwei Funktionen des Dateifensters erst recht. Ausgeliefert steht die
+# Doppelung bei cmd+a und bei cmd+f; eine Zahl steht hier nicht, weil die
+# naechste Doppelung sie falsch machte. cmd+a markiert im Dateifenster ueber
 # "alle_markieren" alle Eintraege und waehlt im Textfeld ueber
 # "text_alles_auswaehlen" den Text aus, wie auf dem Mac ueblich
 # (Nutzerentscheid vom 260805,
 # `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+# cmd+f sucht im Editor ueber "editor_suchen" im Text und haengt im
+# Dateifenster ueber "filter_einfuegen" die Zwischenablage an den Filtertext
+# an (Nutzerentscheid vom 260907-2009,
+# `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
+# In beiden Faellen stellt einmal der Ereignisabgriff zu und einmal das Menue.
 #
 # Das Tippen der Anfangsbuchstaben aus C2 ist keine Belegung und steht darum
 # nicht hier: es ist der Rueckfall fuer jede Taste ohne Zusatztaste, die
@@ -508,6 +520,52 @@ id = "inhaltssuche_umschalten"
 name = "Inhaltssuche ein- und ausschalten"
 tasten = []
 
+[[funktion]]
+id = "filter_einfuegen"
+name = "In den Filter einfügen"
+tasten = ["cmd+f"]
+gehalten_von = "menue"
+# cmd+f steht auch bei "editor_suchen" weiter unten, und das ist kein
+# Konflikt: dort stellt der Ereignisabgriff zu, hier das Menue, und ein
+# Konflikt sind zwei Funktionen genau dann, wenn sie dieselbe Kombination und
+# denselben Zusteller tragen. Mit dem Fokus im Editor sucht cmd+f im Text, mit
+# dem Fokus im Dateifenster haengt es die Zwischenablage an den Filtertext an
+# (Nutzerentscheid vom 260805,
+# `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+# Dasselbe Muster traegt cmd+a bei "alle_markieren" und
+# "text_alles_auswaehlen"; der Kommentar dort sagt es fuer jenes Paar.
+#
+# Der **Zusteller** traegt das Paar und nicht der Wirkungsbereich. Zwei vom
+# Ereignisabgriff zugestellte Funktionen mit verschiedenem Wirkungsbereich
+# blieben ein Konflikt, und die eingebettete Belegung braeche beim ersten
+# Zugriff ab; derselbe Datensatz schreibt das aus. Ohne `gehalten_von` waere
+# diese Zeile also nicht die zweite Zustellung, sondern der Abbruch.
+#
+# **Die zwei Paare trennen den Anschlag an verschiedenen Stellen, und cmd+a ist
+# deshalb kein Beleg fuer cmd+f.** Gelesen in
+# `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, Modulkopf "Die vier
+# Bestandteile": bei cmd+a trennt Bestandteil (2), der Fokusvorbehalt, denn im
+# Textfeld gehoert der Ersthelfer AppKit. Bei cmd+f gehoert der Ersthelfer im
+# Dateifenster KRK, (2) sagt also ja; der Abgriff schlaegt "editor_suchen" nach
+# und findet es, und erst Bestandteil (3) weist es ab, weil es im Editor wirkt
+# und nicht im Dateifenster. Danach faellt der Anschlag an AppKit, und dort
+# traegt der Menueeintrag dieser Funktion das Kuerzel. Ob das reicht oder
+# gemessen gehoert, ist offen
+# (`shared/decisions/260907-2046_*_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.md`).
+#
+# Bis zum 260907 lag das Einfuegen in den Filtertext auf cmd+v und trug gar
+# keine Zeile: es ritt auf "text_einfuegen" ganz unten und dessen Selektor
+# `paste:`, den der Anwendungsdelegierte beantwortet, wenn keine Textflaeche
+# vor ihm in der Antwortkette steht. Der Nutzer hat es am 260907-2009 auf
+# cmd+f verlegt und cmd+v fuer das Einfuegen einer Datei freigezogen; bis die
+# Dateizwischenablage steht, schweigt cmd+v im Dateifenster
+# (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
+#
+# Zweierlei ist hier zum ersten Mal so gebaut: es ist die erste vom Menue
+# zugestellte Funktion ausserhalb des Blocks "Bearbeiten" ganz unten, und die
+# erste, deren Selektor KRK selbst fuehrt statt AppKit. Welcher Selektor das
+# ist, sagt `crates/krk-ui/src/menuemodell.rs` und nicht diese Datei.
+
 # ── C4: Dateioperationen ausserhalb der Norton-Reihe ─────────────────────────
 
 [[funktion]]
@@ -734,8 +792,10 @@ tasten = ["ctrl+left"]
 # Zwischenablage steht, und legt nichts ab. Ab Werk frei sind die beiden seit
 # dem 260805 nicht mehr; sie tragen die Textbefehle des Menues "Bearbeiten"
 # ganz unten und sonst nichts (C3, C10). Wer sie am Dateifenster beantwortet,
-# steht dort: `copy:` und `cut:` der Anwendungsdelegierte seit der Runde 22,
-# `paste:` seit der Runde 21, als Einfuegen in den Filtertext.
+# steht dort: `copy:` und `cut:` der Anwendungsdelegierte seit der Runde 22.
+# `paste:` beantwortete er von der Runde 21 bis zum 260907 ebenso; seither
+# nicht mehr, denn das Einfuegen in den Filtertext ist auf cmd+f gewandert
+# und traegt dort eine eigene Zeile ("filter_einfuegen").
 
 [[funktion]]
 id = "zwischenablage_ansehen"
@@ -1100,15 +1160,17 @@ tasten = []
 # Kombination, und die Antwortkette entscheidet, wer sie beantwortet. Im
 # Textfeld ist das der Feldeditor von AppKit, im Dateifenster der
 # Anwendungsdelegierte: `copy:` und `cut:` beantwortet er seit der Runde 22
-# und legt Dateiverweise fuer andere Anwendungen ab, `paste:` seit der Runde
-# 21 und haengt den Text oder den Dateinamen aus der Zwischenablage an den
-# Filtertext an. Bis zur Runde 22 antwortete im Dateifenster niemand, und der
-# Eintrag war dort grau; genau dieser Punkt war als Einhaengepunkt einer
-# Dateizwischenablage vorgemerkt. Besetzt ist er jetzt, ohne einen zweiten
-# Menueintrag und ohne eine zweite Zeile in dieser Datei, und Dateien fuegt
-# KRK dabei nicht ein. Was Cmd+V mit einem Dateiverweis tut, sobald eine
-# Dateizwischenablage gebaut wird, ist offen:
-# `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`.
+# und legt Dateiverweise fuer andere Anwendungen ab. `paste:` beantwortete er
+# von der Runde 21 bis zum 260907 ebenso und haengte den Text oder den
+# Dateinamen aus der Zwischenablage an den Filtertext an; seither beantwortet
+# es im Dateifenster niemand mehr, und der Eintrag "Einfuegen" ist dort wieder
+# grau. So war es schon bis zur Runde 22, und genau dieser Punkt ist der
+# vorgemerkte Einhaengepunkt einer Dateizwischenablage: der Nutzer hat ihn am
+# 260907-2009 wieder freigezogen und das Einfuegen in den Filtertext auf cmd+f
+# verlegt, wo es eine eigene Zeile traegt ("filter_einfuegen", im Block des
+# Dateilistings). Dateien fuegt KRK weiterhin nicht ein; was Cmd+V mit einem
+# Dateiverweis tut, entscheidet die Runde, die die Dateizwischenablage baut
+# (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
 #
 # Sie stehen hier, weil C3 zusagt, dass jede Kombination, die in KRK etwas
 # ausloest, in der Belegung steht, von der Konflikterkennung gesehen wird und

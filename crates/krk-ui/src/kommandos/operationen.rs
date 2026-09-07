@@ -15,7 +15,8 @@
 //! [`namenszeilen`], [`ablagemeldung`] und [`verweise_abgewiesen`] fuer die
 //! Dateiverweise, die `cmd+c` und `cmd+x` im Dateifenster ablegen, und seit
 //! der Runde 21 [`einfuegen_abgewiesen`] fuer das Einfuegen aus der
-//! Zwischenablage in den Filtertext, das `cmd+v` daneben ausloest, und seit dem
+//! Zwischenablage in den Filtertext, das seit dem 260907 `cmd+f` daneben
+//! ausloest und bis dahin `cmd+v` ausloeste, und seit dem
 //! 260901 [`belegungsdatei_hat_zwei_schreiber`], [`keine_belegungsdatei`] und
 //! [`belegungsdatei_ohne_ablageordner`] fuer den Menuebefehl, der die
 //! Belegungsdatei des Nutzers in die Vorschau stellt. Die Texte
@@ -1400,8 +1401,11 @@ pub fn verweise_abgewiesen() -> String {
 // Das Einfuegen in den Filter (Runde 21)
 // ----------------------------------------------------------------------
 
-/// Der Satz der Statuszeile, wenn `cmd+v` nichts in den Filtertext eingefuegt
+/// Der Satz der Statuszeile, wenn `cmd+f` nichts in den Filtertext eingefuegt
 /// hat (A5 der Runde 21).
+///
+/// Bis zum 260907 loeste das `cmd+v` aus; die Saetze selbst nennen keine
+/// Taste und sind vom Wechsel unberuehrt geblieben.
 ///
 /// Vier Hindernisse, vier Saetze, in der Reihenfolge der Aufzaehlung: eine
 /// Ablage ohne Text und ohne Verweis, ein mehrzeiliger Text, mehrere

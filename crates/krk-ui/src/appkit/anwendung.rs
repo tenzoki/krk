@@ -75,18 +75,18 @@
 //! Hinweisfenster aus [`super::hinweis`], danach `terminate:`. Der Grund und
 //! der Entscheid des Nutzers stehen an jener Funktion.
 //!
-//! # Drei Antworten ohne Kommando: `copy:`, `cut:` und `paste:` (Runden 22 und 21)
+//! # Drei Antworten ohne Kommando: `copy:`, `cut:` und `filterEinfuegen:`
 //!
-//! `cmd+c`, `cmd+x` und `cmd+v` sind kein [`Kommando`]; das Menue "Bearbeiten"
-//! schickt sie mit Ziel `nil` die Antwortkette hinunter, und mit dem Fokus in
+//! `cmd+c`, `cmd+x` und `cmd+f` sind kein [`Kommando`]; das Hauptmenue schickt
+//! sie mit Ziel `nil` die Antwortkette hinunter, und mit dem Fokus in
 //! einer Dateiliste endet die Kette hier. Der Delegierte beantwortet alle drei
 //! ueber **einen** Vorspann,
 //! [`Anwendungsdelegierter::bearbeiten_am_dateifenster`], der
 //! [`zulaessigkeit::dateiablage_zulaessig`] auf der einen [`Lage`] fragt und
 //! dann an die Datenquelle des aktiven Dateifensters weiterreicht. `copy:` und
 //! `cut:` legen seit der Runde 22 Dateiverweise ab
-//! ([`Anwendungsdelegierter::dateiablage_ausfuehren`]); `paste:` fuellt seit
-//! der Runde 21 den Filtertext des aktiven Tabs aus der Zwischenablage
+//! ([`Anwendungsdelegierter::dateiablage_ausfuehren`]); `filterEinfuegen:`
+//! fuellt den Filtertext des aktiven Tabs aus der Zwischenablage
 //! ([`Anwendungsdelegierter::einfuegen_ausfuehren`]), und was aus der Ablage
 //! zum Filtertext wird, entscheidet der Kern in
 //! `krk_core::zwischenablage::filtertext_aus`. Die Ausgrauung in
@@ -94,6 +94,20 @@
 //! zweiten, der fuer genau diese drei Selektoren dieselbe Regel fragt; jede
 //! andere fremde Aktion bekommt weiter `true`, und AppKit entscheidet ueber
 //! sie wie bisher.
+//!
+//! **Zwei der drei Selektoren kommen von AppKit, der dritte von KRK, und das
+//! ist seit dem 260907 so.** Von der Runde 21 bis dahin hiess der dritte
+//! `paste:`, lag also auf `cmd+v` und auf dem Menueeintrag "Einfuegen". Der
+//! Nutzer hat das Einfuegen in den Filtertext am 260907-2009 auf `cmd+f`
+//! verlegt und `cmd+v` fuer eine spaetere Dateizwischenablage freigezogen:
+//! `paste:` beantwortet dieser Delegierte seither nicht mehr, `cmd+v` tut im
+//! Dateifenster nichts, und an seiner Stelle steht ein Selektor, den KRK selbst
+//! fuehrt und den das Menue ueber die eigene Belegungszeile `filter_einfuegen`
+//! zustellt
+//! (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
+//! Die Zahl drei ist dabei unveraendert geblieben, und das ist der Zweck des
+//! einen Vorspanns: die Zaehlprobe `die_zwei_frager_der_dateiablage_rufen_
+//! dieselbe_regel` bleibt bei zwei Fragern.
 //!
 //! # Der eine Fokusvorbehalt (C5)
 //!
@@ -216,8 +230,10 @@
 //! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im
 //! SDK-Kopf gar keine Verfuegbarkeitsangabe und steht damit seit 10.0.
 //! `copy:` und `cut:` sind Aktionsselektoren, die diese Datei seit der Runde
-//! 22 **erklaert** und nicht ruft, `paste:` seit der Runde 21 der dritte; sie
-//! sprechen keine Klasse an und tragen deshalb keine Untergrenze.
+//! 22 **erklaert** und nicht ruft, `filterEinfuegen:` seit dem 260907 der
+//! dritte; sie sprechen keine Klasse an und tragen deshalb keine Untergrenze.
+//! Beim dritten stellt sich die Frage ohnehin nicht mehr: er ist ein Name, den
+//! KRK selbst vergibt, und steht in keinem SDK-Kopf.
 //!
 //! **Seit Schritt 8 der Git-Runde baut diese Datei keine eigene `NSView`
 //! mehr.** Zwischen Schritt 1 und Schritt 8 hielt hier eine leere Ansicht die
@@ -932,17 +948,32 @@ define_class!(
             self.dateiablage_ausfuehren(Dateiablage::Ausschneiden);
         }
 
-        /// "Bearbeiten › Einfuegen" und `cmd+v` mit dem Fokus in der
-        /// Dateiliste (A1, C1.3 der Runde 21).
+        /// "Dateilisting › In den Filter einfuegen" und `cmd+f` mit dem Fokus
+        /// in der Dateiliste (A1, C1.3 der Runde 21; Nutzerentscheid vom
+        /// 260907-2009).
         ///
-        /// Derselbe Weg wie die zwei darueber, mit demselben Fokusvorbehalt:
-        /// mit der Schreibmarke in einer Textflaeche findet AppKit `paste:`
-        /// dort, und die Textbedeutung bleibt (A9, C3.3). Hier fuellt es den
-        /// Filtertext des aktiven Tabs; kein neues [`Kommando`], keine Zeile in
-        /// der Belegung (Constraint 3 und 5).
+        /// **Der Selektor gehoert KRK und nicht AppKit, und das ist seit dem
+        /// 260907 der Unterschied zu den zwei darueber.** Bis dahin ritt das
+        /// Einfuegen in den Filtertext auf `paste:`, also auf dem Selektor des
+        /// Menueeintrags "Einfuegen": mit der Schreibmarke in einer Textflaeche
+        /// fand AppKit ihn dort, und mit dem Fokus in der Dateiliste endete die
+        /// Antwortkette hier. Der Nutzer hat es auf `cmd+f` verlegt und `cmd+v`
+        /// fuer das Einfuegen einer Datei freigezogen; `paste:` beantwortet
+        /// dieser Delegierte seither **nicht mehr**, und `cmd+v` tut im
+        /// Dateifenster nichts, bis die Dateizwischenablage steht
+        /// (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
+        ///
+        /// Zugestellt wird `filterEinfuegen:` trotzdem vom Menue und nicht vom
+        /// Ereignisabgriff: `cmd+f` gehoert dort schon `editor_suchen`, und
+        /// zwei vom Abgriff zugestellte Funktionen auf einer Kombination waeren
+        /// nach dem Entscheid vom 260805 ein Konflikt. Die Funktion traegt
+        /// deshalb `gehalten_von = "menue"` und weiter kein [`Kommando`]
+        /// (Constraint 3 und 5). Der Weg dahinter ist unveraendert der der zwei
+        /// darueber: ein Aufruf von [`Self::einfuegen_ausfuehren`], also
+        /// derselbe Vorspann und dasselbe Tor.
         // SAFETY: Die Signatur ist die einer gewoehnlichen Menueaktion: ein
         // Argument, der Absender.
-        #[unsafe(method(paste:))]
+        #[unsafe(method(filterEinfuegen:))]
         fn filter_einfuegen_aktion(&self, _absender: Option<&AnyObject>) {
             self.einfuegen_ausfuehren();
         }
@@ -977,14 +1008,18 @@ define_class!(
         ///
         /// **Die Dateiablage ist seit der Runde 22 der zweite Fall, den die
         /// Regel und nicht AppKit entscheidet, und seit der Runde 21 gehoert
-        /// `paste:` dazu.** `copy:`, `cut:` und `paste:` sind kein Kommando und
-        /// tragen keinen `tag`; der Zweig fragt fuer die drei
+        /// das Einfuegen in den Filtertext dazu.** `copy:`, `cut:` und
+        /// `filterEinfuegen:` sind kein Kommando und tragen keinen `tag`; der
+        /// Zweig fragt fuer die drei
         /// [`zulaessigkeit::dateiablage_zulaessig`], den zweiten Eingang
         /// derselben Regel, auf derselben [`Lage`] wie
         /// [`Self::bearbeiten_am_dateifenster`] (A11, C4.5 der Runde 22; C3.1,
-        /// C3.6 der Runde 21). Der letzte Zweig bleibt fuer die drei uebrigen
+        /// C3.6 der Runde 21). Der letzte Zweig bleibt fuer die uebrigen
         /// zugestellten Funktionen — jede andere fremde Aktion faellt hinein
-        /// und bleibt AppKit ueberlassen.
+        /// und bleibt AppKit ueberlassen, und **seit dem 260907 faellt `paste:`
+        /// wieder darunter**: es steht in keinem Zweig mehr, der Delegierte
+        /// beantwortet es nicht, und der Eintrag "Einfuegen" ist mit dem Fokus
+        /// in der Dateiliste wieder grau.
         ///
         /// **Kein Beobachter am Fokus, und das ist kein Versehen.** Eine
         /// Anzeige, die dem Fokus folgt, gehoert nach `CLAUDE.md` an die
@@ -1010,7 +1045,7 @@ define_class!(
                 }
             } else if aktion == Some(sel!(copy:))
                 || aktion == Some(sel!(cut:))
-                || aktion == Some(sel!(paste:))
+                || aktion == Some(sel!(filterEinfuegen:))
             {
                 zulaessigkeit::dateiablage_zulaessig(self.lage())
             } else {
@@ -3316,12 +3351,14 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// Der eine Rumpf der drei Selektoren `copy:`, `cut:` und `paste:`
-    /// (Runde 22; Entscheidung 2 der Runde 21).
+    /// Der eine Rumpf der drei Selektoren `copy:`, `cut:` und
+    /// `filterEinfuegen:` (Runde 22; Entscheidung 2 der Runde 21).
     ///
     /// **Der Spiegel von [`Self::kommando_ausfuehren`] fuer einen Befehl ohne
-    /// [`Kommando`].** Die drei kommen aus dem Menue "Bearbeiten" ueber die
-    /// Antwortkette an und tragen weder Kennung noch `tag`; alle gehen durch
+    /// [`Kommando`].** Die drei kommen aus dem Hauptmenue ueber die
+    /// Antwortkette an und tragen weder Kennung noch `tag` — die zwei ersten
+    /// aus "Bearbeiten", der dritte seit dem 260907 aus "Dateilisting"; alle
+    /// gehen durch
     /// diesen einen Vorspann — Lage, Regel, Loeschregel, Seite —, und was
     /// danach an der Datenquelle geschieht, bringt der Rufer als `tun` mit:
     /// [`Self::dateiablage_ausfuehren`] legt Verweise ab,
@@ -3370,6 +3407,10 @@ impl Anwendungsdelegierter {
     /// Die Deutung dessen, was in der Ablage liegt, und die Meldung bei einem
     /// Hindernis gehoeren der Datenquelle; hier steht allein der Vorspann aus
     /// [`Self::bearbeiten_am_dateifenster`].
+    ///
+    /// Der Rufer ist seit dem 260907 `filterEinfuegen:` und nicht mehr
+    /// `paste:`; an dieser Funktion aendert der Wechsel nichts, und genau das
+    /// ist der Grund, aus dem er hier keine Zeile kostet.
     fn einfuegen_ausfuehren(&self) {
         self.bearbeiten_am_dateifenster(|quelle| quelle.aus_zwischenablage_einfuegen());
     }
@@ -10413,17 +10454,26 @@ mod dateiablageproben {
 
     use super::Anwendungsdelegierter;
 
-    /// Der Delegierte beantwortet `copy:`, `cut:` und `paste:` (C3.8 der
-    /// Runde 22; C3.7 der Runde 21).
+    /// Der Delegierte beantwortet `copy:`, `cut:` und `filterEinfuegen:` —
+    /// und `paste:` ausdruecklich nicht (C3.8 der Runde 22; C3.7 der Runde 21;
+    /// Nutzerentscheid vom 260907-2009).
     ///
     /// Gefragt wird die Klasse ueber `responds_to`, nach dem Muster von
     /// `wer_antwortet` in [`super::menue`]: ohne Fenster, ohne Hauptfaden,
     /// ohne Vordergrund. Die dritte Zeile stand bis zur Runde 21 verneint —
-    /// `cmd+v` im Dateifenster gehoerte dem Circle `260828-1041` —, und diese
-    /// Runde ist jener Circle: seit ihr fuellt `paste:` den Filtertext, und die
-    /// Probe haelt, dass die Klasse den Selektor traegt.
+    /// `cmd+v` im Dateifenster gehoerte dem Circle `260828-1041` —, jene Runde
+    /// hat sie bejaht, und der Entscheid vom 260907-2009 hat sie wieder
+    /// verneint: das Einfuegen in den Filtertext liegt seither auf `cmd+f` und
+    /// auf `filterEinfuegen:`.
+    ///
+    /// **Die vierte Zusicherung ist die eigentliche Neuerung, und sie ist die
+    /// einzige Haelfte von „`cmd+v` schweigt im Dateifenster", die ohne Fenster
+    /// pruefbar ist.** Beantwortet der Delegierte `paste:` nicht, endet die
+    /// Antwortkette mit dem Fokus in der Dateiliste bei niemandem; dass AppKit
+    /// den Eintrag daraufhin ausgraut und nichts geschieht, ist am laufenden
+    /// Buendel nachzusehen und hier nicht gemessen.
     #[test]
-    fn der_delegierte_beantwortet_copy_cut_und_paste() {
+    fn der_delegierte_beantwortet_copy_cut_und_das_filtereinfuegen() {
         let klasse = Anwendungsdelegierter::class();
         assert!(
             klasse.responds_to(sel!(copy:)),
@@ -10434,8 +10484,14 @@ mod dateiablageproben {
             "`cut:` bleibt unbeantwortet"
         );
         assert!(
-            klasse.responds_to(sel!(paste:)),
-            "`paste:` bleibt unbeantwortet; seit der Runde 21 fuellt es den Filtertext"
+            klasse.responds_to(sel!(filterEinfuegen:)),
+            "`filterEinfuegen:` bleibt unbeantwortet; seit dem 260907 fuellt es den Filtertext"
+        );
+        assert!(
+            !klasse.responds_to(sel!(paste:)),
+            "der Delegierte beantwortet `paste:` wieder; damit fuellt `cmd+v` im \
+             Dateifenster den Filtertext, den der Entscheid vom 260907-2009 auf \
+             `cmd+f` verlegt hat"
         );
     }
 }

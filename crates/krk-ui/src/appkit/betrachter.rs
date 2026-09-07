@@ -64,8 +64,9 @@
 //! `NSPasteboard` an**, und die Zaehlprobe
 //! `nspasteboard_steht_nicht_im_betrachter_und_copy_cut_und_paste_stehen_an_genannten_stellen`
 //! haelt das (C5.2, Constraint 3); seit der Runde 22 antwortet daneben der
-//! Anwendungsdelegierte auf `copy:` und `cut:` fuer die Dateiliste, seit der
-//! Runde 21 auch auf `paste:`, und die Probe nennt jede Stelle mit Namen.
+//! Anwendungsdelegierte auf `copy:` und `cut:` fuer die Dateiliste, seit dem
+//! 260907 auch auf `filterEinfuegen:` (von der Runde 21 bis dahin auf
+//! `paste:`), und die Probe nennt jede Stelle mit Namen.
 //! Jeder der Wege aus C5.2 und C5.3 endet an dieser
 //! einen Stelle — `cmd+c` ueber den Menueeintrag mit Ziel `nil`, der Eintrag
 //! „Kopieren" des Hauptmenues, der Eintrag im Kontextmenue von `PDFView` —,
@@ -714,17 +715,26 @@ mod tests {
     }
 
     /// Keine Codezeile dieser Datei nennt `NSPasteboard`, und die
-    /// Ueberschreibungen von `copy:`, `cut:` und `paste:` stehen im ganzen
-    /// Baum an genannten Stellen (C5.2, C5.4, Constraint 3; C4.5 der
-    /// Runde 21).
+    /// Ueberschreibungen von `copy:`, `cut:`, `paste:` und `filterEinfuegen:`
+    /// stehen im ganzen Baum an genannten Stellen (C5.2, C5.4, Constraint 3;
+    /// C4.5 der Runde 21).
     ///
     /// Seit der Runde 22 ist `copy:` zweimal ueberschrieben: hier fuer die
     /// Auswahl aus dem PDF und beim Anwendungsdelegierten fuer die
-    /// Dateiliste; `cut:` steht allein beim Delegierten, und seit der Runde 21
-    /// ebenso `paste:`, das den Filtertext der Dateiliste fuellt. Alle gehen
-    /// durch die eine Huelle `zwischenablage.rs`. Die Erwartung ist die Lage
-    /// am 260829 und keine Zusage ueber spaetere Runden (A5): wer eine
-    /// weitere Antwort baut, traegt sie hier ein und begruendet sie.
+    /// Dateiliste; `cut:` steht allein beim Delegierten, und seit dem 260907
+    /// ebenso `filterEinfuegen:`, das den Filtertext der Dateiliste fuellt.
+    /// Alle gehen durch die eine Huelle `zwischenablage.rs`.
+    ///
+    /// **`paste:` steht seit dem 260907 an gar keiner Stelle, und die Null ist
+    /// die Zusage.** Von der Runde 21 bis dahin stand es beim Delegierten und
+    /// fuellte den Filtertext; der Nutzerentscheid vom 260907-2009 hat das auf
+    /// `cmd+f` verlegt und `cmd+v` freigezogen. Baut jemand die Antwort wieder
+    /// ein, faellt es hier auf, statt `cmd+v` still eine zweite Bedeutung zu
+    /// geben.
+    ///
+    /// Die Erwartung ist die Lage am 260907 und keine Zusage ueber spaetere
+    /// Runden (A5): wer eine weitere Antwort baut, traegt sie hier ein und
+    /// begruendet sie.
     ///
     /// Gezaehlt werden Codezeilen: der Modulkopf **nennt** die Klasse, um zu
     /// sagen, dass er sie nicht anspricht, und das ist keine Beruehrung. Die
@@ -737,6 +747,7 @@ mod tests {
         let kopieren = concat!("unsafe(method(co", "py:))");
         let ausschneiden = concat!("unsafe(method(cu", "t:))");
         let einfuegen = concat!("unsafe(method(pas", "te:))");
+        let filtereinfuegen = concat!("unsafe(method(filterEinfue", "gen:))");
 
         let dateien = quelldateien();
         let (_, inhalt) = dateien
@@ -777,8 +788,15 @@ mod tests {
         );
         assert_eq!(
             stellen_von(einfuegen),
+            Vec::new(),
+            "`paste:` ist im Baum wieder ueberschrieben; seit dem 260907 traegt \
+             `cmd+f` das Einfuegen in den Filtertext, und `cmd+v` ist fuer die \
+             Dateizwischenablage freigezogen"
+        );
+        assert_eq!(
+            stellen_von(filtereinfuegen),
             vec![(DELEGIERTER.to_owned(), 1)],
-            "`paste:` steht nicht genau einmal, beim Anwendungsdelegierten"
+            "`filterEinfuegen:` steht nicht genau einmal, beim Anwendungsdelegierten"
         );
     }
 

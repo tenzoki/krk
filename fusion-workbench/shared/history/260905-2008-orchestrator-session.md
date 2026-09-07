@@ -512,3 +512,49 @@ Reichweitenfrage aus der zweiten Runde zu beantworten** (29).
 
 **Was offen bleibt:** 15 der 56 Fragen, dazu die Reichweitenfrage, an der jetzt auch die
 Umsetzung von 29 haengt.
+
+## Fuenf weitere Entscheidungen am 260907-2009 beantwortet
+
+Siebte Vorlagerunde: fuenf Fragen, die kuenftige Arbeit binden statt heutige zu aendern.
+**Bei der letzten ist der Nutzer nicht einer der vorgelegten Moeglichkeiten gefolgt,
+sondern hat eine eigene gebaut** — die einzige dieser Runde, die neue Arbeit am Programm
+ausloest.
+
+31. **Eine Systemfunktion, die es erst in einer neueren macOS-Fassung gibt, wird zur
+    Laufzeit abgefragt, und je Stelle steht ein Ersatzweg daneben.** Der Nutzer hat
+    Moeglichkeit 1 gewaehlt und damit **nicht** das Paket aus Laufzeitabfrage und schwachem
+    Binden, das die Vorlage empfahl. Die Folge steht in der Vorlage: eine Pruefung durch den
+    Uebersetzer gibt es nicht, ein vergessener Schutz faellt erst auf dem alten Geraet auf,
+    und dort als Absturz. Schwaches Binden bleibt ungebaut; es waere allein fuer
+    C-Funktionen noetig. Die erste Stelle dieser Art ist seit der Runde 20
+    Auslieferungscode (`crates/krk-ui/src/appkit/textautomatik.rs`, fuer eine erst ab
+    macOS 15.4 zugesagte Einstellung).
+32. **Der Abnahmelauf bricht weiter ab, wenn KRK nicht im Vordergrund ist**, statt sich
+    selbst nach vorn zu holen. Damit bleibt der Lauf Nutzerarbeit, und ein unbeaufsichtigter
+    Lauf ueber einen Auftragsplaner ist ausgeschlossen. Die Gegenmoeglichkeit lohnt erst,
+    wenn die Messreihe je ohne den Nutzer laufen soll — dann braeuchten die Messzeilen einen
+    zweiten Ausgabeweg, weil der heutige an der Standardausgabe haengt.
+33. **KRK sortiert weiter nach der sprachneutralen Grundordnung von Unicode.** Fuer Deutsch
+    ist das genau die erwartete Reihenfolge; im Schwedischen stuende ae hinter z statt davor.
+    Der Systemsprache zu folgen braechte die Ordnung aus der Oberflaeche in den Kern und
+    verlangte, den Sortierschluessel bei jedem Sprachwechsel neu zu bauen — daran haengen
+    zwei gemessene Zeitzusagen.
+34. **Der geplante Befehlslauf faehrt `/bin/sh`, und die Anmeldeshell wird einmal beim Start
+    nach dem Suchpfad gefragt.** Damit ist jedes Makro auf jedem Geraet dasselbe, und
+    zsh-Schreibweise steht in Makros nicht zur Verfuegung. Die eigene Shell auszufuehren
+    haette bei jedem Lauf eine Datei gelesen, die KRK nicht kennt und die den beim Start
+    erfragten Suchpfad still ueberschreiben kann. Die Runde selbst ist zurueckgestellt; die
+    Antwort bindet sie, wenn sie faehrt.
+35. **`cmd+f` fuegt kuenftig in den Filtertext ein, und `cmd+v` ist fuer das Einfuegen einer
+    Datei aus der Zwischenablage reserviert.** Das ist die Antwort des Nutzers und keine der
+    drei vorgelegten. **Die Vorlage hat `cmd+f` dabei falsch als frei bezeichnet** — dort
+    liegt der Mac-Standard zum Suchen im Text. Es traegt trotzdem: die Kombination liegt im
+    Wirkungsbereich des Editors, die neue im Dateifenster, und genau diesen Fall hat der
+    Nutzer am 260805 fuer `cmd+a` schon entschieden (zwei Zusteller sind kein Konflikt, der
+    Fokusvorbehalt laesst sie einander nie begegnen), samt der Anschlussfrage vom 260907
+    (das Menuekuerzel bekommt die Textfeld-Funktion). **Bis die Dateizwischenablage steht,
+    schweigt `cmd+v` im Dateifenster** — der Nutzer hat diese Zwischenlage ausdruecklich
+    gewaehlt und die zwei Alternativen verworfen, die Doppelbelegung auf Zeit und die
+    Meldung in der Statuszeile.
+
+**Was offen bleibt:** 10 der 56 Fragen, dazu die Reichweitenfrage.

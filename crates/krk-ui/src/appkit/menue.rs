@@ -25,7 +25,11 @@
 //! dann, wenn kein Glied davor antwortet — also mit dem Fokus in der
 //! Dateiliste, deren `NSTableView` keinen der beiden Selektoren traegt; er
 //! legt dort die betroffenen Eintraege als Dateiverweise ab
-//! ([`super::anwendung`], `dateiablage_ausfuehren`).
+//! ([`super::anwendung`], `dateiablage_ausfuehren`). `filterEinfuegen:`
+//! erreicht ihn seit dem 260907 auf demselben Weg und ohne ein Glied davor,
+//! denn den Selektor traegt im ganzen Baum niemand sonst; er haengt dort die
+//! Zwischenablage an den Filtertext der Dateiliste
+//! ([`super::anwendung`], `einfuegen_ausfuehren`).
 //! [`KRK_KOMMANDO`] wie `tastenbelegungSichern:` erreichen den
 //! Anwendungsdelegierten, an dem die Kette endet, und
 //! `orderFrontStandardAboutPanel:` erreicht `NSApplication` und damit eine
@@ -89,7 +93,8 @@
 //! Anwendungsdelegierten fragt zuerst nach der Aktion und antwortet fuer jede
 //! fremde `true`; beide Sonderposten fallen in genau diesen Zweig, und die
 //! Regel nimmt ihnen damit auch bei stehendem Blatt nichts. **Ausgenommen sind
-//! seit der Runde 22 `copy:` und `cut:` und seit der Runde 21 `paste:`**, und
+//! seit der Runde 22 `copy:` und `cut:` und seit dem 260907
+//! `filterEinfuegen:`**, und
 //! die Ausnahme ist keine fuer einen Eintrag, sondern die Regel fuer jeden
 //! Eintrag, den KRK selbst beantwortet: was der Delegierte ausfuehrt,
 //! unterstellt er der einen Zulaessigkeitsregel aus
@@ -98,10 +103,13 @@
 //! weil die drei Selektoren kein `Kommando` tragen. Ein Eintrag, den KRK
 //! beantwortet und **nicht** der Regel unterstellte, bliebe waehrend eines
 //! Blattes oder mit dem Fokus in der Leiste bedienbar, obwohl niemand ihn
-//! ausfuehrt. Alle drei beantwortet der Delegierte am Dateifenster; `paste:`
-//! fuellt dabei den Filtertext der Dateiliste und legt keine Datei ab.
-//! Weiter `true` wie jede fremde Aktion bekommen allein die drei uebrigen
-//! zugestellten Funktionen. Ob AppKit selbst am Menue etwas aendert, solange
+//! ausfuehrt. Alle drei beantwortet der Delegierte am Dateifenster;
+//! `filterEinfuegen:` fuellt dabei den Filtertext der Dateiliste und legt keine
+//! Datei ab. Weiter `true` wie jede fremde Aktion bekommen die uebrigen
+//! zugestellten Funktionen, und seit dem 260907 wieder `paste:`: der
+//! Delegierte beantwortet es nicht mehr, „Einfuegen" ist mit dem Fokus in der
+//! Dateiliste wieder grau, und `cmd+v` ist fuer die Dateizwischenablage einer
+//! spaeteren Runde freigezogen. Ob AppKit selbst am Menue etwas aendert, solange
 //! ein Blatt steht, entscheidet diese Regel nicht; das ist am laufenden
 //! Buendel nachzusehen.
 //!
@@ -136,18 +144,26 @@
 //! nicht, weil `Belegung::nachschlag` sie
 //! ueberspringt. Die sechs Textbefehle laufen deshalb auch im Dateifenster ins
 //! Menue und von dort die Antwortkette hinunter. Genau das war der
-//! Einhaengepunkt der Dateizwischenablage, und er ist in zwei Runden ganz
-//! besetzt worden: `copy:` und `cut:` beantwortet seit der Runde 22 der
-//! Anwendungsdelegierte am Dateifenster und legt Dateiverweise ab, `paste:`
-//! seit der Runde 21 derselbe Delegierte, und es fuellt den Filtertext der
-//! Dateiliste — jeweils ohne einen zweiten Menueeintrag und ohne eine zweite
-//! Zeile in der Belegung. Der Eintrag ist derselbe, der im Editor Text
-//! kopiert oder einfuegt, und heisst darum weiter "Kopieren" und "Einfuegen"
-//! und nicht "Dateien kopieren" (Spec der Runde 22, A9). Der Circle
-//! `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste` ist damit
-//! gefahren; was `cmd+v` mit einem Dateiverweis tut, sobald eine
-//! Dateizwischenablage gebaut ist, entscheidet weiter dessen offener
-//! Datensatz und nicht diese Datei.
+//! Einhaengepunkt der Dateizwischenablage: `copy:` und `cut:` beantwortet seit
+//! der Runde 22 der Anwendungsdelegierte am Dateifenster und legt Dateiverweise
+//! ab — ohne einen zweiten Menueeintrag und ohne eine zweite Zeile in der
+//! Belegung. Der Eintrag ist derselbe, der im Editor Text kopiert, und heisst
+//! darum weiter "Kopieren" und nicht "Dateien kopieren" (Spec der Runde 22,
+//! A9).
+//!
+//! **Die `paste:`-Haelfte jenes Einhaengepunkts ist seit dem 260907 wieder
+//! frei.** Von der Runde 21 bis dahin beantwortete derselbe Delegierte auch
+//! `paste:` und fuellte damit den Filtertext der Dateiliste. Der Nutzer hat
+//! das am 260907-2009 auf `cmd+f` verlegt, das eine eigene Belegungszeile
+//! `filter_einfuegen` mit `gehalten_von = "menue"` und einen eigenen, von KRK
+//! gefuehrten Selektor `filterEinfuegen:` traegt; `cmd+v` tut im Dateifenster
+//! seither nichts, und was es mit einem Dateiverweis tut, sobald eine
+//! Dateizwischenablage gebaut ist, entscheidet weiter der Datensatz jenes
+//! Circles und nicht diese Datei
+//! (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
+//! Mit `filter_einfuegen` steht damit die erste zugestellte Funktion
+//! ausserhalb des Menues "Bearbeiten"; wer die zugestellten dort sucht, findet
+//! sie nicht mehr vollstaendig.
 //!
 //! # Warum es das Menue "Bearbeiten" ueberhaupt gibt
 //!
@@ -171,14 +187,14 @@
 //!
 //! # Wer die sechs Textbefehle beantwortet
 //!
-//! Die sechs sind die einzigen Funktionen der Belegung ohne
-//! [`krk_core::tasten::Kommando`] und damit ohne Wirkungsbereich. **Wie viele
+//! Die Funktionen der Belegung ohne [`krk_core::tasten::Kommando`] und damit
+//! ohne Wirkungsbereich sind genau die vom Menue zugestellten. **Wie viele
 //! Funktionen die Belegung ueberhaupt fuehrt, steht hier nicht als Zahl**: sie
 //! waechst mit fast jeder Runde und ist an dieser Stelle schon einmal falsch
 //! geworden
 //! (`issues/260905-2046_*_drei-prosastellen-in-menue-rs-nennen-85-funktionen-die-belegung-fuehrt-92.md`).
 //! Gezaehlt wird sie mit `grep -c '^id = ' resources/default-keymap.toml`, und
-//! die sechs ohne `Kommando` mit
+//! die ohne `Kommando` mit
 //! `grep -c 'gehalten_von = "menue"' resources/default-keymap.toml`. Wo sie wirken,
 //! entscheidet zur Laufzeit die Antwortkette, in die die Belegung keine Eingabe
 //! hat. Die Tastenbelegung als Markdown-Datei aus der Runde 3 muss es dem Nutzer
@@ -188,6 +204,19 @@
 //! `AnyClass::responds_to`, welche der sechs moeglichen Ersthelferklassen
 //! welchen Selektor beantwortet. Die Antwort braucht keine Instanz, keinen
 //! Hauptfaden und keinen Vordergrund, und sie laeuft von jetzt an mit.
+//!
+//! **Die Messung deckt sechs Selektoren und nicht jede zugestellte Funktion,
+//! und seit dem 260907 faellt der Unterschied auf.** Gemessen wird, welche
+//! **AppKit**-Klasse einen Selektor beantwortet; `filter_einfuegen` traegt mit
+//! `filterEinfuegen:` einen Selektor, den KRK selbst vergibt und den keine
+//! AppKit-Klasse kennt, und die Tafel unten sagt ueber ihn nichts. Er braucht
+//! auch nichts: wer ihn beantwortet, steht im Baum, es ist der
+//! Anwendungsdelegierte, und die Markdown-Ausgabe liest die Zelle aus dem
+//! Anspruch jenes Einhaengepunkts ab statt aus einer Messung
+//! (`crate::belegungsausgabe`, fuenfte Begruendungslage). Der Grund, aus dem
+//! die Zahl sechs unten stehen bleibt, ist damit die **Sorte des Selektors**
+//! und nicht mehr die Zahl der `gehalten_von`-Funktionen, die seither sieben
+//! ist.
 //!
 //! ```text
 //! Selektor      antwortet an        traegt die Methode
@@ -885,12 +914,23 @@ mod tests {
 
     /// Die sechs Selektoren der vom Menue zugestellten Textbefehle.
     ///
-    /// Dieselben sechs, die [`hauptmenue`] unter "Bearbeiten" eintraegt, und
-    /// dieselben sechs, die `resources/default-keymap.toml` mit
-    /// `gehalten_von = "menue"` fuehrt. Sie tragen als einzige Funktionen der
-    /// Belegung kein [`krk_core::tasten::Kommando`] und damit keinen
-    /// Wirkungsbereich; wie viele Funktionen sie insgesamt fuehrt, sagt der
-    /// Modulkopf mit dem Zaehlkommando und keine Zahl an dieser Stelle.
+    /// Dieselben sechs, die [`hauptmenue`] unter "Bearbeiten" eintraegt. Sie
+    /// tragen kein [`krk_core::tasten::Kommando`] und damit keinen
+    /// Wirkungsbereich; wie viele Funktionen die Belegung insgesamt fuehrt,
+    /// sagt der Modulkopf mit dem Zaehlkommando und keine Zahl an dieser
+    /// Stelle.
+    ///
+    /// **Die sechs sind seit dem 260907 nicht mehr alle Funktionen mit
+    /// `gehalten_von = "menue"`, und die Liste bleibt trotzdem bei sechs.**
+    /// `filter_einfuegen` traegt den Wert und faehrt mit `filterEinfuegen:`
+    /// einen Selektor, den KRK selbst vergibt: keine der Klassen aus
+    /// [`ersthelferklassen`] kennt ihn, [`wer_antwortet`] laeuft fuer ihn
+    /// zwangslaeufig leer, und eine Zeile in [`GEMESSEN`] saehe wie eine
+    /// Messung aus, die nichts gemessen hat. Was diese Liste zaehlt, sind
+    /// AppKit-Selektoren und nicht zugestellte Funktionen. Wer den
+    /// Anwendungsdelegierten fragt, tut es bei ihm: die Probe
+    /// `der_delegierte_beantwortet_copy_cut_und_das_filtereinfuegen` in
+    /// [`super::anwendung`].
     fn die_sechs_zugestellten() -> [(&'static str, Sel); 6] {
         [
             ("cut:", sel!(cut:)),
@@ -921,11 +961,14 @@ mod tests {
     /// der Delegierte `copy:` und `cut:` am Ende der Antwortkette, und die
     /// Zeilen zu beiden Selektoren bleiben trotzdem, wie sie am 260811 gemessen
     /// sind: die Tafel sagt, welche **Ersthelfer** antworten, und der
-    /// Delegierte ist keiner. Seit der Runde 21 beantwortet er auch `paste:`,
-    /// und die Zeile dazu bleibt aus demselben Grund. Seine Antwort haelt die
-    /// Probe `der_delegierte_beantwortet_copy_cut_und_paste` beim
+    /// Delegierte ist keiner. Von der Runde 21 bis zum 260907 beantwortete er
+    /// auch `paste:`; seither nicht mehr, und die Zeile dazu bleibt aus
+    /// demselben Grund unveraendert — was sie misst, ist die `NSTextView` und
+    /// nicht der Delegierte. Seine Antworten haelt die Probe
+    /// `der_delegierte_beantwortet_copy_cut_und_das_filtereinfuegen` beim
     /// Anwendungsdelegierten ueber `responds_to` an seiner Klasse — `copy:`,
-    /// `cut:` und `paste:` ja — und nicht diese Tafel.
+    /// `cut:` und `filterEinfuegen:` ja, `paste:` nein — und nicht diese
+    /// Tafel.
     const GEMESSEN: [(&str, &[(&str, &str)]); 6] = [
         ("cut:", &[("NSTextView", "NSText")]),
         ("copy:", &[("NSTextView", "NSText")]),
@@ -973,6 +1016,14 @@ mod tests {
     /// AppKit zur Laufzeit entscheidet, wo sie wirken. Was die Ausgabe aus C3 in ihre
     /// dritte Spalte schreibt, ruht deshalb auf dieser Zahlenreihe und nicht auf
     /// einer Ableitung aus der Zugehoerigkeit zum Menue "Bearbeiten".
+    ///
+    /// **Die siebte zugestellte Funktion faellt nicht darunter.**
+    /// `filter_einfuegen` traegt seit dem 260907 ebenfalls kein Kommando, und
+    /// ihr Wirkungsbereich ist trotzdem entscheidbar: `filterEinfuegen:` hat
+    /// im ganzen Baum einen Rufer, den Anwendungsdelegierten am Dateifenster,
+    /// und AppKit hat an der Kette nichts zu waehlen. Ihre Zelle kommt deshalb
+    /// aus dem Anspruch und nicht aus dieser Messung
+    /// (`crate::belegungsausgabe`, fuenfte Begruendungslage).
     ///
     /// Schlaegt sie fehl, hat sich die Laufzeit geaendert und mit ihr die
     /// Auskunft, die KRK dem Nutzer ueber diese sechs Befehle gibt. Der Befund

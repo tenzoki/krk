@@ -25,3 +25,5 @@ Ein Konflikt ist bei 1 und 2 möglich: die neue Auslieferungskombination kann be
 Gefunden beim Planen der neunten Runde, am Baum geprüft und nicht aus der Prosa übernommen. Der Defekt steht im gemeinsamen Speicher und nicht im Circle, weil er nicht aus dessen Directive entstanden ist: er betrifft jede Runde, die eine Funktion hinzufügt, und drei haben es schon getan.
 
 **Filed by:** planner
+
+Also seen: 260907-2046 by ontocoder — `filter_einfuegen` ist die nächste neue Funktion dieser Art und trifft den Fall in verschärfter Form: kommt sie unbelegt an, tut cmd+f im Dateifenster nichts, während cmd+v dort nach demselben Durchgang schon nichts mehr tut, und der Nutzer verliert das Einfügen in den Filtertext ganz.

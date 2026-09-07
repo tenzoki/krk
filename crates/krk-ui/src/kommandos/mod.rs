@@ -80,8 +80,9 @@
 //! koennen. Seit der Runde 22 hat die Regel einen Rumpf und zwei Eingaenge,
 //! den zweiten fuer die Dateiablage (`copy:` und `cut:` in der Dateiliste),
 //! die kein Kommando ist; seit der Runde 21 bedient derselbe zweite Eingang
-//! auch `paste:`, das den Filtertext der Dateiliste fuellt, also drei
-//! Selektoren und weiter keinen dritten Eingang. Er hat seine zwei eigenen
+//! auch das Einfuegen in den Filtertext der Dateiliste — bis zum 260907 als
+//! `paste:` auf `cmd+v`, seither als `filterEinfuegen:` auf `cmd+f` —, also
+//! drei Selektoren und weiter keinen dritten Eingang. Er hat seine zwei eigenen
 //! Frager an denselben zwei Stellen.
 //!
 //! **`fokus` steht danach und vor den uebrigen.** Jeder Befehl laeuft durch

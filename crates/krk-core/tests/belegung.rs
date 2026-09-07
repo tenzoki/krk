@@ -432,10 +432,14 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
     // Dateifenster nichts auszuloesen, prueft
     // `der_nachschlag_haengt_nicht_an_der_reihenfolge_der_eintraege` weiter
     // unten, und dort steht es unter seinem richtigen Grund: nicht "unbelegt",
-    // sondern "vom Menue zugestellt". Die Reservierung aus C3 ist damit
-    // eingeloest und nicht gebrochen (Nutzerentscheid vom 260805-0000,
+    // sondern "vom Menue zugestellt". Die Reservierung aus C3 ist fuer Cmd+C
+    // damit eingeloest und nicht gebrochen (Nutzerentscheid vom 260805-0000,
     // `decisions/
     // 260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md`).
+    // Fuer Cmd+V ist sie seit dem 260907 wieder offen: das Einfuegen in den
+    // Filtertext ist auf Cmd+F gewandert, der Anwendungsdelegierte beantwortet
+    // `paste:` nicht mehr, und die Kombination wartet auf die Runde, die die
+    // Dateizwischenablage baut.
     //
     // ctrl+b und ctrl+s sind mit derselben Aenderung unbelegt geworden und
     // gehoeren trotzdem nicht hierher. Sie waren eine Behelfsbelegung fuer den
@@ -469,9 +473,13 @@ fn die_ab_werk_freien_kombinationen_kommen_nicht_vor() {
 
 #[test]
 fn cmd_a_steht_bei_zwei_funktionen_und_ist_kein_konflikt() {
-    // Der Fall, der keiner ist, und der einzige seiner Art in der
-    // Auslieferungsbelegung: in der Liste markiert cmd+a alle Eintraege, im
-    // Eingabefeld waehlt es den Text aus, wie auf dem Mac ueblich.
+    // Der Fall, der keiner ist: in der Liste markiert cmd+a alle Eintraege, im
+    // Eingabefeld waehlt es den Text aus, wie auf dem Mac ueblich. **Bis zum
+    // 260907 stand hier "und der einzige seiner Art in der
+    // Auslieferungsbelegung"**; seither traegt cmd+f dieselbe Bauart, und
+    // `cmd_f_steht_bei_zwei_funktionen_und_ist_kein_konflikt` darunter prueft
+    // sie. Eine Zahl steht in keiner der beiden Pruefungen, weil die naechste
+    // Doppelung sie falsch machte.
     let belegung = Belegung::auslieferung();
     let cmd_a = kombi("cmd+a");
 
@@ -498,6 +506,93 @@ fn cmd_a_steht_bei_zwei_funktionen_und_ist_kein_konflikt() {
     assert!(
         belegung.konflikte().is_empty(),
         "verschiedene Zusteller auf einer Kombination gelten als Konflikt"
+    );
+}
+
+/// Cmd+F traegt zwei Funktionen mit verschiedenen Zustellern, und die
+/// Trennung, soweit sie ohne Fenster pruefbar ist.
+///
+/// **Der zweite Fall der Bauart, seit dem Nutzerentscheid vom 260907-2009**
+/// (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`):
+/// `editor_suchen` sucht im Editor im Text, `filter_einfuegen` haengt im
+/// Dateifenster die Zwischenablage an den Filtertext. Kein Konflikt, weil der
+/// erste vom Ereignisabgriff und der zweite vom Menue zugestellt wird.
+///
+/// **Die zwei Paare trennen an verschiedenen Stellen, und deshalb steht diese
+/// Pruefung neben der zu cmd+a und nicht in ihr.** Bei cmd+a trennt der
+/// Fokusvorbehalt: im Textfeld gehoert der Ersthelfer AppKit, und der Abgriff
+/// gibt den Anschlag frei. Bei cmd+f gehoert der Ersthelfer im Dateifenster
+/// KRK; der Abgriff schlaegt nach, **findet** `editor_suchen`, und erst der
+/// Wirkungsbereich weist es ab. Genau diese Kette ist hier gemessen: der
+/// Nachschlag liefert `editor_suchen` und nicht `filter_einfuegen`, und dessen
+/// Wirkungsbereich ist der Editor. Was danach kommt — dass AppKit den
+/// Anschlag ans Menue reicht und der Delegierte `filterEinfuegen:`
+/// beantwortet — verlangt ein laufendes Buendel und steht nicht hier.
+#[test]
+fn cmd_f_steht_bei_zwei_funktionen_und_ist_kein_konflikt() {
+    let belegung = Belegung::auslieferung();
+    let cmd_f = kombi("cmd+f");
+
+    for kennung in ["editor_suchen", "filter_einfuegen"] {
+        let Some(funktion) = belegung.funktion(kennung) else {
+            panic!("die Auslieferungsbelegung kennt {kennung} nicht");
+        };
+        assert!(
+            funktion.tasten().contains(&cmd_f),
+            "{kennung} traegt cmd+f nicht mehr; die Pruefung misst dann nichts"
+        );
+    }
+    assert_eq!(
+        belegung.funktion("editor_suchen").unwrap().gehalten_von(),
+        None,
+        "editor_suchen wird nicht mehr vom Ereignisabgriff zugestellt"
+    );
+    assert_eq!(
+        belegung
+            .funktion("filter_einfuegen")
+            .unwrap()
+            .gehalten_von(),
+        Some("menue"),
+        "filter_einfuegen wird nicht vom Menue zugestellt; ohne den anderen \
+         Zusteller waere cmd+f ein Konflikt"
+    );
+    assert!(
+        belegung.konflikte().is_empty(),
+        "verschiedene Zusteller auf einer Kombination gelten als Konflikt"
+    );
+
+    // Die zugestellte Funktion traegt kein Kommando und ist damit ueber den
+    // Abgriff auf keinem Weg erreichbar; wo sie wirkt, entscheidet die
+    // Antwortkette und nicht diese Kiste.
+    assert!(
+        belegung
+            .funktion("filter_einfuegen")
+            .unwrap()
+            .kommando()
+            .is_none(),
+        "filter_einfuegen traegt ein Kommando und liefe damit ueber den Abgriff"
+    );
+
+    // Die Trennung, soweit sie hier zu messen ist: der Abgriff schlaegt cmd+f
+    // nach und bekommt `editor_suchen`, denn `nachschlag` ueberspringt jede vom
+    // Menue gehaltene Funktion. Der Anschlag faellt erst am Wirkungsbereich
+    // durch — nicht am Fokusvorbehalt, der im Dateifenster ja steht —, und
+    // genau danach erreicht er das Menue.
+    let Nachschlag::Funktion(gefunden) = belegung.nachschlag(cmd_f.tastendruck()) else {
+        panic!("cmd+f wird nicht mehr nachgeschlagen");
+    };
+    assert_eq!(
+        gefunden.kennung(),
+        "editor_suchen",
+        "der Nachschlag liefert fuer cmd+f eine andere Funktion; eine vom Menue \
+         gehaltene darf er nie liefern"
+    );
+    assert_eq!(
+        gefunden.kommando().map(Kommando::wirkungsbereich),
+        Some(Wirkungsbereich::Editor),
+        "editor_suchen wirkt nicht mehr im Editor; dann trennt der \
+         Wirkungsbereich das Paar nicht mehr, und cmd+f schluckte den Anschlag \
+         auch im Dateifenster"
     );
 }
 

@@ -41,8 +41,10 @@
 //!
 //! # Eine zweite Deutung: was aus der Ablage in den Filter kommt (Runde 21)
 //!
-//! `cmd+v` im Dateifenster haengt an den Filtertext an, was die Zwischenablage
-//! traegt — nicht wie es dort steht, sondern gereinigt. Die Reinigung ist
+//! `cmd+f` im Dateifenster haengt an den Filtertext an, was die Zwischenablage
+//! traegt — nicht wie es dort steht, sondern gereinigt. Bis zum 260907 lag das
+//! auf `cmd+v`; welche Taste es ausloest, entscheidet die Oberflaeche, und
+//! diese Datei kennt keine. Die Reinigung ist
 //! [`filtertext_aus`], und sie wohnt hier und nicht in `verzeichnis::filter`,
 //! weil sie eine zweite Deutung desselben Gegenstands ist und
 //! `verweis_zu_pfad` braucht, das die erste schon traegt. Ihre fuenf Schritte,

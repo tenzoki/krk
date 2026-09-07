@@ -49,11 +49,16 @@
 //!   `super::appkit::menue` und nicht dieses Modul, denn `tag` ist ein
 //!   AppKit-Begriff.
 //! - **[`Eintrag::Textbefehl`]** traegt statt eines Kommandos den Namen eines
-//!   AppKit-Selektors und laeuft ueber die Antwortkette (C2.8). Es sind genau
-//!   die sechs Funktionen mit `gehalten_von = "menue"`, und die Zuordnung ihrer
+//!   Selektors und laeuft ueber die Antwortkette (C2.8). Es sind genau die
+//!   Funktionen mit `gehalten_von = "menue"`, und die Zuordnung ihrer
 //!   Kennungen zu den Selektoren steht als [`ZUSTELLER`] an dieser einen
 //!   Stelle; sie hat bis zur Runde 7 im Programmtext von `hauptmenue` gestanden
-//!   und steht dort nicht mehr daneben.
+//!   und steht dort nicht mehr daneben. **Der Variantenname sagt seit dem
+//!   260907 weniger, als er verspricht**: `filter_einfuegen` ist zugestellt und
+//!   kein Textbefehl, und sein Selektor kommt von KRK und nicht von AppKit.
+//!   Der Doc-Kommentar von [`ZUSTELLER`] trennt die zwei Sorten; die Variante
+//!   heisst weiter so, weil sie die **Zustellung** benennt und nicht den
+//!   Gegenstand.
 //! - **[`Eintrag::Sonderposten`]** ist ein benannter Zusatz, der in keiner
 //!   Belegung steht. Es sind zwei, beide im Anwendungsmenue und beide bewusst
 //!   ohne Kennung und ohne Kuerzel: „Über KRK" ganz oben, das den
@@ -70,11 +75,12 @@
 //! # Zwei Funktionen auf einer Kombination, und nur ein Kuerzel
 //!
 //! Eine Menueleiste vertraegt dieselbe Tastenentsprechung nicht zweimal: AppKit
-//! nimmt sie dem spaeter stehenden Eintrag still weg. Ausgeliefert faellt das an
-//! genau einer Kombination an, `cmd+a`. Wer sie behaelt und warum, steht an
-//! [`zugestellte_kuerzel`]; kurz: der Zusteller, weil ein Befehl von KRK
-//! ohnehin ueber den Ereignisabgriff erreichbar bleibt und eine zugestellte
-//! Funktion nicht.
+//! nimmt sie dem spaeter stehenden Eintrag still weg. Ausgeliefert faellt das
+//! bei `cmd+a` und seit dem 260907 bei `cmd+f` an; eine Zahl steht hier nicht,
+//! weil die naechste Doppelung sie falsch machte. Wer die Kombination behaelt
+//! und warum, steht an [`zugestellte_kuerzel`]; kurz: der Zusteller, weil ein
+//! Befehl von KRK ohnehin ueber den Ereignisabgriff erreichbar bleibt und eine
+//! zugestellte Funktion nicht.
 //!
 //! # Was diese Runde am sichtbaren Menue aendert, ohne es zu wollen
 //!
@@ -124,24 +130,39 @@ const UEBER_BESCHRIFTUNG: &str = "Über KRK";
 /// eigenen Inhalt daneben (C5.3, C5.4).
 const UEBER_SELEKTOR: &CStr = c"orderFrontStandardAboutPanel:";
 
-/// Die sechs vom Menue zugestellten Textbefehle mit ihrem AppKit-Selektor.
+/// Die vom Menue zugestellten Funktionen mit ihrem Selektor.
 ///
 /// **Die eine Zuordnung, und sie ist ein Wert und kein Programmtext.** Bis zur
 /// Runde 7 stand sie als sechs `sel!`-Literale mitten im Aufbau des Menues und
-/// war damit weder aufzaehlbar noch ohne Fenster pruefbar.
+/// war damit weder aufzaehlbar noch ohne Fenster pruefbar. Eine Zahl steht in
+/// diesem Doc-Kommentar nicht mehr: sie stand bis zum 260907 auf sechs und ist
+/// mit `filter_einfuegen` falsch geworden. Wer sie braucht, liest
+/// `ZUSTELLER.len()` oder zaehlt in der Belegungsdatei mit
+/// `grep -c 'gehalten_von = "menue"' resources/default-keymap.toml`.
 ///
-/// Die sechs sind genau die Funktionen, die `resources/default-keymap.toml` mit
+/// Es sind genau die Funktionen, die `resources/default-keymap.toml` mit
 /// `gehalten_von = "menue"` fuehrt und die deshalb kein [`Kommando`] tragen: wo
-/// sie wirken, entscheidet die Antwortkette von AppKit und nicht KRK. Welche
-/// Klasse jeden von ihnen beantwortet, ist gemessen und steht im Modulkopf von
-/// `super::appkit::menue`.
-const ZUSTELLER: [(&str, &CStr); 6] = [
+/// sie wirken, entscheidet die Antwortkette von AppKit und nicht KRK.
+///
+/// **Seit dem 260907 sind es zwei Sorten, und die zweite hat genau ein
+/// Mitglied.** Die sechs Textbefehle des Menues „Bearbeiten" tragen einen
+/// Selektor **von AppKit**; welche Klasse jeden von ihnen beantwortet, ist
+/// gemessen und steht im Modulkopf von `super::appkit::menue`.
+/// `filter_einfuegen` dagegen traegt einen Selektor, den **KRK selbst fuehrt**:
+/// `filterEinfuegen:` beantwortet allein der Anwendungsdelegierte, keine
+/// AppKit-Klasse kennt ihn, und die Messtafel jenes Modulkopfs sagt ueber ihn
+/// deshalb nichts. Zugestellt wird er trotzdem vom Menue und nicht vom
+/// Ereignisabgriff, denn `cmd+f` gehoert dort schon `editor_suchen`
+/// (Nutzerentscheid vom 260907-2009,
+/// `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
+const ZUSTELLER: [(&str, &CStr); 7] = [
     ("text_ausschneiden", c"cut:"),
     ("text_kopieren", c"copy:"),
     ("text_einfuegen", c"paste:"),
     ("text_alles_auswaehlen", c"selectAll:"),
     ("text_rueckgaengig", c"undo:"),
     ("text_wiederholen", c"redo:"),
+    ("filter_einfuegen", c"filterEinfuegen:"),
 ];
 
 /// Ein Obermenue der Leiste: ein [`Funktionsbereich`] mit seinen Eintraegen.
@@ -188,8 +209,9 @@ pub enum Eintrag<'a> {
         /// Das Kommando, falls diese Runde es ausfuehrt.
         kommando: Option<Kommando>,
     },
-    /// Einer der sechs zugestellten Textbefehle: AppKit-Selektor statt
-    /// Kommando, Antwortkette statt `kommando_ausfuehren` (C2.8).
+    /// Eine vom Menue zugestellte Funktion: Selektor statt Kommando,
+    /// Antwortkette statt `kommando_ausfuehren` (C2.8). Welche das sind und
+    /// welche zwei Sorten von Selektor darunter liegen, sagt [`ZUSTELLER`].
     Textbefehl {
         /// Die Aufschrift, aus [`Funktion::name`].
         beschriftung: &'a str,
@@ -312,13 +334,27 @@ fn eintrag<'a>(funktion: &'a Funktion, zugestellt: &[Kombination]) -> Eintrag<'a
 /// Runde 7 fiel das nicht an, weil das Menue zehn Eintraege trug und die
 /// Doppelung nicht darunter war.
 ///
-/// **Ausgeliefert gibt es genau einen solchen Fall, und der Entscheid vom
-/// 260805 hat ihn ausdruecklich erlaubt**: `cmd+a` markiert im Dateifenster
-/// ueber `alle_markieren` alle Eintraege und waehlt im Textfeld ueber
-/// `text_alles_auswaehlen` den Text aus. Die Begruendung dort lautete, zwei
+/// **Ausgeliefert steht die Doppelung bei `cmd+a` und seit dem 260907 bei
+/// `cmd+f`, und beide Male hat ein Nutzerentscheid sie ausdruecklich
+/// erlaubt.** Eine Zahl steht hier nicht, weil die naechste Doppelung sie
+/// falsch machte; bis zum 260907 stand hier „genau einen solchen Fall".
+/// `cmd+a` markiert im Dateifenster ueber `alle_markieren` alle Eintraege und
+/// waehlt im Textfeld ueber `text_alles_auswaehlen` den Text aus (Entscheid vom
+/// 260805). `cmd+f` sucht im Editor ueber `editor_suchen` im Text und haengt im
+/// Dateifenster ueber `filter_einfuegen` die Zwischenablage an den Filtertext
+/// an (Entscheid vom 260907-2009). Die Begruendung lautete beide Male, zwei
 /// Funktionen mit verschiedenen Zustellern begegneten einander nie. In der
-/// Belegungsdatei stimmt das weiterhin; in der Menueleiste stimmt es seit dieser
-/// Runde nicht mehr.
+/// Belegungsdatei stimmt das weiterhin; in der Menueleiste stimmt es seit der
+/// Runde 7 nicht mehr.
+///
+/// **Die zwei Paare trennen den Anschlag an verschiedenen Bestandteilen der
+/// Zulaessigkeitsregel, und `cmd+a` ist deshalb kein Beleg fuer `cmd+f`.** Bei
+/// `cmd+a` trennt der Fokusvorbehalt: im Textfeld gehoert der Ersthelfer
+/// AppKit. Bei `cmd+f` gehoert der Ersthelfer im Dateifenster KRK, der Abgriff
+/// schlaegt `editor_suchen` nach und findet es, und erst
+/// `crate::kommandos::fokus::wirkt` weist es ab, weil es im Editor wirkt. Ob
+/// das reicht oder gemessen gehoert, ist offen
+/// (`shared/decisions/260907-2046_*_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.md`).
 ///
 /// **Das Kuerzel bekommt der Zusteller, und das ist kein Muenzwurf.** Ein
 /// Befehl von KRK braucht sein Menuekuerzel nicht: der Ereignisabgriff sieht
@@ -467,10 +503,15 @@ mod tests {
         );
     }
 
-    /// Die sechs zugestellten Textbefehle sind genau die Eintraege ohne
-    /// Kommando, und jeder traegt seinen gemessenen Selektor (C2.8).
+    /// Die zugestellten Funktionen sind genau die Eintraege ohne Kommando, und
+    /// jede traegt ihren Selektor aus [`ZUSTELLER`] (C2.8).
+    ///
+    /// **Die Zahl steht nicht im Namen und nicht im Rumpf.** Sie stand bis zum
+    /// 260907 als „sechs" im Namen und ist mit `filter_einfuegen` falsch
+    /// geworden; verglichen wird gegen [`ZUSTELLER`], das mit der naechsten
+    /// zugestellten Funktion von selbst mitwaechst.
     #[test]
-    fn die_sechs_zugestellten_tragen_ihren_selektor_und_kein_kommando() {
+    fn die_zugestellten_tragen_ihren_selektor_und_kein_kommando() {
         let belegung = Belegung::auslieferung();
         let leiste = aufbau(&belegung);
         let mut gefunden: Vec<(&str, &CStr)> = leiste
@@ -722,6 +763,80 @@ mod tests {
                 funktion.kennung()
             );
         }
+    }
+
+    /// Cmd+F steht bei zwei Eintraegen der Leiste, und das Kuerzel bekommt der
+    /// zugestellte.
+    ///
+    /// **Die Menuehaelfte des Paares, das
+    /// `cmd_f_steht_bei_zwei_funktionen_und_ist_kein_konflikt`
+    /// (`krk-core/tests/belegung.rs`) an der Belegung haelt.** Die Probe
+    /// darueber sucht sich ihre Faelle selbst und deckt cmd+f damit schon mit
+    /// ab; diese hier nennt ihn beim Namen, weil an ihm ausserdem zwei Dinge
+    /// haengen, die kein anderer Fall traegt: `filter_einfuegen` ist die erste
+    /// zugestellte Funktion **ausserhalb** des Menues „Bearbeiten", und ihr
+    /// Selektor ist der erste, den KRK selbst fuehrt.
+    ///
+    /// Was hier **nicht** steht, weil es ohne Fenster nicht zu haben ist: dass
+    /// AppKit den Anschlag nach der Abweisung durch den Wirkungsbereich
+    /// tatsaechlich an diesen Eintrag reicht und der Delegierte daraufhin den
+    /// Filtertext fuellt.
+    #[test]
+    fn cmd_f_traegt_im_menue_das_filtereinfuegen_und_nicht_die_editorsuche() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let cmd_f = Kombination::lesen("cmd+f").expect("cmd+f ist eine Kombination");
+
+        let (bereich, eintrag) = leiste
+            .iter()
+            .flat_map(|obermenue| {
+                obermenue
+                    .eintraege
+                    .iter()
+                    .map(move |eintrag| (obermenue.titel, eintrag))
+            })
+            .find(|(_, eintrag)| {
+                matches!(eintrag, Eintrag::Textbefehl { kennung, .. }
+                    if *kennung == "filter_einfuegen")
+            })
+            .expect("filter_einfuegen steht als zugestellter Eintrag im Menue");
+        assert_eq!(
+            bereich,
+            Funktionsbereich::Dateilisting.name(),
+            "filter_einfuegen steht nicht im Obermenue seines Funktionsbereichs"
+        );
+        assert!(
+            matches!(
+                eintrag,
+                Eintrag::Textbefehl {
+                    kombination: Some(gefuehrt),
+                    selektor,
+                    ..
+                } if *gefuehrt == cmd_f && *selektor == c"filterEinfuegen:"
+            ),
+            "der zugestellte Eintrag traegt cmd+f oder seinen Selektor nicht: {eintrag:?}"
+        );
+
+        let suche = leiste
+            .iter()
+            .flat_map(|obermenue| obermenue.eintraege.iter())
+            .find(|eintrag| {
+                matches!(eintrag, Eintrag::Befehl { kennung, .. }
+                    if *kennung == "editor_suchen")
+            })
+            .expect("editor_suchen steht im Menue");
+        assert!(
+            matches!(
+                suche,
+                Eintrag::Befehl {
+                    kombination: None,
+                    ..
+                }
+            ),
+            "editor_suchen traegt cmd+f als Menuekuerzel, obwohl der Zusteller es \
+             beansprucht; AppKit naehme es dem spaeteren der beiden still weg: \
+             {suche:?}"
+        );
     }
 
     /// Keine zwei Eintraege der Leiste tragen dieselbe Kombination.

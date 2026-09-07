@@ -72,3 +72,6 @@ Superseded by:
 - **`objc2` 0.6 führt an `AnyProtocol` keine Mitgliederliste.** Geprüft an `objc2-0.6/src/runtime/mod.rs:1045-1090`, zitiert im Abschluss von `circles/260807-2116-eingebauter-editor-mit-textmarken/issues/260810-0417_*_die-laufzeitprobe-bindet-den-bau-an-die-macos-version-des-pruefenden-geraets.md`.
 
 Möglichkeit 2, das schwache Binden für C-Funktionen, ist unberührt: kein `-weak_framework` im Baum.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2009 beantwortet` — Moeglichkeit 1: zur Laufzeit fragen, je Stelle ein Ersatzweg daneben. Der Nutzer hat damit nicht das Paket aus Laufzeitabfrage und schwachem Binden gewaehlt, das die Vorlage empfahl; schwaches Binden bleibt ungebaut. Die Folge ist mitentschieden: der Uebersetzer prueft nichts, und ein vergessener Schutz faellt erst auf dem alten Geraet auf, dort als Absturz; ruled by user, Kai Stalmann <kai@stalmann.org>.

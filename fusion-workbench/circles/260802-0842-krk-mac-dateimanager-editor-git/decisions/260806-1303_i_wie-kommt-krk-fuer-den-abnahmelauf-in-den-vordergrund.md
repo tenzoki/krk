@@ -87,3 +87,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2009 beantwortet` — Moeglichkeit 1: es bleibt beim Abbruch, und die Messanleitung schreibt die Bedingung hin. Der Abnahmelauf bleibt Nutzerarbeit, ein unbeaufsichtigter Lauf ist ausgeschlossen; die Gegenmoeglichkeit lohnt erst, wenn die Messreihe je ohne den Nutzer laufen soll, und braeuchte dann einen zweiten Ausgabeweg fuer die Messzeilen; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-ui/src/messmodus.rs bricht mit NICHT_IM_VORDERGRUND ab, statt falsche Zahlen zu liefern; der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

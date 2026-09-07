@@ -82,11 +82,14 @@
 //! Kopf von `resources/default-keymap.toml` schreibt den Wechsel aus, und die
 //! Reservierung aus C3 der Runde 1 ist damit eingeloest und nicht gebrochen.
 //! Seit der Runde 22 ist die `copy:`- und die `cut:`-Haelfte dieses
-//! Einhaengepunkts besetzt (der Abschnitt unten), und seit der Runde 21 auch
-//! die `paste:`-Haelfte — **vom Filter und nicht von einer
-//! Dateizwischenablage**: `cmd+v` im Dateifenster liest ueber
+//! Einhaengepunkts besetzt (der Abschnitt unten). Die `paste:`-Haelfte war es
+//! von der Runde 21 bis zum 260907 — **vom Filter und nicht von einer
+//! Dateizwischenablage** —, und seit dem 260907 ist sie wieder frei: das
+//! Einfuegen in den Filtertext liegt auf `cmd+f` und auf dem eigenen Selektor
+//! `filterEinfuegen:`, waehrend `cmd+v` im Dateifenster nichts mehr tut. Am
+//! Weg durch diese Datei aendert das nichts: der Rufer liest ueber
 //! [`einfuegequelle`] die Ablage und haengt, was der Kern daraus reinigt, an
-//! den Filtertext; es legt keine Datei ab. Was `cmd+v` mit einem
+//! den Filtertext; er legt keine Datei ab. Was `cmd+v` mit einem
 //! Dateiverweis tut, sobald eine Dateizwischenablage gebaut ist, bleibt offen
 //! (`decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
 //!
@@ -358,7 +361,7 @@ pub fn einfuegequelle() -> Einfuegequelle {
 ///
 /// **Der Aufruf kostet linear in der Zahl der Verweise**: 0,13 ms je Verweis
 /// im Profil `release`, die Messung steht bei [`dateiverweise`]. Ein
-/// `cmd+v` ist ein Tastendruck und kein Weg, der bei jeder Zeigerbewegung
+/// `cmd+f` ist ein Tastendruck und kein Weg, der bei jeder Zeigerbewegung
 /// laeuft; die Zahl steht hier als Auskunft und nicht als Warnung.
 pub fn einfuegequelle_aus(ablage: &NSPasteboard) -> Einfuegequelle {
     let verweise = dateiverweise(ablage);

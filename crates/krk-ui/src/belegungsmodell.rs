@@ -39,8 +39,8 @@
 //! Namen. Die Zuordnung Funktion → Bereich steht an genau einer Stelle,
 //! [`bereich`], und dort als vollstaendige Fallunterscheidung ueber
 //! [`Kommando`] ohne Auffangzweig: ein neues Kommando uebersetzt nicht, bevor
-//! es seinen Bereich genannt hat. Die wenigen Funktionen ohne Kommando (die
-//! sechs Textbefehle des Menues) stehen daneben mit Namen; dass keine
+//! es seinen Bereich genannt hat. Die wenigen Funktionen ohne Kommando (die vom
+//! Menue zugestellten) stehen daneben mit Namen; dass keine
 //! vergessen ist, prueft
 //! `jede_kennung_hat_einen_funktionsbereich` gegen die
 //! Auslieferungsbelegung. Innerhalb eines Bereichs bleibt die Reihenfolge
@@ -180,6 +180,11 @@ impl Funktionsbereich {
     /// Eintraege jenes Menues. Dieselbe Gliederung tragen die Belegungsansicht
     /// und die Markdown-Ausgabe, also heisst der Bereich dort ebenso.
     ///
+    /// **Umgekehrt gilt der Satz seit dem 260907 nicht mehr**: nicht jede
+    /// Funktion mit `gehalten_von = "menue"` steht in diesem Bereich.
+    /// `filter_einfuegen` traegt den Wert und steht unter „Dateilisting";
+    /// [`bereich`] schreibt aus, warum.
+    ///
     /// **Ob macOS seine eigenen Textzusaetze an den Menue*titel* haengt, ist
     /// ungemessen**, und der Name traegt diese Zusage deshalb nicht.
     /// `appkit::menue::systemzusaetze_unterdruecken` setzt nicht am Titel an,
@@ -211,10 +216,19 @@ impl Funktionsbereich {
 /// **Die eine Stelle der Zuordnung.** Fuer jede Funktion mit einem
 /// [`Kommando`] antwortet die vollstaendige Fallunterscheidung in
 /// [`bereich_des_kommandos`]; die Funktionen ohne Kommando stehen hier mit
-/// Namen, und es sind genau die, die nie eines bekommen: die sechs vom Menue
-/// zugestellten Textbefehle. `None` heisst: die Zuordnung kennt diese Kennung
-/// nicht — das faengt die Pruefung `jede_kennung_hat_einen_funktionsbereich`,
-/// bevor es eine Ansicht erreicht.
+/// Namen, und es sind genau die, die nie eines bekommen: die vom Menue
+/// zugestellten. `None` heisst: die Zuordnung kennt diese Kennung nicht — das
+/// faengt die Pruefung `jede_kennung_hat_einen_funktionsbereich`, bevor es eine
+/// Ansicht erreicht.
+///
+/// **Zugestellt heisst nicht Textbefehl, und seit dem 260907 faellt das hier
+/// auf.** Die sechs Textbefehle des Menues „Bearbeiten" gehen nach
+/// [`Funktionsbereich::Textbefehle`], `filter_einfuegen` dagegen nach
+/// [`Funktionsbereich::Dateilisting`]: es haengt die Zwischenablage an den
+/// Filtertext der Dateiliste, und diese Gliederung fragt nach der **Gegend der
+/// Anwendung** und nicht nach dem Zusteller. Wer es unter „Bearbeiten" suchte,
+/// suchte es an der Stelle, an der `resources/default-keymap.toml` es auch
+/// nicht fuehrt.
 ///
 /// `bearbeiten` stand bis zur Editor-Runde hier unten, weil der F4-Eintrag
 /// reserviert war und kein Kommando trug. Seit S5 traegt er
@@ -231,6 +245,7 @@ pub fn bereich(kennung: &str) -> Option<Funktionsbereich> {
         | "text_alles_auswaehlen"
         | "text_rueckgaengig"
         | "text_wiederholen" => Some(Funktionsbereich::Textbefehle),
+        "filter_einfuegen" => Some(Funktionsbereich::Dateilisting),
         _ => None,
     }
 }

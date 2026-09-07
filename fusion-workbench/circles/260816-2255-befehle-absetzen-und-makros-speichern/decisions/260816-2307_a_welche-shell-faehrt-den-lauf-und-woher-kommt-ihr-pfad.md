@@ -48,3 +48,6 @@ Implemented:
 Deferred:
 Superseded by:
 Retired:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2009 beantwortet` — Moeglichkeit 1: /bin/sh fuehrt aus, die Anmeldeshell wird einmal beim Start nach dem Suchpfad gefragt. Damit ist jedes Makro auf jedem Geraet dasselbe; zsh-Schreibweise steht in Makros nicht zur Verfuegung, und das ist mitentschieden. Die Runde selbst ist zurueckgestellt, die Antwort bindet sie, wenn sie faehrt; ruled by user, Kai Stalmann <kai@stalmann.org>.

@@ -79,13 +79,19 @@ beiden Enden ungebunden: `abc` trifft an jeder Stelle des Namens, und ein `*`
 am Anfang oder am Ende verankert nichts. Groß- und Kleinschreibung sind egal,
 Umlaute werden nicht gefaltet.
 
-**`cmd+v` hängt die Zwischenablage an den Filtertext an**, aber nicht so, wie
+**`cmd+f` hängt die Zwischenablage an den Filtertext an**, aber nicht so, wie
 sie dort steht. Vom Text bleibt das letzte Stück nach dem letzten Schrägstrich,
 Prozentzeichen aufgelöst, und daraus fällt jedes Zeichen, das die Zeichenregel
 abweist, samt dem Doppelpunkt. Mehrzeiliger Text und mehrere Dateiverweise
 werden ganz abgewiesen statt halb übernommen; die Statuszeile sagt es. Der
 Doppelpunkt fällt dabei **nur** beim Einfügen: wer ihn tippt, bekommt ihn, denn
 ein POSIX-Name trägt ihn.
+
+Dieselbe Taste sucht im Editor im Text, und das ist kein Widerspruch: welche
+der beiden Bedeutungen greift, entscheidet der Fokus. `cmd+v` tut im
+Dateifenster nichts; die Kombination ist für das Einfügen einer Datei
+reserviert, das eine spätere Fassung bringt. Bis zur Fassung vom 260907 lag das
+Einfügen in den Filtertext auf `cmd+v`.
 
 **`Esc` leert den Filtertext, aber erst im dritten Rang.** Steht ein Blatt,
 schließt Esc das Blatt. Läuft eine Dateioperation, bricht Esc sie ab. Erst

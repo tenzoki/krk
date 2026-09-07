@@ -7,7 +7,7 @@
 //!
 //! ```text
 //!  zulaessig(Kommando) ──> Anspruch::Kommando ─┐
-//!  dateiablage_zulaessig() ─> Anspruch::Dateiablage ┤   (copy:, cut:, paste:)
+//!  dateiablage_zulaessig() ─> Anspruch::Dateiablage ┤ (copy:, cut:, filterEinfuegen:)
 //!                                               ├─> Wirkungsbereich ─┐
 //!                                               └─> Ausnahmeliste ───┤
 //!                                                                    ├──> gestattet()
@@ -34,9 +34,10 @@
 //! benannte Eingaenge davor. [`zulaessig`] nimmt ein [`Kommando`] und ist der
 //! Eingang der zwei Frager oben; [`dateiablage_zulaessig`] nimmt allein die
 //! [`Lage`] und ist der Eingang fuer die Dateiablage, also fuer die drei
-//! Selektoren des Menues „Bearbeiten", die der Delegierte am Dateifenster
-//! beantwortet: `copy:` und `cut:` seit der Runde 22, `paste:` seit der
-//! Runde 21. Keiner der drei ist ein Kommando, und keiner bekommt eines
+//! Selektoren, die der Delegierte am Dateifenster beantwortet: `copy:` und
+//! `cut:` aus dem Menue „Bearbeiten" seit der Runde 22 und, seit dem 260907,
+//! `filterEinfuegen:` aus dem Menue „Dateilisting". Keiner der drei ist ein
+//! Kommando, und keiner bekommt eines
 //! (Constraint 3 der Runde 22, Constraint 3 und 5 der Runde 21). Was der
 //! Rumpf vom Befehl wissen will, sind
 //! drei Antworten, und die gibt [`Anspruch`] fuer beide Eingaenge vollstaendig
@@ -45,8 +46,8 @@
 //! `Dateifenster`, nein, nein (A11 der Runde 22), und die Ausnahmeliste
 //! waechst nicht.
 //!
-//! **`paste:` nimmt seit der Runde 21 denselben Eingang und bekommt keinen
-//! dritten Wert von [`Anspruch`].** Das Einfuegen in den Filtertext stellt
+//! **Das Einfuegen in den Filtertext nimmt seit der Runde 21 denselben
+//! Eingang und bekommt keinen dritten Wert von [`Anspruch`].** Es stellt
 //! byteweise denselben Anspruch wie das Kopieren und das Ausschneiden:
 //! `Wirkungsbereich::Dateifenster`, nicht waehrend eines Blattes, nicht immer
 //! erreichbar (A9 der Runde 21). Ein Wert `Anspruch::Einfuegen` mit denselben
@@ -56,9 +57,17 @@
 //! Selektoren, die Verweise ablegen". Ob der Name umbenannt gehoert, ist eine
 //! offene Frage des Plans der Runde 21 und keine dieser Datei.
 //!
+//! **Welcher Selektor das Einfuegen traegt, hat der 260907 gewechselt, und der
+//! Anspruch hat es nicht gemerkt.** Von der Runde 21 bis dahin war es `paste:`
+//! und damit `cmd+v`; seither ist es `filterEinfuegen:` auf `cmd+f`, ein
+//! Selektor, den KRK selbst fuehrt, waehrend `cmd+v` im Dateifenster
+//! schweigt, bis eine spaetere Runde die Dateizwischenablage baut. Diese Datei
+//! aendert das nicht: sie fragt nach dem Anspruch und nicht nach dem Namen des
+//! Selektors.
+//!
 //! **Der zweite Eingang hat seine zwei eigenen Frager, und es sind dieselben
 //! zwei Stellen**: `validateMenuItem:` fuer die Ausgrauung von „Kopieren",
-//! „Ausschneiden" und „Einfuegen", und
+//! „Ausschneiden" und „In den Filter einfuegen", und
 //! `Anwendungsdelegierter::bearbeiten_am_dateifenster` fuer die Antwort auf
 //! den Selektor, seit der Runde 21 der eine Vorspann, durch den alle drei
 //! Selektoren gehen (bis dahin hiess er `dateiablage_ausfuehren` und bediente
@@ -229,9 +238,9 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
 }
 
 /// Ob die Dateiablage in dieser Lage wirken darf (A11 der Runde 22, A9 der
-/// Runde 21): die drei Selektoren des Menues „Bearbeiten", die der Delegierte
-/// am Dateifenster beantwortet, `copy:` und `cut:` seit der Runde 22 und
-/// `paste:` seit der Runde 21.
+/// Runde 21): die drei Selektoren, die der Delegierte am Dateifenster
+/// beantwortet, `copy:` und `cut:` seit der Runde 22 und `filterEinfuegen:`
+/// seit dem 260907.
 ///
 /// **Der zweite Eingang zur einen Regel, und kein zweiter Rumpf.** Die
 /// Dateiablage ist kein [`Kommando`]: sie haengt an keiner Taste der
@@ -239,7 +248,10 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
 /// Aktionsselektoren, die AppKit dem Anwendungsdelegierten am Ende der
 /// Antwortkette zustellt. Ein Kommando dafuer anzulegen hiesse, `cmd+c` oder
 /// `cmd+v` in `resources/default-keymap.toml` zu binden, und das Ereignis
-/// kaeme im Editor nie mehr beim Textsystem an. Also fragt sie die Regel ohne
+/// kaeme im Editor nie mehr beim Textsystem an. `filterEinfuegen:` traegt seit
+/// dem 260907 zwar eine Belegungszeile, aber eine vom Menue gehaltene: sie
+/// bindet kein Kommando, und `Belegung::nachschlag` ueberspringt sie. Also
+/// fragt sie die Regel ohne
 /// Kommando, mit dem [`Anspruch`], den ein Kommando mit
 /// `Wirkungsbereich::Dateifenster` stellte: kein stehendes Blatt, ein
 /// Ersthelfer, der nicht AppKit gehoert, der Fokus im Dateifenster und KRKs
@@ -277,9 +289,10 @@ enum Anspruch {
     /// Ein Tastenbefehl oder ein Eintrag des Hauptmenues.
     Kommando(Kommando),
     /// Der Ablage-Einhaengepunkt des Dateifensters: `copy:` und `cut:` seit
-    /// der Runde 22, `paste:` seit der Runde 21. Ein eigener Wert fuer das
-    /// Einfuegen entsteht nicht, weil er dieselben drei Antworten gaebe
-    /// (A9 der Runde 21).
+    /// der Runde 22, das Einfuegen in den Filtertext seit der Runde 21 (bis
+    /// zum 260907 als `paste:`, seither als `filterEinfuegen:`). Ein eigener
+    /// Wert fuer das Einfuegen entsteht nicht, weil er dieselben drei
+    /// Antworten gaebe (A9 der Runde 21).
     Dateiablage,
 }
 
@@ -442,9 +455,9 @@ mod tests {
     /// C3.6 der Runde 21).
     ///
     /// `validateMenuItem:` fragt fuer die Ausgrauung von „Kopieren",
-    /// „Ausschneiden" und „Einfuegen",
+    /// „Ausschneiden" und „In den Filter einfuegen",
     /// `Anwendungsdelegierter::bearbeiten_am_dateifenster` fuer die Antwort auf
-    /// `copy:`, `cut:` und `paste:`; seit der Runde 21 ist dieser eine
+    /// `copy:`, `cut:` und `filterEinfuegen:`; seit der Runde 21 ist dieser eine
     /// Vorspann der Rumpf aller drei Selektoren, und deshalb bleibt die Zahl
     /// beim dritten Selektor bei zwei. Beide rufen
     /// [`dateiablage_zulaessig`] auf derselben [`Lage`], aus demselben Grund
@@ -483,8 +496,8 @@ mod tests {
     /// Ausnahmeliste.
     ///
     /// Seit der Runde 21 haelt die Tafel auch das Einfuegen (C3.2, C3.4, C3.5,
-    /// Probenhaelften): `paste:` fragt denselben Eingang mit demselben
-    /// Anspruch, also ist jede Zeile hier zugleich seine.
+    /// Probenhaelften): `filterEinfuegen:` fragt denselben Eingang mit
+    /// demselben Anspruch, also ist jede Zeile hier zugleich seine.
     #[test]
     fn die_dateiablage_wirkt_genau_mit_dem_fokus_im_dateifenster() {
         let (blatt, appkit, krk) = OHNE_HINDERNIS;

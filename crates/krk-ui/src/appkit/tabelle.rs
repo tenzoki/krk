@@ -22,8 +22,9 @@
 //! nimmt die Dateiablage ([`DateifensterQuelle::dateiverweise_ablegen`],
 //! `cmd+c` und `cmd+x` ohne `Kommando`) denselben Weg, seit der Runde 21
 //! auch das abgewiesene Einfuegen in den Filtertext
-//! ([`DateifensterQuelle::aus_zwischenablage_einfuegen`], `cmd+v` ohne
-//! `Kommando`); ein gegluecktes Einfuegen schreibt keinen Satz.
+//! ([`DateifensterQuelle::aus_zwischenablage_einfuegen`], seit dem 260907
+//! `cmd+f` und bis dahin `cmd+v`, beide ohne `Kommando`); ein gegluecktes
+//! Einfuegen schreibt keinen Satz.
 //!
 //! Zwei Objective-C-Klassen teilen sich die Arbeit, weil AppKit sie an zwei
 //! Protokollen entgegennimmt. [`DateifensterQuelle`] ist die Datenquelle: sie
@@ -2049,7 +2050,8 @@ impl DateifensterQuelle {
     }
 
     /// Fuegt den Inhalt der Zwischenablage in den Filtertext des sichtbaren
-    /// Tabs ein (`cmd+v` und „Bearbeiten › Einfuegen", Runde 21).
+    /// Tabs ein (`cmd+f` und „Dateilisting › In den Filter einfuegen",
+    /// Runde 21; bis zum 260907 `cmd+v` und „Bearbeiten › Einfuegen").
     ///
     /// **Der zweite Eingang in den Filtertext**, neben
     /// [`Self::filterzeichen_tippen`]. Beide enden im selben Feld desselben
@@ -2082,9 +2084,9 @@ impl DateifensterQuelle {
     /// bekommt einen Satz, den [`operationen::einfuegen_abgewiesen`] je
     /// Hindernis schreibt; der Filtertext bleibt dann, wie er war.
     ///
-    /// `pub`, weil der Rufer der Anwendungsdelegierte ist, der `paste:`
-    /// beantwortet und die aktive Fensterseite waehlt, wie bei
-    /// [`Self::dateiverweise_ablegen`].
+    /// `pub`, weil der Rufer der Anwendungsdelegierte ist, der
+    /// `filterEinfuegen:` beantwortet und die aktive Fensterseite waehlt, wie
+    /// bei [`Self::dateiverweise_ablegen`].
     pub fn aus_zwischenablage_einfuegen(&self) {
         let quelle = super::zwischenablage::einfuegequelle();
         match krk_core::zwischenablage::filtertext_aus(&quelle) {

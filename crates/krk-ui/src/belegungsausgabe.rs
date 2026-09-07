@@ -40,19 +40,19 @@
 //! am 260811-0110 angenommen hat; eine zusaetzliche Meldung darueber verlangt
 //! C4 ausdruecklich nicht.
 //!
-//! # Die vier Begruendungslagen der dritten Spalte
+//! # Die fuenf Begruendungslagen der dritten Spalte
 //!
 //! **Gezaehlt wird ueber alle Funktionen der Auslieferungsbelegung, und die
 //! Einteilung einer Lage heisst ueberall dasselbe**: im Modulkopf, an den
 //! Zweigen von [`wirkung`] und in der Probe
-//! `die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander`. Die erste
+//! `die_dritte_spalte_haelt_die_begruendungslagen_auseinander`. Die erste
 //! Lage traegt jede Funktion mit [`Kommando`](krk_core::tasten::Kommando) (so viele, wie
 //! `Kommando::KENNUNGEN` Eintraege hat; die Probe haelt beide Zahlen
 //! aneinander, und eine Zahl steht deshalb nicht hier, sie wuerde mit jedem
-//! neuen Kommando falsch), die zweite bis vierte verteilen die sechs
-//! zugestellten Textbefehle unter sich.
+//! neuen Kommando falsch), die zweite bis fuenfte verteilen die vom Menue
+//! zugestellten Funktionen unter sich.
 //!
-//! Die Spalte "Wirkt in" hat damit **vier verschiedene Quellen**, und
+//! Die Spalte "Wirkt in" hat damit **fuenf verschiedene Quellen**, und
 //! [`wirkung`] haelt sie auseinander, statt sie zu mitteln:
 //!
 //! | Lage | Funktionen | Zelle | woher die Aussage kommt |
@@ -61,6 +61,15 @@
 //! | 2 | `text_ausschneiden`, `text_kopieren`, `text_einfuegen` | "Textfelder und Editor" | in S1 am Laufzeitsystem **gemessen**, zuzueglich eines `inference:`-Schrittes ueber den Feldeditor (siehe unten) |
 //! | 3 | `text_alles_auswaehlen` | leer | S1 hat die Ableitung **gebrochen** |
 //! | 4 | `text_rueckgaengig`, `text_wiederholen` | "Editor" | **Nutzerentscheid** vom 260811-0935, am Code belegt |
+//! | 5 | `filter_einfuegen` | "Dateifenster" | am Code **entscheidbar**: der Selektor gehoert KRK und hat genau einen Rufer |
+//!
+//! **Die fuenfte Lage ist seit dem 260907 dabei und gehoert nicht zu den drei
+//! davor.** Die Lagen 2 bis 4 antworten fuer eine Funktion, deren Selektor
+//! AppKit fuehrt, und muessen deshalb messen, erschliessen oder entscheiden
+//! lassen. `filterEinfuegen:` fuehrt KRK selbst: ihn beantwortet allein der
+//! Anwendungsdelegierte, durch denselben Vorspann und dasselbe Tor wie `copy:`
+//! und `cut:`, und die Zelle liest den Anspruch ab, den
+//! [`crate::kommandos::zulaessigkeit`] fuer diesen Einhaengepunkt fuehrt.
 //!
 //! **Die zweite Lage ist zur Haelfte gemessen und zur Haelfte erschlossen.**
 //! Gemessen hat S1 eine Aussage ueber Klassen: `cut:`, `copy:` und `paste:`
@@ -119,7 +128,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{atomar, pfade};
-use krk_core::tasten::{Belegung, Funktion};
+use krk_core::tasten::{Belegung, Funktion, Wirkungsbereich};
 
 use crate::belegungsmodell::{nach_bereichen, tastenliste};
 
@@ -232,7 +241,7 @@ fn maskiert(text: &str) -> String {
 ///
 /// **Der Wortlaut ist mit Bedacht keine Ortsangabe.** Die uebrigen Zellen
 /// dieser Spalte nennen Orte — "Editor", "Textfelder und Editor", je eine
-/// Beschriftung von [`Wirkungsbereich`](krk_core::tasten::Wirkungsbereich). Eine
+/// Beschriftung von [`Wirkungsbereich`]. Eine
 /// Zahl steht hier nicht: sie stand bis zur Git-Runde auf sieben und war mit
 /// `Wirkungsbereich::Vorschau` aus der Runde 20 schon falsch; gezaehlt wird
 /// sie mit
@@ -252,17 +261,17 @@ const NICHT_EINGEORDNET: &str = "(von KRK nicht eingeordnet)";
 /// [`Funktion::kommando`] und nicht ueber `Kommando::aus_kennung`, weil das die
 /// Zustellerregel mitfuehrt: was das Hauptmenue zustellt, hat nie ein Kommando,
 /// und die Zusage haengt damit nicht daran, dass `Kommando::KENNUNGEN` die
-/// sechs Textbefehle zufaellig nicht nennt.
+/// zugestellten Funktionen zufaellig nicht nennt.
 ///
 /// **Der rechte Zweig entscheidet je Befehl und nicht fuer die Gruppe.** Das
-/// ist der Kern dieser Funktion: die sechs zugestellten Textbefehle verteilen
-/// sich auf die **zweite bis vierte** der vier Begruendungslagen, und ein
-/// Alles-oder-nichts ueber die sechs waere fuer zwei dieser drei Lagen falsch.
-/// Der Modulkopf stellt alle vier als Tabelle daneben und legt dort die
+/// ist der Kern dieser Funktion: die zugestellten Funktionen verteilen sich auf
+/// die **zweite bis fuenfte** der fuenf Begruendungslagen, und ein
+/// Alles-oder-nichts ueber sie waere fuer drei dieser vier Lagen falsch.
+/// Der Modulkopf stellt alle fuenf als Tabelle daneben und legt dort die
 /// Zaehlung fest, der die Zweige hier folgen.
 fn wirkung(funktion: &Funktion) -> &'static str {
     // Erste Lage: aus der Belegung entscheidbar, ohne Naeherung. Jede
-    // Funktion ausser den sechs zugestellten Textbefehlen traegt ein
+    // Funktion ausser den vom Menue zugestellten traegt ein
     // Kommando, `Kommando::wirkungsbereich` ist eine
     // totale Funktion darueber, und `Wirkungsbereich::beschriftung` ist eine
     // zweite, deren Vollstaendigkeit der Uebersetzer erzwingt. Hier ist nichts
@@ -298,7 +307,8 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // ist eine `NSTableView`: mit dem Fokus dort weist der stumme
         // Fokusvorbehalt `alle_markieren` ab, der Tastendruck geht unveraendert
         // an AppKit und erreicht diesen Menueeintrag. "Textfelder und Editor"
-        // waere fuer diesen einen der sechs eine falsche Zusicherung.
+        // waere fuer diesen einen der sechs Textbefehle eine falsche
+        // Zusicherung.
         //
         // **Die leere Zelle ist ein Ergebnis und kein Versaeumnis.** Der
         // Datensatz
@@ -321,6 +331,23 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // geschieht in `super::appkit::editor`. Der Nutzer hat daraufhin am
         // 260811-0935 "Editor" gesetzt.
         "text_rueckgaengig" | "text_wiederholen" => "Editor",
+
+        // Fuenfte Lage: **am Code entscheidbar, ohne Messung und ohne
+        // Naeherung.** `filter_einfuegen` ist zugestellt wie die vier Zeilen
+        // darueber, aber sein Selektor `filterEinfuegen:` gehoert nicht AppKit,
+        // sondern KRK: ihn beantwortet allein der Anwendungsdelegierte, und
+        // zwar durch denselben Vorspann und dasselbe Tor wie `copy:` und
+        // `cut:`. Die Antwortkette hat hier also nichts zu entscheiden, und die
+        // Zelle liest sich aus dem Anspruch ab, den
+        // `crate::kommandos::zulaessigkeit` fuer diesen Einhaengepunkt fuehrt:
+        // `Wirkungsbereich::Dateifenster`. Geschrieben steht sie deshalb als
+        // dessen `beschriftung()` und nicht als zweite Kopie der Zeichenkette.
+        //
+        // Die Lage ist damit naeher an der ersten als an der zweiten bis
+        // vierten: dort entscheidet die Belegung, hier der eine Rufer im Baum.
+        // Ein Kommando traegt die Funktion trotzdem nicht, und der Zweig steht
+        // deshalb hier unten und nicht oben (Nutzerentscheid vom 260907-2009).
+        "filter_einfuegen" => Wirkungsbereich::Dateifenster.beschriftung(),
 
         // **Erreichbar, und deshalb traegt der Zweig eine eigene Auskunft.**
         //
@@ -358,7 +385,7 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // **Die Ungleichheit der beiden Fallunterscheidungen bleibt bestehen.**
         // Sie zu schliessen — `wirkung` fragte dieselbe Frage wie `bereich` —
         // haenge die Zusage des Doc-Kommentars oben wieder daran, dass
-        // `Kommando::KENNUNGEN` die sechs Textbefehle nicht nennt. Der
+        // `Kommando::KENNUNGEN` die zugestellten Funktionen nicht nennt. Der
         // Datensatz
         // `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_*_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md`
         // legt beide Wege vor; gebaut ist der zweite, und die Ungleichheit
@@ -721,17 +748,20 @@ mod tests {
         );
     }
 
-    /// **Die dritte Spalte, ueber ihre vier Begruendungslagen.**
+    /// **Die dritte Spalte, ueber ihre Begruendungslagen.**
     ///
     /// Die Zaehlung ist die des Modulkopfs und laeuft ueber alle Funktionen
     /// der Auslieferungsbelegung: die erste Lage traegt jede mit Kommando (so
     /// viele wie `Kommando::KENNUNGEN` Eintraege, unten gehalten), die zweite
-    /// bis vierte die sechs zugestellten Textbefehle. Die Probe haelt jede der
-    /// vier einzeln fest, weil ein Alles-oder-nichts ueber die sechs fuer zwei
-    /// der drei sie betreffenden Lagen falsch waere. Aendert eine der vier
+    /// bis fuenfte die vom Menue zugestellten Funktionen. Die Probe haelt jede
+    /// Lage einzeln fest, weil ein Alles-oder-nichts ueber die zugestellten fuer
+    /// drei der vier sie betreffenden Lagen falsch waere. Aendert eine der
     /// Quellen ihre Antwort, schlaegt genau der betroffene Abschnitt fehl.
+    ///
+    /// **Die Zahl steht nicht mehr im Namen.** Sie stand bis zum 260907 als
+    /// „vier" darin und ist mit der fuenften Lage falsch geworden.
     #[test]
-    fn die_dritte_spalte_haelt_die_vier_begruendungslagen_auseinander() {
+    fn die_dritte_spalte_haelt_die_begruendungslagen_auseinander() {
         let belegung = Belegung::auslieferung();
 
         // Erste Lage, aus der Belegung entscheidbar: jede Funktion mit
@@ -799,6 +829,16 @@ mod tests {
                 "{kennung} traegt nicht die vom Nutzer gesetzte Beschriftung"
             );
         }
+
+        // Fuenfte Lage, am Code entscheidbar: `filterEinfuegen:` gehoert KRK
+        // und nicht AppKit, sein einziger Rufer ist der Anwendungsdelegierte am
+        // Dateifenster, und die Zelle liest den Anspruch jenes Einhaengepunkts
+        // ab. Nichts daran ist gemessen oder erschlossen.
+        assert_eq!(
+            wirkung_von("filter_einfuegen"),
+            Wirkungsbereich::Dateifenster.beschriftung(),
+            "filter_einfuegen traegt nicht den Wirkungsbereich seines Einhaengepunkts"
+        );
     }
 
     /// Die Zelle von `text_alles_auswaehlen` steht auch in der fertigen Datei
@@ -814,12 +854,13 @@ mod tests {
     }
 
     /// **In der Auslieferungsbelegung** wird jede Kennung ohne Kommando vom
-    /// Menue zugestellt und steht in einem der sechs Zweige von [`wirkung`].
+    /// Menue zugestellt und steht in einem der benannten Zweige von
+    /// [`wirkung`].
     ///
     /// **Der Umfang dieser Probe ist die ausgelieferte Datei und nichts
     /// sonst.** Sie laeuft ueber `Belegung::auslieferung()`; fuer diese eine
     /// Belegung faengt sie eine Funktion, die weder ein Kommando noch einen der
-    /// sechs Zweige traegt, bevor sie in der Markdown-Datei eine Zelle ohne
+    /// benannten Zweige traegt, bevor sie in der Markdown-Datei eine Zelle ohne
     /// Auskunft erzeugt. Ein neuer `[[funktion]]`-Block in
     /// `resources/default-keymap.toml` schlaegt hier also fehl, solange
     /// `wirkung` ihn nicht kennt.
@@ -851,6 +892,7 @@ mod tests {
                         | "text_alles_auswaehlen"
                         | "text_rueckgaengig"
                         | "text_wiederholen"
+                        | "filter_einfuegen"
                 ),
                 "{} ist zugestellt, aber wirkung() kennt sie nicht",
                 funktion.kennung()
