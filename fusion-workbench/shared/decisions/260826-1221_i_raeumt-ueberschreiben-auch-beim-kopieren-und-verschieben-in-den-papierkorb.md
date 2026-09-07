@@ -82,3 +82,6 @@ trifft heute schon jeden Unzip- und Zip-Lauf und ist dort hingenommen.
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0703 beantwortet` — nein; das Verhalten bleibt ungleich, und das Blatt beschriftet die Schaltflaeche je nach Fall verschieden, statt einen Wortlaut fuer zwei Wirkungen zu fuehren. Gegen die Empfehlung entschieden: es gibt danach keine Regel, auf die man sich ohne Lesen verlassen kann, dafuer bleibt das Ueberschreiben auf einem Datentraeger ohne Papierkorb moeglich; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-0750-zwei-beschriftungen-fuer-die-ersetzende-schaltflaeche.md — `Ersetzungsweg` und `ersetzungsweg` rechnen den Weg aus der `Art`, das Konfliktblatt beschriftet die erste Schaltflaeche danach mit „In den Papierkorb und ersetzen" oder „Endgültig löschen und ersetzen"; das Verhalten im Kern ist unveraendert. Der Commit steht beim Orchestrator, das Verlaufsprotokoll traegt den Nachweis.

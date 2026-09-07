@@ -470,8 +470,10 @@ fn ueberschrift(art: &Art) -> &'static str {
 /// Ob der Vorgang genau **eine** Zieldatei erzeugt.
 ///
 /// Die zweite vollstaendige Rechnung ueber [`Art`], und sie steht neben der
-/// ersten: wer einen siebten Wert hinzufuegt, findet beide Stellen an einem
-/// Fleck statt an zweien.
+/// ersten: wer einen siebten Wert hinzufuegt, findet die Stellen an einem
+/// Fleck statt verstreut. Seit dem 260907 steht [`ersetzungsweg`] als dritte
+/// daneben, und [`konfliktgestalt`] fasst diese beiden zusammen, weil sie
+/// dieselbe Frage an dieselbe [`Art`] stellen.
 ///
 /// **Gefragt wird sie vom Konfliktblatt**, das in dieser Lage drei Antworten
 /// statt vier zeigt und das Ankreuzfeld „fuer alle weiteren" weglaesst: es
@@ -502,10 +504,10 @@ fn ueberschrift(art: &Art) -> &'static str {
 /// annimmt; fiele er still weg, stuende das Blatt in der vierantwortigen
 /// Gestalt da, ohne dass eine Probe es saehe.
 ///
-/// Gefragt wird sie an genau einer Stelle, naemlich in
-/// `Anwendungsdelegierter::konflikt_fragen`, und die reicht die Antwort an
-/// `crate::appkit::blaetter::konflikt::zeigen` weiter. Das Blatt selbst kennt
-/// die [`Art`] nicht und soll sie nicht kennenlernen.
+/// Gefragt wird sie ueber [`konfliktgestalt`], und die eine Stelle, die diese
+/// ruft, ist `Anwendungsdelegierter::konflikt_fragen`; sie reicht die Vorgabe
+/// an `crate::appkit::blaetter::konflikt::zeigen` weiter. Das Blatt selbst
+/// kennt die [`Art`] nicht und soll sie nicht kennenlernen.
 #[must_use]
 pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
     match art {
@@ -515,6 +517,101 @@ pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
         | Art::UmbenennenImStapel { .. } => false,
         Art::Zippen { .. } => true,
         Art::Entpacken { ziele } => ziele.len() == 1,
+    }
+}
+
+/// Wohin der Eintrag geht, der am Ziel steht, wenn der Nutzer ihn ersetzen
+/// laesst.
+///
+/// **Die beiden Werte sind zwei verschiedene Wirkungen und nicht zwei
+/// Schreibweisen derselben**, und genau deshalb gibt es sie: seit dem 260825
+/// raeumt das Packen und das Entpacken den vorhandenen Eintrag in den
+/// Papierkorb, waehrend das Kopieren und das Verschieben ihn ueber
+/// `krk_core::operation::loeschen::baum_entfernen` endgueltig fallen lassen.
+/// Der Nutzer hat am 260907 entschieden, dass die Ungleichheit bleibt und die
+/// Schaltflaeche sagt, was sie tut
+/// (`decisions/260826-1221_*_raeumt-ueberschreiben-auch-beim-kopieren-und-verschieben-in-den-papierkorb.md`).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Ersetzungsweg {
+    /// Der vorhandene Eintrag geht in den Papierkorb und ist von dort zu holen.
+    Papierkorb,
+    /// Der vorhandene Eintrag faellt endgueltig und ist nicht zu holen.
+    Endgueltig,
+}
+
+/// Welchen Weg das Ersetzen des vorhandenen Eintrags bei dieser [`Art`] nimmt.
+///
+/// Die dritte vollstaendige Rechnung ueber [`Art`], und sie steht neben den
+/// beiden anderen: wer einen siebten Wert hinzufuegt, findet alle drei Stellen
+/// an einem Fleck.
+///
+/// **Geraten wird hier nichts.** Jeder Wert bekommt den Weg, den sein
+/// Ausfuehrungszweig im Kern wirklich nimmt, und die Fallunterscheidung hat
+/// keinen Auffangzweig: eine siebte Vorgangsart haelt den Bau an, statt still
+/// in eine Beschriftung zu fallen, die ihre Wirkung falsch ansagt.
+///
+/// Die sechs Werte, ihr Weg und die Stelle, die ihn nimmt:
+///
+/// | Art | Weg | wer raeumt |
+/// |---|---|---|
+/// | Kopieren | endgueltig | `ziel_klaeren` ueber `loeschen::baum_entfernen` |
+/// | Verschieben | endgueltig | dieselbe Stelle |
+/// | InDenPapierkorb | endgueltig | **niemand**, siehe unten |
+/// | UmbenennenImStapel | endgueltig | **niemand**, siehe unten |
+/// | Zippen | Papierkorb | `zielarchiv_klaeren` ueber die `Papierkorb`-Schnittstelle |
+/// | Entpacken | Papierkorb | `zielordner_klaeren` ueber dieselbe Schnittstelle |
+///
+/// **Zwei Arten fragen nie, und sie bekommen trotzdem einen Wert.** Weder das
+/// Raeumen in den Papierkorb noch das Stapel-Umbenennen ruft
+/// `Steuerung::konflikt_loesen`; das Konfliktblatt steht in beiden Faellen
+/// nicht, und welchen Wert sie tragen, sieht der Nutzer heute nicht. Sie tragen
+/// `Endgueltig`, weil von den zwei moeglichen Irrtuemern nur einer etwas
+/// kostet: eine Beschriftung, die zu viel ankuendigt, erschreckt einmal; eine,
+/// die zu wenig ankuendigt, laesst den Nutzer eine Datei fuer holbar halten,
+/// die weg ist. Wer einer der beiden Arten spaeter einen Konfliktzweig gibt,
+/// aendert die Zeile hier mit.
+///
+/// `#[must_use]`: der Rueckgabewert entscheidet die Beschriftung der ersten
+/// Schaltflaeche des Konfliktblattes; fiele er still weg, stuende dort der Weg
+/// des jeweils anderen Falles.
+#[must_use]
+pub fn ersetzungsweg(art: &Art) -> Ersetzungsweg {
+    match art {
+        Art::Kopieren { .. } | Art::Verschieben { .. } => Ersetzungsweg::Endgueltig,
+        // Die zwei ohne Konfliktzweig; die Begruendung steht im Doc-Kommentar.
+        Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } => Ersetzungsweg::Endgueltig,
+        Art::Zippen { .. } | Art::Entpacken { .. } => Ersetzungsweg::Papierkorb,
+    }
+}
+
+/// Was die [`Art`] eines Vorgangs dem Konfliktblatt vorgibt.
+///
+/// **Beide Angaben zusammen und nicht einzeln**, weil sie dieselbe Frage an
+/// dieselbe [`Art`] stellen und beide auf demselben Weg zum Blatt gehen. Das
+/// Blatt kennt die [`Art`] weiterhin nicht und soll sie nicht kennenlernen; es
+/// bekommt diese Vorgabe und sonst nichts.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Konfliktgestalt {
+    /// Ob der Vorgang genau **eine** Zieldatei erzeugt; siehe
+    /// [`erzeugt_genau_ein_ziel`].
+    pub genau_ein_ziel: bool,
+    /// Wohin der ersetzte Eintrag geht; siehe [`ersetzungsweg`].
+    pub ersetzung: Ersetzungsweg,
+}
+
+/// Die Vorgabe des Konfliktblattes fuer diese [`Art`].
+///
+/// Gefragt wird sie an genau einer Stelle, naemlich in
+/// `Anwendungsdelegierter::konflikt_fragen`, und die reicht sie an
+/// `crate::appkit::blaetter::konflikt::zeigen` weiter.
+///
+/// `#[must_use]`: sie rechnet nur und wirkt nicht; fiele sie still weg, bekaeme
+/// das Blatt eine Vorgabe, die niemand gerechnet hat.
+#[must_use]
+pub fn konfliktgestalt(art: &Art) -> Konfliktgestalt {
+    Konfliktgestalt {
+        genau_ein_ziel: erzeugt_genau_ein_ziel(art),
+        ersetzung: ersetzungsweg(art),
     }
 }
 
@@ -2503,6 +2600,92 @@ mod tests {
             ziele: vec![PathBuf::from("/tmp/x/eins"), PathBuf::from("/tmp/x/zwei")],
         };
         assert!(!erzeugt_genau_ein_ziel(&zwei));
+    }
+
+    /// Die Tafel ueber alle sechs Werte von [`Art`], von Hand geschrieben.
+    ///
+    /// **Dieselbe zweite Haelfte wie eine Tafel weiter oben**, fuer die zweite
+    /// Rechnung: der Uebersetzer erzwingt, dass [`ersetzungsweg`] jeden Wert
+    /// beantwortet, aber nicht, dass eine Probe jeden nennt. Ein siebter Wert
+    /// haelt den Bau an; ein sechster, der spaeter den Weg wechselt, faellt
+    /// hier auf.
+    ///
+    /// Die Zeilen fuer `InDenPapierkorb` und `UmbenennenImStapel` halten den
+    /// Wert der zwei Arten fest, die das Blatt nie zu sehen bekommen. Sie
+    /// stehen hier, damit ein spaeterer Konfliktzweig fuer eine von beiden
+    /// nicht stillschweigend die Beschriftung des anderen Falles bekommt.
+    #[test]
+    fn der_ersetzungsweg_folgt_der_stelle_die_wegraeumt() {
+        let ziel = PathBuf::from("/tmp/x");
+        let tafel: [(Art, Ersetzungsweg); 6] = [
+            (
+                Art::Kopieren { ziel: ziel.clone() },
+                Ersetzungsweg::Endgueltig,
+            ),
+            (
+                Art::Verschieben { ziel: ziel.clone() },
+                Ersetzungsweg::Endgueltig,
+            ),
+            (Art::InDenPapierkorb, Ersetzungsweg::Endgueltig),
+            (
+                Art::UmbenennenImStapel {
+                    neue_namen: vec!["a".to_owned()],
+                },
+                Ersetzungsweg::Endgueltig,
+            ),
+            (
+                Art::Zippen { ziel: ziel.clone() },
+                Ersetzungsweg::Papierkorb,
+            ),
+            (
+                Art::Entpacken {
+                    ziele: vec![ziel.clone()],
+                },
+                Ersetzungsweg::Papierkorb,
+            ),
+        ];
+        for (art, erwartet) in tafel {
+            assert_eq!(
+                ersetzungsweg(&art),
+                erwartet,
+                "{art:?} wird falsch eingeordnet"
+            );
+        }
+    }
+
+    /// Die Vorgabe fasst die zwei Rechnungen zusammen und rechnet nicht neu.
+    ///
+    /// Die eine Zusage, die [`konfliktgestalt`] traegt: sie ist die Summe von
+    /// [`erzeugt_genau_ein_ziel`] und [`ersetzungsweg`] und nichts daneben. Ein
+    /// dritter Wert im Rumpf, der beide Quellen umgeht, faellt hier auf.
+    #[test]
+    fn die_vorgabe_ist_die_summe_der_zwei_rechnungen() {
+        let ziel = PathBuf::from("/tmp/x");
+        let arten = [
+            Art::Kopieren { ziel: ziel.clone() },
+            Art::Verschieben { ziel: ziel.clone() },
+            Art::InDenPapierkorb,
+            Art::UmbenennenImStapel {
+                neue_namen: vec!["a".to_owned()],
+            },
+            Art::Zippen { ziel: ziel.clone() },
+            Art::Entpacken {
+                ziele: vec![ziel.clone()],
+            },
+        ];
+        for art in arten {
+            let gestalt = konfliktgestalt(&art);
+            assert_eq!(
+                gestalt.genau_ein_ziel,
+                erzeugt_genau_ein_ziel(&art),
+                "{art:?}: die Vorgabe weicht in der Gestalt ab"
+            );
+            assert_eq!(
+                gestalt.ersetzung,
+                ersetzungsweg(&art),
+                "{art:?}: die Vorgabe weicht im Weg ab"
+            );
+        }
     }
 
     /// Der Satz des Teilens nennt seine Folge und **keine** Ursache.

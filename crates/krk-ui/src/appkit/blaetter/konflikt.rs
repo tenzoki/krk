@@ -8,8 +8,8 @@
 //! das Kaestchen faellt weg, weil es keinen weiteren Fall gibt, fuer den es
 //! gelten koennte. So gewaehlt vom Nutzer am 260824-2120
 //! (`circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/decisions/260825-0711_*_welche-antworten-bietet-das-konfliktblatt-bei-genau-einer-zieldatei.md`,
-//! Moeglichkeit 2). Welche Gestalt es wird, sagt der Aufrufer im Argument
-//! `genau_ein_ziel`; gerechnet hat es
+//! Moeglichkeit 2). Welche Gestalt es wird, sagt der Aufrufer im Feld
+//! `genau_ein_ziel` der [`Konfliktgestalt`]; gerechnet hat es
 //! [`crate::kommandos::operationen::erzeugt_genau_ein_ziel`] ueber die
 //! [`Art`](krk_core::operation::Art) des Vorgangs, und beide Gestalten stehen
 //! als eine Angabe in [`schaltflaechen`].
@@ -17,22 +17,39 @@
 //! Der Arbeitsfaden wartet, solange dieses Blatt steht; die Antwort geht ueber
 //! den Kanal zurueck, den die Meldung mitgebracht hat.
 //!
-//! # Die Eingabetaste liegt in keiner Gestalt auf "Überschreiben"
+//! # Die erste Schaltflaeche sagt seit dem 260907, was sie anrichtet
 //!
-//! `NSAlert` gaebe sie von sich aus der ersten Schaltflaeche, und das waere
-//! hier "Überschreiben": ein reflexhaftes Bestaetigen loeschte damit den
-//! Eintrag am Ziel. Dieselbe Ueberlegung, die C4 fuer die Loeschrueckfrage
+//! Sie hiess bis dahin in jedem Fall "Überschreiben", und derselbe Wortlaut
+//! stand fuer zwei verschiedene Wirkungen: im Kontextmenue raeumt das Ersetzen
+//! den vorhandenen Eintrag seit dem 260825 in den Papierkorb, beim Kopieren,
+//! beim Verschieben und beim Abwurf aus einer fremden Anwendung laesst es ihn
+//! endgueltig fallen. Der Nutzer hat am 260907 entschieden, dass die
+//! Ungleichheit bleibt und die Beschriftung sie ansagt
+//! (`decisions/260826-1221_*_raeumt-ueberschreiben-auch-beim-kopieren-und-verschieben-in-den-papierkorb.md`).
+//! Welchen Weg der Vorgang nimmt, steht im Feld `ersetzung` der
+//! [`Konfliktgestalt`]; gerechnet hat es
+//! [`crate::kommandos::operationen::ersetzungsweg`] ueber dieselbe
+//! [`Art`](krk_core::operation::Art), und die zwei Wortlaute stehen als eine
+//! Angabe in [`ersetzungsbeschriftung`].
+//!
+//! # Die Eingabetaste liegt in keiner Gestalt auf dem Ersetzen
+//!
+//! `NSAlert` gaebe sie von sich aus der ersten Schaltflaeche, und das ist hier
+//! die ersetzende: ein reflexhaftes Bestaetigen loeschte damit den Eintrag am
+//! Ziel. Dieselbe Ueberlegung, die C4 fuer die Loeschrueckfrage
 //! ausschreibt ("vorbelegt ist Abbrechen, sodass ein reflexhaftes Bestaetigen
 //! mit der Return-Taste nichts loescht"), traegt auch hier. Die Reihenfolge der
 //! Schaltflaechen bleibt die des Spec; allein die Taste wandert.
 //!
 //! ```text
-//!   mehrere Ziele  Überschreiben  Überspringen  Umbenennen  Abbrechen
-//!                  Cmd+Return     Return        Opt+Return  Esc
+//!   mehrere Ziele  <Ersetzen>   Überspringen  Umbenennen  Abbrechen
+//!                  Cmd+Return   Return        Opt+Return  Esc
 //!
-//!   ein Ziel       Überschreiben  Umbenennen    Abbrechen
-//!                  Cmd+Return     Opt+Return    Return
+//!   ein Ziel       <Ersetzen>   Umbenennen    Abbrechen
+//!                  Cmd+Return   Opt+Return    Return
 //! ```
+//!
+//! `<Ersetzen>` steht fuer den Wortlaut aus [`ersetzungsbeschriftung`].
 //!
 //! **Faellt "Überspringen" weg, bekommt "Abbrechen" die Eingabetaste**, und
 //! damit traegt dieselbe Schaltflaeche beide ungefaehrlichen Wege. Ein neuer
@@ -73,7 +90,7 @@
 //! **Der Waechter kennt zwei Antworten, dieses Blatt hat drei oder vier**, und
 //! das war der Grund, ihn nicht einfach anzuhaengen: er schickte fuer
 //! "bestaetigt" fest die **erste** Schaltflaeche, und die ist in beiden
-//! Gestalten "Überschreiben". Ein Return im Namensfeld haette damit den Eintrag
+//! Gestalten die ersetzende. Ein Return im Namensfeld haette damit den Eintrag
 //! am Ziel geloescht — dieselbe Bewegung, die der Kopf darueber fuer die
 //! Vorgabeschaltflaeche ausdruecklich ausschliesst. Beantwortet ist das an
 //! [`super::bestaetigungsstelle`]: die Eingabetaste geht an die Schaltflaeche,
@@ -82,7 +99,7 @@
 //! [`tastenhinweis`] dem Nutzer ansagt, und die Escape-Taste faellt wie ueberall
 //! auf "Abbrechen".
 //!
-//! Zwei Antworten bleiben im Feld ohne Taste: "Überschreiben" und
+//! Zwei Antworten bleiben im Feld ohne Taste: das Ersetzen und
 //! "Umbenennen" liegen auf Cmd+Return und Opt+Return, und ob der Feldeditor die
 //! beiden durchlaesst, ist am laufenden Buendel zu messen und nicht hier zu
 //! behaupten. Erreichbar sind sie in jedem Fall, indem der Nutzer das Feld
@@ -115,6 +132,8 @@ use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
 use krk_core::operation::{Konfliktantwort, Konfliktentscheid};
 
+use crate::kommandos::operationen::{Ersetzungsweg, Konfliktgestalt};
+
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Die Breite des Namensfeldes in Punkten.
@@ -134,35 +153,55 @@ const FELDHOEHE: f64 = 24.0;
 /// [`Konfliktantwort`] abbildet, und werden rot, sobald sich eine der beiden
 /// Reihenfolgen ohne die andere dreht.
 ///
-/// `genau_ein_ziel` ist die Auskunft aus
-/// [`crate::kommandos::operationen::erzeugt_genau_ein_ziel`].
+/// `gestalt` ist die Vorgabe aus
+/// [`crate::kommandos::operationen::konfliktgestalt`]: ihr Feld
+/// `genau_ein_ziel` waehlt die Gestalt, ihr Feld `ersetzung` die Beschriftung
+/// der ersten Schaltflaeche.
 #[must_use]
-fn schaltflaechen(genau_ein_ziel: bool) -> Vec<Schaltflaeche<'static>> {
-    if genau_ein_ziel {
+fn schaltflaechen(gestalt: Konfliktgestalt) -> Vec<Schaltflaeche<'static>> {
+    let ersetzen = Schaltflaeche::neu(
+        ersetzungsbeschriftung(gestalt.ersetzung),
+        Taste::EingabeMitBefehl,
+        Wirkung::Ausfuehren,
+    );
+    if gestalt.genau_ein_ziel {
         vec![
-            Schaltflaeche::neu(
-                "Überschreiben",
-                Taste::EingabeMitBefehl,
-                Wirkung::Ausfuehren,
-            ),
+            ersetzen,
             Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
             // Die Eingabetaste und nicht die Escape-Taste: "Überspringen" hat
-            // sie hier nicht mehr, und "Überschreiben" darf sie nicht bekommen.
+            // sie hier nicht mehr, und das Ersetzen darf sie nicht bekommen.
             // Die Escape-Taste erreicht dieselbe Schaltflaeche ueber den
             // Abbruchbefehl und den Blattgriff, siehe Modulkopf.
             Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
         ]
     } else {
         vec![
-            Schaltflaeche::neu(
-                "Überschreiben",
-                Taste::EingabeMitBefehl,
-                Wirkung::Ausfuehren,
-            ),
+            ersetzen,
             Schaltflaeche::neu("Überspringen", Taste::Eingabe, Wirkung::Ausfuehren),
             Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
             Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
         ]
+    }
+}
+
+/// Die Beschriftung der ersten Schaltflaeche, je nach Weg des Ersetzens.
+///
+/// **Die zwei Wortlaute sind parallel gebaut**, damit der Unterschied genau an
+/// der Stelle steht, an der die Wirkung sich unterscheidet: beide sagen erst,
+/// was mit dem vorhandenen Eintrag geschieht, dann "und ersetzen". Das Wort
+/// „Endgültig“ steht dabei vorn und nicht in einem Nachsatz; es ist die Angabe,
+/// wegen der die Unterscheidung ueberhaupt gebaut wurde, und sie muss zu lesen
+/// sein, ohne dass der Nutzer den Satz zu Ende liest.
+///
+/// Der Wortlaut „Überschreiben“, den beide Faelle bis zum 260907 trugen, steht
+/// bewusst in keinem von beiden mehr: er sagt ueber den Verbleib des alten
+/// Eintrags nichts, und genau daran hing die Ungleichheit, die der Nutzer
+/// entschieden hat (siehe Modulkopf).
+#[must_use]
+fn ersetzungsbeschriftung(weg: Ersetzungsweg) -> &'static str {
+    match weg {
+        Ersetzungsweg::Papierkorb => "In den Papierkorb und ersetzen",
+        Ersetzungsweg::Endgueltig => "Endgültig löschen und ersetzen",
     }
 }
 
@@ -216,28 +255,37 @@ fn antwort(stelle: usize, genau_ein_ziel: bool, name: &str) -> Konfliktantwort {
 /// [`schaltflaechen`] anlegt. Bis zur Runde 17 sagte er in beiden Faellen
 /// "Return überspringt"; in der gekuerzten Gestalt gibt es kein Überspringen
 /// mehr, und der Satz nennt die Eingabetaste dort beim Abbruch.
+///
+/// **Er nennt die Taste und nicht den Verbleib**: seit dem 260907 sagt er
+/// "Cmd+Return ersetzt" statt "überschreibt", weil der Wortlaut
+/// "Überschreiben" auf keiner Schaltflaeche mehr steht. Wohin der alte Eintrag
+/// geht, sagt die Schaltflaeche selbst ueber [`ersetzungsbeschriftung`], und
+/// zweimal steht es nicht da: ein Hinweis, der es wiederholte, liefe beim
+/// naechsten Wortlautwechsel neben der Schaltflaeche her.
 #[must_use]
 fn tastenhinweis(genau_ein_ziel: bool) -> &'static str {
     if genau_ein_ziel {
-        "Return und Esc brechen ab, Cmd+Return überschreibt, Opt+Return benennt um."
+        "Return und Esc brechen ab, Cmd+Return ersetzt, Opt+Return benennt um."
     } else {
-        "Return überspringt, Cmd+Return überschreibt, Opt+Return benennt um, Esc bricht ab."
+        "Return überspringt, Cmd+Return ersetzt, Opt+Return benennt um, Esc bricht ab."
     }
 }
 
 /// Zeigt das Konfliktblatt und meldet die Wahl des Nutzers.
 ///
-/// `vorschlag` ist der freie Name, den "Umbenennen" vorausfuellt.
-/// `genau_ein_ziel` waehlt die Gestalt: `true` kuerzt auf Überschreiben,
-/// Umbenennen und Abbrechen und laesst das Kaestchen "fuer alle weiteren"
-/// weg, siehe Modulkopf. `fertig` laeuft auf dem Hauptfaden und genau einmal.
+/// `vorschlag` ist der freie Name, den "Umbenennen" vorausfuellt. `gestalt`
+/// kommt aus [`crate::kommandos::operationen::konfliktgestalt`] und traegt
+/// beides: `genau_ein_ziel` kuerzt auf Ersetzen, Umbenennen und Abbrechen und
+/// laesst das Kaestchen "fuer alle weiteren" weg, `ersetzung` beschriftet die
+/// erste Schaltflaeche; beides siehe Modulkopf. `fertig` laeuft auf dem
+/// Hauptfaden und genau einmal.
 pub fn zeigen(
     mtm: MainThreadMarker,
     fenster: &NSWindow,
     quelle: &Path,
     ziel: &Path,
     vorschlag: &str,
-    genau_ein_ziel: bool,
+    gestalt: Konfliktgestalt,
     fertig: impl Fn(Konfliktentscheid) + 'static,
 ) -> Blattgriff {
     let name = ziel.file_name().map_or_else(
@@ -254,20 +302,20 @@ pub fn zeigen(
     let mut blatt = Blatt::mit_schaltflaechen(
         mtm,
         &format!("„{name}“ gibt es am Ziel schon"),
-        &schaltflaechen(genau_ein_ziel),
+        &schaltflaechen(gestalt),
     );
     blatt.erlaeuterung_setzen(&format!(
         "Quelle: {}\nZiel: {}\n\n{}",
         quelle.display(),
         ziel.display(),
-        tastenhinweis(genau_ein_ziel)
+        tastenhinweis(gestalt.genau_ein_ziel)
     ));
     blatt.beigabe_setzen(&feld);
     // Der Waechter, aber **nicht** `textfeld_setzen`: das machte das Feld
     // daneben zum Ersthelfer, und der Kopf dieser Datei sagt, warum es das
     // nicht wird. Gebraucht wird allein die dritte der drei Handlungen.
     blatt.waechter_anhaengen(mtm, &feld);
-    if !genau_ein_ziel {
+    if !gestalt.genau_ein_ziel {
         blatt.wahl_fuer_alle_zeigen("Für alle weiteren übernehmen");
     }
 
@@ -276,7 +324,7 @@ pub fn zeigen(
     // geantwortet hat; beide gehoeren dem Blatt, und das Blatt lebt bis dahin.
     let ablesen = AntwortAblesen { feld };
     blatt.zeigen_mit_wahl(fenster, move |stelle, fuer_alle| {
-        let antwort = antwort(stelle, genau_ein_ziel, &ablesen.name());
+        let antwort = antwort(stelle, gestalt.genau_ein_ziel, &ablesen.name());
         fertig(Konfliktentscheid {
             // "Fuer alle weiteren" gilt nicht fuer den Abbruch: der beendet den
             // Vorgang ohnehin, und ein angekreuztes Kaestchen daneben waere eine
@@ -306,10 +354,34 @@ impl AntwortAblesen {
 mod tests {
     use crate::appkit::blaetter::{abbruchstelle, bestaetigungsstelle};
 
-    use super::{Konfliktantwort, Taste, Wirkung, antwort, schaltflaechen, tastenhinweis};
+    use super::{
+        Ersetzungsweg, Konfliktantwort, Konfliktgestalt, Taste, Wirkung, antwort,
+        ersetzungsbeschriftung, schaltflaechen, tastenhinweis,
+    };
 
     /// Der getippte Name, den die Proben durch die Rueckrechnung schicken.
     const NAME: &str = "Projekte 2.zip";
+
+    /// Die vier Vorgaben, die es gibt: zwei Gestalten mal zwei Wege.
+    ///
+    /// Die Proben, die eine Zusage ueber **jedes** Blatt machen, laufen ueber
+    /// diese Liste und nicht ueber die Gestalt allein: seit dem 260907 haengt
+    /// die Beschriftung der ersten Schaltflaeche am Weg, und eine Zusage, die
+    /// nur eine Halfte der Vorgaben sieht, ist keine ueber das Blatt.
+    const VORGABEN: [Konfliktgestalt; 4] = [
+        gestalt(false, Ersetzungsweg::Endgueltig),
+        gestalt(false, Ersetzungsweg::Papierkorb),
+        gestalt(true, Ersetzungsweg::Endgueltig),
+        gestalt(true, Ersetzungsweg::Papierkorb),
+    ];
+
+    /// Eine Vorgabe aus ihren zwei Feldern.
+    const fn gestalt(genau_ein_ziel: bool, ersetzung: Ersetzungsweg) -> Konfliktgestalt {
+        Konfliktgestalt {
+            genau_ein_ziel,
+            ersetzung,
+        }
+    }
 
     /// Die Tafel "Stelle → Antwort" in der vollen Gestalt, Zeile fuer Zeile.
     ///
@@ -317,11 +389,22 @@ mod tests {
     /// Aufzaehlung im Probenrumpf: die Beschriftung an der Stelle ist der eine
     /// Beleg dafuer, dass die Rueckrechnung dieselbe Reihenfolge liest, die das
     /// Blatt anlegt.
+    ///
+    /// Die volle Gestalt gehoert dem Kopieren und dem Verschieben, und die
+    /// raeumen endgueltig; die Tafel nimmt deshalb diesen Weg. Den **Wortlaut**
+    /// der ersten Zeile pruefen die zwei Proben am Fuss dieser Datei; hier
+    /// steht er als Rechnung, damit ein Wortlautwechsel nicht drei Proben
+    /// zugleich rot macht und die Reihenfolge dabei ungeprueft laesst.
     #[test]
     fn die_tafel_bei_mehreren_zielen() {
-        let schaltflaechen = schaltflaechen(false);
+        let vorgabe = gestalt(false, Ersetzungsweg::Endgueltig);
+        let schaltflaechen = schaltflaechen(vorgabe);
         let tafel: [(usize, &str, Konfliktantwort); 4] = [
-            (0, "Überschreiben", Konfliktantwort::Ueberschreiben),
+            (
+                0,
+                ersetzungsbeschriftung(Ersetzungsweg::Endgueltig),
+                Konfliktantwort::Ueberschreiben,
+            ),
             (1, "Überspringen", Konfliktantwort::Ueberspringen),
             (
                 2,
@@ -360,11 +443,20 @@ mod tests {
     /// Probe liefe die Rueckrechnung der vollen Gestalt ueber drei
     /// Schaltflaechen und machte aus "Umbenennen" ein Überspringen und aus
     /// "Abbrechen" ein Umbenennen.
+    ///
+    /// Die gekuerzte Gestalt gehoert dem Packen und dem Entpacken ueber ein
+    /// einzelnes Archiv, und die raeumen in den Papierkorb; die Tafel nimmt
+    /// deshalb diesen Weg.
     #[test]
     fn die_tafel_bei_genau_einem_ziel() {
-        let schaltflaechen = schaltflaechen(true);
+        let vorgabe = gestalt(true, Ersetzungsweg::Papierkorb);
+        let schaltflaechen = schaltflaechen(vorgabe);
         let tafel: [(usize, &str, Konfliktantwort); 3] = [
-            (0, "Überschreiben", Konfliktantwort::Ueberschreiben),
+            (
+                0,
+                ersetzungsbeschriftung(Ersetzungsweg::Papierkorb),
+                Konfliktantwort::Ueberschreiben,
+            ),
             (
                 1,
                 "Umbenennen",
@@ -401,29 +493,34 @@ mod tests {
         );
     }
 
-    /// Die Eingabetaste liegt in keiner Gestalt auf "Überschreiben".
+    /// Die Eingabetaste liegt in keiner der vier Vorgaben auf dem Ersetzen.
     ///
     /// Der Sicherheitsgrund aus dem Modulkopf, gemessen an derselben reinen
     /// Funktion, die das Blatt einsetzt: [`bestaetigungsstelle`] rechnet aus
-    /// dem Feld [`Taste`], und was sie trifft, darf nichts ueberschreiben.
+    /// dem Feld [`Taste`], und was sie trifft, darf am Ziel nichts wegnehmen.
     #[test]
-    fn die_eingabetaste_traegt_in_keiner_gestalt_das_ueberschreiben() {
-        for genau_ein_ziel in [false, true] {
-            let schaltflaechen = schaltflaechen(genau_ein_ziel);
+    fn die_eingabetaste_traegt_in_keiner_gestalt_das_ersetzen() {
+        for vorgabe in VORGABEN {
+            let schaltflaechen = schaltflaechen(vorgabe);
             let stelle = bestaetigungsstelle(&schaltflaechen);
             assert_ne!(
-                schaltflaechen[stelle].titel, "Überschreiben",
-                "bei genau_ein_ziel={genau_ein_ziel} loescht ein Return am Ziel"
+                schaltflaechen[stelle].titel,
+                ersetzungsbeschriftung(vorgabe.ersetzung),
+                "bei {vorgabe:?} loescht ein Return am Ziel"
+            );
+            assert_ne!(
+                stelle, 0,
+                "bei {vorgabe:?} traegt die erste Stelle die Taste"
             );
             assert_eq!(
                 schaltflaechen[stelle].taste,
                 Taste::Eingabe,
-                "bei genau_ein_ziel={genau_ein_ziel} traegt die getroffene Schaltflaeche die Taste nicht"
+                "bei {vorgabe:?} traegt die getroffene Schaltflaeche die Taste nicht"
             );
         }
     }
 
-    /// Beide Gestalten haben einen ungefaehrlichen Ausgang, und er heisst
+    /// Jede der vier Vorgaben hat einen ungefaehrlichen Ausgang, und er heisst
     /// "Abbrechen".
     ///
     /// In der gekuerzten Gestalt fallen [`abbruchstelle`] und
@@ -432,29 +529,31 @@ mod tests {
     /// die Tastenentsprechung dasselbe tun.
     #[test]
     fn beide_gestalten_lassen_ueber_abbrechen_liegen() {
-        for genau_ein_ziel in [false, true] {
-            let schaltflaechen = schaltflaechen(genau_ein_ziel);
+        for vorgabe in VORGABEN {
+            let schaltflaechen = schaltflaechen(vorgabe);
             let stelle = abbruchstelle(&schaltflaechen);
             assert_eq!(
                 schaltflaechen[stelle].wirkung,
                 Wirkung::Liegenlassen,
-                "bei genau_ein_ziel={genau_ein_ziel} fuehrt der ungefaehrliche Ausgang etwas aus"
+                "bei {vorgabe:?} fuehrt der ungefaehrliche Ausgang etwas aus"
             );
             assert_eq!(
                 schaltflaechen[stelle].titel, "Abbrechen",
-                "bei genau_ein_ziel={genau_ein_ziel} heisst der ungefaehrliche Ausgang anders"
+                "bei {vorgabe:?} heisst der ungefaehrliche Ausgang anders"
             );
             assert_eq!(
-                antwort(stelle, genau_ein_ziel, NAME),
+                antwort(stelle, vorgabe.genau_ein_ziel, NAME),
                 Konfliktantwort::Abbrechen,
-                "bei genau_ein_ziel={genau_ein_ziel} rechnet die Stelle auf etwas anderes zurueck"
+                "bei {vorgabe:?} rechnet die Stelle auf etwas anderes zurueck"
             );
+            if vorgabe.genau_ein_ziel {
+                assert_eq!(
+                    stelle,
+                    bestaetigungsstelle(&schaltflaechen),
+                    "bei {vorgabe:?} tragen Return und Esc nicht dieselbe Schaltflaeche"
+                );
+            }
         }
-        assert_eq!(
-            abbruchstelle(&schaltflaechen(true)),
-            bestaetigungsstelle(&schaltflaechen(true)),
-            "in der gekuerzten Gestalt tragen Return und Esc nicht dieselbe Schaltflaeche"
-        );
     }
 
     /// Der Tastenhinweis sagt dasselbe wie die angelegten Tasten.
@@ -463,6 +562,10 @@ mod tests {
     /// beiden Faellen "Return überspringt". In der gekuerzten Gestalt gibt es
     /// kein Überspringen; ein Satz, der es dort noch ansagt, schickte den
     /// Nutzer auf eine Schaltflaeche, die nicht dasteht.
+    ///
+    /// **Er nennt seit dem 260907 kein Überschreiben mehr**: der Wortlaut steht
+    /// auf keiner Schaltflaeche des Blattes, und ein Hinweis, der ihn nennt,
+    /// schickte den Nutzer auf eine Beschriftung, die er nicht findet.
     #[test]
     fn der_tastenhinweis_nennt_die_tasten_der_gestalt() {
         assert!(
@@ -479,8 +582,65 @@ mod tests {
         );
         for hinweis in [tastenhinweis(false), tastenhinweis(true)] {
             assert!(
-                hinweis.contains("Cmd+Return überschreibt") && hinweis.contains("Opt+Return"),
+                hinweis.contains("Cmd+Return ersetzt") && hinweis.contains("Opt+Return"),
                 "der Hinweis „{hinweis}“ nennt nicht beide Zusatztasten"
+            );
+            assert!(
+                !hinweis.contains("überschreib"),
+                "der Hinweis „{hinweis}“ nennt einen Wortlaut, den keine Schaltflaeche traegt"
+            );
+        }
+    }
+
+    /// Wo der alte Eintrag in den Papierkorb geht, sagt die Schaltflaeche das.
+    ///
+    /// Der eine Fall des Kontextmenues: Packen und Entpacken raeumen den
+    /// vorhandenen Eintrag seit dem 260825 ueber die `Papierkorb`-Schnittstelle
+    /// weg, und der Nutzer kann ihn von dort holen. Genau das steht auf der
+    /// Schaltflaeche, und das Wort „endgültig“ steht nicht darauf.
+    #[test]
+    fn die_beschriftung_nennt_den_papierkorb() {
+        let titel = ersetzungsbeschriftung(Ersetzungsweg::Papierkorb);
+        assert_eq!(titel, "In den Papierkorb und ersetzen");
+        assert!(
+            !titel.to_lowercase().contains("endgültig"),
+            "die Beschriftung „{titel}“ droht mit einer Wirkung, die dieser Weg nicht hat"
+        );
+        for genau_ein_ziel in [false, true] {
+            assert_eq!(
+                schaltflaechen(gestalt(genau_ein_ziel, Ersetzungsweg::Papierkorb))[0].titel,
+                titel,
+                "bei genau_ein_ziel={genau_ein_ziel} steht der Wortlaut nicht an erster Stelle"
+            );
+        }
+    }
+
+    /// Wo der alte Eintrag endgueltig faellt, sagt die Schaltflaeche das auch.
+    ///
+    /// Der andere Fall: Kopieren, Verschieben und der Abwurf aus einer fremden
+    /// Anwendung raeumen ueber `loeschen::baum_entfernen`, und was dort
+    /// weggeht, ist weg. Die Probe haelt zweierlei fest — den Wortlaut selbst,
+    /// und dass er ein anderer ist als der des Papierkorbwegs. Faellt die
+    /// Unterscheidung, sagt dieselbe Schaltflaeche wieder zweierlei, und genau
+    /// dagegen ist die Entscheidung vom 260907 gerichtet.
+    #[test]
+    fn die_beschriftung_nennt_das_endgueltige_loeschen() {
+        let titel = ersetzungsbeschriftung(Ersetzungsweg::Endgueltig);
+        assert_eq!(titel, "Endgültig löschen und ersetzen");
+        assert!(
+            titel.starts_with("Endgültig"),
+            "die Beschriftung „{titel}“ stellt die Endgueltigkeit hinten an"
+        );
+        assert_ne!(
+            titel,
+            ersetzungsbeschriftung(Ersetzungsweg::Papierkorb),
+            "die zwei Wege tragen wieder denselben Wortlaut"
+        );
+        for genau_ein_ziel in [false, true] {
+            assert_eq!(
+                schaltflaechen(gestalt(genau_ein_ziel, Ersetzungsweg::Endgueltig))[0].titel,
+                titel,
+                "bei genau_ein_ziel={genau_ein_ziel} steht der Wortlaut nicht an erster Stelle"
             );
         }
     }

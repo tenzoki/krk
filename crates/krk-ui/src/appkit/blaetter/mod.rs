@@ -959,14 +959,20 @@ mod tests {
     ///
     /// **So faengt sie den Fehler, gegen den sie gerichtet ist:** wer
     /// [`bestaetigungsstelle`] wieder auf `0` festlegt, bekommt hier die Zeile
-    /// des Konfliktblattes rot, und zwar mit dem Titel „Überschreiben" im
-    /// Fehlschlag — also mit dem Schaden benannt, den die feste Stelle
-    /// anrichtete, und nicht mit einer Zahl.
+    /// des Konfliktblattes rot, und zwar mit dem Titel der ersetzenden
+    /// Schaltflaeche im Fehlschlag — also mit dem Schaden benannt, den die
+    /// feste Stelle anrichtete, und nicht mit einer Zahl.
+    ///
+    /// Die Nachbildung des Konfliktblattes traegt seit dem 260907 den Wortlaut
+    /// seines endgueltigen Falles und nicht mehr „Überschreiben“; welcher
+    /// Wortlaut wann steht, entscheidet
+    /// [`crate::kommandos::operationen::ersetzungsweg`], und die Zusage dieser
+    /// Probe haengt an der Reihenfolge und nicht am Text.
     #[test]
     fn die_eingabetaste_im_feld_gehoert_ihrer_eigenen_schaltflaeche() {
         let konfliktblatt = [
             Schaltflaeche::neu(
-                "Überschreiben",
+                "Endgültig löschen und ersetzen",
                 Taste::EingabeMitBefehl,
                 Wirkung::Ausfuehren,
             ),

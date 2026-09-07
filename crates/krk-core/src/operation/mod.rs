@@ -468,6 +468,31 @@ fn liegt_im_ordner(zielordner: &Path, quellordner: &Path) -> bool {
 /// Ein Ordner auf einen gleichnamigen Ordner ist **kein** Konflikt: sein Inhalt
 /// wandert in den vorhandenen. Andernfalls entscheidet die Konfliktregel des
 /// Auftrags, notfalls durch Nachfragen beim Nutzer.
+///
+/// # "Ueberschreiben" loescht hier endgueltig und raeumt nicht in den Papierkorb
+///
+/// Der vorhandene Eintrag geht ueber [`loeschen::baum_entfernen`] weg, also
+/// unwiederbringlich. Damit weicht dieser Zweig von `zippen::zielarchiv_klaeren`
+/// und `entpacken::zielordner_klaeren` ab, die seit dem 260825 die
+/// hereingereichte [`Papierkorb`]-Schnittstelle nehmen, und die Abweichung ist
+/// gewollt: der Nutzer hat sie am 260907 gegen die Empfehlung bestaetigt
+/// (`decisions/260826-1221_*_raeumt-ueberschreiben-auch-beim-kopieren-und-verschieben-in-den-papierkorb.md`).
+///
+/// **Der Grund ist der Datentraeger ohne Papierkorb.** Dort scheitert
+/// `in_den_papierkorb`, und `OhnePapierkorb` scheitert absichtlich, statt still
+/// endgueltig zu loeschen; ein Kopiervorgang muesste den Eintrag dann
+/// ueberspringen und melden, wo `remove_file` glueckte. Beim Kopieren in einen
+/// vollen Zielordner faellt das je Konflikt an, und das Kopieren ist der am
+/// haeufigsten gelaufene Weg dieser Maschine.
+///
+/// **Was der Nutzer davon sieht, steht in der Oberflaeche**: die erste
+/// Schaltflaeche des Konfliktblattes heisst fuer diesen Weg "Endgültig löschen
+/// und ersetzen" und fuer den Papierkorbweg anders. Gerechnet wird die
+/// Unterscheidung in `krk_ui::kommandos::operationen::ersetzungsweg` ueber die
+/// [`Art`] des Vorgangs, also nicht geraten; wer diesen Zweig auf den
+/// Papierkorb umstellt, aendert dort die Zeile fuer `Kopieren` und
+/// `Verschieben` mit, sonst sagt die Schaltflaeche etwas anderes als der Kern
+/// tut.
 pub(crate) fn ziel_klaeren(
     quelle: &Quelle<'_>,
     ziel: &Path,
