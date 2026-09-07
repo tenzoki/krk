@@ -37,3 +37,6 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Deferred: 260905-2008-orchestrator-session.md `## Die letzten fuenf Entscheidungen am 260907-2334 beantwortet` — unbestimmt. Der Nutzer nennt als moegliche Richtung eine Huelle um das Claude Code SDK oder eine aehnliche Loesung; das ist eine Richtung und keine Wahl, und keine der zwei aus dem Text erschlossenen Moeglichkeiten ist damit ausgeschlossen. Die Vorbedingung des Datensatzes ist ohnehin nicht erfuellt: von der Git-Anbindung ist die lesende Haelfte gebaut, die schreibende steht aus; ruled by user, Kai Stalmann <kai@stalmann.org>.

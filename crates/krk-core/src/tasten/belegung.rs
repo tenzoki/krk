@@ -482,6 +482,12 @@ pub enum Kommando {
     /// nicht, ob der Befehl etwas findet; ein Befehl, der von seinem eigenen
     /// Ergebnis abhinge, waere die zweite Regel neben dem Wirkungsbereich.
     ///
+    /// **Er wirkt seit dem 260908 erst ab drei Zeichen**, derselben
+    /// `krk_core::verzeichnis::filter::ZEICHENSCHWELLE`, die auch "Content"
+    /// haelt: unter drei Zeichen filtert KRK flach und allein ueber die Namen,
+    /// ab drei greifen Unterbaum und Inhalt. Bis dahin stiess schon der erste
+    /// Anschlag den Durchlauf ueber den Unterbaum an.
+    ///
     /// Ab Werk traegt er keine Kombination, wie die drei Spaltenschalter
     /// darueber; Nutzerentscheid vom 260814-1610. Wer eine Taste dafuer will,
     /// weist sie in der Belegungsansicht zu oder traegt sie in
@@ -497,13 +503,12 @@ pub enum Kommando {
     /// keine Kombination. Die Wahl der Aufschrift ist eine Entscheidung ueber
     /// die Anzeige und keine ueber den Wortschatz der Belegung.
     ///
-    /// **Er wirkt erst ab einer Mindestlaenge des Filtertexts**, drei Zeichen
-    /// ohne "Deep" und fuenf mit; die Regel steht als
-    /// `krk_core::verzeichnis::filter::inhaltsschwelle` an einer Stelle. Der
-    /// Befehl fragt sie nicht: er kippt das Kennzeichen, und ob das Kennzeichen
-    /// gerade etwas bewirkt, ist eine andere Frage als die, ob der Befehl
-    /// zulaessig war. Damit steht er neben "Deep", das bei fehlendem Filtertext
-    /// dieselbe Trennung zieht.
+    /// **Er wirkt erst ab einer Mindestlaenge des Filtertexts**, drei Zeichen;
+    /// die Regel steht als `krk_core::verzeichnis::filter::ZEICHENSCHWELLE` an
+    /// einer Stelle und gilt seit dem 260908 fuer "Deep" ebenso. Der Befehl
+    /// fragt sie nicht: er kippt das Kennzeichen, und ob das Kennzeichen gerade
+    /// etwas bewirkt, ist eine andere Frage als die, ob der Befehl zulaessig
+    /// war. Damit steht er neben "Deep", das dieselbe Trennung zieht.
     ///
     /// Ab Werk ohne Kombination, wie "Deep" und die drei Spaltenschalter
     /// darueber; die Nutzerantwort vom 260814-1610 hat das fuer den ersten

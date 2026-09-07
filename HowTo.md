@@ -114,13 +114,14 @@ trägt nicht über die Grenze, an der der Filtertext leer wird. `cmd+delete` und
 
 **Die zwei Ankreuzfelder der Bereichsleiste am Fensterfuß gelten dem sichtbaren
 Tab, nicht dem Fenster.** „Deep" dehnt die Suche auf den Unterbaum aus und
-**steht ab Werk auf ein**; schon der erste Anschlag stößt damit den Durchlauf
-an. „Content" liest zusätzlich den Text der Dateien und steht ab Werk auf aus.
-Beide brauchen einen Mindest-Filtertext, bevor der Inhalt überhaupt gelesen
-wird, und die Schwelle hängt an „Deep": drei Zeichen ohne tiefe Suche, fünf mit
-ihr, wobei ein `*` nicht mitzählt. Keiner der beiden Schalter trägt ab Werk eine
-Tastenkombination; sie stehen in der Bereichsleiste und im Hauptmenü, und wer
-eine Taste will, weist sie in der Belegungsansicht zu.
+**steht ab Werk auf ein**. „Content" liest zusätzlich den Text der Dateien und
+steht ab Werk auf aus. **Beide greifen ab drei getippten Zeichen**, ein `*`
+zählt dabei nicht mit: unter drei Zeichen filtert KRK flach und allein über die
+Namen des angezeigten Ordners, ab drei Zeichen steigt es in den Unterbaum ab und
+liest — mit „Content" — den Text. Die Liste springt am dritten Zeichen deshalb
+sichtbar um; das ist so gewollt und keine Störung. Keiner der beiden Schalter
+trägt ab Werk eine Tastenkombination; sie stehen in der Bereichsleiste und im
+Hauptmenü, und wer eine Taste will, weist sie in der Belegungsansicht zu.
 
 ---
 

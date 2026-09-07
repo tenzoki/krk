@@ -39,3 +39,9 @@ Wir empfehlen Möglichkeit 1 und bauen sie im Plan, vorbehaltlich der Antwort: s
 
 ---
 Abgleich 260828-1044: weiterhin offen. Gesucht in `planning/`, `analyses/` dieses Circles und in `shared/decisions/`; keine Antwort. Der Baum entscheidet die Taste über das gemeldete Zeichen ohne Zusatztaste (`crates/krk-core/src/tasten/parser.rs:211-222`, `zeichen_des_namens`); die US-Hälfte von C3.2 bleibt damit ungebaut, und der Plan nennt das keine Vorbedingung (`## Where this Circle stops`, Klausel 9).
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Die letzten fuenf Entscheidungen am 260907-2334 beantwortet` — Moeglichkeit 1: es bleibt bei der einen Regel, auf der US-Tastatur wirkt nur der Zehnerblock. Ein zweites Zeichen bei gehaltener Umschalttaste kostete eine Zeile am Tastenabgriff, an dem eine Zeitzusage haengt; das Gleichheitszeichen als eigener Tastenname zeigte einem deutschen Nutzer eine Kombination, die auf seiner Tastatur anders heisst. Der Preis ist mitentschieden: ein US-Nutzer ohne Zehnerblock erreicht die Vergroesserung nicht ueber die Tastatur; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-core/src/tasten/parser.rs entscheidet die Taste unveraendert ueber das Zeichen ohne Zusatztaste; der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts. Der Plantext der Runde 20 sagt fuer die US-Tastatur weiter mehr zu, als der Baum haelt; ihn nachzuziehen haengt an der Reichweitenfrage vom 260907-0823.

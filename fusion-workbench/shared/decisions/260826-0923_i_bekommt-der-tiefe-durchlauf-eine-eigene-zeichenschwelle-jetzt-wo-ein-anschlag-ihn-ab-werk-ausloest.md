@@ -115,3 +115,9 @@ ist billiger als zwei Zahlen, die keine bedient.
 Gegen die Möglichkeit 2 in der jetzigen Lage spricht, dass sie eine dritte ungemessene Zahl
 setzte, und der Datensatz `260826-0859` weist genau dieses Argument für seine eigene
 Möglichkeit 3 zurück. Dieselbe Zurückweisung gilt hier.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Die letzten fuenf Entscheidungen am 260907-2334 beantwortet` — Moeglichkeit 2 und nicht die empfohlene 3: der Durchlauf ueber den Unterbaum bekommt eine eigene Zeichenschwelle, und sie ist dieselbe Drei wie die des Inhaltsfilters. Zusammen mit 260826-0859 ergibt das eine Regel statt dreier: unter drei Zeichen filtert KRK flach und nur ueber Namen, ab drei Zeichen greifen Unterbaum und Inhalt. Die Messung ist damit nicht mehr Vorbedingung, sondern spaetere Bestaetigung; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260908-0002-eine-zeichenschwelle-fuer-unterbaum-und-inhalt.md `## Was gebaut wurde` — der Durchlauf beginnt ab drei Zeichen: `Ordnermodell::tief_wirkt` ist neu und holt dieselbe `filter::ZEICHENSCHWELLE` aus derselben Zaehlstelle wie `inhalt_wirkt`; `zeilengrund_von` und `Tabliste::durchlauf_nachziehen_an` fragen es statt des blossen Kennzeichens.

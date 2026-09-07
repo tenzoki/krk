@@ -304,6 +304,8 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
     // Fensterwechsel und wird nicht gelesen", und wer ihn las, hielt B fuer
     // einen Ordner, dessen Inhalt gleichgueltig ist
     // (`shared/issues/260826-2155_*_pruefordner-b-und-der-l6-unterordner-werden-nur-gegen-ihren-steckbrief-gehalten-und-der-kommentar-sagt-b-werde-nicht-gelesen.md`).
+    // Was daraus fuer die Abnahme folgt, sagt der Kopf selbst und nicht dieser
+    // Kommentar: die Zeile "Deckung der Ordner" unten, [`DECKUNG_DER_ORDNER`].
     zeile("Pruefordner B", &messen::ordner_beschreiben(&lauf.ordner_b));
     zeile(
         "Pruefordner 100k",
@@ -313,6 +315,7 @@ pub fn gesamt_verfassen(lauf: &Gesamtlauf, ergebnis: &Gesamtergebnis) -> String 
         "Unterordner L6",
         &messen::ordner_beschreiben(&ergebnis.unterordner),
     );
+    zeile("Deckung der Ordner", DECKUNG_DER_ORDNER);
     zeile(
         "Kopierziel L8/L9",
         &format!(
@@ -583,6 +586,40 @@ L6-Unterordner mit 1.000 Eintraegen, dessen Zusammenfassung genau diesen Leselau
 Die Zusage ist dieselbe geblieben (100 ms, zehn Zahlen in C8); gewachsen ist die gemessene \
 Arbeit. Die Reihe vom 260810 und diese messen deshalb nicht dasselbe und sind nicht \
 gegeneinander zu halten";
+
+/// Welche Messordner gegen ihren Bestand gedeckt sind und welche nicht.
+///
+/// **Ein Messordner ist erst gedeckt, wenn zwei Haelften stehen**: sein
+/// Steckbrief gegen die zugesagte Zahl (`pruefordner_pruefen`) und die
+/// tatsaechlich gelesene Zahl gegen denselben Steckbrief (`Messreihe::fahren`).
+/// Die zweite Haelfte gibt es nur, wo eine `Messreihe` laeuft, also fuer
+/// Pruefordner A und den grossen Ordner. Fuer Pruefordner B und den
+/// L6-Unterordner bleibt allein die Aussage der Textdatei neben dem Ordner
+/// (`shared/issues/260826-2155_*_pruefordner-b-und-der-l6-unterordner-werden-nur-gegen-ihren-steckbrief-gehalten-und-der-kommentar-sagt-b-werde-nicht-gelesen.md`).
+///
+/// **Der Kopf sagt das in einem Satz und nicht in zwei Formulierungen.** Bis zum
+/// 260907 war der Unterschied allein daran ablesbar, dass zwei Zeilen
+/// „Eintraege je Lauf" trugen und zwei „Eintraege laut Steckbrief"; wer den
+/// Bericht las, musste ihn aus der Wortwahl erschliessen. Nachgezogen wird die
+/// fehlende Haelfte ausdruecklich **nicht**: sie kostete ein Vorablesen von B,
+/// und genau das waermt den Systemcache, gegen den die zwei getrennten
+/// Startwerte von A und B gebaut sind
+/// (`shared/decisions/260905-2155_*_bekommen-pruefordner-b-und-der-l6-unterordner-die-zweite-haelfte-der-deckung.md`,
+/// Moeglichkeit 1).
+///
+/// **Keine Zahl steht im Satz**, denn welche Zeile welche Haelfte traegt,
+/// entscheidet der Aufruf daneben und nicht eine Aufstellung hier: das Kommando
+/// im Text erhebt es am Quelltext.
+const DECKUNG_DER_ORDNER: &str = "Pruefordner A und Pruefordner 100k tragen oben \
+eine Zeile \"Eintraege je Lauf\" und sind damit gegen ihren Bestand gedeckt. Pruefordner B \
+und Unterordner L6 tragen allein die Zahl ihres Steckbriefs: krk-bench faehrt ueber sie \
+keine Messreihe, ihre Eintragszahl ist zugesagt und nicht nachgelesen. Ein fremder Eintrag \
+darin, ein hineingerutschter .DS_Store oder ein von Hand geloeschter Name, faellt in diesem \
+Lauf nicht auf, und die Zusagen auf ihnen messen dann auf einem anderen Bestand als dem \
+zugesagten: auf B die L4-Zeile und beide L5-Zeilen, auf dem Unterordner die L6-Zeile und \
+die L7-Zeile fuer den Ordnersprung. Welche Zeile welche Haelfte traegt, erhebt \
+`grep -n ordner_beschreiben crates/krk-bench/src/bericht.rs` und keine Zahl hier: \
+ordner_beschreiben_mit_gelesenen ist gelesen, ordner_beschreiben ist zugesagt";
 
 /// Was der Bericht ueber seine eigenen Zahlen sagen muss.
 const GESAMT_LESART: &str = "\
@@ -989,6 +1026,40 @@ mod tests {
                 "im Kopf fehlt die gelesene Zahl ({angabe}):\n{text}"
             );
         }
+        // Und der Kopf sagt in einem Satz, welche Ordner diese Zahl nicht
+        // tragen und was daraus folgt. Bis zum 260907 hing der Unterschied an
+        // der Wortwahl zweier Zeilen; wer ihn nicht erschloss, las vier
+        // gleichermassen gedeckte Ordner. Jede Aussage des Satzes steht hier
+        // einzeln: der Ort, die zwei ungeprueften Ordner, was ungeprueft ist,
+        // was daraus folgt, die betroffenen Zusagen bei ihrer Kennung und das
+        // Kommando, das die Deckung am Quelltext erhebt.
+        for aussage in [
+            "Deckung der Ordner",
+            "Pruefordner B",
+            "Unterordner L6",
+            "zugesagt und nicht nachgelesen",
+            ".DS_Store",
+            "auf einem anderen Bestand als dem zugesagten",
+            "die L4-Zeile und beide L5-Zeilen",
+            "die L6-Zeile und die L7-Zeile fuer den Ordnersprung",
+            "grep -n ordner_beschreiben crates/krk-bench/src/bericht.rs",
+        ] {
+            assert!(
+                text.contains(aussage),
+                "der Kopf benennt die ungeprueften Messordner nicht ({aussage}):\n{text}"
+            );
+        }
+        // Und die Behauptung des Satzes stimmt mit dem Kopf ueberein: genau
+        // zwei der vier Messordner tragen eine gelesene Zahl. Gezaehlt statt
+        // behauptet, damit ein dritter oder ein weggefallener Rufer von
+        // `ordner_beschreiben_mit_gelesenen` die Probe rot macht und nicht den
+        // Satz still falsch werden laesst.
+        assert_eq!(
+            text.matches("Eintraege je Lauf: ").count(),
+            2,
+            "der Satz sagt zwei gelesene und zwei zugesagte Ordner; der Kopf zaehlt anders. \
+             Zieh den Satz nach oder nimm den Rufer zurueck:\n{text}"
+        );
         // Alle zehn Kennungen stehen in der Tabelle.
         for kennung in [
             "L1 —", "L2 —", "L3 —", "L4 —", "L5 —", "L6 —", "L7 —", "L8 —", "L9 —", "L10 —",

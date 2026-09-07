@@ -1,5 +1,6 @@
 //! Die drei Regeln des Filters: welche Zeichen er aufnimmt, wann ein Name
-//! passt, und ab welcher Laenge der Filtertext auch Inhalte meint.
+//! passt, und ab welcher Laenge der Filtertext ueber den angezeigten Ordner
+//! und ueber die blossen Namen hinausgreift.
 //!
 //! ```text
 //! Taste ohne Zusatztaste ──> traegt_ein_dateiname ──> Filtertext des Tabs
@@ -11,9 +12,11 @@
 //!                            ^             ^         ^               │
 //!                 modell::zeilengrund_von durchlauf inhalt           │
 //!                                                                    │
-//!                        inhaltsschwelle(tief) <─ Zeichenzahl ohne `*`┘
-//!                              ^
-//!                    modell::inhalt_wirkt
+//!                             ZEICHENSCHWELLE <─ Zeichenzahl ohne `*`┘
+//!                                   ^
+//!                        modell::schwelle_erreicht
+//!                            ^              ^
+//!                 modell::tief_wirkt   modell::inhalt_wirkt
 //! ```
 //!
 //! Die Datei traegt alle drei Regeln, weil jede an mehreren Stellen dieselbe
@@ -24,9 +27,9 @@
 //! Vergleich hat drei, den Pruefschritt des Ordnermodells fuer die angezeigte
 //! Zeile, [`super::durchlauf`] fuer den Unterbaum und seit der Runde 11
 //! [`super::inhalt`] fuer den gelesenen Text einer Datei. Die Schwelle hat
-//! einen, [`super::modell::Ordnermodell::inhalt_wirkt`], und der ist
-//! seinerseits die eine Stelle, die alle Frager nach dem Inhaltsfilter
-//! bedient.
+//! einen, [`super::modell::Ordnermodell::schwelle_erreicht`], und der ist
+//! seinerseits die eine Stelle, die beide Frager bedient — die tiefe Suche
+//! ueber `tief_wirkt` und den Inhaltsfilter ueber `inhalt_wirkt`.
 //!
 //! # Der Vergleich ist seit der Runde 21 ein Musterabgleich
 //!
@@ -41,9 +44,21 @@
 //! **einmal je Aenderung** in [`Muster`] zerlegt und kleingeschrieben, der
 //! Vergleich laeuft je Eintrag ohne Rueckverfolgung: jedes Stueck wird ab dem
 //! Ende des vorigen genau einmal gesucht. Fuer die Schwelle zaehlt ein `*`
-//! nicht mit; siehe [`inhaltsschwelle`]. Die Tippsuche der Belegungsansicht
+//! nicht mit; siehe [`ZEICHENSCHWELLE`]. Die Tippsuche der Belegungsansicht
 //! teilt mit dem Filter allein die Zeichenregel und kennt den Platzhalter
 //! nicht.
+//!
+//! # Eine Schwelle, und der Sprung an ihr ist gewollt
+//!
+//! Unter [`ZEICHENSCHWELLE`] filtert KRK flach und allein ueber die Namen des
+//! angezeigten Ordners; ab der Schwelle greifen Unterbaum und Inhalt. **Die
+//! Liste verhaelt sich beim Tippen deshalb nicht gleichmaessig**: bei zwei
+//! Zeichen steht jeder Ordner, weil nur sein Name zaehlt, beim dritten
+//! verschwindet er, bis der Durchlauf ihn beantwortet hat, und bei
+//! eingeschaltetem „Content" kommen im selben Anschlag Dateien hinzu, die nur
+//! ihr Text traegt. Der Sprung ist der Preis der einen Schwelle und kein
+//! Defekt; wer ihn glaetten will, staffelt wieder, und die Staffelung ist am
+//! 260908 gefallen.
 //!
 //! # Was hier bis zur Runde 10 stand
 //!
@@ -187,7 +202,7 @@ impl Muster {
 /// Ein leeres Muster traegt jeder Name. Wer nicht filtern will, fragt
 /// diese Funktion nicht: der Pruefschritt und der Durchlauf haben den Zweig
 /// „steht ein Filtertext?" davor, und der Inhaltsbefund kommt gar nicht erst
-/// zustande, weil [`inhaltsschwelle`] ohne Filtertext nicht erreicht ist.
+/// zustande, weil [`ZEICHENSCHWELLE`] ohne Filtertext nicht erreicht ist.
 #[must_use]
 pub fn traegt_die_folge(name: &str, muster: &Muster) -> bool {
     let name = name.to_lowercase();
@@ -201,45 +216,59 @@ pub fn traegt_die_folge(name: &str, muster: &Muster) -> bool {
     true
 }
 
-/// Ab wie vielen getippten **Zeichen** der Filter auch den Inhalt einer Datei
-/// liest: fuenf bei eingeschalteter tiefer Suche, sonst drei.
+/// Ab wie vielen getippten **Zeichen** der Filter ueber den angezeigten Ordner
+/// und ueber die blossen Namen hinausgreift: in den Unterbaum ("Deep") und in
+/// den Text der Dateien ("Content").
 ///
-/// **Die Staffelung ist hergeleitet und nicht gesetzt.** Ein flacher
-/// Inhaltsfilter liest die Dateien des angezeigten Ordners, ein tiefer die
-/// Dateien seines ganzen Unterbaums, und das sind je nach Ort um
-/// Groessenordnungen mehr. Zwei Zeichen bezeichnen wenig und treffen
-/// entsprechend viel; die Zahl der zu lesenden Dateien waechst also genau
-/// dort, wo die Eingabe am wenigsten aussagt. Die hoehere Schwelle der tiefen
-/// Suche gleicht das aus.
+/// **Eine Zahl fuer beide Fragen, und sie steht hier.** Bis zum 260908 waren
+/// es drei Zahlen: der Inhaltsfilter war nach dem Stand der tiefen Suche
+/// gestaffelt, drei Zeichen flach und fuenf tief, und der Durchlauf ueber den
+/// Unterbaum hatte gar keine Schwelle, sondern begann beim ersten Anschlag.
+/// Seit „Deep" ab Werk auf ein steht, traf die Fuenf jeden neuen Nutzer und
+/// der erste Anschlag stiess in einem gewachsenen Heimatordner einen Lauf
+/// ueber Zehntausende Verzeichnisse an. Der Nutzer hat beide Fragen am
+/// 260907-2334 mit derselben Drei beantwortet
+/// (`shared/decisions/260826-0859_*_die-vorgabe-der-tiefen-suche-hebt-die-schwelle-des-inhaltsfilters-von-drei-auf-fuenf.md`
+/// und
+/// `shared/decisions/260826-0923_*_bekommt-der-tiefe-durchlauf-eine-eigene-zeichenschwelle-jetzt-wo-ein-anschlag-ihn-ab-werk-ausloest.md`).
+/// Die Drei ist damit keine gemessene Zahl, sondern die aeltere und die, die
+/// der Nutzer kennt.
 ///
 /// **Gezaehlt werden Zeichen und keine Bytes, und das `*` zaehlt nicht.** Ein
-/// getipptes `äöü` sind drei Zeichen und sechs Bytes; die Staffelung spricht
-/// von Zeichen, und der eine Rufer zaehlt deshalb mit `chars()`. Seit der
-/// Runde 21 laesst er dabei jedes `*` aus: der Platzhalter sagt nichts ueber
-/// den Gegenstand aus, `ab*` bezeichnet weniger als `abc` und nicht mehr, und
-/// die Schwelle schuetzt genau davor, bei einer wenig sagenden Eingabe viele
-/// Dateien zu lesen. `ab*cd` sind vier Zeichen, `*****` sind null, und ein
-/// Filtertext aus lauter `*` liest nie eine Datei.
+/// getipptes `äöü` sind drei Zeichen und sechs Bytes; die Schwelle spricht von
+/// Zeichen, und der eine Rufer zaehlt deshalb mit `chars()`. Seit der Runde 21
+/// laesst er dabei jedes `*` aus: der Platzhalter sagt nichts ueber den
+/// Gegenstand aus, `ab*` bezeichnet weniger als `abc` und nicht mehr, und die
+/// Schwelle schuetzt genau davor, bei einer wenig sagenden Eingabe viel Arbeit
+/// anzustossen. `ab*cd` sind vier Zeichen, `*****` sind null, und ein
+/// Filtertext aus lauter `*` steigt nie ab und liest nie eine Datei.
 ///
 /// **Ein Rufer, und der ist selbst die eine Stelle:**
-/// [`super::modell::Ordnermodell::inhalt_wirkt`]. Wer wissen will, ob der
-/// Inhaltsfilter wirkt, fragt dort und rechnet die Schwelle nicht nach. Ein
-/// zweiter Rechenweg waere die Gelegenheit, an zwei Stellen verschieden zu
-/// antworten, und genau die schliesst diese Runde aus.
+/// [`super::modell::Ordnermodell::schwelle_erreicht`]. Wer wissen will, ob die
+/// tiefe Suche oder der Inhaltsfilter wirkt, fragt `tief_wirkt` oder
+/// `inhalt_wirkt` und rechnet die Schwelle nicht nach. Ein zweiter Rechenweg
+/// waere die Gelegenheit, an zwei Stellen verschieden zu antworten.
 ///
 /// **Die Schwelle wird bei jeder Bewertung neu gefragt und nicht beim Start
-/// gemerkt.** Daraus folgt ein Fall, der benannt gehoert: wer bei vier Zeichen
-/// ohne tiefe Suche Inhaltstreffer vor sich hat und die tiefe Suche
-/// einschaltet, verliert sie, weil die Schwelle auf fuenf steigt. Ein fuenftes
-/// Zeichen holt sie zurueck. Eine Ausnahme fuer den Umschaltmoment waere ein
-/// Sonderfall ohne Gegenstueck.
+/// gemerkt.** Sie haengt seit dem 260908 an keinem der beiden Schalter mehr:
+/// wer „Deep" umlegt, verschiebt die Schwelle des Inhaltsfilters nicht, und
+/// umgekehrt ebenso wenig. Was am Umlegen haengt, ist allein, ob die Frage
+/// ueberhaupt gestellt wird.
+pub const ZEICHENSCHWELLE: usize = 3;
+
+/// Eine Schwelle von mindestens einem Zeichen heisst: wo sie erreicht ist,
+/// steht ein Filtertext.
 ///
-/// `#[must_use]`, weil der Aufruf nichts tut ausser zu antworten: wer den Wert
-/// fallen laesst, hat ihn umsonst geholt, und still.
-#[must_use]
-pub fn inhaltsschwelle(tief: bool) -> usize {
-    if tief { 5 } else { 3 }
-}
+/// Daran haengt eine Bedingung, die der Baum nicht mehr ausschreibt.
+/// `Tabliste::durchlauf_nachziehen_an` fragte bis zum 260908 zuerst
+/// `filter_steht()` und danach die Schalter; seither fragt es allein
+/// `tief_wirkt() || inhalt_wirkt()`, und die erste Haelfte ist darin
+/// enthalten — aber nur, solange diese Zusicherung haelt. Eine Schwelle von
+/// null liesse den Durchlauf ohne jeden Filtertext beginnen, und zwar still.
+const _: () = assert!(
+    ZEICHENSCHWELLE >= 1,
+    "eine Schwelle von null hiesse: der Durchlauf beginnt ohne Filtertext"
+);
 
 #[cfg(test)]
 mod tests {
@@ -447,10 +476,14 @@ mod tests {
         );
     }
 
-    /// Die Staffelung, ausgeschrieben: drei Zeichen flach, fuenf tief.
+    /// Die eine Schwelle, ausgeschrieben: drei Zeichen, fuer Unterbaum und
+    /// Inhalt dieselben.
+    ///
+    /// Sie stand bis zum 260908 als Funktion ueber den Stand der tiefen Suche
+    /// da und gab drei oder fuenf; wer die Staffelung wiederhaben will, macht
+    /// aus der Zahl wieder eine Funktion und diese Zeile rot.
     #[test]
-    fn die_inhaltsschwelle_steht_bei_drei_und_bei_fuenf() {
-        assert_eq!(inhaltsschwelle(false), 3, "ohne tiefe Suche");
-        assert_eq!(inhaltsschwelle(true), 5, "mit tiefer Suche");
+    fn die_zeichenschwelle_steht_bei_drei() {
+        assert_eq!(ZEICHENSCHWELLE, 3);
     }
 }

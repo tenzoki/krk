@@ -603,3 +603,51 @@ in diesem Projekt nicht umsetzen**, und das steht unten bei ihr.
 
 **Was offen bleibt:** 5 der 56 Fragen, dazu die Reichweitenfrage und die drei Fragen, die
 die Arbeit dieses Tages neu aufgeworfen hat.
+
+## Die letzten fuenf Entscheidungen am 260907-2334 beantwortet
+
+Neunte und letzte Vorlagerunde. Damit sind alle 56 Fragen beantwortet, die am 260906 offen
+standen. **Bei den ersten beiden ist der Nutzer von der Empfehlung abgewichen und hat dabei
+eine Staffelung aufgeloest, die keine Runde je entschieden hatte.**
+
+41. **Der Inhaltsfilter springt kuenftig in beiden Faellen bei drei Zeichen an.** Bisher
+    staffelte `inhaltsschwelle` nach dem Stand der tiefen Suche: drei Zeichen bei flacher,
+    fuenf bei tiefer. Seit „Deep" ab Werk auf ein steht, galt fuer jeden neuen Nutzer die
+    Fuenf, ohne dass das jemand verlangt haette. Der Nutzer hat **Moeglichkeit 2** gewaehlt,
+    nicht die empfohlene 1: **eine Schwelle fuer beide Faelle.** Damit faellt die Kopplung an
+    den Stand der tiefen Suche, und der Inhaltsfilter reagiert unabhaengig davon gleich.
+    Keine der drei Zahlen war je gemessen; die Drei ist die aeltere und die, die der Nutzer
+    kennt.
+42. **Auch der Durchlauf ueber den Unterbaum beginnt erst ab drei Zeichen.** Bisher stiess
+    ihn der **erste** Anschlag an, seit „Deep" ab Werk anhakt — ein Durchlauf ohne
+    Tiefengrenze, in einem gewachsenen Heimatordner Zehntausende Verzeichnisse, und jeder
+    weitere Anschlag beginnt von vorn. Der Nutzer hat **Moeglichkeit 2** gewaehlt, nicht die
+    empfohlene 3 (erst messen): der Durchlauf bekommt eine eigene Zeichenschwelle, und sie
+    ist dieselbe Drei. **Zusammen mit 41 ergibt das eine Regel statt dreier:** unter drei
+    Zeichen filtert KRK flach und nur ueber Namen, ab drei Zeichen greifen Unterbaum und
+    Inhalt. Die Messung, auf die die Empfehlung wartete, ist damit nicht mehr die
+    Vorbedingung, sondern eine spaetere Bestaetigung.
+43. **Zwei der vier Messordner bleiben bei der Beschriftung**, ohne Pruefung gegen ihren
+    tatsaechlichen Inhalt. Ein hineingerutschter `.DS_Store` faellt dort nicht auf, und drei
+    Zeitzusagen messen dann auf einem Bestand, den keine Zusage meint. Die zweite Haelfte
+    nachzuziehen kaufte die Deckung mit genau der Cache-Wirkung, gegen die die Anlage gebaut
+    ist: das Vorablesen waermt den Systemcache, und die zwei getrennten Startwerte sind
+    dagegen gebaut. **Der Berichtskopf bekommt dafuer einen Satz, der den Unterschied
+    benennt**, statt ihn an einer Formulierung haengen zu lassen.
+44. **Das Vergroessern in der PDF-Ansicht bleibt bei der einen Regel; auf einer
+    US-Tastatur wirkt nur der Zehnerblock.** KRK erkennt eine Taste an dem Zeichen, das sie
+    ohne Zusatztaste meldet — auf der deutschen Tastatur ein `+`, auf der US-Tastatur ein
+    `=`. Ein zweites Zeichen bei gehaltener Umschalttaste zu lesen kostete eine Zeile am
+    Tastenabgriff, an dem eine Zeitzusage haengt; das Gleichheitszeichen als eigenen
+    Tastennamen aufzunehmen zeigte einem deutschen Nutzer eine Kombination, die auf seiner
+    Tastatur anders heisst. **Der Preis ist mitentschieden:** ein US-Nutzer ohne Zehnerblock
+    erreicht die Vergroesserung nicht ueber die Tastatur, Menue und Trackpad bleiben ihm.
+45. **Die KI-Anbindung bleibt unentschieden und wird zurueckgestellt.** Der Nutzer nennt als
+    moegliche Richtung eine Huelle um das Claude Code SDK oder eine aehnliche Loesung; das
+    ist eine Richtung und keine Wahl, und keine der zwei aus dem Text erschlossenen
+    Moeglichkeiten ist damit ausgeschlossen. Die Vorbedingung des Datensatzes ist ohnehin
+    nicht erfuellt: von der Git-Anbindung ist die lesende Haelfte gebaut, die schreibende
+    steht aus.
+
+**Damit sind alle 56 Fragen beantwortet.** Offen bleiben die Reichweitenfrage und neun
+Fragen, die die Arbeit dieses Tages selbst aufgeworfen hat.

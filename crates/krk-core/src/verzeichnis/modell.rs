@@ -76,7 +76,7 @@
 //!            │ ja                            │ ja
 //!            │                        traegt der Inhalt? ── Treffer ──> steht
 //!            │                                           └ sonst ────> faellt weg
-//! ist "Deep" eingeschaltet?   ── nein ─> steht in der Liste
+//! wirkt "Deep"?               ── nein ─> steht in der Liste
 //!            │ ja
 //! liegt unter ihm ein Treffer? ─ ja ──> steht in der Liste
 //!                              └ sonst > faellt weg
@@ -123,7 +123,9 @@
 //! Frage fuer einen Ordner ueberhaupt gestellt wird, und nicht, wie sie
 //! ausgeht: derselbe Unterbaum wird immer gleich abgeschritten. Ihn trotzdem
 //! mitzuzaehlen hiesse, beim Umlegen von „Deep" Antworten wegzuwerfen, die
-//! weiter gelten.
+//! weiter gelten. **Seit dem 260908 stimmt das ohne Vorbehalt**: bis dahin
+//! verschob „Deep" die Schwelle des Inhaltsfilters und aenderte die Frage
+//! allein dadurch, und `schalter_setzen` fing genau diesen Fall ab.
 //!
 //! **Die Verstecke gehoeren erst recht nicht dazu.** Sie aendern den
 //! Zeilengrund und damit die Auftragsliste, aber keine einzige Antwort.
@@ -333,7 +335,9 @@ pub struct Ordnermodell {
     /// Aus heisst: der Name entscheidet jede Datei, und jeder Ordner bleibt
     /// stehen, damit die Navigation bei stehendem Filter nicht abbricht. An
     /// heisst: ein Ordner, dessen Name nicht passt, braucht einen Treffer unter
-    /// sich.
+    /// sich — aber erst ab der Schwelle aus
+    /// [`super::filter::ZEICHENSCHWELLE`]. Das Kennzeichen allein sagt deshalb
+    /// nicht, ob die tiefe Suche wirkt; das sagt [`Ordnermodell::tief_wirkt`].
     ///
     /// Die Vorbelegung steht bei [`Ordnermodell::neu`] und nirgends sonst.
     tief: bool,
@@ -341,9 +345,8 @@ pub struct Ordnermodell {
     ///
     /// Aus heisst: ueber eine Datei entscheidet allein ihr Name. An heisst:
     /// eine Datei, deren Name die Folge nicht traegt, bleibt stehen, wenn ihr
-    /// Text sie traegt — aber erst ab der Schwelle aus
-    /// [`super::filter::inhaltsschwelle`]. Das Kennzeichen allein sagt deshalb
-    /// nicht, ob der Inhaltsfilter wirkt; das sagt
+    /// Text sie traegt — aber erst ab derselben Schwelle. Das Kennzeichen
+    /// allein sagt deshalb nicht, ob der Inhaltsfilter wirkt; das sagt
     /// [`Ordnermodell::inhalt_wirkt`].
     inhalt: bool,
     /// Was von der Platte her je Eintrag bekannt ist.
@@ -414,11 +417,14 @@ impl Ordnermodell {
     /// sondern kommt ueber diesen Weg. Wer die Vorgabe aendert, aendert sie
     /// hier und nirgends sonst.
     ///
-    /// **Sichtbar wird die Vorgabe erst, wenn ein Filtertext steht.** Ohne ihn
-    /// verlaesst `Ordnermodell::zeilengrund_von` den Pruefschritt, bevor die
-    /// Frage nach der Tiefe faellt, und `Tabliste::durchlauf_nachziehen`
-    /// stoesst keinen Durchlauf an. Ein frisch gestartetes KRK liest deshalb
-    /// genau so viel wie zuvor.
+    /// **Sichtbar wird die Vorgabe erst ab drei getippten Zeichen.** Ohne
+    /// Filtertext verlaesst `Ordnermodell::zeilengrund_von` den Pruefschritt,
+    /// bevor die Frage nach der Tiefe faellt; unterhalb der Schwelle aus
+    /// [`super::filter::ZEICHENSCHWELLE`] antwortet
+    /// [`Ordnermodell::tief_wirkt`] mit `false`, und die Liste bleibt flach.
+    /// `Tabliste::durchlauf_nachziehen` stoesst in beiden Faellen keinen
+    /// Durchlauf an. Ein frisch gestartetes KRK liest deshalb genau so viel
+    /// wie zuvor, und der erste Anschlag im Dateifenster liest es auch noch.
     #[must_use]
     pub fn neu(generation: u64) -> Self {
         Self {
@@ -431,10 +437,12 @@ impl Ordnermodell {
             markiert: Vec::new(),
             filtertext: String::new(),
             muster: Muster::aus(""),
-            // Ab Werk eingeschaltet, siehe den Abschnitt darueber. Damit haengt
-            // an dieser Zeile auch die Schwelle des Inhaltsfilters: sie fragt
-            // `super::filter::inhaltsschwelle` nach dem Stand der tiefen Suche,
-            // und der ist ab Werk `true`.
+            // Ab Werk eingeschaltet, siehe den Abschnitt darueber. **An dieser
+            // Zeile haengt seit dem 260908 keine zweite Groesse mehr**: bis
+            // dahin las `super::filter::inhaltsschwelle` den Stand der tiefen
+            // Suche und hob damit die Schwelle des Inhaltsfilters von drei auf
+            // fuenf, sobald diese Vorgabe auf `true` stand. Die Schwelle ist
+            // jetzt eine Zahl fuer beide Schalter und liest hier nichts mehr.
             tief: true,
             inhalt: false,
             befund: Vec::new(),
@@ -833,10 +841,10 @@ impl Ordnermodell {
             return Zeilengrund::Steht;
         }
 
-        // ist es ein Ordner? Eine symbolische Verknuepfung zaehlt hier mit: bei
-        // ausgeschaltetem Filter der Tiefe bleibt sie sichtbar wie jeder Ordner,
-        // bei eingeschaltetem entscheidet ihr Befund, und den meldet der
-        // Durchlauf als "kein Treffer darunter", weil er nicht in sie
+        // ist es ein Ordner? Eine symbolische Verknuepfung zaehlt hier mit:
+        // solange der Filter der Tiefe nicht wirkt, bleibt sie sichtbar wie
+        // jeder Ordner, sobald er wirkt entscheidet ihr Befund, und den meldet
+        // der Durchlauf als "kein Treffer darunter", weil er nicht in sie
         // hinabsteigt. Das ist der eine Schnitt fuer "Ordner"; die
         // Verknuepfungsregel selbst wohnt allein im Durchlauf.
         //
@@ -852,8 +860,12 @@ impl Ordnermodell {
             };
         }
 
-        // ist der Filter der Tiefe eingeschaltet?
-        if !self.tief {
+        // wirkt der Filter der Tiefe? Nicht "steht das Kennzeichen": unterhalb
+        // der Zeichenschwelle steht es und tut nichts, und der Ordner bleibt
+        // dann stehen wie bei ausgeschaltetem "Deep". Entschieden wird das an
+        // einer Stelle, in `tief_wirkt`, und hier nicht nachgerechnet
+        // (C2.10, jetzt fuer beide Schalter).
+        if !self.tief_wirkt() {
             return Zeilengrund::Steht;
         }
 
@@ -1090,6 +1102,11 @@ impl Ordnermodell {
     }
 
     /// Ob der Filter auch den Unterbaum meint ("Deep").
+    ///
+    /// Das blosse Kennzeichen, in derselben Bauart wie
+    /// [`Ordnermodell::inhalt`]. Ob die tiefe Suche **wirkt**, sagt
+    /// [`Ordnermodell::tief_wirkt`]; unterhalb der Schwelle steht das
+    /// Kennzeichen und tut nichts.
     #[must_use]
     pub fn tief(&self) -> bool {
         self.tief
@@ -1102,9 +1119,13 @@ impl Ordnermodell {
     /// der tiefen Suche gehoert nicht zu der Frage, die ein Befund
     /// beantwortet**, sondern nur dazu, ob sie ueberhaupt gestellt wird: der
     /// Durchlauf schreitet einen Unterbaum immer gleich ab, gleich wie der
-    /// Schalter steht. Er aendert die Frage trotzdem, wenn er die Schwelle des
-    /// Inhaltsfilters ueber- oder unterschreitet — und genau das misst
-    /// `schalter_setzen`, statt es hier nachzurechnen.
+    /// Schalter steht.
+    ///
+    /// **Seit dem 260908 aendert er die Frage in keinem Fall mehr.** Bis dahin
+    /// verschob er die Schwelle des Inhaltsfilters von drei auf fuenf und
+    /// konnte allein dadurch einen Befund entwerten; die Schwelle ist jetzt
+    /// eine Zahl fuer beide Schalter, und `schalter_setzen` misst diesen Fall
+    /// weiterhin, weil das Umlegen von „Content" ihn nach wie vor ausloest.
     pub fn tief_setzen(&mut self, tief: bool) {
         self.schalter_setzen(|modell| modell.tief = tief);
     }
@@ -1168,40 +1189,84 @@ impl Ordnermodell {
         self.sicht_neu_aufbauen();
     }
 
+    /// Ob der Filtertext die Zeichenschwelle erreicht.
+    ///
+    /// **Die eine Stelle, an der die Schwelle geprueft wird**, und seit dem
+    /// 260908 die eine Quelle beider Schalterfragen: [`Ordnermodell::tief_wirkt`]
+    /// und [`Ordnermodell::inhalt_wirkt`] holen die Zahl von hier und rechnen
+    /// sie nicht nach. Ein zweiter Rechenweg waere die Gelegenheit, an zwei
+    /// Stellen verschieden zu antworten, und die Regel „unter drei Zeichen
+    /// flach und ueber die Namen, ab drei Zeichen Unterbaum und Inhalt" stuende
+    /// dann als zwei Regeln da, die zufaellig gleich ausgehen.
+    ///
+    /// Die Schwelle selbst wohnt in [`super::filter::ZEICHENSCHWELLE`] und
+    /// haengt an keinem der beiden Schalter. **Gezaehlt werden Zeichen und
+    /// keine Bytes**: ein getipptes `äöü` sind drei Zeichen und sechs Bytes.
+    /// **Das `*` zaehlt seit der Runde 21 nicht mit**: der Platzhalter sagt
+    /// nichts ueber den Gegenstand aus, `ab*cd` sind vier Zeichen, `*****` sind
+    /// null, und ein Filtertext aus lauter `*` steigt nie ab und liest nie eine
+    /// Datei. Gezaehlt wird der Filtertext und nicht das Muster, weil die
+    /// Kleinschreibung die Zeichenzahl aendern kann (`İ` wird zu zwei Zeichen)
+    /// und die Schwelle von getippten Zeichen spricht; die Zaehlung steht hier
+    /// und nur hier.
+    ///
+    /// **Der Sprung am dritten Zeichen ist sichtbar und gewollt.** Die Liste
+    /// verhaelt sich beim Tippen nicht gleichmaessig: bei zwei Zeichen steht
+    /// jeder Ordner, weil allein sein Name zaehlt, beim dritten faellt er
+    /// heraus, bis der Durchlauf ihn beantwortet hat, und bei eingeschaltetem
+    /// „Content" kommen im selben Anschlag Dateien hinzu, die nur ihr Text
+    /// traegt. Wer das fuer einen Defekt haelt, liest hier den Grund: der
+    /// Sprung ist der Preis der einen Schwelle, und die Staffelung, die ihn
+    /// geglaettet haette, ist am 260908 gefallen.
+    ///
+    /// Gefragt wird bei jeder Bewertung neu und nicht beim Start gemerkt.
+    #[must_use]
+    fn schwelle_erreicht(&self) -> bool {
+        self.filtertext
+            .chars()
+            .filter(|zeichen| *zeichen != '*')
+            .count()
+            >= filter::ZEICHENSCHWELLE
+    }
+
+    /// Ob die tiefe Suche bei diesem Stand wirkt: „Deep" steht **und** der
+    /// Filtertext ist lang genug.
+    ///
+    /// **Zeile fuer Zeile die Bauart von [`Ordnermodell::inhalt_wirkt`]**
+    /// darunter, und das ist die ganze Aussage der Runde: die zwei Schalter
+    /// haengen an derselben Schwelle, geholt aus derselben
+    /// [`Ordnermodell::schwelle_erreicht`]. Ihre Frager stellen dieselbe Frage
+    /// und rechnen sie nicht nach: der Ordnerzweig des Pruefschritts (steht
+    /// diese Zeile?) und die Entscheidung, ob ueberhaupt ein Durchlauf laeuft.
+    ///
+    /// **Bis zum 260908 gab es diese Frage nicht**, und der Ordnerzweig fragte
+    /// das blosse Kennzeichen: der erste Anschlag im Dateifenster stiess ab
+    /// Werk einen Lauf ueber den ganzen Unterbaum an. Der Nutzer hat am
+    /// 260907-2334 Moeglichkeit 2 von
+    /// `shared/decisions/260826-0923_*_bekommt-der-tiefe-durchlauf-eine-eigene-zeichenschwelle-jetzt-wo-ein-anschlag-ihn-ab-werk-ausloest.md`
+    /// gewaehlt.
+    #[must_use]
+    pub fn tief_wirkt(&self) -> bool {
+        self.tief && self.schwelle_erreicht()
+    }
+
     /// Ob der Inhaltsfilter bei diesem Stand wirkt: „Content" steht **und** der
     /// Filtertext ist lang genug.
     ///
-    /// **Die eine Stelle, an der die Schwelle geprueft wird.** Ihre Frager
-    /// stellen alle dieselbe Frage und rechnen sie nicht nach: der Dateizweig
-    /// des Pruefschritts (steht diese Zeile?), die Auftragsliste des Tabs
-    /// (bekommt diese Datei einen Auftrag?), die Entscheidung, ob ueberhaupt
-    /// ein Durchlauf laeuft, und die Statuszeile (ist der Lesehinweis
-    /// faellig?). Ein zweiter Rechenweg an einer dieser Stellen waere die
-    /// Gelegenheit, verschieden zu antworten.
+    /// Ihre Frager stellen dieselbe Frage und rechnen sie nicht nach: der
+    /// Dateizweig des Pruefschritts (steht diese Zeile?), die Auftragsliste des
+    /// Tabs (bekommt diese Datei einen Auftrag?), die Entscheidung, ob
+    /// ueberhaupt ein Durchlauf laeuft, und die Statuszeile (ist der
+    /// Lesehinweis faellig?).
     ///
-    /// Die Schwelle selbst wohnt in [`super::filter::inhaltsschwelle`] und
-    /// haengt am Stand der tiefen Suche. **Gezaehlt werden Zeichen und keine
-    /// Bytes**: ein getipptes `äöü` sind drei Zeichen und sechs Bytes. **Das
-    /// `*` zaehlt seit der Runde 21 nicht mit**: der Platzhalter sagt nichts
-    /// ueber den Gegenstand aus, `ab*cd` sind vier Zeichen, `*****` sind null,
-    /// und ein Filtertext aus lauter `*` liest nie eine Datei. Gezaehlt wird
-    /// der Filtertext und nicht das Muster, weil die Kleinschreibung die
-    /// Zeichenzahl aendern kann (`İ` wird zu zwei Zeichen) und die Schwelle von
-    /// getippten Zeichen spricht; die Zaehlung steht hier und nur hier.
-    ///
-    /// Gefragt wird bei jeder Bewertung neu. Wer bei vier Zeichen ohne tiefe
-    /// Suche Inhaltstreffer vor sich hat und die tiefe Suche einschaltet,
-    /// verliert sie an der gestiegenen Schwelle; ein fuenftes Zeichen holt sie
-    /// zurueck.
+    /// **Die Schwelle haengt seit dem 260908 nicht mehr am Stand der tiefen
+    /// Suche.** Bis dahin stieg sie mit eingeschaltetem „Deep" von drei auf
+    /// fuenf, und wer bei vier Zeichen die tiefe Suche einschaltete, verlor
+    /// seine Inhaltstreffer. Diesen Fall gibt es nicht mehr: die beiden
+    /// Schalter sind voneinander unabhaengig und teilen allein die Schwelle.
     #[must_use]
     pub fn inhalt_wirkt(&self) -> bool {
-        self.inhalt
-            && self
-                .filtertext
-                .chars()
-                .filter(|zeichen| *zeichen != '*')
-                .count()
-                >= filter::inhaltsschwelle(self.tief)
+        self.inhalt && self.schwelle_erreicht()
     }
 
     /// Was ueber den Unterbaum dieses Eintrags bekannt ist.

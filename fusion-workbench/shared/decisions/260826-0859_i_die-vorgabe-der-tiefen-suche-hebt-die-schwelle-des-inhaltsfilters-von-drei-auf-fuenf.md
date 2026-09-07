@@ -39,3 +39,9 @@ Zu entscheiden ist jetzt, weil die Vorgabe steht und die Verschiebung damit ausg
 Möglichkeit 1, bis eine Messung vorliegt. Die Begründung der Staffelung hat sich nicht geändert, nur ihr Auslöser, und ein tiefer Lauf ab Werk ist genau der Fall, für den die höhere Schwelle geschrieben wurde — nicht der Fall, der sie widerlegt. Die Kosten der Verschiebung sind zwei Zeichen bei eingeschaltetem „Content“, und „Content“ ist weiter aus die Vorgabe; wer es anhakt, hat die teurere Suche schon einmal bewusst gewählt.
 
 Was gegen Möglichkeit 2 fehlt, ist dieselbe Zahl, die auch für sie fehlt: wie lange ein Inhaltsfilter über einen echten Unterbaum bei drei Zeichen tatsächlich braucht. Wer sie misst, entscheidet die Frage; wer sie nicht misst, tauscht eine unbegründete Zahl gegen eine andere.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Die letzten fuenf Entscheidungen am 260907-2334 beantwortet` — Moeglichkeit 2 und nicht die empfohlene 1: eine Schwelle fuer beide Faelle, und zwar drei Zeichen. Die Staffelung nach dem Stand der tiefen Suche faellt, der Inhaltsfilter reagiert unabhaengig davon gleich. Keine der drei Zahlen war je gemessen; die Drei ist die aeltere und die, die der Nutzer kennt; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260908-0002-eine-zeichenschwelle-fuer-unterbaum-und-inhalt.md `## Was gebaut wurde` — die Staffelung ist gefallen: aus `inhaltsschwelle(tief) -> usize` ist die Konstante `filter::ZEICHENSCHWELLE = 3` geworden, und `Ordnermodell::inhalt_wirkt` holt sie ueber die eine Zaehlstelle `schwelle_erreicht`, die den Stand der tiefen Suche nicht mehr liest.

@@ -10,3 +10,5 @@ Kein Defekt im Produktcode. Möglicher Weg: die Prozesskennung in den Namen aufn
 
 ---
 Abgleich 260829-0734: bleibt offen. `probenablage` in `zwischenablage.rs` benennt weiter je Probe ohne Prozesskennung; `cargo test --workspace` allein auf `35b95b3` grün (krk-ui 851 passed), was zur Frage paralleler Läufe nichts sagt.
+
+Also seen: 260908-0030 by coder — `der_zweite_ausgang_legt_verweise_und_namen_ab` fiel bei zwei gleichzeitigen `cargo test --workspace` zweier Bahnen (924 passed, 1 failed) und lief unmittelbar danach allein grün; die Datei ist in keiner der zwei Bahnen angefasst.

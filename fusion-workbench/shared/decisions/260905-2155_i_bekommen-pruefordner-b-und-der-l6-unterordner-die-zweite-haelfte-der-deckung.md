@@ -65,3 +65,9 @@ Möglichkeit 1, mit einem Satz im Berichtskopf, der den Unterschied benennt stat
 Formulierung hängen zu lassen. Möglichkeit 2 kauft die Deckung mit genau der Cache-Wirkung, gegen
 die die zwei getrennten Startwerte gebaut sind, und L4 ist die Zusage, die diese Runde am
 knappsten hält. Das ist eine Empfehlung und keine Antwort; entschieden ist sie nicht.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Die letzten fuenf Entscheidungen am 260907-2334 beantwortet` — Moeglichkeit 1: es bleibt bei der Beschriftung, und der Berichtskopf bekommt einen Satz, der den Unterschied benennt statt ihn an einer Formulierung haengen zu lassen. Die zweite Haelfte kaufte die Deckung mit genau der Cache-Wirkung, gegen die die Anlage gebaut ist; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-2350-berichtskopf-benennt-die-ungeprueften-messordner.md — der Berichtskopf trägt die Zeile „Deckung der Ordner" (`crates/krk-bench/src/bericht.rs`, `DECKUNG_DER_ORDNER`): sie nennt Prüfordner A und 100k als gelesen, Prüfordner B und den L6-Unterordner als zugesagt und nicht nachgelesen, sagt, dass ein hineingerutschter Eintrag dort nicht auffiele, und nennt die daran hängenden Zusagen bei ihrer Kennung (L4 und beide L5-Zeilen auf B, L6 und die L7-Zeile für den Ordnersprung auf dem Unterordner). Statt einer Zahl steht das Zählkommando im Satz. Gehalten wird er von `der_abnahmebericht_traegt_alle_zehn_zusagen_und_den_vollen_kopf` in derselben Datei, die die Behauptung „zwei von vier" zusätzlich am Kopf nachzählt. Die zweite Hälfte der Deckung ist wie entschieden nicht nachgezogen.

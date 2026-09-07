@@ -793,11 +793,13 @@ fn bei_flacher_suche_bleibt_jeder_ordner_stehen() {
 /// den Zweig misst, den ihr Name nennt; keine von ihnen sagt deshalb noch
 /// etwas darueber, womit ein frisches Modell beginnt. Genau das steht hier.
 ///
-/// Mitgehalten wird die Folge, die sich niemand gewuenscht hat: die Schwelle
-/// des Inhaltsfilters haengt am Stand der tiefen Suche
-/// ([`krk_core::verzeichnis::filter::inhaltsschwelle`]), und ab Werk gilt
-/// damit die tiefe Fuenf und nicht mehr die flache Drei. Wer die Vorbelegung
-/// zurueckdreht, macht diese Zeile rot und liest den Grund hier.
+/// Mitgehalten wird, was seit dem 260908 **nicht** mehr an der Vorbelegung
+/// haengt: die Schwelle des Inhaltsfilters. Bis dahin las
+/// `filter::inhaltsschwelle` den Stand der tiefen Suche und hob damit die Drei
+/// auf eine Fuenf, sobald „Deep" stand — ab Werk also fuer jeden neuen Nutzer.
+/// Beide Schalter greifen jetzt ab derselben
+/// [`krk_core::verzeichnis::filter::ZEICHENSCHWELLE`], und die Vorbelegung
+/// verschiebt keine zweite Groesse mehr.
 #[test]
 fn die_tiefe_suche_ist_die_vorbelegung() {
     let frisch = Ordnermodell::neu(1);
@@ -813,18 +815,23 @@ fn die_tiefe_suche_ist_die_vorbelegung() {
     // weil es um sie geht.
     modell.tief_setzen(true);
     modell.inhalt_setzen(true);
-    modell.filtertext_setzen("aaaa");
+    modell.filtertext_setzen("aa");
 
     assert!(
-        !modell.inhalt_wirkt(),
-        "ab Werk gilt die Schwelle der tiefen Suche: vier Zeichen reichen nicht"
+        !modell.tief_wirkt(),
+        "zwei Zeichen bleiben unter der Schwelle, auch mit gesetztem \"Deep\""
     );
+    assert!(!modell.inhalt_wirkt(), "und ebenso fuer \"Content\"");
 
     modell.zeichen_anhaengen('a');
 
     assert!(
+        modell.tief_wirkt(),
+        "das dritte Zeichen erreicht die Schwelle"
+    );
+    assert!(
         modell.inhalt_wirkt(),
-        "das fuenfte Zeichen erreicht die tiefe Schwelle"
+        "dieselbe Schwelle, derselbe Anschlag: die Staffelung ist gefallen"
     );
 }
 
@@ -1188,9 +1195,10 @@ fn ein_zeichen_zurueck_laesst_die_liste_wieder_wachsen() {
 /// **Die dritte Behauptung ist die eigentliche.** Der Stand der tiefen Suche
 /// entscheidet, ob die Frage fuer einen Ordner ueberhaupt gestellt wird, und
 /// nicht, wie sie ausgeht: derselbe Unterbaum wird immer gleich abgeschritten.
-/// Ein Umlegen von „Deep", das die Schwelle des Inhaltsfilters nicht kreuzt,
-/// darf deshalb keine Antwort wegwerfen. Bis zum 260816 warf das Einschalten
-/// jede weg.
+/// Ein Umlegen von „Deep" darf deshalb keine Antwort wegwerfen. Bis zum 260816
+/// warf das Einschalten jede weg; bis zum 260908 galt der Satz zudem nur, wenn
+/// das Umlegen die Schwelle des Inhaltsfilters nicht kreuzte, und seit die
+/// Schwelle an keinem Schalter mehr haengt, gilt er ohne diesen Vorbehalt.
 #[test]
 fn ein_befund_gilt_nur_zu_seiner_frage() {
     let ordner = filterordner();
@@ -1217,11 +1225,17 @@ fn ein_befund_gilt_nur_zu_seiner_frage() {
         "\"Deep\" allein aendert die Frage nicht; die Antwort gilt weiter"
     );
 
+    // Zurueck unter die Schwelle, damit „Content" gleich einen Schalter
+    // umlegt, der nichts bewirkt. Der Filtertext wird dabei kuerzer, also
+    // fallen die Befunde; danach werden sie neu gesetzt.
+    modell.filtertext_setzen("aa");
+    modell.befunde_setzen([(still, Befund::Treffer)]);
+
     modell.inhalt_setzen(true);
     assert!(
         !modell.inhalt_wirkt(),
-        "vier Zeichen liegen unter der Schwelle der tiefen Suche; der Schalter \
-         steht und wirkt nicht"
+        "zwei Zeichen liegen unter der Schwelle; der Schalter steht und wirkt \
+         nicht"
     );
     assert_eq!(
         modell.befund(still),
@@ -1229,12 +1243,9 @@ fn ein_befund_gilt_nur_zu_seiner_frage() {
         "ein Schalter, der nichts bewirkt, aendert die Frage nicht"
     );
 
-    modell.zeichen_anhaengen('x');
+    modell.zeichen_anhaengen('a');
     modell.befunde_setzen([(still, Befund::Treffer)]);
-    assert!(
-        modell.inhalt_wirkt(),
-        "fuenf Zeichen erreichen die Schwelle"
-    );
+    assert!(modell.inhalt_wirkt(), "drei Zeichen erreichen die Schwelle");
     modell.inhalt_setzen(false);
     assert_eq!(
         modell.befund(still),
@@ -1372,11 +1383,12 @@ fn der_rueckschritt_nach_einem_einfuegen_nimmt_ein_zeichen() {
 
 /// C1.7, die Modellhaelfte: „Content" an, „Deep" an, leerer Filtertext, fuenf
 /// Zeichen eingefuegt — der Inhaltsfilter wirkt sofort, ohne dass ein weiterer
-/// Anschlag noetig waere (A8).
+/// Anschlag noetig waere (A8). Fuenf sind es, weil `hallo` der Name der Sache
+/// ist; ueber der Schwelle liegen schon drei.
 ///
-/// Die Schwelle der tiefen Suche ist fuenf; `hallo` erreicht sie mit dem einen
-/// Einfuegen. Die Zaehlung selbst ist die von `inhalt_wirkt`, die Probe stellt
-/// ihr nur den Weg des Einfuegens gegenueber.
+/// Die Schwelle ist drei; `hallo` erreicht sie mit dem einen Einfuegen. Die
+/// Zaehlung selbst ist die von `inhalt_wirkt`, die Probe stellt ihr nur den Weg
+/// des Einfuegens gegenueber.
 #[test]
 fn ein_eingefuegter_name_von_fuenf_zeichen_stoesst_den_inhaltsfilter_sofort_an() {
     let mut modell = Ordnermodell::neu(1);
@@ -1407,14 +1419,14 @@ fn ein_eingefuegter_name_von_fuenf_zeichen_stoesst_den_inhaltsfilter_sofort_an()
     );
     assert_eq!(namen(&modell), vec!["gruss.txt", "hallo-welt.txt"]);
 
-    // Vier eingefuegte Zeichen bleiben darunter, wie vier getippte.
+    // Zwei eingefuegte Zeichen bleiben darunter, wie zwei getippte.
     let mut kurz = Ordnermodell::neu(1);
     kurz.tief_setzen(true);
     kurz.inhalt_setzen(true);
-    kurz.text_anhaengen("hall");
+    kurz.text_anhaengen("ha");
     assert!(
         !kurz.inhalt_wirkt(),
-        "vier Zeichen liegen unter der tiefen Schwelle"
+        "zwei Zeichen liegen unter der Schwelle"
     );
 }
 
@@ -1524,9 +1536,10 @@ fn handeintrag(name: &str, typ: Typ) -> Eintrag {
 /// [`krk_core::verzeichnis::inhalt`], und das steht anderswo.
 fn handmodell(eintraege: impl IntoIterator<Item = Eintrag>) -> Ordnermodell {
     let mut modell = Ordnermodell::neu(1);
-    // Flach, aus demselben Grund wie bei `gefiltert` darueber: die Schwelle des
-    // Inhaltsfilters haengt am Stand der tiefen Suche, und die Proben darunter
-    // messen die flache Drei und die tiefe Fuenf einzeln.
+    // Flach, aus demselben Grund wie bei `gefiltert` darueber: die Vorbelegung
+    // ist seit dem 260826 "ein", und die Proben darunter messen den Zweig, den
+    // ihr Name nennt. Die Schwelle haengt seit dem 260908 an keinem der beiden
+    // Schalter mehr; dass sie hier flach faehrt, aendert sie nicht.
     modell.tief_setzen(false);
     modell.anhaengen(eintraege);
     modell.abschliessen();
@@ -1606,14 +1619,21 @@ fn der_inhaltsfilter_wirkt_ab_drei_zeichen_und_darunter_nicht() {
     );
 }
 
-/// C2.10: mit eingeschalteter tiefer Suche steigt die Schwelle auf fuenf. Vier
-/// Zeichen nehmen die Inhaltstreffer weg, ein fuenftes holt sie zurueck.
+/// C2.10, seit dem 260908 umgekehrt: das Umlegen von „Deep" verschiebt die
+/// Schwelle des Inhaltsfilters nicht.
 ///
-/// Der Ordner steht in dieser Probe nicht mehr: bei tiefer Suche entscheidet
-/// ueber ihn sein Befund, und der ist `Unentschieden`. Das ist die Regel der
-/// Runde 10 und hier nur der Hintergrund.
+/// **Bis dahin hiess diese Probe `die_tiefe_suche_hebt_die_schwelle_auf_fuenf_zeichen`
+/// und hielt das Gegenteil fest**: vier Zeichen nahmen beim Einschalten von
+/// „Deep" die Inhaltstreffer weg, ein fuenftes holte sie zurueck. Der Nutzer
+/// hat am 260907-2334 Moeglichkeit 2 von
+/// `shared/decisions/260826-0859_*_die-vorgabe-der-tiefen-suche-hebt-die-schwelle-des-inhaltsfilters-von-drei-auf-fuenf.md`
+/// gewaehlt: eine Schwelle fuer beide Staende, und zwar drei.
+///
+/// Der Ordner steht bei eingeschalteter tiefer Suche nicht mehr: ueber ihn
+/// entscheidet dann sein Befund, und der ist `Unentschieden`. Das ist die Regel
+/// der Runde 10 und hier nur der Hintergrund.
 #[test]
-fn die_tiefe_suche_hebt_die_schwelle_auf_fuenf_zeichen() {
+fn das_umlegen_der_tiefen_suche_verschiebt_die_schwelle_nicht() {
     let mut modell = inhaltsmodell();
     modell.inhalt_setzen(true);
     modell.filtertext_setzen("aaaa");
@@ -1627,26 +1647,22 @@ fn die_tiefe_suche_hebt_die_schwelle_auf_fuenf_zeichen() {
     modell.befunde_setzen([(kandidat, Befund::Treffer)]);
 
     assert!(
-        !modell.inhalt_wirkt(),
-        "vier Zeichen liegen unter der Schwelle der tiefen Suche"
-    );
-    assert!(
-        !namen(&modell).contains(&"ohne.txt"),
-        "die gestiegene Schwelle nimmt den Inhaltstreffer weg"
-    );
-
-    modell.zeichen_anhaengen('a');
-    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
-
-    assert_eq!(modell.filtertext(), "aaaaa");
-    assert!(
         modell.inhalt_wirkt(),
-        "fuenf Zeichen erreichen die Schwelle"
+        "vier Zeichen bleiben ueber der Schwelle, auch mit tiefer Suche"
     );
     assert!(
         namen(&modell).contains(&"ohne.txt"),
-        "das fuenfte Zeichen holt den Inhaltstreffer zurueck"
+        "der Inhaltstreffer bleibt stehen; die Staffelung ist gefallen"
     );
+
+    // Und die Gegenrichtung: unter der Schwelle wirkt der Inhaltsfilter in
+    // beiden Staenden nicht.
+    modell.filtertext_setzen("aa");
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+    assert!(!modell.inhalt_wirkt(), "zwei Zeichen, tief");
+    modell.tief_setzen(false);
+    modell.befunde_setzen([(kandidat, Befund::Treffer)]);
+    assert!(!modell.inhalt_wirkt(), "zwei Zeichen, flach");
 }
 
 /// Die Schwelle zaehlt **Zeichen und keine Bytes**. Ein getipptes `äöü` sind
@@ -1664,51 +1680,140 @@ fn die_schwelle_zaehlt_zeichen_und_keine_bytes() {
     );
 }
 
-/// C6.4: das Sternchen zaehlt nicht zur Inhaltsschwelle (B6).
+/// C6.4: das Sternchen zaehlt nicht zur Zeichenschwelle (B6).
 ///
-/// Flach liegt die Schwelle bei drei, tief bei fuenf; gezaehlt werden die
-/// Zeichen des Filtertexts ohne die Sternchen. Ein Filtertext aus lauter `*`
-/// zaehlt null und liest deshalb nie eine Datei, gleich wie lang er ist.
+/// Die Schwelle liegt bei drei, flach wie tief; gezaehlt werden die Zeichen des
+/// Filtertexts ohne die Sternchen. Ein Filtertext aus lauter `*` zaehlt null,
+/// steigt deshalb nie ab und liest nie eine Datei, gleich wie lang er ist.
+///
+/// **Gemessen wird an beiden Schaltern**, denn beide holen die Zahl aus
+/// derselben Stelle: was fuer den Inhalt gilt, gilt seit dem 260908 wortgleich
+/// fuer den Unterbaum.
 #[test]
 fn das_sternchen_zaehlt_nicht_zur_schwelle() {
     let mut modell = inhaltsmodell();
     modell.inhalt_setzen(true);
-    assert!(
-        !modell.tief(),
-        "diese Haelfte misst die flache Schwelle drei"
-    );
+    modell.tief_setzen(true);
 
     modell.filtertext_setzen("ab*");
     assert!(
         !modell.inhalt_wirkt(),
         "`ab*` sind zwei Zeichen, nicht drei"
     );
+    assert!(!modell.tief_wirkt(), "und die tiefe Suche zaehlt genauso");
+
     modell.filtertext_setzen("ab*c");
     assert!(modell.inhalt_wirkt(), "`ab*c` sind drei Zeichen");
-    modell.filtertext_setzen("*****");
     assert!(
-        !modell.inhalt_wirkt(),
-        "lauter Sternchen zaehlen null (flach)"
+        modell.tief_wirkt(),
+        "dasselbe dritte Zeichen, derselbe Sprung"
     );
 
-    modell.tief_setzen(true);
-    modell.filtertext_setzen("ab*cd");
-    assert!(
-        !modell.inhalt_wirkt(),
-        "`ab*cd` sind vier Zeichen, nicht fuenf"
-    );
-    modell.filtertext_setzen("ab*cde");
-    assert!(modell.inhalt_wirkt(), "`ab*cde` sind fuenf Zeichen");
     modell.filtertext_setzen("*****");
-    assert!(
-        !modell.inhalt_wirkt(),
-        "lauter Sternchen zaehlen null (tief)"
-    );
+    assert!(!modell.inhalt_wirkt(), "lauter Sternchen zaehlen null");
+    assert!(!modell.tief_wirkt(), "auch fuer den Unterbaum");
     assert!(
         modell.filter_steht(),
         "der Filter steht dabei, denn ein Sternchen ist ein Zeichen; nur die \
-         Inhaltsschwelle zaehlt es nicht"
+         Zeichenschwelle zaehlt es nicht"
     );
+}
+
+/// Der Abstieg in den Unterbaum beginnt ab drei Zeichen und darunter nicht.
+///
+/// **Die zweite Haelfte der einen Regel**, und sie ist am 260908 neu
+/// hinzugekommen: bis dahin stiess schon der erste Anschlag den Durchlauf an
+/// (`filter_steht` genuegte), und seit „Deep" ab Werk auf ein steht, hiess das
+/// in einem gewachsenen Heimatordner einen Lauf ueber Zehntausende
+/// Verzeichnisse je Tastendruck. Der Nutzer hat am 260907-2334 Moeglichkeit 2
+/// von
+/// `shared/decisions/260826-0923_*_bekommt-der-tiefe-durchlauf-eine-eigene-zeichenschwelle-jetzt-wo-ein-anschlag-ihn-ab-werk-ausloest.md`
+/// gewaehlt.
+///
+/// **Gemessen wird an drei Stellen zugleich**, weil alle drei an derselben
+/// Antwort haengen: an `tief_wirkt`, an der Zeile des Ordners, dessen Name den
+/// Filtertext nicht traegt, und an der Auftragsliste, aus der
+/// `Tabliste::durchlauf_nachziehen_an` seinen Lauf zusammensetzt. Unter der
+/// Schwelle ist die Liste leer, und damit beginnt kein Lauf.
+///
+/// **Der Sprung am dritten Zeichen ist sichtbar und gewollt**: bei zwei Zeichen
+/// steht `stiller-ordner` wie bei ausgeschaltetem „Deep", beim dritten
+/// verschwindet er, bis ein Befund ihn beantwortet. Wer das fuer einen Defekt
+/// haelt, liest den Grund im Modulkopf von `verzeichnis/filter.rs`.
+#[test]
+fn die_tiefe_suche_wirkt_ab_drei_zeichen_und_darunter_nicht() {
+    let mut modell = inhaltsmodell();
+    modell.tief_setzen(true);
+
+    modell.filtertext_setzen("aa");
+
+    assert!(modell.tief(), "das Kennzeichen steht");
+    assert!(!modell.tief_wirkt(), "zwei Zeichen bleiben darunter");
+    assert!(
+        namen(&modell).contains(&"stiller-ordner"),
+        "unterhalb der Schwelle steht der Ordner wie bei flacher Suche"
+    );
+    assert!(
+        modell.auftraege().is_empty(),
+        "und ohne Auftrag beginnt kein Durchlauf"
+    );
+
+    modell.zeichen_anhaengen('a');
+
+    assert!(
+        modell.tief_wirkt(),
+        "das dritte Zeichen erreicht die Schwelle"
+    );
+    assert!(
+        !namen(&modell).contains(&"stiller-ordner"),
+        "ab der Schwelle haengt die Ordnerzeile an ihrem Befund, und der ist \
+         noch unentschieden"
+    );
+    let auftraege = modell.auftraege();
+    assert_eq!(auftraege.len(), 1, "genau der eine Ordner");
+    assert_eq!(auftraege[0].art, Auftragsart::Unterbaum);
+
+    let still = index_von(&modell, "stiller-ordner");
+    modell.befunde_setzen([(still, Befund::Treffer)]);
+    assert!(
+        namen(&modell).contains(&"stiller-ordner"),
+        "mit einem Treffer darunter steht er wieder"
+    );
+}
+
+/// Beide Schalter holen ihre Schwelle aus derselben Stelle: sie kippen bei
+/// demselben Zeichen.
+///
+/// **Das ist die Aussage der Runde und nicht die Summe zweier Zahlen.** Zwei
+/// Schwellen, die zufaellig beide drei sind, wuerden diese Probe ebenfalls
+/// bestehen; sie ist deshalb nicht das ganze Pfand. Das andere Stueck ist
+/// `die_zeichenschwelle_hat_einen_rufer` weiter unten, das am Quelltext haelt,
+/// dass es nur eine Zahl gibt. Zusammen sagen die beiden: eine Regel, ein
+/// Kippunkt.
+///
+/// Gemessen wird ueber die Laengen null bis fuenf, mit beiden Schaltern an, und
+/// gegen [`krk_core::verzeichnis::filter::ZEICHENSCHWELLE`] statt gegen eine
+/// abgeschriebene Drei.
+#[test]
+fn beide_schalter_kippen_am_selben_zeichen() {
+    for laenge in 0..=5_usize {
+        let mut modell = inhaltsmodell();
+        modell.tief_setzen(true);
+        modell.inhalt_setzen(true);
+        modell.filtertext_setzen(&"a".repeat(laenge));
+
+        let erwartet = laenge >= krk_core::verzeichnis::filter::ZEICHENSCHWELLE;
+        assert_eq!(
+            modell.tief_wirkt(),
+            erwartet,
+            "die tiefe Suche bei {laenge} Zeichen"
+        );
+        assert_eq!(
+            modell.inhalt_wirkt(),
+            erwartet,
+            "der Inhaltsfilter bei {laenge} Zeichen"
+        );
+    }
 }
 
 /// C2.6: ohne stehenden Filtertext aendert "Content" nichts an der Liste.
@@ -2493,7 +2598,11 @@ fn ein_einzelnes_sternchen_stoesst_den_durchlauf_an_und_entscheidet_jeden_ordner
     }
 
     // Am Modell: `*` ist ein Zeichen, der Filter steht, und jede Zeile steht
-    // schon wegen ihres Namens — es gibt keinen Auftrag.
+    // schon wegen ihres Namens — es gibt keinen Auftrag. **Seit dem 260908
+    // traegt derselbe Ausgang zwei Gruende**: der Kurzschluss des Namens, und
+    // die Zeichenschwelle, die ein Filtertext aus lauter `*` mit null
+    // gezaehlten Zeichen nicht erreicht. Die Probe misst den ersten und nennt
+    // den zweiten, damit ihn niemand fuer ihre eigentliche Aussage haelt.
     let mut modell = Ordnermodell::neu(1);
     modell.tief_setzen(true);
     modell.inhalt_setzen(true);
@@ -3819,6 +3928,56 @@ fn die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei() {
         ],
         "der Vergleich hat andere Rufer als der Pruefschritt, der Durchlauf und \
          der Inhaltsbefund"
+    );
+}
+
+/// Gezaehlt: die Zeichenschwelle hat genau einen Rufer, und beide Schalter
+/// gehen durch ihn.
+///
+/// **Das ist die Haelfte, die `beide_schalter_kippen_am_selben_zeichen` nicht
+/// leisten kann.** Jene misst, dass die zwei Fragen bei demselben Zeichen
+/// kippen; zwei Zahlen, die zufaellig beide drei sind, bestuenden sie ebenso.
+/// Diese hier haelt am Quelltext fest, dass es nur eine Zahl gibt: die
+/// Konstante wohnt in `filter.rs` und wird ausserhalb ihrer Heimat an genau
+/// einer Stelle gelesen, in `Ordnermodell::schwelle_erreicht`. `tief_wirkt` und
+/// `inhalt_wirkt` holen ihre Antwort von dort und rechnen nicht nach.
+///
+/// **Gezaehlt werden die Dateien unter `src/`.** Die Proben oben nennen die
+/// Konstante ebenfalls und messen gegen sie statt gegen eine abgeschriebene
+/// Drei; ein Rufer im Sinne dieser Zaehlung sind sie nicht.
+///
+/// Wer die Staffelung zurueckholt oder dem Durchlauf eine eigene zweite Zahl
+/// gibt, macht diese Zeile rot und liest den Grund in
+/// `shared/decisions/260826-0923_*_bekommt-der-tiefe-durchlauf-eine-eigene-zeichenschwelle-jetzt-wo-ein-anschlag-ihn-ab-werk-ausloest.md`.
+#[test]
+fn die_zeichenschwelle_hat_einen_rufer() {
+    let nadel = concat!("ZEICHEN", "SCHWELLE");
+    let heimat = "krk-core/src/verzeichnis/filter.rs";
+
+    let mut rufer = Vec::new();
+    for (name, inhalt) in gemeinsam::quelldateien() {
+        if !name.contains("/src/") || name == heimat {
+            continue;
+        }
+        if code_zeilen(&inhalt)
+            .iter()
+            .any(|zeile| zeile.contains(nadel))
+        {
+            rufer.push(name);
+        }
+    }
+
+    assert_eq!(
+        rufer,
+        vec!["krk-core/src/verzeichnis/modell.rs".to_owned()],
+        "die Zeichenschwelle hat andere Rufer als die eine Zaehlstelle des \
+         Ordnermodells"
+    );
+    assert!(
+        code_zeilen(&quelltext_von(heimat))
+            .iter()
+            .any(|zeile| zeile.contains(&format!("pub const {nadel}: usize"))),
+        "{heimat} erklaert die Schwelle nicht mehr als eine Zahl"
     );
 }
 

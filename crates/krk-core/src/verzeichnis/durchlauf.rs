@@ -146,6 +146,15 @@
 //! Treffer entscheidet den Auftrag, in welcher Tiefe er auch liegt, und der
 //! Rest unter ihm bleibt ungelesen.
 //!
+//! **Keine Schranke also, und seit dem 260908 eine Vorbedingung.** Wann ein
+//! Lauf ueberhaupt beginnt, entscheidet der Rufer und nicht diese Datei:
+//! `Tabliste::durchlauf_nachziehen_an` stoesst ihn erst ab
+//! [`super::filter::ZEICHENSCHWELLE`] getippten Zeichen an. Das begrenzt keinen
+//! laufenden Abstieg — er laeuft unveraendert bis zum Ende oder bis zum
+//! Abbruch —, sondern haelt die Laeufe zurueck, deren Eingabe zu wenig sagt, um
+//! sie zu rechtfertigen: bis dahin begann schon der erste Anschlag im
+//! Dateifenster einen.
+//!
 //! **Kein `warten`.** Der [`Lesevorgang`](super::leser::Lesevorgang) haelt sein
 //! Fadenstueck fuer Aufrufer, die auf den Abschluss warten; hier gibt es
 //! keinen, der wartet. Dass der Faden geendet hat, sagt der geschlossene Kanal.

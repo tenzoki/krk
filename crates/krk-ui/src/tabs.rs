@@ -1076,6 +1076,14 @@ impl Tabliste {
     /// Tab bekommt keinen Durchlauf; die Begruendung steht bei
     /// [`Tabliste::durchlauf_nachziehen`]. Sie steht vor den uebrigen drei, weil
     /// sie die einzige ist, die nicht am Modell des Tabs haengt.
+    ///
+    /// **Die dritte hiess bis zum 260908 „ein Filtertext steht, und einer der
+    /// beiden Schalter steht".** Sie fragt jetzt allein, ob einer der beiden
+    /// Schalter **wirkt**, und die Frage nach dem Filtertext steckt darin: eine
+    /// Zeichenschwelle von mindestens einem Zeichen ist ohne Filtertext nicht
+    /// erreichbar, und dass die Schwelle mindestens eins ist, haelt eine
+    /// Zusicherung beim Uebersetzen neben
+    /// `krk_core::verzeichnis::filter::ZEICHENSCHWELLE`.
     fn durchlauf_nachziehen_an(&mut self, stelle: usize) -> bool {
         self.tabs[stelle].durchlauf = None;
         self.tabs[stelle].zu_gross = 0;
@@ -1091,11 +1099,11 @@ impl Tabliste {
         if !tab.gelesen || tab.liest() {
             return false;
         }
-        // Ein Filtertext muss stehen, und mindestens einer der beiden Schalter
-        // muss etwas zu tun geben. Ob der Inhaltsfilter wirkt, entscheidet
-        // `inhalt_wirkt` und nicht diese Stelle: die Schwelle wird an einem Ort
-        // geprueft (C2.10).
-        if !tab.modell.filter_steht() || (!tab.modell.tief() && !tab.modell.inhalt_wirkt()) {
+        // Mindestens einer der beiden Schalter muss etwas zu tun geben. Ob er
+        // wirkt, entscheiden `tief_wirkt` und `inhalt_wirkt` und nicht diese
+        // Stelle: die Schwelle wird an einem Ort geprueft, und seit dem 260908
+        // ist es fuer beide Schalter derselbe (C2.10).
+        if !tab.modell.tief_wirkt() && !tab.modell.inhalt_wirkt() {
             return false;
         }
         // Die Liste kommt aus dem Ordnermodell und wird hier nicht
@@ -2403,9 +2411,9 @@ mod tests {
     /// Folge schon traegt; was uebrig ist, entscheidet der Typ mit dem
     /// zugehoerigen Schalter.
     ///
-    /// Fuenf Zeichen sind es mit Absicht: sie liegen ueber beiden Schwellen,
-    /// also haengt das Ergebnis allein an den Schaltern und nicht daran, wie
-    /// `inhaltsschwelle` gerade steht.
+    /// Fuenf Zeichen sind es mit Absicht: sie liegen ueber der Schwelle, also
+    /// haengt das Ergebnis allein an den Schaltern. Bis zum 260908 gab es zwei
+    /// Schwellen zu ueberschreiten, seither ist es eine.
     #[test]
     fn die_auftragsliste_stellt_die_tafel_der_vier_auftragslagen() {
         use krk_core::verzeichnis::Typ;
@@ -2441,30 +2449,39 @@ mod tests {
         );
     }
 
-    /// C3.2: bei vier getippten Zeichen und gesetztem "Deep" entscheidet allein
-    /// der Name, auch wenn "Content" steht.
+    /// C3.2, seit dem 260908 umgekehrt: unter drei Zeichen traegt die
+    /// Auftragsliste gar nichts, ab drei beide Arten auf einmal.
     ///
-    /// Die Schwelle steigt mit der tiefen Suche von drei auf fuenf, und sie
-    /// wird bei jeder Bewertung neu gefragt. Ein fuenftes Zeichen holt die
-    /// Inhaltsauftraege zurueck.
+    /// **Bis dahin hiess diese Probe
+    /// `bei_vier_zeichen_und_deep_traegt_die_auftragsliste_keinen_inhaltsauftrag`**
+    /// und mass die Staffelung: vier Zeichen mit „Deep" liessen den
+    /// Unterbaumauftrag stehen und nahmen den Inhaltsauftrag weg, ein fuenftes
+    /// holte ihn zurueck. Beide Schalter haengen jetzt an derselben Schwelle,
+    /// und der Sprung liegt fuer beide beim dritten Zeichen.
+    ///
+    /// **Der Sprung ist die eigentliche Aussage.** Bei zwei Zeichen laeuft
+    /// nichts, weder ein Abstieg noch ein Lesen; beim dritten kommen beide
+    /// Auftragsarten zugleich, und die Liste sieht mit einem Anschlag anders
+    /// aus. Das ist gewollt und im Modulkopf von
+    /// `krk_core::verzeichnis::filter` begruendet.
     #[test]
-    fn bei_vier_zeichen_und_deep_traegt_die_auftragsliste_keinen_inhaltsauftrag() {
+    fn unter_drei_zeichen_traegt_die_auftragsliste_nichts_und_ab_drei_beides() {
         use krk_core::verzeichnis::Typ;
 
         let bestand = [("bild.png", Typ::Datei), ("bilder", Typ::Ordner)];
 
         assert_eq!(
-            auftragstafel(&modell_mit_schaltern(&bestand, "noti", true, true)),
-            [("bilder".to_owned(), Auftragsart::Unterbaum)],
-            "vier Zeichen liegen unter der Schwelle der tiefen Suche"
+            auftragstafel(&modell_mit_schaltern(&bestand, "no", true, true)),
+            [],
+            "zwei Zeichen liegen unter der Schwelle: kein Abstieg, kein Lesen"
         );
         assert_eq!(
-            auftragstafel(&modell_mit_schaltern(&bestand, "notiz", true, true)),
+            auftragstafel(&modell_mit_schaltern(&bestand, "not", true, true)),
             [
                 ("bild.png".to_owned(), Auftragsart::Inhalt),
                 ("bilder".to_owned(), Auftragsart::Unterbaum),
             ],
-            "das fuenfte Zeichen holt den Inhaltsauftrag zurueck"
+            "das dritte Zeichen holt beide Auftragsarten in einem Anschlag"
         );
     }
 
