@@ -305,6 +305,7 @@ use super::blaetter::{
 use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft};
 use super::ereignisse::{self, Anschlag, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
+use super::finder;
 use super::fsevents::Dateisystemwache;
 use super::git::Gitfenster;
 use super::hinweis;
@@ -6669,8 +6670,9 @@ impl Anwendungsdelegierter {
     /// **ob** es einen Vorgang gibt) und seit der Runde 17 die zwei Zweige des
     /// Kontextmenues, die einen Auftrag stellen
     /// ([`Self::zipauftrag_stellen`] und [`Self::entpackauftrag_stellen`]).
-    /// Der dritte Zweig jenes Menues fragt nicht: [`Self::im_finder_zeigen`]
-    /// stellt keinen Auftrag.
+    /// Die beiden Finder-Zweige jenes Menues fragen nicht:
+    /// [`Self::im_finder_oeffnen`] und [`Self::im_finder_anzeigen`] stellen
+    /// keinen Auftrag.
     ///
     /// Der sechste ist der Abwurf aus einer fremden Anwendung (C6 der Runde 13),
     /// und er nimmt die Frage **ohne** die Meldung. Der Grund ist der Ort seines
@@ -6785,15 +6787,15 @@ impl Anwendungsdelegierter {
     /// Fuehrt den angeklickten Eintrag des Kontextmenues aus (Runde 17).
     ///
     /// **Die Stelle, an der die Kette ankommt**, und die einzige, die einen der
-    /// drei Befehle ausfuehrt. Der Weg dorthin: `menuNeedsUpdate:` baut die
-    /// drei Eintraege mit **einem** Selektor und je einer Marke, der Klick
+    /// eigenen Befehle ausfuehrt. Der Weg dorthin: `menuNeedsUpdate:` baut die
+    /// Eintraege mit **einem** Selektor und je einer Marke, der Klick
     /// laeuft ueber `DateifensterQuelle::kontextbefehl_melden`, das die Marke
     /// ueber [`kontextmenue::Kontextbefehl::von_menuemarke`] zurueckrechnet,
     /// und der Rueckruf aus dem Aufbau der Oberflaeche fuehrt die Fensterseite
     /// mit. Ausgefuehrt wird hier, weil die Operationsmaschine hier haengt und
     /// eine Quelle nur ihre eigene Seite erreicht.
     ///
-    /// **Verzweigt wird vollstaendig und ohne Auffangzweig.** Ein vierter
+    /// **Verzweigt wird vollstaendig und ohne Auffangzweig.** Ein weiterer
     /// [`Kontextbefehl`] haelt damit den Bau an,
     /// statt still nichts zu tun — die Falle, die `CLAUDE.md` fuer
     /// Tastenbefehle beschreibt und die hier ein `NSMenuItem` waere, dessen
@@ -6807,13 +6809,14 @@ impl Anwendungsdelegierter {
     /// mit, und Fortschritt, Rueckfrage und Abschlusstext erscheinen in der
     /// Statuszeile jenes Dateifensters.
     ///
-    /// Drei duenne Zweige und kein Rumpf: was jeder tut, steht in seiner
+    /// Lauter duenne Zweige und kein Rumpf: was jeder tut, steht in seiner
     /// eigenen Funktion, damit diese Stelle allein die Zuordnung traegt.
     fn kontextbefehl_ausfuehren(&self, seite: Fensterseite, befehl: Kontextbefehl) {
         match befehl {
             Kontextbefehl::Zippen => self.zipauftrag_stellen(seite),
             Kontextbefehl::Entpacken => self.entpackauftrag_stellen(seite),
-            Kontextbefehl::ImFinderZeigen => self.im_finder_zeigen(seite),
+            Kontextbefehl::ImFinderOeffnen => self.im_finder_oeffnen(seite),
+            Kontextbefehl::ImFinderAnzeigen => self.im_finder_anzeigen(seite),
         }
     }
 
@@ -6927,6 +6930,12 @@ impl Anwendungsdelegierter {
 
     /// Oeffnet den angezeigten Ordner im Finder (Runde 17).
     ///
+    /// **Er wirkt auf den angezeigten Ordner und deckt keinen Eintrag auf**;
+    /// das Aufdecken ist der Nachbarzweig [`Self::im_finder_anzeigen`], und die
+    /// zwei sind zwei Wirkungen und nicht eine unter zwei Namen. Bis zur
+    /// 260907 hiess diese Funktion `im_finder_zeigen` und beschrieb damit die
+    /// Wirkung des Nachbarn; sie ist mit ihm umbenannt worden.
+    ///
     /// **Derselbe Weg wie der Terminal-Befehl aus C11**, und das ist der
     /// Zuschnitt: [`terminal::ordner_oeffnen`] beantwortet die Frage „wie kommt
     /// ein Ordner an eine ueber ihre Buendelkennung benannte Anwendung", und
@@ -6946,7 +6955,7 @@ impl Anwendungsdelegierter {
     /// darueber. Er stellt keinen Auftrag, fasst nichts an und reicht einen
     /// Pfad an das System weiter; die Frage nach dem einen Vorgang gilt der
     /// Operationsmaschine und nicht dem Menue.
-    fn im_finder_zeigen(&self, seite: Fensterseite) {
+    fn im_finder_oeffnen(&self, seite: Fensterseite) {
         let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
         if let Some(meldung) = operationen::ordner_fehlt(&ordner) {
             self.antwort_zeigen(seite, &meldung);
@@ -6955,6 +6964,49 @@ impl Anwendungsdelegierter {
         if !terminal::ordner_oeffnen(FINDERKENNUNG, &ordner) {
             self.antwort_zeigen(seite, &operationen::kein_finder());
         }
+    }
+
+    /// Deckt die betroffenen Eintraege im Finder auf (260907).
+    ///
+    /// **Er wirkt auf dieselbe Menge wie F5, F6 und die zwei Archivwege**,
+    /// naemlich auf [`operationen::betroffene`] ueber `betroffene_eintraege`:
+    /// die Markierung hat den Vorrang, sonst gilt die ausgewaehlte Zeile, die
+    /// der Rechtsklick vorher nachgerueckt hat. Eine leere Menge deckt nichts
+    /// auf und meldet es ([`operationen::nichts_anzuzeigen`]).
+    ///
+    /// **Der Unterschied zum Nachbarzweig [`Self::im_finder_oeffnen`] ist die
+    /// Menge und nicht der Adressat.** Jener gibt den **angezeigten Ordner** an
+    /// den Finder, dieser die **betroffenen Eintraege**; jener oeffnet ein
+    /// Fenster, dieser waehlt darin aus. Deshalb hat allein dieser einen Satz
+    /// fuer die leere Menge — einen angezeigten Ordner gibt es immer.
+    ///
+    /// **Gefragt wird vor dem Aufruf, weil danach niemand mehr antwortet.**
+    /// `NSWorkspace::activateFileViewerSelectingURLs:` liefert `void`
+    /// ([`crate::appkit::finder`]), also gibt es kein Scheitern, das sich
+    /// melden liesse. Was entscheidbar ist, steht davor: die leere Menge, und
+    /// ueber [`terminal::anwendung_vorhanden`] die Frage, ob das System
+    /// ueberhaupt einen Finder nennt. Deren Antwort ist notwendig und nicht
+    /// hinreichend; `false` heisst sicher „es geschieht nichts", `true` heisst
+    /// nur „eine Anwendung steht da". Ein Pfad, den es nicht mehr gibt, bleibt
+    /// danach unbemerkt — die offene Frage dazu steht im Kopf jener Datei.
+    ///
+    /// **Gemeldet wird [`operationen::kein_finder`]**, derselbe Satz wie im
+    /// Nachbarzweig: die Lage ist dieselbe, und zwei Formulierungen dafuer
+    /// waeren zwei Erklaerungen fuer eine Sache.
+    ///
+    /// **Kein laufender Vorgang haelt ihn auf**, aus demselben Grund wie beim
+    /// Nachbarzweig: er stellt keinen Auftrag und fasst nichts an.
+    fn im_finder_anzeigen(&self, seite: Fensterseite) {
+        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        if betroffen.ist_leer() {
+            self.antwort_zeigen(seite, &operationen::nichts_anzuzeigen());
+            return;
+        }
+        if !terminal::anwendung_vorhanden(FINDERKENNUNG) {
+            self.antwort_zeigen(seite, &operationen::kein_finder());
+            return;
+        }
+        finder::aufdecken(&betroffen.pfade);
     }
 
     /// Startet einen fertigen Auftrag auf der Operationsmaschine.
@@ -10106,7 +10158,7 @@ mod leseprofilproben {
 
 /// Die Kette des Kontextmenues, am Quelltext gezaehlt (Runde 17).
 ///
-/// **Warum am Baum und nicht an einem Ergebnis.** Die drei Menueeintraege sind
+/// **Warum am Baum und nicht an einem Ergebnis.** Die Menueeintraege sind
 /// ohne laufende Anwendung nicht auszuloesen: ein `NSMenu` verlangt den
 /// Hauptfaden, den `libtest` nicht hergibt, und der Anwendungsdelegierte ist
 /// ohne Fenster nicht zu bauen. Was hier gehalten wird, ist deshalb eine
@@ -10165,13 +10217,19 @@ mod kontextproben {
         );
     }
 
-    /// Jeder der drei Kontextbefehle erreicht **seinen** Zweig, und jeder Zweig
-    /// eine Wirkung.
+    /// Jeder Kontextbefehl erreicht **seinen** Zweig, und jeder Zweig eine
+    /// Wirkung.
     ///
     /// Zwei Glieder in einer Probe, weil sie zusammen erst die Aussage tragen:
     /// die Zuordnung Befehl → Zweig steht in der Verzweigung, die Wirkung im
     /// Rumpf des Zweigs. Ein Zweig, der auf einen leeren Rumpf zeigte,
     /// uebersetzte und liesse jede andere Probe gruen.
+    ///
+    /// **Seit dem 260907 traegt die Tafel zwei Finder-Zeilen**, und sie sind
+    /// der Fall, fuer den die Paarung gebaut ist: „oeffnen" und „anzeigen"
+    /// unterscheiden sich in einem Wort, ihre Wirkungen liegen in verschiedenen
+    /// Modulen ([`super::terminal`] und [`super::finder`]), und eine
+    /// vertauschte Zeile bliebe beim Lesen unsichtbar.
     ///
     /// **Gezaehlt wird zeilenweise, und daran haengt die Aussage.** Gehalten
     /// wird die **Paarung** und nicht das blosse Vorhandensein: Befehl und
@@ -10194,7 +10252,7 @@ mod kontextproben {
         /// Befehl, Zweig und die Nadel, an der die Wirkung des Zweigs zu
         /// erkennen ist. Die Nadeln stehen zusammengesetzt da, aus demselben
         /// Grund wie in der Probe darueber.
-        const ZWEIGE: [(&str, &str, &str); 3] = [
+        const ZWEIGE: [(&str, &str, &str); 4] = [
             (
                 "Kontextbefehl::Zippen",
                 "zipauftrag_stellen",
@@ -10206,9 +10264,14 @@ mod kontextproben {
                 concat!("Auftrag::", "entpacken("),
             ),
             (
-                "Kontextbefehl::ImFinderZeigen",
-                "im_finder_zeigen",
+                "Kontextbefehl::ImFinderOeffnen",
+                "im_finder_oeffnen",
                 concat!("terminal::", "ordner_oeffnen("),
+            ),
+            (
+                "Kontextbefehl::ImFinderAnzeigen",
+                "im_finder_anzeigen",
+                concat!("finder::", "aufdecken("),
             ),
         ];
 

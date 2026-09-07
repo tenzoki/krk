@@ -130,6 +130,17 @@
 //! Ausfuehrung beim Anwendungsdelegierten fragt [`packziel`] und liest den
 //! [`Entpackbefund`], den sie sich von der Quelle geben laesst.
 //!
+//! # Was der 260907 hinzugelegt hat
+//!
+//! Einen weiteren Wert in [`Kontextbefehl`], „Im Finder anzeigen", und keine
+//! Rechnung daneben: er wirkt auf [`super::operationen::betroffene`] wie F5 und
+//! F6, und was mit dieser Menge geschieht, steht beim Anwendungsdelegierten und
+//! in `crate::appkit::finder`. **Dieses Modul rechnet fuer ihn nichts**, denn
+//! es gibt nichts zu rechnen: kein Name entsteht, kein Ziel wird geklaert, und
+//! aus den Quellen faellt nichts heraus. Was er hier gewinnt, ist allein die
+//! Einordnung in die Aufzaehlung — Titel, Marke und der Zweig, den der
+//! Uebersetzer einfordert.
+//!
 //! **Bis zur Runde 17 stand hier `expect(dead_code)` am ganzen Modul**, mit
 //! einem Ablaufdatum: `krk-ui` hat kein Bibliotheksziel, also ist `pub` hier
 //! keine Wurzel, und bis zum ersten Aufrufer meldete der Uebersetzer jedes
@@ -176,12 +187,24 @@ const ERSATZSTAMM: &str = "Archiv";
 /// ausfuehrt.
 ///
 /// **Sie ist zugleich die Sperre gegen den Menueeintrag, der nichts tut.** Die
-/// drei Eintraege teilen sich einen Selektor und unterscheiden sich allein in
-/// ihrer Marke; die Ausfuehrung beim Anwendungsdelegierten verzweigt ueber
-/// diesen Wert vollstaendig und ohne Auffangzweig. Ein vierter Wert haelt damit
-/// den Bau an, statt still nichts zu tun — die Falle, die `CLAUDE.md` fuer
+/// Eintraege teilen sich einen Selektor und unterscheiden sich allein in ihrer
+/// Marke; die Ausfuehrung beim Anwendungsdelegierten verzweigt ueber diesen
+/// Wert vollstaendig und ohne Auffangzweig. Ein weiterer Wert haelt damit den
+/// Bau an, statt still nichts zu tun — die Falle, die `CLAUDE.md` fuer
 /// Tastenbefehle beschreibt und die hier ein `NSMenuItem` waere, dessen
-/// Selektor nirgends ankommt.
+/// Selektor nirgends ankommt. **Wie viele Werte sie traegt, sagt
+/// [`Kontextbefehl::ALLE`] und keine Zahl in dieser Prosa**: sie stand von der
+/// Runde 17 bis zum 260907 auf drei und ist mit dem Aufdecken falsch
+/// geworden.
+///
+/// **Die zwei Finder-Werte tragen zwei Wirkungen und nicht eine unter zwei
+/// Namen.** [`Kontextbefehl::ImFinderOeffnen`] gibt den **angezeigten Ordner**
+/// an den Finder und deckt keinen Eintrag auf;
+/// [`Kontextbefehl::ImFinderAnzeigen`] deckt die **betroffenen Eintraege** auf
+/// und oeffnet keinen Ordner. Bis zum 260907 hiess der erste
+/// `ImFinderZeigen` und war mit „Im Finder oeffnen" beschriftet — ein Name, der
+/// die Wirkung des zweiten beschrieb; er ist mit ihm umbenannt worden, damit
+/// die zwei Namen die zwei Wirkungen tragen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kontextbefehl {
     /// Die betroffenen Eintraege in ein Archiv im angezeigten Ordner packen.
@@ -189,22 +212,30 @@ pub enum Kontextbefehl {
     /// Jedes betroffene Archiv in einen eigenen neuen Ordner entpacken.
     Entpacken,
     /// Den angezeigten Ordner im Finder oeffnen.
-    ImFinderZeigen,
+    ImFinderOeffnen,
+    /// Die betroffenen Eintraege im Finder aufdecken, also in einem
+    /// Finder-Fenster ausgewaehlt zeigen.
+    ImFinderAnzeigen,
 }
 
 impl Kontextbefehl {
-    /// Alle drei Befehle, in der Reihenfolge, in der sie im Menue stehen.
+    /// Jeder Befehl, in der Reihenfolge, in der sie im Menue stehen.
+    ///
+    /// **Die zwei Finder-Eintraege stehen nebeneinander**, und das ist die
+    /// Stelle, an der die Reihenfolge im Menue entschieden wird: „Im Finder
+    /// oeffnen" und „Im Finder anzeigen" unterscheiden sich in einem Wort, und
+    /// wer sie auseinanderzoege, liesse den Nutzer zwischen ihnen suchen.
     ///
     /// **Kein `#[cfg(test)]` davor, anders als bei
     /// `Fokus::ALLE` in [`super::fokus`]**: der Menuebau laeuft ueber
-    /// diese Liste und baut nicht drei Eintraege von Hand. Damit ist die
+    /// diese Liste und baut die Eintraege nicht von Hand. Damit ist die
     /// Reihenfolge im Menue dieselbe Angabe wie die Reihenfolge hier, und ein
-    /// vierter Befehl erscheint, ohne dass jemand eine zweite Stelle nachzieht.
+    /// weiterer Befehl erscheint, ohne dass jemand eine zweite Stelle nachzieht.
     ///
     /// **Die Feldbreite in der Typangabe haelt den Bau nicht an.**
-    /// `[Kontextbefehl; 3]` zwingt zu drei Gliedern und sagt nichts darueber,
-    /// welche drei: eine vierte Variante von [`Kontextbefehl`], die niemand hier
-    /// eintraegt, uebersetzt vorbei. Bis zum 260831 stand hier das Gegenteil
+    /// `[Kontextbefehl; 4]` zwingt zu vier Gliedern und sagt nichts darueber,
+    /// welche vier: eine fuenfte Variante von [`Kontextbefehl`], die niemand
+    /// hier eintraegt, uebersetzt vorbei. Bis zum 260831 stand hier das Gegenteil
     /// (`issues/260831-1212_*_kontextmenue-rs-behauptet-eine-feldbreite-halte-den-bau-an-und-ist-die-siebte-stelle-dieser-art.md`),
     /// und gemessen ist die Behauptung in
     /// `issues/260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md`.
@@ -213,32 +244,39 @@ impl Kontextbefehl {
     /// den Wert**, und keine davon steht hier: [`Kontextbefehl::titel`],
     /// [`Kontextbefehl::menuemarke`] und der Ausfuehrungszweig beim
     /// Anwendungsdelegierten verzweigen je vollstaendig und ohne Auffangzweig,
-    /// also erzwingt ein vierter Wert eine Einordnung an drei Stellen. **Dass er
-    /// auch in dieser Liste landet, erzwingt nichts**: die Probe
+    /// also erzwingt ein weiterer Wert eine Einordnung an drei Stellen. **Dass
+    /// er auch in dieser Liste landet, erzwingt nichts**: die Probe
     /// `die_tafel_nennt_jeden_befehl_genau_einmal` laeuft ueber `ALLE` und haelt
     /// die Tafel dagegen, nicht `ALLE` gegen die Aufzaehlung. Wie eine
     /// `ALLE`-Liste kuenftig vollstaendig gehalten wird, ist die offene Frage
     /// `decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`.
-    pub const ALLE: [Kontextbefehl; 3] = [
+    pub const ALLE: [Kontextbefehl; 4] = [
         Kontextbefehl::Zippen,
         Kontextbefehl::Entpacken,
-        Kontextbefehl::ImFinderZeigen,
+        Kontextbefehl::ImFinderOeffnen,
+        Kontextbefehl::ImFinderAnzeigen,
     ];
 
     /// Der Titel, den der Nutzer im Menue liest.
     ///
-    /// **Zwei tragen den Namen des Werkzeugs, einer die Handlung**, und das ist
-    /// keine Nachlaessigkeit: „Zip" und „Unzip" hat der Nutzer im Entwurf
-    /// dieser Runde selbst so genannt, und beide sind als Werkzeugnamen
-    /// gelaeufiger als jede deutsche Fassung. „Finder" allein waere dagegen ein
-    /// Hauptwort ohne Handlung; der Eintrag oeffnet den angezeigten Ordner, und
-    /// genau das sagt sein Titel.
+    /// **Zwei tragen den Namen des Werkzeugs, die uebrigen die Handlung**, und
+    /// das ist keine Nachlaessigkeit: „Zip" und „Unzip" hat der Nutzer im
+    /// Entwurf der Runde 17 selbst so genannt, und beide sind als
+    /// Werkzeugnamen gelaeufiger als jede deutsche Fassung. „Finder" allein
+    /// waere dagegen ein Hauptwort ohne Handlung, und die zwei Finder-Eintraege
+    /// wuerden dadurch ununterscheidbar; ihre Titel nennen deshalb das Verb, in
+    /// dem sie sich unterscheiden.
+    ///
+    /// **Die Titel tragen Umlaute**, wie jeder Text, den ein Mensch liest
+    /// (Nutzerentscheid vom 260907-0703); die Umschrift bleibt Kommentaren und
+    /// Bezeichnern vorbehalten.
     #[must_use]
     pub fn titel(self) -> &'static str {
         match self {
             Kontextbefehl::Zippen => "Zip",
             Kontextbefehl::Entpacken => "Unzip",
-            Kontextbefehl::ImFinderZeigen => "Im Finder öffnen",
+            Kontextbefehl::ImFinderOeffnen => "Im Finder öffnen",
+            Kontextbefehl::ImFinderAnzeigen => "Im Finder anzeigen",
         }
     }
 
@@ -265,7 +303,8 @@ impl Kontextbefehl {
         match self {
             Kontextbefehl::Zippen => 1,
             Kontextbefehl::Entpacken => 2,
-            Kontextbefehl::ImFinderZeigen => 3,
+            Kontextbefehl::ImFinderOeffnen => 3,
+            Kontextbefehl::ImFinderAnzeigen => 4,
         }
     }
 
@@ -276,7 +315,7 @@ impl Kontextbefehl {
     /// `NSMenuItem` eingeschlossen.
     ///
     /// **Gerechnet wird ueber [`Kontextbefehl::ALLE`] und nicht mit einer
-    /// zweiten Tafel.** Eine zweite Verzweigung von Hand haette dieselben drei
+    /// zweiten Tafel.** Eine zweite Verzweigung von Hand haette dieselben
     /// Zahlen ein zweites Mal getragen, und die erste Abweichung zwischen
     /// beiden waere ein Menueeintrag, der den falschen Befehl ausloest.
     #[must_use]
@@ -387,7 +426,7 @@ pub fn ist_zipname(name: &str) -> bool {
 ///
 /// # Warum ein Ersatzname und nicht eine Meldung
 ///
-/// Die Directive dieser Runde sagt: die drei Eintraege sind immer da und immer
+/// Die Directive der Runde 17 sagt: die Eintraege sind immer da und immer
 /// bedienbar, und wo ein Befehl **nichts vorfindet**, meldet er es in der
 /// Statuszeile. Unzip findet hier aber etwas vor — der Nutzer hat auf eine
 /// Datei geklickt, die die Endung sichtbar traegt.
@@ -851,7 +890,7 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // Die drei Befehle des Menues
+    // Die eigenen Befehle des Menues
     // ------------------------------------------------------------------
 
     /// Titel und Marke je Befehl, von Hand geschrieben.
@@ -861,13 +900,19 @@ mod tests {
     /// die Verzweigung gegen sich selbst und liefe mit jeder Aenderung
     /// stillschweigend mit; hier stuende dann ein umbenannter Menueeintrag in
     /// keiner Probe.
-    const TAFEL: [(Kontextbefehl, &str, isize); 3] = [
+    ///
+    /// **Die zwei Finder-Titel stehen ausgeschrieben nebeneinander**, und das
+    /// ist der Zweck dieser Tafel seit dem 260907: sie unterscheiden sich in
+    /// einem Wort, und eine Vertauschung von „oeffnen" und „anzeigen" beschriebe
+    /// jeweils die Wirkung des anderen Eintrags.
+    const TAFEL: [(Kontextbefehl, &str, isize); 4] = [
         (Kontextbefehl::Zippen, "Zip", 1),
         (Kontextbefehl::Entpacken, "Unzip", 2),
-        (Kontextbefehl::ImFinderZeigen, "Im Finder öffnen", 3),
+        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 3),
+        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 4),
     ];
 
-    /// Die Tafel ueber alle drei Werte, an einem Stueck.
+    /// Die Tafel ueber jeden Wert, an einem Stueck.
     #[test]
     fn jeder_befehl_traegt_seinen_titel_und_seine_marke() {
         for (befehl, titel, marke) in TAFEL {
@@ -888,7 +933,7 @@ mod tests {
     ///
     /// Der Uebersetzer erzwingt, dass [`Kontextbefehl::titel`] jeden Wert
     /// beantwortet, aber nicht, dass die Tafel jeden nennt. Ohne diese Probe
-    /// liefe ein vierter Befehl ungeprueft mit, obwohl `titel` ihn einordnen
+    /// liefe ein weiterer Befehl ungeprueft mit, obwohl `titel` ihn einordnen
     /// musste.
     #[test]
     fn die_tafel_nennt_jeden_befehl_genau_einmal() {
@@ -902,7 +947,7 @@ mod tests {
         assert_eq!(TAFEL.len(), Kontextbefehl::ALLE.len());
     }
 
-    /// Der Rundweg Marke → Wert → Marke ueber alle drei Befehle.
+    /// Der Rundweg Marke → Wert → Marke ueber jeden Befehl.
     ///
     /// Er ist die Zusage, an der der eine Selektor haengt: der Menueeintrag
     /// traegt nichts als seine Marke, und der Anwendungsdelegierte rechnet
@@ -943,7 +988,7 @@ mod tests {
     /// begaenne die Zaehlung dort, loeste er das Packen aus.
     #[test]
     fn die_null_und_alles_daneben_benennen_keinen_befehl() {
-        for marke in [-1, 0, 4, 99] {
+        for marke in [-1, 0, 5, 99] {
             assert_eq!(
                 Kontextbefehl::von_menuemarke(marke),
                 None,

@@ -122,9 +122,10 @@
 //!                                  Benutzerordner selbst  Benutzerordner
 //!   6    Arbeitsbaum               arbeitsbaum == Ja      aus einem
 //!                                                         Git-Arbeitsbaum
-//!   7    Umfang                    umfang erreicht die    mit 25 Eintraegen /
-//!                                  Schwelle               mit mehr als 25
-//!                                                         Eintraegen
+//!   7    Umfang                    umfang erreicht die    mit 25 Eintraegen
+//!                                  Schwelle               insgesamt /
+//!                                                         mit mehr als 25
+//!                                                         Eintraegen insgesamt
 //! ```
 //!
 //! Die Rangfolge steht so im Spec unter C3 und ist danach geordnet, **wie
@@ -587,6 +588,19 @@ impl Warngrund {
     /// passen: in die Frage als Einschub und in die Erlaeuterung als Glied einer
     /// Aufzaehlung. Ein Satz koennte nur eines von beiden.
     ///
+    /// **Die beiden Wortlaute des Umfangs tragen seit dem 260907 das Wort
+    /// „insgesamt" und weichen damit von der Spalte des Specs ab.** Sie stehen
+    /// in der Frage neben einer zweiten Zahl, und bei einer flachen Auswahl an
+    /// der Schwelle ist das dieselbe Zahl: „Diese 25 Eintraege mit 25
+    /// Eintraegen in den Papierkorb raeumen?" las sich wie fuenfzig. Das Wort
+    /// sagt, dass die zweite Zahl den ganzen Unterbau zaehlt und keine zweite
+    /// Menge daneben. Kein Verhalten haengt daran; das Abnahmekriterium des
+    /// Specs haelt weiter, denn es verlangt die Zahl 25 beziehungsweise „mehr
+    /// als 25" im Wortlaut, und beide tragen sie. So gewaehlt vom Nutzer am
+    /// 260907-0703
+    /// (`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/decisions/260818-0512_*_wie-lautet-die-frage-wenn-der-umfang-der-genannte-grund-ist-und-die-zahl-doppelt-dasteht.md`,
+    /// Moeglichkeit 2).
+    ///
     /// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: die
     /// Funktion ist rein, und ohne ihren Rueckgabewert nennt die Rueckfrage
     /// ihren Grund nicht.
@@ -603,8 +617,8 @@ impl Warngrund {
             Self::AusserhalbBenutzerordner => "außerhalb des Benutzerordners",
             Self::ImBenutzerordner => "unmittelbar im Benutzerordner",
             Self::Arbeitsbaum => "aus einem Git-Arbeitsbaum",
-            Self::Umfang(Umfangsgrund::GenauDieSchwelle) => "mit 25 Einträgen",
-            Self::Umfang(Umfangsgrund::MehrAlsDieSchwelle) => "mit mehr als 25 Einträgen",
+            Self::Umfang(Umfangsgrund::GenauDieSchwelle) => "mit 25 Einträgen insgesamt",
+            Self::Umfang(Umfangsgrund::MehrAlsDieSchwelle) => "mit mehr als 25 Einträgen insgesamt",
         }
     }
 }
@@ -766,9 +780,10 @@ pub fn warngruende(ziel: &Loeschziel) -> Vec<Warngrund> {
         // Unter der Schwelle, also kein Warngrund.
         Umfang::Genau(_) => {}
         // Die mitgefuehrte Zahl wird gelesen und nicht weggeworfen. „Mehr als
-        // `n`" traegt den Wortlaut „mit mehr als 25 Eintraegen" nur, wenn `n`
-        // die Schwelle erreicht; `zaehlen` liefert nichts anderes, aber
-        // `Umfang` ist oeffentlich und `MehrAls(10)` damit baubar. Ein
+        // `n`" traegt den Wortlaut „mit mehr als 25 Eintraegen insgesamt" nur
+        // dann, wenn `n` die Schwelle erreicht; `zaehlen` liefert nichts
+        // anderes, aber `Umfang` ist oeffentlich und `MehrAls(10)` damit
+        // baubar. Ein
         // weggeworfener Wert liesse die Rueckfrage aus „mehr als 10" ein „mehr
         // als 25" machen, also eine Zahl behaupten, die niemand gezaehlt hat.
         Umfang::MehrAls(gedeckelt) if gedeckelt >= SCHWELLE => {
@@ -1446,6 +1461,11 @@ mod tests {
     /// und der achte, und [`Warngrund::Unentscheidbar`] traegt die hier
     /// gewaehlte Fuegung. Die Erwartungen stehen als Zeichenketten da und werden
     /// nicht gerechnet, aus demselben Grund wie in [`super::super::rueckschritt`].
+    ///
+    /// **Die beiden Wortlaute des Umfangs tragen das Wort „insgesamt" und
+    /// stehen damit nicht mehr woertlich in jener Spalte.** Warum, steht am
+    /// Rumpf von [`Warngrund::wortlaut`]; diese Probe ist die Stelle, an der
+    /// eine Ruecknahme des Zusatzes auffiele.
     #[test]
     fn jeder_grund_traegt_seinen_wortlaut() {
         const TAFEL: [(Warngrund, &str); 8] = [
@@ -1463,11 +1483,11 @@ mod tests {
             (Warngrund::Arbeitsbaum, "aus einem Git-Arbeitsbaum"),
             (
                 Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle),
-                "mit 25 Einträgen",
+                "mit 25 Einträgen insgesamt",
             ),
             (
                 Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle),
-                "mit mehr als 25 Einträgen",
+                "mit mehr als 25 Einträgen insgesamt",
             ),
         ];
 
@@ -1654,12 +1674,12 @@ mod tests {
     ///
     /// **Die letzten drei Zeilen messen, dass die Zahl an `MehrAls` gelesen und
     /// nicht weggeworfen wird.** `MehrAls(25)` und `MehrAls(26)` tragen den
-    /// Wortlaut „mit mehr als 25 Eintraegen", denn beide schliessen die Schwelle
-    /// ein. `MehrAls(10)` tut es nicht: darueber, ob die Schwelle erreicht ist,
-    /// sagt es nichts, und ein Zweig, der die Zahl fallen laesst, liesse die
-    /// Rueckfrage genau hier die 25 behaupten. `zaehlen` liefert diesen Wert
-    /// nicht, [`Umfang`] ist aber oeffentlich und `MehrAls` oeffentlich baubar
-    /// (`issues/260817-1804_*`).
+    /// Wortlaut „mit mehr als 25 Eintraegen insgesamt", denn beide schliessen
+    /// die Schwelle ein. `MehrAls(10)` tut es nicht: darueber, ob die Schwelle
+    /// erreicht ist, sagt es nichts, und ein Zweig, der die Zahl fallen
+    /// laesst, liesse die Rueckfrage genau hier die 25 behaupten. `zaehlen`
+    /// liefert diesen Wert nicht, [`Umfang`] ist aber oeffentlich und
+    /// `MehrAls` oeffentlich baubar (`issues/260817-1804_*`).
     #[test]
     fn der_umfang_loest_ab_der_schwelle_aus() {
         let genau = Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle);
@@ -1769,8 +1789,8 @@ mod tests {
         assert_eq!(
             erlaeuterung,
             "Geräumt wird aus /Volumes/Netz/Projekt.\n\nAußerdem: aus einem Git-Arbeitsbaum, \
-             mit mehr als 25 Einträgen.\n\nDarunter ein Ordner, jeweils mit ihrem gesamten \
-             Inhalt."
+             mit mehr als 25 Einträgen insgesamt.\n\nDarunter ein Ordner, jeweils mit ihrem \
+             gesamten Inhalt."
         );
         assert!(
             !erlaeuterung.contains("von einem Netzlaufwerk"),
@@ -1796,6 +1816,37 @@ mod tests {
             "Diesen Eintrag von einem Ziel unbekannter Einordnung in den Papierkorb räumen?"
         );
         assert_eq!(erlaeuterung, "Geräumt wird aus /Users/k1/Notizen.");
+    }
+
+    /// Stehen beide Zahlen nebeneinander, sagt die zweite, was sie zaehlt.
+    ///
+    /// **Der Fall, um den die Nutzerentscheidung vom 260907-0703 laeuft.** Eine
+    /// flache Auswahl von 25 Zeilen an der Schwelle nennt beide Male die 25:
+    /// die erste Zahl die markierten Zeilen, die zweite den Unterbau darunter.
+    /// Ohne den Zusatz las sich der Satz wie fuenfzig. Beide Formen stehen hier
+    /// als ganze Zeichenketten, denn an ihrem Wortlaut haengt der Befund
+    /// (`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/decisions/260818-0512_*_wie-lautet-die-frage-wenn-der-umfang-der-genannte-grund-ist-und-die-zahl-doppelt-dasteht.md`).
+    #[test]
+    fn die_zweite_zahl_sagt_dass_sie_insgesamt_zaehlt() {
+        let (genau, _) = frage_und_erlaeuterung(
+            &auswahl(25, 0),
+            Path::new("/Users/k1/Notizen"),
+            &[Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle)],
+        );
+        assert_eq!(
+            genau,
+            "Diese 25 Einträge mit 25 Einträgen insgesamt in den Papierkorb räumen?"
+        );
+
+        let (mehr, _) = frage_und_erlaeuterung(
+            &auswahl(30, 0),
+            Path::new("/Users/k1/Notizen"),
+            &[Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle)],
+        );
+        assert_eq!(
+            mehr,
+            "Diese 30 Einträge mit mehr als 25 Einträgen insgesamt in den Papierkorb räumen?"
+        );
     }
 
     /// Ohne Grund stehen beide Texte Wort fuer Wort wie vor dieser Stufe (C2).

@@ -9,7 +9,8 @@
 //! Uebergabe an das Standardprogramm aus C3, und seit dem 260812
 //! [`nichts_zu_teilen`] fuer das Teilen aus C1 der Runde 6, und seit der
 //! Runde 17 [`nichts_zu_packen`], [`kein_archiv`], [`mehrere_archive`] und
-//! [`kein_finder`] fuer die drei Eintraege des Kontextmenues, deren Regel in
+//! [`kein_finder`] und seit dem 260907 [`nichts_anzuzeigen`] fuer die
+//! eigenen Eintraege des Kontextmenues, deren Regel in
 //! [`super::kontextmenue`] steht, und seit der Runde 22 [`Dateiablage`],
 //! [`namenszeilen`], [`ablagemeldung`] und [`verweise_abgewiesen`] fuer die
 //! Dateiverweise, die `cmd+c` und `cmd+x` im Dateifenster ablegen, und seit
@@ -208,34 +209,42 @@ pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
     auswahl
 }
 
-/// Auf welche Zeile ein Rechtsklick die Auswahl setzt, **bevor**
-/// [`betroffene`] gefragt wird (Nutzerentscheid vom 260812-1200).
+/// Auf welche Zeile ein Rechtsklick die Auswahl setzt und dabei die Markierung
+/// aufhebt, **bevor** [`betroffene`] gefragt wird (Nutzerentscheide vom
+/// 260812-1200 und vom 260907-0703).
 ///
-/// `None` heisst: die Auswahl bleibt stehen. `Some(zeile)` heisst: der
-/// Aufrufer setzt sie auf diese Zeile, und zwar auf demselben Weg wie ein
-/// Tastenbefehl, damit die Vorschau davon erfaehrt.
+/// `None` heisst: Auswahl und Markierung bleiben stehen. `Some(zeile)` heisst:
+/// der Aufrufer hebt **jede** Markierung auf und setzt die Auswahl auf diese
+/// Zeile, und zwar auf demselben Weg wie ein Tastenbefehl, damit die Vorschau
+/// davon erfaehrt.
 ///
 /// **Eine zweite Auswahlregel entsteht hier nicht.** [`betroffene`] bleibt
 /// unangetastet und beantwortet weiterhin allein, worauf ein Befehl wirkt;
-/// geaendert wird die Auswahl vor ihr. Der Datensatz dieser Runde,
+/// geaendert werden Auswahl und Markierung vor ihr. Der Datensatz der Runde 6,
 /// `decisions/260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`,
-/// entscheidet genau so und lehnt die beiden anderen Moeglichkeiten
-/// ausdruecklich ab: den Rechtsklick ohne jede Wirkung, weil ein Menue, das
-/// auf A zeigt und auf B wirkt, bei einem spaeteren Eintrag mit
-/// zerstoerender Wirkung der teuerste Fehler einer Oberflaeche ist; und das
-/// Setzen ohne Ausnahme, weil es die Markierung des Nutzers wegnaehme.
+/// lehnte den Rechtsklick ohne jede Wirkung ausdruecklich ab, weil ein Menue,
+/// das auf A zeigt und auf B wirkt, bei einem spaeteren Eintrag mit
+/// zerstoerender Wirkung der teuerste Fehler einer Oberflaeche ist.
 ///
-/// **Die Ausnahme traegt die Antwort.** Ist die angeklickte Zeile markiert,
-/// bleiben Auswahl und Markierung stehen: wer dreissig Eintraege markiert hat
-/// und mit rechts auf einen davon klickt, verliert nichts. Ist sie es nicht,
-/// rueckt die Auswahl auf sie, und der Klick zeigt auf dasselbe, worauf er
-/// wirkt.
+/// **Seit dem 260907 hebt der Klick die Markierung auf, und damit ist genau
+/// jener Fehler geschlossen.** Bis dahin galt die dritte Moeglichkeit des
+/// Datensatzes als abgelehnt, und der Preis stand hier ausgeschrieben: ein
+/// Klick auf eine **un**markierte Zeile rueckte die Auswahl nach, aenderte aber
+/// nichts am Ergebnis, weil die Markierung in [`betroffene`] den Vorrang
+/// behaelt — das Menue zeigte auf A und wirkte auf B. Der Nutzer hat die
+/// Moeglichkeit nun gewaehlt, so wie der Finder es haelt; Anzeige und Wirkung
+/// fallen danach wieder zusammen.
 ///
-/// **Was die Ausnahme nicht deckt**, und der Preis gehoert genannt: ein Klick
-/// auf eine **un**markierte Zeile, waehrend anderswo in der Liste etwas
-/// markiert ist, rueckt die Auswahl zwar nach, aendert aber nichts am
-/// Ergebnis, weil die Markierung in [`betroffene`] den Vorrang behaelt. Das
-/// Aufheben der Markierung waere die abgelehnte dritte Moeglichkeit.
+/// **Die Ausnahme traegt die Antwort weiter.** Ist die angeklickte Zeile
+/// markiert, bleiben Auswahl und Markierung stehen: wer dreissig Eintraege
+/// markiert hat und mit rechts auf einen davon klickt, verliert nichts, und die
+/// dreissig sind dann die betroffene Menge. Ist sie es nicht, faellt die
+/// Markierung und die Auswahl rueckt auf die angeklickte Zeile.
+///
+/// **Der Klick auf keine Zeile hebt nichts auf**, und das ist der Zuschnitt der
+/// Nutzerantwort: sie spricht von der unmarkierten **Zeile**. Ein Klick unter
+/// die letzte Zeile oder auf die leere Flaeche laesst deshalb alles stehen,
+/// statt eine Markierung wegzunehmen, auf die das Menue danach wirkt.
 ///
 /// `angeklickt` ist der Wert von `NSTableView.clickedRow`. Drei Faelle fuehren
 /// zu `None` und einer zu `Some`:
@@ -1017,7 +1026,7 @@ pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
 /// daneben saehe wie eine andere Lage aus (C1.7 der Runde 22).
 #[must_use]
 pub fn nichts_zu_kopieren() -> String {
-    nichts_betroffen("kopieren")
+    nichts_betroffen("zu kopieren")
 }
 
 /// Der Satz, wenn beim Oeffner kein Eintrag betroffen ist (C3).
@@ -1027,7 +1036,7 @@ pub fn nichts_zu_kopieren() -> String {
 /// verschieden gebaute Saetze sonst wie zwei verschiedene Lagen aussaehe.
 #[must_use]
 pub fn nichts_zu_oeffnen() -> String {
-    nichts_betroffen("öffnen")
+    nichts_betroffen("zu öffnen")
 }
 
 /// Der Satz, wenn beim Packen kein Eintrag betroffen ist (Runde 17).
@@ -1046,7 +1055,25 @@ pub fn nichts_zu_oeffnen() -> String {
 /// (`Anwendungsdelegierter::zipauftrag_stellen`).
 #[must_use]
 pub fn nichts_zu_packen() -> String {
-    nichts_betroffen("packen")
+    nichts_betroffen("zu packen")
+}
+
+/// Der Satz, wenn „Im Finder anzeigen" keinen Eintrag vorfindet (260907).
+///
+/// **Der vierte Eingang von [`nichts_betroffen`], und er steht aus demselben
+/// Grund dort wie das Packen darueber:** der Eintrag wirkt auf dieselbe Menge
+/// wie F5, F6 und die zwei Archivwege, naemlich auf [`betroffene`], und findet
+/// auf dieselbe Weise nichts — nichts markiert und nichts ausgewaehlt.
+///
+/// **Der Nachbareintrag „Im Finder oeffnen" hat keinen solchen Satz**, und das
+/// ist kein Versehen: er wirkt auf den angezeigten Ordner, und den gibt es
+/// immer. Genau daran haengt der Unterschied der zwei Eintraege, und hier wird
+/// er zum ersten Mal sichtbar.
+/// **Ein Rufer**, der Anzeige-Zweig des Kontextmenues
+/// (`Anwendungsdelegierter::im_finder_anzeigen`).
+#[must_use]
+pub fn nichts_anzuzeigen() -> String {
+    nichts_betroffen("anzuzeigen")
 }
 
 /// Der Satz, wenn beim Teilen nichts zu uebergeben ist (C1 der Runde 6).
@@ -1122,29 +1149,43 @@ pub fn mehrere_archive() -> String {
 /// **Der Fall ist selten und wird trotzdem gemeldet**, aus demselben Grund wie
 /// bei [`ablage_weist_ab`]: ein Befehl, der still nichts tut, sieht aus wie
 /// einer, der nicht angekommen ist.
-/// **Ein Rufer**, der Finder-Zweig des Kontextmenues
-/// (`Anwendungsdelegierter::im_finder_zeigen`), wenn
-/// `crate::appkit::terminal::ordner_oeffnen` `false` liefert.
+///
+/// **Zwei Rufer, und sie fragen an verschiedenen Stellen.**
+/// `Anwendungsdelegierter::im_finder_oeffnen` meldet, wenn
+/// `crate::appkit::terminal::ordner_oeffnen` `false` liefert, also **nachdem**
+/// die Uebergabe an der fehlenden Anwendung gescheitert ist.
+/// `Anwendungsdelegierter::im_finder_anzeigen` meldet **vor** seinem Aufruf,
+/// auf `crate::appkit::terminal::anwendung_vorhanden`, denn sein eigener
+/// Aufruf gibt nichts zurueck (seit dem 260907). Derselbe Satz fuer beide, weil die
+/// Lage dieselbe ist: das System nennt keinen Finder.
 #[must_use]
 pub fn kein_finder() -> String {
     "der Finder ist nicht erreichbar: das System hat keine Anwendung dafür genannt".to_owned()
 }
 
-/// Die gemeinsame Haelfte der beiden Saetze darueber.
+/// Die gemeinsame Haelfte der Saetze darueber.
 ///
-/// **Zwei Eingaenge und ein Rumpf, und die Aufteilung hat einen Grund.** Bis
+/// **Mehrere Eingaenge und ein Rumpf, und die Aufteilung hat einen Grund.** Bis
 /// zum 260811 war es ein einziger Satz ohne Verb, gemeinsam fuer beide
 /// Befehle; er nannte die Lage und traf damit den Wortlaut von C2 nicht.
-/// Getrennt wird nur, was sich zwischen den Befehlen unterscheidet, naemlich
-/// das Verb; die Lage dahinter steht weiter an einer Stelle.
+/// Getrennt wird nur, was sich zwischen den Befehlen unterscheidet; die Lage
+/// dahinter steht weiter an einer Stelle.
+///
+/// **Uebergeben wird die ganze `zu`-Nennform und nicht das nackte Verb.** Bis
+/// zum 260907 stand das `zu` im Rumpf und der Eingang reichte "kopieren",
+/// "öffnen" oder "packen" herein. Das traegt genau solange, wie kein trennbares
+/// Verb dabei ist: bei „anzeigen" wandert das `zu` in das Wort hinein
+/// („anzuzeigen"), und ein Rumpf mit festem `zu` haette „nichts zu anzeigen"
+/// geschrieben. Der Schnitt liegt deshalb eine Silbe frueher, und die drei
+/// aelteren Saetze lauten Zeichen fuer Zeichen wie zuvor.
 ///
 /// Sie sagt **nicht** "der Ordner ist leer": eine leere Menge entsteht auch in
 /// einem vollen Ordner, naemlich waehrend eines Lesevorgangs, nachdem
 /// `Ordnermodell::ersatz_einloesen` Markierung und Auswahl geleert hat und
 /// bevor die Auswahl wieder steht.
 #[must_use]
-fn nichts_betroffen(verb: &str) -> String {
-    format!("nichts zu {verb}: nichts markiert und nichts ausgewählt")
+fn nichts_betroffen(nennform: &str) -> String {
+    format!("nichts {nennform}: nichts markiert und nichts ausgewählt")
 }
 
 /// Die Meldung, wenn die Zwischenablage den Text nicht annimmt (C1, C2).
@@ -1560,9 +1601,7 @@ mod tests {
     /// Zeile nicht auf.
     ///
     /// Die Ausnahme fragt nach der angeklickten Zeile und nicht danach, ob
-    /// ueberhaupt etwas markiert ist. Was danach betroffen ist, entscheidet
-    /// [`betroffene`] unveraendert weiter, und dort behaelt die Markierung
-    /// den Vorrang.
+    /// ueberhaupt etwas markiert ist.
     #[test]
     fn eine_markierung_anderswo_haelt_den_rechtsklick_nicht_auf() {
         let mut modell = modell_mit(&[("a.txt", Typ::Datei), ("b.txt", Typ::Datei)]);
@@ -1570,6 +1609,63 @@ mod tests {
         modell.markierung_umschalten(index);
 
         assert_eq!(rechtsklick_zielzeile(&modell, 1), Some(1));
+    }
+
+    /// Nach dem Rechtsklick auf eine unmarkierte Zeile wirkt der Befehl auf
+    /// genau diese Zeile (Nutzerentscheid vom 260907-0703).
+    ///
+    /// **Die Probe zum Fall, den der Entscheid geschlossen hat**, und sie hat
+    /// zwei Haelften, weil erst beide zusammen die Aussage tragen: die Antwort
+    /// von [`rechtsklick_zielzeile`] allein sagt nur, wohin die Auswahl rueckt,
+    /// und was danach betroffen ist, entscheidet [`betroffene`]. Bis zum
+    /// 260907 zeigte das Menue in dieser Lage auf `b.txt` und wirkte auf
+    /// `a.txt`.
+    ///
+    /// Nachgestellt wird der Weg des Aufrufers Zug um Zug: die Markierung
+    /// aufheben, die Auswahl auf die zurueckgegebene Zeile setzen, dann
+    /// [`betroffene`] fragen. Was der Aufrufer daraus in AppKit macht, steht in
+    /// `crate::appkit::tabelle::DateifensterQuelle::rechtsklick_auswahl_nachziehen`.
+    #[test]
+    fn nach_dem_rechtsklick_wirkt_der_befehl_auf_die_angeklickte_zeile() {
+        let mut modell = modell_mit(&[("a.txt", Typ::Datei), ("b.txt", Typ::Datei)]);
+        let index = modell.index_von_namen("a.txt").expect("a.txt steht da");
+        modell.markierung_umschalten(index);
+        modell.auswahl_setzen(Some(index));
+
+        let zeile = rechtsklick_zielzeile(&modell, 1).expect("b.txt ist nicht markiert");
+        modell.markierung_aufheben();
+        let eintrag = modell.eintragsindex(zeile).expect("die Zeile traegt einen");
+        modell.auswahl_setzen(Some(eintrag));
+
+        assert_eq!(
+            betroffene(&modell, Path::new("/tmp/x")).pfade,
+            [PathBuf::from("/tmp/x/b.txt")],
+            "der Befehl wirkt auf die angeklickte Zeile und nicht auf die \
+             Markierung anderswo"
+        );
+    }
+
+    /// Auf einer markierten Zeile bleibt die Markierung die betroffene Menge.
+    ///
+    /// Die Gegenprobe zur vorigen: [`rechtsklick_zielzeile`] antwortet `None`,
+    /// der Aufrufer hebt deshalb nichts auf, und [`betroffene`] liefert weiter
+    /// alle markierten Eintraege. Ohne diese Probe waere ein Aufheben ohne
+    /// jede Ausnahme gruen — und wer dreissig Eintraege markiert hat und mit
+    /// rechts auf einen davon klickt, verloere sie.
+    #[test]
+    fn auf_einer_markierten_zeile_bleibt_die_markierung_die_betroffene_menge() {
+        let mut modell = modell_mit(&[("a.txt", Typ::Datei), ("b.txt", Typ::Datei)]);
+        for name in ["a.txt", "b.txt"] {
+            let index = modell.index_von_namen(name).expect("steht da");
+            modell.markierung_umschalten(index);
+        }
+
+        assert_eq!(rechtsklick_zielzeile(&modell, 1), None);
+        assert_eq!(
+            betroffene(&modell, Path::new("/tmp/x")).pfade,
+            [PathBuf::from("/tmp/x/a.txt"), PathBuf::from("/tmp/x/b.txt")],
+            "beide markierten Eintraege bleiben betroffen"
+        );
     }
 
     /// `clickedRow` liefert -1, wenn der Klick auf keine Zeile fiel.
@@ -2132,6 +2228,34 @@ mod tests {
             packen.ends_with("nichts markiert und nichts ausgewählt"),
             "{packen}"
         );
+    }
+
+    /// Der vierte Satz durch [`nichts_betroffen`] ist der des Aufdeckens.
+    ///
+    /// **Er traegt die Nennform, die das Deutsche fuer ein trennbares Verb
+    /// verlangt**, und daran haengt der Schnitt des Rumpfes: „nichts zu
+    /// anzeigen" waere kein Satz. Die drei aelteren lauten unveraendert, und
+    /// genau das haelt die zweite Haelfte dieser Probe.
+    #[test]
+    fn der_satz_des_aufdeckens_traegt_die_getrennte_nennform() {
+        let anzeigen = nichts_anzuzeigen();
+        assert!(anzeigen.contains("anzuzeigen"), "{anzeigen}");
+        assert!(!anzeigen.contains("zu anzeigen"), "{anzeigen}");
+        assert!(
+            anzeigen.ends_with("nichts markiert und nichts ausgewählt"),
+            "{anzeigen}"
+        );
+
+        for satz in [
+            nichts_zu_kopieren(),
+            nichts_zu_oeffnen(),
+            nichts_zu_packen(),
+        ] {
+            assert!(
+                satz.starts_with("nichts zu "),
+                "der Schnitt hat einen aelteren Satz veraendert: {satz}"
+            );
+        }
     }
 
     /// Die zwei Fehlbefunde von Unzip nennen zwei verschiedene Lagen.

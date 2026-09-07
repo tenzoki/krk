@@ -10,15 +10,29 @@
 //!
 //! Das Modul heisst nach dem ersten und beantwortet die Frage fuer beide. Der
 //! Terminal-Befehl aus C11 stellt sie mit der Kennung aus `settings.toml`, die
-//! der Nutzer selbst eintraegt; der Finder-Eintrag des Kontextmenues aus der
-//! Runde 17 stellt sie mit der festen Kennung des Finders. **Beide gehen durch
-//! [`ordner_oeffnen`]**, und eine zweite Huelle daneben waere derselbe
-//! Doppelbau, den der Zuschnitt dieses Moduls im naechsten Absatz vermeidet.
-//! Was die zwei Wege unterscheidet, liegt ausserhalb dieser Datei: woher die
-//! Kennung kommt, und welchen Satz der Aufrufer meldet, wenn keine Anwendung
-//! dazu installiert ist ([`crate::kommandos::operationen::kein_terminal`]
-//! nennt die eingestellte Kennung, weil der Nutzer sie berichtigen kann,
+//! der Nutzer selbst eintraegt; der Eintrag „Im Finder oeffnen" des
+//! Kontextmenues aus der Runde 17 stellt sie mit der festen Kennung des
+//! Finders. **Beide gehen durch [`ordner_oeffnen`]**, und eine zweite Huelle
+//! daneben waere derselbe Doppelbau, den der Zuschnitt dieses Moduls im
+//! naechsten Absatz vermeidet. Was die zwei Wege unterscheidet, liegt
+//! ausserhalb dieser Datei: woher die Kennung kommt, und welchen Satz der
+//! Aufrufer meldet, wenn keine Anwendung dazu installiert ist
+//! ([`crate::kommandos::operationen::kein_terminal`] nennt die eingestellte
+//! Kennung, weil der Nutzer sie berichtigen kann,
 //! [`crate::kommandos::operationen::kein_finder`] nennt keine).
+//!
+//! # Die eine Aufloesung, und ihr zweiter Frager
+//!
+//! [`anwendungsort`] ist die eine Stelle des Programms, die eine
+//! Buendelkennung in einen Anwendungsort aufloest. Sie hat zwei Frager, und
+//! der zweite braucht den Ort gar nicht: [`anwendung_vorhanden`] gibt allein
+//! heraus, **ob** eine Anwendung dieser Kennung installiert ist. Gefragt wird
+//! das vom Eintrag „Im Finder anzeigen" (260907), dessen eigener Aufruf in
+//! [`super::finder`] steht und keine Kennung aufloest — er reicht dem
+//! aufdeckenden `NSWorkspace` unmittelbar Dateiadressen und bekommt von ihm
+//! nichts zurueck. Ohne den Frager hier haette jener Weg gar keine Antwort auf
+//! die Frage, ob ein Finder ueberhaupt dasteht; mit einer zweiten Aufloesung
+//! dort haette dieses Programm zwei.
 //!
 //! Ein eigenes Modul und kein Zusatz zu [`super::zwischenablage`]: jenes
 //! beantwortet nach seinem eigenen Kopf die eine Frage "was steht in der
@@ -74,8 +88,38 @@
 
 use std::path::Path;
 
+use objc2::rc::Retained;
 use objc2_app_kit::{NSWorkspace, NSWorkspaceOpenConfiguration};
 use objc2_foundation::{NSArray, NSString, NSURL};
+
+/// Wo die Anwendung mit dieser Buendelkennung liegt, sofern eine installiert
+/// ist.
+///
+/// **Die eine Stelle des Programms, die eine Buendelkennung in einen
+/// Anwendungsort aufloest.** Ihre zwei Frager stehen im Modulkopf; sie ist
+/// privat, damit kein dritter an ihr vorbei eine eigene Aufloesung baut, und
+/// ein `NSURL` verlaesst diese Datei so auch weiterhin nicht.
+fn anwendungsort(kennung: &str) -> Option<Retained<NSURL>> {
+    NSWorkspace::sharedWorkspace()
+        .URLForApplicationWithBundleIdentifier(&NSString::from_str(kennung))
+}
+
+/// Ob eine Anwendung mit dieser Buendelkennung installiert ist.
+///
+/// **Die Antwort ist notwendig und nicht hinreichend.** `false` heisst, dass
+/// das System keine Anwendung dieser Kennung nennt, und damit steht fest, dass
+/// ein Aufruf an sie nichts bewirkte. `true` heisst allein, dass eine dasteht;
+/// ob sie startet und tut, worum sie gebeten wird, sagt es nicht. Der eine
+/// Aufrufer ([`crate::appkit::anwendung`], Zweig „Im Finder anzeigen") meldet
+/// deshalb auf `false` und behauptet auf `true` nichts.
+///
+/// **Sie gibt einen [`bool`] heraus und keinen Ort**, obwohl ihr Rumpf einen
+/// hat: der Aufrufer braucht ihn nicht, und ein `NSURL` aus dieser Datei
+/// heraus waere die Grenzverletzung, gegen die der Modulkopf geschrieben ist.
+#[must_use = "die Antwort sagt, ob eine Anwendung dieser Kennung installiert ist; fallengelassen bleibt der Nutzer ohne Meldung"]
+pub fn anwendung_vorhanden(kennung: &str) -> bool {
+    anwendungsort(kennung).is_some()
+}
 
 /// Oeffnet den Ordner in der Anwendung mit dieser Buendelkennung (C11).
 ///
@@ -85,17 +129,15 @@ use objc2_foundation::{NSArray, NSString, NSURL};
 /// eingetragen, und eine stillschweigend andere Anwendung waere die Antwort,
 /// die ihn seinen Tippfehler nicht finden laesst.
 ///
-/// Die eine Stelle des Programms, die eine Buendelkennung in einen
-/// Anwendungsort aufloest.
+/// Aufgeloest wird ueber [`anwendungsort`], die eine Stelle des Programms, die
+/// eine Buendelkennung in einen Anwendungsort umsetzt.
 #[must_use = "die Antwort sagt, ob eine Anwendung dieser Kennung installiert ist; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
-    let arbeitsflaeche = NSWorkspace::sharedWorkspace();
-    let Some(anwendung) =
-        arbeitsflaeche.URLForApplicationWithBundleIdentifier(&NSString::from_str(kennung))
-    else {
+    let Some(anwendung) = anwendungsort(kennung) else {
         return false;
     };
 
+    let arbeitsflaeche = NSWorkspace::sharedWorkspace();
     let ziel = NSURL::fileURLWithPath(&NSString::from_str(&ordner.to_string_lossy()));
     let ziele = NSArray::from_retained_slice(&[ziel]);
     arbeitsflaeche.openURLs_withApplicationAtURL_configuration_completionHandler(

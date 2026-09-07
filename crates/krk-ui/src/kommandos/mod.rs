@@ -57,7 +57,7 @@
 //! `libtest` nicht hergibt; jede Zeile, die im Annahmezweig oder im Menuebau
 //! entschiede, waere allein von Hand nachpruefbar.
 //!
-//! **Die drei Menueeintraege bekommen aus demselben Grund keine
+//! **Die eigenen Menueeintraege bekommen aus demselben Grund keine
 //! `Kommando`-Variante**: sie tragen weder eine Tastenkombination noch einen
 //! Hauptmenueeintrag, haengen also weder an `Kommando::wirkungsbereich` noch an
 //! `crate::belegungsmodell::bereich_des_kommandos`. Was sie stattdessen vor dem

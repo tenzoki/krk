@@ -78,41 +78,45 @@
 //! lesen. Jede Ausleihe unten steht deshalb in einer eigenen Anweisung, und
 //! keine ueberlebt eine Zeile mit einem Objective-C-Aufruf.
 //!
-//! **Den Freigabeeintrag baut diese Datei nicht, ihre drei eigenen schon.**
+//! **Den Freigabeeintrag baut diese Datei nicht, ihre eigenen schon.**
 //! Die Tabelle traegt seit C1 der Runde 6 ein `NSMenu`, dessen Delegierter die
 //! Quelle ist; sie beantwortet in `menuNeedsUpdate:`, welche Eintraege
-//! betroffen sind, haengt seit der Runde 17 die drei eigenen Befehle aus
+//! betroffen sind, haengt seit der Runde 17 die eigenen Befehle aus
 //! [`Kontextbefehl`] an und laesst danach
 //! [`super::teilen::eintrag_anfuegen`] den Freigabeeintrag setzen. Ein zweiter
 //! Bauer **jenes** Eintrags waere hier die Wiederholung, die jener Kopf
-//! ausschliesst; die drei eigenen kann er nicht bauen, denn er kennt keine der
+//! ausschliesst; die eigenen kann er nicht bauen, denn er kennt keine der
 //! Flaechen und keinen Befehl von KRK.
 //!
 //! **Die Reihenfolge im Rumpf traegt die Form des Menues und ist keine
 //! Geschmacksfrage.** [`super::teilen::eintrag_anfuegen`] fuegt **vorn** ein
 //! (`insertItem_atIndex(…, 0)`) und setzt seinen Trenner nur, wenn schon etwas
-//! dasteht. Erst die drei eigenen anhaengen, dann jenen rufen, ergibt damit
-//! von selbst „Teilen, Trenner, Zip, Unzip, Im Finder oeffnen"; die umgekehrte
+//! dasteht. Erst die eigenen anhaengen, dann jenen rufen, ergibt damit
+//! von selbst „Teilen, Trenner, Zip, Unzip, Im Finder oeffnen, Im Finder
+//! anzeigen"; die umgekehrte
 //! Folge ergaebe ein Menue ohne Trenner, in dem der Freigabeeintrag zwischen
 //! den eigenen stuende.
 //!
-//! **Was in den drei Eintraegen steht und worauf sie wirken, entscheidet
+//! **Was in den eigenen Eintraegen steht und worauf sie wirken, entscheidet
 //! [`crate::kommandos::kontextmenue`] ohne AppKit.** Titel und Marke kommen von
-//! dort, gebaut wird ueber [`Kontextbefehl::ALLE`], und die drei teilen sich
+//! dort, gebaut wird ueber [`Kontextbefehl::ALLE`], und sie teilen sich
 //! **einen** Selektor `kontextbefehl:`; unterschieden werden sie allein an
 //! ihrer Marke. Das ist die Sperre gegen den Menueeintrag, der dasteht und
 //! nichts tut: die Marke wird ueber [`Kontextbefehl::von_menuemarke`]
 //! zurueckgelesen, und die Ausfuehrung beim Anwendungsdelegierten verzweigt
-//! ueber den Wert vollstaendig und ohne Auffangzweig. Ein vierter Wert haelt
+//! ueber den Wert vollstaendig und ohne Auffangzweig. Ein weiterer Wert haelt
 //! damit den Bau an, statt still nichts zu tun. Der Freigabeeintrag gehoert
 //! nicht in jene Aufzaehlung: er traegt Ziel und Handlung des Systems, und KRK
 //! fuehrt ihn nicht aus.
 //!
-//! **Der Rechtsklick rueckt dabei die Auswahl auf die angeklickte Zeile, es
-//! sei denn, sie ist markiert** (Nutzerentscheid vom 260812-1200,
+//! **Der Rechtsklick hebt dabei die Markierung auf und rueckt die Auswahl auf
+//! die angeklickte Zeile, es sei denn, sie ist markiert** (Nutzerentscheide vom
+//! 260812-1200,
 //! `decisions/260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`
-//! der Runde 6). Die Zeile liefert `clickedRow`, die Entscheidung
-//! [`crate::kommandos::operationen::rechtsklick_zielzeile`] ohne Fenster, und
+//! der Runde 6, und vom 260907-0703, das das Aufheben nachlegt). Die Zeile
+//! liefert `clickedRow`, die Entscheidung
+//! [`crate::kommandos::operationen::rechtsklick_zielzeile`] ohne Fenster,
+//! aufgehoben wird ueber `markierung_aendern` wie beim Tastenbefehl, und
 //! gesetzt wird sie ueber `zeile_setzen` wie jede Auswahl der Tastatur.
 //! **Worauf ein Befehl danach wirkt, sagt weiterhin allein
 //! [`crate::kommandos::operationen::betroffene`]**; die Auswahl aendert sich
@@ -545,14 +549,14 @@ pub type Abwurfmelder = Box<dyn Fn(PathBuf, Vec<PathBuf>, Abwurfvorgang)>;
 /// (Runde 17).
 ///
 /// Ein eigener Name aus demselben Grund wie beim [`Umbenennungsmelder`]
-/// darueber. Ausgefuehrt wird der Befehl beim Anwendungsdelegierten, weil zwei
-/// der drei Wege die Operationsmaschine brauchen und der dritte die
+/// darueber. Ausgefuehrt wird der Befehl beim Anwendungsdelegierten, weil die
+/// zwei Archivwege die Operationsmaschine brauchen und die zwei Finderwege die
 /// Statuszeile ueber beide Dateifenster hinweg; von einer Quelle aus ist
 /// keines von beiden zu erreichen.
 ///
 /// **Der Wert und nicht die Marke.** Die Zurueckrechnung der Menuemarke steht
 /// in [`Kontextbefehl::von_menuemarke`] und damit vor diesem Rueckruf; was
-/// hier herauskommt, ist bereits einer der drei Befehle, und der Empfaenger
+/// hier herauskommt, ist bereits einer der Befehle, und der Empfaenger
 /// verzweigt darueber vollstaendig und ohne Auffangzweig.
 pub type Kontextmelder = Box<dyn Fn(Kontextbefehl)>;
 
@@ -1164,10 +1168,10 @@ define_class!(
         /// Der Klick auf einen der drei eigenen Kontextmenue-Eintraege
         /// (Runde 17).
         ///
-        /// **Ein Selektor fuer alle drei, und die Marke sagt, welcher gemeint
-        /// war.** Drei Selektoren nebeneinander waeren drei Stellen, an denen
-        /// einer fehlen koennte, ohne dass etwas meldet; so gibt es genau eine,
-        /// und wer einen vierten Befehl anlegt, kommt an
+        /// **Ein Selektor fuer alle, und die Marke sagt, welcher gemeint
+        /// war.** Ein Selektor je Befehl waere je eine Stelle, an der einer
+        /// fehlen koennte, ohne dass etwas meldet; so gibt es genau eine,
+        /// und wer einen weiteren Befehl anlegt, kommt an
         /// [`Kontextbefehl`] nicht vorbei.
         ///
         /// Der Rumpf steht daneben, in
@@ -1270,7 +1274,7 @@ define_class!(
         /// [`crate::kommandos::operationen::rechtsklick_zielzeile`], samt der
         /// Begruendung und der Ablehnung der beiden anderen Moeglichkeiten.
         ///
-        /// **Erst die drei eigenen Eintraege, dann der Freigabeeintrag**, und
+        /// **Erst die eigenen Eintraege, dann der Freigabeeintrag**, und
         /// die Folge ist die Form des Menues und keine Geschmacksfrage: jener
         /// Bauer fuegt vorn ein und setzt seinen Trenner nur, wenn schon etwas
         /// dasteht. Der Modulkopf schreibt es aus.
@@ -1790,14 +1794,28 @@ impl DateifensterQuelle {
         true
     }
 
-    /// Rueckt die Auswahl vor einem Rechtsklick auf die angeklickte Zeile.
+    /// Hebt vor einem Rechtsklick die Markierung auf und rueckt die Auswahl auf
+    /// die angeklickte Zeile.
     ///
     /// Der eine Aufrufer ist `menuNeedsUpdate:` oben, und der Zeitpunkt ist
     /// die halbe Regel: gerufen wird **vor** [`Self::betroffene_eintraege`].
     /// Ob ueberhaupt gerueckt wird, entscheidet
     /// [`operationen::rechtsklick_zielzeile`] ohne Fenster; hier bleibt allein,
-    /// was AppKit betrifft, die angeklickte Zeile zu erfragen und die neue zu
-    /// setzen.
+    /// was AppKit betrifft, die angeklickte Zeile zu erfragen und den neuen
+    /// Stand zu setzen.
+    ///
+    /// **Beides haengt an derselben Antwort, und das ist die Regel und nicht
+    /// eine Bequemlichkeit** (Nutzerentscheid vom 260907-0703): `Some(zeile)`
+    /// kommt genau dann zurueck, wenn die angeklickte Zeile **nicht** markiert
+    /// ist, und dann sind Aufheben und Nachruecken dieselbe Handlung — danach
+    /// zeigt das Menue auf dasselbe, worauf es wirkt. Auf `None` bleibt beides
+    /// stehen: die angeklickte Zeile ist markiert, und die Markierung ist dann
+    /// die betroffene Menge.
+    ///
+    /// **Aufgehoben wird ueber [`Self::markierung_aendern`]**, also ueber
+    /// denselben Weg wie der Tastenbefehl `MarkierungAufheben`; er zeichnet die
+    /// Liste neu und frischt den Markierungsstand in der Statuszeile auf. Ein
+    /// zweiter Weg daneben liesse den alten Stand dort stehen.
     ///
     /// **Gesetzt wird ueber [`Self::zeile_setzen`]**, also ueber denselben Weg,
     /// den die Tastatur nimmt. Der Datensatz verlangt das ausdruecklich: nur
@@ -1805,6 +1823,11 @@ impl DateifensterQuelle {
     /// Vorschau aus C6 nichts von der neuen Auswahl. Ein zweiter Weg an
     /// `auswahl_merken` vorbei waere der Fehler, den diese Datei sonst
     /// ueberall vermeidet.
+    ///
+    /// **Die Reihenfolge ist bindend: erst aufheben, dann setzen.**
+    /// `markierung_aendern` stellt ueber [`Self::auswahl_anzeigen`] die Auswahl
+    /// des Modells wieder her; umgekehrt gerufen naehme es die eben gesetzte
+    /// Zeile wieder zurueck.
     fn rechtsklick_auswahl_nachziehen(&self) {
         // `clickedRow` liefert -1, wenn der Klick auf keine Zeile fiel;
         // `rechtsklick_zielzeile` faengt das ab und antwortet `None`.
@@ -1813,24 +1836,25 @@ impl DateifensterQuelle {
             let tabs = self.ivars().tabs.borrow();
             operationen::rechtsklick_zielzeile(tabs.aktiver().modell(), angeklickt)
         };
-        // Nach dem Ende der Ausleihe: `zeile_setzen` ruft in AppKit und ueber
-        // den Auswahlrueckruf in dieselbe Quelle zurueck.
+        // Nach dem Ende der Ausleihe: beide Wege rufen in AppKit und ueber den
+        // Auswahlrueckruf in dieselbe Quelle zurueck.
         if let Some(zeile) = ziel {
+            self.markierung_aendern(Ordnermodell::markierung_aufheben);
             self.zeile_setzen(zeile);
         }
     }
 
-    /// Haengt die drei eigenen Eintraege an das Kontextmenue (Runde 17).
+    /// Haengt die eigenen Eintraege an das Kontextmenue (Runde 17).
     ///
-    /// **Gebaut wird ueber [`Kontextbefehl::ALLE`] und nicht aus drei Zeilen
+    /// **Gebaut wird ueber [`Kontextbefehl::ALLE`] und nicht aus je einer Zeile
     /// von Hand.** Damit ist die Reihenfolge im Menue dieselbe Angabe wie die
-    /// Reihenfolge jener Liste, und ein vierter Befehl erscheint, ohne dass
+    /// Reihenfolge jener Liste, und ein weiterer Befehl erscheint, ohne dass
     /// hier jemand etwas nachzieht. Titel und Marke kommen aus
     /// [`crate::kommandos::kontextmenue`]; diese Stelle rechnet nichts nach.
     ///
     /// **Angehaengt und nicht vorn eingefuegt.** Der Freigabeeintrag kommt
     /// danach und setzt sich mit seinem Trenner selbst nach vorn; wer hier
-    /// einfuegte statt anzuhaengen, drehte die drei um.
+    /// einfuegte statt anzuhaengen, drehte die Reihenfolge um.
     ///
     /// **Angelegt wird der Eintrag nicht hier, sondern in
     /// [`super::menue::ohne_kuerzel`].** C2.10 der Runde 7 sagt zu, dass genau
@@ -1882,7 +1906,7 @@ impl DateifensterQuelle {
     /// Operationsmaschine dort haengt.
     ///
     /// **Zwei Wege enden hier still, und beide sind gewollt.** Eine Marke, die
-    /// keinen der drei Befehle benennt, kommt von einem Eintrag, den nicht
+    /// keinen der eigenen Befehle benennt, kommt von einem Eintrag, den nicht
     /// diese Datei gesetzt hat — die Null eines ungesetzten `NSMenuItem`
     /// eingeschlossen —, und ein fehlender Rueckruf heisst, dass die
     /// Oberflaeche noch nicht steht. In beiden Lagen ist nichts zu tun die
@@ -2902,6 +2926,14 @@ impl DateifensterQuelle {
     }
 
     /// Wendet einen der drei uebrigen Markierungsbefehle an (C2).
+    ///
+    /// **Seit dem 260907 ruft daneben der Rechtsklick herein**
+    /// ([`Self::rechtsklick_auswahl_nachziehen`]), und zwar mit demselben
+    /// `markierung_aufheben`, das der Tastenbefehl nimmt. Er ist kein
+    /// Markierungsbefehl und geht trotzdem hier durch: was danach zu geschehen
+    /// hat — die Liste neu zeichnen und den Markierungsstand in der Statuszeile
+    /// auffrischen — ist dasselbe, und eine zweite Fassung daneben liesse die
+    /// eine oder die andere Haelfte davon aus.
     fn markierung_aendern(&self, aendern: impl FnOnce(&mut Ordnermodell)) {
         {
             let mut tabs = self.ivars().tabs.borrow_mut();

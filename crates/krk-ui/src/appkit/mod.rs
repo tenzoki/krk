@@ -34,6 +34,7 @@
 //!           ──> fsevents ──> crate::auffrischung        blaetter
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!           ──> terminal              ──> statuszeile
+//!           ──> finder
 //!           ──> hinweis                                 standardprogramm
 //!           ──> teilen
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
@@ -146,6 +147,14 @@
 //! `NSWorkspace::openURL:`. Ein eigenes Modul neben den beiden davor, weil
 //! keines von ihnen diese Frage stellt; die Abgrenzung steht in seinem
 //! Modulkopf.
+//! [`finder`] haelt die eine vom 260907: das Aufdecken der betroffenen
+//! Eintraege in einem Finder-Fenster ueber
+//! `NSWorkspace::activateFileViewerSelectingURLs:`. Wieder ein Modul je Frage,
+//! und die Abgrenzung zu [`terminal`] steht in seinem Modulkopf: jenes uebergibt
+//! einen Ordner an eine ueber ihre Buendelkennung **benannte** Anwendung, dieses
+//! deckt Eintraege auf und benennt niemanden. Es ist daneben das eine Modul
+//! dieser Reihe, dessen Aufruf **nichts** zurueckgibt; was der Aufrufer
+//! stattdessen prueft, steht dort.
 //! [`teilen`] haelt die eine aus C1 der Runde 6: die Uebergabe von Eintraegen
 //! an die Freigabedienste des Systems ueber `NSSharingServicePicker`, dazu den
 //! **einen** Menuebauer, den die drei Flaechen mit Kontextmenue rufen. Ein
@@ -227,6 +236,7 @@ mod blaetter;
 mod editor;
 mod ereignisse;
 mod fenster;
+mod finder;
 mod fsevents;
 mod git;
 mod hinweis;
