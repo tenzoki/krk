@@ -62,3 +62,12 @@ Abgleichslauf hat `cargo build --workspace`, `cargo test --workspace`,
 zweiten Agenten im Baum, und alle vier sind gruen. Damit ist die Zusage dieser Runde belegt und
 der Befund unberuehrt: er handelt von der Aussagekraft eines gruenen Ergebnisses bei parallelem
 Lauf, nicht vom Ergebnis selbst. Er bleibt offen.
+
+Also seen: 260907-0718 by coder — eine Stufe haerter als beschrieben: die Datei der zweiten
+Bahn (`crates/krk-ui/src/kommandos/kontextmenue.rs`, Umbenennung von `Kontextbefehl`) war
+mitten in der Umbenennung und **uebersetzte nicht**, also blieben `cargo build --workspace`
+und `cargo test --workspace` rot, solange sie stand. Ein einzelnes `rustfmt` half hier nicht,
+weil nicht die Form fehlte, sondern eine Variante. Ausweg war ein `git worktree` auf HEAD, in
+den allein die eigene Datei kopiert wurde; dort sind alle fuenf Abnahmekommandos gruen
+gefahren. Das ist die erste der drei Richtungen oben in einer Form, die auch bei einem roten
+Nachbarn traegt.

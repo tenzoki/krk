@@ -64,3 +64,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0703 beantwortet` — ja, der Rechtsklick hebt die Markierung auf, wie im Finder; damit fallen Anzeige und Wirkung des Kontextmenues wieder zusammen; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-0726-coder-kontextmenue-anzeigen-und-rechtsklick-hebt-markierung-auf.md — `DateifensterQuelle::rechtsklick_auswahl_nachziehen` hebt auf `Some(zeile)` über `markierung_aendern(Ordnermodell::markierung_aufheben)` jede Markierung auf und setzt danach die Zeile; `betroffene` bleibt die eine Auswahlregel, die Ausnahme für die markierte Zeile steht.

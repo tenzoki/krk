@@ -79,3 +79,6 @@ Moeglichkeit 1. Sie ist die einzige, die ohne einen zweiten Begriff von „Ueber
 auskommt, und sie ist dieselbe Wahl, die der Nutzer am 260825 fuer denselben Wortlaut derselben
 Schaltflaeche schon getroffen hat. Der genannte Nachteil — ein Datentraeger ohne Papierkorb —
 trifft heute schon jeden Unzip- und Zip-Lauf und ist dort hingenommen.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0703 beantwortet` — nein; das Verhalten bleibt ungleich, und das Blatt beschriftet die Schaltflaeche je nach Fall verschieden, statt einen Wortlaut fuer zwei Wirkungen zu fuehren. Gegen die Empfehlung entschieden: es gibt danach keine Regel, auf die man sich ohne Lesen verlassen kann, dafuer bleibt das Ueberschreiben auf einem Datentraeger ohne Papierkorb moeglich; ruled by user, Kai Stalmann <kai@stalmann.org>.

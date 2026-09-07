@@ -113,3 +113,9 @@ Verhalten — nur den Text, an dem der Befund hängt. Möglichkeit 3 löst die
 Doppelung sauberer, verlangt aber eine Wiederlesung von C2 und nimmt dem Nutzer
 die Zahl, die ihm sagt, wie viel er markiert hat. Möglichkeit 4 ist als einzige
 eine Verhaltensänderung und sollte nicht aus einem Lesbarkeitsbefund folgen.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0703 beantwortet` — die zweite Zahl bekommt das Wort insgesamt; kein Verhalten aendert sich, und beide Abnahmekriterien halten; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 8e7a067 — `Warngrund::wortlaut` (crates/krk-ui/src/kommandos/loeschwarnung.rs:620-621) schreibt jetzt „mit 25 Eintraegen insgesamt" und „mit mehr als 25 Eintraegen insgesamt"; die Probe `die_zweite_zahl_sagt_dass_sie_insgesamt_zaehlt` haelt den Wortlaut, beide Abnahmekriterien der Runde 12 bleiben unberuehrt.

@@ -274,3 +274,47 @@ beantwortet.
 
 **Was offen bleibt:** 45 der 56 Fragen. Sie entscheiden wirklich etwas und werden einzeln
 vorgelegt.
+
+## Fuenf weitere Entscheidungen am 260907-0703 beantwortet
+
+Erste von neun Vorlagerunden ueber die 45 nach dem 260906-2147 verbliebenen Fragen. Der
+Nutzer hat fuenf beantwortet, dreimal gegen die Empfehlung.
+
+1. **Der Git-Befehl „verwerfen" wird zwei getrennte Befehle**: einer wirft die Aenderungen
+   einer Datei weg, einer nimmt einen Commit zurueck. Das Wort traegt in Git beide
+   Bedeutungen, und die Oberflaeche trennt sie, statt eine zu waehlen. Bindet die
+   schreibende Git-Runde: aus den vier Operationen des Kurztexts werden damit fuenf
+   Befehle, und der Versions-Schieberegler bringt die Commit-Auswahl fuer den zweiten mit.
+   (Empfehlung war c, gewaehlt ist c.)
+2. **Die Schaltflaeche „Ueberschreiben" wird je nach Fall verschieden beschriftet.** Das
+   Verhalten bleibt, wie es ist: im Kontextmenue raeumt sie seit dem 260825 in den
+   Papierkorb, beim Kopieren, Verschieben und Abwurf loescht sie endgueltig. Was faellt,
+   ist der eine Wortlaut fuer zwei Wirkungen. Der Nutzer hat damit **gegen** die Empfehlung
+   entschieden, die beide Wege in den Papierkorb fuehren wollte, und die Folge stand in der
+   Vorlage: eine Regel, auf die man sich verlassen kann, gibt es danach nicht, der Text ist
+   zu lesen. Dafuer bleibt das Ueberschreiben auf einem Datentraeger ohne Papierkorb
+   moeglich, statt uebersprungen und gemeldet zu werden.
+   (Empfehlung war a, gewaehlt ist c.)
+3. **Die zweite Zahl der Loeschabfrage bekommt das Wort „insgesamt".** Aus „Diese 25
+   Eintraege mit 25 Eintraegen in den Papierkorb raeumen?" wird eine Zeile, die sagt, dass
+   die zweite Zahl den Unterbau meint. Kein Verhalten aendert sich, beide Abnahmekriterien
+   halten. (Empfehlung war b, gewaehlt ist b.)
+4. **Nutzersichtbarer deutscher Text traegt Umlaute, Kommentare und Bezeichner die
+   Umschrift.** Die Trennlinie ist an jeder Zeichenkette entscheidbar: liest das ein Mensch
+   oder der Uebersetzer. Nachzuziehen sind rund fuenfzehn Zeichenketten, vor allem aus
+   Ablage und Leseprofilen, dazu die Proben, die auf ihren Wortlaut pruefen.
+   (Empfehlung war a, gewaehlt ist a.)
+5. **Ein Rechtsklick auf eine unmarkierte Zeile hebt die Markierung anderswo auf**, wie im
+   Finder. Damit fallen Anzeige und Wirkung des Kontextmenues wieder zusammen; heute zeigt
+   es auf die angeklickte Zeile und wirkt auf die Markierung. Der Nutzer hat gewaehlt, wo
+   die Vorlage bewusst keine Empfehlung aussprach.
+   (Keine Empfehlung, gewaehlt ist b.)
+
+**Dazu eine neue Anforderung des Nutzers**, kein Datensatz: das Kontextmenue der Dateiliste
+bekommt „Im Finder anzeigen" als fuenften Eintrag. Der vorhandene Eintrag „Im Finder
+oeffnen" oeffnet den **angezeigten Ordner** (`crates/krk-ui/src/appkit/anwendung.rs:6949`);
+der neue deckt die **betroffenen Eintraege** im Finder auf und ist damit eine andere
+Wirkung, nicht dieselbe unter anderem Namen. Der Orchestrator hat diese Lesart angenommen
+und im Chat zur Berichtigung gestellt.
+
+**Was offen bleibt:** 40 der 56 Fragen.

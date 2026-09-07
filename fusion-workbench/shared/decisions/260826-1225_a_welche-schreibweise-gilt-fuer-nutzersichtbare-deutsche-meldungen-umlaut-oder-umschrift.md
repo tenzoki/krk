@@ -111,3 +111,6 @@ mindestens eine in `krk-ui`. Eine vollständige Erhebung gehört vor die Umsetzu
 über die Stellen, die eine Meldung **bauen**, nicht über ein Wortmuster — der Datensatz
 `shared/issues/260826-1225_*_drei-prosastellen-der-ablage-nennen-die-zahl-der-dateien-falsch-und-jedes-bisherige-suchmuster-musste-sie-uebersehen.md`
 misst an derselben Ablage, was ein Wortmuster hier übersieht.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0703 beantwortet` — Umlaute in allem, was ein Mensch liest; die Umschrift bleibt fuer Kommentare und Bezeichner. Die Trennlinie ist an jeder Zeichenkette entscheidbar, und die Oberflaeche traegt schon heute mehrheitlich Umlaute; ruled by user, Kai Stalmann <kai@stalmann.org>.

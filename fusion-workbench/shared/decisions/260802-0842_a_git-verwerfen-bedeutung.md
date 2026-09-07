@@ -41,3 +41,6 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0703 beantwortet` — beides, als zwei getrennte Befehle: einer wirft die Aenderungen einer Datei weg, einer nimmt einen Commit zurueck; bindet die schreibende Git-Runde, deren vier Operationen damit fuenf Befehle werden; ruled by user, Kai Stalmann <kai@stalmann.org>.
