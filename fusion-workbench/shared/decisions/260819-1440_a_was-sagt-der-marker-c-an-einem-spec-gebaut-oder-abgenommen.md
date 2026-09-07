@@ -127,3 +127,6 @@ nicht führt, und er fällt beim nächsten `/fusion:cleanup` an und nicht späte
 **Was dieser Abgleich getan hat:** die Kopfzeile `**Status:**` von vier Specs gegen den Baum gestellt,
 ohne einen Dateimarker zu bewegen, und den Spec der Runde 11 zum ersten Mal beurteilt. Die
 Einzelheiten stehen in `shared/history/260820-2056-reconciliation.md`.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — der Zustand folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene Kopfzeile; ein Zustand mit vier Werten kann nicht zwei unabhaengige Fragen beantworten, ohne bei jeder Wahl eine falsche Auskunft zu geben; ruled by user, Kai Stalmann <kai@stalmann.org>.

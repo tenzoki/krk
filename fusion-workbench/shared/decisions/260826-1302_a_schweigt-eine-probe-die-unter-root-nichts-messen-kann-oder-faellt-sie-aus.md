@@ -56,3 +56,6 @@ Möglichkeit 2, mit einer Einschränkung. Die Begründung, die `text.rs` gibt �
 Die Einschränkung: das gilt nur, wenn niemand vorhat, diesen Baum je unter `root` zu prüfen. Ist das anders, kehrt sich die Abwägung um, und dann ist Möglichkeit 1 richtig — aber dann gehört der übersprungene Fall gezählt und am Ende des Laufs gemeldet, nicht in eine Zeile geschrieben, die `cargo test` verschluckt.
 
 Die Frage, welche der beiden Lagen gilt, kann nur der Nutzer beantworten.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — sie bricht mit klarem Text ab, statt still zu ueberspringen. Die Folge ist gewollt: ein Lauf unter root meldet danach vier rote Proben, und die Wahl setzt voraus, dass dieser Baum nie unter root geprueft wird; ruled by user, Kai Stalmann <kai@stalmann.org>.

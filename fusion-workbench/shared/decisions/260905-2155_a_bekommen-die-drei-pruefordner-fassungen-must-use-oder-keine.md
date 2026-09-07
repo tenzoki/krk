@@ -58,3 +58,6 @@ Die Frage muss vor dem nächsten `#[must_use]`-Durchgang beantwortet sein: die B
 Möglichkeit 1, zusammen mit dem nächsten Durchgang, der ohnehin alle drei Kisten anfasst. Sie ist
 die einzige, die die Regel des Projekts einhält, ohne die Gleichheit der drei Fassungen
 aufzugeben. Möglichkeit 3 wäre der billigste Eingriff und die teuerste Folge.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — alle drei bekommen sie, in einem Durchgang ueber die drei Kisten; nur die Fassung im Messwerkzeug zu bemarken waere der billigste Eingriff und die teuerste Folge, weil die drei zeichengleich bleiben sollen; ruled by user, Kai Stalmann <kai@stalmann.org>.

@@ -35,3 +35,6 @@ Der Befund, der zu richten ist, ist die falsche Prosa, und die ist unabhängig d
 
 ---
 Abgleich 260829-1252, am Baum `b9d9cbc`: **weiter offen, und eine Voraussetzung der Frage hat sich verschoben.** Der Datensatz sagt, die vier Rechenzeichen des Zehnerblocks lösten nichts aus. Seit der Runde 20 (`2aee690`, `1df8b8d`) tragen `plus` und `minus` die Codes `kVK_ANSI_KeypadPlus` (69) und `kVK_ANSI_KeypadMinus` (78) und lösen über das gemeldete Zeichen `cmd+plus`/`cmd+minus` aus (`crates/krk-core/src/tasten/parser.rs:362-365`, `:283-290`; Probe `:775-800`). Zwei der vier Rechenzeichen sind damit angeschlossen, Eingabetaste, Komma, Stern und Schrägstrich des Blocks weiter nicht. Keine Antwort auf die Frage gefunden; `shared/analyses/` und die Specs der Runden 19–22 nennen den Zehnerblock nicht als Gegenstand.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — der Zehnerblock bleibt halb angeschlossen, und die falsche Erklaerung im Code wird richtiggestellt; der Block ganz herein ist eine eigene Runde, falls der Nutzer mit externer Tastatur danach fragt; ruled by user, Kai Stalmann <kai@stalmann.org>.

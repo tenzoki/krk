@@ -318,3 +318,38 @@ Wirkung, nicht dieselbe unter anderem Namen. Der Orchestrator hat diese Lesart a
 und im Chat zur Berichtigung gestellt.
 
 **Was offen bleibt:** 40 der 56 Fragen.
+
+## Fuenf weitere Entscheidungen am 260907-0823 beantwortet
+
+Zweite Vorlagerunde. Der Nutzer ist allen fuenf Empfehlungen gefolgt. Keine betrifft die
+Anwendung; alle fuenf betreffen, wie an ihr gearbeitet wird.
+
+6. **Der Zustand eines Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme
+   bekommt eine eigene Kopfzeile.** Bis hierher sollte ein Zustand mit vier Werten zwei
+   unabhaengige Fragen beantworten — ist es gebaut, ist es abgenommen —, und deshalb lieferte
+   jede Wahl eine richtige und eine falsche Auskunft. Der Bestand zeigt den Streit: sieben
+   Dokumente geschlossener Runden stehen auf offen, fuenf auf erledigt, zwei auf in Arbeit,
+   obwohl an keinem jemand arbeitet. Der Ausweichzustand behauptet damit eine Taetigkeit, die
+   es nicht gibt. Die teuerste der drei Moeglichkeiten, und die einzige, die nichts aufgibt.
+7. **Die Vollstaendigkeit einer Liste neben einer Aufzaehlung haelt eine Probe**, die die
+   Varianten aus dem Quelltext liest und gegen die Liste haelt — nicht die fremde Kiste
+   `strum`. Der Baum faehrt schon so: `varianten_der_aufzaehlung` laeuft an drei Aufzaehlungen,
+   waehrend fuenfzehn Listen im Baum stehen und der Uebersetzer an keiner die Namen prueft. Ein
+   spaeterer Umstieg auf `strum` striche die Probe, statt sie umzubauen.
+8. **Der Zehnerblock bleibt halb angeschlossen, und die falsche Erklaerung im Code wird
+   richtiggestellt.** Ziffern, Plus und Minus loesen aus, Eingabetaste und Komma nicht. Der
+   Zustand ist nebenbei entstanden, als der Nachschlag von Tastencodes auf gemeldete Zeichen
+   umgestellt wurde; entschieden hatte ihn niemand. Der Block ganz herein ist eine eigene
+   Runde, falls der Nutzer mit externer Tastatur danach fragt.
+9. **Eine Probe, die unter Administratorrechten nichts messen kann, bricht mit klarem Text ab,
+   statt still zu ueberspringen.** Vier Proben stellen ihren Prueffall ueber entzogene
+   Dateirechte her, und unter `root` greifen die nicht. **Die Folge ist gewollt und keine
+   Nebenwirkung:** ein Lauf unter `root` meldet danach vier rote Proben statt gruen zu werden.
+   Die Wahl setzt voraus, dass dieser Baum nie unter `root` geprueft wird.
+10. **Alle drei Pruefordner-Fassungen bekommen die Verfallwarnung des Uebersetzers**, in einem
+    Durchgang ueber die drei Kisten. Wer so ein Objekt anlegt, ohne es festzuhalten, legt einen
+    Namen fest und raeumt sofort wieder ab — genau der Fall, fuer den das Projekt die Marke seit
+    dem 260811 setzt. Nur die Fassung im Messwerkzeug zu bemarken waere der billigste Eingriff
+    und die teuerste Folge, weil die drei zeichengleich bleiben sollen.
+
+**Was offen bleibt:** 35 der 56 Fragen.

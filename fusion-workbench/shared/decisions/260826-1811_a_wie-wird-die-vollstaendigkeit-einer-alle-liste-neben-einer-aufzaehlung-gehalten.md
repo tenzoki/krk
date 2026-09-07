@@ -48,3 +48,6 @@ Sitzung `260826-1807` hat die Frage vorgelegt (`orchestrator-events.jsonl`, die 
 `gate_response` der Sitzung betreffen die Planfreigabe und das Kohärenz-Gate). Die Antwort
 bindet den zweiten Plan über die 116 übrigen Befunde, unter anderem
 `shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — eine Probe liest die Varianten aus dem Quelltext und haelt sie gegen die Liste; keine fremde Kiste. Der Baum faehrt schon so, und ein spaeterer Umstieg auf strum striche die Probe statt sie umzubauen; ruled by user, Kai Stalmann <kai@stalmann.org>.
