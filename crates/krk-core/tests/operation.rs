@@ -41,7 +41,7 @@ use krk_core::operation::{
 use krk_core::verzeichnis::sys::Uebertragungsart;
 
 mod gemeinsam;
-use gemeinsam::Pruefordner;
+use gemeinsam::{Pruefordner, rechtesperre_haelt_oder_abbruch};
 
 // ---------------------------------------------------------------------------
 // Hilfsmittel
@@ -539,6 +539,10 @@ fn ein_eintrag_ohne_leserecht_wird_uebersprungen_und_gemeldet() {
     fs::write(&gesperrt, "geheim\n").expect("Datei laesst sich nicht schreiben");
     fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
         .expect("Rechte lassen sich nicht setzen");
+    rechtesperre_haelt_oder_abbruch(
+        "ein Eintrag ohne Leserecht wird uebersprungen und gemeldet (C4)",
+        fs::read(&gesperrt).is_err(),
+    );
 
     let ziel = ordner.ordner("ziel");
     let bericht = durchlaufen_ohne_papierkorb(Auftrag::kopieren(vec![quelle], &ziel));
@@ -782,6 +786,12 @@ fn ein_eintrag_ohne_schreibrecht_im_ordner_wird_uebersprungen_und_die_uebrigen_l
     fs::write(&darin, b"x").expect("Datei laesst sich nicht schreiben");
     fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o500))
         .expect("Rechte lassen sich nicht setzen");
+    // Genau der Zugriff, den das Umbenennen braucht: ein Schreibvorgang im
+    // gesperrten Ordner. Gelingt er, sperrt `0o500` nichts.
+    rechtesperre_haelt_oder_abbruch(
+        "ein Eintrag ohne Schreibrecht im Ordner wird uebersprungen (C4)",
+        fs::write(gesperrt.join("probe-der-sperre"), b"x").is_err(),
+    );
     paare.insert(2, (darin.clone(), "geht-nicht.txt".to_owned()));
 
     let bericht = durchlaufen_ohne_papierkorb(Auftrag::umbenennen_im_stapel(paare));

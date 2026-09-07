@@ -70,3 +70,5 @@ Zwei Fragen, und die zweite hängt an der ersten.
 Gefunden bei der Vollbaum-Durchsicht R6 der dreizehn übrigen Probendateien des Kerns, HEAD `4a57028`.
 
 Also seen: 260826-1440 by coderev — an `c13bf1c` nachgelesen: `release.rs:905-932` hat Prozesskennung, Laufnummer und Abräumen in `Drop`, ist gegenüber den drei Fassungen des Kerns nicht auseinandergelaufen; allein die Zählprobe sieht sie weiter nicht.
+
+Also seen: 260907-0858 by coder — die drei anerkannten Fassungen tragen seit dem Durchgang zur Antwort auf `260905-2155_*_bekommen-die-drei-pruefordner-fassungen-must-use-oder-keine.md` je ein `#[must_use]` mit zeichengleicher Begruendung; `Wegwerfwurzel` in `xtask/src/release.rs` traegt keines und weicht damit um ein weiteres Merkmal ab.

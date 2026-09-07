@@ -24,7 +24,10 @@ use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 mod gemeinsam;
-use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, kindauftrag, mit_zeitschranke};
+use gemeinsam::{
+    Pruefordner, kind_mit_deskriptorgrenze, kindauftrag, mit_zeitschranke,
+    rechtesperre_haelt_oder_abbruch,
+};
 
 /// Ein flacher Ordner mit `anzahl` Dateien, deren Namen fest zugeordnet sind.
 fn ordner_mit_dateien(zweck: &str, anzahl: usize) -> Pruefordner {
@@ -2243,13 +2246,10 @@ fn eine_datei_ohne_leserecht_traegt_nichts() {
     let gesperrt = ordner.datei("verschlossen.txt", b"gesuchtes Wort\n");
     fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
         .expect("Rechte lassen sich nicht setzen");
-    if fs::read(&gesperrt).is_ok() {
-        // Unter root liest sich auch eine gesperrte Datei. Dann sagt die Probe
-        // nichts aus, und eine Probe, die nichts aussagt, behauptet hier auch
-        // nichts.
-        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
-        return;
-    }
+    rechtesperre_haelt_oder_abbruch(
+        "eine Datei ohne Leserecht traegt nichts und ist nicht unentschieden",
+        fs::read(&gesperrt).is_err(),
+    );
 
     assert_eq!(
         traegt_der_inhalt(&gesperrt, &Muster::aus("gesuchtes"), 1024),
@@ -2579,6 +2579,10 @@ fn ein_nicht_lesbarer_ordner_gilt_als_kein_treffer() {
     fs::write(gesperrt.join("gesuchtes-blatt.txt"), b"x").expect("Datei");
     fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
         .expect("Rechte lassen sich nicht entziehen");
+    rechtesperre_haelt_oder_abbruch(
+        "ein nicht lesbarer Ordner gilt als kein Treffer",
+        fs::read_dir(&gesperrt).is_err(),
+    );
 
     let befunde = einen_ordner_entscheiden(ordner.pfad(), "aussen", "gesuchtes");
 

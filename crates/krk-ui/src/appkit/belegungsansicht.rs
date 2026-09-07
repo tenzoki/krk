@@ -469,10 +469,13 @@ impl Belegungsquelle {
                 self.nachziehen();
                 self.melden(&format!("»{funktion}« liegt jetzt auf {kombination}."));
             }
-            // Satzzeichen und Zehnerblock: die Schreibweise kennt keinen
-            // Namen, also entstuende eine Zeile in keymap.toml, die niemand
-            // wieder einlesen kann. Die Ansicht sagt das, statt sie zu
-            // schreiben (C3, S11b).
+            // Die Satzzeichen, und vom Zehnerblock die Tasten ohne Zeichen aus
+            // der Tastentabelle: die Schreibweise kennt keinen Namen, also
+            // entstuende eine Zeile in keymap.toml, die niemand wieder einlesen
+            // kann. Die Ansicht sagt das, statt sie zu schreiben (C3, S11b).
+            // Die Ziffern des Blocks kommen hier nicht an; sie tragen den Namen
+            // der oberen Reihe. Warum, sagt der Modulkopf von
+            // `krk_core::tasten::parser`.
             Zuweisung::OhneNamen => self.melden(
                 "Diese Taste hat in der Kombinationsschreibweise keinen Namen und lässt \
                  sich nicht ablegen; die Belegung ist unverändert.",

@@ -45,7 +45,7 @@ use krk_core::verzeichnis::sys::{self, Sperrversuch};
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
 mod gemeinsam;
-use gemeinsam::Pruefordner;
+use gemeinsam::{Pruefordner, rechtesperre_haelt_oder_abbruch};
 
 // ---------------------------------------------------------------------------
 // Stellvertreter
@@ -3932,7 +3932,8 @@ fn eine_textmarke_ist_gueltig_solange_ihre_datei_da_ist() {
 /// greifen; dieselbe Einschraenkung steht bei
 /// [`eine_nicht_lesbare_datei_fuehrt_ebenso_zum_auslieferungszustand`]. Sie
 /// bricht deshalb erkennbar ab, statt still durchzugehen und eine Zusage
-/// vorzutaeuschen.
+/// vorzutaeuschen. Die Regel dahinter und der Nutzerentscheid vom 260907-0823
+/// stehen an `gemeinsam::rechtesperre_haelt_oder_abbruch`.
 #[test]
 fn die_gueltigkeitspruefung_kommt_ohne_lesen_der_datei_aus() {
     use std::os::unix::fs::PermissionsExt;
@@ -3943,9 +3944,9 @@ fn die_gueltigkeitspruefung_kommt_ohne_lesen_der_datei_aus() {
     fs::set_permissions(&datei, fs::Permissions::from_mode(0o000))
         .expect("die Rechte lassen sich nicht entziehen");
 
-    assert!(
+    rechtesperre_haelt_oder_abbruch(
+        "die Gueltigkeitspruefung einer Textmarke oeffnet die Datei nicht (C6)",
         fs::read(&datei).is_err(),
-        "die Pruefdatei ist trotz entzogener Rechte lesbar — laeuft der Lauf unter root?"
     );
     assert!(
         Lesezeichen::textstelle("Verschlossen", &datei, 1, "eine Zeile").gueltig(),

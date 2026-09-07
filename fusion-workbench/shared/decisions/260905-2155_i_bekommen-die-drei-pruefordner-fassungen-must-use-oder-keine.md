@@ -61,3 +61,6 @@ aufzugeben. Möglichkeit 3 wäre der billigste Eingriff und die teuerste Folge.
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — alle drei bekommen sie, in einem Durchgang ueber die drei Kisten; nur die Fassung im Messwerkzeug zu bemarken waere der billigste Eingriff und die teuerste Folge, weil die drei zeichengleich bleiben sollen; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-0858-drei-kleine-nutzerantworten-in-code.md — alle drei Fassungen tragen `#[must_use]` mit zeichengleicher Begruendung, gesetzt an der **Struktur** und nicht an `neu`, damit die Marke auch fuer `Pruefordner::nur_name` in `krk-ui` gilt: `crates/krk-bench/src/wegwerfordner.rs`, `crates/krk-ui/src/pruefordner.rs`, `crates/krk-core/tests/gemeinsam/mod.rs`. `genau_drei_pruefordner_fassungen_stehen_im_baum` bleibt gruen; die vierte Fassung in `xtask` ist wie vorgesehen nicht angefasst und dort vermerkt.

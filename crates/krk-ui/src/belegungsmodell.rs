@@ -476,8 +476,13 @@ pub enum Zuweisung {
         /// Die Kombination in der Anzeigeform.
         kombination: String,
     },
-    /// Die gedrueckte Taste hat in der Schreibweise keinen Namen (Satzzeichen,
-    /// Zehnerblock) und liesse sich nicht wieder aus `keymap.toml` einlesen.
+    /// Die gedrueckte Taste hat in der Schreibweise keinen Namen und liesse
+    /// sich nicht wieder aus `keymap.toml` einlesen: die Satzzeichen, und vom
+    /// Zehnerblock die Tasten, deren gemeldetes Zeichen kein Name der
+    /// Tastentabelle traegt. **Die Ziffern des Blocks gehoeren nicht dazu** —
+    /// sie tragen den Namen der oberen Reihe und werden zugewiesen wie diese;
+    /// der Modulkopf von `krk_core::tasten::parser` sagt unter „Was der
+    /// Zehnerblock ausloest, und was nicht", warum.
     OhneNamen,
     /// Die Belegung hat die Zuweisung abgewiesen; der Text nennt den Grund
     /// und kommt woertlich aus dem Kern, samt der anderen Funktion bei einem

@@ -44,6 +44,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 static ZAEHLER: AtomicU64 = AtomicU64::new(0);
 
 /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
+#[must_use = "fallengelassen raeumt Drop den Ordner sofort wieder ab; er ist zu halten, solange die Probe laeuft"]
 pub struct Pruefordner {
     pfad: PathBuf,
 }

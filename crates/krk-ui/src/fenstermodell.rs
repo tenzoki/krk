@@ -1049,16 +1049,15 @@ impl Fenstermodell {
     /// Wunsch. Das ist der Datensatz
     /// `issues/260812-0539_*_ein-zusammengezogenes-fenster-ersetzt-die-aufteilung-des-nutzers-dauerhaft.md`.
     ///
-    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    /// # Was die Feldbreite haelt
     ///
-    /// **Sie haelt nichts.** `[f64; 6]` steht auf beiden Seiten des Aufrufs —
-    /// hier und in `Aufteilung::gemessene_breiten` —, und beide Seiten blieben
-    /// stumm bei fuenf: der Uebersetzer prueft, dass die Laengen zueinander
-    /// passen, und nie, dass sie zu [`Bereich::ALLE`] passen. Ein sechster
-    /// Bereich, der hier fehlte, uebersetzte und liefe. Gehalten wird die
-    /// Uebereinstimmung von den Proben ueber [`bereichsbreiten`], die den
-    /// Anteil je Bereich aus [`Bereich::ALLE`] heraus indizieren.
-    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; 6], mass: Zeilenmass) {
+    /// **Seit dem 260907 die Zahl.** Die Laenge steht als
+    /// `Bereich::ALLE.len()` da, hier wie in `Aufteilung::gemessene_breiten`,
+    /// und folgt damit der Aufzaehlung statt neben ihr zu stehen. Bis dahin
+    /// stand auf beiden Seiten des Aufrufs eine `6`: der Uebersetzer prueft,
+    /// dass die Laengen **zueinander** passen, und nie, dass sie zu
+    /// [`Bereich::ALLE`] passen, und beide Seiten blieben stumm bei fuenf.
+    pub fn breiten_uebernehmen(&mut self, gemessen: [f64; Bereich::ALLE.len()], mass: Zeilenmass) {
         if !traegt_eine_ziehbewegung(mass, &self.breiten, &self.sichtbar, &gemessen) {
             return;
         }
@@ -1198,19 +1197,22 @@ impl Zeilenmass {
 /// Breite; dafuer bekommt der jeweils letzte Bereich den Rest und nicht seinen
 /// gerundeten Anteil (siehe [`anteilig`]).
 ///
-/// # Was die Feldbreite haelt, und was sie nicht haelt
+/// # Was die Feldbreite haelt
 ///
-/// **Sie haelt nichts.** `[f64; 6]` ist hier ein Ergebnistyp und keine
-/// Zusicherung ueber [`Bereich::ALLE`]: das Feld entsteht als `[0.0_f64; 6]`,
-/// also aus einer Zahl im Quelltext und nicht aus der Aufzaehlung. Ein sechster
-/// Bereich, den jemand hinzufuegte, ohne diese Zahl zu erhoehen, haelte den Bau
-/// nicht an, sondern liefe zur Laufzeit auf `index out of bounds`, sobald ein
-/// Aufrufer ueber [`Bereich::index`] hineingriffe. Der Unterschied zu
-/// `Bereichsleiste::bereichsschalter` ist die Bauform und nicht die Zahl: dort
-/// entsteht das Feld ueber `Bereich::ALLE.map(…)`, und dessen Laenge folgt aus
-/// der Aufzaehlung.
+/// **Seit dem 260907 die Zahl.** Ergebnistyp und Feld tragen beide
+/// `Bereich::ALLE.len()`, und ein siebter Bereich verlaengert damit beide von
+/// selbst. Bis dahin stand hier eine `6`, und ein Bereich, den jemand
+/// hinzufuegte, ohne sie zu erhoehen, hielt den Bau nicht an, sondern lief zur
+/// Laufzeit auf `index out of bounds`, sobald ein Aufrufer ueber
+/// [`Bereich::index`] hineingriff. Die Bauform ist damit die von
+/// `Bereichsleiste::bereichsschalter`, dessen Feld ueber `Bereich::ALLE.map(…)`
+/// entsteht: die Laenge folgt der Aufzaehlung, statt neben ihr zu stehen.
 #[must_use]
-pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbarkeit) -> [f64; 6] {
+pub fn bereichsbreiten(
+    mass: Zeilenmass,
+    breiten: &Breiten,
+    sichtbar: &Sichtbarkeit,
+) -> [f64; Bereich::ALLE.len()] {
     // Ein Modell allein, um an `sichtbare()` heranzukommen. Die beiden Felder,
     // die die Breitenrechnung nicht liest, stehen auf ihrem Vorgabewert: die
     // Spalten liegen in der Dateiliste und nicht in der Fensterzeile, und
@@ -1221,7 +1223,7 @@ pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbark
         sichtbar: *sichtbar,
         spalten: Spaltensichtbarkeit::default(),
     };
-    let mut ergebnis = [0.0_f64; 6];
+    let mut ergebnis = [0.0_f64; Bereich::ALLE.len()];
 
     // Welche Bereiche etwas bekommen, sagt allein die Sichtbarkeit. Bis zur
     // Editor-Runde stand hier die Literalliste der festen Bereiche als zweite
@@ -1291,7 +1293,7 @@ pub fn bereichsbreiten(mass: Zeilenmass, breiten: &Breiten, sichtbar: &Sichtbark
 /// ist die Summe der ausgegebenen Breiten genau `gesamt` und nicht `gesamt`
 /// plus n Rundungsfehler. Die Aufteilung rechnet aus diesen Breiten die Lage
 /// jeder Trennlinie, und ein halber Punkt am rechten Rand waere dort zu sehen.
-fn anteilig(ergebnis: &mut [f64; 6], anteile: &[(Bereich, f64)], gesamt: f64) {
+fn anteilig(ergebnis: &mut [f64; Bereich::ALLE.len()], anteile: &[(Bereich, f64)], gesamt: f64) {
     let Some(((letzter, _), vordere)) = anteile.split_last() else {
         return;
     };
@@ -1344,7 +1346,7 @@ fn traegt_eine_ziehbewegung(
     mass: Zeilenmass,
     breiten: &Breiten,
     sichtbar: &Sichtbarkeit,
-    gemessen: &[f64; 6],
+    gemessen: &[f64; Bereich::ALLE.len()],
 ) -> bool {
     let ausgelegt = bereichsbreiten(mass, breiten, sichtbar);
     Bereich::ALLE.into_iter().any(|bereich| {
@@ -1461,7 +1463,7 @@ mod tests {
     /// Breite von 0 heisst "steht nicht im Fenster" und liefert `None`. Proben
     /// ueber `wuensche_nachfuehren` brauchen sie, weil jene Funktion in der
     /// Anwendung eine gemessene Zeile bekommt und keine gerechnete.
-    fn gemessen(breiten: [f64; 6]) -> Breiten {
+    fn gemessen(breiten: [f64; Bereich::ALLE.len()]) -> Breiten {
         let feld = |bereich: Bereich| {
             let breite = breiten[bereich.index()];
             (breite > 0.0).then_some(breite)
@@ -1482,7 +1484,7 @@ mod tests {
     /// Die Anteilsregel liefert Bruchzahlen; ein `assert_eq!` auf die volle
     /// Genauigkeit haenge an der letzten Stelle der Gleitkommarechnung.
     #[track_caller]
-    fn breiten_gleich(ist: [f64; 6], soll: [f64; 6]) {
+    fn breiten_gleich(ist: [f64; Bereich::ALLE.len()], soll: [f64; Bereich::ALLE.len()]) {
         for bereich in Bereich::ALLE {
             let a = ist[bereich.index()];
             let b = soll[bereich.index()];
@@ -2014,7 +2016,7 @@ mod tests {
                 "{bereich:?} hat durch den Git-Bereich nichts abgegeben: {mit:?} statt {ohne:?}"
             );
         }
-        let verhaeltnis = |breiten: [f64; 6]| {
+        let verhaeltnis = |breiten: [f64; Bereich::ALLE.len()]| {
             breiten[Bereich::Links.index()] / breiten[Bereich::Lesezeichen.index()]
         };
         assert!(
@@ -2539,7 +2541,7 @@ mod tests {
         modell.breite_setzen(Bereich::Lesezeichen, 400.0);
         modell.breite_setzen(Bereich::Links, 200.0);
 
-        let verhaeltnis = |breiten: [f64; 6]| {
+        let verhaeltnis = |breiten: [f64; Bereich::ALLE.len()]| {
             breiten[Bereich::Lesezeichen.index()] / breiten[Bereich::Links.index()]
         };
 

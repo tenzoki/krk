@@ -38,3 +38,6 @@ Abgleich 260829-1252, am Baum `b9d9cbc`: **weiter offen, und eine Voraussetzung 
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — der Zehnerblock bleibt halb angeschlossen, und die falsche Erklaerung im Code wird richtiggestellt; der Block ganz herein ist eine eigene Runde, falls der Nutzer mit externer Tastatur danach fragt; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-0858-drei-kleine-nutzerantworten-in-code.md — die Prosa ist nachgezogen und steht jetzt an einer Stelle, im Modulkopf von `crates/krk-core/src/tasten/parser.rs` unter „Was der Zehnerblock ausloest, und was nicht"; sie nennt die Regel statt einer Zahl, und drei weitere Stellen verweisen darauf statt sie zu wiederholen. Am Verhalten ist nichts geaendert.

@@ -30,6 +30,7 @@ use crate::fixture;
 static ZAEHLER: AtomicU64 = AtomicU64::new(0);
 
 /// Ein Ordnername unter dem Temporaerverzeichnis, der sich selbst abraeumt.
+#[must_use = "fallengelassen raeumt Drop den Ordner sofort wieder ab; er ist zu halten, solange die Probe laeuft"]
 pub struct Wegwerfordner {
     pfad: PathBuf,
 }

@@ -237,22 +237,22 @@ pub struct Aufteilung {
     /// Er haelt daneben die Wuensche, aus denen ausgelegt wird, und deshalb
     /// spricht [`Aufteilung::anwenden`] ihn an.
     delegierter: Retained<AufteilungsDelegierter>,
-    /// Die Kaesten aller sechs Bereiche, in der Reihenfolge von
-    /// [`Bereich::ALLE`].
+    /// Die Kaesten aller Bereiche, in der Reihenfolge von [`Bereich::ALLE`].
     ///
-    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    /// # Was die Feldbreite haelt
     ///
-    /// **Sie haelt nichts.** Das Feld entsteht in [`Aufteilung::bauen`] aus
-    /// einem Literal mit sechs Gliedern und nicht aus `Bereich::ALLE.map(…)`;
-    /// die Zahl `6` steht damit im Quelltext und folgt nicht aus der
-    /// Aufzaehlung. Ein siebter Bereich, den jemand hinzufuegte, ohne dieses
-    /// Literal zu erweitern, uebersetzte anstandslos und liefe beim Start auf
-    /// `index out of bounds`, sobald [`Aufteilung::rahmen_setzen`] ueber
-    /// `Bereich::ALLE` griffe. Anders als bei
-    /// `Bereichsleiste::bereichsschalter`, dessen Feld ueber
-    /// `Bereich::ALLE.map(…)` entsteht und dessen Laenge deshalb der Bau
-    /// haelt.
-    rahmen: [Retained<NSBox>; 6],
+    /// **Sie haelt die Zahl, und seit dem 260907 haelt sie sie aus der
+    /// Aufzaehlung.** Die Laenge steht als `Bereich::ALLE.len()` da und nicht
+    /// als Zahl im Quelltext; das Literal in [`Aufteilung::bauen`] muss ihr
+    /// folgen, sonst meldet der Uebersetzer `expected an array with a size
+    /// of …`. Bis dahin stand hier eine `6`, ein siebter Bereich uebersetzte
+    /// anstandslos, und der Start lief auf `index out of bounds`, sobald
+    /// [`Aufteilung::rahmen_setzen`] ueber `Bereich::ALLE` griff.
+    ///
+    /// **Was sie nicht haelt, ist die Reihenfolge.** Welcher Kasten an welcher
+    /// Stelle steht, sagt allein das Literal in [`Aufteilung::bauen`]; ein
+    /// vertauschtes Paar uebersetzt und rahmt den falschen Bereich ein.
+    rahmen: [Retained<NSBox>; Bereich::ALLE.len()],
 }
 
 impl Aufteilung {
@@ -368,17 +368,16 @@ impl Aufteilung {
     /// Der Weg, auf dem eine mit der Maus verschobene Trennlinie in die Sitzung
     /// kommt: sie steht in den Rahmen der Ansichten und nirgends sonst.
     ///
-    /// # Was die Feldbreite haelt, und was sie nicht haelt
+    /// # Was die Feldbreite haelt
     ///
-    /// **Sie haelt nichts.** `[0.0; 6]` ist eine Zahl im Quelltext, und die
-    /// Schleife darunter greift ueber [`Bereich::index`] hinein. Ein siebter
-    /// Bereich, der diese Zahl nicht erhoehte, uebersetzte und liefe zur
-    /// Laufzeit auf `index out of bounds`. Auch die Gegenseite haelt nichts:
-    /// `Fenstermodell::breiten_uebernehmen` nimmt `[f64; 6]`, und beide Seiten
-    /// blieben stumm bei fuenf.
+    /// **Seit dem 260907 die Zahl.** Sie steht als `Bereich::ALLE.len()` da,
+    /// und die Schleife darunter greift ueber [`Bereich::index`] hinein: ein
+    /// siebter Bereich verlaengert das Feld von selbst. Die Gegenseite folgt
+    /// derselben Regel — `Fenstermodell::breiten_uebernehmen` nimmt dieselbe
+    /// abgeleitete Laenge —, und beide blieben bis dahin stumm bei fuenf.
     #[must_use]
-    pub fn gemessene_breiten(&self) -> [f64; 6] {
-        let mut breiten = [0.0; 6];
+    pub fn gemessene_breiten(&self) -> [f64; Bereich::ALLE.len()] {
+        let mut breiten = [0.0; Bereich::ALLE.len()];
         for bereich in Bereich::ALLE {
             if let Some(ansicht) = bereichsansicht(&self.teiler, bereich.index()) {
                 breiten[bereich.index()] = ansicht.frame().size.width;

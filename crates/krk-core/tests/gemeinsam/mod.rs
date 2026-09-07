@@ -88,6 +88,7 @@ use std::time::Duration;
 static ZAEHLER: AtomicU64 = AtomicU64::new(0);
 
 /// Ein Ordner unter dem Temporaerverzeichnis, der sich selbst abraeumt.
+#[must_use = "fallengelassen raeumt Drop den Ordner sofort wieder ab; er ist zu halten, solange die Probe laeuft"]
 pub struct Pruefordner {
     pfad: PathBuf,
 }
@@ -267,6 +268,55 @@ fn entsperren_und_loeschen(pfad: &Path) -> io::Result<()> {
         Ok(_) => fs::remove_file(pfad),
         Err(fehler) => Err(fehler),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Proben, deren Prueffall an entzogenen Rechten haengt
+// ---------------------------------------------------------------------------
+
+/// Haelt die Probe an, wenn die eben gesetzte Rechtesperre nichts sperrt.
+///
+/// **Die eine Antwort auf eine Frage, die der Baum bis zum 260907 an zwei
+/// Stellen entgegengesetzt beantwortet hat.** Etliche Abnahmeproben des Kerns
+/// stellen ihren Prueffall ueber entzogene Rechte her (`chmod 0o000`
+/// beziehungsweise `0o500`). Unter `root` greift die Rechtepruefung des Systems
+/// nicht, der hergestellte Fall tritt nicht ein, und die Probe misst die Zusage
+/// nicht, die sie zu messen vorgibt. Bis zum 260907 schwiegen drei davon
+/// (`eprintln!` und `return`) und liefen gruen weiter, waehrend andere gar nicht
+/// erst nachsahen und mit einer Meldung ausfielen, die den Grund nicht nennt.
+///
+/// Der Nutzer hat am 260907-0823 entschieden: **die Probe bricht mit klarem
+/// Text ab, statt still zu ueberspringen**
+/// (`shared/decisions/
+/// 260826-1302_*_schweigt-eine-probe-die-unter-root-nichts-messen-kann-oder-faellt-sie-aus.md`).
+/// Die Begruendung des stillen Wegs — "eine Probe, die nichts aussagt,
+/// behauptet hier auch nichts" — trifft nur die halbe Sache: ein gruener Lauf
+/// behauptet sehr wohl etwas, naemlich gemessen zu haben. `cargo test` setzt
+/// `--nocapture` nicht, die Zeile auf der Fehlerausgabe sieht also niemand.
+///
+/// **Die Folge ist gewollt und keine Nebenwirkung: ein Lauf als `root` meldet
+/// diese Proben rot.** Die Wahl setzt voraus, dass dieser Baum nie unter `root`
+/// gebaut oder geprueft wird, und heute verlangt das keine Anweisung in
+/// `README.md` und kein Ziel im `Makefile`. Wer das aendert, aendert zuerst
+/// diesen Entscheid und nicht die Proben: ein Rot hier ist die Auskunft
+/// "dieser Lauf konnte die Zusage nicht messen" und kein Defekt an KRK.
+///
+/// `sperre_haelt` fuehrt genau den Zugriff aus, den die Probe verboten hat, und
+/// sagt, ob er verwehrt blieb; `zusage` benennt, was die Probe misst, damit der
+/// Abbruch nicht bloss den Ort nennt.
+///
+/// Nicht jede Probe mit `chmod` braucht den Aufruf. Wo die Behauptung unter
+/// jeder Kennung gleich ausfaellt, steht der Grund am Kopf der Probe: so bei
+/// den zwei Verweisziel-Proben in `tests/verzeichnis.rs`, die `stat(2)` und
+/// nicht `open(2)` befragen.
+pub fn rechtesperre_haelt_oder_abbruch(zusage: &str, sperre_haelt: bool) {
+    assert!(
+        sperre_haelt,
+        "dieser Lauf kann die Zusage nicht messen: der eben entzogene Zugriff \
+         gelingt trotzdem, die Rechtesperre greift auf dieser Kennung nicht. \
+         Das ist die Lage eines Laufs als root, und KRK wird nicht unter root \
+         geprueft. Zusage: {zusage}"
+    );
 }
 
 // ---------------------------------------------------------------------------

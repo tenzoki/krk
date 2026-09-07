@@ -51,3 +51,7 @@ bindet den zweiten Plan über die 116 übrigen Befunde, unter anderem
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-0823 beantwortet` — eine Probe liest die Varianten aus dem Quelltext und haelt sie gegen die Liste; keine fremde Kiste. Der Baum faehrt schon so, und ein spaeterer Umstieg auf strum striche die Probe statt sie umzubauen; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-0848-alle-listen-neben-ihren-aufzaehlungen.md `## Was gebaut ist` — ein Durchlauf in `crates/krk-core/tests/baum.rs` sucht jede Liste `ALLE` unter `crates/` und haelt sie gegen die Varianten ihrer Aufzaehlung; elf der dreizehn Listen sind damit gedeckt, die zwei uebrigen stehen mit Grund in `UNLESBARE_ALLE_LISTEN`.
+

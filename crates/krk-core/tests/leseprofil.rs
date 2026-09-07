@@ -59,7 +59,9 @@ use krk_core::leseprofil::{
 use krk_core::verzeichnis::sys::ortszeit;
 use krk_core::verzeichnis::{Eintrag, Typ};
 
-use gemeinsam::{Pruefordner, kind_mit_deskriptorgrenze, kindauftrag};
+use gemeinsam::{
+    Pruefordner, kind_mit_deskriptorgrenze, kindauftrag, rechtesperre_haelt_oder_abbruch,
+};
 
 mod gemeinsam;
 
@@ -2669,6 +2671,10 @@ fn ein_ordner_ohne_leserecht_zeigt_drei_platzhalter_unter_ihren_beschriftungen()
     schreiben(&gesperrt, "unsichtbar.md", "");
     std::fs::set_permissions(&gesperrt, std::fs::Permissions::from_mode(0o000))
         .expect("die Rechte lassen sich nicht entziehen");
+    rechtesperre_haelt_oder_abbruch(
+        "ein Ordner ohne Leserecht zeigt in allen drei Zaehlzeilen den Platzhalter (C2.11)",
+        std::fs::read_dir(&gesperrt).is_err(),
+    );
 
     // Scheitert die Zeile darunter, raeumt `Drop` des Pruefordners den
     // gesperrten Ordner auf dem langsamen Weg ab; die Rechte kommen deshalb
@@ -2684,7 +2690,7 @@ fn ein_ordner_ohne_leserecht_zeigt_drei_platzhalter_unter_ihren_beschriftungen()
             ("Ordner", &Wert::Nicht),
             ("Verknüpfungen", &Wert::Nicht),
         ],
-        "ohne Leserecht steht nicht in jeder Zeile der Platzhalter; laeuft die Probe als root?"
+        "ohne Leserecht steht nicht in jeder Zeile der Platzhalter"
     );
     assert_eq!(
         zeilen_als_text(&zeilen),

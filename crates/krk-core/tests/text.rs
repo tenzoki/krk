@@ -70,7 +70,7 @@ use krk_core::text::datei::{Lesehindernis, Textstand, Unlesbarkeit};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
-use gemeinsam::{Pruefordner, mit_zeitschranke};
+use gemeinsam::{Pruefordner, mit_zeitschranke, rechtesperre_haelt_oder_abbruch};
 
 /// Der Durchlauf von Hand: Byte fuer Byte, ohne die Rechnung des Index.
 ///
@@ -721,13 +721,10 @@ fn eine_gesperrte_datei_kommt_mit_dem_systemfehler_zurueck() {
     fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
         .expect("Rechte lassen sich nicht setzen");
 
-    if fs::read(&gesperrt).is_ok() {
-        // Unter root liest sich auch eine gesperrte Datei. Dann sagt die Probe
-        // nichts aus, und eine Probe, die nichts aussagt, behauptet hier auch
-        // nichts.
-        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
-        return;
-    }
+    rechtesperre_haelt_oder_abbruch(
+        "eine gesperrte Datei kommt mit dem Systemfehler zurueck",
+        fs::read(&gesperrt).is_err(),
+    );
 
     let ergebnis = datei::oeffnen(&gesperrt);
     let Err(Abweisung::KeinGueltigesZiel { grund, .. }) = &ergebnis else {
@@ -1217,13 +1214,10 @@ fn ein_fehler_beim_oeffnen_ist_kein_deskriptormangel() {
     let gesperrt = ordner.datei("verschlossen.txt", b"eins\n");
     fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
         .expect("Rechte lassen sich nicht setzen");
-    if fs::read(&gesperrt).is_ok() {
-        // Unter root liest sich auch eine gesperrte Datei. Dann sagt die Probe
-        // nichts aus, und eine Probe, die nichts aussagt, behauptet hier auch
-        // nichts.
-        eprintln!("uebersprungen: die Rechtesperre wirkt auf dieser Kennung nicht");
-        return;
-    }
+    rechtesperre_haelt_oder_abbruch(
+        "das fehlende Leserecht ist ein Fehler und kein Deskriptormangel",
+        fs::read(&gesperrt).is_err(),
+    );
 
     assert_eq!(
         datei::bis_zur_grenze_lesen(&gesperrt, 1024),

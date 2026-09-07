@@ -68,6 +68,48 @@
 //! `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/
 //! 260808-0140_*_die-y-tasten-liegen-auf-einer-deutschen-tastatur-unter-anderen-buchstaben.md`.
 //!
+//! # Was der Zehnerblock ausloest, und was nicht
+//!
+//! **Die eine Stelle, die diese Frage beantwortet.** Kein Name der Tabelle
+//! benennt eine Stelle des Zehnerblocks, und ein Teil seiner Tasten loest
+//! trotzdem aus. Das ist die zweite Folge der zeichenbasierten Nachschlagart:
+//! [`Tastendruck::aus_ereignis`](super::Tastendruck::aus_ereignis) sieht den
+//! Tastencode gar nicht an, sobald ein gemeldetes Zeichen durch
+//! [`zeichen_als_kennung`] kommt. **Eine Taste des Blocks loest damit genau
+//! dann aus, wenn das Zeichen, das sie meldet, ein Name der Tabelle traegt** —
+//! welche Zeichen das sind, sagt [`zeichen_des_namens`], und eine Aufzaehlung
+//! daneben waere mit dem naechsten Namen falsch.
+//!
+//! Die Ziffern des Blocks treffen deshalb denselben Eintrag wie die der oberen
+//! Reihe und sind von ihr ununterscheidbar; `+` und `-` treffen seit der Runde
+//! 20 die zwei Zeichentasten am Ende der Tabelle. Jede uebrige Taste des Blocks
+//! — die Eingabetaste, das Komma, die restlichen Rechenzeichen — meldet ein
+//! Zeichen, das kein Name traegt, faellt damit auf ihren Tastencode zurueck und
+//! findet dort keinen Eintrag. Sie loest nichts aus, auch nicht das, was
+//! `return` ausloest.
+//!
+//! **Der Grund, der den Block heraushaelt, ist der fehlende Name und nicht der
+//! eigene Tastencode.** Bis zur Runde 2 schlug der Abgriff auch fuer Ziffern
+//! ueber den Code nach, und die Codes des Blocks stehen nicht in [`TASTEN`] —
+//! damit war er ganz draussen. Seither traegt der Code fuer eine Ziffer nichts
+//! mehr bei, und was bleibt, ist die Wirkung des fehlenden Namens: eine Taste
+//! ohne Namen ist von Hand nicht belegbar und in der Belegungsansicht nicht
+//! zuweisbar ([`Kombination::aus_tastendruck`] liefert `None`). Auf einer
+//! bestehenden Belegung wirkt sie ueber ihr Zeichen trotzdem mit.
+//!
+//! Der halbe Anschluss ist nicht gewaehlt, sondern gefallen, und der Nutzer hat
+//! ihn am 260907-0823 so bestaetigt: er bleibt, und der Block ganz herein ist
+//! eine eigene Runde, falls jemand mit externer Tastatur danach fragt
+//! (`shared/decisions/
+//! 260826-1223_*_loesen-die-zifferntasten-des-zehnerblocks-dieselbe-funktion-aus-wie-die-obere-reihe.md`).
+//!
+//! `inference:` Dass AppKit fuer eine Zifferntaste des Blocks ueber
+//! `charactersByApplyingModifiers(empty)` die Ziffer meldet, ist **nicht
+//! gemessen**: das Referenzgeraet ist ein MacBook und hat keinen Zehnerblock.
+//! Am Quelltext allein entscheidbar ist der Rest der Kette, und das ist die
+//! Aussage dieses Abschnitts: der Code wird fuer ein gemeldetes Zeichen nicht
+//! mehr befragt.
+//!
 //! # Die Schreibweise
 //!
 //! `[ctrl+][opt+][shift+][cmd+]<taste>`, in genau dieser Reihenfolge. Sie ist
@@ -276,7 +318,12 @@ const MESSUNG: &str = "spikes/fn-tasten/messung-A.txt";
 /// `pagedown`, `home`, `end`, `return`, `tab`, `esc`, `space`, die
 /// Buchstaben und die Ziffern sowie die zwei Zeichentasten `plus` und `minus`.
 ///
-/// Nicht enthalten sind die Satzzeichen und der Zehnerblock. Ein virtueller
+/// Keinen Namen tragen hier die Satzzeichen und der Zehnerblock. **Das heisst
+/// nicht, dass sie nichts ausloesen**: was der Zehnerblock ueber sein
+/// gemeldetes Zeichen trotzdem trifft, steht im Modulkopf unter „Was der
+/// Zehnerblock ausloest, und was nicht", und es steht dort und nicht hier, weil
+/// es eine Aussage ueber den Nachschlag ist und keine ueber diese Tabelle. Ein
+/// virtueller
 /// Tastencode benennt eine **Stelle** auf der Tastatur, und bei den
 /// Satzzeichen laeuft die Beschriftung dieser Stelle je nach Tastaturbelegung
 /// weit auseinander: `kVK_ANSI_LeftBracket` traegt auf einer deutschen
@@ -350,8 +397,10 @@ pub const TASTEN: [Taste; 63] = [
     dokumentiert("x", 7, "kVK_ANSI_X"),
     dokumentiert("y", 16, "kVK_ANSI_Y"),
     dokumentiert("z", 6, "kVK_ANSI_Z"),
-    // Die Ziffern der oberen Reihe. Der Zehnerblock traegt eigene Codes und
-    // steht nicht in der Schreibweise.
+    // Die Ziffern der oberen Reihe. Die des Zehnerblocks tragen eigene Codes
+    // und deshalb keinen eigenen Namen in der Schreibweise — sie treffen ueber
+    // ihr gemeldetes Zeichen aber genau diese Eintraege hier, und der Code
+    // haelt sie nicht heraus. Der Modulkopf schreibt aus, was daraus folgt.
     dokumentiert("0", 29, "kVK_ANSI_0"),
     dokumentiert("1", 18, "kVK_ANSI_1"),
     dokumentiert("2", 19, "kVK_ANSI_2"),

@@ -43,7 +43,7 @@
 //! Probe dieser Art.
 
 mod gemeinsam;
-use gemeinsam::{aufrufstellen, quelldateien};
+use gemeinsam::{aufrufstellen, quelldateien, varianten_der_aufzaehlung};
 
 /// Ob eine Nadel in einer **Code**-Zeile der Datei steht und nicht in einem
 /// Kommentar.
@@ -742,4 +742,291 @@ fn beide_sperrgriffe_der_ablage_tragen_must_use_mit_begruendung() {
             "{typ} traegt kein must_use mit Begruendung; ein fallengelassener Griff gibt seine Sperre still ab"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Die ALLE-Listen neben ihren Aufzaehlungen
+// ---------------------------------------------------------------------------
+
+/// Die zwei `ALLE`-Listen, die diese Nadel nicht lesen kann, mit dem Grund.
+///
+/// **Eine Ausnahme steht hier und nicht als stiller Uebersprung im Code.** Der
+/// Durchlauf haelt jeden Eintrag dieser Liste gegen den Baum: eine Ausnahme,
+/// deren Fundstelle verschwindet oder deren Aufzaehlung umzieht, laesst die
+/// Probe rot werden, statt als toter Eintrag stehen zu bleiben. Eine dritte
+/// Ausnahme ist damit eine bewusste Eintragung und kein Versehen.
+const UNLESBARE_ALLE_LISTEN: [(&str, &str, &str); 2] = [
+    (
+        "krk-core/src/ablage/pfade.rs",
+        "Datei",
+        "`Datei::Zettel(Zettel)` traegt Daten, und die Liste fuehrt eine Zeile je Zettel: \
+         sieben Eintraege zu sechs Varianten. Weder die Nadel ueber die Aufzaehlung noch \
+         die ueber die Liste liest datentragende Varianten, und eine Gleichheit waere \
+         hier ohnehin die falsche Zusage",
+    ),
+    (
+        "krk-ui/src/appkit/blaetter/stapelumbenennen.rs",
+        "Spalte",
+        "die Aufzaehlung ist modulintern (`enum Spalte`) und nicht `pub`; \
+         `varianten_der_aufzaehlung` findet allein `pub enum <Name> {` in Spalte 0, und \
+         eine Sichtbarkeit allein fuer eine Probe anzuheben waere der teurere Fehler",
+    ),
+];
+
+/// Die Nadel, an der eine Liste `ALLE` erkannt wird.
+///
+/// **Zusammengesetzt, weil diese Datei in dem Baum liegt, den sie liest.** Als
+/// ein Stueck geschrieben faende sie sich selbst dreimal — im Zerleger, im
+/// Zaehlabgleich und in dessen Meldung — und der Abgleich schluege fehl. Die
+/// Bauform ist die des Dateikopfes.
+const ALLE_NADEL: &str = concat!("const ", "ALLE: [");
+
+/// Jede Liste `ALLE` im Baum fuehrt genau die Varianten ihrer Aufzaehlung, in
+/// deren Reihenfolge.
+///
+/// # Was der Uebersetzer davon haelt: nichts
+///
+/// `pub const ALLE: [Bereich; 6]` zwingt zu sechs Eintraegen und sagt nichts
+/// darueber, **welche** sechs. Ein siebter Bereich uebersetzt anstandslos,
+/// solange niemand die Liste anfasst, und schlaegt erst zur Laufzeit zu — als
+/// `index out of bounds`, wo ein Feld ueber [`Bereich::index`] gegriffen wird,
+/// oder als stilles Nichts, wo eine Schleife ueber `ALLE` den neuen Wert
+/// einfach auslaesst. Die Runde 23 hat dafuer bezahlt: neun Stellen mussten von
+/// Hand nachgezogen werden, und der Uebersetzer hat keine einzige genannt.
+///
+/// Entscheidbar wird die Frage aus einer zweiten Quelle, und die ist der
+/// Quelltext der Aufzaehlung. So haelt die Runde 22 schon `Kommando::KENNUNGEN`
+/// (`crates/krk-core/tests/belegung.rs`), so das Beschriftungsfeld von
+/// `Wirkungsbereich` und so `Marke::ALLE` (`crates/krk-core/tests/git.rs`); der
+/// Nutzer hat diese Bauform am 260907 fuer alle Listen gewaehlt und die fremde
+/// Kiste `strum` verworfen
+/// (`260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`).
+///
+/// # Warum ein Durchlauf und nicht dreizehn Proben
+///
+/// Dreizehn Proben deckten dreizehn Listen ab und liessen die vierzehnte, die
+/// jemand naechste Woche schreibt, ungedeckt — genau die Luecke, gegen die
+/// diese Probe gebaut ist, eine Ebene hoeher. Der Durchlauf sucht die Listen im
+/// Baum, statt sie aufzuzaehlen; eine neue Liste ist damit vom Tag ihrer
+/// Entstehung an gehalten, ohne dass jemand daran denkt.
+///
+/// **Das gilt fuer beide Kisten.** `krk-ui` hat kein Bibliotheksziel, eine
+/// Datei unter `crates/krk-ui/tests/` erreicht also nichts aus `krk-ui`; sechs
+/// der Listen liegen dort. Diese Probe erreicht sie trotzdem, weil sie beide
+/// Seiten aus dem Quelltext liest und keine der beiden verlinkt.
+///
+/// # Was diese Nadel nicht sieht
+///
+/// - **Sie liest allein `crates/`**, weil `gemeinsam::quelldateien()` es tut.
+///   Eine Liste `ALLE` in `xtask/` bekaeme sie nicht zu sehen; heute steht dort
+///   keine.
+/// - **Sie erkennt eine Liste an ihrem Namen `ALLE`.** Eine Liste, die
+///   Vollstaendigkeit meint und anders heisst, entgeht ihr, und eine
+///   Teilmenge wie `RECHTER_RAND: [Bereich; 3]` soll ihr entgehen. Der Name
+///   ist die Zusage; ob eine Liste sie meint, ist an nichts sonst abzulesen.
+/// - **Mehrzeilige Eintraege und Kommentare im Listenrumpf** bricht sie ab,
+///   statt sie zu ueberspringen.
+///
+/// Leer laufen kann sie nicht: der Zaehlabgleich je Datei haelt fest, dass der
+/// Zerleger jede Zeile mit `const ALLE: [` auch wirklich aufgenommen hat.
+#[test]
+fn jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung() {
+    let mut gesehen: Vec<(String, String)> = Vec::new();
+
+    for (datei, inhalt) in quelldateien() {
+        let stellen = alle_listen(&datei, &inhalt);
+
+        // **Der Zerleger wird gegen die rohe Zeilenzahl gehalten.** Ohne das
+        // liesse eine geaenderte Schreibweise ihn still nichts mehr finden, und
+        // die Probe bestaetigte einen Baum, den sie nicht gelesen hat.
+        let roh = inhalt
+            .lines()
+            .filter(|zeile| {
+                let rumpf = zeile.trim_start();
+                !rumpf.starts_with("//") && rumpf.contains(ALLE_NADEL)
+            })
+            .count();
+        assert_eq!(
+            stellen.len(),
+            roh,
+            "in {datei} stehen {roh} Zeilen mit `{ALLE_NADEL}`, der Zerleger nimmt {} auf",
+            stellen.len()
+        );
+
+        for (aufzaehlung, zeile) in stellen {
+            gesehen.push((datei.clone(), aufzaehlung.clone()));
+            if UNLESBARE_ALLE_LISTEN
+                .iter()
+                .any(|(ausnahme, name, _)| *ausnahme == datei && *name == aufzaehlung)
+            {
+                continue;
+            }
+
+            let gelistet = gelistete_namen(&datei, &inhalt, &aufzaehlung, zeile);
+            let varianten = varianten_der_aufzaehlung(&datei, &aufzaehlung);
+
+            // **Die fehlende Variante zuerst.** Sie ist die Auskunft, fuer die
+            // diese Probe gebaut ist; eine Doppelung faellt bei gleicher
+            // Feldlaenge immer zusammen mit einer Luecke an, und ihre Meldung
+            // zuerst verdeckte den Namen, den der Leser sucht.
+            let fehlen: Vec<&str> = varianten
+                .iter()
+                .filter(|name| !gelistet.contains(name))
+                .map(String::as_str)
+                .collect();
+            assert!(
+                fehlen.is_empty(),
+                "diese Varianten von {aufzaehlung} stehen in keinem Eintrag von \
+                 {aufzaehlung}::ALLE ({datei}): {}",
+                fehlen.join(", ")
+            );
+
+            let doppelt: Vec<&str> = gelistet
+                .iter()
+                .enumerate()
+                .filter(|(stelle, name)| gelistet[..*stelle].contains(name))
+                .map(|(_, name)| name.as_str())
+                .collect();
+            assert!(
+                doppelt.is_empty(),
+                "{aufzaehlung}::ALLE in {datei} fuehrt diese Varianten mehr als einmal: {}",
+                doppelt.join(", ")
+            );
+
+            let ueberzaehlig: Vec<&str> = gelistet
+                .iter()
+                .filter(|name| !varianten.contains(name))
+                .map(String::as_str)
+                .collect();
+            assert!(
+                ueberzaehlig.is_empty(),
+                "diese Eintraege von {aufzaehlung}::ALLE ({datei}) benennen keine Variante \
+                 der Aufzaehlung: {}",
+                ueberzaehlig.join(", ")
+            );
+
+            // Die Reihenfolge ist bei mehreren dieser Listen tragend: `index()`
+            // rechnet die Stelle in `ALLE` aus, und die Bereichsleiste reiht
+            // ihre Schalter danach. Wo sie es nicht ist, kostet die Zusage
+            // nichts, und eine bewusste Umstellung faellt hier auf.
+            assert_eq!(
+                gelistet, varianten,
+                "{aufzaehlung}::ALLE in {datei} fuehrt die Varianten in einer anderen \
+                 Reihenfolge als die Aufzaehlung"
+            );
+        }
+    }
+
+    for (datei, aufzaehlung, grund) in UNLESBARE_ALLE_LISTEN {
+        assert!(
+            gesehen
+                .iter()
+                .any(|(gefunden, name)| gefunden == datei && name == aufzaehlung),
+            "die Ausnahme {aufzaehlung}::ALLE in {datei} steht nicht mehr im Baum; \
+             sie ist einzutragen oder zu streichen (Grund war: {grund})"
+        );
+    }
+
+    assert!(
+        gesehen.len() > UNLESBARE_ALLE_LISTEN.len(),
+        "unter crates/ steht keine lesbare Liste ALLE; die Nadel greift ins Leere"
+    );
+}
+
+/// Die Fundstellen `const ALLE: [<Aufzaehlung>; N]` einer Datei: je Fund der
+/// Name der Aufzaehlung und die Zeile, in der die Liste beginnt.
+///
+/// Getrennt vom Lesen des Rumpfes, weil der Rumpf einer Ausnahme aus
+/// [`UNLESBARE_ALLE_LISTEN`] gar nicht erst gelesen werden soll: er ist ja
+/// gerade der, an dem die Nadel abbraeche.
+fn alle_listen(datei: &str, inhalt: &str) -> Vec<(String, usize)> {
+    let mut gefunden = Vec::new();
+    for (nummer, zeile) in inhalt.lines().enumerate() {
+        let rumpf = zeile.trim();
+        if rumpf.starts_with("//") {
+            continue;
+        }
+        let ohne_sicht = rumpf
+            .strip_prefix("pub ")
+            .or_else(|| rumpf.strip_prefix("pub(crate) "))
+            .or_else(|| rumpf.strip_prefix("pub(super) "))
+            .unwrap_or(rumpf);
+        let Some(rest) = ohne_sicht.strip_prefix(ALLE_NADEL) else {
+            continue;
+        };
+        let aufzaehlung = rest
+            .split(';')
+            .next()
+            .expect("ein split liefert immer ein erstes Stueck")
+            .trim();
+        assert!(
+            !aufzaehlung.is_empty()
+                && aufzaehlung
+                    .chars()
+                    .all(|zeichen| zeichen.is_ascii_alphanumeric() || zeichen == '_'),
+            "in {datei} traegt die Zeile `{rumpf}` keinen einfachen Elementtyp"
+        );
+        gefunden.push((aufzaehlung.to_owned(), nummer));
+    }
+    gefunden
+}
+
+/// Die Namen, die die Liste `ALLE` ab Zeile `zeile` aufzaehlt, ohne den
+/// Vorsatz `<Aufzaehlung>::`.
+///
+/// Ein Eintrag steht mit oder ohne diesen Vorsatz da: `Marke::ALLE` schreibt
+/// ihn aus, die Probentafel in `loeschzielbefund.rs` fuehrt die drei Werte ein
+/// und laesst ihn weg. Beide Schreibweisen benennen dieselbe Variante, und die
+/// Nadel nimmt beide.
+fn gelistete_namen(datei: &str, inhalt: &str, aufzaehlung: &str, zeile: usize) -> Vec<String> {
+    let zeilen: Vec<&str> = inhalt.lines().collect();
+    let kopf = zeilen[zeile].trim();
+    let anfang = kopf
+        .find("] = ")
+        .unwrap_or_else(|| panic!("in {datei} steht `{kopf}` ohne `] = `"))
+        + "] = ".len();
+
+    let mut text = kopf[anfang..].trim().to_owned();
+    let mut ende = zeile;
+    while !text.ends_with("];") {
+        ende += 1;
+        let weiter = zeilen.get(ende).unwrap_or_else(|| {
+            panic!("die Liste {aufzaehlung}::ALLE in {datei} endet an keiner Zeile auf `];`")
+        });
+        text.push(' ');
+        text.push_str(weiter.trim());
+        text = text.trim_end().to_owned();
+    }
+
+    let innen = text
+        .strip_prefix('[')
+        .and_then(|rumpf| rumpf.strip_suffix("];"))
+        .unwrap_or_else(|| {
+            panic!("die Liste {aufzaehlung}::ALLE in {datei} steht nicht als `[…];` da: `{text}`")
+        });
+
+    let vorsatz = format!("{aufzaehlung}::");
+    let mut namen = Vec::new();
+    for stueck in innen.split(',') {
+        let eintrag = stueck.trim();
+        if eintrag.is_empty() {
+            continue;
+        }
+        let name = eintrag.strip_prefix(&vorsatz).unwrap_or(eintrag);
+        assert!(
+            !name.is_empty()
+                && name
+                    .chars()
+                    .all(|zeichen| zeichen.is_ascii_alphanumeric() || zeichen == '_'),
+            "die Liste {aufzaehlung}::ALLE in {datei} traegt den Eintrag `{eintrag}`; \
+             diese Nadel liest allein datenlose Varianten, mit oder ohne `{vorsatz}` davor"
+        );
+        namen.push(name.to_owned());
+    }
+    assert!(
+        !namen.is_empty(),
+        "die Liste {aufzaehlung}::ALLE in {datei} liefert keinen Eintrag; \
+         eine leere Liste waere eine Probe, die alles bestaetigt"
+    );
+    namen
 }
