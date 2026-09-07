@@ -115,7 +115,7 @@
 //! `ENFILE` sagen nichts ueber den Pfad, sondern ueber die Deskriptortabelle
 //! des Prozesses. Aus ihnen eine Zahl abzuleiten hiesse, einen Zustand der
 //! eigenen Sitzung als Aussage ueber ein Loeschziel auszugeben — und weil
-//! „unentschieden gilt als laut" ([`super::Loeschzielbefund`]), kostet die
+//! „unentschieden gilt als laut" ([`super::Warnbefund`]), kostet die
 //! ehrliche Antwort hier nichts als eine lautere Rueckfrage.
 //!
 //! Die Regel gilt an beiden Stellen, an denen gelesen wird, beim Oeffnen und
@@ -191,7 +191,7 @@ pub enum Umfang {
     /// Die Zaehlung ist nicht dazu gekommen: dem Prozess fehlte ein
     /// Verzeichnisdeskriptor. Das ist keine Aussage ueber die Auswahl, sondern
     /// eine ueber KRKs Kenntnis von ihr, und sie gilt als warnwuerdig — siehe
-    /// [`super::Loeschzielbefund`].
+    /// [`super::Warnbefund`].
     Unentschieden,
 }
 

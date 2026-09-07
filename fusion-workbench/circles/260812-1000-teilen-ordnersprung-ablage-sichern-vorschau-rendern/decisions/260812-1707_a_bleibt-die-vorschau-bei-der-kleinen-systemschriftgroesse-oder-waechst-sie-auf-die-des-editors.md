@@ -65,3 +65,6 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1651 beantwortet` — Moeglichkeit 3: beide Flaechen gehen auf die kleine Systemschriftgroesse. Der Nutzer holt nicht die alte Ungleichheit zurueck, sondern zieht Editor und Vorschau gemeinsam herunter; die Groesse, die der Editor seit seiner Runde bewusst trug, faellt damit, und das ist mitentschieden; ruled by user, Kai Stalmann <kai@stalmann.org>.

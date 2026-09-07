@@ -16,7 +16,7 @@
 //!
 //! **Sie prueft das Verhalten und nicht das Zugriffsmuster.** Die Zusage
 //! „Abbruch beim ersten Treffer" ist mit echten Ordnern nicht messbar, und der
-//! Grund liegt in `Loeschzielbefund::oder`: `Ja` ist dort aufsaugend, und ein
+//! Grund liegt in `Warnbefund::oder`: `Ja` ist dort aufsaugend, und ein
 //! Gang, der nach dem ersten Treffer weiterlaeuft, liefert dasselbe `Ja`. Kein
 //! Baum, den man hier aufbaut, unterscheidet die beiden Faelle. Gemessen wird
 //! sie deshalb neben dem Modul, mit eingesetzter Pruefung und einer Mitschrift
@@ -32,7 +32,7 @@
 
 use std::path::PathBuf;
 
-use krk_core::verzeichnis::Loeschzielbefund;
+use krk_core::verzeichnis::Warnbefund;
 use krk_core::verzeichnis::arbeitsbaum::{
     beruehrt_einen_arbeitsbaum, liegt_in_arbeitsbaum, traegt_arbeitsbaum,
 };
@@ -51,10 +51,10 @@ fn der_arbeitsbaum_am_ordner_selbst_wird_gefunden() {
     let projekt = ordner.ordner("projekt");
     std::fs::create_dir(projekt.join(".git")).expect(".git laesst sich nicht anlegen");
 
-    assert_eq!(traegt_arbeitsbaum(&projekt), Loeschzielbefund::Ja);
+    assert_eq!(traegt_arbeitsbaum(&projekt), Warnbefund::Ja);
     assert_eq!(
         liegt_in_arbeitsbaum(&projekt, Some(ordner.pfad())),
-        Loeschzielbefund::Ja
+        Warnbefund::Ja
     );
 }
 
@@ -77,12 +77,12 @@ fn der_arbeitsbaum_zwei_ebenen_darueber_wird_gefunden() {
 
     assert_eq!(
         traegt_arbeitsbaum(&tief),
-        Loeschzielbefund::Nein,
+        Warnbefund::Nein,
         "der Ordner selbst traegt kein .git; die enge Form haette hier geschwiegen"
     );
     assert_eq!(
         liegt_in_arbeitsbaum(&tief, Some(ordner.pfad())),
-        Loeschzielbefund::Ja,
+        Warnbefund::Ja,
         "der Aufwaertsgang findet den Arbeitsbaum zwei Ebenen darueber nicht"
     );
 }
@@ -95,7 +95,7 @@ fn ohne_arbeitsbaum_im_ganzen_ast_bleibt_es_ruhig() {
     std::fs::create_dir_all(&tief).expect("Unterbau laesst sich nicht anlegen");
 
     let befund = liegt_in_arbeitsbaum(&tief, Some(ordner.pfad()));
-    assert_eq!(befund, Loeschzielbefund::Nein);
+    assert_eq!(befund, Warnbefund::Nein);
     assert!(
         !befund.ist_warnwuerdig(),
         "ein Ast ohne Arbeitsbaum macht die Rueckfrage laut"
@@ -118,12 +118,12 @@ fn ein_arbeitsbaum_oberhalb_der_grenze_wird_nicht_gefunden() {
 
     assert_eq!(
         liegt_in_arbeitsbaum(&tief, Some(&zuhause)),
-        Loeschzielbefund::Nein,
+        Warnbefund::Nein,
         "der Gang hat die Grenze ueberschritten"
     );
     assert_eq!(
         liegt_in_arbeitsbaum(&tief, None),
-        Loeschzielbefund::Ja,
+        Warnbefund::Ja,
         "ohne Grenze muesste derselbe Baum den Arbeitsbaum darueber finden; \
          tut er das nicht, prueft die Probe darueber nichts"
     );
@@ -142,10 +142,7 @@ fn ein_arbeitsbaum_am_benutzerverzeichnis_wird_gefunden() {
     let tief = zuhause.join("unterlagen/notizen");
     std::fs::create_dir_all(&tief).expect("Unterbau laesst sich nicht anlegen");
 
-    assert_eq!(
-        liegt_in_arbeitsbaum(&tief, Some(&zuhause)),
-        Loeschzielbefund::Ja
-    );
+    assert_eq!(liegt_in_arbeitsbaum(&tief, Some(&zuhause)), Warnbefund::Ja);
 }
 
 /// `.git` als **Datei** ist derselbe Treffer wie `.git` als Verzeichnis.
@@ -160,7 +157,7 @@ fn ein_git_als_datei_ist_derselbe_treffer() {
     std::fs::write(projekt.join(".git"), b"gitdir: /woanders\n")
         .expect(".git laesst sich nicht schreiben");
 
-    assert_eq!(traegt_arbeitsbaum(&projekt), Loeschzielbefund::Ja);
+    assert_eq!(traegt_arbeitsbaum(&projekt), Warnbefund::Ja);
 }
 
 // ---------------------------------------------------------------------------
@@ -184,7 +181,7 @@ fn ein_ausgewaehlter_unterordner_als_wurzel_wird_gefunden() {
 
     assert_eq!(
         liegt_in_arbeitsbaum(&ablage, Some(ordner.pfad())),
-        Loeschzielbefund::Nein,
+        Warnbefund::Nein,
         "der angezeigte Ordner liegt in keinem Arbeitsbaum; sonst prueft die Probe nichts"
     );
     assert_eq!(
@@ -193,12 +190,12 @@ fn ein_ausgewaehlter_unterordner_als_wurzel_wird_gefunden() {
             Some(ordner.pfad()),
             &[harmlos.clone(), projekt.clone()],
         ),
-        Loeschzielbefund::Ja,
+        Warnbefund::Ja,
         "die Schleife ueber die Auswahl hat den Arbeitsbaum nicht gefunden"
     );
     assert_eq!(
         beruehrt_einen_arbeitsbaum(&ablage, Some(ordner.pfad()), &[harmlos]),
-        Loeschzielbefund::Nein,
+        Warnbefund::Nein,
         "eine Auswahl ohne den Arbeitsbaum macht die Rueckfrage laut"
     );
 }
@@ -216,13 +213,13 @@ fn dateien_und_verschwundene_pfade_in_der_auswahl_bleiben_ruhig() {
 
     assert_eq!(
         traegt_arbeitsbaum(&datei),
-        Loeschzielbefund::Nein,
+        Warnbefund::Nein,
         "eine Datei kann keinen Eintrag tragen und ist damit entschieden"
     );
-    assert_eq!(traegt_arbeitsbaum(&weg), Loeschzielbefund::Nein);
+    assert_eq!(traegt_arbeitsbaum(&weg), Warnbefund::Nein);
     assert_eq!(
         beruehrt_einen_arbeitsbaum(ordner.pfad(), Some(ordner.pfad()), &[datei, weg]),
-        Loeschzielbefund::Nein
+        Warnbefund::Nein
     );
 }
 
@@ -235,11 +232,11 @@ fn eine_leere_auswahl_ist_der_aufwaertsgang() {
 
     assert_eq!(
         beruehrt_einen_arbeitsbaum(&projekt, Some(ordner.pfad()), &[]),
-        Loeschzielbefund::Ja
+        Warnbefund::Ja
     );
     assert_eq!(
         beruehrt_einen_arbeitsbaum(ordner.pfad(), Some(ordner.pfad()), &[]),
-        Loeschzielbefund::Nein
+        Warnbefund::Nein
     );
 }
 
@@ -263,7 +260,7 @@ fn ein_ausgewaehlter_verweis_auf_einen_arbeitsbaum_antwortet_ja() {
 
     assert_eq!(
         beruehrt_einen_arbeitsbaum(&ablage, Some(ordner.pfad()), &[verweis]),
-        Loeschzielbefund::Ja
+        Warnbefund::Ja
     );
 }
 
@@ -292,14 +289,14 @@ fn ein_unlesbarer_zugriff_bleibt_unentschieden() {
 
     assert_eq!(
         traegt_arbeitsbaum(&zu_lang),
-        Loeschzielbefund::Unentschieden,
+        Warnbefund::Unentschieden,
         "ein Zugriff, der weder da noch nicht da beantwortet, ist entschieden worden"
     );
 
     let befund = liegt_in_arbeitsbaum(&zu_lang, Some(ordner.pfad()));
     assert_eq!(
         befund,
-        Loeschzielbefund::Unentschieden,
+        Warnbefund::Unentschieden,
         "der Zweifel der ersten Ebene hat den Aufwaertsgang nicht ueberlebt"
     );
     assert!(befund.ist_warnwuerdig());
@@ -307,7 +304,7 @@ fn ein_unlesbarer_zugriff_bleibt_unentschieden() {
     let auswahl: Vec<PathBuf> = vec![zu_lang];
     assert_eq!(
         beruehrt_einen_arbeitsbaum(ordner.pfad(), Some(ordner.pfad()), &auswahl),
-        Loeschzielbefund::Unentschieden,
+        Warnbefund::Unentschieden,
         "ein unlesbarer Eintrag in der Auswahl ist entschieden worden"
     );
 }

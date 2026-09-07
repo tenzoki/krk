@@ -262,7 +262,7 @@ use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
-use krk_core::verzeichnis::{Loeschzielbefund, arbeitsbaum, umfang};
+use krk_core::verzeichnis::{Erlaubnisbefund, Warnbefund, arbeitsbaum, umfang};
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -5902,7 +5902,7 @@ impl Anwendungsdelegierter {
     /// gefragt, haette der Nutzer einem Raeumen zugestimmt, das nicht raeumen
     /// kann. Der angezeigte Ordner wird dafuer **einmal** aufgeloest, und ein
     /// Pfad, der sich nicht aufloesen laesst, zaehlt als
-    /// [`Loeschzielbefund::Unentschieden`] und loescht damit ebenfalls nicht.
+    /// [`Erlaubnisbefund::Unentschieden`] und loescht damit ebenfalls nicht.
     ///
     /// **Die teuren Tatsachen fallen erst an, wenn die billigen Stufen durch
     /// sind.** Aufloesen und Papierkorbfrage kosten Zugriffe auf das
@@ -6003,7 +6003,7 @@ impl Anwendungsdelegierter {
             aufgeloester_ordner = std::fs::canonicalize(&quellordner).ok();
             aufgeloester_ordner
                 .as_deref()
-                .map_or(Loeschzielbefund::Unentschieden, |aufgeloest| {
+                .map_or(Erlaubnisbefund::Unentschieden, |aufgeloest| {
                     papierkorb::fuehrt_einen_papierkorb(aufgeloest)
                 })
         }) {
@@ -6116,14 +6116,15 @@ impl Anwendungsdelegierter {
     /// Stellen auf `Unentschieden` beziehungsweise `Unentscheidbar` und nie auf
     /// eine stille Entwarnung.
     ///
-    /// **Die Polaritaet ist hier zu lesen und nicht zu erschliessen.**
-    /// `liegt_auf_netzlaufwerk` und `beruehrt_einen_arbeitsbaum` liegen auf der
-    /// Polaritaet, auf der [`Loeschzielbefund::Ja`] warnt und
-    /// [`Loeschzielbefund::Unentschieden`] zu ihm gehoert; genau so nehmen die
-    /// beiden Felder des Ziels sie auf. Die Papierkorbfrage im Rumpf darueber
-    /// liegt auf der anderen, dort ist `Ja` die Erlaubnis. Der Modulkopf von
-    /// [`krk_core::verzeichnis::Loeschzielbefund`] haelt die beiden
-    /// auseinander.
+    /// **Die Richtung steht seit dem 260907 im Typ und ist hier weder zu lesen
+    /// noch zu erschliessen.** `liegt_auf_netzlaufwerk` und
+    /// `beruehrt_einen_arbeitsbaum` liefern einen [`Warnbefund`], bei dem `Ja`
+    /// warnt und `Unentschieden` zu ihm gehoert; genau den nehmen die beiden
+    /// Felder des Ziels auf. Die Papierkorbfrage im Rumpf darueber liefert einen
+    /// [`Erlaubnisbefund`], bei dem `Ja` die Erlaubnis ist. Eine Vertauschung
+    /// der beiden uebersetzt nicht; bis zu jenem Tag tat sie es, und der
+    /// Modulkopf von [`krk_core::verzeichnis::loeschzielbefund`] schreibt aus,
+    /// was das gekostet hat.
     ///
     /// Der dritte Rueckgabewert ist `laut`: die Liste der Warngruende ist nicht
     /// leer. Er gehoert hierher und nicht in
@@ -6137,14 +6138,13 @@ impl Anwendungsdelegierter {
     ) -> (String, String, bool) {
         let zuhause =
             pfade::benutzerverzeichnis().and_then(|pfad| std::fs::canonicalize(pfad).ok());
-        let netzlaufwerk = aufgeloester_ordner.as_deref().map_or(
-            Loeschzielbefund::Unentschieden,
-            volumes::liegt_auf_netzlaufwerk,
-        );
+        let netzlaufwerk = aufgeloester_ordner
+            .as_deref()
+            .map_or(Warnbefund::Unentschieden, volumes::liegt_auf_netzlaufwerk);
         let beruehrt_arbeitsbaum =
             aufgeloester_ordner
                 .as_deref()
-                .map_or(Loeschzielbefund::Unentschieden, |ordner| {
+                .map_or(Warnbefund::Unentschieden, |ordner| {
                     arbeitsbaum::beruehrt_einen_arbeitsbaum(
                         ordner,
                         zuhause.as_deref(),

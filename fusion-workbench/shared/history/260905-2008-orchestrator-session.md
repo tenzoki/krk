@@ -468,3 +468,47 @@ liest, liest sie als Entscheidung und nicht als Versaeumnis.
     seine Sitzung verliert, auch nicht mit Meldung.
 
 **Was offen bleibt:** 20 der 56 Fragen, dazu die Reichweitenfrage aus der zweiten Runde.
+
+## Fuenf weitere Entscheidungen am 260907-1651 beantwortet
+
+Sechste Vorlagerunde, Vorschau und Editor. Bei dreien der fuenf sprach die Vorlage bewusst
+keine Empfehlung aus; der Nutzer hat sie entschieden. **Einmal ist er von der Vorlage
+abgewichen** (26), und **eine der fuenf laesst sich nicht umsetzen, ohne die
+Reichweitenfrage aus der zweiten Runde zu beantworten** (29).
+
+26. **Vorschau und Editor schreiben beide in der kleinen Systemschriftgroesse.** Beim
+    Zusammenlegen der Schriftwahl war die Vorschau von 11 auf 13 Punkt gewachsen, ohne dass
+    das jemand entschieden hatte. Der Nutzer holt nicht die alte Ungleichheit zurueck
+    (Moeglichkeit 2), sondern zieht **beide** Flaechen auf die kleine Groesse. Damit faellt
+    die Groesse, die der Editor seit seiner Runde bewusst trug; das ist mitentschieden. Der
+    Gewinn ist mehr Text auf einmal in beiden Flaechen und weiter **eine** Antwort auf die
+    Frage, welche Groesse wo gilt.
+27. **Eine Markierung ueberlebt kein Neulesen des Ordners; es bleibt, wie es ist.** Die
+    Auswahl haengt am Namen und uebersteht das Neulesen, die Markierung haengt an
+    Zeilennummern und faellt weg. Sie ueber die Namen zu tragen kostete bei 100.000
+    markierten Eintraegen 100.000 Zeichenketten zu kopieren und nachzuschlagen, und zwar in
+    genau der Spanne, die zwei Zeitzusagen messen. Der Fall, gegen den das schuetzte, ist
+    nirgends beobachtet.
+28. **`Esc` darf im Editor wirkungslos verschluckt werden.** Steht nichts zum Abbrechen an,
+    tut die Taste nichts und ist trotzdem verbraucht; in Japanisch, Chinesisch oder
+    Koreanisch braeche sie sonst eine laufende Zeichenzusammensetzung ab. Der Verlust ist
+    eng und ungemessen und trifft allein, wer in solchen Sprachen schreibt. Die saubere
+    Gegenmoeglichkeit — der Editor meldet, ob er gerade zusammensetzt — laesst sich ohne
+    Umbau nachziehen, falls es je stoert.
+29. **Die Zusage „alles Nicht-Gerenderte erscheint als Quelltext" wird um ihre Ausnahmen
+    ergaenzt, und zwar um beide.** Der Code ist hier sauberer als die Zusage: die Luecke im
+    Code zu schliessen braeuchte wieder Sonderregeln ueber Markdown-Syntax, also genau das,
+    was jene Runde abgeschafft hat. **Diese Antwort ist noch nicht umsetzbar.** Die Zusage
+    steht als Abnahmekriterium im Plantext der Runde 6, und der gehoert zu einer
+    geschlossenen Runde; nach der Rahmenwerksregel wird ein solcher Text nicht mehr
+    angefasst. Die Umsetzung haengt damit an derselben Reichweitenfrage, die seit der
+    zweiten Vorlagerunde beim Nutzer liegt.
+30. **Die zwei gegenlaeufigen Loeschpruefungen bekommen zwei getrennte Typen.** Ein
+    Pruefergebnis mit drei Werten beantwortet heute zwei entgegengesetzte Fragen: bei „fuehrt
+    das Ziel einen Papierkorb" ist Ja die Erlaubnis, bei „liegt es auf einem Netzlaufwerk"
+    der Warngrund. Der Uebersetzer sieht eine Verwechslung nicht, und genau die ist am
+    260817 eingetreten — gefunden hat sie der Nutzer und keine Probe. Preis: ein Typ mehr
+    und eine Umrechnung an vier Pruefstellen. Ertrag: die Verdrehung wird unuebersetzbar.
+
+**Was offen bleibt:** 15 der 56 Fragen, dazu die Reichweitenfrage, an der jetzt auch die
+Umsetzung von 29 haengt.

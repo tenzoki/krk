@@ -86,15 +86,19 @@
 //! beschaffte, koennte die Zusage nicht mehr brechen, ohne dass sein eigener
 //! Rumpf es zeigt.
 //!
-//! # Warum die Frage nach dem Papierkorb hier auf [`Loeschzielbefund::Ja`] prueft
+//! # Warum die Frage nach dem Papierkorb hier [`Erlaubnisbefund::erlaubt`] fragt
 //!
-//! Weil sie auf der anderen Polaritaet liegt als die Ausloeser der lauten Form:
-//! bei ihr ist [`Loeschzielbefund::Ja`] die **Erlaubnis** und nicht der Warngrund, und
-//! [`Loeschzielbefund::Unentschieden`] gehoert deshalb zu [`Loeschzielbefund::Nein`].
-//! [`Loeschzielbefund::ist_warnwuerdig`] kommt in dieser Datei nicht vor, und das ist
-//! Absicht: es fasst `Ja` und `Unentschieden` zusammen und machte hier aus „wir
-//! wissen nichts" die Erlaubnis zu loeschen. Die beiden Polaritaeten stehen im
-//! Modulkopf von [`krk_core::verzeichnis::Loeschzielbefund`] auseinandergehalten.
+//! Weil sie in die andere Richtung zeigt als die Ausloeser der lauten Form: bei
+//! ihr ist `Ja` die **Erlaubnis** und nicht der Warngrund, und
+//! `Unentschieden` gehoert deshalb zu `Nein`. Seit dem 260907 traegt sie dafuer
+//! einen eigenen Typ, [`Erlaubnisbefund`], und die Zusammenfassung steht an ihm
+//! statt in dieser Datei; [`Warnbefund::ist_warnwuerdig`] ist an einem Wert
+//! dieses Typs gar nicht zu rufen. **Diese Datei fuehrt damit beide Richtungen
+//! und kann sie nicht mehr verwechseln** — `Loeschziel::netzlaufwerk` und
+//! `Loeschziel::arbeitsbaum` nehmen keinen [`Erlaubnisbefund`] an, und der
+//! dritte Eingang von [`vor_der_rueckfrage`] keinen [`Warnbefund`]. Warum es
+//! zwei Typen sind, steht im Modulkopf von
+//! [`krk_core::verzeichnis::loeschzielbefund`].
 //!
 //! # Die Tafel der sechs Ausloeser, und warum die Aufzaehlung selbst die
 //! Rangfolge ist
@@ -151,12 +155,15 @@
 //! Zusage „Unentschieden gilt als laut" ist damit vollstaendig erfuellt — laut
 //! wird die Rueckfrage, und der genannte Grund ist der, der zutrifft.
 //!
-//! Daraus folgt, dass [`Loeschzielbefund::ist_warnwuerdig`] in dieser Datei
-//! auch fuer die Ausloeser der ersten Polaritaet nicht vorkommt, obwohl es fuer
-//! sie die richtige Frage waere: es fasst `Ja` und `Unentschieden` zusammen,
-//! und genau die beiden muessen hier auseinandergehalten werden, weil sie zu
-//! **verschiedenen** Warngruenden fuehren. Die Fallunterscheidungen in
-//! [`warngruende`] schreiben deshalb alle drei Antworten aus.
+//! Daraus folgt, dass [`Warnbefund::ist_warnwuerdig`] in dieser Datei auch fuer
+//! die Warnausloeser nicht vorkommt, obwohl es fuer sie die richtige Frage
+//! waere: es fasst `Ja` und `Unentschieden` zusammen, und genau die beiden
+//! muessen hier auseinandergehalten werden, weil sie zu **verschiedenen**
+//! Warngruenden fuehren. Die Fallunterscheidungen in [`warngruende`] schreiben
+//! deshalb alle drei Antworten aus. **Das haelt kein Typ**, und deshalb steht
+//! die Zaehlprobe `hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt` weiter
+//! unten: der Schnitt vom 260907 hat der Datei die eine Verwechslung genommen,
+//! diese Zusage aber nicht.
 //!
 //! # Warum die Texte der Loeschfrage eigens dastehen
 //!
@@ -269,7 +276,7 @@
 
 use std::path::{Path, PathBuf};
 
-use krk_core::verzeichnis::{Loeschzielbefund, Umfang, umfang::SCHWELLE};
+use krk_core::verzeichnis::{Erlaubnisbefund, Umfang, Warnbefund, umfang::SCHWELLE};
 
 use super::operationen::{Auswahl, ordner_text, pfadtext, zahl};
 
@@ -312,16 +319,16 @@ pub enum Vorstufe {
 /// |---|---|---|---|
 /// | ja | gleichgueltig | **ungefragt** | [`Vorstufe::VorgangLaeuft`] |
 /// | nein | ja | **ungefragt** | [`Vorstufe::NichtsAusgewaehlt`] |
-/// | nein | nein | [`Loeschzielbefund::Ja`] | [`Vorstufe::Rueckfrage`] |
-/// | nein | nein | [`Loeschzielbefund::Nein`] | [`Vorstufe::OhnePapierkorb`] |
-/// | nein | nein | [`Loeschzielbefund::Unentschieden`] | [`Vorstufe::OhnePapierkorb`] |
+/// | nein | nein | [`Erlaubnisbefund::Ja`] | [`Vorstufe::Rueckfrage`] |
+/// | nein | nein | [`Erlaubnisbefund::Nein`] | [`Vorstufe::OhnePapierkorb`] |
+/// | nein | nein | [`Erlaubnisbefund::Unentschieden`] | [`Vorstufe::OhnePapierkorb`] |
 ///
 /// **Die fuenf Zeilen decken alle zwoelf Kombinationen ab** — zwei mal zwei mal
 /// drei —, und die Fallunterscheidung ist damit ueberschneidungsfrei und
 /// vollstaendig; einen Auffangzweig gibt es nicht, und der Uebersetzer haelt die
 /// Vollstaendigkeit. Die Probe `die_tafel_aus_zwoelf_faellen_geht_auf` schreibt
 /// alle zwoelf aus, aus demselben Grund, aus dem die Tafeln in
-/// [`super::rueckschritt`] und [`Loeschzielbefund::oder`] ausgeschrieben dastehen: eine
+/// [`super::rueckschritt`] und [`Warnbefund::oder`] ausgeschrieben dastehen: eine
 /// gerechnete Erwartung waere die Umsetzung ein zweites Mal.
 ///
 /// **„Ungefragt" statt „gleichgueltig" in den ersten beiden Zeilen**, und der
@@ -349,10 +356,10 @@ pub enum Vorstufe {
 ///   sie zu sein behauptet. Danach gefragt, haette der Nutzer einem Raeumen
 ///   zugestimmt, das nicht raeumen kann.
 ///
-/// Ein `papierkorb`, der [`Loeschzielbefund::Unentschieden`] liefert, faellt mit
-/// [`Loeschzielbefund::Nein`] zusammen: der Modulkopf sagt, warum, und `Ja` ist hier die
-/// Erlaubnis. Der Aufrufer, der den Ordnerpfad nicht aufloesen kann, liefert
-/// deshalb `Unentschieden` und loescht damit ebenfalls nicht.
+/// Ein `papierkorb`, der [`Erlaubnisbefund::Unentschieden`] liefert, faellt mit
+/// [`Erlaubnisbefund::Nein`] zusammen: der Modulkopf sagt, warum, und `Ja` ist
+/// hier die Erlaubnis. Der Aufrufer, der den Ordnerpfad nicht aufloesen kann,
+/// liefert deshalb `Unentschieden` und loescht damit ebenfalls nicht.
 ///
 /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
 /// bliebe: die Funktion ist rein, aendert also nichts, und wer ihre Antwort
@@ -363,7 +370,7 @@ pub enum Vorstufe {
 pub fn vor_der_rueckfrage(
     vorgang_laeuft: bool,
     auswahl_leer: bool,
-    papierkorb: impl FnOnce() -> Loeschzielbefund,
+    papierkorb: impl FnOnce() -> Erlaubnisbefund,
 ) -> Vorstufe {
     match (vorgang_laeuft, auswahl_leer) {
         // Die erste Stufe. Sie fragt vor allen anderen, weil ein zweiter
@@ -376,15 +383,23 @@ pub fn vor_der_rueckfrage(
         // darueber brauchen die Antwort nicht, und sie kostet zwei Zugriffe auf
         // das Dateisystem. Die **Reihenfolge** der Stufen steht unveraendert in
         // dieser Tafel; verschoben ist allein, wann die Tatsache anfaellt.
-        (false, false) => match papierkorb() {
-            // `Ja` ist die Erlaubnis: erst jetzt steht fest, dass es einen
-            // Rueckweg gibt (C4).
-            Loeschzielbefund::Ja => Vorstufe::Rueckfrage,
-            // Kein Papierkorb, oder keine Auskunft darueber — beides haelt an.
-            // Die beiden Werte stehen ausgeschrieben und nicht als `_` da: ein
-            // vierter Befund haelt so den Bau an, statt still hierher zu fallen.
-            Loeschzielbefund::Nein | Loeschzielbefund::Unentschieden => Vorstufe::OhnePapierkorb,
-        },
+        //
+        // **Gefragt wird `erlaubt` und nicht die drei Werte einzeln.** Bis zum
+        // 260907 standen sie hier ausgeschrieben, weil der Typ die Richtung
+        // nicht kannte und ein Aufrufer sie selbst treffen musste; seither
+        // wohnt die Fallunterscheidung an [`Erlaubnisbefund::erlaubt`], und ein
+        // vierter Wert haelt dort den Bau an. Zwei Stellen mit einer Meinung
+        // darueber, was „erlaubt" heisst, waeren eine zu viel.
+        (false, false) => {
+            if papierkorb().erlaubt() {
+                // Erst jetzt steht fest, dass es einen Rueckweg gibt (C4).
+                Vorstufe::Rueckfrage
+            } else {
+                // Kein Papierkorb, oder keine Auskunft darueber — beides haelt
+                // an.
+                Vorstufe::OhnePapierkorb
+            }
+        }
     }
 }
 
@@ -402,8 +417,8 @@ pub fn vor_der_rueckfrage(
 /// auf den Ordner vor sich zurueckrechnen muesste.
 ///
 /// **Der Wortlaut sagt nicht, dass es zwei Wege hierher gibt**, und das ist
-/// Absicht. [`Vorstufe::OhnePapierkorb`] entsteht aus [`Loeschzielbefund::Nein`] wie aus
-/// [`Loeschzielbefund::Unentschieden`], und die beiden unterscheiden sich darin, ob KRK
+/// Absicht. [`Vorstufe::OhnePapierkorb`] entsteht aus [`Erlaubnisbefund::Nein`]
+/// wie aus [`Erlaubnisbefund::Unentschieden`], und die beiden unterscheiden sich darin, ob KRK
 /// das Ziel gefragt hat oder nicht fragen konnte. Fuer den Nutzer ist die Folge
 /// dieselbe, und die Statuszeile traegt eine Zeile; die Unterscheidung bleibt
 /// dort, wo sie etwas entscheidet, naemlich am Befund.
@@ -450,7 +465,7 @@ pub enum Umfangsgrund {
 /// aendert, welchen Grund die Frage nennt; wer einen hinzufuegt, gibt ihm seinen
 /// Rang durch die Stelle, an die er ihn schreibt.
 ///
-/// **Das ist der Unterschied zu [`Loeschzielbefund`], bei dem [`Ord`]
+/// **Das ist der Unterschied zu [`Warnbefund`], bei dem [`Ord`]
 /// ausdruecklich nicht abgeleitet ist**, und die beiden zusammen sind keine
 /// Inkonsequenz: dort waere eine Ordnung eine Behauptung ohne Gegenstand — `Ja`
 /// ist nicht groesser als `Nein`, und `Unentschieden` liegt zwischen keinem von
@@ -650,10 +665,12 @@ pub struct Loeschziel {
     /// Regel ohne Zugriff auf das echte pruefbar ist; dieselbe Bauform traegt
     /// `krk_core::ablage::pfade::gekuerzt_fuer_anzeige`.
     pub benutzerverzeichnis: Option<PathBuf>,
-    /// Liegt der Ordner auf einem Netzlaufwerk? Erste Polaritaet: `Ja` warnt.
-    pub netzlaufwerk: Loeschzielbefund,
-    /// Beruehrt der Vorgang einen Git-Arbeitsbaum? Erste Polaritaet: `Ja` warnt.
-    pub arbeitsbaum: Loeschzielbefund,
+    /// Liegt der Ordner auf einem Netzlaufwerk? Der Typ sagt die Richtung:
+    /// `Ja` warnt.
+    pub netzlaufwerk: Warnbefund,
+    /// Beruehrt der Vorgang einen Git-Arbeitsbaum? Der Typ sagt die Richtung:
+    /// `Ja` warnt.
+    pub arbeitsbaum: Warnbefund,
     /// Wie viele Eintraege haengen an der Auswahl, gedeckelt?
     pub umfang: Umfang,
 }
@@ -751,19 +768,19 @@ pub fn warngruende(ziel: &Loeschziel) -> Vec<Warngrund> {
 
     // Der dritte Ausloeser. Alle drei Antworten stehen ausgeschrieben da: `Ja`
     // und `Unentschieden` fuehren zu **verschiedenen** Gruenden, und
-    // `Loeschzielbefund::ist_warnwuerdig` fasst genau die beiden zusammen und
+    // `Warnbefund::ist_warnwuerdig` fasst genau die beiden zusammen und
     // ist hier deshalb nicht zu gebrauchen.
     match ziel.netzlaufwerk {
-        Loeschzielbefund::Ja => gruende.push(Warngrund::Netzlaufwerk),
-        Loeschzielbefund::Unentschieden => gruende.push(Warngrund::Unentscheidbar),
-        Loeschzielbefund::Nein => {}
+        Warnbefund::Ja => gruende.push(Warngrund::Netzlaufwerk),
+        Warnbefund::Unentschieden => gruende.push(Warngrund::Unentscheidbar),
+        Warnbefund::Nein => {}
     }
 
     // Der fuenfte, mit derselben Aufteilung.
     match ziel.arbeitsbaum {
-        Loeschzielbefund::Ja => gruende.push(Warngrund::Arbeitsbaum),
-        Loeschzielbefund::Unentschieden => gruende.push(Warngrund::Unentscheidbar),
-        Loeschzielbefund::Nein => {}
+        Warnbefund::Ja => gruende.push(Warngrund::Arbeitsbaum),
+        Warnbefund::Unentschieden => gruende.push(Warngrund::Unentscheidbar),
+        Warnbefund::Nein => {}
     }
 
     // Der sechste. `Genau` oberhalb der Schwelle kann `zaehlen` nicht liefern,
@@ -966,14 +983,24 @@ mod tests {
     // Die Tafeln darunter stehen in der Form der Tafel aus dem Doc-Kommentar von
     // [`vor_der_rueckfrage`], und die kurzen Namen halten jede Zeile lesbar auf
     // einer Zeile. Es ist eine Einfuhr der drei Werte und keine pauschale.
-    use Loeschzielbefund::{Ja, Nein, Unentschieden};
+    //
+    // **Eingefuehrt sind die des [`Warnbefund`] und nicht die des
+    // [`Erlaubnisbefund`]**, obwohl beide Typen dieselben drei Namen tragen. Der
+    // Grund ist die Verwechslung, gegen die der Schnitt vom 260907 gebaut ist:
+    // ein nacktes `Ja` in dieser Datei soll genau eine Bedeutung haben. Die
+    // Werte der Erlaubnis stehen deshalb ausgeschrieben da, mit ihrem Typ davor.
+    use Warnbefund::{Ja, Nein, Unentschieden};
 
-    /// Alle drei Befunde, einmal als Daten.
+    /// Alle drei Befunde der Papierkorbfrage, einmal als Daten.
     ///
     /// Sie stehen hier, weil drei der Stufenproben sie durchfahren, und nicht
     /// damit eine Erwartung daraus gerechnet wuerde: die Erwartungen stehen in
     /// ihren Proben Fall fuer Fall da.
-    const BEFUNDE: [Loeschzielbefund; 3] = [Ja, Nein, Unentschieden];
+    const BEFUNDE: [Erlaubnisbefund; 3] = [
+        Erlaubnisbefund::Ja,
+        Erlaubnisbefund::Nein,
+        Erlaubnisbefund::Unentschieden,
+    ];
 
     /// Genau eine Stelle im Baum ruft die Stufenregel.
     ///
@@ -1015,29 +1042,32 @@ mod tests {
     ///
     /// **Die Messung zu zwei Aussagen des Modulkopfes, die bis zum 260818
     /// allein als Prosa dastanden** (`issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`).
-    /// Die Datei fuehrt **beide** Polaritaeten, und
-    /// [`Loeschzielbefund::ist_warnwuerdig`] ist in ihr aus zwei verschiedenen
-    /// Gruenden falsch:
+    /// Die Datei fuehrt **beide** Richtungen, und
+    /// [`Warnbefund::ist_warnwuerdig`] war in ihr aus zwei verschiedenen
+    /// Gruenden falsch. **Einen der beiden haelt seit dem 260907 der
+    /// Uebersetzer**, und der andere ist der, um dessentwillen die Zaehlung
+    /// bleibt:
     ///
-    /// - **Zweite Polaritaet, Frage nach dem Papierkorb.** Dort ist `Ja` die
-    ///   Erlaubnis. Eine zusammenfassende Frage machte aus „wir wissen nichts
-    ///   ueber das Ziel" die Erlaubnis zu loeschen und naehme C4 seine Zusage.
-    ///   Das ist der Fehler, gegen den die Zaehlung gebaut ist.
-    /// - **Erste Polaritaet, die sechs Ausloeser.** Dort waere die Frage
-    ///   zulaessig und ist trotzdem unbrauchbar: `Ja` und `Unentschieden`
-    ///   fuehren in [`warngruende`] zu **verschiedenen** Warngruenden, und eine
-    ///   Frage, die beide zusammenzieht, kennt den Unterschied nicht mehr.
+    /// - **Frage nach dem Papierkorb** — erledigt. Dort ist `Ja` die Erlaubnis,
+    ///   und der Wert ist seit dem Schnitt ein [`Erlaubnisbefund`], an dem es
+    ///   `ist_warnwuerdig` nicht gibt. Wer die Frage doch schriebe, bekaeme
+    ///   einen Uebersetzerfehler und keine rote Probe.
+    /// - **Die Warnausloeser** — nicht erledigt, und von keinem Typ zu
+    ///   erledigen. Dort waere die Frage zulaessig und ist trotzdem
+    ///   unbrauchbar: `Ja` und `Unentschieden` fuehren in [`warngruende`] zu
+    ///   **verschiedenen** Warngruenden, und eine Frage, die beide
+    ///   zusammenzieht, kennt den Unterschied nicht mehr.
     ///
-    /// Weil beide Gruende in dieser Datei gelten, sagt die Zaehlung ueber die
-    /// **ganze** Datei nicht mehr zu, als der Modulkopf ohnehin sagt. Rot wird
-    /// sie, wenn jemand die Frage doch stellt; die richtige Antwort darauf ist
-    /// die Frage, welche der beiden Polaritaeten er gerade vor sich hat.
+    /// Rot wird die Zaehlung, wenn jemand die Frage doch stellt; die richtige
+    /// Antwort darauf ist die Frage, welchen der beiden Wortlaute er gerade
+    /// meint.
     ///
-    /// Dieselbe Zaehlung steht in `crate::appkit::papierkorb` — der zweiten
-    /// Datei mit der zweiten Polaritaet — und in `crate::appkit::volumes`, dort
-    /// unter einer Modulgrenze als Grund. Was eine Zaehlung im Quelltext
-    /// leistet und was nicht, steht in [`crate::quellbaum`]. Die Nadel steht
-    /// zusammengesetzt da, weil die Probe in dem Baum liegt, den sie liest.
+    /// Dieselbe Zaehlung stand bis zum 260907 in `crate::appkit::papierkorb` und
+    /// ist dort mit ihrem Gegenstand gefallen; in `crate::appkit::volumes` steht
+    /// sie weiter, dort unter einer Modulgrenze als Grund. Was eine Zaehlung im
+    /// Quelltext leistet und was nicht, steht in [`crate::quellbaum`]. Die Nadel
+    /// steht zusammengesetzt da, weil die Probe in dem Baum liegt, den sie
+    /// liest.
     #[test]
     fn hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt() {
         let zuhause = "krk-ui/src/kommandos/loeschwarnung.rs";
@@ -1049,7 +1079,7 @@ mod tests {
         assert_eq!(
             aufrufstellen(inhalt, name),
             0,
-            "diese Datei fragt nach der Warnwuerdigkeit, und sie fuehrt beide Polaritaeten"
+            "diese Datei fragt nach der Warnwuerdigkeit, und sie fuehrt beide Richtungen"
         );
     }
 
@@ -1064,7 +1094,9 @@ mod tests {
     #[test]
     fn die_tafel_aus_zwoelf_faellen_geht_auf() {
         // vorgang_laeuft, auswahl_leer, papierkorb, Ausgang.
-        const TAFEL: [(bool, bool, Loeschzielbefund, Vorstufe); 12] = [
+        use Erlaubnisbefund::{Ja, Nein, Unentschieden};
+
+        const TAFEL: [(bool, bool, Erlaubnisbefund, Vorstufe); 12] = [
             (true, true, Ja, Vorstufe::VorgangLaeuft),
             (true, true, Nein, Vorstufe::VorgangLaeuft),
             (true, true, Unentschieden, Vorstufe::VorgangLaeuft),
@@ -1133,20 +1165,21 @@ mod tests {
     /// Ohne Papierkorb erscheint kein Blatt, und der unentschiedene Befund
     /// zaehlt dabei wie das Nein (C4).
     ///
-    /// **Die zweite Zusicherung ist die eigentliche.** Hier liegt die Frage auf
-    /// der Polaritaet, auf der [`Loeschzielbefund::Ja`] die Erlaubnis ist; wer aus
-    /// Gewohnheit [`Loeschzielbefund::ist_warnwuerdig`] nimmt, macht aus „wir wissen
-    /// nichts" die Erlaubnis zu loeschen, und dann waere die zweite Zeile dieser
-    /// Probe rot und die Runde um ihre Zusage aus C4 herum.
+    /// **Die zweite Zusicherung ist die eigentliche.** Hier ist `Ja` die
+    /// Erlaubnis; wer aus Gewohnheit die Warnwuerdigkeit faengt, macht aus „wir
+    /// wissen nichts" die Erlaubnis zu loeschen, und dann waere die zweite Zeile
+    /// dieser Probe rot und die Runde um ihre Zusage aus C4 herum. Seit dem
+    /// 260907 uebersetzt diese Gewohnheit nicht mehr — die Probe misst seither,
+    /// dass [`Erlaubnisbefund::erlaubt`] die richtige Seite waehlt.
     #[test]
     fn ohne_papierkorb_erscheint_kein_blatt() {
         assert_eq!(
-            vor_der_rueckfrage(false, false, || Nein),
+            vor_der_rueckfrage(false, false, || Erlaubnisbefund::Nein),
             Vorstufe::OhnePapierkorb,
             "ein Ziel ohne Papierkorb fuehrt trotzdem zur Rueckfrage"
         );
         assert_eq!(
-            vor_der_rueckfrage(false, false, || Unentschieden),
+            vor_der_rueckfrage(false, false, || Erlaubnisbefund::Unentschieden),
             Vorstufe::OhnePapierkorb,
             "ein unentschiedener Befund fuehrt zur Rueckfrage, obwohl C4 ihn \
              wie das Nein behandelt"
@@ -1176,7 +1209,7 @@ mod tests {
             let gefragt = std::cell::Cell::new(0_u32);
             let _ = vor_der_rueckfrage(vorgang_laeuft, auswahl_leer, || {
                 gefragt.set(gefragt.get() + 1);
-                Ja
+                Erlaubnisbefund::Ja
             });
             assert_eq!(
                 gefragt.get(),
@@ -1189,7 +1222,7 @@ mod tests {
         let gefragt = std::cell::Cell::new(0_u32);
         let _ = vor_der_rueckfrage(false, false, || {
             gefragt.set(gefragt.get() + 1);
-            Ja
+            Erlaubnisbefund::Ja
         });
         assert_eq!(
             gefragt.get(),
@@ -1206,7 +1239,7 @@ mod tests {
     /// durchlaessig geworden.
     #[test]
     fn genau_ein_fall_erreicht_das_blatt() {
-        let bis_zum_blatt: Vec<(bool, bool, Loeschzielbefund)> = [false, true]
+        let bis_zum_blatt: Vec<(bool, bool, Erlaubnisbefund)> = [false, true]
             .into_iter()
             .flat_map(|vorgang_laeuft| {
                 [false, true].into_iter().flat_map(move |auswahl_leer| {
@@ -1222,7 +1255,7 @@ mod tests {
             .collect();
         assert_eq!(
             bis_zum_blatt,
-            vec![(false, false, Ja)],
+            vec![(false, false, Erlaubnisbefund::Ja)],
             "nicht genau eine der zwoelf Kombinationen erreicht das Blatt"
         );
     }
@@ -1589,7 +1622,7 @@ mod tests {
 
     /// Netzlaufwerk und Arbeitsbaum warnen auf `Ja` (C3, 3 und 5).
     ///
-    /// Beide liegen auf der ersten Polaritaet, und beide bekommen ihre Zeile
+    /// Beide tragen den [`Warnbefund`], und beide bekommen ihre Zeile
     /// einzeln: sie tragen denselben Typ und **verschiedene** Gruende, und eine
     /// gemeinsame Zeile liesse eine Vertauschung der beiden Felder gruen
     /// durchgehen.
@@ -1616,7 +1649,7 @@ mod tests {
     /// ist. Ein zusaetzliches [`Warngrund::Netzlaufwerk`] daneben waere aber
     /// eine Behauptung ohne Messung: KRK weiss nicht, ob der Datentraeger einer
     /// ist. Genau diese Zeile wuerde rot, wenn jemand die drei Antworten mit
-    /// [`Loeschzielbefund::ist_warnwuerdig`] zusammenfasste — es zieht `Ja` und
+    /// [`Warnbefund::ist_warnwuerdig`] zusammenfasste — es zieht `Ja` und
     /// `Unentschieden` in denselben Zweig, und die beiden fuehren hier zu
     /// verschiedenen Gruenden.
     #[test]

@@ -80,3 +80,6 @@ jemand sie geschrieben hat.
 Keine. Der Wahlpunkt hängt daran, wie viele Fragen mit Löschzielbefund noch
 dazukommen, und das entscheidet die Planung der nächsten Runden und nicht der
 Baum von heute.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1651 beantwortet` — Moeglichkeit 2: zwei Typen fuer zwei Fragen, damit die Verdrehung unuebersetzbar wird. Preis: ein Typ mehr und eine Umrechnung an inzwischen vier Pruefstellen. Der guenstige Zeitpunkt ist verstrichen, und der Nutzer waehlt trotzdem den starken Weg — die Verwechslung ist einmal eingetreten, und gefunden hat sie er und keine Probe; ruled by user, Kai Stalmann <kai@stalmann.org>.

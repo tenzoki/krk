@@ -125,3 +125,9 @@ Superseded by:
 begruendeten Empfehlung weiter und legt sie ihm vor. Der Verlust steht auf der Abnahmeliste des
 Laufs am Buendel. Faellt die Antwort spaeter anders aus, ist der saubere Weg ohne Umbau
 nachziehbar, wie dieser Datensatz begruendet.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1651 beantwortet` — Moeglichkeit 1: es bleibt, wie es ist. Der Verlust ist eng und ungemessen und trifft allein, wer in Japanisch, Chinesisch oder Koreanisch schreibt; die Gegenmoeglichkeit mit einer Zustandsmeldung des Editors laesst sich ohne Umbau nachziehen, falls es je stoert; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-core/src/tasten/belegung.rs, Esc gilt ueberall; hasMarkedText steht nirgends im Baum. Der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

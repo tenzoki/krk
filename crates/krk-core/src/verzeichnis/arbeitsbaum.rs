@@ -3,7 +3,7 @@
 //!
 //! Der fuenfte Ausloeser der lauten Rueckfrage. Gefragt wird nach der
 //! **Anwesenheit** eines Eintrags [`VERWALTUNGSEINTRAG`], und die Antwort ist
-//! ein [`Loeschzielbefund`], also dreiwertig.
+//! ein [`Warnbefund`], also dreiwertig.
 //!
 //! ```text
 //!  traegt_arbeitsbaum(&Path)                 ──> lstat: <Pfad>/.git
@@ -88,14 +88,12 @@
 //! Ordner und an der Auswahl. Die Umkehrung ist also billig, und das ist
 //! Absicht.
 //!
-//! # Auf welcher Polaritaet die drei Rueckgabewerte liegen
+//! # Warum die Rueckgabewerte trotz zulaessiger Frage nicht zusammengefasst werden
 //!
-//! **Auf der ersten**, und alle drei auf derselben:
-//! [`Loeschzielbefund::Ja`] ist der Warngrund, und
-//! [`Loeschzielbefund::Unentschieden`] gehoert zu ihm.
-//! [`Loeschzielbefund::ist_warnwuerdig`] waere fuer einen Wert dieser
-//! Polaritaet die **zulaessige** Frage, denn es fasst genau `Ja` und
-//! `Unentschieden` zusammen.
+//! Der Rueckgabetyp ist der [`Warnbefund`], und damit steht die Richtung im
+//! Typ: `Ja` ist der Warngrund, `Unentschieden` gehoert zu ihm.
+//! [`Warnbefund::ist_warnwuerdig`] ist fuer diese Werte also die **zulaessige**
+//! Frage, denn es fasst genau `Ja` und `Unentschieden` zusammen.
 //!
 //! **Gestellt wird sie trotzdem von keinem Aufrufer, und wer sie hier
 //! einfuehrt, baut einen Fehler ein.** Wer diesen Befund verbraucht, muss nicht
@@ -108,9 +106,11 @@
 //! `krk-ui/src/kommandos/loeschwarnung.rs`, `warngruende`, schreibt deshalb
 //! alle drei Antworten aus.
 //!
-//! Die beiden Polaritaeten und warum die Unterscheidung sicherheitsrelevant
-//! ist, stehen im Modulkopf von [`super::loeschzielbefund`]; die zweite
-//! Polaritaet traegt in dieser Runde allein die Frage nach dem Papierkorb.
+//! Die zweite Richtung — `Ja` ist die Erlaubnis — traegt in dieser Runde allein
+//! die Frage nach dem Papierkorb, und sie traegt seit dem 260907 ihren eigenen
+//! Typ [`super::Erlaubnisbefund`]. Eine Antwort von dort ist hier nicht mehr
+//! einzusetzen: der Uebersetzer weist sie ab. Warum es zwei Typen sind, steht im
+//! Modulkopf von [`super::loeschzielbefund`].
 //!
 //! # Gemerkt wird nichts
 //!
@@ -122,7 +122,7 @@
 //! # Warum die dritte Funktion nicht `befund` heisst
 //!
 //! Die API-Tafel des Plans nannte sie `arbeitsbaum::befund`. Eine Funktion
-//! dieses Namens, die einen [`Loeschzielbefund`] liefert, staende neben
+//! dieses Namens, die einen [`Warnbefund`] liefert, staende neben
 //! [`super::modell::Ordnermodell::befund`], das einen [`super::modell::Befund`]
 //! liefert — **dieselbe Verwechslung, die der Befund `260817-1419` eine Ebene
 //! hoeher gerade aufgeloest hat**, nur eine Ebene tiefer wieder aufgebaut. Der
@@ -183,7 +183,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::Loeschzielbefund;
+use super::Warnbefund;
 use super::aufwaerts;
 
 /// Der Eintrag, an dem ein Git-Arbeitsbaum zu erkennen ist.
@@ -203,20 +203,20 @@ const VERWALTUNGSEINTRAG: &str = ".git";
 /// Die vier Ausgaenge, und die Funktion ist ueber sie total:
 ///
 /// - der Eintrag ist da — gleich ob als Verzeichnis, Datei oder Verknuepfung:
-///   [`Loeschzielbefund::Ja`];
-/// - er ist nicht da: [`Loeschzielbefund::Nein`];
+///   [`Warnbefund::Ja`];
+/// - er ist nicht da: [`Warnbefund::Nein`];
 /// - der Pfad ist gar kein Ordner und kann deshalb keinen Eintrag tragen:
-///   [`Loeschzielbefund::Nein`]. **Dieser Zweig ist nicht kosmetisch.** Die
+///   [`Warnbefund::Nein`]. **Dieser Zweig ist nicht kosmetisch.** Die
 ///   Auswahl eines Dateifensters traegt gewoehnliche Dateien, und `lstat(2)` auf
 ///   `datei/.git` scheitert mit `ENOTDIR` und nicht mit `ENOENT`; ohne diesen
 ///   Zweig machte jede ausgewaehlte Datei die Rueckfrage unentschieden und damit
 ///   laut;
 /// - der Zugriff scheitert anders — keine Rechte, ein zu langer Name, ein
-///   Datentraeger, der nicht antwortet: [`Loeschzielbefund::Unentschieden`], und
+///   Datentraeger, der nicht antwortet: [`Warnbefund::Unentschieden`], und
 ///   das ist laut. Ein Fehlschlag ist keine Aussage ueber den Ordner, sondern
 ///   eine ueber KRKs Kenntnis von ihm.
 ///
-/// **Ein relativer Pfad ist [`Loeschzielbefund::Unentschieden`]**, und zwar
+/// **Ein relativer Pfad ist [`Warnbefund::Unentschieden`]**, und zwar
 /// bevor irgendetwas gelesen wird. Sonst fragte `Path::new("").join(".git")`
 /// nach `.git` **im Arbeitsverzeichnis des Prozesses** und lieferte eine Antwort
 /// ueber einen Ordner, nach dem niemand gefragt hat. Diese eine Pruefung deckt
@@ -234,27 +234,27 @@ const VERWALTUNGSEINTRAG: &str = ".git";
 /// das ein Zugriff je Eintrag fuer einen Unterschied, den in diesem Projekt
 /// niemand sehen wird.
 ///
-/// Auf der ersten Polaritaet: `Ja` ist der Warngrund, `Unentschieden` gehoert
-/// zu ihm.
+/// Die Richtung steht im Rueckgabetyp: `Ja` ist der Warngrund,
+/// `Unentschieden` gehoert zu ihm.
 ///
 /// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: der Wert ist
 /// der einzige Ertrag des Aufrufs, und ohne ihn faellt der fuenfte Ausloeser der
 /// lauten Rueckfrage aus, ohne dass irgendwo etwas fehlte.
 #[must_use = "der Befund ist der einzige Ertrag des Aufrufs; fallengelassen faellt der Ausloeser aus"]
-pub fn traegt_arbeitsbaum(ordner: &Path) -> Loeschzielbefund {
+pub fn traegt_arbeitsbaum(ordner: &Path) -> Warnbefund {
     if !ordner.is_absolute() {
-        return Loeschzielbefund::Unentschieden;
+        return Warnbefund::Unentschieden;
     }
     match std::fs::symlink_metadata(ordner.join(VERWALTUNGSEINTRAG)) {
-        Ok(_) => Loeschzielbefund::Ja,
+        Ok(_) => Warnbefund::Ja,
         // Die Fallunterscheidung ueber [`io::ErrorKind`] traegt einen
         // Auffangzweig, und sie muss ihn tragen: der Typ ist `non_exhaustive`,
         // eine vollstaendige Aufzaehlung ist dort nicht zu haben. Der
         // Auffangzweig geht deshalb in die vorsichtige Richtung — was wir nicht
         // einordnen koennen, ist unentschieden und damit laut.
         Err(fehler) => match fehler.kind() {
-            io::ErrorKind::NotFound | io::ErrorKind::NotADirectory => Loeschzielbefund::Nein,
-            _ => Loeschzielbefund::Unentschieden,
+            io::ErrorKind::NotFound | io::ErrorKind::NotADirectory => Warnbefund::Nein,
+            _ => Warnbefund::Unentschieden,
         },
     }
 }
@@ -265,7 +265,7 @@ pub fn traegt_arbeitsbaum(ordner: &Path) -> Loeschzielbefund {
 /// Der Gang beginnt am Ordner selbst und steigt ueber [`aufwaerts`] auf. Er
 /// endet, sobald eines von drei Dingen eintritt:
 ///
-/// 1. eine Ebene antwortet [`Loeschzielbefund::Ja`] — der erste Treffer bricht
+/// 1. eine Ebene antwortet [`Warnbefund::Ja`] — der erste Treffer bricht
 ///    ab;
 /// 2. die gerade gepruefte Ebene **ist** das mitgegebene
 ///    Benutzerverzeichnis — die Grenze ist einschliessend;
@@ -289,20 +289,20 @@ pub fn traegt_arbeitsbaum(ordner: &Path) -> Loeschzielbefund {
 ///
 /// # Ein Zweifel unterwegs haelt den Gang nicht an
 ///
-/// Antwortet eine Ebene [`Loeschzielbefund::Unentschieden`], wird der Zweifel
-/// ueber [`Loeschzielbefund::oder`] mitgenommen und weitergegangen. Das ist
+/// Antwortet eine Ebene [`Warnbefund::Unentschieden`], wird der Zweifel
+/// ueber [`Warnbefund::oder`] mitgenommen und weitergegangen. Das ist
 /// kein Widerspruch zum Abbruch beim ersten Treffer, sondern seine
 /// Voraussetzung: ein `Ja` weiter oben ist eine gewusste Tatsache und liefert
 /// den **richtigen** Grund fuer die laute Form, wo der Zweifel nur „liess sich
 /// nicht einordnen" hergibt. Bleibt es beim Zweifel, ist die Antwort
 /// `Unentschieden` und die Rueckfrage laut.
 ///
-/// Auf der ersten Polaritaet: `Ja` ist der Warngrund, `Unentschieden` gehoert
-/// zu ihm.
+/// Die Richtung steht im Rueckgabetyp: `Ja` ist der Warngrund,
+/// `Unentschieden` gehoert zu ihm.
 ///
 /// `#[must_use]`, aus demselben Grund wie bei [`traegt_arbeitsbaum`].
 #[must_use = "der Befund ist der einzige Ertrag des Aufrufs; fallengelassen faellt der Ausloeser aus"]
-pub fn liegt_in_arbeitsbaum(ordner: &Path, benutzerverzeichnis: Option<&Path>) -> Loeschzielbefund {
+pub fn liegt_in_arbeitsbaum(ordner: &Path, benutzerverzeichnis: Option<&Path>) -> Warnbefund {
     aufwaerts_mit(ordner, benutzerverzeichnis, traegt_arbeitsbaum)
 }
 
@@ -314,7 +314,7 @@ pub fn liegt_in_arbeitsbaum(ordner: &Path, benutzerverzeichnis: Option<&Path>) -
 ///
 /// # Die Reihenfolge ist die Kostenrechnung
 ///
-/// **Zuerst der Aufwaertsgang, und nur wenn der [`Loeschzielbefund::Nein`] sagt,
+/// **Zuerst der Aufwaertsgang, und nur wenn der [`Warnbefund::Nein`] sagt,
 /// die Schleife ueber die Auswahl.** Damit kostet die Pruefung im haeufigen Fall
 /// — der Nutzer loescht innerhalb eines Projekts — gar keinen Zugriff je
 /// ausgewaehltem Eintrag, sondern hoert beim ersten Treffer auf dem Weg nach
@@ -323,7 +323,7 @@ pub fn liegt_in_arbeitsbaum(ordner: &Path, benutzerverzeichnis: Option<&Path>) -
 /// `lstat(2)` je ausgewaehltem Eintrag, und auch diese Schleife bricht beim
 /// ersten Treffer ab.
 ///
-/// **Der Aufwaertsgang schneidet auch mit [`Loeschzielbefund::Unentschieden`]
+/// **Der Aufwaertsgang schneidet auch mit [`Warnbefund::Unentschieden`]
 /// ab, und der Preis dafuer ist benannt**: die Rueckfrage ist dann schon laut,
 /// aber ihr Grund heisst „liess sich nicht einordnen" statt „aus einem
 /// Git-Arbeitsbaum", obwohl ein ausgewaehlter Eintrag den genauen Grund
@@ -347,8 +347,8 @@ pub fn liegt_in_arbeitsbaum(ordner: &Path, benutzerverzeichnis: Option<&Path>) -
 ///
 /// Eine leere Auswahl ist damit genau der Aufwaertsgang.
 ///
-/// Auf der ersten Polaritaet: `Ja` ist der Warngrund, `Unentschieden` gehoert
-/// zu ihm.
+/// Die Richtung steht im Rueckgabetyp: `Ja` ist der Warngrund,
+/// `Unentschieden` gehoert zu ihm.
 ///
 /// `#[must_use]`, aus demselben Grund wie bei [`traegt_arbeitsbaum`].
 #[must_use = "der Befund ist der einzige Ertrag des Aufrufs; fallengelassen faellt der Ausloeser aus"]
@@ -356,7 +356,7 @@ pub fn beruehrt_einen_arbeitsbaum(
     ordner: &Path,
     benutzerverzeichnis: Option<&Path>,
     auswahl: &[PathBuf],
-) -> Loeschzielbefund {
+) -> Warnbefund {
     beruehrt_mit(ordner, benutzerverzeichnis, auswahl, traegt_arbeitsbaum)
 }
 
@@ -370,7 +370,7 @@ pub fn beruehrt_einen_arbeitsbaum(
 //
 // **Das ist keine Vorratsallgemeinheit, sondern die einzige Art, die
 // Kostenzusage zu messen statt sie zu behaupten.** „Abbruch beim ersten
-// Treffer" ist am Rueckgabewert **nicht** abzulesen: [`Loeschzielbefund::oder`]
+// Treffer" ist am Rueckgabewert **nicht** abzulesen: [`Warnbefund::oder`]
 // macht `Ja` aufsaugend, und genau deshalb liefert ein Gang, der nach dem
 // ersten Treffer weiterlaeuft, dasselbe `Ja`. Eine Probe mit echten Ordnern
 // kann die Zusage darum nicht pruefen, gleich wie sie gebaut ist. Mit der
@@ -386,9 +386,9 @@ pub fn beruehrt_einen_arbeitsbaum(
 fn aufwaerts_mit(
     ordner: &Path,
     benutzerverzeichnis: Option<&Path>,
-    mut pruefer: impl FnMut(&Path) -> Loeschzielbefund,
-) -> Loeschzielbefund {
-    let mut befund = Loeschzielbefund::Nein;
+    mut pruefer: impl FnMut(&Path) -> Warnbefund,
+) -> Warnbefund {
+    let mut befund = Warnbefund::Nein;
     let mut ebene = ordner.to_path_buf();
     loop {
         befund = befund.oder(pruefer(&ebene));
@@ -396,8 +396,8 @@ fn aufwaerts_mit(
         // keinen Auffangzweig: ein vierter Wert haelt hier den Bau an, statt
         // still den Abbruch zu verlieren.
         match befund {
-            Loeschzielbefund::Ja => return befund,
-            Loeschzielbefund::Nein | Loeschzielbefund::Unentschieden => {}
+            Warnbefund::Ja => return befund,
+            Warnbefund::Nein | Warnbefund::Unentschieden => {}
         }
         // Die einschliessende Grenze: die Ebene ist geprueft, und weiter geht
         // es nicht.
@@ -416,23 +416,23 @@ fn beruehrt_mit(
     ordner: &Path,
     benutzerverzeichnis: Option<&Path>,
     auswahl: &[PathBuf],
-    mut pruefer: impl FnMut(&Path) -> Loeschzielbefund,
-) -> Loeschzielbefund {
+    mut pruefer: impl FnMut(&Path) -> Warnbefund,
+) -> Warnbefund {
     let hoch = aufwaerts_mit(ordner, benutzerverzeichnis, &mut pruefer);
     match hoch {
         // Beide Werte sind schon laut; die Auswahl koennte den Grund nur noch
         // schaerfen. Der Doc-Kommentar von [`beruehrt_einen_arbeitsbaum`] nennt
         // den Preis.
-        Loeschzielbefund::Ja | Loeschzielbefund::Unentschieden => return hoch,
-        Loeschzielbefund::Nein => {}
+        Warnbefund::Ja | Warnbefund::Unentschieden => return hoch,
+        Warnbefund::Nein => {}
     }
 
-    let mut befund = Loeschzielbefund::Nein;
+    let mut befund = Warnbefund::Nein;
     for pfad in auswahl {
         befund = befund.oder(pruefer(pfad));
         match befund {
-            Loeschzielbefund::Ja => return befund,
-            Loeschzielbefund::Nein | Loeschzielbefund::Unentschieden => {}
+            Warnbefund::Ja => return befund,
+            Warnbefund::Nein | Warnbefund::Unentschieden => {}
         }
     }
     befund
@@ -443,7 +443,7 @@ mod tests {
     use super::*;
     use std::cell::RefCell;
 
-    use Loeschzielbefund::{Ja, Nein, Unentschieden};
+    use Warnbefund::{Ja, Nein, Unentschieden};
 
     /// Eine Pruefung, die aus einer Tafel antwortet und mitschreibt, wen sie
     /// gefragt wurde.
@@ -454,19 +454,19 @@ mod tests {
     /// [`aufwaerts_mit`].
     struct Mitschrift {
         /// Pfad und Antwort. Was nicht darin steht, ist [`Nein`].
-        tafel: Vec<(&'static str, Loeschzielbefund)>,
+        tafel: Vec<(&'static str, Warnbefund)>,
         besucht: RefCell<Vec<String>>,
     }
 
     impl Mitschrift {
-        fn neu(tafel: &[(&'static str, Loeschzielbefund)]) -> Self {
+        fn neu(tafel: &[(&'static str, Warnbefund)]) -> Self {
             Self {
                 tafel: tafel.to_vec(),
                 besucht: RefCell::new(Vec::new()),
             }
         }
 
-        fn pruefer(&self) -> impl FnMut(&Path) -> Loeschzielbefund + '_ {
+        fn pruefer(&self) -> impl FnMut(&Path) -> Warnbefund + '_ {
             move |pfad| {
                 let text = pfad.to_string_lossy().into_owned();
                 self.besucht.borrow_mut().push(text.clone());

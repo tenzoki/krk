@@ -3186,10 +3186,14 @@ fn kopf_bauen(mtm: MainThreadMarker) -> Retained<NSTextField> {
 /// ueber die Naemlichkeitsfrage aus dem Modulkopf durch; bis zu jener Runde war
 /// die Textflaeche des Editors die einzige, die er so durchliess.
 ///
-/// Die Schrift ist die feste Schreibmaschinenschrift des Nutzers in
-/// Systemgroesse; die Mindestbreite des Bereichs (320 Punkte) ist an ihr
-/// gerechnet. Welche Schrift die Formatansicht aus C3 setzt, entscheidet ein
-/// spaeterer Schritt.
+/// Die Schrift ist die der Rohansicht, also die feste Schreibmaschinenschrift
+/// des Nutzers. **Sie kommt aus [`super::textmerkmale::grundschrift`] und nicht
+/// aus einer eigenen Wahl**, wie in der Textanzeige der Vorschau: bis zum
+/// 260907 stand hier `userFixedPitchFontOfSize(systemFontSize())`
+/// ausgeschrieben, und damit baute die Flaeche in einer anderen Groesse auf, als
+/// [`Editorbereich::darstellung_nachziehen`] gleich darauf setzte. Die
+/// Mindestbreite des Bereichs (320 Punkte) ist an der groesseren Schrift von
+/// damals gerechnet und traegt in der heutigen entsprechend mehr Zeichen.
 fn textflaeche_bauen(
     mtm: MainThreadMarker,
     rahmen: NSRect,
@@ -3240,9 +3244,10 @@ fn textflaeche_bauen(
     text.setMinSize(NSSize::ZERO);
     text.setMaxSize(NSSize::new(f64::MAX, f64::MAX));
     text.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
-    if let Some(schrift) = NSFont::userFixedPitchFontOfSize(NSFont::systemFontSize()) {
-        text.setFont(Some(&schrift));
-    }
+    text.setFont(Some(&textmerkmale::grundschrift(
+        Ansicht::Roh,
+        Darstellungsart::EinfacherText,
+    )));
     rolle.setDocumentView(Some(&text));
     // Die Nummernspalte aus C10, dieselbe Klasse, die die Vorschau einhaengt.
     // Sie steht im Editor immer: der Spec laesst sie nicht abschalten, und der

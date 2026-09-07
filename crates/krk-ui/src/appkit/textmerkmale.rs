@@ -76,7 +76,7 @@
 //! eigene Angabe und stehen damit seit 10.0: `textStorage` und `layoutManager`
 //! an `NSTextView` (`NSTextView.h:113`, `:111`),
 //! `setTemporaryAttributes:forCharacterRange:` (`NSLayoutManager.h:353`),
-//! `systemFontSize` (`NSFont.h:75`), `systemFontOfSize:` (`:47`),
+//! `smallSystemFontSize` (`NSFont.h:76`), `systemFontOfSize:` (`:47`),
 //! `boldSystemFontOfSize:` (`:48`), `userFixedPitchFontOfSize:` (`:41`),
 //! `firstLineHeadIndent` und `headIndent` (`NSParagraphStyle.h:116`, `:117`),
 //! die drei Stuecke der kursiven Schrift — `fontDescriptor` an `NSFont`
@@ -124,6 +124,10 @@ use crate::hervorhebung::{Auszeichnung, Darstellungsart, Farbe, Formatierung, Ta
 /// **Code bekommt den Zuschlag nicht.** Quelltext wird in der Groesse gelesen,
 /// in der er geschrieben wurde, und der sichtbare Unterschied zur Rohansicht ist
 /// bei ihm die Einfaerbung und der Umbruch.
+///
+/// Ein Zuschlag **auf** die Grundlage und keine eigene Groesse: er wird auf das
+/// addiert, was [`grundmerkmale`] als Grundlage nimmt, und geht deshalb mit,
+/// wenn die sich aendert.
 const LESEZUSCHLAG: f64 = 2.0;
 
 /// Um welchen Faktor eine Markdown-Ueberschrift ihre Grundschrift ueberschreitet,
@@ -200,7 +204,14 @@ pub fn anwenden(
     zuruecksetzen(text, ansicht, art);
 
     // Die Merkmale des Textspeichers: was auf die Auslegung wirkt.
-    let grundgroesse = NSFont::systemFontSize() + LESEZUSCHLAG;
+    //
+    // **Die Groesse kommt aus derselben Stelle wie die Grundschrift** und wird
+    // hier nicht ein zweites Mal gerechnet. Bis zum 260907 stand hier
+    // `systemFontSize() + LESEZUSCHLAG` ausgeschrieben, also die Formatansicht
+    // ohne Ruecksicht auf die uebergebene Ansicht; eine Ueberschrift setzte
+    // damit auf einer anderen Grundlage auf als der Text, ueber dem sie steht,
+    // sobald jemand die Grundlage aendert.
+    let grundgroesse = grundgroesse(ansicht, art);
     speicher.beginEditing();
     for stelle in &formatierung.auszeichnungen {
         let bereich = NSRange::new(stelle.anfang, stelle.laenge);
@@ -345,26 +356,60 @@ pub fn zuruecksetzen(text: &NSTextView, ansicht: Ansicht, art: Darstellungsart) 
 /// Text zusagt, und zugleich die Grundschrift, ueber der die
 /// Markdown-Ueberschriften ihre Stufen haben.
 ///
-/// **Sie steht hier und nicht bei ihren beiden Aufrufern.** Der Editor setzt sie
-/// mit `setFont:` an der Flaeche und damit auch fuer den naechsten Anschlag;
-/// [`zuruecksetzen`] setzt sie als Merkmal ueber den ganzen Textspeicher, um eine
-/// weggefallene Auszeichnung zurueckzunehmen. Zwei Rechnungen daneben waeren die
-/// erste Gelegenheit, dass eine geloeschte Ueberschrift in einer anderen Schrift
-/// landete als der, in der ihre Zeile getippt wird.
+/// Welche Groesse dabei die Grundlage ist, sagt [`grundmerkmale`], und diese
+/// Funktion rechnet sie nicht nach.
+///
+/// **Sie steht hier und nicht bei ihren drei Aufrufern.** Der Editor setzt sie
+/// mit `setFont:` an der Flaeche und damit auch fuer den naechsten Anschlag —
+/// beim Bau der Flaeche und bei jedem Nachziehen der Darstellung —, die Vorschau
+/// ebenso beim Bau ihrer Textanzeige, und [`zuruecksetzen`] setzt sie als
+/// Merkmal ueber den ganzen Textspeicher, um eine weggefallene Auszeichnung
+/// zurueckzunehmen. Zwei Rechnungen daneben waeren die erste Gelegenheit, dass
+/// eine geloeschte Ueberschrift in einer anderen Schrift landete als der, in der
+/// ihre Zeile getippt wird.
 #[must_use]
 pub fn grundschrift(ansicht: Ansicht, art: Darstellungsart) -> Retained<NSFont> {
-    let (fest, groesse) = match (ansicht, art) {
-        (Ansicht::Roh, _) | (Ansicht::Format, Darstellungsart::Code) => {
-            (true, NSFont::systemFontSize())
-        }
-        (Ansicht::Format, Darstellungsart::EinfacherText | Darstellungsart::Markdown) => {
-            (false, NSFont::systemFontSize() + LESEZUSCHLAG)
-        }
-    };
+    let (fest, groesse) = grundmerkmale(ansicht, art);
     if fest {
         feste_schrift(groesse)
     } else {
         NSFont::systemFontOfSize(groesse)
+    }
+}
+
+/// Die Groesse der Grundschrift dieser Ansicht, ohne die Schrift selbst.
+///
+/// Fuer [`anwenden`], das die Groesse braucht und die Schrift nicht: die
+/// Ueberschriftsstufen und die beiden Betonungen rechnen ueber ihr, und der
+/// Quelltextblock setzt seine feste Schrift in ihr. Sie fragt [`grundmerkmale`]
+/// und rechnet nichts nach.
+fn grundgroesse(ansicht: Ansicht, art: Darstellungsart) -> f64 {
+    grundmerkmale(ansicht, art).1
+}
+
+/// Die eine Fallunterscheidung ueber Schriftart und Groesse einer Ansicht.
+///
+/// **Die Grundlage ist die kleine Systemschriftgroesse**, und zwar fuer beide
+/// Textflaechen. Bis zum 260907 war es die gewoehnliche
+/// (`NSFont::systemFontSize`); der Nutzer hat an jenem Tag entschieden, Editor
+/// und Vorschau gemeinsam auf die kleine zu ziehen, statt der Vorschau die
+/// Groesse zurueckzugeben, die sie bis zum Zusammenlegen der Schriftwahl allein
+/// trug (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1707_*_bleibt-die-vorschau-bei-der-kleinen-systemschriftgroesse-oder-waechst-sie-auf-die-des-editors.md`,
+/// Moeglichkeit 3). **Damit faellt auch die Groesse, die der Editor seit der
+/// Runde 2 trug**, und das ist mitentschieden und kein Nebenschaden: der Gewinn
+/// ist mehr Text auf einmal in beiden Flaechen, der Preis eine kleinere Schrift
+/// im Editor.
+///
+/// **Die Zahl steht an dieser einen Stelle**, und [`LESEZUSCHLAG`] ist ein
+/// Zuschlag auf sie und keine zweite Zahl daneben. Wer die Grundlage aendert,
+/// aendert sie hier, und Rohansicht wie Formatansicht gehen mit.
+fn grundmerkmale(ansicht: Ansicht, art: Darstellungsart) -> (bool, f64) {
+    let grundlage = NSFont::smallSystemFontSize();
+    match (ansicht, art) {
+        (Ansicht::Roh, _) | (Ansicht::Format, Darstellungsart::Code) => (true, grundlage),
+        (Ansicht::Format, Darstellungsart::EinfacherText | Darstellungsart::Markdown) => {
+            (false, grundlage + LESEZUSCHLAG)
+        }
     }
 }
 

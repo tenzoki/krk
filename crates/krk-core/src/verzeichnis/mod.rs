@@ -16,7 +16,7 @@
 //!
 //! verweisziel        (steht allein, an keinem der anderen)
 //!
-//! loeschzielbefund   (ein Typ und kein Schritt, an keinem der anderen)
+//! loeschzielbefund   (zwei Typen und kein Schritt, an keinem der anderen)
 //!        ^
 //!        └──── arbeitsbaum   (liest ueber `std::fs`, nicht ueber sys;
 //!                             haengt daneben an `aufwaerts` in dieser Datei)
@@ -97,26 +97,37 @@
 //!
 //! [`loeschzielbefund`] ist das einzige Modul hier, das **nichts liest**: kein
 //! Systemaufruf, kein Deskriptor, kein Pfad. Es traegt die dreiwertige Antwort
-//! [`Loeschzielbefund`] und die eine Verknuepfung darauf, und es steht in diesem
-//! Verzeichnis, weil die Fragen, die es beantwortet, am Dateisystem entschieden
-//! werden und nicht am Fenster. Die dritte Antwort `Unentschieden` ist die
+//! auf eine Frage an ein Loeschziel, und zwar **in zwei Typen**: [`Warnbefund`],
+//! bei dem `Ja` der Warngrund ist, und [`Erlaubnisbefund`], bei dem `Ja` die
+//! Erlaubnis ist. Es steht in diesem Verzeichnis, weil die Fragen, die es
+//! beantwortet, am Dateisystem entschieden werden und nicht am Fenster. Die
+//! dritte Antwort `Unentschieden` tragen beide, und sie ist die
 //! Verallgemeinerung dessen, was [`sys::ist_deskriptormangel`] seit der Runde 10
 //! am [`durchlauf`] leistet: ein Mangel von aussen laesst einen Auftrag
 //! unentschieden, statt ihn negativ zu entscheiden. Warum die Loeschrunde diese
 //! Unterscheidung braucht und warum sie nicht auf einen Wahrheitswert
 //! zusammenfaellt, steht in seinem eigenen Modulkopf.
 //!
-//! **Er heisst ausdruecklich nicht `Befund`, denn dieser Name gehoert hier einem
+//! **Zwei Typen sind es seit dem 260907, und vorher war es einer.** Bis dahin
+//! trugen beide Richtungen den Typ `Loeschzielbefund`, und eine vertauschte
+//! Zuweisung uebersetzte anstandslos; genau das ist am 260817 eingetreten. Der
+//! Nutzer hat den Schnitt gewaehlt, damit die Verdrehung nicht mehr uebersetzt
+//! (`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/decisions/260818-0249_*_bekommen-die-zwei-polaritaeten-des-loeschzielbefunds-zwei-typen.md`).
+//! Der Modulname ist der Gegenstand geblieben, obwohl kein Typ mehr so heisst;
+//! der Modulkopf von [`loeschzielbefund`] sagt, warum.
+//!
+//! **Keiner der beiden heisst `Befund`, denn dieser Name gehoert hier einem
 //! anderen Typ.** Der Wortstamm traegt in diesem Modulbaum mehrere Typen, und
 //! diese drei gehoeren zusammen: [`modell::Befund`], die dreiwertige Auskunft
 //! `Unentschieden`/`Treffer`/`KeinTreffer` darueber, ob ein Eintrag die getippte
 //! Folge traegt; [`Befundmeldung`], mit der der [`durchlauf`] sie meldet; und
 //! [`Inhaltsbefund`], der dieselbe Frage fuer den Text einer Datei beantwortet.
-//! [`Loeschzielbefund`] gehoert nicht zu ihnen: er beantwortet keine Frage des
-//! Filters, sondern die Pruefungen der Loeschrunde an einem Loeschziel.
-//! Bis zum 260817 hiessen er und [`modell::Befund`] beide `Befund`, und dieser
-//! Absatz hier erklaerte den einen, ohne den anderen zu nennen — genau daran
-//! entstand der Befund
+//! [`Warnbefund`] und [`Erlaubnisbefund`] gehoeren nicht zu ihnen: sie
+//! beantworten keine Frage des Filters, sondern die Pruefungen der Loeschrunde
+//! an einem Loeschziel.
+//! Bis zum 260817 hiessen der Vorgaenger der beiden und [`modell::Befund`] beide
+//! `Befund`, und dieser Absatz hier erklaerte den einen, ohne den anderen zu
+//! nennen — genau daran entstand der Befund
 //! (`issues/260817-1419_*_zwei-verschiedene-dreiwertige-typen-unter-verzeichnis-heissen-beide-befund.md`).
 //! Welcher der beiden umbenannt wurde und warum nicht der andere, steht im
 //! Modulkopf von [`loeschzielbefund`].
@@ -175,7 +186,7 @@ pub use eintrag::{Eintrag, Typ};
 pub use filter::Muster;
 pub use inhalt::{Inhaltsbefund, traegt_der_inhalt};
 pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
-pub use loeschzielbefund::Loeschzielbefund;
+pub use loeschzielbefund::{Erlaubnisbefund, Warnbefund};
 pub use modell::{Markierungsstand, Ordnermodell};
 pub use sortierung::{Richtung, Schluessel, Sortierung};
 pub use umfang::Umfang;

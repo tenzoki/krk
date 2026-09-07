@@ -263,8 +263,11 @@ impl Bereich {
     ///
     /// **Der Editor steht mit 320 ueber der Vorschau mit ihren 160**, und der
     /// Grund ist das vierte Abnahmekriterium von C1: "nicht schmaler, als eine
-    /// Zeile Text noch lesbar ist". Bei der festen Schrift der Rohansicht in
-    /// Systemgroesse traegt diese Breite rund 40 Zeichen. Die Vorschau kommt
+    /// Zeile Text noch lesbar ist". Die rund 40 Zeichen, die diese Breite
+    /// traegt, sind an der festen Schrift der Rohansicht in der gewoehnlichen
+    /// Systemgroesse gemessen, die sie bis zum 260907 trug; seit sie in der
+    /// kleinen steht (`crate::appkit::textmerkmale`), sind es mehr, und die Zahl
+    /// bleibt damit die untere Schranke, die sie sein soll. Die Vorschau kommt
     /// mit weniger aus, weil sie Metadaten zeigt und keine Zeilen.
     #[must_use]
     pub const fn mindestbreite(self) -> f64 {

@@ -76,3 +76,6 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1651 beantwortet` — Moeglichkeit 1: die Zusage wird um ihre Ausnahmen ergaenzt, und zwar um beide — der Vorspann eines Containers und die YAML-Kopfzeilen aus 260812-1805. Die Luecke im Code zu schliessen braeuchte wieder Sonderregeln ueber Markdown-Syntax, also genau das, was jene Runde abgeschafft hat. **Die Umsetzung steht aus:** die Zusage ist ein Abnahmekriterium im Plantext einer geschlossenen Runde, und ob ein solcher Text noch angefasst wird, ist die Reichweitenfrage, die seit dem 260907-0823 beim Nutzer liegt; ruled by user, Kai Stalmann <kai@stalmann.org>.

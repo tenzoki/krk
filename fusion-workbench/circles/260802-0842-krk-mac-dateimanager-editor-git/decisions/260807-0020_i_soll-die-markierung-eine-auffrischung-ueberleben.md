@@ -74,3 +74,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1651 beantwortet` — Moeglichkeit 1: es bleibt, wie es ist. Die Markierung ueber die Namen zu tragen kostete bei 100000 markierten Eintraegen 100000 Zeichenketten in genau der Spanne, die zwei Zeitzusagen messen, und der Fall, gegen den es schuetzte, ist nirgends beobachtet; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: crates/krk-core/src/verzeichnis/modell.rs, ersatz_einloesen leert die Markierung bei jedem Lesevorgang; der gebaute Zustand ist die gewaehlte Moeglichkeit, und zu bauen ist nichts.

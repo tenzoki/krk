@@ -34,7 +34,7 @@
 //! dieser Kiste sitzt.
 //!
 //! Was ueber die Grenze geht, sind gewoehnliche Rust-Werte: ein [`Path`] hinein,
-//! ein [`PathBuf`], ein [`io::Error`] oder ein [`Loeschzielbefund`] heraus. Kein `NSURL`,
+//! ein [`PathBuf`], ein [`io::Error`] oder ein [`Erlaubnisbefund`] heraus. Kein `NSURL`,
 //! kein `NSError`.
 //!
 //! # Warum die Vorpruefung keine Methode der Schnittstelle ist
@@ -46,17 +46,22 @@
 //! Methode an `trait Papierkorb` haette die Frage also an die falsche Stelle
 //! gelegt und dort einen Aufrufer gebraucht, den es nicht gibt.
 //!
-//! # Auf welcher Polaritaet der Befund liegt
+//! # In welche Richtung der Befund zeigt
 //!
-//! Auf der **zweiten**: bei der Frage nach dem Papierkorb ist [`Loeschzielbefund::Ja`] die
-//! **Erlaubnis** und nicht der Warngrund, und [`Loeschzielbefund::Unentschieden`] gehoert
-//! deshalb zu [`Loeschzielbefund::Nein`]. [`Loeschzielbefund::ist_warnwuerdig`] ist hier folglich das
-//! falsche Werkzeug — es fasst `Ja` und `Unentschieden` zusammen, und wer es an
-//! diesen Rueckgabewert haelt, macht aus „wir wissen nichts" die Erlaubnis zu
-//! loeschen. Der Aufrufer prueft auf [`Loeschzielbefund::Ja`] selbst. Die beiden
-//! Polaritaeten und der Grund fuer die Unterscheidung stehen im Modulkopf von
-//! [`krk_core::verzeichnis::Loeschzielbefund`] auseinandergehalten; hier steht nur, welche
-//! von beiden gilt, damit der naechste Leser sie nicht neu findet.
+//! Der Rueckgabetyp ist der [`Erlaubnisbefund`], und damit steht die Richtung im
+//! Typ: [`Erlaubnisbefund::Ja`] ist die **Erlaubnis** und nicht der Warngrund,
+//! und [`Erlaubnisbefund::Unentschieden`] gehoert deshalb zu
+//! [`Erlaubnisbefund::Nein`]. Gefragt wird an ihm [`Erlaubnisbefund::erlaubt`],
+//! und das trifft allein das `Ja`.
+//!
+//! **`ist_warnwuerdig` gibt es an diesem Typ nicht**, und das ist der Ertrag des
+//! Schnitts vom 260907. Die Frage zieht `Ja` und `Unentschieden` zusammen, und
+//! wer sie an diesen Rueckgabewert hielte, machte aus „wir wissen nichts" die
+//! Erlaubnis zu loeschen; bis zu jenem Tag trug dieser Wert denselben Typ wie
+//! die Warnfragen, und die Verwechslung uebersetzte. Sie tut es nicht mehr.
+//! Warum es zwei Typen sind, steht im Modulkopf von
+//! [`krk_core::verzeichnis::loeschzielbefund`]; hier steht nur, welcher gilt,
+//! damit der naechste Leser es nicht neu findet.
 //!
 //! # Warum die Vorpruefung nicht anlegen laesst
 //!
@@ -113,7 +118,7 @@ use objc2_foundation::{
 };
 
 use krk_core::operation::Papierkorb;
-use krk_core::verzeichnis::Loeschzielbefund;
+use krk_core::verzeichnis::Erlaubnisbefund;
 
 /// Der Papierkorb des Systems.
 ///
@@ -161,11 +166,11 @@ impl Papierkorb for Systempapierkorb {
 ///
 /// Drei Ausgaenge:
 ///
-/// - [`Loeschzielbefund::Ja`] — das System nennt einen Papierkorb. **Das ist die
-///   Erlaubnis**, nicht ein Warngrund; die Polaritaet steht im Modulkopf.
-/// - [`Loeschzielbefund::Nein`] — das System nennt einen Fehler. Es gibt dort keinen
+/// - [`Erlaubnisbefund::Ja`] — das System nennt einen Papierkorb. **Das ist die
+///   Erlaubnis**, nicht ein Warngrund; die Richtung steht im Rueckgabetyp.
+/// - [`Erlaubnisbefund::Nein`] — das System nennt einen Fehler. Es gibt dort keinen
 ///   Papierkorb, und es wird nicht geloescht.
-/// - [`Loeschzielbefund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8 und laesst
+/// - [`Erlaubnisbefund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8 und laesst
 ///   sich nicht in ein `NSString` uebersetzen. Das ist keine Aussage ueber das
 ///   Ziel, sondern eine ueber KRKs Kenntnis von ihm, und der Aufrufer loescht
 ///   auch dann nicht.
@@ -174,7 +179,7 @@ impl Papierkorb for Systempapierkorb {
 /// `canonicalize` noch sonst etwas am Dateisystem: eine Verknuepfung wuerde
 /// sonst den Papierkorb ihres eigenen Ortes melden statt den ihres Ziels. Wer
 /// sie aufloest, ist ihr Aufrufer, und ein Pfad, der sich nicht aufloesen laesst,
-/// zaehlt dort ebenfalls als [`Loeschzielbefund::Unentschieden`].
+/// zaehlt dort ebenfalls als [`Erlaubnisbefund::Unentschieden`].
 ///
 /// **Ein Rest bleibt und ist benannt:** ein einzelner Eintrag kann trotz
 /// bestandener Pruefung scheitern, etwa weil unter dem angezeigten Ordner ein
@@ -182,9 +187,9 @@ impl Papierkorb for Systempapierkorb {
 /// nachtraeglich am Ergebnis des einzelnen Eintrags entschieden, und sein
 /// Ausgang ist „uebersprungen mit Grund" und nie „endgueltig geloescht".
 #[must_use = "der Befund ist die Erlaubnis zu loeschen; fallengelassen loescht der Aufrufer auf einem Ziel, das keinen Papierkorb fuehrt"]
-pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Loeschzielbefund {
+pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Erlaubnisbefund {
     let Some(text) = ordner.to_str() else {
-        return Loeschzielbefund::Unentschieden;
+        return Erlaubnisbefund::Unentschieden;
     };
     let url = NSURL::fileURLWithPath(&NSString::from_str(text));
 
@@ -194,51 +199,30 @@ pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Loeschzielbefund {
         Some(&url),
         false,
     ) {
-        Ok(_) => Loeschzielbefund::Ja,
-        Err(_) => Loeschzielbefund::Nein,
+        Ok(_) => Erlaubnisbefund::Ja,
+        Err(_) => Erlaubnisbefund::Nein,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::quellbaum::{aufrufstellen, quelldateien};
 
-    /// In dieser Datei wird nicht nach der Warnwuerdigkeit gefragt.
-    ///
-    /// **Die Messung zu dem Absatz `# Auf welcher Polaritaet der Befund liegt`
-    /// im Modulkopf, der bis zum 260818 allein als Prosa dastand**
-    /// (`issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`).
-    /// Der Befund dieser Datei liegt auf der **zweiten** Polaritaet: `Ja` ist
-    /// die Erlaubnis. [`Loeschzielbefund::ist_warnwuerdig`] zieht `Ja` und
-    /// `Unentschieden` zusammen, und wer die Frage an diesen Rueckgabewert
-    /// haelt, macht aus „wir wissen nichts ueber das Ziel" die Erlaubnis zu
-    /// loeschen und nimmt C4 seine Zusage. Der Uebersetzer sieht die
-    /// Verdrehung nicht — beide Seiten tragen denselben Typ —, und genau das
-    /// ist der Fehler, den dieses Projekt am 260817-1640 einmal hatte.
-    ///
-    /// Die Zaehlung gilt der ganzen Datei, weil die ganze Datei auf einer
-    /// Polaritaet liegt. Dieselbe Zaehlung steht in
-    /// `crate::kommandos::loeschwarnung`, dort mit einem zweiten Grund fuer die
-    /// erste Polaritaet, und in `crate::appkit::volumes` unter einer
-    /// Modulgrenze. Was eine Zaehlung im Quelltext leistet und was nicht, steht
-    /// in [`crate::quellbaum`]. Die Nadel steht zusammengesetzt da, weil die
-    /// Probe in dem Baum liegt, den sie liest.
-    #[test]
-    fn hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt() {
-        let zuhause = "krk-ui/src/appkit/papierkorb.rs";
-        let name = concat!("ist_warn", "wuerdig");
-        let dateien = quelldateien();
-        let Some((_, inhalt)) = dateien.iter().find(|(datei, _)| datei == zuhause) else {
-            panic!("{zuhause} steht nicht im gelesenen Quellbaum; die Zaehlung misst nichts");
-        };
-        assert_eq!(
-            aufrufstellen(inhalt, name),
-            0,
-            "diese Datei fragt nach der Warnwuerdigkeit, und ihr Befund traegt die Erlaubnis \
-             auf der Antwort, die die Frage mit dem Unentschiedenen zusammenzieht"
-        );
-    }
+    // **Hier stand bis zum 260907 die Zaehlprobe
+    // `hier_wird_nicht_nach_der_warnwuerdigkeit_gefragt`**, die Messung zu dem
+    // Absatz ueber die Richtung des Befundes
+    // (`issues/260817-1419_*_die-einzige-sicherung-gegen-den-polaritaetsfehler-ist-prosa-und-ist-warnwuerdig-hat-keinen-aufrufer.md`).
+    // Sie hat ihren Gegenstand verloren, und zwar an den Uebersetzer: dieser
+    // Befund ist ein `Erlaubnisbefund`, und an dem gibt es `ist_warnwuerdig`
+    // nicht. Was die Zaehlung fing, nachdem jemand es geschrieben hatte, faengt
+    // jetzt der Bau, bevor er uebersetzt. Eine Probe, die nur noch eine
+    // Zeichenfolge zaehlt, die ohnehin nicht uebersetzte, misst nichts mehr.
+    //
+    // Die beiden anderen Zaehlungen derselben Herkunft bleiben stehen, weil
+    // ihre Gegenstaende leben: in `crate::kommandos::loeschwarnung` haelt sie,
+    // dass `Ja` und `Unentschieden` dort zu **verschiedenen** Warngruenden
+    // fuehren, in `crate::appkit::volumes` eine Modulgrenze. Beides haelt kein
+    // Typ.
 
     /// Das Benutzerverzeichnis fuehrt einen Papierkorb.
     ///
@@ -254,7 +238,7 @@ mod tests {
         };
         assert_eq!(
             fuehrt_einen_papierkorb(&zuhause),
-            Loeschzielbefund::Ja,
+            Erlaubnisbefund::Ja,
             "das Benutzerverzeichnis {} fuehrt keinen Papierkorb",
             zuhause.display()
         );
@@ -266,19 +250,19 @@ mod tests {
     /// einhaengen muesste.** `/dev` ist auf jedem macOS ein eigener
     /// Einhaengepunkt mit einem Dateisystem fuer Geraetedateien, und es kann
     /// keinen Papierkorb fuehren; kein Recht und kein Aufbau ist dafuer noetig.
-    /// Ohne diese Probe waere die Funktion mit einem festen [`Loeschzielbefund::Ja`]
+    /// Ohne diese Probe waere die Funktion mit einem festen [`Erlaubnisbefund::Ja`]
     /// gruen, und die Zusage von C4 haette keinen Beleg.
     ///
     /// Gewaehlt ist ein Ort, der die Antwort aus seinem Wesen bezieht, und nicht
     /// ein fehlender Pfad: ein fehlender Pfad liefert dieselbe Antwort, sagt
     /// damit aber nichts ueber den Papierkorb eines Datentraegers, und er kommt
     /// hier ohnehin nicht an — den loest der Aufrufer vorher auf und zaehlt sein
-    /// Scheitern als [`Loeschzielbefund::Unentschieden`].
+    /// Scheitern als [`Erlaubnisbefund::Unentschieden`].
     #[test]
     fn ein_datentraeger_ohne_papierkorb_wird_erkannt() {
         assert_eq!(
             fuehrt_einen_papierkorb(Path::new("/dev")),
-            Loeschzielbefund::Nein,
+            Erlaubnisbefund::Nein,
             "/dev fuehrt angeblich einen Papierkorb, also unterscheidet die Pruefung nicht"
         );
     }
@@ -305,7 +289,7 @@ mod tests {
         );
         assert_eq!(
             fuehrt_einen_papierkorb(&krumm),
-            Loeschzielbefund::Unentschieden,
+            Erlaubnisbefund::Unentschieden,
             "ein Pfad ohne gueltiges UTF-8 liefert nicht den unentschiedenen Befund"
         );
     }
