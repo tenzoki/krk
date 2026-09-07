@@ -128,8 +128,11 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// `reserviert_fuer` der Datei heisst "benannt, aber einer spaeteren Runde
 /// vorbehalten", und diese Funktionen gibt es; es passt also nicht. Die
 /// Ausnahme ist damit eine Aussage der Pruefungen ueber die Auslieferung, und
-/// **zwei Pruefungen brauchen sie**, weshalb sie einmal hier steht und nicht
-/// zweimal in je einem Rumpf: `jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`
+/// **drei Pruefungen brauchen sie**, weshalb sie einmal hier steht und nicht
+/// dreimal in je einem Rumpf:
+/// [`ab_werk_traegt_genau_diese_liste_keine_kombination`] haelt sie in beiden
+/// Richtungen gegen die Auslieferungsbelegung,
+/// `jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`
 /// liest sie von der Seite der Belegungsdatei her,
 /// `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` von der Seite
 /// der gebauten Kommandos. Wer eine weitere Funktion ohne Kombination
@@ -137,15 +140,44 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// fuer `spalte_marke_umschalten` getan, den vierten Spaltenschalter, der der
 /// Nutzerantwort vom 260812-0306 folgt wie die drei vor ihm.
 ///
-/// **Eine dritte Pruefung fuehrt dieselbe Aufzaehlung ein zweites Mal**, als
-/// Literal im Rumpf von `belegungsausgabe::tests::
+/// # Die Reihenfolge ist die der Belegungsdatei
+///
+/// Sie ist Teil der Zusage und keine Schreibweise: die tiefe Suche steht in
+/// `resources/default-keymap.toml` hinter den Spaltenschaltern, weil sie wie
+/// diese bestimmt, was die Dateiliste zeigt, und die Inhaltssuche hinter der
+/// tiefen Suche, weil die beiden Schalter in der Bereichsleiste eine Reihe
+/// bilden. `belegungsdatei_ansehen` steht **am Ende**, weil der Eintrag dort
+/// hinter `belegung_ansehen` steht, also hinter den sechs davor.
+///
+/// Die Aufzaehlung steht ausgeschrieben statt als Zahl: eine Zahl sagte nicht,
+/// **welche** Funktion aus der Markdown-Ausgabe faellt, und genau das ist die
+/// Auskunft, die ein Leser braucht.
+///
+/// # Bis zum 260907 stand dieselbe Aufzaehlung ein zweites Mal
+///
+/// Sie stand als Literal im Rumpf von `belegungsausgabe::tests::
 /// jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte`
-/// (`crates/krk-ui/src/belegungsausgabe.rs`). Sie erreicht diese Konstante
-/// nicht: `krk-ui` hat kein Bibliotheksziel, und `crates/krk-core/tests/` ist
-/// eine eigene Kiste. Wer hier nachtraegt, traegt dort mit nach; ob die beiden
-/// Listen eine werden, ist die Frage `circles/
+/// (`crates/krk-ui/src/belegungsausgabe.rs`) und trug dort die zweite
+/// Pruefrichtung: nicht nur "keine andere Funktion ist ab Werk unbelegt",
+/// sondern auch "diese sieben tragen wirklich keine Taste". Beim vierten
+/// Eintrag sind die beiden Listen auseinandergelaufen. Der Nutzer hat am
+/// 260907 die eine Stelle im Pruefcode gewaehlt, und die zweite Richtung ist
+/// mit hierher gezogen, nach `circles/
 /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
-/// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`.
+/// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`
+/// (Moeglichkeit 3). Die Probe in `krk-ui` erreicht diese Konstante weiterhin
+/// nicht — `krk-ui` hat kein Bibliotheksziel, und `crates/krk-core/tests/` ist
+/// eine eigene Kiste —, sie braucht sie aber auch nicht mehr: sie rechnet die
+/// unbelegten Funktionen fuer ihren Meldetext aus der Belegung aus, statt sie
+/// hinzuschreiben.
+///
+/// **Der Durchlauf `jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung`
+/// (`crates/krk-core/tests/baum.rs`) haelt diese Liste nicht**, und das ist
+/// richtig so: er greift Listen namens `ALLE` neben einer Aufzaehlung, und
+/// hinter diesen Eintraegen steht keine Aufzaehlung, sondern die Kennungen
+/// einer Datei. Die zweite Quelle ist hier `resources/default-keymap.toml`,
+/// und die liest [`ab_werk_traegt_genau_diese_liste_keine_kombination`] ueber
+/// [`Belegung::auslieferung`].
 const OHNE_KOMBINATION_AB_WERK: [&str; 7] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
@@ -251,8 +283,13 @@ fn die_auslieferungsbelegung_ist_konfliktfrei() {
 ///
 /// **Seit dem 260812 gibt es eine zweite Ausnahme, und sie haengt nicht an
 /// `reserviert_fuer`.** Sie steht als [`OHNE_KOMBINATION_AB_WERK`] am Kopf
-/// dieser Datei, samt ihrer Begruendung und dem Datensatz dazu; eine zweite
-/// Pruefung liest dieselbe Liste.
+/// dieser Datei, samt ihrer Begruendung und dem Datensatz dazu; zwei weitere
+/// Pruefungen lesen dieselbe Liste.
+///
+/// **Diese Probe haelt nur die eine Richtung.** Eine Funktion aus der Liste,
+/// die spaeter doch eine Kombination bekommt, faellt hier still durch den
+/// Ausnahmezweig; die Gegenrichtung haelt
+/// [`ab_werk_traegt_genau_diese_liste_keine_kombination`].
 #[test]
 fn jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste() {
     let belegung = Belegung::auslieferung();
@@ -287,6 +324,63 @@ fn jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste() {
             ),
         }
     }
+}
+
+/// Ab Werk tragen genau die Funktionen aus [`OHNE_KOMBINATION_AB_WERK`] keine
+/// Kombination, in deren Reihenfolge.
+///
+/// **Die Zusage geht in beide Richtungen, und darin liegt der Unterschied zu
+/// `jede_funktion_traegt_genau_eine_zeile_und_eine_reservierte_keine_taste`.**
+/// Jene liest die Liste als Ausnahme und haelt damit nur die eine Richtung:
+/// keine Funktion ausserhalb der Liste steht ohne Kombination da. Eine Funktion
+/// **in** der Liste, die spaeter doch eine Kombination bekommt, faellt dort
+/// still durch den Ausnahmezweig. Diese Probe haelt die Gegenrichtung: jede
+/// genannte traegt wirklich keine.
+///
+/// Bis zum 260907 stand die Gegenrichtung als `assert_eq!` gegen ein zweites
+/// Literal in `crates/krk-ui/src/belegungsausgabe.rs`; der Umzug hierher folgt
+/// dem Nutzerentscheid `circles/
+/// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+/// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`
+/// (Moeglichkeit 3).
+///
+/// **Verglichen wird mit Reihenfolge**, weil die Reihenfolge der Konstante die
+/// der Belegungsdatei ist und der Kopf dieser Datei sie begruendet. Ein
+/// Vergleich ohne sie liesse eine umgestellte `default-keymap.toml` durch, und
+/// die Begruendung stuende dann neben einer Zusage, die sie nicht mehr traegt.
+#[test]
+fn ab_werk_traegt_genau_diese_liste_keine_kombination() {
+    let belegung = Belegung::auslieferung();
+
+    let unbelegt: Vec<&str> = belegung
+        .funktionen()
+        .iter()
+        .filter(|funktion| funktion.tasten().is_empty())
+        .map(|funktion| funktion.kennung())
+        .collect();
+
+    // Der Meldetext nennt beide Seiten beim Namen: `assert_eq!` schreibt die
+    // gefundene und die erwartete Liste aus, und die zwei Zeilen darunter
+    // sagen, welcher Eintrag zu viel und welcher zu wenig dasteht. Ohne sie
+    // muesste ein Leser zwei siebenstellige Listen von Hand gegeneinander
+    // halten.
+    let zuviel: Vec<&str> = unbelegt
+        .iter()
+        .copied()
+        .filter(|kennung| !OHNE_KOMBINATION_AB_WERK.contains(kennung))
+        .collect();
+    let zuwenig: Vec<&str> = OHNE_KOMBINATION_AB_WERK
+        .iter()
+        .copied()
+        .filter(|kennung| !unbelegt.contains(kennung))
+        .collect();
+
+    assert_eq!(
+        unbelegt, OHNE_KOMBINATION_AB_WERK,
+        "ab Werk sind andere Funktionen unbelegt als die vier Spaltenschalter, die tiefe \
+         Suche, die Inhaltssuche und die Belegungsdatei; ohne Kombination und nicht in der \
+         Liste: {zuviel:?}; in der Liste und mit Kombination: {zuwenig:?}"
+    );
 }
 
 #[test]

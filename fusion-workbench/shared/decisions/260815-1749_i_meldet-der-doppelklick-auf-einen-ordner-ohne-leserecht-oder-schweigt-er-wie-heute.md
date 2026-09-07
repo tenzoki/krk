@@ -73,3 +73,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1210 beantwortet` — der Doppelklick meldet kuenftig auch; das Abnahmekriterium verlangt eine Meldung fuer den nicht lesbaren Pfad, und diese Wahl erfuellt sie auf beiden Wegen. Der zusaetzliche Systemaufruf auf jedem Ordnereinstieg ist mitentschieden und gehoert in den naechsten Abnahmelauf, weil zwei Zeitzusagen daran haengen; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: `crates/krk-core/src/verzeichnis/verweisziel.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/kommandos/pfadeingabe.rs`, `crates/krk-ui/src/tabs.rs` — die gewaehlte Antwort ist erfuellt, und **ohne** den mitentschiedenen Systemaufruf je Ordnereinstieg. **Die Praemisse dieses Datensatzes war falsch:** der Doppelklick war nie wortlos. `Schwungleser::oeffnen` scheitert mit `EACCES`, der Lesefaden meldet `Abschluss::Fehler`, und `tabs::lesemeldungen_einziehen` macht daraus die Tabmeldung „… ließ sich nicht vollständig lesen: Permission denied“; der Zweig steht seit `537fda5` (S12) im Baum, also seit vor diesem Datensatz. Gemessen von der neuen Probe `tabs::tests::ein_ordner_ohne_leserecht_meldet_sich_aus_dem_lesevorgang`. Die Zeitzusagen L3 und L10 bleiben damit unberuehrt und brauchen keinen Abnahmelauf aus diesem Anlass. Berichtigt ist die zweite Stelle, die dasselbe behauptete, der Modulkopf von `verweisziel.rs`; der Befund dazu ist `260907-1226_*_zwei-prosastellen-nennen-den-doppelklick-auf-einen-ordner-ohne-leserecht-wortlos-der-baum-meldet-seit-s12.md`. Was von der Ungleichheit bleibt — der Pfadsprung weist ab, der Doppelklick geht hinein und meldet danach — steht als neue Frage in `260907-1226_*_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md`.

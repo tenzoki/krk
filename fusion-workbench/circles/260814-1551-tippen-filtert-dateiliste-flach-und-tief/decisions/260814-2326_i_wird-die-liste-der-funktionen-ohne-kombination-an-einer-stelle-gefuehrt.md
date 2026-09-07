@@ -51,3 +51,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1210 beantwortet` — Moeglichkeit 3: die Liste bleibt an einer Stelle im Pruefcode, und die zweite Pruefrichtung zieht mit um. Als einzige stellt sie eine Stelle her, ohne eine Zusage aufzugeben; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-1225-eine-stelle-fuer-die-ab-werk-tastenlosen-funktionen.md `## Was gebaut ist` — das Literal in `crates/krk-ui/src/belegungsausgabe.rs` ist entfallen, `OHNE_KOMBINATION_AB_WERK` (`crates/krk-core/tests/belegung.rs`) traegt beide Pruefrichtungen, und die Auskunft "welche Funktion faellt aus der Ausgabe" steht in `krk-ui` weiter im Meldetext, ausgerechnet statt hingeschrieben.

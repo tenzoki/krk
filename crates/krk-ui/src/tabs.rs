@@ -815,12 +815,14 @@ impl Tabliste {
     /// Trefferzahl nennen, sonst hielte der Nutzer den neuen Ordner fuer fast
     /// leer. Geprueft war dafuer allein `statuszeile::filterstand_text`, das
     /// den Satz **baut**. Ob er die Zeile erreicht, entscheidet
-    /// `statuszeile::zeile` ueber die Rangfolge `Rang::ALLE`, und dort ist der
-    /// Filterstand Rang 5 von 6. Die Ordnung ist erst der Rang und dann die
-    /// aktive Seite, also stehen vier Raenge ueber ihm, drei davon auch dem
-    /// anderen Dateifenster offen. Eine Fenstermeldung (Rang 3) des inaktiven
-    /// Dateifensters verdraengt den Filterstand und wird allein vom Ordner-
-    /// oder Tabwechsel **derselben** Seite geraeumt. Wer in dieser Lage
+    /// `statuszeile::zeile` ueber die Rangfolge `Rang::ALLE`, und dort steht
+    /// der Filterstand unter der Befehlsantwort, der Vorgangsanzeige, der
+    /// Fenstermeldung und der Tabmeldung. Die Ordnung ist erst der Rang und
+    /// dann die aktive Seite, also verdraengt ihn jede von ihnen, und alle
+    /// bis auf die Befehlsantwort — die an beiden Dateifenstern zugleich
+    /// geraeumt wird — auch aus dem anderen Dateifenster. Eine Fenstermeldung
+    /// des inaktiven Dateifensters verdraengt den Filterstand und wird allein
+    /// vom Ordner- oder Tabwechsel **derselben** Seite geraeumt. Wer in dieser Lage
     /// filtert, sieht seinen Filtertext nicht, auch nicht im Augenblick des
     /// Tippens und ueber jeden folgenden Ordnerwechsel hinweg. Der Weg besteht
     /// seit der Runde 10 unveraendert; was der 260815 aendert, ist die
@@ -2763,6 +2765,65 @@ mod tests {
             zeilennamen(liste.aktiver().modell()),
             ["daten"],
             "`daten` traegt den Treffer unter sich, `leer` nicht, und `oben.txt` passt nicht"
+        );
+    }
+
+    /// Der Einstieg in einen Ordner ohne Leserecht bleibt nicht wortlos.
+    ///
+    /// **Der Nutzerentscheid vom 260907-1210 verlangt eine Meldung, und der
+    /// Baum gibt sie, ohne dass der Einstiegsweg dafuer einen Systemaufruf
+    /// hinzubekommt**
+    /// (`shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`).
+    /// Der Lesevorgang selbst liefert die Auskunft:
+    /// `krk_core::verzeichnis::sys::Schwungleser::oeffnen` scheitert mit
+    /// `EACCES`, der Lesefaden meldet `Abschluss::Fehler`, und
+    /// [`lesemeldungen_einziehen`] macht daraus die Tabmeldung, die
+    /// `crate::appkit::tabelle` als `Quellen::tabmeldung` in die Statuszeile
+    /// gibt.
+    ///
+    /// **Geprueft wird hier und nicht am Einstiegsweg**, weil die Meldung dort
+    /// gar nicht entsteht: `Tabelle::in_zeile_einsteigen` ruft `ordner_lesen`
+    /// und ist danach fertig, und die Auskunft kommt einen Einzugstakt spaeter
+    /// aus dem Kanal des Lesevorgangs. Der Weg ohne AppKit endet an dieser
+    /// Stelle, und alles darueber ist die Rangfolge der Statuszeile, die
+    /// `statuszeile::zeile` fuer sich prueft.
+    ///
+    /// Ohne diese Probe kaeme der wortlose Zustand zurueck, sobald jemand den
+    /// Zweig `Abschluss::Fehler` in [`lesemeldungen_einziehen`] fuer
+    /// entbehrlich haelt — der Uebersetzer haelt ihn nicht.
+    #[test]
+    fn ein_ordner_ohne_leserecht_meldet_sich_aus_dem_lesevorgang() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("kein-leserecht");
+        let gesperrt = ordner.ordner("gesperrt");
+        std::fs::set_permissions(&gesperrt, std::fs::Permissions::from_mode(0o000))
+            .expect("Rechte lassen sich setzen");
+
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        liste.ordner_setzen(&gesperrt, None);
+        let mut takte = 0;
+        while liste.arbeitet_noch() {
+            let _ = liste.einziehen();
+            takte += 1;
+            assert!(takte < 2_000, "der Lesevorgang ist nicht zum Ende gekommen");
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        let meldung = liste.aktiver().meldung().map(str::to_owned);
+
+        // Aufraeumen, bevor die Probe fehlschlagen kann: sonst bleibt ein
+        // Ordner liegen, den das `Drop` des Pruefordners nicht mehr betreten
+        // darf.
+        let _ = std::fs::set_permissions(&gesperrt, std::fs::Permissions::from_mode(0o700));
+
+        let meldung = meldung.expect("ein Ordner ohne Leserecht bleibt wortlos");
+        assert!(
+            meldung.contains("lesen"),
+            "die Meldung sagt nicht, dass sich der Ordner nicht lesen liess: {meldung}"
+        );
+        assert!(
+            meldung.contains("gesperrt"),
+            "die Meldung nennt den Ordner nicht: {meldung}"
         );
     }
 

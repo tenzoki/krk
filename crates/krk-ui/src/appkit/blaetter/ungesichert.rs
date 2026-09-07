@@ -65,6 +65,31 @@ pub enum Antwort {
     Abbrechen,
 }
 
+/// Die drei Schaltflaechen der Nachfrage, in bindender Reihenfolge.
+///
+/// **Als reine Funktion herausgezogen**, damit der Bauplan dieses Blattes ohne
+/// AppKit und ohne Hauptfaden pruefbar ist; dieselbe Bauform wie
+/// [`super::loeschbestaetigung::schaltflaechen`](super::loeschbestaetigung) und
+/// [`super::standardschaltflaechen`](super).
+///
+/// Die Reihenfolge ist bindend, und zwar zweifach: sie ist die des dritten
+/// Abnahmekriteriums von C4 der Editor-Runde (sichern, verwerfen, abbrechen),
+/// und [`zeigen`] rechnet die gedrueckte Stelle daraus auf einen Wert von
+/// [`Antwort`] zurueck. Wer sie hier dreht, ohne die Rueckrechnung mitzudrehen,
+/// bekommt aus "Sichern" ein Verwerfen; die Probe unter `mod tests` liest die
+/// Beschriftung an jeder Stelle und wird dann rot.
+///
+/// Die Eingabetaste liegt auf der bewahrenden Antwort und nicht auf dem
+/// Verwerfen; der Grund steht im Modulkopf.
+#[must_use]
+fn schaltflaechen() -> [Schaltflaeche<'static>; 3] {
+    [
+        Schaltflaeche::neu("Sichern", Taste::Eingabe, Wirkung::Ausfuehren),
+        Schaltflaeche::neu("Verwerfen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
+        Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+    ]
+}
+
 /// Zeigt die Nachfrage und meldet die Wahl des Nutzers.
 ///
 /// `datei` ist die Datei, deren Stand auf dem Spiel steht, also die, die der
@@ -86,11 +111,7 @@ pub fn zeigen(
     let blatt = Blatt::mit_schaltflaechen(
         mtm,
         &format!("„{name}“ hat ungesicherte Änderungen"),
-        &[
-            Schaltflaeche::neu("Sichern", Taste::Eingabe, Wirkung::Ausfuehren),
-            Schaltflaeche::neu("Verwerfen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
-            Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
-        ],
+        &schaltflaechen(),
     );
     blatt.erlaeuterung_setzen(&format!(
         "{}\n\nReturn sichert, Cmd+Return verwirft die Änderungen, Esc bricht ab.",
@@ -109,4 +130,70 @@ pub fn zeigen(
         };
         fertig(antwort);
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::appkit::blaetter::{abbruchstelle, bestaetigungsstelle};
+
+    use super::{Taste, Wirkung, schaltflaechen};
+
+    /// Die drei Schaltflaechen stehen in der Reihenfolge, die C4 aufzaehlt.
+    ///
+    /// Gehalten wird die Reihenfolge und nicht nur der Bestand: die
+    /// Rueckrechnung in [`super::zeigen`] macht aus der Stelle einen Wert von
+    /// [`super::Antwort`] und liest damit dieselbe Reihenfolge, die hier
+    /// dasteht.
+    #[test]
+    fn der_bauplan_zaehlt_sichern_verwerfen_abbrechen_in_dieser_reihenfolge() {
+        let schaltflaechen = schaltflaechen();
+        let tafel: [(&str, Taste, Wirkung); 3] = [
+            ("Sichern", Taste::Eingabe, Wirkung::Ausfuehren),
+            ("Verwerfen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
+            ("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+        ];
+        assert_eq!(
+            schaltflaechen.len(),
+            tafel.len(),
+            "die Nachfrage bietet nicht die drei Wege an, die C4 nennt"
+        );
+        for (stelle, (titel, taste, wirkung)) in tafel.into_iter().enumerate() {
+            assert_eq!(
+                schaltflaechen[stelle].titel, titel,
+                "an Stelle {stelle} steht eine andere Schaltflaeche"
+            );
+            assert_eq!(
+                schaltflaechen[stelle].taste, taste,
+                "„{titel}“ traegt eine andere Taste"
+            );
+            assert_eq!(
+                schaltflaechen[stelle].wirkung, wirkung,
+                "„{titel}“ richtet etwas anderes an"
+            );
+        }
+    }
+
+    /// Der ungefaehrliche Ausgang ist das Abbrechen, und die Eingabetaste
+    /// verliert nichts.
+    ///
+    /// Die zwei Zusagen des Modulkopfs an derselben reinen Funktion gemessen,
+    /// die das Blatt einsetzt: eine unbekannte Antwort laesst den Stand stehen,
+    /// und ein reflexhaftes Bestaetigen schreibt die Datei, statt sie zu
+    /// verwerfen.
+    #[test]
+    fn abbrechen_faengt_auf_und_die_eingabetaste_sichert() {
+        let schaltflaechen = schaltflaechen();
+        let liegen = abbruchstelle(&schaltflaechen);
+        assert_eq!(
+            schaltflaechen[liegen].titel, "Abbrechen",
+            "der ungefaehrliche Ausgang heisst anders"
+        );
+        assert_eq!(schaltflaechen[liegen].wirkung, Wirkung::Liegenlassen);
+
+        let bestaetigt = bestaetigungsstelle(&schaltflaechen);
+        assert_eq!(
+            schaltflaechen[bestaetigt].titel, "Sichern",
+            "die Eingabetaste faellt auf einen Weg, der den Stand verliert"
+        );
+    }
 }

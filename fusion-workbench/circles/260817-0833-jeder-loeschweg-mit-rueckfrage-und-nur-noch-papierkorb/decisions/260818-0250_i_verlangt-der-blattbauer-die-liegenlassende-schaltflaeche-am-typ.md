@@ -68,3 +68,9 @@ Möglichkeit 3, falls die nächste Runde ohnehin an den Blättern arbeitet: sie
 kostet je Blatt drei Zeilen und macht jeden Bauplan messbar. Möglichkeit 2 lohnt
 erst, wenn ein Blatt dazukommt, dessen erste Schaltfläche ausführt — heute hat
 keines das.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1210 beantwortet` — Moeglichkeit 3, der halbe Schritt: jedes Blatt bekommt eine reine Bauplanfunktion und wird damit ohne AppKit pruefbar. Die Zusage bleibt eine Probe und wird keine Uebersetzungsbedingung; der Typ lohnt erst, wenn ein Blatt mit ausfuehrender erster Schaltflaeche dazukommt; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 260907-1219-bauplanfunktion-je-blatt.md — jedes der elf Blaetter liefert seinen Bauplan als reine Funktion; vier kamen heute dazu (uebersprungen, ungesichert, zettel, belegungsansicht), je mit einer Probe ohne AppKit. Signatur, Reihenfolge und das `assert!` unveraendert; der starke Weg (Moeglichkeit 2) bleibt ungebaut.

@@ -340,6 +340,29 @@ fn zettel_an_stelle(stelle: isize) -> Option<Zettel> {
         .and_then(|stelle| Zettel::ALLE.get(stelle).copied())
 }
 
+/// Die eine Schaltflaeche des Notizzettels.
+///
+/// **Als reine Funktion herausgezogen**, damit der Bauplan dieses Blattes ohne
+/// AppKit und ohne Hauptfaden pruefbar ist; dieselbe Bauform wie
+/// [`super::loeschbestaetigung::schaltflaechen`](super::loeschbestaetigung) und
+/// [`super::standardschaltflaechen`](super).
+///
+/// **Sie traegt die Escape-Taste und nicht die Eingabetaste.** Die Eingabetaste
+/// an einer Schaltflaeche liefe ueber `performKeyEquivalent:` und schloesse das
+/// Blatt, bevor die Textflaeche sie saehe; C3 sagt zu, dass sie eine neue Zeile
+/// setzt. Die Probe unter `mod tests` haelt genau das fest.
+///
+/// "Fertig" laesst liegen: der Zettel sichert fortlaufend, und das Schliessen
+/// nimmt nichts weg.
+#[must_use]
+fn schaltflaechen() -> [Schaltflaeche<'static>; 1] {
+    [Schaltflaeche::neu(
+        "Fertig",
+        Taste::Escape,
+        Wirkung::Liegenlassen,
+    )]
+}
+
 /// Zeigt den Notizzettel als Blatt am Fenster.
 ///
 /// Kehrt sofort zurueck. `tabklick` laeuft auf dem Hauptfaden, sobald der Nutzer
@@ -418,19 +441,7 @@ pub fn zeigen(
     beigabe.addSubview(&schalter);
     beigabe.addSubview(&bildlauf);
 
-    // Eine einzige Schaltflaeche, und sie traegt die Escape-Taste und nicht die
-    // Eingabetaste. Die Eingabetaste an einer Schaltflaeche liefe ueber
-    // `performKeyEquivalent:` und schloesse das Blatt, bevor die Flaeche sie
-    // saehe; C3 sagt zu, dass sie eine neue Zeile setzt.
-    let blatt = Blatt::mit_schaltflaechen(
-        mtm,
-        "Notizzettel",
-        &[Schaltflaeche::neu(
-            "Fertig",
-            Taste::Escape,
-            Wirkung::Liegenlassen,
-        )],
-    );
+    let blatt = Blatt::mit_schaltflaechen(mtm, "Notizzettel", &schaltflaechen());
     // Der Satz nennt die Taste und die Zusage aus C4 und zaehlt die vier
     // Sicherungsmomente **nicht** auf: welcher Weg heraus wann schreibt, ist
     // eine Frage an den Code und keine, die der Nutzer beantworten muss.
@@ -504,9 +515,44 @@ pub(crate) fn textflaeche_bauen(
 mod tests {
     use objc2::sel;
 
-    use super::{uebernimmt, zettel_an_stelle};
+    use super::{Taste, Wirkung, schaltflaechen, uebernimmt, zettel_an_stelle};
+    use crate::appkit::blaetter::abbruchstelle;
     use crate::quellbaum::quelldateien;
     use krk_core::ablage::pfade::Zettel;
+
+    /// Der Bauplan traegt die eine Schaltflaeche "Fertig" auf der Escape-Taste.
+    ///
+    /// **Die zweite Haelfte ist die Zusage aus C3**, und sie steht hier neben
+    /// der Probe am Waechter darunter: eine Schaltflaeche auf der Eingabetaste
+    /// schloesse das Blatt ueber `performKeyEquivalent:`, bevor die Textflaeche
+    /// die Taste saehe, und die Zeile, die C3 zusagt, entstuende nie. Der
+    /// Waechter allein kann das nicht verhindern.
+    #[test]
+    fn der_bauplan_traegt_fertig_auf_der_escape_taste() {
+        let schaltflaechen = schaltflaechen();
+        assert_eq!(
+            schaltflaechen.len(),
+            1,
+            "der Zettel bietet mehr als das Schließen an"
+        );
+        assert_eq!(schaltflaechen[0].titel, "Fertig");
+        assert_eq!(
+            schaltflaechen[0].taste,
+            Taste::Escape,
+            "die Schaltflaeche des Zettels nimmt der Textflaeche eine Taste weg"
+        );
+        assert_ne!(
+            schaltflaechen[0].taste,
+            Taste::Eingabe,
+            "die Eingabetaste schließt den Zettel, statt eine Zeile zu setzen"
+        );
+        assert_eq!(schaltflaechen[0].wirkung, Wirkung::Liegenlassen);
+        assert_eq!(
+            abbruchstelle(&schaltflaechen),
+            0,
+            "der ungefaehrliche Ausgang liegt nicht auf der einen Schaltflaeche"
+        );
+    }
 
     /// Der Waechter faengt die Escape-Taste ab und die Eingabetaste **nicht**
     /// (C3).

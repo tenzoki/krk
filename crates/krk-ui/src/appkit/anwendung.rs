@@ -1542,8 +1542,9 @@ impl Anwendungsdelegierter {
             // Drei Rueckrufe, weil die Dateiliste drei Dinge braucht, die sie
             // selbst nicht hat: die Frage nach dem laufenden Vorgang **ohne**
             // ihre Meldung — `validateDrop:` laeuft bei jeder Zeigerbewegung —,
-            // den Weg in die Operationsmaschine und die Raeumung des Rangs 1
-            // an **beiden** Dateifenstern, die von einer Quelle aus nicht zu
+            // den Weg in die Operationsmaschine und die Raeumung der
+            // Befehlsantwort an **beiden** Dateifenstern, die von einer
+            // Quelle aus nicht zu
             // erreichen ist. Auch sie halten den Delegierten **schwach**, aus
             // demselben Grund wie die vier darueber.
             let schwach = objc2::rc::Weak::from_retained(&self.retain());
@@ -1568,7 +1569,8 @@ impl Anwendungsdelegierter {
                 }));
             // **Die Meldung aus C7 nimmt dieselbe Loeschregel wie ein
             // Tastenbefehl**, und deshalb geht sie hier heraus statt an der
-            // Quelle zu bleiben: der Rang 1 gehoert beiden Dateifenstern, und
+            // Quelle zu bleiben: der Rang der Befehlsantwort gehoert beiden
+            // Dateifenstern, und
             // eine Meldung im nicht aktiven verloere sonst gegen eine noch
             // stehende Befehlsantwort im aktiven. Der Rueckruf traegt die Seite
             // nicht mit, weil die Regel ohnehin beide raeumt. Auch er haelt den
@@ -2986,9 +2988,10 @@ impl Anwendungsdelegierter {
     /// Funktion trifft sie nicht ein zweites Mal.
     ///
     /// **In die Fenstermeldung und nicht in die Befehlsantwort.** Die fremde
-    /// Aenderung ist ein Ereignis, das niemand angefordert hat, und steht damit
-    /// auf Rang 3 der Statuszeile; auf Rang 1 loeschte der naechste Tastendruck
-    /// sie weg, bevor der Nutzer sie gelesen hat. Denselben Rang nimmt die
+    /// Aenderung ist ein Ereignis, das niemand angefordert hat, und ist damit
+    /// eine [`Rang::Fenstermeldung`](statuszeile::Rang::Fenstermeldung) der Statuszeile; als
+    /// [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort) loeschte der naechste Tastendruck sie weg,
+    /// bevor der Nutzer sie gelesen hat. Denselben Rang nimmt die
     /// Auswurfmeldung aus C9 der Runde 1.
     ///
     /// **In die Zeile des aktiven Dateifensters**, aus demselben Grund wie jede
@@ -4046,7 +4049,7 @@ impl Anwendungsdelegierter {
     /// der Lage an, die zwei Schreibweisen eines Ordners braucht.
     ///
     /// **Die Meldung geht an das ausloesende Dateifenster und nicht an das
-    /// Ziel.** So haelt es KRK bei jeder Befehlsantwort auf Rang 1: die Zeile
+    /// Ziel.** So haelt es KRK bei jeder [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort): die Zeile
     /// antwortet dem, der gedrueckt hat. Eine Antwort im Zielfenster stuende
     /// gerade dort, wohin der Nutzer nicht sieht, wenn das Ziel ausgeblendet
     /// geblieben ist.
@@ -5512,7 +5515,7 @@ impl Anwendungsdelegierter {
     }
 
     /// Raeumt die Antwort auf den vorigen Tastenbefehl an **beiden**
-    /// Dateifenstern weg (Rang 1).
+    /// Dateifenstern weg ([`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort)).
     ///
     /// **Die eine Loeschregel des obersten Rangs, an einer Stelle und mit zwei
     /// Wegen hinein.** Sie raeumt beide Seiten, weil es genau einen letzten
@@ -7373,11 +7376,11 @@ impl Anwendungsdelegierter {
     /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile des
     /// genannten Dateifensters.
     ///
-    /// Rang 1, der oberste der Rangfolge, siehe
-    /// [`crate::appkit::statuszeile::zeile`]. Nicht zu verwechseln mit
-    /// [`Dateifenstersicht::melden`] weiter unten: das ist der Weg der
-    /// Ereignisse, die niemand angefordert hat, und der schreibt die
-    /// Fenstermeldung auf Rang 3.
+    /// [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort), der oberste der Rangfolge; die Ordnung steht
+    /// in [`Rang::ALLE`](statuszeile::Rang::ALLE), angewandt in [`crate::appkit::statuszeile::zeile`].
+    /// Nicht zu verwechseln mit [`Dateifenstersicht::melden`] weiter unten:
+    /// das ist der Weg der Ereignisse, die niemand angefordert hat, und der
+    /// schreibt die [`Rang::Fenstermeldung`](statuszeile::Rang::Fenstermeldung), die darunter steht.
     fn antwort_zeigen(&self, seite: Fensterseite, text: &str) {
         self.dateifenster(seite)
             .quelle()
@@ -7696,8 +7699,9 @@ impl Anwendungsdelegierter {
             // Beim Start ist die Abweisung die Antwort auf keinen Tastendruck,
             // sondern ein Ereignis am Fenster: die gemerkte Datei ist fort oder
             // zu gross geworden, waehrend KRK nicht lief. Sie geht deshalb als
-            // Fenstermeldung auf Rang 3 der Statuszeile; auf Rang 1 loeschte
-            // der erste Tastendruck sie weg, bevor der Nutzer sie gelesen hat.
+            // `Rang::Fenstermeldung` in die Statuszeile; als
+            // `Rang::Befehlsantwort` loeschte der erste Tastendruck sie weg,
+            // bevor der Nutzer sie gelesen hat.
             //
             // Der Editor wird dabei ausgeblendet und nicht bloss leer gelassen:
             // hatte die Sitzung ihn sichtbar, naehme er den Dateifenstern sonst
@@ -7741,8 +7745,9 @@ impl Anwendungsdelegierter {
     /// Bau an.
     ///
     /// **Beide Ausgaenge, die eine Datei betreffen, gehen ueber
-    /// [`Editormeldung`]** und damit in die eine Meldeflaeche des Fensters auf
-    /// Rang 1. Der dritte betrifft keine Datei, weil es keine gibt; er nimmt
+    /// [`Editormeldung`]** und damit in die eine Meldeflaeche des Fensters, als
+    /// [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort). Der dritte betrifft keine Datei, weil es keine
+    /// gibt; er nimmt
     /// denselben Weg wie F4 auf leerer Auswahl, naemlich [`Self::antwort_zeigen`]
     /// mit einem eigenen Satz. Eine Variante in [`Editormeldung`] entsteht dafuer
     /// nicht — sie meldet ueber die gehaltene Datei, und hier haelt der Editor
@@ -8318,10 +8323,11 @@ impl Anwendungsdelegierter {
     /// Runde sagt das zu, C1 wiederholt es, und diese Funktion ist die Stelle,
     /// an der die Zusage haelt: alles, was der Editor zu sagen hat, geht durch
     /// sie und landet in der einen Zeile, die es seit der Runde 1 gibt. Eine
-    /// sechste Quelle in [`crate::appkit::statuszeile::zeile`] entsteht dabei
+    /// weitere Quelle in [`crate::appkit::statuszeile::zeile`] entsteht dabei
     /// nicht.
     ///
-    /// **Rang 1 und kein eigener daneben.** Jede Meldung des Editors ist die
+    /// **[`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort) und kein eigener daneben.** Jede Meldung des
+    /// Editors ist die
     /// Antwort auf einen Tastenbefehl, den der Nutzer eben gegeben hat: eine
     /// Abweisung beim Oeffnen, ein gescheitertes Sichern, eine Zeilennummer
     /// ueber der Zeilenzahl, eine Suche ohne Treffer, die Zahl der ersetzten

@@ -67,3 +67,9 @@ Messung.
 
 Wer den sechsten Rang baut, entscheidet diese Frage mit; bis dahin ist sie es nicht wert,
 Arbeit auszulösen.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1210 beantwortet` — die Zahl faellt weg, der Kommentar verweist auf die eine Stelle, an der die Ordnung steht; an der Aufzaehlung selbst ist es schon so gebaut; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/tabs.rs` — Moeglichkeit 2. Die Regel selbst steht einmal, im Doc-Kommentar von `Rang` unter „Kein Kommentar im Baum nennt einen Rang als Zahl“; die Kommentare nennen seither die Variante (`Rang::Befehlsantwort`, `Rang::Fenstermeldung`) statt der Ziffer. Erhoben mit einem Dreizeilenfenster ueber alle Kommentarzeilen unter `crates/`, damit ein Zeilenumbruch keine Stelle verdeckt; gefunden wurden 22 Absaetze in vier Dateien und nicht „rund neun in drei“. Wo die Zahl die Verdraengung mit aussprach — `statuszeile::zeile` („auf Rang 3 … Abschlusstext (Rang 1)“) und `tabs.rs` („Rang 5 von 6“, das mit der Runde 20 falsch geworden war) — steht jetzt ein Satz mit Namen statt einer Ziffer. Zwei stale gewordene Nachbarzahlen sind mitgefallen: „ein Rang von sechs“ an einer Probe und „eine sechste Quelle“ an `editormeldung_zeigen`.

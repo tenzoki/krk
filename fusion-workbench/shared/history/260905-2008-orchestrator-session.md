@@ -353,3 +353,42 @@ Anwendung; alle fuenf betreffen, wie an ihr gearbeitet wird.
     und die teuerste Folge, weil die drei zeichengleich bleiben sollen.
 
 **Was offen bleibt:** 35 der 56 Fragen.
+
+## Fuenf weitere Entscheidungen am 260907-1210 beantwortet
+
+Dritte Vorlagerunde. Fuenf Stellen, an denen der Code heute etwas tut, das niemand
+entschieden hatte. Der Nutzer ist allen fuenf Empfehlungen gefolgt; bei der zweiten hat er
+nach der Sache gefragt, bevor er sie beantwortet hat, und die Vorlage ist daraufhin ohne
+Fachvokabular neu geschrieben worden.
+
+11. **Der Doppelklick auf einen Ordner ohne Leserecht meldet kuenftig, statt wortlos in eine
+    leere Liste zu wechseln.** Die Pfadeingabe meldet schon heute; das Abnahmekriterium
+    verlangt eine Meldung fuer den nicht lesbaren Pfad, und diese Wahl erfuellt sie auf
+    beiden Wegen. **Der Preis ist ausdruecklich mitentschieden:** ein zusaetzlicher
+    Systemaufruf auf jedem Ordnereinstieg, auch im haeufigen lesbaren Fall. Daran haengen
+    zwei Zeitzusagen, die seit der Runde 4 nicht mehr gemessen sind; der Aufruf gehoert in
+    den naechsten Abnahmelauf.
+12. **Jedes Blatt bekommt eine reine Funktion, die seinen Bauplan liefert** — der halbe
+    Schritt, nicht der Typ, der die harmlose Schaltflaeche erzwingt. Damit wird jedes Blatt
+    ohne AppKit pruefbar, drei Zeilen je Blatt; zwei der sieben tragen es seit dem 260818.
+    Die Zusage bleibt eine Probe und wird keine Uebersetzungsbedingung. Der starke Weg lohnt
+    an dem Tag, an dem ein Blatt mit ausfuehrender erster Schaltflaeche dazukommt, und heute
+    gibt es keines.
+13. **Die Liste der ab Werk tastenlosen Funktionen steht kuenftig an einer Stelle im
+    Pruefcode, und die zweite Pruefrichtung zieht mit um.** Sie stand zweimal, ist beim
+    vierten Eintrag auseinandergelaufen und hat drei Proben zugleich rot gemacht. Als einzige
+    der drei Moeglichkeiten stellt diese eine Stelle her, ohne eine Zusage aufzugeben; ein
+    Umzug in den ausgelieferten Code haette dem Programm eine Aufzaehlung mitgegeben, die
+    niemand liest.
+14. **Kommentare nennen den Rang einer Statuszeilen-Meldung nicht mehr als Zahl**, sondern
+    verweisen auf die eine Stelle, an der die Ordnung steht. Die Zahlen sind viermal falsch
+    geworden, als ein Rang dazukam, und kein Pruflauf liest eine Zahl in einem Kommentar. An
+    der Aufzaehlung selbst ist es schon so gebaut.
+15. **Der Auffrischungsaufschub beim Stapel-Umbenennen bleibt, und seine Begruendung wird
+    nachgezogen.** Der Defekt, fuer den die Regel kam, ist anderswo behoben, aber der
+    Aufschub faengt weiter eine echte Fehlfunktion ab: ab rund 60.000 Eintraegen zeigte die
+    Liste sonst waehrend des ganzen Vorgangs nur den unsortierten Anfang. Die
+    Fallunterscheidung deckt inzwischen sechs Vorgangsarten, und jede weitere ist dort
+    einzuordnen.
+
+**Was offen bleibt:** 30 der 56 Fragen, dazu die Reichweitenfrage aus der zweiten Runde.

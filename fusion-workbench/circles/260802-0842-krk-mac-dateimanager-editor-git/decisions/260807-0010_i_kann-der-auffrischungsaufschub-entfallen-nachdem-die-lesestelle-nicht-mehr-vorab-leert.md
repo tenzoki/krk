@@ -104,3 +104,9 @@ Answered:
 Implemented:
 Deferred:
 Superseded by:
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-1210 beantwortet` — der Aufschub bleibt, und seine Begruendung wird nachgezogen; er faengt weiter eine echte Fehlfunktion ab, naemlich die Liste, die ab rund 60000 Eintraegen waehrend des ganzen Vorgangs nur den unsortierten Anfang zeigte; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: `crates/krk-ui/src/auffrischung.rs` — der Aufschub bleibt, und der Doc-Kommentar an `schiebt_auffrischung_auf` traegt seine heutige Begruendung: nicht mehr die leere Liste des Ursprungsdefekts, sondern der Abschnitt „Warum der Aufschub trotzdem bleibt“ mit den zwei gerechneten Faellen (bis rund 60.000 Eintraege unruhig, darueber fuer die ganze Laufzeit unsortiert und unvollstaendig) und dem Satz, dass jede weitere Vorgangsart hier einzuordnen ist und der Uebersetzer es erzwingt. Dazu berichtigt: `auffrischung_aufgeschoben` beschrieb das Vorabraeumen der Lesestelle im Praesens, obwohl es seit dem 260807 fort ist.

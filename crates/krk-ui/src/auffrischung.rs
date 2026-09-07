@@ -304,9 +304,8 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 /// **Das Stapel-Umbenennen schiebt auf.** Es schreibt Verzeichniseintraege und
 /// sonst nichts; 5.000 davon sind auf dem Referenzgeraet in wenigen hundert
 /// Millisekunden durch. Jede einzelne meldet FSEvents, und die naechste Meldung
-/// setzt den Lesevorgang neu auf, bevor er seinen ersten Stapel angehaengt hat.
-/// Das war der Defekt vom 260805-1337, den [`auffrischung_aufgeschoben`]
-/// abfaengt.
+/// setzt den Lesevorgang neu auf, bevor der vorige fertig ist. Das war der
+/// Defekt vom 260805-1337, den [`auffrischung_aufgeschoben`] abfaengt.
 ///
 /// **Jede uebrige Art schiebt nicht auf.** Kopieren, Verschieben, der
 /// Papierkorb, das Packen und das Entpacken melden in gemaechlichem Takt;
@@ -326,9 +325,38 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 /// eine zweite Ausnahme hier, sondern dort, wo die leere Liste entstand:
 /// [`krk_core::verzeichnis::Ordnermodell::lesevorgang_beginnen`] ersetzt den
 /// Bestand erst mit dem ersten gelieferten Stapel, statt ihn vorab zu leeren.
-/// Damit laeuft die Liste bei keiner Operationsart mehr leer, und die
-/// Einordnung hier bleibt bei der einen Frage, die sie beantwortet: ob eine
-/// Auffrischung waehrend des Vorgangs ueberhaupt lohnt.
+/// Damit laeuft die Liste bei keiner Operationsart mehr leer.
+///
+/// # Warum der Aufschub trotzdem bleibt
+///
+/// Nach dem 260807 lag die Frage nahe, ob er sein Daseinsrecht verloren hat.
+/// Er hat es nicht, und **der Grund ist ein anderer als bei seiner
+/// Einfuehrung**: er faengt nicht mehr die leere Liste ab, sondern eine
+/// mildere, aber echte Fehlfunktion. Gerechnet aus zwei gemessenen Groessen —
+/// FSEvents sammelt 300 ms, bevor es meldet (`SAMMELVERZOEGERUNG` in
+/// `crate::appkit::fsevents`), und ein vollstaendiger Lesevorgang braucht auf
+/// dem Referenzgeraet 43 ms fuer 10.000 Eintraege und 492 ms fuer 100.000
+/// (`messungen/260807-0002-...`) — folgen zwei Faelle:
+///
+/// - **Bis rund 60.000 Eintraege** wird der Lesevorgang zwischen zwei Meldungen
+///   fertig. Ohne den Aufschub saehe der Nutzer eine vollstaendige, sortierte
+///   Liste, die sich rund dreimal je Sekunde erneuert: unruhig, aber nicht
+///   falsch.
+/// - **Darueber** wird er nicht fertig, bevor die naechste Meldung ihn neu
+///   aufsetzt. Die Liste zeigte dann fuer die ganze Laufzeit des Vorgangs nur
+///   den Anfang des Ordners in Lesereihenfolge, also unsortiert und
+///   unvollstaendig, und kaeme nicht mehr in ihren sortierten Zustand.
+///
+/// Der zweite Fall ist nicht die leere Liste des Ursprungsdefekts, aber er ist
+/// eine Fehlfunktion, und der Aufschub verhindert ihn weiterhin. So entschieden
+/// vom Nutzer am 260907-1210
+/// (`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260807-0010_*_kann-der-auffrischungsaufschub-entfallen-nachdem-die-lesestelle-nicht-mehr-vorab-leert.md`).
+///
+/// **Jede weitere Vorgangsart ist hier einzuordnen, und der Uebersetzer
+/// erzwingt es**: die Fallunterscheidung unten ist vollstaendig und hat keinen
+/// Auffangzweig. Was er dagegen **nicht** erzwingt, ist, dass die Proben dieses
+/// Moduls die neue Art anfassen; das haelt
+/// `die_liste_der_gemaechlichen_deckt_jede_art_ausser_dem_stapel_umbenennen`.
 pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
     match art {
         Art::UmbenennenImStapel { .. } => true,
@@ -370,13 +398,18 @@ pub fn aufgeschobene_ordner(art: &Art, ordner_des_vorgangs: Vec<PathBuf>) -> Vec
 /// **Wozu die Frage gestellt wird.** Ein Stapel-Umbenennen aus C4 laeuft seit
 /// S17c auf einem Arbeitsfaden und aendert dabei denselben Ordner, den das
 /// Dateifenster zeigt. Jede Umbenennung meldet FSEvents, jede Meldung startete
-/// bis zum 260806 einen neuen Lesevorgang, und ein Lesevorgang leert sein
-/// Ordnermodell, bevor er den ersten Stapel anhaengt. Bei 5.000 Umbenennungen
-/// in wenigen Sekunden setzte die naechste Meldung den Lesevorgang neu auf,
-/// bevor er fertig war, und die Liste kam fuer die ganze Laufzeit nicht mehr
-/// zum Fuellen
+/// bis zum 260806 einen neuen Lesevorgang, und ein Lesevorgang leerte damals
+/// sein Ordnermodell, bevor er den ersten Stapel anhaengte. Bei 5.000
+/// Umbenennungen in wenigen Sekunden setzte die naechste Meldung den
+/// Lesevorgang neu auf, bevor er fertig war, und die Liste kam fuer die ganze
+/// Laufzeit nicht mehr zum Fuellen
 /// (`issues/260805-1337_*_die-dateiliste-ist-waehrend-eines-stapel-umbenennens-
 /// im-angezeigten-ordner-leer.md`).
+///
+/// **Das Vorabraeumen ist seit dem 260807 fort, die Frage bleibt trotzdem
+/// gestellt.** Was der Aufschub heute abfaengt, ist der unsortierte,
+/// unvollstaendige Stand aus dem zweiten Fall bei
+/// [`schiebt_auffrischung_auf`], nicht mehr die leere Liste.
 ///
 /// **Was der Nutzer stattdessen sieht.** Die Liste bleibt auf dem Stand vor dem
 /// Vorgang stehen, statt leer zu sein, und der Abschluss frischt sie einmal

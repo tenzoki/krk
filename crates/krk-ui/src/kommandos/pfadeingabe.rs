@@ -67,8 +67,18 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
 
     if angaben.is_dir() {
         // Das Leserecht jetzt pruefen und nicht dem Lesevorgang ueberlassen:
-        // C2 verlangt eine Meldung fuer den nicht lesbaren Pfad, und ein
-        // Ordnerwechsel in eine leere Liste waere die wortlose Variante.
+        // C2 verlangt eine Meldung fuer den nicht lesbaren Pfad, und der
+        // Pfadsprung soll gar nicht erst wechseln.
+        //
+        // **Der Doppelklick in der Dateiliste prueft hier nichts nach und ist
+        // trotzdem nicht wortlos.** Er geht hinein, und die Auskunft kommt
+        // einen Einzugstakt spaeter aus dem Lesevorgang selbst
+        // (`crate::tabs::lesemeldungen_einziehen`, Zweig `Abschluss::Fehler`).
+        // Beide Wege melden also; sie unterscheiden sich darin, ob vorher
+        // gewechselt wird. Diese Pruefung hier ist der Preis dafuer, dass der
+        // Pfadsprung nicht wechselt, und keine zweite Wahrheit ueber das
+        // Leserecht (Nutzerentscheid vom 260907-1210,
+        // `shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`).
         if let Err(fehler) = std::fs::read_dir(pfad) {
             return Ergebnis::Meldung(format!(
                 "{} lässt sich nicht lesen: {fehler}",

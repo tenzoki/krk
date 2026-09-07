@@ -219,6 +219,24 @@ pub enum Art {
 /// Runde 20). Dieselbe Bauart wie `Bereich` und `Fokus`. **Wie viele es sind,
 /// sagt [`Rang::ALLE`] und kein Doc-Kommentar**: die Zahl ist mit der Runde 20
 /// gestiegen, und jede Nennung hier waere mit ihr falsch geworden.
+///
+/// # Kein Kommentar im Baum nennt einen Rang als Zahl
+///
+/// Die Regel gilt ueber diese Datei hinaus und ist der Nutzerentscheid vom
+/// 260907-1210
+/// (`circles/260809-2040-tastenbelegung-als-markdown-in-downloads/decisions/260811-1230_*_soll-ein-kommentar-den-rang-der-statuszeile-als-zahl-nennen.md`):
+/// **ein Kommentar nennt den Namen der Variante, nicht ihre Stelle in der
+/// Ordnung.** "Rang 1" heisst [`Rang::Befehlsantwort`], "Rang 3" heisst
+/// [`Rang::Fenstermeldung`], und wo ein Kommentar sagen will, dass eine Meldung
+/// **unter** einer anderen steht, sagt er es in einem Satz und nennt beide beim
+/// Namen.
+///
+/// **Der Grund ist gemessen und keine Vorliebe.** Vier Kommentare in zwei
+/// Dateien nannten den Rang einer Meldung falsch, nachdem die Runde 10 einen
+/// Rang hinzugefuegt hatte; die Runde 20 hat einen weiteren hinzugefuegt, und
+/// `crate::tabs` trug bis zum 260907 "Rang 5 von 6". **Kein Prueflauf liest eine
+/// Zahl in einem Kommentar**, also faellt ein falscher Rang erst dem naechsten
+/// Leser auf. Der Name faellt nicht falsch: er wandert mit seiner Variante.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rang {
     /// Was KRK auf den letzten Tastenbefehl zu sagen hat.
@@ -327,11 +345,12 @@ impl Rang {
 
 /// Was ein Dateifenster der Zeile anzubieten hat.
 ///
-/// Je Dateifenster-Rang eine Quelle. Die vier oberen haelt das Dateifenster in
-/// je einem eigenen Feld mit je einer Loeschregel, die zwei unteren rechnet es
-/// bei jeder Abfrage; `DateifensterQuelle::meldungsquellen` schreibt sie ab.
-/// Der Seitenzaehler hat hier kein Feld, weil kein Dateifenster ihn traegt
-/// ([`Rang::herkunft`]).
+/// Je Dateifenster-Rang eine Quelle, in der Reihenfolge von [`Rang::ALLE`].
+/// Befehlsantwort, Vorgangsanzeige, Fenstermeldung und Tabmeldung haelt das
+/// Dateifenster in je einem eigenen Feld mit je einer Loeschregel; Filterstand
+/// und Markierungsstand rechnet es bei jeder Abfrage.
+/// `DateifensterQuelle::meldungsquellen` schreibt sie ab. Der Seitenzaehler hat
+/// hier kein Feld, weil kein Dateifenster ihn traegt ([`Rang::herkunft`]).
 ///
 /// **Eigene Zeichenketten und keine Ausleihen.** Der Anwendungsdelegierte holt
 /// beide Saetze nacheinander aus zwei `RefCell`-Feldern und ruft danach
@@ -339,17 +358,20 @@ impl Rang {
 /// die der Modulkopf von [`super::tabelle`] fuer das Tabmodell ausschliesst.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Quellen {
-    /// Rang 1: was KRK auf den letzten Tastenbefehl zu sagen hat.
+    /// [`Rang::Befehlsantwort`]: was KRK auf den letzten Tastenbefehl zu sagen
+    /// hat.
     pub befehlsantwort: Option<String>,
-    /// Rang 2: der Stand einer laufenden Dateioperation.
+    /// [`Rang::Vorgangsanzeige`]: der Stand einer laufenden Dateioperation.
     pub vorgangsanzeige: Option<String>,
-    /// Rang 3: ein Ereignis am Fenster, das niemand angefordert hat.
+    /// [`Rang::Fenstermeldung`]: ein Ereignis am Fenster, das niemand
+    /// angefordert hat.
     pub fenstermeldung: Option<String>,
-    /// Rang 4: der Zustand des sichtbaren Ordners.
+    /// [`Rang::Tabmeldung`]: der Zustand des sichtbaren Ordners.
     pub tabmeldung: Option<String>,
-    /// Rang 5: der stehende Filtertext und was er von der Liste uebrig laesst.
+    /// [`Rang::Filterstand`]: der stehende Filtertext und was er von der Liste
+    /// uebrig laesst.
     pub filterstand: Option<String>,
-    /// Rang 6: was im sichtbaren Tab markiert ist.
+    /// [`Rang::Markierungsstand`]: was im sichtbaren Tab markiert ist.
     pub markierungsstand: Option<String>,
 }
 
@@ -629,14 +651,15 @@ pub struct Meldung<'a> {
 /// Operation" hinter dem Fortschritt desselben Dateifensters
 /// (`issues/260804-1915_*_der-zweite-operationsbefehl-meldet-sich-im-fenster-des-vorgangs-unsichtbar.md`).
 ///
-/// **Verdraengt wird nichts geloescht.** Jede der acht Quellen mit eigenem Feld
-/// haelt ihren Text dort, und jedes Feld hat genau eine Loeschregel; die
-/// gerechneten Raenge koennen gar nicht veralten. Eine verdraengte Aussage
-/// erscheint, sobald alles ueber ihr gefallen ist: die Auswurfmeldung, die
-/// waehrend einer Kopie eintrifft, steht auf Rang 3, wartet die Kopie und deren
-/// Abschlusstext (Rang 1) ab und ist mit dem naechsten Tastenbefehl in der
-/// Zeile. Ein Zeitgeber ist dafuer nicht noetig, weil jede Lebensdauer an einem
-/// Ereignis haengt und an keiner Uhr.
+/// **Verdraengt wird nichts geloescht.** Jede Quelle mit eigenem Feld haelt
+/// ihren Text dort, und jedes Feld hat genau eine Loeschregel; die gerechneten
+/// Raenge koennen gar nicht veralten. Eine verdraengte Aussage erscheint,
+/// sobald alles ueber ihr gefallen ist: die Auswurfmeldung, die waehrend einer
+/// Kopie eintrifft, ist eine [`Rang::Fenstermeldung`] und steht damit unter der
+/// [`Rang::Vorgangsanzeige`] der Kopie und unter deren Abschlusstext, der eine
+/// [`Rang::Befehlsantwort`] ist; sie wartet beide ab und ist mit dem naechsten
+/// Tastenbefehl in der Zeile. Ein Zeitgeber ist dafuer nicht noetig, weil jede
+/// Lebensdauer an einem Ereignis haengt und an keiner Uhr.
 ///
 /// # Die zweite Stelle der Ordnung: erst der Rang, dann die aktive Seite
 ///
@@ -1471,8 +1494,8 @@ mod tests {
         );
     }
 
-    /// C4.9 und C4.10: der volle Satz bleibt ein Rang von sechs und ist kein
-    /// Fehler.
+    /// C4.9 und C4.10: der volle Satz bleibt einer der Raenge aus
+    /// [`Rang::ALLE`] und ist kein Fehler.
     ///
     /// Die beiden Zusaetze aendern weder die Rangfolge noch die Farbe: ein
     /// Lesefortschritt wird nicht rot.

@@ -593,13 +593,14 @@ const KEINE_DATEI: &str = "die Quelle liefert keine Datei auf dem Datenträger";
 ///
 /// **Steht die Meldung einmal, bleibt sie stehen**, auch nachdem der Zeiger die
 /// Liste verlassen hat, und faellt mit der naechsten Befehlsantwort. Das ist
-/// die Loeschregel des Rangs 1 und keine Ausnahme fuer den Abwurf; der gemerkte
+/// die Loeschregel der [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort) und keine Ausnahme fuer den Abwurf; der gemerkte
 /// Grund faellt an derselben Stelle mit, sonst bliebe eine zweite gleiche
 /// Ziehbewegung nach einem Tastendruck stumm
 /// ([`DateifensterQuelle::befehlsantwort_loeschen`]).
 ///
 /// **An demselben `Some` haengt die Raeumung beider Dateifenster.** Der
-/// Aufrufer raeumt den Rang 1 auf beiden Seiten, bevor er schreibt, und tut das
+/// Aufrufer raeumt die [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort) auf beiden
+/// Seiten, bevor er schreibt, und tut das
 /// genau dann, wenn diese Funktion einen Text liefert — sonst liefe die
 /// Raeumung bei jeder Zeigerbewegung. Warum sie ueberhaupt beide Seiten
 /// braucht, steht bei
@@ -612,7 +613,8 @@ fn abwurfmeldung(gemerkt: Option<Abwurfgrund>, jetzt: Option<Abwurfgrund>) -> Op
     match jetzt {
         Some(Abwurfgrund::KeineDatei) => Some(KEINE_DATEI),
         // Ein angenommenes Urteil raeumt die stehende Meldung ausdruecklich
-        // nicht weg: das taete eine zweite Loeschregel neben der des Rangs 1.
+        // nicht weg: das taete eine zweite Loeschregel neben der der
+        // Befehlsantwort.
         None
         | Some(
             Abwurfgrund::VorgangLaeuft
@@ -1006,7 +1008,8 @@ pub struct QuelleIvars {
     ///
     /// Der achte Rueckruf, wahlfrei wie die sieben darueber. Er geht an
     /// `Anwendungsdelegierter::befehlsantwort_beidseitig_loeschen`, also an die
-    /// eine Loeschregel des Rangs 1, und traegt keine eigene daneben: von einer
+    /// eine Loeschregel der [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort), und
+    /// traegt keine eigene daneben: von einer
     /// Quelle aus ist die andere Seite nicht zu erreichen, und die Meldung des
     /// Abwurfs bliebe sonst hinter einer stehenden Befehlsantwort im aktiven
     /// Dateifenster liegen. Was ein fehlender Rueckruf bedeutet, entscheidet
@@ -1034,7 +1037,7 @@ pub struct QuelleIvars {
     /// hat. Die Regel dazu steht als reine Funktion in [`abwurfmeldung`], samt
     /// der Tafel und dem Grund.
     ///
-    /// **Seine Loeschregel ist die des Rangs 1.** Es faellt mit der
+    /// **Seine Loeschregel ist die der [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort).** Es faellt mit der
     /// Befehlsantwort, die es beschreibt, und an keiner anderen Stelle; siehe
     /// [`DateifensterQuelle::befehlsantwort_loeschen`]. Ein Feld, das laenger
     /// stuende als die Zeile, die es meint, liesse eine zweite gleiche
@@ -2486,6 +2489,27 @@ impl DateifensterQuelle {
     /// ein `stat` je Verknuepfung bei jeder Anzeige aenderte sie. Der eine
     /// Aufruf faellt an, wenn der Nutzer tatsaechlich hineingeht.
     ///
+    /// # Das fehlende Leserecht wird hier nicht geprueft, und gemeldet wird es
+    /// trotzdem
+    ///
+    /// Ein Ordner, den KRK nicht lesen darf, geht durch diese Funktion hindurch
+    /// wie jeder andere: sie ruft [`Self::ordner_lesen`] und ist fertig. Die
+    /// Meldung entsteht einen Einzugstakt spaeter im Lesevorgang selbst —
+    /// `Schwungleser::oeffnen` scheitert mit `EACCES`, der Lesefaden meldet
+    /// `Abschluss::Fehler`, und `crate::tabs::lesemeldungen_einziehen` macht
+    /// daraus die Tabmeldung. Das ist der Nutzerentscheid vom 260907-1210
+    /// (`shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`),
+    /// und er ist **ohne** den dort vorgesehenen zusaetzlichen Systemaufruf je
+    /// Einstieg erfuellt; die Zeitzusagen L3 und L10 bleiben unberuehrt.
+    /// Gehalten wird die Meldung von
+    /// `tabs::tests::ein_ordner_ohne_leserecht_meldet_sich_aus_dem_lesevorgang`
+    /// und nicht vom Uebersetzer.
+    ///
+    /// **Wer hier doch eine Pruefung einbaut, baut die zweite Wahrheit**, vor
+    /// der der Modulkopf von [`crate::kommandos::pfadeingabe`] warnt, und
+    /// bezahlt einen `stat(2)` auf jedem Ordnereinstieg fuer eine Auskunft, die
+    /// der Leser ohnehin gibt.
+    ///
     /// **Die anderen Rufer von `Eintrag::ist_ordner` bleiben, wie sie sind**,
     /// weil sie eine andere Frage stellen: `kommandos::operationen` zaehlt
     /// Ordner einer Auswahl fuer eine Dateioperation, und dort ist die
@@ -3628,8 +3652,8 @@ impl DateifensterQuelle {
         // wurde, und ein Gedaechtnis, das laenger stuende als sein Gegenstand,
         // liesse eine zweite gleiche Ziehbewegung stumm — die Entdopplung in
         // [`abwurfmeldung`] vergliche gegen einen Grund, dessen Meldung es
-        // nicht mehr gibt. Die Loeschregel des Rangs 1 gilt damit fuer beide
-        // Felder und steht an einer Stelle.
+        // nicht mehr gibt. Die Loeschregel der Befehlsantwort gilt damit fuer
+        // beide Felder und steht an einer Stelle.
         self.ivars().gemeldeter_abwurfgrund.set(None);
         if self.ivars().befehlsantwort.borrow_mut().take().is_some() {
             self.meldung_gewechselt();
@@ -3835,9 +3859,9 @@ impl DateifensterQuelle {
     /// Raeumt die Befehlsantwort an **beiden** Dateifenstern weg (C7).
     ///
     /// Der Weg zu `Anwendungsdelegierter::befehlsantwort_beidseitig_loeschen`,
-    /// also zu der einen Loeschregel des Rangs 1, und keine zweite daneben:
-    /// eine Quelle erreicht von sich aus nur ihre eigene Seite, und der Rang 1
-    /// gehoert beiden Dateifenstern gemeinsam.
+    /// also zu der einen Loeschregel der [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort),
+    /// und keine zweite daneben: eine Quelle erreicht von sich aus nur ihre
+    /// eigene Seite, und dieser Rang gehoert beiden Dateifenstern gemeinsam.
     ///
     /// **Warum der Abwurf ueberhaupt beide Seiten braucht**, wo der Doppelklick
     /// daneben ausdruecklich nur seine eigene raeumt, steht am Ziel dieses
@@ -3910,8 +3934,8 @@ impl DateifensterQuelle {
     /// einmal je Zeigerbewegung —, das Schreibrecht des Ziels, die angebotene
     /// Menge. Danach das Urteil, die
     /// Marke an der Tabelle, die entdoppelte Meldung — und mit ihr, an
-    /// derselben Kante, die Raeumung des Rangs 1 an **beiden** Dateifenstern —
-    /// und zuletzt der Zeiger.
+    /// derselben Kante, die Raeumung der Befehlsantwort an **beiden**
+    /// Dateifenstern — und zuletzt der Zeiger.
     ///
     /// **Die Ausleihe des Tabmodells endet vor dem ersten Objective-C-Aufruf**,
     /// und zwar in [`Self::eintrag_in_zeile`] und [`Self::angezeigter_ordner`]

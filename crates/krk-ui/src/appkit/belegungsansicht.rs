@@ -693,6 +693,37 @@ fn taste_setzen(knopf: &NSButton, angabe: Schaltflaechentaste) {
     }
 }
 
+/// Die eine Schaltflaeche des Blattes, "Fertig".
+///
+/// **Als reine Funktion herausgezogen**, damit der Bauplan dieses Blattes ohne
+/// AppKit und ohne Hauptfaden pruefbar ist; dieselbe Bauform wie
+/// [`blaetter::loeschbestaetigung::schaltflaechen`](super::blaetter::loeschbestaetigung)
+/// und `blaetter::standardschaltflaechen`.
+///
+/// **Sie heisst hier nicht `schaltflaechen`, wie in den Blaettern unter
+/// `blaetter/`**, weil diese Datei bereits [`SCHALTFLAECHEN`] fuehrt: das sind
+/// die drei Knoepfe **in** der Beigabe, und "Fertig" ist der einzige, der dem
+/// Blatt gehoert. Zwei Namen mit derselben Schreibweise fuer zwei verschiedene
+/// Mengen waeren die Verwechslung, die der eigene Name vermeidet.
+///
+/// Der Titel kommt aus [`SCHALTFLAECHEN`] und steht nicht zweimal da; die Taste
+/// dagegen kommt ueber [`Taste::EingabeMitBefehl`] vom Blatt und nicht ueber
+/// `setKeyEquivalent`, und der Eintrag dort haelt sie allein fuer die
+/// Erlaeuterungszeile. Die Probe unter `mod tests` haelt beide Angaben
+/// gegeneinander.
+#[must_use]
+fn blattschaltflaechen() -> [Schaltflaeche<'static>; 1] {
+    // "Fertig" auf Cmd+Eingabe statt auf der blossen Eingabetaste: die
+    // Eingabetaste geht seit der Runde 7 zum naechsten Treffer der Suche.
+    [Schaltflaeche::neu(
+        SCHALTFLAECHEN[FERTIG].titel,
+        Taste::EingabeMitBefehl,
+        // "Fertig" schliesst die Ansicht und richtet nichts an: jede Zuweisung
+        // ist beim Druecken schon geschrieben.
+        Wirkung::Liegenlassen,
+    )]
+}
+
 /// Zeigt die Belegungsansicht als Blatt am Fenster.
 ///
 /// `verlassen` laeuft genau einmal, sobald das Blatt zu ist — ueber "Fertig"
@@ -809,19 +840,7 @@ pub fn zeigen(
     beigabe.addSubview(&zuruecksetzen);
     beigabe.addSubview(&meldung);
 
-    // "Fertig" auf Cmd+Eingabe statt auf der blossen Eingabetaste: die
-    // Eingabetaste geht seit der Runde 7 zum naechsten Treffer der Suche.
-    let blatt = Blatt::mit_schaltflaechen(
-        mtm,
-        "Tastaturbelegung",
-        &[Schaltflaeche::neu(
-            SCHALTFLAECHEN[FERTIG].titel,
-            Taste::EingabeMitBefehl,
-            // "Fertig" schliesst die Ansicht und richtet nichts an: jede
-            // Zuweisung ist beim Druecken schon geschrieben.
-            Wirkung::Liegenlassen,
-        )],
-    );
+    let blatt = Blatt::mit_schaltflaechen(mtm, "Tastaturbelegung", &blattschaltflaechen());
     blatt.erlaeuterung_setzen(&erlaeuterung());
     blatt.beigabe_setzen(&beigabe);
     blatt.ersthelfer_setzen(&tabelle);
@@ -835,6 +854,46 @@ mod tests {
     use crate::quellbaum::quelldateien;
 
     use super::*;
+    use crate::appkit::blaetter::abbruchstelle;
+
+    /// Der Bauplan des Blattes traegt "Fertig" auf Cmd+Eingabe.
+    ///
+    /// **Der Titel wird gegen [`SCHALTFLAECHEN`] gehalten und nicht gegen eine
+    /// zweite Zeichenkette hier**: die Erlaeuterungszeile nennt dieselbe
+    /// Schaltflaeche, und ein Blatt, das sie anders beschriftet, waere genau die
+    /// Abweichung, die die Tafel verhindern soll.
+    ///
+    /// Die blosse Eingabetaste bleibt frei, weil sie seit der Runde 7 zum
+    /// naechsten Treffer der Suche geht; eine Schaltflaeche darauf schloesse das
+    /// Blatt beim ersten Weitersuchen.
+    #[test]
+    fn der_bauplan_des_blattes_traegt_fertig_auf_cmd_eingabe() {
+        let schaltflaechen = blattschaltflaechen();
+        assert_eq!(
+            schaltflaechen.len(),
+            1,
+            "das Blatt der Belegungsansicht bietet mehr als das Fertig an"
+        );
+        assert_eq!(
+            schaltflaechen[0].titel, SCHALTFLAECHEN[FERTIG].titel,
+            "die Schaltflaeche des Blattes und die Erlaeuterungszeile nennen verschiedene Titel"
+        );
+        assert_eq!(
+            schaltflaechen[0].taste,
+            Taste::EingabeMitBefehl,
+            "die Schaltflaeche nimmt der Suche die Eingabetaste weg"
+        );
+        assert_eq!(
+            schaltflaechen[0].wirkung,
+            Wirkung::Liegenlassen,
+            "das Fertig der Belegungsansicht fuehrt etwas aus"
+        );
+        assert_eq!(
+            abbruchstelle(&schaltflaechen),
+            0,
+            "der ungefaehrliche Ausgang liegt nicht auf der einen Schaltflaeche"
+        );
+    }
 
     /// Die Ansicht fuehrt genau eine Suche: die eingebaute Tippauswahl ist
     /// abgeschaltet (C1.11).

@@ -86,13 +86,26 @@
 //!
 //! Ein Unterschied bleibt und ist gewollt: `pfadeingabe::pruefen` prueft fuer
 //! ein Verzeichnis zusaetzlich das Leserecht ueber `read_dir` und meldet, wenn
-//! es fehlt. Dieses Modul prueft es nicht. Ein Doppelklick auf einen
-//! gewoehnlichen [`Typ::Ordner`](super::Typ::Ordner) ohne Leserecht ist heute
-//! wortlos, und eine Verknuepfung darauf verhaelt sich jetzt genauso: eine
-//! Regel statt zweier. Dass der Pfadsprung an derselben Stelle meldet und der
-//! Doppelklick schweigt, ist eine aeltere Ungleichheit und eine Frage an den
-//! Nutzer
+//! es fehlt, **bevor** es den Sprung zulaesst. Dieses Modul prueft es nicht,
+//! und eine Verknuepfung auf einen Ordner ohne Leserecht kommt deshalb als
+//! [`Verweisziel::Ordner`] zurueck: der Einstieg geht hinein.
+//!
+//! **Wortlos ist er darum nicht, und das ist der Teil, den zwei Prosastellen
+//! bis zum 260907 falsch beschrieben haben.** Der Lesevorgang selbst gibt die
+//! Auskunft: [`super::sys::Schwungleser::oeffnen`] scheitert mit `EACCES`, der
+//! Lesefaden meldet [`super::Abschluss::Fehler`], und `krk-ui`s
+//! `tabs::lesemeldungen_einziehen` macht daraus die Tabmeldung "… liess sich
+//! nicht vollstaendig lesen: Permission denied". Der Doppelklick meldet also
+//! seit jeher, nur eine Meldung spaeter als der Pfadsprung und mit einem
+//! anderen Satz. Der Nutzerentscheid vom 260907-1210 verlangt genau diese
+//! Meldung, und sie ist damit **ohne** den zusaetzlichen Systemaufruf erfuellt,
+//! den jener Datensatz als Preis vorgesehen hatte; die Zeitzusagen L3 und L10
+//! bleiben unberuehrt
 //! (`shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`).
+//!
+//! Der verbleibende Unterschied ist nicht mehr "meldet oder schweigt", sondern
+//! "weist ab oder geht hinein und meldet danach"; er ist nicht entschieden
+//! (`shared/decisions/260907-1226_*_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md`).
 
 use std::path::Path;
 

@@ -525,38 +525,30 @@ mod tests {
     /// Jede belegte Funktion der Auslieferungsbelegung steht in der Datei, und
     /// keine unbelegte.
     ///
-    /// **Die Zusage steht in den beiden ersten Teilen**: die Datei fuehrt so
-    /// viele Zeilen, wie es belegte Funktionen gibt, und jede belegte findet
-    /// sich darin. Der dritte Teil sagt daneben, welche Funktionen ab Werk
-    /// unbelegt sind, und nennt sie beim Namen. Bis zum 260812 war die Antwort
-    /// darauf "keine"; seither sind es die drei Spaltenschalter, die nach der
-    /// Nutzerantwort vom 260812-0306 ohne Kombination ausgeliefert werden
-    /// (`circles/260811-1304-statusleiste-mit-bereichsschaltern/decisions/
-    /// 260812-0306_*_bekommen-die-spaltenschalter-tastenbefehle.md`), und seit
-    /// dem 260814 tritt `tiefe_suche_umschalten` hinzu, das Ankreuzfeld "Deep"
-    /// der Filter-Runde (Nutzerantwort vom 260814-1610, `circles/
-    /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
-    /// 260814-1552_*_welche-tastenkombination-schaltet-die-tiefe-suche.md`),
-    /// und seit dem 260816 `inhaltssuche_umschalten`, das Ankreuzfeld
-    /// "Content" der Inhaltsfilter-Runde, das derselben Nutzerantwort folgt.
-    /// Seit dem 260831 tritt `spalte_marke_umschalten` hinzu, der vierte
-    /// Spaltenschalter aus C5 der Git-Runde, der derselben Nutzerantwort vom
-    /// 260812-0306 folgt wie die drei vor ihm. Seit dem 260901 tritt
-    /// `belegungsdatei_ansehen` hinzu, das die Belegungsdatei des Nutzers in die
-    /// Vorschau stellt; es steht **am Ende** der Aufzaehlung, weil diese
-    /// Reihenfolge die der Belegungsdatei ist und der Eintrag dort hinter
-    /// `belegung_ansehen` steht, also hinter den sechs davor. Die Aufzaehlung steht hier
-    /// ausgeschrieben statt als Zahl: eine Zahl sagte nicht, **welche**
-    /// Funktion aus der Datei faellt, und genau das ist die Auskunft, die ein
-    /// Leser dieser Probe braucht.
+    /// **Die Zusage steht in zwei Teilen**: die Datei fuehrt so viele Zeilen,
+    /// wie es belegte Funktionen gibt, und jede belegte findet sich darin. Was
+    /// daraus folgt, ist die zweite Haelfte des Namens: keine unbelegte steht
+    /// darin. Bis zum 260812 war die Antwort auf "welche sind unbelegt" noch
+    /// "keine"; seither waechst die Menge, und **welche Funktionen es sind,
+    /// sagt diese Probe nicht mehr**.
     ///
-    /// **Dieselbe Aufzaehlung steht ein zweites Mal**, als
-    /// `OHNE_KOMBINATION_AB_WERK` in `crates/krk-core/tests/belegung.rs`. Diese
-    /// Probe erreicht sie nicht: `krk-ui` hat kein Bibliotheksziel, und die
-    /// Konstante steht in einer Pruefkiste von `krk-core`. Wer hier nachtraegt,
-    /// traegt dort mit nach; ob die beiden Listen eine werden, ist die Frage
-    /// `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
-    /// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`.
+    /// **Bis zum 260907 sagte sie es, als ausgeschriebenes Literal in ihrem
+    /// dritten Teil**, und dieselbe Aufzaehlung stand ein zweites Mal als
+    /// `OHNE_KOMBINATION_AB_WERK` in `crates/krk-core/tests/belegung.rs`. Beim
+    /// vierten Eintrag sind die zwei Listen auseinandergelaufen. Der Nutzer hat
+    /// am 260907 die eine Stelle im Pruefcode gewaehlt (`circles/
+    /// 260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/
+    /// 260814-2326_*_wird-die-liste-der-funktionen-ohne-kombination-an-einer-stelle-gefuehrt.md`,
+    /// Moeglichkeit 3); die Liste und beide Pruefrichtungen stehen seitdem dort,
+    /// gehalten von `ab_werk_traegt_genau_diese_liste_keine_kombination`.
+    ///
+    /// **Der Preis ist bezahlt und nicht getragen.** Ein Leser dieser Probe
+    /// sieht die Namen nicht mehr im Quelltext; er sieht sie im Meldetext,
+    /// sobald einer der beiden Teile faellt. Die Namen werden dafuer aus der
+    /// Belegung ausgerechnet und nicht hingeschrieben, sind also nie veraltet.
+    /// Der Gegenstand dieser Probe ist die Markdown-Ausgabe; **welche**
+    /// Funktionen ab Werk unbelegt sind, ist eine Aussage ueber
+    /// `resources/default-keymap.toml` und gehoert zur Belegungspruefung.
     #[test]
     fn jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte() {
         let belegung = Belegung::auslieferung();
@@ -573,44 +565,29 @@ mod tests {
             .map(|zeile| zellen(zeile)[0].to_owned())
             .collect();
 
-        assert_eq!(
-            gefunden.len(),
-            erwartet.len(),
-            "die Datei fuehrt nicht genau die belegten Funktionen"
-        );
-        for name in &erwartet {
-            assert!(
-                gefunden.iter().any(|zeile| zeile == name),
-                "die Funktion {name} fehlt in der Datei"
-            );
-        }
-
-        // Ab Werk sind genau diese Funktionen unbelegt; jede andere steht in
-        // der Datei. Die Reihenfolge ist die der Belegungsdatei: die tiefe
-        // Suche steht dort hinter den Spaltenschaltern, weil sie wie diese
-        // bestimmt, was die Dateiliste zeigt, und die Inhaltssuche hinter der
-        // tiefen Suche, weil die beiden Schalter in der Bereichsleiste eine
-        // Reihe bilden.
+        // Die Auskunft, die frueher als Literal dastand: welche Funktionen aus
+        // der Datei fallen. Ausgerechnet statt hingeschrieben, damit sie im
+        // Meldetext beider Teile steht, ohne eine zweite Liste zu sein.
         let unbelegt: Vec<&str> = belegung
             .funktionen()
             .iter()
             .filter(|funktion| funktion.tasten().is_empty())
             .map(Funktion::kennung)
             .collect();
+
         assert_eq!(
-            unbelegt,
-            [
-                "spalte_groesse_umschalten",
-                "spalte_datum_umschalten",
-                "spalte_typ_umschalten",
-                "spalte_marke_umschalten",
-                "tiefe_suche_umschalten",
-                "inhaltssuche_umschalten",
-                "belegungsdatei_ansehen",
-            ],
-            "ab Werk sind andere Funktionen unbelegt als die vier Spaltenschalter, \
-             die tiefe Suche, die Inhaltssuche und die Belegungsdatei"
+            gefunden.len(),
+            erwartet.len(),
+            "die Datei fuehrt nicht genau die belegten Funktionen; ab Werk ohne Kombination \
+             und damit nicht in der Datei: {unbelegt:?}"
         );
+        for name in &erwartet {
+            assert!(
+                gefunden.iter().any(|zeile| zeile == name),
+                "die Funktion {name} fehlt in der Datei; ab Werk ohne Kombination und damit \
+                 nicht in der Datei: {unbelegt:?}"
+            );
+        }
     }
 
     /// Eine unbelegte Funktion faellt aus der Datei, ohne leere Zelle.
@@ -668,11 +645,11 @@ mod tests {
 
         // Die unbelegten fallen aus der Erwartung, wie sie aus der Datei
         // fallen: `nach_bereichen` ordnet **jede** Funktion einem Abschnitt zu,
-        // die Ausgabe schreibt nur die mit einer Kombination. Ab Werk sind das
-        // seit dem 260812 die Spaltenschalter und die beiden Sucheinstellungen;
-        // welche es genau sind, sagt
-        // `jede_belegte_funktion_steht_in_der_datei_und_keine_unbelegte`, diese
-        // Probe misst allein die Reihenfolge.
+        // die Ausgabe schreibt nur die mit einer Kombination. Welche das ab
+        // Werk sind, sagt `OHNE_KOMBINATION_AB_WERK`
+        // (`crates/krk-core/tests/belegung.rs`) und seit dem 260907 keine
+        // Stelle in dieser Kiste mehr; diese Probe misst allein die
+        // Reihenfolge.
         let erwartet: Vec<&str> = nach_bereichen(&belegung)
             .into_iter()
             .flat_map(|(_, stellen)| stellen)

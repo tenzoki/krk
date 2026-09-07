@@ -102,6 +102,38 @@
 //! nichts abzuleiten. Die [`Wirkung`] hat keine Vorgabe, also kann kein
 //! kuenftiges Blatt sie stillschweigend auslassen.
 //!
+//! # Jedes Blatt liefert seinen Bauplan als reine Funktion
+//!
+//! **Kein Blatt legt seine Schaltflaechen mehr an der Aufrufstelle von
+//! [`Blatt::mit_schaltflaechen`] hin.** Jedes hat daneben eine reine Funktion,
+//! die allein die Liste liefert — `schaltflaechen` in den Blaettern dieses
+//! Verzeichnisses, [`standardschaltflaechen`] fuer die aus [`Blatt::neu`],
+//! `blattschaltflaechen` in [`super::belegungsansicht`], die den Namen wegen
+//! ihrer eigenen Tafel `SCHALTFLAECHEN` nicht frei hat. Wer die Blaetter
+//! auszaehlen will, zaehlt die Rufer des Bauers und nicht diese Aufzaehlung:
+//! `grep -rn 'Blatt::mit_schaltflaechen\|Blatt::neu(' crates/*/src`.
+//!
+//! **Der Ertrag ist die Pruefbarkeit ohne AppKit.** Eine [`Schaltflaeche`]
+//! traegt eine Beschriftung, eine [`Taste`] und eine [`Wirkung`] und sonst
+//! nichts; an einem gebauten `NSAlert` ist dagegen nicht mehr abzulesen, welche
+//! seiner Schaltflaechen alles liegen laesst, und ein Blatt zu bauen kostet den
+//! Hauptfaden, den `libtest` nicht hergibt. Je Bauplanfunktion steht deshalb
+//! eine Probe daneben, die die Reihenfolge liest — und die Reihenfolge ist
+//! bindend und je Blatt eine andere: bei [`Blatt::neu`] steht die abbrechende
+//! Schaltflaeche **hinten**, bei der Rueckfrage vor dem Raeumen in den
+//! Papierkorb **vorn**.
+//!
+//! **Der eine Bauer bleibt [`Blatt::neu`] und [`Blatt::mit_schaltflaechen`].**
+//! Die Bauplanfunktionen bauen nichts; sie beschreiben. Der Nutzer hat am
+//! 260907 diesen halben Schritt gewaehlt und den staerkeren ausdruecklich nicht:
+//! einen Typ, der die liegenlassende Schaltflaeche samt ihrer Stelle erzwingt
+//! und [`abbruchstelle`] total machte. Er lohnt an dem Tag, an dem ein Blatt mit
+//! ausfuehrender **erster** Schaltflaeche dazukommt; heute gibt es keines
+//! (`260818-0250_*_verlangt-der-blattbauer-die-liegenlassende-schaltflaeche-am-typ.md`,
+//! im Entscheidungsspeicher des Circles der Runde 12). Bis dahin traegt die
+//! Zusage das `assert!` in
+//! [`Blatt::mit_schaltflaechen`] und nicht der Uebersetzer.
+//!
 //! # Ein Blatt ist mit der Tastatur bedienbar, und das kostet zwei Vorkehrungen
 //!
 //! Die erste ist der **Fokusvorbehalt** im Ereignisabgriff. Solange das Blatt
