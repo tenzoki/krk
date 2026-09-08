@@ -65,3 +65,31 @@ Rufer erfinden — steht nicht zur Wahl.
 Also seen: 260826-1221 by coderev — die gleichnamige Methode `operation::Abschluss::ist_abgebrochen` (`crates/krk-core/src/operation/fortschritt.rs:64-66`) hat im ganzen Arbeitsbereich nicht einmal eine Probe als Rufer; festgehalten in `shared/issues/260826-1221_*_fuenf-oeffentliche-namen-der-zwei-module-haben-keinen-rufer-ausser-hoechstens-ihrer-eigenen-probe.md`.
 
 Also seen: 260826-1417 by coderev — in `kommandos/operationen.rs:577-580` (`abschlusstext`) wird `bericht.abschluss` vollständig über beide Varianten verzweigt; dort muss kein Rufer stehen, ein Prädikat verdeckte den zweiten Zweig. Der Befund bleibt ein toter Helfer im Kern, nicht ein fehlender Rufer in `krk-ui`.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund bestand unveraendert.** `grep -rn 'ist_vollstaendig\|ist_abgebrochen' crates/`
+liefert am 260908 dasselbe Bild: `verzeichnis::Abschluss::ist_abgebrochen` hat allein
+`crates/krk-core/tests/verzeichnis.rs` als Rufer, `ist_vollstaendig` daneben
+`crates/krk-bench/src/messen.rs`, und `krk-ui/src/tabs.rs` verzweigt weiter unmittelbar ueber
+die Variante.
+
+**Gebaut ist Weg 2**, den der Datensatz als den billigeren und den in diesem Baum ueblichen
+nennt. Der Doc-Kommentar von `ist_abgebrochen` sagt jetzt:
+
+- dass ausser der Probe niemand ruft, und warum `dead_code` das grundsaetzlich nicht findet
+  (`krk-core` ist eine Bibliothek) — dieselbe Aussage, die `umfang.rs` und `arbeitsbaum.rs`
+  fuer ihre Module fuehren;
+- mit welchem Kommando gezaehlt wird, und dass die gleichnamige Methode von
+  `operation::Abschluss` dabei mit anfaellt und nicht hierher gehoert;
+- **wann der Absatz zu streichen ist**, in beide Richtungen: ein zweiter Rufer nimmt ihn weg,
+  und wer keinen anlegen will, darf die Methode streichen und die Probe ueber die Variante
+  verzweigen lassen. Das ist die Anweisung, die `sys.rs` fuer `ortszeit` mitfuehrt.
+
+`ist_vollstaendig` bekommt einen Satz daneben, der seinen Rufer nennt und den Absatz
+ausdruecklich von sich weist; sonst laese ihn der naechste Leser als fuer beide geltend.
+
+Resolved: 260908, `crates/krk-core/src/verzeichnis/leser.rs` — Weg 2: der Grund steht am
+Doc-Kommentar, samt Zaehlkommando und der Anweisung, wann er wieder zu streichen ist.

@@ -39,9 +39,16 @@
 //! **Wer den Deskriptor danach benutzt, oeffnet. Wer nur fragt, was hinter dem
 //! Namen steht, fragt am Namen.**
 //!
-//! Der Editor (`text::datei::oeffnen`) und der Leseweg der Vorschau in
-//! `krk-ui` lesen aus genau dem Deskriptor, den sie geprueft haben. Sie kaufen
-//! mit ihm zwei Dinge, und beide bekommt nur, wer ihn behaelt: es gibt kein
+//! **Die Leser lesen aus genau dem Deskriptor, den sie geprueft haben.** Wer
+//! sie sind, sagt der Modulkopf von [`super::sys`] nach Klassen — die Textwege
+//! in `text/datei.rs`, die Archivwege unter `operation/` und der
+//! Verzeichnisleser — und nicht diese Stelle: bis zur Runde 11 stand hier „der
+//! Editor und der Leseweg der Vorschau in `krk-ui`", und seither ist der
+//! Leseweg der Vorschau nach `krk-core` gezogen und die Zahl der Leser dreimal
+//! gestiegen
+//! (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1934_*`).
+//! Sie kaufen mit dem Deskriptor zwei Dinge, und beide bekommt nur, wer ihn
+//! behaelt: es gibt kein
 //! Fenster zwischen Pruefung und Benutzung, weil beides dasselbe Objekt trifft
 //! und nicht denselben Namen; und `open` haengt an einer benannten Roehre ohne
 //! Schreiber nicht fest, weil `O_NONBLOCK` gesetzt ist.

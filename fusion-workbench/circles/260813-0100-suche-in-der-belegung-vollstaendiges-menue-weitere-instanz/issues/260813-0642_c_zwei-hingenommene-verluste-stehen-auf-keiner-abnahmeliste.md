@@ -55,3 +55,25 @@ Randbedingung ist damit zweimal verletzt, und der Spec ist nicht nachgezogen wor
    schon tut.
 
 Beide zusammen sind der vollständige Zuschnitt; Weg 1 allein lässt den Spec falsch stehen.
+
+---
+Resolved: Beide Haelften stehen jetzt als Nachsatz, und keine Zeile des Bestandstextes ist
+angetastet.
+
+**Die Planhaelfte** ist am 260906 erledigt: der Plan dieser Runde traegt unter Punkt 1 seines
+Nachsatzes, dass die zwei Verluste auf der Abnahmeliste des Laufs am Buendel fehlen.
+
+**Die Spechaelfte** ist am 260908-1539 nachgetragen:
+`260813-0053_*_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md`,
+Abschnitt `## Randbedingungen`, traegt unter dem letzten Aufzaehlungspunkt den datierten
+Nachsatz zur Randbedingung „Kein Verlust gegenueber heute": beide Verluste namentlich, mit der
+Begruendung, warum keiner der zwei Auswege der Randbedingung greift, und mit der Feststellung,
+dass der Schlussabsatz von `260813-0311` das Gegenteil behauptet und am Baum nicht zutrifft.
+Die Datei liegt in `shared/planning/` und damit ausserhalb einer geschlossenen Runde; die
+Erlaubnis ist die Nutzerentscheidung zu
+`260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`.
+
+**Was der Nachsatz nicht tut.** Weg 1 des Datensatzes — die Abnahmeliste des Plans um zwei
+Zeilen ergaenzen und die zwei Verluste am Buendel messen — bleibt ungefahren, und das ist
+Nutzerarbeit: der Abnahmelauf verlangt KRK im Vordergrund. Der Nachsatz stellt allein sicher,
+dass ein Leser der Randbedingung nicht mehr die falsche Zusage liest.

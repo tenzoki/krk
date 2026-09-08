@@ -1862,7 +1862,7 @@ mod tests {
     use std::sync::Arc;
     use std::time::SystemTime;
 
-    use crate::quellbaum::{aufrufstellen, quelldateien};
+    use crate::quellbaum::{aufrufstellen, codezeilen, quelldateien};
 
     use super::*;
 
@@ -2183,9 +2183,7 @@ mod tests {
             quelldateien()
                 .into_iter()
                 .map(|(name, inhalt)| {
-                    let zahl = inhalt
-                        .lines()
-                        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                    let zahl = codezeilen(&inhalt)
                         .filter(|zeile| zeile.contains(nadel))
                         .count();
                     (name, zahl)
@@ -2262,9 +2260,7 @@ mod tests {
             .find(|(datei, _)| datei == vorschau)
             .expect("die Vorschau liegt im Quellbaum");
         let zeilen = |nadel: &str| -> usize {
-            inhalt
-                .lines()
-                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            codezeilen(inhalt)
                 .filter(|zeile| zeile.contains(nadel))
                 .count()
         };
@@ -2330,9 +2326,7 @@ mod tests {
         let stellen: Vec<(String, usize)> = dateien
             .iter()
             .map(|(datei, inhalt)| {
-                let zahl = inhalt
-                    .lines()
-                    .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                let zahl = codezeilen(inhalt)
                     .filter(|zeile| zeile.contains(nadel))
                     .count();
                 (datei.clone(), zahl)
@@ -2351,9 +2345,7 @@ mod tests {
             .find(|(datei, _)| datei == vorschau)
             .expect("die Vorschau liegt im Quellbaum");
         let zeilen = |teil: &str| -> usize {
-            inhalt
-                .lines()
-                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            codezeilen(inhalt)
                 .filter(|zeile| zeile.contains(teil))
                 .count()
         };
@@ -2416,9 +2408,7 @@ mod tests {
         let stellen: Vec<(String, usize)> = quelldateien()
             .into_iter()
             .map(|(datei, inhalt)| {
-                let zahl = inhalt
-                    .lines()
-                    .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                let zahl = codezeilen(&inhalt)
                     .filter(|zeile| zeile.contains(erklaerung))
                     .count();
                 (datei, zahl)
@@ -2494,9 +2484,8 @@ mod tests {
         let (ohne_proben, _) = inhalt
             .split_once("#[cfg(test)]")
             .expect("das Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
-        let codezeilen = |text: &str| -> usize {
-            text.lines()
-                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        let treffer = |text: &str| -> usize {
+            codezeilen(text)
                 .filter(|zeile| zeile.contains(nadel))
                 .count()
         };
@@ -2508,12 +2497,12 @@ mod tests {
             .expect("flaeche_zeigen steht nicht mehr in dieser Datei");
 
         assert_eq!(
-            codezeilen(rumpf),
+            treffer(rumpf),
             3,
             "flaeche_zeigen setzt nicht genau drei Ansichten; eine je Wert von Flaeche"
         );
         assert_eq!(
-            codezeilen(ohne_proben),
+            treffer(ohne_proben),
             3,
             "`{nadel}` steht ausserhalb von flaeche_zeigen; der Schalter zwischen den \
              Ansichten hat genau eine Stelle"
@@ -2548,9 +2537,8 @@ mod tests {
         let (ohne_proben, _) = inhalt
             .split_once("#[cfg(test)]")
             .expect("das Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
-        let codezeilen = |text: &str| -> usize {
-            text.lines()
-                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        let treffer = |text: &str| -> usize {
+            codezeilen(text)
                 .filter(|zeile| zeile.contains(nadel))
                 .count()
         };
@@ -2562,12 +2550,12 @@ mod tests {
             .expect("pdf_zeigen steht nicht mehr in dieser Datei");
 
         assert_eq!(
-            codezeilen(rumpf),
+            treffer(rumpf),
             1,
             "pdf_zeigen baut den Betrachter nicht genau einmal"
         );
         assert_eq!(
-            codezeilen(ohne_proben),
+            treffer(ohne_proben),
             1,
             "`{nadel}` steht ausserhalb von pdf_zeigen; vor dem ersten PDF darf kein \
              Objekt des Betrachters entstehen (Z2)"

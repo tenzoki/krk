@@ -98,7 +98,10 @@
 //! C5.7), ueber [`zwischenablage::im_browser_oeffnen`] und damit ueber
 //! dieselbe Stelle wie der Sprung aus der Zwischenablage. **Nur `http:` und
 //! `https:` erreichen den Aufruf**, aus dem Grund, der an jener Funktion
-//! steht (C9 der Runde 1): ein `smb:` oder `ftp:` aus einem fremden PDF baute
+//! steht (C9 der Runde 1); **welche Schemata das sind, entscheidet seit dem
+//! 260908 der Kern** und nicht diese Datei
+//! ([`krk_core::zwischenablage::ist_webschema`], eine Fassung fuer beide Wege
+//! an den Systembrowser): ein `smb:` oder `ftp:` aus einem fremden PDF baute
 //! ueber das System die Serververbindung auf, die C9 ausschliesst. Ein
 //! Verweis mit anderem Schema tut nichts. Verweise innerhalb der Datei
 //! behandelt PDFKit vor der Delegiertenmethode selbst und blaettert dorthin.
@@ -670,21 +673,22 @@ impl Drop for Pdfbetrachter {
 ///
 /// Die eine Grenze vor [`zwischenablage::im_browser_oeffnen`] auf dem Weg
 /// aus einem PDF; warum sie noetig ist, steht im Modulkopf unter „Verweise".
+///
+/// **Welche Schemata durchkommen, entscheidet der Kern** und nicht diese
+/// Datei: [`krk_core::zwischenablage::ist_webschema`] traegt die Grenze aus C9
+/// fuer beide Wege an den Systembrowser, den Sprung aus der Zwischenablage und
+/// den Klick hier. Bis zum 260908 stand daneben eine wortgleiche zweite
+/// Fassung
+/// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_die-regel-nur-http-und-https-*`).
 fn ist_webadresse(adresse: &NSURL) -> bool {
     adresse
         .scheme()
-        .is_some_and(|schema| ist_webschema(&schema.to_string()))
-}
-
-/// Die reine Regel hinter [`ist_webadresse`], ohne Fenster pruefbar.
-fn ist_webschema(schema: &str) -> bool {
-    schema.eq_ignore_ascii_case("http") || schema.eq_ignore_ascii_case("https")
+        .is_some_and(|schema| krk_core::zwischenablage::ist_webschema(&schema.to_string()))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::quellbaum::quelldateien;
+    use crate::quellbaum::{codezeilen, quelldateien, varianten};
 
     /// Der Pfad dieser Datei, wie [`quelldateien`] ihn fuehrt.
     const DIESE_DATEI: &str = "krk-ui/src/appkit/betrachter.rs";
@@ -696,31 +700,6 @@ mod tests {
             .find(|(datei, _)| datei == DIESE_DATEI)
             .map(|(_, inhalt)| inhalt)
             .expect("der Betrachter liegt im Quellbaum")
-    }
-
-    /// Die Varianten einer Aufzaehlung ohne Daten, aus dem Quelltext gelesen —
-    /// nach der Lesart von `varianten_der_aufzaehlung` in
-    /// `krk-core/tests/gemeinsam`, die diese Kiste nicht erreicht.
-    fn varianten(inhalt: &str, name: &str) -> Vec<String> {
-        let kopf = format!("pub enum {name} {{");
-        inhalt
-            .lines()
-            .skip_while(|zeile| *zeile != kopf)
-            .skip(1)
-            .take_while(|zeile| *zeile != "}")
-            .map(str::trim)
-            .filter(|zeile| {
-                !zeile.is_empty() && !zeile.starts_with("//") && !zeile.starts_with("#[")
-            })
-            .map(|zeile| zeile.trim_end_matches(',').to_owned())
-            .collect()
-    }
-
-    /// Die Codezeilen dieser Datei, also ohne Kommentarzeilen.
-    fn codezeilen(inhalt: &str) -> impl Iterator<Item = &str> {
-        inhalt
-            .lines()
-            .filter(|zeile| !zeile.trim_start().starts_with("//"))
     }
 
     /// `Zoom` traegt genau die drei Befehle, die die Belegung fuehrt, und
@@ -836,17 +815,5 @@ mod tests {
             vec![(DELEGIERTER.to_owned(), 1)],
             "`filterEinfuegen:` steht nicht genau einmal, beim Anwendungsdelegierten"
         );
-    }
-
-    /// Nur `http` und `https` gehen an den Systembrowser, gleich wie
-    /// geschrieben (A8, C9 der Runde 1).
-    #[test]
-    fn allein_http_und_https_sind_webschemata() {
-        for schema in ["http", "https", "HTTP", "Https"] {
-            assert!(ist_webschema(schema), "{schema} ist ein Webschema");
-        }
-        for schema in ["smb", "ftp", "mailto", "file", "", "httpx"] {
-            assert!(!ist_webschema(schema), "{schema} ist keines");
-        }
     }
 }

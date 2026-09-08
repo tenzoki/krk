@@ -370,7 +370,7 @@ pub fn immer_erreichbar(kommando: Kommando) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::quellbaum::quelldateien;
+    use crate::quellbaum::{quelldateien, varianten};
 
     use super::*;
 
@@ -560,12 +560,14 @@ mod tests {
     ///
     /// Die Varianten kommen aus dem Quelltext der Aufzaehlung und nicht aus
     /// [`STELLVERTRETER`]: eine Probe, die ueber das Feld laeuft, kann die
-    /// Vollstaendigkeit des Feldes nicht halten. Gelesen wird der Block
-    /// `pub enum Wirkungsbereich` in `belegung.rs` ueber [`quelldateien`], nach
-    /// der Lesart von `varianten_der_aufzaehlung` in
-    /// `krk-core/tests/gemeinsam`; jene Fassung erreicht diese Kiste nicht,
-    /// weil `krk-ui` kein Bibliotheksziel hat, und die Aufzaehlung traegt
-    /// keine Variante mit Daten, also genuegt die Zeile bis zum Komma.
+    /// Vollstaendigkeit des Feldes nicht halten. Gelesen wird der Block der
+    /// Aufzaehlung in `belegung.rs` ueber [`quelldateien`], und zwar mit
+    /// [`crate::quellbaum::varianten`] — der einen Fassung dieser Lesart in
+    /// dieser Kiste. Bis zum 260908 stand sie hier eingesetzt da, ein zweites
+    /// Mal im Pruefmodul des PDF-Betrachters
+    /// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_der-variantenleser-*`).
+    /// Warum die anerkannte Kernfassung `varianten_der_aufzaehlung` diese Kiste
+    /// nicht erreicht, steht bei [`crate::quellbaum::varianten`].
     #[test]
     fn jeder_wirkungsbereich_hat_einen_stellvertreter() {
         let quellen = quelldateien();
@@ -573,17 +575,7 @@ mod tests {
             .iter()
             .find(|(pfad, _)| pfad == "krk-core/src/tasten/belegung.rs")
             .expect("unter crates/ steht keine belegung.rs");
-        let varianten: Vec<&str> = inhalt
-            .lines()
-            .skip_while(|zeile| *zeile != "pub enum Wirkungsbereich {")
-            .skip(1)
-            .take_while(|zeile| *zeile != "}")
-            .map(str::trim)
-            .filter(|zeile| {
-                !zeile.is_empty() && !zeile.starts_with("//") && !zeile.starts_with("#[")
-            })
-            .map(|zeile| zeile.trim_end_matches(','))
-            .collect();
+        let varianten = varianten(inhalt, "Wirkungsbereich");
         assert!(
             !varianten.is_empty(),
             "die Aufzaehlung ist nicht gefunden worden"

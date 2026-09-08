@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use krk_core::zwischenablage::{Ziel, deuten};
+use krk_core::zwischenablage::{Ziel, deuten, ist_webschema};
 
 /// Fall 1: ein Ordnerpfad.
 #[test]
@@ -126,4 +126,25 @@ fn die_schreibung_des_schemas_entscheidet_nicht() {
         deuten("File:///Users/k1"),
         Ziel::Pfad(PathBuf::from("/Users/k1"))
     );
+}
+
+/// Nur `http` und `https` gehen an den Systembrowser, gleich wie geschrieben
+/// (C9 der Runde 1).
+///
+/// **Die Probe stand bis zum 260908 in `krk-ui/src/appkit/betrachter.rs`**, neben
+/// einer zweiten Fassung der Regel; sie ist mit der Regel in den Kern gezogen,
+/// damit beide Wege an den Systembrowser — der Sprung aus der Zwischenablage und
+/// der Klick auf einen Verweis im PDF — an derselben Antwort haengen
+/// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_die-regel-nur-http-und-https-*`).
+///
+/// Erwartet wird das blosse Schema ohne Doppelpunkt, so wie `NSURL::scheme` es
+/// liefert.
+#[test]
+fn allein_http_und_https_sind_webschemata() {
+    for schema in ["http", "https", "HTTP", "Https"] {
+        assert!(ist_webschema(schema), "{schema} ist ein Webschema");
+    }
+    for schema in ["smb", "ftp", "mailto", "file", "", "httpx"] {
+        assert!(!ist_webschema(schema), "{schema} ist keines");
+    }
 }

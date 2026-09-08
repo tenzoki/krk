@@ -3436,6 +3436,7 @@ mod tests {
             Editormeldung::Abgewiesen(Abweisung::KeinGueltigesZiel {
                 pfad: pfad(),
                 grund: "ein Ordner".into(),
+                mangel: false,
             })
             .text(),
             Editormeldung::Abgewiesen(Abweisung::ZuGross {

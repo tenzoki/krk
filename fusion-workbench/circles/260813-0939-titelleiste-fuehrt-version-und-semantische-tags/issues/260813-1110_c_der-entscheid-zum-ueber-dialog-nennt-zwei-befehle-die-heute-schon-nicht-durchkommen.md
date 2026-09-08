@@ -79,3 +79,32 @@ Bedingung wirklich sperrt.
 
 Der Entscheid trägt seit diesem Abgleich den Marker `_i_`; die Berichtigung, die dieser Datensatz
 verlangt, ist davon unberührt und bleibt zu tun.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund bestand fort, und seine eigene Zahl war ueberholt.** Der Abschnitt `## Question`
+nannte unveraendert `F5` und `delete`. Beide Feststellungen sind am heutigen Baum
+nachgelesen und halten: `Kommando::Kopieren` und `Kommando::InPapierkorb` tragen weiter
+`Wirkungsbereich::Dateifenster`, und `fokus::wirkt(Dateifenster, Anderswo)` ist `false`.
+
+**Die Zahl 24 von 76 haelt nicht mehr.** Am 260908 aus dem Rumpf von
+`Kommando::wirkungsbereich` erhoben: `Kommando` traegt 86 Varianten, davon 37 mit
+`Wirkungsbereich::Ueberall`. Dazugekommen sind unter anderem `FokusGit`,
+`GitBereichUmschalten`, `SpalteMarkeUmschalten`, `TiefeSucheUmschalten`,
+`InhaltssucheUmschalten`, `Notizzettel`, `TabNeu`, `TabNaechster`, `TabVoriger`,
+`FensterWechseln`, `AuswahlHoch`, `AuswahlRunter` und `BelegungsdateiAnsehen`.
+
+**Berichtigt ist der Entscheid und nicht sein Rumpf.** Der Abschnitt `## Question` bleibt
+stehen, wie er geschrieben wurde; darunter steht seit heute eine Berichtigung, die die zwei
+untauglichen Beispiele benennt, die Reichweite der Luecke als „die Befehle mit
+`Wirkungsbereich::Ueberall`" ausschreibt, vier belastbare Beispiele nennt und **statt einer
+Zahl das Erhebungskommando** fuehrt. Denselben Weg hat die Bahn vom 260908 fuer
+`260907-2026_*` genommen; ob der Rumpf eines terminalen Datensatzes berichtigt oder ein
+Nachsatz angehaengt wird, ist die offene Frage `shared/issues/260907-2350_*`, und der Nachsatz
+ist die Fassung, die sie nicht vorwegnimmt.
+
+Resolved: 260908, `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/decisions/260813-1037_i_*`
+— Berichtigung als Nachsatz: die zwei untauglichen Beispiele benannt, die Reichweite als
+`Wirkungsbereich::Ueberall` ausgeschrieben, die Zahl durch das Erhebungskommando ersetzt.

@@ -628,6 +628,25 @@ impl Belegungsmodell {
     ///
     /// `gesucht` kommt kleingeschrieben herein, damit die Umschreibung einmal
     /// je Suche laeuft und nicht einmal je Zeile.
+    ///
+    /// # Nicht mehr derselbe Vergleich wie der Filter der Dateiliste
+    ///
+    /// **C1.3 der Runde 10 sagt „Es ist derselbe Vergleich, den
+    /// `Belegungsmodell::zeile_traegt` fuehrt", und seit der Runde 21 stimmt
+    /// das nicht mehr.** `krk_core::verzeichnis::filter::traegt_die_folge`
+    /// nimmt seither ein `Muster` und keinen `&str`: `*` im Filtertext steht
+    /// dort fuer eine beliebige, auch leere Zeichenfolge. Diese Suche hier
+    /// kennt keinen Platzhalter und vergleicht weiter auf Teilzeichenfolge.
+    /// Die zwei Fassungen sind also auseinandergelaufen, und keine Probe im
+    /// Baum hat es gemeldet — genau der Fall, den der Befund
+    /// `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_*_belegungsmodell-zeile-traegt-*`
+    /// vorhergesagt hat.
+    ///
+    /// **Ob die zwei Suchen sich eine Fassung teilen, ist eine offene
+    /// Nutzerfrage** und keine Nacharbeit: sie zu teilen hiesse, der
+    /// Belegungssuche den Platzhalter zu geben, und das ist eine Aenderung am
+    /// Verhalten und nicht am Aufbau. Bis dahin steht der Unterschied hier,
+    /// statt unter einem Kriterium zu verschwinden, das ihn bestreitet.
     fn zeile_traegt(&self, stelle: usize, gesucht: &str) -> bool {
         [self.funktionstext(stelle), self.tastentext(stelle)]
             .into_iter()

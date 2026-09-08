@@ -54,3 +54,28 @@ Answered: circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/hi
 Implemented: c3ada4d — Möglichkeit 2 ist gebaut. `Lage` trägt das vierte Feld `schluesselfenster_gehoert_krk` (`crates/krk-ui/src/kommandos/zulaessigkeit.rs:152`), `zulaessig` fragt es innerhalb des `durchgelassen`-Ausdrucks (`:172-180`), und der Anwendungsdelegierte erhebt das Schlüsselfenster einmal je Eingabe (`crates/krk-ui/src/appkit/anwendung.rs:2623-2639`, gereicht in `lage` `:2664`). Die Tafel deckt 280 Fälle statt 140 (`zulaessigkeit.rs:435`); mit `schluesselfenster_gehoert_krk == false` steht in allen sieben Zeilen `ALLES_ABGEWIESEN`. Abgeglichen am 260813-1345.
 
 **Zwei Aussagen dieses Datensatzes hat der Bau widerlegt, die Antwort selbst nicht.** Der Abschnitt `## Question` nennt `F5` und `delete` als Beispiele; beide tragen `Wirkungsbereich::Dateifenster` und kommen schon vor dieser Runde nicht durch (`issues/260813-1110_o_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`, offen). Der Vorteilssatz zu Möglichkeit 2 sagt, der Defekt zum Freigabedialog der Runde 6 falle mit weg; der Wähler ist keine eigenes Fenster, also erreicht die neue Bedingung ihn nicht (`issues/260813-1110_o_die-schluesselfensterfrage-erreicht-den-freigabewaehler-nicht-weil-er-kein-fenster-ist.md`, offen). Der Datensatz `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_*_die-blattregel-sieht-den-freigabedialog-nicht.md` steht deshalb weiter offen und trägt seit A3 einen Nachtrag über die Reichweite der neuen Regel.
+
+---
+
+**Berichtigung 260908 zum Abschnitt `## Question`, die Antwort bleibt unberuehrt.** Die zwei
+Beispiele dort, `F5` und `delete`, tragen beide `Wirkungsbereich::Dateifenster` und werden
+schon vom dritten Bestandteil der Regel abgewiesen, sobald ein fremdes Fenster das
+Schluesselfenster ist (`fokus::wirkt(Dateifenster, Anderswo)` ist `false`). Sie zeigen die
+Luecke also nicht. **Was wirklich durchkam, sind genau die Befehle mit
+`Wirkungsbereich::Ueberall`**, denn fuer diesen Bereich sagt `fokus::wirkt` auch bei
+`Fokus::Anderswo` ja; belastbare Beispiele sind `Teilen`, `TabSchliessen`, `OrdnerDerDatei`
+und `BelegungAnsehen`, das ein Blatt am Hauptfenster aufzieht, waehrend ein fremdes Fenster
+vorn steht.
+
+**Eine Zahl steht hier nicht.** Der Nachtrag vom 260813-1345 nannte 24 von 76; am 260908 sind
+es 37 von 86, und die Zahl waechst mit fast jeder Runde. Erhoben wird sie ueber den Rumpf von
+`Kommando::wirkungsbereich` in `crates/krk-core/src/tasten/belegung.rs`; die Gesamtzahl der
+Varianten zaehlt
+`awk '/^pub enum Kommando/,/^}/' crates/krk-core/src/tasten/belegung.rs | grep -cE '^\s{4}[A-Z][A-Za-z]*,'`.
+
+Unveraendert gilt: `FensterEinblenden` steht auf der Liste und kommt ueber die Ausnahmeliste
+`kommandos::zulaessigkeit::immer_erreichbar` ohnehin durch, es ist also eines weniger, das die
+neue Bedingung wirklich sperrt.
+
+Der Befund dazu ist
+`issues/260813-1110_c_der-entscheid-zum-ueber-dialog-nennt-zwei-befehle-die-heute-schon-nicht-durchkommen.md`.

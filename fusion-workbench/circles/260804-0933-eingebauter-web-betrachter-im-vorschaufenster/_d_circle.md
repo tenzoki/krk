@@ -435,7 +435,7 @@ Die dritte Frage dieses Circles leitet eine mögliche elfte Zeitzusage aus L5 un
 Vermerk vom 260807-1042 hielt fest, dass beide zum ungemessenen Teil der Abnahmereihe gehören.
 Der Befund gilt weiter, und die Runde 6 hat ihn verschärft: L7 wird bei tief verschachtelten
 Listen jetzt ab rund 12 kB verfehlt statt ab 19 kB
-(`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2133_*_merkzeichen-einloesen-kostet-bei-tiefer-verschachtelung-mehr-als-der-rest-der-zerlegung.md`,
+(`260812-2133_*_merkzeichen-einloesen-kostet-bei-tiefer-verschachtelung-das-zweieinhalbfache-und-verfehlt-l7-frueher.md`,
 offen). Die Zahl der Zusage ist unverändert, der Abstand zu ihr nicht.
 
 Der Betrachter ist nach der Directive dieses Circles eine weitere Quelle für den aktiven

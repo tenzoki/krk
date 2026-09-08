@@ -258,6 +258,30 @@ Der vierte Gegenstand aus dem Spec der Runde 2, die Geschwindigkeit der Syntaxhe
 - **Kein Verlust gegenüber heute.** Diese Runde fügt Wege hinzu und nimmt keinen weg. Wo eine neue Regel einen heute vorhandenen Weg abschnitte, steht der Befehl auf der benannten Liste aus C2.5, oder der Spec sagt, warum der Weg keine Wirkung hatte.
 - **Der Abnahmelauf am Bündel ist Nutzerarbeit.** Jedes mit **(Bündel)** gekennzeichnete Kriterium bleibt bis dahin unabgenommen, und die Runde schließt darum voraussichtlich als beschränkter Abschluss wie ihre sechs Vorgängerinnen.
 
+**Nachsatz vom 260908-1539 zur Randbedingung „Kein Verlust gegenüber heute".** Der Wortlaut
+oben bleibt, wie er zum Abschluss der Runde dastand; er sagt mehr zu, als die Runde gehalten
+hat. Zwei Verluste sind bewusst hingenommen worden, und beide erfüllen keinen der zwei
+Auswege, die die Randbedingung lässt — sie stehen weder auf der benannten Liste aus C2.5, die
+genau `beenden` und `fenster_schliessen` führt, noch hat der Spec gesagt, warum der Weg keine
+Wirkung hatte:
+
+1. **`esc` im Editor bricht keine Zusammensetzung einer Eingabemethode mehr ab.** Seit S3
+   schluckt der Ereignisabgriff den zulässigen und nicht mehr den ausgeführten Befehl;
+   `abbrechen` trägt `Wirkungsbereich::Ueberall`, ist mit dem Fokus im Editor zulässig und
+   liefert `false`, und der Tastendruck erreicht die `NSTextView` nicht mehr
+   (`260813-0320_*_esc-im-editor-erreicht-heute-die-textflaeche-und-wird-nach-s3-geschluckt.md`).
+2. **Ein Klick in die Bereichsleiste wirkt während einer Umbenennung nicht.** Seit S2 erbt der
+   Mausklick den Ersthelferbestandteil der Zulässigkeitsregel
+   (`260813-0311_*_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md`).
+
+Beide sind abgeleitet und nicht am Bündel gemessen, und keiner der beiden steht auf der
+Abnahmeliste des Laufs am Bündel im Plan dieser Runde; der Satz in `260813-0311`, der das
+Gegenteil behauptet, trifft am Baum nicht zu. Die Berichtigung steht hier und nicht im Text
+darüber, nach der Nutzerentscheidung zu
+`260906-0203_*_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md`.
+Der Befund selbst:
+`260813-0642_*_zwei-hingenommene-verluste-stehen-auf-keiner-abnahmeliste.md`.
+
 ---
 
 ## Nicht Gegenstand dieser Runde

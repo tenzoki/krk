@@ -171,3 +171,20 @@ je fuer sich, dass ihr Zweig hinter der Zulaessigkeitspruefung laeuft — die Fo
 `true` liefert"). Sie liegt ausserhalb dieser Bahn; `krk-ui` ausserhalb von `appkit/` wird
 gleichzeitig von einer anderen Bahn gefahren. Erhoben mit
 `grep -rn "seit der Runde 7 immer" crates/krk-ui/src/`, ein Treffer.
+
+---
+
+**Abgleich 260908 (Bahn Q10, beide Kisten): die vierte Stelle ist nachgezogen.**
+`crates/krk-ui/src/kommandos/rundweg.rs` sagt jetzt, dass der Tastendruck verbraucht wird,
+**weil dieser Zweig hinter der Zulaessigkeitspruefung laeuft** und die Antwort dort fuer jeden
+zulaessigen Befehl `true` lautet; daneben steht, dass „immer" zu viel gesagt waere, weil
+`kommando_ausfuehren` zwei Ausgaenge hat und der frueher liegende einen unzulaessigen Befehl
+unveraendert an AppKit weitergibt.
+
+`grep -rn "seit der Runde 7 immer" crates/` liefert am 260908 keine Fundstelle mehr; die drei
+Gegenstellen (`anwendung.rs`, `messmodus.rs`, `appkit/blaetter/mod.rs`) stehen unveraendert und
+sagen dasselbe. Der Baum sagt damit an keiner Stelle mehr zweierlei ueber dieselbe Zeile.
+
+Resolved: 260908, `crates/krk-ui/src/kommandos/rundweg.rs` — die vierte und letzte der vier
+Codestellen traegt die bedingte Fassung; die drei uebrigen sind am 260908 in der Bahn Q3
+nachgezogen worden.

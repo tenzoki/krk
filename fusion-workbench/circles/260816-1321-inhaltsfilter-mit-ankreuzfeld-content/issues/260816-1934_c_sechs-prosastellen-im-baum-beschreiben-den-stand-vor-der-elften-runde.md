@@ -69,3 +69,50 @@ Dateizweig. Siehe
 `issues/260816-1930_o_content-ausschalten-laesst-ordnerzeilen-auf-einem-veralteten-inhaltsbefund-stehen.md`.
 
 Gefunden bei der Durchsicht der elften Runde, Bereich `9f5ced5..b9ab8ae`.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+Jede der sechs Stellen einzeln gegen den heutigen Baum gelesen. **Zwei sind seit dem 260816
+von fremder Hand abgetragen**, vier standen noch, dazu eine siebte derselben Bauart.
+
+**Schon abgetragen (2).**
+
+- **Stelle 1**, `verzeichnis/sys.rs`: der Abschnitt heisst heute „Mehrere Aufrufer, und die
+  Zielpruefung bleibt bei jedem von ihnen", und der Modulkopf nennt die Rufer nach Klassen
+  statt als Aufzaehlung — Textwege, Archivwege, Verzeichnisleser — samt Zaehlkommando.
+- **Stelle 6a**, `tabs.rs`, die Rufer von `durchlauf_nachziehen`: die Aufzaehlung sagt heute
+  „vom Umschalten **eines der beiden** Filter" und nennt daneben das Ein- und Ausblenden der
+  versteckten Eintraege.
+
+**Behoben (5).**
+
+- **Stelle 2**, `crates/krk-core/src/verzeichnis/verweisziel.rs`: der Satz nennt die Leser
+  nicht mehr namentlich, sondern zeigt auf den Modulkopf von `verzeichnis::sys`, der sie nach
+  Klassen fuehrt. Dass die Zahl seit der Runde 11 dreimal gestiegen ist, steht dabei.
+- **Stelle 3**, `crates/krk-core/src/text/datei.rs`, `bis_zur_grenze_lesen`: die Begruendung
+  der Schranke ist jetzt eine gewoehnliche Datei, an die ein Schreiber waehrend des Lesens
+  anhaengt. `/dev/zero` steht ausdruecklich als **untaugliches** Beispiel dabei, mit dem
+  Grund: Zeichengeraet, faellt am `!angaben.is_file()` heraus.
+- **Stelle 3b**, dieselbe Datei, `anlesen`: **dieselbe falsche Begruendung ein zweites Mal**,
+  vom Datensatz nicht genannt und beim Nachlesen gefunden. `anlesen` traegt dasselbe
+  `!angaben.is_file()`, also erreicht `/dev/zero` auch dort die Schranke nie. Mitbehoben, mit
+  Verweis auf die Schwesterstelle.
+- **Stelle 4**, dieselbe Datei, `einlesen`: der Inhaltsfilter
+  (`verzeichnis::inhalt::traegt_der_inhalt`) steht als dritter Weg ueber `String::from_utf8`
+  dabei. **Statt einer Zahl** steht das Erhebungskommando
+  `grep -rn 'String::from_utf8' crates/*/src`.
+- **Stelle 5**, `crates/krk-ui/src/tabs.rs`, `ordner_setzen`: „die vierte Uebertragung, in
+  derselben Bauart wie die drei darueber" heisst jetzt „die fuenfte … wie die vier darueber".
+  Ueber ihr stehen Sortierung, Verstecke, `tief` und `inhalt`.
+- **Stelle 6b**, `crates/krk-ui/src/appkit/tabelle.rs`: „stoesst, wenn ‚Deep' steht, einen
+  neuen an" heisst jetzt „wenn **einer der beiden Filterschalter** etwas zu tun gibt", mit
+  dem wirkenden Inhaltsfilter ohne „Deep" als dem Fall, den die alte Fassung uebersah. Die
+  Bedingung im Rumpf ist heute `!tief_wirkt() && !inhalt_wirkt()`
+  (`Tabliste::durchlauf_nachziehen_an`) und deckt sich damit.
+
+Resolved: 260908 — `crates/krk-core/src/verzeichnis/verweisziel.rs`,
+`crates/krk-core/src/text/datei.rs` (drei Stellen), `crates/krk-ui/src/tabs.rs`,
+`crates/krk-ui/src/appkit/tabelle.rs`. Zwei der sechs waren bereits abgetragen, eine siebte
+derselben Bauart ist beim Nachlesen gefunden und mitbehoben.

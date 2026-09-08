@@ -72,3 +72,16 @@ liegt in fusion und nicht in KRK; der Datensatz sagt es selbst und nennt die Ste
 (`$FUSION_PLUGIN_ROOT/agents/orchestrator.md`, Schritt 3b). Kein Commit dieser Runde traegt eine
 fremde Nachricht: die fuenfzehn Commits `6be1e81..05cb614` sind gelesen und beschreiben
 durchweg die Arbeit dieser Runde. Er bleibt offen und ist an fusion zu melden.
+
+---
+Resolved: Der Defekt besteht nicht mehr. fusion hat die Pfadform um die Sitzungskennung
+ergaenzt: `$FUSION_PLUGIN_ROOT/agents/orchestrator.md` `## Phase 2` Schritt 3b nennt heute
+`/tmp/fusion-commit-msg-<session-id>-<task-id>.txt`, und die Aufrufzeile mit
+`git commit -F` daneben nennt denselben Pfad. Am 260908-1539 an der installierten Fassung
+nachgelesen; der Datensatz verlangte genau das („eine Behebung haette den Dateinamen um
+etwas zu ergaenzen, das je Sitzung eindeutig ist"). Zwei gleichzeitige Sitzungen mit
+derselben Aufgabenkennung schreiben damit nicht mehr auf dieselbe Datei.
+
+Der Ort bleibt `/tmp`, wie dieser Datensatz es ausdruecklich verlangt hat. Was aus der
+Meldung an fusion geworden ist, sagt der Datensatz nicht und braucht er jetzt auch nicht mehr
+zu sagen.

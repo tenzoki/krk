@@ -66,12 +66,33 @@ pub enum Abschluss {
 
 impl Abschluss {
     /// Wahr, wenn der Lesevorgang abgebrochen wurde.
+    ///
+    /// **Ausser der Probe darueber ruft dies heute niemand**, und das ist
+    /// aufgeschrieben statt gelassen: `krk-core` ist eine Bibliothek, also
+    /// findet `dead_code` einen solchen Namen grundsaetzlich nicht, und ein
+    /// toter Helfer verschwindet hier nur, wenn ihn jemand von Hand sucht.
+    /// Gezaehlt wird mit `grep -rn 'ist_abgebrochen' crates/` — die
+    /// gleichnamige Methode von `operation::Abschluss` faellt dabei mit an und
+    /// gehoert nicht hierher.
+    ///
+    /// **Er steht als Gegenstueck zu [`Abschluss::ist_vollstaendig`] da**, das
+    /// einen Rufer ausserhalb der Proben hat (`krk-bench/src/messen.rs`); die
+    /// Oberflaeche kommt ohne beide aus und verzweigt in
+    /// `krk-ui/src/tabs.rs` unmittelbar ueber die Variante. Wer einen zweiten
+    /// Rufer findet oder anlegt, streicht diesen Absatz; wer keinen anlegen
+    /// will, darf die Methode streichen und die Probe ueber die Variante
+    /// verzweigen lassen. Beides ist besser, als es offenzulassen
+    /// (`shared/issues/260826-1221_*_abschluss-ist-abgebrochen-hat-ausserhalb-der-proben-keinen-rufer-im-baum.md`).
     #[must_use]
     pub fn ist_abgebrochen(&self) -> bool {
         matches!(self, Abschluss::Abgebrochen)
     }
 
     /// Wahr, wenn das Verzeichnis vollstaendig gelesen ist.
+    ///
+    /// Der Rufer ausserhalb der Proben ist die kopflose Messstrecke
+    /// (`krk-bench/src/messen.rs`); der Absatz an
+    /// [`Abschluss::ist_abgebrochen`] gilt fuer diese Methode **nicht**.
     #[must_use]
     pub fn ist_vollstaendig(&self) -> bool {
         matches!(self, Abschluss::Vollstaendig)

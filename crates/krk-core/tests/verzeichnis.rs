@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use krk_core::verzeichnis::durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
@@ -2201,14 +2201,10 @@ fn inhalt_mit_zeitschranke(
     grenze: u64,
     schranke: Duration,
 ) -> Inhaltsbefund {
-    let (sender, empfaenger) = mpsc::channel();
     let pfad = pfad.to_path_buf();
     let muster = Muster::aus(filter_klein);
-    std::thread::spawn(move || {
-        let _ = sender.send(traegt_der_inhalt(&pfad, &muster, grenze));
-    });
-    empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
-        panic!("traegt_der_inhalt ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
+    mit_zeitschranke("traegt_der_inhalt", schranke, move || {
+        traegt_der_inhalt(&pfad, &muster, grenze)
     })
 }
 
@@ -4219,23 +4215,23 @@ fn ohne_verknuepfung_gilt_der_name_selbst() {
 /// `stat(2)` fasst die Roehre gar nicht erst an, wartet also auch nicht auf
 /// einen Schreiber.
 ///
-/// Die Zeitschranke macht aus dem Stillstand einen Fehlschlag mit Namen; sie
-/// ist dieselbe Bauart wie `oeffnen_mit_zeitschranke` in `tests/text.rs`, und
-/// eine gemeinsame Fassung gaebe es nur um den Preis, den Pruefling durch die
-/// Hilfsfunktion zu reichen.
+/// Die Zeitschranke macht aus dem Stillstand einen Fehlschlag mit Namen, und
+/// sie kommt seit dem 260908 aus `gemeinsam::mit_zeitschranke` wie bei jeder
+/// anderen Huelle um dieselbe Tuer. Bis dahin stand hier eine eigene Bauart mit
+/// dem Satz, eine gemeinsame Fassung gaebe es „nur um den Preis, den Pruefling
+/// durch die Hilfsfunktion zu reichen"; der Preis ist eine Zeile, und die Probe
+/// fuenfzehn Zeilen darunter zahlte ihn schon
+/// (`shared/issues/260826-1933_*_mit-zeitschranke-nennt-sich-die-eine-fassung-*`).
 #[test]
 fn eine_roehre_haelt_die_frage_nach_dem_verweisziel_nicht_an() {
     let ordner = Pruefordner::neu("verweisziel-roehre");
     let roehre = ordner.roehre("ohne-schreiber");
 
-    let (sender, empfaenger) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        let _ = sender.send(verweisziel::bestimmen(&roehre));
-    });
-    let schranke = Duration::from_secs(5);
-    let ergebnis = empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
-        panic!("bestimmen ist nach {schranke:?} nicht zurueckgekommen; die Frage haengt")
-    });
+    let ergebnis = mit_zeitschranke(
+        "verweisziel::bestimmen",
+        Duration::from_secs(5),
+        move || verweisziel::bestimmen(&roehre),
+    );
 
     assert_eq!(ergebnis, Verweisziel::KeinOrdner);
 }

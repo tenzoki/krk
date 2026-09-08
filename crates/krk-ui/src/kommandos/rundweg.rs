@@ -121,8 +121,12 @@ pub enum Rundweg {
 /// `None` heisst "von hier aus fuehrt kein Rundweg" und nicht "hier ist nichts
 /// zu tun". Der Aufrufer antwortet darauf mit `false`, und das heisst allein,
 /// dass kein Nachzug der Aufteilung und keine vorgemerkte Sitzung anfaellt: den
-/// Tastendruck verbraucht `Anwendungsdelegierter::kommando_ausfuehren` in jedem
-/// Fall, weil es seit der Runde 7 immer `true` liefert.
+/// Tastendruck verbraucht `Anwendungsdelegierter::kommando_ausfuehren`, weil
+/// dieser Zweig hinter der Zulaessigkeitspruefung laeuft und die Antwort dort
+/// fuer jeden **zulaessigen** Befehl `true` lautet. **„Immer" waere zu viel
+/// gesagt**: `kommando_ausfuehren` hat zwei Ausgaenge, und der frueher liegende
+/// gibt einen unzulaessigen Befehl unveraendert an AppKit weiter
+/// (`shared/issues/260823-1433_*_kommando-ausfuehren-liefert-nicht-immer-true-*`).
 ///
 /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
 /// bliebe: `cmd+e` taete dann gar nichts, und keine Meldung sagte warum.

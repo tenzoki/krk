@@ -497,9 +497,10 @@ pub fn aufrufstellen(inhalt: &str, name: &str) -> usize {
 /// Sie liest Text und keinen Syntaxbaum, und `tests/baum.rs` schreibt in seinem
 /// Kopf aus, was das allgemein heisst. Hier im Einzelnen:
 ///
-/// - **Eine Aufzaehlung, die nicht `pub` ist oder eingerueckt steht**, wird
-///   nicht gefunden; der Helfer bricht dann ab, statt eine leere Liste zu
-///   liefern.
+/// - **Eine Aufzaehlung, die eingerueckt steht**, wird nicht gefunden; der
+///   Helfer bricht dann ab, statt eine leere Liste zu liefern. Ob sie `pub` ist,
+///   spielt seit dem 260908 keine Rolle mehr: die Sichtbarkeit sagt nichts
+///   darueber, ob eine Liste daneben vollstaendig zu halten ist.
 /// - **Eine Variante mit Daten** (`Foo(Bar)`, `Foo { … }`) und eine ueber
 ///   mehrere Zeilen laesst er nicht durch, sondern bricht mit der Zeile ab. Ein
 ///   stilles Ueberspringen waere die Blindheit, gegen die er gebaut ist; wer
@@ -511,21 +512,82 @@ pub fn aufrufstellen(inhalt: &str, name: &str) -> usize {
 /// damit ein verschobener oder umbenannter Block die rufende Probe nicht still
 /// bestehen laesst.
 pub fn varianten_der_aufzaehlung(datei: &str, name: &str) -> Vec<String> {
+    variantenzeilen(datei, name)
+        .into_iter()
+        .map(|zeile| {
+            let (bezeichner, nutzlast) = zerlegte_variantenzeile(datei, name, &zeile);
+            assert!(
+                nutzlast.is_none(),
+                "in {datei} traegt die Aufzaehlung {name} die Zeile `{zeile}`; \
+                 diese Nadel liest allein datenlose Varianten, je eine Zeile — wer die \
+                 Nutzlast braucht, nimmt varianten_mit_nutzlast_der_aufzaehlung"
+            );
+            bezeichner
+        })
+        .collect()
+}
+
+/// Wie [`varianten_der_aufzaehlung`], aber mit datentragenden Varianten.
+///
+/// Liefert je Variante ihren Bezeichner und, wenn sie eine Nutzlast in runden
+/// Klammern traegt, deren Wortlaut ohne die Klammern
+/// (`Zettel(Zettel)` wird zu `("Zettel", Some("Zettel"))`).
+///
+/// **Warum es zwei Funktionen sind und nicht eine.** Fuer die meisten Rufer ist
+/// eine datentragende Variante ein Fehler, den sie sehen wollen: eine
+/// `ALLE`-Liste daneben kann dann nicht mehr Zeile fuer Zeile gleich sein, und
+/// ein stilles Ueberspringen waere genau die Blindheit, gegen die diese Nadeln
+/// gebaut sind. [`varianten_der_aufzaehlung`] bricht deshalb ab. Wer die
+/// Nutzlast braucht, sagt das mit dem Namen dieser Funktion und traegt die
+/// Verantwortung fuer die Zusage, die er stattdessen prueft — bei
+/// `Datei::ALLE` etwa „jede datenlose Variante genau einmal, und die
+/// datentragende einmal je Wert ihres Feldes"
+/// (`shared/issues/260907-0858_*_zwei-alle-listen-bleiben-vom-durchlauf-ungedeckt-*`).
+///
+/// Eine Variante mit benannten Feldern (`Foo { … }`) liest auch diese Nadel
+/// nicht; der Baum kennt keine.
+pub fn varianten_mit_nutzlast_der_aufzaehlung(
+    datei: &str,
+    name: &str,
+) -> Vec<(String, Option<String>)> {
+    variantenzeilen(datei, name)
+        .into_iter()
+        .map(|zeile| zerlegte_variantenzeile(datei, name, &zeile))
+        .collect()
+}
+
+/// Die Zeilen des Aufzaehlungsblocks, getrimmt und ohne Kommentare, Attribute
+/// und Leerzeilen.
+///
+/// **Die eine Stelle, die den Block findet und abgrenzt**; beide Nadeln
+/// darueber bauen darauf auf, statt die Lesart ein zweites Mal hinzuschreiben.
+///
+/// **Mit und ohne `pub`.** Die Sichtbarkeit sagt nichts darueber, ob eine
+/// `ALLE`-Liste daneben vollstaendig zu halten ist; sie sagt allein, wer die
+/// Aufzaehlung sehen darf. Bis zum 260908 fand diese Nadel allein
+/// `pub enum <Name> {`, und `Spalte::ALLE` in
+/// `krk-ui/src/appkit/blaetter/stapelumbenennen.rs` blieb deshalb vom Durchlauf
+/// ausgenommen — die Sichtbarkeit allein fuer eine Probe anzuheben waere der
+/// teurere Fehler gewesen, die Nadel zu weiten der billigere.
+fn variantenzeilen(datei: &str, name: &str) -> Vec<String> {
     let quellen = quelldateien();
     let (_, inhalt) = quellen
         .iter()
         .find(|(pfad, _)| pfad == datei)
         .unwrap_or_else(|| panic!("unter crates/ steht keine Datei {datei}"));
 
-    let kopf = format!("pub enum {name} {{");
+    let koepfe = [format!("pub enum {name} {{"), format!("enum {name} {{")];
     let anfang = inhalt
         .lines()
-        .position(|zeile| zeile == kopf)
+        .position(|zeile| koepfe.iter().any(|kopf| zeile == kopf))
         .unwrap_or_else(|| {
-            panic!("in {datei} steht keine Zeile `{kopf}` in Spalte 0; umbenannt oder verschoben?")
+            panic!(
+                "in {datei} steht weder `{}` noch `{}` in Spalte 0; umbenannt oder verschoben?",
+                koepfe[0], koepfe[1]
+            )
         });
 
-    let mut varianten = Vec::new();
+    let mut zeilen = Vec::new();
     let mut geschlossen = false;
     for zeile in inhalt.lines().skip(anfang + 1) {
         if zeile == "}" {
@@ -536,27 +598,45 @@ pub fn varianten_der_aufzaehlung(datei: &str, name: &str) -> Vec<String> {
         if rumpf.is_empty() || rumpf.starts_with("//") || rumpf.starts_with("#[") {
             continue;
         }
-        let bezeichner: String = rumpf
-            .chars()
-            .take_while(|zeichen| zeichen.is_ascii_alphanumeric() || *zeichen == '_')
-            .collect();
-        assert!(
-            !bezeichner.is_empty() && &rumpf[bezeichner.len()..] == ",",
-            "in {datei} traegt die Aufzaehlung {name} die Zeile `{rumpf}`; \
-             diese Nadel liest allein datenlose Varianten, je eine Zeile"
-        );
-        varianten.push(bezeichner);
+        zeilen.push(rumpf.to_owned());
     }
     assert!(
         geschlossen,
-        "der Block `{kopf}` in {datei} endet an keiner schliessenden Klammer in Spalte 0"
+        "der Block `enum {name}` in {datei} endet an keiner schliessenden Klammer in Spalte 0"
     );
     assert!(
-        !varianten.is_empty(),
+        !zeilen.is_empty(),
         "die Aufzaehlung {name} in {datei} liefert keine Variante; \
          eine leere Liste waere eine Probe, die alles bestaetigt"
     );
-    varianten
+    zeilen
+}
+
+/// Eine Zeile des Aufzaehlungsblocks in Bezeichner und Nutzlast zerlegt.
+fn zerlegte_variantenzeile(datei: &str, name: &str, rumpf: &str) -> (String, Option<String>) {
+    let bezeichner: String = rumpf
+        .chars()
+        .take_while(|zeichen| zeichen.is_ascii_alphanumeric() || *zeichen == '_')
+        .collect();
+    assert!(
+        !bezeichner.is_empty(),
+        "in {datei} traegt die Aufzaehlung {name} die Zeile `{rumpf}` ohne Bezeichner"
+    );
+    let rest = &rumpf[bezeichner.len()..];
+    if rest == "," {
+        return (bezeichner, None);
+    }
+    let nutzlast = rest
+        .strip_prefix('(')
+        .and_then(|innen| innen.strip_suffix("),"))
+        .unwrap_or_else(|| {
+            panic!(
+                "in {datei} traegt die Aufzaehlung {name} die Zeile `{rumpf}`; \
+                 diese Nadel liest eine Variante je Zeile, mit hoechstens einer \
+                 Nutzlast in runden Klammern"
+            )
+        });
+    (bezeichner, Some(nutzlast.to_owned()))
 }
 
 // ---------------------------------------------------------------------------

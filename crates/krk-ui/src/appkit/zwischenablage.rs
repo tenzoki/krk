@@ -520,10 +520,15 @@ pub fn dateiverweise_schreiben(pfade: &[PathBuf], namen: &str) -> bool {
 /// bleibt es innerhalb der Grenze des Circles, die einen integrierten Browser
 /// ausschliesst.
 ///
-/// **Nur `http:` und `https:` erreichen diesen Aufruf.** Die Grenze zieht die
-/// Deutung im Kern, und der Grund ist C9: gaebe KRK ein `smb:` oder `ftp:` an
-/// das System, baute es ueber einen Umweg die Serververbindung auf, die C9
-/// ausschliesst.
+/// **Nur `http:` und `https:` erreichen diesen Aufruf, und es sind zwei Rufer.**
+/// Die Grenze zieht [`krk_core::zwischenablage::ist_webschema`] fuer beide: fuer
+/// den Sprung aus der Zwischenablage ueber `deuten` und `Ziel::Web`, und seit
+/// der Runde 20 fuer den Klick auf einen Verweis im PDF-Betrachter
+/// (`super::betrachter::ist_webadresse`). Der Grund ist C9: gaebe KRK ein `smb:`
+/// oder `ftp:` an das System, baute es ueber einen Umweg die Serververbindung
+/// auf, die C9 ausschliesst. Bis zum 260908 zog der zweite Rufer die Grenze
+/// selbst, in einer wortgleichen zweiten Fassung
+/// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_die-regel-nur-http-und-https-*`).
 #[must_use = "die Antwort sagt, ob der Systembrowser die Adresse angenommen hat; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn im_browser_oeffnen(adresse: &str) -> bool {
     let Some(url) = NSURL::URLWithString(&NSString::from_str(adresse)) else {

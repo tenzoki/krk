@@ -120,7 +120,13 @@ pub fn deuten(inhalt: &str) -> Ziel {
             None => Ziel::Nichts,
         };
     }
-    if ohne_schema(text, "http").is_some() || ohne_schema(text, "https").is_some() {
+    // Welche Schemata an den Systembrowser gehen, sagt [`ist_webschema`] und
+    // nicht diese Stelle: der PDF-Betrachter in `krk-ui` stellt dieselbe Frage
+    // und braucht dieselbe Antwort.
+    if text
+        .split_once(':')
+        .is_some_and(|(schema, _)| ist_webschema(schema))
+    {
         return Ziel::Web(text.to_owned());
     }
     if text.starts_with('/') {
@@ -217,6 +223,27 @@ fn letzter_bestandteil(text: &str) -> &str {
 /// Modulkopf.
 fn tragbar(zeichen: char) -> bool {
     traegt_ein_dateiname(zeichen) && zeichen != ':'
+}
+
+/// Ob ein Schema an den Systembrowser gegeben werden darf: `http` und `https`
+/// und sonst keines (C9 der Runde 1).
+///
+/// **Die eine Fassung dieser Grenze**, und sie steht hier, weil KRK zwei Wege
+/// an den Systembrowser hat und beide dieselbe Antwort brauchen: den Sprung aus
+/// der Zwischenablage ([`deuten`], `Ziel::Web`) und den Klick auf einen Verweis
+/// im PDF-Betrachter (`krk-ui`, `betrachter::ist_webadresse`). Bis zur Runde 20
+/// zog der zweite die Grenze selbst, in einer wortgleichen zweiten Fassung; wer
+/// C9 lockert oder ein Schema hinzunimmt, aenderte dann eine Stelle und
+/// uebersaehe die andere
+/// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_die-regel-nur-http-und-https-*`).
+///
+/// Ohne Ruecksicht auf Gross- und Kleinschreibung, aus demselben Grund wie bei
+/// [`ohne_schema`]: RFC 3986 erklaert das Schema fuer schreibungsunabhaengig.
+/// Erwartet wird das blosse Schema **ohne** Doppelpunkt, so wie `NSURL::scheme`
+/// es liefert.
+#[must_use]
+pub fn ist_webschema(schema: &str) -> bool {
+    schema.eq_ignore_ascii_case("http") || schema.eq_ignore_ascii_case("https")
 }
 
 /// Was hinter `<schema>:` steht, falls der Text mit diesem Schema anfaengt.

@@ -743,10 +743,15 @@ pub struct AnwendungsIvars {
     /// Sperre; ein Recht, das nur genommen und dann fallengelassen wuerde,
     /// liesse die naechste Instanz sich fuer die erste halten. Gefragt wird es
     /// genau einmal, beim Start: wer es hat, bekommt einen
-    /// [`Sitzungsschreiber`], wer nicht, bekommt keinen. Die Regel „nur die
-    /// Halterin schreibt die Sitzung" haelt danach der Uebersetzer —
+    /// [`Sitzungsschreiber`], wer nicht, bekommt keinen. **Was der Uebersetzer
+    /// danach haelt, ist „war Halterin, als der Schreiber entstand"** —
     /// [`Sitzungsschreiber::neu`] verlangt das Recht als Argument und liefert
-    /// ohne es `None`.
+    /// ohne es `None`. Die weiter reichende Regel „nur die Halterin schreibt
+    /// die Sitzung" haelt er **nicht**: das Recht wird nur geliehen, der
+    /// Schreiber traegt keine Lebenszeit, und ein `drop` dazwischen bliebe
+    /// unbemerkt. Sie haelt hier die `OnceCell`, die das Recht bis zum
+    /// Prozessende bindet; der Kopf von [`Sitzungsschreiber`] schreibt die
+    /// Grenze aus.
     ///
     /// Leer, solange `sitzung_laden` nicht gelaufen ist, und in den vier
     /// Messmodus-Faellen, die keinen bleibenden Ablageordner oeffnen.

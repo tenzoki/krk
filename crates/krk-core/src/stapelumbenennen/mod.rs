@@ -56,5 +56,12 @@ pub mod regel;
 pub mod vorschau;
 
 pub use kollision::Kollision;
-pub use regel::{HOECHSTE_STELLENZAHL, Nummerierung, Regel, Regelfehler};
+// `HOECHSTE_STELLENZAHL` stand bis zum 260908 in dieser Zeile und hatte im
+// ganzen Arbeitsbereich keinen Rufer ausserhalb von `regel.rs` selbst. Das
+// Blatt in `krk-ui` begrenzt sein Eingabefeld ausdruecklich **nicht** ueber
+// diese Zahl, sondern nimmt jeden Text entgegen und laesst `Regel::aus_eingabe`
+// einen `Regelfehler::Stellenzahl` liefern; die Konstante war also
+// weitergereicht fuer einen Rufer, der sie nicht nimmt
+// (`shared/issues/260826-1221_*_fuenf-oeffentliche-namen-der-zwei-module-*`).
+pub use regel::{Nummerierung, Regel, Regelfehler};
 pub use vorschau::{Vorschau, Vorschauzeile, vorschau};

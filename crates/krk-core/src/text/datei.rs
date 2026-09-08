@@ -226,6 +226,14 @@ pub enum Abweisung {
         pfad: PathBuf,
         /// Woran es lag, in einem Satzteil: der Systemfehler oder die Art.
         grund: String,
+        /// Ob der Prozess keinen Dateideskriptor mehr frei hatte.
+        ///
+        /// **Ein Feld und kein vierter Wert**, wie `fehlt` an
+        /// [`Textstand::KeinGueltigesZiel`], von dem es kommt. Es aendert
+        /// nicht, **ob** abgewiesen wird, sondern allein den Satz: bei einem
+        /// Mangel liegt es an KRK und nicht an der Datei, und ein zweiter
+        /// Versuch kann gelingen.
+        mangel: bool,
     },
     /// Ueber [`EDITORGRENZE`], also gar nicht erst gelesen.
     ZuGross {
@@ -252,6 +260,14 @@ impl Abweisung {
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: ein
     /// vierter Grund haelt den Bau an und erzwingt einen vierten Satz.
     ///
+    /// **Drei Gruende, vier Saetze.** [`Abweisung::KeinGueltigesZiel`] steht
+    /// zweimal da, einmal je Wert seines Feldes `mangel`, und die zwei Zweige
+    /// sind ausgeschrieben statt ueber ein `if` im einen Zweig gefuehrt: so
+    /// haelt der Uebersetzer auch hier an, wenn das Feld einmal mehr als zwei
+    /// Werte traegt. Der Satz zum Mangel spricht ueber KRK und nicht ueber die
+    /// Datei, und er sagt, dass ein zweiter Versuch gelingen kann
+    /// (`shared/issues/260826-1223_*_lesen-trennt-den-deskriptormangel-nicht-*`).
+    ///
     /// **Die Byteangaben stehen roh und nicht in MB.** Der menschenlesbare
     /// Groessensatz des Programms ist `menge` in
     /// `krk-ui/src/kommandos/operationen.rs`, und der liegt in der anderen
@@ -261,7 +277,21 @@ impl Abweisung {
     #[must_use]
     pub fn meldung(&self) -> String {
         match self {
-            Abweisung::KeinGueltigesZiel { pfad, grund } => {
+            Abweisung::KeinGueltigesZiel {
+                pfad,
+                grund,
+                mangel: true,
+            } => {
+                format!(
+                    "{} lässt sich gerade nicht öffnen: KRK hat keinen freien Dateizugriff mehr ({grund}); nach dem Ende der laufenden Suche noch einmal versuchen",
+                    pfad.display()
+                )
+            }
+            Abweisung::KeinGueltigesZiel {
+                pfad,
+                grund,
+                mangel: false,
+            } => {
                 format!(
                     "{} lässt sich nicht im Editor öffnen: {grund}",
                     pfad.display()
@@ -345,6 +375,27 @@ pub enum Textstand {
         /// eigener Wert daneben machte aus vier Ausgaengen fuenf und zwaenge
         /// den Editor zu einer Unterscheidung, die er nicht trifft.
         fehlt: bool,
+        /// Ob der Prozess keinen Dateideskriptor mehr frei hatte.
+        ///
+        /// **Ein zweites Feld und wieder kein fuenfter Ausgang**, aus demselben
+        /// Grund wie `fehlt` und mit einer eigenen Begruendung daneben:
+        /// `EMFILE` und `ENFILE` sagen etwas ueber den **Prozess** und nichts
+        /// ueber die Datei. Ohne diese Trennung sagte der Editor dem Nutzer
+        /// etwas ueber seine Datei, wo etwas ueber KRK zu sagen waere — genau
+        /// der Fehlgriff, den [`Lesehindernis`] weiter unten als tragend
+        /// benennt und den die zwei Nachbarlesewege
+        /// ([`bis_zur_grenze_lesen`], [`anlesen`]) schon vermeiden
+        /// (`shared/issues/260826-1223_*_lesen-trennt-den-deskriptormangel-nicht-*`).
+        ///
+        /// Gespeist aus derselben einen Regel wie dort,
+        /// [`crate::verzeichnis::sys::ist_deskriptormangel`]; eine zweite
+        /// Fassung der Frage entsteht nicht.
+        ///
+        /// **Erreichbar und nicht bloss denkbar:** derselbe Prozess faehrt seit
+        /// der Runde 11 einen Durchlauf ueber den Unterbaum, der je Kandidat
+        /// einen Deskriptor hinzunimmt, und seit dem 260826 laeuft der schon
+        /// beim ersten Anschlag im Dateifenster an.
+        mangel: bool,
     },
 }
 
@@ -432,13 +483,23 @@ pub enum Textstand {
 /// gewoehnlichen Datei — und eine andere kommt bis hierher nicht — ist der Fall
 /// nicht zu erreichen.
 pub fn lesen(pfad: &Path) -> Textstand {
-    let kein_ziel = |grund: String, fehlt: bool| Textstand::KeinGueltigesZiel { grund, fehlt };
+    let kein_ziel = |grund: String, fehlt: bool| Textstand::KeinGueltigesZiel {
+        grund,
+        fehlt,
+        mangel: false,
+    };
 
     let mut datei = match crate::verzeichnis::sys::ohne_warten_oeffnen(pfad) {
         Ok(datei) => datei,
         Err(fehler) => {
-            let fehlt = fehler.kind() == io::ErrorKind::NotFound;
-            return kein_ziel(fehler.to_string(), fehlt);
+            // Die eine Regel fuer `EMFILE` und `ENFILE`, dieselbe, die
+            // `bis_zur_grenze_lesen` und `anlesen` fragen: der Mangel sagt
+            // etwas ueber den Prozess und nichts ueber die Datei.
+            return Textstand::KeinGueltigesZiel {
+                grund: fehler.to_string(),
+                fehlt: fehler.kind() == io::ErrorKind::NotFound,
+                mangel: crate::verzeichnis::sys::ist_deskriptormangel(&fehler),
+            };
         }
     };
     let angaben = match datei.metadata() {
@@ -498,6 +559,9 @@ fn unlesbar(mut datei: File, grund: Unlesbarkeit) -> Textstand {
         Err(fehler) => Textstand::KeinGueltigesZiel {
             grund: fehler.to_string(),
             fehlt: false,
+            // Ein Zurueckspulen scheitert an keinem Deskriptormangel: der
+            // Deskriptor ist bereits offen.
+            mangel: false,
         },
     }
 }
@@ -533,9 +597,10 @@ pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
         // Die fehlende Datei ist fuer den Editor kein eigener Fall: sie hat so
         // wenig Text zu zeigen wie ein Ordner. Der Notizzettel trennt sie,
         // siehe das Feld `fehlt`.
-        Textstand::KeinGueltigesZiel { grund, .. } => Err(Abweisung::KeinGueltigesZiel {
+        Textstand::KeinGueltigesZiel { grund, mangel, .. } => Err(Abweisung::KeinGueltigesZiel {
             pfad: pfad.to_path_buf(),
             grund,
+            mangel,
         }),
     }
 }
@@ -612,8 +677,14 @@ pub enum Lesehindernis {
 ///
 /// # Die Grenze wird eingehalten und nicht nur vorhergesagt
 ///
-/// Zwischen `fstat` und `read` kann eine Datei wachsen, und `/dev/zero` liefert
-/// ohne Ende, ohne je eine Groesse zu melden. Gelesen werden deshalb hoechstens
+/// Zwischen `fstat` und `read` kann eine gewoehnliche Datei wachsen: ein
+/// Schreiber haengt an, waehrend hier gelesen wird, und die Groesse aus dem
+/// `fstat` ist damit eine Auskunft von vorhin und keine Zusage. **`/dev/zero`
+/// ist dafuer kein Beispiel** und stand hier bis zum 260908 als eines: es ist
+/// ein Zeichengeraet, faellt zwei Zeilen frueher am `!angaben.is_file()`
+/// heraus und erreicht die Schranke nie
+/// (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1934_*`).
+/// Gelesen werden hoechstens
 /// `grenze + 1` Bytes, und das eine Byte zuviel entscheidet: kommt es an, ist
 /// die Datei ueber der Grenze und die Antwort
 /// [`Lesehindernis::ZuGross`]. Ohne diese Schranke waere "es wird nie mehr als
@@ -678,8 +749,11 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
 /// `take`, also stehen zu keinem Zeitpunkt mehr als `hoechstens` Bytes im
 /// Arbeitsspeicher, gleich wie gross die Datei ist. Das ist dieselbe Zusage wie
 /// drueben, nur nicht ueber eine Auskunft von `fstat` hergestellt, sondern ueber
-/// die Zahl gelesener Bytes; auch eine wachsende Datei und `/dev/zero` fallen
-/// darunter.
+/// die Zahl gelesener Bytes; auch eine Datei, die zwischen `fstat` und `read`
+/// waechst, faellt darunter. **`/dev/zero` stand hier bis zum 260908 als
+/// zweites Beispiel und taugt nicht dazu**, aus demselben Grund wie bei
+/// [`bis_zur_grenze_lesen`]: es ist ein Zeichengeraet und faellt schon am
+/// `!angaben.is_file()` heraus.
 ///
 /// # Warum es die dritte Fassung ueberhaupt gibt
 ///
@@ -735,10 +809,16 @@ pub fn anlesen(pfad: &Path, hoechstens: u64) -> Result<Vec<u8>, Lesehindernis> {
 /// Wer einen Pfad hat und keine Bytes, nimmt [`oeffnen`]: dort steht die
 /// Groessen- und Typpruefung davor.
 ///
-/// Gewandelt wird ueber [`String::from_utf8`], denselben Weg, ueber den die
-/// Vorschau entscheidet, ob eine Datei Text ist
-/// (`krk-ui/src/vorschaumodell.rs`). Zwei Antworten auf die Frage "ist das
-/// Text" haetten sonst zwei verschiedene Dateimengen bejaht.
+/// Gewandelt wird ueber [`String::from_utf8`], denselben Weg, ueber den auch
+/// die Vorschau (`krk-ui/src/vorschaumodell.rs`) und **seit der Runde 11** der
+/// Inhaltsfilter der Dateiliste
+/// ([`crate::verzeichnis::inhalt::traegt_der_inhalt`]) entscheiden, ob eine
+/// Datei Text ist. Zwei Antworten auf die Frage "ist das Text" haetten sonst
+/// zwei verschiedene Dateimengen bejaht. **Eine Zahl steht hier nicht**: sie
+/// stand auf zwei und ist mit dem Inhaltsfilter falsch geworden
+/// (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1934_*`);
+/// erhoben werden die Stellen mit
+/// `grep -rn 'String::from_utf8' crates/*/src`.
 pub fn einlesen(bytes: Vec<u8>) -> Option<String> {
     String::from_utf8(bytes).ok().map(in_gehaltene_form)
 }

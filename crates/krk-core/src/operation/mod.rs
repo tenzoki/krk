@@ -76,9 +76,16 @@ use crate::verzeichnis::Typ;
 
 pub use anlegen::{datei_anlegen, ordner_anlegen};
 pub use auftrag::{Art, Auftrag, Konfliktregel};
+// `MELDEABSTAND` stand bis zum 260908 in dieser Zeile und hatte im ganzen
+// Arbeitsbereich keinen Rufer ausserhalb von `fortschritt.rs` selbst; ein
+// weitergereichter Name behauptet, dass draussen jemand ihn braucht, und wer
+// ihn liest, sucht diesen Rufer
+// (`shared/issues/260826-1221_*_fuenf-oeffentliche-namen-der-zwei-module-*`).
+// Er bleibt `pub` in seinem Modul, das `pub` ist; wer ihn braucht, nennt den
+// Modulpfad.
 pub use fortschritt::{
     Abbruchgriff, Abschluss, Bericht, Fortschritt, Konfliktantwort, Konfliktentscheid, Lauf,
-    MELDEABSTAND, Meldung, Uebersprungen,
+    Meldung, Uebersprungen,
 };
 pub use loeschen::{OhnePapierkorb, Papierkorb};
 pub use umbenennen::{Namensfehler, freier_name, name_pruefen, umbenennen};

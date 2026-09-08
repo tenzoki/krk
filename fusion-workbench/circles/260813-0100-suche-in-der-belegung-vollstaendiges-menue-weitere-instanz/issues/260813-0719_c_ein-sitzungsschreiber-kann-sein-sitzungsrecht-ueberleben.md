@@ -62,3 +62,32 @@ Sitzungsrecht` im Feld. Dann hält der Übersetzer wirklich, was der Kommentar s
 ist eine Lebenszeit an einem Typ, der im Anwendungsdelegierten in einem `RefCell<Option<…>>`
 neben dem Recht selbst wohnt; ob die zwei Felder eines `ivars` einander so borgen können, ist
 nicht nachgesehen und wäre vor einer Zusage zu messen.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund besteht fort.** `Sitzungsschreiber` traegt weiter keine Lebenszeit
+(`crates/krk-core/src/ablage/sitzung.rs`), beide Erzeuger leihen das `Sitzungsrecht` nur, und
+der Satz „Die Regel ,nur die Halterin schreibt die Sitzung' haelt danach der Uebersetzer"
+stand bis heute unveraendert am Feld des Anwendungsdelegierten. Die drei Aufrufer sind
+gegengelesen: der Anwendungsdelegierte legt das Recht heute in eine `OnceCell` statt in ein
+`RefCell<Option<…>>` und haelt es bis zum Prozessende, `Messplan::herstellen` bis zum Ende der
+Funktion, `schreiber_mit_recht` gibt es mit zurueck. Kein Aufrufer nimmt den Weg.
+
+**Gebaut ist Weg 1**, den der Datensatz als den billigeren empfiehlt:
+
+- `Sitzungsschreiber` bekommt den Abschnitt „Was der Uebersetzer davon haelt, und was der
+  Aufrufer halten muss". Er sagt, dass der Uebersetzer „war Halterin, als der Schreiber
+  entstand" haelt und nicht mehr, dass das Recht mindestens so lange gebunden gehoert wie der
+  Schreiber, dass alle drei Aufrufer das tun, und dass `#[must_use]` allein an das Binden
+  erinnert und nicht an die Dauer.
+- Das Feld `sitzungsrecht` des Anwendungsdelegierten sagt jetzt dasselbe an seiner Stelle: die
+  weiter reichende Regel haelt dort die `OnceCell` und nicht der Uebersetzer.
+
+Weg 2 (die Lebenszeit mitfuehren) ist benannt und nicht gegangen; die Messung, ob zwei Felder
+eines `ivars` einander borgen koennen, steht weiter aus und ist am Kopf vermerkt.
+
+Resolved: 260908, `crates/krk-core/src/ablage/sitzung.rs` und
+`crates/krk-ui/src/appkit/anwendung.rs` — Weg 1: beide Stellen sagen, was der Uebersetzer
+haelt und was der Aufrufer halten muss.

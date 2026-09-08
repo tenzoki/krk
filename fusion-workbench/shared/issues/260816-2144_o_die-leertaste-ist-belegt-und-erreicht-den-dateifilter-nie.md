@@ -103,3 +103,29 @@ Ob die Tippsuche der Belegungsansicht aus der Runde 7, der zweite Rufer der Zeic
 dasselbe Verhalten zeigt. Sie liest `traegt_ein_dateiname` und hängt damit an derselben
 Zeichenregel, aber ob die Leertaste dort über denselben Nachschlag läuft, ist am Baum nicht
 nachgesehen.
+
+---
+
+## Abgleich 260908: der Befund besteht, und der Punkt „Nicht geprueft" ist geprueft
+
+**Die Kette steht unveraendert.** `space` traegt in `resources/default-keymap.toml` weiter
+`markierung_umschalten`, `Belegung::nachschlag` durchlaeuft weiter zuerst die Funktionen, und
+eine belegte Kombination erreicht die Fallunterscheidung am Ende nicht. `traegt_ein_dateiname`
+nimmt das Leerzeichen weiter an.
+
+**Der Zielkonflikt bleibt ein Nutzerentscheid**, und keiner der drei Wege ist gewaehlt. Der
+Datensatz bleibt offen.
+
+**Was jetzt geprueft ist: die Tippsuche der Belegungsansicht zeigt das Verhalten *nicht*.**
+Der Abgriff ruft den Faenger **vor** dem Nachschlag (`crates/krk-ui/src/appkit/ereignisse.rs`,
+`behandeln`: „Die Aufnahme und die Suche der Belegungsansicht, vor allem anderen"), und das
+getippte Zeichen geht mit. Ein Druck auf die Leertaste erreicht die Suche der
+Belegungsansicht also, waehrend derselbe Druck den Dateifilter nie erreicht, weil er dort
+erst hinter dem Nachschlag ankaeme.
+
+**Das schaerft den Zielkonflikt, statt ihn aufzuloesen.** Die zwei Suchen, die der Spec der
+Runde 10 fuer denselben Vergleich haelt, nehmen das Leerzeichen verschieden an; wer Weg 1
+oder 3 waehlt, entscheidet zugleich, ob dieser Unterschied bestehen bleibt. Der zweite
+Unterschied zwischen ihnen steht in
+`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_*`: der
+Vergleich selbst ist seit der Runde 21 nicht mehr derselbe.

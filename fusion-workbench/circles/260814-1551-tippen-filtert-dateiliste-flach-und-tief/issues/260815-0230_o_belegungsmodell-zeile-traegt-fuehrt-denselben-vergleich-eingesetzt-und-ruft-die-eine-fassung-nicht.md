@@ -72,3 +72,35 @@ Belegungsansicht sich damit eine Funktion teilen, die in `krk-core` wohnt und na
 Filter benannt ist; wer künftig eine der beiden Suchen ändern will, ändert die andere
 mit. Genau das ist der Zweck einer einzigen Quelle, aber es ist eine Bindung, die heute
 nicht besteht, und deshalb ist es eine Frage an den Nutzer und keine an den Umsetzer.
+
+---
+
+## Abgleich 260908: der vorhergesagte Fall ist eingetreten
+
+**Die zwei Fassungen sind nicht mehr wortgleich.** Der Datensatz warnt, dass C1.3 still
+falsch wird, wenn eine der beiden Fassungen auseinanderlaeuft, und dass keine Probe im Baum
+es sagen wuerde. Genau das ist mit der Runde 21 geschehen:
+
+```
+crates/krk-core/src/verzeichnis/filter.rs   pub fn traegt_die_folge(name: &str, muster: &Muster) -> bool
+crates/krk-ui/src/belegungsmodell.rs        .any(|text| text.to_lowercase().contains(gesucht))
+```
+
+`traegt_die_folge` nimmt seit der Runde 21 ein `Muster` und keinen `&str` und laeuft ueber
+dessen Stuecke: `*` steht fuer eine beliebige, auch leere Zeichenfolge. `zeile_traegt`
+vergleicht unveraendert auf Teilzeichenfolge. C1.3 der Runde 10 („Es ist derselbe Vergleich,
+den `Belegungsmodell::zeile_traegt` fuehrt") ist damit **falsch**, und keine Probe hat es
+gemeldet.
+
+**Die Frage ist dadurch groesser geworden und nicht kleiner.** Vor der Runde 21 waere das
+Teilen ein reiner Aufbauschritt gewesen; heute hiesse es, der Tippsuche der Belegungsansicht
+den Platzhalter `*` zu geben. Das ist eine Aenderung am Verhalten, und der Datensatz sagt
+schon in seiner ersten Fassung, dass dies eine Frage an den Nutzer ist.
+
+**Was ohne Wahl getan ist:** der Unterschied steht jetzt am Doc-Kommentar von
+`Belegungsmodell::zeile_traegt` (`crates/krk-ui/src/belegungsmodell.rs`), unter der
+Ueberschrift „Nicht mehr derselbe Vergleich wie der Filter der Dateiliste", samt dem Verweis
+hierher. Er verschwindet damit nicht mehr hinter einem Kriterium, das ihn bestreitet.
+
+**Der Datensatz bleibt offen.** Die Wahl steht aus: teilen die zwei Suchen sich eine Fassung,
+und bekommt die Belegungssuche damit den Platzhalter?

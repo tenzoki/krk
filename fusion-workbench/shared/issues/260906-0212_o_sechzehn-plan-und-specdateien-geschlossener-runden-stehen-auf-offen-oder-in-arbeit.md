@@ -44,3 +44,32 @@ Der Fehler ist daneben schon einmal weitergereicht worden: das Feld `**Active sp
 ## Abnahme
 
 Die vier Pläne tragen `_c_` und `**Status:** Complete`, oder ihr offener Rest steht namentlich in ihrem Kopf. Für die zwölf Specs: entweder sie tragen den Marker, den `260819-1440_*` festlegt, oder dieser Datensatz nennt sie als bewusst stehen gelassen mit dem Grund.
+
+---
+Stand 260908-1539: **einer von sechzehn ist gezogen, fuenfzehn bleiben stehen, und der
+Datensatz bleibt offen.**
+
+**Gezogen ist `260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md`** (`_p_` → `_c_`,
+Kopfzeile `**Status:**` auf `Complete`, neue Kopfzeile `**Abnahme:** offen`, urspruenglicher
+Wortlaut als datierter Nachsatz am Dateiende). Er ist der einzige der sechzehn, an dem die
+Nutzerantwort vom 260907-0823 ohne Vorbehalt greift: die Runde 18 hat keinen
+Circle-Datensatz, der Plan liegt im gemeinsamen Planungsspeicher und damit ausserhalb einer
+geschlossenen Runde. Alle zehn Schritte stehen auf `[DONE]`, gegen die Schrittmarken der
+Datei selbst geprueft.
+
+**Die uebrigen drei Plaene bleiben stehen, und nicht aus Unschluessigkeit.** Sie liegen in den
+`planning/`-Speichern geschlossener Runden, und wie weit die Regel vom 260907-0823 in solche
+Dokumente zurueckreicht, ist offen
+(`260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`).
+Namentlich: `260824-0640_*_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`
+(`_p_`), `260830-1317_*_plan-git-bereich-liest-status-branch-verlauf.md` (`_p_`) und
+`260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` (`_o_`, Runde zurueckgestellt).
+Die zwoelf Specs haengen unveraendert an
+`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`.
+
+**Eine Zahl dieses Datensatzes stimmt nicht.** Der erste Absatz sagt „Vier davon stehen auf
+`_p_`"; es sind fuenf. Nachgezaehlt am 260908-1539 mit
+``find fusion-workbench/shared/planning fusion-workbench/circles/*/planning -name '*_p_*.md'``
+→ `260824-0640`, `260830-1251`, `260830-1317`, `260819-2216`, `260825-1725`. Der fuenfte ist
+der Spec der Runde 14 im gemeinsamen Speicher, den die Aufzaehlung unter der Tafel selbst
+nennt und den der Einleitungssatz nicht mitzaehlt. Nach dem Zug von heute sind es vier.

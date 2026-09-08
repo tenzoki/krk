@@ -844,7 +844,7 @@ impl Tabliste {
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
         let tief = self.tabs[stelle].modell.tief();
         let inhalt = self.tabs[stelle].modell.inhalt();
-        // Die vierte Uebertragung, in derselben Bauart wie die drei darueber
+        // Die fuenfte Uebertragung, in derselben Bauart wie die vier darueber
         // und ohne Bedingung: der Filtertext geht hinueber, gleich wie `tief`
         // steht (C1.9, C1.10). Bis zum Nutzerentscheid vom 260815-0955 zu
         // `decisions/260814-1830_*_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`

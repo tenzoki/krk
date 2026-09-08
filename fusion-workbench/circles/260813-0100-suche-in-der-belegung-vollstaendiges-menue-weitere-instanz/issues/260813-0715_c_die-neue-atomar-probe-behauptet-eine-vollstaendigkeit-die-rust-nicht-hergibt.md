@@ -63,3 +63,27 @@ macht.
 Der Satz „Ein anderer Weg besteht nicht" gehört gestrichen. Was stimmt, ist schwächer und
 trägt trotzdem: die drei Zeichenketten decken jede Schreibweise ab, die dieser Baum heute
 kennt, und zwei weitere sind möglich und benannt.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund besteht am heutigen Baum unveraendert.** Der Satz „Ein anderer Weg besteht
+nicht" stand bis heute am Doc-Kommentar von
+`nur_benannte_dateien_erreichen_das_atomare_schreiben`, die Nadelliste fuehrte drei
+Zeichenketten, und Weg 4 war nirgends benannt.
+
+Gebaut ist der Vorschlag, beide Haelften:
+
+- **Weg 3** faengt jetzt eine vierte Nadel, `atomar as`. Sie steht in derselben
+  `concat!`-Form wie die drei anderen, damit die Probe sich nicht selbst zaehlt.
+- **Weg 4** hat einen eigenen Abschnitt am Doc-Kommentar, „Der eine Weg, den keine Nadel
+  sehen kann". Er schreibt aus, dass eine `pub use atomar::schreiben;` in einer der ohnehin
+  erlaubten Dateien die Probe fuer den **ganzen Baum** blind macht, ohne sie rot werden zu
+  lassen, und dass dagegen keine Nadel hilft.
+- Der Satz „Ein anderer Weg besteht nicht" ist gestrichen. An seiner Stelle steht die
+  schwaechere und tragende Aussage: die Nadeln fangen jede Datei, die `schreiben` **unter
+  diesem Namen** erreicht.
+
+Resolved: 260908, `crates/krk-core/tests/baum.rs` — vierte Nadel `atomar as`, der Abschnitt
+zur Wiederausfuhr als benannte Blindheit, der Vollstaendigkeitssatz gestrichen.

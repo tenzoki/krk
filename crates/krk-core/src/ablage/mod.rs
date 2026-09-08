@@ -48,13 +48,30 @@
 //! ihn zum **Lesen** brauchen. Wer beides zusammennimmt, kann an der Sperre
 //! vorbeischreiben; der Uebersetzer haelt ihn nicht auf.
 //!
-//! Diese eine Luecke bewacht deshalb eine Probe und kein Typ:
-//! `nur_benannte_dateien_erreichen_das_atomare_schreiben` in
+//! **Von dieser Luecke bewacht eine Probe die eine Haelfte, und die andere
+//! bewacht nichts.** `nur_benannte_dateien_erreichen_das_atomare_schreiben` in
 //! `krk-core/tests/baum.rs` zaehlt, welche Dateien des ganzen Baums
-//! [`atomar::schreiben`] ueberhaupt erreichen koennen. Eine siebte laesst sie
-//! rot werden. Bis zur Runde 7 stand hier, die Zusage sei „eine Eigenschaft der
-//! Typen und keine Verabredung in Kommentaren"; sie war beides nicht, sondern
-//! eine unbewachte Aussage ueber den damaligen Baum
+//! [`atomar::schreiben`] ueberhaupt erreichen koennen; eine siebte laesst sie
+//! rot werden. Der **zweite** Bestandteil, [`Ablage::pfad`] plus ein beliebiger
+//! Schreibaufruf der Standardbibliothek, braucht [`atomar::schreiben`] gar
+//! nicht und ist von keiner Probe gezaehlt. Wer den Satz „die Luecke ist
+//! bewacht" liest, liest deshalb zu viel hinein
+//! (`issues/260813-0716_*_die-bewachte-luecke-ist-nicht-die-luecke-elf-schreibwege-an-der-sperre-vorbei-bleiben.md`).
+//!
+//! **Unbewacht ist er mit Grund und nicht aus Versehen.** Die Stellen dieser
+//! Bauart stehen saemtlich in `krk-core/tests/ablage.rs` und stellen einen
+//! Altbestand oder eine beschaedigte Datei her — also gerade das, was
+//! [`Zugang::sichern`] nicht schreiben kann, weil keine Serialisierung es
+//! liefert. Kein Weg unter `crates/*/src` schreibt so. Wie viele Stellen es
+//! sind, zaehlt
+//! `grep -c 'fs::write(ablage.pfad(\|fs::create_dir(ablage.pfad(' crates/krk-core/tests/ablage.rs`
+//! und keine Zahl an dieser Stelle; eine zweite Probe darueber waere heute eine
+//! Liste zum Pflegen und keine Wache und lohnt erst, wenn [`Zugang`] auch den
+//! Altbestandsfall abdeckt.
+//!
+//! Bis zur Runde 7 stand hier, die Zusage sei „eine Eigenschaft der Typen und
+//! keine Verabredung in Kommentaren"; sie war beides nicht, sondern eine
+//! unbewachte Aussage ueber den damaligen Baum
 //! (`issues/260813-0540_*_kein-schreibweg-an-der-sperre-vorbei-ist-nicht-typgesichert-und-ungeprueft.md`).
 //!
 //! # Zwei der fuenf TOML-Dateien entstehen einmal und werden nie wieder
@@ -824,6 +841,7 @@ impl Zugang<'_> {
     ///   Text                     ──> der gelesene Zettel, keine Meldung
     ///   KeinGueltigesZiel, fehlt ──> leerer Zettel, keine Meldung
     ///   KeinGueltigesZiel        ──> leerer Zettel, Meldung, nichts beiseite
+    ///     davon mangel           ──> dieselbe Antwort, ein anderer Satz
     ///   Unlesbar (zu gross)      ──> leerer Zettel, Meldung, beiseitegelegt
     ///   Unlesbar (kein Text)     ──> leerer Zettel, Meldung, beiseitegelegt
     /// ```
@@ -861,14 +879,31 @@ impl Zugang<'_> {
             Textstand::KeinGueltigesZiel {
                 grund,
                 fehlt: false,
+                mangel,
             } => Geladen {
                 wert: String::new(),
                 ersetzung: Some(Ersetzung {
                     datei: pfad,
+                    // **Der Deskriptormangel sagt etwas ueber den Prozess und
+                    // nichts ueber die Datei**, und der Satz des Nutzers sagt
+                    // es mit: „nicht lesbar" allein legte ihm nahe, mit seinem
+                    // Zettel sei etwas, waehrend KRK gerade keinen freien
+                    // Dateizugriff hat und ein zweiter Versuch gelingen kann.
+                    // Die Trennung kommt aus dem einen Feld des Befundes und
+                    // nicht aus einer zweiten Frage an das System
+                    // (`shared/issues/260826-1223_*_lesen-trennt-den-deskriptormangel-nicht-*`).
                     welche,
-                    grund: Grund::NichtLesbar(einzeilig(&grund)),
+                    grund: Grund::NichtLesbar(if mangel {
+                        format!(
+                            "KRK hat keinen freien Dateizugriff mehr ({})",
+                            einzeilig(&grund)
+                        )
+                    } else {
+                        einzeilig(&grund)
+                    }),
                     // Von einer Datei, die sich nicht oeffnen liess, gibt es
-                    // keinen Inhalt zu sichern.
+                    // keinen Inhalt zu sichern — bei einem Mangel so wenig wie
+                    // bei einem fehlenden Leserecht.
                     beiseite: Beiseite::Nicht,
                 }),
             },

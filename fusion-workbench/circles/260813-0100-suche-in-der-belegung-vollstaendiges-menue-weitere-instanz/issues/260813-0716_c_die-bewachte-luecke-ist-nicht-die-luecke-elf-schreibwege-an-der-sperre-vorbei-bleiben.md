@@ -70,3 +70,31 @@ herstellen, die keine Serialisierung liefern kann.
 `.pfad(` und ein Schreibaufruf der Standardbibliothek in derselben Zeile stehen. Sie zählte
 heute elf Stellen in einer Datei und wäre damit eine Liste zum Pflegen und keine Wache; sie
 lohnt erst, wenn `Zugang::pfad` auch den Altbestandsfall abdeckt.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund besteht fort, und die Zahl im Titel ist gewachsen.** Der Modulkopf sagte bis
+heute „Diese eine Luecke bewacht deshalb eine Probe und kein Typ", waehrend die Probe allein
+die Erreichbarkeit von `atomar::schreiben` zaehlt. Die Stellen der Bauart
+`fs::write(ablage.pfad(...))` beziehungsweise `fs::create_dir(ablage.pfad(...))` in
+`crates/krk-core/tests/ablage.rs` sind seit dem 260813 von elf auf einundzwanzig gestiegen
+(`grep -c 'fs::write(ablage.pfad(\|fs::create_dir(ablage.pfad(' crates/krk-core/tests/ablage.rs`,
+am 260908 gefahren). Kein Weg unter `crates/*/src` schreibt so; das ist unveraendert.
+
+**Gebaut ist Weg 1**, wie der Datensatz ihn empfiehlt („und der erste reicht"). Der
+Modulkopf von `crates/krk-core/src/ablage/mod.rs` sagt jetzt:
+
+- welche **Haelfte** der Luecke die Probe bewacht (die Erreichbarkeit von
+  `atomar::schreiben`) und welche nicht (`Ablage::pfad` plus ein Schreibaufruf der
+  Standardbibliothek);
+- warum die zweite Haelfte unbewacht ist: die Stellen stellen einen Altbestand oder eine
+  beschaedigte Datei her, also gerade das, was `Zugang::sichern` nicht schreiben kann;
+- dass Weg 2 heute eine Liste zum Pflegen und keine Wache waere.
+
+**Die Zahl ist durch das Zaehlkommando ersetzt** und steht nicht mehr als Ziffer im Kopf.
+
+Resolved: 260908, `crates/krk-core/src/ablage/mod.rs` — Weg 1: der Kopf sagt, welche Haelfte
+bewacht ist, welche nicht und warum; die Zahl der unbewachten Stellen steht als
+Zaehlkommando.

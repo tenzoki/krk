@@ -367,19 +367,25 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // `gehalten_von` **nicht**; diese Funktion fragt drei Zeilen weiter
         // oben ueber `Funktion::kommando` und sieht es.
         //
-        // Der Weg hierher, am 260811-0955 gegen `krk-core` gemessen: eine von
-        // Hand geschriebene `keymap.toml` gibt einer Kennung **mit** Kommando
-        // einen Zusteller, etwa `kopieren` ein `gehalten_von = "menue"`.
-        // `Belegung::vom_nutzer` nimmt sie an — `Belegung::bauen` prueft
-        // allein die Kennung gegen den Wortschatz der Auslieferungsbelegung
-        // und uebernimmt `gehalten_von` unveraendert, und `konflikte`
-        // vergleicht nur innerhalb desselben Zustellers. `bereich("kopieren")`
-        // ordnet die Funktion dann ueber ihr Kommando ein, `nach_bereichen`
-        // bricht **nicht** ab, und `funktion.kommando()` steht hier auf `None`:
+        // **Der Weg hierher ist seit dem 260908 zu.** Bis dahin gab eine von
+        // Hand geschriebene `keymap.toml` einer Kennung **mit** Kommando einen
+        // Zusteller — `kopieren` ein `gehalten_von = "menue"` —, und
+        // `Belegung::bauen` uebernahm ihn unveraendert; die Lage
         // `kommando()=None gehalten_von=Some("menue")
-        // aus_kennung=Some(Kopieren)`. Die Probe
-        // `eine_kennung_mit_kommando_und_zusteller_landet_im_auffangzweig`
-        // haelt genau diesen Fall fest.
+        // aus_kennung=Some(Kopieren)` war am 260811-0955 gegen `krk-core`
+        // gemessen. Seither nimmt `bauen` den Zusteller aus dem Wortschatz
+        // (`shared/issues/260826-1223_*_die-nutzerdatei-setzt-den-zusteller-frei-*`),
+        // und kein Eintrag der Auslieferungsbelegung traegt einen Zusteller
+        // **und** eine Kennung aus `Kommando::KENNUNGEN`. Der Zweig ist damit
+        // durch die Bauart unerreichbar geworden und nicht durch eine
+        // Verabredung; was ihn dabei haelt, ist die Probe
+        // `keine_ausgelieferte_funktion_traegt_zusteller_und_kommando`.
+        //
+        // **Er bleibt trotzdem stehen.** Der `match` laeuft ueber `&str` und
+        // braucht ohnehin einen Auffangzweig, und die Unerreichbarkeit haengt
+        // an einer Datei, die eine spaetere Runde aendern kann: gaebe die
+        // Auslieferung einem gebauten Befehl einen Zusteller, waere der Zweig
+        // am selben Tag wieder erreichbar.
         //
         // **Was hier nicht steht und nicht stehen darf: ein `panic!`.** Es
         // braechte KRK an einer vom Nutzer von Hand geschriebenen, formal
@@ -907,60 +913,46 @@ mod tests {
         }
     }
 
-    /// **Der Auffangzweig von [`wirkung`] ist erreichbar, und seine Zelle ist
-    /// von der bewusst leeren unterscheidbar.**
+    /// **Keine ausgelieferte Funktion traegt einen Zusteller und ein Kommando
+    /// zugleich**, und genau das haelt den Auffangzweig von [`wirkung`]
+    /// unerreichbar.
     ///
-    /// Der Fall, den der Kommentar am Zweig ausschreibt, hier gemessen statt
-    /// behauptet: eine `keymap.toml` des Nutzers gibt `kopieren` einen
-    /// Zusteller. `Belegung::vom_nutzer` nimmt sie an, `bereich` ordnet die
-    /// Funktion ueber ihr Kommando ein — [`markdown`] bricht also **nicht** ab
-    /// —, und `Funktion::kommando` liefert hier trotzdem `None`. Die Probe
-    /// haelt beide Haelften fest: dass der Zweig greift, und dass die fertige
-    /// Datei danach zwei verschiedene Sachverhalte auseinanderhaelt.
+    /// Bis zum 260908 mass diese Stelle den umgekehrten Fall: eine
+    /// `keymap.toml` des Nutzers gab `kopieren` einen Zusteller, und der Zweig
+    /// griff. Seither nimmt `Belegung::bauen` den Zusteller aus dem Wortschatz
+    /// (`shared/issues/260826-1223_*_die-nutzerdatei-setzt-den-zusteller-frei-*`),
+    /// und der Weg ueber die Nutzerdatei ist zu. Was uebrig bleibt, ist eine
+    /// Aussage ueber die **Auslieferungsbelegung**, und die ist zu messen und
+    /// nicht zu behaupten: gaebe eine spaetere Runde einem gebauten Befehl ein
+    /// `gehalten_von`, waere der Zweig am selben Tag wieder erreichbar, und
+    /// diese Probe wuerde rot und nennte die Funktion beim Namen.
+    ///
+    /// Die zweite Haelfte des alten Falls bleibt gemessen: der Auffangzweig
+    /// liefert eine Zelle, die von der bewusst leeren unterscheidbar ist.
     #[test]
-    fn eine_kennung_mit_kommando_und_zusteller_landet_im_auffangzweig() {
-        let belegung = belegung_aus(
-            r#"
-            [[funktion]]
-            id = "kopieren"
-            name = "In das andere Fenster kopieren"
-            tasten = ["f5"]
-            gehalten_von = "menue"
-            "#,
-        );
-        let funktion = belegung
-            .funktion("kopieren")
-            .expect("die Pruefbelegung fuehrt die Funktion");
-
-        // Die beiden Fragen, und dass sie auseinanderfallen: daran haengt der
-        // ganze Fall.
-        assert_eq!(
-            funktion.kommando(),
-            None,
-            "der Zusteller nimmt der Funktion ihr Kommando"
-        );
-        assert_eq!(
-            Kommando::aus_kennung(funktion.kennung()),
-            Some(Kommando::Kopieren),
-            "ueber diesen Weg fragt `bereich`, und deshalb ordnet es die Funktion ein"
+    fn keine_ausgelieferte_funktion_traegt_zusteller_und_kommando() {
+        let belegung = Belegung::auslieferung();
+        let beides: Vec<&str> = belegung
+            .funktionen()
+            .iter()
+            .filter(|funktion| {
+                funktion.gehalten_von().is_some()
+                    && Kommando::aus_kennung(funktion.kennung()).is_some()
+            })
+            .map(Funktion::kennung)
+            .collect();
+        assert!(
+            beides.is_empty(),
+            "diese ausgelieferten Funktionen tragen einen Zusteller und ein Kommando; \
+             der Auffangzweig von wirkung ist damit wieder erreichbar: {}",
+            beides.join(", ")
         );
 
-        assert_eq!(wirkung(funktion), NICHT_EINGEORDNET);
+        // Und die Zelle des Zweigs bleibt von der bewusst leeren
+        // unterscheidbar; die leere gehoert `text_alles_auswaehlen`.
         assert_ne!(
-            wirkung(funktion),
-            "",
-            "die leere Zelle gehoert `text_alles_auswaehlen`; \
-             die beiden Sachverhalte duerfen in der Datei nicht zusammenfallen"
-        );
-
-        let text = markdown(&belegung);
-        let zeile = funktionszeilen(&text)
-            .into_iter()
-            .find(|zeile| zellen(zeile)[0] == "In das andere Fenster kopieren")
-            .expect("die Zeile steht in der Datei");
-        assert_eq!(
-            zellen(zeile),
-            ["In das andere Fenster kopieren", "F5", NICHT_EINGEORDNET]
+            NICHT_EINGEORDNET, "",
+            "die beiden Sachverhalte duerfen in der Datei nicht zusammenfallen"
         );
     }
 

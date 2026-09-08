@@ -40,3 +40,27 @@ Die dritte Blindheit in denselben Absatz aufnehmen: eine Fassung, die ihren Ordn
 `std::env::temp_dir()` anlegt, sondern etwa unter dem Messplatz. Wer sie billig mitfangen will,
 nimmt `temp_dir()` als **eine von zwei** Ortsnadeln und stellt `krk-messplatz` daneben; das
 kostet eine Zeile und deckt den einen anderen Ort, den dieses Projekt kennt.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund besteht fort.** Der Doc-Kommentar von
+`genau_drei_pruefordner_fassungen_stehen_im_baum` nannte bis heute zwei Restblindheiten, die
+verteilte Fassung und die, die Eintrag fuer Eintrag abraeumt; der dritte Ort fehlte.
+
+Gebaut ist der Vorschlag, beide Haelften:
+
+- **Die Ortsnadel ist eine aus zweien.** Neben `temp_dir()` steht `krk-messplatz`, der eine
+  weitere Wegwerfort, den dieses Projekt kennt. Beide in der `concat!`-Form, wie die uebrigen
+  Nadeln der Datei, gegen den Selbstfund.
+- **Der Absatz nennt jetzt drei Blindheiten** statt zweier: die verteilte Fassung, das
+  Abraeumen Eintrag fuer Eintrag und einen **dritten** Ort, den dieses Projekt heute nicht
+  kennt. Dass die Frage nach dem Messplatz schon einmal gestellt worden ist, steht mit dem
+  Beleg dabei: alle drei anerkannten Fassungen schliessen ihn ausdruecklich aus.
+
+Der Lauf ueber den Baum bleibt gruen: keine der drei anerkannten Fassungen und keine weitere
+Datei traegt die neue Nadel neben `impl Drop for` und `remove_dir_all`.
+
+Resolved: 260908, `crates/krk-core/tests/baum.rs` — `krk-messplatz` als zweite Ortsnadel, die
+dritte Blindheit benannt.

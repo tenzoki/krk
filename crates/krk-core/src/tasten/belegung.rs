@@ -33,6 +33,27 @@
 //! nennt, treten unbelegt hinzu, damit die Belegungsansicht aus C3 jede Funktion
 //! auffuehren kann und der Nutzer sie wieder erreichbar machen kann.
 //!
+//! **Den Zusteller `gehalten_von` nimmt [`Belegung::vom_nutzer`] aus dem
+//! Wortschatz und nicht aus der Datei.** Er ist die tragende Haelfte der
+//! Zustellerregel weiter unten: ein von Hand gesetztes `gehalten_von = "menue"`
+//! an einem gebauten Befehl nahm ihn bis zum 260908 aus dem Ereignisabgriff und
+//! liess [`Funktion::kommando`] `None` liefern — ohne Konflikt, ohne Meldung,
+//! ohne Rueckfall auf die Auslieferung. Der Befehl stand danach in der
+//! Belegungsansicht und tat nichts
+//! (`shared/issues/260826-1223_*_die-nutzerdatei-setzt-den-zusteller-frei-*`).
+//! In der geschriebenen Datei ist das Feld damit eine **Duldung beim Lesen** und
+//! keine Eingabe; rueckwaertsvertraeglich ist das, weil die Belegungsansicht
+//! denselben Wert zurueckschreibt.
+//!
+//! **`name` und `reserviert_fuer` kommen weiter aus der Datei**, und das ist
+//! keine Nachlaessigkeit, sondern die Grenze des Schnitts. Keines von beiden
+//! entscheidet, ob ein Befehl ankommt: `name` ist die Beschriftung, und
+//! `reserviert_fuer` haengt allein einen Zusatz an den Text der Belegungsansicht
+//! (`krk-ui/src/belegungsmodell.rs`, `funktionstext`). Beide aus dem Wortschatz
+//! zu nehmen naehme dem Nutzer eine Umbenennung, die niemandem schadet, und
+//! verwuerfe still das `reserviert_fuer` einer `keymap.toml` aus einer aelteren
+//! Fassung, mit dem jene Stelle ausdruecklich rechnet.
+//!
 //! # Was ein Nachschlag antwortet
 //!
 //! Drei Faelle, siehe [`Nachschlag`]. Der dritte ist [`Nachschlag::Tippen`]:
@@ -1470,7 +1491,9 @@ impl Belegung {
     ///
     /// 1. **Es ist keine zweite, sondern die schon vorhandene.** Das Hauptmenue
     ///    schlaegt seit S13b ueber das Zeichen nach; `NSMenuItem.keyEquivalent`
-    ///    nimmt eine Zeichenkette (`crates/krk-ui/src/appkit/menue.rs:322-342`).
+    ///    nimmt eine Zeichenkette (`crates/krk-ui/src/appkit/menue.rs`,
+    ///    `zeichen_der_taste`; die Zeilenangabe, die hier bis zum 260908 stand,
+    ///    zeigte ins Leere).
     ///    Vier Funktionen tragen sie bereits. Der Ereignisabgriff zieht damit
     ///    nach, und der Zuschnitt **beendet eine Asymmetrie**, statt eine zu
     ///    schaffen.
@@ -1620,11 +1643,23 @@ impl Belegung {
     ) -> Result<Self, Belegungsfehler> {
         let mut funktionen: Vec<Funktion> = Vec::with_capacity(datei.funktionen.len());
         for eintrag in &datei.funktionen {
-            if let Some(wortschatz) = wortschatz
-                && wortschatz.funktion(&eintrag.id).is_none()
-            {
-                return Err(Belegungsfehler::UnbekannteFunktion(eintrag.id.clone()));
-            }
+            // **Der Zusteller kommt aus dem Wortschatz und nicht aus der
+            // Datei.** Er ist die tragende Haelfte der Zustellerregel, und ein
+            // von Hand gesetztes `gehalten_von = "menue"` nahm bis zum 260908
+            // einen gebauten Befehl still aus dem Ereignisabgriff — ohne
+            // Konflikt, ohne Meldung, ohne Rueckfall
+            // (`shared/issues/260826-1223_*_die-nutzerdatei-setzt-den-zusteller-frei-*`).
+            // Ohne Wortschatz baut diese Stelle die Auslieferungsbelegung
+            // selbst, und dann ist die Datei auch dafuer die Quelle.
+            let bekannt = match wortschatz {
+                Some(wortschatz) => match wortschatz.funktion(&eintrag.id) {
+                    Some(bekannt) => Some(bekannt),
+                    None => {
+                        return Err(Belegungsfehler::UnbekannteFunktion(eintrag.id.clone()));
+                    }
+                },
+                None => None,
+            };
             if funktionen
                 .iter()
                 .any(|funktion| funktion.kennung == eintrag.id)
@@ -1650,7 +1685,10 @@ impl Belegung {
                 name: eintrag.name.clone(),
                 tasten,
                 reserviert_fuer: eintrag.reserviert_fuer.clone(),
-                gehalten_von: eintrag.gehalten_von.clone(),
+                gehalten_von: match bekannt {
+                    Some(bekannt) => bekannt.gehalten_von.clone(),
+                    None => eintrag.gehalten_von.clone(),
+                },
             });
         }
 

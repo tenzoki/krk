@@ -34,3 +34,30 @@ Der Name reist außerdem: `menue.rs:443` und `CLAUDE.md:133` zitieren ihn wörtl
 Umbenennen auf das, was der Rumpf hält, etwa `jede_variante_von_kommando_steht_in_kennungen_und_jeder_eintrag_benennt_eine`. Der Name ist an drei Stellen zitiert, die mitziehen müßten (`menue.rs:443`, `CLAUDE.md:133`, `belegung.rs:1705`). Alternativ die Vielfachheit wirklich prüfen: statt der zweiten `BTreeSet` eine Zählung je Variante über `KENNUNGEN`, dann trägt der Name.
 
 Gefunden bei der Durchsicht der Behebungsrunde 1, zweiter Teil, Bereich `9c02863..fc829c8`.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund bestand unveraendert:** die Probe verglich weiter zwei `BTreeSet`, und ihr Name
+versprach die Eindeutigkeit, die der Rumpf nicht hielt.
+
+**Gebaut ist die zweite der zwei Fassungen, die der Datensatz nennt: die Vielfachheit wird
+wirklich geprueft.** Statt eines Mengenvergleichs zaehlt die Probe je Variante, wie oft sie in
+`KENNUNGEN` steht, und meldet jede Zahl ungleich eins mit Namen und Zahl — 0 heisst
+unbelegbar, jede Zahl darueber heisst zwei Wege von einer Kennung zu einem Kommando. Die
+Gegenrichtung (ein Eintrag ohne Variante) laeuft jetzt ueber die Liste statt ueber eine Menge
+und sieht damit auch eine doppelte ueberzaehlige Zeile.
+
+**Umbenannt ist nichts, und das ist der Grund fuer diese Wahl.** Der Name reist nach
+`crates/krk-ui/src/appkit/menue.rs` und nach `CLAUDE.md`; ein Rumpf, der ihn traegt, ist
+billiger als drei nachzuziehende Zitate und laesst die zwei Prosastellen wahr werden, statt
+sie zu bewegen.
+
+Der Doc-Kommentar sagt jetzt, was die Probe haelt, warum die Eindeutigkeit an zwei Stellen
+steht und warum das kein Doppelbau ist: `jedes_kommando_traegt_genau_einen_wirkungsbereich`
+laeuft ueber `KENNUNGEN` und sieht eine fehlende Variante nicht, diese laeuft ueber die
+Varianten.
+
+Resolved: 260908, `crates/krk-core/tests/belegung.rs` — die Vielfachheit wird gezaehlt statt
+als Menge verglichen; der Name traegt jetzt, was der Rumpf haelt.

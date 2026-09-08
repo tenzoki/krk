@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode)
-**Active spec/plan:** `shared/planning/260821-1115_*_spec-artefakt-und-release.md` — vor diesem Circle entstanden und deshalb im gemeinsamen Speicher, mit dem Plan dazu am selben Ort: `shared/planning/260821-1221_*_plan-artefakt-und-release.md`.
+**Active spec/plan:** `260821-1115_*_spec-artefakt-und-release.md` — vor diesem Circle entstanden und deshalb im gemeinsamen Speicher, mit dem Plan dazu am selben Ort: `260821-1221_*_plan-artefakt-und-release.md` (der Plan liegt seit dem Aufräumlauf 260826-1637 unter `archive/`).
 **Active session history:** `shared/history/260820-2200-orchestrator-session.md`
 
 ---

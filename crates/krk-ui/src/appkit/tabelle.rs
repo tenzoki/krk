@@ -464,7 +464,9 @@ const ORDNERZEICHEN: char = '/';
 /// Dateiliste. Die misst **keine** der zehn Zusagen aus C8: L2, L3 und L10
 /// laufen auf der kopflosen Strecke, die keine `NSTableView` baut und
 /// [`DateifensterDelegierter::zellenansicht`] nie ruft
-/// (`krk-bench/src/messen.rs:1199`). Ein Systemaufruf je Zeile kaeme damit als
+/// (`krk-bench/src/messen.rs`, Modulkopf „Die kopflose Messstrecke" und
+/// `Messreihe::fahren`; die Zeilenangabe, die hier bis zum 260908 stand, zeigte
+/// ins Leere). Ein Systemaufruf je Zeile kaeme damit als
 /// Kostenstelle ohne Abnahmekriterium in den Baum, und das ist der staerkere
 /// Grund, ihn zu unterlassen, nicht der schwaechere.
 ///
@@ -2296,8 +2298,12 @@ impl DateifensterQuelle {
     /// sonst zeigte der naechste Aufbau der Sicht wieder die alte.
     ///
     /// **Der Durchlauf wird hier nachgezogen** (C3.6). Jede Aenderung des
-    /// Filtertexts bricht den laufenden ab und stoesst, wenn „Deep" steht,
-    /// einen neuen an; die Regel dafuer steht in
+    /// Filtertexts bricht den laufenden ab und stoesst einen neuen an, wenn
+    /// **einer der beiden Filterschalter** etwas zu tun gibt — seit der Runde
+    /// 11 also nicht mehr allein „Deep", sondern auch ein wirkender
+    /// Inhaltsfilter ohne „Deep"
+    /// (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1934_*`);
+    /// die Regel dafuer steht in
     /// [`Tabliste::durchlauf_nachziehen`](crate::tabs::Tabliste::durchlauf_nachziehen)
     /// und nicht hier. Diese Stelle ist der eine Weg jeder Filteraenderung,
     /// also auch der eine Ort dieses Rufs — die drei Aufrufer daneben je

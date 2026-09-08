@@ -8,7 +8,6 @@
 //! hineinwachsen; deshalb waehlt das Abnahmekommando das Testprogramm mit
 //! `--test belegung` und filtert nicht ueber Pruefungsnamen.
 
-use std::collections::BTreeSet;
 use std::fs;
 
 use krk_core::ablage::{Ablage, Ablageort, Datei};
@@ -771,18 +770,30 @@ gehalten_von = "menue"
     assert_eq!(funktion.kennung(), "alle_markieren");
     assert_eq!(funktion.kommando(), Some(Kommando::AlleMarkieren));
 
-    // Und eine Funktion, die es sonst gaebe, liefert kein Kommando, sobald das
-    // Hauptmenue sie zustellt: die vierte Stelle der Regel. `fenster_schliessen`
-    // ist der einzige Fall, an dem sich das ueberhaupt messen laesst, weil die
-    // vier Textbefehle ohnehin in keiner Kennung eines Kommandos stehen.
+    // Die vierte Stelle der Regel, am Wortschatz gemessen: ein vom Hauptmenue
+    // zugestellter Befehl liefert kein Kommando und wird vom Nachschlag
+    // uebersprungen. Gemessen wird sie an `text_alles_auswaehlen`, das
+    // `gehalten_von = "menue"` **ab Werk** traegt.
+    let alles = belegung
+        .funktion("text_alles_auswaehlen")
+        .expect("die Funktion steht in der Datei");
+    assert_eq!(alles.gehalten_von(), Some("menue"));
+    assert_eq!(alles.kommando(), None);
+
+    // **Und `fenster_schliessen` bleibt erreichbar, obwohl die Datei ihm einen
+    // Zusteller gibt.** Bis zum 260908 nahm dieser eine Eintrag den gebauten
+    // Befehl still aus dem Abgriff; seither kommen `name`, `reserviert_fuer`
+    // und `gehalten_von` aus dem Wortschatz, und die Auslieferung gibt
+    // `fenster_schliessen` ausdruecklich keinen Zusteller
+    // (`shared/issues/260826-1223_*_die-nutzerdatei-setzt-den-zusteller-frei-*`).
     let geschlossen = belegung
         .funktion("fenster_schliessen")
         .expect("die Funktion steht in der Datei");
-    assert_eq!(geschlossen.gehalten_von(), Some("menue"));
-    assert_eq!(geschlossen.kommando(), None);
+    assert_eq!(geschlossen.gehalten_von(), None);
+    assert_eq!(geschlossen.kommando(), Some(Kommando::FensterSchliessen));
     assert!(matches!(
         belegung.nachschlag(kombi("shift+cmd+w").tastendruck()),
-        Nachschlag::Unbelegt
+        Nachschlag::Funktion(_)
     ));
 
     // Die drei Textbefehle der Auslieferungsbelegung loesen im Dateifenster
@@ -1973,30 +1984,52 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
 /// faellt aus, wenn eine Variante fortfaellt und ihre Zeile stehen bleibt, und
 /// eine solche Zeile uebersetzt heute noch, solange der Name als Alias
 /// weiterlebt.
+///
+/// **Und die Vielfachheit, denn der Name sagt „genau einmal".** Bis zum 260908
+/// verglich diese Probe zwei `BTreeSet`; eine Menge kennt keine Vielfachheit,
+/// also fielen zwei Zeilen derselben Variante zu einer zusammen und die Probe
+/// blieb gruen. Der Name versprach damit mehr als der Rumpf hielt — dieselbe
+/// Fehlerklasse, aus der der Datensatz `260826-1223` entstanden ist, eine Ebene
+/// tiefer
+/// (`shared/issues/260826-2156_*_der-probenname-sagt-genau-einmal-*`). Gezaehlt
+/// wird deshalb je Variante, statt umbenannt zu werden: der Name reist nach
+/// `krk-ui/src/appkit/menue.rs` und nach `CLAUDE.md`, und ein Rumpf, der ihn
+/// traegt, ist billiger als drei nachzuziehende Zitate.
+///
+/// Die Eindeutigkeit steht damit an **zwei** Stellen —
+/// [`jedes_kommando_traegt_genau_einen_wirkungsbereich`] haelt sie ueber jedes
+/// Paar —, und das ist kein Doppelbau, sondern zwei Fragen an denselben
+/// Gegenstand: jene laeuft ueber `KENNUNGEN` und sieht eine fehlende Variante
+/// nicht, diese laeuft ueber die Varianten und sieht eine ueberzaehlige Zeile
+/// nur, weil sie sie zaehlt.
 #[test]
 fn jede_variante_von_kommando_steht_genau_einmal_in_kennungen() {
-    let varianten: BTreeSet<String> =
-        varianten_der_aufzaehlung("krk-core/src/tasten/belegung.rs", "Kommando")
-            .into_iter()
-            .collect();
-    let gefuehrt: BTreeSet<String> = Kommando::KENNUNGEN
+    let varianten = varianten_der_aufzaehlung("krk-core/src/tasten/belegung.rs", "Kommando");
+    let gefuehrt: Vec<String> = Kommando::KENNUNGEN
         .into_iter()
         .map(|(kommando, _)| format!("{kommando:?}"))
         .collect();
 
-    let fehlen: Vec<&str> = varianten
-        .difference(&gefuehrt)
-        .map(String::as_str)
+    // **Je Variante gezaehlt und nicht als Menge verglichen.** Die Zahl 0 ist
+    // die fehlende Zeile, jede Zahl ueber 1 die doppelte; beide nennt die
+    // Meldung mit Namen.
+    let daneben: Vec<String> = varianten
+        .iter()
+        .map(|name| (name, gefuehrt.iter().filter(|zeile| *zeile == name).count()))
+        .filter(|(_, zahl)| *zahl != 1)
+        .map(|(name, zahl)| format!("{name} ({zahl}-mal)"))
         .collect();
     assert!(
-        fehlen.is_empty(),
-        "diese Varianten von Kommando stehen in keiner Zeile von KENNUNGEN \
-         und sind damit unbelegbar: {}",
-        fehlen.join(", ")
+        daneben.is_empty(),
+        "diese Varianten von Kommando stehen nicht genau einmal in KENNUNGEN; \
+         keine Zeile heisst unbelegbar, zwei heissen zwei Wege von einer Kennung \
+         zu einem Kommando: {}",
+        daneben.join(", ")
     );
 
     let ueberzaehlig: Vec<&str> = gefuehrt
-        .difference(&varianten)
+        .iter()
+        .filter(|zeile| !varianten.contains(zeile))
         .map(String::as_str)
         .collect();
     assert!(
@@ -2483,4 +2516,72 @@ fn die_sieben_befehle_der_leiste_sind_gebaut() {
             "{kennung} steht in der Belegung, hat aber kein Kommando"
         );
     }
+}
+
+/// Den Zusteller setzt die Nutzerdatei nicht, den Namen setzt sie weiter.
+///
+/// **Der Zusteller ist die tragende Haelfte der Zustellerregel**, und ein von
+/// Hand gesetztes `gehalten_von = "menue"` an einem gebauten Befehl nahm ihn
+/// bis zum 260908 aus dem Ereignisabgriff: `Belegung::nachschlag` uebersprang
+/// die Funktion, `Funktion::kommando` lieferte `None`, `Belegung::konflikte`
+/// vergleicht nur innerhalb desselben Zustellers und sah nichts, und `laden`
+/// faellt nur bei einem `Belegungsfehler` zurueck — es entstand keiner. Der
+/// Befehl stand danach in der Belegungsansicht und tat nichts
+/// (`shared/issues/260826-1223_*_die-nutzerdatei-setzt-den-zusteller-frei-*`).
+///
+/// **Der Name bleibt Sache der Nutzerdatei**, und die Probe haelt das
+/// ausdruecklich fest, damit es niemand aus Symmetrie mitzieht: eine
+/// Umbenennung schadet niemandem, waehrend ein Zusteller einen Befehl
+/// unerreichbar macht. Dasselbe gilt fuer `reserviert_fuer`, mit dem
+/// `krk-ui/src/belegungsmodell.rs` fuer alte Dateien ausdruecklich rechnet.
+///
+/// Die **Tasten** kommen weiterhin aus der Datei; sonst waere die Zusage „sie
+/// darf jede Kombination frei verteilen" mit dieser Aenderung gefallen.
+#[test]
+fn die_nutzerdatei_setzt_weder_zusteller_noch_name_noch_vorbehalt() {
+    let datei: krk_core::tasten::Belegungsdatei = toml::from_str(
+        r#"
+[[funktion]]
+id = "kopieren"
+name = "Kaffee kochen"
+tasten = ["ctrl+c"]
+reserviert_fuer = "irgendwas"
+gehalten_von = "menue"
+"#,
+    )
+    .expect("gueltiges TOML");
+
+    let belegung = Belegung::vom_nutzer(&datei).expect("die Kennung steht im Wortschatz");
+    let gebaut = belegung
+        .funktion("kopieren")
+        .expect("kopieren steht in der Belegung");
+    let ausgeliefert = Belegung::auslieferung()
+        .funktion("kopieren")
+        .expect("kopieren steht in der Auslieferung")
+        .clone();
+
+    assert_eq!(
+        gebaut.name(),
+        "Kaffee kochen",
+        "der Name kommt nicht mehr aus der Nutzerdatei"
+    );
+    assert_ne!(
+        gebaut.name(),
+        ausgeliefert.name(),
+        "die Auslieferung traegt denselben Namen; die Probe misst dann nichts"
+    );
+    assert_eq!(
+        gebaut.reserviert_fuer(),
+        Some("irgendwas"),
+        "der Vorbehalt kommt nicht mehr aus der Nutzerdatei"
+    );
+    assert!(
+        gebaut.kommando().is_some(),
+        "ein von Hand gesetztes gehalten_von hat den Befehl still unerreichbar gemacht"
+    );
+    assert_eq!(
+        gebaut.tasten(),
+        [Kombination::lesen("ctrl+c").expect("gueltige Schreibweise")],
+        "die Tasten kommen nicht mehr aus der Nutzerdatei"
+    );
 }

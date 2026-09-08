@@ -184,7 +184,9 @@ use crate::editormodell::Dateityp;
 /// Welche der beiden Farbtafeln gilt (C3, S34).
 ///
 /// **Eine Wahl zwischen zwei fertigen Tafeln und keine eigene Tafel.**
-/// `crates/krk-ui/src/appkit/leiste.rs:439-442` und der Modulkopf von
+/// `crate::appkit::leiste` (in `Leiste::bauen`, am `setStyle`: „das Erscheinungsbild
+/// von Hell und Dunkel nachzubauen"; die Zeilenangabe, die hier bis zum 260908
+/// stand, zeigte ins Leere) und der Modulkopf von
 /// `crate::appkit::tableiste` begruenden beide, warum KRK das Erscheinungsbild
 /// von Hell und Dunkel nicht nachbaut: man nimmt das Systemsteuerelement, und
 /// es folgt dem System von selbst. Fuer Syntaxhervorhebung gibt es kein

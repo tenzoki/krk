@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** closed
 **Filed by:** orchestrator
-**Active spec/plan:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_c_plan-absicherung-jedes-loeschwegs.md (Spec: shared/planning/260817-0536_c_spec-absicherung-jedes-loeschwegs.md)
+**Active spec/plan:** 260817-0856_*_plan-absicherung-jedes-loeschwegs.md (Spec: 260817-0536_*_spec-absicherung-jedes-loeschwegs.md, seit dem Aufräumlauf 260819-1613 unter `archive/`)
 **Active session history:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md
 
 ---

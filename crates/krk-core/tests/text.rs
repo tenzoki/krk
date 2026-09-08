@@ -41,10 +41,11 @@
 //! der zwoelf Faelle: `datei::bis_zur_grenze_lesen` ist die zweite Huelle um
 //! dieselbe Tuer, die eine uebergebene Grenze haelt statt der Editorgrenze. Sie
 //! pruefen die Grenze in ihren drei Lagen und drei der vier Werte von
-//! `Lesehindernis`. **Der Deskriptormangel wird hier nicht geprueft**: er
-//! braucht eine Kindprobe unter `ulimit -n 64`, weil `cargo test` sonst die
-//! angehobene Grenze der Sitzung erbt, und er steht deshalb bei der Probe des
-//! Durchlaufs.
+//! `Lesehindernis`. **Der Deskriptormangel steht seit dem 260908 auch hier**,
+//! naemlich als Kindprobe unter `ulimit -n 64` fuer `datei::lesen`; die Grenze
+//! muss abgesenkt sein, weil `cargo test` sonst die angehobene Grenze der
+//! Sitzung erbt. Fuer `bis_zur_grenze_lesen` steht sie weiterhin bei der Probe
+//! des Durchlaufs.
 //!
 //! **Drei weitere stehen seit der Runde 16 daneben**, und auch sie gehoeren zu
 //! keinem der zwoelf Faelle: `datei::anlesen` ist die dritte Huelle um dieselbe
@@ -70,7 +71,10 @@ use krk_core::text::datei::{Lesehindernis, Textstand, Unlesbarkeit};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
-use gemeinsam::{Pruefordner, mit_zeitschranke, rechtesperre_haelt_oder_abbruch};
+use gemeinsam::{
+    Pruefordner, kind_mit_deskriptorgrenze, kindauftrag, mit_zeitschranke,
+    rechtesperre_haelt_oder_abbruch,
+};
 
 /// Der Durchlauf von Hand: Byte fuer Byte, ohne die Rechnung des Index.
 ///
@@ -1114,7 +1118,11 @@ fn oeffnen_liefert_denselben_stand_wie_einlesen() {
 /// Der fuenfte Ausgang, den es nicht gibt: eine fehlende Datei ist kein eigener
 /// Wert, sondern das Feld `fehlt` an `KeinGueltigesZiel`. Die Probe haelt beide
 /// Haelften fest, denn allein daran haengt die Zusage, dass ein fehlender
-/// Zettel keine Meldung nach sich zieht.
+/// Zettel keine Meldung nach sich zieht. Dasselbe gilt seit dem 260908 fuer das
+/// zweite Feld `mangel`: es steht hier auf `false`, weil weder ein Ordner noch
+/// eine fehlende Datei ein Deskriptormangel ist. Gemessen wird der Mangel
+/// selbst in der Kindprobe unter `ulimit -n`, wie bei den zwei
+/// Nachbarlesewegen auch.
 #[test]
 fn der_befund_deckt_alle_vier_ausgaenge_und_spult_zurueck() {
     let ordner = Pruefordner::neu("befund");
@@ -1173,15 +1181,21 @@ fn der_befund_deckt_alle_vier_ausgaenge_und_spult_zurueck() {
     //    fehlende Datei steht nicht da.
     let unterordner = ordner.ordner("ein-ordner");
     match datei::lesen(&unterordner) {
-        Textstand::KeinGueltigesZiel { grund, fehlt } => {
+        Textstand::KeinGueltigesZiel {
+            grund,
+            fehlt,
+            mangel,
+        } => {
             assert!(!fehlt, "ein Ordner gilt als fehlend");
+            assert!(!mangel, "ein Ordner gilt als Deskriptormangel");
             assert!(!grund.is_empty(), "der Grund ist leer");
         }
         anderes => panic!("der Ordner kam als {anderes:?} zurueck"),
     }
     match datei::lesen(&ordner.unter("gibt-es-nicht.txt")) {
-        Textstand::KeinGueltigesZiel { fehlt, .. } => {
+        Textstand::KeinGueltigesZiel { fehlt, mangel, .. } => {
             assert!(fehlt, "die fehlende Datei gilt nicht als fehlend");
+            assert!(!mangel, "die fehlende Datei gilt als Deskriptormangel");
         }
         anderes => panic!("die fehlende Datei kam als {anderes:?} zurueck"),
     }
@@ -1376,4 +1390,94 @@ fn eine_benannte_roehre_ist_keine_datei_und_haelt_das_anlesen_nicht_an() {
         anlesen_mit_zeitschranke(&roehre, 1024, Duration::from_secs(5)),
         Err(Lesehindernis::KeineDatei)
     );
+}
+
+/// Die Deskriptorgrenze, unter der das Kind laeuft.
+///
+/// Dieselbe Zahl wie in `tests/verzeichnis.rs`, und aus demselben Grund: sie
+/// liegt unter dem, was ein aus dem Finder gestartetes Buendel ungefaehr
+/// bekommt, und weit unter der angehobenen Grenze einer Anmeldesitzung.
+const DESKRIPTORGRENZE: usize = 64;
+
+/// `lesen` trennt den Deskriptormangel von den uebrigen Fehlern.
+///
+/// **Die Trennung ist tragend und nicht bloss genauer** (`Lesehindernis`,
+/// Doc-Kommentar): `EMFILE` und `ENFILE` sagen etwas ueber den **Prozess** und
+/// nichts ueber die Datei. Bis zum 260908 warf `lesen` sie mit allem anderen in
+/// `KeinGueltigesZiel`, waehrend die zwei Nachbarlesewege sie trennten, und der
+/// Editor sagte dem Nutzer dann etwas ueber seine Datei
+/// (`shared/issues/260826-1223_*_lesen-trennt-den-deskriptormangel-nicht-*`).
+///
+/// **Unter `ulimit -n 64` und in einem Kindprozess**, aus demselben Grund wie
+/// bei den Proben des Durchlaufs: `cargo test` erbt sonst die angehobene Grenze
+/// der Anmeldesitzung, und die Probe behauptete den Mangel, statt ihn zu
+/// messen. Das Kind misst seine Grenze zuerst selbst.
+#[test]
+fn ein_deskriptormangel_kommt_bei_lesen_als_mangel_an() {
+    let ordner = Pruefordner::neu("lesen-mangel");
+    ordner.datei("zettel.txt", b"erste\nzweite");
+
+    kind_mit_deskriptorgrenze(
+        "ein Deskriptormangel des Prozesses wird zu einer Aussage ueber die Datei",
+        DESKRIPTORGRENZE,
+        "kind_liest_bei_deskriptormangel_einen_mangel",
+        ordner.pfad(),
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
+fn kind_liest_bei_deskriptormangel_einen_mangel() {
+    let Some(ordner) = kindauftrag() else {
+        return;
+    };
+    let zettel = ordner.join("zettel.txt");
+
+    // Ohne Mangel liest dieselbe Datei sauber; sonst pruefte die Probe unten
+    // womoeglich einen ganz anderen Fehlschlag.
+    match datei::lesen(&zettel) {
+        Textstand::Text(stand) => assert_eq!(stand, "erste\nzweite"),
+        anderes => panic!("die Textdatei kam als {anderes:?} zurueck"),
+    }
+
+    // Den Vorrat aufbrauchen und dabei messen, dass die abgesenkte Grenze
+    // gegriffen hat: ohne diese Zusicherung bestuende die Probe auch dann,
+    // wenn `ulimit` wirkungslos geblieben waere.
+    let mut gehalten = Vec::new();
+    while let Ok(offen) = fs::File::open(&zettel) {
+        gehalten.push(offen);
+        assert!(
+            gehalten.len() <= DESKRIPTORGRENZE * 4,
+            "die Grenze `ulimit -n {DESKRIPTORGRENZE}` hat nicht gegriffen"
+        );
+    }
+    assert!(
+        !gehalten.is_empty(),
+        "schon der erste Deskriptor war nicht zu bekommen"
+    );
+
+    match datei::lesen(&zettel) {
+        Textstand::KeinGueltigesZiel {
+            fehlt,
+            mangel,
+            grund,
+        } => {
+            assert!(mangel, "der Deskriptormangel kommt nicht als Mangel an");
+            assert!(!fehlt, "die vorhandene Datei gilt als fehlend");
+            assert!(!grund.is_empty(), "der Grund ist leer");
+        }
+        anderes => panic!("bei erschoepftem Vorrat kam {anderes:?} zurueck"),
+    }
+
+    // Und der Satz des Editors sagt es dem Nutzer.
+    let Err(abweisung) = datei::oeffnen(&zettel) else {
+        panic!("der Editor nimmt die Datei bei erschoepftem Vorrat an");
+    };
+    assert!(
+        abweisung.meldung().contains("keinen freien Dateizugriff"),
+        "der Satz des Editors spricht ueber die Datei statt ueber KRK: {}",
+        abweisung.meldung()
+    );
+
+    drop(gehalten);
 }

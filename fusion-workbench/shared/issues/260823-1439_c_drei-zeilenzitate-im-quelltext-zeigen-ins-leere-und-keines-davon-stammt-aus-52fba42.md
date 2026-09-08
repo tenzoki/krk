@@ -90,3 +90,38 @@ vom Datensatz vorgeschlagene Form gezogen, also Datei und Name statt Zeile.
 **Der Datensatz bleibt offen.** Die drei übrigen Zitate der Tafel stehen in
 `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/src/tasten/parser.rs` und
 `crates/krk-ui/src/hervorhebung.rs`; sie liegen außerhalb dieser Bahn und sind unangetastet.
+
+---
+
+## Abgleich 260908, und die Behebung: die Tafel ist abgearbeitet
+
+Jedes Zitat der Tafel einzeln gegen den heutigen Baum nachgeschlagen. Der Stand hat sich seit
+dem 260823 in zwei Zeilen geaendert, und beide Aenderungen sind hier eingetragen.
+
+- **`crates/krk-core/src/tasten/parser.rs`: schon abgetragen.** Der Modulkopf nennt heute
+  `crates/krk-ui/src/appkit/menue.rs` und `zeichen_der_taste` ohne Zeilenangabe — genau die
+  Form, die der Vorschlag verlangt.
+- **`crates/krk-core/src/tasten/belegung.rs`: behoben.** `menue.rs:322-342` ist durch
+  `menue.rs`, `zeichen_der_taste` ersetzt, mit dem Vermerk, dass die Zahl ins Leere zeigte.
+- **`crates/krk-ui/src/hervorhebung.rs`: behoben.** `leiste.rs:439-442` ist durch
+  `crate::appkit::leiste`, `Leiste::bauen`, am `setStyle` ersetzt; dort steht der Satz „das
+  Erscheinungsbild von Hell und Dunkel nachzubauen" wortgleich.
+- **`xtask/src/release.rs` und `xtask/src/veroeffentlichung.rs`: am 260908 in der Bahn
+  `xtask` behoben**, siehe den Nachtrag darueber.
+- **`crates/krk-ui/src/appkit/tabelle.rs`: die fuenfte Zeile traegt nicht mehr.** Die Tafel
+  fuehrt sie als die eine, die haelt („ein Zitat, das auf einen selten angefassten Abschnitt
+  zeigt, haelt jahrelang"); am 260908 steht auf `krk-bench/src/messen.rs:1199` ein
+  `pruefordner_pruefen(ordner, erwartet)?;` und nicht mehr die kopflose Strecke. **Damit ist
+  keines der fuenf Zitate mehr richtig, und die Gegenprobe der Tafel ist selbst widerlegt.**
+  Mitbehoben: die Stelle nennt jetzt den Modulkopf „Die kopflose Messstrecke" und
+  `Messreihe::fahren`.
+
+`grep -rn "\.rs:[0-9]" crates/ --include='*.rs'` liefert danach im eigenen Baum keine
+Zeilenangabe mehr; was uebrig bleibt, sind Verweise in Fremdkisten (`objc2-app-kit-0.3.2`,
+`syntect-5.3.0`, `gix`), und die haengen an ihrer Fassung und verschieben sich unter einem
+festen `Cargo.lock` nicht — so grenzt der Datensatz sie ausdruecklich aus.
+
+Resolved: 260908 — `crates/krk-core/src/tasten/belegung.rs`,
+`crates/krk-ui/src/hervorhebung.rs`, `crates/krk-ui/src/appkit/tabelle.rs`; die zwei Stellen
+in `xtask/` waren schon abgetragen, `parser.rs` ebenso. Die Zeilenzahl ist ueberall durch den
+Namen der Funktion oder des Abschnitts ersetzt.

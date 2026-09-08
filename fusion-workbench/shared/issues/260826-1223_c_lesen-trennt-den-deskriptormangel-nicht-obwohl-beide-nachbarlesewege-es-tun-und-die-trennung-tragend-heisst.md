@@ -51,3 +51,38 @@ Verwandt und nicht dasselbe: `shared/issues/260816-1932_*_ein-deskriptormangel-b
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
 
 Also seen: 260908-0800 by coder — am Baum nachgesehen: die Haelfte am Notizzettel liegt ganz in `krk-core` (`Textstand` kommt in `krk-ui` an keiner Stelle vor), die Haelfte am Editor nicht. Jeder Weg zu einem anderen Satz fuehrt ueber `Abweisung`, und `Abweisung::KeinGueltigesZiel { pfad, grund }` wird in `crates/krk-ui/src/appkit/editor.rs` gebaut: ein Feld daneben bricht dort den Bau, ein vierter Wert laesst die Probe `die_drei_abweisungsgruende_tragen_drei_verschiedene_saetze` still mit ihrem Namen und ihrer Deckung zurueck. Welche der beiden Gestalten es wird, laesst dieser Datensatz offen — er nennt das Feld ausdruecklich fuer `Textstand` und sagt zum Uebergang an `Abweisung` nichts —, und die Wahl entscheidet zugleich, was in `krk-ui` nachzuziehen ist. Deshalb in der Bahn „nur `krk-core`" nicht behoben.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund bestand unveraendert.** `lesen` warf jeden Fehler ausser `NotFound` in
+`Textstand::KeinGueltigesZiel { fehlt: false }`, waehrend `bis_zur_grenze_lesen` und
+`anlesen` beide ueber `sys::ist_deskriptormangel` trennten.
+
+Gebaut ist der Vorschlag, ohne fuenften `Textstand`-Wert:
+
+- **`Textstand::KeinGueltigesZiel` traegt das Feld `mangel: bool`**, gespeist aus derselben
+  einen Regel `crate::verzeichnis::sys::ist_deskriptormangel`; eine zweite Fassung der Frage
+  entsteht nicht. Die Begruendung steht am Feld, neben der von `fehlt`.
+- **`Abweisung::KeinGueltigesZiel` traegt es ebenfalls**, und `Abweisung::meldung`
+  verzweigt darueber — **ausgeschrieben in zwei Zweigen und nicht ueber ein `if`**, damit der
+  Uebersetzer auch hier anhaelt, wenn das Feld einmal mehr als zwei Werte traegt. Der Satz
+  lautet jetzt: „… laesst sich gerade nicht oeffnen: KRK hat keinen freien Dateizugriff mehr
+  (…); nach dem Ende der laufenden Suche noch einmal versuchen."
+- **Der Notizzettel unterscheidet mit.** `Zugang::text_laden` bildet den Mangel weiter auf
+  `Grund::NichtLesbar` ab — nichts gelesen heisst nichts zu sichern, bei einem Mangel so wenig
+  wie bei einem fehlenden Leserecht —, aber der Grundtext nennt jetzt KRK statt die Datei. Die
+  Tafel der Ausgaenge am Doc-Kommentar fuehrt die Zeile.
+
+**Gemessen und nicht behauptet:** `ein_deskriptormangel_kommt_bei_lesen_als_mangel_an`
+(`crates/krk-core/tests/text.rs`) faehrt eine Kindprobe unter `ulimit -n 64` nach dem Muster
+der Proben des Durchlaufs. Das Kind liest die Datei erst sauber, braucht dann den Vorrat auf
+— und misst dabei, dass die abgesenkte Grenze wirklich gegriffen hat —, und prueft danach
+beide Enden: `lesen` liefert `mangel: true` mit `fehlt: false`, und der Satz aus
+`Abweisung::meldung` spricht ueber KRK.
+
+Resolved: 260908 — `crates/krk-core/src/text/datei.rs` (`mangel` an beiden Aufzaehlungen,
+`lesen`, `oeffnen`, `meldung`), `crates/krk-core/src/ablage/mod.rs` (`text_laden`),
+`crates/krk-core/tests/text.rs` (Kindprobe unter `ulimit -n 64`),
+`crates/krk-ui/src/appkit/editor.rs` (Probenstelle).

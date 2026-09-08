@@ -531,6 +531,28 @@ fn standardordner() -> PathBuf {
 /// (`issues/260813-0540_*_der-messmodus-schreibt-die-sitzung-ohne-sitzungsrecht.md`).
 /// Ein fehlender Wert ist eine Abmachung; ein verlangtes Argument ist eine
 /// Eigenschaft der Typen.
+///
+/// # Was der Uebersetzer davon haelt, und was der Aufrufer halten muss
+///
+/// **Er haelt „war Halterin, als der Schreiber entstand", und das ist weniger
+/// als „nur die Halterin schreibt".** Das [`Sitzungsrecht`] wird den beiden
+/// Erzeugern nur **geliehen**; der Schreiber traegt keine Lebenszeit und
+/// ueberlebt deshalb ein `drop(recht)`, ohne dass der Bau etwas meldete. Die
+/// Spanne, in der geschrieben wird, deckt der Uebersetzer nicht ab.
+///
+/// **Das Recht gehoert deshalb mindestens so lange gebunden wie der
+/// Schreiber**, und das zu tun ist Sache des Aufrufers. Alle drei im Baum tun
+/// es: der Anwendungsdelegierte legt es in einer `OnceCell` ab und haelt es bis
+/// zum Prozessende, `Messplan::herstellen` bis zum Ende der Funktion, und die
+/// Probe `schreiber_mit_recht` gibt es absichtlich mit zurueck. Das
+/// `#[must_use]` an [`Sitzungsrecht`] erinnert allein daran, es ueberhaupt zu
+/// binden, und nicht daran, wie lange.
+///
+/// Die Lebenszeit mitzufuehren (`Sitzungsschreiber<'a>` mit `recht: &'a
+/// Sitzungsrecht`) waere der Weg, der die volle Zusage vom Uebersetzer halten
+/// liesse; ob die zwei Felder eines `ivars` einander so borgen koennen, ist
+/// ungemessen. Der Befund dazu ist
+/// `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0719_*`.
 #[derive(Debug)]
 pub struct Sitzungsschreiber {
     takt: Duration,

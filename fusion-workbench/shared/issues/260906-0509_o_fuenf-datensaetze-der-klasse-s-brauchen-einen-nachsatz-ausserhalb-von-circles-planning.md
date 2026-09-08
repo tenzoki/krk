@@ -49,3 +49,28 @@ irgendwer gewählt hätte.
 Schreibfläche; die Form des Nachsatzes steht fest und ist in den 24 geschlossenen Fällen
 gleichlautend angewandt. Für die letzten drei ist zu entscheiden, ob ein Nachsatz unter einer
 Directive dieselbe Zutat ist wie einer unter einem Spec, oder ob der Shaper sie fahren muss.
+
+---
+Stand 260908-1552: **die zwei Ziele unter `shared/planning/` sind erledigt, die drei unter
+`## Directive` nicht, und der Datensatz bleibt deshalb offen.**
+
+**Zeile 1 der Tafel** (`260813-0642_*_zwei-hingenommene-verluste-…`) ist geschlossen. Der
+Nachsatz steht am 260908-1539 im Spec der Runde 7,
+`260813-0053_*_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md`, Abschnitt
+`## Randbedingungen`, unter dem letzten Aufzaehlungspunkt: beide Verluste namentlich, mit der
+Begruendung, warum keiner der zwei Auswege der Randbedingung greift.
+
+**Zeile 2** (`260821-1221_*_das-abnahmekriterium-c6-3-…`) ist am 260908 auf einem anderen Weg
+geschlossen worden, ohne Nachsatz am Spec: der Quellbaum ist nachgemessen, die Zusage des Plans
+haelt, und der Datensatz selbst traegt die Begruendung, warum C6.3 und die drei Aufzeichnungen
+ihren Wortlaut behalten.
+
+**Die Zeilen 3 bis 5 haengen unveraendert an der Zustaendigkeitsfrage**, und die ist jetzt als
+Nutzerfrage abgelegt statt in diesem Absatz zu stehen:
+`260908-1608_*_gilt-die-nachsatzregel-vom-260906-auch-unter-dem-abschnitt-directive-eines-circle-datensatzes.md`.
+Sie fuehrt drei Wege und empfiehlt keinen; was sie entscheidbar macht, ist die Auskunft, ob ein
+Shaper-Lauf im Modus `portfolio-activation` an einem geschlossenen Circle-Datensatz ueberhaupt
+moeglich ist.
+
+Dieser Datensatz schliesst, sobald jene Frage beantwortet und ihre Antwort an den drei Stellen
+ausgefuehrt ist.

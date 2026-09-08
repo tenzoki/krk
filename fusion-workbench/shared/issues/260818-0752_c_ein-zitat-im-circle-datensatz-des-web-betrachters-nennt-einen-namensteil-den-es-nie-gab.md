@@ -63,3 +63,21 @@ Umgebung richtig.
 Der breite Fix bleibt offen und ist derselbe, den `260818-0710` unter `## Fix` verlangt: eine
 Pruefung, die jedes Zitat gegen den Dateibestand aufloest, Namensteil eingeschlossen. Der
 Fehlertyp hat jetzt drei Belege, und keiner davon waere ueber den Marker allein gefunden worden.
+
+---
+Resolved: Die eine Zeile ist am 260908-1539 berichtigt (`_d_circle.md`, Abschnitt
+`### 4. Die Messreihe hinter der dritten offenen Frage ist schlechter geworden`). Der
+Namensteil lautet jetzt `…das-zweieinhalbfache-und-verfehlt-l7-frueher`, und der
+Speichervorsatz `circles/260812-1000-…/issues/` ist dabei entfallen, weil
+`rules/fusion-workbench-conventions.md` `## Filename Patterns` ein Zitat mit
+Speicherabschnitt als Verstoß führt. Aufgelöst: `find fusion-workbench -name
+'260812-2133_*_merkzeichen-einloesen-*.md'` liefert genau einen Träger,
+`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-2133_c_merkzeichen-einloesen-kostet-bei-tiefer-verschachtelung-das-zweieinhalbfache-und-verfehlt-l7-frueher.md`.
+
+Der Circle trägt seit dem 260821-2202 `_d_` statt `_a_`; die Sorge des Datensatzes um den
+Abschnitt `## Grounding snapshot` bei einer Aktivierung ist damit gegenstandslos, der tote
+Zeiger war es nicht. Das Wort „offen" hinter dem Zitat ist inzwischen falsch — der zitierte
+Datensatz steht auf `_c_` — und ist als eigener Befund abgelegt
+(`260908-1544_*_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md`).
+Der breite Fix bleibt, was dieser Datensatz sagt, und hängt an
+`260818-0807_*_vierzehn-tote-zeiger-stehen-ausserhalb-dieser-runde-und-zwei-in-der-sitzungsstandsdatei.md`.

@@ -43,3 +43,24 @@ done
 ## Ablage
 
 Gemeinsamer Speicher, und die Herkunftsregel entscheidet das ohne Ermessen: der Befund ist in einem Abgleich ohne aktiven Circle entstanden, also nicht aus der Directive der Runde 10, in deren Spec er sitzt. Dass sein Gegenstand in einem Circle liegt, ist nach derselben Regel kein Ablagegrund — Reichweite wird zitiert und nicht abgelegt.
+
+---
+Stand 260908-1539: **dieser Datensatz bleibt offen, und das ist der beschlossene Zustand und
+keine ausstehende Arbeit.**
+
+Der Nutzer hat am 260907-1301 zu
+`260906-0509_*_deckt-die-nachsatzregel-auch-eine-umstellung-im-bestandstext-ab.md`
+Moeglichkeit 1 gewaehlt: die Nachsatzregel vom 260906 deckt eine **Umstellung** im
+Bestandstext nicht. Eine Ueberschrift umzubenennen oder zwei Abschnitte zusammenzuziehen ist
+ein Eingriff in den Wortlaut, und die Regel sagt „nicht im Text" ohne Ausnahme. Der Gewinn ist
+eine Regel, die nach dem Ort entscheidbar bleibt; der Preis ist genau dieser eine offene
+Datensatz.
+
+Der Nachsatz, den die vierte Behebungsschleife am 260906 in den Spec der Runde 10 gesetzt hat,
+nennt beide Abschnitte und ihre Stelle. Wer maschinell nach dem Abgleichsstand sucht, findet
+ueber ihn den Hinweis auf den zweiten Block. Das ist weniger als eine Behebung und mehr als
+nichts.
+
+Der Befund selbst besteht unveraendert: die Datei traegt weiter zwei Ueberschriften
+`## Reconciliation Log`, und ein Muster, das beim ersten Treffer abbricht, sieht den zweiten
+Block nicht.

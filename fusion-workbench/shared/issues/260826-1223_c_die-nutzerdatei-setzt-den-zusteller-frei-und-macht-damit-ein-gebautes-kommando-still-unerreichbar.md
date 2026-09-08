@@ -54,3 +54,66 @@ Verwandt und **nicht** dasselbe: `shared/issues/260814-0656_*_eine-neue-funktion
 Gefunden bei der Vollbaum-Durchsicht R4 an HEAD `004ff72`.
 
 Also seen: 260826-1442 by coderev — die drei Oberflächen zeigen den freigesetzten Befehl verschieden: Belegungsansicht „(Kürzel des Menüs)“ (`belegungsmodell.rs:530-536`, sachlich falsch, das Menü stellt ihn nicht zu), Markdown „(von KRK nicht eingeordnet)“ (`belegungsausgabe.rs:237,357`), Hauptmenü grau ohne Kommando (`menuemodell.rs:295-300`); keine sagt, dass der Befehl unerreichbar ist.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund bestand unveraendert**, und eine Probe im Baum hat den Weg als richtiges
+Verhalten gemessen: `der_nachschlag_haengt_nicht_an_der_reihenfolge_der_eintraege`
+(`crates/krk-core/tests/belegung.rs`) gab `fenster_schliessen` in ihrer Nutzerdatei ein
+`gehalten_von = "menue"` und hielt anschliessend fest, dass `kommando()` `None` liefert und
+der Nachschlag `Unbelegt` sagt — genau die Wirkung, die dieser Datensatz als Defekt fuehrt.
+Die Auslieferungsbelegung gibt `fenster_schliessen` ausdruecklich **keinen** Zusteller
+(`resources/default-keymap.toml`, „Sie traegt deshalb kein `gehalten_von`").
+
+**Gebaut ist der Schnitt des Datensatzes, aber enger als er ihn vorschlaegt: allein
+`gehalten_von`.** `Belegung::bauen` holt die Wortschatz-Funktion einmal an Ort und Stelle und
+nimmt den Zusteller von dort; `name` und `reserviert_fuer` kommen weiter aus der Nutzerdatei.
+
+**Die Einengung ist am Baum begruendet und nicht Vorsicht.** Der Datensatz nennt alle drei
+Felder als „billigsten Schnitt", weil `bauen` die Wortschatz-Funktion ohnehin zur Hand hat;
+gemessen an der Wirkung sind sie aber nicht dieselbe Sache. Keines von beiden entscheidet, ob
+ein Befehl ankommt: `name` ist die Beschriftung, `reserviert_fuer` haengt allein einen Zusatz
+an den Text der Belegungsansicht (`krk-ui/src/belegungsmodell.rs`, `funktionstext`) — und
+dessen Doc-Kommentar rechnet **ausdruecklich** mit einer `keymap.toml` aus einer aelteren
+Fassung, die das Feld noch traegt. Beide aus dem Wortschatz zu nehmen naehme dem Nutzer eine
+Umbenennung, die niemandem schadet, und verwuerfe still den Vorbehalt einer alten Datei. Der
+erste Anlauf hat das getan und dabei zwei Proben rot gemacht, darunter die zur Maskierung des
+senkrechten Strichs, die einen Namen aus der Nutzerdatei braucht, um ueberhaupt einen Strich
+in die Tabelle zu bekommen.
+
+**Zwei Proben halten es.** Neu ist
+`die_nutzerdatei_setzt_weder_zusteller_noch_name_noch_vorbehalt`: eine Datei, die `kopieren`
+einen fremden Namen, ein `reserviert_fuer` und ein `gehalten_von = "menue"` gibt, kommt mit
+einem Kommando heraus, behaelt aber ihren Namen, ihren Vorbehalt und **ihre** Taste `ctrl+c`
+— die letzte Zusicherung ist noetig, sonst waere mit dieser Aenderung die Zusage gefallen,
+dass die Datei jede Kombination frei verteilen darf. Die vorhandene Reihenfolgeprobe misst die
+vierte Stelle der Zustellerregel jetzt an `text_alles_auswaehlen`, das `gehalten_von = "menue"`
+ab Werk traegt, und haelt daneben fest, dass `fenster_schliessen` trotz des Eintrags in der
+Datei erreichbar bleibt.
+
+**Eine Folge, die ueber die Kiste hinausgeht und mitgebaut ist.** Der Auffangzweig von
+`belegungsausgabe::wirkung` (`krk-ui`) war ueber genau diesen Weg erreichbar und ist es nicht
+mehr: kein Eintrag der Auslieferungsbelegung traegt einen Zusteller **und** eine Kennung aus
+`Kommando::KENNUNGEN`. Der Zweig bleibt stehen — der `match` laeuft ueber `&str` und braucht
+ohnehin einen Auffangzweig —, und was ihn unerreichbar haelt, ist jetzt gemessen statt
+verabredet: die Probe `keine_ausgelieferte_funktion_traegt_zusteller_und_kommando` ersetzt
+`eine_kennung_mit_kommando_und_zusteller_landet_im_auffangzweig` und wird rot, sobald eine
+spaetere Runde einem gebauten Befehl ein `gehalten_von` gibt.
+
+**Der Modulkopf sagt es jetzt auch.** Der Satz „sie darf jede Kombination frei verteilen, aber
+nur auf Funktionen, die KRK kennt" hat einen Absatz bekommen, der den Zusteller als Duldung
+beim Lesen einordnet und daneben ausschreibt, warum `name` und `reserviert_fuer` bleiben, wo
+sie sind.
+
+**Was der Datensatz daneben festhaelt, bleibt offen:** dass die drei Oberflaechen einen
+freigesetzten Befehl verschieden und keine ihn als unerreichbar zeigt
+(`Also seen: 260826-1442`). Nach dieser Behebung ist der Fall ueber die Nutzerdatei nicht mehr
+erreichbar; die drei Anzeigen gelten weiter fuer die Befehle, die ab Werk einen Zusteller
+tragen, und die Frage, wie sie einen solchen Befehl benennen, ist eine eigene.
+
+Resolved: 260908, `crates/krk-core/src/tasten/belegung.rs` — `bauen` nimmt `gehalten_von` aus
+dem Wortschatz, `name` und `reserviert_fuer` bleiben Sache der Nutzerdatei; Modulkopf
+nachgezogen; zwei Proben in `crates/krk-core/tests/belegung.rs` und eine in
+`crates/krk-ui/src/belegungsausgabe.rs`.

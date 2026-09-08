@@ -29,3 +29,30 @@ Beide Stellen in `tests/verzeichnis.rs` auf `gemeinsam::mit_zeitschranke` ziehen
 ## Was geprueft ist
 
 Gelesen am Baum `9c02863`; `git grep -n 'recv_timeout' 9c02863 -- crates` liefert die Stellen.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund bestand unveraendert.** Beide Stellen in `crates/krk-core/tests/verzeichnis.rs`
+trugen ihre eigene Bauart, und der Satz an der Handform begruendete sie weiter mit dem
+Fehlen einer gemeinsamen Fassung.
+
+Gebaut ist, was der Datensatz nennt:
+
+- **`inhalt_mit_zeitschranke` bleibt als duenne Huelle** und ruft
+  `gemeinsam::mit_zeitschranke`; Kanal, Faden und `recv_timeout` sind fort. Sie bleibt
+  stehen, weil sie den Pruefling **vorbindet** — Pfad, Muster und Grenze — und ihre fuenf
+  Rufer sonst je vier Zeilen mehr trugen.
+- **Die Handform in `eine_roehre_haelt_die_frage_nach_dem_verweisziel_nicht_an` ist fort**
+  und geht ueber `mit_zeitschranke("verweisziel::bestimmen", …)`.
+- **Der Satz an jener Probe ist gestrichen.** An seiner Stelle steht, dass die Schranke seit
+  dem 260908 aus der gemeinsamen Fassung kommt und dass der genannte Preis eine Zeile ist —
+  die Probe fuenfzehn Zeilen darunter zahlte ihn schon.
+
+`grep -n 'recv_timeout' crates/krk-core/tests/` liefert danach keine Fundstelle mehr; die
+Fassung in `crates/krk-ui/src/vorschaumodell.rs` liegt in der anderen Kiste und bleibt, wie
+der Datensatz es vorsieht.
+
+Resolved: 260908, `crates/krk-core/tests/verzeichnis.rs` — beide Stellen auf
+`gemeinsam::mit_zeitschranke` gezogen, die ueberholte Begruendung gestrichen.

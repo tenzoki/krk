@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** closed
 **Filed by:** orchestrator
-**Active spec/plan:** shared/planning/260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md
+**Active spec/plan:** 260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md (seit dem Aufräumlauf 260819-1613 unter `archive/`)
 **Active session history:** shared/history/260818-1117-orchestrator-session.md
 
 ---

@@ -67,3 +67,36 @@ Datei ohne AppKit, in der schon zwei solche Fallunterscheidungen stehen.
 Die Zeile „Betroffen" ist damit zu lesen als `crates/krk-ui/src/spalten.rs` und
 `crates/krk-core/src/verzeichnis/sortierung.rs`. Der Datensatz selbst bleibt unverändert; er hält
 den Stand vom 260812-0415 fest.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Die Praemisse des Titels traegt nicht mehr.** `Spalte` fuehrt seit der Git-Runde fuenf
+Werte (`crates/krk-ui/src/spalten.rs`, `Spalte::Marke`), `Schluessel` weiter vier
+(`crates/krk-core/src/verzeichnis/sortierung.rs`); es sind also nicht mehr "dieselben vier
+Dinge". Die Markenspalte ordnet nach nichts, und das ist ausdruecklich entschieden (A12 der
+Git-Runde, begruendet am Dokumentkommentar von `Spalte::Marke`): ein Schluessel, der auf
+einen nachgetragenen Befund wartete, ordnete die Liste beim Eintreffen des Befunds neu.
+**Die teure Antwort des Datensatzes ist damit vom Baum erledigt** — genau die Spalte, die
+sie unmoeglich machte, steht heute da.
+
+**Die billige Antwort ist gebaut, an einer Stelle, die der Datensatz nicht vorhersehen
+konnte.** Sie steht im Probenmodul von `spalten.rs` und nicht in der Kiste, weil `krk-ui`
+ein reines Binaerziel ist: eine `Spalte::schluessel`-Zuordnung haette zur Laufzeit keinen
+Rufer (die vier Sortierbefehle nennen ihren `Schluessel` unmittelbar,
+`appkit/tabelle.rs`), und eine ungerufene Funktion macht `-D warnings` rot. Gebaut sind
+deshalb `schluessel_der_spalte` als ausgeschriebene Fallunterscheidung ohne Auffangzweig
+und zwei Proben darueber:
+
+- `jeder_sortierschluessel_gehoert_zu_genau_einer_spalte` — ein fuenfter `Schluessel` ohne
+  Spalte macht sie rot;
+- `genau_die_markenspalte_ordnet_nach_nichts` — eine zweite Spalte ohne Schluessel macht sie
+  rot.
+
+Eine sechste Spalte haelt schon den Bau von `schluessel_der_spalte` an. Damit sind beide
+Richtungen gehalten, die der Datensatz als ungehalten benennt.
+
+Resolved: 260908, `crates/krk-ui/src/spalten.rs` — `schluessel_der_spalte` im Probenmodul
+als vollstaendige Fallunterscheidung, dazu die zwei Proben ueber beide Richtungen; die
+teure Antwort ist vom Baum ausgeschlossen.

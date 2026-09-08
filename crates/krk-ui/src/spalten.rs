@@ -176,6 +176,8 @@ impl Spalte {
 
 #[cfg(test)]
 mod tests {
+    use krk_core::verzeichnis::Schluessel;
+
     use super::*;
 
     #[test]
@@ -202,5 +204,73 @@ mod tests {
             .filter(|spalte| spalte.beschreibbar())
             .collect();
         assert_eq!(beschreibbare, vec![Spalte::Name]);
+    }
+
+    /// Wonach die Spalte ordnet, oder nichts.
+    ///
+    /// **Steht im Probenmodul und nicht in der Kiste**, weil sie zur Laufzeit
+    /// keinen Rufer haette: die vier Sortierbefehle nennen ihren
+    /// [`Schluessel`] unmittelbar
+    /// (`appkit::tabelle::Tabelle::kommando_ausfuehren`), und `krk-ui` ist ein
+    /// reines Binaerziel, in dem eine ungerufene Funktion den Bau unter
+    /// `-D warnings` rot macht. Der Zweck ist der Uebersetzerhalt: die
+    /// Fallunterscheidung ist ausgeschrieben und hat keinen Auffangzweig, also
+    /// haelt eine sechste Spalte den Probenbau an und erzwingt die Antwort, ob
+    /// nach ihr geordnet wird.
+    const fn schluessel_der_spalte(spalte: Spalte) -> Option<Schluessel> {
+        match spalte {
+            Spalte::Name => Some(Schluessel::Name),
+            Spalte::Groesse => Some(Schluessel::Groesse),
+            Spalte::Geaendert => Some(Schluessel::Geaendert),
+            Spalte::Typ => Some(Schluessel::Typ),
+            // Nach der Git-Marke wird nicht sortiert (A12 der Git-Runde); die
+            // Begruendung steht am Dokumentkommentar von [`Spalte::Marke`].
+            Spalte::Marke => None,
+        }
+    }
+
+    /// Die Spalten und die Sortierschluessel bleiben aneinander.
+    ///
+    /// Zwei Aufzaehlungen beschreiben dieselbe Sache aus zwei Richtungen, und
+    /// **der Uebersetzer haelt nur je eine fuer sich**: er meldet die neue
+    /// Variante an jeder Fallunterscheidung darueber, sagt aber nichts darueber,
+    /// dass die andere Aufzaehlung nachzuziehen waere. Diese Probe schliesst
+    /// beide Richtungen:
+    ///
+    /// - ein fuenfter [`Schluessel`] ohne Spalte laesst sie rot werden, weil
+    ///   ihn keine Spalte mehr nennt;
+    /// - eine sechste [`Spalte`] haelt schon den Bau von
+    ///   `schluessel_der_spalte` an.
+    ///
+    /// Der Befund dazu ist
+    /// `circles/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0415_*`.
+    #[test]
+    fn jeder_sortierschluessel_gehoert_zu_genau_einer_spalte() {
+        for schluessel in Schluessel::ALLE {
+            let spalten: Vec<Spalte> = Spalte::ALLE
+                .into_iter()
+                .filter(|spalte| schluessel_der_spalte(*spalte) == Some(schluessel))
+                .collect();
+            assert_eq!(
+                spalten.len(),
+                1,
+                "{schluessel:?} gehoert zu {spalten:?} statt zu genau einer Spalte"
+            );
+        }
+    }
+
+    /// Genau die Markenspalte ordnet nach nichts.
+    ///
+    /// Die Gegenrichtung zur Probe darueber: sie haelt fest, dass die
+    /// Ausnahme eine einzige ist und welche. Eine zweite Spalte ohne
+    /// Sortierschluessel ist eine bewusste Entscheidung und laesst diese Probe
+    /// rot werden, statt still durchzugehen.
+    #[test]
+    fn genau_die_markenspalte_ordnet_nach_nichts() {
+        let ohne: Vec<Spalte> = Spalte::ALLE
+            .into_iter()
+            .filter(|spalte| schluessel_der_spalte(*spalte).is_none())
+            .collect();
+        assert_eq!(ohne, vec![Spalte::Marke]);
     }
 }

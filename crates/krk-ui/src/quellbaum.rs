@@ -108,6 +108,77 @@ pub(crate) fn quelldateien() -> Vec<(String, String)> {
     gefunden
 }
 
+/// Die Codezeilen einer Datei, also alles ausser den Kommentarzeilen.
+///
+/// **Die eine Fassung dieses Filters in dieser Kiste.** Er stand bis zum 260908
+/// achtmal eingesetzt da — siebenmal in den Zaehlproben von
+/// [`crate::appkit::vorschau`], einmal im Pruefmodul von
+/// [`crate::appkit::betrachter`] und einmal in [`aufrufstellen`] hier —, und
+/// zwei eingesetzte Fassungen desselben Filters driften: wer den einen um
+/// Blockkommentare erweitert, erweitert den anderen nicht, und eine Probe sieht
+/// dann Zeilen, die die andere nicht sieht
+/// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_der-variantenleser-*`).
+///
+/// **Was er nicht sieht:** ein Blockkommentar `/* … */` und eine Kommentarzeile
+/// hinter Code (`let x = 1; // dazu`). Beide Formen kennt dieser Baum nicht;
+/// `rustfmt` bricht keine Zeile so um, und die Bauanleitung im Modulkopf
+/// verlangt, die verbleibende Blindheit zu benennen statt sie zu ueberschreiben.
+pub(crate) fn codezeilen(inhalt: &str) -> impl Iterator<Item = &str> {
+    inhalt
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+}
+
+/// Die Varianten einer Aufzaehlung ohne Daten, aus dem Quelltext gelesen.
+///
+/// Gelesen wird ab `pub enum <name> {` bis zur schliessenden Klammer am
+/// Zeilenanfang; Leer-, Kommentar- und Attributzeilen fallen heraus, und von
+/// jeder verbleibenden Zeile bleibt, was vor dem Komma steht.
+///
+/// **Die eine Fassung dieser Lesart in dieser Kiste**, und die Doppelung, gegen
+/// die sie steht, war eine echte: bis zum 260908 stand sie zweimal eingesetzt
+/// da, im Pruefmodul von [`crate::appkit::betrachter`] und in
+/// `kommandos::zulaessigkeit::jeder_wirkungsbereich_hat_einen_stellvertreter`
+/// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_der-variantenleser-*`).
+///
+/// **Die anerkannte Kernfassung ist `varianten_der_aufzaehlung` in
+/// `krk-core/tests/gemeinsam/mod.rs`**, und beide tragen dieselbe Lesart. Sie
+/// zusammenzulegen geht nicht: `krk-ui` hat kein Bibliotheksziel, also erreicht
+/// kein Testziel des Kerns dieses Modul, und `tests/gemeinsam` gehoert den
+/// Probenzielen des Kerns. Wer die eine Lesart aendert — um Varianten mit Daten
+/// etwa, oder um `#[doc]`-Zeilen —, aendert die andere mit.
+///
+/// **Die Nadel steht zusammengesetzt da**, wie der Modulkopf es verlangt: diese
+/// Datei liegt in dem Baum, den [`quelldateien`] liest, und ein `pub enum` als
+/// ein Stueck waere eine Fundstelle fuer jede Zaehlprobe darueber.
+pub(crate) fn varianten(inhalt: &str, name: &str) -> Vec<String> {
+    // **Mit und ohne `pub`, wie die Kernfassung seit dem 260908**: die
+    // Sichtbarkeit sagt, wer die Aufzaehlung sehen darf, und nichts darueber,
+    // ob eine Liste daneben vollstaendig zu halten ist.
+    let koepfe = [
+        format!(concat!("pub ", "enum {} {{"), name),
+        format!(concat!("", "enum {} {{"), name),
+    ];
+    let varianten: Vec<String> = inhalt
+        .lines()
+        .skip_while(|zeile| !koepfe.iter().any(|kopf| zeile == kopf))
+        .skip(1)
+        .take_while(|zeile| *zeile != "}")
+        .map(str::trim)
+        .filter(|zeile| !zeile.is_empty() && !zeile.starts_with("//") && !zeile.starts_with("#["))
+        .map(|zeile| zeile.trim_end_matches(',').to_owned())
+        .collect();
+    // Leer laufen kann sie nicht, und das ist dieselbe Vorkehrung, die die
+    // Kernfassung traegt: ein verschobener oder umbenannter Block liesse die
+    // rufende Probe sonst still bestehen.
+    assert!(
+        !varianten.is_empty(),
+        "die Aufzaehlung {name} steht nicht in Spalte 0 im gelesenen Quelltext; \
+         umbenannt oder verschoben?"
+    );
+    varianten
+}
+
 /// Zaehlt die Aufrufstellen einer Funktion in einer Datei, unabhaengig davon,
 /// **wie** der Aufruf geschrieben ist.
 ///
@@ -132,9 +203,7 @@ pub(crate) fn quelldateien() -> Vec<(String, String)> {
 /// Quelltext restlos dicht ist.
 pub(crate) fn aufrufstellen(inhalt: &str, name: &str) -> usize {
     let nadel = format!("{name}(");
-    inhalt
-        .lines()
-        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+    codezeilen(inhalt)
         .map(|zeile| {
             zeile
                 .match_indices(&nadel)
@@ -179,7 +248,43 @@ fn einsammeln(
 
 #[cfg(test)]
 mod tests {
-    use super::aufrufstellen;
+    use super::{aufrufstellen, codezeilen, quelldateien};
+
+    /// Der Aufzaehlungsleser steht in dieser Kiste genau einmal, naemlich in
+    /// [`super::varianten`].
+    ///
+    /// **Gesucht wird der Gegenstand und nicht der Name**, wie die
+    /// Bauanleitung im Modulkopf es verlangt: was einen Aufzaehlungsleser
+    /// ausmacht, ist der Abbruch am schliessenden `}` einer Zeile, also
+    /// `take_while` ueber `zeile`. Eine zweite Fassung unter anderem Namen
+    /// faellt damit genauso auf wie eine Abschrift — und genau zwei Abschriften
+    /// hat diese Probe zu spaet gefunden
+    /// (`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-1046_*_der-variantenleser-*`).
+    ///
+    /// **Die Nadel steht zusammengesetzt da**, sonst faende die Probe die
+    /// Zeile, mit der sie sich selbst beschreibt.
+    ///
+    /// **Was sie nicht findet:** ein Leser, der den Block ueber
+    /// Zeilennummern statt ueber `take_while` abgrenzt, und die Kernfassung
+    /// `varianten_der_aufzaehlung` unter `crates/krk-core/tests/`, die sie
+    /// bewusst nicht meint — sie gehoert den Probenzielen des Kerns, und warum
+    /// es sie geben muss, steht bei [`super::varianten`].
+    #[test]
+    fn der_aufzaehlungsleser_steht_in_dieser_kiste_genau_einmal() {
+        let nadel = concat!("take_while(|zeile| ", "*zeile != \"}\")");
+        let leser: Vec<String> = quelldateien()
+            .into_iter()
+            .filter(|(name, inhalt)| {
+                name.starts_with("krk-ui/") && codezeilen(inhalt).any(|zeile| zeile.contains(nadel))
+            })
+            .map(|(name, _)| name)
+            .collect();
+        assert_eq!(
+            leser,
+            vec!["krk-ui/src/quellbaum.rs".to_owned()],
+            "eine zweite Fassung des Aufzaehlungslesers steht in dieser Kiste"
+        );
+    }
 
     /// Die drei Abzuege und die vier Formen, die stehen bleiben.
     ///

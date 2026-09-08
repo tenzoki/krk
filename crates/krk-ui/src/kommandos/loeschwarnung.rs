@@ -977,7 +977,7 @@ pub fn nach_der_rueckfrage(bestaetigt: bool, traegt_auswahl: bool) -> Nachstufe 
 mod tests {
     use std::path::PathBuf;
 
-    use crate::quellbaum::{aufrufstellen, quelldateien};
+    use crate::quellbaum::{aufrufstellen, quelldateien, varianten};
 
     use super::*;
     // Die Tafeln darunter stehen in der Form der Tafel aus dem Doc-Kommentar von
@@ -1475,6 +1475,63 @@ mod tests {
     /// Gruende auf demselben Rang machten den genannten Grund von der
     /// Sortierung abhaengig, und `sort_unstable` sagt zu gleichen Werten nichts
     /// zu.
+    /// [`RANGFOLGE`] fuehrt jede Variante, und die datentragende je Wortlaut.
+    ///
+    /// **Die Feldbreite haelt das nicht.** `[Warngrund; 8]` zwingt zu acht
+    /// Zeilen und sagt nichts darueber, **welche** acht: ein achter Ausloeser
+    /// uebersetzt anstandslos, solange niemand die Liste anfasst, und die zwei
+    /// Proben darueber fuehren die Ordnung dann ueber sieben Achtel der
+    /// Aufzaehlung. Die Liste heisst nicht `ALLE` und faellt schon deshalb aus
+    /// dem Durchlauf `jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung`
+    /// (`crates/krk-core/tests/baum.rs`); sie ist aber dieselbe Bauart und
+    /// bekommt hier ihre eigene Probe
+    /// (`shared/issues/260907-0858_*_zwei-alle-listen-bleiben-vom-durchlauf-ungedeckt-*`).
+    ///
+    /// Beide Seiten kommen aus dem Quelltext und keine aus der anderen: die
+    /// Erwartung aus den Aufzaehlungen `Warngrund` und `Umfangsgrund`, der
+    /// Bestand aus [`RANGFOLGE`] ueber `{:?}`. Ein neunter Wert ohne Zeile
+    /// laesst die Probe rot werden und nennt seinen Namen.
+    #[test]
+    fn die_rangfolge_fuehrt_jede_variante_und_jeden_umfangswortlaut() {
+        const DIESE_DATEI: &str = "krk-ui/src/kommandos/loeschwarnung.rs";
+        let (_, inhalt) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == DIESE_DATEI)
+            .expect("die Loeschwarnung liegt im Quellbaum");
+
+        let umfang = varianten(&inhalt, "Umfangsgrund");
+        let erwartet: Vec<String> = varianten(&inhalt, "Warngrund")
+            .into_iter()
+            .flat_map(|zeile| match zeile.strip_suffix(')') {
+                None => vec![zeile],
+                Some(mit_klammer) => {
+                    let (name, typ) = mit_klammer
+                        .split_once('(')
+                        .expect("eine Zeile auf `)` traegt eine oeffnende Klammer");
+                    assert_eq!(
+                        typ, "Umfangsgrund",
+                        "Warngrund traegt eine Nutzlast vom Typ {typ}; diese Probe kennt \
+                         allein Umfangsgrund"
+                    );
+                    // `{:?}` schreibt den Typ der Nutzlast nicht mit; die
+                    // Erwartung baut deshalb `Umfang(GenauDieSchwelle)` und
+                    // nicht `Umfang(Umfangsgrund::GenauDieSchwelle)`.
+                    umfang
+                        .iter()
+                        .map(|wert| format!("{name}({wert})"))
+                        .collect()
+                }
+            })
+            .collect();
+
+        let gelistet: Vec<String> = RANGFOLGE.iter().map(|grund| format!("{grund:?}")).collect();
+        assert_eq!(
+            gelistet, erwartet,
+            "RANGFOLGE fuehrt nicht jede Variante genau einmal und den Umfang je Wortlaut, \
+             oder in einer anderen Reihenfolge als die Aufzaehlung"
+        );
+    }
+
     #[test]
     fn die_rangfolge_der_aufzaehlung_ist_die_des_specs() {
         for paar in RANGFOLGE.windows(2) {

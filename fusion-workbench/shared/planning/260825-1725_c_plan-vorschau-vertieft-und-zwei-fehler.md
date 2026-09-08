@@ -1,7 +1,8 @@
 # Implementation Plan: Die Vorschau vertieft, und zwei Fehler
 
 **Date:** 2026-08-25
-**Status:** Gebaut, nicht abgenommen — alle zehn Schritte stehen auf `[DONE]` und sind am 260826-0149 einzeln gegen den Baum gelesen (`e5ec81a`, `make check` grün, alle vier Kommandos); der Schlussabgleich am 260826-1024 hat `make check` über `c95f28b` wiederholt (ebenfalls grün) und festgestellt, dass keiner der sieben Commits von `e5ec81a..c95f28b` einen Planschritt berührt; von den neun Schließungsbedingungen unter „Where this Circle stops" halten sechs, zwei sind Nutzerarbeit und ungefahren (der Handgriff mit der `readers.toml` aus Schritt 9 und die Abnahme am laufenden Bündel, darunter der vierteilige Handgriff zum Klick-Fokus), eine steht ausdrücklich außerhalb. Der Dateimarker bleibt auf `_p_` und geht nicht auf `_c_`, solange die zwei Nutzerbedingungen offen sind und `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` die Frage nach der Lesart des Markers offen hält
+**Status:** Complete — alle zehn Schritte stehen auf `[DONE]` und sind am 260826-0149 einzeln gegen den Baum gelesen (`e5ec81a`, `make check` grün, alle vier Kommandos); der Schlussabgleich am 260826-1024 hat `make check` über `c95f28b` wiederholt (ebenfalls grün) und festgestellt, dass keiner der sieben Commits von `e5ec81a..c95f28b` einen Planschritt berührt.
+**Abnahme:** offen. Von den neun Schließungsbedingungen unter „Where this Circle stops" halten sechs, zwei sind Nutzerarbeit und ungefahren (der Handgriff mit der `readers.toml` aus Schritt 9 und die Abnahme am laufenden Bündel, darunter der vierteilige Handgriff zum Klick-Fokus), eine steht ausdrücklich außerhalb. Der Abnahmelauf verlangt KRK im Vordergrund und ist damit Nutzerarbeit.
 **Spec:** keiner — geplant aus einem Rohauftrag des Nutzers vom 260825. Das Schärfen ist ausdrücklich übersprungen; die offenen Fragen sind in diesem Plan beantwortet und in sieben Entscheidungsdatensätzen abgelegt.
 **Decidability:** Die tragende Frage lautet: *kann eine Profil-Zusammenfassung eine Auskunft geben, die über alle Unterordner eines Ordners aggregiert, ohne dass ihre Kosten mit dem Bestand der Werkbank wachsen?* Die Antwort ist **nein**, und zwar nicht aus Unentscheidbarkeit, sondern aus Unbeschränktheit: die Zahl der offenen Defekte über alle Runden ist entscheidbar, kostet aber eine Verzeichnisöffnung je Runde, und die Zahl der Runden wächst. Ein fester Deckel auf Verzeichnisöffnungen kann diese Auskunft deshalb nie dauerhaft tragen. **Der Mechanismus wechselt daher die Einheit, in der er zählt**: nicht mehr die geöffneten Verzeichnisse, sondern die **gelesenen Einträge** begrenzen einen Platzhalter-Lauf, und die Schranke dafür steht seit der Runde 16 als `HOECHSTENS_EINTRAEGE` da, samt der Vokabel für die abgeschnittene Antwort (`Wert::UeberGrenze`: „mindestens N, Lesung abgebrochen"). Damit ist die Auskunft an der heutigen Werkbank exakt (568 von 2.000 Einträgen), bei rund hundert Runden ausdrücklich unvollständig — und sie sagt dann selbst, dass sie es ist, statt eine Zahl zu nennen, die stillschweigend falsch ist.
 
@@ -645,3 +646,47 @@ und ein Defekt abgelegt (`shared/decisions/260826-0859_o_*`,
 ### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
 
 **Zwei Runden haben auf Schritt 7 aufgesetzt, und keine hat einen Schritt dieses Plans zurückgenommen.** Die Runde 19 (`circles/260827-0310-…`, `_c_`) hängt an die Regel „ohne Auswahl beschreibt die Vorschau den angezeigten Ordner" das eingebaute Default-Profil mit drei Zählzeilen (`bf3a91d`, `5e506e6`); die Runde 20 (`circles/260827-2028-…`, `_c_`) legt neben Text- und Bildfläche eine dritte für PDF (`5ff1ee4`). `nach_lesebeginn`, `tab_gewechselt` und `auswahl_merken` in `tabelle.rs` sind seit `a5c7a46` unberührt (`git diff a5c7a46..HEAD -- crates/krk-ui/src/appkit/tabelle.rs` nennt keine der drei), also stehen die zwei Defekte zu Schritt 7 (`shared/issues/260825-1922_o_…`, beide) unverändert offen. Die neun Schließungsbedingungen sind unverändert: sechs halten, die zwei Nutzerbedingungen sind weiter ungefahren, eine liegt außerhalb. Marker `_p_` bleibt.
+
+---
+
+## Nachsatz vom 260908-1539: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` stand bis heute auf „Gebaut, nicht
+abgenommen" und trug im selben Satz zwei verschiedene Auskünfte: den Stand der Bauarbeit und
+den der Abnahme. Sie steht jetzt auf `Complete`, und die zweite Auskunft hat mit
+`**Abnahme:**` eine eigene Zeile bekommen. Der Dateimarker ist von `_p_` auf `_c_` gezogen.
+Am Sachtext des Plans, an seinen zehn Schritten und an ihren Marken ist nichts geändert.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Gebaut, nicht abgenommen — alle zehn Schritte stehen auf `[DONE]` und sind am
+> 260826-0149 einzeln gegen den Baum gelesen (`e5ec81a`, `make check` grün, alle vier
+> Kommandos); der Schlussabgleich am 260826-1024 hat `make check` über `c95f28b` wiederholt
+> (ebenfalls grün) und festgestellt, dass keiner der sieben Commits von `e5ec81a..c95f28b`
+> einen Planschritt berührt; von den neun Schließungsbedingungen unter „Where this Circle
+> stops" halten sechs, zwei sind Nutzerarbeit und ungefahren (der Handgriff mit der
+> `readers.toml` aus Schritt 9 und die Abnahme am laufenden Bündel, darunter der vierteilige
+> Handgriff zum Klick-Fokus), eine steht ausdrücklich außerhalb. Der Dateimarker bleibt auf
+> `_p_` und geht nicht auf `_c_`, solange die zwei Nutzerbedingungen offen sind und
+> [der Datensatz zur Lesart des Markers] die Frage nach der Lesart des Markers offen hält
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Damit ist der Grund entfallen, aus dem der Marker hier stehengeblieben war — ein
+Zustand mit vier Werten kann die zwei Fragen „ist es gebaut" und „ist es abgenommen" nicht
+zugleich beantworten, und die Trennung ist genau die Antwort darauf. Der Befund:
+`260906-0212_*_sechzehn-plan-und-specdateien-geschlossener-runden-stehen-auf-offen-oder-in-arbeit.md`.
+
+**Warum ausgerechnet diese Datei und keine der übrigen fünfzehn.** Die Runde 18 hat keinen
+Circle-Datensatz; dieser Plan liegt im gemeinsamen Planungsspeicher und damit außerhalb einer
+geschlossenen Runde. Wie weit die Regel vom 260907-0823 in die Dokumente **innerhalb**
+geschlossener Runden zurückreicht, ist offen
+(`260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`),
+und solange sie es ist, bleiben jene unangetastet.
+
+**Der Preis, benannt und nicht verschwiegen.** Die Umbenennung tötet rund ein Dutzend Zitate,
+die diese Datei mit ausgeschriebenem `_p_` nennen. Sie stehen sämtlich in eingefrorenen
+Speichern — `history/`, `reviews/`, `analyses/`, `archive/` — und sind dort Aufzeichnungen
+eines Standes; nach der Ortsregel in `CLAUDE.md` behalten sie ihren damaligen Marker. Kein
+lebender Text zitiert die Datei mit ausgeschriebenem Marker; nachgesehen am 260908-1539 über
+den ganzen Baum.

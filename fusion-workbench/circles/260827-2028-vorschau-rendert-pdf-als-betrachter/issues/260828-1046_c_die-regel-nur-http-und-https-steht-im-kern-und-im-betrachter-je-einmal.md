@@ -19,3 +19,33 @@ Der Plan (`planning/260828-0712_*`, Schritt 6) sah `im_browser_oeffnen(url.absol
 **Schwere:** Low (heute stimmen beide Fassungen überein; der Defekt ist die Doppelung, nicht ein Verhalten)
 
 Fix: `pub fn ist_webschema(schema: &str) -> bool` in `krk_core::zwischenablage`, mit der Begründung aus C9 am Kommentar; `deuten` dort ruft es für den Schemavergleich, `betrachter::ist_webadresse` ruft es über `NSURL::scheme`, und die private Fassung samt ihrer Probe `allein_http_und_https_sind_webschemata` wandert in den Kern (`crates/krk-core/tests/zwischenablage.rs` oder das Prüfmodul der Datei). Der Doc-Kommentar an `im_browser_oeffnen` nennt danach beide Rufer und die eine Regel.
+
+---
+
+## Abgleich 260908, und die Behebung
+
+**Der Befund bestand unveraendert.** Beide Fassungen am heutigen Baum nachgelesen: der Kern
+entschied ueber `ohne_schema(text, "http").is_some() || ohne_schema(text, "https").is_some()`,
+der Betrachter ueber ein privates `ist_webschema` mit zwei `eq_ignore_ascii_case`.
+
+Gebaut ist der Vorschlag des Datensatzes, in allen vier Teilen:
+
+- **`pub fn ist_webschema(schema: &str) -> bool` steht in `krk_core::zwischenablage`**, mit
+  `#[must_use]` und der Begruendung aus C9 am Doc-Kommentar; dort steht auch, dass das blosse
+  Schema ohne Doppelpunkt erwartet wird, so wie `NSURL::scheme` es liefert.
+- **`deuten` ruft es** ueber `text.split_once(':')` statt zweier `ohne_schema`-Aufrufe. Die
+  Deutung bleibt fuer jede Eingabe dieselbe: ein Text ohne `:` liefert `None`, ein anderes
+  Schema liefert `false`, und beide fallen in denselben Zweig wie zuvor.
+- **`betrachter::ist_webadresse` ruft dieselbe Funktion**; die private Fassung ist fort.
+- **Die Probe `allein_http_und_https_sind_webschemata` ist mit der Regel in den Kern
+  gezogen**, nach `crates/krk-core/tests/zwischenablage.rs`, mit einem Nachsatz, woher sie
+  kommt.
+
+**Der Doc-Kommentar an `im_browser_oeffnen` nennt jetzt beide Rufer und die eine Regel**
+(`crates/krk-ui/src/appkit/zwischenablage.rs`), und der Modulkopf des Betrachters sagt unter
+„Verweise", dass ueber die Schemata der Kern entscheidet.
+
+Resolved: 260908 — `crates/krk-core/src/zwischenablage.rs` (neue oeffentliche Regel, `deuten`
+ruft sie), `crates/krk-core/tests/zwischenablage.rs` (Probe umgezogen),
+`crates/krk-ui/src/appkit/betrachter.rs` (zweite Fassung entfernt),
+`crates/krk-ui/src/appkit/zwischenablage.rs` (Doc-Kommentar nennt beide Rufer).

@@ -43,7 +43,9 @@
 //! Probe dieser Art.
 
 mod gemeinsam;
-use gemeinsam::{aufrufstellen, quelldateien, varianten_der_aufzaehlung};
+use gemeinsam::{
+    aufrufstellen, quelldateien, varianten_der_aufzaehlung, varianten_mit_nutzlast_der_aufzaehlung,
+};
 
 /// Ob eine Nadel in einer **Code**-Zeile der Datei steht und nicht in einem
 /// Kommentar.
@@ -106,16 +108,25 @@ fn genau_zwei_dateien_oeffnen_die_regel_deny_unsafe_code() {
 /// (`issues/260813-0540_*_eine-vierte-pruefordner-fassung-steht-im-baum-und-die-probe-sieht-sie-nicht.md`).
 ///
 /// Was eine Pruefordner-Fassung ausmacht, ist nicht ihr Name, sondern was sie
-/// tut: sie legt unter dem Temporaerverzeichnis etwas an und raeumt es in
-/// `Drop` wieder ab. Die Gegenprobe sucht deshalb die drei Zeichen dieser
-/// Sache in **derselben** Datei — `impl Drop`, `temp_dir()` und
-/// `remove_dir_all` — und findet damit jede vierte Fassung, gleich wie sie
-/// heisst.
+/// tut: sie legt an einem Wegwerfort etwas an und raeumt es in `Drop` wieder
+/// ab. Die Gegenprobe sucht deshalb die drei Zeichen dieser Sache in
+/// **derselben** Datei — `impl Drop`, den Ort und `remove_dir_all` — und findet
+/// damit jede vierte Fassung, gleich wie sie heisst.
+///
+/// **Der Ort ist eine Nadel aus zweien**, und der Grund steht im Baum: neben
+/// `std::env::temp_dir()` kennt dieses Projekt genau einen weiteren Wegwerfort,
+/// den Messplatz unter `~/Library/Caches/krk-messplatz`. Alle drei anerkannten
+/// Fassungen tragen einen Absatz, der ihn ausdruecklich ausschliesst — die
+/// Frage ist hier also schon einmal gestellt worden —, und eine vierte Fassung
+/// **dort** waere in jeder anderen Hinsicht dieselbe Sache und einer Nadel auf
+/// `temp_dir()` allein unsichtbar.
 ///
 /// **Was auch das nicht findet**, und der Satz gehoert dazu: eine Fassung, die
-/// ueber zwei Dateien verteilt ist, oder eine, die ihren Ordner Eintrag fuer
-/// Eintrag statt mit `remove_dir_all` abraeumt. Der Kopf dieser Datei sagt,
-/// warum keine Nadel das leisten kann.
+/// ueber zwei Dateien verteilt ist, eine, die ihren Ordner Eintrag fuer
+/// Eintrag statt mit `remove_dir_all` abraeumt, oder eine an einem **dritten**
+/// Ort, den dieses Projekt heute nicht kennt. Der Kopf dieser Datei sagt,
+/// warum keine Nadel das leisten kann; der Befund dazu ist
+/// `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0720_*`.
 #[test]
 fn genau_drei_pruefordner_fassungen_stehen_im_baum() {
     let fassungen = [
@@ -140,13 +151,13 @@ fn genau_drei_pruefordner_fassungen_stehen_im_baum() {
     // in dem Baum liegt, den sie liest, und gesucht wird nur in Code-Zeilen,
     // weil die Doc-Kommentare darueber alle drei im Klartext nennen.
     let abraeumer = concat!("impl Drop", " for ");
-    let ort = concat!("temp_", "dir()");
+    let orte = [concat!("temp_", "dir()"), concat!("krk-", "messplatz")];
     let abraeumen = concat!("remove_dir", "_all");
     let weitere: Vec<String> = baum
         .iter()
         .filter(|(name, inhalt)| {
             im_code(inhalt, abraeumer)
-                && im_code(inhalt, ort)
+                && orte.iter().any(|ort| im_code(inhalt, ort))
                 && im_code(inhalt, abraeumen)
                 && !fassungen.iter().any(|(fassung, _)| fassung == name)
         })
@@ -270,25 +281,40 @@ fn keine_code_zeile_unter_leseprofil_erreicht_den_ausblendeschalter() {
 /// Ablagedatei ohne Durchgang. Beides zusammen ergibt einen Schreibweg an der
 /// Sperre vorbei, den kein Typ versperrt.
 ///
-/// **Diese Zaehlung haengt ausnahmsweise nicht an einer Schreibweise, und das
-/// ist der Grund, aus dem sie hier steht.** Es gibt in Rust genau zwei Wege an
+/// **Diese Zaehlung haengt weniger an einer Schreibweise als die uebrigen, und
+/// das ist der Grund, aus dem sie hier steht.** Es gibt in Rust zwei Wege an
 /// eine fremde Funktion: den Pfad an der Aufrufstelle oder ein `use`, das sie in
 /// den Geltungsbereich holt. Beide nennen das Modul, also enthaelt jede Datei,
-/// die `schreiben` ueberhaupt erreichen kann, eine der drei Zeichenketten
-/// `atomar::schreiben`, `atomar::{` oder `atomar::*`. Ein anderer Weg besteht
-/// nicht; wer die Liste erweitert, tut es sichtbar.
+/// die `schreiben` unter diesem Namen erreicht, eine der vier Zeichenketten
+/// `atomar::schreiben`, `atomar::{`, `atomar::*` oder `atomar as`. Die vierte
+/// faengt die Einbindung unter anderem Namen
+/// (`use krk_core::ablage::atomar as werkzeug;`), die sonst keine Nadel sieht.
+///
+/// # Der eine Weg, den keine Nadel sehen kann
+///
+/// **Eine Wiederausfuhr macht den Namen `atomar` entbehrlich.** Stuende in
+/// einer der benannten Dateien `pub use atomar::schreiben;`, dann erreichte
+/// jede Datei des Baums das atomare Schreiben ueber
+/// `krk_core::ablage::schreiben`, ohne eine der vier Zeichenketten zu fuehren —
+/// und diese Probe bliebe gruen. Sie ist damit **fuer den ganzen Baum blind**,
+/// sobald eine einzige Zeile in einer Datei steht, die auf der Liste ohnehin
+/// erlaubt ist. Gegen diesen Weg hilft keine Erweiterung der Nadelliste,
+/// sondern nur, dass er hier benannt ist: wer eine Wiederausfuhr anlegt, hat
+/// diesen Absatz gelesen. Der Befund dazu ist
+/// `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0715_*`.
 ///
 /// Gesucht wird in Code-Zeilen: eine Datei, die den Namen nur bespricht — der
 /// Kopf von `ablage::sperre` etwa, oder diese Zeile hier —, erreicht nichts.
-/// Was bleibt, ist ein Pfad, den jemand ueber zwei Zeilen umbricht; `rustfmt`
-/// tut das nicht, und der Kopf dieser Datei sagt, warum keine Nadel restlos
-/// dicht ist.
+/// Was daneben bleibt, ist ein Pfad, den jemand ueber zwei Zeilen umbricht;
+/// `rustfmt` tut das nicht, und der Kopf dieser Datei sagt, warum keine Nadel
+/// restlos dicht ist.
 #[test]
 fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
     let wege = [
         concat!("atomar::", "schreiben"),
         concat!("atomar::", "{"),
         concat!("atomar::", "*"),
+        concat!("atomar", " as "),
     ];
     let erreichbar: Vec<String> = quelldateien()
         .into_iter()
@@ -755,23 +781,14 @@ fn beide_sperrgriffe_der_ablage_tragen_must_use_mit_begruendung() {
 /// deren Fundstelle verschwindet oder deren Aufzaehlung umzieht, laesst die
 /// Probe rot werden, statt als toter Eintrag stehen zu bleiben. Eine dritte
 /// Ausnahme ist damit eine bewusste Eintragung und kein Versehen.
-const UNLESBARE_ALLE_LISTEN: [(&str, &str, &str); 2] = [
-    (
-        "krk-core/src/ablage/pfade.rs",
-        "Datei",
-        "`Datei::Zettel(Zettel)` traegt Daten, und die Liste fuehrt eine Zeile je Zettel: \
+const UNLESBARE_ALLE_LISTEN: [(&str, &str, &str); 1] = [(
+    "krk-core/src/ablage/pfade.rs",
+    "Datei",
+    "`Datei::Zettel(Zettel)` traegt Daten, und die Liste fuehrt eine Zeile je Zettel: \
          sieben Eintraege zu sechs Varianten. Weder die Nadel ueber die Aufzaehlung noch \
          die ueber die Liste liest datentragende Varianten, und eine Gleichheit waere \
          hier ohnehin die falsche Zusage",
-    ),
-    (
-        "krk-ui/src/appkit/blaetter/stapelumbenennen.rs",
-        "Spalte",
-        "die Aufzaehlung ist modulintern (`enum Spalte`) und nicht `pub`; \
-         `varianten_der_aufzaehlung` findet allein `pub enum <Name> {` in Spalte 0, und \
-         eine Sichtbarkeit allein fuer eine Probe anzuheben waere der teurere Fehler",
-    ),
-];
+)];
 
 /// Die Nadel, an der eine Liste `ALLE` erkannt wird.
 ///
@@ -1013,13 +1030,22 @@ fn gelistete_namen(datei: &str, inhalt: &str, aufzaehlung: &str, zeile: usize) -
             continue;
         }
         let name = eintrag.strip_prefix(&vorsatz).unwrap_or(eintrag);
+        let bezeichner: &str = name
+            .split(|zeichen: char| !(zeichen.is_ascii_alphanumeric() || zeichen == '_'))
+            .next()
+            .expect("ein split liefert immer ein erstes Stueck");
+        // **Ein Eintrag mit Nutzlast bleibt ganz stehen.** Der Durchlauf
+        // uebergeht die eine Liste, die welche fuehrt (`Datei::ALLE`, siehe
+        // `UNLESBARE_ALLE_LISTEN`); ihre eigene Probe braucht den Eintrag
+        // dagegen im Wortlaut, weil ihre Zusage „einmal je Wert des Feldes"
+        // lautet und nicht „genau einmal".
         assert!(
-            !name.is_empty()
-                && name
-                    .chars()
-                    .all(|zeichen| zeichen.is_ascii_alphanumeric() || zeichen == '_'),
+            !bezeichner.is_empty()
+                && (name == bezeichner
+                    || (name.starts_with(&format!("{bezeichner}(")) && name.ends_with(')'))),
             "die Liste {aufzaehlung}::ALLE in {datei} traegt den Eintrag `{eintrag}`; \
-             diese Nadel liest allein datenlose Varianten, mit oder ohne `{vorsatz}` davor"
+             diese Nadel liest eine Variante mit oder ohne `{vorsatz}` davor und mit \
+             hoechstens einer Nutzlast in runden Klammern"
         );
         namen.push(name.to_owned());
     }
@@ -1292,5 +1318,66 @@ fn jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt() {
         "diese Namen kommen aus einer Frameworkbindung herein, ohne im Abschnitt \
          `{UNTERGRENZEN_UEBERSCHRIFT}` genannt zu sein:\n{}",
         fehlend.join("\n")
+    );
+}
+
+/// `Datei::ALLE` fuehrt jede Variante, und die datentragende einmal je Zettel.
+///
+/// **Die Ausnahme des Durchlaufs bekommt hier ihre eigene Probe.**
+/// `jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung` uebergeht
+/// `Datei::ALLE`, weil `Datei::Zettel(Zettel)` Daten traegt und die Liste
+/// deshalb mehr Eintraege fuehrt als die Aufzaehlung Varianten hat; eine
+/// Gleichheit waere dort die falsche Zusage. **Die richtige lautet: jede
+/// datenlose Variante genau einmal, und die datentragende einmal je Wert ihres
+/// Feldes**, und sie steht hier
+/// (`shared/issues/260907-0858_*_zwei-alle-listen-bleiben-vom-durchlauf-ungedeckt-*`).
+///
+/// Beide Seiten kommen aus dem Quelltext und keine aus der anderen: die
+/// Erwartung aus den Aufzaehlungen `Datei` und `Zettel`, der Bestand aus der
+/// Liste. Eine achte Ablagedatei ohne Zeile in `ALLE` laesst die Probe rot
+/// werden und nennt ihren Namen — genau die Auskunft, fuer die der Durchlauf
+/// gebaut ist.
+#[test]
+fn die_ablageliste_fuehrt_jede_datei_und_je_einen_zettel() {
+    const PFADE: &str = "krk-core/src/ablage/pfade.rs";
+
+    let quellen = quelldateien();
+    let (_, inhalt) = quellen
+        .iter()
+        .find(|(pfad, _)| pfad == PFADE)
+        .expect("unter crates/ steht keine pfade.rs");
+
+    let zettel = varianten_der_aufzaehlung(PFADE, "Zettel");
+    let erwartet: Vec<String> = varianten_mit_nutzlast_der_aufzaehlung(PFADE, "Datei")
+        .into_iter()
+        .flat_map(|(name, nutzlast)| match nutzlast {
+            None => vec![name],
+            // Der Wortlaut der Nutzlast ist zugleich der Name der Aufzaehlung,
+            // aus der die Werte kommen; eine zweite Angabe daneben waere eine
+            // zweite Wahrheit darueber, was in den Klammern steht.
+            Some(typ) => {
+                assert_eq!(
+                    typ, "Zettel",
+                    "Datei traegt eine Nutzlast vom Typ {typ}; diese Probe kennt allein Zettel"
+                );
+                zettel
+                    .iter()
+                    .map(|wert| format!("{name}({typ}::{wert})"))
+                    .collect()
+            }
+        })
+        .collect();
+
+    let zeile = alle_listen(PFADE, inhalt)
+        .into_iter()
+        .find(|(aufzaehlung, _)| aufzaehlung == "Datei")
+        .map(|(_, zeile)| zeile)
+        .unwrap_or_else(|| panic!("in pfade.rs steht keine Liste `{ALLE_NADEL}Datei; N]`"));
+    let gelistet = gelistete_namen(PFADE, inhalt, "Datei", zeile);
+
+    assert_eq!(
+        gelistet, erwartet,
+        "Datei::ALLE fuehrt nicht jede Variante genau einmal und den Zettel je Wert, \
+         oder in einer anderen Reihenfolge als die Aufzaehlung"
     );
 }

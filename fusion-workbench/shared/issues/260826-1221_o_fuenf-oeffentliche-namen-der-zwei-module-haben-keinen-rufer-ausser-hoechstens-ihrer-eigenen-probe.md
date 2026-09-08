@@ -67,3 +67,36 @@ Buendel.
 
 `krk-core`, `operation/fortschritt.rs`, `operation/mod.rs`, `stapelumbenennen/regel.rs` und
 `stapelumbenennen/mod.rs`.
+
+---
+
+## Abgleich 260908: zwei der fuenf sind erledigt, drei brauchen eine Entscheidung
+
+**Alle fuenf am heutigen Baum nachgezaehlt; der Befund besteht fuer alle fuenf unveraendert.**
+
+**Erledigt sind die zwei, fuer die der Datensatz die Antwort selbst gibt** („heisst das, die
+Zeile aus der jeweiligen Modulwurzel zu streichen"):
+
+- **`MELDEABSTAND`** ist aus `pub use fortschritt::{…}` in
+  `crates/krk-core/src/operation/mod.rs` gestrichen. Er bleibt `pub` in seinem Modul, das
+  selbst `pub` ist; wer ihn braucht, nennt den Modulpfad. An seiner Stelle steht der Grund.
+- **`HOECHSTE_STELLENZAHL`** ist aus `pub use regel::{…}` in
+  `crates/krk-core/src/stapelumbenennen/mod.rs` gestrichen, mit demselben Vermerk und dem
+  Zusatz, den der Datensatz bemerkenswert nennt: das Blatt in `krk-ui` begrenzt sein
+  Eingabefeld nicht ueber die Zahl, sondern laesst `Regel::aus_eingabe` antworten.
+
+Der Bau bleibt gruen; kein Rufer im Arbeitsbereich nahm einen der beiden ueber die Modulwurzel.
+
+**Offen bleiben die drei, fuer die der Datensatz „heisst es zu entscheiden" schreibt.** Der
+Marker bleibt deshalb `_o_`:
+
+- **`Regel::ist_wirkungslos`** — bleibt die Frage je Regel neben der Frage je Zeile
+  (`Vorschauzeile::wird_umbenannt`) bestehen, oder faellt sie?
+- **`Lauf::warten`** — soll ein Pruefwerkzeug `pub` sein? Zehn Rufer, alle in
+  `crates/krk-core/tests/operation.rs`.
+- **`operation::Abschluss::ist_abgebrochen`** — ohne jeden Rufer, auch ohne Probe; dazu die
+  Doppelung des Namens mit `verzeichnis::Abschluss::ist_abgebrochen`, dessen Haelfte am
+  260908 mit einem Vermerk am Doc-Kommentar geschlossen ist
+  (`shared/issues/260826-1221_c_abschluss-ist-abgebrochen-hat-ausserhalb-der-proben-keinen-rufer-im-baum.md`).
+  Ob hier derselbe Weg gilt oder die Methode faellt, ist nicht dasselbe: die des Umfangs hat
+  nicht einmal eine Probe.
