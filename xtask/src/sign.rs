@@ -788,24 +788,84 @@ Policy: Code Signing
         }
     }
 
-    /// Den Hinweis gibt allein der Unterbefehl `bundle` aus.
+    /// Der Quelltext der obersten Funktion `name`, ohne ihren Kopf.
+    ///
+    /// Ein Rumpf auf oberster Ebene endet an der ersten Zeile, die mit `}` in
+    /// Spalte 0 beginnt; `cargo fmt --all --check` haelt diese Form, und die
+    /// Probe faellt mit einer benennenden Meldung, wenn die Funktion nicht mehr
+    /// dasteht.
+    fn oberste_funktion<'a>(quelle: &'a str, name: &str) -> &'a str {
+        let kopf = format!("\nfn {name}(");
+        let anfang = quelle
+            .find(&kopf)
+            .unwrap_or_else(|| panic!("fn {name} steht nicht auf oberster Ebene"));
+        let rumpf = &quelle[anfang + kopf.len()..];
+        let ende = rumpf
+            .find("\n}\n")
+            .unwrap_or_else(|| panic!("der Rumpf von fn {name} endet nicht"));
+        &rumpf[..ende]
+    }
+
+    /// Den Hinweis gibt allein `main::bundle_fahren` aus.
     ///
     /// In `release` waere er falsch: der Unterbefehl faehrt genau den Weg, auf
     /// den der Hinweis zeigt. `messen --alle` baut dasselbe Buendel fuer eine
-    /// Messung und gibt es nicht weiter. Die Probe schreibt den Ausgabeort
-    /// nicht fest, sondern haelt fest, dass es genau einen gibt und wo er
-    /// nicht liegt.
+    /// Messung und gibt es nicht weiter.
+    ///
+    /// **Sie haelt den Ort und nicht die Datei.** Bis zum 260908 las sie drei
+    /// benannte Geschwister und zaehlte die Nadel in `main.rs`, und beides war
+    /// zu schwach: `git.rs`, `version.rs`, `beglaubigung.rs`,
+    /// `veroeffentlichung.rs` und `werkbank.rs` standen in keiner Liste, und ein
+    /// Aufruf, der aus dem `bundle`-Zweig in den `release`-Zweig derselben Datei
+    /// wandert, laesst die Zahl bei eins
+    /// (`shared/issues/260815-1446_*_die-probe-zum-einen-rufer-des-weitergabehinweises-liest-drei-von-sechs-modulen-und-nicht-den-zweig.md`).
+    /// Jetzt laeuft sie ueber **jede** `.rs`-Datei unter `xtask/src` — ein neues
+    /// Modul kommt von selbst dazu, statt stumm zu bleiben — und haelt danach,
+    /// dass die eine Fundstelle im Rumpf von `bundle_fahren` liegt.
+    ///
+    /// `sign.rs` bleibt mit Grund aussen vor: dort steht die Funktion selbst,
+    /// und vier Proben rufen sie.
     #[test]
     fn allein_der_unterbefehl_bundle_gibt_den_hinweis_aus() {
         let nadel = concat!("weitergabe", "hinweis(");
-        for (name, quelle) in [
-            ("release.rs", include_str!("release.rs")),
-            ("messen.rs", include_str!("messen.rs")),
-            ("bundle.rs", include_str!("bundle.rs")),
-        ] {
-            assert!(!quelle.contains(nadel), "{name} gibt den Hinweis aus");
+        let quellen = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let (mut sah_main, mut sah_sign) = (false, false);
+        for eintrag in std::fs::read_dir(&quellen).expect("xtask/src ist lesbar") {
+            let pfad = eintrag.expect("Eintrag in xtask/src").path();
+            if pfad.extension().is_none_or(|endung| endung != "rs") {
+                continue;
+            }
+            let name = pfad
+                .file_name()
+                .expect("Datei mit Namen")
+                .to_string_lossy()
+                .into_owned();
+            if name == "sign.rs" {
+                sah_sign = true;
+                continue;
+            }
+            sah_main |= name == "main.rs";
+            let quelle = std::fs::read_to_string(&pfad).expect("Quelldatei ist lesbar");
+            let erwartet = usize::from(name == "main.rs");
+            assert_eq!(
+                quelle.matches(nadel).count(),
+                erwartet,
+                "{name} gibt den Hinweis nicht {erwartet}-mal aus"
+            );
         }
-        assert_eq!(include_str!("main.rs").matches(nadel).count(), 1);
+        assert!(
+            sah_main && sah_sign,
+            "der Durchlauf hat nicht beide Kernstuecke gesehen"
+        );
+
+        let main = std::fs::read_to_string(quellen.join("main.rs")).expect("main.rs ist lesbar");
+        assert_eq!(
+            oberste_funktion(&main, "bundle_fahren")
+                .matches(nadel)
+                .count(),
+            1,
+            "der Hinweis steht nicht im Rumpf von bundle_fahren"
+        );
     }
 
     #[test]

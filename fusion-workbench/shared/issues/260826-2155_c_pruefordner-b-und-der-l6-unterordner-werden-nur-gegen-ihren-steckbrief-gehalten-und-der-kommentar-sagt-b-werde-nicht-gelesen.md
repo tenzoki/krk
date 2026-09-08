@@ -48,3 +48,14 @@ Gefunden bei der Durchsicht der Behebungsrunde 1, zweiter Teil, Bereich `9c02863
 
 ---
 Resolved: Beide Hälften des Befunds sind auf dem ersten der zwei Wege behoben, „ehrlich beschriften". Der Kommentar über B trägt seine zweite Hälfte seit dem 260905. Der Berichtskopf macht seit dem 260907-2350 kenntlich, dass die Zahl von Prüfordner B und des L6-Unterordners unbestätigt ist: die Zeile „Deckung der Ordner" (`crates/krk-bench/src/bericht.rs`, `DECKUNG_DER_ORDNER`) sagt, welche zwei Ordner eine gelesene Zahl tragen und welche zwei nur eine zugesagte, was ein hineingerutschter Eintrag dort anrichtete und welche Zusagen daran hängen; gehalten wird der Satz von `der_abnahmebericht_traegt_alle_zehn_zusagen_und_den_vollen_kopf` in derselben Datei, mitsamt der gezählten Behauptung, dass genau zwei der vier Ordner eine gelesene Zahl tragen. **Der zweite Weg ist ausdrücklich nicht gegangen** und die Deckungslücke besteht fort: der Nutzer hat am 260907-2334 Möglichkeit 1 gewählt, weil ein Vorablesen von B den Systemcache wärmte, gegen den die zwei getrennten Startwerte von A und B gebaut sind (`260905-2155_*_bekommen-pruefordner-b-und-der-l6-unterordner-die-zweite-haelfte-der-deckung.md`). Der Befund ist damit als Lage angenommen und beschriftet, nicht aufgehoben. Dass die Aufzählung der betroffenen Zusagen in diesem Datensatz L7 nicht kennt, führt `260907-2350_*_zwei-datensaetze-nennen-l4-l5-und-l6-als-betroffene-zusagen-seit-dem-260907-haengt-auch-l7-am-l6-unterordner.md`.
+
+---
+Nachtrag 260908: die Aufzählung „L4, L5 und L6" im Rumpf oben und im Abschnitt
+„Die zwei Hälften und wer sie bekommt" war am 260826 vollständig und ist es seit
+`1936a0f` nicht mehr. L7 misst seitdem zwei Spannen, und die zweite ist der
+Sprung auf den L6-Unterordner; an dessen ungeprüfter Eintragszahl hängt damit
+neben L6 auch die L7-Zeile für den Ordnersprung. Welche Zusage auf welchem
+Ordner misst, sagt `DECKUNG_DER_ORDNER` (`crates/krk-bench/src/bericht.rs`) und
+keine Aufzählung in einem Datensatz — dort steht die vollständige Liste, und sie
+wird hier nicht wiederholt
+(`260907-2350_*_zwei-datensaetze-nennen-l4-l5-und-l6-als-betroffene-zusagen-seit-dem-260907-haengt-auch-l7-am-l6-unterordner.md`).

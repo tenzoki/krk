@@ -65,3 +65,6 @@ Der Befund selbst bleibt richtig und ist am Code sichtbar: der Doc-Kommentar von
 `an_einer_flaeche` benennt die Behauptung. Bricht sie auf einem Gerät, fällt der
 Prüflauf aus und nicht die Anwendung — das ist der Preis, der hier bewusst
 gezahlt wird. Wer `krk-ui` aus einem anderen Grund umbaut, nimmt beides mit.
+
+---
+Revised by: 260826-1327_*_die-freigabe-des-rueckgaengig-blocks-ist-mit-verwalter-ohne-fenster-messbar-und-die-begruendung-fuer-ungemessen-traegt-nicht-mehr.md — die Lage, als die dieser Datensatz geschlossen wurde, besteht nicht mehr: `verwalter_ohne_fenster` liefert seit dem 260810 einen `NSUndoManager` ohne Umbau der Kiste, und seit dem 260908 misst `der_verwalter_gibt_den_block_auf_allen_vier_wegen_frei` die Freigabe auf allen vier Wegen. Die Messung hat daneben ergeben, dass sie an einem offenen `autoreleasepool` hängt.

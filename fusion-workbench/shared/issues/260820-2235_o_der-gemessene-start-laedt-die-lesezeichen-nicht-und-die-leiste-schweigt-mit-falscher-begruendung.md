@@ -59,3 +59,17 @@ mitfahren?** Beide Antworten sind vertretbar und keine ist ableitbar.
 
 Der Kommentar ist in beiden Fällen zu berichtigen; er behauptet heute etwas über einen Weg,
 den er nicht kennt.
+
+---
+
+**Abgleich 260908 (Bahn Q3, `crates/krk-ui/src/appkit/`).** Die Hälfte, die keine Entscheidung
+verlangt, ist erledigt: der Kommentar am Zweig `Sperrhindernis::OhneOrdner` in
+`leiste_einrichten` (`crates/krk-ui/src/appkit/anwendung.rs`) nennt jetzt alle drei Lagen, in
+denen dieses `None` entsteht, und sagt für die dritte — die Messaufgaben — den wirklichen Grund:
+dort hat niemand gemeldet, und das Schweigen ist richtig, weil niemand zusieht. Der Satz
+verweist daneben auf die offene Frage und darauf, dass L4 heute einen Start ohne den
+Ablagedurchgang für `bookmarks.toml` misst.
+
+**Der Datensatz bleibt offen**, weil seine Frage offen ist: soll der gemessene Start den
+Ablagedurchgang mitfahren? Beide Antworten sind vertretbar und keine ist ableitbar; das steht
+im Abschnitt `## Vorschlag` und ist Nutzerarbeit.

@@ -145,3 +145,6 @@ offene Punkte lieferte damit Arbeit, die der Nutzer vertagt hat. Gefunden von de
 Der Fall der Überschrift, die ihre Schriftgröße verliert, ist ebenfalls ausgezogen und steht als
 `issues/260812-1920_*_eine-auszeichnung-in-einer-ueberschrift-verliert-deren-schriftgroesse.md`.
 
+
+---
+Revised by: 260812-1920_*_eine-auszeichnung-in-einer-ueberschrift-verliert-deren-schriftgroesse.md — der Abschnitt „Was fehlt: Punkt 2" zählt zwei Paarungen und übergeht die dritte: eine Auszeichnung **in einer Überschrift** verliert deren Schriftgröße, und der dort genannte Weg über die Schriftschnitte behebt das nicht.

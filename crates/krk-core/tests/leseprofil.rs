@@ -1244,13 +1244,21 @@ fn werkbankgestalt(zweck: &str) -> Pruefordner {
         "# Plan: die Vorschau\n",
     );
 
+    // Dieselbe gesetzte Zeit wie unten bei `history`, und aus demselben Grund:
+    // auf `decisions` liegt eine Zusicherung ueber die **juengste** Datei, und
+    // ohne gesetzte Zeit entschiede der Zweitschluessel — der aufsteigend nach
+    // Namen bricht und damit die erwartete Antwort umkehrte.
     let decisions = ordner.ordner("decisions");
-    for (name, inhalt) in [
+    for (nummer, (name, inhalt)) in [
         ("260823-2208_a_erste-frage.md", "#   Erste Frage?\n\nText\n"),
         ("260824-0541_a_zweite-frage.md", "# Zweite Frage?\n"),
         ("260824-0600_a_dritte-frage.md", "# Dritte Frage?\n"),
-    ] {
-        schreiben(&decisions, name, inhalt);
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let pfad = schreiben(&decisions, name, inhalt);
+        geaendert_setzen(&pfad, 1_700_000_000 + nummer as u64 * 60);
     }
 
     let issues = ordner.ordner("issues");
@@ -1297,6 +1305,13 @@ fn schreiben(ordner: &Path, name: &str, inhalt: &str) -> PathBuf {
 /// laeuft: vier Dateien nacheinander geschrieben tragen auf einem schnellen
 /// Dateisystem denselben Zeitpunkt, und die Probe pruefte dann den
 /// Zweitschluessel statt der Sortierung.
+///
+/// **Er gilt fuer jeden Bestand, auf dem eine Zusicherung ueber die
+/// Reihenfolge liegt**, also fuer `history` und fuer `decisions`. Bei
+/// `decisions` waere die Folge nicht bloss eine andere Messung: der
+/// Zweitschluessel bricht den Gleichstand aufsteigend nach Namen
+/// (`leseprofil::bausteine`), und die erwartete juengste Frage kehrte sich in
+/// die aelteste um.
 fn geaendert_setzen(pfad: &Path, seit_epoche: u64) {
     let zeitpunkt = SystemTime::UNIX_EPOCH + Duration::from_secs(seit_epoche);
     let datei = std::fs::File::options()
@@ -3844,6 +3859,29 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// und nicht als Vergleich gegen `wurzelwerte`: was die zwei Profile
 /// aneinanderhaelte, waere eine Zusage, die `default-readers.toml` fuer sich
 /// ausdruecklich nicht gibt.
+///
+/// # Zwei Behauptungen haengen an der Zeilenreihenfolge der Profildatei
+///
+/// Beide pruefen ueber die **Stellung** eines Wertes in der Zusammenfassung,
+/// und die Stellung kommt aus der Reihenfolge der Zeilen in
+/// `resources/default-readers.toml`:
+///
+/// - der `step_by(2)` am Speicherprofil setzt voraus, dass in jedem der zehn
+///   Unterspeicher die Zaehlungszeile vor der Datumszeile steht;
+/// - die ausgeschriebene Werteliste des Projektwurzelprofils steht als
+///   geordnete Folge da.
+///
+/// Wer die Zeilen eines Speichers vertauscht oder die sieben Zeilen des
+/// Projektwurzelprofils umstellt, macht die Probe rot, obwohl jede Zeile ihren
+/// Wert sehr wohl gefunden hat. Die Richtung stimmt — rot und nicht still gruen
+/// —, aber die zwei Meldungen nennen die Reihenfolge deshalb als zweiten
+/// moeglichen Grund neben dem, den sie behaupten. Die Beschriftungsliste
+/// darueber faengt eine Umstellung **nicht** ab: sie vergleicht gegen
+/// `profil.zeilen()` desselben Profils, also gegen eine Liste, die sich
+/// mitdreht. Die Kopplung aufzuheben — gegen Paare aus Beschriftung und Wert
+/// statt gegen eine Folge von Werten — kostet an beiden Stellen mehr Zeilen,
+/// als die Auskunft wert ist, solange die Richtung rot bleibt (Defekt
+/// `260826-0139`).
 #[test]
 fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     let profile = ausgelieferte();
@@ -4004,7 +4042,9 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
             .iter()
             .step_by(2)
             .all(|(_, wert)| **wert == Wert::Zahl(1)),
-        "die Zaehlungen sehen nicht je den einen Datensatz: {speicherwerte:?}"
+        "die Zaehlungen sehen nicht je den einen Datensatz, oder die Reihenfolge der \
+         Zeilen in `default-readers.toml` hat sich geaendert und die Zaehlungszeile \
+         steht nicht mehr vor der Datumszeile: {speicherwerte:?}"
     );
 
     let projektwurzelprofil =
@@ -4078,7 +4118,9 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
         ],
         "die Projektwurzelzusammenfassung liefert nicht die Werte, fuer die sie \
          gelesen hat; eine Zeile, die nichts findet, oeffnet auch nichts, und die \
-         fuenf Oeffnungen darueber waeren dann keine fuenf Treffer"
+         fuenf Oeffnungen darueber waeren dann keine fuenf Treffer. Oder die \
+         Reihenfolge der sieben Zeilen in `default-readers.toml` hat sich geaendert: \
+         diese Liste steht als geordnete Folge da"
     );
 }
 
@@ -4387,18 +4429,11 @@ const ZEILEN_DER_DESKRIPTORPROBE: &str = r#"
 fn eine_zusammenfassung_haelt_nie_mehr_als_einen_deskriptor_zugleich() {
     let ordner = runde("deskriptorhaushalt");
 
-    let ergebnis = kind_mit_deskriptorgrenze(
+    kind_mit_deskriptorgrenze(
+        "mit einem freien Deskriptor kommt die Zusammenfassung nicht zustande",
         GRENZE_DESKRIPTOREN,
         "kind_fasst_mit_einem_freien_deskriptor_zusammen",
         ordner.pfad(),
-    );
-
-    assert!(
-        ergebnis.status.success(),
-        "mit einem freien Deskriptor kommt die Zusammenfassung nicht zustande\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
-        String::from_utf8_lossy(&ergebnis.stderr)
     );
 }
 
@@ -4538,4 +4573,260 @@ fn kind_fasst_mit_einem_freien_deskriptor_zusammen() {
         "mit einem freien Deskriptor zaehlt der Rueckfallweg nicht den Circle-Datensatz und \
          die drei Unterordner"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Die zwei Werkbankpaare laufen nicht auseinander
+// ---------------------------------------------------------------------------
+
+/// Schneidet die Zeilenbloecke eines benannten Profils aus dem
+/// Auslieferungstext heraus.
+///
+/// Geliefert werden die Zeilen ab dem ersten `[[profil.zeile]]` bis zum Ende
+/// des Profilblocks, ohne Kommentarzeilen und ohne leere Zeilen am Rand. Kopf
+/// und `kennzeichen` fallen weg: die zwei Bloecke eines Paares unterscheiden
+/// sich dort **notwendig**, das eine erkennt die Werkbankwurzel, das andere den
+/// Ordner darueber.
+fn zeilenbloecke(name: &str) -> String {
+    let text = krk_core::ablage::leseprofile::AUSLIEFERUNGSTEXT;
+    let kopf = format!("name = \"{name}\"");
+    let ab = text
+        .find(&kopf)
+        .unwrap_or_else(|| panic!("das Profil «{name}» steht nicht in der Auslieferungsfassung"));
+    let rest = &text[ab..];
+    let bis = rest[kopf.len()..]
+        .find("\n[[profil]]")
+        .map_or(rest.len(), |stelle| stelle + kopf.len());
+    let block = &rest[..bis];
+
+    let erste_zeile = block
+        .find("[[profil.zeile]]")
+        .unwrap_or_else(|| panic!("das Profil «{name}» fuehrt keine einzige Zeile"));
+    block[erste_zeile..]
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with('#'))
+        .map(str::trim_end)
+        .filter(|zeile| !zeile.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Die zwei Bloecke eines Werkbankpaares tragen dieselben Zeilen.
+///
+/// **Die Datei sagt selbst, dass sie das nicht halten kann.** Ueber beiden
+/// Paaren steht ein Doppelungshinweis, und er begruendet, warum keine Vererbung
+/// und keine Vorlage danebensteht: das waere ein neuer Mechanismus fuer zwei
+/// Bloecke in einer von Hand gepflegten Datei. Das bleibt richtig. Eine Probe
+/// ist beides nicht — sie fasst die Datei nicht an, aendert am Format nichts
+/// und kostet zur Laufzeit nichts; sie haelt bloss die Rechnung fest, die
+/// dreimal jemand von Hand gefahren hat (Defekt `260826-0903`).
+///
+/// # Die Normalisierung, und woran die naive Fassung scheitert
+///
+/// Der zweite Block jedes Paares sieht von der **Projektwurzel** aus auf
+/// dieselben Orte und traegt dafuer eine Ortsangabe mehr. Sie kommt in zwei
+/// Gestalten, und nur eine davon ist ein Praefix:
+///
+/// - Eine Zeile mit `feld` traegt im Wurzelprofil **keine** Ortsangabe und
+///   bekommt im Projektwurzelprofil den ganzen Schluessel dazu:
+///   `ordner = "fusion-workbench", ` faellt weg.
+/// - Eine Zeile mit `zaehlung` oder `juengste` traegt in beiden eine, und dem
+///   zweiten ist die Werkbank vorangestellt: `ordner = "fusion-workbench/` geht
+///   auf `ordner = "` zurueck.
+///
+/// Wer nur das Praefix normalisiert, bekommt eine Probe, die an einem gesunden
+/// Stand rot ist.
+#[test]
+fn die_zwei_bloecke_eines_werkbankpaares_tragen_dieselben_zeilen() {
+    for (werkbank, wurzel, projektwurzel) in [
+        (
+            "fusion-workbench",
+            "fusion-Werkbank: die Wurzel",
+            "Projektwurzel mit fusion-Werkbank",
+        ),
+        (
+            "flight-workbench",
+            "flight-Werkbank: die Wurzel",
+            "Projektwurzel mit flight-Werkbank",
+        ),
+    ] {
+        let oben = zeilenbloecke(wurzel);
+        let unten = zeilenbloecke(projektwurzel)
+            .replace(&format!("ordner = \"{werkbank}\", "), "")
+            .replace(&format!("ordner = \"{werkbank}/"), "ordner = \"");
+
+        assert_eq!(
+            unten, oben,
+            "«{projektwurzel}» ist von «{wurzel}» abgewichen; die zwei Bloecke \
+             beantworten dieselbe Frage an der Werkbankwurzel anders als an der \
+             Projektwurzel darueber"
+        );
+        assert!(
+            !unten.contains(werkbank),
+            "in «{projektwurzel}» steht «{werkbank}» in einer Gestalt, die die \
+             Normalisierung nicht kennt"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Die vier Zahlen der flight-Profile
+// ---------------------------------------------------------------------------
+
+/// Legt eine flight-Werkbank unter `wurzel` an.
+///
+/// **Der Ordner in `archive` ist nicht Beiwerk.** Er ist der einzige Eintrag,
+/// an dem die Zeile „Ablagen, zuletzt" ihre Form belegt: sie fuehrt
+/// `zeigt = "datum"`, und der Kommentar ueber dem Profil sagt, dass
+/// `zeigt = "titel"` dort keinen einzigen Eintrag saehe, weil es Ordner sind
+/// und keine Dateien.
+fn flightbestand(wurzel: &Path) {
+    std::fs::create_dir_all(wurzel).expect("die flight-Wurzel laesst sich nicht anlegen");
+
+    schreiben(
+        wurzel,
+        ".flight-setup",
+        r#"{"setup_at":"260528-1440","setup_pwd":"/Users/k/2026-Sommer-Adria","plugin_version":"0.8.0"}"#,
+    );
+
+    for (speicher, namen) in [
+        (
+            "decisions",
+            &["260528-1440-route-option-a.md", "260529-0900-hafen.md"][..],
+        ),
+        ("history", &["260528-1500-erster-schlag.md"][..]),
+        ("memos", &["260530-0800-proviant.md"][..]),
+    ] {
+        let ordner = wurzel.join(speicher);
+        std::fs::create_dir_all(&ordner).expect("der Speicher laesst sich nicht anlegen");
+        for (nummer, name) in namen.iter().enumerate() {
+            let pfad = schreiben(&ordner, name, "# Datensatz\n");
+            geaendert_setzen(&pfad, 1_700_000_000 + nummer as u64 * 60);
+        }
+    }
+
+    // Ein Lauf als **Ordner**, wie flight ihn ablegt.
+    std::fs::create_dir_all(wurzel.join("archive/260527-1200-vorbereitung"))
+        .expect("der Ablagelauf laesst sich nicht anlegen");
+
+    // `stilwerk` traegt die Stilprofile und keine Datensaetze ueber die Reise;
+    // das Profil gibt ihm deshalb keine Zeile. Er steht hier, damit der
+    // Pruefordner die Gestalt einer wirklichen Werkbank hat und nicht die des
+    // Profils.
+    std::fs::create_dir_all(wurzel.join("stilwerk"))
+        .expect("der Stilwerkordner laesst sich nicht anlegen");
+}
+
+/// Die Wurzel einer flight-Werkbank.
+fn flightwurzel(zweck: &str) -> Pruefordner {
+    let ordner = Pruefordner::neu(zweck);
+    flightbestand(ordner.pfad());
+    ordner
+}
+
+/// Eine Projektwurzel, die eine flight-Werkbank **enthaelt**.
+fn flightprojektwurzel(zweck: &str) -> Pruefordner {
+    let ordner = Pruefordner::neu(zweck);
+    flightbestand(&ordner.unter("flight-workbench"));
+    ordner
+}
+
+/// Die zwei flight-Profile bleiben unter den Zahlen, die ihr Kommentar nennt.
+///
+/// **Derselbe Fall, den `96e32cb` fuer das fusion-Projektwurzelprofil geschlossen
+/// hat.** `180fc53` hat am selben Tag vier weitere Zahlen derselben Art in
+/// `resources/default-readers.toml` geschrieben — elf Zeilen und fuenf
+/// Leselaeufe fuer `flight-Werkbank: die Wurzel`, elf Zeilen und sechs
+/// Leselaeufe fuer `Projektwurzel mit flight-Werkbank`, drei Oeffnungen fuer
+/// beide — und keine Probe hielt sie: die Zeichenfolge `flight` kam unter
+/// `crates/` an keiner Stelle vor (Defekt `260826-0902`).
+///
+/// Der Kommentar ist bei dieser Datei die einzige Auskunft, die der Nutzer je
+/// bekommt — sie wird beim ersten Start woertlich kopiert und danach nie wieder
+/// ueberschrieben —, und eine falsche Zahl darin wandert mit.
+///
+/// # Gehalten wird je Profil beides
+///
+/// Die Zahl selbst, und ihre Herleitung: an der Wurzel `leselaeufe ==
+/// orte.len()`, weil die drei Feldzeilen den erkannten Ordner selbst nennen und
+/// sich dessen Lesung mit der Erkennung teilen; an der Projektwurzel
+/// `leselaeufe == orte.len() + 1`, weil dort **jede** Zeile eine Ortsangabe
+/// traegt und den erkannten Ordner allein die Erkennung liest. Das ist die
+/// Bauform, die `96e32cb` fuer das fusion-Projektwurzelprofil vormacht.
+///
+/// Die drei Oeffnungen gehen in beiden Faellen allein auf die drei Feldzeilen:
+/// `zeigt = "datum"` liest das Aenderungsdatum aus dem Verzeichniseintrag, den
+/// der Leselauf ohnehin liefert, und oeffnet nichts.
+#[test]
+fn die_zwei_flight_profile_bleiben_unter_ihren_zahlen() {
+    let profile = ausgelieferte();
+
+    for (profilname, gestalt, erwartet, erkennungslauf) in [
+        (
+            "flight-Werkbank: die Wurzel",
+            flightwurzel("haushalt-flight-wurzel"),
+            (5, 3),
+            0,
+        ),
+        (
+            "Projektwurzel mit flight-Werkbank",
+            flightprojektwurzel("haushalt-flight-projektwurzel"),
+            (6, 3),
+            1,
+        ),
+    ] {
+        let profil = profil_der_auslieferung(&profile, profilname);
+        let orte = genannte_orte(profil);
+
+        let (zusammenfassung, haushalt) =
+            gezaehlt_erkannt(&profile, gestalt.pfad()).expect("kein Profil greift");
+        let gemessen = werte(&zusammenfassung);
+
+        assert_eq!(
+            gemessen.iter().map(|(name, _)| *name).collect::<Vec<_>>(),
+            profil
+                .zeilen()
+                .iter()
+                .map(|zeile| zeile.beschriftung())
+                .collect::<Vec<_>>(),
+            "gemessen wurde nicht «{profilname}», sondern ein anderes Profil"
+        );
+        assert_eq!(
+            (haushalt.leselaeufe(), haushalt.oeffnungen()),
+            erwartet,
+            "«{profilname}» kostet nicht mehr die Zahlen, die sein Kommentar in \
+             `default-readers.toml` nennt"
+        );
+        assert_eq!(
+            haushalt.leselaeufe() as usize,
+            orte.len() + erkennungslauf,
+            "die Herleitung stimmt nicht mehr: «{profilname}» nennt {} Orte",
+            orte.len()
+        );
+        assert!(
+            haushalt.leselaeufe() <= HOECHSTENS_LESELAEUFE
+                && haushalt.oeffnungen() <= HOECHSTENS_OEFFNUNGEN,
+            "C6.4 ist gebrochen: {} Leselaeufe und {} Oeffnungen",
+            haushalt.leselaeufe(),
+            haushalt.oeffnungen()
+        );
+        assert!(
+            gemessen
+                .iter()
+                .all(|(_, wert)| !matches!(wert, Wert::Nicht)),
+            "eine Zeile von «{profilname}» ist nicht drangekommen: {gemessen:?}"
+        );
+
+        // Die Zeile, um derentwillen der Ablagelauf ein Ordner ist: mit
+        // `zeigt = "datum"` liefert sie ein Datum, mit `zeigt = "titel"` saehe
+        // sie keinen einzigen Eintrag.
+        let (_, ablagen) = gemessen
+            .iter()
+            .find(|(name, _)| *name == "Ablagen, zuletzt")
+            .unwrap_or_else(|| panic!("«{profilname}» fuehrt keine Zeile «Ablagen, zuletzt»"));
+        assert!(
+            matches!(ablagen, Wert::Text(_)),
+            "«Ablagen, zuletzt» liefert kein Datum, sondern {ablagen:?}"
+        );
+    }
 }

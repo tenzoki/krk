@@ -34,3 +34,21 @@ stehen, der Nutzer berichtigt), oder `stapel_beauftragen` unterscheidet „keine
 „nur Zeilen mit Hinweis" — `vorschau.zeilen().is_empty()` gegen `auszufuehren().count() == 0`
 — und sagt beim ersten „keine Regel". Das Erste hält die Eingaben, das Zweite nur die
 Wahrheit der Meldung.
+
+---
+
+**Abgleich 260908 (Bahn Q3, `crates/krk-ui/src/appkit/`).** Der zweite der beiden Wege ist
+gebaut, also die Wahrheit der Meldung: `stapel_beauftragen`
+(`crates/krk-ui/src/appkit/anwendung.rs`) unterscheidet jetzt `vorschau.zeilen().is_empty()`
+von „auszuführen ist nichts" und sagt im ersten Fall „nichts umzubenennen: aus den Feldern
+ließ sich keine Regel bauen". Ein Nutzer, der sich in `Nummer ab:` vertippt hat, wird damit
+nicht mehr seine Zeilen absuchen geschickt.
+
+**Der Datensatz bleibt offen, weil die andere Hälfte steht: die vier eingetippten Felder sind
+nach dem Return fort.** Der erste Weg, wie der Datensatz ihn beschreibt („der Rückruf bleibt
+aus, das Blatt bleibt stehen"), hält den Sachverhalt am Mechanismus nicht: das Blatt schließt
+AppKit, sobald eine Schaltfläche gedrückt ist, und ob der Rückruf danach etwas tut, ändert
+daran nichts. Was die Eingaben hielte, wäre eine dritte Sache — die Schaltfläche „Umbenennen"
+auszugrauen, solange die Regel unlesbar ist. Dafür bräuchte `Blatt` einen Weg, eine
+Schaltfläche nach dem Zeigen zu schalten, den es heute nicht gibt; ob dieser Weg gebaut wird,
+ist eine Nutzerfrage und keine Umsetzungsfrage.

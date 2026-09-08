@@ -103,7 +103,7 @@ use objc2_foundation::{
 
 use krk_core::stapelumbenennen::{Regel, Vorschau, vorschau};
 
-use super::Blatt;
+use super::{Blatt, Blattgriff};
 
 /// Die Breite der Beigabe in Punkten.
 ///
@@ -408,7 +408,7 @@ pub fn zeigen(
     markierte: Vec<String>,
     bestand: Vec<String>,
     fertig: impl Fn(Vorschau) + 'static,
-) {
+) -> Blattgriff {
     let (beigabe, tabelle, hinweis, felder) = beigabe_bauen(mtm);
 
     let mut blatt = Blatt::neu(mtm, &frage(markierte.len()), "Umbenennen");
@@ -454,7 +454,7 @@ pub fn zeigen(
         if bestaetigt {
             fertig(quelle.ergebnis());
         }
-    });
+    })
 }
 
 /// Die Frage in der Kopfzeile des Blattes.

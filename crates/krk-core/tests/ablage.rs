@@ -439,9 +439,14 @@ pfad = 'eigenes/verzeichnis$'
 /// und ihr Schreibweg ist das atomare Schreiben eines Textes. Geprueft wird
 /// derselbe Rundlauf, allein die Nutzlast ist eine andere.
 ///
-/// Fuer `readers.toml` endet der Rundlauf beim Text und nicht bei einem
-/// geladenen Wert: die Ablage kennt von dieser Datei bislang nur Namen und
-/// Pfad, und wer ihren Inhalt auswertet, kommt mit einem spaeteren Schritt.
+/// **Auch `readers.toml` geht ueber den Ladeweg.** Bis zum 260908 endete ihr
+/// Rundlauf bei einem rohen `read_to_string` der Probe, mit der Begruendung,
+/// die Ablage kenne von dieser Datei nur Namen und Pfad; der "spaetere
+/// Schritt" ist mit Schritt 8 der Runde 16 gefahren, und [`toml_dateien`] sagt
+/// dreihundert Zeilen weiter oben selbst, dass ueber `Zugang::laden` alle fuenf
+/// gehen. Der Wortlautvergleich steht daneben stehen geblieben, denn er haelt
+/// die zweite Zusage: der Ladeweg schreibt die von Hand gepflegte Datei nicht
+/// um.
 #[test]
 fn alle_toml_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     let (_ordner, ablage) = ablage("rundlauf");
@@ -498,11 +503,26 @@ fn alle_toml_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     assert_eq!(zurueck_lesezeichen.wert, lesezeichen);
     assert_eq!(zurueck_sitzung.wert, sitzung);
 
+    let zurueck_leseprofile = geladene_leseprofile(&ablage);
+    assert!(
+        !zurueck_leseprofile.ist_ersetzt(),
+        "readers.toml kam nicht durch den Ladeweg zurueck: {:?}",
+        zurueck_leseprofile.ersetzung
+    );
+    assert_eq!(
+        zurueck_leseprofile
+            .wert
+            .iter()
+            .map(Profil::name)
+            .collect::<Vec<_>>(),
+        ["eigener Ordner"],
+        "der Ladeweg liefert nicht das geschriebene Profil"
+    );
     assert_eq!(
         fs::read_to_string(ablage.pfad(Datei::Leser))
             .expect("readers.toml laesst sich nicht lesen"),
         LESEPROFILTEXT,
-        "der Rundlauf hat readers.toml veraendert"
+        "der Ladeweg hat die von Hand gepflegte readers.toml umgeschrieben"
     );
 
     let zurueck_einstellungen = geladene_einstellungen(&ablage);

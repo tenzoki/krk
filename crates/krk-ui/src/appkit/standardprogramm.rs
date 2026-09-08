@@ -45,7 +45,7 @@
 //! verschiedenen Programmen gehoeren, und eine Sammeluebergabe an ein einzelnes
 //! Programm waere genau das "Oeffnen mit", das C3 ausschliesst.
 //!
-//! # Diese Huelle traegt keine Probe, und das ist Absicht
+//! # Diese Huelle traegt keine Probe, die etwas oeffnet, und das ist Absicht
 //!
 //! Ein Aufruf startet ein Programm des angemeldeten Nutzers. Eine Probe, die
 //! ihn ausloeste, oeffnete bei jedem `make check` Fenster, die niemand
@@ -55,6 +55,11 @@
 //! Eintraege in [`crate::kommandos::operationen::betroffene`] und die Meldungen
 //! in [`crate::kommandos::operationen::oeffnungsmeldung`]. Dass `openURL:` den
 //! Eintrag an LaunchServices gibt, sieht der Nutzer am gebauten Buendel.
+//!
+//! **Die eine Probe, die seit dem 260908 hier steht, oeffnet nichts.** Sie
+//! reicht einen Pfad ohne gueltiges UTF-8 herein, und der wird abgewiesen,
+//! bevor `NSWorkspace` ueberhaupt gefragt wird. Der Satz oben gilt damit
+//! unveraendert: nichts geht bei einem `make check` auf.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -89,6 +94,49 @@ use objc2_foundation::{NSString, NSURL};
 /// jener Aufruf **keine** Antwort liefert, und hier liefert er eine.
 #[must_use = "die Antwort sagt, ob das System den Eintrag angenommen hat; fallengelassen bleibt der Nutzer ohne Meldung vor einem Programm, das nicht aufgeht"]
 pub fn oeffnen(pfad: &Path) -> bool {
-    let ziel = NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy()));
+    // **Kein `to_string_lossy`.** Ein Pfad ohne gueltiges UTF-8 wuerde damit zu
+    // einem Pfad mit `U+FFFD`, und das System bekaeme einen Eintrag, den es
+    // nicht gibt — waehrend `openURL:` `true` lieferte oder sein Fehlschlag
+    // etwas anderes bedeutete als das, was wirklich vorlag. `false` heisst hier
+    // dasselbe wie eine Abweisung durch das System: der Rufer meldet es.
+    // Dieselbe Antwort geben `super::papierkorb`, `super::abwurf` und
+    // `super::volumes`
+    // (`issues/260826-1421_*_pfade-ohne-gueltiges-utf-8-vier-huellen-glaetten-still-mit-to-string-lossy-und-drei-weisen-ab.md`).
+    let Some(pfad) = pfad.to_str() else {
+        return false;
+    };
+    let ziel = NSURL::fileURLWithPath(&NSString::from_str(pfad));
     NSWorkspace::sharedWorkspace().openURL(&ziel)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ein Pfad ohne gueltiges UTF-8 wird abgewiesen und nicht geglaettet.
+    ///
+    /// **Dieselbe Bauform wie in [`super::papierkorb`]**, und aus demselben
+    /// Grund: `to_string_lossy` machte daraus einen anderen Eintrag, und das
+    /// System bekaeme eine Datei, die es nicht gibt. Das Byte `0xff` ist in
+    /// keiner UTF-8-Folge zulaessig.
+    ///
+    /// **Die Probe fasst AppKit nicht an**: die Abweisung steht vor dem
+    /// `NSWorkspace`. Ein gueltiger Pfad in derselben Probe wuerde ein fremdes
+    /// Programm oeffnen und gehoert deshalb nicht hierher.
+    #[test]
+    fn ein_pfad_ohne_gueltiges_utf8_geht_nicht_an_das_system() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+        use std::path::PathBuf;
+
+        let krumm = PathBuf::from(OsStr::from_bytes(b"/tmp/krk-standardprogramm-\xffkrumm"));
+        assert!(
+            krumm.to_str().is_none(),
+            "der Pfad der Probe ist gueltiges UTF-8 und misst damit nicht, was sie messen soll"
+        );
+        assert!(
+            !oeffnen(&krumm),
+            "ein Pfad ohne gueltiges UTF-8 wird nicht abgewiesen"
+        );
+    }
 }

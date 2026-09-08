@@ -133,12 +133,21 @@ pub fn anwendung_vorhanden(kennung: &str) -> bool {
 /// eine Buendelkennung in einen Anwendungsort umsetzt.
 #[must_use = "die Antwort sagt, ob eine Anwendung dieser Kennung installiert ist; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
+    // **Kein `to_string_lossy`.** Ein Pfad ohne gueltiges UTF-8 wuerde damit zu
+    // einem Pfad mit `U+FFFD`, und das Terminal oeffnete einen anderen Ordner,
+    // ohne dass der Rufer es erfuehre. `false` heisst hier dasselbe wie bei
+    // einer fehlenden Anwendung: der Rufer meldet es. Dieselbe Antwort geben
+    // `super::papierkorb`, `super::abwurf` und `super::volumes`
+    // (`issues/260826-1421_*_pfade-ohne-gueltiges-utf-8-vier-huellen-glaetten-still-mit-to-string-lossy-und-drei-weisen-ab.md`).
+    let Some(ordner) = ordner.to_str() else {
+        return false;
+    };
     let Some(anwendung) = anwendungsort(kennung) else {
         return false;
     };
 
     let arbeitsflaeche = NSWorkspace::sharedWorkspace();
-    let ziel = NSURL::fileURLWithPath(&NSString::from_str(&ordner.to_string_lossy()));
+    let ziel = NSURL::fileURLWithPath(&NSString::from_str(ordner));
     let ziele = NSArray::from_retained_slice(&[ziel]);
     arbeitsflaeche.openURLs_withApplicationAtURL_configuration_completionHandler(
         &ziele,
@@ -147,4 +156,36 @@ pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
         None,
     );
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ein Pfad ohne gueltiges UTF-8 wird abgewiesen und nicht geglaettet.
+    ///
+    /// **Dieselbe Bauform wie in [`super::papierkorb`]**, und aus demselben
+    /// Grund: `to_string_lossy` machte daraus einen Pfad mit `U+FFFD`, also
+    /// einen anderen Ordner, und das Terminal oeffnete ihn, ohne dass jemand es
+    /// erfuehre. Das Byte `0xff` ist in keiner UTF-8-Folge zulaessig.
+    ///
+    /// **Die Probe fasst AppKit nicht an**: die Abweisung steht vor dem Auflegen
+    /// der Anwendung und vor jedem Ruf an `NSWorkspace`. Deshalb steht der
+    /// krumme Pfad in der Zeile und keine gueltige Kennung daneben.
+    #[test]
+    fn ein_pfad_ohne_gueltiges_utf8_oeffnet_kein_terminal() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+        use std::path::PathBuf;
+
+        let krumm = PathBuf::from(OsStr::from_bytes(b"/tmp/krk-terminal-\xffkrumm"));
+        assert!(
+            krumm.to_str().is_none(),
+            "der Pfad der Probe ist gueltiges UTF-8 und misst damit nicht, was sie messen soll"
+        );
+        assert!(
+            !ordner_oeffnen("com.apple.Terminal", &krumm),
+            "ein Pfad ohne gueltiges UTF-8 wird nicht abgewiesen"
+        );
+    }
 }

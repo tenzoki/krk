@@ -269,14 +269,28 @@ pub fn anwenden(
         // Ueberschrift bekommt seine feste Schrift, der tiefere Listenpunkt
         // seinen groesseren Einzug.
         //
+        // **Der Quelltext in einer Ueberschrift faellt dabei auf die
+        // Grundgroesse**, und das gehoert zum vorigen Satz dazu: er bekommt
+        // seine feste Schrift **und verliert die Groesse der Ueberschrift**,
+        // weil `feste_schrift(grundgroesse)` eine ganz neue Schrift setzt. Bei
+        // Stufe 1 sind das 41 Prozent Hoehe gegenueber den Nachbarn in
+        // derselben Zeile. Dasselbe trifft jede Betonung in einer
+        // Ueberschrift, also `## Ein **fetter** Teil` und `## *kursiver* Teil`
+        // (`issues/260812-1920_*_eine-auszeichnung-in-einer-ueberschrift-verliert-deren-schriftgroesse.md`).
+        //
         // **Was diese Reihenfolge nicht kann, ist zusammenlegen.** Wo zwei
         // schriftsetzende Auszeichnungen einander enthalten, geht die
         // aeussere fuer den ueberlappten Bereich verloren, statt sich mit der
         // inneren zu verbinden: in `*kursiv **fett** wieder kursiv*` ist
         // "fett" fett und nicht mehr kursiv (gemessen). Fett **und** kursiv
         // brauchte einen Schriftzustand je Stelle statt eines Ersetzens; der
-        // offene Datensatz dazu ist
+        // Datensatz dazu ist
         // `issues/260812-1805_*_der-ueberschneidungssatz-in-textmerkmale-anwenden-gilt-seit-markdown-rs-nicht-mehr.md`.
+        //
+        // **Ein blosses Zusammenlegen der Schnitte behebt den Groessenverlust
+        // nicht.** `NSFontDescriptor`-Merkmale und `applyFontTraits:range:`
+        // legen Schnitte zusammen und keine Groessen; der Zustand je Stelle
+        // muesste die Groesse mitfuehren.
         unsafe { speicher.addAttributes_range(&merkmale, bereich) };
     }
     speicher.endEditing();
@@ -527,4 +541,125 @@ fn nsfarbe(farbe: Farbe) -> Retained<NSColor> {
         f64::from(farbe.blau) / 255.0,
         1.0,
     )
+}
+
+#[cfg(test)]
+mod proben {
+    use super::*;
+
+    /// Die sechs Eingabepaare von [`grundmerkmale`], Zeile fuer Zeile.
+    ///
+    /// **Ohne AppKit-Objekt und ohne Hauptfaden.** `smallSystemFontSize` ist
+    /// eine Klassenangabe von `NSFont` und baut nichts; die Probe fasst keine
+    /// Ansicht an und braucht deshalb weder Fenster noch
+    /// `MainThreadMarker::new_unchecked`. Gemessen wird die
+    /// Fallunterscheidung und nicht die Zahl: welche Grundlage die kleine
+    /// Systemschriftgroesse ist, entscheidet das System.
+    ///
+    /// **Was sie haelt:** die Zusage des Doc-Kommentars, dass es *eine* Regel
+    /// ist und nicht drei — die Rohansicht traegt in jeder Darstellungsart
+    /// feste Schrift in der Grundlage, die Formatansicht nur bei Code, und die
+    /// beiden lesbaren Arten bekommen den Zuschlag. Sie faengt damit den
+    /// Wiedereinzug einer zweiten Groessenrechnung, den `anwenden` bis zum
+    /// 260907 trug.
+    #[test]
+    fn die_tafel_der_grundmerkmale() {
+        let grundlage = NSFont::smallSystemFontSize();
+        let faelle = [
+            (
+                Ansicht::Roh,
+                Darstellungsart::EinfacherText,
+                true,
+                grundlage,
+            ),
+            (Ansicht::Roh, Darstellungsart::Code, true, grundlage),
+            (Ansicht::Roh, Darstellungsart::Markdown, true, grundlage),
+            (Ansicht::Format, Darstellungsart::Code, true, grundlage),
+            (
+                Ansicht::Format,
+                Darstellungsart::EinfacherText,
+                false,
+                grundlage + LESEZUSCHLAG,
+            ),
+            (
+                Ansicht::Format,
+                Darstellungsart::Markdown,
+                false,
+                grundlage + LESEZUSCHLAG,
+            ),
+        ];
+
+        for (ansicht, art, fest_erwartet, groesse_erwartet) in faelle {
+            let (fest, groesse) = grundmerkmale(ansicht, art);
+            assert_eq!(
+                fest, fest_erwartet,
+                "{ansicht:?}/{art:?}: die Schriftart der Grundschrift stimmt nicht"
+            );
+            assert!(
+                (groesse - groesse_erwartet).abs() < f64::EPSILON,
+                "{ansicht:?}/{art:?}: die Groesse ist {groesse} statt {groesse_erwartet}"
+            );
+        }
+    }
+
+    /// [`grundgroesse`] rechnet nichts nach, sondern liefert die zweite Haelfte
+    /// von [`grundmerkmale`].
+    ///
+    /// Die Zusage des Doc-Kommentars, und sie ist die, an der `anwenden` haengt:
+    /// eine Ueberschrift setzt auf derselben Grundlage auf wie der Text, ueber
+    /// dem sie steht.
+    #[test]
+    fn die_grundgroesse_ist_die_zweite_haelfte_der_grundmerkmale() {
+        for ansicht in [Ansicht::Roh, Ansicht::Format] {
+            for art in [
+                Darstellungsart::EinfacherText,
+                Darstellungsart::Code,
+                Darstellungsart::Markdown,
+            ] {
+                assert!(
+                    (grundgroesse(ansicht, art) - grundmerkmale(ansicht, art).1).abs()
+                        < f64::EPSILON,
+                    "{ansicht:?}/{art:?}: die Groesse kommt aus einer zweiten Rechnung"
+                );
+            }
+        }
+    }
+
+    /// Die sechs Ueberschriftsfaktoren fallen streng.
+    ///
+    /// „Absteigend, weil `#` mehr wiegt als `######`" steht als Begruendung an
+    /// [`UEBERSCHRIFTSFAKTOREN`]; hier steht sie als Zusage. Die untere Schranke
+    /// gehoert dazu: ein Faktor unter eins machte eine Ueberschrift kleiner als
+    /// den Text darunter.
+    #[test]
+    fn die_ueberschriftsfaktoren_fallen_streng_und_bleiben_ueber_eins() {
+        for paar in UEBERSCHRIFTSFAKTOREN.windows(2) {
+            assert!(
+                paar[0] > paar[1],
+                "die Faktoren fallen nicht streng: {} steht vor {}",
+                paar[0],
+                paar[1]
+            );
+        }
+        assert!(
+            UEBERSCHRIFTSFAKTOREN.iter().all(|faktor| *faktor > 1.0),
+            "ein Faktor liegt bei eins oder darunter; die Ueberschrift waere nicht groesser \
+             als ihr Text"
+        );
+    }
+
+    /// Die Liste traegt genau eine Zahl je Ueberschriftsstufe, die Markdown
+    /// kennt.
+    ///
+    /// `anwenden` greift mit `stufe.clamp(1, 6) - 1` hinein; eine kuerzere Liste
+    /// waere ein Zugriff hinter das Feld, eine laengere eine Zahl, die niemand
+    /// liest.
+    #[test]
+    fn die_liste_traegt_eine_zahl_je_stufe() {
+        assert_eq!(
+            UEBERSCHRIFTSFAKTOREN.len(),
+            6,
+            "Markdown kennt sechs Ueberschriftsstufen, und `anwenden` greift auf `stufe - 1` zu"
+        );
+    }
 }

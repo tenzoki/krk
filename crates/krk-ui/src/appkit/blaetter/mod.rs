@@ -215,6 +215,7 @@ pub mod zeilennummer;
 pub mod zettel;
 
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use block2::RcBlock;
 use objc2::rc::Retained;
@@ -243,7 +244,11 @@ pub struct WaechterIvars {
     ///
     /// Wahlfrei, weil die meisten Blaetter nichts damit anfangen: allein die
     /// Vorschau des Stapel-Umbenennens rechnet mit jedem Zeichen neu.
-    aenderung: RefCell<Option<Box<dyn Fn()>>>,
+    ///
+    /// **Ein `Rc` und kein `Box`**, damit [`Eingabewaechter::text_geaendert`]
+    /// den Rueckruf aus der Ausleihe herausklonen kann, statt ihn waehrend des
+    /// Rufs zu halten; die Begruendung steht dort.
+    aenderung: RefCell<Option<Rc<dyn Fn()>>>,
 }
 
 define_class!(
@@ -296,8 +301,16 @@ define_class!(
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(controlTextDidChange:))]
         fn text_geaendert(&self, _meldung: &objc2_foundation::NSNotification) {
-            let aenderung = self.ivars().aenderung.borrow();
-            if let Some(aenderung) = aenderung.as_ref() {
+            // Die Ausleihe endet vor dem Aufruf, aus demselben Grund wie in
+            // [`Eingabewaechter::antworten`]: der Rueckruf schreibt nach AppKit
+            // hinein (`setStringValue`, `reloadData`), und AppKit kann dabei
+            // erneut `controlTextDidChange:` melden oder ueber
+            // [`Blatt::textaenderung_melden`] einen neuen Rueckruf setzen.
+            // Beides waere unter gehaltener Ausleihe ein Abbruch mit
+            // „already borrowed". Anders als dort wird nicht `take`
+            // genommen: dieser Rueckruf gilt fuer jede weitere Aenderung.
+            let aenderung = self.ivars().aenderung.borrow().clone();
+            if let Some(aenderung) = aenderung {
                 aenderung();
             }
         }
@@ -547,8 +560,17 @@ pub fn bestaetigungsstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> usize {
 /// Der Abbruchbefehl braucht das: `esc` schliesst ein stehendes Blatt ueber
 /// seinen Griff, weil ein `NSButton` genau eine Tastenentsprechung traegt und
 /// die Rueckfrage vor dem Raeumen in den Papierkorb die Eingabetaste auf
-/// "Abbrechen" gelegt hat. Wer den Griff nicht braucht, laesst ihn fallen; das
-/// schadet nicht, weil AppKit das Blatt haelt, solange es steht.
+/// "Abbrechen" gelegt hat.
+///
+/// **„Wer den Griff nicht braucht, laesst ihn fallen; das schadet nicht" stand
+/// hier bis zum 260907 und war halb wahr.** Der Lebensdauer des Blattes schadet
+/// es wirklich nicht: AppKit haelt es, solange es steht. Dem Abbruchbefehl
+/// schadet es sehr wohl — er sucht den Griff in `offenes_blatt`, fand dort
+/// nichts und leerte stattdessen den Filtertext des Dateifensters **hinter**
+/// dem Blatt
+/// (`issues/260826-1325_*_esc-im-stapel-umbenennen-blatt-mit-fokus-in-der-vorschautabelle-schliesst-das-blatt-nicht-sondern-leert-den-filter-dahinter.md`).
+/// Wer ihn heute fallen laesst, sagt es mit `let _ =` und schreibt daneben,
+/// warum sein Blatt ohne Griff auskommt.
 #[must_use = "ein Griff, der faellt, nimmt dem Abbruchbefehl sein Blatt; wer ihn nicht braucht, sagt es mit `let _ =`"]
 pub struct Blattgriff {
     warnung: Retained<NSAlert>,
@@ -793,7 +815,7 @@ impl Blatt {
     /// nichts; die Meldung braucht ein bewachtes Feld.
     pub fn textaenderung_melden(&self, melden: Box<dyn Fn()>) {
         if let Some(waechter) = &self.waechter {
-            *waechter.ivars().aenderung.borrow_mut() = Some(melden);
+            *waechter.ivars().aenderung.borrow_mut() = Some(Rc::from(melden));
         }
     }
 
@@ -820,8 +842,25 @@ impl Blatt {
     ///
     /// "Bestaetigt" heisst: die **erste** Schaltflaeche. Fuer ein Blatt mit
     /// mehr als zweien ist [`Blatt::zeigen_mit_wahl`] der richtige Weg.
-    pub fn zeigen(self, fenster: &NSWindow, fertig: impl Fn(bool) + 'static) {
-        let _griff = self.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| fertig(stelle == 0));
+    ///
+    /// **Der [`Blattgriff`] kommt zurueck und wurde bis zum 260907 hier
+    /// fallengelassen.** Das kostete jedem Blatt dieses Weges den Abbruchbefehl:
+    /// `Anwendungsdelegierter::abbrechen` sucht den Griff in `offenes_blatt`,
+    /// findet dort nichts und faellt auf seinen zweiten und dritten Rang — er
+    /// brach einen laufenden Vorgang ab oder leerte den Filtertext des Tabs
+    /// **hinter** dem Blatt, waehrend das Blatt stehen blieb. Gedeckt war das
+    /// allein durch den Fokusvorbehalt, also so lange, wie der Ersthelfer ein
+    /// Textfeld ist; im Stapel-Umbenennen-Blatt liegt die Vorschautabelle im
+    /// Tabring und ist es nicht
+    /// (`issues/260826-1325_*_esc-im-stapel-umbenennen-blatt-mit-fokus-in-der-vorschautabelle-schliesst-das-blatt-nicht-sondern-leert-den-filter-dahinter.md`).
+    ///
+    /// Ein eigenes `#[must_use]` steht hier nicht: [`Blattgriff`] traegt es
+    /// selbst, samt der Erklaerung. „Wer den Griff nicht braucht, laesst ihn
+    /// fallen" gilt der Lebensdauer des Blattes und **nicht** dem
+    /// Abbruchbefehl; wer ihn hier fallen laesst, entscheidet das bewusst und
+    /// schreibt `let _ =` davor.
+    pub fn zeigen(self, fenster: &NSWindow, fertig: impl Fn(bool) + 'static) -> Blattgriff {
+        self.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| fertig(stelle == 0))
     }
 
     /// Zeigt das Blatt am Fenster und meldet die Stelle der gedrueckten
@@ -1003,34 +1042,36 @@ mod tests {
     /// Schaltflaeche im Fehlschlag — also mit dem Schaden benannt, den die
     /// feste Stelle anrichtete, und nicht mit einer Zahl.
     ///
-    /// Die Nachbildung des Konfliktblattes traegt seit dem 260907 den Wortlaut
-    /// seines endgueltigen Falles und nicht mehr „Überschreiben“; welcher
-    /// Wortlaut wann steht, entscheidet
-    /// [`crate::kommandos::operationen::ersetzungsweg`], und die Zusage dieser
-    /// Probe haengt an der Reihenfolge und nicht am Text.
+    /// **Keiner der Bauplaene wird hier nachgebaut**, sondern jeder bei seinem
+    /// Bauer geholt. Eine Nachbildung des Konfliktblattes stand bis zum 260907
+    /// an dieser Stelle und blieb gruen, als das Original den Wortlaut seiner
+    /// ersten Schaltflaeche wechselte
+    /// (`issues/260907-0750_*_eine-nachbildung-der-konfliktschaltflaechen-steht-in-blaetter-mod-rs-und-nichts-haelt-sie-am-original.md`).
+    /// Vom Konfliktblatt kommen deshalb **beide** Gestalten herein: seine
+    /// Reihenfolge und seine Tasten unterscheiden sich danach, ob der Vorgang
+    /// genau ein Ziel erzeugt.
     #[test]
     fn die_eingabetaste_im_feld_gehoert_ihrer_eigenen_schaltflaeche() {
-        let konfliktblatt = [
-            Schaltflaeche::neu(
-                "Endgültig löschen und ersetzen",
-                Taste::EingabeMitBefehl,
-                Wirkung::Ausfuehren,
-            ),
-            Schaltflaeche::neu("Überspringen", Taste::Eingabe, Wirkung::Ausfuehren),
-            Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
-            Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
-        ];
-        let loeschrueckfrage = [
-            Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
-            Schaltflaeche::neu(
-                "In den Papierkorb räumen",
-                Taste::EingabeMitBefehl,
-                Wirkung::Ausfuehren,
-            ),
-        ];
+        use crate::kommandos::operationen::{Ersetzungsweg, Konfliktgestalt};
+
+        let ein_ziel = super::konflikt::schaltflaechen(Konfliktgestalt {
+            genau_ein_ziel: true,
+            ersetzung: Ersetzungsweg::Endgueltig,
+        });
+        let mehrere_ziele = super::konflikt::schaltflaechen(Konfliktgestalt {
+            genau_ein_ziel: false,
+            ersetzung: Ersetzungsweg::Papierkorb,
+        });
+        let loeschrueckfrage =
+            super::loeschbestaetigung::schaltflaechen("In den Papierkorb räumen");
         let blatt_neu = standardschaltflaechen("Sichern");
 
-        for schaltflaechen in [&konfliktblatt[..], &loeschrueckfrage[..], &blatt_neu[..]] {
+        for schaltflaechen in [
+            &ein_ziel[..],
+            &mehrere_ziele[..],
+            &loeschrueckfrage[..],
+            &blatt_neu[..],
+        ] {
             let stelle = bestaetigungsstelle(schaltflaechen);
             assert_eq!(
                 schaltflaechen[stelle].taste,

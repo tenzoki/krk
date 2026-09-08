@@ -106,8 +106,13 @@ const AUSFUEHRENDE_STELLE: usize = 1;
 /// Beschriftung, eine Taste und eine [`Wirkung`]. Der Bauplan des Blattes ist
 /// die eine Angabe, an der die Zusage "eine unbekannte Antwort loescht nichts"
 /// haengt (`issues/260817-1106_*`).
+///
+/// **`pub(super)` und nicht privat**, aus demselben Grund wie bei
+/// [`super::konflikt::schaltflaechen`]: die Probe
+/// `super::tests::die_eingabetaste_im_feld_gehoert_ihrer_eigenen_schaltflaeche`
+/// liest diese Liste, statt sie nachzubauen.
 #[must_use]
-fn schaltflaechen(vorgang: &str) -> [Schaltflaeche<'_>; 2] {
+pub(super) fn schaltflaechen(vorgang: &str) -> [Schaltflaeche<'_>; 2] {
     [
         Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
         Schaltflaeche::neu(vorgang, Taste::EingabeMitBefehl, Wirkung::Ausfuehren),

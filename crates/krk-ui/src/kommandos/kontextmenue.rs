@@ -784,6 +784,25 @@ fn ist_ziel_des_laufs(pfad: &Path, ziele: &[PathBuf]) -> bool {
 /// nimmt einen solchen Namen gar nicht an. Der Weg ist derselbe, den
 /// [`archivname`] und [`ordnername_zum_archiv`] schon gehen; ein zweiter
 /// daneben antwortete an einem Namen anders als sie.
+/// Die Laenge, nach der [`ohne_die_eigenen_ziele`] ordnet.
+///
+/// **Sie misst genau das, was [`gleicher_eintrag`] vergleicht**, und deshalb
+/// steht sie hier und nicht als `len()` an der Sortierzeile: dort mass sie den
+/// geschriebenen Pfad, waehrend der Vergleich den gefalteten letzten
+/// Bestandteil nahm, und die zwei Ordnungen fielen an einem Kelvinzeichen
+/// auseinander (Defekt `260825-1425`). Der Elternteil zaehlt nicht mit — er
+/// ist bei allen Paaren eines Laufs derselbe, und `gleicher_eintrag` weist
+/// ohnehin ab, wo er es nicht ist.
+///
+/// Ohne letzten Bestandteil bleibt nichts zu falten; dann steht hier die Laenge
+/// des Pfades, wie auch der Vergleich dort buchstabengetreu wird.
+fn faltlaenge(pfad: &Path) -> usize {
+    match pfad.file_name() {
+        Some(name) => name.to_string_lossy().to_lowercase().len(),
+        None => pfad.as_os_str().len(),
+    }
+}
+
 fn gleicher_eintrag(einer: &Path, anderer: &Path) -> bool {
     match (einer.file_name(), anderer.file_name()) {
         (Some(dieser), Some(jener)) => {
@@ -818,20 +837,23 @@ fn gleicher_eintrag(einer: &Path, anderer: &Path) -> bool {
 /// nicht ist, traegt er [`ERSATZSTAMM`] — und der endet nicht auf `.zip`, kann
 /// also gar kein Archiv dieser Liste treffen.
 ///
-/// **Die Faltung laesst diese Rechnung stehen und macht sie zu einer Annahme.**
+/// **Geordnet wird nach der gefalteten Laenge, und darin liegt der Beweis.**
 /// Bis zum 260825-1358 verglich [`gleicher_eintrag`] ASCII-gefaltet, und das
-/// trifft nur gleich lange Bytefolgen: der beanspruchte Eintrag war damit genau
-/// vier Bytes kuerzer als sein Beansprucher, und die Ordnung war bewiesen. Das
-/// Kleinschreiben ueber ganz Unicode kann die Laenge aendern: gut zwei Dutzend
-/// Zeichen verlieren dabei Bytes, das Kelvinzeichen `K` (`U+212A`) als einziges
-/// zwei und die uebrigen je eines, drei Zeichen gewinnen eines. Der Vorsprung
-/// von vier Bytes traegt das, solange nicht
-/// mehrere solcher Zeichen in einem Namen stehen: zwei Kelvinzeichen stellen
-/// die Laengen gleich, drei kehren die Ordnung um. Dahinter kommt der
-/// Beanspruchte vor seinem Beansprucher dran und bleibt stehen — der Ausgang
-/// des Befundes vom 260825, an einer Stelle, die ein Archivname mit drei
-/// Kelvinzeichen erreicht. Wer die Grenze schliessen will, ordnet nach der
-/// kleingeschriebenen Laenge und nicht nach der geschriebenen.
+/// trifft nur gleich lange Bytefolgen; die geschriebene Laenge war damals
+/// dieselbe Ordnung wie die gefaltete. Mit dem Kleinschreiben ueber ganz
+/// Unicode fielen sie auseinander — gut zwei Dutzend Zeichen verlieren dabei
+/// Bytes, das Kelvinzeichen `K` (`U+212A`) als einziges zwei —, und die
+/// Ordnung nach der geschriebenen Laenge war von da an eine Annahme:
+/// `kkk.zip.zip` und `KKK.zip` mit drei Kelvinzeichen meinen gefaltet
+/// denselben Eintrag, und der Beanspruchte stand geschrieben vor seinem
+/// Beansprucher (Defekt `260825-1425`). Seit dem 260908 ordnet
+/// [`faltlaenge`] nach genau dem, was [`gleicher_eintrag`] vergleicht, und die
+/// Rechnung traegt wieder: der Zielname ist der um [`ENDUNG`] gekuerzte
+/// Archivname, die vier Bytes von `.zip` sind ASCII und ueberstehen das
+/// Kleinschreiben unveraendert, und die einzige laengenrelevante
+/// Kontextabhaengigkeit der Umschrift — das Schluss-Sigma — liefert mit `ς`
+/// und `σ` zwei gleich lange Zeichen. Der Beansprucher ist damit gefaltet
+/// immer genau vier Bytes laenger als der Beanspruchte.
 ///
 /// **Herausgegeben wird trotzdem in der Reihenfolge der Eingabe**, denn das ist
 /// die Reihenfolge, in der die Eintraege vor dem Nutzer stehen; die
@@ -841,7 +863,7 @@ fn gleicher_eintrag(einer: &Path, anderer: &Path) -> bool {
 /// laengste Archiv kommt zuerst dran, und die Zielliste ist dann noch leer.
 fn ohne_die_eigenen_ziele(paare: Vec<(PathBuf, PathBuf)>) -> Vec<(PathBuf, PathBuf)> {
     let mut reihenfolge: Vec<usize> = (0..paare.len()).collect();
-    reihenfolge.sort_by_key(|stelle| Reverse(paare[*stelle].0.as_os_str().len()));
+    reihenfolge.sort_by_key(|stelle| Reverse(faltlaenge(&paare[*stelle].0)));
 
     let mut bleibt = vec![true; paare.len()];
     let mut ziele: Vec<PathBuf> = Vec::with_capacity(paare.len());
@@ -1599,6 +1621,37 @@ mod tests {
                 ausgelassen: 1,
             },
             "äpfel.zip ist der Zielordner von Äpfel.zip.zip, in der Schreibung der Platte"
+        );
+    }
+
+    /// Drei Kelvinzeichen kehren die geschriebene Laenge um, die gefaltete
+    /// nicht (Defekt `260825-1425`).
+    ///
+    /// `KKK.zip` mit `U+212A` ist geschrieben 13 Bytes lang und gefaltet 7;
+    /// `kkk.zip.zip` in ASCII ist geschrieben 11 und gefaltet 11. Nach der
+    /// geschriebenen Laenge kam der Beanspruchte damit vor seinem Beansprucher
+    /// dran, war zu diesem Zeitpunkt noch kein Ziel des Laufs und blieb stehen;
+    /// der Nutzer bekam zwei Zielordner statt eines und das Archiv im Archiv.
+    #[test]
+    fn drei_kelvinzeichen_kehren_die_ordnung_des_entpackschnitts_nicht_um() {
+        let ordner = ordner();
+        let beansprucht = ordner.join("\u{212A}\u{212A}\u{212A}.zip");
+        let beansprucher = ordner.join("kkk.zip.zip");
+        assert!(
+            beansprucht.as_os_str().len() > beansprucher.as_os_str().len(),
+            "die Vorprobe: geschrieben steht der Beanspruchte vorn"
+        );
+
+        let modell = modell_mit(&["\u{212A}\u{212A}\u{212A}.zip", "kkk.zip.zip"]);
+        let betroffen = vec![beansprucht, beansprucher.clone()];
+
+        assert_eq!(
+            entpackziel(&modell, &betroffen, ordner),
+            Entpackbefund::Archive {
+                paare: vec![(beansprucher, ordner.join("kkk.zip"))],
+                ausgelassen: 1,
+            },
+            "KKK.zip ist gefaltet der Zielordner von kkk.zip.zip"
         );
     }
 

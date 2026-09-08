@@ -287,35 +287,7 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         return Err(Abbruch::Aufruf("kein Unterbefehl genannt".to_owned()));
     };
     match befehl.as_str() {
-        "bundle" => {
-            if let Some(ueberzaehlig) = argumente.get(1) {
-                return Err(Abbruch::Aufruf(format!(
-                    "bundle kennt {ueberzaehlig:?} nicht"
-                )));
-            }
-            let gebaut = bundle::bauen()?;
-            println!("Buendel: {}", gebaut.buendel.display());
-            // Der Abschlusshinweis haengt an diesem Unterbefehl und nicht an
-            // `bundle::bauen`: `messen --alle` baut dasselbe Buendel fuer eine
-            // Messung und gibt es nicht weiter, und `release` faehrt genau den
-            // Weg, auf den der Hinweis zeigt. Was er sagt, entscheidet der
-            // **Name** der Identitaet und nicht ihre Art: aufgeloest wird die
-            // Art bewusst nicht; siehe [`sign::weitergabehinweis`].
-            //
-            // Die Architektur der Baumaschine steht schon beim Uebersetzen
-            // fest, wird aber unter dem Namen gemeldet, den `lipo` benutzt:
-            // wer den Hinweis nachprueft, tut es mit `lipo`, und das schreibt
-            // `arm64`, wo Rust `aarch64` sagt. Die Umrechnung liest die Namen
-            // aus `release` und legt keine zweite Liste an.
-            println!(
-                "{}",
-                sign::weitergabehinweis(
-                    &gebaut.identitaet.name,
-                    release::lipo_name(std::env::consts::ARCH)
-                )
-            );
-            Ok(())
-        }
+        "bundle" => bundle_fahren(&argumente[1..]),
         "version" => version::ausfuehren(&argumente[1..]),
         "release" => release::ausfuehren(&argumente[1..]),
         "beglaubigen" => beglaubigung::ausfuehren(&argumente[1..]),
@@ -329,6 +301,49 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
             "unbekannter Unterbefehl {anderer:?}"
         ))),
     }
+}
+
+/// Der Unterbefehl `bundle`: baut das Buendel und nennt danach den Weg zur
+/// Weitergabe.
+///
+/// **Warum das eine benannte Funktion ist und kein Zweigkoerper im `match`.**
+/// Den Weitergabehinweis gibt genau eine Stelle des Werkzeugs aus, und die Probe
+/// `allein_der_unterbefehl_bundle_gibt_den_hinweis_aus` (`xtask/src/sign.rs`)
+/// haelt das fest. Solange der Zweigkoerper eine Stelle in diesem `match` war,
+/// hielt sie allein die **Datei**: wer die Zeilen des Aufrufs in den
+/// `release`-Zweig verschob, liess die Zahl in `main.rs` bei eins und die Probe
+/// gruen, und der Hinweis stand an der Stelle, an der er ausdruecklich nicht
+/// stehen soll
+/// (`shared/issues/260815-1446_*_die-probe-zum-einen-rufer-des-weitergabehinweises-liest-drei-von-sechs-modulen-und-nicht-den-zweig.md`).
+/// Ein benannter Ort ist pruefbar, eine Stelle in einem `match` nicht.
+fn bundle_fahren(rest: &[String]) -> Result<(), Abbruch> {
+    if let Some(ueberzaehlig) = rest.first() {
+        return Err(Abbruch::Aufruf(format!(
+            "bundle kennt {ueberzaehlig:?} nicht"
+        )));
+    }
+    let gebaut = bundle::bauen()?;
+    println!("Buendel: {}", gebaut.buendel.display());
+    // Der Abschlusshinweis haengt an diesem Unterbefehl und nicht an
+    // `bundle::bauen`: `messen --alle` baut dasselbe Buendel fuer eine
+    // Messung und gibt es nicht weiter, und `release` faehrt genau den
+    // Weg, auf den der Hinweis zeigt. Was er sagt, entscheidet der
+    // **Name** der Identitaet und nicht ihre Art: aufgeloest wird die
+    // Art bewusst nicht; siehe [`sign::weitergabehinweis`].
+    //
+    // Die Architektur der Baumaschine steht schon beim Uebersetzen
+    // fest, wird aber unter dem Namen gemeldet, den `lipo` benutzt:
+    // wer den Hinweis nachprueft, tut es mit `lipo`, und das schreibt
+    // `arm64`, wo Rust `aarch64` sagt. Die Umrechnung liest die Namen
+    // aus `release` und legt keine zweite Liste an.
+    println!(
+        "{}",
+        sign::weitergabehinweis(
+            &gebaut.identitaet.name,
+            release::lipo_name(std::env::consts::ARCH)
+        )
+    );
+    Ok(())
 }
 
 #[cfg(test)]

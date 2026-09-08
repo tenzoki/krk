@@ -157,3 +157,17 @@ Stand unverändert, weil seit `b58e9d1` keine Codedatei angefasst worden ist:
 Die drei Gegenstellen stehen ebenfalls unverändert: `anwendung.rs:5354-5356`, `messmodus.rs:93-95`,
 `appkit/blaetter/mod.rs:304-305`. Der Baum sagt damit weiter an sieben Stellen zweierlei über
 dieselbe Zeile.
+
+---
+
+**Abgleich 260908 (Bahn Q3, `crates/krk-ui/src/appkit/`).** Drei der vier Codestellen tragen
+jetzt die bedingte Fassung: `terminal_oeffnen`, `editor_oeffnen_lassen` und `editor_rundweg` in
+`crates/krk-ui/src/appkit/anwendung.rs` sagen „schluckt jeden **zulaessigen** Befehl" und belegen
+je fuer sich, dass ihr Zweig hinter der Zulaessigkeitspruefung laeuft — die Form, die
+`tabelle.rs` und `anwendung.rs` an zwei Stellen schon trugen.
+
+**Die vierte Stelle bleibt offen und haelt den Datensatz offen:**
+`crates/krk-ui/src/kommandos/rundweg.rs:125` („in jedem Fall, weil es seit der Runde 7 immer
+`true` liefert"). Sie liegt ausserhalb dieser Bahn; `krk-ui` ausserhalb von `appkit/` wird
+gleichzeitig von einer anderen Bahn gefahren. Erhoben mit
+`grep -rn "seit der Runde 7 immer" crates/krk-ui/src/`, ein Treffer.

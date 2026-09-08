@@ -534,6 +534,13 @@ struct Vorgang {
     /// und der Abschlusstext gehoeren.
     seite: Fensterseite,
     /// Der Ordner, aus dem die Eintraege stammen.
+    ///
+    /// **Beim Abwurf aus einer fremden Anwendung steht hier der Zielordner**,
+    /// und das ist kein Fehlgriff, sondern die einzige Antwort, die KRK geben
+    /// kann: der wirkliche Quellordner gehoert einem fremden Programm, und was
+    /// dieses Feld tragen soll, ist ein Ordner, den [`Vorgang::ordner`]
+    /// auffrischen kann. Dass die Liste ihn dann nicht zweimal fuehrt, haelt
+    /// jene Funktion.
     quellordner: PathBuf,
     /// Wie viele Positionen der Nutzer ausgewaehlt hatte.
     positionen: usize,
@@ -579,10 +586,24 @@ impl Vorgang {
     /// [`auffrischung::schiebt_auffrischung_auf`] anhand der Operationsart. Der
     /// Abschluss frischt danach unveraendert fuer jede Art auf; aufgeschoben
     /// wird allein beim Stapel-Umbenennen.
+    ///
+    /// **Ein Ordner steht hoechstens einmal in der Liste**, und die eine Zeile
+    /// dafuer steht hier, weil hier die Frage beantwortet wird. Der Abwurf aus
+    /// einer fremden Anwendung reicht seinen **Zielordner** als `quellordner`
+    /// herein — der wirkliche Quellordner gehoert einem fremden Programm —, und
+    /// ohne diese Zeile las der Abschluss ihn zweimal
+    /// (`issues/260818-2221_*_the-drop-passes-its-target-as-the-source-folder-and-the-completion-reads-it-twice.md`,
+    /// Moeglichkeit 1). Die Bedeutung des Feldes bleibt damit unangetastet, und
+    /// jeder kuenftige Rufer, der denselben Ordner zweimal reicht, ist
+    /// mitgedeckt.
     fn ordner(&self) -> Vec<PathBuf> {
         let mut ordner = vec![self.quellordner.clone()];
         match &self.art {
-            Art::Kopieren { ziel } | Art::Verschieben { ziel } => ordner.push(ziel.clone()),
+            Art::Kopieren { ziel } | Art::Verschieben { ziel } => {
+                if *ziel != self.quellordner {
+                    ordner.push(ziel.clone());
+                }
+            }
             // Loeschen, Papierkorb und das Stapel-Umbenennen bleiben im
             // Quellordner. Das Packen ebenso: sein Archiv entsteht im
             // angezeigten Ordner, und der steht schon als `quellordner` da. Das
@@ -2019,8 +2040,23 @@ impl Anwendungsdelegierter {
                 liste
             }
             // Ohne Ablageordner gibt es nichts zu laden und nichts zu sichern.
-            // Die Meldung darueber hat `sitzung_laden` schon gestellt; eine
-            // zweite waere dieselbe Auskunft ein zweites Mal.
+            //
+            // **Gemeldet wird hier nichts, und der Grund ist nicht in allen
+            // Lagen derselbe.** Auf den zwei gewoehnlichen Wegen hat
+            // `sitzung_laden` die Meldung schon gestellt — beim Fehlschlag von
+            // `Ablage::im_benutzerverzeichnis` und beim fehlgeschlagenen
+            // Schreibgriff —, und eine zweite waere dieselbe Auskunft ein
+            // zweites Mal. Auf dem **dritten** Weg, den Messaufgaben des
+            // Messmodus, hat niemand gemeldet: `sitzung_laden` kehrt dort
+            // zurueck, bevor es `ivars.ablage` setzt, und gibt einen leeren
+            // Meldungsvektor. Dort ist das Schweigen richtig, weil niemand
+            // zusieht, und nicht, weil schon jemand gesprochen haette. Der
+            // Kommentar behauptete bis zum 260907 das Zweite fuer alle drei
+            // (`issues/260820-2235_*_der-gemessene-start-laedt-die-lesezeichen-nicht-und-die-leiste-schweigt-mit-falscher-begruendung.md`).
+            //
+            // **Damit misst L4 einen Start ohne den Ablagedurchgang fuer
+            // `bookmarks.toml`.** Ob das so bleibt, ist eine offene
+            // Nutzerfrage; sie steht in demselben Datensatz.
             Err(Sperrhindernis::OhneOrdner) => Lesezeichenliste::default(),
             Err(Sperrhindernis::Gesperrt(fehler)) => {
                 meldungen.push(format!(
@@ -2151,7 +2187,29 @@ impl Anwendungsdelegierter {
     /// Aenderung an den Lesezeichen ist eine Handlung des Nutzers und keine
     /// Nebenwirkung des Arbeitens, davon gibt es wenige, und jede soll einen
     /// Absturz ueberleben.
-    fn lesezeichen_aendern(&self, seite: Fensterseite, aenderung: &Aenderung) {
+    ///
+    /// # Der Rueckgabewert sagt, ob die Befehlsantwort noch frei ist
+    ///
+    /// `true` heisst: diese Funktion hat **nichts** in die Befehlsantwort des
+    /// Dateifensters geschrieben, und der Aufrufer darf seine eigene
+    /// Erfolgsmeldung stellen. `false` heisst, dass hier schon eine Meldung
+    /// steht — die nicht zu nehmende Schreibsperre, ein Hinweis aus dem Laden,
+    /// ein verschwundenes Lesezeichen oder ein gescheitertes Sichern.
+    ///
+    /// **Die Frage ist „steht schon eine Meldung" und nicht „ist geschrieben
+    /// worden".** Ohne Ablageordner wird gerechnet und nicht geschrieben, und
+    /// gemeldet wird das trotzdem nicht: darueber hat der Start informiert, und
+    /// der Befehl hat in der laufenden Sitzung gewirkt. Ein Rueckgabewert am
+    /// Schreiben trennte diesen Fall von einem Fehlschlag nicht.
+    ///
+    /// `#[must_use]`: [`Self::lesezeichen_anlegen_ausfuehren`] schrieb bis zum
+    /// 260907 seine Erfolgsmeldung **unbedingt** hinterher und ersetzte damit
+    /// jede Fehlermeldung von hier; der Nutzer las „angelegt", waehrend
+    /// `bookmarks.toml` den Eintrag nicht trug
+    /// (`issues/260826-1325_*_lesezeichen-anlegen-meldet-angelegt-auch-wenn-das-sichern-gescheitert-ist-und-ueberschreibt-die-fehlermeldung.md`).
+    /// Fiele der Wert still weg, waere derselbe Defekt zurueck.
+    #[must_use]
+    fn lesezeichen_aendern(&self, seite: Fensterseite, aenderung: &Aenderung) -> bool {
         let ergebnis = self.unter_der_sperre(|zugang| {
             let (mut liste, meldung) = zugang
                 .laden::<Lesezeichenliste>(Datei::Lesezeichen)
@@ -2179,7 +2237,7 @@ impl Anwendungsdelegierter {
                          Ablage ist nicht zu nehmen: {fehler}"
                     ),
                 );
-                return;
+                return false;
             }
         };
 
@@ -2196,7 +2254,7 @@ impl Anwendungsdelegierter {
 
         if let Some(meldung) = meldung {
             self.antwort_zeigen(seite, &meldung);
-            return;
+            return false;
         }
         if matches!(ausgang, Ausgang::Verschwunden) {
             // **„geaendert oder geloescht" und nicht „geloescht".**
@@ -2211,14 +2269,16 @@ impl Anwendungsdelegierter {
                 "dieses Lesezeichen steht nicht mehr so in der Liste; eine andere Instanz \
                  von KRK hat es geändert oder gelöscht",
             );
-            return;
+            return false;
         }
         if let Some(Err(fehler)) = geschrieben {
             self.antwort_zeigen(
                 seite,
                 &format!("die Lesezeichen ließen sich nicht sichern: {fehler}"),
             );
+            return false;
         }
+        true
     }
 
     /// Das ausgewaehlte Lesezeichen, oder nichts.
@@ -2260,7 +2320,7 @@ impl Anwendungsdelegierter {
         };
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        namenseingabe::frei_zeigen(
+        let griff = namenseingabe::frei_zeigen(
             self.mtm(),
             fenster,
             "Wie soll das Lesezeichen heißen?",
@@ -2272,6 +2332,9 @@ impl Anwendungsdelegierter {
                 }
             },
         );
+        // Der Griff geht in den Schlitz, damit `esc` ueber den Abbruchbefehl
+        // dasselbe tut wie bei jedem anderen Blatt.
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -2346,7 +2409,9 @@ impl Anwendungsdelegierter {
     /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur etwas
     /// zu melden hatte. Ein `false` liesse den Nachzug der Aufteilung und die
     /// vorgemerkte Sitzung ausfallen; den Tastendruck gaebe es nicht her, denn
-    /// [`Self::kommando_ausfuehren`] liefert seit der Runde 7 immer `true`.
+    /// [`Self::kommando_ausfuehren`] schluckt seit der Runde 7 **jeden
+    /// zulaessigen** Befehl, und dieser Zweig laeuft hinter der
+    /// Zulaessigkeitspruefung.
     fn terminal_oeffnen(&self) -> bool {
         let seite = self.ivars().modell.borrow().aktiv();
         let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
@@ -2389,14 +2454,19 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(seite, hinweis.grund());
             return;
         }
-        self.lesezeichen_aendern(
+        // Die Erfolgsmeldung nur, wenn die Aenderung nichts zu melden hatte:
+        // sonst ersetzte sie die Fehlermeldung, die eine Zeile vorher gestellt
+        // wurde, und der Nutzer laese „angelegt" ueber einem gescheiterten
+        // Schreiben.
+        if self.lesezeichen_aendern(
             seite,
             &Aenderung::Anlegen {
                 name: name.to_owned(),
                 ziel: ziel.clone(),
             },
-        );
-        self.antwort_zeigen(seite, &format!("Lesezeichen „{}“ angelegt", name.trim()));
+        ) {
+            self.antwort_zeigen(seite, &format!("Lesezeichen „{}“ angelegt", name.trim()));
+        }
     }
 
     /// Benennt das ausgewaehlte Lesezeichen um (C5).
@@ -2414,7 +2484,7 @@ impl Anwendungsdelegierter {
         let seite = self.ivars().modell.borrow().aktiv();
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        namenseingabe::frei_zeigen(
+        let griff = namenseingabe::frei_zeigen(
             self.mtm(),
             fenster,
             "Wie soll das Lesezeichen heißen?",
@@ -2426,6 +2496,9 @@ impl Anwendungsdelegierter {
                 }
             },
         );
+        // Der Griff geht in den Schlitz, damit `esc` ueber den Abbruchbefehl
+        // dasselbe tut wie bei jedem anderen Blatt.
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -2438,7 +2511,9 @@ impl Anwendungsdelegierter {
         let Some(welches) = self.gewaehltes_lesezeichen() else {
             return;
         };
-        self.lesezeichen_aendern(
+        // Kein Erfolgssatz danach, also auch nichts zu unterscheiden: die drei
+        // Geschwister des Anlegens melden allein, was schiefging.
+        let _ = self.lesezeichen_aendern(
             seite,
             &Aenderung::Umbenennen {
                 welches,
@@ -2453,7 +2528,7 @@ impl Anwendungsdelegierter {
             return false;
         };
         let seite = self.ivars().modell.borrow().aktiv();
-        self.lesezeichen_aendern(seite, &Aenderung::Loeschen { welches });
+        let _ = self.lesezeichen_aendern(seite, &Aenderung::Loeschen { welches });
         true
     }
 
@@ -2463,7 +2538,7 @@ impl Anwendungsdelegierter {
             return false;
         };
         let seite = self.ivars().modell.borrow().aktiv();
-        self.lesezeichen_aendern(seite, &Aenderung::Verschieben { welches, richtung });
+        let _ = self.lesezeichen_aendern(seite, &Aenderung::Verschieben { welches, richtung });
         true
     }
 
@@ -3282,6 +3357,50 @@ impl Anwendungsdelegierter {
             .get()
             .and_then(|fenster| fenster.attachedSheet())
             .is_some()
+    }
+
+    /// Ein Blatt ist zugegangen: den Schlitz freigeben und nachholen, was
+    /// waehrend des Blattes liegengeblieben ist.
+    ///
+    /// **Die eine Stelle, an der [`AnwendungsIvars::offenes_blatt`] geleert
+    /// wird.** Jeder Abschlussblock eines Blattes ruft sie, und das ist der
+    /// Grund, aus dem sie ueberhaupt existiert: [`Self::vorgang_zeichnen`] laesst
+    /// Konfliktfrage und Abschlussbericht im [`Vorgangszustand`] liegen, solange
+    /// ein Blatt steht, und braucht dafuer einen Durchgang nach dem Schliessen.
+    /// Wuerde eine der Schliessstellen den Schlitz von Hand leeren, bliebe der
+    /// Konflikt eines gerade laufenden Vorgangs unbeantwortet stehen, und der
+    /// Arbeitsfaden wartete auf eine Antwort, die niemand mehr abholt.
+    ///
+    /// **Geweckt wird ueber [`hauptfaden_wecken`] und nicht durch einen
+    /// unmittelbaren Ruf.** Der Abschlussblock laeuft, waehrend AppKit das Blatt
+    /// noch abbaut; `attachedSheet` kann in diesem Augenblick noch antworten,
+    /// und der Nachzug traefe dann denselben Vorbehalt noch einmal. Ueber die
+    /// Hauptschlange kommt er einen Durchgang spaeter und damit sicher danach.
+    /// Es ist derselbe Weg, den der Vermittlerfaden nimmt, und kein zweiter.
+    ///
+    /// Steht kein Vorgang, kostet der Weckruf einen leeren Durchgang durch
+    /// [`Self::vorgang_zeichnen`], der sofort zurueckkehrt.
+    fn blatt_geschlossen(&self) {
+        *self.ivars().offenes_blatt.borrow_mut() = None;
+        hauptfaden_wecken();
+    }
+
+    /// Ein Blatt ist aufgegangen: seinen Griff in den Schlitz legen.
+    ///
+    /// **Die eine Stelle, an der [`AnwendungsIvars::offenes_blatt`] gefuellt
+    /// wird**, als Gegenstueck zu [`Self::blatt_geschlossen`]. Der Schlitz
+    /// haelt genau einen Griff, und ein zweiter darueber nimmt dem sichtbaren
+    /// Blatt seinen Abbruchweg.
+    ///
+    /// **Ein liegengebliebener Griff ist dabei harmlos**, und das ist keine
+    /// Nachlaessigkeit, sondern der Grund, aus dem der erste Rang von
+    /// [`Self::abbrechen`] `blatt_steht` fragt, bevor er ihn nimmt: die fuenf
+    /// Eingabeblaetter melden ihr Schliessen nicht, ihr Griff bleibt also bis
+    /// zum naechsten Blatt stehen, und ein Ruf darauf traefe ein Fenster ohne
+    /// anhaengendes Blatt und taete nichts. Der Rang faellt deshalb nicht auf
+    /// ihn zurueck, sondern auf die Frage, ob ueberhaupt eines steht.
+    fn blatt_oeffnet(&self, griff: Blattgriff) {
+        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
     }
 
     /// Welches Fenster gerade das Schluesselfenster ist.
@@ -4221,7 +4340,17 @@ impl Anwendungsdelegierter {
             teilen::Quelle::Nichts => (Vec::new(), None),
         };
         let gezeigt = match anker {
-            Some(flaeche) => teilen::anbieten(&pfade, flaeche, flaeche.bounds()),
+            // **`visibleRect` und nicht `bounds`.** Seit der Runde 14 liefert
+            // `fokusansicht` fuer die Vorschau die Textanzeige, und die ist mit
+            // `setVerticallyResizable(true)` aufgesetzt: ihr `bounds` ist das
+            // ganze Dokumentrechteck, dessen Mitte bei einer langen Datei weit
+            // unterhalb des Fensters liegt. Der Anker eines `NSPopover` gehoert
+            // aber an eine Stelle, die der Nutzer sieht
+            // (`issues/260820-0735_*_der-anker-des-freigabedialogs-ist-in-der-vorschau-jetzt-das-ganze-dokumentrechteck.md`).
+            // Fuer jede Ansicht, die ganz sichtbar ist, sind beide Rechtecke
+            // dasselbe; die eine Zuordnung von Fokuswert auf Ansicht aus C1.8
+            // bleibt unberuehrt, geaendert ist das Rechteck.
+            Some(flaeche) => teilen::anbieten(&pfade, flaeche, flaeche.visibleRect()),
             None => false,
         };
         if !gezeigt {
@@ -4253,7 +4382,7 @@ impl Anwendungsdelegierter {
             }
         });
         *self.ivars().belegungsansicht.borrow_mut() = Some(quelle);
-        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -4265,7 +4394,7 @@ impl Anwendungsdelegierter {
     /// damit die Umbelegung sofort wirkt und nicht erst nach einem Neustart.
     /// Das ist derselbe Aufbauweg wie beim Start: eine Quelle, zwei Abnehmer.
     fn belegungsansicht_verlassen(&self) {
-        *self.ivars().offenes_blatt.borrow_mut() = None;
+        self.blatt_geschlossen();
         let Some(quelle) = self.ivars().belegungsansicht.borrow_mut().take() else {
             return;
         };
@@ -4462,7 +4591,7 @@ impl Anwendungsdelegierter {
             },
         );
         *self.ivars().zettelflaeche.borrow_mut() = Some(flaeche);
-        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -4718,7 +4847,7 @@ impl Anwendungsdelegierter {
     fn zettel_blatt_geschlossen(&self) {
         self.zettel_stand_uebernehmen();
         *self.ivars().zettelflaeche.borrow_mut() = None;
-        *self.ivars().offenes_blatt.borrow_mut() = None;
+        self.blatt_geschlossen();
         // **Nach dem Abraeumen und nicht davor.** Das Schreiben laeuft durch die
         // Ablage; bliebe die Flaeche bis dahin eingetragen, saehe ein Weg, der in
         // dieser Spanne hierher zurueckkaeme, ein Blatt, das es nicht mehr gibt.
@@ -5032,6 +5161,20 @@ impl Anwendungsdelegierter {
     /// einen Bereich umschaltet, legt die Zeile damit zweimal aus; das ist der
     /// Preis dafuer, dass die Zusage an der Quelle haengt statt an der
     /// Vollstaendigkeit einer Aufrufliste.
+    ///
+    /// **Diese Stelle misst die Bildschirmbreiten nicht, und sie muss es
+    /// nicht.** [`Self::bildschirmbreiten_uebernehmen`] verweist jeden Rufer
+    /// von [`Self::aufteilung_nachziehen`] fuer diese Frage an ihn selbst; hier
+    /// ist die Antwort. Ihre zwei Rufer, [`Self::bereich_umschalten`] und
+    /// [`Self::bereich_einblenden`], werden allein aus
+    /// [`Self::kommando_ausfuehren`], [`Self::anlass_ausfuehren`] und
+    /// [`Self::editorausgang_behandeln`] erreicht, und alle drei messen. Zwischen
+    /// jener Messung und diesem Griff in das Modell kann keine Ziehbewegung
+    /// liegen — derselbe Grund, den die zwei begruendeten Rufer fuer sich
+    /// ausschreiben. Der Satz fehlte bis zum 260907, und der Absatz, der
+    /// [`Self::aktives_setzen`] als den einen ohne Messung und ohne Begruendung
+    /// benennt, las sich damit als vollstaendige Abrechnung ueber die uebrigen
+    /// (`issues/260823-1445_*_die-neue-regel-verweist-jeden-rufer-an-sich-selbst-einer-der-fuenf-sagt-dort-nichts.md`).
     fn sichtbarkeit_aendern(&self, aendern: impl FnOnce(&mut Fenstermodell) -> bool) -> bool {
         let vorher = self.ivars().modell.borrow().sichtbarkeit();
         let geaendert = aendern(&mut self.ivars().modell.borrow_mut());
@@ -6100,7 +6243,7 @@ impl Anwendungsdelegierter {
                         let Some(selbst) = schwach.load() else {
                             return;
                         };
-                        *selbst.ivars().offenes_blatt.borrow_mut() = None;
+                        selbst.blatt_geschlossen();
                         // Die fuenfte Stufe, und sie steht als Tafel in
                         // `loeschwarnung::nach_der_rueckfrage`: was KRK aus der
                         // Antwort des Blattes macht, ist eine Rechnung ueber
@@ -6124,7 +6267,7 @@ impl Anwendungsdelegierter {
                         }
                     },
                 );
-                *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+                self.blatt_oeffnet(griff);
                 true
             }
         }
@@ -6304,10 +6447,26 @@ impl Anwendungsdelegierter {
     /// Schaltflaeche trug, ist die Taste selbst, und die Vorgangsanzeige nennt
     /// sie in ihrem Text.
     fn abbrechen(&self) -> bool {
-        let blatt = self.ivars().offenes_blatt.borrow_mut().take();
-        if let Some(blatt) = blatt {
-            blatt.abbrechen();
-            return true;
+        // **Der erste Rang fragt zuerst, ob ueberhaupt ein Blatt steht**, und
+        // erst danach nach dem Griff. Zwei Gruende, und beide waren Defekte.
+        // Der eine: ein Griff im Schlitz ueberlebt das Blatt, dessen Schliessen
+        // niemand meldet; ein Ruf darauf traefe ein Fenster ohne anhaengendes
+        // Blatt, taete nichts und schluckte trotzdem die Taste. Der andere:
+        // steht ein Blatt, dessen Griff **nicht** im Schlitz liegt, gehoert
+        // `esc` diesem Blatt und nicht KRK — bis zum 260907 fiel der Befehl
+        // dann auf Rang 2 und 3 und brach einen laufenden Vorgang ab oder
+        // leerte den Filtertext des Tabs hinter dem Blatt, waehrend das Blatt
+        // stehen blieb
+        // (`issues/260826-1325_*_esc-im-stapel-umbenennen-blatt-mit-fokus-in-der-vorschautabelle-schliesst-das-blatt-nicht-sondern-leert-den-filter-dahinter.md`).
+        // `false` gibt die Taste an AppKit zurueck, und dort beantwortet sie
+        // die Schaltflaeche des Blattes.
+        if self.blatt_steht() {
+            let blatt = self.ivars().offenes_blatt.borrow_mut().take();
+            if let Some(blatt) = blatt {
+                blatt.abbrechen();
+                return true;
+            }
+            return false;
         }
         let laufender = {
             let vorgang = self.ivars().vorgang.borrow();
@@ -6353,7 +6512,7 @@ impl Anwendungsdelegierter {
         let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        namenseingabe::zeigen(
+        let griff = namenseingabe::zeigen(
             self.mtm(),
             fenster,
             art.frage(),
@@ -6364,6 +6523,9 @@ impl Anwendungsdelegierter {
                 }
             },
         );
+        // Der Griff geht in den Schlitz, damit `esc` ueber den Abbruchbefehl
+        // dasselbe tut wie bei jedem anderen Blatt.
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -6483,11 +6645,15 @@ impl Anwendungsdelegierter {
         let bestand = quelle.alle_namen();
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        stapelumbenennen::zeigen(self.mtm(), fenster, markierte, bestand, move |vorschau| {
-            if let Some(selbst) = schwach.load() {
-                selbst.stapel_beauftragen(seite, &ordner, &vorschau);
-            }
-        });
+        let griff =
+            stapelumbenennen::zeigen(self.mtm(), fenster, markierte, bestand, move |vorschau| {
+                if let Some(selbst) = schwach.load() {
+                    selbst.stapel_beauftragen(seite, &ordner, &vorschau);
+                }
+            });
+        // Der Griff geht in den Schlitz, damit `esc` ueber den Abbruchbefehl
+        // dasselbe tut wie bei jedem anderen Blatt.
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -6519,7 +6685,22 @@ impl Anwendungsdelegierter {
             .map(|zeile| (ordner.join(&zeile.alt), zeile.neu.clone()))
             .collect();
         if paare.is_empty() {
-            self.antwort_zeigen(seite, "nichts umzubenennen: jede Zeile trägt einen Hinweis");
+            // **Zwei Gruende, kein Eintrag umzubenennen, und sie sind nicht
+            // derselbe.** Eine leere Vorschau heisst: aus den vier Feldern liess
+            // sich gar keine Regel bauen, und das Blatt hat den Grund eine
+            // Sekunde vorher in seiner Hinweiszeile gezeigt. Eine volle
+            // Vorschau ohne auszufuehrende Zeile heisst: die Regel steht, und
+            // jede Zeile traegt einen Hinweis. Bis zum 260908 sagte diese
+            // Stelle in beiden Faellen den zweiten Satz und schickte damit
+            // einen Nutzer, der sich in `Nummer ab:` vertippt hatte, seine
+            // Zeilen absuchen
+            // (`issues/260826-1333_*_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md`).
+            let grund = if vorschau.zeilen().is_empty() {
+                "nichts umzubenennen: aus den Feldern ließ sich keine Regel bauen"
+            } else {
+                "nichts umzubenennen: jede Zeile trägt einen Hinweis"
+            };
+            self.antwort_zeigen(seite, grund);
             return;
         }
         let auftrag = Auftrag::umbenennen_im_stapel(paare);
@@ -7173,11 +7354,34 @@ impl Anwendungsdelegierter {
         };
 
         zustand.buendelung.gezeichnet();
+        // **Solange ein Blatt steht, bleiben Konflikt und Bericht liegen.**
+        // [`AnwendungsIvars::offenes_blatt`] ist ein Einzelschlitz, und diese
+        // beiden sind die einzigen Oeffner, die vom Arbeitsfaden kommen und
+        // deshalb keine Zulaessigkeitsfrage passieren. Ohne den Vorbehalt
+        // ueberschrieben sie den Griff des Notizzettels oder der
+        // Belegungsansicht, und das sichtbare Blatt war danach mit `esc` nicht
+        // mehr zu schliessen
+        // (`issues/260826-1332_*_offenes-blatt-ist-ein-einzelschlitz-und-zwei-asynchrone-blaetter-pruefen-nicht-ob-schon-eines-steht.md`).
+        //
+        // Abgeholt wird beides beim naechsten Durchgang, und der kommt:
+        // [`Self::blatt_geschlossen`] weckt den Hauptfaden ueber denselben Weg,
+        // den der Vermittlerfaden nimmt. Der Arbeitsfaden wartet inzwischen auf
+        // die Konfliktantwort — das ist der Preis, und er ist derselbe wie bei
+        // einem Nutzer, der die Frage stehen laesst.
+        let blatt_steht = self.blatt_steht();
         let (fortschritt, konflikt, bericht) = zustand.aendern(|stand| {
             (
                 stand.fortschritt.clone(),
-                stand.konflikt.take(),
-                stand.bericht.take(),
+                if blatt_steht {
+                    None
+                } else {
+                    stand.konflikt.take()
+                },
+                if blatt_steht {
+                    None
+                } else {
+                    stand.bericht.take()
+                },
             )
         });
 
@@ -7262,11 +7466,11 @@ impl Anwendungsdelegierter {
                 };
                 let _ = antwortweg.send(entscheid);
                 if let Some(selbst) = schwach.load() {
-                    *selbst.ivars().offenes_blatt.borrow_mut() = None;
+                    selbst.blatt_geschlossen();
                 }
             },
         );
-        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        self.blatt_oeffnet(griff);
     }
 
     /// Schliesst den Vorgang ab: Anzeige weg, Meldung, Auffrischung, Liste.
@@ -7416,10 +7620,10 @@ impl Anwendungsdelegierter {
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = uebersprungen::zeigen(self.mtm(), fenster, &frage, &liste, move || {
             if let Some(selbst) = schwach.load() {
-                *selbst.ivars().offenes_blatt.borrow_mut() = None;
+                selbst.blatt_geschlossen();
             }
         });
-        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        self.blatt_oeffnet(griff);
     }
 
     /// Stellt die Antwort auf einen Tastenbefehl in die Statuszeile des
@@ -7475,7 +7679,9 @@ impl Anwendungsdelegierter {
     /// Wert weiter, und er entscheidet dort ueber [`Self::aufteilung_nachziehen`]
     /// und [`Self::sitzung_vormerken`] und ueber sonst nichts. **Der Tastendruck
     /// ist auch dann verbraucht**, weil [`Self::kommando_ausfuehren`] seit der
-    /// Runde 7 immer `true` liefert; dieselbe Auskunft steht dreissig Zeilen
+    /// Runde 7 **jeden zulaessigen** Befehl schluckt und die beiden Befehle
+    /// darunter Zweige des `match` sind, das erst hinter der
+    /// Zulaessigkeitspruefung laeuft; dieselbe Auskunft steht dreissig Zeilen
     /// weiter unten am Leerweg von [`Self::im_editor_oeffnen`].
     ///
     fn editor_oeffnen_lassen(&self, pfad: &Path, herkunft: Oeffnungsherkunft) -> bool {
@@ -7911,7 +8117,7 @@ impl Anwendungsdelegierter {
             return true;
         };
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        blaetter::zeilennummer::zeigen(self.mtm(), &fenster, move |eingabe| {
+        let griff = blaetter::zeilennummer::zeigen(self.mtm(), &fenster, move |eingabe| {
             let Some(selbst) = schwach.load() else {
                 return;
             };
@@ -7922,6 +8128,9 @@ impl Anwendungsdelegierter {
                 selbst.editormeldung_zeigen(&meldung);
             }
         });
+        // Der Griff geht in den Schlitz, damit `esc` ueber den Abbruchbefehl
+        // dasselbe tut wie bei jedem anderen Blatt.
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -7946,7 +8155,7 @@ impl Anwendungsdelegierter {
         };
         let (gesucht, ersatz) = editor.suchtexte();
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        blaetter::suche::zeigen(
+        let griff = blaetter::suche::zeigen(
             self.mtm(),
             &fenster,
             &gesucht,
@@ -7962,6 +8171,9 @@ impl Anwendungsdelegierter {
                 selbst.editormeldung_zeigen(&meldung);
             },
         );
+        // Der Griff geht in den Schlitz, damit `esc` ueber den Abbruchbefehl
+        // dasselbe tut wie bei jedem anderen Blatt.
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -8057,10 +8269,10 @@ impl Anwendungsdelegierter {
             let Some(selbst) = schwach.load() else {
                 return;
             };
-            *selbst.ivars().offenes_blatt.borrow_mut() = None;
+            selbst.blatt_geschlossen();
             selbst.nachfrage_beantworten(anlass, antwort);
         });
-        *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
+        self.blatt_oeffnet(griff);
         true
     }
 
@@ -8264,7 +8476,9 @@ impl Anwendungsdelegierter {
     /// Leiste und das stehende Blatt schon abgewiesen hat. `false` heisst dann
     /// allein, dass kein Nachzug der Aufteilung und keine vorgemerkte Sitzung
     /// anfaellt; der Tastendruck ist verbraucht, weil
-    /// [`Self::kommando_ausfuehren`] seit der Runde 7 immer `true` liefert.
+    /// [`Self::kommando_ausfuehren`] seit der Runde 7 **jeden zulaessigen**
+    /// Befehl schluckt und dieser Zweig hinter der Zulaessigkeitspruefung
+    /// laeuft.
     fn editor_rundweg(&self, fokus: Fokus) -> bool {
         let Some(weg) = rundweg(fokus) else {
             return false;
@@ -9949,13 +10163,47 @@ mod sichtbarkeitsproben {
 /// Editor-Runde, und im zweiten drehte "Abbrechen" die Wahl des Nutzers vom
 /// 260823-0942 um (`shared/issues/260823-1034_*_das-neue-feld-vorschau-danach-*`).
 ///
-/// **Was sie nicht sehen:** einen dritten Rufer von
+/// **Was sie fuer sich nicht sehen:** einen dritten Rufer von
 /// [`Anwendungsdelegierter::editor_schliessen`], der einen eigenen Wert
-/// uebergibt. Dagegen haelt, dass die Regel des Rundwegs genau einen Aufrufer
-/// hat (`crate::kommandos::rundweg::tests::die_regel_hat_genau_einen_aufrufer`).
+/// uebergibt. Die vier lesen je eine benannte Aufrufstelle und blieben gruen,
+/// gleich was ein dritter Rufer uebergaebe. Dagegen haelt
+/// [`rundwegproben::das_schliessen_hat_genau_die_zwei_gelesenen_rufer`] und
+/// **nicht** `crate::kommandos::rundweg::tests::die_regel_hat_genau_einen_aufrufer`:
+/// die zaehlt die Rufer der reinen Funktion `rundweg` und sagt ueber
+/// `editor_schliessen` nichts
+/// (`issues/260823-1442_*_der-modulkopf-der-rundwegproben-nennt-eine-abwehr-die-den-genannten-fall-nicht-abwehrt.md`).
 #[cfg(test)]
 mod rundwegproben {
+    use crate::quellbaum::{aufrufstellen, quelldateien};
+
     use super::zettelproben::{diese_datei, rumpf};
+
+    /// Die vier Proben darunter lesen genau zwei Aufrufstellen, und mehr gibt
+    /// es nicht.
+    ///
+    /// **Die Nadel, die die vier Proben ergaenzt.** Jede von ihnen liest eine
+    /// benannte Stelle und sagt, welchen Wahrheitswert sie uebergibt; keine
+    /// sagt, dass es die einzigen sind. Ein dritter Rufer bestuende alle vier
+    /// und traege den Wert, den sein Schreiber fuer richtig hielt — an
+    /// `opt+cmd+e` haengt aber eine Bedeutung aus einer abgenommenen Runde und
+    /// an `cmd+e` ein Nutzerentscheid vom 260823-0942.
+    ///
+    /// Dieselbe Bauform wie `crate::kommandos::rundweg::tests::die_regel_hat_genau_einen_aufrufer`
+    /// und aus demselben Grund. Der Name steht als `concat!` da, sonst zaehlte
+    /// die Probe sich selbst mit.
+    #[test]
+    fn das_schliessen_hat_genau_die_zwei_gelesenen_rufer() {
+        let name = concat!("editor_", "schliessen");
+        let rufer: usize = quelldateien()
+            .iter()
+            .map(|(_, inhalt)| aufrufstellen(inhalt, name))
+            .sum();
+        assert_eq!(
+            rufer, 2,
+            "{name} hat {rufer} Aufrufstellen statt zwei; die vier Proben darunter lesen zwei \
+             benannte und saehen eine dritte nicht"
+        );
+    }
 
     /// Der Rumpf einer Methode dieser Datei, ohne Kommentare.
     fn rumpf_von(name: &str) -> String {

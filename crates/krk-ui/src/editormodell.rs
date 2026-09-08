@@ -1068,10 +1068,32 @@ impl Editormodell {
     /// verschwunden oder unlesbar geworden ist, gilt als geaendert: auch das
     /// ist eine Aenderung von aussen, ueber die C4 den Nutzer nicht im Unklaren
     /// lassen will. Haelt der Editor keine Datei, ist die Antwort `false`.
+    ///
+    /// # Eine gehaltene Datei ohne Stempel gilt als geaendert
+    ///
+    /// `pfad = Some` mit `stempel = None` ist kein "der Editor haelt keine
+    /// Datei", sondern "der Vergleich hat seine Bezugsgroesse verloren", und es
+    /// gibt zwei Wege dorthin: [`Self::sichern`] setzt den Stempel nach dem
+    /// Schreiben ueber [`Stempel::von_pfad`] neu, und [`Self::uebernehmen`]
+    /// nimmt den vom Lesevorgang erhobenen; beide liefern `None`, wenn
+    /// `metadata` oder `modified` scheitert. Die Antwort `false` schaltete die
+    /// Zusage aus C4 fuer diese Datei bis zum naechsten Oeffnen **stumm** ab:
+    /// [`Self::fremdaenderung_melden`] schwiege, und [`Self::sichern`]
+    /// ueberschriebe jede fremde Aenderung ohne Rueckhalt. Deshalb faellt die
+    /// Antwort hier auf `true`, dieselbe vorsichtige Wahl wie bei der
+    /// verschwundenen Datei einen Absatz darueber.
+    ///
+    /// **Der Preis steht hier und wird nicht verschwiegen:** in dieser Lage
+    /// meldet der Editor die fremde Aenderung und sichert nicht mehr, bis der
+    /// Nutzer die Datei neu oeffnet. Das ist die teurere Seite des Irrtums und
+    /// die richtige: die andere schreibt ueber fremde Arbeit.
     #[must_use]
     pub fn fremd_geaendert(&self) -> bool {
-        let (Some(pfad), Some(gemerkt)) = (self.pfad.as_ref(), self.stempel) else {
+        let Some(pfad) = self.pfad.as_ref() else {
             return false;
+        };
+        let Some(gemerkt) = self.stempel else {
+            return true;
         };
         Stempel::von_pfad(pfad) != Some(gemerkt)
     }
@@ -1915,9 +1937,9 @@ mod tests {
         let ordner = Pruefordner::neu("stempel");
         let pfad = ordner.datei("stand.txt", "Inhalt\n");
         let mut modell = geoeffnet(&pfad);
-        // Dass ueberhaupt ein Stempel erhoben wurde, sagt die letzte Zusicherung
-        // dieser Probe mit: ohne gemerkten Stempel antwortet `fremd_geaendert`
-        // `false`, und dann faende die Aenderung von aussen dort keine Meldung.
+        // Dass ueberhaupt ein Stempel erhoben wurde, sagt **diese** Zusicherung:
+        // ohne gemerkten Stempel antwortet `fremd_geaendert` seit dem 260908
+        // `true`, und die Probe bliebe an jeder folgenden Zeile haengen.
         assert!(!modell.fremd_geaendert());
 
         let _ = modell.bearbeiten("im Editor geändert\n".to_owned());
@@ -1945,6 +1967,35 @@ mod tests {
         let modell = geoeffnet(&pfad);
         std::fs::remove_file(&pfad).expect("die Datei laesst sich loeschen");
         assert!(modell.fremd_geaendert());
+    }
+
+    /// Der zweite Weg zu `stempel = None` bei gehaltener Datei: nicht das
+    /// Schliessen, sondern ein gescheitertes `Stempel::von_pfad` nach dem
+    /// Sichern oder vor dem Lesen. Der Editor haelt danach eine Datei und hat
+    /// seine Bezugsgroesse verloren; C4 gilt trotzdem weiter.
+    #[test]
+    fn eine_gehaltene_datei_ohne_stempel_gilt_als_geaendert() {
+        let ordner = Pruefordner::neu("stempel-fehlt");
+        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let mut modell = geoeffnet(&pfad);
+        assert!(
+            !modell.fremd_geaendert(),
+            "mit Stempel ist nichts geaendert"
+        );
+
+        // Genau der Zustand, den ein gescheitertes `metadata` hinterlaesst.
+        modell.stempel = None;
+        assert!(
+            modell.fremd_geaendert(),
+            "ohne Stempel bleibt die Zusage aus C4 stehen, statt stumm abzuschalten"
+        );
+        assert!(
+            modell.fremdaenderung_melden().is_some(),
+            "und der erste der beiden Momente meldet"
+        );
+        let Sicherungsausgang::Gescheitert(_) = modell.sichern() else {
+            panic!("der zweite Moment ueberschreibt nicht ungeprueft");
+        };
     }
 
     #[test]

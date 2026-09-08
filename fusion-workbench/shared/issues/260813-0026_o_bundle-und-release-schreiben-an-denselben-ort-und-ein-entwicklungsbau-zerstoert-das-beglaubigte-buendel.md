@@ -72,3 +72,18 @@ Also seen: 260823-1651 by reconciler — nach der Auslieferung der 1.0.0 liegt u
 `Info.plist` führt `1.0.0`), daneben `target/KRK-1.0.0.zip`. Der Befund ist damit scharf gestellt:
 ein `make run` an dieser Stelle nimmt die Beglaubigung der ausgelieferten Fassung weg. Die
 Auslieferungskette hat ihn nicht behoben und nicht berührt.
+
+---
+Nachtrag 260908 (coder, Bahn `xtask`/`krk-bench`): **weiter offen, und die Wahl ist jetzt als
+Frage gestellt statt als Aufzählung im Defektspeicher.** Keiner der drei Zuschnitte ist
+gebaut; `bundle` schreibt weiter nach `target/KRK.app`. Der Grund für den Stillstand ist, dass
+alle drei ändern, was ein gewöhnlicher Tastendruck dieses Projekts tut — das ist eine
+Nutzerentscheidung und keine, die ein Durchgang nebenbei trifft. Sie liegt seit heute als
+`260908-0640_*_wie-wird-das-beglaubigte-buendel-vor-dem-naechsten-entwicklungsbau-geschuetzt.md`
+im Entscheidungsspeicher, mit den drei Zuschnitten und ihren Kosten.
+
+Eine Korrektur an Zuschnitt 2: der Datensatz nennt dafür `xcrun stapler validate`, das Netz
+braucht. Seit der Runde 15 beantwortet `traegt_angeheftetes_ticket`
+(`xtask/src/veroeffentlichung.rs`) dieselbe Frage an den ersten vier Bytes von
+`Contents/CodeResources`, ohne Netz. Zuschnitt 2 ist damit billiger, als der Datensatz ihn
+veranschlagt.

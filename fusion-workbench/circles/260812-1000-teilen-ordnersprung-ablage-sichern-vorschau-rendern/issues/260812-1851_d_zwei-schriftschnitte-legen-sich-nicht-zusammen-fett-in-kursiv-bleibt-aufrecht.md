@@ -34,3 +34,19 @@ ihn stört.
 
 ---
 Deferred: bis zum nächsten Abnahmelauf am Bündel — Nutzerentscheid vom 260812. Zwei Randfälle einer nicht bearbeitbaren Vorschau, deren Behebung ohne Vordergrundlauf nicht nachweisbar wäre.
+
+---
+
+Also seen: 260908 by coder — **ein dritter Fall derselben Ursache, den dieser Datensatz nicht
+nennt.** Eine Auszeichnung **in einer Überschrift** verliert deren Schriftgröße:
+`## Ein **fetter** Teil` zeigt „fetter" in der Grundgröße, bei Stufe 1 sind das 41 Prozent
+Höhe gegenüber den Nachbarn in derselben Zeile. Der Fall ist als
+`260812-1920_*_eine-auszeichnung-in-einer-ueberschrift-verliert-deren-schriftgroesse.md`
+gemessen abgelegt.
+
+**Für die zurückgestellte Frage ist daran eines wichtig:** der hier genannte Behebungsweg —
+`NSFontDescriptor`-Merkmale beziehungsweise `applyFontTraits:range:` — löst ihn **nicht**. Die
+legen Schnitte zusammen und keine Größen. Der Größenverlust entsteht dadurch, dass der innere
+Eintrag eine ganz neue Schrift setzt; ein Zustand je Stelle müsste deshalb die Größe
+mitführen. Wer die Frage später aufnimmt, rechnet mit drei Fällen und mit einem Zustand, der
+Schnitt **und** Größe trägt.

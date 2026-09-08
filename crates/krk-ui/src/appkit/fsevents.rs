@@ -277,18 +277,25 @@ pub struct Dateisystemwache {
 impl Dateisystemwache {
     /// Beobachtet die genannten Ordner und meldet jede Aenderung an `senke`.
     ///
-    /// Liefert `None` fuer eine leere Pfadliste und dann, wenn FSEvents den
-    /// Strom nicht anlegt oder nicht startet. Der Aufrufer meldet das; still
-    /// ohne Beobachtung weiterzulaufen hiesse, eine Anwendung auszuliefern,
-    /// die fremde Aenderungen nicht anzeigt, ohne dass jemand es erfaehrt.
+    /// Liefert `None` fuer eine leere Pfadliste, fuer einen Pfad ohne
+    /// gueltiges UTF-8 und dann, wenn FSEvents den Strom nicht anlegt oder
+    /// nicht startet. Der Aufrufer meldet das; still ohne Beobachtung
+    /// weiterzulaufen hiesse, eine Anwendung auszuliefern, die fremde
+    /// Aenderungen nicht anzeigt, ohne dass jemand es erfaehrt.
     pub fn einrichten(ordner: &[PathBuf], senke: impl Fn(&[PathBuf]) + 'static) -> Option<Self> {
         if ordner.is_empty() {
             return None;
         }
+        // **Kein `to_string_lossy`.** Ein Pfad ohne gueltiges UTF-8 wuerde
+        // damit zu einem Pfad mit `U+FFFD`, und die Wache beobachtete einen
+        // Ordner, den es nicht gibt — waehrend `einrichten` `Some` liefert und
+        // niemand erfaehrt, dass nichts beobachtet wird. `None` heisst hier
+        // dasselbe wie ein nicht angelegter Strom: der Rufer meldet es
+        // (`issues/260826-1421_*_pfade-ohne-gueltiges-utf-8-vier-huellen-glaetten-still-mit-to-string-lossy-und-drei-weisen-ab.md`).
         let pfade: Vec<CFRetained<CFString>> = ordner
             .iter()
-            .map(|pfad| CFString::from_str(&pfad.to_string_lossy()))
-            .collect();
+            .map(|pfad| pfad.to_str().map(CFString::from_str))
+            .collect::<Option<_>>()?;
         let liste = CFArray::from_retained_objects(&pfade);
 
         let senke: Box<Senke> = Box::new(Box::new(senke));

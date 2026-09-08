@@ -72,3 +72,21 @@ landet an einer Stelle, die von etwas anderem handelt, und muss erst merken, das
 
 ---
 Also seen: 260826-1440 by coderev — ein viertes Zitat derselben Gattung in `veroeffentlichung.rs:374-375` (`beglaubigung.rs:344`, `:369`, `:379`); am `c13bf1c` stimmen alle drei noch, die nächste eingefügte Zeile in `beglaubigung.rs` kippt sie.
+
+---
+Nachtrag 260908 (coder, Bahn `xtask`/`krk-bench`): die zwei Zitate **in `xtask/`** sind auf die
+vom Datensatz vorgeschlagene Form gezogen, also Datei und Name statt Zeile.
+
+- `xtask/src/release.rs`, Prüfmodul: „Wörtlich aus `crates/krk-ui/src/appkit/anwendung.rs:575`"
+  → ohne Zahl, mit dem Hinweis, wo die Zeile herkommt (die schwache Bezugnahme auf den
+  Anwendungsdelegierten). Die Zahl zeigte seit `28cbb7b` ins Leere; die zitierte Zeile steht
+  heute dreimal in jener Datei, zuerst bei `:1314`.
+- `xtask/src/veroeffentlichung.rs`, Doc-Kommentar zum zweiten Packen: die drei Zahlen aus dem
+  Nachtrag 260826-1440 (`beglaubigung.rs:344`, `:369`, `:379`) sind **inzwischen alle drei
+  falsch** — `:344` liegt heute in `traegt_gehaertete_laufzeitumgebung`, die drei gemeinten
+  Schritte liegen in `beglaubigen` (`:394-478`). Sie sind durch den Verweis auf
+  [`crate::beglaubigung::beglaubigen`] ersetzt, der die drei Schritte in Worten nennt.
+
+**Der Datensatz bleibt offen.** Die drei übrigen Zitate der Tafel stehen in
+`crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/src/tasten/parser.rs` und
+`crates/krk-ui/src/hervorhebung.rs`; sie liegen außerhalb dieser Bahn und sind unangetastet.

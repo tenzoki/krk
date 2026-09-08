@@ -62,3 +62,5 @@ Antwort, die schlechter ist als gar keine.
 ## Umfang
 
 `krk-core`, `operation/umbenennen.rs` und `operation/fortschritt.rs`.
+
+Also seen: 260908-0651 by coder — der Umfang stimmt nicht mehr: `freier_name` hat seit `004ff72` einen zweiten Rufer, `Anwendungsdelegierter::konflikt_fragen` (`crates/krk-ui/src/appkit/anwendung.rs`), der den Vorschlag in das Konfliktblatt setzt. Ein Wechsel auf `Option<String>` fasst damit `krk-core` **und** `krk-ui` an und stellt die zweite Frage mit, was das Blatt vorschlaegt, wenn kein freier Name da ist; deshalb in dieser Bahn nicht behoben.

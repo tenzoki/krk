@@ -99,7 +99,14 @@
 //! # Warum die Datei unteilbar geschrieben wird
 //!
 //! Ueber [`atomar::schreiben`], denselben Weg, den `krk_core::text::datei`
-//! beim Sichern des Editors und die vier Ablagedateien gehen. Ein zweiter
+//! beim Sichern des Editors und die Ablagedateien gehen. Wie viele es sind,
+//! sagt `krk_core::ablage::pfade::Datei::ALLE`, und keine Zahl an dieser
+//! Stelle: sie stand hier auf vier, war seit der fuenften Ablagedatei falsch
+//! und war zuletzt die einzige verbliebene der neun Stellen des Defekts
+//! `260814-0912`. Die Prosa unter `krk-core/src/ablage/` haelt die Zahl unter
+//! einer Probe (`keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_
+//! ablagedateien`); diese Datei liegt ausserhalb ihres Blickfelds, also traegt
+//! sie hier keine. Ein zweiter
 //! Schreibweg im Programm entsteht damit nicht, und C2 bekommt, was es
 //! verlangt: eine halb geschriebene Datei bleibt in keinem Fall zurueck. Der
 //! Preis ist eine kurzlebige Nachbardatei `KRK-Tastenbelegung.md.neu` im

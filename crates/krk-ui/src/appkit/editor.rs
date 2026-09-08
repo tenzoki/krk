@@ -412,8 +412,8 @@
 //! Zurueckgeben eines Menues — traegt im Kopf des Systems keine Angabe und
 //! steht damit seit 10.0.
 //!
-//! Sechs **Methoden** sind juenger als ihre Klasse, und **fuenf von ihnen liegen
-//! auf oder unter dem Zielsystem** und brauchen deshalb keine Pruefung:
+//! Sieben **Methoden** sind juenger als ihre Klasse, und **sechs von ihnen
+//! liegen auf oder unter dem Zielsystem** und brauchen deshalb keine Pruefung:
 //! `setInlinePredictionType:` steht seit macOS 14,
 //! `setMathExpressionCompletionType:` und `setWritingToolsBehavior:` seit macOS
 //! 15, `NSTextView.textLayoutManager` seit macOS 12 — die fragt allein
@@ -424,8 +424,15 @@
 //! 260826, obwohl `Editorbereich::umkehrung_anmelden` und zwei Proben sie
 //! rufen
 //! (`issues/260826-1327_*_der-untergrenzen-abschnitt-von-editor-rs-nennt-nsundomanager-nicht-und-registerundowithtarget-handler-steht-seit-10-11.md`).
+//! `NSTextContainer.size` steht ebenfalls seit macOS 10.11
+//! (`NSTextContainer.h:119-121`, am 260826 gelesen) und ist die einzige der
+//! sieben, die **statt** einer aelteren angesprochen wird:
+//! [`Editorbereich::umbruch_setzen`] rief bis dahin `setContainerSize:`, das
+//! derselbe Kopf des Systems seit 10.11 als weich abgekuendigt fuehrt und mit
+//! „Use -size instead" beantwortet
+//! (`issues/260826-1327_*_umbruch-setzen-ruft-setcontainersize-das-seit-10-11-weich-abgekuendigt-ist.md`).
 //!
-//! **Die sechste liegt darueber und ist die einzige gehuetete Beruehrung dieser
+//! **Die siebte liegt darueber und ist die einzige gehuetete Beruehrung dieser
 //! Datei.** `setAllowsWritingToolsAffordance:` fuehrt das SDK erst ab macOS 15.4
 //! und nur an `NSTextField`; die Laufzeit von 15.7.7 antwortet an `NSTextView`
 //! darauf, aber undokumentiert. Sie geht deshalb ueber
@@ -498,6 +505,8 @@ use objc2_foundation::{
     NSUndoManager, ns_string,
 };
 
+#[cfg(test)]
+use objc2::rc::autoreleasepool;
 #[cfg(test)]
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
@@ -959,16 +968,26 @@ const _: () = assert!(STAPELBUDGET as u64 == datei::EDITORGRENZE);
 /// damit auf jedem der vier Wege, ohne dass einer von ihnen hier genannt werden
 /// muesste.
 ///
-/// # Die Freigabe des Blocks ist geschlossen und nicht gemessen
+/// # Die Freigabe des Blocks ist seit dem 260907 gemessen
 ///
 /// Dass der Verwalter den Block festhaelt und ihn mit der Handlung wieder
 /// freigibt, ist die Regel von Objective-C fuer einen Block, den ein Objekt
-/// aufbewahrt; nachgemessen ist sie hier **nicht**. Eine Messung braeuchte einen
-/// `NSUndoManager`, also einen `MainThreadMarker`, und darueber steht eine offene
-/// Nutzerentscheidung an den vier Proben, die ihn heute behaupten
-/// (`decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`).
-/// Eine fuenfte daneben zu stellen haette die Frage vergroessert, statt sie zu
-/// beantworten.
+/// aufbewahrt. Sie stand hier bis zum 260907 als **ungemessene** Annahme, mit
+/// der Begruendung, eine Messung braeuchte einen `NSUndoManager` und damit einen
+/// `MainThreadMarker`, ueber den eine offene Nutzerentscheidung stehe. Die
+/// Begruendung trug nicht mehr: `verwalter_ohne_fenster` im Pruefmodul liefert
+/// diesen Verwalter seit dem 260810, und die Messung hat eine Probe gekostet und
+/// kein neues Pruefziel
+/// (`issues/260826-1327_*_die-freigabe-des-rueckgaengig-blocks-ist-mit-verwalter-ohne-fenster-messbar-und-die-begruendung-fuer-ungemessen-traegt-nicht-mehr.md`).
+/// Gemessen wird sie von
+/// `tests::der_verwalter_gibt_den_block_auf_allen_vier_wegen_frei`, einen Weg je
+/// Block, und alle vier halten.
+///
+/// **Der Freigabeverbund ist dabei die Bedingung und nicht ein Nebenumstand.**
+/// Ohne einen offenen `autoreleasepool` um die Handlung faellt der Zaehler auf
+/// **keinem** der vier Wege: der Verbund haelt den Block bis zu seinem Ende. Der
+/// Editor bekommt seinen Verbund von der Ereignisschleife der Anwendung, je
+/// Ereignis einen; die Probe muss ihn selbst aufmachen.
 ///
 /// **Die Schranke haengt an der Annahme nicht.** Traefe sie nicht zu, ginge der
 /// Zaehler nur hoch und nie herunter; das Budget griffe dann bei **jedem**
@@ -977,10 +996,10 @@ const _: () = assert!(STAPELBUDGET as u64 == datei::EDITORGRENZE);
 /// nicht die Schranke. Der Preis stuende in derselben Richtung wie der Fall
 /// darunter.
 ///
-/// **Genauigkeit im Augenblick leistet die Huelle ohnehin nicht.** Gibt AppKit den
-/// Block an einen Freigabeverbund weiter, faellt sie einen Umlauf der Laufschleife
-/// spaeter, und der Zaehler steht bis dahin zu hoch. Die Richtung ist die
-/// vorsichtige: geraeumt wird dann eher als noetig, nie spaeter.
+/// **Genauigkeit im Augenblick leistet die Huelle trotzdem nicht.** Der Block
+/// faellt mit dem Freigabeverbund und nicht mit der Handlung, also einen
+/// Ereignisumlauf spaeter, und der Zaehler steht bis dahin zu hoch. Die Richtung
+/// ist die vorsichtige: geraeumt wird dann eher als noetig, nie spaeter.
 /// [`Editorbereich::umkehren`] fragt den Zaehler ohnehin nicht — ein `cmd+z`
 /// raeumt keinen Verlauf.
 struct Stapellast {
@@ -2960,7 +2979,13 @@ impl Editorbereich {
         // nur eingestellt; kein fremdes Objekt wird gehalten.
         if let Some(behaelter) = unsafe { text.textContainer() } {
             behaelter.setWidthTracksTextView(umbruch);
-            behaelter.setContainerSize(if umbruch {
+            // `setSize:` und nicht `setContainerSize:`: der Kopf des Systems
+            // fuehrt jeden Namen auf „containerSize" seit 10.11 als weich
+            // abgekuendigt und verweist auf `-size`
+            // (`NSTextContainer.h`, am 260826 gelesen). Die Bedeutung ist
+            // dieselbe; die amtliche Abkuendigung kaeme ohne Warnung des
+            // Uebersetzers, weil `objc2` keine Verfuegbarkeitsangaben fuehrt.
+            behaelter.setSize(if umbruch {
                 NSSize::new(breite, f64::MAX)
             } else {
                 NSSize::new(f64::MAX, f64::MAX)
@@ -2998,6 +3023,31 @@ impl Editorbereich {
     /// und den unveraenderten Schwanz uebernimmt; ohne ihn kostete jeder
     /// Anschlag einen vollen Durchgang. Wo er zwischen zwei Laeufen wohnt und
     /// wann er faellt, steht an [`EditorIvars::einfaerbungsstand`].
+    ///
+    /// # Die Uebergabe an den Faden ist eine zweite Abschrift, und der Preis ist
+    /// angenommen
+    ///
+    /// `modell.stand().to_owned()` unten ist eine zweite vollstaendige Abschrift
+    /// des Standes, bis 16 MB, und sie steht auf dem Hauptfaden. Die erste ist
+    /// das Umschreiben aus UTF-16 am Kopf von [`Self::text_zurueckschreiben`],
+    /// das 96 % des Anschlags traegt und dort mit Zahlen steht
+    /// (`issues/260809-2322_*_der-ganze-stand-geht-je-tastendruck-durch-bearbeiten.md`).
+    /// Diese zweite ist **nicht** gemessen; sie ist ein `memcpy` und keine
+    /// Umschreibung, liegt also unterhalb der ersten, und wie weit darunter,
+    /// sagt keine Reihe dieses Baums.
+    ///
+    /// **Der Satz „kostet nichts, solange schon eine laeuft" gilt der Anfrage
+    /// und nicht der Abschrift.** Laeuft schon ein Faden, kehrt diese Funktion
+    /// vor der Abschrift zurueck. Nur der Anschlag, der einen Lauf **startet**,
+    /// zahlt sie — bei einem Nutzer, der schneller tippt als der Einfaerbungslauf
+    /// zurueckkehrt, also nicht jeder.
+    ///
+    /// **Billiger ginge es nur mit einem `Arc<str>` fuer den gehaltenen Stand**,
+    /// und das ist eine Aenderung am [`Editormodell`], die derselbe Datensatz
+    /// als zu teuer fuehrt: der Rueckweg aus der Flaeche bekaeme einen zweiten
+    /// Eingang und eine zweite Wahrheit darueber, was der gehaltene Stand ist.
+    /// Gemeldet war der fehlende Satz als
+    /// `issues/260826-1327_*_die-anfrage-der-einfaerbung-schreibt-je-anschlag-den-ganzen-stand-ein-zweites-mal-ab.md`.
     fn einfaerbung_anfordern(&self) {
         if self.ivars().einfaerbung.borrow().is_some() {
             self.ivars().einfaerbung_erneut.set(true);
@@ -3968,7 +4018,7 @@ mod tests {
 
     /// Ein Verwalter fuer sich, ohne Flaeche und ohne Fenster.
     ///
-    /// **Das `new_unchecked` ist hier vertretbar und sonst nirgends.** Der
+    /// **Warum das `new_unchecked` hier traegt.** Der
     /// Pruefstand von Rust laesst jede Pruefung auf einem eigenen Faden laufen,
     /// und `MainThreadMarker::new()` gaebe dort `None`. Was der Marker
     /// absichert, ist die Fadenbindung von AppKits Fensterwerkzeug; ein
@@ -3976,6 +4026,24 @@ mod tests {
     /// Ereignisschleife seines Fadens, und die ist hier mit
     /// `setGroupsByEvent(false)` abgewaehlt. Der Verwalter dieser Pruefung
     /// wird ausserdem auf demselben Faden erzeugt, benutzt und fallengelassen.
+    ///
+    /// **„Hier vertretbar und sonst nirgends" stand bis zum 260907 an dieser
+    /// Stelle und war falsch.** Der Teilbaum `appkit/` behauptet den Hauptfaden
+    /// an drei Stellen, alle unter `#[cfg(test)]`, und jede mit einer eigenen
+    /// Begruendung: diese hier, [`an_einer_flaeche`] weiter unten (die einzige,
+    /// die eine AppKit-**Ansicht** baut, und die einzige mit einer Sperre) und
+    /// `super::blaetter::tests::ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf`.
+    /// Erhoben werden sie mit `grep -rn new_unchecked crates/krk-ui/src`, das
+    /// ausserhalb der Pruefmodule keinen Treffer liefert; eine Zahl steht
+    /// deshalb weder hier noch in CLAUDE.md
+    /// (`issues/260826-1327_*_verwalter-ohne-fenster-sagt-new-unchecked-sei-hier-vertretbar-und-sonst-nirgends-an-einer-flaeche-nimmt-es-daneben.md`).
+    ///
+    /// **Ob die Verwalterproben unter dieselbe Sperre gehoeren wie
+    /// [`an_einer_flaeche`], ist offen** und haengt an
+    /// `260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`
+    /// (zurueckgestellt). Sie bauen keine Ansicht, also greift die Begruendung
+    /// der Sperre — zwei gleichzeitig gebaute AppKit-Ansichten — fuer sie
+    /// nicht.
     fn verwalter_ohne_fenster() -> Retained<NSUndoManager> {
         NSUndoManager::new(unsafe { MainThreadMarker::new_unchecked() })
     }
@@ -4225,6 +4293,158 @@ mod tests {
             verwalter.canRedo(),
             "der Weg zurueck steht offen, wie beim Ersetzen aus S37"
         );
+    }
+
+    /// Meldet einen Block an, der eine [`Stapellast`] traegt, und liefert deren
+    /// Zaehler.
+    ///
+    /// Die Bauart von [`Editorbereich::umkehrung_anmelden`], auf das Zaehlen
+    /// verkuerzt: der Block tut nichts, haelt aber die Last, und damit steht der
+    /// Zaehler genau so lange auf den Bytes des Punktes, wie der Verwalter den
+    /// Block haelt.
+    fn last_anmelden(verwalter: &NSUndoManager, ziel: &NSObject) -> Rc<Cell<usize>> {
+        let zaehler = Rc::new(Cell::new(0usize));
+        let punkt = Umkehrpunkt::zwischen("eins foo zwei", "eins bar zwei", NSRange::new(0, 0));
+        let bytes = punkt.getragene_bytes();
+        assert!(
+            bytes > 0,
+            "die Probe misst nur einen Punkt, der ueberhaupt Bytes traegt"
+        );
+        let last = Stapellast::angemeldet(punkt, &zaehler);
+        assert_eq!(
+            zaehler.get(),
+            bytes,
+            "die Voraussetzung: die Anmeldung hat angetragen"
+        );
+        let handlung = RcBlock::new(move |_ziel: NonNull<AnyObject>| {
+            // Der Block tut nichts und **haelt** die Last: genau das ist der
+            // Mechanismus, den diese Probe misst.
+            let _ = &last;
+        });
+        // SAFETY: `ziel` ist ein NSObject und wird vom Verwalter nur als Kennung
+        // gehalten; der Block spricht es nicht an.
+        unsafe { verwalter.registerUndoWithTarget_handler(ziel, &handlung) };
+        zaehler
+    }
+
+    /// Der Verwalter gibt den angemeldeten Block auf allen vier Wegen wieder
+    /// frei, und der Zaehler von [`Stapellast`] faellt mit ihm.
+    ///
+    /// **Die eine Annahme unter dem Budget, jetzt gemessen.** Der Kopf von
+    /// [`Stapellast`] zaehlt vier Wege auf, auf denen ein `NSUndoManager` eine
+    /// Handlung fallen laesst, und stuetzte sich bis zum 260907 darauf, dass er
+    /// dabei auch den Block freigibt — mit der Begruendung, eine Messung
+    /// braeuchte einen `MainThreadMarker`, ueber den eine offene Nutzerfrage
+    /// stehe. [`verwalter_ohne_fenster`] liefert diesen Verwalter seit dem
+    /// 260810, und die Messung kostet deshalb diese eine Probe und kein neues
+    /// Pruefziel
+    /// (`issues/260826-1327_*_die-freigabe-des-rueckgaengig-blocks-ist-mit-verwalter-ohne-fenster-messbar-und-die-begruendung-fuer-ungemessen-traegt-nicht-mehr.md`).
+    ///
+    /// **Jeder Weg laeuft in einem eigenen Freigabeverbund**, und das ist die
+    /// zweite Auskunft dieser Probe: ohne ihn faellt der Zaehler auf keinem der
+    /// vier Wege, weil der Verbund den Block bis zu seinem Ende haelt. Genau das
+    /// nennt der Kopf von [`Stapellast`] unter „Genauigkeit im Augenblick
+    /// leistet die Huelle ohnehin nicht"; hier ist es nachgemessen und nicht
+    /// mehr fuer moeglich gehalten. Ein Umlauf der Laufschleife ersetzt den
+    /// Verbund **nicht**: `runMode:beforeDate:` kehrt ohne Eingabequelle sofort
+    /// zurueck, und die Probe stand auf diesem Irrtum, bevor sie stimmte.
+    ///
+    /// **Was ein Fehlschlag bedeutet**, steht im Kopf von [`Stapellast`]: faellt
+    /// der Zaehler nicht, greift das Budget bei jedem Umbau, und der Stapel
+    /// haelt statt „Budget plus eine Handlung" genau eine Handlung. Der
+    /// Fehlschlag benennt also einen Preis an der Verlaufstiefe und keinen
+    /// Absturz.
+    ///
+    /// Jeder Weg bekommt einen eigenen Verwalter: sie wirken auf denselben
+    /// Stapel, und zwei Wege an einem Verwalter maessen nicht mehr, welcher von
+    /// beiden freigegeben hat.
+    #[test]
+    fn der_verwalter_gibt_den_block_auf_allen_vier_wegen_frei() {
+        // Weg 3: `removeAllActions` raeumt beide Stapel.
+        {
+            let verwalter = verwalter_ohne_fenster();
+            let ziel = NSObject::new();
+            let zaehler = autoreleasepool(|_| {
+                let zaehler = last_anmelden(&verwalter, &ziel);
+                verwalter.removeAllActions();
+                zaehler
+            });
+            assert_eq!(
+                zaehler.get(),
+                0,
+                "removeAllActions gibt den Block nicht frei"
+            );
+        }
+
+        // Weg 1: die Handlung wird ausgefuehrt.
+        {
+            let verwalter = verwalter_ohne_fenster();
+            let ziel = NSObject::new();
+            let zaehler = autoreleasepool(|_| {
+                let zaehler = last_anmelden(&verwalter, &ziel);
+                assert!(
+                    verwalter.canUndo(),
+                    "die Voraussetzung: der Stapel traegt sie"
+                );
+                verwalter.undo();
+                zaehler
+            });
+            assert_eq!(
+                zaehler.get(),
+                0,
+                "das ausgefuehrte Rueckgaengig gibt den Block nicht frei"
+            );
+        }
+
+        // Weg 2: eine neue Anmeldung raeumt den Wiederherstellungsstapel. Die
+        // erste Anmeldung geht dorthin, weil `undo` sie ausfuehrt; damit misst
+        // dieser Block einen anderen Stapel als der darueber.
+        {
+            let verwalter = verwalter_ohne_fenster();
+            let ziel = NSObject::new();
+            let (erster, zweiter) = autoreleasepool(|_| {
+                let erster = last_anmelden(&verwalter, &ziel);
+                verwalter.undo();
+                let zweiter = last_anmelden(&verwalter, &ziel);
+                (erster, zweiter)
+            });
+            assert_eq!(
+                erster.get(),
+                0,
+                "die neue Anmeldung raeumt den Wiederherstellungsstapel nicht"
+            );
+            assert!(
+                zweiter.get() > 0,
+                "die Probe misst nur, solange die zweite Anmeldung selbst noch steht"
+            );
+        }
+
+        // Weg 4: das Objekt selbst geht fort.
+        //
+        // **Ohne `setGroupsByEvent(false)` misst dieser Block nichts.** Ein
+        // `NSUndoManager` in der Werksbetriebsart haengt einen Beobachter in die
+        // Laufschleife, und die haelt ihn damit fest; das `drop` gibt dann die
+        // eine Referenz dieser Probe frei und nicht das Objekt. Der Editor
+        // laesst seinen Verwalter mit dem Fenster fallen, in dem die
+        // Laufschleife derselben Anwendung gehoert — hier gehoert sie dem
+        // Pruefstand und ueberlebt die Probe.
+        {
+            let ziel = NSObject::new();
+            let zaehler = autoreleasepool(|_| {
+                let verwalter = verwalter_ohne_fenster();
+                verwalter.setGroupsByEvent(false);
+                verwalter.beginUndoGrouping();
+                let zaehler = last_anmelden(&verwalter, &ziel);
+                verwalter.endUndoGrouping();
+                drop(verwalter);
+                zaehler
+            });
+            assert_eq!(
+                zaehler.get(),
+                0,
+                "der fallengelassene Verwalter gibt den Block nicht frei"
+            );
+        }
     }
 
     /// Meldet eine Handlung an, die einen Wert herstellt und dabei den Gegenweg

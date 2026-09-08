@@ -46,3 +46,14 @@ Das Kommando, das die zwei Prosastellen nennen, gibt so viele Zeilen aus, wie es
 ## Herkunft
 
 Gemeinsamer Speicher. Gefunden beim Behebungsdurchgang an `CLAUDE.md` und `README.md` vom 260905-2254, beim Nachprüfen des Kommandos, das der Absatz zu `ohne_warten_oeffnen` nennt. Kein Circle war aktiv, und der Befund betrifft eine projektweite Gewohnheit.
+
+Also seen: 260908-0810 by coder — die Haelfte in `crates/krk-core/src/verzeichnis/sys.rs` ist behoben, die in `CLAUDE.md` nicht: die Datei liegt ausserhalb dieser Bahn. Beide Stellen der Quelldatei — der Modulkopf und der Doc-Kommentar von `ohne_warten_oeffnen` — nennen jetzt denselben Lauf, der Kommentarzeilen, die Definitionszeile und das Pruefmodul ausnimmt und das breite Muster behaelt:
+
+```sh
+awk 'FNR==1{probe=0} /^#\[cfg\(test\)\]/{probe=1}
+     !probe && /ohne_warten_oeffnen\(/ && !/^[[:space:]]*\/\// && !/^pub fn/ \
+     {print FILENAME":"FNR}' \
+  $(find crates/krk-core/src -name '*.rs' | sort)
+```
+
+Am 260908 gemessen: sechs Zeilen, dieselben sechs, die die Tabelle dieses Datensatzes als Aufrufe fuehrt — und weiterhin sechs, nachdem derselbe Durchgang zwei weitere Prosastellen ueber die Huelle geschrieben hat. Damit ist die Abnahme fuer die Quelldatei erfuellt. Offen bleibt die Zeile in `CLAUDE.md` (Abschnitt „Was man nicht sieht, wenn man es nicht weiss", Absatz zur Pruefung am Deskriptor), die weiter `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src` nennt; sie gehoert in die Bahn, die die Prosa des Baums fuehrt.

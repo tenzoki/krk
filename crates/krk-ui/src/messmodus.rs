@@ -247,6 +247,14 @@ impl Messplan {
     }
 
     /// Pruefordner A: der sichtbare Tab des linken Dateifensters.
+    ///
+    /// **Die Wurzel ist hier kein Rueckfall, sondern eine unerreichbare
+    /// Stelle.** [`Messplan::pruefen`] weist einen Plan ohne aktiven Tab ab,
+    /// und [`Messplan::lesen`] ist der einzige Weg, auf dem ein Plan von der
+    /// Platte hereinkommt. Bis zum 260908 gab es die Pruefung nicht: dann
+    /// lieferte diese Methode `/`, `pruefen` fand die Wurzel erwartungsgemaess
+    /// als Verzeichnis auf demselben Datentraeger vor, und die Strecke mass L1,
+    /// L7, L6 und L8 ueber das Wurzelverzeichnis (Defekt `260826-1442`).
     pub fn ordner_a(&self) -> &Path {
         self.sitzung.fenster[0]
             .aktiver_tab()
@@ -262,8 +270,37 @@ impl Messplan {
     /// Sichtbarkeit des Fortschritts. Und es muss **leer** sein, weil der
     /// Lauf es zwischen den Wiederholungen leert; ein fremder Inhalt darf
     /// dabei nicht verschwinden koennen.
+    ///
+    /// # Die vier Angaben, aus denen die Strecke ihre Ordner nimmt
+    ///
+    /// Vier Stellen von [`sitzungsschritte`] und [`Messplan::ordner_a`] fielen
+    /// bis zum 260908 still auf einen Platzhalter zurueck, wenn die Angabe
+    /// fehlte: auf `/` fuer den Ordner des linken Fensters und fuer den
+    /// Elternordner des L6-Unterordners, auf den leeren Pfad fuer den Ordner
+    /// des rechten, auf den leeren Namen fuer den Unterordner selbst. Ein `/`
+    /// besteht jede Pruefung darunter, und die Strecke mass dann ueber das
+    /// Wurzelverzeichnis (Defekt `260826-1442`). Der Doc-Kommentar zu
+    /// [`Aufgabe::aus_argumenten`] will, dass ein Fehler in der Planangabe „als
+    /// ‚Messplan nicht lesbar' auffaellt statt still"; die vier Zeilen unten
+    /// sind, was daraus folgt. Danach ist jeder der vier Platzhalter
+    /// unerreichbar, und er steht dort als das da.
     fn pruefen(&self) -> Result<(), String> {
         use std::os::unix::fs::MetadataExt as _;
+        for (seite, fenster) in ["linke", "rechte"].iter().zip(&self.sitzung.fenster) {
+            if fenster.aktiver_tab().is_none() {
+                return Err(format!(
+                    "das {seite} Dateifenster der Pruefsitzung hat keinen aktiven Tab; die \
+                     Strecke wuesste nicht, ueber welchen Ordner sie misst"
+                ));
+            }
+        }
+        if self.unterordner.parent().is_none() || self.unterordner.file_name().is_none() {
+            return Err(format!(
+                "der Unterordner fuer L6 ({}) hat keinen Elternordner oder keinen Namen; die \
+                 Strecke kann den Ordnersprung daraus nicht bauen",
+                self.unterordner.display()
+            ));
+        }
         for (name, ordner) in [
             ("Pruefordner A", self.ordner_a()),
             ("der Unterordner fuer L6", &self.unterordner),
@@ -809,7 +846,12 @@ fn messung_unmoeglich(groesse: Sitzungsgroesse, lage: &Sitzungslage) -> Option<S
         Sitzungsgroesse::L8 => lage.vorgang_laeuft.then(|| {
             "es laeuft noch eine Dateioperation; L8 braucht einen frischen Start".to_owned()
         }),
-        _ => None,
+        // Die drei Wechsel-Groessen haben keine Vorbedingung, und zwar je aus
+        // demselben Grund: sie messen einen Wechsel und nicht eine Bewegung
+        // **innerhalb** eines Bestands. Ein Tabwechsel, ein Fensterwechsel und
+        // ein Ordnerwechsel wirken auch dann, wenn die Liste davor leer ist,
+        // und keiner von ihnen braucht einen laufenden Vorgang.
+        Sitzungsgroesse::L5Tab | Sitzungsgroesse::L5Fenster | Sitzungsgroesse::L6 => None,
     }
 }
 
@@ -848,6 +890,11 @@ pub fn auswahl_ohne_eintrag(name: &str, ordner: &Path, zeilen: usize) -> String 
 /// warme Reihe truege — dieselbe Regel wie bei [`Schritt::Vorlauf`].
 fn sitzungsschritte(plan: &Messplan) -> Vec<Sitzungsschritt> {
     use Sitzungsschritt as S;
+    // Die drei Platzhalter hier und der vierte am rechten Fenster weiter unten
+    // sind seit dem 260908 unerreichbar: [`Messplan::pruefen`] weist einen Plan
+    // ab, dem eine der vier Angaben fehlt, und der Abschnitt dort sagt, warum
+    // (Defekt `260826-1442`). Sie stehen, weil der Typ die Angaben nicht haelt,
+    // und nicht als Antwort auf einen Fall.
     let ordner_a = plan.ordner_a().to_path_buf();
     let eltern = plan
         .unterordner
@@ -1949,6 +1996,26 @@ mod tests {
         let plan = Messplan::lesen(&pfad).expect("der Plan ist lesbar");
         assert_eq!(plan.ordner_a(), ordner.unter("a"));
         assert_eq!(plan.kopierziel, ordner.unter("ziel"));
+    }
+
+    /// Ein Fenster ohne aktiven Tab haelt die Strecke an, statt sie ueber das
+    /// Wurzelverzeichnis messen zu lassen (Defekt `260826-1442`).
+    ///
+    /// `aktiver_tab` zeigt hier hinter das Ende der Tabliste, also genau das,
+    /// was ein von Hand geschriebener oder beim Bearbeiten gekuerzter Plan
+    /// hinterlaesst.
+    #[test]
+    fn ein_fenster_ohne_aktiven_tab_wird_abgewiesen() {
+        for seite in 0..2 {
+            let ordner = Planordner::neu("ohne-tab");
+            let mut plan = ordner.plan();
+            plan.sitzung.fenster[seite].aktiver_tab = 99;
+            let fehler = plan.pruefen().expect_err("haette scheitern muessen");
+            assert!(
+                fehler.contains("keinen aktiven Tab"),
+                "unerwartete Meldung: {fehler}"
+            );
+        }
     }
 
     #[test]

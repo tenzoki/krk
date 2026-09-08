@@ -654,18 +654,21 @@ fn zeit_uebernehmen(
     let Some(geaendert) = angaben.and_then(|angaben| angaben.modified().ok()) else {
         return wahl;
     };
-    // Die Zugriffszeit ist die Zugabe und nicht der Gegenstand: fehlt sie, steht
-    // das Aenderungsdatum an beiden Stellen, so wie `ditto(1)` es auch haelt.
-    let gelesen = angaben
-        .and_then(|angaben| angaben.accessed().ok())
-        .unwrap_or(geaendert);
+    // Die Zugriffszeit ist die Zugabe und nicht der Gegenstand: gibt sie nichts
+    // her, steht das Aenderungsdatum an beiden Stellen, so wie `ditto(1)` es
+    // auch haelt. Sie gibt in zwei Lagen nichts her, und beide sind hier
+    // gleich behandelt: sie fehlt, oder sie liegt ausserhalb der vier Byte, die
+    // die zwei Zusatzfelder dafuer vorsehen. Haenge die Felder an die Zugabe,
+    // verhinderte eine Zugriffszeit von 1969 das Zusatzfeld eines tadellosen
+    // Aenderungsdatums, und zwar ohne eine Zeile in der Abschlussliste.
+    let gelesen = angaben.and_then(|angaben| angaben.accessed().ok());
 
     if let Some(zeitpunkt) = archivzeitpunkt(geaendert) {
         wahl = wahl.last_modified_time(zeitpunkt);
     }
 
-    if let (Some(geaendert), Some(gelesen)) = (epochensekunden(geaendert), epochensekunden(gelesen))
-    {
+    if let Some(geaendert) = epochensekunden(geaendert) {
+        let gelesen = gelesen.and_then(epochensekunden).unwrap_or(geaendert);
         let mut erweitert = Vec::with_capacity(9);
         // Bit 0: die Aenderungszeit steht da. Bit 1: die Zugriffszeit steht da.
         erweitert.push(0b0000_0011);

@@ -225,13 +225,10 @@ mod tests {
         fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
             .expect("Rechte lassen sich setzen");
 
-        let ergebnis = pruefen(&gesperrt, ordner.pfad());
-
-        // Aufraeumen, bevor die Probe fehlschlagen kann: sonst bleibt ein
-        // Ordner liegen, den `remove_dir_all` nicht mehr betreten darf.
-        let _ = fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o700));
-
-        let Ergebnis::Meldung(text) = ergebnis else {
+        // Kein Aufraeumen von Hand davor: `Pruefordner::drop` raeumt seit dem
+        // 260908 zweistufig ab und kommt an dem `0o000` vorbei, auch wenn die
+        // Probe hier fehlschlaegt (Defekt `260826-1442`).
+        let Ergebnis::Meldung(text) = pruefen(&gesperrt, ordner.pfad()) else {
             panic!("ein Ordner ohne Leserecht fuehrte zu einer Navigation");
         };
         assert!(

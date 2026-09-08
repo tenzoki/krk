@@ -421,6 +421,19 @@ pub fn text_schreiben(text: &str) -> bool {
 /// der Statuszeile; wortlos nichts zu tun ist in keinem Fall zulaessig, und
 /// deshalb traegt der Wert `#[must_use]`.
 ///
+/// **`false` heisst, dass die Ablage leer ist**, und nicht nur, dass etwas
+/// fehlt: weist `setString:forType:` ab, nachdem `writeObjects:` angenommen
+/// hat, raeumt diese Funktion die Verweise wieder ab. Ein Ablegen ist damit
+/// ganz oder gar nicht, und der eine Satz des Rufers — „die Zwischenablage hat
+/// die Einträge nicht angenommen" — stimmt in beiden Lagen.
+///
+/// **Keine Probe haelt das, und der Grund gehoert dazu:** beide `false`-Wege
+/// sind von aussen nicht herstellbar. `writeObjects:` nimmt selbst die leere
+/// Menge an, und `setString:forType:` weist auf einer Probenablage nicht ab.
+/// Was die Zusage traegt, ist die Bauform: der eine `clearContents` am Kopf
+/// deckt den ersten Weg, der zweite am Fuss den zweiten, und dazwischen gibt es
+/// keinen dritten Ausgang.
+///
 /// **`clearContents` ist Bedingung und keine Vorsichtsmassnahme**, wie bei
 /// [`text_auf_ablage_schreiben`]: ohne den Aufruf gehoert die Ablage noch dem
 /// vorigen Besitzer, und es ist zugleich die Zusage, dass ein zweites Ablegen
@@ -469,9 +482,22 @@ pub fn dateiverweise_auf_ablage_schreiben(
         return false;
     }
 
-    ablage.setString_forType(&NSString::from_str(namen), unsafe {
+    if ablage.setString_forType(&NSString::from_str(namen), unsafe {
         NSPasteboardTypeString
-    })
+    }) {
+        return true;
+    }
+    // **Ein Ablegen ist ganz oder gar nicht.** `writeObjects:` hat angenommen,
+    // `setString:forType:` nicht; ohne diese Zeile traege die Ablage die
+    // Verweise ohne die Namen, und `false` hiesse fuer den Rufer dasselbe wie
+    // eine abgewiesene Ablage. Er meldet „die Zwischenablage hat die Eintraege
+    // nicht angenommen", und in dieser Lage legte ein `cmd+v` im Finder sie
+    // sehr wohl ab
+    // (`issues/260829-0052_*_die-abweisungsmeldung-nennt-die-eintraege-auch-wenn-allein-die-namenszeilen-abgewiesen-wurden.md`).
+    // Geleert stimmt der Satz wieder, und der Rufer braucht die zwei Lagen
+    // nicht zu unterscheiden.
+    ablage.clearContents();
+    false
 }
 
 /// Legt Dateiverweise und ihre Namen in die Zwischenablage des Nutzers
@@ -569,27 +595,66 @@ mod proben {
     use crate::pruefordner::Pruefordner;
     use crate::quellbaum::quelldateien;
 
-    /// Eine Ablage, die niemandem sonst gehoert.
+    /// Die eine Ablage dieses Pruefprozesses, geleert und exklusiv.
     ///
     /// **`generalPasteboard` wird hier nicht angefasst**, aus demselben Grund,
     /// aus dem [`text_schreiben`] keine Probe traegt: sie wuerfe bei jedem
     /// `make check` weg, was der Entwickler gerade kopiert hat. Der Modulkopf
-    /// schreibt es aus. Jede Probe legt sich stattdessen ueber
-    /// `pasteboardWithName:` eine eigene an und leert sie als Erstes.
+    /// schreibt es aus. Die Proben legen sich stattdessen ueber
+    /// `pasteboardWithName:` eine eigene an und leeren sie als Erstes.
     ///
-    /// **Der Name ist fest und nicht eindeutig**, obwohl
-    /// `pasteboardWithUniqueName` daneben stuende. `objc2-app-kit 0.3.2` bindet
-    /// `releaseGlobally` nicht, und eine eindeutig benannte Ablage bliebe damit
-    /// beim Pasteboard-Server stehen, ohne dass diese Probe sie wieder abgeben
-    /// koennte — je Lauf eine weitere. Ein fester Name je Probe haelt die Zahl
-    /// bei der Zahl der Proben, die eine Ablage brauchen, und `clearContents`
-    /// macht den Anfangszustand jedes Laufs gleich.
-    fn probenablage(zweck: &str) -> objc2::rc::Retained<NSPasteboard> {
+    /// **Der Name traegt die Prozesskennung, und die Ablage ist eine einzige.**
+    /// Bis zum 260908 stand hier ein fester Name **je Probe** — eindeutig im
+    /// Prozess und nicht zwischen Prozessen. Sobald zwei `cargo test`-Laeufe
+    /// gleichzeitig fahren, und das ist mit den parallel dispatchten Bahnen der
+    /// Regelfall geworden, greifen beide auf dieselbe Ablage am
+    /// Pasteboard-Server, und vier Proben fallen; zuletzt beobachtet am
+    /// 260908-0030
+    /// (`issues/260829-0041_*_die-probenablagen-der-huelle-teilen-sich-zwei-gleichzeitige-testlaeufe.md`).
+    ///
+    /// **Der Preis ist eine stehenbleibende Ablage je Lauf**, und zwar genau
+    /// eine, nicht eine je Probe: `objc2-app-kit 0.3.2` bindet
+    /// `releaseGlobally` nicht, also kann keine Probe ihre Ablage wieder
+    /// abgeben. Deshalb teilen sich alle Proben **eine** und laufen unter einer
+    /// Sperre nacheinander — dieselbe Form, mit der `super::editor` seine
+    /// AppKit-Proben serialisiert, und aus demselben Grund: ohne sie sind die
+    /// Proben untereinander, was zwei Prozesse vorher gegeneinander waren.
+    /// Zurueck bleibt eine geleerte Ablage ohne Besitzer.
+    ///
+    /// Ein vergifteter Riegel wird trotzdem genommen: der Fehlschlag steht
+    /// schon in der Reihe, und ein zweiter Name daneben verdeckte ihn nur.
+    fn probenablage() -> Probenablage {
+        static SPERRE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let sperre = SPERRE
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let ablage = NSPasteboard::pasteboardWithName(&NSString::from_str(&format!(
-            "com.krk.probe.{zweck}"
+            "com.krk.probe.{}",
+            std::process::id()
         )));
         let _ = ablage.clearContents();
-        ablage
+        Probenablage {
+            _sperre: sperre,
+            ablage,
+        }
+    }
+
+    /// Die gehaltene Probenablage samt ihrer Sperre.
+    ///
+    /// Sie steht als eigener Typ da, damit die Sperre so lange gilt, wie die
+    /// Probe die Ablage benutzt; `Deref` macht sie an jeder Aufrufstelle zu
+    /// dem `&NSPasteboard`, den die Huelle erwartet.
+    struct Probenablage {
+        _sperre: std::sync::MutexGuard<'static, ()>,
+        ablage: objc2::rc::Retained<NSPasteboard>,
+    }
+
+    impl std::ops::Deref for Probenablage {
+        type Target = NSPasteboard;
+
+        fn deref(&self) -> &NSPasteboard {
+            &self.ablage
+        }
     }
 
     /// Legt die Pfade ueber den zweiten Ausgang der Huelle in die Ablage.
@@ -616,7 +681,7 @@ mod proben {
         let erste = ordner.datei("erste.txt", b"eins");
         let zweite = ordner.datei("zweite.txt", b"zwei");
 
-        let ablage = probenablage("dateiverweise");
+        let ablage = probenablage();
         dateien_ablegen(&ablage, &[erste.clone(), zweite.clone()], "");
 
         assert_eq!(
@@ -632,7 +697,7 @@ mod proben {
         let erste = ordner.datei("erste.txt", b"eins");
         let zweite = ordner.datei("zweite.txt", b"zwei");
 
-        let ablage = probenablage("zweiter-ausgang");
+        let ablage = probenablage();
         dateien_ablegen(
             &ablage,
             &[erste.clone(), zweite.clone()],
@@ -660,7 +725,7 @@ mod proben {
         std::os::unix::fs::symlink(&ziel, &verknuepfung)
             .expect("die Verknuepfung im Pruefordner laesst sich anlegen");
 
-        let ablage = probenablage("verknuepfung");
+        let ablage = probenablage();
         dateien_ablegen(
             &ablage,
             std::slice::from_ref(&verknuepfung),
@@ -680,7 +745,7 @@ mod proben {
         let alte = ordner.datei("alte.txt", b"alt");
         let neue = ordner.datei("neue.txt", b"neu");
 
-        let ablage = probenablage("ersetzen");
+        let ablage = probenablage();
         dateien_ablegen(&ablage, &[alte], "alte.txt");
         dateien_ablegen(&ablage, std::slice::from_ref(&neue), "neue.txt");
 
@@ -698,7 +763,7 @@ mod proben {
 
     #[test]
     fn eine_leere_ablage_liefert_einen_leeren_vektor() {
-        let ablage = probenablage("leer");
+        let ablage = probenablage();
 
         assert!(
             dateiverweise(&ablage).is_empty(),
@@ -708,7 +773,7 @@ mod proben {
 
     #[test]
     fn text_allein_kommt_als_einfuegequelle_text() {
-        let ablage = probenablage("einfuegequelle-text");
+        let ablage = probenablage();
         assert!(text_auf_ablage_schreiben(&ablage, "Notizen.md"));
 
         assert_eq!(
@@ -724,7 +789,7 @@ mod proben {
         let erste = ordner.datei("erste.txt", b"eins");
         let zweite = ordner.datei("zweite.txt", b"zwei");
 
-        let ablage = probenablage("einfuegequelle-verweise");
+        let ablage = probenablage();
         dateien_ablegen(&ablage, &[erste.clone(), zweite.clone()], "");
 
         assert_eq!(
@@ -739,7 +804,7 @@ mod proben {
         let ordner = Pruefordner::neu("einfuegequelle-rangfolge");
         let datei = ordner.datei("Mein Text.md", b"text");
 
-        let ablage = probenablage("einfuegequelle-rangfolge");
+        let ablage = probenablage();
         dateien_ablegen(&ablage, std::slice::from_ref(&datei), "Mein Text.md");
 
         assert_eq!(
@@ -751,7 +816,7 @@ mod proben {
 
     #[test]
     fn eine_geleerte_ablage_ist_leer() {
-        let ablage = probenablage("einfuegequelle-leer");
+        let ablage = probenablage();
 
         assert_eq!(
             einfuegequelle_aus(&ablage),
@@ -762,7 +827,7 @@ mod proben {
 
     #[test]
     fn text_auf_ablage_schreiben_legt_den_text_in_die_gereichte_ablage() {
-        let ablage = probenablage("text-schreiben");
+        let ablage = probenablage();
 
         assert!(
             text_auf_ablage_schreiben(&ablage, "geschriebener Text"),

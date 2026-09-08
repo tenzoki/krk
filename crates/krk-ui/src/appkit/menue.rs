@@ -218,6 +218,17 @@
 //! und nicht mehr die Zahl der `gehalten_von`-Funktionen, die seither sieben
 //! ist.
 //!
+//! **Die Ungleichheit haelt seit dem 260908 eine Probe und nicht mehr Prosa.**
+//! `jeder_zugestellte_selektor_ist_gemessen_oder_eigen` stellt je Selektor aus
+//! `menuemodell::ZUSTELLER` die eine entscheidbare Frage — beantwortet ihn eine
+//! der sechs Ersthelferklassen? — und verlangt danach genau eine der beiden
+//! Zugehoerigkeiten: gemessen oder namentlich als KRK-eigener gefuehrt. Ein
+//! Eintrag, der zu `ZUSTELLER` hinzukommt, ohne dass jemand ueber seine Sorte
+//! entschieden hat, haelt damit den Lauf an; zwei Gegenproben halten die andere
+//! Richtung. Bis dahin beschrieb die Prosa an drei Stellen die Divergenz, und
+//! keine wurde rot
+//! (`issues/260907-2127_*_zwei-selektorlisten-im-menue-stehen-nebeneinander-und-nichts-haelt-sie-mehr-aneinander.md`).
+//!
 //! ```text
 //! Selektor      antwortet an        traegt die Methode
 //! cut:          NSTextView          NSText
@@ -886,7 +897,9 @@ fn ja_nein(wahr: bool) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use objc2::runtime::AnyClass;
+    use std::ffi::CString;
+
+    use objc2::runtime::{AnyClass, Sel};
     use objc2::{ClassType, sel};
 
     use crate::quellbaum::quelldateien;
@@ -1444,5 +1457,149 @@ mod tests {
             aufrufe, 2,
             "das Hauptmenue wird nicht an genau zwei Anlaessen gebaut"
         );
+    }
+    // -----------------------------------------------------------------------
+    // Die zwei Selektorlisten des Menues
+    // -----------------------------------------------------------------------
+
+    /// Die Selektoren, die KRK selbst vergibt und die deshalb in keiner
+    /// AppKit-Klasse stehen.
+    ///
+    /// **Die Liste, die es vorher nicht gab.** Bis zum 260907 trugen
+    /// `menuemodell::ZUSTELLER` und [`die_sechs_zugestellten`] dieselben sechs
+    /// Eintraege, und was sie aneinanderhielt, war Prosa. Mit
+    /// `filterEinfuegen:` sind sie absichtlich verschieden geworden — sieben
+    /// gegen sechs —, und damit war auch die Prosa weg, die einen kuenftigen
+    /// Auseinanderlauf als Auseinanderlauf erkennbar machte
+    /// (`issues/260907-2127_*_zwei-selektorlisten-im-menue-stehen-nebeneinander-und-nichts-haelt-sie-mehr-aneinander.md`).
+    ///
+    /// Ein Selektor gehoert hierher, wenn keine der [`ersthelferklassen`] ihn
+    /// beantwortet. Das ist die entscheidbare Fassung der Frage „ist dieser
+    /// Selektor einer von AppKit"; aus dem Namen ist sie nicht zu beantworten,
+    /// aus dem Laufzeitsystem schon.
+    const KRK_EIGENE: [&str; 1] = ["filterEinfuegen:"];
+
+    /// Die Selektoren aus `menuemodell::ZUSTELLER`, aus dem Quelltext gelesen.
+    ///
+    /// **Aus dem Quelltext und nicht aus der Konstanten**, weil die Konstante
+    /// privat ist und ein `pub(crate)` daran eine Modulgrenze fuer eine Probe
+    /// oeffnete. Dieselbe Lesart wie bei den Variantenlesern des Baums: ab der
+    /// Zeile mit dem Namen, bis zur schliessenden Klammer, je Zeile das Stueck
+    /// zwischen `c"` und `"`.
+    fn zusteller_selektoren() -> Vec<String> {
+        let name = concat!("ZUST", "ELLER");
+        let (_, inhalt) = quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/menuemodell.rs")
+            .expect("krk-ui/src/menuemodell.rs steht nicht im Quellbaum");
+        let anfang = inhalt
+            .find(&format!("const {name}"))
+            .expect("menuemodell.rs fuehrt die Zustellerliste nicht mehr unter diesem Namen");
+        let liste = &inhalt[anfang..];
+        let ende = liste.find("];").expect("die Zustellerliste hat kein Ende");
+        let gelesen: Vec<String> = liste[..ende]
+            .lines()
+            .filter_map(|zeile| {
+                let hinter = zeile.split_once("c\"")?.1;
+                let selektor = hinter.split_once('"')?.0;
+                Some(selektor.to_owned())
+            })
+            .collect();
+        assert!(
+            !gelesen.is_empty(),
+            "die Zustellerliste ist leer gelesen worden; die Lesart passt nicht mehr zum Quelltext"
+        );
+        gelesen
+    }
+
+    /// Jeder zugestellte Selektor ist entweder gemessen oder namentlich als
+    /// KRK-eigener gefuehrt.
+    ///
+    /// **Die Probe, die die zwei Listen aneinanderhaelt.** Sie stellt je
+    /// Selektor die eine entscheidbare Frage — beantwortet ihn eine der
+    /// [`ersthelferklassen`]? — und verlangt danach genau eine der beiden
+    /// Zugehoerigkeiten: ein AppKit-Selektor steht in
+    /// [`die_sechs_zugestellten`] und damit in [`GEMESSEN`], ein eigener in
+    /// [`KRK_EIGENE`]. Ein Eintrag, der zu `menuemodell::ZUSTELLER` hinzukommt,
+    /// ohne dass jemand ueber seine Sorte entschieden hat, haelt damit den Lauf
+    /// an.
+    ///
+    /// **Die Frage wird an das Laufzeitsystem gestellt und nicht an den
+    /// Namen.** Aus `filterEinfuegen:` ist nicht abzulesen, dass keine
+    /// AppKit-Klasse ihn kennt; `AnyClass::responds_to` weiss es. Die Antwort
+    /// braucht keine Instanz, keinen Hauptfaden und keinen Vordergrund, wie bei
+    /// der Messung darueber.
+    #[test]
+    fn jeder_zugestellte_selektor_ist_gemessen_oder_eigen() {
+        let gemessen: Vec<&str> = die_sechs_zugestellten()
+            .iter()
+            .map(|(name, _)| *name)
+            .collect();
+
+        for name in zusteller_selektoren() {
+            let kennung = CString::new(name.clone()).expect("ein Selektorname ohne Nullbyte");
+            let selektor = Sel::register(&kennung);
+            let von_appkit = ersthelferklassen()
+                .iter()
+                .any(|(_, klasse)| klasse.responds_to(selektor));
+
+            if von_appkit {
+                assert!(
+                    gemessen.contains(&name.as_str()),
+                    "{name} wird von einer AppKit-Klasse beantwortet und steht nicht in der \
+                     gemessenen Liste; die dritte Spalte der Markdown-Ausgabe bekaeme fuer ihn \
+                     eine Auskunft, die niemand gemessen hat"
+                );
+            } else {
+                assert!(
+                    KRK_EIGENE.contains(&name.as_str()),
+                    "{name} wird von keiner AppKit-Klasse beantwortet und ist nicht als \
+                     KRK-eigener Selektor gefuehrt; wer ihn beantwortet, ist damit nirgends \
+                     entschieden"
+                );
+            }
+        }
+    }
+
+    /// Jeder gemessene Selektor wird auch wirklich zugestellt.
+    ///
+    /// Die Gegenrichtung: eine Zeile in [`die_sechs_zugestellten`], die
+    /// `menuemodell::ZUSTELLER` nicht mehr fuehrt, misst eine Klasse fuer einen
+    /// Menueeintrag, den es nicht gibt.
+    #[test]
+    fn jeder_gemessene_selektor_wird_zugestellt() {
+        let zugestellt = zusteller_selektoren();
+        for (name, _) in die_sechs_zugestellten() {
+            assert!(
+                zugestellt.iter().any(|kandidat| kandidat == name),
+                "{name} wird gemessen, aber vom Menue nicht mehr zugestellt"
+            );
+        }
+    }
+
+    /// Jeder KRK-eigene Selektor wird zugestellt und von keiner AppKit-Klasse
+    /// beantwortet.
+    ///
+    /// Ohne diese Probe koennte [`KRK_EIGENE`] eine Zeile tragen, die nichts
+    /// mehr freistellt — eine Ausnahme ohne Fall, und die naechste Zeile
+    /// darunter kaeme unbemerkt durch.
+    #[test]
+    fn jeder_eigene_selektor_hat_seinen_fall() {
+        let zugestellt = zusteller_selektoren();
+        for name in KRK_EIGENE {
+            assert!(
+                zugestellt.iter().any(|kandidat| kandidat == name),
+                "{name} steht als KRK-eigener Selektor und wird vom Menue nicht zugestellt"
+            );
+            let kennung = CString::new(name).expect("ein Selektorname ohne Nullbyte");
+            let selektor = Sel::register(&kennung);
+            assert!(
+                !ersthelferklassen()
+                    .iter()
+                    .any(|(_, klasse)| klasse.responds_to(selektor)),
+                "{name} steht als KRK-eigener Selektor und wird von einer AppKit-Klasse \
+                 beantwortet; er gehoert dann in die gemessene Liste"
+            );
+        }
     }
 }

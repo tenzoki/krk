@@ -312,8 +312,26 @@ fn lesen_und_senden(
 
     let mut gesammelt: Vec<Eintrag> = Vec::with_capacity(STAPELGROESSE);
     loop {
+        // **Ein Abbruch sendet nichts mehr.** Das gilt an dieser Stelle und an
+        // der zweiten weiter unten gleich; bis zum 260908 schickte diese hier
+        // den angefangenen Stapel noch los und jene liess ihn fallen, ohne dass
+        // ein Grund fuer den Unterschied irgendwo stand (Defekt `260826-1221`).
+        //
+        // Gewaehlt ist "an beiden nicht", und das ist gemessen und nicht
+        // abgewogen: die zweite Stelle steht **innerhalb** der Stapelschleife,
+        // wo `gesammelt` alles traegt, was ein einziger `getdirentries`
+        // geliefert hat. Ein `rest_senden` dort schickt bei einem Ordner mit
+        // 5.000 Eintraegen alle 5.000 los, und der Abbruch hoerte auf, einer zu
+        // sein; `abgebrochener_leser_liefert_teilbestand_und_meldet_den_abbruch`
+        // (`crates/krk-core/tests/verzeichnis.rs`) wird davon rot. Der Kommentar
+        // unten sagt dasselbe von der anderen Seite: die Pruefung steht dort,
+        // damit ein abgebrochener Ordner nicht doch vollstaendig durchlaeuft.
+        //
+        // Die Zusage aus `Abschluss::Abgebrochen` traegt das: die bis dahin
+        // gesendeten Stapel sind gueltig, der Bestand ist unvollstaendig. Ein
+        // abgebrochener Ordner wird ohnehin verworfen, und ein Senden weniger
+        // ist ein Kanalplatz weniger, an dem der Abbruch haengen kann.
         if abbruch.load(Ordering::Relaxed) {
-            rest_senden(generation, sender, &mut gesammelt)?;
             return Some(Abschluss::Abgebrochen);
         }
 
@@ -336,6 +354,8 @@ fn lesen_und_senden(
         // liefe ein abgebrochener Ordner mit 5.000 Eintraegen trotzdem
         // vollstaendig durch.
         while gesammelt.len() >= STAPELGROESSE {
+            // Der Rest bleibt liegen, wie am ersten Abbruchweg oben; die
+            // Begruendung steht dort einmal und nicht hier ein zweites Mal.
             if abbruch.load(Ordering::Relaxed) {
                 return Some(Abschluss::Abgebrochen);
             }

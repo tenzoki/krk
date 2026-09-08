@@ -147,9 +147,47 @@ thread_local! {
     /// nachdem der neue steht — deshalb die Zuweisung nach dem Zeigen und
     /// nicht davor.
     ///
+    /// **Freigegeben wird er nie.** Er bleibt hier stehen, nachdem der Nutzer
+    /// den Dialog geschlossen hat, bis zum naechsten [`anbieten`]; der letzte
+    /// ueberlebt das Programm, weil `NSApplication`s Beendigung `exit()` ruft
+    /// und keine Rust-Destruktoren fuehrt. Der saubere Weg waere ein
+    /// `NSSharingServicePickerDelegate` mit
+    /// `sharingServicePicker:didChooseSharingService:`, das AppKit auch beim
+    /// Abbrechen mit `nil` ruft; das waere eine zweite Beruehrung mit einem
+    /// Protokoll fuer ein Objekt samt seiner `NSURL`-Liste, also fuer nichts,
+    /// was der Nutzer merkt.
+    ///
     /// `thread_local!` und kein `static`: ein `Retained` ist nicht `Sync`, und
     /// hier gehoert es ohnehin dem Hauptfaden, auf dem AppKit allein arbeitet.
     static OFFENER_DIALOG: RefCell<Option<Retained<NSSharingServicePicker>>> =
+        const { RefCell::new(None) };
+
+    /// Der Waehler des zuletzt gebauten Menueeintrags.
+    ///
+    /// **Dieselbe Regel wie darueber, und seit dem 260908 ohne Ausnahme.**
+    /// [`eintrag_anfuegen`] liess seinen Waehler bis dahin unmittelbar nach
+    /// `standardShareMenuItem` fallen. Ob der zurueckgegebene `NSMenuItem` ihn
+    /// dann noch haelt, sagt weder der Kopf des Systems noch diese Datei:
+    /// `NSMenuItem.target` ist ausdruecklich **schwach**
+    /// (`NSMenuItem.h:93`), `representedObject` stark (`:98`), und welches von
+    /// beiden die Methode benutzt, steht nirgends. Damit stand dieselbe Frage
+    /// in derselben Datei zweimal entgegengesetzt beantwortet, und nur eine der
+    /// beiden Antworten trug eine Begruendung
+    /// (`issues/260812-1529_*_die-besitzregel-des-freigabewaehlers-gilt-nur-in-einer-der-zwei-huellen.md`,
+    /// Zuschnitt 2). Gewaehlt ist der Zuschnitt, der ohne unbelegbare Annahme
+    /// auskommt: der Waehler des Menueweges wird festgehalten wie der des
+    /// Tastenweges.
+    ///
+    /// **Ein zweiter Schlitz und nicht derselbe.** Ein Kontextmenue kann
+    /// aufgehen, waehrend ein Freigabedialog steht; teilten sich beide einen
+    /// Schlitz, naehme der Menuebau dem Dialog seinen Besitzer. Die Regel
+    /// „einer und keine Reihe" gilt je Weg und nicht ueber beide.
+    ///
+    /// **Freigegeben wird er nicht**, wie der darueber: der letzte ueberlebt
+    /// das Programm, weil `NSApplication`s Beendigung `exit()` ruft und keine
+    /// Rust-Destruktoren fuehrt. Ein Objekt samt seiner `NSURL`-Liste, ohne
+    /// Wirkung auf den Nutzer.
+    static MENUEWAEHLER: RefCell<Option<Retained<NSSharingServicePicker>>> =
         const { RefCell::new(None) };
 }
 
@@ -238,10 +276,27 @@ pub fn anbieten(pfade: &[PathBuf], flaeche: &NSView, rechteck: NSRect) -> bool {
     if pfade.is_empty() {
         return false;
     }
-    let auswaehler = auswaehler_bauen(pfade);
+    // `None` heisst hier dasselbe wie eine leere Liste: kein Dialog, und der
+    // Rufer meldet es. Die Begruendung steht an [`auswaehler_bauen`].
+    let Some(auswaehler) = auswaehler_bauen(pfade) else {
+        return false;
+    };
     auswaehler.showRelativeToRect_ofView_preferredEdge(rechteck, flaeche, NSRectEdge::MinY);
-    // Erst zeigen, dann festhalten: die Zuweisung setzt den vorigen Dialog ab,
-    // und der soll gehen, nachdem der neue steht.
+    // Erst zeigen, dann festhalten.
+    //
+    // **Die Reihenfolge kauft dabei weniger, als hier bis zum 260908 stand.**
+    // Sie hiess „die Zuweisung setzt den vorigen Dialog ab, und der soll gehen,
+    // nachdem der neue steht" — der vorige verliert seinen Besitzer aber
+    // unabhaengig davon, ob der neue schon steht, und die zwei Zeilen
+    // aendern daran nichts
+    // (`issues/260812-1529_*_die-besitzregel-des-freigabewaehlers-gilt-nur-in-einer-der-zwei-huellen.md`,
+    // erster Nebenbefund). Was den Fall traegt, ist eine andere Voraussetzung:
+    // `showRelativeToRect:ofView:preferredEdge:` faehrt eine Verfolgungsschleife,
+    // und solange sie laeuft, kommt kein zweiter Tastenbefehl bis hierher. Ein
+    // zweiter Aufruf **waehrend** eines offenen Dialogs ist damit nicht
+    // erreichbar. `inference:` am laufenden Buendel nicht nachgemessen; die
+    // Verfolgungsschleife steht im Kopf des Systems, die Folgerung daraus ist
+    // gelesen und nicht gemessen.
     OFFENER_DIALOG.with(|halt| *halt.borrow_mut() = Some(auswaehler));
     true
 }
@@ -253,6 +308,10 @@ pub fn anbieten(pfade: &[PathBuf], flaeche: &NSView, rechteck: NSRect) -> bool {
 /// sich ein eigenes Menue. Bei leerer Liste geschieht nichts, und das Menue
 /// bleibt, wie es war — ein Eintrag, der nichts zu teilen haette, waere der
 /// stille Fehlschlag, den C1 ausschliesst.
+///
+/// **Der Waehler wird festgehalten, wie beim Tastenweg.** Die Begruendung und
+/// die Frage dahinter stehen an [`MENUEWAEHLER`]; hier steht nur, dass die
+/// Regel am [`OFFENER_DIALOG`] keine Ausnahme hat.
 ///
 /// **Der Eintrag kommt vom System und nicht von KRK.**
 /// `standardShareMenuItem` liefert ihn samt Untermenue der Dienste; ein selbst
@@ -274,7 +333,16 @@ pub fn eintrag_anfuegen(menue: &NSMenu, pfade: &[PathBuf], mtm: MainThreadMarker
     if pfade.is_empty() {
         return;
     }
-    let eintrag = auswaehler_bauen(pfade).standardShareMenuItem(mtm);
+    // `None` heisst hier dasselbe wie eine leere Liste: kein Eintrag. Die
+    // Begruendung steht an [`auswaehler_bauen`].
+    let Some(auswaehler) = auswaehler_bauen(pfade) else {
+        return;
+    };
+    let eintrag = auswaehler.standardShareMenuItem(mtm);
+    // Festgehalten wie der Waehler des Tastenweges; die Begruendung steht an
+    // [`MENUEWAEHLER`]. Erst der Eintrag, dann der Halt: der vorige Eintrag ist
+    // mit seinem Menue schon fort.
+    MENUEWAEHLER.with(|halt| *halt.borrow_mut() = Some(auswaehler));
     if menue.numberOfItems() > 0 {
         menue.insertItem_atIndex(&NSMenuItem::separatorItem(mtm), 0);
     }
@@ -292,14 +360,26 @@ pub fn eintrag_anfuegen(menue: &NSMenu, pfade: &[PathBuf], mtm: MainThreadMarker
 /// es auch nicht: ein Eintrag, den es nicht mehr gibt, geht bis zum Dienst
 /// durch, und was der dazu sagt, ist seine Sache. Dieselbe Zurueckhaltung wie
 /// in [`super::standardprogramm`].
-fn auswaehler_bauen(pfade: &[PathBuf]) -> Retained<NSSharingServicePicker> {
+///
+/// **`None` fuer einen Pfad ohne gueltiges UTF-8**, und das ist keine Ausnahme
+/// von der Zurueckhaltung darueber, sondern ihr Gegenteil: `to_string_lossy`
+/// baute einen Pfad mit `U+FFFD`, also einen **anderen** Eintrag, und der
+/// Freigabedialog bekaeme eine Datei, die es nicht gibt, ohne dass ein Rufer es
+/// erfuehre. Nicht zu fragen heisst weitergeben, was dasteht, und nicht, etwas
+/// anderes weiterzugeben. Dieselbe Antwort geben `super::papierkorb`,
+/// `super::abwurf` und `super::volumes`
+/// (`issues/260826-1421_*_pfade-ohne-gueltiges-utf-8-vier-huellen-glaetten-still-mit-to-string-lossy-und-drei-weisen-ab.md`).
+/// Abgewiesen wird die **ganze** Menge und nicht der einzelne Eintrag: ein
+/// Teilen, das stillschweigend weniger Dateien mitnimmt, als der Nutzer
+/// markiert hat, ist der Fehlschlag, den C1 ausschliesst.
+fn auswaehler_bauen(pfade: &[PathBuf]) -> Option<Retained<NSSharingServicePicker>> {
     let eintraege: Vec<Retained<AnyObject>> = pfade
         .iter()
         .map(|pfad| {
-            let adresse = NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy()));
-            Retained::into_super(Retained::into_super(adresse))
+            let adresse = NSURL::fileURLWithPath(&NSString::from_str(pfad.to_str()?));
+            Some(Retained::into_super(Retained::into_super(adresse)))
         })
-        .collect();
+        .collect::<Option<_>>()?;
     let liste = NSArray::from_retained_slice(&eintraege);
     // SAFETY: `initWithItems:` verlangt, dass jedes Element `NSPasteboardWriting`
     // erfuellt oder ein `NSItemProvider` oder ein `NSDocument` ist
@@ -307,7 +387,7 @@ fn auswaehler_bauen(pfade: &[PathBuf]) -> Retained<NSSharingServicePicker> {
     // `NSURL` erfuellt `NSPasteboardWriting` (`NSPasteboard.h:469`). Anderes
     // kommt nicht herein, weil die Umwandlung in dieser Funktion steht und
     // nicht beim Aufrufer.
-    unsafe { NSSharingServicePicker::initWithItems(NSSharingServicePicker::alloc(), &liste) }
+    Some(unsafe { NSSharingServicePicker::initWithItems(NSSharingServicePicker::alloc(), &liste) })
 }
 
 #[cfg(test)]

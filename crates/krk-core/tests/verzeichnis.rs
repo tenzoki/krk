@@ -620,21 +620,48 @@ fn nach_schluessel_sortieren_schaltet_die_richtung_um() {
     );
 }
 
+/// Ein Stapel fremder Generation kommt nicht ins Modell.
+///
+/// **Verworfen wird vom Rufer und nicht vom Modell.**
+/// [`Ordnermodell::anhaengen`] fragt nach keiner Generation; die Oberflaeche
+/// stellt die Frage selbst, und diese Probe stellt sie genauso. Bis zum 260908
+/// stand hier ein `filter` mit einem Praedikat, das seinen Eintrag nicht ansah
+/// und eine Schleifeninvariante rief — es war fuer jeden Stapel wahr, und die
+/// Zusicherung sagte am Ende nur, dass der Leser zehn Eintraege geliefert hat.
+///
+/// Die zwei Modelle nebeneinander sind der Gegenstand: ohne das zweite bestuende
+/// die Probe auch dann, wenn der Leser gar nichts geliefert haette.
 #[test]
 fn das_modell_verwirft_stapel_einer_alten_generation() {
     let ordner = ordner_mit_dateien("generation", 10);
-    let modell = Ordnermodell::neu(4);
+    let mut jung = Ordnermodell::neu(4);
+    let mut alt = Ordnermodell::neu(3);
 
-    assert!(modell.gehoert_dazu(4));
-    assert!(!modell.gehoert_dazu(3));
+    assert!(jung.gehoert_dazu(4));
+    assert!(!jung.gehoert_dazu(3));
 
     let (stapel, _) = stapelweise_lesen(ordner.pfad(), 3);
-    let veraltet: usize = stapel
-        .iter()
-        .filter(|_| !modell.gehoert_dazu(3))
-        .map(|s| s.len())
-        .sum();
-    assert_eq!(veraltet, 10, "die Generationspruefung greift nicht");
+    for eintraege in stapel {
+        if alt.gehoert_dazu(3) {
+            alt.anhaengen(eintraege.clone());
+        }
+        if jung.gehoert_dazu(3) {
+            jung.anhaengen(eintraege);
+        }
+    }
+    alt.abschliessen();
+    jung.abschliessen();
+
+    assert_eq!(
+        alt.zeilenzahl(),
+        10,
+        "der Leser hat nicht geliefert; die Probe misst dann gar nichts"
+    );
+    assert_eq!(
+        jung.zeilenzahl(),
+        0,
+        "ein Stapel der Generation 3 ist im Modell der Generation 4 gelandet"
+    );
 }
 
 #[test]
@@ -2825,6 +2852,14 @@ fn jeder_auftrag_bekommt_genau_einen_befund() {
 
     let gesperrt = ordner.ordner("gesperrt");
     fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000)).expect("Rechte");
+    // Der Ordner ist leer und traegt sein `false` unter `root` auf dem
+    // **zweiten** Weg, ohne dass etwas rot wuerde: der Kopf sagt "der negative
+    // kommt auf drei Wegen", und dann waeren es zwei. Der Abbruch ist deshalb
+    // hier so noetig wie an den acht anderen Aufrufstellen.
+    rechtesperre_haelt_oder_abbruch(
+        "der negative Befund kommt auf drei Wegen, und der gesperrte Ordner ist der eine davon",
+        fs::read_dir(&gesperrt).is_err(),
+    );
 
     let ziel = ordner.ordner("ziel");
     fs::write(ziel.join("gesuchtes-blatt.txt"), b"x").expect("Datei");
@@ -2969,6 +3004,15 @@ fn ein_namenstreffer_im_unterbaum_bleibt_ungelesen() {
     fs::write(&blatt, b"").expect("Blatt laesst sich nicht schreiben");
     fs::set_permissions(&blatt, fs::Permissions::from_mode(0o000))
         .expect("Rechte lassen sich nicht entziehen");
+    // Unter `root` liesse sich das Blatt lesen; sein leerer Inhalt traege die
+    // Folge nicht, und der Namenstreffer entschiede den Ordner ohnehin. Die
+    // Probe bliebe gruen, und der Satz aus dem Kopf — `treffer: true` ist der
+    // Beleg, dass nicht gelesen wurde — stuende unbelegt da. Genau das darf er
+    // in keiner Lage.
+    rechtesperre_haelt_oder_abbruch(
+        "der Namenstreffer entscheidet vor dem Lesen; das unlesbare Blatt ist der Beleg dafuer",
+        fs::read(&blatt).is_err(),
+    );
 
     assert_eq!(
         einen_ordner_mit_inhalt_entscheiden(ordner.pfad(), "aussen", "gesuchtes", PROBENGRENZE),
@@ -3190,18 +3234,11 @@ fn ein_deskriptormangel_beim_lesen_laesst_die_datei_unentschieden() {
     // Durchlauf **ab** dem ersten Oeffnen anhaelt und nicht schon davor.
     ordner.verknuepfung("verweis", &ziel);
 
-    let ergebnis = kind_mit_deskriptorgrenze(
+    kind_mit_deskriptorgrenze(
+        "ein Deskriptormangel des Prozesses wird zu einer Aussage ueber eine Datei",
         DESKRIPTORGRENZE,
         "kind_meldet_bei_deskriptormangel_ueber_einer_datei_nichts",
         ordner.pfad(),
-    );
-
-    assert!(
-        ergebnis.status.success(),
-        "ein Deskriptormangel des Prozesses wird zu einer Aussage ueber eine Datei\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
-        String::from_utf8_lossy(&ergebnis.stderr)
     );
 }
 
@@ -3396,18 +3433,11 @@ fn die_tiefe_kette_wird_auch_mit_vierundsechzig_deskriptoren_entschieden() {
     fs::create_dir_all(&tief).expect("Kette laesst sich nicht anlegen");
     fs::write(tief.join("gesuchtes-blatt.txt"), b"x").expect("Blatt");
 
-    let ergebnis = kind_mit_deskriptorgrenze(
+    kind_mit_deskriptorgrenze(
+        "unter einer knappen Deskriptorgrenze faellt der Treffer aus der Antwort",
         DESKRIPTORGRENZE,
         "kind_entscheidet_die_tiefe_kette",
         ordner.pfad(),
-    );
-
-    assert!(
-        ergebnis.status.success(),
-        "unter einer knappen Deskriptorgrenze faellt der Treffer aus der Antwort\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
-        String::from_utf8_lossy(&ergebnis.stderr)
     );
 }
 
@@ -3490,18 +3520,11 @@ fn ein_deskriptormangel_von_aussen_laesst_die_ordner_unentschieden() {
     // Durchlauf **ab** dem ersten Oeffnen anhaelt und nicht schon davor.
     ordner.verknuepfung("verweis", ordner.unter("aussen"));
 
-    let ergebnis = kind_mit_deskriptorgrenze(
+    kind_mit_deskriptorgrenze(
+        "ein Deskriptormangel des Prozesses wird zu einer Aussage ueber einen Ordner",
         DESKRIPTORGRENZE,
         "kind_meldet_bei_deskriptormangel_nichts",
         ordner.pfad(),
-    );
-
-    assert!(
-        ergebnis.status.success(),
-        "ein Deskriptormangel des Prozesses wird zu einer Aussage ueber einen Ordner\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
-        String::from_utf8_lossy(&ergebnis.stderr)
     );
 }
 

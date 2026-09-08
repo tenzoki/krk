@@ -36,7 +36,22 @@
 //! in `krk-bench/src/wegwerfordner.rs` zusammenlegbar: ein Testziel und ein
 //! Binaerziel sind je eine eigene Kiste, und `krk-ui` hat kein
 //! Bibliotheksziel, das eine gemeinsame Fassung tragen koennte.
+//!
+//! # Das Abraeumen ist zweistufig, wie im Kern
+//!
+//! `CLAUDE.md` sagt, es gebe drei Fassungen, eine je Kiste, und dass sie
+//! dasselbe **tun**, stand bis zum 260908 nirgends und war auch nicht so: der
+//! Kern raeumte ueber [`abraeumen`] in zwei Stufen ab, diese Kiste ueber ein
+//! blankes `remove_dir_all` (Defekt `260826-1442`). Zwei Proben dieser Kiste
+//! setzen `0o000` — `kommandos::pfadeingabe` auf einen Unterordner,
+//! `leistenmodell` auf eine Datei —, und an einem Unterordner mit `0o000`
+//! scheitert der einstufige Weg. Die eine Probe hat deshalb von Hand
+//! aufgeraeumt, „bevor die Probe fehlschlagen kann"; genau diese Handarbeit
+//! macht der zweistufige Weg entbehrlich, und sie steht dort seither als das
+//! da, was sie ist: eine Vorsichtsmassnahme, die den Fall gar nicht mehr
+//! erreicht.
 
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -64,7 +79,7 @@ impl Pruefordner {
             "krk-ui-probe-{zweck}-{}-{laufnummer}",
             std::process::id()
         ));
-        let _ = std::fs::remove_dir_all(&pfad);
+        abraeumen(&pfad);
         Self { pfad }
     }
 
@@ -129,6 +144,79 @@ impl Pruefordner {
 
 impl Drop for Pruefordner {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.pfad);
+        abraeumen(&self.pfad);
+    }
+}
+
+/// Raeumt einen Baum ab, notfalls gegen entzogene Rechte.
+///
+/// Zwei Stufen, und die Reihenfolge ist der Grund fuer beide: `remove_dir_all`
+/// raeumt einen Ordner mit vielen Eintraegen in einem Zug ab, kommt aber an
+/// einem Eintrag mit `0o000` nicht vorbei. [`entsperren_und_loeschen`] steigt
+/// dafuer Eintrag fuer Eintrag hinab und dreht jedem die Rechte zurueck; das
+/// kostet einen Aufruf je Eintrag und laeuft deshalb nur, wenn der schnelle Weg
+/// gescheitert ist.
+///
+/// **Wortgleich mit `abraeumen` in `krk-core/tests/gemeinsam/mod.rs`**, und
+/// zusammenlegen laesst es sich nicht: der Modulkopf sagt, warum.
+fn abraeumen(pfad: &Path) {
+    if std::fs::remove_dir_all(pfad).is_ok() {
+        return;
+    }
+    let _ = entsperren_und_loeschen(pfad);
+}
+
+/// Raeumt einen Baum ab und gibt vorher jedem Eintrag wieder Rechte.
+///
+/// Eine Verknuepfung bekommt keine neuen Rechte: `set_permissions` folgt ihr
+/// und aendere sonst die Rechte ihres Ziels, das ausserhalb des Pruefordners
+/// liegen kann.
+fn entsperren_und_loeschen(pfad: &Path) -> std::io::Result<()> {
+    if let Ok(angaben) = std::fs::symlink_metadata(pfad) {
+        if !angaben.is_symlink() {
+            let _ = std::fs::set_permissions(pfad, std::fs::Permissions::from_mode(0o755));
+        }
+        if angaben.is_dir()
+            && let Ok(eintraege) = std::fs::read_dir(pfad)
+        {
+            for eintrag in eintraege.flatten() {
+                let _ = entsperren_und_loeschen(&eintrag.path());
+            }
+        }
+    }
+    match std::fs::symlink_metadata(pfad) {
+        Ok(angaben) if angaben.is_dir() => std::fs::remove_dir(pfad),
+        Ok(_) => std::fs::remove_file(pfad),
+        Err(fehler) => Err(fehler),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Die zweite Stufe, an dem Fall gefahren, den die erste nicht schafft.
+    ///
+    /// Der Pruefordner haelt seinen Pfad, nicht der Ordner den Pruefordner:
+    /// nach dem `drop` ist die Frage, ob unter dem gemerkten Pfad noch etwas
+    /// steht. Unter `root` greift die Rechtesperre nicht, dann raeumt schon die
+    /// erste Stufe ab und die Probe misst nichts — sie ist trotzdem gruen, und
+    /// die Zusage ist dieselbe.
+    #[test]
+    fn ein_unterordner_ohne_rechte_haelt_das_abraeumen_nicht_auf() {
+        let ordner = Pruefordner::neu("abraeumen-gesperrt");
+        let pfad = ordner.pfad().to_path_buf();
+        let gesperrt = ordner.ordner("gesperrt");
+        std::fs::write(gesperrt.join("darin.txt"), b"x").expect("die Datei laesst sich schreiben");
+        std::fs::set_permissions(&gesperrt, std::fs::Permissions::from_mode(0o000))
+            .expect("die Rechte lassen sich entziehen");
+
+        drop(ordner);
+
+        assert!(
+            !pfad.exists(),
+            "{} steht noch: das Abraeumen ist an dem 0o000 haengengeblieben",
+            pfad.display()
+        );
     }
 }

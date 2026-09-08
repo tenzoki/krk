@@ -2546,7 +2546,13 @@ impl DateifensterQuelle {
                 // geschieht: der Aufrufer reicht sie an das System, und das
                 // loest sie seinerseits auf.
                 Verweisziel::KeinOrdner => false,
-                // Ins Leere, im Ring oder ohne Recht: nicht still verschlucken.
+                // Ein Ziel, an dem `stat(2)` scheitert — ins Leere, im Ring
+                // oder ohne Recht sind Beispiele und keine Aufzaehlung: ein zu
+                // langer Name (`errno 63`) faellt unter keines der drei, und
+                // `ELOOP` entsteht ab 32 aufgeloesten Verknuepfungen auch ohne
+                // Ring. Der Zweig faengt jeden Fehlschlag, und `grund` nennt
+                // ihn; still verschluckt wird keiner
+                // (`issues/260815-1858_*_die-dritte-aufzaehlung-der-unerreichbar-gruende-steht-im-einstiegsweg-und-ist-dieselbe-verengung.md`).
                 // Die Statuszeile aus C1 ist die eine Meldeflaeche dafuer,
                 // dieselbe, die "die Zwischenablage ist leer" traegt.
                 Verweisziel::Unerreichbar { grund } => {
@@ -2613,7 +2619,17 @@ impl DateifensterQuelle {
         };
         let hier = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        blaetter::pfadeingabe::zeigen(
+        // **Der Griff faellt hier, und das ist eine Entscheidung.** Der Schlitz
+        // `offenes_blatt` gehoert dem Anwendungsdelegierten, und dieses Blatt
+        // oeffnet als einziges eine Ansicht des Dateifensters, die ihn nicht
+        // erreicht. Gedeckt ist der Abbruch trotzdem: der Ersthelfer ist das
+        // Textfeld, `esc` gehoert damit AppKit und beantwortet die Schaltflaeche
+        // „Abbrechen"; und faellt dieser Schutz durch die vollstaendige
+        // Tastaturnavigation, antwortet der erste Rang von
+        // `Anwendungsdelegierter::abbrechen` bei einem stehenden Blatt ohne
+        // Griff `false` und gibt die Taste an AppKit zurueck, statt den
+        // Filtertext dahinter zu leeren.
+        let _ = blaetter::pfadeingabe::zeigen(
             self.mtm(),
             &fenster,
             &hier.to_string_lossy(),
@@ -3985,9 +4001,14 @@ impl DateifensterQuelle {
     ///
     /// **Genauer laesst sich die Frage an dieser Stelle nicht beantworten, und
     /// sie muss es auch nicht.** Genauer waere sie nur ueber `st_dev` und
-    /// `st_ino`, also ueber einen Systemaufruf je Zeigerbewegung; und selbst
-    /// dann bliebe sie eine Vorhersage, denn zwischen der letzten
-    /// Zeigerbewegung und dem Loslassen kann der Ordner ein anderer werden.
+    /// `st_ino`; entscheidend ist aber nicht deren Preis, sondern dass selbst
+    /// dann eine Vorhersage bliebe, denn zwischen der letzten Zeigerbewegung
+    /// und dem Loslassen kann der Ordner ein anderer werden. Der Preis stand
+    /// hier bis zum 260907 als erster Grund („ein Systemaufruf je
+    /// Zeigerbewegung") und trug nicht: dieselbe Funktion fragt drei Zeilen
+    /// tiefer `abwurf::beschreibbarkeit`, und das macht ueber
+    /// `resourceValuesForKeys:` genau so einen Aufruf, ebenfalls je Bewegung
+    /// (`issues/260826-1327_*_abwurf-pruefen-nennt-einen-systemaufruf-je-zeigerbewegung-zu-teuer-und-macht-fuer-das-schreibrecht-einen.md`).
     /// Entschieden wird sie deshalb dort, wo sie zu entscheiden ist: in
     /// `krk_core::operation`s `zielpfad`, im Augenblick des Zugriffs und ueber
     /// die Naemlichkeit statt ueber die Schreibweise. Was hier durchrutscht,

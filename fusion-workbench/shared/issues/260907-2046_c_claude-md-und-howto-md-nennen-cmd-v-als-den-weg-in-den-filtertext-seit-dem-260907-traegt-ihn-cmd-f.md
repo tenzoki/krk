@@ -52,7 +52,7 @@ ausgenommen. Der Befund bleibt für diese eine Stelle offen, und seine
 Abnahmebedingung ist unverändert die beider Stellen.
 
 ---
-Resolved am 260908-0632: `CLAUDE.md:35` nennt `cmd+v` nicht mehr. Die Zeile heißt
+Resolved: 260908-0632 — `CLAUDE.md:35` nennt `cmd+v` nicht mehr. Die Zeile heißt
 jetzt „Einfügen aus der Zwischenablage in den Filtertext, `*` im Filtertext ist
 ein Platzhalter"; die zweite Hälfte des Satzes, die schon richtig war, steht
 unverändert.

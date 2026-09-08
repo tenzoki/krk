@@ -16,7 +16,10 @@
 //! unzulaessig. Die Form, die dieser Baum dafuer kennt, ist die Kindprobe mit
 //! gesetzter Umgebung: `tests/ablage.rs` startet dieselbe Pruefdatei mit einer
 //! gesetzten Variablen noch einmal, `tests/verzeichnis.rs` tut dasselbe unter
-//! `ulimit -n 64`. Diese Datei schreibt die Form ab und macht keine neue auf.
+//! `ulimit -n 64`. Diese Datei schreibt die Form ab und macht keine neue auf —
+//! **beide Haelften**: den Start des Kindes und den Beleg, dass es gelaufen
+//! ist. Der Rueckgabewert allein ist keiner, denn `libtest` beendet sich mit 0,
+//! wenn sein Filter kein Verfahren trifft. Siehe [`EIN_KIND_GELAUFEN`].
 //!
 //! Drei Proben, und jede beantwortet eine andere Frage. Unter `TZ=UTC` stehen
 //! feste Zeitpunkte gegen feste Kalenderwerte. Unter `TZ=Europe/Berlin` stehen
@@ -76,14 +79,28 @@ fn kindprobe_in_zone(name: &str, zone: &str) -> Output {
         .expect("die Kindprobe laesst sich nicht starten")
 }
 
+/// Der Satz, mit dem `libtest` einen Lauf ueber **genau ein** Verfahren
+/// abschliesst.
+///
+/// **Er ist die zweite Haelfte der Zusage und nicht ihre Verzierung.**
+/// `libtest` endet mit 0, wenn ein Filter kein Verfahren trifft: ein
+/// verschriebener, umbenannter oder gestrichener Kindname liesse den
+/// Elternteil sonst gruen, waehrend gar nichts gemessen wurde. Dieselbe
+/// Vorkehrung faehrt `gemeinsam::kind_mit_deskriptorgrenze` unter demselben
+/// Namen; diese Datei fuehrt `gemeinsam` nicht und traegt ihn deshalb selbst.
+const EIN_KIND_GELAUFEN: &str = "test result: ok. 1 passed;";
+
 /// Haelt fest, dass das Kind durchgelaufen ist, und gibt sonst aus, was es sah.
 #[track_caller]
 fn kind_ist_durchgelaufen(ergebnis: &Output, zone: &str) {
+    let stdout = String::from_utf8_lossy(&ergebnis.stdout);
     assert!(
-        ergebnis.status.success(),
-        "die Kindprobe unter TZ={zone} ist gescheitert\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
+        ergebnis.status.success() && stdout.contains(EIN_KIND_GELAUFEN),
+        "die Kindprobe unter TZ={zone} ist nicht als genau ein Kind gelaufen \
+         (Status {}, erwartet `{EIN_KIND_GELAUFEN}` in stdout); trifft der Name \
+         nicht, oder fehlt dem Kind sein `#[ignore]`?\n\
+         --- stdout ---\n{stdout}\n--- stderr ---\n{}",
+        ergebnis.status,
         String::from_utf8_lossy(&ergebnis.stderr)
     );
 }

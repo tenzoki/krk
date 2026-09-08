@@ -59,7 +59,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSTextAlignment, NSTextField, NSView, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
-use super::Blatt;
+use super::{Blatt, Blattgriff};
 
 /// Die Breite der Beigabe in Punkten.
 ///
@@ -99,7 +99,7 @@ pub fn zeigen(
     gesucht: &str,
     ersatz: &str,
     fertig: impl Fn(String, String) + 'static,
-) {
+) -> Blattgriff {
     let hoehe = 2.0f64.mul_add(ZEILENHOEHE, ZEILENABSTAND);
     let beigabe = NSView::initWithFrame(
         NSView::alloc(mtm),
@@ -155,7 +155,7 @@ pub fn zeigen(
                 ersatzfeld.stringValue().to_string(),
             );
         }
-    });
+    })
 }
 
 /// Eine beschriftete Eingabezeile, in die Beigabe gehaengt.

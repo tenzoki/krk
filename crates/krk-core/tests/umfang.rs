@@ -255,18 +255,11 @@ fn ein_deskriptormangel_von_aussen_laesst_den_umfang_unentschieden() {
         fs::write(aussen.join(format!("d-{nummer}.txt")), b"x").expect("Datei");
     }
 
-    let ergebnis = kind_mit_deskriptorgrenze(
+    kind_mit_deskriptorgrenze(
+        "ein Deskriptormangel des Prozesses wird zu einer Zahl ueber eine Auswahl",
         GRENZE,
         "kind_laesst_den_umfang_bei_deskriptormangel_unentschieden",
         ordner.pfad(),
-    );
-
-    assert!(
-        ergebnis.status.success(),
-        "ein Deskriptormangel des Prozesses wird zu einer Zahl ueber eine Auswahl\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
-        String::from_utf8_lossy(&ergebnis.stderr)
     );
 }
 
@@ -343,18 +336,11 @@ fn die_tiefe_kette_kostet_einen_deskriptor_und_nicht_einen_je_ebene() {
     let ordner = Pruefordner::neu("umfang-kette-deskriptoren");
     kette_anlegen(&ordner, KETTENTIEFE);
 
-    let ergebnis = kind_mit_deskriptorgrenze(
+    kind_mit_deskriptorgrenze(
+        "unter einer knappen Deskriptorgrenze faellt die Zaehlung der tiefen Kette aus",
         GRENZE,
         "kind_zaehlt_die_tiefe_kette_mit_einem_deskriptor",
         ordner.pfad(),
-    );
-
-    assert!(
-        ergebnis.status.success(),
-        "unter einer knappen Deskriptorgrenze faellt die Zaehlung der tiefen Kette aus\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
-        String::from_utf8_lossy(&ergebnis.stderr)
     );
 }
 

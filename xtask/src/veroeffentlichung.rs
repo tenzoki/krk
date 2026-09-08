@@ -217,7 +217,7 @@ pub(crate) fn gh_pruefen() -> Result<(), Abbruch> {
 /// Sie liest allein und laesst den Baum, wie er ist.
 pub(crate) fn release_frei_pruefen(wurzel: &Path, zahl: &str) -> Result<(), Abbruch> {
     let tag = tagname(zahl);
-    if release_steht(wurzel, &tag)? {
+    if release_steht(wurzel, zahl, &tag)? {
         return Err(Abbruch::Lauf(release_steht_vorab_meldung(&tag)));
     }
     println!("Die Gegenseite fuehrt noch kein Release {tag}.");
@@ -295,16 +295,24 @@ fn vorab_ohne_gh_meldung(grund: &str) -> String {
 ///
 /// Der seltene Fall — `gh` antwortet der Vorpruefung und ist beim Anlegen weg —,
 /// und der einzige, an dem der Nutzer etwas vorfindet. Die Meldung sagt ihm
-/// deshalb, was steht und dass derselbe Aufruf die Seite nachholt; dasselbe,
-/// was [`release_steht_meldung`] und der gescheiterte Anlegeversuch sagen.
+/// deshalb, was steht und wie die Seite nachzuholen ist.
+///
+/// **Sie nennt den Befehl, statt „derselbe Aufruf" zu sagen.** Wer ueber
+/// `./release.sh <zahl>` hierher gekommen ist, faehrt mit demselben Aufruf
+/// zwei Uebersetzungslaeufe und eine zweite Einreichung bei Apple; nachzuholen
+/// ist allein die achte Station, und die hat mit
+/// `cargo xtask veroeffentlichen <zahl>` einen eigenen Rufer
+/// (`circles/260821-1644-veroeffentlichen-als-achte-station/issues/260821-2105_*_ein-angemeldetes-gh-das-das-vorhaben-nicht-erreicht-schiebt-erst-und-nennt-dann-die-falsche-abhilfe.md`,
+/// Nachtrag 260826-1440).
 #[must_use]
-fn spaet_ohne_gh_meldung(grund: &str) -> String {
+fn spaet_ohne_gh_meldung(zahl: &str, grund: &str) -> String {
     format!(
         "{}\n\
          \n\
          Gepackt ist bereits, und geschoben ist ebenfalls schon: HEAD und der Tag stehen auf der \
-         Gegenseite. Was fehlt, ist allein die Releaseseite. Derselbe Aufruf noch einmal holt sie \
-         nach und schiebt dabei nichts zweites.",
+         Gegenseite. Was fehlt, ist allein die Releaseseite. Sobald gh wieder da ist, holt die \
+         achte Station sie nach und schiebt dabei nichts zweites:\n\
+         \x20      cargo xtask veroeffentlichen {zahl}",
         gh_fehlt_meldung(grund)
     )
 }
@@ -523,10 +531,15 @@ fn paket_stellen(buendel: &Path, paket: &Path) -> Result<(), Abbruch> {
 ///
 /// **Warum ein zweites Mal gepackt wird.** Die Beglaubigung packt zwar auch,
 /// aber das Ergebnis ist zu diesem Zeitpunkt nicht mehr da und waere auch das
-/// falsche: jenes Zip entsteht in `beglaubigung.rs:344` fuer die Einreichung
-/// bei Apple, wird `:369` geloescht, und erst `:379` heftet das Ticket an das
-/// Buendel. Ein wiederverwendetes Zip truege den Nachweis also gerade nicht.
-/// Gepackt wird deshalb hier und jetzt, nach dem Heften.
+/// falsche: [`crate::beglaubigung::beglaubigen`] packt sein Zip fuer die
+/// Einreichung bei Apple, loescht es nach der Antwort wieder und heftet erst
+/// danach das Ticket an das Buendel. Ein wiederverwendetes Zip truege den
+/// Nachweis also gerade nicht. Gepackt wird deshalb hier und jetzt, nach dem
+/// Heften.
+///
+/// Die drei Schritte standen bis zum 260908 als Zeilenzahlen dieser Datei hier;
+/// alle drei sind inzwischen verrutscht, und die Funktion nennt sie besser
+/// (`shared/issues/260823-1439_*_drei-zeilenzitate-im-quelltext-zeigen-ins-leere-und-keines-davon-stammt-aus-52fba42.md`).
 ///
 /// **Die zwei Namen kommen sich nicht ins Gehege.** Die Einreichung packt
 /// `target/KRK.zip`, dieser Weg `target/KRK-<zahl>.zip`; siehe [`zipname`].
@@ -786,7 +799,7 @@ fn releasetitel(zahl: &str) -> String {
 /// steht `.current_dir` auf der Projektwurzel — dieselbe Erwaegung wie bei
 /// [`git::rufen`].
 fn releaseseite_anlegen(wurzel: &Path, zahl: &str, tag: &str, zip: &Path) -> Result<(), Abbruch> {
-    if release_steht(wurzel, tag)? {
+    if release_steht(wurzel, zahl, tag)? {
         return Err(Abbruch::Lauf(release_steht_meldung(tag, zip)));
     }
 
@@ -801,17 +814,14 @@ fn releaseseite_anlegen(wurzel: &Path, zahl: &str, tag: &str, zip: &Path) -> Res
         .arg(zip)
         .current_dir(wurzel)
         .output()
-        .map_err(|fehler| Abbruch::Lauf(spaet_ohne_gh_meldung(&fehler.to_string())))?;
+        .map_err(|fehler| Abbruch::Lauf(spaet_ohne_gh_meldung(zahl, &fehler.to_string())))?;
     if !angelegt.status.success() {
-        return Err(Abbruch::Lauf(format!(
-            "Das Release {tag} liess sich nicht anlegen ({}): {}\n\
-             \n\
-             Geschoben ist bereits: HEAD und der Tag stehen auf der Gegenseite, und das Zip \
-             liegt unter {}. Was fehlt, ist allein die Releaseseite. Derselbe Aufruf noch \
-             einmal holt sie nach und schiebt dabei nichts zweites.",
-            angelegt.status,
+        return Err(Abbruch::Lauf(anlegen_gescheitert_meldung(
+            zahl,
+            tag,
+            &angelegt.status.to_string(),
             String::from_utf8_lossy(&angelegt.stderr).trim(),
-            zip.display()
+            zip,
         )));
     }
     println!(
@@ -819,6 +829,58 @@ fn releaseseite_anlegen(wurzel: &Path, zahl: &str, tag: &str, zip: &Path) -> Res
         zip.display()
     );
     Ok(())
+}
+
+/// Die Meldung, wenn `gh` die Releaseseite nicht anlegen konnte.
+///
+/// **Sie nennt zwei Lagen und entscheidet nicht zwischen ihnen.** Bis zum
+/// 260908 trug sie einen Satz fuer eine Ursache: „Derselbe Aufruf noch einmal
+/// holt sie nach." Fuer einen Zeitueberlauf oder eine abgerissene Verbindung
+/// stimmt er; fuer ein Vorhaben, das nicht erreichbar oder nicht adressierbar
+/// ist, nie — die Ursache ist dann stehend, und derselbe Aufruf scheitert fuer
+/// immer gleich. Gemessen am 260821-2101 in einem Wegwerfklon gegen eine
+/// Ersatzgegenseite ohne GitHub-Wirt: gepackt und geschoben ist beides, bevor
+/// der Befund faellt
+/// (`circles/260821-1644-veroeffentlichen-als-achte-station/issues/260821-2105_*_ein-angemeldetes-gh-das-das-vorhaben-nicht-erreicht-schiebt-erst-und-nennt-dann-die-falsche-abhilfe.md`).
+///
+/// **Warum sie die zwei nicht selbst auseinanderhaelt.** Der Rueckgabewert
+/// trennt sie nicht, und die Standardfehlerausgabe von `gh` taete es allein
+/// ueber ihren Wortlaut — genau die Grundlage, die dieses Modul fuer jede
+/// Entscheidung ablehnt (siehe [`gh_pruefen`]), weil sie mit der naechsten
+/// Fassung des fremden Werkzeugs eine andere ist. Die Meldung stellt deshalb
+/// die Ausgabe von `gh` voran, benennt beide Lagen und nennt zu jeder den
+/// Handgriff. Die Unterscheidung trifft der Leser an einem Text, den er vor
+/// sich hat, statt eine Maschine an einem, den sie nicht halten kann.
+///
+/// **Und sie nennt Befehle statt „derselbe Aufruf".** Nachzuholen ist allein
+/// die achte Station; wer stattdessen `./release.sh <zahl>` wiederholt, faehrt
+/// zwei Uebersetzungslaeufe und eine zweite Einreichung bei Apple.
+#[must_use]
+fn anlegen_gescheitert_meldung(
+    zahl: &str,
+    tag: &str,
+    stand: &str,
+    ausgabe: &str,
+    zip: &Path,
+) -> String {
+    format!(
+        "Das Release {tag} liess sich nicht anlegen ({stand}): {ausgabe}\n\
+         \n\
+         Geschoben ist bereits: HEAD und der Tag stehen auf der Gegenseite, und das Zip liegt \
+         unter {}. Was fehlt, ist allein die Releaseseite; ueberschrieben wurde nichts.\n\
+         \n\
+         Zwei Lagen fuehren hierher, und welche es ist, sagt die Ausgabe von gh darueber:\n\
+         \n\
+         \x20      voruebergehend — Zeitueberlauf, abgerissene Verbindung, Gegenseite gerade \
+         nicht erreichbar. Die achte Station allein nachholen, sie schiebt nichts zweites:\n\
+         \x20            cargo xtask veroeffentlichen {zahl}\n\
+         \n\
+         \x20      stehend — das Vorhaben ist von hier aus nicht erreichbar oder nicht \
+         adressierbar; eine gueltige Anmeldung reicht dafuer nicht. Derselbe Aufruf scheitert \
+         wieder gleich. Erst die Gegenstelle pruefen:\n\
+         \x20            gh repo view",
+        zip.display()
+    )
 }
 
 /// Steht das Release zu diesem Tag auf der Gegenseite schon?
@@ -832,14 +894,14 @@ fn releaseseite_anlegen(wurzel: &Path, zahl: &str, tag: &str, zip: &Path) -> Res
 /// Auskunft unscharf ist, ist keine Luecke, sondern die sichere Richtung: das
 /// Anlegen gleich danach entscheidet sie, und es ueberschreibt nichts — ein
 /// bestehendes Release weist `gh` beim Anlegen ab.
-fn release_steht(wurzel: &Path, tag: &str) -> Result<bool, Abbruch> {
+fn release_steht(wurzel: &Path, zahl: &str, tag: &str) -> Result<bool, Abbruch> {
     let gefragt = Command::new(GH)
         .arg("release")
         .arg("view")
         .arg(tag)
         .current_dir(wurzel)
         .output()
-        .map_err(|fehler| Abbruch::Lauf(spaet_ohne_gh_meldung(&fehler.to_string())))?;
+        .map_err(|fehler| Abbruch::Lauf(spaet_ohne_gh_meldung(zahl, &fehler.to_string())))?;
     Ok(gefragt.status.success())
 }
 
@@ -941,11 +1003,17 @@ mod tests {
             "{vorab}"
         );
 
-        let spaet = spaet_ohne_gh_meldung(grund);
+        let spaet = spaet_ohne_gh_meldung("1.2.0", grund);
         assert!(!spaet.contains("nichts gepackt"), "{spaet}");
         assert!(spaet.contains("Gepackt ist bereits"), "{spaet}");
         assert!(spaet.contains("geschoben ist ebenfalls schon"), "{spaet}");
         assert!(spaet.contains("allein die Releaseseite"), "{spaet}");
+        // Nicht „derselbe Aufruf", sondern der Rufer der achten Station.
+        assert!(
+            spaet.contains("cargo xtask veroeffentlichen 1.2.0"),
+            "{spaet}"
+        );
+        assert!(!spaet.contains("Derselbe Aufruf"), "{spaet}");
 
         // Beide tragen weiter, was ueberall stimmt: Werkzeug, Grund, Abhilfe.
         for meldung in [&vorab, &spaet] {
@@ -983,6 +1051,40 @@ mod tests {
             assert!(meldung.contains("Release v1.2.0"), "{meldung}");
             assert!(meldung.contains("./release.sh <zahl>"), "{meldung}");
         }
+    }
+
+    /// Die Meldung des gescheiterten Anlegens trennt ihre zwei Lagen.
+    ///
+    /// Eine behebt sich durch Wiederholung, die andere nie. Ein Zweig fuer
+    /// beide waere die unvollstaendige Fallunterscheidung, die
+    /// `260821-2105_*_ein-angemeldetes-gh-das-das-vorhaben-nicht-erreicht-schiebt-erst-und-nennt-dann-die-falsche-abhilfe.md`
+    /// meldet: an der Stelle, an der der Nutzer eine Diagnose braucht, stand die
+    /// Aufforderung, es noch einmal zu versuchen.
+    #[test]
+    fn das_gescheiterte_anlegen_nennt_beide_lagen_und_je_ihren_handgriff() {
+        let meldung = anlegen_gescheitert_meldung(
+            "1.2.0",
+            "v1.2.0",
+            "exit status: 1",
+            "none of the git remotes configured for this repository point to a known GitHub host.",
+            Path::new("/ziel/KRK-1.2.0.zip"),
+        );
+        // Der Stand des Laufs, wie an jeder spaeten Stelle.
+        assert!(meldung.contains("Geschoben ist bereits"), "{meldung}");
+        assert!(meldung.contains("/ziel/KRK-1.2.0.zip"), "{meldung}");
+        // Die Ausgabe von gh steht darueber; an ihr entscheidet der Leser.
+        assert!(meldung.contains("known GitHub host"), "{meldung}");
+        // Beide Lagen, jede mit ihrem Handgriff.
+        assert!(meldung.contains("voruebergehend"), "{meldung}");
+        assert!(
+            meldung.contains("cargo xtask veroeffentlichen 1.2.0"),
+            "{meldung}"
+        );
+        assert!(meldung.contains("stehend"), "{meldung}");
+        assert!(meldung.contains("scheitert wieder gleich"), "{meldung}");
+        assert!(meldung.contains("gh repo view"), "{meldung}");
+        // Und kein unbedingtes „derselbe Aufruf holt sie nach" mehr.
+        assert!(!meldung.contains("Derselbe Aufruf noch"), "{meldung}");
     }
 
     /// Ist `gh` da und nicht angemeldet, nennt die Meldung den Handgriff.

@@ -742,18 +742,11 @@ fn ein_ordner_ohne_repository_wird_entschieden_verneint() {
 fn ein_deskriptormangel_laesst_den_gitbefund_unentschieden() {
     let ordner = repository("deskriptormangel");
 
-    let ergebnis = kind_mit_deskriptorgrenze(
+    kind_mit_deskriptorgrenze(
+        "der Gitleser haelt unter abgesenkter Deskriptorgrenze nicht",
         GRENZE_DESKRIPTOREN,
         "kind_liest_unter_abgesenkter_deskriptorgrenze",
         ordner.pfad(),
-    );
-
-    assert!(
-        ergebnis.status.success(),
-        "der Gitleser haelt unter abgesenkter Deskriptorgrenze nicht\n\
-         --- stdout ---\n{}\n--- stderr ---\n{}",
-        String::from_utf8_lossy(&ergebnis.stdout),
-        String::from_utf8_lossy(&ergebnis.stderr)
     );
 }
 

@@ -30,7 +30,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSTextField, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
-use super::Blatt;
+use super::{Blatt, Blattgriff};
 
 /// Die Breite des Eingabefeldes in Punkten.
 ///
@@ -52,7 +52,7 @@ pub fn zeigen(
     fenster: &NSWindow,
     startwert: &str,
     fertig: impl Fn(String) + 'static,
-) {
+) -> Blattgriff {
     let feld = NSTextField::initWithFrame(
         NSTextField::alloc(mtm),
         NSRect::new(NSPoint::ZERO, NSSize::new(FELDBREITE, FELDHOEHE)),
@@ -74,5 +74,5 @@ pub fn zeigen(
         if bestaetigt {
             fertig(feld.stringValue().to_string());
         }
-    });
+    })
 }

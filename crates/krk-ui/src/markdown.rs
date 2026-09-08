@@ -1236,18 +1236,36 @@ impl<'q> Zerlegung<'q> {
     /// Merkzeichen mitnehmen — der Einzug der Listenzeile gilt ihm mit —, und
     /// alles ausserhalb von ihm hat es ohnehin schon. Ein Abstand dagegen
     /// gehoert keinem der offenen Elemente, also ruecken dort alle nach.
+    ///
+    /// # Der Nachzug kostet einen Durchlauf und nicht einen je Merkzeichen
+    ///
+    /// Bis zum 260908 lief hinter jedem eingeloesten Merkzeichen ein zweiter
+    /// Durchlauf ueber den ganzen Rest von `offen`. Ueber ein Dokument summierte
+    /// sich das auf ein Quadrat der Verschachtelungstiefe, und L7 wurde damit
+    /// schon bei einer Quelle von 12 kB verfehlt statt erst bei 19 kB (Defekt
+    /// `260812-2133`, mit der Messreihe).
+    ///
+    /// **Welche Eintraege ueberhaupt nachruecken, steht schon vor dem ersten
+    /// Schreiben fest.** Ein Eintrag rueckt genau dann nach, wenn sein Anfang
+    /// auf dem Lesestand liegt, mit dem diese Methode beginnt: `stelle` waechst
+    /// nur, also liegt jeder Anfang darauf oder davor, und wer davor liegt,
+    /// trifft auch keinen spaeteren Stand. Wer darauf liegt, wird von der ersten
+    /// schreibenden Stufe mitgenommen, steht danach auf dem neuen Stand und wird
+    /// von jeder folgenden wieder mitgenommen — bis zu **seiner eigenen** Stufe,
+    /// denn ab dort ist er nicht mehr innen. Sein Endwert ist damit der
+    /// Lesestand, den er beim Eintritt in seine eigene Stufe vorfindet, und
+    /// genau den setzt die Zeile unten. Eine Annahme ueber die Sortierung von
+    /// `offen` braucht sie nicht.
     fn merkzeichen_einloesen(&mut self) {
+        let anfangsstand = self.stelle;
         for stufe in 0..self.offen.len() {
+            if self.offen[stufe].anfang == anfangsstand {
+                self.offen[stufe].anfang = self.stelle;
+            }
             let Some(merkzeichen) = self.offen[stufe].merkzeichen.take() else {
                 continue;
             };
-            let vorher = self.stelle;
             self.erzeugen(&merkzeichen);
-            for eintrag in &mut self.offen[stufe + 1..] {
-                if eintrag.anfang == vorher {
-                    eintrag.anfang = self.stelle;
-                }
-            }
         }
     }
 
@@ -1311,6 +1329,32 @@ impl<'q> Zerlegung<'q> {
     /// Bloecken rechnet [`Zerlegung::absetzen`] aus dem Wunsch des Blocks; der
     /// Leerraum der Quelle daneben ergaebe Leerzeilen. Was uebrig bleibt, ist
     /// ein Block und wird wie einer abgesetzt.
+    ///
+    /// # Auf Dokumentebene bleibt der Einzug nur der zweiten und jeder
+    /// weiteren Zeile stehen
+    ///
+    /// [`str::trim`] schneidet an den **beiden Enden der ganzen Luecke** und
+    /// nicht je Zeile. Zwei Zeilen mit demselben Einzug in der Quelle kommen
+    /// deshalb verschieden heraus: die erste ohne, jede weitere mit. Gemessen
+    /// (Tafel Hell, `pulldown-cmark` meldet zu dieser Quelle kein Ereignis,
+    /// beide Zeilen sind Verweisdefinitionen, die ganze Datei ist eine Luecke):
+    ///
+    /// ```text
+    /// Quelle : "  [a]: http://a.example\n  [b]: http://b.example\n"
+    /// Ausgabe: "[a]: http://a.example\n  [b]: http://b.example"
+    /// ```
+    ///
+    /// **Der Einzug, den die zweite Zeile behaelt, ist keiner, den CommonMark
+    /// traegt**: bis zu drei Leerzeichen vor einem Block sind dort
+    /// bedeutungslos. Von dem Einzug, der wirklich Inhalt ist — der
+    /// Fortsetzungszeile einer mehrzeiligen Verweisdefinition —, ist er nicht
+    /// zu unterscheiden, solange nur `trim` gefragt wird. Der Zuschnitt, der
+    /// beide Seiten unter eine Regel braechte — den kuerzesten fuehrenden Lauf
+    /// ueber alle nichtleeren Zeilen bestimmen und nur diesen abziehen —, ist
+    /// derselbe, den der Schwesterbefund `260812-2140` fuer die andere Seite
+    /// der Grenze erwaegt und ausdruecklich nicht waehlt; ungeprueft ist dort
+    /// wie hier, was er mit einer Luecke tut, deren erste Zeile leer ist.
+    /// Gebaut ist er an keiner der beiden Stellen (Defekt `260812-2134`).
     fn luecke_bis(&mut self, bis: usize) {
         if self.gelesen >= bis {
             return;
@@ -1721,6 +1765,14 @@ mod tests {
     /// `crate::hervorhebung::tests::die_tafel_faerbt_einen_verweis` fest; hier
     /// steht die andere Haelfte, naemlich dass das Rendern genau diesen
     /// Nachschlag nimmt und keine eigene Farbe setzt.
+    ///
+    /// **Was der Name nahelegt und die Probe nicht misst:** einen Unterschied
+    /// zwischen den beiden Tafeln. Beide liefern fuer den Verweisstapel
+    /// dieselbe Farbe, (208, 135, 112), nachgemessen am 260812 und am 260908;
+    /// die Schleife ueber `[Hell, Dunkel]` faehrt damit zweimal denselben
+    /// Vergleich und hielte auch, wenn eine der Tafeln sich aendert. Was sie
+    /// misst, ist der Nachschlag, und das ist die Zusage, die hier zu halten
+    /// ist (Defekt `260812-1805`).
     #[test]
     fn der_verweis_traegt_die_farbe_seiner_tafel() {
         let quelle = "[Ziel](https://example.com)\n";
@@ -2143,6 +2195,24 @@ mod tests {
         assert_eq!(
             gerendert("[ZIEL]: http://z.example\n      \"Titel\"\n").text,
             "[ZIEL]: http://z.example\n      \"Titel\""
+        );
+    }
+
+    /// Die Grenze daneben, festgehalten statt behoben (Defekt `260812-2134`).
+    ///
+    /// Die Probe darueber misst den Fall, in dem der Einzug auf der **zweiten**
+    /// Zeile steht; deren erste traegt keinen, also faellt dort nicht auf, dass
+    /// `trim` an den beiden Enden der ganzen Luecke schneidet und nicht je
+    /// Zeile. Hier tragen **beide** Zeilen denselben Einzug, und nur die zweite
+    /// behaelt ihn. Der Zuschnitt, der beide Seiten unter eine Regel braechte,
+    /// steht am Doc-Kommentar von [`Zerlegung::luecke_bis`] und ist nicht
+    /// gebaut; diese Probe haelt fest, was stattdessen gilt, damit die naechste
+    /// Runde den Weg nicht fuer geschlossen haelt.
+    #[test]
+    fn auf_dokumentebene_verliert_die_erste_zeile_einer_luecke_ihren_einzug() {
+        assert_eq!(
+            gerendert("  [a]: http://a.example\n  [b]: http://b.example\n").text,
+            "[a]: http://a.example\n  [b]: http://b.example"
         );
     }
 

@@ -278,7 +278,7 @@ mit einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt.
 
 | | Station | Was sie tut |
 |---|---|---|
-| 1 | Stand prüfen | HEAD trägt `v<version>` passend zu `[workspace.package]`, keine verfolgte Datei ist geändert, `gh` ist vorhanden und angemeldet |
+| 1 | Stand prüfen | HEAD trägt `v<version>` passend zu `[workspace.package]`, keine verfolgte Datei ist geändert, `gh` ist vorhanden und angemeldet, und die Gegenseite führt noch kein Release `v<version>` |
 | 2 | AppKit-Grenze | `objc2` steht außerhalb von `crates/krk-ui/src/appkit/` nirgends, weder als `use`-Zeile noch als ausgeschriebener Pfad |
 | 3 | Übersetzen | `x86_64-apple-darwin` und `aarch64-apple-darwin`, dieselben zwei wie in `rust-toolchain.toml` |
 | 4 | `lipo` | die zwei Binärdateien zu `target/universal/krk`, geprüft mit `lipo -archs` |
@@ -289,11 +289,13 @@ mit einer benennenden Meldung ab, wenn ihre Voraussetzung fehlt.
 
 Drei Dinge daran sind nicht offensichtlich:
 
-- **Station 1 fragt schon nach `gh`, obwohl erst Station 8 es braucht.** Eine
+- **Station 1 stellt zwei Fragen, die erst Station 8 braucht:** ob `gh` da und
+  angemeldet ist, und ob die Gegenseite dieses Release schon führt. Eine
   fehlende Voraussetzung soll auffallen, solange noch nichts geschehen ist; am
-  Kopf der achten Station wäre bereits eine Einreichung bei Apple gelaufen.
-  `cargo xtask bundle` und `make check` bekommen dadurch keine Abhängigkeit
-  von `gh`.
+  Kopf der achten Station wären bereits drei Übersetzungsläufe und eine
+  Einreichung bei Apple gelaufen. Die zweite Frage geht dabei ins Netz und die
+  erste nicht. `cargo xtask bundle` und `make check` bekommen dadurch keine
+  Abhängigkeit von `gh`.
 - **Station 2 trägt die Hälfte, die `#![deny(unsafe_code)]` nicht trägt.** Ein
   großer Teil der `objc2`-Bindungen ist als sicher deklariert und übersetzte
   außerhalb von `appkit/` anstandslos.
@@ -331,21 +333,28 @@ liegt fertig unter `target/KRK.app`, und allein das Ticket fehlt. So geschehen a
 Bündel herzustellen, und reichte es ein zweites Mal bei Apple ein. An Station 1
 hält es dabei nur an, wenn seit dem ersten Lauf etwas eingetragen oder geändert
 wurde — `stand_pruefen` fragt allein nach einem passenden Tag auf HEAD und einem
-sauberen Arbeitsbaum, und mehrere Tags auf HEAD stören sie nicht. Der Aufwand
-ist der Grund für diesen Weg, nicht ein Abbruch, auf den man sich verlassen
-könnte.
+sauberen Arbeitsbaum, und mehrere Tags auf HEAD stören sie nicht. Auch die
+vierte Frage der Station greift hier nicht: ist der Lauf an Station 7
+gescheitert, hat Station 8 nie eine Releaseseite angelegt, und die Vorabfrage
+danach kommt durch. Der Aufwand ist der Grund für diesen Weg, nicht ein Abbruch,
+auf den man sich verlassen könnte.
 
-Geprüft wird zweierlei, und beides am Bündel, das dort liegt:
+Geprüft wird am Bündel, das dort liegt, und an nichts sonst:
 
 | Prüfung | Abbruch, wenn |
 |---|---|
 | die Versionszahl | sie von `CFBundleShortVersionString` der `Info.plist` im Bündel abweicht |
-| der Signaturstand | keine `Authority=`-Zeile mit `Developer ID Application` beginnt oder die Merkmalsliste `runtime` nicht nennt |
+| der Signaturstand | das Bündel nicht so signiert ist, dass Apple es annimmt und es danach auf jedem Mac läuft — was `signaturstand_pruefen` (`xtask/src/beglaubigung.rs`) fragt und der Abbruch einzeln benennt |
 
 Die erste rechtfertigt das Argument: `target/KRK.app` überlebt jede Sitzung, und
 ohne sie ginge ein Bündel von vorgestern still bei Apple ein. Die zweite spart
 eine sinnlose Einreichung, denn ein mit `cargo xtask bundle` gebautes Bündel
 trägt eine Entwicklungsidentität und keine gehärtete Laufzeitumgebung.
+
+**Die zweite Zeile nennt hier keine Zahl von Teilfragen**, und der Grund ist,
+dass sie schon zweimal falsch geworden ist: der Doc-Kommentar von
+`signaturstand_pruefen` nennt aus demselben Grund keine mehr. Wer sie braucht,
+liest sie dort.
 
 **Gebaut wird nichts**, und **weder Tag noch Arbeitsbaum werden geprüft**. Station
 1 zu übergehen ist der Zweck des Wegs und zugleich seine Grenze: es ist nicht

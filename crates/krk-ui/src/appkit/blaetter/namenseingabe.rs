@@ -48,7 +48,7 @@ use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
 use krk_core::operation::{Namensfehler, name_pruefen};
 
-use super::Blatt;
+use super::{Blatt, Blattgriff};
 
 /// Die Breite des Eingabefeldes in Punkten.
 ///
@@ -73,10 +73,10 @@ pub fn zeigen(
     frage: &str,
     bestaetigen: &str,
     fertig: impl Fn(Result<String, Namensfehler>) + 'static,
-) {
+) -> Blattgriff {
     frei_zeigen(mtm, fenster, frage, bestaetigen, "", move |name| {
         fertig(name_pruefen(&name).map(|()| name))
-    });
+    })
 }
 
 /// Zeigt dieselbe Namenseingabe, ohne den Namen gegen das Dateisystem zu
@@ -102,7 +102,7 @@ pub fn frei_zeigen(
     bestaetigen: &str,
     vorgabe: &str,
     fertig: impl Fn(String) + 'static,
-) {
+) -> Blattgriff {
     let feld = NSTextField::initWithFrame(
         NSTextField::alloc(mtm),
         NSRect::new(NSPoint::ZERO, NSSize::new(FELDBREITE, FELDHOEHE)),
@@ -131,5 +131,5 @@ pub fn frei_zeigen(
             return;
         }
         fertig(feld.stringValue().to_string().trim().to_owned());
-    });
+    })
 }

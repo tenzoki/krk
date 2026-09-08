@@ -744,17 +744,31 @@ pub(crate) mod tests {
         assert_eq!(lipo_name("x86_64"), "x86_64");
     }
 
-    /// Die Umrechnung deckt jedes gebaute Ziel ab.
+    /// Jedes Ziel-Tripel bekommt den Namen, der an seiner Stelle steht.
     ///
     /// Sie liest die Rust-Namen aus [`ZIELE`] statt sie aufzuschreiben; ein
-    /// drittes Ziel liefe hier von selbst mit und muesste einen Namen aus
-    /// [`ARCHITEKTUREN`] bekommen, statt still durchgereicht zu werden.
+    /// drittes Ziel liefe hier von selbst mit und muesste den Namen bekommen,
+    /// der in [`ARCHITEKTUREN`] an derselben Stelle steht.
+    ///
+    /// **Sie fragt nach der Stelle und nicht nach der Mitgliedschaft.** Bis zum
+    /// 260908 stand hier `ARCHITEKTUREN.contains(&lipo_name(rust_name))`, und
+    /// das ist schwaecher als der Kommentar zusagt: [`lipo_name`] reicht einen
+    /// unbekannten Namen durch, und ein durchgereichter Name, der zufaellig in
+    /// [`ARCHITEKTUREN`] steht, kommt durch. Fuer `x86_64-apple-darwin` ist das
+    /// schon heute der Fall, weil Rust und `lipo` die Architektur gleich
+    /// schreiben; ein drittes und viertes Ziel gegeneinander vertauscht kaeme
+    /// ebenso durch. Der paarweise Vergleich faengt jedes Vertauschen an jeder
+    /// Stelle (`shared/issues/260815-1447_*_die-probe-ueber-die-paarung-von-zielen-und-architekturen-prueft-mitgliedschaft-statt-paarung.md`).
+    /// `die_beiden_ziele_tragen_die_namen_die_lipo_dafuer_meldet` daneben
+    /// bleibt noetig: sie haelt die zwei Namen als Tatsache ueber `lipo` fest,
+    /// diese hier allein die Paarung.
     #[test]
     fn jedes_ziel_tripel_bekommt_einen_namen_aus_den_architekturen() {
-        for ziel in ZIELE {
+        for (ziel, erwartet) in ZIELE.into_iter().zip(ARCHITEKTUREN) {
             let rust_name = ziel.split('-').next().unwrap();
-            assert!(
-                ARCHITEKTUREN.contains(&lipo_name(rust_name)),
+            assert_eq!(
+                lipo_name(rust_name),
+                erwartet,
                 "{ziel} wird nicht uebersetzt"
             );
         }
@@ -822,9 +836,14 @@ pub(crate) mod tests {
     /// Die erste der beiden Luecken vom 260806-1333: der ausgeschriebene Pfad.
     #[test]
     fn ein_ausgeschriebener_objc2_pfad_ist_ein_verstoss() {
-        // Woertlich aus crates/krk-ui/src/appkit/anwendung.rs:575. Innerhalb
-        // von appkit/ ist die Zeile erlaubt, ausserhalb ist sie der Verstoss,
-        // den die Vorgaengerin nicht sah.
+        // Woertlich aus crates/krk-ui/src/appkit/anwendung.rs, wo die schwache
+        // Bezugnahme auf den Anwendungsdelegierten so entsteht. Innerhalb von
+        // appkit/ ist die Zeile erlaubt, ausserhalb ist sie der Verstoss, den
+        // die Vorgaengerin nicht sah.
+        //
+        // Die Zeilenzahl stand hier bis zum 260908 und zeigte seit `28cbb7b`
+        // ins Leere
+        // (`shared/issues/260823-1439_*_drei-zeilenzitate-im-quelltext-zeigen-ins-leere-und-keines-davon-stammt-aus-52fba42.md`).
         assert!(verletzt_grenze(
             "            let schwach = objc2::rc::Weak::from_retained(&self.retain());"
         ));

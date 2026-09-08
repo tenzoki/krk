@@ -785,6 +785,37 @@ fn eine_gesperrte_datei_kommt_mit_dem_systemfehler_zurueck() {
 /// Die Obergrenze daneben ist die Notbremse: haelt der Tauscher an, laeuft der
 /// Lesefaden nicht ewig, sondern kommt zurueck und laesst die Zaehlung ausfallen.
 ///
+/// # Der Elternteil wartet auf Stillstand und nicht auf eine Gesamtdauer
+///
+/// Bis zum 260908 stand hier ein `recv_timeout(15 s)` ueber den ganzen Lauf.
+/// Der hat nicht die Zusage der Probe gemessen, sondern die Belegung der
+/// Maschine: allein gefahren brauchte der Lauf 8,3 bis 9,2 Sekunden, unter
+/// einem parallelen Bau riss er die Frist regelmaessig, und die Meldung
+/// entschied sich dann fuer „das Oeffnen haengt an der benannten Roehre",
+/// obwohl sie den Zeitmangel davon nicht trennen konnte. Drei Datensaetze
+/// halten das fest: `shared/issues/260815-1019_*_die-wettrennprobe-des-oeffnens-
+/// ist-lastabhaengig-*`, `260816-0055_*_die-wettrennprobe-*-faellt-gelegentlich-
+/// aus.md` und `260823-1436_*_die-wettrennprobe-des-oeffnens-braucht-allein-
+/// neun-sekunden-*`.
+///
+/// **Gemessen wird jetzt die Frage, die die Probe wirklich stellt: haengt ein
+/// einzelner Aufruf.** Der Lesefaden schreibt vor jedem Aufruf die Nummer
+/// seines Durchlaufs in einen Zaehler; der Elternteil wacht alle
+/// [`STILLSTANDSFRIST`] auf und urteilt allein dann, wenn sich der Zaehler in
+/// der ganzen Frist nicht bewegt hat. Eine langsame Maschine verlaengert den
+/// Lauf und macht ihn nicht rot, denn der Lesefaden kommt weiter voran; ein
+/// haengendes `open` bewegt den Zaehler gar nicht mehr.
+///
+/// Damit ist die Frage nach der richtigen Marge weg, statt beantwortet zu
+/// werden: es gibt keine Gesamtfrist mehr, an der sich eine Marge bemessen
+/// liesse. Ein Lauf ohne Defekt endet immer, denn `HOECHSTENS_DURCHLAEUFE`
+/// begrenzt den Lesefaden; die einzige Lage, in der er nicht endet, ist genau
+/// die gesuchte.
+///
+/// Was auch der Stillstandszaehler nicht trennt: eine Maschine, die ueber eine
+/// ganze Frist gar nichts rechnet, saehe aus wie ein Haenger. Die Meldung sagt
+/// das, statt sich fuer eine der beiden Ursachen zu entscheiden.
+///
 /// # Was die Probe zusagt und was nicht
 ///
 /// - **Unter der heutigen Bauart kann sie nicht ausfallen.** Es gibt nur noch
@@ -807,6 +838,15 @@ fn ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an() {
     const DURCHLAEUFE: usize = 20_000;
     const MINDESTENS_GETAUSCHT: u64 = 2_000;
     const HOECHSTENS_DURCHLAEUFE: usize = 10 * DURCHLAEUFE;
+    /// So lange darf der Lesefaden **keinen einzigen** Durchlauf schaffen,
+    /// bevor die Probe urteilt.
+    ///
+    /// Sie ist keine Frist fuer den ganzen Lauf, sondern fuer einen einzigen
+    /// Schritt, und deshalb ist sie unabhaengig von der Belegung der Maschine:
+    /// ein belasteter Lauf braucht laenger, macht aber weiter Schritte. Zehn
+    /// Sekunden fuer einen Durchlauf, der ohne Last unter einer Millisekunde
+    /// bleibt, sind vier Zehnerpotenzen Luft.
+    const STILLSTANDSFRIST: Duration = Duration::from_secs(10);
 
     let ordner = Pruefordner::neu("oeffnen-wechsel");
     let vorlage_datei = ordner.datei("vorlage.txt", b"eins\n");
@@ -841,6 +881,8 @@ fn ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an() {
     let (sender, empfaenger) = mpsc::channel();
     let leserpfad = umkaempft.clone();
     let mitgezaehlt = Arc::clone(&getauscht);
+    let fortschritt = Arc::new(AtomicU64::new(0));
+    let mitgeschrieben = Arc::clone(&fortschritt);
     std::thread::spawn(move || {
         let mut unerwartet: Vec<String> = Vec::new();
         let mut gelaufen = 0usize;
@@ -849,6 +891,9 @@ fn ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an() {
                 && gelaufen < HOECHSTENS_DURCHLAEUFE)
         {
             gelaufen += 1;
+            // Vor dem Aufruf und nicht danach: haengt er, ist der Zaehler die
+            // Nummer des Durchlaufs, in dem er haengt.
+            mitgeschrieben.store(gelaufen as u64, Ordering::Relaxed);
             match datei::oeffnen(&leserpfad) {
                 Ok(_) | Err(Abweisung::KeinGueltigesZiel { .. }) => {}
                 andere => unerwartet.push(format!("{andere:?}")),
@@ -857,7 +902,24 @@ fn ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an() {
         let _ = sender.send((gelaufen, unerwartet));
     });
 
-    let ergebnis = empfaenger.recv_timeout(Duration::from_secs(15));
+    // Gewartet wird auf **Stillstand** und nicht auf eine Gesamtdauer. Solange
+    // der Lesefaden vorankommt, wartet die Probe weiter, gleich wie belastet
+    // die Maschine ist; erst wenn er in einer ganzen Frist keinen einzigen
+    // Durchlauf schafft, ist das die Lage, die die Probe sucht.
+    let mut vorheriger_stand = fortschritt.load(Ordering::Relaxed);
+    let ergebnis = loop {
+        match empfaenger.recv_timeout(STILLSTANDSFRIST) {
+            Ok(fertig) => break Ok(fertig),
+            Err(mpsc::RecvTimeoutError::Disconnected) => break Err(None),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                let stand = fortschritt.load(Ordering::Relaxed);
+                if stand == vorheriger_stand {
+                    break Err(Some(stand));
+                }
+                vorheriger_stand = stand;
+            }
+        }
+    };
     schluss.store(true, Ordering::Relaxed);
     let _ = tauscher.join();
     let gelaufene_tausche = getauscht.load(Ordering::Relaxed);
@@ -868,9 +930,16 @@ fn ein_wechsel_der_art_unter_dem_oeffnen_haelt_nichts_an() {
             "{} von {gelaufen} Durchlaeufen kamen mit einer unerwarteten Antwort zurueck: {unerwartet:?}",
             unerwartet.len()
         ),
-        Err(_) => panic!(
-            "die Durchlaeufe sind nach 15 Sekunden nicht fertig geworden; \
-             das Oeffnen haengt an der benannten Roehre"
+        Err(Some(stand)) => panic!(
+            "der Lesefaden steht seit {STILLSTANDSFRIST:?} bei Durchlauf {stand} von \
+             mindestens {DURCHLAEUFE}, bei {gelaufene_tausche} Tauschen. Ein Durchlauf, \
+             der ueber eine ganze Frist keinen einzigen Schritt macht, ist das haengende \
+             Oeffnen an der benannten Roehre; eine Maschine, die in dieser Zeit gar nichts \
+             rechnet, saehe genauso aus"
+        ),
+        Err(None) => panic!(
+            "der Lesefaden ist bei Durchlauf {} abgestuerzt, bei {gelaufene_tausche} Tauschen",
+            fortschritt.load(Ordering::Relaxed)
         ),
     }
     assert!(

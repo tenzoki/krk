@@ -259,9 +259,19 @@ pub struct PdfbetrachterIvars {
     /// Der schwache Rueckverweis auf das Vorschaufenster, fuer die eine Frage
     /// des Kontextmenues: welche Datei zeigt der aktive Tab.
     vorschau: RefCell<Option<Weak<Vorschaufenster>>>,
-    /// Welche Bytes das gesetzte Dokument traegt; `None`, solange keines
-    /// gesetzt ist. Verglichen wird ueber `Arc::ptr_eq`, siehe Modulkopf.
-    bytes: RefCell<Option<Arc<Vec<u8>>>>,
+    /// Welche Bytes zuletzt gedeutet wurden und was dabei herauskam; `None`,
+    /// solange nichts gedeutet ist. Verglichen wird ueber `Arc::ptr_eq`, siehe
+    /// Modulkopf.
+    ///
+    /// **Die Deutung steht daneben, seit dem 260908.** Bis dahin merkte sich
+    /// diese Zelle allein den Erfolg, und `Beschaedigt` wie `Gesperrt` kehrten
+    /// vorher zurueck; der Vergleich traf fuer dieselben Bytes damit nie, und
+    /// jeder Tabwechsel reichte sie erneut an `PDFDocument::initWithData:` auf
+    /// dem Hauptfaden — bei einer abgeschnittenen Datei knapp unter
+    /// [`BILDGRENZE`](crate::vorschaumodell::BILDGRENZE) ein wiederholter
+    /// Leselauf ohne Ergebnis
+    /// (`issues/260828-1046_*_dokument-setzen-merkt-nur-den-erfolg-und-deutet-eine-beschaedigte-datei-bei-jedem-anzeigen-neu.md`).
+    gedeutet: RefCell<Option<(Arc<Vec<u8>>, Deutung)>>,
     /// Der Melder, den [`Pdfbetrachter::seitenmelder_setzen`] eintraegt.
     seitenmelder: RefCell<Option<Box<dyn Fn()>>>,
     /// Der Delegierte der Ansicht, stark gehalten, weil `PDFView` ihn nur
@@ -434,7 +444,7 @@ impl Pdfbetrachter {
         let delegierter = Verweisdelegierter::neu(mtm);
         let this = Self::alloc(mtm).set_ivars(PdfbetrachterIvars {
             vorschau: RefCell::new(None),
-            bytes: RefCell::new(None),
+            gedeutet: RefCell::new(None),
             seitenmelder: RefCell::new(None),
             delegierter,
         });
@@ -496,13 +506,23 @@ impl Pdfbetrachter {
     /// Setzt das Dokument aus den gelesenen Bytes, oder laesst es stehen
     /// (C1.1, C1.2, C1.7, C2.3 bis C2.5, A1, A2).
     ///
-    /// **Dieselben Bytes wie zuvor: nichts geschieht, `Gesetzt`.** Verglichen
-    /// wird ueber `Arc::ptr_eq`, siehe Modulkopf; Zoom und Ausschnitt bleiben.
-    /// Andere Bytes gehen an `PDFDocument::initWithData:`; liefert PDFKit kein
-    /// Dokument, ist die Antwort `Beschaedigt`, traegt es ein Kennwort,
-    /// `Gesperrt`, und in beiden Faellen bleibt das vorige Dokument samt
-    /// Merkposten stehen — die Vorschau blendet den Betrachter dann aus, und
-    /// kommen die vorigen Bytes zurueck, steht ihr Dokument noch.
+    /// **Dieselben Bytes wie zuvor: nichts geschieht, und die gemerkte Deutung
+    /// kommt zurueck.** Verglichen wird ueber `Arc::ptr_eq`, siehe Modulkopf;
+    /// Zoom und Ausschnitt bleiben. Andere Bytes gehen an
+    /// `PDFDocument::initWithData:`; liefert PDFKit kein Dokument, ist die
+    /// Antwort `Beschaedigt`, traegt es ein Kennwort, `Gesperrt`, und in beiden
+    /// Faellen bleibt das **vorige Dokument in der Ansicht** stehen — die
+    /// Vorschau blendet den Betrachter dann aus, und kommen die vorigen Bytes
+    /// zurueck, steht ihr Dokument noch.
+    ///
+    /// **Gemerkt wird in allen drei Zweigen**, und nicht nur im Erfolgszweig:
+    /// sonst deutete jeder Tabwechsel auf eine beschaedigte oder gesperrte
+    /// Datei sie erneut. Die Begruendung und der Preis stehen an
+    /// [`PdfbetrachterIvars::gedeutet`]. Dass das Dokument der Ansicht und der
+    /// Merkposten dabei auseinandergehen, ist gewollt: der Merkposten sagt, was
+    /// zuletzt **gedeutet** wurde, die Ansicht zeigt, was zuletzt **gesetzt**
+    /// wurde, und die Vorschau entscheidet ueber die Deutung, welche der beiden
+    /// sie zeigt.
     ///
     /// Bei `Gesetzt` wird die Auslegung jedes Mal neu gesetzt: fortlaufende
     /// Rolle, senkrecht, mit Seitenabstand (C1.2), die zwei Zoomgrenzen und
@@ -510,14 +530,14 @@ impl Pdfbetrachter {
     /// den Schalter zurueck, `cmd+0` setzt ihn wieder.
     #[must_use]
     pub fn dokument_setzen(&self, daten: &Arc<Vec<u8>>) -> Deutung {
-        let dieselben = self
+        let gemerkt = self
             .ivars()
-            .bytes
+            .gedeutet
             .borrow()
             .as_ref()
-            .is_some_and(|bisher| Arc::ptr_eq(bisher, daten));
-        if dieselben {
-            return Deutung::Gesetzt;
+            .and_then(|(bisher, deutung)| Arc::ptr_eq(bisher, daten).then_some(*deutung));
+        if let Some(deutung) = gemerkt {
+            return deutung;
         }
 
         let rohdaten = NSData::with_bytes(daten);
@@ -527,10 +547,10 @@ impl Pdfbetrachter {
         let Some(dokument) =
             (unsafe { PDFDocument::initWithData(PDFDocument::alloc(), &rohdaten) })
         else {
-            return Deutung::Beschaedigt;
+            return self.gedeutet_merken(daten, Deutung::Beschaedigt);
         };
         if unsafe { dokument.isLocked() } {
-            return Deutung::Gesperrt;
+            return self.gedeutet_merken(daten, Deutung::Gesperrt);
         }
 
         // SAFETY: Sieben Setzer von PDFView ohne Vorbedingung; die Werte sind
@@ -545,8 +565,17 @@ impl Pdfbetrachter {
             self.setMaxScaleFactor(ZOOM_MAX);
             self.setAutoScales(true);
         }
-        *self.ivars().bytes.borrow_mut() = Some(Arc::clone(daten));
-        Deutung::Gesetzt
+        self.gedeutet_merken(daten, Deutung::Gesetzt)
+    }
+
+    /// Merkt sich Bytes und ihre Deutung und gibt die Deutung zurueck.
+    ///
+    /// Die eine Schreibstelle von [`PdfbetrachterIvars::gedeutet`], damit kein
+    /// Zweig von [`Self::dokument_setzen`] sie vergessen kann; genau das war der
+    /// Defekt, gegen den sie steht.
+    fn gedeutet_merken(&self, daten: &Arc<Vec<u8>>, deutung: Deutung) -> Deutung {
+        *self.ivars().gedeutet.borrow_mut() = Some((Arc::clone(daten), deutung));
+        deutung
     }
 
     /// Fuehrt einen der drei Zoombefehle aus (C3.1, C3.9, A1, A2, A6).

@@ -36,3 +36,20 @@ Reconciled 260829-1223: weiter offen, keine Antwort im Baum. Gesucht in `plannin
 
 ---
 Answered: 260905-2008-orchestrator-session.md `## Fuenf weitere Entscheidungen am 260907-2009 beantwortet` — Keine der drei vorgelegten Moeglichkeiten, sondern eine vierte des Nutzers: cmd+f fuegt in den Filtertext ein, cmd+v ist fuer das Einfuegen einer Datei reserviert. cmd+f ist dabei nicht frei, dort liegt der Mac-Standard zum Suchen im Text; es traegt aber nach der Regel vom 260805 fuer cmd+a, weil zwei Zusteller in verschiedenen Wirkungsbereichen kein Konflikt sind. Bis die Dateizwischenablage steht, schweigt cmd+v im Dateifenster; die Doppelbelegung auf Zeit und die Statuszeilenmeldung hat der Nutzer verworfen; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+**Berichtigung 260908 zur Begründung der `Answered:`-Zeile, nicht zu ihrem Ergebnis.** Der
+Halbsatz „weil zwei Zusteller in verschiedenen Wirkungsbereichen kein Konflikt sind" gibt die
+Regel vom 260805 verkehrt wieder. Sie lautet: zwei Funktionen sind genau dann ein Konflikt,
+wenn sie dieselbe Kombination tragen und **denselben Zusteller** haben; ihr Abschnitt
+„`Wirkungsbereich` ist kein zweiter Zusteller" sagt ausdrücklich, dass zwei vom Abgriff
+zugestellte Funktionen mit verschiedenem Wirkungsbereich ein Konflikt **bleiben**
+(`260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`).
+
+Das Ergebnis der Antwort ist davon unberührt: `cmd+f` trägt das Einfügen in den Filtertext,
+und es geht — aber über den anderen **Zusteller**. `filter_einfuegen` steht seit dem
+260907-2046 mit `gehalten_von = "menue"` in `resources/default-keymap.toml` und ist damit
+nach dem Zusteller gebaut. Wer die Begründung wörtlich nähme und die Funktion mit
+`Wirkungsbereich::Dateifenster` und ohne `gehalten_von` einträgt, legte zwei vom Abgriff
+zugestellte Funktionen auf `cmd+f`; die eingebettete Auslieferungsbelegung bricht bei einem
+Konflikt beim ersten Zugriff ab. Der Datensatz dazu ist
+`260907-2026_*_die-antwortzeile-zu-cmd-f-begruendet-das-paar-mit-dem-wirkungsbereich-die-regel-vom-260805-nennt-den-zusteller.md`.

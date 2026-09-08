@@ -71,3 +71,13 @@ Answered: 260905-2008-orchestrator-session.md `## Die letzten fuenf Entscheidung
 
 ---
 Implemented: 260907-2350-berichtskopf-benennt-die-ungeprueften-messordner.md — der Berichtskopf trägt die Zeile „Deckung der Ordner" (`crates/krk-bench/src/bericht.rs`, `DECKUNG_DER_ORDNER`): sie nennt Prüfordner A und 100k als gelesen, Prüfordner B und den L6-Unterordner als zugesagt und nicht nachgelesen, sagt, dass ein hineingerutschter Eintrag dort nicht auffiele, und nennt die daran hängenden Zusagen bei ihrer Kennung (L4 und beide L5-Zeilen auf B, L6 und die L7-Zeile für den Ordnersprung auf dem Unterordner). Statt einer Zahl steht das Zählkommando im Satz. Gehalten wird er von `der_abnahmebericht_traegt_alle_zehn_zusagen_und_den_vollen_kopf` in derselben Datei, die die Behauptung „zwei von vier" zusätzlich am Kopf nachzählt. Die zweite Hälfte der Deckung ist wie entschieden nicht nachgezogen.
+
+---
+Nachtrag 260908: die Aufzählung „L4, L5 und L6" im Abschnitt `## Frage` war am
+260905 vollständig und ist es seit `1936a0f` nicht mehr. L7 misst seitdem zwei
+Spannen, und die zweite ist der Sprung auf den L6-Unterordner; an dessen
+ungeprüfter Eintragszahl hängt damit neben L6 auch die L7-Zeile für den
+Ordnersprung. Die `Implemented:`-Zeile darüber nennt sie bereits. Welche Zusage
+auf welchem Ordner misst, sagt `DECKUNG_DER_ORDNER`
+(`crates/krk-bench/src/bericht.rs`) und keine Aufzählung in einem Datensatz
+(`260907-2350_*_zwei-datensaetze-nennen-l4-l5-und-l6-als-betroffene-zusagen-seit-dem-260907-haengt-auch-l7-am-l6-unterordner.md`).

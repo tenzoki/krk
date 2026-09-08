@@ -114,8 +114,14 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// der der sechs davor.** `belegungsdatei_ansehen` stellt die Belegungsdatei des
 /// Nutzers in die Vorschau, und der Nutzer hat sie im Auftrag desselben Tages
 /// ausdruecklich ohne Kombination bestellt: erreichbar ueber das Hauptmenue, wie
-/// die vier Spaltenschalter. Die sechs davor folgen einer offen gelassenen Wahl,
-/// diese einer getroffenen; die Form ist dieselbe, die Herleitung nicht.
+/// die vier Spaltenschalter. **Die sechs davor zerfallen dabei in zwei
+/// Gruppen, und nur eine von beiden folgt einer offen gelassenen Wahl.** Die
+/// vier Spaltenschalter folgen der getroffenen Antwort vom 260812-0306
+/// (Moeglichkeit 2, begruendet mit der Knappheit der Kombinationen), also
+/// derselben Sorte Herleitung wie dieser siebte Eintrag; allein
+/// `tiefe_suche_umschalten` und `inhaltssuche_umschalten` folgen der am
+/// 260814-1610 offen gelassenen Wahl. Die Form ist bei allen dieselbe; die
+/// Herleitung trennt die zwei Sucheinstellungen von den uebrigen fuenf.
 ///
 /// **Seit dem 260816 tritt eine fuenfte hinzu, und sie hat denselben Grund wie
 /// die vierte.** `inhaltssuche_umschalten` ist das Ankreuzfeld "Content" der

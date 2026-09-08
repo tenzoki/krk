@@ -74,15 +74,31 @@
 //! Der Name des Moduls ist damit weiter gedeckt: es ist die Systemschicht des
 //! Kerns und nicht allein die des Lesers. Die Zeile zu `fcntl(2)` traegt die
 //! ersten Aufrufer von ausserhalb `verzeichnis/`, und sie sind der Grund, aus
-//! dem die Aussage nicht mehr nur behauptet ist. **Wie viele es sind, sagt
-//! `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src` und nicht diese
-//! Zeile**; sie stand vom Defekt `260810-1247` bis zur Runde 16 auf zwei und ist
-//! seither zweimal falsch geworden, erst mit dem Anlesen jener Runde, dann mit
-//! den zwei Archivwegen der Runde 17
+//! dem die Aussage nicht mehr nur behauptet ist. **Wie viele es sind, sagt der
+//! Lauf unten und nicht diese Zeile**; sie stand vom Defekt `260810-1247` bis
+//! zur Runde 16 auf zwei und ist seither zweimal falsch geworden, erst mit dem
+//! Anlesen jener Runde, dann mit den zwei Archivwegen der Runde 17
 //! (`shared/issues/260825-0727_*_claude-md-nennt-zwei-aufrufer-von-ohne-warten-oeffnen-*`).
-//! **Zaehlen muss man mit dem breiten Muster**: `entpacken.rs` holt den Namen
-//! ueber `use` herein und ruft ihn unqualifiziert, entgeht dem engeren
-//! `sys::ohne_warten_oeffnen(` also.
+//!
+//! ```sh
+//! awk 'FNR==1{probe=0} /^#\[cfg\(test\)\]/{probe=1}
+//!      !probe && /ohne_warten_oeffnen\(/ && !/^[[:space:]]*\/\// && !/^pub fn/ \
+//!      {print FILENAME":"FNR}' \
+//!   $(find crates/krk-core/src -name '*.rs' | sort)
+//! ```
+//!
+//! **Drei Ausnahmen, und jede hat ihren Grund.** Das Muster muss **breit**
+//! sein: `entpacken.rs` holt den Namen ueber `use` herein und ruft ihn
+//! unqualifiziert, entgeht dem engeren `sys::ohne_warten_oeffnen(` also. Ein
+//! breites Muster allein zaehlt dafuer die Prosa mit, die den Namen nennt —
+//! diesen Absatz eingeschlossen —, und waechst mit jeder weiteren Stelle, die
+//! ueber die Huelle schreibt, ohne dass ein Aufrufer dazugekommen waere; deshalb
+//! fallen Kommentarzeilen und die Definitionszeile heraus. Und das Prüfmodul
+//! dieser Datei ruft die Huelle selbst, ist aber kein Weg durch sie; deshalb
+//! endet der Lauf je Datei am `#[cfg(test)]`. Das ist dieselbe Unterscheidung,
+//! die `genau_zwei_dateien_oeffnen_die_regel_deny_unsafe_code` schon trifft:
+//! eine Zusage ueber den Bau und nicht ueber die Prosa
+//! (`shared/issues/260905-2254_*_das-zaehlkommando-fuer-ohne-warten-oeffnen-*`).
 //!
 //! Genannt seien sie deshalb nach ihren Klassen und nicht als Aufzaehlung, die
 //! mit der naechsten Runde wieder falsch waere. **Die Textwege** liegen seit der
@@ -486,10 +502,24 @@ const COPYFILE_ALL: u32 = 0x0000_000F;
 /// die Bytes zu kopieren. Ein bester Versuch; wo Klonen nicht geht, kopiert
 /// `copyfile(3)` von selbst die Bytes.
 ///
-/// Das Kennzeichen schliesst `COPYFILE_EXCL` ein: ein vorhandenes Ziel laesst
-/// den Aufruf scheitern. Genau das ist gewollt, denn ueber ein vorhandenes Ziel
-/// entscheidet die Konfliktregel und nicht `copyfile(3)`.
+/// Das Kennzeichen schliesst `COPYFILE_EXCL` ein. Darauf verlaesst sich hier
+/// nichts mehr: [`COPYFILE_EXCL`] steht seit dem 260908 als eigene Konstante
+/// daneben und geht in **beide** Uebertragungsarten. Bis dahin hing die Zusage
+/// „ueber ein vorhandenes Ziel entscheidet die Konfliktregel" allein an diesem
+/// Wert, und mit [`Uebertragungsart::ImmerBytes`] fiel sie still aus (Defekt
+/// `260826-1221`).
 const COPYFILE_CLONE: u32 = 0x0100_0000;
+
+/// `COPYFILE_EXCL` aus `copyfile.h`: ein vorhandenes Ziel laesst den Aufruf
+/// scheitern.
+///
+/// **Es steht in beiden Uebertragungsarten und nicht nur in der einen.** Ueber
+/// ein vorhandenes Ziel entscheidet die Konfliktregel und nicht `copyfile(3)`,
+/// und diese Zusage haengt an keiner Wahl, die der Aufrufer trifft:
+/// [`Uebertragungsart::ImmerBytes`] bekommt sie genauso wie
+/// [`Uebertragungsart::KlonenWennMoeglich`], die es frueher ueber
+/// [`COPYFILE_CLONE`] mitbrachte.
+const COPYFILE_EXCL: u32 = 0x0002_0000;
 
 const COPYFILE_STATE_STATUS_CB: u32 = 6;
 const COPYFILE_STATE_STATUS_CTX: u32 = 7;
@@ -650,8 +680,9 @@ extern "C" fn statusrueckruf(
 /// einem Klon wird `melden` nicht gerufen: er ist fertig, bevor es etwas zu
 /// melden gaebe.
 ///
-/// Ein vorhandenes Ziel laesst den Aufruf scheitern. Ueber ein vorhandenes Ziel
-/// entscheidet die Konfliktregel, nicht diese Funktion.
+/// Ein vorhandenes Ziel laesst den Aufruf scheitern, und zwar in **jeder**
+/// [`Uebertragungsart`]: [`COPYFILE_EXCL`] steht ausserhalb der Wahl. Ueber ein
+/// vorhandenes Ziel entscheidet die Konfliktregel, nicht diese Funktion.
 pub fn datei_kopieren(
     quelle: &Path,
     ziel: &Path,
@@ -711,10 +742,11 @@ fn mit_zustand_kopieren(
         }
     }
 
-    let kennzeichen = match art {
-        Uebertragungsart::KlonenWennMoeglich => COPYFILE_ALL | COPYFILE_CLONE,
-        Uebertragungsart::ImmerBytes => COPYFILE_ALL,
-    };
+    let kennzeichen = COPYFILE_EXCL
+        | match art {
+            Uebertragungsart::KlonenWennMoeglich => COPYFILE_ALL | COPYFILE_CLONE,
+            Uebertragungsart::ImmerBytes => COPYFILE_ALL,
+        };
 
     // SICHERHEIT: beide Pfade sind nullterminiert und leben bis zum Ende des
     // Aufrufs. `zustand` ist gueltig und traegt Rueckruf und Kontext.
@@ -910,11 +942,14 @@ unsafe extern "C" {
 /// Aufrufer ist mit `260810-1247` dazugekommen, der dritte mit der Runde 16, der
 /// vierte und der fuenfte mit der Runde 17, der sechste mit dem Defekt
 /// `260826-1221`. **Wie viele es heute sind, steht hier trotzdem nicht**: die
-/// Zahl waechst mit jeder Runde, die einen weiteren Leser baut, gezaehlt wird
-/// sie mit `grep -rn 'ohne_warten_oeffnen(' crates/krk-core/src`, und der
+/// Zahl waechst mit jeder Runde, die einen weiteren Leser baut, und der
 /// Ordinalsatz oben ist die Herkunft und keine Zusage ueber den heutigen Stand
 /// (`shared/issues/260826-1933_*_zwei-prosastellen-an-ohne-warten-oeffnen-zaehlen-fuenf-rufer-*`).
-/// Der Modulkopf nennt dasselbe Zaehlkommando
+/// **Gezaehlt wird mit dem Lauf im Modulkopf**, der Kommentarzeilen, die
+/// Definitionszeile und das Pruefmodul ausnimmt; ein blosses `grep` ueber den
+/// Namen zaehlt die Prosa mit und stieg mit jeder Stelle, die ueber die Huelle
+/// schreibt (`shared/issues/260905-2254_*_das-zaehlkommando-fuer-ohne-warten-oeffnen-*`).
+/// Dort steht auch, warum das Muster breit sein muss
 /// (`shared/issues/260825-0727_*_claude-md-nennt-zwei-aufrufer-von-ohne-warten-oeffnen-*`).
 pub fn ohne_warten_oeffnen(pfad: &Path) -> io::Result<File> {
     let datei = OpenOptions::new()

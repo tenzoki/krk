@@ -153,12 +153,19 @@ const FELDHOEHE: f64 = 24.0;
 /// [`Konfliktantwort`] abbildet, und werden rot, sobald sich eine der beiden
 /// Reihenfolgen ohne die andere dreht.
 ///
+/// **`pub(super)` und nicht privat**, damit
+/// `super::tests::die_eingabetaste_im_feld_gehoert_ihrer_eigenen_schaltflaeche`
+/// diese Liste liest, statt sie nachzubauen. Eine Nachbildung dort stand bis
+/// zum 260907 daneben und blieb gruen, als der Wortlaut der ersten
+/// Schaltflaeche wechselte
+/// (`issues/260907-0750_*_eine-nachbildung-der-konfliktschaltflaechen-steht-in-blaetter-mod-rs-und-nichts-haelt-sie-am-original.md`).
+///
 /// `gestalt` ist die Vorgabe aus
 /// [`crate::kommandos::operationen::konfliktgestalt`]: ihr Feld
 /// `genau_ein_ziel` waehlt die Gestalt, ihr Feld `ersetzung` die Beschriftung
 /// der ersten Schaltflaeche.
 #[must_use]
-fn schaltflaechen(gestalt: Konfliktgestalt) -> Vec<Schaltflaeche<'static>> {
+pub(super) fn schaltflaechen(gestalt: Konfliktgestalt) -> Vec<Schaltflaeche<'static>> {
     let ersetzen = Schaltflaeche::neu(
         ersetzungsbeschriftung(gestalt.ersetzung),
         Taste::EingabeMitBefehl,

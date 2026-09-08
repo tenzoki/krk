@@ -74,6 +74,15 @@
 //! Durchgaenge, einer fuer die Farbe und einer fuer die Markdown-Auszeichnung,
 //! kosteten das Doppelte und koennten auseinanderlaufen.
 //!
+//! **Wer die Zahlen dieses Kopfes nachfahren will, ruft die Messstelle**
+//! `tests::messstelle_der_einfaerbung` am Ende dieser Datei; sie misst an
+//! derselben Datei und gibt deren heutige Groesse mit aus. Bis zum 260908 gab
+//! es sie nicht, und die Zahlen unten standen ohne ein Programm daneben, das
+//! sie erzeugt haette (Defekt `260826-1442`). Ein Lauf vom 260908 an
+//! `anwendung.rs` (546 kB) liefert 0,29 MB/s und 8,7 ms fuer den Anschlag in
+//! der Mitte; die Groessenordnungen der Tabellen unten halten damit, ihre
+//! genauen Zahlen sind die des Laufs vom 260810 und werden nicht nachgezogen.
+//!
 //! Gemessen am 260810 auf diesem Geraet, `--release`, an
 //! `crates/krk-ui/src/appkit/anwendung.rs` (193 kB) und Vielfachen davon:
 //!
@@ -999,6 +1008,15 @@ fn zerlegen(
 /// liesse den naechsten Durchgang hinter dem Abbruch weiterfaerben, und ein
 /// Wiederanschluss haengte den eingefaerbten Schwanz der Vorlage an — beides
 /// Farben, die ein voller Durchgang nicht setzt.
+///
+/// **Die Kiste kann je Zeile an zwei Stellen abbrechen, und beide zaehlen als
+/// derselbe Abbruch.** Die erste ist [`zerlegen`] selbst; die zweite ist
+/// `ScopeStack::apply` mitten in der Zeile, wo ein halb angewandter Stapel
+/// zurueckbleibt. Bis zum 260908 wurde jener Stand als gueltig wieder
+/// eingesetzt und in Haltepunkte aufgehoben, waehrend dieser Absatz schon von
+/// **dem** Abbruch sprach; seither faellt er in beiden Faellen (Defekt
+/// `260826-1442`). Der Rest der Zeile bleibt in beiden Faellen ungefaerbt, und
+/// die Zeilentafel laeuft in beiden Faellen weiter.
 fn rechnen(
     text: &str,
     vorlage: Option<Vorlage<'_>>,
@@ -1136,8 +1154,19 @@ fn rechnen(
                 Ok(befehle) => {
                     let mut innen = stelle;
                     let mut ist_liste = false;
+                    // Der **zweite** Abbruch der Kiste, und er wiegt wie der
+                    // erste. `ScopeStack::apply` scheitert mitten in der Zeile
+                    // und laesst einen halb angewandten Stapel zurueck; ein
+                    // Haltepunkt darauf liesse den naechsten Durchgang mit
+                    // einem Stand weiterfaerben, den ein voller Durchgang so
+                    // nie herstellt. Bis zum 260908 wurde der Stand hier
+                    // trotzdem als gueltig wieder eingesetzt, und der
+                    // Doc-Kommentar sprach schon damals von **dem** Abbruch
+                    // (Defekt `260826-1442`).
+                    let mut stapel_gebrochen = false;
                     for (stueck, befehl) in ScopeRegionIterator::new(&befehle, zeile) {
                         if stand.stapel.apply(befehl).is_err() {
+                            stapel_gebrochen = true;
                             break;
                         }
                         let stuecklaenge = stueck.encode_utf16().count();
@@ -1200,7 +1229,9 @@ fn rechnen(
                             art: Auszeichnung::Listenzeile { tiefe: 1 },
                         });
                     }
-                    zerleger = Some(stand);
+                    if !stapel_gebrochen {
+                        zerleger = Some(stand);
+                    }
                 }
             }
         }
@@ -1499,6 +1530,87 @@ mod tests {
 
     fn pfad(name: &str) -> PathBuf {
         PathBuf::from("/tmp").join(name)
+    }
+
+    /// Die Messstelle der Einfaerbung: der vierte Gegenstand der Messrunde.
+    ///
+    /// **Sie ist die einzige Stelle im Baum, an der die Geschwindigkeit aus C3
+    /// der Runde 2 wiederholbar erhoben wird.** Bis zum 260908 gab es keine:
+    /// die sieben Zahlen im Modulkopf stammen aus einem Lauf vom 260810, den
+    /// niemand nachfahren konnte, und `krk-bench` kennt fuer die Hervorhebung
+    /// keine Groesse (Defekt `260826-1442`). Wer eine der Zahlen im Modulkopf
+    /// aendert, aendert sie gegen einen Lauf dieser Probe.
+    ///
+    /// ```text
+    /// cargo test -p krk-ui --release messstelle_der_einfaerbung -- --ignored --nocapture
+    /// ```
+    ///
+    /// **`--release` ist keine Bequemlichkeit.** Im Profil `dev` misst der Lauf
+    /// die ungeoptimierten Sprachregeln von `syntect` und liefert eine Zahl,
+    /// die mit der des Buendels nichts zu tun hat. `#[ignore]` steht daran,
+    /// weil eine Messung ueber eine halbe Megabyte grosse Quelldatei in
+    /// `make check` eine Minute kostete und nichts abnaehme: sie hat keine
+    /// Zusage, an der sie scheitern koennte. Die zehn Zeitzusagen aus C8 der
+    /// Runde 1 sind es nicht — die Hervorhebung gehoert zu keiner von ihnen.
+    ///
+    /// Gemessen wird an derselben Datei wie am 260810,
+    /// `src/appkit/anwendung.rs`, und an einem Vielfachen davon. Ihre Groesse
+    /// waechst mit dem Baum, deshalb gibt der Lauf sie mit aus; eine Zahl ohne
+    /// die Groesse daneben ist nicht vergleichbar.
+
+    #[test]
+    #[ignore = "Messstelle, kein Abnahmekriterium: mit --ignored und im Profil release fahren"]
+    fn messstelle_der_einfaerbung() {
+        let messdatei = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/appkit/anwendung.rs");
+        let einer = std::fs::read_to_string(&messdatei).expect("die Messdatei steht im Baum");
+        println!(
+            "Messdatei {} ({} Bytes, {} Zeilen)",
+            messdatei.display(),
+            einer.len(),
+            einer.lines().count()
+        );
+
+        for faktor in [1usize, 4] {
+            let text = einer.repeat(faktor);
+            let bytes = text.len();
+
+            let uhr = std::time::Instant::now();
+            let stand = fortschreiben(
+                None,
+                text.clone(),
+                Some(&messdatei),
+                Dateityp::Sonstiges,
+                Tafel::Hell,
+            );
+            let voll = uhr.elapsed();
+
+            // Ein Anschlag in der Mitte: derselbe Fall, den der Modulkopf als
+            // „ein Anschlag in der Mitte" fuehrt. Er entscheidet, ob der
+            // Wiedereinstieg traegt.
+            let mitte = text
+                .char_indices()
+                .map(|(stelle, _)| stelle)
+                .find(|stelle| *stelle >= bytes / 2)
+                .expect("die Datei ist nicht leer");
+            let mut geaendert = text.clone();
+            geaendert.insert(mitte, 'x');
+            let uhr = std::time::Instant::now();
+            let fortgeschrieben = fortschreiben(
+                Some(stand),
+                geaendert,
+                Some(&messdatei),
+                Dateityp::Sonstiges,
+                Tafel::Hell,
+            );
+            let anschlag = uhr.elapsed();
+
+            println!(
+                "  {bytes} Bytes: voller Durchgang {voll:?} ({:.2} MB/s), \
+                 ein Anschlag in der Mitte {anschlag:?}, {} Haltepunkte",
+                bytes as f64 / 1e6 / voll.as_secs_f64(),
+                fortgeschrieben.haltepunkte.len()
+            );
+        }
     }
 
     /// Die Farbe eines Verweises ist wirklich eine Farbe und nicht die des

@@ -40,7 +40,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSTextField, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize};
 
-use super::Blatt;
+use super::{Blatt, Blattgriff};
 
 /// Die Breite des Eingabefeldes in Punkten.
 ///
@@ -59,7 +59,11 @@ const FELDHOEHE: f64 = 24.0;
 /// bestaetigt hat; bricht er ab, laeuft es gar nicht. Der Abbruch ist damit
 /// kein Sonderfall mit eigener Meldung: er ist die Abwesenheit einer Eingabe,
 /// wie bei der Pfadeingabe.
-pub fn zeigen(mtm: MainThreadMarker, fenster: &NSWindow, fertig: impl Fn(String) + 'static) {
+pub fn zeigen(
+    mtm: MainThreadMarker,
+    fenster: &NSWindow,
+    fertig: impl Fn(String) + 'static,
+) -> Blattgriff {
     let feld = NSTextField::initWithFrame(
         NSTextField::alloc(mtm),
         NSRect::new(NSPoint::ZERO, NSSize::new(FELDBREITE, FELDHOEHE)),
@@ -73,5 +77,5 @@ pub fn zeigen(mtm: MainThreadMarker, fenster: &NSWindow, fertig: impl Fn(String)
         if bestaetigt {
             fertig(feld.stringValue().to_string());
         }
-    });
+    })
 }

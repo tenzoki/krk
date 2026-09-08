@@ -1,0 +1,78 @@
+The drop passes its target folder as the source folder, so the completion reads that one folder twice
+
+---
+
+`Anwendungsdelegierter::abwurf_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs`, step 9 of
+the round-13 plan) calls
+`auftrag_starten(seite, auftrag, ziel, quellen.len())` — the third argument is `Vorgang.quellordner`,
+documented as "Der Ordner, aus dem die Eintraege stammen" (`anwendung.rs:423`). For a drop that
+folder belongs to a foreign application, so the plan fills the field with the **target** folder
+instead (step 9: "`auftrag_starten(seite, auftrag, ziel, quellen.len())` ruft").
+
+The consequence is one redundant directory read per accepted drop. `Vorgang::ordner`
+(`anwendung.rs:448`) starts from `quellordner` and pushes the `ziel` carried inside
+`Art::Kopieren` / `Art::Verschieben`, so for a drop it returns the same path twice, and
+`vorgang_beenden` runs `auffrischung::ordner_neu_lesen` once per entry.
+
+---
+
+**Severity:** Low, and the two things that could have made it worse were checked and do not
+happen:
+
+- The second read reaches the same result. `DateifensterQuelle::neu_lesen`
+  (`tabelle.rs:888`) re-derives the selection name from the inventory still standing at that
+  moment and re-notes it as `wunschauswahl` (`Tabliste::aktiven_neu_lesen`, `tabs.rs:716`), and
+  the scroll position is re-read from the view first. Nothing is lost between the two runs.
+- The first run's batches cannot land in the second run's model.
+  `Ordnermodell::lesevorgang_beginnen` (`krk-core/src/verzeichnis/modell.rs:392`) raises the
+  generation, and stale batches are dropped against it.
+
+What remains is a wasted walk over the target folder on every drop, plus a field whose
+documented meaning does not hold for the third caller.
+
+**Not affected:** the source folder of a move drop. If one of the two panes displays it, the
+Dateisystemwache refreshes it while the operation runs — a drop is not one of the arts that defer
+the refresh (`auffrischung::schiebt_auffrischung_auf` defers only `UmbenennenImStapel`).
+
+**Found by:** coder, implementing step 9 and following `quellordner` into `Vorgang::ordner`.
+**Affects:** `crates/krk-ui/src/appkit/anwendung.rs`, `abwurf_ausfuehren` and the
+`Vorgang.quellordner` doc comment.
+**Related:** `issues/260818-2129_c_the-redundant-read-the-path-comparison-allows-is-not-without-consequence.md`
+— the same class of claim about a redundant read, checked there and found to be wrong; checked
+here and found to hold.
+**Tree state:** `07347b8` plus the working tree of step 9.
+**Domain:** code
+
+## What a fix would have to do
+
+Two candidates, and neither is free:
+
+1. **Give `Vorgang::ordner` a deduplication.** One line at the one place that answers "which
+   folders does this operation rewrite". It also covers any future caller that passes the same
+   folder twice, and it does not touch the meaning of the field.
+2. **Pass the real source folder** — `quellen.first().and_then(Path::parent)` — and decide what
+   an empty source list or a root path means. That fills the field truthfully and refreshes the
+   source pane on completion instead of relying on the Dateisystemwache, at the cost of a case
+   split the plan did not ask for.
+
+Option 1 is the smaller change and the one this defect points at. Neither belongs in step 9,
+which is bound to the plan's wording.
+
+**Filed by:** coder
+
+---
+Abgleich 260819-0057 (reconciler): **bleibt offen; am Baum nachgemessen und unverändert.**
+`Anwendungsdelegierter::abwurf_ausfuehren` (`crates/krk-ui/src/appkit/anwendung.rs:5679-5694`)
+ruft weiter `self.auftrag_starten(seite, auftrag, ziel, positionen)` und reicht damit denselben
+`ziel`-Pfad an den Parameter `quellordner` der Signatur (`:5702-5708`). Für einen Abwurf aus
+einer fremden Anwendung liest die Abschlussliste diesen einen Ordner zweimal, als Quelle und
+als Ziel.
+
+Nicht angefasst von den vier Commits nach dem Filing (`a7419cd`, `4d27c1c`, `cac9218`,
+`a6b3818`): keiner berührt diese Zeile. Der Befund ist damit weder behoben noch überholt.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **unverändert offen, am Baum nachgemessen.** `abwurf_ausfuehren` ruft weiter `let _ = self.auftrag_starten(seite, auftrag, ziel, positionen);` (`crates/krk-ui/src/appkit/anwendung.rs:5781`) und reicht damit den Zielpfad an den Parameter `quellordner`. Der eine Commit seit dem Abgleich vom 260819-0057, der diese Datei anfasst (`76ceb68`), setzt den Fokus-Nachzug ein und berührt die Zeile nicht; die Zeilennummer ist durch ihn von `:5694` auf `:5781` gewandert. `auftrag_starten` hat unverändert vier Aufrufstellen (`:5222`, `:5480`, `:5655`, `:5781`).
+
+---
+Resolved: Moeglichkeit 1, die der Datensatz selbst als die kleinere und gemeinte nennt: `Vorgang::ordner` nimmt das Ziel nur auf, wenn es nicht schon der `quellordner` ist. Die Bedeutung des Feldes bleibt unberuehrt, und jeder kuenftige Rufer, der denselben Ordner zweimal reicht, ist mitgedeckt. Der Doc-Kommentar von `Vorgang.quellordner` sagt jetzt daneben, dass beim Abwurf aus einer fremden Anwendung der Zielordner darin steht, und warum das die einzige Antwort ist, die KRK geben kann.

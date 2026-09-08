@@ -61,11 +61,16 @@
 //! ist nicht vorgesehen. Der erste und der dritte enden beide auf `0 passed`,
 //! und deshalb haelt der Starter nach `output()` selbst: `status.success()`
 //! **und** die Zeile `test result: ok. 1 passed;` in `stdout`. Scheitert eines,
-//! bricht er mit Name, stdout und stderr ab. Die Rufer behalten ihr eigenes
-//! `assert!` als die fachliche Zeile; das Gate hier sagt nur, dass genau ein
-//! Kind gelaufen ist. Der Datensatz ist `shared/issues/260826-1302_*_sechs-
-//! elternproben-am-gemeinsamen-kindstarter-bleiben-gruen-wenn-der-kindname-
-//! nicht-trifft.md`.
+//! bricht er mit Name, stdout und stderr ab. Der Datensatz ist
+//! `shared/issues/260826-1302_*_sechs-elternproben-am-gemeinsamen-kindstarter-
+//! bleiben-gruen-wenn-der-kindname-nicht-trifft.md`.
+//!
+//! **Die fachliche Zeile reist als `zusage` in den Starter hinein.** Sie stand
+//! bis zum 260908 als eigenes `assert!` bei jedem Rufer, und dessen Bedingung
+//! war seit dem Gate eine Tautologie: der Starter kehrt nur zurueck, wenn
+//! `status.success()` schon gilt. Damit erschien der fachliche Satz bei keinem
+//! Fehlschlag mehr (Defekt `260826-2152`). Jetzt steht er im Meldetext des
+//! Gates, an der einen Stelle, an der er auch ausgeloest wird.
 //!
 //! # Jedes Ziel nimmt einen anderen Ausschnitt
 //!
@@ -604,10 +609,17 @@ const EIN_KIND_GELAUFEN: &str = "test result: ok. 1 passed;";
 /// **Das Gate.** `libtest` endet mit 0, wenn der Name nichts trifft und wenn das
 /// Kind sein `#[ignore]` verloren hat; beides meldet `0 passed`. Deshalb bricht
 /// der Starter ab, sobald der Status nicht 0 ist **oder** `stdout` die Zeile
-/// `test result: ok. 1 passed;` nicht traegt. Die Ausgabe kommt zurueck, damit
-/// der Rufer seine fachliche Zusicherung mit derselben Meldung halten kann; die
-/// drei Wege stehen im Modulkopf.
-pub fn kind_mit_deskriptorgrenze(grenze: usize, name: &str, wert: &Path) -> std::process::Output {
+/// `test result: ok. 1 passed;` nicht traegt. Die drei Wege stehen im Modulkopf.
+///
+/// **`zusage` steht dem Abbruch voran, und deshalb gibt der Starter nichts
+/// zurueck.** Bis zum 260908 kam die Ausgabe heraus, damit der Rufer seine
+/// fachliche Zusicherung selbst halten konnte; seine Bedingung war seit dem Gate
+/// aber `status.success()` ein zweites Mal und damit unerreichbar, und die
+/// fachliche Meldung erschien bei keinem Fehlschlag mehr (Defekt
+/// `260826-2152`). Jetzt reist der Satz herein, wie [`mit_zeitschranke`] ihn
+/// mit seinem `was` schon hereinreisen laesst, und steht an der einen Stelle,
+/// an der er auch ausgeloest wird.
+pub fn kind_mit_deskriptorgrenze(zusage: &str, grenze: usize, name: &str, wert: &Path) {
     let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
     let ergebnis = std::process::Command::new("/bin/sh")
         .arg("-c")
@@ -624,11 +636,11 @@ pub fn kind_mit_deskriptorgrenze(grenze: usize, name: &str, wert: &Path) -> std:
     let stderr = String::from_utf8_lossy(&ergebnis.stderr);
     assert!(
         ergebnis.status.success() && stdout.contains(EIN_KIND_GELAUFEN),
-        "die Kindprobe `{name}` ist nicht als genau ein Kind gelaufen \
+        "{zusage}\n\
+         die Kindprobe `{name}` ist nicht als genau ein Kind gelaufen \
          (Status {}, erwartet `{EIN_KIND_GELAUFEN}` in stdout); \
          trifft der Name nicht, oder fehlt dem Kind sein `#[ignore]`?\n\
          --- stdout ---\n{stdout}\n--- stderr ---\n{stderr}",
         ergebnis.status
     );
-    ergebnis
 }
