@@ -50,3 +50,23 @@ Einfügen einer Datei reserviert ist, und nennt das Datum des Wechsels
 unberührt: der Auftrag jenes Durchgangs hat die Datei ausdrücklich
 ausgenommen. Der Befund bleibt für diese eine Stelle offen, und seine
 Abnahmebedingung ist unverändert die beider Stellen.
+
+---
+Resolved am 260908-0632: `CLAUDE.md:35` nennt `cmd+v` nicht mehr. Die Zeile heißt
+jetzt „Einfügen aus der Zwischenablage in den Filtertext, `*` im Filtertext ist
+ein Platzhalter"; die zweite Hälfte des Satzes, die schon richtig war, steht
+unverändert.
+
+**Die Abnahmebedingung ist auf einem anderen Weg erfüllt, als sie ihn vorsah, und
+das gehört hierher.** Sie verlangte, dass die Stelle `cmd+f` nennt oder beide
+Kombinationen mit dem Datum des Wechsels. Der Nutzer hat am 260908 stattdessen
+entschieden, dass die Rundentabelle überhaupt keine Tastennamen mehr führt: die
+Datei sagt in `CLAUDE.md:86` selbst, dass `resources/default-keymap.toml` die
+Tastenzuordnung trägt und nicht sie, und vier Zeilen der Tabelle hielten sich
+nicht daran. Die Zeilen der Runden 13, 20, 21 und 22 nennen seitdem die Funktion
+statt der Taste. Damit ist die falsche Angabe weg und kann durch keine künftige
+Umbelegung wiederkehren — die Bedingung ist der Sache nach übererfüllt und dem
+Wortlaut nach umgangen.
+
+`HowTo.md:82` war schon am 260907-2127 nachgezogen und nennt `cmd+f` samt Datum
+des Wechsels. Beide Stellen des Befunds sind damit erledigt.

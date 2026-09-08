@@ -63,3 +63,29 @@ Baum.
 
 **Herkunft:** gemeinsamer Speicher. Kein Circle war aktiv, und der Befund betrifft den Bauweg des
 ganzen Projekts.
+
+---
+Halb erledigt am 260908-0632, Marker bleibt `_o_`: die `CLAUDE.md`-Hälfte steht,
+die `README.md`-Hälfte nicht.
+
+**Erledigt.** Der Satz „deshalb fragt schon Station 1 nach `gh`, obwohl erst
+Station 8 es braucht" nannte eine Vorabfrage, wo der Code zwei stellt. Er heißt
+jetzt: Station 1 stellt zwei Vorabfragen, die erst Station 8 braucht —
+`gh_pruefen`, ob `gh` vorhanden und angemeldet ist, und `release_frei_pruefen`,
+ob auf der Gegenseite nicht schon ein Release `v<zahl>` steht; beide in
+`veroeffentlichung`, gerufen aus `xtask/src/release.rs`. Belegt am Baum vor der
+Änderung: `xtask/src/release.rs:220` und `:225`.
+
+Die Lesung des Befunds, `CLAUDE.md` sei nicht falsch geworden, trifft damit für
+den Absatz zur achten Station **nicht** zu; für den Absatz „Seit dem 260820 steht
+daneben ein zweiter Weg" trifft sie zu, und er ist unverändert geblieben. Dieser
+Durchgang hat den Beglaubigungsweg nur gelesen und nicht angefasst: `CLAUDE.md`
+zählt dort keine Prüfungen auf.
+
+**Offen bleibt die `README.md`-Hälfte**, und sie ist der Kern des Befunds: die
+Stationstabelle bei `README.md:272`, der Absatz bei `:283-285` und die
+Beglaubigungstabelle bei `:329`. Sie liegt außerhalb des Auftrags dieses
+Durchgangs, der ausdrücklich allein `CLAUDE.md` umfasste. Die Abhilfe steht oben
+unverändert, samt dem Vorschlag, die Beglaubigungstabelle nicht auf drei Zeilen
+zu erweitern, sondern auf die Frage zu stellen, die `signaturstand_pruefen`
+führt.

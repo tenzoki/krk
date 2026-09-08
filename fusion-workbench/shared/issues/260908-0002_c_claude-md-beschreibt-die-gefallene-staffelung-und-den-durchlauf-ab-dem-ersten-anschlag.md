@@ -36,3 +36,28 @@ Die zwei Entscheidungsdatensätze sind
 `260826-0859_*_die-vorgabe-der-tiefen-suche-hebt-die-schwelle-des-inhaltsfilters-von-drei-auf-fuenf.md`
 und
 `260826-0923_*_bekommt-der-tiefe-durchlauf-eine-eigene-zeichenschwelle-jetzt-wo-ein-anschlag-ihn-ab-werk-ausloest.md`.
+
+---
+Resolved: Alle vier Aussagen stehen auf dem heutigen Stand.
+
+`grep -n 'inhaltsschwelle\|erste Anschlag im Dateifenster' CLAUDE.md` gibt nichts
+mehr aus. Die dritte Regel des Moduls heißt im Absatz jetzt `ZEICHENSCHWELLE` und
+trägt ihren heutigen Schnitt („ab welcher Länge des Filtertexts der Filter über
+den angezeigten Ordner und über die bloßen Namen hinausgreift"), dazu das
+Erhebungskommando
+``awk '/pub const ZEICHENSCHWELLE/' crates/krk-core/src/verzeichnis/filter.rs``
+statt einer Zahl.
+
+Der Durchlauf über den Unterbaum beginnt im Text ab `ZEICHENSCHWELLE` getippten
+Zeichen und nicht mehr mit dem ersten Anschlag; die Vorbelegung des Ankreuzfelds
+„Deep" auf ein bleibt als eigene Aussage stehen, weil sie richtig ist
+(`Ordnermodell::neu`, `tief: true`), und ist von der Schwelle getrennt. Die
+Staffelung ist als gefallen bezeichnet, mit beiden Entscheiden zitiert und ohne
+Verweis auf eine offene Frage. Genannt ist auch die eine Zählstelle,
+`Ordnermodell::schwelle_erreicht`, die beide Frager bedient.
+
+Belegt am Baum vor der Änderung:
+`crates/krk-core/src/verzeichnis/filter.rs:257` trägt
+`pub const ZEICHENSCHWELLE: usize = 3;`, eine Funktion `inhaltsschwelle` gibt es
+nicht mehr, und `crates/krk-core/src/verzeichnis/modell.rs:1229` ist ihr einziger
+Rufer.

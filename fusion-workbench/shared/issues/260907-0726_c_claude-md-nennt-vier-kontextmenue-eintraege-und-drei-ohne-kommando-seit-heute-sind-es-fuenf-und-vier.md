@@ -42,3 +42,28 @@ Dieselbe Form ist die Abhilfe für `CLAUDE.md`.
 **Abnahmebedingung:** keine Stelle in `CLAUDE.md` nennt eine Zahl der Kontextmenü-Einträge oder
 der `Kontextbefehl`-Werte; der Absatz verweist stattdessen auf `Kontextbefehl::ALLE` und nennt den
 Erhebungsbefehl, wie es die Absätze zu `Wirkungsbereich` und `Kommando` vormachen.
+
+---
+Resolved: Der Absatz nennt keine Zahl der Kontextmenü-Einträge und keine der
+`Kontextbefehl`-Werte mehr. Er sagt, dass das Menü das Teilen und daneben die
+eigenen Einträge trägt, zeigt für deren Bestand auf `Kontextbefehl::ALLE` und
+nennt den Erhebungsbefehl
+``awk '/pub enum Kontextbefehl/,/^}/' crates/krk-ui/src/kommandos/kontextmenue.rs`` —
+dieselbe Form, die die Absätze zu `Wirkungsbereich` und `Kommando` schon tragen.
+Der Satz „mit den drei eigenen Einträgen des Kontextmenüs" in `CLAUDE.md:86`
+heißt jetzt „mit den eigenen Einträgen"; das ist die Form, die die Modulköpfe von
+`appkit/tabelle.rs` und `kommandos/mod.rs` vorgemacht haben.
+
+Zwei Angaben sind dabei über den Befund hinaus berichtigt worden, weil sie
+derselbe Satz trug: „Ein vierter Wert hält damit den Bau an" ist zu „Ein weiterer
+Wert" geworden, und daneben steht jetzt, was der Modulkopf ausdrücklich sagt und
+`CLAUDE.md` verschwieg — **die Feldbreite der Liste `ALLE` hält den Bau nicht
+an**; gehalten wird die Liste von der Probe
+`jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung`.
+
+Die eine Zahl, die stehen bleibt, ist datiert und deshalb unverfälschbar: „die
+Zahl stand von der Runde 17 bis zum 260907 auf drei". Denselben Satz führt der
+Modulkopf von `kontextmenue.rs`.
+
+Belegt am Baum vor der Änderung: `Kontextbefehl` trägt `Zippen`, `Entpacken`,
+`ImFinderOeffnen`, `ImFinderAnzeigen`.

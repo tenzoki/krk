@@ -39,3 +39,27 @@ Hälfte sie halten und welche nicht, und dass die Ausnahme eine Eigenschaft ist 
 Aufzählung. Die Zahl der Dateien steht dabei nicht in `CLAUDE.md`: sie ist zwischen dem
 260811 und dem 260814 viermal falsch geworden, und die Datei sagt das an derselben Stelle
 schon selbst.
+
+---
+Resolved: Die drei Stellen sagen, was der Baum trägt.
+
+1. Aus „eine Gewohnheit und kein Werkzeug" ist geworden: bis zum 260907 eine
+   Gewohnheit, seitdem zur einen Hälfte ein Werkzeug. Die zwei Proben stehen
+   namentlich da, und welche Hälfte sie halten, steht dabei — das Dastehen des
+   Abschnitts und die Nennung jedes hereingeholten Namens. **Die Richtigkeit der
+   macOS-Zahl bleibt ausdrücklich eine Zusage des Menschen**, mit dem Grund
+   daneben: sie am SDK zu prüfen bräuchte Xcode, und der Nutzer hat das
+   verworfen.
+2. „ist offen" ist gefallen; der Entscheid `260811-2050_*_…` trägt `_i_`, und
+   der Absatz nennt die gewählten Möglichkeiten 1 und 2 und die verworfene 3.
+3. Die zwei Ausnahmen stehen nicht mehr als Liste, sondern als Eigenschaft: den
+   Abschnitt schuldet jede Datei, die einen Namen aus einer `objc2_`-Kiste
+   hereinholt. `koordinaten.rs` und `mod.rs` fallen von selbst heraus, eine
+   dritte solche Datei bräuchte keinen Eintrag, und `koordinaten.rs` schuldet den
+   Abschnitt in dem Augenblick, in dem sie den ersten Namen hereinholt.
+
+Die Zahl der Dateien steht weiterhin nicht in `CLAUDE.md`.
+
+Belegt am Baum vor der Änderung: `crates/krk-core/tests/baum.rs:1238` und
+`:1276`, dazu der Doc-Kommentar der ersten Probe, der die Zusage des Menschen
+selbst ausschreibt.
