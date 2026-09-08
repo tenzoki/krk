@@ -2309,8 +2309,8 @@ fn eine_fehlende_readers_toml_entsteht_byteweise_und_bleibt_beim_zweiten_start_l
     );
     assert_eq!(
         geladen.wert.zahl(),
-        12,
-        "der erste Start arbeitet nicht mit den zwoelf mitgelieferten Profilen"
+        13,
+        "der erste Start arbeitet nicht mit allen mitgelieferten Profilen"
     );
     assert_eq!(
         fs::read_to_string(&pfad).expect("readers.toml ist nicht entstanden"),

@@ -188,14 +188,22 @@ mod tests {
     }
 
     /// C3.4 der Runde 19: Keine Zeile der mitgelieferten Profile nennt einen
-    /// der zwei neuen Schluessel, und es bleiben zwoelf Profile.
+    /// der zwei neuen Schluessel, und die Zahl der Profile bleibt die der
+    /// Auslieferungsfassung.
+    ///
+    /// **Wie viele Profile das sind, steht hier nicht als Wort**, sondern
+    /// einmal als Zahl in der Zusicherung unten; erhoben wird sie mit
+    /// `grep -c '^\[\[' resources/default-readers.toml`. Die Zusicherung
+    /// haelt sie, statt sie nur zu nennen: wer der Datei ein Profil
+    /// hinzufuegt, faellt hier auf und zieht die Zahl bewusst nach.
     ///
     /// Gezaehlt wird ueber die **Nicht-Kommentarzeilen**, und das ist der
     /// Kern der Probe: der Kommentarteil derselben Datei beschreibt `typ`
     /// und `versteckt` sehr wohl (C3.9), und ein Zaehlweg, der ihn mitlaese,
     /// waere seit Schritt 6 jener Runde rot. Was hier gehalten wird, ist,
-    /// dass die Ausgabe der zwoelf Profile sich nicht aendert; der Nachweis
-    /// dafuer ist, dass kein `[[profil.zeile]]`-Block die Schluessel traegt.
+    /// dass die Ausgabe der mitgelieferten Profile sich nicht aendert; der
+    /// Nachweis dafuer ist, dass kein `[[profil.zeile]]`-Block die
+    /// Schluessel traegt.
     ///
     /// Ein `#` mitten in einer Zeile beginnt in TOML ebenfalls einen
     /// Kommentar; die mitgelieferten Zeilen tragen keinen, und die Probe
@@ -216,7 +224,11 @@ mod tests {
         let gelesen: datei::Profildatei =
             toml::from_str(AUSLIEFERUNGSTEXT).expect("die Auslieferungsfassung ist kein TOML");
         let (profile, _) = datei::pruefen(gelesen);
-        assert_eq!(profile.zahl(), 12, "es sind nicht mehr die zwoelf Profile");
+        assert_eq!(
+            profile.zahl(),
+            13,
+            "die Zahl der mitgelieferten Profile hat sich geaendert"
+        );
         let zaehlungen_mit_neuen_schluesseln = profile
             .iter()
             .flat_map(|profil| profil.zeilen())
@@ -254,8 +266,9 @@ mod tests {
         );
         assert_eq!(
             profile.zahl(),
-            12,
-            "die Auslieferungsfassung fuehrt nicht mehr die zwoelf mitgelieferten Profile"
+            13,
+            "die Zahl der mitgelieferten Profile hat sich geaendert; die Zusicherung ist \
+             mitzuziehen"
         );
     }
 }

@@ -274,9 +274,19 @@
 # Ordners, und dieser Lauf ist einer der zwölf; nennt eine Zeile denselben
 # Ordner, teilt sie sich die Lesung mit ihm. Ein `pfad` erkennt ohne Lesung
 # und kostet nichts. Das Wurzelprofil einer fusion-Werkbank unten kostet
-# deshalb drei Läufe, das Projektwurzelprofil mit denselben sieben Zeilen
-# vier: dort trägt jede Zeile eine Ortsangabe, und den erkannten Ordner liest
+# deshalb vier Läufe, das Projektwurzelprofil mit denselben acht Zeilen
+# fünf: dort trägt jede Zeile eine Ortsangabe, und den erkannten Ordner liest
 # allein die Erkennung.
+#
+# EIN ORT, DEN ES NICHT GIBT, KOSTET GAR NICHTS. Eine Ortsangabe wird vor der
+# Lesung aufgelöst, und was sich nicht auflösen lässt, wird nicht gelesen: die
+# Zeile zeigt ihren Platzhalter `--`, und der Haushalt bleibt unberührt. Die
+# Zahlen oben sind damit OBERGRENZEN und stehen nur an einer Werkbank, die
+# jeden genannten Ort wirklich führt; ein leeres `fusion-workbench` kostet das
+# Projektwurzelprofil zwei Läufe statt fünf. Wer eine Zeile über einen Ordner
+# aufnimmt, den nicht jede Werkbank hat, belastet deshalb niemanden, der ihn
+# nicht hat. Das gilt für den Leselauf und nicht für den Systemaufruf: das
+# Auflösen des Pfades fällt an, es wird nur nicht gebucht.
 #
 # Bei den Öffnungen fällt die Wahl anders aus. `feld` kostet genau eine,
 # `juengste` mit `zeigt = "titel"` deren `anzahl` und mit `zeigt = "datum"`
@@ -332,7 +342,28 @@
 # `## Current` mitten im Fließtext, und die Zeile zeigte deren Inhalt statt
 # des Platzhalters.
 #
-# DIESE SIEBEN ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
+# Die Zeile „Nachrichten" ist die verdichtete Form des Forum-Profils weiter
+# unten: EINE Zahl und kein Titel. Sie steht hier und nicht im Profil des
+# gemeinsamen Speichers, obwohl der Speicher dort sachlich hängt, und dafür gibt
+# es zwei Gründe. Der erste ist die Sichtbarkeit: eine Nachricht, die die
+# Gegenseite kennen soll, muss dort auffallen, wo man ohnehin steht, und das ist
+# die Werkbank- und die Projektwurzel und nicht ein Speicherordner, den man
+# selten öffnet. Der zweite ist der Haushalt: das Speicherprofil steht mit zehn
+# von zwölf Leseläufen zwei vor der Schranke, ein elfter Ort dort nähme den
+# vorletzten, während hier von zwölf Läufen acht frei sind.
+#
+# EINE ZAHL UND KEIN TITEL, weil `zaehlung` keine Datei öffnet und weil die
+# sechs Werte daneben kurz sind — eine Fassung, ein Datum, ein Name, zwei
+# Zahlen. Eine Nachrichtenüberschrift ist ein ganzer Satz und verdrängte den
+# Rest des Blocks. Wovon die Nachrichten handeln, sagt das Forum-Profil, und
+# dorthin schickt diese Zahl.
+#
+# Sie unterscheidet dabei zwei Lagen, die eine Null zusammenzöge: `--` heißt,
+# dass diese Werkbank keinen Forum-Speicher hat, `0` heißt, dass sie einen hat
+# und darin nichts steht. Eine Werkbank ohne Forum zahlt für die Zeile keinen
+# Leselauf; der Absatz „Ein Ort, den es nicht gibt" oben schreibt es aus.
+#
+# DIESE ACHT ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
 # „Projektwurzel mit fusion-Werkbank" ganz unten, dort jede mit
 # `fusion-workbench/` vor der Ortsangabe. Wer hier eine Zeile ändert, ändert sie
 # dort mit; nichts hält die beiden Blöcke aneinander. Der Preis ist bewusst
@@ -370,6 +401,10 @@ kennzeichen = '^\.fusion-setup$'
   [[profil.zeile]]
   beschriftung = "Offene Defekte, gemeinsam"
   zaehlung = { ordner = "shared/issues", muster = '_o_.*\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Nachrichten"
+  zaehlung = { ordner = "shared/forum", muster = '\.md$' }
 
 # Ein Speicher, gemeinsam oder in einer Runde.
 #
@@ -428,6 +463,60 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
   [[profil.zeile]]
   beschriftung = "Zurückgestellt"
   zaehlung = { muster = '_d_.*\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Die jüngsten zehn"
+  juengste = { muster = '\.md$', anzahl = 10 }
+
+# Der Forum-Speicher.
+#
+# Er trägt die Nachrichten, die fusion-Instanzen einander hinterlassen —
+# verschiedene Nutzer, oder derselbe Nutzer mit mehreren Arbeitskopien — und
+# meldet Pushes und Änderungen, die die Gegenseite kennen sollte. Ein Eintrag
+# heißt `260907-2354-1d05b0e4-read-before-pull.md`: Zeitstempel, acht
+# Hexzeichen, Kurzname. Nach vierzehn Tagen wird er weggeräumt.
+#
+# EIN EIGENES PROFIL UND KEIN NAME IN DER AUFZÄHLUNG DES SPEICHERPROFILS oben,
+# aus demselben Grund, aus dem der Defektspeicher eines hat: die zwei Zeilen
+# jenes Profils beantworten „wie viele Datensätze, und wovon handeln sie", und
+# bei einem Nachrichtenspeicher kommt „seit wann liegt das da" dazu. Vierzehn
+# Tage Aufbewahrung heißt, dass das Alter der jüngsten Nachricht die Auskunft
+# ist, an der man sieht, ob hier etwas Neues steht; ein Analysespeicher hat
+# diese Frage nicht.
+#
+# DAS MUSTER NENNT BEIDE ORTE, obwohl fusion den Speicher heute allein unter
+# `shared/` führt. Das ist der Zuschnitt des Speicherprofils oben, das aus
+# demselben Grund vier Namen für beide Orte führt, die es nur unter `shared/`
+# gibt: ein Pfadmuster, das nicht trifft, kostet keinen Systemaufruf, und ein
+# Speicher, der einmal doch in einer Runde stünde, verlöre sonst seine
+# Zusammenfassung.
+#
+# DIE TITELZEILE DIESER EINTRÄGE STEHT OHNE RAUTE, und das ist kein Sonderfall:
+# der Titel ist die erste Zeile, aus der nach dem Abschneiden führender Rauten
+# und Leerzeichen etwas übrig bleibt. Eine nackte erste Zeile ist damit ein
+# Titel wie jeder andere.
+#
+# ZEHN TITEL WIE ÜBERALL SONST in dieser Datei, und die Aufbewahrung macht die
+# Zahl hier zur Obergrenze statt zu einem Ausschnitt: ein Speicher, der nach
+# vierzehn Tagen leerräumt, führt selten zehn Einträge, und dann zeigt die
+# Zeile schlicht alle. Eine kleinere Zahl wäre eine Sonderregel ohne
+# Gegenstand.
+#
+# EIN LESELAUF, HÖCHSTENS ZEHN ÖFFNUNGEN. Alle drei Zeilen nennen den erkannten
+# Ordner selbst und teilen sich seine eine Lesung; die Erkennung über `pfad`
+# kostet nichts dazu. Die Öffnungen gehen allein auf die Titelzeile: `zaehlung`
+# und `zeigt = "datum"` lesen aus dem Verzeichniseintrag und öffnen nichts.
+[[profil]]
+name = "fusion-Werkbank: der Forum-Speicher"
+pfad = 'fusion-workbench/(shared|circles/[^/]+)/forum$'
+
+  [[profil.zeile]]
+  beschriftung = "Nachrichten"
+  zaehlung = { muster = '\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Zuletzt angekommen"
+  juengste = { muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
   beschriftung = "Die jüngsten zehn"
@@ -694,15 +783,23 @@ kennzeichen = '^_._circle\.md$'
 # DAS IST DIE ERKENNUNG, DIE DAS WURZELPROFIL OBEN FÜR SICH VERWIRFT, und sie
 # hat ihren Preis: ein `kennzeichen` sieht allein die Namen der Einträge und
 # kann nicht in den Ordner hineinsehen. Ein leeres `fusion-workbench` oder eine
-# Datei dieses Namens genügt, und die Vorschau zeigt statt der Metadaten sieben
+# Datei dieses Namens genügt, und die Vorschau zeigt statt der Metadaten acht
 # Zeilen Platzhalter. Der Preis ist in Kauf genommen, weil die Auskunft an
 # einer eingerichteten Projektwurzel ihn aufwiegt; wer ihn nicht zahlen will,
 # streicht dieses Profil und sieht an der Projektwurzel die Metadaten.
 #
-# DIESE SIEBEN ZEILEN SIND DIE DES WURZELPROFILS GANZ OBEN, jede mit
+# DIESE ACHT ZEILEN SIND DIE DES WURZELPROFILS GANZ OBEN, jede mit
 # `fusion-workbench/` vor der Ortsangabe. Sie stehen zweimal in dieser Datei und
 # können auseinanderlaufen; nichts hält sie aneinander. Wer eine ändert, ändert
 # die andere mit. Der Grund steht oben beim Wurzelprofil.
+#
+# DAS IST DIE STELLE, AUF DIE DIE ZEILE „NACHRICHTEN" ES ABGESEHEN HAT. Die
+# Begründung steht vollständig oben beim Wurzelprofil und wird hier nicht
+# wiederholt; sie läuft darauf hinaus, dass eine Projektwurzel der Ordner ist,
+# in dem ein Nutzer am häufigsten steht, und eine Nachricht für die Gegenseite
+# genau dort auffallen muss. Dass die Zeile im Wurzelprofil oben ebenfalls
+# steht, folgt aus der Kopplung der zwei Blöcke und ist keine zweite
+# Entscheidung.
 [[profil]]
 name = "Projektwurzel mit fusion-Werkbank"
 kennzeichen = '^fusion-workbench$'
@@ -734,6 +831,10 @@ kennzeichen = '^fusion-workbench$'
   [[profil.zeile]]
   beschriftung = "Offene Defekte, gemeinsam"
   zaehlung = { ordner = "fusion-workbench/shared/issues", muster = '_o_.*\.md$' }
+
+  [[profil.zeile]]
+  beschriftung = "Nachrichten"
+  zaehlung = { ordner = "fusion-workbench/shared/forum", muster = '\.md$' }
 
 # ============================================================================
 # Die Profile für eine flight-Werkbank

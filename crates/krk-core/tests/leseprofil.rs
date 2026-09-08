@@ -3005,10 +3005,19 @@ fn runde(zweck: &str) -> Pruefordner {
 /// **Zwei Pruefordner brauchen ihn, und sie unterscheiden sich allein darin,
 /// wo er liegt.** [`werkbankwurzel`] schreibt ihn an die Wurzel des
 /// Pruefordners, [`projektwurzel`] eine Ebene tiefer unter `fusion-workbench`.
-/// Die sieben Zeilen des Projektwurzelprofils sind die des Wurzelprofils, jede
-/// mit `fusion-workbench/` vor der Ortsangabe; ein zweiter, von Hand
-/// gepflegter Bestand daneben liefe von diesem weg, und die zwei Messungen
-/// verglichen dann nicht mehr dieselbe Gestalt.
+/// Die Zeilen des Projektwurzelprofils sind die des Wurzelprofils, jede mit
+/// `fusion-workbench/` vor der Ortsangabe; ein zweiter, von Hand gepflegter
+/// Bestand daneben liefe von diesem weg, und die zwei Messungen verglichen
+/// dann nicht mehr dieselbe Gestalt.
+///
+/// **Jeder Ort, den die zwei Profile nennen, steht hier auch wirklich auf der
+/// Platte**, und das ist keine Vollstaendigkeit um ihrer selbst willen: die
+/// Zusicherung `leselaeufe == orte.len() + 1` in
+/// [`die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen`]
+/// belegt den Halbsatz „plus einen Lauf fuer die Erkennung", und ein
+/// genannter Ort, den es nicht gibt, wird gar nicht gelesen und faellt aus
+/// der Rechnung. Wer den Profilen einen Ort hinzufuegt, legt ihn hier mit an,
+/// statt die Zusicherung stumpf zu machen.
 fn werkbankbestand(wurzel: &Path) {
     std::fs::create_dir_all(wurzel).expect("die Werkbankwurzel laesst sich nicht anlegen");
 
@@ -3039,6 +3048,18 @@ fn werkbankbestand(wurzel: &Path) {
         "noch einer\n",
     );
     schreiben(&issues, "260824-0600_c_ein geschlossener.md", "erledigt\n");
+
+    // Der Forum-Speicher, den die Zeile „Nachrichten" beider Profile nennt.
+    // Ein Eintrag reicht: die Zeile zaehlt und oeffnet nichts, und die Eins
+    // unterscheidet den Lauf, der den Ordner findet, von dem, der ihn nicht
+    // findet und `--` zeigt.
+    let forum = wurzel.join("shared/forum");
+    std::fs::create_dir_all(&forum).expect("der Forum-Speicher laesst sich nicht anlegen");
+    schreiben(
+        &forum,
+        "260907-2354-1d05b0e4-read-before-pull.md",
+        "Neuer Befehl: sehen, was angekommen ist, bevor du ziehst\n",
+    );
 }
 
 /// Die Wurzel einer Werkbank in der Gestalt, die das erste mitgelieferte
@@ -3049,8 +3070,15 @@ fn werkbankwurzel(zweck: &str) -> Pruefordner {
     ordner
 }
 
-/// Eine Projektwurzel in der Gestalt, die das achte mitgelieferte Profil
-/// erwartet: ein Ordner, der eine Werkbank **enthaelt**.
+/// Eine Projektwurzel in der Gestalt, die das mitgelieferte Profil
+/// „Projektwurzel mit fusion-Werkbank" erwartet: ein Ordner, der eine
+/// Werkbank **enthaelt**.
+///
+/// **Benannt und nicht durchgezaehlt**, aus dem Grund, den
+/// [`profil_der_auslieferung`] ausschreibt: wer einen Block in
+/// `default-readers.toml` einfuegt oder verschiebt, verschiebt keine Nummer
+/// mit. Bis zum 260908 stand hier „das achte mitgelieferte Profil", und das
+/// dreizehnte Profil hat die Angabe still falsch gemacht.
 ///
 /// **Der Pruefordner ist hier eine Ebene hoeher als bei [`werkbankwurzel`]**,
 /// denn das Profil erkennt ueber das Kennzeichen `^fusion-workbench$`, also
@@ -3078,7 +3106,11 @@ fn ausgelieferte() -> Profile {
         meldungen.is_empty(),
         "die Auslieferungsfassung wird beanstandet: {meldungen:?}"
     );
-    assert_eq!(profile.zahl(), 12, "es sind nicht die zwoelf Profile");
+    assert_eq!(
+        profile.zahl(),
+        13,
+        "die Zahl der mitgelieferten Profile hat sich geaendert"
+    );
     profile
 }
 
@@ -3808,41 +3840,52 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// eine Runde       4 Leselaeufe   11 Oeffnungen   C6.7: hoechstens 7 und 11
 ///   erkannter Ordner, planning, decisions, history
 ///   Circle-Datensatz, zehn Verlaeufe
-/// die Wurzel       3 Leselaeufe    5 Oeffnungen   C6.4: hoechstens 12 und 24
-///   erkannter Ordner, circles, shared/issues
+/// die Wurzel       4 Leselaeufe    5 Oeffnungen   C6.4: hoechstens 12 und 24
+///   erkannter Ordner, circles, shared/issues, shared/forum
 ///   .fusion-setup dreimal, .active-circle, orchestrator-live.md
 /// der Speicher    10 Leselaeufe    0 Oeffnungen   C6.4: hoechstens 12 und 24
 ///   die zehn Unterspeicher, die das Profil nennt; keiner doppelt
 ///   `zeigt = "datum"` oeffnet keine Datei
-/// die Projektwz.   4 Leselaeufe    5 Oeffnungen   C6.4: hoechstens 12 und 24
-///   erkannter Ordner, fusion-workbench, dessen circles, dessen shared/issues
+/// die Projektwz.   5 Leselaeufe    5 Oeffnungen   C6.4: hoechstens 12 und 24
+///   erkannter Ordner, fusion-workbench, dessen circles, shared/issues,
+///   shared/forum
 ///   .fusion-setup dreimal, .active-circle, orchestrator-live.md
 /// ```
+///
+/// **Die zwei Wurzelprofile stehen seit dem 260908 je einen Lauf hoeher**, und
+/// die Oeffnungen sind dieselben geblieben: die Zeile „Nachrichten" ueber
+/// `shared/forum` ist eine `zaehlung`, und die liest den Verzeichniseintrag
+/// und oeffnet keine Datei. Der gemeinsame Speicher hat die Zeile bewusst
+/// nicht bekommen (`shared/decisions/260908-1754_*_bekommt-das-profil-des-…`),
+/// steht also weiter bei zehn Laeufen und zwei Laeufe vor der Schranke.
 ///
 /// **Der vierte Fall ist nicht der eines der groessten Profile.** Er steht
 /// hier, weil `default-readers.toml` seine Leselaufregel an zwei Zahlen
 /// vorfuehrt und bis zum 260825 nur die erste eine Probe hatte
 /// (`shared/issues/260825-2233_*_die-beispielzahl-vier-des-…`): das
-/// Wurzelprofil kostet drei Laeufe, das Projektwurzelprofil mit **denselben
-/// sieben Zeilen** vier. Die Vier ist die eine Zahl der Datei, die den
-/// Halbsatz „plus einen Lauf fuer die Erkennung" belegt, und sie leitet sich
-/// hier her und wird nicht uebernommen: das Profil nennt drei verschiedene
-/// Orte, keiner davon ist der erkannte Ordner selbst, also liest den allein
-/// die Erkennung ueber `kennzeichen = '^fusion-workbench$'`. Die Probe haelt
-/// beide Haelften — die Vier als Zahl und die Vier als `orte.len() + 1`.
+/// Wurzelprofil kostet vier Laeufe, das Projektwurzelprofil mit **denselben
+/// Zeilen** fuenf. Die Fuenf ist die eine Zahl der Datei, die den Halbsatz
+/// „plus einen Lauf fuer die Erkennung" belegt, und sie leitet sich hier her
+/// und wird nicht uebernommen: das Profil nennt vier verschiedene Orte,
+/// keiner davon ist der erkannte Ordner selbst, also liest den allein die
+/// Erkennung ueber `kennzeichen = '^fusion-workbench$'`. Die Probe haelt
+/// beide Haelften: die Fuenf als Zahl und die Fuenf als `orte.len() + 1`.
+/// Damit die zweite Haelfte etwas haelt, muss jeder genannte Ort im
+/// Pruefordner auch stehen; [`werkbankbestand`] legt sie deshalb vollzaehlig
+/// an.
 ///
 /// **Fuenf Oeffnungen und nicht vier**, obwohl die Kostenmessung vom
 /// 260825-2107 an der wirklichen Werkbank vier zaehlt: dort fehlt
 /// `.active-circle`, und eine Zeile, die ihre Datei nicht findet, oeffnet
 /// nichts. Nachgemessen am 260826 an einem Pruefordner ohne diese eine Datei:
-/// vier Laeufe, vier Oeffnungen. Der Pruefordner hier traegt den vollen
-/// Bestand, also faellt die fuenfte an, und die sieben Werte darunter sind der
-/// Nachweis, dass jede Oeffnung etwas gefunden hat.
+/// dieselben Laeufe, eine Oeffnung weniger. Der Pruefordner hier traegt den
+/// vollen Bestand, also faellt die fuenfte Oeffnung an, und die Werte darunter
+/// sind der Nachweis, dass jede Oeffnung etwas gefunden hat.
 ///
 /// **Der Bestand unter `fusion-workbench` ist nicht Beiwerk.** Ein leeres
 /// `fusion-workbench` kostet zwei Laeufe und keine Oeffnung, gemessen am
-/// selben Tag: ein Ort, den es nicht gibt, wird nicht gelesen. Die Vier steht
-/// also nur an einer eingerichteten Werkbank, und genau die baut
+/// selben Tag: ein Ort, den es nicht gibt, wird nicht gelesen. Die Fuenf
+/// steht also nur an einer eingerichteten Werkbank, und genau die baut
 /// [`projektwurzel`].
 ///
 /// **Geprueft wird auch, welches Profil gegriffen hat.** Die Erkennung nimmt
@@ -3851,12 +3894,12 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// der Zusammenfassung sind der Ausweis dafuer, welches es war.
 ///
 /// **Beim vierten Fall traegt die Beschriftungsliste allein diesen Ausweis
-/// nicht.** Das Wurzelprofil fuehrt dieselben sieben Beschriftungen, es sind
-/// dieselben sieben Zeilen; erst die Werte trennen die zwei. An einer
-/// Projektwurzel sieht das Wurzelprofil in den ausgewaehlten Ordner selbst und
-/// findet dort nichts als den Eintrag `fusion-workbench`, liefert also
-/// siebenmal [`Wert::Nicht`]. Die Werteliste steht deshalb hier ausgeschrieben
-/// und nicht als Vergleich gegen `wurzelwerte`: was die zwei Profile
+/// nicht.** Das Wurzelprofil fuehrt dieselben Beschriftungen, es sind
+/// dieselben Zeilen; erst die Werte trennen die zwei. An einer Projektwurzel
+/// sieht das Wurzelprofil in den ausgewaehlten Ordner selbst und findet dort
+/// nichts als den Eintrag `fusion-workbench`, liefert also lauter
+/// [`Wert::Nicht`]. Die Werteliste steht deshalb hier ausgeschrieben und
+/// nicht als Vergleich gegen `wurzelwerte`: was die zwei Profile
 /// aneinanderhaelte, waere eine Zusage, die `default-readers.toml` fuer sich
 /// ausdruecklich nicht gibt.
 ///
@@ -3871,7 +3914,7 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// - die ausgeschriebene Werteliste des Projektwurzelprofils steht als
 ///   geordnete Folge da.
 ///
-/// Wer die Zeilen eines Speichers vertauscht oder die sieben Zeilen des
+/// Wer die Zeilen eines Speichers vertauscht oder die Zeilen des
 /// Projektwurzelprofils umstellt, macht die Probe rot, obwohl jede Zeile ihren
 /// Wert sehr wohl gefunden hat. Die Richtung stimmt — rot und nicht still gruen
 /// —, aber die zwei Meldungen nennen die Reihenfolge deshalb als zweiten
@@ -3950,14 +3993,15 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
             "Aktive Runde",
             "Sitzung",
             "Runden",
-            "Offene Defekte, gemeinsam"
+            "Offene Defekte, gemeinsam",
+            "Nachrichten"
         ],
         "gemessen wurde nicht das Profil der Werkbankwurzel"
     );
     assert_eq!(
         (haushalt.leselaeufe(), haushalt.oeffnungen()),
-        (3, 5),
-        "die Wurzelzusammenfassung kostet nicht mehr die gemessenen drei Leselaeufe \
+        (4, 5),
+        "die Wurzelzusammenfassung kostet nicht mehr die gemessenen vier Leselaeufe \
          und fuenf Oeffnungen"
     );
     assert!(
@@ -3980,6 +4024,7 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
             Wert::Text("Schritt 12, die Zaehlproben".to_owned()),
             Wert::Zahl(3),
             Wert::Zahl(2),
+            Wert::Zahl(1),
         ],
         "die Wurzelzusammenfassung liefert nicht die Werte, fuer die sie gelesen hat"
     );
@@ -4055,9 +4100,12 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
         [
             "fusion-workbench",
             "fusion-workbench/circles",
-            "fusion-workbench/shared/issues"
+            "fusion-workbench/shared/issues",
+            "fusion-workbench/shared/forum"
         ],
-        "das Projektwurzelprofil nennt nicht mehr diese drei Orte"
+        "das Projektwurzelprofil nennt nicht mehr genau diese Orte; steht einer davon \
+         nicht im Pruefordner, wird er gar nicht gelesen und die Rechnung darunter \
+         geht nicht mehr auf"
     );
     assert!(
         !projektorte.iter().any(String::is_empty),
@@ -4085,15 +4133,14 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     );
     assert_eq!(
         (haushalt.leselaeufe(), haushalt.oeffnungen()),
-        (4, 5),
-        "die Projektwurzel kostet nicht mehr die vier Leselaeufe und fuenf \
+        (5, 5),
+        "die Projektwurzel kostet nicht mehr die fuenf Leselaeufe und fuenf \
          Oeffnungen, mit denen `default-readers.toml` die Leselaufregel belegt"
     );
     assert_eq!(
         haushalt.leselaeufe() as usize,
         projektorte.len() + 1,
-        "die Vier ist nicht mehr die drei genannten Orte plus den einen \
-         Erkennungslauf"
+        "die Fuenf ist nicht mehr die genannten Orte plus den einen Erkennungslauf"
     );
     assert!(
         haushalt.leselaeufe() <= HOECHSTENS_LESELAEUFE
@@ -4115,17 +4162,18 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
             Wert::Text("Schritt 12, die Zaehlproben".to_owned()),
             Wert::Zahl(3),
             Wert::Zahl(2),
+            Wert::Zahl(1),
         ],
         "die Projektwurzelzusammenfassung liefert nicht die Werte, fuer die sie \
          gelesen hat; eine Zeile, die nichts findet, oeffnet auch nichts, und die \
          fuenf Oeffnungen darueber waeren dann keine fuenf Treffer. Oder die \
-         Reihenfolge der sieben Zeilen in `default-readers.toml` hat sich geaendert: \
+         Reihenfolge der Zeilen in `default-readers.toml` hat sich geaendert: \
          diese Liste steht als geordnete Folge da"
     );
 }
 
 /// C5.8: Liegt `orchestrator-live.md` unter einem anderen Namen, zeigt allein
-/// die Zeile „Sitzung" ihren Platzhalter; die uebrigen sechs stimmen weiter.
+/// die Zeile „Sitzung" ihren Platzhalter; die uebrigen stimmen weiter.
 ///
 /// **Geprueft wird an der Auslieferungsfassung und nicht an einem nachgebauten
 /// Profil.** Die Zusage aus C5.8 spricht ueber die **mitgelieferten** Profile,
@@ -4163,7 +4211,8 @@ fn ohne_orchestrator_live_zeigt_allein_die_sitzungszeile_ihren_platzhalter() {
             "Aktive Runde",
             "Sitzung",
             "Runden",
-            "Offene Defekte, gemeinsam"
+            "Offene Defekte, gemeinsam",
+            "Nachrichten"
         ],
         "gemessen wurde nicht das Profil der Werkbankwurzel"
     );
@@ -4181,6 +4230,7 @@ fn ohne_orchestrator_live_zeigt_allein_die_sitzungszeile_ihren_platzhalter() {
             Wert::Nicht,
             Wert::Zahl(3),
             Wert::Zahl(2),
+            Wert::Zahl(1),
         ],
         "eine fehlende Sitzungsdatei nimmt mehr als ihre eigene Zeile mit"
     );
@@ -4191,14 +4241,23 @@ fn ohne_orchestrator_live_zeigt_allein_die_sitzungszeile_ihren_platzhalter() {
 /// Ein gewoehnlicher Ordner bekommt das eingebaute Default-Profil und kein
 /// erkanntes, und zwar auch dann, wenn er Unterordner traegt, die in einer
 /// Werkbank einen Speicher benennten. Zwei Sperren halten das, und die Probe
-/// prueft beide: die sechs Profile mit Pfadmuster verlangen `fusion-workbench/`
-/// oder `flight-workbench/` **im Pfad**, die sechs mit Kennzeichendatei
-/// verlangen einen der vier Eintraege `.fusion-setup`, `_._circle.md`,
+/// prueft beide: die Profile mit Pfadmuster verlangen `fusion-workbench/`
+/// oder `flight-workbench/` **im Pfad**, die mit Kennzeichendatei verlangen
+/// einen der vier Eintraege `.fusion-setup`, `_._circle.md`,
 /// `fusion-workbench` und `.flight-setup` beziehungsweise `flight-workbench`
 /// **im Ordner**.
 ///
+/// **Wie viele auf welcher Seite stehen, steht hier nicht**, und der Grund ist
+/// ein Befund: bis zum 260908 sprach dieser Absatz von „sechs" und „sechs",
+/// und die Datei trug schon bei seiner Niederschrift sieben Pfadmuster und
+/// fuenf Kennzeichen. Erhoben werden die zwei Seiten mit
+/// `grep -c '^pfad = ' resources/default-readers.toml` und
+/// `grep -c '^kennzeichen = '` darueber; die Aussage der Probe haengt an
+/// keiner der zwei Zahlen, sondern daran, dass **jedes** Profil eine der zwei
+/// Sperren traegt.
+///
 /// **Ohne diese Probe war die Zusage nur fuer heute nachgesehen.** Ein
-/// siebentes Pfadmuster, das den Werkbanknamen weglaesst, ergaebe einen gruenen
+/// weiteres Pfadmuster, das den Werkbanknamen weglaesst, ergaebe einen gruenen
 /// Bau und eine gruene Probenreihe; derselbe Datensatz wie bei C5.8.
 #[test]
 fn die_mitgelieferten_profile_greifen_ausserhalb_einer_werkbank_nicht() {
