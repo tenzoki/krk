@@ -1,7 +1,8 @@
 # Spec: Vier Tastenbefehle für Pfade, das Öffnen und Cmd+W (Runde 4)
 
 **Datum:** 2026-08-11
-**Status:** Vom Nutzer abgenommen am 260811-1610, mit einer Auflage, die am 260811-1614 nachgezogen ist: zwei fehlende Kanten im Diagramm, die Kennzeichnung von Cmd+W als bestehende Belegung, und ein Zählfehler bei den Abnehmern von `betroffene()`. Zwei vorbelegte Punkte sind dabei zu Antworten geworden (`decisions/260811-1552_*` und `decisions/260811-1612_*`). Der Marker bleibt `_o_`, bis die Abnahmekriterien eingelöst sind.
+**Status:** Complete — die Runde 4 ist beschränkt geschlossen, ihr Plan `planning/260811-1648_c_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md` steht auf `_c_`. Der Abgleich vom 260811-2157 hat 23 der 62 Abnahmekriterien einzeln am Baum belegt; die übrigen 39 brauchen das laufende Bündel und keine weitere Bauarbeit. `Kommando::MitStandardprogrammOeffnen` und `Kommando::TabSchliessen` stehen in `crates/krk-core/src/tasten/belegung.rs`, die zwei Pfadkopierer über `pfadzeilen` in `crates/krk-ui/src/kommandos/operationen.rs`, nachgesehen am 260909-1021.
+**Abnahme:** offen. Der Nutzer hat am 260811-1610 den Spec abgenommen, also den Text mitsamt der Auflage, die am 260811-1614 nachgezogen ist. Die 62 Abnahmekriterien sind davon unberührt und stehen auf `- [ ]`: 32 beantwortet nur das laufende Bündel, sieben brauchen dazu einen Prüfaufbau.
 **Circle:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
 **Quelle:** Circle-Directive im Datensatz `_t_circle.md`, Abschnitt `## Directive`. Dazu die vier Nutzerantworten vom 260811-1505 und die zwei vom 260811-1610, die in den Datensätzen unter `decisions/` mit einer `Answered:`-Zeile stehen, und die Festlegung vom 260811-1250 zu den Menükürzeln.
 
@@ -421,3 +422,31 @@ die Runden 1 bis 3 geschlossen worden sind, und er ist der Grund, aus dem diese 
 beschränkter Abschluss schließt.
 
 Vollständiger Bericht: `history/260811-2157-reconciliation.md`.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` beschrieb die Abnahme des Spectextes vom
+260811-1610 und schloss mit dem Satz, der Marker bleibe `_o_`, bis die Abnahmekriterien
+eingelöst sind. Diese Kopplung ist mit der Regel vom 260907-0823 gefallen: der Zustand folgt
+der Bauarbeit, das Einlösen der Kriterien steht jetzt unter `**Abnahme:**`. Der Dateimarker
+ist von `_o_` auf `_c_` gezogen.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Vom Nutzer abgenommen am 260811-1610, mit einer Auflage, die am 260811-1614
+> nachgezogen ist: zwei fehlende Kanten im Diagramm, die Kennzeichnung von Cmd+W als
+> bestehende Belegung, und ein Zählfehler bei den Abnehmern von `betroffene()`. Zwei
+> vorbelegte Punkte sind dabei zu Antworten geworden (`decisions/260811-1552_*` und
+> `decisions/260811-1612_*`). Der Marker bleibt `_o_`, bis die Abnahmekriterien eingelöst
+> sind.
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

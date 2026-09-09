@@ -1,7 +1,8 @@
 # Implementation Plan: Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der Metadaten
 
 **Date:** 2026-08-24
-**Status:** In Arbeit (`_p_`) — gebaut und abgeglichen, nicht abgenommen. Alle vierzehn Schritte stehen auf `[DONE]`, und alle vierzehn sind am 260824-1852 einzeln gegen den Baum gelesen; der Beleg steht unten unter `## Reconciliation Log`. Offen ist allein die Nutzerarbeit am laufenden Bündel, und solange sie offen ist, geht der Marker nicht auf `_c_`. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor". Am 260824-1313 auf Schritt 7 fortgeschrieben, am 260824-1538 um Schritt 14 ergänzt, am 260824-1755 auf Schritt 11 fortgeschrieben, am 260824-1902 auf Schritt 12 und damit auf den letzten. Schritt 14 stand seit dem 260824-1650 auf `[DONE]`, während diese Zeile ihn noch als offen führte. Am 260824-1722 sind die zwei Stellen berichtigt, die den Satz der abgeschnittenen Zählung nennen. Am 260824-1751 sind die drei Stellen nachgezogen, die den Stand der Auslieferungsfassung vor der Räumung der Durchsicht `reviews/260824-1700-ontorev-…` beschreiben: die Zahl der Speicherorte, die Zeilen des Defektspeichers in der Profiltabelle und ein Nachtrag an Schritt 7.)*
+**Status:** Complete — alle vierzehn Schritte stehen auf `[DONE]` und sind am 260824-1852 einzeln gegen den Baum gelesen, je mit Commit und Fundstelle in der Tabelle unter `## Reconciliation Log`. `make check` lief an jenem Tag in einem Zug grün: 1520 Proben in 22 Zielen, keine rot, keine Beanstandung unter `-D warnings`.
+**Abnahme:** offen. Der Abschnitt `## Nutzerarbeit` führt sieben Kriterien mit Bündelanteil, und der Abhängigkeitsgraph endet auf dem Knoten „Nutzerarbeit am laufenden Bündel“. Dieser Durchgang ist nicht gefahren; er verlangt KRK im Vordergrund und ist damit Nutzerarbeit.
 **Spec:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0613_*_spec-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, vom Nutzer am 260824-0625 freigegeben, A1 bis A7 eingeschlossen
 **Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Grundlage erhoben:** 260824-0634, am Baum auf dem Stand `278a008` unter `crates/` und `resources/`, und am Bestand dieser Werkbank
@@ -691,3 +692,46 @@ Risikotabelle dieses Plans in einen eigenen Datensatz; der Absatz in der Tabelle
 
 **Kein Befund steht dem Rundenabschluss entgegen.** Was offen bleibt, ist die Nutzerarbeit unten
 und die eine Nutzerentscheidung über die Archivspeicher.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` sagte „In Arbeit (`_p_`) — gebaut und
+abgeglichen, nicht abgenommen“ und behauptete eine Tätigkeit, an der seit dem Rundenabschluss
+niemand ist. Sie sagt jetzt `Complete`, die Abnahme steht unter `**Abnahme:**`, und der
+Dateimarker ist von `_p_` auf `_c_` gezogen. Die Fortschreibungsnotizen in Klammern bleiben
+als Wortlaut im Nachsatz unten erhalten.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** In Arbeit (`_p_`) — gebaut und abgeglichen, nicht abgenommen. Alle vierzehn
+> Schritte stehen auf `[DONE]`, und alle vierzehn sind am 260824-1852 einzeln gegen den
+> Baum gelesen; der Beleg steht unten unter `## Reconciliation Log`. Offen ist allein die
+> Nutzerarbeit am laufenden Bündel, und solange sie offen ist, geht der Marker nicht auf
+> `_c_`. *(Am 260824-1224 nachgezogen; die Zeile stand noch auf „Entwurf, wartet am Tor".
+> Am 260824-1313 auf Schritt 7 fortgeschrieben, am 260824-1538 um Schritt 14 ergänzt, am
+> 260824-1755 auf Schritt 11 fortgeschrieben, am 260824-1902 auf Schritt 12 und damit auf
+> den letzten. Schritt 14 stand seit dem 260824-1650 auf `[DONE]`, während diese Zeile ihn
+> noch als offen führte. Am 260824-1722 sind die zwei Stellen berichtigt, die den Satz der
+> abgeschnittenen Zählung nennen. Am 260824-1751 sind die drei Stellen nachgezogen, die
+> den Stand der Auslieferungsfassung vor der Räumung der Durchsicht
+> `reviews/260824-1700-ontorev-…` beschreiben: die Zahl der Speicherorte, die Zeilen des
+> Defektspeichers in der Profiltabelle und ein Nachtrag an Schritt 7.)*
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.
+
+**Der Preis, benannt und nicht verschwiegen.** Die Umbenennung tötet einen lebenden Verweis:
+`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md:6`
+nennt diese Datei im Feld `**Active spec/plan:**` mit ausgeschriebenem `_p_`. Der Circle-Datensatz
+steht außerhalb des Auftrags, unter dem dieser Zug gefahren ist, und ist deshalb nicht
+nachgezogen; nachgesehen am 260909-1021 über den ganzen Baum. Die übrigen Zitate dieser Datei
+stehen in eingefrorenen Speichern und behalten nach der Ortsregel in `CLAUDE.md` ihren damaligen
+Marker.

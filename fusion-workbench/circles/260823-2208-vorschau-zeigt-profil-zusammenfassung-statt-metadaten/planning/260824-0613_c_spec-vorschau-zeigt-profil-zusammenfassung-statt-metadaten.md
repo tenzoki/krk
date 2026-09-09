@@ -1,7 +1,8 @@
 # Spec: Das Vorschaufenster zeigt für erkannte Orte eine Profil-Zusammenfassung statt der Metadaten
 
 **Date:** 2026-08-24
-**Status:** Vom Nutzer am 260824-0625 freigegeben, A1 bis A7 eingeschlossen; in Umsetzung. Vier Kriterien sind am 260824-1224 berichtigt, drei weitere und die Festlegung A7 am 260824-1505; C6.5 und die Festlegung A5 am 260824-1722; C5.4 am 260824-1751; jede Berichtigung steht bei ihrem Kriterium.
+**Status:** Complete — die Runde 16 ist beschränkt geschlossen, ihr Plan `planning/260824-0640_*_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md` trägt alle vierzehn Schritte auf `[DONE]`, einzeln am 260824-1852 gegen den Baum gelesen. Von den 56 Abnahmekriterien sind 38 ohne Fenster belegt, zwei zur Hälfte und zwei unbelegt; die vier tragen je einen eigenen Defektdatensatz. Die Leseprofile stehen als `crates/krk-core/src/leseprofil/` mit fünf Modulen, nachgesehen am 260909-1021.
+**Abnahme:** offen. Die 14 Kriterien mit Bündelanteil — C2.8 in seiner sichtbaren Hälfte, C4.1 bis C4.6 und C5.1 bis C5.7 — verlangen KRK im Vordergrund und sind Nutzerarbeit. Dazu kommt der Handgriff mit der `readers.toml`, den ein Versionswechsel nicht mitbringt.
 **Source:** Der Backlogeintrag `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md` und die Directive des Circle-Datensatzes `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_t_circle.md`
 **Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/`, aktiv seit 260824-0530
 **Grundlage erhoben:** 260824-0541, 260824-0600 und 260824-0613, am Baum auf dem Stand `278a008` und am Bestand dieser Werkbank
@@ -445,3 +446,29 @@ diesem Abgleich auf umgesetzt. Und das Zitat in der Notiz zu C5.4 nannte
 `shared/issues/260824-1758_*_die-zeitstempel-…` ins Leere zeigte; es steht jetzt in der Sternform
 auf `260824-1745`. Daneben tragen alle Zitate dieses Specs die Sternform statt eines
 ausgeschriebenen Markers.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` sagte „Vom Nutzer am 260824-0625 freigegeben
+…; in Umsetzung“ und behauptete damit eine Tätigkeit, die es seit dem Rundenabschluss nicht
+mehr gibt. Sie sagt jetzt den Stand der Bauarbeit; die Freigabe des Spectextes und der Stand der
+Abnahme stehen unter `**Abnahme:**`. Der Dateimarker ist von `_o_` auf `_c_` gezogen. Die
+Berichtigungen vom 260824-1224, -1505, -1722 und -1751 stehen weiter bei ihrem Kriterium.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Vom Nutzer am 260824-0625 freigegeben, A1 bis A7 eingeschlossen; in
+> Umsetzung. Vier Kriterien sind am 260824-1224 berichtigt, drei weitere und die
+> Festlegung A7 am 260824-1505; C6.5 und die Festlegung A5 am 260824-1722; C5.4 am
+> 260824-1751; jede Berichtigung steht bei ihrem Kriterium.
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

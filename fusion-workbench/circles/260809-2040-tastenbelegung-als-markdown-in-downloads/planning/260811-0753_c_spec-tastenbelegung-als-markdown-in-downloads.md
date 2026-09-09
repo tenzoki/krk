@@ -1,7 +1,8 @@
 # Spec: Die geltende Tastenbelegung als Markdown-Datei im Downloads-Ordner (Runde 3)
 
 **Datum:** 2026-08-11
-**Status:** Entwurf, wartet auf die Abnahme des Nutzers
+**Status:** Complete — die Runde 3 ist beschränkt geschlossen, ihr Plan `planning/260811-0838_c_plan-tastenbelegung-als-markdown-in-downloads.md` steht auf `_c_`. Am Baum tragen `belegungsausgabe::markdown` (`crates/krk-ui/src/belegungsausgabe.rs`) und der Menüeintrag „Tastenbelegung als Markdown sichern“ (Selektor `tastenbelegungSichern:`, `crates/krk-ui/src/appkit/menue.rs`) die vier Fähigkeiten, nachgesehen am 260909-1021.
+**Abnahme:** offen. Die 41 Abnahmekriterien aus C1 bis C4 stehen auf `- [ ]`. Die Anleitung dazu liegt fertig als `planning/260811-1130_*_abnahmeanleitung-tastenbelegung-als-markdown.md` und ist nicht gefahren; sie verlangt KRK im Vordergrund und ist Nutzerarbeit.
 **Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Quelle:** Circle-Directive im Datensatz `_*_circle.md`, Abschnitt `## Directive`. Dazu zwölf Festlegungen des Nutzers: die fünf Antworten vom 260811-0110, die in den Datensätzen unter `decisions/` mit einer `Answered:`-Zeile stehen, und die sieben Antworten vom 260811-0115, die die Klärungsrunde `history/260811-0446-shaper-klaerungsrunde-tastenbelegung-ausgabe.md` gestellt hat.
 
@@ -308,3 +309,25 @@ Die Directive nennt sechs Bestandteile, und jeder ist in diesem Spec einer Fähi
 **Ein Bestandteil ist gegenüber der Directive geschärft und nicht geändert.** Die Directive sagt, die Ausgabe führe "jede Funktion". Der Nutzer hat den Umfang am 260811-0110 auf die belegten Funktionen beschränkt. Das ist keine Abweichung von der Directive, sondern die Antwort auf eine Frage, die sie offen ließ: eine unbelegte Funktion trägt keine Kombination, und die Directive verspricht Funktionen "mit ihren Kombinationen".
 
 **Ein Bestandteil ist über die Directive hinausgewachsen.** Die dritte Spalte mit dem Wirkungsbereich steht in der Directive nicht. Sie ist die Antwort auf eine der fünf Aktivierungsfragen dieses Circles und vom Nutzer am 260811-0110 ausdrücklich gewählt, nachdem die Spannung zur Bildschirmansicht benannt war. Die Directive bleibt unverändert; wer den Datensatz später liest, findet die Begründung in `decisions/260809-2040_*_gehoert-der-wirkungsbereich-in-die-ausgabe.md`.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` stand auf „Entwurf, wartet auf die Abnahme
+des Nutzers“. „Entwurf“ war seit dem Bau der Runde falsch, und die zweite Hälfte des Satzes
+sprach über die Abnahme und nicht über den Zustand. Beide Auskünfte stehen jetzt getrennt,
+und der Dateimarker ist von `_o_` auf `_c_` gezogen.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Entwurf, wartet auf die Abnahme des Nutzers
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

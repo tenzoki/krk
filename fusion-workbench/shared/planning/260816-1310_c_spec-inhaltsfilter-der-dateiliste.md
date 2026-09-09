@@ -1,7 +1,8 @@
 # Spec: Der Filter der Dateiliste berücksichtigt den Inhalt der Dateien
 
 **Datum:** 2026-08-16
-**Status:** Gebaut und belegt, Abnahmelauf **nicht** gefahren — die Runde 11 (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content`) ist am 260816-2030 beschränkt geschlossen, ihr Plan `planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md` steht auf `_c_`. Die Abnahmeliste liegt fertig unter `messungen/260816-abnahme-inhaltsfilter.md` und ist Nutzerarbeit. Der Dateimarker bleibt `_o_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` offen ist; siehe `## Reconciliation Log` am Ende.
+**Status:** Complete — die Runde 11 (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content`) ist am 260816-2030 beschränkt geschlossen, ihr Plan `planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md` steht auf `_c_`. Der Abgleich vom 260820-2056 hat die ohne Bündel entscheidbaren Kriterien einzeln nachgelesen, und alle halten; `make check` lief an jenem Tag mit Rückgabewert 0. Der Inhaltsfilter steht als `crates/krk-core/src/verzeichnis/inhalt.rs`, nachgesehen am 260909-1021.
+**Abnahme:** offen. Die Abnahmeliste liegt fertig unter `messungen/260816-abnahme-inhaltsfilter.md` mit 28 Beobachtungen an vier Orten und ist nicht gefahren; sie verlangt KRK im Vordergrund. Von den 57 Abnahmekriterien ist keines abgehakt.
 **Quelle:** „Nächste Erweiterung des Filters: im Moment filtern wir Datei-/Foldernamen. Nun erweitern wir so, dass matches im Dateiinhalt berücksichtigt werden. Diese Funktion wird mit einer weiteren Checkbox in der unteren Controlleiste aktiviert: ‚Content'."
 **Baumstand:** `9236dd4`, gelesen am 260816
 **Ablage:** Dieser Spec entsteht ohne Circle im Blick und liegt deshalb im gemeinsamen Speicher. Der Circle der elften Runde nimmt ihn über sein Feld `Active spec/plan:` an.
@@ -306,3 +307,40 @@ nachgelesen. Es bleiben fünf.
 ### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
 
 **Die Runde 21 hat den einen Vergleich, den C1.4 „Teilzeichenfolge an jeder Stelle" nennt, in ein Muster mit Platzhalter verwandelt, und der Inhaltsfilter geht denselben Weg.** `traegt_die_folge` nimmt seit `f4ba58d` ein `Muster` statt einer Zeichenkette (`crates/krk-core/src/verzeichnis/filter.rs:190`), ein `*` darin steht für eine beliebige Folge, und `traegt_der_inhalt` (`crates/krk-core/src/verzeichnis/inhalt.rs`) ruft denselben Vergleich mit demselben Muster, „auch ueber Zeilenenden hinweg". Für einen Filtertext ohne `*` ist das Verhalten das von C1.4: Teilzeichenfolge, ohne Rücksicht auf die Schreibung, ohne Faltung. Mit `*` sagt C1.4 etwas Engeres als der Baum. Der Spec der Runde 21 (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/planning/260829-1052_*_spec-…`, C5 bis C7, B1 bis B9) trägt die neue Regel; dieser Spec wird nicht umgeschrieben (Ortsregel), der Vermerk hier genügt. Marker `_o_` und Statuszeile unverändert — der Abnahmelauf ist weiter nicht gefahren, und die Lesart des Markers ist weiter offen.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` sagte „Gebaut und belegt, Abnahmelauf **nicht**
+gefahren“ und band den Marker an die offene Frage nach der Lesart von `_c_`. Jene Frage ist am
+260907-0823 beantwortet. Die zwei Auskünfte stehen jetzt in zwei Zeilen, und der Dateimarker
+ist von `_o_` auf `_c_` gezogen.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Gebaut und belegt, Abnahmelauf **nicht** gefahren — die Runde 11
+> (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content`) ist am 260816-2030
+> beschränkt geschlossen, ihr Plan `planning/260816-1359_c_plan-inhaltsfilter-der-
+> dateiliste.md` steht auf `_c_`. Die Abnahmeliste liegt fertig unter
+> `messungen/260816-abnahme-inhaltsfilter.md` und ist Nutzerarbeit. Der Dateimarker bleibt
+> `_o_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-
+> gebaut-oder-abgenommen.md` offen ist; siehe `## Reconciliation Log` am Ende.
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.
+
+**Der Preis, benannt und nicht verschwiegen.** Die Umbenennung tötet vier lebende Verweise, die
+diese Datei mit ausgeschriebenem `_o_` nennen: drei im Circle-Datensatz
+`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md` (Zeilen 7, 38 und 64),
+einer in dessen Plan `planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md:5`. Beide Dateien
+stehen außerhalb des Auftrags, unter dem dieser Zug gefahren ist, und sind deshalb nicht
+nachgezogen. Der fünfte Verweis, `messungen/260816-abnahme-inhaltsfilter.md:8`, fällt unter die
+Ortsregel in `CLAUDE.md` und behält seinen damaligen Marker. Nachgesehen am 260909-1021 über
+den ganzen Baum.

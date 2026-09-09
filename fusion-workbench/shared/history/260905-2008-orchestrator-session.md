@@ -651,3 +651,45 @@ eine Staffelung aufgeloest, die keine Runde je entschieden hatte.**
 
 **Damit sind alle 56 Fragen beantwortet.** Offen bleiben die Reichweitenfrage und neun
 Fragen, die die Arbeit dieses Tages selbst aufgeworfen hat.
+
+## Fortsetzung 260909-0938 — Reichweite der Zustandsregel
+
+Die Sitzung ist am 260908-0020 unterbrochen worden und am 260909-0833 fortgesetzt. Vier von
+sieben Aufgaben standen erledigt, 37 Commits seit dem Anker `28c4a47`, die Warteschlange
+wartete auf die Antwort zur Reichweite.
+
+**Der Nutzer hat am 260909-0944 Möglichkeit 3 gewählt:** die Regel vom 260907-0823 — der
+Zustand eines Anforderungsdokuments folgt der belegten Bauarbeit, die Abnahme bekommt eine
+eigene Kopfzeile — gilt für alle 42 Anforderungsdokumente und Pläne des Bestands, samt der
+Deckungszusage der Runde 6 und dem Plantext der Runde 20.
+
+**Die Wahl steht gegen eine Regel des Rahmenwerks**, und das ist hier festgehalten, weil sie
+sich nicht auflösen lässt: `rules/circle-records.md` erklärt Anforderungsdokument und Plan
+einer geschlossenen Runde zur Aufzeichnung, die nicht mehr an Ort und Stelle nachgeführt
+wird. Der Nutzer hat für dieses Projekt anders entschieden. Die Umsetzung schreibt den
+ursprünglichen Wortlaut je Datei als datierten Nachsatz ans Dateiende, damit die Aufzeichnung
+nicht verloren geht, sondern neben der Berichtigung steht.
+
+**Zwei Dateien bleiben trotzdem auf `_o_`**, und nicht als Ausnahme, sondern weil die Regel
+selbst es so ergibt: das Anforderungsdokument und der Plan der zurückgestellten Runde
+`260816-2255-befehle-absetzen-und-makros-speichern` gehören zu Arbeit, die nie gefahren ist.
+Der Zustand folgt der belegten Bauarbeit, und es gibt keine.
+
+**Befund beim Vorlegen der Frage:** die Erhebung im Datensatz nennt vierzehn Dokumente, der
+Baum trägt zweiundvierzig. Abgelegt als
+`260909-0938_*_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md`.
+
+## Coherence — Nachtrag 260909-1021
+
+<!-- RECONCILER-OWNED -->
+
+**Verdict:** coherent
+
+**Edges:**
+- Artifact↔Grounding: 14 von 14 behaupteten Bauständen einzeln belegt, 0 Abweichungen; Belegquelle sind die Abgleiche unter `history/` der jeweiligen Runde, dazu elf Stichproben am Baum am 260909-1021 (je Runde die tragende Stelle, von `krk-core/src/text/` bis `krk-core/src/git/`). Der Bestand führt daneben 107 offene Defekte, keiner davon aus diesem Lauf.
+- Artifact↔Directive: die 37 Commits aus `git log 28c4a47..HEAD` und die heutige, noch nicht committete Arbeit bewegen sich auf die Directive zu. Sie verlangt seit dem 260906 ausdrücklich, die Antworten des Nutzers auf die vorgelegten Fragen umzusetzen; dieser Lauf setzt die Antwort zu `260907-2340_*_wie-weit-reicht-die-neue-regel-…-zurueck.md` um. Belegend `26cbc93`, `2f4b7b2` und `85bcbad`, die dasselbe für frühere Antwortrunden tun.
+- Grounding↔Directive: 12 offene und 22 beantwortete, nicht umgesetzte Fragen; keine steht der Directive entgegen. Zwei der 22 löst dieser Lauf ein, `260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` und `260907-2340_a_…`; ihr Übergang auf `_i_` wartet auf den Commit, den er zitieren kann, und ist keine Abweichung, sondern ein offener Nachzug.
+
+**Rebalance recommendation:** none
+
+**Belege:** `shared/history/260909-1021-reconciliation.md` (die vierzehn Dateien einzeln, die fünf toten Verweise, die 25 Dokumente ohne Abnahme-Kopfzeile).

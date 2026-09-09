@@ -1,7 +1,8 @@
 # Spec: Der eingebaute Editor mit Roh- und Formatansicht und Textmarken (Runde 2)
 
 **Datum:** 2026-08-08, erweitert am 2026-08-09, auf den gebauten Stand gezogen am 2026-08-10
-**Status:** Gebaut, wartet auf den Abnahmelauf des Nutzers
+**Status:** Complete — die Runde 2 ist beschränkt geschlossen, ihr Plan `planning/260808-0140_c_plan-eingebauter-editor-mit-textmarken.md` steht auf `_c_`, und jeder seiner Schritte ist einzeln gegen den Baum gelesen; die Belege liegen unter `history/` dieses Circles. Am Baum stehen heute `crates/krk-core/src/text/` mit fünf Modulen, `krk-ui/src/editormodell.rs`, `krk-ui/src/hervorhebung.rs`, `krk-ui/src/appkit/nummernspalte.rs` und `krk-ui/src/fenstertitel.rs`, nachgesehen am 260909-1021.
+**Abnahme:** offen. Die 110 Abnahmekriterien der elf Fähigkeiten stehen sämtlich auf `- [ ]`, gezählt am 260810-0805 und am 260810-1404 unabhängig bestätigt. Der Abnahmelauf verlangt KRK im Vordergrund und ist damit Nutzerarbeit, die kein Agent leisten kann. Die drei Punkte unter `## Was die Abnahme mitentscheidet` gehen mit ihm an den Nutzer.
 **Circle:** `circles/260807-2116-eingebauter-editor-mit-textmarken`
 **Quelle:** Circle-Directive im Datensatz `_*_circle.md`, Abschnitt `## Directive`, dazu die vier Festlegungen der Aktivierungsrunde vom 260807-2139 und die sechs Festlegungen der Spec-Runde vom 260808-0017, beide in `history/260807-2139-orchestrator-session.md`. Die Fähigkeiten C9 bis C11 sind am 260809-2035 auf Wunsch des Nutzers hinzugekommen, mitten in der Umsetzung; der Abschnitt `## Die vier später hinzugekommenen Fähigkeiten` hält fest, warum sie nicht im ursprünglichen Zuschnitt standen.
 
@@ -665,3 +666,25 @@ Der Unterschied zum Plan daneben ist sachlich und nicht formal. Ein Plan ist ges
 **Ein Querverweis in `## Die drei vollständigen Fallunterscheidungen` ist überholt.** Der Abschnitt beruft sich auf `CLAUDE.md` als der Stelle, die „drei Fallunterscheidungen ohne Auffangzweig" nennt. `CLAUDE.md` nennt seit dem 260810 ausdrücklich **keine Zahl** mehr, mit der Begründung, dass sie schon bei drei unvollständig war und der Übersetzer die Stellen genauer nennt als jede Aufzählung. Der Sachgehalt des Abschnitts bleibt richtig; die Berufung auf eine Dreizahl in `CLAUDE.md` trifft nicht mehr.
 
 **Der Marker `_o_` dieser Datei passt nicht zum Bestand, und der Bestand gibt eine Antwort her.** Der Grund, der oben für `_o_` angeführt wird — kein Abnahmekriterium ist abgehakt —, trägt nicht, weil der Spec der Runde 1 in derselben Lage ist und `_c_` trägt: `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md` führt ebenfalls 110 Kästchen, davon null abgehakt, und steht auf `**Status:** Complete`, gesetzt zum beschränkten Abschluss der Runde 1 am 260807-1035. Das Kästchen ist in diesem Projekt also nicht die Größe, an der der Marker eines Specs hängt. Die Entscheidung gehört dem Nutzer und dem Orchestrator, weil sie die Zeile `**Active spec/plan:**` im Circle-Datensatz nachzieht; die Abwägung steht in `history/260810-1404-reconciliation.md`.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` sagte „Gebaut, wartet auf den Abnahmelauf
+des Nutzers“ und trug damit zwei Auskünfte in einem Satz. Sie sagt jetzt den Stand der
+Bauarbeit, und der Stand der Abnahme hat mit `**Abnahme:**` eine eigene Zeile bekommen. Der
+Dateimarker ist von `_o_` auf `_c_` gezogen.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Gebaut, wartet auf den Abnahmelauf des Nutzers
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

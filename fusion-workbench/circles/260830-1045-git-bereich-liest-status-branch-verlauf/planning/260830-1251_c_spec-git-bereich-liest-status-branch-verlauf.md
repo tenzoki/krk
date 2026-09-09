@@ -1,7 +1,8 @@
 # Spec: Der Git-Bereich liest Status, Branch und Verlauf (Stufe A)
 
 **Date:** 2026-08-30
-**Status:** Partially Complete
+**Status:** Complete — die Runde 23 ist beschränkt geschlossen, ihr Plan `260830-1317_*_plan-git-bereich-liest-status-branch-verlauf.md` trägt die sechzehn Bauschritte auf `[DONE]`; der siebzehnte ist der Abnahmelauf und keine Bauarbeit. Von den 90 Abnahmekriterien tragen 65 eine Stelle im Baum oder eine Probe und sind belegt. Der Gitleser steht als `crates/krk-core/src/git/` mit vier Modulen, die Ansicht als `crates/krk-ui/src/appkit/git.rs`, nachgesehen am 260909-1021.
+**Abnahme:** offen. Die 25 Kriterien der Nutzerarbeit warten auf den Abnahmelauf am laufenden Bündel; 23 von ihnen haben eine belegte Bau- oder Probenhälfte, C5.4 und C7.2 liegen ganz beim Nutzer. Kein Kästchen ist abgehakt.
 **Activated from Circle:** 260830-1045-git-bereich-liest-status-branch-verlauf
 **Source:** Die Directive des Circle-Datensatzes `_t_circle.md`, vom Nutzer am 260830-1045 geschärft und hier nicht noch einmal angefasst. Dazu die Machbarkeitsanalyse `260830-1006-gix-als-git-anbindung-stufe-a.md`, die vier beantworteten Entscheidungen unter dem Stempel `260830-1006` und die vier Antworten des Nutzers vom 260830 („1a 2a 3b 4b"). Die dreizehn Festlegungen des Nutzers stehen unten als E1 bis E13; A1 bis A14 füllen die Lücken, die keine von ihnen benennt, und sind am Spec-Tor überstimmbar.
 
@@ -496,3 +497,26 @@ Runde:** `grep -rn 'NeedsUpdate' crates/` liefert 15 Treffer, davon **elf** auf
 `menuNeedsUpdate:`, den Selektor des Kontextmenüs, die mit `gix` nichts zu tun haben. Das Muster
 gehört an eine Wortgrenze gebunden (`grep -rnw` oder `EntryStatus::NeedsUpdate`). Anlass:
 `issues/260830-1614_*_c3-8-verlangt-null-treffer-fuer-write-changes-c10-3-verlangt-treffer-die-die-lesestelle-nennen.md`.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` stand auf `Partially Complete`, gesetzt am
+260831-1417 mit der Begründung, der siebzehnte Schritt des Plans stehe aus. Jener Schritt ist
+der Abnahmelauf und trägt keine Bauarbeit; nach der Regel vom 260907-0823 hält er den Zustand
+nicht mehr auf und steht jetzt unter `**Abnahme:**`. Der Dateimarker ist von `_p_` auf `_c_`
+gezogen; der Nachsatz vom 260906-0448 darunter bleibt unangetastet.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Partially Complete
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

@@ -1,7 +1,8 @@
 # Spec: Tippen filtert die Dateiliste, flach und als gefilterter Ordnerbaum
 
 **Date:** 2026-08-14
-**Status:** Gebaut und belegt, Abnahmelauf **nicht** gefahren — die Runde 10 ist beschränkt geschlossen, ihr Plan `planning/260814-2102_c_plan-tippen-filtert-dateiliste-flach-und-tief.md` steht auf `_c_`. Der Dateimarker bleibt `_o_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` offen ist.
+**Status:** Complete — die Runde 10 ist beschränkt geschlossen, ihr Plan `planning/260814-2102_c_plan-tippen-filtert-dateiliste-flach-und-tief.md` steht auf `_c_`. Der Abgleich vom 260815-1216 hat C1.9 und C1.10 einzeln am Baum nachgelesen und je fünf Wege belegt. Der Filter wohnt als `crates/krk-core/src/verzeichnis/filter.rs` neben dem Durchlauf in `durchlauf.rs`, beide nachgesehen am 260909-1021.
+**Abnahme:** offen. Der Abnahmelauf ist nicht gefahren. Von den 77 Abnahmekriterien tragen zehn einen Bündelanteil, und sie verlangen KRK im Vordergrund; kein Kästchen ist abgehakt.
 **Source:** Der Entwurf des Nutzers vom 260814-1520 und seine Berichtigungen vom 260814-1610, festgehalten in der Directive des Circle-Datensatzes `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_t_circle.md`
 **Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`, aktiv seit 260814-1551
 **Grundlage erhoben:** 260814-1830, am Baum auf dem Stand `43dfe90`, unter `crates/` und `resources/`
@@ -587,3 +588,29 @@ findet nur den ersten. Der zugehörige Befund
 verlangt eine Umbenennung im Bestandstext und **bleibt offen**: die Nutzerentscheidung vom
 260906 erlaubt den Nachsatz unter dem unangetasteten Wortlaut und nicht das Umschreiben einer
 Überschrift.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` sagte „Gebaut und belegt, Abnahmelauf **nicht**
+gefahren“ und band den Marker an die offene Frage nach der Lesart von `_c_`. Jene Frage ist am
+260907-0823 beantwortet, und die zwei Auskünfte stehen jetzt in zwei Zeilen. Der Dateimarker
+ist von `_o_` auf `_c_` gezogen; der Nachsatz vom 260906-0448 darunter bleibt unangetastet.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Gebaut und belegt, Abnahmelauf **nicht** gefahren — die Runde 10 ist
+> beschränkt geschlossen, ihr Plan `planning/260814-2102_c_plan-tippen-filtert-dateiliste-
+> flach-und-tief.md` steht auf `_c_`. Der Dateimarker bleibt `_o_`, solange
+> `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-
+> abgenommen.md` offen ist.
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

@@ -1,7 +1,8 @@
 # Spec: Ein Notizzettel als Blatt am Hauptfenster, zwei Zettel, sichert sich selbst
 
 **Date:** 2026-08-13
-**Status:** Gebaut und belegt, Abnahmelauf am 260814 gefahren und 8 von 29 Bündelkriterien deckend — die Runde 9 ist beschränkt geschlossen, ihr Plan `planning/260814-0656_c_plan-notizzettel-als-blatt-mit-zwei-zetteln.md` steht auf `_c_`. Der Dateimarker bleibt `_o_`, gemessen gesetzt vom Abgleich vom 260814-1247 und bestätigt am 260820-2056; die Lesart des Markers an einem Spec ist offen (`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`).
+**Status:** Complete — die Runde 9 ist beschränkt geschlossen, ihr Plan `planning/260814-0656_c_plan-notizzettel-als-blatt-mit-zwei-zetteln.md` steht auf `_c_`. Der Abgleich vom 260814-1247 hat die 46 am Baum nachweisbaren Kriterien einzeln gelesen; sie halten mit den drei dort benannten Einschränkungen. Das Blatt steht als `crates/krk-ui/src/appkit/blaetter/zettel.rs`, nachgesehen am 260909-1021.
+**Abnahme:** teilweise gefahren am 260814-1115 und seitdem unverändert. Von den 29 Kriterien mit Bündelanteil sind 8 belegt, 5 zur Hälfte berührt und 16 nie berührt; die Zuordnung Kriterium für Kriterium steht in `issues/260814-1247_*_sechzehn-der-neunundzwanzig-buendelkriterien-…`. Die Grundmenge ist 77 und nicht 72, wie der Nachsatz vom 260906-0448 unter Punkt 4 ausrechnet. Kein Kästchen ist abgehakt.
 **Source:** Backlog-Eintrag des Nutzers vom 260813-2033, mit der Anlage des Circles geschlossen, und die Directive im Circle-Datensatz `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_*_circle.md`
 **Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`, aktiv seit 260813-2341
 **Grundlage erhoben:** 260813-2348, am Baum unter `crates/` und `resources/`
@@ -567,3 +568,31 @@ zur Abnahme dieser Runde zählt; ohne sie sind es 75. **Die Zählung mit 77 ist 
 richtige**, weil der Spec selbst sagt, dass die zwei dazugehören. Der Reconciliation Log
 darüber nennt 75 und 77 nebeneinander, ohne zu wählen; hier ist gewählt. Anlass:
 `issues/260814-1247_*_die-abnahmeliste-rechnet-gegen-72-kriterien-der-spec-fuehrt-nach-dem-c5-nachtrag-75.md`.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` trug den Stand der Bauarbeit, den Stand der
+Abnahme und die Begründung für den stehengebliebenen Marker in einem Satz. Sie sagt jetzt den
+Zustand, die Abnahme steht unter `**Abnahme:**`, und der Dateimarker ist von `_o_` auf `_c_`
+gezogen. Der Nachsatz vom 260906-0448 darunter bleibt unangetastet.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Gebaut und belegt, Abnahmelauf am 260814 gefahren und 8 von 29
+> Bündelkriterien deckend — die Runde 9 ist beschränkt geschlossen, ihr Plan
+> `planning/260814-0656_c_plan-notizzettel-als-blatt-mit-zwei-zetteln.md` steht auf `_c_`.
+> Der Dateimarker bleibt `_o_`, gemessen gesetzt vom Abgleich vom 260814-1247 und
+> bestätigt am 260820-2056; die Lesart des Markers an einem Spec ist offen
+> (`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-
+> abgenommen.md`).
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

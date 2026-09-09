@@ -1,7 +1,8 @@
 # Spec: Artefakt und Release
 
 **Datum:** 2026-08-21
-**Status:** Vom Nutzer am 260821 abgenommen, gebaut und am Baum belegt; 25 der 40 Abnahmekriterien sind an Proben und am Lesen abgenommen, 15 warten auf den Nutzer. Der Marker bleibt `_o_`; die Begründung steht unten im Abgleichsprotokoll.
+**Status:** Complete — elf von elf Planschritten sind am 260821-1532 gegen den Baum belegt, vier Durchsichten sind gefahren, und jeder Befund ist behoben oder als eigener Datensatz abgelegt; `cargo test --workspace`, `cargo clippy --workspace --all-targets` und `cargo fmt --all --check` liefen grün. Die achte Station steht als `xtask/src/veroeffentlichung.rs` mit `RELEASETEXT` an genau einer Stelle, nachgesehen am 260909-1021.
+**Abnahme:** gefahren am 260821-2105, und am 260821 um 20:24 ist `KRK 0.5.6` über die achte Station wirklich ausgeliefert worden (`https://github.com/tenzoki/krk/releases/tag/v0.5.6`). Die fünfzehn Kriterien, die den Nutzer brauchten, sind gemessen. Für C2.2 fehlt ein zweiter Mac ohne Netz; geprüft ist stattdessen der Mechanismus, auf dem die Zusage beruht, und das ist ein Indiz und keine Abnahme. Die Schließungsnotiz von `circles/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md` schreibt es aus.
 **Baumstand bei der Abfassung:** `d771ec6`
 **Quelle:** Nutzerwunsch vom 260821, „wie könnten wir eine Ersteinstall und eine Update-Function realisieren?", eingegrenzt in drei Klärungsrunden auf Artefakt und Release.
 **Umfangswahl des Nutzers:** nur Artefakt und Release. Kein App-Code, keine neue Kiste, keine Netzverbindung zur Laufzeit. Aktualisieren heißt herunterladen und hinüberziehen.
@@ -439,3 +440,27 @@ dabei nicht bewegt worden.
 ### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
 
 **Zwei weitere Auslieferungen sind durch die Kette gelaufen, ohne dass sich an ihr etwas geändert hat.** `d2824c5` (1.3.0, nach der Runde 22) und `b9d9cbc` (1.4.0, nach der Runde 21) tragen je allein die Versionszahl; `git diff a5c7a46..HEAD --stat -- xtask/ release.sh certify-only.sh Makefile` ist leer. `git tag -l --sort=creatordate | tail -2` nennt `v1.3.0` und `v1.4.0` auf genau diesen Commits. Die 15 Nutzerkriterien sind damit nicht abgenommen, aber ein weiteres Mal in Gebrauch gewesen. Statuszeile und Marker unverändert; die zwei bindenden Datensätze (`260821-1221_*_c6-3-…`, `260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-…`) sind weiter offen.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` beschrieb den Stand vom 260821-1532: der
+Nutzer hatte den Spectext abgenommen, 25 der 40 Kriterien waren an Proben und am Lesen belegt,
+15 warteten. Sie war damit an dem Tag überholt, an dem der Nutzer die 15 gefahren hat. Bauarbeit
+und Abnahme stehen jetzt in zwei Zeilen, und der Dateimarker ist von `_o_` auf `_c_` gezogen.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Vom Nutzer am 260821 abgenommen, gebaut und am Baum belegt; 25 der 40
+> Abnahmekriterien sind an Proben und am Lesen abgenommen, 15 warten auf den Nutzer. Der
+> Marker bleibt `_o_`; die Begründung steht unten im Abgleichsprotokoll.
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

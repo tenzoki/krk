@@ -1,7 +1,8 @@
 # Spec: Auswahl und Kopieren in der Vorschau
 
 **Date:** 2026-08-19
-**Status:** Gebaut und am laufenden Bündel abgenommen — vom Nutzer am 260819-2228 abgenommen, alle acht Planschritte gebaut und einzeln gegen den Baum gelesen; die 15 Abnahmekriterien mit Bündelanteil hat der Nutzer am 260820-1030 an `KRK.app` 0.5.4 gefahren, mit dem Befund, die neuen Funktionen halten. Der Dateimarker steht auf `_p_` und nicht auf `_c_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` offen ist
+**Status:** Complete — alle acht Planschritte sind gebaut und einzeln gegen den Baum gelesen; der Plan `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/planning/260819-2245_c_plan-auswahl-und-kopieren-in-der-vorschau.md` steht auf `_c_`, und die Runde 14 ist kohärent geschlossen. `make check` lief am 260820-0834 und am 260820-2050 grün. Die Abfangstelle geht über `text_auf_ablage_schreiben` in `crates/krk-ui/src/appkit/zwischenablage.rs`, nachgesehen am 260909-1021.
+**Abnahme:** gefahren am 260820-1030 an `KRK.app` 0.5.4 aus `05cb614`; der Befund des Nutzers lautet, die neuen Funktionen halten. Vierzehn der fünfzehn Kriterien mit Bündelanteil sind damit gefahren. C2.12 ist nicht mitgefahren und am Baum zur Hälfte widerlegt (`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_*_die-abfangstelle-verwirft-die-geforderten-sorten-…`); zwei weitere Kriterien tragen die Kennzeichnung **(Probe)** ohne Probe, C2.3 und C2.4.
 **Source:** Der Wunsch des Nutzers vom 260819-2031, in der Vorschau Text auswählen und kopieren zu können, und seine vier Antworten der ersten Klärungsrunde vom 260819-2210
 **Circle:** keiner. Diese Runde ist am 260819-1835 als eigener Circle mit vorgeschalteter Klärung beschlossen worden (Ereignis `scope_resolved` in `orchestrator-events.jsonl`); der Circle entsteht nach der Abnahme dieses Specs, und bis dahin liegen Spec und Datensätze im gemeinsamen Speicher.
 **Grundlage erhoben:** 260819-2216, am Baum auf dem Stand `6be1e81`, unter `crates/` und `resources/`
@@ -345,3 +346,32 @@ sie beim nächsten Durchgang nicht als Nachlässigkeit gelesen wird.
 ### 260829-1252 — Aufräumlauf nach den Runden 19–22, am Baum `b9d9cbc`
 
 **Die Runde 20 hat der Vorschau eine dritte Fläche gegeben, und die Quelltextzusage dieses Specs gilt ihr nicht.** Der PDF-Betrachter (`crates/krk-ui/src/appkit/betrachter.rs`, `5ff1ee4`) beantwortet `copy:` selbst über `PDFView` und legt seine Textauswahl ab; er spricht die Hülle `appkit/zwischenablage.rs` nicht an, und die Probe `nspasteboard_steht_nicht_im_betrachter_und_copy_cut_und_paste_stehen_an_genannten_stellen` hält das (`betrachter.rs:61-67`). Kopiert wird dort der Seitentext, nicht ein Quelltext — für ein PDF gibt es keinen. Die Abfangstelle der Textvorschau und ihr Weg über `text_auf_ablage_schreiben` sind unverändert (`git diff a5c7a46..HEAD -- crates/krk-ui/src/appkit/vorschau.rs` ändert die Anzeige, nicht die Abfangstelle). Die Zusage dieses Specs bleibt, was sie war: sie gilt der gerenderten Textvorschau. Marker `_p_` und Statuszeile unverändert; die Begründung steht oben.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` trug die Bauarbeit, die gefahrene Abnahme und
+die Begründung für den stehengebliebenen Marker in einem Satz. Diese Datei ist unter den
+vierzehn die einzige neben dem Spec der Runde 15, deren Abnahme wirklich gefahren ist; sie steht
+jetzt als eigene Auskunft unter `**Abnahme:**`. Der Dateimarker ist von `_p_` auf `_c_` gezogen.
+Damit fällt zugleich die Unwahrheit, die der Abgleich vom 260820-2056 selbst benannt hat: `_p_`
+heißt „ein Agent arbeitet daran“, und niemand tat es seit dem 260820-1045.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Gebaut und am laufenden Bündel abgenommen — vom Nutzer am 260819-2228
+> abgenommen, alle acht Planschritte gebaut und einzeln gegen den Baum gelesen; die 15
+> Abnahmekriterien mit Bündelanteil hat der Nutzer am 260820-1030 an `KRK.app` 0.5.4
+> gefahren, mit dem Befund, die neuen Funktionen halten. Der Dateimarker steht auf `_p_`
+> und nicht auf `_c_`, solange `shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-
+> einem-spec-gebaut-oder-abgenommen.md` offen ist
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

@@ -1,7 +1,8 @@
 # Spec: Suche in der Belegungsansicht, vollständiges Menü, weitere Instanz
 
 **Date:** 2026-08-13
-**Status:** Überarbeitet nach der Diagrammprüfung
+**Status:** Complete — die Runde 7 (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz`) ist am 260813 beschränkt geschlossen, ihr Plan `planning/260813-0205_c_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md` steht auf `_c_`, und der Bau ist dort gegen den Baum gelesen. `Kommando::WeitereInstanz` steht in `crates/krk-core/src/tasten/belegung.rs`, die Zulässigkeitsregel als `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, nachgesehen am 260909-1021.
+**Abnahme:** offen. Kein Abnahmelauf ist gefahren. Zwei Datensätze binden den Spec weiter und sind unbeantwortet: `shared/decisions/260813-0053_*_wie-viele-obermenues-…` und `shared/decisions/260813-0053_*_was-teilen-sich-zwei-instanzen-…`; keine der Runden 19 bis 22 hat ein Obermenü hinzugefügt oder die Sitzungsablage berührt.
 **Überarbeitet:** 260813-0130, nach dem Spruch `tangled` der Diagrammprüfung `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/reviews/260813-0109-conceptrev-spec-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md`. Was geändert wurde und warum, steht unten unter `## Nachzug vom 260813-0130`.
 **Source:** Nutzerwortlaut vom 260813: „1. wenn F1 gedrückt wurde und die tastenbelegung angezeigt wird, sollte jede eingabe eines zeichens an einen suchstring appended werden und sofort nach dem ersten treffer gesucht werden, enter sucht das nächste vorkommen, weitere eingaben werden append und lösen eine weitere suche aus, backspace löscht und triggert die suche, esc beendet F1. 2. wir brauchen eine möglichkeit eine zweite instanz von krk zu starten - auch per taste. 3. alle tastenbefehle sollten auch über das Menu erreichbar sein."
 **Grundlage erhoben:** 260813-0053, am Baum unter `crates/` und `resources/`
@@ -403,3 +404,25 @@ Alle drei Diagramme sind mit `mmdc` 11.16.0 nach SVG und PNG gerendert und anges
 **Was diesen Spec daneben bindet:** `shared/decisions/260813-0053_o_wie-viele-obermenues-…` und `260813-0053_o_was-teilen-sich-zwei-instanzen-…` sind weiter unbeantwortet; keine der vier Runden hat ein Obermenü hinzugefügt oder die Sitzungsablage berührt (`git diff a5c7a46..HEAD --stat` nennt weder `ablage/sitzung*` noch eine Menüstruktur).
 
 **Statuszeile und Marker.** Die Zeile `**Status:** Überarbeitet nach der Diagrammprüfung` beschreibt den Stand vor dem Bau; die Runde 7 (`circles/260813-0100-…`) ist am 260813 beschränkt geschlossen, und der Bau ist dort gegen den Baum gelesen. Der Marker `_o_` bleibt aus demselben Grund wie an den Nachbarspecs (`shared/decisions/260819-1440_*_was-sagt-der-marker-c-an-einem-spec-…`, offen); die Statuszeile wird hier nicht umgeschrieben, weil der Abgleich der Runde 7 die Auskunft im Circle trägt und eine zweite Fassung hier auseinanderliefe.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` sagte „Überarbeitet nach der
+Diagrammprüfung“ und beschrieb damit den Stand vor dem Bau; gebaut ist die Runde seit dem
+260813. Sie sagt jetzt den Zustand, die Abnahme steht unter `**Abnahme:**`, und der Dateimarker
+ist von `_o_` auf `_c_` gezogen. Die Zeile `**Ueberarbeitet:**` darunter bleibt, wo sie ist.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Überarbeitet nach der Diagrammprüfung
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

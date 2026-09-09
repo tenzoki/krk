@@ -1,7 +1,8 @@
 # Implementierungsplan: Der Git-Bereich liest Status, Branch und Verlauf (Stufe A)
 
 **Date:** 2026-08-30
-**Status:** Partially Complete
+**Status:** Complete — die sechzehn Bauschritte stehen auf `[DONE]` und sind am 260831-1417 einzeln gegen den Baum gelesen, je mit Fundstelle in der Tabelle unter `## Reconciliation Log`; `make check` lief an jenem Tag grün, und `cargo tree` gegen beide Mac-Ziele fand weder `cc` noch ein Paket mit einem Namen auf `-sys`. Schritt 17 ist der Abnahmelauf am laufenden Bündel und trägt keine Bauarbeit.
+**Abnahme:** offen. Schritt 17 führt die 25 Kriterien der Nutzerarbeit als Prüfliste; gefahren ist er nicht. Der Lauf verlangt KRK im Vordergrund, aus einem Terminalfenster gestartet, und kein Agent kann ihn leisten.
 **Spec:** `260830-1251_*_spec-git-bereich-liest-status-branch-verlauf.md`, vom Nutzer am 260830 unverändert freigegeben; A1 bis A14 gelten, E1 bis E13 stehen fest.
 **Decidability:** Die tragende Frage lautet: *Welche Marke trägt dieser Eintrag, und gehört der eintreffende Befund noch zu dem Ordner, der jetzt dasteht?* Beide Hälften sind aus den Eingaben entscheidbar, die der Mechanismus hat. Die erste beantwortet der Statusstrom von `gix`, der je Eintrag genau einen der drei Fälle liefert und für einen unveränderten Eintrag gar nichts; die zweite beantwortet die Generation des Lesevorgangs, die der Lauf mitführt und die `Ordnermodell::generation` gegenhält — und sie ist hier tragend und nicht bloß Zierat, weil die Zuordnung über den **Namen** läuft und ein Name im neuen Ordner einen gleichnamigen Eintrag träfe, während der Eintragsindex des Filterbefunds am Bestandsende von selbst durchfällt. **Nicht entscheidbar ist, ob der angezeigte Befund noch der wahre Zustand des Repositorys ist.** Ein `git commit` in einem Terminal ändert nichts im angezeigten Unterordner, FSEvents meldet nichts, und KRK hat keine Eingabe, aus der es die Veralterung ableiten könnte. Der Spec hat den Mechanismus dafür schon gewechselt (A9): KRK sagt nicht zu, aktuell zu sein, sondern beantwortet die andere, entscheidbare Frage — *was stand hier, als dieser Ordner zuletzt gelesen wurde* —, und die offene Nutzerfrage nach einem Beobachter auf `.git` ist als Datensatz gefilt. Der Plan nähert an dieser Stelle nichts an.
 
@@ -755,3 +756,27 @@ drei Kommandos tragen `Wirkungsbereich::Navigator`, nämlich `FensterWechseln`, 
 ob die Fläche einen kopflosen Aufruf bekommt, ist eine Frage für den Nutzer** und mit diesem
 Nachsatz nicht entschieden. Anlass:
 `issues/260831-1334_*_make-tasten-ist-der-interaktive-tastenlogger-und-traegt-keine-dritte-spalte.md`.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` stand auf `Partially Complete`, gesetzt am
+260831-1417 mit dem Satz, `_c_` wäre erst nach Schritt 17 richtig. Schritt 17 ist der
+Abnahmelauf; nach der Regel vom 260907-0823 folgt der Zustand der Bauarbeit, und die sechzehn
+Bauschritte stehen. Die Abnahme hat mit `**Abnahme:**` eine eigene Zeile bekommen, der
+Dateimarker ist von `_p_` auf `_c_` gezogen. An den Schrittmarken ist nichts geändert: Schritt
+17 trägt weiterhin keine Marke.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** Partially Complete
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

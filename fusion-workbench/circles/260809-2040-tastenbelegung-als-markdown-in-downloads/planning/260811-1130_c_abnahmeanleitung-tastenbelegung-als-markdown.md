@@ -1,6 +1,7 @@
 # Abnahmeanleitung: Die Tastenbelegung als Markdown
 
-**Status:** offen, wartet auf den Abnahmelauf des Nutzers
+**Status:** Complete — die Anleitung ist fertig geschrieben und führt die 41 Kriterien des Specs in acht Blöcken, nach Werkzeug geordnet. Ihre Bauarbeit ist der Text selbst; belegt ist er an seinem eigenen Bestand und an dem Spec, auf den er sich beruft (`planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md`, C1 bis C4).
+**Abnahme:** offen. Kein Block ist gefahren. Die Anleitung beschreibt den Lauf und ersetzt ihn nicht, und abgehakt wird ohnehin im Spec und nicht hier, wie `## Ergebnis eintragen` sagt.
 **Grundlage:** `planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md`, C1 bis C4
 **Zweck:** Die 41 Abnahmekriterien des Specs sind als Behauptungen über den Endzustand
 formuliert. Diese Datei macht Schritte daraus: Handlung, Beobachtungsort, Bestehensbedingung.
@@ -203,3 +204,25 @@ Fall ist von einer Probe gehalten, und ein Handlauf dafür wäre ein eigener Sch
 
 Diese Datei hat keine Kästchen. Abgehakt wird im Spec, `### C1` bis `### C4` — dort stehen die
 41 Kriterien mit `- [ ]`. Diese Anleitung sagt nur, wie du zu jedem von ihnen kommst.
+
+## Nachsatz vom 260909-1021: Zustand und Abnahme sind getrennt
+
+**Was geändert wurde.** Die Kopfzeile `**Status:**` stand auf „offen, wartet auf den Abnahmelauf
+des Nutzers“ und beantwortete damit allein die Abnahmefrage. Ueber den Zustand der Datei sagte
+sie nichts: geschrieben ist die Anleitung vollständig. Beide Auskünfte stehen jetzt getrennt,
+und der Dateimarker ist von `_o_` auf `_c_` gezogen.
+
+**Der ursprüngliche Wortlaut der Kopfzeile, damit er lesbar bleibt:**
+
+> **Status:** offen, wartet auf den Abnahmelauf des Nutzers
+
+**Worauf die Änderung steht.** Der Nutzer hat am 260907-0823 entschieden: der Zustand eines
+Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Kopfzeile. Am 260909 hat er die Reichweite dieser Regel auf den ganzen Bestand gezogen
+(`shared/decisions/260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+Möglichkeit 3), ausdrücklich auch auf die Dokumente innerhalb geschlossener Runden. Damit ist
+der Grund entfallen, aus dem der Marker hier stehengeblieben war: ein Zustand mit vier Werten
+kann die zwei Fragen „ist es gebaut“ und „ist es abgenommen“ nicht zugleich beantworten, und
+die Trennung ist genau die Antwort darauf. Das Muster dieser Änderung ist
+`shared/planning/260825-1725_c_plan-vorschau-vertieft-und-zwei-fehler.md` vom 260908-1539. Am
+Sachtext oberhalb ist nichts geändert.

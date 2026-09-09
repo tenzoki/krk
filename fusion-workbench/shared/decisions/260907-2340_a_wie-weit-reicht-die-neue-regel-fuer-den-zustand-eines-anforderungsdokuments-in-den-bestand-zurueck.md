@@ -77,3 +77,6 @@ Möglichkeit 2. Sie räumt den Teil weg, den keine Regel schützt, und lässt di
 Ruhe. Für die zwei blockierten Antworten heißt das: Antwort notiert, Text unverändert, Lücke
 dokumentiert statt korrigiert — was schlechter ist als eine Korrektur und besser als eine
 stille Unstimmigkeit zwischen Zusage und Baum.
+
+---
+Answered: `260905-2008-orchestrator-session.md` `## Fortsetzung 260909-0938 — Reichweite der Zustandsregel` — Möglichkeit 3: die Regel gilt für alle 42 Anforderungsdokumente und Pläne, samt der Deckungszusage der Runde 6 und dem Plantext der Runde 20; der ursprüngliche Wortlaut bleibt je Datei als datierter Nachsatz erhalten, und die zwei Texte der zurückgestellten Runde bleiben auf `_o_`, weil ihnen keine Bauarbeit zugrunde liegt; ruled by user, Kai Stalmann <kai@stalmann.org>.
