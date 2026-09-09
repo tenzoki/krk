@@ -11,3 +11,5 @@
 **Eine Vermutung zur Ursache, ungeprüft.** `F4` ist auf Apple-Tastaturen ab Werk mit Spotlight beziehungsweise Launchpad belegt; KRK sieht die Taste nur, wenn in den Systemeinstellungen „F1, F2 usw. als Standard-Funktionstasten verwenden" eingeschaltet ist. Trifft das zu, ist die Hakeligkeit keine Eigenschaft von KRK, und eine Runde sollte das zuerst messen, bevor sie eine Kombination wählt.
 
 **Related:** `resources/default-keymap.toml` (Eintrag `bearbeiten`); `circles/260807-2116-eingebauter-editor-mit-textmarken` (die Runde, die den Editor gebaut hat)
+
+Closed: cmd+e (editor_rundweg) oeffnet seit dem 260823 im Dateifenster denselben ausgewaehlten Eintrag wie f4. Bestätigt vom Nutzer am 260909-2209 über `/fusion:next`.

@@ -18,3 +18,5 @@ Plan vorliegen, die Zahl der Entscheidungsdatensätze und die letzten zehn Verla
 Definitionsdatei liegt unter `~/Library/Application Support/KRK/`, also im Bestandsort von
 KRK neben Lesezeichen, gesicherter Sitzung, abweichender Tastenbelegung und Notizzetteln.
 Der Nutzer nennt dies als nächsten Circle.
+
+Closed: die Leseprofile stehen als readers.toml, die Auslieferungsfassung fuehrt 13 Profile und deckt die Skizze des Eintrags. Bestätigt vom Nutzer am 260909-2209 über `/fusion:next`.
