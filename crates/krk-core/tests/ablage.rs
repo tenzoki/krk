@@ -4389,6 +4389,56 @@ fn jede_verglichene_ablagedatei_hat_eine_eingebettete_fassung() {
     }
 }
 
+/// Auf einer frischen Installation meldet der erste Start keine Neuerung.
+///
+/// **Die Probe daneben legt die Dateien selbst hin, diese laesst sie
+/// entstehen.** Gefahren wird die Reihenfolge des Starts: `einstellungen::laden`
+/// und `leseprofile::laden` legen `settings.toml` und `readers.toml` in
+/// **diesem** Durchgang an, und erst danach erhebt der Vergleich. Beide tragen
+/// dann keinen Unterschied, weil sie woertlich aus der Auslieferungsfassung
+/// entstanden sind, und `keymap.toml` traegt keinen, weil KRK sie nie anlegt
+/// und der Vergleich nur vergleicht, was dasteht.
+///
+/// Erhoebe der Start **vor** den zwei Ladern, faende er zwei Dateien vor, die
+/// es in dieser Sekunde noch nicht gibt, und meldete dem Nutzer am ersten Tag
+/// jeden Eintrag als Neuerung. Dass die Erhebung in `krk-ui` wirklich hinter
+/// ihnen steht, haelt
+/// `neuerungsproben::die_erhebung_steht_im_durchgang_hinter_den_zwei_ladern`
+/// in `krk-ui/src/appkit/anwendung.rs`; hier steht, was diese Reihenfolge
+/// bewirkt.
+#[test]
+fn auf_einer_frischen_installation_meldet_der_erste_start_keine_neuerung() {
+    let (_ordner, ablage) = ablage("neuerungen-frische-installation");
+
+    let bestand = ablage
+        .durchgang(|zugang| {
+            let _ = einstellungen::laden(zugang);
+            let _ = leseprofile::laden(zugang);
+            neuerungen::erheben(zugang)
+        })
+        .expect("die Schreibsperre laesst sich nicht nehmen");
+
+    assert_eq!(
+        zeile(&bestand, Datei::Belegung).befund,
+        Befund::Fehlt,
+        "keymap.toml entsteht beim ersten Start nicht und darf nicht verglichen werden"
+    );
+    for welche in [Datei::Einstellungen, Datei::Leser] {
+        assert_eq!(
+            zeile(&bestand, welche).befund,
+            Befund::Verglichen,
+            "{} ist beim ersten Start entstanden und muesste verglichen sein",
+            welche.dateiname()
+        );
+    }
+    assert!(
+        !bestand.traegt_unterschied(),
+        "der erste Start einer frischen Installation meldet einen Unterschied: {:?}",
+        bestand.dateien()
+    );
+    assert_eq!(neuerungen::startzeile(&bestand, None), None);
+}
+
 /// Eine Nutzerdatei, die der Auslieferungsfassung gleicht, liefert keine
 /// Neuerung.
 ///

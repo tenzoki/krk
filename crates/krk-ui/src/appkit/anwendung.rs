@@ -271,6 +271,8 @@ use objc2_foundation::{
     NSString, NSTimer,
 };
 
+use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG};
+use krk_core::ablage::neuerungen::{self, Bestand};
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
     Ablage, Aenderung, Ausgang, Datei, Einstellungen, Fensterseite, Lesezeichen, Lesezeichenliste,
@@ -436,6 +438,61 @@ fn faengerstation(nimmt_auf: bool, druck: Tastendruck, zeichen: Option<char>) ->
         Some(zeichen) => Faengerstation::Suchzeichen(zeichen),
         None => Faengerstation::Keine,
     }
+}
+
+/// Erhebt die Neuerungen dieser Fassung, falls fuer sie noch nicht gemeldet ist
+/// (Runde 24).
+///
+/// Zurueck kommen zwei Stuecke: der [`Bestand`], den
+/// [`AnwendungsIvars::neuerungen`] haelt, und die Meldungen fuer die
+/// Statuszeile. `None` beim ersten heisst „nicht erhoben" und nicht „kein
+/// Unterschied"; die zwei Auskuenfte auseinanderzuhalten ist der Zweck des
+/// [`Option`].
+///
+/// # Der Fassungsvergleich steht vor der Erhebung und nicht dahinter
+///
+/// Stimmt der abgelegte Merker mit [`LAUFENDE_FASSUNG`] ueberein, wird keine
+/// der verglichenen Dateien ein zweites Mal geoeffnet — nicht eine, und auch
+/// nicht, um den Unterschied zu erheben und ihn dann zu verschweigen. Das ist
+/// zugleich die Einloesung von „einmal je Fassung" und die Bedingung, unter der
+/// die Zeitzusage L4 im Dauerbetrieb unberuehrt bleibt. Gemessen wird sie und
+/// nicht zugesichert: `bei_gleichem_merker_wird_keine_datei_geoeffnet` zaehlt
+/// die Oeffnungen, und
+/// `bei_neuer_fassung_werden_die_verglichenen_dateien_geoeffnet` eicht dasselbe
+/// Messmittel am Gegenfall.
+///
+/// # Der Merker wird auch dann geschrieben, wenn nichts zu melden war
+///
+/// Sonst erhoebe jeder Start derselben Fassung von neuem, und die Zusage
+/// „einmal je Fassung" waere fuer den haeufigsten Fall — es gibt keinen
+/// Unterschied — gerade nicht eingeloest.
+///
+/// **Ein gescheitertes Vermerken wird gemeldet und nicht verschluckt.** Die
+/// Folge ist nicht, dass die Erhebung fehlschluege, sondern dass sie sich bei
+/// jedem Start wiederholt; das ist eine Auskunft wert, und ein stiller
+/// Fehlschlag waere der eine Fall, in dem der Nutzer die Wiederholung fuer
+/// einen Defekt der Meldung hielte.
+fn neuerungen_erheben(zugang: &Zugang<'_>) -> (Option<Bestand>, Vec<String>) {
+    let mut meldungen = Vec::new();
+    // Die `Ersetzung` reicht der Ladeweg dieser Datei weiter und verschluckt
+    // sie nicht; der Kopf von `krk_core::ablage::merker` traegt den Grund.
+    let (merker, meldung) = merker::laden(zugang).mit_meldung();
+    meldungen.extend(meldung);
+    if !merker.meldung_steht_aus(LAUFENDE_FASSUNG) {
+        return (None, meldungen);
+    }
+    let bestand = neuerungen::erheben(zugang);
+    if let Err(fehler) = merker::vermerken(zugang, LAUFENDE_FASSUNG) {
+        meldungen.push(format!(
+            "es ließ sich nicht vermerken, dass die Neuerungen dieser Fassung gemeldet sind; \
+             die Meldung kommt beim nächsten Start wieder: {fehler}"
+        ));
+    }
+    meldungen.extend(neuerungen::startzeile(
+        &bestand,
+        pfade::benutzerverzeichnis().as_deref(),
+    ));
+    (Some(bestand), meldungen)
 }
 
 /// Der Tastencode der Eingabetaste, aus der einen Tastentabelle des Kerns.
@@ -670,6 +727,23 @@ pub struct AnwendungsIvars {
     ///
     /// [`Inhalt::Bild`]: crate::vorschaumodell::Inhalt::Bild
     profile: RefCell<Arc<Profile>>,
+    /// Was diese Fassung an den von Hand gepflegten Ablagedateien mitbringt
+    /// (Runde 24).
+    ///
+    /// Erhoben in [`Anwendungsdelegierter::sitzung_laden`], als Letztes im
+    /// einen Durchgang und **hinter** dem Fassungsvergleich: `None` heisst
+    /// „fuer diese Fassung ist schon gemeldet, es wurde nichts erhoben" und
+    /// nicht „es gibt keinen Unterschied". Der Unterschied zwischen den beiden
+    /// Auskuenften ist tragend, denn ein erhobener Bestand **ohne** Unterschied
+    /// steht hier als `Some` und traegt trotzdem die vollen Pfade, die das
+    /// Blatt auf Abruf in jedem Fall zeigt.
+    ///
+    /// **Er wird nach dem Start nicht nachgezogen.** Das ist keine
+    /// Sparsamkeit, sondern die Wahrheit ueber KRK: die Leseprofile und die
+    /// Belegung, mit denen die laufende Anwendung arbeitet, sind die vom Start,
+    /// und ein Blatt, das die Platte neu laese, zeigte einen Bestand, den
+    /// niemand benutzt.
+    neuerungen: RefCell<Option<Bestand>>,
     /// Die Meldung, falls die Belegung ersetzt werden musste.
     ///
     /// Sie steht hier und nicht in der Statuszeile, weil es die Statuszeile
@@ -1275,6 +1349,7 @@ impl Anwendungsdelegierter {
             belegung: RefCell::new(belegung),
             einstellungen: RefCell::new(Einstellungen::default()),
             profile: RefCell::new(Arc::default()),
+            neuerungen: RefCell::new(None),
             belegungsmeldung,
             modell: RefCell::new(Fenstermodell::aus_sitzung(&Sitzung::default())),
             fenster: OnceCell::new(),
@@ -1823,6 +1898,15 @@ impl Anwendungsdelegierter {
     /// vorschau-zaehlt-ordnerinhalt-im-default-profil/decisions/260827-1322_o_
     /// faellt-das-default-profil-auch-im-messmodus-an-und-was-misst-l7-
     /// danach.md`; gebaut ist ohne Ausnahme fuer den Messmodus.
+    ///
+    /// **Seit der Runde 24 steht die Erhebung der Neuerungen als Letztes im
+    /// selben Durchgang**, und die Reihenfolge ist tragend: die zwei Lader
+    /// darueber legen `settings.toml` und `readers.toml` beim ersten Start an.
+    /// Im Messmodus faellt sie mit dem ganzen Durchgang weg, denn jede der vier
+    /// Aufgaben kehrt vorher zurueck — der Messlauf schreibt also keinen Merker
+    /// und meldet nichts. **Damit sieht kein Messlauf, was die Erhebung
+    /// kostet**, und die Zusage aus dem L4-Datensatz jener Runde haengt an der
+    /// Probe, die die Oeffnungen zaehlt, und nicht an einer Messstrecke.
     fn sitzung_laden(&self) -> (Sitzung, Vec<String>) {
         let ivars = self.ivars();
         match &ivars.messaufgabe {
@@ -1914,11 +1998,13 @@ impl Anwendungsdelegierter {
         }
         let _ = ivars.sitzungsrecht.set(recht);
 
-        // **Ein Durchgang fuer alle drei Dateien.** Die Sitzung, die
-        // Einstellungen und die Leseprofile werden unter derselben
-        // Schreibsperre gelesen; das Lesen steht mit darunter, weil schon
-        // `Zugang::laden` schreibt, wenn eine Datei beschaedigt ist und zur
-        // Seite gelegt wird.
+        // **Ein Durchgang fuer alles, was der Start aus der Ablage braucht.**
+        // Die Sitzung, die Einstellungen, die Leseprofile und seit der Runde 24
+        // die Erhebung der Neuerungen werden unter derselben Schreibsperre
+        // gelesen; das Lesen steht mit darunter, weil schon `Zugang::laden`
+        // schreibt, wenn eine Datei beschaedigt ist und zur Seite gelegt wird.
+        // Eine Zahl steht hier nicht: welche Stuecke es sind, sagt der Rumpf
+        // darunter, und mit dem naechsten waere sie falsch.
         let gelesen = ablage.durchgang(|zugang| {
             let sitzung = zugang.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
             // Die Einstellungen aus C11, ueber denselben Zugang. Der Aufruf legt
@@ -1938,18 +2024,28 @@ impl Anwendungsdelegierter {
             // Statuszeile, aber nicht durch dieselbe Tuer — warum, steht im Kopf
             // von `krk_core::ablage::leseprofile`.
             let (profile, profilmeldungen) = leseprofile::laden(zugang);
+            // **Die Erhebung der Neuerungen steht als Letztes im Durchgang**
+            // (Runde 24), und die Reihenfolge ist tragend und keine Laune: die
+            // zwei Aufrufe darueber legen `settings.toml` und `readers.toml`
+            // beim ersten Start an. Wer davor erhoebe, hielte die
+            // Auslieferungsfassung gegen zwei Dateien, die es in dieser
+            // Sekunde noch nicht gibt, und meldete dem Nutzer am ersten Tag
+            // jeden Eintrag als Neuerung.
+            let erhoben = neuerungen_erheben(zugang);
             (
                 sitzung,
                 eingestellt,
                 (profile.mit_meldung(), profilmeldungen),
+                erhoben,
             )
         });
         let (
             (sitzung, meldung),
             (eingestellt, meldung_einstellungen),
             ((profile, meldung_profile), profilmeldungen),
+            (bestand, neuerungsmeldungen),
         ) = match gelesen {
-            Ok(alle_drei) => alle_drei,
+            Ok(alles) => alles,
             Err(fehler) => {
                 meldungen.push(format!(
                     "die Schreibsperre der Ablage lässt sich nicht nehmen, es wird nichts \
@@ -1964,6 +2060,12 @@ impl Anwendungsdelegierter {
         *ivars.profile.borrow_mut() = Arc::new(profile);
         meldungen.extend(meldung_profile);
         meldungen.extend(profilmeldungen);
+        // **Der Bestand wird auch dann gehalten, wenn er keinen Unterschied
+        // traegt**: das Blatt auf Abruf nennt die vollen Pfade in jedem Fall.
+        // `None` heisst hier etwas anderes, naemlich „nicht erhoben"; die
+        // Begruendung steht am Feld.
+        *ivars.neuerungen.borrow_mut() = bestand;
+        meldungen.extend(neuerungsmeldungen);
         // Derselbe Zugang traegt die Lesezeichen aus C5. Er wird hier einmal
         // geoeffnet und nicht je Datei ein zweites Mal: `Ablage::oeffnen` legt
         // den Ordner an, und zweimal anzulegen hiesse, dieselbe Frage zweimal an
@@ -10482,6 +10584,22 @@ mod leseprofilproben {
     /// werden; sie sieht aber nicht, ob ueberhaupt welche gelesen wurden. Diese
     /// haelt die andere Haelfte der Kette.
     ///
+    /// # Gezaehlt wird der Betriebscode und nicht der ganze Baum
+    ///
+    /// **Seit dem 260910**, und der Anlass war ein roter Lauf: die Runde 24
+    /// brauchte in `krk-core/tests/ablage.rs` eine Probe, die die Reihenfolge
+    /// des Starts nachfaehrt — Einstellungen, Leseprofile, dann die Erhebung
+    /// der Neuerungen —, und dafuer ruft sie beide Lader. Ein Ruf aus einem
+    /// Probenziel ist **keine** zweite Lesestelle: er laeuft in keinem Start
+    /// von KRK, und die Zusage aus C4.5 sagt ueber ihn nichts. Gezaehlt wird
+    /// deshalb, was unter einem `src/` steht, und dort alles vor dem ersten
+    /// `#[cfg(test)]` — dieselbe Schnittstelle wie in
+    /// `vorschaumodell::tests::zusammenfassen_hat_einen_rufer_…`.
+    ///
+    /// Die Zusage selbst ist damit unberuehrt: ein zweiter Rufer im
+    /// Betriebscode macht diese Probe weiter rot, gleich in welcher Datei er
+    /// steht.
+    ///
     /// # Was diese Probe nicht sieht
     ///
     /// Gezaehlt wird die **Aufrufform** `leseprofile::laden(`. Nicht gezaehlt
@@ -10499,7 +10617,13 @@ mod leseprofilproben {
 
         let rufer: Vec<(String, usize)> = quelldateien()
             .into_iter()
-            .map(|(datei, inhalt)| (datei, aufrufstellen(&inhalt, nadel)))
+            .filter(|(datei, _)| datei.contains("/src/"))
+            .map(|(datei, inhalt)| {
+                let betrieb = inhalt
+                    .split_once("#[cfg(test)]")
+                    .map_or(inhalt.as_str(), |(davor, _)| davor);
+                (datei, aufrufstellen(betrieb, nadel))
+            })
             .filter(|(_, zahl)| *zahl > 0)
             .collect();
 
@@ -10791,6 +10915,227 @@ mod dateiablageproben {
             "der Delegierte beantwortet `paste:` wieder; damit fuellt `cmd+v` im \
              Dateifenster den Filtertext, den der Entscheid vom 260907-2009 auf \
              `cmd+f` verlegt hat"
+        );
+    }
+}
+
+/// Die Erhebung der Neuerungen beim Start (Runde 24).
+///
+/// **Sie haengt an einem `Zugang` und nicht an AppKit**, und deshalb stehen die
+/// Proben hier und nicht am laufenden Buendel: gemessen wird
+/// [`neuerungen_erheben`](super::neuerungen_erheben) gegen einen Pruefordner
+/// der Fassung dieser Kiste ([`crate::pruefordner`], keine vierte).
+///
+/// # Wie hier Oeffnungen gezaehlt werden
+///
+/// Eine gelungene Lesung hinterlaesst nichts, an dem sie abzulesen waere; eine
+/// **beschaedigte** Datei dagegen legt [`Zugang::laden`] beim Oeffnen zur Seite,
+/// und die beiseitegelegte Fassung steht danach auf der Platte
+/// ([`atomar::beiseitepfad`]). Die drei verglichenen Dateien stehen in diesen
+/// Proben deshalb absichtlich als kaputtes TOML da: jede Oeffnung schreibt
+/// dann genau eine Nachbardatei, und die Zahl dieser Nachbardateien **ist** die
+/// Zahl der Oeffnungen.
+///
+/// Das Messmittel ist geeicht und nicht behauptet:
+/// `bei_gleichem_merker_wird_keine_der_drei_dateien_geoeffnet` erwartet null,
+/// `bei_neuer_fassung_werden_die_drei_dateien_geoeffnet` erwartet drei, und
+/// beide zaehlen mit derselben Zeile, `geoeffnete`. Eine Probe allein sagte
+/// nichts: null Nachbardateien misst auch, wer gar nicht messen kann.
+///
+/// `reported.toml` wird dabei in **beiden** Faellen geoeffnet und ist keine der
+/// drei — ohne sie gaebe es die Frage nicht, die hier entschieden wird.
+#[cfg(test)]
+mod neuerungsproben {
+    use krk_core::ablage::merker::LAUFENDE_FASSUNG;
+    use krk_core::ablage::neuerungen::Bestand;
+    use krk_core::ablage::{Ablage, Ablageort, Datei, atomar};
+
+    use crate::pruefordner::Pruefordner;
+
+    use super::neuerungen_erheben;
+
+    /// Die drei von Hand gepflegten Dateien, in der Reihenfolge von
+    /// [`Datei::ALLE`].
+    const DIE_DREI: [Datei; 3] = [Datei::Belegung, Datei::Einstellungen, Datei::Leser];
+
+    /// Kein TOML, aber ein oberster Schluessel.
+    ///
+    /// Beides ist noetig: ohne obersten Schluessel nimmt [`Ablage`] den anderen
+    /// Zweig und legt **nichts** zur Seite, und dann zaehlte das Messmittel
+    /// eine Oeffnung nicht mit, die stattgefunden hat.
+    const KAPUTT: &str = "name = \"krk\"\ndies ist kein toml\n";
+
+    /// Legt die drei verglichenen Dateien als kaputtes TOML an und vermerkt
+    /// `fassung` als zuletzt gemeldet.
+    fn ordner_mit(zweck: &str, fassung: &str) -> Pruefordner {
+        let ordner = Pruefordner::neu(zweck);
+        for welche in DIE_DREI {
+            ordner.datei(welche.dateiname(), KAPUTT);
+        }
+        ordner.datei(
+            Datei::Merker.dateiname(),
+            format!("gemeldete_fassung = \"{fassung}\"\n"),
+        );
+        ordner
+    }
+
+    /// Wie viele der drei Dateien geoeffnet wurden, gezaehlt an den
+    /// beiseitegelegten Fassungen.
+    fn geoeffnete(ordner: &Pruefordner) -> Vec<&'static str> {
+        DIE_DREI
+            .into_iter()
+            .filter(|welche| {
+                let pfad = ordner.unter(welche.dateiname());
+                let beiseite = atomar::beiseitepfad(&pfad).expect("der Nachbarname steht fest");
+                beiseite.exists()
+            })
+            .map(Datei::dateiname)
+            .collect()
+    }
+
+    /// Faehrt die Erhebung an einem Ordner, so wie `sitzung_laden` sie faehrt.
+    fn erheben(ordner: &Pruefordner) -> (Option<Bestand>, Vec<String>) {
+        let ablage =
+            Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
+        ablage
+            .durchgang(neuerungen_erheben)
+            .expect("die Schreibsperre laesst sich nehmen")
+    }
+
+    /// Bei gleichem Merker wird keine der drei Dateien ein zweites Mal
+    /// geoeffnet.
+    ///
+    /// Die Bedingung aus dem L4-Datensatz der Runde 24, gemessen und nicht
+    /// zugesichert. Wie gezaehlt wird, steht im Kopf dieses Moduls; die Eichung
+    /// des Messmittels ist die Probe darunter.
+    #[test]
+    fn bei_gleichem_merker_wird_keine_der_drei_dateien_geoeffnet() {
+        let ordner = ordner_mit("neuerungen-gleicher-merker", LAUFENDE_FASSUNG);
+
+        let (bestand, meldungen) = erheben(&ordner);
+
+        assert_eq!(
+            geoeffnete(&ordner),
+            Vec::<&str>::new(),
+            "bei gleichem Merker ist eine der drei Dateien geoeffnet worden"
+        );
+        assert!(
+            bestand.is_none(),
+            "bei gleichem Merker ist trotzdem erhoben worden: {bestand:?}"
+        );
+        assert_eq!(
+            meldungen,
+            Vec::<String>::new(),
+            "bei gleichem Merker geht eine Meldung hinaus"
+        );
+    }
+
+    /// Die Eichung des Messmittels: bei neuer Fassung werden alle drei
+    /// geoeffnet.
+    ///
+    /// Ohne sie waere die Probe darueber wertlos — null beiseitegelegte
+    /// Fassungen misst auch ein Zaehler, der nichts sieht.
+    #[test]
+    fn bei_neuer_fassung_werden_die_drei_dateien_geoeffnet() {
+        let ordner = ordner_mit("neuerungen-neue-fassung", "0.0.0-eine-andere");
+
+        let (bestand, _meldungen) = erheben(&ordner);
+
+        assert_eq!(
+            geoeffnete(&ordner),
+            vec!["keymap.toml", "settings.toml", "readers.toml"],
+            "nicht jede der drei Dateien ist geoeffnet worden"
+        );
+        assert!(
+            bestand.is_some(),
+            "bei einer neuen Fassung ist nichts erhoben worden"
+        );
+    }
+
+    /// Nach dem ersten Start einer Fassung meldet der zweite Start derselben
+    /// Fassung nichts.
+    ///
+    /// Zwei Laeufe an **einem** Ordner, wie zwei Starts an einer Ablage. Der
+    /// erste erhebt und vermerkt, der zweite findet den Vermerk vor — und
+    /// meldet nicht, obwohl niemand ihm sagt, dass schon gemeldet wurde: das
+    /// steht in `reported.toml` und sonst nirgends.
+    #[test]
+    fn der_zweite_start_derselben_fassung_meldet_nichts() {
+        let ordner = Pruefordner::neu("neuerungen-zweiter-start");
+        let ablage =
+            Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
+        let ein_start = || {
+            ablage
+                .durchgang(neuerungen_erheben)
+                .expect("die Schreibsperre laesst sich nehmen")
+        };
+
+        let (erster, erste_meldungen) = ein_start();
+        let (zweiter, zweite_meldungen) = ein_start();
+
+        assert!(
+            erster.is_some(),
+            "der erste Start einer Fassung erhebt nichts"
+        );
+        assert!(
+            zweiter.is_none(),
+            "der zweite Start derselben Fassung erhebt wieder: {zweiter:?}"
+        );
+        assert_eq!(
+            erste_meldungen,
+            Vec::<String>::new(),
+            "der erste Start eines frischen Ordners meldet etwas"
+        );
+        assert_eq!(
+            zweite_meldungen,
+            Vec::<String>::new(),
+            "der zweite Start derselben Fassung meldet etwas"
+        );
+    }
+
+    /// Die Erhebung steht im Durchgang **hinter** den zwei Ladern, die die
+    /// Dateien beim ersten Start anlegen.
+    ///
+    /// **Eine Probe ueber den Quelltext und keine ueber ein Ergebnis**, weil
+    /// die Zusage eine ueber die Reihenfolge im Durchgang ist: was sie
+    /// bewirkt, misst
+    /// `auf_einer_frischen_installation_meldet_der_erste_start_keine_neuerung`
+    /// in `krk-core/tests/ablage.rs`, das ohne AppKit an einen Zugang kommt.
+    /// Diese hier haelt die Stelle, an der die Bewirkung haengt: `settings.toml`
+    /// und `readers.toml` entstehen in den zwei Aufrufen darueber, und wer die
+    /// Erhebung vor sie zoege, verglichen gegen zwei Dateien, die es in dieser
+    /// Sekunde noch nicht gibt. Der Uebersetzer haelt eine Reihenfolge nicht,
+    /// und die zwei Aufrufe sind fuer ihn unabhaengig.
+    ///
+    /// **Die Nadeln stehen zusammengesetzt da**, wie im Kopf von
+    /// [`crate::quellbaum`] verlangt und aus einem zweiten Grund: eine der
+    /// beiden als ein Stueck geschrieben zaehlte
+    /// `leseprofilproben::die_leseprofile_werden_im_baum_genau_einmal_geladen`
+    /// eine zweite Lesestelle, die es nicht gibt.
+    #[test]
+    fn die_erhebung_steht_im_durchgang_hinter_den_zwei_ladern() {
+        let (_, quelle) = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/anwendung.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let durchgang = quelle
+            .split_once("fn sitzung_laden")
+            .expect("sitzung_laden steht in dieser Datei")
+            .1;
+        let stelle = |nadel: &str| {
+            durchgang
+                .find(nadel)
+                .unwrap_or_else(|| panic!("`{nadel}` steht nicht mehr in `sitzung_laden`"))
+        };
+
+        let einstellungen = stelle(concat!("einstellungen::", "laden(zugang)"));
+        let profile = stelle(concat!("leseprofile::", "laden(zugang)"));
+        let erhebung = stelle(concat!("neuerungen_", "erheben(zugang)"));
+
+        assert!(
+            erhebung > einstellungen && erhebung > profile,
+            "die Erhebung steht nicht mehr hinter beiden Ladern; auf einer frischen \
+             Installation vergliche sie gegen Dateien, die es noch nicht gibt"
         );
     }
 }

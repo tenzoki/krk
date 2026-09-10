@@ -233,7 +233,7 @@ den die laufende Anwendung gar nicht benutzt.
    - Dependencies: Schritt 1 (die `Vergleichsform` der neuen Datei). Gesperrt, bis der
      Datensatz beantwortet ist.
 
-4. **Die Erhebung läuft beim Start, und die Zeile geht hinaus**
+4. **Die Erhebung läuft beim Start, und die Zeile geht hinaus** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes: In `sitzung_laden`, im vorhandenen `durchgang` und **als Letztes** darin: den
@@ -253,6 +253,65 @@ den die laufende Anwendung gar nicht benutzt.
        frischen Installation meldet der erste Start **keine** Neuerung an `settings.toml` und
        `readers.toml`, weil beide gerade wörtlich aus der Auslieferungsfassung entstanden
        sind, und keine an `keymap.toml`, weil sie nicht dasteht.
+   - Nachtrag des Ausführenden am 260910-1600: **eine Datei im Kern ist dazugekommen, und
+     eine vorhandene Zählprobe in `anwendung.rs` ist mitgezogen.** Das vierte
+     Abnahmekriterium verlangt, dass die Erhebung hinter `einstellungen::laden` und
+     `leseprofile::laden` steht; eine Probe, die das *bewirkt*, muss beide Lader rufen — und
+     `leseprofilproben::die_leseprofile_werden_im_baum_genau_einmal_geladen` zählt die
+     Aufrufform `leseprofile::laden(` und verlangt **genau einen** Rufer. Geprüft ist das
+     Kriterium dort, wo die Testing Strategy es hinlegt:
+     `auf_einer_frischen_installation_meldet_der_erste_start_keine_neuerung` in
+     `crates/krk-core/tests/ablage.rs` fährt die Reihenfolge des Starts an einem frischen
+     Prüfordner, und die Reihenfolge im Code selbst hält eine Quelltextprobe in
+     `anwendung.rs` (`die_erhebung_steht_im_durchgang_hinter_den_zwei_ladern`).
+
+     **Der Umzug in den Kern allein hat nicht gereicht, und das war ein Irrtum des
+     Ausführenden.** `quellbaum::quelldateien` liest jede `.rs`-Datei unter `crates/` und
+     nicht nur die unter `krk-ui/src`; der erste `make check` endete rot mit
+     `left: [("krk-core/tests/ablage.rs", 1), ("krk-ui/src/appkit/anwendung.rs", 1)]`.
+     Behoben ist die Wurzel: die Probe zählt seither den **Betriebscode** — jede Datei unter
+     einem `src/`, und dort alles vor dem ersten `#[cfg(test)]`, dieselbe Schnittstelle wie
+     `vorschaumodell::tests::zusammenfassen_hat_einen_rufer_…`. Das engt sie auf das ein,
+     was C4.5 behauptet: `readers.toml` wird einmal **beim Start** gelesen, und ein Ruf aus
+     einem Prüfziel läuft in keinem Start. Ein zweiter Rufer im Betriebscode macht sie
+     weiter rot. Angefasst sind deshalb zusätzlich `crates/krk-core/tests/ablage.rs` und die
+     Probe in `crates/krk-ui/src/appkit/anwendung.rs`.
+
+     **Die Öffnungen sind gezählt und nicht zugesichert, und das Messmittel ist geeicht.**
+     Eine gelungene Lesung hinterlässt nichts; eine beschädigte Datei dagegen legt
+     `Zugang::laden` beim Öffnen zur Seite, und die beiseitegelegte Fassung steht danach auf
+     der Platte. Die drei verglichenen Dateien stehen in den zwei Proben deshalb als
+     kaputtes TOML da: jede Öffnung schreibt genau eine Nachbardatei.
+     `bei_gleichem_merker_wird_keine_der_drei_dateien_geoeffnet` erwartet null,
+     `bei_neuer_fassung_werden_die_drei_dateien_geoeffnet` erwartet drei, beide zählen mit
+     derselben Zeile. Ohne die zweite sagte die erste nichts: null Nachbardateien misst auch
+     ein Zähler, der nichts sieht.
+
+     **Der `ivar` hält `Option<Bestand>`, und das `None` trägt zwei Fragen, von denen dieser
+     Schritt nur eine beantwortet.** `None` heißt „nicht erhoben, weil für diese Fassung
+     schon gemeldet ist" — nicht „kein Unterschied"; ein erhobener Bestand ohne Unterschied
+     steht als `Some` da und trägt die vollen Pfade, wie der Schritt es verlangt. Offen
+     bleibt damit, **was Schritt 9 zeigt, wenn beim Start nichts erhoben wurde** — der
+     häufigste Fall, denn er tritt bei jedem zweiten und jedem weiteren Start derselben
+     Fassung ein. Der Schritt sagt „das Blatt mit dem gehaltenen `Bestand`", und dann ist
+     keiner gehalten. Die zwei Auswege sind, in Schritt 9 auf Verlangen zu erheben (der
+     Nutzer hat gefragt, also kostet es kein L4) oder ein Blatt ohne Namenslisten zu zeigen.
+     Das ist eine Frage an den Nutzer und kein Defekt an diesem Schritt; sie liegt als
+     `260910-1600_*_was-zeigt-das-blatt-auf-abruf-wenn-der-start-nichts-erhoben-hat.md`.
+
+     **Der Merker wird auch dann geschrieben, wenn nichts zu melden war.** Sonst erhöbe jeder
+     Start derselben Fassung von neuem, und „einmal je Fassung" wäre für den häufigsten Fall
+     — es gibt keinen Unterschied — gerade nicht eingelöst. Ein gescheitertes Vermerken geht
+     als Meldung hinaus statt still zu bleiben: die Folge ist eine Meldung, die sich bei
+     jedem Start wiederholt, und der Nutzer hielte die Wiederholung sonst für den Defekt.
+
+     **Im Messmodus fällt die Erhebung mit dem ganzen Durchgang weg**, weil jede der vier
+     Aufgaben vorher zurückkehrt. Kein Messlauf sieht also, was sie kostet; die Zusage des
+     L4-Datensatzes hängt an der Zählprobe und nicht an einer Messstrecke. Das steht im
+     Doc-Kommentar von `sitzung_laden`.
+
+     `make check` endet mit 0, alle fünf. Alles Weitere im Verlaufsprotokoll
+     `260910-1600-coder-schritt-4-die-erhebung-laeuft-beim-start.md`.
    - Dependencies: Schritte 1, 2, 3
 
 5. **Ein Kürzer für lange Namenslisten, an einer Stelle** [DONE]
