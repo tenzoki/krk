@@ -544,10 +544,66 @@ pub fn blatttext(bestand: &Bestand) -> String {
 ///
 /// Eine leere Liste bekommt einen Gedankenstrich und faellt nicht weg: der
 /// Nutzer soll sehen, dass die Richtung gefragt und leer war, statt zu raten,
-/// ob sie geprueft wurde.
+/// ob sie geprueft wurde. Eine lange Liste geht durch [`gekuerzt`]:
+/// `keymap.toml` kann jede ausgelieferte Funktion nennen.
 fn namenszeile(ueberschrift: &str, namen: &[String]) -> String {
     if namen.is_empty() {
         return format!("{ueberschrift}: —\n");
     }
-    format!("{ueberschrift}: {}\n", namen.join(", "))
+    format!("{ueberschrift}: {}\n", gekuerzt(namen.to_vec()).join(", "))
+}
+
+// ----------------------------------------------------------------------
+// Der eine Kuerzer fuer lange Namenslisten
+// ----------------------------------------------------------------------
+
+/// Hoechstens so viele Glieder einer Liste stehen einzeln da.
+///
+/// Ein Wert fuer jede Liste, die KRK zeigt. Eine Kopie ueber einen Ordner
+/// ohne Leserechte kann
+/// Tausende uebersprungene Eintraege erzeugen, und `keymap.toml` nennt jede
+/// ausgelieferte Funktion; eine Liste, die den Schirm ueberragt, ist keine
+/// Auskunft mehr. Der Rest wird gezaehlt.
+pub const HOECHSTENS_EINZELN: usize = 12;
+
+/// Die eine Schreibweise fuer eine Zahl in KRKs Oberflaeche.
+///
+/// Tausenderpunkte. Sie stand bis zum 260910 als `zahl` in
+/// `krk_ui::kommandos::operationen` und ist mit [`gekuerzt`] hierher gezogen,
+/// weil dieser Kuerzer sie braucht und der Kern die Oberflaeche nicht rufen
+/// kann. Der alte Ort holt sie ueber `pub(crate) use` zurueck; seine Rufer
+/// haben davon nichts gemerkt, und eine zweite Fassung ist nicht entstanden.
+#[must_use]
+pub fn zahl(wert: usize) -> String {
+    let ziffern = wert.to_string();
+    let mut aus = String::with_capacity(ziffern.len() + ziffern.len() / 3);
+    for (stelle, ziffer) in ziffern.chars().enumerate() {
+        if stelle > 0 && (ziffern.len() - stelle).is_multiple_of(3) {
+            aus.push('.');
+        }
+        aus.push(ziffer);
+    }
+    aus
+}
+
+/// Kuerzt eine lange Liste auf [`HOECHSTENS_EINZELN`] Glieder und beziffert
+/// den Rest in einem weiteren Glied.
+///
+/// **Der Wortlaut „… und N weitere" steht hier und sonst nirgends.** Zwei
+/// Rufer teilen ihn: die Abschlussliste der uebersprungenen Eintraege in
+/// `krk_ui::kommandos::operationen` und die Namenszeile des Blattes nebenan.
+/// Wie viele Rufer es sind, haelt die Probe
+/// `der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer` in
+/// `krk-core/tests/baum.rs`; eine dritte Fassung des Wortlauts faellt dort
+/// auf, statt still danebenzustehen.
+///
+/// Eine Liste bis zur Grenze kommt unveraendert zurueck, auch die leere.
+#[must_use]
+pub fn gekuerzt(mut glieder: Vec<String>) -> Vec<String> {
+    let ganz = glieder.len();
+    if ganz > HOECHSTENS_EINZELN {
+        glieder.truncate(HOECHSTENS_EINZELN);
+        glieder.push(format!("… und {} weitere", zahl(ganz - HOECHSTENS_EINZELN)));
+    }
+    glieder
 }

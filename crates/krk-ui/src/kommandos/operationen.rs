@@ -114,6 +114,14 @@ use std::sync::mpsc::SyncSender;
 use std::time::{Duration, Instant};
 
 use krk_core::ablage::Datei;
+// Die Grenze fuer lange Listen und der Kuerzer selbst wohnen seit dem
+// 260910 im Kern: das Blatt auf Abruf braucht denselben Wortlaut, und der
+// Kern kann die Oberflaeche nicht rufen.
+use krk_core::ablage::neuerungen::gekuerzt;
+// Die Grenze selbst braucht nur noch die Probe, die sie nachrechnet: der
+// Kuerzer haelt sie im Kern.
+#[cfg(test)]
+use krk_core::ablage::neuerungen::HOECHSTENS_EINZELN;
 use krk_core::operation::{
     Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Uebersprungen,
     name_pruefen,
@@ -131,14 +139,6 @@ use krk_core::zwischenablage::Einfuegehindernis;
 /// Der Name hiess bis zum 260804-1832 `BLATTVERZUG`. Er trug das Blatt in sich,
 /// und das gibt es seit S16b nicht mehr.
 pub const ANZEIGEVERZUG: Duration = Duration::from_millis(150);
-
-/// Hoechstens so viele uebersprungene Eintraege stehen einzeln in der
-/// Abschlussliste.
-///
-/// Eine Kopie ueber einen Ordner ohne Leserechte kann Tausende erzeugen; ein
-/// Blatt, das den Bildschirm ueberragt, ist keine Auskunft mehr. Der Rest wird
-/// gezaehlt.
-const HOECHSTENS_EINZELN: usize = 12;
 
 /// Ob die Vorgangsanzeige jetzt faellig ist.
 #[must_use]
@@ -735,9 +735,12 @@ pub fn uebersprungenliste(uebersprungen: &[Uebersprungen]) -> Option<(String, St
         1 => "Ein Eintrag wurde übersprungen".to_owned(),
         zahl => format!("{} Einträge wurden übersprungen", self::zahl(zahl)),
     };
-    let mut zeilen: Vec<String> = uebersprungen
+    // Gebaut werden alle Zeilen und gekuerzt wird danach. Der umgekehrte Weg
+    // (erst `take`, dann zaehlen) sparte das Formatieren der weggeworfenen
+    // Zeilen und verlangte dafuer den Wortlaut „… und N weitere" ein zweites
+    // Mal hier; genau den traegt [`gekuerzt`] an seiner einen Stelle.
+    let zeilen: Vec<String> = uebersprungen
         .iter()
-        .take(HOECHSTENS_EINZELN)
         .map(|eintrag| {
             let name = eintrag.pfad.file_name().map_or_else(
                 || eintrag.pfad.display().to_string(),
@@ -746,13 +749,7 @@ pub fn uebersprungenliste(uebersprungen: &[Uebersprungen]) -> Option<(String, St
             format!("{name}: {}", eintrag.grund)
         })
         .collect();
-    if uebersprungen.len() > HOECHSTENS_EINZELN {
-        zeilen.push(format!(
-            "… und {} weitere",
-            zahl(uebersprungen.len() - HOECHSTENS_EINZELN)
-        ));
-    }
-    Some((frage, zeilen.join("\n")))
+    Some((frage, gekuerzt(zeilen).join("\n")))
 }
 
 // ----------------------------------------------------------------------
@@ -945,18 +942,15 @@ pub(crate) fn ordner_text(ordner: usize) -> String {
 /// **`pub(crate)` und nicht `pub(super)`**, und das ist kein Versehen: der
 /// dritte Aufrufer ist `crate::appkit::statuszeile` und liegt ausserhalb von
 /// [`super`]. Die enge Sichtbarkeit haelt der Uebersetzer dort nicht ein.
-#[must_use]
-pub(crate) fn zahl(wert: usize) -> String {
-    let ziffern = wert.to_string();
-    let mut aus = String::with_capacity(ziffern.len() + ziffern.len() / 3);
-    for (stelle, ziffer) in ziffern.chars().enumerate() {
-        if stelle > 0 && (ziffern.len() - stelle).is_multiple_of(3) {
-            aus.push('.');
-        }
-        aus.push(ziffer);
-    }
-    aus
-}
+///
+/// **Der Rumpf steht seit dem 260910 im Kern** und hier nur noch der Zeiger
+/// darauf: [`gekuerzt`] beziffert seinen Rest in derselben Schreibweise und
+/// wird auch vom Blatt auf Abruf gerufen, das der Kern baut. Zwei Fassungen
+/// haetten dem Nutzer dieselbe Zahl an zwei Blaettern verschieden
+/// geschrieben. Die Rufer haben vom Umzug nichts gemerkt: der Name steht hier
+/// weiter, und [`super::auswahl`], [`super::loeschwarnung`],
+/// `crate::appkit::statuszeile` und diese Datei greifen ihn wie zuvor.
+pub(crate) use krk_core::ablage::neuerungen::zahl;
 
 /// Eine Datenmenge in der Schreibweise, die der Nutzer im Blatt liest.
 ///

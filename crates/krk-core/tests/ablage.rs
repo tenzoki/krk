@@ -4651,3 +4651,34 @@ fn der_blatttext_nennt_jede_datei_mit_vollem_pfad_und_beide_richtungen() {
         "der Blatttext sagt nicht, worauf er sich bezieht:\n{text}"
     );
 }
+
+/// Der Kuerzer laesst eine Liste bis zur Grenze in Ruhe und beziffert erst
+/// jenseits davon.
+///
+/// Die Grenze selbst ist der Fall, an dem ein Kuerzer sich verzaehlt: eine
+/// Liste von genau [`neuerungen::HOECHSTENS_EINZELN`] Gliedern darf keine
+/// Zeile „… und 0 weitere" bekommen. Der Wortlaut jenseits der Grenze steht
+/// zusaetzlich in `uebersprungenliste` unter Probe; hier steht die Bauform der
+/// Funktion selbst.
+#[test]
+fn der_kuerzer_laesst_eine_liste_bis_zur_grenze_in_ruhe() {
+    let grenze = neuerungen::HOECHSTENS_EINZELN;
+    let liste = |wie_viele: usize| -> Vec<String> {
+        (1..=wie_viele).map(|nummer| format!("N{nummer}")).collect()
+    };
+
+    assert!(neuerungen::gekuerzt(Vec::new()).is_empty());
+    assert_eq!(neuerungen::gekuerzt(liste(grenze)), liste(grenze));
+
+    let gekuerzt = neuerungen::gekuerzt(liste(grenze + 1));
+    assert_eq!(gekuerzt.len(), grenze + 1, "{gekuerzt:?}");
+    assert_eq!(gekuerzt.last().map(String::as_str), Some("… und 1 weitere"));
+
+    let viele = neuerungen::gekuerzt(liste(grenze + 2000));
+    assert_eq!(viele.len(), grenze + 1, "{viele:?}");
+    assert_eq!(
+        viele.last().map(String::as_str),
+        Some("… und 2.000 weitere"),
+        "der Rest traegt die Tausenderpunkte der Oberflaeche nicht"
+    );
+}

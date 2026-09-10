@@ -255,7 +255,7 @@ den die laufende Anwendung gar nicht benutzt.
        sind, und keine an `keymap.toml`, weil sie nicht dasteht.
    - Dependencies: Schritte 1, 2, 3
 
-5. **Ein Kürzer für lange Namenslisten, an einer Stelle**
+5. **Ein Kürzer für lange Namenslisten, an einer Stelle** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/kommandos/operationen.rs`,
      `crates/krk-core/src/ablage/neuerungen.rs`

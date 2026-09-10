@@ -1381,3 +1381,63 @@ fn die_ablageliste_fuehrt_jede_datei_und_je_einen_zettel() {
          oder in einer anderen Reihenfolge als die Aufzaehlung"
     );
 }
+
+/// Der Kuerzer langer Namenslisten hat genau zwei Rufer, und den Wortlaut
+/// „… und N weitere" traegt er allein.
+///
+/// **Die Bauform stammt von `die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei`**
+/// (`krk-core/tests/verzeichnis.rs`), und die Frage ist dieselbe: eine Regel,
+/// die an einer Stelle steht, bleibt nur dann an einer Stelle, wenn jemand
+/// nachzaehlt. Der Unterschied zur Vorlage ist, dass die Heimat hier selbst
+/// ein Rufer ist: `namenszeile` in `ablage/neuerungen.rs` kuerzt die Namen des
+/// Blattes, `uebersprungenliste` in `kommandos/operationen.rs` die
+/// Abschlussliste der uebersprungenen Eintraege. Ein dritter Rufer ist kein
+/// Fehler, sondern ein Grund, diese Zeile zu aendern; eine dritte Fassung des
+/// **Wortlauts** ist einer, und die faengt die zweite Behauptung.
+#[test]
+fn der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer() {
+    let kuerzer = concat!("gekue", "rzt");
+    let heimat = "krk-core/src/ablage/neuerungen.rs";
+    // Der Wortlaut in zwei Stuecken, damit diese Datei sich nicht selbst
+    // findet; dasselbe Mittel wie bei jeder Nadel dieser Datei.
+    let wortlaut = concat!("… und {} ", "weitere");
+
+    let mut rufer = Vec::new();
+    let mut wortlautstellen = Vec::new();
+    let mut heimat_erklaert = false;
+    for (name, inhalt) in quelldateien() {
+        if name == heimat {
+            heimat_erklaert = im_code(&inhalt, &format!("pub fn {kuerzer}("));
+        }
+        // Eine Probe ist kein Rufer im Sinne des Kriteriums und ihr Wortlaut
+        // keine zweite Fassung: sie prueft beide, statt sie zu setzen.
+        // Gefragt ist, wer die Kuerzung im Betrieb ausloest.
+        if !name.contains("/src/") {
+            continue;
+        }
+        let stellen = aufrufstellen(&inhalt, kuerzer);
+        if stellen > 0 {
+            rufer.push((name.clone(), stellen));
+        }
+        if im_code(&inhalt, wortlaut) {
+            wortlautstellen.push(name);
+        }
+    }
+
+    assert!(heimat_erklaert, "{heimat} erklaert den Kuerzer nicht mehr");
+
+    assert_eq!(
+        rufer,
+        vec![
+            (heimat.to_owned(), 1),
+            ("krk-ui/src/kommandos/operationen.rs".to_owned(), 1),
+        ],
+        "der Kuerzer hat andere Rufer als die Namenszeile des Blattes und die \
+         Abschlussliste der uebersprungenen Eintraege"
+    );
+    assert_eq!(
+        wortlautstellen,
+        vec![heimat.to_owned()],
+        "der Wortlaut „… und N weitere\" steht nicht mehr allein in {heimat}"
+    );
+}
