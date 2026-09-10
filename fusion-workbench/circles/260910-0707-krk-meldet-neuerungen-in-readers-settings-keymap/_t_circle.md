@@ -4,22 +4,14 @@
 **Domain:** code
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Claim:** Claimed 260910-0754: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
-**Active spec/plan:** (none yet)
+**Active spec/plan:** 260910-0818_*_plan-krk-meldet-neuerungen-in-readers-settings-keymap.md
 **Active session history:** 260905-2008-orchestrator-session.md
 
 ---
 
 ## Directive
 
-Nach dieser Runde erfährt der Nutzer beim Start, dass seine drei von Hand gepflegten
-Ablagedateien hinter der Auslieferungsfassung zurückliegen, und er kann sich den Unterschied
-auf Verlangen im Einzelnen ansehen. Die Statuszeile trägt beim Start eine Zeile, die je Datei
-die Zahl der Einträge nennt, die die Auslieferungsfassung führt und die Nutzerdatei nicht,
-dazu den Ordner, in dem die drei Dateien liegen; sie erscheint einmal je Fassung, weil KRK
-sich merkt, für welche Versionsnummer es gemeldet hat. Ein Blatt über Taste und Hauptmenü
-zeigt danach die Namen jedes Unterschieds in beide Richtungen und die vollen Pfade der drei
-Dateien. KRK schreibt dabei keine der drei Dateien: was der Nutzer mit dem Unterschied tut,
-bleibt sein Handgriff, und der steht in `README.md` unter `## Neue Leseprofile übernehmen`.
+See `**Active spec/plan:**` above. The cited spec or plan states the Directive in force.
 
 ## Grounding snapshot
 

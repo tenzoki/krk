@@ -693,3 +693,43 @@ Baum trägt zweiundvierzig. Abgelegt als
 **Rebalance recommendation:** none
 
 **Belege:** `shared/history/260909-1021-reconciliation.md` (die vierzehn Dateien einzeln, die fünf toten Verweise, die 25 Dokumente ohne Abnahme-Kopfzeile).
+
+## Fortsetzung 260910 — die Runde 24 wird geplant
+
+Der Nutzer hat am 260910 die Auslieferung 1.8.0 gefahren, zwei gebaute Einträge des
+Ideenspeichers geschlossen und den seit dem 260831 angekündigten Gegenstand festhalten
+lassen. Daraus ist die Runde
+`260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap` entstanden, in drei
+Schärfungsrunden mit ihm zugeschnitten und am 260910-0754 aktiviert.
+
+**Der Zuschnitt, wie er im Circle-Datensatz steht:** beim Start eine Zeile in der
+Statuszeile mit der Zahl je Datei und dem Ordner, auf Abruf ein Blatt über Taste und
+Hauptmenü mit den Namen jedes Unterschieds und den vollen Pfaden, einmal je Fassung, und
+KRK schreibt keine der drei von Hand gepflegten Ablagedateien.
+
+**Der Nutzer hat den Zuschnitt am 260910 erweitert:** die Behebung des Defekts, dass die
+Startmeldungen einander überschreiben, kommt in dieselbe Runde. Sie ist die Voraussetzung
+dafür, dass die neue Startzeile den Nutzer überhaupt erreicht.
+
+**Der Plan** ist `260910-0818_*_plan-krk-meldet-neuerungen-in-readers-settings-keymap.md`,
+zehn Schritte, vom Nutzer am 260910 abgenommen.
+
+### Drei Antworten des Nutzers, alle am 260910
+
+**Wo merkt sich KRK die gemeldete Fassung? Eine achte Ablagedatei.** Nicht `session.toml`:
+die schreibt nur die Instanz mit dem Sitzungsrecht, eine zweite Instanz meldete damit bei
+jedem Start. Die achte Datei wird unter der Schreibsperre geschrieben und gilt für jede
+Instanz. Die offene Frage `260907-1407_*` zur Fassungsangabe in `session.toml` bleibt
+unangetastet und wird auf ihre eigenen Gründe beantwortet.
+
+**Wie erreichen mehrere Startmeldungen den Nutzer? Ab der zweiten ein Blatt.** Genau eine
+geht unverändert in die Statuszeile. Die begrenzte Abweichung von der Antwort vom
+260804-0830 ist benannt und mitentschieden, ebenso der Fall, in dem die Zeile dieser Runde
+mit ins Blatt wandert.
+
+**Schuldet die Runde einen Abnahmelauf gegen L4? Nein.** L4 kommt auf die Gegenstände der
+späteren Messrunde, wie L7 in der Runde 14. Der Preis ist mitentschieden: die Aussage, die
+zusätzliche Arbeit falle im Dauerbetrieb nicht an, bleibt am gebauten Bündel unbelegt.
+
+**Zwei Festlegungen des Nutzers am Plan, ebenfalls am 260910:** das Blatt liegt auf
+`opt+cmd+i`, und die Startzeile nennt nur die Dateien mit einem Unterschied, nicht alle drei.
