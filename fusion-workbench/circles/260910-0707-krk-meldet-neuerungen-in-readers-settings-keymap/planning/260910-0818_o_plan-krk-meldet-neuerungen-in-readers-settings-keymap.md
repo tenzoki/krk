@@ -142,7 +142,7 @@ den die laufende Anwendung gar nicht benutzt.
 
 ## Implementation Steps
 
-1. **Der Vergleich im Kern**
+1. **Der Vergleich im Kern** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-core/src/ablage/neuerungen.rs` (neu),
      `crates/krk-core/src/ablage/mod.rs`, `crates/krk-core/src/ablage/pfade.rs`,

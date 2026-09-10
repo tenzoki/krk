@@ -14,9 +14,9 @@
 //!
 //! ```text
 //! pfade ──> mod (Ablage ──> Zugang: laden, sichern, melden) ──> atomar
-//!                   │           ^       ^        ^            ^
-//!                sperre         │       │        │            │
-//!                        lesezeichen sitzung einstellungen leseprofile
+//!                   │           ^       ^        ^            ^        ^
+//!                sperre         │       │        │            │        │
+//!                        lesezeichen sitzung einstellungen leseprofile neuerungen
 //! ```
 //!
 //! [`pfade`] loest den Ordner auf und legt ihn beim ersten Start an.
@@ -28,6 +28,15 @@
 //! [`Zugang::laden`] und [`Zugang::sichern`] hier ab. Die Ablage ist deshalb
 //! ueber den Inhalt allgemein gehalten: sie kennt Pfad, Format und
 //! Fehlerbehandlung, nicht die Felder.
+//!
+//! [`neuerungen`] steht neben diesen Lesern und haelt keinen eigenen Inhalt.
+//! Es liest jede von Hand gepflegte Ablagedatei ueber denselben
+//! [`Zugang::laden`] als `toml::Table` und haelt sie gegen die eingebettete
+//! Auslieferungsfassung, damit der Nutzer beim ersten Start einer neuen Fassung
+//! erfaehrt, was sie an seinen Dateien mitbringt. Geschrieben wird dabei
+//! nichts; welche Ablagedatei ueberhaupt einen Unterschied tragen kann, sagt
+//! [`neuerungen::Vergleichsform`] als vierte je Datei beantwortete Frage neben
+//! den dreien in [`pfade`].
 //!
 //! # Jeder Weg auf die Platte geht durch die Schreibsperre
 //!
@@ -241,6 +250,7 @@ pub mod atomar;
 pub mod einstellungen;
 pub mod leseprofile;
 pub mod lesezeichen;
+pub mod neuerungen;
 pub mod pfade;
 pub mod sitzung;
 pub mod sperre;

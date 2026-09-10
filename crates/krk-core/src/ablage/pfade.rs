@@ -8,6 +8,14 @@
 //! beschaedigten tritt. Wer eine achte Ablagedatei aufnimmt, beantwortet alle
 //! drei, sonst haelt der Uebersetzer ihn an.
 //!
+//! **Eine weitere je Datei beantwortete Frage steht nicht hier**, und wer nur
+//! diesen Kopf liest, zaehlt sie nicht mit:
+//! [`super::neuerungen::Vergleichsform`] sagt, was bei einer Ablagedatei ein
+//! Eintrag ist, den die Auslieferungsfassung fuehren kann und die Nutzerdatei
+//! nicht. Sie ist von derselben Bauart und wohnt trotzdem woanders, weil sie
+//! eine Aussage ueber den **Inhalt** einer Datei ist und diese Datei den Inhalt
+//! nicht kennt.
+//!
 //! # Zwei Formate, und warum die Zettel kein TOML tragen
 //!
 //! Die fuenf TOML-Dateien gehen ueber [`super::Zugang::laden`] und

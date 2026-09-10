@@ -177,7 +177,16 @@ use super::{ModMaske, Tastendruck};
 ///
 /// Damit gibt es keinen Start ohne Belegung: eine fehlende, geloeschte oder
 /// kaputte `keymap.toml` faellt immer auf diesen Text zurueck.
-const AUSLIEFERUNGSTEXT: &str = include_str!("../../../../resources/default-keymap.toml");
+///
+/// **Sichtbar und nicht modulprivat**, seit
+/// [`ablage::neuerungen`](crate::ablage::neuerungen) die Nutzerdatei gegen sie
+/// haelt: der Vergleich braucht den ausgelieferten Text selbst und nicht die
+/// daraus gebaute [`Belegung`], denn er fragt, welche Funktionen die Datei
+/// **nennt**, und nicht, welche KRK am Ende fuehrt — [`Belegung::bauen`] nimmt
+/// jede ungenannte Funktion unbelegt hinzu und macht den Unterschied damit
+/// unsichtbar. Die zwei Schwestern in [`crate::ablage`] sind aus demselben
+/// Grund laengst sichtbar.
+pub const AUSLIEFERUNGSTEXT: &str = include_str!("../../../../resources/default-keymap.toml");
 
 /// Die gelesene Auslieferungsbelegung. Sie definiert den Wortschatz.
 static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {

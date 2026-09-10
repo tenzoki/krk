@@ -31,15 +31,17 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
+use krk_core::ablage::neuerungen::{Befund, Bestand, Vergleichsform};
 use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
 use krk_core::ablage::sperre::{SCHREIBSPERRE, SITZUNGSRECHT};
 use krk_core::ablage::{
     Ablage, Ablageort, Aenderung, Ausgang, Beiseite, Breiten, Datei, Dateifenster, Einstellungen,
     Ersatz, Ersetzung, Fensterseite, Format, Geladen, Grund, Lesezeichen, Lesezeichenliste,
     Sichtbarkeit, Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Zettel, Ziel,
-    atomar, einstellungen, leseprofile, melden, pfade,
+    atomar, einstellungen, leseprofile, melden, neuerungen, pfade,
 };
 use krk_core::leseprofil::{Profil, Profile};
+use krk_core::tasten::belegung;
 use krk_core::text::datei::EDITORGRENZE;
 use krk_core::verzeichnis::sys::{self, Sperrversuch};
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
@@ -4176,4 +4178,476 @@ fn die_gueltigkeitspruefung_kommt_ohne_lesen_der_datei_aus() {
         .expect("die Rechte lassen sich nicht zuruecksetzen");
     fs::remove_file(&datei).expect("die Pruefdatei laesst sich nicht loeschen");
     assert!(!Lesezeichen::textstelle("Verschlossen", &datei, 1, "eine Zeile").gueltig());
+}
+
+// ---------------------------------------------------------------------------
+// Was eine neue Fassung an den von Hand gepflegten Dateien mitbringt
+// ---------------------------------------------------------------------------
+//
+// `ablage::neuerungen` haelt die eingebettete Auslieferungsfassung gegen die
+// Datei des Nutzers und liefert die Namen der Unterschiede in beide Richtungen.
+// Geschrieben wird dabei nichts; die Proben pruefen das mit, indem sie ihre
+// Dateien selbst hinlegen und den Bestand danach unveraendert vorfinden.
+
+/// Erhebt die Neuerungen unter der Schreibsperre, so wie der Start es tut.
+fn erhobene_neuerungen(ablage: &Ablage) -> Bestand {
+    ablage
+        .durchgang(neuerungen::erheben)
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Die Ablagedateien, die ueberhaupt einen Unterschied tragen koennen.
+///
+/// **Eine abgeleitete Frage und keine zweite Liste**, wie [`toml_dateien`] eine
+/// Ebene hoeher: eine achte Ablagedatei mit einer Vergleichsform steht hier von
+/// selbst, und eine von Hand gepflegte Liste koennte es nicht.
+fn verglichene_dateien() -> impl Iterator<Item = Datei> {
+    Datei::ALLE
+        .into_iter()
+        .filter(|welche| Vergleichsform::fuer(*welche) != Vergleichsform::Nicht)
+}
+
+/// Die eingebettete Auslieferungsfassung einer verglichenen Ablagedatei.
+///
+/// Vollstaendig ueber [`Datei`]: eine achte Ablagedatei haelt auch diese Probe
+/// an, statt still an einer Datei weniger zu pruefen.
+fn auslieferungstext(welche: Datei) -> &'static str {
+    match welche {
+        Datei::Belegung => belegung::AUSLIEFERUNGSTEXT,
+        Datei::Einstellungen => einstellungen::AUSLIEFERUNGSTEXT,
+        Datei::Leser => leseprofile::AUSLIEFERUNGSTEXT,
+        Datei::Lesezeichen | Datei::Sitzung | Datei::Zettel(_) => panic!(
+            "{} wird nicht verglichen und hat keine eingebettete Auslieferungsfassung",
+            welche.dateiname()
+        ),
+    }
+}
+
+/// Legt jede verglichene Ablagedatei woertlich aus ihrer Auslieferungsfassung
+/// an — der Zustand unmittelbar nach dem ersten Start.
+fn auslieferungsfassungen_schreiben(ablage: &Ablage) {
+    for welche in verglichene_dateien() {
+        fs::write(ablage.pfad(welche), auslieferungstext(welche))
+            .expect("die Auslieferungsfassung laesst sich nicht hinlegen");
+    }
+}
+
+/// Schneidet den ersten Block einer Tabellenfolge aus einem Auslieferungstext
+/// heraus und liefert den Rest samt dem Namen des herausgeschnittenen Blocks.
+///
+/// **Am Text und nicht an einer wieder ausgeschriebenen `toml::Table`.** Ein
+/// Rundlauf durch `toml::to_string` sortierte die Schluessel jedes Tisches neu
+/// und koennte dabei einen Wert hinter eine Untertabelle schieben, was TOML
+/// nicht zulaesst. Der Schnitt am Text laesst jede uebrige Zeile so stehen, wie
+/// die Auslieferungsfassung sie fuehrt.
+fn ohne_den_ersten_block(text: &str, tisch: &str, schluessel: &str) -> (String, String) {
+    // **Gesucht wird die Kopfzeile und nicht die Zeichenfolge.** Beide
+    // Auslieferungsfassungen erklaeren ihren eigenen Aufbau im Kommentarkopf und
+    // schreiben `[[profil]]` dort aus; wer ohne die Zeilenumbrueche sucht,
+    // findet den Fliesstext und nicht den ersten Block.
+    let kopf = format!("\n[[{tisch}]]\n");
+    let anfang = text
+        .find(&kopf)
+        .map(|stelle| stelle + 1)
+        .unwrap_or_else(|| panic!("die Auslieferungsfassung fuehrt keinen Block [[{tisch}]]"));
+    let ende = text[anfang..]
+        .find(&kopf)
+        .map(|stelle| stelle + anfang + 1)
+        .unwrap_or_else(|| panic!("die Auslieferungsfassung fuehrt nur einen Block [[{tisch}]]"));
+
+    let block: toml::Table =
+        toml::from_str(&text[anfang..ende]).expect("der Block ist kein gueltiges TOML");
+    let name = block
+        .get(tisch)
+        .and_then(toml::Value::as_array)
+        .and_then(|folge| folge.first())
+        .and_then(|eintrag| eintrag.get(schluessel))
+        .and_then(toml::Value::as_str)
+        .unwrap_or_else(|| panic!("der erste Block [[{tisch}]] nennt kein {schluessel}"))
+        .to_owned();
+
+    (format!("{}{}", &text[..anfang], &text[ende..]), name)
+}
+
+/// Die Zeile einer Ablagedatei im Bestand.
+fn zeile(bestand: &Bestand, welche: Datei) -> &krk_core::ablage::neuerungen::Neuerungen {
+    bestand
+        .fuer(welche)
+        .unwrap_or_else(|| panic!("{} steht nicht im Bestand", welche.dateiname()))
+}
+
+/// Eine Nutzerdatei, die es nicht gibt, liefert keine Neuerung.
+///
+/// **`keymap.toml` ist der Fall, um den es geht**, und deshalb steht sie hier
+/// namentlich neben dem Rundlauf ueber alle verglichenen Dateien: KRK legt sie
+/// nie an, und auf einer frischen Installation gibt es sie gar nicht. Wer sie
+/// als leere Datei liest, meldet dem Nutzer jede ausgelieferte Funktion als
+/// Neuerung — eine Meldung, die formal stimmt und nichts sagt.
+#[test]
+fn eine_nutzerdatei_die_es_nicht_gibt_liefert_keine_neuerung() {
+    let (_ordner, ablage) = ablage("neuerungen-fehlende-datei");
+    let bestand = erhobene_neuerungen(&ablage);
+
+    assert_eq!(
+        bestand.dateien().len(),
+        verglichene_dateien().count(),
+        "der Bestand fuehrt nicht je verglichener Ablagedatei eine Zeile"
+    );
+    for welche in verglichene_dateien() {
+        let zeile = zeile(&bestand, welche);
+        assert!(
+            !ablage.pfad(welche).exists(),
+            "{} steht auf der Platte; die Probe prueft den falschen Zustand",
+            welche.dateiname()
+        );
+        assert_eq!(
+            zeile.befund,
+            Befund::Fehlt,
+            "{} liegt nicht da und muesste als fehlend gelten",
+            welche.dateiname()
+        );
+        assert!(
+            !zeile.traegt_unterschied(),
+            "{} liefert eine Neuerung, obwohl es die Datei nicht gibt: {:?} / {:?}",
+            welche.dateiname(),
+            zeile.nur_ausgeliefert,
+            zeile.nur_beim_nutzer
+        );
+    }
+
+    assert_eq!(
+        zeile(&bestand, Datei::Belegung).befund,
+        Befund::Fehlt,
+        "keymap.toml entsteht auf einer frischen Installation nie und darf nichts melden"
+    );
+    assert_eq!(
+        neuerungen::startzeile(&bestand, None),
+        None,
+        "ohne Unterschied gibt es keine Startzeile"
+    );
+}
+
+/// Jede verglichene Ablagedatei hat eine eingebettete Auslieferungsfassung.
+///
+/// **Was der Uebersetzer hier nicht haelt.** `Vergleichsform::fuer` und die
+/// private `auslieferung` in `ablage/neuerungen.rs` sind je fuer sich
+/// vollstaendig ueber `Datei`; dass sie **dieselben** Dateien bejahen, sagt
+/// keine der beiden. Eine achte Ablagedatei mit einer Vergleichsform, aber ohne
+/// eingebettete Fassung liesse sich nicht vergleichen und faellt aus dem
+/// Bestand heraus, ohne dass jemand es merkt.
+#[test]
+fn jede_verglichene_ablagedatei_hat_eine_eingebettete_fassung() {
+    let (_ordner, ablage) = ablage("neuerungen-paarung");
+    auslieferungsfassungen_schreiben(&ablage);
+    let bestand = erhobene_neuerungen(&ablage);
+
+    let erwartet: Vec<Datei> = verglichene_dateien().collect();
+    let gefunden: Vec<Datei> = bestand.dateien().iter().map(|zeile| zeile.welche).collect();
+    assert_eq!(
+        gefunden, erwartet,
+        "der Bestand fuehrt nicht genau die verglichenen Ablagedateien, in der Reihenfolge \
+         von Datei::ALLE"
+    );
+    for zeile in bestand.dateien() {
+        assert_eq!(
+            zeile.befund,
+            Befund::Verglichen,
+            "{} steht da und ist gueltig, wurde aber nicht verglichen",
+            zeile.welche.dateiname()
+        );
+    }
+}
+
+/// Eine Nutzerdatei, die der Auslieferungsfassung gleicht, liefert keine
+/// Neuerung.
+///
+/// Der Zustand unmittelbar nach dem ersten Start: KRK hat die Dateien woertlich
+/// aus den eingebetteten Fassungen angelegt. Meldete der Vergleich hier etwas,
+/// meldete er es bei jedem Nutzer.
+#[test]
+fn eine_nutzerdatei_wie_die_auslieferungsfassung_liefert_keine_neuerung() {
+    let (_ordner, ablage) = ablage("neuerungen-gleichstand");
+    auslieferungsfassungen_schreiben(&ablage);
+
+    let bestand = erhobene_neuerungen(&ablage);
+    for zeile in bestand.dateien() {
+        assert!(
+            !zeile.traegt_unterschied(),
+            "{} meldet einen Unterschied zu ihrer eigenen Auslieferungsfassung: {:?} / {:?}",
+            zeile.welche.dateiname(),
+            zeile.nur_ausgeliefert,
+            zeile.nur_beim_nutzer
+        );
+    }
+    assert!(!bestand.traegt_unterschied());
+    assert_eq!(neuerungen::startzeile(&bestand, None), None);
+}
+
+/// Ein aus `readers.toml` entferntes Profil steht in der Hinrichtung, ein
+/// eigenes Profil des Nutzers in der Gegenrichtung.
+///
+/// `readers.toml` ist die eine Datei, an der die Zusage „in beide Richtungen"
+/// wirklich beide fuellt: ein `[[profil]]` mit einem eigenen Namen ist dort der
+/// gewoehnliche Fall und kein Schaden.
+#[test]
+fn ein_entferntes_profil_steht_in_der_hinrichtung_und_ein_eigenes_in_der_gegenrichtung() {
+    let (_ordner, ablage) = ablage("neuerungen-leseprofile");
+    auslieferungsfassungen_schreiben(&ablage);
+
+    let (rest, entfernter_name) =
+        ohne_den_ersten_block(leseprofile::AUSLIEFERUNGSTEXT, "profil", "name");
+    let eigenes =
+        "\n[[profil]]\nname = \"Mein eigener Ort\"\nkennzeichen = '^eigenes-kennzeichen$'\n";
+    fs::write(ablage.pfad(Datei::Leser), format!("{rest}{eigenes}"))
+        .expect("readers.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zeile = zeile(&bestand, Datei::Leser);
+    assert_eq!(zeile.befund, Befund::Verglichen);
+    assert_eq!(
+        zeile.nur_ausgeliefert,
+        vec![entfernter_name],
+        "die Hinrichtung nennt nicht genau das entfernte Profil"
+    );
+    assert_eq!(
+        zeile.nur_beim_nutzer,
+        vec![String::from("Mein eigener Ort")],
+        "die Gegenrichtung nennt nicht genau das eigene Profil"
+    );
+}
+
+/// Eine `keymap.toml` ohne eine ausgelieferte `id` liefert genau diese `id`.
+#[test]
+fn eine_keymap_ohne_eine_ausgelieferte_id_liefert_genau_diese_id() {
+    let (_ordner, ablage) = ablage("neuerungen-belegung");
+    auslieferungsfassungen_schreiben(&ablage);
+
+    let (rest, entfernte_id) = ohne_den_ersten_block(belegung::AUSLIEFERUNGSTEXT, "funktion", "id");
+    fs::write(ablage.pfad(Datei::Belegung), rest).expect("keymap.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zeile = zeile(&bestand, Datei::Belegung);
+    assert_eq!(zeile.befund, Befund::Verglichen);
+    assert_eq!(
+        zeile.nur_ausgeliefert,
+        vec![entfernte_id],
+        "die Hinrichtung nennt nicht genau die entfernte Funktion"
+    );
+    assert!(
+        zeile.nur_beim_nutzer.is_empty(),
+        "die Gegenrichtung ist bei keymap.toml bauartbedingt leer, hier steht {:?}",
+        zeile.nur_beim_nutzer
+    );
+}
+
+/// Eine `settings.toml` ohne `terminal` liefert genau diesen Schluessel.
+///
+/// Die Datei traegt hier nichts als einen Kommentar. Das ist kein Schaden,
+/// sondern `Leerbefund::Vorgabe`: `settings.toml` pflegt der Nutzer von Hand
+/// und darf sie bis auf ihre Kommentare leerraeumen.
+#[test]
+fn eine_settings_ohne_terminal_liefert_genau_diesen_schluessel() {
+    let (_ordner, ablage) = ablage("neuerungen-einstellungen");
+    auslieferungsfassungen_schreiben(&ablage);
+    fs::write(
+        ablage.pfad(Datei::Einstellungen),
+        b"# leergeraeumt bis auf diese Zeile\n",
+    )
+    .expect("settings.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zeile = zeile(&bestand, Datei::Einstellungen);
+    assert_eq!(zeile.befund, Befund::Verglichen);
+    assert_eq!(
+        zeile.nur_ausgeliefert,
+        vec![String::from("terminal")],
+        "die Hinrichtung nennt nicht genau den fehlenden obersten Schluessel"
+    );
+    assert!(zeile.nur_beim_nutzer.is_empty());
+}
+
+/// Warum die Gegenrichtung bei `keymap.toml` und `settings.toml`
+/// bauartbedingt leer bleibt: ein unbekannter Eintrag macht die Datei
+/// beschaedigt, und sie kommt gar nicht bis zum Vergleich.
+///
+/// **Ohne diese Probe waere „ist bauartbedingt leer" eine Behauptung im
+/// Modulkopf von `ablage/neuerungen.rs`.** Sie haelt die zwei Stellen, an denen
+/// die Bauart wirklich haengt: `deny_unknown_fields` an `Einstellungsdatei` und
+/// die Abweisung einer unbekannten Kennung in `Belegung::bauen`. Wer eine von
+/// beiden aufhebt, laesst diese Probe rot werden, statt jene Begruendung still
+/// falsch zu machen.
+#[test]
+fn ein_unbekannter_eintrag_macht_settings_und_keymap_beschaedigt() {
+    let (_ordner, ablage) = ablage("neuerungen-unbekannter-eintrag");
+    auslieferungsfassungen_schreiben(&ablage);
+    fs::write(
+        ablage.pfad(Datei::Einstellungen),
+        format!(
+            "{}\nunbekannter_schluessel = \"irgendwas\"\n",
+            einstellungen::AUSLIEFERUNGSTEXT
+        ),
+    )
+    .expect("settings.toml laesst sich nicht hinlegen");
+    fs::write(
+        ablage.pfad(Datei::Belegung),
+        format!(
+            "{}\n[[funktion]]\nid = \"gibt_es_nicht\"\nname = \"Gibt es nicht\"\ntasten = []\n",
+            belegung::AUSLIEFERUNGSTEXT
+        ),
+    )
+    .expect("keymap.toml laesst sich nicht hinlegen");
+
+    // Erst der Befund der eigentlichen Leser: fuer sie sind beide Dateien
+    // beschaedigt, und KRK arbeitet auf dem Auslieferungszustand weiter.
+    assert!(
+        geladene_einstellungen(&ablage).ersetzung.is_some(),
+        "ein unbekannter oberster Schluessel muss settings.toml beschaedigen \
+         (deny_unknown_fields an Einstellungsdatei)"
+    );
+    assert!(
+        ablage
+            .durchgang(belegung::laden)
+            .expect("die Schreibsperre laesst sich nicht nehmen")
+            .ersetzung
+            .is_some(),
+        "eine unbekannte Kennung muss keymap.toml beschaedigen \
+         (Belegungsfehler::UnbekannteFunktion in Belegung::bauen)"
+    );
+
+    // Und deshalb der Befund hier: nicht verglichen, in keiner Richtung.
+    let bestand = erhobene_neuerungen(&ablage);
+    for welche in [Datei::Einstellungen, Datei::Belegung] {
+        let zeile = zeile(&bestand, welche);
+        assert_eq!(
+            zeile.befund,
+            Befund::Ersetzt,
+            "{} ist fuer ihren Leser beschaedigt und darf nicht verglichen werden",
+            welche.dateiname()
+        );
+        assert!(
+            !zeile.traegt_unterschied(),
+            "{} traegt einen Unterschied, obwohl sie gar nicht verglichen wird: {:?} / {:?}",
+            welche.dateiname(),
+            zeile.nur_ausgeliefert,
+            zeile.nur_beim_nutzer
+        );
+    }
+    assert_eq!(
+        zeile(&bestand, Datei::Leser).befund,
+        Befund::Verglichen,
+        "readers.toml ist unversehrt und muss verglichen werden"
+    );
+
+    // Und das Blatt sagt es dem Nutzer mit dem Wort, das `Grund::beschreibung`
+    // ihm in der Statuszeile schon hingeschrieben hat.
+    let text = neuerungen::blatttext(&bestand);
+    assert!(
+        text.contains("Diese Datei ist beschädigt und wird deshalb nicht verglichen."),
+        "der Blatttext sagt nicht, warum die zwei Dateien nicht verglichen sind:\n{text}"
+    );
+}
+
+/// Der Wortlaut der Startzeile: je Datei mit Unterschied ihr Name und ihre
+/// Zahl, dazu der Ordner in KRKs Meldungsform.
+///
+/// **Der Text traegt Umlaute** — er geht durch KRKs Oberflaeche an den Nutzer,
+/// und die Naht vom 260907 trennt danach, wer liest. Die Bezeichner und
+/// Kommentare daneben tragen die Umschrift.
+///
+/// Das Benutzerverzeichnis reicht die Probe herein und fasst das echte nicht
+/// an; `gekuerzt_fuer_anzeige` nimmt es als Argument entgegen, und genau dafuer.
+#[test]
+fn die_startzeile_nennt_jede_datei_mit_unterschied_und_den_ordner() {
+    let (ordner, ablage) = ablage("neuerungen-startzeile");
+    auslieferungsfassungen_schreiben(&ablage);
+    fs::write(
+        ablage.pfad(Datei::Einstellungen),
+        b"# leergeraeumt bis auf diese Zeile\n",
+    )
+    .expect("settings.toml laesst sich nicht hinlegen");
+    let (rest, _) = ohne_den_ersten_block(leseprofile::AUSLIEFERUNGSTEXT, "profil", "name");
+    let (rest, _) = ohne_den_ersten_block(&rest, "profil", "name");
+    fs::write(ablage.pfad(Datei::Leser), rest).expect("readers.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zuhause = ordner
+        .pfad()
+        .parent()
+        .expect("der Pruefordner hat kein uebergeordnetes Verzeichnis");
+    let name = ordner
+        .pfad()
+        .file_name()
+        .expect("der Pruefordner hat keinen Namen")
+        .to_string_lossy()
+        .into_owned();
+
+    assert_eq!(
+        neuerungen::startzeile(&bestand, Some(zuhause)),
+        Some(format!(
+            "Neu in dieser Fassung: 1 Eintrag in settings.toml, 2 Einträge in readers.toml. \
+             Ihre Dateien liegen unter ~/{name}."
+        )),
+        "die Startzeile traegt nicht ihren Wortlaut"
+    );
+}
+
+/// Der Wortlaut des Blatttextes: je verglichener Datei ihr voller Pfad und der
+/// Unterschied in beide Richtungen.
+///
+/// **Auch der Text traegt Umlaute**, aus demselben Grund wie die Startzeile.
+/// Jede verglichene Datei bekommt ihren Absatz, auch die ohne Unterschied und
+/// die, die es nicht gibt: der volle Pfad ist der Grund, aus dem der Nutzer das
+/// Blatt aufmacht.
+#[test]
+fn der_blatttext_nennt_jede_datei_mit_vollem_pfad_und_beide_richtungen() {
+    let (_ordner, ablage) = ablage("neuerungen-blatttext");
+    fs::write(
+        ablage.pfad(Datei::Einstellungen),
+        b"# leergeraeumt bis auf diese Zeile\n",
+    )
+    .expect("settings.toml laesst sich nicht hinlegen");
+    let (rest, entfernter_name) =
+        ohne_den_ersten_block(leseprofile::AUSLIEFERUNGSTEXT, "profil", "name");
+    let eigenes =
+        "\n[[profil]]\nname = \"Mein eigener Ort\"\nkennzeichen = '^eigenes-kennzeichen$'\n";
+    fs::write(ablage.pfad(Datei::Leser), format!("{rest}{eigenes}"))
+        .expect("readers.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let text = neuerungen::blatttext(&bestand);
+
+    for welche in verglichene_dateien() {
+        let pfad = ablage.pfad(welche).display().to_string();
+        assert!(
+            text.contains(&pfad),
+            "der Blatttext nennt den vollen Pfad von {} nicht:\n{text}",
+            welche.dateiname()
+        );
+    }
+    assert!(
+        text.contains("Diese Datei liegt nicht in Ihrer Ablage; verglichen wird nur, was dasteht."),
+        "der Blatttext sagt nicht, dass keymap.toml gar nicht dasteht:\n{text}"
+    );
+    assert!(
+        text.contains("Neu in dieser Fassung: terminal"),
+        "der Blatttext nennt die Hinrichtung von settings.toml nicht:\n{text}"
+    );
+    assert!(
+        text.contains(&format!("Neu in dieser Fassung: {entfernter_name}")),
+        "der Blatttext nennt die Hinrichtung von readers.toml nicht:\n{text}"
+    );
+    assert!(
+        text.contains("Nur in Ihrer Datei: Mein eigener Ort"),
+        "der Blatttext nennt die Gegenrichtung von readers.toml nicht:\n{text}"
+    );
+    assert!(
+        text.contains("Nur in Ihrer Datei: —"),
+        "eine leere Richtung bekommt einen Gedankenstrich und faellt nicht weg:\n{text}"
+    );
+    assert!(
+        text.ends_with(
+            "Gezeigt ist der Stand vom Start; KRK liest diese Dateien im Betrieb nicht neu."
+        ),
+        "der Blatttext sagt nicht, worauf er sich bezieht:\n{text}"
+    );
 }
