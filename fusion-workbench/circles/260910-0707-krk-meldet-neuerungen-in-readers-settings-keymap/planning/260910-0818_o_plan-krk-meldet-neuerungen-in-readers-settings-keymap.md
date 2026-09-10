@@ -270,7 +270,7 @@ den die laufende Anwendung gar nicht benutzt.
        wie `die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei`.
    - Dependencies: keine
 
-6. [DONE] **Das Blatt auf Abruf**
+6. **Das Blatt auf Abruf** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/blaetter/neuerungen.rs` (neu),
      `crates/krk-ui/src/appkit/blaetter/mod.rs`
@@ -292,6 +292,33 @@ den die laufende Anwendung gar nicht benutzt.
      - Der Bauplan trägt genau eine Schaltfläche, und sie lässt liegen.
      - Eine Namensliste jenseits der Kürzungsgrenze endet mit „… und N weitere".
      - Die drei Sätze über den Preis je Datei stehen als Probe im Wortlaut fest.
+   - Nachtrag des Ausführenden am 260910-1520: **die Dateiliste dieses Schrittes reicht für
+     seine eigenen Changes nicht aus, und zwei Dateien im Kern sind dazugekommen.** Der
+     Schritt verlangt, dass „der Text aus `neuerungen::blatttext`" je Datei den Preissatz
+     führt und dort, wo die Gegenrichtung bauartbedingt leer ist, den Grund in einem
+     Halbsatz nennt. Beides gehört in `blatttext`, und `blatttext` steht seit Schritt 1 in
+     `crates/krk-core/src/ablage/neuerungen.rs`, dessen Changes die zwei Formatierer nur
+     benannt und nicht ausgeschrieben hatten. Die Oberfläche kann keines von beiden
+     nachreichen: den Preissatz je Datei nicht, weil `blatttext` die Absätze schon
+     zusammengesetzt zurückgibt, und den Halbsatz erst recht nicht, weil er den
+     Gedankenstrich ersetzt, den `namenszeile` setzt. Ein zweiter Formatierer in `krk-ui`
+     daneben wäre genau die Doppelung, die Schritt 5 an der Kürzung gerade beseitigt hat.
+     Angefasst sind deshalb zusätzlich `crates/krk-core/src/ablage/neuerungen.rs` (die
+     reinen Funktionen `preis` und `gegenrichtung`, gerufen aus `blatttext`) und
+     `crates/krk-core/tests/ablage.rs` (die Proben zu den ersten drei
+     Abnahmekriterien). Die Testing Strategy des Plans sieht genau das vor — „der Kern
+     trägt die Last, weil er ohne AppKit prüfbar ist" —, und drei der vier
+     Abnahmekriterien dieses Schrittes sind Aussagen über den Text und nicht über AppKit;
+     `crates/krk-ui/src/appkit/blaetter/neuerungen.rs` trägt das vierte, den Bauplan.
+     **`pub fn zeigen` hat noch keinen Rufer** und trägt dafür ein
+     `#[expect(dead_code, reason = …)]`, das mit dem Ausführungszweig aus Schritt 9 von
+     selbst zur Warnung wird und fällt; ein `#[allow]` bliebe ohne Ablaufdatum stehen.
+     Ein roter Lauf unterwegs: die erste Fassung der Prosa sagte „die vier Dateien ohne
+     Vergleich", und `keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien`
+     hält jede Zahl vor „Dateien" unter `ablage/` gegen die acht des Baumes — heraus ist
+     die Zahl aus dem Satz und nicht die Probe. `make check` endet mit 0, alle fünf.
+     Alles Weitere im Verlaufsprotokoll
+     `260910-1520-coder-schritt-6-das-blatt-auf-abruf.md`.
    - Dependencies: Schritte 1, 5
 
 7. **Das Kommando im Kern** [DONE]
