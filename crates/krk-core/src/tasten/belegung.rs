@@ -838,6 +838,20 @@ pub enum Kommando {
     /// zugleich, setzt deshalb kein Dateifenster im Fokus voraus und traegt ab
     /// Werk keine Kombination.
     SpalteMarkeUmschalten,
+    /// Das Blatt zeigen, das die Neuerungen an `readers.toml`,
+    /// `settings.toml` und `keymap.toml` im Einzelnen auffuehrt (Runde der
+    /// Ablageneuerungen).
+    ///
+    /// Beim Start meldet KRK von sich aus, dass eine der drei Dateien hinter
+    /// der Auslieferungsfassung zurueckliegt, einmal je Fassung. Dieser Befehl
+    /// ist der Weg zum Einzelnen auf Verlangen; er zeigt den Bestand **vom
+    /// Start** und liest die drei Dateien nicht neu, denn die Leseprofile und
+    /// die Belegung, mit denen KRK arbeitet, sind die vom Start.
+    ///
+    /// **Wirkt ueberall, wie [`Kommando::Notizzettel`] daneben.** Das Blatt
+    /// faehrt am Hauptfenster herunter und betrifft die Ablage, nicht einen
+    /// der Bereiche der Fensterzeile.
+    NeuerungenZeigen,
 }
 
 /// Die Aufzaehlung passt in die Umwandlung, ueber die [`Kommando::kennung`]
@@ -860,7 +874,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 86] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 87] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -971,6 +985,7 @@ impl Kommando {
         (Kommando::GitBereichUmschalten, "git_bereich_umschalten"),
         (Kommando::FokusGit, "fokus_git"),
         (Kommando::SpalteMarkeUmschalten, "spalte_marke_umschalten"),
+        (Kommando::NeuerungenZeigen, "neuerungen_zeigen"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -1116,7 +1131,15 @@ impl Kommando {
             // schnitte die anderen vier ab — der Nutzer bekaeme den Zettel
             // aus dem Editor oder aus der Leiste heraus nicht mehr auf,
             // obwohl er dort so wenig zu tun hat wie im Dateifenster.
-            | Kommando::Notizzettel => Wirkungsbereich::Ueberall,
+            | Kommando::Notizzettel
+            // Das Blatt der Ablageneuerungen steht aus demselben Grund hier
+            // wie der Notizzettel darueber: es faehrt am Hauptfenster
+            // herunter und sein Gegenstand ist die Ablage, nicht einer der
+            // Bereiche der Fensterzeile. Wer beim Start gelesen hat, dass
+            // seine `readers.toml` zurueckliegt, will das Einzelne von dort
+            // aus sehen, wo er gerade steht, und nicht erst den Fokus
+            // umsetzen.
+            | Kommando::NeuerungenZeigen => Wirkungsbereich::Ueberall,
             // Die drei Befehle des Navigators, deren Taste im Editor der
             // Textflaeche gehoert.
             //

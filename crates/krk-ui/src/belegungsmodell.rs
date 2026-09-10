@@ -417,7 +417,18 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::BelegungsdateiAnsehen
         | Kommando::Beenden
         | Kommando::WeitereInstanz
-        | Kommando::Notizzettel => Funktionsbereich::Anwendung,
+        | Kommando::Notizzettel
+        // Die Ablageneuerungen stehen aus demselben Grund hier wie der
+        // Notizzettel: das Blatt haengt am Hauptfenster, und sein Gegenstand
+        // ist die Ablage der Anwendung als ganze. Ein eigener
+        // Funktionsbereich waere ein Obermenue mit einem einzigen Eintrag.
+        //
+        // **Nicht unter `Vorschau`, obwohl die Belegungsdatei dort
+        // erscheint.** Der Befehl zeigt nicht eine der drei Dateien, sondern
+        // den Unterschied zwischen der Nutzerfassung und der
+        // Auslieferungsfassung; wer ihn sucht, sucht ihn bei den zwei
+        // Eintraegen, die die Ablage schon fuehren.
+        | Kommando::NeuerungenZeigen => Funktionsbereich::Anwendung,
         // Der eingebaute Editor, und `bearbeiten` steht mit darin.
         //
         // Es ist die einzige Stelle, an der diese Gliederung und

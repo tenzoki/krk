@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 93 Funktionen mit zusammen 96 Kombinationen.
+# Ausgeliefert sind 94 Funktionen mit zusammen 97 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1278,6 +1278,35 @@ gehalten_von = "menue"
 id = "notizzettel"
 name = "Notizzettel anzeigen"
 tasten = ["f2", "cmd+k"]
+
+# ── Die Neuerungen auf Verlangen ─────────────────────────────────────────────
+# Die Runde der Ablageneuerungen. Beim Start meldet KRK von sich aus, dass
+# eine der drei Dateien readers.toml, settings.toml und keymap.toml hinter der
+# Auslieferungsfassung zurueckliegt, einmal je Fassung. Dieser Eintrag ist der
+# Weg zum Einzelnen auf Verlangen, und nach der Startmeldung der einzige.
+#
+# Der Block steht zwischen dem Notizzettel und der weiteren Instanz, also bei
+# der Anwendung als ganze: `bereich_des_kommandos` in
+# `crates/krk-ui/src/belegungsmodell.rs` fuehrt "neuerungen_zeigen" unter
+# `Funktionsbereich::Anwendung`, und die Reihenfolge der Bloecke ist die
+# Reihenfolge im Menue.
+#
+# opt+cmd+i hat der Nutzer am 260910 festgelegt. Das i ist auf dem Mac der
+# Buchstabe der Auskunft, und von den i-Kombinationen traegt in dieser Datei
+# allein shift+cmd+i etwas, naemlich "markierung_umkehren" weiter oben.
+# Nachgezaehlt am 260910 ueber alle Tastenlisten dieser Datei, die vor diesem
+# Eintrag 93 Funktionen mit zusammen 96 Kombinationen fuehrte: keine davon
+# nennt opt+cmd+i.
+#
+# Wer eine eigene keymap.toml ohne diese Kennung hat, bekommt die Funktion
+# unbelegt hinzu und erreicht sie ueber das Hauptmenue; `Belegung::bauen`
+# nimmt jede Funktion auf, die die Nutzerdatei nicht nennt. Genau dieser Fall
+# ist es, den das Blatt fuer keymap.toml meldet.
+
+[[funktion]]
+id = "neuerungen_zeigen"
+name = "Neuerungen anzeigen"
+tasten = ["opt+cmd+i"]
 
 # ── Eine weitere Instanz von KRK ─────────────────────────────────────────────
 # C3 der Runde 7. Der Eintrag steht hier bei der Anwendung als ganze und nicht

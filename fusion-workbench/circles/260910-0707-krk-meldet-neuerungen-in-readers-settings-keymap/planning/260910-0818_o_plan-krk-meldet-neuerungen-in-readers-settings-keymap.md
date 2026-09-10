@@ -294,7 +294,7 @@ den die laufende Anwendung gar nicht benutzt.
      - Die drei Sätze über den Preis je Datei stehen als Probe im Wortlaut fest.
    - Dependencies: Schritte 1, 5
 
-7. **Das Kommando im Kern**
+7. **Das Kommando im Kern** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`
    - Changes: `Kommando` bekommt eine Variante, `Kommando::KENNUNGEN` die Zeile mit der
@@ -312,9 +312,18 @@ den die laufende Anwendung gar nicht benutzt.
        verlangt für jede Kennung einen Eintrag in `resources/default-keymap.toml`. Das ist
        erwartet und aufgeschrieben. **Wer diesen Schritt ausführt, fasst
        `resources/default-keymap.toml` nicht an**; die Datei gehört Schritt 8.
+     - Nachtrag des Ausführenden am 260910-1245: **es sind drei Stellen und nicht eine**,
+       gemessen mit `cargo test --workspace --no-fail-fast`, alle mit derselben Wurzel —
+       `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` (`krk-core`, Lib),
+       `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` (`krk-core`,
+       `tests/belegung.rs`) und
+       `belegungsausgabe::tests::die_dritte_spalte_haelt_die_begruendungslagen_auseinander`
+       (`krk-ui`). Die zweite verlangt zusätzlich eine **Kombination** und nicht nur einen
+       Eintrag, es sei denn, die Kennung stünde in `OHNE_KOMBINATION_AB_WERK`. Alles Weitere
+       im Verlaufsprotokoll `260910-1215-coder-schritt-7-das-kommando-im-kern.md`.
    - Dependencies: keine
 
-8. **Der Eintrag in der Auslieferungsbelegung**
+8. **Der Eintrag in der Auslieferungsbelegung** [DONE]
    - Executor: `ontocoder`
    - Files: `resources/default-keymap.toml`
    - Changes: Ein `[[funktion]]`-Block mit `id = "neuerungen_zeigen"`, einem deutschen
@@ -332,6 +341,19 @@ den die laufende Anwendung gar nicht benutzt.
        `die_zwei_zahlen_im_kopf_von_default_keymap_toml_stimmen_noch` ist grün.
      - `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` ist grün.
      - `cargo test --workspace` ist wieder vollständig grün.
+   - Nachtrag des Ausführenden am 260910-1330: eingetragen ist `neuerungen_zeigen` mit dem
+     Namen „Neuerungen anzeigen" und `opt+cmd+i`, zwischen `notizzettel` und
+     `weitere_instanz`; der Kopf steht auf 94 Funktionen mit zusammen 97 Kombinationen.
+     `opt+cmd+i` war über alle Tastenlisten der Datei frei, belegt war von den
+     i-Kombinationen allein `shift+cmd+i` bei `markierung_umkehren`. `make check` endet mit
+     0, und die drei Proben aus dem Nachtrag zu Schritt 7 sind grün, dazu
+     `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch`. **Die Menüausgabe
+     dieses Geräts zeigt den Eintrag ohne Kürzel und am Fuß der Gruppe „Anwendung"**, weil
+     die `keymap.toml` unter `~/Library/Application Support/KRK/` von gestern stammt und die
+     Kennung nicht führt; `Belegung::bauen` hängt fehlende Funktionen unbelegt hinten an.
+     Das ist genau der Fall, den Schritt 10 dem Nutzer erklären soll, und kein Befund an
+     diesem Schritt. Alles Weitere im Verlaufsprotokoll
+     `260910-1315-ontocoder-schritt-8-der-eintrag-in-der-auslieferungsbelegung.md`.
    - Dependencies: Schritt 7. **Die Reihenfolge ist nicht umkehrbar**: ein Eintrag in der
      Belegung ohne Kommando lässt `belegungsmodell::bereich` `None` liefern, und
      `nach_bereichen` bricht darauf mit einem `panic` ab, sobald das Hauptmenü gebaut wird.
