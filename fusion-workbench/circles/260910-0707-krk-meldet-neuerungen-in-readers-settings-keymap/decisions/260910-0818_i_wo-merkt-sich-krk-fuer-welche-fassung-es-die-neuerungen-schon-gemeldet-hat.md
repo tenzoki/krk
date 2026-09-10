@@ -114,3 +114,6 @@ Teil der Antwort und nicht schon entschieden.
 
 ---
 Answered: `260905-2008-orchestrator-session.md` `## Fortsetzung 260910 — die Runde 24 wird geplant` — Möglichkeit 2: eine achte Ablagedatei trägt den Merker `gemeldete_fassung`, geschrieben unter der Schreibsperre und damit für jede Instanz gültig; `session.toml` bleibt Sitzungszustand und die offene Frage `260907-1407_*_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md` unangetastet; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 70f0d84 — `reported.toml` als achte Ablagedatei, geschrieben und gelesen über `Zugang::sichern` und `Zugang::laden` und damit unter der Schreibsperre, die jede Instanz nimmt; `session.toml` ist unangetastet, und die offene Frage `260907-1407_*_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md` bleibt auf ihre eigenen Gründe zu beantworten.

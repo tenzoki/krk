@@ -76,6 +76,11 @@
 //! vollstaendige Fallunterscheidung. Die Zusage „in beide Richtungen" ist
 //! damit an einer Datei erfuellt und an zweien leer, mit dem Grund daneben.
 //!
+//! **Das Blatt schreibt diesen Grund hin, statt einen Gedankenstrich stehen zu
+//! lassen** ([`gegenrichtung`]): eine leere Richtung mit Grund und eine leere
+//! Richtung ohne Fund sind zweierlei, und der Nutzer soll sie nicht an
+//! derselben Zeile auseinanderhalten muessen.
+//!
 //! **Gehalten wird die Begruendung von der Probe
 //! `ein_unbekannter_eintrag_macht_settings_und_keymap_beschaedigt`** in
 //! `krk-core/tests/ablage.rs`. Ohne sie waere sie eine Behauptung in diesem
@@ -496,8 +501,16 @@ pub fn startzeile(bestand: &Bestand, benutzerverzeichnis: Option<&Path>) -> Opti
     ))
 }
 
-/// Der Text des Blattes auf Abruf: je verglichener Datei ihr voller Pfad und
-/// der Unterschied in beide Richtungen.
+/// Der Text des Blattes auf Abruf: je verglichener Datei ihr voller Pfad, der
+/// Unterschied in beide Richtungen und ein Satz darueber, was ein Unterschied
+/// an **dieser** Datei kostet.
+///
+/// **Der Preissatz steht nur unter [`Befund::Verglichen`]**, und das ist keine
+/// Sparsamkeit. Wer keine `keymap.toml` hat, arbeitet mit der
+/// Auslieferungsbelegung und verliert nichts; wer eine beschaedigte hat, hat
+/// das beim Start gelesen und arbeitet ebenfalls auf dem
+/// Auslieferungszustand. Ein Preis faellt erst an, wo es einen Unterschied
+/// geben kann. Welcher es je Datei ist, sagt [`preis`].
 ///
 /// **Jede verglichene Datei bekommt ihren Absatz, auch die ohne Unterschied und
 /// die, die es nicht gibt.** Das Blatt beantwortet die Frage „was ist mit
@@ -534,7 +547,11 @@ pub fn blatttext(bestand: &Bestand) -> String {
                     "Neu in dieser Fassung",
                     &zeile.nur_ausgeliefert,
                 ));
-                text.push_str(&namenszeile("Nur in Ihrer Datei", &zeile.nur_beim_nutzer));
+                text.push_str(&gegenrichtung(zeile.welche, &zeile.nur_beim_nutzer));
+                if let Some(satz) = preis(zeile.welche) {
+                    text.push_str(satz);
+                    text.push('\n');
+                }
             }
         }
         text.push('\n');
@@ -554,6 +571,67 @@ fn namenszeile(ueberschrift: &str, namen: &[String]) -> String {
         return format!("{ueberschrift}: —\n");
     }
     format!("{ueberschrift}: {}\n", gekuerzt(namen.to_vec()).join(", "))
+}
+
+/// Die Zeile der Gegenrichtung, mit dem Grund dort, wo sie bauartbedingt leer
+/// ist.
+///
+/// Bei `settings.toml` und `keymap.toml` fuellt sie sich nie
+/// ([`eigene_eintraege_moeglich`], und der Modulkopf sagt warum). Ein blosser
+/// Gedankenstrich liesse den Nutzer raten, ob die Richtung geprueft wurde und
+/// nichts ergab oder ob sie gar nicht zu fuellen ist; der Halbsatz dahinter
+/// beantwortet das. Bei `readers.toml` bleibt der Gedankenstrich allein
+/// stehen, denn dort heisst er wirklich „geprueft und nichts gefunden".
+fn gegenrichtung(welche: Datei, namen: &[String]) -> String {
+    let zeile = namenszeile("Nur in Ihrer Datei", namen);
+    if namen.is_empty() && !eigene_eintraege_moeglich(welche) {
+        return format!(
+            "{} (diese Datei kann keine eigenen Einträge führen; einen unbekannten Eintrag \
+             weist KRK als beschädigt ab)\n",
+            zeile.trim_end()
+        );
+    }
+    zeile
+}
+
+/// Was es den Nutzer kostet, wenn seine Fassung dieser Ablagedatei einen
+/// ausgelieferten Eintrag nicht fuehrt.
+///
+/// **Die vierte vollstaendige Fallunterscheidung dieses Moduls**, und sie
+/// beantwortet wieder eine eigene Frage: nicht, was ein Eintrag ist
+/// ([`Vergleichsform::fuer`]), nicht, wogegen er gehalten wird
+/// ([`auslieferung`]), und nicht, ob ein unbekannter zulaessig ist
+/// ([`eigene_eintraege_moeglich`]), sondern was sein Fehlen kostet. Die drei
+/// Antworten sind drei verschiedene, und keine ist aus den anderen
+/// abzuleiten — bei `settings.toml` kostet es fast nichts, bei `keymap.toml`
+/// die Tastenkombination und nicht die Funktion, bei `readers.toml` die
+/// Zusammenfassung selbst.
+///
+/// **Der Satz steht im Blatt und nicht in der Startzeile.** Die Zeile hat eine
+/// Zeile und traegt die Zahlen; das Blatt hat Platz fuer den Grund, und der
+/// Nutzer hat es eigens aufgemacht.
+///
+/// Eine Datei ohne Vergleich hat keinen Preis: sie kommt in [`blatttext`] gar
+/// nicht vor. Dass jede verglichene einen nennt, haelt die
+/// Probe `jede_verglichene_ablagedatei_nennt_ihren_preis` in
+/// `krk-core/tests/ablage.rs` — dieselbe Paarung und dieselbe Luecke wie bei
+/// [`auslieferung`], die der Uebersetzer nicht sieht.
+const fn preis(welche: Datei) -> Option<&'static str> {
+    match welche {
+        Datei::Leser => Some(
+            "Ein Profil, das Ihre Datei nicht führt, kostet die Zusammenfassung für diesen \
+             Ort: die Vorschau zeigt dort die Metadaten.",
+        ),
+        Datei::Einstellungen => Some(
+            "Ein Schlüssel, den Ihre Datei nicht führt, kostet allein den erklärenden \
+             Kommentarblock; den Wert selbst nimmt KRK aus der Auslieferungsfassung.",
+        ),
+        Datei::Belegung => Some(
+            "Eine Funktion, die Ihre Datei nicht führt, kostet ihre ausgelieferten \
+             Tastenkombinationen; über das Hauptmenü bleibt sie erreichbar.",
+        ),
+        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => None,
+    }
 }
 
 // ----------------------------------------------------------------------

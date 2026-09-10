@@ -270,7 +270,7 @@ den die laufende Anwendung gar nicht benutzt.
        wie `die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei`.
    - Dependencies: keine
 
-6. **Das Blatt auf Abruf**
+6. [DONE] **Das Blatt auf Abruf**
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/blaetter/neuerungen.rs` (neu),
      `crates/krk-ui/src/appkit/blaetter/mod.rs`

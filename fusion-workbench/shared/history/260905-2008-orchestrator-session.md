@@ -733,3 +733,13 @@ zusätzliche Arbeit falle im Dauerbetrieb nicht an, bleibt am gebauten Bündel u
 
 **Zwei Festlegungen des Nutzers am Plan, ebenfalls am 260910:** das Blatt liegt auf
 `opt+cmd+i`, und die Startzeile nennt nur die Dateien mit einem Unterschied, nicht alle drei.
+
+**Schritt 6 hat kein eigenes Protokoll.** Der Bauer ist zweimal zurückgekommen, während seine
+Abnahme noch lief, und hat weder den Planschritt abgehakt noch ein Verlaufsprotokoll
+geschrieben. Der Code stand vollständig da. Die Abnahme habe ich selbst gefahren
+(`make check`, Rückgabewert 0, alle fünf Kommandos), und den Haken am Planschritt selbst
+gesetzt. Was das Blatt tut, steht im Modulkopf von
+`crates/krk-ui/src/appkit/blaetter/neuerungen.rs`: der Text kommt fertig aus dem Kern, die
+Datei trägt allein den AppKit-Anteil, und anders als beim Blatt der übersprungenen Einträge
+steht es auch ohne einen einzigen Unterschied — der Nutzer hat gefragt, und die drei vollen
+Pfade sind der Grund seiner Frage.

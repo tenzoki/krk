@@ -4714,6 +4714,179 @@ fn der_kuerzer_laesst_eine_liste_bis_zur_grenze_in_ruhe() {
     );
 }
 
+/// Ohne einen einzigen Unterschied steht das Blatt trotzdem und nennt die
+/// vollen Pfade.
+///
+/// **Das ist der Unterschied zur Abschlussliste der uebersprungenen
+/// Eintraege**, wo ohne Eintraege kein Blatt aufgeht: dort meldet KRK
+/// ungefragt, hier hat der Nutzer gefragt. „An Ihren Dateien ist nichts" ist
+/// auf diese Frage eine Antwort, und der volle Pfad ist der Grund, aus dem er
+/// das Blatt aufgemacht hat.
+#[test]
+fn ohne_einen_einzigen_unterschied_nennt_das_blatt_die_drei_vollen_pfade() {
+    let (_ordner, ablage) = ablage("neuerungen-blatt-ohne-unterschied");
+    auslieferungsfassungen_schreiben(&ablage);
+
+    let bestand = erhobene_neuerungen(&ablage);
+    assert!(
+        !bestand.traegt_unterschied(),
+        "die woertlich hingelegte Auslieferungsfassung traegt einen Unterschied"
+    );
+
+    let text = neuerungen::blatttext(&bestand);
+    for welche in verglichene_dateien() {
+        let zeile = zeile(&bestand, welche);
+        assert_eq!(
+            zeile.befund,
+            Befund::Verglichen,
+            "{} ist nicht verglichen worden",
+            welche.dateiname()
+        );
+        assert!(
+            text.contains(&ablage.pfad(welche).display().to_string()),
+            "der Blatttext nennt den vollen Pfad von {} nicht:\n{text}",
+            welche.dateiname()
+        );
+    }
+    assert_eq!(
+        text.matches("Neu in dieser Fassung: —").count(),
+        verglichene_dateien().count(),
+        "nicht jede verglichene Datei meldet ihre leere Hinrichtung:\n{text}"
+    );
+}
+
+/// Jede verglichene Ablagedatei nennt im Blatt, was ein Unterschied bei ihr
+/// kostet, und zwar im Wortlaut.
+///
+/// **Die drei Saetze sind drei verschiedene**, und das ist der Zweck: bei
+/// `settings.toml` kostet ein fehlender Schluessel allein den erklaerenden
+/// Kommentarblock, bei `keymap.toml` die Tastenkombination und nicht die
+/// Funktion, bei `readers.toml` die Zusammenfassung selbst. Ein
+/// Sammelsatz ueber alle drei waere an zweien falsch.
+///
+/// Die Probe haelt daneben die Paarung, die der Uebersetzer nicht haelt: eine
+/// verglichene Datei ohne Preissatz kaeme sonst still durch, wie eine ohne
+/// eingebettete Auslieferungsfassung.
+#[test]
+fn jede_verglichene_ablagedatei_nennt_ihren_preis() {
+    let (_ordner, ablage) = ablage("neuerungen-blatt-preis");
+    auslieferungsfassungen_schreiben(&ablage);
+
+    let text = neuerungen::blatttext(&erhobene_neuerungen(&ablage));
+    let saetze = [
+        (
+            Datei::Leser,
+            "Ein Profil, das Ihre Datei nicht führt, kostet die Zusammenfassung für diesen \
+             Ort: die Vorschau zeigt dort die Metadaten.",
+        ),
+        (
+            Datei::Einstellungen,
+            "Ein Schlüssel, den Ihre Datei nicht führt, kostet allein den erklärenden \
+             Kommentarblock; den Wert selbst nimmt KRK aus der Auslieferungsfassung.",
+        ),
+        (
+            Datei::Belegung,
+            "Eine Funktion, die Ihre Datei nicht führt, kostet ihre ausgelieferten \
+             Tastenkombinationen; über das Hauptmenü bleibt sie erreichbar.",
+        ),
+    ];
+    for welche in verglichene_dateien() {
+        let (_, satz) = saetze
+            .iter()
+            .find(|(datei, _)| *datei == welche)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{} wird verglichen, aber diese Probe kennt ihren Preissatz nicht",
+                    welche.dateiname()
+                )
+            });
+        assert!(
+            text.contains(satz),
+            "der Blatttext nennt den Preis von {} nicht im Wortlaut:\n{text}",
+            welche.dateiname()
+        );
+    }
+
+    // Wo die Gegenrichtung bauartbedingt leer ist, sagt das Blatt es; ein
+    // blosser Gedankenstrich liesse den Nutzer raten.
+    assert!(
+        text.contains(
+            "Nur in Ihrer Datei: — (diese Datei kann keine eigenen Einträge führen; einen \
+             unbekannten Eintrag weist KRK als beschädigt ab)"
+        ),
+        "der Blatttext sagt nicht, warum die Gegenrichtung dort gar nicht zu fuellen ist:\n{text}"
+    );
+    // Bei `readers.toml` heisst der Gedankenstrich wirklich „geprueft und
+    // nichts gefunden" und bekommt deshalb keinen Halbsatz.
+    assert!(
+        text.contains("Nur in Ihrer Datei: —\n"),
+        "die Gegenrichtung von readers.toml traegt einen Grund, wo keiner hingehoert:\n{text}"
+    );
+}
+
+/// Eine Namensliste jenseits der Kuerzungsgrenze endet mit „… und N weitere".
+///
+/// **`keymap.toml` ist der Fall, um den es geht**: sie fuehrt jede
+/// ausgelieferte Funktion, und wer eine alte Datei mit einer Handvoll
+/// Eintraege hat, bekaeme sonst eine Liste, die den Schirm ueberragt. Der
+/// Kuerzer ist derselbe, den die Abschlussliste der uebersprungenen Eintraege
+/// benutzt (Schritt 5 des Plans); hier steht, dass das Blatt ihn wirklich
+/// nimmt.
+#[test]
+fn eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere() {
+    let (_ordner, ablage) = ablage("neuerungen-blatt-kuerzung");
+    let ausgeliefert: toml::Table =
+        toml::from_str(belegung::AUSLIEFERUNGSTEXT).expect("die Auslieferungsbelegung ist kaputt");
+    let kennungen: Vec<String> = ausgeliefert["funktion"]
+        .as_array()
+        .expect("die Auslieferungsbelegung fuehrt keine Tabellenfolge [[funktion]]")
+        .iter()
+        .filter_map(|eintrag| Some(eintrag.get("id")?.as_str()?.to_owned()))
+        .collect();
+    let erste = kennungen
+        .first()
+        .expect("die Auslieferungsbelegung ist leer");
+    let fehlende = kennungen.len() - 1;
+    assert!(
+        fehlende > neuerungen::HOECHSTENS_EINZELN,
+        "die Auslieferungsbelegung fuehrt zu wenige Funktionen fuer eine Kuerzung"
+    );
+
+    // Eine Nutzerbelegung mit genau einer ausgelieferten Kennung: jede andere
+    // fehlt ihr, und keine ist unbekannt — sonst gaelte die Datei als
+    // beschaedigt und kaeme gar nicht bis zum Vergleich.
+    fs::write(
+        ablage.pfad(Datei::Belegung),
+        format!("[[funktion]]\nid = \"{erste}\"\n"),
+    )
+    .expect("keymap.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    assert_eq!(zeile(&bestand, Datei::Belegung).befund, Befund::Verglichen);
+    assert_eq!(
+        zeile(&bestand, Datei::Belegung).nur_ausgeliefert.len(),
+        fehlende
+    );
+
+    let text = neuerungen::blatttext(&bestand);
+    let rest = fehlende - neuerungen::HOECHSTENS_EINZELN;
+    let schluss = format!("… und {} weitere", neuerungen::zahl(rest));
+    let hinrichtung = text
+        .lines()
+        .find(|zeile| zeile.starts_with("Neu in dieser Fassung: ") && zeile.contains("… und "))
+        .unwrap_or_else(|| panic!("keine gekuerzte Namenszeile im Blatttext:\n{text}"));
+    assert!(
+        hinrichtung.ends_with(&schluss),
+        "die gekuerzte Namenszeile endet nicht auf {schluss:?}: {hinrichtung:?}"
+    );
+    assert_eq!(
+        hinrichtung.split(", ").count(),
+        neuerungen::HOECHSTENS_EINZELN + 1,
+        "die Namenszeile fuehrt nicht {} Namen und ein Schlussglied: {hinrichtung:?}",
+        neuerungen::HOECHSTENS_EINZELN
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Der Merker der gemeldeten Fassung
 // ---------------------------------------------------------------------------
