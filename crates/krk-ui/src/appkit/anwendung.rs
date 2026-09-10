@@ -323,8 +323,8 @@ use super::betrachter::Zoom;
 use super::bildtakt::{self, Zeichenende};
 use super::blaetter::ungesichert::{self, Antwort};
 use super::blaetter::{
-    self, Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen, uebersprungen,
-    zettel,
+    self, Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen,
+    startmeldungen, uebersprungen, zettel,
 };
 use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft};
 use super::ereignisse::{self, Anschlag, Eingabe, Tastenabgriff};
@@ -1734,11 +1734,49 @@ impl Anwendungsdelegierter {
         // fest im linken; hat die Sitzung das rechte als aktiv
         // wiederhergestellt, sah der Nutzer sie in der Zeile, auf die er nicht
         // blickt.
+        //
+        // **Die Zeile haelt genau eine Meldung, und bis zum 260910 lief hier
+        // eine Schleife ueber alle.** Jeder Durchlauf ueberschrieb den vorigen
+        // im selben Zug; von n Meldungen sah der Nutzer die n-te
+        // (`shared/issues/260820-2235_*_die-startmeldungen-ueberschreiben-einander-und-nur-die-letzte-erreicht-den-nutzer.md`).
+        // Welchen Weg die Meldungen nehmen, entscheidet jetzt
+        // [`startmeldungen::auskunft`] als reine Funktion; hier steht allein,
+        // was AppKit betrifft. Die Fallunterscheidung ist vollstaendig und
+        // ohne Auffangzweig: ein vierter Weg haelt den Bau an.
         let aktiv = self.ivars().modell.borrow().aktiv();
-        for meldung in meldungen {
-            self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
+        match startmeldungen::auskunft(&meldungen) {
+            startmeldungen::Auskunft::Nichts => {}
+            startmeldungen::Auskunft::Zeile(meldung) => {
+                self.dateifenster(aktiv).quelle().meldung_zeigen(meldung);
+            }
+            startmeldungen::Auskunft::Blatt { frage, liste } => {
+                self.startmeldungen_zeigen(&frage, &liste);
+            }
         }
         self.messmodus_einrichten();
+    }
+
+    /// Faehrt das Blatt mit allen Startmeldungen herunter.
+    ///
+    /// **Der zweite Weg der Startmeldungen**, neben der Statuszeile. Welcher
+    /// von beiden gilt, entscheidet [`startmeldungen::auskunft`] und nicht
+    /// diese Funktion: sie wird allein fuer den Mehrfachfall gerufen.
+    ///
+    /// Der Griff geht nach `offenes_blatt` wie bei jedem anderen Blatt, sonst
+    /// haette das stehende Blatt keinen Abbruchweg von aussen. Ohne Fenster
+    /// gibt es weder Blatt noch sichtbare Statuszeile — beide haengen darin —,
+    /// und die Meldungen fallen mit der Oberflaeche, die sie tragen sollte.
+    fn startmeldungen_zeigen(&self, frage: &str, liste: &str) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = startmeldungen::zeigen(self.mtm(), fenster, frage, liste, move || {
+            if let Some(selbst) = schwach.load() {
+                selbst.blatt_geschlossen();
+            }
+        });
+        self.blatt_oeffnet(griff);
     }
 
     /// Warum ein Durchgang durch die Ablage nicht zustande kam.

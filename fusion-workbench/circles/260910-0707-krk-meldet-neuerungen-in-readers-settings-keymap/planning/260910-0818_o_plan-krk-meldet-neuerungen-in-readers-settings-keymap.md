@@ -178,7 +178,7 @@ den die laufende Anwendung gar nicht benutzt.
        Kommentare die Umschrift. Je eine Probe hält den Wortlaut.
    - Dependencies: keine
 
-2. **Die n Startmeldungen erreichen den Nutzer**
+2. **Die n Startmeldungen erreichen den Nutzer** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`,
      `crates/krk-ui/src/appkit/blaetter/startmeldungen.rs` (neu, falls Möglichkeit 2),

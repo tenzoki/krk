@@ -2,7 +2,7 @@
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
 //! es blockiert, solange er steht. AppKit nennt das ein Sheet. In diesem
-//! Verzeichnis liegen zehn:
+//! Verzeichnis liegen elf:
 //! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
 //! dem Raeumen in den Papierkorb, Abschlussliste der uebersprungenen Eintraege
 //! und seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen
@@ -11,9 +11,12 @@
 //! S35 und S36 die beiden Eingabeblaetter des Editors: die Frage nach der
 //! Zeilennummer ([`zeilennummer`]) und die nach Such- und Ersatztext
 //! ([`suche`]), beide C5 der Editor-Runde. Das zehnte ist der Notizzettel der
-//! Runde 9 ([`zettel`]).
+//! Runde 9 ([`zettel`]), das elfte seit der Runde 24 die Sammlung der
+//! Startmeldungen ([`startmeldungen`]): sie faehrt herunter, sobald der Start
+//! mehr als eine Meldung hervorgebracht hat, weil die eine Zeile der
+//! Statuszeile nur eine traegt.
 //!
-//! **Ein elftes Blatt liegt ausserhalb dieses Verzeichnisses**, und wer nach
+//! **Ein zwoelftes Blatt liegt ausserhalb dieses Verzeichnisses**, und wer nach
 //! diesem Kopf „alle Blaetter" durchgeht, uebersieht genau dieses eine:
 //! [`super::belegungsansicht`] baut die Tastaturbelegung aus C3 mit
 //! [`Blatt::mit_schaltflaechen`], haengt sie an dasselbe Fenster, legt denselben
@@ -56,7 +59,7 @@
 //! `NSModalResponse`; was AppKit dafuer als Zahl fuehrt, bleibt in dieser Datei.
 //!
 //! **Der Grund fuer eine gemeinsame Huelle** ist derselbe wie ueberall in
-//! diesem Entwurf: zehn Blaetter mit je eigenem Aufbau waeren zehn Stellen,
+//! diesem Entwurf: elf Blaetter mit je eigenem Aufbau waeren elf Stellen,
 //! die dieselbe Frage beantworten, und die erste Abweichung zwischen ihnen
 //! faende keine Pruefung.
 //!
@@ -208,6 +211,7 @@ pub mod loeschbestaetigung;
 pub mod namenseingabe;
 pub mod pfadeingabe;
 pub mod stapelumbenennen;
+pub mod startmeldungen;
 pub mod suche;
 pub mod uebersprungen;
 pub mod ungesichert;
