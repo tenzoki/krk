@@ -738,11 +738,16 @@ pub struct AnwendungsIvars {
     /// steht hier als `Some` und traegt trotzdem die vollen Pfade, die das
     /// Blatt auf Abruf in jedem Fall zeigt.
     ///
-    /// **Er wird nach dem Start nicht nachgezogen.** Das ist keine
-    /// Sparsamkeit, sondern die Wahrheit ueber KRK: die Leseprofile und die
-    /// Belegung, mit denen die laufende Anwendung arbeitet, sind die vom Start,
-    /// und ein Blatt, das die Platte neu laese, zeigte einen Bestand, den
-    /// niemand benutzt.
+    /// **Er wird nach dem Start nicht nachgezogen**, und ein `Some` bleibt
+    /// deshalb bis zum Beenden, was es war. Das ist keine Sparsamkeit, sondern
+    /// die Wahrheit ueber KRK: die Leseprofile und die Belegung, mit denen die
+    /// laufende Anwendung arbeitet, sind die vom Start.
+    ///
+    /// **Ein `None` fuellt sich auch dann nicht.** Traegt der Nutzer den Befehl
+    /// vor, erhebt [`Anwendungsdelegierter::neuerungen_zeigen`] auf Verlangen
+    /// nach und legt das Ergebnis **nicht** hier ab; der Grund und der
+    /// Nutzerentscheid vom 260910-1600, der die Nacherhebung traegt, stehen
+    /// dort. So heisst `None` weiterhin genau eines.
     neuerungen: RefCell<Option<Bestand>>,
     /// Die Meldung, falls die Belegung ersetzt werden musste.
     ///
@@ -4037,6 +4042,16 @@ impl Anwendungsdelegierter {
             // Auffangzweig unten und taete nichts**, und der Uebersetzer sagte
             // dazu kein Wort.
             Kommando::Notizzettel => self.notizzettel_zeigen(),
+            // Das Blatt der Neuerungen aus der Runde 24. Es steht hier aus
+            // demselben Grund wie der Notizzettel darueber: `Ueberall` als
+            // Wirkungsbereich, kein Bereich der Fensterzeile als Gegenstand,
+            // und ein einzelnes Dateifenster wuesste mit dem Befehl nichts
+            // anzufangen. **Ohne diesen Zweig stuende der Befehl mit Namen und
+            // Kombination im Hauptmenue und taete nichts** — der Uebersetzer
+            // haelt die Stelle nicht, weil der Auffangzweig unten sie
+            // abdeckt; gehalten wird sie von
+            // `neuerungsproben::der_befehl_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::NeuerungenZeigen => self.neuerungen_zeigen(),
             // Cmd+W aus jedem Fokus (C4 der Runde 4). Der einzige Befehl
             // dieser Runde, der ueber die Bereiche hinweg entscheidet, und
             // deshalb der einzige, der hier einen Zweig bekommt: er traegt
@@ -4502,6 +4517,105 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(aktiv, &operationen::nichts_zu_teilen());
         }
         true
+    }
+
+    // ------------------------------------------------------------------
+    // Das Blatt der Neuerungen (Runde 24)
+    // ------------------------------------------------------------------
+
+    /// Zeigt, was diese Fassung an den von Hand gepflegten Ablagedateien
+    /// mitbringt (Runde 24).
+    ///
+    /// # Der gehaltene Bestand, und was gilt, wenn keiner gehalten wird
+    ///
+    /// [`AnwendungsIvars::neuerungen`] traegt den Stand vom Start, sobald der
+    /// Start erhoben hat. `None` heisst dort **nicht** „kein Unterschied",
+    /// sondern „nicht erhoben, weil fuer diese Fassung schon gemeldet ist" —
+    /// und das ist der haeufigste Fall, denn er tritt bei jedem zweiten und
+    /// jedem weiteren Start derselben Fassung ein. Dieser Zweig darf die zwei
+    /// Auskuenfte nicht verwechseln: ein Blatt „nichts Neues" auf einen leeren
+    /// [`Option`] hin waere eine Behauptung ueber Dateien, die niemand
+    /// angesehen hat.
+    ///
+    /// **Dann wird auf Verlangen nachgetragen.** So entschieden vom Nutzer am
+    /// 260910-1600 (`260910-1600_*_was-zeigt-das-blatt-auf-abruf-wenn-der-
+    /// start-nichts-erhoben-hat.md`, Moeglichkeit 1): der Nutzer hat gefragt,
+    /// also kostet das Lesen kein L4 — jene Zeitzusage misst den Start und
+    /// nicht einen Tastendruck im laufenden Betrieb. Der Preis steht daneben
+    /// und ist mitentschieden: fuer **diesen einen Fall** zeigt das Blatt
+    /// nicht mehr den Stand vom Start, sondern den der Platte. Die Asymmetrie
+    /// ist gewollt; gefragt ist hier, was in den Dateien steht, und nicht, mit
+    /// welchem Stand KRK gerade arbeitet.
+    ///
+    /// **Der nachgetragene Bestand wird nicht in den `ivar` gelegt.** Dort
+    /// stuende sonst ein dritter Zustand, den das Feld nicht erklaert: weder
+    /// „vom Start" noch „nicht erhoben". So bleibt die Regel eine: ist beim
+    /// Start erhoben worden, zeigt jeder Abruf denselben Stand vom Start;
+    /// sonst zeigt jeder Abruf, was gerade auf der Platte steht.
+    ///
+    /// # Zwei Ausgaenge, und der zweite wird gemeldet
+    ///
+    /// Die Erhebung braucht einen [`Zugang`], also die Schreibsperre. Damit hat
+    /// der Befehl neben dem Blatt einen zweiten Ausgang, das
+    /// [`Sperrhindernis`], und beide Faelle werden einzeln entschieden wie bei
+    /// jedem anderen Rufer von [`Self::unter_der_sperre`]. Ein stiller dritter
+    /// Ausgang entsteht nicht: ein Tastendruck, der nichts zeigt und nichts
+    /// sagt, ist von einem Defekt nicht zu unterscheiden.
+    ///
+    /// Liefert `true`, sobald das Blatt steht oder die Meldung hinausgegangen
+    /// ist: der Tastendruck ist dann verbraucht.
+    fn neuerungen_zeigen(&self) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        // Der Start hat erhoben: dieses Blatt zeigt den Stand vom Start, und
+        // die Platte wird nicht angefasst.
+        if let Some(bestand) = self.ivars().neuerungen.borrow().as_ref() {
+            self.neuerungen_blatt(fenster, bestand);
+            return true;
+        }
+        match self.unter_der_sperre(neuerungen::erheben) {
+            Ok(bestand) => self.neuerungen_blatt(fenster, &bestand),
+            // Ohne Ablageordner gibt es die drei Dateien nicht, und ein Blatt
+            // mit drei Pfaden, die nirgendwohin zeigen, waere eine Auskunft
+            // ueber nichts. Der Start hat den fehlenden Ordner schon gemeldet;
+            // hier bleibt zu sagen, warum **dieser** Befehl nichts zeigt.
+            Err(Sperrhindernis::OhneOrdner) => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.antwort_zeigen(
+                    aktiv,
+                    "es gibt keinen Ablageordner, und damit keine Dateien, die hinter dieser \
+                     Fassung zurückliegen könnten",
+                );
+            }
+            Err(Sperrhindernis::Gesperrt(fehler)) => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.antwort_zeigen(
+                    aktiv,
+                    &format!(
+                        "die Neuerungen lassen sich nicht nachsehen: die Schreibsperre der Ablage \
+                         lässt sich nicht nehmen ({fehler})"
+                    ),
+                );
+            }
+        }
+        true
+    }
+
+    /// Faehrt das Blatt der Neuerungen herunter.
+    ///
+    /// Die eine Stelle, die [`blaetter::neuerungen::zeigen`] ruft; welchen
+    /// Bestand sie zeigt, entscheidet [`Self::neuerungen_zeigen`] darueber.
+    /// Der Griff geht nach `offenes_blatt` wie bei jedem anderen Blatt, sonst
+    /// haette das stehende Blatt keinen Abbruchweg ueber `esc`.
+    fn neuerungen_blatt(&self, fenster: &NSWindow, bestand: &Bestand) {
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = blaetter::neuerungen::zeigen(self.mtm(), fenster, bestand, move || {
+            if let Some(selbst) = schwach.load() {
+                selbst.blatt_geschlossen();
+            }
+        });
+        self.blatt_oeffnet(griff);
     }
 
     // ------------------------------------------------------------------
@@ -11136,6 +11250,44 @@ mod neuerungsproben {
             erhebung > einstellungen && erhebung > profile,
             "die Erhebung steht nicht mehr hinter beiden Ladern; auf einer frischen \
              Installation vergliche sie gegen Dateien, die es noch nicht gibt"
+        );
+    }
+
+    /// Der Befehl hat einen eigenen Zweig in `kommando_ausfuehren`.
+    ///
+    /// **Die Pflichtstelle, die der Uebersetzer nicht haelt.** Das `match` in
+    /// [`Anwendungsdelegierter::kommando_ausfuehren`](super::Anwendungsdelegierter)
+    /// endet auf einen Auffangzweig, also uebersetzt ein Kommando ohne eigenen
+    /// Zweig anstandslos, steht mit Namen und Kombination im Hauptmenue und tut
+    /// nichts. Genau dieser Fall ist im Kopf von CLAUDE.md als Falle
+    /// beschrieben; hier ist er an dieser einen Stelle geschlossen.
+    ///
+    /// **Die Taste und der Menueeintrag brauchen keine zwei Proben.** Beide
+    /// Wege enden in derselben Funktion: der Ereignisabgriff ueber
+    /// [`crate::appkit::ereignisse`], der Menueeintrag ueber seinen Melder, und
+    /// der Kopf von [`crate::appkit::menue`] schreibt hin, dass es keinen
+    /// zweiten Ausfuehrungsweg gibt.
+    ///
+    /// **Die Nadel steht zusammengesetzt da**, wie im Kopf von
+    /// [`crate::quellbaum`] verlangt: als ein Stueck geschriebene faende sich
+    /// diese Probe selbst und waere gruen, ohne dass der Zweig steht.
+    #[test]
+    fn der_befehl_hat_einen_eigenen_ausfuehrungszweig() {
+        let (_, quelle) = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/anwendung.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let rumpf = quelle
+            .split_once("fn kommando_ausfuehren")
+            .expect("kommando_ausfuehren steht in dieser Datei")
+            .1;
+
+        let nadel = concat!("Kommando::", "NeuerungenZeigen => self.");
+
+        assert!(
+            rumpf.contains(nadel),
+            "`Kommando::NeuerungenZeigen` hat keinen eigenen Ausfuehrungszweig mehr; der \
+             Befehl faellt damit durch den Auffangzweig, steht im Hauptmenue und tut nichts"
         );
     }
 }

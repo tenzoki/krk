@@ -743,3 +743,10 @@ gesetzt. Was das Blatt tut, steht im Modulkopf von
 Datei trägt allein den AppKit-Anteil, und anders als beim Blatt der übersprungenen Einträge
 steht es auch ohne einen einzigen Unterschied — der Nutzer hat gefragt, und die drei vollen
 Pfade sind der Grund seiner Frage.
+
+**Eine vierte Antwort am 260910, aufgeworfen beim Bau des Schrittes 4:** was zeigt das Blatt
+auf Abruf, wenn der Start nichts erhoben hat, weil für diese Fassung schon gemeldet wurde?
+Der Nutzer hat Möglichkeit 1 gewählt — auf Verlangen nacherheben. Damit zeigt das Blatt
+unabhängig davon dasselbe, ob es der erste Start dieser Fassung war oder der zwanzigste. Der
+Preis ist mitentschieden: für diesen einen Fall ist der gezeigte Stand nicht mehr der vom
+Start, und der Befehl bekommt über die Schreibsperre einen zweiten Ausgang.

@@ -445,7 +445,7 @@ den die laufende Anwendung gar nicht benutzt.
      `nach_bereichen` bricht darauf mit einem `panic` ab, sobald das Hauptmenü gebaut wird.
      Daten zuerst hieße also: KRK startet nicht.
 
-9. **Der Ausführungszweig und der Weg über das Hauptmenü**
+9. **Der Ausführungszweig und der Weg über das Hauptmenü** [DONE]
    - Executor: `coder`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes: Ein eigener Zweig in `Anwendungsdelegierter::kommando_ausfuehren`, der das
@@ -462,6 +462,37 @@ den die laufende Anwendung gar nicht benutzt.
        Ausnahmeliste. Die Probe
        `zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch` bleibt grün und
        zählt weiter vier.
+   - Nachtrag des Ausführenden am 260910-1730: gebaut nach dem Nutzerentscheid vom
+     260910-1600 (`260910-1600_*_was-zeigt-das-blatt-auf-abruf-wenn-der-start-nichts-erhoben-hat.md`,
+     Möglichkeit 1). `Anwendungsdelegierter::neuerungen_zeigen` zeigt den gehaltenen
+     `Bestand`, wenn der Start erhoben hat, und erhebt sonst **auf Verlangen nach**;
+     `None` im `ivar` heißt „nicht erhoben" und nicht „kein Unterschied", und der Zweig
+     verwechselt die zwei nicht. Der nachgetragene Bestand geht **nicht** in den `ivar`:
+     dort stünde sonst ein dritter Zustand, den das Feld nicht erklärt. Die Nacherhebung
+     braucht einen `Zugang`, der Befehl hat damit zwei Ausgänge, und beide Fälle des
+     `Sperrhindernis` bekommen je eine eigene Meldung in der Statuszeile. Die Erhebung beim
+     Start ist unberührt; `bei_gleichem_merker_wird_keine_der_drei_dateien_geoeffnet` bleibt
+     grün.
+
+     **Die Pflichtstelle ist jetzt gehalten.** Der Schritt nennt den Zweig als die Stelle,
+     die weder der Übersetzer noch eine Probe hält;
+     `neuerungsproben::der_befehl_hat_einen_eigenen_ausfuehrungszweig` liest seither den
+     Quelltext von `kommando_ausfuehren` und verlangt ihn. Die Taste und der Menüeintrag
+     brauchen dafür keine zwei Proben: beide Wege enden in derselben Funktion, und der Kopf
+     von `appkit/menue.rs` schreibt hin, dass es keinen zweiten Ausführungsweg gibt.
+
+     **Zwei Dateien im Kern sind dazugekommen, und der Entscheid verlangt sie.** Der
+     Schlusssatz des Blattes lautete „Gezeigt ist der Stand vom Start; KRK liest diese
+     Dateien im Betrieb nicht neu." Mit der Nacherhebung ist er im häufigsten Fall falsch,
+     und `blatttext` kennt die Herkunft seines `Bestand` nicht und soll sie nicht
+     kennenlernen. Der Satz sagt jetzt, was in beiden Fällen gilt: „Gezeigt ist der Stand,
+     den KRK zuletzt gelesen hat. Womit KRK arbeitet, steht seit dem Start fest: eine
+     geänderte Datei wirkt erst beim nächsten Start." Angefasst sind dafür
+     `crates/krk-core/src/ablage/neuerungen.rs` und `crates/krk-core/tests/ablage.rs`, dazu
+     die Zeichnung im Kopf von `crates/krk-ui/src/appkit/blaetter/neuerungen.rs`. Das
+     `#[expect(dead_code)]` an `blaetter::neuerungen::zeigen` ist mit dem Rufer gefallen.
+     `make check` endet mit 0, alle fünf. Alles Weitere im Verlaufsprotokoll
+     `260910-1730-coder-schritt-9-der-ausfuehrungszweig-und-das-hauptmenue.md`.
    - Dependencies: Schritte 6, 7, 8
 
 10. **Was der Nutzer darüber liest**

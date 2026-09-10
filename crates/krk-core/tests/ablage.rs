@@ -4727,7 +4727,8 @@ fn der_blatttext_nennt_jede_datei_mit_vollem_pfad_und_beide_richtungen() {
     );
     assert!(
         text.ends_with(
-            "Gezeigt ist der Stand vom Start; KRK liest diese Dateien im Betrieb nicht neu."
+            "Gezeigt ist der Stand, den KRK zuletzt gelesen hat. Womit KRK arbeitet, steht seit \
+             dem Start fest: eine geänderte Datei wirkt erst beim nächsten Start."
         ),
         "der Blatttext sagt nicht, worauf er sich bezieht:\n{text}"
     );

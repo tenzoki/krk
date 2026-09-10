@@ -518,10 +518,25 @@ pub fn startzeile(bestand: &Bestand, benutzerverzeichnis: Option<&Path>) -> Opti
 /// volle Pfad steht dabei in jedem Absatz: er ist der Grund, aus dem der Nutzer
 /// das Blatt aufmacht.
 ///
-/// Der Schlusssatz sagt, worauf sich der Text bezieht: auf den Stand vom Start.
-/// KRK liest diese Dateien im Betrieb nicht neu, und ein Blatt, das die Platte
-/// neu laese, zeigte einen Bestand, mit dem die laufende Anwendung gar nicht
-/// arbeitet.
+/// # Der Schlusssatz sagt nicht mehr „der Stand vom Start", und zwar seit dem
+/// 260910-1600
+///
+/// Bis dahin stand hier, der Text zeige den Stand vom Start. Das trifft seit
+/// dem Nutzerentscheid vom 260910-1600 nicht mehr in jedem Fall zu
+/// (`260910-1600_*_was-zeigt-das-blatt-auf-abruf-wenn-der-start-nichts-erhoben-
+/// hat.md`, Moeglichkeit 1): hat der Start nichts erhoben — der haeufigste
+/// Fall, denn er tritt bei jedem zweiten Start derselben Fassung ein —, dann
+/// traegt der Befehl die Erhebung auf Verlangen nach, und der gezeigte Stand
+/// ist der von eben. Ein Satz, der in diesem Fall „vom Start" sagte, waere im
+/// haeufigsten Fall falsch.
+///
+/// **Diese Datei kennt den Unterschied nicht**, und sie soll ihn nicht
+/// kennenlernen: sie bekommt einen [`Bestand`] und nicht seine Herkunft. Der
+/// Schlusssatz sagt deshalb, was in beiden Faellen gilt: gezeigt ist die
+/// zuletzt gelesene Fassung, und womit KRK **arbeitet**, steht seit dem Start
+/// fest. Die zweite Haelfte ist die Auskunft, auf die es dem Nutzer ankommt;
+/// sie war schon vorher der Grund fuer den Satz und ist von der Aenderung
+/// unberuehrt.
 #[must_use]
 pub fn blatttext(bestand: &Bestand) -> String {
     let mut text = String::new();
@@ -556,7 +571,10 @@ pub fn blatttext(bestand: &Bestand) -> String {
         }
         text.push('\n');
     }
-    text.push_str("Gezeigt ist der Stand vom Start; KRK liest diese Dateien im Betrieb nicht neu.");
+    text.push_str(
+        "Gezeigt ist der Stand, den KRK zuletzt gelesen hat. Womit KRK arbeitet, steht seit dem \
+         Start fest: eine geänderte Datei wirkt erst beim nächsten Start.",
+    );
     text
 }
 

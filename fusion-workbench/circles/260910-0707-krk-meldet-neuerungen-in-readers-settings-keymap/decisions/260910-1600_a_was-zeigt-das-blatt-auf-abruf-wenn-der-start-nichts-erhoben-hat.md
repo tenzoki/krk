@@ -90,3 +90,6 @@ Möglichkeit 3 scheidet aus, solange der L4-Datensatz steht.
 
 Die Frage bindet Schritt 9 und sonst nichts. Sie hält ihn nicht auf: der Zweig lässt sich
 für beide Antworten in derselben Stunde bauen.
+
+---
+Answered: `260905-2008-orchestrator-session.md` `## Fortsetzung 260910 — die Runde 24 wird geplant` — Möglichkeit 1: der Befehl erhebt auf Verlangen nach, wenn beim Start nichts erhoben wurde; das Blatt zeigt damit unabhängig vom wievielten Start dasselbe. Die Asymmetrie zur Zusage „das Blatt zeigt den Stand vom Start" ist mitentschieden und gilt nur für diesen Fall, ebenso der zweite Ausgang des Befehls über die Schreibsperre; ruled by user, Kai Stalmann <kai@stalmann.org>.

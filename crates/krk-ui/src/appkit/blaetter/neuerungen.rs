@@ -2,7 +2,11 @@
 //! Ablagedateien mitbringt.
 //!
 //! ```text
-//! Kommando::NeuerungenZeigen ──> zeigen(fenster, bestand)
+//! Kommando::NeuerungenZeigen ──> Anwendungsdelegierter::neuerungen_zeigen
+//!                                        │  Bestand vom Start, sonst auf
+//!                                        │  Verlangen nachgetragen
+//!                                        ▼
+//!                                zeigen(fenster, bestand)
 //!                                        │
 //!            krk_core::ablage::neuerungen::blatttext(bestand)
 //! ```
@@ -73,20 +77,11 @@ fn schaltflaechen() -> [Schaltflaeche<'static>; 1] {
 
 /// Zeigt den erhobenen Bestand am Fenster.
 ///
-/// Der Bestand ist der vom Start; KRK liest diese Dateien im Betrieb nicht
-/// neu, und der Schlusssatz von [`blatttext`] schreibt das hin.
-///
-/// **Der Rufer fehlt noch, und die Ausnahme hat deshalb ein Ablaufdatum.**
-/// Das Kommando `Kommando::NeuerungenZeigen` steht seit `6cd9e74` im Kern und
-/// hat seine Taste; sein Ausfuehrungszweig beim Anwendungsdelegierten ist
-/// Schritt 9 desselben Plans. `#[expect]` und nicht `#[allow]`: sobald der
-/// Zweig steht, wird die Ausnahme selbst zur Warnung und faellt, statt als
-/// Ausnahme ohne Ablaufdatum stehen zu bleiben — die Lehre aus dem Kopf von
-/// [`crate::editormodell`].
-#[expect(
-    dead_code,
-    reason = "der Ausfuehrungszweig ist Schritt 9 des Plans 260910-0818"
-)]
+/// Welchen Bestand sie zeigt, entscheidet der eine Rufer,
+/// `Anwendungsdelegierter::neuerungen_zeigen`: den vom Start, wenn der Start
+/// erhoben hat, und sonst einen auf Verlangen nachgetragenen. Diese Datei
+/// kennt den Unterschied nicht und soll ihn nicht kennenlernen; was der
+/// gezeigte Stand bedeutet, sagt der Schlusssatz von [`blatttext`].
 pub fn zeigen(
     mtm: MainThreadMarker,
     fenster: &NSWindow,
