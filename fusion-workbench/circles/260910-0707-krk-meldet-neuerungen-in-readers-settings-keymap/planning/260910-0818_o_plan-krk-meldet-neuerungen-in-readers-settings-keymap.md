@@ -202,7 +202,7 @@ den die laufende Anwendung gar nicht benutzt.
      davon abhängt: eine Startzeile, die neben einer Ablagemeldung still ausfällt, ist keine
      gebaute Zusage. Bis der Datensatz beantwortet ist, ist der Schritt gesperrt.
 
-3. **Der Merker der gemeldeten Fassung**
+3. **Der Merker der gemeldeten Fassung** [DONE]
    - Executor: `coder`
    - Files: nach der Antwort auf
      `260910-0818_*_wo-merkt-sich-krk-fuer-welche-fassung-es-die-neuerungen-schon-gemeldet-hat.md`.

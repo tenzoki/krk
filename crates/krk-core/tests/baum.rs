@@ -536,7 +536,7 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
 ///
 /// **Die Zahl selbst ist hier nicht ersetzbar, und deshalb steht sie unter
 /// einer Probe.** An etlichen Stellen des Ablagemoduls traegt die Zahl die
-/// Aussage — „sieben Ablagedateien in zwei Formaten", „die fuenf TOML-Dateien
+/// Aussage — „acht Ablagedateien in zwei Formaten", „die sechs TOML-Dateien
 /// gehen ueber `Zugang::laden`" —, und ein Zeiger auf `Datei::ALLE` naehme dem
 /// Satz seinen Inhalt. Ohne eine Probe daneben ist eine solche Zahl die zweite
 /// Fassung einer Liste, und die zweite Fassung ist die, die veraltet: fuenf
@@ -559,7 +559,7 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
 ///
 /// # Was nicht gezaehlt wird, und wo die Probe blind ist
 ///
-/// - **Ein Zahlwort vor „der"** — „sechs der sieben Ablagedateien" nennt eine
+/// - **Ein Zahlwort vor „der"** — „sieben der acht Ablagedateien" nennt eine
 ///   Teilmenge und keine Gesamtzahl. Es faellt heraus, weil gesucht wird, wo
 ///   ein Zahlwort **unmittelbar** vor einem der vier Hauptwoerter steht.
 /// - **Ein Zitat einer frueheren Fassung.** Das Modul zitiert an einer Stelle
@@ -571,7 +571,7 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
 ///   Probe, die einmal von Hand zu lesen ist.
 /// - **Ein Zahlwort ohne Hauptwort** („Alle sieben, in fester Reihenfolge")
 ///   erreicht die Probe nicht. Die Zeile darunter ist dort das Feldliteral
-///   `[Datei; 7]`, das der Uebersetzer haelt.
+///   `[Datei; 8]`, das der Uebersetzer haelt.
 #[test]
 fn keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien() {
     use krk_core::ablage::pfade::{Datei, Format};
@@ -785,7 +785,7 @@ const UNLESBARE_ALLE_LISTEN: [(&str, &str, &str); 1] = [(
     "krk-core/src/ablage/pfade.rs",
     "Datei",
     "`Datei::Zettel(Zettel)` traegt Daten, und die Liste fuehrt eine Zeile je Zettel: \
-         sieben Eintraege zu sechs Varianten. Weder die Nadel ueber die Aufzaehlung noch \
+         acht Eintraege zu sieben Varianten. Weder die Nadel ueber die Aufzaehlung noch \
          die ueber die Liste liest datentragende Varianten, und eine Gleichheit waere \
          hier ohnehin die falsche Zusage",
 )];

@@ -1,7 +1,7 @@
-//! Die Ablage: sieben Ablagedateien in zwei Formaten unter
+//! Die Ablage: acht Ablagedateien in zwei Formaten unter
 //! `~/Library/Application Support/KRK/`.
 //!
-//! Die fuenf TOML-Dateien gehen ueber [`Zugang::laden`] und [`Zugang::sichern`];
+//! Die sechs TOML-Dateien gehen ueber [`Zugang::laden`] und [`Zugang::sichern`];
 //! die zwei Notizzettel der Runde 9 tragen nackten Text und gehen ueber
 //! [`Zugang::text_laden`] und [`Zugang::text_sichern`]. Welche Datei welches
 //! Format traegt, sagt [`pfade::Datei::format`], und der Kopf von [`pfade`]
@@ -14,17 +14,18 @@
 //!
 //! ```text
 //! pfade ──> mod (Ablage ──> Zugang: laden, sichern, melden) ──> atomar
-//!                   │           ^       ^        ^            ^        ^
-//!                sperre         │       │        │            │        │
-//!                        lesezeichen sitzung einstellungen leseprofile neuerungen
+//!                   │         ^         ^          ^            ^         ^        ^
+//!                sperre       │         │          │            │         │        │
+//!                        lesezeichen sitzung einstellungen leseprofile merker neuerungen
 //! ```
 //!
 //! [`pfade`] loest den Ordner auf und legt ihn beim ersten Start an.
 //! [`sperre`] traegt die beiden Absprachen, die zwei gleichzeitig laufende
 //! Instanzen von KRK auseinanderhalten. [`atomar`] schreibt jede Datei ueber
 //! eine Nachbardatei und `rename`. [`sitzung`], [`lesezeichen`],
-//! [`einstellungen`] und [`leseprofile`] halten vier der fuenf Inhalte; den
-//! fuenften, die Belegung aus `keymap.toml`, baut Schritt 11 und legt ihn ueber
+//! [`einstellungen`], [`leseprofile`] und [`merker`] halten fuenf der sechs
+//! Inhalte; den sechsten, die Belegung aus `keymap.toml`, baut Schritt 11 und
+//! legt ihn ueber
 //! [`Zugang::laden`] und [`Zugang::sichern`] hier ab. Die Ablage ist deshalb
 //! ueber den Inhalt allgemein gehalten: sie kennt Pfad, Format und
 //! Fehlerbehandlung, nicht die Felder.
@@ -37,6 +38,13 @@
 //! nichts; welche Ablagedatei ueberhaupt einen Unterschied tragen kann, sagt
 //! [`neuerungen::Vergleichsform`] als vierte je Datei beantwortete Frage neben
 //! den dreien in [`pfade`].
+//!
+//! [`merker`] steht wiederum neben [`neuerungen`] und traegt die zweite Haelfte
+//! derselben Zusage: `reported.toml` haelt fest, fuer welche Fassung von KRK
+//! schon gemeldet ist, damit die Startzeile **einmal je Fassung** erscheint und
+//! nicht bei jedem Start. Sie ist die achte Ablagedatei und die einzige, die
+//! keinen Bestand des Nutzers traegt; warum der Wert nicht als Feld auf
+//! [`Sitzung`] steht, sagt der Kopf jenes Moduls.
 //!
 //! # Jeder Weg auf die Platte geht durch die Schreibsperre
 //!
@@ -59,8 +67,8 @@
 //!
 //! **Von dieser Luecke bewacht eine Probe die eine Haelfte, und die andere
 //! bewacht nichts.** `nur_benannte_dateien_erreichen_das_atomare_schreiben` in
-//! `krk-core/tests/baum.rs` zaehlt, welche Dateien des ganzen Baums
-//! [`atomar::schreiben`] ueberhaupt erreichen koennen; eine siebte laesst sie
+//! `krk-core/tests/baum.rs` zaehlt, welche Quelldateien des ganzen Baums
+//! [`atomar::schreiben`] ueberhaupt erreichen koennen; eine weitere laesst sie
 //! rot werden. Der **zweite** Bestandteil, [`Ablage::pfad`] plus ein beliebiger
 //! Schreibaufruf der Standardbibliothek, braucht [`atomar::schreiben`] gar
 //! nicht und ist von keiner Probe gezaehlt. Wer den Satz „die Luecke ist
@@ -83,7 +91,7 @@
 //! unbewachte Aussage ueber den damaligen Baum
 //! (`issues/260813-0540_*_kein-schreibweg-an-der-sperre-vorbei-ist-nicht-typgesichert-und-ungeprueft.md`).
 //!
-//! # Zwei der fuenf TOML-Dateien entstehen einmal und werden nie wieder
+//! # Zwei der sechs TOML-Dateien entstehen einmal und werden nie wieder
 //! geschrieben
 //!
 //! `settings.toml` aus Schritt 18c und, seit der Runde 16, `readers.toml` sind
@@ -180,7 +188,7 @@
 //! - **Ein oberster Schluessel, den der Leser nicht kennt**, ist ein `Err` und
 //!   kein stiller Auslieferungszustand. Das leistet
 //!   `#[serde(deny_unknown_fields)]` an der jeweiligen Struktur, und vier der
-//!   fuenf TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei`, seit
+//!   sechs TOML-Dateien tragen es: `Belegungsdatei`, `Einstellungsdatei`, seit
 //!   dem 260821 [`Lesezeichenliste`] und seit der Runde 16
 //!   `leseprofil::datei::Profildatei`, ueber die `readers.toml` denselben
 //!   Ladeweg geht. **`session.toml` traegt es nicht, und das ist entschieden
@@ -190,14 +198,19 @@
 //!   aus einer **spaeteren** Fassung von KRK in einer frueheren die Sitzung
 //!   nicht kostet, und `deny_unknown_fields` kostete sie genau dort. Die Frage,
 //!   ob dieser Datei eine Fassungsangabe die Strenge doch erlaubt, steht als
-//!   eigener Datensatz.
+//!   eigener Datensatz. **`reported.toml` traegt es aus demselben Grund
+//!   nicht**, und dort ohne offene Frage daneben: eine spaetere Fassung von KRK
+//!   darf dem Merker ein Feld hinzufuegen, ohne dass eine fruehere ihn deshalb
+//!   verwirft und ihre Meldung ein zweites Mal zeigt.
 //! - **Kein einziger oberster Schluessel** heisst je nach Datei etwas anderes,
 //!   und deshalb steht die Antwort in [`pfade::Datei::leerbefund`] — einer
 //!   vollstaendigen Fallunterscheidung ohne Auffangzweig, wie
 //!   [`pfade::Datei::format`] daneben. `bookmarks.toml` und `session.toml`
-//!   tragen dort [`Leerbefund::Beschaedigt`], weil KRK sie selbst schreibt und
-//!   dabei nie ohne obersten Schluessel hinterlaesst — die leere Liste als
-//!   `eintraege = []`, die aermste Sitzung als sechs oberste Schluessel. Die
+//!   tragen dort [`Leerbefund::Beschaedigt`], seit der Runde 24 auch
+//!   `reported.toml`, und der Grund ist bei allen dreien derselbe: KRK schreibt
+//!   sie selbst und hinterlaesst sie dabei nie ohne obersten Schluessel — die
+//!   leere Liste als `eintraege = []`, die aermste Sitzung als sechs oberste
+//!   Schluessel, der Merker als `gemeldete_fassung`. Die
 //!   drei uebrigen TOML-Dateien und die zwei Zettel tragen
 //!   [`Leerbefund::Vorgabe`]: `keymap.toml`, `settings.toml` und `readers.toml`
 //!   pflegt der Nutzer von Hand und darf sie leerraeumen, und ein leerer Zettel
@@ -250,6 +263,7 @@ pub mod atomar;
 pub mod einstellungen;
 pub mod leseprofile;
 pub mod lesezeichen;
+pub mod merker;
 pub mod neuerungen;
 pub mod pfade;
 pub mod sitzung;
@@ -444,13 +458,13 @@ pub enum Beiseite {
 /// meldet. Der Weg dorthin ist [`melden`].
 ///
 /// **Wodurch ersetzt, sagt [`Datei::ersatz`] und nicht dieser Satz.** Fuer
-/// sechs der sieben Ablagedateien ist es der Auslieferungszustand, fuer
+/// jede Ablagedatei bis auf eine ist es der Auslieferungszustand, fuer
 /// `readers.toml` nichts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ersetzung {
     /// Die Datei, um die es geht. Sie steht in jeder Meldung.
     pub datei: PathBuf,
-    /// Welche der sieben Ablagedateien das ist.
+    /// Welche der acht Ablagedateien das ist.
     ///
     /// **Neben dem Pfad und nicht statt seiner.** Der Pfad ist der absolute
     /// Ort, den die Meldung nennt, und er ist nicht aus dieser Angabe
@@ -673,7 +687,7 @@ impl Zugang<'_> {
         self.ort.datei(welche)
     }
 
-    /// Liest eine der fuenf TOML-Dateien.
+    /// Liest eine der sechs TOML-Dateien.
     ///
     /// Scheitert nie: eine fehlende, nicht lesbare oder beschaedigte Datei
     /// fuehrt zum Auslieferungszustand. Nur die letzten beiden Faelle tragen
@@ -813,7 +827,7 @@ impl Zugang<'_> {
         }
     }
 
-    /// Schreibt eine der fuenf TOML-Dateien, atomar ueber
+    /// Schreibt eine der sechs TOML-Dateien, atomar ueber
     /// [`atomar::schreiben`].
     ///
     /// **Nicht der Weg zu `settings.toml` und nicht der zu `readers.toml`.**
@@ -959,7 +973,7 @@ impl Zugang<'_> {
     /// daneben.
     ///
     /// **Die Quelle ist ein Leser und keine Zeichenkette**, und sie hat mit der
-    /// Runde 9 ihren zweiten Aufrufer bekommen. Die fuenf TOML-Dateien reichen
+    /// Runde 9 ihren zweiten Aufrufer bekommen. Die sechs TOML-Dateien reichen
     /// ihren gelesenen Text als `&mut text.as_bytes()` herein; eine Zetteldatei
     /// reicht ihren **offenen Deskriptor** herein, denn ihre zwei unlesbaren
     /// Faelle tragen keinen `&str`: eine ungueltige Bytefolge ist definitions-

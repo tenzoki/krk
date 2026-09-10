@@ -31,14 +31,15 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
+use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG, Merker};
 use krk_core::ablage::neuerungen::{Befund, Bestand, Vergleichsform};
 use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
 use krk_core::ablage::sperre::{SCHREIBSPERRE, SITZUNGSRECHT};
 use krk_core::ablage::{
     Ablage, Ablageort, Aenderung, Ausgang, Beiseite, Breiten, Datei, Dateifenster, Einstellungen,
-    Ersatz, Ersetzung, Fensterseite, Format, Geladen, Grund, Lesezeichen, Lesezeichenliste,
-    Sichtbarkeit, Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Zettel, Ziel,
-    atomar, einstellungen, leseprofile, melden, neuerungen, pfade,
+    Ersatz, Ersetzung, Fensterseite, Format, Geladen, Grund, Leerbefund, Lesezeichen,
+    Lesezeichenliste, Sichtbarkeit, Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung,
+    Zettel, Ziel, atomar, einstellungen, leseprofile, melden, neuerungen, pfade,
 };
 use krk_core::leseprofil::{Profil, Profile};
 use krk_core::tasten::belegung;
@@ -53,7 +54,7 @@ use gemeinsam::{Pruefordner, rechtesperre_haelt_oder_abbruch};
 // Stellvertreter
 // ---------------------------------------------------------------------------
 
-/// Laedt eine der fuenf TOML-Dateien so, wie der Betrieb es tut: unter der
+/// Laedt eine der sechs TOML-Dateien so, wie der Betrieb es tut: unter der
 /// Schreibsperre.
 ///
 /// Seit der Runde 7 fuehrt jeder Weg auf die Platte durch einen `Zugang`, und
@@ -70,7 +71,7 @@ where
         .expect("die Schreibsperre laesst sich nicht nehmen")
 }
 
-/// Schreibt eine der fuenf TOML-Dateien unter der Schreibsperre.
+/// Schreibt eine der sechs TOML-Dateien unter der Schreibsperre.
 ///
 /// Der Rueckgabewert ist der des Schreibens und nicht der des Durchgangs: die
 /// Proben pruefen ihn, und ein Fehlschlag beim Nehmen der Sperre waere ein
@@ -117,17 +118,18 @@ fn geladene_leseprofile(ablage: &Ablage) -> Geladen<Profile> {
 /// Die fuenf Ablagedateien, die TOML tragen, in der Reihenfolge von
 /// [`Datei::ALLE`].
 ///
-/// **Eine abgeleitete Frage und keine zweite Liste.** Seit der Runde 16 fuehrt
-/// [`Datei::ALLE`] sieben Dateien in zwei Formaten, und dieser Filter meint
-/// die fuenf mit TOML. Eine von Hand gepflegte Liste daneben koennte von
+/// **Eine abgeleitete Frage und keine zweite Liste.** Seit der Runde 24 fuehrt
+/// [`Datei::ALLE`] acht Dateien in zwei Formaten, und dieser Filter meint
+/// die sechs mit TOML. Eine von Hand gepflegte Liste daneben koennte von
 /// `Datei::ALLE` abweichen; ein Filter ueber [`Datei::format`] kann es nicht.
 /// Die Proben, die **jede** Ablagedatei meinen — Pfad, Name, Nichtanlage —,
 /// laufen weiterhin ueber `Datei::ALLE` und decken die zwei Zettel mit ab.
 ///
-/// **Nicht jede der fuenf geht durch `Zugang::sichern`.** `settings.toml` und
+/// **Nicht jede der sechs geht durch `Zugang::sichern`.** `settings.toml` und
 /// `readers.toml` pflegt der Nutzer von Hand, und ihr Schreibweg ist die
 /// woertliche Anlage der Auslieferungsfassung. Ueber `Zugang::laden` gehen
-/// seit Schritt 8 der Runde 16 alle fuenf.
+/// seit Schritt 8 der Runde 16 alle uebrigen, seit der Runde 24 auch
+/// `reported.toml`.
 fn toml_dateien() -> impl Iterator<Item = Datei> {
     Datei::ALLE
         .into_iter()
@@ -238,6 +240,16 @@ fn beispielbelegung() -> BelegungStellvertreter {
     }
 }
 
+/// Ein Merker, der sich vom Auslieferungszustand unterscheidet.
+///
+/// Eine Fassungsnummer, die es nie gab: der Rundlauf soll den geschriebenen
+/// Wert zurueckbekommen und nicht zufaellig die laufende Fassung.
+fn beispielmerker() -> Merker {
+    Merker {
+        gemeldete_fassung: "0.0.1-pruefung".to_owned(),
+    }
+}
+
 fn beispiellesezeichen() -> Lesezeichenliste {
     Lesezeichenliste::aus(vec![
         Lesezeichen::neu("Projekte", "/Users/pruefung/Projekte"),
@@ -284,6 +296,7 @@ fn der_ablageordner_liegt_unter_application_support() {
             "session.toml",
             "settings.toml",
             "readers.toml",
+            "reported.toml",
             "note-1.txt",
             "note-2.txt"
         ]
@@ -462,6 +475,8 @@ fn alle_toml_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     gesichert(&ablage, Datei::Lesezeichen, &lesezeichen)
         .expect("bookmarks.toml laesst sich nicht schreiben");
     gesichert(&ablage, Datei::Sitzung, &sitzung).expect("session.toml laesst sich nicht schreiben");
+    gesichert(&ablage, Datei::Merker, &beispielmerker())
+        .expect("reported.toml laesst sich nicht schreiben");
     // **Unter einem Durchgang und nicht daneben.** `settings.toml` geht als
     // einzige nicht ueber `Zugang::sichern` — sie wird von Hand gepflegt, und
     // die Anlage schreibt einen Text und keine Serialisierung. Der Weg dorthin
@@ -496,14 +511,17 @@ fn alle_toml_dateien_ueberstehen_schreiben_und_wiedereinlesen() {
     let zurueck_belegung: Geladen<BelegungStellvertreter> = geladen(&ablage, Datei::Belegung);
     let zurueck_lesezeichen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
     let zurueck_sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+    let zurueck_merker: Geladen<Merker> = geladen(&ablage, Datei::Merker);
 
     assert!(!zurueck_belegung.ist_ersetzt());
     assert!(!zurueck_lesezeichen.ist_ersetzt());
     assert!(!zurueck_sitzung.ist_ersetzt());
+    assert!(!zurueck_merker.ist_ersetzt());
 
     assert_eq!(zurueck_belegung.wert, belegung);
     assert_eq!(zurueck_lesezeichen.wert, lesezeichen);
     assert_eq!(zurueck_sitzung.wert, sitzung);
+    assert_eq!(zurueck_merker.wert, beispielmerker());
 
     let zurueck_leseprofile = geladene_leseprofile(&ablage);
     assert!(
@@ -1218,6 +1236,9 @@ fn eine_kaputte_datei_fuehrt_zum_auslieferungszustand_und_zu_einer_meldung() {
     let sitzung: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
     let eingestellt = geladene_einstellungen(&ablage);
     let profile = geladene_leseprofile(&ablage);
+    let merker = ablage
+        .durchgang(merker::laden)
+        .expect("die Schreibsperre laesst sich nicht nehmen");
 
     assert_eq!(belegung.wert, BelegungStellvertreter::default());
     assert_eq!(lesezeichen.wert, Lesezeichenliste::default());
@@ -1227,6 +1248,7 @@ fn eine_kaputte_datei_fuehrt_zum_auslieferungszustand_und_zu_einer_meldung() {
     // zur Auslieferungsfassung; der Kopf von `ablage::leseprofile` schreibt
     // aus, warum die zwei von Hand gepflegten Dateien hier auseinandergehen.
     assert_eq!(profile.wert.zahl(), 0);
+    assert_eq!(merker.wert, Merker::default());
 
     for (welche, ersetzung) in [
         (Datei::Belegung, belegung.ersetzung),
@@ -1234,6 +1256,7 @@ fn eine_kaputte_datei_fuehrt_zum_auslieferungszustand_und_zu_einer_meldung() {
         (Datei::Sitzung, sitzung.ersetzung),
         (Datei::Einstellungen, eingestellt.ersetzung),
         (Datei::Leser, profile.ersetzung),
+        (Datei::Merker, merker.ersetzung),
     ] {
         pruefe_meldung(&ablage, welche, ersetzung, true);
 
@@ -1356,12 +1379,16 @@ fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
     let sitzung: Geladen<Sitzung> = geladen(ablage, Datei::Sitzung);
     let eingestellt = geladene_einstellungen(ablage);
     let profile = geladene_leseprofile(ablage);
+    let merker = ablage
+        .durchgang(merker::laden)
+        .expect("die Schreibsperre laesst sich nicht nehmen");
     vec![
         belegung.ersetzung,
         lesezeichen.ersetzung,
         sitzung.ersetzung,
         eingestellt.ersetzung,
         profile.ersetzung,
+        merker.ersetzung,
     ]
 }
 
@@ -1376,7 +1403,7 @@ fn ersetzungen_der_toml_dateien(ablage: &Ablage) -> Vec<Option<Ersetzung>> {
 /// kuerzte still auf vier; die Probe blieb gruen und prueft eine Datei weniger,
 /// als ihr Name verspricht
 /// (`issues/260824-0940_*_readers-toml-faellt-beim-zip-…`). Jetzt haelt sie
-/// beide Seiten gegeneinander: eine sechste TOML-Datei, die niemand in
+/// beide Seiten gegeneinander: eine weitere TOML-Datei, die niemand in
 /// [`ersetzungen_der_toml_dateien`] eintraegt, laesst sie rot werden.
 #[test]
 fn jede_toml_datei_wird_bei_beschaedigung_zur_seite_gelegt() {
@@ -1762,12 +1789,12 @@ fn die_meldung_zu_readers_toml_verspricht_keinen_auslieferungszustand() {
     }
 }
 
-/// Genau eine der sieben Ablagedateien traegt [`Ersatz::Nichts`].
+/// Genau eine der acht Ablagedateien traegt [`Ersatz::Nichts`].
 ///
 /// Die Zaehlprobe zu der Aussage, die der Doc-Kommentar von [`Datei::ersatz`]
-/// macht. Sie laeuft ueber [`Datei::ALLE`] und kann keine vergessen; eine achte
-/// Datei mit `Ersatz::Nichts` laesst sie rot werden und verlangt, dass die
-/// Prosa nachgezogen wird.
+/// macht. Sie laeuft ueber [`Datei::ALLE`] und kann keine vergessen; eine
+/// weitere Datei mit `Ersatz::Nichts` laesst sie rot werden und verlangt, dass
+/// die Prosa nachgezogen wird.
 #[test]
 fn genau_readers_toml_bekommt_keinen_ersatz() {
     let ohne: Vec<&str> = Datei::ALLE
@@ -1967,7 +1994,7 @@ fn eine_ungueltige_zetteldatei_wird_beiseitegelegt_und_der_zettel_ist_leer() {
         "die Sicherung traegt nicht Byte fuer Byte den Inhalt der Datei"
     );
 
-    // Kopiert und nicht verschoben, wie bei den fuenf TOML-Dateien.
+    // Kopiert und nicht verschoben, wie bei den sechs TOML-Dateien.
     assert_eq!(
         fs::read(&pfad).expect("das Original fehlt"),
         kaputt,
@@ -1986,7 +2013,7 @@ fn eine_ungueltige_zetteldatei_wird_beiseitegelegt_und_der_zettel_ist_leer() {
 
 /// Eine zweite ungueltige Fassung laesst die erste Sicherung unangetastet (C5).
 ///
-/// Dieselbe Zusage wie fuer die fuenf TOML-Dateien, und sie haengt an derselben
+/// Dieselbe Zusage wie fuer die sechs TOML-Dateien, und sie haengt an derselben
 /// Funktion: `Zugang::beiseite_legen` fragt vorher, ob dort schon etwas steht.
 #[test]
 fn eine_zweite_ungueltige_zetteldatei_laesst_die_erste_sicherung_stehen() {
@@ -3983,6 +4010,12 @@ fn beschaedigte_sitzung(zweck: &str, inhalt: &str) {
 /// leerraeumen. Die Trennung folgt seit dem 260907 einem Kriterium — schreibt
 /// KRK die Datei selbst, oder pflegt der Nutzer sie von Hand?
 ///
+/// **Welche Dateien die Probe meint, fragt sie an `Datei::leerbefund` und
+/// zaehlt sie nicht auf.** Bis zur Runde 24 stand hier ein Filter, der
+/// `bookmarks.toml` und `session.toml` namentlich ausnahm; `reported.toml` kam
+/// daneben als dritte strenge Datei dazu und waere dem Filter durchgerutscht.
+/// Die abgeleitete Frage kann das nicht.
+///
 /// **`session.toml` ist mit demselben Entscheid aus dieser Gruppe
 /// ausgeschieden** und steht jetzt neben `bookmarks.toml`; die Probe dazu ist
 /// [`eine_leere_session_toml_gilt_als_beschaedigt`]
@@ -3996,9 +4029,7 @@ fn beschaedigte_sitzung(zweck: &str, inhalt: &str) {
 #[test]
 fn eine_leere_datei_meldet_bei_den_drei_von_hand_gepflegten_nichts() {
     let (_ordner, ablage) = ablage("leerbefund-die-von-hand-gepflegten");
-    for welche in
-        toml_dateien().filter(|welche| !matches!(welche, Datei::Lesezeichen | Datei::Sitzung))
-    {
+    for welche in toml_dateien().filter(|welche| welche.leerbefund() == Leerbefund::Vorgabe) {
         fs::write(ablage.pfad(welche), "").expect("schreiben gescheitert");
     }
 
@@ -4216,7 +4247,7 @@ fn auslieferungstext(welche: Datei) -> &'static str {
         Datei::Belegung => belegung::AUSLIEFERUNGSTEXT,
         Datei::Einstellungen => einstellungen::AUSLIEFERUNGSTEXT,
         Datei::Leser => leseprofile::AUSLIEFERUNGSTEXT,
-        Datei::Lesezeichen | Datei::Sitzung | Datei::Zettel(_) => panic!(
+        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => panic!(
             "{} wird nicht verglichen und hat keine eingebettete Auslieferungsfassung",
             welche.dateiname()
         ),
@@ -4680,5 +4711,174 @@ fn der_kuerzer_laesst_eine_liste_bis_zur_grenze_in_ruhe() {
         viele.last().map(String::as_str),
         Some("… und 2.000 weitere"),
         "der Rest traegt die Tausenderpunkte der Oberflaeche nicht"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Der Merker der gemeldeten Fassung
+// ---------------------------------------------------------------------------
+//
+// `reported.toml` traegt die Fassung, fuer die die Startzeile aus
+// `ablage::neuerungen` zuletzt gelaufen ist. Der Merker ist die achte
+// Ablagedatei und die zweite Haelfte der Zusage „einmal je Fassung"; die
+// Wahl gegen ein Feld auf `Sitzung` steht im Kopf von `ablage::merker`.
+
+/// Der Merker geht unter der Schreibsperre auf die Platte und zurueck.
+fn gelesener_merker(ablage: &Ablage) -> Geladen<Merker> {
+    ablage
+        .durchgang(merker::laden)
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+fn merker_vermerken(ablage: &Ablage, fassung: &str) {
+    ablage
+        .durchgang(|zugang| merker::vermerken(zugang, fassung))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("reported.toml laesst sich nicht schreiben");
+}
+
+/// Ein Merker, der nicht dasteht, heisst „noch nie gemeldet".
+///
+/// Der erste Start nach der Installation. Es gibt keine Datei, und die Zeile
+/// muss trotzdem kommen; die Antwort faellt mit dem Auslieferungszustand von
+/// [`Merker`] zusammen und braucht keinen eigenen Zweig.
+#[test]
+fn ein_fehlender_merker_heisst_noch_nie_gemeldet() {
+    let (_ordner, ablage) = ablage("merker-fehlt");
+    assert!(
+        !ablage
+            .pfad(Datei::Merker)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "reported.toml steht schon da, bevor etwas gemeldet wurde"
+    );
+
+    let geladen = gelesener_merker(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine fehlende Datei ist der erste Start und keine Ersetzung: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(geladen.wert, Merker::default());
+    assert!(
+        geladen.wert.meldung_steht_aus(LAUFENDE_FASSUNG),
+        "ohne Merker haelt KRK die Meldung fuer erledigt"
+    );
+
+    // **Das Lesen legt die Datei nicht an.** Der Merker entsteht erst, wenn
+    // gemeldet worden ist; eine Datei, die schon beim Lesen entstuende, sagte
+    // nichts anderes und kostete beim ersten Start einen Schreibvorgang.
+    assert!(
+        !ablage
+            .pfad(Datei::Merker)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "das Lesen des Merkers hat reported.toml angelegt"
+    );
+}
+
+/// Ein leerer Merker heisst dasselbe wie ein fehlender.
+///
+/// Die Datei steht da und nennt eine leere Fassung — etwa weil der Nutzer sie
+/// von Hand ausgeraeumt hat. Die leere Zeichenkette ist ungleich jeder
+/// Fassungsnummer, also steht die Meldung aus.
+#[test]
+fn ein_leerer_merker_heisst_ebenfalls_noch_nie_gemeldet() {
+    let (_ordner, ablage) = ablage("merker-leer");
+    ablage
+        .durchgang(|zugang| {
+            atomar::schreiben(
+                &zugang.pfad(Datei::Merker),
+                &mut "gemeldete_fassung = \"\"\n".as_bytes(),
+            )
+        })
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+        .expect("reported.toml laesst sich nicht schreiben");
+
+    let geladen = gelesener_merker(&ablage);
+    assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
+    assert_eq!(geladen.wert.gemeldete_fassung, "");
+    assert!(
+        geladen.wert.meldung_steht_aus(LAUFENDE_FASSUNG),
+        "ein leerer Merker gilt als gemeldet"
+    );
+}
+
+/// Ein Merker mit einer anderen Zahl heisst „melden", einer mit derselben
+/// „nicht melden".
+///
+/// **Die andere Zahl steht in beide Richtungen da.** Wer eine aeltere Fassung
+/// ueber eine neuere installiert, bekommt ihre Meldung ebenso: verglichen wird
+/// auf Ungleichheit und nicht auf „neuer als".
+#[test]
+fn ein_merker_mit_anderer_fassung_heisst_melden_und_mit_derselben_nicht() {
+    let (_ordner, ablage) = ablage("merker-fassungen");
+
+    merker_vermerken(&ablage, LAUFENDE_FASSUNG);
+    let geladen = gelesener_merker(&ablage);
+    assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
+    assert_eq!(geladen.wert.gemeldete_fassung, LAUFENDE_FASSUNG);
+    assert!(
+        !geladen.wert.meldung_steht_aus(LAUFENDE_FASSUNG),
+        "derselbe Merker verlangt eine zweite Meldung"
+    );
+
+    for fremde in ["0.0.1", "999.0.0"] {
+        merker_vermerken(&ablage, fremde);
+        let geladen = gelesener_merker(&ablage);
+        assert_eq!(geladen.wert.gemeldete_fassung, fremde);
+        assert!(
+            geladen.wert.meldung_steht_aus(LAUFENDE_FASSUNG),
+            "der Merker {fremde} gilt neben der laufenden Fassung \
+             {LAUFENDE_FASSUNG} als gemeldet"
+        );
+    }
+}
+
+/// Die Messung, an der `Leerbefund::Beschaedigt` fuer `reported.toml` haengt:
+/// KRK schreibt sie nie ohne obersten Schluessel.
+///
+/// **Die Gegenprobe, dieselbe Bauform wie
+/// [`jede_geschriebene_session_toml_traegt_einen_obersten_schluessel`]**, und
+/// aus demselben Grund: schriebe KRK je eine solche Datei, machte die Strenge
+/// KRKs eigene Ausgabe zum Schadensfall. Gemessen wird am aermsten Merker, der
+/// sich konstruieren laesst — der leeren Fassung —, und die Struktur ist
+/// ausgeschrieben und nicht ueber `..` und `Default` gebaut, damit ein neues
+/// Feld die Messung erneut erzwingt.
+#[test]
+fn jede_geschriebene_reported_toml_traegt_einen_obersten_schluessel() {
+    let (_ordner, ablage) = ablage("merker-oberster-schluessel");
+    let aermster = Merker {
+        gemeldete_fassung: String::new(),
+    };
+
+    for wert in [Merker::default(), aermster] {
+        gesichert(&ablage, Datei::Merker, &wert).expect("schreiben gescheitert");
+        let text = fs::read_to_string(ablage.pfad(Datei::Merker)).expect("lesen gescheitert");
+        let dokument: toml::Table = toml::from_str(&text).expect("KRK schreibt gueltiges TOML");
+        assert!(
+            !dokument.is_empty(),
+            "KRK hat eine reported.toml ohne obersten Schluessel geschrieben: {text:?}"
+        );
+    }
+}
+
+/// Der Merker wird nicht verglichen und gehoert nicht in die Meldung.
+///
+/// `reported.toml` traegt keinen Bestand des Nutzers, sondern eine Auskunft
+/// ueber KRKs eigenes Verhalten; sie kann deshalb nicht hinter einer
+/// Auslieferungsfassung zurueckliegen. Die vierte je Datei beantwortete Frage
+/// sagt das, und der [`Bestand`] fuehrt sie infolgedessen nicht.
+#[test]
+fn der_merker_wird_nicht_verglichen() {
+    assert_eq!(Vergleichsform::fuer(Datei::Merker), Vergleichsform::Nicht);
+
+    let (_ordner, ablage) = ablage("merker-ohne-vergleich");
+    merker_vermerken(&ablage, LAUFENDE_FASSUNG);
+
+    let bestand = erhobene_neuerungen(&ablage);
+    assert!(
+        bestand.fuer(Datei::Merker).is_none(),
+        "der Merker steht im Bestand der Neuerungen"
     );
 }

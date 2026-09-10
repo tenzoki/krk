@@ -138,7 +138,9 @@ impl Vergleichsform {
                 tisch: "funktion",
                 schluessel: "id",
             },
-            Datei::Lesezeichen | Datei::Sitzung | Datei::Zettel(_) => Vergleichsform::Nicht,
+            Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => {
+                Vergleichsform::Nicht
+            }
         }
     }
 
@@ -388,6 +390,7 @@ const fn eigene_eintraege_moeglich(welche: Datei) -> bool {
         | Datei::Einstellungen
         | Datei::Lesezeichen
         | Datei::Sitzung
+        | Datei::Merker
         | Datei::Zettel(_) => false,
     }
 }
@@ -449,7 +452,7 @@ fn auslieferung(welche: Datei) -> Option<&'static toml::Table> {
         Datei::Belegung => Some(&AUSGELIEFERTE_BELEGUNG),
         Datei::Einstellungen => Some(&AUSGELIEFERTE_EINSTELLUNGEN),
         Datei::Leser => Some(&AUSGELIEFERTE_LESEPROFILE),
-        Datei::Lesezeichen | Datei::Sitzung | Datei::Zettel(_) => None,
+        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => None,
     }
 }
 
