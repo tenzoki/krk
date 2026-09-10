@@ -110,3 +110,6 @@ KRK dem Nutzer zwei Dinge zu sagen und nicht eines.
 
 ---
 Answered: `260905-2008-orchestrator-session.md` `## Fortsetzung 260910 — die Runde 24 wird geplant` — Möglichkeit 2: genau eine Startmeldung geht unverändert in die Statuszeile, ab der zweiten fährt ein Blatt herunter, das alle aufführt, gebaut wie die Abschlussliste der übersprungenen Einträge; die begrenzte Abweichung von der Antwort vom 260804-0830 und der Fall, in dem die Zeile dieser Runde mit ins Blatt wandert, sind mitentschieden; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 929e5d5 — genau eine Startmeldung geht unverändert in die Statuszeile, ab der zweiten führt ein Blatt sie alle auf; die Entscheidung liegt als reine Funktion mit drei Ausgängen in `krk-ui/src/appkit/blaetter/startmeldungen.rs`, der Aufrufer verzweigt vollständig und ohne Auffangzweig.

@@ -59,3 +59,6 @@ sind Entscheidungen und keine Ableitungen:
   Möglichkeit 1) für diesen einen Fall und gehört deshalb entschieden, nicht gebaut.
 
 Der Fall „genau eine Meldung" muss in beiden Wegen Wort für Wort bleiben, was er heute ist.
+
+---
+Resolved: 929e5d5 — genau eine Startmeldung geht unverändert in die Statuszeile, ab der zweiten fährt ein Blatt herunter, das alle aufführt. Gewählt vom Nutzer am 260910 aus drei vorgelegten Wegen (`260910-0818_*_wie-erreichen-n-startmeldungen-den-nutzer-wenn-die-eine-zeile-nur-eine-traegt.md`); das Verbinden der Sätze und eine Warteschlange mit Verweildauer sind geprüft und verworfen.
