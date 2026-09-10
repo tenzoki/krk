@@ -52,36 +52,60 @@ Stelle, als Konstante `RELEASETEXT` in `xtask/src/veroeffentlichung.rs`, und jed
 seiner Aussagen hängt dort an einer eigenen Behauptung der Probe
 `der_releasetext_traegt_jede_seiner_aussagen`.
 
-## Neue Leseprofile übernehmen
+## Neuerungen an den eigenen Dateien übernehmen
 
-Wählt man im Dateifenster einen Ordner aus, zeigt die Vorschau rechts seine
-Metadaten. Für Orte, die KRK erkennt, steht dort stattdessen eine
-Zusammenfassung ihres Inhalts. Welche Orte das sind und was in der
-Zusammenfassung steht, sagt die Datei
-`~/Library/Application Support/KRK/readers.toml`.
+Drei Dateien in `~/Library/Application Support/KRK/` gehören dem Nutzer, und KRK
+legt jede von ihnen beim ersten Start an und schreibt sie danach nie wieder:
+`keymap.toml` mit der Tastenbelegung, `settings.toml` mit den Einstellungen ohne
+Oberfläche und `readers.toml` mit den Leseprofilen der Vorschau. Bringt eine
+neue Fassung darin einen Eintrag mit, den die eigene Datei nicht führt, kommt er
+nicht von selbst an. Die eigene Datei bleibt, wie sie ist, und das ist kein
+Fehler: eine unveränderte Datei ist nicht beschädigt.
 
-**Ein Versionswechsel bringt neue Leseprofile nicht mit.** KRK legt diese Datei
-beim ersten Start an und schreibt sie danach nie wieder, auch dann nicht, wenn
-eine neue Fassung Profile mitbringt, die darin fehlen. Wer KRK schon einmal
-gestartet hat, sieht nach der Installation weiter genau die Profile von vorher.
-Eine Meldung darüber gibt es nicht, und es wäre auch keine am Platz: eine
-unveränderte Datei ist nicht beschädigt, sie verhält sich vollkommen richtig.
+**KRK sagt es beim Start.** Liegt eine der drei hinter der Auslieferungsfassung
+zurück, steht in der Statuszeile eine Zeile, die je betroffener Datei die Zahl
+der neuen Einträge nennt und dahinter den Ordner, in dem die eigenen Dateien
+liegen. Genannt sind nur die Dateien, an denen es einen Unterschied gibt, und
+die Zeile kommt **einmal je Fassung**: der zweite Start derselben Fassung zeigt
+sie nicht mehr.
 
-Die neuen Profile holt man sich in drei Schritten:
+Das Einzelne zeigt der Befehl **„Neuerungen anzeigen"**, im Hauptmenü unter
+„Anwendung" und ab Werk auf `opt+cmd+i`. Er öffnet ein Blatt, das für jede der
+drei Dateien ihren vollen Pfad nennt, die Namen der Einträge, die nur die
+Auslieferungsfassung führt, die Namen der Einträge, die nur die eigene Datei
+führt, und einen Satz darüber, was ein fehlender Eintrag an dieser Datei kostet.
+Wer eine eigene `keymap.toml` von vor dieser Fassung hat, findet den Befehl
+selbst als Beispiel: seine Datei kennt `neuerungen_zeigen` nicht, also steht der
+Eintrag bei ihm ohne Kürzel am Fuß der Gruppe „Anwendung", und über das
+Hauptmenü ist er trotzdem erreichbar.
+
+**Was ein fehlender Eintrag kostet, ist bei den drei Dateien verschieden.**
+
+- `readers.toml`: Das neue Profil gibt es für KRK nicht. Die Vorschau zeigt an
+  dem Ort, den es erkannt hätte, weiter die Metadaten.
+- `settings.toml`: Die neue Einstellung wirkt schon, mit dem Wert der
+  Auslieferungsfassung. Was fehlt, ist ihr erklärender Kommentarblock — man
+  erfährt aus der eigenen Datei nicht, dass es sie gibt.
+- `keymap.toml`: KRK hängt eine Funktion, die die eigene Datei nicht nennt,
+  unbelegt hinten an ihre Gruppe an. Der Befehl steht im Hauptmenü und tut, was
+  er soll, aber ohne Tastenkombination und nicht an seinem Platz.
+
+Die Neuerungen holt man sich in drei Schritten, für jede betroffene Datei
+einzeln:
 
 1. KRK beenden.
-2. `~/Library/Application Support/KRK/readers.toml` beiseitelegen, etwa als
-   `readers.toml.alt` im selben Ordner.
+2. Die Datei beiseitelegen, etwa als `readers.toml.alt` im selben Ordner.
 3. KRK starten. Die Datei entsteht neu aus der Auslieferungsfassung, samt allen
    Kommentaren darin.
 
 **Beiseitelegen und nicht löschen.** Es ist derselbe Grund wie beim
 Installieren: was KRK sich merkt, liegt außerhalb des Bündels, und ein
-Handgriff, der es mitnimmt, hat es genommen. In der alten Datei stehen die
-eigenen Profile und die eigenen Änderungen an den ausgelieferten; wer sie
-löscht, hat sie nicht mehr, denn die neu angelegte Datei kennt nur die
-Auslieferungsfassung. Aus der beiseitegelegten holt man sie sich Zeile für
-Zeile zurück.
+Handgriff, der es mitnimmt, hat es genommen. In der beiseitegelegten Datei
+stehen die eigenen Einträge und die eigenen Änderungen an den ausgelieferten;
+wer sie löscht, hat sie nicht mehr, denn die neu angelegte Datei kennt nur die
+Auslieferungsfassung. Aus der beiseitegelegten holt man sie sich Zeile für Zeile
+zurück, und das Blatt aus „Neuerungen anzeigen" sagt dabei unter „Nur in Ihrer
+Datei", welche Einträge das sind.
 
 ---
 

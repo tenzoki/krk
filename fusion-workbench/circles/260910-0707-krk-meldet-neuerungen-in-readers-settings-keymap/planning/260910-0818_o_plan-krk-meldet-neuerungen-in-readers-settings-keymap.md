@@ -495,7 +495,7 @@ den die laufende Anwendung gar nicht benutzt.
      `260910-1730-coder-schritt-9-der-ausfuehrungszweig-und-das-hauptmenue.md`.
    - Dependencies: Schritte 6, 7, 8
 
-10. **Was der Nutzer darüber liest**
+10. **Was der Nutzer darüber liest** [DONE]
     - Executor: `ontocoder`
     - Files: `README.md`, `HowTo.md`
     - Changes: `README.md` `## Neue Leseprofile übernehmen` sagt heute den Handgriff, mit dem
@@ -513,6 +513,30 @@ den die laufende Anwendung gar nicht benutzt.
         ``grep -rnE --exclude-dir=fusion-workbench --exclude-dir=target '[Dd]ie alte.{0,24}löschen' .``
         vor und nach dem Schritt, mit demselben Ergebnis.
       - Keine neue Zahl im Text, die der Baum schon trägt.
+    - Nachtrag des Ausführenden am 260910-1830: gebaut. `README.md` `## Neue Leseprofile
+      übernehmen` heißt jetzt `## Neuerungen an den eigenen Dateien übernehmen` und gilt für
+      alle drei von Hand gepflegten Ablagedateien; er trägt die Startzeile (Zahlen je Datei,
+      der Ordner, nur Dateien mit Unterschied, einmal je Fassung), den Befehl „Neuerungen
+      anzeigen" mit Menügruppe „Anwendung" **und** `opt+cmd+i`, was das Blatt zeigt, die drei
+      verschiedenen Preise und den vorhandenen Handgriff, auf „die betroffene Datei"
+      verallgemeinert. `HowTo.md` bekommt dieselbe Auskunft in der knapperen Form der
+      Anleitung und **verweist** für den Handgriff auf die `README.md`, statt ihn ein zweites
+      Mal auszuschreiben; die zwei Rückverweise auf den alten Abschnittsnamen sind
+      nachgezogen. Das Beispiel des Nutzers steht in beiden Dateien: wer eine `keymap.toml`
+      von vor dieser Fassung hat, findet `neuerungen_zeigen` bei sich ohne Kürzel am Fuß der
+      Gruppe „Anwendung".
+
+      **Die Erhebung zur Betriebsregel liefert vor und nach dem Schritt dieselben vier
+      Zeilen** (`README.md:35`, `CLAUDE.md:133`, `HowTo.md:15`,
+      `xtask/src/veroeffentlichung.rs:760`); keine davon ist angefasst, und kein neuer Satz
+      trägt die Wendung.
+
+      **Zwei Stellen liegen daneben und sind bewusst nicht angefasst.** `CLAUDE.md` Zeile 135
+      verweist auf den alten Abschnittsnamen; CLAUDE.md hält dieser Plan aus der Runde heraus,
+      der Verweis gehört in `/fusion:cleanup --only claude-md`. `RELEASETEXT` sagt, was beim
+      Installieren zu tun ist, und die Neuerung betrifft den ersten Start danach; er bleibt.
+      Alles Weitere im Verlaufsprotokoll
+      `260910-1830-ontocoder-schritt-10-was-der-nutzer-darueber-liest.md`.
     - Dependencies: Schritte 4, 6
 
 ```mermaid

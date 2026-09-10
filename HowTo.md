@@ -43,15 +43,36 @@ darinsteht. Für die Einstellungen ist das gewollt, denn ein Schreibpfad löscht
 die Kommentare, die den Sinn der Datei ausmachen; ein Feld, das die eigene Datei
 nicht nennt, kommt ohnehin aus der Auslieferungsfassung.
 
-**Für die Leseprofile hat es einen Preis.**
-Eine neue KRK-Fassung bringt neue Profile mit, und wer KRK schon einmal
-gestartet hat, sieht nach der Installation trotzdem weiter genau die Profile von
-vorher. Eine Meldung darüber gibt es nicht, und es wäre auch keine am Platz:
-eine unveränderte Datei ist nicht beschädigt. Der einzige Weg an die neuen
-Profile ist die vollständige Neuanlage, und dabei gehen die eigenen Zeilen
-verloren. Wie man sie sich zurückholt, steht in `README.md` unter „Neue
-Leseprofile übernehmen"; der wichtigste Handgriff daraus ist, die alte Datei
-**beiseitezulegen** und nicht zu löschen.
+**Eine neue KRK-Fassung bringt Einträge mit, die in den eigenen Dateien
+fehlen.** Betroffen sind die drei von Hand gepflegten `keymap.toml`,
+`settings.toml` und `readers.toml`. KRK meldet das beim ersten Start einer neuen
+Fassung in der Statuszeile: je betroffener Datei die Zahl der Einträge, die nur
+die Auslieferungsfassung führt, dahinter der Ordner, in dem die eigenen Dateien
+liegen. Genannt sind nur Dateien mit einem Unterschied, und die Zeile kommt
+**einmal je Fassung** — der zweite Start derselben Fassung zeigt sie nicht mehr.
+
+Das Einzelne zeigt **„Neuerungen anzeigen"**, im Hauptmenü unter „Anwendung"
+und ab Werk auf `opt+cmd+i`. Das Blatt nennt je Datei ihren vollen Pfad, die
+Namen der Einträge nur in der Auslieferungsfassung, die Namen der Einträge nur
+in der eigenen Datei und einen Satz darüber, was der Unterschied an dieser Datei
+kostet. Wer eine `keymap.toml` von vor dieser Fassung hat, findet den Befehl bei
+sich ohne Kürzel am Fuß der Gruppe „Anwendung": das ist zugleich das
+nächstliegende Beispiel für den Fall, den das Blatt beschreibt.
+
+**Der Preis ist bei den drei Dateien verschieden:**
+
+| Datei | Was ein fehlender Eintrag kostet |
+|---|---|
+| `readers.toml` | Alles. Das Profil gibt es für KRK nicht, und die Vorschau zeigt an dem Ort, den es erkannt hätte, weiter die Metadaten. |
+| `settings.toml` | Nur den erklärenden Kommentarblock. Die Einstellung selbst wirkt bereits, mit dem Wert aus der Auslieferungsfassung. |
+| `keymap.toml` | Die ausgelieferten Tastenkombinationen. Die Funktion hängt KRK unbelegt hinten an ihre Gruppe, über das Hauptmenü bleibt sie erreichbar. |
+
+Der Handgriff ist bei allen dreien derselbe: KRK beenden, die betroffene Datei
+**beiseitelegen** und nicht löschen, KRK starten. Sie entsteht neu aus der
+Auslieferungsfassung, samt allen Kommentaren darin; die eigenen Zeilen holt man
+sich aus der beiseitegelegten zurück, und das Blatt sagt unter „Nur in Ihrer
+Datei", welche das sind. Im Einzelnen steht der Weg in `README.md` unter
+„Neuerungen an den eigenen Dateien übernehmen".
 
 Außerhalb dieses Ordners schreibt KRK an genau eine feste Stelle: die
 Markdown-Ausgabe der Tastenbelegung geht nach `~/Downloads/KRK-Tastenbelegung.md`,
@@ -420,8 +441,10 @@ beantwortet „was war die Directive und wie weit ist sie", und ein Klick auf
 `issues/` beantwortet „wie viel liegt hier offen".
 
 **Und die Einschränkung von oben gilt hier:** neue Profile einer neuen
-KRK-Fassung kommen nicht von selbst. Der Weg dorthin steht in `README.md` unter
-„Neue Leseprofile übernehmen".
+KRK-Fassung kommen nicht von selbst. Dass es welche gibt, meldet KRK beim ersten
+Start der neuen Fassung, und „Neuerungen anzeigen" nennt sie beim Namen; der Weg
+zu ihnen steht in `README.md` unter „Neuerungen an den eigenen Dateien
+übernehmen".
 
 ---
 
