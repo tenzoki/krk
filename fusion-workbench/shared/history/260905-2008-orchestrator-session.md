@@ -750,3 +750,57 @@ Der Nutzer hat Möglichkeit 1 gewählt — auf Verlangen nacherheben. Damit zeig
 unabhängig davon dasselbe, ob es der erste Start dieser Fassung war oder der zwanzigste. Der
 Preis ist mitentschieden: für diesen einen Fall ist der gezeigte Stand nicht mehr der vom
 Start, und der Befehl bekommt über die Schreibsperre einen zweiten Ausgang.
+
+## Abschluss der Sitzung 260911-0630
+
+**Status:** Beendet auf Wunsch des Nutzers. Die Runde
+`260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap` bleibt **aktiv** — sie ist
+gebaut, aber nicht geschlossen: Abgleich, Durchsicht, die Frage nach den Endbedingungen und
+die Schließungsnotiz stehen aus. `.active-circle` nennt sie weiter, und die nächste Sitzung
+nimmt sie auf.
+
+### Bilanz
+
+| Größe | Zahl |
+|---|---|
+| Durchgänge | 5 |
+| Commits seit `28c4a47` | 57 |
+| Defektdatensätze angelegt | 40 |
+| Defektdatensätze geschlossen | 172 |
+| Nutzerfragen angelegt | 25 |
+| Nutzerfragen beantwortet (`_a_`) | 11 |
+| Nutzerfragen umgesetzt (`_i_`) | 25 |
+| Nutzergates | 2 an Datendateien, dazu die Fragenrunden |
+| Agentenfehler | 0 |
+
+Die Zahlen sind am Dateibestand erhoben und nicht mitgezählt; erhoben gegen den Anker
+`28c4a47` und den Sitzungsbeginn `260905-2008`. Sie umfassen deshalb die ganze Sitzung seit
+dem 260905 und nicht allein den letzten Durchgang.
+
+### Was der letzte Durchgang gebaut hat
+
+Zehn Planschritte der Runde 24, alle `[DONE]`, jeder einzeln gegen `make check` abgenommen.
+KRK meldet beim Start, was eine neue Fassung an `keymap.toml`, `settings.toml` und
+`readers.toml` mitbringt; `opt+cmd+i` und das Hauptmenü zeigen den Unterschied im Einzelnen
+mit den vollen Pfaden; wurde beim Start nichts erhoben, liest KRK auf Verlangen nach. Dazu
+behoben: die Startmeldungen überschrieben einander und nur die letzte erreichte den Nutzer.
+
+Zwei Auslieferungen in dieser Sitzung, 1.8.0 und 1.9.0, beide beglaubigt und veröffentlicht.
+
+### Durchsicht
+
+**Bereich:** `28c4a47..HEAD` — 57 Commits.
+**Gedeckt von:** keiner Durchsicht (`reviews=0`).
+**Nicht gedeckt:** alle 57. Die letzte Durchsicht des Projekts liegt am 260831-1444.
+**Getragene Dateien aus einer vorigen Durchsicht:** keine erhoben.
+
+Das ist der größte offene Posten dieser Sitzung und ausdrücklich kein Versehen: der Nutzer
+hat die Durchsicht am 260910 zugunsten der Auslieferung übersprungen.
+
+### Was offen bleibt
+
+- Der Abnahmelauf am Bündel 1.9.0 — Nutzerarbeit, nicht gefahren.
+- Der zweite Zug über 25 Plandokumente ohne Kopfzeile `**Abnahme:**`.
+- Die zwei entsperrten Antworten: die Deckungszusage der Runde 6 und der Plantext der Runde 20.
+- Elf der zwölf offenen Nutzerfragen sind nicht vorgelegt.
+- Fünf Befunde dieser Sitzung stehen offen, darunter zwei an `CLAUDE.md`.
