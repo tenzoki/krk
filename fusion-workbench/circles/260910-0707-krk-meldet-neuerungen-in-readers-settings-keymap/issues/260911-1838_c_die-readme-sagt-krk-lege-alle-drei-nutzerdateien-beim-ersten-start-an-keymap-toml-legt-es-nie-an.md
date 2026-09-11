@@ -51,3 +51,15 @@ gar nicht dasteht — nämlich nichts.
 Geprüft am Baum: `grep -rn "anlegen_falls_fehlt" crates/krk-core/src/ablage/` nennt die zwei
 Dateien, die angelegt werden, und `grep -rn "sichern(Datei::Belegung" crates/` die eine
 Stelle, die `keymap.toml` schreibt.
+
+---
+Resolved: ff48cde — `README.md` sagt jetzt fuer jede der drei Dateien, was fuer sie gilt:
+`settings.toml` und `readers.toml` entstehen beim ersten Start und werden danach nicht wieder
+geschrieben, `keymap.toml` entsteht erst, wenn der Nutzer seine Belegung in der F1-Ansicht
+aendert, und wird dann von dieser Ansicht beim Verlassen geschrieben. Der Handgriff darunter
+ist entsprechend geteilt: Beiseitelegen und neu starten traegt fuer die zwei angelegten
+Dateien; fuer `keymap.toml` traegt es nicht, und der Text sagt, dass bei einer fehlenden Datei
+nichts zu tun ist und bei einer vorhandenen der Weg ueber `cmd+r` in der F1-Ansicht fuehrt.
+Belegt am Baum: `anlegen_falls_fehlt` steht allein in `ablage/einstellungen.rs` und
+`ablage/leseprofile.rs`, und `sichern(Datei::Belegung` hat genau einen Rufer. `make check` mit
+Exit 0, alle fuenf Kommandos.

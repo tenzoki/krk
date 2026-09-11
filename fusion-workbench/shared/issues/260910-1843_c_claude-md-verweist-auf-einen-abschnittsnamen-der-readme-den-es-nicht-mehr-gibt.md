@@ -25,3 +25,9 @@ Verschiedenes. Wer den Absatz liest, hält den Handgriff für enger, als er ist.
 
 `CLAUDE.md` nennt den heutigen Abschnittsnamen, und die Aussage über den Handgriff deckt die
 drei Dateien statt einer. Erhoben mit einer Suche über `CLAUDE.md` nach dem alten Namen.
+
+---
+Resolved: ff48cde — `CLAUDE.md` nennt den heutigen Abschnittsnamen
+`## Neuerungen an den eigenen Dateien uebernehmen`, und der Absatz sagt jetzt, dass der
+Handgriff seit der Runde 24 nicht mehr allein den Leseprofilen gilt und fuer die drei von Hand
+gepflegten Dateien verschieden ausfaellt. Sonst ist an der Datei nichts geaendert.

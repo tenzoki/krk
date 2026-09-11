@@ -35,3 +35,14 @@ awk '/pub const ALLE: \[Datei;/,/\];/' crates/krk-core/src/ablage/pfade.rs
 ```
 
 also gegen genau das Kommando, das der Satz unter der Tabelle dem Leser selbst empfiehlt.
+
+---
+Resolved: ff48cde — die Tabelle in `HowTo.md` fuehrt `reported.toml` mit ihrem Inhalt
+("fuer welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind") und KRK als
+Schreiber. Gezaehlt gegen `Datei::ALLE`, also gegen die Quelle, auf die der Satz unter der
+Tabelle den Leser selbst verweist.
+
+Nicht behoben und keine Aufgabe dieses Durchgangs: die Probe
+`keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien` liest weiter allein
+`crates/krk-core/src/ablage/` und sieht `HowTo.md` nicht. Dieselbe Luecke faengt die naechste
+Ablagedatei wieder nicht.
