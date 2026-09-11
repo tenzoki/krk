@@ -54,13 +54,21 @@ seiner Aussagen hängt dort an einer eigenen Behauptung der Probe
 
 ## Neuerungen an den eigenen Dateien übernehmen
 
-Drei Dateien in `~/Library/Application Support/KRK/` gehören dem Nutzer, und KRK
-legt jede von ihnen beim ersten Start an und schreibt sie danach nie wieder:
+Drei Dateien in `~/Library/Application Support/KRK/` gehören dem Nutzer:
 `keymap.toml` mit der Tastenbelegung, `settings.toml` mit den Einstellungen ohne
 Oberfläche und `readers.toml` mit den Leseprofilen der Vorschau. Bringt eine
 neue Fassung darin einen Eintrag mit, den die eigene Datei nicht führt, kommt er
 nicht von selbst an. Die eigene Datei bleibt, wie sie ist, und das ist kein
 Fehler: eine unveränderte Datei ist nicht beschädigt.
+
+**Wie die drei entstehen, ist nicht dasselbe, und daran hängt der Handgriff
+weiter unten.** `settings.toml` und `readers.toml` legt KRK beim ersten Start
+an und schreibt sie danach nie wieder. `keymap.toml` legt KRK überhaupt nicht
+an: sie entsteht erst, wenn der Nutzer seine Belegung in der F1-Ansicht ändert,
+und geschrieben wird sie dann von dieser Ansicht, beim Verlassen und nur, wenn
+sich etwas geändert hat. Wer seine Belegung nie geändert hat, hat die Datei
+nicht, und das Blatt aus „Neuerungen anzeigen" sagt für sie „Diese Datei liegt
+nicht in Ihrer Ablage".
 
 **KRK sagt es beim Start.** Liegt eine der drei hinter der Auslieferungsfassung
 zurück, steht in der Statuszeile eine Zeile, die je betroffener Datei die Zahl
@@ -90,13 +98,23 @@ Hauptmenü ist er trotzdem erreichbar.
   unbelegt hinten an ihre Gruppe an. Der Befehl steht im Hauptmenü und tut, was
   er soll, aber ohne Tastenkombination und nicht an seinem Platz.
 
-Die Neuerungen holt man sich in drei Schritten, für jede betroffene Datei
-einzeln:
+Die Neuerungen an `settings.toml` und `readers.toml` holt man sich in drei
+Schritten, für jede betroffene Datei einzeln:
 
 1. KRK beenden.
 2. Die Datei beiseitelegen, etwa als `readers.toml.alt` im selben Ordner.
 3. KRK starten. Die Datei entsteht neu aus der Auslieferungsfassung, samt allen
    Kommentaren darin.
+
+**Bei `keymap.toml` greift dieser Handgriff nicht**, denn KRK legt sie beim
+Start nicht an: beiseitegelegt bleibt sie fort, und KRK arbeitet mit der
+einkompilierten Auslieferungsbelegung. Steht die Datei gar nicht erst da, ist
+nichts zu tun — dann gilt die Auslieferungsbelegung ohnehin vollständig, samt
+allem, was die neue Fassung mitbringt. Steht sie da, führt der Weg durch die
+Anwendung: in der F1-Ansicht **Auslieferungszustand** (`cmd+r`), und das
+Verlassen der Ansicht schreibt `keymap.toml` mit dem Auslieferungsstand. Die
+eigenen Zuweisungen sind danach fort, und wer sie behalten will, legt die Datei
+vorher beiseite.
 
 **Beiseitelegen und nicht löschen.** Es ist derselbe Grund wie beim
 Installieren: was KRK sich merkt, liegt außerhalb des Bündels, und ein

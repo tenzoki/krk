@@ -29,6 +29,7 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 | `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten | KRK |
 | `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung | nur der Nutzer |
 | `readers.toml` | die Leseprofile der Vorschau | nur der Nutzer |
+| `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind | KRK |
 | `note-1.txt`, `note-2.txt` | die zwei Notizzettel | KRK |
 
 Wer die Liste am Baum nachlesen will, liest sie an ihrer Quelle und nicht hier:
