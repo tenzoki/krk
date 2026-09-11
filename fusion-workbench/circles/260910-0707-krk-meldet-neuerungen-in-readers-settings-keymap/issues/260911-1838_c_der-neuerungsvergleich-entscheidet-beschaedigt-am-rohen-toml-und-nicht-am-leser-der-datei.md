@@ -84,3 +84,22 @@ sein.
 Der Modulkopf sagt danach, was der Code tut, und die Begründung für die leere Gegenrichtung
 steht neben dem Mechanismus, der sie trägt, statt neben einem, der sie nur in einem von
 sechs Fällen trägt.
+
+---
+Resolved: ad43d87 — `neuerungen::erheben` nimmt `Leserurteile` entgegen, drei Wahrheitswerte
+aus `belegung::laden`, `einstellungen::laden` und `leseprofile::laden`; `eine_datei` fragt
+Dasein, dann Urteil, dann Namen, und der TOML-Ladeweg steht hinter dem Urteil und liefert
+allein die Namen. Der Befund kommt damit vom Leser der Datei und nicht von einem zweiten
+Vergleich daneben. Drei neue Proben in `crates/krk-core/tests/ablage.rs` decken je einen der
+Wege ab, die die alte Fassung durchliess (Kombination in falscher Schreibweise, `terminal = 42`,
+verschriebener Bausteintisch); jede prueft, dass die Datei gueltiges TOML ist, dass ihr Leser
+sie trotzdem verwirft, und dass der Bestand `Befund::Ersetzt` ohne Unterschied traegt. Der
+Modulkopf und der Doc-Kommentar der alten Probe sagen jetzt, was der Code haelt. `make check`
+mit Exit 0, alle fuenf Kommandos.
+
+Dabei mitbehoben: die Vorrichtung von
+`eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere` war selbst ein Fall
+dieses Defekts und legte einen `[[funktion]]`-Block ohne Pflichtfelder hin.
+
+Nicht beruehrt bleibt `260812-1204_*_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md`:
+dieselbe Naht, andere Folge.
