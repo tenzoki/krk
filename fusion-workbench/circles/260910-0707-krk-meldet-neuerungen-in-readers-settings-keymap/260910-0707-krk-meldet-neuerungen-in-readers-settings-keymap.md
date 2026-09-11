@@ -2,8 +2,9 @@
 
 ---
 **Domain:** code
+**Status:** claimed
+**Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260910-0754
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
-**Claim:** Claimed 260910-0754: Kai Stalmann <kai@stalmann.org>, checkout 6c11b1f2.
 **Active spec/plan:** 260910-0818_*_plan-krk-meldet-neuerungen-in-readers-settings-keymap.md
 **Active session history:** 260905-2008-orchestrator-session.md
 
