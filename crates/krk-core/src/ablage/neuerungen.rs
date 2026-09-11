@@ -49,6 +49,12 @@
 //! [`Zugang::laden`](super::Zugang::laden) geht dabei durch dieselbe Tuer wie
 //! jedes andere Laden, mit derselben Schadensbehandlung.
 //!
+//! **Er beantwortet damit genau eine Frage, naemlich „welche Namen fuehrt
+//! diese Datei", und ausdruecklich nicht die Frage „ist diese Datei
+//! beschaedigt".** Ein `toml::Table` nimmt jedes syntaktisch gueltige TOML an;
+//! ob eine Datei ihrem eigentlichen Leser genuegt, entscheidet sich eine Ebene
+//! darueber, und der naechste Abschnitt sagt, wo.
+//!
 //! # Was nicht dasteht, wird nicht verglichen
 //!
 //! Eine Nutzerdatei, die es nicht gibt, liefert keine Neuerung. Auf einer
@@ -62,6 +68,32 @@
 //! [`Befund`]; das Blatt auf Abruf nennt den vollen Pfad jeder verglichenen
 //! Datei, auch der, die es nicht gibt.
 //!
+//! # „Beschaedigt" sagt der eigene Leser der Datei, und sonst niemand
+//!
+//! [`Befund::Ersetzt`] steht genau dann, wenn [`belegung::laden`],
+//! [`einstellungen::laden`] bzw. [`leseprofile::laden`] fuer dieselbe Datei
+//! eine [`Ersetzung`](super::Ersetzung) geliefert haben. Dieses Urteil wird
+//! **hereingereicht** ([`Leserurteile`]) und hier nicht ein zweites Mal
+//! hergeleitet.
+//!
+//! **Der Grund ist ein bezahlter.** Bis zum 260911 entschied dieses Modul
+//! „beschaedigt" am rohen TOML und an einem Eintrag, den die
+//! Auslieferungsfassung nicht kennt. Das fing einen Fall von sechs: eine
+//! `keymap.toml` mit einer Kombination in falscher Schreibweise, mit einer
+//! doppelten Funktion oder mit einem Konflikt, eine `settings.toml` mit einem
+//! falschen **Typ** an einem bekannten Schluessel und eine `readers.toml` mit
+//! einem verschriebenen Bausteintisch sind gueltiges TOML, gehen ihrem
+//! eigentlichen Leser aber nicht durch. Der Nutzer las im selben Start zwei
+//! Saetze, die einander widersprachen — die Meldung des Lesers ueber die
+//! beiseitegelegte Datei und die Startzeile ueber die Neuerungen darin —, und
+//! auf dem Blatt einen Preissatz ueber verlorene Tastenkombinationen, waehrend
+//! KRK auf der vollen Auslieferungsbelegung lief.
+//!
+//! **Eine zweite Beurteilung neben der ersten kann nur auseinanderlaufen.** Das
+//! Urteil ist deshalb ein Parameter und keine Frage, die dieses Modul selbst
+//! stellt; wer es beantwortet, ist derselbe Leseweg, der auch entscheidet, mit
+//! welchem Stand KRK arbeitet.
+//!
 //! # Die Gegenrichtung fuellt sich bauartbedingt nur bei `readers.toml`
 //!
 //! Ein `[[profil]]` mit einem eigenen Namen ist dort der gewoehnliche Fall.
@@ -70,11 +102,13 @@
 //! `Einstellungsdatei` traegt `deny_unknown_fields`, und `Belegung::bauen`
 //! weist eine unbekannte Kennung ab. Eine solche Datei gibt ihrem eigentlichen
 //! Leser ihren Bestand gar nicht her, KRK arbeitet auf dem
-//! Auslieferungszustand weiter — und sie kommt deshalb hier nicht bis zum
-//! Vergleich, sondern traegt [`Befund::Ersetzt`]. Welche Datei eigene
-//! Eintraege fuehren darf, sagt [`eigene_eintraege_moeglich`] als
-//! vollstaendige Fallunterscheidung. Die Zusage „in beide Richtungen" ist
-//! damit an einer Datei erfuellt und an zweien leer, mit dem Grund daneben.
+//! Auslieferungszustand weiter — und sie traegt deshalb [`Befund::Ersetzt`],
+//! auf demselben Weg wie jeder andere Schaden, naemlich ueber das Urteil ihres
+//! Lesers. Welche Datei eigene Eintraege fuehren darf, sagt
+//! [`eigene_eintraege_moeglich`] als vollstaendige Fallunterscheidung; sie
+//! steuert allein die Zeile des Blattes und nicht mehr den Befund. Die Zusage
+//! „in beide Richtungen" ist damit an einer Datei erfuellt und an zweien leer,
+//! mit dem Grund daneben.
 //!
 //! **Das Blatt schreibt diesen Grund hin, statt einen Gedankenstrich stehen zu
 //! lassen** ([`gegenrichtung`]): eine leere Richtung mit Grund und eine leere
@@ -201,12 +235,69 @@ pub enum Befund {
     Fehlt,
     /// Die Nutzerdatei liegt da, hat ihren Bestand aber nicht hergegeben.
     ///
-    /// Zwei Wege fuehren hierher. Der eine ist das Laden selbst: es traegt eine
-    /// [`Ersetzung`](super::Ersetzung), und die hat der Nutzer beim Start schon
-    /// gelesen; dieses Modul meldet sie kein zweites Mal. Der andere ist ein
-    /// eigener Eintrag in einer Datei, die keine fuehren darf — siehe
-    /// [`eigene_eintraege_moeglich`] und den Modulkopf.
+    /// **Ein Weg fuehrt hierher, und das ist der Punkt:** der eigene Leser
+    /// dieser Datei hat sie verworfen und eine [`Ersetzung`](super::Ersetzung)
+    /// geliefert. Sein Urteil kommt als [`Leserurteile`] herein; der Modulkopf
+    /// sagt unter „Beschaedigt sagt der eigene Leser der Datei" warum. Die
+    /// Meldung darueber hat der Nutzer beim Start schon gelesen, und dieses
+    /// Modul schreibt sie kein zweites Mal.
     Ersetzt,
+}
+
+/// Was die eigentlichen Leser der verglichenen Ablagedateien vorgefunden
+/// haben: je Datei, ob sie eine [`Ersetzung`](super::Ersetzung) geliefert hat.
+///
+/// **Hereingereicht und hier nicht hergeleitet.** Ob eine Datei ihrem Leser
+/// genuegt, weiss allein dieser Leser; ein `toml::Table` daneben beantwortet
+/// eine andere Frage und beantwortete sie in fuenf von sechs Faellen anders.
+/// Der Modulkopf traegt den Fall, der das gekostet hat.
+///
+/// **Drei Felder und keine Liste ueber [`Datei`].** Es gibt genau drei Leser,
+/// jeder mit eigenem Namen und eigenem Ladeweg, und ein Feld je Leser benennt
+/// sie. [`Leserurteile::ersetzt`] uebersetzt das in die Frage nach einer
+/// [`Datei`], vollstaendig und ohne Auffangzweig: eine achte Ablagedatei haelt
+/// dort den Bau an.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Leserurteile {
+    /// Ob [`belegung::laden`] fuer `keymap.toml` eine Ersetzung geliefert hat.
+    pub belegung: bool,
+    /// Ob [`einstellungen::laden`] fuer `settings.toml` eine Ersetzung
+    /// geliefert hat.
+    pub einstellungen: bool,
+    /// Ob [`leseprofile::laden`] fuer `readers.toml` eine Ersetzung geliefert
+    /// hat.
+    pub leseprofile: bool,
+}
+
+impl Leserurteile {
+    /// Kein Leser hat etwas verworfen.
+    ///
+    /// Der gewoehnliche Fall, und der Wert fuer jeden Rufer, dessen Leser gar
+    /// nicht gelaufen sind — eine Erhebung ohne vorheriges Laden kann von
+    /// keiner Datei behaupten, ihr Leser habe sie abgewiesen.
+    #[must_use]
+    pub const fn unversehrt() -> Self {
+        Self {
+            belegung: false,
+            einstellungen: false,
+            leseprofile: false,
+        }
+    }
+
+    /// Ob der eigene Leser dieser Ablagedatei sie verworfen hat.
+    ///
+    /// **Vollstaendig ueber [`Datei`] und ohne Auffangzweig.** Die Dateien ohne
+    /// Vergleichsform haben keinen Leser, der hier etwas beitruege; ihre
+    /// Antwort steuert nichts und steht da, weil die Fallunterscheidung
+    /// vollstaendig ist.
+    const fn ersetzt(self, welche: Datei) -> bool {
+        match welche {
+            Datei::Belegung => self.belegung,
+            Datei::Einstellungen => self.einstellungen,
+            Datei::Leser => self.leseprofile,
+            Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => false,
+        }
+    }
 }
 
 /// Der Unterschied zwischen der Auslieferungsfassung einer Ablagedatei und der
@@ -287,16 +378,20 @@ impl Bestand {
 /// fehlende oder beschaedigte Datei liefert eine Zeile mit ihrem [`Befund`] und
 /// ohne Namen.
 ///
-/// **Die [`Ersetzung`](super::Ersetzung) aus dem Laden faellt hier absichtlich
-/// weg.** Jede verglichene Datei ist im selben Start schon von ihrem
-/// eigentlichen Leser geladen worden — `keymap.toml` von
-/// [`belegung::laden`], `settings.toml` von
-/// [`einstellungen::laden`], `readers.toml` von
-/// [`leseprofile::laden`] —, und deren Meldung ist
-/// die, die der Nutzer liest. Eine zweite, wortgleiche daneben waere keine
-/// zweite Auskunft.
+/// **`urteile` sagt, welche Datei ihr eigener Leser verworfen hat**, und diese
+/// Frage stellt die Erhebung nicht selbst. Jede verglichene Datei ist im selben
+/// Start schon von ihrem eigentlichen Leser geladen worden — `keymap.toml` von
+/// [`belegung::laden`], `settings.toml` von [`einstellungen::laden`],
+/// `readers.toml` von [`leseprofile::laden`] —, und dessen Antwort ist die, mit
+/// der KRK arbeitet. Eine zweite daneben waere keine zweite Auskunft, sondern
+/// eine, die von der ersten abweichen kann; der Modulkopf traegt den Fall, in
+/// dem sie es getan hat.
+///
+/// Die Meldung des Lesers schreibt dieses Modul deshalb auch nicht noch einmal
+/// hin: der Nutzer hat sie beim Start gelesen, und hier steht allein der
+/// [`Befund`].
 #[must_use]
-pub fn erheben(zugang: &Zugang<'_>) -> Bestand {
+pub fn erheben(zugang: &Zugang<'_>, urteile: Leserurteile) -> Bestand {
     let mut dateien = Vec::new();
     for welche in Datei::ALLE {
         let form = Vergleichsform::fuer(welche);
@@ -316,7 +411,13 @@ pub fn erheben(zugang: &Zugang<'_>) -> Bestand {
             );
             continue;
         };
-        dateien.push(eine_datei(zugang, welche, form, ausgeliefert));
+        dateien.push(eine_datei(
+            zugang,
+            welche,
+            form,
+            ausgeliefert,
+            urteile.ersetzt(welche),
+        ));
     }
     Bestand {
         ordner: zugang.ort.wurzel().to_path_buf(),
@@ -325,11 +426,15 @@ pub fn erheben(zugang: &Zugang<'_>) -> Bestand {
 }
 
 /// Der Unterschied an einer einzelnen Ablagedatei.
+///
+/// `vom_leser_ersetzt` ist das Urteil des eigenen Lesers dieser Datei, aus
+/// [`Leserurteile`] herausgegriffen.
 fn eine_datei(
     zugang: &Zugang<'_>,
     welche: Datei,
     form: Vergleichsform,
     ausgeliefert: &toml::Table,
+    vom_leser_ersetzt: bool,
 ) -> Neuerungen {
     let pfad = zugang.pfad(welche);
     let ohne_namen = |befund| Neuerungen {
@@ -348,22 +453,37 @@ fn eine_datei(
     if pfad.try_exists().is_ok_and(|steht_da| !steht_da) {
         return ohne_namen(Befund::Fehlt);
     }
+    // **Die Frage nach dem Dasein steht vor der nach dem Schaden**, und zwar
+    // absichtlich: `einstellungen::laden` und `leseprofile::laden` tragen eine
+    // Ersetzung auch dann, wenn die fehlende Datei sich nicht **anlegen** liess
+    // (`Grund::NichtAnlegbar`). Das ist eine Aussage ueber die Anlage und nicht
+    // ueber einen Bestand, den die Datei nicht hergegeben haette; „liegt nicht
+    // in Ihrer Ablage" ist darueber die genauere Auskunft.
+    //
+    // **Und danach entscheidet allein das Urteil des eigenen Lesers.** Was in
+    // einer Datei steht, die KRK verworfen hat, ist fuer den laufenden Betrieb
+    // ohne Belang: beide Namenslisten waeren eine Aussage ueber eine Datei, mit
+    // der niemand arbeitet, und der Preissatz des Blattes bezifferte einen
+    // Verlust, den es nicht gibt. Der Modulkopf traegt den Fall, der das
+    // gekostet hat.
+    if vom_leser_ersetzt {
+        return ohne_namen(Befund::Ersetzt);
+    }
     let geladen: Geladen<toml::Table> = zugang.laden(welche);
+    // **Dieser Ladeweg kann nach dem Urteil oben kaum noch scheitern**, und wo
+    // er es doch tut, ist das keine zweite Beurteilung der Datei, sondern die
+    // Feststellung, dass es nichts zu vergleichen gibt. Jeder Fehlerzweig von
+    // `Zugang::laden` ist typunabhaengig bis auf das Zerlegen selbst, und ein
+    // `toml::Table` nimmt jedes TOML an, das der getypte Leser annimmt — es
+    // bleibt der Fall, dass die Datei sich zwischen den zwei Lesungen geaendert
+    // hat. Eine leere Namensliste waere dann eine Behauptung: sie meldete dem
+    // Nutzer jeden ausgelieferten Eintrag als Neuerung.
     if geladen.ersetzung.is_some() {
         return ohne_namen(Befund::Ersetzt);
     }
     let ausgelieferte_namen = form.namen(ausgeliefert);
     let eigene_namen = form.namen(&geladen.wert);
     let nur_beim_nutzer = ohne(&eigene_namen, &ausgelieferte_namen);
-    // **Ein eigener Eintrag, wo keiner sein darf, ist ein Schaden und keine
-    // Abweichung.** Der eigentliche Leser dieser Datei weist sie ab, KRK
-    // arbeitet auf dem Auslieferungszustand weiter, und was in ihr steht, ist
-    // fuer den laufenden Betrieb ohne Belang. Beide Richtungen waeren dann eine
-    // Aussage ueber eine Datei, mit der niemand arbeitet; der Modulkopf traegt
-    // die Begruendung, und eine Probe haelt sie.
-    if !nur_beim_nutzer.is_empty() && !eigene_eintraege_moeglich(welche) {
-        return ohne_namen(Befund::Ersetzt);
-    }
     Neuerungen {
         welche,
         pfad,
@@ -388,6 +508,12 @@ fn eine_datei(
 /// `Belegungsfehler::UnbekannteFunktion` abweist. Die uebrigen werden gar nicht
 /// verglichen; ihre Antwort steuert nichts und steht da, weil die
 /// Fallunterscheidung vollstaendig ist.
+///
+/// **Ihr einziger Rufer ist [`gegenrichtung`], und das seit dem 260911.** Bis
+/// dahin entschied sie in [`eine_datei`] mit darueber, ob eine Datei als
+/// beschaedigt gilt — und war dort der eine gefangene von sechs Faellen. Den
+/// Befund entscheidet jetzt das Urteil des eigenen Lesers; diese Frage sagt nur
+/// noch, ob die leere Gegenrichtung im Blatt einen Grund danebenbekommt.
 const fn eigene_eintraege_moeglich(welche: Datei) -> bool {
     match welche {
         Datei::Leser => true,

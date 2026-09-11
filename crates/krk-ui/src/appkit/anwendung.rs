@@ -272,7 +272,7 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG};
-use krk_core::ablage::neuerungen::{self, Bestand};
+use krk_core::ablage::neuerungen::{self, Bestand, Leserurteile};
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
     Ablage, Aenderung, Ausgang, Datei, Einstellungen, Fensterseite, Lesezeichen, Lesezeichenliste,
@@ -449,6 +449,11 @@ fn faengerstation(nimmt_auf: bool, druck: Tastendruck, zeichen: Option<char>) ->
 /// Unterschied"; die zwei Auskuenfte auseinanderzuhalten ist der Zweck des
 /// [`Option`].
 ///
+/// `urteile` traegt herein, welche der drei Dateien ihr eigener Leser verworfen
+/// hat. Diese Frage stellt die Erhebung nicht selbst, und der Kopf von
+/// [`krk_core::ablage::neuerungen`] sagt, was eine zweite Beurteilung daneben
+/// gekostet hat.
+///
 /// # Der Fassungsvergleich steht vor der Erhebung und nicht dahinter
 ///
 /// Stimmt der abgelegte Merker mit [`LAUFENDE_FASSUNG`] ueberein, wird keine
@@ -472,7 +477,10 @@ fn faengerstation(nimmt_auf: bool, druck: Tastendruck, zeichen: Option<char>) ->
 /// jedem Start wiederholt; das ist eine Auskunft wert, und ein stiller
 /// Fehlschlag waere der eine Fall, in dem der Nutzer die Wiederholung fuer
 /// einen Defekt der Meldung hielte.
-fn neuerungen_erheben(zugang: &Zugang<'_>) -> (Option<Bestand>, Vec<String>) {
+fn neuerungen_erheben(
+    zugang: &Zugang<'_>,
+    urteile: Leserurteile,
+) -> (Option<Bestand>, Vec<String>) {
     let mut meldungen = Vec::new();
     // Die `Ersetzung` reicht der Ladeweg dieser Datei weiter und verschluckt
     // sie nicht; der Kopf von `krk_core::ablage::merker` traegt den Grund.
@@ -481,7 +489,7 @@ fn neuerungen_erheben(zugang: &Zugang<'_>) -> (Option<Bestand>, Vec<String>) {
     if !merker.meldung_steht_aus(LAUFENDE_FASSUNG) {
         return (None, meldungen);
     }
-    let bestand = neuerungen::erheben(zugang);
+    let bestand = neuerungen::erheben(zugang, urteile);
     if let Err(fehler) = merker::vermerken(zugang, LAUFENDE_FASSUNG) {
         meldungen.push(format!(
             "es ließ sich nicht vermerken, dass die Neuerungen dieser Fassung gemeldet sind; \
@@ -749,11 +757,37 @@ pub struct AnwendungsIvars {
     /// Nutzerentscheid vom 260910-1600, der die Nacherhebung traegt, stehen
     /// dort. So heisst `None` weiterhin genau eines.
     neuerungen: RefCell<Option<Bestand>>,
+    /// Was die eigentlichen Leser der drei von Hand gepflegten Ablagedateien
+    /// beim Start vorgefunden haben (Runde 24).
+    ///
+    /// **Das eine Urteil ueber „diese Datei ist beschaedigt", und es kommt vom
+    /// Start.** `neuerungen::erheben` leitet es nicht selbst her — der Grund
+    /// steht im Kopf von [`krk_core::ablage::neuerungen`] —, und es gibt in
+    /// KRK nur ein Urteil: die Belegung, die Einstellungen und die Leseprofile,
+    /// mit denen die laufende Anwendung arbeitet, sind die vom Start. Deshalb
+    /// bedient dieses Feld **beide** Wege ins Blatt, den Start und den Abruf.
+    ///
+    /// **Gesetzt in [`Anwendungsdelegierter::sitzung_laden`]**, aus den zwei
+    /// Ladern jenes Durchgangs und der Belegungsmeldung darunter. Bis dahin
+    /// steht hier, was [`Anwendungsdelegierter::neu`] weiss: das Urteil ueber
+    /// `keymap.toml`, das [`starten`] schon eingeholt hat, und fuer die zwei
+    /// uebrigen „kein Leser hat sie verworfen" — was vor ihrem ersten Lauf
+    /// zutrifft.
+    urteile: RefCell<Leserurteile>,
     /// Die Meldung, falls die Belegung ersetzt werden musste.
     ///
     /// Sie steht hier und nicht in der Statuszeile, weil es die Statuszeile
     /// beim Laden noch nicht gibt: [`starten`] laeuft vor
     /// `applicationDidFinishLaunching:`.
+    ///
+    /// **Sie traegt zugleich das Urteil ueber `keymap.toml`.** Ein `Some` heisst
+    /// genau, dass `belegung::laden` eine `Ersetzung` geliefert hat, denn
+    /// `fuer_den_betrieb` setzt die Meldung ueber `Geladen::mit_meldung` aus
+    /// ihr zusammen; seine zwei uebrigen Zweige — kein Ablageordner, keine
+    /// Schreibsperre — melden dasselbe fuer den Nutzer, naemlich dass KRK auf
+    /// der Auslieferungsbelegung laeuft. Ein zweites Feld mit demselben Inhalt
+    /// steht deshalb nicht daneben; abgelesen wird es an genau einer Stelle,
+    /// in [`Anwendungsdelegierter::neu`].
     belegungsmeldung: Option<String>,
     /// Das aktive Dateifenster, die Sichtbarkeit und die Breiten.
     modell: RefCell<Fenstermodell>,
@@ -1348,6 +1382,14 @@ impl Anwendungsdelegierter {
         belegung: Belegung,
         belegungsmeldung: Option<String>,
     ) -> Retained<Self> {
+        // Das Urteil ueber `keymap.toml` reist als Meldung aus [`starten`]
+        // hierher; der Vermerk am Feld `belegungsmeldung` sagt, warum ein `Some`
+        // genau „belegung::laden hat eine Ersetzung geliefert" heisst. Abgelesen
+        // wird es hier und sonst nirgends.
+        let urteile = Leserurteile {
+            belegung: belegungsmeldung.is_some(),
+            ..Leserurteile::unversehrt()
+        };
         let this = Self::alloc(mtm).set_ivars(AnwendungsIvars {
             tasten_protokoll,
             messaufgabe,
@@ -1355,6 +1397,7 @@ impl Anwendungsdelegierter {
             einstellungen: RefCell::new(Einstellungen::default()),
             profile: RefCell::new(Arc::default()),
             neuerungen: RefCell::new(None),
+            urteile: RefCell::new(urteile),
             belegungsmeldung,
             modell: RefCell::new(Fenstermodell::aus_sitzung(&Sitzung::default())),
             fenster: OnceCell::new(),
@@ -2016,7 +2059,9 @@ impl Anwendungsdelegierter {
             // `settings.toml` beim ersten Start an; ohne diese Anlage haette der
             // Nutzer nichts zu pflegen, weil in dieser Runde keine Ansicht die
             // Datei schreibt.
-            let eingestellt = einstellungen::laden(zugang).mit_meldung();
+            let geladene_einstellungen = einstellungen::laden(zugang);
+            let einstellungen_ersetzt = geladene_einstellungen.ist_ersetzt();
+            let eingestellt = geladene_einstellungen.mit_meldung();
             // Die Leseprofile aus C1 der Runde 16, ueber denselben Zugang und
             // aus demselben Grund wie die Einstellungen: der Aufruf legt
             // `readers.toml` beim ersten Start an, und ein zweiter Durchgang
@@ -2029,26 +2074,40 @@ impl Anwendungsdelegierter {
             // Statuszeile, aber nicht durch dieselbe Tuer — warum, steht im Kopf
             // von `krk_core::ablage::leseprofile`.
             let (profile, profilmeldungen) = leseprofile::laden(zugang);
+            // **Die drei Urteile stammen aus genau diesen Ladern und werden
+            // nicht daneben hergeleitet** (Runde 24, berichtigt am 260911). Ob
+            // eine Ablagedatei beschaedigt ist, weiss allein ihr eigener Leser;
+            // der Kopf von `krk_core::ablage::neuerungen` traegt den Fall, den
+            // eine zweite Beurteilung gekostet hat. Das Urteil ueber
+            // `keymap.toml` kommt von `belegung::fuer_den_betrieb` und liegt
+            // seit `neu` in den ivars, denn jener Lader laeuft in `starten`,
+            // vor `NSApplication` und damit vor dem Delegierten.
+            let urteile = Leserurteile {
+                einstellungen: einstellungen_ersetzt,
+                leseprofile: profile.ist_ersetzt(),
+                ..*ivars.urteile.borrow()
+            };
             // **Die Erhebung der Neuerungen steht als Letztes im Durchgang**
             // (Runde 24), und die Reihenfolge ist tragend und keine Laune: die
             // zwei Aufrufe darueber legen `settings.toml` und `readers.toml`
             // beim ersten Start an. Wer davor erhoebe, hielte die
             // Auslieferungsfassung gegen zwei Dateien, die es in dieser
             // Sekunde noch nicht gibt, und meldete dem Nutzer am ersten Tag
-            // jeden Eintrag als Neuerung.
-            let erhoben = neuerungen_erheben(zugang);
+            // jeden Eintrag als Neuerung. Seit dem 260911 haengt die Erhebung
+            // auch sachlich an ihnen: sie braucht ihr Urteil.
+            let erhoben = neuerungen_erheben(zugang, urteile);
             (
                 sitzung,
                 eingestellt,
                 (profile.mit_meldung(), profilmeldungen),
-                erhoben,
+                (erhoben, urteile),
             )
         });
         let (
             (sitzung, meldung),
             (eingestellt, meldung_einstellungen),
             ((profile, meldung_profile), profilmeldungen),
-            (bestand, neuerungsmeldungen),
+            ((bestand, neuerungsmeldungen), urteile),
         ) = match gelesen {
             Ok(alles) => alles,
             Err(fehler) => {
@@ -2070,6 +2129,10 @@ impl Anwendungsdelegierter {
         // `None` heisst hier etwas anderes, naemlich „nicht erhoben"; die
         // Begruendung steht am Feld.
         *ivars.neuerungen.borrow_mut() = bestand;
+        // Das Urteil der drei Leser bleibt stehen: es ist das eine, an dem auch
+        // der Abruf sich haelt, denn womit KRK arbeitet, steht seit dem Start
+        // fest. Siehe das Feld und `neuerungen_zeigen`.
+        *ivars.urteile.borrow_mut() = urteile;
         meldungen.extend(neuerungsmeldungen);
         // Derselbe Zugang traegt die Lesezeichen aus C5. Er wird hier einmal
         // geoeffnet und nicht je Datei ein zweites Mal: `Ablage::oeffnen` legt
@@ -4553,6 +4616,27 @@ impl Anwendungsdelegierter {
     /// Start erhoben worden, zeigt jeder Abruf denselben Stand vom Start;
     /// sonst zeigt jeder Abruf, was gerade auf der Platte steht.
     ///
+    /// # Der Befund bleibt der vom Start, auch wenn der Bestand nachgetragen
+    /// wird
+    ///
+    /// Nachgetragen werden die **Namen**, nicht das Urteil: welche der drei
+    /// Dateien beschaedigt ist, sagt [`AnwendungsIvars::urteile`], und das ist
+    /// der Stand vom Start. Zwei Gruende, und beide binden.
+    ///
+    /// **Der erste ist die Zusage von [`krk_core::ablage::neuerungen`], nichts
+    /// zu schreiben.** Das Urteil hier neu einzuholen hiesse, `belegung::laden`,
+    /// `einstellungen::laden` und `leseprofile::laden` ein zweites Mal zu
+    /// fahren; die zwei letzten legen ihre Datei an, wenn sie fehlt. Ein Befehl,
+    /// der nachsieht, wuerde dann eine Datei zurueckschreiben, die der Nutzer
+    /// nach dem Start geloescht hat, und aus „liegt nicht in Ihrer Ablage" ein
+    /// „kein Unterschied" machen.
+    ///
+    /// **Der zweite ist, dass es nur ein Urteil gibt.** „Beschaedigt" heisst
+    /// hier „KRK hat diese Datei verworfen und arbeitet auf dem
+    /// Auslieferungszustand weiter", und das entscheidet sich einmal, beim
+    /// Start. Der Schlusssatz des Blattes sagt dem Nutzer genau das: eine
+    /// geaenderte Datei wirkt erst beim naechsten Start.
+    ///
     /// # Zwei Ausgaenge, und der zweite wird gemeldet
     ///
     /// Die Erhebung braucht einen [`Zugang`], also die Schreibsperre. Damit hat
@@ -4574,7 +4658,11 @@ impl Anwendungsdelegierter {
             self.neuerungen_blatt(fenster, bestand);
             return true;
         }
-        match self.unter_der_sperre(neuerungen::erheben) {
+        // **Das Urteil ueber „beschaedigt" kommt auch hier vom Start** und wird
+        // nicht neu eingeholt; die Begruendung steht im Absatz „Der Befund
+        // bleibt der vom Start" am Kopf dieser Funktion.
+        let urteile = *self.ivars().urteile.borrow();
+        match self.unter_der_sperre(|zugang| neuerungen::erheben(zugang, urteile)) {
             Ok(bestand) => self.neuerungen_blatt(fenster, &bestand),
             // Ohne Ablageordner gibt es die drei Dateien nicht, und ein Blatt
             // mit drei Pfaden, die nirgendwohin zeigen, waere eine Auskunft
@@ -11061,7 +11149,7 @@ mod dateiablageproben {
 #[cfg(test)]
 mod neuerungsproben {
     use krk_core::ablage::merker::LAUFENDE_FASSUNG;
-    use krk_core::ablage::neuerungen::Bestand;
+    use krk_core::ablage::neuerungen::{Bestand, Leserurteile};
     use krk_core::ablage::{Ablage, Ablageort, Datei, atomar};
 
     use crate::pruefordner::Pruefordner;
@@ -11108,11 +11196,18 @@ mod neuerungsproben {
     }
 
     /// Faehrt die Erhebung an einem Ordner, so wie `sitzung_laden` sie faehrt.
+    ///
+    /// **Die Urteile stehen hier auf „unversehrt", und das ist der Zweck.**
+    /// Diese Proben messen, **ob** die Erhebung die drei Dateien oeffnet, und
+    /// nicht, was sie ueber sie meldet. Ein Urteil „beschaedigt" liesse sie gar
+    /// nicht erst bis zum Oeffnen kommen — dann zaehlte das Messmittel darunter
+    /// in beiden Faellen null, und die Eichung waere keine. Die Leser selbst
+    /// laufen hier nicht; ohne ihren Lauf hat niemand etwas verworfen.
     fn erheben(ordner: &Pruefordner) -> (Option<Bestand>, Vec<String>) {
         let ablage =
             Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
         ablage
-            .durchgang(neuerungen_erheben)
+            .durchgang(|zugang| neuerungen_erheben(zugang, Leserurteile::unversehrt()))
             .expect("die Schreibsperre laesst sich nehmen")
     }
 
@@ -11180,7 +11275,7 @@ mod neuerungsproben {
             Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
         let ein_start = || {
             ablage
-                .durchgang(neuerungen_erheben)
+                .durchgang(|zugang| neuerungen_erheben(zugang, Leserurteile::unversehrt()))
                 .expect("die Schreibsperre laesst sich nehmen")
         };
 
@@ -11221,6 +11316,12 @@ mod neuerungsproben {
     /// Sekunde noch nicht gibt. Der Uebersetzer haelt eine Reihenfolge nicht,
     /// und die zwei Aufrufe sind fuer ihn unabhaengig.
     ///
+    /// **Seit dem 260911 haelt er die Haelfte davon doch**, denn die Erhebung
+    /// nimmt seither das Urteil der zwei Lader entgegen und kann ohne sie gar
+    /// nicht mehr stehen. Die Probe bleibt: sie haelt die Reihenfolge auch
+    /// gegen den Tag, an dem jemand die Urteile aus einem Feld nimmt statt aus
+    /// dem Lader daneben, und sie nennt die Folge beim Namen.
+    ///
     /// **Die Nadeln stehen zusammengesetzt da**, wie im Kopf von
     /// [`crate::quellbaum`] verlangt und aus einem zweiten Grund: eine der
     /// beiden als ein Stueck geschrieben zaehlte
@@ -11244,7 +11345,7 @@ mod neuerungsproben {
 
         let einstellungen = stelle(concat!("einstellungen::", "laden(zugang)"));
         let profile = stelle(concat!("leseprofile::", "laden(zugang)"));
-        let erhebung = stelle(concat!("neuerungen_", "erheben(zugang)"));
+        let erhebung = stelle(concat!("neuerungen_", "erheben(zugang, urteile)"));
 
         assert!(
             erhebung > einstellungen && erhebung > profile,

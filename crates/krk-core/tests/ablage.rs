@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG, Merker};
-use krk_core::ablage::neuerungen::{Befund, Bestand, Vergleichsform};
+use krk_core::ablage::neuerungen::{Befund, Bestand, Leserurteile, Vergleichsform};
 use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
 use krk_core::ablage::sperre::{SCHREIBSPERRE, SITZUNGSRECHT};
 use krk_core::ablage::{
@@ -4221,9 +4221,26 @@ fn die_gueltigkeitspruefung_kommt_ohne_lesen_der_datei_aus() {
 // Dateien selbst hinlegen und den Bestand danach unveraendert vorfinden.
 
 /// Erhebt die Neuerungen unter der Schreibsperre, so wie der Start es tut.
+///
+/// **Die drei eigentlichen Leser laufen mit, und deshalb sieht diese Stelle wie
+/// ein Start aus und nicht wie ein Aufruf.** Ob eine Ablagedatei beschaedigt
+/// ist, sagt allein ihr Leser, und `neuerungen::erheben` nimmt sein Urteil
+/// entgegen, statt es daneben herzuleiten. Ein von Hand gesetztes Urteil
+/// pruefte gerade die Kopplung nicht, um die es in diesen Proben geht.
+///
+/// **`einstellungen::laden` und `leseprofile::laden` legen ihre Datei dabei an,
+/// wenn sie fehlt** — genau wie beim Start. Die eine Probe, die drei fehlende
+/// Dateien braucht, faehrt ihren Durchgang deshalb selbst.
 fn erhobene_neuerungen(ablage: &Ablage) -> Bestand {
     ablage
-        .durchgang(neuerungen::erheben)
+        .durchgang(|zugang| {
+            let urteile = Leserurteile {
+                belegung: belegung::laden(zugang).ist_ersetzt(),
+                einstellungen: einstellungen::laden(zugang).ist_ersetzt(),
+                leseprofile: leseprofile::laden(zugang).0.ist_ersetzt(),
+            };
+            neuerungen::erheben(zugang, urteile)
+        })
         .expect("die Schreibsperre laesst sich nicht nehmen")
 }
 
@@ -4314,10 +4331,18 @@ fn zeile(bestand: &Bestand, welche: Datei) -> &krk_core::ablage::neuerungen::Neu
 /// nie an, und auf einer frischen Installation gibt es sie gar nicht. Wer sie
 /// als leere Datei liest, meldet dem Nutzer jede ausgelieferte Funktion als
 /// Neuerung — eine Meldung, die formal stimmt und nichts sagt.
+///
+/// **Sie faehrt ihren Durchgang selbst und nimmt nicht [`erhobene_neuerungen`].**
+/// Die drei Leser dort legen `settings.toml` und `readers.toml` an, wenn sie
+/// fehlen; dann stuende hier nur noch eine der drei Dateien nicht da, und die
+/// Probe pruefte ihren eigenen Gegenstand nicht mehr. Ohne einen Lauf der Leser
+/// hat niemand etwas verworfen, und `Leserurteile::unversehrt` sagt genau das.
 #[test]
 fn eine_nutzerdatei_die_es_nicht_gibt_liefert_keine_neuerung() {
     let (_ordner, ablage) = ablage("neuerungen-fehlende-datei");
-    let bestand = erhobene_neuerungen(&ablage);
+    let bestand = ablage
+        .durchgang(|zugang| neuerungen::erheben(zugang, Leserurteile::unversehrt()))
+        .expect("die Schreibsperre laesst sich nicht nehmen");
 
     assert_eq!(
         bestand.dateien().len(),
@@ -4412,9 +4437,12 @@ fn auf_einer_frischen_installation_meldet_der_erste_start_keine_neuerung() {
 
     let bestand = ablage
         .durchgang(|zugang| {
-            let _ = einstellungen::laden(zugang);
-            let _ = leseprofile::laden(zugang);
-            neuerungen::erheben(zugang)
+            let urteile = Leserurteile {
+                belegung: belegung::laden(zugang).ist_ersetzt(),
+                einstellungen: einstellungen::laden(zugang).ist_ersetzt(),
+                leseprofile: leseprofile::laden(zugang).0.ist_ersetzt(),
+            };
+            neuerungen::erheben(zugang, urteile)
         })
         .expect("die Schreibsperre laesst sich nicht nehmen");
 
@@ -4552,11 +4580,22 @@ fn eine_settings_ohne_terminal_liefert_genau_diesen_schluessel() {
 /// beschaedigt, und sie kommt gar nicht bis zum Vergleich.
 ///
 /// **Ohne diese Probe waere „ist bauartbedingt leer" eine Behauptung im
-/// Modulkopf von `ablage/neuerungen.rs`.** Sie haelt die zwei Stellen, an denen
-/// die Bauart wirklich haengt: `deny_unknown_fields` an `Einstellungsdatei` und
-/// die Abweisung einer unbekannten Kennung in `Belegung::bauen`. Wer eine von
+/// Modulkopf von `ablage/neuerungen.rs`.** Sie haelt zwei der Stellen, an denen
+/// die Bauart haengt: `deny_unknown_fields` an `Einstellungsdatei` und die
+/// Abweisung einer unbekannten Kennung in `Belegung::bauen`. Wer eine von
 /// beiden aufhebt, laesst diese Probe rot werden, statt jene Begruendung still
 /// falsch zu machen.
+///
+/// **Sie haelt sie nicht mehr allein, und der Satz „die zwei Stellen, an denen
+/// die Bauart wirklich haengt" stand bis zum 260911 zu Unrecht hier.** Eine
+/// Datei ist beschaedigt, sobald ihr eigener Leser sie verwirft, und dafuer gibt
+/// es je Datei mehrere Wege: an `keymap.toml` allein vier Werte von
+/// `Belegungsfehler`. Die drei Wege, die neben dem unbekannten Eintrag stehen,
+/// halten die drei Proben darunter
+/// (`eine_keymap_in_falscher_schreibweise_…`, `eine_settings_mit_falschem_typ_…`,
+/// `eine_readers_mit_verschriebenem_bausteintisch_…`). Diese hier ist der Fall
+/// des unbekannten Eintrags und damit zugleich die Probe, die die Begruendung
+/// der leeren Gegenrichtung traegt.
 #[test]
 fn ein_unbekannter_eintrag_macht_settings_und_keymap_beschaedigt() {
     let (_ordner, ablage) = ablage("neuerungen-unbekannter-eintrag");
@@ -4625,6 +4664,181 @@ fn ein_unbekannter_eintrag_macht_settings_und_keymap_beschaedigt() {
     assert!(
         text.contains("Diese Datei ist beschädigt und wird deshalb nicht verglichen."),
         "der Blatttext sagt nicht, warum die zwei Dateien nicht verglichen sind:\n{text}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Beschaedigt sagt der eigene Leser, und nicht das rohe TOML
+// ---------------------------------------------------------------------------
+//
+// Die drei Proben darunter sind die drei Faelle, die bis zum 260911 durch den
+// Vergleich liefen: gueltiges TOML, das seinem eigentlichen Leser nicht genuegt
+// (`circles/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/issues/
+// 260911-1838_*_der-neuerungsvergleich-entscheidet-beschaedigt-am-rohen-toml-und-nicht-am-leser-der-datei.md`).
+// Jede von ihnen prueft dreierlei in dieser Reihenfolge: die Datei ist
+// gueltiges TOML, ihr Leser verwirft sie trotzdem, und der Bestand traegt
+// deshalb `Befund::Ersetzt` ohne einen Unterschied in irgendeiner Richtung.
+
+/// Die erste Funktion der Auslieferungsbelegung, als Kennung und Beschriftung.
+///
+/// Aus dem Text gelesen und nicht hier hingeschrieben: welche Funktion an
+/// erster Stelle steht, entscheidet `resources/default-keymap.toml`, und eine
+/// Kopie des Namens hier veraltete mit der naechsten Umstellung.
+fn erste_ausgelieferte_funktion() -> (String, String) {
+    let tabelle: toml::Table =
+        toml::from_str(belegung::AUSLIEFERUNGSTEXT).expect("die Auslieferungsbelegung ist TOML");
+    let erste = tabelle
+        .get("funktion")
+        .and_then(toml::Value::as_array)
+        .and_then(|folge| folge.first())
+        .expect("die Auslieferungsbelegung fuehrt keine Funktion");
+    let feld = |name: &str| {
+        erste
+            .get(name)
+            .and_then(toml::Value::as_str)
+            .unwrap_or_else(|| panic!("die erste Funktion nennt kein {name}"))
+            .to_owned()
+    };
+    (feld("id"), feld("name"))
+}
+
+/// Prueft, dass eine Datei gueltiges TOML ist.
+///
+/// Die halbe Aussage jeder der drei Proben darunter: ohne sie waere nicht
+/// gezeigt, dass der alte Weg — `Zugang::laden::<toml::Table>` — diese Datei
+/// annimmt und bis zum Vergleich durchlaesst.
+fn ist_gueltiges_toml(text: &str) -> bool {
+    toml::from_str::<toml::Table>(text).is_ok()
+}
+
+/// Eine `keymap.toml` mit einer Kombination in falscher Schreibweise gilt als
+/// beschaedigt.
+///
+/// `Belegungsfehler::Schreibweise` ist einer der drei Werte, die bis zum 260911
+/// durchliefen. Die Datei ist gueltiges TOML mit lauter bekannten `id`; allein
+/// die Reihenfolge der Zusatztasten stimmt nicht, und
+/// `resources/default-keymap.toml` schreibt sie im Kommentarkopf aus:
+/// `[ctrl+][opt+][shift+][cmd+]<taste>`. KRK laeuft danach auf der vollen
+/// Auslieferungsbelegung, und ein Preissatz ueber verlorene Kombinationen waere
+/// in diesem Fall die Umkehrung der Wahrheit.
+#[test]
+fn eine_keymap_in_falscher_schreibweise_gilt_als_beschaedigt() {
+    let (_ordner, ablage) = ablage("neuerungen-keymap-schreibweise");
+    auslieferungsfassungen_schreiben(&ablage);
+    let (kennung, name) = erste_ausgelieferte_funktion();
+    // "cmd+shift+k" statt "shift+cmd+k": dieselbe Kombination, in der falschen
+    // Reihenfolge, also `Schreibfehler::ReihenfolgeVerletzt`.
+    let text = format!(
+        "[[funktion]]\nid = \"{kennung}\"\nname = \"{name}\"\ntasten = [\"cmd+shift+k\"]\n"
+    );
+    assert!(
+        ist_gueltiges_toml(&text),
+        "die Pruefdatei ist schon kein gueltiges TOML; dann prueft diese Probe den alten Weg mit"
+    );
+    fs::write(ablage.pfad(Datei::Belegung), &text).expect("keymap.toml laesst sich nicht hinlegen");
+
+    assert!(
+        ablage
+            .durchgang(belegung::laden)
+            .expect("die Schreibsperre laesst sich nicht nehmen")
+            .ersetzung
+            .is_some(),
+        "eine Kombination in falscher Schreibweise muss keymap.toml beschaedigen \
+         (Belegungsfehler::Schreibweise)"
+    );
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zeile = zeile(&bestand, Datei::Belegung);
+    assert_eq!(
+        zeile.befund,
+        Befund::Ersetzt,
+        "keymap.toml ist fuer ihren Leser beschaedigt und darf nicht verglichen werden"
+    );
+    assert!(
+        !zeile.traegt_unterschied(),
+        "keymap.toml traegt einen Unterschied, obwohl KRK auf der Auslieferungsbelegung laeuft: \
+         {:?} / {:?}",
+        zeile.nur_ausgeliefert,
+        zeile.nur_beim_nutzer
+    );
+}
+
+/// Eine `settings.toml` mit einem falschen Typ an `terminal` gilt als
+/// beschaedigt.
+///
+/// `deny_unknown_fields` an `Einstellungsdatei` faengt den unbekannten
+/// Schluessel; einen bekannten Schluessel mit einem Wert der falschen Sorte
+/// faengt es nicht, und ein `toml::Table` nimmt ihn an.
+#[test]
+fn eine_settings_mit_falschem_typ_an_terminal_gilt_als_beschaedigt() {
+    let (_ordner, ablage) = ablage("neuerungen-settings-typ");
+    auslieferungsfassungen_schreiben(&ablage);
+    let text = "terminal = 42\n";
+    assert!(
+        ist_gueltiges_toml(text),
+        "die Pruefdatei ist schon kein gueltiges TOML; dann prueft diese Probe den alten Weg mit"
+    );
+    fs::write(ablage.pfad(Datei::Einstellungen), text)
+        .expect("settings.toml laesst sich nicht hinlegen");
+
+    assert!(
+        geladene_einstellungen(&ablage).ersetzung.is_some(),
+        "ein Wert der falschen Sorte an terminal muss settings.toml beschaedigen"
+    );
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zeile = zeile(&bestand, Datei::Einstellungen);
+    assert_eq!(
+        zeile.befund,
+        Befund::Ersetzt,
+        "settings.toml ist fuer ihren Leser beschaedigt und darf nicht verglichen werden"
+    );
+    assert!(
+        !zeile.traegt_unterschied(),
+        "settings.toml traegt einen Unterschied, obwohl KRK ihren Wert gar nicht nimmt: {:?} / {:?}",
+        zeile.nur_ausgeliefert,
+        zeile.nur_beim_nutzer
+    );
+}
+
+/// Eine `readers.toml` mit einem verschriebenen Bausteintisch gilt als
+/// beschaedigt.
+///
+/// Die weiteste der drei Reichweiten aus dem Kopf von `leseprofil::datei`: ein
+/// Buchstabendreher in einem Bausteintisch verwirft die **ganze** Datei, und
+/// KRK arbeitet ohne jedes Profil weiter. Fuer `toml::Table` ist es eine
+/// gewoehnliche Tabelle mit einem gewoehnlichen Namen.
+#[test]
+fn eine_readers_mit_verschriebenem_bausteintisch_gilt_als_beschaedigt() {
+    let (_ordner, ablage) = ablage("neuerungen-readers-bausteintisch");
+    auslieferungsfassungen_schreiben(&ablage);
+    // `zaehlungg` statt `zaehlung`: `deny_unknown_fields` an `Zeilendatei`.
+    let text = "[[profil]]\nname = \"Ein Ort\"\nkennzeichen = '^eigenes-kennzeichen$'\n\n\
+                [[profil.zeile]]\nbeschriftung = \"Datensaetze\"\nzaehlungg = { muster = '\\.md$' }\n";
+    assert!(
+        ist_gueltiges_toml(text),
+        "die Pruefdatei ist schon kein gueltiges TOML; dann prueft diese Probe den alten Weg mit"
+    );
+    fs::write(ablage.pfad(Datei::Leser), text).expect("readers.toml laesst sich nicht hinlegen");
+
+    assert!(
+        geladene_leseprofile(&ablage).ersetzung.is_some(),
+        "ein verschriebener Bausteintisch muss readers.toml beschaedigen \
+         (deny_unknown_fields an Zeilendatei)"
+    );
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zeile = zeile(&bestand, Datei::Leser);
+    assert_eq!(
+        zeile.befund,
+        Befund::Ersetzt,
+        "readers.toml ist fuer ihren Leser beschaedigt und darf nicht verglichen werden"
+    );
+    assert!(
+        !zeile.traegt_unterschied(),
+        "readers.toml traegt einen Unterschied, obwohl KRK ohne jedes Profil laeuft: {:?} / {:?}",
+        zeile.nur_ausgeliefert,
+        zeile.nur_beim_nutzer
     );
 }
 
@@ -4894,9 +5108,7 @@ fn eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere() {
         .iter()
         .filter_map(|eintrag| Some(eintrag.get("id")?.as_str()?.to_owned()))
         .collect();
-    let erste = kennungen
-        .first()
-        .expect("die Auslieferungsbelegung ist leer");
+    let (erste, name) = erste_ausgelieferte_funktion();
     let fehlende = kennungen.len() - 1;
     assert!(
         fehlende > neuerungen::HOECHSTENS_EINZELN,
@@ -4906,9 +5118,15 @@ fn eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere() {
     // Eine Nutzerbelegung mit genau einer ausgelieferten Kennung: jede andere
     // fehlt ihr, und keine ist unbekannt — sonst gaelte die Datei als
     // beschaedigt und kaeme gar nicht bis zum Vergleich.
+    //
+    // **Der Block traegt jedes Pflichtfeld von `Eintrag`**, seit dem 260911.
+    // Bis dahin stand hier `id` allein; `serde` weist einen solchen Block ab,
+    // also war die Pruefdatei fuer `belegung::laden` beschaedigt, und die Probe
+    // lebte davon, dass der Vergleich das nicht bemerkte. Die leere Tastenliste
+    // ist dabei zulaessig und baut keinen Konflikt auf.
     fs::write(
         ablage.pfad(Datei::Belegung),
-        format!("[[funktion]]\nid = \"{erste}\"\n"),
+        format!("[[funktion]]\nid = \"{erste}\"\nname = \"{name}\"\ntasten = []\n"),
     )
     .expect("keymap.toml laesst sich nicht hinlegen");
 
