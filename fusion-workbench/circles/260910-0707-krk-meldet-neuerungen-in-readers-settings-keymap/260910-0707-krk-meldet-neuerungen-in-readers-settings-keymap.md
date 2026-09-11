@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** claimed
+**Status:** done
 **Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260910-0754
 **Filed by:** shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>
 **Active spec/plan:** 260910-0818_*_plan-krk-meldet-neuerungen-in-readers-settings-keymap.md
@@ -125,3 +125,42 @@ mit dem, was sie gebaut haben.
 
 Der Aktivierungsschritt selbst gehört nicht diesem Lauf. Umbenannt wird der Datensatz vom
 Nutzer über `/fusion:next` oder vom Orchestrator.
+
+---
+
+## Abschluss 260911
+
+**Erledigt.** Der Nutzer hat die Runde am 260911 abgenommen. Die Arbeit steht seit `968ace0`
+im Baum und ist mit `v1.9.0` ausgeliefert.
+
+**Spanne:** `fc18cf6..e934043`. Die tragende Arbeit liegt in neun Commits zwischen `47aa2b6`
+und `a38cb01`; `d9535c4` und `e934043` sind Werkbankpflege dieser Sitzung.
+
+**Die acht Endbedingungen des Plans halten alle.** Fünf sind am Bestand nachgelesen (alle
+zehn Planschritte einzeln gegen den Baum, `make check` grün mit Exit 0 am Stand `d9535c4`,
+die zwei sperrenden Datensätze auf umgesetzt, der Defekt `260820-2235_*_die-startmeldungen-
+ueberschreiben-einander-…` geschlossen mit einer `Resolved:`-Zeile auf `929e5d5`, CLAUDE.md
+von keinem Commit der Spanne berührt). Zwei sind Nutzerarbeit am gebauten Bündel und durch
+die Abnahme gedeckt. Die achte, der Verzicht auf einen Abnahmelauf gegen L4, hängt an zwei
+Hälften: Möglichkeit 1 ist beantwortet, und die Probe, die sie verlangt, steht — sie heißt
+`bei_gleichem_merker_wird_keine_der_drei_dateien_geoeffnet` (`anwendung.rs:11126`), zählt die
+Öffnungen gegen die leere Liste, und `bei_neuer_fassung_werden_die_drei_dateien_geoeffnet`
+eicht den Zähler am Gegenfall.
+
+**Die Durchsicht ist einmal gefahren, über `feecd6c..d9535c4`.** Sie liegt als
+`260911-1838-reviewer-runde-24-neuerungsmeldung-und-startmeldungen.md` im `reviews/`-Speicher
+dieser Runde und hat fünf Defekte abgelegt: einen schweren, zwei mittlere, zwei leichte. Ein
+sechster kam beim Abarbeiten der Endbedingungen dazu
+(`260911-2011_*_der-modulkopf-nennt-zwei-proben-unter-namen-die-es-nicht-gibt.md`). Alle sechs
+stehen offen und sind Arbeit einer späteren Runde.
+
+**Der schwere Befund ist ausgeliefert und nicht behoben.** `ablage/neuerungen.rs:348-374`
+entscheidet „beschädigt" daran, ob die Datei gültiges TOML ist, und nicht daran, ob sie ihrem
+Leser genügt. Gefangen ist ein Fall; durch gehen drei der vier Werte von `Belegungsfehler`,
+jeder Typfehler in `settings.toml` und jeder verschriebene Bausteintisch in `readers.toml`.
+Der Nutzer liest dann zwei Sätze, die einander widersprechen. Das steht seit `v1.9.0` beim
+Nutzer, und die Durchsicht setzt es vor die nächste Auslieferung.
+
+**Deckungslücke:** `e934043` liegt hinter der Spanne der Durchsicht und ist von keiner
+gedeckt. Es trägt Werkbankdatensätze und keinen Code; der Zuschnitt der nächsten Durchsicht
+nimmt es mit.

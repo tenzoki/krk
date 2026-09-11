@@ -73,3 +73,15 @@ Ablagedurchgang für `bookmarks.toml` misst.
 **Der Datensatz bleibt offen**, weil seine Frage offen ist: soll der gemessene Start den
 Ablagedurchgang mitfahren? Beide Antworten sind vertretbar und keine ist ableitbar; das steht
 im Abschnitt `## Vorschlag` und ist Nutzerarbeit.
+
+Also seen: 260911-1838 by reviewer — die Antwort „Ja" hat seit der Runde 24 eine zweite
+Folge, die der Abschnitt `## Vorschlag` noch nicht kennt: `oberflaeche_aufbauen` fährt ab der
+**zweiten** Startmeldung ein modales Blatt herunter (`startmeldungen::auskunft`,
+`crates/krk-ui/src/appkit/blaetter/startmeldungen.rs:85-94`). Heute ist das im Messmodus
+unerreichbar, weil `leiste_einrichten` dort schweigt und nur die Belegungsmeldung übrig
+bleibt, also höchstens eine. Lädt der gemessene Start künftig die Lesezeichen mit, können
+zwei Meldungen zusammentreffen, und dann steht mitten im Messlauf ein Blatt, das jeden
+Tastenbefehl sperrt und auf eine Bestätigung wartet, die niemand gibt. Der Datensatz
+`260910-0818_*_wie-erreichen-n-startmeldungen-den-nutzer-wenn-die-eine-zeile-nur-eine-traegt.md`
+hat diese Kopplung unter `## Constraints` verlangt („die Antwort auf diese Frage muss sagen,
+ob das so bleibt") und seine `Answered:`-Zeile sagt nichts darüber.
