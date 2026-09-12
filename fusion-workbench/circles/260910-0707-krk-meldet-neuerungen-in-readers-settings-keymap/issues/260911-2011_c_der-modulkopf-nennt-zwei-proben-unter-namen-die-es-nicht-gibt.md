@@ -30,3 +30,12 @@ für jeden genannten Namen auch eine `fn`-Zeile.
 
 Gefunden beim Abarbeiten der Endbedingungen der Runde 24, nicht von der Durchsicht dieser Runde
 (die fünf Defektdatensätze daneben stammen von ihr).
+
+---
+Resolved: 78e381e — der Modulkopf nennt die zwei Proben jetzt so, wie sie heissen,
+`bei_gleichem_merker_wird_keine_der_drei_dateien_geoeffnet` und
+`bei_neuer_fassung_werden_die_drei_dateien_geoeffnet`, wortgleich mit der zweiten Stelle im
+selben Modul, die schon richtig war. `grep -n 'bei_gleichem_merker\|bei_neuer_fassung'
+crates/krk-ui/src/appkit/anwendung.rs` nennt fuer jeden genannten Namen auch eine `fn`-Zeile.
+Der Umbau durch `ad43d87` hatte den Kopf mitwandern lassen, die zwei Namen aber nicht
+beruehrt; der Defekt bestand unveraendert fort.

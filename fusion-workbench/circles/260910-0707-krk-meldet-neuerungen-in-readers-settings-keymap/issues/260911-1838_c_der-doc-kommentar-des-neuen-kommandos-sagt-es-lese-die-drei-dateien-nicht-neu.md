@@ -36,3 +36,12 @@ Der Doc-Kommentar an `Kommando::NeuerungenZeigen` sagt dasselbe wie
 erhoben, zeigt jeder Abruf denselben Stand vom Start; sonst zeigt jeder Abruf, was gerade
 auf der Platte steht. `grep -rn "vom Start" --include='*.rs' crates` nennt danach keine
 Stelle mehr, die das Gegenteil behauptet.
+
+---
+Resolved: 78e381e — der Doc-Kommentar an `Kommando::NeuerungenZeigen` sagt jetzt dasselbe wie
+`Anwendungsdelegierter::neuerungen_zeigen`: hat der Start erhoben, zeigt jeder Abruf denselben
+Stand vom Start; sonst traegt der Befehl die Erhebung nach und zeigt, was auf der Platte steht.
+Der wahre Teil des alten Satzes ist erhalten und an die Stelle geruckt, an der er zutrifft:
+womit KRK arbeitet, aendert die Nacherhebung nicht. `grep -rn "vom Start" --include='*.rs'
+crates` nennt danach keine Stelle mehr, die das Gegenteil behauptet; die fuenf uebrigen
+Fundstellen waren schon richtig. `make check` mit Exit 0, alle fuenf Kommandos.
