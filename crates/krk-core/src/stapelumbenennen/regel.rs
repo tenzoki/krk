@@ -96,8 +96,31 @@ pub struct Regel {
 
 impl Regel {
     /// Ob die Regel jeden Namen unveraendert liesse.
+    ///
+    /// **`pub(crate)` und nicht `pub`, weil der einzige Rufer die weitere
+    /// Sichtbarkeit nicht braucht.** Das ist die Probe
+    /// `eine_regel_ohne_suchtext_und_ohne_nummer_laesst_alles_stehen` im
+    /// `#[cfg(test)]`-Modul dieser Datei; sie liegt innerhalb der Kiste und
+    /// kommt ueber `pub(crate)` genauso heran. Die Begruendung, die einen nur
+    /// von Proben gerufenen Namen `pub` bleiben laesst, traegt hier gerade
+    /// nicht: sie gilt den Integrationsproben unter `crates/krk-core/tests/`,
+    /// die eine eigene Kiste sind und ausschliesslich `pub` erreichen. So am
+    /// 260912-1330 entschieden
+    /// (`shared/decisions/260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`,
+    /// Nachtrag).
+    ///
+    /// **`#[cfg(test)]` muss dabeistehen, sonst uebersetzt `pub(crate)` hier
+    /// gar nicht.** Ein `pub` in einer Bibliothekskiste gilt dem Uebersetzer
+    /// als benutzt, ein `pub(crate)` nicht: im Bau ohne `cfg(test)` hat die
+    /// Methode keinen Rufer, und `dead_code` unter `-D warnings` macht daraus
+    /// einen Fehler. Die Wahl zwischen `#[cfg(test)]` und einem
+    /// `#[allow(dead_code)]` faellt dieses Projekt zugunsten des ersten, weil
+    /// das zweite einen kuenftigen Rufer ankuendigt, den es hier nicht gibt;
+    /// dasselbe steht an `Fokus::ALLE` in `krk-ui/src/kommandos/fokus.rs`
+    /// ausgeschrieben.
+    #[cfg(test)]
     #[must_use]
-    pub fn ist_wirkungslos(&self) -> bool {
+    pub(crate) fn ist_wirkungslos(&self) -> bool {
         self.suchen.is_empty() && self.nummerierung.is_none()
     }
 

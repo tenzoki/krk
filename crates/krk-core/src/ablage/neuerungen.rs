@@ -342,17 +342,21 @@ impl Neuerungen {
 /// nennt ihren Pfad trotzdem.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bestand {
+    /// Der Ablageordner, in dem die verglichenen Dateien liegen.
+    ///
+    /// **Einen oeffentlichen Zugang dazu gibt es nicht, und das ist der Zug
+    /// und nicht die Luecke.** [`startzeile`] greift das Feld unmittelbar,
+    /// weil sie im selben Modul steht; ausserhalb hat den Ordner nie jemand
+    /// gebraucht, auch keine Probe. Ein oeffentlicher Name ohne jeden Rufer
+    /// faellt, so am 260912-1149 entschieden
+    /// (`shared/decisions/260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`,
+    /// Moeglichkeit 1). Wer ihn braucht, schreibt ihn mit seinem Rufer
+    /// zusammen wieder hin.
     ordner: PathBuf,
     dateien: Vec<Neuerungen>,
 }
 
 impl Bestand {
-    /// Der Ablageordner, in dem die verglichenen Dateien liegen.
-    #[must_use]
-    pub fn ordner(&self) -> &Path {
-        &self.ordner
-    }
-
     /// Die Zeilen, in der Reihenfolge von [`Datei::ALLE`].
     ///
     /// **Gerufen wird dies allein aus `crates/krk-core/tests/ablage.rs`.** Die
