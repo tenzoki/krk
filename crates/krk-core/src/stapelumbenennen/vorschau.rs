@@ -35,6 +35,21 @@ impl Vorschauzeile {
     ///
     /// Eine Kollision haelt sie zurueck, und ein unveraenderter Name gibt
     /// nichts zu tun.
+    ///
+    /// **Das ist nicht dieselbe Frage wie `Regel::ist_wirkungslos`**
+    /// (`super::regel`), die fuer die ganze Regel fragt, ob sie ueberhaupt
+    /// etwas aendert. Jene rechnet allein aus den Feldern der Regel und
+    /// braucht keine einzige Datei; diese hier rechnet aus dem Ergebnis und
+    /// braucht die markierten Namen und den Bestand des Ordners. Die
+    /// Implikation traegt nur von dort nach hier: eine wirkungslose Regel
+    /// laesst jeden Namen gleich, also wird keine Zeile umbenannt. Von hier
+    /// nach dort traegt sie nicht — enthaelt keiner der markierten Namen den
+    /// Suchtext, ist `wird_umbenannt` auf jeder Zeile falsch und die Regel
+    /// gleichwohl nicht wirkungslos; dasselbe, wenn saemtliche Zeilen eine
+    /// Kollision tragen. Wer von "keine Zeile wird angefasst" auf eine
+    /// wirkungslose Regel schliesst, schliesst deshalb falsch. So am 260912
+    /// entschieden
+    /// (`shared/decisions/260912-1335_*_bleibt-die-frage-je-regel-neben-der-frage-je-zeile-bestehen.md`).
     #[must_use]
     pub fn wird_umbenannt(&self) -> bool {
         self.kollision.is_none() && self.neu != self.alt

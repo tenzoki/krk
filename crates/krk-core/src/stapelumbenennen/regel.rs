@@ -97,6 +97,21 @@ pub struct Regel {
 impl Regel {
     /// Ob die Regel jeden Namen unveraendert liesse.
     ///
+    /// **Das ist nicht dieselbe Frage wie
+    /// [`super::vorschau::Vorschauzeile::wird_umbenannt`]**, obwohl die zwei
+    /// Antworten einander aehneln. Jene fragt je Zeile, ob die Ausfuehrung
+    /// diesen einen Eintrag anfasst, und braucht dafuer das Ergebnis, also die
+    /// markierten Namen und den Bestand des Ordners; diese hier fragt die
+    /// Felder der Regel und kommt ohne eine einzige Datei aus. Die Implikation
+    /// traegt nur von hier nach dort: ist die Regel wirkungslos, bleibt jeder
+    /// Name gleich, also wird keine Zeile umbenannt. Zurueck traegt sie nicht
+    /// — ein Suchtext, den kein markierter Name enthaelt, laesst jede Zeile
+    /// stehen, und `ist_wirkungslos` ist trotzdem falsch, weil `suchen` nicht
+    /// leer ist. Wer die Methode deshalb fallen laesst oder auf die Vorschau
+    /// zurueckfuehrt, tauscht die Frage "aendert diese Regel ueberhaupt etwas"
+    /// gegen die Frage "wird diese Zeile angefasst". So am 260912 entschieden
+    /// (`shared/decisions/260912-1335_*_bleibt-die-frage-je-regel-neben-der-frage-je-zeile-bestehen.md`).
+    ///
     /// **`pub(crate)` und nicht `pub`, weil der einzige Rufer die weitere
     /// Sichtbarkeit nicht braucht.** Das ist die Probe
     /// `eine_regel_ohne_suchtext_und_ohne_nummer_laesst_alles_stehen` im
