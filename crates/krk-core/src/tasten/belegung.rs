@@ -844,9 +844,15 @@ pub enum Kommando {
     ///
     /// Beim Start meldet KRK von sich aus, dass eine der drei Dateien hinter
     /// der Auslieferungsfassung zurueckliegt, einmal je Fassung. Dieser Befehl
-    /// ist der Weg zum Einzelnen auf Verlangen; er zeigt den Bestand **vom
-    /// Start** und liest die drei Dateien nicht neu, denn die Leseprofile und
-    /// die Belegung, mit denen KRK arbeitet, sind die vom Start.
+    /// ist der Weg zum Einzelnen auf Verlangen, und was er zeigt, haengt daran,
+    /// ob der Start erhoben hat: hat er es, zeigt jeder Abruf denselben Stand
+    /// vom Start; sonst — der haeufigste Fall, denn er tritt bei jedem zweiten
+    /// Start derselben Fassung ein — traegt der Befehl die Erhebung auf
+    /// Verlangen nach und zeigt, was gerade auf der Platte steht. So
+    /// entschieden vom Nutzer am 260910-1600; die Begruendung steht an
+    /// `Anwendungsdelegierter::neuerungen_zeigen` in `krk-ui`. Womit KRK
+    /// **arbeitet**, aendert das nicht: die Leseprofile und die Belegung der
+    /// laufenden Anwendung sind in beiden Faellen die vom Start.
     ///
     /// **Wirkt ueberall, wie [`Kommando::Notizzettel`] daneben.** Das Blatt
     /// faehrt am Hauptfenster herunter und betrifft die Ablage, nicht einen

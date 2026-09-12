@@ -461,10 +461,10 @@ fn faengerstation(nimmt_auf: bool, druck: Tastendruck, zeichen: Option<char>) ->
 /// nicht, um den Unterschied zu erheben und ihn dann zu verschweigen. Das ist
 /// zugleich die Einloesung von „einmal je Fassung" und die Bedingung, unter der
 /// die Zeitzusage L4 im Dauerbetrieb unberuehrt bleibt. Gemessen wird sie und
-/// nicht zugesichert: `bei_gleichem_merker_wird_keine_datei_geoeffnet` zaehlt
-/// die Oeffnungen, und
-/// `bei_neuer_fassung_werden_die_verglichenen_dateien_geoeffnet` eicht dasselbe
-/// Messmittel am Gegenfall.
+/// nicht zugesichert:
+/// `bei_gleichem_merker_wird_keine_der_drei_dateien_geoeffnet` zaehlt die
+/// Oeffnungen, und `bei_neuer_fassung_werden_die_drei_dateien_geoeffnet` eicht
+/// dasselbe Messmittel am Gegenfall.
 ///
 /// # Der Merker wird auch dann geschrieben, wenn nichts zu melden war
 ///
