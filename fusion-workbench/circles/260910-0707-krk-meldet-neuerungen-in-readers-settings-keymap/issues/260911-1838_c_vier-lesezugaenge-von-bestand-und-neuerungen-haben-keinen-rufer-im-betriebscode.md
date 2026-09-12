@@ -38,3 +38,18 @@ ist der Zustand, in dem
 `grep -rn "\.traegt_unterschied()\|\.fuer(\|\.dateien()\|\.ordner()" crates/*/src` für
 dieses Modul entweder leer ist und die Namen weg sind, oder je Name eine Zeile im
 Betriebscode nennt.
+
+---
+Resolved: 2183df9 und 00fb99a — nach dem Massstab
+`260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`.
+`Bestand::ordner` hatte gar keinen Rufer und ist gefallen; `Bestand::dateien`, `Bestand::fuer`
+und `Bestand::traegt_unterschied` bleiben `pub` und tragen je einen Absatz, der die Probe
+namentlich nennt und sagt, warum sie den Namen nicht anders erreicht.
+`Neuerungen::traegt_unterschied` hat seit `ad43d87` einen Betriebsrufer und war damit schon
+kein Befund mehr, als dieser Datensatz noch offenstand.
+
+**Eine Behauptung dieses Datensatzes war falsch.** Er nennt fuer alle vier Zugaenge gemeinsam
+"jeder Treffer liegt in tests/ablage.rs" und hat nicht je Name geprueft: fuer `ordner` gab es
+ueberhaupt keinen Treffer, auch am Stand `d9535c4` nicht, gegen den erhoben wurde. Die
+Erhebungsregel, die daraus folgt — je Name einzeln, ueber `crates` und `xtask`, und nach der
+Kiste des Rufers unterschieden —, steht im Nachtrag des Entscheids. `make check` mit Exit 0.

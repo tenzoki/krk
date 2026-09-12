@@ -100,3 +100,25 @@ Marker bleibt deshalb `_o_`:
   (`shared/issues/260826-1221_c_abschluss-ist-abgebrochen-hat-ausserhalb-der-proben-keinen-rufer-im-baum.md`).
   Ob hier derselbe Weg gilt oder die Methode faellt, ist nicht dasselbe: die des Umfangs hat
   nicht einmal eine Probe.
+
+---
+Resolved: 2183df9 und 00fb99a — die drei am 260908 offengebliebenen Namen sind nach dem
+Massstab `260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`
+erledigt. `operation::Abschluss::ist_abgebrochen` hatte gar keinen Rufer und ist gefallen; mit
+ihm die Doppelung des Namens mit `verzeichnis::Abschluss::ist_abgebrochen`, deren Zaehlanleitung
+in `verzeichnis/leser.rs` nachgezogen ist. `Regel::ist_wirkungslos` gibt `pub` ab und traegt
+`pub(crate)` samt `#[cfg(test)]`, weil seine einzige Ruferin die innere Probe derselben Datei
+ist.
+
+**Eine Behauptung dieses Datensatzes war falsch.** `Lauf::warten` hat einen Betriebsrufer,
+`krk-ui/src/appkit/anwendung.rs`, in `vermitteln`, und zwar seit `343a7f3` vom 260804 — drei
+Wochen vor dieser Erhebung, deren `grep` auf `krk-core` beschraenkt war. Der Name war nie ein
+Befund und hat deshalb auch keine Begruendung angeschrieben bekommen: "nur Proben rufen ihn"
+waere falsch.
+
+**Ein Teilbefund bleibt offen und ist als eigene Frage abgelegt.** Dass
+`Regel::ist_wirkungslos` fuer die ganze Regel dieselbe Frage beantwortet wie
+`Vorschauzeile::wird_umbenannt` je Zeile, ist keine Sichtbarkeitsfrage und von diesem
+Durchgang nicht entschieden:
+`260912-1335_*_bleibt-die-frage-je-regel-neben-der-frage-je-zeile-bestehen.md`.
+`make check` mit Exit 0.

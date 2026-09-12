@@ -47,3 +47,13 @@ eigene Probe, diese zwei haben auch die nicht.
 
 **Gefunden:** coderev, Vollbaum-Durchsicht von `crates/krk-core/src/{ablage,leseprofil}/` am
 260826-1225.
+
+---
+Resolved: 2183df9 — beide Namen hatten im ganzen Arbeitsbereich keinen Rufer, auch keine Probe,
+und sind nach dem Massstab
+`260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`
+gefallen. Mit `Lesezeichenliste::eintrag` faellt die Zusage "Das Lesezeichen an dieser Stelle",
+die keine Probe hielt; die Liste wird ueberall ueber das oeffentliche Feld `eintraege` gelesen,
+nachgeprueft an `krk-ui/src/leistenmodell.rs` und den Proben in `crates/krk-core/tests/ablage.rs`.
+Bei `Nachbardatei::ziel` faellt allein der Lesezugang, das Feld bleibt in Gebrauch.
+`make check` mit Exit 0.
