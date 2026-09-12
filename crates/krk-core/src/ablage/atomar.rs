@@ -162,11 +162,6 @@ pub struct Nachbardatei {
 }
 
 impl Nachbardatei {
-    /// Das Ziel, auf das diese Nachbardatei umbenannt wird.
-    pub fn ziel(&self) -> &Path {
-        &self.ziel
-    }
-
     /// Die Nachbardatei selbst.
     pub fn nachbarpfad(&self) -> &Path {
         &self.nachbar

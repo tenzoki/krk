@@ -364,11 +364,6 @@ impl Lesezeichenliste {
         self.eintraege.len()
     }
 
-    /// Das Lesezeichen an dieser Stelle.
-    pub fn eintrag(&self, stelle: usize) -> Option<&Lesezeichen> {
-        self.eintraege.get(stelle)
-    }
-
     /// Haengt ein Lesezeichen unten an und liefert seine Stelle (C5, C6).
     ///
     /// Unten und nicht oben: die Reihenfolge gehoert dem Nutzer, und ein neuer

@@ -354,18 +354,69 @@ impl Bestand {
     }
 
     /// Die Zeilen, in der Reihenfolge von [`Datei::ALLE`].
+    ///
+    /// **Gerufen wird dies allein aus `crates/krk-core/tests/ablage.rs`.** Die
+    /// Probe, die den Zugang traegt, ist
+    /// `jede_verglichene_ablagedatei_hat_eine_eingebettete_fassung`: sie haelt
+    /// die gelieferte Folge Zeile fuer Zeile gegen `verglichene_dateien()` und
+    /// prueft damit genau die Reihenfolgezusage der Kopfzeile, die sonst
+    /// niemand nachrechnet. Ohne diesen Zugang gaebe es die Zusage weiter,
+    /// aber nichts, was sie hielte.
+    ///
+    /// **Anders erreicht die Probe das Feld nicht.** `dateien` ist privat;
+    /// [`startzeile`] und [`blatttext`] greifen es unmittelbar, weil sie im
+    /// selben Modul stehen, und eine Datei unter `crates/krk-core/tests/` ist
+    /// eine eigene Kiste und sieht ausschliesslich `pub`. Dass ein Name mit
+    /// dieser Lage bleibt und den Grund an seine Stelle bekommt, ist am
+    /// 260912-1149 entschieden
+    /// (`shared/decisions/260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`,
+    /// Moeglichkeit 1).
     #[must_use]
     pub fn dateien(&self) -> &[Neuerungen] {
         &self.dateien
     }
 
     /// Die Zeile einer bestimmten Ablagedatei, falls sie verglichen wird.
+    ///
+    /// **Gerufen wird dies allein aus `crates/krk-core/tests/ablage.rs`**, und
+    /// zwar von beiden Seiten des `Option`: der dortige Helfer `zeile` holt
+    /// ueber ihn die eine Datei heraus, ueber die eine Probe gerade etwas
+    /// behauptet, und `der_merker_wird_nicht_verglichen` belegt am `None`,
+    /// dass der Merker gar nicht erst in den Bestand kommt.
+    ///
+    /// **Ueber [`Bestand::dateien`] ginge das nur mit einer zweiten Fassung
+    /// dieser Suche** — der Probe bliebe, `welche` selbst durch die Zeilen zu
+    /// jagen, also die Zeile darunter noch einmal hinzuschreiben. Der
+    /// Betriebscode braucht die Frage je Datei nicht: [`startzeile`] und
+    /// [`blatttext`] laufen ueber alle Zeilen und suchen keine. Dass ein Name
+    /// mit dieser Lage bleibt und den Grund an seine Stelle bekommt, ist am
+    /// 260912-1149 entschieden
+    /// (`shared/decisions/260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`,
+    /// Moeglichkeit 1).
     #[must_use]
     pub fn fuer(&self, welche: Datei) -> Option<&Neuerungen> {
         self.dateien.iter().find(|zeile| zeile.welche == welche)
     }
 
     /// Ob irgendeine Datei einen Unterschied traegt.
+    ///
+    /// **Gerufen wird dies allein aus `crates/krk-core/tests/ablage.rs`**, von
+    /// den drei Proben, die den stillen Start belegen:
+    /// `auf_einer_frischen_installation_meldet_der_erste_start_keine_neuerung`,
+    /// `eine_nutzerdatei_wie_die_auslieferungsfassung_liefert_keine_neuerung`
+    /// und `ohne_einen_einzigen_unterschied_nennt_das_blatt_die_drei_vollen_pfade`.
+    /// Jede von ihnen behauptet die Abwesenheit ueber den **ganzen** Bestand,
+    /// und genau diese eine Aussage steht hier.
+    ///
+    /// **Der Betriebscode stellt die Frage nicht, weil er eine engere stellt.**
+    /// [`startzeile`] filtert auf `nur_ausgeliefert` und laesst damit die
+    /// Gegenrichtung aus, [`blatttext`] schreibt ohnehin jede Zeile hin. Die
+    /// Probe koennte die Antwort nur zusammensetzen, indem sie ueber
+    /// [`Neuerungen::traegt_unterschied`] faltet, also die Zeile darunter
+    /// nachbaut, die sie gerade prueft. Dass ein Name mit dieser Lage bleibt
+    /// und den Grund an seine Stelle bekommt, ist am 260912-1149 entschieden
+    /// (`shared/decisions/260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`,
+    /// Moeglichkeit 1).
     #[must_use]
     pub fn traegt_unterschied(&self) -> bool {
         self.dateien.iter().any(Neuerungen::traegt_unterschied)

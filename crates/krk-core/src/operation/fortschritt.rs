@@ -59,14 +59,6 @@ pub enum Abschluss {
     Abgebrochen,
 }
 
-impl Abschluss {
-    /// Wahr, wenn der Vorgang abgebrochen wurde.
-    #[must_use]
-    pub fn ist_abgebrochen(self) -> bool {
-        self == Abschluss::Abgebrochen
-    }
-}
-
 /// Ein Eintrag, an dem die Operation gescheitert ist.
 ///
 /// Eine gescheiterte Einzelposition bricht den Stapel nicht ab (C4). Sie

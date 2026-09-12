@@ -71,9 +71,11 @@ impl Abschluss {
     /// aufgeschrieben statt gelassen: `krk-core` ist eine Bibliothek, also
     /// findet `dead_code` einen solchen Namen grundsaetzlich nicht, und ein
     /// toter Helfer verschwindet hier nur, wenn ihn jemand von Hand sucht.
-    /// Gezaehlt wird mit `grep -rn 'ist_abgebrochen' crates/` — die
-    /// gleichnamige Methode von `operation::Abschluss` faellt dabei mit an und
-    /// gehoert nicht hierher.
+    /// Gezaehlt wird mit `grep -rn 'ist_abgebrochen' crates/`. Bis zum
+    /// 260912 fiel dabei die gleichnamige Methode von `operation::Abschluss`
+    /// mit an; sie ist gestrichen, weil sie gar keinen Rufer hatte, und der
+    /// Doppelname ist damit weg
+    /// (`shared/decisions/260912-1149_*_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md`).
     ///
     /// **Er steht als Gegenstueck zu [`Abschluss::ist_vollstaendig`] da**, das
     /// einen Rufer ausserhalb der Proben hat (`krk-bench/src/messen.rs`); die
