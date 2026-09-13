@@ -1,7 +1,7 @@
 # Implementation Plan: KRK meldet, was eine neue Fassung an readers.toml, settings.toml und keymap.toml mitbringt
 
 **Date:** 2026-09-10
-**Status:** Draft
+**Status:** Complete
 **Spec:** keiner — geplant gegen die Directive und den Grundlagen-Abschnitt des Circle-Datensatzes `260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap`
 **Decidability:** Die tragende Frage lautet „führt die Auslieferungsfassung einen Eintrag, den die Nutzerdatei nicht führt, und hat KRK das für diese Fassung schon gemeldet?". Beide Hälften sind aus Eingaben entscheidbar, die der Mechanismus hat: die Auslieferungsfassung steht über `include_str!` einkompiliert da, die Nutzerdatei liegt auf der Platte, und die eigene Versionsnummer kommt aus `env!("CARGO_PKG_VERSION")`. Für die zweite Hälfte braucht es einen abgelegten Wert; ohne ihn ist sie aus nichts zu erschließen, und der Datensatz `260910-0818_*_wo-merkt-sich-krk-fuer-welche-fassung-es-die-neuerungen-schon-gemeldet-hat.md` legt die zwei Orte vor. **Eine dritte Frage ist mit denselben Eingaben nicht entscheidbar und wird deshalb nicht gestellt:** ob eine **fehlende** Nutzerdatei „zurückliegt". Eine `keymap.toml` gibt es auf einer frischen Installation gar nicht, und wer sie als leere Datei liest, meldet dem Nutzer alle 93 Funktionen als Neuerung. Der Plan ändert dafür nicht die Näherung, sondern die Frage: verglichen wird nur, was dasteht, und eine Datei, die nicht dasteht, liefert keine Neuerung.
 
