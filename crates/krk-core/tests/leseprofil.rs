@@ -3424,17 +3424,23 @@ fn zwei_zusammenfassungen_desselben_ordners_lesen_zweimal() {
 /// einen Eintrag trifft; die juengsten N oeffnen so viele Dateien, wie es
 /// Kandidaten gibt, hoechstens aber N.
 ///
-/// **Die letzte Zeile der Tabelle ist die, die eine Zahl aus dem Profil
-/// ablesbar haelt.** Zwei Feldbausteine auf **derselben** Datei kosten zwei
-/// Oeffnungen und nicht eine: die Auswertung fuehrt bewusst keinen
-/// Zwischenspeicher ueber gelesene Dateien, damit die Zahl der Oeffnungen aus
-/// dem Profil folgt und nicht aus dessen Inhalt. Faellt ein Zwischenspeicher
-/// spaeter doch hinein, wird diese Zeile rot und nicht die Zusage in C6.7.
+/// **Die letzten zwei Zeilen der Tabelle zaehlen die Datei und nicht die
+/// Zeile.** Seit dem 260913 wird eine Datei je Zusammenfassung hoechstens
+/// einmal angelesen, und das gilt fuer zwei Feldbausteine auf derselben Datei
+/// genauso wie fuer eine Feldzeile und einen Titel der juengsten N. Bis dahin
+/// kosteten sie je zwei Oeffnungen, damit die Zahl aus dem Profil folgte und
+/// nicht aus dessen Inhalt; der Nutzer hat den Preis am 260913 gewaehlt, weil
+/// die Auslieferungsfassung sonst C6.7 um eine Oeffnung bricht
+/// (`shared/decisions/260913-0851_*_merkt-sich-der-feldbaustein-seine-…`).
+///
+/// **Dass die zweite Zeile trotzdem ihren eigenen Wert bekommt**, nimmt
+/// [`zwei_feldzeilen_auf_derselben_datei_teilen_die_oeffnung_und_nicht_den_wert`]
+/// ab; diese Tabelle zaehlt allein.
 #[test]
 fn die_zahl_der_oeffnungen_folgt_der_bausteinsorte() {
     let ordner = werkbankgestalt("oeffnungen-je-baustein");
 
-    let faelle: [(&str, &str, u32); 8] = [
+    let faelle: [(&str, &str, u32); 9] = [
         (
             "die Zaehlung oeffnet nichts",
             r#"
@@ -3499,7 +3505,7 @@ fn die_zahl_der_oeffnungen_folgt_der_bausteinsorte() {
             0,
         ),
         (
-            "zwei Felder auf derselben Datei oeffnen sie zweimal",
+            "zwei Felder auf derselben Datei oeffnen sie einmal",
             r#"
   [[profil.zeile]]
   beschriftung = "Directive"
@@ -3509,7 +3515,20 @@ fn die_zahl_der_oeffnungen_folgt_der_bausteinsorte() {
   beschriftung = "Noch einmal dieselbe Datei"
   feld = { datei = '^_._circle\.md$', feldmuster = '(?m)^## (.+)' }
 "#,
-            2,
+            1,
+        ),
+        (
+            "ein Feld und ein Titel auf derselben Datei oeffnen sie einmal",
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Der juengste Spec"
+  juengste = { ordner = "planning", muster = '_o_spec-', anzahl = 1 }
+
+  [[profil.zeile]]
+  beschriftung = "Dieselbe Datei als Feld"
+  feld = { ordner = "planning", datei = '_o_spec-', feldmuster = '^# (.+)' }
+"#,
+            1,
         ),
     ];
 
@@ -3522,6 +3541,76 @@ fn die_zahl_der_oeffnungen_folgt_der_bausteinsorte() {
             haushalt.oeffnungen()
         );
     }
+}
+
+/// C6.2 und C6.7: Zwei Zeilen auf derselben Datei teilen die Oeffnung und
+/// **nicht** den Wert.
+///
+/// Die zweite Haelfte ist die wichtigere. Gemerkt wird der gelesene Text und
+/// nicht das Ergebnis eines Bausteins: zwei Feldzeilen auf derselben Datei
+/// tragen verschiedene `feldmuster`, und wer das Ergebnis der ersten merkte,
+/// gaebe es der zweiten und lieferte ihr stillschweigend einen falschen Wert.
+/// Eine Probe, die allein die Oeffnungen zaehlt, bliebe dabei gruen.
+///
+/// **Die zweite Haelfte des Profils nimmt denselben Satz ueber die Bausteine
+/// hinweg ab.** Der Titel einer Datei und ein Feld aus derselben Datei sind
+/// zwei verschiedene Auskuenfte aus denselben Bytes; sie stehen hier
+/// nebeneinander, weil seit dem 260913 beide durch dieselbe Merkstelle gehen.
+#[test]
+fn zwei_feldzeilen_auf_derselben_datei_teilen_die_oeffnung_und_nicht_den_wert() {
+    let ordner = werkbankgestalt("eine-datei-zwei-werte");
+
+    let (zusammenfassung, haushalt) = gezaehlt(
+        &circleprofil(
+            r#"
+  [[profil.zeile]]
+  beschriftung = "Zustand"
+  feld = { datei = '^_._circle\.md$', feldmuster = '^# (.+)' }
+
+  [[profil.zeile]]
+  beschriftung = "Directive"
+  feld = { datei = '^_._circle\.md$', feldmuster = '(?m)^## (.+)' }
+
+  [[profil.zeile]]
+  beschriftung = "Der juengste Spec"
+  juengste = { ordner = "planning", muster = '_o_spec-', anzahl = 1 }
+
+  [[profil.zeile]]
+  beschriftung = "Woran der Spec arbeitet"
+  feld = { ordner = "planning", datei = '_o_spec-', feldmuster = '^# Spec: (.+)' }
+"#,
+        ),
+        ordner.pfad(),
+    );
+    let werte = werte(&zusammenfassung);
+
+    assert_eq!(
+        haushalt.oeffnungen(),
+        2,
+        "vier Zeilen ueber zwei Dateien kosten nicht zwei Oeffnungen"
+    );
+    assert_eq!(
+        werte[0].1,
+        &Wert::Text("Circle: eine Runde".to_owned()),
+        "die erste Feldzeile hat ihr eigenes Muster nicht angewandt"
+    );
+    assert_eq!(
+        werte[1].1,
+        &Wert::Text("Directive".to_owned()),
+        "die zweite Feldzeile hat den Wert der ersten bekommen, statt ihr Muster \
+         auf denselben Text anzuwenden"
+    );
+    assert_eq!(
+        werte[2].1,
+        &Wert::Titel(vec!["Spec: die Vorschau".to_owned()]),
+        "die Titelzeile hat ihren Titel nicht bekommen"
+    );
+    assert_eq!(
+        werte[3].1,
+        &Wert::Text("die Vorschau".to_owned()),
+        "die Feldzeile hat den Titel der Zeile darueber bekommen, statt ihr Muster \
+         auf denselben Text anzuwenden"
+    );
 }
 
 /// C6.4, erste Haelfte: mehr Bausteine als Leselaeufe, und die uebrigen Zeilen
@@ -3630,25 +3719,41 @@ fn dreizehn_zaehlbausteine_erreichen_die_grenze_und_der_rest_traegt_den_platzhal
 /// den Zeilen darunter. Eine Liste aus vier von zehn Titeln unter der
 /// Beschriftung „die juengsten zehn" laese sich ausserdem als „es sind nur
 /// vier".
+///
+/// **Jede Zeile liest eigene Dateien, und das ist seit dem 260913 die
+/// Voraussetzung dafuer, dass diese Probe ueberhaupt etwas misst.** Eine Datei
+/// wird je Zusammenfassung hoechstens einmal angelesen; acht Zeilen auf
+/// denselben Dateien kaemen auf elf Oeffnungen und erreichten die Grenze nie.
+/// Die drei Titelzeilen greifen deshalb ueber ihr `muster` in drei getrennte
+/// Namensgruppen, und die fuenf Feldzeilen nennen fuenf verschiedene Dateien.
 #[test]
 fn die_oeffnungen_gehen_ganz_oder_gar_nicht_und_enden_an_der_grenze() {
     let ordner = werkbankgestalt("oeffnungsgrenze");
     let viele = ordner.ordner("viele");
-    for nummer in 0..12 {
-        schreiben(&viele, &format!("{nummer:02}.md"), "# Ein Datensatz\n");
+    for gruppe in ["a", "b", "c"] {
+        for nummer in 0..12 {
+            schreiben(
+                &viele,
+                &format!("{gruppe}{nummer:02}.md"),
+                "# Ein Datensatz\n",
+            );
+        }
+    }
+    for nummer in 0..5 {
+        ordner.datei(&format!("feld{nummer}.md"), "# Circle: eine Runde\n");
     }
 
     let mut zeilen = String::new();
-    for nummer in 0..3 {
+    for (nummer, gruppe) in ["a", "b", "c"].into_iter().enumerate() {
         zeilen.push_str(&format!(
             "\n  [[profil.zeile]]\n  beschriftung = \"Die juengsten zehn {nummer}\"\n  \
-             juengste = {{ ordner = \"viele\", anzahl = 10 }}\n"
+             juengste = {{ ordner = \"viele\", muster = '^{gruppe}', anzahl = 10 }}\n"
         ));
     }
     for nummer in 0..5 {
         zeilen.push_str(&format!(
             "\n  [[profil.zeile]]\n  beschriftung = \"Directive {nummer}\"\n  \
-             feld = {{ datei = '^_._circle\\.md$', feldmuster = '^# (.+)' }}\n"
+             feld = {{ datei = '^feld{nummer}\\.md$', feldmuster = '^# (.+)' }}\n"
         ));
     }
 
@@ -3858,7 +3963,7 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// Leselaeufe steigt, und genau der Schritt waere die Nachricht.
 ///
 /// **Welches Profil das groesste ist, haengt an der Frage.** Nach Oeffnungen
-/// ist es das der einzelnen Runde mit zwoelf; nach Leselaeufen ist es seit der
+/// ist es das der einzelnen Runde mit elf; nach Leselaeufen ist es seit der
 /// Runde 18 das des gemeinsamen Speichers mit zehn von zwoelf, und das ist
 /// zugleich das mit dem kleinsten Abstand zu seiner Schranke. Die Zahlen
 /// sind die der Kostenmessung vom 260825-2107 an der wirklichen Werkbank
@@ -3873,19 +3978,19 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// Probe aus dem Profil und behauptet es nicht.
 ///
 /// ```text
-/// eine Runde       4 Leselaeufe   12 Oeffnungen   C6.7: hoechstens 7 und 11
+/// eine Runde       4 Leselaeufe   11 Oeffnungen   C6.7: hoechstens 7 und 11
 ///   erkannter Ordner, planning, decisions, history
-///   Rundendatensatz zweimal, zehn Verlaeufe
-/// die Wurzel       4 Leselaeufe    3 Oeffnungen   C6.4: hoechstens 12 und 24
+///   Rundendatensatz einmal, zehn Verlaeufe
+/// die Wurzel       4 Leselaeufe    1 Oeffnung     C6.4: hoechstens 12 und 24
 ///   erkannter Ordner, circles, shared/issues, shared/forum
-///   .fusion-setup dreimal
+///   .fusion-setup einmal
 /// der Speicher    10 Leselaeufe    0 Oeffnungen   C6.4: hoechstens 12 und 24
 ///   die zehn Unterspeicher, die das Profil nennt; keiner doppelt
 ///   `zeigt = "datum"` oeffnet keine Datei
-/// die Projektwz.   5 Leselaeufe    3 Oeffnungen   C6.4: hoechstens 12 und 24
+/// die Projektwz.   5 Leselaeufe    1 Oeffnung     C6.4: hoechstens 12 und 24
 ///   erkannter Ordner, fusion-workbench, dessen circles, shared/issues,
 ///   shared/forum
-///   .fusion-setup dreimal
+///   .fusion-setup einmal
 /// ```
 ///
 /// **Die zwei Wurzelprofile stehen seit dem 260908 je einen Lauf hoeher**, und
@@ -3910,12 +4015,14 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// Pruefordner auch stehen; [`werkbankbestand`] legt sie deshalb vollzaehlig
 /// an.
 ///
-/// **Drei Oeffnungen, und alle drei gehen auf `.fusion-setup`.** Bis zum
-/// 260913 waren es fuenf: die Zeilen „Aktive Runde" und „Sitzung" oeffneten
+/// **Eine Oeffnung, und die drei Feldzeilen teilen sie sich.** Alle drei
+/// nennen `.fusion-setup`, und seit dem 260913 wird eine Datei je
+/// Zusammenfassung hoechstens einmal angelesen. Bis dahin waren es drei, und
+/// davor fuenf: die Zeilen „Aktive Runde" und „Sitzung" oeffneten
 /// `.active-circle` und `orchestrator-live.md`. fusion 11 loescht die erste
 /// Datei und hat die zweite abgeschafft, beide Zeilen sind aus
-/// `default-readers.toml` gefallen, und mit ihnen die zwei Oeffnungen. Die
-/// Werte darunter sind der Nachweis, dass jede der drei etwas gefunden hat.
+/// `default-readers.toml` gefallen. Die Werte darunter sind der Nachweis, dass
+/// jede der drei Zeilen ihr eigenes Feld aus denselben Bytes gezogen hat.
 ///
 /// **Der Bestand unter `fusion-workbench` ist nicht Beiwerk.** Ein leeres
 /// `fusion-workbench` kostet zwei Laeufe und keine Oeffnung, gemessen am
@@ -3938,29 +4045,28 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// aneinanderhaelte, waere eine Zusage, die `default-readers.toml` fuer sich
 /// ausdruecklich nicht gibt.
 ///
-/// # Die zweite Zahl aus C6.7 haelt seit fusion 11 nicht mehr
+/// # Die zweite Zahl aus C6.7 haelt wieder, und wie sie zurueckgekommen ist
 ///
 /// C6.7 sagt der einzelnen Runde „hoechstens 7 Verzeichnisleselaeufe und
-/// hoechstens 11 Dateioeffnungen" zu. Die erste Zahl haelt mit Abstand, die
-/// zweite ist seit der Umstellung auf fusion 11 um **eine** ueberschritten:
-/// der Zustand der Runde steht nicht mehr als vier Ja/Nein-Zeilen im
-/// Dateinamen, sondern als Kopfzeile `**Status:**` im Datensatz, und diese
-/// Zeile und die Zeile „Directive" nennen dieselbe Datei und oeffnen sie
-/// trotzdem zweimal.
+/// hoechstens 11 Dateioeffnungen" zu. Zwischen der Umstellung auf fusion 11
+/// und dem 260913 war die zweite Zahl um **eine** ueberschritten: der Zustand
+/// der Runde steht nicht mehr als vier Ja/Nein-Zeilen im Dateinamen, sondern
+/// als Kopfzeile `**Status:**` im Datensatz, und diese Zeile und die Zeile
+/// „Directive" nennen dieselbe Datei und oeffneten sie trotzdem zweimal. Die
+/// Probe hielt in dieser Zeit die exakte Zwoelf als Messung und **keine**
+/// Schranke, damit der Bruch sichtbar blieb und keine Probe sich ein
+/// Abnahmekriterium selbst neu setzte.
 ///
-/// **Die Probe schreibt die Zwoelf deshalb als Messung hin und nicht als
-/// Schranke.** Eine Zusicherung `<= 12` an dieser Stelle waere ein
-/// Abnahmekriterium, das diese Probe sich selbst neu gesetzt haette, und das
-/// steht keinem Agenten zu. Was stattdessen gehalten wird: die erste Zahl aus
-/// C6.7, die Schranken aus C6.4 und die exakte Zwoelf, die jede weitere
-/// Oeffnung rot werden laesst.
-///
-/// **Drei Wege stehen offen und keiner ist hier zu waehlen**: das Kriterium
-/// auf zwoelf nachziehen; die zwei Feldzeilen auf eine zusammenziehen und die
-/// Auskunft „Zustand" oder „Directive" aufgeben; oder dem Feldbaustein eine
-/// je Zusammenfassung gemerkte Dateioeffnung geben, wie sie der Leselauf seit
-/// der Runde 18 hat. Der dritte aendert das Verhalten aller Profile und ist
-/// damit die groesste der drei Aenderungen.
+/// **Von den drei Wegen, die damals offenstanden, ist der dritte gefahren**:
+/// nicht das Kriterium auf zwoelf nachziehen und nicht eine der zwei
+/// Feldzeilen aufgeben, sondern dem Lesen eine je Zusammenfassung gemerkte
+/// Dateioeffnung geben, wie sie der Leselauf seit der Runde 18 hat
+/// (`shared/decisions/260913-0851_*_merkt-sich-der-feldbaustein-seine-…`,
+/// Moeglichkeit 1). Die Schranke `<= 11` steht damit wieder als Zusicherung
+/// da, und das ist ihre Wiederherstellung und keine Verschiebung. Der Weg
+/// aendert das Verhalten **aller** Profile: die zwei Wurzelprofile fallen von
+/// drei Oeffnungen auf eine, weil ihre drei Feldzeilen alle `.fusion-setup`
+/// nennen.
 ///
 /// # Eine Behauptung haengt noch an der Zeilenreihenfolge der Profildatei
 ///
@@ -4013,21 +4119,17 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     );
     assert_eq!(
         (haushalt.leselaeufe(), haushalt.oeffnungen()),
-        (4, 12),
+        (4, 11),
         "das groesste mitgelieferte Profil kostet nicht mehr die gemessenen vier \
-         Leselaeufe und zwoelf Oeffnungen"
+         Leselaeufe und elf Oeffnungen"
     );
     assert!(
-        haushalt.leselaeufe() <= 7,
-        "die erste Zahl aus C6.7 ist gebrochen: {} Leselaeufe statt hoechstens 7",
-        haushalt.leselaeufe()
+        haushalt.leselaeufe() <= 7 && haushalt.oeffnungen() <= 11,
+        "C6.7 ist gebrochen: {} Leselaeufe statt hoechstens 7, {} Oeffnungen \
+         statt hoechstens 11",
+        haushalt.leselaeufe(),
+        haushalt.oeffnungen()
     );
-    // Die zweite Zahl aus C6.7, „hoechstens 11 Dateioeffnungen", steht hier
-    // bewusst NICHT als Zusicherung. Sie ist seit der Umstellung auf fusion 11
-    // um eine ueberschritten, und das Kriterium umzuschreiben steht keinem
-    // Agenten zu; der Kopf dieser Probe schreibt die Lage aus. Was der Lauf
-    // statt ihrer haelt, ist die Schranke aus C6.4 darunter — und die exakte
-    // Zwoelf darueber, die jede weitere Oeffnung rot werden laesst.
     assert!(
         haushalt.leselaeufe() <= HOECHSTENS_LESELAEUFE
             && haushalt.oeffnungen() <= HOECHSTENS_OEFFNUNGEN,
@@ -4075,9 +4177,9 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     );
     assert_eq!(
         (haushalt.leselaeufe(), haushalt.oeffnungen()),
-        (4, 3),
+        (4, 1),
         "die Wurzelzusammenfassung kostet nicht mehr die gemessenen vier Leselaeufe \
-         und drei Oeffnungen"
+         und die eine Oeffnung, die sich ihre drei Feldzeilen teilen"
     );
     assert!(
         haushalt.leselaeufe() <= HOECHSTENS_LESELAEUFE
@@ -4238,9 +4340,10 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     );
     assert_eq!(
         (haushalt.leselaeufe(), haushalt.oeffnungen()),
-        (5, 3),
-        "die Projektwurzel kostet nicht mehr die fuenf Leselaeufe und drei \
-         Oeffnungen, mit denen `default-readers.toml` die Leselaufregel belegt"
+        (5, 1),
+        "die Projektwurzel kostet nicht mehr die fuenf Leselaeufe, mit denen \
+         `default-readers.toml` die Leselaufregel belegt, und die eine Oeffnung, \
+         die sich ihre drei Feldzeilen teilen"
     );
     assert_eq!(
         haushalt.leselaeufe() as usize,
@@ -4968,9 +5071,11 @@ fn flightprojektwurzel(zweck: &str) -> Pruefordner {
 /// traegt und den erkannten Ordner allein die Erkennung liest. Das ist die
 /// Bauform, die `96e32cb` fuer das fusion-Projektwurzelprofil vormacht.
 ///
-/// Die drei Oeffnungen gehen in beiden Faellen allein auf die drei Feldzeilen:
-/// `zeigt = "datum"` liest das Aenderungsdatum aus dem Verzeichniseintrag, den
-/// der Leselauf ohnehin liefert, und oeffnet nichts.
+/// **Die eine Oeffnung geht in beiden Faellen auf die drei Feldzeilen
+/// zusammen**: alle drei nennen `.flight-setup`, und seit dem 260913 wird eine
+/// Datei je Zusammenfassung hoechstens einmal angelesen. `zeigt = "datum"`
+/// liest das Aenderungsdatum aus dem Verzeichniseintrag, den der Leselauf
+/// ohnehin liefert, und oeffnet gar nichts.
 #[test]
 fn die_zwei_flight_profile_bleiben_unter_ihren_zahlen() {
     let profile = ausgelieferte();
@@ -4979,13 +5084,13 @@ fn die_zwei_flight_profile_bleiben_unter_ihren_zahlen() {
         (
             "flight-Werkbank: die Wurzel",
             flightwurzel("haushalt-flight-wurzel"),
-            (5, 3),
+            (5, 1),
             0,
         ),
         (
             "Projektwurzel mit flight-Werkbank",
             flightprojektwurzel("haushalt-flight-projektwurzel"),
-            (6, 3),
+            (6, 1),
             1,
         ),
     ] {

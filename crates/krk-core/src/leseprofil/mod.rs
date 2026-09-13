@@ -130,12 +130,17 @@ pub const HOECHSTENS_LESELAEUFE: u32 = 12;
 
 /// Wie viele Dateioeffnungen eine Zusammenfassung kostet, hoechstens (C6.4).
 ///
-/// Eine Datei, die zwei Bausteine desselben Profils lesen, wird zweimal
-/// geoeffnet. Das ist gewollt: so ist die Zahl der Oeffnungen aus dem Profil
-/// ablesbar, naemlich eine je Feldbaustein und N je Baustein „juengste N",
-/// der Titel zeigt. **Seine Datumsform kostet keine**: sie nimmt den
-/// Zeitpunkt aus dem Eintrag, den der Leselauf ohnehin liefert
-/// ([`Anzeige::Datum`]).
+/// Gezaehlt wird die **Datei** und nicht die Zeile: eine Datei, die zwei
+/// Bausteine desselben Profils lesen, wird je Zusammenfassung einmal
+/// geoeffnet, und die zweite Zeile bekommt die schon gelesenen Bytes. Seit
+/// dem 260913 ist das so, und der Modulkopf von [`bausteine`] schreibt aus,
+/// was die Umstellung gekostet hat und warum der Nutzer sie gewaehlt hat.
+///
+/// Eine Obergrenze bleibt aus dem Profil ablesbar, naemlich eine Oeffnung je
+/// Feldbaustein und N je Baustein „juengste N", der Titel zeigt; was davon
+/// wirklich anfaellt, steht erst am Profil **und** am Bestand. **Die
+/// Datumsform der juengsten N kostet keine**: sie nimmt den Zeitpunkt aus dem
+/// Eintrag, den der Leselauf ohnehin liefert ([`Anzeige::Datum`]).
 pub const HOECHSTENS_OEFFNUNGEN: u32 = 24;
 
 /// Wie viele Eintraege ein einzelner Leselauf liefert, hoechstens (C6.5,
@@ -871,6 +876,10 @@ impl Haushalt {
     /// keine. Einzeln gebucht haette er die ersten Oeffnungen verbraucht und
     /// den Wert am Ende doch fallen lassen, und die verbrauchten fehlten den
     /// Zeilen darunter.
+    ///
+    /// **Welche Zahl der Rufer nennt, entscheidet er und nicht diese Stelle.**
+    /// Seit dem 260913 zaehlt er die Dateien, die seine Zusammenfassung noch
+    /// nicht angelesen hat; siehe `bausteine::Lauf::angelesen`.
     ///
     /// `false` heisst wie bei [`Haushalt::leselauf_nehmen`]: es hat nicht
     /// stattgefunden, und der Zaehler bleibt stehen.

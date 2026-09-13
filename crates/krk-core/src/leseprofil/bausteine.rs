@@ -91,15 +91,45 @@
 //! darunter tragen damit unveraendert weiter; sie fragen den Lesestand und
 //! nicht, aus wie vielen Verzeichnissen er stammt.
 //!
-//! **Bei der Dateioeffnung faellt die Wahl anders aus**, siehe
-//! [`super::HOECHSTENS_OEFFNUNGEN`]: zwei Feldbausteine auf derselben Datei
-//! oeffnen sie zweimal. Der Unterschied ist keine Unachtsamkeit. Ein Ort steht
-//! als Ortsangabe im Profil und ist damit vor jeder Lesung bekannt; welche
-//! Datei ein Baustein oeffnet, entscheidet erst sein Muster an den gelesenen
-//! Eintraegen. Ein Merker darueber haenge am Inhalt des Ordners statt am
-//! Profil, und die Zahl der Oeffnungen waere nicht mehr abzulesen.
+//! # Eine Datei wird je Zusammenfassung hoechstens einmal angelesen
 //!
-//! **Der Merker lebt genau so lange wie ein [`Lauf`]**, also fuer eine
+//! Seit dem 260913 gilt derselbe Satz fuer die Dateioeffnung. [`Lauf`] merkt
+//! auch sie, unter dem Pfad der Datei, und [`Lauf::angelesen`] ist die eine
+//! Stelle, die oeffnet und dafuer bucht. Zwei Zeilen auf derselben Datei
+//! kosten eine Oeffnung, gleich ob es zwei Feldzeilen sind oder eine Feldzeile
+//! und ein Titel der juengsten N.
+//!
+//! **Gemerkt sind die gelesenen Bytes und nicht der herausgezogene Wert.**
+//! Zwei Feldzeilen auf derselben Datei tragen verschiedene `feldmuster`; wer
+//! das Ergebnis der ersten merkte, gaebe es der zweiten und lieferte ihr einen
+//! falschen Wert. Der Schluessel ist die Datei, der gemerkte Gegenstand sind
+//! die Bytes, und jede Zeile wendet ihr eigenes Muster darauf an.
+//!
+//! **Dass beide dieselben Bytes sehen, traegt [`HOECHSTENS_BYTES`]** und nicht
+//! das Muster: jeder Leser hier geht durch `angelesener_text`, und das liest
+//! bis zu dieser einen Grenze (C6.6) und nie so weit, wie ein Muster es
+//! braeuchte. Wer die gelesene Laenge je Baustein verschieden macht, macht
+//! damit den Schluessel unzureichend — er muesste dann die Datei **und** den
+//! gelesenen Bereich treffen.
+//!
+//! **Bis zum 260913 fiel die Wahl hier anders aus**, und der Grund steht
+//! weiter da, damit ihn niemand fuer eine Unachtsamkeit haelt: ein Ort steht
+//! als Ortsangabe im Profil und ist vor jeder Lesung bekannt, welche Datei ein
+//! Baustein oeffnet, entscheidet dagegen erst sein Muster an den gelesenen
+//! Eintraegen. Die Zahl der Oeffnungen ist seither nicht mehr aus dem Profil
+//! allein abzulesen, sondern erst am Profil **und** am Bestand — derselbe
+//! Preis, den der Platzhalterlauf beim Leselauf schon zahlt. Der Nutzer hat
+//! ihn am 260913 bewusst gezahlt: die Auslieferungsfassung von
+//! `default-readers.toml` brach C6.7 um genau eine Oeffnung, weil die zwei
+//! Feldzeilen „Zustand" und „Directive" des Rundenprofils dieselbe Datei
+//! nennen, und behoben wird die Ursache und nicht die Zahl
+//! (`shared/decisions/260913-0851_*_merkt-sich-der-feldbaustein-seine-dateioeffnungen-…`).
+//!
+//! **Gebucht wird vor dem Lesen und allein fuer neue Dateien.** Die Regel
+//! „ganz oder gar nicht" der juengsten N bleibt dieselbe; sie zaehlt seither
+//! die Dateien, die dieser Lauf noch nicht angelesen hat.
+//!
+//! **Beide Merker leben genau so lange wie ein [`Lauf`]**, also fuer eine
 //! Zusammenfassung. Zwei Zusammenfassungen desselben Ordners nacheinander lesen
 //! zweimal; alles andere zeigte dem Nutzer einen Stand von vorhin.
 //!
@@ -190,6 +220,12 @@
 //! gelesen wird erst der Ordner, dann aus seinen Eintraegen eine Datei nach der
 //! anderen. Wer daraus eine Liste offener Dateien macht, holt sich den Defekt
 //! `260815-0211` in seiner naechsten Gestalt.
+//!
+//! **Die Merkliste der angelesenen Dateien ist keine solche Liste**: sie haelt
+//! Bytes und keinen Deskriptor. [`Lauf::angelesen`] liest eine Datei nach der
+//! anderen, jede ueber [`crate::text::datei::anlesen`], das seinen Deskriptor
+//! innerhalb seines Aufrufs wieder abgibt; gehalten wird danach allein der
+//! Text.
 //!
 //! **Der Platzhalterlauf aendert daran nichts**, obwohl er viele Verzeichnisse
 //! liest: er haelt die *Eintraege* des Ordners vor dem Platzhalter und keinen
@@ -403,6 +439,28 @@ struct Lauf<'w> {
     /// fragt diese Liste nach dem Ordner vor dem Platzhalter, waehrend er
     /// gerade selbst darin aufgenommen wird.
     staende: RefCell<Vec<(Ort, Option<Rc<Lesestand>>)>>,
+    /// Jede Datei, die dieser Lauf angelesen hat, nach ihrem Pfad, jede beim
+    /// ersten Bedarf. `None` an einem Eintrag heisst „nicht als Text zu
+    /// lesen": die Datei liess sich nicht oeffnen oder traegt keinen. Auch das
+    /// wird gemerkt, aus demselben Grund wie bei `staende` — ein zweiter
+    /// Versuch an derselben Datei scheiterte genauso und kostete eine weitere
+    /// Oeffnung.
+    ///
+    /// **Gemerkt sind die gelesenen Bytes und nicht der herausgezogene Wert.**
+    /// Zwei Feldzeilen auf derselben Datei tragen verschiedene `feldmuster`;
+    /// wer das Ergebnis der ersten merkte, gaebe es der zweiten und lieferte
+    /// ihr einen falschen Wert. Der Modulkopf schreibt aus, warum es derselbe
+    /// Text ist und wann das aufhoerte zu gelten.
+    ///
+    /// Eine Liste und keine Abbildung, aus demselben Grund wie bei `staende`,
+    /// und hier mit einer festen Schranke daneben: ein Eintrag entsteht erst,
+    /// nachdem eine Oeffnung gebucht ist, also stehen hoechstens
+    /// [`super::HOECHSTENS_OEFFNUNGEN`] darin. Was der Lauf damit hoechstens
+    /// haelt, ist diese Zahl mal [`HOECHSTENS_BYTES`].
+    ///
+    /// Der Text steht unter [`Rc`], damit ein Rufer ihn geliehen bekommt, ohne
+    /// die Liste ausgeliehen zu halten oder 64 KB zu kopieren.
+    inhalte: RefCell<Vec<(PathBuf, Option<Rc<str>>)>>,
     /// Derselbe Stand fuer den erkannten Ordner, ein zweites Mal gehalten.
     ///
     /// **Keine zweite Lesung**, sondern ein geliehener Handgriff auf den
@@ -418,6 +476,7 @@ impl<'w> Lauf<'w> {
             wurzel,
             haushalt: Cell::new(Haushalt::neu()),
             staende: RefCell::new(Vec::new()),
+            inhalte: RefCell::new(Vec::new()),
             wurzelstand: OnceCell::new(),
         }
     }
@@ -525,6 +584,77 @@ impl<'w> Lauf<'w> {
             eintraege,
             abgeschnitten,
         })
+    }
+
+    /// Liest die genannten Dateien an, je Lauf hoechstens einmal je Datei.
+    ///
+    /// Die **eine** Stelle, an der eine Datei ueberhaupt geoeffnet wird, und
+    /// zugleich die eine, die dafuer bucht. Beides steht hier zusammen, damit
+    /// kein Rufer lesen kann, ohne gebucht zu haben, und keiner bucht, was
+    /// dieser Lauf schon hat: gezaehlt werden allein die Pfade, die noch nicht
+    /// in der Merkliste stehen, und ein Pfad, den die Liste im Argument
+    /// zweimal nennt, zaehlt einmal.
+    ///
+    /// **Ganz oder gar nicht**, und deshalb nimmt sie eine Liste und nicht
+    /// einen Pfad: der Baustein „juengste N" braucht seine Oeffnungen fuer
+    /// **eine** Antwort (siehe [`Haushalt::oeffnungen_nehmen`]). `None` heisst
+    /// also, dass sie nicht mehr in den Haushalt passten und keine einzige
+    /// stattgefunden hat. Sonst steht in der Antwort zu jedem Pfad, in seiner
+    /// Reihenfolge, der angelesene Text — oder `None` an der Stelle einer
+    /// Datei, die keinen hergibt.
+    ///
+    /// **Ein gescheiterter Versuch wird gemerkt, ein nicht gebuchter nicht.**
+    /// Der erste hat eine Oeffnung gekostet und der zweite nicht: ein
+    /// erschoepfter Haushalt ist keine Auskunft ueber die Datei, und die
+    /// naechste Zeile, die weniger auf einmal braucht, soll sie noch bekommen.
+    #[must_use = "wer die Texte fallen laesst, hat Oeffnungen gebucht und Dateien \
+                  umsonst gelesen"]
+    fn angelesen(&self, pfade: &[PathBuf]) -> Option<Vec<Option<Rc<str>>>> {
+        let neue = self.noch_ungelesene(pfade);
+        let wie_viele = u32::try_from(neue.len()).unwrap_or(u32::MAX);
+        if !self.buchen(|haushalt| haushalt.oeffnungen_nehmen(wie_viele)) {
+            return None;
+        }
+        for pfad in neue {
+            let text = angelesener_text(&pfad).map(Rc::from);
+            self.inhalte.borrow_mut().push((pfad, text));
+        }
+        // Nach der Schleife steht jeder Pfad in der Merkliste; die aeussere
+        // Schicht ist damit immer `Some`, und `flatten` reicht den Text durch.
+        Some(
+            pfade
+                .iter()
+                .map(|pfad| self.gemerkter_inhalt(pfad).flatten())
+                .collect(),
+        )
+    }
+
+    /// Die Pfade aus der Liste, die dieser Lauf noch nicht angelesen hat, jeder
+    /// einmal und in ihrer Reihenfolge.
+    fn noch_ungelesene(&self, pfade: &[PathBuf]) -> Vec<PathBuf> {
+        let inhalte = self.inhalte.borrow();
+        let mut neue: Vec<PathBuf> = Vec::new();
+        for pfad in pfade {
+            let schon = inhalte.iter().any(|(gelesen, _)| gelesen == pfad) || neue.contains(pfad);
+            if !schon {
+                neue.push(pfad.clone());
+            }
+        }
+        neue
+    }
+
+    /// Was die Merkliste ueber eine Datei sagt.
+    ///
+    /// Die aeussere Schicht heisst „steht in der Liste", die innere „traegt
+    /// Text". Die zwei auseinanderzuhalten ist der Zweck der doppelten
+    /// Verpackung: eine Datei, die keinen Text hergibt, ist gelesen und kostet
+    /// keine zweite Oeffnung.
+    fn gemerkter_inhalt(&self, pfad: &Path) -> Option<Option<Rc<str>>> {
+        self.inhalte
+            .borrow()
+            .iter()
+            .find(|(gelesen, _)| gelesen == pfad)
+            .map(|(_, text)| text.clone())
     }
 
     /// Bucht etwas im Haushalt und sagt, ob es noch hineinpasste.
@@ -728,15 +858,21 @@ impl<'w> Lauf<'w> {
         }
         match zeigt {
             Anzeige::Titel => {
-                // In einem Zug oder gar nicht, siehe den Modulkopf.
-                let wie_viele = u32::try_from(kandidaten.len()).unwrap_or(u32::MAX);
-                if !self.buchen(|haushalt| haushalt.oeffnungen_nehmen(wie_viele)) {
+                // In einem Zug oder gar nicht, siehe den Modulkopf. Gebucht
+                // werden allein die Dateien, die dieser Lauf noch nicht
+                // angelesen hat; darum geht die ganze Liste auf einmal hinein.
+                let pfade: Vec<PathBuf> = kandidaten
+                    .iter()
+                    .map(|eintrag| ordner.join(&eintrag.name))
+                    .collect();
+                let Some(texte) = self.angelesen(&pfade) else {
                     return Wert::Nicht;
-                }
+                };
                 Wert::Titel(
                     kandidaten
                         .iter()
-                        .map(|eintrag| titel(&ordner.join(&eintrag.name), &eintrag.name))
+                        .zip(texte)
+                        .map(|(eintrag, text)| titel(text.as_deref(), &eintrag.name))
                         .collect(),
                 )
             }
@@ -760,10 +896,12 @@ impl<'w> Lauf<'w> {
         else {
             return Wert::Nicht;
         };
-        if !self.buchen(|haushalt| haushalt.oeffnungen_nehmen(1)) {
-            return Wert::Nicht;
-        }
-        let Some(text) = angelesener_text(&ordner.join(&eintrag.name)) else {
+        // Zwei Lagen, ein Platzhalter: die Oeffnung passte nicht mehr in den
+        // Haushalt, oder die Datei gibt keinen Text her.
+        let Some(text) = self
+            .angelesen(&[ordner.join(&eintrag.name)])
+            .and_then(|texte| texte.into_iter().next().flatten())
+        else {
             return Wert::Nicht;
         };
         match feldmuster
@@ -933,12 +1071,10 @@ pub fn kalendertext(zeitpunkt: SystemTime) -> Option<String> {
 ///
 /// Auf den Dateinamen faellt die Regel in drei Lagen zurueck, und in allen
 /// dreien ist er die einzige Auskunft, die es gibt: die Datei ist leer, sie
-/// laesst sich nicht lesen, oder sie ist kein Text.
-fn titel(pfad: &Path, name: &str) -> String {
-    angelesener_text(pfad)
-        .as_deref()
-        .and_then(titelzeile)
-        .unwrap_or_else(|| name.to_owned())
+/// laesst sich nicht lesen, oder sie ist kein Text. Die letzten zwei kommen
+/// hier schon als `None` an; lesen tut allein [`Lauf::angelesen`].
+fn titel(text: Option<&str>, name: &str) -> String {
+    text.and_then(titelzeile).unwrap_or_else(|| name.to_owned())
 }
 
 /// Die erste Zeile, aus der nach dem Abraeumen noch etwas uebrig bleibt.

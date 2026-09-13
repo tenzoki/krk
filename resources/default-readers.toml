@@ -164,8 +164,9 @@
 #   `zeigt = "titel"` (die Vorgabe, wenn der Schlüssel fehlt) zeigt den Titel
 #   jeder Datei. Der Titel ist ihre erste nicht leere Zeile; ein führendes `#`
 #   und die Leerzeichen dahinter fallen weg. Eine leere oder nicht lesbare Datei
-#   zeigt ihren Dateinamen. Diese Form ÖFFNET JEDE DATEI und sieht deshalb
-#   allein Einträge vom Typ Datei.
+#   zeigt ihren Dateinamen. Diese Form LIEST JEDE DATEI und sieht deshalb
+#   allein Einträge vom Typ Datei; was sie an Öffnungen kostet, sagt der
+#   Abschnitt „Was eine Zusammenfassung höchstens kostet" weiter unten.
 #
 #   `zeigt = "datum"` zeigt stattdessen das Änderungsdatum in der Form
 #   `JJJJ-MM-TT HH:MM`, in bürgerlicher Ortszeit. Diese Form ÖFFNET NICHTS —
@@ -288,12 +289,26 @@
 # nicht hat. Das gilt für den Leselauf und nicht für den Systemaufruf: das
 # Auflösen des Pfades fällt an, es wird nur nicht gebucht.
 #
-# Bei den Öffnungen fällt die Wahl anders aus. `feld` kostet genau eine,
-# `juengste` mit `zeigt = "titel"` deren `anzahl` und mit `zeigt = "datum"`
-# keine; zwei Feldbausteine über derselben Datei öffnen sie zweimal. Ein Ort
-# steht als Ortsangabe im Profil und ist vor jeder Lesung bekannt, welche Datei
-# ein Baustein öffnet, entscheidet dagegen erst sein Muster an den gelesenen
-# Einträgen.
+# Bei den Öffnungen gilt derselbe Satz eine Ebene tiefer: EINE DATEI KOSTET
+# GENAU EINE ÖFFNUNG, gleich wie viele Zeilen sie lesen. `feld` liest eine
+# Datei, `juengste` mit `zeigt = "titel"` deren `anzahl`; `zeigt = "datum"`,
+# `zaehlung` und `vorhandensein` lesen keine. Die Zahl der Öffnungen eines
+# Profils ist damit die Zahl der VERSCHIEDENEN Dateien, die seine Zeilen
+# lesen. Die zwei Feldzeilen des Rundenprofils unten nennen beide den
+# Datensatz der Runde und teilen sich dessen eine Öffnung; eine Feldzeile und
+# ein Titel der jüngsten zehn teilen sie sich ebenso, wenn sie auf dieselbe
+# Datei treffen.
+#
+# GEMERKT SIND DIE GELESENEN BYTES UND NICHT DER HERAUSGEZOGENE WERT. Zwei
+# Feldzeilen über derselben Datei tragen verschiedene `feldmuster`, und jede
+# wendet ihres auf denselben Text an. Gelesen wird bis zu derselben Grenze von
+# 64 KB, gleich welcher Baustein fragt.
+#
+# WELCHE Dateien ein Profil liest, steht anders als bei den Orten nicht in ihm
+# selbst: eine Ortsangabe ist vor jeder Lesung bekannt, welche Datei ein
+# Baustein öffnet, entscheidet erst sein Muster an den gelesenen Einträgen.
+# Die Zahl der Öffnungen ist deshalb erst am Profil UND am Bestand abzulesen,
+# genau wie die der geöffneten Verzeichnisse im Absatz darunter.
 #
 # Ein Platzhalterlauf bucht EINEN Leselauf und öffnet dabei so viele
 # Verzeichnisse, wie er Treffer hat. Ein Leselauf öffnet damit nicht mehr genau
@@ -320,12 +335,10 @@
 # kein Schreibfehler in dieser Datei: sie zieht den Namen aus dem Feld
 # `setup_pwd` von `.fusion-setup`, und fusion schreibt dieses Feld seit einer
 # Fassung zwischen 8.1.0 und 10.7.0 nicht mehr. Sie bleibt trotzdem stehen,
-# weil eine ältere Werkbank das Feld noch trägt. Umsonst ist sie nicht:
-# geteilt wird der Leselauf über einen Ort, nicht die Öffnung einer Datei,
-# und jeder Feldbaustein öffnet seine Datei selbst. Die drei Zeilen über
-# `.fusion-setup` kosten also drei der vierundzwanzig Öffnungen, und diese
-# eine davon. Bei einer flight-Werkbank ganz unten liefert dieselbe Zeile
-# weiter einen Wert.
+# weil eine ältere Werkbank das Feld noch trägt. Zu kosten hat das nichts:
+# die drei Zeilen über `.fusion-setup` lesen dieselbe Datei und teilen sich
+# deren eine Öffnung, eine der vierundzwanzig. Bei einer flight-Werkbank ganz
+# unten liefert dieselbe Zeile weiter einen Wert.
 #
 # ZWEI ZEILEN SIND HIER GEFALLEN, und wer eine ältere `readers.toml` in seiner
 # Ablage hat, findet sie dort noch: „Aktive Runde" las den Zeiger
@@ -739,11 +752,11 @@ pfad = 'fusion-workbench/shared$'
 # wie der Absatz zu `feld` oben es verlangt. Die Gruppe ist mit `(?:…)`
 # geschrieben und fängt nicht: die eine Fanggruppe gehört dem `feldmuster`.
 #
-# VIER LESELÄUFE, ZWÖLF ÖFFNUNGEN. Gelesen werden der erkannte Ordner selbst
+# VIER LESELÄUFE, ELF ÖFFNUNGEN. Gelesen werden der erkannte Ordner selbst
 # für die zwei Feldzeilen, dazu `planning`, `decisions` und `history`; die
-# Erkennung über `pfad` kostet keinen Lauf. Die Öffnungen sind die zwei
-# Feldzeilen — beide nennen dieselbe Datei und öffnen sie trotzdem zweimal —
-# und die zehn Titel der Verlaufszeile.
+# Erkennung über `pfad` kostet keinen Lauf. Die Öffnungen sind die zehn Titel
+# der Verlaufszeile und die EINE des Rundendatensatzes: „Zustand" und
+# „Directive" nennen dieselbe Datei und teilen sich deren Öffnung.
 [[profil]]
 name = "fusion-Werkbank: eine Runde"
 pfad = 'fusion-workbench/circles/[^/]+$'
@@ -867,14 +880,14 @@ kennzeichen = '^fusion-workbench$'
 # keinen einzigen Eintrag. Das eigene Profil „flight-Werkbank: der
 # Ablagespeicher" unten schreibt denselben Baustein aus.
 #
-# ELF ZEILEN, FÜNF LESELÄUFE, DREI ÖFFNUNGEN. Die drei Feldzeilen nennen den
+# ELF ZEILEN, FÜNF LESELÄUFE, EINE ÖFFNUNG. Die drei Feldzeilen nennen den
 # erkannten Ordner selbst und teilen sich dessen Lesung mit der Erkennung über
 # `.flight-setup`; dazu kommt je ein Lauf für `decisions`, `history`, `memos`
 # und `archive`, und die zwei Zeilen eines Speichers nennen denselben Ort und
 # teilen sich seine Lesung. Von den zwölf erlaubten Läufen bleiben sieben
-# übrig. Die drei Öffnungen gehen allein auf die Feldzeilen: `zeigt = "datum"`
-# liest das Änderungsdatum aus dem Verzeichniseintrag, den der Leselauf ohnehin
-# liefert, und öffnet nichts.
+# übrig. Die eine Öffnung teilen sich dieselben drei Feldzeilen: alle drei
+# lesen `.flight-setup`. `zeigt = "datum"` öffnet nichts, es liest das
+# Änderungsdatum aus dem Verzeichniseintrag, den der Leselauf ohnehin liefert.
 #
 # DIESE ELF ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
 # „Projektwurzel mit flight-Werkbank" ganz unten, dort jede mit
@@ -970,13 +983,13 @@ pfad = 'flight-workbench/archive$'
 # können auseinanderlaufen; nichts hält sie aneinander. Wer eine ändert, ändert
 # die andere mit. Der Grund steht oben beim Wurzelprofil.
 #
-# ELF ZEILEN, SECHS LESELÄUFE, DREI ÖFFNUNGEN. Ein Lauf mehr als beim
+# ELF ZEILEN, SECHS LESELÄUFE, EINE ÖFFNUNG. Ein Lauf mehr als beim
 # Wurzelprofil, und der Halbsatz „plus einen Lauf für die Erkennung" oben ist
 # der Grund: hier trägt JEDE Zeile eine Ortsangabe, keine nennt den erkannten
 # Ordner selbst, also liest den allein die Erkennung über
 # `kennzeichen = '^flight-workbench$'`. Fünf genannte Orte plus dieser eine Lauf
-# sind sechs, und von den zwölf erlaubten bleiben sechs übrig. Die drei
-# Öffnungen sind dieselben drei Feldzeilen wie oben.
+# sind sechs, und von den zwölf erlaubten bleiben sechs übrig. Die eine
+# Öffnung teilen sich dieselben drei Feldzeilen wie oben.
 #
 # Erkannt wird auch hier am Namen, und der Preis ist derselbe wie beim
 # fusion-Projektwurzelprofil oben: ein leeres `flight-workbench` liefert
