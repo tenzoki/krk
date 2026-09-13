@@ -248,3 +248,21 @@ Zwei offene Datensätze binden diese Runde, ohne sie aufzuhalten:
 
 ---
 Berichtigt am 260906: die Beschreibung in C2.6 nennt jetzt die Vierzeichenfolge `'\''` statt der Verdopplung, und C3.7 verweist auf sie statt „mit verdoppeltem Anführungszeichen" zu sagen. Der Nachweis in C2.6 ist unverändert; er war von Anfang an richtig. Grundlage: `260816-2307_*_c2-6-beschreibt-das-verdoppeln-des-anfuehrungszeichens-die-shell-verliert-es-dabei.md`.
+
+---
+Zurückgestellt am 260913-1519: die Runde `260816-2255-befehle-absetzen-und-makros-speichern`,
+die diesen Spec über ihr Feld `**Active spec/plan:**` angenommen hat, ist am 260817-0451 der
+Löschabsicherung gewichen (`b8e198e`) und trägt seitdem `_d_`. Von den 54 Abnahmekriterien
+ist keines gebaut. Die Kopfzeile `**Status:** Entwurf` bleibt stehen und ist zutreffend.
+
+Der Marker geht auf `_d_` und nicht auf `_c_`: `_c_` an einem Anforderungsdokument behauptete
+Bauarbeit, und die hat es hier nicht gegeben. Die offene Frage
+`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` betrifft diese
+Datei damit nicht mehr, denn sie fragt, was `_c_` an einem Spec heißt. Die Reichweite der
+Zustandsregel hat der Nutzer am 260913-1519 nachgezogen; der Nachsatz in
+`260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`
+schreibt es aus.
+
+`_d_` ist ein Endzustand. Wer die Arbeit wieder aufnimmt, schreibt ein neues
+Anforderungsdokument, das dieses zitiert, statt zurückzubenennen. Der Spec liest den
+Baumstand `627b5f4` bei Version 0.5.0, der Baum steht auf 1.10.0.

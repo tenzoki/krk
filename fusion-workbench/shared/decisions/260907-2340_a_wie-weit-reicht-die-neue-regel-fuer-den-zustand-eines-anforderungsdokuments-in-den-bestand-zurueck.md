@@ -80,3 +80,27 @@ stille Unstimmigkeit zwischen Zusage und Baum.
 
 ---
 Answered: `260905-2008-orchestrator-session.md` `## Fortsetzung 260909-0938 — Reichweite der Zustandsregel` — Möglichkeit 3: die Regel gilt für alle 42 Anforderungsdokumente und Pläne, samt der Deckungszusage der Runde 6 und dem Plantext der Runde 20; der ursprüngliche Wortlaut bleibt je Datei als datierter Nachsatz erhalten, und die zwei Texte der zurückgestellten Runde bleiben auf `_o_`, weil ihnen keine Bauarbeit zugrunde liegt; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Nachgezogen am 260913-1519: der Nutzer hat die Reichweite für die **zwei Texte der
+zurückgestellten Runde** anders entschieden als die Antwortzeile darüber. Sie tragen seit
+heute `_d_` statt `_o_`:
+`260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` und
+`260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md`.
+
+**Die Antwortzeile oben bleibt unverändert stehen und wird nicht umgeschrieben**, denn sie
+hält fest, was am 260909-0938 entschieden wurde. Was sich geändert hat, ist nicht die
+Entscheidung, sondern ihr Gegenstand: die Frage dieses Datensatzes lautete, ob der Zustand
+eines Anforderungsdokuments der belegten Bauarbeit folgt, also `_o_` gegen `_c_`. Der
+Halbsatz „bleiben auf `_o_`, weil ihnen keine Bauarbeit zugrunde liegt" begründet, warum die
+zwei Dateien nicht auf **erledigt** gehen. Gegen `_d_` trägt er nicht: `_d_` behauptet keine
+Bauarbeit, sondern eine Zurückstellung, und die hat der Nutzer am 260817-0451 entschieden
+(`b8e198e`). Die Möglichkeit stand am 260909 nicht zur Wahl.
+
+**Was damit nicht entschieden ist.** Die übrigen Dateien dieses Bestands sind nicht berührt.
+Der offene Rest steht weiter in
+`260906-0212_*_sechzehn-plan-und-specdateien-geschlossener-runden-stehen-auf-offen-oder-in-arbeit.md`,
+und die zwölf Anforderungsdokumente hängen unverändert an
+`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`; zwei davon
+sind mit dem heutigen Zug aus jener Frage herausgefallen, weil sie nicht mehr nach `_c_`
+fragen.

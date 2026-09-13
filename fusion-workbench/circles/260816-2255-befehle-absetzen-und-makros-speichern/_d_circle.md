@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** deferred
 **Filed by:** orchestrator
-**Active spec/plan:** shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md
+**Active spec/plan:** 260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md
 **Active session history:** shared/history/260816-2113-orchestrator-session.md
 
 ---
@@ -76,8 +76,8 @@ einen gleichartigen Vorfall auf einem zweiten Gerät berichtet.
 Die Runde ist nicht gescheitert und ihre Directive ist erreichbar; sie ist nur nicht
 dran. Was sie hinterlässt, ist vollständig und zitierbar:
 
-- Spec mit 54 Abnahmekriterien: `shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md`
-- Plan mit 22 Schritten in fünf Bündeln: `planning/260816-2307_o_plan-befehle-absetzen-und-makros-speichern.md`
+- Spec mit 54 Abnahmekriterien: `260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md`
+- Plan mit 22 Schritten in fünf Bündeln: `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md`
 - Zwei Entscheidungen: die Shell des Laufs steht offen (`_o_`). Ob die Prozessgruppe am
   normalen Ende stirbt, hat der Nutzer am 260816 beantwortet (Möglichkeit 1, die Gruppe
   stirbt mit der Shell); der Abgleich vom 260817-1129 hat die Antwort eingetragen, und der
@@ -89,3 +89,12 @@ Wer die Runde wieder aufnimmt, legt einen neuen Circle an und zitiert diesen üb
 `## Dependencies`; ein zurückgestellter Circle wird nicht wiederbelebt.
 
 Sitzungsprotokoll: `shared/history/260816-2113-orchestrator-session.md`
+
+---
+Nachgetragen am 260913-1519: die drei Verweise dieses Datensatzes auf den Spec und den Plan
+standen in der Langform mit ausgeschriebenem Marker `_o_` und mit Speichersegment. Beide
+Dateien tragen seit heute `_d_`, und die Verweise stehen deshalb jetzt in der Sternform
+(`**Active spec/plan:**` im Kopf und die zwei Zeilen unter „Was sie hinterlässt"). Der Inhalt
+der Zeilen ist unverändert; geändert ist allein die Schreibweise der Zeiger, damit sie die
+Umbenennung überleben. Grund der Umbenennung: siehe den Nachsatz in
+`260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`.

@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-16
 **Status:** Entwurf
-**Spec:** `shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md`, abgenommen vom Nutzer am 260816-2250
+**Spec:** `260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md`, abgenommen vom Nutzer am 260816-2250
 **Circle:** `circles/260816-2255-befehle-absetzen-und-makros-speichern`
 **Baumstand:** `627b5f4`, Version 0.5.0, gelesen am 260816
 **Decidability:** Die tragende Frage dieses Plans ist nicht, was ein Befehl anfassen wird, sondern **wann ein Lauf zu Ende ist**. Aus dem Dateiende der Röhre ist sie nicht entscheidbar: ein abgehängter Enkelprozess hält sein Schreibende offen, und KRK kann das von einem langsamen Befehl nicht unterscheiden. Entschieden wird deshalb die andere Frage, ob die Shell geendet hat; `waitpid` beantwortet sie aus dem, was der Mechanismus ohnehin hält. Der Wechsel des Mechanismus besteht darin, dass der Lauf mit der Shell endet und dasselbe Signal an die Prozessgruppe, das der Abbruch schickt, danach die übrigen Schreibenden schließt — ein Mechanismus mit zwei Auslösern statt einer Näherung. Die Trennung, die der Spec nennt, hält daneben unverändert: was ein Befehl anfasst, sagt KRK nicht voraus, und wie ein Wert vollständig angeführt wird, beantwortet C2.6.
@@ -437,3 +437,26 @@ Prüfordner nimmt jede Probe aus der Fassung ihrer eigenen Kiste: `crates/krk-co
 - [ ] **Der Wortlaut von C2.6** ist zu berichtigen; der Nachweis bleibt: `circles/260816-2255-befehle-absetzen-und-makros-speichern/issues/260816-2307_o_c2-6-beschreibt-das-verdoppeln-des-anfuehrungszeichens-die-shell-verliert-es-dabei.md`.
 - [ ] **Wie viele Obermenüs trägt die Menüleiste?** Diese Runde baut das zehnte und folgt damit der Empfehlung von `shared/decisions/260813-0053_o_wie-viele-obermenues-traegt-die-menueleiste-fuer-81-funktionen.md`, ohne den Datensatz zu schließen. Wer ihn später anders beantwortet, ordnet auch dieses Obermenü neu ein.
 - [ ] **An welcher Stelle der Bedeutungen von `Esc` steht der Filtertext?** Unberührt. Ein Befehlslauf ist ein laufender Vorgang und fällt in den zweiten Rang; ein vierter entsteht nicht (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1830_o_…`).
+
+---
+Zurückgestellt am 260913-1519: die Runde `260816-2255-befehle-absetzen-und-makros-speichern`
+ist am 260817-0451 der Löschabsicherung gewichen (`b8e198e`) und trägt seitdem `_d_`. Keiner
+der 22 Schritte dieses Plans ist gefahren; die Kopfzeile `**Status:** Entwurf` bleibt deshalb
+stehen und ist zutreffend.
+
+**Warum erst heute.** Die Antwort auf
+`260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`
+hielt diese Datei ausdrücklich auf `_o_` fest, mit dem Grund, dass ihr keine Bauarbeit
+zugrunde liegt. Dieser Grund trägt gegen `_c_` und nicht gegen `_d_`: `_d_` behauptet keine
+Bauarbeit, sondern eine Zurückstellung, und die hat der Nutzer am 260817 entschieden. Der
+Nutzer hat die Reichweite am 260913-1519 entsprechend nachgezogen; der Nachsatz dort schreibt
+es aus.
+
+**Der Preis, benannt und nicht verschwiegen.** Dreizehn Stellen nennen diese Datei und den
+Spec mit ausgeschriebenem Marker. Sechs stehen unter `history/`, vier in `issues/` und
+`decisions/`; für diese Orte hält die Pfadregel in `CLAUDE.md` fest, dass sie ihren damaligen
+Marker behalten, ein alter Zeiger dort also die Regel und kein Schaden ist. Zwei weitere sind
+im selben Zug auf die Sternform gezogen, der Kopf dieser Datei und die drei Verweise im
+Rundendatensatz. `_d_` ist ein Endzustand: wer die Runde wieder aufnimmt, schreibt einen neuen
+Plan, der diesen zitiert, statt zurückzubenennen. Der Plan liest den Baumstand `627b5f4` bei
+Version 0.5.0, der Baum steht auf 1.10.0.

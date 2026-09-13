@@ -73,3 +73,22 @@ Die zwoelf Specs haengen unveraendert an
 → `260824-0640`, `260830-1251`, `260830-1317`, `260819-2216`, `260825-1725`. Der fuenfte ist
 der Spec der Runde 14 im gemeinsamen Speicher, den die Aufzaehlung unter der Tafel selbst
 nennt und den der Einleitungssatz nicht mitzaehlt. Nach dem Zug von heute sind es vier.
+
+---
+Stand 260913-1519: **zwei weitere sind gezogen, dreizehn bleiben stehen.** Der Plan und das
+Anforderungsdokument der zurückgestellten Runde tragen `_d_`:
+`260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` und
+`260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md`.
+
+**Der Absatz darüber, der den Plan als bewusst stehen gelassen führt, ist damit überholt.**
+Er stützte sich auf die Antwort in
+`260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`,
+die beide Dateien auf `_o_` festhielt. Deren Grund („keine Bauarbeit") trägt gegen `_c_` und
+nicht gegen `_d_`; der Nutzer hat das am 260913-1519 nachgezogen, und der Nachsatz in jenem
+Datensatz schreibt es aus. Für die verbliebenen zwei Pläne innerhalb geschlossener Runden
+(`260824-0640_*` und `260830-1317_*`, beide `_p_`) ändert das nichts: bei ihnen geht es um
+gefahrene Bauarbeit und damit um `_c_`, nicht um eine Zurückstellung.
+
+Die Zahl der Anforderungsdokumente, die an
+`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` hängen, fällt
+damit von zwölf auf elf.

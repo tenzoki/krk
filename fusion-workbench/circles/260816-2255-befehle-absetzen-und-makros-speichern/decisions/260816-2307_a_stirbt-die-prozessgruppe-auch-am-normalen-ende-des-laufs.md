@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** answered
 **Filed by:** planner
-**Cross-references:** `shared/planning/260816-2240_o_spec-befehle-absetzen-und-makros-speichern.md` (C1.9, C1.10, C1.15 und `## Was der Befehlslauf nicht kann`); `circles/260816-2255-befehle-absetzen-und-makros-speichern/planning/260816-2307_o_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und die Zeile `**Decidability:**` im Plankopf
+**Cross-references:** `260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` (C1.9, C1.10, C1.15 und `## Was der Befehlslauf nicht kann`); `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und die Zeile `**Decidability:**` im Plankopf
 
 ---
 
