@@ -1,7 +1,8 @@
 # KRKs fusion-Leseprofile auf fusion 11 nachziehen
 
 ---
-**Status:** open
+**Status:** claimed
+**Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260912-2043
 **Filed by:** user, Kai Stalmann <kai@stalmann.org>
 ---
 
@@ -62,3 +63,33 @@ regelkonformen Werkbank eine Zeile, die wie ein Puls aussieht und keiner ist.
 Die Speicherpfade, die Marker der Defekte und der Entscheidungen, das Ablageprofil, `setup_at` und
 `plugin_version` sind unverändert richtig. Das `stilwerk`-Verzeichnis bekommt bewusst keine Zeile,
 aus demselben Grund wie beim flight-Profil.
+
+---
+
+## Stand 260913-0900 — die Profile sind nachgezogen, die Arbeit ist es nicht
+
+**Gelandet in `4815f0a`:** alle sechs Schritte der Liste oben, bis auf den als freiwillig
+ausgewiesenen sechsten. Die Ortsangabe des Rundenprofils hängt am Pfad und trifft beide
+Formen; der Zustand steht als eine Feldzeile statt vier Ja/Nein-Zeilen; die sechs
+Zustandszeilen in „alle Runden" sind ohne Ersatz gefallen; „Aktive Runde" und „Sitzung" sind
+in beiden Wurzelprofilen weg; `backlog` ist gegen `checkouts` getauscht. Die Nutzerfrage zu
+Verläufen und Untersuchungen ist am 260912 entschieden: Zählzeilen bleiben, Datumszeilen
+gehen. Die Proben sind mitgezogen (`260912-2154_*`, geschlossen).
+
+**Nicht gebaut, mit Begründung:** die Zeile für das `checks`-Objekt in `.fusion-setup`. Ein
+Feldbaustein fängt genau eine Fanggruppe, also ein Datum, und welches der zehn es ist,
+entscheidet die Reihenfolge im JSON und nicht der Kalender. Eine Zeile „Prüfungen, zuletzt",
+die das erste statt das jüngste zeigt, ist die irreführende Sorte, die diese Datei anderswo
+schon abgelehnt hat.
+
+**Offen, und deshalb bleibt dieses Arbeitspaket beansprucht:** die Auslieferungsfassung bricht
+das Abnahmekriterium C6.7 der Runde 16 um genau eine Dateiöffnung, zwölf statt elf, weil
+„Zustand" und „Directive" dieselbe Datei nennen und sie zweimal öffnen. Der Nutzer hat am
+260913 entschieden, die Ursache zu beheben statt die Zahl:
+`260913-0851_*_merkt-sich-der-feldbaustein-seine-dateioeffnungen-wie-der-leselauf-seine-lesungen.md`.
+Bis dahin geht keine Auslieferung hinaus.
+
+**Daneben offen, aus dieser Arbeit gefunden:**
+`260912-2158_*_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md`
+— zwei Datensätze der Werkbank widersprechen sich selbst, und KRKs Vorschau zeigt dort jetzt
+den falschen Zustand.
