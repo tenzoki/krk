@@ -63,3 +63,6 @@ Datei.
 
 ---
 Answered: `260913-0851_*_merkt-sich-der-feldbaustein-seine-dateioeffnungen-wie-der-leselauf-seine-lesungen.md` `## Options` — Möglichkeit 1: der Feldbaustein merkt sich seine Öffnungen je Zusammenfassung, wie der Leselauf seit der Runde 18 seine Lesungen. Die Ursache wird behoben und nicht die Zahl, C6.7 bleibt unberührt. Die Auslieferung wartet darauf; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Implemented: 40af340 — gebucht und gelesen wird an einer Stelle, `Lauf::angelesen`, durch die auch die Titelform der jüngsten N geht; gemerkt sind die Bytes je aufgelöstem Pfad und nicht der herausgezogene Wert, so dass jede Zeile ihr eigenes `feldmuster` darauf anwendet. Der Vorbehalt dieses Datensatzes ist geprüft und trägt: jeder Leser geht durch `angelesener_text` mit `HOECHSTENS_BYTES` als Konstante, kein Baustein reicht eine eigene Länge hinein, also hängt die gelesene Bytefolge allein an der Datei. Der Schlüssel musste deshalb nicht Datei und Bereich treffen. Das Rundenprofil misst wieder `(4, 11)` und C6.7 hält ohne Änderung am Kriterium; die vier Wurzelprofile fallen von drei Öffnungen auf eine mit. C6.9 ist unberührt, gemerkt wird Text und kein Deskriptor. `make check` mit Exit 0, ohne Pipe gemessen.

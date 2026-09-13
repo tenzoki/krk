@@ -1,7 +1,7 @@
 # KRKs fusion-Leseprofile auf fusion 11 nachziehen
 
 ---
-**Status:** claimed
+**Status:** done
 **Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260912-2043
 **Filed by:** user, Kai Stalmann <kai@stalmann.org>
 ---
@@ -93,3 +93,31 @@ Bis dahin geht keine Auslieferung hinaus.
 `260912-2158_*_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md`
 — zwei Datensätze der Werkbank widersprechen sich selbst, und KRKs Vorschau zeigt dort jetzt
 den falschen Zustand.
+
+---
+
+## Abschluss 260913-1130
+
+**Erledigt.** Die mitgelieferten Profile beschreiben die Werkbank der Fassung 11, und C6.7 der
+Runde 16 hält wieder.
+
+**Spanne:** `4815f0a` (Profile und Proben), `40af340` (die Behebung der Ursache und die
+Kommentare). Dazwischen `c66f8e2` mit dem Zwischenstand.
+
+**Der Weg war nicht der geplante, und das ist die Aufzeichnung wert.** Die sechs Schritte der
+Liste oben sind gefahren, aber der vierte hat einen Bruch erzeugt, den niemand vorhergesehen
+hatte: „Zustand" und „Directive" nennen dieselbe Datei, und der Feldbaustein öffnete sie
+zweimal. Damit stieg das Rundenprofil auf zwölf Öffnungen gegen die elf, die C6.7 zusagt. Der
+Nutzer hat am 260913 entschieden, die Ursache zu beheben statt die Zahl zu verschieben
+(`260913-0851_*_merkt-sich-der-feldbaustein-seine-dateioeffnungen-wie-der-leselauf-seine-lesungen.md`,
+umgesetzt in `40af340`). Der Zug war der, den die Runde 18 für den Leselauf schon gefahren
+hatte, nur eine Ebene tiefer — und er bringt vier weitere Profile von drei Öffnungen auf eine.
+
+**Nicht gebaut, mit Begründung:** die Zeile für das `checks`-Objekt in `.fusion-setup`. Ein
+Feldbaustein fängt eine Fanggruppe, also ein Datum, und welches der zehn es ist, entscheidet
+die Reihenfolge im JSON und nicht der Kalender.
+
+**Offen geblieben:**
+`260912-2158_*_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md`
+— zwei Datensätze dieser Werkbank widersprechen sich selbst, und die Vorschau zeigt dort
+seitdem den falschen Zustand. Gefunden aus dieser Arbeit, nicht von ihr verursacht.
