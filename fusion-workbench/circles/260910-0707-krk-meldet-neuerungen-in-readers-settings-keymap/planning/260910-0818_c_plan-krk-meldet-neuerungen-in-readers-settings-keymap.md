@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-10
 **Status:** Complete — alle zehn Schritte stehen auf `[DONE]` und sind am 260913-1519 einzeln gegen den Baum gelesen (`ablage/neuerungen.rs` und `ablage/merker.rs` stehen da, `Kommando::NeuerungenZeigen` steht mit seiner Kennung `neuerungen_zeigen` in `Kommando::KENNUNGEN` und in `resources/default-keymap.toml`, das Blatt liegt unter `appkit/blaetter/neuerungen.rs`); `make check` endete am selben Tag mit 0 über `cf39759`, alle fünf Kommandos. Der Schlussabgleich der Runde hatte denselben Lauf am Stand `d9535c4` grün.
-**Abnahme:** gefahren. Der Nutzer hat die Runde am 260911 abgenommen; die Arbeit steht seit `968ace0` im Baum und ist mit `v1.9.0` ausgeliefert. Alle acht Endbedingungen unter „Where this Circle stops“ halten: fünf sind am Bestand nachgelesen, zwei sind Nutzerarbeit am gebauten Bündel und durch die Abnahme gedeckt, die achte ist der Verzicht auf einen Abnahmelauf gegen L4, dessen zwei Hälften beide stehen. **Nicht gedeckt:** sechs Defekte aus der Durchsicht `260911-1838-reviewer-runde-24-neuerungsmeldung-und-startmeldungen.md` stehen offen, darunter ein schwerer, der seit `v1.9.0` beim Nutzer steht (`ablage/neuerungen.rs:348-374` entscheidet „beschädigt“ an der TOML-Gültigkeit statt daran, ob die Datei ihrem Leser genügt). Der Commit `e934043` liegt hinter der Spanne jeder Durchsicht.
+**Abnahme:** gefahren. Der Nutzer hat die Runde am 260911 abgenommen; die Arbeit steht seit `968ace0` im Baum und ist mit `v1.9.0` ausgeliefert. Alle acht Endbedingungen unter „Where this Circle stops“ halten: fünf sind am Bestand nachgelesen, zwei sind Nutzerarbeit am gebauten Bündel und durch die Abnahme gedeckt, die achte ist der Verzicht auf einen Abnahmelauf gegen L4, dessen zwei Hälften beide stehen. **Die sechs Defekte der Durchsicht `260911-1838-reviewer-runde-24-neuerungsmeldung-und-startmeldungen.md` sind alle behoben**, und alle sechs Behebungen stecken im Tag `v1.10.0`; nachgezählt am 260913-1541 mit `git tag --contains` über die `Resolved:`-Zeilen der sechs Datensätze (`78e381e`, `ad43d87`, `ff48cde`, `2183df9`). Der schwere darunter, `neuerungen.rs` entschied „beschädigt“ an der TOML-Gültigkeit statt am Leser der Datei, ist mit `ad43d87` behoben: `erheben` nimmt `Leserurteile` entgegen, und der Ladeweg steht hinter dem Urteil. **Nicht gedeckt:** der Commit `e934043` liegt hinter der Spanne jeder Durchsicht.
 **Spec:** keiner — geplant gegen die Directive und den Grundlagen-Abschnitt des Circle-Datensatzes `260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap`
 **Decidability:** Die tragende Frage lautet „führt die Auslieferungsfassung einen Eintrag, den die Nutzerdatei nicht führt, und hat KRK das für diese Fassung schon gemeldet?". Beide Hälften sind aus Eingaben entscheidbar, die der Mechanismus hat: die Auslieferungsfassung steht über `include_str!` einkompiliert da, die Nutzerdatei liegt auf der Platte, und die eigene Versionsnummer kommt aus `env!("CARGO_PKG_VERSION")`. Für die zweite Hälfte braucht es einen abgelegten Wert; ohne ihn ist sie aus nichts zu erschließen, und der Datensatz `260910-0818_*_wo-merkt-sich-krk-fuer-welche-fassung-es-die-neuerungen-schon-gemeldet-hat.md` legt die zwei Orte vor. **Eine dritte Frage ist mit denselben Eingaben nicht entscheidbar und wird deshalb nicht gestellt:** ob eine **fehlende** Nutzerdatei „zurückliegt". Eine `keymap.toml` gibt es auf einer frischen Installation gar nicht, und wer sie als leere Datei liest, meldet dem Nutzer alle 93 Funktionen als Neuerung. Der Plan ändert dafür nicht die Näherung, sondern die Frage: verglichen wird nur, was dasteht, und eine Datei, die nicht dasteht, liefert keine Neuerung.
 
@@ -700,3 +700,15 @@ dabei die Zeile `**Abnahme:**` und diesen Nachsatz vergessen; der zweite trägt 
 
 **Der Preis.** Kein lebender Text nennt diese Datei mit ausgeschriebenem Marker; nachgesehen
 am 260913-1519 über den ganzen Baum. Die Umbenennung tötet deshalb keinen Zeiger.
+
+**Berichtigt am 260913-1541.** Die Zeile `**Abnahme:**` sagte bis eben, sechs Defekte aus der
+Durchsicht stünden offen und der schwere stehe seit `v1.9.0` beim Nutzer. Das war falsch. Der
+Satz war aus dem Abschnitt `## Abschluss 260911` des Rundendatensatzes übernommen, ohne die
+Marker der sechs Dateien nachzusehen; dort stimmte er am 260911 und ist seit `ad43d87`
+überholt. Alle sechs tragen `_c_`, und `git tag --contains` über ihre vier Behebungscommits
+nennt für jeden `v1.10.0`.
+
+**Der Satz im Rundendatensatz bleibt unverändert stehen.** Er ist Aufzeichnung eines Standes
+und wird nach der Ortsregel in `CLAUDE.md` nicht nachgeführt. Berichtigt ist allein diese
+Datei, weil ihre Kopfzeile eine Aussage über den heutigen Stand macht und keine über den
+damaligen.
