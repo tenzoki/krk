@@ -1,7 +1,8 @@
 # Implementation Plan: KRK meldet, was eine neue Fassung an readers.toml, settings.toml und keymap.toml mitbringt
 
 **Date:** 2026-09-10
-**Status:** Complete
+**Status:** Complete — alle zehn Schritte stehen auf `[DONE]` und sind am 260913-1519 einzeln gegen den Baum gelesen (`ablage/neuerungen.rs` und `ablage/merker.rs` stehen da, `Kommando::NeuerungenZeigen` steht mit seiner Kennung `neuerungen_zeigen` in `Kommando::KENNUNGEN` und in `resources/default-keymap.toml`, das Blatt liegt unter `appkit/blaetter/neuerungen.rs`); `make check` endete am selben Tag mit 0 über `cf39759`, alle fünf Kommandos. Der Schlussabgleich der Runde hatte denselben Lauf am Stand `d9535c4` grün.
+**Abnahme:** gefahren. Der Nutzer hat die Runde am 260911 abgenommen; die Arbeit steht seit `968ace0` im Baum und ist mit `v1.9.0` ausgeliefert. Alle acht Endbedingungen unter „Where this Circle stops“ halten: fünf sind am Bestand nachgelesen, zwei sind Nutzerarbeit am gebauten Bündel und durch die Abnahme gedeckt, die achte ist der Verzicht auf einen Abnahmelauf gegen L4, dessen zwei Hälften beide stehen. **Nicht gedeckt:** sechs Defekte aus der Durchsicht `260911-1838-reviewer-runde-24-neuerungsmeldung-und-startmeldungen.md` stehen offen, darunter ein schwerer, der seit `v1.9.0` beim Nutzer steht (`ablage/neuerungen.rs:348-374` entscheidet „beschädigt“ an der TOML-Gültigkeit statt daran, ob die Datei ihrem Leser genügt). Der Commit `e934043` liegt hinter der Spanne jeder Durchsicht.
 **Spec:** keiner — geplant gegen die Directive und den Grundlagen-Abschnitt des Circle-Datensatzes `260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap`
 **Decidability:** Die tragende Frage lautet „führt die Auslieferungsfassung einen Eintrag, den die Nutzerdatei nicht führt, und hat KRK das für diese Fassung schon gemeldet?". Beide Hälften sind aus Eingaben entscheidbar, die der Mechanismus hat: die Auslieferungsfassung steht über `include_str!` einkompiliert da, die Nutzerdatei liegt auf der Platte, und die eigene Versionsnummer kommt aus `env!("CARGO_PKG_VERSION")`. Für die zweite Hälfte braucht es einen abgelegten Wert; ohne ihn ist sie aus nichts zu erschließen, und der Datensatz `260910-0818_*_wo-merkt-sich-krk-fuer-welche-fassung-es-die-neuerungen-schon-gemeldet-hat.md` legt die zwei Orte vor. **Eine dritte Frage ist mit denselben Eingaben nicht entscheidbar und wird deshalb nicht gestellt:** ob eine **fehlende** Nutzerdatei „zurückliegt". Eine `keymap.toml` gibt es auf einer frischen Installation gar nicht, und wer sie als leere Datei liest, meldet dem Nutzer alle 93 Funktionen als Neuerung. Der Plan ändert dafür nicht die Näherung, sondern die Frage: verglichen wird nur, was dasteht, und eine Datei, die nicht dasteht, liefert keine Neuerung.
 
@@ -678,3 +679,24 @@ Nicht geprüft wird am laufenden Bündel; das ist der Abnahmelauf und Nutzerarbe
       nennt nur die mit einem Unterschied: die Zeile ist einzeilig und kürzt rechts, und drei
       Nullen darin verdrängen die Auskunft, um die es geht. Je Datei eine Zahl bleibt damit
       erfüllt. Bindet nur diesen Plan.
+
+---
+Nachgezogen am 260913-1519. Diese Datei trug bis heute den Marker `_o_` und die Kopfzeile
+`**Status:** Entwurf`, obwohl alle zehn Planschritte auf `[DONE]` standen und die Runde am
+260911 abgenommen war. Der ursprüngliche Wortlaut der Kopfzeile lautete:
+
+> **Status:** Draft
+
+Der Marker steht jetzt auf `_c_`, und die Kopfzeile `**Status:**` nennt ihre Belege. Die
+Trennung in zwei Kopfzeilen folgt der Festlegung des Nutzers vom 260907-0823: der Zustand
+eines Anforderungsdokuments folgt der belegten Bauarbeit, und die Abnahme bekommt eine eigene
+Zeile, weil ein Zustand mit vier Werten nicht zwei unabhängige Fragen beantworten kann, ohne
+bei jeder Wahl eine falsche Auskunft zu geben. Die Reichweite in den vorhandenen Bestand
+steht in
+`260907-2340_*_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md`.
+
+**Zwei Züge, nicht einer.** Der erste (`cf39759`) hat Marker und Zustandswort gesetzt und
+dabei die Zeile `**Abnahme:**` und diesen Nachsatz vergessen; der zweite trägt beides nach.
+
+**Der Preis.** Kein lebender Text nennt diese Datei mit ausgeschriebenem Marker; nachgesehen
+am 260913-1519 über den ganzen Baum. Die Umbenennung tötet deshalb keinen Zeiger.
