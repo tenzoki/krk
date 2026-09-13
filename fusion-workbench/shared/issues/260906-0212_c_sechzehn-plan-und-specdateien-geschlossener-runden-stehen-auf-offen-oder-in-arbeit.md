@@ -92,3 +92,38 @@ gefahrene Bauarbeit und damit um `_c_`, nicht um eine Zurückstellung.
 Die Zahl der Anforderungsdokumente, die an
 `260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` hängen, fällt
 damit von zwölf auf elf.
+
+---
+**Berichtigung am 260913-1547 zum Absatz darüber.** Der Satz „zwei weitere sind gezogen,
+dreizehn bleiben stehen" ist falsch. Er ist aus dem Stand vom 260908-1539 fortgerechnet
+worden, statt den Dateibestand zu lesen. Zwischen jener Notiz und heute hat `68b76de`
+(260909, „vierzehn Plandokumente tragen den Zustand ihrer Bauarbeit") vierzehn Dateien
+gezogen, und niemand hat es hier eingetragen. Nach den zwei Zügen von heute steht keine
+einzige mehr offen.
+
+**Erhoben am 260913-1547** über alle `planning/`-Verzeichnisse außerhalb von `archive/`:
+41 Dateien tragen `_c_`, zwei tragen `_d_`, keine trägt `_o_` oder `_p_`.
+
+---
+Resolved: alle sechzehn Dateien der Tafel tragen den Marker, den
+`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md` festlegt, und
+keine Plan- oder Specdatei des Bestands steht mehr auf `_o_` oder `_p_`. Sie sind in drei
+Zügen gezogen worden, je namentlich belegt durch `git log --diff-filter=R`:
+
+- `85bcbad` (260908): `260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md`.
+- `68b76de` (260909): vierzehn, nämlich `260807-2147_*`, `260811-0753_*`, `260811-1130_*`,
+  `260811-1552_*`, `260813-2348_*`, `260814-1830_*`, `260824-0613_*`, `260824-0640_*`,
+  `260830-1251_*`, `260830-1317_*`, `260813-0053_*`, `260816-1310_*`, `260819-2216_*` und
+  `260821-1115_*`.
+- `ba11852` (260913): `260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` auf `_d_`
+  statt `_c_`, weil ihr keine Bauarbeit zugrunde liegt; im selben Zug der Plan derselben
+  Runde, `260816-2307_*`, den die Notiz vom 260908 zusätzlich zur Tafel genannt hat.
+
+Die Abnahmebedingung dieses Datensatzes verlangt daneben, dass die Pläne `**Status:**`
+tragen oder ihren offenen Rest im Kopf nennen. Erhoben am selben Tag: alle 41 geschlossenen
+Dateien tragen eine `**Status:**`-Kopfzeile, sechzehn davon daneben die eigene Zeile
+`**Abnahme:**`, die die Festlegung vom 260907-0823 verlangt. Die übrigen sind vor jener
+Festlegung geschlossen worden und werden nach der Ortsregel nicht nachgeführt.
+
+Die Zahl „vier auf `_p_`" aus dem Einleitungssatz und ihre eigene Berichtigung auf fünf sind
+damit beide gegenstandslos: es steht keine mehr auf `_p_`.
