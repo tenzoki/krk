@@ -274,7 +274,7 @@
 # Ordners, und dieser Lauf ist einer der zwölf; nennt eine Zeile denselben
 # Ordner, teilt sie sich die Lesung mit ihm. Ein `pfad` erkennt ohne Lesung
 # und kostet nichts. Das Wurzelprofil einer fusion-Werkbank unten kostet
-# deshalb vier Läufe, das Projektwurzelprofil mit denselben acht Zeilen
+# deshalb vier Läufe, das Projektwurzelprofil mit denselben sechs Zeilen
 # fünf: dort trägt jede Zeile eine Ortsangabe, und den erkannten Ordner liest
 # allein die Erkennung.
 #
@@ -327,20 +327,15 @@
 # eine davon. Bei einer flight-Werkbank ganz unten liefert dieselbe Zeile
 # weiter einen Wert.
 #
-# Die Zeile „Sitzung" hängt an einer Zeilenform von `orchestrator-live.md`, die
-# fusion ändern kann. Ändert fusion sie, zeigt diese eine Zeile ihren
-# Platzhalter, und die sechs übrigen stimmen weiter.
-#
-# Ihr Muster nimmt die erste Zeile unter `## Current`, die etwas trägt. Es
-# überspringt dabei Leerzeilen, hält aber vor der nächsten Überschrift an: ist
-# der Abschnitt leer, steht der Platzhalter da und nicht der Name des nächsten
-# Abschnitts. Eine Zeile, die selbst mit `#` beginnt, gilt dabei als
-# Überschrift und wird nicht gelesen. Ein fehlendes Zeilenende am Dateiende
-# kostet den Wert nicht. Das `(?m)^` am Anfang verankert die Überschrift am
-# Zeilenanfang, wie der Absatz „Zur Verankerung" oben es verlangt: ohne das
-# fingen auch eine Unterüberschrift `### Current` und eine Erwähnung von
-# `## Current` mitten im Fließtext, und die Zeile zeigte deren Inhalt statt
-# des Platzhalters.
+# ZWEI ZEILEN SIND HIER GEFALLEN, und wer eine ältere `readers.toml` in seiner
+# Ablage hat, findet sie dort noch: „Aktive Runde" las den Zeiger
+# `.active-circle`, „Sitzung" las einen Abschnitt aus `orchestrator-live.md`.
+# fusion führt seit Fassung 11 keine der beiden Dateien mehr — den Zeiger
+# löscht das Umstellen der Werkbank, die Sitzungsdatei schreibt niemand mehr —,
+# und mit den vier Bausteinen gibt es für keine der zwei einen Nachfolger: was
+# gerade läuft, steht in keiner Datei, die eine Zusammenfassung lesen könnte.
+# Eine Zeile, die von nun an immer ihren Platzhalter zeigte, ist keine
+# Auskunft, sondern eine Zeile weniger Platz für die sechs übrigen.
 #
 # Die Zeile „Nachrichten" ist die verdichtete Form des Forum-Profils weiter
 # unten: EINE Zahl und kein Titel. Sie steht hier und nicht im Profil des
@@ -353,7 +348,7 @@
 # vorletzten, während hier von zwölf Läufen acht frei sind.
 #
 # EINE ZAHL UND KEIN TITEL, weil `zaehlung` keine Datei öffnet und weil die
-# sechs Werte daneben kurz sind — eine Fassung, ein Datum, ein Name, zwei
+# fünf Werte daneben kurz sind — eine Fassung, ein Datum, ein Name, zwei
 # Zahlen. Eine Nachrichtenüberschrift ist ein ganzer Satz und verdrängte den
 # Rest des Blocks. Wovon die Nachrichten handeln, sagt das Forum-Profil, und
 # dorthin schickt diese Zahl.
@@ -363,7 +358,7 @@
 # und darin nichts steht. Eine Werkbank ohne Forum zahlt für die Zeile keinen
 # Leselauf; der Absatz „Ein Ort, den es nicht gibt" oben schreibt es aus.
 #
-# DIESE ACHT ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
+# DIESE SECHS ZEILEN STEHEN EIN ZWEITES MAL IN DIESER DATEI, nämlich im Profil
 # „Projektwurzel mit fusion-Werkbank" ganz unten, dort jede mit
 # `fusion-workbench/` vor der Ortsangabe. Wer hier eine Zeile ändert, ändert sie
 # dort mit; nichts hält die beiden Blöcke aneinander. Der Preis ist bewusst
@@ -387,14 +382,6 @@ kennzeichen = '^\.fusion-setup$'
   feld = { datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
 
   [[profil.zeile]]
-  beschriftung = "Aktive Runde"
-  feld = { datei = '^\.active-circle$', feldmuster = '^([^\n]+)' }
-
-  [[profil.zeile]]
-  beschriftung = "Sitzung"
-  feld = { datei = '^orchestrator-live\.md$', feldmuster = '(?m)^## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
-
-  [[profil.zeile]]
   beschriftung = "Runden"
   zaehlung = { ordner = "circles" }
 
@@ -409,10 +396,14 @@ kennzeichen = '^\.fusion-setup$'
 # Ein Speicher, gemeinsam oder in einer Runde.
 #
 # Ein Profil für die neun Speichernamen unter `shared/` und die fünf, die
-# daneben in jeder Runde stehen. Vier der neun — `backlog`, `consult`,
+# daneben in jeder Runde stehen. Vier der neun — `checkouts`, `consult`,
 # `investigations` und `memos` — gibt es nach den Konventionen der Werkbank
 # allein unter `shared/`; sie stehen in der Aufzählung, weil das Muster für
-# beide Orte dasselbe ist. Wie viele Ordner das trifft, sagt der Bestand und
+# beide Orte dasselbe ist. `checkouts` steht dort seit fusion 11 an der Stelle
+# von `backlog`: ein Vorhaben ist kein Datensatz in einem Speicher mehr,
+# sondern ein eigenes Verzeichnis unter `circles`, und der alte Speicher ist
+# weggefallen. Ein Eintrag heißt dort `6c11b1f2.md` und trägt als Titel
+# `Checkout 6c11b1f2`; die zehn Titel sind damit die Liste der Arbeitskopien. Wie viele Ordner das trifft, sagt der Bestand und
 # nicht diese Zeile: die Zahl wächst mit jeder Runde. Der Defektspeicher steht
 # darunter als eigenes Profil, weil er nach Markern aufschlüsselt.
 #
@@ -423,7 +414,7 @@ kennzeichen = '^\.fusion-setup$'
 # Defektspeichers darunter.
 [[profil]]
 name = "fusion-Werkbank: ein Speicher"
-pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|backlog|consult|decisions|history|investigations|memos|planning|reviews)$'
+pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|checkouts|consult|decisions|history|investigations|memos|planning|reviews)$'
 
   [[profil.zeile]]
   beschriftung = "Datensätze"
@@ -524,23 +515,27 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/forum$'
 
 # Das Verzeichnis aller Runden.
 #
-# Der Zustand einer Runde steht im DATEINAMEN ihres Circle-Datensatzes, also
-# eine Ebene tiefer: `<runde>/_X_circle.md`. Deshalb tragen die sechs
-# Zustandszeilen `ordner = "*"` und zählen über jede Runde hinweg. Alle sechs
-# nennen denselben Ort und teilen sich damit EINEN Leselauf; die Defektzeile
-# nennt `*/issues` und kostet einen zweiten. Zusammen mit der Lesung des
-# Verzeichnisses selbst sind es drei, gleich wie viele Runden darin stehen.
+# ZWEI ZEILEN, UND DIE SECHS ZUSTANDSZEILEN SIND GEFALLEN. Bis fusion 10 stand
+# der Zustand einer Runde als Marker im DATEINAMEN ihres Datensatzes, eine
+# Ebene tiefer (`<runde>/_X_circle.md`), und sechs Zählzeilen mit
+# `ordner = "*"` schlüsselten ihn über alle Runden hinweg auf. Seit Fassung 11
+# heißt der Datensatz wie sein Verzeichnis, trägt keinen Marker mehr und führt
+# den Zustand als Kopfzeile `**Status:**` in seinem Inneren.
 #
-# SECHS ZEILEN UND NICHT VIER: das Vokabular der Werkbank hat sechs Marker
-# (`_a_` vorgesehen, `_t_` aktiv, `_c_` kohärent geschlossen, `_b_` beschränkt
-# geschlossen, `_s_` überholt, `_d_` zurückgestellt), und dieses Projekt
-# unterscheidet einen beschränkten von einem kohärenten Abschluss ausdrücklich.
-# Die sechs sind überschneidungsfrei und vollständig; ihre Summe geht gegen die
-# Zeile „Runden" auf, und ein siebter Marker würde als Differenz sichtbar. Das
-# Profil einer EINZELNEN Runde weiter unten fasst dieselben sechs Marker zu vier
-# Zeilen zusammen, und das ist kein Widerspruch: dort sagt genau eine Zeile „ja"
-# und die Frage ist, in welchem Zustand diese eine Runde steht, hier ist die
-# Frage, wie viele in jedem Zustand stehen.
+# MIT DEN VIER BAUSTEINEN IST DIE AUFSCHLÜSSELUNG DAMIT NICHT MEHR ZU HABEN,
+# und das ist keine Lücke dieser Datei, sondern die Grenze des Platzhalters:
+# `zaehlung` nimmt ihn an, sieht aber allein Namen, und `feld` liest die
+# Kopfzeile, nimmt ihn aber nicht an — der Absatz „Der Platzhalter in der
+# Ortsangabe" oben schreibt beides aus. Eine Zeile, die weiter Dateinamen
+# zählte, stünde an einer umgestellten Werkbank auf null, und null ist hier
+# keine Auskunft, sondern eine falsche.
+#
+# WER DEN ZUSTAND EINER EINZELNEN RUNDE BRAUCHT, wählt deren Verzeichnis aus:
+# das Profil „fusion-Werkbank: eine Runde" weiter unten liest die Kopfzeile.
+#
+# ZWEI LESELÄUFE, gleich wie viele Runden darin stehen. Die Zeile „Runden"
+# nennt das Verzeichnis selbst, die Defektzeile nennt `*/issues` und kostet den
+# zweiten; die Erkennung über `pfad` kostet nichts dazu.
 [[profil]]
 name = "fusion-Werkbank: alle Runden"
 pfad = 'fusion-workbench/circles$'
@@ -548,30 +543,6 @@ pfad = 'fusion-workbench/circles$'
   [[profil.zeile]]
   beschriftung = "Runden"
   zaehlung = { }
-
-  [[profil.zeile]]
-  beschriftung = "Vorgesehen"
-  zaehlung = { ordner = "*", muster = '^_a_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Aktiv"
-  zaehlung = { ordner = "*", muster = '^_t_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Kohärent geschlossen"
-  zaehlung = { ordner = "*", muster = '^_c_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Beschränkt geschlossen"
-  zaehlung = { ordner = "*", muster = '^_b_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Überholt"
-  zaehlung = { ordner = "*", muster = '^_s_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Zurückgestellt"
-  zaehlung = { ordner = "*", muster = '^_d_circle\.md$' }
 
   [[profil.zeile]]
   beschriftung = "Offene Defekte, alle Runden"
@@ -628,12 +599,30 @@ pfad = 'fusion-workbench/archive$'
 
 # Der gemeinsame Speicher.
 #
-# Er führt zehn Unterspeicher, und jeder bekommt zwei Zeilen: wie viele
-# Datensätze darin stehen und wann zuletzt einer geschrieben wurde. Zwanzig
-# Zeilen, aber nur ZEHN Leseläufe, denn die zwei Zeilen eines Unterspeichers
-# nennen denselben Ort und teilen sich seine Lesung. Die Erkennung über `pfad`
-# kostet keinen Lauf dazu. Von den zwölf erlaubten Läufen bleiben damit zwei
-# übrig; wer einen elften Unterspeicher aufnimmt, rechnet nach, was er kostet.
+# Er führt zehn Unterspeicher. Acht bekommen zwei Zeilen: wie viele Datensätze
+# darin stehen und wann zuletzt einer geschrieben wurde. Zwei bekommen allein
+# die Zählzeile, und der übernächste Absatz sagt, warum. Achtzehn Zeilen, aber
+# nur ZEHN Leseläufe, denn die Zeilen eines Unterspeichers nennen denselben Ort
+# und teilen sich seine Lesung. Die Erkennung über `pfad` kostet keinen Lauf
+# dazu. Von den zwölf erlaubten Läufen bleiben damit zwei übrig; wer einen
+# elften Unterspeicher aufnimmt, rechnet nach, was er kostet.
+#
+# `checkouts` STEHT AN DER STELLE VON `backlog`, und das ist ein Tausch und
+# keine Erweiterung: der Ideenspeicher ist mit fusion 11 weggefallen, weil ein
+# Vorhaben seitdem ein eigenes Verzeichnis unter `circles` ist, und
+# `checkouts` ist neu und führt eine Datei je Arbeitskopie, die auf dieser
+# Werkbank arbeitet. Seine Datumszeile ist nicht eingefroren: sie zeigt, wann
+# sich eine Arbeitskopie zuletzt eingetragen oder aufgefrischt hat.
+#
+# `history` UND `investigations` TRAGEN KEINE DATUMSZEILE MEHR. fusion schreibt
+# seit Fassung 11 in keinen der beiden hinein — der Verlauf einer Sitzung steht
+# im Commit und in den Datensätzen, die sie hinterlässt, und eine Untersuchung
+# ist eine Analyse geworden. Der vorhandene Bestand bleibt stehen und bleibt
+# zitierbar, deshalb bleibt die Zählzeile. Das Datum dagegen fror mit dem
+# letzten Eintrag ein, und eine Zeile „zuletzt" mit einem Datum von vor einem
+# Jahr liest sich wie ein stillgelegtes Projekt, während in Wahrheit nur diese
+# eine Sorte Datensatz nicht mehr entsteht. Eine Zahl altert nicht auf diese
+# Weise, ein Datum schon.
 #
 # Die Datumszeilen öffnen keine Datei: `zeigt = "datum"` liest das
 # Änderungsdatum aus dem Verzeichniseintrag, den der Leselauf ohnehin liefert.
@@ -651,12 +640,12 @@ pfad = 'fusion-workbench/shared$'
   juengste = { ordner = "analyses", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
-  beschriftung = "Ideen"
-  zaehlung = { ordner = "backlog", muster = '\.md$' }
+  beschriftung = "Arbeitskopien"
+  zaehlung = { ordner = "checkouts", muster = '\.md$' }
 
   [[profil.zeile]]
-  beschriftung = "Ideen, zuletzt"
-  juengste = { ordner = "backlog", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+  beschriftung = "Arbeitskopien, zuletzt"
+  juengste = { ordner = "checkouts", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
   beschriftung = "Beratungen"
@@ -679,16 +668,8 @@ pfad = 'fusion-workbench/shared$'
   zaehlung = { ordner = "history", muster = '\.md$' }
 
   [[profil.zeile]]
-  beschriftung = "Verläufe, zuletzt"
-  juengste = { ordner = "history", muster = '\.md$', anzahl = 1, zeigt = "datum" }
-
-  [[profil.zeile]]
   beschriftung = "Untersuchungen"
   zaehlung = { ordner = "investigations", muster = '\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Untersuchungen, zuletzt"
-  juengste = { ordner = "investigations", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
   beschriftung = "Defekte"
@@ -724,39 +705,56 @@ pfad = 'fusion-workbench/shared$'
 
 # Eine einzelne Runde.
 #
-# Erkannt über den Circle-Datensatz, dessen Name den Zustandsmarker trägt. Kein
-# Pfadmuster dieser Datei trifft ein Rundenverzeichnis, also kann dieses Profil
-# im ersten Durchgang nicht überholt werden.
+# ERKANNT ÜBER DEN PFAD UND NICHT MEHR ÜBER DEN NAMEN DES DATENSATZES. Bis
+# fusion 10 hieß er `_X_circle.md` und trug den Zustand als Marker; seit
+# Fassung 11 heißt er wie sein Verzeichnis und trägt keinen. Ein `kennzeichen`
+# auf den alten Namen sähe eine heutige Runde nicht mehr; das Pfadmuster sieht
+# beide Formen und damit auch eine Werkbank, die beide nebeneinander führt —
+# den gewöhnlichen Fall nach einer Umstellung, denn die vorhandenen Datensätze
+# werden nicht umbenannt.
 #
-# Der Zustand steht als vier Zeilen und nicht als eine, weil er im DATEINAMEN
-# des Datensatzes steht und in keinem Feld darin; keiner der vier Bausteine
-# liefert einen Dateinamen. Die vier Zeilen decken die sechs Marker des
-# Werkbankvokabulars vollständig ab: `_a_` vorgesehen, `_t_` aktiv, `_c_` und
-# `_b_` geschlossen, `_s_` und `_d_` abgelegt. Genau eine der vier Zeilen sagt
-# „ja", die drei übrigen sagen „nein".
+# DAMIT TRIFFT ERSTMALS EIN PFADMUSTER DIESER DATEI EIN RUNDENVERZEICHNIS, und
+# dieses Profil kann im ersten Durchgang überholt werden. Heute wird es das
+# nicht: `fusion-workbench/circles$` verlangt das Verzeichnis ALLER Runden, die
+# drei Speicherprofile verlangen eine Ebene mehr, und keines der übrigen nennt
+# `circles`. Wer über dieser Stelle ein Profil mit einem `pfad` einfügt, prüft
+# es nach.
+#
+# DER ZUSTAND STEHT ALS EINE ZEILE UND NICHT MEHR ALS VIER. Er ist die
+# Kopfzeile `**Status:**` des Datensatzes, und `feld` gibt sie wieder, wie sie
+# dasteht: an einem Datensatz der Fassung 11 das heutige Vokabular, an einem
+# älteren das damalige. Das ist an einer gemischten Werkbank die ehrlichere
+# Auskunft als vier Ja/Nein-Zeilen, die den Zustand in ein Vokabular
+# übersetzen, das der Datensatz selbst nicht führt.
+#
+# TRÄGT EIN ÄLTERER DATENSATZ DIE KOPFZEILE NICHT, steht der Platzhalter da,
+# und das ist kein Schreibfehler in dieser Datei: der Zustand steht dann allein
+# im Dateinamen, und keiner der vier Bausteine liefert einen Dateinamen als
+# Wert. Ebenso gibt die Zeile einen veralteten Wert wieder, wenn Dateiname und
+# Kopfzeile im Datensatz auseinandergelaufen sind. Beides ist eine Aussage über
+# den Datensatz und nicht über dieses Profil.
+#
+# DAS `datei`-MUSTER NENNT BEIDE NAMENSFORMEN, die alte `_X_circle.md` und die
+# heutige `<zeitstempel>-<kurzname>.md`, und es ist an beiden Enden verankert,
+# wie der Absatz zu `feld` oben es verlangt. Die Gruppe ist mit `(?:…)`
+# geschrieben und fängt nicht: die eine Fanggruppe gehört dem `feldmuster`.
+#
+# VIER LESELÄUFE, ZWÖLF ÖFFNUNGEN. Gelesen werden der erkannte Ordner selbst
+# für die zwei Feldzeilen, dazu `planning`, `decisions` und `history`; die
+# Erkennung über `pfad` kostet keinen Lauf. Die Öffnungen sind die zwei
+# Feldzeilen — beide nennen dieselbe Datei und öffnen sie trotzdem zweimal —
+# und die zehn Titel der Verlaufszeile.
 [[profil]]
 name = "fusion-Werkbank: eine Runde"
-kennzeichen = '^_._circle\.md$'
+pfad = 'fusion-workbench/circles/[^/]+$'
 
   [[profil.zeile]]
-  beschriftung = "Vorgesehen"
-  vorhandensein = { muster = '^_a_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Aktiv"
-  vorhandensein = { muster = '^_t_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Geschlossen"
-  vorhandensein = { muster = '^_[cb]_circle\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Abgelegt"
-  vorhandensein = { muster = '^_[sd]_circle\.md$' }
+  beschriftung = "Zustand"
+  feld = { datei = '^(?:_._circle|[0-9]{6}-[0-9]{4}-.+)\.md$', feldmuster = '(?m)^\*\*Status:\*\* *(.+)$' }
 
   [[profil.zeile]]
   beschriftung = "Directive"
-  feld = { datei = '^_._circle\.md$', feldmuster = '(?sm)^## Directive\s*\n+(.+?)\n\n' }
+  feld = { datei = '^(?:_._circle|[0-9]{6}-[0-9]{4}-.+)\.md$', feldmuster = '(?sm)^## Directive\s*\n+(.+?)\n\n' }
 
   [[profil.zeile]]
   beschriftung = "Spec"
@@ -783,12 +781,12 @@ kennzeichen = '^_._circle\.md$'
 # DAS IST DIE ERKENNUNG, DIE DAS WURZELPROFIL OBEN FÜR SICH VERWIRFT, und sie
 # hat ihren Preis: ein `kennzeichen` sieht allein die Namen der Einträge und
 # kann nicht in den Ordner hineinsehen. Ein leeres `fusion-workbench` oder eine
-# Datei dieses Namens genügt, und die Vorschau zeigt statt der Metadaten acht
+# Datei dieses Namens genügt, und die Vorschau zeigt statt der Metadaten sechs
 # Zeilen Platzhalter. Der Preis ist in Kauf genommen, weil die Auskunft an
 # einer eingerichteten Projektwurzel ihn aufwiegt; wer ihn nicht zahlen will,
 # streicht dieses Profil und sieht an der Projektwurzel die Metadaten.
 #
-# DIESE ACHT ZEILEN SIND DIE DES WURZELPROFILS GANZ OBEN, jede mit
+# DIESE SECHS ZEILEN SIND DIE DES WURZELPROFILS GANZ OBEN, jede mit
 # `fusion-workbench/` vor der Ortsangabe. Sie stehen zweimal in dieser Datei und
 # können auseinanderlaufen; nichts hält sie aneinander. Wer eine ändert, ändert
 # die andere mit. Der Grund steht oben beim Wurzelprofil.
@@ -815,14 +813,6 @@ kennzeichen = '^fusion-workbench$'
   [[profil.zeile]]
   beschriftung = "fusion-Fassung"
   feld = { ordner = "fusion-workbench", datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
-
-  [[profil.zeile]]
-  beschriftung = "Aktive Runde"
-  feld = { ordner = "fusion-workbench", datei = '^\.active-circle$', feldmuster = '^([^\n]+)' }
-
-  [[profil.zeile]]
-  beschriftung = "Sitzung"
-  feld = { ordner = "fusion-workbench", datei = '^orchestrator-live\.md$', feldmuster = '(?m)^## Current\n(?:[^\S\n]*\n)*[^\S\n]*([^#\n][^\n]*)' }
 
   [[profil.zeile]]
   beschriftung = "Runden"
