@@ -429,7 +429,7 @@ fusion-Werkbank sind es diese:
 |---|---|---|
 | die Wurzel | den Ordner mit `.fusion-setup` darin | Projekt, Einrichtungszeitpunkt, fusion-Fassung, aktive Runde, Sitzung, Zahl der Runden, offene gemeinsame Defekte |
 | Projektwurzel mit fusion-Werkbank | den Ordner, der `fusion-workbench` enthält | dieselben Angaben, eine Ebene höher gelesen |
-| eine Runde | einen Circle-Ordner an seiner `_._circle.md` | Zustand der Runde, den Text der Directive, ob Spec und Plan stehen, Zahl der Entscheidungen, die jüngsten Verläufe |
+| eine Runde | einen Ordner unmittelbar unter `circles/`, an seinem Pfad | Titel der Runde, ihren Zustand, die Querverweise, wer sie eingetragen hat, und den Text der Directive |
 | alle Runden | `circles/` | Runden gesamt und je eine Zeile für vorgesehen, aktiv, kohärent geschlossen, beschränkt geschlossen, überholt und zurückgestellt, dazu die offenen Defekte aller Runden |
 | der gemeinsame Speicher | `shared/` | je Unterspeicher die Zahl der Datensätze und das jüngste Datum |
 | ein Speicher | einen der Unterspeicher | Zahl der Datensätze und die jüngsten davon |

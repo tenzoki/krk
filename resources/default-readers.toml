@@ -294,7 +294,7 @@
 # Datei, `juengste` mit `zeigt = "titel"` deren `anzahl`; `zeigt = "datum"`,
 # `zaehlung` und `vorhandensein` lesen keine. Die Zahl der Öffnungen eines
 # Profils ist damit die Zahl der VERSCHIEDENEN Dateien, die seine Zeilen
-# lesen. Die zwei Feldzeilen des Rundenprofils unten nennen beide den
+# lesen. Die fünf Feldzeilen des Rundenprofils unten nennen alle denselben
 # Datensatz der Runde und teilen sich dessen eine Öffnung; eine Feldzeile und
 # ein Titel der jüngsten zehn teilen sie sich ebenso, wenn sie auf dieselbe
 # Datei treffen.
@@ -733,12 +733,13 @@ pfad = 'fusion-workbench/shared$'
 # `circles`. Wer über dieser Stelle ein Profil mit einem `pfad` einfügt, prüft
 # es nach.
 #
-# DER ZUSTAND STEHT ALS EINE ZEILE UND NICHT MEHR ALS VIER. Er ist die
-# Kopfzeile `**Status:**` des Datensatzes, und `feld` gibt sie wieder, wie sie
-# dasteht: an einem Datensatz der Fassung 11 das heutige Vokabular, an einem
-# älteren das damalige. Das ist an einer gemischten Werkbank die ehrlichere
-# Auskunft als vier Ja/Nein-Zeilen, die den Zustand in ein Vokabular
-# übersetzen, das der Datensatz selbst nicht führt.
+# DER ZUSTAND STEHT ALS EINE ZEILE UND NICHT MEHR ALS VIER. Sie heißt `Status`
+# nach der Kopfzeile, die sie liest, und `feld` gibt diese Kopfzeile
+# `**Status:**` des Datensatzes wieder, wie sie dasteht: an einem Datensatz der
+# Fassung 11 das heutige Vokabular, an einem älteren das damalige. Das ist an
+# einer gemischten Werkbank die ehrlichere Auskunft als vier Ja/Nein-Zeilen,
+# die den Zustand in ein Vokabular übersetzen, das der Datensatz selbst nicht
+# führt.
 #
 # TRÄGT EIN ÄLTERER DATENSATZ DIE KOPFZEILE NICHT, steht der Platzhalter da,
 # und das ist kein Schreibfehler in dieser Datei: der Zustand steht dann allein
@@ -747,43 +748,56 @@ pfad = 'fusion-workbench/shared$'
 # Kopfzeile im Datensatz auseinandergelaufen sind. Beides ist eine Aussage über
 # den Datensatz und nicht über dieses Profil.
 #
+# VIER ZEILEN SIND HIER GEFALLEN: „Spec", „Plan", „Entscheidungen" und „Die
+# jüngsten zehn Verläufe". Der Nutzer hat am 260916 an einem Tor entschieden,
+# dass die Vorschau den Kopf des Rundendatensatzes und seine Directive zeigt
+# und sonst nichts. Ob ein Spec und ein Plan stehen, wie viele Entscheidungen
+# gefallen sind und was zuletzt im Verlauf abgelegt wurde, liest man seitdem in
+# `planning`, `decisions` und `history` selbst und nicht in der Vorschau.
+#
+# ZWEI DER FÜNF ZEILEN STEHEN OFT LEER, und das ist die Konvention der Werkbank
+# und kein Schreibfehler in dieser Datei: `**Cross-references:**` und
+# `**Filed by:**` stehen im Datensatz nur, wenn es etwas zu nennen gibt, und
+# ein älterer Datensatz trägt womöglich keine von beiden. Die Zeile zeigt dann
+# ihren Platzhalter, genau wie die Zustandszeile an einem Datensatz ohne
+# `**Status:**`.
+#
 # DAS `datei`-MUSTER NENNT BEIDE NAMENSFORMEN, die alte `_X_circle.md` und die
 # heutige `<zeitstempel>-<kurzname>.md`, und es ist an beiden Enden verankert,
 # wie der Absatz zu `feld` oben es verlangt. Die Gruppe ist mit `(?:…)`
 # geschrieben und fängt nicht: die eine Fanggruppe gehört dem `feldmuster`.
+# Das Muster steht an allen fünf Zeilen, denn alle fünf lesen denselben
+# Datensatz.
 #
-# VIER LESELÄUFE, ELF ÖFFNUNGEN. Gelesen werden der erkannte Ordner selbst
-# für die zwei Feldzeilen, dazu `planning`, `decisions` und `history`; die
-# Erkennung über `pfad` kostet keinen Lauf. Die Öffnungen sind die zehn Titel
-# der Verlaufszeile und die EINE des Rundendatensatzes: „Zustand" und
-# „Directive" nennen dieselbe Datei und teilen sich deren Öffnung.
+# EIN LESELAUF, EINE ÖFFNUNG. Gelesen wird allein der erkannte Ordner: jede der
+# fünf Zeilen nennt ihn, keine nennt einen Unterordner, und die Erkennung über
+# `pfad` kostet keinen Lauf. Geöffnet wird allein der Rundendatensatz — alle
+# fünf Feldzeilen nennen dieselbe Datei und teilen sich deren eine Öffnung.
+# Damit ist dieses Profil nicht mehr das mit den meisten Öffnungen; das war es,
+# solange die Verlaufszeile zehn Titel las.
 [[profil]]
 name = "fusion-Werkbank: eine Runde"
 pfad = 'fusion-workbench/circles/[^/]+$'
 
   [[profil.zeile]]
-  beschriftung = "Zustand"
+  beschriftung = "Titel"
+  feld = { datei = '^(?:_._circle|[0-9]{6}-[0-9]{4}-.+)\.md$', feldmuster = '(?m)^# +(.+)$' }
+
+  [[profil.zeile]]
+  beschriftung = "Status"
   feld = { datei = '^(?:_._circle|[0-9]{6}-[0-9]{4}-.+)\.md$', feldmuster = '(?m)^\*\*Status:\*\* *(.+)$' }
+
+  [[profil.zeile]]
+  beschriftung = "Cross-refs"
+  feld = { datei = '^(?:_._circle|[0-9]{6}-[0-9]{4}-.+)\.md$', feldmuster = '(?m)^\*\*Cross-references:\*\* *(.+)$' }
+
+  [[profil.zeile]]
+  beschriftung = "Filed-by"
+  feld = { datei = '^(?:_._circle|[0-9]{6}-[0-9]{4}-.+)\.md$', feldmuster = '(?m)^\*\*Filed by:\*\* *(.+)$' }
 
   [[profil.zeile]]
   beschriftung = "Directive"
   feld = { datei = '^(?:_._circle|[0-9]{6}-[0-9]{4}-.+)\.md$', feldmuster = '(?sm)^## Directive\s*\n+(.+?)\n\n' }
-
-  [[profil.zeile]]
-  beschriftung = "Spec"
-  vorhandensein = { ordner = "planning", muster = '_._spec-' }
-
-  [[profil.zeile]]
-  beschriftung = "Plan"
-  vorhandensein = { ordner = "planning", muster = '_._plan-' }
-
-  [[profil.zeile]]
-  beschriftung = "Entscheidungen"
-  zaehlung = { ordner = "decisions", muster = '\.md$' }
-
-  [[profil.zeile]]
-  beschriftung = "Die jüngsten zehn Verläufe"
-  juengste = { ordner = "history", muster = '\.md$', anzahl = 10 }
 
 # Das Verzeichnis, das eine fusion-Werkbank enthält.
 #

@@ -2977,6 +2977,17 @@ const RUNDE_IM_PRUEFORDNER: &str = "fusion-workbench/circles/260824-0530-eine-ru
 /// unter dem Temporaerverzeichnis traegt diese Folge von selbst, also traegt
 /// sie der Pruefordner.
 ///
+/// **Der Datensatz traegt jede Stelle, die das Rundenprofil aus ihm zieht**:
+/// die Ueberschrift, die drei Kopfzeilen `**Status:**`,
+/// `**Cross-references:**` und `**Filed by:**`, und den Abschnitt
+/// `## Directive`. Die zwei mittleren Kopfzeilen stehen an einer wirklichen
+/// Werkbank oft nicht da — die Konvention laesst sie weg, wo nichts zu nennen
+/// ist —, und genau deshalb stehen sie hier: nur an einem Datensatz, der sie
+/// fuehrt, belegt eine Probe, dass jede der fuenf Zeilen ihr **eigenes** Feld
+/// aus denselben Bytes zieht. Dass eine fehlende Stelle den Platzhalter
+/// liefert, misst [`ohne_den_rundendatensatz_fallen_alle_fuenf_zeilen_auf_den_platzhalter`]
+/// an der Datei als ganzer.
+///
 /// **Der Datensatz heisst weiter `_t_circle.md` und traegt trotzdem die
 /// Kopfzeile `**Status:**`.** Das ist keine erfundene Mischform, sondern der
 /// haeufigste Fall dieser Werkbank: fusion 11 benennt die vorhandenen
@@ -3003,7 +3014,7 @@ fn runde(zweck: &str) -> (Pruefordner, PathBuf) {
     schreiben(
         &runde,
         "_t_circle.md",
-        "# Circle: eine Runde\n\n---\n**Status:** claimed\n---\n\n## Directive\n\nDas Vorschaufenster beantwortet, was an einem Ort liegt.\n\n## Grounding\n",
+        "# Circle: eine Runde\n\n---\n**Status:** claimed\n**Cross-references:** 260824-0613_*_spec-vorschau.md\n**Filed by:** user, Kai Stalmann\n---\n\n## Directive\n\nDas Vorschaufenster beantwortet, was an einem Ort liegt.\n\n## Grounding\n",
     );
 
     let planning = ordner.ordner(&format!("{RUNDE_IM_PRUEFORDNER}/planning"));
@@ -3045,7 +3056,7 @@ fn runde(zweck: &str) -> (Pruefordner, PathBuf) {
 /// **Jeder Ort, den die zwei Profile nennen, steht hier auch wirklich auf der
 /// Platte**, und das ist keine Vollstaendigkeit um ihrer selbst willen: die
 /// Zusicherung `leselaeufe == orte.len() + 1` in
-/// [`die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen`]
+/// [`die_mitgelieferten_profile_bleiben_unter_den_zahlen_ihrer_abnahmekriterien`]
 /// belegt den Halbsatz „plus einen Lauf fuer die Erkennung", und ein
 /// genannter Ort, den es nicht gibt, wird gar nicht gelesen und faellt aus
 /// der Rechnung. Wer den Profilen einen Ort hinzufuegt, legt ihn hier mit an,
@@ -3953,34 +3964,59 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
     (ordner, shared)
 }
 
-/// C6.7: Die drei groessten mitgelieferten Profile bleiben unter den Zahlen,
-/// die der Spec ihnen zusagt.
+/// C6.7 und C6.4: die gemessenen mitgelieferten Profile bleiben unter den
+/// Zahlen, die ihre Abnahmekriterien ihnen zusagen.
 ///
 /// Gemessen an der eingebetteten Auslieferungsfassung und an je einem
 /// Pruefordner in der Gestalt, die das Profil erwartet. Die Zahlen stehen hier
 /// **genau** und nicht als „unter der Grenze": eine Probe, die allein
-/// `<= 7` prueft, bliebe gruen, wenn ein Profil von vier auf sieben
+/// `<= 7` prueft, bliebe gruen, wenn ein Profil von einem auf sieben
 /// Leselaeufe steigt, und genau der Schritt waere die Nachricht.
 ///
-/// **Welches Profil das groesste ist, haengt an der Frage.** Nach Oeffnungen
-/// ist es das der einzelnen Runde mit elf; nach Leselaeufen ist es seit der
-/// Runde 18 das des gemeinsamen Speichers mit zehn von zwoelf, und das ist
-/// zugleich das mit dem kleinsten Abstand zu seiner Schranke. Die Zahlen
-/// sind die der Kostenmessung vom 260825-2107 an der wirklichen Werkbank
-/// (`shared/analyses/260825-2107-was-die-zwoelf-leseprofile-…`), nachgezaehlt
-/// am 260913 an der auf fusion 11 umgestellten Profildatei.
+/// **Gemessen wird nicht, was am groessten ist, sondern was ein Kriterium
+/// benennt.** Bis zum 260916 hiess diese Probe „die drei groessten
+/// mitgelieferten Profile", und das Rundenprofil stand darin als das mit den
+/// meisten Oeffnungen. An jenem Tag sind vier seiner Zeilen gefallen, und die
+/// fuenf uebrigen lesen alle denselben Rundendatensatz: die Runde kostet
+/// seither einen Leselauf und eine Oeffnung und steht nach keiner der beiden
+/// Zahlen mehr oben. Sie wird hier trotzdem gemessen, weil **C6.7 sie
+/// namentlich nennt** und diese Probe der Beleg jenes Kriteriums ist. Die
+/// Schranke `<= 7 && <= 11` bleibt dabei, wie sie ist: ein Kriterium
+/// nachzuziehen, weil sein Gegenstand billiger geworden ist, gaebe die Zusage
+/// auf, statt sie zu halten.
 ///
-/// **Vier und nicht mehr fuenf** bei der Runde, seit ein Ort je
-/// Zusammenfassung hoechstens einmal gelesen wird: die zwei Zeilen des
-/// Rundenprofils auf `planning` teilen sich seither eine Lesung. Aus
-/// demselben Grund kostet der gemeinsame Speicher einen Lauf je Unterspeicher
-/// und nicht einen je Zeile; wie viele Zeilen er dafuer fuehrt, liest die
-/// Probe aus dem Profil und behauptet es nicht.
+/// **Welche die groessten sind, rechnet man an der Profildatei nach** und
+/// liest es nicht aus dieser Ueberschrift ab. Die Rechnung ist ein Leselauf je
+/// genanntem Ort — der erkannte Ordner ist einer davon, und ein `kennzeichen`
+/// legt nur dann einen Lauf obendrauf, wenn keine Zeile den erkannten Ordner
+/// selbst nennt — und eine Oeffnung je **Datei**, die ein Feldbaustein oder
+/// ein Baustein „juengste N" mit Titeln anspricht. Beides sind Obergrenzen —
+/// ein genannter Ort, den es nicht gibt, wird nicht gelesen, und „die
+/// juengsten zehn" oeffnen in einem Ordner mit drei Dateien drei. Nach
+/// Leselaeufen fuehrt damit der gemeinsame Speicher mit seinen zehn genannten
+/// Orten, und er hat zugleich den kleinsten Abstand zu
+/// [`HOECHSTENS_LESELAEUFE`]; nach Oeffnungen fuehren mit je hoechstens zehn
+/// die vier Profile, die „die juengsten zehn" mit Titeln tragen: „ein
+/// Speicher", „ein Defektspeicher", „der Forum-Speicher" und
+/// „flight-Werkbank: ein Speicher". In keiner der beiden Reihen steht das
+/// Rundenprofil.
+///
+/// Die Zahlen der drei uebrigen Faelle sind die der Kostenmessung vom
+/// 260825-2107 an der wirklichen Werkbank
+/// (`shared/analyses/260825-2107-was-die-zwoelf-leseprofile-…`), nachgezaehlt
+/// am 260913 an der auf fusion 11 umgestellten Profildatei; die der Runde ist
+/// am 260916 an der Auslieferungsfassung neu genommen.
+///
+/// **Ein Lauf je Ort und nicht je Zeile**, seit ein Ort je Zusammenfassung
+/// hoechstens einmal gelesen wird: der gemeinsame Speicher kostet deshalb
+/// einen Lauf je Unterspeicher und nicht einen je Zeile, und wie viele Zeilen
+/// er dafuer fuehrt, liest die Probe aus dem Profil und behauptet es nicht.
+/// Dieselbe Regel macht die fuenf Feldzeilen der Runde zu einem einzigen Lauf.
 ///
 /// ```text
-/// eine Runde       4 Leselaeufe   11 Oeffnungen   C6.7: hoechstens 7 und 11
-///   erkannter Ordner, planning, decisions, history
-///   Rundendatensatz einmal, zehn Verlaeufe
+/// eine Runde       1 Leselauf      1 Oeffnung     C6.7: hoechstens 7 und 11
+///   nur der erkannte Ordner
+///   der Rundendatensatz einmal, den sich alle fuenf Feldzeilen teilen
 /// die Wurzel       4 Leselaeufe    1 Oeffnung     C6.4: hoechstens 12 und 24
 ///   erkannter Ordner, circles, shared/issues, shared/forum
 ///   .fusion-setup einmal
@@ -4000,7 +4036,7 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// nicht bekommen (`shared/decisions/260908-1754_*_bekommt-das-profil-des-…`),
 /// steht also weiter bei zehn Laeufen und zwei Laeufe vor der Schranke.
 ///
-/// **Der vierte Fall ist nicht der eines der groessten Profile.** Er steht
+/// **Der vierte Fall steht aus einem eigenen Grund hier.** Er steht
 /// hier, weil `default-readers.toml` seine Leselaufregel an zwei Zahlen
 /// vorfuehrt und bis zum 260825 nur die erste eine Probe hatte
 /// (`shared/issues/260825-2233_*_die-beispielzahl-vier-des-…`): das
@@ -4068,21 +4104,23 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// drei Oeffnungen auf eine, weil ihre drei Feldzeilen alle `.fusion-setup`
 /// nennen.
 ///
-/// # Eine Behauptung haengt noch an der Zeilenreihenfolge der Profildatei
+/// # Zwei Behauptungen haengen noch an der Zeilenreihenfolge der Profildatei
 ///
-/// Die ausgeschriebene Werteliste des Projektwurzelprofils steht als geordnete
-/// Folge da und prueft damit ueber die **Stellung** eines Wertes in der
-/// Zusammenfassung. Wer die Zeilen jenes Profils umstellt, macht die Probe rot,
-/// obwohl jede Zeile ihren Wert sehr wohl gefunden hat. Die Richtung stimmt —
-/// rot und nicht still gruen —, und die Meldung nennt die Reihenfolge deshalb
-/// als zweiten moeglichen Grund neben dem, den sie behauptet. Die
-/// Beschriftungsliste darueber faengt eine Umstellung **nicht** ab: sie
-/// vergleicht gegen `profil.zeilen()` desselben Profils, also gegen eine
-/// Liste, die sich mitdreht. Die Kopplung aufzuheben kostet dort mehr Zeilen,
-/// als die Auskunft wert ist, solange die Richtung rot bleibt (Defekt
+/// Die ausgeschriebenen Wertelisten des Rundenprofils und des
+/// Projektwurzelprofils stehen als geordnete Folge da und pruefen damit ueber
+/// die **Stellung** eines Wertes in der Zusammenfassung. Wer die Zeilen jener
+/// Profile umstellt, macht die Probe rot, obwohl jede Zeile ihren Wert sehr
+/// wohl gefunden hat. Die Richtung stimmt — rot und nicht still gruen —, und
+/// die Meldungen nennen die Reihenfolge deshalb als zweiten moeglichen Grund
+/// neben dem, den sie behaupten. Beim Projektwurzelprofil faengt die
+/// Beschriftungsliste darueber eine Umstellung **nicht** ab: sie vergleicht
+/// gegen `profil.zeilen()` desselben Profils, also gegen eine Liste, die sich
+/// mitdreht. Beim Rundenprofil steht die Beschriftungsliste ausgeschrieben da
+/// und wird zuerst rot. Die Kopplung aufzuheben kostet dort mehr Zeilen, als
+/// die Auskunft wert ist, solange die Richtung rot bleibt (Defekt
 /// `260826-0139`).
 ///
-/// **Eine zweite stand bis zum 260913 daneben, und sie war die
+/// **Eine dritte stand bis zum 260913 daneben, und sie war die
 /// gefaehrliche.** Am Speicherprofil griff ein `step_by(2)` die
 /// Zaehlungszeilen ueber ihre gerade Stellung ab und setzte voraus, dass in
 /// jedem Unterspeicher die Zaehlungszeile vor der Datumszeile steht. Mit
@@ -4094,7 +4132,7 @@ fn gemeinsamer_speicher(zweck: &str, orte: &[String]) -> (Pruefordner, PathBuf) 
 /// greift jetzt ueber den Baustein statt ueber die Stellung. Der Kommentar an
 /// der Zusicherung selbst schreibt es aus.
 #[test]
-fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
+fn die_mitgelieferten_profile_bleiben_unter_den_zahlen_ihrer_abnahmekriterien() {
     let profile = ausgelieferte();
 
     let (_wurzel_der_runde, eine_runde) = runde("haushalt-eine-runde");
@@ -4107,21 +4145,14 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
             .iter()
             .map(|(name, _)| *name)
             .collect::<Vec<_>>(),
-        [
-            "Zustand",
-            "Directive",
-            "Spec",
-            "Plan",
-            "Entscheidungen",
-            "Die jüngsten zehn Verläufe"
-        ],
+        ["Titel", "Status", "Cross-refs", "Filed-by", "Directive"],
         "gemessen wurde nicht das Profil der einzelnen Runde"
     );
     assert_eq!(
         (haushalt.leselaeufe(), haushalt.oeffnungen()),
-        (4, 11),
-        "das groesste mitgelieferte Profil kostet nicht mehr die gemessenen vier \
-         Leselaeufe und elf Oeffnungen"
+        (1, 1),
+        "das Profil der einzelnen Runde kostet nicht mehr den gemessenen einen \
+         Leselauf und die eine Oeffnung, die sich seine fuenf Feldzeilen teilen"
     );
     assert!(
         haushalt.leselaeufe() <= 7 && haushalt.oeffnungen() <= 11,
@@ -4138,21 +4169,21 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
         haushalt.oeffnungen()
     );
     assert_eq!(
-        rundenwerte[0].1,
-        &Wert::Text("claimed".to_owned()),
-        "das Profil hat den Zustand nicht aus der Kopfzeile gezogen; die Oeffnung \
-         darueber waere dann eine, die nichts findet"
-    );
-    assert_eq!(
-        rundenwerte[1].1,
-        &Wert::Text("Das Vorschaufenster beantwortet, was an einem Ort liegt.".to_owned()),
-        "das Profil hat seine Directive nicht gezogen; gemessen waere dann ein Lauf, \
-         der gar nichts findet"
-    );
-    assert!(
-        matches!(rundenwerte[5].1, Wert::Titel(titel) if titel.len() == 10),
-        "die zehn juengsten Verlaeufe fehlen: {:?}",
-        rundenwerte[5].1
+        rundenwerte
+            .iter()
+            .map(|(_, wert)| (*wert).clone())
+            .collect::<Vec<_>>(),
+        [
+            Wert::Text("Circle: eine Runde".to_owned()),
+            Wert::Text("claimed".to_owned()),
+            Wert::Text("260824-0613_*_spec-vorschau.md".to_owned()),
+            Wert::Text("user, Kai Stalmann".to_owned()),
+            Wert::Text("Das Vorschaufenster beantwortet, was an einem Ort liegt.".to_owned()),
+        ],
+        "das Rundenprofil liefert nicht die Werte, fuer die es gelesen hat; die eine \
+         Oeffnung darueber waere dann eine, die nichts findet. Oder die Reihenfolge \
+         der Zeilen in `default-readers.toml` hat sich geaendert: diese Liste steht \
+         als geordnete Folge da"
     );
 
     let wurzel = werkbankwurzel("haushalt-wurzel");
@@ -4378,9 +4409,19 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
     );
 }
 
-/// C5.8: Liegt der Datensatz einer Runde unter einem anderen Namen, zeigen
-/// allein die zwei Zeilen, die ihn lesen, ihren Platzhalter; die uebrigen
-/// stimmen weiter.
+/// C5.8, erste Haelfte: Liegt der Datensatz einer Runde unter einem anderen
+/// Namen, fallen alle fuenf Zeilen des Rundenprofils auf ihren Platzhalter.
+///
+/// **Die zweite Haelfte des Kriteriums misst dieses Profil nicht mehr**, und
+/// dafuer steht
+/// [`ohne_die_setup_datei_fallen_allein_die_drei_feldzeilen_der_projektwurzel`]
+/// daneben. C5.8 sagt zweierlei zu: die Zeile, der ihre Datei fehlt, zeigt
+/// ihren Platzhalter, **und** jede Zeile, die jene Datei nicht nennt, steht
+/// unveraendert da. Seit dem 260916 nennen alle fuenf Zeilen des
+/// Rundenprofils denselben Datensatz, also gibt es hier keine Zeile mehr, die
+/// ihn nicht nennt; der Zeuge fuer die zweite Haelfte hat das Profil
+/// gewechselt und ist nicht gefallen. Der Nutzer hat das am 260916 an einem
+/// Tor so entschieden: beide Haelften behalten ihren Beleg.
 ///
 /// **Worum es dem Kriterium geht.** C5.8 nimmt einen Preis ausdruecklich in
 /// Kauf: die mitgelieferten Profile beschreiben die Ablagekonventionen
@@ -4410,12 +4451,14 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
 /// Verlust seines Datensatzes — und genau das macht den Datensatz zu einem
 /// Traeger fuer diese Frage.
 ///
-/// **Zwei Zeilen und nicht eine.** „Zustand" und „Directive" lesen beide
-/// diesen einen Datensatz; fehlt er, fallen beide auf den Platzhalter. Die
-/// vier uebrigen Zeilen arbeiten in `planning`, `decisions` und `history` und
-/// stimmen weiter. Das ist die Aussage des Kriteriums, nicht ihre
-/// Abschwaechung: die Zahl der betroffenen Zeilen folgt daraus, wie viele
-/// Zeilen die fehlende Datei nennen.
+/// **Alle fuenf und nicht zwei.** „Titel", „Status", „Cross-refs", „Filed-by"
+/// und „Directive" lesen alle denselben Datensatz; fehlt er, fallen alle fuenf
+/// auf den Platzhalter. Bis zum 260916 waren es zwei von sechs: die vier
+/// uebrigen Zeilen arbeiteten in `planning`, `decisions` und `history`, und
+/// eben diese vier sind gefallen. Das ist die Aussage des Kriteriums und nicht
+/// ihre Abschwaechung: **wie viele** Zeilen es trifft, folgt daraus, wie viele
+/// Zeilen die fehlende Datei nennen, und nicht aus einer Zahl, die das
+/// Kriterium zusagte.
 ///
 /// **Geprueft wird an der Auslieferungsfassung und nicht an einem nachgebauten
 /// Profil.** Die Zusage aus C5.8 spricht ueber die **mitgelieferten** Profile,
@@ -4428,10 +4471,10 @@ fn die_drei_groessten_mitgelieferten_profile_bleiben_unter_ihren_zahlen() {
 /// **Umbenannt und nicht geloescht**, weil das Kriterium den Pruefweg selbst
 /// ausschreibt: „geprueft wird, indem man [die Datei] unter einen anderen
 /// Namen legt". Der Unterschied ist keine Kleinigkeit — der Ordner traegt
-/// danach genauso viele Eintraege wie vorher, und die zwei Zeilen fallen am
+/// danach genauso viele Eintraege wie vorher, und die fuenf Zeilen fallen am
 /// Muster und nicht daran, dass nichts mehr dasteht.
 #[test]
-fn ohne_den_rundendatensatz_zeigen_allein_seine_zwei_zeilen_ihren_platzhalter() {
+fn ohne_den_rundendatensatz_fallen_alle_fuenf_zeilen_auf_den_platzhalter() {
     let profile = ausgelieferte();
     let (_wurzel, eine_runde) = runde("c5-8-ohne-rundendatensatz");
     std::fs::rename(
@@ -4446,14 +4489,7 @@ fn ohne_den_rundendatensatz_zeigen_allein_seine_zwei_zeilen_ihren_platzhalter() 
 
     assert_eq!(
         werte.iter().map(|(name, _)| *name).collect::<Vec<_>>(),
-        [
-            "Zustand",
-            "Directive",
-            "Spec",
-            "Plan",
-            "Entscheidungen",
-            "Die jüngsten zehn Verläufe"
-        ],
+        ["Titel", "Status", "Cross-refs", "Filed-by", "Directive"],
         "gemessen wurde nicht das Profil der einzelnen Runde"
     );
     assert_eq!(
@@ -4462,35 +4498,105 @@ fn ohne_den_rundendatensatz_zeigen_allein_seine_zwei_zeilen_ihren_platzhalter() 
             .map(|(name, wert)| (*name, matches!(wert, Wert::Nicht)))
             .collect::<Vec<_>>(),
         [
-            // Die zwei Zeilen, denen ihre Datei fehlt.
-            ("Zustand", true),
+            // Alle fuenf nennen den Datensatz, dem hier sein Name fehlt.
+            ("Titel", true),
+            ("Status", true),
+            ("Cross-refs", true),
+            ("Filed-by", true),
             ("Directive", true),
-            ("Spec", false),
-            ("Plan", false),
-            ("Entscheidungen", false),
-            ("Die jüngsten zehn Verläufe", false),
         ],
-        "ein fehlender Rundendatensatz nimmt mehr als die zwei Zeilen mit, die ihn \
-         lesen: {werte:?}"
+        "eine Zeile des Rundenprofils zeigt ohne den Datensatz etwas anderes als \
+         ihren Platzhalter: {werte:?}"
+    );
+}
+
+/// C5.8, zweite Haelfte: Fehlt die Datei, die drei Zeilen der Projektwurzel
+/// lesen, zeigen allein diese drei ihren Platzhalter; die uebrigen stimmen
+/// weiter.
+///
+/// **Worum es dem Kriterium geht**, steht bei
+/// [`ohne_den_rundendatensatz_fallen_alle_fuenf_zeilen_auf_den_platzhalter`]:
+/// die Zusage ist nicht, dass einer Feldzeile nie ihre Datei fehlt, sondern
+/// dass der Verlust genau die Zeilen trifft, die jene Datei nennen. Die erste
+/// Haelfte misst jene Probe, die zweite diese.
+///
+/// **Warum die Projektwurzel und nicht eines der zwei Wurzelprofile.** Fuer
+/// die Gegenprobe braucht es ein mitgeliefertes Profil, das `feld` neben einer
+/// anderen Bausteinsorte fuehrt **und** den Verlust seiner Felddatei
+/// ueberlebt. „fusion-Werkbank: die Wurzel" und „flight-Werkbank: die Wurzel"
+/// fuehren beides, scheiden aber aus einem Grund aus, der an ihrem Bau haengt:
+/// ihre drei Feldzeilen lesen genau die Datei, die zugleich ihr `kennzeichen`
+/// ist (`^\.fusion-setup$`, `^\.flight-setup$`). Nimmt man sie weg, erkennt
+/// das Profil seinen Ordner nicht mehr, es gibt keine Zusammenfassung, und
+/// gemessen wird nichts — dieselbe Lage, in der das Rundenprofil vor der
+/// Umstellung auf die Erkennung ueber den Pfad war. „Projektwurzel mit
+/// fusion-Werkbank" erkennt dagegen am Verzeichniseintrag `fusion-workbench`
+/// und liest seine Felder aus `fusion-workbench/.fusion-setup`: Erkennung und
+/// Felddatei sind zwei verschiedene Dinge, und nur deshalb laesst sich das
+/// eine wegnehmen und das andere messen.
+///
+/// **Die drei uebrigen Zeilen sind `zaehlung`-Zeilen** ueber `circles`,
+/// `shared/issues` und `shared/forum`. Sie sehen die fehlende Datei gar nicht
+/// und liefern dieselben drei Zahlen wie bei vollem Bestand; die Werteliste
+/// steht deshalb ausgeschrieben da und nicht als „irgendetwas ausser dem
+/// Platzhalter".
+///
+/// **Geprueft wird an der Auslieferungsfassung**, aus dem Grund, den die Probe
+/// zur ersten Haelfte ausschreibt, und **umbenannt und nicht geloescht**, weil
+/// das Kriterium den Pruefweg so ausschreibt.
+#[test]
+fn ohne_die_setup_datei_fallen_allein_die_drei_feldzeilen_der_projektwurzel() {
+    let profile = ausgelieferte();
+    let projekt = projektwurzel("c5-8-ohne-setup-datei");
+    let werkbank = projekt.unter("fusion-workbench");
+    std::fs::rename(
+        werkbank.join(".fusion-setup"),
+        werkbank.join(".fusion-setup.alt"),
+    )
+    .expect("die Kennzeichendatei laesst sich nicht umbenennen");
+
+    let (zusammenfassung, _haushalt) = gezaehlt_erkannt(&profile, projekt.pfad())
+        .expect("das Projektwurzelprofil greift nicht mehr");
+    let werte = werte(&zusammenfassung);
+
+    assert_eq!(
+        werte.iter().map(|(name, _)| *name).collect::<Vec<_>>(),
+        [
+            "Projekt",
+            "Eingerichtet",
+            "fusion-Fassung",
+            "Runden",
+            "Offene Defekte, gemeinsam",
+            "Nachrichten"
+        ],
+        "gemessen wurde nicht das Profil der Projektwurzel"
     );
     assert_eq!(
-        werte[2..]
+        werte
+            .iter()
+            .map(|(name, wert)| (*name, matches!(wert, Wert::Nicht)))
+            .collect::<Vec<_>>(),
+        [
+            // Die drei Feldzeilen, denen ihre Datei fehlt.
+            ("Projekt", true),
+            ("Eingerichtet", true),
+            ("fusion-Fassung", true),
+            // Die drei Zaehlungszeilen, die sie nicht nennen.
+            ("Runden", false),
+            ("Offene Defekte, gemeinsam", false),
+            ("Nachrichten", false),
+        ],
+        "eine fehlende `.fusion-setup` nimmt mehr oder weniger als die drei Zeilen \
+         mit, die sie lesen: {werte:?}"
+    );
+    assert_eq!(
+        werte[3..]
             .iter()
             .map(|(_, wert)| (*wert).clone())
             .collect::<Vec<_>>(),
-        [
-            Wert::Vorhanden(true),
-            Wert::Vorhanden(true),
-            Wert::Zahl(3),
-            Wert::Titel(
-                (2..12)
-                    .rev()
-                    .map(|nummer| format!("Verlauf {nummer}"))
-                    .collect()
-            ),
-        ],
-        "die vier Zeilen, die den Datensatz nicht lesen, liefern nicht mehr ihre \
-         alten Werte"
+        [Wert::Zahl(3), Wert::Zahl(2), Wert::Zahl(1)],
+        "die drei Zeilen, die die fehlende Datei nicht lesen, liefern nicht mehr \
+         ihre alten Werte"
     );
 }
 
