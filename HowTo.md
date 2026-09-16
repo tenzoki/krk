@@ -427,19 +427,19 @@ fusion-Werkbank sind es diese:
 
 | Profil | erkennt | zeigt |
 |---|---|---|
-| die Wurzel | den Ordner mit `.fusion-setup` darin | Projekt, Einrichtungszeitpunkt, fusion-Fassung, aktive Runde, Sitzung, Zahl der Runden, offene gemeinsame Defekte |
+| die Wurzel | den Ordner mit `.fusion-setup` darin | Projekt, Einrichtungszeitpunkt, fusion-Fassung, Zahl der Runden, offene gemeinsame Defekte, Nachrichten im Forum |
 | Projektwurzel mit fusion-Werkbank | den Ordner, der `fusion-workbench` enthält | dieselben Angaben, eine Ebene höher gelesen |
 | eine Runde | einen Ordner unmittelbar unter `circles/`, an seinem Pfad | Titel der Runde, ihren Zustand, die Querverweise, wer sie eingetragen hat, und den Text der Directive |
-| alle Runden | `circles/` | Runden gesamt und je eine Zeile für vorgesehen, aktiv, kohärent geschlossen, beschränkt geschlossen, überholt und zurückgestellt, dazu die offenen Defekte aller Runden |
-| der gemeinsame Speicher | `shared/` | je Unterspeicher die Zahl der Datensätze und das jüngste Datum |
+| alle Runden | `circles/` | Runden gesamt und die offenen Defekte aller Runden |
+| der gemeinsame Speicher | `shared/` | je Unterspeicher die Zahl der Datensätze und das jüngste Datum, bei Verläufen und Untersuchungen nur die Zahl |
 | ein Speicher | einen der Unterspeicher | Zahl der Datensätze und die jüngsten davon |
 | ein Defektspeicher | `issues/` | Datensätze gesamt, offen, geschlossen, zurückgestellt, und die jüngsten davon |
 | der Ablagespeicher | `archive/` | Zahl der Läufe und das Datum der letzten Ablage |
 
-Praktisch heißt das: ein Klick auf den Projektordner beantwortet „welche Runde
-läuft und wie viele Defekte sind offen", ein Klick auf einen Circle-Ordner
-beantwortet „was war die Directive und wie weit ist sie", und ein Klick auf
-`issues/` beantwortet „wie viel liegt hier offen".
+Praktisch heißt das: ein Klick auf den Projektordner beantwortet „wie viele
+Runden gibt es, wie viele Defekte sind offen, und liegt eine Nachricht", ein
+Klick auf einen Circle-Ordner beantwortet „was war die Directive und wie weit
+ist sie", und ein Klick auf `issues/` beantwortet „wie viel liegt hier offen".
 
 **Und die Einschränkung von oben gilt hier:** neue Profile einer neuen
 KRK-Fassung kommen nicht von selbst. Dass es welche gibt, meldet KRK beim ersten

@@ -22,3 +22,6 @@ mit dem jeweiligen Profilnamen in der zweiten Bedingung.
 **Gefunden am 260916** beim Nachziehen der Zeile „eine Runde" derselben Tabelle, die im selben Zug berichtigt wurde. Die zwei übrigen Zeilen standen außerhalb jenes Auftrags.
 
 **Cross-references:** 260912-0441_*_die-spalte-wer-schreibt-der-howto-tabelle-nennt-fuer-drei-dateien-das-gegenteil-dessen-was-krk-tut.md
+
+---
+Resolved: Beide Zeilen nennen jetzt die Beschriftungen, die das jeweilige Profil in `resources/default-readers.toml` führt, in deren Reihenfolge — „die Wurzel" sechs Angaben mit „Nachrichten im Forum" statt „aktive Runde" und „Sitzung", „alle Runden" zwei statt acht. Der Verweis in der Zeile „Projektwurzel mit fusion-Werkbank" bleibt ein Verweis. Bei der Durchsicht der übrigen Zeilen kam zweierlei dazu: „der gemeinsame Speicher" versprach je Unterspeicher eine Datumszeile, die `history` und `investigations` seit fusion 11 nicht mehr tragen, und der Absatz unter der Tabelle wiederholte die gefallene Angabe „welche Runde läuft". Beides ist mitberichtigt. `make check` grün.
