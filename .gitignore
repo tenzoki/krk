@@ -18,6 +18,11 @@ fusion-workbench/orchestrator-live.md
 fusion-workbench/.active-circle
 fusion-workbench/.commit-lock/
 fusion-workbench/.session-marker
+# Merkzeiger dieses Checkouts auf den letzten Abgleichs- und Kuratorenlauf.
+# Beide Zeilen werden bei jedem Lauf ueberschrieben, die vorige Fassung
+# beantwortet nichts, und aus einem fremden Checkout zurueckgeholt behauptet
+# sie einen Lauf, den dieser hier nie gefahren hat.
+fusion-workbench/.cadence-anchors
 # Kennung dieses Checkouts. Als einziger Eintrag hier nicht deshalb, weil eine
 # fruehere Fassung nichts beantwortete, sondern weil sie beantwortet, WELCHES
 # Checkout -- ein Checkout, der die Kopie eines anderen zoege, truege dessen
