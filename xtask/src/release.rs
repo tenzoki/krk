@@ -1489,8 +1489,10 @@ pub(crate) mod tests {
     ///
     /// **Die Werkbank bleibt draussen, und das ist eine Festlegung.** Unter
     /// `fusion-workbench/` liegen Aufzeichnungen eines vergangenen Standes, und
-    /// die behalten nach der Ortsregel aus `CLAUDE.md` ihren damaligen
-    /// Wortlaut. Das Abnahmekriterium selbst enthaelt ueberdies die
+    /// eine Aufzeichnung wird nicht nachgezogen, wenn der Baum weiterrueckt:
+    /// sie sagt, was am Tag ihrer Niederschrift galt, und wer ihren Wortlaut
+    /// dem heutigen Stand anglaeche, loeschte genau diese Auskunft. Das
+    /// Abnahmekriterium selbst enthaelt ueberdies die
     /// Zeichenfolge, die es verbietet, ist also woertlich genommen nicht
     /// erfuellbar; der Befund ist gefilt
     /// (`shared/issues/260821-1221_*_das-abnahmekriterium-c6-3-enthaelt-die-zeichenfolge-die-es-verbietet.md`),
@@ -1523,9 +1525,9 @@ pub(crate) mod tests {
     ///
     /// `target` und `.git` sind Bauergebnis und Verwaltung. `fusion-workbench`
     /// und `spikes` sind Aufzeichnungen eines vergangenen Standes: die Werkbank
-    /// haelt nach der Ortsregel aus `CLAUDE.md` ihren damaligen Wortlaut, und
-    /// die Vorstudien unter `spikes/` sind verworfen und als Aufzeichnung
-    /// behalten. Dieselbe Begruendung fuehrt
+    /// haelt fest, was an ihrem Tag galt, und wird nicht nachgezogen, wenn der
+    /// Baum weiterrueckt, und die Vorstudien unter `spikes/` sind verworfen und
+    /// als Aufzeichnung behalten. Dieselbe Begruendung fuehrt
     /// [`der_quellbaum_nennt_die_alte_stationszahl_nicht_mehr`], das sich
     /// deshalb selbst auf `xtask/` beschraenkt hat; sie steht jetzt hier, wo
     /// jeder Abnehmer sie erbt. Keiner der vier Ordner traegt heute eine

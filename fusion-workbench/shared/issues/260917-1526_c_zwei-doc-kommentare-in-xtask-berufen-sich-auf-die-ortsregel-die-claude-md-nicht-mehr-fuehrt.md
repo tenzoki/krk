@@ -26,3 +26,7 @@ Falsch ist der Name, nicht der Schluss. `CLAUDE.md` sagt weiter, dass Aufzeichnu
 **Abnahme**
 
 Beide Doc-Kommentare nennen den Grund, ohne einen Regelnamen zu führen, den `CLAUDE.md` nicht mehr trägt; ``grep -rn 'Ortsregel' --exclude-dir=fusion-workbench --exclude-dir=target --exclude-dir=.git .`` gibt nichts mehr aus, und `cargo test -p xtask` bleibt grün.
+
+---
+
+Resolved: Beide Doc-Kommentare begründen den Ausschluss der Werkbank jetzt aus der Sache statt aus einem Regelnamen: eine Aufzeichnung wird nicht nachgezogen, wenn der Baum weiterrückt, weil ihr Wortlaut sagt, was am Tag ihrer Niederschrift galt, und ein Angleichen an den heutigen Stand genau diese Auskunft löschte. Der Schluss und der Umfang der beiden Läufe sind unverändert; `NICHT_BETRETEN` führt weiter dieselben vier Ordner. `grep -rn 'Ortsregel' --exclude-dir=fusion-workbench --exclude-dir=target --exclude-dir=.git .` gibt nichts mehr aus, `cargo test -p xtask` mit Exit 0 (171 Proben).
