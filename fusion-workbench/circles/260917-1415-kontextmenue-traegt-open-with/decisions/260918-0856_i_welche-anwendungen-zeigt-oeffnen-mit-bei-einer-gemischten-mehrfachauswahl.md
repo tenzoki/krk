@@ -39,3 +39,7 @@ Gebaut ist heute die Regel, die dem Wortlaut am nächsten steht: gefragt wird de
 ## Recommendation
 
 Möglichkeit 1 vorerst beibehalten, und zwar so lange, wie die Kosten der beiden anderen ungemessen sind. Der Auslöser, der die Frage wieder aufmacht, ist eine gemischte Mehrfachauswahl, bei der die angebotene Anwendung mit den übrigen Einträgen erkennbar nichts anfängt.
+
+---
+Answered: Der Nutzer am 260918-0907, auf die Vorlage der drei Möglichkeiten im Chat: Möglichkeit 1. Der angeklickte Eintrag entscheidet über die Liste, alle betroffenen gehen an die gewählte Anwendung; der Code bleibt, wie er gebaut ist. Ruled by user, Kai Stalmann <kai@stalmann.org>.
+Implemented: ea9af88 — `oeffnungsbezug` in `krk-ui/src/kommandos/kontextmenue.rs` nennt den angeklickten Eintrag als Bezug; die Hülle `appkit/oeffnenmit.rs` fragt das System einmal je Rechtsklick.
