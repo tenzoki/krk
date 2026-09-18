@@ -515,10 +515,14 @@ speichert.
 - **Patch** steigt bei Behebungen ohne neue Fähigkeit.
 
 **Jede Auslieferung bekommt einen Tag `v<version>`, und den setzt das Werkzeug**
-(`shared/decisions/260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`).
-Der Tag bleibt ein bewusster Akt, nur liegt der Vorsatz im Argument: wer
-`./release.sh 0.2.0` tippt, hat die Zahl gewählt, und der Tag folgt daraus
-mechanisch. Verschoben wird nie einer — ein vergebener Name hält den Lauf an.
+(`260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md`).
+Der Tag bleibt ein bewusster Akt, nur liegt der Vorsatz im Auftrag und nicht in
+der Hand am Argument: die Zahl folgt den drei Stufen darüber, und wer sie daraus
+ableitet, darf sie vergeben — auch ein Agent, sofern er sie vor dem Lauf nennt
+und die Auslieferung auf ausdrücklichen Auftrag fährt
+(`260918-0842_*_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.md`).
+Der Tag folgt aus der Zahl mechanisch. Verschoben wird nie einer — ein vergebener
+Name hält den Lauf an.
 
 Station 1 von `cargo xtask release` prüft, dass HEAD einen Tag mit genau diesem
 Namen trägt und dass keine verfolgte Datei geändert ist; vorgemerkte und nicht
