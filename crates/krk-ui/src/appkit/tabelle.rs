@@ -115,13 +115,34 @@
 //! 260812-1200,
 //! `decisions/260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`
 //! der Runde 6, und vom 260907-0703, das das Aufheben nachlegt). Die Zeile
-//! liefert `clickedRow`, die Entscheidung
+//! rechnet [`Dateiliste`] aus dem Ereignis aus, die Entscheidung faellt
 //! [`crate::kommandos::operationen::rechtsklick_zielzeile`] ohne Fenster,
 //! aufgehoben wird ueber `markierung_aendern` wie beim Tastenbefehl, und
 //! gesetzt wird sie ueber `zeile_setzen` wie jede Auswahl der Tastatur.
 //! **Worauf ein Befehl danach wirkt, sagt weiterhin allein
 //! [`crate::kommandos::operationen::betroffene`]**; die Auswahl aendert sich
 //! vor ihr, nicht sie selbst.
+//!
+//! **Sie tut das in `menuForEvent:` und nicht in `menuNeedsUpdate:`**, also in
+//! [`Dateiliste::kontextmenue`] und nicht im Menuebauer der Quelle. Der Grund
+//! ist der Zuschnitt der beiden Rueckrufe: `menuNeedsUpdate:` fuellt ein Menue,
+//! und AppKit ruft es, nachdem es die Verfolgung schon aufgebaut hat. Die
+//! Auswahl nachzuruecken heisst dagegen, die Tabelle zu **aendern** — auf einer
+//! unmarkierten Zeile bis hin zu einem vollen `reloadData` in
+//! `markierung_aendern`, das jede Zeilen- und Zellenansicht verwirft —, und das
+//! gehoert vor den Beginn der Verfolgung und damit an den Rueckruf, der den
+//! Rechtsklick selbst beantwortet. Bis zum 260918 stand es in
+//! `menuNeedsUpdate:` (`8e7a067` hat das `reloadData` am 260907 dorthin
+//! gebracht); umgestellt wurde es, weil die Stelle falsch geschnitten war, und
+//! **nicht**, weil jemand eine Wirkung davon belegt haette
+//! (`shared/issues/260917-2216_*_das-kontextmenue-der-dateiliste-schliesst-sich-nach-einer-zehntel-sekunde-von-selbst.md`).
+//!
+//! **Die Umstellung nimmt dem Auffrischungstakt nichts.** Der Zeitgeber unten
+//! haengt in `NSRunLoopCommonModes` und baut die Liste sechzigmal je Sekunde
+//! neu auf, solange ein Lese- oder Gitlauf offen ist — auch waehrend ein Menue
+//! steht, und das ist dort ausdruecklich gewollt. Ein Rechtsklick, der in einen
+//! **laufenden** Vorgang faellt, sieht also weiterhin `reloadData` unter dem
+//! offenen Menue. Wer dem nachgeht, faengt bei jenem Takt an und nicht hier.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -131,7 +152,8 @@
 //! `NSColor` und `NSFont`; aus Foundation `NSObject`, `NSString`, `NSDate`,
 //! `NSDateFormatter`, `NSIndexSet`, `NSNotification`, `NSRunLoop`, `NSTimer`
 //! und `NSByteCountFormatter`, seit C1 der Runde 6 dazu `NSMenu` und die
-//! Eigenschaft `menu` von `NSResponder` (`NSResponder.h:111`). **Alle stehen
+//! Eigenschaft `menu` von `NSResponder` (`NSResponder.h:111`), seit dem 260918
+//! ausserdem `NSEvent` (`NSEvent.h:317`). **Alle stehen
 //! seit macOS 10.0 zur Verfuegung**, `NSByteCountFormatter` als einzige
 //! Ausnahme seit 10.8 (`NSByteCountFormatter.h:38`). Dasselbe gilt fuer die
 //! fuenf angenommenen Protokolle `NSObjectProtocol`, `NSTableViewDataSource`,
@@ -209,9 +231,26 @@
 //! in den Erzeuger.
 //!
 //! **`clickedRow` steht seit 10.0** (`NSTableView.h:276`, am SDK gelesen: die
-//! Eigenschaft traegt kein `API_AVAILABLE`). Sie hat seit dem 260812 zwei
-//! Abnehmer statt einen, den Doppelklick aus C3 der Runde 4 und die Auswahl
-//! vor dem Rechtsklick aus C1 der Runde 6.
+//! Eigenschaft traegt kein `API_AVAILABLE`). Sie hat seit dem 260918 wieder
+//! genau einen Abnehmer, den Doppelklick aus C3 der Runde 4.
+//!
+//! **Die vier Beruehrungen der Unterklasse [`Dateiliste`] stehen seit 10.0**,
+//! jede am 260918 im SDK nachgelesen und keine mit einem `API_AVAILABLE` im
+//! Kopf: `menuForEvent:` (`NSView.h:291`), das sie ueberschreibt,
+//! `convertPoint:fromView:` (`NSView.h:149`), `initWithFrame:`
+//! (`NSView.h:83`) und `rowAtPoint:` (`NSTableView.h:411`). Dazu die eine
+//! Beruehrung an `NSEvent`, `locationInWindow` (`NSEvent.h:337`).
+//!
+//! **Die Zeile kommt aus dem Ereignis und nicht aus `clickedRow`**, und das ist
+//! keine Geschmacksfrage: ob AppKit `clickedRow` schon gesetzt hat, wenn es
+//! `menuForEvent:` ruft, sagt der Kopf des Systems an keiner Stelle
+//! (`NSTableView.h:275-276` tragen ueberhaupt keinen Kommentar). Der Wert aus
+//! `locationInWindow` traegt seine Zusage dagegen im Kopf: „valid for all
+//! mouse-related events". Eine Zusage anzunehmen, die niemand gibt, ist genau
+//! das, was diese Datei sonst ueberall vermeidet. `rowAtPoint:` antwortet
+//! ausserhalb jeder Zeile `-1`, also dasselbe wie `clickedRow`, und
+//! [`crate::kommandos::operationen::rechtsklick_zielzeile`] bleibt damit
+//! unveraendert.
 //!
 //! **Die Zelle der Namensspalte ist seit dem Ordnerzeichen eine eigene
 //! Unterklasse von `NSTextField`** ([`Namensfeld`]). Sie ueberschreibt
@@ -251,12 +290,12 @@ use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use objc2::rc::Retained;
+use objc2::rc::{Retained, Weak};
 use objc2::runtime::ProtocolObject;
 use objc2::{ClassType, DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSDragOperation,
-    NSDraggingInfo, NSFont, NSFontWeightBold, NSFontWeightRegular, NSMenu, NSMenuDelegate,
+    NSDraggingInfo, NSEvent, NSFont, NSFontWeightBold, NSFontWeightRegular, NSMenu, NSMenuDelegate,
     NSMenuItem, NSScrollView, NSTableColumn, NSTableView, NSTableViewColumnAutoresizingStyle,
     NSTableViewDataSource, NSTableViewDelegate, NSTableViewDropOperation, NSTableViewStyle,
     NSTextAlignment, NSTextField, NSUserInterfaceItemIdentification, NSView,
@@ -827,8 +866,11 @@ pub struct QuelleIvars {
     /// Die Tabelle, der die Quelle Aenderungen meldet.
     ///
     /// `NSTableView` haelt Datenquelle und Delegierten nur schwach; die starke
-    /// Richtung laeuft deshalb von hier nach dort und nicht umgekehrt.
-    tabelle: Retained<NSTableView>,
+    /// Richtung laeuft deshalb von hier nach dort und nicht umgekehrt. Das gilt
+    /// seit dem 260918 auch fuer den Rueckverweis der Unterklasse
+    /// ([`Dateiliste::ziel_setzen`]): er ist schwach, weil dieses Feld stark
+    /// ist.
+    tabelle: Retained<Dateiliste>,
     /// Die Bildlaufansicht um die Tabelle. Sie traegt die Bildlaufposition.
     sicht: Retained<NSScrollView>,
     /// Was gerufen wird, wenn eine der Meldungsquellen dieses
@@ -1276,13 +1318,21 @@ define_class!(
         /// eines mitbringt, haengt sich aus genau diesem Grund anders an
         /// (siehe den Kopf von [`super::teilen`]).
         ///
-        /// **Der Rechtsklick rueckt die Auswahl nach, bevor die betroffenen
-        /// Eintraege nachgeschlagen werden** — es sei denn, die angeklickte
-        /// Zeile ist markiert. So hat der Nutzer es am 260812-1200 entschieden
+        /// **Dieser Rumpf aendert die Tabelle nicht, und das ist seit dem
+        /// 260918 die Regel dieser Stelle.** Er liest das Modell und fuellt das
+        /// Menue; sonst nichts. Das Nachruecken der Auswahl, das bis dahin hier
+        /// als erste Zeile stand, ist eine **Aenderung** an der Tabelle und
+        /// gehoert deshalb vor den Beginn der Menueverfolgung, also in
+        /// [`Dateiliste::kontextmenue`] (`menuForEvent:`). Der Modulkopf sagt,
+        /// warum, und sagt auch, dass kein belegtes Symptom dahintersteht.
+        ///
+        /// **Die Reihenfolge bleibt dieselbe**, sie liegt nur nicht mehr in
+        /// einem Rumpf: AppKit ruft erst `menuForEvent:` und dann
+        /// `menuNeedsUpdate:`, also steht die nachgerueckte Auswahl schon,
+        /// wenn [`Self::betroffene_eintraege`] hier fragt. Das ist der
+        /// Nutzerentscheid vom 260812-1200
         /// (`decisions/260812-1145_*_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`
-        /// dieser Runde), und deshalb steht
-        /// [`Self::rechtsklick_auswahl_nachziehen`] hier **vor**
-        /// [`Self::betroffene_eintraege`] und nicht in ihm.
+        /// dieser Runde): das Menue zeigt auf dasselbe, worauf es wirkt.
         ///
         /// **Eine zweite Auswahlregel entsteht dabei nicht.**
         /// [`crate::kommandos::operationen::betroffene`] bleibt unangetastet
@@ -1297,12 +1347,11 @@ define_class!(
         /// Bauer fuegt vorn ein und setzt seinen Trenner nur, wenn schon etwas
         /// dasteht. Der Modulkopf schreibt es aus.
         ///
-        /// Die Ausleihe des Tabmodells endet in jeder der beiden ersten
-        /// Zeilen, vor dem ersten Objective-C-Aufruf; siehe den Modulkopf.
+        /// Die Ausleihe des Tabmodells endet in der ersten Zeile, vor dem
+        /// ersten Objective-C-Aufruf; siehe den Modulkopf.
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(menuNeedsUpdate:))]
         fn menue_auffrischen(&self, menue: &NSMenu) {
-            self.rechtsklick_auswahl_nachziehen();
             let betroffen = self.betroffene_eintraege();
             menue.removeAllItems();
             self.eigene_kontexteintraege_anfuegen(menue);
@@ -1315,7 +1364,7 @@ impl DateifensterQuelle {
     /// Eine Datenquelle fuer die genannte Tabelle.
     fn neu(
         mtm: MainThreadMarker,
-        tabelle: Retained<NSTableView>,
+        tabelle: Retained<Dateiliste>,
         sicht: Retained<NSScrollView>,
         tabs: Tabliste,
     ) -> Retained<Self> {
@@ -1815,12 +1864,21 @@ impl DateifensterQuelle {
     /// Hebt vor einem Rechtsklick die Markierung auf und rueckt die Auswahl auf
     /// die angeklickte Zeile.
     ///
-    /// Der eine Aufrufer ist `menuNeedsUpdate:` oben, und der Zeitpunkt ist
-    /// die halbe Regel: gerufen wird **vor** [`Self::betroffene_eintraege`].
-    /// Ob ueberhaupt gerueckt wird, entscheidet
+    /// Der eine Aufrufer ist [`Dateiliste::kontextmenue`], also
+    /// `menuForEvent:`, und der Zeitpunkt ist die halbe Regel: gerufen wird
+    /// **vor** dem Beginn der Menueverfolgung und damit vor `menuNeedsUpdate:`,
+    /// wo [`Self::betroffene_eintraege`] fragt. Bis zum 260918 stand der Aufruf
+    /// in jenem Rueckruf; warum er heute davor steht, sagt der Modulkopf. Ob
+    /// ueberhaupt gerueckt wird, entscheidet
     /// [`operationen::rechtsklick_zielzeile`] ohne Fenster; hier bleibt allein,
-    /// was AppKit betrifft, die angeklickte Zeile zu erfragen und den neuen
-    /// Stand zu setzen.
+    /// was AppKit betrifft, den neuen Stand zu setzen.
+    ///
+    /// **Die angeklickte Zeile bringt der Aufrufer mit** und wird nicht hier
+    /// erfragt: `menuForEvent:` hat das Ereignis in der Hand und rechnet die
+    /// Zeile daraus aus, statt sich auf `clickedRow` zu verlassen, ueber dessen
+    /// Stand zu diesem Zeitpunkt der Kopf des Systems nichts sagt. Der
+    /// Modulkopf schreibt es aus. `angeklickt` ist deshalb genau das, was
+    /// `rowAtPoint:` geliefert hat, `-1` eingeschlossen.
     ///
     /// **Beides haengt an derselben Antwort, und das ist die Regel und nicht
     /// eine Bequemlichkeit** (Nutzerentscheid vom 260907-0703): `Some(zeile)`
@@ -1846,10 +1904,9 @@ impl DateifensterQuelle {
     /// `markierung_aendern` stellt ueber [`Self::auswahl_anzeigen`] die Auswahl
     /// des Modells wieder her; umgekehrt gerufen naehme es die eben gesetzte
     /// Zeile wieder zurueck.
-    fn rechtsklick_auswahl_nachziehen(&self) {
-        // `clickedRow` liefert -1, wenn der Klick auf keine Zeile fiel;
+    fn rechtsklick_auswahl_nachziehen(&self, angeklickt: NSInteger) {
+        // `rowAtPoint:` liefert -1, wenn der Klick auf keine Zeile fiel;
         // `rechtsklick_zielzeile` faengt das ab und antwortet `None`.
-        let angeklickt = self.ivars().tabelle.clickedRow();
         let ziel = {
             let tabs = self.ivars().tabs.borrow();
             operationen::rechtsklick_zielzeile(tabs.aktiver().modell(), angeklickt)
@@ -4694,9 +4751,9 @@ impl DateifensterDelegierter {
             // kommt also nur wieder in die Namensspalte, und mit ihm seine
             // Aktion.
             feld.setEditable(true);
-            // **Das Ziel hat seit dem Ordnerzeichen zwei Abnehmer statt einen**
-            // — wie `clickedRow` im Modulkopf, und aus demselben Grund steht es
-            // hier: [`Namensfeld::delegierter`] liest dasselbe `target`
+            // **Das Ziel hat seit dem Ordnerzeichen zwei Abnehmer statt einen**,
+            // und deshalb steht das hier:
+            // [`Namensfeld::delegierter`] liest dasselbe `target`
             // zurueck, weil es der einzige Weg von der Zelle zu ihrem
             // Delegierten ist. Drei Ueberschreibungen der Zelle gehen darueber
             // (`becomeFirstResponder`, `textDidEndEditing:`, `abortEditing`),
@@ -5036,6 +5093,107 @@ impl Namensfeld {
     }
 }
 
+define_class!(
+    /// Die Tabelle der Dateiliste: eine `NSTableView`, die vor dem
+    /// Kontextmenue die Auswahl nachrueckt.
+    ///
+    /// **Warum es diese Unterklasse gibt.** Ein Rechtsklick auf eine
+    /// unmarkierte Zeile hebt die Markierung auf und rueckt die Auswahl nach
+    /// (Nutzerentscheid vom 260907-0703). Das **aendert** die Tabelle, bis hin
+    /// zu einem vollen `reloadData` in
+    /// [`DateifensterQuelle::markierung_aendern`]. Bis zum 260918 geschah es in
+    /// `menuNeedsUpdate:`, also in einem Rueckruf, den AppKit erst ruft,
+    /// nachdem es die Menueverfolgung aufgebaut hat; `menuForEvent:` ist der
+    /// Rueckruf, der den Rechtsklick selbst beantwortet, und damit die Stelle,
+    /// an der eine Aenderung an der Tabelle hingehoert. Der Modulkopf
+    /// begruendet die Umstellung und sagt ausdruecklich, dass sie nicht auf
+    /// einem belegten Symptom beruht.
+    ///
+    /// **Was sie nicht ist: eine zweite Menuemaschine.** Das `NSMenu` haengt
+    /// weiter an der Tabelle ([`Dateifenster::bauen`]), gefuellt wird es weiter
+    /// von [`DateifensterQuelle`] in `menuNeedsUpdate:`. Diese Klasse baut kein
+    /// Menue, aendert keines und kennt keinen Eintrag; sie rueckt die Auswahl
+    /// nach und reicht die Frage an die Oberklasse weiter.
+    ///
+    /// **Der Rueckverweis ist schwach.** Die Quelle haelt die Tabelle stark
+    /// (`QuelleIvars::tabelle`), also bricht der Ring Quelle → Tabelle →
+    /// Quelle an dieser Kante, wie schon beim Delegierten des Menues und bei
+    /// [`super::vorschau`]s Inhaltsflaeche. Fehlt der Verweis oder ist die
+    /// Quelle fort, geschieht nichts und das Menue kommt trotzdem: die
+    /// Oberflaeche steht dann noch nicht oder nicht mehr, und das ist keine
+    /// Lage, in der eine Auswahl nachzurruecken waere.
+    ///
+    /// Ab welchem macOS die vier angesprochenen Methoden stehen, sagt der
+    /// Modulkopf; dort steht auch, warum die Zeile aus dem Ereignis kommt und
+    /// nicht aus `clickedRow`.
+    // SAFETY:
+    // - Die Oberklasse `NSTableView` stellt an eine Unterklasse keine
+    //   Bedingung, die diese Klasse verletzt: sie ruft den bezeichneten
+    //   Erzeuger `initWithFrame:` der Oberklasse, sie ist weder ihre eigene
+    //   Datenquelle noch ihr eigener Delegierter, und ihre eine
+    //   Ueberschreibung ruft die Fassung der Oberklasse.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSTableView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = RefCell<Option<Weak<DateifensterQuelle>>>]
+    pub struct Dateiliste;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Dateiliste {}
+
+    impl Dateiliste {
+        /// Rueckt die Auswahl nach und gibt danach das Menue der Oberklasse
+        /// heraus.
+        ///
+        /// **Die Reihenfolge ist die ganze Zusage dieser Methode**: erst
+        /// nachruecken, dann antworten. AppKit spannt das Menue auf, nachdem
+        /// dieser Rumpf zurueckgekehrt ist, und ruft erst danach
+        /// `menuNeedsUpdate:`; die Tabelle steht also, bevor die Verfolgung
+        /// beginnt, und der Menuebauer sieht denselben Stand wie der Nutzer.
+        ///
+        /// **Die Zeile kommt aus dem Ereignis.** `locationInWindow` gilt laut
+        /// dem Kopf des Systems fuer jedes Mausereignis, `rowAtPoint:`
+        /// antwortet ausserhalb jeder Zeile `-1`, und
+        /// [`operationen::rechtsklick_zielzeile`] faengt genau das ab. Warum
+        /// nicht `clickedRow`, sagt der Modulkopf.
+        ///
+        /// **Kein `return` in diesem Rumpf**: `method_id` huellt den Wert, und
+        /// ein frueher Ausstieg lieferte den falschen Typ. Dieselbe Form wie in
+        /// [`super::betrachter`].
+        // SAFETY: Die Signatur entspricht der von NSView (`NSView.h:291`): ein
+        // Ereignis, ein optionales Menue zurueck.
+        #[unsafe(method_id(menuForEvent:))]
+        fn kontextmenue(&self, ereignis: &NSEvent) -> Option<Retained<NSMenu>> {
+            let quelle = self.ivars().borrow().as_ref().and_then(Weak::load);
+            if let Some(quelle) = quelle {
+                let ort = self.convertPoint_fromView(ereignis.locationInWindow(), None);
+                quelle.rechtsklick_auswahl_nachziehen(self.rowAtPoint(ort));
+            }
+            // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht mit
+            // demselben Argument und liefert ein optionales Menue.
+            unsafe { msg_send![super(self), menuForEvent: ereignis] }
+        }
+    }
+);
+
+impl Dateiliste {
+    /// Eine Tabelle mit dem genannten Rahmen, noch ohne Rueckverweis.
+    fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(RefCell::new(None));
+        // SAFETY: `initWithFrame:` von NSView hat die hier angenommene
+        // Signatur.
+        unsafe { msg_send![super(this), initWithFrame: rahmen] }
+    }
+
+    /// Traegt den Rueckverweis nach, sobald es die Quelle gibt.
+    ///
+    /// Die eine Stelle, die ihn setzt, ist [`Dateifenster::bauen`]; vorher gibt
+    /// es die Quelle nicht, denn sie bekommt die Tabelle in ihren Erzeuger.
+    fn ziel_setzen(&self, quelle: &DateifensterQuelle) {
+        *self.ivars().borrow_mut() = Some(Weak::from_retained(&quelle.retain()));
+    }
+}
+
 /// Ein aufgebautes Dateifenster: seine drei Ansichten und die Objekte, die
 /// AppKit nur schwach referenziert.
 ///
@@ -5059,7 +5217,10 @@ impl Dateifenster {
     /// bestimmt das Fenstermodell und nicht der Aufbau.
     pub fn bauen(mtm: MainThreadMarker, tabs: Tabliste) -> Self {
         let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
-        let tabelle = NSTableView::initWithFrame(NSTableView::alloc(mtm), rahmen);
+        // Die Unterklasse und nicht die nackte `NSTableView`: sie rueckt die
+        // Auswahl vor dem Kontextmenue nach. Der Rueckverweis kommt weiter
+        // unten, sobald es die Quelle gibt.
+        let tabelle = Dateiliste::neu(mtm, rahmen);
         tabelle.setRowHeight(ZEILENHOEHE);
         // Ausdruecklich, obwohl es die Vorbelegung ist: an dieser Zeile haengt,
         // dass AppKit die Gesamthoehe rechnet statt jede Zeile zu messen.
@@ -5101,6 +5262,12 @@ impl Dateifenster {
             tabelle.setDataSource(Some(ProtocolObject::from_ref(delegierter.quelle())));
             tabelle.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));
         }
+
+        // Der Rueckverweis der Unterklasse, **schwach** gehalten: die Quelle
+        // haelt die Tabelle stark, und der Ring bricht an dieser Kante. Er
+        // steht hier und nicht in `Dateiliste::neu`, weil die Quelle die
+        // Tabelle in ihren Erzeuger bekommt und es sie vorher nicht gibt.
+        tabelle.ziel_setzen(delegierter.quelle());
 
         // Der Abwurf aus einer fremden Anwendung (C4 bis C7 der Runde 13).
         // Welche Sorten angemeldet werden und warum die Zusagesorten dabei

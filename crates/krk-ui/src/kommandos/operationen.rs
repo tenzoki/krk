@@ -247,7 +247,11 @@ pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
 /// die letzte Zeile oder auf die leere Flaeche laesst deshalb alles stehen,
 /// statt eine Markierung wegzunehmen, auf die das Menue danach wirkt.
 ///
-/// `angeklickt` ist der Wert von `NSTableView.clickedRow`. Drei Faelle fuehren
+/// `angeklickt` ist die Zeile, die der Rufer aus dem Mausereignis gerechnet
+/// hat, seit dem 260918 also der Wert von `NSTableView.rowAtPoint:` und nicht
+/// mehr der von `clickedRow`; warum, sagt der Kopf von
+/// `crate::appkit::tabelle`. An dieser Rechnung aendert der Wechsel nichts:
+/// beide antworten ausserhalb jeder Zeile negativ. Drei Faelle fuehren
 /// zu `None` und einer zu `Some`:
 ///
 /// - **negativ** — der Klick fiel auf keine Zeile, also unter die letzte oder
@@ -1763,7 +1767,7 @@ mod tests {
         );
     }
 
-    /// `clickedRow` liefert -1, wenn der Klick auf keine Zeile fiel.
+    /// `rowAtPoint:` liefert -1, wenn der Klick auf keine Zeile fiel.
     #[test]
     fn ein_klick_auf_keine_zeile_setzt_keine_auswahl() {
         let modell = modell_mit(&[("a.txt", Typ::Datei)]);
