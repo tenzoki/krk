@@ -1505,6 +1505,82 @@ pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> Strin
 }
 
 // ----------------------------------------------------------------------
+// Das Untermenue „Öffnen mit" (260918)
+// ----------------------------------------------------------------------
+
+/// Der Satz, wenn das System fuer den Bezugseintrag keine Anwendung nennt
+/// (260918).
+///
+/// **Er geht nicht durch [`nichts_betroffen`]**, und der Grund ist derselbe,
+/// aus dem [`kein_archiv`] es nicht tut: „nichts markiert und nichts
+/// ausgewaehlt" waere hier falsch. Der Nutzer hat einen Eintrag vor sich und
+/// hat ihn angeklickt; was fehlt, ist eine Anwendung dafuer. Ist wirklich nichts
+/// betroffen, meldet der Eintrag [`nichts_zu_oeffnen`] und nicht diesen Satz —
+/// die zwei Lagen sind geschieden, und geschieden werden sie an
+/// [`super::kontextmenue::oeffnungsbezug`], das ohne betroffenen Eintrag `None`
+/// liefert.
+///
+/// **Er nennt nicht, woran es liegt**, denn das System nennt es nicht:
+/// `URLsForApplicationsToOpenURL:` liefert dieselbe leere Liste fuer einen
+/// Eintrag, fuer den keine Anwendung angemeldet ist, und fuer einen, den es
+/// nicht mehr gibt (`crate::appkit::oeffnenmit`). Zwei Texte fuer eine Antwort
+/// waeren eine Vermutung, wie sie [`kein_finder`] und der Oeffner aus der
+/// Runde 4 ebenfalls ablehnen.
+///
+/// **Ein Rufer**, der Zweig
+/// [`Kontextbefehl::OeffnenMit`](super::kontextmenue::Kontextbefehl::OeffnenMit)
+/// beim Anwendungsdelegierten. Er wird nur erreicht, wenn der Eintrag gar kein
+/// Untermenue traegt; steht eines da, ist die Lage nicht diese.
+#[must_use]
+pub fn keine_anwendung() -> String {
+    "nichts zu öffnen: das System nennt für diesen Eintrag keine Anwendung".to_owned()
+}
+
+/// Die Meldung nach der Uebergabe an eine benannte Anwendung (260918).
+///
+/// **Das Gegenstueck zu [`oeffnungsmeldung`], und es sagt noch weniger.** Jene
+/// meldet „an das System uebergeben", weil `openURL:` immerhin die Annahme
+/// zurueckgibt; `openURLs:withApplicationAtURL:configuration:completionHandler:`
+/// gibt gar nichts zurueck (`crate::appkit::oeffnenmit`). Der Satz nennt
+/// deshalb die Anwendung, an die uebergeben wurde, und behauptet ueber den
+/// Ausgang nichts.
+///
+/// **Die Anwendung steht im Satz**, und das ist der ganze Unterschied zum
+/// Nachbarn: der Nutzer hat sie eben ausgewaehlt, und die Antwort bestaetigt
+/// ihm die Wahl. Ihr Name ist der, den er im Untermenue gelesen hat.
+///
+/// Bei einem Eintrag nennt sie seinen **Namen**, bei mehreren ihre Zahl — die
+/// Regel von [`oeffnungsmeldung`], und sie steht dort begruendet. Eine leere
+/// Menge erreicht diese Funktion nicht: ohne betroffenen Eintrag traegt das
+/// Untermenue keine Anwendung, die anzuklicken waere.
+#[must_use]
+pub fn oeffnungsmeldung_an(anwendung: &str, uebergeben: &[PathBuf]) -> String {
+    match uebergeben {
+        [] => nichts_zu_oeffnen(),
+        [einziger] => format!("an {anwendung} übergeben: {}", eintragsname(einziger)),
+        mehrere => format!("{} Einträge an {anwendung} übergeben", mehrere.len()),
+    }
+}
+
+/// Der Satz, wenn die Uebergabe an eine Anwendung nicht stattgefunden hat
+/// (260918).
+///
+/// **Ein Pfad ohne gueltiges UTF-8 ist der einzige Grund**, und der Satz nennt
+/// ihn, statt die Lage offenzulassen: `crate::appkit::oeffnenmit::oeffnen_mit`
+/// weist die ganze Menge ab, bevor es das System fragt, und tut es an genau
+/// dieser einen Stelle. Ein Satz, der bloss „nicht uebergeben" sagte, liesse den
+/// Nutzer den Grund bei der Anwendung suchen.
+///
+/// **Der Fall ist selten und wird trotzdem gemeldet**, aus demselben Grund wie
+/// bei [`ablage_weist_ab`] und [`kein_finder`]: ein Befehl, der still nichts
+/// tut, sieht aus wie einer, der nicht angekommen ist. Auf dem Bauziel entsteht
+/// er kaum, denn APFS nimmt einen solchen Namen gar nicht an.
+#[must_use]
+pub fn nicht_uebergeben(anwendung: &str) -> String {
+    format!("an {anwendung} nicht übergeben: ein Pfad trägt kein gültiges UTF-8")
+}
+
+// ----------------------------------------------------------------------
 // Die Belegungsdatei in der Vorschau (Nutzerauftrag vom 260901)
 // ----------------------------------------------------------------------
 

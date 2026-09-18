@@ -244,6 +244,7 @@ mod koordinaten;
 mod leiste;
 mod menue;
 mod nummernspalte;
+mod oeffnenmit;
 mod papierkorb;
 mod standardprogramm;
 mod statuszeile;

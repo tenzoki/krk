@@ -93,8 +93,8 @@
 //! Geschmacksfrage.** [`super::teilen::eintrag_anfuegen`] fuegt **vorn** ein
 //! (`insertItem_atIndex(…, 0)`) und setzt seinen Trenner nur, wenn schon etwas
 //! dasteht. Erst die eigenen anhaengen, dann jenen rufen, ergibt damit
-//! von selbst „Teilen, Trenner, Zip, Unzip, Im Finder oeffnen, Im Finder
-//! anzeigen"; die umgekehrte
+//! von selbst „Teilen, Trenner, die eigenen Eintraege in der Reihenfolge von
+//! [`Kontextbefehl::ALLE`]"; die umgekehrte
 //! Folge ergaebe ein Menue ohne Trenner, in dem der Freigabeeintrag zwischen
 //! den eigenen stuende.
 //!
@@ -109,6 +109,30 @@
 //! damit den Bau an, statt still nichts zu tun. Der Freigabeeintrag gehoert
 //! nicht in jene Aufzaehlung: er traegt Ziel und Handlung des Systems, und KRK
 //! fuehrt ihn nicht aus.
+//!
+//! **Seit dem 260918 traegt das Menue eine zweite Art von Eintrag, und sie hat
+//! einen zweiten Selektor.** Die Glieder des Untermenues „Öffnen mit" sind die
+//! Anwendungen, die das System fuer den Bezugseintrag nennt; wie viele es sind,
+//! steht beim Uebersetzen nicht fest, und sie sind deshalb **keine** Werte von
+//! [`Kontextbefehl`]. Warum der Schnitt dort und nicht anderswo liegt, schreibt
+//! der Modulkopf von [`crate::kommandos::kontextmenue`] aus; was diese Datei
+//! davon traegt, sind drei Stellen:
+//!
+//! ```text
+//!  menuNeedsUpdate: ──> eigene_kontexteintraege_anfuegen ──> anwendungsmenue
+//!                              │                                  │
+//!                              └─> oeffnungsziele <───────────────┘
+//!                                       │
+//!  oeffnenMit: ──> oeffnung_melden ─────┘──> Kontextwahl::OeffnenMit
+//! ```
+//!
+//! Der Selektor `oeffnenMit:` liest seine Marke gegen diese Liste, der Selektor
+//! `kontextbefehl:` gegen [`Kontextbefehl::ALLE`]; beide Folgen zaehlen ab
+//! eins, und getrennt werden sie am Selektor und nicht an einem geteilten
+//! Zahlenraum. **Der Eintrag „Öffnen mit" selbst gehoert weiterhin in die
+//! Aufzaehlung** — er steht immer da, an fester Stelle, mit festem Titel —, und
+//! sein Zweig ist die Meldung, die er gibt, wenn das System keine Anwendung
+//! nennt und er darum gar kein Untermenue traegt.
 //!
 //! **Der Rechtsklick hebt dabei die Markierung auf und rueckt die Auswahl auf
 //! die angeklickte Zeile, es sei denn, sie ist markiert** (Nutzerentscheide vom
@@ -222,6 +246,17 @@
 //! `$(xcrun --show-sdk-path)/System/Library/Frameworks/AppKit.framework/Headers/`
 //! nachgelesen.
 //!
+//! **Die zwei Beruehrungen des Untermenues vom 260918 stehen ebenfalls seit
+//! 10.0**, beide am SDK nachgelesen und keine mit einem `API_AVAILABLE` im
+//! Kopf: `NSMenuItem`s Eigenschaft `submenu` (`NSMenuItem.h:45`, Lesen und
+//! Setzen in derselben Deklaration) und `NSMenu`s Erzeuger `initWithTitle:`
+//! (`NSMenu.h:60`, mit `NS_DESIGNATED_INITIALIZER` und ohne
+//! Verfuegbarkeitsangabe). **Der Erzeuger steht hier und nicht bei
+//! [`super::menue`]**, anders als der von `NSMenuItem`: die Zusage C2.10 der
+//! Runde 7 gilt dem Menueeintrag und nicht dem Menue, und ein Kontextmenue mit
+//! einer zur Laufzeit gefuellten Liste hat mit dem Bau der Menueleiste nichts
+//! gemein ausser dem Klassennamen.
+//!
 //! **Der Erzeuger `initWithTitle:action:keyEquivalent:` (`NSMenuItem.h:38`,
 //! ebenfalls ohne Angabe und damit seit 10.0) steht bewusst nicht in dieser
 //! Liste**: diese Datei ruft ihn nicht. Sie geht ueber
@@ -322,7 +357,7 @@ use crate::kommandos::abwurfregel::{
     self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang,
 };
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
-use crate::kommandos::kontextmenue::{self, Entpackbefund, Kontextbefehl};
+use crate::kommandos::kontextmenue::{self, Anwendung, Entpackbefund, Kontextbefehl, Kontextwahl};
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
@@ -332,6 +367,7 @@ use crate::tabs::{Auswahlversuch, Tabliste};
 use super::abwurf;
 use super::blaetter;
 use super::menue;
+use super::oeffnenmit;
 use super::standardprogramm;
 use super::statuszeile::{self, Filterstand, Quellen};
 use super::tableiste::Tableiste;
@@ -612,7 +648,13 @@ pub type Abwurfmelder = Box<dyn Fn(PathBuf, Vec<PathBuf>, Abwurfvorgang)>;
 /// in [`Kontextbefehl::von_menuemarke`] und damit vor diesem Rueckruf; was
 /// hier herauskommt, ist bereits einer der Befehle, und der Empfaenger
 /// verzweigt darueber vollstaendig und ohne Auffangzweig.
-pub type Kontextmelder = Box<dyn Fn(Kontextbefehl)>;
+///
+/// **Seit dem 260918 traegt er zwei Arten von Klick und bleibt einer**
+/// ([`Kontextwahl`]): einen festen Eintrag und ein Glied des Untermenues
+/// „Öffnen mit". Ein zweiter Melder daneben waere ein zweiter Draht, den der
+/// Aufbau der Oberflaeche vergessen koennte, und die Probe
+/// `der_kontextmelder_wird_beim_aufbau_gesetzt` haelt genau einen.
+pub type Kontextmelder = Box<dyn Fn(Kontextwahl)>;
 
 /// Was die Statuszeile sagt, wenn die Quelle keine Datei auf dem Datentraeger
 /// liefert (C7).
@@ -1084,6 +1126,28 @@ pub struct QuelleIvars {
     /// seit dem Aufbau der Oberflaeche, und ein Rechtsklick braucht ein
     /// stehendes Fenster.
     kontextbefehl: RefCell<Option<Kontextmelder>>,
+    /// Die Anwendungen des Untermenues „Öffnen mit", in seiner Reihenfolge
+    /// (260918).
+    ///
+    /// **Kein Rueckruf, sondern die eine Liste, ueber die das Untermenue
+    /// zurueckgelesen wird.** Ein Glied dort traegt nichts als seine Marke, und
+    /// die Marke ist eine Stelle in dieser Liste; der Modulkopf von
+    /// [`crate::kommandos::kontextmenue`] sagt, warum die Anwendungen keine
+    /// Werte einer Aufzaehlung sein koennen und was an deren Stelle tritt.
+    ///
+    /// **Gefuellt wird sie bei jedem Menuebau, gelesen beim Klick, und
+    /// dazwischen liegt nichts.** AppKit ruft `menuNeedsUpdate:` vor dem Beginn
+    /// der Verfolgung und gibt den Klick erst nach ihrem Ende zurueck; die
+    /// Liste, die der Nutzer vor sich hatte, ist damit dieselbe, die
+    /// [`DateifensterQuelle::oeffnung_melden`] liest.
+    ///
+    /// Leer heisst: der Eintrag traegt kein Untermenue. Eine Marke, die aus
+    /// dieser Liste faellt, fuehrt zu nichts — dieselbe Antwort, die
+    /// [`Kontextbefehl::von_menuemarke`] einer fremden Marke gibt.
+    ///
+    /// **Der Name steht neben dem Pfad**, weil die Statuszeile ihn nennt: der
+    /// Nutzer soll die Anwendung wiederlesen, die er angeklickt hat.
+    oeffnungsziele: RefCell<Vec<Anwendung>>,
     /// Der Grund, den der vorige Durchgang von
     /// [`DateifensterQuelle::abwurf_pruefen`] gefaellt hat, `None` fuer ein
     /// angenommenes Urteil (C7).
@@ -1225,8 +1289,7 @@ define_class!(
             self.einziehen();
         }
 
-        /// Der Klick auf einen der drei eigenen Kontextmenue-Eintraege
-        /// (Runde 17).
+        /// Der Klick auf einen der eigenen Kontextmenue-Eintraege (Runde 17).
         ///
         /// **Ein Selektor fuer alle, und die Marke sagt, welcher gemeint
         /// war.** Ein Selektor je Befehl waere je eine Stelle, an der einer
@@ -1245,6 +1308,28 @@ define_class!(
         #[unsafe(method(kontextbefehl:))]
         fn kontextbefehl(&self, absender: &NSMenuItem) {
             self.kontextbefehl_melden(absender.tag());
+        }
+
+        /// Der Klick auf ein Glied des Untermenues „Öffnen mit" (260918).
+        ///
+        /// **Ein zweiter Selektor, und er ist der Schnitt zwischen den zwei
+        /// Arten von Eintrag.** Die Marke eines Gliedes benennt eine Stelle in
+        /// [`QuelleIvars::oeffnungsziele`], die Marke eines festen Eintrags
+        /// einen [`Kontextbefehl`]; beide zaehlen ab eins, und nur der Selektor
+        /// sagt, gegen welche der beiden Folgen zu lesen ist. Ein gemeinsamer
+        /// Selektor braeuchte dafuer einen geteilten Zahlenraum, und die erste
+        /// Verschiebung darin oeffnete beim Zippen eine Anwendung.
+        ///
+        /// Der Rumpf steht daneben, in
+        /// [`DateifensterQuelle::oeffnung_melden`], aus demselben Grund wie
+        /// beim Nachbarn darueber.
+        // SAFETY: Die Signatur passt zu der, die ein `NSMenuItem` an sein Ziel
+        // schickt: ein Argument, der Absender. Er ist der Eintrag, an dem die
+        // Handlung gesetzt wurde, und traegt damit die Marke, die
+        // `anwendungsmenue` ihm gegeben hat.
+        #[unsafe(method(oeffnenMit:))]
+        fn oeffnen_mit(&self, absender: &NSMenuItem) {
+            self.oeffnung_melden(absender.tag());
         }
     }
 
@@ -1354,7 +1439,7 @@ define_class!(
         fn menue_auffrischen(&self, menue: &NSMenu) {
             let betroffen = self.betroffene_eintraege();
             menue.removeAllItems();
-            self.eigene_kontexteintraege_anfuegen(menue);
+            self.eigene_kontexteintraege_anfuegen(menue, &betroffen.pfade);
             teilen::eintrag_anfuegen(menue, &betroffen.pfade, self.mtm());
         }
     }
@@ -1392,6 +1477,7 @@ impl DateifensterQuelle {
             abwurf: RefCell::new(None),
             befehlsantwort_raeumer: RefCell::new(None),
             kontextbefehl: RefCell::new(None),
+            oeffnungsziele: RefCell::new(Vec::new()),
             gemeldeter_abwurfgrund: Cell::new(None),
             beschlossener_vorgang: Cell::new(None),
             abwurfquellen: RefCell::new(None),
@@ -1950,13 +2036,48 @@ impl DateifensterQuelle {
     /// gemeldet; eine zweite Zulaessigkeitsmaschine neben
     /// [`crate::kommandos::zulaessigkeit`], die fuer das Hauptmenue gebaut ist,
     /// entsteht damit nicht.
-    fn eigene_kontexteintraege_anfuegen(&self, menue: &NSMenu) {
+    ///
+    /// **„Öffnen mit" ist der eine Eintrag, der zwei Gestalten hat** (260918),
+    /// und die Fallunterscheidung steht genau hier:
+    ///
+    /// ```text
+    ///  das System nennt Anwendungen ──> Untermenue, keine Handlung
+    ///  es nennt keine               ──> keine Untermenue, Handlung kontextbefehl:
+    /// ```
+    ///
+    /// **Ohne Handlung und ohne Untermenue waere er grau** — das sagt der Kopf
+    /// von `super::menue::roher_befehl` ausdruecklich —, und grau ist die
+    /// falsche Auskunft: der Nutzer laese „hier ist nichts zu holen" und
+    /// bekaeme keinen Grund. Mit der Handlung bleibt er bedienbar, und sein
+    /// Zweig beim Anwendungsdelegierten meldet, dass das System keine Anwendung
+    /// nennt. Das ist die Regel der Directive und dieselbe Antwort, die Unzip
+    /// auf einen Ordner ohne Archiv gibt.
+    ///
+    /// **Die Handlung faellt weg, sobald ein Untermenue dasteht**, und das ist
+    /// keine Vorsicht gegen einen erwarteten Klick: ein `NSMenuItem` mit
+    /// Untermenue schickt seine Handlung ohnehin nicht. Sie wegzulassen stellt
+    /// die Zusage aber von einer Eigenschaft von AppKit auf eine des eigenen
+    /// Baumes um — hier steht dann kein Weg, den irgendetwas anderes als das
+    /// Aufklappen beantworten muesste.
+    ///
+    /// **Die Liste der Anwendungen entsteht einmal je Menuebau**, wird als
+    /// Pfadliste in [`QuelleIvars::oeffnungsziele`] gelegt und beim Klick von
+    /// dort gelesen; warum sie und nicht eine Aufzaehlung die Glieder haelt,
+    /// steht im Modulkopf von [`crate::kommandos::kontextmenue`].
+    fn eigene_kontexteintraege_anfuegen(&self, menue: &NSMenu, betroffen: &[PathBuf]) {
         let mtm = self.mtm();
+        let anwendungen = kontextmenue::oeffnungsbezug(betroffen)
+            .map(oeffnenmit::anwendungen_fuer)
+            .unwrap_or_default();
+        // Die Ausleihe endet mit dieser Anweisung, vor dem ersten
+        // Objective-C-Aufruf darunter; siehe den Modulkopf.
+        *self.ivars().oeffnungsziele.borrow_mut() = anwendungen.clone();
         for befehl in Kontextbefehl::ALLE {
+            let klappt_auf = befehl == Kontextbefehl::OeffnenMit && !anwendungen.is_empty();
             let eintrag = menue::ohne_kuerzel(
                 mtm,
                 &NSString::from_str(befehl.titel()),
-                Some(sel!(kontextbefehl:)),
+                (!klappt_auf).then(|| sel!(kontextbefehl:)),
             );
             eintrag.setTag(befehl.menuemarke());
             // SAFETY: `setTarget:` verlangt, dass das Ziel vom richtigen Typ
@@ -1968,8 +2089,50 @@ impl DateifensterQuelle {
             // Delegierten des Menues. Ein gestorbenes Ziel liefert `nil` und
             // keinen Absturz.
             unsafe { eintrag.setTarget(Some(self)) };
+            if klappt_auf {
+                eintrag.setSubmenu(Some(&self.anwendungsmenue(&anwendungen)));
+            }
             menue.addItem(&eintrag);
         }
+    }
+
+    /// Das Untermenue „Öffnen mit" ueber die genannten Anwendungen (260918).
+    ///
+    /// **Ein Glied je Anwendung, in der Reihenfolge, die das System gegeben
+    /// hat**; sortiert wird hier nichts, und warum, steht im Kopf von
+    /// [`super::oeffnenmit`]. Der Titel ist der Name, den das System nennt, und
+    /// die Marke die Stelle in derselben Liste, die
+    /// [`Self::eigene_kontexteintraege_anfuegen`] eben hinterlegt hat.
+    ///
+    /// **Leer gerufen wird sie nicht**: der Aufrufer haengt das Untermenue nur
+    /// an, wenn wenigstens eine Anwendung dasteht. Ein leeres Untermenue waere
+    /// ein Eintrag, der aufklappt und nichts zeigt, und damit genau die
+    /// Sackgasse, die der Zweig ohne Untermenue vermeidet.
+    ///
+    /// Der Titel des Menues selbst sieht niemand — „Otherwise, the title is
+    /// ignored" (`NSMenu.h:58`) —; er steht trotzdem da, weil `initWithTitle:`
+    /// keinen leeren Ersatz verdient, wenn der richtige Titel eine Zeile weiter
+    /// oben schon ausgerechnet ist.
+    fn anwendungsmenue(&self, anwendungen: &[Anwendung]) -> Retained<NSMenu> {
+        let mtm = self.mtm();
+        let menue = NSMenu::initWithTitle(
+            NSMenu::alloc(mtm),
+            &NSString::from_str(Kontextbefehl::OeffnenMit.titel()),
+        );
+        for (stelle, anwendung) in anwendungen.iter().enumerate() {
+            let eintrag = menue::ohne_kuerzel(
+                mtm,
+                &NSString::from_str(&anwendung.name),
+                Some(sel!(oeffnenMit:)),
+            );
+            eintrag.setTag(kontextmenue::oeffnungsmarke(stelle));
+            // SAFETY: Dieselbe Bedingung wie beim Nachbarn darueber, und
+            // dieselbe Antwort: diese Quelle traegt `oeffnenMit:` selbst, und
+            // das Ziel wird schwach gehalten.
+            unsafe { eintrag.setTarget(Some(self)) };
+            menue.addItem(&eintrag);
+        }
+        menue
     }
 
     /// Meldet den angeklickten Kontextmenue-Befehl weiter (Runde 17).
@@ -1995,7 +2158,40 @@ impl DateifensterQuelle {
         let Some(melden) = melden.as_ref() else {
             return;
         };
-        melden(befehl);
+        melden(Kontextwahl::Befehl(befehl));
+    }
+
+    /// Meldet die angeklickte Anwendung des Untermenues weiter (260918).
+    ///
+    /// Der Rumpf hinter dem Selektor `oeffnenMit:` und das Gegenstueck zu
+    /// [`Self::kontextbefehl_melden`]. **Er entscheidet nichts**, sondern
+    /// rechnet die Marke ueber [`kontextmenue::oeffnungsstelle`] in eine Stelle
+    /// zurueck, holt den Pfad aus [`QuelleIvars::oeffnungsziele`] und reicht ihn
+    /// an den Anwendungsdelegierten; uebergeben wird dort, weil die Statuszeile
+    /// der Fensterseite dort haengt.
+    ///
+    /// **Drei Wege enden hier still, und alle drei sind gewollt.** Eine Marke,
+    /// die keine Stelle benennt — die Null eines ungesetzten `NSMenuItem`
+    /// eingeschlossen —, eine Stelle, die aus der gehaltenen Liste faellt, und
+    /// ein fehlender Rueckruf. In allen drei Lagen ist nichts zu tun die
+    /// richtige Antwort: ein Rueckfall auf die erste Anwendung oeffnete die
+    /// Dateien in einem Programm, das niemand gewaehlt hat.
+    ///
+    /// **Die Ausleihe der Liste endet vor dem Rueckruf.** Er geht zum
+    /// Anwendungsdelegierten und von dort in diese Quelle zurueck, die nach den
+    /// betroffenen Eintraegen fragt; eine offene Ausleihe ueberlebte das nicht.
+    fn oeffnung_melden(&self, marke: NSInteger) {
+        let Some(stelle) = kontextmenue::oeffnungsstelle(marke) else {
+            return;
+        };
+        let Some(anwendung) = self.ivars().oeffnungsziele.borrow().get(stelle).cloned() else {
+            return;
+        };
+        let melden = self.ivars().kontextbefehl.borrow();
+        let Some(melden) = melden.as_ref() else {
+            return;
+        };
+        melden(Kontextwahl::OeffnenMit(anwendung));
     }
 
     /// Worauf ein Dateioperations-Befehl in diesem Dateifenster wirkt (C4).
@@ -6005,8 +6201,8 @@ mod tests {
             }
         }
     }
-    /// Der Selektor des Kontextmenues wird genau einmal erklaert und genau
-    /// einmal gesetzt (Runde 17).
+    /// Jeder Selektor des Kontextmenues wird genau einmal erklaert und genau
+    /// einmal gesetzt (Runde 17, seit dem 260918 fuer beide).
     ///
     /// **Die eine Falle dieser Runde, und der Uebersetzer haelt sie nicht.**
     /// `sel!` baut einen Selektornamen und fragt nicht, ob eine Methode ihn
@@ -6024,6 +6220,12 @@ mod tests {
     /// Die Nadeln stehen zusammengesetzt da, wie bei
     /// `es_gibt_genau_einen_menuebauer` in [`super::super::teilen`]: als ein
     /// Stueck geschrieben faenden sie sich selbst.
+    ///
+    /// **Seit dem 260918 zaehlt sie zwei Selektoren und nicht einen.**
+    /// `oeffnenMit:` traegt dieselbe Falle wie `kontextbefehl:` und ist nicht
+    /// dieselbe Frage: die zwei Marken werden gegen zwei verschiedene Folgen
+    /// gelesen, und ein Selektor, der in der falschen Haelfte ankaeme, oeffnete
+    /// beim Zippen eine Anwendung.
     #[test]
     fn der_kontextmenue_selektor_hat_einen_empfaenger_und_einen_setzer() {
         let dateien = quelldateien();
@@ -6046,6 +6248,16 @@ mod tests {
             zaehlen(concat!("sel!(", "kontextbefehl:)")),
             1,
             "der Selektor `kontextbefehl:` wird nicht genau einmal gesetzt"
+        );
+        assert_eq!(
+            zaehlen(concat!("method(", "oeffnenMit:)")),
+            1,
+            "der Selektor `oeffnenMit:` wird nicht genau einmal erklaert"
+        );
+        assert_eq!(
+            zaehlen(concat!("sel!(", "oeffnenMit:)")),
+            1,
+            "der Selektor `oeffnenMit:` wird nicht genau einmal gesetzt"
         );
     }
 

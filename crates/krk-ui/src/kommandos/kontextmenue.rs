@@ -13,6 +13,9 @@
 //!                        │      └─> archivname()
 //!                        │
 //!  sichtbare Zeilen ─────┴──> entpackziel()  ──> Archive mit ihren Zielordnern
+//!
+//!  betroffene Eintraege ────> oeffnungsbezug() ──> der Eintrag, nach dessen Typ
+//!                                                  das System gefragt wird
 //! ```
 //!
 //! # Die eine Frage dieses Moduls
@@ -130,6 +133,10 @@
 //! Ausfuehrung beim Anwendungsdelegierten fragt [`packziel`] und liest den
 //! [`Entpackbefund`], den sie sich von der Quelle geben laesst.
 //!
+//! Seit dem 260918 fragt dieselbe Quelle beim Menuebau zusaetzlich
+//! [`oeffnungsbezug`] und [`oeffnungsmarke`], beim Klick [`oeffnungsstelle`];
+//! was sie damit an das System richtet, steht in `crate::appkit::oeffnenmit`.
+//!
 //! # Was der 260907 hinzugelegt hat
 //!
 //! Einen weiteren Wert in [`Kontextbefehl`], „Im Finder anzeigen", und keine
@@ -140,6 +147,49 @@
 //! aus den Quellen faellt nichts heraus. Was er hier gewinnt, ist allein die
 //! Einordnung in die Aufzaehlung — Titel, Marke und der Zweig, den der
 //! Uebersetzer einfordert.
+//!
+//! # Eine feste Aufzaehlung neben einer Liste, deren Laenge erst zur Laufzeit feststeht
+//!
+//! Das Untermenue „Öffnen mit" (260918) traegt die Anwendungen, die das System
+//! fuer den Bezugseintrag nennt. Wie viele das sind und wie sie heissen, steht
+//! beim Uebersetzen nicht fest, und [`Kontextbefehl`] ist gerade deshalb eine
+//! Aufzaehlung, weil beim Uebersetzen feststeht, welche Eintraege es gibt. Die
+//! beiden lassen sich nicht ineinander schieben; der Schnitt laeuft deshalb
+//! **zwischen** ihnen:
+//!
+//! ```text
+//!  fester Eintrag      Kontextbefehl  ──> Marke ──> von_menuemarke ──> Zweig
+//!  Glied des Untermenues  Stelle      ──> Marke ──> oeffnungsstelle ──> Anwendung
+//! ```
+//!
+//! **Was die Aufzaehlung traegt, ist der Eintrag und nicht das Untermenue.**
+//! [`Kontextbefehl::OeffnenMit`] ist ein fester Eintrag wie die vier anderen:
+//! er steht immer da, an einer festen Stelle, mit einem festen Titel. Die
+//! Anwendungen darunter sind **keine** Werte der Aufzaehlung, und ein Wert
+//! `OeffnenMit(usize)`, der die Stelle mitfuehrte, waere die Auskunft, die
+//! dieses Modul nicht geben kann: [`Kontextbefehl::ALLE`] koennte ihn nicht
+//! aufzaehlen, der Rundweg Marke → Wert → Marke hoerte auf, ueber die Liste zu
+//! laufen, und die vollstaendigen Fallunterscheidungen bekaemen einen Zweig, der
+//! nichts entscheidet.
+//!
+//! **Was an ihre Stelle tritt, ist die eine Liste.** Die Glieder des
+//! Untermenues entstehen beim Menuebau aus einer Liste und werden beim Klick
+//! ueber dieselbe gelesen; dazwischen liegt nichts, denn AppKit baut das Menue
+//! in `menuNeedsUpdate:` und gibt den Klick erst nach dem Ende der Verfolgung
+//! zurueck. Eine Marke ohne Glied in jener Liste tut nichts — dieselbe Antwort,
+//! die [`Kontextbefehl::von_menuemarke`] einer fremden Marke gibt. Gehalten wird
+//! die Liste, wo sie gebaut wird, naemlich bei der Datenquelle der Dateiliste;
+//! dieses Modul rechnet die zwei Richtungen ([`oeffnungsmarke`],
+//! [`oeffnungsstelle`]) und den Bezugseintrag ([`oeffnungsbezug`]) und haelt
+//! nichts.
+//!
+//! **Der Eintrag ohne Untermenue ist kein Sonderfall, sondern der zweite
+//! Ausgang derselben Rechnung.** Nennt das System keine Anwendung, bekommt
+//! [`Kontextbefehl::OeffnenMit`] gar kein Untermenue, dafuer den Selektor der
+//! festen Befehle — und sein Zweig beim Anwendungsdelegierten meldet es in der
+//! Statuszeile. Das ist die Regel der Directive („wo ein Befehl nichts
+//! vorfindet, meldet er es") und zugleich der Grund, warum der Wert in der
+//! Aufzaehlung einen Zweig mit einer Wirkung hat und keinen leeren.
 //!
 //! **Bis zur Runde 17 stand hier `expect(dead_code)` am ganzen Modul**, mit
 //! einem Ablaufdatum: `krk-ui` hat kein Bibliotheksziel, also ist `pub` hier
@@ -205,8 +255,21 @@ const ERSATZSTAMM: &str = "Archiv";
 /// `ImFinderZeigen` und war mit „Im Finder oeffnen" beschriftet — ein Name, der
 /// die Wirkung des zweiten beschrieb; er ist mit ihm umbenannt worden, damit
 /// die zwei Namen die zwei Wirkungen tragen.
+///
+/// **[`Kontextbefehl::OeffnenMit`] ist der Eintrag und nicht das Untermenue
+/// darunter.** Warum die Anwendungen keine Werte dieser Aufzaehlung sind,
+/// steht im Modulkopf unter „Eine feste Aufzaehlung neben einer Liste, deren
+/// Laenge erst zur Laufzeit feststeht"; was der Wert ausloest, steht bei
+/// [`Kontextbefehl::titel`] und in seinem Zweig beim Anwendungsdelegierten.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kontextbefehl {
+    /// Der Eintrag, unter dem die Anwendungen des Systems haengen.
+    ///
+    /// **Er traegt das Untermenue, sobald das System fuer den Bezugseintrag
+    /// eine Anwendung nennt, und sonst eine Meldung.** Beide Lagen gehen durch
+    /// diesen einen Wert; welche vorliegt, entscheidet sich beim Menuebau und
+    /// nicht hier.
+    OeffnenMit,
     /// Die betroffenen Eintraege in ein Archiv im angezeigten Ordner packen.
     Zippen,
     /// Jedes betroffene Archiv in einen eigenen neuen Ordner entpacken.
@@ -233,8 +296,8 @@ impl Kontextbefehl {
     /// weiterer Befehl erscheint, ohne dass jemand eine zweite Stelle nachzieht.
     ///
     /// **Die Feldbreite in der Typangabe haelt den Bau nicht an.**
-    /// `[Kontextbefehl; 4]` zwingt zu vier Gliedern und sagt nichts darueber,
-    /// welche vier: eine fuenfte Variante von [`Kontextbefehl`], die niemand
+    /// `[Kontextbefehl; 5]` zwingt zu fuenf Gliedern und sagt nichts darueber,
+    /// welche fuenf: eine sechste Variante von [`Kontextbefehl`], die niemand
     /// hier eintraegt, uebersetzt vorbei. Bis zum 260831 stand hier das Gegenteil
     /// (`issues/260831-1212_*_kontextmenue-rs-behauptet-eine-feldbreite-halte-den-bau-an-und-ist-die-siebte-stelle-dieser-art.md`),
     /// und gemessen ist die Behauptung in
@@ -250,7 +313,17 @@ impl Kontextbefehl {
     /// die Tafel dagegen, nicht `ALLE` gegen die Aufzaehlung. Wie eine
     /// `ALLE`-Liste kuenftig vollstaendig gehalten wird, ist die offene Frage
     /// `decisions/260826-1811_*_wie-wird-die-vollstaendigkeit-einer-alle-liste-neben-einer-aufzaehlung-gehalten.md`.
-    pub const ALLE: [Kontextbefehl; 4] = [
+    /// Seit dem 260907 haelt die Probe
+    /// `jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung`
+    /// (`crates/krk-core/tests/baum.rs`) auch diese Liste, und zwar **samt der
+    /// Reihenfolge**: sie ist dieselbe Angabe wie die Reihenfolge der
+    /// Aufzaehlung, und wer den Menueeintrag verschieben will, verschiebt die
+    /// Variante.
+    ///
+    /// **„Öffnen mit" steht vorn**, weil das Oeffnen der haeufigste Griff ist
+    /// und weil die zwei Finder-Eintraege am Ende beieinander bleiben sollen.
+    pub const ALLE: [Kontextbefehl; 5] = [
+        Kontextbefehl::OeffnenMit,
         Kontextbefehl::Zippen,
         Kontextbefehl::Entpacken,
         Kontextbefehl::ImFinderOeffnen,
@@ -270,9 +343,16 @@ impl Kontextbefehl {
     /// **Die Titel tragen Umlaute**, wie jeder Text, den ein Mensch liest
     /// (Nutzerentscheid vom 260907-0703); die Umschrift bleibt Kommentaren und
     /// Bezeichnern vorbehalten.
+    ///
+    /// **„Öffnen mit" endet offen, und das ist die Ansage des Untermenues.**
+    /// Der Titel benennt eine Handlung, die erst der Eintrag darunter
+    /// vollendet; ein abgeschlossenes „Öffnen" versprach dasselbe wie der
+    /// Doppelklick und die Taste aus der Runde 4, die daneben unangetastet
+    /// bleiben.
     #[must_use]
     pub fn titel(self) -> &'static str {
         match self {
+            Kontextbefehl::OeffnenMit => "Öffnen mit",
             Kontextbefehl::Zippen => "Zip",
             Kontextbefehl::Entpacken => "Unzip",
             Kontextbefehl::ImFinderOeffnen => "Im Finder öffnen",
@@ -298,13 +378,21 @@ impl Kontextbefehl {
     /// liess jene Probe mit sechs Aufrufern rot werden. Der Name ist damit
     /// nicht nur genauer, sondern die Bedingung dafuer, dass die fremde Zusage
     /// stehen bleibt.
+    /// **Die Marken folgen der Reihenfolge der Aufzaehlung**, und dass „Öffnen
+    /// mit" sie am 260918 vorn angefuehrt und die vier uebrigen um eins
+    /// weitergerueckt hat, kostet nichts: eine Marke ist eine Kennung und keine
+    /// Ablage. Sie entsteht bei jedem Menuebau neu und ueberdauert weder einen
+    /// Rechtsklick noch eine Sitzung. **Die Marken des Untermenues stehen nicht
+    /// hier**, sondern bei [`oeffnungsmarke`]; sie zaehlen eine eigene Folge auf
+    /// einem eigenen Selektor und koennen mit diesen nicht zusammenstossen.
     #[must_use]
     pub fn menuemarke(self) -> isize {
         match self {
-            Kontextbefehl::Zippen => 1,
-            Kontextbefehl::Entpacken => 2,
-            Kontextbefehl::ImFinderOeffnen => 3,
-            Kontextbefehl::ImFinderAnzeigen => 4,
+            Kontextbefehl::OeffnenMit => 1,
+            Kontextbefehl::Zippen => 2,
+            Kontextbefehl::Entpacken => 3,
+            Kontextbefehl::ImFinderOeffnen => 4,
+            Kontextbefehl::ImFinderAnzeigen => 5,
         }
     }
 
@@ -324,6 +412,113 @@ impl Kontextbefehl {
             .into_iter()
             .find(|befehl| befehl.menuemarke() == marke)
     }
+}
+
+/// Was ein Klick im Kontextmenue meldet.
+///
+/// **Ein Melder und nicht zwei**, seit das Menue zwei Arten von Eintraegen
+/// traegt. Die Datenquelle der Dateiliste rechnet die Marke des angeklickten
+/// Eintrags zurueck und reicht **diesen** Wert an den Anwendungsdelegierten;
+/// ein zweiter Rueckruf neben dem ersten waere ein zweiter Halteort fuer
+/// dieselbe Frage und eine zweite Stelle, an der der Aufbau der Oberflaeche
+/// einen Draht vergessen kann. Die Probe
+/// `der_kontextmelder_wird_beim_aufbau_gesetzt` haelt heute genau einen.
+///
+/// Die Fallunterscheidung ist vollstaendig und ueberschneidungsfrei: ein
+/// angeklickter Eintrag ist entweder einer der festen Befehle oder ein Glied
+/// des Untermenues „Öffnen mit", und beide kommen ueber je einen eigenen
+/// Selektor herein.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Kontextwahl {
+    /// Einer der festen Eintraege, an seiner Marke erkannt.
+    Befehl(Kontextbefehl),
+    /// Ein Glied des Untermenues: die Anwendung, an die die betroffenen
+    /// Eintraege gehen sollen.
+    ///
+    /// **Die Anwendung reist mit und nicht die Stelle.** Die Stelle waere ein
+    /// Verweis in eine Liste, die der Anwendungsdelegierte nicht haelt; er
+    /// bekaeme damit eine Zahl, deren Bedeutung woanders liegt. Und sie reist
+    /// **ganz** mit, mit Namen und Pfad: der Name ist der, den der Nutzer eben
+    /// im Menue gelesen hat, und die Statuszeile nennt ihn wieder.
+    OeffnenMit(Anwendung),
+}
+
+/// Eine Anwendung, die das System fuer einen Eintrag nennt.
+///
+/// **Ohne AppKit**, wie alles in diesem Verzeichnis: was `NSWorkspace` liefert,
+/// kommt als Name und Pfad hier an, und `crate::appkit::oeffnenmit` ist die eine
+/// Stelle, die daraus wieder ein `NSURL` macht.
+///
+/// Der Name ist der, den der Nutzer im Menue liest, und deshalb der des
+/// Systems (`displayNameAtPath:`) und nicht der letzte Pfadbestandteil: der
+/// hiesse „Systemeinstellungen.app" statt „Systemeinstellungen".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Anwendung {
+    /// Der Titel des Untermenue-Eintrags.
+    pub name: String,
+    /// Das Programmbuendel, an das die Eintraege gehen.
+    pub pfad: PathBuf,
+}
+
+/// Der Eintrag, nach dessen Dateityp das System gefragt wird.
+///
+/// **Einer und nicht alle**, und das ist die Wahl des Auftrags: gefragt sind
+/// „die Anwendungen, die das System fuer den Dateityp des betroffenen Eintrags
+/// liefert". Bei genau einem betroffenen Eintrag ist die Frage eindeutig; bei
+/// mehreren antwortet der **erste**, also der oberste auf dem Schirm, denn
+/// [`super::operationen::betroffene`] gibt die Pfade in der Reihenfolge der
+/// Zeilen heraus.
+///
+/// **Was das kostet, steht dazu:** sind Eintraege verschiedenen Typs markiert,
+/// zeigt das Untermenue die Anwendungen des ersten, und die gewaehlte bekommt
+/// trotzdem alle — so, wie es der Auftrag fuer die Mehrfachauswahl verlangt.
+/// Der Gegenentwurf waere, jeden betroffenen Eintrag zu fragen und nur die
+/// Anwendungen anzubieten, die das System fuer **jeden** nennt. Er ist heute
+/// nicht gebaut, und zwar aus zwei Gruenden: er kostet einen Gang zu
+/// LaunchServices je markiertem Eintrag, und zwar bei **jedem** Rechtsklick und
+/// auf dem Hauptfaden, und bei gemischter Markierung bliebe haeufig nichts
+/// uebrig. Die Wahl zwischen beiden ist eine Nutzerfrage und liegt als
+/// `decisions/260918-0856_*_welche-anwendungen-zeigt-oeffnen-mit-bei-einer-gemischten-mehrfachauswahl.md`.
+///
+/// `None` heisst: es ist nichts betroffen. Dann gibt es keinen Dateityp, nach
+/// dem zu fragen waere, und der Eintrag meldet es
+/// ([`super::operationen::nichts_zu_oeffnen`]).
+#[must_use]
+pub fn oeffnungsbezug(betroffen: &[PathBuf]) -> Option<&Path> {
+    betroffen.first().map(PathBuf::as_path)
+}
+
+/// Die Marke des Untermenue-Eintrags an der genannten Stelle.
+///
+/// **Die Zaehlung beginnt bei eins, aus demselben Grund wie bei
+/// [`Kontextbefehl::menuemarke`]:** ein `NSMenuItem`, an dem niemand eine Marke
+/// gesetzt hat, traegt die Null, und die soll auf keine Anwendung fuehren.
+///
+/// **Sie zaehlt neben den Marken der festen Befehle und nicht hinter ihnen.**
+/// Ein gemeinsamer Zahlenraum waere noetig, wenn beide Arten sich einen Selektor
+/// teilten; sie tun es nicht (`kontextbefehl:` und `oeffnenMit:`), und eine
+/// Marke wird immer nur gegen **eine** der beiden Folgen gelesen.
+///
+/// **Eine Stelle, die kein `isize` traegt, bekommt die groesste Marke.** Der
+/// Fall setzt ein Untermenue mit mehr Gliedern voraus, als ein Zeiger Werte hat,
+/// und entsteht auf keinem Geraet; die saettigende Rechnung steht trotzdem da,
+/// weil ein Ueberlauf hier lautlos auf die erste Anwendung zeigte.
+#[must_use]
+pub fn oeffnungsmarke(stelle: usize) -> isize {
+    isize::try_from(stelle)
+        .unwrap_or(isize::MAX)
+        .saturating_add(1)
+}
+
+/// Die Stelle zu einer Marke des Untermenues, sofern sie eine benennt.
+///
+/// Die Umkehrung von [`oeffnungsmarke`]. `None` heisst: diese Marke gehoert
+/// keinem Glied des Untermenues — die Null eines ungesetzten `NSMenuItem`
+/// eingeschlossen. Ob die Stelle in der gehaltenen Liste **steht**, beantwortet
+/// diese Rechnung nicht; das kann nur, wer die Liste haelt.
+#[must_use]
+pub fn oeffnungsstelle(marke: isize) -> Option<usize> {
+    usize::try_from(marke.checked_sub(1)?).ok()
 }
 
 /// Was Unzip vorgefunden hat.
@@ -927,11 +1122,12 @@ mod tests {
     /// ist der Zweck dieser Tafel seit dem 260907: sie unterscheiden sich in
     /// einem Wort, und eine Vertauschung von „oeffnen" und „anzeigen" beschriebe
     /// jeweils die Wirkung des anderen Eintrags.
-    const TAFEL: [(Kontextbefehl, &str, isize); 4] = [
-        (Kontextbefehl::Zippen, "Zip", 1),
-        (Kontextbefehl::Entpacken, "Unzip", 2),
-        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 3),
-        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 4),
+    const TAFEL: [(Kontextbefehl, &str, isize); 5] = [
+        (Kontextbefehl::OeffnenMit, "Öffnen mit", 1),
+        (Kontextbefehl::Zippen, "Zip", 2),
+        (Kontextbefehl::Entpacken, "Unzip", 3),
+        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 4),
+        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 5),
     ];
 
     /// Die Tafel ueber jeden Wert, an einem Stueck.
@@ -1010,11 +1206,69 @@ mod tests {
     /// begaenne die Zaehlung dort, loeste er das Packen aus.
     #[test]
     fn die_null_und_alles_daneben_benennen_keinen_befehl() {
-        for marke in [-1, 0, 5, 99] {
+        for marke in [-1, 0, 6, 99] {
             assert_eq!(
                 Kontextbefehl::von_menuemarke(marke),
                 None,
                 "die Marke {marke} benennt einen Befehl"
+            );
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Das Untermenue „Öffnen mit"
+    // ------------------------------------------------------------------
+
+    /// Der Bezugseintrag ist der erste betroffene und sonst keiner.
+    ///
+    /// Die drei Lagen an einem Stueck: nichts betroffen, genau einer, mehrere.
+    /// Die dritte ist die, um derentwillen die Regel ueberhaupt dasteht — sie
+    /// entscheidet, welcher Dateityp das Untermenue fuellt, waehrend der
+    /// gewaehlten Anwendung danach **alle** betroffenen Eintraege zugehen.
+    #[test]
+    fn der_bezugseintrag_ist_der_erste_betroffene() {
+        let erster = PathBuf::from("/tmp/Projekte/bericht.txt");
+        let zweiter = PathBuf::from("/tmp/Projekte/bild.png");
+        assert_eq!(oeffnungsbezug(&[]), None);
+        assert_eq!(
+            oeffnungsbezug(std::slice::from_ref(&erster)),
+            Some(erster.as_path())
+        );
+        assert_eq!(
+            oeffnungsbezug(&[erster.clone(), zweiter]),
+            Some(erster.as_path()),
+            "bei mehreren betroffenen Eintraegen entscheidet nicht der erste"
+        );
+    }
+
+    /// Der Rundweg Stelle → Marke → Stelle ueber die ersten Glieder.
+    ///
+    /// Er traegt dieselbe Zusage wie [`Kontextbefehl::von_menuemarke`] fuer die
+    /// festen Eintraege: der Menueeintrag traegt nichts als seine Marke, und die
+    /// Quelle rechnet allein daraus zurueck, welche Anwendung gemeint war.
+    #[test]
+    fn der_rundweg_ueber_die_oeffnungsmarke_schliesst() {
+        for stelle in [0, 1, 2, 17] {
+            assert_eq!(
+                oeffnungsstelle(oeffnungsmarke(stelle)),
+                Some(stelle),
+                "die Stelle {stelle} kommt ueber ihre Marke nicht zurueck"
+            );
+        }
+    }
+
+    /// Die Null eines ungesetzten `NSMenuItem` benennt keine Stelle.
+    ///
+    /// **Die Zusage, um derentwillen auch diese Zaehlung bei eins beginnt.**
+    /// Begaenne sie bei null, oeffnete ein fremder Eintrag ohne gesetzte Marke
+    /// die erste Anwendung der Liste.
+    #[test]
+    fn die_null_benennt_keine_stelle_des_untermenues() {
+        for marke in [-1, 0] {
+            assert_eq!(
+                oeffnungsstelle(marke),
+                None,
+                "die Marke {marke} benennt eine Stelle"
             );
         }
     }

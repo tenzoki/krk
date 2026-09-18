@@ -302,7 +302,7 @@ use crate::fenstertitel;
 use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::blattmeldung;
 use crate::kommandos::fokus::{self, Fokus};
-use crate::kommandos::kontextmenue::{self, Entpackbefund, Kontextbefehl};
+use crate::kommandos::kontextmenue::{self, Anwendung, Entpackbefund, Kontextbefehl, Kontextwahl};
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{
     self, Anlegeart, Auswahl, Dateiablage, Konfliktfrage, Vorgangszustand,
@@ -337,6 +337,7 @@ use super::git::Gitfenster;
 use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
+use super::oeffnenmit;
 use super::papierkorb::{self, Systempapierkorb};
 use super::statuszeile::{self, Statuszeile};
 use super::tabelle::{Dateifenster, DateifensterQuelle, Rangmitnahme};
@@ -1776,7 +1777,7 @@ impl Anwendungsdelegierter {
                         selbst.befehlsantwort_beidseitig_loeschen();
                     }
                 }));
-            // Der Klick auf einen der drei eigenen Kontextmenue-Eintraege
+            // Der Klick auf einen der eigenen Kontextmenue-Eintraege
             // (Runde 17). **Ohne diese Zeilen faellt der Klick still durch**:
             // die Eintraege stuenden im Menue, ihr Selektor kaeme bei der
             // Quelle an, und `kontextbefehl_melden` faende keinen Rueckruf vor.
@@ -1792,9 +1793,9 @@ impl Anwendungsdelegierter {
             let schwach = objc2::rc::Weak::from_retained(&self.retain());
             self.dateifenster(seite)
                 .quelle()
-                .kontextmelder_setzen(Box::new(move |befehl| {
+                .kontextmelder_setzen(Box::new(move |wahl| {
                     if let Some(selbst) = schwach.load() {
-                        selbst.kontextbefehl_ausfuehren(seite, befehl);
+                        selbst.kontextwahl_ausfuehren(seite, wahl);
                     }
                 }));
         }
@@ -7393,11 +7394,101 @@ impl Anwendungsdelegierter {
     /// eigenen Funktion, damit diese Stelle allein die Zuordnung traegt.
     fn kontextbefehl_ausfuehren(&self, seite: Fensterseite, befehl: Kontextbefehl) {
         match befehl {
+            Kontextbefehl::OeffnenMit => self.keine_anwendung_melden(seite),
             Kontextbefehl::Zippen => self.zipauftrag_stellen(seite),
             Kontextbefehl::Entpacken => self.entpackauftrag_stellen(seite),
             Kontextbefehl::ImFinderOeffnen => self.im_finder_oeffnen(seite),
             Kontextbefehl::ImFinderAnzeigen => self.im_finder_anzeigen(seite),
         }
+    }
+
+    /// Fuehrt den angeklickten Eintrag des Kontextmenues aus, gleich welcher
+    /// Art er ist (260918).
+    ///
+    /// **Die eine Stelle, an der die zwei Arten von Eintrag auseinandergehen**,
+    /// und sie gehen hier auseinander und nicht frueher: bis hierher reisen
+    /// beide auf demselben Rueckruf, damit der Aufbau der Oberflaeche einen
+    /// Draht zu setzen hat und nicht zwei.
+    ///
+    /// Die Fallunterscheidung ist die der Aufzaehlung [`Kontextwahl`] und damit
+    /// vollstaendig und ohne Auffangzweig. Sie traegt keinen eigenen Rumpf: der
+    /// erste Zweig gibt an die Zuordnungstafel darueber weiter, der zweite an
+    /// die Uebergabe darunter.
+    fn kontextwahl_ausfuehren(&self, seite: Fensterseite, wahl: Kontextwahl) {
+        match wahl {
+            Kontextwahl::Befehl(befehl) => self.kontextbefehl_ausfuehren(seite, befehl),
+            Kontextwahl::OeffnenMit(anwendung) => self.mit_anwendung_oeffnen(seite, &anwendung),
+        }
+    }
+
+    /// Meldet, dass das System fuer den betroffenen Eintrag keine Anwendung
+    /// nennt (260918).
+    ///
+    /// **Der Zweig von [`Kontextbefehl::OeffnenMit`], und er wird nur
+    /// erreicht, wenn der Eintrag gar kein Untermenue traegt.** Steht eines da,
+    /// klappt der Klick es auf und kommt hier nicht an;
+    /// `DateifensterQuelle::eigene_kontexteintraege_anfuegen` setzt die Handlung
+    /// dann ausdruecklich nicht. Der Eintrag bleibt in beiden Gestalten
+    /// bedienbar — ein grauer Eintrag naennte dem Nutzer keinen Grund.
+    ///
+    /// **Die zwei Lagen tragen zwei Saetze**, und geschieden werden sie an der
+    /// Menge der betroffenen Eintraege: ohne einen einzigen gibt es keinen
+    /// Dateityp, nach dem zu fragen waere
+    /// ([`operationen::nichts_zu_oeffnen`]); mit einem antwortet das System
+    /// selbst mit einer leeren Liste ([`operationen::keine_anwendung`]). Die
+    /// Frage stellt [`kontextmenue::oeffnungsbezug`] und nicht diese Stelle.
+    fn keine_anwendung_melden(&self, seite: Fensterseite) {
+        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        let satz = if kontextmenue::oeffnungsbezug(&betroffen.pfade).is_some() {
+            operationen::keine_anwendung()
+        } else {
+            operationen::nichts_zu_oeffnen()
+        };
+        self.antwort_zeigen(seite, &satz);
+    }
+
+    /// Uebergibt die betroffenen Eintraege an die im Untermenue gewaehlte
+    /// Anwendung (260918).
+    ///
+    /// **Alle betroffenen Eintraege gehen an dieselbe Anwendung**, wie im
+    /// Finder und wie der Auftrag es verlangt. Die Menge ist dieselbe wie bei
+    /// F5, F6 und den drei Nachbareintraegen, naemlich
+    /// [`operationen::betroffene`]: die Markierung hat den Vorrang, sonst gilt
+    /// die ausgewaehlte Zeile, die der Rechtsklick vorher nachgerueckt hat.
+    /// Eine zweite Auswahlregel entsteht nicht.
+    ///
+    /// **Gefragt wird erneut und nicht das Menue zitiert.** Die Menge, ueber
+    /// die das Untermenue gebaut wurde, koennte hierher mitreisen; sie tut es
+    /// nicht, weil dann zwei Antworten auf dieselbe Frage im Umlauf waeren.
+    /// Zwischen Menuebau und Klick aendert sich nichts daran — AppKit gibt den
+    /// Klick erst nach dem Ende der Menueverfolgung zurueck —, und so fragen
+    /// alle Zweige dieses Menues dieselbe Stelle.
+    ///
+    /// **Der leere Fall wird gemeldet und nicht uebergeben.** Er ist ueber das
+    /// Menue nicht erreichbar, denn ohne betroffenen Eintrag traegt „Öffnen
+    /// mit" kein Untermenue; gemeldet wird er trotzdem, weil eine Zusage, die
+    /// nur ein Beweis in Prosa haelt, nicht zwischen dem Nutzer und einer
+    /// leeren Uebergabe stehen soll — dieselbe Erwaegung wie bei
+    /// [`Self::zipauftrag_stellen`].
+    ///
+    /// **Der Name im Satz ist der aus dem Menue.** Deshalb reist die ganze
+    /// [`Anwendung`] mit und nicht nur ihr Pfad: der Nutzer hat eben „Vorschau"
+    /// angeklickt und liest in der Statuszeile „Vorschau" und nicht
+    /// „Preview.app". Den Namen hier aus dem Pfad zu rechnen waere eine zweite
+    /// Auskunft ueber dieselbe Anwendung, und bei jeder lokalisiert benannten
+    /// eine andere als die gelesene.
+    fn mit_anwendung_oeffnen(&self, seite: Fensterseite, anwendung: &Anwendung) {
+        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        if betroffen.ist_leer() {
+            self.antwort_zeigen(seite, &operationen::nichts_zu_oeffnen());
+            return;
+        }
+        let satz = if oeffnenmit::oeffnen_mit(&betroffen.pfade, &anwendung.pfad) {
+            operationen::oeffnungsmeldung_an(&anwendung.name, &betroffen.pfade)
+        } else {
+            operationen::nicht_uebergeben(&anwendung.name)
+        };
+        self.antwort_zeigen(seite, &satz);
     }
 
     /// Packt die betroffenen Eintraege in ein Archiv im angezeigten Ordner
@@ -10934,7 +11025,12 @@ mod kontextproben {
         /// Befehl, Zweig und die Nadel, an der die Wirkung des Zweigs zu
         /// erkennen ist. Die Nadeln stehen zusammengesetzt da, aus demselben
         /// Grund wie in der Probe darueber.
-        const ZWEIGE: [(&str, &str, &str); 4] = [
+        const ZWEIGE: [(&str, &str, &str); 5] = [
+            (
+                "Kontextbefehl::OeffnenMit",
+                "keine_anwendung_melden",
+                concat!("operationen::", "keine_anwendung("),
+            ),
             (
                 "Kontextbefehl::Zippen",
                 "zipauftrag_stellen",
@@ -10967,6 +11063,54 @@ mod kontextproben {
             assert_eq!(
                 paarungen, 1,
                 "{befehl} und {zweig} stehen nicht auf genau einer Zeile beisammen: \
+                 der Menüeintrag stünde da und täte nichts oder das Falsche"
+            );
+            assert!(
+                rumpf(&datei, zweig).contains(wirkung),
+                "{zweig} ruft {wirkung} nicht: der Zweig ist da und wirkt nicht"
+            );
+        }
+    }
+
+    /// Die zwei Arten von Klick erreichen ihre zwei Zweige (260918).
+    ///
+    /// **Dieselbe Bauform wie die Probe darueber, eine Ebene hoeher.** Sie
+    /// haelt die Gabelung, an der die festen Eintraege und die Glieder des
+    /// Untermenues auseinandergehen: die Zuordnung Wert → Zweig auf je einer
+    /// Zeile, und im Zweig die Wirkung. Ohne sie koennte
+    /// `kontextwahl_ausfuehren` beide Arten an denselben Zweig geben, und jede
+    /// andere Probe bliebe gruen — die Verzweigung uebersetzte, das Untermenue
+    /// stuende da, und ein Klick darin loeste das Packen aus.
+    ///
+    /// **Was sie nicht sieht**, ist dasselbe wie bei der Nachbarin: eine
+    /// Wirkung, die in eine tiefer gerufene Hilfsfunktion gewandert ist.
+    #[test]
+    fn jede_kontextwahl_erreicht_ihren_zweig() {
+        /// Wert, Zweig und die Nadel, an der die Wirkung des Zweigs zu erkennen
+        /// ist; die Nadeln stehen zusammengesetzt da wie in den Proben darueber.
+        const GABELUNG: [(&str, &str, &str); 2] = [
+            (
+                "Kontextwahl::Befehl",
+                "kontextbefehl_ausfuehren",
+                "Kontextbefehl::Zippen",
+            ),
+            (
+                "Kontextwahl::OeffnenMit",
+                "mit_anwendung_oeffnen",
+                concat!("oeffnenmit::", "oeffnen_mit("),
+            ),
+        ];
+
+        let datei = diese_datei();
+        let verzweigung = rumpf(&datei, "kontextwahl_ausfuehren");
+        for (wahl, zweig, wirkung) in GABELUNG {
+            let paarungen = verzweigung
+                .lines()
+                .filter(|zeile| zeile.contains(wahl) && zeile.contains(zweig))
+                .count();
+            assert_eq!(
+                paarungen, 1,
+                "{wahl} und {zweig} stehen nicht auf genau einer Zeile beisammen: \
                  der Menüeintrag stünde da und täte nichts oder das Falsche"
             );
             assert!(
