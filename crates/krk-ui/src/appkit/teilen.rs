@@ -41,9 +41,13 @@
 //! an.** Bis zur Runde 17 stand hier "sie bauen kein Menue"; fuer den
 //! Freigabeeintrag stimmt der Satz weiter, als Aussage ueber die Flaechen
 //! stimmt er seit dem Menuebau jener Runde nicht mehr. Die Dateiliste legt in
-//! `menuNeedsUpdate:` erst ihre drei eigenen Eintraege an — Zip, Unzip und
-//! Finder — und ruft [`eintrag_anfuegen`] danach; dass dabei die Form
-//! "Teilen, Trenner, Zip, Unzip, Finder" herauskommt, liegt daran, dass dieser
+//! `menuNeedsUpdate:` erst ihre eigenen Eintraege an — **welche und wie viele,
+//! sagt `Kontextbefehl::ALLE` und keine Zahl an dieser Stelle**, denn sie ist
+//! seit der Runde 17 zweimal gestiegen
+//! (`shared/issues/260918-0746_*_der-modulkopf-von-teilen-rs-nennt-drei-eigene-kontextmenue-eintraege-die-aufzaehlung-fuehrt-vier.md`)
+//! — und ruft [`eintrag_anfuegen`] danach; dass dabei die Form
+//! "Teilen, Trenner, die eigenen Eintraege in der Reihenfolge jener Liste"
+//! herauskommt, liegt daran, dass dieser
 //! Bauer vorn einfuegt und seinen Trenner nur setzt, wenn schon etwas dasteht.
 //! Die beiden Zaehlproben unter `mod tests` bleiben davon unberuehrt und
 //! sollen es: sie halten fest, dass der **Freigabeeintrag** einen Bauer hat,

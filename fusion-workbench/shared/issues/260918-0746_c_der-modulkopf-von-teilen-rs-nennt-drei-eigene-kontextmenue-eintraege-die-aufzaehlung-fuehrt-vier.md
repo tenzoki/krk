@@ -17,3 +17,5 @@ Erhoben mit `awk '/pub enum Kontextbefehl/,/^}/' crates/krk-ui/src/kommandos/kon
 **Abnahme**
 
 Der Kopf nennt keine Zahl mehr, sondern verweist auf `Kontextbefehl::ALLE` als die Auskunft, so wie `CLAUDE.md` es für dieselbe Aufzählung schon hält; oder er nennt vier und die beiden Finder-Wege einzeln. `make check` bleibt grün.
+
+Resolved: Der Kopf nennt keine Zahl mehr. `crates/krk-ui/src/appkit/teilen.rs:43-49` sagt jetzt „erst ihre eigenen Eintraege an — **welche und wie viele, sagt `Kontextbefehl::ALLE` und keine Zahl an dieser Stelle**", mit dem Verweis auf diesen Datensatz und dem Hinweis, dass die Zahl seit der Runde 17 zweimal gestiegen ist; die Form des Menüs steht dort als „Teilen, Trenner, die eigenen Eintraege in der Reihenfolge jener Liste". Das ist die erste der beiden Abnahmemöglichkeiten. Behoben nebenbei beim Bau des Untermenüs „Öffnen mit" (Arbeitspaket `260917-1415-kontextmenue-traegt-open-with`), das die Zahl auf fünf gebracht und den alten Wortlaut ein zweites Mal falsch gemacht hätte. `make check` grün, fünf von fünf (260918).
