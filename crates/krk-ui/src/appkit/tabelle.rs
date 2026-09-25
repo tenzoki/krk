@@ -1874,6 +1874,22 @@ impl DateifensterQuelle {
             .map(|eintrag| tab.ordner().join(&eintrag.name))
     }
 
+    /// Der Name des ausgewaehlten Eintrags, so wie ihn das Ordnermodell fuehrt;
+    /// `None` ohne Auswahl.
+    ///
+    /// Das Gegenstueck zum zweiten Parameter von [`Self::ordner_lesen`]: ein
+    /// Ordner-Lesezeichen merkt sich diesen Namen und reicht ihn beim Sprung
+    /// dorthin zurueck, damit dieselbe Zeile wieder ausgewaehlt ist.
+    #[must_use]
+    pub fn auswahl_name(&self) -> Option<String> {
+        let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok()?;
+        let tabs = self.ivars().tabs.borrow();
+        tabs.aktiver()
+            .modell()
+            .zeile(zeile)
+            .map(|eintrag| eintrag.name.clone())
+    }
+
     /// Ob die Vorgangsanzeige einer Dateioperation in der Statuszeile steht.
     ///
     /// Nur zum Ablesen, fuer die Endbedingung von L8: die Zeile erscheint mit

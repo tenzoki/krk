@@ -90,8 +90,8 @@ pub struct Lesezeichen {
 /// Worauf ein Lesezeichen zeigt: die beiden Sorten aus C5 und C6.
 ///
 /// Eine **unmarkierte** Auswahl: in `bookmarks.toml` steht keine Sortenkennung,
-/// sondern allein das Feld `ordner` oder das Feldtrio `datei`, `zeile` und
-/// `zeileninhalt`. Drei Eigenschaften machen diese Form zur richtigen, und alle
+/// sondern allein das Feld `ordner` (mit dem wahlfreien `auswahl` daneben) oder
+/// das Feldtrio `datei`, `zeile` und `zeileninhalt`. Drei Eigenschaften machen diese Form zur richtigen, und alle
 /// drei sind Zusagen und keine Bequemlichkeit:
 ///
 /// - **Eine bestehende Datei bleibt gueltig.** Ein Eintrag mit `name` und
@@ -125,6 +125,22 @@ pub enum Ziel {
     Ordner {
         /// Der Ordner.
         ordner: PathBuf,
+        /// Der Eintrag, auf dem die Auswahl beim Anlegen stand, als Name im
+        /// Ordner; der Sprung setzt die Auswahl wieder darauf.
+        ///
+        /// **Wahlfrei und kein eigenes Ziel**, entschieden am 260925
+        /// (`260925-1901_*_merkt-sich-ein-lesezeichen-die-markierte-datei-als-feld-oder-als-eigene-sorte.md`):
+        /// im Dateifenster steht die Auswahl fast immer auf irgendeiner Zeile,
+        /// und eine eigene Sorte machte aus fast jedem Ordner-Lesezeichen eines
+        /// auf eine Datei. Gueltig bleibt die Marke deshalb, solange der Ordner
+        /// steht; fehlt der Eintrag, oeffnet der Sprung den Ordner ohne
+        /// Auswahl, wie vor dieser Angabe.
+        ///
+        /// Fehlt das Feld in `bookmarks.toml`, ist es `None`, und `None` wird
+        /// nicht geschrieben: eine Datei aus der Zeit davor wird unveraendert
+        /// gelesen und bleibt nach dem Schreiben dieselbe.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        auswahl: Option<String>,
     },
     /// Eine Stelle in einer Datei, auf die die Auswahl den Editor setzt (C6).
     ///
@@ -159,6 +175,7 @@ impl Default for Ziel {
     fn default() -> Self {
         Ziel::Ordner {
             ordner: PathBuf::new(),
+            auswahl: None,
         }
     }
 }
@@ -170,6 +187,7 @@ impl Lesezeichen {
             name: name.into(),
             ziel: Ziel::Ordner {
                 ordner: ordner.into(),
+                auswahl: None,
             },
         }
     }
@@ -212,7 +230,7 @@ impl Lesezeichen {
     /// beim Sprung und nur dort.
     pub fn gueltig(&self) -> bool {
         match &self.ziel {
-            Ziel::Ordner { ordner } => ordner.is_dir(),
+            Ziel::Ordner { ordner, .. } => ordner.is_dir(),
             Ziel::Textstelle { datei, .. } => datei.is_file(),
         }
     }
@@ -513,6 +531,7 @@ mod tests {
     fn ordner(pfad: &str) -> Ziel {
         Ziel::Ordner {
             ordner: PathBuf::from(pfad),
+            auswahl: None,
         }
     }
 

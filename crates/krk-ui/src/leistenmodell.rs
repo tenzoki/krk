@@ -180,7 +180,7 @@ impl Auswahl {
     #[must_use]
     pub fn pfad(&self) -> &Path {
         match &self.ziel {
-            Ziel::Ordner { ordner } => ordner,
+            Ziel::Ordner { ordner, .. } => ordner,
             Ziel::Textstelle { datei, .. } => datei,
         }
     }
@@ -477,6 +477,7 @@ impl Leistenmodell {
                     name: ort.name.clone(),
                     ziel: Ziel::Ordner {
                         ordner: ort.pfad.clone(),
+                        auswahl: None,
                     },
                     gueltig: true,
                 })
@@ -659,6 +660,7 @@ mod tests {
     fn ordnerziel(pfad: impl Into<PathBuf>) -> Ziel {
         Ziel::Ordner {
             ordner: pfad.into(),
+            auswahl: None,
         }
     }
 
@@ -747,7 +749,8 @@ mod tests {
             Some(Auswahl {
                 name: "Zwei".to_owned(),
                 ziel: Ziel::Ordner {
-                    ordner: PathBuf::from("/zwei")
+                    ordner: PathBuf::from("/zwei"),
+                    auswahl: None
                 },
                 gueltig: false,
             }),
@@ -759,7 +762,8 @@ mod tests {
             Some(Auswahl {
                 name: "Macintosh HD".to_owned(),
                 ziel: Ziel::Ordner {
-                    ordner: PathBuf::from("/")
+                    ordner: PathBuf::from("/"),
+                    auswahl: None
                 },
                 gueltig: true,
             })

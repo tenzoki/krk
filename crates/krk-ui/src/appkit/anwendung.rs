@@ -2310,6 +2310,13 @@ impl Anwendungsdelegierter {
     /// sichtbaren Tab, denselben Weg, den jede Navigation aus C2 geht. Ein
     /// eigener Lesepfad fuer die Leiste entstuende sonst.
     ///
+    /// **Hat sie sich beim Anlegen einen Eintrag gemerkt, steht die Auswahl
+    /// danach wieder darauf** (seit dem 260925): der Name geht als zweiter
+    /// Parameter an [`DateifensterQuelle::ordner_lesen`], der ihn bis zum Ende
+    /// des Lesens vormerkt. Fehlt der Eintrag inzwischen, bleibt der Ordner
+    /// ohne Auswahl offen, und gemeldet wird nichts: das Ziel der Marke ist der
+    /// Ordner, und der steht.
+    ///
     /// **Eine Textmarke oeffnet ihre Datei im Editor und springt an die
     /// gemerkte Stelle.** Die Fallunterscheidung ueber das [`Ziel`] ist
     /// vollstaendig und hat keinen Auffangzweig; eine dritte Sorte haelt den Bau
@@ -2331,8 +2338,13 @@ impl Anwendungsdelegierter {
             return;
         }
         match &auswahl.ziel {
-            Ziel::Ordner { ordner } => {
-                self.dateifenster(aktiv).quelle().ordner_lesen(ordner, None);
+            Ziel::Ordner {
+                ordner,
+                auswahl: eintrag,
+            } => {
+                self.dateifenster(aktiv)
+                    .quelle()
+                    .ordner_lesen(ordner, eintrag.clone());
                 self.sitzung_vormerken();
             }
             Ziel::Textstelle {
@@ -2561,6 +2573,12 @@ impl Anwendungsdelegierter {
     /// gemeinte Ordner derselbe wie mit dem Fokus im Dateifenster, naemlich der
     /// des aktiven.
     ///
+    /// **Die Ordnermarke merkt sich den ausgewaehlten Eintrag mit** (seit dem
+    /// 260925), als wahlfreies Feld und nicht als eigene Sorte; warum, steht an
+    /// [`Ziel::Ordner`]. Gemerkt wird die Zeile unter der Auswahl des aktiven
+    /// Dateifensters, und mehrere markierte Eintraege aendern daran nichts:
+    /// die Auswahl ist eine Zeile, die Markierung eine Menge.
+    ///
     /// **Eine Marke bezeichnet genau eine Zeile.** Welche das bei mehrzeiliger
     /// Auswahl ist, entscheidet
     /// [`Editorbereich::schreibmarkenzeile`](super::editor::Editorbereich::schreibmarkenzeile)
@@ -2600,7 +2618,8 @@ impl Anwendungsdelegierter {
             .file_name()
             .map(|teil| teil.to_string_lossy().into_owned())
             .unwrap_or_else(|| ordner.display().to_string());
-        Some((Ziel::Ordner { ordner }, vorschlag))
+        let auswahl = self.dateifenster(seite).quelle().auswahl_name();
+        Some((Ziel::Ordner { ordner, auswahl }, vorschlag))
     }
 
     /// Oeffnet den angezeigten Ordner in der eingestellten Anwendung (C11).

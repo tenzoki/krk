@@ -3340,6 +3340,7 @@ fn kind_legt_lesezeichen_an() {
                     name: format!("{kennung}-{lauf}"),
                     ziel: Ziel::Ordner {
                         ordner: PathBuf::from("/"),
+                        auswahl: None,
                     },
                 });
                 assert!(matches!(ausgang, Ausgang::Geaendert(_)));
@@ -3456,6 +3457,7 @@ fn ein_lesezeichen_kennt_den_zustand_seines_ordners() {
 fn auf(pfad: &str) -> Ziel {
     Ziel::Ordner {
         ordner: PathBuf::from(pfad),
+        auswahl: None,
     }
 }
 
@@ -4106,6 +4108,43 @@ fn eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei() {
     let zweiter = fs::read(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
 
     assert_eq!(erster, zweiter, "die Datei ist byteweise dieselbe");
+}
+
+/// Eine Ordnermarke mit gemerktem Eintrag uebersteht die Rundreise, und eine
+/// ohne schreibt kein Feld `auswahl` (260925).
+///
+/// Die zweite Haelfte ist die Zusage an bestehende Dateien: eine Marke aus der
+/// Zeit vor dem Feld wird gelesen und wieder geschrieben, ohne dass eine Zeile
+/// hinzukommt.
+#[test]
+fn eine_ordnermarke_mit_gemerktem_eintrag_uebersteht_die_rundreise() {
+    let (_ordner, ablage) = ablage("lesezeichen-auswahl");
+    let liste = Lesezeichenliste::aus(vec![
+        Lesezeichen {
+            name: "Bericht".to_owned(),
+            ziel: Ziel::Ordner {
+                ordner: PathBuf::from("/p/berichte"),
+                auswahl: Some("quartal.pdf".to_owned()),
+            },
+        },
+        Lesezeichen::neu("Projekte", "/p"),
+    ]);
+
+    gesichert(&ablage, Datei::Lesezeichen, &liste)
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+    let text = fs::read_to_string(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+    assert_eq!(
+        text.matches("auswahl = ").count(),
+        1,
+        "allein die Marke mit gemerktem Eintrag traegt das Feld:\n{text}"
+    );
+
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
+    assert_eq!(
+        geladen.wert, liste,
+        "der gemerkte Eintrag ueberlebt die Rundreise"
+    );
 }
 
 /// Die geschriebene Datei bleibt von Hand lesbar (C6, zwoelftes
