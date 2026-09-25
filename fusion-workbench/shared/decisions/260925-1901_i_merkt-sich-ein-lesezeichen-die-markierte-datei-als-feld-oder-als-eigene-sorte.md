@@ -31,3 +31,6 @@ Möglichkeit 1: sie ändert die Bedeutung eines bestehenden Lesezeichens nicht, 
 
 ---
 Answered: dieser Datensatz `## Recommendation` — Möglichkeit 1, das wahlfreie Feld an der Ordnermarke; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: c0dbbed — `Ziel::Ordner { ordner, auswahl }`, gemerkt in `anlegeziel`, angesprungen in `leistenauswahl_ausfuehren`.
