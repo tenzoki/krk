@@ -1,5 +1,5 @@
-# Langform-Schreibprofil (Deutsch) — narrative Artefakte: Session-Summaries,
-# Consultant-Antworten, Analysen, Playmaker-Briefings, Prosa in Specs und Plänen.
+# Langform-Schreibprofil (Deutsch): narrative Artefakte wie Session-Summaries,
+# Consultant-Antworten, Analysen, Prosa in Specs und Plänen.
 # Kurzform-Chat ist Sache des Chat-Profils, nicht dieses.
 name: "Beratung & Strategie - Professionelle Stimme"
 description: "These zuerst, evidenzbasiert, kalibriert; autoritativ ohne Steifheit."
@@ -29,5 +29,5 @@ blacklist:
   - "AI08 Struktur nicht ankündigen ('Im Folgenden zeigen wir...')."
   - "AI09 Kein perfekter Parallelismus über aufeinanderfolgende Sätze oder Bullets; Syntax variieren."
   - "L02 Keine Beratungs-Buzzwords ('Hebelwirkung', 'Synergien', 'ganzheitlich', 'nahtlos', 'Deep Dive'); Konkretes mit benannter Quelle."
-  - "L04 Keine hohlen Abstraktionen: ein durch 'Sachen' ersetzbares Substantiv braucht Ersatz ('Lösungen', 'Maßnahmen' — welche?)."
+  - "L04 Keine hohlen Abstraktionen: ein durch 'Sachen' ersetzbares Substantiv braucht Ersatz ('Lösungen', 'Maßnahmen': welche?)."
   - "S01 Echte Dokumentkonventionen befolgen, aber keine Einleitung-Hauptteil-Schluss-Miniaturen pro Abschnitt; Absatzlänge variieren."

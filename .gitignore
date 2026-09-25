@@ -56,3 +56,4 @@ fusion-workbench/.guard-state/
 /target/
 **/*.rs.bk
 !fusion-workbench/.fusion-setup
+fusion-workbench/.check-stamps

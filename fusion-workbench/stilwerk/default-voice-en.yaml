@@ -1,5 +1,5 @@
-# Long-form writing profile (English) — narrative artifacts: session summary
-# bodies, consultant replies, analyst reports, playmaker briefings, prose
+# Long-form writing profile (English): narrative artefacts such as session
+# summary bodies, consultant replies, analyst reports, prose
 # sections of specs and plans. Short-form chat is the chat profile's, not this.
 name: "Consulting & Strategy - Professional Voice"
 description: "Thesis-first, evidence-grounded, calibrated; authoritative without being stiff."
@@ -27,5 +27,5 @@ blacklist:
   - "AI08 No structural telegraphing ('In what follows, we will argue that...')."
   - "AI09 No perfect parallelism across consecutive sentences or bullets; vary syntax."
   - "L02 No consulting buzzwords ('leverage', 'synergies', 'robust', 'holistic', 'seamless', 'deep dive', 'north star'); concrete language with named sources."
-  - "L04 No hollow abstractions: a noun replaceable by 'stuff' needs replacing ('solutions', 'capabilities', 'outcomes' — which?)."
+  - "L04 No hollow abstractions: a noun replaceable by 'stuff' needs replacing ('solutions', 'capabilities', 'outcomes': which?)."
   - "S01 Follow genuine document conventions, but no intro-body-conclusion miniatures per section; vary paragraph length."
