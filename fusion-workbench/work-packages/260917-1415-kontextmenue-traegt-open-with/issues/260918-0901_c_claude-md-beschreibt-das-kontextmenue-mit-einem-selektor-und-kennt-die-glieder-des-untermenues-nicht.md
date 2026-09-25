@@ -33,3 +33,6 @@ Die Aussage „welche das sind, sagt `Kontextbefehl::ALLE` und keine Zahl an die
 **Abnahme**
 
 Der Absatz beschreibt beide Arten von Eintrag, ohne eine Zahl zu nennen, und sagt für jede, was sie vor dem wirkungslosen Menüeintrag schützt.
+
+---
+Resolved: `CLAUDE.md` `## Was man nicht sieht, wenn man es nicht weiß`, Absatz „Seit der Runde 17 führt ein zweiter Weg in die Anwendung hinein“ beschreibt beide Arten von eigenem Eintrag ohne Zahl: die festen mit dem Selektor `kontextbefehl:`, geschützt von der Aufzählung `Kontextbefehl`, und die Glieder des Untermenüs mit dem Selektor `oeffnenMit:`, geschützt von der einen Liste, über die sie gebaut und gelesen werden; ausgeführt am 260925 auf Weisung des Nutzers.

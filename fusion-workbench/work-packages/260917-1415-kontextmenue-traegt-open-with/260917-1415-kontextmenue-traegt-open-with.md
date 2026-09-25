@@ -2,7 +2,7 @@
 
 ---
 **Domain:** code
-**Status:** claimed
+**Status:** done
 **Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260918-0837
 **Filed by:** user, Kai Stalmann
 ---
