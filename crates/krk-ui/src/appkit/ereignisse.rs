@@ -410,11 +410,20 @@ impl Tastenabgriff {
     /// `protokoll` schaltet den Modus `--tasten-protokoll`: jeder empfangene
     /// Tastendruck geht mit seinem Code und seiner normalisierten Maske auf die
     /// Standardausgabe, gleich ob die Belegung ihn kennt.
+    ///
+    /// `verdeckt` beantwortet fuer das Protokoll, ob gerade Geheimes getippt
+    /// wird; dann schreibt es statt des Anschlags nur, dass einer kam (siehe
+    /// [`protokollzeile`]). **Gefragt wird allein bei eingeschaltetem
+    /// Protokoll**, der Tastendruckpfad ohne Protokoll bekommt keinen Aufruf
+    /// dazu. Die Antwort gibt der Anwendungsdelegierte, der Editor und Blatt
+    /// haelt; dieses Modul kennt beide weiterhin nicht, sondern allein die
+    /// Frage, dieselbe Bauart wie bei [`ersthelfer_gehoert_appkit`].
     pub fn einrichten(
         belegung: Belegung,
         protokoll: bool,
         faenger: impl Fn(Tastendruck, Option<char>) -> bool + 'static,
         senke: impl Fn(Eingabe) -> bool + 'static,
+        verdeckt: impl Fn() -> bool + 'static,
     ) -> Option<Self> {
         let block = RcBlock::new(move |ereignis: NonNull<NSEvent>| -> *mut NSEvent {
             // SAFETY: AppKit reicht dem Block einen gueltigen Zeiger auf das
@@ -424,7 +433,7 @@ impl Tastenabgriff {
                 &senke,
                 &belegung,
                 unsafe { ereignis.as_ref() },
-                protokoll,
+                protokoll.then_some(&verdeckt),
             );
             if geschluckt {
                 // `nil` heisst: das Ereignis geht nicht weiter.
@@ -612,12 +621,15 @@ fn ereignis_senden(
 }
 
 /// Wertet ein Tastenereignis aus. Liefert, ob es geschluckt wurde.
+///
+/// `protokoll` ist `None` ohne `--tasten-protokoll` und sonst die Frage, ob
+/// gerade Geheimes getippt wird.
 fn behandeln(
     faenger: &impl Fn(Tastendruck, Option<char>) -> bool,
     senke: &impl Fn(Eingabe) -> bool,
     belegung: &Belegung,
     ereignis: &NSEvent,
-    protokoll: bool,
+    protokoll: Option<&impl Fn() -> bool>,
 ) -> bool {
     let druck = Tastendruck::aus_ereignis(
         ereignis.keyCode(),
@@ -654,8 +666,8 @@ fn behandeln(
     // Ersthelfer.
     let nachschlag = belegung.nachschlag(druck);
 
-    if protokoll {
-        protokollieren(druck, nachschlag);
+    if let Some(verdeckt) = protokoll {
+        println!("{}", protokollzeile(druck, zeichen, nachschlag, verdeckt()));
     }
 
     match nachschlag {
@@ -807,9 +819,11 @@ fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
     erstes_zeichen(ereignis.characters())
 }
 
-/// Schreibt eine Zeile des Modus `--tasten-protokoll`.
+/// Die Zeile des Modus `--tasten-protokoll` fuer einen Tastendruck.
 ///
-/// Auf die Standardausgabe, wie der Plan es vorschreibt. Sichtbar ist sie nur,
+/// Geschrieben wird sie auf die Standardausgabe, wie der Plan es vorschreibt, und zwar in
+/// [`behandeln`]; diese Funktion baut sie nur, damit die Verdeckung ohne
+/// AppKit pruefbar ist. Sichtbar ist sie nur,
 /// wenn KRK aus einem Terminal gestartet wurde: ein ueber `open` gestartetes
 /// Buendel bekommt von LaunchServices keine.
 ///
@@ -827,7 +841,36 @@ fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
 /// ein Textfeld erschien deshalb gar nicht. Ohne den frueheren Ausstieg
 /// erscheint er. Der Modus gibt damit wieder, was der Abgriff sieht, und nicht
 /// mehr, was eine Sperre hinter ihm uebrig laesst.
-fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
+///
+/// # Geheimes Tippen steht verdeckt in der Zeile
+///
+/// **Seit dem 260926 zeigt der Modus nicht mehr jeden Anschlag.** Wer in
+/// `.secrets.txt` tippt oder ins PIN-Blatt, dessen Anschlaege gingen sonst
+/// Zeichen fuer Zeichen auf die Standardausgabe, und genau die liest ein
+/// Agent, der KRK zur Fehlersuche mit `--tasten-protokoll` startet — das
+/// Bedrohungsmodell von C7 der krkhome-Arbeit
+/// (`issues/260926-1010_*_das-tastenprotokoll-schreibt-jedes-in-secrets-txt-und-ins-pin-blatt-getippte-zeichen-auf-die-standardausgabe.md`).
+/// Ob gerade Geheimes getippt wird (`verdeckt`), beantwortet der
+/// Anwendungsdelegierte; ob **dieser** Anschlag dann etwas verraten
+/// koennte, sagt [`verraet_eingabe`]. Verraet er etwas, traegt die Zeile
+/// allein die Marke [`VERDECKT`] in jedem Feld, und nicht nur im Feld
+/// `zeichen`: bei einer PIN aus Ziffern nennt der Tastencode die Ziffer so
+/// deutlich wie das Zeichen, und Kombination, Maske und Funktion nennen die
+/// Taste oder ihre Umschaltung ebenso. Dass ein Anschlag kam, bleibt
+/// sichtbar; die Zahl der Anschlaege gibt die Laenge der Eingabe preis, und
+/// die ist bei der PIN ohnehin festgelegt.
+fn protokollzeile(
+    druck: Tastendruck,
+    getippt: Option<char>,
+    nachschlag: Nachschlag<'_>,
+    verdeckt: bool,
+) -> String {
+    if verdeckt && verraet_eingabe(druck.maske, getippt) {
+        return format!(
+            "tastencode={VERDECKT} zeichen={VERDECKT} maske={VERDECKT} \
+             kombination={VERDECKT} funktion={VERDECKT}"
+        );
+    }
     let kombination = match Kombination::aus_tastendruck(druck) {
         Some(kombination) => kombination.to_string(),
         None => "(kein Name in der Schreibweise)".to_owned(),
@@ -841,10 +884,39 @@ fn protokollieren(druck: Tastendruck, nachschlag: Nachschlag<'_>) {
         Some(zeichen) => zeichen.to_string(),
         None => "(keins)".to_owned(),
     };
-    println!(
+    format!(
         "tastencode={} zeichen={zeichen} maske={} kombination={kombination} funktion={funktion}",
         druck.code, druck.maske
-    );
+    )
+}
+
+/// Was ein verdeckter Anschlag im Protokoll an jedem Feld traegt.
+const VERDECKT: &str = "(verdeckt)";
+
+/// Ob ein Anschlag verraten koennte, was getippt wurde.
+///
+/// **Die eine Regel, und sie entscheidet vorsichtig.** Offen bleibt ein
+/// Anschlag nur in zwei Faellen, in denen er nach der Tastaturbelegung von
+/// AppKit keinen Text einfuegt:
+///
+/// - er haelt `cmd` oder `ctrl`: ein Befehl wie `cmd+s` oder `cmd+v`, und
+///   `ctrl` traegt im Textsystem Bewegungen und keine Zeichen;
+/// - sein getipptes Zeichen ist ein Steuerzeichen (Eingabe, Tabulator,
+///   Rueckschritt, `esc`) oder liegt im privaten Bereich, den AppKit den
+///   Pfeil- und Funktionstasten beilegt (`U+F700` bis `U+F8FF`).
+///
+/// **Alles andere gilt als verraeterisch, auch ein Anschlag ohne Zeichen**:
+/// eine tote Taste wie `opt+u` liefert kein Zeichen und kuendigt doch das
+/// naechste an, und eine Eingabemethode kann Text ohne ein erstes Zeichen
+/// bringen. `shift` und `opt` allein machen einen Anschlag nicht offen, weil
+/// sie Zeichen erzeugen.
+#[must_use]
+fn verraet_eingabe(maske: ModMaske, getippt: Option<char>) -> bool {
+    if maske.enthaelt(ModMaske::BEFEHL) || maske.enthaelt(ModMaske::STEUERUNG) {
+        return false;
+    }
+    !getippt
+        .is_some_and(|zeichen| zeichen.is_control() || ('\u{F700}'..='\u{F8FF}').contains(&zeichen))
 }
 
 #[cfg(test)]
@@ -1218,5 +1290,78 @@ mod tests {
             geprueft > 0,
             "die Auslieferungsbelegung fuehrt keine Kombination auf einem Buchstaben"
         );
+    }
+
+    /// Die Protokollzeile eines Anschlags, wie [`behandeln`] sie baut.
+    fn zeile(name: &str, getippt: Option<char>, flaggen: u64, verdeckt: bool) -> String {
+        let belegung = Belegung::auslieferung();
+        let druck = Tastendruck::aus_ereignis(code_von_pflicht(name), getippt, flaggen);
+        protokollzeile(druck, getippt, belegung.nachschlag(druck), verdeckt)
+    }
+
+    /// Geheimes Tippen steht verdeckt im Tastenprotokoll, und zwar jedes Feld
+    /// (`issues/260926-1010_*_das-tastenprotokoll-schreibt-jedes-in-secrets-txt-und-ins-pin-blatt-getippte-zeichen-auf-die-standardausgabe.md`).
+    ///
+    /// **Die Ziffern sind der Fall, an dem die Regel haengt**: die PIN besteht
+    /// aus ihnen, und der Tastencode nennt eine Ziffer so deutlich wie das
+    /// Zeichen. Die Probe verlangt deshalb, dass die verdeckte Zeile fuer alle
+    /// zehn dieselbe ist und keine Ziffer traegt. Daneben die Buchstaben mit
+    /// und ohne Umschalttaste, das Leerzeichen und die tote Taste, die kein
+    /// Zeichen liefert und doch das naechste ankuendigt.
+    #[test]
+    fn geheimes_tippen_steht_verdeckt_im_protokoll() {
+        let verdeckte = format!(
+            "tastencode={VERDECKT} zeichen={VERDECKT} maske={VERDECKT} \
+             kombination={VERDECKT} funktion={VERDECKT}"
+        );
+        for ziffer in '0'..='9' {
+            let name = ziffer.to_string();
+            let offen = zeile(&name, Some(ziffer), 0, false);
+            assert!(
+                offen.contains(&format!("zeichen={ziffer}")),
+                "ohne Verdeckung traegt die Zeile die Ziffer: {offen}"
+            );
+            let geheim = zeile(&name, Some(ziffer), 0, true);
+            assert_eq!(geheim, verdeckte, "die Ziffer {ziffer}");
+            assert!(!geheim.chars().any(|zeichen| zeichen.is_ascii_digit()));
+        }
+        for (name, getippt, flaggen) in [
+            ("a", Some('a'), 0),
+            ("a", Some('A'), roh::UMSCHALT),
+            ("l", Some('@'), roh::WAHL),
+            ("space", Some(' '), 0),
+            ("u", None, roh::WAHL),
+        ] {
+            assert_eq!(
+                zeile(name, getippt, flaggen, true),
+                verdeckte,
+                "{name} mit {getippt:?}"
+            );
+        }
+    }
+
+    /// Was keinen Text einfuegt, bleibt auch bei geheimem Tippen offen: ein
+    /// Befehl, eine Bewegung, eine Funktionstaste. So bleibt das Protokoll
+    /// fuer die Frage brauchbar, welcher Befehl in `.secrets.txt` gefeuert hat.
+    #[test]
+    fn befehle_und_bewegungen_bleiben_im_verdeckten_protokoll_offen() {
+        for (name, getippt, flaggen) in [
+            ("s", Some('s'), roh::BEFEHL),
+            ("p", Some('P'), roh::BEFEHL | roh::UMSCHALT),
+            ("a", Some('\u{1}'), roh::STEUERUNG),
+            ("return", Some('\r'), 0),
+            ("esc", Some('\u{1b}'), 0),
+            ("delete", Some('\u{7f}'), 0),
+            ("down", Some('\u{F701}'), 0),
+            ("f2", Some('\u{F705}'), 0),
+        ] {
+            let offen = zeile(name, getippt, flaggen, false);
+            assert_eq!(
+                zeile(name, getippt, flaggen, true),
+                offen,
+                "{name} mit {getippt:?}"
+            );
+            assert!(!offen.contains(VERDECKT), "{offen}");
+        }
     }
 }

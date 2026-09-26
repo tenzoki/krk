@@ -2941,6 +2941,21 @@ impl Editorbereich {
         self.ivars().modell.borrow().textmarke_verweigert()
     }
 
+    /// Ob der Editor `.secrets.txt` haelt; die Regel steht bei
+    /// [`Editormodell::haelt_geheimnisse`].
+    ///
+    /// **Ein gerade geliehenes Modell zaehlt als geheim.** Gefragt wird aus
+    /// dem Tastenabgriff, und eine Antwort, die dort an einer laufenden
+    /// Leihe abstuerzte oder im Zweifel „nicht geheim" sagte, waere die
+    /// schlechtere von zwei moeglichen Irrungen.
+    #[must_use]
+    pub fn haelt_geheimnisse(&self) -> bool {
+        self.ivars()
+            .modell
+            .try_borrow()
+            .map_or(true, |modell| modell.haelt_geheimnisse())
+    }
+
     /// Schreibt den gehaltenen Stand in die Datei (C4).
     ///
     /// **Geschrieben wird im Modell und hier nicht ein zweites Mal.** Diese

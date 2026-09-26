@@ -1134,19 +1134,32 @@ impl Editormodell {
     /// eine Satz [`KEINE_TEXTMARKE_IN_GEHEIMNISSEN`]
     /// (`issues/260926-1004_*_eine-textmarke-in-secrets-txt-schreibt-eine-klartextzeile-in-die-lesezeichendatei.md`).
     ///
+    /// Ob es eine Geheimnisdatei ist, sagt [`Self::haelt_geheimnisse`].
+    #[must_use]
+    pub fn textmarke_verweigert(&self) -> Option<&'static str> {
+        self.haelt_geheimnisse()
+            .then_some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN)
+    }
+
+    /// Ob der Editor `.secrets.txt` haelt (C7 der krkhome-Arbeit).
+    ///
+    /// **Die eine Antwort fuer jeden Weg, auf dem Inhalt der Geheimnisse aus
+    /// KRK hinausgelangen koennte**: die Textmarke
+    /// ([`Self::textmarke_verweigert`]) und das Tastenprotokoll, das waehrend
+    /// dessen verdeckt schreibt (`Anwendungsdelegierter::tasten_verdeckt`).
+    ///
     /// Gefragt werden zwei Dinge, und jedes allein genuegt: der [`Schutz`],
     /// der einen Schluessel haelt, und die Erkennung des Pfads. Der Schutz
     /// antwortet auch dann, wenn ein F2 die aufgeloeste Form des Heimordners
     /// inzwischen anders fuehrt; die Erkennung antwortet auch fuer eine
     /// leere `.secrets.txt`, deren Stand noch gar nichts traegt.
     #[must_use]
-    pub fn textmarke_verweigert(&self) -> Option<&'static str> {
-        let geheim = matches!(self.schutz, Schutz::Verschluesselt { .. })
+    pub fn haelt_geheimnisse(&self) -> bool {
+        matches!(self.schutz, Schutz::Verschluesselt { .. })
             || self
                 .pfad
                 .as_deref()
-                .is_some_and(|pfad| self.ist_geheimnisdatei(pfad));
-        geheim.then_some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN)
+                .is_some_and(|pfad| self.ist_geheimnisdatei(pfad))
     }
 
     /// Welche Ansicht gewaehlt ist (C3).

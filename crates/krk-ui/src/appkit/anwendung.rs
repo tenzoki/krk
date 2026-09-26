@@ -3100,6 +3100,7 @@ impl Anwendungsdelegierter {
         let belegung = self.ivars().belegung.borrow().clone();
         let fuer_faenger = objc2::rc::Weak::from_retained(&self.retain());
         let fuer_senke = objc2::rc::Weak::from_retained(&self.retain());
+        let fuer_protokoll = objc2::rc::Weak::from_retained(&self.retain());
         Tastenabgriff::einrichten(
             belegung,
             self.ivars().tasten_protokoll,
@@ -3111,7 +3112,47 @@ impl Anwendungsdelegierter {
                 Some(selbst) => selbst.eingabe_ausfuehren(eingabe),
                 None => false,
             },
+            // Ohne Delegierten gibt es nichts mehr, was geheim sein koennte,
+            // aber auch niemanden, der es sagt: im Zweifel verdeckt.
+            move || {
+                fuer_protokoll
+                    .load()
+                    .is_none_or(|selbst| selbst.tasten_verdeckt())
+            },
         )
+    }
+
+    /// Ob das Tastenprotokoll gerade verdeckt schreibt, weil Geheimes getippt
+    /// wird (C7 der krkhome-Arbeit,
+    /// `issues/260926-1010_*_das-tastenprotokoll-schreibt-jedes-in-secrets-txt-und-ins-pin-blatt-getippte-zeichen-auf-die-standardausgabe.md`).
+    ///
+    /// **Zwei Antworten, die es schon gibt, und keine neue Regel daneben:**
+    /// das PIN-Blatt steht ([`Blattgriff::verdeckt_und_steht`]), oder der
+    /// Editor haelt `.secrets.txt` ([`Editorbereich::haelt_geheimnisse`],
+    /// dieselbe Antwort, die die Textmarke verweigert).
+    ///
+    /// **Der Editor zaehlt, gleich wo der Fokus steht.** Das ist vorsichtig
+    /// und kostet wenig: waehrend `.secrets.txt` offen ist, steht auch ein
+    /// Anschlag in den Filtertext eines Dateifensters verdeckt im Protokoll.
+    /// Eine Frage nach dem Fokus muesste jede Flaeche kennen, die im Editor
+    /// Text annimmt — Tabelle, Rohansicht, Zelle, Suchfeld —, und die eine,
+    /// die sie vergaesse, schriebe wieder Klartext. Befehle, Bewegungen und
+    /// Funktionstasten bleiben dabei offen; welche, sagt
+    /// `ereignisse::verraet_eingabe`.
+    fn tasten_verdeckt(&self) -> bool {
+        let blatt = self
+            .ivars()
+            .offenes_blatt
+            .try_borrow()
+            .map_or(true, |griff| {
+                griff.as_ref().is_some_and(Blattgriff::verdeckt_und_steht)
+            });
+        blatt
+            || self
+                .ivars()
+                .editor
+                .get()
+                .is_some_and(|editor| editor.haelt_geheimnisse())
     }
 
     /// Ob dieser Ersthelfer eine der **eigenen** Textflaechen von KRK ist.

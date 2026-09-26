@@ -41,7 +41,10 @@
 //! und das System haelt sie aus der Zwischenablage und aus der
 //! Bedienungshilfe heraus. Die PIN geht weder in ein Protokoll noch in eine
 //! Meldung; `Pin` zeigt in `Debug` keine Ziffern, und dieses Modul schreibt
-//! die Eingabe nirgends hin ausser in [`eingabe_pruefen`].
+//! die Eingabe nirgends hin ausser in [`eingabe_pruefen`]. **Das gilt seit dem
+//! 260926 auch fuer das Tastenprotokoll**: der Griff des Blattes traegt
+//! [`Blattgriff::verdeckt_machen`], und solange es steht, schreibt
+//! `--tasten-protokoll` statt jeder Ziffer nur `(verdeckt)`.
 //!
 //! **Das Feld ist nicht als eigene Textflaeche angemeldet**, wie das Feld
 //! jedes Blattes: `Esc` schliesst das Blatt nur, weil der Ersthelfer AppKit
@@ -362,17 +365,20 @@ pub fn zeigen(
         }));
     }
 
-    blatt.zeigen(fenster, move |bestaetigt| {
-        if !bestaetigt {
-            return;
-        }
-        // Noch einmal geprueft und nicht vorausgesetzt: die Schaltflaeche und
-        // die Taste haben schon geprueft, aber eine Antwort von AppKit, die zu
-        // keiner Schaltflaeche gehoert, kommt ohne sie hierher.
-        if let Ok(eingabe) = felder_pruefen(form, &lesen()) {
-            fertig(eingabe);
-        }
-    })
+    blatt
+        .zeigen(fenster, move |bestaetigt| {
+            if !bestaetigt {
+                return;
+            }
+            // Noch einmal geprueft und nicht vorausgesetzt: die Schaltflaeche und
+            // die Taste haben schon geprueft, aber eine Antwort von AppKit, die zu
+            // keiner Schaltflaeche gehoert, kommt ohne sie hierher.
+            if let Ok(eingabe) = felder_pruefen(form, &lesen()) {
+                fertig(eingabe);
+            }
+        })
+        // Das Tastenprotokoll schreibt, solange dieses Blatt steht, keine Ziffer.
+        .verdeckt_machen()
 }
 
 /// Eine beschriftete Eingabezeile mit einem verdeckten Feld, in die Beigabe

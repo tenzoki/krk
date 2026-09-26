@@ -630,9 +630,41 @@ pub struct Blattgriff {
     /// Er gehoert der Schaltflaeche an [`abbruchstelle`]; die Frage nach der
     /// ungefaehrlichen Stelle ist in dieser Datei einmal beantwortet.
     abbruchcode: NSModalResponse,
+    /// Ob in dieses Blatt Geheimes getippt wird; siehe
+    /// [`Blattgriff::verdeckt_machen`].
+    verdeckt: bool,
 }
 
 impl Blattgriff {
+    /// Kennzeichnet das Blatt als eines, in das Geheimes getippt wird, heute
+    /// allein das PIN-Blatt ([`pin`]).
+    ///
+    /// **Das Kennzeichen sitzt am Griff und nicht am Ersthelfer**, damit die
+    /// Frage „wird gerade Geheimes getippt" ohne eine Frage nach der Klasse
+    /// des Feldes auskommt: der Feldeditor eines `NSSecureTextField` ist
+    /// ein privater Typ von AppKit, und die Frage nach den Textklassen steht
+    /// im Baum an genau einer Stelle (`ereignisse::ersthelfer_gehoert_appkit`).
+    pub fn verdeckt_machen(mut self) -> Self {
+        self.verdeckt = true;
+        self
+    }
+
+    /// Ob dieses Blatt als verdeckt gekennzeichnet ist **und** gerade am
+    /// Fenster steht.
+    ///
+    /// Die zweite Haelfte ist noetig, weil ein Griff nach dem Schliessen
+    /// seines Blattes liegen bleiben kann (`Anwendungsdelegierter::blatt_oeffnet`
+    /// sagt, warum); gefragt wird nach der Naemlichkeit des anhaengenden
+    /// Blattes und nicht nach irgendeinem.
+    #[must_use]
+    pub fn verdeckt_und_steht(&self) -> bool {
+        self.verdeckt
+            && self
+                .fenster
+                .attachedSheet()
+                .is_some_and(|blatt| blatt.isEqual(Some(&*self.warnung.window())))
+    }
+
     /// Schliesst das Blatt mit dem Rueckgabewert seiner abbrechenden
     /// Schaltflaeche.
     ///
@@ -990,6 +1022,7 @@ impl Blatt {
             warnung: self.warnung,
             fenster: fenster.retain(),
             abbruchcode,
+            verdeckt: false,
         }
     }
 }
