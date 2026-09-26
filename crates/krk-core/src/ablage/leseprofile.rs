@@ -44,9 +44,9 @@
 //!
 //! # Warum die geprueften Profile woanders wohnen als die gelesenen
 //!
-//! Die Ablage kennt Pfad, Format und Fehlerbehandlung und nicht den Inhalt;
+//! Die Ablage kennt Pfad und Fehlerbehandlung und nicht den Inhalt;
 //! das steht so im Kopf von [`super`] und gilt fuer diese Datei wie fuer die
-//! sechs anderen. Was ein Profil bedeutet, ob sich sein Muster uebersetzen
+//! fuenf anderen. Was ein Profil bedeutet, ob sich sein Muster uebersetzen
 //! laesst und welche Zeile ihren Baustein verliert, entscheidet deshalb
 //! [`crate::leseprofil`] und nicht dieses Modul. Hier steht der Weg von der
 //! Platte zu [`datei::Profildatei`]; von dort zu [`Profile`] fuehrt der eine

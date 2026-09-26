@@ -6,7 +6,7 @@
 //!     │
 //!     └──> lesen ──> Textstand ──> oeffnen ──> Abweisung (kein gueltiges
 //!            │           │                       Ziel, zu gross, kein Text)
-//!            │           └───────> Zugang::text_laden ──> der Notizzettel
+//!            │           └───────> heimordner::bereitstellen ──> die alten Zettel
 //!            │
 //!            │  die Bytes, und zwar erst nach der Groessenpruefung
 //!            v
@@ -117,8 +117,10 @@
 //! **[`lesen`] ist die einzige Stelle im Programm, die einen Pfad daraufhin
 //! ansieht, ob eine Textdatei dahintersteht.** Beide Einstiege des Editors aus
 //! C2, F4 und das Menue, kommen ueber [`oeffnen`] dort an, der Sprung auf eine
-//! Textmarke aus C6 ebenfalls, und seit der Runde 9 auch der Notizzettel ueber
-//! `ablage::Zugang::text_laden`. Genau das meint C2 mit "beide Einstiege legen
+//! Textmarke aus C6 ebenfalls, und die einmalige Uebernahme der alten
+//! Notizzettel in `heimordner::bereitstellen`. Von der Runde 9 bis zur
+//! krkhome-Arbeit kam hier auch der Notizzettel selbst an, ueber einen Ladeweg
+//! der Ablage, der mit ihm gefallen ist. Genau das meint C2 mit "beide Einstiege legen
 //! dieselbe Pruefung an"; ein zweiter Leseweg daneben waere die zweite Wahrheit
 //! darueber, welche Datei KRK als Text annimmt, und die erste Abweichung
 //! zwischen beiden faende keine Pruefung. Es ist derselbe Zuschnitt, den
@@ -126,9 +128,11 @@
 //!
 //! **Die zwei Aufrufer uebersetzen denselben Befund verschieden, und das ist
 //! der Grund fuer die Trennung.** Der Editor weist ab und wirft die Bytes weg;
-//! der Notizzettel legt sie beiseite und arbeitet mit einem leeren Zettel
-//! weiter. [`Textstand::Unlesbar`] traegt den offenen Deskriptor deshalb mit,
-//! und [`Abweisung`] tut es nicht.
+//! die Uebernahme der alten Zettel trennt die fehlende Datei von der
+//! unlesbaren und meldet allein die zweite. [`Textstand::Unlesbar`] traegt den
+//! offenen Deskriptor mit, und [`Abweisung`] tut es nicht; gebraucht hat ihn
+//! der Notizzettel, der eine unlesbare Datei beiseitelegte, und seit dessen
+//! Wegfall liest ihn kein Aufrufer mehr.
 //!
 //! **Daneben stehen zwei weitere Fragen, und beide gehen durch dieselbe Tuer.**
 //! Keine von ihnen ist ein zweiter Leseweg im Sinne des Absatzes darueber; es
@@ -331,8 +335,11 @@ pub enum Unlesbarkeit {
 /// Was hinter einem Pfad steht, gemessen an dem, was KRK als Textdatei annimmt.
 ///
 /// **Der eine Befund, und zwei Uebersetzungen leben davon.** Der Editor macht
-/// daraus eine [`Abweisung`] ([`oeffnen`]), der Notizzettel einen leeren Zettel
-/// samt beiseitegelegtem Inhalt (`ablage::Zugang::text_laden`). Vor der Runde 9
+/// daraus eine [`Abweisung`] ([`oeffnen`]), die Uebernahme der alten Zettel
+/// einen Befund je Zettel (`heimordner::bereitstellen`). Von der Runde 9 bis
+/// zur krkhome-Arbeit war die zweite der Notizzettel, der eine unlesbare Datei
+/// samt Inhalt beiseitelegte; fuer ihn traegt [`Textstand::Unlesbar`] den
+/// Deskriptor. Vor der Runde 9
 /// stand die Pruefung allein in [`oeffnen`] und warf dabei genau das weg, was
 /// das Beiseitelegen braucht: die Bytes und den offenen Deskriptor. Ein zweiter
 /// Leser daneben waere die zweite Wahrheit darueber, was eine Textdatei ist.
@@ -369,9 +376,10 @@ pub enum Textstand {
         /// **Ein Feld und kein fuenfter Ausgang**, und der Unterschied ist
         /// tragend. Fuer den Editor ist eine fehlende Datei dasselbe wie ein
         /// Ordner: beide werden abgewiesen, mit demselben Wert und demselben
-        /// Satz. Der Notizzettel trennt sie, weil eine fehlende Zetteldatei der
-        /// erste Start ist und keine Meldung wert — dieselbe Regel, die
-        /// `ablage::Zugang::laden` fuer eine fehlende TOML-Datei anwendet. Ein
+        /// Satz. Die Uebernahme der alten Zettel trennt sie, weil ein fehlender
+        /// Zettel nichts zu uebernehmen hat und keine Meldung wert ist —
+        /// dieselbe Regel, die `ablage::Zugang::laden` fuer eine fehlende
+        /// Ablagedatei anwendet. Ein
         /// eigener Wert daneben machte aus vier Ausgaengen fuenf und zwaenge
         /// den Editor zu einer Unterscheidung, die er nicht trifft.
         fehlt: bool,
@@ -576,8 +584,8 @@ fn unlesbar(mut datei: File, grund: Unlesbarkeit) -> Textstand {
 ///
 /// **Der Deskriptor aus [`Textstand::Unlesbar`] wird hier fallengelassen.** Der
 /// Editor oeffnet nichts, was er nicht als Text lesen kann, und braucht die
-/// Bytes deshalb nicht; wer sie braucht, ist der Notizzettel, und der geht
-/// ueber [`lesen`].
+/// Bytes deshalb nicht; gebraucht hat sie bis zur krkhome-Arbeit der
+/// Notizzettel, und der ging ueber [`lesen`].
 pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
     match lesen(pfad) {
         Textstand::Text(stand) => Ok(stand),
@@ -595,8 +603,8 @@ pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
             pfad: pfad.to_path_buf(),
         }),
         // Die fehlende Datei ist fuer den Editor kein eigener Fall: sie hat so
-        // wenig Text zu zeigen wie ein Ordner. Der Notizzettel trennt sie,
-        // siehe das Feld `fehlt`.
+        // wenig Text zu zeigen wie ein Ordner. Die Uebernahme der alten Zettel
+        // trennt sie, siehe das Feld `fehlt`.
         Textstand::KeinGueltigesZiel { grund, mangel, .. } => Err(Abweisung::KeinGueltigesZiel {
             pfad: pfad.to_path_buf(),
             grund,
@@ -660,13 +668,14 @@ pub enum Lesehindernis {
 /// # Warum das nicht [`lesen`] ist
 ///
 /// [`lesen`] gibt den offenen, zurueckgespulten Deskriptor zurueck
-/// ([`Textstand::Unlesbar`]), damit der Notizzettel den Inhalt beiseitelegen
-/// kann, ohne den Pfad ein zweites Mal aufzuloesen. **Diese Huelle gibt ihn
+/// ([`Textstand::Unlesbar`]), damit ein Aufrufer den Inhalt weiterkopieren
+/// kann, ohne den Pfad ein zweites Mal aufzuloesen; so tat es bis zur
+/// krkhome-Arbeit der Notizzettel. **Diese Huelle gibt ihn
 /// nicht zurueck**, und ihre Aufrufer brauchen ihn auch nicht: sie haben die
 /// Bytes oder einen Grund. Die zweite Fassung ist deshalb kein Versehen und
 /// keine Doppelung derselben Frage, sondern die andere Frage; ein Umbau von
-/// [`lesen`] auf diese Form kostete die Zusage des Notizzettels und der
-/// Sicherungsform und braechte den Aufrufern dieser Huelle nichts.
+/// [`lesen`] auf diese Form kostete den Deskriptor und die Sicherungsform und
+/// braechte den Aufrufern dieser Huelle nichts.
 ///
 /// # Die Reihenfolge ist dieselbe wie bei [`lesen`]
 ///

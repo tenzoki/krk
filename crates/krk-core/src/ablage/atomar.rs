@@ -18,15 +18,16 @@
 //!
 //! Bis zur Runde 9 nahmen beide Funktionen `&str`. Die Runde 9 hat den
 //! Notizzettel gebracht, und mit ihm zwei Nutzlasten, die keine Zeichenkette
-//! sind und es nicht werden koennen:
+//! waren: eine Zetteldatei ohne gueltiges UTF-8 und eine ueber
+//! `text::datei::EDITORGRENZE`, die aus ihrem offenen Deskriptor in Stuecken
+//! ueber [`io::copy`] auf die Platte floss. Der Zettelweg ist mit der
+//! krkhome-Arbeit gefallen; der Leser ist geblieben, und die erste der zwei
+//! Nutzlasten mit ihm:
 //!
-//! - **Eine Zetteldatei, die kein gueltiges UTF-8 traegt.** Sie wird
+//! - **Eine Ablagedatei, die kein gueltiges UTF-8 traegt.** Sie wird
 //!   beiseitegelegt, also Byte fuer Byte kopiert; eine ungueltige Bytefolge ist
 //!   definitionsgemaess kein `&str`, und ein Ersatzzeichen darin waere genau der
 //!   Verlust, den das Beiseitelegen verhindern soll.
-//! - **Eine Zetteldatei ueber `text::datei::EDITORGRENZE`.** Sie darf zu keinem
-//!   Zeitpunkt vollstaendig im Arbeitsspeicher stehen; aus einem Leser flieszt
-//!   sie ueber [`io::copy`] in Stuecken auf die Platte.
 //!
 //! **Eine obere Schranke fuer die Menge steht hier nicht und gehoert nicht
 //! hierher.** Diese Datei schreibt, was ihr gereicht wird, bis die Quelle zu

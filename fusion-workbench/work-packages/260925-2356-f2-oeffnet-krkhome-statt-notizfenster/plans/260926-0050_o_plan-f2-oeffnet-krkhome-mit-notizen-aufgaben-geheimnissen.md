@@ -239,7 +239,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
    - Closes (am Baum): C1.2, C1.3, C1.4, C2.3, C2.6 (die eine Stelle), C3.1.
    - Dependencies: 1.2
 
-4. **1.3b Kern: die Ablage verliert die Zettel**
+4. [DONE] **1.3b Kern: die Ablage verliert die Zettel**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/ablage/{pfade.rs,mod.rs,sitzung.rs,neuerungen.rs,atomar.rs}`, `crates/krk-core/src/text/datei.rs` (Prosa), `crates/krk-core/tests/{ablage.rs,baum.rs,text.rs}`, `crates/krk-core/tests/gemeinsam/mod.rs`, `crates/krk-ui/src/fenstermodell.rs` (die eine Zeile, die das Feld füllt), `xtask/src/veroeffentlichung.rs` (Prosa)
    - Changes:

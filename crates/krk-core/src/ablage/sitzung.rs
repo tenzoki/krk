@@ -351,9 +351,9 @@ impl Default for Spaltensichtbarkeit {
 /// **Eine `session.toml` ohne einen einzigen obersten Schluessel gilt seit dem
 /// 260907 als beschaedigt** ([`Datei::leerbefund`](super::Datei::leerbefund)),
 /// und die Antwort ist gemessen: die aermste ueberhaupt konstruierbare Sitzung
-/// serialisiert zu sechs obersten Schluesseln, weil [`Sitzung::aktiv`] und
-/// [`Sitzung::zettel`] kein `skip_serializing_if` tragen und die drei Tische
-/// und die Tischfolge unbedingt danebenstehen. Eine Datei ohne einen einzigen
+/// serialisiert zu fuenf obersten Schluesseln, weil [`Sitzung::aktiv`] kein
+/// `skip_serializing_if` traegt und die drei Tische und die Tischfolge
+/// unbedingt danebenstehen. Eine Datei ohne einen einzigen
 /// kann deshalb nicht aus KRKs Feder stammen.
 ///
 /// **`#[serde(deny_unknown_fields)]` steht hier bewusst nicht.** Die Strenge
@@ -368,6 +368,13 @@ impl Default for Spaltensichtbarkeit {
 /// Entscheids zurueck; die Probe
 /// `eine_session_toml_aus_einer_spaeteren_fassung_behaelt_ihre_sitzung` in
 /// `krk-core/tests/ablage.rs` wird dabei rot.
+///
+/// **Dieselbe Offenheit traegt auch den umgekehrten Weg.** Bis zur
+/// krkhome-Arbeit fuehrte die Sitzung ein Feld `zettel`, das den zuletzt
+/// offenen Notizzettel merkte; mit dem Notizblatt ist es gefallen. Eine
+/// `session.toml`, die es noch traegt, laedt weiter und behaelt jede andere
+/// Angabe, gehalten von der Probe
+/// `eine_session_toml_mit_dem_alten_zettelfeld_laedt_und_behaelt_alles_uebrige`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Sitzung {
@@ -394,23 +401,6 @@ pub struct Sitzung {
     /// traegt; die Probe dazu steht in `tests/ablage.rs`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub editor: Option<PathBuf>,
-    /// Welcher der beiden Notizzettel zuletzt offen war.
-    ///
-    /// **Die Merkung und nicht der Text.** Was auf den Zetteln steht, liegt in
-    /// `note-1.txt` und `note-2.txt` und kommt in diese Datei an keiner Stelle;
-    /// der Zwei-Sekunden-Takt des [`Sitzungsschreiber`] traegt damit vom Zettel
-    /// nichts als diese eine Angabe. C4 der Runde 9 sagt beides zu, und eine
-    /// Probe in `tests/ablage.rs` haelt es fest. Es ist derselbe Zuschnitt wie
-    /// bei [`Sitzung::editor`] weiter oben: der Ort und nicht der Stand.
-    ///
-    /// **Vor den drei Tabellen und vor `fenster`**, aus dem Grund, den
-    /// [`Sitzung::editor`] ausschreibt: TOML verlangt, dass die Werte einer
-    /// Tabelle vor ihren Untertabellen stehen.
-    ///
-    /// Mit der Runde 9 dazugekommen. Eine `session.toml` aus der Zeit davor
-    /// bleibt lesbar, weil diese Struktur `#[serde(default)]` traegt, und
-    /// ergibt den ersten Zettel.
-    pub zettel: pfade::Zettel,
     /// Wie der Git-Bereich die Flaeche unter seinem Kopf teilt: der Anteil, den
     /// die Verlaufsliste davon bekommt.
     ///
@@ -463,13 +453,11 @@ impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, Editor und
     /// Git-Bereich ausgeblendet und der Editor ohne Datei, alle fuenf Spalten
-    /// sichtbar, links aktiv, der erste Notizzettel offen, der Git-Bereich
-    /// ungeteilt gelassen.
+    /// sichtbar, links aktiv, der Git-Bereich ungeteilt gelassen.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),
             editor: None,
-            zettel: pfade::Zettel::default(),
             gitanteil: None,
             breiten: Breiten::default(),
             sichtbar: Sichtbarkeit::default(),

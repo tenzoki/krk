@@ -37,9 +37,9 @@ use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
 use krk_core::ablage::sperre::{SCHREIBSPERRE, SITZUNGSRECHT};
 use krk_core::ablage::{
     Ablage, Ablageort, Aenderung, Ausgang, Beiseite, Breiten, Datei, Dateifenster, Einstellungen,
-    Ersatz, Ersetzung, Fensterseite, Format, Geladen, Grund, Leerbefund, Lesezeichen,
-    Lesezeichenliste, Sichtbarkeit, Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung,
-    Zettel, Ziel, atomar, einstellungen, leseprofile, melden, neuerungen, pfade,
+    Ersatz, Ersetzung, Fensterseite, Geladen, Grund, Leerbefund, Lesezeichen, Lesezeichenliste,
+    Sichtbarkeit, Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Ziel, atomar,
+    einstellungen, leseprofile, melden, neuerungen, pfade,
 };
 use krk_core::leseprofil::{Profil, Profile};
 use krk_core::tasten::belegung;
@@ -54,7 +54,7 @@ use gemeinsam::{Pruefordner, rechtesperre_haelt_oder_abbruch};
 // Stellvertreter
 // ---------------------------------------------------------------------------
 
-/// Laedt eine der sechs TOML-Dateien so, wie der Betrieb es tut: unter der
+/// Laedt eine der sechs Ablagedateien so, wie der Betrieb es tut: unter der
 /// Schreibsperre.
 ///
 /// Seit der Runde 7 fuehrt jeder Weg auf die Platte durch einen `Zugang`, und
@@ -71,7 +71,7 @@ where
         .expect("die Schreibsperre laesst sich nicht nehmen")
 }
 
-/// Schreibt eine der sechs TOML-Dateien unter der Schreibsperre.
+/// Schreibt eine der sechs Ablagedateien unter der Schreibsperre.
 ///
 /// Der Rueckgabewert ist der des Schreibens und nicht der des Durchgangs: die
 /// Proben pruefen ihn, und ein Fehlschlag beim Nehmen der Sperre waere ein
@@ -115,25 +115,21 @@ fn geladene_leseprofile(ablage: &Ablage) -> Geladen<Profile> {
     geladene_leseprofile_mit_meldungen(ablage).0
 }
 
-/// Die fuenf Ablagedateien, die TOML tragen, in der Reihenfolge von
-/// [`Datei::ALLE`].
+/// Die Ablagedateien, die TOML tragen, in der Reihenfolge von [`Datei::ALLE`].
 ///
-/// **Eine abgeleitete Frage und keine zweite Liste.** Seit der Runde 24 fuehrt
-/// [`Datei::ALLE`] acht Dateien in zwei Formaten, und dieser Filter meint
-/// die sechs mit TOML. Eine von Hand gepflegte Liste daneben koennte von
-/// `Datei::ALLE` abweichen; ein Filter ueber [`Datei::format`] kann es nicht.
-/// Die Proben, die **jede** Ablagedatei meinen — Pfad, Name, Nichtanlage —,
-/// laufen weiterhin ueber `Datei::ALLE` und decken die zwei Zettel mit ab.
+/// **Seit der krkhome-Arbeit sind das alle.** Bis dahin fuehrte
+/// [`Datei::ALLE`] daneben die zwei Notizzettel im Textformat, und dieser
+/// Filter trennte sie ueber die abgeleitete Frage `Datei::format` ab; mit den
+/// Zetteln sind Frage und Filter gefallen. Der Name bleibt, weil die Proben,
+/// die ihn rufen, von TOML-Dateien handeln und nicht von einer Zahl.
 ///
-/// **Nicht jede der sechs geht durch `Zugang::sichern`.** `settings.toml` und
+/// **Nicht jede geht durch `Zugang::sichern`.** `settings.toml` und
 /// `readers.toml` pflegt der Nutzer von Hand, und ihr Schreibweg ist die
 /// woertliche Anlage der Auslieferungsfassung. Ueber `Zugang::laden` gehen
 /// seit Schritt 8 der Runde 16 alle uebrigen, seit der Runde 24 auch
 /// `reported.toml`.
 fn toml_dateien() -> impl Iterator<Item = Datei> {
-    Datei::ALLE
-        .into_iter()
-        .filter(|welche| welche.format() == Format::Toml)
+    Datei::ALLE.into_iter()
 }
 
 /// Eine Ablage in einem frischen Pruefordner.
@@ -172,7 +168,6 @@ fn beispielsitzung() -> Sitzung {
     Sitzung {
         aktiv: Fensterseite::Rechts,
         editor: Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md")),
-        zettel: Zettel::Zweiter,
         gitanteil: Some(0.375),
         breiten: Breiten {
             lesezeichen: Some(180.0),
@@ -297,8 +292,6 @@ fn der_ablageordner_liegt_unter_application_support() {
             "settings.toml",
             "readers.toml",
             "reported.toml",
-            "note-1.txt",
-            "note-2.txt"
         ]
     );
 }
@@ -1305,7 +1298,7 @@ fn eine_nicht_lesbare_datei_fuehrt_ebenso_zum_auslieferungszustand() {
 /// Prueft, dass eine Ersetzung gemeldet wird und die Datei benennt.
 ///
 /// **Der Satzteil ueber den Ersatz haengt an der Datei und nicht an dieser
-/// Stelle.** Sechs der sieben bekommen den Auslieferungszustand, `readers.toml`
+/// Stelle.** Fuenf der sechs bekommen den Auslieferungszustand, `readers.toml`
 /// bekommt nichts; die erwarteten Woerter stehen hier ausgeschrieben und werden
 /// nicht aus [`Ersatz`] geholt, damit die Probe den Wortlaut haelt und nicht
 /// den Aufruf wiederholt, den sie pruefen soll.
@@ -1364,9 +1357,7 @@ fn beiseitepfad(ablage: &Ablage, welche: Datei) -> PathBuf {
 ///
 /// Die Belegung geht ueber ihren Stellvertreter, die Einstellungen ueber
 /// `einstellungen::laden`, die Leseprofile ueber `leseprofile::laden`; damit
-/// laufen alle durch denselben `Zugang::laden` wie im Betrieb. Die zwei Zettel
-/// stehen nicht darin: sie gehen ueber `Zugang::text_laden` und haben ihre
-/// eigenen Proben weiter unten.
+/// laufen alle durch denselben `Zugang::laden` wie im Betrieb.
 ///
 /// **Die Liste steht hier von Hand, und die Probe unten zaehlt sie gegen
 /// [`toml_dateien`]**, statt beide Seiten im `zip` still zu kuerzen. Bis
@@ -1789,7 +1780,7 @@ fn die_meldung_zu_readers_toml_verspricht_keinen_auslieferungszustand() {
     }
 }
 
-/// Genau eine der acht Ablagedateien traegt [`Ersatz::Nichts`].
+/// Genau eine der sechs Ablagedateien traegt [`Ersatz::Nichts`].
 ///
 /// Die Zaehlprobe zu der Aussage, die der Doc-Kommentar von [`Datei::ersatz`]
 /// macht. Sie laeuft ueber [`Datei::ALLE`] und kann keine vergessen; eine
@@ -1806,276 +1797,43 @@ fn genau_readers_toml_bekommt_keinen_ersatz() {
 }
 
 // ---------------------------------------------------------------------------
-// Die zwei Notizzettel (C5 der Runde 9)
+// Die Grenze der Sicherung
 // ---------------------------------------------------------------------------
 
-/// Laedt einen Zettel unter der Schreibsperre, wie der Betrieb es tut.
-fn geladener_zettel(ablage: &Ablage, welcher: Zettel) -> Geladen<String> {
-    ablage
-        .durchgang(|zugang| zugang.text_laden(Datei::Zettel(welcher)))
-        .expect("die Schreibsperre laesst sich nicht nehmen")
-}
-
-/// Schreibt einen Zettel unter der Schreibsperre.
-fn gesicherter_zettel(ablage: &Ablage, welcher: Zettel, text: &str) -> std::io::Result<()> {
-    ablage
-        .durchgang(|zugang| zugang.text_sichern(Datei::Zettel(welcher), text))
-        .expect("die Schreibsperre laesst sich nicht nehmen")
-}
-
-/// Der Text eines Zettels gerät an keine Stelle der `session.toml` (C4).
+/// Eine beschaedigte Ablagedatei ueber `EDITORGRENZE` geht gekuerzt beiseite.
 ///
-/// **Die Sitzung traegt die Merkung und nie den Text.** Welcher der zwei Zettel
-/// offen war, gehoert in die Sitzung — der Zwei-Sekunden-Takt des
-/// [`Sitzungsschreiber`] schreibt sie, und ein Text im Takt waere genau die
-/// Zusage, die diese Runde nicht macht. Geschrieben wird der Text allein an den
-/// vier Sicherungsmomenten und allein in `note-1.txt` und `note-2.txt`.
+/// **Die Grenze der Kopie ist die des Editors und keine zweite Zahl**, so
+/// entschieden am 260814-1010. Bis zur krkhome-Arbeit stand die Probe am
+/// Zettelweg, der eine zu grosse Datei gar nicht erst las
+/// (`issues/260814-0910_*_eine-zetteldatei-ueber-editorgrenze-wird-unbegrenzt-auf-dem-hauptfaden-kopiert.md`);
+/// mit ihm ist der einzige Weg gefallen, auf dem die Kuerzung ueberhaupt
+/// eintrat. Der Ladeweg der Ablagedateien kennt keine Groessengrenze, legt
+/// aber jede beschaedigte Datei ueber dieselbe Kopie beiseite, und die haelt
+/// bei der Grenze an. Die Probe steht deshalb jetzt dort.
 ///
-/// Beide Haelften stehen hier: die Nadel darf in der Zetteldatei vorkommen und
-/// in der Sitzungsdatei nicht. Ohne die erste liefe die Probe auch dann gruen,
-/// wenn der Text nirgends stuende.
-///
-/// **Was die Probe nicht sieht:** ein Weg, der den Text in eine dritte Datei
-/// schreibt. Dass es keine dritte gibt, halten `Datei::ALLE` und
-/// `nur_benannte_dateien_erreichen_das_atomare_schreiben` fest.
+/// Die Datei ist ein Loch, also lauter Nullbytes: gueltiges UTF-8 und kein
+/// gueltiges TOML. `keymap.toml` traegt [`Leerbefund::Vorgabe`], der Befund
+/// kommt also vom Leser und nicht von der Frage nach dem obersten Schluessel.
 #[test]
-fn die_geschriebene_sitzung_traegt_den_text_eines_zettels_an_keiner_stelle() {
-    let (_ordner, ablage) = ablage("sitzung-ohne-zettelext");
-    // Eine Nadel, die in keinem Feld der Sitzung als Wert vorkommen kann.
-    let nadel = "Milch-Eier-Brot-4711";
-    gesicherter_zettel(&ablage, Zettel::Zweiter, nadel).expect("schreiben gescheitert");
-    gesichert(&ablage, Datei::Sitzung, &beispielsitzung()).expect("schreiben gescheitert");
+fn eine_beschaedigte_ablagedatei_ueber_der_grenze_geht_gekuerzt_beiseite() {
+    let (ordner, ablage) = ablage("sicherung-zu-gross");
+    let groesse = EDITORGRENZE + 1;
+    let pfad = ablage.pfad(Datei::Belegung);
+    // Der Ablageordner ist die Wurzel des Pruefordners; das Loch entsteht
+    // deshalb unter dem Namen der Ablagedatei selbst.
+    assert_eq!(pfad.parent(), Some(ordner.pfad()));
+    ordner.luecke(Datei::Belegung.dateiname(), groesse);
 
-    let zetteldatei =
-        fs::read_to_string(ablage.pfad(Datei::Zettel(Zettel::Zweiter))).expect("lesen gescheitert");
-    assert_eq!(
-        zetteldatei, nadel,
-        "der Text steht nicht in der Datei des Zettels; dann sagt die Gegenprobe nichts"
-    );
-
-    let sitzungsdatei = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
-    assert!(
-        !sitzungsdatei.contains(nadel),
-        "der Text des Zettels steht in der session.toml: {sitzungsdatei}"
-    );
-    assert!(
-        sitzungsdatei.contains("zettel = \"zweiter\""),
-        "die Merkung des offenen Zettels fehlt in der session.toml: {sitzungsdatei}"
-    );
-}
-
-/// Eine `session.toml` ohne das Feld `zettel` bleibt lesbar und ergibt den
-/// ersten Zettel (C2).
-///
-/// Die Datei tritt so auf, wie die Runden vor der neunten sie geschrieben
-/// haben. Sie gilt nicht als beschaedigt, und der Nutzer verliert nichts.
-#[test]
-fn eine_sitzung_ohne_das_zettelfeld_bleibt_lesbar() {
-    let (_ordner, ablage) = ablage("vor-dem-zettel");
-    let alt = "\
-aktiv = \"rechts\"
-
-[breiten]
-links = 420.0
-
-[sichtbar]
-lesezeichen = true
-
-[[fenster]]
-aktiver_tab = 0
-
-[[fenster]]
-aktiver_tab = 0
-";
-    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
-
-    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
-
-    assert!(
-        !geladen.ist_ersetzt(),
-        "die Datei ohne das Zettelfeld gilt als beschaedigt: {:?}",
-        geladen.ersetzung
-    );
-    assert_eq!(
-        geladen.wert.zettel,
-        Zettel::Erster,
-        "ohne das Feld ist der erste Zettel offen"
-    );
-    assert_eq!(geladen.wert.aktiv, Fensterseite::Rechts);
-}
-
-/// Eine fehlende Zetteldatei ist der erste Start und keine Meldung wert (C5).
-///
-/// Dieselbe Regel, die `Zugang::laden` fuer eine fehlende TOML-Datei anwendet.
-/// Sie steht als eigene Probe da, weil sie im Befund von `text::datei::lesen`
-/// an einem einzigen Feld haengt: eine fehlende Datei kommt dort als
-/// `KeinGueltigesZiel` herein wie ein Ordner auch, und allein `fehlt` trennt
-/// die beiden.
-#[test]
-fn eine_fehlende_zetteldatei_ergibt_einen_leeren_zettel_ohne_meldung() {
-    let (_ordner, ablage) = ablage("zettel-fehlt");
-
-    for welcher in Zettel::ALLE {
-        let geladen = geladener_zettel(&ablage, welcher);
-        assert_eq!(geladen.wert, "", "der fehlende Zettel kam nicht leer");
-        assert!(
-            !geladen.ist_ersetzt(),
-            "der fehlende Zettel wurde gemeldet: {:?}",
-            geladen.ersetzung
-        );
-        assert!(
-            !ablage.pfad(Datei::Zettel(welcher)).exists(),
-            "das Laden hat die Zetteldatei angelegt"
-        );
-    }
-}
-
-/// Ein Rundlauf: was hineingeschrieben wird, kommt unveraendert zurueck (C5).
-///
-/// Zwei Zusagen in einer Probe, und beide gehoeren zusammen: der Inhalt der
-/// Datei ist der Text des Zettels — kein TOML, kein Kopf, keine
-/// Bytefolgenmarke —, und die zwei Zettel liegen in zwei Dateien, die sich
-/// nicht ins Gehege kommen.
-#[test]
-fn ein_zettel_kommt_unveraendert_zurueck_und_stoert_den_anderen_nicht() {
-    let (_ordner, ablage) = ablage("zettel-rundlauf");
-    let erster = "Pfad: ~/Projekte\nzweite Zeile ohne Umbruch am Ende";
-    let zweiter = "";
-
-    gesicherter_zettel(&ablage, Zettel::Erster, erster)
-        .expect("note-1.txt laesst sich nicht schreiben");
-    gesicherter_zettel(&ablage, Zettel::Zweiter, zweiter)
-        .expect("note-2.txt laesst sich nicht schreiben");
-
-    // Auf der Platte steht der Text und sonst nichts.
-    assert_eq!(
-        fs::read_to_string(ablage.pfad(Datei::Zettel(Zettel::Erster))).expect("note-1.txt fehlt"),
-        erster,
-        "die Zetteldatei traegt mehr oder weniger als den Text des Zettels"
-    );
-
-    let zurueck = geladener_zettel(&ablage, Zettel::Erster);
-    assert!(!zurueck.ist_ersetzt(), "{:?}", zurueck.ersetzung);
-    assert_eq!(zurueck.wert, erster);
-
-    let zurueck = geladener_zettel(&ablage, Zettel::Zweiter);
-    assert!(!zurueck.ist_ersetzt(), "{:?}", zurueck.ersetzung);
-    assert_eq!(zurueck.wert, zweiter);
-}
-
-/// Eine ungueltige Bytefolge wird beiseitegelegt, und der Zettel ist leer (C5).
-///
-/// **Das ist die Antwort des Nutzers vom 260814-0005 in einer Probe.** Waere
-/// der Inhalt nicht gesichert, schriebe der naechste Sicherungsmoment den
-/// leeren Stand darueber, und ein blosser Blick auf einen Zettel haette eine
-/// Datei vernichtet.
-#[test]
-fn eine_ungueltige_zetteldatei_wird_beiseitegelegt_und_der_zettel_ist_leer() {
-    let (_ordner, ablage) = ablage("zettel-ungueltig");
-    let pfad = ablage.pfad(Datei::Zettel(Zettel::Erster));
-    let kaputt: &[u8] = b"noch lesbar\n\xff\xfe und ab hier nicht mehr";
-    fs::write(&pfad, kaputt).expect("schreiben gescheitert");
-
-    let geladen = geladener_zettel(&ablage, Zettel::Erster);
-    assert_eq!(geladen.wert, "", "der unlesbare Zettel kam nicht leer");
+    let geladen: Geladen<toml::Table> = geladen(&ablage, Datei::Belegung);
     let ersetzung = geladen
         .ersetzung
-        .expect("der unlesbare Zettel wurde nicht gemeldet");
+        .expect("die beschaedigte Datei wurde nicht gemeldet");
     assert!(
         matches!(ersetzung.grund, Grund::Beschaedigt(_)),
         "{ersetzung:?}"
     );
 
-    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Erster));
-    assert_eq!(ersetzung.beiseite, Beiseite::Gesichert(sicherung.clone()));
-    assert_eq!(
-        fs::read(&sicherung).expect("die Sicherung fehlt"),
-        kaputt,
-        "die Sicherung traegt nicht Byte fuer Byte den Inhalt der Datei"
-    );
-
-    // Kopiert und nicht verschoben, wie bei den sechs TOML-Dateien.
-    assert_eq!(
-        fs::read(&pfad).expect("das Original fehlt"),
-        kaputt,
-        "die Zetteldatei wurde verschoben statt kopiert"
-    );
-
-    // Die Meldung nennt die Sicherung, ueber denselben Weg, den `Ersetzung`
-    // fuer `keymap.toml` und `settings.toml` geht.
-    let text = melden(&ersetzung);
-    assert!(
-        text.contains(&sicherung.display().to_string()),
-        "die Meldung nennt die Sicherung nicht: {text}"
-    );
-    assert!(!text.contains('\n'), "die Meldung ist mehrzeilig: {text}");
-}
-
-/// Eine zweite ungueltige Fassung laesst die erste Sicherung unangetastet (C5).
-///
-/// Dieselbe Zusage wie fuer die sechs TOML-Dateien, und sie haengt an derselben
-/// Funktion: `Zugang::beiseite_legen` fragt vorher, ob dort schon etwas steht.
-#[test]
-fn eine_zweite_ungueltige_zetteldatei_laesst_die_erste_sicherung_stehen() {
-    let (_ordner, ablage) = ablage("zettel-zweimal");
-    let pfad = ablage.pfad(Datei::Zettel(Zettel::Zweiter));
-    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Zweiter));
-
-    fs::write(&pfad, b"\xff die erste Fassung").expect("schreiben gescheitert");
-    let erst = geladener_zettel(&ablage, Zettel::Zweiter);
-    assert_eq!(
-        erst.ersetzung.expect("keine Meldung").beiseite,
-        Beiseite::Gesichert(sicherung.clone())
-    );
-
-    fs::write(&pfad, b"\xff die zweite Fassung").expect("schreiben gescheitert");
-    let dann = geladener_zettel(&ablage, Zettel::Zweiter);
-    assert_eq!(
-        dann.ersetzung.expect("keine Meldung").beiseite,
-        Beiseite::SchonVorhanden(sicherung.clone())
-    );
-    assert_eq!(
-        fs::read(&sicherung).expect("die Sicherung fehlt"),
-        b"\xff die erste Fassung",
-        "die zweite Fassung hat die erste Sicherung ueberschrieben"
-    );
-}
-
-/// Eine Zetteldatei ueber `EDITORGRENZE` wird nicht geladen und geht gekuerzt
-/// beiseite (C5).
-///
-/// **Die Grenze ist die des Editors und keine zweite Zahl**, und sie faengt
-/// genau den Fall, fuer den sie dasteht: eine fremde Datei unter dem Namen
-/// eines Zettels. Der Inhalt wird dabei aus dem offenen Deskriptor kopiert und
-/// steht zu keinem Zeitpunkt vollstaendig im Arbeitsspeicher.
-///
-/// **Dieselbe Zahl begrenzt seit dem 260814-1010 auch die Kopie**, und die
-/// Laengenzusicherung unten ist deshalb umgekehrt worden: sie hielt bis dahin
-/// fest, dass die Sicherung den ganzen Inhalt traegt, und haelt jetzt fest,
-/// dass sie bei der Grenze aufhoert. Ohne die Schranke kopierte ein `f2` eine
-/// Datei von 40 GB in voller Laenge, synchron auf dem Hauptfaden
-/// (`issues/260814-0910_*_eine-zetteldatei-ueber-editorgrenze-wird-unbegrenzt-auf-dem-hauptfaden-kopiert.md`).
-///
-/// Gelesen wuerde ein Loch als lauter Nullbytes, und die sind gueltiges UTF-8:
-/// die Datei faellt also an ihrer Groesse heraus und an nichts sonst.
-#[test]
-fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_gekuerzt_beiseite() {
-    let (ordner, ablage) = ablage("zettel-zu-gross");
-    let groesse = EDITORGRENZE + 1;
-    let pfad = ablage.pfad(Datei::Zettel(Zettel::Erster));
-    // Der Ablageordner ist die Wurzel des Pruefordners; das Loch entsteht
-    // deshalb unter dem Namen der Zetteldatei selbst.
-    assert_eq!(pfad.parent(), Some(ordner.pfad()));
-    ordner.luecke("note-1.txt", groesse);
-
-    let geladen = geladener_zettel(&ablage, Zettel::Erster);
-    assert_eq!(geladen.wert, "", "die zu grosse Datei wurde geladen");
-    let ersetzung = geladen
-        .ersetzung
-        .expect("die zu grosse Datei wurde nicht gemeldet");
-    assert_eq!(ersetzung.grund, Grund::ZuGross { groesse });
-
-    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Erster));
+    let sicherung = beiseitepfad(&ablage, Datei::Belegung);
     assert_eq!(ersetzung.beiseite, Beiseite::Gekuerzt(sicherung.clone()));
     assert_eq!(
         fs::metadata(&sicherung).expect("die Sicherung fehlt").len(),
@@ -2088,21 +1846,18 @@ fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_gekuerzt_beiseite() {
     assert_eq!(
         fs::metadata(&pfad).expect("das Original fehlt").len(),
         groesse,
-        "die zu grosse Zetteldatei wurde verschoben oder gekuerzt"
+        "die zu grosse Datei wurde verschoben oder gekuerzt"
     );
 
     let text = melden(&ersetzung);
     assert!(
-        text.contains(&groesse.to_string()) && text.contains(&EDITORGRENZE.to_string()),
-        "die Meldung nennt Groesse und Grenze nicht: {text}"
-    );
-    assert!(
-        text.contains("gekürzt"),
+        text.contains("gekürzt") && text.contains(&EDITORGRENZE.to_string()),
         "die Meldung verschweigt, dass die Sicherung nicht vollstaendig ist: {text}"
     );
 }
 
-/// Eine Zetteldatei von genau `EDITORGRENZE` Bytes geht **ganz** beiseite (C5).
+/// Eine beschaedigte Ablagedatei von genau `EDITORGRENZE` Bytes geht **ganz**
+/// beiseite.
 ///
 /// Der Grenzfall zur Probe darueber, und er misst die Stelle, an der die
 /// Kuerzung sonst zu frueh gemeldet wuerde: das Budget ist hier restlos
@@ -2111,35 +1866,33 @@ fn eine_zu_grosse_zetteldatei_wird_nicht_geladen_und_geht_gekuerzt_beiseite() {
 /// ausgeschoepften Budget selbst; steht dort keines, ist die Sicherung
 /// vollstaendig.
 ///
-/// Herausfallen muss die Datei an ihrer Bytefolge und nicht an ihrer Groesse:
-/// genau `EDITORGRENZE` Bytes nimmt der Leser an. Das erste Byte ist deshalb
-/// `0xff`, das in keiner gueltigen UTF-8-Folge vorkommt; der Rest ist ein Loch.
+/// Das erste Byte ist `0xff`, das in keiner gueltigen UTF-8-Folge vorkommt; der
+/// Rest ist ein Loch.
 #[test]
-fn eine_zetteldatei_genau_auf_der_grenze_geht_ganz_beiseite() {
-    let (ordner, ablage) = ablage("zettel-auf-der-grenze");
-    let pfad = ablage.pfad(Datei::Zettel(Zettel::Erster));
+fn eine_beschaedigte_ablagedatei_genau_auf_der_grenze_geht_ganz_beiseite() {
+    let (ordner, ablage) = ablage("sicherung-auf-der-grenze");
+    let pfad = ablage.pfad(Datei::Belegung);
     assert_eq!(pfad.parent(), Some(ordner.pfad()));
-    ordner.luecke("note-1.txt", EDITORGRENZE);
+    ordner.luecke(Datei::Belegung.dateiname(), EDITORGRENZE);
     let mut datei = fs::OpenOptions::new()
         .write(true)
         .open(&pfad)
-        .expect("die Zetteldatei laesst sich nicht oeffnen");
+        .expect("die Ablagedatei laesst sich nicht oeffnen");
     datei
         .write_all(b"\xff")
         .expect("das ungueltige Byte laesst sich nicht schreiben");
     drop(datei);
 
-    let geladen = geladener_zettel(&ablage, Zettel::Erster);
-    assert_eq!(geladen.wert, "", "die ungueltige Datei wurde geladen");
+    let geladen: Geladen<toml::Table> = geladen(&ablage, Datei::Belegung);
     let ersetzung = geladen
         .ersetzung
         .expect("die ungueltige Datei wurde nicht gemeldet");
     assert!(
         matches!(ersetzung.grund, Grund::Beschaedigt(_)),
-        "die Datei faellt an ihrer Groesse heraus und nicht an ihrer Bytefolge: {ersetzung:?}"
+        "{ersetzung:?}"
     );
 
-    let sicherung = beiseitepfad(&ablage, Datei::Zettel(Zettel::Erster));
+    let sicherung = beiseitepfad(&ablage, Datei::Belegung);
     assert_eq!(
         ersetzung.beiseite,
         Beiseite::Gesichert(sicherung.clone()),
@@ -3828,19 +3581,19 @@ farbe = \"rot\"
 ///
 /// Gemessen wird an der **aermsten** ueberhaupt konstruierbaren Sitzung und
 /// nicht am Auslieferungszustand: jedes `Option` auf `None`, jeder Wahrheitswert
-/// auf `false`, beide Tabreihen leer. [`Sitzung::aktiv`] und
-/// [`Sitzung::zettel`] tragen kein `skip_serializing_if` und stehen deshalb
-/// unbedingt in der Datei; die drei Tische und die Tischfolge `[[fenster]]`
-/// stehen daneben. Die Strukturen sind ausgeschrieben und nicht ueber `..` und
-/// `Default` gebaut, damit ein neues Feld diese Probe anhaelt und die Messung
-/// erneut erzwingt.
+/// auf `false`, beide Tabreihen leer. [`Sitzung::aktiv`] traegt kein
+/// `skip_serializing_if` und steht deshalb unbedingt in der Datei; die drei
+/// Tische und die Tischfolge `[[fenster]]` stehen daneben. Das sind fuenf
+/// oberste Schluessel, und die Probe zaehlt sie: bis zur krkhome-Arbeit waren
+/// es sechs, mit dem gefallenen Feld `zettel`. Die Strukturen sind
+/// ausgeschrieben und nicht ueber `..` und `Default` gebaut, damit ein neues
+/// Feld diese Probe anhaelt und die Messung erneut erzwingt.
 #[test]
 fn jede_geschriebene_session_toml_traegt_einen_obersten_schluessel() {
     let (_ordner, ablage) = ablage("sitzung-oberster-schluessel");
     let aermste = Sitzung {
         aktiv: Fensterseite::Links,
         editor: None,
-        zettel: Zettel::Erster,
         gitanteil: None,
         breiten: Breiten::default(),
         sichtbar: Sichtbarkeit {
@@ -3876,6 +3629,13 @@ fn jede_geschriebene_session_toml_traegt_einen_obersten_schluessel() {
         assert!(
             !dokument.is_empty(),
             "KRK hat eine session.toml ohne obersten Schluessel geschrieben: {text:?}"
+        );
+        let mut schluessel: Vec<&str> = dokument.keys().map(String::as_str).collect();
+        schluessel.sort_unstable();
+        assert_eq!(
+            schluessel,
+            ["aktiv", "breiten", "fenster", "sichtbar", "spalten"],
+            "die aermste session.toml traegt andere oberste Schluessel: {text:?}"
         );
     }
 }
@@ -3956,7 +3716,118 @@ aktiver_tab = 0
     // Und die Felder, die diese Fassung kennt, sind angekommen: der Nutzer
     // behaelt seine Sitzung und bekommt nicht den Auslieferungszustand.
     assert_eq!(geladen.wert.aktiv, Fensterseite::Rechts);
-    assert_eq!(geladen.wert.zettel, Zettel::Zweiter);
+}
+
+/// Eine `session.toml` mit dem gefallenen Feld `zettel` laedt und behaelt jede
+/// andere Angabe.
+///
+/// Von der Runde 9 bis zur krkhome-Arbeit schrieb KRK in jede Sitzung, welcher
+/// der zwei Notizzettel zuletzt offen war. Mit dem Notizblatt ist das Feld
+/// gefallen, und jede `session.toml` eines Nutzers, der KRK davor einmal
+/// beendet hat, traegt es noch. Sie darf die Sitzung nicht kosten: dieselbe
+/// Offenheit gegen unbekannte oberste Schluessel, die
+/// [`eine_session_toml_aus_einer_spaeteren_fassung_behaelt_ihre_sitzung`] fuer
+/// die Vorwaertsrichtung haelt, traegt hier die Rueckwaertsrichtung.
+///
+/// Die Datei ist so geschrieben, wie die Fassung davor sie schrieb, mit dem
+/// Feld zwischen `editor` und `gitanteil`; jede andere Angabe weicht vom
+/// Auslieferungszustand ab, damit ein stiller Rueckfall auf ihn auffiele.
+#[test]
+fn eine_session_toml_mit_dem_alten_zettelfeld_laedt_und_behaelt_alles_uebrige() {
+    let (_ordner, ablage) = ablage("sitzung-altes-zettelfeld");
+    let alt = "\
+aktiv = \"rechts\"
+editor = \"/Users/pruefung/Projekte/notiz.md\"
+zettel = \"erster\"
+gitanteil = 0.375
+
+[breiten]
+lesezeichen = 180.0
+links = 520.5
+editor = 480.0
+
+[sichtbar]
+lesezeichen = false
+erstes_dateifenster = false
+zweites_dateifenster = true
+vorschau = false
+editor = true
+git = true
+
+[spalten]
+groesse = false
+geaendert = true
+typ = false
+marke = false
+
+[[fenster]]
+aktiver_tab = 1
+
+[[fenster.tabs]]
+ordner = \"/Users/pruefung/Projekte\"
+
+[[fenster.tabs]]
+ordner = \"/Users/pruefung/Bilder\"
+auswahl = \"urlaub.jpg\"
+
+[[fenster]]
+aktiver_tab = 0
+
+[[fenster.tabs]]
+ordner = \"/Volumes/Sicherung\"
+";
+    fs::write(ablage.pfad(Datei::Sitzung), alt).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine session.toml mit dem alten Zettelfeld gilt als beschaedigt: {:?}",
+        geladen.ersetzung
+    );
+    assert!(
+        !beiseitepfad(&ablage, Datei::Sitzung)
+            .try_exists()
+            .expect("try_exists gescheitert"),
+        "eine session.toml mit dem alten Zettelfeld wurde zur Seite gelegt"
+    );
+
+    let sitzung = geladen.wert;
+    assert_eq!(sitzung.aktiv, Fensterseite::Rechts);
+    assert_eq!(
+        sitzung.editor,
+        Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md"))
+    );
+    assert_eq!(sitzung.gitanteil, Some(0.375));
+    assert_eq!(sitzung.breiten.lesezeichen, Some(180.0));
+    assert_eq!(sitzung.breiten.links, Some(520.5));
+    assert_eq!(sitzung.breiten.editor, Some(480.0));
+    assert!(!sitzung.sichtbar.lesezeichen);
+    assert!(!sitzung.sichtbar.erstes_dateifenster);
+    assert!(sitzung.sichtbar.editor);
+    assert!(sitzung.sichtbar.git);
+    assert!(!sitzung.spalten.groesse);
+    assert!(!sitzung.spalten.typ);
+    assert!(!sitzung.spalten.marke);
+    let links = sitzung.fenster(Fensterseite::Links);
+    assert_eq!(links.aktiver_tab, 1);
+    assert_eq!(links.tabs.len(), 2);
+    assert_eq!(
+        links.tabs[1].ordner,
+        PathBuf::from("/Users/pruefung/Bilder")
+    );
+    assert_eq!(links.tabs[1].auswahl.as_deref(), Some("urlaub.jpg"));
+    let rechts = sitzung.fenster(Fensterseite::Rechts);
+    assert_eq!(rechts.tabs.len(), 1);
+    assert_eq!(rechts.tabs[0].ordner, PathBuf::from("/Volumes/Sicherung"));
+
+    // Beim naechsten Schreiben verschwindet das Feld: KRK schreibt, was es
+    // kennt.
+    gesichert(&ablage, Datei::Sitzung, &sitzung).expect("schreiben gescheitert");
+    let neu = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert!(
+        !neu.contains("zettel"),
+        "KRK schreibt das gefallene Zettelfeld weiter: {neu}"
+    );
 }
 
 /// Prueft, dass eine `session.toml` als beschaedigt gilt, und was dabei unter
@@ -4285,9 +4156,9 @@ fn erhobene_neuerungen(ablage: &Ablage) -> Bestand {
 
 /// Die Ablagedateien, die ueberhaupt einen Unterschied tragen koennen.
 ///
-/// **Eine abgeleitete Frage und keine zweite Liste**, wie [`toml_dateien`] eine
-/// Ebene hoeher: eine achte Ablagedatei mit einer Vergleichsform steht hier von
-/// selbst, und eine von Hand gepflegte Liste koennte es nicht.
+/// **Eine abgeleitete Frage und keine zweite Liste**: eine siebte Ablagedatei
+/// mit einer Vergleichsform steht hier von selbst, und eine von Hand gepflegte
+/// Liste koennte es nicht.
 fn verglichene_dateien() -> impl Iterator<Item = Datei> {
     Datei::ALLE
         .into_iter()
@@ -4296,14 +4167,14 @@ fn verglichene_dateien() -> impl Iterator<Item = Datei> {
 
 /// Die eingebettete Auslieferungsfassung einer verglichenen Ablagedatei.
 ///
-/// Vollstaendig ueber [`Datei`]: eine achte Ablagedatei haelt auch diese Probe
+/// Vollstaendig ueber [`Datei`]: eine siebte Ablagedatei haelt auch diese Probe
 /// an, statt still an einer Datei weniger zu pruefen.
 fn auslieferungstext(welche: Datei) -> &'static str {
     match welche {
         Datei::Belegung => belegung::AUSLIEFERUNGSTEXT,
         Datei::Einstellungen => einstellungen::AUSLIEFERUNGSTEXT,
         Datei::Leser => leseprofile::AUSLIEFERUNGSTEXT,
-        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => panic!(
+        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => panic!(
             "{} wird nicht verglichen und hat keine eingebettete Auslieferungsfassung",
             welche.dateiname()
         ),
@@ -4427,7 +4298,7 @@ fn eine_nutzerdatei_die_es_nicht_gibt_liefert_keine_neuerung() {
 /// **Was der Uebersetzer hier nicht haelt.** `Vergleichsform::fuer` und die
 /// private `auslieferung` in `ablage/neuerungen.rs` sind je fuer sich
 /// vollstaendig ueber `Datei`; dass sie **dieselben** Dateien bejahen, sagt
-/// keine der beiden. Eine achte Ablagedatei mit einer Vergleichsform, aber ohne
+/// keine der beiden. Eine siebte Ablagedatei mit einer Vergleichsform, aber ohne
 /// eingebettete Fassung liesse sich nicht vergleichen und faellt aus dem
 /// Bestand heraus, ohne dass jemand es merkt.
 #[test]
@@ -5200,8 +5071,8 @@ fn eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere() {
 // ---------------------------------------------------------------------------
 //
 // `reported.toml` traegt die Fassung, fuer die die Startzeile aus
-// `ablage::neuerungen` zuletzt gelaufen ist. Der Merker ist die achte
-// Ablagedatei und die zweite Haelfte der Zusage „einmal je Fassung"; die
+// `ablage::neuerungen` zuletzt gelaufen ist. Der Merker ist die zuletzt
+// hinzugekommene Ablagedatei und die zweite Haelfte der Zusage „einmal je Fassung"; die
 // Wahl gegen ein Feld auf `Sitzung` steht im Kopf von `ablage::merker`.
 
 /// Der Merker geht unter der Schreibsperre auf die Platte und zurueck.

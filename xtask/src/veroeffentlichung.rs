@@ -1373,11 +1373,11 @@ mod tests {
         // Was in dem Ordner liegt, steht als **eine** Aussage da und nicht als
         // Aufzaehlung. Bis zum 260905 nannte der Text vier der sieben Dateien
         // aus `Datei::ALLE` und las sich dabei vollstaendig; wer weder
-        // Lesezeichen noch Zettel pflegt, aber Leseprofile von Hand
-        // geschrieben hat, hielt die Regel danach fuer unerheblich
+        // Lesezeichen noch eine eigene Tastenbelegung pflegt, aber Leseprofile
+        // von Hand geschrieben hat, hielt die Regel danach fuer unerheblich
         // (`shared/issues/260826-1444_*_der-releasetext-nennt-vier-von-sieben-ablagedateien-und-die-probe-haelt-die-unvollstaendige-liste.md`).
-        // Eine Liste hier haette eine achte Ablagedatei ueberlebt, ohne sie zu
-        // nennen; „alles" ueberlebt sie richtig. Der Vergleich laeuft ueber die
+        // Eine Liste hier haette eine weitere Ablagedatei ueberlebt, ohne sie
+        // zu nennen; „alles" ueberlebt sie richtig. Der Vergleich laeuft ueber die
         // zusammengezogenen Leerzeichen, damit der Zeilenumbruch des Textes ihn
         // nicht entscheidet.
         let gezogen = text.split_whitespace().collect::<Vec<_>>().join(" ");

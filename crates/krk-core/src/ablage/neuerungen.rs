@@ -25,17 +25,18 @@
 //!
 //! [`Ersatz::Nichts`]: super::Ersatz::Nichts
 //!
-//! # Die vierte je Datei beantwortete Frage
+//! # Die dritte je Datei beantwortete Frage
 //!
-//! [`super::pfade`] beantwortet drei Fragen je Ablagedatei, jede als
-//! vollstaendige Fallunterscheidung ohne Auffangzweig: Format, Leerbefund,
-//! Ersatz. [`Vergleichsform::fuer`] ist die vierte und von derselben Bauart —
-//! eine achte Ablagedatei haelt auch hier den Bau an.
+//! [`super::pfade`] beantwortet zwei Fragen je Ablagedatei, jede als
+//! vollstaendige Fallunterscheidung ohne Auffangzweig: Leerbefund und Ersatz.
+//! [`Vergleichsform::fuer`] ist die dritte und von derselben Bauart — eine
+//! siebte Ablagedatei haelt auch hier den Bau an. Bis zur krkhome-Arbeit stand
+//! als vierte das Format daneben; es ist mit den Notizzetteln gefallen.
 //!
 //! **Sie steht trotzdem nicht in [`super::pfade`], und das ist keine
 //! Nachlaessigkeit.** „Ein Eintrag ist ein `[[profil]]`, benannt durch sein
 //! Feld `name`" ist eine Aussage ueber den **Inhalt** einer Datei; die Ablage
-//! kennt Pfad, Format und Fehlerbehandlung und nicht den Inhalt, so der Kopf
+//! kennt Pfad und Fehlerbehandlung und nicht den Inhalt, so der Kopf
 //! von [`super`]. Die Frage gehoert deshalb in das Modul, das sie braucht.
 //!
 //! # Verglichen wird ueber `toml::Table`
@@ -131,8 +132,8 @@ use crate::tasten::belegung;
 /// Was bei einer Ablagedatei ein Eintrag ist.
 ///
 /// **Vollstaendig ueber [`Datei`] und ohne Auffangzweig**, wie
-/// [`Datei::format`], [`Datei::leerbefund`] und [`Datei::ersatz`] daneben; der
-/// Modulkopf sagt, warum die Frage hier wohnt und nicht bei jenen dreien.
+/// [`Datei::leerbefund`] und [`Datei::ersatz`] daneben; der Modulkopf sagt,
+/// warum die Frage hier wohnt und nicht bei jenen beiden.
 ///
 /// Zwei Gestalten reichen fuer jede heute verglichene Datei: `settings.toml`
 /// nennt ihre Eintraege als oberste Schluessel, `readers.toml` und
@@ -157,7 +158,7 @@ pub enum Vergleichsform {
     },
     /// Diese Datei wird nicht verglichen.
     ///
-    /// Der Wert jeder Datei, die KRK selbst schreibt, und der zwei Zettel: eine
+    /// Der Wert jeder Datei, die KRK selbst schreibt: eine
     /// Nutzerfassung kann dort nicht hinter der Auslieferungsfassung
     /// zurueckliegen, denn es gibt keine ausgelieferte Fassung, hinter der sie
     /// zurueckbliebe.
@@ -177,9 +178,7 @@ impl Vergleichsform {
                 tisch: "funktion",
                 schluessel: "id",
             },
-            Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => {
-                Vergleichsform::Nicht
-            }
+            Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => Vergleichsform::Nicht,
         }
     }
 
@@ -255,7 +254,7 @@ pub enum Befund {
 /// **Drei Felder und keine Liste ueber [`Datei`].** Es gibt genau drei Leser,
 /// jeder mit eigenem Namen und eigenem Ladeweg, und ein Feld je Leser benennt
 /// sie. [`Leserurteile::ersetzt`] uebersetzt das in die Frage nach einer
-/// [`Datei`], vollstaendig und ohne Auffangzweig: eine achte Ablagedatei haelt
+/// [`Datei`], vollstaendig und ohne Auffangzweig: eine siebte Ablagedatei haelt
 /// dort den Bau an.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Leserurteile {
@@ -295,7 +294,7 @@ impl Leserurteile {
             Datei::Belegung => self.belegung,
             Datei::Einstellungen => self.einstellungen,
             Datei::Leser => self.leseprofile,
-            Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => false,
+            Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => false,
         }
     }
 }
@@ -576,8 +575,7 @@ const fn eigene_eintraege_moeglich(welche: Datei) -> bool {
         | Datei::Einstellungen
         | Datei::Lesezeichen
         | Datei::Sitzung
-        | Datei::Merker
-        | Datei::Zettel(_) => false,
+        | Datei::Merker => false,
     }
 }
 
@@ -638,7 +636,7 @@ fn auslieferung(welche: Datei) -> Option<&'static toml::Table> {
         Datei::Belegung => Some(&AUSGELIEFERTE_BELEGUNG),
         Datei::Einstellungen => Some(&AUSGELIEFERTE_EINSTELLUNGEN),
         Datei::Leser => Some(&AUSGELIEFERTE_LESEPROFILE),
-        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => None,
+        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => None,
     }
 }
 
@@ -829,7 +827,7 @@ const fn preis(welche: Datei) -> Option<&'static str> {
             "Eine Funktion, die Ihre Datei nicht führt, kostet ihre ausgelieferten \
              Tastenkombinationen; über das Hauptmenü bleibt sie erreichbar.",
         ),
-        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker | Datei::Zettel(_) => None,
+        Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => None,
     }
 }
 

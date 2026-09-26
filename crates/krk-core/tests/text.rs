@@ -1103,11 +1103,12 @@ fn oeffnen_liefert_denselben_stand_wie_einlesen() {
 /// Der eine Befund geht ueber alle vier Ausgaenge, und der unlesbare traegt
 /// seinen Deskriptor zurueckgespult.
 ///
-/// **Der Befund ist die Stelle, an der `oeffnen` und der Notizzettel sich
-/// treffen** (Runde 9). Der Editor uebersetzt ihn in eine [`Abweisung`] und
-/// wirft die Bytes weg; `ablage::Zugang::text_laden` legt sie beiseite. Was
-/// dieser zweite Aufrufer braucht und die `Abweisung` nicht traegt, ist der
-/// offene Deskriptor — und zwar am Anfang.
+/// **Der Befund ist die Stelle, an der der Editor seine Datei annimmt oder
+/// abweist.** `oeffnen` uebersetzt ihn in eine [`Abweisung`] und wirft die
+/// Bytes weg. Den offenen Deskriptor, den die `Abweisung` nicht traegt, hat
+/// von der Runde 9 bis zur krkhome-Arbeit der Notizzettel gebraucht, der eine
+/// unlesbare Datei beiseitelegte; der Befund traegt ihn weiter, und diese
+/// Probe haelt, dass er am Anfang steht.
 ///
 /// **Zurueckgespult wird auch dort, wo es nicht noetig scheint.** Der Fall "zu
 /// gross" kehrt in `lesen` zurueck, bevor gelesen wird, und stuende ohnehin am
@@ -1118,8 +1119,10 @@ fn oeffnen_liefert_denselben_stand_wie_einlesen() {
 /// Der fuenfte Ausgang, den es nicht gibt: eine fehlende Datei ist kein eigener
 /// Wert, sondern das Feld `fehlt` an `KeinGueltigesZiel`. Die Probe haelt beide
 /// Haelften fest, denn allein daran haengt die Zusage, dass ein fehlender
-/// Zettel keine Meldung nach sich zieht. Dasselbe gilt seit dem 260908 fuer das
-/// zweite Feld `mangel`: es steht hier auf `false`, weil weder ein Ordner noch
+/// alter Zettel bei der einmaligen Uebernahme in `~/krkhome/notes.txt` keine
+/// Meldung nach sich zieht (`heimordner::bereitstellen`, `Zettelbefund::Fehlt`),
+/// waehrend der Editor beide Faelle gleich abweist. Dasselbe gilt seit dem
+/// 260908 fuer das zweite Feld `mangel`: es steht hier auf `false`, weil weder ein Ordner noch
 /// eine fehlende Datei ein Deskriptormangel ist. Gemessen wird der Mangel
 /// selbst in der Kindprobe unter `ulimit -n`, wie bei den zwei
 /// Nachbarlesewegen auch.

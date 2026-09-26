@@ -13,7 +13,7 @@
 //! der den Prozess ueberlebt. Der zweite gehoert deshalb auf die Platte, und
 //! diese Datei traegt ihn.
 //!
-//! # Warum eine achte Ablagedatei und kein Feld auf der Sitzung
+//! # Warum eine eigene Ablagedatei und kein Feld auf der Sitzung
 //!
 //! Der naechstliegende Ort waere ein oberstes Feld auf
 //! [`Sitzung`](super::Sitzung) gewesen: `session.toml` wird ohnehin alle zwei

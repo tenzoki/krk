@@ -1,38 +1,31 @@
-//! Wo die acht Ablagedateien liegen, in welchen zwei Formaten sie stehen und
-//! wie der Ordner beim ersten Start entsteht.
+//! Wo die sechs Ablagedateien liegen und wie der Ordner beim ersten Start
+//! entsteht.
 //!
-//! Drei abgeleitete Fragen stehen daneben, je eine vollstaendige
-//! Fallunterscheidung ohne Auffangzweig: [`Datei::format`] sagt, welches Format
-//! eine Datei traegt, [`Datei::leerbefund`], was eine Datei ohne einen einzigen
-//! obersten Schluessel bedeutet, und [`Datei::ersatz`], was an die Stelle einer
-//! beschaedigten tritt. Wer eine achte Ablagedatei aufnimmt, beantwortet alle
-//! drei, sonst haelt der Uebersetzer ihn an. Die achte ist seit der Runde 24
-//! da, und sie hat genau diesen Weg genommen.
+//! Zwei abgeleitete Fragen stehen daneben, je eine vollstaendige
+//! Fallunterscheidung ohne Auffangzweig: [`Datei::leerbefund`] sagt, was eine
+//! Datei ohne einen einzigen obersten Schluessel bedeutet, und
+//! [`Datei::ersatz`], was an die Stelle einer beschaedigten tritt. Wer eine
+//! siebte Ablagedatei aufnimmt, beantwortet beide, sonst haelt der Uebersetzer
+//! ihn an.
 //!
 //! **Eine weitere je Datei beantwortete Frage steht nicht hier**, und wer nur
 //! diesen Kopf liest, zaehlt sie nicht mit:
-//! [`super::neuerungen::Vergleichsform`] sagt, was bei einer Ablagedatei ein
-//! Eintrag ist, den die Auslieferungsfassung fuehren kann und die Nutzerdatei
-//! nicht. Sie ist von derselben Bauart und wohnt trotzdem woanders, weil sie
-//! eine Aussage ueber den **Inhalt** einer Datei ist und diese Datei den Inhalt
-//! nicht kennt.
+//! [`super::neuerungen::Vergleichsform`] sagt, was bei
+//! einer Ablagedatei ein Eintrag ist, den die Auslieferungsfassung fuehren kann
+//! und die Nutzerdatei nicht. Sie ist von derselben Bauart und wohnt trotzdem
+//! woanders, weil sie eine Aussage ueber den **Inhalt** einer Datei ist und
+//! diese Datei den Inhalt nicht kennt.
 //!
-//! # Zwei Formate, und warum die Zettel kein TOML tragen
+//! # Ein Format
 //!
-//! Die sechs TOML-Dateien gehen ueber [`super::Zugang::laden`] und
-//! [`super::Zugang::sichern`]; die zwei Zetteldateien der Runde 9 tragen den
-//! Text des Zettels und sonst nichts. [`Datei::format`] sagt, welche welche
-//! ist, und wer beide Sorten verschieden behandeln muss, fragt diese abgeleitete
-//! Frage statt eine zweite Liste neben [`Datei::ALLE`] zu fuehren: eine Liste
-//! kann auseinanderlaufen, eine vollstaendige Fallunterscheidung nicht.
-//!
-//! **Der Nutzer hat zwei einzelne Zetteldateien gewaehlt und ausdruecklich
-//! keine gemeinsame.** Aus dieser Wahl folgt die Form des Inhalts: eine Datei je
-//! Zettel ist nur dann eine Verbesserung gegenueber einer gemeinsamen, wenn sie
-//! fuer sich lesbar ist und in einem beliebigen Textprogramm aufgeht. Ein
-//! TOML-Rahmen um den Text naehme genau das zurueck und brachte daneben die
-//! Frage nach der Behandlung von Sonderzeichen mit, die eine Textdatei nicht
-//! kennt.
+//! Alle sechs tragen TOML und gehen ueber [`super::Zugang::laden`] und
+//! [`super::Zugang::sichern`]. Bis zur krkhome-Arbeit standen daneben die zwei
+//! Notizzettel der Runde 9 als nackter Text, und mit ihnen eine Aufzaehlung
+//! `Format` samt der Frage `Datei::format`, ueber die sich beide Sorten
+//! trennten. Seit die Notizen in `~/krkhome/notes.txt` liegen, liest und
+//! schreibt KRK die alten Zetteldateien nicht mehr; ihre Namen stehen allein
+//! noch in `heimordner::ALTE_ZETTEL`, fuer die einmalige Uebernahme. Eine
+//! Aufzaehlung mit einem Wert entschiede nichts und ist mit ihnen gefallen.
 //!
 //! Der Ort ist `~/Library/Application Support/KRK/`, so wie `### Frage 4` des
 //! Plans ihn festlegt. Aufgeloest wird er ueber das Benutzerverzeichnis, das
@@ -64,63 +57,10 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
-
-/// Welcher der beiden Notizzettel gemeint ist (C2 der Runde 9).
-///
-/// Das Blatt fuehrt genau zwei, gleichrangig nebeneinander. **Ein eigener Typ
-/// statt einer Zahl, damit ein Index nicht versehentlich zu drei Zetteln
-/// wird**; dieselbe Erwaegung und dieselbe Bauform wie bei
-/// [`Fensterseite`](super::Fensterseite). Damit ist "das Blatt fuehrt genau
-/// zwei Zettel" eine Aussage ueber einen Typ und nicht ueber eine Zeile Code.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Zettel {
-    /// Der Zettel, der ohne weiteres Zutun offen ist.
-    #[default]
-    Erster,
-    /// Der zweite Zettel.
-    Zweiter,
-}
-
-impl Zettel {
-    /// Beide Zettel, der erste zuerst.
-    pub const ALLE: [Zettel; 2] = [Zettel::Erster, Zettel::Zweiter];
-
-    /// Die Stelle im Feld der beiden Zettel, etwa fuer die Tabs des Blattes.
-    pub const fn index(self) -> usize {
-        match self {
-            Zettel::Erster => 0,
-            Zettel::Zweiter => 1,
-        }
-    }
-
-    /// Der jeweils andere Zettel. Beim Tabwechsel ist er das Ziel.
-    pub const fn andere(self) -> Self {
-        match self {
-            Zettel::Erster => Zettel::Zweiter,
-            Zettel::Zweiter => Zettel::Erster,
-        }
-    }
-}
-
-/// In welchem Format eine Ablagedatei steht.
-///
-/// **Zwei Werte, vollstaendig und ohne Auffangzweig.** Eine dritte Sorte haelt
-/// den Bau an, und zwar an jeder Stelle, die heute nach dem Format fragt: den
-/// zwei Gegenproben in [`super::Zugang`] und den Rundlaeufen der Proben.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Format {
-    /// TOML, gelesen und geschrieben ueber `serde`.
-    Toml,
-    /// Nackter Text, ohne Kopf und ohne Rahmen.
-    Text,
-}
-
 /// Was eine dastehende Ablagedatei bedeutet, aus der kein einziger oberster
 /// Schluessel kommt.
 ///
-/// **Zwei Werte, vollstaendig und ohne Auffangzweig**, wie [`Format`] daneben.
+/// **Zwei Werte, vollstaendig und ohne Auffangzweig**, wie [`Ersatz`] daneben.
 /// Die Frage ist je Datei zu beantworten und nicht ueber alle zu
 /// verallgemeinern: sie haengt daran, ob KRK diese Datei je ohne obersten
 /// Schluessel schreibt, und das ist eine Aussage ueber ihren Schreiber und
@@ -129,10 +69,8 @@ pub enum Format {
 pub enum Leerbefund {
     /// Ein gueltiger Bestand: jedes Feld steht auf seinem Auslieferungswert.
     ///
-    /// Der Wert der von Hand gepflegten Dateien und der zwei Zettel. Wer
-    /// `keymap.toml` bis auf die Kommentare leerraeumt, meint die
-    /// Vorgabebelegung und keinen Schaden; ein leerer Notizzettel ist ein
-    /// leerer Notizzettel.
+    /// Der Wert der von Hand gepflegten Dateien. Wer `keymap.toml` bis auf die
+    /// Kommentare leerraeumt, meint die Vorgabebelegung und keinen Schaden.
     Vorgabe,
     /// Kein Bestand: die Datei hat nicht hergegeben, was sie traegt.
     ///
@@ -145,11 +83,11 @@ pub enum Leerbefund {
 
 /// Was an die Stelle einer ersetzten Ablagedatei tritt.
 ///
-/// **Zwei Werte, vollstaendig und ohne Auffangzweig**, wie [`Format`] und
-/// [`Leerbefund`] daneben. Die Frage ist je Datei zu beantworten: sie haengt
+/// **Zwei Werte, vollstaendig und ohne Auffangzweig**, wie [`Leerbefund`]
+/// daneben. Die Frage ist je Datei zu beantworten: sie haengt
 /// daran, ob es fuer diese Datei ueberhaupt etwas gibt, das einspringen
-/// koennte, und das ist eine Aussage ueber ihren Zweck und nicht ueber ihr
-/// Format.
+/// koennte, und das ist eine Aussage ueber ihren Zweck und nicht ueber ihre
+/// Gestalt.
 ///
 /// **Der Wert traegt die Auskunft, weil sie sonst niemand traegt.** Bis zum
 /// 260824 stand sie als feststehende Prosa im Formatierer von
@@ -168,8 +106,7 @@ pub enum Ersatz {
     ///
     /// Der Wert jeder Ablagedatei bis auf [`Datei::Leser`]. Bei den von KRK
     /// geschriebenen Dateien ist es der Vorgabewert der Struktur, bei
-    /// `settings.toml` die eingebettete Auslieferungsfassung, bei einem Zettel
-    /// der leere Text.
+    /// `settings.toml` die eingebettete Auslieferungsfassung.
     Auslieferungszustand,
     /// Es tritt nichts an ihre Stelle.
     ///
@@ -194,7 +131,7 @@ impl Ersatz {
     }
 }
 
-/// Die acht Ablagedateien, die KRK unter `Application Support` ablegt.
+/// Die sechs Ablagedateien, die KRK unter `Application Support` ablegt.
 ///
 /// Eine Aufzaehlung statt loser Namen: wer alle anfassen muss, laeuft
 /// ueber [`Datei::ALLE`] und kann keine vergessen. Eine Ablagedatei, die in
@@ -235,39 +172,24 @@ pub enum Datei {
     /// als Feld einer anderen Datei; die Begruendung steht im Kopf von
     /// [`super::merker`] und der Ausschlag war die zweite Instanz.
     Merker,
-    /// `note-1.txt` und `note-2.txt`: die zwei Notizzettel aus C5 der Runde 9.
-    ///
-    /// **Eine Variante mit Nutzlast und nicht zwei nebeneinander.** Welcher
-    /// Zettel gemeint ist, sagt [`Zettel`]; damit traegt die Ablageaufzaehlung
-    /// die Zusage "genau zwei Zettel" mit, statt sie ein zweites Mal zu
-    /// behaupten.
-    ///
-    /// Die einzigen beiden, die kein TOML tragen; siehe [`Datei::format`] und
-    /// den Modulkopf.
-    Zettel(Zettel),
 }
 
 impl Datei {
-    /// Alle acht, in fester Reihenfolge: die sechs TOML-Dateien, danach die
-    /// zwei Zettel.
-    pub const ALLE: [Datei; 8] = [
+    /// Alle sechs, in fester Reihenfolge.
+    pub const ALLE: [Datei; 6] = [
         Datei::Belegung,
         Datei::Lesezeichen,
         Datei::Sitzung,
         Datei::Einstellungen,
         Datei::Leser,
         Datei::Merker,
-        Datei::Zettel(Zettel::Erster),
-        Datei::Zettel(Zettel::Zweiter),
     ];
 
     /// Der Dateiname unterhalb des Ablageordners.
     ///
-    /// Die zwei Zettelnamen folgen der englischsprachigen Kleinschreibung der
-    /// vier bestehenden; der Bindestrich mit Ziffer ist die knappste Form, zwei
-    /// gleichartige Dateien zu unterscheiden. `reported.toml` folgt derselben
-    /// Kleinschreibung; der Name ist der aus der Empfehlung des Datensatzes,
-    /// den der Kopf von [`super::merker`] nennt.
+    /// `reported.toml` folgt der englischsprachigen Kleinschreibung der
+    /// uebrigen; der Name ist der aus der Empfehlung des Datensatzes, den der
+    /// Kopf von [`super::merker`] nennt.
     pub const fn dateiname(self) -> &'static str {
         match self {
             Datei::Belegung => "keymap.toml",
@@ -276,37 +198,15 @@ impl Datei {
             Datei::Einstellungen => "settings.toml",
             Datei::Leser => "readers.toml",
             Datei::Merker => "reported.toml",
-            Datei::Zettel(Zettel::Erster) => "note-1.txt",
-            Datei::Zettel(Zettel::Zweiter) => "note-2.txt",
-        }
-    }
-
-    /// In welchem Format diese Datei steht.
-    ///
-    /// Die abgeleitete Frage, ueber die sich die beiden Sorten trennen lassen,
-    /// ohne eine zweite Liste neben [`Datei::ALLE`] zu fuehren. Die
-    /// Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: eine
-    /// achte Ablagedatei haelt den Bau hier an und erzwingt eine bewusste
-    /// Einordnung.
-    pub const fn format(self) -> Format {
-        match self {
-            Datei::Belegung
-            | Datei::Lesezeichen
-            | Datei::Sitzung
-            | Datei::Einstellungen
-            | Datei::Leser
-            | Datei::Merker => Format::Toml,
-            Datei::Zettel(_) => Format::Text,
         }
     }
 
     /// Was eine dastehende Datei bedeutet, aus der kein einziger oberster
     /// Schluessel kommt.
     ///
-    /// Die zweite abgeleitete Frage neben [`Datei::format`], und sie steht aus
-    /// demselben Grund hier: vollstaendig, ohne Auffangzweig, damit eine
-    /// achte Ablagedatei den Bau anhaelt und eine bewusste Einordnung
-    /// erzwingt. Wer sie beantwortet, beantwortet sie **je Datei** und leitet
+    /// Eine abgeleitete Frage neben [`Datei::ersatz`]: vollstaendig, ohne
+    /// Auffangzweig, damit eine siebte Ablagedatei den Bau anhaelt und eine
+    /// bewusste Einordnung erzwingt. Wer sie beantwortet, beantwortet sie **je Datei** und leitet
     /// sie nicht von einer anderen ab.
     ///
     /// **`bookmarks.toml` und `session.toml` tragen
@@ -316,9 +216,9 @@ impl Datei {
     /// `eintraege = []` und damit zu einem obersten Schluessel; eine
     /// `bookmarks.toml` ohne einen einzigen hat KRK nie geschrieben. Fuer
     /// [`Sitzung`](super::Sitzung) traegt die Messung weiter: die aermste
-    /// ueberhaupt konstruierbare Sitzung serialisiert zu sechs obersten
-    /// Schluesseln, denn `aktiv` und `zettel` tragen kein
-    /// `skip_serializing_if`, und die drei Tische und die Tischfolge
+    /// ueberhaupt konstruierbare Sitzung serialisiert zu fuenf obersten
+    /// Schluesseln, denn `aktiv` traegt kein `skip_serializing_if`, und die
+    /// drei Tische und die Tischfolge
     /// `[[fenster]]` stehen unbedingt daneben. Die Probe dazu ist
     /// `jede_geschriebene_session_toml_traegt_einen_obersten_schluessel` in
     /// `krk-core/tests/ablage.rs`.
@@ -341,44 +241,31 @@ impl Datei {
     /// KRK schreibt sie im Betrieb nie, also kann eine Datei ohne obersten
     /// Schluessel hier kein Zeichen fuer einen Schaden sein.
     ///
-    /// **Die drei uebrigen TOML-Dateien und die zwei Zettel tragen
-    /// [`Leerbefund::Vorgabe`]**, und die Trennung folgt einem Kriterium:
-    /// schreibt KRK die Datei selbst, oder pflegt der Nutzer sie von Hand?
+    /// **Die drei uebrigen tragen [`Leerbefund::Vorgabe`]**, und die Trennung
+    /// folgt einem Kriterium: schreibt KRK die Datei selbst, oder pflegt der Nutzer sie von Hand?
     /// `keymap.toml`, `settings.toml` und `readers.toml` aendert der Nutzer von
     /// Hand und darf sie bis auf ihre Kommentare leerraeumen — das heisst dort
     /// „nimm die Vorgabe" und ist kein Schaden. So entschieden am 260907
     /// (`shared/decisions/260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md`,
     /// Moeglichkeit 2).
-    ///
-    /// **Die Antwort fuer [`Datei::Zettel`] wird nie gelesen**, und das gehoert
-    /// dazu. Einziger Rufer ist [`super::Zugang::laden`], und der weist ein
-    /// Textformat vorher ab; „kein einziger oberster Schluessel" ist an einer
-    /// Textdatei ohnehin keine beantwortbare Frage, denn dort gibt es keine
-    /// Schluessel. Der Zweig steht da, weil die Fallunterscheidung vollstaendig
-    /// ist und keinen Auffangzweig hat — nicht, weil er etwas steuert. Fuer
-    /// eine achte Ablagedatei im Textformat haelt der Uebersetzer damit eine
-    /// Einordnung an, die nichts entscheidet; das ist der Preis der
-    /// Vollstaendigkeit und ist gesehen.
     pub const fn leerbefund(self) -> Leerbefund {
         match self {
             Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => Leerbefund::Beschaedigt,
-            Datei::Belegung | Datei::Einstellungen | Datei::Leser | Datei::Zettel(_) => {
-                Leerbefund::Vorgabe
-            }
+            Datei::Belegung | Datei::Einstellungen | Datei::Leser => Leerbefund::Vorgabe,
         }
     }
 
     /// Was an die Stelle dieser Datei tritt, wenn sie ersetzt wird.
     ///
-    /// Die dritte abgeleitete Frage neben [`Datei::format`] und
-    /// [`Datei::leerbefund`], und sie steht aus demselben Grund hier:
-    /// vollstaendig, ohne Auffangzweig, damit eine achte Ablagedatei den Bau
-    /// anhaelt und eine bewusste Einordnung erzwingt.
+    /// Die abgeleitete Frage neben [`Datei::leerbefund`], und sie steht aus
+    /// demselben Grund hier: vollstaendig, ohne Auffangzweig, damit eine
+    /// siebte Ablagedatei den Bau anhaelt und eine bewusste Einordnung
+    /// erzwingt.
     ///
     /// **`readers.toml` ist die eine mit [`Ersatz::Nichts`]** (C1.6 der
-    /// Runde 16). Fuer die sechs uebrigen gibt es einen Zustand, der einspringt
-    /// — ein Vorgabewert, die eingebettete Auslieferungsfassung oder der leere
-    /// Zettel —, und die Meldung darf ihn versprechen. Fuer `readers.toml`
+    /// Runde 16). Fuer die fuenf uebrigen gibt es einen Zustand, der einspringt
+    /// — ein Vorgabewert oder die eingebettete Auslieferungsfassung —, und die
+    /// Meldung darf ihn versprechen. Fuer `readers.toml`
     /// gibt es ihn nicht: eine beschaedigte Datei fuehrt dort zu gar keinem
     /// Profil, und die Begruendung steht unter „Zweite Abweichung" im Kopf von
     /// [`super::leseprofile`].
@@ -389,8 +276,7 @@ impl Datei {
             | Datei::Lesezeichen
             | Datei::Sitzung
             | Datei::Einstellungen
-            | Datei::Merker
-            | Datei::Zettel(_) => Ersatz::Auslieferungszustand,
+            | Datei::Merker => Ersatz::Auslieferungszustand,
         }
     }
 }
@@ -468,7 +354,7 @@ pub fn gekuerzt_fuer_anzeige(pfad: &Path, benutzerverzeichnis: Option<&Path>) ->
     }
 }
 
-/// Der Ordner, in dem die acht Ablagedateien liegen.
+/// Der Ordner, in dem die sechs Ablagedateien liegen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ablageort {
     wurzel: PathBuf,
@@ -505,7 +391,7 @@ impl Ablageort {
         &self.wurzel
     }
 
-    /// Der Pfad einer der acht Ablagedateien.
+    /// Der Pfad einer der sechs Ablagedateien.
     pub fn datei(&self, welche: Datei) -> PathBuf {
         self.wurzel.join(welche.dateiname())
     }

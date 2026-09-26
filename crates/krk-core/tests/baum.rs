@@ -43,9 +43,7 @@
 //! Probe dieser Art.
 
 mod gemeinsam;
-use gemeinsam::{
-    aufrufstellen, quelldateien, varianten_der_aufzaehlung, varianten_mit_nutzlast_der_aufzaehlung,
-};
+use gemeinsam::{aufrufstellen, quelldateien, varianten_der_aufzaehlung};
 
 /// Ob eine Nadel in einer **Code**-Zeile der Datei steht und nicht in einem
 /// Kommentar.
@@ -324,9 +322,8 @@ fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
     assert_eq!(
         erreichbar,
         vec![
-            // Vier Schreiber hinter einem `Zugang`: `Zugang::sichern`,
-            // `Zugang::text_sichern`, `Zugang::beiseite_legen` und die Anlage
-            // von `settings.toml`.
+            // Drei Schreiber hinter einem `Zugang`: `Zugang::sichern`,
+            // `Zugang::beiseite_legen` und die Anlage von `settings.toml`.
             "krk-core/src/ablage/einstellungen.rs".to_owned(),
             // Die Anlage von `readers.toml`, unter einem Durchgang.
             "krk-core/src/ablage/leseprofile.rs".to_owned(),
@@ -536,8 +533,8 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
 ///
 /// **Die Zahl selbst ist hier nicht ersetzbar, und deshalb steht sie unter
 /// einer Probe.** An etlichen Stellen des Ablagemoduls traegt die Zahl die
-/// Aussage — „acht Ablagedateien in zwei Formaten", „die sechs TOML-Dateien
-/// gehen ueber `Zugang::laden`" —, und ein Zeiger auf `Datei::ALLE` naehme dem
+/// Aussage — „sechs Ablagedateien in TOML", „Alle sechs gehen ueber
+/// `Zugang::laden`" —, und ein Zeiger auf `Datei::ALLE` naehme dem
 /// Satz seinen Inhalt. Ohne eine Probe daneben ist eine solche Zahl die zweite
 /// Fassung einer Liste, und die zweite Fassung ist die, die veraltet: fuenf
 /// Erhebungen in Folge haben Stellen mit „vier Dateien" nachgezogen und dabei
@@ -545,9 +542,11 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
 /// (`shared/issues/260826-1225_*_drei-prosastellen-der-ablage-nennen-die-zahl-der-dateien-falsch-und-jedes-bisherige-suchmuster-musste-sie-uebersehen.md`).
 ///
 /// **Die Erwartung kommt aus dem Baum und nicht aus dieser Datei:**
-/// `Datei::ALLE.len()` fuer die Ablagedateien, und die Zahl der Werte mit
-/// [`Format::Toml`] fuer die TOML-Dateien. Eine achte Ablagedatei laesst die
-/// Probe rot werden und nennt jede Stelle, die nachzuziehen ist.
+/// `Datei::ALLE.len()` fuer die Ablagedateien und ebenso fuer die
+/// TOML-Dateien, denn seit der krkhome-Arbeit tragen alle TOML; bis dahin
+/// zaehlte ein Filter ueber das gefallene `Datei::format` die zwei Notizzettel
+/// heraus. Eine siebte Ablagedatei laesst die Probe rot werden und nennt jede
+/// Stelle, die nachzuziehen ist.
 ///
 /// # Was gelesen wird
 ///
@@ -559,7 +558,7 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
 ///
 /// # Was nicht gezaehlt wird, und wo die Probe blind ist
 ///
-/// - **Ein Zahlwort vor „der"** — „sieben der acht Ablagedateien" nennt eine
+/// - **Ein Zahlwort vor „der"** — „fuenf der sechs Ablagedateien" nennt eine
 ///   Teilmenge und keine Gesamtzahl. Es faellt heraus, weil gesucht wird, wo
 ///   ein Zahlwort **unmittelbar** vor einem der vier Hauptwoerter steht.
 /// - **Ein Zitat einer frueheren Fassung.** Das Modul zitiert an einer Stelle
@@ -569,18 +568,14 @@ fn ueber_der_ablage_stehen_genau_zwei_absprachen() {
 ///   diesem Fenster heraus und laesst die Probe rot werden; das ist der
 ///   gewollte Ausgang, denn eine unbemerkte Ausnahme waere teurer als eine
 ///   Probe, die einmal von Hand zu lesen ist.
-/// - **Ein Zahlwort ohne Hauptwort** („Alle sieben, in fester Reihenfolge")
+/// - **Ein Zahlwort ohne Hauptwort** („Alle sechs, in fester Reihenfolge")
 ///   erreicht die Probe nicht. Die Zeile darunter ist dort das Feldliteral
-///   `[Datei; 8]`, das der Uebersetzer haelt.
+///   `[Datei; 6]`, das der Uebersetzer haelt.
 #[test]
 fn keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien() {
-    use krk_core::ablage::pfade::{Datei, Format};
+    use krk_core::ablage::pfade::Datei;
 
     let alle = Datei::ALLE.len();
-    let toml = Datei::ALLE
-        .iter()
-        .filter(|datei| datei.format() == Format::Toml)
-        .count();
 
     let zahlwoerter = [
         ("ein", 1),
@@ -600,7 +595,7 @@ fn keine_prosastelle_der_ablage_nennt_eine_andere_zahl_von_ablagedateien() {
         ("Ablagedateien", alle),
         ("Nutzdateien", alle),
         ("Dateien", alle),
-        ("TOML-Dateien", toml),
+        ("TOML-Dateien", alle),
     ];
 
     let mut falsch: Vec<String> = Vec::new();
@@ -774,21 +769,20 @@ fn beide_sperrgriffe_der_ablage_tragen_must_use_mit_begruendung() {
 // Die ALLE-Listen neben ihren Aufzaehlungen
 // ---------------------------------------------------------------------------
 
-/// Die zwei `ALLE`-Listen, die diese Nadel nicht lesen kann, mit dem Grund.
+/// Die `ALLE`-Listen, die diese Nadel nicht lesen kann, mit dem Grund.
 ///
 /// **Eine Ausnahme steht hier und nicht als stiller Uebersprung im Code.** Der
 /// Durchlauf haelt jeden Eintrag dieser Liste gegen den Baum: eine Ausnahme,
 /// deren Fundstelle verschwindet oder deren Aufzaehlung umzieht, laesst die
-/// Probe rot werden, statt als toter Eintrag stehen zu bleiben. Eine dritte
-/// Ausnahme ist damit eine bewusste Eintragung und kein Versehen.
-const UNLESBARE_ALLE_LISTEN: [(&str, &str, &str); 1] = [(
-    "krk-core/src/ablage/pfade.rs",
-    "Datei",
-    "`Datei::Zettel(Zettel)` traegt Daten, und die Liste fuehrt eine Zeile je Zettel: \
-         acht Eintraege zu sieben Varianten. Weder die Nadel ueber die Aufzaehlung noch \
-         die ueber die Liste liest datentragende Varianten, und eine Gleichheit waere \
-         hier ohnehin die falsche Zusage",
-)];
+/// Probe rot werden, statt als toter Eintrag stehen zu bleiben. Eine Ausnahme
+/// ist damit eine bewusste Eintragung und kein Versehen.
+///
+/// **Heute steht keine darin.** Bis zur krkhome-Arbeit fuehrte die Liste
+/// `Datei::ALLE` in `ablage/pfade.rs`, weil `Datei::Zettel(Zettel)` Daten trug
+/// und die Liste eine Zeile je Zettel fuehrte; eine eigene Probe hielt sie
+/// stattdessen. Mit den Notizzetteln traegt `Datei` allein datenlose Varianten,
+/// und der Durchlauf liest die Liste wie jede andere.
+const UNLESBARE_ALLE_LISTEN: [(&str, &str, &str); 0] = [];
 
 /// Die Nadel, an der eine Liste `ALLE` erkannt wird.
 ///
@@ -1034,11 +1028,10 @@ fn gelistete_namen(datei: &str, inhalt: &str, aufzaehlung: &str, zeile: usize) -
             .split(|zeichen: char| !(zeichen.is_ascii_alphanumeric() || zeichen == '_'))
             .next()
             .expect("ein split liefert immer ein erstes Stueck");
-        // **Ein Eintrag mit Nutzlast bleibt ganz stehen.** Der Durchlauf
-        // uebergeht die eine Liste, die welche fuehrt (`Datei::ALLE`, siehe
-        // `UNLESBARE_ALLE_LISTEN`); ihre eigene Probe braucht den Eintrag
-        // dagegen im Wortlaut, weil ihre Zusage „einmal je Wert des Feldes"
-        // lautet und nicht „genau einmal".
+        // **Ein Eintrag mit Nutzlast bleibt ganz stehen**, und der Abgleich
+        // mit den Varianten weist ihn dann als ueberzaehlig ab. Heute fuehrt
+        // keine Liste einen; bis zur krkhome-Arbeit tat es `Datei::ALLE`, und
+        // ihre eigene Probe brauchte den Eintrag im Wortlaut.
         assert!(
             !bezeichner.is_empty()
                 && (name == bezeichner
@@ -1318,67 +1311,6 @@ fn jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt() {
         "diese Namen kommen aus einer Frameworkbindung herein, ohne im Abschnitt \
          `{UNTERGRENZEN_UEBERSCHRIFT}` genannt zu sein:\n{}",
         fehlend.join("\n")
-    );
-}
-
-/// `Datei::ALLE` fuehrt jede Variante, und die datentragende einmal je Zettel.
-///
-/// **Die Ausnahme des Durchlaufs bekommt hier ihre eigene Probe.**
-/// `jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung` uebergeht
-/// `Datei::ALLE`, weil `Datei::Zettel(Zettel)` Daten traegt und die Liste
-/// deshalb mehr Eintraege fuehrt als die Aufzaehlung Varianten hat; eine
-/// Gleichheit waere dort die falsche Zusage. **Die richtige lautet: jede
-/// datenlose Variante genau einmal, und die datentragende einmal je Wert ihres
-/// Feldes**, und sie steht hier
-/// (`shared/issues/260907-0858_*_zwei-alle-listen-bleiben-vom-durchlauf-ungedeckt-*`).
-///
-/// Beide Seiten kommen aus dem Quelltext und keine aus der anderen: die
-/// Erwartung aus den Aufzaehlungen `Datei` und `Zettel`, der Bestand aus der
-/// Liste. Eine achte Ablagedatei ohne Zeile in `ALLE` laesst die Probe rot
-/// werden und nennt ihren Namen — genau die Auskunft, fuer die der Durchlauf
-/// gebaut ist.
-#[test]
-fn die_ablageliste_fuehrt_jede_datei_und_je_einen_zettel() {
-    const PFADE: &str = "krk-core/src/ablage/pfade.rs";
-
-    let quellen = quelldateien();
-    let (_, inhalt) = quellen
-        .iter()
-        .find(|(pfad, _)| pfad == PFADE)
-        .expect("unter crates/ steht keine pfade.rs");
-
-    let zettel = varianten_der_aufzaehlung(PFADE, "Zettel");
-    let erwartet: Vec<String> = varianten_mit_nutzlast_der_aufzaehlung(PFADE, "Datei")
-        .into_iter()
-        .flat_map(|(name, nutzlast)| match nutzlast {
-            None => vec![name],
-            // Der Wortlaut der Nutzlast ist zugleich der Name der Aufzaehlung,
-            // aus der die Werte kommen; eine zweite Angabe daneben waere eine
-            // zweite Wahrheit darueber, was in den Klammern steht.
-            Some(typ) => {
-                assert_eq!(
-                    typ, "Zettel",
-                    "Datei traegt eine Nutzlast vom Typ {typ}; diese Probe kennt allein Zettel"
-                );
-                zettel
-                    .iter()
-                    .map(|wert| format!("{name}({typ}::{wert})"))
-                    .collect()
-            }
-        })
-        .collect();
-
-    let zeile = alle_listen(PFADE, inhalt)
-        .into_iter()
-        .find(|(aufzaehlung, _)| aufzaehlung == "Datei")
-        .map(|(_, zeile)| zeile)
-        .unwrap_or_else(|| panic!("in pfade.rs steht keine Liste `{ALLE_NADEL}Datei; N]`"));
-    let gelistet = gelistete_namen(PFADE, inhalt, "Datei", zeile);
-
-    assert_eq!(
-        gelistet, erwartet,
-        "Datei::ALLE fuehrt nicht jede Variante genau einmal und den Zettel je Wert, \
-         oder in einer anderen Reihenfolge als die Aufzaehlung"
     );
 }
 

@@ -87,7 +87,7 @@ use std::path::PathBuf;
 
 use krk_core::ablage::{
     Breiten, Dateifenster as Fensterzustand, Fensterseite, Sichtbarkeit, Sitzung,
-    Spaltensichtbarkeit, Zettel,
+    Spaltensichtbarkeit,
 };
 
 use crate::spalten::Spalte;
@@ -534,12 +534,6 @@ impl Fenstermodell {
     /// einer zweiten Quelle zu erfragen hiesse, zwei Orte darueber zu haben,
     /// welche Datei offen ist.
     ///
-    /// **Das Feld fuer den zuletzt offenen Notizzettel traegt seinen leeren
-    /// Wert.** Das Notizblatt der Runde 9 ist gefallen, seit F2 nach
-    /// `~/krkhome/` fuehrt, und niemand merkt sich mehr einen Zettel; das Feld
-    /// selbst faellt erst mit dem Kern (Schritt 1.3b des Plans
-    /// `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
-    ///
     /// **Die Teilung des Git-Bereichs kommt aus demselben Grund von aussen.**
     /// Dieses Modell haelt vom Git-Bereich Breite und Sichtbarkeit, also seinen
     /// Platz in der Fensterzeile; wie er die Flaeche unter seinem Kopf zwischen
@@ -555,7 +549,6 @@ impl Fenstermodell {
         Sitzung {
             aktiv: self.aktiv,
             editor,
-            zettel: Zettel::default(),
             gitanteil,
             breiten: self.breiten,
             sichtbar: self.sichtbar,

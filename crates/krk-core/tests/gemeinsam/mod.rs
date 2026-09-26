@@ -520,47 +520,23 @@ pub fn varianten_der_aufzaehlung(datei: &str, name: &str) -> Vec<String> {
                 nutzlast.is_none(),
                 "in {datei} traegt die Aufzaehlung {name} die Zeile `{zeile}`; \
                  diese Nadel liest allein datenlose Varianten, je eine Zeile — wer die \
-                 Nutzlast braucht, nimmt varianten_mit_nutzlast_der_aufzaehlung"
+                 Nutzlast braucht, erweitert sie bewusst"
             );
             bezeichner
         })
         .collect()
 }
 
-/// Wie [`varianten_der_aufzaehlung`], aber mit datentragenden Varianten.
-///
-/// Liefert je Variante ihren Bezeichner und, wenn sie eine Nutzlast in runden
-/// Klammern traegt, deren Wortlaut ohne die Klammern
-/// (`Zettel(Zettel)` wird zu `("Zettel", Some("Zettel"))`).
-///
-/// **Warum es zwei Funktionen sind und nicht eine.** Fuer die meisten Rufer ist
-/// eine datentragende Variante ein Fehler, den sie sehen wollen: eine
-/// `ALLE`-Liste daneben kann dann nicht mehr Zeile fuer Zeile gleich sein, und
-/// ein stilles Ueberspringen waere genau die Blindheit, gegen die diese Nadeln
-/// gebaut sind. [`varianten_der_aufzaehlung`] bricht deshalb ab. Wer die
-/// Nutzlast braucht, sagt das mit dem Namen dieser Funktion und traegt die
-/// Verantwortung fuer die Zusage, die er stattdessen prueft — bei
-/// `Datei::ALLE` etwa „jede datenlose Variante genau einmal, und die
-/// datentragende einmal je Wert ihres Feldes"
-/// (`shared/issues/260907-0858_*_zwei-alle-listen-bleiben-vom-durchlauf-ungedeckt-*`).
-///
-/// Eine Variante mit benannten Feldern (`Foo { … }`) liest auch diese Nadel
-/// nicht; der Baum kennt keine.
-pub fn varianten_mit_nutzlast_der_aufzaehlung(
-    datei: &str,
-    name: &str,
-) -> Vec<(String, Option<String>)> {
-    variantenzeilen(datei, name)
-        .into_iter()
-        .map(|zeile| zerlegte_variantenzeile(datei, name, &zeile))
-        .collect()
-}
-
 /// Die Zeilen des Aufzaehlungsblocks, getrimmt und ohne Kommentare, Attribute
 /// und Leerzeilen.
 ///
-/// **Die eine Stelle, die den Block findet und abgrenzt**; beide Nadeln
-/// darueber bauen darauf auf, statt die Lesart ein zweites Mal hinzuschreiben.
+/// **Die eine Stelle, die den Block findet und abgrenzt**; die Nadel darueber
+/// baut darauf auf, statt die Lesart ein zweites Mal hinzuschreiben.
+///
+/// Bis zur krkhome-Arbeit stand daneben eine zweite Nadel, die auch
+/// datentragende Varianten las; ihr einziger Rufer war die Probe zu
+/// `Datei::ALLE`, solange `Datei::Zettel(Zettel)` Daten trug. Beide sind mit
+/// den Notizzetteln gefallen.
 ///
 /// **Mit und ohne `pub`.** Die Sichtbarkeit sagt nichts darueber, ob eine
 /// `ALLE`-Liste daneben vollstaendig zu halten ist; sie sagt allein, wer die
@@ -613,6 +589,10 @@ fn variantenzeilen(datei: &str, name: &str) -> Vec<String> {
 }
 
 /// Eine Zeile des Aufzaehlungsblocks in Bezeichner und Nutzlast zerlegt.
+///
+/// Die Nutzlast liest heute kein Rufer; sie wird erkannt, damit
+/// [`varianten_der_aufzaehlung`] eine datentragende Variante mit ihrer Zeile
+/// meldet, statt an ihr vorbeizulesen.
 fn zerlegte_variantenzeile(datei: &str, name: &str, rumpf: &str) -> (String, Option<String>) {
     let bezeichner: String = rumpf
         .chars()
