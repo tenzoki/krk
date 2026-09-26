@@ -566,17 +566,23 @@ impl Fenstermodell {
     /// sie wieder oeffnen wollte, haette keine. Die Regel steht in
     /// [`merkbare_editordatei`], und `heim` ist die Abschrift des einen
     /// geteilten Wertes ([`crate::heimgriff`]).
+    ///
+    /// **Der gemerkte Notizordner kommt ebenfalls von aussen** und wird
+    /// durchgeschrieben: welcher Ort zuletzt gegolten hat, weiss der
+    /// Anwendungsdelegierte, und dieses Modell kennt keinen Ort.
     pub fn sitzung(
         &self,
         fenster: [Fensterzustand; 2],
         editor: Option<PathBuf>,
         gitanteil: Option<f64>,
+        notizordner: Option<PathBuf>,
         heim: Option<&Heimordner>,
     ) -> Sitzung {
         Sitzung {
             aktiv: self.aktiv,
             editor: merkbare_editordatei(editor, heim),
             gitanteil,
+            notizordner,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
             spalten: self.spalten,
@@ -2936,7 +2942,7 @@ mod tests {
         let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
         assert_eq!(modell.breiten().editor, Some(gewuenscht));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         assert!(
             text.contains("editor"),
@@ -3091,7 +3097,7 @@ mod tests {
         let mut modell = modell();
         assert!(modell.spalte_umschalten(Spalte::Groesse));
 
-        let sitzung = modell.sitzung(fenster, None, None, None);
+        let sitzung = modell.sitzung(fenster, None, None, None, None);
         assert!(
             !sitzung.spalten.groesse,
             "die Spalte Groesse ist nicht weggeschaltet"
@@ -3113,7 +3119,7 @@ mod tests {
         assert!(modell.spalte_umschalten(Spalte::Groesse));
         assert!(modell.spalte_umschalten(Spalte::Typ));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
         let wieder = Fenstermodell::aus_sitzung(&gelesen);
@@ -3155,7 +3161,13 @@ mod tests {
         let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
         let mut modell = modell();
         schalten(&mut modell, Bereich::Editor);
-        let ohne_datei = modell.sitzung(Sitzung::default().fenster, None, Some(0.4), Some(&heim));
+        let ohne_datei = modell.sitzung(
+            Sitzung::default().fenster,
+            None,
+            Some(0.4),
+            None,
+            Some(&heim),
+        );
 
         for basis in [&geschrieben, &ziel] {
             let geheimnisse = basis.join("secrets.txt");
@@ -3163,6 +3175,7 @@ mod tests {
                 Sitzung::default().fenster,
                 Some(geheimnisse.clone()),
                 Some(0.4),
+                None,
                 Some(&heim),
             );
             assert_eq!(sitzung.editor, None, "{}", geheimnisse.display());
@@ -3192,8 +3205,13 @@ mod tests {
             (anderswo, Some(&heim)),
             (geschrieben.join("secrets.txt"), None),
         ] {
-            let sitzung =
-                modell.sitzung(Sitzung::default().fenster, Some(datei.clone()), None, heim);
+            let sitzung = modell.sitzung(
+                Sitzung::default().fenster,
+                Some(datei.clone()),
+                None,
+                None,
+                heim,
+            );
             assert_eq!(sitzung.editor, Some(datei));
         }
     }
@@ -3227,6 +3245,7 @@ mod tests {
             gelesen.fenster.clone(),
             gelesen.editor.clone(),
             gelesen.gitanteil,
+            gelesen.notizordner.clone(),
             Some(&heim),
         );
         assert_eq!(

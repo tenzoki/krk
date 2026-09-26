@@ -312,7 +312,7 @@ impl Grund {
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: ein
     /// weiterer Grund haelt den Bau an und erzwingt einen weiteren Satzteil.
-    fn beschreibung(&self) -> &'static str {
+    pub(crate) fn beschreibung(&self) -> &'static str {
         match self {
             Grund::NichtLesbar(_) => "ist nicht lesbar",
             Grund::Beschaedigt(_) => "ist beschädigt",

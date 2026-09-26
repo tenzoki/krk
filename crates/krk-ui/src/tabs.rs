@@ -592,8 +592,9 @@ pub struct Tabliste {
 /// **Ein Textvergleich und kein Systemaufruf**
 /// ([`krk_core::heimordner::Heimordner::ohne_inhaltsauftrag`]). Gefragt wird ueber
 /// eine Abschrift des Wertes und nicht ueber eine Leihe, wie
-/// [`crate::heimgriff`] es fuer jeden Frager verlangt. Ohne Heimordner gibt es
-/// die Eigenschaft nirgends.
+/// [`crate::heimgriff`] es fuer jeden Frager verlangt. Gilt kein Notizordner,
+/// gilt sie am Schutzort, den [`crate::heimgriff::lesen`] dann liefert; ohne
+/// auch den gibt es sie nirgends.
 fn ohne_inhaltsauftrag_fuer(heim: &Heimgriff, ordner: &Path) -> Option<&'static str> {
     heimgriff::lesen(heim)?.ohne_inhaltsauftrag(ordner)
 }
@@ -1675,7 +1676,7 @@ mod tests {
     /// Ein Griff ohne Heimordner: fuer jede Probe, die die Eigenschaft
     /// „ohne Inhaltsauftrag“ nicht misst.
     fn ohne_heim() -> Heimgriff {
-        std::rc::Rc::new(std::cell::RefCell::new(None))
+        crate::heimgriff::ungelesen()
     }
 
     /// Eine Tabliste auf den genannten Ordnern, ohne selbst zu lesen.
@@ -3461,7 +3462,7 @@ mod tests {
             .expect("der Verweis laesst sich anlegen");
         let heim = krk_core::heimordner::Heimordner::im_benutzerverzeichnis(&zuhause);
         let geschrieben = heim.geschrieben().to_path_buf();
-        let griff: Heimgriff = std::rc::Rc::new(std::cell::RefCell::new(Some(heim)));
+        let griff: Heimgriff = crate::heimgriff::mit(heim);
 
         let erwartet = [
             (geschrieben.clone(), Some("secrets.txt")),
@@ -3501,5 +3502,48 @@ mod tests {
         let mut ohne = Tabliste::aus_zustand(&zustand(&namen), ohne_heim());
         ohne.ordner_setzen(&geschrieben, None);
         assert_eq!(ohne.aktiver().modell().ohne_inhaltsauftrag(), None);
+    }
+
+    /// H2.12: mit dem Griff auf einen eingestellten Ort traegt ein Tab dort
+    /// die Eigenschaft, ein Tab auf dem alten Vorgabeort nicht; nach dem
+    /// Ersetzen des Griffs zieht der naechste Lesevorgang nach.
+    #[test]
+    fn die_eigenschaft_folgt_dem_eingestellten_ort() {
+        let ordner = Pruefordner::neu("tabs-heim-anderswo");
+        let zuhause = ordner.ordner("zuhause");
+        let anderswo = ordner.ordner("anderswo");
+        let vorgabe = ordner.ordner("zuhause/krkhome");
+        let griff = crate::heimgriff::mit(krk_core::heimordner::Heimordner::am_ort(
+            anderswo.clone(),
+            Some(&zuhause),
+        ));
+        let pfade = [
+            anderswo.display().to_string(),
+            vorgabe.display().to_string(),
+        ];
+        let namen: Vec<&str> = pfade.iter().map(String::as_str).collect();
+        let mut liste = Tabliste::aus_zustand(&zustand(&namen), std::rc::Rc::clone(&griff));
+
+        liste.ordner_setzen(&anderswo, None);
+        assert_eq!(
+            liste.aktiver().modell().ohne_inhaltsauftrag(),
+            Some("secrets.txt")
+        );
+        liste.ordner_setzen(&vorgabe, None);
+        assert_eq!(liste.aktiver().modell().ohne_inhaltsauftrag(), None);
+
+        crate::heimgriff::ersetzen(
+            &griff,
+            crate::heimgriff::Notizlage::gilt(
+                krk_core::heimordner::Heimordner::im_benutzerverzeichnis(&zuhause),
+            ),
+        );
+        liste.ordner_setzen(&vorgabe, None);
+        assert_eq!(
+            liste.aktiver().modell().ohne_inhaltsauftrag(),
+            Some("secrets.txt")
+        );
+        liste.ordner_setzen(&anderswo, None);
+        assert_eq!(liste.aktiver().modell().ohne_inhaltsauftrag(), None);
     }
 }

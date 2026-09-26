@@ -127,8 +127,10 @@ Datei", welche Einträge das sind.
 
 ## Das Dateiformat von `secrets.txt`
 
-`~/krkhome/secrets.txt` hält die Geheimnisse des Notizordners verschlüsselt;
-wie man sie in KRK bedient und wovor die PIN schützt, steht in `HowTo.md`.
+`secrets.txt` im Notizordner hält dessen Geheimnisse verschlüsselt. Wo der
+Notizordner liegt, steht in `settings.toml` unter `notizordner`, ab Werk
+`~/krkhome`; wie man die Geheimnisse in KRK bedient und wovor die PIN schützt,
+steht in `HowTo.md`.
 **Dieser Abschnitt beschreibt die Datei so, dass sich ihr Inhalt mit der PIN
 auch ohne KRK entschlüsseln lässt.** Die verbindliche Quelle ist der Modulkopf
 von `crates/krk-core/src/heimordner/tresor.rs`; die Probe

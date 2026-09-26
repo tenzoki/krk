@@ -27,7 +27,7 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 | `keymap.toml` | die eigene Tastenbelegung | KRK und der Nutzer |
 | `bookmarks.toml` | die Lesezeichen | KRK |
 | `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten | KRK |
-| `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung | nur der Nutzer |
+| `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | nur der Nutzer |
 | `readers.toml` | die Leseprofile der Vorschau | nur der Nutzer |
 | `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind | KRK |
 
@@ -37,12 +37,13 @@ Wer die Liste am Baum nachlesen will, liest sie an ihrer Quelle und nicht hier:
 awk '/pub const ALLE: \[Datei;/,/\];/' crates/krk-core/src/ablage/pfade.rs
 ```
 
-**Die Notizen liegen nicht hier, sondern in `~/krkhome/`** (siehe „Der
-Notizordner“ weiter unten). Ein Löschwerkzeug, das den Ablageordner mitnimmt,
-lässt `~/krkhome/` stehen. Wer KRK aus der Zeit des Notizblatts kennt, findet
-im Ablageordner vielleicht noch `note-1.txt` und `note-2.txt`. KRK hat sie
-einmal nach `~/krkhome/notes.txt` übernommen und liest und schreibt sie seither
-nicht mehr. Sie liegen ohne Leser da und dürfen bleiben oder gehen.
+**Die Notizen liegen nicht hier, sondern im Notizordner, ab Werk `~/krkhome/`**
+(siehe „Der Notizordner“ weiter unten). Ein Löschwerkzeug, das den Ablageordner
+mitnimmt, lässt den Notizordner stehen; im Ablageordner selbst lässt KRK ihn
+deshalb gar nicht erst einstellen. Wer KRK aus der Zeit des Notizblatts kennt,
+findet im Ablageordner vielleicht noch `note-1.txt` und `note-2.txt`. KRK hat
+sie einmal nach `notes.txt` im Notizordner übernommen und liest und schreibt
+sie seither nicht mehr. Sie liegen ohne Leser da und dürfen bleiben oder gehen.
 
 **`settings.toml` und `readers.toml` legt KRK beim ersten Start an und schreibt
 sie danach nie wieder.** Weder überschreibend noch ergänzend, gleich was
@@ -458,10 +459,11 @@ zu ihnen steht in `README.md` unter „Neuerungen an den eigenen Dateien
 
 ## Der Notizordner
 
-`f2` oder `cmd+k` führt nach `~/krkhome/`, gleich wo der Fokus gerade steht.
-Das aktive Dateifenster zeigt den Ordner, und der Fokus geht dorthin. Steht in
-diesem Dateifenster schon ein Tab auf `~/krkhome/`, wird er sichtbar; sonst
-entsteht ein neuer. Ein Blatt geht dabei nicht auf. Der Tab ist ein gewöhnlicher
+`f2` oder `cmd+k` führt in den Notizordner, ab Werk `~/krkhome/`, gleich wo der
+Fokus gerade steht. Das aktive Dateifenster zeigt den Ordner, und der Fokus geht
+dorthin. Steht in diesem Dateifenster schon ein Tab auf den Notizordner, wird er
+sichtbar; sonst entsteht ein neuer. Wo der Notizordner liegt, stellt man in
+`settings.toml` ein; davon handelt „Der Ort des Notizordners“ weiter unten. Ein Blatt geht dabei nicht auf. Der Tab ist ein gewöhnlicher
 Tab der Dateiliste und steht nach einem Neustart wieder da.
 
 **Alle Befehle zum Notizordner stehen im Hauptmenü „Home“**, gleich hinter
@@ -476,8 +478,9 @@ nächste `f2` sie leer wieder an, mit null Bytes. Eine vorhandene Datei
 überschreibt KRK nie. Wer aus einer früheren Fassung noch eine `.secrets.txt`
 mit Punkt hat, findet sie nach dem nächsten `f2` als `secrets.txt` wieder;
 was dabei im Einzelnen geschieht, steht unter „Geheimnisse in `secrets.txt`“. Beim Start legt KRK nichts an, auch nicht für einen
-wiederhergestellten Tab auf den Ordner. Steht an der Stelle von `~/krkhome` eine
-gewöhnliche Datei, nennt die Statuszeile den Grund, und kein Tab geht auf.
+wiederhergestellten Tab auf den Ordner. Steht an der Stelle des Notizordners
+eine gewöhnliche Datei, oder fehlt der Ordner darüber, etwa weil ein Laufwerk
+nicht eingehängt ist, nennt die Statuszeile den Grund, und kein Tab geht auf.
 
 **Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. `notes.txt`
 und `tasks.txt` sind reiner Text und lassen sich genauso in jedem anderen
@@ -533,14 +536,15 @@ dabei den Regeln von CommonMark, nach denen jede Markdown-Datei gelesen wird.
 Spalten Thema und Notiz. Wie man die zwei Tabellen bedient, steht am Ende
 dieses Abschnitts.
 
-**Die Kästchen gibt es nur für diese zwei Dateien in `~/krkhome/`.** Eine
+**Die Kästchen gibt es nur für diese zwei Dateien im Notizordner.** Eine
 `.md`-Datei mit `- [ ]` an einem anderen Ort zeigt die Vorschau wie bisher,
 ohne Kästchen. Eine `notes.txt` oder `tasks.txt` in einem anderen Ordner bleibt
 gewöhnlicher Text.
 
 **Die Zettel des früheren Notizblatts stehen als Notizen in `notes.txt`.**
 Übernommen wird genau einmal, nämlich in dem Augenblick, in dem ein `f2` den
-Ordner `~/krkhome/` selbst anlegt. Jeder nicht leere Zettel wird dabei zu einer
+Vorgabeort `~/krkhome/` selbst anlegt. An jedem anderen Ort entsteht
+`notes.txt` leer, auch wenn `f2` den Ordner dort neu anlegt. Jeder nicht leere Zettel wird dabei zu einer
 Notiz mit dem Thema „Zettel 1“ beziehungsweise „Zettel 2“, und sein Text bleibt
 unverändert. Ein Zettel, der selbst eine Zeile mit `## ` trägt, wird nicht
 übernommen, weil diese Zeile eine eigene Notiz eröffnete; die Statuszeile nennt
@@ -548,9 +552,11 @@ ihn. Gab es den Ordner schon, übernimmt KRK nichts, auch wenn `notes.txt` darin
 fehlt und neu entsteht. `note-1.txt` und `note-2.txt` bleiben in jedem Fall
 unverändert im Ablageordner liegen.
 
-**Wer die Notizen auf mehreren Geräten haben will, legt `~/krkhome` als
-symbolischen Verweis an**, etwa auf einen Ordner in einem synchronisierten
-Speicher:
+**Wer die Notizen auf mehreren Geräten haben will, stellt den Notizordner auf
+einen Ordner in einem synchronisierten Speicher** (siehe „Der Ort des
+Notizordners“). Der ältere, zweite Weg bleibt: `~/krkhome` als symbolischen
+Verweis anlegen. Nötig ist er allein für den Vorgabeort, denn einen anderen Ort
+nennt man in `settings.toml` gleich selbst:
 
 ```sh
 ln -s ~/Library/Mobile\ Documents/com~apple~CloudDocs/krkhome ~/krkhome
@@ -567,12 +573,56 @@ gewöhnliche Textdateien, und verloren geht nichts.
 **Mit einer eigenen `keymap.toml` heißt der Menüeintrag weiter „Notizzettel
 anzeigen“.** Der Name kommt aus der eigenen Datei, und die Meldung beim Start
 vergleicht allein die Kennungen der Befehle. Die Kennung ist geblieben, also
-meldet sie nichts. `f2` und `cmd+k` führen trotzdem nach `~/krkhome/`, und der
+meldet sie nichts. `f2` und `cmd+k` führen trotzdem in den Notizordner, und der
 Eintrag steht unter dem alten Namen im Menü „Home“. **Einen Handgriff an der
 eigenen Belegung braucht das nicht.** Insbesondere ist `cmd+r` in der
 Belegungsansicht dafür nicht nötig: es brächte zwar den neuen Namen, setzt aber
 die ganze eigene Belegung auf die Auslieferungsfassung zurück, also auch jede
 eigene Tastenzuweisung.
+
+### Der Ort des Notizordners
+
+**Wo der Notizordner liegt, steht in `settings.toml` unter `notizordner`**, ab
+Werk:
+
+```toml
+notizordner = "~/krkhome"
+```
+
+Der Wert beginnt mit `~/` für das eigene Benutzerverzeichnis oder mit `/`, etwa
+`"~/Dropbox/Notizen"` oder `"/Volumes/Daten/Notizen"`. Ein leerer oder
+relativer Wert, `~` allein, `~name/…` für ein fremdes Benutzerverzeichnis, ein
+Wert, der kein Text ist, und ein Ort im Ablageordner von KRK gelten nicht.
+**Einen Ersatzort setzt KRK dann nicht ein**: die Statuszeile nennt den Wert
+beim Start, `f2` nennt ihn noch einmal, legt nichts an und öffnet keinen Tab.
+Fehlt der Schlüssel in der eigenen Datei, gilt `~/krkhome`.
+
+**Ein Wechsel verschiebt nichts.** Die Dateien am alten Ort bleiben liegen, und
+was am neuen Ort fehlt, legt erst der nächste `f2` dort leer an; beim Start legt
+KRK nie etwas an. Ein Wechsel von Hand in `settings.toml` gilt ab dem nächsten
+Start, und die Statuszeile nennt dann einmal den neuen und den alten Ort. Die
+Regeln des Notizordners (die gerenderte Vorschau, die Tabellen im Editor, die
+PIN für `secrets.txt`, der Inhaltsfilter) gelten danach am neuen Ort und am
+alten nicht mehr. Eine `secrets.txt` am alten Ort ist dann eine gewöhnliche
+Datei; ihr Chiffrat öffnet der Editor nicht als Text.
+
+**Ist `settings.toml` beschädigt oder nicht lesbar, gilt kein Notizordner.**
+Das gilt auch, wenn der Fehler an einer ganz anderen Zeile steht, etwa ein
+Tippfehler an `terminal`: KRK weiß dann nicht, ob ein anderer Ort eingestellt
+ist, und legt lieber nichts an als am falschen Ort. Die Statuszeile nennt den
+Schaden beim Start, `f2` nennt ihn noch einmal samt dem Weg hinaus:
+`settings.toml` berichtigen und KRK neu starten. Dasselbe gilt, wenn KRK die
+Datei beim Start gar nicht lesen konnte, weil sich der Ablageordner nicht öffnen
+oder seine Sperre nicht nehmen ließ; dann hilft der Neustart allein. Fehlte die
+Datei nur und ließ sich nicht anlegen, gilt `~/krkhome`, denn dann hat niemand
+einen anderen Ort eingestellt. **`secrets.txt` am zuletzt geltenden Ort bleibt
+in dieser Lage geschützt**: Vorschau, Editor und Inhaltsfilter behandeln den
+Ordner, der beim letzten Start galt (ohne einen solchen `~/krkhome`), weiter als
+Notizordner, nur `f2` legt dort nichts an.
+
+**Eine ältere KRK-Fassung kennt den Schlüssel nicht.** Sie weist eine
+`settings.toml`, die ihn führt, als beschädigt ab, lässt die Datei liegen und
+arbeitet mit ihren eigenen Vorgaben weiter.
 
 ### Aufgaben in der Tabelle bearbeiten
 
@@ -710,13 +760,13 @@ mit einer vierstelligen PIN.
 **Die Datei steht in der Liste wie jede andere.** Ihr Name beginnt nicht mit
 einem Punkt, der Umschalter für versteckte Einträge (`shift+cmd+h`) betrifft sie
 also nicht. Ein Filtertext wirkt auf ihren Namen wie auf jeden anderen. Den
-Inhalt liest der Filter in `~/krkhome/` nie; mehr dazu unter „Was die PIN
+Inhalt liest der Filter im Notizordner nie; mehr dazu unter „Was die PIN
 schützt und was nicht“. In jedem anderen Ordner ist eine `secrets.txt` eine
 gewöhnliche Datei.
 
 **Eine `.secrets.txt` aus einer früheren Fassung benennt `f2` um.** Früher hieß
 die Datei `.secrets.txt`, mit Punkt, und war ein versteckter Eintrag. Steht eine
-solche in `~/krkhome/` und noch keine `secrets.txt`, gibt ihr der nächste `f2`
+solche im Notizordner und noch keine `secrets.txt`, gibt ihr der nächste `f2`
 den neuen Namen, und die Statuszeile meldet „.secrets.txt heißt jetzt
 secrets.txt“. Der Inhalt bleibt Byte für Byte, wie er war, und dieselbe PIN
 öffnet ihn. Drei Fälle weichen davon ab:
@@ -798,7 +848,7 @@ sie nicht.
   oder `grep`; sie sehen nur Binärdaten.
 - Indexern wie Spotlight und Sicherungen wie Time Machine, die die Datei als
   Ganzes mitnehmen; auch sie bekommen nur das Chiffrat.
-- dem Inhaltsfilter von KRK: im Ordner `~/krkhome/` liest „Content“ die Datei
+- dem Inhaltsfilter von KRK: im Notizordner liest „Content“ die Datei
   nie. Die tiefe Suche
   mit „Content“ aus einem übergeordneten Ordner liest sie wie jede andere Datei
   darunter, findet dort aber nur Chiffrat und keinen Eintrag.
@@ -809,8 +859,8 @@ sie nicht.
 - jemandem mit einer Kopie der Datei, der gezielt alle zehntausend PINs
   durchprobiert. Jeder Versuch kostet auf dem Referenz-Mac rund eine halbe
   Sekunde, alle zusammen also rund anderthalb Stunden, auf einem schnelleren
-  Rechner oder mit mehreren Kernen zugleich weniger. Wer `~/krkhome` in einen
-  synchronisierten Speicher legt, legt dort auch eine solche Kopie ab.
+  Rechner oder mit mehreren Kernen zugleich weniger. Wer den Notizordner in
+  einen synchronisierten Speicher legt, legt dort auch eine solche Kopie ab.
 - einem Programm, das mitliest, solange die Datei im Editor offen ist; dann
   steht der Inhalt im Klartext im Speicher.
 - Schadsoftware, die unter dem eigenen Benutzerkonto läuft.

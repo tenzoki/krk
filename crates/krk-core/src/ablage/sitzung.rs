@@ -427,6 +427,24 @@ pub struct Sitzung {
     /// Untertabellen stehen.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gitanteil: Option<f64>,
+    /// Der Notizordner, der zuletzt gegolten hat, als geschriebener Pfad; `None`,
+    /// solange keiner gegolten hat.
+    ///
+    /// **Ein Textwert und nie am Dateisystem geprueft.** Der Start haelt ihn
+    /// gegen den Ort aus `settings.toml` und sagt bei einem Unterschied einmal,
+    /// welcher Ort jetzt gilt und dass am alten alles liegen bleibt (H2 des
+    /// Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`); fuer
+    /// einen Wechsel von Hand ist der alte Ort anders nicht zu kennen. Gilt
+    /// beim Start kein Ort, bleibt der gemerkte stehen, damit nach dem
+    /// Berichtigen keine Wechselmeldung kommt, wenn der Ort derselbe geblieben
+    /// ist.
+    ///
+    /// Mit der Arbeit zum einstellbaren Ort dazugekommen; eine `session.toml`
+    /// aus der Zeit davor bleibt lesbar, weil diese Struktur `#[serde(default)]`
+    /// traegt. **Vor den drei Tabellen**, aus dem Grund, den
+    /// [`Sitzung::editor`] ausschreibt.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notizordner: Option<PathBuf>,
     /// Die Breiten der sechs Bereiche.
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
@@ -453,12 +471,14 @@ impl Default for Sitzung {
     /// Der Auslieferungszustand: zwei Fenster mit je einem Tab auf dem
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, Editor und
     /// Git-Bereich ausgeblendet und der Editor ohne Datei, alle fuenf Spalten
-    /// sichtbar, links aktiv, der Git-Bereich ungeteilt gelassen.
+    /// sichtbar, links aktiv, der Git-Bereich ungeteilt gelassen, kein
+    /// Notizordner gemerkt.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),
             editor: None,
             gitanteil: None,
+            notizordner: None,
             breiten: Breiten::default(),
             sichtbar: Sichtbarkeit::default(),
             spalten: Spaltensichtbarkeit::default(),

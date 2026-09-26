@@ -63,10 +63,11 @@
 //! Zusammenfassung des Status. Es liegt hier und nicht unter `appkit`, weil der
 //! Bereich seine drei Flaechen aus diesem einen Stand schreibt und der Stand
 //! ohne Fenster pruefbar bleiben soll.
-//! `heimgriff` haelt zuletzt den einen geteilten Wert der Erkennung von
-//! `~/krkhome/`: der Anwendungsdelegierte baut ihn beim Start, erneuert ihn
-//! allein bei F2 und reicht Abschriften des Griffs an jeden, der fragt. Die
-//! Erkennung selbst steht im Kern, in `krk_core::heimordner`.
+//! `heimgriff` haelt zuletzt den einen geteilten Wert der Erkennung des
+//! Notizordners, ab Werk `~/krkhome/`: der Anwendungsdelegierte setzt ihn beim
+//! Start aus `settings.toml`, erneuert ihn bei F2 und reicht Abschriften des
+//! Griffs an jeden, der fragt. Die Erkennung selbst steht im Kern, in
+//! `krk_core::heimordner`.
 
 mod angezeigtedatei;
 mod appkit;

@@ -647,7 +647,7 @@ pub struct VorschaufensterIvars {
     tableiste: RefCell<Option<Tableiste>>,
     /// Die Tabs mit ihrem Inhalt und dem Halteverhalten.
     modell: RefCell<Vorschaumodell>,
-    /// Der geteilte Wert der Erkennung von `~/krkhome/`, den der
+    /// Der geteilte Wert der Erkennung des Notizordners, den der
     /// Anwendungsdelegierte beim Bau hereinreicht.
     ///
     /// Gelesen wird er bei jedem Auftrag als Abschrift

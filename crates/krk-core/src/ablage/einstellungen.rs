@@ -72,7 +72,12 @@ static AUSLIEFERUNG: LazyLock<Einstellungen> = LazyLock::new(|| {
         terminal: datei
             .terminal
             .expect("die eingebettete Auslieferungsfassung nennt keinen Eintrag terminal"),
-        notizordner: datei.notizordner.as_ref().map(ortswert),
+        notizordner: ortswert(
+            datei
+                .notizordner
+                .as_ref()
+                .expect("die eingebettete Auslieferungsfassung nennt keinen Eintrag notizordner"),
+        ),
     }
 });
 
@@ -99,12 +104,9 @@ pub struct Einstellungen {
     /// nicht. Ein Wert, der kein Text ist, macht die Datei **nicht**
     /// beschaedigt, sondern wird [`Ortswert::KeinText`]; siehe dort.
     ///
-    /// **`Option` nur, solange die Auslieferungsfassung den Schluessel noch
-    /// nicht traegt** (Schritt 2.3 des Plans
-    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`); danach fuellt
-    /// sie ihn wie `terminal` fuer jede Nutzerdatei, die ihn nicht nennt, und
-    /// das `Option` faellt mit Schritt 2.4.
-    pub notizordner: Option<Ortswert>,
+    /// Nennt die Nutzerdatei ihn nicht, fuellt ihn die Auslieferungsfassung,
+    /// wie bei `terminal`; ab Werk ist das der Vorgabeort `~/krkhome`.
+    pub notizordner: Ortswert,
 }
 
 /// Der Wert von `notizordner`, wie `settings.toml` ihn traegt.
@@ -147,8 +149,7 @@ impl Einstellungen {
             notizordner: datei
                 .notizordner
                 .as_ref()
-                .map(ortswert)
-                .or_else(|| AUSLIEFERUNG.notizordner.clone()),
+                .map_or_else(|| AUSLIEFERUNG.notizordner.clone(), ortswert),
         }
     }
 }

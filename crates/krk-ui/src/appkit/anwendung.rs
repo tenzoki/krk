@@ -280,7 +280,7 @@ use krk_core::ablage::{
     Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen, leseprofile, lesezeichen,
     pfade,
 };
-use krk_core::heimordner::ort::Ortsfehler;
+use krk_core::heimordner::ort::{self, Notizort, Ortsfehler};
 use krk_core::heimordner::{self, Heimordner};
 use krk_core::leseprofil::Profile;
 use krk_core::operation::{
@@ -302,7 +302,7 @@ use crate::fenstermodell::{
     BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in, spalte_sichtbar_in,
 };
 use crate::fenstertitel;
-use crate::heimgriff::{self, Heimgriff};
+use crate::heimgriff::{self, Heimgriff, Notizlage};
 use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::blattmeldung;
 use crate::kommandos::fokus::{self, Fokus};
@@ -982,16 +982,22 @@ pub struct AnwendungsIvars {
     /// Datei laesst es ohne eine eigene Zeile fallen: es ist dann schon
     /// herausgenommen.
     vorgemerkte_marke: RefCell<Option<(u32, String)>>,
-    /// Der Heimordner `~/krkhome/`, wie ihn KRK gerade erkennt, oder `None`,
-    /// wenn das System kein Benutzerverzeichnis nennt.
+    /// Der Notizordner, wie KRK ihn gerade erkennt, oder warum keiner gilt.
     ///
-    /// **Der eine Wert der Erkennung, den alle fragen.** Gebaut wird er einmal
-    /// beim Start, leicht und ohne das Ziel eines Verweises zu beruehren
-    /// ([`Heimordner::des_benutzers`]); erneuert wird er allein in
-    /// [`Anwendungsdelegierter::notizordner_oeffnen`]. Wer ihn braucht, bekommt eine Abschrift
-    /// des `Rc` und sieht damit jede Erneuerung; der Modulkopf von
-    /// [`crate::heimgriff`] sagt, warum es ein geteilter Griff ist.
+    /// **Der eine Wert der Erkennung, den alle fragen.** In `neu` steht ein
+    /// Platzhalter ([`heimgriff::ungelesen`]); gesetzt wird der Ort in
+    /// [`Anwendungsdelegierter::oberflaeche_aufbauen`] aus dem, was
+    /// [`Anwendungsdelegierter::sitzung_laden`] auf jedem Ausgang liefert, und
+    /// erneuert in [`Anwendungsdelegierter::notizordner_oeffnen`]. Wer ihn
+    /// braucht, bekommt eine Abschrift des `Rc` und sieht damit jede
+    /// Erneuerung; der Modulkopf von [`crate::heimgriff`] sagt, warum es ein
+    /// geteilter Griff ist.
     heim: Heimgriff,
+    /// Der Notizordner, den die Sitzung als zuletzt geltenden merkt: der
+    /// geschriebene Pfad des geltenden Orts, gilt keiner, der bisher gemerkte
+    /// ([`ort::zu_merken`]). Gesetzt beim Start, gelesen von
+    /// [`Anwendungsdelegierter::sitzung_bauen`].
+    gemerkter_ort: RefCell<Option<PathBuf>>,
     /// Der Ablauf der Messung. Der Bildtakt haelt eine zweite Referenz.
     messlauf: OnceCell<Rc<RefCell<Messlauf>>>,
     zeichenende: OnceCell<Zeichenende>,
@@ -1406,9 +1412,12 @@ impl Anwendungsdelegierter {
             beenden_ohne_nachfrage: Cell::new(false),
             rueckschritt_merker: Cell::new(false),
             vorgemerkte_marke: RefCell::new(None),
-            // Leicht gebaut: `des_benutzers` fragt allein den Eintrag im
-            // Benutzerverzeichnis und nie das Ziel eines Verweises.
-            heim: Rc::new(RefCell::new(Heimordner::des_benutzers())),
+            // Ein Platzhalter und kein Ort: welcher gilt, steht erst nach dem
+            // Lesen von `settings.toml` fest, und `oberflaeche_aufbauen` setzt
+            // ihn, bevor der erste Frager den Griff bekommt. Ein Vorgabeort an
+            // dieser Stelle waere der stille Rueckfall, den H2 ausschliesst.
+            heim: heimgriff::ungelesen(),
+            gemerkter_ort: RefCell::new(None),
             messlauf: OnceCell::new(),
             zeichenende: OnceCell::new(),
             ausloesetakt: OnceCell::new(),
@@ -1422,7 +1431,27 @@ impl Anwendungsdelegierter {
         let mtm = self.mtm();
         let ivars = self.ivars();
 
-        let (sitzung, mut meldungen) = self.sitzung_laden();
+        let (sitzung, mut meldungen, notizort) = self.sitzung_laden();
+        // **Der Ort geht hier in den Griff, und die Stelle ist tragend**: vor
+        // der ersten Tabliste, weil jede ihn je Lesevorgang nach der
+        // Eigenschaft „ohne Inhaltsauftrag“ fragt, und vor Vorschau und
+        // Editor, die ihn beim ersten Auftrag abschreiben. Bis zu dieser Zeile
+        // haelt der Griff den Platzhalter aus `neu`, den niemand gefragt hat.
+        // Die Quelltextprobe `der_griff_steht_vor_der_ersten_tabliste` haelt
+        // die Reihenfolge.
+        let zuhause = pfade::benutzerverzeichnis();
+        let gemerkt = sitzung.notizordner.as_deref();
+        if let Some(zeile) = ort::startzeile(&notizort, gemerkt, zuhause.as_deref()) {
+            meldungen.push(zeile);
+        }
+        let zu_merken = ort::zu_merken(&notizort, gemerkt);
+        let sitzung_nachziehen = zu_merken.as_deref() != gemerkt;
+        let schutzort = match notizort {
+            Ok(_) => None,
+            Err(_) => ort::schutzort(gemerkt, zuhause.as_deref()),
+        };
+        heimgriff::ersetzen(&ivars.heim, Notizlage::aus(notizort, schutzort));
+        *ivars.gemerkter_ort.borrow_mut() = zu_merken;
         *ivars.modell.borrow_mut() = Fenstermodell::aus_sitzung(&sitzung);
 
         let dateifenster = [
@@ -1873,6 +1902,13 @@ impl Anwendungsdelegierter {
                 self.startmeldungen_zeigen(&frage, &liste);
             }
         }
+        // **Ein neuer Ort wird einmal gemerkt**, damit der naechste Start keine
+        // zweite Wechselmeldung zeigt. Nach dem Bau der Oberflaeche, weil
+        // `sitzung_bauen` die Dateifenster fragt; im Messmodus und ohne
+        // Sitzungsrecht schreibt `sitzung_vormerken` ohnehin nichts.
+        if sitzung_nachziehen {
+            self.sitzung_vormerken();
+        }
         self.messmodus_einrichten();
     }
 
@@ -1952,12 +1988,25 @@ impl Anwendungsdelegierter {
     /// und meldet nichts. **Damit sieht kein Messlauf, was die Erhebung
     /// kostet**, und die Zusage aus dem L4-Datensatz jener Runde haengt an der
     /// Probe, die die Oeffnungen zaehlt, und nicht an einer Messstrecke.
-    fn sitzung_laden(&self) -> (Sitzung, Vec<String>) {
+    ///
+    /// **Der dritte Wert ist der Notizordner, und jeder Ausgang liefert ihn**
+    /// (Schritt 2.4 des Plans `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`,
+    /// Zweitlesung M2). Der Uebersetzer haelt das ueber das Tupel. Im Messmodus
+    /// ist es der Vorgabeort, damit L4 misst, was es bisher mass; auf den zwei
+    /// fruehen Ausgaengen ohne gelesene `settings.toml` ist es
+    /// [`Ortsfehler::EinstellungenUngelesen`], denn ein Vorgabeort dort waere
+    /// der stille Rueckfall, den H2 ausschliesst; auf dem gewoehnlichen Weg die
+    /// Antwort von [`ort::notizort`] auf Wert und Ersetzungsgrund. **Keiner
+    /// dieser Wege legt an oder loest auf**: gebaut wird allein ueber
+    /// [`Heimordner::am_ort`].
+    fn sitzung_laden(&self) -> (Sitzung, Vec<String>, Notizort) {
         let ivars = self.ivars();
+        // Der Vorgabeort fuer die vier Messaufgaben, und nur fuer sie.
+        let messort = || Heimordner::des_benutzers().ok_or(Ortsfehler::KeinBenutzerverzeichnis);
         match &ivars.messaufgabe {
             None => {}
             Some(Aufgabe::Start { .. } | Aufgabe::Spannen { .. }) => {
-                return (Sitzung::default(), Vec::new());
+                return (Sitzung::default(), Vec::new(), messort());
             }
             Some(Aufgabe::Sitzung { plan }) => {
                 // Herstellen heisst schreiben: die folgenden L4-Starts finden
@@ -1968,7 +2017,7 @@ impl Anwendungsdelegierter {
                     eprintln!("krk: {meldung}. Es wird keine Zahl ausgegeben.");
                     std::process::exit(4);
                 }
-                return (plan.sitzung.clone(), Vec::new());
+                return (plan.sitzung.clone(), Vec::new(), messort());
             }
             Some(Aufgabe::SitzungsStart) => {
                 let ablage = match Ablage::im_benutzerverzeichnis() {
@@ -2001,7 +2050,7 @@ impl Anwendungsdelegierter {
                     std::process::exit(4);
                 }
                 let (sitzung, _meldung) = geladen.mit_meldung();
-                return (sitzung, Vec::new());
+                return (sitzung, Vec::new(), messort());
             }
         }
         let mut meldungen = Vec::new();
@@ -2011,7 +2060,10 @@ impl Anwendungsdelegierter {
                 meldungen.push(format!(
                     "der Ablageordner ließ sich nicht öffnen, die Sitzung wird nicht gesichert: {fehler}"
                 ));
-                return (Sitzung::default(), meldungen);
+                let ungelesen = Ortsfehler::EinstellungenUngelesen(format!(
+                    "der Ablageordner ließ sich nicht öffnen: {fehler}"
+                ));
+                return (Sitzung::default(), meldungen, Err(ungelesen));
             }
         };
         // **Das Sitzungsrecht zuerst, und ohne zu warten** (C3.9, C3.11 der
@@ -2058,7 +2110,13 @@ impl Anwendungsdelegierter {
             // Datei schreibt.
             let geladene_einstellungen = einstellungen::laden(zugang);
             let einstellungen_ersetzt = geladene_einstellungen.ist_ersetzt();
-            let eingestellt = geladene_einstellungen.mit_meldung();
+            // Der Grund der Ersetzung, gelesen vor `mit_meldung`, das ihn in
+            // einen Satz verwandelt: an ihm haengt, ob ein Notizordner gilt.
+            let einstellungsschaden = geladene_einstellungen
+                .ersetzung
+                .as_ref()
+                .map(|ersetzung| ersetzung.grund.clone());
+            let eingestellt = (geladene_einstellungen.mit_meldung(), einstellungsschaden);
             // Die Leseprofile aus C1 der Runde 16, ueber denselben Zugang und
             // aus demselben Grund wie die Einstellungen: der Aufruf legt
             // `readers.toml` beim ersten Start an, und ein zweiter Durchgang
@@ -2102,7 +2160,7 @@ impl Anwendungsdelegierter {
         });
         let (
             (sitzung, meldung),
-            (eingestellt, meldung_einstellungen),
+            ((eingestellt, meldung_einstellungen), einstellungsschaden),
             ((profile, meldung_profile), profilmeldungen),
             ((bestand, neuerungsmeldungen), urteile),
         ) = match gelesen {
@@ -2112,10 +2170,19 @@ impl Anwendungsdelegierter {
                     "die Schreibsperre der Ablage lässt sich nicht nehmen, es wird nichts \
                      geladen und nichts gesichert: {fehler}"
                 ));
-                return (Sitzung::default(), meldungen);
+                let ungelesen = Ortsfehler::EinstellungenUngelesen(format!(
+                    "die Schreibsperre der Ablage ließ sich nicht nehmen: {fehler}"
+                ));
+                return (Sitzung::default(), meldungen, Err(ungelesen));
             }
         };
         meldungen.extend(meldung);
+        let notizort = ort::notizort(
+            &eingestellt.notizordner,
+            einstellungsschaden.as_ref(),
+            pfade::benutzerverzeichnis().as_deref(),
+            Some(ablage.ort().wurzel()),
+        );
         *ivars.einstellungen.borrow_mut() = eingestellt;
         meldungen.extend(meldung_einstellungen);
         *ivars.profile.borrow_mut() = Arc::new(profile);
@@ -2136,7 +2203,7 @@ impl Anwendungsdelegierter {
         // den Ordner an, und zweimal anzulegen hiesse, dieselbe Frage zweimal an
         // das Dateisystem zu stellen.
         *ivars.ablage.borrow_mut() = Some(ablage);
-        (sitzung, meldungen)
+        (sitzung, meldungen, notizort)
     }
 
     // ------------------------------------------------------------------
@@ -4996,12 +5063,17 @@ impl Anwendungsdelegierter {
     }
 
     // ------------------------------------------------------------------
-    // Der Notizordner: F2 fuehrt nach ~/krkhome (C1 bis C3 der krkhome-Arbeit)
+    // Der Notizordner: F2 fuehrt an den eingestellten Ort (C1 bis C3 der
+    // krkhome-Arbeit, H2 des einstellbaren Orts)
     // ------------------------------------------------------------------
 
-    /// Fuehrt das aktive Dateifenster auf `~/krkhome/` und legt dabei an, was
-    /// fehlt (C1, C2 und C3 des Spec
+    /// Fuehrt das aktive Dateifenster auf den Notizordner, ab Werk `~/krkhome/`,
+    /// und legt dabei an, was fehlt (C1, C2 und C3 des Spec
     /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+    ///
+    /// **Gilt kein Ort**, nennt die Statuszeile den Grund aus
+    /// [`heimgriff::lage`], und F2 legt nichts an und oeffnet keinen Tab
+    /// (H2 des Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
     ///
     /// Der Weg in vier Schritten, und jeder steht genau einmal im Baum:
     ///
@@ -5029,9 +5101,16 @@ impl Anwendungsdelegierter {
     /// sichtbar war. Ein Blatt oeffnet sich auf keinem dieser Wege.
     fn notizordner_oeffnen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        let Some(heim) = heimgriff::lesen(&self.ivars().heim) else {
-            self.antwort_zeigen(aktiv, &Ortsfehler::KeinBenutzerverzeichnis.meldung());
-            return true;
+        // **`lage` und nicht `lesen`**: gilt kein Ort, nennt F2 den Grund und
+        // legt nichts an. Den Schutzort, den `lesen` dann liefert, darf F2
+        // nicht sehen; an ihm anzulegen waere der stille Rueckfall, den H2
+        // ausschliesst.
+        let heim = match heimgriff::lage(&self.ivars().heim) {
+            Ok(heim) => heim,
+            Err(fehler) => {
+                self.antwort_zeigen(aktiv, &fehler.meldung());
+                return true;
+            }
         };
         let bereitstellung = match heimordner::bereitstellen(&heim, &self.ablageordner()) {
             Ok(bereitstellung) => bereitstellung,
@@ -5041,7 +5120,7 @@ impl Anwendungsdelegierter {
             }
         };
         let heim = heim.aufgeloest_erneuern();
-        heimgriff::ersetzen(&self.ivars().heim, heim.clone());
+        heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(heim.clone()));
 
         let tabelle = self.dateifenster(aktiv).quelle();
         let vorhanden = tabelle
@@ -9103,10 +9182,11 @@ impl Anwendungsdelegierter {
         let editor = self.editordatei();
         let gitanteil = self.gitanteil();
         let heim = heimgriff::lesen(&self.ivars().heim);
+        let notizordner = self.ivars().gemerkter_ort.borrow().clone();
         self.ivars()
             .modell
             .borrow()
-            .sitzung(fenster, editor, gitanteil, heim.as_ref())
+            .sitzung(fenster, editor, gitanteil, notizordner, heim.as_ref())
     }
 
     /// Wie der Git-Bereich seine Flaeche unter dem Kopf teilt.
@@ -10178,6 +10258,82 @@ mod notizordnerproben {
             aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren"), oeffnen),
             1,
             "der eine Rufer von {oeffnen} ist nicht der Zweig in kommando_ausfuehren"
+        );
+    }
+
+    /// H2 und Zweitlesung M2: der Vorgabeort steht in `sitzung_laden` allein
+    /// vor der Grenze zum gewoehnlichen Start, also allein im Messmodus, und
+    /// die zwei fruehen Ausgaenge liefern „nicht gelesen“ statt eines Orts.
+    ///
+    /// Dass **jeder** Ausgang einen Notizort traegt, haelt der Uebersetzer
+    /// ueber das Tupel; diese Probe haelt, welcher es ist.
+    #[test]
+    fn der_start_kennt_den_vorgabeort_allein_im_messmodus() {
+        let laden = rumpf(&diese_datei(), "sitzung_laden");
+        let grenze = "let mut meldungen = Vec::new();";
+        let (messmodus, betrieb) = laden
+            .split_once(grenze)
+            .unwrap_or_else(|| panic!("{grenze} steht nicht in sitzung_laden"));
+        let vorgabe = concat!("Heimordner::des_", "benutzers");
+        assert!(
+            messmodus.contains(vorgabe),
+            "der Messmodus baut den Vorgabeort nicht mehr"
+        );
+        assert!(
+            !betrieb.contains(vorgabe),
+            "der gewoehnliche Start faellt auf den Vorgabeort zurueck"
+        );
+        assert_eq!(
+            betrieb
+                .matches(concat!("Ortsfehler::Einstellungen", "Ungelesen("))
+                .count(),
+            2,
+            "die zwei fruehen Ausgaenge liefern nicht je einen Fehler"
+        );
+        assert_eq!(
+            betrieb.matches(concat!("ort::", "notizort(")).count(),
+            1,
+            "der gewoehnliche Weg fragt den Ort nicht genau einmal"
+        );
+    }
+
+    /// Der Griff bekommt den Ort unmittelbar nach `sitzung_laden` und vor der
+    /// ersten Tabliste, die ihn je Lesevorgang fragt.
+    #[test]
+    fn der_griff_steht_vor_der_ersten_tabliste() {
+        let aufbau = rumpf(&diese_datei(), "oberflaeche_aufbauen");
+        let stelle = |nadel: &str| {
+            aufbau
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{nadel} steht nicht in oberflaeche_aufbauen"))
+        };
+        let laden = stelle(concat!("self.sitzung_", "laden()"));
+        let setzen = stelle(concat!("heimgriff::", "ersetzen("));
+        let tabliste = stelle(concat!("Tabliste::aus_", "zustand("));
+        assert!(laden < setzen, "der Griff wird vor dem Laden gesetzt");
+        assert!(
+            setzen < tabliste,
+            "die erste Tabliste entsteht vor dem gesetzten Griff"
+        );
+    }
+
+    /// F2 fragt die Lage samt Fehler und kehrt bei einem Fehler zurueck,
+    /// bevor es anlegt; den Schutzort aus `heimgriff::lesen` sieht es nicht.
+    #[test]
+    fn f2_nennt_den_fehler_und_legt_ohne_ort_nichts_an() {
+        let f2 = rumpf(&diese_datei(), concat!("notizordner_", "oeffnen"));
+        let stelle = |nadel: &str| {
+            f2.find(nadel)
+                .unwrap_or_else(|| panic!("{nadel} steht nicht im Rumpf von F2"))
+        };
+        let lage = stelle(concat!("heimgriff::", "lage("));
+        let fehler = stelle("Err(fehler) =>");
+        let zurueck = stelle("return true;");
+        let anlegen = stelle(concat!("heimordner::bereit", "stellen("));
+        assert!(lage < fehler && fehler < zurueck && zurueck < anlegen);
+        assert!(
+            !f2.contains(concat!("heimgriff::", "lesen(")),
+            "F2 liest den Schutzort mit"
         );
     }
 }

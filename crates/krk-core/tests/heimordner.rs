@@ -26,11 +26,16 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use gemeinsam::Pruefordner;
+use krk_core::ablage::Grund;
+use krk_core::ablage::einstellungen::Ortswert;
 use krk_core::heimordner::eintraege::{
     Abweisung, Aufgaben, Notiz, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
     ist_themenzeile, notizen,
 };
-use krk_core::heimordner::ort::{Ortsfehler, ort_lesen, schreibform};
+use krk_core::heimordner::ort::{
+    Notizort, Ortsfehler, notizort, ort_lesen, ortswechsel, schreibform, schutzort, startzeile,
+    wechselsatz, zu_merken,
+};
 use krk_core::heimordner::tresor::{
     self, FORMATVERSION, KOPFLAENGE, Kopf, Kopfschaden, Oeffnungsfehler, Parameter, Pin, Pinfehler,
     SALZLAENGE, Schluessel,
@@ -1938,6 +1943,228 @@ fn die_meldungen_nennen_den_eingestellten_ort() {
                 .to_owned()
         ]
     );
+}
+
+/// Ein Text als Ortswert.
+fn text(wert: &str) -> Ortswert {
+    Ortswert::Text(wert.to_owned())
+}
+
+/// H2.2, H2.3 und H2.4 am Start: `notizort` ueber Wert und Ersetzungsgrund.
+///
+/// Ein gueltiger Wert ergibt seinen Ort, jede Fehlerform des Werts ihren
+/// Fehler; `NichtAnlegbar` mit dem Auslieferungswert ergibt den Vorgabeort;
+/// `Beschaedigt` und `NichtLesbar` ergeben **keinen** Ort, gleich was der Wert
+/// sagt. Der letzte Fall ist der eine Zweig, der an der offenen Nutzerfrage
+/// `260926-1506_*_welcher-notizordner-gilt-wenn-settings-toml-beim-start-beschaedigt-ist.md`
+/// haengt; eine andere Antwort aendert diese Zeilen.
+#[test]
+fn notizort_folgt_wert_und_ersetzungsgrund() {
+    let zuhause = Some(Path::new(ZUHAUSE));
+    let ablage = Some(Path::new(ABLAGE));
+    let ort = |wert: &Ortswert, schaden: Option<&Grund>| -> Notizort {
+        notizort(wert, schaden, zuhause, ablage)
+    };
+
+    let gueltig = ort(&text("/Volumes/X/notizen"), None).expect("ein gueltiger Ort");
+    assert_eq!(gueltig.geschrieben(), Path::new("/Volumes/X/notizen"));
+    assert!(!gueltig.ist_vorgabeort());
+
+    for (wert, fehler) in [
+        (text(""), Ortsfehler::Leer),
+        (
+            text("notizen"),
+            Ortsfehler::NichtAbsolut("notizen".to_owned()),
+        ),
+        (
+            text("~kai/x"),
+            Ortsfehler::FremdesBenutzerverzeichnis("~kai/x".to_owned()),
+        ),
+        (
+            text("~/Library/Application Support/KRK"),
+            Ortsfehler::ImAblageordner("~/Library/Application Support/KRK".to_owned()),
+        ),
+        (
+            Ortswert::KeinText("5".to_owned()),
+            Ortsfehler::KeinText("5".to_owned()),
+        ),
+    ] {
+        assert_eq!(ort(&wert, None), Err(fehler), "{wert:?}");
+    }
+    assert_eq!(
+        notizort(&text("~/krkhome"), None, None, ablage),
+        Err(Ortsfehler::KeinBenutzerverzeichnis)
+    );
+
+    let fehlte = Grund::NichtAnlegbar("kein Platz".to_owned());
+    let vorgabe = ort(&text(&format!("~/{ORDNERNAME}")), Some(&fehlte))
+        .expect("eine fehlende Datei ergibt den Vorgabeort");
+    assert!(vorgabe.ist_vorgabeort());
+
+    for (schaden, satzteil) in [
+        (Grund::Beschaedigt("Zeile 3".to_owned()), "ist beschädigt"),
+        (Grund::NichtLesbar("Rechte".to_owned()), "ist nicht lesbar"),
+    ] {
+        assert_eq!(
+            ort(&text("/Volumes/X/notizen"), Some(&schaden)),
+            Err(Ortsfehler::EinstellungenBeschaedigt(satzteil.to_owned())),
+            "{schaden:?}"
+        );
+    }
+}
+
+/// H2.10: der Wechselsatz kommt allein, wenn ein gemerkter Ort da ist und der
+/// geltende gueltig und ein anderer ist; `~/krkhome` und `/<zuhause>/krkhome`
+/// sind derselbe.
+#[test]
+fn ortswechsel_meldet_allein_einen_anderen_ort() {
+    let zuhause = Some(Path::new(ZUHAUSE));
+    let geltend: Notizort = Ok(Heimordner::am_ort(
+        PathBuf::from("/Users/probe/Dropbox/Notizen"),
+        zuhause,
+    ));
+    let vorgabe: Notizort = Ok(Heimordner::im_benutzerverzeichnis(Path::new(ZUHAUSE)));
+
+    assert_eq!(ortswechsel(None, &geltend, zuhause), None, "nichts gemerkt");
+    assert_eq!(
+        ortswechsel(
+            Some(Path::new("/Users/probe/Dropbox/Notizen")),
+            &geltend,
+            zuhause
+        ),
+        None,
+        "derselbe Ort"
+    );
+    assert_eq!(
+        ortswechsel(Some(Path::new("~/krkhome")), &vorgabe, zuhause),
+        None,
+        "derselbe Ort in anderer Schreibweise"
+    );
+    assert_eq!(
+        ortswechsel(Some(Path::new("/Users/probe/krkhome/")), &vorgabe, zuhause),
+        None,
+        "ein Schlussstrich ist dieselbe Schreibweise"
+    );
+    assert_eq!(
+        ortswechsel(Some(Path::new("/Users/probe/krkhome")), &geltend, zuhause),
+        Some(wechselsatz("~/Dropbox/Notizen", "~/krkhome"))
+    );
+    assert_eq!(
+        ortswechsel(
+            Some(Path::new("/Users/probe/krkhome")),
+            &Err(Ortsfehler::Leer),
+            zuhause
+        ),
+        None,
+        "ein ungueltiger geltender Ort ist kein Wechsel"
+    );
+    let satz = wechselsatz("~/Dropbox/Notizen", "~/krkhome");
+    for teil in [
+        "~/Dropbox/Notizen",
+        "~/krkhome",
+        "bleibt alles liegen",
+        "F2",
+    ] {
+        assert!(satz.contains(teil), "{satz}");
+    }
+}
+
+/// H2.3 und H2.10: die Startzeile ueber jede Variante von `Ortsfehler` und
+/// ueber einen gueltigen Ort.
+#[test]
+fn startzeile_nennt_den_fehler_des_werts_und_schweigt_zum_schaden_der_datei() {
+    let zuhause = Some(Path::new(ZUHAUSE));
+    let gemerkt = Some(Path::new("/Users/probe/krkhome"));
+    for fehler in [
+        Ortsfehler::KeinBenutzerverzeichnis,
+        Ortsfehler::Leer,
+        Ortsfehler::NichtAbsolut("x".to_owned()),
+        Ortsfehler::FremdesBenutzerverzeichnis("~kai".to_owned()),
+        Ortsfehler::KeinText("5".to_owned()),
+        Ortsfehler::ImAblageordner("~/Library/Application Support/KRK".to_owned()),
+    ] {
+        assert_eq!(
+            startzeile(&Err(fehler.clone()), gemerkt, zuhause),
+            Some(fehler.meldung()),
+            "{fehler:?}"
+        );
+    }
+    for fehler in [
+        Ortsfehler::EinstellungenBeschaedigt("ist beschädigt".to_owned()),
+        Ortsfehler::EinstellungenUngelesen("Sperre".to_owned()),
+    ] {
+        assert_eq!(
+            startzeile(&Err(fehler.clone()), gemerkt, zuhause),
+            None,
+            "{fehler:?}: den Grund nennt schon der Lader"
+        );
+    }
+    let vorgabe: Notizort = Ok(Heimordner::im_benutzerverzeichnis(Path::new(ZUHAUSE)));
+    assert_eq!(startzeile(&vorgabe, gemerkt, zuhause), None);
+    assert_eq!(startzeile(&vorgabe, None, zuhause), None);
+    assert!(
+        startzeile(&vorgabe, Some(Path::new("/Volumes/X")), zuhause)
+            .is_some_and(|zeile| zeile.contains("/Volumes/X"))
+    );
+}
+
+/// Die zwei Fehler zur ungelesenen Datei nennen den Weg hinaus und dass F2
+/// nichts anlegt.
+#[test]
+fn die_meldungen_zur_ungelesenen_datei_nennen_den_weg() {
+    let beschaedigt = Ortsfehler::EinstellungenBeschaedigt("ist beschädigt".to_owned()).meldung();
+    for teil in [
+        "settings.toml ist beschädigt",
+        "kein Notizordner",
+        "F2 legt nichts an",
+        "berichtigen und KRK neu starten",
+    ] {
+        assert!(beschaedigt.contains(teil), "{beschaedigt}");
+    }
+    let ungelesen = Ortsfehler::EinstellungenUngelesen("Sperre belegt".to_owned()).meldung();
+    for teil in ["Sperre belegt", "F2 legt nichts an", "KRK neu starten"] {
+        assert!(ungelesen.contains(teil), "{ungelesen}");
+    }
+}
+
+/// Die Sitzung merkt den geltenden Ort; gilt keiner, bleibt der gemerkte.
+#[test]
+fn zu_merken_behaelt_den_alten_ort_wenn_keiner_gilt() {
+    let gemerkt = Path::new("/Users/probe/krkhome");
+    let geltend: Notizort = Ok(Heimordner::am_ort(PathBuf::from("/Volumes/X"), None));
+    assert_eq!(
+        zu_merken(&geltend, Some(gemerkt)),
+        Some(PathBuf::from("/Volumes/X"))
+    );
+    assert_eq!(
+        zu_merken(&Err(Ortsfehler::Leer), Some(gemerkt)),
+        Some(gemerkt.to_path_buf())
+    );
+    assert_eq!(zu_merken(&Err(Ortsfehler::Leer), None), None);
+}
+
+/// Gilt kein Ort, gelten die Schutzregeln am zuletzt geltenden Ort, ohne
+/// einen gemerkten am Vorgabeort. Eine `secrets.txt` dort bleibt die
+/// Geheimnisdatei; F2 sieht diesen Ordner nicht (Probe in `heimgriff.rs`).
+#[test]
+fn der_schutzort_ist_der_gemerkte_sonst_der_vorgabeort() {
+    let zuhause = Path::new(ZUHAUSE);
+    let vorgabe = schutzort(None, Some(zuhause)).expect("mit Benutzerverzeichnis");
+    assert!(vorgabe.ist_vorgabeort());
+    assert_eq!(
+        vorgabe.sonderdatei(&zuhause.join(ORDNERNAME).join("secrets.txt")),
+        Some(Sonderdatei::Geheimnisse)
+    );
+    let gemerkt =
+        schutzort(Some(Path::new("/Volumes/X/notizen")), Some(zuhause)).expect("ein gemerkter Ort");
+    assert_eq!(gemerkt.geschrieben(), Path::new("/Volumes/X/notizen"));
+    let von_hand = schutzort(Some(Path::new("~/Dropbox/Notizen")), Some(zuhause))
+        .expect("ein gemerkter Ort in der Form ~/");
+    assert_eq!(
+        von_hand.geschrieben(),
+        Path::new("/Users/probe/Dropbox/Notizen")
+    );
+    assert_eq!(schutzort(None, None), None);
 }
 
 // ---------------------------------------------------------------------------

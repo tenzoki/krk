@@ -171,6 +171,7 @@ fn beispielsitzung() -> Sitzung {
         aktiv: Fensterseite::Rechts,
         editor: Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md")),
         gitanteil: Some(0.375),
+        notizordner: Some(PathBuf::from("/Users/pruefung/Notizen")),
         breiten: Breiten {
             lesezeichen: Some(180.0),
             links: Some(520.5),
@@ -2036,10 +2037,7 @@ fn eine_settings_toml_mit_notizordner_liefert_dessen_wert() {
     let geladen = geladene_einstellungen(&ablage);
 
     assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
-    assert_eq!(
-        geladen.wert.notizordner,
-        Some(Ortswert::Text("~/x".to_owned()))
-    );
+    assert_eq!(geladen.wert.notizordner, Ortswert::Text("~/x".to_owned()));
     assert_eq!(geladen.wert.terminal, "com.mitchellh.ghostty");
     assert_eq!(
         fs::read_to_string(&pfad).expect("lesen gescheitert"),
@@ -2066,10 +2064,7 @@ fn ein_notizordner_ohne_text_beschaedigt_settings_toml_nicht() {
         "ein Wert ohne Text ist kein Dateischaden: {:?}",
         geladen.ersetzung
     );
-    assert_eq!(
-        geladen.wert.notizordner,
-        Some(Ortswert::KeinText("5".to_owned()))
-    );
+    assert_eq!(geladen.wert.notizordner, Ortswert::KeinText("5".to_owned()));
     assert_eq!(geladen.wert.terminal, "com.mitchellh.ghostty");
     assert_eq!(
         fs::read_to_string(&pfad).expect("lesen gescheitert"),
@@ -2080,12 +2075,9 @@ fn ein_notizordner_ohne_text_beschaedigt_settings_toml_nicht() {
 
 /// H2.1 und H2.2: die Auslieferungsfassung fuehrt den Notizordner am
 /// Vorgabeort, und eine Nutzerdatei ohne den Schluessel bekommt diesen Wert.
-///
-/// **Rot bis Schritt 2.3** des Plans, der den Schluessel in
-/// `resources/default-settings.toml` eintraegt.
 #[test]
 fn die_auslieferungsfassung_fuehrt_den_notizordner_am_vorgabeort() {
-    let vorgabe = Some(Ortswert::Text(format!("~/{ORDNERNAME}")));
+    let vorgabe = Ortswert::Text(format!("~/{ORDNERNAME}"));
     assert_eq!(Einstellungen::auslieferung().notizordner, vorgabe);
 
     let (_ordner, ablage) = ablage("einstellungen-notizordner-vorgabe");
@@ -3673,6 +3665,7 @@ fn jede_geschriebene_session_toml_traegt_einen_obersten_schluessel() {
         aktiv: Fensterseite::Links,
         editor: None,
         gitanteil: None,
+        notizordner: None,
         breiten: Breiten::default(),
         sichtbar: Sichtbarkeit {
             lesezeichen: false,
@@ -3796,6 +3789,32 @@ aktiver_tab = 0
     assert_eq!(geladen.wert.aktiv, Fensterseite::Rechts);
 }
 
+/// H2.10: `session.toml` merkt den zuletzt geltenden Notizordner als Text,
+/// vor den Tabellen, und liest ihn zurueck; die Datei ohne ihn haelt die Probe
+/// darunter (`notizordner` ist dort `None`).
+#[test]
+fn eine_session_toml_merkt_den_notizordner() {
+    let (_ordner, ablage) = ablage("sitzung-notizordner");
+    let sitzung = Sitzung {
+        notizordner: Some(PathBuf::from("/Volumes/X/notizen")),
+        ..Sitzung::default()
+    };
+    let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
+    let zeile = "notizordner = \"/Volumes/X/notizen\"";
+    let stelle = text
+        .find(zeile)
+        .unwrap_or_else(|| panic!("die Sitzung nennt den Ort nicht: {text}"));
+    assert!(
+        stelle < text.find("[breiten]").expect("die Tabelle breiten"),
+        "der Ort steht hinter einer Tabelle: {text}"
+    );
+    fs::write(ablage.pfad(Datei::Sitzung), &text).expect("schreiben gescheitert");
+
+    let geladen: Geladen<Sitzung> = geladen(&ablage, Datei::Sitzung);
+    assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
+    assert_eq!(geladen.wert, sitzung);
+}
+
 /// Eine `session.toml` mit dem gefallenen Feld `zettel` laedt und behaelt jede
 /// andere Angabe.
 ///
@@ -3876,6 +3895,8 @@ ordner = \"/Volumes/Sicherung\"
         Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md"))
     );
     assert_eq!(sitzung.gitanteil, Some(0.375));
+    // Eine Sitzung aus der Zeit vor dem einstellbaren Ort merkt keinen.
+    assert_eq!(sitzung.notizordner, None);
     assert_eq!(sitzung.breiten.lesezeichen, Some(180.0));
     assert_eq!(sitzung.breiten.links, Some(520.5));
     assert_eq!(sitzung.breiten.editor, Some(480.0));

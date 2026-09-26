@@ -1198,6 +1198,38 @@ mod tests {
         );
     }
 
+    /// H2.12: am eingestellten Ort kommt `notes.txt` gerendert, am alten
+    /// Vorgabeort wie jede andere Textdatei. `secrets.txt` am eingestellten Ort
+    /// bekommt den Hinweis statt ihres Inhalts, am alten nicht mehr.
+    #[test]
+    fn die_regeln_gelten_am_eingestellten_ort_und_am_alten_nicht() {
+        let ordner = Pruefordner::neu("eintraege-anderswo");
+        let (_, alt, _) = pruef_krkhome(&ordner);
+        let anderswo = ordner.ordner("anderswo");
+        std::fs::write(anderswo.join("notes.txt"), "## Einkauf\nBrot\n").expect("notes.txt");
+        std::fs::write(anderswo.join("secrets.txt"), "klar\n").expect("secrets.txt");
+        std::fs::write(alt.join("secrets.txt"), "klar\n").expect("secrets.txt");
+        let heim = Heimordner::am_ort(anderswo.clone(), None);
+
+        let lies = |pfad: &Path| laden(pfad, Tafel::Hell, &Profile::default(), Some(&heim));
+        assert_eq!(
+            gerenderter_text(lies(&anderswo.join("notes.txt"))),
+            "Einkauf\n\nBrot"
+        );
+        assert_eq!(
+            lies(&alt.join("notes.txt")),
+            Inhalt::Text("## Einkauf\nBrot\n".to_owned())
+        );
+        assert_eq!(
+            lies(&anderswo.join("secrets.txt")),
+            Inhalt::Hinweis(GEHEIMNISHINWEIS.to_owned())
+        );
+        assert_eq!(
+            lies(&alt.join("secrets.txt")),
+            Inhalt::Text("klar\n".to_owned())
+        );
+    }
+
     /// C4.2: eine `.md` mit `- [ ]` an einem anderen Ort bekommt keine
     /// Kaestchen, auch mit Heimordner, und eine `.md` im Heimordner ebenso
     /// nicht.

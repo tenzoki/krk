@@ -1018,7 +1018,7 @@ pub struct Editormodell {
     /// Wie der Stand auf die Platte geht: im Klartext oder verschluesselt
     /// (C7). Gesetzt allein zusammen mit dem Stand; siehe [`Schutz`].
     schutz: Schutz,
-    /// Der geteilte Wert der Erkennung von `~/krkhome/`, aus dem
+    /// Der geteilte Wert der Erkennung des Notizordners, aus dem
     /// [`Self::typ`] beim Uebernehmen einer gelesenen Datei entsteht.
     ///
     /// Ein Griff und keine Abschrift, damit ein F2, das die aufgeloeste Form
@@ -2138,7 +2138,7 @@ mod tests {
     }
 
     fn geoeffnet(pfad: &Path) -> Editormodell {
-        let mut modell = Editormodell::neu(Heimgriff::default());
+        let mut modell = Editormodell::neu(crate::heimgriff::ungelesen());
         assert_eq!(
             modell.oeffnen(pfad, None),
             None,
@@ -2150,7 +2150,7 @@ mod tests {
 
     #[test]
     fn ein_neuer_editor_haelt_nichts() {
-        let modell = Editormodell::neu(Heimgriff::default());
+        let modell = Editormodell::neu(crate::heimgriff::ungelesen());
         assert!(!modell.haelt_datei());
         assert_eq!(modell.pfad(), None);
         assert_eq!(modell.stand(), "");
@@ -2228,7 +2228,7 @@ mod tests {
         let erste = ordner.datei("erste.txt", "Inhalt der ersten Datei\n");
         let zweite = ordner.datei("zweite.txt", "Inhalt der zweiten Datei\n");
 
-        let mut modell = Editormodell::neu(Heimgriff::default());
+        let mut modell = Editormodell::neu(crate::heimgriff::ungelesen());
         assert_eq!(modell.oeffnen(&erste, None), None);
         assert_eq!(modell.oeffnen(&zweite, None), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
@@ -2771,7 +2771,7 @@ mod tests {
 
     #[test]
     fn ein_editor_ohne_datei_hat_nichts_zu_sichern() {
-        let mut modell = Editormodell::neu(Heimgriff::default());
+        let mut modell = Editormodell::neu(crate::heimgriff::ungelesen());
         assert_eq!(modell.sichern(), Sicherungsausgang::NichtsGehalten);
     }
 
@@ -3180,7 +3180,7 @@ mod tests {
     fn der_editor_liest_den_dateityp_aus_dem_geteilten_griff() {
         let ordner = Pruefordner::neu("editor-eintraege");
         let (heim, geschrieben, _) = pruef_krkhome(&ordner);
-        let griff = Heimgriff::default();
+        let griff = crate::heimgriff::ungelesen();
         let mut modell = Editormodell::neu(std::rc::Rc::clone(&griff));
         let notizen = geschrieben.join("notes.txt");
 
@@ -3192,7 +3192,7 @@ mod tests {
             "noch kein Heimordner im Griff"
         );
 
-        heimgriff::ersetzen(&griff, heim);
+        heimgriff::ersetzen(&griff, crate::heimgriff::Notizlage::gilt(heim));
         let aufgaben = geschrieben.join("tasks.txt");
         assert_eq!(modell.oeffnen(&aufgaben, None), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
@@ -3281,7 +3281,7 @@ mod tests {
     /// Ohne gehaltene Datei gibt es keine fremde Aenderung.
     #[test]
     fn ein_editor_ohne_datei_meldet_keine_fremde_aenderung() {
-        let mut modell = Editormodell::neu(Heimgriff::default());
+        let mut modell = Editormodell::neu(crate::heimgriff::ungelesen());
         assert_eq!(modell.fremdaenderung_melden(), None);
     }
 
@@ -3314,8 +3314,8 @@ mod tests {
     /// `secrets.txt` in der geschriebenen Form.
     fn geheimnis_modell(ordner: &Pruefordner) -> (Editormodell, PathBuf, PathBuf) {
         let (heim, geschrieben, ziel) = pruef_krkhome(ordner);
-        let griff = Heimgriff::default();
-        heimgriff::ersetzen(&griff, heim);
+        let griff = crate::heimgriff::ungelesen();
+        heimgriff::ersetzen(&griff, crate::heimgriff::Notizlage::gilt(heim));
         (
             Editormodell::neu(griff),
             geschrieben.join("secrets.txt"),
@@ -3666,21 +3666,21 @@ mod tests {
         std::fs::write(&pfad, b"").expect("leere Datei");
 
         // Beim Lesen noch nicht erkannt, beim Aufnehmen schon.
-        let griff = Heimgriff::default();
+        let griff = crate::heimgriff::ungelesen();
         let mut modell = Editormodell::neu(std::rc::Rc::clone(&griff));
         assert_eq!(modell.oeffnen(&pfad, None), None);
-        heimgriff::ersetzen(&griff, heim.clone());
+        heimgriff::ersetzen(&griff, crate::heimgriff::Notizlage::gilt(heim.clone()));
         let satz = meldung_von(&abwarten(&mut modell));
         assert!(satz.contains("öffnet sich allein mit der PIN"), "{satz}");
         assert!(!modell.haelt_datei());
 
         // Beim Lesen und Aufnehmen nicht erkannt, beim Sichern schon.
-        let griff = Heimgriff::default();
+        let griff = crate::heimgriff::ungelesen();
         let mut modell = Editormodell::neu(std::rc::Rc::clone(&griff));
         assert_eq!(modell.oeffnen(&pfad, None), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
         let _ = modell.bearbeiten(format!("{GEHEIM}\n"));
-        heimgriff::ersetzen(&griff, heim);
+        heimgriff::ersetzen(&griff, crate::heimgriff::Notizlage::gilt(heim));
         let Sicherungsausgang::Gescheitert(satz) = modell.sichern() else {
             panic!("der Klartext wurde geschrieben");
         };
@@ -3710,8 +3710,8 @@ mod tests {
             "der Pfadtext erkennt sie nicht"
         );
 
-        let griff = Heimgriff::default();
-        heimgriff::ersetzen(&griff, heim.clone());
+        let griff = crate::heimgriff::ungelesen();
+        heimgriff::ersetzen(&griff, crate::heimgriff::Notizlage::gilt(heim.clone()));
         let mut modell = Editormodell::neu(std::rc::Rc::clone(&griff));
 
         // Ohne PIN: sofort abgewiesen, kein Faden.
@@ -3740,20 +3740,20 @@ mod tests {
 
         // Am Oeffnen vorbei: der Heimordner wird erst nach dem Start bekannt.
         std::fs::write(&dritte, b"").expect("wieder leer");
-        let spaet = Heimgriff::default();
+        let spaet = crate::heimgriff::ungelesen();
         let mut modell = Editormodell::neu(std::rc::Rc::clone(&spaet));
         assert_eq!(modell.oeffnen(&dritte, None), None);
-        heimgriff::ersetzen(&spaet, heim.clone());
+        heimgriff::ersetzen(&spaet, crate::heimgriff::Notizlage::gilt(heim.clone()));
         let satz = meldung_von(&abwarten(&mut modell));
         assert!(satz.contains("öffnet sich allein mit der PIN"), "{satz}");
         assert!(!modell.haelt_datei());
 
-        let spaeter = Heimgriff::default();
+        let spaeter = crate::heimgriff::ungelesen();
         let mut modell = Editormodell::neu(std::rc::Rc::clone(&spaeter));
         assert_eq!(modell.oeffnen(&dritte, None), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
         let _ = modell.bearbeiten(format!("{GEHEIM}\n"));
-        heimgriff::ersetzen(&spaeter, heim);
+        heimgriff::ersetzen(&spaeter, crate::heimgriff::Notizlage::gilt(heim));
         let Sicherungsausgang::Gescheitert(satz) = modell.sichern() else {
             panic!("der Klartext wurde geschrieben");
         };

@@ -236,7 +236,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
    - Closes (am Baum): H2.1 (die Neuerungsmeldung nennt den Schlüssel für eine Nutzerdatei ohne ihn über die bestehende Vergleichsform `ObersteSchluessel`, gehalten von der Probe aus 2.2).
    - Dependencies: 2.2
 
-7. **2.4 Der Start liefert den Ort auf jedem Ausgang, merkt ihn und meldet einen Wechsel; F2 folgt ihm**
+7. [DONE] **2.4 Der Start liefert den Ort auf jedem Ausgang, merkt ihn und meldet einen Wechsel; F2 folgt ihm**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/ablage/einstellungen.rs`, `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-core/src/heimordner/ort.rs`, `crates/krk-core/tests/{ablage.rs,heimordner.rs}`, `crates/krk-ui/src/heimgriff.rs`, `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/{tabs.rs,vorschaumodell.rs,editormodell.rs,main.rs}` sowie `appkit/{vorschau.rs,editor.rs}` (allein wo Prüfmodule `Heimgriff::default()` bauen oder Prosa den Griff beschreibt)
    - Changes:
@@ -260,8 +260,9 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
    - Acceptance: `make check` grün.
    - Closes (am Baum): H2.2, H2.3, H2.4 (am Start), H2.9, H2.10, H2.11 (F2 und Start), H2.12.
    - Dependencies: 2.3; der Datensatz `260926-1506_*_welcher-notizordner-…` bestimmt den einen markierten Zweig, hält den Schritt aber nicht an.
+   - Abweichung beim Bau: der Griff hält nicht `Notizort`, sondern `heimgriff::Notizlage` (den `Notizort` und, allein für einen Fehler, einen Schutzort). Gilt kein Ort, liefert `heimgriff::lesen` den zuletzt geltenden Ort aus `session.toml`, ohne einen gemerkten den Vorgabeort (`heimordner::ort::schutzort`); `heimgriff::lage` für F2 liefert allein den Fehler. Grund: ohne Ort fragten Vorschau, Editor, Inhaltsfilter, Sitzung und Tastenprotokoll keinen Heimordner mehr, und eine leere `secrets.txt` am bisherigen Ort ginge über den Klartextweg. Preis: die Regeln für `notes.txt` und `tasks.txt` gelten dort ebenfalls weiter. Dazu `ort::zu_merken` und `ort::wechselsatz` als eigene Funktionen.
 
-8. **2.5 Anleitung und README für Stufe 2**
+8. [DONE] **2.5 Anleitung und README für Stufe 2**
    - Executor: `code-implementer`
    - Files: `HowTo.md`, `README.md`, `CLAUDE.md` (allein Aussagen, die Stufe 2 falsch gemacht hat)
    - Changes: `HowTo.md`: die Tabelle der Ablagedateien nennt für `settings.toml` auch den Notizordner; der Abschnitt zu F2 spricht vom Notizordner „ab Werk `~/krkhome/`“ und beschreibt den Schlüssel, die zulässigen Formen, dass ein Wechsel nichts verschiebt und von Hand ab dem nächsten Start gilt, dass ein unzulässiger Wert und eine beschädigte oder unlesbare `settings.toml` keinen Ort ergeben und was dann zu tun ist (in der Fassung, die der Datensatz zur beschädigten Datei festlegt), dass die Zettel nur am Vorgabeort übernommen werden und dass eine ältere KRK-Fassung die Datei mit dem neuen Schlüssel als beschädigt abweist; der Abschnitt zum symbolischen Verweis bleibt als zweiter Weg stehen und sagt, dass er allein für den Vorgabeort nötig ist. `README.md` nennt `secrets.txt` im eingestellten Notizordner statt fest unter `~/krkhome/`. `CLAUDE.md`: `grep -n 'krkhome\|settings.toml' CLAUDE.md`, und nur eine Aussage, die jetzt falsch ist, zieht nach.

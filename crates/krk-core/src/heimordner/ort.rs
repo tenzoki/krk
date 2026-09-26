@@ -10,7 +10,11 @@
 //!
 //! # Ohne Systemaufruf
 //!
-//! **Keine Funktion dieses Moduls fragt das Dateisystem.** Geprueft wird der
+//! **[`ort_lesen`], [`schreibform`], [`ortswechsel`] und [`startzeile`] fragen
+//! das Dateisystem nicht.** [`notizort`] und [`schutzort`] bauen am Ende einen
+//! [`Heimordner`] ueber [`Heimordner::am_ort`], und der stellt fuer einen Ort
+//! unmittelbar im Benutzerverzeichnis zwei Aufrufe an dessen Eintrag, nie am
+//! Ziel eines Verweises; fuer jeden anderen Ort keinen. Geprueft wird der
 //! Text: `~/` wird gegen das hereingereichte Benutzerverzeichnis gesetzt, und
 //! danach wird der Pfad **lexikalisch** bereinigt, also ohne nachzusehen, ob
 //! unterwegs ein Verweis steht. Das ist der Preis dafuer, dass der Start einen
@@ -38,6 +42,8 @@
 use std::path::{Component, Path, PathBuf};
 
 use super::{Heimordner, ORDNERNAME, lexikalisch_bereinigt};
+use crate::ablage::einstellungen::Ortswert;
+use crate::ablage::{Grund, pfade};
 
 /// Der Notizordner, der gilt, oder der Grund, warum keiner gilt.
 ///
@@ -72,6 +78,17 @@ pub enum Ortsfehler {
     /// Der Ort liegt im Ablageordner von KRK oder darunter. Der Wert, wie er
     /// dasteht.
     ImAblageordner(String),
+    /// `settings.toml` war da und liess sich nicht lesen oder nicht deuten
+    /// ([`Grund::Beschaedigt`], [`Grund::NichtLesbar`]). Traegt den Satzteil
+    /// des Grunds, etwa „ist beschädigt“.
+    ///
+    /// Die Einzelheit nennt die Startmeldung des Laders schon; dieser Fehler
+    /// nennt den Weg hinaus.
+    EinstellungenBeschaedigt(String),
+    /// Der Start ist nicht bis zum Lesen von `settings.toml` gekommen, weil
+    /// sich der Ablageordner nicht oeffnen oder seine Schreibsperre nicht
+    /// nehmen liess. Traegt die Ursache.
+    EinstellungenUngelesen(String),
 }
 
 impl Ortsfehler {
@@ -96,6 +113,12 @@ impl Ortsfehler {
             ),
             Ortsfehler::ImAblageordner(wert) => format!(
                 "Der Notizordner „{wert}“ liegt im Ablageordner von KRK; ein Werkzeug, das KRK entfernt, nähme ihn mit, also gilt er nicht"
+            ),
+            Ortsfehler::EinstellungenBeschaedigt(satzteil) => format!(
+                "settings.toml {satzteil}, also gilt kein Notizordner, und F2 legt nichts an: settings.toml berichtigen und KRK neu starten"
+            ),
+            Ortsfehler::EinstellungenUngelesen(ursache) => format!(
+                "KRK konnte settings.toml beim Start nicht lesen ({ursache}), also gilt kein Notizordner, und F2 legt nichts an: KRK neu starten"
             ),
         }
     }
@@ -160,6 +183,173 @@ pub fn schreibform(ort: &Path, benutzerverzeichnis: Option<&Path>) -> Option<Str
         return rest.to_str().map(|rest| format!("~/{rest}"));
     }
     ort.to_str().map(str::to_owned)
+}
+
+/// Der Notizordner, der nach dem Lesen von `settings.toml` gilt, oder der
+/// Grund, warum keiner gilt.
+///
+/// `wert` ist [`crate::ablage::Einstellungen::notizordner`], `schaden` der
+/// Grund, aus dem der Lader die Datei ersetzt hat, falls er es getan hat.
+/// **Vollstaendig ueber `schaden`**, ohne Auffangzweig:
+///
+/// - kein Schaden: der Wert der Datei, geprueft von [`ort_lesen`];
+/// - [`Grund::NichtAnlegbar`]: die Datei fehlte, also hat niemand einen Ort
+///   eingestellt, und `wert` ist der Auslieferungswert, der Vorgabeort;
+/// - [`Grund::Beschaedigt`] und [`Grund::NichtLesbar`]: **kein Ort**, siehe
+///   den Zweig.
+///
+/// Gebaut wird der Wert ueber [`Heimordner::am_ort`]; der Modulkopf sagt, was
+/// das am Dateisystem kostet.
+#[must_use = "der Notizort ist die ganze Wirkung; er gehoert in den Griff"]
+pub fn notizort(
+    wert: &Ortswert,
+    schaden: Option<&Grund>,
+    benutzerverzeichnis: Option<&Path>,
+    ablageordner: Option<&Path>,
+) -> Notizort {
+    match schaden {
+        None | Some(Grund::NichtAnlegbar(_)) => {}
+        // OFFENE NUTZERFRAGE: dieser eine Zweig haengt an der Antwort auf
+        // `260926-1506_*_welcher-notizordner-gilt-wenn-settings-toml-beim-start-beschaedigt-ist.md`.
+        // Gebaut ist die empfohlene Moeglichkeit 1 in der Schaerfung der
+        // Zweitlesung: bei einer beschaedigten oder unlesbaren Datei weiss KRK
+        // nicht, ob der Nutzer einen anderen Ort eingestellt hat, und ein
+        // Ersatzort legte bei F2 Dateien dort an, wo er nicht mehr notiert.
+        // Eine andere Antwort aendert allein diesen Zweig, seine Probe in
+        // `tests/heimordner.rs` und den Satz in `HowTo.md`.
+        Some(grund @ (Grund::Beschaedigt(_) | Grund::NichtLesbar(_))) => {
+            return Err(Ortsfehler::EinstellungenBeschaedigt(
+                grund.beschreibung().to_owned(),
+            ));
+        }
+    }
+    let text = match wert {
+        Ortswert::Text(text) => text,
+        Ortswert::KeinText(schreibweise) => {
+            return Err(Ortsfehler::KeinText(schreibweise.clone()));
+        }
+    };
+    let ort = ort_lesen(text, benutzerverzeichnis, ablageordner)?;
+    Ok(Heimordner::am_ort(ort, benutzerverzeichnis))
+}
+
+/// Der gemerkte Ort als bereinigter Pfad.
+///
+/// `session.toml` traegt den geschriebenen, absoluten Pfad; eine von Hand
+/// geschriebene Form `~/…` wird wie in `settings.toml` gelesen, damit
+/// `~/krkhome` und `/<zuhause>/krkhome` derselbe Ort sind. Was [`ort_lesen`]
+/// abweist, gilt lexikalisch bereinigt, wie es dasteht: der gemerkte Ort ist
+/// eine Erinnerung und wird nicht geprueft.
+fn gemerkt_gelesen(gemerkt: &Path, benutzerverzeichnis: Option<&Path>) -> PathBuf {
+    gemerkt
+        .to_str()
+        .and_then(|text| ort_lesen(text, benutzerverzeichnis, None).ok())
+        .unwrap_or_else(|| lexikalisch_bereinigt(gemerkt))
+}
+
+/// Der Satz ueber einen Ortswechsel: welcher Ort jetzt gilt, dass am alten
+/// alles liegen bleibt und F2 zum neuen fuehrt.
+///
+/// Beide Orte in der Anzeigeform. Stufe 3 („Ort waehlen…“) nimmt denselben
+/// Satz.
+#[must_use]
+pub fn wechselsatz(neu: &str, alt: &str) -> String {
+    format!(
+        "Der Notizordner ist jetzt „{neu}“; am alten Ort „{alt}“ bleibt alles liegen, und F2 führt zum neuen"
+    )
+}
+
+/// Der Wechselsatz, wenn der geltende Ort ein anderer ist als der gemerkte,
+/// sonst `None`.
+///
+/// Kein gemerkter Ort, derselbe Ort (auch in anderer Schreibweise) und ein
+/// ungueltiger geltender Ort ergeben keinen Satz: im letzten Fall gilt gar
+/// kein Ort, und dessen Grund meldet [`startzeile`] oder der Lader.
+/// Verglichen wird als Text, **ohne Systemaufruf**; am alten Ort wird nicht
+/// nachgesehen, ob dort etwas liegt.
+#[must_use]
+pub fn ortswechsel(
+    gemerkt: Option<&Path>,
+    geltend: &Notizort,
+    benutzerverzeichnis: Option<&Path>,
+) -> Option<String> {
+    let gemerkt = gemerkt?;
+    let neu = geltend.as_ref().ok()?;
+    let alt = gemerkt_gelesen(gemerkt, benutzerverzeichnis);
+    if alt == neu.geschrieben() {
+        return None;
+    }
+    let alt = pfade::gekuerzt_fuer_anzeige(&alt, benutzerverzeichnis);
+    Some(wechselsatz(neu.anzeigename(), &alt))
+}
+
+/// Hoechstens eine Startmeldung zum Notizordner.
+///
+/// **Vollstaendig ueber den Fehler**, ohne Auffangzweig:
+///
+/// - ein gueltiger Ort: der Wechselsatz aus [`ortswechsel`], oder nichts;
+/// - [`Ortsfehler::EinstellungenBeschaedigt`] und
+///   [`Ortsfehler::EinstellungenUngelesen`]: nichts, weil der Lader
+///   beziehungsweise der fruehe Ausgang des Starts die Ursache schon in die
+///   Statuszeile stellt und F2 sie wiederholt;
+/// - jeder andere Fehler: seine Meldung, die den Wert nennt.
+#[must_use]
+pub fn startzeile(
+    geltend: &Notizort,
+    gemerkt: Option<&Path>,
+    benutzerverzeichnis: Option<&Path>,
+) -> Option<String> {
+    let fehler = match geltend {
+        Ok(_) => return ortswechsel(gemerkt, geltend, benutzerverzeichnis),
+        Err(fehler) => fehler,
+    };
+    match fehler {
+        Ortsfehler::EinstellungenBeschaedigt(_) | Ortsfehler::EinstellungenUngelesen(_) => None,
+        Ortsfehler::KeinBenutzerverzeichnis
+        | Ortsfehler::Leer
+        | Ortsfehler::NichtAbsolut(_)
+        | Ortsfehler::FremdesBenutzerverzeichnis(_)
+        | Ortsfehler::KeinText(_)
+        | Ortsfehler::ImAblageordner(_) => Some(fehler.meldung()),
+    }
+}
+
+/// Der Pfad, den die Sitzung als zuletzt geltenden Ort merkt.
+///
+/// Der geschriebene Pfad eines gueltigen Orts; gilt keiner, bleibt der bisher
+/// gemerkte stehen, damit nach dem Berichtigen keine Wechselmeldung kommt, wenn
+/// der Ort derselbe geblieben ist.
+#[must_use]
+pub fn zu_merken(geltend: &Notizort, gemerkt: Option<&Path>) -> Option<PathBuf> {
+    match geltend {
+        Ok(heim) => Some(heim.geschrieben().to_path_buf()),
+        Err(_) => gemerkt.map(Path::to_path_buf),
+    }
+}
+
+/// Der Ordner, dessen Schutzregeln weiter gelten, wenn **kein** Notizordner
+/// gilt: der zuletzt geltende aus der Sitzung, ohne einen gemerkten der
+/// Vorgabeort.
+///
+/// **Eine Entscheidung zur sicheren Seite**, getroffen beim Bau von Schritt
+/// 2.4 des Plans `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`.
+/// Ohne Ort fragten Vorschau, Editor, Inhaltsfilter, Sitzung und
+/// Tastenprotokoll keinen Heimordner mehr, und eine `secrets.txt` am Ort, der
+/// bis gestern galt, verloere still jede Regel: eine leere ginge im Editor
+/// ueber den Klartextweg, und der Inhaltsfilter laese sie. **F2 und „Ort
+/// waehlen…“ sehen diesen Ordner nicht**; sie lesen den Fehler und legen
+/// nichts an. Der Preis: die Regeln fuer `notes.txt` und `tasks.txt` gelten
+/// an diesem Ordner ebenfalls weiter, denn die Erkennung trennt sie nicht von
+/// denen fuer `secrets.txt`.
+#[must_use]
+pub fn schutzort(gemerkt: Option<&Path>, benutzerverzeichnis: Option<&Path>) -> Option<Heimordner> {
+    match gemerkt {
+        Some(gemerkt) => Some(Heimordner::am_ort(
+            gemerkt_gelesen(gemerkt, benutzerverzeichnis),
+            benutzerverzeichnis,
+        )),
+        None => benutzerverzeichnis.map(Heimordner::im_benutzerverzeichnis),
+    }
 }
 
 /// Ob `ort` der Ordner `ordner` ist oder darunter liegt, Bestandteil fuer

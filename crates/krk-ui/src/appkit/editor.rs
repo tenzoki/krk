@@ -1927,7 +1927,7 @@ pub struct EditorIvars {
     /// [`Editorbereich::zurueckgehaltenes_uebernehmen`] kehrt ohne
     /// zurueckgehaltene Datei um.
     herkunft: Cell<Oeffnungsherkunft>,
-    /// Der geteilte Griff der Erkennung von `~/krkhome/`, derselbe, den das
+    /// Der geteilte Griff der Erkennung des Notizordners, derselbe, den das
     /// Modell haelt.
     ///
     /// [`Editorbereich::datei_oeffnen`] fragt ihn, bevor es einen Ladeauftrag
@@ -4968,7 +4968,7 @@ mod tests {
         let mut flaeche = String::from("erste\r\nzweite\r\ndritte");
         let schreibmarke = koordinaten::in_utf16(&flaeche, &[13])[0];
 
-        let mut modell = Editormodell::neu(Heimgriff::default());
+        let mut modell = Editormodell::neu(crate::heimgriff::ungelesen());
         assert!(
             modell.bearbeiten(flaeche.clone()),
             "das Modell verlangt, die Flaeche nachzuziehen"
