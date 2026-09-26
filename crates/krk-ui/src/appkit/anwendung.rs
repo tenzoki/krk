@@ -1581,7 +1581,7 @@ impl Anwendungsdelegierter {
         // Delegierter → Fenster → Rueckruf → Delegierter, und das Fenster lebt
         // ueber sein Schliessen hinaus.
         //
-        // **Zwei Empfaenger haengen daran, und der erste ist der neuere.**
+        // **Drei Empfaenger haengen daran, in dieser Reihenfolge.**
         // `aktives_dem_ersthelfer_nachziehen` setzt den Nutzerentscheid vom
         // 260819 um: liegt der Rang nach dem Wechsel in einem Dateifenster, ist
         // dieses das aktive. Es steht **vor** dem Nachzug der Anzeige, damit
@@ -1596,11 +1596,23 @@ impl Anwendungsdelegierter {
         // dass `aktives_setzen` die Anzeige mitnimmt, und liesse sie still
         // ausfallen, sobald jemand das aendert. Der eine Schreiber der Anzeige
         // laeuft auf diesem Ausloesepunkt immer.
+        //
+        // **Der dritte ist `Editorbereich::heute_nachziehen`** (Schritt 7 des
+        // Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`):
+        // er bestimmt den heutigen Tag der Termintabelle beim Wechsel in den
+        // Vordergrund neu und haengt deshalb hier und an keinem zweiten
+        // Beobachter. Er steht zuletzt, weil er allein die Zeilen der Tabelle
+        // angeht und keinen der beiden davor braucht; er ruft weder `anwenden`
+        // noch `setHidden:` noch `makeFirstResponder:` und ueberspringt eine
+        // laufende Zelle.
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         fenster.melder_setzen(Box::new(move || {
             if let Some(selbst) = schwach.load() {
                 selbst.aktives_dem_ersthelfer_nachziehen();
                 selbst.fokusanzeige_nachziehen();
+                if let Some(editor) = selbst.ivars().editor.get() {
+                    editor.heute_nachziehen();
+                }
             }
         }));
         // **Der Klick auf einen Schalter der Bereichsleiste geht denselben Weg

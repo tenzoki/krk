@@ -307,7 +307,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
    - Closes (am Baum): T3.1 bis T3.10 und T4.1 in der Oberflächenhälfte (Anzeige aufsteigend).
    - Dependencies: 1, 2, 4, 5
 
-7. **7 Der heutige Tag ist hervorgehoben**
+7. [DONE] **7 Der heutige Tag ist hervorgehoben**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/eintragsansicht.rs`, `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:

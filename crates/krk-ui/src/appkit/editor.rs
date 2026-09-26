@@ -2850,16 +2850,42 @@ impl Editorbereich {
                 Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse) => {
                     Zeilen::Notizen(eintragsansicht::notizzeilen(modell.stand()))
                 }
+                // Der heutige Tag ueber die eine Stelle im Kern, an der die Uhr
+                // fuer die Termine gelesen wird; allein fuer diese Datei.
                 Dateityp::Eintraege(Sonderdatei::Termine) => {
                     Zeilen::Termine(eintragsansicht::terminzeilen(
                         modell.stand(),
                         self.ivars().terminrichtung.get(),
+                        termine::heute(),
                     ))
                 }
                 Dateityp::Markdown | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),
             }
         };
         self.ivars().eintraege.zeilen_zeigen(zeilen);
+    }
+
+    /// Bestimmt den heutigen Tag der Termintabelle neu (T6, Schritt 7 des
+    /// Plans der Termine).
+    ///
+    /// **Der dritte Empfaenger am einen Melder des Hauptfensters**, hinter
+    /// `fokusanzeige_nachziehen` (Rumpf von `oberflaeche_aufbauen` beim
+    /// Anwendungsdelegierten): er laeuft bei jedem Wechsel des Ersthelfers und
+    /// jedem Wechsel in den Vorder- oder Hintergrund, und wer KRK ueber
+    /// Mitternacht offen laesst, sieht die Hervorhebung beim naechsten Wechsel
+    /// auf dem neuen Tag. Ein zweiter Beobachter entsteht nicht.
+    ///
+    /// **Er tut nichts, solange der Editor keine Termintabelle zeigt oder eine
+    /// Zelle laeuft**: das Neuladen verwuerfe eine offene Zelle
+    /// ([`Eintragsansicht::zeilen_zeigen`]), und nachgeholt wird beim naechsten
+    /// Nachzug. Sonst geht er ueber [`Self::tabelle_nachziehen`], und die
+    /// Tabelle laedt allein dann neu, wenn sich die Zeilen geaendert haben. Er
+    /// ruft weder `anwenden` noch `setHidden:` noch `makeFirstResponder:`.
+    pub fn heute_nachziehen(&self) {
+        if self.form() != Editorform::Termine || self.zelle_laeuft() {
+            return;
+        }
+        self.tabelle_nachziehen();
     }
 
     /// Ob der Editor eine Datei haelt (C1, C2).
@@ -8908,6 +8934,7 @@ mod tests {
         eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
             stand,
             Sortierrichtung::Aufsteigend,
+            None,
         ));
         eintraege.auswahl_setzen(auswahl);
     }
@@ -9245,5 +9272,68 @@ mod tests {
                 "tabelle_nachziehen ruft {nadel}"
             );
         }
+    }
+    /// Schritt 7: `heute_nachziehen` haengt am einen Melder des Hauptfensters
+    /// und an keinem zweiten Beobachter, hinter den zwei aelteren Empfaengern;
+    /// es ueberspringt eine laufende Zelle vor jedem Nachzug und ruft weder
+    /// `anwenden` noch `setHidden:` noch `makeFirstResponder:`. Die Uhr liest es
+    /// nicht selbst, sondern ueber `tabelle_nachziehen` und `termine::heute`.
+    #[test]
+    fn der_heutige_tag_wird_allein_am_melder_des_hauptfensters_nachgezogen() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        use crate::quellbaum::{aufrufstellen, quelldateien};
+        let name = concat!("heute_", "nachziehen");
+        let mut rufer = Vec::new();
+        for (pfad, inhalt) in quelldateien() {
+            let code = inhalt
+                .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+                .map_or(inhalt.as_str(), |(code, _)| code);
+            let zahl = aufrufstellen(code, name);
+            if zahl > 0 {
+                rufer.push((pfad, zahl));
+            }
+        }
+        assert_eq!(
+            rufer,
+            vec![("krk-ui/src/appkit/anwendung.rs".to_owned(), 1)],
+            "ein Rufer ausser dem Melder"
+        );
+        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
+        let aufbau = rumpf(&anwendung, "oberflaeche_aufbauen");
+        let melder = aufbau
+            .find(concat!("fenster.melder_", "setzen("))
+            .expect("der Melder des Hauptfensters steht im Aufbau");
+        let aktiv = aufbau
+            .find(concat!("selbst.aktives_dem_ersthelfer_", "nachziehen()"))
+            .expect("der erste Empfaenger");
+        let anzeige = aufbau
+            .find(concat!("selbst.fokusanzeige_", "nachziehen()"))
+            .expect("der zweite Empfaenger");
+        let heute = aufbau
+            .find(concat!("editor.heute_", "nachziehen()"))
+            .expect("der dritte Empfaenger");
+        assert!(melder < aktiv && aktiv < anzeige && anzeige < heute);
+
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        let nachziehen = rumpf(&editor, name);
+        let zelle = nachziehen
+            .find(concat!("self.zelle_", "laeuft()"))
+            .expect("eine laufende Zelle wird uebersprungen");
+        let tabelle = nachziehen
+            .find(concat!("self.tabelle_", "nachziehen()"))
+            .expect("der Nachzug geht ueber tabelle_nachziehen");
+        assert!(zelle < tabelle);
+        for nadel in [
+            concat!("an", "wenden("),
+            concat!("set", "Hidden("),
+            concat!("makeFirst", "Responder("),
+            concat!("termine::", "heute("),
+        ] {
+            assert!(!nachziehen.contains(nadel), "heute_nachziehen ruft {nadel}");
+        }
+        assert!(
+            rumpf(&editor, "tabelle_nachziehen").contains(concat!("termine::", "heute()")),
+            "die Tabelle liest den Tag ueber die eine Stelle im Kern"
+        );
     }
 }

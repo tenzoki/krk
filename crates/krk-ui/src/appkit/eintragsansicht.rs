@@ -263,6 +263,17 @@
 //! - `NSTextField::textFieldWithString:` und
 //!   `NSButton::checkboxWithTitle:target:action:` seit 10.12
 //!   (`NSTextField.h:115`, `NSButton.h:59`)
+//! - `NSTableRowView` seit 10.7 (`NSTableRowView.h:21`), samt seiner
+//!   Eigenschaft `backgroundColor` und damit `setBackgroundColor:`
+//!   (`NSTableRowView.h:61`, ohne eigene Angabe), und die **gebaute** Methode
+//!   `tableView:didAddRowView:forRow:` seit 10.7 (`NSTableView.h:601`), fuer
+//!   die Hervorhebung des heutigen Tages in der Termintabelle
+//! - `NSColor` samt `colorWithAlphaComponent:` (`NSColor.h:311`) und
+//!   `backgroundColor` von `NSTableView` (`NSTableView.h:189`) ohne Angabe und
+//!   damit seit 10.0; `systemYellowColor` seit 10.10 (`NSColor.h:254`); allein
+//!   in einer Probe `selectedContentBackgroundColor` und
+//!   `unemphasizedSelectedContentBackgroundColor` seit 10.14 (`NSColor.h:221`
+//!   und `:222`) und `isEqual:` aus `NSObjectProtocol`
 //! - `NSTableViewStyle` samt `setStyle:` seit 11.0 (`NSTableView.h:77` und
 //!   `:377`) — die hoechste Untergrenze dieser Datei
 //!
@@ -288,10 +299,10 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Bool, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSApplication, NSAutoresizingMaskOptions, NSButton, NSControl, NSControlStateValueOff,
+    NSApplication, NSAutoresizingMaskOptions, NSButton, NSColor, NSControl, NSControlStateValueOff,
     NSControlStateValueOn, NSControlTextEditingDelegate, NSFont, NSLayoutConstraintOrientation,
     NSLayoutPriorityRequired, NSLineBreakMode, NSResponder, NSScrollView, NSTableCellView,
-    NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView, NSTableView,
+    NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView, NSTableRowView, NSTableView,
     NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
     NSTableViewStyle, NSText, NSTextField, NSTextFieldDelegate, NSTextView, NSView, NSWindow,
 };
@@ -300,7 +311,7 @@ use objc2_foundation::{
     NSRect, NSSize, NSString, NSUndoManager, ns_string,
 };
 
-use krk_core::heimordner::eintraege::{Aufgaben, Notizen, aufgabenzeile, termine};
+use krk_core::heimordner::eintraege::{Aufgaben, Notizen, Tag, aufgabenzeile, termine};
 use krk_core::verzeichnis::Richtung;
 
 use super::{textautomatik, zwischenablage};
@@ -467,6 +478,12 @@ pub struct Terminzeile {
     /// Der Termintext, Zeilen durch `\n` getrennt, wie der Text einer
     /// [`Notizzeile`].
     pub text: String,
+    /// Ob der Termin am heutigen Tag liegt, mit oder ohne Uhrzeit; die Zeile
+    /// ist dann hervorgehoben ([`heute_farbe`], Schritt 7 des Plans der
+    /// Termine). Ein Feld der Zeile und nicht eine Frage beim Zeichnen: eine
+    /// geaenderte Hervorhebung ist damit eine geaenderte Zeilenfolge, und
+    /// [`Eintragsansicht::zeilen_zeigen`] laedt neu.
+    pub heute: bool,
 }
 
 /// Die Zeilen der Termintabelle zu einem Stand von `appointments.md`, in der
@@ -475,15 +492,18 @@ pub struct Terminzeile {
 /// **Die eine Stelle der Ableitung fuer Termine**: die Folge ist
 /// `termine::anzeigeordnung` in der genannten Richtung, Datum und Text kommen
 /// ueber `Notizen::notiz` wie in [`notizzeilen`], und jede Zeile nennt ihre
-/// Stelle.
+/// Stelle. `heute` ist der Tag, dessen Termine hervorgehoben sind; die Uhr
+/// liest der Rufer ueber `termine::heute`, damit diese Ableitung ohne Uhr
+/// pruefbar bleibt, und ohne Tag ist keine Zeile hervorgehoben.
 #[must_use = "die Zeilen sind die ganze Auskunft"]
-pub fn terminzeilen(stand: &str, richtung: Richtung) -> Vec<Terminzeile> {
+pub fn terminzeilen(stand: &str, richtung: Richtung, heute: Option<Tag>) -> Vec<Terminzeile> {
     let notizen = Notizen::lesen(stand);
     termine::anzeigeordnung(stand, richtung)
         .into_iter()
         .filter_map(|stelle| {
             notizen.notiz(stelle).map(|notiz| Terminzeile {
                 stelle,
+                heute: heute.is_some_and(|tag| termine::ist_heute(notiz.thema, tag)),
                 datum: notiz.thema.to_owned(),
                 text: notiz.text,
             })
@@ -518,6 +538,29 @@ pub fn notizzeilen(stand: &str) -> Vec<Notizzeile> {
             text: notiz.text,
         })
         .collect()
+}
+
+/// Der Hintergrund einer Zeile der Termintabelle, deren Termin heute liegt
+/// (T6, Entscheidung 4 des Plans
+/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+///
+/// **Die eine Stelle der Farbe.** `systemYellowColor` mit dem Deckungsgrad
+/// 0,25: die Systemfarbe liefert AppKit je Erscheinungsbild, und der geringe
+/// Deckungsgrad laesst den Text im hellen wie im dunklen Erscheinungsbild
+/// lesbar. Gelb steht fuer den Textmarker. Die Auswahl zeichnet
+/// `NSTableRowView` ueber den Hintergrund; eine gewaehlte Zeile zeigt also die
+/// Auswahl, und sobald sie weiterwandert, erscheint die Faerbung wieder.
+///
+/// **Verworfen:** `findHighlightColor`, weil sie fuer dunklen Text auf hellem
+/// Grund gemacht ist und im dunklen Erscheinungsbild den weissen Text
+/// schluckt; `unemphasizedSelectedContentBackgroundColor`, weil sie die Farbe
+/// der Auswahl einer Tabelle ohne Fokus ist und genau damit verwechselt
+/// wuerde; `controlAccentColor`, weil sie die Auswahlfarbe ist. Ob Gelb auf
+/// dem Referenzgeraet in beiden Erscheinungsbildern traegt, ist Nutzerabnahme
+/// (T6).
+#[must_use]
+pub fn heute_farbe() -> Retained<NSColor> {
+    NSColor::systemYellowColor().colorWithAlphaComponent(0.25)
 }
 
 /// Was ein Befehl des Feldeditors in einer Zelle bewirkt.
@@ -1126,6 +1169,37 @@ define_class!(
             spalte.ok().and_then(|spalte| self.zellenansicht(zeile, spalte))
         }
 
+        /// Eine Zeilenansicht ist in die Tabelle gekommen, neu gebaut oder
+        /// wiederverwendet: sie bekommt den Hintergrund des heutigen Tages,
+        /// wenn ihre Zeile einen Termin von heute zeigt, und sonst den der
+        /// Tabelle zurueck (Schritt 7 des Plans der Termine).
+        ///
+        /// **Zurueckgesetzt wird immer**, weil AppKit Zeilenansichten
+        /// wiederverwendet: eine Ansicht, die eben eine heutige Zeile trug,
+        /// behielte sonst ihre Farbe in einer anderen. Der Hintergrund der
+        /// Tabelle ist der Vorgabewert der Eigenschaft (`NSTableRowView.h`).
+        /// Gelesen an AppKits Zeile, denn die abgeleiteten Zeilen stehen in der
+        /// Folge des Schirms.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSTableView.h:601`).
+        #[unsafe(method(tableView:didAddRowView:forRow:))]
+        fn zeilenansicht_hinzugefuegt(
+            &self,
+            tabelle: &NSTableView,
+            zeilenansicht: &NSTableRowView,
+            zeile: NSInteger,
+        ) {
+            let heute = usize::try_from(zeile)
+                .ok()
+                .is_some_and(|zeile| self.zeigt_heute(zeile));
+            let farbe = if heute {
+                heute_farbe()
+            } else {
+                tabelle.backgroundColor()
+            };
+            zeilenansicht.setBackgroundColor(&farbe);
+        }
+
         /// Eine Spalte hat ihre Breite geaendert: die Notizfelder brechen ab
         /// jetzt an der neuen Breite um.
         // SAFETY: Die Signatur entspricht der des Protokolls (`NSTableView.h`).
@@ -1385,6 +1459,16 @@ impl Eintragsansicht {
                 .and_then(|zeile| self.ivars().zeilen.borrow().stelle_der_zeile(zeile)),
         };
         self.auswahl_setzen(auswahl);
+    }
+
+    /// Ob AppKits Zeile `zeile` einen Termin von heute zeigt; ausserhalb der
+    /// Termintabelle nie.
+    #[must_use]
+    fn zeigt_heute(&self, zeile: usize) -> bool {
+        match &*self.ivars().zeilen.borrow() {
+            Zeilen::Termine(zeilen) => zeilen.get(zeile).is_some_and(|termin| termin.heute),
+            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) => false,
+        }
     }
 
     /// Welche Art von Eintraegen die Tabelle gerade zeigt.
@@ -2127,7 +2211,7 @@ mod tests {
     #[test]
     fn die_termintabelle_trennt_zeile_und_stelle() {
         let stand = "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261001\neins\n";
-        let zeilen = Zeilen::from(terminzeilen(stand, Richtung::Aufsteigend));
+        let zeilen = Zeilen::from(terminzeilen(stand, Richtung::Aufsteigend, None));
         assert_eq!(zeilen.art(), Eintragsart::Termine);
         let Zeilen::Termine(termine) = &zeilen else {
             unreachable!("die Art ist eben geprueft")
@@ -2150,7 +2234,7 @@ mod tests {
         assert_eq!(zeilen.stelle_der_zeile(3), None);
         assert_eq!(zeilen.zeile_der_stelle(3), None);
 
-        let absteigend = Zeilen::from(terminzeilen(stand, Richtung::Absteigend));
+        let absteigend = Zeilen::from(terminzeilen(stand, Richtung::Absteigend, None));
         assert_eq!(
             absteigend.stelle_der_zeile(0),
             Some(0),
@@ -2237,5 +2321,85 @@ mod tests {
         assert!(rumpf(&quelle, "auswahl_setzen").contains(concat!("self.zeile_", "von(")));
         assert!(rumpf(&quelle, "zelle_beginnen").contains(concat!("self.ziel_der_", "zelle(")));
         assert!(rumpf(&quelle, "ziel_der_zelle").contains(concat!("self.zeile_", "von(")));
+    }
+    /// T6.1 in der Oberflaechenhaelfte: mit festem Tag tragen genau die zwei
+    /// Termine dieses Tages, mit und ohne Uhrzeit, die Hervorhebung; der
+    /// Vortag, der Folgetag und ein ungueltiges Datum nicht, und ohne Tag
+    /// keiner.
+    #[test]
+    fn genau_die_termine_des_tages_sind_hervorgehoben() {
+        let stand = concat!(
+            "## 261003\nFolgetag\n",
+            "## 261002 09:30\nmit Uhrzeit\n",
+            "## 261001\nVortag\n",
+            "## xyz\nungueltig\n",
+            "## 261002\nohne Uhrzeit\n",
+        );
+        let heute = Tag::neu(2026, 10, 2).expect("ein Tag im Kalender");
+        let hervorgehoben: Vec<(usize, bool)> =
+            terminzeilen(stand, Richtung::Aufsteigend, Some(heute))
+                .into_iter()
+                .map(|termin| (termin.stelle, termin.heute))
+                .collect();
+        assert_eq!(
+            hervorgehoben,
+            vec![(2, false), (4, true), (1, true), (0, false), (3, false)]
+        );
+        assert!(
+            terminzeilen(stand, Richtung::Aufsteigend, None)
+                .iter()
+                .all(|termin| !termin.heute),
+            "ohne Tag ist keine Zeile hervorgehoben"
+        );
+    }
+
+    /// T6.3: die Farbe des heutigen Tages steht an einer Stelle, ist die
+    /// Systemfarbe Gelb und kein fest gebauter Farbwert, und sie ist weder die
+    /// Farbe der Auswahl noch die der Auswahl ohne Fokus. Dazu setzt der
+    /// Delegierte sie je Zeile und setzt sonst zurueck.
+    #[test]
+    fn die_farbe_des_heutigen_tages_ist_die_systemfarbe_gelb_und_keine_auswahlfarbe() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let farbe = rumpf(&quelle, "heute_farbe");
+        assert!(farbe.contains(concat!("systemYellow", "Color()")));
+        for nadel in [
+            concat!("colorWith", "Red"),
+            concat!("colorWith", "SRGB"),
+            concat!("colorWith", "Calibrated"),
+            concat!("colorWith", "DeviceRed"),
+        ] {
+            assert!(
+                !farbe.contains(nadel),
+                "heute_farbe baut eine feste Farbe: {nadel}"
+            );
+        }
+        let (code, _) = quelle
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .expect("das Pruefmodul steht am Fuss der Datei");
+        assert_eq!(
+            code.lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(concat!("systemYellow", "Color(")))
+                .count(),
+            1,
+            "die Farbe steht an einer Stelle"
+        );
+        let hinzugefuegt = rumpf(&quelle, "zeilenansicht_hinzugefuegt");
+        for nadel in [
+            concat!("heute_", "farbe()"),
+            concat!("tabelle.background", "Color()"),
+            concat!("setBackground", "Color("),
+        ] {
+            assert!(
+                hinzugefuegt.contains(nadel),
+                "die Zeilenansicht setzt {nadel} nicht"
+            );
+        }
+
+        let heute = heute_farbe();
+        let heute: &AnyObject = &heute;
+        assert!(!NSColor::selectedContentBackgroundColor().isEqual(Some(heute)));
+        assert!(!NSColor::unemphasizedSelectedContentBackgroundColor().isEqual(Some(heute)));
     }
 }
