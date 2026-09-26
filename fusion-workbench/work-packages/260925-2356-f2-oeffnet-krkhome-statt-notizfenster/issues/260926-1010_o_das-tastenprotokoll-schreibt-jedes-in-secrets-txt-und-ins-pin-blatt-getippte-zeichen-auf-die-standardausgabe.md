@@ -1,0 +1,15 @@
+Das Tastenprotokoll schreibt jedes in `.secrets.txt` und ins PIN-Blatt getippte Zeichen auf die Standardausgabe
+
+---
+
+Gestartet mit `--tasten-protokoll`, schreibt KRK für jeden Tastendruck eine Zeile `tastencode=… zeichen=… maske=… kombination=… funktion=…` auf die Standardausgabe (`protokollieren` in `crates/krk-ui/src/appkit/ereignisse.rs`, gerufen aus `behandeln`). Der Aufruf steht hinter dem Fänger und vor dem Nachschlag und fragt nicht nach dem Ersthelfer; der Modulkopf sagt ausdrücklich, dass seit der Runde 7 auch ein Tastendruck in ein Textfeld erscheint. Damit erscheint im Protokoll jedes Zeichen, das der Nutzer in der Tabelle oder der Rohansicht von `.secrets.txt` tippt, und ebenso jede Ziffer der PIN im PIN-Blatt (`appkit/blaetter/pin.rs`).
+
+Auf die Platte schreibt KRK dabei nichts: die Ausgabe geht an das Terminal, das KRK gestartet hat, und ein über `open` gestartetes Bündel bekommt gar keine. C7.8 („Klartext der Geheimnisse gelangt an keine Stelle auf der Platte") ist damit nicht verletzt, solange niemand die Ausgabe umlenkt. Das Bedrohungsmodell von C7 ist aber das versehentliche Lesen durch Agenten und Werkzeuge, und ein Agent, der KRK zur Fehlersuche mit `--tasten-protokoll` startet, liest genau diese Ausgabe; ein `> datei` dahinter legt sie auf die Platte.
+
+---
+**Domain:** code
+**Filed by:** code-implementer, Kai Stalmann <kai@stalmann.org>
+
+**Am Code gelesen, nicht am Bündel ausgelöst.** Gefunden bei der Durchsicht aller Wege, auf denen Inhalt von `.secrets.txt` aus KRK hinausgelangt (Behebung von `260926-1004_*_eine-textmarke-in-secrets-txt-schreibt-eine-klartextzeile-in-die-lesezeichendatei.md`).
+
+**Warum nicht mitbehoben.** `appkit/ereignisse.rs` kennt den Editor nicht und soll ihn nach `CLAUDE.md` nicht kennenlernen; ob der Ersthelfer die Tabelle der Geheimnisse oder das PIN-Blatt ist, weiß dort niemand. Drei Antworten liegen nahe, und zwischen ihnen entscheidet der Zweck des Modus: (1) das Feld `zeichen` entfällt, sobald der Ersthelfer AppKit gehört oder eine eigene Textfläche ist, was den Modus für die Tastaturfrage aus Schritt 7 in Textflächen schwächt; (2) die Senke reicht eine Auskunft „hier wird Geheimes getippt" herein, eine neue Naht zwischen Abgriff und Anwendungsdelegiertem; (3) der Modus bleibt, wie er ist, weil er eine bewusste Diagnose des Nutzers ist, und `HowTo.md` oder die Hilfe des Modus nennt das Risiko wie bei der Zwischenablage (`260926-0033_*_darf-text-aus-secrets-txt-in-die-zwischenablage.md`). Nutzerprüfung: KRK mit `--tasten-protokoll` aus einem Terminal starten, `.secrets.txt` öffnen und die PIN eingeben; die Ziffern stehen im Terminal.

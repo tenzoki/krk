@@ -2585,9 +2585,19 @@ impl Anwendungsdelegierter {
     /// fuehrt. Auf den Ordner des aktiven Dateifensters auszuweichen waere
     /// falsch: der Nutzer bekaeme dann stillschweigend ein anderes Lesezeichen,
     /// als er verlangt hat.
+    ///
+    /// **`.secrets.txt` bekommt keine Textmarke** (C7.8 der krkhome-Arbeit):
+    /// ihr `zeileninhalt` waere eine Zeile der Geheimnisse im Klartext in
+    /// `bookmarks.toml`. Gefragt wird, bevor die Zeile ueberhaupt gelesen
+    /// wird; die Regel steht bei
+    /// [`Editormodell::textmarke_verweigert`](crate::editormodell::Editormodell::textmarke_verweigert).
     fn anlegeziel(&self, seite: Fensterseite) -> Option<(Ziel, String)> {
         if self.fokus() == Fokus::Editor {
             let editor = self.ivars().editor.get()?;
+            if let Some(grund) = editor.textmarke_verweigert() {
+                self.antwort_zeigen(seite, grund);
+                return None;
+            }
             let (Some(datei), Some((zeile, zeileninhalt))) =
                 (editor.pfad(), editor.schreibmarkenzeile())
             else {
@@ -9777,6 +9787,63 @@ pub(super) mod quelltextproben {
             .filter(|zeile| !zeile.trim_start().starts_with("//"))
             .collect::<Vec<_>>()
             .join("\n")
+    }
+}
+
+/// Die Textmarke an `.secrets.txt` (C7.8 der krkhome-Arbeit): `anlegeziel` ist
+/// die eine Stelle, an der eine Zeile des Editors in ein Lesezeichen geht, und
+/// sie fragt die Verweigerung, bevor sie die Zeile liest.
+///
+/// **Am Rumpf gelesen**, weil `anlegeziel` einen Anwendungsdelegierten mit
+/// Fenster braucht, den `libtest` nicht hergibt. Die Regel selbst halten die
+/// Proben von `Editormodell::textmarke_verweigert` im Modell.
+#[cfg(test)]
+mod textmarkenproben {
+    use super::quelltextproben::{diese_datei, rumpf};
+    use crate::quellbaum::quelldateien;
+
+    /// `anlegeziel` fragt die Verweigerung vor der Zeile der Schreibmarke.
+    #[test]
+    fn anlegeziel_fragt_die_verweigerung_vor_der_zeile() {
+        let rumpf = rumpf(&diese_datei(), "anlegeziel");
+        let frage = rumpf
+            .find(concat!("textmarke_", "verweigert("))
+            .expect("anlegeziel fragt die Verweigerung der Textmarke");
+        let zeile = rumpf
+            .find(concat!("schreibmarken", "zeile("))
+            .expect("anlegeziel liest die Zeile der Schreibmarke");
+        assert!(
+            frage < zeile,
+            "die Verweigerung steht hinter dem Lesen der Zeile"
+        );
+    }
+
+    /// Die Zeile der Schreibmarke hat im ganzen Baum genau einen Rufer, und
+    /// der ist `anlegeziel`: ein zweiter Weg einer Editorzeile in eine Ablage
+    /// ginge an der Verweigerung vorbei.
+    #[test]
+    fn die_zeile_der_schreibmarke_hat_genau_einen_rufer() {
+        let nadel = concat!(".schreibmarken", "zeile(");
+        let rufer: Vec<String> = quelldateien()
+            .into_iter()
+            .flat_map(|(name, inhalt)| {
+                inhalt
+                    .lines()
+                    .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                    .filter(|zeile| zeile.contains(nadel))
+                    .map(|zeile| format!("{name}: {}", zeile.trim()))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        assert_eq!(rufer.len(), 1, "{rufer:#?}");
+        assert!(
+            rufer[0].starts_with("krk-ui/src/appkit/anwendung.rs"),
+            "{rufer:#?}"
+        );
+        assert!(
+            rumpf(&diese_datei(), "anlegeziel").contains(nadel),
+            "der eine Rufer ist anlegeziel"
+        );
     }
 }
 

@@ -2873,6 +2873,14 @@ impl Editorbereich {
         self.ivars().modell.borrow().pin_aenderbar()
     }
 
+    /// Warum an der gehaltenen Datei keine Textmarke entsteht (C7.8 der
+    /// krkhome-Arbeit); die Regel steht bei
+    /// [`Editormodell::textmarke_verweigert`].
+    #[must_use]
+    pub fn textmarke_verweigert(&self) -> Option<&'static str> {
+        self.ivars().modell.borrow().textmarke_verweigert()
+    }
+
     /// Schreibt den gehaltenen Stand in die Datei (C4).
     ///
     /// **Geschrieben wird im Modell und hier nicht ein zweites Mal.** Diese

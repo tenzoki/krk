@@ -611,6 +611,12 @@ impl Chiffrat {
 /// nicht tragen, dessen Klartext der Editor annimmt.
 const GEHEIMNISGRENZE: u64 = datei::EDITORGRENZE + tresor::KOPFLAENGE as u64 + 16;
 
+/// Der Satz der Statuszeile, wenn `cmd+d` im Editor an `.secrets.txt` eine
+/// Textmarke anlegen soll; die Regel steht an
+/// [`Editormodell::textmarke_verweigert`].
+pub const KEINE_TEXTMARKE_IN_GEHEIMNISSEN: &str = "für .secrets.txt legt KRK keine Textmarke an: \
+     sie schriebe eine Zeile der Geheimnisse im Klartext in die Lesezeichen";
+
 /// Der Grund, aus dem `.secrets.txt` ohne PIN nicht geoeffnet wird.
 const OHNE_PIN: &str = "sie ist verschlüsselt und öffnet sich allein mit der PIN";
 
@@ -1029,6 +1035,30 @@ impl Editormodell {
                 ..
             }
         )
+    }
+
+    /// Warum an der gehaltenen Datei keine Textmarke entsteht, oder `None`,
+    /// wenn sie entstehen darf (C7.8 der krkhome-Arbeit).
+    ///
+    /// **Eine Textmarke traegt ihre Zeile im Klartext**, als `zeileninhalt` in
+    /// `bookmarks.toml`, und haelt der Editor `.secrets.txt`, ist diese Zeile
+    /// ein Geheimnis. Die Antwort ist deshalb fuer die Geheimnisse immer der
+    /// eine Satz [`KEINE_TEXTMARKE_IN_GEHEIMNISSEN`]
+    /// (`issues/260926-1004_*_eine-textmarke-in-secrets-txt-schreibt-eine-klartextzeile-in-die-lesezeichendatei.md`).
+    ///
+    /// Gefragt werden zwei Dinge, und jedes allein genuegt: der [`Schutz`],
+    /// der einen Schluessel haelt, und die Erkennung des Pfads. Der Schutz
+    /// antwortet auch dann, wenn ein F2 die aufgeloeste Form des Heimordners
+    /// inzwischen anders fuehrt; die Erkennung antwortet auch fuer eine
+    /// leere `.secrets.txt`, deren Stand noch gar nichts traegt.
+    #[must_use]
+    pub fn textmarke_verweigert(&self) -> Option<&'static str> {
+        let geheim = matches!(self.schutz, Schutz::Verschluesselt { .. })
+            || self
+                .pfad
+                .as_deref()
+                .is_some_and(|pfad| self.ist_geheimnisdatei(pfad));
+        geheim.then_some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN)
     }
 
     /// Welche Ansicht gewaehlt ist (C3).
@@ -3060,6 +3090,68 @@ mod tests {
 
         assert_eq!(modell.oeffnen(&pfad, None), Some(Ladeausgang::SchonOffen));
         assert_eq!(modell.stand(), klartext);
+    }
+
+    /// C7.8: haelt der Editor `.secrets.txt`, verweigert er die Textmarke,
+    /// deren `zeileninhalt` eine Zeile der Geheimnisse im Klartext in die
+    /// Lesezeichendatei truege; ueber beide Formen des Heimordners, mit
+    /// gesichertem Kopf und als leere Datei mit eben festgelegter PIN
+    /// (`issues/260926-1004_*_eine-textmarke-in-secrets-txt-schreibt-eine-klartextzeile-in-die-lesezeichendatei.md`).
+    #[test]
+    fn an_secrets_txt_entsteht_keine_textmarke() {
+        let ordner = Pruefordner::neu("geheim-textmarke");
+        let (mut modell, geschrieben, ziel) = geheimnis_modell(&ordner);
+        assert_eq!(modell.textmarke_verweigert(), None, "ohne Datei");
+
+        verschlossen_ablegen(&geschrieben, &format!("## Konto\n{GEHEIM}\n"), "0417");
+        for pfad in [geschrieben.clone(), ziel.join(".secrets.txt")] {
+            let mut frisch = Editormodell::neu(modell.heim.clone());
+            assert_eq!(frisch.oeffnen(&pfad, Some(pin("0417"))), None);
+            assert_eq!(abwarten_mit_ableitung(&mut frisch), Ladeausgang::Geoeffnet);
+            assert_eq!(
+                frisch.textmarke_verweigert(),
+                Some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN),
+                "{}",
+                pfad.display()
+            );
+        }
+
+        std::fs::write(&geschrieben, b"").expect("leere .secrets.txt");
+        assert_eq!(modell.oeffnen(&geschrieben, Some(pin("0417"))), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(
+            modell.textmarke_verweigert(),
+            Some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN),
+            "leere Datei"
+        );
+    }
+
+    /// Die Gegenprobe: jede andere Datei bekommt ihre Textmarke, auch
+    /// `notes.txt` und `tasks.txt` im erkannten Ordner und eine `.secrets.txt`
+    /// ausserhalb davon, die eine gewoehnliche Textdatei ist.
+    #[test]
+    fn jede_andere_datei_bekommt_ihre_textmarke() {
+        let ordner = Pruefordner::neu("geheim-textmarke-gegen");
+        let (mut modell, geschrieben, _) = geheimnis_modell(&ordner);
+        let anderswo = ordner.ordner("anderswo");
+        let daneben = anderswo.join(".secrets.txt");
+        std::fs::write(&daneben, "kein Geheimnis\n").expect(".secrets.txt anderswo");
+        let heim = geschrieben.parent().expect("der Heimordner").to_path_buf();
+        for pfad in [heim.join("notes.txt"), heim.join("tasks.txt"), daneben] {
+            assert_eq!(modell.oeffnen(&pfad, None), None, "{}", pfad.display());
+            assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+            assert_eq!(modell.textmarke_verweigert(), None, "{}", pfad.display());
+        }
+    }
+
+    /// Der Satz der Verweigerung nennt die Datei und traegt Umlaute nach der
+    /// Schreibregel des Projekts, denn der Nutzer liest ihn in der Statuszeile.
+    #[test]
+    fn der_satz_der_verweigerten_textmarke_traegt_umlaute() {
+        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains(".secrets.txt"));
+        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("für"));
+        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("Klartext"));
+        assert!(!KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("fuer"));
     }
 
     /// Eine falsche PIN und ein veraendertes Byte geben dieselbe eine Meldung,
