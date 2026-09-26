@@ -1410,7 +1410,7 @@ impl Anwendungsdelegierter {
             Dateifenster::bauen(mtm, Tabliste::aus_zustand(&sitzung.fenster[1])),
         ];
         let leiste = Leiste::bauen(mtm);
-        let vorschau = Vorschaufenster::bauen(mtm);
+        let vorschau = Vorschaufenster::bauen(mtm, Rc::clone(&ivars.heim));
         // **Der Seitenmelder der Vorschau** (C4.2, C4.7 der Runde 20). Die
         // Vorschau meldet, dass ein Seitenwechsel, ein neuer Inhalt oder ein
         // Tabwechsel ansteht, und der eine Schreiber der Statuszeile fragt sie
@@ -1424,7 +1424,7 @@ impl Anwendungsdelegierter {
                 selbst.statuszeile_nachziehen();
             }
         }));
-        let editor = Editorbereich::bauen(mtm);
+        let editor = Editorbereich::bauen(mtm, Rc::clone(&ivars.heim));
         // **Der Rueckweg des Editors.** Seit S24 liest er auf einem
         // Arbeitsfaden, und wie ein Oeffnen ausgegangen ist, steht erst fest,
         // wenn der Befehl, der es angefordert hat, laengst zurueck ist. Der

@@ -249,7 +249,10 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
+use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::text::{Abweisung, Treffer, datei, suche};
+
+use crate::heimgriff::{self, Heimgriff};
 
 /// Welche der beiden Ansichten aus C3 die Textflaeche zeigt.
 ///
@@ -285,6 +288,18 @@ impl Ansicht {
 
 /// Was die Formatansicht ueber die gehaltene Datei **aus ihrem Pfad** weiss.
 ///
+/// # Die Eintragsdateien in `~/krkhome/`
+///
+/// `notes.txt` und `tasks.txt` im erkannten Heimordner sind ein eigener Wert,
+/// [`Dateityp::Eintraege`], und **keine zweite Endungsregel**: sie tragen die
+/// Endung `.txt` und waeren nach der Endung `Sonstiges`. Erkannt werden sie
+/// allein ueber [`Heimordner::sonderdatei`], die eine Stelle der Erkennung,
+/// und die stellt keinen Systemaufruf; `von_pfad` bleibt damit so billig wie
+/// vorher und kostet die Vorschau vor der Endbedingung von L7 nichts. Jede
+/// vollstaendige Fallunterscheidung ueber diesen Typ haelt den Bau an, bis sie
+/// die neuen Dateien eingeordnet hat (Plan des Arbeitspakets
+/// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`, Schritt 2.1).
+///
 /// # Warum hier zwei Werte stehen und nicht die drei aus C3
 ///
 /// C3 nennt drei Besetzungen der Formatansicht: Markdown gerendert, Code mit
@@ -309,6 +324,12 @@ pub enum Dateityp {
     /// Alles Uebrige, einschliesslich "der Editor haelt keine Datei".
     #[default]
     Sonstiges,
+    /// Eine der Eintragsdateien im erkannten `~/krkhome/`.
+    ///
+    /// Die Vorschau rendert sie als Markdown mit Aufgabenkaestchen
+    /// (`crate::markdown::Lesart::Eintragsdatei`); die Formatansicht des
+    /// Editors zeigt sie bis zur Tabellenform als Markdown.
+    Eintraege(Sonderdatei),
 }
 
 /// Die Endungen, die als Markdown gelten.
@@ -321,8 +342,16 @@ const MARKDOWNENDUNGEN: [&str; 4] = ["md", "markdown", "mdown", "mkd"];
 
 impl Dateityp {
     /// Was der Pfad ueber die Datei sagt.
+    ///
+    /// **Erst die Erkennung, dann die Endung.** `heim` ist die Abschrift des
+    /// einen geteilten Wertes ([`crate::heimgriff`]); `None` heisst, es gibt
+    /// keinen Heimordner, und dann entscheidet allein die Endung. Weder die
+    /// Erkennung noch die Endung beruehren die Platte.
     #[must_use]
-    pub fn von_pfad(pfad: &Path) -> Self {
+    pub fn von_pfad(pfad: &Path, heim: Option<&Heimordner>) -> Self {
+        if let Some(sonderdatei) = heim.and_then(|heim| heim.sonderdatei(pfad)) {
+            return Dateityp::Eintraege(sonderdatei);
+        }
         let endung = pfad
             .extension()
             .map(|endung| endung.to_string_lossy().to_ascii_lowercase());
@@ -611,6 +640,12 @@ pub struct Editormodell {
     suchlauf: Option<Suchlauf>,
     /// Der Zustand der Datei beim Oeffnen oder beim letzten Sichern (C4).
     stempel: Option<Stempel>,
+    /// Der geteilte Wert der Erkennung von `~/krkhome/`, aus dem
+    /// [`Self::typ`] beim Uebernehmen einer gelesenen Datei entsteht.
+    ///
+    /// Ein Griff und keine Abschrift, damit ein F2, das die aufgeloeste Form
+    /// erneuert, auch hier gilt; siehe [`crate::heimgriff`].
+    heim: Heimgriff,
     /// Das laufende Laden, falls eines laeuft (C2).
     ladevorgang: Option<Ladevorgang>,
     /// Eine gelesene Datei, die auf die Antwort der Nachfrage aus C4 wartet.
@@ -633,9 +668,15 @@ pub struct Editormodell {
 
 impl Editormodell {
     /// Ein Editor, der keine Datei haelt.
+    ///
+    /// `heim` ist der Griff, den der Anwendungsdelegierte einmal baut und an
+    /// jeden Frager der Erkennung reicht.
     #[must_use]
-    pub fn neu() -> Self {
-        Self::default()
+    pub fn neu(heim: Heimgriff) -> Self {
+        Self {
+            heim,
+            ..Self::default()
+        }
     }
 
     /// Die gehaltene Datei; `None`, solange keine gehalten wird.
@@ -802,7 +843,7 @@ impl Editormodell {
     fn uebernehmen(&mut self, pfad: PathBuf, geladen: Geladen) -> Ladeausgang {
         match geladen.ergebnis {
             Ok(stand) => {
-                self.typ = Dateityp::von_pfad(&pfad);
+                self.typ = Dateityp::von_pfad(&pfad, heimgriff::lesen(&self.heim).as_ref());
                 self.pfad = Some(pfad);
                 self.stand = stand;
                 self.abweichung = false;
@@ -1314,7 +1355,7 @@ mod tests {
     }
 
     fn geoeffnet(pfad: &Path) -> Editormodell {
-        let mut modell = Editormodell::neu();
+        let mut modell = Editormodell::neu(Heimgriff::default());
         assert_eq!(
             modell.oeffnen(pfad),
             None,
@@ -1326,7 +1367,7 @@ mod tests {
 
     #[test]
     fn ein_neuer_editor_haelt_nichts() {
-        let modell = Editormodell::neu();
+        let modell = Editormodell::neu(Heimgriff::default());
         assert!(!modell.haelt_datei());
         assert_eq!(modell.pfad(), None);
         assert_eq!(modell.stand(), "");
@@ -1378,7 +1419,7 @@ mod tests {
         let erste = ordner.datei("erste.txt", "Inhalt der ersten Datei\n");
         let zweite = ordner.datei("zweite.txt", "Inhalt der zweiten Datei\n");
 
-        let mut modell = Editormodell::neu();
+        let mut modell = Editormodell::neu(Heimgriff::default());
         assert_eq!(modell.oeffnen(&erste), None);
         assert_eq!(modell.oeffnen(&zweite), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
@@ -1921,7 +1962,7 @@ mod tests {
 
     #[test]
     fn ein_editor_ohne_datei_hat_nichts_zu_sichern() {
-        let mut modell = Editormodell::neu();
+        let mut modell = Editormodell::neu(Heimgriff::default());
         assert_eq!(modell.sichern(), Sicherungsausgang::NichtsGehalten);
     }
 
@@ -2247,22 +2288,104 @@ mod tests {
     #[test]
     fn der_dateityp_kommt_aus_der_endung() {
         assert_eq!(
-            Dateityp::von_pfad(Path::new("/a/b/lies.md")),
+            Dateityp::von_pfad(Path::new("/a/b/lies.md"), None),
             Dateityp::Markdown
         );
         assert_eq!(
-            Dateityp::von_pfad(Path::new("/a/b/LIES.MARKDOWN")),
+            Dateityp::von_pfad(Path::new("/a/b/LIES.MARKDOWN"), None),
             Dateityp::Markdown,
             "die Endung wird ohne Ruecksicht auf Gross- und Kleinschreibung verglichen"
         );
         assert_eq!(
-            Dateityp::von_pfad(Path::new("/a/b/quelle.rs")),
+            Dateityp::von_pfad(Path::new("/a/b/quelle.rs"), None),
             Dateityp::Sonstiges
         );
         assert_eq!(
-            Dateityp::von_pfad(Path::new("/a/b/Makefile")),
+            Dateityp::von_pfad(Path::new("/a/b/Makefile"), None),
             Dateityp::Sonstiges,
             "ohne Endung ist die Frage nach Markdown mit Nein beantwortet"
+        );
+    }
+
+    /// Ein Pruef-krkhome: `zuhause/krkhome` als Verweis auf `ziel`, mit
+    /// `notes.txt` und `tasks.txt` darin, und der Heimordner dazu.
+    fn pruef_krkhome(ordner: &Pruefordner) -> (Heimordner, PathBuf, PathBuf) {
+        let zuhause = ordner.ordner("zuhause");
+        let ziel = ordner.ordner("ziel");
+        std::os::unix::fs::symlink(&ziel, zuhause.join(krk_core::heimordner::ORDNERNAME))
+            .expect("der Verweis laesst sich anlegen");
+        std::fs::write(ziel.join("notes.txt"), "## Thema\nText\n").expect("notes.txt");
+        std::fs::write(ziel.join("tasks.txt"), "- [ ] a\n").expect("tasks.txt");
+        let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+        let geschrieben = heim.geschrieben().to_path_buf();
+        (heim, geschrieben, ziel)
+    }
+
+    /// C4.1 fuer den Dateityp: die zwei Dateien im erkannten Ordner sind
+    /// Eintragsdateien, ueber die geschriebene und ueber die aufgeloeste Form,
+    /// und eine gleichnamige Datei anderswo bleibt, was ihre Endung sagt.
+    #[test]
+    fn die_eintragsdateien_erkennt_der_dateityp_ueber_den_heimordner() {
+        let ordner = Pruefordner::neu("dateityp-eintraege");
+        let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+        for basis in [&geschrieben, &ziel] {
+            assert_eq!(
+                Dateityp::von_pfad(&basis.join("notes.txt"), Some(&heim)),
+                Dateityp::Eintraege(Sonderdatei::Notizen),
+                "{}",
+                basis.display()
+            );
+            assert_eq!(
+                Dateityp::von_pfad(&basis.join("tasks.txt"), Some(&heim)),
+                Dateityp::Eintraege(Sonderdatei::Aufgaben),
+                "{}",
+                basis.display()
+            );
+        }
+        let daneben = ordner.datei("notes.txt", "## Thema\n");
+        assert_eq!(
+            Dateityp::von_pfad(&daneben, Some(&heim)),
+            Dateityp::Sonstiges
+        );
+        assert_eq!(
+            Dateityp::von_pfad(&geschrieben.join("notes.txt"), None),
+            Dateityp::Sonstiges,
+            "ohne Heimordner entscheidet die Endung"
+        );
+        assert_eq!(
+            Dateityp::von_pfad(&geschrieben.join("lies.md"), Some(&heim)),
+            Dateityp::Markdown,
+            "eine andere Datei im Heimordner bleibt bei ihrer Endung"
+        );
+    }
+
+    /// Der Editor fragt beim Uebernehmen den geteilten Griff, und ein
+    /// Ersetzen darin gilt fuer das naechste Oeffnen.
+    #[test]
+    fn der_editor_liest_den_dateityp_aus_dem_geteilten_griff() {
+        let ordner = Pruefordner::neu("editor-eintraege");
+        let (heim, geschrieben, _) = pruef_krkhome(&ordner);
+        let griff = Heimgriff::default();
+        let mut modell = Editormodell::neu(std::rc::Rc::clone(&griff));
+        let notizen = geschrieben.join("notes.txt");
+
+        assert_eq!(modell.oeffnen(&notizen), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(
+            modell.typ(),
+            Dateityp::Sonstiges,
+            "noch kein Heimordner im Griff"
+        );
+
+        heimgriff::ersetzen(&griff, heim);
+        let aufgaben = geschrieben.join("tasks.txt");
+        assert_eq!(modell.oeffnen(&aufgaben), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(modell.typ(), Dateityp::Eintraege(Sonderdatei::Aufgaben));
+        assert_eq!(
+            crate::hervorhebung::art(modell.pfad(), modell.typ()),
+            crate::hervorhebung::Darstellungsart::Markdown,
+            "die Formatansicht zeigt die Eintragsdatei bis zur Tabellenform als Markdown"
         );
     }
 
@@ -2343,7 +2466,7 @@ mod tests {
     /// Ohne gehaltene Datei gibt es keine fremde Aenderung.
     #[test]
     fn ein_editor_ohne_datei_meldet_keine_fremde_aenderung() {
-        let mut modell = Editormodell::neu();
+        let mut modell = Editormodell::neu(Heimgriff::default());
         assert_eq!(modell.fremdaenderung_melden(), None);
     }
 }

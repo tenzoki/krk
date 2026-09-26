@@ -430,9 +430,14 @@ fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
 /// fuer die Grundschrift und den Umbruch, `formatieren` fuer die Einfaerbung;
 /// zwei Antworten nebeneinander waeren eine Datei mit fester Schrift ohne
 /// Einfaerbung oder umgekehrt.
+///
+/// **Eine Eintragsdatei aus `~/krkhome/` ist Markdown**, obwohl sie `.txt`
+/// heisst: die Vorschau rendert sie, und die Formatansicht des Editors zeigt
+/// sie bis zur Tabellenform ebenso (Schritt 2.1 des Arbeitspakets
+/// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
 pub fn art(pfad: Option<&Path>, typ: Dateityp) -> Darstellungsart {
     match typ {
-        Dateityp::Markdown => Darstellungsart::Markdown,
+        Dateityp::Markdown | Dateityp::Eintraege(_) => Darstellungsart::Markdown,
         Dateityp::Sonstiges => match sprache_fuer(pfad) {
             Some(_) => Darstellungsart::Code,
             None => Darstellungsart::EinfacherText,
@@ -546,9 +551,18 @@ impl Wortarten {
 /// braucht, den [`rechnen`] benutzt: waeren es zwei Ausdruecke, koennte der
 /// aufgehobene Stand einer anderen Sprache gehoeren als der Durchgang, der ihn
 /// fortschreibt.
-fn gewaehlte_sprache(pfad: Option<&Path>) -> &'static SyntaxReference {
+///
+/// **Eine Eintragsdatei nimmt Markdown und nicht ihre Endung.** `.txt` fuehrt
+/// die Kiste als reinen Text, und mit ihm truege die Formatansicht zwar den
+/// Umbruch der Markdown-Besetzung, aber keine Ueberschrift: die Wortarten, an
+/// denen [`Wortarten`] sie erkennt, liefert allein die Markdown-Definition.
+fn gewaehlte_sprache(pfad: Option<&Path>, typ: Dateityp) -> &'static SyntaxReference {
     let satz = sprachsatz();
-    sprache_fuer(pfad)
+    let eigene = match typ {
+        Dateityp::Eintraege(_) => None,
+        Dateityp::Markdown | Dateityp::Sonstiges => sprache_fuer(pfad),
+    };
+    eigene
         .or_else(|| satz.find_syntax_by_extension("md"))
         .unwrap_or_else(|| satz.find_syntax_plain_text())
 }
@@ -1338,7 +1352,7 @@ pub fn fortschreiben(
     tafel: Tafel,
 ) -> Einfaerbungsstand {
     let art = art(pfad, typ);
-    let sprache = gewaehlte_sprache(pfad);
+    let sprache = gewaehlte_sprache(pfad, typ);
     let schluessel = Schluessel {
         art,
         sprache: sprache.name.as_str(),
@@ -1394,7 +1408,14 @@ pub fn fortschreiben(
 /// in diesem Circle fuehrt.
 #[cfg(test)]
 fn formatieren(text: &str, pfad: Option<&Path>, typ: Dateityp, tafel: Tafel) -> Formatierung {
-    rechnen(text, None, art(pfad, typ), gewaehlte_sprache(pfad), tafel).formatierung
+    rechnen(
+        text,
+        None,
+        art(pfad, typ),
+        gewaehlte_sprache(pfad, typ),
+        tafel,
+    )
+    .formatierung
 }
 
 /// Haengt eine Einfaerbung an und zieht sie mit der vorigen zusammen, wenn
@@ -1654,6 +1675,28 @@ mod tests {
         assert_eq!(formatierung.art, Darstellungsart::EinfacherText);
         assert!(formatierung.einfaerbungen.is_empty());
         assert!(formatierung.auszeichnungen.is_empty());
+    }
+
+    /// Eine Eintragsdatei aus `~/krkhome/` zeigt die Formatansicht als
+    /// Markdown, mit ihren Themen als Ueberschriften, obwohl ihre Endung
+    /// `.txt` ist; dieselbe Datei nach der Endung bekaeme keine (Schritt 2.1).
+    #[test]
+    fn eine_eintragsdatei_traegt_in_der_formatansicht_ihre_ueberschriften() {
+        let datei = pfad("notes.txt");
+        let typ = Dateityp::Eintraege(krk_core::heimordner::Sonderdatei::Notizen);
+        assert_eq!(art(Some(&datei), typ), Darstellungsart::Markdown);
+        let ueberschrift = |formatierung: &Formatierung| {
+            formatierung
+                .auszeichnungen
+                .iter()
+                .any(|stelle| stelle.art == Auszeichnung::Ueberschrift { stufe: 2 })
+        };
+        let quelle = "## Thema\nText darunter\n";
+        let eintraege = formatieren(quelle, Some(&datei), typ, Tafel::Hell);
+        assert_eq!(eintraege.art, Darstellungsart::Markdown);
+        assert!(ueberschrift(&eintraege), "{:?}", eintraege.auszeichnungen);
+        let nach_endung = formatieren(quelle, Some(&datei), Dateityp::Sonstiges, Tafel::Hell);
+        assert!(!ueberschrift(&nach_endung));
     }
 
     /// Ohne gehaltene Datei gibt es keinen Pfad, und die Kiste kennt keine

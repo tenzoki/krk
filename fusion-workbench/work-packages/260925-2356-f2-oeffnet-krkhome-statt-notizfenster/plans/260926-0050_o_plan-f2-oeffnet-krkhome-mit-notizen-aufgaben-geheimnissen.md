@@ -272,7 +272,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
 
 ### Stufe 2: lesen (C4)
 
-7. **2.1 Eintragsdateien sind ein Dateityp, und die Vorschau zeigt Kästchen**
+7. [DONE] **2.1 Eintragsdateien sind ein Dateityp, und die Vorschau zeigt Kästchen**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/editormodell.rs`, `crates/krk-ui/src/hervorhebung.rs`, `crates/krk-ui/src/markdown.rs`, `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/anwendung.rs` (Weitergabe des Griffs), `crates/krk-ui/src/appkit/textmerkmale.rs` (je nach Rufern von `Dateityp::von_pfad`)
    - Changes:

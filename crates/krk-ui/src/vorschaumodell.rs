@@ -177,13 +177,14 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
+use krk_core::heimordner::Heimordner;
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
 
 use crate::editormodell::Dateityp;
 use crate::hervorhebung::{self, Darstellungsart, Tafel};
-use crate::markdown::{self, Gerendert};
+use crate::markdown::{self, Gerendert, Lesart};
 
 /// Bis zu welcher Groesse eine Textdatei als Inhalt erscheint (C6).
 pub const TEXTGRENZE: u64 = 1024 * 1024;
@@ -403,7 +404,16 @@ impl Ladevorgang {
     /// uebersetzten regulaeren Ausdruck, und ein Klon legte jedes Mal eine
     /// zweite Fassung aller Profile an. `Arc` macht denselben Klon zu einem
     /// Zaehlerschritt. Er und nicht `Rc`, weil der Wert diesen Faden erreicht.
-    fn starten(pfad: PathBuf, tafel: Tafel, profile: Arc<Profile>) -> Self {
+    ///
+    /// **Der Heimordner faehrt als Abschrift mit** und nicht als Griff: ein
+    /// `Rc` erreicht diesen Faden nicht, und die Abschrift ist der Wert, der
+    /// beim Auftrag galt ([`crate::heimgriff`]).
+    fn starten(
+        pfad: PathBuf,
+        tafel: Tafel,
+        profile: Arc<Profile>,
+        heim: Option<Heimordner>,
+    ) -> Self {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
         let fuer_faden = pfad.clone();
@@ -413,7 +423,7 @@ impl Ladevorgang {
                 let _ = SyncSender::send(
                     &sender,
                     Geladen {
-                        inhalt: laden(&fuer_faden, tafel, &profile),
+                        inhalt: laden(&fuer_faden, tafel, &profile, heim.as_ref()),
                     },
                 );
             });
@@ -577,10 +587,21 @@ impl Vorschaumodell {
     /// leerer Satz heisst „keine Profile" und ist kein Fehlerfall, dann zeigt
     /// ein Ordner seine Metadaten. Warum sie als `Arc` und nicht als Kopie
     /// reisen, steht an [`Ladevorgang::starten`].
-    pub fn datei_anzeigen(&mut self, pfad: &Path, tafel: Tafel, profile: Arc<Profile>) {
+    pub fn datei_anzeigen(
+        &mut self,
+        pfad: &Path,
+        tafel: Tafel,
+        profile: Arc<Profile>,
+        heim: Option<Heimordner>,
+    ) {
         let tab = &mut self.tabs[self.aktiv];
         tab.titel = titel_von(pfad);
-        tab.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf(), tafel, profile));
+        tab.ladevorgang = Some(Ladevorgang::starten(
+            pfad.to_path_buf(),
+            tafel,
+            profile,
+            heim,
+        ));
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
@@ -768,7 +789,14 @@ fn zu_gross_text(groesse: u64) -> String {
 /// Zaehlprobe sagt das ausdruecklich. Weil er hier steht und diese Funktion allein auf dem
 /// Arbeitsfaden eines ausgewaehlten Eintrags laeuft, kostet ein Ordner, den der
 /// Nutzer nie auswaehlt, keinen Verzeichnisleselauf und keine Dateioeffnung.
-fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
+///
+/// **Die Eintragsdateien aus `~/krkhome/` kommen als Markdown mit Kaestchen**
+/// (C4 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
+/// Erkannt werden sie ueber `heim`, die Abschrift des einen geteilten Wertes,
+/// und ohne einen Systemaufruf ueber die hinaus, die dieser Weg ohnehin
+/// stellt; gelesen wird mit demselben `bis_zur_grenze_lesen` wie jede
+/// Textdatei, also nur lesend.
+fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>) -> Inhalt {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
     let roh = match std::fs::symlink_metadata(pfad) {
@@ -866,12 +894,17 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile) -> Inhalt {
         // Eingefaerbt wird der Quelltext **nicht** hier: das gehoert hinter die
         // Endbedingung von L7 und damit in die Ansicht, denn `syntect` ist mit
         // 0,3 MB/s zu langsam, um darauf zu warten.
-        Some(text) => match hervorhebung::art(Some(pfad), Dateityp::von_pfad(pfad)) {
-            Darstellungsart::Markdown => {
-                Inhalt::Markdown(Box::new(markdown::rendern(&text, tafel)))
+        Some(text) => {
+            let typ = Dateityp::von_pfad(pfad, heim);
+            match hervorhebung::art(Some(pfad), typ) {
+                Darstellungsart::Markdown => Inhalt::Markdown(Box::new(markdown::rendern(
+                    &text,
+                    tafel,
+                    Lesart::von_dateityp(typ),
+                ))),
+                Darstellungsart::Code | Darstellungsart::EinfacherText => Inhalt::Text(text),
             }
-            Darstellungsart::Code | Darstellungsart::EinfacherText => Inhalt::Text(text),
-        },
+        }
         // Zu gross, nicht lesbar, keine gewoehnliche Datei oder kein UTF-8, also
         // keine Textdatei im Sinne von C6.
         None => Inhalt::Metadaten {
@@ -1074,8 +1107,137 @@ mod tests {
         let pfad = ordner.pfad().join("notiz.txt");
         std::fs::write(&pfad, "Erste Zeile\nZweite").expect("Probendatei");
         assert_eq!(
-            laden(&pfad, Tafel::Hell, &Profile::default()),
+            laden(&pfad, Tafel::Hell, &Profile::default(), None),
             Inhalt::Text("Erste Zeile\nZweite".to_owned())
+        );
+    }
+
+    /// Ein Pruef-krkhome: `zuhause/krkhome` als Verweis auf `ziel`, mit den
+    /// zwei Eintragsdateien darin, und der Heimordner dazu.
+    fn pruef_krkhome(ordner: &Pruefordner) -> (Heimordner, PathBuf, PathBuf) {
+        let zuhause = ordner.ordner("zuhause");
+        let ziel = ordner.ordner("ziel");
+        std::os::unix::fs::symlink(&ziel, zuhause.join(krk_core::heimordner::ORDNERNAME))
+            .expect("der Verweis laesst sich anlegen");
+        std::fs::write(ziel.join("notes.txt"), "## Einkauf\nBrot\n").expect("notes.txt");
+        std::fs::write(
+            ziel.join("tasks.txt"),
+            "- [ ] offen\n- [x] erledigt\nfremd\n",
+        )
+        .expect("tasks.txt");
+        let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+        let geschrieben = heim.geschrieben().to_path_buf();
+        (heim, geschrieben, ziel)
+    }
+
+    /// Der gerenderte Text, oder ein Abbruch mit dem, was statt dessen kam.
+    fn gerenderter_text(inhalt: Inhalt) -> String {
+        match inhalt {
+            Inhalt::Markdown(gerendert) => gerendert.text,
+            anderes => panic!("erwartet war Markdown, gekommen ist {anderes:?}"),
+        }
+    }
+
+    /// C4.1: die zwei Eintragsdateien im erkannten Ordner kommen als Markdown,
+    /// ueber die geschriebene und ueber die aufgeloeste Form, die Aufgaben mit
+    /// Kaestchen; eine gleichnamige Datei daneben bleibt Text.
+    #[test]
+    fn die_eintragsdateien_im_heimordner_kommen_gerendert() {
+        let ordner = Pruefordner::neu("eintraege-gerendert");
+        let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+        for basis in [&geschrieben, &ziel] {
+            let notizen = laden(
+                &basis.join("notes.txt"),
+                Tafel::Hell,
+                &Profile::default(),
+                Some(&heim),
+            );
+            assert_eq!(gerenderter_text(notizen), "Einkauf\n\nBrot");
+            let aufgaben = laden(
+                &basis.join("tasks.txt"),
+                Tafel::Hell,
+                &Profile::default(),
+                Some(&heim),
+            );
+            assert_eq!(gerenderter_text(aufgaben), "☐ offen\n☑ erledigt\nfremd");
+        }
+        let daneben = ordner.datei("notes.txt", "## Einkauf\nBrot\n");
+        assert_eq!(
+            laden(&daneben, Tafel::Hell, &Profile::default(), Some(&heim)),
+            Inhalt::Text("## Einkauf\nBrot\n".to_owned()),
+            "eine gleichnamige Datei in einem anderen Ordner erscheint wie bisher"
+        );
+    }
+
+    /// C4.2: eine `.md` mit `- [ ]` an einem anderen Ort bekommt keine
+    /// Kaestchen, auch mit Heimordner, und eine `.md` im Heimordner ebenso
+    /// nicht.
+    #[test]
+    fn eine_markdown_datei_anderswo_bleibt_ohne_kaestchen() {
+        let ordner = Pruefordner::neu("md-ohne-kaestchen");
+        let (heim, geschrieben, _) = pruef_krkhome(&ordner);
+        let anderswo = ordner.datei("liste.md", "- [ ] a\n- [x] b\n");
+        let im_heim = geschrieben.join("liste.md");
+        std::fs::write(&im_heim, "- [ ] a\n- [x] b\n").expect("liste.md");
+        for pfad in [anderswo, im_heim] {
+            assert_eq!(
+                gerenderter_text(laden(&pfad, Tafel::Hell, &Profile::default(), Some(&heim))),
+                "• [ ] a\n• [x] b",
+                "{}",
+                pfad.display()
+            );
+        }
+    }
+
+    /// C4.3: die Vorschau schreibt keine der beiden Dateien. Gemessen an
+    /// Bytes und Aenderungszeit vor und nach dem Laden.
+    #[test]
+    fn das_laden_laesst_beide_eintragsdateien_unberuehrt() {
+        let ordner = Pruefordner::neu("eintraege-unberuehrt");
+        let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+        let stand = |name: &str| {
+            let pfad = ziel.join(name);
+            let bytes = std::fs::read(&pfad).expect("lesbar");
+            let zeit = std::fs::metadata(&pfad)
+                .and_then(|daten| daten.modified())
+                .expect("Aenderungszeit");
+            (bytes, zeit)
+        };
+        let vorher = [stand("notes.txt"), stand("tasks.txt")];
+        for name in ["notes.txt", "tasks.txt"] {
+            let _ = laden(
+                &geschrieben.join(name),
+                Tafel::Hell,
+                &Profile::default(),
+                Some(&heim),
+            );
+        }
+        assert_eq!([stand("notes.txt"), stand("tasks.txt")], vorher);
+    }
+
+    /// Die Abschrift des Heimordners erreicht den Arbeitsfaden ueber den
+    /// oeffentlichen Weg, den die Ansicht ruft.
+    #[test]
+    fn der_ladeauftrag_nimmt_die_abschrift_des_heimordners_mit() {
+        let ordner = Pruefordner::neu("eintraege-auftrag");
+        let (heim, geschrieben, _) = pruef_krkhome(&ordner);
+        let mut modell = Vorschaumodell::neu();
+        modell.datei_anzeigen(
+            &geschrieben.join("tasks.txt"),
+            Tafel::Hell,
+            Arc::default(),
+            Some(heim),
+        );
+        for _ in 0..2000 {
+            let _ = modell.einziehen();
+            if !matches!(modell.aktiver_inhalt(), Inhalt::Leer) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(
+            gerenderter_text(modell.aktiver_inhalt().clone()),
+            "☐ offen\n☑ erledigt\nfremd"
         );
     }
 
@@ -1090,7 +1252,8 @@ mod tests {
 
         let markdown = ordner.pfad().join("notiz.md");
         std::fs::write(&markdown, "# Ueberschrift\n").expect("Probendatei");
-        let Inhalt::Markdown(gerendert) = laden(&markdown, Tafel::Hell, &Profile::default()) else {
+        let Inhalt::Markdown(gerendert) = laden(&markdown, Tafel::Hell, &Profile::default(), None)
+        else {
             panic!("eine .md-Datei wird gerendert");
         };
         assert_eq!(
@@ -1103,7 +1266,7 @@ mod tests {
         let quelltext = ordner.pfad().join("quelle.rs");
         std::fs::write(&quelltext, "fn main() {}\n").expect("Probendatei");
         assert_eq!(
-            laden(&quelltext, Tafel::Hell, &Profile::default()),
+            laden(&quelltext, Tafel::Hell, &Profile::default(), None),
             Inhalt::Text("fn main() {}\n".to_owned())
         );
 
@@ -1112,7 +1275,7 @@ mod tests {
         let html = ordner.pfad().join("seite.html");
         std::fs::write(&html, "<p>Hallo</p>\n").expect("Probendatei");
         assert_eq!(
-            laden(&html, Tafel::Hell, &Profile::default()),
+            laden(&html, Tafel::Hell, &Profile::default(), None),
             Inhalt::Text("<p>Hallo</p>\n".to_owned())
         );
     }
@@ -1121,7 +1284,7 @@ mod tests {
     fn ein_ordner_erscheint_als_metadaten() {
         let ordner = Pruefordner::neu("ordner");
         let Inhalt::Metadaten { metadaten, .. } =
-            laden(ordner.pfad(), Tafel::Hell, &Profile::default())
+            laden(ordner.pfad(), Tafel::Hell, &Profile::default(), None)
         else {
             panic!("ein Ordner gehoert in die Metadatenanzeige");
         };
@@ -1136,7 +1299,8 @@ mod tests {
         let ordner = Pruefordner::neu("gross");
         let pfad = ordner.pfad().join("gross.txt");
         std::fs::write(&pfad, "a".repeat((TEXTGRENZE + 1) as usize)).expect("Probendatei");
-        let Inhalt::Metadaten { metadaten, .. } = laden(&pfad, Tafel::Hell, &Profile::default())
+        let Inhalt::Metadaten { metadaten, .. } =
+            laden(&pfad, Tafel::Hell, &Profile::default(), None)
         else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
@@ -1152,7 +1316,8 @@ mod tests {
         let ordner = Pruefordner::neu("bild-klein");
         let pfad = ordner.pfad().join("bild.png");
         std::fs::write(&pfad, [0x89, b'P', b'N', b'G']).expect("Probendatei");
-        let Inhalt::Bild { daten, metadaten } = laden(&pfad, Tafel::Hell, &Profile::default())
+        let Inhalt::Bild { daten, metadaten } =
+            laden(&pfad, Tafel::Hell, &Profile::default(), None)
         else {
             panic!("unter der Grenze zeigt das Bild");
         };
@@ -1176,7 +1341,8 @@ mod tests {
         let datei = std::fs::File::create(&pfad).expect("Probendatei");
         datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
         drop(datei);
-        let Inhalt::Metadaten { metadaten, .. } = laden(&pfad, Tafel::Hell, &Profile::default())
+        let Inhalt::Metadaten { metadaten, .. } =
+            laden(&pfad, Tafel::Hell, &Profile::default(), None)
         else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
@@ -1201,7 +1367,8 @@ mod tests {
         let datei = std::fs::File::create(&pfad).expect("Probendatei");
         datei.set_len(BILDGRENZE + 1).expect("Laenge setzen");
         drop(datei);
-        let Inhalt::Metadaten { metadaten, .. } = laden(&pfad, Tafel::Hell, &Profile::default())
+        let Inhalt::Metadaten { metadaten, .. } =
+            laden(&pfad, Tafel::Hell, &Profile::default(), None)
         else {
             panic!("ueber der Grenze zeigen die Metadaten");
         };
@@ -1217,7 +1384,8 @@ mod tests {
         for name in ["Bericht.PDF", "bericht.pdf"] {
             let pfad = ordner.pfad().join(name);
             std::fs::write(&pfad, b"%PDF-1.4\n").expect("Probendatei");
-            let Inhalt::Pdf { daten, metadaten } = laden(&pfad, Tafel::Hell, &Profile::default())
+            let Inhalt::Pdf { daten, metadaten } =
+                laden(&pfad, Tafel::Hell, &Profile::default(), None)
             else {
                 panic!("{name} erreicht den Betrachter");
             };
@@ -1239,7 +1407,7 @@ mod tests {
         let ordner = Pruefordner::neu("pdf-umbenannt");
         let pfad = ordner.pfad().join("notiz.pdf");
         std::fs::write(&pfad, "Erste Zeile\nZweite").expect("Probendatei");
-        let Inhalt::Pdf { daten, metadaten } = laden(&pfad, Tafel::Hell, &Profile::default())
+        let Inhalt::Pdf { daten, metadaten } = laden(&pfad, Tafel::Hell, &Profile::default(), None)
         else {
             panic!("die Endung entscheidet, nicht der Inhalt");
         };
@@ -1254,7 +1422,7 @@ mod tests {
         let pfad = ordner.pfad().join("roh.bin");
         std::fs::write(&pfad, [0xFF, 0xFE, 0x00, 0x42]).expect("Probendatei");
         assert!(matches!(
-            laden(&pfad, Tafel::Hell, &Profile::default()),
+            laden(&pfad, Tafel::Hell, &Profile::default(), None),
             Inhalt::Metadaten { .. }
         ));
     }
@@ -1263,7 +1431,7 @@ mod tests {
     fn ein_fehlender_pfad_liefert_einen_hinweis() {
         let pfad = Path::new("/gibt/es/nicht/krk-probe");
         assert!(matches!(
-            laden(pfad, Tafel::Hell, &Profile::default()),
+            laden(pfad, Tafel::Hell, &Profile::default(), None),
             Inhalt::Hinweis(_)
         ));
     }
@@ -1284,7 +1452,7 @@ mod tests {
         let (sender, empfaenger) = std::sync::mpsc::channel();
         let pfad = pfad.to_path_buf();
         thread::spawn(move || {
-            let _ = sender.send(laden(&pfad, Tafel::Hell, &Profile::default()));
+            let _ = sender.send(laden(&pfad, Tafel::Hell, &Profile::default(), None));
         });
         empfaenger.recv_timeout(schranke).unwrap_or_else(|_| {
             panic!("laden ist nach {schranke:?} nicht zurueckgekommen; das Oeffnen haengt")
@@ -1351,7 +1519,7 @@ mod tests {
         std::fs::write(&pfad, "aus dem Faden").expect("Probendatei");
 
         let mut modell = Vorschaumodell::neu();
-        modell.datei_anzeigen(&pfad, Tafel::Hell, Arc::default());
+        modell.datei_anzeigen(&pfad, Tafel::Hell, Arc::default(), None);
         modell.oeffnen();
         // Der bestellende Tab ist jetzt inaktiv; die Meldung gehoert trotzdem
         // ihm.
@@ -1416,7 +1584,11 @@ mod tests {
         assert!(!tab_setzen(Inhalt::Leer, None).zeigt_dateitext());
         assert!(
             !tab_setzen(
-                Inhalt::Markdown(Box::new(crate::markdown::rendern("# Titel\n", Tafel::Hell))),
+                Inhalt::Markdown(Box::new(crate::markdown::rendern(
+                    "# Titel\n",
+                    Tafel::Hell,
+                    crate::markdown::Lesart::Markdown,
+                ))),
                 Some("/tmp/probe.md"),
             )
             .zeigt_dateitext(),
@@ -1515,7 +1687,7 @@ kennzeichen = '^\.fusion-setup$'
 "#,
         );
 
-        let Inhalt::Metadaten { metadaten, .. } = laden(ordner.pfad(), Tafel::Hell, &profile)
+        let Inhalt::Metadaten { metadaten, .. } = laden(ordner.pfad(), Tafel::Hell, &profile, None)
         else {
             panic!("ohne Treffer bleibt es beim Zweig von vor der Runde");
         };
@@ -1550,7 +1722,7 @@ kennzeichen = '^\.fusion-setup$'
         let Inhalt::Metadaten {
             metadaten,
             zaehlzeilen,
-        } = laden(ordner.pfad(), Tafel::Hell, &Profile::default())
+        } = laden(ordner.pfad(), Tafel::Hell, &Profile::default(), None)
         else {
             panic!("ein Ordner ohne Profiltreffer bleibt bei den Metadaten");
         };
@@ -1608,7 +1780,7 @@ kennzeichen = '^\.fusion-setup$'
             let Inhalt::Metadaten {
                 metadaten,
                 zaehlzeilen,
-            } = laden(pfad, Tafel::Hell, &Profile::default())
+            } = laden(pfad, Tafel::Hell, &Profile::default(), None)
             else {
                 panic!("{} gehoert in die Metadatenanzeige", pfad.display());
             };
@@ -1621,7 +1793,8 @@ kennzeichen = '^\.fusion-setup$'
         }
 
         // Die Gegenprobe am Ziel: der Ordner selbst bekommt seine drei Zeilen.
-        let Inhalt::Metadaten { zaehlzeilen, .. } = laden(&ziel, Tafel::Hell, &Profile::default())
+        let Inhalt::Metadaten { zaehlzeilen, .. } =
+            laden(&ziel, Tafel::Hell, &Profile::default(), None)
         else {
             panic!("das Ziel der Verknuepfung gehoert in die Metadatenanzeige");
         };
@@ -1650,7 +1823,8 @@ pfad = 'werkbank$'
 "#,
         );
 
-        let Inhalt::Zusammenfassung(zusammenfassung) = laden(&werkbank, Tafel::Hell, &profile)
+        let Inhalt::Zusammenfassung(zusammenfassung) =
+            laden(&werkbank, Tafel::Hell, &profile, None)
         else {
             panic!("ein erkannter Ordner zeigt die Zeilen seines Profils");
         };
@@ -1698,13 +1872,13 @@ pfad = 'werkbank'
         );
 
         assert_eq!(
-            laden(&text, Tafel::Hell, &profile),
+            laden(&text, Tafel::Hell, &profile, None),
             Inhalt::Text("Erste Zeile\nZweite".to_owned()),
             "eine Textdatei bis 1 MB zeigt weiter ihren Inhalt"
         );
         assert!(
             matches!(
-                laden(&bild, Tafel::Hell, &profile),
+                laden(&bild, Tafel::Hell, &profile, None),
                 Inhalt::Bild {
                     metadaten: Some(_),
                     ..
@@ -1714,7 +1888,7 @@ pfad = 'werkbank'
         );
         assert!(
             matches!(
-                laden(&binaer, Tafel::Hell, &profile),
+                laden(&binaer, Tafel::Hell, &profile, None),
                 Inhalt::Metadaten { .. }
             ),
             "alles Uebrige zeigt weiter seine Metadaten"
@@ -1723,7 +1897,7 @@ pfad = 'werkbank'
         // sie sagte die Probe darueber nur, dass das Muster nirgends trifft.
         assert!(
             matches!(
-                laden(&werkbank, Tafel::Hell, &profile),
+                laden(&werkbank, Tafel::Hell, &profile, None),
                 Inhalt::Zusammenfassung(_)
             ),
             "dasselbe Muster trifft den Ordner sehr wohl"

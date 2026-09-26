@@ -24,11 +24,13 @@
 //!
 //! ```text
 //!   Quelltext
-//!       │  Parser::new_ext(.., Options::empty()).into_offset_iter()
+//!       │  Parser::new_ext(.., lesart.optionen()).into_offset_iter()
 //!       v
 //!   ┌───────────────────────────────────────────────────────────────┐
 //!   │ Ueberschrift   ──> Auszeichnung::Ueberschrift { stufe }       │
 //!   │ Listenpunkt    ──> Merkzeichen + Listenzeile { tiefe }        │
+//!   │ Kaestchen      ──> "☐ " oder "☑ " statt "• "                  │
+//!   │   (allein Lesart::Eintragsdatei)                              │
 //!   │ Zitatblock     ──> Auszeichnung::Listenzeile { tiefe }        │
 //!   │ Quelltext      ──> Auszeichnung::FesteSchrift                 │
 //!   │ Betonung       ──> Auszeichnung::Betonung                     │
@@ -160,6 +162,28 @@
 //! genauso einrueckt; die Nummer einer geordneten Liste steht in der [`Ebene`]
 //! der Liste und wird vom Punkt verbraucht.
 //!
+//! # Zwei Lesarten, und die zweite gilt zwei Dateien
+//!
+//! [`Lesart::Markdown`] ist der Grundumfang von CommonMark ohne jedes Merkmal
+//! der Kiste, und so bleibt es fuer jede Markdown-Datei. [`Lesart::Eintragsdatei`]
+//! gilt allein `notes.txt` und `tasks.txt` im erkannten `~/krkhome/` (C4 des
+//! Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`) und
+//! schaltet genau ein Merkmal hinzu, `ENABLE_TASKLISTS`. **Welche Lesart gilt,
+//! entscheidet der Dateityp und nicht diese Datei** ([`Lesart::von_dateityp`]);
+//! eine `.md` mit `- [ ]` an anderem Ort erscheint deshalb wie vor dieser
+//! Arbeit.
+//!
+//! **Das Kaestchen ist das Merkzeichen seines Punktes**, und daraus folgt, wo
+//! es in die zurueckgehaltene Merkzeichenlogik greift und wo nicht
+//! ([`Zerlegung::kaestchen`]): es nimmt dem Punkt sein ausstehendes `• ` ab und
+//! wird selbst **sofort** geschrieben, mit dem Quellbereich `[ ]` beziehungsweise
+//! `[x]` als seinem Abschnitt. Sofort geht es, ohne den Defekt `260812-1920`
+//! zurueckzuholen, weil die Kiste das Ereignis erst **nach** einem etwaigen
+//! Absatzbeginn meldet — der Abstand des Absatzes ist dann schon eingeloest,
+//! und zwischen Kaestchen und Text tritt nichts mehr. Die Folge davon steht
+//! bei [`Zerlegung::kaestchen`]: in einer losen Liste liegt `[ ]` schon hinter
+//! dem Lesestand, und das Kaestchen bekommt einen leeren Quellbereich.
+//!
 //! # Die Stellen sind UTF-16-Einheiten
 //!
 //! Wie in [`crate::hervorhebung`], und aus demselben Grund: ein `NSRange` zaehlt
@@ -238,10 +262,53 @@ use std::sync::Arc;
 
 use pulldown_cmark::{Event, Options, Parser, Tag};
 
+use crate::editormodell::Dateityp;
 use crate::hervorhebung::{
     Auszeichnung, Auszeichnungsstelle, Darstellungsart, Einfaerbung, Farbe, Formatierung, Tafel,
     linkfarbe,
 };
+
+/// Wie eine Quelle gelesen wird: als Markdown oder als Eintragsdatei.
+///
+/// Siehe den Modulkopf unter „Zwei Lesarten". Zwei Werte, weil es genau zwei
+/// Merkmalssaetze gibt; ein dritter kaeme mit einem dritten Satz.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lesart {
+    /// Der Grundumfang von CommonMark, fuer jede Markdown-Datei.
+    Markdown,
+    /// Dazu die Aufgabenkaestchen, allein fuer `notes.txt` und `tasks.txt` im
+    /// erkannten Ordner.
+    Eintragsdatei,
+}
+
+impl Lesart {
+    /// Die Lesart, die der Dateityp verlangt.
+    ///
+    /// **Die eine Stelle, an der ein Dateityp zur Lesart wird**, und die
+    /// Fallunterscheidung ist vollstaendig und ohne Auffangzweig: ein weiterer
+    /// Dateityp haelt den Bau hier an und erzwingt die Antwort, ob er
+    /// Kaestchen zeigt. `Sonstiges` erreicht das Rendern nie, weil
+    /// `hervorhebung::art` ihn nicht als Markdown einordnet; er steht beim
+    /// Grundumfang, weil das die Lesart ohne jede Zutat ist.
+    #[must_use]
+    pub fn von_dateityp(typ: Dateityp) -> Self {
+        match typ {
+            Dateityp::Eintraege(_) => Lesart::Eintragsdatei,
+            Dateityp::Markdown | Dateityp::Sonstiges => Lesart::Markdown,
+        }
+    }
+
+    /// Die Merkmale der Kiste, die diese Lesart einschaltet.
+    ///
+    /// `ENABLE_TASKLISTS` fuegt keinen Containerblock hinzu; die Frage in
+    /// [`Inhaltsart::deckt_luecken`] bleibt davon unberuehrt.
+    fn optionen(self) -> Options {
+        match self {
+            Lesart::Markdown => Options::empty(),
+            Lesart::Eintragsdatei => Options::ENABLE_TASKLISTS,
+        }
+    }
+}
 
 /// Ein gerendertes Markdown: der Text, der zu sehen ist, und seine Stellen.
 ///
@@ -577,9 +644,12 @@ struct Quellelement {
 /// Die Tafel entscheidet allein ueber die Farbe eines Verweises. Sie kommt von
 /// aussen herein, weil dieses Modul keine Farbe kennt und die Wahl zwischen
 /// Hell und Dunkel am Erscheinungsbild des Fensters haengt.
-pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
+///
+/// Die [`Lesart`] entscheidet allein ueber die Aufgabenkaestchen; siehe den
+/// Modulkopf.
+pub fn rendern(quelle: &str, tafel: Tafel, lesart: Lesart) -> Gerendert {
     let mut zerlegung = Zerlegung::neu(quelle, linkfarbe(tafel));
-    let mut ereignisse = Parser::new_ext(quelle, Options::empty()).into_offset_iter();
+    let mut ereignisse = Parser::new_ext(quelle, lesart.optionen()).into_offset_iter();
     while let Some((ereignis, bereich)) = ereignisse.next() {
         // Der erste Satz der Deckung, vor jedem Ereignis und ohne seine Art zu
         // kennen: was seit dem letzten Stand ungelesen blieb, steht da.
@@ -661,6 +731,12 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
             // drei Zeilen einer Tabelle sind ein Absatz mit weichen
             // Umbruechen, und der Umbruch bleibt einer.
             Event::SoftBreak | Event::HardBreak => zerlegung.schreiben("\n", bereich.end),
+            // Das Kaestchen eines Aufgabenpunktes. Die Kiste liefert das
+            // Ereignis allein unter `Lesart::Eintragsdatei`, denn nur dort ist
+            // `ENABLE_TASKLISTS` eingeschaltet; unter `Lesart::Markdown` bleibt
+            // `- [ ]` ein gewoehnlicher Punkt mit dem Text `[ ]`, wie vor der
+            // Lesart.
+            Event::TaskListMarker(erledigt) => zerlegung.kaestchen(erledigt, bereich),
             // Dieselbe Auffangregel fuer die Ereignisse, die kein Ende haben:
             // eine Trennlinie, eingebettetes HTML in der Zeile, alles Uebrige.
             Event::Rule
@@ -668,8 +744,7 @@ pub fn rendern(quelle: &str, tafel: Tafel) -> Gerendert {
             | Event::InlineHtml(_)
             | Event::FootnoteReference(_)
             | Event::InlineMath(_)
-            | Event::DisplayMath(_)
-            | Event::TaskListMarker(_) => zerlegung.woertlich(bereich),
+            | Event::DisplayMath(_) => zerlegung.woertlich(bereich),
         }
     }
     zerlegung.abschliessen()
@@ -735,6 +810,13 @@ const PUNKTABSTAND: usize = 1;
 /// Mit dem Leerzeichen dahinter, weil es zum Zeichen gehoert und nicht zum
 /// Text. Der Punkt `U+2022` ist derselbe, den jeder Betrachter setzt.
 const AUFZAEHLUNGSZEICHEN: &str = "• ";
+
+/// Das Kaestchen einer offenen Aufgabe (`[ ]`), mit dem Leerzeichen dahinter
+/// aus demselben Grund wie beim [`AUFZAEHLUNGSZEICHEN`].
+const KAESTCHEN_OFFEN: &str = "☐ ";
+
+/// Das Kaestchen einer erledigten Aufgabe (`[x]` oder `[X]`).
+const KAESTCHEN_ERLEDIGT: &str = "☑ ";
 
 /// Was aus dem Element mit diesem Anfangszeichen wird.
 fn behandlung(tag: &Tag<'_>) -> Behandlung {
@@ -903,7 +985,7 @@ impl Inhaltsart {
     /// dritte Variante liefe damit still als „nicht gedeckt" durch, statt den
     /// Bau anzuhalten. CommonMark kennt mit der Fussnotendefinition und der
     /// Definitionsliste weitere Containerbloecke; sie sind heute nur deshalb
-    /// kein Fall, weil `Options::empty()` sie abschaltet. Wer eine Option
+    /// kein Fall, weil keine [`Lesart`] sie einschaltet. Wer eine Option
     /// einschaltet, soll vom Uebersetzer diese Stelle genannt bekommen — so,
     /// wie es [`Auszeichnung`] in [`crate::hervorhebung`] zusagt und wie
     /// `CLAUDE.md` es unter „Was man nicht sieht" fuer die gewachsenen
@@ -1485,6 +1567,57 @@ impl<'q> Zerlegung<'q> {
         }
     }
 
+    /// Schreibt das Kaestchen eines Aufgabenpunktes an die Stelle seines
+    /// Aufzaehlungszeichens (Lesart::Eintragsdatei).
+    ///
+    /// **Welcher Punkt es ist.** Die Kiste meldet das Kaestchen allein am
+    /// Anfang eines Punktes, bevor irgendein Zeichen darin kam; dessen
+    /// Merkzeichen steht also noch aus, und es ist das innerste ausstehende.
+    /// Ein aeusserer Punkt, dessen Merkzeichen ebenfalls aussteht (`- - [ ] x`),
+    /// behaelt seines und wird von [`Zerlegung::schreiben`] wie immer davor
+    /// eingeloest.
+    ///
+    /// **Allein das `• ` faellt.** Eine Nummer bleibt stehen, denn sie traegt
+    /// eine Auskunft, die das Kaestchen nicht traegt: `1. ☐ a`.
+    ///
+    /// **Sofort geschrieben und nicht vorgemerkt**, anders als das
+    /// Merkzeichen, und das ist der Grund, warum es den Defekt `260812-1920`
+    /// nicht zurueckholt: in einer losen Liste meldet die Kiste das Kaestchen
+    /// erst **nach** dem Beginn des Absatzes, dessen Abstand
+    /// [`Zerlegung::oeffnen`] da schon eingeloest hat. Zwischen Kaestchen und
+    /// Text tritt deshalb nichts mehr, und ein Vormerken braechte nichts ausser
+    /// einem zweiten Wunsch neben dem Merkzeichen.
+    ///
+    /// **Der Quellbezug.** In einer engen Liste — der Form, in der KRK
+    /// `tasks.txt` schreibt — steht der Lesestand vor `[ ]`, und das Kaestchen
+    /// bekommt genau diesen Quellbereich als [`Abschnittsart::Ersetzt`]. In
+    /// einer losen Liste meldet die Kiste es erst nach dem Absatzbeginn,
+    /// dessen Luecke `- [ ] `
+    /// schon als Vorspann des Punktes abgetragen hat; dann ist sein Bereich der
+    /// leere am Lesestand, nach der Regel „ein Rueckschritt in der Quelle wird
+    /// zum leeren Bereich" ([`Zerlegung::kacheln`]), und die Kachelung bleibt
+    /// lueckenlos. Kopiert wird in beiden Formen dasselbe, die ganze
+    /// Aufgabenzeile: der Punkt traegt seine Klammer, und eine beruehrte
+    /// Klammer faehrt ganz mit (Probe
+    /// `das_kopierte_kaestchen_bringt_seine_aufgabenzeile_mit`).
+    fn kaestchen(&mut self, erledigt: bool, bereich: Range<usize>) {
+        if let Some(punkt) = self
+            .offen
+            .iter_mut()
+            .rev()
+            .find(|eintrag| eintrag.merkzeichen.is_some())
+            && punkt.merkzeichen.as_deref() == Some(AUFZAEHLUNGSZEICHEN)
+        {
+            punkt.merkzeichen = None;
+        }
+        let zeichen = if erledigt {
+            KAESTCHEN_ERLEDIGT
+        } else {
+            KAESTCHEN_OFFEN
+        };
+        self.schreiben(zeichen, bereich.end);
+    }
+
     /// Beginnt einen Zitatblock: er legt seine Ebene an und rueckt sich selbst
     /// um sie ein.
     fn zitat_oeffnen(&mut self, quelle: Range<usize>) {
@@ -1666,7 +1799,7 @@ mod tests {
     /// Rendert mit der hellen Tafel; die Farbe spielt in den meisten Proben
     /// keine Rolle, die Tafel muss aber genannt werden.
     fn gerendert(quelle: &str) -> Gerendert {
-        rendern(quelle, Tafel::Hell)
+        rendern(quelle, Tafel::Hell, Lesart::Markdown)
     }
 
     /// Die Stellen einer Auszeichnung, nach ihrer Art.
@@ -1777,7 +1910,9 @@ mod tests {
     fn der_verweis_traegt_die_farbe_seiner_tafel() {
         let quelle = "[Ziel](https://example.com)\n";
         for tafel in [Tafel::Hell, Tafel::Dunkel] {
-            let einfaerbungen = rendern(quelle, tafel).formatierung.einfaerbungen;
+            let einfaerbungen = rendern(quelle, tafel, Lesart::Markdown)
+                .formatierung
+                .einfaerbungen;
             assert_eq!(einfaerbungen.len(), 1, "{tafel:?}");
             assert_eq!(
                 einfaerbungen[0].farbe,
@@ -2621,7 +2756,12 @@ mod tests {
     /// Zeichen aneinander, und daran haengt in Schritt 2 die Umrechnung einer
     /// Auswahlgrenze auf ein Byte.
     fn kachelung_pruefen(quelle: &str) -> Gerendert {
-        let ergebnis = gerendert(quelle);
+        kachelung_pruefen_als(quelle, Lesart::Markdown)
+    }
+
+    /// Dasselbe unter einer genannten Lesart.
+    fn kachelung_pruefen_als(quelle: &str, lesart: Lesart) -> Gerendert {
+        let ergebnis = rendern(quelle, Tafel::Hell, lesart);
         assert_eq!(
             ergebnis.formatierung.laenge,
             ergebnis.text.encode_utf16().count(),
@@ -2972,6 +3112,218 @@ mod tests {
             .iter()
             .map(|element| (element.quelle.clone(), element.klammer))
             .collect()
+    }
+
+    // ---------------------------------------------------------------------
+    // Die Lesart der Eintragsdateien (C4 des Arbeitspakets
+    // `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`, Schritt 2.1)
+    // ---------------------------------------------------------------------
+
+    /// Rendert als Eintragsdatei und haelt dabei die Kachelung nach.
+    fn als_eintragsdatei(quelle: &str) -> Gerendert {
+        kachelung_pruefen_als(quelle, Lesart::Eintragsdatei)
+    }
+
+    /// Die Quelle, an der die Referenz fuer [`Lesart::Markdown`] genommen ist.
+    ///
+    /// Sie traegt jede Schreibweise einer Aufgabe, die die Eintragsform
+    /// kennt, dazu eine fremde Zeile, eine Nummer, ein Zitat und die
+    /// gewoehnlichen Auszeichnungen: genau das, woran eine versehentlich
+    /// eingeschaltete Lesart etwas aendern wuerde.
+    const REFERENZQUELLE: &str = "# Aufgaben\n\n- [ ] offen\n- [x] erledigt\n  * [X] tief\nfremd\n\n1. [ ] nummer\n\n> - [ ] zitat\n\nEin **fetter** [Verweis](https://example.com) und `code`.\n";
+
+    /// FNV-1a ueber die Bytes eines Textes: ein fester Fingerabdruck, der
+    /// anders als `DefaultHasher` nicht von der Fassung der Standardbibliothek
+    /// abhaengt.
+    fn fingerabdruck(text: &str) -> u64 {
+        text.bytes().fold(0xcbf2_9ce4_8422_2325, |stand, byte| {
+            (stand ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3)
+        })
+    }
+
+    /// C4.2: unter `Lesart::Markdown` bleibt die Ausgabe byte-gleich mit der
+    /// vor diesem Schritt.
+    ///
+    /// **Die Referenz ist vor der Aenderung aufgenommen** (260926, Stand
+    /// `38910d0`), mit dem damaligen `rendern(quelle, Tafel::Hell)`: der Text
+    /// woertlich, dazu Laenge und Fingerabdruck der vollstaendigen
+    /// `Debug`-Ausgabe von [`Gerendert`], also Text, Formatierung und
+    /// Quellbezug samt Klammern. Aendert eine kuenftige Arbeit das Rendern
+    /// von Markdown mit Absicht, nimmt sie die Referenz neu auf; die Probe
+    /// sagt dann, dass es sich geaendert hat, und nicht, dass es falsch ist.
+    #[test]
+    fn unter_der_lesart_markdown_bleibt_die_ausgabe_byte_gleich() {
+        let ergebnis = rendern(REFERENZQUELLE, Tafel::Hell, Lesart::Markdown);
+        assert_eq!(
+            ergebnis.text,
+            "Aufgaben\n\n• [ ] offen\n• [x] erledigt\n• [X] tief\nfremd\n1. [ ] nummer\n\n• [ ] zitat\n\nEin fetter Verweis und code."
+        );
+        let vollstaendig = format!("{ergebnis:?}");
+        assert_eq!(vollstaendig.len(), 5609, "die Laenge der Referenz");
+        assert_eq!(
+            fingerabdruck(&vollstaendig),
+            0x854a_577e_8663_b4e8,
+            "Formatierung oder Quellbezug weichen von der Referenz ab"
+        );
+    }
+
+    /// C4.1: offene und erledigte Aufgaben tragen ihr Kaestchen, in der
+    /// Reihenfolge der Quelle, und das Aufzaehlungszeichen faellt.
+    #[test]
+    fn eine_eintragsdatei_zeigt_kaestchen_in_der_reihenfolge_der_quelle() {
+        let ergebnis = als_eintragsdatei("- [ ] a\n- [x] b\n- [ ] c\n");
+        assert_eq!(ergebnis.text, "☐ a\n☑ b\n☐ c");
+    }
+
+    /// Jede Schreibweise, die die Eintragsform beim Lesen annimmt, bekommt
+    /// ihr Kaestchen: `*` statt `-`, Einzug, `[X]`.
+    #[test]
+    fn jede_grosszuegige_schreibweise_bekommt_ihr_kaestchen() {
+        let ergebnis = als_eintragsdatei("* [X] gross\n  - [ ] eingerueckt\n");
+        assert!(ergebnis.text.starts_with("☑ gross"), "{:?}", ergebnis.text);
+        assert!(
+            ergebnis.text.contains("☐ eingerueckt"),
+            "{:?}",
+            ergebnis.text
+        );
+        assert!(!ergebnis.text.contains('•'), "{:?}", ergebnis.text);
+        assert!(!ergebnis.text.contains('['), "{:?}", ergebnis.text);
+    }
+
+    /// Das Kaestchen steht innerhalb der Listenzeile und ausserhalb jeder
+    /// Auszeichnung des ersten Kindes, genau wie das Merkzeichen, an dessen
+    /// Stelle es tritt.
+    #[test]
+    fn das_kaestchen_rueckt_ein_und_wird_nicht_mit_ausgezeichnet() {
+        let ergebnis = als_eintragsdatei("- [ ] **fett** x\n");
+        assert_eq!(ergebnis.text, "☐ fett x");
+        assert_eq!(
+            stellen(&ergebnis, Auszeichnung::Listenzeile { tiefe: 1 }),
+            vec![(0, "☐ fett x".encode_utf16().count())],
+            "die Listenzeile nimmt das Kaestchen mit"
+        );
+        let (anfang, laenge) = stellen(&ergebnis, Auszeichnung::StarkeBetonung)[0];
+        assert_eq!(stueck(&ergebnis.text, anfang, laenge), "fett");
+    }
+
+    /// In einer losen Liste steht das Kaestchen bei seinem Text und nicht
+    /// allein auf seiner Zeile — der Defekt `260812-1920`, den das sofortige
+    /// Schreiben nicht zurueckholen darf.
+    #[test]
+    fn in_einer_losen_liste_steht_das_kaestchen_bei_seinem_text() {
+        let ergebnis = als_eintragsdatei("- [ ] a\n\n- [X] b\n  weiter\n");
+        assert!(ergebnis.text.starts_with("☐ a\n"), "{:?}", ergebnis.text);
+        assert!(ergebnis.text.contains("☑ b\nweiter"), "{:?}", ergebnis.text);
+    }
+
+    /// Ein aeusserer Punkt behaelt sein Merkzeichen, eine Nummer bleibt
+    /// stehen, und ein Punkt aus nichts als dem Kaestchen zeigt es.
+    #[test]
+    fn verschachtelt_nummeriert_und_leer() {
+        assert_eq!(als_eintragsdatei("- - [ ] tief\n").text, "• ☐ tief");
+        assert_eq!(als_eintragsdatei("1. [x] eins\n").text, "1. ☑ eins");
+        assert_eq!(als_eintragsdatei("- [ ]\n").text, "☐ ");
+    }
+
+    /// Eine Zeile, die keiner Eintragsform folgt, erscheint als gewoehnlicher
+    /// Text: als eigener Absatz, wenn eine Leerzeile sie absetzt oder sie vor
+    /// der ersten Aufgabe steht, und als Folgezeile, wenn sie unmittelbar
+    /// unter einer Aufgabe steht — das ist CommonMarks faule Fortsetzung, und
+    /// die Zeile bleibt dabei lesbar und unveraendert.
+    #[test]
+    fn eine_fremde_zeile_erscheint_als_gewoehnlicher_text() {
+        let ergebnis =
+            als_eintragsdatei("Vorspann ohne Form\n\n- [ ] a\ndarunter\n\nNotiz ohne Form\n");
+        assert_eq!(
+            ergebnis.text,
+            "Vorspann ohne Form\n\n☐ a\ndarunter\n\nNotiz ohne Form"
+        );
+    }
+
+    /// Die Notizen: ein Thema ist eine Ueberschrift, sein Text steht darunter.
+    #[test]
+    fn eine_notizdatei_zeigt_ihre_themen_als_ueberschriften() {
+        let ergebnis = als_eintragsdatei("## Einkauf\nBrot und Milch\n\n## Idee\nmehr\n");
+        assert_eq!(ergebnis.text, "Einkauf\n\nBrot und Milch\n\nIdee\n\nmehr");
+        assert_eq!(
+            stellen(&ergebnis, Auszeichnung::Ueberschrift { stufe: 2 }).len(),
+            2
+        );
+    }
+
+    /// Der Quellbezug der Runde 14 deckt das Kaestchen in einer engen Liste
+    /// mit `[ ]` beziehungsweise `[x]`, und die Kachelung bleibt in jeder
+    /// Form lueckenlos.
+    #[test]
+    fn das_kaestchen_steht_an_seinem_quellbereich() {
+        let quelle = "- [ ] a\n- [x] b\n";
+        let ergebnis = als_eintragsdatei(quelle);
+        for (zeichen, erwartet) in [("☐", "[ ]"), ("☑", "[x]")] {
+            let stelle = auswahl(&ergebnis.text, zeichen);
+            let abschnitt = ergebnis
+                .quellbezug
+                .abschnitte
+                .iter()
+                // Der Vorspann `- ` davor hat einen Abschnitt mit leerem
+                // Textbereich an derselben Stelle; gesucht ist der, der das
+                // Kaestchen schreibt.
+                .find(|abschnitt| {
+                    abschnitt.text.start == stelle.start && !abschnitt.text.is_empty()
+                })
+                .expect("das Kaestchen hat einen Abschnitt");
+            assert_eq!(&quelle[abschnitt.quelle.clone()], erwartet);
+            assert_eq!(abschnitt.art, Abschnittsart::Ersetzt);
+        }
+        for quelle in [
+            "- [ ] a\n\n- [X] b\n  weiter\n",
+            "- - [ ] tief\n",
+            "* [ ]\n",
+            "Vorspann\n- [ ] **fett** x\nfremd\n",
+            REFERENZQUELLE,
+        ] {
+            let _ = als_eintragsdatei(quelle);
+        }
+        assert_eq!(
+            als_eintragsdatei(quelle)
+                .quellbezug
+                .quelltext(0..ergebnis.formatierung.laenge),
+            quelle,
+            "die Auswahl ueber alles liefert die Quelle vollstaendig"
+        );
+    }
+
+    /// Wer das Kaestchen auswaehlt und kopiert, bekommt die ganze
+    /// Aufgabenzeile, in einer engen wie in einer losen Liste: der Punkt traegt
+    /// seine Klammer (`- [ ] `), und die Regel der Runde 14 laesst eine
+    /// beruehrte Klammer ganz mitfahren. Die Kopie ist damit wieder eine
+    /// Aufgabe und kein nacktes `[ ]`.
+    #[test]
+    fn das_kopierte_kaestchen_bringt_seine_aufgabenzeile_mit() {
+        for (quelle, erwartet) in [
+            ("- [ ] a\n- [x] b\n", ["- [ ] a\n", "- [x] b\n"]),
+            ("- [ ] a\n\n- [X] b\n", ["- [ ] a\n\n", "- [X] b\n"]),
+        ] {
+            let ergebnis = als_eintragsdatei(quelle);
+            for (zeichen, zeile) in ["☐", "☑"].into_iter().zip(erwartet) {
+                let stelle = auswahl(&ergebnis.text, zeichen);
+                assert_eq!(ergebnis.quellbezug.quelltext(stelle), zeile, "{quelle:?}");
+            }
+        }
+    }
+
+    /// Ein Dateityp wird an genau einer Stelle zur Lesart, und allein die
+    /// Eintragsdateien bekommen Kaestchen.
+    #[test]
+    fn allein_eine_eintragsdatei_wird_als_eintragsdatei_gelesen() {
+        use krk_core::heimordner::Sonderdatei;
+        for sonderdatei in Sonderdatei::ALLE {
+            assert_eq!(
+                Lesart::von_dateityp(Dateityp::Eintraege(sonderdatei)),
+                Lesart::Eintragsdatei
+            );
+        }
+        assert_eq!(Lesart::von_dateityp(Dateityp::Markdown), Lesart::Markdown);
+        assert_eq!(Lesart::von_dateityp(Dateityp::Sonstiges), Lesart::Markdown);
     }
 }
 

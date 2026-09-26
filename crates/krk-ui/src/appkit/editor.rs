@@ -514,6 +514,7 @@ use krk_core::text::{
 };
 
 use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf};
+use crate::heimgriff::Heimgriff;
 use crate::hervorhebung::{
     Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
@@ -1554,7 +1555,12 @@ define_class!(
 
 impl Editorbereich {
     /// Baut Kopf und Textflaeche mit einem Modell, das noch keine Datei haelt.
-    pub fn bauen(mtm: MainThreadMarker) -> Retained<Self> {
+    ///
+    /// `heim` ist der eine geteilte Griff des Anwendungsdelegierten; das
+    /// Modell fragt ihn, wenn es eine gelesene Datei uebernimmt, und ordnet
+    /// `notes.txt` und `tasks.txt` im erkannten `~/krkhome/` damit als
+    /// [`crate::editormodell::Dateityp::Eintraege`] ein.
+    pub fn bauen(mtm: MainThreadMarker, heim: Heimgriff) -> Retained<Self> {
         let bereich = Editorsicht::neu(mtm, NSRect::new(NSPoint::ZERO, AUFBAUGROESSE));
         bereich.setAutoresizingMask(
             NSAutoresizingMaskOptions::ViewWidthSizable
@@ -1594,7 +1600,7 @@ impl Editorbereich {
             bereich,
             kopf,
             text,
-            modell: RefCell::new(Editormodell::neu()),
+            modell: RefCell::new(Editormodell::neu(heim)),
             takt: RefCell::new(None),
             melden: RefCell::new(None),
             herkunft: Cell::new(Oeffnungsherkunft::Befehl),
@@ -3698,7 +3704,7 @@ mod tests {
         let mut flaeche = String::from("erste\r\nzweite\r\ndritte");
         let schreibmarke = koordinaten::in_utf16(&flaeche, &[13])[0];
 
-        let mut modell = Editormodell::neu();
+        let mut modell = Editormodell::neu(Heimgriff::default());
         assert!(
             modell.bearbeiten(flaeche.clone()),
             "das Modell verlangt, die Flaeche nachzuziehen"

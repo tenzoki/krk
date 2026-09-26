@@ -318,11 +318,13 @@ use objc2_foundation::{
     NSRunLoop, NSRunLoopCommonModes, NSSize, NSString, NSTimeInterval, NSTimer, NSUInteger,
 };
 
+use krk_core::heimordner::Heimordner;
 use krk_core::leseprofil::{Profile, Zusammenfassungszeile, zeilen_als_text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Typ;
 
 use crate::editormodell::{Ansicht, Dateityp};
+use crate::heimgriff::{self, Heimgriff};
 use crate::hervorhebung::{
     self, Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
@@ -645,6 +647,15 @@ pub struct VorschaufensterIvars {
     tableiste: RefCell<Option<Tableiste>>,
     /// Die Tabs mit ihrem Inhalt und dem Halteverhalten.
     modell: RefCell<Vorschaumodell>,
+    /// Der geteilte Wert der Erkennung von `~/krkhome/`, den der
+    /// Anwendungsdelegierte beim Bau hereinreicht.
+    ///
+    /// Gelesen wird er bei jedem Auftrag als Abschrift
+    /// ([`heimgriff::lesen`]), damit ein F2, das die aufgeloeste Form erneuert,
+    /// ab dem naechsten Auftrag gilt; der Arbeitsfaden bekommt die Abschrift
+    /// und nie den Griff. Die Erkennung stellt keinen Systemaufruf, also
+    /// kostet sie vor der Endbedingung von L7 nichts.
+    heim: Heimgriff,
     /// Der Zeitgeber, der die Meldungen **beider** Arbeitsfaeden abholt: die
     /// des Ladens aus dem Modell und die der Einfaerbung.
     ///
@@ -805,7 +816,9 @@ define_class!(
 
 impl Vorschaufenster {
     /// Baut das Vorschaufenster mit einem leeren Tab.
-    pub fn bauen(mtm: MainThreadMarker) -> Retained<Self> {
+    ///
+    /// `heim` ist der eine geteilte Griff des Anwendungsdelegierten.
+    pub fn bauen(mtm: MainThreadMarker, heim: Heimgriff) -> Retained<Self> {
         let rahmen = NSRect::new(NSPoint::ZERO, AUFBAUGROESSE);
         let bereich = NSView::initWithFrame(NSView::alloc(mtm), rahmen);
         bereich.setAutoresizingMask(
@@ -861,6 +874,7 @@ impl Vorschaufenster {
             seitenmelder: RefCell::new(None),
             tableiste: RefCell::new(None),
             modell: RefCell::new(Vorschaumodell::neu()),
+            heim,
             takt: RefCell::new(None),
             einfaerbung: RefCell::new(None),
             einfaerbungsstand: RefCell::new(None),
@@ -1051,10 +1065,12 @@ impl Vorschaufenster {
         // Metadaten. Der leere Satz nimmt denselben Weg wie ein voller; eine
         // Verzweigung danach stuende sonst hier und im Modell ein zweites Mal.
         let profile = self.ivars().profile.get().cloned().unwrap_or_default();
-        self.ivars()
-            .modell
-            .borrow_mut()
-            .datei_anzeigen(pfad, self.ivars().tafel.get(), profile);
+        self.ivars().modell.borrow_mut().datei_anzeigen(
+            pfad,
+            self.ivars().tafel.get(),
+            profile,
+            heimgriff::lesen(&self.ivars().heim),
+        );
         // **Nur die Leiste und nicht die ganze Anzeige.** Geaendert hat sich
         // allein die Beschriftung des Tabs; Inhalt und Pfad wechseln erst,
         // wenn der Arbeitsfaden geliefert hat, und bis dahin steht der
@@ -1538,10 +1554,11 @@ impl Vorschaufenster {
             self.ivars().einfaerbung_erneut.set(true);
             return;
         }
+        let heim = heimgriff::lesen(&self.ivars().heim);
         let angaben = {
             let modell = self.ivars().modell.borrow();
             let pfad = modell.aktiver_pfad();
-            einzufaerben(modell.aktiver_inhalt(), pfad.as_deref())
+            einzufaerben(modell.aktiver_inhalt(), pfad.as_deref(), heim.as_ref())
                 .map(|(text, pfad)| (text.to_owned(), pfad.to_path_buf()))
         };
         let Some((stand, pfad)) = angaben else {
@@ -1553,7 +1570,7 @@ impl Vorschaufenster {
         // Die Vorlage wandert in den Lauf hinein und kommt mit dem Ergebnis
         // zurueck; waehrenddessen haelt sie niemand hier.
         let vorlage = self.ivars().einfaerbungsstand.borrow_mut().take();
-        let typ = Dateityp::von_pfad(&pfad);
+        let typ = Dateityp::von_pfad(&pfad, heim.as_ref());
         let vorgang =
             Einfaerbungsvorgang::starten(vorlage, stand, Some(pfad), typ, self.ivars().tafel.get());
         *self.ivars().einfaerbung.borrow_mut() = Some(vorgang);
@@ -1765,11 +1782,18 @@ impl Vorschaufenster {
 /// Keine Groessenschranke: eingefaerbt wird jede Datei, die die Vorschau
 /// ueberhaupt als Text zeigt, und was sie als Text zeigt, entscheidet
 /// `TEXTGRENZE` und sonst nichts (C4, zwoelftes Kriterium).
-fn einzufaerben<'a>(inhalt: &'a Inhalt, pfad: Option<&'a Path>) -> Option<(&'a str, &'a Path)> {
+///
+/// `heim` ist die Abschrift des geteilten Heimordners; mit ihr sagt der
+/// Dateityp dasselbe wie beim Laden, und keine zweite Erkennung entsteht.
+fn einzufaerben<'a>(
+    inhalt: &'a Inhalt,
+    pfad: Option<&'a Path>,
+    heim: Option<&Heimordner>,
+) -> Option<(&'a str, &'a Path)> {
     match inhalt {
         Inhalt::Text(text) => match pfad {
             Some(pfad)
-                if hervorhebung::art(Some(pfad), Dateityp::von_pfad(pfad))
+                if hervorhebung::art(Some(pfad), Dateityp::von_pfad(pfad, heim))
                     == Darstellungsart::Code =>
             {
                 Some((text.as_str(), pfad))
@@ -1899,7 +1923,7 @@ mod tests {
         // Der eine Fall: eine Datei, deren Sprache die Kiste kennt. Text und
         // Pfad gehen an den Faden, wie sie dastehen.
         let quelle = Inhalt::Text("fn main() {}\n".to_owned());
-        let (text, pfad) = einzufaerben(&quelle, Some(&quelltext))
+        let (text, pfad) = einzufaerben(&quelle, Some(&quelltext), None)
             .expect("eine .rs-Datei ist Quelltext und wird eingefaerbt");
         assert_eq!(text, "fn main() {}\n");
         assert_eq!(pfad, quelltext);
@@ -1907,20 +1931,25 @@ mod tests {
         // Einfacher Text: die Kiste kennt keine Sprache, es gaebe nichts
         // einzufaerben.
         assert!(
-            einzufaerben(&Inhalt::Text("nur Text\n".to_owned()), Some(&unbekannt)).is_none(),
+            einzufaerben(
+                &Inhalt::Text("nur Text\n".to_owned()),
+                Some(&unbekannt),
+                None
+            )
+            .is_none(),
             "eine unbekannte Endung ist einfacher Text und kein Quelltext"
         );
 
         // Eine Markdown-Endung, deren Inhalt als roher Text dasteht: der Weg
         // fuer Markdown ist ein anderer, und `art` sagt es.
         assert!(
-            einzufaerben(&Inhalt::Text("# Titel\n".to_owned()), Some(&markdown)).is_none(),
+            einzufaerben(&Inhalt::Text("# Titel\n".to_owned()), Some(&markdown), None).is_none(),
             "Markdown geht ueber Inhalt::Markdown und nicht ueber die Einfaerbung"
         );
 
         // Text ohne Pfad: die Zwischenablage. Keine Endung, keine Sprache.
         assert!(
-            einzufaerben(&Inhalt::Text("aus der Ablage".to_owned()), None).is_none(),
+            einzufaerben(&Inhalt::Text("aus der Ablage".to_owned()), None, None).is_none(),
             "der Text der Zwischenablage traegt keinen Pfad und wird nicht eingefaerbt"
         );
 
@@ -1929,7 +1958,11 @@ mod tests {
         // Quelltextdatei daneben: an ihnen liegt es und nicht am Pfad.
         let uebrige = [
             Inhalt::Leer,
-            Inhalt::Markdown(Box::new(crate::markdown::rendern("# Titel\n", Tafel::Hell))),
+            Inhalt::Markdown(Box::new(crate::markdown::rendern(
+                "# Titel\n",
+                Tafel::Hell,
+                crate::markdown::Lesart::Markdown,
+            ))),
             Inhalt::Bild {
                 daten: Arc::new(Vec::new()),
                 metadaten: Some(metadaten(&quelltext)),
@@ -1946,7 +1979,7 @@ mod tests {
         ];
         for inhalt in &uebrige {
             assert!(
-                einzufaerben(inhalt, Some(&quelltext)).is_none(),
+                einzufaerben(inhalt, Some(&quelltext), None).is_none(),
                 "{inhalt:?} zeigt keinen rohen Dateitext und wird nicht eingefaerbt"
             );
         }
@@ -1978,12 +2011,12 @@ mod tests {
         ));
 
         assert!(
-            einzufaerben(&zusammenfassung, Some(&ordner)).is_none(),
+            einzufaerben(&zusammenfassung, Some(&ordner), None).is_none(),
             "eine Zusammenfassung traegt keine Sprache; syntect haette an ihr \
              nichts zu faerben"
         );
         assert!(
-            einzufaerben(&zusammenfassung, Some(&quelltext)).is_none(),
+            einzufaerben(&zusammenfassung, Some(&quelltext), None).is_none(),
             "am Inhalt liegt es und nicht am Pfad daneben"
         );
     }
