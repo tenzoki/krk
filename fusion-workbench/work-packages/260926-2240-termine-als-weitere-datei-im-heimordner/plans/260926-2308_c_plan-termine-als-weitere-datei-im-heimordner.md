@@ -1,7 +1,7 @@
 # Implementation Plan: `appointments.md` als Termindatei im Notizordner
 
 **Date:** 2026-09-26
-**Status:** Approved (Arbeitspaket mit `**Mode:** autonomous`; der Plan ist durch dieses Feld freigegeben und braucht keine weitere Eingabe des Nutzers)
+**Status:** Complete
 **Spec:** `260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md` (T1 bis T8, Annahmen A1 bis A14); bindend dazu der Entscheid dieses Arbeitspakets `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md` (Empfehlung: Möglichkeit 1). Gebaute Grundlage: `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md` und `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`, beide geschlossen, HEAD `cf458eb`.
 **Decidability:** Drei Fragen tragen den Plan, und alle drei sind aus den Eingaben ihres Mechanismus entscheidbar. **Erstens „können zwei Funktionen, die dieselbe Kombination tragen, je zugleich zulässig sein?“**: entscheidbar zur Bauzeit der Belegung aus dem Wirkungsbereich je Kommando, einer festen Eigenschaft im Kern. Jeder Wirkungsbereich bekommt über eine vollständige Fallunterscheidung eine von drei Seiten (Editor, außerhalb des Editors, beide), und zwei Bereiche schließen einander genau dann aus, wenn einer auf der Editorseite und der andere außerhalb steht. Diese Einteilung ist disjunkt und vollständig, weil jeder Wert in genau einem Zweig steht. Dass sie mit der wirklichen Zulässigkeit übereinstimmt, hält eine Probe in `krk-ui` über alle Fokuswerte, alle Formen und alle Lagen der Zulässigkeitstafel. Die Regel ist gröber als die Tafel (zwei Bereiche derselben Seite gelten als überschneidend), und der Fehler fällt immer auf die Seite des gemeldeten Konflikts. **Zweitens „welche der zwei Funktionen meint dieser Anschlag?“**: entscheidbar aus der einen `Lage`, die der Anwendungsdelegierte je Eingabe ohnehin erhebt; nach der ersten Frage ist höchstens eine der beiden zulässig. **Drittens „ist dieser Termin heute?“**: entscheidbar aus dem Text der Kopfzeile und dem Datum der Mac-Uhr in Ortszeit, gelesen an genau einer Stelle über das vorhandene `verzeichnis::sys::ortszeit`. Nicht entscheidbar ist nichts, das der Plan braucht.
 
@@ -421,7 +421,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
     - Closes (am Baum): T8.1.
     - Dependencies: 7, 8, 9
 
-11. **11 `CLAUDE.md` nachziehen**
+11. [DONE] **11 `CLAUDE.md` nachziehen**
     - Executor: `code-implementer`
     - Files: `CLAUDE.md`
     - Changes, je Aussage, die mit den Schritten falsch geworden ist:
