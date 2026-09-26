@@ -233,8 +233,9 @@ pub struct Lage {
     /// eine gesicherte PIN (Schritt 5.4b der krkhome-Arbeit).
     ///
     /// Erhoben von `Anwendungsdelegierter::lage` ueber
-    /// `Editorbereich::pin_aenderbar`; **gelesen wird es erst ab Schritt 5.5**,
-    /// vom Wirkungsbereich des Befehls „PIN ändern". Eine leere `.secrets.txt`
+    /// `Editorbereich::pin_aenderbar`; gelesen seit Schritt 5.5 von
+    /// [`datei_passt`] fuer den Wirkungsbereich des Befehls „PIN ändern",
+    /// `Wirkungsbereich::Geheimnisse`. Eine leere `.secrets.txt`
     /// meldet `false`: ihre PIN steht noch in keinem Kopf, und das naechste
     /// Oeffnen fragt ohnehin nach einer neuen.
     pub pin_aenderbar: bool,
@@ -403,7 +404,10 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
             && !lage.ersthelfer_gehoert_appkit);
 
     let bereich = anspruch.wirkungsbereich();
-    durchgelassen && fokus::wirkt(bereich, lage.fokus) && form_passt(bereich, lage.editorform)
+    durchgelassen
+        && fokus::wirkt(bereich, lage.fokus)
+        && form_passt(bereich, lage.editorform)
+        && datei_passt(bereich, lage.pin_aenderbar)
 }
 
 /// Ob der Editor in der Form ist, die dieser Wirkungsbereich verlangt (die
@@ -437,10 +441,44 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             Editorform::Text | Editorform::Notizen | Editorform::Geheimnisse => false,
             Editorform::Aufgaben => true,
         },
+        // Die Geheimnisse fragen nicht die Form, sondern die Datei; das
+        // steht in `datei_passt`. Auch in der Rohansicht haelt der Editor
+        // dieselbe `.secrets.txt` mit derselben PIN.
         Wirkungsbereich::Dateifenster
         | Wirkungsbereich::Leiste
         | Wirkungsbereich::Dateibereiche
         | Wirkungsbereich::Editor
+        | Wirkungsbereich::Geheimnisse
+        | Wirkungsbereich::Tabbereich
+        | Wirkungsbereich::Navigator
+        | Wirkungsbereich::Vorschau
+        | Wirkungsbereich::Ueberall => true,
+    }
+}
+
+/// Ob der Editor die Datei haelt, die dieser Wirkungsbereich verlangt (die
+/// dritte Haelfte von Bestandteil (3), Schritt 5.5 der krkhome-Arbeit).
+///
+/// **Allein [`Wirkungsbereich::Geheimnisse`] fragt hier etwas**, naemlich
+/// [`Lage::pin_aenderbar`]: „PIN ändern" wirkt nur, solange der Editor
+/// `.secrets.txt` entsperrt haelt und ihre PIN schon in einem Kopf auf der
+/// Platte steht. Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
+/// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
+/// bewusst.
+///
+/// Eine eigene Funktion und keine Zeile in [`form_passt`], weil die Frage eine
+/// andere ist: die Form sagt, was der Editor zeigt, dieses Feld, was er haelt.
+#[must_use = "fallengelassen laeuft der Befehl an der falschen Datei weiter"]
+fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool) -> bool {
+    match bereich {
+        Wirkungsbereich::Geheimnisse => pin_aenderbar,
+        Wirkungsbereich::Dateifenster
+        | Wirkungsbereich::Leiste
+        | Wirkungsbereich::Dateibereiche
+        | Wirkungsbereich::Editor
+        | Wirkungsbereich::Editortext
+        | Wirkungsbereich::Eintraege
+        | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
@@ -647,7 +685,7 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 11] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 12] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
@@ -655,6 +693,7 @@ mod tests {
         (Wirkungsbereich::Editortext, Kommando::EditorWeitersuchen),
         (Wirkungsbereich::Eintraege, Kommando::EintragHoch),
         (Wirkungsbereich::Aufgaben, Kommando::AufgabeAbhaken),
+        (Wirkungsbereich::Geheimnisse, Kommando::PinAendern),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
         (Wirkungsbereich::Navigator, Kommando::AuswahlHoch),
         (Wirkungsbereich::Vorschau, Kommando::VorschauVergroessern),
@@ -727,8 +766,11 @@ mod tests {
 
     /// Die Lage aus fuenf Werten, in der Reihenfolge der Felder.
     ///
-    /// `pin_aenderbar` steht auf `false`: keine Probe dieses Schritts fragt
-    /// danach, und der Befehl, der es liest, kommt erst mit Schritt 5.5.
+    /// `pin_aenderbar` steht auf `false`: der Editor haelt darin keine
+    /// entsperrte `.secrets.txt` mit Kopf, und „PIN ändern" ist in der Tafel
+    /// deshalb ueberall abgewiesen. Die Lage mit `true` baut
+    /// [`pin_aendern_wirkt_allein_mit_dem_fokus_im_editor_und_pin_aenderbar`]
+    /// selbst.
     fn lage_in(
         blatt_steht: bool,
         ersthelfer_gehoert_appkit: bool,
@@ -857,8 +899,8 @@ mod tests {
     /// Die Pruefungen darunter zeigen einzelne Felder dieser Tafel mit ihrer
     /// Begruendung; die Tafel zeigt fuer die heutigen Zeilen und Spalten, dass
     /// keine fehlt, und fuer keine andere Zahl. **Die
-    /// beiden Feldbreiten sichern das nicht**: `[[bool; 6]; 11]` zwingt zu elf
-    /// Zeilen zu je sechs Spalten und sagt nichts darueber, welche elf und
+    /// beiden Feldbreiten sichern das nicht**: `[[bool; 6]; 12]` zwingt zu zwoelf
+    /// Zeilen zu je sechs Spalten und sagt nichts darueber, welche zwoelf und
     /// welche sechs. Ein weiterer Wirkungsbereich faellt an der Zaehlprobe
     /// `jeder_wirkungsbereich_hat_einen_stellvertreter` auf und ein siebter
     /// Fokuswert an der Zusicherung unter der Tafel, die die Spaltenzahl gegen
@@ -878,7 +920,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 11] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 12] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -888,13 +930,15 @@ mod tests {
             // Eintraege
             [false, false, false, false, false, false],
             // Aufgaben
+            [false, false, false, false, false, false],
+            // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 11] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 12] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -905,6 +949,8 @@ mod tests {
             [false, false, false, true, false, false],
             // Aufgaben
             [false, false, false, true, false, false],
+            // Geheimnisse: ohne `pin_aenderbar` nirgends
+            [false, false, false, false, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
@@ -912,7 +958,7 @@ mod tests {
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 11] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 12] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -923,12 +969,14 @@ mod tests {
             [false, false, false, true, false, false],
             // Aufgaben
             [false, false, false, false, false, false],
+            // Geheimnisse: ohne `pin_aenderbar` nirgends
+            [false, false, false, false, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 11] = [[false; 6]; 11];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 12] = [[false; 6]; 12];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -945,7 +993,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 11]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 12]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),
@@ -1572,6 +1620,71 @@ mod tests {
                     ),
                     "{kommando:?} wirkt in der Tabelle {tabelle:?} auf die ausgeblendete Textflaeche"
                 );
+            }
+        }
+    }
+
+    /// „PIN ändern" wirkt allein mit dem Fokus im Editor und nur, solange die
+    /// Lage `pin_aenderbar` meldet; die Form des Editors fragt es nicht
+    /// (C7.15, Probenhaelfte; Schritt 5.5 der krkhome-Arbeit).
+    ///
+    /// Ueber jeden Fokuswert, jede Form und beide Werte von `pin_aenderbar`,
+    /// ohne Hindernis der Lage; mit jedem Hindernis ist der Befehl abgewiesen
+    /// wie jeder andere. Ohne `pin_aenderbar` ist er also auch mit dem Fokus in
+    /// der Tabelle der Geheimnisse unzulaessig und im Menue ausgegraut: eine
+    /// leere `.secrets.txt`, deren PIN noch in keinem Kopf steht, hat keine
+    /// PIN zu aendern.
+    #[test]
+    fn pin_aendern_wirkt_allein_mit_dem_fokus_im_editor_und_pin_aenderbar() {
+        let kommando = Kommando::PinAendern;
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Geheimnisse);
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        for pin_aenderbar in [false, true] {
+            for form in JEDE_FORM {
+                for fokus in JEDER_FOKUS {
+                    let lage = Lage {
+                        pin_aenderbar,
+                        ..lage_in(blatt, appkit, krk, fokus, form)
+                    };
+                    assert_eq!(
+                        zulaessig(kommando, lage),
+                        fokus == Fokus::Editor && pin_aenderbar,
+                        "„PIN ändern“ antwortet in {fokus:?} bei {form:?} mit \
+                         pin_aenderbar={pin_aenderbar} falsch"
+                    );
+                    for (blatt, appkit, krk) in HINDERNISSE {
+                        let gesperrt = Lage {
+                            pin_aenderbar,
+                            ..lage_in(blatt, appkit, krk, fokus, form)
+                        };
+                        assert!(!zulaessig(kommando, gesperrt));
+                    }
+                }
+            }
+        }
+    }
+
+    /// Kein anderer Befehl fragt `pin_aenderbar`: mit ihm und ohne ihn gibt die
+    /// Regel fuer jedes Kommando ausser „PIN ändern" dieselbe Antwort.
+    #[test]
+    fn allein_pin_aendern_fragt_pin_aenderbar() {
+        for kommando in Kommando::KENNUNGEN.map(|(kommando, _)| kommando) {
+            if kommando == Kommando::PinAendern {
+                continue;
+            }
+            for form in JEDE_FORM {
+                for fokus in JEDER_FOKUS {
+                    let ohne = lage_in(false, false, true, fokus, form);
+                    let mit = Lage {
+                        pin_aenderbar: true,
+                        ..ohne
+                    };
+                    assert_eq!(
+                        zulaessig(kommando, ohne),
+                        zulaessig(kommando, mit),
+                        "{kommando:?} fragt pin_aenderbar in {fokus:?} bei {form:?}"
+                    );
+                }
             }
         }
     }

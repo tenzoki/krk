@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 100 Funktionen mit zusammen 103 Kombinationen.
+# Ausgeliefert sind 101 Funktionen mit zusammen 104 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1169,6 +1169,15 @@ name = "Aufgabe abhaken oder öffnen"
 tasten = ["shift+cmd+x"]
 # x wie das Kreuz im Kaestchen. cmd+x traegt das Ausschneiden; shift+cmd+x ist
 # ab Werk frei. Dieselbe Handlung wie ein Klick auf das Ankreuzfeld der Zeile.
+
+[[funktion]]
+id = "pin_aendern"
+name = "PIN ändern"
+tasten = ["shift+cmd+p"]
+# Allein fuer .secrets.txt im Editor, und erst nachdem die Datei einmal
+# verschluesselt gesichert ist; sonst ist der Eintrag ausgegraut. p wie PIN;
+# shift+cmd+p war am 260926 in keiner Liste dieser Datei belegt
+# (Datensatz 260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md).
 
 # ── C3: die Belegungsansicht ─────────────────────────────────────────────────
 

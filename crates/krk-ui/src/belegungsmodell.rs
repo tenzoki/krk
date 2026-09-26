@@ -474,7 +474,10 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EintragHoch
         | Kommando::EintragRunter
         | Kommando::EintragLoeschen
-        | Kommando::AufgabeAbhaken => Funktionsbereich::Editor,
+        | Kommando::AufgabeAbhaken
+        // „PIN ändern" (Schritt 5.5 der krkhome-Arbeit) aus demselben Satz:
+        // es wirkt an der Datei, die der Editor haelt.
+        | Kommando::PinAendern => Funktionsbereich::Editor,
         // Der Git-Bereich, und die zwei Befehle folgen demselben Satz wie das
         // Ein- und Ausblenden der Vorschau und des Editors weiter oben: die
         // Gliederung fragt nach der **Gegend der Anwendung**, und wer den
@@ -1418,10 +1421,11 @@ mod tests {
     /// mit.
     #[test]
     fn der_bereich_editor_fuehrt_genau_die_befehle_des_editors() {
-        // Die sechs letzten sind die Befehle der Eintragstabelle aus Schritt
-        // 3.3 der krkhome-Arbeit; ihre Zeilen in der Auslieferungsbelegung
-        // kommen mit Schritt 3.4, und bis dahin ist diese Probe rot.
-        const EDITORBEFEHLE: [&str; 19] = [
+        // Die sechs vorletzten sind die Befehle der Eintragstabelle aus
+        // Schritt 3.3 der krkhome-Arbeit. Der letzte ist „PIN ändern" aus
+        // Schritt 5.5; seine Zeile in der Auslieferungsbelegung kommt mit
+        // Schritt 5.6, und bis dahin ist diese Probe rot.
+        const EDITORBEFEHLE: [&str; 20] = [
             "bearbeiten",
             "editor_rundweg",
             "fokus_editor",
@@ -1441,6 +1445,7 @@ mod tests {
             "eintrag_runter",
             "eintrag_loeschen",
             "aufgabe_abhaken",
+            "pin_aendern",
         ];
 
         let belegung = Belegung::auslieferung();

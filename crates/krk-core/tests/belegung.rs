@@ -2007,7 +2007,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         // (bis zum 260823 `Vorschau`), `Editor` und `Navigator` mit dem
         // eingebauten Editor, `Vorschau` mit den drei Zoombefehlen der Runde 20,
         // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
-        // krkhome-Arbeit.
+        // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
@@ -2019,6 +2019,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Editortext
                     | Wirkungsbereich::Eintraege
                     | Wirkungsbereich::Aufgaben
+                    | Wirkungsbereich::Geheimnisse
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
                     | Wirkungsbereich::Vorschau
@@ -2375,6 +2376,25 @@ fn die_sechs_befehle_der_eintragstabelle_tragen_ihre_bereiche() {
     );
 }
 
+/// „PIN ändern" traegt den Bereich der Geheimnisse, und seine Kennung fuehrt
+/// zu ihm (C7.15, Kernhaelfte; Schritt 5.5 der krkhome-Arbeit). Ob der Editor
+/// `.secrets.txt` mit einem Kopf haelt, fragt `krk_ui`.
+#[test]
+fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
+    assert_eq!(
+        Kommando::PinAendern.wirkungsbereich(),
+        Wirkungsbereich::Geheimnisse
+    );
+    assert_eq!(
+        Kommando::aus_kennung("pin_aendern"),
+        Some(Kommando::PinAendern)
+    );
+    assert_eq!(
+        Wirkungsbereich::Geheimnisse.beschriftung(),
+        "Geheimnisse im Editor"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Die Beschriftung der Wirkungsbereiche (Runde 3, S2, C3; Runde 20, C3.6;
 // krkhome-Arbeit, Schritt 3.3)
@@ -2387,14 +2407,16 @@ fn die_sechs_befehle_der_eintragstabelle_tragen_ihre_bereiche() {
 /// den Namen aus dem Modulkopf von `belegung.rs`. `Vorschau` ist mit der
 /// Runde 20 dazugekommen und verweist den Leser auf das Vorschaufenster
 /// (C3.6). `Editortext`, `Eintraege` und `Aufgaben` kommen mit Schritt 3.3 der
-/// krkhome-Arbeit, die zwei letzten mit dem Wortlaut des Plans.
+/// krkhome-Arbeit, die zwei letzten mit dem Wortlaut des Plans;
+/// `Geheimnisse` mit Schritt 5.5 derselben Arbeit, ebenfalls im Wortlaut des
+/// Plans.
 ///
 /// **Das Feld ist die Quelle des erwarteten Texts und nicht die Quelle der
 /// Werte.** Welche Werte es gibt, lesen die drei Proben darunter ueber
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 11] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 12] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2405,6 +2427,7 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 11] = [
     (Wirkungsbereich::Editortext, "Text im Editor"),
     (Wirkungsbereich::Eintraege, "Einträge im Editor"),
     (Wirkungsbereich::Aufgaben, "Aufgaben im Editor"),
+    (Wirkungsbereich::Geheimnisse, "Geheimnisse im Editor"),
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
     (
         Wirkungsbereich::Navigator,
@@ -2434,10 +2457,11 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Editortext => 4,
         Wirkungsbereich::Eintraege => 5,
         Wirkungsbereich::Aufgaben => 6,
-        Wirkungsbereich::Tabbereich => 7,
-        Wirkungsbereich::Navigator => 8,
-        Wirkungsbereich::Vorschau => 9,
-        Wirkungsbereich::Ueberall => 10,
+        Wirkungsbereich::Geheimnisse => 7,
+        Wirkungsbereich::Tabbereich => 8,
+        Wirkungsbereich::Navigator => 9,
+        Wirkungsbereich::Vorschau => 10,
+        Wirkungsbereich::Ueberall => 11,
     }
 }
 

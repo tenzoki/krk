@@ -557,7 +557,8 @@ use krk_core::text::{
 };
 
 use crate::editormodell::{
-    Ansicht, Dateityp, Editormodell, Ladeausgang, Pinform, Sicherungsausgang, Suchlauf,
+    Ansicht, Dateityp, Editormodell, Ladeausgang, Pinform, Pinwechselausgang, Sicherungsausgang,
+    Suchlauf,
 };
 use crate::heimgriff::{self, Heimgriff};
 use crate::hervorhebung::{
@@ -599,6 +600,7 @@ use super::textmerkmale;
 ///  Zahl der ersetzten Treffer    krk_core::text::suche (S37)
 ///  Abweisung einer Zelle         krk_core::heimordner::eintraege (3.2b der krkhome-Arbeit)
 ///  Antwort einer Tabellenhandlung  Editorbereich::handlung_ausfuehren (dieselbe)
+///  Ausgang von „PIN ändern"      crate::editormodell::Pinwechselausgang (5.5 derselben)
 /// ```
 ///
 /// **Die Tafel zaehlt Ausloeser, die Aufzaehlung darunter zaehlt Varianten, und
@@ -734,6 +736,18 @@ pub enum Editormeldung {
     /// Arbeitspakets), mit der Art der Tabelle, weil der Satz eine Aufgabe oder
     /// eine Notiz nennt.
     Eintrag(Eintragsart, Eintragsantwort),
+    /// Die PIN der Datei ist geaendert, und ab jetzt oeffnet sie allein die
+    /// neue (C7.15, Schritt 5.5 der krkhome-Arbeit).
+    PinGeaendert {
+        /// Die Datei, deren PIN geaendert ist.
+        pfad: PathBuf,
+    },
+    /// „PIN ändern" ist unterblieben, und die alte PIN gilt weiter; der Satz
+    /// kommt fertig aus dem Modell, wie bei [`Self::SichernGescheitert`].
+    PinNichtGeaendert {
+        /// Der Grund, wie das Modell ihn formuliert hat.
+        grund: String,
+    },
 }
 
 impl Editormeldung {
@@ -820,6 +834,10 @@ impl Editormeldung {
             },
             Self::EintragAbgewiesen(abweisung) => abweisung.meldung().to_owned(),
             Self::Eintrag(art, antwort) => antwort.text(*art).to_owned(),
+            Self::PinGeaendert { pfad } => {
+                format!("die PIN von {} ist geändert", pfad.display())
+            }
+            Self::PinNichtGeaendert { grund } => grund.clone(),
         }
     }
 }
@@ -2376,7 +2394,8 @@ impl Editorbereich {
     /// [`Self::ansicht_umschalten`], [`Self::handlung_ausfuehren`] und beim
     /// Anwendungsdelegierten `editor_stand_befragen`, die Frage vor dem
     /// Schliessen und dem Beenden. Dazu seit Schritt 4.3
-    /// [`Self::zelle_abbrechen`], das eine Notizzelle mit `esc` uebernimmt.
+    /// [`Self::zelle_abbrechen`], das eine Notizzelle mit `esc` uebernimmt,
+    /// und seit Schritt 5.5 [`Self::pin_aendern`] vor dem PIN-Blatt.
     /// Die Liste haelt die Probe `die_zellenuebernahme_hat_genau_diese_rufer`.
     pub fn zelle_uebernehmen(&self) -> Zellenausgang {
         let Some(fenster) = self.ivars().bereich.window() else {
@@ -2866,11 +2885,52 @@ impl Editorbereich {
     }
 
     /// Ob sich die PIN der gehaltenen Datei aendern laesst (Schritt 5.4b,
-    /// gelesen ab 5.5); die Antwort steht bei
+    /// gelesen seit 5.5 von der Zulaessigkeit); die Antwort steht bei
     /// [`Editormodell::pin_aenderbar`].
     #[must_use]
     pub fn pin_aenderbar(&self) -> bool {
         self.ivars().modell.borrow().pin_aenderbar()
+    }
+
+    /// „PIN ändern", vor dem Blatt (C7.15, Schritt 5.5 der krkhome-Arbeit).
+    ///
+    /// **Als erstes die laufende Zelle**, wie vor jedem anderen Weg, der den
+    /// Stand liest: ihr getippter Text steht bis dahin allein im Feldeditor,
+    /// und das Blatt nimmt dem Fenster den Ersthelfer. Eine abgewiesene Zelle
+    /// haelt den Befehl an, mit ihrer Meldung. Dann fragt das Modell, ob sich
+    /// die PIN jetzt aendern liesse ([`Editormodell::pin_aenderung_pruefen`]),
+    /// damit der Nutzer nicht drei PINs tippt, um dann zu erfahren, dass sich
+    /// die Datei aussen geaendert hat. `Ok` heisst: das Blatt darf aufgehen.
+    #[must_use = "ein Err traegt den Grund, aus dem kein Blatt aufgeht"]
+    pub fn pin_aendern(&self) -> Result<(), Editormeldung> {
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return Err(meldung);
+        }
+        self.ivars()
+            .modell
+            .borrow()
+            .pin_aenderung_pruefen()
+            .map_err(|grund| Editormeldung::PinNichtGeaendert { grund })
+    }
+
+    /// „PIN ändern", nach dem Blatt: beginnt den Wechsel mit alter und neuer
+    /// PIN (Schritt 5.5).
+    ///
+    /// Das Modell vergleicht die alte PIN und startet die Ableitung auf ihrem
+    /// Faden; der Einzugstakt holt den Ausgang ab, wie beim Laden, und gibt
+    /// ihn ueber die Meldungssenke weiter ([`Self::pinwechsel_einziehen`]).
+    /// `Some` traegt den Grund, aus dem der Wechsel gar nicht erst begonnen
+    /// hat; `None` heisst, er laeuft, und seine Antwort kommt.
+    #[must_use = "ein Some traegt den Grund, aus dem die PIN bleibt"]
+    pub fn pin_wechsel_starten(&self, alte: Pin, neue: Pin) -> Option<Editormeldung> {
+        let begonnen = self.ivars().modell.borrow_mut().pin_aendern(alte, neue);
+        match begonnen {
+            Ok(()) => {
+                self.takt_starten();
+                None
+            }
+            Err(grund) => Some(Editormeldung::PinNichtGeaendert { grund }),
+        }
     }
 
     /// Warum an der gehaltenen Datei keine Textmarke entsteht (C7.8 der
@@ -3011,10 +3071,33 @@ impl Editorbereich {
     fn einziehen(&self) {
         self.ladeausgang_einziehen();
         self.einfaerbung_einziehen();
-        if !self.ivars().modell.borrow().laedt_noch() && self.ivars().einfaerbung.borrow().is_none()
-        {
+        self.pinwechsel_einziehen();
+        let faeden_ruhen = {
+            let modell = self.ivars().modell.borrow();
+            !modell.laedt_noch() && !modell.pin_wechselt()
+        };
+        if faeden_ruhen && self.ivars().einfaerbung.borrow().is_none() {
             self.takt_beenden();
         }
+    }
+
+    /// Holt den Ausgang eines Wechsels der PIN ab (Schritt 5.5) und gibt ihn
+    /// an die Meldungssenke.
+    ///
+    /// **Der dritte Faden am selben Takt**, neben dem Lesen und dem
+    /// Einfaerben, und aus demselben Grund kein eigener Zeitgeber. Die
+    /// Flaeche wird nicht angefasst: der Stand des Editors bleibt, wie er ist,
+    /// umgeschluesselt wird allein die Datei.
+    fn pinwechsel_einziehen(&self) {
+        let ausgang = self.ivars().modell.borrow_mut().pinwechsel_einziehen();
+        let meldung = match ausgang {
+            None => return,
+            Some(Pinwechselausgang::Geaendert(pfad)) => Editormeldung::PinGeaendert { pfad },
+            Some(Pinwechselausgang::Gescheitert(grund)) => {
+                Editormeldung::PinNichtGeaendert { grund }
+            }
+        };
+        self.meldung_melden(meldung);
     }
 
     /// Holt die Meldung des Lesefadens ab (C2).
@@ -7692,8 +7775,9 @@ mod tests {
     }
 
     /// **Die eine Uebernahmestelle und ihre Rufer.** `zelle_uebernehmen` wird
-    /// von genau diesen sechs gerufen — seit Schritt 4.3 auch von
-    /// `zelle_abbrechen`, das eine Notizzelle mit `esc` uebernimmt —, von jedem vor allem anderen, was den
+    /// von genau diesen sieben gerufen — seit Schritt 4.3 auch von
+    /// `zelle_abbrechen`, das eine Notizzelle mit `esc` uebernimmt, seit
+    /// Schritt 5.5 von `pin_aendern` vor dem PIN-Blatt —, von jedem vor allem anderen, was den
     /// Stand liest oder die Flaeche wechselt; und die Uebernahme selbst geht
     /// ueber `bearbeitung_beenden`, also ueber die zwei Delegiertenwege, und
     /// nicht an ihnen vorbei.
@@ -7709,6 +7793,7 @@ mod tests {
             (&editor, "ansicht_umschalten"),
             (&editor, "handlung_ausfuehren"),
             (&editor, "zelle_abbrechen"),
+            (&editor, "pin_aendern"),
             (&anwendung, "editor_stand_befragen"),
         ];
         for (quelle, name) in rufer {
@@ -7739,7 +7824,7 @@ mod tests {
         assert_eq!(
             codezeilen(&editor) + codezeilen(&anwendung),
             rufer.len(),
-            "ein Rufer ausser den sechs"
+            "ein Rufer ausser den sieben"
         );
         assert!(
             rumpf(&editor, "zelle_uebernehmen")

@@ -47,8 +47,9 @@
 //! Sicherung zieht dagegen eine neue Nonce
 //! (`260926-0050_*_zieht-jede-sicherung-von-secrets-txt-ein-neues-salz-wenn-das-eine-halbe-sekunde-je-cmd-s-kostet.md`,
 //! Moeglichkeit 3). Abgeleitet wird deshalb an genau zwei Stellen, in
-//! [`oeffnen`] und in [`neuer_schluessel`]; [`verschliessen`] nimmt den
-//! gehaltenen [`Schluessel`] und leitet nicht ab, und ein `cmd+s` an
+//! [`oeffnen`] und in [`neuer_schluessel`]; [`verschliessen`] und
+//! [`oeffnen_mit`] nehmen den gehaltenen [`Schluessel`] und leiten nicht ab,
+//! und ein `cmd+s` an
 //! `.secrets.txt` kostet so viel wie an jeder anderen Datei. Die 24 Byte der
 //! Nonce von XChaCha20 sind gross genug, um sie je Sicherung zufaellig zu
 //! ziehen, ohne einen Zaehler zu verwalten.
@@ -547,8 +548,46 @@ pub fn oeffnen(bytes: &[u8], pin: &Pin) -> Result<Geoeffnet, Oeffnungsfehler> {
     let kopf = Kopf::lesen(bytes).map_err(Oeffnungsfehler::KopfBeschaedigt)?;
     let schluessel =
         schluessel_ableiten(pin, &kopf.salz, kopf.parameter).map_err(Oeffnungsfehler::System)?;
+    let klartext = entschluesseln(bytes, &kopf, &schluessel)?;
+    Ok(Geoeffnet {
+        klartext,
+        schluessel,
+    })
+}
+
+/// Oeffnet eine nicht leere `.secrets.txt` mit einem **gehaltenen**
+/// Schluessel, ohne abzuleiten; schreibt nie.
+///
+/// Der Weg des Befehls „PIN ändern" (Schritt 5.5 des Plans der
+/// krkhome-Arbeit): der Editor haelt den Schluessel der offenen Datei und
+/// entschluesselt mit ihm den Stand **auf der Platte**, bevor er ihn mit dem
+/// neuen verschliesst. Eine zweite Ableitung mit der alten PIN kostete eine
+/// weitere halbe Sekunde fuer einen Schluessel, der schon da ist.
+///
+/// **Der Schluessel muss zur Datei gehoeren**: tragen Salz oder Parameter im
+/// Kopf andere Werte als der Schluessel, ist die Datei mit einem anderen
+/// Schluessel geschrieben, und die Antwort ist dieselbe wie bei einer falschen
+/// PIN, [`Oeffnungsfehler::PinFalschOderVeraendert`]. Die Pruefung des
+/// Verfahrens wiese sie ohnehin ab; die Frage vorher sagt es ohne Umweg.
+#[must_use = "traegt den Klartext oder die eine Meldung; fallengelassen oeffnet sich nichts"]
+pub fn oeffnen_mit(bytes: &[u8], schluessel: &Schluessel) -> Result<Vec<u8>, Oeffnungsfehler> {
+    let kopf = Kopf::lesen(bytes).map_err(Oeffnungsfehler::KopfBeschaedigt)?;
+    if kopf.salz != schluessel.salz || kopf.parameter != schluessel.parameter {
+        return Err(Oeffnungsfehler::PinFalschOderVeraendert);
+    }
+    entschluesseln(bytes, &kopf, schluessel)
+}
+
+/// Die Entschluesselung hinter dem gelesenen Kopf, fuer [`oeffnen`] und
+/// [`oeffnen_mit`]: der ganze Kopf als zusaetzliche authentifizierte Daten,
+/// jede Abweisung des Verfahrens als [`Oeffnungsfehler::PinFalschOderVeraendert`].
+fn entschluesseln(
+    bytes: &[u8],
+    kopf: &Kopf,
+    schluessel: &Schluessel,
+) -> Result<Vec<u8>, Oeffnungsfehler> {
     let verfahren = XChaCha20Poly1305::new(&Key::from(schluessel.schluessel));
-    let klartext = verfahren
+    verfahren
         .decrypt(
             &XNonce::from(kopf.nonce),
             Payload {
@@ -556,11 +595,7 @@ pub fn oeffnen(bytes: &[u8], pin: &Pin) -> Result<Geoeffnet, Oeffnungsfehler> {
                 aad: &bytes[..KOPFLAENGE],
             },
         )
-        .map_err(|_| Oeffnungsfehler::PinFalschOderVeraendert)?;
-    Ok(Geoeffnet {
-        klartext,
-        schluessel,
-    })
+        .map_err(|_| Oeffnungsfehler::PinFalschOderVeraendert)
 }
 
 #[cfg(test)]
@@ -593,6 +628,39 @@ mod proben {
             nonce: [9; NONCELAENGE],
         };
         assert_eq!(Kopf::lesen(&kopf.bytes()), Ok(kopf));
+    }
+
+    /// Der gehaltene Schluessel oeffnet die Datei, die er verschlossen hat,
+    /// ohne Ableitung; ein Schluessel mit anderem Salz oeffnet sie nicht, und
+    /// ein veraendertes Byte gibt dieselbe Meldung wie eine falsche PIN
+    /// (Schritt 5.5 der krkhome-Arbeit).
+    #[test]
+    fn der_gehaltene_schluessel_oeffnet_allein_seine_datei() {
+        let pin = Pin::aus_eingabe("2468").expect("vier Ziffern");
+        let schluessel = schluessel_ableiten(&pin, &[5; SALZLAENGE], klein()).expect("Ableitung");
+        let datei = verschliessen(b"Thema\nGeheim\n", &schluessel).expect("verschliessen");
+        assert_eq!(
+            oeffnen_mit(&datei, &schluessel).as_deref(),
+            Ok(&b"Thema\nGeheim\n"[..])
+        );
+
+        let fremd = schluessel_ableiten(&pin, &[6; SALZLAENGE], klein()).expect("Ableitung");
+        assert_eq!(
+            oeffnen_mit(&datei, &fremd),
+            Err(Oeffnungsfehler::PinFalschOderVeraendert)
+        );
+
+        let mut veraendert = datei.clone();
+        let letztes = veraendert.len() - 1;
+        veraendert[letztes] ^= 1;
+        assert_eq!(
+            oeffnen_mit(&veraendert, &schluessel),
+            Err(Oeffnungsfehler::PinFalschOderVeraendert)
+        );
+        assert_eq!(
+            oeffnen_mit(b"", &schluessel),
+            Err(Oeffnungsfehler::KopfBeschaedigt(Kopfschaden::Abgeschnitten))
+        );
     }
 
     #[test]

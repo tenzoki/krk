@@ -4158,6 +4158,12 @@ impl Anwendungsdelegierter {
             Kommando::EintragRunter => self.editorbefehl(Editorbereich::eintrag_runter),
             Kommando::EintragLoeschen => self.editorbefehl(Editorbereich::eintrag_loeschen),
             Kommando::AufgabeAbhaken => self.editorbefehl(Editorbereich::aufgabe_abhaken),
+            // „PIN ändern" (C7.15, Schritt 5.5 der krkhome-Arbeit): ein
+            // eigener Zweig, weil er ein Blatt zeigt. Ohne ihn fiele der
+            // Befehl durch den Auffangzweig unten, stuende im Hauptmenue und
+            // taete nichts; gehalten von
+            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::PinAendern => self.pin_aendern_erfragen(),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
             // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**:
@@ -8277,15 +8283,63 @@ impl Anwendungsdelegierter {
             return;
         };
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        let griff = blaetter::pin::zeigen(self.mtm(), fenster, form, move |pin| {
+        let griff = blaetter::pin::zeigen(self.mtm(), fenster, form, move |eingabe| {
             let Some(selbst) = schwach.load() else {
                 return;
             };
             if let Some(editor) = selbst.ivars().editor.get() {
-                editor.geheimnisse_oeffnen(&pfad, pin);
+                editor.geheimnisse_oeffnen(&pfad, eingabe.pin);
             }
         });
         self.blatt_oeffnet(griff);
+    }
+
+    /// „PIN ändern": uebernimmt die laufende Zelle, zeigt das PIN-Blatt in
+    /// der dritten Form und reicht alte und neue PIN an den Editor (C7.15,
+    /// Schritt 5.5 der krkhome-Arbeit).
+    ///
+    /// **Der Delegierte zeigt nur**, wie bei [`Self::pin_erfragen`]: ob sich
+    /// die PIN aendern laesst, fragt `Editorbereich::pin_aendern` vor dem
+    /// Blatt, und zwar nach der Uebernahme der laufenden Zelle; eine
+    /// abgewiesene Zelle oder eine Datei, die sich aussen geaendert hat, meldet
+    /// sich in der Statuszeile, und kein Blatt geht auf. Den Wechsel beginnt
+    /// `Editorbereich::pin_wechsel_starten`; sein Ausgang kommt ueber die
+    /// Meldungssenke des Editors in die Statuszeile, weil zwischen Blatt und
+    /// Ausgang die Ableitung auf ihrem Faden laeuft und kein Befehl mehr da
+    /// ist, der ihn zurueckgaebe.
+    ///
+    /// `true` in jedem Fall mit Editor: der Befehl traegt
+    /// `Wirkungsbereich::Geheimnisse` und erreicht diese Stelle nur mit dem
+    /// Fokus im Editor, gehoert also ihm und nicht der Menueleiste.
+    fn pin_aendern_erfragen(&self) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        if let Err(meldung) = editor.pin_aendern() {
+            self.editormeldung_zeigen(&meldung);
+            return true;
+        }
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return true;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = blaetter::pin::zeigen(self.mtm(), fenster, Pinform::Aendern, move |eingabe| {
+            let Some(selbst) = schwach.load() else {
+                return;
+            };
+            // Die Form `Aendern` liefert immer eine alte PIN; ohne sie gibt
+            // es nichts zu vergleichen und nichts zu aendern.
+            let Some(alte) = eingabe.alte else {
+                return;
+            };
+            if let Some(editor) = selbst.ivars().editor.get()
+                && let Some(meldung) = editor.pin_wechsel_starten(alte, eingabe.pin)
+            {
+                selbst.editormeldung_zeigen(&meldung);
+            }
+        });
+        self.blatt_oeffnet(griff);
+        true
     }
 
     /// Setzt die Schreibmarke auf die vorgemerkte Stelle und meldet, falls es
@@ -9923,7 +9977,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 8] = [
+    const BEFEHLE: [&str; 9] = [
         "NeuerungenZeigen",
         "Notizordner",
         "EintragHinzufuegen",
@@ -9932,6 +9986,7 @@ mod zweigproben {
         "EintragRunter",
         "EintragLoeschen",
         "AufgabeAbhaken",
+        "PinAendern",
     ];
 
     #[test]

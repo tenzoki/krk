@@ -7,15 +7,28 @@
 //!  └ <Grund>      ┘                          │ Wiederholen: [••••] │
 //!  [Abbrechen]  [Öffnen]                     └ <Grund>             ┘
 //!                                            [Abbrechen]  [Festlegen]
+//!
+//!  PIN für die Geheimnisse ändern
+//!  <HINWEIS>
+//!  ┌ Alte PIN:    [••••] ┐
+//!  │ Neue PIN:    [••••] │
+//!  │ Wiederholen: [••••] │
+//!  └ <Grund>             ┘
+//!  [Abbrechen]  [Ändern]
 //! ```
 //!
-//! **Zwei Formen, ein Blatt.** Welche gilt, sagt [`Pinform`], und entschieden
-//! wird sie an der Groesse der Datei in `Editorbereich::datei_oeffnen`: eine
+//! **Drei Formen, ein Blatt.** Welche gilt, sagt [`Pinform`]. Die ersten zwei
+//! entscheidet die Groesse der Datei in `Editorbereich::datei_oeffnen`: eine
 //! leere `.secrets.txt` hat noch keine PIN, und der Nutzer legt eine fest,
 //! **zweimal eingegeben**, weil eine vertippte neue PIN den Inhalt so
 //! endgueltig verschloesse wie eine vergessene (Spec, C7). Jede andere gibt er
-//! einmal ein. Das Blatt liefert eine [`Pin`] und oeffnet nichts; geoeffnet
-//! wird ueber `Editorbereich::geheimnisse_oeffnen`.
+//! einmal ein. Die dritte, [`Pinform::Aendern`], ist die des Befehls „PIN
+//! ändern" (Schritt 5.5): die alte PIN einmal, die neue zweimal. Das Blatt
+//! liefert eine [`Pineingabe`] und oeffnet und aendert nichts; geoeffnet wird
+//! ueber `Editorbereich::geheimnisse_oeffnen`, geaendert ueber
+//! `Editorbereich::pin_wechsel_starten`. **Ob die alte PIN stimmt, prueft das
+//! Blatt nicht**: es kennt die gehaltene nicht, und das Modell vergleicht sie,
+//! bevor es irgendetwas anfasst.
 //!
 //! **Geprueft wird ueber [`Pin::aus_eingabe`], und eine abgewiesene Eingabe
 //! schliesst das Blatt nicht.** `NSAlert` beendet ein Blatt mit jedem Druck
@@ -74,7 +87,7 @@ use crate::editormodell::Pinform;
 
 use super::{Blatt, Blattgriff};
 
-/// Der Text unter der Frage, in beiden Formen derselbe (C7).
+/// Der Text unter der Frage, in jeder Form derselbe (C7).
 ///
 /// **Der Wortlaut des Spec, ohne Zeitangabe**: wovor die PIN schuetzt, wovor
 /// nicht, und dass eine vergessene PIN den Inhalt endgueltig verschliesst. Mit
@@ -114,6 +127,7 @@ pub fn frage(form: Pinform) -> &'static str {
     match form {
         Pinform::Festlegen => "Neue PIN für die Geheimnisse festlegen",
         Pinform::Eingeben => "PIN für die Geheimnisse eingeben",
+        Pinform::Aendern => "PIN für die Geheimnisse ändern",
     }
 }
 
@@ -123,6 +137,7 @@ pub fn bestaetigen(form: Pinform) -> &'static str {
     match form {
         Pinform::Festlegen => "Festlegen",
         Pinform::Eingeben => "Öffnen",
+        Pinform::Aendern => "Ändern",
     }
 }
 
@@ -133,7 +148,23 @@ pub fn beschriftungen(form: Pinform) -> &'static [&'static str] {
     match form {
         Pinform::Festlegen => &["Neue PIN:", "Wiederholen:"],
         Pinform::Eingeben => &["PIN:"],
+        Pinform::Aendern => &["Alte PIN:", "Neue PIN:", "Wiederholen:"],
     }
+}
+
+/// Was das Blatt liefert: die eingegebene oder neue PIN, und in der Form
+/// [`Pinform::Aendern`] dazu die alte.
+///
+/// **Ein Wert fuer alle drei Formen**, damit das Blatt einen Rueckruf hat und
+/// nicht drei. `alte` ist `None` beim Festlegen und Eingeben und `Some` beim
+/// Aendern; das sagt [`felder_pruefen`], die eine Stelle, die ihn baut.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Pineingabe {
+    /// Die PIN, mit der geoeffnet wird, oder die neue beim Festlegen und
+    /// Aendern.
+    pub pin: Pin,
+    /// Die alte PIN, allein in der Form [`Pinform::Aendern`].
+    pub alte: Option<Pin>,
 }
 
 /// Warum eine Eingabe im Blatt nicht angenommen wird.
@@ -171,6 +202,50 @@ pub fn eingabe_pruefen(erste: &str, zweite: Option<&str>) -> Result<Pin, Eingabe
     }
 }
 
+/// Die Pruefung aller Felder einer Form, von oben nach unten; fehlt ein Feld,
+/// gilt es als leer.
+///
+/// **Baut die [`Pineingabe`] und stuetzt sich auf [`eingabe_pruefen`]**: beim
+/// Eingeben ein Feld, beim Festlegen zwei, die gleichen muessen, beim Aendern
+/// zuerst die alte PIN, die allein vier Ziffern sein muss, dann die neue mit
+/// ihrer Wiederholung. Die Regel fuer vier Ziffern steht weiter allein in
+/// [`Pin::aus_eingabe`].
+pub fn felder_pruefen(form: Pinform, felder: &[String]) -> Result<Pineingabe, Eingabefehler> {
+    let feld = |stelle: usize| felder.get(stelle).map_or("", String::as_str);
+    match form {
+        Pinform::Eingeben => Ok(Pineingabe {
+            pin: eingabe_pruefen(feld(0), None)?,
+            alte: None,
+        }),
+        Pinform::Festlegen => Ok(Pineingabe {
+            pin: eingabe_pruefen(feld(0), Some(feld(1)))?,
+            alte: None,
+        }),
+        Pinform::Aendern => {
+            let alte = Pin::aus_eingabe(feld(0)).map_err(Eingabefehler::KeinePin)?;
+            Ok(Pineingabe {
+                pin: eingabe_pruefen(feld(1), Some(feld(2)))?,
+                alte: Some(alte),
+            })
+        }
+    }
+}
+
+/// Der Grund beim Tippen fuer alle Felder einer Form, nach
+/// [`grund_beim_tippen`]: beim Aendern zuerst fuer die alte PIN, dann fuer die
+/// neue mit ihrer Wiederholung.
+#[must_use]
+pub fn grund_der_felder(form: Pinform, felder: &[String]) -> Option<&'static str> {
+    let feld = |stelle: usize| felder.get(stelle).map_or("", String::as_str);
+    match form {
+        Pinform::Eingeben => grund_beim_tippen(feld(0), None),
+        Pinform::Festlegen => grund_beim_tippen(feld(0), Some(feld(1))),
+        Pinform::Aendern => {
+            grund_beim_tippen(feld(0), None).or_else(|| grund_beim_tippen(feld(1), Some(feld(2))))
+        }
+    }
+}
+
 /// Der Grund, der schon waehrend des Tippens unter den Feldern steht; `None`,
 /// solange die Eingabe noch gueltig werden kann.
 ///
@@ -195,13 +270,13 @@ pub fn grund_beim_tippen(erste: &str, zweite: Option<&str>) -> Option<&'static s
 /// Zeigt das PIN-Blatt in der genannten Form am Fenster.
 ///
 /// Kehrt sofort zurueck. `fertig` laeuft auf dem Hauptfaden mit der
-/// gepruefte PIN, wenn der Nutzer bestaetigt hat; bricht er ab, laeuft es gar
-/// nicht, wie bei jedem Eingabeblatt dieses Verzeichnisses.
+/// geprueften Eingabe, wenn der Nutzer bestaetigt hat; bricht er ab, laeuft es
+/// gar nicht, wie bei jedem Eingabeblatt dieses Verzeichnisses.
 pub fn zeigen(
     mtm: MainThreadMarker,
     fenster: &NSWindow,
     form: Pinform,
-    fertig: impl Fn(Pin) + 'static,
+    fertig: impl Fn(Pineingabe) + 'static,
 ) -> Blattgriff {
     let namen = beschriftungen(form);
     let zeilen = namen.len() as f64;
@@ -255,10 +330,11 @@ pub fn zeigen(
     let felder = Rc::new(felder);
     let lesen = {
         let felder = Rc::clone(&felder);
-        move || -> (String, Option<String>) {
-            let erste = felder[0].stringValue().to_string();
-            let zweite = felder.get(1).map(|feld| feld.stringValue().to_string());
-            (erste, zweite)
+        move || -> Vec<String> {
+            felder
+                .iter()
+                .map(|feld| feld.stringValue().to_string())
+                .collect()
         }
     };
     let lesen = Rc::new(lesen);
@@ -268,23 +344,20 @@ pub fn zeigen(
         let lesen = Rc::clone(&lesen);
         let grund = grund.clone();
         blatt.textaenderung_melden(Box::new(move || {
-            let (erste, zweite) = lesen();
-            knopf.setEnabled(eingabe_pruefen(&erste, zweite.as_deref()).is_ok());
-            let satz = grund_beim_tippen(&erste, zweite.as_deref()).unwrap_or("");
+            let eingaben = lesen();
+            knopf.setEnabled(felder_pruefen(form, &eingaben).is_ok());
+            let satz = grund_der_felder(form, &eingaben).unwrap_or("");
             grund.setStringValue(&NSString::from_str(satz));
         }));
     }
     {
         let lesen = Rc::clone(&lesen);
         let grund = grund.clone();
-        blatt.bestaetigung_pruefen(Box::new(move || {
-            let (erste, zweite) = lesen();
-            match eingabe_pruefen(&erste, zweite.as_deref()) {
-                Ok(_) => true,
-                Err(fehler) => {
-                    grund.setStringValue(&NSString::from_str(fehler.meldung()));
-                    false
-                }
+        blatt.bestaetigung_pruefen(Box::new(move || match felder_pruefen(form, &lesen()) {
+            Ok(_) => true,
+            Err(fehler) => {
+                grund.setStringValue(&NSString::from_str(fehler.meldung()));
+                false
             }
         }));
     }
@@ -296,9 +369,8 @@ pub fn zeigen(
         // Noch einmal geprueft und nicht vorausgesetzt: die Schaltflaeche und
         // die Taste haben schon geprueft, aber eine Antwort von AppKit, die zu
         // keiner Schaltflaeche gehoert, kommt ohne sie hierher.
-        let (erste, zweite) = lesen();
-        if let Ok(pin) = eingabe_pruefen(&erste, zweite.as_deref()) {
-            fertig(pin);
+        if let Ok(eingabe) = felder_pruefen(form, &lesen()) {
+            fertig(eingabe);
         }
     })
 }
@@ -351,6 +423,12 @@ mod tests {
         assert_eq!(frage(Pinform::Eingeben), "PIN für die Geheimnisse eingeben");
         assert_eq!(bestaetigen(Pinform::Festlegen), "Festlegen");
         assert_eq!(bestaetigen(Pinform::Eingeben), "Öffnen");
+        assert_eq!(frage(Pinform::Aendern), "PIN für die Geheimnisse ändern");
+        assert_eq!(bestaetigen(Pinform::Aendern), "Ändern");
+        assert_eq!(
+            beschriftungen(Pinform::Aendern),
+            ["Alte PIN:", "Neue PIN:", "Wiederholen:"]
+        );
         assert_eq!(
             beschriftungen(Pinform::Festlegen),
             ["Neue PIN:", "Wiederholen:"]
@@ -368,6 +446,70 @@ mod tests {
     fn festlegen_fragt_zweimal_und_eingeben_einmal() {
         assert_eq!(beschriftungen(Pinform::Festlegen).len(), 2);
         assert_eq!(beschriftungen(Pinform::Eingeben).len(), 1);
+    }
+
+    /// Das Aendern fragt die alte PIN einmal und die neue zweimal (C7.15,
+    /// Schritt 5.5); jedes Feld muss vier Ziffern tragen, und die
+    /// Wiederholung muss der neuen gleichen. Die alte wird hier nicht gegen die
+    /// gehaltene gehalten, das tut das Modell.
+    #[test]
+    fn aendern_fragt_die_alte_einmal_und_die_neue_zweimal() {
+        let felder = |a: &str, b: &str, c: &str| [a.to_owned(), b.to_owned(), c.to_owned()];
+        assert_eq!(beschriftungen(Pinform::Aendern).len(), 3);
+        assert_eq!(
+            felder_pruefen(Pinform::Aendern, &felder("1111", "2222", "2222")),
+            Ok(Pineingabe {
+                pin: Pin::aus_eingabe("2222").expect("vier Ziffern"),
+                alte: Some(Pin::aus_eingabe("1111").expect("vier Ziffern")),
+            })
+        );
+        assert_eq!(
+            felder_pruefen(Pinform::Aendern, &felder("111", "2222", "2222")),
+            Err(Eingabefehler::KeinePin(Pinfehler::KeineVierZiffern))
+        );
+        assert_eq!(
+            felder_pruefen(Pinform::Aendern, &felder("1111", "2222", "2223")),
+            Err(Eingabefehler::Abweichung)
+        );
+        assert_eq!(
+            felder_pruefen(Pinform::Aendern, &felder("1111", "22a2", "22a2")),
+            Err(Eingabefehler::KeinePin(Pinfehler::KeineVierZiffern))
+        );
+        assert_eq!(
+            grund_der_felder(Pinform::Aendern, &felder("11x", "", "")),
+            Some(Pinfehler::KeineVierZiffern.meldung())
+        );
+        assert_eq!(
+            grund_der_felder(Pinform::Aendern, &felder("1111", "2222", "3")),
+            Some(ABWEICHUNG)
+        );
+        assert_eq!(
+            grund_der_felder(Pinform::Aendern, &felder("11", "2", "")),
+            None
+        );
+    }
+
+    /// Die zwei aelteren Formen liefern keine alte PIN, und `felder_pruefen`
+    /// sagt dort dasselbe wie `eingabe_pruefen`.
+    #[test]
+    fn eingeben_und_festlegen_liefern_keine_alte_pin() {
+        let eins = ["0427".to_owned()];
+        assert_eq!(
+            felder_pruefen(Pinform::Eingeben, &eins),
+            Ok(Pineingabe {
+                pin: Pin::aus_eingabe("0427").expect("vier Ziffern"),
+                alte: None,
+            })
+        );
+        assert_eq!(
+            felder_pruefen(Pinform::Festlegen, &["0427".to_owned(), "0428".to_owned()]),
+            Err(Eingabefehler::Abweichung)
+        );
+        assert_eq!(
+            felder_pruefen(Pinform::Festlegen, &["0427".to_owned(), "0427".to_owned()])
+                .map(|eingabe| eingabe.alte),
+            Ok(None)
+        );
     }
 
     /// Hinter dem Blatt steht `Pin::aus_eingabe`: drei Ziffern, fuenf

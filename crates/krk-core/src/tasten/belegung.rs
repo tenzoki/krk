@@ -244,7 +244,9 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// verlangen den Fokus im Editor wie [`Wirkungsbereich::Editor`] und dazu eine
 /// Form dessen, was er zeigt. Die Form kennt der Kern nicht; `krk_ui` fragt sie
 /// in derselben Regel, die den Fokus fragt, und die Ausgrauung des Menues folgt
-/// daraus ohne eigenen Weg.
+/// daraus ohne eigenen Weg. Ein vierter, [`Wirkungsbereich::Geheimnisse`],
+/// kommt mit Schritt 5.5 fuer „PIN ändern" und fragt statt der Form, ob der
+/// Editor `.secrets.txt` mit einem Kopf auf der Platte haelt.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
@@ -316,6 +318,16 @@ pub enum Wirkungsbereich {
     ///
     /// Der Wert allein des Abhakens: eine Notiz hat kein Kaestchen.
     Aufgaben,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor
+    /// `.secrets.txt` entsperrt haelt, deren PIN schon in einem Kopf auf der
+    /// Platte steht (C7 des Spec, Schritt 5.5 der krkhome-Arbeit).
+    ///
+    /// Der Wert allein von „PIN ändern". **Ob die Datei gehalten wird und einen
+    /// Kopf traegt, weiss der Kern nicht**; die Frage stellt `krk_ui` in seiner
+    /// Zulaessigkeitsregel, wie bei [`Wirkungsbereich::Editortext`] die Form.
+    /// Die Form selbst fragt der Wert nicht: auch in der Rohansicht haelt der
+    /// Editor dieselbe Datei mit derselben PIN.
+    Geheimnisse,
     /// Wirkt, wenn der Fokus in einem Bereich mit Tabs steht: in einem
     /// Dateifenster oder im Vorschaufenster (C1, C6).
     ///
@@ -430,6 +442,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Editortext => "Text im Editor",
             Wirkungsbereich::Eintraege => "Einträge im Editor",
             Wirkungsbereich::Aufgaben => "Aufgaben im Editor",
+            Wirkungsbereich::Geheimnisse => "Geheimnisse im Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
             Wirkungsbereich::Navigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
             Wirkungsbereich::Vorschau => "Vorschau",
@@ -804,6 +817,15 @@ pub enum Kommando {
     /// [`Wirkungsbereich::Eintraege`]: eine Notiz hat kein Kaestchen, und in
     /// der Notiztabelle soll der Befehl ausgegraut sein.
     AufgabeAbhaken,
+    /// Die PIN der offenen `.secrets.txt` aendern: alte PIN, neue PIN
+    /// zweimal, dann verschluesselt KRK den Stand auf der Platte mit einem
+    /// neuen Schluessel aus frischem Salz (C7 des Spec, Schritt 5.5 der
+    /// krkhome-Arbeit).
+    ///
+    /// Traegt [`Wirkungsbereich::Geheimnisse`]: er wirkt allein mit dem Fokus
+    /// im Editor und nur, solange der Editor `.secrets.txt` haelt und ihre
+    /// PIN schon in einem Kopf auf der Platte steht.
+    PinAendern,
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
     /// aenderbar und zuruecksetzbar (C3).
     BelegungAnsehen,
@@ -942,7 +964,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 93] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 94] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1045,6 +1067,7 @@ impl Kommando {
         (Kommando::EintragRunter, "eintrag_runter"),
         (Kommando::EintragLoeschen, "eintrag_loeschen"),
         (Kommando::AufgabeAbhaken, "aufgabe_abhaken"),
+        (Kommando::PinAendern, "pin_aendern"),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::BelegungsdateiAnsehen, "belegungsdatei_ansehen"),
         (Kommando::Beenden, "beenden"),
@@ -1307,6 +1330,10 @@ impl Kommando {
             | Kommando::EintragRunter
             | Kommando::EintragLoeschen => Wirkungsbereich::Eintraege,
             Kommando::AufgabeAbhaken => Wirkungsbereich::Aufgaben,
+            // „PIN ändern" (C7, Schritt 5.5 der krkhome-Arbeit): allein an der
+            // entsperrten `.secrets.txt`, deren PIN schon in einem Kopf steht;
+            // ob das so ist, fragt `krk_ui`.
+            Kommando::PinAendern => Wirkungsbereich::Geheimnisse,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen

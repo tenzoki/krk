@@ -204,6 +204,20 @@
 //! (`260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md`),
 //! und unter einer dritten ist die Datei fuer den Editor eine gewoehnliche.
 //!
+//! **„PIN ändern" (Schritt 5.5) ist der zweite Ort einer Ableitung**, und
+//! auch er leitet nicht auf dem rufenden Faden ab:
+//!
+//! ```text
+//!  pin_aendern(alte, neue) ──> alte == gehaltene? ──> Faden „krk-pin“: neuer_schluessel
+//!  pinwechsel_einziehen   ──> Stempel gleich? ──> Platte lesen ──> oeffnen_mit(gehaltener)
+//!                             ──> Chiffrat::verschliessen(neuer) ──> Chiffrat::schreiben
+//!                             ──> Stempel neu, Schutz mit neuem Schluessel und neuer PIN
+//! ```
+//!
+//! Umgeschluesselt wird der Stand der Platte und nicht der des Editors; was
+//! ungesichert ist, bleibt ungesichert. Der Klartext der Platte lebt dabei
+//! allein im Speicher.
+//!
 //! # Was dieses Modul nicht tut
 //!
 //! Es **fragt nicht nach**. Die Nachfrage an den drei Anlaessen aus C4 ist ein
@@ -541,12 +555,9 @@ enum Schutz {
         /// der neu festgelegten PIN; jede Sicherung verschliesst mit ihm.
         schluessel: Schluessel,
         /// Die PIN, allein fuer den Vergleich der alten PIN beim Aendern
-        /// (Schritt 5.5). Nach dem Bedrohungsmodell unerheblich, weil der
-        /// Speicher den Klartext ohnehin haelt.
-        #[expect(
-            dead_code,
-            reason = "der Leser ist der Befehl „PIN ändern“ aus Schritt 5.5 des Plans"
-        )]
+        /// ([`Editormodell::pin_aendern`], Schritt 5.5). Nach dem
+        /// Bedrohungsmodell unerheblich, weil der Speicher den Klartext
+        /// ohnehin haelt.
         pin: Pin,
         /// Ob auf der Platte ein Kopf mit dieser PIN steht: gesetzt, wenn die
         /// Datei nicht leer gelesen wurde oder ein Sichern gelungen ist.
@@ -556,7 +567,9 @@ enum Schutz {
         /// Menueausgrauung gefragt wird und dort kein Lesen auf dem Hauptfaden
         /// stehen soll. Aendert jemand die Datei von aussen, geht der Wert
         /// daneben; der Befehl „PIN ändern" aus Schritt 5.5 prueft dann ueber
-        /// `fremd_geaendert` wie jedes Sichern und weist ab.
+        /// `fremd_geaendert` wie jedes Sichern und weist ab. Nach einem
+        /// gelungenen Aendern steht er wieder, denn der neue Kopf ist
+        /// geschrieben.
         kopf_auf_platte: bool,
     },
 }
@@ -604,6 +617,66 @@ impl Chiffrat {
         atomar::schreiben(ziel, &mut self.0.as_slice())
     }
 }
+
+/// Ein laufender Wechsel der PIN: die Ableitung des neuen Schluessels auf
+/// einem benannten Faden (Schritt 5.5 des Plans der krkhome-Arbeit).
+///
+/// **Derselbe Zuschnitt wie [`Ladevorgang`]**: ein Faden je Wechsel, genau
+/// eine Meldung ueber einen `sync_channel(1)`, abgeholt vom selben
+/// Einzugstakt ueber [`Editormodell::pinwechsel_einziehen`]. Auf dem Faden
+/// laeuft allein die Ableitung, [`tresor::neuer_schluessel`] mit frischem Salz
+/// und den Parametern des Codes; gelesen, entschluesselt und geschrieben wird
+/// danach auf dem rufenden Faden, damit der Stand, der umgeschluesselt wird,
+/// der ist, der im Augenblick des Schreibens auf der Platte steht, und nicht
+/// der vor einer halben Sekunde.
+#[derive(Debug)]
+struct Pinwechsel {
+    empfaenger: Receiver<Result<Schluessel, Tresorfehler>>,
+    /// Die Datei, deren PIN geaendert wird.
+    pfad: PathBuf,
+    /// Die neue PIN; sie ersetzt die gehaltene, sobald der neue Kopf steht.
+    neue: Pin,
+}
+
+impl Pinwechsel {
+    /// Startet die Ableitung fuer die neue PIN.
+    ///
+    /// **Das Startergebnis wird nicht fallengelassen**: ohne Faden kaeme nie
+    /// eine Meldung, und der Nutzer bekommt den Grund, statt auf eine Antwort
+    /// zu warten, die nicht kommt (`kein_fadenstart_im_baum_wirft_seinen_rueckgabewert_weg`).
+    fn starten(pfad: PathBuf, neue: Pin) -> Result<Self, String> {
+        // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
+        let (sender, empfaenger) = sync_channel(1);
+        thread::Builder::new()
+            .name("krk-pin".to_owned())
+            .spawn(move || {
+                let _ = SyncSender::send(&sender, tresor::neuer_schluessel(&neue));
+            })
+            .map_err(|fehler| {
+                format!("die neue PIN lässt sich nicht ableiten: {fehler}; {PIN_BLEIBT}")
+            })?;
+        Ok(Self {
+            empfaenger,
+            pfad,
+            neue,
+        })
+    }
+}
+
+/// Wie ein Wechsel der PIN ausgegangen ist (Schritt 5.5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "der Ausgang ist die einzige Antwort auf „PIN ändern“; fallengelassen erfaehrt der Nutzer nicht, ob die neue PIN gilt"]
+pub enum Pinwechselausgang {
+    /// Der neue Kopf steht auf der Platte, und ab jetzt oeffnet allein die neue
+    /// PIN die Datei.
+    Geaendert(PathBuf),
+    /// Nichts ist geschrieben, und die alte PIN gilt weiter; der Satz sagt,
+    /// warum.
+    Gescheitert(String),
+}
+
+/// Der Satzschluss jeder Abweisung von „PIN ändern".
+const PIN_BLEIBT: &str = "die PIN bleibt, wie sie war";
 
 /// Die Grenze fuer das Lesen einer `.secrets.txt`: die Editorgrenze fuer den
 /// Klartext, dazu der Kopf und die 16 Byte Pruefwert von Poly1305 (Kopftabelle
@@ -816,18 +889,24 @@ pub enum Ladeausgang {
 
 /// In welcher Form das PIN-Blatt fragt (C7).
 ///
-/// **Entschieden an der Groesse der Datei**, wie der Spec es sagt: null Bytes
-/// heisst, es gibt noch keine PIN, und der Nutzer legt eine fest, zweimal
-/// einzugeben; jede andere Groesse heisst, er gibt die PIN ein. Das Modell
-/// nimmt in beiden Faellen dieselbe PIN und entscheidet beim Lesen noch einmal
-/// an den gelesenen Bytes; weicht die Platte in der Spanne dazwischen ab, gilt
-/// das Lesen.
+/// **Die ersten zwei entscheidet die Groesse der Datei**, wie der Spec es
+/// sagt: null Bytes heisst, es gibt noch keine PIN, und der Nutzer legt eine
+/// fest, zweimal einzugeben; jede andere Groesse heisst, er gibt die PIN ein.
+/// Das Modell nimmt in beiden Faellen dieselbe PIN und entscheidet beim Lesen
+/// noch einmal an den gelesenen Bytes; weicht die Platte in der Spanne
+/// dazwischen ab, gilt das Lesen.
+///
+/// **Die dritte, [`Self::Aendern`], entscheidet der Befehl** „PIN ändern"
+/// (Schritt 5.5) und nie die Groesse: [`Self::nach_groesse`] liefert sie nicht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Pinform {
     /// Die Datei ist leer: eine neue PIN festlegen, zweimal eingegeben.
     Festlegen,
     /// Die Datei traegt einen Kopf: die PIN eingeben.
     Eingeben,
+    /// Die offene Datei traegt einen Kopf, und ihre PIN wird geaendert: die
+    /// alte einmal, die neue zweimal (Schritt 5.5).
+    Aendern,
 }
 
 impl Pinform {
@@ -959,6 +1038,15 @@ pub struct Editormodell {
     /// andere Meldung. Gesetzt und geloescht wird es allein in
     /// [`Editormodell::fremdaenderung_melden`]; siehe den Grund dort.
     fremd_gemeldet: bool,
+    /// Der laufende Wechsel der PIN, falls einer laeuft (Schritt 5.5).
+    ///
+    /// **Er ueberlebt einen Dateiwechsel und das Schliessen**, und zwar mit
+    /// Absicht: der Nutzer hat ihn verlangt, und sein Ausgang gehoert in die
+    /// Statuszeile, auch wenn es nur der Satz ist, dass die Datei nicht mehr
+    /// offen ist und die PIN bleibt. [`Editormodell::pinwechsel_einziehen`]
+    /// fragt deshalb im Augenblick des Schreibens, ob der Editor die Datei
+    /// noch haelt.
+    pinwechsel: Option<Pinwechsel>,
 }
 
 impl Editormodell {
@@ -1548,6 +1636,176 @@ impl Editormodell {
                 pfad.display()
             )),
         }
+    }
+
+    /// Ob sich die PIN jetzt aendern liesse, ohne die alte zu kennen; `Err`
+    /// traegt den Satz, warum nicht (Schritt 5.5).
+    ///
+    /// **Die Frage vor dem Blatt**: `Editorbereich::pin_aendern` stellt sie,
+    /// bevor der Nutzer drei PINs tippt, und [`Self::pin_aendern`] stellt sie
+    /// noch einmal, bevor es die alte vergleicht. Gefragt wird die
+    /// Buchfuehrung [`Self::pin_aenderbar`], ein laufender Wechsel und die
+    /// fremde Aenderung ueber [`Self::fremd_geaendert`], dieselbe Frage wie
+    /// vor jedem Sichern.
+    pub fn pin_aenderung_pruefen(&self) -> Result<(), String> {
+        let Some(pfad) = self.pfad.as_deref() else {
+            return Err(format!("der Editor hält keine Datei; {PIN_BLEIBT}"));
+        };
+        if !self.pin_aenderbar() {
+            return Err(format!(
+                "{} trägt noch keine gesicherte PIN; erst sichern, dann ändern",
+                pfad.display()
+            ));
+        }
+        if self.pinwechsel.is_some() {
+            return Err("die PIN wird schon geändert".to_owned());
+        }
+        if self.fremd_geaendert() {
+            return Err(format!(
+                "{} hat sich außerhalb von KRK geändert; {PIN_BLEIBT}",
+                pfad.display()
+            ));
+        }
+        Ok(())
+    }
+
+    /// Beginnt den Wechsel der PIN der gehaltenen `.secrets.txt` (C7.15,
+    /// Schritt 5.5 des Plans der krkhome-Arbeit).
+    ///
+    /// **Die alte PIN wird gegen die gehaltene verglichen**, bevor irgendetwas
+    /// anlaeuft; eine falsche weist ab, und nichts ist geschehen. Dann startet
+    /// die Ableitung des neuen Schluessels auf einem benannten Faden
+    /// ([`Pinwechsel`]), mit frischem Salz und den Parametern des Codes, also
+    /// auch mit angehobenen
+    /// (`260926-0050_*_zieht-jede-sicherung-von-secrets-txt-ein-neues-salz-wenn-das-eine-halbe-sekunde-je-cmd-s-kostet.md`,
+    /// Moeglichkeit 3). Den Ausgang holt [`Self::pinwechsel_einziehen`] ab.
+    ///
+    /// **Der Stand des Editors bleibt unberuehrt**: ungesicherte Aenderungen
+    /// bleiben ungesichert, denn umgeschluesselt wird der Stand auf der Platte
+    /// und nicht der im Editor.
+    pub fn pin_aendern(&mut self, alte: Pin, neue: Pin) -> Result<(), String> {
+        self.pin_aenderung_pruefen()?;
+        let Some(pfad) = self.pfad.clone() else {
+            return Err(format!("der Editor hält keine Datei; {PIN_BLEIBT}"));
+        };
+        let Schutz::Verschluesselt { pin, .. } = &self.schutz else {
+            return Err(format!(
+                "{} ist nicht verschlüsselt; {PIN_BLEIBT}",
+                pfad.display()
+            ));
+        };
+        if *pin != alte {
+            return Err(format!("die alte PIN stimmt nicht; {PIN_BLEIBT}"));
+        }
+        self.pinwechsel = Some(Pinwechsel::starten(pfad, neue)?);
+        Ok(())
+    }
+
+    /// Ob ein Wechsel der PIN laeuft.
+    #[must_use]
+    pub fn pin_wechselt(&self) -> bool {
+        self.pinwechsel.is_some()
+    }
+
+    /// Holt den Ausgang eines Wechsels der PIN ab und schreibt den neuen Kopf
+    /// (Schritt 5.5).
+    ///
+    /// `None`, solange die Ableitung laeuft oder kein Wechsel laeuft. Mit dem
+    /// neuen Schluessel geschieht dann, in dieser Reihenfolge und auf dem
+    /// rufenden Faden: die Frage nach der fremden Aenderung wie vor jedem
+    /// Sichern, das Lesen der Datei, das Entschluesseln mit dem **gehaltenen**
+    /// Schluessel ohne Ableitung (`tresor::oeffnen_mit`), das Verschliessen mit
+    /// dem neuen ueber [`Chiffrat::verschliessen`] und das Schreiben ueber
+    /// [`Chiffrat::schreiben`], also `ablage::atomar::schreiben`. **Zu keinem
+    /// Zeitpunkt geht Klartext auf die Platte**: der entschluesselte Stand lebt
+    /// allein im Speicher, und der Schreibweg nimmt allein ein [`Chiffrat`].
+    ///
+    /// Danach steht der Stempel neu, damit das naechste Sichern keine fremde
+    /// Aenderung meldet, und der Schutz traegt den neuen Schluessel, die neue
+    /// PIN und `kopf_auf_platte`. Scheitert ein Schritt, bleibt alles, wie es
+    /// war, Platte und Schutz.
+    #[must_use]
+    pub fn pinwechsel_einziehen(&mut self) -> Option<Pinwechselausgang> {
+        self.pinwechsel_einziehen_ueber(|ziel, chiffrat| chiffrat.schreiben(ziel))
+    }
+
+    /// [`Self::pinwechsel_einziehen`] mit einem hereingereichten Schreibweg
+    /// fuer das Chiffrat; dieselbe Naht und derselbe Grund wie an
+    /// [`Self::sichern_ueber`].
+    fn pinwechsel_einziehen_ueber(
+        &mut self,
+        chiffrat_schreiben: impl FnOnce(&Path, &Chiffrat) -> io::Result<()>,
+    ) -> Option<Pinwechselausgang> {
+        let geliefert = match self.pinwechsel.as_ref()?.empfaenger.try_recv() {
+            Ok(geliefert) => geliefert,
+            Err(std::sync::mpsc::TryRecvError::Empty) => return None,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                self.pinwechsel = None;
+                return Some(Pinwechselausgang::Gescheitert(format!(
+                    "die neue PIN ließ sich nicht ableiten; {PIN_BLEIBT}"
+                )));
+            }
+        };
+        let Pinwechsel { pfad, neue, .. } = self.pinwechsel.take()?;
+        let neuer = match geliefert {
+            Ok(neuer) => neuer,
+            Err(fehler) => {
+                return Some(Pinwechselausgang::Gescheitert(format!(
+                    "{}; {PIN_BLEIBT}",
+                    fehler.meldung()
+                )));
+            }
+        };
+        Some(
+            match self.umschluesseln(&pfad, &neuer, chiffrat_schreiben) {
+                Ok(()) => {
+                    self.stempel = Stempel::von_pfad(&pfad);
+                    self.schutz = Schutz::Verschluesselt {
+                        schluessel: neuer,
+                        pin: neue,
+                        kopf_auf_platte: true,
+                    };
+                    Pinwechselausgang::Geaendert(pfad)
+                }
+                Err(grund) => Pinwechselausgang::Gescheitert(grund),
+            },
+        )
+    }
+
+    /// Der Stand auf der Platte, mit dem gehaltenen Schluessel entschluesselt
+    /// und mit dem neuen verschlossen geschrieben; fasst das Modell nicht an.
+    fn umschluesseln(
+        &self,
+        pfad: &Path,
+        neuer: &Schluessel,
+        chiffrat_schreiben: impl FnOnce(&Path, &Chiffrat) -> io::Result<()>,
+    ) -> Result<(), String> {
+        let name = pfad.display();
+        if self.pfad.as_deref() != Some(pfad) {
+            return Err(format!("{name} ist nicht mehr offen; {PIN_BLEIBT}"));
+        }
+        let Schutz::Verschluesselt {
+            schluessel: gehalten,
+            ..
+        } = &self.schutz
+        else {
+            return Err(format!("{name} ist nicht mehr entsperrt; {PIN_BLEIBT}"));
+        };
+        if self.fremd_geaendert() {
+            return Err(format!(
+                "{name} hat sich außerhalb von KRK geändert; {PIN_BLEIBT}"
+            ));
+        }
+        let bytes = datei::bis_zur_grenze_lesen(pfad, GEHEIMNISGRENZE)
+            .map_err(|_| format!("{name} lässt sich nicht lesen; {PIN_BLEIBT}"))?;
+        let klartext = tresor::oeffnen_mit(&bytes, gehalten)
+            .map_err(|fehler| format!("{name}: {}; {PIN_BLEIBT}", fehler.meldung()))?;
+        let stand = datei::einlesen(klartext)
+            .ok_or_else(|| format!("{name} ist nicht als Text lesbar; {PIN_BLEIBT}"))?;
+        let chiffrat = Chiffrat::verschliessen(&stand, neuer)
+            .map_err(|fehler| format!("{name}: {}; {PIN_BLEIBT}", fehler.meldung()))?;
+        chiffrat_schreiben(pfad, &chiffrat)
+            .map_err(|fehler| format!("{name} ließ sich nicht schreiben: {fehler}; {PIN_BLEIBT}"))
     }
 
     /// Gibt die gehaltene Datei auf (C1, C4).
@@ -3549,5 +3807,270 @@ mod tests {
         assert_eq!(Pinform::nach_groesse(Some(1)), Pinform::Eingeben);
         assert_eq!(Pinform::nach_groesse(Some(4096)), Pinform::Eingeben);
         assert_eq!(Pinform::nach_groesse(None), Pinform::Eingeben);
+    }
+
+    // ---------------------------------------------------------------------
+    // „PIN ändern" (Schritt 5.5 des Plans der krkhome-Arbeit)
+    // ---------------------------------------------------------------------
+
+    /// Holt den Ausgang des PIN-Wechsels ab, mit derselben Schranke wie
+    /// [`abwarten_mit_ableitung`]: die Ableitung laeuft mit den Parametern des
+    /// Codes. `schreiben` ist der Schreibweg der Naht; jede Runde, in der noch
+    /// nichts geliefert ist, ruft ihn nicht.
+    fn pinwechsel_abwarten(
+        modell: &mut Editormodell,
+        mut schreiben: impl FnMut(&Path, &Chiffrat) -> io::Result<()>,
+    ) -> Pinwechselausgang {
+        for _ in 0..30_000 {
+            if let Some(ausgang) =
+                modell.pinwechsel_einziehen_ueber(|ziel, chiffrat| schreiben(ziel, chiffrat))
+            {
+                return ausgang;
+            }
+            thread::sleep(std::time::Duration::from_millis(1));
+        }
+        panic!("der Faden der neuen PIN hat innerhalb von dreissig Sekunden nichts geliefert");
+    }
+
+    /// Der Alltagsweg des Schreibens, fuer [`pinwechsel_abwarten`].
+    fn alltagsweg(ziel: &Path, chiffrat: &Chiffrat) -> io::Result<()> {
+        chiffrat.schreiben(ziel)
+    }
+
+    /// Ein Modell, das `.secrets.txt` mit kleinen Parametern und der PIN
+    /// `0417` entsperrt haelt.
+    fn entsperrt(ordner: &Pruefordner, klartext: &str) -> (Editormodell, PathBuf) {
+        let (mut modell, pfad, _) = geheimnis_modell(ordner);
+        verschlossen_ablegen(&pfad, klartext, "0417");
+        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert!(modell.pin_aenderbar());
+        (modell, pfad)
+    }
+
+    /// C7.15 im Modell: nach dem Aendern oeffnet allein die neue PIN die
+    /// Datei und die alte nicht; das Salz ist ein anderes, und die Parameter
+    /// sind die des Codes, auch wenn die Datei mit kleineren geschrieben war.
+    /// Ungesicherte Aenderungen stehen danach noch im Stand und nicht in der
+    /// Datei; kein Klartext steht in der Datei und keiner im Bild der
+    /// Nachbardatei, das die Probe am Schreibweg abfaengt. Das naechste
+    /// Sichern meldet keine fremde Aenderung und verschliesst mit dem neuen
+    /// Schluessel.
+    #[test]
+    fn nach_dem_aendern_oeffnet_allein_die_neue_pin() {
+        let ordner = Pruefordner::neu("geheim-pin-aendern");
+        let gesichert = format!("## Konto\n{GEHEIM}\n");
+        let (mut modell, pfad) = entsperrt(&ordner, &gesichert);
+        let salz_vorher = *tresor::Kopf::lesen(&std::fs::read(&pfad).expect("lesen"))
+            .expect("Kopf")
+            .salz();
+        let getippt = format!("{gesichert}## Neu\nungesichert\n");
+        let _ = modell.bearbeiten(getippt.clone());
+
+        assert_eq!(modell.pin_aendern(pin("0417"), pin("8642")), Ok(()));
+        assert!(modell.pin_wechselt());
+        let mut abbild = None;
+        let ausgang = pinwechsel_abwarten(&mut modell, |ziel, chiffrat| {
+            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.0.as_slice())?;
+            abbild = Some(std::fs::read(nachbar.nachbarpfad())?);
+            nachbar.umbenennen()
+        });
+        assert_eq!(ausgang, Pinwechselausgang::Geaendert(pfad.clone()));
+        assert!(!modell.pin_wechselt());
+
+        let abbild = abbild.expect("der Schreibweg wurde gerufen");
+        for nadel in [GEHEIM, "Konto", "ungesichert"] {
+            assert!(!enthaelt(&abbild, nadel), "die Nachbardatei traegt {nadel}");
+        }
+        let platte = std::fs::read(&pfad).expect("lesen");
+        assert_eq!(platte, abbild);
+        let kopf = tresor::Kopf::lesen(&platte).expect("Kopf");
+        assert_ne!(
+            *kopf.salz(),
+            salz_vorher,
+            "die neue PIN zieht ein neues Salz"
+        );
+        assert_eq!(kopf.parameter(), tresor::Parameter::DES_CODES);
+
+        assert_eq!(
+            tresor::oeffnen(&platte, &pin("0417")).map(|_| ()),
+            Err(tresor::Oeffnungsfehler::PinFalschOderVeraendert),
+            "die alte PIN oeffnet nicht mehr"
+        );
+        let neu = tresor::oeffnen(&platte, &pin("8642")).expect("die neue PIN oeffnet");
+        assert_eq!(
+            neu.klartext,
+            gesichert.as_bytes(),
+            "umgeschluesselt ist der Stand der Platte und nicht der des Editors"
+        );
+
+        assert_eq!(modell.stand(), getippt);
+        assert!(modell.hat_ungesicherten_stand());
+        assert!(modell.pin_aenderbar(), "der neue Kopf steht auf der Platte");
+        assert!(!modell.fremd_geaendert(), "der Stempel steht neu");
+
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+        let danach = std::fs::read(&pfad).expect("lesen");
+        assert_eq!(
+            tresor::Kopf::lesen(&danach).expect("Kopf").salz(),
+            kopf.salz(),
+            "gesichert wird mit dem neuen Schluessel"
+        );
+        assert_eq!(
+            tresor::oeffnen_mit(&danach, &neu.schluessel).expect("oeffnet"),
+            getippt.as_bytes()
+        );
+    }
+
+    /// Eine falsche alte PIN weist ab, bevor irgendetwas anlaeuft: kein
+    /// Faden, keine Bytes geaendert, der Schutz wie vorher.
+    #[test]
+    fn eine_falsche_alte_pin_weist_ab_und_laesst_alles_stehen() {
+        let ordner = Pruefordner::neu("geheim-pin-falsch");
+        let (mut modell, pfad) = entsperrt(&ordner, "## A\nx\n");
+        let vorher = std::fs::read(&pfad).expect("lesen");
+
+        let grund = modell
+            .pin_aendern(pin("1111"), pin("2222"))
+            .expect_err("die falsche alte PIN weist ab");
+        assert!(grund.contains("alte PIN stimmt nicht"), "{grund}");
+        assert!(grund.contains("die PIN bleibt, wie sie war"), "{grund}");
+        assert!(!modell.pin_wechselt());
+        assert_eq!(modell.pinwechsel_einziehen(), None);
+        assert_eq!(std::fs::read(&pfad).expect("lesen"), vorher);
+        assert!(matches!(
+            &modell.schutz,
+            Schutz::Verschluesselt { pin: gehalten, .. } if *gehalten == pin("0417")
+        ));
+    }
+
+    /// Eine Datei, die sich aussen geaendert hat, weist das Aendern ab wie
+    /// `sichern`: vor dem Blatt, und ebenso, wenn die Aenderung waehrend der
+    /// Ableitung kommt. Die fremden Bytes bleiben stehen.
+    #[test]
+    fn eine_fremd_geaenderte_datei_weist_das_aendern_ab() {
+        let ordner = Pruefordner::neu("geheim-pin-fremd");
+        let (mut modell, pfad) = entsperrt(&ordner, "## A\nx\n");
+        let fremd = b"von aussen, deutlich laenger als vorher";
+
+        std::fs::write(&pfad, fremd).expect("schreiben");
+        let grund = modell
+            .pin_aenderung_pruefen()
+            .expect_err("die fremde Aenderung haelt das Blatt an");
+        assert!(grund.contains("außerhalb von KRK geändert"), "{grund}");
+        assert!(modell.pin_aendern(pin("0417"), pin("2222")).is_err());
+        assert!(!modell.pin_wechselt());
+
+        // Der Ordner lebt bis zum Ende der Probe; ein Zeitwert raeumte ihn am
+        // Ende der Zeile ab, und die Datei gaelte dann als fremd geaendert.
+        let spaet = Pruefordner::neu("geheim-pin-fremd-spaet");
+        let (mut modell, pfad) = entsperrt(&spaet, "## A\n");
+        assert_eq!(modell.pin_aendern(pin("0417"), pin("2222")), Ok(()));
+        std::fs::write(&pfad, fremd).expect("schreiben");
+        match pinwechsel_abwarten(&mut modell, alltagsweg) {
+            Pinwechselausgang::Gescheitert(grund) => {
+                assert!(grund.contains("außerhalb von KRK geändert"), "{grund}");
+            }
+            anderer => panic!("erwartet war eine Abweisung, gekommen ist {anderer:?}"),
+        }
+        assert_eq!(std::fs::read(&pfad).expect("lesen"), fremd);
+    }
+
+    /// Ein Sichern waehrend der Ableitung geht nicht verloren: umgeschluesselt
+    /// wird der Stand, der im Augenblick des Schreibens auf der Platte steht.
+    #[test]
+    fn ein_sichern_waehrend_des_aenderns_geht_nicht_verloren() {
+        let ordner = Pruefordner::neu("geheim-pin-sichern");
+        let (mut modell, pfad) = entsperrt(&ordner, "## A\nalt\n");
+        assert_eq!(modell.pin_aendern(pin("0417"), pin("5555")), Ok(()));
+        let _ = modell.bearbeiten(format!("## A\n{GEHEIM}\n"));
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+
+        assert_eq!(
+            pinwechsel_abwarten(&mut modell, alltagsweg),
+            Pinwechselausgang::Geaendert(pfad.clone())
+        );
+        let platte = std::fs::read(&pfad).expect("lesen");
+        assert!(!enthaelt(&platte, GEHEIM));
+        let neu = tresor::oeffnen(&platte, &pin("5555")).expect("die neue PIN oeffnet");
+        assert_eq!(neu.klartext, format!("## A\n{GEHEIM}\n").into_bytes());
+    }
+
+    /// Eine leere `.secrets.txt`, deren PIN eben festgelegt und nie gesichert
+    /// wurde, hat keine PIN zu aendern: `pin_aenderbar` sagt nein, und das
+    /// Modell weist ab, ohne einen Faden zu starten.
+    #[test]
+    fn eine_nie_gesicherte_pin_laesst_sich_nicht_aendern() {
+        let ordner = Pruefordner::neu("geheim-pin-leer");
+        let (mut modell, pfad, _) = geheimnis_modell(&ordner);
+        std::fs::write(&pfad, b"").expect("leere Datei");
+        assert_eq!(modell.oeffnen(&pfad, Some(pin("2468"))), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+
+        assert!(!modell.pin_aenderbar());
+        let grund = modell
+            .pin_aendern(pin("2468"), pin("1357"))
+            .expect_err("ohne Kopf gibt es keine PIN zu aendern");
+        assert!(grund.contains("erst sichern"), "{grund}");
+        assert!(!modell.pin_wechselt());
+        assert_eq!(std::fs::metadata(&pfad).expect("stat").len(), 0);
+    }
+
+    /// Wird die Datei waehrend der Ableitung geschlossen, meldet der Wechsel
+    /// sich trotzdem, und zwar mit dem Satz, dass die PIN bleibt; geschrieben
+    /// wird nichts.
+    #[test]
+    fn ein_schliessen_waehrend_des_aenderns_meldet_und_schreibt_nichts() {
+        let ordner = Pruefordner::neu("geheim-pin-schliessen");
+        let (mut modell, pfad) = entsperrt(&ordner, "## A\nx\n");
+        let vorher = std::fs::read(&pfad).expect("lesen");
+        assert_eq!(modell.pin_aendern(pin("0417"), pin("2222")), Ok(()));
+        modell.schliessen();
+        assert!(
+            modell.pin_wechselt(),
+            "der Wechsel wartet auf seine Meldung"
+        );
+
+        match pinwechsel_abwarten(&mut modell, alltagsweg) {
+            Pinwechselausgang::Gescheitert(grund) => {
+                assert!(grund.contains("nicht mehr offen"), "{grund}");
+            }
+            anderer => panic!("erwartet war eine Abweisung, gekommen ist {anderer:?}"),
+        }
+        assert_eq!(std::fs::read(&pfad).expect("lesen"), vorher);
+    }
+
+    /// Der Weg des Aenderns am Quelltext: die Ableitung laeuft auf einem
+    /// benannten Faden, die alte PIN wird vor dem Start verglichen, und
+    /// geschrieben wird allein ein `Chiffrat` aus `Chiffrat::verschliessen`,
+    /// entschluesselt mit dem gehaltenen Schluessel ohne Ableitung.
+    #[test]
+    fn das_aendern_leitet_auf_einem_faden_ab_und_schreibt_allein_chiffrat() {
+        let code = code_vor_den_proben("krk-ui/src/editormodell.rs");
+        let starten = rumpf_von(&code, concat!("fn starten(pfad: PathBuf, neue", ": Pin)"));
+        assert!(starten.contains(concat!(".name(\"krk-", "pin\"")));
+        assert!(starten.contains(concat!("tresor::neuer_", "schluessel(&neue)")));
+
+        let aendern = rumpf_von(&code, concat!("pub fn pin_", "aendern(&mut self"));
+        let vergleich = aendern
+            .find("*pin != alte")
+            .expect("die alte PIN wird verglichen");
+        let start = aendern
+            .find(concat!("Pinwechsel::", "starten("))
+            .expect("der Faden startet");
+        assert!(vergleich < start);
+
+        let umschluesseln = rumpf_von(&code, concat!("fn umschluesseln", "("));
+        assert!(umschluesseln.contains(concat!("tresor::oeffnen_", "mit(&bytes, gehalten)")));
+        assert!(umschluesseln.contains(concat!("Chiffrat::", "verschliessen(&stand, neuer)")));
+        assert!(umschluesseln.contains(concat!("chiffrat_", "schreiben(pfad, &chiffrat)")));
+        assert!(!umschluesseln.contains(concat!("datei::", "sichern(")));
+        let frage = umschluesseln
+            .find(concat!("self.fremd_", "geaendert()"))
+            .expect("die fremde Aenderung wird gefragt");
+        let lesen = umschluesseln
+            .find(concat!("bis_zur_grenze_", "lesen("))
+            .expect("gelesen wird");
+        assert!(frage < lesen);
     }
 }
