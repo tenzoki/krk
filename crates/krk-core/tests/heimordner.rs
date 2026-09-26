@@ -1,6 +1,7 @@
 //! Abnahme des Heimordners `~/krkhome/`: Erkennung und Form der Eintraege
 //! (Schritt 1.1), Anlegen und Uebernahme der alten Zettel (Schritt 1.2) und die
-//! Handlungen an Aufgaben (Schritt 3.1, Faehigkeit C6) des
+//! Handlungen an Aufgaben (Schritt 3.1, Faehigkeit C6) und an Notizen
+//! (Schritt 4.1, Faehigkeit C5) des
 //! Plans `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`,
 //! Faehigkeiten C2 und C3 des Spec. Die Rennprobe zum exklusiven Anlegen steht
 //! im Pruefmodul von `heimordner/bereitstellen.rs`, weil sie einen privaten
@@ -26,8 +27,8 @@ use std::path::{Path, PathBuf};
 
 use gemeinsam::Pruefordner;
 use krk_core::heimordner::eintraege::{
-    Abweisung, Aufgaben, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
-    ist_themenzeile,
+    Abweisung, Aufgaben, Notiz, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
+    ist_themenzeile, notizen,
 };
 use krk_core::heimordner::{
     ALTE_ZETTEL, Bereitstellung, Heimordner, Hindernis, ORDNERNAME, Sonderdatei, Uebernahmeausgang,
@@ -600,6 +601,315 @@ fn loeschen_wahrt_das_dateiende() {
     let neu = aufgaben::loeschen("- [ ] eins\n- [ ] zwei", 1).expect("die Aufgabe gibt es");
     assert_eq!(neu.text, "- [ ] eins");
     assert_eq!(neu.auswahl, Some(0));
+}
+
+// ---------------------------------------------------------------------------
+// Die Handlungen an Notizen (Schritt 4.1)
+// ---------------------------------------------------------------------------
+
+/// Ein Stand mit Vorspann, einer Notiz mit zwei Absaetzen und Trenner, einer
+/// ohne Text und einer letzten mit `#`- und `###`-Zeilen im Text.
+const NOTIZSTAND: &str = "\
+# Notizen
+
+## Eins
+erste Zeile
+
+zweiter Absatz
+
+## Zwei
+## Drei
+# flach
+### tief
+";
+
+/// Eine Notiz als Vergleichswert.
+fn notiz<'a>(thema: &'a str, text: &str) -> Notiz<'a> {
+    Notiz {
+        thema,
+        text: text.to_owned(),
+    }
+}
+
+/// Die Notiz liest Thema und Text; die Leerzeilen am Ende sind Trenner und
+/// nicht Text, die Leerzeile zwischen zwei Absaetzen ist Text.
+#[test]
+fn die_notiz_liest_thema_und_text_ohne_trenner() {
+    let gelesen = Notizen::lesen(NOTIZSTAND);
+    assert_eq!(gelesen.vorspann(), ["# Notizen\n", "\n"]);
+    assert_eq!(
+        gelesen.notiz(0),
+        Some(notiz("Eins", "erste Zeile\n\nzweiter Absatz"))
+    );
+    assert_eq!(gelesen.notiz(1), Some(notiz("Zwei", "")));
+    assert_eq!(gelesen.notiz(2), Some(notiz("Drei", "# flach\n### tief")));
+    assert_eq!(gelesen.notiz(3), None);
+
+    // Am Dateiende ohne Umbruch und mit leerem Thema.
+    let ohne_schluss = Notizen::lesen("## \nText ohne Schluss");
+    assert_eq!(ohne_schluss.notiz(0), Some(notiz("", "Text ohne Schluss")));
+    assert_eq!(Notizen::lesen("## Kopf").notiz(0), Some(notiz("Kopf", "")));
+}
+
+/// C5.1: Hinzufuegen haengt Themenzeile und Text ans Ende, hinter den Text der
+/// letzten Notiz, und waehlt die neue; der Vorspann bleibt oben.
+#[test]
+fn notiz_hinzufuegen_haengt_thema_und_text_ans_ende() {
+    let neu = notizen::hinzufuegen(NOTIZSTAND, "Vier", "a\n\nb").expect("zulaessig");
+    assert_eq!(neu.text, format!("{NOTIZSTAND}## Vier\na\n\nb\n"));
+    assert_eq!(neu.auswahl, Some(3));
+    let gelesen = Notizen::lesen(&neu.text);
+    assert_eq!(gelesen.vorspann(), ["# Notizen\n", "\n"]);
+    assert_eq!(gelesen.notiz(3), Some(notiz("Vier", "a\n\nb")));
+
+    // Leere Datei, nur Vorspann, leerer Text, leeres Thema.
+    let leer = notizen::hinzufuegen("", "Erste", "").expect("zulaessig");
+    assert_eq!(leer.text, "## Erste\n");
+    assert_eq!(leer.auswahl, Some(0));
+    let nur_vorspann = notizen::hinzufuegen("# Titel\n", "", "").expect("zulaessig");
+    assert_eq!(nur_vorspann.text, "# Titel\n## \n");
+    assert_eq!(nur_vorspann.auswahl, Some(0));
+    assert_eq!(
+        Notizen::lesen(&nur_vorspann.text).notiz(0),
+        Some(notiz("", ""))
+    );
+
+    // Schlussumbrueche des Textes sind Trenner und werden nicht geschrieben.
+    let mit_schluss = notizen::hinzufuegen("", "T", "text\n\n").expect("zulaessig");
+    assert_eq!(mit_schluss.text, "## T\ntext\n");
+}
+
+/// Endet die Datei ohne Umbruch, bekommt die alte letzte Zeile einen, und die
+/// neue Notiz endet ohne.
+#[test]
+fn notiz_hinzufuegen_wahrt_das_dateiende() {
+    let neu = notizen::hinzufuegen("## Eins\nText", "Zwei", "x\ny").expect("zulaessig");
+    assert_eq!(neu.text, "## Eins\nText\n## Zwei\nx\ny");
+    assert_eq!(neu.auswahl, Some(1));
+    let ohne_text = notizen::hinzufuegen("Vorspann", "Zwei", "").expect("zulaessig");
+    assert_eq!(ohne_text.text, "Vorspann\n## Zwei");
+}
+
+/// C5.2: eine Zeile mit `## ` im Notiztext und ein Umbruch im Thema werden
+/// abgewiesen, beim Hinzufuegen wie beim Aendern, und die Meldung nennt den
+/// Grund. Eine Abweisung ist kein Neustand, der Stand bleibt also, wie er war.
+#[test]
+fn eine_themenzeile_im_text_und_ein_umbruch_im_thema_werden_abgewiesen() {
+    for text in ["## x", "davor\n## x", "a\n\n## \nb", "a\n## x\n"] {
+        assert_eq!(
+            notizen::hinzufuegen(NOTIZSTAND, "T", text),
+            Err(Abweisung::ThemenzeileImNotiztext),
+            "{text:?}"
+        );
+        assert_eq!(
+            notizen::aendern(NOTIZSTAND, 0, "Eins", text),
+            Err(Abweisung::ThemenzeileImNotiztext),
+            "{text:?}"
+        );
+    }
+    for thema in ["zwei\nZeilen", "Schluss\n"] {
+        assert_eq!(
+            notizen::hinzufuegen(NOTIZSTAND, thema, "t"),
+            Err(Abweisung::UmbruchImThema)
+        );
+        assert_eq!(
+            notizen::aendern(NOTIZSTAND, 1, thema, ""),
+            Err(Abweisung::UmbruchImThema)
+        );
+    }
+    // Die Abweisung geht vor jeder anderen Antwort, auch ohne Notiz.
+    assert_eq!(
+        notizen::aendern("", 7, "T", "## x"),
+        Err(Abweisung::ThemenzeileImNotiztext)
+    );
+
+    // Zulaessig bleibt, was keine Themenzeile ist.
+    for text in ["# flach", "### tief", "##x", " ## eingerueckt", "a ## b"] {
+        assert!(
+            notizen::hinzufuegen(NOTIZSTAND, "T", text).is_ok(),
+            "{text:?}"
+        );
+    }
+
+    assert!(
+        Abweisung::ThemenzeileImNotiztext
+            .meldung()
+            .contains("„## “")
+    );
+    assert!(
+        Abweisung::UmbruchImThema
+            .meldung()
+            .contains("Zeilenumbruch")
+    );
+    assert_ne!(
+        Abweisung::UmbruchImThema.meldung(),
+        Abweisung::UmbruchImAufgabentext.meldung()
+    );
+}
+
+/// C5.1: ein geaendertes Thema schreibt allein die Themenzeile neu; Text und
+/// Trenner bleiben Byte fuer Byte.
+#[test]
+fn notiz_aendern_schreibt_allein_die_themenzeile_wenn_nur_das_thema_neu_ist() {
+    let neu = notizen::aendern(NOTIZSTAND, 0, "Eins neu", "erste Zeile\n\nzweiter Absatz")
+        .expect("zulaessig")
+        .expect("die Notiz gibt es");
+    assert_eq!(abweichende_zeilen(NOTIZSTAND, &neu.text), [2]);
+    assert_eq!(neu.text.split_inclusive('\n').nth(2), Some("## Eins neu\n"));
+    assert_eq!(neu.auswahl, Some(0));
+}
+
+/// C5.1: ein geaenderter Text ersetzt die Textzeilen, laesst Themenzeile und
+/// Trenner, und jede andere Notiz bleibt.
+#[test]
+fn notiz_aendern_ersetzt_den_text_und_laesst_den_trenner() {
+    let neu = notizen::aendern(NOTIZSTAND, 0, "Eins", "nur noch\neins")
+        .expect("zulaessig")
+        .expect("die Notiz gibt es");
+    assert_eq!(
+        neu.text,
+        "# Notizen\n\n## Eins\nnur noch\neins\n\n## Zwei\n## Drei\n# flach\n### tief\n"
+    );
+    assert_eq!(
+        Notizen::lesen(&neu.text).notiz(0),
+        Some(notiz("Eins", "nur noch\neins"))
+    );
+
+    // Eine Notiz ohne Text bekommt einen, beide zugleich geaendert.
+    let beides = notizen::aendern(NOTIZSTAND, 1, "Zwo", "neu")
+        .expect("zulaessig")
+        .expect("die Notiz gibt es");
+    assert_eq!(
+        beides.text,
+        "# Notizen\n\n## Eins\nerste Zeile\n\nzweiter Absatz\n\n## Zwo\nneu\n## Drei\n# flach\n### tief\n"
+    );
+    assert_eq!(beides.auswahl, Some(1));
+
+    // Der Text geleert: die Textzeilen fallen, der Trenner bleibt.
+    let geleert = notizen::aendern(NOTIZSTAND, 0, "Eins", "")
+        .expect("zulaessig")
+        .expect("die Notiz gibt es");
+    assert_eq!(
+        geleert.text,
+        "# Notizen\n\n## Eins\n\n## Zwei\n## Drei\n# flach\n### tief\n"
+    );
+}
+
+/// Die letzte Notiz ohne Schlussumbruch geaendert: das Dateiende bleibt.
+#[test]
+fn notiz_aendern_wahrt_das_dateiende() {
+    let text = notizen::aendern("## A\nalt", 0, "A", "neu\nzwei")
+        .expect("zulaessig")
+        .expect("die Notiz gibt es");
+    assert_eq!(text.text, "## A\nneu\nzwei");
+    let kopf = notizen::aendern("## A", 0, "A", "neu")
+        .expect("zulaessig")
+        .expect("die Notiz gibt es");
+    assert_eq!(kopf.text, "## A\nneu");
+    let thema = notizen::aendern("## A\nText", 0, "B", "Text")
+        .expect("zulaessig")
+        .expect("die Notiz gibt es");
+    assert_eq!(thema.text, "## B\nText");
+}
+
+/// Unveraendertes Thema und unveraenderter Text, eine fehlende Notiz und ein
+/// Text, der sich allein in Schlussumbruechen unterscheidet, ergeben keinen
+/// Neustand.
+#[test]
+fn notiz_aendern_ohne_aenderung_ergibt_nichts() {
+    assert_eq!(
+        notizen::aendern(NOTIZSTAND, 0, "Eins", "erste Zeile\n\nzweiter Absatz"),
+        Ok(None)
+    );
+    assert_eq!(
+        notizen::aendern(NOTIZSTAND, 0, "Eins", "erste Zeile\n\nzweiter Absatz\n\n"),
+        Ok(None)
+    );
+    assert_eq!(notizen::aendern(NOTIZSTAND, 3, "Vier", ""), Ok(None));
+    assert_eq!(notizen::aendern("", 0, "A", ""), Ok(None));
+}
+
+/// Rundlauf: jede Notiz jedes Standes mit ihren eigenen Werten geaendert ergibt
+/// nichts, und was hinzugefuegt wurde, liest sich als dieselbe Notiz zurueck.
+#[test]
+fn notizen_laufen_rund() {
+    for stand in STAENDE.iter().copied().chain([NOTIZSTAND]) {
+        let gelesen = Notizen::lesen(stand);
+        for index in 0..gelesen.bloecke().len() {
+            let alt = gelesen.notiz(index).expect("jeder Block ist eine Notiz");
+            assert_eq!(
+                notizen::aendern(stand, index, alt.thema, &alt.text),
+                Ok(None),
+                "{stand:?}, Notiz {index}"
+            );
+        }
+        for (thema, text) in [("T", ""), ("", "x"), ("mit äöü", "a\n\n\tb\n# c")] {
+            let neu = notizen::hinzufuegen(stand, thema, text).expect("zulaessig");
+            let auswahl = neu.auswahl.expect("die neue ist gewaehlt");
+            assert_eq!(
+                Notizen::lesen(&neu.text).notiz(auswahl),
+                Some(notiz(thema, text)),
+                "{stand:?}"
+            );
+            // Der alte Stand steht unveraendert davor, bis auf einen
+            // ergaenzten Umbruch am alten Ende.
+            assert!(neu.text.starts_with(stand), "{stand:?}");
+        }
+    }
+}
+
+/// C5.1: Loeschen nimmt die ganze Notiz, Themenzeile, Text und Trenner; der
+/// Vorspann bleibt, und die nachrueckende ist gewaehlt.
+#[test]
+fn notiz_loeschen_nimmt_thema_text_und_trenner() {
+    let erste = notizen::loeschen(NOTIZSTAND, 0).expect("die Notiz gibt es");
+    assert_eq!(
+        erste.text,
+        "# Notizen\n\n## Zwei\n## Drei\n# flach\n### tief\n"
+    );
+    assert_eq!(erste.auswahl, Some(0));
+
+    let letzte = notizen::loeschen(NOTIZSTAND, 2).expect("die Notiz gibt es");
+    assert_eq!(
+        letzte.text,
+        "# Notizen\n\n## Eins\nerste Zeile\n\nzweiter Absatz\n\n## Zwei\n"
+    );
+    assert_eq!(letzte.auswahl, Some(1));
+
+    let einzige = notizen::loeschen("# Titel\n## Allein\nText\n", 0).expect("die Notiz gibt es");
+    assert_eq!(einzige.text, "# Titel\n");
+    assert_eq!(einzige.auswahl, None);
+
+    // Die letzte ohne Schlussumbruch: die neue letzte verliert ihren.
+    let ohne_schluss = notizen::loeschen("## A\na\n## B\nb", 1).expect("die Notiz gibt es");
+    assert_eq!(ohne_schluss.text, "## A\na");
+
+    assert_eq!(notizen::loeschen(NOTIZSTAND, 3), None);
+    assert_eq!(notizen::loeschen("nur Vorspann\n", 0), None);
+}
+
+/// C5.1: Verschieben nimmt Text und Trenner mit, der Vorspann bleibt oben, am
+/// Rand gibt es nichts zu tun, und hin und zurueck ergibt den alten Stand.
+#[test]
+fn notiz_verschieben_nimmt_den_text_mit() {
+    let runter = notizen::verschieben(NOTIZSTAND, 0, Richtung::Runter).expect("nicht unten");
+    assert_eq!(
+        runter.text,
+        "# Notizen\n\n## Zwei\n## Eins\nerste Zeile\n\nzweiter Absatz\n\n## Drei\n# flach\n### tief\n"
+    );
+    assert_eq!(runter.auswahl, Some(1));
+    let zurueck = notizen::verschieben(&runter.text, 1, Richtung::Hoch).expect("nicht oben");
+    assert_eq!(zurueck.text, NOTIZSTAND);
+    assert_eq!(zurueck.auswahl, Some(0));
+
+    let ohne_schluss = "## A\na\n## B\nb";
+    let hoch = notizen::verschieben(ohne_schluss, 1, Richtung::Hoch).expect("nicht oben");
+    assert_eq!(hoch.text, "## B\nb\n## A\na");
+
+    assert_eq!(notizen::verschieben(NOTIZSTAND, 0, Richtung::Hoch), None);
+    assert_eq!(notizen::verschieben(NOTIZSTAND, 2, Richtung::Runter), None);
+    assert_eq!(notizen::verschieben(NOTIZSTAND, 3, Richtung::Hoch), None);
+    assert_eq!(notizen::verschieben("", 0, Richtung::Runter), None);
 }
 
 // ---------------------------------------------------------------------------

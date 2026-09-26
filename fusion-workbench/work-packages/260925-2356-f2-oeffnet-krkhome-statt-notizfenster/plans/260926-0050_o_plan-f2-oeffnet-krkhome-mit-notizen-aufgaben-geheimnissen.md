@@ -372,7 +372,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
     - Closes (am Baum): C6.4.
     - Dependencies: 3.3
 
-14. **3.5 Anleitung und CLAUDE.md für Stufe 3**
+14. [DONE] **3.5 Anleitung und CLAUDE.md für Stufe 3**
     - Executor: `code-implementer`
     - Files: `HowTo.md`, `CLAUDE.md`
     - Changes: `HowTo.md` beschreibt die Aufgabentabelle, die sechs Befehle, Doppelklick und Ankreuzfeld, `esc` in einer Zelle nach der Antwort des Datensatzes, dass `cmd+s`, das Schließen und das Beenden eine laufende Zelle zuerst übernehmen, `ctrl+cmd+e` als Weg zur Rohansicht und den Handgriff F1, `cmd+r` für eine eigene Belegung. `CLAUDE.md` zieht den Satz nach, der die eigenen Textflächen als Editor und Vorschau aufzählt, und nennt die Zelle der Eintragsansicht als dritte, erkannt im Augenblick der Frage über den Feldeditor und seinen Delegierten; dazu einen Satz über die eine Übernahmestelle `zelle_uebernehmen` und ihre Quelltextprobe unter „Was man nicht sieht“.
@@ -383,7 +383,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
 
 ### Stufe 4: Notizen bearbeiten (C5)
 
-15. **4.1 Die Handlungen an Notizen im Kern**
+15. [DONE] **4.1 Die Handlungen an Notizen im Kern**
     - Executor: `code-implementer`
     - Files: `crates/krk-core/src/heimordner/eintraege.rs`, `crates/krk-core/tests/heimordner.rs`
     - Changes: `notizen::hinzufuegen(stand, thema, text)`, `aendern(stand, index, thema, text)`, `loeschen`, `verschieben`. Eine Notiz ist Themenzeile und Text; `loeschen` nimmt beides. **Abgewiesen wird mit einem eigenen Fehlerwert:** ein Text mit einer Zeile, für die `ist_themenzeile` gilt, und ein Thema mit Zeilenumbruch. Der Vorspann bleibt oben.
