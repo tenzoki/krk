@@ -1441,3 +1441,57 @@ fn der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer() {
         "der Wortlaut „… und N weitere\" steht nicht mehr allein in {heimat}"
     );
 }
+
+/// Der Name des Heimordners steht im ausgelieferten Code an genau einer
+/// Stelle, `ORDNERNAME` in `krk-core/src/heimordner/mod.rs` (C2 des Spec
+/// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+///
+/// **Wozu.** Die Erkennung von `~/krkhome/` steht an einer Stelle, und jede
+/// Regel, die am Ordner haengt, fragt sie. Ein zweites Literal irgendwo im Baum
+/// waere der Anfang einer zweiten Erkennung, die einen Verweis nicht kennt.
+///
+/// **Gelesen wird der ausgelieferte Code**: Dateien unter `src/`, ohne
+/// Kommentarzeilen und ohne die Pruefmodule hinter `#[cfg(test)]`. Proben
+/// duerfen den Namen in Pfaden schreiben, und Prosa darf ihn nennen.
+///
+/// **Was die Probe nicht sieht:** den Namen aus Teilen zusammengesetzt, etwa
+/// ueber `concat!`. Das tut im Baum nur diese Datei, und sie liest sich damit
+/// nicht selbst.
+#[test]
+fn der_name_krkhome_steht_im_ausgelieferten_code_allein_bei_der_erkennung() {
+    let nadel = concat!("krk", "home");
+    let mut stellen: Vec<String> = Vec::new();
+    for (name, inhalt) in quelldateien() {
+        if !name.contains("/src/") {
+            continue;
+        }
+        let mut im_pruefmodul = false;
+        let mut vorgemerkt = false;
+        for zeile in inhalt.lines() {
+            if im_pruefmodul {
+                im_pruefmodul = zeile != "}";
+                continue;
+            }
+            if zeile == "#[cfg(test)]" {
+                vorgemerkt = true;
+                continue;
+            }
+            if vorgemerkt && zeile.starts_with("mod ") {
+                vorgemerkt = false;
+                im_pruefmodul = zeile.ends_with('{');
+                continue;
+            }
+            vorgemerkt = false;
+            if !zeile.trim_start().starts_with("//") && zeile.contains(nadel) {
+                stellen.push(format!("{name}: {}", zeile.trim()));
+            }
+        }
+    }
+    assert_eq!(
+        stellen,
+        vec![format!(
+            "krk-core/src/heimordner/mod.rs: pub const ORDNERNAME: &str = \"{nadel}\";"
+        )],
+        "der Name des Heimordners steht im ausgelieferten Code nicht allein bei der Erkennung"
+    );
+}

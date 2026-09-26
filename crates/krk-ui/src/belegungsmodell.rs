@@ -398,11 +398,12 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // Menueleiste, und `Fenster` fuehrt die Bereiche **dieses** Fensters.
         // Diese Runde fuehrt keine zweiten Fenster ein.
         //
-        // Der Notizzettel steht mit hier und bekommt **keinen** eigenen
+        // Der Notizordner steht mit hier und bekommt **keinen** eigenen
         // Funktionsbereich: er waere ein Obermenue mit einem einzigen Eintrag,
-        // und diese Gliederung fragt nach der Gegend der Anwendung. Der Zettel
-        // haengt als Blatt am Hauptfenster und gehoert damit der Anwendung als
-        // ganze, so wie die Belegungsansicht daneben.
+        // und diese Gliederung fragt nach der Gegend der Anwendung. F2 wirkt
+        // aus jedem Bereich und fuehrt an einen festen Ort der Anwendung,
+        // `~/krkhome/`; unter `Dateifenster` stuende er zwischen Befehlen, die
+        // einen Ordner voraussetzen, statt einen herzustellen.
         //
         // Die Belegungsdatei steht neben der Belegungsansicht und **nicht**
         // unter `Vorschau`, obwohl sie dort erscheint. Diese Gliederung fragt
@@ -417,9 +418,9 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::BelegungsdateiAnsehen
         | Kommando::Beenden
         | Kommando::WeitereInstanz
-        | Kommando::Notizzettel
-        // Die Ablageneuerungen stehen aus demselben Grund hier wie der
-        // Notizzettel: das Blatt haengt am Hauptfenster, und sein Gegenstand
+        | Kommando::Notizordner
+        // Die Ablageneuerungen stehen hier, weil ihr Blatt am Hauptfenster
+        // haengt und ihr Gegenstand
         // ist die Ablage der Anwendung als ganze. Ein eigener
         // Funktionsbereich waere ein Obermenue mit einem einzigen Eintrag.
         //

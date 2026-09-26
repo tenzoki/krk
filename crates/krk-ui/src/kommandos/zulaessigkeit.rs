@@ -197,7 +197,7 @@ pub struct Lage {
     /// Naemlichkeitsfrage dahinter beantwortet der Anwendungsdelegierte, der
     /// beide Flaechen haelt. Die Flaeche eines Blattes gehoert ausdruecklich
     /// nicht dazu und meldet `true`, denn nur so bleibt `Abbrechen` dort
-    /// unzulaessig und schliesst `Esc` den Notizzettel.
+    /// unzulaessig und schliesst `Esc` das Blatt.
     pub ersthelfer_gehoert_appkit: bool,
     /// Ob das Schluesselfenster KRKs Hauptfenster oder ein daran haengendes
     /// Blatt ist.
@@ -1035,15 +1035,14 @@ mod tests {
     /// Die zweite Haelfte von C2.7: `esc` erreicht dann AppKit wie heute und
     /// schliesst das Blatt ueber dessen eigene Abbruchschaltflaeche.
     ///
-    /// **An dieser Abweisung haengt der Notizzettel.** Seine Textflaeche haelt
-    /// den Ersthelferrang und ist in `ersthelfer_gehoert_appkit` **nicht** als
-    /// Ausnahme angemeldet, also meldet die Lage hier `true`, der Abbruch ist
-    /// abgewiesen, und `esc` geht unveraendert an AppKit. Erst dadurch kommt
-    /// `cancelOperation:` beim Waechter des Zettels an und schliesst ihn. Waere
-    /// diese zweite Zusicherung eines Tages `true`, schluckte KRK die Taste, und
-    /// der Zettel haette keinen Weg zurueck — die Probe haelt damit eine
-    /// Vorbedingung der Notizzettel-Runde und nicht nur eine Aussage ueber den
-    /// Abbruch.
+    /// **An dieser Abweisung haengt jedes Blatt mit Textfeld.** Sein Feld
+    /// haelt den Ersthelferrang und ist in `ersthelfer_gehoert_appkit`
+    /// **nicht** als Ausnahme angemeldet, also meldet die Lage hier `true`,
+    /// der Abbruch ist abgewiesen, und `esc` geht unveraendert an AppKit. Erst
+    /// dadurch kommt `cancelOperation:` beim Waechter des Blattes an und
+    /// schliesst es. Waere diese zweite Zusicherung eines Tages `true`,
+    /// schluckte KRK die Taste, und das Blatt bliebe stehen; die Kette steht im
+    /// Modulkopf von `appkit/blaetter/mod.rs`.
     #[test]
     fn im_textfeld_eines_blattes_ist_auch_der_abbruch_abgewiesen() {
         assert!(zulaessig(
@@ -1056,14 +1055,16 @@ mod tests {
         ));
     }
 
-    /// Steht der Zettel, kommt der Befehl nicht durch, der ihn geoeffnet hat.
+    /// Steht ein Blatt, kommt der Notizordner nicht durch; ohne Blatt kommt er
+    /// aus jedem Fokuswert.
     ///
-    /// **Keine Luecke, sondern die Regel.** Der Notizzettelbefehl steht weder
-    /// auf der Ausnahmeliste noch unter
+    /// **Keine Luecke, sondern die Regel.** Der Notizordner steht weder auf der
+    /// Ausnahmeliste noch unter
     /// [`operationen::waehrend_blatt_erlaubt`](super::operationen::waehrend_blatt_erlaubt),
-    /// und beides bleibt in dieser Runde ausdruecklich so. Die Folge ist die
-    /// Zusage aus C1: ein zweiter Druck auf `f2` oder `cmd+k` schliesst den
-    /// Zettel nicht und tut nichts; der Weg zurueck ist `esc`.
+    /// und C1 des Spec
+    /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
+    /// sagt genau das zu: der Befehl wirkt aus jedem Fokuswert heraus und, wie
+    /// jeder andere Befehl, nicht, solange ein Blatt steht.
     ///
     /// Die drei Zusicherungen ueber der Schleife nennen die Herleitung, damit
     /// ein Fehlschlag sagt, **welche** der drei Voraussetzungen gewichen ist.
@@ -1071,8 +1072,8 @@ mod tests {
     /// wirkt der Befehl aus jedem Fokuswert, und genau dafuer traegt
     /// er [`Wirkungsbereich::Ueberall`].
     #[test]
-    fn der_notizzettel_kommt_bei_stehendem_blatt_nicht_durch() {
-        let kommando = Kommando::Notizzettel;
+    fn der_notizordner_kommt_bei_stehendem_blatt_nicht_durch() {
+        let kommando = Kommando::Notizordner;
         assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
         assert!(!immer_erreichbar(kommando));
         assert!(!operationen::waehrend_blatt_erlaubt(kommando));
@@ -1080,11 +1081,11 @@ mod tests {
         for fokus in JEDER_FOKUS {
             assert!(
                 zulaessig(kommando, lage(false, false, true, fokus)),
-                "der Notizzettel kommt ohne Blatt in {fokus:?} nicht durch"
+                "der Notizordner kommt ohne Blatt in {fokus:?} nicht durch"
             );
             assert!(
                 !zulaessig(kommando, lage(true, false, true, fokus)),
-                "der Notizzettel kommt bei stehendem Blatt in {fokus:?} durch"
+                "der Notizordner kommt bei stehendem Blatt in {fokus:?} durch"
             );
         }
     }

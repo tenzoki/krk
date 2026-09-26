@@ -2,7 +2,7 @@
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
 //! es blockiert, solange er steht. AppKit nennt das ein Sheet. In diesem
-//! Verzeichnis liegen zwoelf:
+//! Verzeichnis liegen elf:
 //! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
 //! dem Raeumen in den Papierkorb, Abschlussliste der uebersprungenen Eintraege
 //! und seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen
@@ -10,16 +10,20 @@
 //! eines ungesicherten Standes ([`ungesichert`], C4 der Editor-Runde) und seit
 //! S35 und S36 die beiden Eingabeblaetter des Editors: die Frage nach der
 //! Zeilennummer ([`zeilennummer`]) und die nach Such- und Ersatztext
-//! ([`suche`]), beide C5 der Editor-Runde. Das zehnte ist der Notizzettel der
-//! Runde 9 ([`zettel`]), das elfte seit der Runde 24 die Sammlung der
-//! Startmeldungen ([`startmeldungen`]): sie faehrt herunter, sobald der Start
-//! mehr als eine Meldung hervorgebracht hat, weil die eine Zeile der
-//! Statuszeile nur eine traegt. Das zwoelfte ist aus derselben Runde das Blatt
-//! auf Abruf ([`neuerungen`]), das zeigt, was diese Fassung an den von Hand
+//! ([`suche`]), beide C5 der Editor-Runde. Das zehnte ist seit der Runde 24
+//! die Sammlung der Startmeldungen ([`startmeldungen`]): sie faehrt herunter,
+//! sobald der Start mehr als eine Meldung hervorgebracht hat, weil die eine
+//! Zeile der Statuszeile nur eine traegt. Das elfte ist aus derselben Runde das
+//! Blatt auf Abruf ([`neuerungen`]), das zeigt, was diese Fassung an den von Hand
 //! gepflegten Ablagedateien mitbringt; es ist **das einzige, das auch ohne
 //! Befund aufgeht**, denn der Nutzer hat danach gefragt.
 //!
-//! **Ein dreizehntes Blatt liegt ausserhalb dieses Verzeichnisses**, und wer nach
+//! **Das Notizblatt der Runde 9 steht hier nicht mehr.** Es war das zehnte und
+//! das einzige mit einem eigenen Waechter; seit der Arbeit, in der F2 nach
+//! `~/krkhome/` fuehrt, oeffnet kein Befehl mehr ein Blatt fuer Notizen, und
+//! Datei, Waechter und Abbruchweg sind gefallen.
+//!
+//! **Ein zwoelftes Blatt liegt ausserhalb dieses Verzeichnisses**, und wer nach
 //! diesem Kopf „alle Blaetter" durchgeht, uebersieht genau dieses eine:
 //! [`super::belegungsansicht`] baut die Tastaturbelegung aus C3 mit
 //! [`Blatt::mit_schaltflaechen`], haengt sie an dasselbe Fenster, legt denselben
@@ -30,11 +34,6 @@
 //! weil sie ueber den Quellbaum und nicht ueber dieses Verzeichnis laeuft;
 //! gemeldet war der Abstand als
 //! `issues/260826-1336_*_der-modulkopf-der-blaetter-zaehlt-zehn-und-die-belegungsansicht-ist-das-elfte-blatt-desselben-bauers.md`.
-//!
-//! **Das zehnte ist das erste mit einem eigenen Waechter**, und der traegt die
-//! halbe Regel des [`Eingabewaechter`] darunter: `Esc` schliesst, die
-//! Eingabetaste setzt eine Zeile. Warum das ein eigener Typ ist und kein
-//! Schalter hier, steht im Kopf von [`zettel`].
 //!
 //! **Der Stand einer laufenden Dateioperation ist seit Schritt 16b keines
 //! mehr.** Er stand bis dahin als fuenftes Blatt hier und ist in die
@@ -158,6 +157,22 @@
 //! Blatt weder mit der Eingabe- noch mit der Escape-Taste schliessen, und die
 //! Pfadeingabe waere allein mit der Maus bedienbar.
 //!
+//! **Warum das Textfeld eines Blattes nicht als eigene Textflaeche angemeldet
+//! wird.** Der Ereignisabgriff reicht jeden Tastendruck an AppKit weiter,
+//! solange der Ersthelfer AppKit gehoert, und KRKs eigene Textflaechen sind
+//! davon ausgenommen (`Anwendungsdelegierter::ist_eigene_textflaeche`). Fuer
+//! das Feld eines Blattes ist gerade das Weiterreichen erwuenscht, und zwar
+//! wegen `Esc`: `kommandos::zulaessigkeit::zulaessig` laesst bei stehendem
+//! Blatt allein durch, was `kommandos::operationen::waehrend_blatt_erlaubt`
+//! nennt, und das ist `Kommando::Abbrechen`, **aber** nur, solange der
+//! Ersthelfer nicht AppKit gehoert. Bleibt das Feld unangemeldet, ist
+//! `Abbrechen` unzulaessig, der Tastendruck laeuft unveraendert weiter, der
+//! Feldeditor macht daraus `cancelOperation:`, und der Waechter schliesst das
+//! Blatt. Eine Anmeldung kehrte beides um: `Abbrechen` wuerde zulaessig, KRK
+//! schluckte `Esc` fuer den Abbruch einer Dateioperation, und das Blatt bliebe
+//! stehen. Ein Bereich der Fensterzeile wie der Editor braucht die Anmeldung aus
+//! dem umgekehrten Grund: er **will** KRKs Befehle mit dem Fokus in sich selbst.
+//!
 //! **Ein Blatt haelt genau einen Waechter, auch bei mehreren Feldern.** Das
 //! Stapel-Umbenennen aus Schritt 17 traegt vier Eingabefelder; der Waechter
 //! entscheidet nicht nach Feld, sondern beantwortet zwei Tasten, und die
@@ -220,7 +235,6 @@ pub mod suche;
 pub mod uebersprungen;
 pub mod ungesichert;
 pub mod zeilennummer;
-pub mod zettel;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -440,8 +454,7 @@ pub enum Wirkung {
     ///
     /// Der Abbruch. Ebenso der einzige Ausgang eines Blattes, das nach keinem
     /// Vorgang fragt: die Abschlussliste der uebersprungenen Eintraege
-    /// ("Schliessen"), die Tastaturbelegung und der Notizzettel (beide
-    /// "Fertig"). Dort steht keine ausfuehrende Schaltflaeche daneben, aus der
+    /// ("Schliessen") und die Tastaturbelegung ("Fertig"). Dort steht keine ausfuehrende Schaltflaeche daneben, aus der
     /// eine verlorene Antwort waehlen koennte, und das Schliessen ist der
     /// ungefaehrliche Ausgang, weil es derselbe ist, den die Escape-Taste nimmt.
     Liegenlassen,
@@ -600,27 +613,6 @@ impl Blattgriff {
     pub fn abbrechen(&self) {
         self.fenster
             .endSheet_returnCode(&self.warnung.window(), self.abbruchcode);
-    }
-
-    /// Derselbe Abbruch als festhaltbarer Ruf.
-    ///
-    /// **Fuer einen Delegierten des Blattes, der es selbst schliessen muss und
-    /// den Griff nicht bekommt.** Der eine Aufrufer ist der
-    /// [`Zettelwaechter`](zettel::Zettelwaechter): der Griff geht an den
-    /// Anwendungsdelegierten, damit `esc` ueber den Abbruchbefehl dasselbe tut
-    /// wie bei jedem anderen Blatt, und der Waechter braucht daneben einen
-    /// eigenen Weg fuer die Escape-Taste **in** der Textflaeche.
-    ///
-    /// **Ein zweiter Schliessweg entsteht damit nicht.** Der Ruf tut Zeile fuer
-    /// Zeile, was [`Blattgriff::abbrechen`] tut, und beide muenden in denselben
-    /// Abschlussblock von AppKit. Ein zweiter Ruf, nachdem das Blatt schon zu
-    /// ist, trifft ein Fenster ohne anhaengendes Blatt und tut nichts.
-    #[must_use = "der Abschluss schliesst das Blatt erst, wenn ihn jemand ruft; fallengelassen ist er ein Aufruf ohne Wirkung"]
-    pub fn abbruchweg(&self) -> impl Fn() + use<> {
-        let warnung = self.warnung.clone();
-        let fenster = self.fenster.clone();
-        let abbruchcode = self.abbruchcode;
-        move || fenster.endSheet_returnCode(&warnung.window(), abbruchcode)
     }
 }
 

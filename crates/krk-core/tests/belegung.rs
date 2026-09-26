@@ -1696,6 +1696,67 @@ tasten = ["ctrl+c"]
     );
 }
 
+/// Eine vollstaendige eigene Belegung, die die Kennung `notizzettel` fuehrt,
+/// laedt ohne Ersetzung, und die Kennung fuehrt zum Notizordner (C1 des Spec
+/// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+///
+/// **Das ist der Grund, warum die Kennung aelter ist als der Befehl.** Eine
+/// Nutzerdatei ist eine vollstaendige Liste von Kennungen, und
+/// `Belegung::bauen` weist eine unbekannte ab und setzt dann die ganze
+/// Auslieferungsbelegung ein. Haette der Befehl mit seinem neuen Namen eine
+/// neue Kennung bekommen, verloere jeder Nutzer mit eigener Belegung beim
+/// ersten Start der neuen Fassung alle seine Tasten.
+///
+/// Die Datei ist die Auslieferungsbelegung, wie `Belegung::sichern` sie
+/// schreibt, mit dem Namen, den die Funktion vor dieser Arbeit trug: so sieht
+/// die `keymap.toml` eines Nutzers aus, der seine Belegung vor dem Wechsel
+/// einmal geaendert hat.
+#[test]
+fn eine_vollstaendige_nutzerbelegung_mit_notizzettel_laedt_ohne_ersetzung() {
+    let ordner = Pruefordner::neu("notizzettel");
+    let ablage =
+        Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
+    belegung_sichern(&ablage, &Belegung::auslieferung());
+    let geschrieben =
+        fs::read_to_string(ablage.pfad(Datei::Belegung)).expect("keymap.toml laesst sich lesen");
+    let ausgeliefert = Belegung::auslieferung()
+        .funktion("notizzettel")
+        .expect("die Auslieferung fuehrt notizzettel")
+        .name()
+        .to_owned();
+    let alt = "Notizzettel anzeigen";
+    let block_neu = format!("id = \"notizzettel\"\nname = \"{ausgeliefert}\"");
+    let block_alt = format!("id = \"notizzettel\"\nname = \"{alt}\"");
+    assert!(
+        geschrieben.contains(&block_neu),
+        "die geschriebene keymap.toml fuehrt den Block fuer notizzettel nicht in der erwarteten Form"
+    );
+    let nutzerdatei = geschrieben.replace(&block_neu, &block_alt);
+    let ablage = ablage_mit(&ordner, &nutzerdatei);
+
+    let geladen = geladene_belegung(&ablage);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "die eigene Belegung mit notizzettel wurde durch die Auslieferung ersetzt"
+    );
+    let belegung = geladen.wert;
+    assert_eq!(
+        kennungen(&belegung),
+        kennungen(&Belegung::auslieferung()),
+        "die Nutzerdatei ist nicht vollstaendig; die Probe misst dann nicht, was sie behauptet"
+    );
+    let funktion = belegung
+        .funktion("notizzettel")
+        .expect("die geladene Belegung fuehrt notizzettel");
+    assert_eq!(funktion.kommando(), Some(Kommando::Notizordner));
+    assert_eq!(funktion.name(), alt, "der Name kommt aus der Nutzerdatei");
+    let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombi("f2").tastendruck()) else {
+        panic!("f2 trifft in der geladenen Belegung keine Funktion");
+    };
+    assert_eq!(getroffen.kennung(), "notizzettel");
+}
+
 #[test]
 fn eine_geaenderte_belegung_ueberlebt_sichern_und_laden() {
     let ordner = Pruefordner::neu("sichern");
@@ -2150,7 +2211,7 @@ fn der_fokuswechsel_wirkt_aus_jedem_bereich_heraus() {
 /// [`Wirkungsbereich::Ueberall`].
 ///
 /// Sie sind keine Gruppe des Fensters, sondern der Anwendung: das Beenden, die
-/// weitere Instanz, der Notizzettel und die zwei Wege in die Tastenbelegung.
+/// weitere Instanz, der Notizordner und die zwei Wege in die Tastenbelegung.
 /// Keiner von ihnen setzt einen Bereich voraus, und ein engerer Bereich waere
 /// bei jedem von ihnen genau dann eine Sperre, wenn der Nutzer ihn braucht —
 /// wer ein zweites KRK aus dem Editor heraus ruft, will nicht den Editor
@@ -2172,7 +2233,7 @@ fn die_anwendungsweiten_befehle_wirken_aus_jedem_bereich_heraus() {
     for kommando in [
         Kommando::Beenden,
         Kommando::WeitereInstanz,
-        Kommando::Notizzettel,
+        Kommando::Notizordner,
         Kommando::BelegungAnsehen,
         Kommando::BelegungsdateiAnsehen,
     ] {

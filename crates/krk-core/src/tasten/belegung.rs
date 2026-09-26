@@ -769,19 +769,20 @@ pub enum Kommando {
     Beenden,
     /// Eine weitere, eigenstaendige Instanz von KRK starten (C3 der Runde 7).
     WeitereInstanz,
-    /// Den Notizzettel als Blatt am Hauptfenster zeigen (C1 der
-    /// Notizzettel-Runde).
+    /// Das aktive Dateifenster auf den Heimordner `~/krkhome/` fuehren und
+    /// Ordner und Eintragsdateien dabei anlegen, wo sie fehlen (C1 und C2 des
+    /// Spec `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+    ///
+    /// Steht im aktiven Dateifenster schon ein Tab auf den Ordner, wird er
+    /// sichtbar; sonst entsteht ein neuer. Ein Blatt oeffnet sich nie. Bis zu
+    /// dieser Arbeit oeffnete derselbe Befehl das Notizblatt der Runde 9; seine
+    /// Kennung `notizzettel` ist aelter als er, und warum sie bleibt, steht bei
+    /// ihrer Zeile in [`Kommando::KENNUNGEN`].
     ///
     /// Ausgeliefert auf zwei Kombinationen, `f2` und `cmd+k`, in **einer**
     /// Zeile der Belegung; die Begruendung steht bei ihrem Eintrag in
     /// `resources/default-keymap.toml`.
-    ///
-    /// **Der Befehl schliesst den Zettel nicht.** Steht das Blatt, weist
-    /// `zulaessigkeit::zulaessig` ihn ab, denn
-    /// `operationen::waehrend_blatt_erlaubt` nennt allein den Abbruch. Der Weg
-    /// zurueck ist `Esc` ueber den Waechter des Zettels und nicht ein zweiter
-    /// Druck auf dieselbe Taste.
-    Notizzettel,
+    Notizordner,
     /// Die Seite im PDF-Betrachter des Vorschaufensters um eine Stufe
     /// vergroessern (C3 der Runde 20).
     ///
@@ -854,7 +855,7 @@ pub enum Kommando {
     /// **arbeitet**, aendert das nicht: die Leseprofile und die Belegung der
     /// laufenden Anwendung sind in beiden Faellen die vom Start.
     ///
-    /// **Wirkt ueberall, wie [`Kommando::Notizzettel`] daneben.** Das Blatt
+    /// **Wirkt ueberall, wie [`Kommando::Notizordner`] daneben.** Das Blatt
     /// faehrt am Hauptfenster herunter und betrifft die Ablage, nicht einen
     /// der Bereiche der Fensterzeile.
     NeuerungenZeigen,
@@ -981,7 +982,12 @@ impl Kommando {
         (Kommando::BelegungsdateiAnsehen, "belegungsdatei_ansehen"),
         (Kommando::Beenden, "beenden"),
         (Kommando::WeitereInstanz, "weitere_instanz"),
-        (Kommando::Notizzettel, "notizzettel"),
+        // Die Kennung ist aelter als der Befehl: sie stammt aus der Runde 9,
+        // als F2 das Notizblatt oeffnete, und bleibt, damit eine vollstaendige
+        // eigene Belegung weiter laedt. `Belegung::bauen` weist eine unbekannte
+        // Kennung ab und setzt dann die ganze Auslieferungsbelegung ein (C1 des
+        // Spec `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+        (Kommando::Notizordner, "notizzettel"),
         (Kommando::VorschauVergroessern, "vorschau_vergroessern"),
         (Kommando::VorschauVerkleinern, "vorschau_verkleinern"),
         (
@@ -1130,18 +1136,16 @@ impl Kommando {
             // ganze und keinen ihrer Bereiche. Wer sie aus dem Editor heraus
             // ruft, will nicht den Editor verlassen, sondern ein zweites KRK.
             | Kommando::WeitereInstanz
-            // Der Notizzettel aus C1 der Notizzettel-Runde steht hier aus
-            // demselben Grund wie die Belegungsansicht ganz oben: er faehrt
-            // als Blatt am Hauptfenster herunter und gehoert keinem der fuenf
-            // Bereiche. Ein Wirkungsbereich, der einen von ihnen verlangte,
-            // schnitte die anderen vier ab — der Nutzer bekaeme den Zettel
-            // aus dem Editor oder aus der Leiste heraus nicht mehr auf,
-            // obwohl er dort so wenig zu tun hat wie im Dateifenster.
-            | Kommando::Notizzettel
-            // Das Blatt der Ablageneuerungen steht aus demselben Grund hier
-            // wie der Notizzettel darueber: es faehrt am Hauptfenster
-            // herunter und sein Gegenstand ist die Ablage, nicht einer der
-            // Bereiche der Fensterzeile. Wer beim Start gelesen hat, dass
+            // Der Notizordner aus C1 der krkhome-Arbeit wirkt aus jedem
+            // Bereich heraus: F2 soll aus dem Editor, der Vorschau oder der
+            // Leiste ebenso nach `~/krkhome/` fuehren wie aus dem Dateifenster,
+            // und er setzt den Fokus selbst in das Dateifenster. Ein
+            // Wirkungsbereich, der einen Bereich verlangte, verlangte damit
+            // den Zustand, den der Befehl erst herstellt.
+            | Kommando::Notizordner
+            // Das Blatt der Ablageneuerungen steht hier, weil es am
+            // Hauptfenster herunterfaehrt und sein Gegenstand die Ablage ist,
+            // nicht einer der Bereiche der Fensterzeile. Wer beim Start gelesen hat, dass
             // seine `readers.toml` zurueckliegt, will das Einzelne von dort
             // aus sehen, wo er gerade steht, und nicht erst den Fokus
             // umsetzen.

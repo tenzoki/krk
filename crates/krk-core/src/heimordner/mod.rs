@@ -170,6 +170,14 @@ impl Heimordner {
         }
     }
 
+    /// Die geschriebene Form, `<benutzerverzeichnis>/krkhome`.
+    ///
+    /// Auf sie oeffnet F2 einen neuen Tab: der Tab zeigt dann den Pfad, den der
+    /// Nutzer kennt, auch wenn `krkhome` ein Verweis ist.
+    pub fn geschrieben(&self) -> &Path {
+        &self.geschrieben
+    }
+
     /// Ob der gefragte Ordner der Heimordner ist, in der geschriebenen oder der
     /// aufgeloesten Form.
     ///

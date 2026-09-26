@@ -63,12 +63,10 @@
 //! Zusammenfassung des Status. Es liegt hier und nicht unter `appkit`, weil der
 //! Bereich seine drei Flaechen aus diesem einen Stand schreibt und der Stand
 //! ohne Fenster pruefbar bleiben soll.
-//! `zettelmodell` haelt zuletzt, was KRK ueber die beiden Notizzettel der
-//! Runde 9 weiss: welcher offen ist, was beim Oeffnen aus der Datei kam und was
-//! seither in der Textflaeche steht. Der Unterschied zwischen den beiden
-//! Zeichenketten **ist** die Sicherungsregel aus C4, und er ist ohne Fenster
-//! pruefbar; das Blatt mit den zwei Tabs steht in `appkit/blaetter/zettel.rs`
-//! und setzt den Stand nur um.
+//! `heimgriff` haelt zuletzt den einen geteilten Wert der Erkennung von
+//! `~/krkhome/`: der Anwendungsdelegierte baut ihn beim Start, erneuert ihn
+//! allein bei F2 und reicht Abschriften des Griffs an jeden, der fragt. Die
+//! Erkennung selbst steht im Kern, in `krk_core::heimordner`.
 
 mod angezeigtedatei;
 mod appkit;
@@ -79,6 +77,7 @@ mod editormodell;
 mod fenstermodell;
 mod fenstertitel;
 mod gitmodell;
+mod heimgriff;
 mod hervorhebung;
 mod kommandos;
 mod leistenmodell;
@@ -98,7 +97,6 @@ mod quellbaum;
 mod spalten;
 mod tabs;
 mod vorschaumodell;
-mod zettelmodell;
 
 /// Die Befehlszeilenmarke, die den Protokollmodus des Ereignisabgriffs
 /// einschaltet.

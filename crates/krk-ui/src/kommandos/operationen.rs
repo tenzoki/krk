@@ -1988,7 +1988,7 @@ mod tests {
         );
     }
 
-    /// Die eine Ausnahme bleibt die eine, und der Notizzettelbefehl steht
+    /// Die eine Ausnahme bleibt die eine, und der Notizordner steht
     /// ausdruecklich nicht darin.
     ///
     /// **Der Durchgang geht ueber alle Kommandos**, damit die Aussage „genau
@@ -2000,12 +2000,14 @@ mod tests {
     /// und richtig mit „gehoert nicht dazu" an; wer es dennoch eintraegt, sieht
     /// diese Probe rot.
     ///
-    /// **Warum der Notizzettel eine eigene Zeile bekommt, obwohl der Durchgang
-    /// ihn schon deckt:** ein Eintrag fuer ihn waere der naheliegende Griff, um
-    /// den Zettel mit derselben Taste wieder zu schliessen, mit der er kommt.
-    /// Genau das laesst die Notizzettel-Runde ausdruecklich sein — der Weg
-    /// zurueck ist `esc` ueber den Waechter des Zettels. Die Zeile nennt den
-    /// Befehl deshalb beim Namen und macht den Fehlschlag lesbar.
+    /// **Warum der Notizordner eine eigene Zeile bekommt, obwohl der Durchgang
+    /// ihn schon deckt:** F2 wirkt aus jedem Bereich heraus, und ein Eintrag
+    /// hier waere der naheliegende Griff, ihn auch aus einem stehenden Blatt
+    /// heraus wirken zu lassen. C1 des Spec
+    /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
+    /// sagt das Gegenteil zu: wie jeder andere Befehl nicht, solange ein Blatt
+    /// steht. Die Zeile nennt den Befehl deshalb beim Namen und macht den
+    /// Fehlschlag lesbar.
     #[test]
     fn in_der_blattsperre_bleibt_es_bei_dem_einen_abbruch() {
         let erlaubt: Vec<Kommando> = Kommando::KENNUNGEN
@@ -2020,9 +2022,9 @@ mod tests {
             "die Blattsperre laesst nicht mehr allein den Abbruch durch"
         );
         assert!(
-            !waehrend_blatt_erlaubt(Kommando::Notizzettel),
-            "der Notizzettelbefehl steht in der Ausnahme; der Zettel schliesst mit esc und \
-             nicht mit der Taste, mit der er kommt"
+            !waehrend_blatt_erlaubt(Kommando::Notizordner),
+            "der Notizordner steht in der Ausnahme; er soll wie jeder andere Befehl \
+             nicht wirken, solange ein Blatt steht"
         );
     }
 

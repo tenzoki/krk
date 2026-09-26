@@ -1657,6 +1657,18 @@ impl DateifensterQuelle {
         self.tab_gewechselt();
     }
 
+    /// Oeffnet einen neuen Tab auf dem genannten Ordner hinter dem sichtbaren
+    /// und macht ihn sichtbar.
+    ///
+    /// Der Weg von F2, wenn im Dateifenster noch kein Tab auf `~/krkhome/`
+    /// steht (`Anwendungsdelegierter::notizordner_oeffnen`). Derselbe Ablauf
+    /// wie [`Self::tab_neu`], nur mit einem Ordner von aussen.
+    pub fn tab_oeffnen(&self, ordner: &Path) {
+        self.bildlauf_merken();
+        self.ivars().tabs.borrow_mut().oeffnen(ordner);
+        self.tab_gewechselt();
+    }
+
     /// Schliesst den sichtbaren Tab (C1).
     pub fn tab_schliessen(&self) {
         self.bildlauf_merken();

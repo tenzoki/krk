@@ -152,9 +152,9 @@
 //!
 //! **Die Flaeche eines Blattes gehoert ausdruecklich nicht dazu.** Dort ist
 //! erwuenscht, dass die Tasten AppKit gehoeren: nur so bleibt `Abbrechen`
-//! unzulaessig, und nur deshalb schliesst `Esc` den Notizzettel. Wer die
-//! Ausnahme fuer jede bedienbare Textflaeche liest, meldet die falsche an; der
-//! Modulkopf von [`super::blaetter::zettel`] schreibt die Kette aus.
+//! unzulaessig, und nur deshalb schliesst `Esc` das Blatt. Wer die Ausnahme
+//! fuer jede bedienbare Textflaeche liest, meldet die falsche an; der Modulkopf
+//! von [`super::blaetter`] schreibt die Kette aus.
 //!
 //! **Gefragt ist die Naemlichkeit und nicht die Art.** Eine Frage nach der Art
 //! kann zwei Objekte derselben Art nicht trennen, und der Feldeditor eines

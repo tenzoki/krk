@@ -225,7 +225,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
    - Closes (am Baum): C2.1, C2.2, C3.2, C3.3, C3.4, C3.5.
    - Dependencies: 1.1
 
-3. **1.3a Oberfläche: das Notizblatt fällt, und F2 führt nach ~/krkhome**
+3. [DONE] **1.3a Oberfläche: das Notizblatt fällt, und F2 führt nach ~/krkhome**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/tests/{baum.rs,belegung.rs}`, `crates/krk-ui/src/main.rs`, `crates/krk-ui/src/heimgriff.rs` (neu), `crates/krk-ui/src/zettelmodell.rs` (entfällt), `crates/krk-ui/src/appkit/blaetter/zettel.rs` (entfällt), `crates/krk-ui/src/appkit/blaetter/mod.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/kommandos/{zulaessigkeit.rs,operationen.rs}`, `crates/krk-ui/src/appkit/{editor.rs,textautomatik.rs,ereignisse.rs,mod.rs}` (Prosa und die eine Probe)
    - Changes:

@@ -2,19 +2,21 @@
 //! Textflaeche abgeschaltet gehoeren.
 //!
 //! ```text
-//!   editor::textflaeche_bauen ──┐
-//!                               ├──> automatiken_abschalten(&NSTextView)
-//!   blaetter::zettel::zeigen ───┘          │
+//!   editor::textflaeche_bauen ──> automatiken_abschalten(&NSTextView)
+//!                                          │
 //!                                          └─> setzen_falls_vorhanden
 //! ```
 //!
-//! **Ein Modul, weil es zwei Flaechen gibt.** Bis zur Runde 8 stand die Frage
-//! mitten in `super::editor::textflaeche_bauen`, und das war richtig, solange
-//! es genau eine bearbeitbare `NSTextView` gab. Mit dem Notizzettel der Runde 9
-//! gibt es zwei, und zwei Aufzaehlungen derselben Einstellungen waeren zwei
-//! Wahrheiten darueber, was „abgeschaltet" heisst. Der Zettel haelt Pfade und
-//! Ausschnitte aus Code; typografische Anfuehrungszeichen darin sind derselbe
-//! Schaden wie in einer Datei des Editors.
+//! **Ein Modul, obwohl es heute wieder eine Flaeche gibt.** Bis zur Runde 8
+//! stand die Frage mitten in `super::editor::textflaeche_bauen`, und das war
+//! richtig, solange es genau eine bearbeitbare `NSTextView` gab. Mit dem
+//! Notizzettel der Runde 9 gab es zwei, und zwei Aufzaehlungen derselben
+//! Einstellungen waeren zwei Wahrheiten darueber gewesen, was „abgeschaltet"
+//! heisst. Seit F2 nach `~/krkhome/` fuehrt, ist das Notizblatt fort, und der
+//! Editor ist wieder der einzige Rufer. Das Modul bleibt trotzdem stehen: die
+//! Antwort ist eine eigene Frage und nicht ein Teil des Flaechenbaus, und die
+//! naechste bearbeitbare Flaeche fragt hier, statt eine zweite Aufzaehlung zu
+//! beginnen.
 //!
 //! **Die Vorschau ist keine dieser Flaechen und darf es nicht werden.** Sie
 //! setzt `setEditable(false)`, und daran haengt der Satz: was der Nutzer dort
@@ -35,7 +37,7 @@
 //! bearbeitbare Flaeche gleich haben muss. Alles Flaechenspezifische bleibt bei
 //! seiner Flaeche: die Bildlaufansicht, der Rueckgaengigverlauf, der Zugriff auf
 //! `layoutManager`, die Schrift und die Nummernspalte stehen weiterhin in
-//! [`super::editor`], und der Zettel setzt seine eigenen.
+//! [`super::editor`].
 //!
 //! **Die Aufstellung `EINSTELLUNGEN` bleibt, wo sie ist.** Sie steht unter
 //! `mod tests` in [`super::editor`] und ordnet jeden der sechsunddreissig

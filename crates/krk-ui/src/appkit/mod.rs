@@ -44,7 +44,7 @@
 //!           ──> editor   ──> crate::editormodell
 //!           │             ──> nummernspalte ──> krk-core::text::zeilen
 //!           │             ──> textmerkmale  ──> crate::hervorhebung
-//!           │             ──> textautomatik <── blaetter::zettel
+//!           │             ──> textautomatik
 //!           ──> belegungsansicht ──> crate::belegungsmodell
 //!
 //! papierkorb ──> krk-core::operation::Papierkorb   (Aufruf von unten nach oben)
@@ -68,10 +68,10 @@
 //! [`textautomatik`] haelt die eine Antwort darauf, welche Automatiken an einer
 //! bearbeitbaren Textflaeche abgeschaltet gehoeren. Sie stand bis zur Runde 8
 //! mitten in [`editor`], und das trug, solange es genau eine bearbeitbare
-//! `NSTextView` gab; mit dem Notizzettel der Runde 9 gibt es zwei, und zwei
-//! Aufzaehlungen derselben Einstellungen waeren zwei Wahrheiten darueber, was
-//! „abgeschaltet" heisst. Ein eigenes Modul aus demselben Grund wie
-//! [`textmerkmale`] und [`nummernspalte`] daneben.
+//! `NSTextView` gab; mit dem Notizzettel der Runde 9 gab es zwei. Seit F2 nach
+//! `~/krkhome/` fuehrt, ist das Notizblatt fort und der Editor wieder die
+//! einzige; der Modulkopf von [`textautomatik`] sagt, warum das Modul trotzdem
+//! bleibt.
 //! [`textmerkmale`] haelt die eine Umsetzung einer `crate::hervorhebung`-
 //! `Formatierung` in die Merkmale einer `NSTextView`: Schrift, Einzug, Farbe
 //! und Unterstreichung. Ein eigenes Modul aus demselben Grund wie die

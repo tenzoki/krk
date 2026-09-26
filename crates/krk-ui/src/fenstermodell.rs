@@ -534,11 +534,11 @@ impl Fenstermodell {
     /// einer zweiten Quelle zu erfragen hiesse, zwei Orte darueber zu haben,
     /// welche Datei offen ist.
     ///
-    /// **Der offene Notizzettel kommt aus demselben Grund von aussen.** Er
-    /// wohnt in [`Zettelmodell`](crate::zettelmodell::Zettelmodell); dieses
-    /// Modell kennt vom Zettel nichts, denn er ist ein Blatt und kein Bereich
-    /// der Fensterzeile. Was mitgeht, ist allein die Merkung und nie der Text
-    /// (C4 der Runde 9).
+    /// **Das Feld fuer den zuletzt offenen Notizzettel traegt seinen leeren
+    /// Wert.** Das Notizblatt der Runde 9 ist gefallen, seit F2 nach
+    /// `~/krkhome/` fuehrt, und niemand merkt sich mehr einen Zettel; das Feld
+    /// selbst faellt erst mit dem Kern (Schritt 1.3b des Plans
+    /// `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
     ///
     /// **Die Teilung des Git-Bereichs kommt aus demselben Grund von aussen.**
     /// Dieses Modell haelt vom Git-Bereich Breite und Sichtbarkeit, also seinen
@@ -550,13 +550,12 @@ impl Fenstermodell {
         &self,
         fenster: [Fensterzustand; 2],
         editor: Option<PathBuf>,
-        zettel: Zettel,
         gitanteil: Option<f64>,
     ) -> Sitzung {
         Sitzung {
             aktiv: self.aktiv,
             editor,
-            zettel,
+            zettel: Zettel::default(),
             gitanteil,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
@@ -2917,7 +2916,7 @@ mod tests {
         let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
         assert_eq!(modell.breiten().editor, Some(gewuenscht));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         assert!(
             text.contains("editor"),
@@ -3072,7 +3071,7 @@ mod tests {
         let mut modell = modell();
         assert!(modell.spalte_umschalten(Spalte::Groesse));
 
-        let sitzung = modell.sitzung(fenster, None, Zettel::Erster, None);
+        let sitzung = modell.sitzung(fenster, None, None);
         assert!(
             !sitzung.spalten.groesse,
             "die Spalte Groesse ist nicht weggeschaltet"
@@ -3094,7 +3093,7 @@ mod tests {
         assert!(modell.spalte_umschalten(Spalte::Groesse));
         assert!(modell.spalte_umschalten(Spalte::Typ));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, Zettel::Erster, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
         let wieder = Fenstermodell::aus_sitzung(&gelesen);

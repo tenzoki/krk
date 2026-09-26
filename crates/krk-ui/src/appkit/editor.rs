@@ -315,10 +315,9 @@
 //!
 //! **Und die neun Zeilen selbst haelt eine Probe.** Die Zeilen stehen seit der
 //! Runde 9 in [`super::textautomatik::automatiken_abschalten`], das
-//! [`textflaeche_bauen`] und die Flaeche des Zettels rufen; die Probe baut beide
-//! Flaechen, liest jede der neun zurueck und vergleicht sie mit einer frisch
-//! gebauten `NSTextView`: an KRKs Flaechen steht jede aus, an der frischen jede
-//! anders. Was daran Nutzerarbeit bleibt, ist die Wirkung im
+//! [`textflaeche_bauen`] ruft; die Probe baut die Flaeche, liest jede der neun
+//! zurueck und vergleicht sie mit einer frisch gebauten `NSTextView`: an KRKs
+//! Flaeche steht jede aus, an der frischen jede anders. Was daran Nutzerarbeit bleibt, ist die Wirkung im
 //! laufenden Buendel — dass getippte Anfuehrungszeichen als getippte in der
 //! Datei stehen —, nicht mehr die Frage, ob die Zeilen stehen und greifen.
 //!
@@ -3291,8 +3290,8 @@ fn textflaeche_bauen(
     text.setSelectable(true);
     // Reiner Text, und die sieben Automatiken aus: der gesicherte Stand ist der
     // getippte. Der Grund steht im Modulkopf, die Zeilen selbst seit der Runde 9
-    // in `super::textautomatik` — die eine Antwort fuer die beiden bearbeitbaren
-    // Flaechen dieses Programms, den Editor und den Notizzettel.
+    // in `super::textautomatik`, der einen Antwort fuer jede bearbeitbare
+    // Flaeche dieses Programms.
     textautomatik::automatiken_abschalten(&text);
     // Ohne diese Zeile traegt die Textansicht keine einzige
     // Rueckgaengig-Handlung, und die beiden Menueeintraege aus S7 finden am
@@ -4573,7 +4572,7 @@ mod tests {
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     enum Einordnung {
         /// [`textautomatik::automatiken_abschalten`] schaltet sie ab, das
-        /// [`textflaeche_bauen`] und die Flaeche des Zettels rufen, weil sie
+        /// [`textflaeche_bauen`] ruft, weil sie
         /// Zeichen in den Text bringt oder aus ihm nimmt, die der Nutzer nicht
         /// getippt hat.
         ///
@@ -5171,27 +5170,24 @@ mod tests {
     /// Die sieben Zeilen aus [`textautomatik::automatiken_abschalten`] wirken,
     /// und das steht nicht mehr allein in der Prosa.
     ///
-    /// **Drei Flaechen, ein Zeuge.** Gemessen wird an den **zwei** bearbeitbaren
-    /// Flaechen, die KRK baut — der des Editors aus [`textflaeche_bauen`] und der
-    /// des Notizzettels aus
-    /// [`blaetter::zettel::textflaeche_bauen`](crate::appkit::blaetter::zettel::textflaeche_bauen)
-    /// —, und beide werden gegen denselben Zeugen gestellt: eine frisch erzeugte
-    /// `NSTextView`. An den unseren steht jede abgeschaltete Einstellung aus, am
-    /// Zeugen jede **anders**. Die zweite Haelfte ist die tragende: ohne sie liefe
+    /// **Eine Flaeche, ein Zeuge.** Gemessen wird an der bearbeitbaren Flaeche,
+    /// die KRK baut, der des Editors aus [`textflaeche_bauen`], und sie wird
+    /// gegen einen Zeugen gestellt: eine frisch erzeugte `NSTextView`. An der
+    /// unseren steht jede abgeschaltete Einstellung aus, am Zeugen jede
+    /// **anders**. Die zweite Haelfte ist die tragende: ohne sie liefe
     /// die Probe gruen durch, wenn eine Einstellung ab Werk schon aus waere und
     /// die Zeile fehlte.
     ///
-    /// # Warum hier zwei Flaechen stehen und die Aufstellung trotzdem einmal
+    /// # Warum die Probe ueber eine Liste von Flaechen laeuft
     ///
     /// Seit der Runde 9 lautet die Aussage „jede bearbeitbare Flaeche in KRK" und
-    /// nicht mehr „die Flaeche des Editors" (C3 der Runde 9). Beide Flaechen
-    /// rufen dieselbe Abschaltung, und [`EINSTELLUNGEN`] steht deshalb weiter an
-    /// **einer** Stelle: eine zweite Aufstellung fuer den Zettel koennte von
-    /// dieser abweichen, und dann sagte jede der beiden Proben etwas ueber eine
-    /// andere Liste. Die Schleife ueber die zwei Flaechen ist die billigere
-    /// Haelfte, die Aufstellung die teure.
+    /// nicht mehr „die Flaeche des Editors" (C3 der Runde 9). Bis F2 nach
+    /// `~/krkhome/` fuehrte, stand die Flaeche des Notizzettels mit in der
+    /// Liste; seither ist die des Editors die einzige. Die Liste bleibt, damit
+    /// die naechste bearbeitbare Flaeche eine Zeile bekommt und nicht eine
+    /// zweite Probe, und [`EINSTELLUNGEN`] steht weiter an **einer** Stelle.
     ///
-    /// **Was die Probe nicht sieht:** eine dritte bearbeitbare Flaeche einer
+    /// **Was die Probe nicht sieht:** eine weitere bearbeitbare Flaeche einer
     /// spaeteren Runde, die die Abschaltung nicht ruft. Der Bau haelt dabei nicht
     /// an; ob er es kuenftig tut, ist als Frage gefilt
     /// (`decisions/260814-0656_*_wird-die-abschaltung-der-textautomatiken-bauanhaltend.md`).
@@ -5201,8 +5197,8 @@ mod tests {
     /// [`textautomatik::automatiken_abschalten`] zu schreiben, bekommt hier den
     /// Fehlschlag — und nicht erst der Nutzer am laufenden Buendel. **Die Zeile
     /// gehoert dorthin und nicht in [`textflaeche_bauen`]**: dort geschrieben
-    /// bekaeme sie allein der Editor, und der Zettel stuende ohne sie da — zwei
-    /// Wahrheiten darueber, was „abgeschaltet" heisst.
+    /// bekaeme sie allein der Editor, und die naechste bearbeitbare Flaeche
+    /// stuende ohne sie da.
     ///
     /// # Eine Einstellung, die diese Laufzeit nicht fuehrt, ist ein Hinweis
     ///
@@ -5232,12 +5228,7 @@ mod tests {
 
         an_einer_flaeche(|mtm| {
             let (_rolle, editorflaeche) = textflaeche_bauen(mtm, probenrahmen());
-            let (_bildlauf, zettelflaeche) =
-                crate::appkit::blaetter::zettel::textflaeche_bauen(mtm, probenrahmen());
-            let unsere = [
-                ("die Flaeche des Editors", editorflaeche),
-                ("die Flaeche des Notizzettels", zettelflaeche),
-            ];
+            let unsere = [("die Flaeche des Editors", editorflaeche)];
             let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
             for setzer in abgeschaltet {
                 let name = merkmalsname(setzer);
