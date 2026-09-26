@@ -1,7 +1,7 @@
 # F2 öffnet einen Dateilisten-Tab in ~/krkhome/ mit Notizen, Aufgaben und Geheimnissen statt des blockierenden Notizfensters
 
 ---
-**Status:** claimed
+**Status:** done
 **Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260926-0004
 **Mode:** autonomous
 **Active spec/plan:** 260926-1451_*_spec-home-menue-und-einstellbarer-ort.md (Spec), 260926-1506_*_plan-home-menue-und-einstellbarer-ort.md (Plan)
