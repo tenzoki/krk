@@ -26,7 +26,7 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 |---|---|---|
 | `keymap.toml` | die eigene Tastenbelegung | KRK und der Nutzer |
 | `bookmarks.toml` | die Lesezeichen | KRK |
-| `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten | KRK |
+| `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten, die Richtung der Termintabelle | KRK |
 | `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | der Nutzer; KRK allein den Ort des Notizordners, über „Ort wählen…“ |
 | `readers.toml` | die Leseprofile der Vorschau | nur der Nutzer |
 | `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind, und ob die alten Zettel schon nach `notes.txt` übernommen sind | KRK |
@@ -221,6 +221,30 @@ Eine fehlerhafte `keymap.toml` wird als Ganzes verworfen und nicht teilweise
 übernommen. Unbekannte Kennung, doppelte Kennung, unlesbare Tastenschreibweise
 oder ein Kombinationskonflikt: KRK meldet es beim Start und fährt mit der
 Auslieferungsbelegung. Die Datei selbst bleibt dabei stehen.
+
+**Ein Kombinationskonflikt ist nicht jede Kombination, die zweimal vorkommt.**
+Eine Kombination darf auf zwei Funktionen liegen, wenn beide nie zugleich
+wirken können. Das trifft auf zwei Fälle zu:
+
+- Die eine Funktion bekommt den Tastendruck über KRK, die andere über AppKit,
+  etwa in einem Textfeld. So liegt `cmd+a` auf „Alle Einträge markieren“ und auf
+  „Alles auswählen“.
+- Beide bekommen ihn über KRK, aber die eine wirkt allein im Editor und die
+  andere allein außerhalb davon. So liegt `cmd+1` auf „Nach Name sortieren“ im
+  Dateifenster und auf „Termine: Sortierrichtung umkehren“ in der Termintabelle
+  des Editors. Welche der beiden ein Anschlag auslöst, entscheidet der Ort des
+  Fokus.
+
+Eine Funktion, die im Editor und außerhalb wirkt, schließt keine andere aus,
+und drei Funktionen auf einer Kombination sind immer ein Konflikt. Dieselbe
+Regel gilt beim Zuweisen mit `cmd+t`: eine Kombination, die danach keinen
+Konflikt ergibt, nimmt die Ansicht an, und beide Funktionen behalten sie; ergibt
+sie einen, bleibt die Belegung, wie sie war, und die Ansicht nennt beide
+Funktionen.
+**Im Hauptmenü zeigt dann nur einer der beiden Einträge das Kürzel**, nämlich
+der, der in der Menüleiste weiter links steht. „Termine: Sortierrichtung
+umkehren“ unter „Home“ zeigt `⌘1`, und „Nach Name sortieren“ steht ohne Kürzel
+da, sortiert mit `cmd+1` im Dateifenster aber weiter.
 
 ---
 
@@ -476,7 +500,7 @@ der Notizordner liegt, wählt man über „Ort wählen…“ oder trägt es in
 
 **Alle Befehle zum Notizordner stehen im Hauptmenü „Home“**, gleich hinter
 dem Anwendungsmenü: „Notizordner öffnen“, „Ort wählen…“, die sechs Befehle der
-Tabellen im Editor und „PIN ändern“. Unter „Anwendung“ und „Editor“ stehen sie
+Tabellen im Editor, „PIN ändern“ und „Termine: Sortierrichtung umkehren“. Unter „Anwendung“ und „Editor“ stehen sie
 nicht mehr. Tasten und Wirkung der älteren Befehle sind geblieben, nur der Platz
 in der Menüleiste hat sich geändert. „Ort wählen…“ hat ab Werk keine Taste; wer
 eine will, weist sie in der Belegungsansicht (F1) zu. Mit einer eigenen
@@ -485,8 +509,10 @@ die die eigene Datei dort nennt, und dafür ist an der eigenen Belegung nichts z
 tun.
 
 **Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt`,
-`tasks.txt` und `secrets.txt`. Fehlt später eine der drei Dateien, legt der
-nächste `f2` sie leer wieder an, mit null Bytes. Eine vorhandene Datei
+`tasks.txt`, `secrets.txt` und `appointments.md`. Fehlt später eine dieser
+Dateien, legt der nächste `f2` sie leer wieder an, mit null Bytes. Wer den
+Ordner schon aus einer früheren Fassung hat, bekommt `appointments.md` beim
+nächsten `f2` dazu; die übrigen Dateien bleiben, wie sie sind. Eine vorhandene Datei
 überschreibt KRK nie. Wer aus einer früheren Fassung noch eine `.secrets.txt`
 mit Punkt hat, findet sie nach dem nächsten `f2` als `secrets.txt` wieder;
 was dabei im Einzelnen geschieht, steht unter „Geheimnisse in `secrets.txt`“. Beim Start legt KRK nichts an, auch nicht für einen
@@ -494,9 +520,9 @@ wiederhergestellten Tab auf den Ordner. Steht an der Stelle des Notizordners
 eine gewöhnliche Datei, oder fehlt der Ordner darüber, etwa weil ein Laufwerk
 nicht eingehängt ist, nennt die Statuszeile den Grund, und kein Tab geht auf.
 
-**Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. `notes.txt`
-und `tasks.txt` sind reiner Text und lassen sich genauso in jedem anderen
-Textprogramm pflegen. `secrets.txt` ist verschlüsselt und öffnet sich allein in
+**Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. `notes.txt`,
+`tasks.txt` und `appointments.md` sind reiner Text und lassen sich genauso in
+jedem anderen Textprogramm pflegen. `secrets.txt` ist verschlüsselt und öffnet sich allein in
 KRK mit einer PIN; davon handelt der letzte Teil dieses Abschnitts.
 
 **Eine Notiz in `notes.txt`** beginnt mit einer Zeile `## <Thema>`. Alles
@@ -546,7 +572,9 @@ dabei den Regeln von CommonMark, nach denen jede Markdown-Datei gelesen wird.
 **Die Formatansicht des Editors zeigt beide Dateien als Tabelle**
 (`ctrl+cmd+e`): `tasks.txt` mit einer Zeile je Aufgabe, `notes.txt` mit den
 Spalten Thema und Notiz. Wie man die zwei Tabellen bedient, steht am Ende
-dieses Abschnitts.
+dieses Abschnitts. `appointments.md` folgt der Form von `notes.txt` mit einem
+Datum als Thema; wie sie in Vorschau und Editor erscheint, steht unter „Termine
+in `appointments.md`“.
 
 **Die Kästchen gibt es nur für diese zwei Dateien im Notizordner.** Eine
 `.md`-Datei mit `- [ ]` an einem anderen Ort zeigt die Vorschau wie bisher,
@@ -646,7 +674,8 @@ dem Start einen anderen Ort; jetzt steht dort wieder „~/krkhome“, und der
 Notizordner bleibt, wo er ist“.
 
 **Solange der Editor eine Datei des Notizordners hält, wählt KRK keinen anderen
-Ort.** Gemeint sind `notes.txt`, `tasks.txt` und `secrets.txt`, am geltenden
+Ort.** Gemeint sind `notes.txt`, `tasks.txt`, `secrets.txt` und
+`appointments.md`, am geltenden
 Ort wie am gewählten; das zweite trifft etwa eine `notes.txt`, die am gewählten
 Ort noch als gewöhnlicher Text offen ist. Die Statuszeile nennt die Datei:
 
@@ -752,8 +781,9 @@ zum Anfang der Datei.
 | `cmd+z` | jede dieser Handlungen zurücknehmen |
 
 Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Home“. Wirken können
-sie nur, solange der Fokus im Editor steht und dieser eine der zwei Tabellen
-zeigt; das Abhaken wirkt allein in der Aufgabentabelle. Sonst sind sie
+sie nur, solange der Fokus im Editor steht und dieser eine der Tabellen
+zeigt; das Abhaken wirkt allein in der Aufgabentabelle, und das Verschieben
+wirkt in der Termintabelle nicht. Sonst sind sie
 ausgegraut, und ihre Tasten wirken so, als wären sie nicht belegt.
 Nach dem Öffnen ist die erste Aufgabe gewählt, damit die Tasten sofort eine
 Zeile vor sich haben, und ein Klick auf das Kästchen holt den Fokus in die
@@ -855,6 +885,117 @@ wirken.
 
 Wer mit `shift+cmd+return` eine Notiz anlegt und die Zelle ohne Eingabe
 schließt, behält eine leere Notiz in der Datei. Ein `cmd+z` nimmt sie zurück.
+
+### Termine in `appointments.md`
+
+**`appointments.md` hat dieselbe Form wie `notes.txt`, nur steht in der
+Kopfzeile statt eines Themas ein Datum.** Ein Termin beginnt mit einer Zeile
+`## YYMMDD` oder `## YYMMDD HH:MM`, und alles darunter bis zur nächsten solchen
+Zeile ist sein Text:
+
+```text
+## 261002 09:30
+Zahnarzt, Praxis am Markt
+
+## 261002
+Geburtstag Anna
+Geschenk nicht vergessen
+
+## 261015
+Steuererklärung abgeben
+```
+
+**Ein Datum gilt, wenn es genau so dasteht:** sechs Ziffern für Jahr, Monat
+und Tag, wahlweise ein Leerzeichen und die Uhrzeit mit je zwei Ziffern für
+Stunde und Minute. Der Tag muss im Kalender stehen, also kein 30. Februar, der
+29. Februar nur im Schaltjahr; die Jahre reichen von 2000 bis 2099, die
+Uhrzeiten von 00:00 bis 23:59. `261002`
+und `261002 09:30` gelten, `26102`, `261002 9:30`, `261002 09:30 Uhr` und
+`261302` nicht. **Ein ungültiges Datum bleibt als Termin stehen**, geht nicht
+verloren und steht in der Tabelle am Ende, in beiden Richtungen. Text vor dem
+ersten `## ` gehört zu keinem Termin; er bleibt oben in der Datei stehen und
+erscheint allein in der Rohansicht.
+
+**In der Formatansicht des Editors steht `appointments.md` als Tabelle mit zwei
+Spalten**, „Datum“ und „Termin“, und bedient wird sie wie die Notiztabelle.
+Sie ist nach dem Datum sortiert, ab Werk aufsteigend, also der früheste Termin
+oben. Ein Termin ohne Uhrzeit steht vor einem am selben Tag mit Uhrzeit. Die
+Datei selbst bleibt dabei in ihrer eigenen Reihenfolge; die Rohansicht zeigt
+sie so, wie sie auf der Platte steht, und ein neuer Termin kommt ans Ende der
+Datei, auch wenn er in der Tabelle weiter oben steht.
+
+| Griff | Wirkung |
+|---|---|
+| Doppelklick auf eine Zelle | diese Zelle öffnet sich, ihr Text ist ausgewählt |
+| Doppelklick unter den letzten Termin, auch in die leere Tabelle | ein Termin mit dem heutigen Datum, sein Datum gleich offen |
+| `cmd+return` | das Datum des gewählten Termins öffnen; in einer offenen Zelle den Text übernehmen |
+| `shift+cmd+return` | ein Termin mit dem heutigen Datum, sein Datum gleich offen |
+| `shift+cmd+delete` | den gewählten Termin löschen, ohne Rückfrage |
+| `cmd+1`, Klick auf den Kopf „Datum“ | die Richtung umkehren, aufsteigend oder absteigend |
+| `cmd+c` | den Text des gewählten Termins kopieren; ist er leer, das Datum |
+| `cmd+z` | jede dieser Handlungen zurücknehmen |
+
+**Ein neuer Termin trägt das heutige Datum** und keine Uhrzeit, damit er dort
+steht, wo man weiterschreibt, und nicht als ungültiger am Ende. „Eintrag nach
+oben“ und „Eintrag nach unten“ sind in der Termintabelle ausgegraut, denn ihre
+Reihenfolge ist das Datum; wer einen Termin verlegen will, ändert sein Datum,
+und die Zeile wandert an ihren neuen Platz und bleibt gewählt. „Aufgabe
+abhaken oder öffnen“ und „PIN ändern“ bleiben hier ebenso ausgegraut.
+
+**In einer offenen Zelle unterscheiden sich die zwei Spalten:**
+
+- Das Datum ist eine Zeile. `return` übernimmt es, und `esc` verwirft das
+  Getippte, wie in der Aufgabentabelle.
+- Der Text eines Termins trägt Absätze. `return` schreibt einen
+  Zeilenumbruch, und `esc` übernimmt eine geänderte Zelle, wie in der
+  Notiztabelle; die Statuszeile sagt dazu, dass `cmd+z` es zurücknimmt.
+- `tab` und `shift+tab` wechseln wie in der Notiztabelle, in der Folge, in der
+  die Tabelle die Termine zeigt.
+- Ein geändertes Datum, das nicht gilt, weist KRK ab; die Zelle bleibt offen,
+  und die Statuszeile nennt die zwei gültigen Formen. Leerzeichen am Anfang und
+  am Ende zählen nicht mit. Ein ungültiges Datum, das man unverändert lässt,
+  prüft KRK nicht, sodass sich auch der Text eines solchen Termins bearbeiten
+  lässt.
+- Eine Zeile im Text, die mit `## ` beginnt, weist KRK ab, denn so beginnt der
+  nächste Termin.
+
+**`cmd+1` oder ein Klick auf den Kopf „Datum“ kehrt die Richtung um.** Ein
+Pfeil im Spaltenkopf zeigt, in welche Richtung die Tabelle gerade ordnet, und
+die Statuszeile meldet „Termine absteigend sortiert“ oder „Termine aufsteigend
+sortiert“. Der gewählte Termin bleibt gewählt. Die Datei ändert sich dabei
+nicht, und `cmd+s` ist nicht nötig. Die Richtung übersteht einen Neustart:
+KRK merkt sie sich in `session.toml` als `terminrichtung`. **Dieselbe
+Kombination sortiert im Dateifenster weiter nach Namen**; welche der beiden
+Funktionen wirkt, entscheidet der Fokus (siehe „Die Tastaturbelegung“). Im
+Hauptmenü trägt deshalb nur „Termine: Sortierrichtung umkehren“ unter „Home“
+das Kürzel `⌘1`, und „Nach Name sortieren“ steht ohne Kürzel da.
+
+**Jeder Termin des heutigen Tages ist in der Tabelle gelb hinterlegt**, mit
+und ohne Uhrzeit. Eine gewählte Zeile zeigt die Farbe der Auswahl; sobald die
+Auswahl weiterwandert, kommt die Hervorhebung wieder. Wer KRK über Mitternacht
+offen lässt, sieht den neuen Tag, sobald das Fenster wieder in den Vordergrund
+kommt oder der Fokus wechselt. Solange eine Zelle offen ist, bleibt die Tabelle
+dabei, wie sie ist, damit nichts Getipptes verloren geht; nachgeholt wird beim
+nächsten solchen Wechsel.
+
+**Die Vorschau zeigt `appointments.md` gerendert und immer aufsteigend**,
+gleich in welche Richtung die Tabelle im Editor gerade ordnet: den Text vor dem
+ersten Termin oben, jedes Datum als Überschrift, ungültige Termine am Ende.
+Hervorgehoben ist dort nichts, und geschrieben wird dabei nichts. Wer aus der
+Vorschau kopiert, bekommt den Text in dieser Ordnung und nicht in der der
+Datei. Eine `appointments.md` in einem anderen Ordner ist gewöhnliches Markdown,
+ohne Tabelle und in der Reihenfolge der Datei.
+
+**Mit einer eigenen `keymap.toml` trägt „Termine: Sortierrichtung umkehren“
+keine Taste.** KRK hängt den Befehl beim Start unbelegt an, und über das Menü
+„Home“ und den Klick auf den Kopf „Datum“ wirkt er trotzdem. Wer `cmd+1` dafür
+will, weist es vor der ersten Benutzung einzeln zu: **F1**, „Termine:
+Sortierrichtung umkehren“ wählen, `cmd+t`, `cmd+1` drücken, die Ansicht mit
+„Fertig“ verlassen. Dass `cmd+1` schon auf „Nach Name sortieren“ liegt, ist
+dabei kein Konflikt, und die Sortierung im Dateifenster behält die Taste.
+**Nicht `cmd+r`**: es brächte die Taste zwar mit, setzt aber die ganze eigene
+Belegung auf die Auslieferungsfassung zurück, also auch jede eigene
+Tastenzuweisung.
 
 ### Geheimnisse in `secrets.txt`
 

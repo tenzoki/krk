@@ -128,6 +128,16 @@ Verlassen der Ansicht schreibt `keymap.toml` mit dem Auslieferungsstand. Die
 eigenen Zuweisungen sind danach fort, und wer sie behalten will, legt die Datei
 vorher beiseite.
 
+**Eine einzelne neue Funktion belegt man ohne jedes Zurücksetzen.** In der
+F1-Ansicht die Funktion wählen, **Zuweisen** (`cmd+t`), die Kombination
+drücken und die Ansicht verlassen; die eigene Belegung bleibt dabei bis auf
+diese eine Zuweisung, wie sie war. Das nächstliegende Beispiel ist „Termine:
+Sortierrichtung umkehren“: die Auslieferung legt sie auf `cmd+1`, eine eigene
+`keymap.toml` von vorher führt sie unbelegt, und `cmd+1` lässt sich ihr
+zuweisen, obwohl „Nach Name sortieren“ dieselbe Kombination trägt. Die eine
+wirkt allein im Editor, die andere allein im Dateifenster, und so ist das kein
+Konflikt; die Regel steht in `HowTo.md` unter „Die Tastaturbelegung“.
+
 **Beiseitelegen und nicht löschen.** Es ist derselbe Grund wie beim
 Installieren: was KRK sich merkt, liegt außerhalb des Bündels, und ein
 Handgriff, der es mitnimmt, hat es genommen. In der beiseitegelegten Datei
@@ -143,6 +153,9 @@ Datei", welche Einträge das sind.
 Notizordner liegt, steht in `settings.toml` unter `notizordner`, ab Werk
 `~/krkhome`, gesetzt von Hand oder über „Ort wählen…“ im Menü „Home“; wie man die Geheimnisse in KRK bedient und wovor die PIN schützt,
 steht in `HowTo.md`.
+Neben ihr liegen im selben Ordner `notes.txt`, `tasks.txt` und
+`appointments.md`, die Termine; alle drei sind unverschlüsselter Text, und
+keine davon braucht eine PIN.
 **Dieser Abschnitt beschreibt die Datei so, dass sich ihr Inhalt mit der PIN
 auch ohne KRK entschlüsseln lässt.** Die verbindliche Quelle ist der Modulkopf
 von `crates/krk-core/src/heimordner/tresor.rs`; die Probe

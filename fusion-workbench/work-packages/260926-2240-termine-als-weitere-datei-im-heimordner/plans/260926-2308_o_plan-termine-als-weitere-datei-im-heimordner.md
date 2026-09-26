@@ -401,7 +401,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
    - Closes (am Baum): T7.1 bis T7.3.
    - Dependencies: 1, 2
 
-10. **10 Anleitung und README**
+10. [DONE] **10 Anleitung und README**
     - Executor: `code-implementer`
     - Files: `HowTo.md`, `README.md`
     - Changes:
