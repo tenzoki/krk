@@ -31,7 +31,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use krk_core::ablage::einstellungen::Ortswert;
+use krk_core::ablage::einstellungen::{Ortswert, Schreibausgang, Schreibhindernis};
 use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG, Merker};
 use krk_core::ablage::neuerungen::{Befund, Bestand, Leserurteile, Vergleichsform};
 use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
@@ -2089,6 +2089,387 @@ fn die_auslieferungsfassung_fuehrt_den_notizordner_am_vorgabeort() {
     let geladen = geladene_einstellungen(&ablage);
     assert!(!geladen.ist_ersetzt());
     assert_eq!(geladen.wert.notizordner, vorgabe);
+}
+
+// ---------------------------------------------------------------------------
+// Der eine Schreibweg in settings.toml (Schritt 3.1 des Plans
+// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`)
+// ---------------------------------------------------------------------------
+
+/// Schreibt `notizordner` unter der Schreibsperre, mit einer Regel fuer
+/// „derselbe Ort?“, die nie ja sagt.
+fn notizordner_neu(ablage: &Ablage, wert: &str) -> Result<Schreibausgang, Schreibhindernis> {
+    notizordner_mit_regel(ablage, wert, |_| false)
+}
+
+/// Schreibt `notizordner` unter der Schreibsperre, mit der mitgegebenen Regel.
+fn notizordner_mit_regel(
+    ablage: &Ablage,
+    wert: &str,
+    derselbe: impl Fn(&str) -> bool,
+) -> Result<Schreibausgang, Schreibhindernis> {
+    ablage
+        .durchgang(|zugang| einstellungen::notizordner_schreiben(zugang, wert, derselbe))
+        .expect("die Schreibsperre laesst sich nicht nehmen")
+}
+
+/// Die Bytes der Datei.
+fn bytes_von(pfad: &Path) -> Vec<u8> {
+    fs::read(pfad).expect("lesen gescheitert")
+}
+
+/// Der Text, den eine Probe nach dem Ersetzen erwartet: alles vor und hinter
+/// dem Wertbereich Byte fuer Byte, dazwischen der neue Wert.
+fn mit_ersetztem_wert(vor: &str, nach: &str, wert: &str) -> String {
+    format!("{vor}{}{nach}", toml::Value::String(wert.to_owned()))
+}
+
+/// Laedt `settings.toml` ueber den gewoehnlichen Ladeweg und verlangt, dass
+/// sie ohne Ersetzung laedt und den geschriebenen Wert traegt.
+fn laedt_mit(ablage: &Ablage, wert: &str) -> Einstellungen {
+    let geladen = geladene_einstellungen(ablage);
+    assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
+    assert_eq!(geladen.wert.notizordner, Ortswert::Text(wert.to_owned()));
+    geladen.wert
+}
+
+/// H3.3: die Auslieferungsfassung bekommt einen neuen Wert, und jedes Byte vor
+/// und hinter dem Wertbereich bleibt; die Kommentare sind der Zweck der Datei.
+#[test]
+fn der_schreibweg_ersetzt_in_der_auslieferungsfassung_allein_den_wert() {
+    let (_ordner, ablage) = ablage("schreiben-auslieferung");
+    let _ = geladene_einstellungen(&ablage);
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    assert_eq!(
+        bytes_von(&pfad),
+        einstellungen::AUSLIEFERUNGSTEXT.as_bytes()
+    );
+
+    let ausgang = notizordner_neu(&ablage, "~/Notizen");
+
+    assert_eq!(ausgang, Ok(Schreibausgang::Geschrieben));
+    let alt = format!("notizordner = \"~/{ORDNERNAME}\"");
+    let (vor, nach) = einstellungen::AUSLIEFERUNGSTEXT
+        .rsplit_once(&alt)
+        .expect("die Auslieferungsfassung traegt den Vorgabeort");
+    let erwartet = mit_ersetztem_wert(&format!("{vor}notizordner = "), nach, "~/Notizen");
+    assert_eq!(String::from_utf8(bytes_von(&pfad)).unwrap(), erwartet);
+    assert_eq!(
+        laedt_mit(&ablage, "~/Notizen").terminal,
+        Einstellungen::auslieferung().terminal
+    );
+}
+
+/// H3.3 in jeder Schreibweise, die der Leser kennt: Kommentar hinter dem Wert,
+/// `'…'`, `"""…"""`, der Schluessel in Anfuehrungszeichen, ein vorangestelltes
+/// BOM und CRLF. Gemessen am Byte: vor und hinter dem Wertbereich ist alles,
+/// wie es war, auch das Zeilenende.
+#[test]
+fn der_schreibweg_ersetzt_allein_den_wertbereich_in_jeder_schreibweise() {
+    let faelle: [(&str, &str, &str, &str); 6] = [
+        (
+            "kommentar",
+            "terminal = \"com.mitchellh.ghostty\"\nnotizordner = ",
+            "\"~/alt\"",
+            " # eigener Ort\n# Ende\n",
+        ),
+        (
+            "einfach",
+            "terminal = \"x\"\nnotizordner = ",
+            "'~/alt'",
+            "\n",
+        ),
+        (
+            "dreifach",
+            "terminal = \"x\"\nnotizordner = ",
+            "\"\"\"~/alt\"\"\"",
+            "   # drei\n",
+        ),
+        (
+            "schluessel",
+            "terminal = \"x\"\n\"notizordner\" = ",
+            "\"~/alt\"",
+            "\n",
+        ),
+        (
+            "bom",
+            "\u{feff}# Kopf\nterminal = \"x\"\nnotizordner = ",
+            "\"~/alt\"",
+            "\n",
+        ),
+        (
+            "crlf",
+            "# Kopf\r\nterminal = \"x\"\r\nnotizordner = ",
+            "\"~/alt\"",
+            " # hier\r\n# Ende\r\n",
+        ),
+    ];
+    for (zweck, vor, alt, nach) in faelle {
+        let (_ordner, ablage) = ablage(&format!("schreiben-{zweck}"));
+        let pfad = ablage.pfad(Datei::Einstellungen);
+        fs::write(&pfad, format!("{vor}{alt}{nach}")).expect("schreiben gescheitert");
+
+        let ausgang = notizordner_neu(&ablage, "/Volumes/X/notizen");
+
+        assert_eq!(ausgang, Ok(Schreibausgang::Geschrieben), "{zweck}");
+        assert_eq!(
+            String::from_utf8(bytes_von(&pfad)).unwrap(),
+            mit_ersetztem_wert(vor, nach, "/Volumes/X/notizen"),
+            "{zweck}"
+        );
+        let _ = laedt_mit(&ablage, "/Volumes/X/notizen");
+    }
+}
+
+/// Ein Wert, der kein Text ist, wird ebenso ersetzt: „Ort waehlen…“ ist der
+/// Weg aus `notizordner = 5`.
+#[test]
+fn der_schreibweg_ersetzt_einen_wert_ohne_text() {
+    let (_ordner, ablage) = ablage("schreiben-keintext");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    fs::write(&pfad, "terminal = \"x\"\nnotizordner = 5 # falsch\n")
+        .expect("schreiben gescheitert");
+
+    assert_eq!(
+        notizordner_neu(&ablage, "~/n"),
+        Ok(Schreibausgang::Geschrieben)
+    );
+    assert_eq!(
+        String::from_utf8(bytes_von(&pfad)).unwrap(),
+        "terminal = \"x\"\nnotizordner = \"~/n\" # falsch\n"
+    );
+}
+
+/// Fehlt der Schluessel, wird er angehaengt: die bisherigen Bytes stehen
+/// unveraendert am Anfang, ein fehlender Schlussumbruch kommt zuerst.
+#[test]
+fn der_schreibweg_haengt_einen_fehlenden_schluessel_hinten_an() {
+    let (_ordner, ablage) = ablage("schreiben-anhaengen");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    let bisher = "# eigener Kopf\nterminal = \"x\"";
+    fs::write(&pfad, bisher).expect("schreiben gescheitert");
+
+    assert_eq!(
+        notizordner_neu(&ablage, "~/n"),
+        Ok(Schreibausgang::Geschrieben)
+    );
+    let text = String::from_utf8(bytes_von(&pfad)).unwrap();
+    let angehaengt = text
+        .strip_prefix(bisher)
+        .expect("die bisherigen Bytes stehen nicht mehr am Anfang");
+    assert!(angehaengt.starts_with("\n\n#"), "{angehaengt:?}");
+    assert!(
+        angehaengt.ends_with("notizordner = \"~/n\"\n"),
+        "{angehaengt:?}"
+    );
+    assert!(!angehaengt.contains('\r'));
+    assert_eq!(laedt_mit(&ablage, "~/n").terminal, "x");
+}
+
+/// O2 der Zweitlesung: in einer Datei mit CRLF endet jede angehaengte Zeile
+/// auf `\r\n`.
+#[test]
+fn angehaengte_zeilen_uebernehmen_das_zeilenende_der_datei() {
+    let (_ordner, ablage) = ablage("schreiben-anhaengen-crlf");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    let bisher = "terminal = \"x\"\r\n# ohne Schlussumbruch";
+    fs::write(&pfad, bisher).expect("schreiben gescheitert");
+
+    assert_eq!(
+        notizordner_neu(&ablage, "~/n"),
+        Ok(Schreibausgang::Geschrieben)
+    );
+    let text = String::from_utf8(bytes_von(&pfad)).unwrap();
+    let angehaengt = text
+        .strip_prefix(bisher)
+        .expect("die bisherigen Bytes stehen nicht mehr am Anfang");
+    assert!(
+        angehaengt.ends_with("notizordner = \"~/n\"\r\n"),
+        "{angehaengt:?}"
+    );
+    let zeilenenden = angehaengt.matches('\n').count();
+    assert!(zeilenenden >= 3, "{angehaengt:?}");
+    assert_eq!(
+        angehaengt.matches("\r\n").count(),
+        zeilenenden,
+        "ein angehaengtes Zeilenende ist kein CRLF: {angehaengt:?}"
+    );
+    let _ = laedt_mit(&ablage, "~/n");
+}
+
+/// Eine fehlende Datei entsteht als Auslieferungsfassung mit dem gewaehlten
+/// Wert.
+#[test]
+fn eine_fehlende_settings_toml_entsteht_als_auslieferungsfassung_mit_dem_wert() {
+    let (_ordner, ablage) = ablage("schreiben-fehlend");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    assert!(!pfad.exists());
+
+    assert_eq!(
+        notizordner_neu(&ablage, "~/n"),
+        Ok(Schreibausgang::Geschrieben)
+    );
+    let alt = format!("notizordner = \"~/{ORDNERNAME}\"");
+    assert_eq!(
+        String::from_utf8(bytes_von(&pfad)).unwrap(),
+        einstellungen::AUSLIEFERUNGSTEXT.replace(&alt, "notizordner = \"~/n\"")
+    );
+    let _ = laedt_mit(&ablage, "~/n");
+}
+
+/// S4 der Zweitlesung: „derselbe Ort?“ fragt den Wert, der jetzt in der Datei
+/// steht; bejaht die Regel, bleibt die Datei Byte fuer Byte.
+#[test]
+fn ein_wert_den_die_regel_als_denselben_ort_nennt_bleibt_unveraendert() {
+    let (_ordner, ablage) = ablage("schreiben-derselbe");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    let inhalt = "terminal = \"x\"\nnotizordner = '~/a/../n' # von Hand\n";
+    fs::write(&pfad, inhalt).expect("schreiben gescheitert");
+    let gefragt = std::cell::RefCell::new(Vec::new());
+
+    let ausgang = notizordner_mit_regel(&ablage, "~/n", |alt| {
+        gefragt.borrow_mut().push(alt.to_owned());
+        true
+    });
+
+    assert_eq!(ausgang, Ok(Schreibausgang::Unveraendert));
+    assert_eq!(gefragt.into_inner(), vec![String::from("~/a/../n")]);
+    assert_eq!(bytes_von(&pfad), inhalt.as_bytes());
+}
+
+/// Eine beschaedigte Datei wird nicht geschrieben und nicht zur Seite gelegt:
+/// ungueltiges TOML, ein unbekannter Schluessel, ein doppelter Schluessel,
+/// `notizordner` als Punktschluessel und als Tabelle, und Bytes, die kein
+/// UTF-8 sind.
+#[test]
+fn eine_beschaedigte_settings_toml_wird_nicht_geschrieben() {
+    let faelle: [(&str, &[u8]); 6] = [
+        ("toml", b"terminal = \"x\nnotizordner = \"~/a\"\n"),
+        (
+            "unbekannt",
+            b"terminal = \"x\"\nterminl = \"y\"\nnotizordner = \"~/a\"\n",
+        ),
+        ("doppelt", b"notizordner = \"~/a\"\nnotizordner = \"~/b\"\n"),
+        ("punkt", b"terminal = \"x\"\nnotizordner.ort = \"~/a\"\n"),
+        (
+            "tabelle",
+            b"terminal = \"x\"\n[notizordner]\nort = \"~/a\"\n",
+        ),
+        ("utf8", b"terminal = \"\xff\"\n"),
+    ];
+    for (zweck, inhalt) in faelle {
+        let (_ordner, ablage) = ablage(&format!("schreiben-kaputt-{zweck}"));
+        let pfad = ablage.pfad(Datei::Einstellungen);
+        fs::write(&pfad, inhalt).expect("schreiben gescheitert");
+
+        let ausgang = notizordner_neu(&ablage, "~/n");
+
+        assert!(
+            matches!(ausgang, Err(Schreibhindernis::Beschaedigt(_))),
+            "{zweck}: {ausgang:?}"
+        );
+        assert_eq!(bytes_von(&pfad), inhalt, "{zweck}");
+        assert!(
+            !beiseitepfad(&ablage, Datei::Einstellungen).exists(),
+            "{zweck}: der Schreibweg hat etwas zur Seite gelegt"
+        );
+        let meldung = ausgang.unwrap_err().meldung();
+        assert!(meldung.contains("berichtigen"), "{zweck}: {meldung}");
+    }
+}
+
+/// S3 der Zweitlesung: eine `settings.toml`, die ein Verweis auf eine Datei
+/// ist, wird nicht ersetzt; sie bleibt ein Verweis, ihr Ziel bleibt Byte fuer
+/// Byte, und die Meldung gibt die Zeile zum Eintragen von Hand mit.
+#[test]
+fn eine_verknuepfte_settings_toml_wird_nicht_ersetzt() {
+    let (ordner, ablage) = ablage("schreiben-verweis");
+    let inhalt = "terminal = \"x\"\nnotizordner = \"~/a\"\n";
+    let ziel = ordner.datei("gepflegt.toml", inhalt);
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    std::os::unix::fs::symlink(&ziel, &pfad).expect("Verweis laesst sich nicht anlegen");
+
+    let ausgang = notizordner_neu(&ablage, "~/Notizen mit \"Zeichen\"");
+
+    let Err(Schreibhindernis::Verweis(zeile)) = &ausgang else {
+        panic!("kein Verweis: {ausgang:?}");
+    };
+    let gelesen: toml::Table = toml::from_str(zeile).expect("die Zeile ist kein gueltiges TOML");
+    assert_eq!(
+        gelesen.get("notizordner"),
+        Some(&toml::Value::String("~/Notizen mit \"Zeichen\"".to_owned())),
+        "die Zeile zum Eintragen nennt einen anderen Wert: {zeile}"
+    );
+    assert!(
+        ausgang
+            .clone()
+            .unwrap_err()
+            .meldung()
+            .contains(zeile.as_str())
+    );
+    assert!(
+        fs::symlink_metadata(&pfad)
+            .expect("der Verweis ist fort")
+            .file_type()
+            .is_symlink(),
+        "der Verweis ist eine gewoehnliche Datei geworden"
+    );
+    assert_eq!(bytes_von(&ziel), inhalt.as_bytes());
+}
+
+/// Ein verwaister Verweis ergibt ebenso `Verweis`, und nichts wird angelegt,
+/// weder an der Stelle noch am Ziel.
+#[test]
+fn ein_verwaister_verweis_ergibt_ebenso_verweis_und_legt_nichts_an() {
+    let (ordner, ablage) = ablage("schreiben-verwaist");
+    let ziel = ordner.unter("fehlt.toml");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    std::os::unix::fs::symlink(&ziel, &pfad).expect("Verweis laesst sich nicht anlegen");
+
+    let ausgang = notizordner_neu(&ablage, "~/n");
+
+    assert!(
+        matches!(ausgang, Err(Schreibhindernis::Verweis(_))),
+        "{ausgang:?}"
+    );
+    assert!(!ziel.exists(), "das Ziel ist angelegt worden");
+    assert!(
+        fs::symlink_metadata(&pfad)
+            .expect("der Verweis ist fort")
+            .file_type()
+            .is_symlink()
+    );
+}
+
+/// Ein Ordner an der Stelle ist nicht lesbar und wird nicht angefasst.
+#[test]
+fn ein_ordner_an_der_stelle_von_settings_toml_ist_nicht_lesbar() {
+    let (_ordner, ablage) = ablage("schreiben-ordner");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    fs::create_dir(&pfad).expect("Ordner laesst sich nicht anlegen");
+
+    let ausgang = notizordner_neu(&ablage, "~/n");
+
+    assert!(
+        matches!(ausgang, Err(Schreibhindernis::NichtLesbar(_))),
+        "{ausgang:?}"
+    );
+    assert!(pfad.is_dir());
+}
+
+/// Ein Wert mit `"` und `\` kommt ueber den gewoehnlichen Ladeweg unveraendert
+/// zurueck.
+#[test]
+fn ein_wert_mit_anfuehrungszeichen_und_rueckstrich_kommt_unveraendert_zurueck() {
+    let (_ordner, ablage) = ablage("schreiben-zeichen");
+    let _ = geladene_einstellungen(&ablage);
+    let wert = "/Volumes/A \"B\"/C\\D";
+
+    assert_eq!(
+        notizordner_neu(&ablage, wert),
+        Ok(Schreibausgang::Geschrieben)
+    );
+    let _ = laedt_mit(&ablage, wert);
 }
 
 /// Laesst sich die Datei nicht anlegen, sagt KRK das, statt still weiterzulaufen.

@@ -18,11 +18,18 @@
 //! setzt der Befehl aus C3 vollstaendig zurueck und naehme die Terminal-Wahl
 //! mit; `session.toml` ueberschreibt KRK alle zwei Sekunden und loeschte dabei
 //! jeden Kommentar; `bookmarks.toml` haelt Ordnerverweise und wird bei jeder
-//! Aenderung geschrieben. Aufgenommen wird hier ein Wert, der keine
+//! Aenderung geschrieben. Aufgenommen wurde hier ein Wert, der keine
 //! Tastenbelegung ist, den KRK im Betrieb nicht selbst schreibt und der in
-//! dieser Runde keine Oberflaeche hat.
+//! jener Runde keine Oberflaeche hatte.
 //!
-//! # Die Datei entsteht einmal und wird danach nicht mehr geschrieben
+//! **Die Aufnahmeregel lautet seit Schritt 3.1 des Plans
+//! `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md` weiter:** ein Wert
+//! darf eine Ansicht haben, die ihn schreibt, wenn ihr Schreibweg allein den
+//! Byte-Bereich dieses Werts beruehrt und jedes andere Byte der Datei stehen
+//! laesst, Kommentare eingeschlossen. `notizordner` ist der erste solche Wert;
+//! sein Schreibweg ist [`notizordner_schreiben`].
+//!
+//! # Die Datei entsteht einmal und hat danach genau einen Schreibweg
 //!
 //! [`laden`] legt sie beim ersten Start an, und zwar **woertlich aus
 //! [`AUSLIEFERUNGSTEXT`]** und nicht ueber [`Zugang::sichern`]. Der Unterschied
@@ -37,6 +44,35 @@
 //! [`atomar::schreiben`], derselbe Ablageort, dieselbe Behandlung einer
 //! beschaedigten Datei. Allein die Nutzlast ist eine andere.
 //!
+//! **Danach schreibt allein „Ort waehlen…“ die Datei, und dort allein den Wert
+//! von `notizordner`** ([`notizordner_schreiben`]). Es liest die Datei unter
+//! der Schreibsperre, laesst den Leser den Byte-Bereich des Werts melden
+//! (`toml::Spanned`) und ersetzt genau diesen Bereich; fehlt der Schluessel,
+//! haengt es ihn samt einer Kommentarzeile ans Ende, mit dem Zeilenende der
+//! Datei. Vor dem Schreiben liest es das Ergebnis ein zweites Mal, und es muss
+//! allein im Wert von `notizordner` abweichen. Eine beschaedigte Datei
+//! schreibt es nicht: der Nutzer berichtigt sie zuerst.
+//!
+//! **Das Anhaengen am Ende gilt nur, solange die Datei keine Tabelle kennt.**
+//! `deny_unknown_fields` laesst heute allein oberste Skalare zu. Kaeme ein
+//! Schluessel mit eigener Tabelle hinzu, landete ein angehaengter
+//! `notizordner` darin; die zweite Lesung faengt das als
+//! [`Schreibhindernis::Intern`] ab, und der Schreibweg muss dann vor der
+//! ersten Tabellenueberschrift einfuegen.
+//!
+//! **Eine verknuepfte `settings.toml` schreibt KRK nicht.**
+//! [`atomar::schreiben`] ersetzt das Ziel ueber `rename`, und ein symbolischer
+//! Verweis an der Stelle waere danach eine gewoehnliche Datei; KRK verwandelte
+//! eine vom Nutzer gepflegte Verknuepfung still in eine Kopie, und die Datei,
+//! auf die sie zeigte, bliebe beim alten Wert. [`notizordner_schreiben`] fragt
+//! deshalb unter der Sperre `symlink_metadata` und antwortet bei einem Verweis,
+//! auch einem verwaisten, mit [`Schreibhindernis::Verweis`], das die Zeile zum
+//! Eintragen von Hand mitgibt. `keymap.toml` ist davon unberuehrt; ihr
+//! Schreibweg ist [`Zugang::sichern`]. **Die verbleibende Luecke:** zwischen
+//! `symlink_metadata` und `rename` kann ein anderes Programm, das die
+//! Schreibsperre nicht kennt, einen Verweis an die Stelle legen; die Sperre
+//! haelt allein eine zweite Instanz von KRK ab.
+//!
 //! # Ein fehlendes Feld kommt aus der Auslieferungsfassung
 //!
 //! Das ist die eine Abweichung von `keymap.toml`, wo die Nutzerdatei die
@@ -46,12 +82,13 @@
 //! Verzweigung: [`Einstellungsdatei`] haelt jedes Feld als `Option`, und
 //! [`Einstellungen::aus_datei`] fuellt das leere aus der Auslieferungsfassung.
 
+use std::fs;
 use std::io;
 use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use super::{Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, atomar};
+use super::{Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, atomar, einzeilig};
 
 /// Die Auslieferungsfassung der Einstellungen, in das Programm einkompiliert.
 ///
@@ -198,8 +235,9 @@ struct Einstellungsdatei {
 ///
 /// Die kaputte Datei bleibt aus demselben Grund liegen wie eine kaputte
 /// `keymap.toml`: sie ist von Hand geschrieben, und ein Tippfehler darf die
-/// Arbeit des Nutzers nicht loeschen. Ueberschrieben wird sie nie, denn in
-/// dieser Runde schreibt keine Ansicht diese Datei.
+/// Arbeit des Nutzers nicht loeschen. Ueberschrieben wird sie auch spaeter
+/// nicht: der eine Schreibweg, [`notizordner_schreiben`], weist eine
+/// beschaedigte Datei ab.
 ///
 /// Hoechstens eine Meldung kann anfallen: angelegt wird nur, was fehlt, und
 /// eine fehlende Datei traegt keine Ersetzung.
@@ -228,6 +266,235 @@ pub fn laden(zugang: &Zugang<'_>) -> Geladen<Einstellungen> {
             }),
         },
     }
+}
+
+/// Wie das Schreiben von `notizordner` ausgegangen ist, wenn es kein
+/// [`Schreibhindernis`] gab.
+///
+/// **Vollstaendig und ohne Auffangzweig**; der Rufer entscheidet ueber beide
+/// Werte zusammen mit der Frage, ob der Ort wechselt (Tafel in Schritt 3.3 des
+/// Plans `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Schreibausgang {
+    /// Der neue Wert steht jetzt in der Datei, und jedes andere Byte ist
+    /// geblieben.
+    Geschrieben,
+    /// Die Datei nannte schon denselben Ort; nichts wurde geschrieben.
+    Unveraendert,
+}
+
+/// Warum `notizordner` nicht in `settings.toml` geschrieben wurde.
+///
+/// In jedem Fall ist die Datei danach Byte fuer Byte, was sie vorher war.
+/// **Vollstaendig und ohne Auffangzweig**, wie [`Schreibhindernis::meldung`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Schreibhindernis {
+    /// `settings.toml` ist ein symbolischer Verweis, auch ein verwaister.
+    /// Traegt die Zeile, die der Nutzer von Hand eintragen kann.
+    Verweis(String),
+    /// Die Datei steht da, gibt ihren Bestand aber nicht her, oder sie traegt
+    /// `notizordner` nicht als einen einzelnen Wert. Traegt den Befund.
+    Beschaedigt(String),
+    /// Die Datei liess sich nicht lesen, oder an ihrer Stelle steht etwas
+    /// anderes als eine gewoehnliche Datei. Traegt den Befund.
+    NichtLesbar(String),
+    /// Das Ergebnis haette mehr geaendert als den Wert von `notizordner`; die
+    /// zweite Lesung hat es abgefangen. Traegt den Befund.
+    Intern(String),
+    /// Das atomare Schreiben ist gescheitert. Traegt die Meldung des Systems.
+    NichtGeschrieben(String),
+}
+
+impl Schreibhindernis {
+    /// Der Satz fuer die Statuszeile.
+    #[must_use]
+    pub fn meldung(&self) -> String {
+        match self {
+            Schreibhindernis::Verweis(zeile) => format!(
+                "settings.toml ist ein symbolischer Verweis, und KRK ersetzt ihn nicht durch eine Datei; der Ort bleibt, wie er ist. Von Hand in die Zieldatei eintragen: {zeile}"
+            ),
+            Schreibhindernis::Beschaedigt(befund) => format!(
+                "settings.toml ist zuerst von Hand zu berichtigen, KRK schreibt sie so nicht: {befund}"
+            ),
+            Schreibhindernis::NichtLesbar(befund) => {
+                format!("settings.toml ist nicht lesbar, KRK schreibt sie nicht: {befund}")
+            }
+            Schreibhindernis::Intern(befund) => format!(
+                "settings.toml bleibt, wie sie ist: das Ergebnis hätte mehr geändert als den Notizordner ({befund})"
+            ),
+            Schreibhindernis::NichtGeschrieben(befund) => {
+                format!("settings.toml ließ sich nicht schreiben und bleibt, wie sie war: {befund}")
+            }
+        }
+    }
+}
+
+/// Die Zeile `notizordner = "…"` fuer einen Wert, gueltig kodiert.
+///
+/// `toml::Value::to_string` setzt `"` und `\` im Wert ein Escape voran; eine
+/// Zusammensetzung von Hand taete das nicht.
+fn schluesselzeile(wert: &str) -> String {
+    format!("notizordner = {}", toml_text(wert))
+}
+
+/// Ein Text in seiner TOML-Schreibweise, samt Anfuehrungszeichen.
+fn toml_text(wert: &str) -> String {
+    toml::Value::String(wert.to_owned()).to_string()
+}
+
+/// Schreibt den Ort des Notizordners in `settings.toml` und aendert dabei kein
+/// anderes Byte der Datei.
+///
+/// **Der eine Schreibweg in diese Datei neben ihrer Anlage**; gerufen von „Ort
+/// waehlen…“ (H3 des Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+/// Der Rufer haelt die Schreibsperre, weil es einen [`Zugang`] nur im
+/// Durchgang gibt; gelesen wird darunter, damit „derselbe Ort?“ am Wert
+/// entschieden wird, der **jetzt** in der Datei steht (S4 der Zweitlesung).
+///
+/// `derselbe` beantwortet, ob ein vorhandener Text denselben Ort nennt wie
+/// `wert`. Der Rufer gibt dafuer seine Leseregel mit, so dass dieses Modul den
+/// Heimordner nicht kennen muss; die Abhaengigkeit laeuft von `heimordner`
+/// nach `ablage` und nicht umgekehrt.
+///
+/// Der Ablauf, vollstaendig ueber `symlink_metadata` am Pfad:
+///
+/// | An der Stelle | Ergebnis |
+/// |---|---|
+/// | ein symbolischer Verweis, auch ein verwaister | [`Schreibhindernis::Verweis`], nichts wird gelesen |
+/// | nichts | die Auslieferungsfassung, mit dem neuen Wert |
+/// | eine gewoehnliche Datei | ihre Bytes, weiter unten |
+/// | etwas anderes, oder ein Fehler | [`Schreibhindernis::NichtLesbar`] |
+///
+/// Kein gueltiges UTF-8, ein Fehler des Lesers, ein doppelter Schluessel und
+/// ein `notizordner`, der nicht als einzelner Wert dasteht (`notizordner.x =
+/// …`, `[notizordner]`), ergeben [`Schreibhindernis::Beschaedigt`]. Nennt der
+/// vorhandene Text denselben Ort, ist der Ausgang
+/// [`Schreibausgang::Unveraendert`]. Sonst wird genau der Byte-Bereich des
+/// Werts ersetzt, oder, fehlt der Schluessel, am Ende angehaengt, mit dem
+/// Zeilenende der Datei. **Vor dem Schreiben wird das Ergebnis ein zweites Mal
+/// gelesen** und muss `notizordner == wert` und jeden anderen Wert unveraendert
+/// ergeben, sonst [`Schreibhindernis::Intern`].
+#[must_use = "das Ergebnis sagt, ob die Datei geschrieben ist; wer es fallen laesst, meldet einen Ort, der nicht in der Datei steht"]
+pub fn notizordner_schreiben(
+    zugang: &Zugang<'_>,
+    wert: &str,
+    derselbe: impl Fn(&str) -> bool,
+) -> Result<Schreibausgang, Schreibhindernis> {
+    let pfad = zugang.pfad(Datei::Einstellungen);
+    let text = match fs::symlink_metadata(&pfad) {
+        Ok(art) if art.file_type().is_symlink() => {
+            return Err(Schreibhindernis::Verweis(schluesselzeile(wert)));
+        }
+        Ok(art) if art.is_file() => {
+            let bytes = fs::read(&pfad)
+                .map_err(|fehler| Schreibhindernis::NichtLesbar(einzeilig(&fehler.to_string())))?;
+            String::from_utf8(bytes).map_err(|_| {
+                Schreibhindernis::Beschaedigt(String::from("keine gültige UTF-8-Folge"))
+            })?
+        }
+        Ok(_) => {
+            return Err(Schreibhindernis::NichtLesbar(String::from(
+                "an ihrer Stelle steht keine gewöhnliche Datei",
+            )));
+        }
+        Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => AUSLIEFERUNGSTEXT.to_owned(),
+        Err(fehler) => {
+            return Err(Schreibhindernis::NichtLesbar(einzeilig(
+                &fehler.to_string(),
+            )));
+        }
+    };
+
+    let datei: Einstellungsdatei = toml::from_str(&text)
+        .map_err(|fehler| Schreibhindernis::Beschaedigt(einzeilig(&fehler.to_string())))?;
+    let neu = match &datei.notizordner {
+        Some(vorhanden) => {
+            let bereich = vorhanden.span();
+            if !ist_einzelwert(&text[bereich.clone()], vorhanden.get_ref()) {
+                return Err(Schreibhindernis::Beschaedigt(String::from(
+                    "notizordner steht nicht als einzelner Wert in einer Zeile „notizordner = …“ da",
+                )));
+            }
+            if let toml::Value::String(alt) = vorhanden.get_ref()
+                && derselbe(alt)
+            {
+                return Ok(Schreibausgang::Unveraendert);
+            }
+            let mut neu = String::with_capacity(text.len() + wert.len());
+            neu.push_str(&text[..bereich.start]);
+            neu.push_str(&toml_text(wert));
+            neu.push_str(&text[bereich.end..]);
+            neu
+        }
+        None => angehaengt(&text, wert),
+    };
+
+    pruefen(&text, &neu, wert).map_err(Schreibhindernis::Intern)?;
+    atomar::schreiben(&pfad, &mut neu.as_bytes())
+        .map_err(|fehler| Schreibhindernis::NichtGeschrieben(einzeilig(&fehler.to_string())))?;
+    Ok(Schreibausgang::Geschrieben)
+}
+
+/// Ob der Byte-Bereich, den der Leser fuer `notizordner` meldet, den Wert
+/// selbst traegt.
+///
+/// Bei `notizordner.x = 1` und bei `[notizordner]` meldet der Leser den
+/// Bereich des **Schluessels** oder der Ueberschrift; ein Ersatz dort machte
+/// aus dem Schluessel einen anderen. Gelesen wird der Bereich deshalb als
+/// eigener Wert, und er muss denselben Wert ergeben.
+fn ist_einzelwert(bereich: &str, wert: &toml::Value) -> bool {
+    toml::from_str::<toml::Table>(&format!("wert = {bereich}"))
+        .is_ok_and(|tafel| tafel.get("wert") == Some(wert))
+}
+
+/// Der Text mit `notizordner` am Ende, fuer eine Datei ohne den Schluessel.
+///
+/// **Das Anhaengen gilt, solange die Datei keine Tabelle kennt**; siehe den
+/// Modulkopf. Jede angehaengte Zeile endet wie die erste Zeile der Datei (O2
+/// der Zweitlesung), damit eine Datei mit `\r\n` keine gemischten Zeilenenden
+/// bekommt.
+fn angehaengt(text: &str, wert: &str) -> String {
+    let ende = zeilenende(text);
+    let mut neu = String::from(text);
+    if !neu.is_empty() {
+        if !neu.ends_with('\n') {
+            neu.push_str(ende);
+        }
+        neu.push_str(ende);
+    }
+    neu.push_str("# Der Ort des Notizordners, gesetzt ueber \"Ort waehlen\" im Menue Home.");
+    neu.push_str(ende);
+    neu.push_str(&schluesselzeile(wert));
+    neu.push_str(ende);
+    neu
+}
+
+/// `\r\n`, wenn die erste Zeile der Datei so endet, sonst `\n`.
+fn zeilenende(text: &str) -> &'static str {
+    match text.find('\n') {
+        Some(stelle) if text[..stelle].ends_with('\r') => "\r\n",
+        _ => "\n",
+    }
+}
+
+/// Die zweite Lesung: der neue Text laedt als Einstellungsdatei, traegt
+/// `notizordner == wert` und sonst genau die Werte des alten Texts.
+fn pruefen(alt: &str, neu: &str, wert: &str) -> Result<(), String> {
+    toml::from_str::<Einstellungsdatei>(neu).map_err(|fehler| einzeilig(&fehler.to_string()))?;
+    let mut vorher: toml::Table =
+        toml::from_str(alt).map_err(|fehler| einzeilig(&fehler.to_string()))?;
+    let mut nachher: toml::Table =
+        toml::from_str(neu).map_err(|fehler| einzeilig(&fehler.to_string()))?;
+    let _ = vorher.remove("notizordner");
+    if nachher.remove("notizordner") != Some(toml::Value::String(wert.to_owned())) {
+        return Err(String::from("der neue Wert steht nicht als notizordner da"));
+    }
+    if vorher != nachher {
+        return Err(String::from(
+            "ein anderer Wert der Datei hätte sich geändert",
+        ));
+    }
+    Ok(())
 }
 
 /// Schreibt die Auslieferungsfassung woertlich, falls die Datei fehlt.

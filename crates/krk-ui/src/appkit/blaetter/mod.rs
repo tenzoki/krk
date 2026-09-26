@@ -649,20 +649,31 @@ impl Blattgriff {
         self
     }
 
-    /// Ob dieses Blatt als verdeckt gekennzeichnet ist **und** gerade am
-    /// Fenster steht.
+    /// Ob das Blatt **dieses** Griffs gerade am Fenster haengt.
     ///
-    /// Die zweite Haelfte ist noetig, weil ein Griff nach dem Schliessen
-    /// seines Blattes liegen bleiben kann (`Anwendungsdelegierter::blatt_oeffnet`
-    /// sagt, warum); gefragt wird nach der Naemlichkeit des anhaengenden
-    /// Blattes und nicht nach irgendeinem.
+    /// Noetig, weil ein Griff nach dem Schliessen seines Blattes liegen bleiben
+    /// kann (`Anwendungsdelegierter::blatt_oeffnet` sagt, warum), und weil am
+    /// Fenster ein Blatt haengen kann, das gar keinen Griff hat, etwa der
+    /// Ordnerdialog von „Ort waehlen…“. Gefragt wird deshalb nach der
+    /// Naemlichkeit des anhaengenden Blattes und nicht danach, ob irgendeines
+    /// steht: `attachedSheet` des Fensters ist das Fenster der eigenen Warnung.
+    ///
+    /// Zwei Frager: [`Blattgriff::verdeckt_und_steht`] und der erste Rang von
+    /// `Anwendungsdelegierter::abbrechen`, der einen Griff nur dann aus dem
+    /// Schlitz nimmt, wenn sein Blatt das anhaengende ist (Schritt 3.2 des
+    /// Plans `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`).
+    #[must_use]
+    pub fn steht(&self) -> bool {
+        self.fenster
+            .attachedSheet()
+            .is_some_and(|blatt| blatt.isEqual(Some(&*self.warnung.window())))
+    }
+
+    /// Ob dieses Blatt als verdeckt gekennzeichnet ist **und** gerade am
+    /// Fenster steht; die zweite Haelfte ist [`Blattgriff::steht`].
     #[must_use]
     pub fn verdeckt_und_steht(&self) -> bool {
-        self.verdeckt
-            && self
-                .fenster
-                .attachedSheet()
-                .is_some_and(|blatt| blatt.isEqual(Some(&*self.warnung.window())))
+        self.verdeckt && self.steht()
     }
 
     /// Schliesst das Blatt mit dem Rueckgabewert seiner abbrechenden

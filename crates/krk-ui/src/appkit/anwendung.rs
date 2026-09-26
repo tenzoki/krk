@@ -3758,11 +3758,14 @@ impl Anwendungsdelegierter {
     ///
     /// **Ein liegengebliebener Griff ist dabei harmlos**, und das ist keine
     /// Nachlaessigkeit, sondern der Grund, aus dem der erste Rang von
-    /// [`Self::abbrechen`] `blatt_steht` fragt, bevor er ihn nimmt: die fuenf
+    /// [`Self::abbrechen`] nach der **Naemlichkeit** fragt, bevor er ihn nimmt,
+    /// und nicht allein danach, ob ueberhaupt ein Blatt steht: die fuenf
     /// Eingabeblaetter melden ihr Schliessen nicht, ihr Griff bleibt also bis
-    /// zum naechsten Blatt stehen, und ein Ruf darauf traefe ein Fenster ohne
-    /// anhaengendes Blatt und taete nichts. Der Rang faellt deshalb nicht auf
-    /// ihn zurueck, sondern auf die Frage, ob ueberhaupt eines steht.
+    /// zum naechsten Blatt stehen. Steht kein Blatt, faellt der Rang auf die
+    /// Frage `blatt_steht` zurueck; steht eines ohne Griff, etwa der
+    /// Ordnerdialog von „Ort waehlen…“, antwortet [`Blattgriff::steht`] mit
+    /// nein, der Griff bleibt liegen, und `esc` geht an AppKit und damit an
+    /// das anhaengende Blatt.
     fn blatt_oeffnet(&self, griff: Blattgriff) {
         *self.ivars().offenes_blatt.borrow_mut() = Some(griff);
     }
@@ -6743,8 +6746,26 @@ impl Anwendungsdelegierter {
         // (`issues/260826-1325_*_esc-im-stapel-umbenennen-blatt-mit-fokus-in-der-vorschautabelle-schliesst-das-blatt-nicht-sondern-leert-den-filter-dahinter.md`).
         // `false` gibt die Taste an AppKit zurueck, und dort beantwortet sie
         // die Schaltflaeche des Blattes.
+        //
+        // **Der dritte Fall: ein Griff liegt im Schlitz, aber sein Blatt ist
+        // nicht das anhaengende.** Das Blatt, das jetzt steht, hat dann keinen
+        // Griff, etwa der Ordnerdialog von „Ort waehlen…“ nach einer
+        // Umbenennung, deren Griff liegen geblieben ist. Genommen wird der
+        // Griff deshalb nur, wenn er selbst sagt, dass sein Blatt haengt;
+        // sonst bleibt der Schlitz, wie er ist, und `esc` gehoert dem Blatt.
+        // Bis zu Schritt 3.2 des Plans
+        // `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md` nahm dieser
+        // Rang jeden Griff, beendete damit das Blatt seiner eigenen Warnung,
+        // das nicht mehr stand, und schluckte die Taste.
         if self.blatt_steht() {
-            let blatt = self.ivars().offenes_blatt.borrow_mut().take();
+            let blatt = {
+                let mut schlitz = self.ivars().offenes_blatt.borrow_mut();
+                if schlitz.as_ref().is_some_and(Blattgriff::steht) {
+                    schlitz.take()
+                } else {
+                    None
+                }
+            };
             if let Some(blatt) = blatt {
                 blatt.abbrechen();
                 return true;
@@ -11868,6 +11889,94 @@ mod neuerungsproben {
             erhebung > einstellungen && erhebung > profile,
             "die Erhebung steht nicht mehr hinter beiden Ladern; auf einer frischen \
              Installation vergliche sie gegen Dateien, die es noch nicht gibt"
+        );
+    }
+}
+
+/// `esc` gehoert dem anhaengenden Blatt (Schritt 3.2 des Plans
+/// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`, Punkt M1 der
+/// Zweitlesung).
+///
+/// **Am Rumpf gelesen**, weil ein wirklich anhaengendes Blatt ein Fenster
+/// verlangt, das `libtest` nicht hergibt. Der Fall, den die Regel abdeckt
+/// (`esc` im Ordnerdialog, nachdem vorher ein Eingabeblatt seinen Griff hat
+/// liegen lassen), ist Nutzerarbeit von Stufe 3 am laufenden Buendel. Die
+/// vier Befehle, die waehrend eines Blattes durchkommen, haelt weiter
+/// `zulaessigkeit::waehrend_eines_blattes_kommen_genau_diese_vier_durch`,
+/// unveraendert.
+///
+/// Die Nadeln stehen zusammengesetzt da, wie im Kopf von
+/// [`crate::quellbaum`] verlangt, damit keine Zaehlprobe sie als Code liest.
+#[cfg(test)]
+mod escproben {
+    use super::quelltextproben::{datei, diese_datei, rumpf};
+
+    /// Im ersten Rang von `abbrechen` steht die Naemlichkeitsfrage vor dem
+    /// Nehmen des Griffs aus dem Schlitz, und beide hinter `blatt_steht`.
+    #[test]
+    fn abbrechen_nimmt_den_griff_erst_nach_der_naemlichkeitsfrage() {
+        let rumpf = rumpf(&diese_datei(), "abbrechen");
+        let stelle = |nadel: &str| {
+            rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("`{nadel}` steht nicht mehr im Rumpf von abbrechen"))
+        };
+        let blatt = stelle(concat!("self.blatt_", "steht()"));
+        let naemlichkeit = stelle(concat!("Blattgriff::", "steht"));
+        let nehmen = stelle(concat!("schlitz.", "take()"));
+        assert!(
+            blatt < naemlichkeit,
+            "die Naemlichkeitsfrage steht vor der Frage, ob ueberhaupt ein Blatt steht"
+        );
+        assert!(
+            naemlichkeit < nehmen,
+            "der Griff wird aus dem Schlitz genommen, bevor gefragt ist, ob sein Blatt haengt"
+        );
+    }
+
+    /// `verdeckt_und_steht` ruft `steht` und stellt die Naemlichkeitsfrage
+    /// nicht ein zweites Mal.
+    #[test]
+    fn verdeckt_und_steht_ruft_steht() {
+        let quelle = datei("krk-ui/src/appkit/blaetter/mod.rs");
+        let rumpf = rumpf(&quelle, "verdeckt_und_steht");
+        assert!(
+            rumpf.contains(concat!("self.", "steht()")),
+            "verdeckt_und_steht fragt nicht mehr ueber steht"
+        );
+        assert!(
+            !rumpf.contains(concat!("attached", "Sheet")),
+            "verdeckt_und_steht stellt die Naemlichkeitsfrage ein zweites Mal"
+        );
+    }
+
+    /// Der Schlitz wird an genau einer Stelle auf `None` gesetzt, in
+    /// `blatt_geschlossen`, und genau einmal genommen, im ersten Rang von
+    /// `abbrechen`.
+    #[test]
+    fn der_schlitz_wird_an_genau_einer_stelle_geleert() {
+        let quelle = diese_datei();
+        let ohne_prosa: Vec<&str> = quelle
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .collect();
+        let geleert: Vec<&&str> = ohne_prosa
+            .iter()
+            .filter(|zeile| zeile.contains(concat!("offenes_blatt.borrow_mut() ", "= None")))
+            .collect();
+        assert_eq!(geleert.len(), 1, "{geleert:#?}");
+        assert!(
+            rumpf(&quelle, "blatt_geschlossen")
+                .contains(concat!("offenes_blatt.borrow_mut() ", "= None")),
+            "die eine leerende Stelle ist nicht mehr blatt_geschlossen"
+        );
+        let genommen = ohne_prosa
+            .iter()
+            .filter(|zeile| zeile.contains(concat!("schlitz.", "take()")))
+            .count();
+        assert_eq!(
+            genommen, 1,
+            "der Griff wird an mehr als einer Stelle genommen"
         );
     }
 }

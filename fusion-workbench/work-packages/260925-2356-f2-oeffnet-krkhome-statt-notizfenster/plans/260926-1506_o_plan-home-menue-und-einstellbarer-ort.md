@@ -274,7 +274,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
 
 ### Stufe 3: „Ort wählen…“ (H3)
 
-9. **3.1 Der eine Schreibweg in `settings.toml`**
+9. [DONE] **3.1 Der eine Schreibweg in `settings.toml`**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/ablage/einstellungen.rs`, `crates/krk-core/src/ablage/mod.rs` (Modulkopf, Doc-Kommentar an `Grund::NichtAnlegbar`), `crates/krk-core/tests/ablage.rs`
    - Changes:
@@ -291,8 +291,9 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
    - Acceptance: `make check` grün; das Ergebnis der Kistenprüfung steht in der Commit-Nachricht.
    - Closes (am Baum): H3.2 im Kernteil, H3.3, H3.4, H3.5, H3.6 im Kernteil, H3.9 im Kernteil, H3.13 im Teil `einstellungen.rs`.
    - Dependencies: 2.5
+   - Abweichung beim Bau: `Schreibhindernis::Beschaedigt` deckt zusätzlich einen `notizordner`, der nicht als einzelner Wert dasteht (`notizordner.x = …`, `[notizordner]`). Der Leser meldet dort den Bereich des Schlüssels oder der Überschrift, nicht den eines Werts; `ist_einzelwert` liest den Bereich deshalb als eigenen Wert und verlangt denselben. `Verweis` trägt die Zeile zum Eintragen; `toml` wählt für einen Wert mit `"` die Form `'…'`, beide gültig. Kistenprüfung: `cargo tree --target {aarch64,x86_64}-apple-darwin -e normal,build` ohne `cc` und ohne Paket auf `-sys`, `git diff --exit-code Cargo.toml Cargo.lock crates/*/Cargo.toml` ohne Unterschied.
 
-10. **3.2 `esc` gehört dem anhängenden Blatt**
+10. [DONE] **3.2 `esc` gehört dem anhängenden Blatt**
     - Executor: `code-implementer`
     - Files: `crates/krk-ui/src/appkit/blaetter/mod.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes:
