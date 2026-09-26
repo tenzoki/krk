@@ -248,7 +248,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
 
 ### Stufe C: die Termintabelle
 
-5. **5 Stelle und Zeile trennen sich an der Grenze der Tabelle**
+5. [DONE] **5 Stelle und Zeile trennen sich an der Grenze der Tabelle**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/eintragsansicht.rs`, `crates/krk-ui/src/appkit/editor.rs`
    - Changes, **ein Umbau ohne Verhaltensänderung**:

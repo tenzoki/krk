@@ -1523,17 +1523,17 @@ fn zellenrechnung(
 ) -> Result<Option<Neustand>, eintraege::Abweisung> {
     match form {
         Editorform::Text => Ok(None),
-        Editorform::Aufgaben => aufgaben::text_aendern(stand, zelle.zeile, text),
+        Editorform::Aufgaben => aufgaben::text_aendern(stand, zelle.stelle, text),
         // Die Geheimnisse tragen die Form der Notizen und rechnen ueber
         // denselben Kern (Schritt 5.4b).
         Editorform::Notizen | Editorform::Geheimnisse => {
-            let Some(alt) = Notizen::lesen(stand).notiz(zelle.zeile) else {
+            let Some(alt) = Notizen::lesen(stand).notiz(zelle.stelle) else {
                 return Ok(None);
             };
             if zelle.spalte == eintragsansicht::NOTIZSPALTE {
-                notizen::aendern(stand, zelle.zeile, alt.thema, text)
+                notizen::aendern(stand, zelle.stelle, alt.thema, text)
             } else {
-                notizen::aendern(stand, zelle.zeile, text, &alt.text)
+                notizen::aendern(stand, zelle.stelle, text, &alt.text)
             }
         }
     }
@@ -2225,9 +2225,9 @@ impl Editorbereich {
                     editor.zelle_festschreiben(zelle, text);
                 }
             }),
-            abhaken: Box::new(move |zeile| {
+            abhaken: Box::new(move |stelle| {
                 if let Some(editor) = haker.load() {
-                    editor.kasten_abhaken(zeile);
+                    editor.kasten_abhaken(stelle);
                 }
             }),
             // Der Doppelklick ins Leere ist dieselbe Handlung wie der Befehl
@@ -2530,11 +2530,11 @@ impl Editorbereich {
     }
 
     /// Das Ankreuzfeld einer Zeile: dieselbe Handlung wie
-    /// [`Self::aufgabe_abhaken`], an der Zeile des Kaestchens statt an der
+    /// [`Self::aufgabe_abhaken`], an der Stelle des Kaestchens statt an der
     /// gewaehlten. Die Antwort geht an die Senke, weil kein Befehl sie
     /// weitergibt.
-    fn kasten_abhaken(&self, zeile: usize) {
-        let meldung = self.handlung_ausfuehren(Handlung::Abhaken, Some(zeile));
+    fn kasten_abhaken(&self, stelle: usize) {
+        let meldung = self.handlung_ausfuehren(Handlung::Abhaken, Some(stelle));
         self.meldung_melden(meldung);
     }
 
@@ -2578,12 +2578,12 @@ impl Editorbereich {
     /// die Form und mit ihr die Art der Tabelle, dann die Rechnung ueber
     /// [`handlung_rechnen`], dann der Umbau
     /// ueber [`Self::umbau_anwenden`] und damit ueber den einen Weg in den
-    /// Verwalter. `zeile` nennt den Eintrag, `None` heisst den gewaehlten.
+    /// Verwalter. `stelle` nennt den Eintrag, `None` heisst den gewaehlten.
     ///
     /// **`Bearbeiten` bei laufender Zelle uebernimmt sie und beginnt keine
     /// neue**: so beendet `cmd+return` eine Zelle, und ein zweites `cmd+return`
     /// oeffnet sie wieder.
-    fn handlung_ausfuehren(&self, handlung: Handlung, zeile: Option<usize>) -> Editormeldung {
+    fn handlung_ausfuehren(&self, handlung: Handlung, stelle: Option<usize>) -> Editormeldung {
         let zelle = self.zelle_uebernehmen();
         if let Zellenausgang::Abgewiesen(meldung) = zelle {
             return meldung;
@@ -2594,16 +2594,16 @@ impl Editorbereich {
         if handlung == Handlung::Bearbeiten && zelle == Zellenausgang::Uebernommen {
             return Editormeldung::Eintrag(art, Eintragsantwort::Uebernommen);
         }
-        let zeile = zeile.or_else(|| self.ivars().eintraege.gewaehlte_zeile());
+        let stelle = stelle.or_else(|| self.ivars().eintraege.gewaehlte_stelle());
         let (meldung, neustand) =
-            handlung_rechnen(self.ivars().modell.borrow().stand(), art, handlung, zeile);
+            handlung_rechnen(self.ivars().modell.borrow().stand(), art, handlung, stelle);
         let auswahl = neustand.as_ref().and_then(|neustand| neustand.auswahl);
         if let Some(neustand) = neustand {
             self.umbau_anwenden(neustand);
         }
         let zu_bearbeiten = match handlung {
             Handlung::Hinzufuegen => auswahl,
-            Handlung::Bearbeiten => zeile.filter(|_| {
+            Handlung::Bearbeiten => stelle.filter(|_| {
                 meldung == Editormeldung::Eintrag(art, Eintragsantwort::BearbeitungBegonnen)
             }),
             Handlung::Verschieben(_) | Handlung::Loeschen | Handlung::Abhaken => None,
@@ -7552,7 +7552,7 @@ mod tests {
             assert_eq!(
                 eintraege.laufende_zelle(&feldeditor),
                 Some(eintragsansicht::Zelle {
-                    zeile: 1,
+                    stelle: 1,
                     spalte: 0
                 }),
                 "ein Feldeditor, dessen Delegierter das Feld der zweiten Zeile ist"
@@ -7596,7 +7596,7 @@ mod tests {
             pruefen: Box::new(move |zelle, text| {
                 p.borrow_mut().push(format!(
                     "pruefen {}{} {text}",
-                    zelle.zeile,
+                    zelle.stelle,
                     spaltenzusatz(zelle)
                 ));
                 pruefung
@@ -7604,7 +7604,7 @@ mod tests {
             festschreiben: Box::new(move |zelle, text| {
                 f.borrow_mut().push(format!(
                     "festschreiben {}{} {text}",
-                    zelle.zeile,
+                    zelle.stelle,
                     spaltenzusatz(zelle)
                 ));
             }),
@@ -7789,7 +7789,7 @@ mod tests {
         let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
         let klick = rumpf(&quelle, "kasten_geklickt");
         let abhaken = klick
-            .find(concat!("(wege.", "abhaken)(zeile)"))
+            .find(concat!("(wege.", "abhaken)(stelle)"))
             .expect("der Klick hakt ab");
         let fokus = klick
             .find(concat!("self.fokus_in_die_", "tabelle()"))
@@ -7899,10 +7899,10 @@ mod tests {
             let (wege, buch) = aufzeichnende_wege(true);
             eintraege.wege_setzen(wege);
 
-            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(-1, -1, true));
+            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(None, -1, true));
             assert_eq!(*buch.borrow(), vec!["anlegen".to_owned()]);
 
-            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(-1, 1, false));
+            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(None, 1, false));
             assert_eq!(buch.borrow().len(), 1, "die Kopfzeile legt nichts an");
 
             // Der Weg ueber den Selektor ohne laufendes Ereignis: keine Zeile,
@@ -8552,14 +8552,23 @@ mod tests {
             Zellenbefehl::Appkit
         );
 
-        let zelle = |zeile, spalte| Zelle { zeile, spalte };
+        let zelle = |stelle, spalte| Zelle { stelle, spalte };
         let weiter = eintragsansicht::naechste_zelle;
-        assert_eq!(weiter(zelle(0, 0), true, 2), Some(zelle(0, 1)));
-        assert_eq!(weiter(zelle(0, 1), true, 2), Some(zelle(1, 0)));
-        assert_eq!(weiter(zelle(1, 1), true, 2), None, "nach der letzten Zelle");
-        assert_eq!(weiter(zelle(1, 0), false, 2), Some(zelle(0, 1)));
-        assert_eq!(weiter(zelle(1, 1), false, 2), Some(zelle(1, 0)));
-        assert_eq!(weiter(zelle(0, 0), false, 2), None, "vor der ersten Zelle");
+        let zwei = eintragsansicht::Zeilen::from(eintragsansicht::notizzeilen(NOTIZEN));
+        assert_eq!(weiter(zelle(0, 0), true, &zwei), Some(zelle(0, 1)));
+        assert_eq!(weiter(zelle(0, 1), true, &zwei), Some(zelle(1, 0)));
+        assert_eq!(
+            weiter(zelle(1, 1), true, &zwei),
+            None,
+            "nach der letzten Zelle"
+        );
+        assert_eq!(weiter(zelle(1, 0), false, &zwei), Some(zelle(0, 1)));
+        assert_eq!(weiter(zelle(1, 1), false, &zwei), Some(zelle(1, 0)));
+        assert_eq!(
+            weiter(zelle(0, 0), false, &zwei),
+            None,
+            "vor der ersten Zelle"
+        );
     }
 
     /// Die Zelle der Notiztabelle rechnet ueber den Kern: ein geaenderter Text
@@ -8571,11 +8580,11 @@ mod tests {
         use eintragsansicht::{NOTIZSPALTE, THEMENSPALTE, Zelle};
         use krk_core::heimordner::eintraege::Abweisung as Eintragsabweisung;
         let text = Zelle {
-            zeile: 0,
+            stelle: 0,
             spalte: NOTIZSPALTE,
         };
         let thema = Zelle {
-            zeile: 0,
+            stelle: 0,
             spalte: THEMENSPALTE,
         };
         let rechnen = |zelle, eingabe| zellenrechnung(Editorform::Notizen, NOTIZEN, zelle, eingabe);

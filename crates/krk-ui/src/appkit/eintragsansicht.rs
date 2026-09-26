@@ -76,6 +76,33 @@
 //! steht im Modulkopf von [`super::editor`] unter
 //! `rueckgaengigstapel_leeren`.
 //!
+//! # Stelle und Zeile
+//!
+//! **Zwei Zahlen, und die Naht zwischen ihnen liegt in dieser Datei.** Die
+//! *Stelle* ist die Zahl, mit der der Kern einen Eintrag zaehlt: in der
+//! Reihenfolge der Datei, ohne den Vorspann, wie `Neustand::auswahl` und jede
+//! Handlung in `krk_core::heimordner::eintraege`. Die *Zeile* ist AppKits
+//! Zeilennummer, also die Reihenfolge auf dem Schirm. Fuer Aufgaben und
+//! Notizen sind beide dieselbe Zahl; eine Tabelle, die nach etwas anderem
+//! ordnet als nach der Datei, trennt sie.
+//!
+//! **Nach aussen spricht diese Ansicht allein in Stellen**: die gewaehlte
+//! Stelle ([`Eintragsansicht::gewaehlte_stelle`]), die gemeldete [`Zelle`],
+//! die Auswahl nach einem Umbau ([`Eintragsansicht::auswahl_setzen`]), der
+//! Beginn einer Bearbeitung ([`Eintragsansicht::bearbeitung_beginnen`]) und der
+//! Rueckruf des Ankreuzfeldes ([`Zellenwege::abhaken`]). Der Editorbereich und
+//! der Kern sehen damit nie eine Zeilennummer. Jede Stelle, an der eine
+//! Zeilennummer von AppKit herein- oder hinausgeht — `selectedRow`,
+//! `clickedRow`, `rowForView:`, `selectRowIndexes:`, `editColumn:row:` und der
+//! Zellenwechsel mit `tab` —, rechnet ueber [`Zeilen::stelle_der_zeile`] und
+//! [`Zeilen::zeile_der_stelle`] und ueber keinen dritten Weg. Wer hier eine
+//! Zeilennummer ohne die Umrechnung weiterreicht, aendert oder loescht in einer
+//! umgeordneten Tabelle den falschen Eintrag.
+//!
+//! Innen bleibt es bei Zeilen: die abgeleiteten Zeilen stehen in der
+//! Reihenfolge des Schirms, und wer sie mit einer Zeilennummer von AppKit
+//! befragt, braucht nichts umzurechnen.
+//!
 //! # Zellen, und wer sie beendet
 //!
 //! Seit Schritt 3.2b des Plans
@@ -353,6 +380,31 @@ impl Zeilen {
             Self::Notizen(zeilen) => zeilen.len(),
         }
     }
+
+    /// Die Stelle im Stand, die AppKits Zeile `zeile` zeigt; `None` jenseits
+    /// der letzten Zeile.
+    ///
+    /// **Eine der zwei Stellen der Umrechnung** (Modulkopf, „Stelle und
+    /// Zeile"). Aufgaben und Notizen stehen in der Reihenfolge der Datei, und
+    /// dort ist es die Gleichheit.
+    #[must_use]
+    pub fn stelle_der_zeile(&self, zeile: usize) -> Option<usize> {
+        match self {
+            Self::Aufgaben(_) | Self::Notizen(_) => (zeile < self.len()).then_some(zeile),
+        }
+    }
+
+    /// Die Zeile, in der AppKit die Stelle `stelle` zeigt; `None`, wenn es sie
+    /// nicht gibt.
+    ///
+    /// Die Umkehrung von [`Self::stelle_der_zeile`], und fuer Aufgaben und
+    /// Notizen ebenso die Gleichheit.
+    #[must_use]
+    pub fn zeile_der_stelle(&self, stelle: usize) -> Option<usize> {
+        match self {
+            Self::Aufgaben(_) | Self::Notizen(_) => (stelle < self.len()).then_some(stelle),
+        }
+    }
 }
 
 impl From<Vec<Eintragszeile>> for Zeilen {
@@ -437,36 +489,30 @@ pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefeh
 }
 
 /// Die Zelle, in die `tab` (`vorwaerts`) oder `shift+tab` aus `zelle` fuehrt,
-/// bei `zeilen` Zeilen der Notiztabelle; `None` am Rand.
+/// in der Notiztabelle mit diesen `zeilen`; `None` am Rand.
 ///
-/// Zeilenweise, wie gelesen wird: Thema, Notiz, dann das Thema der naechsten
-/// Zeile.
+/// Zeilenweise, wie gelesen wird: Thema, Notiz, dann das Thema der
+/// **naechsten Zeile auf dem Schirm**. Die Zelle kommt und geht als Stelle;
+/// gezaehlt wird dazwischen in Zeilen, ueber die zwei Umrechnungen an
+/// [`Zeilen`] (Modulkopf, „Stelle und Zeile").
 #[must_use]
-pub fn naechste_zelle(zelle: Zelle, vorwaerts: bool, zeilen: usize) -> Option<Zelle> {
-    let Zelle { zeile, spalte } = zelle;
-    if vorwaerts {
+pub fn naechste_zelle(zelle: Zelle, vorwaerts: bool, zeilen: &Zeilen) -> Option<Zelle> {
+    let Zelle { stelle, spalte } = zelle;
+    let zeile = zeilen.zeile_der_stelle(stelle)?;
+    let (ziel, spalte) = if vorwaerts {
         if spalte == THEMENSPALTE {
-            return Some(Zelle {
-                zeile,
-                spalte: NOTIZSPALTE,
-            });
+            (zeile, NOTIZSPALTE)
+        } else {
+            (zeile + 1, THEMENSPALTE)
         }
-        (zeile + 1 < zeilen).then_some(Zelle {
-            zeile: zeile + 1,
-            spalte: THEMENSPALTE,
-        })
+    } else if spalte == NOTIZSPALTE {
+        (zeile, THEMENSPALTE)
     } else {
-        if spalte == NOTIZSPALTE {
-            return Some(Zelle {
-                zeile,
-                spalte: THEMENSPALTE,
-            });
-        }
-        zeile.checked_sub(1).map(|zeile| Zelle {
-            zeile,
-            spalte: NOTIZSPALTE,
-        })
-    }
+        (zeile.checked_sub(1)?, NOTIZSPALTE)
+    };
+    zeilen
+        .stelle_der_zeile(ziel)
+        .map(|stelle| Zelle { stelle, spalte })
 }
 
 /// Eine Zeile der Aufgabentabelle, abgeleitet aus einem Block des Standes.
@@ -505,8 +551,10 @@ pub fn aufgabenzeilen(stand: &str) -> Vec<Eintragszeile> {
 /// Die Zelle, deren Text gerade im Feldeditor steht.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Zelle {
-    /// Die Stelle der Zeile, gezaehlt wie `Neustand::auswahl`.
-    pub zeile: usize,
+    /// Die Stelle des Eintrags im Stand, gezaehlt wie `Neustand::auswahl`,
+    /// und **nie** die Zeilennummer von AppKit (Modulkopf, „Stelle und
+    /// Zeile").
+    pub stelle: usize,
     /// Die Spalte: [`THEMENSPALTE`] oder [`NOTIZSPALTE`]; die Aufgabentabelle
     /// hat allein die erste.
     pub spalte: usize,
@@ -529,8 +577,9 @@ pub enum Doppelklick {
     Nichts,
 }
 
-/// Die Regel fuer den Doppelklick, aus `clickedRow`, `clickedColumn` und der
-/// Frage, ob das Ereignis in der Flaeche der Tabelle liegt.
+/// Die Regel fuer den Doppelklick, aus der Stelle der geklickten Zeile
+/// (`clickedRow`, schon umgerechnet), `clickedColumn` und der Frage, ob das
+/// Ereignis in der Flaeche der Tabelle liegt.
 ///
 /// **Rein und ohne Fenster pruefbar.** Eine Zeile mit Spalte ist ihre Zelle,
 /// eine Zeile ohne Spalte ihre erste Zelle. Keine Zeile heisst entweder die
@@ -539,14 +588,14 @@ pub enum Doppelklick {
 /// meldet, und dann geschieht nichts: wer eine Spalte breiter ziehen will,
 /// soll dabei keine Notiz anlegen.
 #[must_use]
-pub fn doppelklick(zeile: NSInteger, spalte: NSInteger, in_der_tabelle: bool) -> Doppelklick {
-    match usize::try_from(zeile) {
-        Ok(zeile) => Doppelklick::Zelle(Zelle {
-            zeile,
+pub fn doppelklick(stelle: Option<usize>, spalte: NSInteger, in_der_tabelle: bool) -> Doppelklick {
+    match stelle {
+        Some(stelle) => Doppelklick::Zelle(Zelle {
+            stelle,
             spalte: usize::try_from(spalte).unwrap_or(THEMENSPALTE),
         }),
-        Err(_) if in_der_tabelle => Doppelklick::Anlegen,
-        Err(_) => Doppelklick::Nichts,
+        None if in_der_tabelle => Doppelklick::Anlegen,
+        None => Doppelklick::Nichts,
     }
 }
 
@@ -580,7 +629,8 @@ pub struct Zellenwege {
     pub pruefen: Zellenpruefung,
     /// Die Zelle ist mit diesem Text zu Ende gegangen.
     pub festschreiben: Zellenende,
-    /// Das Ankreuzfeld dieser Zeile ist angeklickt worden.
+    /// Das Ankreuzfeld des Eintrags an dieser **Stelle** ist angeklickt
+    /// worden; umgerechnet aus der Zeile des Kaestchens.
     pub abhaken: Box<dyn Fn(usize)>,
     /// Ein Doppelklick unter die Zeilen: ein Eintrag soll entstehen
     /// ([`doppelklick`]).
@@ -1031,11 +1081,11 @@ define_class!(
         // Argument; Absender ist allein das Ankreuzfeld aus `zellenansicht`.
         #[unsafe(method(kastenGeklickt:))]
         fn kasten_geklickt(&self, kasten: &NSButton) {
-            let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(kasten)) else {
+            let Some(stelle) = self.stelle_an(self.ivars().tabelle.rowForView(kasten)) else {
                 return;
             };
             if let Some(wege) = self.ivars().wege.borrow().as_ref() {
-                (wege.abhaken)(zeile);
+                (wege.abhaken)(stelle);
             }
             self.fokus_in_die_tabelle();
             if let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(kasten))
@@ -1055,7 +1105,7 @@ define_class!(
             let tabelle = &self.ivars().tabelle;
             let in_der_tabelle = self.ereignis_in_der_tabelle();
             self.doppelklick_ausfuehren(doppelklick(
-                tabelle.clickedRow(),
+                self.stelle_an(tabelle.clickedRow()),
                 tabelle.clickedColumn(),
                 in_der_tabelle,
             ));
@@ -1235,7 +1285,7 @@ impl Eintragsansicht {
         let vorher = if artwechsel {
             None
         } else {
-            self.gewaehlte_zeile()
+            self.gewaehlte_stelle()
         };
         // Die Ausleihe endet an ihrem Semikolon: `reloadData` fragt die Zeilen
         // gleich wieder ab.
@@ -1305,29 +1355,41 @@ impl Eintragsansicht {
         Some(Retained::into_super(self.ivars().zelleneditor.clone()))
     }
 
-    /// Waehlt die Zeile an der genannten Stelle und bringt sie ins Bild.
+    /// Waehlt die Zeile, die den Eintrag an der genannten **Stelle** zeigt,
+    /// und bringt sie ins Bild.
     ///
-    /// `None` und eine Stelle hinter der letzten Zeile lassen die Auswahl, wie
+    /// `None` und eine Stelle, die keine Zeile zeigt, lassen die Auswahl, wie
     /// sie ist: eine Handlung ohne Auswahl danach hat keine gewaehlt, und eine
-    /// zu grosse Stelle beantwortete AppKit mit einer Ausnahme, die Rust nicht
+    /// zu grosse Zeile beantwortete AppKit mit einer Ausnahme, die Rust nicht
     /// fangen kann.
     pub fn auswahl_setzen(&self, stelle: Option<usize>) {
-        let Some(stelle) = stelle else {
+        let Some(zeile) = stelle.and_then(|stelle| self.zeile_von(stelle)) else {
             return;
         };
-        if stelle >= self.ivars().zeilen.borrow().len() {
-            return;
-        }
         let tabelle = &self.ivars().tabelle;
-        tabelle
-            .selectRowIndexes_byExtendingSelection(&NSIndexSet::indexSetWithIndex(stelle), false);
-        tabelle.scrollRowToVisible(NSInteger::try_from(stelle).unwrap_or(NSInteger::MAX));
+        tabelle.selectRowIndexes_byExtendingSelection(&NSIndexSet::indexSetWithIndex(zeile), false);
+        tabelle.scrollRowToVisible(NSInteger::try_from(zeile).unwrap_or(NSInteger::MAX));
     }
 
-    /// Die gewaehlte Zeile, falls eine gewaehlt ist.
+    /// Die **Stelle** des gewaehlten Eintrags im Stand, falls einer gewaehlt
+    /// ist; nie die Zeilennummer (Modulkopf, „Stelle und Zeile").
     #[must_use]
-    pub fn gewaehlte_zeile(&self) -> Option<usize> {
-        usize::try_from(self.ivars().tabelle.selectedRow()).ok()
+    pub fn gewaehlte_stelle(&self) -> Option<usize> {
+        self.stelle_an(self.ivars().tabelle.selectedRow())
+    }
+
+    /// Die Stelle, die AppKits Zeile `zeile` zeigt: die Umrechnung jeder
+    /// Zeilennummer, die von AppKit hereinkommt. -1 und eine Zeile jenseits
+    /// der letzten ergeben `None`.
+    fn stelle_an(&self, zeile: NSInteger) -> Option<usize> {
+        let zeile = usize::try_from(zeile).ok()?;
+        self.ivars().zeilen.borrow().stelle_der_zeile(zeile)
+    }
+
+    /// Die Zeile, die den Eintrag an `stelle` zeigt: die Umrechnung jeder
+    /// Stelle, die zu AppKit hinausgeht.
+    fn zeile_von(&self, stelle: usize) -> Option<usize> {
+        self.ivars().zeilen.borrow().zeile_der_stelle(stelle)
     }
 
     /// Der abgeleitete Text des gewaehlten Eintrags, fuer `copy:`.
@@ -1335,9 +1397,12 @@ impl Eintragsansicht {
     /// Von einer Notiz ihr Text, und das Thema nur, wenn sie keinen Text
     /// traegt: kopiert wird, was der Nutzer woanders einsetzen will, und bei
     /// einer Notiz ist das der Inhalt und nicht die Ueberschrift.
+    ///
+    /// Gelesen an der **Zeile**: die abgeleiteten Zeilen stehen in der Folge
+    /// des Schirms, und die gewaehlte Zeile ist ihr Index.
     #[must_use]
     fn gewaehlter_text(&self) -> Option<String> {
-        let zeile = self.gewaehlte_zeile()?;
+        let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok()?;
         match &*self.ivars().zeilen.borrow() {
             Zeilen::Aufgaben(zeilen) => zeilen.get(zeile).map(|eintrag| eintrag.text.clone()),
             Zeilen::Notizen(zeilen) => zeilen.get(zeile).map(|notiz| {
@@ -1382,18 +1447,19 @@ impl Eintragsansicht {
         if !ansicht.isDescendantOf(tabelle) {
             return None;
         }
-        let zeile = usize::try_from(tabelle.rowForView(ansicht)).ok()?;
+        let stelle = self.stelle_an(tabelle.rowForView(ansicht))?;
         let spalte = usize::try_from(tabelle.columnForView(ansicht)).ok()?;
-        Some(Zelle { zeile, spalte })
+        Some(Zelle { stelle, spalte })
     }
 
-    /// Setzt die erste Zelle der genannten Zeile in Bearbeitung, der Text ist
-    /// ausgewaehlt: den Aufgabentext, in der Notiztabelle das Thema.
+    /// Setzt die erste Zelle des Eintrags an der genannten **Stelle** in
+    /// Bearbeitung, der Text ist ausgewaehlt: den Aufgabentext, in der
+    /// Notiztabelle das Thema.
     ///
-    /// Liefert `false`, wenn es die Zeile nicht gibt.
-    pub fn bearbeitung_beginnen(&self, zeile: usize) -> bool {
+    /// Liefert `false`, wenn es den Eintrag nicht gibt.
+    pub fn bearbeitung_beginnen(&self, stelle: usize) -> bool {
         self.zelle_beginnen(Zelle {
-            zeile,
+            stelle,
             spalte: THEMENSPALTE,
         })
     }
@@ -1402,18 +1468,20 @@ impl Eintragsansicht {
     ///
     /// Derselbe Weg wie das Umbenennen in [`super::tabelle`]:
     /// `editColumn:row:withEvent:select:` macht den Feldeditor zum Ersthelfer
-    /// und stellt ihn in das Textfeld der Zelle. Liefert `false`, wenn es die
-    /// Zeile oder die Spalte nicht gibt.
+    /// und stellt ihn in das Textfeld der Zelle, an der Zeile, die die Stelle
+    /// der Zelle zeigt. Liefert `false`, wenn es den Eintrag oder die Spalte
+    /// nicht gibt.
     pub fn zelle_beginnen(&self, zelle: Zelle) -> bool {
         let tabelle = &self.ivars().tabelle;
-        if zelle.zeile >= self.ivars().zeilen.borrow().len()
-            || NSInteger::try_from(zelle.spalte)
-                .is_ok_and(|spalte| spalte >= tabelle.numberOfColumns())
+        let Some(zeile) = self.zeile_von(zelle.stelle) else {
+            return false;
+        };
+        if NSInteger::try_from(zelle.spalte).is_ok_and(|spalte| spalte >= tabelle.numberOfColumns())
         {
             return false;
         }
         let (Ok(zeile), Ok(spalte)) = (
-            NSInteger::try_from(zelle.zeile),
+            NSInteger::try_from(zeile),
             NSInteger::try_from(zelle.spalte),
         ) else {
             return false;
@@ -1534,11 +1602,13 @@ impl Eintragsansicht {
         feld.invalidateIntrinsicContentSize();
     }
 
-    /// Der abgeleitete Text einer Zelle, wie die Tabelle ihn zeigt.
+    /// Der abgeleitete Text einer Zelle, wie die Tabelle ihn zeigt; gelesen an
+    /// der Zeile, die die Stelle der Zelle zeigt.
     fn abgeleiteter_text(&self, zelle: Zelle) -> Option<String> {
+        let zeile = self.zeile_von(zelle.stelle)?;
         match &*self.ivars().zeilen.borrow() {
-            Zeilen::Aufgaben(zeilen) => zeilen.get(zelle.zeile).map(|eintrag| eintrag.text.clone()),
-            Zeilen::Notizen(zeilen) => zeilen.get(zelle.zeile).map(|notiz| {
+            Zeilen::Aufgaben(zeilen) => zeilen.get(zeile).map(|eintrag| eintrag.text.clone()),
+            Zeilen::Notizen(zeilen) => zeilen.get(zeile).map(|notiz| {
                 if zelle.spalte == NOTIZSPALTE {
                     notiz.text.clone()
                 } else {
@@ -1579,7 +1649,7 @@ impl Eintragsansicht {
                 true
             }
             Zellenbefehl::Weiter(vorwaerts) => {
-                let ziel = naechste_zelle(zelle, vorwaerts, self.ivars().zeilen.borrow().len());
+                let ziel = naechste_zelle(zelle, vorwaerts, &self.ivars().zeilen.borrow());
                 if let Some(fenster) = self.ivars().tabelle.window()
                     && self.bearbeitung_beenden(&fenster)
                     && let Some(ziel) = ziel
@@ -1856,22 +1926,43 @@ mod tests {
     #[test]
     fn der_doppelklick_trifft_eine_zelle_legt_im_leeren_an_und_auf_der_kopfzeile_nichts() {
         assert_eq!(
-            doppelklick(2, 1, true),
+            doppelklick(Some(2), 1, true),
             Doppelklick::Zelle(Zelle {
-                zeile: 2,
+                stelle: 2,
                 spalte: NOTIZSPALTE
             })
         );
         assert_eq!(
-            doppelklick(0, -1, true),
+            doppelklick(Some(0), -1, true),
             Doppelklick::Zelle(Zelle {
-                zeile: 0,
+                stelle: 0,
                 spalte: THEMENSPALTE
             })
         );
-        assert_eq!(doppelklick(-1, -1, true), Doppelklick::Anlegen);
-        assert_eq!(doppelklick(-1, 0, true), Doppelklick::Anlegen);
-        assert_eq!(doppelklick(-1, 1, false), Doppelklick::Nichts);
+        assert_eq!(doppelklick(None, -1, true), Doppelklick::Anlegen);
+        assert_eq!(doppelklick(None, 0, true), Doppelklick::Anlegen);
+        assert_eq!(doppelklick(None, 1, false), Doppelklick::Nichts);
+    }
+
+    /// Die zwei Umrechnungen zwischen Stelle und Zeile (Modulkopf, „Stelle
+    /// und Zeile"): fuer Aufgaben und Notizen die Gleichheit, jenseits der
+    /// Laenge `None` in beiden Richtungen, und in der leeren Tabelle immer
+    /// `None`.
+    #[test]
+    fn stelle_und_zeile_sind_fuer_aufgaben_und_notizen_dieselbe_zahl() {
+        let aufgaben = Zeilen::from(aufgabenzeilen("- [ ] a\n- [x] b\n- [ ] c\n"));
+        let notizen = Zeilen::from(notizzeilen("Vorspann\n## a\n## b\n"));
+        for zeilen in [&aufgaben, &notizen] {
+            for zahl in 0..zeilen.len() {
+                assert_eq!(zeilen.stelle_der_zeile(zahl), Some(zahl), "{zeilen:?}");
+                assert_eq!(zeilen.zeile_der_stelle(zahl), Some(zahl), "{zeilen:?}");
+            }
+            assert_eq!(zeilen.stelle_der_zeile(zeilen.len()), None);
+            assert_eq!(zeilen.zeile_der_stelle(zeilen.len()), None);
+        }
+        let leer = Zeilen::Aufgaben(Vec::new());
+        assert_eq!(leer.stelle_der_zeile(0), None);
+        assert_eq!(leer.zeile_der_stelle(0), None);
     }
 
     /// Die Regel der Auswahl nach dem Neuladen: ohne Auswahl davor die erste
