@@ -4769,7 +4769,8 @@ impl DateifensterDelegierter {
         // `Geaendert` sollen untereinander stehen, waehrend die Dateinamen der
         // Namensspalte ihre Proportionalschrift behalten. Gemessen am 260811
         // auf macOS 15.7.7 mit `NSAttributedString::size` bei 13 Punkt:
-        // „11.11.11 11:11“ und „08.08.88 08:88“ sind in `systemFontOfSize:`
+        // die Zeit aus lauter Einsen und „08.08.88 08:88“, beide in der Form
+        // `TT.MM.JJ hh:mm`, sind in `systemFontOfSize:`
         // 73,07 und 95,01 Punkt breit, also 22 Punkt auseinander, und in
         // dieser Schrift beide 96,05 Punkt. Der Name „Ablage.rs“ misst in
         // beiden Schriften dieselben 57,36 Punkt: die Buchstaben ruehrt der
