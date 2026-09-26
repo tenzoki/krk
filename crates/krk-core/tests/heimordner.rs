@@ -1299,6 +1299,35 @@ fn ein_ungueltiges_datum_und_eine_kopfzeile_im_text_werden_abgewiesen() {
     );
 }
 
+/// Eine unveraendert verlassene Datumszelle ergibt keine Handlung, auch wenn
+/// die Kopfzeile Leerraum am Ende oder ein `\r` traegt: die Zelle zeigt das
+/// rohe Thema, und der getrimmte Vergleich darf es nicht als geaendert lesen,
+/// weder als gueltiges Datum (stilles Neuschreiben) noch als ungueltiges
+/// (Abweisung, die Zelle liesse sich nicht verlassen). Geaendert wird dabei der
+/// Text allein, und die Kopfzeile bleibt Byte fuer Byte.
+#[test]
+fn eine_unveraenderte_datumszelle_mit_leerraum_am_ende_ergibt_keine_handlung() {
+    assert_eq!(
+        termine::aendern("## xyz \nalt\n", 0, "xyz ", "alt"),
+        Ok(None)
+    );
+    assert_eq!(
+        termine::aendern("## 261002 \nText\n", 0, "261002 ", "Text"),
+        Ok(None)
+    );
+    assert_eq!(
+        termine::aendern("## 261002\r\nText\r\n", 0, "261002\r", "Text\r"),
+        Ok(None)
+    );
+
+    for (stand, datum) in [("## xyz \nalt\n", "xyz "), ("## 261002 \nalt\n", "261002 ")] {
+        let neu = termine::aendern(stand, 0, datum, "neu")
+            .expect("das unveraenderte Datum wird nicht geprueft")
+            .expect("den Termin gibt es");
+        assert_eq!(neu.text, format!("## {datum}\nneu\n"), "{stand:?}");
+    }
+}
+
 /// T3.1: Loeschen nimmt den Termin an seiner Stelle in der Datei ganz weg.
 #[test]
 fn ein_termin_wird_ganz_geloescht() {

@@ -969,8 +969,9 @@ pub mod termine {
     /// Ersetzt Datum und Text des Termins an `stelle`.
     ///
     /// Die Datumseingabe wird an beiden Enden getrimmt. **Allein ein
-    /// geaendertes Datum wird geprueft**: weicht es vom bisherigen Datumstext
-    /// ab, muss es [`termindatum`] bestehen, sonst
+    /// geaendertes Datum wird geprueft**: weicht es getrimmt vom ebenso
+    /// getrimmten bisherigen Datumstext ab, muss es [`termindatum`] bestehen,
+    /// sonst
     /// [`Abweisung::UngueltigesDatum`]. Ein unveraendert gelassenes ungueltiges
     /// Datum wird also nicht geprueft, sonst liesse sich der Text eines
     /// Termins mit vertippter Kopfzeile nicht aendern, ohne erst das Datum zu
@@ -986,13 +987,24 @@ pub mod termine {
         datum: &str,
         text: &str,
     ) -> Result<Option<Neustand>, Abweisung> {
-        let datum = datum.trim();
         let Some(alt) = Notizen::lesen(stand).notiz(stelle) else {
             return Ok(None);
         };
-        if datum != alt.thema && termindatum(datum).is_none() {
-            return Err(Abweisung::UngueltigesDatum);
-        }
+        // Beide Seiten getrimmt vergleichen: die Zelle zeigt das rohe Thema
+        // samt Leerraum am Ende oder `\r` einer CRLF-Datei, und eine so
+        // unveraendert verlassene Zelle darf die Kopfzeile weder neu schreiben
+        // noch an der Pruefung scheitern. Unveraendert geht das rohe Thema
+        // weiter, damit `notizen::aendern` die Kopfzeile Byte fuer Byte stehen
+        // laesst.
+        let datum = if datum.trim() == alt.thema.trim() {
+            alt.thema
+        } else {
+            let datum = datum.trim();
+            if termindatum(datum).is_none() {
+                return Err(Abweisung::UngueltigesDatum);
+            }
+            datum
+        };
         notizen::aendern(stand, stelle, datum, text).map_err(|abweisung| match abweisung {
             Abweisung::ThemenzeileImNotiztext => Abweisung::KopfzeileImTermintext,
             andere => andere,
