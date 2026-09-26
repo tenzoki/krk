@@ -866,6 +866,22 @@ pub enum Kommando {
     /// Zeile der Belegung; die Begruendung steht bei ihrem Eintrag in
     /// `resources/default-keymap.toml`.
     Notizordner,
+    /// Den Ort des Notizordners ueber einen Ordnerdialog waehlen und in
+    /// `settings.toml` schreiben (H3 des Spec
+    /// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// Der Dialog beginnt beim geltenden Ort und erlaubt, einen Ordner
+    /// anzulegen. Der gewaehlte Ort gilt sofort; verschoben und angelegt wird
+    /// nichts, auch kein Tab, und F2 fuehrt danach dorthin. Haelt der Editor
+    /// eine Datei des geltenden oder des gewaehlten Orts, verweigert sich der
+    /// Befehl und nennt sie.
+    ///
+    /// **Ab Werk ohne Kombination**: ein seltener Einrichtungsbefehl, erreichbar
+    /// ueber das Menue „Home“ und in F1 belegbar. **Wirkt ueberall**, wie
+    /// [`Kommando::Notizordner`] daneben: sein Dialog faehrt am Hauptfenster
+    /// herunter, und sein Gegenstand ist der Notizordner, nicht einer der
+    /// Bereiche der Fensterzeile.
+    OrtWaehlen,
     /// Die Seite im PDF-Betrachter des Vorschaufensters um eine Stufe
     /// vergroessern (C3 der Runde 20).
     ///
@@ -964,7 +980,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 94] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 95] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1078,6 +1094,7 @@ impl Kommando {
         // Kennung ab und setzt dann die ganze Auslieferungsbelegung ein (C1 des
         // Spec `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
         (Kommando::Notizordner, "notizzettel"),
+        (Kommando::OrtWaehlen, "ort_waehlen"),
         (Kommando::VorschauVergroessern, "vorschau_vergroessern"),
         (Kommando::VorschauVerkleinern, "vorschau_verkleinern"),
         (
@@ -1233,6 +1250,14 @@ impl Kommando {
             // Wirkungsbereich, der einen Bereich verlangte, verlangte damit
             // den Zustand, den der Befehl erst herstellt.
             | Kommando::Notizordner
+            // „Ort waehlen…“ aus demselben Grund wie F2 darueber: sein Dialog
+            // haengt am Hauptfenster und nicht an einem Bereich, und wer den
+            // Ort aus dem Editor heraus wechseln will, soll dafuer nicht erst
+            // den Fokus umsetzen. Ob der Editor dabei eine Datei des
+            // Notizordners haelt, fragt der Ausfuehrungszweig und nicht der
+            // Wirkungsbereich: eine Antwort hier graute den Menueeintrag aus,
+            // ohne zu sagen, warum.
+            | Kommando::OrtWaehlen
             // Das Blatt der Ablageneuerungen steht hier, weil es am
             // Hauptfenster herunterfaehrt und sein Gegenstand die Ablage ist,
             // nicht einer der Bereiche der Fensterzeile. Wer beim Start gelesen hat, dass

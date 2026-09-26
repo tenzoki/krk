@@ -10,8 +10,9 @@
 //!
 //! # Ohne Systemaufruf
 //!
-//! **[`ort_lesen`], [`schreibform`], [`ortswechsel`] und [`startzeile`] fragen
-//! das Dateisystem nicht.** [`notizort`] und [`schutzort`] bauen am Ende einen
+//! **[`ort_lesen`], [`schreibform`], [`ortswechsel`], [`startzeile`],
+//! [`im_ablageordner`] und [`gehaltene_notizdatei`] fragen das Dateisystem
+//! nicht.** [`notizort`] und [`schutzort`] bauen am Ende einen
 //! [`Heimordner`] ueber [`Heimordner::am_ort`], und der stellt fuer einen Ort
 //! unmittelbar im Benutzerverzeichnis zwei Aufrufe an dessen Eintrag, nie am
 //! Ziel eines Verweises; fuer jeden anderen Ort keinen. Geprueft wird der
@@ -37,7 +38,7 @@
 //! **Was die Pruefung nicht sieht**: einen Ort, der erst ueber einen Verweis
 //! im Ablageordner landet. Das zu erkennen braeuchte `canonicalize`, also einen
 //! Systemaufruf am Ort; beim Start gibt es ihn nicht. „Ort waehlen…“ prueft
-//! ab Stufe 3 zusaetzlich die kanonische Form.
+//! zusaetzlich die kanonische Form, ueber [`im_ablageordner`].
 
 use std::path::{Component, Path, PathBuf};
 
@@ -114,8 +115,12 @@ impl Ortsfehler {
             Ortsfehler::ImAblageordner(wert) => format!(
                 "Der Notizordner „{wert}“ liegt im Ablageordner von KRK; ein Werkzeug, das KRK entfernt, nähme ihn mit, also gilt er nicht"
             ),
+            // Zwei Wege hinaus, und der zweite traegt ohne Neustart:
+            // `notizordner_schreiben` liest die Datei unter der Sperre neu, ist
+            // sie inzwischen berichtigt, schreibt „Ort waehlen…“ und der Ort
+            // gilt; ist sie es nicht, antwortet es mit dem Befund.
             Ortsfehler::EinstellungenBeschaedigt(satzteil) => format!(
-                "settings.toml {satzteil}, also gilt kein Notizordner, und F2 legt nichts an: settings.toml berichtigen und KRK neu starten"
+                "settings.toml {satzteil}, also gilt kein Notizordner, und F2 legt nichts an: settings.toml berichtigen und KRK neu starten, oder nach dem Berichtigen den Ort über „Home“ → „Ort wählen…“ setzen"
             ),
             Ortsfehler::EinstellungenUngelesen(ursache) => format!(
                 "KRK konnte settings.toml beim Start nicht lesen ({ursache}), also gilt kein Notizordner, und F2 legt nichts an: KRK neu starten"
@@ -350,6 +355,96 @@ pub fn schutzort(gemerkt: Option<&Path>, benutzerverzeichnis: Option<&Path>) -> 
         )),
         None => benutzerverzeichnis.map(Heimordner::im_benutzerverzeichnis),
     }
+}
+
+/// Ob `ort` im Ablageordner oder darunter liegt; dieselbe Regel, mit der
+/// [`ort_lesen`] einen Text abweist.
+///
+/// **Fuer die kanonische Form, die „Ort waehlen…“ erhebt**: ein gewaehlter
+/// Ort kann ueber einen Verweis im Ablageordner landen, und das sieht erst
+/// `canonicalize`, das [`ort_lesen`] nicht stellt. Beide Pfade werden
+/// lexikalisch bereinigt verglichen, **ohne Systemaufruf**; wer die kanonische
+/// Form des Ablageordners braucht, reicht sie herein.
+#[must_use]
+pub fn im_ablageordner(ort: &Path, ablageordner: &Path) -> bool {
+    liegt_darin_ohne_schreibung(
+        &lexikalisch_bereinigt(ort),
+        &lexikalisch_bereinigt(ablageordner),
+    )
+}
+
+/// Der Name der Datei des Notizordners, die der Editor gerade haelt, oder
+/// `None`.
+///
+/// Gefragt von „Ort waehlen…“, **zweimal mit demselben Editorzustand**: vor
+/// dem Dialog gegen den geltenden Ort und nach der Wahl gegen den gewaehlten
+/// (H3 des Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+/// Antwortet sie, unterbleibt der Wechsel. **Der Grund ist die Anzeige, nicht
+/// das Sichern**: das Sichern verzweigt ueber den Schutz, den der Editor beim
+/// Oeffnen gewonnen hat, und bliebe auch ohne diese Frage sicher. Ohne sie
+/// zeigte der Editor eine Datei des alten Orts weiter als Eintragstabelle,
+/// und eine als Text geoeffnete Datei des neuen Orts liesse sich nicht mehr
+/// sichern.
+///
+/// Zwei Antworten genuegen je fuer sich: `heim` erkennt `pfad` als eine der
+/// drei Eintragsdateien, oder der Editor haelt die Geheimnisse
+/// (`haelt_geheimnisse`, der Schutz mit Schluessel oder die Erkennung des
+/// Pfadtexts). Das zweite faengt `secrets.txt` unter einer dritten
+/// Schreibweise, die der Pfadtext nicht erkennt. **Kein Systemaufruf.**
+#[must_use = "eine Antwort heisst: der Wechsel unterbleibt, und die Statuszeile nennt die Datei"]
+pub fn gehaltene_notizdatei(
+    pfad: Option<&Path>,
+    haelt_geheimnisse: bool,
+    heim: Option<&Heimordner>,
+) -> Option<String> {
+    let erkannt = pfad
+        .zip(heim)
+        .is_some_and(|(pfad, heim)| heim.sonderdatei(pfad).is_some());
+    if !erkannt && !haelt_geheimnisse {
+        return None;
+    }
+    Some(pfad.and_then(Path::file_name).map_or_else(
+        || super::Sonderdatei::Geheimnisse.dateiname().to_owned(),
+        |name| name.to_string_lossy().into_owned(),
+    ))
+}
+
+/// Der Satz, mit dem „Ort waehlen…“ sich verweigert, solange der Editor eine
+/// Datei des Notizordners haelt.
+#[must_use]
+pub fn abweisungssatz(datei: &str) -> String {
+    format!(
+        "Zuerst {datei} im Editor schließen; solange der Editor eine Datei des Notizordners hält, wählt KRK keinen anderen Ort"
+    )
+}
+
+/// Der Satz nach einem Wechsel ueber „Ort waehlen…“: der neue Ort, und wenn
+/// einer bekannt ist, der alte mit dem Satz aus [`wechselsatz`].
+///
+/// Ohne alten Ort galt vorher keiner, und es gibt keinen, an dem etwas liegen
+/// bliebe.
+#[must_use]
+pub fn wahlsatz(neu: &str, alt: Option<&str>) -> String {
+    match alt {
+        Some(alt) => wechselsatz(neu, alt),
+        None => format!("Der Notizordner ist jetzt „{neu}“, und F2 führt dorthin"),
+    }
+}
+
+/// Der Satz, wenn der gewaehlte Ort schon der Notizordner ist und schon in
+/// `settings.toml` steht.
+#[must_use]
+pub fn schon_der_ort(neu: &str) -> String {
+    format!("„{neu}“ ist schon der Notizordner; settings.toml bleibt, wie sie ist")
+}
+
+/// Der Satz, wenn `settings.toml` seit dem Start von Hand einen anderen Ort
+/// nannte und „Ort waehlen…“ den geltenden zurueckgeschrieben hat.
+#[must_use]
+pub fn zurueckgeschrieben(neu: &str) -> String {
+    format!(
+        "settings.toml nannte seit dem Start einen anderen Ort; jetzt steht dort wieder „{neu}“, und der Notizordner bleibt, wo er ist"
+    )
 }
 
 /// Ob `ort` der Ordner `ordner` ist oder darunter liegt, Bestandteil fuer

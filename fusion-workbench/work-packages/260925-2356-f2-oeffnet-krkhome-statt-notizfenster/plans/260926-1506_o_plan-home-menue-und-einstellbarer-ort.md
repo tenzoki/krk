@@ -304,7 +304,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
     - Closes (am Baum): die Voraussetzung dafür, dass `esc` den Ordnerdialog erreicht (Nutzerkriterium „Den Dialog abbrechen“ von H3).
     - Dependencies: 2.5
 
-11. **3.3 Der Befehl, der Ordnerdialog und die Übernahme des gewählten Orts**
+11. [DONE] **3.3 Der Befehl, der Ordnerdialog und die Übernahme des gewählten Orts**
     - Executor: `code-implementer`
     - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/kommandos/zulaessigkeit.rs` (Probe), `crates/krk-ui/src/appkit/blaetter/ortwahl.rs` (neu), `crates/krk-ui/src/appkit/blaetter/mod.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-core/src/heimordner/ort.rs` (die Frage nach der gehaltenen Datei, der Wortlaut von `EinstellungenBeschaedigt`), `crates/krk-core/tests/heimordner.rs`
     - Changes:
@@ -334,8 +334,9 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
     - Acceptance: `make check` grün **bis auf `der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge` in `crates/krk-ui/src/belegungsmodell.rs`**: ohne Block in der Belegungsdatei hängt `Belegung::bauen` die neue Funktion unbelegt hinten an ihre Gruppe, also hinter „PIN ändern“; 3.5 macht die Probe grün. Findet der Lauf eine Probe, die für jede Kennung einen Block in `resources/default-keymap.toml` verlangt, ist sie das zweite erwartete Rot, und die Commit-Nachricht nennt sie. Jedes weitere Rot ist ein Halt.
     - Closes (am Baum): H3.1 im Codeteil, H3.2, H3.6 (Meldung), H3.7, H3.8, H3.9, H3.10, H3.12.
     - Dependencies: 3.1, 3.2
+    - Abweichung beim Bau: **Rot bis 3.5 sind fünf Proben, nicht eine**, und alle aus demselben Grund: `Belegung::auslieferung` hängt eine Funktion ohne Block nicht an, sondern kennt `ort_waehlen` gar nicht. Rot sind `tasten::belegung::tests::jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` (`krk-core`, lib), `ab_werk_traegt_genau_diese_liste_keine_kombination` und `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` (`krk-core/tests/belegung.rs`), `belegungsausgabe::tests::die_dritte_spalte_haelt_die_begruendungslagen_auseinander` und `belegungsmodell::tests::der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge` (`krk-ui`); jedes andere Kommando von `make check` ist grün. Die erste Abweisung fragt den Ordner aus `heimgriff::lesen` und nicht aus `heimgriff::lage`: der Grund ist die Anzeige, und die folgt auch dem Schutzort, wenn kein Ort gilt. Der Wechsel selbst steht in `ort_wechseln` (Griff, `einstellungen.notizordner`, `gemerkter_ort`, `sitzung_vormerken`, Nachzug aus 3.4, Statuszeile); die Quelltextprobe hält Schreiben vor Wechsel in `ort_uebernehmen` und Griff vor Nachzug in `ort_wechseln`. Die kanonische Form wird gegen den Ablageordner lexikalisch und gegen dessen `canonicalize` gehalten (`ort::im_ablageordner`). `ortwahl::zeigen` liefert keinen Griff und ruft `fertig` auch beim Abbruch, mit `None`, damit `blatt_geschlossen` jedes Mal läuft. Neu im Kern: `Heimordner::aufgeloest`, `ort::{im_ablageordner, abweisungssatz, wahlsatz, schon_der_ort, zurueckgeschrieben}`; `wahlsatz` nennt ohne gemerkten Ort keinen alten.
 
-12. **3.4 Tablisten und Vorschau folgen dem neuen Ort sofort**
+12. [DONE] **3.4 Tablisten und Vorschau folgen dem neuen Ort sofort**
     - Executor: `code-implementer`
     - Files: `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes:
@@ -347,8 +348,9 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
     - Acceptance: `make check` grün bis auf das in 3.3 benannte Rot, das 3.5 grün macht.
     - Closes (am Baum): H3.11.
     - Dependencies: 3.3
+    - Abweichung beim Bau: `Vorschaumodell::neu_laden_wo(treffer, tafel, &profile, Option<&Heimordner>) -> usize` fragt die Datei eines laufenden Auftrags vor der angezeigten und liefert die Zahl der neuen Aufträge; `Vorschaufenster::heimordner_gewechselt` wirft den Ladetakt nur bei mindestens einem an. `DateifensterQuelle::heimordner_gewechselt` ist der Name der Ansichtsseite (`Dateitabelle` heißt im Baum so). Die Probe in `tabs.rs` prüft den gefallenen Inhaltsdurchlauf als `durchlauf.is_none()` nach dem Neulesen; einen laufenden Durchlauf baut sie nicht auf.
 
-13. **3.5 Belegung und Auslieferung kennen „Ort wählen…“**
+13. [DONE] **3.5 Belegung und Auslieferung kennen „Ort wählen…“**
     - Executor: `data-implementer`
     - Files: `resources/default-keymap.toml`, `resources/default-settings.toml`
     - Changes: In der Belegung ein Block `id = "ort_waehlen"`, `name = "Ort wählen…"`, `tasten = []`, unmittelbar hinter `notizzettel` und vor dem Eintragsblock, mit einem Kommentar: ein seltener Einrichtungsbefehl ohne Kombination ab Werk, in F1 belegbar; wer eine eigene `keymap.toml` hat, bekommt ihn unbelegt hinten an seine Gruppe, ohne etwas an seiner Belegung zu tun. In `default-settings.toml` wird der Kopf neu gefasst: KRK schreibt die Datei an genau einer Stelle, „Ort wählen…“, dort allein den Wert von `notizordner`, und nie, wenn die Datei ein symbolischer Verweis ist; die Aufnahmeregel lautet, dass ein Wert eine Ansicht haben darf, wenn ihr Schreibweg allein die Zeile dieses Werts berührt; der Kommentar an `notizordner` nennt „Ort wählen…“ als zweiten Weg und als Weg aus einer beschädigten Datei, sobald sie berichtigt ist.

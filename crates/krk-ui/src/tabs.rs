@@ -50,6 +50,7 @@ use std::path::{Path, PathBuf};
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
 use krk_core::git::Marke;
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung};
+use krk_core::heimordner::Heimordner;
 use krk_core::verzeichnis::modell::Befund;
 use krk_core::verzeichnis::{Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell};
 
@@ -966,6 +967,40 @@ impl Tabliste {
         tab.wunschauswahl = auswahlname;
         tab.bildlauf_offen = tab.bildlauf > 0.0;
         self.lesen_starten(stelle);
+    }
+
+    /// Liest jeden Tab neu, dessen Ordner der alte oder der neue Notizordner
+    /// ist, der sichtbare wie jeder verdeckte (Schritt 3.4 des Plans
+    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`, H3 des Spec).
+    ///
+    /// **Ueber [`Tabliste::lesen_starten`], die eine Stelle, die die
+    /// Eigenschaft „ohne Inhaltsauftrag“ setzt**: sie ist eine Abschrift des
+    /// Werts beim letzten Lesevorgang, und ein Wechsel des Orts erreicht sie
+    /// erst mit dem naechsten. Dieselbe Stelle laesst einen laufenden
+    /// Inhaltsdurchlauf fallen, der unter der alten Eigenschaft Auftraege
+    /// vergeben hat. Auswahl und Bildlauf werden vorgemerkt wie in
+    /// [`Tabliste::aktiven_neu_lesen`]. Ein Tab auf einem anderen Ordner wird
+    /// nicht beruehrt.
+    ///
+    /// Gefragt wird `alt.ist` und `neu.ist`, zwei Textvergleiche **ohne
+    /// Systemaufruf**; ob der Griff schon den neuen Ort haelt, verantwortet der
+    /// Rufer. Die Antwort sagt, ob der sichtbare Tab darunter war.
+    #[must_use = "die Antwort sagt, ob die Ansicht des sichtbaren Tabs nachzuziehen ist"]
+    pub fn heimordner_gewechselt(&mut self, alt: Option<&Heimordner>, neu: &Heimordner) -> bool {
+        let mut sichtbarer = false;
+        for stelle in 0..self.tabs.len() {
+            let ordner = &self.tabs[stelle].ordner;
+            if !(neu.ist(ordner) || alt.is_some_and(|alt| alt.ist(ordner))) {
+                continue;
+            }
+            let auswahlname = self.tabs[stelle].auswahlname();
+            let tab = &mut self.tabs[stelle];
+            tab.wunschauswahl = auswahlname;
+            tab.bildlauf_offen = tab.bildlauf > 0.0;
+            self.lesen_starten(stelle);
+            sichtbarer |= stelle == self.aktiv;
+        }
+        sichtbarer
     }
 
     /// Setzt die Auswahl des sichtbaren Tabs auf den Eintrag dieses Namens:
@@ -3545,5 +3580,64 @@ mod tests {
         );
         liste.ordner_setzen(&anderswo, None);
         assert_eq!(liste.aktiver().modell().ohne_inhaltsauftrag(), None);
+    }
+
+    /// H3.11, Schritt 3.4: nach einem Wechsel lesen der Tab auf dem alten und
+    /// der auf dem neuen Ort neu, auch verdeckt, und tragen danach die
+    /// Eigenschaft des neuen Orts; der Tab auf einem dritten Ordner bekommt
+    /// keinen Lesevorgang.
+    #[test]
+    fn ein_ortswechsel_liest_die_tabs_auf_altem_und_neuem_ort_neu_und_sonst_keinen() {
+        let ordner = Pruefordner::neu("tabs-heim-wechsel");
+        let zuhause = ordner.ordner("zuhause");
+        let alt_ort = ordner.ordner("zuhause/krkhome");
+        let neu_ort = ordner.ordner("anderswo");
+        let dritter = ordner.ordner("dritter");
+        let alt = krk_core::heimordner::Heimordner::im_benutzerverzeichnis(&zuhause);
+        let neu = krk_core::heimordner::Heimordner::am_ort(neu_ort.clone(), Some(&zuhause));
+        let griff = crate::heimgriff::mit(alt.clone());
+        let pfade = [
+            alt_ort.display().to_string(),
+            neu_ort.display().to_string(),
+            dritter.display().to_string(),
+        ];
+        let namen: Vec<&str> = pfade.iter().map(String::as_str).collect();
+        let mut liste = Tabliste::aus_zustand(&zustand(&namen), std::rc::Rc::clone(&griff));
+        // Der dritte Tab wird der sichtbare; die zwei Tabs auf den Orten sind
+        // damit verdeckt. `abbrechen` beendet jeden Lesevorgang, so dass danach
+        // jeder neue einer des Wechsels ist.
+        let _ = liste.waehlen(2);
+        liste.abbrechen();
+        assert!(liste.tabs.iter().all(|tab| tab.lesevorgang.is_none()));
+        assert_eq!(
+            liste.tabs[0].modell.ohne_inhaltsauftrag(),
+            Some("secrets.txt")
+        );
+        assert_eq!(liste.tabs[1].modell.ohne_inhaltsauftrag(), None);
+
+        crate::heimgriff::ersetzen(&griff, crate::heimgriff::Notizlage::gilt(neu.clone()));
+        let sichtbarer = liste.heimordner_gewechselt(Some(&alt), &neu);
+
+        assert!(!sichtbarer, "der sichtbare Tab steht auf keinem der Orte");
+        for stelle in [0, 1] {
+            assert!(
+                liste.tabs[stelle].lesevorgang.is_some() && liste.tabs[stelle].durchlauf.is_none(),
+                "der verdeckte Tab {stelle} liest nicht neu"
+            );
+        }
+        assert!(
+            liste.tabs[2].lesevorgang.is_none(),
+            "der Tab auf dem dritten Ordner liest neu"
+        );
+        assert_eq!(liste.tabs[0].modell.ohne_inhaltsauftrag(), None);
+        assert_eq!(
+            liste.tabs[1].modell.ohne_inhaltsauftrag(),
+            Some("secrets.txt")
+        );
+        assert_eq!(liste.tabs[2].modell.ohne_inhaltsauftrag(), None);
+
+        // Steht der sichtbare Tab auf einem der Orte, sagt die Antwort es.
+        let _ = liste.waehlen(1);
+        assert!(liste.heimordner_gewechselt(Some(&alt), &neu));
     }
 }

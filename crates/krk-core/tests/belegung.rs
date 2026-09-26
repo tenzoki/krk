@@ -183,7 +183,7 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// einer Datei. Die zweite Quelle ist hier `resources/default-keymap.toml`,
 /// und die liest [`ab_werk_traegt_genau_diese_liste_keine_kombination`] ueber
 /// [`Belegung::auslieferung`].
-const OHNE_KOMBINATION_AB_WERK: [&str; 7] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 8] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
@@ -191,6 +191,7 @@ const OHNE_KOMBINATION_AB_WERK: [&str; 7] = [
     "tiefe_suche_umschalten",
     "inhaltssuche_umschalten",
     "belegungsdatei_ansehen",
+    "ort_waehlen",
 ];
 
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.
@@ -2215,11 +2216,12 @@ fn der_fokuswechsel_wirkt_aus_jedem_bereich_heraus() {
     }
 }
 
-/// Die fuenf Befehle, die die Anwendung als ganze angehen, tragen
+/// Die sechs Befehle, die die Anwendung als ganze angehen, tragen
 /// [`Wirkungsbereich::Ueberall`].
 ///
 /// Sie sind keine Gruppe des Fensters, sondern der Anwendung: das Beenden, die
-/// weitere Instanz, der Notizordner und die zwei Wege in die Tastenbelegung.
+/// weitere Instanz, der Notizordner samt „Ort wählen…“ und die zwei Wege in
+/// die Tastenbelegung.
 /// Keiner von ihnen setzt einen Bereich voraus, und ein engerer Bereich waere
 /// bei jedem von ihnen genau dann eine Sperre, wenn der Nutzer ihn braucht —
 /// wer ein zweites KRK aus dem Editor heraus ruft, will nicht den Editor
@@ -2235,13 +2237,14 @@ fn der_fokuswechsel_wirkt_aus_jedem_bereich_heraus() {
 ///
 /// [`jedes_kommando_traegt_genau_einen_wirkungsbereich`] haelt daneben, dass
 /// **jedes** Kommando einen Bereich traegt; welchen, sagt es nicht. Diese Probe
-/// sagt es fuer diese fuenf.
+/// sagt es fuer diese sechs.
 #[test]
 fn die_anwendungsweiten_befehle_wirken_aus_jedem_bereich_heraus() {
     for kommando in [
         Kommando::Beenden,
         Kommando::WeitereInstanz,
         Kommando::Notizordner,
+        Kommando::OrtWaehlen,
         Kommando::BelegungAnsehen,
         Kommando::BelegungsdateiAnsehen,
     ] {

@@ -1373,6 +1373,36 @@ mod tests {
         }
     }
 
+    /// Steht ein Blatt, kommt „Ort waehlen…“ nicht durch; ohne Blatt kommt es
+    /// aus jedem Fokuswert (H3 des Spec
+    /// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// **Das ist die Regel, und sie traegt hier doppelt.** Der Befehl oeffnet
+    /// selbst ein Blatt, den Ordnerdialog; kaeme er waehrend eines anderen
+    /// Blattes durch, stuende ein zweites Blatt ueber dem ersten, und waehrend
+    /// des eigenen Dialogs oeffnete ein zweiter Anschlag einen zweiten. Dasselbe
+    /// Muster wie die Probe zum Notizordner darueber; die Zaehlprobe
+    /// `waehrend_eines_blattes_kommen_genau_diese_vier_durch` bleibt dabei, wie
+    /// sie ist.
+    #[test]
+    fn der_ortswahlbefehl_kommt_bei_stehendem_blatt_nicht_durch() {
+        let kommando = Kommando::OrtWaehlen;
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
+        assert!(!immer_erreichbar(kommando));
+        assert!(!operationen::waehrend_blatt_erlaubt(kommando));
+
+        for fokus in JEDER_FOKUS {
+            assert!(
+                zulaessig(kommando, lage(false, false, true, fokus)),
+                "„Ort waehlen…“ kommt ohne Blatt in {fokus:?} nicht durch"
+            );
+            assert!(
+                !zulaessig(kommando, lage(true, false, true, fokus)),
+                "„Ort waehlen…“ kommt bei stehendem Blatt in {fokus:?} durch"
+            );
+        }
+    }
+
     /// Die Ausnahmeliste fuehrt nach der Notizzettel-Runde dieselben drei
     /// Befehle wie davor.
     ///

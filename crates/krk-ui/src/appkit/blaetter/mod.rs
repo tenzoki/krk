@@ -22,6 +22,14 @@
 //! bestaetigende Schaltflaeche erst mit einer gueltigen Eingabe wirkt
 //! ([`Blatt::bestaetigung_pruefen`]).
 //!
+//! **Daneben liegt seit Stufe 3 der Home-Arbeit ein Blatt, das keines dieser
+//! Huelle ist**: der Ordnerdialog von „Ort waehlen…“ ([`ortwahl`]) ist ein
+//! `NSOpenPanel` und kein `NSAlert`, baut also weder ueber [`Blatt::neu`] noch
+//! ueber [`Blatt::mit_schaltflaechen`] und legt keinen [`Blattgriff`] in den
+//! Schlitz; sein Modulkopf sagt, warum `esc` ihn trotzdem erreicht. Die
+//! Blattsperre gilt fuer ihn wie fuer jedes andere Blatt, denn sie fragt
+//! `attachedSheet` und nicht den Schlitz.
+//!
 //! **Das Notizblatt der Runde 9 steht hier nicht mehr.** Es war das zehnte und
 //! das einzige mit einem eigenen Waechter; seit der Arbeit, in der F2 nach
 //! `~/krkhome/` fuehrt, oeffnet kein Befehl mehr ein Blatt fuer Notizen, und
@@ -234,6 +242,7 @@ pub mod konflikt;
 pub mod loeschbestaetigung;
 pub mod namenseingabe;
 pub mod neuerungen;
+pub mod ortwahl;
 pub mod pfadeingabe;
 pub mod pin;
 pub mod stapelumbenennen;

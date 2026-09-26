@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 101 Funktionen mit zusammen 104 Kombinationen.
+# Ausgeliefert sind 102 Funktionen mit zusammen 104 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1290,6 +1290,17 @@ gehalten_von = "menue"
 id = "notizzettel"
 name = "Notizordner öffnen"
 tasten = ["f2", "cmd+k"]
+
+[[funktion]]
+id = "ort_waehlen"
+name = "Ort wählen…"
+tasten = []
+# Waehlt den Ort des Notizordners ueber einen Ordnerdialog und schreibt ihn als
+# `notizordner` nach settings.toml (Datensatz
+# `260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md`).
+# Ein seltener Einrichtungsbefehl und darum ab Werk ohne Kombination; in F1
+# belegbar. Wer eine eigene keymap.toml hat, findet ihn unbelegt im Menue
+# "Home", ohne an seiner Belegung etwas zu tun.
 
 # ── Einträge im Editor ───────────────────────────────────────────────────────
 # Sechs Funktionen fuer die Tabelle, in der die Formatansicht des Editors

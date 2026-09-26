@@ -33,8 +33,9 @@ use krk_core::heimordner::eintraege::{
     ist_themenzeile, notizen,
 };
 use krk_core::heimordner::ort::{
-    Notizort, Ortsfehler, notizort, ort_lesen, ortswechsel, schreibform, schutzort, startzeile,
-    wechselsatz, zu_merken,
+    Notizort, Ortsfehler, abweisungssatz, gehaltene_notizdatei, im_ablageordner, notizort,
+    ort_lesen, ortswechsel, schon_der_ort, schreibform, schutzort, startzeile, wahlsatz,
+    wechselsatz, zu_merken, zurueckgeschrieben,
 };
 use krk_core::heimordner::tresor::{
     self, FORMATVERSION, KOPFLAENGE, Kopf, Kopfschaden, Oeffnungsfehler, Parameter, Pin, Pinfehler,
@@ -2118,6 +2119,7 @@ fn die_meldungen_zur_ungelesenen_datei_nennen_den_weg() {
         "kein Notizordner",
         "F2 legt nichts an",
         "berichtigen und KRK neu starten",
+        "„Home“ → „Ort wählen…“",
     ] {
         assert!(beschaedigt.contains(teil), "{beschaedigt}");
     }
@@ -2125,6 +2127,98 @@ fn die_meldungen_zur_ungelesenen_datei_nennen_den_weg() {
     for teil in ["Sperre belegt", "F2 legt nichts an", "KRK neu starten"] {
         assert!(ungelesen.contains(teil), "{ungelesen}");
     }
+}
+
+/// H3, Schritt 3.3: die Frage „haelt der Editor eine Datei dieses Orts?“,
+/// als Tafel. Gefragt wird sie mit demselben Editorzustand gegen zwei Orte.
+#[test]
+fn gehaltene_notizdatei_erkennt_die_drei_dateien_am_gefragten_ort() {
+    let geltend = Heimordner::am_ort(PathBuf::from("/Users/probe/krkhome"), None);
+    let gewaehlt = Heimordner::am_ort(PathBuf::from("/Volumes/X/notizen"), None);
+    for sorte in Sonderdatei::ALLE {
+        let pfad = geltend.geschrieben().join(sorte.dateiname());
+        assert_eq!(
+            gehaltene_notizdatei(Some(&pfad), false, Some(&geltend)),
+            Some(sorte.dateiname().to_owned()),
+            "{} am geltenden Ort",
+            sorte.dateiname()
+        );
+        // Dieselbe Datei gegen den gewaehlten Ort: dort liegt sie nicht.
+        assert_eq!(
+            gehaltene_notizdatei(Some(&pfad), false, Some(&gewaehlt)),
+            None
+        );
+    }
+    // Eine Datei des gewaehlten statt des geltenden Orts (S1 der Zweitlesung).
+    let dort = gewaehlt.geschrieben().join("secrets.txt");
+    assert_eq!(
+        gehaltene_notizdatei(Some(&dort), false, Some(&geltend)),
+        None
+    );
+    assert_eq!(
+        gehaltene_notizdatei(Some(&dort), false, Some(&gewaehlt)),
+        Some("secrets.txt".to_owned())
+    );
+    // `secrets.txt` unter einer dritten Schreibweise: der Pfadtext erkennt sie
+    // nicht, der Schluessel im Editor schon.
+    let dritte = Path::new("/private/elsewhere/secrets.txt");
+    assert_eq!(
+        gehaltene_notizdatei(Some(dritte), false, Some(&geltend)),
+        None
+    );
+    assert_eq!(
+        gehaltene_notizdatei(Some(dritte), true, Some(&geltend)),
+        Some("secrets.txt".to_owned())
+    );
+    // Eine andere Datei, kein Pfad, kein Ort.
+    let andere = geltend.geschrieben().join("liste.txt");
+    assert_eq!(
+        gehaltene_notizdatei(Some(&andere), false, Some(&geltend)),
+        None
+    );
+    assert_eq!(gehaltene_notizdatei(None, false, Some(&geltend)), None);
+    assert_eq!(
+        gehaltene_notizdatei(Some(&geltend.geschrieben().join("notes.txt")), false, None),
+        None
+    );
+    assert_eq!(
+        gehaltene_notizdatei(None, true, None),
+        Some("secrets.txt".to_owned())
+    );
+}
+
+/// Die kanonische Form eines gewaehlten Orts wird mit derselben Regel gegen
+/// den Ablageordner gehalten wie ein Text in `settings.toml`.
+#[test]
+fn im_ablageordner_folgt_der_regel_von_ort_lesen() {
+    let ablage = Path::new("/Users/probe/Library/Application Support/KRK");
+    assert!(im_ablageordner(ablage, ablage));
+    assert!(im_ablageordner(&ablage.join("notizen"), ablage));
+    assert!(im_ablageordner(
+        Path::new("/Users/probe/library/application support/krk/x"),
+        ablage
+    ));
+    assert!(!im_ablageordner(
+        Path::new("/Users/probe/Library/Application Support/KRK-alt"),
+        ablage
+    ));
+    assert!(!im_ablageordner(Path::new("/Volumes/X"), ablage));
+}
+
+/// Die Saetze von „Ort waehlen…“ nennen, was der Nutzer wissen muss.
+#[test]
+fn die_saetze_der_ortswahl_nennen_datei_und_orte() {
+    let abweisung = abweisungssatz("secrets.txt");
+    assert!(abweisung.starts_with("Zuerst secrets.txt im Editor schließen"));
+    assert_eq!(
+        wahlsatz("~/neu", Some("~/krkhome")),
+        wechselsatz("~/neu", "~/krkhome")
+    );
+    let ohne_alten = wahlsatz("~/neu", None);
+    assert!(ohne_alten.contains("~/neu") && ohne_alten.contains("F2"));
+    assert!(schon_der_ort("~/neu").contains("„~/neu“ ist schon der Notizordner"));
+    let zurueck = zurueckgeschrieben("~/krkhome");
+    assert!(zurueck.contains("„~/krkhome“") && zurueck.contains("seit dem Start"));
 }
 
 /// Die Sitzung merkt den geltenden Ort; gilt keiner, bleibt der gemerkte.

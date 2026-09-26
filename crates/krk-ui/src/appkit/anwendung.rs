@@ -272,6 +272,7 @@ use objc2_foundation::{
     NSString, NSTimer,
 };
 
+use krk_core::ablage::einstellungen::{Ortswert, Schreibausgang};
 use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG};
 use krk_core::ablage::neuerungen::{self, Bestand, Leserurteile};
 use krk_core::ablage::sitzung::Sitzungsschreiber;
@@ -4295,6 +4296,12 @@ impl Anwendungsdelegierter {
             // wird die Stelle von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
             Kommando::Notizordner => self.notizordner_oeffnen(),
+            // „Ort waehlen…“ aus H3 des einstellbaren Orts, aus demselben
+            // Grund wie F2 darueber: `Wirkungsbereich::Ueberall`, ein Blatt am
+            // Hauptfenster als Gegenstand, und der Auffangzweig unten schluckte
+            // ihn still. Gehalten von
+            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::OrtWaehlen => self.ort_waehlen(),
             // Das Blatt der Neuerungen aus der Runde 24. Es steht hier aus
             // demselben Grund wie der Notizordner darueber: `Ueberall` als
             // Wirkungsbereich, kein Bereich der Fensterzeile als Gegenstand,
@@ -5163,6 +5170,229 @@ impl Anwendungsdelegierter {
         krk_core::ablage::Ablageort::im_benutzerverzeichnis()
             .map(|ort| ort.wurzel().to_path_buf())
             .unwrap_or_default()
+    }
+
+    /// „Ort waehlen…“: den Ordnerdialog am Hauptfenster zeigen, beim
+    /// geltenden Ort beginnend (H3 des Spec
+    /// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// **Vor dem Dialog die erste Abweisung**: haelt der Editor eine Datei des
+    /// geltenden Notizordners, nennt die Statuszeile sie, und kein Dialog
+    /// oeffnet sich. Gefragt wird der Ordner aus [`heimgriff::lesen`] und nicht
+    /// aus [`heimgriff::lage`]: der Grund der Abweisung ist die Anzeige, und
+    /// die folgt dem Ordner, an dem die Regeln gerade gelten, also auch dem
+    /// Schutzort, wenn kein Ort gilt. Die Frage selbst steht im Kern
+    /// ([`ort::gehaltene_notizdatei`]); eine `secrets.txt`, deren PIN-Abfrage
+    /// laeuft, erreicht sie nie, denn das PIN-Blatt ist ein Blatt, und dieser
+    /// Befehl kommt waehrend eines Blattes nicht durch.
+    ///
+    /// Der Abschlussblock haelt den Delegierten **schwach**, ruft zuerst
+    /// [`Self::blatt_geschlossen`], wie jeder Abschlussblock eines Blattes, und
+    /// bei einem gewaehlten Ordner [`Self::ort_uebernehmen`]. Einen
+    /// [`Blattgriff`] legt der Dialog nicht in den Schlitz; der Modulkopf von
+    /// [`blaetter::ortwahl`] sagt, warum `esc` ihn trotzdem erreicht.
+    fn ort_waehlen(&self) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        if let Some(datei) =
+            self.gehaltene_notizdatei(heimgriff::lesen(&self.ivars().heim).as_ref())
+        {
+            self.antwort_zeigen(aktiv, &ort::abweisungssatz(&datei));
+            return true;
+        }
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        let beginn =
+            heimgriff::lesen(&self.ivars().heim).map(|heim| heim.geschrieben().to_path_buf());
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        blaetter::ortwahl::zeigen(self.mtm(), fenster, beginn.as_deref(), move |gewaehlt| {
+            if let Some(selbst) = schwach.load() {
+                selbst.blatt_geschlossen();
+                if let Some(pfad) = gewaehlt {
+                    selbst.ort_uebernehmen(&pfad);
+                }
+            }
+        });
+        true
+    }
+
+    /// Die Datei des Notizordners `heim`, die der Editor gerade haelt, oder
+    /// `None`; die Regel steht bei [`ort::gehaltene_notizdatei`].
+    ///
+    /// Ohne gebauten Editor haelt er keine.
+    fn gehaltene_notizdatei(&self, heim: Option<&Heimordner>) -> Option<String> {
+        let editor = self.ivars().editor.get()?;
+        ort::gehaltene_notizdatei(editor.pfad().as_deref(), editor.haelt_geheimnisse(), heim)
+    }
+
+    /// Uebernimmt den im Dialog gewaehlten Ordner als Notizordner, oder meldet,
+    /// warum nicht (H3).
+    ///
+    /// **Jeder Abbruch meldet in der Statuszeile und laesst den geltenden Ort
+    /// in Kraft.** Die Folge, und jeder Schritt steht genau einmal da:
+    ///
+    /// 1. die Frage nach der gehaltenen Datei gegen den geltenden Ort, noch
+    ///    einmal, denn zwischen Dialog und Wahl kann der Editor eine geoeffnet
+    ///    haben;
+    /// 2. die Schreibform und [`ort::ort_lesen`] auf **genau diesem Text**, mit
+    ///    dem Ablageordner: der Dialog prueft, was danach in der Datei steht;
+    /// 3. [`Heimordner::aufgeloest_erneuern`] am gewaehlten Ort, also
+    ///    `canonicalize`, und die kanonische Form noch einmal gegen den
+    ///    Ablageordner, denn ein Verweis kann dorthin fuehren;
+    /// 4. die Frage nach der gehaltenen Datei gegen den **gewaehlten** Ort (S1
+    ///    der Zweitlesung);
+    /// 5. ob es ein Wechsel ist: kein Ort galt, oder die geschriebenen Formen
+    ///    unterscheiden sich und die kanonische Form des gewaehlten gleicht
+    ///    nicht der aufgeloesten des geltenden. Der alte Ort wird dafuer nicht
+    ///    beruehrt;
+    /// 6. das Schreiben unter der Sperre, ueber
+    ///    [`einstellungen::notizordner_schreiben`]; ob der Wert in der Datei
+    ///    schon den gewaehlten Ort nennt, entscheidet sich dort, am Stand der
+    ///    Datei und nicht am Stand des Starts (S4).
+    ///
+    /// Danach entscheidet allein die Tafel aus Schritt 3.3 des Plans
+    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`, vollstaendig
+    /// ueber Ausgang und Wechsel. **Angelegt wird nichts, und kein Tab
+    /// oeffnet sich**; F2 bleibt der eine Weg, der anlegt.
+    fn ort_uebernehmen(&self, pfad: &Path) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let melden = |text: &str| self.antwort_zeigen(aktiv, text);
+        let geltend = heimgriff::lage(&self.ivars().heim);
+        let regelort = heimgriff::lesen(&self.ivars().heim);
+
+        // 1. Der geltende Ort, noch einmal.
+        if let Some(datei) = self.gehaltene_notizdatei(regelort.as_ref()) {
+            melden(&ort::abweisungssatz(&datei));
+            return;
+        }
+
+        // 2. Genau der Text, der danach in der Datei steht, durch dieselbe
+        // Pruefung wie ein Wert von Hand.
+        let zuhause = pfade::benutzerverzeichnis();
+        let ablageordner = self.ablageordner();
+        let Some(text) = ort::schreibform(pfad, zuhause.as_deref()) else {
+            melden(
+                "Der gewählte Ort lässt sich nicht in settings.toml schreiben: sein Pfad ist kein gültiges UTF-8",
+            );
+            return;
+        };
+        let neuer_pfad = match ort::ort_lesen(&text, zuhause.as_deref(), Some(&ablageordner)) {
+            Ok(neuer_pfad) => neuer_pfad,
+            Err(fehler) => {
+                melden(&fehler.meldung());
+                return;
+            }
+        };
+
+        // 3. Die kanonische Form, allein hier und bei F2 erhoben.
+        let neu = Heimordner::am_ort(neuer_pfad.clone(), zuhause.as_deref()).aufgeloest_erneuern();
+        if let Some(kanonisch) = neu.aufgeloest() {
+            let ablage_kanonisch = std::fs::canonicalize(&ablageordner).ok();
+            let im_ablageordner = ort::im_ablageordner(kanonisch, &ablageordner)
+                || ablage_kanonisch
+                    .as_deref()
+                    .is_some_and(|ablage| ort::im_ablageordner(kanonisch, ablage));
+            if im_ablageordner {
+                melden(&Ortsfehler::ImAblageordner(text).meldung());
+                return;
+            }
+        }
+
+        // 4. Der gewaehlte Ort (S1).
+        if let Some(datei) = self.gehaltene_notizdatei(Some(&neu)) {
+            melden(&ort::abweisungssatz(&datei));
+            return;
+        }
+
+        // 5. Wechsel oder derselbe Ordner unter anderer Schreibweise.
+        let wechsel = match &geltend {
+            Err(_) => true,
+            Ok(alt) => {
+                alt.geschrieben() != neu.geschrieben()
+                    && !neu
+                        .aufgeloest()
+                        .is_some_and(|kanonisch| alt.aufgeloest() == Some(kanonisch))
+            }
+        };
+
+        // 6. Schreiben unter der Sperre; „derselbe Ort“ am Wert in der Datei.
+        let ausgang = self.unter_der_sperre(|zugang| {
+            einstellungen::notizordner_schreiben(zugang, &text, |vorhanden| {
+                ort::ort_lesen(vorhanden, zuhause.as_deref(), Some(&ablageordner))
+                    .is_ok_and(|vorhanden| vorhanden == neuer_pfad)
+            })
+        });
+        let ausgang = match ausgang {
+            Ok(Ok(ausgang)) => ausgang,
+            Ok(Err(hindernis)) => {
+                melden(&hindernis.meldung());
+                return;
+            }
+            Err(Sperrhindernis::OhneOrdner) => {
+                melden(
+                    "Es gibt keinen Ablageordner und damit keine settings.toml, in die KRK den Ort schreiben könnte; der Notizordner bleibt, wo er ist",
+                );
+                return;
+            }
+            Err(Sperrhindernis::Gesperrt(fehler)) => {
+                melden(&format!(
+                    "Der Ort lässt sich nicht in settings.toml schreiben: die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); der Notizordner bleibt, wo er ist"
+                ));
+                return;
+            }
+        };
+
+        // Die Tafel aus Schritt 3.3, vollstaendig und ohne Auffangzweig.
+        match (ausgang, wechsel) {
+            (Schreibausgang::Unveraendert, false) => melden(&ort::schon_der_ort(neu.anzeigename())),
+            (Schreibausgang::Geschrieben, false) => {
+                melden(&ort::zurueckgeschrieben(neu.anzeigename()));
+            }
+            (Schreibausgang::Unveraendert | Schreibausgang::Geschrieben, true) => {
+                self.ort_wechseln(regelort.as_ref(), neu, text, zuhause.as_deref());
+            }
+        }
+    }
+
+    /// Der Wechsel selbst, nachdem `settings.toml` den neuen Ort traegt oder
+    /// schon trug: Griff, Einstellungen, Sitzung, Nachzug, Statuszeile.
+    ///
+    /// **In dieser Reihenfolge, und die Stelle des Griffs ist tragend**: die
+    /// Tablisten und die Vorschau fragen beim Nachziehen den Griff, also muss
+    /// er vorher den neuen Ort halten. `alt` ist der Ordner, an dem die Regeln
+    /// bis eben galten ([`heimgriff::lesen`], auch der Schutzort): Tabs und
+    /// Vorschau-Tabs dort tragen noch die Abschrift des alten Werts. Der
+    /// Wechselsatz nennt als alten Ort den gemerkten vor der Uebernahme.
+    fn ort_wechseln(
+        &self,
+        alt: Option<&Heimordner>,
+        neu: Heimordner,
+        text: String,
+        zuhause: Option<&Path>,
+    ) {
+        let gemerkt_vorher = self.ivars().gemerkter_ort.borrow().clone();
+        heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(neu.clone()));
+        self.ivars().einstellungen.borrow_mut().notizordner = Ortswert::Text(text);
+        *self.ivars().gemerkter_ort.borrow_mut() = Some(neu.geschrieben().to_path_buf());
+        self.sitzung_vormerken();
+
+        // Schritt 3.4: Tablisten und Vorschau folgen sofort.
+        for seite in Fensterseite::ALLE {
+            self.dateifenster(seite)
+                .quelle()
+                .heimordner_gewechselt(alt, &neu);
+        }
+        if let Some(vorschau) = self.ivars().vorschau.get() {
+            vorschau.heimordner_gewechselt(alt, &neu);
+        }
+
+        let alt_anzeige =
+            gemerkt_vorher.map(|gemerkt| pfade::gekuerzt_fuer_anzeige(&gemerkt, zuhause));
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.antwort_zeigen(
+            aktiv,
+            &ort::wahlsatz(neu.anzeigename(), alt_anzeige.as_deref()),
+        );
     }
 
     /// Schreibt die geltende Tastenbelegung als Markdown in den
@@ -10120,9 +10350,10 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 9] = [
+    const BEFEHLE: [&str; 10] = [
         "NeuerungenZeigen",
         "Notizordner",
+        "OrtWaehlen",
         "EintragHinzufuegen",
         "EintragBearbeiten",
         "EintragHoch",
@@ -10259,15 +10490,25 @@ mod notizordnerproben {
             "der eine Rufer des Anlegens ist nicht {oeffnen}"
         );
 
+        // Zwei Rufer seit Stufe 3 des einstellbaren Orts: F2 und „Ort
+        // waehlen…“, und beide sind Befehle; keiner davon ist der Start.
         assert_eq!(
             rufer(concat!("aufgeloest_", "erneuern")),
-            [(datei.clone(), 1)],
-            "das Aufloesen am Ziel hat nicht genau einen Rufer im ausgelieferten Code"
+            [(datei.clone(), 2)],
+            "das Aufloesen am Ziel hat nicht genau zwei Rufer im ausgelieferten Code"
         );
         assert_eq!(
             aufrufstellen(&rumpf(&quelle, oeffnen), concat!("aufgeloest_", "erneuern")),
             1,
-            "der eine Rufer des Aufloesens ist nicht {oeffnen}"
+            "einer der Rufer des Aufloesens ist nicht {oeffnen}"
+        );
+        assert_eq!(
+            aufrufstellen(
+                &rumpf(&quelle, concat!("ort_", "uebernehmen")),
+                concat!("aufgeloest_", "erneuern")
+            ),
+            1,
+            "der zweite Rufer des Aufloesens ist nicht ort_uebernehmen"
         );
 
         assert_eq!(
@@ -10335,6 +10576,91 @@ mod notizordnerproben {
         assert!(
             setzen < tabliste,
             "die erste Tabliste entsteht vor dem gesetzten Griff"
+        );
+    }
+
+    /// „Ort waehlen…“ hat eine Rufkette ohne Start: `ort_uebernehmen` allein
+    /// aus dem Abschlussblock in `ort_waehlen`, dieses allein aus dem Zweig in
+    /// `kommando_ausfuehren`, und das Schreiben in `settings.toml` allein aus
+    /// `ort_uebernehmen` (H3, Schritt 3.3).
+    #[test]
+    fn die_ortswahl_hat_genau_eine_rufkette() {
+        let datei = "krk-ui/src/appkit/anwendung.rs".to_owned();
+        let quelle = diese_datei();
+        let uebernehmen = concat!("ort_", "uebernehmen");
+        let waehlen = concat!("ort_", "waehlen");
+        let schreiben = concat!("notizordner_", "schreiben");
+
+        assert_eq!(rufer(uebernehmen), [(datei.clone(), 1)]);
+        assert_eq!(aufrufstellen(&rumpf(&quelle, waehlen), uebernehmen), 1);
+        assert_eq!(rufer(waehlen), [(datei.clone(), 1)]);
+        assert_eq!(
+            aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren"), waehlen),
+            1
+        );
+        assert_eq!(
+            rufer(schreiben),
+            [(datei, 1)],
+            "settings.toml hat nicht genau einen Schreiber im ausgelieferten Code"
+        );
+        assert_eq!(aufrufstellen(&rumpf(&quelle, uebernehmen), schreiben), 1);
+    }
+
+    /// In `ort_uebernehmen` stehen beide Fragen nach der gehaltenen Datei vor
+    /// dem Schreiben, und das Schreiben vor dem Wechsel; im Wechsel steht der
+    /// Griff vor dem Nachzug von Tablisten und Vorschau (Schritte 3.3 und 3.4).
+    /// `ort_waehlen` fragt vor dem Dialog.
+    #[test]
+    fn die_ortswahl_fragt_vor_dem_schreiben_und_setzt_den_griff_vor_dem_nachzug() {
+        let quelle = diese_datei();
+        let frage = concat!("self.gehaltene_", "notizdatei(");
+
+        let waehlen = rumpf(&quelle, concat!("ort_", "waehlen"));
+        let dialog = waehlen
+            .find(concat!("ortwahl::", "zeigen("))
+            .expect("ort_waehlen zeigt keinen Dialog");
+        assert!(waehlen.find(frage).is_some_and(|stelle| stelle < dialog));
+
+        let uebernehmen = rumpf(&quelle, concat!("ort_", "uebernehmen"));
+        let schreiben = uebernehmen
+            .find(concat!("notizordner_", "schreiben("))
+            .expect("ort_uebernehmen schreibt nicht");
+        let fragen: Vec<usize> = uebernehmen
+            .match_indices(frage)
+            .map(|(stelle, _)| stelle)
+            .collect();
+        assert_eq!(
+            fragen.len(),
+            2,
+            "nicht genau zwei Fragen nach der gehaltenen Datei"
+        );
+        assert!(fragen.iter().all(|stelle| *stelle < schreiben));
+        let wechsel = uebernehmen
+            .find(concat!("self.ort_", "wechseln("))
+            .expect("ort_uebernehmen wechselt nie");
+        assert!(schreiben < wechsel);
+        assert!(
+            !uebernehmen.contains(concat!("heimgriff::", "ersetzen(")),
+            "der Griff wird ausserhalb des Wechsels ersetzt"
+        );
+
+        let wechseln = rumpf(&quelle, concat!("ort_", "wechseln"));
+        let griff = wechseln
+            .find(concat!("heimgriff::", "ersetzen("))
+            .expect("der Wechsel ersetzt den Griff nicht");
+        let nachzuege: Vec<usize> = wechseln
+            .match_indices(concat!(".heimordner_", "gewechselt("))
+            .map(|(stelle, _)| stelle)
+            .collect();
+        assert_eq!(
+            nachzuege.len(),
+            2,
+            "Dateifenster und Vorschau ziehen nicht beide nach"
+        );
+        assert!(nachzuege.iter().all(|stelle| griff < *stelle));
+        assert!(
+            !wechseln.contains(concat!("bereit", "stellen(")) && !wechseln.contains("tab_oeffnen("),
+            "der Wechsel legt an oder oeffnet einen Tab"
         );
     }
 

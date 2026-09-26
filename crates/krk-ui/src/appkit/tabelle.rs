@@ -344,6 +344,7 @@ use objc2_foundation::{
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
 use krk_core::git::Marke;
+use krk_core::heimordner::Heimordner;
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
 use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
@@ -1757,6 +1758,30 @@ impl DateifensterQuelle {
         self.bildlauf_merken();
         self.ivars().tabs.borrow_mut().aktiven_neu_lesen();
         self.nach_lesebeginn();
+    }
+
+    /// Liest jeden Tab neu, dessen Ordner der alte oder der neue Notizordner
+    /// ist (Schritt 3.4 des Plans
+    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// Welche Tabs das sind, entscheidet [`Tabliste::heimordner_gewechselt`].
+    /// War der sichtbare darunter, zieht die Ansicht denselben Weg nach wie
+    /// [`Self::neu_lesen`]; sonst lesen allein verdeckte Tabs, und es genuegt,
+    /// den Einzugstakt anzuwerfen, der ihre Stapel still einzieht. Der Ordner
+    /// bleibt in jedem Tab derselbe, also meldet diese Methode keinen
+    /// Ordnerwechsel.
+    pub fn heimordner_gewechselt(&self, alt: Option<&Heimordner>, neu: &Heimordner) {
+        self.bildlauf_merken();
+        let sichtbarer = self
+            .ivars()
+            .tabs
+            .borrow_mut()
+            .heimordner_gewechselt(alt, neu);
+        if sichtbarer {
+            self.nach_lesebeginn();
+        } else if self.ivars().tabs.borrow().arbeitet_noch() {
+            self.einzug_starten();
+        }
     }
 
     /// Zieht die Ansicht nach, nachdem im sichtbaren Tab ein Lesevorgang

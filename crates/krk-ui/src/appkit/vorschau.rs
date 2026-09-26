@@ -1082,6 +1082,31 @@ impl Vorschaufenster {
         self.takt_starten();
     }
 
+    /// Laedt jeden Vorschau-Tab neu, der eine Eintragsdatei des alten oder
+    /// des neuen Notizordners zeigt (Schritt 3.4 des Plans
+    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// Der Treffer ist `alt.sonderdatei(p)` oder `neu.sonderdatei(p)`, zwei
+    /// Textvergleiche **ohne Systemaufruf**; der neue Auftrag nimmt die
+    /// Abschrift aus dem Griff, den der Rufer vorher auf den neuen Ort gesetzt
+    /// hat. `notes.txt` am alten Ort erscheint danach als Text, am neuen
+    /// gerendert, ohne dass der Nutzer sie neu waehlt.
+    pub fn heimordner_gewechselt(&self, alt: Option<&Heimordner>, neu: &Heimordner) {
+        let profile = self.ivars().profile.get().cloned().unwrap_or_default();
+        let auftraege = self.ivars().modell.borrow_mut().neu_laden_wo(
+            |pfad| {
+                neu.sonderdatei(pfad).is_some()
+                    || alt.is_some_and(|alt| alt.sonderdatei(pfad).is_some())
+            },
+            self.ivars().tafel.get(),
+            &profile,
+            heimgriff::lesen(&self.ivars().heim).as_ref(),
+        );
+        if auftraege > 0 {
+            self.takt_starten();
+        }
+    }
+
     /// Welche Datei der aktive Tab zeigt; `None`, wenn keine Datei.
     ///
     /// Nur zum Ablesen. Vier fragen danach: die Endbedingung von L7 im

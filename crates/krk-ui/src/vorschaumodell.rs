@@ -613,6 +613,48 @@ impl Vorschaumodell {
         ));
     }
 
+    /// Startet fuer jeden Tab, dessen Datei `treffer` erfuellt, einen neuen
+    /// Ladeauftrag mit der hereingereichten Abschrift des Heimordners
+    /// (Schritt 3.4 des Plans
+    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// **Der Ladeauftrag haelt eine Abschrift des Werts vom Auftrag**
+    /// ([`crate::heimgriff`]), und ob `notes.txt` gerendert oder als Text
+    /// erscheint, haengt an ihr; ein Wechsel des Orts erreicht einen Tab also
+    /// erst mit einem neuen Auftrag. Gefragt wird die Datei, die gerade
+    /// geladen wird, sonst die angezeigte: ein laufender Auftrag traegt noch
+    /// die alte Abschrift und wird ersetzt. Titel und Inhalt bleiben bis zur
+    /// Lieferung stehen, wie bei [`Vorschaumodell::datei_anzeigen`]. Liefert
+    /// die Zahl der neuen Auftraege.
+    #[must_use = "die Zahl sagt, ob der Ladetakt anzuwerfen ist"]
+    pub fn neu_laden_wo(
+        &mut self,
+        treffer: impl Fn(&Path) -> bool,
+        tafel: Tafel,
+        profile: &Arc<Profile>,
+        heim: Option<&Heimordner>,
+    ) -> usize {
+        let mut auftraege = 0;
+        for tab in &mut self.tabs {
+            let pfad = tab
+                .ladevorgang
+                .as_ref()
+                .map(|vorgang| vorgang.pfad.clone())
+                .or_else(|| tab.pfad.clone());
+            let Some(pfad) = pfad.filter(|pfad| treffer(pfad)) else {
+                continue;
+            };
+            tab.ladevorgang = Some(Ladevorgang::starten(
+                pfad,
+                tafel,
+                Arc::clone(profile),
+                heim.cloned(),
+            ));
+            auftraege += 1;
+        }
+        auftraege
+    }
+
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
     ///
     /// Ohne Arbeitsfaden: die Zwischenablage liegt im Arbeitsspeicher. Ein
@@ -1722,6 +1764,57 @@ mod tests {
             Inhalt::Text("aus dem Faden".to_owned())
         );
         assert_eq!(modell.titel()[0], "inhalt.txt");
+    }
+
+    /// H3.11, Schritt 3.4: nach einem Wechsel des Orts bekommt ein Tab mit
+    /// `notes.txt` des alten Orts einen neuen Ladeauftrag mit dem neuen Wert
+    /// und erscheint danach als Text; ein Tab mit einer fremden Datei bekommt
+    /// keinen.
+    #[test]
+    fn ein_ortswechsel_laedt_allein_die_tabs_mit_einer_eintragsdatei_neu() {
+        let ordner = Pruefordner::neu("vorschau-wechsel");
+        let alt_ort = ordner.ordner("alt");
+        let neu_ort = ordner.ordner("neu");
+        std::fs::write(alt_ort.join("notes.txt"), "## Einkauf\nBrot\n").expect("notes.txt");
+        let fremd = ordner.datei("fremd.txt", "fremd\n");
+        let alt = Heimordner::am_ort(alt_ort.clone(), None);
+        let neu = Heimordner::am_ort(neu_ort, None);
+        let profile: Arc<Profile> = Arc::default();
+
+        let mut modell = Vorschaumodell::neu();
+        modell.datei_anzeigen(
+            &alt_ort.join("notes.txt"),
+            Tafel::Hell,
+            Arc::clone(&profile),
+            Some(alt.clone()),
+        );
+        modell.oeffnen();
+        modell.datei_anzeigen(&fremd, Tafel::Hell, Arc::clone(&profile), Some(alt.clone()));
+        while modell.laedt_noch() {
+            let _ = modell.einziehen();
+            std::thread::yield_now();
+        }
+        assert!(modell.waehlen(0));
+        assert_eq!(
+            gerenderter_text(modell.aktiver_inhalt().clone()),
+            "Einkauf\n\nBrot"
+        );
+
+        let treffer =
+            |pfad: &Path| neu.sonderdatei(pfad).is_some() || alt.sonderdatei(pfad).is_some();
+        let auftraege = modell.neu_laden_wo(treffer, Tafel::Hell, &profile, Some(&neu));
+        assert_eq!(auftraege, 1, "allein der Tab mit notes.txt laedt neu");
+        assert!(modell.tabs[0].ladevorgang.is_some());
+        assert!(modell.tabs[1].ladevorgang.is_none());
+        while modell.laedt_noch() {
+            let _ = modell.einziehen();
+            std::thread::yield_now();
+        }
+        assert_eq!(
+            *modell.aktiver_inhalt(),
+            Inhalt::Text("## Einkauf\nBrot\n".to_owned()),
+            "am alten Ort erscheint notes.txt nach dem Wechsel als Text"
+        );
     }
 
     /// Setzt Inhalt und Pfad des aktiven Tabs unmittelbar.

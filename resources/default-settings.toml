@@ -3,24 +3,30 @@
 # Diese Datei ist die alleinige Quelle der ausgelieferten Einstellungen. Die
 # Ablage aus Schritt 18c des Plans bindet sie ueber `include_str!` ein und legt
 # `~/Library/Application Support/KRK/settings.toml` beim ersten Start aus ihr
-# an, samt dieser Kommentare. Danach schreibt KRK die Nutzerdatei nicht mehr:
-# sie ist die eine Datei der Ablage, die von Hand gepflegt wird.
+# an, samt dieser Kommentare. Danach ist sie die eine Datei der Ablage, die von
+# Hand gepflegt wird, und KRK schreibt sie an genau einer Stelle: "Ort
+# waehlen..." im Menue "Home" ersetzt allein den Wert von `notizordner` und
+# laesst jedes andere Byte stehen, diese Kommentare eingeschlossen. Ist die
+# Datei ein symbolischer Verweis, schreibt KRK sie nie und nennt die Zeile zum
+# Eintragen von Hand.
 #
 # Quelle: Spec `260802-1036_*_spec-navigator-geruest.md`, Faehigkeit C11.
 # Bindend ist ausserdem der Datensatz
 # `decisions/260805-1623_*_taste-und-einstellbarkeit-des-terminal-befehls.md`.
 #
-# Aufnahmeregel: hier steht ein Wert, der drei Bedingungen zugleich erfuellt.
-# Er ist keine Tastenbelegung, KRK schreibt ihn im Betrieb nicht selbst, und er
-# hat in dieser Runde keine Oberflaeche. Was KRK selbst fortschreibt, gehoert
+# Aufnahmeregel: hier steht ein Wert, der zwei Bedingungen zugleich erfuellt.
+# Er ist keine Tastenbelegung, und KRK schreibt ihn im Betrieb nicht selbst
+# fort. Eine Ansicht darf er haben, wenn ihr Schreibweg allein die Zeile dieses
+# Werts beruehrt; `notizordner` ist der erste solche Wert. Was KRK selbst
+# fortschreibt, gehoert
 # nach `session.toml`: eine Fensterbreite, eine Sortierung, eine zuletzt
 # besuchte Stelle aendern sich beim Arbeiten und nicht beim Einrichten. Eine
 # Tastenbelegung gehoert nach `keymap.toml`, schon weil der Befehl aus C3, der
 # die gesamte Belegung zuruecksetzt, sonst eine Einstellung mit zuruecksetzte.
-# Und sobald eine Ansicht einen Wert aendern kann, gehoert er nicht mehr
-# hierher: mit der Ansicht kaeme ein Schreibpfad, und ein Schreibpfad loescht
-# die Kommentare, die den Sinn dieser Datei ausmachen. Die Herleitung steht im
-# Plan unter `### Frage 4`.
+# Und eine Ansicht, deren Schreibweg die ganze Datei neu schriebe, gehoert
+# nicht hierher: sie loeschte die Kommentare, die den Sinn dieser Datei
+# ausmachen. Die Herleitung steht im Plan unter `### Frage 4`, die Neufassung im
+# Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`.
 #
 # Ein Feld, das die Nutzerdatei nicht nennt, kommt aus dieser Fassung. Das ist
 # die eine Abweichung von `keymap.toml`, wo die Nutzerdatei die
@@ -72,13 +78,15 @@ terminal = "com.apple.Terminal"
 #
 # Ein Wechsel verschiebt nichts. Die Dateien am alten Ort bleiben liegen, und
 # was am neuen Ort fehlt, legt erst der naechste F2 dort leer an; beim Start
-# legt KRK nie etwas an. Ein Wechsel von Hand in dieser Datei gilt ab dem
-# naechsten Start, und die Statuszeile nennt dann einmal den alten Ort. Die
+# legt KRK nie etwas an. Gesetzt wird der Wert von Hand hier, dann gilt er ab
+# dem naechsten Start und die Statuszeile nennt einmal den alten Ort, oder ueber
+# "Ort waehlen..." im Menue "Home", dann gilt er sofort. Die
 # alten Notizzettel aus der Zeit vor dem Notizordner werden allein am
 # Vorgabeort `~/krkhome` uebernommen und nirgends sonst.
 #
 # Ist diese Datei beschaedigt oder nicht lesbar, gilt kein Notizordner, bis
-# sie berichtigt und KRK neu gestartet ist (Datensatz
+# sie berichtigt und KRK neu gestartet ist oder bis "Ort waehlen..." sie nach
+# dem Berichtigen neu liest und den Wert schreibt (Datensatz
 # `260926-1506_*_welcher-notizordner-gilt-wenn-settings-toml-beim-start-beschaedigt-ist.md`).
 #
 # Eine KRK-Fassung vor diesem Schluessel weist eine Datei, die ihn fuehrt, als

@@ -476,8 +476,8 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EditorRueckwaertsSuchen
         | Kommando::EditorErsetzen
         | Kommando::EditorAlleErsetzen => Funktionsbereich::Editor,
-        // Der Notizordner und alles, was an ihm haengt: F2, die sechs Befehle
-        // der Eintragstabelle und „PIN ändern".
+        // Der Notizordner und alles, was an ihm haengt: F2, „Ort waehlen…",
+        // die sechs Befehle der Eintragstabelle und „PIN ändern".
         //
         // **Hier fragt die Gliederung ausnahmsweise nach dem Gegenstand und
         // nicht nach der Gegend.** Bis zum 260926 stand F2 unter "Anwendung",
@@ -495,6 +495,7 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // ändern" wirken weiter allein im Editor, F2 weiter ueberall. Nur die
         // Stelle in der Leiste zieht um.
         Kommando::Notizordner
+        | Kommando::OrtWaehlen
         | Kommando::EintragHinzufuegen
         | Kommando::EintragBearbeiten
         | Kommando::EintragHoch
@@ -1508,8 +1509,9 @@ mod tests {
     /// Probe des Editors darueber.
     #[test]
     fn der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge() {
-        const HOMEBEFEHLE: [&str; 8] = [
+        const HOMEBEFEHLE: [&str; 9] = [
             "notizzettel",
+            "ort_waehlen",
             "eintrag_hinzufuegen",
             "eintrag_bearbeiten",
             "eintrag_hoch",

@@ -40,8 +40,9 @@
 //!   **lexikalisch** bereinigt, also ohne nachzusehen, ob unterwegs ein
 //!   weiterer Verweis steht.
 //! - **bei F2** ([`Heimordner::aufgeloest_erneuern`]) ueber `canonicalize`,
-//!   nachdem das Anlegen am Ziel ohnehin gearbeitet hat. Erst diese Form loest
-//!   auch Verweise auf, die im Ziel des ersten Verweises stehen.
+//!   nachdem das Anlegen am Ziel ohnehin gearbeitet hat, und ebenso bei „Ort
+//!   waehlen…“ am gewaehlten Ort. Erst diese Form loest auch Verweise auf, die
+//!   im Ziel des ersten Verweises stehen.
 //!
 //! # Was diese Erkennung nicht sieht
 //!
@@ -227,9 +228,10 @@ impl Heimordner {
 
     /// Ein neuer Wert, dessen aufgeloeste Form ueber `canonicalize` erhoben ist.
     ///
-    /// **Allein fuer F2 gedacht**, nachdem das Anlegen am Ziel ohnehin gearbeitet
-    /// hat; `canonicalize` beruehrt das Ziel und darf deshalb weder beim Start
-    /// noch je Lesevorgang laufen. Scheitert es, bleibt die bisherige Form
+    /// **Allein fuer F2 und „Ort waehlen…“ gedacht**: F2 ruft es, nachdem das
+    /// Anlegen am Ziel ohnehin gearbeitet hat, „Ort waehlen…“ am Ort, den der
+    /// Nutzer eben im Dialog gewaehlt hat. `canonicalize` beruehrt das Ziel
+    /// und darf deshalb weder beim Start noch je Lesevorgang laufen. Scheitert es, bleibt die bisherige Form
     /// stehen: ein Heimordner, der sich gerade nicht aufloesen laesst, ist immer
     /// noch unter seiner geschriebenen Form zu erkennen.
     #[must_use = "der erneuerte Wert ist die ganze Wirkung; fallengelassen bleibt die alte Form im Umlauf"]
@@ -249,6 +251,15 @@ impl Heimordner {
     /// Nutzer kennt, auch wenn `krkhome` ein Verweis ist.
     pub fn geschrieben(&self) -> &Path {
         &self.geschrieben
+    }
+
+    /// Die aufgeloeste Form, falls es eine gibt.
+    ///
+    /// Gefragt von „Ort waehlen…“: gleicht die kanonische Form des gewaehlten
+    /// Orts der aufgeloesten des geltenden, ist es derselbe Ordner unter einer
+    /// anderen Schreibweise. Ein Wert, kein Systemaufruf.
+    pub fn aufgeloest(&self) -> Option<&Path> {
+        self.aufgeloest.as_deref()
     }
 
     /// Ob der Ort der Vorgabeort `<benutzerverzeichnis>/krkhome` ist.
