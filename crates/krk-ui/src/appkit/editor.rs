@@ -551,14 +551,15 @@ use krk_core::heimordner::Sonderdatei;
 use krk_core::heimordner::eintraege::{
     self, Aufgaben, Neustand, Notizen, Richtung, aufgaben, notizen,
 };
+use krk_core::heimordner::tresor::Pin;
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
 };
 
 use crate::editormodell::{
-    Ansicht, Dateityp, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf,
+    Ansicht, Dateityp, Editormodell, Ladeausgang, Pinform, Sicherungsausgang, Suchlauf,
 };
-use crate::heimgriff::Heimgriff;
+use crate::heimgriff::{self, Heimgriff};
 use crate::hervorhebung::{
     Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
@@ -1505,7 +1506,9 @@ fn zellenrechnung(
     match form {
         Editorform::Text => Ok(None),
         Editorform::Aufgaben => aufgaben::text_aendern(stand, zelle.zeile, text),
-        Editorform::Notizen => {
+        // Die Geheimnisse tragen die Form der Notizen und rechnen ueber
+        // denselben Kern (Schritt 5.4b).
+        Editorform::Notizen | Editorform::Geheimnisse => {
             let Some(alt) = Notizen::lesen(stand).notiz(zelle.zeile) else {
                 return Ok(None);
             };
@@ -1557,10 +1560,11 @@ enum Tauschschritt {
 /// Bau an. `notes.txt` zeigt seit Schritt 4.3 des Plans in der Formatansicht
 /// die Notiztabelle; bis dahin zeigte sie Markdown in der Textflaeche.
 ///
-/// **`.secrets.txt` zeigt dieselbe Notiztabelle**, weil ihre Eintraege die
-/// Form von `notes.txt` tragen. Eine eigene Form `Editorform::Geheimnisse`
-/// bringt erst Schritt 5.4b mit, zusammen mit der PIN davor; bis dahin ordnet
-/// diese Zeile die Sonderdatei aus 5.2 nur ein, damit der Bau steht.
+/// **`.secrets.txt` hat seit Schritt 5.4b ihre eigene Form**,
+/// [`Editorform::Geheimnisse`]. Sie zeigt dieselbe Notiztabelle, weil ihre
+/// Eintraege die Form von `notes.txt` tragen ([`eintragsart_der_form`]), und
+/// ist ein eigener Wert, weil der Befehl „PIN ändern" aus Schritt 5.5 allein
+/// in ihr wirkt.
 #[must_use]
 fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
     match (ansicht, typ) {
@@ -1574,8 +1578,51 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
         )
         | (Ansicht::Format, Dateityp::Markdown | Dateityp::Sonstiges) => Editorform::Text,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
-        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse)) => {
-            Editorform::Notizen
+        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen)) => Editorform::Notizen,
+        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Geheimnisse)) => Editorform::Geheimnisse,
+    }
+}
+
+/// Was [`Editorbereich::datei_oeffnen`] mit einem Pfad tut (Schritt 5.4b der
+/// krkhome-Arbeit).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Oeffnungsweg {
+    /// Der gewoehnliche Ladeauftrag ohne PIN.
+    Laden,
+    /// `.secrets.txt` auf einen Befehl hin: erst das PIN-Blatt, kein
+    /// Ladeauftrag.
+    PinErfragen,
+    /// `.secrets.txt` aus der Sitzung: nichts, kein Ladeauftrag und kein
+    /// Blatt.
+    Unterlassen,
+}
+
+/// Der Weg eines Oeffnens, aus Herkunft, Sonderdatei und der Frage, ob der
+/// Editor die Datei schon haelt.
+///
+/// **Rein und ohne Fenster pruefbar**, weil sich ein ganzer Editorbereich in
+/// keiner Probe bauen laesst (siehe die Proben zum Umbauweg). Vollstaendig
+/// ueber die Sonderdatei und ohne Auffangzweig: eine weitere Sonderdatei haelt
+/// hier den Bau an und bekommt ihren Weg bewusst.
+///
+/// **Die schon gehaltene `.secrets.txt` laedt ohne PIN**, und das heisst: sie
+/// nimmt im Modell die Abkuerzung `SchonOffen`. Die PIN gilt, solange die
+/// Datei offen ist (C7), und ein zweites F4 fragt deshalb nicht noch einmal.
+#[must_use]
+fn oeffnungsweg(
+    herkunft: Oeffnungsherkunft,
+    sonderdatei: Option<Sonderdatei>,
+    haelt_bereits: bool,
+) -> Oeffnungsweg {
+    match sonderdatei {
+        None | Some(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => Oeffnungsweg::Laden,
+        Some(Sonderdatei::Geheimnisse) if haelt_bereits => Oeffnungsweg::Laden,
+        Some(Sonderdatei::Geheimnisse) => {
+            if herkunft.ist_aus_sitzung() {
+                Oeffnungsweg::Unterlassen
+            } else {
+                Oeffnungsweg::PinErfragen
+            }
         }
     }
 }
@@ -1585,18 +1632,19 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
 fn flaeche_der_form(form: Editorform) -> Flaeche {
     match form {
         Editorform::Text => Flaeche::Textflaeche,
-        Editorform::Aufgaben | Editorform::Notizen => Flaeche::Tabelle,
+        Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => Flaeche::Tabelle,
     }
 }
 
 /// Die Art der Eintragstabelle, die eine Form zeigt; `None` fuer die
-/// Textflaeche. Die Geheimnisse aus Stufe 5 werden hier als Notizen stehen.
+/// Textflaeche. Die Geheimnisse stehen hier als Notizen: dieselbe Tabelle,
+/// dieselben Spalten, dieselben Meldungen (Schritt 5.4b).
 #[must_use]
 fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
     match form {
         Editorform::Text => None,
         Editorform::Aufgaben => Some(Eintragsart::Aufgaben),
-        Editorform::Notizen => Some(Eintragsart::Notizen),
+        Editorform::Notizen | Editorform::Geheimnisse => Some(Eintragsart::Notizen),
     }
 }
 
@@ -1861,6 +1909,14 @@ pub struct EditorIvars {
     /// [`Editorbereich::zurueckgehaltenes_uebernehmen`] kehrt ohne
     /// zurueckgehaltene Datei um.
     herkunft: Cell<Oeffnungsherkunft>,
+    /// Der geteilte Griff der Erkennung von `~/krkhome/`, derselbe, den das
+    /// Modell haelt.
+    ///
+    /// [`Editorbereich::datei_oeffnen`] fragt ihn, bevor es einen Ladeauftrag
+    /// erteilt: `.secrets.txt` im erkannten Ordner geht erst ueber das
+    /// PIN-Blatt (Schritt 5.4b der krkhome-Arbeit). Ein Griff und keine
+    /// Abschrift, aus demselben Grund wie im Modell.
+    heim: Heimgriff,
     /// Das laufende Einfaerben, falls eines laeuft (C3).
     ///
     /// Hoechstens eines. Der Editor haelt hoechstens eine Datei und zeigt
@@ -2094,7 +2150,8 @@ impl Editorbereich {
             textrolle: rolle,
             eintraege,
             gezeigt: Cell::new(Flaeche::Textflaeche),
-            modell: RefCell::new(Editormodell::neu(heim)),
+            modell: RefCell::new(Editormodell::neu(heim.clone())),
+            heim,
             takt: RefCell::new(None),
             melden: RefCell::new(None),
             herkunft: Cell::new(Oeffnungsherkunft::Befehl),
@@ -2356,11 +2413,12 @@ impl Editorbereich {
     /// unveraenderte endet ohne Umbau und ohne Meldung; eine abgewiesene bleibt
     /// offen, und ihren Grund hat die Pruefung schon gemeldet. Verworfen wird
     /// dort nicht, weil eine Notizzelle mehrere Absaetze tragen kann, die ein
-    /// Verwerfen ohne Meldung verloere.
+    /// Verwerfen ohne Meldung verloere. Die Tabelle der Geheimnisse folgt
+    /// derselben Regel (C7, Schritt 5.4b).
     pub fn zelle_abbrechen(&self) {
         match self.form() {
             Editorform::Aufgaben => self.zelle_verwerfen(),
-            Editorform::Notizen => {
+            Editorform::Notizen | Editorform::Geheimnisse => {
                 if self.zelle_uebernehmen() == Zellenausgang::Uebernommen
                     && self.ivars().zelle_umgebaut.get()
                 {
@@ -2723,6 +2781,24 @@ impl Editorbereich {
     /// ausserhalb des Anwendungsdelegierten, und das ist der Unterschied zum
     /// Stand vom 260810-1028. Wo sie bis zum Ausgang liegt und warum das keine
     /// Marke neben der Kette ist, steht an [`EditorIvars::herkunft`].
+    ///
+    /// # `.secrets.txt` geht erst ueber das PIN-Blatt
+    ///
+    /// **Hier und nicht beim Anwendungsdelegierten**, weil diese Funktion die
+    /// eine ist, durch die jedes Oeffnen geht (Schritt 5.4b der
+    /// krkhome-Arbeit, C7.10): nach der Zelle und vor dem Ladeauftrag fragt sie
+    /// die Erkennung nach der Sonderdatei, und [`oeffnungsweg`] entscheidet.
+    /// Auf einen Befehl hin meldet sie den PIN-Bedarf als
+    /// [`Ladeausgang::PinVerlangt`], in der Form, die die Dateigroesse
+    /// verlangt, und erteilt keinen Ladeauftrag; die PIN kommt ueber
+    /// [`Self::geheimnisse_oeffnen`] zurueck. Aus der Sitzung geschieht
+    /// nichts, und kein Blatt geht auf: die Sitzung nennt die Datei nie, und
+    /// eine aeltere, die es tut, filtert schon der Delegierte (Schritt 5.3).
+    ///
+    /// **Die Groesse ist ein `stat(2)` auf dem Hauptfaden**, einer je Oeffnen
+    /// dieser einen Datei und keiner fuer jede andere. Gelesen wird damit
+    /// nichts; entschieden wird allein die Form des Blattes, und das Modell
+    /// entscheidet beim Lesen noch einmal an den gelesenen Bytes.
     pub fn datei_oeffnen(&self, pfad: &Path, herkunft: Oeffnungsherkunft) {
         // Erst die laufende Zelle, dann der Wechsel: ein Oeffnen nach einer
         // abgewiesenen Zelle naehme ihr den getippten Text. Die Herkunft wird
@@ -2733,14 +2809,68 @@ impl Editorbereich {
             self.melden(Ladeausgang::ZelleAbgewiesen(meldung.text()));
             return;
         }
-        // Ohne PIN: `.secrets.txt` weist das Modell damit ab, bevor es liest
-        // (Schritt 5.4a der krkhome-Arbeit). Die PIN aus dem Blatt reicht
-        // Schritt 5.4b ueber denselben Ruf herein.
+        let sonderdatei =
+            heimgriff::lesen(&self.ivars().heim).and_then(|heim| heim.sonderdatei(pfad));
+        let haelt_bereits = self.ivars().modell.borrow().haelt_bereits(pfad);
+        match oeffnungsweg(herkunft, sonderdatei, haelt_bereits) {
+            Oeffnungsweg::Laden => {}
+            Oeffnungsweg::Unterlassen => return,
+            Oeffnungsweg::PinErfragen => {
+                // Der letzte Befehl des Nutzers gilt dieser Datei; ein Lesen,
+                // das noch laeuft, gehoert niemandem mehr und kaeme sonst
+                // hinter dem Blatt an.
+                self.ivars().modell.borrow_mut().laden_aufgeben();
+                let groesse = std::fs::metadata(pfad).ok().map(|daten| daten.len());
+                self.melden(Ladeausgang::PinVerlangt {
+                    pfad: pfad.to_path_buf(),
+                    form: Pinform::nach_groesse(groesse),
+                });
+                return;
+            }
+        }
+        // Ohne PIN: fuer jede andere Datei der gewoehnliche Weg, und fuer die
+        // schon gehaltene `.secrets.txt` die Abkuerzung `SchonOffen`, denn die
+        // PIN gilt, solange die Datei offen ist.
         let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, None);
         match sofort {
             Some(ausgang) => self.melden(ausgang),
             None => self.takt_starten(),
         }
+    }
+
+    /// Oeffnet `.secrets.txt` mit der PIN aus dem Blatt (Schritt 5.4b der
+    /// krkhome-Arbeit).
+    ///
+    /// **Der Rueckweg des PIN-Blattes und nichts daneben.** Derselbe Ladeauftrag
+    /// und derselbe Takt wie bei [`Self::datei_oeffnen`]; das Modell liest und
+    /// leitet auf dem Arbeitsfaden ab, und der Ausgang geht durch dieselbe
+    /// Senke. Eine falsche PIN kommt als [`Ladeausgang::Abgewiesen`] mit dem
+    /// einen Satz fuer PIN und veraenderte Datei an, und das Blatt geht nicht
+    /// wieder auf: der Nutzer oeffnet neu, wie der Spec es beschreibt.
+    ///
+    /// **Die Herkunft ist hier immer ein Befehl**: eine PIN gibt es nur aus
+    /// dem Blatt, und das Blatt nur auf einen Befehl hin. Gesetzt wird sie
+    /// trotzdem ausdruecklich, damit kein dazwischenliegendes Oeffnen seine
+    /// Herkunft an diesen Ausgang vererbt.
+    ///
+    /// Eine laufende Zelle gibt es hier nicht mehr: [`Self::datei_oeffnen`]
+    /// hat sie vor der Frage nach der PIN uebernommen, und solange das Blatt
+    /// steht, bearbeitet niemand eine.
+    pub fn geheimnisse_oeffnen(&self, pfad: &Path, pin: Pin) {
+        self.ivars().herkunft.set(Oeffnungsherkunft::Befehl);
+        let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, Some(pin));
+        match sofort {
+            Some(ausgang) => self.melden(ausgang),
+            None => self.takt_starten(),
+        }
+    }
+
+    /// Ob sich die PIN der gehaltenen Datei aendern laesst (Schritt 5.4b,
+    /// gelesen ab 5.5); die Antwort steht bei
+    /// [`Editormodell::pin_aenderbar`].
+    #[must_use]
+    pub fn pin_aenderbar(&self) -> bool {
+        self.ivars().modell.borrow().pin_aenderbar()
     }
 
     /// Schreibt den gehaltenen Stand in die Datei (C4).
@@ -6775,6 +6905,19 @@ mod tests {
             eintragsart_der_form(Editorform::Notizen),
             Some(Eintragsart::Notizen)
         );
+        // Seit Schritt 5.4b eine eigene Form, in derselben Tabelle und Art
+        // wie die Notizen; die Rohansicht zeigt die Textflaeche.
+        let geheimnisse = Dateityp::Eintraege(Sonderdatei::Geheimnisse);
+        assert_eq!(
+            editorform(Ansicht::Format, geheimnisse),
+            Editorform::Geheimnisse
+        );
+        assert_eq!(flaeche_der_form(Editorform::Geheimnisse), Flaeche::Tabelle);
+        assert_eq!(
+            eintragsart_der_form(Editorform::Geheimnisse),
+            Some(Eintragsart::Notizen)
+        );
+        assert_eq!(editorform(Ansicht::Roh, geheimnisse), Editorform::Text);
         for typ in [Dateityp::Markdown, Dateityp::Sonstiges] {
             for ansicht in [Ansicht::Roh, Ansicht::Format] {
                 assert_eq!(
@@ -6784,6 +6927,93 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Der Weg eines Oeffnens (Schritt 5.4b der krkhome-Arbeit): `.secrets.txt`
+    /// geht auf einen Befehl hin ueber das PIN-Blatt, aus der Sitzung nirgends
+    /// hin, und die schon gehaltene laedt ohne PIN ueber die Abkuerzung. Jede
+    /// andere Datei laedt wie bisher.
+    #[test]
+    fn secrets_txt_geht_ueber_das_blatt_und_aus_der_sitzung_nirgends_hin() {
+        use Oeffnungsherkunft::{Befehl, Sitzung};
+        let geheim = Some(Sonderdatei::Geheimnisse);
+        assert_eq!(
+            oeffnungsweg(Befehl, geheim, false),
+            Oeffnungsweg::PinErfragen
+        );
+        assert_eq!(
+            oeffnungsweg(Sitzung, geheim, false),
+            Oeffnungsweg::Unterlassen
+        );
+        assert_eq!(oeffnungsweg(Befehl, geheim, true), Oeffnungsweg::Laden);
+        for herkunft in [Befehl, Sitzung] {
+            for sonderdatei in [
+                None,
+                Some(Sonderdatei::Notizen),
+                Some(Sonderdatei::Aufgaben),
+            ] {
+                for haelt in [false, true] {
+                    assert_eq!(
+                        oeffnungsweg(herkunft, sonderdatei, haelt),
+                        Oeffnungsweg::Laden,
+                        "{herkunft:?} {sonderdatei:?} {haelt}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// `datei_oeffnen` fragt die Sonderdatei **vor** dem Ladeauftrag, und der
+    /// Weg aus der Sitzung kehrt zurueck, ohne zu laden und ohne zu melden
+    /// (Schritt 5.4b, C7.10 und C7.14).
+    ///
+    /// Eine Quelltextprobe, weil sich ein ganzer Editorbereich in keiner Probe
+    /// bauen laesst; die Regel selbst misst die Probe darueber an
+    /// [`oeffnungsweg`]. Hier steht, dass der Rumpf sie vor dem einen
+    /// Ladeauftrag fragt, dass `Unterlassen` allein zurueckkehrt und dass der
+    /// PIN-Bedarf ohne Ladeauftrag gemeldet wird.
+    #[test]
+    fn datei_oeffnen_fragt_die_sonderdatei_vor_dem_ladeauftrag() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let oeffnen = rumpf(&quelle, "datei_oeffnen");
+        let frage = oeffnen
+            .find(".sonderdatei(pfad)")
+            .expect("datei_oeffnen fragt die Sonderdatei nicht");
+        let weg = oeffnen
+            .find("oeffnungsweg(herkunft")
+            .expect("datei_oeffnen entscheidet den Weg nicht");
+        let auftrag = oeffnen
+            .find(".oeffnen(pfad, None)")
+            .expect("datei_oeffnen erteilt keinen Ladeauftrag");
+        assert!(
+            frage < weg && weg < auftrag,
+            "die Frage steht nach dem Ladeauftrag"
+        );
+        assert_eq!(
+            oeffnen.matches(".oeffnen(pfad").count(),
+            1,
+            "datei_oeffnen erteilt mehr als einen Ladeauftrag"
+        );
+        let unterlassen = oeffnen
+            .split_once("Oeffnungsweg::Unterlassen =>")
+            .map(|(_, rest)| rest.lines().next().unwrap_or_default().trim().to_owned())
+            .expect("der Zweig aus der Sitzung fehlt");
+        assert_eq!(unterlassen, "return,", "aus der Sitzung geschieht etwas");
+        let pin = oeffnen
+            .split_once("Oeffnungsweg::PinErfragen =>")
+            .and_then(|(_, rest)| rest.split_once("return;"))
+            .map(|(zweig, _)| zweig)
+            .expect("der Zweig des PIN-Bedarfs fehlt");
+        assert!(pin.contains("Ladeausgang::PinVerlangt"));
+        assert!(
+            !pin.contains(".oeffnen("),
+            "der PIN-Bedarf erteilt einen Ladeauftrag"
+        );
+        assert!(
+            !pin.contains("takt_starten"),
+            "der PIN-Bedarf startet den Takt"
+        );
     }
 
     /// Der Tausch an echten Rollen: im Augenblick der Uebergabe ist die neue
@@ -7254,7 +7484,8 @@ mod tests {
             "die Aufgabenzelle verwirft (Moeglichkeit 2)"
         );
         let notizzweig = abbrechen
-            .split_once("Editorform::Notizen =>")
+            // Seit Schritt 5.4b teilt die Tabelle der Geheimnisse den Zweig.
+            .split_once("Editorform::Notizen | Editorform::Geheimnisse =>")
             .map(|(_, rest)| rest)
             .and_then(|rest| rest.split_once("Editorform::Text =>"))
             .map(|(zweig, _)| zweig)

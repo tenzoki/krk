@@ -2,7 +2,7 @@
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
 //! es blockiert, solange er steht. AppKit nennt das ein Sheet. In diesem
-//! Verzeichnis liegen elf:
+//! Verzeichnis liegen zwoelf:
 //! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
 //! dem Raeumen in den Papierkorb, Abschlussliste der uebersprungenen Eintraege
 //! und seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen
@@ -16,14 +16,18 @@
 //! Zeile der Statuszeile nur eine traegt. Das elfte ist aus derselben Runde das
 //! Blatt auf Abruf ([`neuerungen`]), das zeigt, was diese Fassung an den von Hand
 //! gepflegten Ablagedateien mitbringt; es ist **das einzige, das auch ohne
-//! Befund aufgeht**, denn der Nutzer hat danach gefragt.
+//! Befund aufgeht**, denn der Nutzer hat danach gefragt. Das zwoelfte ist das
+//! PIN-Blatt ([`pin`]) aus Schritt 5.4b der krkhome-Arbeit: es fragt vor dem
+//! Oeffnen von `.secrets.txt` nach der PIN und ist das einzige, dessen
+//! bestaetigende Schaltflaeche erst mit einer gueltigen Eingabe wirkt
+//! ([`Blatt::bestaetigung_pruefen`]).
 //!
 //! **Das Notizblatt der Runde 9 steht hier nicht mehr.** Es war das zehnte und
 //! das einzige mit einem eigenen Waechter; seit der Arbeit, in der F2 nach
 //! `~/krkhome/` fuehrt, oeffnet kein Befehl mehr ein Blatt fuer Notizen, und
 //! Datei, Waechter und Abbruchweg sind gefallen.
 //!
-//! **Ein zwoelftes Blatt liegt ausserhalb dieses Verzeichnisses**, und wer nach
+//! **Ein dreizehntes Blatt liegt ausserhalb dieses Verzeichnisses**, und wer nach
 //! diesem Kopf „alle Blaetter" durchgeht, uebersieht genau dieses eine:
 //! [`super::belegungsansicht`] baut die Tastaturbelegung aus C3 mit
 //! [`Blatt::mit_schaltflaechen`], haengt sie an dasselbe Fenster, legt denselben
@@ -61,7 +65,7 @@
 //! `NSModalResponse`; was AppKit dafuer als Zahl fuehrt, bleibt in dieser Datei.
 //!
 //! **Der Grund fuer eine gemeinsame Huelle** ist derselbe wie ueberall in
-//! diesem Entwurf: zwoelf Blaetter mit je eigenem Aufbau waeren zwoelf Stellen,
+//! diesem Entwurf: dreizehn Blaetter mit je eigenem Aufbau waeren zwoelf Stellen,
 //! die dieselbe Frage beantworten, und die erste Abweichung zwischen ihnen
 //! faende keine Pruefung.
 //!
@@ -191,7 +195,9 @@
 //! `control:textView:doCommandBySelector:` und `controlTextDidChange:`, dazu
 //! die Aufzaehlungen `NSAlertStyle` und `NSEventModifierFlags` und die
 //! Zugriffe `setInitialFirstResponder:`, `setNextKeyView:` und
-//! `NSTextField.delegate`.
+//! `NSTextField.delegate`, dazu `NSAlert.buttons`, `NSArray` mit
+//! `objectAtIndex:` und `NSControl.enabled` fuer die bestaetigende
+//! Schaltflaeche des PIN-Blattes.
 //!
 //! **Fuenf Beruehrungen sind juenger als 10.0**, und alle fuenf liegen unter
 //! dem Zielsystem: `setAccessoryView:`, `setShowsSuppressionButton:` und
@@ -229,6 +235,7 @@ pub mod loeschbestaetigung;
 pub mod namenseingabe;
 pub mod neuerungen;
 pub mod pfadeingabe;
+pub mod pin;
 pub mod stapelumbenennen;
 pub mod startmeldungen;
 pub mod suche;
@@ -271,6 +278,15 @@ pub struct WaechterIvars {
     /// den Rueckruf aus der Ausleihe herausklonen kann, statt ihn waehrend des
     /// Rufs zu halten; die Begruendung steht dort.
     aenderung: RefCell<Option<Rc<dyn Fn()>>>,
+    /// Ob die Eingabetaste im Feld bestaetigen darf.
+    ///
+    /// Wahlfrei, weil allein das PIN-Blatt es setzt
+    /// ([`Blatt::bestaetigung_pruefen`]): dort schliesst eine abgewiesene
+    /// Eingabe das Blatt nicht. Sagt die Pruefung nein, verbraucht der Waechter
+    /// die Taste und beendet nichts; was der Nutzer davon sieht, zeigt die
+    /// Pruefung selbst an. Ein `Rc` aus demselben Grund wie bei
+    /// [`Self::aenderung`].
+    pruefung: RefCell<Option<Rc<dyn Fn() -> bool>>>,
 }
 
 define_class!(
@@ -305,7 +321,9 @@ define_class!(
             befehl: Sel,
         ) -> objc2::runtime::Bool {
             if befehl == sel!(insertNewline:) {
-                self.antworten(true);
+                if self.bestaetigung_erlaubt() {
+                    self.antworten(true);
+                }
                 return objc2::runtime::Bool::YES;
             }
             if befehl == sel!(cancelOperation:) {
@@ -348,6 +366,7 @@ impl Eingabewaechter {
         let this = Self::alloc(mtm).set_ivars(WaechterIvars {
             antwort: RefCell::new(None),
             aenderung: RefCell::new(None),
+            pruefung: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -356,6 +375,16 @@ impl Eingabewaechter {
     /// Hinterlegt, was beim Bestaetigen und beim Abbrechen zu tun ist.
     fn antwort_setzen(&self, antwort: Antwortweg) {
         *self.ivars().antwort.borrow_mut() = Some(antwort);
+    }
+
+    /// Ob die hinterlegte Pruefung die Bestaetigung zulaesst; ohne Pruefung
+    /// immer.
+    ///
+    /// Die Ausleihe endet vor dem Ruf, aus demselben Grund wie in
+    /// [`Self::text_geaendert`]: die Pruefung schreibt ihren Grund in das Blatt.
+    fn bestaetigung_erlaubt(&self) -> bool {
+        let pruefung = self.ivars().pruefung.borrow().clone();
+        pruefung.is_none_or(|pruefen| pruefen())
     }
 
     /// Ruft den hinterlegten Antwortweg.
@@ -644,7 +673,7 @@ pub struct Blatt {
 
 /// Die beiden Schaltflaechen von [`Blatt::neu`], in bindender Reihenfolge.
 ///
-/// **Als reine Funktion herausgezogen, damit der Bauplan der fuenf Blaetter aus
+/// **Als reine Funktion herausgezogen, damit der Bauplan der sechs Blaetter aus
 /// [`Blatt::neu`] ohne AppKit und ohne Hauptfaden pruefbar ist.** Dieselbe
 /// Bauform wie `super::loeschbestaetigung::schaltflaechen`, und aus demselben
 /// Grund: an einem gebauten `NSAlert` ist nicht mehr abzulesen, welche seiner
@@ -817,6 +846,37 @@ impl Blatt {
         if let Some(waechter) = &self.waechter {
             *waechter.ivars().aenderung.borrow_mut() = Some(Rc::from(melden));
         }
+    }
+
+    /// Laesst die Eingabetaste in einem bewachten Feld nur bestaetigen, solange
+    /// `pruefen` ja sagt.
+    ///
+    /// **Fuer ein Blatt, das eine abgewiesene Eingabe nicht schliessen soll**,
+    /// heute allein das PIN-Blatt. Die Taste faellt dann nicht an AppKit
+    /// zurueck, sondern ist verbraucht: der Feldeditor machte sonst aus ihr
+    /// ein Ende der Bearbeitung, und die Vorgabeschaltflaeche kaeme doch noch
+    /// an die Reihe. Die Schaltflaeche selbst haelt der Aufrufer ueber
+    /// [`Self::bestaetigende_schaltflaeche`] und `setEnabled:` an; ein Klick
+    /// auf eine abgeschaltete Schaltflaeche erreicht `NSAlert` nicht.
+    ///
+    /// Ohne einen Waechter geschieht nichts, wie bei
+    /// [`Self::textaenderung_melden`].
+    pub fn bestaetigung_pruefen(&self, pruefen: Box<dyn Fn() -> bool>) {
+        if let Some(waechter) = &self.waechter {
+            *waechter.ivars().pruefung.borrow_mut() = Some(Rc::from(pruefen));
+        }
+    }
+
+    /// Die Schaltflaeche, der die Eingabetaste gehoert
+    /// ([`bestaetigungsstelle`]).
+    ///
+    /// `None` allein fuer ein `NSAlert`, das weniger Schaltflaechen fuehrt, als
+    /// angelegt wurden, und das kommt nicht vor.
+    #[must_use]
+    pub fn bestaetigende_schaltflaeche(&self) -> Option<Retained<NSButton>> {
+        let knoepfe = self.warnung.buttons();
+        (self.bestaetigungsstelle < knoepfe.count())
+            .then(|| knoepfe.objectAtIndex(self.bestaetigungsstelle))
     }
 
     /// Haengt ein Textfeld unter die Frage und macht es bedienbar.
@@ -1123,7 +1183,7 @@ mod tests {
     /// trat nicht ein
     /// (`issues/260817-1419_*_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
     ///
-    /// **Die fuenf Blaetter aus [`Blatt::neu`] sieht diese Zaehlung nicht**, und
+    /// **Die sechs Blaetter aus [`Blatt::neu`] sieht diese Zaehlung nicht**, und
     /// sie soll es nicht: ihre Dateien bringen keine Schaltflaechen mit. Deren
     /// gemeinsamer Bauplan ist eigens gemessen, an
     /// `der_bauplan_von_blatt_neu_hat_einen_ungefaehrlichen_ausgang`.
@@ -1153,11 +1213,11 @@ mod tests {
 
     /// Der Bauplan von [`Blatt::neu`] traegt einen ungefaehrlichen Ausgang.
     ///
-    /// **Die fuenf Blaetter, die ueber [`Blatt::neu`] entstehen, bringen ihre
+    /// **Die sechs Blaetter, die ueber [`Blatt::neu`] entstehen, bringen ihre
     /// Schaltflaechen nicht selbst mit**, also kann die Zaehlprobe darueber sie
     /// nicht sehen: ihre Dateien nennen [`Wirkung::Liegenlassen`] nicht und
     /// muessen es auch nicht. Gemessen wird stattdessen der eine Bauplan, den
-    /// alle fuenf teilen, und zwar an derselben reinen Funktion, die
+    /// alle sechs teilen, und zwar an derselben reinen Funktion, die
     /// [`Blatt::neu`] einsetzt.
     #[test]
     fn der_bauplan_von_blatt_neu_hat_einen_ungefaehrlichen_ausgang() {

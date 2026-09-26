@@ -548,6 +548,16 @@ enum Schutz {
             reason = "der Leser ist der Befehl „PIN ändern“ aus Schritt 5.5 des Plans"
         )]
         pin: Pin,
+        /// Ob auf der Platte ein Kopf mit dieser PIN steht: gesetzt, wenn die
+        /// Datei nicht leer gelesen wurde oder ein Sichern gelungen ist.
+        ///
+        /// **Eine Buchfuehrung und keine Frage an die Platte**, weil
+        /// [`Editormodell::pin_aenderbar`] bei jedem Tastendruck und jeder
+        /// Menueausgrauung gefragt wird und dort kein Lesen auf dem Hauptfaden
+        /// stehen soll. Aendert jemand die Datei von aussen, geht der Wert
+        /// daneben; der Befehl „PIN ändern" aus Schritt 5.5 prueft dann ueber
+        /// `fremd_geaendert` wie jedes Sichern und weist ab.
+        kopf_auf_platte: bool,
     },
 }
 
@@ -653,6 +663,7 @@ fn geheimnisse_lesen(pfad: &Path, pin: &Pin) -> Result<Gelesen, Abweisung> {
             mangel,
         }
     })?;
+    let kopf_auf_platte = !bytes.is_empty();
     let (klartext, schluessel) = if bytes.is_empty() {
         let schluessel =
             tresor::neuer_schluessel(pin).map_err(|fehler| gesperrt(pfad, fehler.meldung()))?;
@@ -670,6 +681,7 @@ fn geheimnisse_lesen(pfad: &Path, pin: &Pin) -> Result<Gelesen, Abweisung> {
         schutz: Schutz::Verschluesselt {
             schluessel,
             pin: *pin,
+            kopf_auf_platte,
         },
     })
 }
@@ -724,7 +736,8 @@ impl Ladevorgang {
 /// Wie ein Ladevorgang ausgegangen ist.
 ///
 /// **Vier Werte aus dem Modell, ueberschneidungsfrei und vollstaendig**, dazu
-/// [`Self::ZelleAbgewiesen`], den allein die Ansicht erzeugt. Entweder der Editor
+/// [`Self::ZelleAbgewiesen`] und [`Self::PinVerlangt`], die allein die Ansicht
+/// erzeugt. Entweder der Editor
 /// haelt danach eine neue Datei, oder er hielt sie schon und nichts hat sich
 /// bewegt, oder die gelesene Datei wartet auf die Nachfrage aus C4, oder er
 /// haelt weiter, was er vorher hielt, und der Nutzer bekommt den Grund. Ein
@@ -777,6 +790,55 @@ pub enum Ladeausgang {
     /// eine Behandlung gibt und nicht zwei. Ein eigener Wert und nicht
     /// `Abgewiesen`, weil jene Abweisung eine Datei nennt und diese keine.
     ZelleAbgewiesen(String),
+    /// Die Datei ist `.secrets.txt` im erkannten Heimordner, und bevor gelesen
+    /// wird, gehoert die PIN erfragt (Schritt 5.4b der krkhome-Arbeit, C7.10).
+    ///
+    /// **Dieses Modell erzeugt den Wert nie**, wie [`Self::ZelleAbgewiesen`]:
+    /// er entsteht in `Editorbereich::datei_oeffnen` und geht durch dieselbe
+    /// Senke, damit jeder Weg in den Editor — F4, `cmd+e` aus Liste und
+    /// Vorschau, der Sprung auf eine Textmarke — an derselben Stelle beim Blatt
+    /// ankommt. Nichts ist gelesen, nichts hat sich bewegt; der Empfaenger
+    /// zeigt das Blatt in der genannten Form und reicht die PIN an
+    /// `Editorbereich::geheimnisse_oeffnen` zurueck.
+    PinVerlangt {
+        /// Die Datei, fuer die gefragt wird.
+        pfad: PathBuf,
+        /// Festlegen oder eingeben, nach der Groesse der Datei.
+        form: Pinform,
+    },
+}
+
+/// In welcher Form das PIN-Blatt fragt (C7).
+///
+/// **Entschieden an der Groesse der Datei**, wie der Spec es sagt: null Bytes
+/// heisst, es gibt noch keine PIN, und der Nutzer legt eine fest, zweimal
+/// einzugeben; jede andere Groesse heisst, er gibt die PIN ein. Das Modell
+/// nimmt in beiden Faellen dieselbe PIN und entscheidet beim Lesen noch einmal
+/// an den gelesenen Bytes; weicht die Platte in der Spanne dazwischen ab, gilt
+/// das Lesen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pinform {
+    /// Die Datei ist leer: eine neue PIN festlegen, zweimal eingegeben.
+    Festlegen,
+    /// Die Datei traegt einen Kopf: die PIN eingeben.
+    Eingeben,
+}
+
+impl Pinform {
+    /// Die Form zur Groesse der Datei; `None` heisst, die Groesse liess sich
+    /// nicht erheben.
+    ///
+    /// **Ohne Groesse wird eingegeben und nicht festgelegt.** Eine Datei, die
+    /// sich nicht befragen laesst, wird auch das Lesen danach abweisen, und
+    /// dann mit seinem eigenen Grund; ein Festlegen dagegen verspraeche eine
+    /// neue Datei, die es womoeglich nicht ist.
+    #[must_use]
+    pub fn nach_groesse(groesse: Option<u64>) -> Self {
+        match groesse {
+            Some(0) => Pinform::Festlegen,
+            Some(_) | None => Pinform::Eingeben,
+        }
+    }
 }
 
 /// Eine gelesene Datei, die auf die Antwort der Nachfrage aus C4 wartet.
@@ -950,6 +1012,25 @@ impl Editormodell {
         self.abweichung
     }
 
+    /// Ob sich die PIN der gehaltenen Datei aendern laesst: der Editor haelt
+    /// `.secrets.txt` entsperrt, und auf der Platte steht ihr Kopf (Schritt
+    /// 5.4b der krkhome-Arbeit, gelesen ab 5.5).
+    ///
+    /// Eine leere Datei, deren PIN eben festgelegt und noch nie gesichert
+    /// wurde, antwortet nein: ihre PIN steht in keinem Kopf, und das naechste
+    /// Oeffnen fragt ohnehin nach einer neuen. Gefragt wird die Buchfuehrung im
+    /// [`Schutz`] und nicht die Platte; der Grund steht dort.
+    #[must_use]
+    pub fn pin_aenderbar(&self) -> bool {
+        matches!(
+            self.schutz,
+            Schutz::Verschluesselt {
+                kopf_auf_platte: true,
+                ..
+            }
+        )
+    }
+
     /// Welche Ansicht gewaehlt ist (C3).
     #[must_use]
     pub fn ansicht(&self) -> Ansicht {
@@ -1088,6 +1169,17 @@ impl Editormodell {
         };
         self.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf(), auftrag));
         None
+    }
+
+    /// Gibt ein laufendes Lesen auf, ohne etwas anderes anzufassen.
+    ///
+    /// Der Weg von `Editorbereich::datei_oeffnen`, wenn es fuer
+    /// `.secrets.txt` erst nach der PIN fragt: der letzte Befehl des Nutzers
+    /// gilt dieser Datei, also gehoert ein Lesen, das noch fuer eine andere
+    /// laeuft, niemandem mehr. Derselbe Satz wie an [`Self::oeffnen`]:
+    /// hoechstens ein Lesen ist offen, und es ist das zuletzt begonnene.
+    pub fn laden_aufgeben(&mut self) {
+        self.ladevorgang = None;
     }
 
     /// Ob der Pfad `.secrets.txt` im erkannten Heimordner ist.
@@ -1411,6 +1503,14 @@ impl Editormodell {
             Ok(()) => {
                 self.abweichung = false;
                 self.stempel = Stempel::von_pfad(&pfad);
+                // Eine leere `.secrets.txt` traegt nach dem ersten Sichern
+                // ihren Kopf; ab jetzt laesst sich ihre PIN aendern.
+                if let Schutz::Verschluesselt {
+                    kopf_auf_platte, ..
+                } = &mut self.schutz
+                {
+                    *kopf_auf_platte = true;
+                }
                 Sicherungsausgang::Gesichert(pfad)
             }
             Err(fehler) => Sicherungsausgang::Gescheitert(format!(
@@ -3346,5 +3446,16 @@ mod tests {
             .map(|(name, _)| name)
             .collect();
         assert_eq!(rufer, vec!["krk-ui/src/editormodell.rs".to_owned()]);
+    }
+
+    /// Die Form des PIN-Blattes folgt der Groesse (Schritt 5.4b): null Bytes
+    /// heisst festlegen, jede andere Groesse eingeben, und eine Datei ohne
+    /// erhebbare Groesse wird eingegeben.
+    #[test]
+    fn die_form_des_pin_blattes_folgt_der_groesse() {
+        assert_eq!(Pinform::nach_groesse(Some(0)), Pinform::Festlegen);
+        assert_eq!(Pinform::nach_groesse(Some(1)), Pinform::Eingeben);
+        assert_eq!(Pinform::nach_groesse(Some(4096)), Pinform::Eingeben);
+        assert_eq!(Pinform::nach_groesse(None), Pinform::Eingeben);
     }
 }

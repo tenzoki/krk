@@ -187,7 +187,7 @@ use super::operationen;
 /// Zeichenzweig liest drei davon heraus. Zwei Erhebungen
 /// desselben Augenblicks koennten auseinanderlaufen, eine kann es nicht.
 ///
-/// `Copy`, weil der Wert fuenf kleine Felder traegt und die Tafel ihn einmal je
+/// `Copy`, weil der Wert sechs kleine Felder traegt und die Tafel ihn einmal je
 /// Fall durchreicht. **Wie viele Faelle das sind, steht hier nicht**, sondern
 /// rechnet `die_tafel_aus_allen_faellen_geht_auf` in dieser Datei aus dem
 /// Produkt der drei Aufzaehlungen; die Zahl stand einmal auf 140, dann auf 280,
@@ -228,6 +228,16 @@ pub struct Lage {
     /// Regel fragt es nur fuer die Wirkungsbereiche, die ohnehin den Fokus im
     /// Editor verlangen, und dort ist die Form die des Editors vor dem Nutzer.
     pub editorform: Editorform,
+    /// Ob sich die PIN der gehaltenen Datei aendern laesst: der Editor haelt
+    /// `.secrets.txt` entsperrt, und auf der Platte steht schon ein Kopf, also
+    /// eine gesicherte PIN (Schritt 5.4b der krkhome-Arbeit).
+    ///
+    /// Erhoben von `Anwendungsdelegierter::lage` ueber
+    /// `Editorbereich::pin_aenderbar`; **gelesen wird es erst ab Schritt 5.5**,
+    /// vom Wirkungsbereich des Befehls „PIN ändern". Eine leere `.secrets.txt`
+    /// meldet `false`: ihre PIN steht noch in keinem Kopf, und das naechste
+    /// Oeffnen fragt ohnehin nach einer neuen.
+    pub pin_aenderbar: bool,
 }
 
 /// Was der Editor gerade zeigt: Text in der Textflaeche oder die Eintraege
@@ -242,11 +252,10 @@ pub struct Lage {
 /// Dateityp ableitet; ohne AppKit bleibt dieses Modul trotzdem, denn der Wert
 /// ist eine Aufzaehlung und keine Flaeche.
 ///
-/// **Drei Werte und nicht die vier des Plans**, weil nur drei gebaut sind: die
-/// Notiztabelle ist mit Schritt 4.3 als `Notizen` dazugekommen, die Geheimnisse
-/// kommen in Stufe 5 als `Geheimnisse`. Ein Wert ohne Erzeuger waere eine Form,
-/// die der Editor nie zeigt, und jede vollstaendige Fallunterscheidung ueber
-/// diesen Typ haelt den Bau an, sobald einer dazukommt.
+/// **Die vier Werte des Plans**: die Notiztabelle ist mit Schritt 4.3 als
+/// `Notizen` dazugekommen, die Geheimnisse mit Schritt 5.4b als `Geheimnisse`.
+/// Jede vollstaendige Fallunterscheidung ueber diesen Typ haelt den Bau an,
+/// sobald einer dazukommt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Editorform {
     /// Die Textflaeche: jede Datei in der Rohansicht und jede Datei ausser
@@ -259,6 +268,12 @@ pub enum Editorform {
     /// Die Notiztabelle: `notes.txt` im erkannten Heimordner in der
     /// Formatansicht (Schritt 4.3).
     Notizen,
+    /// Die Tabelle der Geheimnisse: `.secrets.txt` im erkannten Heimordner in
+    /// der Formatansicht, entsperrt mit der PIN (Schritt 5.4b). Sie zeigt
+    /// dieselbe Tabelle wie [`Self::Notizen`], weil ihre Eintraege dieselbe
+    /// Form tragen, und nimmt dieselben Befehle an; ein eigener Wert, weil
+    /// „PIN ändern" aus Schritt 5.5 allein hier wirkt.
+    Geheimnisse,
 }
 
 /// Ob dieser Befehl in dieser Lage wirken darf.
@@ -410,15 +425,16 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
     match bereich {
         Wirkungsbereich::Editortext => match form {
             Editorform::Text => true,
-            Editorform::Aufgaben | Editorform::Notizen => false,
+            Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => false,
         },
         Wirkungsbereich::Eintraege => match form {
             Editorform::Text => false,
-            Editorform::Aufgaben | Editorform::Notizen => true,
+            Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => true,
         },
-        // Die Notiztabelle traegt keine Kaestchen.
+        // Die Notiztabelle traegt keine Kaestchen, die der Geheimnisse als
+        // dieselbe Tabelle ebenso wenig.
         Wirkungsbereich::Aufgaben => match form {
-            Editorform::Text | Editorform::Notizen => false,
+            Editorform::Text | Editorform::Notizen | Editorform::Geheimnisse => false,
             Editorform::Aufgaben => true,
         },
         Wirkungsbereich::Dateifenster
@@ -709,7 +725,10 @@ mod tests {
         )
     }
 
-    /// Die Lage aus allen fuenf Werten, in der Reihenfolge der Felder.
+    /// Die Lage aus fuenf Werten, in der Reihenfolge der Felder.
+    ///
+    /// `pin_aenderbar` steht auf `false`: keine Probe dieses Schritts fragt
+    /// danach, und der Befehl, der es liest, kommt erst mit Schritt 5.5.
     fn lage_in(
         blatt_steht: bool,
         ersthelfer_gehoert_appkit: bool,
@@ -723,6 +742,7 @@ mod tests {
             schluesselfenster_gehoert_krk,
             fokus,
             editorform,
+            pin_aenderbar: false,
         }
     }
 
@@ -733,8 +753,12 @@ mod tests {
     /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
     /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
     /// laufen.
-    const JEDE_FORM: [Editorform; 3] =
-        [Editorform::Text, Editorform::Aufgaben, Editorform::Notizen];
+    const JEDE_FORM: [Editorform; 4] = [
+        Editorform::Text,
+        Editorform::Aufgaben,
+        Editorform::Notizen,
+        Editorform::Geheimnisse,
+    ];
 
     /// [`JEDE_FORM`] fuehrt jede Variante von [`Editorform`] genau einmal.
     #[test]
@@ -911,7 +935,9 @@ mod tests {
         let ohne_sperre = |form: Editorform| match form {
             Editorform::Text => IN_DER_TEXTFLAECHE,
             Editorform::Aufgaben => IN_DER_AUFGABENTABELLE,
-            Editorform::Notizen => IN_DER_NOTIZTABELLE,
+            // Die Geheimnisse zeigen dieselbe Tabelle wie die Notizen und
+            // nehmen dieselben Befehle an (Schritt 5.4b).
+            Editorform::Notizen | Editorform::Geheimnisse => IN_DER_NOTIZTABELLE,
         };
 
         let mut geprueft = 0usize;
@@ -1488,7 +1514,9 @@ mod tests {
                 let form_passt = match form {
                     Editorform::Text => false,
                     Editorform::Aufgaben => true,
-                    Editorform::Notizen => kommando != Kommando::AufgabeAbhaken,
+                    Editorform::Notizen | Editorform::Geheimnisse => {
+                        kommando != Kommando::AufgabeAbhaken
+                    }
                 };
                 for fokus in JEDER_FOKUS {
                     assert_eq!(
@@ -1532,7 +1560,11 @@ mod tests {
                 ),
                 "{kommando:?} wirkt in der Textflaeche nicht mehr"
             );
-            for tabelle in [Editorform::Aufgaben, Editorform::Notizen] {
+            for tabelle in [
+                Editorform::Aufgaben,
+                Editorform::Notizen,
+                Editorform::Geheimnisse,
+            ] {
                 assert!(
                     !zulaessig(
                         kommando,

@@ -296,7 +296,7 @@ use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsausgabe;
 use crate::belegungsmodell::Belegungsmodell;
-use crate::editormodell::{Ladeausgang, Sicherungsausgang};
+use crate::editormodell::{Ladeausgang, Pinform, Sicherungsausgang};
 use crate::fenstermodell::{
     BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in, spalte_sichtbar_in,
 };
@@ -3727,6 +3727,13 @@ impl Anwendungsdelegierter {
                 .editor
                 .get()
                 .map_or(Editorform::Text, |editor| editor.form()),
+            // Dieselbe Ausflucht: ohne Editorbereich haelt niemand
+            // `.secrets.txt`. Gelesen wird der Wert ab Schritt 5.5.
+            pin_aenderbar: self
+                .ivars()
+                .editor
+                .get()
+                .is_some_and(|editor| editor.pin_aenderbar()),
         }
     }
 
@@ -8209,6 +8216,18 @@ impl Anwendungsdelegierter {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, &satz);
             }
+            // `.secrets.txt` auf einen Befehl hin: erst das PIN-Blatt, dann
+            // der Ladeauftrag mit PIN (Schritt 5.4b der krkhome-Arbeit). Aus
+            // der Sitzung kommt der Wert nie, `Editorbereich::datei_oeffnen`
+            // unterlaesst dort alles; der Zweig fragt trotzdem, damit ein
+            // spaeterer Weg kein Blatt beim Start aufgehen laesst (C7). Die
+            // vorgemerkte Marke ist oben gefallen: eine Textmarke fuehrt nicht
+            // in eine verschluesselte Datei.
+            Ladeausgang::PinVerlangt { pfad, form } => {
+                if !aus_sitzung {
+                    self.pin_erfragen(pfad, form);
+                }
+            }
             Ladeausgang::Abgewiesen(abweisung) if !aus_sitzung => {
                 self.editormeldung_zeigen(&Editormeldung::Abgewiesen(abweisung));
             }
@@ -8231,6 +8250,32 @@ impl Anwendungsdelegierter {
                     .meldung_zeigen(&abweisung.meldung());
             }
         }
+    }
+
+    /// Zeigt das PIN-Blatt fuer `.secrets.txt` und reicht die PIN an den
+    /// Editor zurueck (Schritt 5.4b der krkhome-Arbeit, C7.10).
+    ///
+    /// **Der Delegierte zeigt nur**: ob gefragt wird und in welcher Form,
+    /// entscheidet `Editorbereich::datei_oeffnen`, und geoeffnet wird ueber
+    /// `Editorbereich::geheimnisse_oeffnen`, dessen Ausgang wieder in
+    /// [`Self::editorausgang_behandeln`] ankommt. Der Griff geht in den
+    /// Schlitz, damit `esc` ueber den Abbruchbefehl dasselbe tut wie bei jedem
+    /// anderen Blatt; abgebrochen wird ohne Meldung, wie bei jedem
+    /// Eingabeblatt.
+    fn pin_erfragen(&self, pfad: PathBuf, form: Pinform) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = blaetter::pin::zeigen(self.mtm(), fenster, form, move |pin| {
+            let Some(selbst) = schwach.load() else {
+                return;
+            };
+            if let Some(editor) = selbst.ivars().editor.get() {
+                editor.geheimnisse_oeffnen(&pfad, pin);
+            }
+        });
+        self.blatt_oeffnet(griff);
     }
 
     /// Setzt die Schreibmarke auf die vorgemerkte Stelle und meldet, falls es
