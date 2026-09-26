@@ -121,9 +121,10 @@ Dateifenster nichts; die Kombination ist für das Einfügen einer Datei
 reserviert, das eine spätere Fassung bringt. Bis zur Fassung vom 260907 lag das
 Einfügen in den Filtertext auf `cmd+v`.
 
-**`Esc` leert den Filtertext, aber erst im dritten Rang.** Steht ein Blatt,
-schließt Esc das Blatt. Läuft eine Dateioperation, bricht Esc sie ab. Erst
-danach fällt der Filter, und dann trifft er den sichtbaren Tab des **aktiven**
+**`Esc` leert den Filtertext, aber erst im letzten Rang.** Steht ein Blatt,
+schließt Esc das Blatt. Ist im Editor eine Zelle der Aufgabentabelle offen,
+verwirft Esc das dort Getippte (siehe „Der Notizordner“). Läuft eine
+Dateioperation, bricht Esc sie ab. Erst danach fällt der Filter, und dann trifft er den sichtbaren Tab des **aktiven**
 Dateifensters, gleich wo der Fokus gerade steht.
 
 **Die Rückschritt-Taste bedeutet zweierlei, und die Unterscheidung ist keine
@@ -508,8 +509,8 @@ als Überschrift, sein Text darunter. In `tasks.txt` trägt jede Aufgabe ein
 Kästchen: ☐ für offen, ☑ für erledigt, in der Reihenfolge der Datei. Das
 Aufzählungszeichen davor fällt weg, eine Nummer wie in `1. [x] …` bleibt
 stehen. Die Vorschau liest nur: ein Klick auf das Kästchen hakt nichts ab, und
-keine der beiden Dateien wird dabei geschrieben. Abgehakt wird im Editor, indem
-man `[ ]` zu `[x]` ändert und sichert.
+keine der beiden Dateien wird dabei geschrieben. Abgehakt wird im Editor, in
+der Aufgabentabelle (siehe unten).
 
 Eine Zeile ohne Eintragsform erscheint in der Vorschau als gewöhnlicher Text.
 Wo sie steht, entscheidet, wie: unmittelbar unter einer Aufgabe zeigt die
@@ -517,10 +518,11 @@ Vorschau sie als Fortsetzungszeile dieser Aufgabe, so wie die Werkstattzeile im
 Beispiel. Mit einer Leerzeile davor steht sie als eigener Absatz. KRK folgt
 dabei den Regeln von CommonMark, nach denen jede Markdown-Datei gelesen wird.
 
-**Die Formatansicht des Editors zeigt beide Dateien vorerst als Markdown**
-(`ctrl+cmd+e`). Die Themen erscheinen dort als Überschriften, obwohl die Dateien
-auf `.txt` enden, und die Aufgaben stehen als Text mit `- [ ]` und `- [x]`, ohne
-Kästchen. Eine Tabellenansicht für die Aufgaben folgt in einer späteren Fassung.
+**Die Formatansicht des Editors zeigt `notes.txt` vorerst als Markdown**
+(`ctrl+cmd+e`). Die Themen erscheinen dort als Überschriften, obwohl die Datei
+auf `.txt` endet. Eine Tabelle für die Notizen folgt in einer späteren Fassung.
+`tasks.txt` steht in der Formatansicht schon als Tabelle; wie man sie bedient,
+steht am Ende dieses Abschnitts.
 
 **Die Kästchen gibt es nur für diese zwei Dateien in `~/krkhome/`.** Eine
 `.md`-Datei mit `- [ ]` an einem anderen Ort zeigt die Vorschau wie bisher,
@@ -560,3 +562,73 @@ meldet sie nichts. `f2` und `cmd+k` führen trotzdem nach `~/krkhome/`. Den neue
 Namen „Notizordner öffnen“ bringt die Belegungsansicht: **F1**, dann `cmd+r`
 für den Auslieferungsstand, dann „Fertig“. Das überschreibt die ganze eigene
 Belegung mit der Auslieferungsfassung, also auch jede eigene Tastenzuweisung.
+
+### Aufgaben in der Tabelle bearbeiten
+
+**In der Formatansicht des Editors steht `tasks.txt` als Tabelle**, eine Zeile
+je Aufgabe, vorn das Kästchen, dahinter der Text. `ctrl+cmd+e` wechselt
+zwischen Tabelle und Rohtext, und der Fokus bleibt dabei im Editor. Die
+Rohansicht zeigt die Datei so, wie sie auf der Platte steht.
+
+**Die Tabelle zeigt allein die Aufgaben.** Eine Zeile ohne Aufgabenform, wie die
+Werkstattzeile im Beispiel oben, sieht man nur in der Rohansicht. Verloren geht
+sie trotzdem nicht. Beim Verschieben wandert sie mit ihrer Aufgabe. Beim Löschen
+bleibt sie stehen und gehört danach zur Aufgabe darüber, bei der ersten Aufgabe
+zum Anfang der Datei.
+
+| Griff | Wirkung |
+|---|---|
+| Doppelklick auf den Text | die Zelle öffnet sich, ihr Text ist ausgewählt |
+| Klick auf das Kästchen | die Aufgabe abhaken oder wieder öffnen |
+| `shift+cmd+x` | die gewählte Aufgabe abhaken oder wieder öffnen |
+| `cmd+return` | die gewählte Zelle öffnen; in einer offenen Zelle den Text übernehmen |
+| `shift+cmd+return` | eine leere Aufgabe ans Ende, ihre Zelle gleich offen |
+| `opt+cmd+up`, `opt+cmd+down` | die gewählte Aufgabe eine Stelle nach oben oder unten |
+| `shift+cmd+delete` | die gewählte Aufgabe löschen |
+| `cmd+c` | den Text der gewählten Aufgabe kopieren |
+| `cmd+z` | jede dieser Handlungen zurücknehmen |
+
+Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Editor“. Wirken können
+sie nur, solange der Fokus im Editor steht und dieser die Aufgabentabelle zeigt;
+sonst sind sie ausgegraut, und ihre Tasten wirken so, als wären sie nicht
+belegt.
+
+**Jede Handlung ändert zuerst nur den Stand im Editor.** Auf die Platte kommt
+sie mit `cmd+s`, wie jede andere Änderung im Editor. Abhaken schreibt allein
+die Zeile der Aufgabe neu, in der Grundform `- [ ] ` oder `- [x] `. Eine
+Aufgabe, die als `* [X]` dastand, kommt deshalb als `- [ ] ` zurück, wenn man
+sie wieder öffnet; ihre Nachbarn bleiben Zeichen für Zeichen, wie sie waren.
+
+**`shift+cmd+delete` fragt nicht nach.** Im Finder heißt dieselbe Kombination
+„Papierkorb entleeren“. Hier wirkt sie allein auf die gewählte Aufgabe in der
+Tabelle, und die Statuszeile sagt dazu, dass `cmd+z` sie zurückholt.
+
+**In einer offenen Zelle gelten diese Regeln:**
+
+- `return`, `tab` oder ein Klick daneben übernehmen den Text. Der Fokus bleibt
+  danach in der Tabelle, und `cmd+z` nimmt die Übernahme zurück.
+- `esc` verwirft das Getippte, und die Zelle zeigt wieder den alten Text. Ein
+  Filtertext im Dateifenster bleibt dabei stehen.
+- Eine Aufgabe ist eine Zeile. Wer Text mit einem Zeilenumbruch einfügt, dem
+  bleibt die Zelle offen, und die Statuszeile nennt den Grund.
+- `cmd+s`, `ctrl+cmd+e`, das Schließen des Editors und `cmd+q` übernehmen eine
+  offene Zelle zuerst; die Datei trägt danach den getippten Text. Lässt sich
+  die Zelle nicht übernehmen, unterbleibt der Befehl.
+- Die übrigen Befehle von KRK wirken auch während des Tippens, `f2` etwa führt
+  weiter in den Notizordner.
+
+Wer mit `shift+cmd+return` eine Aufgabe anlegt und dann `esc` drückt, behält
+eine leere Aufgabe in der Datei. Das Verwerfen gilt dem Getippten und nicht dem
+Anlegen; die leere Zeile nimmt ein `cmd+z` zurück.
+
+**Suchen, Ersetzen und der Zeilensprung sind in der Tabelle ausgegraut.** Sie
+arbeiten auf dem Rohtext, und der ist in der Tabellenform ausgeblendet; ein
+Treffer landete unsichtbar darin. In der Rohansicht derselben Datei stehen sie
+wie gewohnt bereit.
+
+**Mit einer eigenen `keymap.toml` tragen die sechs Befehle keine Tasten.** KRK
+hängt sie unbelegt an ihre Gruppe an, und über das Hauptmenü „Editor“ sind sie
+trotzdem erreichbar. Doppelklick, Kästchen, `cmd+c` und `cmd+z` wirken ohnehin.
+Die Tasten bringt derselbe Handgriff wie oben beim Menüeintrag des
+Notizordners: **F1**, dann `cmd+r`, dann „Fertig“, mit demselben Preis für jede
+eigene Tastenzuweisung.
