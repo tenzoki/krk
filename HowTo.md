@@ -503,6 +503,30 @@ KRK liest großzügig: `- [X]`, `* [ ]`, `* [x]` und eingerückte Aufgaben gelte
 ebenso. Eine Zeile, die keiner dieser Formen folgt, bleibt erhalten. In
 `tasks.txt` gehört sie zur Aufgabe über ihr, wie die Werkstattzeile im Beispiel.
 
+**Die Vorschau zeigt beide Dateien gerendert.** In `notes.txt` steht jedes Thema
+als Überschrift, sein Text darunter. In `tasks.txt` trägt jede Aufgabe ein
+Kästchen: ☐ für offen, ☑ für erledigt, in der Reihenfolge der Datei. Das
+Aufzählungszeichen davor fällt weg, eine Nummer wie in `1. [x] …` bleibt
+stehen. Die Vorschau liest nur: ein Klick auf das Kästchen hakt nichts ab, und
+keine der beiden Dateien wird dabei geschrieben. Abgehakt wird im Editor, indem
+man `[ ]` zu `[x]` ändert und sichert.
+
+Eine Zeile ohne Eintragsform erscheint in der Vorschau als gewöhnlicher Text.
+Wo sie steht, entscheidet, wie: unmittelbar unter einer Aufgabe zeigt die
+Vorschau sie als Fortsetzungszeile dieser Aufgabe, so wie die Werkstattzeile im
+Beispiel. Mit einer Leerzeile davor steht sie als eigener Absatz. KRK folgt
+dabei den Regeln von CommonMark, nach denen jede Markdown-Datei gelesen wird.
+
+**Die Formatansicht des Editors zeigt beide Dateien vorerst als Markdown**
+(`ctrl+cmd+e`). Die Themen erscheinen dort als Überschriften, obwohl die Dateien
+auf `.txt` enden, und die Aufgaben stehen als Text mit `- [ ]` und `- [x]`, ohne
+Kästchen. Eine Tabellenansicht für die Aufgaben folgt in einer späteren Fassung.
+
+**Die Kästchen gibt es nur für diese zwei Dateien in `~/krkhome/`.** Eine
+`.md`-Datei mit `- [ ]` an einem anderen Ort zeigt die Vorschau wie bisher,
+ohne Kästchen. Eine `notes.txt` oder `tasks.txt` in einem anderen Ordner bleibt
+gewöhnlicher Text.
+
 **Die Zettel des früheren Notizblatts stehen als Notizen in `notes.txt`.**
 Übernommen wird genau einmal, nämlich in dem Augenblick, in dem ein `f2` den
 Ordner `~/krkhome/` selbst anlegt. Jeder nicht leere Zettel wird dabei zu einer
