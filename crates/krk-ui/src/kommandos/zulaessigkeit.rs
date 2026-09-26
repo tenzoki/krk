@@ -199,10 +199,10 @@ pub struct Lage {
     /// Ob der Ersthelfer des Schluesselfensters seine AppKit-Bedeutung behaelt.
     ///
     /// Die eigenen Textflaechen von KRK sind die Ausnahme davon und melden
-    /// hier `false`. Es sind seit der Runde 14 zwei, die Textflaeche des
-    /// eingebauten Editors und die Textanzeige der Vorschau; die
-    /// Naemlichkeitsfrage dahinter beantwortet der Anwendungsdelegierte, der
-    /// beide Flaechen haelt. Die Flaeche eines Blattes gehoert ausdruecklich
+    /// hier `false`: die Textflaeche des eingebauten Editors, die Textanzeige
+    /// der Vorschau, die laufende Zelle der Eintragstabelle und die Flaeche der
+    /// Quicknote. Welche es sind, sagt der Rumpf von `ist_eigene_textflaeche`
+    /// beim Anwendungsdelegierten, der die Naemlichkeitsfrage beantwortet. Die Flaeche eines Blattes gehoert ausdruecklich
     /// nicht dazu und meldet `true`, denn nur so bleibt `Abbrechen` dort
     /// unzulaessig und schliesst `Esc` das Blatt.
     pub ersthelfer_gehoert_appkit: bool,
@@ -287,6 +287,16 @@ pub enum Editorform {
     /// Plans). Alle uebrigen Befehle der Eintragstabelle nimmt sie an wie die
     /// Notiztabelle.
     Termine,
+    /// Die Quicknote: ein Puffer allein im Arbeitsspeicher, ueber einer im
+    /// Editor gehaltenen Datei oder ohne eine (Plan
+    /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    ///
+    /// **Sie folgt nicht aus Ansicht und Dateityp**, sondern daraus, ob der
+    /// Editorbereich die Rueckkehr einer offenen Quicknote haelt; solange er
+    /// das tut, zeigt er diese Form, gleich welche Datei darunter liegt. In
+    /// ihr wirken allein Kopieren und Leeren; jeder Befehl, der an der Datei
+    /// darunter arbeitet, ist ausgegraut.
+    Quicknote,
 }
 
 /// Ob dieser Befehl in dieser Lage wirken darf.
@@ -455,7 +465,9 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
 /// hier, dass sie eine Eintragstabelle ist und keine Kaestchen traegt. Die
 /// Bereiche ohne eigene Form antworten ja, gleich was der Editor zeigt; das
 /// Sichern, das Schliessen und der Ansichtswechsel wirken damit auch aus der
-/// Tabelle heraus.
+/// Tabelle heraus. **Die Quicknote ist die Ausnahme davon**: in ihr sagen
+/// `Editor` und `Geheimnisse` nein, weil die Datei darunter nicht zu sehen
+/// ist, und allein `Quicknote` sagt ja.
 ///
 /// Die Form fragt allein nach dem Editor und nicht nach dem Fokus. Das ist
 /// ohne Folgen, weil jeder Bereich, der hier nein sagen kann, von
@@ -468,10 +480,11 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine => false,
+            | Editorform::Termine
+            | Editorform::Quicknote => false,
         },
         Wirkungsbereich::Eintraege => match form {
-            Editorform::Text => false,
+            Editorform::Text | Editorform::Quicknote => false,
             Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
@@ -481,7 +494,7 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         // Termintabelle ordnet nach dem Datum und lehnt es ab (Entscheidung 2
         // des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
         Wirkungsbereich::Reihenfolge => match form {
-            Editorform::Text | Editorform::Termine => false,
+            Editorform::Text | Editorform::Termine | Editorform::Quicknote => false,
             Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => true,
         },
         // Die Notiztabelle traegt keine Kaestchen, die der Geheimnisse als
@@ -490,7 +503,8 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             Editorform::Text
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine => false,
+            | Editorform::Termine
+            | Editorform::Quicknote => false,
             Editorform::Aufgaben => true,
         },
         // Allein die Termintabelle ordnet nach dem Datum und hat eine
@@ -500,27 +514,49 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             Editorform::Text
             | Editorform::Aufgaben
             | Editorform::Notizen
-            | Editorform::Geheimnisse => false,
+            | Editorform::Geheimnisse
+            | Editorform::Quicknote => false,
             Editorform::Termine => true,
         },
         // Das Kopieren und das Leeren der Quicknote wirken allein an ihrem
-        // Puffer; die Form, in der der Editor ihn zeigt, entsteht erst mit der
-        // Flaeche der Quicknote. Bis dahin sagt jede Form nein.
+        // Puffer, und den zeigt der Editor allein in dieser Form.
         Wirkungsbereich::Quicknote => match form {
             Editorform::Text
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Termine => false,
+            Editorform::Quicknote => true,
         },
-        // Die Geheimnisse fragen nicht die Form, sondern die Datei; das
-        // steht in `datei_passt`. Auch in der Rohansicht haelt der Editor
-        // dieselbe `secrets.txt` mit derselben PIN.
+        // Sichern, Schliessen und der Ansichtswechsel arbeiten an der Datei,
+        // die der Editor haelt; in der Quicknote liegt sie unsichtbar darunter,
+        // und ein Befehl an ihr taete etwas, das der Nutzer nicht vor Augen
+        // hat (Entscheidung 7 des Plans der Quicknote). Jede andere Form nimmt
+        // sie an.
+        Wirkungsbereich::Editor => match form {
+            Editorform::Text
+            | Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine => true,
+            Editorform::Quicknote => false,
+        },
+        // „PIN ändern" fragt sonst die Datei und nicht die Form, in
+        // `datei_passt`; auch in der Rohansicht haelt der Editor dieselbe
+        // `secrets.txt` mit derselben PIN. Allein die Quicknote sagt hier
+        // nein, sonst wirkte der Befehl durch sie hindurch auf eine darunter
+        // entsperrte `secrets.txt`.
+        Wirkungsbereich::Geheimnisse => match form {
+            Editorform::Text
+            | Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine => true,
+            Editorform::Quicknote => false,
+        },
         Wirkungsbereich::Dateifenster
         | Wirkungsbereich::Leiste
         | Wirkungsbereich::Dateibereiche
-        | Wirkungsbereich::Editor
-        | Wirkungsbereich::Geheimnisse
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
@@ -876,12 +912,13 @@ mod tests {
     /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
     /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
     /// laufen.
-    const JEDE_FORM: [Editorform; 5] = [
+    const JEDE_FORM: [Editorform; 6] = [
         Editorform::Text,
         Editorform::Aufgaben,
         Editorform::Notizen,
         Editorform::Geheimnisse,
         Editorform::Termine,
+        Editorform::Quicknote,
     ];
 
     /// [`JEDE_FORM`] fuehrt jede Variante von [`Editorform`] genau einmal.
@@ -1103,6 +1140,35 @@ mod tests {
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
+        // Wie die Textflaeche, nur dass jede Zeile, die an der Datei darunter
+        // arbeitet, ueberall nein sagt und allein die Zeile `Quicknote` mit
+        // dem Fokus im Editor ja (Schritt 2 des Plans der Quicknote,
+        // Entscheidung 7).
+        const IN_DER_QUICKNOTE: [[bool; 6]; 15] = [
+            [true, false, false, false, false, false],
+            [false, true, false, false, false, false],
+            [true, false, true, true, false, false],
+            // Editor: Sichern, Schliessen, Ansicht nirgends
+            [false, false, false, false, false, false],
+            // Editortext
+            [false, false, false, false, false, false],
+            // Eintraege
+            [false, false, false, false, false, false],
+            // Reihenfolge
+            [false, false, false, false, false, false],
+            // Aufgaben
+            [false, false, false, false, false, false],
+            // Termine
+            [false, false, false, false, false, false],
+            // Geheimnisse: ohne `pin_aenderbar` ohnehin nirgends
+            [false, false, false, false, false, false],
+            // Quicknote: allein hier, mit dem Fokus im Editor
+            [false, false, false, true, false, false],
+            [true, false, true, false, false, false],
+            [true, true, true, false, true, false],
+            [false, false, true, false, false, false],
+            [true, true, true, true, true, true],
+        ];
         const ALLES_ABGEWIESEN: [[bool; 6]; 15] = [[false; 6]; 15];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
@@ -1114,6 +1180,7 @@ mod tests {
             // nehmen dieselben Befehle an (Schritt 5.4b).
             Editorform::Notizen | Editorform::Geheimnisse => IN_DER_NOTIZTABELLE,
             Editorform::Termine => IN_DER_TERMINTABELLE,
+            Editorform::Quicknote => IN_DER_QUICKNOTE,
         };
 
         let mut geprueft = 0usize;
@@ -1823,7 +1890,9 @@ mod tests {
         ] {
             for form in JEDE_FORM {
                 let form_passt = match form {
-                    Editorform::Text => false,
+                    // Die Quicknote zeigt keine Tabelle (Schritt 2 des Plans
+                    // der Quicknote).
+                    Editorform::Text | Editorform::Quicknote => false,
                     Editorform::Aufgaben => true,
                     Editorform::Notizen | Editorform::Geheimnisse => {
                         kommando != Kommando::AufgabeAbhaken
@@ -1896,7 +1965,9 @@ mod tests {
 
     /// „PIN ändern" wirkt allein mit dem Fokus im Editor und nur, solange die
     /// Lage `pin_aenderbar` meldet; die Form des Editors fragt es nicht
-    /// (C7.15, Probenhaelfte; Schritt 5.5 der krkhome-Arbeit).
+    /// (C7.15, Probenhaelfte; Schritt 5.5 der krkhome-Arbeit), **bis auf die
+    /// Quicknote**: durch sie hindurch wirkt es nicht (Schritt 2 des Plans der
+    /// Quicknote).
     ///
     /// Ueber jeden Fokuswert, jede Form und beide Werte von `pin_aenderbar`,
     /// ohne Hindernis der Lage; mit jedem Hindernis ist der Befehl abgewiesen
@@ -1918,7 +1989,7 @@ mod tests {
                     };
                     assert_eq!(
                         zulaessig(kommando, lage),
-                        fokus == Fokus::Editor && pin_aenderbar,
+                        fokus == Fokus::Editor && pin_aenderbar && form != Editorform::Quicknote,
                         "„PIN ändern“ antwortet in {fokus:?} bei {form:?} mit \
                          pin_aenderbar={pin_aenderbar} falsch"
                     );
@@ -1959,11 +2030,14 @@ mod tests {
         }
     }
 
-    /// Sichern, Schliessen und der Ansichtswechsel wirken in jeder Form.
+    /// Sichern, Schliessen und der Ansichtswechsel wirken in jeder Form, in
+    /// der der Editor die Datei zeigt.
     ///
     /// Ohne sie kaeme der Nutzer aus der Tabelle weder in die Rohansicht noch
     /// zu einer gesicherten Datei; `form_passt` sagt fuer
-    /// `Wirkungsbereich::Editor` deshalb in jeder Form ja.
+    /// `Wirkungsbereich::Editor` deshalb in jeder dieser Formen ja. **Die
+    /// Quicknote zeigt die Datei nicht**, und dort sagt es nein; das haelt
+    /// [`in_der_quicknote_wirkt_kein_befehl_der_datei`].
     #[test]
     fn sichern_schliessen_und_ansicht_wirken_in_jeder_form() {
         let (blatt, appkit, krk) = OHNE_HINDERNIS;
@@ -1973,12 +2047,58 @@ mod tests {
             Kommando::EditorAnsichtUmschalten,
         ] {
             for form in JEDE_FORM {
+                if form == Editorform::Quicknote {
+                    continue;
+                }
                 assert!(
                     zulaessig(kommando, lage_in(blatt, appkit, krk, Fokus::Editor, form)),
                     "{kommando:?} wirkt bei {form:?} nicht"
                 );
             }
         }
+    }
+
+    /// In der Quicknote wirkt kein Befehl, der an der Datei darunter arbeitet,
+    /// und ihre zwei eigenen Befehle wirken dort und nirgends sonst
+    /// (Entscheidung 7 des Plans
+    /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    ///
+    /// Ausgeschrieben mit dem Fokus im Editor, und „PIN ändern" mit
+    /// `pin_aenderbar`: sonst waere es ohnehin abgewiesen, und die Probe
+    /// maesse die Form nicht.
+    #[test]
+    fn in_der_quicknote_wirkt_kein_befehl_der_datei() {
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        let quicknote = Lage {
+            pin_aenderbar: true,
+            ..lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Quicknote)
+        };
+        for kommando in [
+            Kommando::EditorSichern,
+            Kommando::EditorSchliessen,
+            Kommando::EditorAnsichtUmschalten,
+            Kommando::EditorSuchen,
+            Kommando::EditorZeileSpringen,
+            Kommando::PinAendern,
+        ] {
+            assert!(
+                !zulaessig(kommando, quicknote),
+                "{kommando:?} wirkt durch die Quicknote hindurch"
+            );
+        }
+        for kommando in [Kommando::QuicknoteKopieren, Kommando::QuicknoteLeeren] {
+            assert!(zulaessig(kommando, quicknote), "{kommando:?} wirkt nicht");
+            for form in JEDE_FORM {
+                if form == Editorform::Quicknote {
+                    continue;
+                }
+                assert!(
+                    !zulaessig(kommando, lage_in(blatt, appkit, krk, Fokus::Editor, form)),
+                    "{kommando:?} wirkt bei {form:?}"
+                );
+            }
+        }
+        assert!(zulaessig(Kommando::QuicknoteUmschalten, quicknote));
     }
     /// T3.7 der Termine: in der Termintabelle, mit dem Fokus im Editor, ist
     /// „Eintrag hinzufügen" zulaessig, „Eintrag nach oben" und „nach unten"

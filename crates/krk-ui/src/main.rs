@@ -95,6 +95,7 @@ mod pruefordner;
 /// teilen ihn, seit die Runde 7 ihn aus `appkit/teilen.rs` herausgezogen hat.
 #[cfg(test)]
 mod quellbaum;
+mod quicknote;
 mod spalten;
 mod tabs;
 mod vorschaumodell;

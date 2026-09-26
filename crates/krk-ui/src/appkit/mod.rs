@@ -250,6 +250,7 @@ mod menue;
 mod nummernspalte;
 mod oeffnenmit;
 mod papierkorb;
+mod quicknote;
 mod standardprogramm;
 mod statuszeile;
 mod tabelle;

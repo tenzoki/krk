@@ -523,7 +523,7 @@
 //! diese vier stehen hier, weil ein Mensch sie nachgetragen hat, und nicht,
 //! weil ein Prueflauf sie eingefordert haette.
 
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::rc::Rc;
@@ -567,11 +567,13 @@ use crate::hervorhebung::{
     Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
 use crate::kommandos::zulaessigkeit::Editorform;
+use crate::quicknote::Rueckkehr;
 
 use super::bereichsleiste::Kommandomelder;
 use super::eintragsansicht::{self, Eintragsansicht, Eintragsart, Zeilen, Zelle, Zellenwege};
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
+use super::quicknote::Quicknote;
 use super::statuszeile;
 use super::teilen;
 use super::textautomatik;
@@ -1565,6 +1567,9 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 /// sichtbar.
 const ABWEICHUNGSZEICHEN: &str = "•";
 
+/// Was der Kopf bei offener Quicknote nennt.
+const QUICKNOTEKOPF: &str = "Quicknote";
+
 /// Was der Text einer Zelle am Stand aendert; die Rechnung des Kerns.
 ///
 /// **Rein und ohne Fenster pruefbar.** In der Aufgabentabelle ist es der Text
@@ -1581,7 +1586,7 @@ fn zellenrechnung(
     text: &str,
 ) -> Result<Option<Neustand>, eintraege::Abweisung> {
     match form {
-        Editorform::Text => Ok(None),
+        Editorform::Text | Editorform::Quicknote => Ok(None),
         Editorform::Aufgaben => aufgaben::text_aendern(stand, zelle.stelle, text),
         // Die Geheimnisse tragen die Form der Notizen und rechnen ueber
         // denselben Kern (Schritt 5.4b).
@@ -1627,26 +1632,31 @@ fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
             Editorform::Aufgaben
         }
         Editorform::Termine => Editorform::Notizen,
-        Editorform::Text | Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => {
-            form
-        }
+        Editorform::Text
+        | Editorform::Aufgaben
+        | Editorform::Notizen
+        | Editorform::Geheimnisse
+        | Editorform::Quicknote => form,
     }
 }
 
-/// Welche der beiden Flaechen des Editors zu sehen ist.
+/// Welche der drei Flaechen des Editors zu sehen ist.
 ///
-/// **Zwei Flaechen, eine Ansicht.** Beide liegen deckungsgleich unter dem
+/// **Drei Flaechen, eine Ansicht.** Alle liegen deckungsgleich unter dem
 /// Kopf; die Textflaeche zeigt jede Datei in der Rohansicht und fast jede in
 /// der Formatansicht, die [`Eintragsansicht`] zeigt `tasks.txt` und
-/// `notes.txt` im erkannten `~/krkhome/` in der Formatansicht. Welche es ist, folgt aus der
-/// [`Editorform`] ueber [`flaeche_der_form`], und gewechselt wird allein in
-/// [`Editorbereich::flaeche_waehlen`].
+/// `notes.txt` im erkannten `~/krkhome/` in der Formatansicht, und die
+/// [`Quicknote`] zeigt ihren Puffer, solange sie offen ist. Welche es ist,
+/// folgt aus der [`Editorform`] ueber [`flaeche_der_form`], und gewechselt wird
+/// allein in [`Editorbereich::flaeche_waehlen`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Flaeche {
     /// Die `NSTextView` in ihrer Rolle.
     Textflaeche,
     /// Die Tabelle der Eintragsansicht in ihrer Rolle.
     Tabelle,
+    /// Die Textflaeche der Quicknote in ihrer Rolle.
+    Quicknote,
 }
 
 /// Ein Schritt des Flaechentauschs, in der Reihenfolge, in der er geschieht.
@@ -1755,6 +1765,7 @@ fn flaeche_der_form(form: Editorform) -> Flaeche {
         | Editorform::Notizen
         | Editorform::Geheimnisse
         | Editorform::Termine => Flaeche::Tabelle,
+        Editorform::Quicknote => Flaeche::Quicknote,
     }
 }
 
@@ -1764,7 +1775,7 @@ fn flaeche_der_form(form: Editorform) -> Flaeche {
 #[must_use]
 fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
     match form {
-        Editorform::Text => None,
+        Editorform::Text | Editorform::Quicknote => None,
         Editorform::Aufgaben => Some(Eintragsart::Aufgaben),
         Editorform::Notizen | Editorform::Geheimnisse => Some(Eintragsart::Notizen),
         Editorform::Termine => Some(Eintragsart::Termine),
@@ -2153,6 +2164,20 @@ pub struct EditorIvars {
     /// der Melder der Bereichsleiste: der Klick wird ein Kommando und geht
     /// durch dieselbe Zulaessigkeit wie die Taste.
     kommandomelder: RefCell<Option<Kommandomelder>>,
+    /// Die Flaeche der Quicknote, gebaut beim ersten F10 und nicht beim Start
+    /// (Entscheidung 11 des Plans
+    /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    ///
+    /// Gebaut wird allein in [`Editorbereich::quicknote`]; wer nur fragt, etwa
+    /// [`Editorbereich::ist_quicknote_flaeche`], nimmt `get` und baut nie.
+    quicknote: OnceCell<Retained<Quicknote>>,
+    /// Die Rueckkehr der offenen Quicknote; `Some` heisst offen, `None` zu.
+    ///
+    /// **Das eine Kennzeichen „offen"**, und es gibt kein zweites daneben
+    /// (Modulkopf von [`crate::quicknote`]). Gesetzt allein von
+    /// [`Editorbereich::quicknote_zeigen`], genommen allein von
+    /// [`Editorbereich::quicknote_verlassen`].
+    quicknote_rueckkehr: Cell<Option<Rueckkehr>>,
 }
 
 define_class!(
@@ -2304,6 +2329,8 @@ impl Editorbereich {
             zelle_umgebaut: Cell::new(false),
             terminrichtung: Cell::new(Sortierrichtung::Aufsteigend),
             kommandomelder: RefCell::new(None),
+            quicknote: OnceCell::new(),
+            quicknote_rueckkehr: Cell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -2443,10 +2470,90 @@ impl Editorbereich {
     /// die Antwort darauf haengt an Ansicht und Datei und nicht daran, ob der
     /// Tausch schon gelaufen ist. [`Self::flaeche_waehlen`] haelt die beiden
     /// nach jedem Wechsel beieinander.
+    ///
+    /// **Die Quicknote geht vor.** Solange der Bereich ihre Rueckkehr haelt,
+    /// ist die Form [`Editorform::Quicknote`], gleich welche Datei darunter
+    /// liegt; Ansicht und Dateityp fragt die Form erst danach.
     #[must_use]
     pub fn form(&self) -> Editorform {
+        if self.quicknote_offen() {
+            return Editorform::Quicknote;
+        }
         let modell = self.ivars().modell.borrow();
         editorform(modell.ansicht(), modell.typ())
+    }
+
+    // ------------------------------------------------------------------
+    // Die Quicknote (Plan `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`)
+    // ------------------------------------------------------------------
+
+    /// Ob die Quicknote offen ist, also ob der Bereich ihre Rueckkehr haelt.
+    #[must_use]
+    pub fn quicknote_offen(&self) -> bool {
+        self.ivars().quicknote_rueckkehr.get().is_some()
+    }
+
+    /// Ob dieser Ersthelfer die Textflaeche der Quicknote ist.
+    ///
+    /// Ueber `isEqual`, wie jede eigene Textflaeche beim
+    /// Anwendungsdelegierten, und **ohne zu bauen**: eine Quicknote, die noch
+    /// nie offen war, hat keine Flaeche, und die Frage antwortet `false`.
+    #[must_use]
+    pub fn ist_quicknote_flaeche(&self, ersthelfer: &NSResponder) -> bool {
+        self.ivars()
+            .quicknote
+            .get()
+            .is_some_and(|quicknote| ersthelfer.isEqual(Some(quicknote.textflaeche())))
+    }
+
+    /// Die Flaeche der Quicknote; beim ersten Ruf gebaut.
+    ///
+    /// Deckungsgleich mit der Rolle der Textflaeche und als Unteransicht des
+    /// Bereichs, ausgeblendet; zu sehen ist sie erst nach
+    /// [`Self::flaeche_waehlen`].
+    fn quicknote(&self) -> &Quicknote {
+        self.ivars().quicknote.get_or_init(|| {
+            let quicknote = Quicknote::bauen(self.mtm(), self.ivars().textrolle.frame());
+            self.ivars().bereich.addSubview(quicknote.rolle());
+            quicknote
+        })
+    }
+
+    /// Zeigt die Quicknote und merkt die Rueckkehr (Q1 des Spec).
+    ///
+    /// **Ist sie schon offen, aendert sich nichts**, auch die Rueckkehr
+    /// nicht: sie gehoert dem ersten F10. **Zuerst die laufende Zelle**, wie
+    /// bei jedem Weg, der die Flaeche wechselt; eine abgewiesene Zelle ergibt
+    /// `Err` und laesst alles, wie es war. Dann die Rueckkehr, dann der Tausch
+    /// ueber [`Self::flaeche_waehlen`], dann der Kopf.
+    #[must_use = "eine abgewiesene Zelle haelt F10 an, und ihre Meldung gehoert in die Statuszeile"]
+    pub fn quicknote_zeigen(&self, rueckkehr: Rueckkehr) -> Result<(), Editormeldung> {
+        if self.quicknote_offen() {
+            return Ok(());
+        }
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return Err(meldung);
+        }
+        let _ = self.quicknote();
+        self.ivars().quicknote_rueckkehr.set(Some(rueckkehr));
+        self.flaeche_waehlen();
+        self.kopf_nachziehen();
+        Ok(())
+    }
+
+    /// Verlaesst die Quicknote und gibt ihre Rueckkehr heraus; `None`, wenn
+    /// sie nicht offen war.
+    ///
+    /// **Die eine Stelle, die die Flaeche der Quicknote wieder gegen die der
+    /// Datei tauscht.** Den Rand und den Fokus stellt sie nicht zurueck; das
+    /// tut der Rufer mit der Rueckkehr, oder er laesst es, weil sein Befehl
+    /// beides selbst setzt. Ihr Puffer bleibt stehen.
+    #[must_use = "die Rueckkehr sagt, was am Rand und beim Fokus zurueckzustellen ist"]
+    pub fn quicknote_verlassen(&self) -> Option<Rueckkehr> {
+        let rueckkehr = self.ivars().quicknote_rueckkehr.take()?;
+        self.flaeche_waehlen();
+        self.kopf_nachziehen();
+        Some(rueckkehr)
     }
 
     /// Schreibt den Neustand einer Tabellenhandlung ein, als eine
@@ -2665,6 +2772,9 @@ impl Editorbereich {
             // Ohne Tabelle laeuft keine Zelle; der Rang in `abbrechen` fragt
             // vorher danach.
             Editorform::Text => {}
+            // Die Quicknote zeigt keine Tabelle, also laeuft darin keine
+            // Zelle; aus demselben Grund wie bei der Textflaeche.
+            Editorform::Quicknote => {}
             // `esc_regel` nennt fuer die Termintabelle je Spalte die Regel
             // der Aufgaben oder der Notizen und diese Form nie.
             Editorform::Termine => {}
@@ -2915,6 +3025,7 @@ impl Editorbereich {
         match flaeche {
             Flaeche::Textflaeche => &self.ivars().textrolle,
             Flaeche::Tabelle => self.ivars().eintraege.rolle(),
+            Flaeche::Quicknote => self.quicknote().rolle(),
         }
     }
 
@@ -2923,6 +3034,7 @@ impl Editorbereich {
         match flaeche {
             Flaeche::Textflaeche => &self.ivars().text,
             Flaeche::Tabelle => self.ivars().eintraege.tabelle(),
+            Flaeche::Quicknote => self.quicknote().textflaeche(),
         }
     }
 
@@ -3597,7 +3709,11 @@ impl Editorbereich {
     /// Was dort steht, entscheidet [`kopfzeile`] ohne AppKit und ist deshalb
     /// ohne Fenster pruefbar.
     fn kopf_nachziehen(&self) {
-        let zeile = {
+        // Bei offener Quicknote nennt der Kopf sie und nicht die Datei
+        // darunter; er ist die Titelzeile, die Q1 des Spec verlangt.
+        let zeile = if self.quicknote_offen() {
+            QUICKNOTEKOPF.to_owned()
+        } else {
             let modell = self.ivars().modell.borrow();
             kopfzeile(modell.pfad(), modell.hat_ungesicherten_stand())
         };
@@ -6769,9 +6885,14 @@ mod tests {
             let zelleneditor = eintraege
                 .feldeditor_fuer(&feld)
                 .expect("ein Feld der Tabelle bekommt den eigenen Feldeditor");
+            let quicknote = Quicknote::bauen(mtm, probenrahmen());
             let unsere = [
                 ("die Flaeche des Editors", editorflaeche),
                 ("dem Feldeditor der Eintragszellen", zelleneditor),
+                (
+                    "der Flaeche der Quicknote",
+                    quicknote.textflaeche().retain(),
+                ),
             ];
             let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
             for setzer in abgeschaltet {
@@ -7335,6 +7456,50 @@ mod tests {
         );
     }
 
+    /// Die Quicknote zeigt ihre eigene Flaeche, keine Tabelle, und `esc` in
+    /// ihr richtet sich nach ihr selbst (Schritt 2 des Plans
+    /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    #[test]
+    fn die_quicknote_zeigt_ihre_eigene_flaeche() {
+        assert_eq!(flaeche_der_form(Editorform::Quicknote), Flaeche::Quicknote);
+        assert_eq!(eintragsart_der_form(Editorform::Quicknote), None);
+        assert_eq!(
+            esc_regel(Editorform::Quicknote, None),
+            Editorform::Quicknote
+        );
+    }
+
+    /// Die gebaute Flaeche der Quicknote ist kein Rich Text, nimmt keine
+    /// Grafiken, erlaubt Rueckgaengig, und ihr Verwalter ist der eigene der
+    /// Quicknote und nicht der eines Fensters.
+    ///
+    /// **Sie steht hier und nicht im Pruefmodul von `super::quicknote`**, weil
+    /// sie eine Ansicht baut und dafuer [`an_einer_flaeche`] braucht, die eine
+    /// Stelle mit Sperre, die den Hauptfaden behauptet. Eine zweite daneben
+    /// waere eine weitere Behauptung desselben Fadens.
+    #[test]
+    fn die_flaeche_der_quicknote_ist_reiner_text_mit_eigenem_verwalter() {
+        an_einer_flaeche(|mtm| {
+            let quicknote = Quicknote::bauen(mtm, probenrahmen());
+            let flaeche = quicknote.textflaeche();
+            assert!(!flaeche.isRichText(), "die Quicknote nimmt Rich Text");
+            assert!(!flaeche.importsGraphics(), "die Quicknote nimmt Grafiken");
+            assert!(
+                flaeche.allowsUndo(),
+                "die Quicknote erlaubt kein Rueckgaengig"
+            );
+            assert!(flaeche.isEditable());
+            let verwalter = flaeche
+                .undoManager()
+                .expect("die Flaeche nennt ohne Fenster keinen Verwalter");
+            assert!(
+                verwalter.isEqual(Some(quicknote.verwalter())),
+                "der Verwalter der Flaeche ist nicht der eigene der Quicknote"
+            );
+            assert!(quicknote.rolle().isHidden(), "die Rolle entsteht sichtbar");
+        });
+    }
+
     /// Die Tabelle gehoert zu `tasks.txt` und seit Schritt 4.3 zu `notes.txt`
     /// in der Formatansicht; eine `.md` und jede Datei in der Rohansicht zeigen
     /// die Textflaeche. Beide Tabellenformen zeigen dieselbe Flaeche, in ihrer
@@ -7479,15 +7644,23 @@ mod tests {
         an_einer_flaeche(|mtm| {
             let (textrolle, _text) = textflaeche_bauen(mtm, probenrahmen());
             let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let quicknote = Quicknote::bauen(mtm, probenrahmen());
             let rolle = |flaeche: Flaeche| -> &NSView {
                 match flaeche {
                     Flaeche::Textflaeche => &textrolle,
                     Flaeche::Tabelle => eintraege.rolle(),
+                    Flaeche::Quicknote => quicknote.rolle(),
                 }
             };
+            // Eine Kette: jedes Paar beginnt bei der Flaeche, bei der das
+            // vorige geendet hat, denn nur die gezeigte Flaeche ist sichtbar.
             for (alt, neu) in [
                 (Flaeche::Textflaeche, Flaeche::Tabelle),
                 (Flaeche::Tabelle, Flaeche::Textflaeche),
+                (Flaeche::Textflaeche, Flaeche::Quicknote),
+                (Flaeche::Quicknote, Flaeche::Tabelle),
+                (Flaeche::Tabelle, Flaeche::Quicknote),
+                (Flaeche::Quicknote, Flaeche::Textflaeche),
             ] {
                 let mut uebergaben = Vec::new();
                 tausch_ausfuehren(&tauschschritte(alt, neu, true), rolle, |flaeche| {
@@ -7690,8 +7863,9 @@ mod tests {
         }
     }
 
-    /// Getauscht wird allein bei einem Wechsel von Datei oder Ansicht:
-    /// `flaeche_waehlen` hat genau diese vier Rufer, `makeFirstResponder:`
+    /// Getauscht wird allein bei einem Wechsel von Datei oder Ansicht und
+    /// seit dem 260927 beim Zeigen und Verlassen der Quicknote:
+    /// `flaeche_waehlen` hat genau diese Rufer, `makeFirstResponder:`
     /// steht im Editor an genau einer Stelle, in `flaeche_waehlen`, und
     /// `setHidden:` allein in `tausch_ausfuehren`.
     #[test]
@@ -7707,6 +7881,8 @@ mod tests {
             "zurueckgehaltenes_uebernehmen",
             "schliessen",
             "ansicht_umschalten",
+            "quicknote_zeigen",
+            "quicknote_verlassen",
         ];
         for name in rufer {
             assert!(
@@ -7723,7 +7899,7 @@ mod tests {
         assert_eq!(
             zeilen(concat!("self.flaeche_", "waehlen()")),
             rufer.len(),
-            "ein Rufer ausser den vier"
+            "ein Rufer ausser denen der Liste"
         );
         assert_eq!(zeilen(concat!("makeFirst", "Responder(")), 1);
         assert!(rumpf(&quelle, "flaeche_waehlen").contains(concat!("makeFirst", "Responder(")));
@@ -8334,6 +8510,7 @@ mod tests {
             (&editor, "zelle_abbrechen"),
             (&editor, "pin_aendern"),
             (&editor, "terminrichtung_umkehren"),
+            (&editor, "quicknote_zeigen"),
             (&anwendung, "editor_stand_befragen"),
         ];
         for (quelle, name) in rufer {

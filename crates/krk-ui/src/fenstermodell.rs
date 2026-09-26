@@ -455,6 +455,25 @@ pub fn spalte_sichtbar_in(spalten: &Spaltensichtbarkeit, spalte: Spalte) -> bool
     }
 }
 
+/// Was am rechten Rand zurueckzustellen ist, wenn der Editor geht, den die
+/// Quicknote eingeblendet hat.
+///
+/// Entsteht in [`Fenstermodell::randrueckkehr`] im Augenblick vor dem
+/// Einblenden und wird in [`Fenstermodell::rand_zurueckstellen`] eingeloest.
+/// **Drei Werte, ueberschneidungsfrei und vollstaendig**: entweder stand der
+/// Editor schon, oder der Rand war leer, oder ein Mitbewerber stand dort und
+/// ist gewichen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Randrueckkehr {
+    /// Der Editor stand schon; beim Schliessen bleibt er stehen.
+    Nichts,
+    /// Der rechte Rand war leer; beim Schliessen geht der Editor wieder.
+    Ausblenden,
+    /// Dieser Bereich teilte den Rand und ist dem Editor gewichen; beim
+    /// Schliessen kommt er zurueck und raeumt den Editor.
+    Einblenden(Bereich),
+}
+
 /// Das gehaltene Fenstermodell.
 ///
 /// Es traegt, was nicht zu den Tabs gehoert: das aktive Dateifenster, die
@@ -465,7 +484,7 @@ pub fn spalte_sichtbar_in(spalten: &Spaltensichtbarkeit, spalte: Spalte) -> bool
 /// **Die Spalten stehen hier und nicht bei den Tabs**, weil ein Spaltenschalter
 /// nach dem Nutzerentscheid vom 260812-0306 beide Dateilisten zugleich trifft;
 /// je Tab gefuehrt waeren sie zwei mal n Wahrheiten ueber eine Angabe.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Fenstermodell {
     aktiv: Fensterseite,
     breiten: Breiten,
@@ -902,6 +921,46 @@ impl Fenstermodell {
             return false;
         }
         self.umschalten(bereich, mass)
+    }
+
+    /// Was am rechten Rand zurueckzustellen waere, wenn der Editor jetzt
+    /// eingeblendet wird und spaeter wieder geht (Plan
+    /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    ///
+    /// **Im Augenblick vor dem Einblenden zu fragen**, denn danach ist die
+    /// Antwort verloren: das Einblenden raeumt die Mitbewerber, und wer vorher
+    /// stand, sagt dann nichts mehr. Die Mitbewerber kommen aus
+    /// [`Bereich::bewirbt_sich_mit`] ueber [`Bereich::ALLE`] und nicht aus
+    /// einer Liste; ein vierter Bewerber um den rechten Rand braucht hier
+    /// keine Zeile.
+    #[must_use]
+    pub fn randrueckkehr(&self) -> Randrueckkehr {
+        if self.sichtbar(Bereich::Editor) {
+            return Randrueckkehr::Nichts;
+        }
+        Bereich::ALLE
+            .into_iter()
+            .find(|bereich| Bereich::Editor.bewirbt_sich_mit(*bereich) && self.sichtbar(*bereich))
+            .map_or(Randrueckkehr::Ausblenden, Randrueckkehr::Einblenden)
+    }
+
+    /// Stellt den rechten Rand nach einer [`Randrueckkehr`] zurueck.
+    ///
+    /// `Nichts` tut nichts; `Ausblenden` blendet den Editor aus, falls er
+    /// steht; `Einblenden(b)` holt `b` hervor, und dessen Ausschluss raeumt
+    /// den Editor. **Weist die Mindestbreite das Einblenden ab, bleibt der
+    /// Editor stehen**, und die Antwort ist `false`, wie bei jeder stummen
+    /// Abweisung dieses Modells. Liefert, ob sich die Sichtbarkeit geaendert
+    /// hat.
+    #[must_use = "die Antwort sagt, ob sich die Sichtbarkeit geaendert hat; nur dann ist die Aufteilung nachzuziehen"]
+    pub fn rand_zurueckstellen(&mut self, rueckkehr: Randrueckkehr, mass: Zeilenmass) -> bool {
+        match rueckkehr {
+            Randrueckkehr::Nichts => false,
+            Randrueckkehr::Ausblenden => {
+                self.sichtbar(Bereich::Editor) && self.umschalten(Bereich::Editor, mass)
+            }
+            Randrueckkehr::Einblenden(bereich) => self.einblenden(bereich, mass),
+        }
     }
 
     /// Die gespeicherten Breiten.
@@ -3304,5 +3363,93 @@ mod tests {
             .find(concat!("editor_oeffnen_", "lassen("))
             .expect("die Wiederherstellung oeffnet ueber den einen Weg");
         assert!(regel < oeffnen, "die Regel steht hinter dem Oeffnen");
+    }
+
+    // ------------------------------------------------------------------
+    // Die Rueckkehr des rechten Randes (Quicknote, Schritt 2)
+    // ------------------------------------------------------------------
+
+    /// Ein Modell, in dem am rechten Rand genau `rand` steht, oder keiner.
+    fn mit_rand(rand: Option<Bereich>) -> Fenstermodell {
+        let mut modell = modell();
+        if modell.sichtbar(Bereich::Vorschau) {
+            schalten(&mut modell, Bereich::Vorschau);
+        }
+        if let Some(bereich) = rand {
+            schalten(&mut modell, bereich);
+        }
+        modell
+    }
+
+    /// `randrueckkehr` fuer die vier Lagen des rechten Randes.
+    #[test]
+    fn die_randrueckkehr_nennt_wer_am_rand_stand() {
+        assert_eq!(
+            mit_rand(Some(Bereich::Editor)).randrueckkehr(),
+            Randrueckkehr::Nichts
+        );
+        assert_eq!(
+            mit_rand(Some(Bereich::Vorschau)).randrueckkehr(),
+            Randrueckkehr::Einblenden(Bereich::Vorschau)
+        );
+        assert_eq!(
+            mit_rand(Some(Bereich::Git)).randrueckkehr(),
+            Randrueckkehr::Einblenden(Bereich::Git)
+        );
+        assert_eq!(mit_rand(None).randrueckkehr(), Randrueckkehr::Ausblenden);
+    }
+
+    /// Jede Rueckkehr stellt nach dem Einblenden des Editors die Lage von
+    /// vorher wieder her.
+    #[test]
+    fn rand_zurueckstellen_stellt_die_lage_vor_dem_einblenden_her() {
+        for rand in [
+            None,
+            Some(Bereich::Vorschau),
+            Some(Bereich::Editor),
+            Some(Bereich::Git),
+        ] {
+            let vorher = mit_rand(rand);
+            let rueckkehr = vorher.randrueckkehr();
+            let mut modell = vorher.clone();
+            let _ = modell.einblenden(Bereich::Editor, weit());
+            assert!(modell.sichtbar(Bereich::Editor));
+            let geaendert = modell.rand_zurueckstellen(rueckkehr, weit());
+            assert_eq!(
+                geaendert,
+                rueckkehr != Randrueckkehr::Nichts,
+                "{rand:?}: die Antwort sagt nicht, ob sich etwas geaendert hat"
+            );
+            assert_eq!(
+                modell.sichtbarkeit(),
+                vorher.sichtbarkeit(),
+                "{rand:?}: die Sichtbarkeit ist nicht die von vorher"
+            );
+        }
+    }
+
+    /// `Ausblenden` bei einem Editor, der schon nicht mehr steht, tut nichts.
+    #[test]
+    fn ausblenden_ohne_stehenden_editor_tut_nichts() {
+        let mut modell = mit_rand(None);
+        let vorher = modell.sichtbarkeit();
+        assert!(!modell.rand_zurueckstellen(Randrueckkehr::Ausblenden, weit()));
+        assert_eq!(modell.sichtbarkeit(), vorher);
+    }
+
+    /// Weist die Mindestbreite das Einblenden des Git-Bereichs ab, bleibt der
+    /// Editor stehen.
+    ///
+    /// Leiste, zwei Dateifenster und Editor verlangen 920 Punkte, mit dem
+    /// Git-Bereich statt des Editors 940; 930 Punkte tragen das erste und
+    /// nicht das zweite.
+    #[test]
+    fn am_engen_fenster_bleibt_der_editor_statt_des_git_bereichs_stehen() {
+        let mut modell = mit_rand(Some(Bereich::Editor));
+        let geaendert =
+            modell.rand_zurueckstellen(Randrueckkehr::Einblenden(Bereich::Git), mass(930.0));
+        assert!(!geaendert, "der Git-Bereich passt nicht und kam trotzdem");
+        assert!(modell.sichtbar(Bereich::Editor));
+        assert!(!modell.sichtbar(Bereich::Git));
     }
 }

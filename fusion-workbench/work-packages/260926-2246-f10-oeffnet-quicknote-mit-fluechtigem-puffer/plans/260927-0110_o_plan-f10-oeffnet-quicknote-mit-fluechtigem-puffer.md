@@ -178,7 +178,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 3
 
 ### Stufe B: die Fläche und ihre Wege
 
-2. **F10 öffnet und schließt die Quicknote im Editorbereich**
+2. [DONE] **F10 öffnet und schließt die Quicknote im Editorbereich**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/quicknote.rs` (neu, ohne AppKit), `crates/krk-ui/src/appkit/quicknote.rs` (neu), `crates/krk-ui/src/main.rs` und `crates/krk-ui/src/appkit/mod.rs` (Moduleinträge), `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:

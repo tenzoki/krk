@@ -317,6 +317,7 @@ use crate::kommandos::rundweg::{Rundweg, rundweg};
 use crate::kommandos::zulaessigkeit::{self, Editorform, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
+use crate::quicknote::{self, F10Wirkung, Rueckkehr};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
 
@@ -3243,14 +3244,16 @@ impl Anwendungsdelegierter {
 
     /// Ob dieser Ersthelfer eine der **eigenen** Textflaechen von KRK ist.
     ///
-    /// Es sind drei, und sie stehen hier einzeln: die Textflaeche des Editors
+    /// Sie stehen hier einzeln: die Textflaeche des Editors
     /// ([`Editorbereich::textflaeche`]), die Textanzeige der Vorschau
-    /// ([`Vorschaufenster::textflaeche`]) und seit Schritt 3.2b der
+    /// ([`Vorschaufenster::textflaeche`]), seit Schritt 3.2b der
     /// krkhome-Arbeit der Feldeditor einer Zelle der Eintragstabelle im Editor
-    /// ([`Editorbereich::bearbeitet_zelle`]). Alle drei liegen in Bereichen der
-    /// Fensterzeile, alle drei **wollen** KRKs Tastenbefehle mit dem Fokus in
-    /// sich selbst — `F2`, `cmd+s`, `esc` fuer die Zelle —, und alle drei sind
-    /// eine `NSTextView` und fielen ohne diese Frage unter den Fokusvorbehalt.
+    /// ([`Editorbereich::bearbeitet_zelle`]) und seit dem 260927 die
+    /// Textflaeche der Quicknote ([`Editorbereich::ist_quicknote_flaeche`]).
+    /// Alle liegen in Bereichen der Fensterzeile, alle **wollen** KRKs
+    /// Tastenbefehle mit dem Fokus in sich selbst — `F2`, `cmd+s`, `esc` fuer
+    /// die Zelle, F10 und `esc` fuer die Quicknote —, und alle sind eine
+    /// `NSTextView` und fielen ohne diese Frage unter den Fokusvorbehalt.
     ///
     /// **Die Zelle wird anders erkannt als die beiden Flaechen**, und das ist
     /// kein Bruch der Regel: den Feldeditor teilen sich alle Textfelder des
@@ -3281,11 +3284,11 @@ impl Anwendungsdelegierter {
     /// Inhaltsflaeche der Vorschau seit der Runde 1 genauso erkennt.
     ///
     /// **Die Menge der eigenen Flaechen entsteht hier und nicht im
-    /// Ereignisabgriff.** Zwei `isEqual`-Vergleiche in einer Funktion, ein
+    /// Ereignisabgriff.** Die Vergleiche stehen in einer Funktion, ein
     /// Abschluss, ein Parameter: [`ereignisse`] kennt weder den Editor noch die
     /// Vorschau und soll beide nicht kennenlernen; es kennt allein die Frage,
-    /// die hier beantwortet wird. Eine dritte eigene Flaeche kaeme als dritter
-    /// Vergleich in diesen Rumpf.
+    /// die hier beantwortet wird. Eine weitere eigene Flaeche kaeme als
+    /// weiterer Vergleich in diesen Rumpf.
     ///
     /// **Solange ein Bereich nicht gebaut ist, gibt es keine Textflaeche, mit
     /// der zu vergleichen waere**, und dieser Vergleich antwortet `false`: der
@@ -3297,6 +3300,7 @@ impl Anwendungsdelegierter {
     ///
     /// [`Editorbereich::textflaeche`]: super::editor::Editorbereich::textflaeche
     /// [`Editorbereich::bearbeitet_zelle`]: super::editor::Editorbereich::bearbeitet_zelle
+    /// [`Editorbereich::ist_quicknote_flaeche`]: super::editor::Editorbereich::ist_quicknote_flaeche
     /// [`Vorschaufenster::textflaeche`]: super::vorschau::Vorschaufenster::textflaeche
     fn ist_eigene_textflaeche(&self, ersthelfer: &NSResponder) -> bool {
         let editorflaeche = self
@@ -3314,8 +3318,13 @@ impl Anwendungsdelegierter {
             .editor
             .get()
             .is_some_and(|editor| editor.bearbeitet_zelle(ersthelfer));
+        let quicknoteflaeche = self
+            .ivars()
+            .editor
+            .get()
+            .is_some_and(|editor| editor.ist_quicknote_flaeche(ersthelfer));
 
-        editorflaeche || vorschauflaeche || eintragszelle
+        editorflaeche || vorschauflaeche || eintragszelle || quicknoteflaeche
     }
 
     /// Richtet den Abgriff nach einer Umbelegung neu ein (C3).
@@ -4336,6 +4345,10 @@ impl Anwendungsdelegierter {
             // merkt. Gehalten von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
             Kommando::TermineRichtungUmkehren => self.termine_richtung_umkehren(),
+            // Die Quicknote auf F10: oeffnen, den Fokus in sie holen oder sie
+            // schliessen, je nach Lage. Gehalten von
+            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::QuicknoteUmschalten => self.quicknote_umschalten(fokus),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
             // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**:
@@ -5831,6 +5844,18 @@ impl Anwendungsdelegierter {
         // nicht sein eigener Befehl, sondern die eingeblendete Vorschau
         // verdraengt hat.
         if bereich.seite().is_none() && !self.ivars().modell.borrow().sichtbar(bereich) {
+            // Ein ausgeblendeter Editorbereich laesst die Quicknote fallen,
+            // und zwar ohne Rueckkehr: der Befehl, der ihn ausgeblendet hat,
+            // hat den Rand selbst gesetzt, und der Fokus geht gleich darunter
+            // in das Dateifenster. So haelt die Zusage „offen heisst
+            // sichtbar" (Modulkopf von `crate::quicknote`). Vor dem
+            // Fokusumzug, damit die Flaeche der Datei steht, wenn der Rang den
+            // Bereich verlaesst.
+            if bereich == Bereich::Editor
+                && let Some(editor) = self.ivars().editor.get()
+            {
+                let _ = editor.quicknote_verlassen();
+            }
             // `let _ =`: der Fokus soll aus dem gerade ausgeblendeten
             // Randbereich heraus, und das Ziel ist das aktive Dateifenster, das
             // nie ausgeblendet ist. Eine Abweisung liesse den Fokus stehen, wo
@@ -6998,10 +7023,11 @@ impl Anwendungsdelegierter {
 
     /// Der Abbruchbefehl (C4, C1.7).
     ///
-    /// **Vier Raenge, und die Reihenfolge ist bindend.** Ein offenes Blatt
+    /// **Fuenf Raenge, und die Reihenfolge ist bindend.** Ein offenes Blatt
     /// zuerst, weil die Konfliktfrage waehrend eines laufenden Vorgangs steht
     /// und der Abbruch dann ihr gilt. Dann eine Zelle der Eintragstabelle, die
-    /// gerade bearbeitet wird. Dann eine laufende Dateioperation. Und zuletzt
+    /// gerade bearbeitet wird. Dann die Quicknote, wenn der Fokus in ihr steht.
+    /// Dann eine laufende Dateioperation. Und zuletzt
     /// der Filtertext des sichtbaren Tabs im aktiven Dateifenster — genau an
     /// der Stelle, an der die Taste bis zum 260815 nichts mehr zu tun fand und
     /// `false` lieferte.
@@ -7011,12 +7037,19 @@ impl Anwendungsdelegierter {
     ///          │ nein
     ///          └──> wird eine Zelle bearbeitet? ──ja──> editor.zelle_abbrechen()
     ///                │ nein
-    ///                └──> laeuft eine Operation? ──ja──> sie abbrechen
+    ///                └──> Fokus in der Quicknote? ──ja──> sie schliessen
     ///                      │ nein
-    ///                      └──> steht ein Filtertext? ──ja──> ihn loeschen
+    ///                      └──> laeuft eine Operation? ──ja──> sie abbrechen
     ///                            │ nein
-    ///                            └──> nichts, wie vor dieser Runde
+    ///                            └──> steht ein Filtertext? ──ja──> ihn loeschen
+    ///                                  │ nein
+    ///                                  └──> nichts, wie vor dieser Runde
     /// ```
+    ///
+    /// **Der Rang der Quicknote steht nach der Zelle und vor der Operation**
+    /// (Q1 des Spec): `esc` gilt dem, was der Nutzer vor Augen hat, und eine
+    /// Zelle kann mit offener Quicknote nicht laufen, weil die Tabelle dann
+    /// ausgeblendet ist.
     ///
     /// **Der Rang der Zelle steht unmittelbar nach dem Blatt** (Schritt 3.2b
     /// der krkhome-Arbeit). Er muss vor dem Filtertext stehen, sonst leerte
@@ -7094,6 +7127,17 @@ impl Anwendungsdelegierter {
         {
             editor.zelle_abbrechen();
             return true;
+        }
+        // Der Rang der Quicknote, gelesen im Augenblick des Tastendrucks.
+        if let Some(editor) = self.ivars().editor.get()
+            && self
+                .ivars()
+                .fenster
+                .get()
+                .and_then(|fenster| fenster.firstResponder())
+                .is_some_and(|ersthelfer| editor.ist_quicknote_flaeche(&ersthelfer))
+        {
+            return self.quicknote_schliessen();
         }
         let laufender = {
             let vorgang = self.ivars().vorgang.borrow();
@@ -8942,6 +8986,94 @@ impl Anwendungsdelegierter {
         ausgefuehrt
     }
 
+    // ------------------------------------------------------------------
+    // Die Quicknote (Plan `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`)
+    // ------------------------------------------------------------------
+
+    /// F10: oeffnet die Quicknote, holt den Fokus in sie oder schliesst sie
+    /// (Q1 des Spec).
+    ///
+    /// Welche der drei Wirkungen, sagt [`quicknote::f10_wirkung`] aus der
+    /// Frage, ob sie offen ist, und dem Fokus. Die Faelle stehen in
+    /// [`Self::quicknote_oeffnen`] und [`Self::quicknote_schliessen`].
+    fn quicknote_umschalten(&self, fokus: Fokus) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        match quicknote::f10_wirkung(editor.quicknote_offen(), fokus) {
+            F10Wirkung::Oeffnen => self.quicknote_oeffnen(fokus),
+            F10Wirkung::FokusHinein => self.fokus_setzen(Fokus::Editor),
+            F10Wirkung::Schliessen => self.quicknote_schliessen(),
+        }
+    }
+
+    /// Oeffnet die Quicknote und setzt den Fokus in sie.
+    ///
+    /// **Die Rueckkehr des Randes wird erhoben, bevor etwas eingeblendet
+    /// wird**: danach hat das Einblenden die Mitbewerber geraeumt, und wer
+    /// vorher am Rand stand, sagte nichts mehr. **Die Sichtbarkeit des Editors
+    /// wird vorab gefragt**, wie in [`Self::ordner_angleichen`], weil `false`
+    /// aus [`Self::bereich_einblenden`] mehr als eine Bedeutung traegt; ist er
+    /// ausgeblendet und kommt nicht hervor, ist das Fenster zu schmal, und die
+    /// Quicknote bleibt zu. Dann zeigt der Editorbereich sie, und erst danach
+    /// geht der Fokus hinein; damit ist die Zusage „offen heisst sichtbar"
+    /// (Modulkopf von [`crate::quicknote`]) hergestellt, bevor die Rueckkehr
+    /// steht.
+    fn quicknote_oeffnen(&self, fokus: Fokus) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        let (rand, sichtbar) = {
+            let modell = self.ivars().modell.borrow();
+            (modell.randrueckkehr(), modell.sichtbar(Bereich::Editor))
+        };
+        if !sichtbar && !self.bereich_einblenden(Bereich::Editor) {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, "Für die Quicknote ist das Fenster zu schmal.");
+            return false;
+        }
+        if let Err(meldung) = editor.quicknote_zeigen(Rueckkehr { fokus, rand }) {
+            self.editormeldung_zeigen(&meldung);
+            return true;
+        }
+        // `let _ =`: der Editorbereich steht, und seine sichtbare Flaeche ist
+        // die der Quicknote; eine Abweisung liesse den Fokus, wo er war, und
+        // ein zweites F10 holte ihn hinein.
+        let _ = self.fokus_setzen(Fokus::Editor);
+        true
+    }
+
+    /// Schliesst die Quicknote und stellt Rand und Fokus zurueck; `false`,
+    /// wenn sie nicht offen war.
+    ///
+    /// **Der eine Rumpf fuer jeden Weg aus der Quicknote hinaus, der
+    /// zurueckstellt.** Erst gibt der Editorbereich die Rueckkehr heraus und
+    /// zeigt die Flaeche der Datei, dann stellt das Fenstermodell den rechten
+    /// Rand zurueck, dann geht der Fokus dorthin, wo er vor F10 stand, und
+    /// wenn das abgewiesen wird, weil sein Bereich nicht mehr steht, in das
+    /// aktive Dateifenster. Zuletzt der Titel, der jetzt wieder den Pfad der
+    /// Datei nennen kann.
+    #[must_use = "die Antwort sagt, ob eine Quicknote offen war"]
+    fn quicknote_schliessen(&self) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        let Some(rueckkehr) = editor.quicknote_verlassen() else {
+            return false;
+        };
+        if let Some(mass) = self.zeilenmass() {
+            // `let _ =`: eine abgewiesene Rueckkehr laesst den Editor stehen,
+            // und das ist die Antwort des Modells auf ein zu schmales Fenster.
+            let _ = self
+                .sichtbarkeit_aendern(|modell| modell.rand_zurueckstellen(rueckkehr.rand, mass));
+        }
+        if !self.fokus_setzen(rueckkehr.fokus) {
+            let _ = self.fokus_setzen(Fokus::Dateifenster);
+        }
+        self.titel_nachziehen(self.fokus());
+        true
+    }
+
     /// Fuehrt einen Editorbefehl aus, der genau eine Meldung liefert.
     ///
     /// **Die eine Stelle fuer die Befehle ohne Blatt**, die so antworten, von
@@ -10451,6 +10583,16 @@ mod zellenproben {
                 .contains(concat!("editor.bearbeitet_", "zelle(ersthelfer)"))
         );
     }
+
+    /// Die Flaeche der Quicknote ist eine eigene Textflaeche: mit ihr als
+    /// Ersthelfer wirken F10 und `esc` (Schritt 2 des Plans der Quicknote).
+    #[test]
+    fn die_quicknote_ist_eine_eigene_textflaeche() {
+        assert!(
+            rumpf(&diese_datei(), "ist_eigene_textflaeche")
+                .contains(concat!("editor.ist_quicknote_", "flaeche(ersthelfer)"))
+        );
+    }
 }
 
 /// Befehle, deren Ausfuehrungszweig beim Anwendungsdelegierten der Uebersetzer
@@ -10477,7 +10619,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 11] = [
+    const BEFEHLE: [&str; 12] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -10489,6 +10631,7 @@ mod zweigproben {
         "AufgabeAbhaken",
         "PinAendern",
         "TermineRichtungUmkehren",
+        "QuicknoteUmschalten",
     ];
 
     #[test]
@@ -10503,6 +10646,57 @@ mod zweigproben {
                  faellt der Befehl durch den Auffangzweig, steht im Hauptmenue und tut nichts"
             );
         }
+    }
+}
+
+/// Die Wege der Quicknote beim Anwendungsdelegierten (Schritt 2 des Plans
+/// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+///
+/// **Am Rumpf gelesen**, weil jeder dieser Wege ein Fenster verlangt, das
+/// `libtest` nicht hergibt. Was sie auf dem Schirm tun, prueft der Abnahmelauf.
+#[cfg(test)]
+mod quicknoteproben {
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    /// Ein ausgeblendeter Editor verlaesst die Quicknote, bevor der Fokus
+    /// umzieht; so haelt die Zusage „offen heisst sichtbar".
+    #[test]
+    fn ein_ausgeblendeter_editor_verlaesst_die_quicknote() {
+        let rumpf = rumpf(&diese_datei(), "nach_dem_sichtbarkeitswechsel");
+        let verlassen = rumpf
+            .find(concat!("editor.quicknote_", "verlassen()"))
+            .expect("nach_dem_sichtbarkeitswechsel verlaesst die Quicknote nicht");
+        let fokus = rumpf
+            .find(concat!("self.fokus_", "setzen(Fokus::Dateifenster)"))
+            .expect("der Fokusumzug steht nicht mehr im Rumpf");
+        assert!(
+            verlassen < fokus,
+            "die Quicknote faellt erst nach dem Fokusumzug"
+        );
+    }
+
+    /// Die Rueckkehr des Randes wird erhoben, bevor der Editor eingeblendet
+    /// wird; danach waere sie verloren.
+    #[test]
+    fn die_rueckkehr_wird_vor_dem_einblenden_erhoben() {
+        let rumpf = rumpf(&diese_datei(), "quicknote_oeffnen");
+        let rueckkehr = rumpf
+            .find(concat!("modell.rand", "rueckkehr()"))
+            .expect("das Oeffnen erhebt die Rueckkehr nicht");
+        let einblenden = rumpf
+            .find(concat!("self.bereich_", "einblenden(Bereich::Editor)"))
+            .expect("das Oeffnen blendet den Editor nicht ein");
+        let zeigen = rumpf
+            .find(concat!("editor.quicknote_", "zeigen("))
+            .expect("das Oeffnen zeigt die Quicknote nicht");
+        assert!(
+            rueckkehr < einblenden,
+            "die Rueckkehr wird nach dem Einblenden erhoben"
+        );
+        assert!(
+            einblenden < zeigen,
+            "die Quicknote steht vor dem Editorbereich"
+        );
     }
 }
 
@@ -12386,6 +12580,31 @@ mod escproben {
             naemlichkeit < nehmen,
             "der Griff wird aus dem Schlitz genommen, bevor gefragt ist, ob sein Blatt haengt"
         );
+    }
+
+    /// Der Rang der Quicknote steht nach dem der Zelle und vor dem des
+    /// laufenden Vorgangs, und beide hinter dem Blatt (Schritt 2 des Plans der
+    /// Quicknote).
+    #[test]
+    fn esc_hat_den_rang_der_quicknote_nach_der_zelle_und_vor_dem_vorgang() {
+        let rumpf = rumpf(&diese_datei(), "abbrechen");
+        let stelle = |nadel: &str| {
+            rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("`{nadel}` steht nicht mehr im Rumpf von abbrechen"))
+        };
+        let blatt = stelle(concat!("self.blatt_", "steht()"));
+        let zelle = stelle(concat!("editor.bearbeitet_", "zelle("));
+        let quicknote = stelle(concat!("editor.ist_quicknote_", "flaeche("));
+        let schliessen = stelle(concat!("self.quicknote_", "schliessen()"));
+        let vorgang = stelle(concat!("vorgang.zustand.", "abbrechen()"));
+        let filter = stelle(concat!("filter_", "leeren()"));
+        assert!(
+            blatt < zelle && zelle < quicknote,
+            "die Quicknote steht vor der Zelle"
+        );
+        assert!(quicknote < schliessen && schliessen < vorgang);
+        assert!(vorgang < filter);
     }
 
     /// `verdeckt_und_steht` ruft `steht` und stellt die Naemlichkeitsfrage
