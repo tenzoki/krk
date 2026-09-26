@@ -301,10 +301,9 @@ impl Lesart {
     #[must_use]
     pub fn von_dateityp(typ: Dateityp) -> Self {
         match typ {
-            // `appointments.md` wird gelesen wie `notes.txt`; die Vorschau
-            // rendert sie bis Schritt 9 des Plans
-            // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`
-            // in Dateireihenfolge, danach nach dem Datum vorsortiert.
+            // `appointments.md` wird gelesen wie `notes.txt`; nach dem Datum
+            // vorsortiert hat die Vorschau sie schon vor dem Rendern
+            // (`vorschaumodell::vorschautext`).
             Dateityp::Eintraege(
                 Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Termine,
             ) => Lesart::Eintragsdatei,

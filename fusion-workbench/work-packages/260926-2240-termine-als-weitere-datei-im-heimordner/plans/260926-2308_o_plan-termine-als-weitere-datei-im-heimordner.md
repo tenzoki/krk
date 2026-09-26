@@ -385,7 +385,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
 
 ### Stufe D: Vorschau und Texte
 
-9. **9 Die Vorschau zeigt die Termine aufsteigend**
+9. [DONE] **9 Die Vorschau zeigt die Termine aufsteigend**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/vorschaumodell.rs`
    - Changes:

@@ -177,6 +177,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
+use krk_core::heimordner::eintraege::termine;
 use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
@@ -969,7 +970,7 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             let typ = Dateityp::von_pfad(pfad, heim);
             match hervorhebung::art(Some(pfad), typ) {
                 Darstellungsart::Markdown => Inhalt::Markdown(Box::new(markdown::rendern(
-                    &text,
+                    &vorschautext(typ, text),
                     tafel,
                     Lesart::von_dateityp(typ),
                 ))),
@@ -982,6 +983,38 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             metadaten,
             zaehlzeilen: Vec::new(),
         },
+    }
+}
+
+/// Der Text, den die Vorschau rendert: fuer `appointments.md` im erkannten
+/// Notizordner die Termine nach ihrem Datum, fuer jede andere Datei der Text,
+/// wie er dasteht.
+///
+/// **Die Vorschau ordnet fest aufsteigend und hebt nichts hervor** (A13 des
+/// Spec `260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`,
+/// Schritt 9 des Plans
+/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`). Die
+/// Richtung der Termintabelle im Editor erreicht sie nicht: die Tabelle ist
+/// eine Ansicht auf den Stand, die Vorschau eine auf die Datei. Der Vorspann
+/// steht oben, ungueltige Termine stehen am Ende, und die Umordnung rechnet
+/// allein [`termine::in_anzeigeordnung`], dieselbe Rechnung wie die Tabelle,
+/// ueber einen Text im Speicher; geschrieben wird nichts.
+///
+/// **Kopiert der Nutzer aus der Vorschau, kommt der Text aus dieser
+/// umgeordneten Quelle** und nicht aus der Datei. Jeder Termin reist dabei mit
+/// seinen eigenen Zeilen, weil die Umordnung ganze Bloecke versetzt und keinen
+/// zerschneidet.
+///
+/// Eine `appointments.md` ausserhalb des Notizordners ist `Dateityp::Markdown`
+/// und kommt in Dateireihenfolge, wie jede andere Markdown-Datei.
+fn vorschautext(typ: Dateityp, text: String) -> String {
+    match typ {
+        Dateityp::Eintraege(Sonderdatei::Termine) => termine::in_anzeigeordnung(&text),
+        Dateityp::Eintraege(
+            Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse,
+        )
+        | Dateityp::Markdown
+        | Dateityp::Sonstiges => text,
     }
 }
 
@@ -1316,6 +1349,80 @@ mod tests {
             );
         }
         assert_eq!([stand("notes.txt"), stand("tasks.txt")], vorher);
+    }
+
+    /// Eine Termindatei mit Vorspann, drei Terminen ausser der Reihe und
+    /// einer ungueltigen Kopfzeile, ohne Schlussumbruch.
+    const TERMINDATEI: &str = "Vorspann\n\n## 261003\nDrei\n\n## xyz\nKaputt\n\n\
+                               ## 261001 09:30\nEins\n\n## 261002\nZwei";
+
+    /// T7.3: im erkannten Notizordner kommt `appointments.md` als Markdown,
+    /// der Vorspann oben, die Termine aufsteigend nach dem Datum und der
+    /// ungueltige am Ende; kein Hinweis und kein Fehler. Ueber die
+    /// geschriebene und die aufgeloeste Form des Ordners gleich.
+    #[test]
+    fn die_termine_im_notizordner_kommen_aufsteigend() {
+        let ordner = Pruefordner::neu("termine-aufsteigend");
+        let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+        std::fs::write(ziel.join("appointments.md"), TERMINDATEI).expect("appointments.md");
+        for basis in [&geschrieben, &ziel] {
+            let text = gerenderter_text(laden(
+                &basis.join("appointments.md"),
+                Tafel::Hell,
+                &Profile::default(),
+                Some(&heim),
+            ));
+            assert_eq!(
+                text,
+                "Vorspann\n\n261001 09:30\n\nEins\n\n261002\n\nZwei\n\n261003\n\nDrei\n\nxyz\n\nKaputt",
+                "{}",
+                basis.display()
+            );
+        }
+    }
+
+    /// T7.1: dieselbe Datei in einem anderen Ordner ist gewoehnliches
+    /// Markdown und kommt in Dateireihenfolge.
+    #[test]
+    fn die_termine_anderswo_kommen_in_dateireihenfolge() {
+        let ordner = Pruefordner::neu("termine-anderswo");
+        let (heim, _, _) = pruef_krkhome(&ordner);
+        let daneben = ordner.datei("appointments.md", TERMINDATEI);
+        assert_eq!(
+            gerenderter_text(laden(
+                &daneben,
+                Tafel::Hell,
+                &Profile::default(),
+                Some(&heim)
+            )),
+            "Vorspann\n\n261003\n\nDrei\n\nxyz\n\nKaputt\n\n261001 09:30\n\nEins\n\n261002\n\nZwei"
+        );
+    }
+
+    /// T7.2: die Vorschau ordnet im Speicher um und schreibt nichts; Bytes,
+    /// Groesse und Aenderungszeit der Datei stehen nach dem Laden wie vorher.
+    #[test]
+    fn das_laden_laesst_die_termindatei_unberuehrt() {
+        let ordner = Pruefordner::neu("termine-unberuehrt");
+        let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+        let pfad = ziel.join("appointments.md");
+        std::fs::write(&pfad, TERMINDATEI).expect("appointments.md");
+        let stand = || {
+            let daten = std::fs::metadata(&pfad).expect("Metadaten");
+            (
+                std::fs::read(&pfad).expect("lesbar"),
+                daten.len(),
+                daten.modified().expect("Aenderungszeit"),
+            )
+        };
+        let vorher = stand();
+        let _ = laden(
+            &geschrieben.join("appointments.md"),
+            Tafel::Hell,
+            &Profile::default(),
+            Some(&heim),
+        );
+        assert_eq!(stand(), vorher);
     }
 
     /// Legt `secrets.txt` mit dem genannten Inhalt im Ziel des
