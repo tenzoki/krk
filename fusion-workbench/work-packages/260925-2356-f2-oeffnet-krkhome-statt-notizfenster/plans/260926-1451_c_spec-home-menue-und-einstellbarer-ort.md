@@ -1,7 +1,7 @@
 # Spec: Menü „Home“ und einstellbarer Ort des Notizordners
 
 **Date:** 2026-09-26
-**Status:** Draft
+**Status:** Complete
 **Source:** Nutzerwunsch nach der ersten Prüfung am Bündel, beantwortet in `260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md` (bindend). Er löst `260926-0007_*_ist-der-ort-krkhome-fest-oder-einstellbar.md` ab.
 **Baut auf:** `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md` (geschlossen, alle Stufen gebaut, HEAD `3091666`). Was dort gilt, gilt weiter, soweit dieser Spec es nicht ausdrücklich ändert. Kennungen dieses Spec tragen den Vorsatz **H**, damit sie nicht mit C1 bis C7 des ersten verwechselt werden.
 **Grundlage erhoben:** 260926-1451 am Baum (`heimordner/mod.rs`, `heimordner/bereitstellen.rs`, `heimgriff.rs`, `ablage/einstellungen.rs`, `ablage/neuerungen.rs`, `ablage/mod.rs`, `belegungsmodell.rs`, `menuemodell.rs`, `resources/default-keymap.toml`, `resources/default-settings.toml`, `HowTo.md`).
