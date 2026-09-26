@@ -235,9 +235,11 @@ wirken können. Das trifft auf zwei Fälle zu:
   des Editors. Welche der beiden ein Anschlag auslöst, entscheidet der Ort des
   Fokus.
 
-Eine Funktion, die im Editor und außerhalb wirkt, schließt keine andere aus,
-und drei Funktionen auf einer Kombination sind immer ein Konflikt. Dieselbe
-Regel gilt beim Zuweisen mit `cmd+t`: eine Kombination, die danach keinen
+Eine Funktion, die im Editor und außerhalb wirkt, schließt keine andere aus.
+Drei Funktionen, die den Tastendruck auf demselben Weg bekommen, ergeben auf
+einer Kombination deshalb immer einen Konflikt; eine Funktion, die ihn auf dem
+anderen Weg bekommt, zählt dabei nicht mit und darf neben zweien davon liegen.
+Dieselbe Regel gilt beim Zuweisen mit `cmd+t`: eine Kombination, die danach keinen
 Konflikt ergibt, nimmt die Ansicht an, und beide Funktionen behalten sie; ergibt
 sie einen, bleibt die Belegung, wie sie war, und die Ansicht nennt beide
 Funktionen.
