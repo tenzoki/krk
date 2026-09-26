@@ -1,0 +1,46 @@
+Durchgang vorgabe
+Version 15.7.9 (Build 24G830)
+Anwendung aktiv: ja, Fenster ist Schlüsselfenster: ja
+Fall 1: Umbau (B über A), Zelle der Zeile 0 öffnen, ohne Tippen cmd+z
+  Fensterverwalter canUndo nach dem Umbau: true
+  Eigenschaften: isRichText=nein importsGraphics=nein allowsUndo=ja isFieldEditor=ja smartInsertDelete=ja QuoteSubstitution=nein DashSubstitution=nein TextReplacement=ja SpellingCorrection=ja ContinuousSpellChecking=nein GrammarChecking=ja LinkDetection=nein DataDetection=nein TextCompletion=ja usesFindBar=nein usesFontPanel=nein usesRuler=nein drawsBackground=ja isHorizontallyResizable=ja isVerticallyResizable=ja widthTracksTextView=nein
+  Ersthelfer NSTextView, isFieldEditor true
+  Verwalter des Feldeditors NSCellUndoManager, derselbe wie der des Fensters: nein
+  Verwalter der Tabelle NSUndoManager, derselbe wie der des Fensters: ja
+  Zelle offen, nichts getippt    Zelle offen ja   Feldeditortext 'B' Zeilen [B, A] Menü Rückgängig frei Wiederholen grau Ersthelfer NSTextView Felder ['B', 'A'] Umbauten zurück 0
+    NSWindow.undo: Ersthelfer NSTextView, dessen Verwalter NSCellUndoManager canUndo true, Fensterverwalter canUndo true
+  nach cmd+z                     Zelle offen nein Feldeditortext '-' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer Messfenster Felder ['A', 'B'] Umbauten zurück 1
+  nach zweitem cmd+z             Zelle offen nein Feldeditortext '-' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer Messfenster Felder ['A', 'B'] Umbauten zurück 1
+Fall 2: frischer Umbau, Zelle öffnen, 'xyz' tippen, cmd+z viermal
+  nach 'xyz'                     Zelle offen ja   Feldeditortext 'xyz' Zeilen [B, A] Menü Rückgängig frei Wiederholen grau Ersthelfer NSTextView Felder ['xyz', 'A'] Umbauten zurück 0
+    NSWindow.undo: Ersthelfer NSTextView, dessen Verwalter NSCellUndoManager canUndo true, Fensterverwalter canUndo true
+  nach cmd+z 1                   Zelle offen ja   Feldeditortext 'B' Zeilen [B, A] Menü Rückgängig frei Wiederholen frei Ersthelfer NSTextView Felder ['B', 'A'] Umbauten zurück 0
+    NSWindow.undo: Ersthelfer NSTextView, dessen Verwalter NSCellUndoManager canUndo true, Fensterverwalter canUndo true
+  nach cmd+z 2                   Zelle offen nein Feldeditortext '-' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer Messfenster Felder ['A', 'B'] Umbauten zurück 1
+  nach cmd+z 3                   Zelle offen nein Feldeditortext '-' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer Messfenster Felder ['A', 'B'] Umbauten zurück 1
+  nach cmd+z 4                   Zelle offen nein Feldeditortext '-' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer Messfenster Felder ['A', 'B'] Umbauten zurück 1
+Fall 3: Zelle der Zeile 0 öffnen, 'neu' tippen, dann reloadData mit getauschten Zeilen
+  vor reloadData                 Zelle offen ja   Feldeditortext 'neu' Zeilen [A, B] Menü Rückgängig frei Wiederholen grau Ersthelfer NSTextView Felder ['neu', 'B'] Umbauten zurück 1
+  Delegiertenwege während reloadData: textShouldEndEditing: Zeile -1 Text 'neu' || controlTextDidEndEditing: Zeile -1 Wert 'neu' | Ersthelfer NSTextView isFieldEditor true Delegierter des Feldeditors NSTextField currentEditor NSTextView
+  gleich nach reloadData         Zelle offen nein Feldeditortext '-' Zeilen [B, A] Menü Rückgängig grau Wiederholen grau Ersthelfer Messfenster Felder ['?', '?'] Umbauten zurück 1
+  nach Leerlauf                  Zelle offen nein Feldeditortext '-' Zeilen [B, A] Menü Rückgängig grau Wiederholen grau Ersthelfer Messfenster Felder ['B', 'A'] Umbauten zurück 1
+Fall 4: Zelle öffnen, 'ende' tippen, Ende über makeFirstResponder(tabelle)
+  makeFirstResponder: true
+  textShouldEndEditing: Zeile 1 Text 'ende'
+  controlTextDidEndEditing: Zeile 1 Wert 'ende' | Ersthelfer NSTextView isFieldEditor true Delegierter des Feldeditors NSTextField currentEditor NSTextView
+  danach                         Zelle offen nein Feldeditortext '-' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer NSTableView Felder ['A', 'ende'] Umbauten zurück 1
+Fall 5: Zeile 0 öffnen, 'abc' tippen, übernehmen; Zeile 1 öffnen, cmd+z
+  Zeile 0 übernommen             Zelle offen nein Feldeditortext '-' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer NSTableView Felder ['abc', 'B'] Umbauten zurück 1
+  Zeile 1 offen                  Zelle offen ja   Feldeditortext 'B' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer NSTextView Felder ['abc', 'B'] Umbauten zurück 1
+  nach cmd+z                     Zelle offen ja   Feldeditortext 'B' Zeilen [A, B] Menü Rückgängig grau Wiederholen grau Ersthelfer NSTextView Felder ['abc', 'B'] Umbauten zurück 1
+Fall 6: Zeile 0 öffnen, 'wx' tippen, Schlüsselrang ab und zurück, cmd+z
+  nach Rangwechsel               Zelle offen ja   Feldeditortext 'wx' Zeilen [A, B] Menü Rückgängig frei Wiederholen grau Ersthelfer NSTextView Felder ['wx', 'B'] Umbauten zurück 1
+    NSWindow.undo: Ersthelfer NSTextView, dessen Verwalter NSCellUndoManager canUndo true, Fensterverwalter canUndo false
+  nach cmd+z                     Zelle offen ja   Feldeditortext 'abc' Zeilen [A, B] Menü Rückgängig grau Wiederholen frei Ersthelfer NSTextView Felder ['abc', 'B'] Umbauten zurück 1
+Fall 7: Zeile 1 öffnen, 'neu' tippen, Ende über makeFirstResponder, im Ende reloadData
+  makeFirstResponder: true
+  textShouldEndEditing: Zeile 1 Text 'neu'
+  controlTextDidEndEditing: Zeile 1 Wert 'neu' | Ersthelfer NSTextView isFieldEditor true Delegierter des Feldeditors NSTextField currentEditor NSTextView
+  reloadData im Ende fertig, Ersthelfer Messfenster
+  danach                         Zelle offen nein Feldeditortext '-' Zeilen [A, neu] Menü Rückgängig grau Wiederholen grau Ersthelfer NSTableView Felder ['?', '?'] Umbauten zurück 1
+  nach Leerlauf                  Zelle offen nein Feldeditortext '-' Zeilen [A, neu] Menü Rückgängig grau Wiederholen grau Ersthelfer NSTableView Felder ['A', 'neu'] Umbauten zurück 1

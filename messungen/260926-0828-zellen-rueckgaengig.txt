@@ -1,0 +1,161 @@
+KRK — Was erreicht cmd+z in einer offenen Tabellenzelle?
+========================================================
+
+Wozu dieser Lauf
+----------------
+Defekt
+`fusion-workbench/work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0813_*_cmd-z-bei-offener-zelle-nimmt-einen-tabellenumbau-zurueck-und-verliert-oder-verschiebt-den-getippten-text.md`.
+Die Zweitlesung `shared/consultations/260926-0811-zweitlesung-stufe-3-aufgabeneditor.md`
+fuehrt den geteilten Verwalter als Inference und empfiehlt einen eigenen
+Feldeditor ueber `windowWillReturnFieldEditor:toObject:`, "vorbehaltlich einer
+Messung". Dagegen stand ein Befund vom 260810 (Kopf von
+`rueckgaengigstapel_leeren` in `crates/krk-ui/src/appkit/editor.rs`): der
+Feldeditor eines `NSTextField` hat einen eigenen `NSCellUndoManager`. Dieser
+Lauf entscheidet zwischen beidem fuer die Zelle einer view-basierten Tabelle und
+misst die Empfehlung, bevor sie gebaut wird.
+
+Bedingungen
+-----------
+Zeitpunkt             2026-09-26, 08:20 bis 08:40 Ortszeit
+hw.model              MacBookPro15,1 (das Referenzgeraet der zehn Zusagen)
+sw_vers               macOS 15.7.9 24G830
+Werkzeug              Wegwerf-Programme `spikes/zellen-rueckgaengig/rueckgaengig.swift`
+                      und `mehrzeilig.swift`, Apple Swift 6.2.4, `swiftc` ohne
+                      Optimierungsschalter; Aufruf `spikes/zellen-rueckgaengig/starten.sh alle`
+Vordergrund           Das Programm laeuft als `.regular` und kam in jedem Durchgang
+                      selbst nach vorn ("Anwendung aktiv: ja, Fenster ist
+                      Schluesselfenster: ja"). Keine Nutzerarbeit noetig.
+Tastenweg             `NSApp.postEvent(_:atStart:)` in die eigene Ereignisschlange;
+                      `cmd+z` erreicht "Rueckgaengig" im Hauptmenue (`undo:`, Ziel
+                      nil) wie in KRK. Kein osascript.
+Einzelbelege          `spikes/zellen-rueckgaengig/messung-<durchgang>.txt`
+
+Aufbau
+------
+Tabelle mit zwei Zeilen A und B, je Zeile ein bearbeitbares `NSTextField` in
+einer `NSTableCellView`, Bearbeitung ueber `editColumn:row:withEvent:select:`
+wie in `eintragsansicht.rs`. Ein "Umbau" vertauscht die Zeilen, laedt neu und
+meldet seine Umkehrung am Verwalter des Fensters an, wie `umkehrung_anmelden`.
+
+Durchgaenge
+  vorgabe        der Feldeditor, den AppKit einsetzt
+  eigener        eigener Feldeditor (NSTextView-Unterklasse, `isFieldEditor`) aus
+                 `windowWillReturnFieldEditor:toObject:`, nur fuer Felder unter
+                 der Tabelle; `undoManager` ueberschrieben auf einen eigenen
+                 NSUndoManager
+  eigenerundo    dazu `allowsUndo` von Hand ein (AppKit setzt es beim Beginn der
+                 Bearbeitung ohnehin, siehe Eigenschaften; der Durchgang ist
+                 damit derselbe wie `eigener`)
+  eigenerfaengt  dazu beantwortet der Feldeditor `undo:` und `redo:` selbst an
+                 seinem Verwalter, prueft die Menueeintraege an `canUndo`/`canRedo`
+                 und leert den Verwalter in `becomeFirstResponder`
+  eigenerfaengt ohnepruefung
+                 dasselbe ohne eigene Antwort auf `validateMenuItem:` (die Form,
+                 die KRK baut; Grund unter "Antworten", Punkt 6)
+
+Ergebnis
+--------
+Fall 1 (Nutzerpruefung 1 der Zweitlesung): Umbau B ueber A, Zelle der Zeile 0
+oeffnen, ohne Tippen cmd+z.
+
+  Durchgang       Verwalter des Feldeditors   nach cmd+z
+  vorgabe         NSCellUndoManager (eigen)   Umbau zurueck, Zelle zu, Reihenfolge A, B
+  eigener         NSUndoManager (eigen)       Umbau zurueck, Zelle zu
+  eigenerundo     NSUndoManager (eigen)       Umbau zurueck, Zelle zu
+  eigenerfaengt   NSUndoManager (eigen)       nichts; Zelle offen, Reihenfolge B, A
+  ... ohnepruefung NSUndoManager (eigen)      nichts; Zelle offen, Reihenfolge B, A
+
+Menueeintraege "Rueckgaengig"/"Wiederholen" nach `NSMenu.update`, Zelle offen
+und nichts getippt: `vorgabe` frei/grau, `eigenerfaengt` grau/grau,
+`eigenerfaengt ohnepruefung` frei/frei (die Oberklasse `NSTextView` sagt fuer
+beide ja, auch mit leerem Verwalter).
+
+Fall 2 (Nutzerpruefung 2): frischer Umbau, Zelle oeffnen, 'xyz' tippen, cmd+z
+viermal.
+
+  Durchgang       cmd+z 1                      cmd+z 2..4
+  vorgabe         'xyz' zurueck, Zelle offen   Umbau zurueck, Zelle zu
+  eigener         Umbau zurueck, Zelle zu,     nichts mehr
+                  'xyz' faellt
+  eigenerundo     wie eigener
+  eigenerfaengt   'xyz' zurueck, Zelle offen   nichts; Zelle offen, Umbau steht
+  ... ohnepruefung wie eigenerfaengt
+
+Fall 3: 'neu' in die offene Zelle der Zeile 0 tippen, dann `reloadData` mit
+vertauschten Zeilen. In allen vier Durchgaengen gleich:
+  control:textShouldEndEditing:  Zeile -1, Text 'neu'
+  controlTextDidEndEditing:      Zeile -1, Wert 'neu'
+  danach                         Zelle zu, Felder zeigen die neuen Zeilen
+KRKs `zelle_darf_enden` sagt bei Zeile -1 ja, `zelle_geendet` schreibt bei
+Zeile -1 nichts fest: das ist Fall A der Zweitlesung, der Text faellt still.
+
+Fall 4: Ende ueber `makeFirstResponder:` an die Tabelle (der Weg von
+`bearbeitung_beenden`). In allen vier Durchgaengen: beide Delegiertenwege mit
+der richtigen Zeile; **waehrend `controlTextDidEndEditing:` ist der Feldeditor
+noch Ersthelfer, `isFieldEditor` ja, sein Delegierter noch das Feld.**
+`laufende_zelle` erkennt die Zelle also noch, waehrend sie endet.
+
+Fall 5: Zeile 0 bearbeiten und uebernehmen, dann Zeile 1 oeffnen und cmd+z: in
+allen Durchgaengen nichts; in `eigenerfaengt` ist der Verwalter bei jedem Beginn
+geleert (6-mal bis dahin).
+
+Fall 6: 'wx' tippen, Fenster gibt den Schluesselrang ab und bekommt ihn zurueck,
+cmd+z: in `vorgabe` und `eigenerfaengt` nimmt es 'wx' zurueck; der Rangwechsel
+leert den Stapel der Zelle nicht.
+
+Fall 7: 'neu' in Zeile 1, Ende ueber `makeFirstResponder:`, und im
+`controlTextDidEndEditing:` selbst `reloadData` mit dem neuen Text (der Weg
+`zelle_festschreiben` -> `umbau_anwenden` -> `zeilen_zeigen` in KRK). In allen
+Durchgaengen: kein zweiter Ruf der Delegiertenwege, waehrend des Neuladens ist
+kurz das Fenster Ersthelfer, danach die Tabelle, der Text steht in der Zeile.
+Das Neuladen im eigenen Ende ist damit unschaedlich; ausgenommen werden muss es
+von einem Guertel trotzdem, weil `laufende_zelle` die Zelle dort noch meldet
+(Fall 4).
+
+Eigenschaften des Feldeditors waehrend der Bearbeitung (21 Werte, darunter
+isRichText, allowsUndo, die automatischen Ersetzungen und Pruefungen,
+usesFindBar, die Groessenregeln): in allen vier Durchgaengen **dieselben**.
+AppKit richtet den eigenen Feldeditor beim Beginn der Bearbeitung ein wie den
+eigenen.
+
+Mehrzeilige Form aus 4.2 mit dem eigenen Feldeditor (`mehrzeilig.swift`,
+Durchgaenge `feldeditormass` und `feldeditorohnenote`): Zeilenhoehe 20 / 36 /
+52 pt nach der ersten, zweiten und dritten Zeile, der eigene Feldeditor bleibt
+Ersthelfer, 37 Anschlaege, 0 am Schluesselfenster vorbei. Dasselbe wie
+`messungen/260926-0818-mehrzeilige-zelle.txt`.
+
+Antworten
+---------
+1. Der Befund vom 260810 stimmt, und die Inference der Zweitlesung stimmt in der
+   Wirkung trotzdem: der Feldeditor hat einen eigenen Verwalter, aber
+   `NSWindow.undo:` geht bei leerem Zellenstapel an den Umbau des Fensters.
+   Der Defekt ist damit am laufenden Programm nachgestellt (Fall 1 und 2).
+2. Ein eigener Feldeditor aus `windowWillReturnFieldEditor:toObject:` wird fuer
+   die Zellen einer view-basierten Tabelle angenommen (Ersthelfer ist der
+   eigene, AppKit fragt den Delegierten).
+3. **Ein eigener Verwalter allein hilft nicht**: `NSWindow.undo:` nimmt nicht
+   das ueberschriebene `undoManager` des Feldeditors, sondern den Umbau, und
+   verwirft dabei sogar das Getippte (`eigener`, Fall 2). Die Aussage im Kopf
+   von `rueckgaengigstapel_leeren`, `NSWindow` nehme den Verwalter des
+   Ersthelfers, gilt fuer einen Feldeditor so nicht.
+4. Was traegt: der Feldeditor beantwortet `undo:` und `redo:` selbst, mit
+   eigenem Verwalter, geleert bei jedem Beginn. Dann endet `cmd+z` am Anfang
+   der Zelle, und der Umbau bleibt (`eigenerfaengt`).
+5. `reloadData` unter einer offenen Zelle verliert den Text (Fall 3); jedes
+   Neuladen muss eine offene Zelle vorher beenden. Waehrend des eigenen Endes
+   (Fall 4) meldet `laufende_zelle` die Zelle noch, und ein Guertel vor
+   `reloadData` muss dieses Ende ausnehmen.
+6. Die eigene Antwort auf `validateMenuItem:` macht allein die Menueeintraege
+   am Anfang der Zelle grau; an der Wirkung von `cmd+z` aendert sie nichts.
+   KRK baut sie nicht, weil die Ausgrauung dort an genau einer Stelle
+   entschieden wird (C2.17 der Runde 7, Probe
+   `die_freigabe_eines_eintrags_wird_nirgends_gesetzt`).
+
+Was die Messung nicht deckt
+---------------------------
+- Das Menue des Programms traegt nur Rueckgaengig und Wiederholen; KRKs
+  Hauptmenue mit `validateMenuItem:` beim Anwendungsdelegierten ist nicht
+  nachgebaut. Der Eintrag zielt in KRK wie hier auf den Ersthelfer.
+- Eine Tabelle mit einer Spalte und zwei Zeilen, ohne Rollen, in Swift und
+  nicht ueber `objc2`; gemessen ist ein Verhalten von AppKit.
+- Eine Systemfassung, macOS 15.7.9.

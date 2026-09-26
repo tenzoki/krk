@@ -2083,6 +2083,14 @@ impl Editorbereich {
         &self.ivars().text
     }
 
+    /// Die Eintragsansicht, fuer den Fensterdelegierten: sie beantwortet dort
+    /// `windowWillReturnFieldEditor:toObject:` fuer ihre Zellen
+    /// ([`Eintragsansicht::feldeditor_fuer`]). Zu nichts sonst geht sie nach
+    /// aussen; was an ihr geschieht, geht durch diesen Bereich.
+    pub fn eintragsansicht(&self) -> &Eintragsansicht {
+        &self.ivars().eintraege
+    }
+
     /// Die Ansicht, die den Eingabefokus bekommt, wenn er in den Editor geht:
     /// die Textflaeche oder die Tabelle, je nachdem, welche zu sehen ist.
     ///
@@ -4247,6 +4255,15 @@ fn textflaeche_bauen(
 /// nimmt dabei den Verwalter des **Ersthelfers** und nicht seinen eigenen. Der
 /// Weg steht damit offen, wird aber nicht genommen: es gibt keinen zweiten
 /// Anmelder, und ein Verwalter mehr waere ein Mechanismus ohne Fall.
+///
+/// **Fuer einen Feldeditor gilt der letzte Satz nicht in der Richtung
+/// `cmd+z`**, gemessen am 260926
+/// (`messungen/260926-0828-zellen-rueckgaengig.txt`): ist sein eigener Stapel
+/// leer, nimmt `NSWindow.undo:` die naechste Handlung aus **diesem** Verwalter
+/// zurueck, und ein ueberschriebenes `undoManager` am Feldeditor aendert daran
+/// nichts. Die Zellen der Eintragstabelle haben deshalb einen eigenen
+/// Feldeditor, der `undo:` selbst beantwortet
+/// ([`super::eintragsansicht::Zelleneditor`]).
 fn rueckgaengigstapel_leeren(verwalter: Option<&NSUndoManager>) {
     if let Some(verwalter) = verwalter {
         verwalter.removeAllActions();
@@ -7276,5 +7293,267 @@ mod tests {
             rumpf(&editor, "zelle_uebernehmen")
                 .contains(concat!("eintraege.bearbeitung_", "beenden("))
         );
+    }
+
+    // ------------------------------------------------------------------
+    // Solange eine Zelle laeuft, aendert nichts von aussen den Stand
+    // (`issues/260926-0813_*_cmd-z-bei-offener-zelle-…` im Arbeitspaket
+    // `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`)
+    // ------------------------------------------------------------------
+    //
+    // Was AppKit dabei tut — welches `undo:` ankommt, was `reloadData` mit
+    // einer offenen Zelle macht —, ist gemessen und steht in
+    // `messungen/260926-0828-zellen-rueckgaengig.txt`. Die Proben hier halten,
+    // was sich ohne Fenster halten laesst: welches Feld den eigenen Feldeditor
+    // bekommt, dass er `undo:` und `redo:` an seinem Verwalter beantwortet und
+    // den Umbau des Fensters nicht erreicht, und die Wege vor dem Neuladen.
+
+    /// Den eigenen Feldeditor bekommen genau die Felder unter der
+    /// Eintragstabelle: nicht ein fremdes Textfeld, nicht die Tabelle selbst,
+    /// nicht die Textflaeche des Editors. Er ist ein Feldeditor, fuer jede Zelle
+    /// derselbe, und hat einen eigenen Verwalter.
+    #[test]
+    fn den_eigenen_feldeditor_bekommen_allein_die_felder_der_eintragstabelle() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (erstes, _) = felder_der_zeile(&eintraege, 0);
+            let (zweites, _) = felder_der_zeile(&eintraege, 1);
+
+            let editor = eintraege
+                .feldeditor_fuer(&erstes)
+                .expect("ein Feld der Tabelle bekommt den eigenen");
+            assert!(editor.isFieldEditor(), "AppKit erkennt ihn als Feldeditor");
+            assert!(editor.allowsUndo(), "sonst naehme er nichts zurueck");
+            assert!(
+                eintraege
+                    .feldeditor_fuer(&zweites)
+                    .is_some_and(|zweiter| std::ptr::eq(&*zweiter, &*editor)),
+                "einer fuer alle Zellen"
+            );
+
+            let fremd = NSTextField::textFieldWithString(ns_string!("Blatt"), mtm);
+            assert!(eintraege.feldeditor_fuer(&fremd).is_none());
+            assert!(
+                eintraege.feldeditor_fuer(eintraege.tabelle()).is_none(),
+                "die Tabelle ist kein Feld, obwohl isDescendantOf: fuer sie ja sagt"
+            );
+            let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+            assert!(eintraege.feldeditor_fuer(&textflaeche).is_none());
+
+            let eigener = editor
+                .undoManager()
+                .expect("er bringt seinen Verwalter mit");
+            let (rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+            let sicht = Editorsicht::neu(mtm, probenrahmen());
+            sicht.addSubview(&rolle);
+            let fensterverwalter = NSUndoManager::new(mtm);
+            let halter = Verwalterhalter::alloc(mtm).set_ivars(fensterverwalter.clone());
+            // SAFETY: `init` von NSObject, die NSResponder erbt, hat die hier
+            // angenommene Signatur.
+            let halter: Retained<Verwalterhalter> = unsafe { msg_send![super(halter), init] };
+            // SAFETY: wie in `textflaeche_und_tabelle_finden_denselben_verwalter`.
+            unsafe { sicht.setNextResponder(Some(&halter)) };
+            assert!(
+                textflaeche
+                    .undoManager()
+                    .is_some_and(|v| v.isEqual(Some(&fensterverwalter))),
+                "die Voraussetzung: die Textflaeche findet den Verwalter der Kette"
+            );
+            assert!(
+                !eigener.isEqual(Some(&fensterverwalter)),
+                "der Feldeditor der Zellen fuehrt einen anderen Stapel als der Umbau"
+            );
+        });
+    }
+
+    /// `undo:` und `redo:` am Zelleneditor gehen an seinen Verwalter und an
+    /// keinen anderen; ist dort nichts zurueckzunehmen, tut `undo:` nichts,
+    /// und der Umbau des Fensters steht weiter. Das ist die Nutzerpruefung 1
+    /// der Zweitlesung ohne Fenster: "B doppelklicken, ohne Tippen `cmd+z`".
+    /// Dass die Klasse `undo:` selbst beantwortet, ist die Bedingung dafuer,
+    /// dass die Nachricht nicht bis `NSWindow` weiterlaeuft.
+    #[test]
+    fn cmd_z_in_der_zelle_endet_am_anfang_der_zelle_und_laesst_den_umbau() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, _) = felder_der_zeile(&eintraege, 0);
+            let editor = eintraege
+                .feldeditor_fuer(&feld)
+                .expect("ein Feld der Tabelle bekommt den eigenen");
+            for aktion in [sel!(undo:), sel!(redo:)] {
+                assert!(
+                    editor.class().responds_to(aktion),
+                    "der Zelleneditor beantwortet {aktion} selbst"
+                );
+            }
+            let eigener = editor
+                .undoManager()
+                .expect("er bringt seinen Verwalter mit");
+            let rueckgaengig = || {
+                // SAFETY: `undo:` ist eine Aktion mit einem optionalen Absender
+                // und ohne Rueckgabe.
+                let _: () = unsafe { msg_send![&*editor, undo: Option::<&AnyObject>::None] };
+            };
+            let wiederholen = || {
+                // SAFETY: wie `undo:`.
+                let _: () = unsafe { msg_send![&*editor, redo: Option::<&AnyObject>::None] };
+            };
+
+            // Der Umbau steht im Verwalter des Fensters.
+            let fensterverwalter = NSUndoManager::new(mtm);
+            let ziel = NSObject::new();
+            let umbau = Rc::new(Cell::new(2u8));
+            wert_anmelden(&fensterverwalter, &ziel, Rc::clone(&umbau), 1);
+
+            rueckgaengig();
+            assert_eq!(
+                umbau.get(),
+                2,
+                "am Anfang der Zelle bleibt der Umbau stehen"
+            );
+            assert!(fensterverwalter.canUndo(), "und zuruecknehmbar");
+
+            // Getipptes in der Zelle: eine Handlung am eigenen Verwalter.
+            let getippt = Rc::new(Cell::new(2u8));
+            wert_anmelden(&eigener, &ziel, Rc::clone(&getippt), 1);
+            rueckgaengig();
+            assert_eq!(getippt.get(), 1, "das Getippte ist zurueckgenommen");
+            rueckgaengig();
+            assert_eq!(
+                (getippt.get(), umbau.get()),
+                (1, 2),
+                "ein zweites cmd+z tut nichts, auch am Umbau nicht"
+            );
+            wiederholen();
+            assert_eq!(getippt.get(), 2, "shift+cmd+z bringt es zurueck");
+            assert!(fensterverwalter.canUndo());
+        });
+    }
+
+    /// Jede Zelle beginnt mit leerem Stapel: `becomeFirstResponder` fragt
+    /// zuerst die Oberklasse und leert den eigenen Verwalter nur, wenn sie den
+    /// Rang annimmt. **Am Rumpf gelesen**, weil der Rang ein Fenster braucht.
+    #[test]
+    fn jede_zelle_beginnt_mit_leerem_stapel() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let beginn = rumpf(&quelle, "wird_ersthelfer");
+        let oberklasse = beginn
+            .find(concat!("super(self), become", "FirstResponder]"))
+            .expect("die Oberklasse wird gefragt");
+        let leeren = beginn
+            .find(concat!("removeAll", "Actions()"))
+            .expect("der Verwalter wird geleert");
+        assert!(oberklasse < leeren);
+        assert!(beginn.contains("if angenommen"));
+    }
+
+    /// **Die Gegenrichtung zu `die_zellenuebernahme_hat_genau_diese_rufer`:**
+    /// `umkehren` und das Eintreffen einer geladenen Datei lassen keine offene
+    /// Zelle stehen. Beide gehen ueber `stand_erneuern` und
+    /// `tabelle_nachziehen` nach `zeilen_zeigen`, und dort wird eine Zelle
+    /// unter einem fremden Stand verworfen, bevor irgendetwas anderes
+    /// geschieht — vor dem Vergleich und damit vor `reloadData`, das sie mit
+    /// Zeile -1 beendete. Ausgenommen ist allein das eigene Ende der Zelle.
+    ///
+    /// Die Kette ist am Rumpf gelesen, weil das Verwerfen ein Fenster braucht;
+    /// die Frage, ob verworfen wird, ist an einer echten Zelle gefahren, auch
+    /// im eigenen Ende.
+    #[test]
+    fn umkehren_und_eine_eingetroffene_datei_lassen_keine_offene_zelle_stehen() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        for name in ["umkehren", "ladeausgang_einziehen"] {
+            assert!(
+                rumpf(&editor, name).contains(concat!("self.stand_", "erneuern(")),
+                "{name} geht nicht ueber stand_erneuern"
+            );
+        }
+        assert!(
+            rumpf(&editor, "stand_erneuern").contains(concat!("self.tabelle_", "nachziehen()"))
+        );
+        assert!(rumpf(&editor, "tabelle_nachziehen").contains(concat!(".zeilen_", "zeigen(")));
+
+        let ansicht = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let zeigen = rumpf(&ansicht, "zeilen_zeigen");
+        let verwerfen = zeigen
+            .find(concat!("self.fremde_zelle_", "verwerfen()"))
+            .expect("zeilen_zeigen verwirft eine fremde Zelle");
+        let vergleich = zeigen
+            .find(concat!("== ", "zeilen"))
+            .expect("der Vergleich steht im Rumpf");
+        let neuladen = zeigen
+            .find(concat!("reload", "Data()"))
+            .expect("das Neuladen steht im Rumpf");
+        assert!(verwerfen < vergleich && vergleich < neuladen);
+        let (code, _) = ansicht
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .unwrap_or((&ansicht, ""));
+        assert_eq!(
+            code.lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(concat!("reload", "Data(")))
+                .count(),
+            1,
+            "die Tabelle laedt an genau einer Stelle neu, und das ist zeilen_zeigen"
+        );
+        assert!(
+            rumpf(&ansicht, "fremde_zelle_verwerfen")
+                .contains(concat!("self.bearbeitung_", "verwerfen("))
+        );
+        let ende = rumpf(&ansicht, "zelle_geendet");
+        let an = ende
+            .find(concat!("endet.set(", "true)"))
+            .expect("die Marke wird gesetzt");
+        let fest = ende
+            .find(concat!("(wege.fest", "schreiben)("))
+            .expect("es schreibt fest");
+        let ab = ende
+            .find(concat!("endet.set(", "false)"))
+            .expect("die Marke wird geloescht");
+        assert!(an < fest && fest < ab);
+
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, _) = felder_der_zeile(&eintraege, 0);
+            let feldeditor = feldeditor_fuer(mtm, &feld);
+            assert!(
+                eintraege.zelle_unter_fremdem_stand(&feldeditor),
+                "eine offene Zelle vor einem Neuladen wird verworfen"
+            );
+            let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+            assert!(!eintraege.zelle_unter_fremdem_stand(&textflaeche));
+            assert!(!eintraege.zelle_unter_fremdem_stand(eintraege.tabelle()));
+
+            // Im eigenen Ende fragt das Festschreiben ueber den Umbau dieselbe
+            // Frage, und dort ist die Antwort nein.
+            let im_ende = Rc::new(Cell::new(None));
+            let schwach = Weak::from_retained(&eintraege);
+            let editor_schwach = Weak::from_retained(&feldeditor);
+            let antwort = Rc::clone(&im_ende);
+            eintraege.wege_setzen(Zellenwege {
+                pruefen: Box::new(|_, _| true),
+                festschreiben: Box::new(move |_, _| {
+                    if let (Some(ansicht), Some(editor)) = (schwach.load(), editor_schwach.load()) {
+                        antwort.set(Some(ansicht.zelle_unter_fremdem_stand(&editor)));
+                    }
+                }),
+                abhaken: Box::new(|_| {}),
+            });
+            feld.setStringValue(ns_string!("Brot und Butter"));
+            eintraege.zelle_geendet(&feld);
+            assert_eq!(
+                im_ende.get(),
+                Some(false),
+                "das eigene Festschreiben verwirft seine Zelle nicht"
+            );
+            assert!(
+                eintraege.zelle_unter_fremdem_stand(&feldeditor),
+                "nach dem Ende gilt die Frage wieder"
+            );
+        });
     }
 }

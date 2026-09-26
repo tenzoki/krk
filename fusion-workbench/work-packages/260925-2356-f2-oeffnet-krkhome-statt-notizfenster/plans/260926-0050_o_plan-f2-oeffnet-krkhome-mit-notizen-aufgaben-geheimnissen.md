@@ -381,6 +381,12 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
 
 **Stufe 3 schließt am Baum:** C6.1 bis C6.7. **Nutzerarbeit:** die neun Nutzerkriterien von C6, nach dem Handgriff F1, `cmd+r`, Ansicht verlassen. **Riskantester Schritt:** 3.2b. Er verbindet drei Mechanismen, deren Zusammenspiel nur zum Teil gemessen ist: den Feldeditor mit eigenem Verwalter, den Umbauweg im Verwalter des Fensters und die Nämlichkeitsprüfung im Ereignisabgriff. Die Teilung legt den Umbauweg und den Flächentausch vorher in 3.2a fest und prüft sie für sich.
 
+**Drei weitere Nutzerprüfungen aus der Zweitlesung der gebauten Stufe** (`260926-0811-zweitlesung-stufe-3-aufgabeneditor.md`, Frage 4, Punkte 1 bis 3), gefahren nach der Behebung von `260926-0813_*_cmd-z-bei-offener-zelle-nimmt-einen-tabellenumbau-zurueck-und-verliert-oder-verschiebt-den-getippten-text.md`. **Die Erwartung der ersten weicht vom Wortlaut der Zweitlesung ab**, und zwar deshalb, weil die Abnahme des Defekts es verlangt: `cmd+z` in einer offenen Zelle endet am Anfang der Zelle und nimmt keinen Tabellenumbau zurück. Die Zweitlesung schrieb die Prüfung vor der Behebung und erwartete „Reihenfolge wieder A, B“.
+
+1. **Vorrangig.** In `tasks.txt` zwei Aufgaben A und B anlegen, B mit `opt+cmd+up` nach oben schieben, B doppelklicken und ohne zu tippen `cmd+z` drücken. Erwartet: nichts geschieht, die Zelle bleibt offen, die Reihenfolge bleibt B, A, und beide Texte sind unverändert; nach `esc` nimmt ein `cmd+z` das Verschieben zurück, und die Reihenfolge ist A, B. Ein Fehler zeigt sich als „A heißt jetzt B“, als Absturz oder als eine Zelle, die offen über einer neu geladenen Tabelle steht. Der Menüeintrag „Rückgängig“ bleibt dabei bedienbar und ist nicht grau; warum, steht an `Zelleneditor::rueckgaengig` in `crates/krk-ui/src/appkit/eintragsansicht.rs`.
+2. Eine Zelle öffnen, drei Zeichen tippen und `cmd+z` viermal drücken. Erwartet: das erste `cmd+z` nimmt das Getippte zurück, die übrigen drei tun nichts; die Zelle bleibt offen, und kein Tabellenumbau ist zurückgenommen.
+3. Während des Tippens in einer Zelle `cmd+w` drücken, das Fenster wieder einblenden und dann `cmd+q`. Erwartet: die Datei trägt danach den getippten Text, oder die Rückfrage kommt.
+
 ### Stufe 4: Notizen bearbeiten (C5)
 
 15. [DONE] **4.1 Die Handlungen an Notizen im Kern**

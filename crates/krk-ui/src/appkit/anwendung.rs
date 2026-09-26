@@ -1516,6 +1516,7 @@ impl Anwendungsdelegierter {
                 dateifenster[0].quelle().retain(),
                 dateifenster[1].quelle().retain(),
             ],
+            editor.eintragsansicht().retain(),
         );
         // **Die Leiste am Fensterfuss, darueber die eine Statuszeile, darueber
         // die Fensterzeile.** Alle drei liegen in derselben Traegerflaeche;

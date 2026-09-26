@@ -65,6 +65,33 @@
 //! an der die laufende Zelle erkannt wird, und die Stelle, an der `copy:`
 //! ankommt.
 //!
+//! # Solange eine Zelle laeuft, aendert nichts von aussen den Stand
+//!
+//! Zwei Wege, und beide sind gemessen
+//! (`messungen/260926-0828-zellen-rueckgaengig.txt`, Belege unter
+//! `spikes/zellen-rueckgaengig/`):
+//!
+//! - **`cmd+z` endet am Anfang der Zelle.** Mit dem Feldeditor von AppKit ging
+//!   `NSWindow.undo:` bei leerem Zellenstapel an den Verwalter des Fensters und
+//!   nahm den letzten Tabellenumbau zurueck, waehrend die Zelle offen stand
+//!   (`issues/260926-0813_*_cmd-z-bei-offener-zelle-…`). Die Zellen bekommen
+//!   deshalb einen eigenen Feldeditor, [`Zelleneditor`], ueber
+//!   `windowWillReturnFieldEditor:toObject:` beim Fensterdelegierten
+//!   (`super::fenster`) und [`Eintragsansicht::feldeditor_fuer`]. **Ein eigener
+//!   Verwalter allein haelt es nicht**, auch das ist gemessen: `NSWindow.undo:`
+//!   fragt beim Feldeditor nicht dessen `undoManager`. Der Zelleneditor
+//!   beantwortet `undo:` und `redo:` deshalb selbst, als erstes Glied der
+//!   Antwortkette, und `NSWindow` bekommt sie nicht mehr zu sehen.
+//! - **Jedes Neuladen beendet eine offene Zelle vorher, verwerfend.**
+//!   `reloadData` unter einer offenen Zelle ruft beide Delegiertenwege mit
+//!   Zeile -1, und der getippte Text fiele still. [`Eintragsansicht::zeilen_zeigen`]
+//!   verwirft deshalb eine Zelle, die unter einem von aussen gewechselten Stand
+//!   steht, bevor es neu laedt: der Stand darunter ist nicht mehr der, gegen
+//!   den sie begonnen hat. Ausgenommen ist das eigene Ende der Zelle, dessen
+//!   Festschreiben ueber den Umbau selbst hierher kommt; waehrend
+//!   `controlTextDidEndEditing:` meldet [`Eintragsansicht::laufende_zelle`] die
+//!   Zelle naemlich noch.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSButton`,
@@ -97,7 +124,12 @@
 //! `indexSetWithIndex:`, dazu die hier **gebauten** Methoden
 //! `numberOfRowsInTableView:` (`NSTableView.h:743`),
 //! `control:textShouldEndEditing:` und `controlTextDidEndEditing:`
-//! (`NSControl.h`) und die Aktion `copy:`. Die Konstanten
+//! (`NSControl.h`) und die Aktion `copy:`. Fuer den [`Zelleneditor`] stehen
+//! ebenso seit 10.0 `NSUndoManager` samt `undo`, `redo`, `canUndo`, `canRedo`
+//! und `removeAllActions`, `setAllowsUndo:` und `setFieldEditor:`
+//! (`NSTextView.h`, `NSText.h:93`) und die **gebauten** Methoden `undoManager`
+//! (`NSResponder.h:309`), `undo:`, `redo:` und `becomeFirstResponder`
+//! (`NSResponder.h:105`). Die Konstanten
 //! `NSControlStateValueOn` und `NSControlStateValueOff` (`NSCell.h:74` und
 //! `:73`) tragen keine Angabe. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`).
@@ -148,7 +180,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{
     MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
-    NSRect, NSSize, NSString, ns_string,
+    NSRect, NSSize, NSString, NSUndoManager, ns_string,
 };
 
 use krk_core::heimordner::eintraege::{Aufgaben, aufgabenzeile};
@@ -300,6 +332,118 @@ define_class!(
     }
 );
 
+define_class!(
+    /// Der Feldeditor der Eintragszellen, mit eigenem Rueckgaengigverwalter.
+    ///
+    /// **Einer fuer alle Zellen**, wie der Feldeditor des Fensters, den er fuer
+    /// sie ersetzt; die Eintragsansicht haelt ihn, und der Fensterdelegierte
+    /// reicht ihn ueber [`Eintragsansicht::feldeditor_fuer`] an AppKit. Warum es
+    /// ihn gibt, steht im Modulkopf unter „Solange eine Zelle laeuft".
+    ///
+    /// **AppKit richtet ihn beim Beginn jeder Bearbeitung selbst ein**, wie den
+    /// eigenen: gemessen sind 21 Eigenschaften, darunter Rich Text, die
+    /// Automatiken und `allowsUndo`, und alle stehen wie beim Feldeditor von
+    /// AppKit. Diese Klasse aendert allein, wohin `cmd+z` geht.
+    // SAFETY:
+    // - Die Oberklasse NSTextView stellt an eine Unterklasse keine Bedingung,
+    //   die diese Klasse verletzt: sie ruft den bezeichneten Erzeuger
+    //   `initWithFrame:` der Oberklasse, und `becomeFirstResponder` geht
+    //   unveraendert an die Oberklasse.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSTextView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = Retained<NSUndoManager>]
+    pub struct Zelleneditor;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Zelleneditor {}
+
+    impl Zelleneditor {
+        /// Der eigene Verwalter: in ihn meldet die Oberklasse das Tippen an.
+        // SAFETY: Die Signatur entspricht der Eigenschaft von NSResponder
+        // (`NSResponder.h:309`).
+        #[unsafe(method_id(undoManager))]
+        fn verwalter(&self) -> Option<Retained<NSUndoManager>> {
+            Some(self.ivars().clone())
+        }
+
+        /// `cmd+z` in einer Zelle nimmt Getipptes dieser Zelle zurueck und
+        /// sonst nichts.
+        ///
+        /// **Hier und nicht bei `NSWindow`**, das `undo:` sonst beantwortet:
+        /// der Feldeditor ist das erste Glied der Antwortkette, und ohne diese
+        /// Methode nahm das Fenster bei leerem Zellenstapel den letzten
+        /// Tabellenumbau zurueck (gemessen, Modulkopf).
+        ///
+        /// **Der Menueeintrag bleibt dabei bedienbar**, auch am Anfang der
+        /// Zelle, und ein `cmd+z` dort tut nichts. Grau wuerde er erst mit
+        /// einer eigenen Antwort auf `validateMenuItem:`, und die Ausgrauung
+        /// entscheidet in diesem Baum genau eine Stelle, beim
+        /// Anwendungsdelegierten (C2.17 der Runde 7,
+        /// `die_freigabe_eines_eintrags_wird_nirgends_gesetzt` in
+        /// [`super::menue`]). Gemessen: ohne eigene Antwort sagt die Oberklasse
+        /// fuer beide Eintraege ja.
+        // SAFETY: Die Signatur ist die einer Aktion: ein optionales
+        // Objektargument, keine Rueckgabe.
+        #[unsafe(method(undo:))]
+        fn rueckgaengig(&self, _absender: Option<&AnyObject>) {
+            let verwalter = self.ivars();
+            if verwalter.canUndo() {
+                verwalter.undo();
+            }
+        }
+
+        /// `shift+cmd+z` in einer Zelle, das Gegenstueck zu `undo:`.
+        // SAFETY: wie bei `undo:`.
+        #[unsafe(method(redo:))]
+        fn wiederholen(&self, _absender: Option<&AnyObject>) {
+            let verwalter = self.ivars();
+            if verwalter.canRedo() {
+                verwalter.redo();
+            }
+        }
+
+        /// Jede Zelle beginnt mit leerem Stapel.
+        ///
+        /// Der Editor ist einer fuer alle Zellen, und ein Rest aus der vorigen
+        /// naehme deren Tippen am Text dieser zurueck. Gemessen: AppKit ruft
+        /// dies bei jedem Beginn einer Bearbeitung, und ein Wechsel des
+        /// Schluesselfensters mitten im Tippen ruft es nicht (Fall 5 und 6 der
+        /// Messung).
+        // SAFETY: Die Signatur entspricht der von NSResponder
+        // (`NSResponder.h:105`).
+        #[unsafe(method(becomeFirstResponder))]
+        fn wird_ersthelfer(&self) -> bool {
+            // SAFETY: `becomeFirstResponder` der Oberklasse hat die hier
+            // angenommene Signatur.
+            let angenommen: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
+            if angenommen {
+                self.ivars().removeAllActions();
+            }
+            angenommen
+        }
+    }
+);
+
+impl Zelleneditor {
+    /// Ein Feldeditor mit leerem eigenem Verwalter.
+    ///
+    /// `setFieldEditor(true)` ist die Eigenschaft, an der AppKit und
+    /// [`Eintragsansicht::laufende_zelle`] ihn als Feldeditor erkennen;
+    /// `allowsUndo` setzte AppKit beim Beginn ohnehin, es steht hier, weil
+    /// [`Self::rueckgaengig`] ohne es nichts zurueckzunehmen haette.
+    fn neu(mtm: MainThreadMarker) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(NSUndoManager::new(mtm));
+        // SAFETY: `initWithFrame:` von NSTextView hat die hier angenommene
+        // Signatur; der Rahmen ist gleichgueltig, AppKit legt den Feldeditor
+        // ueber das bearbeitete Feld.
+        let this: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
+        this.setFieldEditor(true);
+        this.setAllowsUndo(true);
+        this
+    }
+}
+
 impl Eintragstabelle {
     /// Eine leere Tabelle mit dem genannten Rahmen.
     fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
@@ -331,6 +475,19 @@ pub struct EintragsansichtIvars {
     /// auf die Frage, **wie** sie endet: die beiden Delegiertenmethoden laufen
     /// innerhalb jenes einen `makeFirstResponder:`.
     verwerfen: Cell<bool>,
+    /// Ob die laufende Zelle gerade selbst endet und festschreibt.
+    ///
+    /// Gesetzt allein fuer die Dauer des Festschreibens in
+    /// [`Eintragsansicht::zelle_geendet`], und aus demselben Grund kein
+    /// gemerkter Zustand ueber die Zelle wie [`Self::verwerfen`]: das
+    /// Festschreiben kommt ueber den Umbau nach
+    /// [`Eintragsansicht::zeilen_zeigen`], und dort meldet
+    /// [`Eintragsansicht::laufende_zelle`] die endende Zelle noch (gemessen,
+    /// Fall 4 von `messungen/260926-0828-zellen-rueckgaengig.txt`). Ohne diese
+    /// Antwort verwuerfe das Neuladen die Zelle, die gerade uebernommen wird.
+    endet: Cell<bool>,
+    /// Der Feldeditor der Zellen, siehe [`Zelleneditor`].
+    zelleneditor: Retained<Zelleneditor>,
     /// Der Hauptfadenbeweis vom Aufbau.
     ///
     /// Gemerkt und nicht mit `mtm()` erfragt, weil `mtm()` den wirklichen
@@ -496,6 +653,8 @@ impl Eintragsansicht {
             zeilen: RefCell::new(Vec::new()),
             wege: RefCell::new(None),
             verwerfen: Cell::new(false),
+            endet: Cell::new(false),
+            zelleneditor: Zelleneditor::neu(mtm),
             mtm,
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -548,7 +707,17 @@ impl Eintragsansicht {
     /// auf der neuen letzten und nicht auf keiner. Wohin eine Handlung sie
     /// setzt, sagt der Kern ueber `Neustand::auswahl` und
     /// [`Self::auswahl_setzen`], nicht diese Funktion.
+    ///
+    /// **Eine offene Zelle wird zuerst verworfen**, und zwar vor dem Vergleich:
+    /// gerufen wird nach jeder Aenderung des Standes, und steht dabei eine Zelle
+    /// offen, die nicht selbst gerade festschreibt, dann hat sich der Stand von
+    /// aussen unter ihr geaendert — ein `cmd+z` mit der Tabelle im Fokus, eine
+    /// eingetroffene Datei. `reloadData` beendete sie sonst mit Zeile -1, und
+    /// der Text fiele still (Modulkopf, "Solange eine Zelle laeuft"). Verworfen
+    /// und nicht uebernommen, weil der Stand darunter nicht mehr der ist, gegen
+    /// den sie begonnen hat.
     pub fn zeilen_zeigen(&self, zeilen: Vec<Eintragszeile>) {
+        self.fremde_zelle_verwerfen();
         if *self.ivars().zeilen.borrow() == zeilen {
             return;
         }
@@ -561,6 +730,51 @@ impl Eintragsansicht {
         let stelle =
             vorher.and_then(|stelle| laenge.checked_sub(1).map(|letzte| stelle.min(letzte)));
         self.auswahl_setzen(stelle);
+    }
+
+    /// Verwirft eine offene Zelle, unter der sich der Stand von aussen
+    /// geaendert hat; siehe [`Self::zeilen_zeigen`].
+    fn fremde_zelle_verwerfen(&self) {
+        let Some(fenster) = self.ivars().tabelle.window() else {
+            return;
+        };
+        let Some(ersthelfer) = fenster.firstResponder() else {
+            return;
+        };
+        if self.zelle_unter_fremdem_stand(&ersthelfer) {
+            self.bearbeitung_verwerfen(&fenster);
+        }
+    }
+
+    /// Ob dieser Ersthelfer eine Zelle bearbeitet, die nicht gerade selbst
+    /// endet: die Frage vor jedem Neuladen.
+    ///
+    /// `pub(super)` allein fuer die Proben in [`super::editor`], die kein
+    /// Fenster haben und den Ersthelfer deshalb hereinreichen.
+    #[must_use]
+    pub(super) fn zelle_unter_fremdem_stand(&self, ersthelfer: &NSResponder) -> bool {
+        !self.ivars().endet.get()
+            && !self.ivars().verwerfen.get()
+            && self.laufende_zelle(ersthelfer).is_some()
+    }
+
+    /// Der Feldeditor fuer das genannte Objekt, falls es ein Feld unter dieser
+    /// Tabelle ist: die Antwort auf `windowWillReturnFieldEditor:toObject:`
+    /// beim Fensterdelegierten (`super::fenster`).
+    ///
+    /// **Allein fuer Felder unter der Tabelle**, gefragt an derselben
+    /// Naemlichkeit wie [`Self::laufende_zelle`]; jedes andere Feld im Fenster,
+    /// das Umbenennen im Dateifenster eingeschlossen, bekommt `None` und damit
+    /// den Feldeditor von AppKit. Die Tabelle selbst ist kein Feld, obwohl
+    /// `isDescendantOf:` fuer sie ja sagt.
+    #[must_use]
+    pub fn feldeditor_fuer(&self, klient: &AnyObject) -> Option<Retained<NSTextView>> {
+        let ansicht = klient.downcast_ref::<NSView>()?;
+        let tabelle: &NSView = &self.ivars().tabelle;
+        if !ansicht.isDescendantOf(tabelle) || std::ptr::eq(ansicht, tabelle) {
+            return None;
+        }
+        Some(Retained::into_super(self.ivars().zelleneditor.clone()))
     }
 
     /// Waehlt die Zeile an der genannten Stelle und bringt sie ins Bild.
@@ -713,7 +927,9 @@ impl Eintragsansicht {
         {
             let text = feld.stringValue().to_string();
             if let Some(wege) = self.ivars().wege.borrow().as_ref() {
+                self.ivars().endet.set(true);
                 (wege.festschreiben)(zeile, &text);
+                self.ivars().endet.set(false);
             }
         }
         if let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(feld))

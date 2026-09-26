@@ -29,11 +29,16 @@
 //! eingehaengt in [`hauptfenster`], und in der Skizze oben deshalb nicht zu
 //! sehen. Der Titel daneben traegt seither nur noch den Pfad.
 //!
-//! Der Delegierte hat eine Aufgabe, und sie ist nicht kosmetisch: er bricht die
-//! laufenden Lesevorgaenge **beider** Dateifenster ab, sobald das Fenster
-//! schliesst. Ohne ihn liesse ein Ordner mit 100.000 Eintraegen seinen
+//! Der Delegierte hat zwei Aufgaben, und keine ist kosmetisch. Die erste: er
+//! bricht die laufenden Lesevorgaenge **beider** Dateifenster ab, sobald das
+//! Fenster schliesst. Ohne ihn liesse ein Ordner mit 100.000 Eintraegen seinen
 //! Arbeitsfaden und seinen Zeitgeber gegen eine Tabelle weiterlaufen, die
-//! niemand mehr sieht.
+//! niemand mehr sieht. Die zweite: er gibt den Zellen der Eintragstabelle im
+//! Editor ihren eigenen Feldeditor (`windowWillReturnFieldEditor:toObject:`),
+//! damit `cmd+z` in einer Zelle am Anfang der Zelle endet und keinen
+//! Tabellenumbau zuruecknimmt. Welches Feld einer ist, entscheidet die
+//! Eintragsansicht und nicht diese Datei; warum es ihn gibt, steht im Kopf von
+//! [`super::eintragsansicht`].
 //!
 //! **Das Fenster ueberlebt sein Schliessen.** `setReleasedWhenClosed(false)`
 //! sorgt dafuer, und der Anwendungsdelegierte haelt es weiter. Genau darauf
@@ -81,7 +86,9 @@
 //!
 //! `NSWindow`, `NSResponder`, `NSView` und `NSObject` stehen seit macOS 10.0
 //! zur Verfuegung, ebenso das Protokoll `NSWindowDelegate` mit
-//! `windowWillClose:` und jede hier gerufene oder ueberschriebene Methode:
+//! `windowWillClose:` und `windowWillReturnFieldEditor:toObject:`
+//! (`NSWindow.h`, ohne Angabe), `NSTextView`, die Klasse des gelieferten
+//! Feldeditors, und jede hier gerufene oder ueberschriebene Methode:
 //! `initWithContentRect:styleMask:backing:defer:`, `makeFirstResponder:`,
 //! `becomeKeyWindow`, `resignKeyWindow`, `setReleasedWhenClosed:`, `setTitle:`,
 //! `setContentMinSize:`, `setContentView:`, `setDelegate:` und `center`.
@@ -110,7 +117,8 @@
 //!
 //! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
 //! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
-//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Kiste und hat kein macOS-Alter, `AnyObject` ist ein Typ der Laufzeit;
+//! das Makro `ns_string!` baut die
 //! Zeichenkette beim Uebersetzen und hat keines; `NSObjectProtocol` ist der
 //! Kistenname des Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene
 //! Angabe); `NSPoint`, `NSRect` und `NSSize` sind C-Strukturen
@@ -127,11 +135,11 @@
 use std::cell::RefCell;
 
 use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
+use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSBackingStoreType, NSResponder, NSView, NSWindow, NSWindowDelegate,
-    NSWindowStyleMask,
+    NSAutoresizingMaskOptions, NSBackingStoreType, NSResponder, NSTextView, NSView, NSWindow,
+    NSWindowDelegate, NSWindowStyleMask,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
@@ -139,6 +147,7 @@ use objc2_foundation::{
 };
 
 use super::bereichsleiste;
+use super::eintragsansicht::Eintragsansicht;
 use super::statuszeile;
 use super::tabelle::DateifensterQuelle;
 use super::titelzusatz;
@@ -306,6 +315,12 @@ impl Hauptfenster {
 pub struct FensterIvars {
     /// Die Datenquellen der beiden Dateifenster, links zuerst.
     quellen: [Retained<DateifensterQuelle>; 2],
+    /// Die Eintragsansicht des Editors, die fuer ihre Zellen den Feldeditor
+    /// nennt.
+    ///
+    /// Stark gehalten, wie die Quellen: die Ansicht haelt weder das Fenster
+    /// noch diesen Delegierten, ein Ring entsteht nicht.
+    eintraege: Retained<Eintragsansicht>,
 }
 
 define_class!(
@@ -330,16 +345,34 @@ define_class!(
                 quelle.lesen_abbrechen();
             }
         }
+
+        /// Der Feldeditor fuer ein Feld, das bearbeitet werden soll: fuer die
+        /// Zellen der Eintragstabelle der eigene, fuer jedes andere `None` und
+        /// damit der von AppKit.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`objc2-app-kit-0.3.2/src/generated/NSWindow.rs:2257`): Fenster und
+        // ein optionales Objekt hinein, ein optionales Objekt heraus; der
+        // gelieferte Feldeditor ist eine `NSTextView`, wie AppKit ihn erwartet.
+        #[unsafe(method_id(windowWillReturnFieldEditor:toObject:))]
+        fn feldeditor(
+            &self,
+            _fenster: &NSWindow,
+            klient: Option<&AnyObject>,
+        ) -> Option<Retained<NSTextView>> {
+            klient.and_then(|klient| self.ivars().eintraege.feldeditor_fuer(klient))
+        }
     }
 );
 
 impl FensterDelegierter {
-    /// Einen Delegierten fuer das Fenster mit den genannten Dateifenstern.
+    /// Einen Delegierten fuer das Fenster mit den genannten Dateifenstern und
+    /// der Eintragsansicht des Editors.
     pub fn neu(
         mtm: MainThreadMarker,
         quellen: [Retained<DateifensterQuelle>; 2],
+        eintraege: Retained<Eintragsansicht>,
     ) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(FensterIvars { quellen });
+        let this = Self::alloc(mtm).set_ivars(FensterIvars { quellen, eintraege });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
     }
