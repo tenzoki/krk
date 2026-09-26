@@ -83,7 +83,7 @@
 //! ist das Textfeld jeder Zeile bearbeitbar und das Ankreuzfeld eingeschaltet.
 //! **Die Tabelle rechnet dabei nichts selbst.** Was aus einem getippten Text
 //! oder einem Klick ins Kaestchen wird, entscheidet der Editorbereich ueber die
-//! drei Wege in [`Zellenwege`]; diese Datei meldet allein, welche Zeile es
+//! vier Wege in [`Zellenwege`]; diese Datei meldet allein, welche Zeile es
 //! betrifft und was in ihr steht.
 //!
 //! ```text
@@ -96,7 +96,19 @@
 //!                                        (Notizzelle: zelle_uebernehmen, Schritt 4.3)
 //!   tab in der Notiztabelle          ──> bearbeitung_beenden, dann naechste Zelle
 //!   Ankreuzfeld                      ──> abhaken
+//!   Doppelklick auf eine Zelle       ──> zelle_beginnen
+//!   Doppelklick unter die Zeilen     ──> anlegen (auch in der leeren Tabelle)
 //! ```
+//!
+//! **Der Doppelklick ins Leere legt einen Eintrag an**, nach der reinen Regel
+//! [`doppelklick`]. Der Spec verlangt jede Handlung „mit der Tastatur und
+//! ebenso mit der Maus" (C5, C6), und in einer leeren Tabelle gab es fuer die
+//! Maus nichts anzuklicken als den Menueeintrag; eine eigene `keymap.toml` aus
+//! einer Fassung vor diesen Befehlen laesst sie ausserdem ohne Taste
+//! (`issues/260926-1400_*_eine-zelle-der-eintragstabelle-laesst-sich-im-laufenden-buendel-nicht-bearbeiten.md`).
+//! Ein Doppelklick auf die Kopfzeile ist kein Klick ins Leere, obwohl AppKit
+//! auch dann `clickedRow` -1 meldet: er liegt ausserhalb der Tabelle, und die
+//! Regel fragt deshalb nach dem Ort des Ereignisses.
 //!
 //! **Welche Zelle laeuft, wird im Augenblick der Frage gelesen und nirgends
 //! gemerkt.** [`Eintragsansicht::laufende_zelle`] sagt ja, wenn der Ersthelfer
@@ -138,7 +150,7 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSButton`,
+//! `NSApplication`, `NSEvent`, `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSButton`,
 //! `NSTextField`, `NSControl`, `NSText`, `NSTextView`, `NSResponder`,
 //! `NSWindow`, `NSFont`, `NSIndexSet`, `NSNotification`, `NSObject`,
 //! `NSTableHeaderView`, `NSLayoutManager`, `NSTextContainer`, `NSCell` und
@@ -174,7 +186,9 @@
 //! `setUsesSingleLineMode:`, `cell`, `setWraps:`, `setScrollable:`,
 //! `currentEditor`, `layoutManager`, `textContainer`, `textContainerInset`,
 //! `ensureLayoutForTextContainer:`, `usedRectForTextContainer:` und
-//! `insertNewlineIgnoringFieldEditor:`, dazu die hier **gebauten** Methoden
+//! `insertNewlineIgnoringFieldEditor:`, fuer den Doppelklick ins Leere
+//! `sharedApplication`, `currentEvent`, `locationInWindow`,
+//! `convertPoint:fromView:` und `bounds`, dazu die hier **gebauten** Methoden
 //! `numberOfRowsInTableView:` (`NSTableView.h:743`),
 //! `control:textShouldEndEditing:`, `controlTextDidEndEditing:`,
 //! `controlTextDidChange:` und `control:textView:doCommandBySelector:`
@@ -242,10 +256,10 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Bool, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSButton, NSControl, NSControlStateValueOff, NSControlStateValueOn,
-    NSControlTextEditingDelegate, NSFont, NSLayoutConstraintOrientation, NSLayoutPriorityRequired,
-    NSLineBreakMode, NSResponder, NSScrollView, NSTableCellView, NSTableColumn,
-    NSTableColumnResizingOptions, NSTableHeaderView, NSTableView,
+    NSApplication, NSAutoresizingMaskOptions, NSButton, NSControl, NSControlStateValueOff,
+    NSControlStateValueOn, NSControlTextEditingDelegate, NSFont, NSLayoutConstraintOrientation,
+    NSLayoutPriorityRequired, NSLineBreakMode, NSResponder, NSScrollView, NSTableCellView,
+    NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView, NSTableView,
     NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
     NSTableViewStyle, NSText, NSTextField, NSTextFieldDelegate, NSTextView, NSView, NSWindow,
 };
@@ -504,7 +518,39 @@ pub type Zellenpruefung = Box<dyn Fn(Zelle, &str) -> bool>;
 /// Der Weg des Festschreibens: Zelle und Text, mit dem sie geendet hat.
 pub type Zellenende = Box<dyn Fn(Zelle, &str)>;
 
-/// Die drei Wege aus der Tabelle in den Editor.
+/// Was ein Doppelklick in die Tabelle ausloest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Doppelklick {
+    /// Die geklickte Zelle geht in Bearbeitung.
+    Zelle(Zelle),
+    /// Ein neuer Eintrag entsteht, wie mit „Eintrag hinzufuegen".
+    Anlegen,
+    /// Nichts, etwa ein Doppelklick auf die Kopfzeile.
+    Nichts,
+}
+
+/// Die Regel fuer den Doppelklick, aus `clickedRow`, `clickedColumn` und der
+/// Frage, ob das Ereignis in der Flaeche der Tabelle liegt.
+///
+/// **Rein und ohne Fenster pruefbar.** Eine Zeile mit Spalte ist ihre Zelle,
+/// eine Zeile ohne Spalte ihre erste Zelle. Keine Zeile heisst entweder die
+/// Flaeche unter den Zeilen, auch die ganze Flaeche einer leeren Tabelle, und
+/// dann entsteht ein Eintrag; oder die Kopfzeile, fuer die AppKit dieselbe -1
+/// meldet, und dann geschieht nichts: wer eine Spalte breiter ziehen will,
+/// soll dabei keine Notiz anlegen.
+#[must_use]
+pub fn doppelklick(zeile: NSInteger, spalte: NSInteger, in_der_tabelle: bool) -> Doppelklick {
+    match usize::try_from(zeile) {
+        Ok(zeile) => Doppelklick::Zelle(Zelle {
+            zeile,
+            spalte: usize::try_from(spalte).unwrap_or(THEMENSPALTE),
+        }),
+        Err(_) if in_der_tabelle => Doppelklick::Anlegen,
+        Err(_) => Doppelklick::Nichts,
+    }
+}
+
+/// Die vier Wege aus der Tabelle in den Editor.
 ///
 /// **Rueckrufe und kein Verweis auf den Editorbereich**, aus zwei Gruenden:
 /// die Tabelle soll die Rechnung nicht kennen, und die Proben koennen die
@@ -520,6 +566,9 @@ pub struct Zellenwege {
     pub festschreiben: Zellenende,
     /// Das Ankreuzfeld dieser Zeile ist angeklickt worden.
     pub abhaken: Box<dyn Fn(usize)>,
+    /// Ein Doppelklick unter die Zeilen: ein Eintrag soll entstehen
+    /// ([`doppelklick`]).
+    pub anlegen: Box<dyn Fn()>,
 }
 
 define_class!(
@@ -973,18 +1022,19 @@ define_class!(
             }
         }
 
-        /// Doppelklick auf eine Zeile: ihre Zelle geht in Bearbeitung.
+        /// Doppelklick in die Tabelle: auf eine Zeile ihre Zelle in
+        /// Bearbeitung, darunter ein neuer Eintrag ([`doppelklick`]).
         // SAFETY: Die Signatur ist die einer Aktion; der Absender ist die
         // Tabelle und wird nicht gebraucht.
         #[unsafe(method(zeileDoppelt:))]
         fn zeile_doppelt(&self, _absender: Option<&AnyObject>) {
             let tabelle = &self.ivars().tabelle;
-            if let (Ok(zeile), Ok(spalte)) = (
-                usize::try_from(tabelle.clickedRow()),
-                usize::try_from(tabelle.clickedColumn()),
-            ) {
-                let _ = self.zelle_beginnen(Zelle { zeile, spalte });
-            }
+            let in_der_tabelle = self.ereignis_in_der_tabelle();
+            self.doppelklick_ausfuehren(doppelklick(
+                tabelle.clickedRow(),
+                tabelle.clickedColumn(),
+                in_der_tabelle,
+            ));
         }
     }
 );
@@ -1069,9 +1119,44 @@ impl Eintragsansicht {
         this
     }
 
-    /// Traegt die drei Wege in den Editor ein (siehe [`Zellenwege`]).
+    /// Traegt die vier Wege in den Editor ein (siehe [`Zellenwege`]).
     pub fn wege_setzen(&self, wege: Zellenwege) {
         *self.ivars().wege.borrow_mut() = Some(wege);
+    }
+
+    /// Fuehrt aus, was die Regel [`doppelklick`] entschieden hat.
+    ///
+    /// `pub(super)` allein fuer die Proben in [`super::editor`]: ein
+    /// Doppelklick braucht ein Ereignis, das `libtest` nicht hergibt, und die
+    /// Proben reichen deshalb das Urteil herein.
+    pub(super) fn doppelklick_ausfuehren(&self, urteil: Doppelklick) {
+        match urteil {
+            Doppelklick::Zelle(zelle) => {
+                let _ = self.zelle_beginnen(zelle);
+            }
+            Doppelklick::Anlegen => {
+                if let Some(wege) = self.ivars().wege.borrow().as_ref() {
+                    (wege.anlegen)();
+                }
+            }
+            Doppelklick::Nichts => {}
+        }
+    }
+
+    /// Ob das laufende Ereignis in der Flaeche der Tabelle liegt und nicht
+    /// etwa auf ihrer Kopfzeile; ohne Ereignis nein.
+    fn ereignis_in_der_tabelle(&self) -> bool {
+        let tabelle = &self.ivars().tabelle;
+        let Some(ereignis) = NSApplication::sharedApplication(self.ivars().mtm).currentEvent()
+        else {
+            return false;
+        };
+        let ort = tabelle.convertPoint_fromView(ereignis.locationInWindow(), None);
+        let flaeche = tabelle.bounds();
+        ort.x >= flaeche.origin.x
+            && ort.y >= flaeche.origin.y
+            && ort.x < flaeche.origin.x + flaeche.size.width
+            && ort.y < flaeche.origin.y + flaeche.size.height
     }
 
     /// Die Rolle um die Tabelle, die der Editorbereich einhaengt und ein- und
@@ -1703,6 +1788,30 @@ mod tests {
                 },
             ]
         );
+    }
+
+    /// Die Regel des Doppelklicks: Zeile und Spalte sind die Zelle, eine Zeile
+    /// ohne Spalte ihre erste Zelle, keine Zeile in der Tabelle legt an, keine
+    /// Zeile ausserhalb (die Kopfzeile) tut nichts.
+    #[test]
+    fn der_doppelklick_trifft_eine_zelle_legt_im_leeren_an_und_auf_der_kopfzeile_nichts() {
+        assert_eq!(
+            doppelklick(2, 1, true),
+            Doppelklick::Zelle(Zelle {
+                zeile: 2,
+                spalte: NOTIZSPALTE
+            })
+        );
+        assert_eq!(
+            doppelklick(0, -1, true),
+            Doppelklick::Zelle(Zelle {
+                zeile: 0,
+                spalte: THEMENSPALTE
+            })
+        );
+        assert_eq!(doppelklick(-1, -1, true), Doppelklick::Anlegen);
+        assert_eq!(doppelklick(-1, 0, true), Doppelklick::Anlegen);
+        assert_eq!(doppelklick(-1, 1, false), Doppelklick::Nichts);
     }
 
     /// Ein Stand ohne Aufgabe gibt keine Zeile, auch der leere.

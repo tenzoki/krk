@@ -582,6 +582,7 @@ zum Anfang der Datei.
 | Griff | Wirkung |
 |---|---|
 | Doppelklick auf den Text | die Zelle öffnet sich, ihr Text ist ausgewählt |
+| Doppelklick unter die letzte Aufgabe, auch in die leere Tabelle | eine leere Aufgabe ans Ende, ihre Zelle gleich offen |
 | Klick auf das Kästchen | die Aufgabe abhaken oder wieder öffnen |
 | `shift+cmd+x` | die gewählte Aufgabe abhaken oder wieder öffnen |
 | `cmd+return` | die gewählte Zelle öffnen; in einer offenen Zelle den Text übernehmen |
@@ -652,6 +653,7 @@ Löschen nimmt eine Notiz ganz, also Thema und Text.
 | Griff | Wirkung |
 |---|---|
 | Doppelklick auf eine Zelle | diese Zelle öffnet sich, ihr Text ist ausgewählt |
+| Doppelklick unter die letzte Notiz, auch in die leere Tabelle | eine leere Notiz ans Ende, ihr Thema gleich offen |
 | `cmd+return` | das Thema der gewählten Notiz öffnen; in einer offenen Zelle den Text übernehmen |
 | `shift+cmd+return` | eine leere Notiz ans Ende, ihr Thema gleich offen |
 | `opt+cmd+up`, `opt+cmd+down` | die gewählte Notiz eine Stelle nach oben oder unten |

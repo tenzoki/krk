@@ -1,0 +1,130 @@
+KRK — Laesst sich eine Zelle der Eintragstabelle im laufenden Buendel bearbeiten?
+=================================================================================
+
+Wozu dieser Lauf
+----------------
+Defekt
+`fusion-workbench/work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-1400_*_eine-zelle-der-eintragstabelle-laesst-sich-im-laufenden-buendel-nicht-bearbeiten.md`.
+Der Nutzer meldet am laufenden Buendel (HEAD b7d80be): `secrets.txt` bleibt
+leer, `notes.txt` und `tasks.txt` lassen sich nicht bearbeiten. Verdacht des
+Auftrags: der eigene Feldeditor `Zelleneditor` aus `7f27344`/`4bda73e`, den der
+Fensterdelegierte ueber `windowWillReturnFieldEditor:toObject:` reicht, wird
+nicht angenommen oder nimmt keine Eingabe an. Dieser Lauf misst das an KRK
+selbst und nicht an einem Nachbau.
+
+Bedingungen
+-----------
+Zeitpunkt             2026-09-26, 13:30 bis 14:00 Ortszeit
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.7.9
+Werkzeug              Ein Messhaken in `crates/krk-ui/src/appkit/anwendung.rs`,
+                      eingeschaltet ueber die Umgebungsvariable `KRK_DIAG_ZELLE`,
+                      nach der Messung wieder entfernt; Wortlaut unter
+                      `spikes/eintragszelle-im-buendel/messhaken.rs`. Gebaut
+                      `cargo build -p krk-ui` und `cargo build --release -p krk-ui`
+                      (beide Profile gefahren, dasselbe Ergebnis).
+Vordergrund           `activateIgnoringOtherApps:` und `makeKeyAndOrderFront:`
+                      aus dem Haken; ab dem zweiten Lauf "key=true aktiv=true".
+Tastenweg             `NSApp.postEvent(_:atStart:)` in KRKs eigene Schlange, also
+                      durch den lokalen Ereignisabgriff; Maus ebenso ueber
+                      `mouseEventWithType:…clickCount:`. Kein osascript.
+Heimordner            HOME auf einen Wegwerfordner im Scratchpad. Die Dateien des
+                      Nutzers sind nicht angefasst: `notes.txt` ist in Zeilenzahl
+                      und Zeilenlaengen nachgebaut (Inhalt durch `a` ersetzt),
+                      `keymap.toml`, `settings.toml` und `readers.toml` des
+                      Nutzers sind kopiert, `session.toml` mit umgeschriebenen
+                      Pfaden (Editor haelt `notes.txt` aus der Sitzung).
+
+Befund am Nachbau
+-----------------
+Jede Zeile ist ein eigener Lauf; "ok" heisst: Ersthelfer ist danach der
+`Zelleneditor` (isFieldEditor ja, editierbar ja, Delegierter das Notizfeld),
+getippte Zeichen stehen im Feldeditor, `tab` uebernimmt, der Stand des Editors
+traegt den Text, `sichern` schreibt ihn in die Datei.
+
+  Weg in die Zelle                          Belegung   Profil   Ergebnis
+  ----------------------------------------  ---------  -------  --------
+  zelle_beginnen (0, Notiz), Tippen "xy"    Auslief.   debug    ok
+  Doppelklick Zeile 0 Notiz, Tippen "x"     Auslief.   debug    ok
+  dasselbe                                  Nutzer     debug    ok
+  dasselbe                                  Nutzer     release  ok
+  dasselbe, dann tab, dann sichern          Nutzer     release  ok, Datei traegt "x"
+  erst PIN-Blatt fuer secrets.txt (1234     Nutzer     release  ok
+    zweimal), dann notes.txt, Doppelklick
+  Editor aus der Sitzung, Doppelklick       Nutzer     release  ok
+  Doppelklick auf Zeile 1 (nicht gewaehlt)  Nutzer     release  ok
+  zwei Einzelklicks mit 1 s Abstand         Nutzer     release  ok (AppKit oeffnet die
+                                                                Zelle der gewaehlten Zeile)
+  Doppelklick auf die Themenspalte          Nutzer     release  ok
+  Rohansicht (ctrl+cmd+e), Tippen           Nutzer     release  ok, Stand geaendert
+  Leerzeichen und Rueckschritt in der       Nutzer     release  ok ("space" und "delete"
+    Zelle                                                       sind belegt und kommen
+                                                                trotzdem als Zeichen an)
+
+Einzig der Pfeil nach links wirkte weder in der Zelle noch in der Rohansicht.
+Da er in der Rohansicht genauso ausblieb und dort seit der Runde 2 taeglich
+benutzt wird, ist das ein Mangel des gebauten Ereignisses und kein Befund
+ueber KRK; er ist nicht weiter verfolgt.
+
+Der erste Lauf ohne Vordergrund (key=false aktiv=false): `zelle_beginnen` und
+Tippen gingen, der gesendete Doppelklick oeffnete keine Zelle. Kein Befund:
+ein echter erster Klick auf ein Fenster im Hintergrund holt KRK nach vorn.
+
+Befund am laufenden Buendel des Nutzers
+---------------------------------------
+Prozess 47040, `target/KRK.app/Contents/MacOS/krk`, gestartet 13:43:15.
+Gelesen mit `lldb -p 47040 --batch` (nur Abfragen, danach `detach`):
+
+  Hauptfenster.firstResponder         Eintragstabelle
+  Tabelle numberOfRows / Columns      2 / 2
+  Tabelle doubleAction / target       zeileDoppelt: / Eintragsansicht
+  dataSource, delegate                Eintragsansicht
+  Rolle versteckt                     nein
+  Zelle (1,0) textField isEditable    ja, Delegierter Eintragsansicht
+  windowWillReturnFieldEditor:…       Zelleneditor
+  fieldEditor:YES forObject: Feld     Zelleneditor, Rahmen {0,0,0,0}
+  Hauptmenue                          "Eintrag hinzufuegen", "Eintrag bearbeiten",
+                                      "Eintrag nach oben/unten", "Eintrag loeschen"
+                                      stehen darin (ohne Taste)
+
+Der Rahmen {0,0,0,0} ist der Befund: nach dem Ende jeder Zellenbearbeitung
+behaelt der Zelleneditor den Rahmen seines letzten Feldes (am Nachbau gemessen:
+156 x 16 nach `tab` und Ende). Im laufenden Prozess hat also seit 13:43:15 **keine
+einzige Zelle eine Bearbeitung begonnen**; die Verdrahtung, die dafuer noetig
+ist, steht vollstaendig.
+
+Tastenbelegung des Nutzers
+--------------------------
+`~/Library/Application Support/KRK/keymap.toml` vom 13.09. fuehrt 7 Kennungen
+nicht, die die Auslieferung fuehrt: `aufgabe_abhaken`, `eintrag_bearbeiten`,
+`eintrag_hinzufuegen`, `eintrag_hoch`, `eintrag_loeschen`, `eintrag_runter`,
+`pin_aendern`. Nach `Belegung::vom_nutzer` treten sie unbelegt hinzu:
+`cmd+return` und `shift+cmd+return` tun nichts, die Menueeintraege wirken.
+
+Die Startzeile der Neuerungen gilt einmal je Fassung. `reported.toml` traegt
+`gemeldete_fassung = "1.11.1"` mit Zeitstempel 26.09. 03:02; die Kennungen kamen
+am selben Tag danach, ohne neue Fassungsnummer:
+  970abb0  08:06  eintrag_* und aufgabe_abhaken
+  d3a9983  10:34  pin_aendern
+Die Zeile, die sie haette nennen koennen, war also schon verbraucht.
+
+Ergebnis
+--------
+- Der Verdacht gegen den `Zelleneditor` ist widerlegt: angenommen, Feldeditor,
+  editierbar, richtiger Delegierter, Tippen, Uebernehmen und Sichern gehen, in
+  beiden Profilen, mit Auslieferungs- und mit Nutzerbelegung, aus der Sitzung
+  und nach dem PIN-Blatt.
+- Im laufenden Buendel ist nie eine Zelle begonnen worden. Die Tastenwege
+  dorthin (`cmd+return`, `shift+cmd+return`) sind in der Belegung des Nutzers
+  unbelegt, und eine leere Tabelle (`tasks.txt`, `secrets.txt`) bot der Maus
+  ausser dem Menueeintrag nichts an.
+
+Nachmessung nach dem Einbau des Doppelklicks ins Leere
+------------------------------------------------------
+Derselbe Weg, Haken `diag_leer` (ebenfalls entfernt), release:
+
+  leere tasks.txt, Doppelklick in die     zeilen 0 -> 1, Stand "- [ ] \n",
+    Tabellenflaeche                       Ersthelfer Zelleneditor
+  notes.txt, Doppelklick unter Zeile 2    zeilen 2 -> 3, Ersthelfer Zelleneditor
+  notes.txt, Doppelklick auf die          zeilen bleiben 3: die Kopfzeile legt
+    Kopfzeile (Spalte Thema)              nichts an

@@ -2194,10 +2194,11 @@ impl Editorbereich {
         // Derselbe Grund an der Ansicht: der Wechsel des Erscheinungsbildes
         // laeuft ueber sie hierher, und "hierher" gibt es erst ab dieser Zeile.
         this.ivars().bereich.ziel_setzen(&this);
-        // Die drei Wege aus der Tabelle, aus demselben Grund erst hier. Jeder
+        // Die vier Wege aus der Tabelle, aus demselben Grund erst hier. Jeder
         // haelt den Editorbereich schwach; die Begruendung steht an
         // `Zellenwege`.
-        let (pruefer, schreiber, haker) = (
+        let (pruefer, schreiber, haker, anleger) = (
+            Weak::from_retained(&this),
             Weak::from_retained(&this),
             Weak::from_retained(&this),
             Weak::from_retained(&this),
@@ -2216,6 +2217,15 @@ impl Editorbereich {
             abhaken: Box::new(move |zeile| {
                 if let Some(editor) = haker.load() {
                     editor.kasten_abhaken(zeile);
+                }
+            }),
+            // Der Doppelklick ins Leere ist dieselbe Handlung wie der Befehl
+            // „Eintrag hinzufuegen", und seine Antwort geht wie die des
+            // Ankreuzfeldes an die Senke, weil kein Befehl sie weitergibt.
+            anlegen: Box::new(move || {
+                if let Some(editor) = anleger.load() {
+                    let meldung = editor.eintrag_hinzufuegen();
+                    editor.meldung_melden(meldung);
                 }
             }),
         });
@@ -7564,7 +7574,7 @@ mod tests {
         pruefung: bool,
     ) -> (eintragsansicht::Zellenwege, Rc<RefCell<Vec<String>>>) {
         let buch = Rc::new(RefCell::new(Vec::new()));
-        let (p, f, a) = (buch.clone(), buch.clone(), buch.clone());
+        let (p, f, a, n) = (buch.clone(), buch.clone(), buch.clone(), buch.clone());
         let wege = eintragsansicht::Zellenwege {
             pruefen: Box::new(move |zelle, text| {
                 p.borrow_mut().push(format!(
@@ -7583,6 +7593,9 @@ mod tests {
             }),
             abhaken: Box::new(move |zeile| {
                 a.borrow_mut().push(format!("abhaken {zeile}"));
+            }),
+            anlegen: Box::new(move || {
+                n.borrow_mut().push("anlegen".to_owned());
             }),
         };
         (wege, buch)
@@ -7739,6 +7752,55 @@ mod tests {
                 "die zweite Aufgabe ist erledigt, und das zeigt das Kaestchen wieder"
             );
         });
+    }
+
+    /// Ein Doppelklick unter die Zeilen, auch in die leere Tabelle, ruft den
+    /// Weg `anlegen` und sonst keinen; die Kopfzeile ruft nichts
+    /// (`issues/260926-1400_*_eine-zelle-der-eintragstabelle-laesst-sich-im-laufenden-buendel-nicht-bearbeiten.md`).
+    ///
+    /// Ohne diesen Weg hatte eine leere `tasks.txt` oder `secrets.txt` fuer
+    /// die Maus nichts anzuklicken, und mit einer `keymap.toml` von vor diesen
+    /// Befehlen auch keine Taste.
+    #[test]
+    fn ein_doppelklick_unter_die_zeilen_legt_an_und_die_kopfzeile_nicht() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(Zeilen::Notizen(Vec::new()));
+            assert_eq!(
+                eintraege.tabelle().numberOfRows(),
+                0,
+                "die Tabelle ist leer"
+            );
+            let (wege, buch) = aufzeichnende_wege(true);
+            eintraege.wege_setzen(wege);
+
+            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(-1, -1, true));
+            assert_eq!(*buch.borrow(), vec!["anlegen".to_owned()]);
+
+            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(-1, 1, false));
+            assert_eq!(buch.borrow().len(), 1, "die Kopfzeile legt nichts an");
+
+            // Der Weg ueber den Selektor ohne laufendes Ereignis: keine Zeile,
+            // kein Ort in der Tabelle, also nichts.
+            // SAFETY: Die Aktion nimmt einen optionalen Absender; das ist der
+            // Weg, den die Tabelle beim Doppelklick nimmt.
+            let _: () = unsafe { msg_send![&*eintraege, zeileDoppelt: Option::<&AnyObject>::None] };
+            assert_eq!(buch.borrow().len(), 1, "ohne Ereignis kein Eintrag");
+        });
+    }
+
+    /// Der Weg `anlegen` des Editorbereichs ist die Handlung „Eintrag
+    /// hinzufuegen" und meldet ihre Antwort; gelesen am Rumpf von `bauen`,
+    /// weil sich der Editorbereich unter `libtest` nicht bauen laesst.
+    #[test]
+    fn der_weg_anlegen_ist_eintrag_hinzufuegen_und_meldet() {
+        let quelle = include_str!("editor.rs");
+        let anfang = quelle
+            .find("anlegen: Box::new(move || {")
+            .expect("der Weg anlegen steht in bauen");
+        let rumpf = &quelle[anfang..anfang + 300];
+        assert!(rumpf.contains("editor.eintrag_hinzufuegen()"), "{rumpf}");
+        assert!(rumpf.contains("editor.meldung_melden(meldung)"), "{rumpf}");
     }
 
     /// Jede Handlung rechnet ueber den Kern und antwortet: mit Umbau, wo sie
@@ -8171,6 +8233,7 @@ mod tests {
                     }
                 }),
                 abhaken: Box::new(|_| {}),
+                anlegen: Box::new(|| {}),
             });
             feld.setStringValue(ns_string!("Brot und Butter"));
             eintraege.zelle_geendet(&feld);
