@@ -813,8 +813,15 @@ fn zu_gross_text(groesse: u64) -> String {
 /// Zusammenfassung und vor dem Dateityp, der weiter unten ueber die
 /// Darstellung entscheidet. Das Bedrohungsmodell ist das versehentliche Lesen
 /// ([`GEHEIMNISHINWEIS`]); eine Vorschau, die das Chiffrat liest, um es dann
-/// nicht zu zeigen, haette die Datei schon beruehrt. Die Frage selbst stellt
-/// keinen Systemaufruf ([`Heimordner::sonderdatei`]).
+/// nicht zu zeigen, haette die Datei schon beruehrt.
+///
+/// **Gefragt wird die genaue Erkennung** ([`Heimordner::sonderdatei_genau`]),
+/// dieselbe eine Regel, die der Editor beim Oeffnen und Sichern fragt: fuer
+/// eine Datei namens `.secrets.txt` vergleicht sie ueber die zwei Pfadformen
+/// hinaus Geraet und Inode, und damit bleibt die Datei auch unter einer
+/// dritten Schreibweise des Heimordners ungelesen. Das kostet fuer genau
+/// diesen Namen zwei `stat(2)` auf dem Lesefaden der Vorschau, der ohnehin
+/// schon eines stellt, und fuer jeden anderen Namen keinen.
 fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>) -> Inhalt {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
@@ -827,7 +834,7 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             ));
         }
     };
-    if heim.and_then(|heim| heim.sonderdatei(pfad)) == Some(Sonderdatei::Geheimnisse) {
+    if heim.and_then(|heim| heim.sonderdatei_genau(pfad)) == Some(Sonderdatei::Geheimnisse) {
         return Inhalt::Hinweis(GEHEIMNISHINWEIS.to_owned());
     }
     let metadaten = Metadaten {
@@ -1348,7 +1355,7 @@ mod tests {
                 .find(nadel)
                 .unwrap_or_else(|| panic!("{nadel} steht nicht im Rumpf von laden"))
         };
-        let frage = stelle(concat!(".sonder", "datei(pfad)"));
+        let frage = stelle(concat!(".sonder", "datei_genau(pfad)"));
         for leseweg in [
             concat!("zusammen", "fassen("),
             concat!("bis_zur_grenze_", "lesen("),

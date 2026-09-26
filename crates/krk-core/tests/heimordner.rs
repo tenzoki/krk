@@ -102,6 +102,58 @@ fn ein_relatives_verweisziel_wird_gegen_das_benutzerverzeichnis_gesetzt() {
     );
 }
 
+/// `260926-1119_*` Moeglichkeit 1: unter einer dritten Schreibweise erkennt
+/// die genaue Frage `.secrets.txt` an Geraet und Inode, auch unter anderer
+/// Gross- und Kleinschreibung des Namens; eine gleichnamige Datei anderswo
+/// bleibt eine gewoehnliche, und `notes.txt` bleibt bei den zwei Formen.
+#[test]
+fn die_genaue_frage_erkennt_secrets_txt_unter_einer_dritten_schreibweise() {
+    let ordner = Pruefordner::neu("heim-genau");
+    let zuhause = kanonisch(&ordner);
+    let heimpfad = zuhause.join(ORDNERNAME);
+    fs::create_dir(&heimpfad).expect("Heimordner laesst sich nicht anlegen");
+    fs::write(heimpfad.join(".secrets.txt"), b"").expect("leere Datei");
+    fs::write(heimpfad.join("notes.txt"), b"").expect("Notizen");
+    // Die dritte Schreibweise: ein zweiter Verweis anderswo auf den Ordner.
+    let zweiter = zuhause.join("anderswo");
+    std::os::unix::fs::symlink(&heimpfad, &zweiter).expect("zweiter Verweis");
+    let fremd = zuhause.join("fremd");
+    fs::create_dir(&fremd).expect("fremder Ordner");
+    fs::write(fremd.join(".secrets.txt"), b"").expect("gleichnamige Datei");
+
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+    let dritte = zweiter.join(".secrets.txt");
+    assert_eq!(
+        heim.sonderdatei(&dritte),
+        None,
+        "der Text erkennt sie nicht"
+    );
+    assert_eq!(
+        heim.sonderdatei_genau(&dritte),
+        Some(Sonderdatei::Geheimnisse)
+    );
+    assert_eq!(
+        heim.sonderdatei_genau(&heimpfad.join(".secrets.txt")),
+        Some(Sonderdatei::Geheimnisse)
+    );
+    assert_eq!(heim.sonderdatei_genau(&fremd.join(".secrets.txt")), None);
+    assert_eq!(heim.sonderdatei_genau(&zweiter.join("notes.txt")), None);
+    assert_eq!(heim.sonderdatei_genau(&zweiter.join("fehlt.txt")), None);
+
+    // Ein zweiter Name derselben Inode mit anderer Schreibung: wie `.Secrets.txt`
+    // auf einem Volume ohne Unterscheidung von Gross und Klein.
+    // Ein eigener Ordner, weil `fremd/.secrets.txt` auf einem solchen Volume
+    // denselben Namen belegt.
+    let dritter = zuhause.join("dritter");
+    fs::create_dir(&dritter).expect("dritter Ordner");
+    let anders = dritter.join(".SECRETS.TXT");
+    fs::hard_link(heimpfad.join(".secrets.txt"), &anders).expect("zweiter Name");
+    assert_eq!(
+        heim.sonderdatei_genau(&anders),
+        Some(Sonderdatei::Geheimnisse)
+    );
+}
+
 /// Die leichte Form entsteht, auch wenn das Ziel des Verweises fehlt: sie
 /// fragt allein den Verweis und nie sein Ziel.
 #[test]

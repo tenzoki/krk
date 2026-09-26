@@ -198,11 +198,15 @@
 //! `die_sperre_fragt_die_sonderdatei_vor_dem_lesen` halten die Wege am
 //! Quelltext; die Faelle, in denen sich die Erkennung zwischen Oeffnen und
 //! Sichern aendert, stehen an [`Editormodell::uebernehmen`] und
-//! [`Editormodell::sichern`]. **Nicht erkannt wird `.secrets.txt` unter einer
-//! dritten Schreibweise** (ein zweiter Verweis anderswo): die Erkennung kennt
-//! zwei Pfadformen, wie der Nutzer es gewaehlt hat
-//! (`260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md`),
-//! und unter einer dritten ist die Datei fuer den Editor eine gewoehnliche.
+//! [`Editormodell::sichern`]. **Unter einer dritten Schreibweise** (ein
+//! zweiter Verweis anderswo) erkennt der Pfadtext `.secrets.txt` nicht; die
+//! Erkennung kennt zwei Pfadformen, wie der Nutzer es gewaehlt hat
+//! (`260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md`).
+//! Oeffnen, Uebernahme und Sichern fragen deshalb seit dem 260926 fuer eine
+//! Datei dieses Namens zusaetzlich Geraet und Inode
+//! (`260926-1119_*_bekommt-secrets-txt-unter-einer-dritten-schreibweise-eine-zusatzpruefung-und-gilt-ziehen-als-kopieren.md`,
+//! Moeglichkeit 1), und unter jeder Schreibweise oeffnet sie allein mit der PIN
+//! und geht allein als Chiffrat auf die Platte.
 //!
 //! **„PIN ändern" (Schritt 5.5) ist der zweite Ort einer Ableitung**, und
 //! auch er leitet nicht auf dem rufenden Faden ab:
@@ -1149,17 +1153,20 @@ impl Editormodell {
     /// dessen verdeckt schreibt (`Anwendungsdelegierter::tasten_verdeckt`).
     ///
     /// Gefragt werden zwei Dinge, und jedes allein genuegt: der [`Schutz`],
-    /// der einen Schluessel haelt, und die Erkennung des Pfads. Der Schutz
+    /// der einen Schluessel haelt, und die Erkennung des Pfadtexts. Der Schutz
     /// antwortet auch dann, wenn ein F2 die aufgeloeste Form des Heimordners
-    /// inzwischen anders fuehrt; die Erkennung antwortet auch fuer eine
-    /// leere `.secrets.txt`, deren Stand noch gar nichts traegt.
+    /// inzwischen anders fuehrt, und fuer `.secrets.txt` unter einer dritten
+    /// Schreibweise; die Erkennung antwortet auch fuer eine
+    /// leere `.secrets.txt`, deren Stand noch gar nichts traegt. **Kein
+    /// Systemaufruf**, weil der Frager das Tastenprotokoll ist
+    /// ([`Self::nennt_geheimnisdatei`]).
     #[must_use]
     pub fn haelt_geheimnisse(&self) -> bool {
         matches!(self.schutz, Schutz::Verschluesselt { .. })
             || self
                 .pfad
                 .as_deref()
-                .is_some_and(|pfad| self.ist_geheimnisdatei(pfad))
+                .is_some_and(|pfad| self.nennt_geheimnisdatei(pfad))
     }
 
     /// Welche Ansicht gewaehlt ist (C3).
@@ -1313,12 +1320,35 @@ impl Editormodell {
         self.ladevorgang = None;
     }
 
-    /// Ob der Pfad `.secrets.txt` im erkannten Heimordner ist.
+    /// Ob der Pfad `.secrets.txt` im erkannten Heimordner ist, unter jeder
+    /// Schreibweise.
     ///
-    /// Die eine Frage, an der Sperre und Sicherungsweg haengen; gestellt ueber
-    /// [`Heimordner::sonderdatei`], die eine Stelle der Erkennung, ohne
-    /// Systemaufruf.
+    /// Die eine Frage, an der Sperre, Uebernahme und Sicherungsweg haengen;
+    /// gestellt ueber [`Heimordner::sonderdatei_genau`], die fuer eine Datei
+    /// namens `.secrets.txt` ueber die zwei Pfadformen hinaus Geraet und Inode
+    /// vergleicht
+    /// (`260926-1119_*_bekommt-secrets-txt-unter-einer-dritten-schreibweise-eine-zusatzpruefung-und-gilt-ziehen-als-kopieren.md`).
+    /// **Das ist ein `stat(2)` je Frage fuer genau diesen Namen** und keiner
+    /// fuer jede andere Datei; gefragt wird allein beim Oeffnen und Sichern.
+    /// Einen offenen Deskriptor auf die Datei haelt keiner der drei Frager:
+    /// das Oeffnen fragt vor dem Faden, die Uebernahme nach ihm, und das
+    /// Sichern schreibt ueber eine Nachbardatei und `rename`. Die heissen Wege
+    /// fragen [`Self::nennt_geheimnisdatei`].
     fn ist_geheimnisdatei(&self, pfad: &Path) -> bool {
+        heimgriff::lesen(&self.heim)
+            .and_then(|heim| heim.sonderdatei_genau(pfad))
+            .is_some_and(|sonderdatei| sonderdatei == Sonderdatei::Geheimnisse)
+    }
+
+    /// Ob der Pfadtext `.secrets.txt` im erkannten Heimordner nennt, **ohne
+    /// Systemaufruf** ([`Heimordner::sonderdatei`]).
+    ///
+    /// Allein fuer [`Self::haelt_geheimnisse`], das bei jedem Tastendruck
+    /// gefragt wird. Unter einer dritten Schreibweise antwortet es nein, und
+    /// das genuegt dort: eine solche Datei haelt der Editor allein mit dem
+    /// Schluessel, weil [`Self::ist_geheimnisdatei`] sie beim Oeffnen erkannt
+    /// hat, und dann antwortet schon der [`Schutz`].
+    fn nennt_geheimnisdatei(&self, pfad: &Path) -> bool {
         heimgriff::lesen(&self.heim)
             .and_then(|heim| heim.sonderdatei(pfad))
             .is_some_and(|sonderdatei| sonderdatei == Sonderdatei::Geheimnisse)
@@ -1349,7 +1379,14 @@ impl Editormodell {
                 if matches!(schutz, Schutz::Klartext) && self.ist_geheimnisdatei(&pfad) {
                     return Ladeausgang::Abgewiesen(gesperrt(&pfad, OHNE_PIN.to_owned()));
                 }
-                self.typ = Dateityp::von_pfad(&pfad, heimgriff::lesen(&self.heim).as_ref());
+                // Ein Schluessel heisst `.secrets.txt`, auch unter einer
+                // dritten Schreibweise, die der Pfadtext nicht erkennt; die
+                // Datei zeigt sich dann dennoch als Tabelle der Geheimnisse.
+                self.typ = if matches!(schutz, Schutz::Verschluesselt { .. }) {
+                    Dateityp::Eintraege(Sonderdatei::Geheimnisse)
+                } else {
+                    Dateityp::von_pfad(&pfad, heimgriff::lesen(&self.heim).as_ref())
+                };
                 self.pfad = Some(pfad);
                 self.stand = stand;
                 self.schutz = schutz;
@@ -1579,8 +1616,10 @@ impl Editormodell {
     /// dem Schreiben: haelt der Editor keinen Schluessel und ist der Pfad
     /// trotzdem `.secrets.txt`, wird nicht geschrieben. Erreichbar ist das nur,
     /// wenn die Erkennung sich nach dem Oeffnen geaendert hat; die Frage kostet
-    /// einen Textvergleich und schliesst den Weg, auf dem Klartext in die Datei
-    /// kaeme.
+    /// einen Textvergleich und fuer eine Datei namens `.secrets.txt` ein
+    /// `stat(2)` fuer Geraet und Inode, auch unter einer dritten Schreibweise
+    /// ([`Self::ist_geheimnisdatei`]), und schliesst den Weg, auf dem Klartext
+    /// in die Datei kaeme.
     #[must_use = "der Ausgang traegt den Grund eines gescheiterten Sicherns; fallengelassen glaubt der Nutzer, die Datei stehe auf der Platte"]
     pub fn sichern(&mut self) -> Sicherungsausgang {
         self.sichern_ueber(|ziel, chiffrat| chiffrat.schreiben(ziel))
@@ -3649,6 +3688,98 @@ mod tests {
         assert_eq!(std::fs::metadata(&pfad).expect("stat").len(), 0);
     }
 
+    /// `.secrets.txt` unter einer dritten Schreibweise des Heimordners, hier
+    /// ueber einen zweiten Verweis anderswo: ohne PIN weist das Modell ab,
+    /// ohne einen Faden zu starten; mit PIN oeffnet es sie als Geheimnisse und
+    /// sichert allein Chiffrat. Kommt sie am Oeffnen vorbei in den Editor, weil
+    /// der Heimordner erst danach bekannt wird, nimmt die Uebernahme sie nicht
+    /// auf und das Sichern schreibt keinen Klartext. Eine gleichnamige Datei
+    /// mit anderer Inode bleibt eine gewoehnliche
+    /// (`issues/260926-1051_*_eine-leere-secrets-txt-unter-einer-dritten-schreibweise-des-heimordners-geht-ueber-den-klartextweg.md`).
+    #[test]
+    fn secrets_txt_unter_einer_dritten_schreibweise_oeffnet_allein_mit_pin_und_bleibt_chiffrat() {
+        let ordner = Pruefordner::neu("geheim-dritte");
+        let (heim, _, ziel) = pruef_krkhome(&ordner);
+        std::fs::write(ziel.join(".secrets.txt"), b"").expect("leere .secrets.txt");
+        let zweiter = ordner.pfad().join("zweiter-verweis");
+        std::os::unix::fs::symlink(&ziel, &zweiter).expect("zweiter Verweis");
+        let dritte = zweiter.join(".secrets.txt");
+        assert_eq!(
+            heim.sonderdatei(&dritte),
+            None,
+            "der Pfadtext erkennt sie nicht"
+        );
+
+        let griff = Heimgriff::default();
+        heimgriff::ersetzen(&griff, heim.clone());
+        let mut modell = Editormodell::neu(std::rc::Rc::clone(&griff));
+
+        // Ohne PIN: sofort abgewiesen, kein Faden.
+        let ausgang = modell
+            .oeffnen(&dritte, None)
+            .expect("der Ausgang steht sofort fest");
+        assert!(meldung_von(&ausgang).contains("öffnet sich allein mit der PIN"));
+        assert!(!modell.laedt_noch());
+        assert!(!modell.haelt_datei());
+
+        // Mit PIN: die Geheimnisse, und gesichert wird allein Chiffrat.
+        assert_eq!(modell.oeffnen(&dritte, Some(pin("0417"))), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert!(matches!(modell.schutz, Schutz::Verschluesselt { .. }));
+        assert_eq!(modell.typ(), Dateityp::Eintraege(Sonderdatei::Geheimnisse));
+        assert!(modell.haelt_geheimnisse());
+        let _ = modell.bearbeiten(format!("## Konto\n{GEHEIM}\n"));
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::Gesichert(dritte.clone())
+        );
+        let platte = std::fs::read(&dritte).expect("lesen");
+        assert!(platte.starts_with(&tresor::KENNUNG));
+        assert!(!enthaelt(&platte, GEHEIM), "die Datei traegt Klartext");
+        modell.schliessen();
+
+        // Am Oeffnen vorbei: der Heimordner wird erst nach dem Start bekannt.
+        std::fs::write(&dritte, b"").expect("wieder leer");
+        let spaet = Heimgriff::default();
+        let mut modell = Editormodell::neu(std::rc::Rc::clone(&spaet));
+        assert_eq!(modell.oeffnen(&dritte, None), None);
+        heimgriff::ersetzen(&spaet, heim.clone());
+        let satz = meldung_von(&abwarten(&mut modell));
+        assert!(satz.contains("öffnet sich allein mit der PIN"), "{satz}");
+        assert!(!modell.haelt_datei());
+
+        let spaeter = Heimgriff::default();
+        let mut modell = Editormodell::neu(std::rc::Rc::clone(&spaeter));
+        assert_eq!(modell.oeffnen(&dritte, None), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        let _ = modell.bearbeiten(format!("{GEHEIM}\n"));
+        heimgriff::ersetzen(&spaeter, heim);
+        let Sicherungsausgang::Gescheitert(satz) = modell.sichern() else {
+            panic!("der Klartext wurde geschrieben");
+        };
+        assert!(satz.contains("nicht im Klartext"), "{satz}");
+        assert_eq!(std::fs::metadata(&dritte).expect("stat").len(), 0);
+
+        // Gleicher Name, andere Inode: eine gewoehnliche Textdatei.
+        let anderswo = ordner.ordner("anderswo");
+        let daneben = anderswo.join(".secrets.txt");
+        std::fs::write(&daneben, "kein Geheimnis\n").expect(".secrets.txt anderswo");
+        let mut modell = Editormodell::neu(griff);
+        assert_eq!(modell.oeffnen(&daneben, None), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert!(matches!(modell.schutz, Schutz::Klartext));
+        assert!(!modell.haelt_geheimnisse());
+        let _ = modell.bearbeiten("offen und lesbar\n".to_owned());
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::Gesichert(daneben.clone())
+        );
+        assert_eq!(
+            std::fs::read_to_string(&daneben).expect("lesen"),
+            "offen und lesbar\n"
+        );
+    }
+
     /// Eine PIN fuer eine gewoehnliche Datei weist ab, statt sie im Klartext
     /// zu oeffnen.
     #[test]
@@ -3745,7 +3876,7 @@ mod tests {
         );
 
         let erkennung = rumpf_von(&code, concat!("fn ist_geheimnis", "datei("));
-        assert!(erkennung.contains(concat!(".sonder", "datei(pfad)")));
+        assert!(erkennung.contains(concat!(".sonder", "datei_genau(pfad)")));
 
         let lesen = concat!("datei::", "oeffnen(");
         assert_eq!(

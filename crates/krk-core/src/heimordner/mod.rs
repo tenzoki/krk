@@ -51,6 +51,16 @@
 //! Datensatz**: Geraet und Inode, erhoben im Lesefaden am offenen Deskriptor.
 //! Sie ist der Weg, wenn sich die Luecke im Gebrauch zeigt.
 //!
+//! **Fuer `.secrets.txt` gilt seit dem 260926 eine Ausnahme davon**, und nur
+//! an zwei Stellen: beim Oeffnen und beim Sichern fragt der Editor
+//! [`Heimordner::sonderdatei_genau`], die fuer eine Datei dieses Namens
+//! Geraet und Inode gegen die geschriebene Form vergleicht
+//! (`260926-1119_*_bekommt-secrets-txt-unter-einer-dritten-schreibweise-eine-zusatzpruefung-und-gilt-ziehen-als-kopieren.md`,
+//! Moeglichkeit 1). Sonst ginge eine leere `.secrets.txt` unter einer dritten
+//! Schreibweise ueber den Klartextweg. Dieselbe Regel fragt die Vorschau auf
+//! ihrem Lesefaden; alle uebrigen Frager bleiben beim Textvergleich ohne
+//! Systemaufruf.
+//!
 //! Aus derselben Bauart folgt eine zweite, kleinere Eigenschaft: die leichte
 //! Form aus `read_link` und die kanonische aus `canonicalize` koennen
 //! voneinander abweichen, wenn das Ziel des Verweises selbst ueber einen
@@ -222,6 +232,45 @@ impl Heimordner {
         self.ist(ordner).then_some(sorte)
     }
 
+    /// [`Heimordner::sonderdatei`], und fuer eine Datei namens `.secrets.txt`
+    /// unter jeder Schreibweise des Ordners: **Geraet und Inode** gegen die
+    /// geschriebene Form `<heimordner>/.secrets.txt`.
+    ///
+    /// **Allein fuer das Oeffnen und das Sichern gedacht**
+    /// (`260926-1119_*_bekommt-secrets-txt-unter-einer-dritten-schreibweise-eine-zusatzpruefung-und-gilt-ziehen-als-kopieren.md`,
+    /// Moeglichkeit 1): erkennt der Pfadtext die Datei nicht, heisst sie aber
+    /// `.secrets.txt`, fragt diese Funktion das Dateisystem, und zwar mit
+    /// `metadata` an beiden Pfaden, also dem Verweis folgend. Jeder andere Name
+    /// kommt ohne Systemaufruf zurueck, und die zwei Formen fuer `notes.txt` und
+    /// `tasks.txt` bleiben, wie sie sind: an ihnen haengt kein Klartext.
+    ///
+    /// **Der Name wird ohne Ruecksicht auf Gross- und Kleinschreibung
+    /// verglichen**, weil `.Secrets.txt` auf einem Volume ohne diese
+    /// Unterscheidung dieselbe Inode ist; ueber die Gleichheit entscheidet dann
+    /// die Inode und nicht der Name.
+    ///
+    /// **Im Zweifel ist es die Geheimnisdatei.** Fehlt `.secrets.txt` im
+    /// Heimordner oder der gefragte Pfad, kann er sie nicht sein; laesst sich
+    /// eine der beiden Seiten aus einem anderen Grund nicht erheben (Rechte,
+    /// Ein-/Ausgabefehler), antwortet die Funktion ja. Die falsche Seite des
+    /// Irrtums waere ein Klartext in der Datei der Geheimnisse; die richtige
+    /// ist ein PIN-Blatt, das eine gewoehnliche Datei nicht oeffnet.
+    pub fn sonderdatei_genau(&self, pfad: &Path) -> Option<Sonderdatei> {
+        if let Some(sorte) = self.sonderdatei(pfad) {
+            return Some(sorte);
+        }
+        let geheimnisse = Sonderdatei::Geheimnisse.dateiname();
+        let traegt_den_namen = pfad
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.eq_ignore_ascii_case(geheimnisse));
+        if !traegt_den_namen {
+            return None;
+        }
+        let bezug = self.geschrieben.join(geheimnisse);
+        dieselbe_datei(pfad, &bezug).then_some(Sonderdatei::Geheimnisse)
+    }
+
     /// Der Name des Eintrags, der im gefragten Ordner immer in der Liste
     /// steht, oder `None`.
     ///
@@ -236,6 +285,25 @@ impl Heimordner {
     pub fn immer_gelistet(&self, ordner: &Path) -> Option<&'static str> {
         self.ist(ordner)
             .then_some(Sonderdatei::Geheimnisse.dateiname())
+    }
+}
+
+/// Ob beide Pfade dieselbe Datei nennen, nach Geraet und Inode; die Regel
+/// fuer Fehler steht an [`Heimordner::sonderdatei_genau`].
+fn dieselbe_datei(gefragt: &Path, bezug: &Path) -> bool {
+    use std::io::ErrorKind;
+    use std::os::unix::fs::MetadataExt;
+    let erheben = |pfad: &Path| match std::fs::metadata(pfad) {
+        Ok(angaben) => Ok(Some((angaben.dev(), angaben.ino()))),
+        Err(fehler) if fehler.kind() == ErrorKind::NotFound => Ok(None),
+        Err(fehler) => Err(fehler),
+    };
+    match (erheben(gefragt), erheben(bezug)) {
+        (Ok(Some(gefragt)), Ok(Some(bezug))) => gefragt == bezug,
+        // Eine Seite fehlt: dann ist es nicht dieselbe Datei.
+        (Ok(None), _) | (_, Ok(None)) => false,
+        // Eine Seite laesst sich nicht erheben: im Zweifel die Geheimnisse.
+        (Err(_), _) | (_, Err(_)) => true,
     }
 }
 

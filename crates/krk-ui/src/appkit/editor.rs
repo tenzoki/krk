@@ -2814,6 +2814,12 @@ impl Editorbereich {
     /// nichts, und kein Blatt geht auf: die Sitzung nennt die Datei nie, und
     /// eine aeltere, die es tut, filtert schon der Delegierte (Schritt 5.3).
     ///
+    /// **Die Erkennung ist die genaue**
+    /// (`krk_core::heimordner::Heimordner::sonderdatei_genau`): fuer eine Datei
+    /// namens `.secrets.txt` fragt sie ueber die zwei Pfadformen hinaus Geraet
+    /// und Inode, damit auch eine dritte Schreibweise des Heimordners ueber das
+    /// Blatt geht und nie ohne PIN in den Editor kommt.
+    ///
     /// **Die Groesse ist ein `stat(2)` auf dem Hauptfaden**, einer je Oeffnen
     /// dieser einen Datei und keiner fuer jede andere. Gelesen wird damit
     /// nichts; entschieden wird allein die Form des Blattes, und das Modell
@@ -2828,8 +2834,11 @@ impl Editorbereich {
             self.melden(Ladeausgang::ZelleAbgewiesen(meldung.text()));
             return;
         }
+        // Die genaue Frage, damit `.secrets.txt` auch unter einer dritten
+        // Schreibweise ueber das Blatt geht; ein `stat(2)` allein fuer diesen
+        // Namen, siehe `Heimordner::sonderdatei_genau`.
         let sonderdatei =
-            heimgriff::lesen(&self.ivars().heim).and_then(|heim| heim.sonderdatei(pfad));
+            heimgriff::lesen(&self.ivars().heim).and_then(|heim| heim.sonderdatei_genau(pfad));
         let haelt_bereits = self.ivars().modell.borrow().haelt_bereits(pfad);
         match oeffnungsweg(herkunft, sonderdatei, haelt_bereits) {
             Oeffnungsweg::Laden => {}
@@ -7152,8 +7161,8 @@ mod tests {
         let quelle = datei("krk-ui/src/appkit/editor.rs");
         let oeffnen = rumpf(&quelle, "datei_oeffnen");
         let frage = oeffnen
-            .find(".sonderdatei(pfad)")
-            .expect("datei_oeffnen fragt die Sonderdatei nicht");
+            .find(".sonderdatei_genau(pfad)")
+            .expect("datei_oeffnen fragt die Sonderdatei nicht genau");
         let weg = oeffnen
             .find("oeffnungsweg(herkunft")
             .expect("datei_oeffnen entscheidet den Weg nicht");
