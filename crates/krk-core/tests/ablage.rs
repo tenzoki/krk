@@ -245,6 +245,7 @@ fn beispielbelegung() -> BelegungStellvertreter {
 fn beispielmerker() -> Merker {
     Merker {
         gemeldete_fassung: "0.0.1-pruefung".to_owned(),
+        zettel_uebernommen: true,
     }
 }
 
@@ -5686,6 +5687,7 @@ fn jede_geschriebene_reported_toml_traegt_einen_obersten_schluessel() {
     let (_ordner, ablage) = ablage("merker-oberster-schluessel");
     let aermster = Merker {
         gemeldete_fassung: String::new(),
+        zettel_uebernommen: false,
     };
 
     for wert in [Merker::default(), aermster] {

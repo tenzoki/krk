@@ -86,7 +86,8 @@
 //! Stelle im Code, die `krkhome` schreibt; die Auslieferungsfassung von
 //! `settings.toml` traegt denselben Ort als Daten. Am Vorgabeort haengt eine
 //! Regel, die an keinem anderen gilt: allein dort uebernimmt F2 die alten
-//! Zettel ([`Heimordner::ist_vorgabeort`], Modulkopf von `bereitstellen`).
+//! Zettel, und nur ein einziges Mal, gehalten vom Merker in `reported.toml`
+//! ([`Heimordner::ist_vorgabeort`], Modulkopf von `bereitstellen`).
 
 mod bereitstellen;
 pub mod eintraege;
@@ -95,7 +96,7 @@ pub mod tresor;
 
 pub use bereitstellen::{
     ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, AlterZettel, Bereitstellung, Hindernis,
-    Uebernahme, Uebernahmeausgang, Zettelbefund, bereitstellen,
+    Uebernahme, Uebernahmeausgang, Zettelbefund, Zettelmerker, bereitstellen,
 };
 
 use std::path::{Component, Path, PathBuf};

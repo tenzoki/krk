@@ -26,8 +26,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use gemeinsam::Pruefordner;
-use krk_core::ablage::Grund;
 use krk_core::ablage::einstellungen::Ortswert;
+use krk_core::ablage::merker::{self, Merker};
+use krk_core::ablage::{Ablage, Ablageort, Datei, Geladen, Grund};
 use krk_core::heimordner::eintraege::{
     Abweisung, Aufgaben, Notiz, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
     ist_themenzeile, notizen,
@@ -43,7 +44,7 @@ use krk_core::heimordner::tresor::{
 };
 use krk_core::heimordner::{
     ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, Bereitstellung, Heimordner, Hindernis,
-    ORDNERNAME, Sonderdatei, Uebernahmeausgang, Zettelbefund, bereitstellen,
+    ORDNERNAME, Sonderdatei, Uebernahmeausgang, Zettelbefund, Zettelmerker, bereitstellen,
 };
 
 /// Der Pruefordner in der Schreibweise, die `canonicalize` fuer ihn liefert.
@@ -1026,10 +1027,15 @@ fn notiz_verschieben_nimmt_den_text_mit() {
 ///
 /// Haelt den Pruefordner, damit `Drop` ihn erst am Ende der Probe abraeumt,
 /// und merkt sich die Zettel, damit jede Probe sie am Ende unveraendert findet.
+///
+/// Der Ablageordner ist zugleich eine geoeffnete [`Ablage`], damit
+/// [`Lage::bereitstellen`] wie F2 im Durchgang laeuft und den Merker in
+/// `reported.toml` liest und setzt.
 struct Lage {
     _ordner: Pruefordner,
     zuhause: PathBuf,
     ablage: PathBuf,
+    ablagezugang: Ablage,
     zettel: [Option<&'static [u8]>; 2],
 }
 
@@ -1044,10 +1050,13 @@ impl Lage {
                 fs::write(ablage.join(alter.datei), inhalt).expect("Zettel");
             }
         }
+        let ablagezugang =
+            Ablage::oeffnen(Ablageort::an(&ablage)).expect("die Ablage laesst sich nicht oeffnen");
         Self {
             _ordner: ordner,
             zuhause,
             ablage,
+            ablagezugang,
             zettel,
         }
     }
@@ -1060,8 +1069,29 @@ impl Lage {
         self.zuhause.join(ORDNERNAME)
     }
 
+    /// Der Weg von F2: im Durchgang der Ablage, mit Zugang zum Merker.
     fn bereitstellen(&self) -> Result<Bereitstellung, Hindernis> {
-        bereitstellen(&self.heim(), &self.ablage)
+        self.ablagezugang
+            .durchgang(|zugang| bereitstellen(&self.heim(), &self.ablage, Some(zugang)))
+            .expect("die Schreibsperre laesst sich nicht nehmen")
+    }
+
+    /// Der Weg ohne Ablage: kein Ablageordner, oder die Sperre ist nicht zu
+    /// haben.
+    fn ohne_ablage_bereitstellen(&self) -> Result<Bereitstellung, Hindernis> {
+        bereitstellen(&self.heim(), &self.ablage, None)
+    }
+
+    /// Der Merker, wie ihn die Ablage gerade liest.
+    fn merker(&self) -> Geladen<Merker> {
+        self.ablagezugang
+            .durchgang(merker::laden)
+            .expect("die Schreibsperre laesst sich nicht nehmen")
+    }
+
+    /// Loescht den Heimordner samt Inhalt, wie es der Nutzer im Finder taete.
+    fn heimordner_loeschen(&self) {
+        fs::remove_dir_all(self.heimpfad()).expect("der Heimordner laesst sich nicht loeschen");
     }
 
     fn lesen(&self, sorte: Sonderdatei) -> String {
@@ -1460,6 +1490,210 @@ fn nach_geloeschter_notizdatei_kommt_keine_zweite_uebernahme() {
     lage.zettel_unveraendert();
 }
 
+// ---------------------------------------------------------------------------
+// Einmal heisst einmal: der Merker in `reported.toml`
+// (`260926-1527_*_die-alten-zettel-werden-bei-jedem-neuen-anlegen-von-krkhome-erneut-uebernommen.md`)
+// ---------------------------------------------------------------------------
+
+/// Das erste F2 uebernimmt und setzt den Merker; der Nutzer loescht
+/// `~/krkhome`, das naechste F2 legt den Ordner neu an, und `notes.txt`
+/// entsteht leer, ohne zweite Uebernahme.
+#[test]
+fn nach_geloeschtem_heimordner_kommt_keine_zweite_uebernahme() {
+    let lage = Lage::neu(
+        "heim-merker-geloescht",
+        [
+            Some("erster Zettel\n".as_bytes()),
+            Some("zweiter\n".as_bytes()),
+        ],
+    );
+    assert!(!lage.merker().wert.zettel_uebernommen);
+
+    let erste = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(
+        erste.uebernahme.as_ref().map(|u| &u.ausgang),
+        Some(&Uebernahmeausgang::Geschrieben)
+    );
+    assert_eq!(erste.zettelmerker, Zettelmerker::Vermerkt);
+    assert_eq!(
+        erste.meldungen(),
+        vec!["Zettel 1 und Zettel 2 als Notizen in notes.txt übernommen".to_owned()]
+    );
+    let gelesen = lage.merker();
+    assert!(!gelesen.ist_ersetzt(), "{:?}", gelesen.ersetzung);
+    assert!(
+        gelesen.wert.zettel_uebernommen,
+        "der Merker ist nicht gesetzt"
+    );
+
+    lage.heimordner_loeschen();
+    let zweite = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert!(
+        zweite.ordner_angelegt,
+        "der Ordner ist nicht neu entstanden"
+    );
+    assert_eq!(zweite.uebernahme, None, "die Zettel kamen ein zweites Mal");
+    assert_eq!(zweite.zettelmerker, Zettelmerker::StandSchon);
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
+    assert!(zweite.meldungen().is_empty(), "{zweite:?}");
+    assert!(lage.merker().wert.zettel_uebernommen);
+    lage.zettel_unveraendert();
+}
+
+/// Auch ein erstes F2 ohne einen einzigen Zettel mit Text setzt den Merker:
+/// `notes.txt` steht danach am Vorgabeort, und die Zettel kaemen nie mehr.
+#[test]
+fn ein_erstes_f2_ohne_zetteltext_setzt_den_merker_ebenso() {
+    let lage = Lage::neu("heim-merker-nichts", [None, None]);
+
+    let erste = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(
+        erste.uebernahme.map(|u| u.ausgang),
+        Some(Uebernahmeausgang::NichtsZuUebernehmen)
+    );
+    assert_eq!(erste.zettelmerker, Zettelmerker::Vermerkt);
+    assert!(lage.merker().wert.zettel_uebernommen);
+}
+
+/// Der Nutzer der ersten Fassung mit `~/krkhome`: `~/krkhome` steht mit seiner `notes.txt`,
+/// die alten Zettel liegen weiter im Ablageordner, und `reported.toml` kennt
+/// das Feld noch nicht. F2 vermerkt, ohne zu uebernehmen, und ein spaeteres
+/// Loeschen des Ordners bringt die Zettel nicht zurueck.
+#[test]
+fn ein_nutzer_von_2_0_0_bekommt_den_merker_ohne_zweite_uebernahme() {
+    let lage = Lage::neu(
+        "heim-merker-bestand",
+        [Some("alter Text\n".as_bytes()), None],
+    );
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let notizen = b"## Zettel 1\nalter Text\n## Eigenes\nseither geschrieben\n";
+    fs::write(lage.heimpfad().join("notes.txt"), notizen).expect("notes.txt");
+    fs::write(
+        lage.ablage.join(Datei::Merker.dateiname()),
+        "gemeldete_fassung = \"0.0.1-ohne-zettelfeld\"\n",
+    )
+    .expect("reported.toml ohne Zettelfeld");
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert!(!bereitstellung.ordner_angelegt);
+    assert_eq!(bereitstellung.uebernahme, None);
+    assert_eq!(bereitstellung.zettelmerker, Zettelmerker::Vermerkt);
+    assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
+    assert_eq!(
+        fs::read(lage.heimpfad().join("notes.txt")).expect("notes.txt"),
+        notizen
+    );
+    let gelesen = lage.merker();
+    assert!(!gelesen.ist_ersetzt(), "{:?}", gelesen.ersetzung);
+    assert!(gelesen.wert.zettel_uebernommen);
+    assert_eq!(
+        gelesen.wert.gemeldete_fassung, "0.0.1-ohne-zettelfeld",
+        "das Vermerken der Zettel hat die gemeldete Fassung ueberschrieben"
+    );
+
+    lage.heimordner_loeschen();
+    let danach = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(danach.uebernahme, None);
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
+    lage.zettel_unveraendert();
+}
+
+/// Eine `reported.toml` aus der ersten krkhome-Fassung, ohne das Feld der Zettel laedt ohne
+/// Ersetzung, liest „noch nicht uebernommen“, und das Vermerken einer neuen
+/// Fassung laesst ein gesetztes Feld der Zettel stehen.
+#[test]
+fn eine_reported_toml_ohne_zettelfeld_laedt_und_das_fassungsvermerken_laesst_es_stehen() {
+    let lage = Lage::neu("heim-merker-alt", [None, None]);
+    fs::write(
+        lage.ablage.join(Datei::Merker.dateiname()),
+        "gemeldete_fassung = \"0.0.1-ohne-zettelfeld\"\n",
+    )
+    .expect("reported.toml ohne Zettelfeld");
+
+    let gelesen = lage.merker();
+    assert!(!gelesen.ist_ersetzt(), "{:?}", gelesen.ersetzung);
+    assert_eq!(
+        gelesen.wert,
+        Merker {
+            gemeldete_fassung: "0.0.1-ohne-zettelfeld".to_owned(),
+            zettel_uebernommen: false,
+        }
+    );
+
+    lage.ablagezugang
+        .durchgang(merker::zettel_vermerken)
+        .expect("Sperre")
+        .expect("reported.toml");
+    lage.ablagezugang
+        .durchgang(|zugang| merker::vermerken(zugang, "9.9.9"))
+        .expect("Sperre")
+        .expect("reported.toml");
+    assert_eq!(
+        lage.merker().wert,
+        Merker {
+            gemeldete_fassung: "9.9.9".to_owned(),
+            zettel_uebernommen: true,
+        }
+    );
+}
+
+/// Ohne Zugang zur Ablage haelt sich F2 an das `mkdir(2)`: es uebernimmt und
+/// sagt, dass der Merker fehlt. Das naechste F2 mit Zugang vermerkt, ohne ein
+/// zweites Mal zu uebernehmen.
+#[test]
+fn ohne_ablage_wird_uebernommen_und_das_naechste_f2_vermerkt() {
+    let lage = Lage::neu("heim-merker-ohne", [Some("Text\n".as_bytes()), None]);
+
+    let ohne = lage
+        .ohne_ablage_bereitstellen()
+        .expect("kein Hindernis erwartet");
+
+    assert_eq!(
+        ohne.uebernahme.as_ref().map(|u| &u.ausgang),
+        Some(&Uebernahmeausgang::Geschrieben)
+    );
+    assert_eq!(ohne.zettelmerker, Zettelmerker::OhneAblage);
+    let meldungen = ohne.meldungen();
+    assert_eq!(meldungen.len(), 2, "{meldungen:?}");
+    assert!(
+        meldungen[1].starts_with("KRK kann sich ohne seinen Ablageordner nicht merken")
+            && meldungen[1].contains("~/krkhome"),
+        "{meldungen:?}"
+    );
+    assert!(!lage.merker().wert.zettel_uebernommen);
+
+    let mit = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(mit.uebernahme, None);
+    assert_eq!(mit.zettelmerker, Zettelmerker::Vermerkt);
+    assert!(mit.meldungen().is_empty(), "{mit:?}");
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "## Zettel 1\nText\n");
+    lage.zettel_unveraendert();
+}
+
+/// An einem anderen Ort wird nichts vermerkt und `reported.toml` nicht
+/// beruehrt: dort gibt es nichts zu uebernehmen.
+#[test]
+fn an_einem_anderen_ort_bleibt_der_merker_unberuehrt() {
+    let lage = Lage::neu("heim-merker-anderswo", [Some("Text\n".as_bytes()), None]);
+    let heim = Heimordner::am_ort(lage.zuhause.join("woanders"), Some(&lage.zuhause));
+
+    let bereitstellung = lage
+        .ablagezugang
+        .durchgang(|zugang| bereitstellen(&heim, &lage.ablage, Some(zugang)))
+        .expect("Sperre")
+        .expect("kein Hindernis erwartet");
+
+    assert_eq!(bereitstellung.zettelmerker, Zettelmerker::NichtsZuVermerken);
+    assert!(
+        !lage.ablage.join(Datei::Merker.dateiname()).exists(),
+        "reported.toml ist entstanden"
+    );
+    lage.zettel_unveraendert();
+}
+
 /// C7.1: eine vorhandene `secrets.txt` bleibt Byte fuer Byte, gleich ob sie
 /// Chiffrat oder null Bytes traegt; F2 fragt dabei keine PIN und legt nichts
 /// daneben an.
@@ -1850,7 +2084,7 @@ fn die_alten_zettel_kommen_allein_am_vorgabeort() {
     let ort = lage.zuhause.join("woanders");
     let heim = Heimordner::am_ort(ort.clone(), Some(&lage.zuhause));
 
-    let anderswo = bereitstellen(&heim, &lage.ablage).expect("kein Hindernis erwartet");
+    let anderswo = bereitstellen(&heim, &lage.ablage, None).expect("kein Hindernis erwartet");
 
     assert!(anderswo.ordner_angelegt);
     assert_eq!(anderswo.uebernahme, None);
@@ -1886,7 +2120,7 @@ fn ein_fehlender_oberer_ordner_legt_nichts_an() {
     let oben = lage.zuhause.join("nicht-eingehaengt");
     let heim = Heimordner::am_ort(oben.join("notizen"), Some(&lage.zuhause));
 
-    let ausgang = bereitstellen(&heim, &lage.ablage);
+    let ausgang = bereitstellen(&heim, &lage.ablage, None);
 
     assert_eq!(ausgang, Err(Hindernis::ObererOrdnerFehlt));
     assert!(!oben.exists(), "die Stufe darueber ist entstanden");
@@ -1936,7 +2170,7 @@ fn die_meldungen_nennen_den_eingestellten_ort() {
     fs::write(ort.join(ALTER_GEHEIMNISNAME), b"alt").expect(".secrets.txt");
     fs::write(ort.join("secrets.txt"), b"neu").expect("secrets.txt");
     let heim = Heimordner::am_ort(ort.clone(), Some(&lage.zuhause));
-    let bereitstellung = bereitstellen(&heim, &lage.ablage).expect("kein Hindernis erwartet");
+    let bereitstellung = bereitstellen(&heim, &lage.ablage, None).expect("kein Hindernis erwartet");
     assert_eq!(
         bereitstellung.meldungen(),
         vec![

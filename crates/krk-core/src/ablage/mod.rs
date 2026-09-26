@@ -43,7 +43,9 @@
 //! nicht bei jedem Start. Sie ist die zuletzt hinzugekommene Ablagedatei und
 //! die einzige, die keinen Bestand des Nutzers traegt; warum der Wert nicht als
 //! Feld auf
-//! [`Sitzung`] steht, sagt der Kopf jenes Moduls.
+//! [`Sitzung`] steht, sagt der Kopf jenes Moduls. Seit dem 260926 traegt sie
+//! aus demselben Grund eine zweite Auskunft, dass F2 die alten Zettel schon
+//! nach `notes.txt` uebernommen hat.
 //!
 //! # Jeder Weg auf die Platte geht durch die Schreibsperre
 //!

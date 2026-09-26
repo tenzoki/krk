@@ -29,7 +29,7 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 | `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten | KRK |
 | `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | der Nutzer; KRK allein den Ort des Notizordners, über „Ort wählen…“ |
 | `readers.toml` | die Leseprofile der Vorschau | nur der Nutzer |
-| `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind | KRK |
+| `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind, und ob die alten Zettel schon nach `notes.txt` übernommen sind | KRK |
 
 Wer die Liste am Baum nachlesen will, liest sie an ihrer Quelle und nicht hier:
 
@@ -554,10 +554,12 @@ ohne Kästchen. Eine `notes.txt` oder `tasks.txt` in einem anderen Ordner bleibt
 gewöhnlicher Text.
 
 **Die Zettel des früheren Notizblatts stehen als Notizen in `notes.txt`.**
-Übernommen wird in dem Augenblick, in dem ein `f2` den Vorgabeort
-`~/krkhome/` selbst anlegt, und zwar jedes Mal, wenn er das tut: wer
-`~/krkhome/` löscht, bekommt beim nächsten `f2` die alten Zettel ein weiteres
-Mal als Notizen. An jedem anderen Ort entsteht
+Übernommen wird genau einmal, nämlich in dem Augenblick, in dem ein `f2` den
+Vorgabeort `~/krkhome/` zum ersten Mal selbst anlegt. KRK merkt sich das in
+`reported.toml`: wer `~/krkhome/` später löscht, bekommt beim nächsten `f2`
+eine leere `notes.txt` und die alten Zettel kein weiteres Mal. Wer schon mit
+der Fassung 2.0.0 übernommen hat, dem setzt das nächste `f2` auf den Vorgabeort
+denselben Vermerk, ohne ein zweites Mal zu übernehmen. An jedem anderen Ort entsteht
 `notes.txt` leer, auch wenn `f2` den Ordner dort neu anlegt. Jeder nicht leere Zettel wird dabei zu einer
 Notiz mit dem Thema „Zettel 1“ beziehungsweise „Zettel 2“, und sein Text bleibt
 unverändert. Ein Zettel, der selbst eine Zeile mit `## ` trägt, wird nicht

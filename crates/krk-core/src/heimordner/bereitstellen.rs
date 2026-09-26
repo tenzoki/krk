@@ -25,9 +25,57 @@
 //! der Nutzer hat entschieden, dass fehlende Dateien am neuen Ort **leer**
 //! entstehen, und ohne diese Regel bekaeme jeder neu angelegte Ort die alten
 //! Zettel ein weiteres Mal, samt Notizen, die der Nutzer am alten Ort
-//! geloescht hat. Dass auch ein wiederholtes Anlegen des Vorgabeorts sie
-//! erneut uebernimmt, ist ein offener Defekt
+//! geloescht hat.
+//!
+//! # Einmal heisst einmal: der Merker in `reported.toml`
+//!
+//! Das `mkdir(2)` allein haelt die Uebernahme nicht einmalig: loescht der
+//! Nutzer `~/krkhome` und drueckt F2, gelingt es ein zweites Mal
 //! (`260926-1527_*_die-alten-zettel-werden-bei-jedem-neuen-anlegen-von-krkhome-erneut-uebernommen.md`).
+//! Die alten Dateien bleiben unangetastet und koennen es deshalb nicht selbst
+//! sagen. Die Antwort traegt [`Merker::zettel_uebernommen`] in
+//! `reported.toml`; warum dort, sagt der Kopf von [`crate::ablage::merker`].
+//!
+//! **Uebernommen wird nur, wenn der Merker nicht steht**, und gesetzt wird er
+//! nach genau einer Regel: **am Vorgabeort steht nach diesem Aufruf eine
+//! `notes.txt`.** Die Regel deckt drei Faelle mit einer Zeile:
+//!
+//! ```text
+//! Ordner neu, Zettel uebernommen     ──> notes.txt steht ──> Merker
+//! Ordner neu, nichts zu uebernehmen  ──> notes.txt leer  ──> Merker
+//! Ordner stand schon, Nutzer von vor ──> notes.txt steht ──> Merker,
+//!   dem Merker                                              keine Uebernahme
+//! ```
+//!
+//! Der dritte Fall ist der Nutzer, der mit der ersten Fassung von `~/krkhome`
+//! schon uebernommen hat und noch keinen Merker traegt: sein Ordner steht,
+//! also uebernimmt F2 ohnehin nicht, und derselbe Aufruf holt den Merker nach.
+//! **Scheitert das Anlegen von `notes.txt`**, steht keine, und der Merker
+//! bleibt aus. Das naechste F2 findet den Ordner dann vor, legt `notes.txt`
+//! leer an und vermerkt; uebernommen wird wie bei jedem Ordner, den es schon
+//! gab, nicht mehr. Die Zettel liegen unveraendert im Ablageordner, und die
+//! Meldung des gescheiterten Aufrufs sagt es. Erst ein neu angelegter Ordner
+//! versucht die Uebernahme wieder. An einem anderen Ort als dem Vorgabeort
+//! wird nichts vermerkt: dort
+//! gibt es nichts zu uebernehmen, und eine `notes.txt` dort sagt nichts ueber
+//! die Zettel.
+//!
+//! **Lesen, Anlegen und Vermerken laufen in einem Durchgang unter der
+//! Schreibsperre der Ablage**, wenn der Rufer einen [`Zugang`] mitgibt. Zwei
+//! Instanzen koennen den Merker damit nicht beide ungesetzt lesen. Was bleibt,
+//! ist ein Fenster zwischen dem Schreiben von `notes.txt` und dem des Merkers:
+//! endet KRK genau dort, steht `notes.txt` mit den Notizen und kein Merker, und
+//! das naechste F2 findet den Ordner vor und vermerkt, ohne zu uebernehmen.
+//! Eine zweite Uebernahme gibt es erst, wenn der Nutzer den Ordner **in dieser
+//! Spanne** loescht, also zwischen dem Absturz und dem naechsten F2.
+//!
+//! **Ohne Zugang**, weil es keinen Ablageordner gibt oder die Sperre sich
+//! nicht nehmen laesst, kennt F2 den Merker nicht und haelt sich an das
+//! `mkdir(2)`: ein neu angelegter Vorgabeort uebernimmt. Das naechste F2 mit
+//! Zugang vermerkt dann nach der Regel oben, weil `notes.txt` steht. Die
+//! Alternative, ohne Merker nie zu uebernehmen, liesse die Zettel eines
+//! Nutzers ohne erreichbare Ablage fuer immer draussen. Hat dieser Aufruf ohne
+//! Zugang uebernommen, sagt die Statuszeile, dass der Merker fehlt.
 //!
 //! Aus demselben Grund entsteht jede Eintragsdatei mit exklusivem Oeffnen
 //! (`create_new`, also `O_CREAT | O_EXCL`): steht die Datei schon da, scheitert
@@ -99,6 +147,8 @@ use std::path::Path;
 
 use super::eintraege::ist_themenzeile;
 use super::{Heimordner, Sonderdatei};
+use crate::ablage::Zugang;
+use crate::ablage::merker::{self, Merker};
 use crate::text::datei::{self, Textstand, Unlesbarkeit};
 
 /// Ein Zettel des Notizblatts der Runde 9: seine Datei im Ablageordner und das
@@ -167,6 +217,27 @@ pub struct Uebernahme {
     pub ausgang: Uebernahmeausgang,
 }
 
+/// Was aus dem Merker geworden ist, dass die alten Zettel uebernommen sind
+/// ([`Merker::zettel_uebernommen`]).
+///
+/// **Vollstaendig und ohne Auffangzweig**, damit ein weiterer Ausgang die
+/// Meldungen anhaelt, bis er einen Satz hat.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Zettelmerker {
+    /// Nichts zu vermerken: der Ort ist nicht der Vorgabeort, oder dort steht
+    /// nach diesem Aufruf keine `notes.txt`.
+    NichtsZuVermerken,
+    /// Der Merker stand schon; uebernommen wurde nichts.
+    StandSchon,
+    /// Dieser Aufruf hat ihn gesetzt.
+    Vermerkt,
+    /// Er war zu setzen, und das Schreiben von `reported.toml` ist
+    /// gescheitert. Der Grund des Systems.
+    NichtVermerkt(String),
+    /// Er war zu setzen, und der Rufer hatte keinen Zugang zur Ablage.
+    OhneAblage,
+}
+
 /// Der Name der Geheimnisdatei bis zum 260926, allein fuer das Umbenennen.
 ///
 /// Der gueltige Name steht an [`Sonderdatei::dateiname`] und nirgends sonst;
@@ -202,9 +273,14 @@ pub struct Bereitstellung {
     /// Die Eintragsdateien, die fehlten und sich nicht anlegen liessen, je mit
     /// dem Grund des Systems.
     pub nicht_angelegt: Vec<(Sonderdatei, String)>,
-    /// Die Uebernahme, genau dann vorhanden, wenn `ordner_angelegt` gilt und
-    /// der Ort der Vorgabeort ist.
+    /// Die Uebernahme, genau dann vorhanden, wenn `ordner_angelegt` gilt, der
+    /// Ort der Vorgabeort ist und der Merker nicht schon steht.
     pub uebernahme: Option<Uebernahme>,
+    /// Was aus dem Merker der Uebernahme geworden ist.
+    pub zettelmerker: Zettelmerker,
+    /// Der Satz ueber eine beschaedigte `reported.toml`, wenn der Merker aus
+    /// dem Auslieferungszustand kam.
+    pub merkerersetzung: Option<String>,
     /// Was aus einer `.secrets.txt` von vorher geworden ist; `None`, wenn im
     /// Heimordner keine stand.
     pub alte_geheimnisse: Option<AlteGeheimnisse>,
@@ -266,6 +342,25 @@ impl Bereitstellung {
         let mut saetze = Vec::new();
         if let Some(uebernahme) = &self.uebernahme {
             saetze.extend(uebernahme.meldungen());
+        }
+        saetze.extend(self.merkerersetzung.iter().cloned());
+        let uebernommen = self
+            .uebernahme
+            .as_ref()
+            .is_some_and(|uebernahme| uebernahme.ausgang == Uebernahmeausgang::Geschrieben);
+        match &self.zettelmerker {
+            Zettelmerker::NichtsZuVermerken | Zettelmerker::StandSchon | Zettelmerker::Vermerkt => {}
+            Zettelmerker::NichtVermerkt(grund) => saetze.push(format!(
+                "KRK kann sich nicht merken, dass die alten Zettel übernommen sind ({grund}); das nächste F2 versucht es wieder, und wird {} vorher gelöscht, übernimmt es sie noch einmal",
+                self.ort
+            )),
+            // Ohne Ablage hat der Start das Fehlen schon gemeldet; einen Satz
+            // ist es erst wert, wenn dieser Aufruf uebernommen hat.
+            Zettelmerker::OhneAblage if uebernommen => saetze.push(format!(
+                "KRK kann sich ohne seinen Ablageordner nicht merken, dass die alten Zettel übernommen sind; ein späteres F2 holt das nach, und wird {} vorher gelöscht, übernimmt es sie noch einmal",
+                self.ort
+            )),
+            Zettelmerker::OhneAblage => {}
         }
         for (sorte, grund) in &self.nicht_angelegt {
             saetze.push(format!(
@@ -351,16 +446,22 @@ fn dateien(zettel: &[&AlterZettel]) -> String {
 }
 
 /// Legt den Heimordner an, falls er fehlt, darin jede fehlende Eintragsdatei,
-/// und uebernimmt die alten Zettel, wenn dieser Aufruf den Ordner angelegt hat
-/// und der Ort der Vorgabeort ist.
+/// und uebernimmt die alten Zettel, wenn dieser Aufruf den Ordner angelegt hat,
+/// der Ort der Vorgabeort ist und der Merker in `reported.toml` nicht steht.
 ///
 /// `ablageordner` ist der Ordner, in dem `note-1.txt` und `note-2.txt` liegen.
+/// `merker` ist der Zugang zur Ablage, in deren Durchgang dieser Aufruf laeuft,
+/// oder `None`, wenn es keinen gibt; was dann gilt, sagt der Modulkopf.
 /// Angelegt wird an der geschriebenen Form des Heimordners; ist sie ein Verweis
 /// auf einen Ordner, entstehen die Dateien in dessen Ziel. **Allein fuer F2
 /// gedacht**; der Modulkopf sagt, warum der Start diesen Weg nicht erreicht.
 #[must_use = "ein Hindernis heisst: kein Tab, und die Meldungen gehoeren in die Statuszeile"]
-pub fn bereitstellen(heim: &Heimordner, ablageordner: &Path) -> Result<Bereitstellung, Hindernis> {
-    anlegen_mit_vorlauf(heim, ablageordner, &mut |_| {})
+pub fn bereitstellen(
+    heim: &Heimordner,
+    ablageordner: &Path,
+    merker: Option<&Zugang<'_>>,
+) -> Result<Bereitstellung, Hindernis> {
+    anlegen_mit_vorlauf(heim, ablageordner, merker, &mut |_| {})
 }
 
 /// [`bereitstellen`] mit einem Einhaengepunkt, der unmittelbar vor jedem
@@ -372,9 +473,23 @@ pub fn bereitstellen(heim: &Heimordner, ablageordner: &Path) -> Result<Bereitste
 fn anlegen_mit_vorlauf(
     heim: &Heimordner,
     ablageordner: &Path,
+    zugang: Option<&Zugang<'_>>,
     vorlauf: &mut dyn FnMut(&Path),
 ) -> Result<Bereitstellung, Hindernis> {
     let ordner = heim.geschrieben.as_path();
+    // Gelesen allein am Vorgabeort, dem einzigen, an dem der Merker etwas
+    // entscheidet; an jedem anderen bleibt `reported.toml` unberuehrt.
+    let vorgabeort = heim.ist_vorgabeort();
+    let (gelesen, merkerersetzung) = match zugang {
+        Some(zugang) if vorgabeort => {
+            let (wert, meldung): (Merker, _) = merker::laden(zugang).mit_meldung();
+            (Some(wert), meldung)
+        }
+        Some(_) | None => (None, None),
+    };
+    let schon_uebernommen = gelesen
+        .as_ref()
+        .is_some_and(|merker| merker.zettel_uebernommen);
     let ordner_angelegt = match fs::create_dir(ordner) {
         Ok(()) => true,
         Err(fehler) if fehler.kind() == io::ErrorKind::AlreadyExists => {
@@ -396,17 +511,21 @@ fn anlegen_mit_vorlauf(
 
     // Gelesen wird erst nach dem gelungenen `mkdir(2)`: vorher ist nicht
     // entschieden, ob dieser Aufruf ueberhaupt uebernimmt. Und allein am
-    // Vorgabeort; der Modulkopf sagt, warum.
-    let befunde = (ordner_angelegt && heim.ist_vorgabeort()).then(|| zettel_lesen(ablageordner));
+    // Vorgabeort und ohne Merker; der Modulkopf sagt, warum.
+    let befunde =
+        (ordner_angelegt && vorgabeort && !schon_uebernommen).then(|| zettel_lesen(ablageordner));
 
     let mut bereitstellung = Bereitstellung {
         ordner_angelegt,
         angelegt: Vec::new(),
         nicht_angelegt: Vec::new(),
         uebernahme: None,
+        zettelmerker: Zettelmerker::NichtsZuVermerken,
+        merkerersetzung,
         alte_geheimnisse: None,
         ort: heim.anzeigename().to_owned(),
     };
+    let mut notizen_stehen = false;
     for sorte in Sonderdatei::ALLE {
         let pfad = ordner.join(sorte.dateiname());
         if sorte == Sonderdatei::Geheimnisse {
@@ -433,6 +552,9 @@ fn anlegen_mit_vorlauf(
         };
         vorlauf(&pfad);
         let ausgang = exklusiv_anlegen(&pfad, inhalt);
+        if sorte == Sonderdatei::Notizen {
+            notizen_stehen = matches!(ausgang, Anlegeausgang::Angelegt | Anlegeausgang::StandSchon);
+        }
         match &ausgang {
             Anlegeausgang::Angelegt => bereitstellung.angelegt.push(sorte),
             Anlegeausgang::StandSchon => {}
@@ -447,6 +569,15 @@ fn anlegen_mit_vorlauf(
             });
         }
     }
+    bereitstellung.zettelmerker = match (vorgabeort && notizen_stehen, zugang) {
+        (false, _) => Zettelmerker::NichtsZuVermerken,
+        (true, _) if schon_uebernommen => Zettelmerker::StandSchon,
+        (true, None) => Zettelmerker::OhneAblage,
+        (true, Some(zugang)) => match merker::zettel_vermerken(zugang) {
+            Ok(()) => Zettelmerker::Vermerkt,
+            Err(fehler) => Zettelmerker::NichtVermerkt(fehler.to_string()),
+        },
+    };
     Ok(bereitstellung)
 }
 
@@ -594,10 +725,11 @@ mod proben {
         fs::create_dir(zuhause.join(ORDNERNAME)).expect("Heimordner");
         let fremd = b"von der anderen Instanz\n";
 
-        let bereitstellung = anlegen_mit_vorlauf(&heim, &zuhause.join("ablage"), &mut |pfad| {
-            fs::write(pfad, fremd).expect("die fremde Datei laesst sich nicht schreiben");
-        })
-        .expect("ein Hindernis, wo keines ist");
+        let bereitstellung =
+            anlegen_mit_vorlauf(&heim, &zuhause.join("ablage"), None, &mut |pfad| {
+                fs::write(pfad, fremd).expect("die fremde Datei laesst sich nicht schreiben");
+            })
+            .expect("ein Hindernis, wo keines ist");
 
         for sorte in Sonderdatei::ALLE {
             let pfad = zuhause.join(ORDNERNAME).join(sorte.dateiname());
@@ -626,7 +758,7 @@ mod proben {
         fs::write(ablage.join("note-1.txt"), "alter Text\n").expect("note-1.txt");
         let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
 
-        let bereitstellung = anlegen_mit_vorlauf(&heim, &ablage, &mut |pfad| {
+        let bereitstellung = anlegen_mit_vorlauf(&heim, &ablage, None, &mut |pfad| {
             if pfad.ends_with(Sonderdatei::Notizen.dateiname()) {
                 fs::write(pfad, b"").expect("die fremde Datei laesst sich nicht schreiben");
             }

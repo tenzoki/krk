@@ -5122,7 +5122,28 @@ impl Anwendungsdelegierter {
                 return true;
             }
         };
-        let bereitstellung = match heimordner::bereitstellen(&heim, &self.ablageordner()) {
+        // **Im Durchgang der Ablage, wenn es einen gibt**: der Merker der
+        // Uebernahme in `reported.toml` wird unter derselben Sperre gelesen
+        // und gesetzt, unter der `notes.txt` entsteht (Modulkopf von
+        // `krk_core::heimordner`, Abschnitt „Einmal heisst einmal“). Ohne
+        // Durchgang laeuft derselbe eine Aufruf ohne Zugang.
+        let ablageordner = self.ablageordner();
+        let anlegen =
+            |zugang: Option<&Zugang<'_>>| heimordner::bereitstellen(&heim, &ablageordner, zugang);
+        let mut sperrsatz = None;
+        let ausgang = match self.unter_der_sperre(|zugang| anlegen(Some(zugang))) {
+            Ok(ausgang) => ausgang,
+            // Der Start hat das Fehlen des Ablageordners schon gemeldet.
+            Err(Sperrhindernis::OhneOrdner) => anlegen(None),
+            Err(Sperrhindernis::Gesperrt(fehler)) => {
+                sperrsatz = Some(format!(
+                    "die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); \
+                     F2 hat ohne sie angelegt"
+                ));
+                anlegen(None)
+            }
+        };
+        let bereitstellung = match ausgang {
             Ok(bereitstellung) => bereitstellung,
             Err(hindernis) => {
                 self.antwort_zeigen(aktiv, &hindernis.meldung(heim.anzeigename()));
@@ -5145,7 +5166,8 @@ impl Anwendungsdelegierter {
         // Statuszeile des Tabs stehen, den der Nutzer jetzt ansieht. Mehrere
         // Saetze gingen nacheinander in dieselbe Zeile, und stehen bliebe der
         // letzte; zusammengefasst werden sie deshalb hier, in einer Antwort.
-        let meldungen = bereitstellung.meldungen();
+        let mut meldungen = bereitstellung.meldungen();
+        meldungen.extend(sperrsatz);
         if !meldungen.is_empty() {
             self.antwort_zeigen(aktiv, &meldungen.join("; "));
         }
