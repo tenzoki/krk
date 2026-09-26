@@ -281,7 +281,9 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// traegt das Verschieben [`Wirkungsbereich::Reihenfolge`], weil die
 /// Termintabelle nach dem Datum ordnet und es dort nicht annimmt, und das
 /// Umkehren ihrer Richtung [`Wirkungsbereich::Termine`], weil es allein in ihr
-/// etwas bedeutet.
+/// etwas bedeutet. Seit dem 260927 tragen das Kopieren und das Leeren der
+/// Quicknote [`Wirkungsbereich::Quicknote`], weil sie allein an deren Puffer
+/// wirken und der Editor ihn nur in dieser Form zeigt.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
@@ -388,6 +390,17 @@ pub enum Wirkungsbereich {
     /// Die Form selbst fragt der Wert nicht: auch in der Rohansicht haelt der
     /// Editor dieselbe Datei mit derselben PIN.
     Geheimnisse,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die Quicknote
+    /// zeigt (Q2 des Spec
+    /// `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    ///
+    /// Der Wert des Kopierens und des Leerens: beide wirken allein am Puffer
+    /// der Quicknote, und mit einer Datei im Editor gibt es keinen. **Ob die
+    /// Quicknote offen ist, weiss der Kern nicht**; die Form fragt, wie bei
+    /// [`Wirkungsbereich::Editortext`], `krk_ui`. Das Oeffnen und Schliessen
+    /// traegt [`Wirkungsbereich::Ueberall`], weil es die Quicknote aus jedem
+    /// Bereich heraus holt.
+    Quicknote,
     /// Wirkt, wenn der Fokus in einem Bereich mit Tabs steht: in einem
     /// Dateifenster oder im Vorschaufenster (C1, C6).
     ///
@@ -505,6 +518,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Aufgaben => "Aufgaben im Editor",
             Wirkungsbereich::Termine => "Termine im Editor",
             Wirkungsbereich::Geheimnisse => "Geheimnisse im Editor",
+            Wirkungsbereich::Quicknote => "Quicknote im Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
             Wirkungsbereich::Navigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
             Wirkungsbereich::Vorschau => "Vorschau",
@@ -530,7 +544,8 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Reihenfolge
             | Wirkungsbereich::Aufgaben
             | Wirkungsbereich::Termine
-            | Wirkungsbereich::Geheimnisse => Seite::Editor,
+            | Wirkungsbereich::Geheimnisse
+            | Wirkungsbereich::Quicknote => Seite::Editor,
             Wirkungsbereich::Dateifenster
             | Wirkungsbereich::Leiste
             | Wirkungsbereich::Tabbereich
@@ -913,6 +928,25 @@ pub enum Kommando {
     EditorErsetzen,
     /// Jeden Treffer im ganzen Text ersetzen (C5 der Editor-Runde).
     EditorAlleErsetzen,
+    /// Die Quicknote oeffnen, den Fokus in sie holen oder sie schliessen (Q1
+    /// des Spec `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    ///
+    /// Traegt [`Wirkungsbereich::Ueberall`]: F10 holt die Quicknote aus jedem
+    /// Bereich, und ein Vorbehalt verlangte den Zustand, den der Befehl erst
+    /// herstellt. Welche der drei Wirkungen ein Anschlag hat, entscheidet
+    /// `krk_ui` aus der Lage.
+    QuicknoteUmschalten,
+    /// Den ganzen Text der Quicknote in die Zwischenablage legen, den Puffer
+    /// leeren und die Quicknote schliessen (Q2).
+    ///
+    /// Traegt [`Wirkungsbereich::Quicknote`]: ohne offene Quicknote gibt es
+    /// keinen Puffer, den er kopierte.
+    QuicknoteKopieren,
+    /// Den Puffer der Quicknote leeren, mit `cmd+z` zuruecknehmbar (Q2).
+    ///
+    /// Traegt [`Wirkungsbereich::Quicknote`] wie das Kopieren und ist ab Werk
+    /// unbelegt; erreichbar ist er ueber die Schaltflaeche und das Menue.
+    QuicknoteLeeren,
     /// Am Ende der Eintragstabelle einen leeren Eintrag anlegen und seine
     /// Zelle in Bearbeitung setzen (C6 des Spec
     /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
@@ -1111,7 +1145,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 96] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 99] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1208,6 +1242,9 @@ impl Kommando {
         ),
         (Kommando::EditorErsetzen, "editor_ersetzen"),
         (Kommando::EditorAlleErsetzen, "editor_alle_ersetzen"),
+        (Kommando::QuicknoteUmschalten, "quicknote_umschalten"),
+        (Kommando::QuicknoteKopieren, "quicknote_kopieren"),
+        (Kommando::QuicknoteLeeren, "quicknote_leeren"),
         (Kommando::EintragHinzufuegen, "eintrag_hinzufuegen"),
         (Kommando::EintragBearbeiten, "eintrag_bearbeiten"),
         (Kommando::EintragHoch, "eintrag_hoch"),
@@ -1399,7 +1436,12 @@ impl Kommando {
             // seine `readers.toml` zurueckliegt, will das Einzelne von dort
             // aus sehen, wo er gerade steht, und nicht erst den Fokus
             // umsetzen.
-            | Kommando::NeuerungenZeigen => Wirkungsbereich::Ueberall,
+            | Kommando::NeuerungenZeigen
+            // F10 holt die Quicknote aus jedem Bereich heraus und setzt den
+            // Fokus selbst in den Editor; ein Vorbehalt verlangte den Zustand,
+            // den der Befehl erst herstellt, wie beim Notizordner darueber.
+            // Blatt, Textfeld und fremdes Fenster halten ihn weiter an.
+            | Kommando::QuicknoteUmschalten => Wirkungsbereich::Ueberall,
             // Die drei Befehle des Navigators, deren Taste im Editor der
             // Textflaeche gehoert.
             //
@@ -1500,6 +1542,9 @@ impl Kommando {
             // Allein in der Termintabelle, die nach dem Datum ordnet (Schritt 8
             // des Plans der Termine).
             Kommando::TermineRichtungUmkehren => Wirkungsbereich::Termine,
+            // Allein am Puffer der offenen Quicknote (Q2 des Spec der
+            // Quicknote); ob sie offen ist, fragt `krk_ui` ueber die Form.
+            Kommando::QuicknoteKopieren | Kommando::QuicknoteLeeren => Wirkungsbereich::Quicknote,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen

@@ -1019,6 +1019,42 @@ mod tests {
         assert_eq!(letzter, Some("termine_richtung_umkehren"));
     }
 
+    /// Die drei Befehle der Quicknote stehen im Obermenue „Editor", in der
+    /// Reihenfolge der Auslieferungsbelegung, zwei mit Kuerzel und „Quicknote
+    /// leeren" ohne (Schritt 1 des Plans
+    /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
+    #[test]
+    fn die_quicknote_steht_mit_ihren_kuerzeln_im_menue_editor() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let editor = leiste
+            .iter()
+            .find(|obermenue| obermenue.titel == Funktionsbereich::Editor.name())
+            .expect("es gibt ein Obermenue Editor");
+        let befehle: Vec<(&str, Option<Kombination>)> = editor
+            .eintraege
+            .iter()
+            .filter_map(|eintrag| match eintrag {
+                Eintrag::Befehl {
+                    kennung,
+                    kombination,
+                    ..
+                } if kennung.starts_with("quicknote_") => Some((*kennung, *kombination)),
+                _ => None,
+            })
+            .collect();
+        let f10 = Kombination::lesen("f10").expect("f10 ist eine Kombination");
+        let shift_f10 = Kombination::lesen("shift+f10").expect("shift+f10 ist eine Kombination");
+        assert_eq!(
+            befehle,
+            [
+                ("quicknote_umschalten", Some(f10)),
+                ("quicknote_kopieren", Some(shift_f10)),
+                ("quicknote_leeren", None),
+            ]
+        );
+    }
+
     /// Die Zusage von [`keine_zwei_eintraege_tragen_dieselbe_kombination`]
     /// fuer eine Belegung.
     fn keine_doppelte_kombination_in(belegung: &Belegung) {

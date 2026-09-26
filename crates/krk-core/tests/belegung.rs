@@ -185,13 +185,14 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// einer Datei. Die zweite Quelle ist hier `resources/default-keymap.toml`,
 /// und die liest [`ab_werk_traegt_genau_diese_liste_keine_kombination`] ueber
 /// [`Belegung::auslieferung`].
-const OHNE_KOMBINATION_AB_WERK: [&str; 8] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 9] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
     "spalte_marke_umschalten",
     "tiefe_suche_umschalten",
     "inhaltssuche_umschalten",
+    "quicknote_leeren",
     "belegungsdatei_ansehen",
     "ort_waehlen",
 ];
@@ -1107,6 +1108,102 @@ fn eine_eigene_belegung_mit_und_ohne_die_neue_funktion_laedt() {
     };
     assert_eq!(konflikt.andere.kennung, "sortierung_name");
     assert_eq!(konflikt.bewerber.kennung, "sortierung_groesse");
+}
+
+// ---------------------------------------------------------------------------
+// Die drei Befehle der Quicknote (Schritt 1 des Plans
+// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`)
+// ---------------------------------------------------------------------------
+
+/// Die drei Befehle tragen ihre Bereiche und ihre Kennungen, und die
+/// Auslieferung legt F10 und `shift+f10` auf die ersten zwei.
+#[test]
+fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
+    let faelle = [
+        (
+            Kommando::QuicknoteUmschalten,
+            "quicknote_umschalten",
+            Wirkungsbereich::Ueberall,
+        ),
+        (
+            Kommando::QuicknoteKopieren,
+            "quicknote_kopieren",
+            Wirkungsbereich::Quicknote,
+        ),
+        (
+            Kommando::QuicknoteLeeren,
+            "quicknote_leeren",
+            Wirkungsbereich::Quicknote,
+        ),
+    ];
+    for (kommando, kennung, bereich) in faelle {
+        assert_eq!(kommando.wirkungsbereich(), bereich, "{kennung}");
+        assert_eq!(Kommando::aus_kennung(kennung), Some(kommando));
+        assert_eq!(kommando.kennung(), kennung);
+    }
+    assert_eq!(Wirkungsbereich::Quicknote.seite(), Seite::Editor);
+
+    let belegung = Belegung::auslieferung();
+    assert!(matches!(
+        belegung.nachschlag(kombi("f10").tastendruck()),
+        Nachschlag::Funktion(funktion) if funktion.kennung() == "quicknote_umschalten"
+    ));
+    assert!(matches!(
+        belegung.nachschlag(kombi("shift+f10").tastendruck()),
+        Nachschlag::Funktion(funktion) if funktion.kennung() == "quicknote_kopieren"
+    ));
+    assert!(belegung.konflikte().is_empty());
+}
+
+/// Eine Nutzerbelegung von vor der Quicknote laedt ohne Ersetzung, fuehrt die
+/// drei Funktionen unbelegt, und F10 trifft darin keine Funktion.
+///
+/// Der Beleg fuer den Satz in `HowTo.md`, dass F10 bei einer eigenen
+/// `keymap.toml` erst nach „Zuweisen" wirkt.
+#[test]
+fn eine_eigene_belegung_ohne_die_quicknote_laedt_und_fuehrt_sie_unbelegt() {
+    let beginn = belegung::AUSLIEFERUNGSTEXT
+        .find("[[funktion]]\nid = \"quicknote_umschalten\"\n")
+        .expect("der erste Block der Quicknote steht in der Auslieferung");
+    let ende = belegung::AUSLIEFERUNGSTEXT
+        .find("[[funktion]]\nid = \"belegung_ansehen\"\n")
+        .expect("der Block der Belegungsansicht folgt");
+    assert!(
+        beginn < ende,
+        "die Quicknote steht vor der Belegungsansicht"
+    );
+    let ohne = format!(
+        "{}{}",
+        &belegung::AUSLIEFERUNGSTEXT[..beginn],
+        &belegung::AUSLIEFERUNGSTEXT[ende..]
+    );
+    assert!(!ohne.contains("id = \"quicknote_"));
+
+    let ordner = Pruefordner::neu("quicknote-ohne");
+    let ablage = ablage_mit(&ordner, &ohne);
+    let geladen = geladene_belegung(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine Belegung ohne die Quicknote wurde abgewiesen"
+    );
+    for kennung in [
+        "quicknote_umschalten",
+        "quicknote_kopieren",
+        "quicknote_leeren",
+    ] {
+        let funktion = geladen
+            .wert
+            .funktion(kennung)
+            .unwrap_or_else(|| panic!("{kennung} kommt nicht hinzu"));
+        assert!(funktion.tasten().is_empty(), "{kennung} kommt belegt an");
+    }
+    assert!(
+        !matches!(
+            geladen.wert.nachschlag(kombi("f10").tastendruck()),
+            Nachschlag::Funktion(_) | Nachschlag::Geteilt(..)
+        ),
+        "F10 trifft in einer Belegung ohne die Quicknote eine Funktion"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -2283,7 +2380,8 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         // eingebauten Editor, `Vorschau` mit den drei Zoombefehlen der Runde 20,
         // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
         // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5,
-        // `Reihenfolge` und `Termine` mit den Terminen.
+        // `Reihenfolge` und `Termine` mit den Terminen, `Quicknote` mit der
+        // Quicknote auf F10.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
@@ -2298,6 +2396,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Aufgaben
                     | Wirkungsbereich::Termine
                     | Wirkungsbereich::Geheimnisse
+                    | Wirkungsbereich::Quicknote
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
                     | Wirkungsbereich::Vorschau
@@ -2718,7 +2817,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 14] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 15] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2735,6 +2834,7 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 14] = [
     (Wirkungsbereich::Aufgaben, "Aufgaben im Editor"),
     (Wirkungsbereich::Termine, "Termine im Editor"),
     (Wirkungsbereich::Geheimnisse, "Geheimnisse im Editor"),
+    (Wirkungsbereich::Quicknote, "Quicknote im Editor"),
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
     (
         Wirkungsbereich::Navigator,
@@ -2767,10 +2867,11 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Aufgaben => 7,
         Wirkungsbereich::Termine => 8,
         Wirkungsbereich::Geheimnisse => 9,
-        Wirkungsbereich::Tabbereich => 10,
-        Wirkungsbereich::Navigator => 11,
-        Wirkungsbereich::Vorschau => 12,
-        Wirkungsbereich::Ueberall => 13,
+        Wirkungsbereich::Quicknote => 10,
+        Wirkungsbereich::Tabbereich => 11,
+        Wirkungsbereich::Navigator => 12,
+        Wirkungsbereich::Vorschau => 13,
+        Wirkungsbereich::Ueberall => 14,
     }
 }
 

@@ -463,6 +463,10 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // unter "Fenster" stehen, ist kein Widerspruch, sondern dieselbe
         // Regel: ein Dateifenster ist keine eigene Gegend der Belegung, es
         // gibt keinen Abschnitt dafuer.
+        //
+        // Die drei Befehle der Quicknote stehen aus demselben Satz hier: sie
+        // ist eine Gestalt des Editorbereichs, und wer sie sucht, sucht unter
+        // "Editor".
         Kommando::Bearbeiten
         | Kommando::EditorRundweg
         | Kommando::FokusEditor
@@ -475,7 +479,10 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EditorWeitersuchen
         | Kommando::EditorRueckwaertsSuchen
         | Kommando::EditorErsetzen
-        | Kommando::EditorAlleErsetzen => Funktionsbereich::Editor,
+        | Kommando::EditorAlleErsetzen
+        | Kommando::QuicknoteUmschalten
+        | Kommando::QuicknoteKopieren
+        | Kommando::QuicknoteLeeren => Funktionsbereich::Editor,
         // Der Notizordner und alles, was an ihm haengt: F2, „Ort waehlen…",
         // die sechs Befehle der Eintragstabelle und „PIN ändern".
         //
@@ -1452,7 +1459,13 @@ mod tests {
         // Die Befehle der Eintragstabelle und „PIN ändern" stehen seit dem
         // 260926 unter „Home" und nicht mehr hier; ihre Probe ist
         // `der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge`.
-        const EDITORBEFEHLE: [&str; 13] = [
+        //
+        // Die drei der Quicknote stehen seit dem 260927 hier (Schritt 1 des
+        // Plans `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`);
+        // „Quicknote leeren" ist ab Werk unbelegt und steht deshalb auch in
+        // `UNBELEGT_AB_WERK`, der einen Ausnahme von der Pruefung auf eine
+        // Kombination.
+        const EDITORBEFEHLE: [&str; 16] = [
             "bearbeiten",
             "editor_rundweg",
             "fokus_editor",
@@ -1466,7 +1479,11 @@ mod tests {
             "editor_rueckwaerts_suchen",
             "editor_ersetzen",
             "editor_alle_ersetzen",
+            "quicknote_umschalten",
+            "quicknote_kopieren",
+            "quicknote_leeren",
         ];
+        const UNBELEGT_AB_WERK: [&str; 1] = ["quicknote_leeren"];
 
         let belegung = Belegung::auslieferung();
         let modell = Belegungsmodell::neu(Belegung::auslieferung());
@@ -1481,9 +1498,10 @@ mod tests {
                 "{kennung} steht nicht unter der Ueberschrift Editor, sondern in {:?}",
                 bereich(kennung)
             );
-            assert!(
-                !funktion.tasten().is_empty(),
-                "{kennung} steht in der Ansicht, traegt aber keine Kombination"
+            assert_eq!(
+                funktion.tasten().is_empty(),
+                UNBELEGT_AB_WERK.contains(&kennung),
+                "{kennung} steht in der Ansicht und traegt ab Werk nicht, was die Probe erwartet"
             );
         }
         assert_eq!(

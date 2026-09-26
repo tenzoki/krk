@@ -503,6 +503,16 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Geheimnisse => false,
             Editorform::Termine => true,
         },
+        // Das Kopieren und das Leeren der Quicknote wirken allein an ihrem
+        // Puffer; die Form, in der der Editor ihn zeigt, entsteht erst mit der
+        // Flaeche der Quicknote. Bis dahin sagt jede Form nein.
+        Wirkungsbereich::Quicknote => match form {
+            Editorform::Text
+            | Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine => false,
+        },
         // Die Geheimnisse fragen nicht die Form, sondern die Datei; das
         // steht in `datei_passt`. Auch in der Rohansicht haelt der Editor
         // dieselbe `secrets.txt` mit derselben PIN.
@@ -543,6 +553,7 @@ fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool) -> bool {
         | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Termine
+        | Wirkungsbereich::Quicknote
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
@@ -749,7 +760,7 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 14] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 15] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
@@ -763,6 +774,7 @@ mod tests {
         (Wirkungsbereich::Aufgaben, Kommando::AufgabeAbhaken),
         (Wirkungsbereich::Termine, Kommando::TermineRichtungUmkehren),
         (Wirkungsbereich::Geheimnisse, Kommando::PinAendern),
+        (Wirkungsbereich::Quicknote, Kommando::QuicknoteLeeren),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
         (Wirkungsbereich::Navigator, Kommando::AuswahlHoch),
         (Wirkungsbereich::Vorschau, Kommando::VorschauVergroessern),
@@ -990,7 +1002,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 14] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 15] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1006,13 +1018,15 @@ mod tests {
             // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
+            [false, false, false, false, false, false],
+            // Quicknote: in keiner Form dieser Tafel
             [false, false, false, false, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 14] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 15] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1028,6 +1042,8 @@ mod tests {
             // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
+            [false, false, false, false, false, false],
+            // Quicknote: in keiner Form dieser Tafel
             [false, false, false, false, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
@@ -1036,7 +1052,7 @@ mod tests {
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 14] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 15] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1052,6 +1068,8 @@ mod tests {
             // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
+            [false, false, false, false, false, false],
+            // Quicknote: in keiner Form dieser Tafel
             [false, false, false, false, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
@@ -1061,7 +1079,7 @@ mod tests {
         // Wie die Notiztabelle, nur ohne die Zeile `Reihenfolge`: die
         // Termintabelle ordnet nach dem Datum, und verschieben laesst sich
         // darin nichts (Schritt 6 des Plans der Termine, T3.7).
-        const IN_DER_TERMINTABELLE: [[bool; 6]; 14] = [
+        const IN_DER_TERMINTABELLE: [[bool; 6]; 15] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1078,12 +1096,14 @@ mod tests {
             [false, false, false, true, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
+            // Quicknote: in keiner Form dieser Tafel
+            [false, false, false, false, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 14] = [[false; 6]; 14];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 15] = [[false; 6]; 15];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1101,7 +1121,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 14]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 15]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),

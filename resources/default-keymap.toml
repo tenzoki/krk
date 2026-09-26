@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 103 Funktionen mit zusammen 105 Kombinationen.
+# Ausgeliefert sind 106 Funktionen mit zusammen 107 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1116,6 +1116,35 @@ name = "Alle ersetzen"
 tasten = ["ctrl+cmd+r"]
 # Dieselbe Systematik wie "umbenennen" gegen "umbenennen_stapel": die
 # Einzelform auf shift+cmd, die Stapelform auf ctrl+cmd.
+
+# ── Die Quicknote ────────────────────────────────────────────────────────────
+# Drei Funktionen aus dem Spec
+# `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`. Die
+# nackte F10 ist auf Apple-Tastaturen "Ton aus"; KRK bekommt den Tastencode
+# dann erst mit gehaltener fn-Taste (siehe den Absatz ueber die fn-Taste im
+# Kopf dieser Datei).
+
+[[funktion]]
+id = "quicknote_umschalten"
+name = "Quicknote öffnen und schließen"
+tasten = ["f10"]
+# F10 war frei. Ein Cmd-Kuerzel daneben traegt die Funktion nicht, wie F1 und
+# F4: die Zwei-Wege-Regel aus C3 gilt den fuenf Funktionen der Norton-Reihe.
+
+[[funktion]]
+id = "quicknote_kopieren"
+name = "Quicknote kopieren und schließen"
+tasten = ["shift+f10"]
+# Die Umschalttaste bindet die verwandte Handlung an dieselbe F-Taste, wie
+# shift+f3 und shift+f6.
+
+[[funktion]]
+id = "quicknote_leeren"
+name = "Quicknote leeren"
+tasten = []
+# Ab Werk unbelegt: cmd+a und die Ruecktaste tun in der Quicknote dasselbe,
+# und cmd+return traegt "eintrag_bearbeiten". Erreichbar ist die Funktion ueber
+# ihre Schaltflaeche und das Menue.
 
 # ── C3: die Belegungsansicht ─────────────────────────────────────────────────
 
