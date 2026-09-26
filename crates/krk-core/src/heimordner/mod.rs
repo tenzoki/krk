@@ -1,0 +1,214 @@
+//! Der Heimordner `~/krkhome/`: die eine Stelle, die ihn erkennt.
+//!
+//! F2 fuehrt in einen Dateilisten-Tab auf `~/krkhome/`, und an diesem Ordner
+//! haengen mehrere Regeln: die Vorschau rendert `notes.txt` und `tasks.txt`
+//! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
+//! Tabelle, und spaeter steht `.secrets.txt` dort immer in der Liste. **Jede
+//! dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
+//! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+//! Die Form der Eintraege in den zwei Dateien steht in [`eintraege`].
+//!
+//! # Zwei Formen, verglichen als Text
+//!
+//! [`Heimordner`] haelt den Ordner in zwei Formen: der **geschriebenen**
+//! (`<benutzerverzeichnis>/krkhome`) und, wenn `krkhome` ein symbolischer
+//! Verweis ist, der **aufgeloesten**. [`Heimordner::ist`] und
+//! [`Heimordner::sonderdatei`] vergleichen den gefragten Pfad als Text mit
+//! beiden und **stellen dabei keinen Systemaufruf**. Das ist der Kern der
+//! Sache und nicht eine Sparsamkeit: gefragt wird je Lesevorgang eines Tabs
+//! und auf dem Hauptfaden, und ein `realpath(3)` am Tab-Ordner blockierte an
+//! einem haengenden Netzlaufwerk die Ereignisschleife. Die Probe
+//! `ist_und_sonderdatei_stellen_keinen_systemaufruf` in
+//! `crates/krk-core/tests/heimordner.rs` liest die beiden Ruempfe und haelt das.
+//!
+//! Die aufgeloeste Form entsteht an zwei Stellen, und keine davon beruehrt den
+//! gefragten Pfad:
+//!
+//! - **beim Bau** ([`Heimordner::im_benutzerverzeichnis`]) leicht, ueber
+//!   `symlink_metadata` und `read_link` am Verweis im Benutzerverzeichnis. Beide
+//!   Aufrufe treffen allein das Benutzerverzeichnis und nie das Ziel des
+//!   Verweises; ein Ziel auf einem haengenden Laufwerk haelt den Start also
+//!   nicht auf. Ein relatives Ziel wird gegen das Benutzerverzeichnis gesetzt
+//!   und **lexikalisch** bereinigt, also ohne nachzusehen, ob unterwegs ein
+//!   weiterer Verweis steht.
+//! - **bei F2** ([`Heimordner::aufgeloest_erneuern`]) ueber `canonicalize`,
+//!   nachdem das Anlegen am Ziel ohnehin gearbeitet hat. Erst diese Form loest
+//!   auch Verweise auf, die im Ziel des ersten Verweises stehen.
+//!
+//! # Was diese Erkennung nicht sieht
+//!
+//! **Eine dritte Schreibweise desselben Ordners wird nicht erkannt**: ein
+//! zweiter Verweis an anderer Stelle, der auf denselben Ordner zeigt, oder ein
+//! Pfad, dessen Bestandteile selbst Verweise sind, die die aufgeloeste Form
+//! aufloest und der gefragte Pfad nicht. Dort zeigt KRK `notes.txt` und
+//! `tasks.txt` wie jede andere Textdatei und verliert nichts. So entschieden vom
+//! Nutzer am 260926
+//! (`260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md`,
+//! Moeglichkeit 1). **Die Gegenmoeglichkeit liegt ausgearbeitet in demselben
+//! Datensatz**: Geraet und Inode, erhoben im Lesefaden am offenen Deskriptor.
+//! Sie ist der Weg, wenn sich die Luecke im Gebrauch zeigt.
+//!
+//! Aus derselben Bauart folgt eine zweite, kleinere Eigenschaft: die leichte
+//! Form aus `read_link` und die kanonische aus `canonicalize` koennen
+//! voneinander abweichen, wenn das Ziel des Verweises selbst ueber einen
+//! weiteren Verweis fuehrt. Vor dem ersten F2 einer Sitzung erkennt KRK den
+//! Ordner dann ueber den Pfad, den der Verweis nennt, danach ueber den
+//! kanonischen; [`Heimordner`] haelt eine aufgeloeste Form und nicht zwei.
+//!
+//! # Der Name
+//!
+//! [`ORDNERNAME`] ist die einzige Stelle im Code, die `krkhome` schreibt. Der Ort
+//! ist fest und nicht einstellbar
+//! (`260926-0007_*_ist-der-ort-krkhome-fest-oder-einstellbar.md`); ein
+//! einstellbarer Ort erbte die Frage nach den Schreibweisen unveraendert.
+
+pub mod eintraege;
+
+use std::path::{Component, Path, PathBuf};
+
+use crate::ablage::pfade;
+
+/// Der Name des Heimordners im Benutzerverzeichnis.
+pub const ORDNERNAME: &str = "krkhome";
+
+/// Eine der Dateien im Heimordner, die KRK als Eintragsdatei behandelt.
+///
+/// **Vollstaendig und ohne Auffangzweig**, damit eine weitere Datei den Bau an
+/// jeder Stelle anhaelt, die nach der Sorte fragt. Die Stufe 5 dieser Arbeit
+/// fuegt `.secrets.txt` hinzu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Sonderdatei {
+    /// `notes.txt`: Notizen aus Thema und Text.
+    Notizen,
+    /// `tasks.txt`: Aufgaben mit Erledigt-Kaestchen.
+    Aufgaben,
+}
+
+impl Sonderdatei {
+    /// Jede Eintragsdatei, in der Reihenfolge der Aufzaehlung.
+    pub const ALLE: [Sonderdatei; 2] = [Sonderdatei::Notizen, Sonderdatei::Aufgaben];
+
+    /// Der Dateiname im Heimordner.
+    pub const fn dateiname(self) -> &'static str {
+        match self {
+            Sonderdatei::Notizen => "notes.txt",
+            Sonderdatei::Aufgaben => "tasks.txt",
+        }
+    }
+}
+
+/// Der Heimordner in seiner geschriebenen und, wenn es eine gibt, seiner
+/// aufgeloesten Form.
+///
+/// Ein Wert und kein Zugriff: er haelt zwei Pfade und fragt an ihnen nichts
+/// ab. Wer die aufgeloeste Form erneuern will, bekommt von
+/// [`Heimordner::aufgeloest_erneuern`] einen neuen Wert.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Heimordner {
+    /// `<benutzerverzeichnis>/krkhome`, unabhaengig davon, was dort steht.
+    geschrieben: PathBuf,
+    /// Das Ziel, wenn `krkhome` ein Verweis ist; `None` sonst oder wenn es sich
+    /// nicht lesen liess.
+    aufgeloest: Option<PathBuf>,
+}
+
+impl Heimordner {
+    /// Der Heimordner unter dem genannten Benutzerverzeichnis.
+    ///
+    /// **Das Benutzerverzeichnis kommt als Argument herein**, damit Proben den
+    /// Heimordner in einen Pruefordner legen koennen; dieselbe Erwaegung wie bei
+    /// [`pfade::gekuerzt_fuer_anzeige`]. Die aufgeloeste Form entsteht leicht: ist
+    /// `krkhome` laut `symlink_metadata` ein Verweis, gilt sein Ziel aus
+    /// `read_link`, sonst gibt es keine. Beide Aufrufe treffen allein den Eintrag
+    /// im Benutzerverzeichnis und nie das Ziel.
+    pub fn im_benutzerverzeichnis(benutzerverzeichnis: &Path) -> Self {
+        let geschrieben = benutzerverzeichnis.join(ORDNERNAME);
+        let ist_verweis = std::fs::symlink_metadata(&geschrieben)
+            .is_ok_and(|angaben| angaben.file_type().is_symlink());
+        let aufgeloest = if ist_verweis {
+            std::fs::read_link(&geschrieben)
+                .ok()
+                .map(|ziel| lexikalisch_bereinigt(&benutzerverzeichnis.join(ziel)))
+        } else {
+            None
+        };
+        Self {
+            geschrieben,
+            aufgeloest,
+        }
+    }
+
+    /// Der Heimordner des angemeldeten Benutzers, oder `None`, wenn das System
+    /// kein Benutzerverzeichnis nennt.
+    pub fn des_benutzers() -> Option<Self> {
+        pfade::benutzerverzeichnis().map(|zuhause| Self::im_benutzerverzeichnis(&zuhause))
+    }
+
+    /// Ein neuer Wert, dessen aufgeloeste Form ueber `canonicalize` erhoben ist.
+    ///
+    /// **Allein fuer F2 gedacht**, nachdem das Anlegen am Ziel ohnehin gearbeitet
+    /// hat; `canonicalize` beruehrt das Ziel und darf deshalb weder beim Start
+    /// noch je Lesevorgang laufen. Scheitert es, bleibt die bisherige Form
+    /// stehen: ein Heimordner, der sich gerade nicht aufloesen laesst, ist immer
+    /// noch unter seiner geschriebenen Form zu erkennen.
+    #[must_use = "der erneuerte Wert ist die ganze Wirkung; fallengelassen bleibt die alte Form im Umlauf"]
+    pub fn aufgeloest_erneuern(&self) -> Self {
+        match std::fs::canonicalize(&self.geschrieben) {
+            Ok(kanonisch) => Self {
+                geschrieben: self.geschrieben.clone(),
+                aufgeloest: Some(kanonisch),
+            },
+            Err(_) => self.clone(),
+        }
+    }
+
+    /// Ob der gefragte Ordner der Heimordner ist, in der geschriebenen oder der
+    /// aufgeloesten Form.
+    ///
+    /// Verglichen wird ueber die Gleichheit von [`Path`], also Bestandteil fuer
+    /// Bestandteil. Ein Schlussstrich und doppelte Trennstriche sind damit
+    /// ohne eigenen Schritt gleichgueltig. **Kein Systemaufruf**; der Modulkopf
+    /// sagt, warum, und was daraus folgt.
+    pub fn ist(&self, ordner: &Path) -> bool {
+        ordner == self.geschrieben.as_path()
+            || self
+                .aufgeloest
+                .as_deref()
+                .is_some_and(|aufgeloest| ordner == aufgeloest)
+    }
+
+    /// Welche Eintragsdatei der gefragte Pfad ist, oder `None`.
+    ///
+    /// Gefragt wird erst der Dateiname und nur bei einem der Namen der
+    /// Elternordner ueber [`Heimordner::ist`]. **Kein Systemaufruf.**
+    pub fn sonderdatei(&self, pfad: &Path) -> Option<Sonderdatei> {
+        let name = pfad.file_name()?;
+        let sorte = Sonderdatei::ALLE
+            .into_iter()
+            .find(|sorte| name == sorte.dateiname())?;
+        let ordner = pfad.parent()?;
+        self.ist(ordner).then_some(sorte)
+    }
+}
+
+/// Der Pfad ohne `.` und mit jedem `..` gegen den Bestandteil davor
+/// aufgehoben, **ohne das Dateisystem zu fragen**.
+///
+/// Das ist nicht dasselbe wie `canonicalize`: steht vor einem `..` ein Verweis,
+/// fuehrt das lexikalische Aufheben woanders hin als das System. Fuer die
+/// leichte Form ist das hingenommen, weil sie das Ziel nicht beruehren darf;
+/// F2 ersetzt sie durch die kanonische.
+fn lexikalisch_bereinigt(pfad: &Path) -> PathBuf {
+    let mut bereinigt = PathBuf::new();
+    for teil in pfad.components() {
+        match teil {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                // An der Wurzel bleibt `..` die Wurzel, wie beim System.
+                let _ = bereinigt.pop();
+            }
+            anderer => bereinigt.push(anderer),
+        }
+    }
+    bereinigt
+}

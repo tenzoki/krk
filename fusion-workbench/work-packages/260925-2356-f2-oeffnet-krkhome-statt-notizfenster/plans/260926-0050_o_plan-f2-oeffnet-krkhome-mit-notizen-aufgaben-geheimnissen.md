@@ -195,7 +195,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
 
 ### Stufe 1: der Ort (C1, C2, C3)
 
-1. **1.1 Erkennung von ~/krkhome und die Eintragsform im Kern**
+1. [DONE] **1.1 Erkennung von ~/krkhome und die Eintragsform im Kern**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/heimordner/mod.rs` (neu), `crates/krk-core/src/heimordner/eintraege.rs` (neu), `crates/krk-core/src/lib.rs`, `crates/krk-core/tests/heimordner.rs` (neu)
    - Changes:

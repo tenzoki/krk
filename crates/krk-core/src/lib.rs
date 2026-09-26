@@ -39,6 +39,11 @@
 //! ihre abzaehlbaren Grenzen ohne Fenster zu belegen sind und `krk-ui` kein
 //! Bibliotheksziel hat; die Herleitung steht im Kopf jenes Moduls.
 //!
+//! `heimordner` erkennt `~/krkhome/` und beschreibt die Form der Eintraege in
+//! `notes.txt` und `tasks.txt`. Es liegt aus demselben Grund hier: jede Regel,
+//! die am Ordner haengt, fragt diese eine Stelle, und die Stelle ist ohne
+//! Fenster pruefbar.
+//!
 //! Der Kern kennt AppKit nicht. Das ist der Grund, aus dem er ohne Fenster
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
 //!
@@ -55,6 +60,7 @@
 
 pub mod ablage;
 pub mod git;
+pub mod heimordner;
 pub mod leseprofil;
 pub mod operation;
 pub mod stapelumbenennen;
