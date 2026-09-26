@@ -203,7 +203,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
 
 ### Stufe 2: der Ort aus `settings.toml` (H2)
 
-4. **2.1 Der Kern kennt einen Ort statt eines Namens**
+4. [DONE] **2.1 Der Kern kennt einen Ort statt eines Namens**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/heimordner/ort.rs` (neu), `crates/krk-core/src/heimordner/mod.rs`, `crates/krk-core/src/heimordner/bereitstellen.rs`, `crates/krk-core/tests/heimordner.rs`, `crates/krk-ui/src/appkit/anwendung.rs` (die zwei Stellen, die `Hindernis::meldung` rufen)
    - Changes:
@@ -217,7 +217,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
    - Closes (am Baum): H2.4 (Textprüfung), H2.5, H2.6, H2.7, H2.8, H2.11 (Wortlaut im Kern).
    - Dependencies: 1.3
 
-5. **2.2 `settings.toml` darf `notizordner` tragen**
+5. [DONE] **2.2 `settings.toml` darf `notizordner` tragen**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/ablage/einstellungen.rs`, `crates/krk-core/tests/ablage.rs`
    - Changes:
@@ -228,7 +228,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
    - Closes (am Baum): H2.3 im Teil „kein Text ist kein Dateischaden“.
    - Dependencies: 2.1
 
-6. **2.3 Die Auslieferungsfassung führt den Notizordner**
+6. [DONE] **2.3 Die Auslieferungsfassung führt den Notizordner**
    - Executor: `data-implementer`
    - Files: `resources/default-settings.toml`
    - Changes: Hinter `terminal` ein Kommentarblock und `notizordner = "~/krkhome"`. Der Kommentar sagt, in der Umschrift der übrigen Kommentare dieser Datei: was der Wert bewirkt; dass er mit `~/` oder `/` beginnt; dass ein Wechsel nichts verschiebt und fehlende Dateien am neuen Ort leer entstehen; dass ein Wechsel von Hand ab dem nächsten Start gilt; dass ein unzulässiger Wert keinen Ersatzort ergibt und F2 dann den Grund nennt; dass eine beschädigte oder unlesbare Datei ebenso keinen Notizordner ergibt, bis sie berichtigt und KRK neu gestartet ist (in der Fassung, die der Datensatz `260926-1506_*_…` festlegt); dass der Ablageordner von KRK ausgeschlossen ist; dass die alten Notizzettel allein am Vorgabeort übernommen werden; dass eine ältere KRK-Fassung eine Datei mit diesem Schlüssel als beschädigt abweist, liegen lässt und mit ihren Vorgaben weiterarbeitet. Der Kopf der Datei bleibt in diesem Schritt, wie er ist: in Stufe 2 schreibt KRK die Datei weiterhin nie.

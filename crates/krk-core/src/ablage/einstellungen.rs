@@ -72,6 +72,7 @@ static AUSLIEFERUNG: LazyLock<Einstellungen> = LazyLock::new(|| {
         terminal: datei
             .terminal
             .expect("die eingebettete Auslieferungsfassung nennt keinen Eintrag terminal"),
+        notizordner: datei.notizordner.as_ref().map(ortswert),
     }
 });
 
@@ -90,6 +91,44 @@ pub struct Einstellungen {
     /// Umbenennen der Anwendung. Die Herleitung steht in `### Frage 4` des
     /// Plans, die Erklaerung fuer den Nutzer in `resources/default-settings.toml`.
     pub terminal: String,
+    /// Der Ort des Notizordners, wie er in der Datei steht, noch ungeprueft
+    /// (H2 des Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// **Ein Wert, und noch kein Ort**: ob der Text einen Notizordner ergibt,
+    /// entscheidet `heimordner::ort::ort_lesen`, und das kennt dieses Modul
+    /// nicht. Ein Wert, der kein Text ist, macht die Datei **nicht**
+    /// beschaedigt, sondern wird [`Ortswert::KeinText`]; siehe dort.
+    ///
+    /// **`Option` nur, solange die Auslieferungsfassung den Schluessel noch
+    /// nicht traegt** (Schritt 2.3 des Plans
+    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`); danach fuellt
+    /// sie ihn wie `terminal` fuer jede Nutzerdatei, die ihn nicht nennt, und
+    /// das `Option` faellt mit Schritt 2.4.
+    pub notizordner: Option<Ortswert>,
+}
+
+/// Der Wert von `notizordner`, wie `settings.toml` ihn traegt.
+///
+/// **Vollstaendig und ohne Auffangzweig.** Die zweite Variante gibt es, weil
+/// der Spec „kein Text“ zu den unzulaessigen **Werten** zaehlt und nicht zu den
+/// Schaeden der Datei (H2, drittes Kriterium): ein `notizordner = 5` ergibt
+/// eine Meldung, die den Wert nennt, und keinen Notizordner, laesst aber
+/// `terminal` und die Datei, wie sie sind. Bei `terminal` bleibt ein Wert
+/// falschen Typs ein Dateischaden.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Ortswert {
+    /// Ein Text, noch ungeprueft.
+    Text(String),
+    /// Ein Wert anderen Typs, in seiner TOML-Schreibweise.
+    KeinText(String),
+}
+
+/// Der Ortswert zu einem gelesenen TOML-Wert.
+fn ortswert(wert: &toml::Spanned<toml::Value>) -> Ortswert {
+    match wert.get_ref() {
+        toml::Value::String(text) => Ortswert::Text(text.clone()),
+        anderer => Ortswert::KeinText(anderer.to_string()),
+    }
 }
 
 impl Einstellungen {
@@ -105,6 +144,11 @@ impl Einstellungen {
                 .terminal
                 .clone()
                 .unwrap_or_else(|| AUSLIEFERUNG.terminal.clone()),
+            notizordner: datei
+                .notizordner
+                .as_ref()
+                .map(ortswert)
+                .or_else(|| AUSLIEFERUNG.notizordner.clone()),
         }
     }
 }
@@ -124,11 +168,20 @@ impl Default for Einstellungen {
 /// `deny_unknown_fields` wie dort: ein Feld, das KRK nicht kennt, ist in einer
 /// von Hand gepflegten Datei fast immer ein Tippfehler, und der Nutzer soll ihn
 /// als Meldung sehen statt seine Einstellung stillschweigend zu verlieren.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+///
+/// **`notizordner` wird als beliebiger TOML-Wert gelesen**, samt seinem
+/// Byte-Bereich in der Datei, und erst danach gedeutet ([`Ortswert`]). Ein
+/// `Option<String>` wie bei `terminal` machte einen Wert falschen Typs zum
+/// Schaden der ganzen Datei. Den Bereich braucht der Schreibweg von „Ort
+/// waehlen…“, der allein ihn ersetzt. Ohne `Eq`, weil `toml::Value`
+/// Gleitkommazahlen tragen kann.
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Einstellungsdatei {
     #[serde(default)]
     terminal: Option<String>,
+    #[serde(default)]
+    notizordner: Option<toml::Spanned<toml::Value>>,
 }
 
 /// Laedt `settings.toml` und legt sie beim ersten Start an.

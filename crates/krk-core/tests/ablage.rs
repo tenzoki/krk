@@ -31,6 +31,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
+use krk_core::ablage::einstellungen::Ortswert;
 use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG, Merker};
 use krk_core::ablage::neuerungen::{Befund, Bestand, Leserurteile, Vergleichsform};
 use krk_core::ablage::sitzung::{SITZUNGSTAKT, Sitzungsschreiber};
@@ -41,6 +42,7 @@ use krk_core::ablage::{
     Sichtbarkeit, Sitzung, Sitzungsrecht, Spaltensichtbarkeit, Tab, Verschiebung, Ziel, atomar,
     einstellungen, leseprofile, melden, neuerungen, pfade,
 };
+use krk_core::heimordner::ORDNERNAME;
 use krk_core::leseprofil::{Profil, Profile};
 use krk_core::tasten::belegung;
 use krk_core::text::datei::EDITORGRENZE;
@@ -2019,6 +2021,82 @@ fn ein_unbekanntes_feld_in_settings_toml_gilt_als_beschaedigt() {
 
     assert_eq!(geladen.wert, Einstellungen::auslieferung());
     pruefe_meldung(&ablage, Datei::Einstellungen, geladen.ersetzung, true);
+}
+
+/// H2.2: eine Nutzerdatei mit `notizordner` ergibt dessen Wert, als Text und
+/// noch ungeprueft, ohne Ersetzung (Schritt 2.2 des Plans
+/// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`).
+#[test]
+fn eine_settings_toml_mit_notizordner_liefert_dessen_wert() {
+    let (_ordner, ablage) = ablage("einstellungen-notizordner");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    let inhalt = "terminal = \"com.mitchellh.ghostty\"\nnotizordner = \"~/x\" # eigener Ort\n";
+    fs::write(&pfad, inhalt).expect("schreiben gescheitert");
+
+    let geladen = geladene_einstellungen(&ablage);
+
+    assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
+    assert_eq!(
+        geladen.wert.notizordner,
+        Some(Ortswert::Text("~/x".to_owned()))
+    );
+    assert_eq!(geladen.wert.terminal, "com.mitchellh.ghostty");
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("lesen gescheitert"),
+        inhalt,
+        "die Datei wurde ueberschrieben"
+    );
+}
+
+/// H2.3 im Teil „kein Text ist kein Dateischaden“: `notizordner = 5` ergibt
+/// `KeinText` mit der TOML-Schreibweise, keine Ersetzung, und `terminal` bleibt
+/// der Wert der Datei. Bei `terminal` selbst bleibt ein falscher Typ ein
+/// Schaden; das haelt `eine_settings_mit_falschem_typ_an_terminal_gilt_als_beschaedigt`.
+#[test]
+fn ein_notizordner_ohne_text_beschaedigt_settings_toml_nicht() {
+    let (_ordner, ablage) = ablage("einstellungen-notizordner-zahl");
+    let pfad = ablage.pfad(Datei::Einstellungen);
+    let inhalt = "terminal = \"com.mitchellh.ghostty\"\nnotizordner = 5\n";
+    fs::write(&pfad, inhalt).expect("schreiben gescheitert");
+
+    let geladen = geladene_einstellungen(&ablage);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "ein Wert ohne Text ist kein Dateischaden: {:?}",
+        geladen.ersetzung
+    );
+    assert_eq!(
+        geladen.wert.notizordner,
+        Some(Ortswert::KeinText("5".to_owned()))
+    );
+    assert_eq!(geladen.wert.terminal, "com.mitchellh.ghostty");
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("lesen gescheitert"),
+        inhalt,
+        "die Datei wurde ueberschrieben oder beiseitegelegt"
+    );
+}
+
+/// H2.1 und H2.2: die Auslieferungsfassung fuehrt den Notizordner am
+/// Vorgabeort, und eine Nutzerdatei ohne den Schluessel bekommt diesen Wert.
+///
+/// **Rot bis Schritt 2.3** des Plans, der den Schluessel in
+/// `resources/default-settings.toml` eintraegt.
+#[test]
+fn die_auslieferungsfassung_fuehrt_den_notizordner_am_vorgabeort() {
+    let vorgabe = Some(Ortswert::Text(format!("~/{ORDNERNAME}")));
+    assert_eq!(Einstellungen::auslieferung().notizordner, vorgabe);
+
+    let (_ordner, ablage) = ablage("einstellungen-notizordner-vorgabe");
+    fs::write(
+        ablage.pfad(Datei::Einstellungen),
+        "terminal = \"com.mitchellh.ghostty\"\n",
+    )
+    .expect("schreiben gescheitert");
+    let geladen = geladene_einstellungen(&ablage);
+    assert!(!geladen.ist_ersetzt());
+    assert_eq!(geladen.wert.notizordner, vorgabe);
 }
 
 /// Laesst sich die Datei nicht anlegen, sagt KRK das, statt still weiterzulaufen.
@@ -4459,11 +4537,15 @@ fn eine_keymap_ohne_eine_ausgelieferte_id_liefert_genau_diese_id() {
     );
 }
 
-/// Eine `settings.toml` ohne `terminal` liefert genau diesen Schluessel.
+/// Eine `settings.toml` ohne `terminal` und ohne `notizordner` liefert genau
+/// diese beiden Schluessel, in der Reihenfolge, die `toml::Table` liefert.
 ///
 /// Die Datei traegt hier nichts als einen Kommentar. Das ist kein Schaden,
 /// sondern `Leerbefund::Vorgabe`: `settings.toml` pflegt der Nutzer von Hand
-/// und darf sie bis auf ihre Kommentare leerraeumen.
+/// und darf sie bis auf ihre Kommentare leerraeumen. Den zweiten Schluessel
+/// fuehrt die Auslieferungsfassung ab Schritt 2.3 des Plans
+/// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`; bis dahin ist
+/// diese Probe rot.
 #[test]
 fn eine_settings_ohne_terminal_liefert_genau_diesen_schluessel() {
     let (_ordner, ablage) = ablage("neuerungen-einstellungen");
@@ -4479,8 +4561,8 @@ fn eine_settings_ohne_terminal_liefert_genau_diesen_schluessel() {
     assert_eq!(zeile.befund, Befund::Verglichen);
     assert_eq!(
         zeile.nur_ausgeliefert,
-        vec![String::from("terminal")],
-        "die Hinrichtung nennt nicht genau den fehlenden obersten Schluessel"
+        vec![String::from("notizordner"), String::from("terminal")],
+        "die Hinrichtung nennt nicht genau die fehlenden obersten Schluessel"
     );
     assert!(zeile.nur_beim_nutzer.is_empty());
 }
@@ -4789,7 +4871,7 @@ fn die_startzeile_nennt_jede_datei_mit_unterschied_und_den_ordner() {
     assert_eq!(
         neuerungen::startzeile(&bestand, Some(zuhause)),
         Some(format!(
-            "Neu in dieser Fassung: 1 Eintrag in settings.toml, 2 Einträge in readers.toml. \
+            "Neu in dieser Fassung: 2 Einträge in settings.toml, 2 Einträge in readers.toml. \
              Ihre Dateien liegen unter ~/{name}."
         )),
         "die Startzeile traegt nicht ihren Wortlaut"
@@ -4834,7 +4916,7 @@ fn der_blatttext_nennt_jede_datei_mit_vollem_pfad_und_beide_richtungen() {
         "der Blatttext sagt nicht, dass keymap.toml gar nicht dasteht:\n{text}"
     );
     assert!(
-        text.contains("Neu in dieser Fassung: terminal"),
+        text.contains("Neu in dieser Fassung: notizordner, terminal"),
         "der Blatttext nennt die Hinrichtung von settings.toml nicht:\n{text}"
     );
     assert!(

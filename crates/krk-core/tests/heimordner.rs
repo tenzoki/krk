@@ -30,6 +30,7 @@ use krk_core::heimordner::eintraege::{
     Abweisung, Aufgaben, Notiz, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
     ist_themenzeile, notizen,
 };
+use krk_core::heimordner::ort::{Ortsfehler, ort_lesen, schreibform};
 use krk_core::heimordner::tresor::{
     self, FORMATVERSION, KOPFLAENGE, Kopf, Kopfschaden, Oeffnungsfehler, Parameter, Pin, Pinfehler,
     SALZLAENGE, Schluessel,
@@ -1543,25 +1544,399 @@ fn ein_verweis_ins_leere_ist_unerreichbar() {
     assert!(!ziel.exists(), "das Ziel ist entstanden");
 }
 
-/// Die Saetze der Statuszeile fuer die vier Hindernisse, im Wortlaut, mit
-/// Umlauten und mit dem Ordner so, wie der Nutzer ihn kennt.
+/// Die Saetze der Statuszeile fuer die vier Hindernisse am Vorgabeort, im
+/// Wortlaut, mit Umlauten und mit dem Ordner so, wie der Nutzer ihn kennt;
+/// dazu der Satz ohne Benutzerverzeichnis, der seit Schritt 2.1 des Plans
+/// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md` ein Ortsfehler ist.
 #[test]
 fn die_hindernisse_melden_sich_im_wortlaut() {
+    let heim = Heimordner::im_benutzerverzeichnis(Path::new("/Users/probe"));
+    let ort = heim.anzeigename();
+    assert_eq!(ort, "~/krkhome");
     assert_eq!(
-        Hindernis::KeinOrdner.meldung(),
+        Hindernis::KeinOrdner.meldung(ort),
         "~/krkhome ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"
     );
     assert_eq!(
-        Hindernis::Unerreichbar("Grund".to_owned()).meldung(),
+        Hindernis::Unerreichbar("Grund".to_owned()).meldung(ort),
         "~/krkhome ist nicht erreichbar: Grund"
     );
     assert_eq!(
-        Hindernis::NichtAnlegbar("Grund".to_owned()).meldung(),
+        Hindernis::NichtAnlegbar("Grund".to_owned()).meldung(ort),
         "~/krkhome lässt sich nicht anlegen: Grund"
     );
     assert_eq!(
-        Hindernis::KeinBenutzerverzeichnis.meldung(),
-        "Das System nennt kein Benutzerverzeichnis, also gibt es kein ~/krkhome"
+        Hindernis::ObererOrdnerFehlt.meldung(ort),
+        "~/krkhome lässt sich nicht anlegen, weil der Ordner darüber fehlt, etwa ein nicht eingehängtes Laufwerk; KRK legt nichts an"
+    );
+    assert_eq!(
+        Ortsfehler::KeinBenutzerverzeichnis.meldung(),
+        "Das System nennt kein Benutzerverzeichnis, also gibt es keinen Notizordner"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Der eingestellte Ort (Schritt 2.1 des Plans
+// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`, H2 des Spec
+// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`)
+// ---------------------------------------------------------------------------
+
+/// Das Benutzerverzeichnis der Tafeln; keine Probe beruehrt es.
+const ZUHAUSE: &str = "/Users/probe";
+
+/// Der Ablageordner der Tafeln, in der Schreibweise des Systems.
+const ABLAGE: &str = "/Users/probe/Library/Application Support/KRK";
+
+/// H2.4 und H2.5: jede zulaessige Form ergibt ihren bereinigten Pfad, jede
+/// abgewiesene ihren Fehler mit dem Wert. Der Ablageordner wird ohne Ruecksicht
+/// auf Gross- und Kleinschreibung verglichen und Bestandteil fuer Bestandteil,
+/// so dass `KRK-alt` daneben gilt.
+#[test]
+fn ort_lesen_nimmt_genau_die_zulaessigen_formen() {
+    let zuhause = Some(Path::new(ZUHAUSE));
+    let ablage = Some(Path::new(ABLAGE));
+    let zulaessig: &[(&str, &str)] = &[
+        ("~/krkhome", "/Users/probe/krkhome"),
+        ("~/", "/Users/probe"),
+        ("~/a/../b", "/Users/probe/b"),
+        ("~/./a//b/", "/Users/probe/a/b"),
+        ("~/Dropbox/Notizen", "/Users/probe/Dropbox/Notizen"),
+        ("/Volumes/X/notizen", "/Volumes/X/notizen"),
+        (
+            "/Users/probe/Library/Application Support/KRK-alt",
+            "/Users/probe/Library/Application Support/KRK-alt",
+        ),
+        (
+            "~/Library/Application Support",
+            "/Users/probe/Library/Application Support",
+        ),
+    ];
+    for (text, erwartet) in zulaessig {
+        assert_eq!(
+            ort_lesen(text, zuhause, ablage),
+            Ok(PathBuf::from(erwartet)),
+            "{text}"
+        );
+    }
+
+    let abgewiesen: Vec<(&str, Ortsfehler)> = vec![
+        ("", Ortsfehler::Leer),
+        ("  \t", Ortsfehler::Leer),
+        ("notizen", Ortsfehler::NichtAbsolut("notizen".to_owned())),
+        (
+            "./notizen",
+            Ortsfehler::NichtAbsolut("./notizen".to_owned()),
+        ),
+        ("~", Ortsfehler::NichtAbsolut("~".to_owned())),
+        (
+            "~kai/notizen",
+            Ortsfehler::FremdesBenutzerverzeichnis("~kai/notizen".to_owned()),
+        ),
+        (
+            "~kai",
+            Ortsfehler::FremdesBenutzerverzeichnis("~kai".to_owned()),
+        ),
+        (
+            "~/Library/Application Support/KRK",
+            Ortsfehler::ImAblageordner("~/Library/Application Support/KRK".to_owned()),
+        ),
+        (
+            "~/Library/Application Support/KRK/notizen",
+            Ortsfehler::ImAblageordner("~/Library/Application Support/KRK/notizen".to_owned()),
+        ),
+        (
+            "~/library/application support/krk",
+            Ortsfehler::ImAblageordner("~/library/application support/krk".to_owned()),
+        ),
+        (
+            "/Users/probe/Library/Application Support/KRK-alt/../KRK/x",
+            Ortsfehler::ImAblageordner(
+                "/Users/probe/Library/Application Support/KRK-alt/../KRK/x".to_owned(),
+            ),
+        ),
+    ];
+    for (text, fehler) in abgewiesen {
+        assert_eq!(ort_lesen(text, zuhause, ablage), Err(fehler), "{text:?}");
+    }
+
+    // Ohne Benutzerverzeichnis ist `~/` nicht aufzuloesen, ein absoluter Ort
+    // gilt weiter; ohne Ablageordner faellt allein dessen Ausschluss.
+    assert_eq!(
+        ort_lesen("~/krkhome", None, ablage),
+        Err(Ortsfehler::KeinBenutzerverzeichnis)
+    );
+    assert_eq!(
+        ort_lesen("/Volumes/X", None, ablage),
+        Ok(PathBuf::from("/Volumes/X"))
+    );
+    assert_eq!(
+        ort_lesen("~/Library/Application Support/KRK", zuhause, None),
+        Ok(PathBuf::from(ABLAGE))
+    );
+}
+
+/// H2.3: jede Meldung eines unzulaessigen Werts nennt den Wert.
+#[test]
+fn jede_meldung_eines_unzulaessigen_werts_nennt_ihn() {
+    for fehler in [
+        Ortsfehler::NichtAbsolut("notizen".to_owned()),
+        Ortsfehler::FremdesBenutzerverzeichnis("notizen".to_owned()),
+        Ortsfehler::KeinText("notizen".to_owned()),
+        Ortsfehler::ImAblageordner("notizen".to_owned()),
+    ] {
+        let meldung = fehler.meldung();
+        assert!(meldung.contains("notizen"), "{fehler:?}: {meldung}");
+        assert!(meldung.contains("Notizordner"), "{fehler:?}: {meldung}");
+    }
+    assert!(Ortsfehler::Leer.meldung().contains("leer"));
+    assert!(
+        Ortsfehler::KeinText("5".to_owned())
+            .meldung()
+            .contains("kein Text, sondern 5")
+    );
+}
+
+/// H3.7 im Kern: `schreibform` und `ort_lesen` ergeben fuer jeden zulaessigen
+/// Ort den Ort zurueck, unter dem Benutzerverzeichnis in der Form `~/…`, das
+/// Benutzerverzeichnis selbst und jeden anderen Ort absolut.
+#[test]
+fn schreibform_und_ort_lesen_ergeben_den_ort_zurueck() {
+    use std::os::unix::ffi::OsStrExt;
+    let zuhause = Path::new(ZUHAUSE);
+    let faelle: &[(&str, &str)] = &[
+        ("/Users/probe/krkhome", "~/krkhome"),
+        ("/Users/probe/Dropbox/Notizen", "~/Dropbox/Notizen"),
+        ("/Users/probe", "/Users/probe"),
+        ("/Users/probe-alt/notizen", "/Users/probe-alt/notizen"),
+        ("/Volumes/X/notizen", "/Volumes/X/notizen"),
+        ("/", "/"),
+    ];
+    for (ort, form) in faelle {
+        let ort = Path::new(ort);
+        let text = schreibform(ort, Some(zuhause)).expect("ein UTF-8-Pfad hat eine Schreibform");
+        assert_eq!(text, *form, "{}", ort.display());
+        assert_eq!(
+            ort_lesen(&text, Some(zuhause), Some(Path::new(ABLAGE))),
+            Ok(ort.to_path_buf()),
+            "{text}"
+        );
+    }
+    assert_eq!(
+        schreibform(Path::new("/Users/probe/krkhome"), None).as_deref(),
+        Some("/Users/probe/krkhome")
+    );
+    let ohne_utf8 = Path::new(std::ffi::OsStr::from_bytes(b"/Volumes/\xff"));
+    assert_eq!(schreibform(ohne_utf8, Some(zuhause)), None);
+}
+
+/// Der Vorgabeort ist genau `<benutzerverzeichnis>/krkhome`, und nur mit einem
+/// bekannten Benutzerverzeichnis. Der Anzeigename kuerzt unter dem
+/// Benutzerverzeichnis zu `~/…` und nennt jeden anderen Ort ausgeschrieben.
+/// Keiner dieser Orte besteht, und keiner liegt unmittelbar im
+/// Benutzerverzeichnis ausser den zwei Vorgabeorten, also fragt der Bau hier
+/// hoechstens nach dem nicht vorhandenen `/Users/probe/krkhome`.
+#[test]
+fn der_vorgabeort_und_der_anzeigename() {
+    let zuhause = Path::new(ZUHAUSE);
+    assert!(Heimordner::im_benutzerverzeichnis(zuhause).ist_vorgabeort());
+    assert!(Heimordner::am_ort(zuhause.join(ORDNERNAME), Some(zuhause)).ist_vorgabeort());
+    for (ort, bekannt, anzeige) in [
+        ("/Users/probe/krkhome", false, "/Users/probe/krkhome"),
+        ("/Users/probe/krkhome/unter", true, "~/krkhome/unter"),
+        ("/Users/probe/Dropbox/krkhome", true, "~/Dropbox/krkhome"),
+        ("/Volumes/X/notizen", true, "/Volumes/X/notizen"),
+    ] {
+        let heim = Heimordner::am_ort(PathBuf::from(ort), bekannt.then_some(zuhause));
+        assert!(!heim.ist_vorgabeort(), "{ort}");
+        assert_eq!(heim.anzeigename(), anzeige, "{ort}");
+    }
+}
+
+/// H2.5: ein Verweis **unmittelbar** im Benutzerverzeichnis wird beim Bau
+/// leicht aufgeloest, und der Ordner ist ueber Verweis und Ziel erkannt. Zwei
+/// Ebenen tiefer entsteht beim Bau keine aufgeloeste Form: erkannt wird allein
+/// die geschriebene, bis F2 ueber `canonicalize` erneuert.
+#[test]
+fn die_leichte_form_entsteht_allein_unmittelbar_im_benutzerverzeichnis() {
+    let ordner = Pruefordner::neu("heim-ort-verweis");
+    let zuhause = kanonisch(&ordner);
+    let ziel = zuhause.join("ziel");
+    fs::create_dir(&ziel).expect("Zielordner");
+
+    let flach = zuhause.join("notizen");
+    std::os::unix::fs::symlink(&ziel, &flach).expect("Verweis im Benutzerverzeichnis");
+    let heim = Heimordner::am_ort(flach.clone(), Some(&zuhause));
+    assert!(heim.ist(&flach));
+    assert!(
+        heim.ist(&ziel),
+        "der Verweis im Benutzerverzeichnis ist nicht aufgeloest"
+    );
+    assert_eq!(
+        heim.sonderdatei(&ziel.join("notes.txt")),
+        Some(Sonderdatei::Notizen)
+    );
+
+    fs::create_dir(zuhause.join("tief")).expect("Zwischenordner");
+    let tief = zuhause.join("tief").join("notizen");
+    std::os::unix::fs::symlink(&ziel, &tief).expect("Verweis zwei Ebenen tiefer");
+    let heim = Heimordner::am_ort(tief.clone(), Some(&zuhause));
+    assert!(heim.ist(&tief), "die geschriebene Form gilt");
+    assert!(
+        !heim.ist(&ziel),
+        "zwei Ebenen tiefer hat der Bau den Verweis gelesen"
+    );
+    assert_eq!(heim.sonderdatei(&ziel.join("notes.txt")), None);
+    let erneuert = heim.aufgeloest_erneuern();
+    assert!(
+        erneuert.ist(&ziel),
+        "F2 loest den Ort ueber canonicalize auf"
+    );
+    assert!(erneuert.ist(&tief));
+    assert_eq!(erneuert.anzeigename(), "~/tief/notizen");
+    assert!(!erneuert.ist_vorgabeort());
+}
+
+/// H2.6: `sonderdatei_genau` erkennt `secrets.txt` unter einer dritten
+/// Schreibweise auch an einem Ort ausserhalb von `~/krkhome`, und der
+/// Vorgabeort erkennt sie dort nicht.
+#[test]
+fn die_genaue_frage_gilt_am_eingestellten_ort() {
+    let ordner = Pruefordner::neu("heim-ort-genau");
+    let zuhause = kanonisch(&ordner);
+    let ort = zuhause.join("anderswo").join("notizen");
+    fs::create_dir_all(&ort).expect("eingestellter Ort");
+    fs::write(ort.join("secrets.txt"), b"").expect("leere Geheimnisdatei");
+    let dritte = zuhause.join("zweiter");
+    std::os::unix::fs::symlink(&ort, &dritte).expect("zweiter Verweis");
+
+    let heim = Heimordner::am_ort(ort.clone(), Some(&zuhause));
+    let gefragt = dritte.join("secrets.txt");
+    assert_eq!(
+        heim.sonderdatei(&gefragt),
+        None,
+        "der Text erkennt sie nicht"
+    );
+    assert_eq!(
+        heim.sonderdatei_genau(&gefragt),
+        Some(Sonderdatei::Geheimnisse)
+    );
+    assert_eq!(
+        heim.sonderdatei_genau(&ort.join("secrets.txt")),
+        Some(Sonderdatei::Geheimnisse)
+    );
+    let vorgabe = Heimordner::im_benutzerverzeichnis(&zuhause);
+    assert_eq!(vorgabe.sonderdatei_genau(&gefragt), None);
+    assert_eq!(vorgabe.sonderdatei_genau(&ort.join("secrets.txt")), None);
+}
+
+/// H2.8: F2 legt an einem anderen Ort mit Text in beiden Zetteln an und findet
+/// eine leere `notes.txt`; die Zettel sind Byte fuer Byte unveraendert. Am
+/// Vorgabeort uebernimmt derselbe Aufruf danach wie bisher.
+#[test]
+fn die_alten_zettel_kommen_allein_am_vorgabeort() {
+    let lage = Lage::neu(
+        "heim-ort-zettel",
+        [
+            Some("erster Zettel\n".as_bytes()),
+            Some("zweiter Zettel\n".as_bytes()),
+        ],
+    );
+    let ort = lage.zuhause.join("woanders");
+    let heim = Heimordner::am_ort(ort.clone(), Some(&lage.zuhause));
+
+    let anderswo = bereitstellen(&heim, &lage.ablage).expect("kein Hindernis erwartet");
+
+    assert!(anderswo.ordner_angelegt);
+    assert_eq!(anderswo.uebernahme, None);
+    assert_eq!(anderswo.angelegt, Sonderdatei::ALLE.to_vec());
+    assert_eq!(
+        fs::read(ort.join("notes.txt")).expect("notes.txt fehlt"),
+        b""
+    );
+    assert_eq!(
+        namen_in(&ort),
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
+    );
+    assert!(anderswo.meldungen().is_empty(), "{anderswo:?}");
+    lage.zettel_unveraendert();
+
+    let vorgabe = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(
+        vorgabe.uebernahme.map(|u| u.ausgang),
+        Some(Uebernahmeausgang::Geschrieben)
+    );
+    assert_eq!(
+        lage.lesen(Sonderdatei::Notizen),
+        "## Zettel 1\nerster Zettel\n## Zettel 2\nzweiter Zettel\n"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// H2.7: fehlt der Ordner ueber dem Ort, meldet F2 das mit dem Ort und legt
+/// nichts an, auch nicht die fehlende Stufe darueber.
+#[test]
+fn ein_fehlender_oberer_ordner_legt_nichts_an() {
+    let lage = Lage::neu("heim-ort-oben", [Some("Text\n".as_bytes()), None]);
+    let oben = lage.zuhause.join("nicht-eingehaengt");
+    let heim = Heimordner::am_ort(oben.join("notizen"), Some(&lage.zuhause));
+
+    let ausgang = bereitstellen(&heim, &lage.ablage);
+
+    assert_eq!(ausgang, Err(Hindernis::ObererOrdnerFehlt));
+    assert!(!oben.exists(), "die Stufe darueber ist entstanden");
+    assert_eq!(
+        ausgang.expect_err("Hindernis").meldung(heim.anzeigename()),
+        "~/nicht-eingehaengt/notizen lässt sich nicht anlegen, weil der Ordner darüber fehlt, etwa ein nicht eingehängtes Laufwerk; KRK legt nichts an"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// H2.11: jede Meldung nennt den eingestellten Ort, unter dem
+/// Benutzerverzeichnis als `~/…` und ausserhalb ausgeschrieben.
+#[test]
+fn die_meldungen_nennen_den_eingestellten_ort() {
+    let zuhause = Path::new(ZUHAUSE);
+    for (ort, anzeige) in [
+        ("/Users/probe/Dropbox/Notizen", "~/Dropbox/Notizen"),
+        ("/Volumes/X/notizen", "/Volumes/X/notizen"),
+    ] {
+        // Keiner der Orte liegt unmittelbar im Benutzerverzeichnis: der Bau
+        // stellt keinen Systemaufruf.
+        let heim = Heimordner::am_ort(PathBuf::from(ort), Some(zuhause));
+        let name = heim.anzeigename();
+        assert_eq!(name, anzeige);
+        for (hindernis, satz) in [
+            (
+                Hindernis::KeinOrdner,
+                format!("{anzeige} ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"),
+            ),
+            (
+                Hindernis::Unerreichbar("Grund".to_owned()),
+                format!("{anzeige} ist nicht erreichbar: Grund"),
+            ),
+            (
+                Hindernis::NichtAnlegbar("Grund".to_owned()),
+                format!("{anzeige} lässt sich nicht anlegen: Grund"),
+            ),
+        ] {
+            assert_eq!(hindernis.meldung(name), satz);
+        }
+    }
+
+    // Der eine Satz aus `Bereitstellung`, der den Ordner nennt.
+    let lage = Lage::neu("heim-ort-beide", [None, None]);
+    let ort = lage.zuhause.join("woanders");
+    fs::create_dir(&ort).expect("eingestellter Ort");
+    fs::write(ort.join(ALTER_GEHEIMNISNAME), b"alt").expect(".secrets.txt");
+    fs::write(ort.join("secrets.txt"), b"neu").expect("secrets.txt");
+    let heim = Heimordner::am_ort(ort.clone(), Some(&lage.zuhause));
+    let bereitstellung = bereitstellen(&heim, &lage.ablage).expect("kein Hindernis erwartet");
+    assert_eq!(
+        bereitstellung.meldungen(),
+        vec![
+            "secrets.txt und .secrets.txt stehen beide in ~/woanders; KRK benennt keine um, und es gilt secrets.txt"
+                .to_owned()
+        ]
     );
 }
 

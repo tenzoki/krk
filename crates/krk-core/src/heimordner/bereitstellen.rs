@@ -16,6 +16,19 @@
 //! Moeglichkeit 1). Ein spaeteres Neuanlegen von `notes.txt` uebernimmt nichts,
 //! und ein Ordner, den es schon gab, bekommt nichts uebernommen.
 //!
+//! # Die alten Zettel allein am Vorgabeort
+//!
+//! **Uebernommen wird nur, wenn der angelegte Ordner der Vorgabeort
+//! `~/krkhome` ist** ([`Heimordner::ist_vorgabeort`]). An jedem anderen Ort
+//! entsteht `notes.txt` leer, und die Zettel bleiben unberuehrt. Der Grund
+//! steht im Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`, H2:
+//! der Nutzer hat entschieden, dass fehlende Dateien am neuen Ort **leer**
+//! entstehen, und ohne diese Regel bekaeme jeder neu angelegte Ort die alten
+//! Zettel ein weiteres Mal, samt Notizen, die der Nutzer am alten Ort
+//! geloescht hat. Dass auch ein wiederholtes Anlegen des Vorgabeorts sie
+//! erneut uebernimmt, ist ein offener Defekt
+//! (`260926-1527_*_die-alten-zettel-werden-bei-jedem-neuen-anlegen-von-krkhome-erneut-uebernommen.md`).
+//!
 //! Aus demselben Grund entsteht jede Eintragsdatei mit exklusivem Oeffnen
 //! (`create_new`, also `O_CREAT | O_EXCL`): steht die Datei schon da, scheitert
 //! das Oeffnen, und die Datei bleibt Byte fuer Byte, wie sie war. **Eine
@@ -85,7 +98,7 @@ use std::io::{self, Write};
 use std::path::Path;
 
 use super::eintraege::ist_themenzeile;
-use super::{Heimordner, ORDNERNAME, Sonderdatei};
+use super::{Heimordner, Sonderdatei};
 use crate::text::datei::{self, Textstand, Unlesbarkeit};
 
 /// Ein Zettel des Notizblatts der Runde 9: seine Datei im Ablageordner und das
@@ -189,41 +202,46 @@ pub struct Bereitstellung {
     /// Die Eintragsdateien, die fehlten und sich nicht anlegen liessen, je mit
     /// dem Grund des Systems.
     pub nicht_angelegt: Vec<(Sonderdatei, String)>,
-    /// Die Uebernahme, genau dann vorhanden, wenn `ordner_angelegt` gilt.
+    /// Die Uebernahme, genau dann vorhanden, wenn `ordner_angelegt` gilt und
+    /// der Ort der Vorgabeort ist.
     pub uebernahme: Option<Uebernahme>,
     /// Was aus einer `.secrets.txt` von vorher geworden ist; `None`, wenn im
     /// Heimordner keine stand.
     pub alte_geheimnisse: Option<AlteGeheimnisse>,
+    /// Der Ort, wie die Statuszeile ihn nennt ([`Heimordner::anzeigename`]),
+    /// fuer die Saetze, die den Ordner nennen.
+    pub ort: String,
 }
 
 /// Warum F2 keinen Tab oeffnet.
 ///
 /// **Vollstaendig und ohne Auffangzweig.** Ein Hindernis betrifft den Ordner;
 /// eine einzelne Datei, die sich nicht anlegen laesst, haelt den Tab nicht auf
-/// und steht in [`Bereitstellung::nicht_angelegt`].
+/// und steht in [`Bereitstellung::nicht_angelegt`]. Dass es gar keinen Ort
+/// gibt, etwa ohne Benutzerverzeichnis, ist kein Hindernis, sondern ein
+/// [`super::ort::Ortsfehler`]: dann gibt es keinen [`Heimordner`], den dieser
+/// Weg bekommen koennte.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Hindernis {
-    /// Das System nennt kein Benutzerverzeichnis. Erzeugt vom Rufer, der den
-    /// [`Heimordner`] gar nicht erst bauen kann.
-    KeinBenutzerverzeichnis,
-    /// An der Stelle von `~/krkhome` steht etwas, das kein Ordner ist; es
-    /// bleibt unveraendert.
+    /// An der Stelle des Orts steht etwas, das kein Ordner ist; es bleibt
+    /// unveraendert.
     KeinOrdner,
     /// An der Stelle steht etwas, dessen Ziel sich nicht erreichen laesst,
     /// etwa ein Verweis ins Leere. Der Grund des Systems in einem Satzteil.
     Unerreichbar(String),
     /// Der Ordner fehlt und laesst sich nicht anlegen. Der Grund des Systems.
     NichtAnlegbar(String),
+    /// Der Ordner fehlt, und der Ordner darueber fehlt ebenso, etwa weil das
+    /// Laufwerk nicht eingehaengt ist. Angelegt wird allein die letzte
+    /// Pfadstufe, also nichts.
+    ObererOrdnerFehlt,
 }
 
 impl Hindernis {
-    /// Der Satz fuer die Statuszeile.
-    pub fn meldung(&self) -> String {
-        let ordner = anzeigename();
+    /// Der Satz fuer die Statuszeile; `ordner` ist der Ort, wie ihn
+    /// [`Heimordner::anzeigename`] nennt.
+    pub fn meldung(&self, ordner: &str) -> String {
         match self {
-            Hindernis::KeinBenutzerverzeichnis => {
-                format!("Das System nennt kein Benutzerverzeichnis, also gibt es kein {ordner}")
-            }
             Hindernis::KeinOrdner => {
                 format!("{ordner} ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab")
             }
@@ -233,6 +251,9 @@ impl Hindernis {
             Hindernis::NichtAnlegbar(grund) => {
                 format!("{ordner} lässt sich nicht anlegen: {grund}")
             }
+            Hindernis::ObererOrdnerFehlt => format!(
+                "{ordner} lässt sich nicht anlegen, weil der Ordner darüber fehlt, etwa ein nicht eingehängtes Laufwerk; KRK legt nichts an"
+            ),
         }
     }
 }
@@ -261,7 +282,7 @@ impl Bereitstellung {
             }
             Some(AlteGeheimnisse::BeideStehen) => saetze.push(format!(
                 "{neu} und {alt} stehen beide in {}; KRK benennt keine um, und es gilt {neu}",
-                anzeigename()
+                self.ort
             )),
             Some(AlteGeheimnisse::AlterNameBleibt(grund)) => saetze.push(format!(
                 "{alt} heißt jetzt auch {neu}, der alte Name lässt sich nicht entfernen: {grund}"
@@ -329,13 +350,9 @@ fn dateien(zettel: &[&AlterZettel]) -> String {
         .join(" und ")
 }
 
-/// Der Ordner, wie ihn die Statuszeile nennt.
-fn anzeigename() -> String {
-    format!("~/{ORDNERNAME}")
-}
-
 /// Legt den Heimordner an, falls er fehlt, darin jede fehlende Eintragsdatei,
-/// und uebernimmt die alten Zettel, wenn dieser Aufruf den Ordner angelegt hat.
+/// und uebernimmt die alten Zettel, wenn dieser Aufruf den Ordner angelegt hat
+/// und der Ort der Vorgabeort ist.
 ///
 /// `ablageordner` ist der Ordner, in dem `note-1.txt` und `note-2.txt` liegen.
 /// Angelegt wird an der geschriebenen Form des Heimordners; ist sie ein Verweis
@@ -369,12 +386,18 @@ fn anlegen_mit_vorlauf(
                 Err(fehler) => return Err(Hindernis::Unerreichbar(fehler.to_string())),
             }
         }
+        // Angelegt wird allein die letzte Pfadstufe; fehlt die darueber, ist
+        // das ein eigenes Hindernis und kein `create_dir_all`.
+        Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => {
+            return Err(Hindernis::ObererOrdnerFehlt);
+        }
         Err(fehler) => return Err(Hindernis::NichtAnlegbar(fehler.to_string())),
     };
 
     // Gelesen wird erst nach dem gelungenen `mkdir(2)`: vorher ist nicht
-    // entschieden, ob dieser Aufruf ueberhaupt uebernimmt.
-    let befunde = ordner_angelegt.then(|| zettel_lesen(ablageordner));
+    // entschieden, ob dieser Aufruf ueberhaupt uebernimmt. Und allein am
+    // Vorgabeort; der Modulkopf sagt, warum.
+    let befunde = (ordner_angelegt && heim.ist_vorgabeort()).then(|| zettel_lesen(ablageordner));
 
     let mut bereitstellung = Bereitstellung {
         ordner_angelegt,
@@ -382,6 +405,7 @@ fn anlegen_mit_vorlauf(
         nicht_angelegt: Vec::new(),
         uebernahme: None,
         alte_geheimnisse: None,
+        ort: heim.anzeigename().to_owned(),
     };
     for sorte in Sonderdatei::ALLE {
         let pfad = ordner.join(sorte.dateiname());
@@ -539,6 +563,7 @@ mod proben {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::heimordner::ORDNERNAME;
 
     /// Ein frischer Ordner unter dem Temporaerverzeichnis, der die Rolle des
     /// Benutzerverzeichnisses spielt, mit Prozesskennung und Probennamen.

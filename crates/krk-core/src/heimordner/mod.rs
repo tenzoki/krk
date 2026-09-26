@@ -1,6 +1,6 @@
-//! Der Heimordner `~/krkhome/`: die eine Stelle, die ihn erkennt.
+//! Der Notizordner, ab Werk `~/krkhome/`: die eine Stelle, die ihn erkennt.
 //!
-//! F2 fuehrt in einen Dateilisten-Tab auf `~/krkhome/`, und an diesem Ordner
+//! F2 fuehrt in einen Dateilisten-Tab auf den Notizordner, und an diesem Ordner
 //! haengen mehrere Regeln: die Vorschau rendert `notes.txt` und `tasks.txt`
 //! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
 //! Tabelle, und `secrets.txt` bekommt dort vom Inhaltsfilter keinen Auftrag.
@@ -9,13 +9,14 @@
 //! Die Form der Eintraege in den zwei Dateien steht in [`eintraege`], das
 //! Anlegen von Ordner und Dateien samt der einmaligen Uebernahme der alten
 //! Zettel in [`bereitstellen`], das Dateiformat von `secrets.txt` mit Kopf,
-//! Ableitung und Verschluesselung in [`tresor`].
+//! Ableitung und Verschluesselung in [`tresor`], das Lesen und Pruefen des
+//! eingestellten Orts in [`ort`].
 //!
 //! # Zwei Formen, verglichen als Text
 //!
-//! [`Heimordner`] haelt den Ordner in zwei Formen: der **geschriebenen**
-//! (`<benutzerverzeichnis>/krkhome`) und, wenn `krkhome` ein symbolischer
-//! Verweis ist, der **aufgeloesten**. [`Heimordner::ist`] und
+//! [`Heimordner`] haelt den Ordner in zwei Formen: der **geschriebenen** (dem
+//! eingestellten Ort, ab Werk `<benutzerverzeichnis>/krkhome`) und, wenn der
+//! Ort ein symbolischer Verweis ist, der **aufgeloesten**. [`Heimordner::ist`] und
 //! [`Heimordner::sonderdatei`] vergleichen den gefragten Pfad als Text mit
 //! beiden und **stellen dabei keinen Systemaufruf**. Das ist der Kern der
 //! Sache und nicht eine Sparsamkeit: gefragt wird je Lesevorgang eines Tabs
@@ -27,12 +28,16 @@
 //! Die aufgeloeste Form entsteht an zwei Stellen, und keine davon beruehrt den
 //! gefragten Pfad:
 //!
-//! - **beim Bau** ([`Heimordner::im_benutzerverzeichnis`]) leicht, ueber
-//!   `symlink_metadata` und `read_link` am Verweis im Benutzerverzeichnis. Beide
-//!   Aufrufe treffen allein das Benutzerverzeichnis und nie das Ziel des
-//!   Verweises; ein Ziel auf einem haengenden Laufwerk haelt den Start also
-//!   nicht auf. Ein relatives Ziel wird gegen das Benutzerverzeichnis gesetzt
-//!   und **lexikalisch** bereinigt, also ohne nachzusehen, ob unterwegs ein
+//! - **beim Bau** ([`Heimordner::am_ort`]) leicht, ueber `symlink_metadata`
+//!   und `read_link` am Verweis, **und nur fuer einen Ort unmittelbar im
+//!   Benutzerverzeichnis**. Allein dort treffen beide Aufrufe das
+//!   Benutzerverzeichnis und nie das Ziel des Verweises; ein Ziel auf einem
+//!   haengenden Laufwerk haelt den Start also nicht auf. Fuer jeden anderen Ort
+//!   trafe derselbe Aufruf den Ordner darueber, und der kann selbst auf einem
+//!   haengenden Laufwerk liegen; dort entsteht beim Bau keine aufgeloeste Form,
+//!   und bis zum ersten F2 erkennt KRK den Ordner allein an der geschriebenen.
+//!   Ein relatives Ziel wird gegen das Benutzerverzeichnis gesetzt und
+//!   **lexikalisch** bereinigt, also ohne nachzusehen, ob unterwegs ein
 //!   weiterer Verweis steht.
 //! - **bei F2** ([`Heimordner::aufgeloest_erneuern`]) ueber `canonicalize`,
 //!   nachdem das Anlegen am Ziel ohnehin gearbeitet hat. Erst diese Form loest
@@ -68,15 +73,23 @@
 //! Ordner dann ueber den Pfad, den der Verweis nennt, danach ueber den
 //! kanonischen; [`Heimordner`] haelt eine aufgeloeste Form und nicht zwei.
 //!
-//! # Der Name
+//! # Der Ort
 //!
-//! [`ORDNERNAME`] ist die einzige Stelle im Code, die `krkhome` schreibt. Der Ort
-//! ist fest und nicht einstellbar
-//! (`260926-0007_*_ist-der-ort-krkhome-fest-oder-einstellbar.md`); ein
-//! einstellbarer Ort erbte die Frage nach den Schreibweisen unveraendert.
+//! **Der Ort ist einstellbar**, ueber den Schluessel `notizordner` in
+//! `settings.toml` (`260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md`);
+//! gelesen und geprueft wird der Text in [`ort`], gebaut wird der Wert der
+//! Erkennung in [`Heimordner::am_ort`]. Die Frage nach den Schreibweisen erbt
+//! er unveraendert: die Erkennung bleibt ein Textvergleich gegen zwei Formen.
+//!
+//! [`ORDNERNAME`] ist der Name des **Vorgabeorts** `~/krkhome` und die einzige
+//! Stelle im Code, die `krkhome` schreibt; die Auslieferungsfassung von
+//! `settings.toml` traegt denselben Ort als Daten. Am Vorgabeort haengt eine
+//! Regel, die an keinem anderen gilt: allein dort uebernimmt F2 die alten
+//! Zettel ([`Heimordner::ist_vorgabeort`], Modulkopf von `bereitstellen`).
 
 mod bereitstellen;
 pub mod eintraege;
+pub mod ort;
 pub mod tresor;
 
 pub use bereitstellen::{
@@ -88,7 +101,10 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::ablage::pfade;
 
-/// Der Name des Heimordners im Benutzerverzeichnis.
+/// Der Name des Vorgabeorts im Benutzerverzeichnis.
+///
+/// Gilt, solange `settings.toml` keinen anderen Ort nennt; der Modulkopf sagt,
+/// was sonst an ihm haengt.
 pub const ORDNERNAME: &str = "krkhome";
 
 /// Eine der Dateien im Heimordner, die KRK als Eintragsdatei behandelt.
@@ -143,40 +159,67 @@ impl Sonderdatei {
 /// [`Heimordner::aufgeloest_erneuern`] einen neuen Wert.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Heimordner {
-    /// `<benutzerverzeichnis>/krkhome`, unabhaengig davon, was dort steht.
+    /// Der eingestellte Ort, lexikalisch bereinigt, unabhaengig davon, was dort
+    /// steht.
     geschrieben: PathBuf,
-    /// Das Ziel, wenn `krkhome` ein Verweis ist; `None` sonst oder wenn es sich
-    /// nicht lesen liess.
+    /// Das Ziel, wenn der Ort ein Verweis ist; `None` sonst, wenn es sich nicht
+    /// lesen liess, oder solange der Ort nicht unmittelbar im
+    /// Benutzerverzeichnis liegt und noch kein F2 ihn aufgeloest hat.
     aufgeloest: Option<PathBuf>,
+    /// Ob der Ort der Vorgabeort `<benutzerverzeichnis>/krkhome` ist.
+    vorgabeort: bool,
+    /// Der Ort, wie die Statuszeile ihn nennt: `~/…` unter dem
+    /// Benutzerverzeichnis, sonst ausgeschrieben.
+    anzeige: String,
 }
 
 impl Heimordner {
-    /// Der Heimordner unter dem genannten Benutzerverzeichnis.
+    /// Der Notizordner am genannten Ort.
     ///
-    /// **Das Benutzerverzeichnis kommt als Argument herein**, damit Proben den
-    /// Heimordner in einen Pruefordner legen koennen; dieselbe Erwaegung wie bei
-    /// [`pfade::gekuerzt_fuer_anzeige`]. Die aufgeloeste Form entsteht leicht: ist
-    /// `krkhome` laut `symlink_metadata` ein Verweis, gilt sein Ziel aus
-    /// `read_link`, sonst gibt es keine. Beide Aufrufe treffen allein den Eintrag
-    /// im Benutzerverzeichnis und nie das Ziel.
-    pub fn im_benutzerverzeichnis(benutzerverzeichnis: &Path) -> Self {
-        let geschrieben = benutzerverzeichnis.join(ORDNERNAME);
-        let ist_verweis = std::fs::symlink_metadata(&geschrieben)
-            .is_ok_and(|angaben| angaben.file_type().is_symlink());
-        let aufgeloest = if ist_verweis {
-            std::fs::read_link(&geschrieben)
+    /// `ort` ist ein Pfad aus [`ort::ort_lesen`], also absolut und lexikalisch
+    /// bereinigt. **Das Benutzerverzeichnis kommt als Argument herein**, damit
+    /// Proben den Ordner in einen Pruefordner legen koennen; dieselbe Erwaegung
+    /// wie bei [`pfade::gekuerzt_fuer_anzeige`].
+    ///
+    /// **Die aufgeloeste Form entsteht nur fuer einen Ort unmittelbar im
+    /// Benutzerverzeichnis**, und dort leicht: ist der Ort laut
+    /// `symlink_metadata` ein Verweis, gilt sein Ziel aus `read_link`, sonst
+    /// gibt es keine. Beide Aufrufe treffen allein den Eintrag im
+    /// Benutzerverzeichnis und nie das Ziel. Fuer jeden anderen Ort stellt der
+    /// Bau **keinen** Systemaufruf; der Modulkopf sagt, warum.
+    pub fn am_ort(ort: PathBuf, benutzerverzeichnis: Option<&Path>) -> Self {
+        let im_benutzerverzeichnis =
+            benutzerverzeichnis.filter(|zuhause| ort.parent() == Some(*zuhause));
+        let aufgeloest = im_benutzerverzeichnis.and_then(|zuhause| {
+            let ist_verweis = std::fs::symlink_metadata(&ort)
+                .is_ok_and(|angaben| angaben.file_type().is_symlink());
+            if !ist_verweis {
+                return None;
+            }
+            std::fs::read_link(&ort)
                 .ok()
-                .map(|ziel| lexikalisch_bereinigt(&benutzerverzeichnis.join(ziel)))
-        } else {
-            None
-        };
+                .map(|ziel| lexikalisch_bereinigt(&zuhause.join(ziel)))
+        });
+        let vorgabeort = benutzerverzeichnis.is_some_and(|zuhause| ort == zuhause.join(ORDNERNAME));
+        let anzeige = pfade::gekuerzt_fuer_anzeige(&ort, benutzerverzeichnis);
         Self {
-            geschrieben,
+            geschrieben: ort,
             aufgeloest,
+            vorgabeort,
+            anzeige,
         }
     }
 
-    /// Der Heimordner des angemeldeten Benutzers, oder `None`, wenn das System
+    /// Der Vorgabeort unter dem genannten Benutzerverzeichnis,
+    /// `<benutzerverzeichnis>/krkhome`, gebaut ueber [`Heimordner::am_ort`].
+    pub fn im_benutzerverzeichnis(benutzerverzeichnis: &Path) -> Self {
+        Self::am_ort(
+            benutzerverzeichnis.join(ORDNERNAME),
+            Some(benutzerverzeichnis),
+        )
+    }
+
+    /// Der Vorgabeort des angemeldeten Benutzers, oder `None`, wenn das System
     /// kein Benutzerverzeichnis nennt.
     pub fn des_benutzers() -> Option<Self> {
         pfade::benutzerverzeichnis().map(|zuhause| Self::im_benutzerverzeichnis(&zuhause))
@@ -193,19 +236,33 @@ impl Heimordner {
     pub fn aufgeloest_erneuern(&self) -> Self {
         match std::fs::canonicalize(&self.geschrieben) {
             Ok(kanonisch) => Self {
-                geschrieben: self.geschrieben.clone(),
                 aufgeloest: Some(kanonisch),
+                ..self.clone()
             },
             Err(_) => self.clone(),
         }
     }
 
-    /// Die geschriebene Form, `<benutzerverzeichnis>/krkhome`.
+    /// Die geschriebene Form, der eingestellte Ort.
     ///
     /// Auf sie oeffnet F2 einen neuen Tab: der Tab zeigt dann den Pfad, den der
     /// Nutzer kennt, auch wenn `krkhome` ein Verweis ist.
     pub fn geschrieben(&self) -> &Path {
         &self.geschrieben
+    }
+
+    /// Ob der Ort der Vorgabeort `<benutzerverzeichnis>/krkhome` ist.
+    ///
+    /// Ein Vergleich der geschriebenen Form beim Bau, kein Systemaufruf. Allein
+    /// dort uebernimmt F2 die alten Zettel (Modulkopf von `bereitstellen`).
+    pub fn ist_vorgabeort(&self) -> bool {
+        self.vorgabeort
+    }
+
+    /// Der Ort, wie die Statuszeile ihn nennt: `~/…` fuer einen Ort unter dem
+    /// Benutzerverzeichnis, sonst der ausgeschriebene Pfad.
+    pub fn anzeigename(&self) -> &str {
+        &self.anzeige
     }
 
     /// Ob der gefragte Ordner der Heimordner ist, in der geschriebenen oder der

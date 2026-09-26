@@ -280,7 +280,8 @@ use krk_core::ablage::{
     Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen, leseprofile, lesezeichen,
     pfade,
 };
-use krk_core::heimordner::{self, Heimordner, Hindernis};
+use krk_core::heimordner::ort::Ortsfehler;
+use krk_core::heimordner::{self, Heimordner};
 use krk_core::leseprofil::Profile;
 use krk_core::operation::{
     self, Abschluss, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung,
@@ -5011,7 +5012,7 @@ impl Anwendungsdelegierter {
     ///    haelt beides. Damit legt der Start nichts an, auch nicht fuer einen
     ///    wiederhergestellten Tab auf den Ordner. Jede Meldung geht als
     ///    Befehlsantwort in die Statuszeile des aktiven Dateifensters; ein
-    ///    [`Hindernis`] oeffnet keinen Tab.
+    ///    [`heimordner::Hindernis`] oeffnet keinen Tab.
     /// 2. **Aufloesen**, ueber [`Heimordner::aufgeloest_erneuern`], und erst
     ///    nach dem Anlegen: `canonicalize` beruehrt das Ziel eines Verweises,
     ///    und das hat `bereitstellen` in diesem Augenblick ohnehin getan. Der
@@ -5029,13 +5030,13 @@ impl Anwendungsdelegierter {
     fn notizordner_oeffnen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let Some(heim) = heimgriff::lesen(&self.ivars().heim) else {
-            self.antwort_zeigen(aktiv, &Hindernis::KeinBenutzerverzeichnis.meldung());
+            self.antwort_zeigen(aktiv, &Ortsfehler::KeinBenutzerverzeichnis.meldung());
             return true;
         };
         let bereitstellung = match heimordner::bereitstellen(&heim, &self.ablageordner()) {
             Ok(bereitstellung) => bereitstellung,
             Err(hindernis) => {
-                self.antwort_zeigen(aktiv, &hindernis.meldung());
+                self.antwort_zeigen(aktiv, &hindernis.meldung(heim.anzeigename()));
                 return true;
             }
         };

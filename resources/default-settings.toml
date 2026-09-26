@@ -52,3 +52,35 @@
 # ohne diesen Eintrag startet auf den Befehl hin, ohne in den Ordner zu
 # wechseln, und KRK kann den Unterschied nicht feststellen (C11).
 terminal = "com.apple.Terminal"
+
+# Der Notizordner, den F2 und cmd+k oeffnen: dort liegen notes.txt, tasks.txt
+# und secrets.txt (Datensatz
+# `260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md`).
+#
+# Der Wert beginnt mit `~/` fuer das Benutzerverzeichnis oder mit `/`; ein
+# relativer oder leerer Wert ist unzulaessig. KRK setzt dann keinen Ersatzort
+# ein, und F2 nennt den Grund in der Statuszeile. Der Ablageordner von KRK
+# (`~/Library/Application Support/KRK/`) ist als Ort ausgeschlossen, weil ein
+# Werkzeug, das eine Anwendung samt Stuetzdateien entfernt, ihn mitnimmt.
+#
+# Ein geteiltes Verzeichnis ist der Anlass fuer diesen Schluessel, etwa
+#
+#   notizordner = "~/Dropbox/krkhome"
+#
+# und dann liegt eine Kopie von secrets.txt auch beim Anbieter: verschluesselt,
+# aber mit einer vierstelligen PIN.
+#
+# Ein Wechsel verschiebt nichts. Die Dateien am alten Ort bleiben liegen, und
+# was am neuen Ort fehlt, legt erst der naechste F2 dort leer an; beim Start
+# legt KRK nie etwas an. Ein Wechsel von Hand in dieser Datei gilt ab dem
+# naechsten Start, und die Statuszeile nennt dann einmal den alten Ort. Die
+# alten Notizzettel aus der Zeit vor dem Notizordner werden allein am
+# Vorgabeort `~/krkhome` uebernommen und nirgends sonst.
+#
+# Ist diese Datei beschaedigt oder nicht lesbar, gilt kein Notizordner, bis
+# sie berichtigt und KRK neu gestartet ist (Datensatz
+# `260926-1506_*_welcher-notizordner-gilt-wenn-settings-toml-beim-start-beschaedigt-ist.md`).
+#
+# Eine KRK-Fassung vor diesem Schluessel weist eine Datei, die ihn fuehrt, als
+# beschaedigt ab, laesst sie liegen und arbeitet mit ihren Vorgaben weiter.
+notizordner = "~/krkhome"
