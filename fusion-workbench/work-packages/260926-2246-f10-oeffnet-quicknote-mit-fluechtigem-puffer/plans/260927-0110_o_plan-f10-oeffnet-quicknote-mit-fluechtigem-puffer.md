@@ -199,7 +199,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 3
    - Acceptance: `make check` grün, und keine Probe ausser den hier genannten hat ihre Erwartung geändert.
    - Dependencies: Schritt 1
 
-3. **Leeren und Kopieren, die drei Schaltflächen**
+3. [DONE] **Leeren und Kopieren, die drei Schaltflächen**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/quicknote.rs`, `crates/krk-ui/src/appkit/quicknote.rs`, `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:

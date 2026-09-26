@@ -66,9 +66,123 @@ pub struct Rueckkehr {
     pub rand: Randrueckkehr,
 }
 
+/// Wie ein Kopieren der Quicknote ausgegangen ist (Q2 des Spec).
+///
+/// **Drei Werte, ueberschneidungsfrei und vollstaendig.** Ein leerer Puffer
+/// wird nicht kopiert und laesst die Zwischenablage, wie sie war (A12); ein
+/// gelungenes Kopieren nennt die Zahl der Zeichen; ein gescheitertes laesst den
+/// Text stehen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use = "der Ausgang entscheidet, ob der Puffer geleert und die Quicknote geschlossen wird, und traegt die Meldung"]
+pub enum Kopierausgang {
+    /// Der Puffer war leer; die Zwischenablage ist unberuehrt.
+    Leer,
+    /// Der ganze Text liegt in der Zwischenablage.
+    Kopiert {
+        /// Wie viele Zeichen, gezaehlt als Unicode-Zeichen und nicht als Bytes.
+        zeichen: usize,
+    },
+    /// Die Zwischenablage hat den Text nicht angenommen.
+    Gescheitert,
+}
+
+impl Kopierausgang {
+    /// Ob der Puffer nach diesem Ausgang zu leeren ist: allein nach einem
+    /// gelungenen Kopieren.
+    #[allow(
+        clippy::match_like_matches_macro,
+        reason = "`matches!` prueft die Vollstaendigkeit nicht, und genau die ist hier der Zweck"
+    )]
+    #[must_use]
+    pub fn leert_den_puffer(self) -> bool {
+        match self {
+            Kopierausgang::Kopiert { .. } => true,
+            Kopierausgang::Leer | Kopierausgang::Gescheitert => false,
+        }
+    }
+
+    /// Ob die Quicknote nach diesem Ausgang schliesst: nach einem gelungenen
+    /// Kopieren und bei leerem Puffer, nicht nach einem gescheiterten, denn
+    /// dann steht ihr Text noch da und gehoert vor Augen.
+    #[allow(
+        clippy::match_like_matches_macro,
+        reason = "`matches!` prueft die Vollstaendigkeit nicht, und genau die ist hier der Zweck"
+    )]
+    #[must_use]
+    pub fn schliesst(self) -> bool {
+        match self {
+            Kopierausgang::Kopiert { .. } | Kopierausgang::Leer => true,
+            Kopierausgang::Gescheitert => false,
+        }
+    }
+}
+
+/// Kopiert den ganzen Text ueber `schreiben`, ausser er ist leer.
+///
+/// `schreiben` ist der Weg in die Zwischenablage und liefert, ob sie den Text
+/// angenommen hat; beim Anwendungsdelegierten ist es die eine Huelle
+/// `appkit::zwischenablage::text_schreiben`. Bei leerem Text wird er nicht
+/// gerufen.
+pub fn kopieren(text: &str, schreiben: impl FnOnce(&str) -> bool) -> Kopierausgang {
+    if text.is_empty() {
+        return Kopierausgang::Leer;
+    }
+    if schreiben(text) {
+        Kopierausgang::Kopiert {
+            zeichen: text.chars().count(),
+        }
+    } else {
+        Kopierausgang::Gescheitert
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Ein leerer Puffer ruft `schreiben` nicht und ergibt `Leer`.
+    #[test]
+    fn ein_leerer_puffer_wird_nicht_kopiert() {
+        let ausgang = kopieren("", |_| panic!("ein leerer Puffer ruft schreiben"));
+        assert_eq!(ausgang, Kopierausgang::Leer);
+        assert!(!ausgang.leert_den_puffer());
+        assert!(ausgang.schliesst());
+    }
+
+    /// Ein mehrzeiliger Text mit Umlauten kommt Zeichen fuer Zeichen an, und
+    /// gezaehlt werden Zeichen und nicht Bytes.
+    #[test]
+    fn ein_gelungenes_kopieren_zaehlt_zeichen_und_reicht_den_ganzen_text() {
+        let text = "Grüße\r\naus Köln\nund Zürich\n";
+        let mut angekommen = String::new();
+        let ausgang = kopieren(text, |geschrieben| {
+            angekommen.push_str(geschrieben);
+            true
+        });
+        assert_eq!(angekommen, text);
+        assert_eq!(
+            ausgang,
+            Kopierausgang::Kopiert {
+                zeichen: text.chars().count()
+            }
+        );
+        assert_ne!(
+            text.chars().count(),
+            text.len(),
+            "die Probe misst keine Umlaute"
+        );
+        assert!(ausgang.leert_den_puffer());
+        assert!(ausgang.schliesst());
+    }
+
+    /// Ein gescheitertes Kopieren leert nicht und schliesst nicht.
+    #[test]
+    fn ein_gescheitertes_kopieren_laesst_den_text_stehen() {
+        let ausgang = kopieren("Notiz", |_| false);
+        assert_eq!(ausgang, Kopierausgang::Gescheitert);
+        assert!(!ausgang.leert_den_puffer());
+        assert!(!ausgang.schliesst());
+    }
 
     /// `f10_wirkung` ueber beide Werte von `offen` und jeden Fokuswert, an
     /// einem Stueck.

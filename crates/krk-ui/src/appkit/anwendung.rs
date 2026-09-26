@@ -317,7 +317,7 @@ use crate::kommandos::rundweg::{Rundweg, rundweg};
 use crate::kommandos::zulaessigkeit::{self, Editorform, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
-use crate::quicknote::{self, F10Wirkung, Rueckkehr};
+use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
 
@@ -4349,6 +4349,9 @@ impl Anwendungsdelegierter {
             // schliessen, je nach Lage. Gehalten von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
             Kommando::QuicknoteUmschalten => self.quicknote_umschalten(fokus),
+            // Kopieren und Leeren der Quicknote; gehalten von derselben Probe.
+            Kommando::QuicknoteKopieren => self.quicknote_kopieren(),
+            Kommando::QuicknoteLeeren => self.quicknote_leeren(),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
             // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**:
@@ -9074,6 +9077,52 @@ impl Anwendungsdelegierter {
         true
     }
 
+    /// Kopiert den ganzen Text der Quicknote in die Zwischenablage, leert den
+    /// Puffer und schliesst sie (Q2 des Spec).
+    ///
+    /// **Ueber die eine Huelle um `NSPasteboard`**,
+    /// `super::zwischenablage::text_schreiben`, und ueber keinen eigenen Weg. Was
+    /// danach geschieht, sagt [`Kopierausgang`]: nach einem gelungenen
+    /// Kopieren erst den Puffer leeren, dann schliessen, dann melden; bei
+    /// leerem Puffer schliessen und melden; nach einem gescheiterten allein
+    /// melden, und der Text bleibt stehen.
+    ///
+    /// **`Editorbereich::haelt_geheimnisse` wird hier bewusst nicht gefragt**
+    /// (Entscheidung 4 des Plans der Quicknote): gelesen wird allein der
+    /// Puffer der Quicknote und nicht der Stand der Datei darunter, und Text
+    /// aus `secrets.txt` kommt in ihn nur ueber ein Einfuegen des Nutzers, das
+    /// `260926-0033_*_darf-text-aus-secrets-txt-in-die-zwischenablage.md`
+    /// erlaubt.
+    fn quicknote_kopieren(&self) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        let text = editor.quicknote_text();
+        let ausgang = quicknote::kopieren(&text, super::zwischenablage::text_schreiben);
+        if ausgang.leert_den_puffer() {
+            editor.quicknote_nach_kopie_leeren();
+        }
+        if ausgang.schliesst() {
+            let _ = self.quicknote_schliessen();
+        }
+        let meldung = match ausgang {
+            Kopierausgang::Kopiert { zeichen } => Editormeldung::QuicknoteKopiert { zeichen },
+            Kopierausgang::Leer => Editormeldung::QuicknoteLeer,
+            Kopierausgang::Gescheitert => Editormeldung::QuicknoteNichtKopiert,
+        };
+        self.editormeldung_zeigen(&meldung);
+        true
+    }
+
+    /// Leert den Puffer der Quicknote; `cmd+z` nimmt es zurueck (Q2, A13).
+    fn quicknote_leeren(&self) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        editor.quicknote_leeren();
+        true
+    }
+
     /// Fuehrt einen Editorbefehl aus, der genau eine Meldung liefert.
     ///
     /// **Die eine Stelle fuer die Befehle ohne Blatt**, die so antworten, von
@@ -10619,7 +10668,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 12] = [
+    const BEFEHLE: [&str; 14] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -10632,6 +10681,8 @@ mod zweigproben {
         "PinAendern",
         "TermineRichtungUmkehren",
         "QuicknoteUmschalten",
+        "QuicknoteKopieren",
+        "QuicknoteLeeren",
     ];
 
     #[test]
@@ -10672,6 +10723,27 @@ mod quicknoteproben {
         assert!(
             verlassen < fokus,
             "die Quicknote faellt erst nach dem Fokusumzug"
+        );
+    }
+
+    /// Das Kopieren schreibt ueber die eine Huelle, leert nach dem Ausgang und
+    /// vor dem Schliessen, und fragt die Geheimnisse nicht (Schritt 3).
+    #[test]
+    fn das_kopieren_der_quicknote_schreibt_ueber_die_eine_huelle() {
+        let rumpf = rumpf(&diese_datei(), "quicknote_kopieren");
+        let stelle = |nadel: &str| {
+            rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("`{nadel}` steht nicht im Rumpf von quicknote_kopieren"))
+        };
+        let schreiben = stelle(concat!("zwischenablage::text_", "schreiben"));
+        let leeren = stelle(concat!("editor.quicknote_nach_", "kopie_leeren()"));
+        let schliessen = stelle(concat!("self.quicknote_", "schliessen()"));
+        assert!(schreiben < leeren, "geleert wird vor dem Kopieren");
+        assert!(leeren < schliessen, "geschlossen wird vor dem Leeren");
+        assert!(
+            !rumpf.contains(concat!("haelt_", "geheimnisse")),
+            "das Kopieren der Quicknote fragt die Geheimnisse (Entscheidung 4)"
         );
     }
 

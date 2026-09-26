@@ -606,6 +606,7 @@ use super::textmerkmale;
 ///  Abweisung einer Zelle         krk_core::heimordner::eintraege (3.2b der krkhome-Arbeit)
 ///  Antwort einer Tabellenhandlung  Editorbereich::handlung_ausfuehren (dieselbe)
 ///  Ausgang von „PIN ändern"      crate::editormodell::Pinwechselausgang (5.5 derselben)
+///  Ausgang des Kopierens         crate::quicknote::kopieren (Schritt 3 der Quicknote)
 /// ```
 ///
 /// **Die Tafel zaehlt Ausloeser, die Aufzaehlung darunter zaehlt Varianten, und
@@ -756,6 +757,18 @@ pub enum Editormeldung {
     /// Die Termintabelle ordnet jetzt in dieser Richtung nach dem Datum
     /// (T5.5 der Termine); die Datei ist unveraendert.
     Terminrichtung(Sortierrichtung),
+    /// Der ganze Text der Quicknote liegt in der Zwischenablage, ihr Puffer
+    /// ist geleert und sie geschlossen (Q2 des Spec der Quicknote).
+    QuicknoteKopiert {
+        /// Wie viele Zeichen kopiert sind.
+        zeichen: usize,
+    },
+    /// Der Puffer der Quicknote war leer; die Zwischenablage bleibt, wie sie
+    /// war (A12).
+    QuicknoteLeer,
+    /// Die Zwischenablage hat den Text der Quicknote nicht angenommen; er
+    /// bleibt stehen.
+    QuicknoteNichtKopiert,
 }
 
 impl Editormeldung {
@@ -851,6 +864,16 @@ impl Editormeldung {
             }
             Self::Terminrichtung(Sortierrichtung::Absteigend) => {
                 "Termine absteigend sortiert".to_owned()
+            }
+            Self::QuicknoteKopiert { zeichen } => {
+                format!("Die Quicknote ist in der Zwischenablage: {zeichen} Zeichen.")
+            }
+            Self::QuicknoteLeer => {
+                "Die Quicknote ist leer; die Zwischenablage bleibt, wie sie war.".to_owned()
+            }
+            Self::QuicknoteNichtKopiert => {
+                "Die Quicknote ließ sich nicht in die Zwischenablage kopieren; ihr Text bleibt stehen."
+                    .to_owned()
             }
         }
     }
@@ -2515,8 +2538,41 @@ impl Editorbereich {
         self.ivars().quicknote.get_or_init(|| {
             let quicknote = Quicknote::bauen(self.mtm(), self.ivars().textrolle.frame());
             self.ivars().bereich.addSubview(quicknote.rolle());
+            // Ein Klick auf eine Schaltflaeche geht als Kommando durch den
+            // einen Kommandomelder dieses Bereichs, wie der Klick auf den Kopf
+            // „Datum"; schwach, aus dem Grund an `Zellenwege`.
+            let schwach = Weak::from_retained(&self.retain());
+            quicknote.knopfmelder_setzen(Box::new(move |kommando| {
+                if let Some(editor) = schwach.load() {
+                    editor.kommando_melden(kommando);
+                }
+            }));
             quicknote
         })
+    }
+
+    /// Der ganze Text der Quicknote; leer, solange sie nie offen war.
+    #[must_use]
+    pub fn quicknote_text(&self) -> String {
+        self.ivars()
+            .quicknote
+            .get()
+            .map_or_else(String::new, |quicknote| quicknote.text())
+    }
+
+    /// Leert den Puffer der Quicknote als zuruecknehmbare Handlung (A13).
+    pub fn quicknote_leeren(&self) {
+        if let Some(quicknote) = self.ivars().quicknote.get() {
+            quicknote.leeren();
+        }
+    }
+
+    /// Leert den Puffer nach einem gelungenen Kopieren, ohne Rueckgaengig
+    /// (Entscheidung 10 des Plans der Quicknote).
+    pub fn quicknote_nach_kopie_leeren(&self) {
+        if let Some(quicknote) = self.ivars().quicknote.get() {
+            quicknote.nach_kopie_leeren();
+        }
     }
 
     /// Zeigt die Quicknote und merkt die Rueckkehr (Q1 des Spec).
@@ -7454,6 +7510,34 @@ mod tests {
             tauschschritte(Textflaeche, Tabelle, false),
             vec![Einblenden(Tabelle), Ausblenden(Textflaeche)]
         );
+    }
+
+    /// Die Saetze der Quicknote, soweit sie Meldungen des Editors sind, sind
+    /// paarweise verschieden und nennen keine Zahl ausser der Zeichenzahl
+    /// (Entscheidung 6 des Plans der Quicknote): eine Grenze in einer Meldung
+    /// wanderte mit `EDITORGRENZE`.
+    #[test]
+    fn die_saetze_der_quicknote_sind_verschieden_und_ohne_grenze() {
+        let saetze: Vec<String> = [
+            Editormeldung::QuicknoteKopiert { zeichen: 7 },
+            Editormeldung::QuicknoteLeer,
+            Editormeldung::QuicknoteNichtKopiert,
+        ]
+        .iter()
+        .map(Editormeldung::text)
+        .collect();
+        for (stelle, satz) in saetze.iter().enumerate() {
+            for anderer in &saetze[stelle + 1..] {
+                assert_ne!(satz, anderer);
+            }
+            let ziffern: String = satz.chars().filter(char::is_ascii_digit).collect();
+            let erlaubt = if stelle == 0 { "7" } else { "" };
+            assert_eq!(ziffern, erlaubt, "„{satz}“ nennt eine Zahl");
+            assert!(
+                satz.contains("Quicknote"),
+                "„{satz}“ nennt die Quicknote nicht"
+            );
+        }
     }
 
     /// Die Quicknote zeigt ihre eigene Flaeche, keine Tabelle, und `esc` in

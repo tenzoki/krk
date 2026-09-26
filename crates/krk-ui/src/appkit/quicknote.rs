@@ -30,6 +30,18 @@
 //! Ausnahme davon ist der Feldeditor, der `undo:` selbst beantworten muss
 //! (`Zelleneditor` in `super::eintragsansicht`), und die Quicknote hat keinen.
 //!
+//! # Die drei Schaltflaechen
+//!
+//! Oben in der Rolle stehen „Leeren", „Schließen" und „Kopieren", von links
+//! nach rechts (Entscheidung 2 des Plans). **Ein Klick ist ein Kommando** und
+//! geht ueber den Knopfmelder, den der Editorbereich beim Bau setzt, durch
+//! dieselbe Zulaessigkeit wie die Taste; die Schaltflaechen nehmen den
+//! Ersthelferrang nicht an, und ein Klick holt zuerst den Fokus in die
+//! Textflaeche, damit die Zulaessigkeit den Fokus im Editor sieht. Keine
+//! Aktion heisst `copy:`, `cut:` oder `paste:`: die Zwischenablage erreicht
+//! diese Datei nicht, das Kopieren geht beim Anwendungsdelegierten ueber
+//! `super::zwischenablage::text_schreiben`.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSView`, `NSScrollView`, `NSTextView`, `NSColor`, `NSObject` und
@@ -41,26 +53,46 @@
 //! `setTextColor:`, `setBackgroundColor:`, `setDelegate:`, `setHidden:`,
 //! `addSubview:` und `setDocumentView:` sowie die Farben `textColor` und
 //! `textBackgroundColor` (`NSColor.h:217-218`). Keine davon traegt im SDK eine
-//! eigene Verfuegbarkeitsangabe. Die Wertetypen `NSRect`, `NSPoint`, `NSSize`
+//! eigene Verfuegbarkeitsangabe. Ebenso seit 10.0: `NSString`, `NSRange`, die
+//! Textmethoden `string`, `setString:`, `replaceCharactersInRange:withString:`,
+//! `shouldChangeTextInRange:replacementString:`, `didChangeText` und
+//! `breakUndoCoalescing`, `removeAllActions` am Verwalter, `window` und
+//! `makeFirstResponder:`, `sizeToFit` und `setRefusesFirstResponder:` an
+//! `NSButton`. **Juenger als seine Klasse ist allein
+//! `buttonWithTitle:target:action:`**, seit macOS 10.12 (`NSButton.h:40`,
+//! `API_AVAILABLE(macos(10.12))`). Die Wertetypen `NSRect`, `NSPoint`, `NSSize`
 //! und die Maske `NSAutoresizingMaskOptions` haben kein eigenes macOS-Alter,
-//! `MainThreadMarker` ist ein Rust-Typ der Kiste. Das Buendel zielt auf 15.0
+//! `MainThreadMarker` ist ein Rust-Typ der Kiste, und das Makro `ns_string!`
+//! baut seine Zeichenkette beim Uebersetzen. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`); keine Beruehrung in dieser Datei liegt darueber.
 
+use std::cell::RefCell;
+
 use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
-use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
+use objc2::runtime::{AnyObject, ProtocolObject, Sel};
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSScrollView, NSTextDelegate, NSTextView,
+    NSAutoresizingMaskOptions, NSButton, NSColor, NSScrollView, NSTextDelegate, NSTextView,
     NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSUndoManager,
+    MainThreadMarker, NSObject, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSString,
+    NSUndoManager, ns_string,
 };
+
+use krk_core::tasten::Kommando;
 
 use crate::editormodell::Ansicht;
 use crate::hervorhebung::Darstellungsart;
 
+use super::bereichsleiste::Kommandomelder;
 use super::{textautomatik, textmerkmale};
+
+/// Die Hoehe der Schaltflaechenreihe oben in der Rolle.
+const KNOPFZEILE: f64 = 30.0;
+
+/// Der Abstand zwischen zwei Schaltflaechen und zum linken Rand.
+const KNOPFABSTAND: f64 = 8.0;
 
 /// Was die Quicknote haelt.
 pub struct QuicknoteIvars {
@@ -70,6 +102,9 @@ pub struct QuicknoteIvars {
     text: Retained<NSTextView>,
     /// Der eigene Verwalter, den `undoManagerForTextView:` liefert.
     verwalter: Retained<NSUndoManager>,
+    /// Die Senke fuer den Klick auf eine Schaltflaeche; `None`, bis der
+    /// Editorbereich sie setzt. Sie haelt den Editorbereich schwach.
+    knopfmelder: RefCell<Option<Kommandomelder>>,
 }
 
 define_class!(
@@ -100,6 +135,30 @@ define_class!(
             Some(self.ivars().verwalter.clone())
         }
     }
+
+    impl Quicknote {
+        /// Die Schaltflaeche „Leeren".
+        // SAFETY: Die Signatur ist die uebliche einer Aktion.
+        #[unsafe(method(quicknoteLeeren:))]
+        fn leeren_geklickt(&self, _absender: Option<&AnyObject>) {
+            self.geklickt(Kommando::QuicknoteLeeren);
+        }
+
+        /// Die Schaltflaeche „Schließen": dasselbe Kommando wie F10 mit dem
+        /// Fokus in der Quicknote.
+        // SAFETY: Die Signatur ist die uebliche einer Aktion.
+        #[unsafe(method(quicknoteSchliessen:))]
+        fn schliessen_geklickt(&self, _absender: Option<&AnyObject>) {
+            self.geklickt(Kommando::QuicknoteUmschalten);
+        }
+
+        /// Die Schaltflaeche „Kopieren".
+        // SAFETY: Die Signatur ist die uebliche einer Aktion.
+        #[unsafe(method(quicknoteKopieren:))]
+        fn kopieren_geklickt(&self, _absender: Option<&AnyObject>) {
+            self.geklickt(Kommando::QuicknoteKopieren);
+        }
+    }
 );
 
 impl Quicknote {
@@ -117,7 +176,13 @@ impl Quicknote {
         );
         rolle.setHidden(true);
 
-        let innen = NSRect::new(NSPoint::ZERO, rahmen.size);
+        let innen = NSRect::new(
+            NSPoint::ZERO,
+            NSSize::new(
+                rahmen.size.width,
+                (rahmen.size.height - KNOPFZEILE).max(0.0),
+            ),
+        );
         let bildlauf = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), innen);
         bildlauf.setHasVerticalScroller(true);
         bildlauf.setAutohidesScrollers(true);
@@ -155,13 +220,117 @@ impl Quicknote {
             rolle,
             text,
             verwalter: NSUndoManager::new(mtm),
+            knopfmelder: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
         this.ivars()
             .text
             .setDelegate(Some(ProtocolObject::from_ref(&*this)));
+        this.knoepfe_bauen(mtm, rahmen);
         this
+    }
+
+    /// Baut die Schaltflaechenreihe oben in der Rolle.
+    ///
+    /// `NSControl` haelt sein Ziel schwach; die Quicknote lebt so lange wie
+    /// der Editorbereich, der sie haelt.
+    fn knoepfe_bauen(&self, mtm: MainThreadMarker, rahmen: NSRect) {
+        // Von links nach rechts; welches Kommando ein Selektor meldet, steht
+        // an seiner Methode oben.
+        let knoepfe: [(&str, Sel); 3] = [
+            ("Leeren", sel!(quicknoteLeeren:)),
+            ("Schließen", sel!(quicknoteSchliessen:)),
+            ("Kopieren", sel!(quicknoteKopieren:)),
+        ];
+        let mut links = KNOPFABSTAND;
+        for (titel, aktion) in knoepfe {
+            // SAFETY: `self` beantwortet den Selektor mit der ueblichen
+            // Aktionssignatur (siehe `define_class!` oben), und `sel!` liefert
+            // einen gueltigen Selektor.
+            let knopf = unsafe {
+                NSButton::buttonWithTitle_target_action(
+                    &NSString::from_str(titel),
+                    Some(self),
+                    Some(aktion),
+                    mtm,
+                )
+            };
+            knopf.setRefusesFirstResponder(true);
+            knopf.sizeToFit();
+            let groesse = knopf.frame().size;
+            knopf.setFrame(NSRect::new(
+                NSPoint::new(
+                    links,
+                    rahmen.size.height - KNOPFZEILE + (KNOPFZEILE - groesse.height) / 2.0,
+                ),
+                groesse,
+            ));
+            // Die Reihe klebt oben, wenn die Rolle waechst.
+            knopf.setAutoresizingMask(NSAutoresizingMaskOptions::ViewMinYMargin);
+            self.ivars().rolle.addSubview(&knopf);
+            links += groesse.width + KNOPFABSTAND;
+        }
+    }
+
+    /// Traegt die Senke fuer einen Klick ein.
+    pub fn knopfmelder_setzen(&self, melder: Kommandomelder) {
+        *self.ivars().knopfmelder.borrow_mut() = Some(melder);
+    }
+
+    /// Ein Klick: zuerst den Fokus in die Textflaeche, dann das Kommando.
+    ///
+    /// **Die Reihenfolge ist die Aussage**, nach dem Muster des Ankreuzfeldes
+    /// der Aufgabentabelle: die Zulaessigkeit fragt nach dem Fokus, und ein
+    /// Klick aus einem anderen Bereich heraus hat ihn noch nicht im Editor.
+    fn geklickt(&self, kommando: Kommando) {
+        if let Some(fenster) = self.ivars().text.window() {
+            // `let _ =`: lehnt AppKit ab, weist die Zulaessigkeit das Kommando
+            // ab, und der Klick tut nichts, wie jede abgewiesene Taste.
+            let _ = fenster.makeFirstResponder(Some(&self.ivars().text));
+        }
+        let melder = self.ivars().knopfmelder.borrow();
+        if let Some(melder) = melder.as_ref() {
+            melder(kommando);
+        }
+    }
+
+    /// Der ganze Text des Puffers.
+    #[must_use]
+    pub fn text(&self) -> String {
+        self.ivars().text.string().to_string()
+    }
+
+    /// Leert den Puffer als eine Handlung, die `cmd+z` zuruecknimmt (A13 des
+    /// Spec).
+    ///
+    /// Angemeldet ueber `shouldChangeTextInRange:replacementString:` und
+    /// `didChangeText`, dieselben zwei Rufe, mit denen die Flaeche das Tippen
+    /// anmeldet; `breakUndoCoalescing` davor, damit das Leeren nicht in die
+    /// letzte Tipp-Handlung faellt. Ein leerer Puffer bleibt unangetastet.
+    pub fn leeren(&self) {
+        let text = &self.ivars().text;
+        let bereich = NSRange::new(0, text.string().length());
+        if bereich.length == 0 {
+            return;
+        }
+        text.breakUndoCoalescing();
+        if text.shouldChangeTextInRange_replacementString(bereich, Some(ns_string!(""))) {
+            text.replaceCharactersInRange_withString(bereich, ns_string!(""));
+            text.didChangeText();
+        }
+    }
+
+    /// Leert den Puffer nach einem gelungenen Kopieren, ohne Rueckgaengig
+    /// (Entscheidung 10 des Plans).
+    ///
+    /// `setString:` schreibt an der Rueckgaengigverwaltung vorbei, und ein
+    /// stehengebliebener Stapel zeigte auf Text, den die Flaeche nicht mehr
+    /// traegt; deshalb raeumt `removeAllActions` den eigenen Verwalter danach
+    /// ab. Dieselbe Begruendung wie an `Editorbereich::stand_einsetzen`.
+    pub fn nach_kopie_leeren(&self) {
+        self.ivars().text.setString(ns_string!(""));
+        self.ivars().verwalter.removeAllActions();
     }
 
     /// Die Ansicht, die der Editorbereich ein- und ausblendet.
@@ -179,5 +348,51 @@ impl Quicknote {
     #[cfg(test)]
     pub fn verwalter(&self) -> &NSUndoManager {
         &self.ivars().verwalter
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::anwendung::quelltextproben::{datei, rumpf};
+
+    /// Keine Codezeile dieser Datei nennt die Zwischenablage; das Kopieren
+    /// geht beim Anwendungsdelegierten ueber die eine Huelle.
+    #[test]
+    fn die_quicknote_nennt_die_zwischenablage_nicht() {
+        let quelle = datei("krk-ui/src/appkit/quicknote.rs");
+        let (code, _) = quelle
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .expect("das Pruefmodul steht am Fuss der Datei");
+        let nennt = code
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .any(|zeile| zeile.contains(concat!("NSPaste", "board")));
+        assert!(!nennt, "die Quicknote spricht die Zwischenablage selbst an");
+    }
+
+    /// Die drei Aktionen melden die drei Kommandos, und jede ueber
+    /// `geklickt`, das zuerst den Fokus holt.
+    #[test]
+    fn die_drei_aktionen_melden_ihre_kommandos() {
+        let quelle = datei("krk-ui/src/appkit/quicknote.rs");
+        for (aktion, kommando) in [
+            ("leeren_geklickt", "Kommando::QuicknoteLeeren"),
+            ("schliessen_geklickt", "Kommando::QuicknoteUmschalten"),
+            ("kopieren_geklickt", "Kommando::QuicknoteKopieren"),
+        ] {
+            let rumpf = rumpf(&quelle, aktion);
+            assert!(
+                rumpf.contains(&format!("self.geklickt({kommando})")),
+                "{aktion} meldet nicht {kommando}"
+            );
+        }
+        let geklickt = rumpf(&quelle, "geklickt");
+        let fokus = geklickt
+            .find(concat!("makeFirst", "Responder("))
+            .expect("der Klick holt den Fokus nicht");
+        let melden = geklickt
+            .find("melder(kommando)")
+            .expect("der Klick meldet kein Kommando");
+        assert!(fokus < melden, "der Klick meldet vor dem Fokus");
     }
 }
