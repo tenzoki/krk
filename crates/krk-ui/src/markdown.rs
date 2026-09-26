@@ -301,9 +301,13 @@ impl Lesart {
     #[must_use]
     pub fn von_dateityp(typ: Dateityp) -> Self {
         match typ {
-            Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => {
-                Lesart::Eintragsdatei
-            }
+            // `appointments.md` wird gelesen wie `notes.txt`; die Vorschau
+            // rendert sie bis Schritt 9 des Plans
+            // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`
+            // in Dateireihenfolge, danach nach dem Datum vorsortiert.
+            Dateityp::Eintraege(
+                Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Termine,
+            ) => Lesart::Eintragsdatei,
             Dateityp::Eintraege(Sonderdatei::Geheimnisse)
             | Dateityp::Markdown
             | Dateityp::Sonstiges => Lesart::Markdown,
@@ -3324,13 +3328,15 @@ mod tests {
     }
 
     /// Ein Dateityp wird an genau einer Stelle zur Lesart, und allein
-    /// `notes.txt` und `tasks.txt` bekommen Kaestchen; `secrets.txt` erreicht
-    /// das Rendern nie und steht beim Grundumfang.
+    /// `notes.txt`, `tasks.txt` und `appointments.md` bekommen Kaestchen;
+    /// `secrets.txt` erreicht das Rendern nie und steht beim Grundumfang.
     #[test]
     fn allein_eine_eintragsdatei_wird_als_eintragsdatei_gelesen() {
         for sonderdatei in Sonderdatei::ALLE {
             let erwartet = match sonderdatei {
-                Sonderdatei::Notizen | Sonderdatei::Aufgaben => Lesart::Eintragsdatei,
+                Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Termine => {
+                    Lesart::Eintragsdatei
+                }
                 Sonderdatei::Geheimnisse => Lesart::Markdown,
             };
             assert_eq!(

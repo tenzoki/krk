@@ -144,7 +144,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
    - Closes (am Baum): T2.1, T2.2, T2.3; die Kernhälften von T3.1 bis T3.5, T4.1, T6.1 und T6.2.
    - Dependencies: none
 
-2. **2 `appointments.md` wird die vierte Eintragsdatei**
+2. [DONE] **2 `appointments.md` wird die vierte Eintragsdatei**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/heimordner/mod.rs`, `crates/krk-core/src/heimordner/bereitstellen.rs`, `crates/krk-core/tests/heimordner.rs`, `crates/krk-core/src/verzeichnis/modell.rs` (Prüfmodul), `crates/krk-ui/src/hervorhebung.rs`, `crates/krk-ui/src/markdown.rs`, `crates/krk-ui/src/appkit/editor.rs`
    - Changes:

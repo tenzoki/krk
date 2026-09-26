@@ -444,9 +444,11 @@ fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
 /// Sonderdatei still als Markdown durchgeht.
 pub fn art(pfad: Option<&Path>, typ: Dateityp) -> Darstellungsart {
     match typ {
-        Dateityp::Markdown | Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => {
-            Darstellungsart::Markdown
-        }
+        // `appointments.md` ist ihrer Endung wie ihrer Form nach Markdown.
+        Dateityp::Markdown
+        | Dateityp::Eintraege(
+            Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Termine,
+        ) => Darstellungsart::Markdown,
         Dateityp::Eintraege(Sonderdatei::Geheimnisse) => Darstellungsart::EinfacherText,
         Dateityp::Sonstiges => match sprache_fuer(pfad) {
             Some(_) => Darstellungsart::Code,
@@ -1718,6 +1720,32 @@ mod tests {
         assert_eq!(
             art(Some(&pfad("secrets.txt")), typ),
             Darstellungsart::EinfacherText
+        );
+    }
+
+    /// `appointments.md` ist fuer die Darstellung Markdown, und ihre Kopfzeilen
+    /// sind Ueberschriften wie die Themen von `notes.txt` (Schritt 2 des Plans
+    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+    #[test]
+    fn die_termine_sind_fuer_die_darstellung_markdown() {
+        let datei = pfad("appointments.md");
+        let typ = Dateityp::Eintraege(Sonderdatei::Termine);
+        assert_eq!(art(Some(&datei), typ), Darstellungsart::Markdown);
+        let formatierung = formatieren(
+            "## 261002 09:30
+Zahnarzt
+",
+            Some(&datei),
+            typ,
+            Tafel::Hell,
+        );
+        assert!(
+            formatierung
+                .auszeichnungen
+                .iter()
+                .any(|stelle| stelle.art == Auszeichnung::Ueberschrift { stufe: 2 }),
+            "{:?}",
+            formatierung.auszeichnungen
         );
     }
 

@@ -2226,4 +2226,29 @@ mod tests {
             "der neue Bestand fragt schon den neuen Wert"
         );
     }
+    /// T8.2 des Spec der Termine: im erkannten Notizordner mit „Content“ ein
+    /// bekommt `appointments.md` einen Inhaltsauftrag wie jede andere Datei,
+    /// und ein Treffer allein im Inhalt zeigt sie. Die Ausnahme bleibt allein
+    /// bei `secrets.txt`.
+    #[test]
+    fn im_notizordner_findet_der_inhaltsfilter_die_termine() {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([
+            eintrag("secrets.txt", Typ::Datei),
+            eintrag("appointments.md", Typ::Datei),
+        ]);
+        modell.abschliessen();
+        modell.ohne_inhaltsauftrag_setzen(Some("secrets.txt"));
+        mit_inhaltsfilter(&mut modell);
+
+        let auftraege = modell.auftraege();
+        assert_eq!(auftraege.len(), 1, "allein appointments.md wird gelesen");
+        let index = auftraege[0].index;
+        assert_eq!(modell.eintraege()[index as usize].name, "appointments.md");
+        assert_eq!(modell.zeilenzahl(), 0, "vor dem Befund steht nichts");
+
+        modell.befunde_setzen([(index, Befund::Treffer)]);
+        assert_eq!(name_in_zeile(&modell, 0), Some("appointments.md"));
+        assert_eq!(modell.zeilenzahl(), 1);
+    }
 }

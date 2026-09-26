@@ -1591,10 +1591,18 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
             Dateityp::Markdown
             | Dateityp::Sonstiges
             | Dateityp::Eintraege(
-                Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse,
+                Sonderdatei::Notizen
+                | Sonderdatei::Aufgaben
+                | Sonderdatei::Geheimnisse
+                | Sonderdatei::Termine,
             ),
         )
         | (Ansicht::Format, Dateityp::Markdown | Dateityp::Sonstiges) => Editorform::Text,
+        // Zwischenstand: `appointments.md` zeigt in der Formatansicht Markdown
+        // in der Textflaeche, bis Schritt 6 des Plans
+        // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md` die
+        // Termintabelle baut und diese Zeile abloest.
+        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Termine)) => Editorform::Text,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen)) => Editorform::Notizen,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Geheimnisse)) => Editorform::Geheimnisse,
@@ -1633,7 +1641,10 @@ fn oeffnungsweg(
     haelt_bereits: bool,
 ) -> Oeffnungsweg {
     match sonderdatei {
-        None | Some(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => Oeffnungsweg::Laden,
+        // `appointments.md` laedt wie `notes.txt`: an ihr haengt keine PIN.
+        None | Some(Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Termine) => {
+            Oeffnungsweg::Laden
+        }
         Some(Sonderdatei::Geheimnisse) if haelt_bereits => Oeffnungsweg::Laden,
         Some(Sonderdatei::Geheimnisse) => {
             if herkunft.ist_aus_sitzung() {
@@ -2718,7 +2729,13 @@ impl Editorbereich {
                 Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse) => {
                     Zeilen::Notizen(eintragsansicht::notizzeilen(modell.stand()))
                 }
-                Dateityp::Markdown | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),
+                // Zwischenstand: `appointments.md` hat bis Schritt 6 des Plans
+                // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`
+                // keine Tabelle und bekommt wie jede Datei ohne Tabelle die
+                // leere Aufgabenliste; Schritt 6 loest diese Zeile ab.
+                Dateityp::Eintraege(Sonderdatei::Termine)
+                | Dateityp::Markdown
+                | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),
             }
         };
         self.ivars().eintraege.zeilen_zeigen(zeilen);

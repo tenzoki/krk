@@ -279,6 +279,62 @@ fn ein_schlussstrich_aendert_die_antwort_nicht() {
     );
 }
 
+/// T1.1: die Eintragsdateien fuehren `appointments.md` als vierten Wert.
+#[test]
+fn appointments_md_ist_die_vierte_eintragsdatei() {
+    assert_eq!(Sonderdatei::ALLE.len(), 4);
+    assert_eq!(Sonderdatei::Termine.dateiname(), "appointments.md");
+    assert!(Sonderdatei::ALLE.contains(&Sonderdatei::Termine));
+}
+
+/// T1.5: `appointments.md` ist allein im erkannten Notizordner die
+/// Termindatei, ueber dieselbe eine Erkennung wie die uebrigen und ohne
+/// Systemaufruf; anderswo und unter anderer Schreibung ist sie es nicht.
+#[test]
+fn appointments_md_ist_allein_im_notizordner_die_termindatei() {
+    let heim = Heimordner::im_benutzerverzeichnis(Path::new("/Users/probe"));
+    assert_eq!(
+        heim.sonderdatei(Path::new("/Users/probe/krkhome/appointments.md")),
+        Some(Sonderdatei::Termine)
+    );
+    for anderswo in [
+        "/Users/probe/appointments.md",
+        "/Users/probe/krkhome/unter/appointments.md",
+        "/Users/probe/krkhome-alt/appointments.md",
+        "/Users/probe/krkhome/Appointments.MD",
+        "/Users/probe/krkhome/appointments.txt",
+    ] {
+        assert_eq!(heim.sonderdatei(Path::new(anderswo)), None, "{anderswo}");
+    }
+}
+
+/// T1.6: die genaue Frage antwortet fuer `secrets.txt` wie vorher und fuer
+/// `appointments.md` in keiner Schreibung mit den Geheimnissen.
+#[test]
+fn die_genaue_frage_nennt_allein_secrets_txt_als_geheimnisse() {
+    let ordner = Pruefordner::neu("heim-genau-termine");
+    let zuhause = kanonisch(&ordner);
+    let heimpfad = zuhause.join(ORDNERNAME);
+    fs::create_dir(&heimpfad).expect("Heimordner laesst sich nicht anlegen");
+    for name in ["secrets.txt", "appointments.md"] {
+        fs::write(heimpfad.join(name), b"").expect("leere Datei");
+    }
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+
+    assert_eq!(
+        heim.sonderdatei_genau(&heimpfad.join("secrets.txt")),
+        Some(Sonderdatei::Geheimnisse)
+    );
+    assert_eq!(
+        heim.sonderdatei_genau(&heimpfad.join("appointments.md")),
+        Some(Sonderdatei::Termine)
+    );
+    assert_eq!(
+        heim.sonderdatei_genau(&heimpfad.join("Appointments.MD")),
+        None
+    );
+}
+
 /// Der Rumpf einer Methode aus `heimordner/mod.rs`, ohne Kommentarzeilen.
 ///
 /// Der Rumpf endet an der ersten schliessenden Klammer auf der Einrueckung
@@ -1490,17 +1546,22 @@ fn eine_vorhandene_datei_bleibt_und_eine_fehlende_entsteht_leer() {
     assert!(!bereitstellung.ordner_angelegt);
     assert_eq!(
         bereitstellung.angelegt,
-        vec![Sonderdatei::Aufgaben, Sonderdatei::Geheimnisse]
+        vec![
+            Sonderdatei::Aufgaben,
+            Sonderdatei::Geheimnisse,
+            Sonderdatei::Termine
+        ]
     );
     assert_eq!(bereitstellung.uebernahme, None);
     assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
     lage.zettel_unveraendert();
 }
 
-/// C2, C7.1: der erste Aufruf legt Ordner, `notes.txt`, `tasks.txt` und
-/// `secrets.txt` an und sonst nichts; `secrets.txt` hat null Bytes.
+/// C2, C7.1, T1.1: der erste Aufruf legt Ordner, `notes.txt`, `tasks.txt`,
+/// `secrets.txt` und `appointments.md` an und sonst nichts; `secrets.txt` hat
+/// null Bytes.
 #[test]
-fn der_erste_aufruf_legt_genau_die_drei_dateien_an() {
+fn der_erste_aufruf_legt_genau_die_eintragsdateien_an() {
     let lage = Lage::neu("heim-erster", [None, None]);
 
     let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
@@ -1509,7 +1570,7 @@ fn der_erste_aufruf_legt_genau_die_drei_dateien_an() {
     assert_eq!(bereitstellung.angelegt, Sonderdatei::ALLE.to_vec());
     assert_eq!(
         namen_in(&lage.heimpfad()),
-        vec!["notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
     assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
@@ -1567,7 +1628,7 @@ fn eine_alte_secrets_txt_wird_umbenannt_und_bleibt_byte_fuer_byte() {
     );
     assert_eq!(
         namen_in(&lage.heimpfad()),
-        vec!["notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
     );
     let meldungen = bereitstellung.meldungen().join("\n");
     assert!(
@@ -1653,7 +1714,11 @@ fn eine_gescheiterte_umbenennung_legt_keine_leere_datei_daneben() {
     use std::os::unix::fs::PermissionsExt;
     let lage = Lage::neu("heim-alt-gescheitert", [None, None]);
     fs::create_dir(lage.heimpfad()).expect("Heimordner");
-    for sorte in [Sonderdatei::Notizen, Sonderdatei::Aufgaben] {
+    for sorte in [
+        Sonderdatei::Notizen,
+        Sonderdatei::Aufgaben,
+        Sonderdatei::Termine,
+    ] {
         fs::write(lage.heimpfad().join(sorte.dateiname()), b"").expect("Eintragsdatei");
     }
     let alt = lage.heimpfad().join(ALTER_GEHEIMNISNAME);
@@ -1721,6 +1786,48 @@ fn beide_zettel_werden_zu_notizen_wenn_der_ordner_neu_ist() {
     let stand = lage.lesen(Sonderdatei::Notizen);
     assert_eq!(Notizen::lesen(&stand).bloecke().len(), 2);
     lage.zettel_unveraendert();
+}
+
+/// T1.7: die Uebernahme der alten Zettel schreibt nichts nach
+/// `appointments.md`; sie entsteht daneben mit null Bytes.
+#[test]
+fn die_uebernahme_der_zettel_laesst_die_termine_leer() {
+    let lage = Lage::neu(
+        "heim-uebernahme-termine",
+        [
+            Some("## 261002\nkein Termin\n".as_bytes()),
+            Some("Zettel\n".as_bytes()),
+        ],
+    );
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert!(bereitstellung.uebernahme.is_some(), "{bereitstellung:?}");
+    assert!(bereitstellung.angelegt.contains(&Sonderdatei::Termine));
+    assert_eq!(lage.lesen(Sonderdatei::Termine), "");
+    assert!(!lage.lesen(Sonderdatei::Notizen).is_empty());
+    lage.zettel_unveraendert();
+}
+
+/// T1.3: eine vorhandene `appointments.md` bleibt beim Anlegen Byte fuer Byte,
+/// und eine fehlende entsteht mit null Bytes.
+#[test]
+fn eine_vorhandene_termindatei_bleibt_und_eine_fehlende_entsteht_leer() {
+    let lage = Lage::neu("heim-termine-vorhanden", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let vorher = b"# Termine\n## 261002 09:30\nZahnarzt ohne Schluss";
+    let termine = lage.heimpfad().join("appointments.md");
+    fs::write(&termine, vorher).expect("appointments.md");
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(fs::read(&termine).expect("appointments.md"), vorher);
+    assert!(!bereitstellung.angelegt.contains(&Sonderdatei::Termine));
+
+    fs::remove_file(&termine).expect("appointments.md laesst sich nicht loeschen");
+    let zweite = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(zweite.angelegt, vec![Sonderdatei::Termine]);
+    assert_eq!(fs::read(&termine).expect("appointments.md"), b"");
 }
 
 /// C3.3: Ein Zettel mit einer Themenzeile wird nicht uebernommen, der andere
@@ -2058,7 +2165,7 @@ fn eine_vorhandene_geheimnisdatei_bleibt_byte_fuer_byte() {
         );
         assert_eq!(
             namen_in(&lage.heimpfad()),
-            vec!["notes.txt", "secrets.txt", "tasks.txt"]
+            vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
         );
     }
 }
@@ -2092,7 +2199,7 @@ fn ein_verweis_auf_einen_ordner_laesst_die_dateien_im_ziel_entstehen() {
 
     assert_eq!(
         namen_in(&ziel),
-        vec!["notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert!(!bereitstellung.ordner_angelegt);
     assert_eq!(bereitstellung.uebernahme, None);
@@ -2433,7 +2540,7 @@ fn die_alten_zettel_kommen_allein_am_vorgabeort() {
     );
     assert_eq!(
         namen_in(&ort),
-        vec!["notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert!(anderswo.meldungen().is_empty(), "{anderswo:?}");
     lage.zettel_unveraendert();
