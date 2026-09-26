@@ -830,7 +830,14 @@ impl Editormeldung {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Eintragsantwort {
     /// Der Editor zeigt keine Aufgabentabelle; die Handlung hat keinen
-    /// Gegenstand. Ab Schritt 3.3 haelt die Zulaessigkeit den Befehl vorher an.
+    /// Gegenstand.
+    ///
+    /// **Seit Schritt 3.3 nur noch ein Rueckfall.** Die Zulaessigkeit haelt
+    /// jeden der sechs Befehle vorher an, wenn die Form nicht passt, und graut
+    /// seinen Menueeintrag aus; ueber einen Befehl kommt diese Antwort nicht
+    /// mehr an. Sie bleibt, weil `handlung_ausfuehren` die Form trotzdem fragt
+    /// und eine Antwort braucht, falls ein kuenftiger Rufer an der Regel
+    /// vorbeigeht.
     KeineTabelle,
     /// Die Handlung braucht eine gewaehlte Aufgabe, und es ist keine gewaehlt.
     KeinEintragGewaehlt,
@@ -2090,7 +2097,8 @@ impl Editorbereich {
     /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`, Schritt 3.2a).
     ///
     /// Aus dem Modell abgeleitet und nicht aus der gezeigten Flaeche gelesen:
-    /// die Form ist die Frage, welche Befehle hier wirken (ab Schritt 3.3), und
+    /// die Form ist die Frage, welche Befehle hier wirken (seit Schritt 3.3
+    /// liest `Anwendungsdelegierter::lage` sie in die Zulaessigkeit), und
     /// die Antwort darauf haengt an Ansicht und Datei und nicht daran, ob der
     /// Tausch schon gelaufen ist. [`Self::flaeche_waehlen`] haelt die beiden
     /// nach jedem Wechsel beieinander.
@@ -2286,50 +2294,32 @@ impl Editorbereich {
     }
 
     /// Eine leere Aufgabe ans Ende, ihre Zelle danach in Bearbeitung (C6).
-    #[expect(
-        dead_code,
-        reason = "der Befehl `EintragHinzufuegen` kommt mit Schritt 3.3"
-    )]
     pub fn eintrag_hinzufuegen(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Hinzufuegen, None)
     }
 
     /// Uebernimmt eine laufende Zelle, oder setzt die gewaehlte in
     /// Bearbeitung (C6).
-    #[expect(
-        dead_code,
-        reason = "der Befehl `EintragBearbeiten` kommt mit Schritt 3.3"
-    )]
     pub fn eintrag_bearbeiten(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Bearbeiten, None)
     }
 
     /// Die gewaehlte Aufgabe eine Stelle nach oben (C6).
-    #[expect(dead_code, reason = "der Befehl `EintragHoch` kommt mit Schritt 3.3")]
     pub fn eintrag_hoch(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Verschieben(Richtung::Hoch), None)
     }
 
     /// Die gewaehlte Aufgabe eine Stelle nach unten (C6).
-    #[expect(dead_code, reason = "der Befehl `EintragRunter` kommt mit Schritt 3.3")]
     pub fn eintrag_runter(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Verschieben(Richtung::Runter), None)
     }
 
     /// Die gewaehlte Aufgabenzeile fort (C6).
-    #[expect(
-        dead_code,
-        reason = "der Befehl `EintragLoeschen` kommt mit Schritt 3.3"
-    )]
     pub fn eintrag_loeschen(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Loeschen, None)
     }
 
     /// Die gewaehlte Aufgabe abhaken oder wieder oeffnen (C6).
-    #[expect(
-        dead_code,
-        reason = "der Befehl `AufgabeAbhaken` kommt mit Schritt 3.3"
-    )]
     pub fn aufgabe_abhaken(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Abhaken, None)
     }

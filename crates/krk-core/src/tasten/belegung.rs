@@ -198,7 +198,9 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 
 /// Welcher Bereich den Eingabefokus haben muss, damit ein Kommando wirkt (C5).
 ///
-/// Acht Werte, und die Aufzaehlung ist mit ihnen vollstaendig.
+/// Wie viele Werte es sind, steht hier nicht: die Zahl stand bis zur
+/// krkhome-Arbeit auf acht und ist mit ihr falsch geworden. Gezaehlt wird sie
+/// mit `awk '/^pub enum Wirkungsbereich/,/^}/'` ueber diese Datei.
 ///
 /// Vier davon tragen die Runde 1. KRK hatte seit Schritt 19 drei fokussierbare
 /// Bereiche, die beiden Dateifenster, die Leiste und das Vorschaufenster, und
@@ -235,6 +237,14 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// PDF-Betrachters, die allein im Vorschaufenster etwas bedeuten. Kein anderer
 /// Wert sagt das: `Dateibereiche` schliesst Dateifenster und Editor ein,
 /// `Tabbereich` das Dateifenster, `Navigator` Dateifenster und Leiste.
+///
+/// **Drei weitere kommen mit den Eintragstabellen aus `~/krkhome/`** (Schritt
+/// 3.3 der krkhome-Arbeit): [`Wirkungsbereich::Editortext`],
+/// [`Wirkungsbereich::Eintraege`] und [`Wirkungsbereich::Aufgaben`]. Alle drei
+/// verlangen den Fokus im Editor wie [`Wirkungsbereich::Editor`] und dazu eine
+/// Form dessen, was er zeigt. Die Form kennt der Kern nicht; `krk_ui` fragt sie
+/// in derselben Regel, die den Fokus fragt, und die Ausgrauung des Menues folgt
+/// daraus ohne eigenen Weg.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
@@ -278,10 +288,34 @@ pub enum Wirkungsbereich {
     /// Wirkt nur, wenn der Fokus im eingebauten Editor steht (C3 bis C6 der
     /// Editor-Runde).
     ///
-    /// Sichern, die Ansicht umschalten, der Zeilensprung, Suchen, Ersetzen und
-    /// die Textmarken wirken allein in der Datei, die der Editor haelt. Mit dem
-    /// Fokus anderswo gibt es keine solche Datei.
+    /// Sichern, die Ansicht umschalten und schliessen wirken allein in der
+    /// Datei, die der Editor haelt. Mit dem Fokus anderswo gibt es keine
+    /// solche Datei. Sie wirken in jeder Form, in der der Editor die Datei
+    /// zeigt, als Text und als Eintragstabelle.
     Editor,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die
+    /// Textflaeche zeigt (Schritt 3.3 der krkhome-Arbeit).
+    ///
+    /// Der Wert des Zeilensprungs, der Suche und des Ersetzens: sie setzen
+    /// Schreibmarke und Auswahl der Textflaeche. Zeigt der Editor eine
+    /// Eintragstabelle aus `~/krkhome/`, ist die Textflaeche ausgeblendet, und
+    /// ein Treffer landete unsichtbar darin. **Welche Form der Editor zeigt,
+    /// weiss der Kern nicht**; die Frage stellt `krk_ui` in seiner
+    /// Zulaessigkeitsregel, und dieser Wert sagt nur, dass sie zu stellen ist.
+    Editortext,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor eine
+    /// Eintragstabelle zeigt (C6 des Spec
+    /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+    ///
+    /// Der Wert der fuenf Befehle, die Eintraege anlegen, bearbeiten,
+    /// verschieben und loeschen. Die Form fragt, wie bei
+    /// [`Wirkungsbereich::Editortext`], `krk_ui`.
+    Eintraege,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die
+    /// Aufgabentabelle zeigt (C6).
+    ///
+    /// Der Wert allein des Abhakens: eine Notiz hat kein Kaestchen.
+    Aufgaben,
     /// Wirkt, wenn der Fokus in einem Bereich mit Tabs steht: in einem
     /// Dateifenster oder im Vorschaufenster (C1, C6).
     ///
@@ -377,7 +411,7 @@ impl Wirkungsbereich {
     /// 260811-0115.
     ///
     /// **Vollstaendige Fallunterscheidung ohne Auffangzweig**, nach dem Vorbild
-    /// von [`Kommando::wirkungsbereich`] darueber. Ein achter Wert der
+    /// von [`Kommando::wirkungsbereich`] darueber. Ein weiterer Wert der
     /// Aufzaehlung braucht hier eine Zeile, bevor er uebersetzt; ein `_`-Zweig
     /// gaebe ihm stillschweigend die Beschriftung eines Nachbarn und damit eine
     /// falsche Zusicherung in einer Datei, die der Nutzer liest.
@@ -393,6 +427,9 @@ impl Wirkungsbereich {
             Wirkungsbereich::Leiste => "Lesezeichen- und Geräteleiste",
             Wirkungsbereich::Dateibereiche => "Dateifenster, Vorschau und Editor",
             Wirkungsbereich::Editor => "Editor",
+            Wirkungsbereich::Editortext => "Text im Editor",
+            Wirkungsbereich::Eintraege => "Einträge im Editor",
+            Wirkungsbereich::Aufgaben => "Aufgaben im Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
             Wirkungsbereich::Navigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
             Wirkungsbereich::Vorschau => "Vorschau",
@@ -743,6 +780,30 @@ pub enum Kommando {
     EditorErsetzen,
     /// Jeden Treffer im ganzen Text ersetzen (C5 der Editor-Runde).
     EditorAlleErsetzen,
+    /// Am Ende der Eintragstabelle einen leeren Eintrag anlegen und seine
+    /// Zelle in Bearbeitung setzen (C6 des Spec
+    /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
+    ///
+    /// Die fuenf `Eintrag*`-Befehle tragen [`Wirkungsbereich::Eintraege`]: sie
+    /// wirken allein mit dem Fokus im Editor und nur, solange er eine
+    /// Eintragstabelle zeigt. Welche Form das ist, fragt `krk_ui` in seiner
+    /// Zulaessigkeitsregel; der Kern kennt den Bereich und nicht die Form.
+    EintragHinzufuegen,
+    /// Die Zelle des gewaehlten Eintrags in Bearbeitung setzen, oder eine
+    /// laufende Zelle uebernehmen (C6).
+    EintragBearbeiten,
+    /// Den gewaehlten Eintrag eine Stelle nach oben ruecken (C6).
+    EintragHoch,
+    /// Den gewaehlten Eintrag eine Stelle nach unten ruecken (C6).
+    EintragRunter,
+    /// Den gewaehlten Eintrag entfernen; mit `cmd+z` zuruecknehmbar (C6).
+    EintragLoeschen,
+    /// Die gewaehlte Aufgabe abhaken oder wieder oeffnen (C6).
+    ///
+    /// Traegt [`Wirkungsbereich::Aufgaben`] und nicht
+    /// [`Wirkungsbereich::Eintraege`]: eine Notiz hat kein Kaestchen, und in
+    /// der Notiztabelle soll der Befehl ausgegraut sein.
+    AufgabeAbhaken,
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
     /// aenderbar und zuruecksetzbar (C3).
     BelegungAnsehen,
@@ -881,7 +942,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 87] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 93] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -978,6 +1039,12 @@ impl Kommando {
         ),
         (Kommando::EditorErsetzen, "editor_ersetzen"),
         (Kommando::EditorAlleErsetzen, "editor_alle_ersetzen"),
+        (Kommando::EintragHinzufuegen, "eintrag_hinzufuegen"),
+        (Kommando::EintragBearbeiten, "eintrag_bearbeiten"),
+        (Kommando::EintragHoch, "eintrag_hoch"),
+        (Kommando::EintragRunter, "eintrag_runter"),
+        (Kommando::EintragLoeschen, "eintrag_loeschen"),
+        (Kommando::AufgabeAbhaken, "aufgabe_abhaken"),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::BelegungsdateiAnsehen, "belegungsdatei_ansehen"),
         (Kommando::Beenden, "beenden"),
@@ -1209,22 +1276,37 @@ impl Kommando {
             Kommando::VorschauVergroessern
             | Kommando::VorschauVerkleinern
             | Kommando::VorschauAusgangsgroesse => Wirkungsbereich::Vorschau,
-            // Die acht Befehle, die in der Datei arbeiten, die der Editor
-            // haelt (C3 bis C6 der Editor-Runde). Mit dem Fokus anderswo gibt
-            // es keine solche Datei.
+            // Die Befehle, die an der Datei arbeiten, die der Editor haelt,
+            // gleich wie er sie zeigt (C3 und C4 der Editor-Runde). Mit dem
+            // Fokus anderswo gibt es keine solche Datei.
             //
             // `bearbeiten` steht **nicht** hier, sondern beim Dateifenster:
             // F4 oeffnet dessen ausgewaehlten Eintrag und setzt den Editor
             // nicht voraus, sondern fuellt ihn.
             Kommando::EditorSchliessen
             | Kommando::EditorAnsichtUmschalten
-            | Kommando::EditorSichern
-            | Kommando::EditorZeileSpringen
+            | Kommando::EditorSichern => Wirkungsbereich::Editor,
+            // Der Zeilensprung, die Suche und das Ersetzen (C5 der
+            // Editor-Runde) wirken an der Schreibmarke und der Auswahl der
+            // Textflaeche. Zeigt der Editor eine Eintragstabelle, ist die
+            // Textflaeche ausgeblendet, und ein Treffer oder ein Sprung
+            // landete unsichtbar darin; `krk_ui` weist die sechs dann ab und
+            // graut sie im Menue aus (Schritt 3.3 der krkhome-Arbeit).
+            Kommando::EditorZeileSpringen
             | Kommando::EditorSuchen
             | Kommando::EditorWeitersuchen
             | Kommando::EditorRueckwaertsSuchen
             | Kommando::EditorErsetzen
-            | Kommando::EditorAlleErsetzen => Wirkungsbereich::Editor,
+            | Kommando::EditorAlleErsetzen => Wirkungsbereich::Editortext,
+            // Die Befehle der Eintragstabelle (C6 der krkhome-Arbeit). Alle
+            // fuenf wirken in jeder Tabellenform; das Abhaken allein in der
+            // Aufgabentabelle, denn eine Notiz hat kein Kaestchen.
+            Kommando::EintragHinzufuegen
+            | Kommando::EintragBearbeiten
+            | Kommando::EintragHoch
+            | Kommando::EintragRunter
+            | Kommando::EintragLoeschen => Wirkungsbereich::Eintraege,
+            Kommando::AufgabeAbhaken => Wirkungsbereich::Aufgaben,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen

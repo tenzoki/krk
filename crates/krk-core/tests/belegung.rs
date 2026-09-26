@@ -592,12 +592,14 @@ fn cmd_f_steht_bei_zwei_funktionen_und_ist_kein_konflikt() {
         "der Nachschlag liefert fuer cmd+f eine andere Funktion; eine vom Menue \
          gehaltene darf er nie liefern"
     );
+    // Seit Schritt 3.3 der krkhome-Arbeit traegt die Suche `Editortext` statt
+    // `Editor`; beide verlangen den Fokus im Editor, und die Trennung bleibt.
     assert_eq!(
         gefunden.kommando().map(Kommando::wirkungsbereich),
-        Some(Wirkungsbereich::Editor),
-        "editor_suchen wirkt nicht mehr im Editor; dann trennt der \
-         Wirkungsbereich das Paar nicht mehr, und cmd+f schluckte den Anschlag \
-         auch im Dateifenster"
+        Some(Wirkungsbereich::Editortext),
+        "editor_suchen wirkt nicht mehr allein im Text des Editors; dann trennt \
+         der Wirkungsbereich das Paar womoeglich nicht mehr, und cmd+f schluckte \
+         den Anschlag auch im Dateifenster"
     );
 }
 
@@ -2000,10 +2002,12 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
             assert_ne!(kennung, weitere, "die Kennung {kennung} steht zweimal");
         }
         // Der Aufruf selbst ist die Probe: er liefert fuer jedes Kommando
-        // einen der acht Werte und kann keinen zweiten liefern.
+        // einen der Werte und kann keinen zweiten liefern.
         // `Tabbereich` kam mit dem Vorschaufenster aus S19 dazu; `Dateibereiche`
         // (bis zum 260823 `Vorschau`), `Editor` und `Navigator` mit dem
-        // eingebauten Editor, `Vorschau` mit den drei Zoombefehlen der Runde 20.
+        // eingebauten Editor, `Vorschau` mit den drei Zoombefehlen der Runde 20,
+        // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
+        // krkhome-Arbeit.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
@@ -2012,12 +2016,15 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Leiste
                     | Wirkungsbereich::Dateibereiche
                     | Wirkungsbereich::Editor
+                    | Wirkungsbereich::Editortext
+                    | Wirkungsbereich::Eintraege
+                    | Wirkungsbereich::Aufgaben
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
                     | Wirkungsbereich::Vorschau
                     | Wirkungsbereich::Ueberall
             ),
-            "{kennung} traegt keinen der acht Bereiche"
+            "{kennung} traegt keinen der Bereiche"
         );
     }
 }
@@ -2278,11 +2285,15 @@ fn die_drei_befehle_des_navigators_tragen_den_navigator() {
 /// Die zwoelf Kommandos des Editors tragen die Bereiche, die der Plan ihnen
 /// gibt, und die Aufteilung ist erschoepfend.
 ///
-/// Drei Sorten, und die Grenze ist die Frage, was der Befehl voraussetzt.
+/// Vier Sorten, und die Grenze ist die Frage, was der Befehl voraussetzt.
 /// `bearbeiten` setzt das Dateifenster voraus, dessen ausgewaehlten Eintrag es
 /// oeffnet; der Fokusbefehl setzt nichts voraus, weil er den Fokus holt. Die
-/// uebrigen acht arbeiten in der Datei, die der Editor haelt, und ohne Fokus
-/// dort gibt es keine.
+/// uebrigen arbeiten in der Datei, die der Editor haelt, und ohne Fokus dort
+/// gibt es keine. **Seit Schritt 3.3 der krkhome-Arbeit teilen sie sich**:
+/// Schliessen, Ansicht und Sichern wirken in jeder Form des Editors, der
+/// Zeilensprung, die Suche und das Ersetzen allein, solange er die
+/// Textflaeche zeigt, denn in einer Eintragstabelle landete ein Treffer
+/// unsichtbar in der ausgeblendeten Textflaeche.
 ///
 /// **Der Rundweg faellt aus dieser Dreiteilung heraus**, und seit dem
 /// 260823-0942 ist das seine Aussage: er setzt keinen einzelnen Bereich voraus,
@@ -2309,6 +2320,15 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
         Kommando::EditorSchliessen,
         Kommando::EditorAnsichtUmschalten,
         Kommando::EditorSichern,
+    ] {
+        assert_eq!(
+            kommando.wirkungsbereich(),
+            Wirkungsbereich::Editor,
+            "{} arbeitet in der Datei des Editors und braucht dessen Fokus",
+            kommando.kennung()
+        );
+    }
+    for kommando in [
         Kommando::EditorZeileSpringen,
         Kommando::EditorSuchen,
         Kommando::EditorWeitersuchen,
@@ -2318,31 +2338,63 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
     ] {
         assert_eq!(
             kommando.wirkungsbereich(),
-            Wirkungsbereich::Editor,
-            "{} arbeitet in der Datei des Editors und braucht dessen Fokus",
+            Wirkungsbereich::Editortext,
+            "{} arbeitet an der Textflaeche des Editors und braucht sie sichtbar",
             kommando.kennung()
         );
     }
 }
 
+/// Die sechs Befehle der Eintragstabelle tragen die Bereiche, die Schritt 3.3
+/// der krkhome-Arbeit ihnen gibt (C6.5, C6.6, Kernhaelfte).
+///
+/// Fuenf wirken in jeder Tabellenform, das Abhaken allein in der
+/// Aufgabentabelle. Ob die Form passt, fragt `krk_ui`; hier steht die Aussage
+/// ueber die Befehle, die ohne Fenster pruefbar ist, und dass jede der sechs
+/// Kennungen zu ihrem Kommando fuehrt.
+#[test]
+fn die_sechs_befehle_der_eintragstabelle_tragen_ihre_bereiche() {
+    for (kommando, kennung) in [
+        (Kommando::EintragHinzufuegen, "eintrag_hinzufuegen"),
+        (Kommando::EintragBearbeiten, "eintrag_bearbeiten"),
+        (Kommando::EintragHoch, "eintrag_hoch"),
+        (Kommando::EintragRunter, "eintrag_runter"),
+        (Kommando::EintragLoeschen, "eintrag_loeschen"),
+    ] {
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Eintraege);
+        assert_eq!(Kommando::aus_kennung(kennung), Some(kommando));
+    }
+    assert_eq!(
+        Kommando::AufgabeAbhaken.wirkungsbereich(),
+        Wirkungsbereich::Aufgaben,
+        "eine Notiz hat kein Kaestchen; das Abhaken braucht die Aufgabentabelle"
+    );
+    assert_eq!(
+        Kommando::aus_kennung("aufgabe_abhaken"),
+        Some(Kommando::AufgabeAbhaken)
+    );
+}
+
 // ---------------------------------------------------------------------------
-// Die Beschriftung der acht Wirkungsbereiche (Runde 3, S2, C3; Runde 20, C3.6)
+// Die Beschriftung der Wirkungsbereiche (Runde 3, S2, C3; Runde 20, C3.6;
+// krkhome-Arbeit, Schritt 3.3)
 // ---------------------------------------------------------------------------
 
-/// Die acht Bereiche mit dem Text, den die Tastenbelegung als Markdown fuehrt.
+/// Die Bereiche mit dem Text, den die Tastenbelegung als Markdown fuehrt.
 ///
 /// Der Nutzer hat am 260811-0115 drei davon genannt, naemlich die drei, deren
 /// Variantenname als Beschriftung unverstaendlich waere; die uebrigen tragen
 /// den Namen aus dem Modulkopf von `belegung.rs`. `Vorschau` ist mit der
 /// Runde 20 dazugekommen und verweist den Leser auf das Vorschaufenster
-/// (C3.6).
+/// (C3.6). `Editortext`, `Eintraege` und `Aufgaben` kommen mit Schritt 3.3 der
+/// krkhome-Arbeit, die zwei letzten mit dem Wortlaut des Plans.
 ///
 /// **Das Feld ist die Quelle des erwarteten Texts und nicht die Quelle der
 /// Werte.** Welche Werte es gibt, lesen die drei Proben darunter ueber
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const ACHT_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 8] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 11] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2350,6 +2402,9 @@ const ACHT_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 8] = [
         "Dateifenster, Vorschau und Editor",
     ),
     (Wirkungsbereich::Editor, "Editor"),
+    (Wirkungsbereich::Editortext, "Text im Editor"),
+    (Wirkungsbereich::Eintraege, "Einträge im Editor"),
+    (Wirkungsbereich::Aufgaben, "Aufgaben im Editor"),
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
     (
         Wirkungsbereich::Navigator,
@@ -2359,32 +2414,35 @@ const ACHT_BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 8] = [
     (Wirkungsbereich::Ueberall, "überall"),
 ];
 
-/// Die Stelle eines Bereichs in [`ACHT_BESCHRIFTUNGEN`].
+/// Die Stelle eines Bereichs in [`BESCHRIFTUNGEN`].
 ///
 /// **Der Grund fuer diese zweite Fallunterscheidung ist die erste.** Eine
 /// Aufzaehlung in einer Probe waechst nicht von selbst mit der Aufzaehlung im
-/// Kern: ein neunter Wert bekaeme in `Wirkungsbereich::beschriftung` seine
+/// Kern: ein weiterer Wert bekaeme in `Wirkungsbereich::beschriftung` seine
 /// Zeile vom Uebersetzer abverlangt, in einem Feld darueber aber nicht. Diese
-/// Funktion ist ebenfalls ohne Auffangzweig, also uebersetzt ein neunter Wert
+/// Funktion ist ebenfalls ohne Auffangzweig, also uebersetzt ein solcher Wert
 /// erst, wenn er auch hier steht. **Im Feld steht er damit noch nicht**: der
 /// Zweig darf jede Zahl liefern, und das Feld zieht niemand nach. Dass jeder
 /// Wert im Feld steht, haelt [`jeder_wirkungsbereich_im_quelltext`] ueber die
 /// Varianten aus dem Quelltext und nicht ueber das Feld.
-fn stelle_in_den_acht(bereich: Wirkungsbereich) -> usize {
+fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
     match bereich {
         Wirkungsbereich::Dateifenster => 0,
         Wirkungsbereich::Leiste => 1,
         Wirkungsbereich::Dateibereiche => 2,
         Wirkungsbereich::Editor => 3,
-        Wirkungsbereich::Tabbereich => 4,
-        Wirkungsbereich::Navigator => 5,
-        Wirkungsbereich::Vorschau => 6,
-        Wirkungsbereich::Ueberall => 7,
+        Wirkungsbereich::Editortext => 4,
+        Wirkungsbereich::Eintraege => 5,
+        Wirkungsbereich::Aufgaben => 6,
+        Wirkungsbereich::Tabbereich => 7,
+        Wirkungsbereich::Navigator => 8,
+        Wirkungsbereich::Vorschau => 9,
+        Wirkungsbereich::Ueberall => 10,
     }
 }
 
 /// Jeder Wirkungsbereich, den der Quelltext der Aufzaehlung nennt, mit seiner
-/// Zeile in [`ACHT_BESCHRIFTUNGEN`].
+/// Zeile in [`BESCHRIFTUNGEN`].
 ///
 /// **Die Varianten kommen aus dem Quelltext und nicht aus dem Feld.** Bis zum
 /// 260828 liefen die drei Beschriftungsproben ueber das Feld selbst, und ein
@@ -2401,7 +2459,7 @@ fn jeder_wirkungsbereich_im_quelltext() -> Vec<(Wirkungsbereich, &'static str)> 
     let varianten = varianten_der_aufzaehlung("krk-core/src/tasten/belegung.rs", "Wirkungsbereich");
     let mut gefunden = Vec::with_capacity(varianten.len());
     for name in &varianten {
-        let zeilen: Vec<(Wirkungsbereich, &str)> = ACHT_BESCHRIFTUNGEN
+        let zeilen: Vec<(Wirkungsbereich, &str)> = BESCHRIFTUNGEN
             .into_iter()
             .filter(|(bereich, _)| format!("{bereich:?}") == *name)
             .collect();
@@ -2413,7 +2471,7 @@ fn jeder_wirkungsbereich_im_quelltext() -> Vec<(Wirkungsbereich, &'static str)> 
         );
         gefunden.push(zeilen[0]);
     }
-    for (bereich, _) in ACHT_BESCHRIFTUNGEN {
+    for (bereich, _) in BESCHRIFTUNGEN {
         assert!(
             varianten.contains(&format!("{bereich:?}")),
             "{bereich:?} steht im Beschriftungsfeld, aber nicht in der Aufzaehlung"
@@ -2422,7 +2480,7 @@ fn jeder_wirkungsbereich_im_quelltext() -> Vec<(Wirkungsbereich, &'static str)> 
     gefunden
 }
 
-/// Jeder der acht Bereiche traegt die Beschriftung, die C3 ihm gibt.
+/// Jeder Bereich traegt die Beschriftung, die C3 ihm gibt.
 ///
 /// Ausgeschrieben und ohne Legende: die Datei nennt "Dateifenster, Leiste,
 /// Vorschau und Git-Bereich" und nicht "Navigator". Wer einen dieser Texte
@@ -2433,8 +2491,8 @@ fn jeder_wirkungsbereich_im_quelltext() -> Vec<(Wirkungsbereich, &'static str)> 
 fn jeder_wirkungsbereich_traegt_seine_beschriftung() {
     for (bereich, erwartet) in jeder_wirkungsbereich_im_quelltext() {
         assert_eq!(
-            stelle_in_den_acht(bereich),
-            ACHT_BESCHRIFTUNGEN
+            stelle_im_feld(bereich),
+            BESCHRIFTUNGEN
                 .iter()
                 .position(|(anderer, _)| *anderer == bereich)
                 .expect("der Bereich steht nicht im Feld"),

@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 94 Funktionen mit zusammen 97 Kombinationen.
+# Ausgeliefert sind 100 Funktionen mit zusammen 103 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1106,6 +1106,69 @@ name = "Alle ersetzen"
 tasten = ["ctrl+cmd+r"]
 # Dieselbe Systematik wie "umbenennen" gegen "umbenennen_stapel": die
 # Einzelform auf shift+cmd, die Stapelform auf ctrl+cmd.
+
+# ── Einträge im Editor ───────────────────────────────────────────────────────
+# Sechs Funktionen fuer die Tabelle, in der die Formatansicht des Editors
+# `tasks.txt` zeigt. Der Block steht unmittelbar nach dem Editorblock, damit
+# er im Menue "Editor" unter den Editorbefehlen steht. Wirksam sind die sechs
+# allein, solange der Editor die Tabelle zeigt; sonst sind sie ausgegraut, und
+# die Taste geht an AppKit.
+#
+# Alle sechs Kombinationen waren am 260926 ueber alle Tastenlisten dieser Datei
+# frei, und keine davon hat im Feldeditor von AppKit eine eingefuehrte
+# Bedeutung: `StandardKeyBinding.dict` belegt keine. Die naeherliegenden nackten
+# Tasten sind vergeben: `return` oeffnet mit dem Standardprogramm, `delete`
+# raeumt in den Papierkorb und `space` markiert einen Eintrag, und die
+# Konfliktregel aus C3 kennt keinen Bereich, also teilt sich keine davon eine
+# Kombination mit einem Tabellenbefehl. `shift+delete` und `opt+cmd+delete`
+# bleiben absichtlich frei.
+#
+# **`shift+cmd+delete` heisst im Finder "Papierkorb entleeren" und wird hier
+# trotzdem vergeben.** Die Kombination wirkt allein auf die Tabelle im Editor,
+# loescht dort eine Zeile und ist mit cmd+z zurueckzunehmen; an den Papierkorb
+# reicht sie nicht heran. Der Nutzer hat sie mit diesem Befund bestaetigt
+# (Nutzerentscheid vom 260926,
+# `work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/decisions/260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md`).
+
+[[funktion]]
+id = "eintrag_hinzufuegen"
+name = "Eintrag hinzufügen"
+tasten = ["shift+cmd+return"]
+# Die Zweitform von cmd+return darunter: shift+cmd traegt das Anlegen, die
+# blanke Cmd-Ebene das Bearbeiten des Vorhandenen.
+
+[[funktion]]
+id = "eintrag_bearbeiten"
+name = "Eintrag bearbeiten"
+tasten = ["cmd+return"]
+# Oeffnet die Zelle der gewaehlten Zeile; waehrend eine Zelle laeuft, uebernimmt
+# dieselbe Kombination sie, und ein zweites cmd+return oeffnet sie wieder.
+
+[[funktion]]
+id = "eintrag_hoch"
+name = "Eintrag nach oben"
+tasten = ["opt+cmd+up"]
+# Die Pfeiltasten tragen in der Tabelle die Auswahl; opt+cmd davor verschiebt
+# die gewaehlte Zeile, statt die Auswahl zu bewegen.
+
+[[funktion]]
+id = "eintrag_runter"
+name = "Eintrag nach unten"
+tasten = ["opt+cmd+down"]
+# Das Gegenstueck zu "eintrag_hoch" darueber.
+
+[[funktion]]
+id = "eintrag_loeschen"
+name = "Eintrag löschen"
+tasten = ["shift+cmd+delete"]
+# Warum trotz der Finder-Bedeutung, steht im Blockkommentar oben.
+
+[[funktion]]
+id = "aufgabe_abhaken"
+name = "Aufgabe abhaken oder öffnen"
+tasten = ["shift+cmd+x"]
+# x wie das Kreuz im Kaestchen. cmd+x traegt das Ausschneiden; shift+cmd+x ist
+# ab Werk frei. Dieselbe Handlung wie ein Klick auf das Ankreuzfeld der Zeile.
 
 # ── C3: die Belegungsansicht ─────────────────────────────────────────────────
 

@@ -91,7 +91,14 @@
 //!    Frage, die der Fokusvorbehalt bis zum 260813 im Ereignisabgriff selbst
 //!    gestellt hat; sie ist hierher gewandert und steht nicht mehr daneben.
 //! 3. **[`fokus::wirkt`] sagt ja** zum Wirkungsbereich des
-//!    Befehls und zum Fokus des Augenblicks.
+//!    Befehls und zum Fokus des Augenblicks, **und die Form des Editors
+//!    passt** (Schritt 3.3 der krkhome-Arbeit). Die zweite Haelfte fragt
+//!    allein fuer die drei Wirkungsbereiche, die eine Form verlangen —
+//!    `Editortext`, `Eintraege` und `Aufgaben` —, ob der Editor gerade Text
+//!    oder eine Eintragstabelle zeigt; jeder andere Bereich sagt dazu ja. Sie
+//!    steht bei (3) und nicht als fuenfter Bestandteil, weil sie wie der
+//!    Fokus nach dem Wirkungsbereich fragt und nicht nach der Lage; die
+//!    Ausnahmeliste hebt sie deshalb ebenso wenig auf.
 //! 4. **Das Schluesselfenster gehoert KRK.** Es ist das Hauptfenster oder ein
 //!    Blatt, das daran haengt; steht ein fremdes Fenster vorn, wirkt kein
 //!    Befehl.
@@ -173,14 +180,14 @@ use super::operationen;
 
 /// Was die Oberflaeche im Augenblick der Frage ueber sich weiss.
 ///
-/// Die vier Eingaben der Zulaessigkeitsfrage an **einer** Stelle, damit die
+/// Die Eingaben der Zulaessigkeitsfrage an **einer** Stelle, damit die
 /// Frage rein bleibt und die Tafel ueber alle Faelle sie ohne Fenster stellen
 /// kann. Erhoben werden sie von `Anwendungsdelegierter::lage`, und zwar einmal
 /// je Eingabe: der Kommandozweig gibt die `Lage` an [`zulaessig`], der
 /// Zeichenzweig liest drei davon heraus. Zwei Erhebungen
 /// desselben Augenblicks koennten auseinanderlaufen, eine kann es nicht.
 ///
-/// `Copy`, weil der Wert vier kleine Felder traegt und die Tafel ihn einmal je
+/// `Copy`, weil der Wert fuenf kleine Felder traegt und die Tafel ihn einmal je
 /// Fall durchreicht. **Wie viele Faelle das sind, steht hier nicht**, sondern
 /// rechnet `die_tafel_aus_allen_faellen_geht_auf` in dieser Datei aus dem
 /// Produkt der drei Aufzaehlungen; die Zahl stand einmal auf 140, dann auf 280,
@@ -215,19 +222,25 @@ pub struct Lage {
     pub schluesselfenster_gehoert_krk: bool,
     /// Wo der Eingabefokus steht.
     pub fokus: Fokus,
+    /// Was der Editor gerade zeigt, aus `Editorbereich::form`.
+    ///
+    /// Erhoben wird es auch dann, wenn der Fokus nicht im Editor steht; die
+    /// Regel fragt es nur fuer die Wirkungsbereiche, die ohnehin den Fokus im
+    /// Editor verlangen, und dort ist die Form die des Editors vor dem Nutzer.
+    pub editorform: Editorform,
 }
 
 /// Was der Editor gerade zeigt: Text in der Textflaeche oder die Eintraege
 /// einer Datei aus `~/krkhome/` als Tabelle.
 ///
 /// **Der Typ steht hier und nicht im Editor**, weil die Frage, die ihn braucht,
-/// hier gestellt wird: ab Schritt 3.3 des Plans
+/// hier gestellt wird: seit Schritt 3.3 des Plans
 /// `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
 /// traegt die [`Lage`] ihn als fuenftes Feld, und die Befehle der Tabelle wirken
-/// nur in der passenden Form. Bis dahin liest ihn allein der Editor, der ihn
-/// in `Editorbereich::form` aus Ansicht und Dateityp ableitet; ohne AppKit
-/// bleibt dieses Modul trotzdem, denn der Wert ist eine Aufzaehlung und keine
-/// Flaeche.
+/// nur in der passenden Form, die Textbefehle nur in der Textflaeche. Erzeugt
+/// wird er im Editor, der ihn in `Editorbereich::form` aus Ansicht und
+/// Dateityp ableitet; ohne AppKit bleibt dieses Modul trotzdem, denn der Wert
+/// ist eine Aufzaehlung und keine Flaeche.
 ///
 /// **Zwei Werte und nicht die vier des Plans**, weil nur zwei gebaut sind: die
 /// Notiztabelle kommt in Schritt 4.3 als `Notizen`, die Geheimnisse in Stufe 5
@@ -370,7 +383,48 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
             && kein_blatt_oder_erlaubt
             && !lage.ersthelfer_gehoert_appkit);
 
-    durchgelassen && fokus::wirkt(anspruch.wirkungsbereich(), lage.fokus)
+    let bereich = anspruch.wirkungsbereich();
+    durchgelassen && fokus::wirkt(bereich, lage.fokus) && form_passt(bereich, lage.editorform)
+}
+
+/// Ob der Editor in der Form ist, die dieser Wirkungsbereich verlangt (die
+/// zweite Haelfte von Bestandteil (3), Schritt 3.3 der krkhome-Arbeit).
+///
+/// **Vollstaendig ueber beide Aufzaehlungen und ohne Auffangzweig.** Ein
+/// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
+/// bewusst, ebenso eine weitere Form: die Notiztabelle aus Schritt 4.3 muss
+/// sagen, ob sie eine Eintragstabelle ist und ob sie Kaestchen traegt. Die
+/// Bereiche ohne eigene Form antworten ja, gleich was der Editor zeigt; das
+/// Sichern, das Schliessen und der Ansichtswechsel wirken damit auch aus der
+/// Tabelle heraus.
+///
+/// Die Form fragt allein nach dem Editor und nicht nach dem Fokus. Das ist
+/// ohne Folgen, weil jeder Bereich, der hier nein sagen kann, von
+/// [`fokus::wirkt`] ohnehin nur mit dem Fokus im Editor durchgelassen wird.
+#[must_use = "fallengelassen laeuft der Befehl in der falschen Form weiter"]
+fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
+    match bereich {
+        Wirkungsbereich::Editortext => match form {
+            Editorform::Text => true,
+            Editorform::Aufgaben => false,
+        },
+        Wirkungsbereich::Eintraege => match form {
+            Editorform::Text => false,
+            Editorform::Aufgaben => true,
+        },
+        Wirkungsbereich::Aufgaben => match form {
+            Editorform::Text => false,
+            Editorform::Aufgaben => true,
+        },
+        Wirkungsbereich::Dateifenster
+        | Wirkungsbereich::Leiste
+        | Wirkungsbereich::Dateibereiche
+        | Wirkungsbereich::Editor
+        | Wirkungsbereich::Tabbereich
+        | Wirkungsbereich::Navigator
+        | Wirkungsbereich::Vorschau
+        | Wirkungsbereich::Ueberall => true,
+    }
 }
 
 /// Die benannte Liste der Befehle, die ein Blatt, ein Textfeld und ein fremdes
@@ -556,27 +610,30 @@ mod tests {
     /// Ein Befehl je Wirkungsbereich, und keiner von ihnen steht auf der
     /// Ausnahmeliste oder kommt waehrend eines Blattes durch.
     ///
-    /// Die Tafel unten braucht zu jedem der acht Wirkungsbereiche ein
+    /// Die Tafel unten braucht zu jedem Wirkungsbereich ein
     /// Kommando, denn [`zulaessig`] fragt nach einem Kommando und nicht nach
     /// einem Bereich. Die Paarung ist nicht behauptet: die Probe
     /// `jeder_stellvertreter_traegt_den_bereich_den_er_vertritt` haelt sie gegen
     /// [`Kommando::wirkungsbereich`], und sie haelt daneben fest, dass keiner
-    /// der acht eine der beiden Ausnahmen traegt. Ohne das zweite koennte ein
+    /// der Stellvertreter eine der beiden Ausnahmen traegt. Ohne das zweite koennte ein
     /// Stellvertreter die sieben abweisenden Achtel der Tafel gruen faerben,
     /// ohne dass die Regel sie traegt.
     ///
     /// **Die Feldbreite haelt den Bau nicht an, wenn ein Wert dazukommt**: hier
-    /// steht kein `match`, und ein neunter Wirkungsbereich ohne Zeile bliebe
+    /// steht kein `match`, und ein weiterer Wirkungsbereich ohne Zeile bliebe
     /// von der Tafel unbemerkt. Was ihn faengt, ist die Tafel in
     /// [`super::super::fokus`], die als `match` ohne Auffangzweig uebersetzt
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 8] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 11] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
         (Wirkungsbereich::Editor, Kommando::EditorSichern),
+        (Wirkungsbereich::Editortext, Kommando::EditorWeitersuchen),
+        (Wirkungsbereich::Eintraege, Kommando::EintragHoch),
+        (Wirkungsbereich::Aufgaben, Kommando::AufgabeAbhaken),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
         (Wirkungsbereich::Navigator, Kommando::AuswahlHoch),
         (Wirkungsbereich::Vorschau, Kommando::VorschauVergroessern),
@@ -624,22 +681,79 @@ mod tests {
         );
     }
 
-    /// Die Lage aus vier Werten, kurz geschrieben.
+    /// Die Lage aus vier Werten, kurz geschrieben, mit dem Editor in der
+    /// Textflaeche.
     ///
     /// Die Reihenfolge ist die der Felder: Blattstand, Ersthelferbefund,
-    /// Schluesselfenster, Fokus.
+    /// Schluesselfenster, Fokus. Die Form steht auf [`Editorform::Text`], der
+    /// Form jeder Datei ausserhalb von `~/krkhome/` und damit der Lage, die
+    /// jede Probe vor Schritt 3.3 stillschweigend annahm; wer eine andere
+    /// braucht, nimmt [`lage_in`].
     fn lage(
         blatt_steht: bool,
         ersthelfer_gehoert_appkit: bool,
         schluesselfenster_gehoert_krk: bool,
         fokus: Fokus,
     ) -> Lage {
+        lage_in(
+            blatt_steht,
+            ersthelfer_gehoert_appkit,
+            schluesselfenster_gehoert_krk,
+            fokus,
+            Editorform::Text,
+        )
+    }
+
+    /// Die Lage aus allen fuenf Werten, in der Reihenfolge der Felder.
+    fn lage_in(
+        blatt_steht: bool,
+        ersthelfer_gehoert_appkit: bool,
+        schluesselfenster_gehoert_krk: bool,
+        fokus: Fokus,
+        editorform: Editorform,
+    ) -> Lage {
         Lage {
             blatt_steht,
             ersthelfer_gehoert_appkit,
             schluesselfenster_gehoert_krk,
             fokus,
+            editorform,
         }
+    }
+
+    /// Jede Form des Editors, fuer die Proben.
+    ///
+    /// Die Vollstaendigkeit haelt
+    /// [`jede_form_des_editors_steht_in_der_probenliste`] ueber die Varianten
+    /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
+    /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
+    /// laufen.
+    const JEDE_FORM: [Editorform; 2] = [Editorform::Text, Editorform::Aufgaben];
+
+    /// [`JEDE_FORM`] fuehrt jede Variante von [`Editorform`] genau einmal.
+    #[test]
+    fn jede_form_des_editors_steht_in_der_probenliste() {
+        let quellen = quelldateien();
+        let (_, inhalt) = quellen
+            .iter()
+            .find(|(pfad, _)| pfad == "krk-ui/src/kommandos/zulaessigkeit.rs")
+            .expect("unter crates/ steht keine zulaessigkeit.rs");
+        let varianten = varianten(inhalt, "Editorform");
+        assert!(
+            !varianten.is_empty(),
+            "die Aufzaehlung ist nicht gefunden worden"
+        );
+        for name in &varianten {
+            let zeilen = JEDE_FORM
+                .iter()
+                .filter(|form| format!("{form:?}") == *name)
+                .count();
+            assert_eq!(
+                zeilen, 1,
+                "Editorform::{name} steht {zeilen}-mal in JEDE_FORM"
+            );
+        }
+        assert_eq!(varianten.len(), JEDE_FORM.len());
     }
 
     /// Die eine Lage ohne jedes Hindernis: kein Blatt, ein Ersthelfer, der
@@ -685,9 +799,9 @@ mod tests {
         }
     }
 
-    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal sechs
+    /// Die ganze Regel auf einen Blick: jeder Wirkungsbereich mal sechs
     /// Fokuswerte mal zwei Blattstaende mal zwei Ersthelferbefunde mal zwei
-    /// Schluesselfensterbefunde.
+    /// Schluesselfensterbefunde mal jede Form des Editors.
     ///
     /// **Die Zahl der Faelle steht nicht mehr im Namen, sondern wird
     /// gerechnet.** Sie stand bis zur Git-Runde auf 320 und ist mit dem
@@ -704,12 +818,18 @@ mod tests {
     /// nicht bloss so aussehen, haengt an den Stellvertretern; die Probe
     /// darueber haelt ihre beiden Voraussetzungen fest.
     ///
+    /// **Seit Schritt 3.3 der krkhome-Arbeit steht die Tafel ohne Sperre
+    /// zweimal da**, einmal je Form des Editors. Die beiden unterscheiden sich
+    /// allein in der Spalte `Editor` der drei Zeilen `Editortext`, `Eintraege`
+    /// und `Aufgaben`; ausgeschrieben sind sie trotzdem beide, aus dem Grund
+    /// oben.
+    ///
     /// Die Pruefungen darunter zeigen einzelne Felder dieser Tafel mit ihrer
-    /// Begruendung; die Tafel zeigt fuer die heutigen acht mal sechs, dass
-    /// keine Zeile und keine Spalte fehlt, und fuer keine andere Zahl. **Die
-    /// beiden Feldbreiten sichern das nicht**: `[[bool; 6]; 8]` zwingt zu acht
-    /// Zeilen zu je sechs Spalten und sagt nichts darueber, welche acht und
-    /// welche sechs. Ein neunter Wirkungsbereich faellt an der Zaehlprobe
+    /// Begruendung; die Tafel zeigt fuer die heutigen Zeilen und Spalten, dass
+    /// keine fehlt, und fuer keine andere Zahl. **Die
+    /// beiden Feldbreiten sichern das nicht**: `[[bool; 6]; 11]` zwingt zu elf
+    /// Zeilen zu je sechs Spalten und sagt nichts darueber, welche elf und
+    /// welche sechs. Ein weiterer Wirkungsbereich faellt an der Zaehlprobe
     /// `jeder_wirkungsbereich_hat_einen_stellvertreter` auf und ein siebter
     /// Fokuswert an der Zusicherung unter der Tafel, die die Spaltenzahl gegen
     /// `Fokus::ALLE.len()` haelt; keiner von beiden am Bau.
@@ -726,54 +846,91 @@ mod tests {
         // Seite ab, und fuenfspaltige Zeilen liessen den sechsten Fokuswert
         // ungeprueft. Die Zusicherung unter der Tafel haelt die Spaltenzahl
         // gegen `Fokus::ALLE`.
-        const OHNE_SPERRE: [[bool; 6]; 8] = [
+        //
+        // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 11] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
+            [false, false, false, true, false, false],
+            // Editortext
+            [false, false, false, true, false, false],
+            // Eintraege
+            [false, false, false, false, false, false],
+            // Aufgaben
+            [false, false, false, false, false, false],
+            [true, false, true, false, false, false],
+            [true, true, true, false, true, false],
+            [false, false, true, false, false, false],
+            [true, true, true, true, true, true],
+        ];
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 11] = [
+            [true, false, false, false, false, false],
+            [false, true, false, false, false, false],
+            [true, false, true, true, false, false],
+            [false, false, false, true, false, false],
+            // Editortext
+            [false, false, false, false, false, false],
+            // Eintraege
+            [false, false, false, true, false, false],
+            // Aufgaben
             [false, false, false, true, false, false],
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 8] = [[false; 6]; 8];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 11] = [[false; 6]; 11];
 
-        // blatt_steht, ersthelfer_gehoert_appkit, schluesselfenster_gehoert_krk,
-        // und welches Achtel gilt.
-        let achtel: [(bool, bool, bool, [[bool; 6]; 8]); 8] = [
-            (false, false, true, OHNE_SPERRE),
-            (false, false, false, ALLES_ABGEWIESEN),
-            (false, true, true, ALLES_ABGEWIESEN),
-            (false, true, false, ALLES_ABGEWIESEN),
-            (true, false, true, ALLES_ABGEWIESEN),
-            (true, false, false, ALLES_ABGEWIESEN),
-            (true, true, true, ALLES_ABGEWIESEN),
-            (true, true, false, ALLES_ABGEWIESEN),
-        ];
+        // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
+        // eine weitere Form den Bau hier anhaelt.
+        let ohne_sperre = |form: Editorform| match form {
+            Editorform::Text => IN_DER_TEXTFLAECHE,
+            Editorform::Aufgaben => IN_DER_AUFGABENTABELLE,
+        };
 
         let mut geprueft = 0usize;
-        for (blatt, ersthelfer, schluessel, tafel) in achtel {
-            for ((_, kommando), zeile) in STELLVERTRETER.into_iter().zip(tafel) {
-                assert_eq!(
-                    zeile.len(),
-                    Fokus::ALLE.len(),
-                    "die Zeile {kommando:?} hat nicht so viele Spalten wie Fokus::ALLE Werte \
-                     fuehrt"
-                );
-                for (fokus, erwartet) in JEDER_FOKUS.into_iter().zip(zeile) {
+        let mut achtel_zahl = 0usize;
+        for form in JEDE_FORM {
+            // blatt_steht, ersthelfer_gehoert_appkit,
+            // schluesselfenster_gehoert_krk, und welches Achtel gilt.
+            let achtel: [(bool, bool, bool, [[bool; 6]; 11]); 8] = [
+                (false, false, true, ohne_sperre(form)),
+                (false, false, false, ALLES_ABGEWIESEN),
+                (false, true, true, ALLES_ABGEWIESEN),
+                (false, true, false, ALLES_ABGEWIESEN),
+                (true, false, true, ALLES_ABGEWIESEN),
+                (true, false, false, ALLES_ABGEWIESEN),
+                (true, true, true, ALLES_ABGEWIESEN),
+                (true, true, false, ALLES_ABGEWIESEN),
+            ];
+            achtel_zahl = achtel.len();
+            for (blatt, ersthelfer, schluessel, tafel) in achtel {
+                for ((_, kommando), zeile) in STELLVERTRETER.into_iter().zip(tafel) {
                     assert_eq!(
-                        zulaessig(kommando, lage(blatt, ersthelfer, schluessel, fokus)),
-                        erwartet,
-                        "{kommando:?} bei blatt={blatt} ersthelfer={ersthelfer} \
-                         schluessel={schluessel} in {fokus:?}"
+                        zeile.len(),
+                        Fokus::ALLE.len(),
+                        "die Zeile {kommando:?} hat nicht so viele Spalten wie Fokus::ALLE \
+                         Werte fuehrt"
                     );
-                    geprueft += 1;
+                    for (fokus, erwartet) in JEDER_FOKUS.into_iter().zip(zeile) {
+                        assert_eq!(
+                            zulaessig(
+                                kommando,
+                                lage_in(blatt, ersthelfer, schluessel, fokus, form)
+                            ),
+                            erwartet,
+                            "{kommando:?} bei blatt={blatt} ersthelfer={ersthelfer} \
+                             schluessel={schluessel} in {fokus:?} und {form:?}"
+                        );
+                        geprueft += 1;
+                    }
                 }
             }
         }
         assert_eq!(
             geprueft,
-            achtel.len() * STELLVERTRETER.len() * Fokus::ALLE.len(),
+            JEDE_FORM.len() * achtel_zahl * STELLVERTRETER.len() * Fokus::ALLE.len(),
             "die Tafel deckt nicht jeden Fall ab"
         );
     }
@@ -1275,6 +1432,107 @@ mod tests {
                 assert!(
                     !zulaessig(kommando, anderswo),
                     "{kommando:?} kaeme mit dem Fokus in {fokus:?} durch"
+                );
+            }
+        }
+    }
+
+    /// Die sechs Befehle der Eintragstabelle wirken allein mit dem Fokus im
+    /// Editor und in der passenden Form (C6.5, C6.6, Probenhaelfte; Schritt
+    /// 3.3 der krkhome-Arbeit).
+    ///
+    /// Ueber jeden Fokuswert und jede Form, ohne Hindernis der Lage. Heute
+    /// gibt es eine Tabellenform, die Aufgabentabelle, und in ihr wirken alle
+    /// sechs; in der Textflaeche keiner. **Mit der Notiztabelle aus Schritt
+    /// 4.3 trennen sie sich**: die fuenf `Eintrag*` wirken dann in jeder
+    /// Tabellenform, `AufgabeAbhaken` in der Notiztabelle nicht. Die Erwartung
+    /// steht deshalb als `match` ueber die Form, und eine weitere Form haelt
+    /// den Bau hier an, statt still als „keine Tabelle" zu gelten.
+    #[test]
+    fn die_sechs_befehle_der_eintragstabelle_wirken_nur_im_editor_in_passender_form() {
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        for kommando in [
+            Kommando::EintragHinzufuegen,
+            Kommando::EintragBearbeiten,
+            Kommando::EintragHoch,
+            Kommando::EintragRunter,
+            Kommando::EintragLoeschen,
+            Kommando::AufgabeAbhaken,
+        ] {
+            for form in JEDE_FORM {
+                let form_passt = match form {
+                    Editorform::Text => false,
+                    Editorform::Aufgaben => true,
+                };
+                for fokus in JEDER_FOKUS {
+                    assert_eq!(
+                        zulaessig(kommando, lage_in(blatt, appkit, krk, fokus, form)),
+                        fokus == Fokus::Editor && form_passt,
+                        "{kommando:?} antwortet in {fokus:?} bei {form:?} falsch"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Zeigt der Editor eine Eintragstabelle, sind Zeilensprung, Suche und
+    /// Ersetzen abgewiesen und im Menue ausgegraut; in der Textflaeche wirken
+    /// sie wie bisher (Schritt 3.3 der krkhome-Arbeit).
+    ///
+    /// **Der Grund ist die ausgeblendete Textflaeche.** Die sechs setzen
+    /// Schreibmarke und Auswahl der Textflaeche; mit der Tabelle davor landete
+    /// ein Treffer oder ein Sprung unsichtbar darin, und ein Ersetzen aenderte
+    /// die Datei an einer Stelle, die der Nutzer nicht sieht. Die Vorgabe
+    /// unter „Open Questions" des Plans
+    /// `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
+    /// liess sie zulaessig und nannte einen weiteren Wirkungsbereich als
+    /// Alternative; gebaut ist mit Schritt 3.3 die Alternative,
+    /// `Wirkungsbereich::Editortext`.
+    #[test]
+    fn in_der_tabelle_sind_zeilensprung_suche_und_ersetzen_abgewiesen() {
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        for kommando in [
+            Kommando::EditorZeileSpringen,
+            Kommando::EditorSuchen,
+            Kommando::EditorWeitersuchen,
+            Kommando::EditorRueckwaertsSuchen,
+            Kommando::EditorErsetzen,
+            Kommando::EditorAlleErsetzen,
+        ] {
+            assert!(
+                zulaessig(
+                    kommando,
+                    lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Text)
+                ),
+                "{kommando:?} wirkt in der Textflaeche nicht mehr"
+            );
+            assert!(
+                !zulaessig(
+                    kommando,
+                    lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Aufgaben)
+                ),
+                "{kommando:?} wirkt in der Aufgabentabelle auf die ausgeblendete Textflaeche"
+            );
+        }
+    }
+
+    /// Sichern, Schliessen und der Ansichtswechsel wirken in jeder Form.
+    ///
+    /// Ohne sie kaeme der Nutzer aus der Tabelle weder in die Rohansicht noch
+    /// zu einer gesicherten Datei; `form_passt` sagt fuer
+    /// `Wirkungsbereich::Editor` deshalb in jeder Form ja.
+    #[test]
+    fn sichern_schliessen_und_ansicht_wirken_in_jeder_form() {
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        for kommando in [
+            Kommando::EditorSichern,
+            Kommando::EditorSchliessen,
+            Kommando::EditorAnsichtUmschalten,
+        ] {
+            for form in JEDE_FORM {
+                assert!(
+                    zulaessig(kommando, lage_in(blatt, appkit, krk, Fokus::Editor, form)),
+                    "{kommando:?} wirkt bei {form:?} nicht"
                 );
             }
         }

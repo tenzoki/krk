@@ -336,7 +336,8 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
     - Closes (am Baum): C6.7.
     - Dependencies: 3.2a; der Datensatz `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md` trägt eine Antwort, bevor der Schritt beginnt.
 
-12. **3.3 Sechs Befehle und die Form des Editors in der Zulässigkeit**
+12. [DONE] **3.3 Sechs Befehle und die Form des Editors in der Zulässigkeit**
+    - Umgesetzt am 260926; `cargo clippy`, `cargo fmt --check` und `cargo doc` grün, `cargo test --workspace --no-fail-fast` mit 2030 grünen und vier roten Proben, alle vier aus der erwarteten Frage „eine Kennung ohne Zeile in `resources/default-keymap.toml`“: `jede_kennung_der_kommandos_steht_in_der_auslieferungsbelegung` (`belegung.rs`), `jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste` (`tests/belegung.rs`), `die_dritte_spalte_haelt_die_begruendungslagen_auseinander` (`krk-ui/src/belegungsausgabe.rs`) und `der_bereich_editor_fuehrt_genau_die_befehle_des_editors` (`krk-ui/src/belegungsmodell.rs`, um die sechs Kennungen erweitert). Ein Probelauf mit den sechs Zeilen aus 3.4 in einer danach zurückgesetzten Belegungsdatei ließ allein `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` rot, und die Kopfzeile ist Teil von 3.4. **Abweichung:** die Vorgabe unter „Open Questions“, Suchen, Ersetzen und Zeilensprung in der Tabellenform zulässig zu lassen, ist nach der Übergabe aus 3.2b umgekehrt: die sechs Textbefehle tragen einen vierten neuen Wert `Wirkungsbereich::Editortext` („Text im Editor“), der allein bei `Editorform::Text` wirkt, denn in der Tabellenform landete ein Treffer in der ausgeblendeten Textfläche. Stufe 5 bringt damit den vierten und nicht den dritten neuen Wirkungsbereich. Die Form fragt `form_passt` in `zulaessigkeit.rs` als zweite Hälfte von Bestandteil (3), vollständig über `Wirkungsbereich` und `Editorform`; `Editorform::Notizen` aus 4.3 hält den Bau dort an. **Nutzerarbeit am laufenden Bündel, nach 3.4 und F1, `cmd+r`:** mit `tasks.txt` in der Formatansicht wirken die sechs Befehle und stehen im Menü „Editor“ bedienbar; mit einer anderen Datei im Editor oder dem Fokus anderswo sind sie ausgegraut und die Tasten gehen an AppKit; in der Aufgabentabelle sind Suchen, Weitersuchen, Rückwärtssuchen, Ersetzen, Alle ersetzen und Zeilensprung ausgegraut, in der Rohansicht derselben Datei bedienbar; `cmd+return` während einer laufenden Zelle übernimmt sie, ein zweites öffnet sie wieder.
     - Executor: `code-implementer`
     - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/kommandos/{fokus.rs,zulaessigkeit.rs}`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes:
@@ -351,7 +352,8 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
     - Closes (am Baum): C6.4 im Codeteil, C6.5, C6.6.
     - Dependencies: 3.2b
 
-13. **3.4 Die Belegung trägt die sechs Befehle**
+13. [DONE] **3.4 Die Belegung trägt die sechs Befehle**
+    - Umgesetzt am 260926; `make check` grün, 2034 Proben grün und keine rot, darunter die vier aus 3.3 und `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch`. Der Block heißt „Einträge im Editor“ und steht zwischen `editor_alle_ersetzen` und der Belegungsansicht; die Kopfzeile nennt 100 Funktionen mit 103 Kombinationen, nachgezählt über die Einträge der Datei. Die belegten nackten Tasten nennt der Blockkommentar nach dem Baum: `return` öffnet mit dem Standardprogramm, `delete` räumt in den Papierkorb, `space` markiert.
     - Executor: `data-implementer`
     - Files: `resources/default-keymap.toml`
     - Changes: ein Block „Einträge im Editor“ unmittelbar nach dem Editorblock, damit er im Menü „Editor“ unter den Editorbefehlen steht, mit sechs Einträgen:

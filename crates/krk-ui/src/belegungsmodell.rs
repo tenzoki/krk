@@ -465,7 +465,16 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EditorWeitersuchen
         | Kommando::EditorRueckwaertsSuchen
         | Kommando::EditorErsetzen
-        | Kommando::EditorAlleErsetzen => Funktionsbereich::Editor,
+        | Kommando::EditorAlleErsetzen
+        // Die sechs Befehle der Eintragstabelle (Schritt 3.3 der
+        // krkhome-Arbeit) aus demselben Satz: die Tabelle steht im Editor, und
+        // wer sie bedienen will, sucht unter "Editor".
+        | Kommando::EintragHinzufuegen
+        | Kommando::EintragBearbeiten
+        | Kommando::EintragHoch
+        | Kommando::EintragRunter
+        | Kommando::EintragLoeschen
+        | Kommando::AufgabeAbhaken => Funktionsbereich::Editor,
         // Der Git-Bereich, und die zwei Befehle folgen demselben Satz wie das
         // Ein- und Ausblenden der Vorschau und des Editors weiter oben: die
         // Gliederung fragt nach der **Gegend der Anwendung**, und wer den
@@ -1409,7 +1418,10 @@ mod tests {
     /// mit.
     #[test]
     fn der_bereich_editor_fuehrt_genau_die_befehle_des_editors() {
-        const EDITORBEFEHLE: [&str; 13] = [
+        // Die sechs letzten sind die Befehle der Eintragstabelle aus Schritt
+        // 3.3 der krkhome-Arbeit; ihre Zeilen in der Auslieferungsbelegung
+        // kommen mit Schritt 3.4, und bis dahin ist diese Probe rot.
+        const EDITORBEFEHLE: [&str; 19] = [
             "bearbeiten",
             "editor_rundweg",
             "fokus_editor",
@@ -1423,6 +1435,12 @@ mod tests {
             "editor_rueckwaerts_suchen",
             "editor_ersetzen",
             "editor_alle_ersetzen",
+            "eintrag_hinzufuegen",
+            "eintrag_bearbeiten",
+            "eintrag_hoch",
+            "eintrag_runter",
+            "eintrag_loeschen",
+            "aufgabe_abhaken",
         ];
 
         let belegung = Belegung::auslieferung();

@@ -422,7 +422,14 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         Wirkungsbereich::Dateibereiche => {
             matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau | Fokus::Editor)
         }
-        Wirkungsbereich::Editor => fokus == Fokus::Editor,
+        // Die drei Bereiche der Eintragstabellen und der Textflaeche (Schritt
+        // 3.3 der krkhome-Arbeit) verlangen den Fokus wie `Editor`. Welche Form
+        // der Editor zeigt, fragt nicht diese Regel, sondern ihre zweite
+        // Haelfte in `zulaessigkeit::gestattet`; hier steht allein der Fokus.
+        Wirkungsbereich::Editor
+        | Wirkungsbereich::Editortext
+        | Wirkungsbereich::Eintraege
+        | Wirkungsbereich::Aufgaben => fokus == Fokus::Editor,
         Wirkungsbereich::Tabbereich => {
             matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
         }
@@ -466,14 +473,16 @@ mod tests {
     /// womoeglich eine andere Menge als die, ueber die das Programm laeuft.
     const JEDER_FOKUS: [Fokus; 6] = Fokus::ALLE;
 
-    /// Die ganze Regel auf einen Blick: acht Wirkungsbereiche mal sechs
+    /// Die ganze Regel auf einen Blick: jeder Wirkungsbereich mal sechs
     /// Fokuswerte.
     ///
     /// Die Pruefungen darunter zeigen jeweils eine Zeile dieser Tafel mit ihrer
-    /// Begruendung; die Tafel zeigt fuer die heutigen acht mal sechs, dass
-    /// keine Zeile und keine Spalte fehlt, und fuer keine andere Zahl.
+    /// Begruendung; die Tafel zeigt fuer die heutigen Zeilen und Spalten, dass
+    /// keine fehlt, und fuer keine andere Zahl. Die Zahl der Zeilen steht
+    /// nicht im Namen: sie stand dort bis zu Schritt 3.3 der krkhome-Arbeit
+    /// als „acht" und waere mit jedem weiteren Bereich falsch geworden.
     ///
-    /// **Was einen siebten Fokuswert oder einen neunten Wirkungsbereich
+    /// **Was einen siebten Fokuswert oder einen weiteren Wirkungsbereich
     /// auffallen laesst, sind nicht die beiden Feldbreiten.** Eine Feldbreite
     /// `[T; N]` zwingt zu N Gliedern und sagt nichts darueber, welche N: der
     /// neue Wert kaeme in der Aufzaehlung an, ohne dass diese Tafel eine Zeile
@@ -489,11 +498,11 @@ mod tests {
     /// Feldbreite `[bool; 6]` haelt die Laenge jeder Zeile, aber nicht ihre
     /// Uebereinstimmung mit [`Fokus::ALLE`].
     #[test]
-    fn die_tafel_aus_acht_wirkungsbereichen_und_sechs_fokuswerten_geht_auf() {
+    fn die_tafel_aus_wirkungsbereichen_und_fokuswerten_geht_auf() {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
         // Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 6]); 8] = [
+        const TAFEL: [(Wirkungsbereich, [bool; 6]); 11] = [
             (
                 Wirkungsbereich::Dateifenster,
                 [true, false, false, false, false, false],
@@ -508,6 +517,18 @@ mod tests {
             ),
             (
                 Wirkungsbereich::Editor,
+                [false, false, false, true, false, false],
+            ),
+            (
+                Wirkungsbereich::Editortext,
+                [false, false, false, true, false, false],
+            ),
+            (
+                Wirkungsbereich::Eintraege,
+                [false, false, false, true, false, false],
+            ),
+            (
+                Wirkungsbereich::Aufgaben,
                 [false, false, false, true, false, false],
             ),
             (
@@ -936,10 +957,16 @@ mod tests {
                         "„{kennung}“ wirkt in der Leiste, wo es keine Datei gibt"
                     );
                 }
-                // Die neun Befehle des Editors sind der Sinn der Uebung.
-                Wirkungsbereich::Editor => {
+                // Die Befehle des Editors sind der Sinn der Uebung, seit
+                // Schritt 3.3 der krkhome-Arbeit auch die der Textflaeche und
+                // der Eintragstabellen; ob die Form passt, fragt diese Regel
+                // nicht.
+                Wirkungsbereich::Editor
+                | Wirkungsbereich::Editortext
+                | Wirkungsbereich::Eintraege
+                | Wirkungsbereich::Aufgaben => {
                     assert!(
-                        wirkt(Wirkungsbereich::Editor, Fokus::Editor),
+                        wirkt(kommando.wirkungsbereich(), Fokus::Editor),
                         "„{kennung}“ wirkt in seinem eigenen Bereich nicht"
                     );
                 }

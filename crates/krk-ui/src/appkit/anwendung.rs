@@ -312,7 +312,7 @@ use crate::kommandos::operationen::{
 };
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::rundweg::{Rundweg, rundweg};
-use crate::kommandos::zulaessigkeit::{self, Lage};
+use crate::kommandos::zulaessigkeit::{self, Editorform, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
 use crate::spalten::Spalte;
@@ -3711,6 +3711,13 @@ impl Anwendungsdelegierter {
             ),
             schluesselfenster_gehoert_krk: schluesselfenster.gehoert_krk(),
             fokus: self.fokus_bei(schluesselfenster),
+            // Ohne Editorbereich, also vor dem Aufbau der Oberflaeche, zeigt
+            // der Editor nichts als die leere Textflaeche.
+            editorform: self
+                .ivars()
+                .editor
+                .get()
+                .map_or(Editorform::Text, |editor| editor.form()),
         }
     }
 
@@ -4111,6 +4118,20 @@ impl Anwendungsdelegierter {
             }
             Kommando::EditorErsetzen => self.editorbefehl(Editorbereich::treffer_ersetzen),
             Kommando::EditorAlleErsetzen => self.editorbefehl(Editorbereich::alle_treffer_ersetzen),
+            // Die sechs Befehle der Eintragstabelle (C6 der krkhome-Arbeit,
+            // Schritt 3.3). Derselbe Zuschnitt wie die vier darueber: ein Ruf
+            // in den Editor, eine Meldung zurueck. Jede der sechs geht dort
+            // durch `handlung_ausfuehren`, und `eintrag_bearbeiten` uebernimmt
+            // eine laufende Zelle, statt eine neue zu beginnen. **Ohne diese
+            // Zweige fielen die Befehle durch den Auffangzweig unten**, stuenden
+            // im Hauptmenue und taeten nichts; gehalten werden sie von
+            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::EintragHinzufuegen => self.editorbefehl(Editorbereich::eintrag_hinzufuegen),
+            Kommando::EintragBearbeiten => self.editorbefehl(Editorbereich::eintrag_bearbeiten),
+            Kommando::EintragHoch => self.editorbefehl(Editorbereich::eintrag_hoch),
+            Kommando::EintragRunter => self.editorbefehl(Editorbereich::eintrag_runter),
+            Kommando::EintragLoeschen => self.editorbefehl(Editorbereich::eintrag_loeschen),
+            Kommando::AufgabeAbhaken => self.editorbefehl(Editorbereich::aufgabe_abhaken),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
             // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**:
@@ -9769,7 +9790,16 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 2] = ["NeuerungenZeigen", "Notizordner"];
+    const BEFEHLE: [&str; 8] = [
+        "NeuerungenZeigen",
+        "Notizordner",
+        "EintragHinzufuegen",
+        "EintragBearbeiten",
+        "EintragHoch",
+        "EintragRunter",
+        "EintragLoeschen",
+        "AufgabeAbhaken",
+    ];
 
     #[test]
     fn jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig() {
