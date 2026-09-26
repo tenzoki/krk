@@ -41,3 +41,6 @@ Zu entscheiden sind drei Dinge, die zusammenhängen: woran die Belegung erkennt,
 
 ---
 Answered: 260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md `## Entscheidungen des Plans` — Möglichkeit 1: die Seite des Wirkungsbereichs im Kern entscheidet, ob zwei Funktionen eine Kombination teilen dürfen; ruled by user, Kai Stalmann <kai@stalmann.org> (Anweisung im Chat 260926-2250, beide Arbeitspakete autonom auszuführen; **Mode:** autonomous auf 260926-2240-termine-als-weitere-datei-im-heimordner)
+
+---
+Implemented: fd967b7, d350c29 — Seiten der Wirkungsbereiche und Nachschlag::Geteilt in krk-core/src/tasten/belegung.rs; cmd+1 traegt „Nach Name sortieren“ und „Termine: Sortierrichtung umkehren“.
