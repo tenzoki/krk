@@ -37,3 +37,6 @@ Answered: dieser Datensatz `## Options` und 260926-0017-zweitlesung-spec-f2-krkh
 
 ---
 Implemented: 87d5ff6 — Heimordner fest auf ~/krkhome, Verweis erkannt; F2 in 4c2ca49
+
+---
+Superseded by: 260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md — der Nutzer verlangt den einstellbaren Ort nach der ersten Prüfung am Bündel
