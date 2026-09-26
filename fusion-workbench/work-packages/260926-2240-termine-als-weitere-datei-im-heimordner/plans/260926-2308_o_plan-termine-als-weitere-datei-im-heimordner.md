@@ -225,7 +225,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
    - Closes (am Baum): die Regelhälften von T5.3 und T5.4. Die namentlichen Fälle mit „Termine: Sortierrichtung umkehren“ folgen in Schritt 8.
    - Dependencies: none
 
-4. **4 Das Verschieben bekommt einen eigenen Wirkungsbereich**
+4. [DONE] **4 Das Verschieben bekommt einen eigenen Wirkungsbereich**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/kommandos/fokus.rs`, `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, `crates/krk-ui/src/belegungsausgabe.rs` (nur, wenn eine Probe dort den Wirkungsbereich der zwei Befehle nennt)
    - Changes:

@@ -2194,6 +2194,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Editor
                     | Wirkungsbereich::Editortext
                     | Wirkungsbereich::Eintraege
+                    | Wirkungsbereich::Reihenfolge
                     | Wirkungsbereich::Aufgaben
                     | Wirkungsbereich::Geheimnisse
                     | Wirkungsbereich::Tabbereich
@@ -2527,20 +2528,42 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
 /// Die sechs Befehle der Eintragstabelle tragen die Bereiche, die Schritt 3.3
 /// der krkhome-Arbeit ihnen gibt (C6.5, C6.6, Kernhaelfte).
 ///
-/// Fuenf wirken in jeder Tabellenform, das Abhaken allein in der
-/// Aufgabentabelle. Ob die Form passt, fragt `krk_ui`; hier steht die Aussage
-/// ueber die Befehle, die ohne Fenster pruefbar ist, und dass jede der sechs
-/// Kennungen zu ihrem Kommando fuehrt.
+/// Drei wirken in jeder Tabellenform, die zwei des Verschiebens seit dem
+/// 260926 allein in einer Tabelle in Dateireihenfolge (Schritt 4 des Plans
+/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`), das
+/// Abhaken allein in der Aufgabentabelle. Ob die Form passt, fragt `krk_ui`;
+/// hier steht die Aussage ueber die Befehle, die ohne Fenster pruefbar ist,
+/// und dass jede der sechs Kennungen zu ihrem Kommando fuehrt.
 #[test]
 fn die_sechs_befehle_der_eintragstabelle_tragen_ihre_bereiche() {
-    for (kommando, kennung) in [
-        (Kommando::EintragHinzufuegen, "eintrag_hinzufuegen"),
-        (Kommando::EintragBearbeiten, "eintrag_bearbeiten"),
-        (Kommando::EintragHoch, "eintrag_hoch"),
-        (Kommando::EintragRunter, "eintrag_runter"),
-        (Kommando::EintragLoeschen, "eintrag_loeschen"),
+    for (kommando, kennung, bereich) in [
+        (
+            Kommando::EintragHinzufuegen,
+            "eintrag_hinzufuegen",
+            Wirkungsbereich::Eintraege,
+        ),
+        (
+            Kommando::EintragBearbeiten,
+            "eintrag_bearbeiten",
+            Wirkungsbereich::Eintraege,
+        ),
+        (
+            Kommando::EintragHoch,
+            "eintrag_hoch",
+            Wirkungsbereich::Reihenfolge,
+        ),
+        (
+            Kommando::EintragRunter,
+            "eintrag_runter",
+            Wirkungsbereich::Reihenfolge,
+        ),
+        (
+            Kommando::EintragLoeschen,
+            "eintrag_loeschen",
+            Wirkungsbereich::Eintraege,
+        ),
     ] {
-        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Eintraege);
+        assert_eq!(kommando.wirkungsbereich(), bereich, "{kennung}");
         assert_eq!(Kommando::aus_kennung(kennung), Some(kommando));
     }
     assert_eq!(
@@ -2594,7 +2617,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 12] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 13] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2604,6 +2627,10 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 12] = [
     (Wirkungsbereich::Editor, "Editor"),
     (Wirkungsbereich::Editortext, "Text im Editor"),
     (Wirkungsbereich::Eintraege, "Einträge im Editor"),
+    (
+        Wirkungsbereich::Reihenfolge,
+        "Einträge in Dateireihenfolge im Editor",
+    ),
     (Wirkungsbereich::Aufgaben, "Aufgaben im Editor"),
     (Wirkungsbereich::Geheimnisse, "Geheimnisse im Editor"),
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
@@ -2634,12 +2661,13 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Editor => 3,
         Wirkungsbereich::Editortext => 4,
         Wirkungsbereich::Eintraege => 5,
-        Wirkungsbereich::Aufgaben => 6,
-        Wirkungsbereich::Geheimnisse => 7,
-        Wirkungsbereich::Tabbereich => 8,
-        Wirkungsbereich::Navigator => 9,
-        Wirkungsbereich::Vorschau => 10,
-        Wirkungsbereich::Ueberall => 11,
+        Wirkungsbereich::Reihenfolge => 6,
+        Wirkungsbereich::Aufgaben => 7,
+        Wirkungsbereich::Geheimnisse => 8,
+        Wirkungsbereich::Tabbereich => 9,
+        Wirkungsbereich::Navigator => 10,
+        Wirkungsbereich::Vorschau => 11,
+        Wirkungsbereich::Ueberall => 12,
     }
 }
 

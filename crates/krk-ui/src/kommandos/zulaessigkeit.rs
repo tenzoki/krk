@@ -459,6 +459,15 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             Editorform::Text => false,
             Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => true,
         },
+        // Das Verschieben verlangt eine Tabelle in Dateireihenfolge. Heute
+        // steht jede Eintragstabelle so; die Zeile ist ein eigener Wert, damit
+        // eine nach dem Datum geordnete Tabelle ihn hier ablehnen kann
+        // (Entscheidung 2 des Plans
+        // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+        Wirkungsbereich::Reihenfolge => match form {
+            Editorform::Text => false,
+            Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => true,
+        },
         // Die Notiztabelle traegt keine Kaestchen, die der Geheimnisse als
         // dieselbe Tabelle ebenso wenig.
         Wirkungsbereich::Aufgaben => match form {
@@ -502,6 +511,7 @@ fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool) -> bool {
         | Wirkungsbereich::Editor
         | Wirkungsbereich::Editortext
         | Wirkungsbereich::Eintraege
+        | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
@@ -709,13 +719,17 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 12] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 13] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
         (Wirkungsbereich::Editor, Kommando::EditorSichern),
         (Wirkungsbereich::Editortext, Kommando::EditorWeitersuchen),
-        (Wirkungsbereich::Eintraege, Kommando::EintragHoch),
+        // `EintragHinzufuegen` und nicht mehr `EintragHoch`, seit das
+        // Verschieben einen eigenen Bereich traegt; er steht auf keiner
+        // Ausnahmeliste und kommt waehrend eines Blattes nicht durch.
+        (Wirkungsbereich::Eintraege, Kommando::EintragHinzufuegen),
+        (Wirkungsbereich::Reihenfolge, Kommando::EintragHoch),
         (Wirkungsbereich::Aufgaben, Kommando::AufgabeAbhaken),
         (Wirkungsbereich::Geheimnisse, Kommando::PinAendern),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
@@ -923,9 +937,9 @@ mod tests {
     /// Die Pruefungen darunter zeigen einzelne Felder dieser Tafel mit ihrer
     /// Begruendung; die Tafel zeigt fuer die heutigen Zeilen und Spalten, dass
     /// keine fehlt, und fuer keine andere Zahl. **Die
-    /// beiden Feldbreiten sichern das nicht**: `[[bool; 6]; 12]` zwingt zu zwoelf
-    /// Zeilen zu je sechs Spalten und sagt nichts darueber, welche zwoelf und
-    /// welche sechs. Ein weiterer Wirkungsbereich faellt an der Zaehlprobe
+    /// beiden Feldbreiten sichern das nicht**: `[[bool; 6]; N]` zwingt zu so
+    /// vielen Zeilen zu je sechs Spalten, wie dort stehen, und sagt nichts
+    /// darueber, welche Zeilen und welche Spalten. Ein weiterer Wirkungsbereich faellt an der Zaehlprobe
     /// `jeder_wirkungsbereich_hat_einen_stellvertreter` auf und ein siebter
     /// Fokuswert an der Zusicherung unter der Tafel, die die Spaltenzahl gegen
     /// `Fokus::ALLE.len()` haelt; keiner von beiden am Bau.
@@ -944,7 +958,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 12] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 13] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -952,6 +966,8 @@ mod tests {
             // Editortext
             [false, false, false, true, false, false],
             // Eintraege
+            [false, false, false, false, false, false],
+            // Reihenfolge, gleich der Zeile darueber
             [false, false, false, false, false, false],
             // Aufgaben
             [false, false, false, false, false, false],
@@ -962,7 +978,7 @@ mod tests {
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 12] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 13] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -970,6 +986,8 @@ mod tests {
             // Editortext
             [false, false, false, false, false, false],
             // Eintraege
+            [false, false, false, true, false, false],
+            // Reihenfolge, gleich der Zeile darueber
             [false, false, false, true, false, false],
             // Aufgaben
             [false, false, false, true, false, false],
@@ -982,7 +1000,7 @@ mod tests {
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 12] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 13] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -990,6 +1008,8 @@ mod tests {
             // Editortext
             [false, false, false, false, false, false],
             // Eintraege
+            [false, false, false, true, false, false],
+            // Reihenfolge, gleich der Zeile darueber
             [false, false, false, true, false, false],
             // Aufgaben
             [false, false, false, false, false, false],
@@ -1000,7 +1020,7 @@ mod tests {
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 12] = [[false; 6]; 12];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 13] = [[false; 6]; 13];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1017,7 +1037,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 12]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 13]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),

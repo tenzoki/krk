@@ -424,13 +424,14 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         }
         // Die drei Bereiche der Eintragstabellen und der Textflaeche (Schritt
         // 3.3 der krkhome-Arbeit) verlangen den Fokus wie `Editor`, ebenso der
-        // der Geheimnisse (Schritt 5.5). Welche Form der Editor zeigt und ob
-        // er `secrets.txt` mit einem Kopf haelt, fragt nicht diese Regel,
-        // sondern ihre zweite Haelfte in `zulaessigkeit::gestattet`; hier
-        // steht allein der Fokus.
+        // der Geheimnisse (Schritt 5.5) und seit dem 260926 der des
+        // Verschiebens. Welche Form der Editor zeigt und ob er `secrets.txt`
+        // mit einem Kopf haelt, fragt nicht diese Regel, sondern ihre zweite
+        // Haelfte in `zulaessigkeit::gestattet`; hier steht allein der Fokus.
         Wirkungsbereich::Editor
         | Wirkungsbereich::Editortext
         | Wirkungsbereich::Eintraege
+        | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Geheimnisse => fokus == Fokus::Editor,
         Wirkungsbereich::Tabbereich => {
@@ -505,7 +506,7 @@ mod tests {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
         // Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 6]); 12] = [
+        const TAFEL: [(Wirkungsbereich, [bool; 6]); 13] = [
             (
                 Wirkungsbereich::Dateifenster,
                 [true, false, false, false, false, false],
@@ -528,6 +529,10 @@ mod tests {
             ),
             (
                 Wirkungsbereich::Eintraege,
+                [false, false, false, true, false, false],
+            ),
+            (
+                Wirkungsbereich::Reihenfolge,
                 [false, false, false, true, false, false],
             ),
             (
@@ -966,11 +971,13 @@ mod tests {
                 }
                 // Die Befehle des Editors sind der Sinn der Uebung, seit
                 // Schritt 3.3 der krkhome-Arbeit auch die der Textflaeche und
-                // der Eintragstabellen, seit Schritt 5.5 „PIN ändern"; ob Form
-                // und Datei passen, fragt diese Regel nicht.
+                // der Eintragstabellen, seit Schritt 5.5 „PIN ändern", seit dem
+                // 260926 das Verschieben; ob Form und Datei passen, fragt diese
+                // Regel nicht.
                 Wirkungsbereich::Editor
                 | Wirkungsbereich::Editortext
                 | Wirkungsbereich::Eintraege
+                | Wirkungsbereich::Reihenfolge
                 | Wirkungsbereich::Aufgaben
                 | Wirkungsbereich::Geheimnisse => {
                     assert!(

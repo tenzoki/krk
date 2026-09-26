@@ -277,7 +277,9 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// in derselben Regel, die den Fokus fragt, und die Ausgrauung des Menues folgt
 /// daraus ohne eigenen Weg. Ein vierter, [`Wirkungsbereich::Geheimnisse`],
 /// kommt mit Schritt 5.5 fuer „PIN ändern" und fragt statt der Form, ob der
-/// Editor `secrets.txt` mit einem Kopf auf der Platte haelt.
+/// Editor `secrets.txt` mit einem Kopf auf der Platte haelt. Seit dem 260926
+/// traegt das Verschieben [`Wirkungsbereich::Reihenfolge`], weil die
+/// Termintabelle nach dem Datum ordnet und es dort nicht annimmt.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
@@ -340,10 +342,24 @@ pub enum Wirkungsbereich {
     /// Eintragstabelle zeigt (C6 des Spec
     /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
     ///
-    /// Der Wert der fuenf Befehle, die Eintraege anlegen, bearbeiten,
-    /// verschieben und loeschen. Die Form fragt, wie bei
-    /// [`Wirkungsbereich::Editortext`], `krk_ui`.
+    /// Der Wert der drei Befehle, die Eintraege anlegen, bearbeiten und
+    /// loeschen. Die Form fragt, wie bei [`Wirkungsbereich::Editortext`],
+    /// `krk_ui`. Das Verschieben traegt seit dem 260926
+    /// [`Wirkungsbereich::Reihenfolge`].
     Eintraege,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor eine
+    /// Eintragstabelle **in Dateireihenfolge** zeigt.
+    ///
+    /// Der Wert der zwei Befehle, die einen Eintrag nach oben oder unten
+    /// verschieben. Eine Tabelle, die ihre Zeilen nach etwas anderem ordnet als
+    /// der Datei, nimmt sie nicht an: die Termintabelle ordnet nach dem Datum,
+    /// und dort hiesse „nach oben" nichts, was der Nutzer sieht (Entscheidung 2
+    /// des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+    /// Ein eigener Wert und keine Frage nach dem Kommando, weil die
+    /// Zulaessigkeit in `krk_ui` allein den Wirkungsbereich und die Form fragt;
+    /// der Menueeintrag ist dort damit ausgegraut. Die Form fragt, wie bei
+    /// [`Wirkungsbereich::Eintraege`], `krk_ui`.
+    Reihenfolge,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die
     /// Aufgabentabelle zeigt (C6).
     ///
@@ -472,6 +488,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Editor => "Editor",
             Wirkungsbereich::Editortext => "Text im Editor",
             Wirkungsbereich::Eintraege => "Einträge im Editor",
+            Wirkungsbereich::Reihenfolge => "Einträge in Dateireihenfolge im Editor",
             Wirkungsbereich::Aufgaben => "Aufgaben im Editor",
             Wirkungsbereich::Geheimnisse => "Geheimnisse im Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
@@ -496,6 +513,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Editor
             | Wirkungsbereich::Editortext
             | Wirkungsbereich::Eintraege
+            | Wirkungsbereich::Reihenfolge
             | Wirkungsbereich::Aufgaben
             | Wirkungsbereich::Geheimnisse => Seite::Editor,
             Wirkungsbereich::Dateifenster
@@ -1433,14 +1451,17 @@ impl Kommando {
             | Kommando::EditorRueckwaertsSuchen
             | Kommando::EditorErsetzen
             | Kommando::EditorAlleErsetzen => Wirkungsbereich::Editortext,
-            // Die Befehle der Eintragstabelle (C6 der krkhome-Arbeit). Alle
-            // fuenf wirken in jeder Tabellenform; das Abhaken allein in der
+            // Die Befehle der Eintragstabelle (C6 der krkhome-Arbeit). Diese
+            // drei wirken in jeder Tabellenform; das Abhaken allein in der
             // Aufgabentabelle, denn eine Notiz hat kein Kaestchen.
             Kommando::EintragHinzufuegen
             | Kommando::EintragBearbeiten
-            | Kommando::EintragHoch
-            | Kommando::EintragRunter
             | Kommando::EintragLoeschen => Wirkungsbereich::Eintraege,
+            // Das Verschieben wirkt allein in einer Tabelle, die in der
+            // Reihenfolge der Datei steht; die Termintabelle ordnet nach dem
+            // Datum (Entscheidung 2 des Plans
+            // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+            Kommando::EintragHoch | Kommando::EintragRunter => Wirkungsbereich::Reihenfolge,
             Kommando::AufgabeAbhaken => Wirkungsbereich::Aufgaben,
             // „PIN ändern" (C7, Schritt 5.5 der krkhome-Arbeit): allein an der
             // entsperrten `secrets.txt`, deren PIN schon in einem Kopf steht;
