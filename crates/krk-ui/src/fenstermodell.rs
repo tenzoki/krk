@@ -90,8 +90,27 @@ use krk_core::ablage::{
     Spaltensichtbarkeit,
 };
 
+use krk_core::heimordner::{Heimordner, Sonderdatei};
+
 use crate::spalten::Spalte;
 use crate::tabs::Tabuebersicht;
+
+/// Die Editordatei, wie die Sitzung sie nennen darf: jede ausser
+/// `.secrets.txt` im erkannten Ordner.
+///
+/// **Die eine Stelle dieser Regel, und sie hat zwei Frager**: das Schreiben
+/// der Sitzung ([`Fenstermodell::sitzung`]) und das Wiederherstellen beim
+/// Start (`Anwendungsdelegierter::editor_wiederherstellen`). Der zweite gilt
+/// einer `session.toml` aus der Zeit vor dieser Regel, die die Datei noch
+/// nennt; sie wird beim Start nicht geoeffnet, und die naechste Sicherung der
+/// Sitzung laesst sie fallen. Die Frage ist ein Textvergleich und stellt
+/// keinen Systemaufruf ([`Heimordner::sonderdatei`]).
+#[must_use = "der Rueckgabewert ist die gefilterte Datei; wer ihn fallen laesst, merkt die ungefilterte"]
+pub fn merkbare_editordatei(editor: Option<PathBuf>, heim: Option<&Heimordner>) -> Option<PathBuf> {
+    editor.filter(|pfad| {
+        heim.and_then(|heim| heim.sonderdatei(pfad)) != Some(Sonderdatei::Geheimnisse)
+    })
+}
 
 /// Um wie viele Punkte ein Tastenbefehl einen Bereich breiter oder schmaler
 /// macht.
@@ -540,15 +559,23 @@ impl Fenstermodell {
     /// Verlaufsliste und Einzelheiten teilt, steht in den Rahmen seiner
     /// Ansichten und nirgends sonst. Der Weg von dort hierher ist
     /// `krk_ui::appkit::git::Gitfenster::listenanteil`.
+    ///
+    /// **`.secrets.txt` im erkannten Ordner nennt die Sitzung nie**
+    /// (C7 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`):
+    /// die PIN gilt, solange die Datei im Editor offen ist, und ein Start, der
+    /// sie wieder oeffnen wollte, haette keine. Die Regel steht in
+    /// [`merkbare_editordatei`], und `heim` ist die Abschrift des einen
+    /// geteilten Wertes ([`crate::heimgriff`]).
     pub fn sitzung(
         &self,
         fenster: [Fensterzustand; 2],
         editor: Option<PathBuf>,
         gitanteil: Option<f64>,
+        heim: Option<&Heimordner>,
     ) -> Sitzung {
         Sitzung {
             aktiv: self.aktiv,
-            editor,
+            editor: merkbare_editordatei(editor, heim),
             gitanteil,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
@@ -2909,7 +2936,7 @@ mod tests {
         let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
         assert_eq!(modell.breiten().editor, Some(gewuenscht));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         assert!(
             text.contains("editor"),
@@ -3064,7 +3091,7 @@ mod tests {
         let mut modell = modell();
         assert!(modell.spalte_umschalten(Spalte::Groesse));
 
-        let sitzung = modell.sitzung(fenster, None, None);
+        let sitzung = modell.sitzung(fenster, None, None, None);
         assert!(
             !sitzung.spalten.groesse,
             "die Spalte Groesse ist nicht weggeschaltet"
@@ -3086,7 +3113,7 @@ mod tests {
         assert!(modell.spalte_umschalten(Spalte::Groesse));
         assert!(modell.spalte_umschalten(Spalte::Typ));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
         let wieder = Fenstermodell::aus_sitzung(&gelesen);
@@ -3104,5 +3131,132 @@ mod tests {
             &wieder.spaltensichtbarkeit(),
             Spalte::Typ
         ));
+    }
+
+    /// Ein Pruef-krkhome: `zuhause/krkhome` als Verweis auf `ziel`, und der
+    /// Heimordner dazu mit seiner geschriebenen und seiner aufgeloesten Form.
+    fn pruef_krkhome(ordner: &crate::pruefordner::Pruefordner) -> (Heimordner, PathBuf, PathBuf) {
+        let zuhause = ordner.ordner("zuhause");
+        let ziel = ordner.ordner("ziel");
+        std::os::unix::fs::symlink(&ziel, zuhause.join(krk_core::heimordner::ORDNERNAME))
+            .expect("der Verweis laesst sich anlegen");
+        let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+        let geschrieben = heim.geschrieben().to_path_buf();
+        (heim, geschrieben, ziel)
+    }
+
+    /// C7.14: eine Sitzung mit `.secrets.txt` im Editor nennt die Datei nicht,
+    /// ueber die geschriebene und ueber die aufgeloeste Form, und traegt jede
+    /// andere Angabe unveraendert. Gemessen an der Zeichenkette, die als
+    /// `session.toml` auf die Platte geht.
+    #[test]
+    fn die_sitzung_nennt_secrets_txt_nie_als_editordatei() {
+        let ordner = crate::pruefordner::Pruefordner::neu("sitzung-geheimnisse");
+        let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+        let mut modell = modell();
+        schalten(&mut modell, Bereich::Editor);
+        let ohne_datei = modell.sitzung(Sitzung::default().fenster, None, Some(0.4), Some(&heim));
+
+        for basis in [&geschrieben, &ziel] {
+            let geheimnisse = basis.join(".secrets.txt");
+            let sitzung = modell.sitzung(
+                Sitzung::default().fenster,
+                Some(geheimnisse.clone()),
+                Some(0.4),
+                Some(&heim),
+            );
+            assert_eq!(sitzung.editor, None, "{}", geheimnisse.display());
+            assert_eq!(
+                sitzung, ohne_datei,
+                "jede andere Angabe bleibt, wie sie ohne Editordatei waere"
+            );
+            let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
+            assert!(
+                !text.contains("secrets"),
+                "session.toml nennt die Datei: {text}"
+            );
+        }
+    }
+
+    /// Die Regel greift allein `.secrets.txt` im erkannten Ordner: `notes.txt`
+    /// daneben, eine `.secrets.txt` in einem anderen Ordner und jede Datei ohne
+    /// Heimordner bleiben in der Sitzung stehen.
+    #[test]
+    fn die_sitzung_merkt_jede_andere_editordatei() {
+        let ordner = crate::pruefordner::Pruefordner::neu("sitzung-andere");
+        let (heim, geschrieben, _) = pruef_krkhome(&ordner);
+        let modell = modell();
+        let anderswo = ordner.pfad().join(".secrets.txt");
+        for (datei, heim) in [
+            (geschrieben.join("notes.txt"), Some(&heim)),
+            (anderswo, Some(&heim)),
+            (geschrieben.join(".secrets.txt"), None),
+        ] {
+            let sitzung =
+                modell.sitzung(Sitzung::default().fenster, Some(datei.clone()), None, heim);
+            assert_eq!(sitzung.editor, Some(datei));
+        }
+    }
+
+    /// Eine `session.toml` aus der Zeit vor der Regel, die `.secrets.txt` noch
+    /// nennt: der Start oeffnet sie nicht, und die naechste Sicherung der
+    /// Sitzung laesst sie fallen. Beide Wege fragen dieselbe Regel.
+    #[test]
+    fn eine_aeltere_sitzung_mit_secrets_txt_oeffnet_sie_nicht() {
+        let ordner = crate::pruefordner::Pruefordner::neu("sitzung-aelter");
+        let (heim, geschrieben, _) = pruef_krkhome(&ordner);
+        let geheimnisse = geschrieben.join(".secrets.txt");
+        let alt = Sitzung {
+            editor: Some(geheimnisse.clone()),
+            ..Sitzung::default()
+        };
+        let text = toml::to_string(&alt).expect("die Sitzung laesst sich schreiben");
+        assert!(
+            text.contains(".secrets.txt"),
+            "die aeltere Sitzung nennt sie"
+        );
+
+        let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
+        assert_eq!(gelesen.editor.as_deref(), Some(geheimnisse.as_path()));
+        assert_eq!(
+            merkbare_editordatei(gelesen.editor.clone(), Some(&heim)),
+            None,
+            "der Start oeffnet sie nicht"
+        );
+        let wieder = Fenstermodell::aus_sitzung(&gelesen).sitzung(
+            gelesen.fenster.clone(),
+            gelesen.editor.clone(),
+            gelesen.gitanteil,
+            Some(&heim),
+        );
+        assert_eq!(
+            wieder.editor, None,
+            "die naechste Sicherung laesst sie fallen"
+        );
+    }
+
+    /// Die Wiederherstellung beim Start fragt die Regel, bevor sie den Editor
+    /// eine Datei oeffnen laesst. Der Rumpf steht beim Anwendungsdelegierten,
+    /// den keine Probe ohne Fenster baut; deshalb haelt ihn der Quelltext.
+    #[test]
+    fn die_wiederherstellung_fragt_die_regel_vor_dem_oeffnen() {
+        let (_, datei) = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/anwendung.rs")
+            .expect("der Anwendungsdelegierte steht im Quellbaum");
+        let kopf = concat!("fn editor_wieder", "herstellen(");
+        let beginn = datei.find(kopf).expect("die Wiederherstellung steht dort");
+        let rest = &datei[beginn..];
+        let ende = rest.find("\n    }\n").expect("ihr Rumpf endet");
+        let rumpf: String = crate::quellbaum::codezeilen(&rest[..ende])
+            .collect::<Vec<_>>()
+            .join("\n");
+        let regel = rumpf
+            .find(concat!("merkbare_editor", "datei("))
+            .expect("die Wiederherstellung fragt die Regel");
+        let oeffnen = rumpf
+            .find(concat!("editor_oeffnen_", "lassen("))
+            .expect("die Wiederherstellung oeffnet ueber den einen Weg");
+        assert!(regel < oeffnen, "die Regel steht hinter dem Oeffnen");
     }
 }

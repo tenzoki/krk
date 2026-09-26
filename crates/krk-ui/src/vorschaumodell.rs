@@ -177,7 +177,7 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
-use krk_core::heimordner::Heimordner;
+use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
@@ -237,6 +237,15 @@ const BILDENDUNGEN: [&str; 10] = [
 /// kein PDF ist, faellt in der Ansicht auf die Metadaten zurueck, die jede
 /// [`Inhalt::Pdf`]-Meldung dafuer mitfuehrt.
 const PDFENDUNG: &str = "pdf";
+
+/// Was die Vorschau statt des Inhalts von `.secrets.txt` zeigt (C7).
+///
+/// **Ein Satz an den Nutzer und kein Inhalt**: die Datei ist verschluesselt,
+/// und geoeffnet wird sie im Editor mit der PIN. Die Vorschau liest sie dafuer
+/// nicht ([`laden`]); was sie zeigt, ist allein dieser Text, und was sich in
+/// ihr markieren und kopieren laesst, ist ebenfalls allein dieser Text.
+const GEHEIMNISHINWEIS: &str =
+    "Diese Datei ist verschlüsselt und öffnet sich mit F4 und der PIN im Editor.";
 
 /// Die Metadaten eines Eintrags, wie C6 sie fuer alles Uebrige verlangt.
 ///
@@ -796,6 +805,16 @@ fn zu_gross_text(groesse: u64) -> String {
 /// und ohne einen Systemaufruf ueber die hinaus, die dieser Weg ohnehin
 /// stellt; gelesen wird mit demselben `bis_zur_grenze_lesen` wie jede
 /// Textdatei, also nur lesend.
+///
+/// **`.secrets.txt` im erkannten Ordner wird nicht gelesen, auch nicht eine
+/// leere** (C7 desselben Arbeitspakets, Schritt 5.3). Die Frage nach der
+/// Sonderdatei steht gleich hinter dem `lstat(2)` und vor jedem anderen Zweig,
+/// also vor dem Oeffnen einer Datei, vor dem Lesen eines Ordners fuer die
+/// Zusammenfassung und vor dem Dateityp, der weiter unten ueber die
+/// Darstellung entscheidet. Das Bedrohungsmodell ist das versehentliche Lesen
+/// ([`GEHEIMNISHINWEIS`]); eine Vorschau, die das Chiffrat liest, um es dann
+/// nicht zu zeigen, haette die Datei schon beruehrt. Die Frage selbst stellt
+/// keinen Systemaufruf ([`Heimordner::sonderdatei`]).
 fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>) -> Inhalt {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
@@ -808,6 +827,9 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             ));
         }
     };
+    if heim.and_then(|heim| heim.sonderdatei(pfad)) == Some(Sonderdatei::Geheimnisse) {
+        return Inhalt::Hinweis(GEHEIMNISHINWEIS.to_owned());
+    }
     let metadaten = Metadaten {
         name: titel_von(pfad),
         pfad: pfad.to_path_buf(),
@@ -1213,6 +1235,130 @@ mod tests {
             );
         }
         assert_eq!([stand("notes.txt"), stand("tasks.txt")], vorher);
+    }
+
+    /// Legt `.secrets.txt` mit dem genannten Inhalt im Ziel des
+    /// Pruef-krkhome an und nimmt ihr jedes Recht (Modus `000`).
+    ///
+    /// **Der Modus ist der Beleg, dass nichts geoeffnet wurde**: jeder Versuch,
+    /// die Datei zu lesen, scheiterte an ihm und endete in den Metadaten und
+    /// nicht im Hinweis. Die Gegenprobe ohne Heimordner zeigt genau das.
+    fn gesperrte_geheimnisse(ziel: &Path, inhalt: &[u8]) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let pfad = ziel.join(".secrets.txt");
+        std::fs::write(&pfad, inhalt).expect(".secrets.txt");
+        std::fs::set_permissions(&pfad, std::fs::Permissions::from_mode(0o000))
+            .expect("der Modus 000 laesst sich setzen");
+        pfad
+    }
+
+    /// C7.9: die Vorschau zeigt fuer `.secrets.txt` im erkannten Ordner den
+    /// Hinweis und liest nichts, ueber die geschriebene und ueber die
+    /// aufgeloeste Form, fuer eine gefuellte und fuer eine leere Datei.
+    #[test]
+    fn secrets_txt_im_heimordner_zeigt_den_hinweis_ohne_zu_lesen() {
+        for (name, inhalt) in [
+            ("secrets-gefuellt", b"KRKSEC geheimer Eintrag".as_slice()),
+            ("secrets-leer", b"".as_slice()),
+        ] {
+            let ordner = Pruefordner::neu(name);
+            let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+            let _ = gesperrte_geheimnisse(&ziel, inhalt);
+            for basis in [&geschrieben, &ziel] {
+                assert_eq!(
+                    laden(
+                        &basis.join(".secrets.txt"),
+                        Tafel::Hell,
+                        &Profile::default(),
+                        Some(&heim),
+                    ),
+                    Inhalt::Hinweis(GEHEIMNISHINWEIS.to_owned()),
+                    "{name} ueber {}",
+                    basis.display()
+                );
+            }
+            // Die Gegenprobe: ohne Erkennung versucht die Vorschau zu lesen,
+            // scheitert am Modus und zeigt die Metadaten. Der Hinweis oben
+            // kommt also nicht aus einem gescheiterten Lesen.
+            assert!(
+                matches!(
+                    laden(
+                        &ziel.join(".secrets.txt"),
+                        Tafel::Hell,
+                        &Profile::default(),
+                        None
+                    ),
+                    Inhalt::Metadaten { .. }
+                ),
+                "{name}: ohne Heimordner ist die gesperrte Datei eine gewoehnliche"
+            );
+        }
+    }
+
+    /// Eine `.secrets.txt` ausserhalb des erkannten Ordners ist eine
+    /// gewoehnliche Textdatei und erscheint mit ihrem Inhalt: die Ausnahme
+    /// haengt am Ordner und am Namen, nicht am Namen allein.
+    #[test]
+    fn secrets_txt_anderswo_erscheint_wie_jede_textdatei() {
+        let ordner = Pruefordner::neu("secrets-anderswo");
+        let (heim, _, _) = pruef_krkhome(&ordner);
+        let daneben = ordner.datei(".secrets.txt", "kein Geheimnis\n");
+        assert_eq!(
+            laden(&daneben, Tafel::Hell, &Profile::default(), Some(&heim)),
+            Inhalt::Text("kein Geheimnis\n".to_owned())
+        );
+    }
+
+    /// Der Hinweis traegt den Wortlaut mit Umlauten, wie jede Zeichenkette,
+    /// die ein Mensch durch KRKs Oberflaeche liest, und nennt Taste und PIN.
+    #[test]
+    fn der_geheimnishinweis_nennt_f4_und_pin_mit_umlauten() {
+        assert_eq!(
+            GEHEIMNISHINWEIS,
+            "Diese Datei ist verschlüsselt und öffnet sich mit F4 und der PIN im Editor."
+        );
+        for umschrift in ["verschluesselt", "oeffnet"] {
+            assert!(!GEHEIMNISHINWEIS.contains(umschrift), "{umschrift}");
+        }
+    }
+
+    /// Die Frage nach der Sonderdatei steht in [`laden`] vor jedem Zweig, der
+    /// liest: vor der Zusammenfassung eines Ordners, vor jedem
+    /// `bis_zur_grenze_lesen` und vor dem Dateityp. Die Proben oben messen es
+    /// an einer Datei; diese haelt die Reihenfolge fuer jeden kuenftigen Zweig
+    /// fest, der vor ihnen eingefuegt wuerde.
+    ///
+    /// **Blind** ist sie fuer einen Lesezweig unter einem Namen, den sie nicht
+    /// kennt; die drei Nadeln sind die Lesewege, die `laden` heute hat.
+    #[test]
+    fn laden_fragt_die_sonderdatei_vor_jedem_lesen() {
+        let (_, datei) = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/vorschaumodell.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let kopf = concat!("fn la", "den(");
+        let beginn = datei.find(kopf).expect("laden steht in dieser Datei");
+        let rest = &datei[beginn..];
+        let ende = rest.find("\n}\n").expect("der Rumpf von laden endet");
+        let rumpf: String = crate::quellbaum::codezeilen(&rest[..ende])
+            .collect::<Vec<_>>()
+            .join("\n");
+        let stelle = |nadel: &str| {
+            rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{nadel} steht nicht im Rumpf von laden"))
+        };
+        let frage = stelle(concat!(".sonder", "datei(pfad)"));
+        for leseweg in [
+            concat!("zusammen", "fassen("),
+            concat!("bis_zur_grenze_", "lesen("),
+            concat!("Dateityp::von_", "pfad("),
+        ] {
+            assert!(
+                frage < stelle(leseweg),
+                "die Frage nach der Sonderdatei steht hinter {leseweg}"
+            );
+        }
     }
 
     /// Die Abschrift des Heimordners erreicht den Arbeitsfaden ueber den

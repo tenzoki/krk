@@ -8039,11 +8039,22 @@ impl Anwendungsdelegierter {
     /// ausgeblendeter Editor mit gehaltener Datei ist der Zustand, den der
     /// Fokusbefehl aus C1 hervorholt, und ihn hier einzublenden hiesse, die
     /// gemerkte Sichtbarkeit zu uebergehen.
+    ///
+    /// **`.secrets.txt` im erkannten Ordner oeffnet sie nicht und zeigt kein
+    /// Blatt** (C7 des Arbeitspakets
+    /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`, Schritt 5.3). Das
+    /// Schreiben der Sitzung nennt die Datei nie; eine aeltere `session.toml`
+    /// kann sie noch nennen, und fuer sie fragt dieser Weg dieselbe Regel
+    /// ([`crate::fenstermodell::merkbare_editordatei`]). Der Editor bleibt dann
+    /// ohne Datei, wie bei einer Sitzung, die keine nennt.
     fn editor_wiederherstellen(&self, sitzung: &Sitzung) {
-        let Some(pfad) = sitzung.editor.as_ref() else {
+        let heim = heimgriff::lesen(&self.ivars().heim);
+        let Some(pfad) =
+            crate::fenstermodell::merkbare_editordatei(sitzung.editor.clone(), heim.as_ref())
+        else {
             return;
         };
-        self.editor_oeffnen_lassen(pfad, Oeffnungsherkunft::Sitzung);
+        self.editor_oeffnen_lassen(&pfad, Oeffnungsherkunft::Sitzung);
     }
 
     /// Was auf einen Ladevorgang des Editors folgt (C2, C7, C11).
@@ -8940,10 +8951,11 @@ impl Anwendungsdelegierter {
         ];
         let editor = self.editordatei();
         let gitanteil = self.gitanteil();
+        let heim = heimgriff::lesen(&self.ivars().heim);
         self.ivars()
             .modell
             .borrow()
-            .sitzung(fenster, editor, gitanteil)
+            .sitzung(fenster, editor, gitanteil, heim.as_ref())
     }
 
     /// Wie der Git-Bereich seine Flaeche unter dem Kopf teilt.

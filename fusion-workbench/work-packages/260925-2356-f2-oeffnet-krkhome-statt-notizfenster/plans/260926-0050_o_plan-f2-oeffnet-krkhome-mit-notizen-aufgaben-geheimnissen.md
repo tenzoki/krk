@@ -455,7 +455,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
     - Closes (am Baum): C7.1, C7.11, C7.12, C7.13.
     - Dependencies: 4.4
 
-21. **5.3 Die Vorschau zeigt einen Hinweis, und die Sitzung vergisst die Datei**
+21. [DONE] **5.3 Die Vorschau zeigt einen Hinweis, und die Sitzung vergisst die Datei**
     - Executor: `code-implementer`
     - Files: `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/fenstermodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
     - Changes: `vorschaumodell::laden` fragt nach der Typprüfung am Pfad und **vor jedem Lesen** `heim.sonderdatei(pfad)`; bei `Geheimnisse` liefert es `Inhalt::Hinweis` mit einem Satz, dass die Datei verschlüsselt ist und sich mit F4 und der PIN öffnet. `Fenstermodell::sitzung` nimmt den Editorpfad nicht auf, wenn er `.secrets.txt` im erkannten Ordner ist; `editor_wiederherstellen` öffnet eine solche Datei aus einer älteren Sitzung nicht und zeigt kein Blatt.

@@ -260,6 +260,7 @@ use std::borrow::Cow;
 use std::ops::Range;
 use std::sync::Arc;
 
+use krk_core::heimordner::Sonderdatei;
 use pulldown_cmark::{Event, Options, Parser, Tag};
 
 use crate::editormodell::Dateityp;
@@ -290,11 +291,22 @@ impl Lesart {
     /// Kaestchen zeigt. `Sonstiges` erreicht das Rendern nie, weil
     /// `hervorhebung::art` ihn nicht als Markdown einordnet; er steht beim
     /// Grundumfang, weil das die Lesart ohne jede Zutat ist.
+    ///
+    /// **`.secrets.txt` steht aus demselben Grund beim Grundumfang und nicht
+    /// bei den Eintragsdateien.** Sie ist dem Dateityp nach eine, aber
+    /// `hervorhebung::art` ordnet sie als einfachen Text ein, und die Vorschau
+    /// zweigt fuer sie vor jedem Lesen mit einem Hinweis ab
+    /// (`vorschaumodell::laden`, Schritt 5.3). Erreichte sie das Rendern doch,
+    /// bekaeme sie keine Zutat, die ihr keiner zugesagt hat.
     #[must_use]
     pub fn von_dateityp(typ: Dateityp) -> Self {
         match typ {
-            Dateityp::Eintraege(_) => Lesart::Eintragsdatei,
-            Dateityp::Markdown | Dateityp::Sonstiges => Lesart::Markdown,
+            Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => {
+                Lesart::Eintragsdatei
+            }
+            Dateityp::Eintraege(Sonderdatei::Geheimnisse)
+            | Dateityp::Markdown
+            | Dateityp::Sonstiges => Lesart::Markdown,
         }
     }
 
@@ -3311,15 +3323,20 @@ mod tests {
         }
     }
 
-    /// Ein Dateityp wird an genau einer Stelle zur Lesart, und allein die
-    /// Eintragsdateien bekommen Kaestchen.
+    /// Ein Dateityp wird an genau einer Stelle zur Lesart, und allein
+    /// `notes.txt` und `tasks.txt` bekommen Kaestchen; `.secrets.txt` erreicht
+    /// das Rendern nie und steht beim Grundumfang.
     #[test]
     fn allein_eine_eintragsdatei_wird_als_eintragsdatei_gelesen() {
-        use krk_core::heimordner::Sonderdatei;
         for sonderdatei in Sonderdatei::ALLE {
+            let erwartet = match sonderdatei {
+                Sonderdatei::Notizen | Sonderdatei::Aufgaben => Lesart::Eintragsdatei,
+                Sonderdatei::Geheimnisse => Lesart::Markdown,
+            };
             assert_eq!(
                 Lesart::von_dateityp(Dateityp::Eintraege(sonderdatei)),
-                Lesart::Eintragsdatei
+                erwartet,
+                "{sonderdatei:?}"
             );
         }
         assert_eq!(Lesart::von_dateityp(Dateityp::Markdown), Lesart::Markdown);
