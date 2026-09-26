@@ -3,6 +3,8 @@
 ---
 **Status:** claimed
 **Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260926-0004
+**Mode:** autonomous
+**Active spec/plan:** 260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md (Spec), 260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md (Plan)
 **Filed by:** user, Kai Stalmann <kai@stalmann.org>
 ---
 
