@@ -279,7 +279,9 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// kommt mit Schritt 5.5 fuer „PIN ändern" und fragt statt der Form, ob der
 /// Editor `secrets.txt` mit einem Kopf auf der Platte haelt. Seit dem 260926
 /// traegt das Verschieben [`Wirkungsbereich::Reihenfolge`], weil die
-/// Termintabelle nach dem Datum ordnet und es dort nicht annimmt.
+/// Termintabelle nach dem Datum ordnet und es dort nicht annimmt, und das
+/// Umkehren ihrer Richtung [`Wirkungsbereich::Termine`], weil es allein in ihr
+/// etwas bedeutet.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
@@ -365,6 +367,17 @@ pub enum Wirkungsbereich {
     ///
     /// Der Wert allein des Abhakens: eine Notiz hat kein Kaestchen.
     Aufgaben,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die
+    /// Termintabelle zeigt (Schritt 8 des Plans
+    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+    ///
+    /// Der Wert allein von „Termine: Sortierrichtung umkehren": eine andere
+    /// Tabelle ordnet nicht nach dem Datum und hat keine Richtung, die sich
+    /// umkehren liesse. Die Form fragt, wie bei [`Wirkungsbereich::Eintraege`],
+    /// `krk_ui`. Er steht auf der Seite des Editors und teilt sich deshalb
+    /// `cmd+1` mit dem Sortieren nach Name im Dateifenster (Entscheid
+    /// `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
+    Termine,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor
     /// `secrets.txt` entsperrt haelt, deren PIN schon in einem Kopf auf der
     /// Platte steht (C7 des Spec, Schritt 5.5 der krkhome-Arbeit).
@@ -490,6 +503,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Eintraege => "Einträge im Editor",
             Wirkungsbereich::Reihenfolge => "Einträge in Dateireihenfolge im Editor",
             Wirkungsbereich::Aufgaben => "Aufgaben im Editor",
+            Wirkungsbereich::Termine => "Termine im Editor",
             Wirkungsbereich::Geheimnisse => "Geheimnisse im Editor",
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
             Wirkungsbereich::Navigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
@@ -515,6 +529,7 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Eintraege
             | Wirkungsbereich::Reihenfolge
             | Wirkungsbereich::Aufgaben
+            | Wirkungsbereich::Termine
             | Wirkungsbereich::Geheimnisse => Seite::Editor,
             Wirkungsbereich::Dateifenster
             | Wirkungsbereich::Leiste
@@ -931,6 +946,17 @@ pub enum Kommando {
     /// im Editor und nur, solange der Editor `secrets.txt` haelt und ihre
     /// PIN schon in einem Kopf auf der Platte steht.
     PinAendern,
+    /// Die Richtung der Termintabelle umkehren: aufsteigend nach dem Datum
+    /// oder absteigend (T5 des Spec
+    /// `260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`).
+    ///
+    /// Traegt [`Wirkungsbereich::Termine`] und ist ausgeliefert auf `cmd+1`,
+    /// derselben Kombination wie das Sortieren nach Name: die beiden Bereiche
+    /// schliessen einander aus, und welche der zwei Funktionen ein Anschlag
+    /// meint, entscheidet die Lage. Die Richtung ist eine Angabe der Anzeige;
+    /// die Datei aendert der Befehl nicht, und die Sitzung merkt sich die
+    /// Richtung.
+    TermineRichtungUmkehren,
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
     /// aenderbar und zuruecksetzbar (C3).
     BelegungAnsehen,
@@ -1085,7 +1111,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 95] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 96] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1189,6 +1215,10 @@ impl Kommando {
         (Kommando::EintragLoeschen, "eintrag_loeschen"),
         (Kommando::AufgabeAbhaken, "aufgabe_abhaken"),
         (Kommando::PinAendern, "pin_aendern"),
+        (
+            Kommando::TermineRichtungUmkehren,
+            "termine_richtung_umkehren",
+        ),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::BelegungsdateiAnsehen, "belegungsdatei_ansehen"),
         (Kommando::Beenden, "beenden"),
@@ -1467,6 +1497,9 @@ impl Kommando {
             // entsperrten `secrets.txt`, deren PIN schon in einem Kopf steht;
             // ob das so ist, fragt `krk_ui`.
             Kommando::PinAendern => Wirkungsbereich::Geheimnisse,
+            // Allein in der Termintabelle, die nach dem Datum ordnet (Schritt 8
+            // des Plans der Termine).
+            Kommando::TermineRichtungUmkehren => Wirkungsbereich::Termine,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen

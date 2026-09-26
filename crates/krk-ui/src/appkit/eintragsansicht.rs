@@ -115,7 +115,7 @@
 //! ist das Textfeld jeder Zeile bearbeitbar und das Ankreuzfeld eingeschaltet.
 //! **Die Tabelle rechnet dabei nichts selbst.** Was aus einem getippten Text
 //! oder einem Klick ins Kaestchen wird, entscheidet der Editorbereich ueber die
-//! vier Wege in [`Zellenwege`]; diese Datei meldet allein, welche Zeile es
+//! Wege in [`Zellenwege`]; diese Datei meldet allein, welche Stelle es
 //! betrifft und was in ihr steht.
 //!
 //! ```text
@@ -274,6 +274,11 @@
 //!   in einer Probe `selectedContentBackgroundColor` und
 //!   `unemphasizedSelectedContentBackgroundColor` seit 10.14 (`NSColor.h:221`
 //!   und `:222`) und `isEqual:` aus `NSObjectProtocol`
+//! - fuer den Kopf der Termintabelle `NSImage` samt `imageNamed:`
+//!   (`NSImage.h:77`), `setIndicatorImage:inTableColumn:` (`NSTableView.h:287`),
+//!   `tableColumnWithIdentifier:` (`:242`), `setAllowsColumnSelection:`
+//!   (`:334`) und die **gebaute** Methode `tableView:didClickTableColumn:`
+//!   (`:659`), alle ohne Angabe und damit seit 10.0
 //! - `NSTableViewStyle` samt `setStyle:` seit 11.0 (`NSTableView.h:77` und
 //!   `:377`) — die hoechste Untergrenze dieser Datei
 //!
@@ -300,11 +305,12 @@ use objc2::runtime::{AnyObject, Bool, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSAutoresizingMaskOptions, NSButton, NSColor, NSControl, NSControlStateValueOff,
-    NSControlStateValueOn, NSControlTextEditingDelegate, NSFont, NSLayoutConstraintOrientation,
-    NSLayoutPriorityRequired, NSLineBreakMode, NSResponder, NSScrollView, NSTableCellView,
-    NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView, NSTableRowView, NSTableView,
-    NSTableViewColumnAutoresizingStyle, NSTableViewDataSource, NSTableViewDelegate,
-    NSTableViewStyle, NSText, NSTextField, NSTextFieldDelegate, NSTextView, NSView, NSWindow,
+    NSControlStateValueOn, NSControlTextEditingDelegate, NSFont, NSImage,
+    NSLayoutConstraintOrientation, NSLayoutPriorityRequired, NSLineBreakMode, NSResponder,
+    NSScrollView, NSTableCellView, NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView,
+    NSTableRowView, NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource,
+    NSTableViewDelegate, NSTableViewStyle, NSText, NSTextField, NSTextFieldDelegate, NSTextView,
+    NSView, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
@@ -563,6 +569,16 @@ pub fn heute_farbe() -> Retained<NSColor> {
     NSColor::systemYellowColor().colorWithAlphaComponent(0.25)
 }
 
+/// Der Name des Systembildes, das AppKit als Pfeil einer Sortierrichtung im
+/// Spaltenkopf zeigt.
+#[must_use]
+pub fn richtungsbild(richtung: Richtung) -> &'static NSString {
+    match richtung {
+        Richtung::Aufsteigend => ns_string!("NSAscendingSortIndicator"),
+        Richtung::Absteigend => ns_string!("NSDescendingSortIndicator"),
+    }
+}
+
 /// Was ein Befehl des Feldeditors in einer Zelle bewirkt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Zellenbefehl {
@@ -731,7 +747,7 @@ pub fn auswahl_nach_neuladen(vorher: Option<usize>, laenge: usize) -> Option<usi
     Some(vorher.map_or(0, |stelle| stelle.min(letzte)))
 }
 
-/// Die vier Wege aus der Tabelle in den Editor.
+/// Die Wege aus der Tabelle in den Editor.
 ///
 /// **Rueckrufe und kein Verweis auf den Editorbereich**, aus zwei Gruenden:
 /// die Tabelle soll die Rechnung nicht kennen, und die Proben koennen die
@@ -751,6 +767,12 @@ pub struct Zellenwege {
     /// Ein Doppelklick unter die Zeilen: ein Eintrag soll entstehen
     /// ([`doppelklick`]).
     pub anlegen: Box<dyn Fn()>,
+    /// Ein Klick auf den Kopf der Datumsspalte der Termintabelle: die Richtung
+    /// soll sich umkehren (Entscheidung 8 des Plans
+    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+    /// Der Editorbereich reicht ihn als Kommando weiter, damit er denselben
+    /// Weg geht wie die Taste.
+    pub kopf_geklickt: Box<dyn Fn()>,
 }
 
 define_class!(
@@ -1063,6 +1085,13 @@ pub struct EintragsansichtIvars {
     endet: Cell<bool>,
     /// Der Feldeditor der Zellen, siehe [`Zelleneditor`].
     zelleneditor: Retained<Zelleneditor>,
+    /// Die Richtung, die der Pfeil im Kopf der Datumsspalte zeigt.
+    ///
+    /// Keine zweite Wahrheit neben dem Editorbereich, der die Richtung haelt:
+    /// geschrieben allein von [`Eintragsansicht::terminrichtung_zeigen`], und
+    /// gebraucht, weil die Spalten beim Wechsel der Art neu entstehen und ihr
+    /// Pfeil dann neu zu setzen ist.
+    terminrichtung: Cell<Richtung>,
     /// Der Hauptfadenbeweis vom Aufbau.
     ///
     /// Gemerkt und nicht mit `mtm()` erfragt, weil `mtm()` den wirklichen
@@ -1200,6 +1229,34 @@ define_class!(
             zeilenansicht.setBackgroundColor(&farbe);
         }
 
+        /// Ein Klick auf einen Spaltenkopf (Entscheidung 8 des Plans der
+        /// Termine): allein der Kopf der Datumsspalte der Termintabelle tut
+        /// etwas, und zwar dasselbe wie `cmd+1`.
+        ///
+        /// **Erst der Fokus, dann das Kommando**: der Klick auf den Kopf holt
+        /// den Ersthelfer nicht von selbst, und das Kommando wirkt allein mit
+        /// dem Fokus im Editor. Der Fokus kommt ueber
+        /// [`Eintragsansicht::fokus_in_die_tabelle`], also ueber
+        /// `makeFirstResponder:` des Fensters; das Kommando geht ueber
+        /// [`Zellenwege::kopf_geklickt`] an den Editorbereich und von dort als
+        /// Kommando an den Anwendungsdelegierten, also durch dieselbe
+        /// Zulaessigkeit wie die Taste.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSTableView.h:659`).
+        #[unsafe(method(tableView:didClickTableColumn:))]
+        fn kopf_geklickt(&self, tabelle: &NSTableView, spalte: &NSTableColumn) {
+            if self.art() != Eintragsart::Termine
+                || usize::try_from(tabelle.columnWithIdentifier(&spalte.identifier()))
+                    != Ok(DATUMSSPALTE)
+            {
+                return;
+            }
+            self.fokus_in_die_tabelle();
+            if let Some(wege) = self.ivars().wege.borrow().as_ref() {
+                (wege.kopf_geklickt)();
+            }
+        }
+
         /// Eine Spalte hat ihre Breite geaendert: die Notizfelder brechen ab
         /// jetzt an der neuen Breite um.
         // SAFETY: Die Signatur entspricht der des Protokolls (`NSTableView.h`).
@@ -1283,6 +1340,10 @@ impl Eintragsansicht {
         tabelle.setStyle(NSTableViewStyle::FullWidth);
         tabelle.setAllowsEmptySelection(true);
         tabelle.setAllowsMultipleSelection(false);
+        // Ein Klick auf einen Spaltenkopf waehlt keine Spalte; in der
+        // Termintabelle kehrt er die Richtung um (Schritt 8 des Plans der
+        // Termine).
+        tabelle.setAllowsColumnSelection(false);
         // Die letzte Spalte nimmt jede Aenderung der Breite: in der
         // Aufgabentabelle die einzige, in der Notiztabelle die Notiz, und das
         // Thema behaelt die Breite, die der Nutzer ihm gezogen hat.
@@ -1320,6 +1381,7 @@ impl Eintragsansicht {
             verwerfen: Cell::new(false),
             endet: Cell::new(false),
             zelleneditor: Zelleneditor::neu(mtm),
+            terminrichtung: Cell::new(Richtung::Aufsteigend),
             mtm,
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -1342,7 +1404,7 @@ impl Eintragsansicht {
         this
     }
 
-    /// Traegt die vier Wege in den Editor ein (siehe [`Zellenwege`]).
+    /// Traegt die Wege in den Editor ein (siehe [`Zellenwege`]).
     pub fn wege_setzen(&self, wege: Zellenwege) {
         *self.ivars().wege.borrow_mut() = Some(wege);
     }
@@ -1448,6 +1510,7 @@ impl Eintragsansicht {
                 &ivars.kopfzeile,
                 art,
             );
+            self.richtungspfeil_setzen();
         }
         self.ivars().tabelle.reloadData();
         // Die Regel rechnet eine Auswahl davor als Stelle weiter; ohne eine
@@ -1475,6 +1538,30 @@ impl Eintragsansicht {
     #[must_use]
     pub fn art(&self) -> Eintragsart {
         self.ivars().zeilen.borrow().art()
+    }
+
+    /// Zeigt die Richtung der Termintabelle als Pfeil im Kopf der
+    /// Datumsspalte (Schritt 8 des Plans der Termine).
+    ///
+    /// Gerufen vom Editorbereich vor jedem Nachzug der Termintabelle; der Pfeil
+    /// steht damit auch dann richtig, wenn die Zeilen gleich bleiben und
+    /// [`Self::zeilen_zeigen`] nicht neu laedt. Ohne Datumsspalte, also in jeder
+    /// anderen Art, wird er gemerkt und beim naechsten Einrichten der Spalten
+    /// gesetzt.
+    pub fn terminrichtung_zeigen(&self, richtung: Richtung) {
+        self.ivars().terminrichtung.set(richtung);
+        self.richtungspfeil_setzen();
+    }
+
+    /// Setzt den Pfeil der gemerkten Richtung in den Kopf der Datumsspalte,
+    /// falls die Tabelle eine traegt.
+    fn richtungspfeil_setzen(&self) {
+        let tabelle = &self.ivars().tabelle;
+        let Some(spalte) = tabelle.tableColumnWithIdentifier(ns_string!("datum")) else {
+            return;
+        };
+        let bild = NSImage::imageNamed(richtungsbild(self.ivars().terminrichtung.get()));
+        tabelle.setIndicatorImage_inTableColumn(bild.as_deref(), &spalte);
     }
 
     /// Verwirft eine offene Zelle, unter der sich der Stand von aussen

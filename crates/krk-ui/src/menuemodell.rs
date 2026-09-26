@@ -929,8 +929,10 @@ mod tests {
     }
 
     /// Die Auslieferungsbelegung, in der `editor_sichern` statt `cmd+s` die
-    /// Kombination `cmd+1` von `sortierung_name` teilt: Dateifenster und
-    /// Editor schliessen einander aus, also laedt sie ohne Konflikt.
+    /// Kombination `cmd+2` von `sortierung_groesse` teilt: Dateifenster und
+    /// Editor schliessen einander aus, also laedt sie ohne Konflikt. `cmd+2`
+    /// und nicht `cmd+1`, weil `cmd+1` seit Schritt 8 des Plans der Termine in
+    /// der Auslieferung selbst schon zwei Funktionen traegt.
     fn mit_geteilter_kombination() -> Belegung {
         use krk_core::tasten::Belegungsdatei;
         use krk_core::tasten::belegung::AUSLIEFERUNGSTEXT;
@@ -941,7 +943,7 @@ mod tests {
         );
         let text = AUSLIEFERUNGSTEXT.replacen(
             alt,
-            "id = \"editor_sichern\"\nname = \"Sichern\"\ntasten = [\"cmd+1\"]",
+            "id = \"editor_sichern\"\nname = \"Sichern\"\ntasten = [\"cmd+2\"]",
             1,
         );
         let datei: Belegungsdatei = toml::from_str(&text).expect("gueltiges TOML");
@@ -956,7 +958,7 @@ mod tests {
     fn bei_einer_geteilten_kombination_behaelt_der_fruehere_befehl_das_kuerzel() {
         let belegung = mit_geteilter_kombination();
         let leiste = aufbau(&belegung);
-        let cmd_1 = Kombination::lesen("cmd+1").expect("cmd+1 ist eine Kombination");
+        let cmd_2 = Kombination::lesen("cmd+2").expect("cmd+2 ist eine Kombination");
         let befehle: Vec<(&str, Option<Kombination>)> = leiste
             .iter()
             .flat_map(|obermenue| obermenue.eintraege.iter())
@@ -965,15 +967,56 @@ mod tests {
                     kennung,
                     kombination,
                     ..
-                } if ["sortierung_name", "editor_sichern"].contains(kennung) => {
+                } if ["sortierung_groesse", "editor_sichern"].contains(kennung) => {
                     Some((*kennung, *kombination))
                 }
                 _ => None,
             })
             .collect();
         assert_eq!(befehle.len(), 2, "{befehle:?}");
-        assert_eq!(befehle[0].1, Some(cmd_1), "der fruehere zeigt cmd+1 nicht");
+        assert_eq!(befehle[0].1, Some(cmd_2), "der fruehere zeigt cmd+2 nicht");
         assert_eq!(befehle[1].1, None, "der spaetere zeigt ein Kuerzel");
+    }
+
+    /// Der Fall der Termine in der Auslieferung (T5, Entscheidung 7 des Plans
+    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`):
+    /// „Home" steht vor dem Obermenue der Dateiliste, also zeigt „Termine:
+    /// Sortierrichtung umkehren" dort als letzter Eintrag `cmd+1`, und „Nach
+    /// Name sortieren" steht ohne Kuerzel da.
+    #[test]
+    fn in_der_auslieferung_zeigt_die_richtung_der_termine_cmd_1_und_die_sortierung_keines() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let cmd_1 = Kombination::lesen("cmd+1").expect("cmd+1 ist eine Kombination");
+        let kuerzel = |gesucht: &str| {
+            leiste
+                .iter()
+                .flat_map(|obermenue| obermenue.eintraege.iter())
+                .find_map(|eintrag| match eintrag {
+                    Eintrag::Befehl {
+                        kennung,
+                        kombination,
+                        ..
+                    } if *kennung == gesucht => Some(*kombination),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{gesucht} steht nicht im Menue"))
+        };
+        assert_eq!(kuerzel("termine_richtung_umkehren"), Some(cmd_1));
+        assert_eq!(kuerzel("sortierung_name"), None);
+        let home = leiste
+            .iter()
+            .find(|obermenue| obermenue.titel == Funktionsbereich::Home.name())
+            .expect("es gibt ein Obermenue Home");
+        let letzter = home
+            .eintraege
+            .iter()
+            .rev()
+            .find_map(|eintrag| match eintrag {
+                Eintrag::Befehl { kennung, .. } => Some(*kennung),
+                _ => None,
+            });
+        assert_eq!(letzter, Some("termine_richtung_umkehren"));
     }
 
     /// Die Zusage von [`keine_zwei_eintraege_tragen_dieselbe_kombination`]

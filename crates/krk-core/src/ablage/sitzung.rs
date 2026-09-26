@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 use super::pfade;
 use super::sperre::Sitzungsrecht;
 use super::{Datei, Zugang};
-use crate::verzeichnis::Sortierung;
+use crate::verzeichnis::{Richtung, Sortierung};
 
 /// Der Mindestabstand zwischen zwei Schreibvorgaengen des Sitzungszustands.
 pub const SITZUNGSTAKT: Duration = Duration::from_secs(2);
@@ -445,6 +445,23 @@ pub struct Sitzung {
     /// [`Sitzung::editor`] ausschreibt.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notizordner: Option<PathBuf>,
+    /// In welcher Richtung die Termintabelle des Editors nach dem Datum ordnet
+    /// (T5.7 des Spec `260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`).
+    ///
+    /// **Eine Angabe der Anzeige und keine der Datei**: `appointments.md`
+    /// bleibt in ihrer Reihenfolge, und die Sitzung merkt sich allein, wie die
+    /// Tabelle sie zeigt. Dieselben zwei Woerter `"aufsteigend"` und
+    /// `"absteigend"` wie unter `sortierung` jedes Tabs, damit der Nutzer, der
+    /// diese Datei nach C7 von Hand liest, sie ohne Legende deutet (Entscheidung
+    /// 5 des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+    ///
+    /// `None` heisst "noch nie umgekehrt", wie bei [`Sitzung::gitanteil`], und
+    /// dann gilt aufsteigend. Mit den Terminen dazugekommen; eine
+    /// `session.toml` aus der Zeit davor bleibt lesbar, weil diese Struktur
+    /// `#[serde(default)]` traegt. **Vor den drei Tabellen**, aus dem Grund,
+    /// den [`Sitzung::editor`] ausschreibt.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terminrichtung: Option<Richtung>,
     /// Die Breiten der sechs Bereiche.
     pub breiten: Breiten,
     /// Welche Bereiche sichtbar sind.
@@ -472,13 +489,14 @@ impl Default for Sitzung {
     /// Benutzerverzeichnis, die vier Bereiche der Runde 1 sichtbar, Editor und
     /// Git-Bereich ausgeblendet und der Editor ohne Datei, alle fuenf Spalten
     /// sichtbar, links aktiv, der Git-Bereich ungeteilt gelassen, kein
-    /// Notizordner gemerkt.
+    /// Notizordner gemerkt, die Termine nie umgekehrt.
     fn default() -> Self {
         Self {
             aktiv: Fensterseite::default(),
             editor: None,
             gitanteil: None,
             notizordner: None,
+            terminrichtung: None,
             breiten: Breiten::default(),
             sichtbar: Sichtbarkeit::default(),
             spalten: Spaltensichtbarkeit::default(),

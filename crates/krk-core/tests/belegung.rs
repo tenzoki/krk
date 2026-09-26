@@ -905,26 +905,29 @@ fn der_rueckweg_ueber_die_belegungsdatei_traegt_den_zusteller_mit() {
 // ausschliessen, also der eine allein im Editor und der andere allein
 // ausserhalb wirkt (Entscheid
 // `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
-// Die Proben arbeiten mit `editor_sichern`, weil die neue Funktion der Termine
-// erst mit Schritt 8 entsteht; die Regel haengt an keiner Kennung.
+// Die Proben arbeiten mit `editor_sichern` auf `cmd+2`, der Kombination von
+// `sortierung_groesse`: die Regel haengt an keiner Kennung, und `cmd+1` traegt
+// seit Schritt 8 in der Auslieferung selbst schon zwei Funktionen, die
+// Sortierung nach Name und die Richtung der Termine. Die Proben dieses Falls
+// stehen im Abschnitt darunter.
 
-/// `editor_sichern` zusaetzlich auf `cmd+1` laedt ohne Ersetzung, und der
+/// `editor_sichern` zusaetzlich auf `cmd+2` laedt ohne Ersetzung, und der
 /// Nachschlag nennt beide Funktionen in der Reihenfolge der Belegung.
 #[test]
 fn eine_kombination_im_editor_und_im_dateifenster_ist_kein_konflikt() {
     let ordner = Pruefordner::neu("geteilt");
-    let ablage = ablage_mit(&ordner, &auslieferung_mit(&[("editor_sichern", "cmd+1")]));
+    let ablage = ablage_mit(&ordner, &auslieferung_mit(&[("editor_sichern", "cmd+2")]));
     let geladen = geladene_belegung(&ablage);
     assert!(
         !geladen.ist_ersetzt(),
-        "cmd+1 auf Dateifenster und Editor ist ein Konflikt geworden"
+        "cmd+2 auf Dateifenster und Editor ist ein Konflikt geworden"
     );
     let belegung = geladen.wert;
-    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("cmd+1").tastendruck())
+    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("cmd+2").tastendruck())
     else {
-        panic!("cmd+1 ergibt keinen geteilten Nachschlag");
+        panic!("cmd+2 ergibt keinen geteilten Nachschlag");
     };
-    assert_eq!(erste.kennung(), "sortierung_name");
+    assert_eq!(erste.kennung(), "sortierung_groesse");
     assert_eq!(zweite.kennung(), "editor_sichern");
     assert_eq!(
         Wirkungsbereich::Dateifenster.seite(),
@@ -966,9 +969,9 @@ fn eine_kombination_mit_einem_befehl_fuer_ueberall_bleibt_ein_konflikt() {
 #[test]
 fn drei_funktionen_auf_einer_kombination_sind_ein_konflikt() {
     let Err(Belegungsfehler::Konflikt(konflikt)) =
-        nutzerbelegung_mit(&[("editor_sichern", "cmd+1"), ("eintrag_loeschen", "cmd+1")])
+        nutzerbelegung_mit(&[("editor_sichern", "cmd+2"), ("eintrag_loeschen", "cmd+2")])
     else {
-        panic!("cmd+1 auf drei Funktionen ist kein Konflikt");
+        panic!("cmd+2 auf drei Funktionen ist kein Konflikt");
     };
     assert_eq!(konflikt.andere.kennung, "editor_sichern");
     assert_eq!(konflikt.bewerber.kennung, "eintrag_loeschen");
@@ -980,23 +983,23 @@ fn drei_funktionen_auf_einer_kombination_sind_ein_konflikt() {
 /// Kombination zuerst traegt.
 #[test]
 fn die_umbelegung_folgt_derselben_regel_wie_das_einlesen() {
-    let cmd_1 = kombi("cmd+1");
+    let cmd_2 = kombi("cmd+2");
     let cmd_s = ausgeliefert("editor_sichern");
 
     // Editor auf die Kombination des Dateifensters, und umgekehrt.
     let mut belegung = Belegung::auslieferung();
-    assert_eq!(belegung.zuweisen("editor_sichern", cmd_1), Ok(()));
+    assert_eq!(belegung.zuweisen("editor_sichern", cmd_2), Ok(()));
     assert!(belegung.konflikte().is_empty());
-    assert_eq!(belegung.zuweisen("sortierung_groesse", cmd_s), Ok(()));
+    assert_eq!(belegung.zuweisen("sortierung_datum", cmd_s), Ok(()));
     assert!(belegung.konflikte().is_empty());
 
     // Dieselbe Seite: Konflikt, in beiden Richtungen, mit beiden Namen.
     let Err(Zuweisungsfehler::Konflikt(konflikt)) =
-        Belegung::auslieferung().zuweisen("sortierung_groesse", cmd_1)
+        Belegung::auslieferung().zuweisen("sortierung_datum", cmd_2)
     else {
-        panic!("cmd+1 an eine zweite Sortierung lieferte keinen Konflikt");
+        panic!("cmd+2 an eine zweite Sortierung lieferte keinen Konflikt");
     };
-    assert_eq!(konflikt.andere.kennung, "sortierung_name");
+    assert_eq!(konflikt.andere.kennung, "sortierung_groesse");
     let Err(Zuweisungsfehler::Konflikt(konflikt)) =
         Belegung::auslieferung().zuweisen("eintrag_loeschen", cmd_s)
     else {
@@ -1005,9 +1008,105 @@ fn die_umbelegung_folgt_derselben_regel_wie_das_einlesen() {
     assert_eq!(konflikt.andere.kennung, "editor_sichern");
 
     // Das Einlesen gibt dieselben Antworten.
-    assert!(nutzerbelegung_mit(&[("editor_sichern", "cmd+1")]).is_ok());
-    assert!(nutzerbelegung_mit(&[("sortierung_groesse", "cmd+s")]).is_ok());
+    assert!(nutzerbelegung_mit(&[("editor_sichern", "cmd+2")]).is_ok());
+    assert!(nutzerbelegung_mit(&[("sortierung_datum", "cmd+s")]).is_ok());
     assert!(nutzerbelegung_mit(&[("eintrag_loeschen", "cmd+s")]).is_err());
+}
+
+// ---------------------------------------------------------------------------
+// `cmd+1` auf zwei Funktionen (Schritt 8 des Plans
+// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`, T5)
+// ---------------------------------------------------------------------------
+
+/// T5.1 und T5.2: die Auslieferung fuehrt „Termine: Sortierrichtung umkehren"
+/// auf `cmd+1`, und `sortierung_name` behaelt `cmd+1`; die Auslieferung bleibt
+/// ohne Konflikt.
+#[test]
+fn die_auslieferung_legt_die_richtung_der_termine_auf_cmd_1_und_die_sortierung_behaelt_sie() {
+    let belegung = Belegung::auslieferung();
+    let cmd_1 = kombi("cmd+1");
+    let termine = belegung
+        .funktion("termine_richtung_umkehren")
+        .expect("die Auslieferung fuehrt die Funktion");
+    assert_eq!(termine.tasten(), [cmd_1]);
+    assert_eq!(termine.name(), "Termine: Sortierrichtung umkehren");
+    assert_eq!(termine.kommando(), Some(Kommando::TermineRichtungUmkehren));
+    assert_eq!(
+        Kommando::TermineRichtungUmkehren.wirkungsbereich(),
+        Wirkungsbereich::Termine
+    );
+    assert_eq!(Wirkungsbereich::Termine.seite(), Seite::Editor);
+    assert_eq!(ausgeliefert("sortierung_name"), cmd_1);
+    assert!(belegung.konflikte().is_empty());
+}
+
+/// T5.3: der Nachschlag von `cmd+1` in der Auslieferung nennt beide
+/// Funktionen, in der Reihenfolge der Belegung.
+#[test]
+fn cmd_1_ergibt_in_der_auslieferung_einen_geteilten_nachschlag() {
+    let belegung = Belegung::auslieferung();
+    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("cmd+1").tastendruck())
+    else {
+        panic!("cmd+1 ergibt keinen geteilten Nachschlag");
+    };
+    assert_eq!(erste.kennung(), "sortierung_name");
+    assert_eq!(zweite.kennung(), "termine_richtung_umkehren");
+}
+
+/// T5.4: eine Nutzerbelegung mit `cmd+1` auf beiden Funktionen laedt ohne
+/// Ersetzung; eine ohne die neue Funktion laedt ebenso und fuehrt sie
+/// unbelegt; `cmd+1` auf `sortierung_name` und `sortierung_groesse` bleibt ein
+/// Konflikt, auch neben der Richtung der Termine.
+#[test]
+fn eine_eigene_belegung_mit_und_ohne_die_neue_funktion_laedt() {
+    let ordner = Pruefordner::neu("termine-mit");
+    let ablage = ablage_mit(&ordner, belegung::AUSLIEFERUNGSTEXT);
+    let geladen = geladene_belegung(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "cmd+1 auf beiden Funktionen wurde abgewiesen"
+    );
+
+    // Die Belegung eines Nutzers von vor dieser Arbeit: ohne den Block.
+    let kopf = "[[funktion]]\nid = \"termine_richtung_umkehren\"\n";
+    let beginn = belegung::AUSLIEFERUNGSTEXT
+        .find(kopf)
+        .expect("der Block steht in der Auslieferung");
+    let ende = beginn
+        + belegung::AUSLIEFERUNGSTEXT[beginn..]
+            .find("tasten = [\"cmd+1\"]\n")
+            .expect("der Block traegt cmd+1")
+        + "tasten = [\"cmd+1\"]\n".len();
+    let ohne = format!(
+        "{}{}",
+        &belegung::AUSLIEFERUNGSTEXT[..beginn],
+        &belegung::AUSLIEFERUNGSTEXT[ende..]
+    );
+    assert!(!ohne.contains("termine_richtung_umkehren\""));
+    let ordner = Pruefordner::neu("termine-ohne");
+    let ablage = ablage_mit(&ordner, &ohne);
+    let geladen = geladene_belegung(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine aeltere Belegung wurde abgewiesen"
+    );
+    let termine = geladen
+        .wert
+        .funktion("termine_richtung_umkehren")
+        .expect("die neue Funktion kommt hinzu");
+    assert!(termine.tasten().is_empty(), "und zwar unbelegt");
+    assert!(matches!(
+        geladen.wert.nachschlag(kombi("cmd+1").tastendruck()),
+        Nachschlag::Funktion(funktion) if funktion.kennung() == "sortierung_name"
+    ));
+
+    let Err(Belegungsfehler::Konflikt(konflikt)) =
+        nutzerbelegung_mit(&[("sortierung_groesse", "cmd+1")])
+    else {
+        panic!("cmd+1 auf zwei Sortierungen ist kein Konflikt mehr");
+    };
+    assert_eq!(konflikt.andere.kennung, "sortierung_name");
+    assert_eq!(konflikt.bewerber.kennung, "sortierung_groesse");
 }
 
 // ---------------------------------------------------------------------------
@@ -2183,7 +2282,8 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         // (bis zum 260823 `Vorschau`), `Editor` und `Navigator` mit dem
         // eingebauten Editor, `Vorschau` mit den drei Zoombefehlen der Runde 20,
         // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
-        // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5.
+        // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5,
+        // `Reihenfolge` und `Termine` mit den Terminen.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
@@ -2196,6 +2296,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Eintraege
                     | Wirkungsbereich::Reihenfolge
                     | Wirkungsbereich::Aufgaben
+                    | Wirkungsbereich::Termine
                     | Wirkungsbereich::Geheimnisse
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
@@ -2617,7 +2718,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 13] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 14] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2632,6 +2733,7 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 13] = [
         "Einträge in Dateireihenfolge im Editor",
     ),
     (Wirkungsbereich::Aufgaben, "Aufgaben im Editor"),
+    (Wirkungsbereich::Termine, "Termine im Editor"),
     (Wirkungsbereich::Geheimnisse, "Geheimnisse im Editor"),
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
     (
@@ -2663,11 +2765,12 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Eintraege => 5,
         Wirkungsbereich::Reihenfolge => 6,
         Wirkungsbereich::Aufgaben => 7,
-        Wirkungsbereich::Geheimnisse => 8,
-        Wirkungsbereich::Tabbereich => 9,
-        Wirkungsbereich::Navigator => 10,
-        Wirkungsbereich::Vorschau => 11,
-        Wirkungsbereich::Ueberall => 12,
+        Wirkungsbereich::Termine => 8,
+        Wirkungsbereich::Geheimnisse => 9,
+        Wirkungsbereich::Tabbereich => 10,
+        Wirkungsbereich::Navigator => 11,
+        Wirkungsbereich::Vorschau => 12,
+        Wirkungsbereich::Ueberall => 13,
     }
 }
 

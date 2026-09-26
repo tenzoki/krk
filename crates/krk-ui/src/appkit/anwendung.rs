@@ -292,7 +292,7 @@ use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
-use krk_core::verzeichnis::{Erlaubnisbefund, Warnbefund, arbeitsbaum, umfang};
+use krk_core::verzeichnis::{Erlaubnisbefund, Richtung, Warnbefund, arbeitsbaum, umfang};
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -322,7 +322,7 @@ use crate::tabs::{Auswahlversuch, Tabliste};
 
 use super::aufteilung::Aufteilung;
 use super::belegungsansicht::{self, Belegungsquelle};
-use super::bereichsleiste::Bereichsleiste;
+use super::bereichsleiste::{Bereichsleiste, Kommandomelder};
 use super::betrachter::Zoom;
 use super::bildtakt::{self, Zeichenende};
 use super::blaetter::ungesichert::{self, Antwort};
@@ -1509,6 +1509,19 @@ impl Anwendungsdelegierter {
                 selbst.editormeldung_zeigen(&meldung);
             }
         }));
+        // Der dritte Rueckweg des Editors traegt ein Kommando: der Klick auf
+        // den Kopf „Datum" der Termintabelle geht denselben Weg wie `cmd+1`
+        // und wie der Klick auf einen Schalter der Bereichsleiste, samt
+        // Zulaessigkeit (Entscheidung 8 des Plans
+        // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+        // **Es ist derselbe Melder** wie der der Bereichsleiste, aus
+        // `klickmelder`: ein Klick auf ein Bedienelement ist einer der drei
+        // Wege aus C2.14 der Runde 7, gleich welches Element geklickt ist,
+        // und ein zweiter Rumpf daneben waere ein vierter.
+        editor.kommandomelder_setzen(self.klickmelder());
+        // Die Richtung der Termintabelle aus der Sitzung; nie umgekehrt heisst
+        // aufsteigend (Entscheidung 5 des Plans der Termine).
+        editor.terminrichtung_setzen(sitzung.terminrichtung.unwrap_or(Richtung::Aufsteigend));
         let git = Gitfenster::bauen(mtm);
         // Die Teilung zwischen Verlaufsliste und Einzelheiten aus der Sitzung
         // (Nutzerbefund vom 260831). Sie wird hier vorgemerkt und nicht
@@ -1627,15 +1640,7 @@ impl Anwendungsdelegierter {
         // einen Schalter ist kein Tastendruck. Der Rueckruf haelt den
         // Delegierten **schwach**, aus demselben Grund wie die uebrigen Melder
         // hier.
-        let schwach = objc2::rc::Weak::from_retained(&self.retain());
-        bereichsleiste.melder_setzen(Box::new(move |kommando| {
-            if let Some(selbst) = schwach.load() {
-                // `let _ =`: der Melder hat keinen Ort fuer die Antwort. Ein
-                // Klick auf einen Schalter ist kein Tastendruck, der
-                // unveraendert an AppKit weiterliefe, wenn niemand ihn nimmt.
-                let _ = selbst.kommando_ausfuehren(kommando, None);
-            }
-        }));
+        bereichsleiste.melder_setzen(self.klickmelder());
 
         // Ab hier nur noch als `NSWindow`: jede uebrige Fensterberuehrung ruft
         // ohnehin nur Methoden der Oberklasse.
@@ -4326,6 +4331,11 @@ impl Anwendungsdelegierter {
             // taete nichts; gehalten von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
             Kommando::PinAendern => self.pin_aendern_erfragen(),
+            // Die Richtung der Termintabelle (Schritt 8 des Plans der
+            // Termine): ein eigener Zweig, weil die Sitzung sich die Richtung
+            // merkt. Gehalten von
+            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::TermineRichtungUmkehren => self.termine_richtung_umkehren(),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
             // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**:
@@ -8908,6 +8918,41 @@ impl Anwendungsdelegierter {
     /// Was der Befehl tut, entscheidet der Editor, und ob er ueberhaupt etwas
     /// tun kann, ebenfalls: laeuft keine Suche, kommt die Meldung darueber
     /// zurueck. Diese Funktion stellt keine zweite Vorbedingung daneben.
+    /// Der Melder fuer ein Kommando aus einem Klick: auf einen Schalter der
+    /// Bereichsleiste oder auf den Kopf „Datum" der Termintabelle.
+    ///
+    /// **Ein Rumpf fuer beide Elemente**, weil beide derselbe der drei Wege
+    /// aus C2.14 der Runde 7 sind, der Klick; die Probe
+    /// `der_delegierte_wird_an_genau_drei_stellen_um_einen_befehl_gebeten`
+    /// (`super::menue`) zaehlt ihn einmal. **Kein Anschlag**, aus demselben
+    /// Grund wie beim Menueeintrag: ein Klick ist kein Tastendruck. Der
+    /// Rueckruf haelt den Delegierten **schwach**, aus demselben Grund wie die
+    /// uebrigen Melder: sonst schloesse sich der Ring Delegierter → Element →
+    /// Rueckruf → Delegierter.
+    fn klickmelder(&self) -> Kommandomelder {
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        Box::new(move |kommando| {
+            if let Some(selbst) = schwach.load() {
+                // `let _ =`: der Melder hat keinen Ort fuer die Antwort. Ein
+                // Klick ist kein Tastendruck, der unveraendert an AppKit
+                // weiterliefe, wenn niemand ihn nimmt.
+                let _ = selbst.kommando_ausfuehren(kommando, None);
+            }
+        })
+    }
+
+    /// Kehrt die Richtung der Termintabelle um und merkt die Sitzung vor
+    /// (T5.5, T5.7 der Termine).
+    ///
+    /// Die Umkehrung selbst und ihre Meldung stehen im Editorbereich; hier
+    /// steht allein, dass die Sitzung sie sich merkt, wie jede andere Angabe
+    /// der Anzeige.
+    fn termine_richtung_umkehren(&self) -> bool {
+        let ausgefuehrt = self.editorbefehl(Editorbereich::terminrichtung_umkehren);
+        self.sitzung_vormerken();
+        ausgefuehrt
+    }
+
     fn editorbefehl(&self, tun: fn(&Editorbereich) -> Editormeldung) -> bool {
         let Some(editor) = self.ivars().editor.get() else {
             return false;
@@ -9505,10 +9550,19 @@ impl Anwendungsdelegierter {
         let gitanteil = self.gitanteil();
         let heim = heimgriff::lesen(&self.ivars().heim);
         let notizordner = self.ivars().gemerkter_ort.borrow().clone();
-        self.ivars()
-            .modell
-            .borrow()
-            .sitzung(fenster, editor, gitanteil, notizordner, heim.as_ref())
+        let terminrichtung = self
+            .ivars()
+            .editor
+            .get()
+            .map(|editor| editor.terminrichtung());
+        self.ivars().modell.borrow().sitzung(
+            fenster,
+            editor,
+            gitanteil,
+            notizordner,
+            terminrichtung,
+            heim.as_ref(),
+        )
     }
 
     /// Wie der Git-Bereich seine Flaeche unter dem Kopf teilt.
@@ -10421,7 +10475,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 10] = [
+    const BEFEHLE: [&str; 11] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -10432,6 +10486,7 @@ mod zweigproben {
         "EintragLoeschen",
         "AufgabeAbhaken",
         "PinAendern",
+        "TermineRichtungUmkehren",
     ];
 
     #[test]

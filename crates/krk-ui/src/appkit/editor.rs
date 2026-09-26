@@ -552,6 +552,7 @@ use krk_core::heimordner::eintraege::{
     self, Aufgaben, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
 };
 use krk_core::heimordner::tresor::Pin;
+use krk_core::tasten::Kommando;
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
 };
@@ -567,6 +568,7 @@ use crate::hervorhebung::{
 };
 use crate::kommandos::zulaessigkeit::Editorform;
 
+use super::bereichsleiste::Kommandomelder;
 use super::eintragsansicht::{self, Eintragsansicht, Eintragsart, Zeilen, Zelle, Zellenwege};
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
@@ -749,6 +751,9 @@ pub enum Editormeldung {
         /// Der Grund, wie das Modell ihn formuliert hat.
         grund: String,
     },
+    /// Die Termintabelle ordnet jetzt in dieser Richtung nach dem Datum
+    /// (T5.5 der Termine); die Datei ist unveraendert.
+    Terminrichtung(Sortierrichtung),
 }
 
 impl Editormeldung {
@@ -839,6 +844,12 @@ impl Editormeldung {
                 format!("die PIN von {} ist geändert", pfad.display())
             }
             Self::PinNichtGeaendert { grund } => grund.clone(),
+            Self::Terminrichtung(Sortierrichtung::Aufsteigend) => {
+                "Termine aufsteigend sortiert".to_owned()
+            }
+            Self::Terminrichtung(Sortierrichtung::Absteigend) => {
+                "Termine absteigend sortiert".to_owned()
+            }
         }
     }
 }
@@ -2133,6 +2144,15 @@ pub struct EditorIvars {
     /// in [`Editorbereich::tabelle_nachziehen`] und aendert an der Datei
     /// nichts.
     terminrichtung: Cell<Sortierrichtung>,
+    /// Die Senke fuer ein Kommando, das aus der Tabelle kommt: der Klick auf
+    /// den Kopf „Datum" der Termintabelle (Entscheidung 8 des Plans der
+    /// Termine).
+    ///
+    /// Sie haelt den Anwendungsdelegierten **schwach**, wie [`Self::melden`];
+    /// `None`, solange der Aufbau nicht so weit ist. Derselbe Zuschnitt wie
+    /// der Melder der Bereichsleiste: der Klick wird ein Kommando und geht
+    /// durch dieselbe Zulaessigkeit wie die Taste.
+    kommandomelder: RefCell<Option<Kommandomelder>>,
 }
 
 define_class!(
@@ -2283,6 +2303,7 @@ impl Editorbereich {
             zellenabweisung: Cell::new(None),
             zelle_umgebaut: Cell::new(false),
             terminrichtung: Cell::new(Sortierrichtung::Aufsteigend),
+            kommandomelder: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -2298,7 +2319,8 @@ impl Editorbereich {
         // Die vier Wege aus der Tabelle, aus demselben Grund erst hier. Jeder
         // haelt den Editorbereich schwach; die Begruendung steht an
         // `Zellenwege`.
-        let (pruefer, schreiber, haker, anleger) = (
+        let (pruefer, schreiber, haker, anleger, kopf) = (
+            Weak::from_retained(&this),
             Weak::from_retained(&this),
             Weak::from_retained(&this),
             Weak::from_retained(&this),
@@ -2327,6 +2349,15 @@ impl Editorbereich {
                 if let Some(editor) = anleger.load() {
                     let meldung = editor.eintrag_hinzufuegen();
                     editor.meldung_melden(meldung);
+                }
+            }),
+            // Der Klick auf den Kopf „Datum" ist dasselbe Kommando wie
+            // `cmd+1` und geht als Kommando nach oben, nicht als Aufruf von
+            // `terminrichtung_umkehren`: so fragt die Zulaessigkeit ihn wie
+            // die Taste, und die Sitzung merkt sich die Richtung.
+            kopf_geklickt: Box::new(move || {
+                if let Some(editor) = kopf.load() {
+                    editor.kommando_melden(Kommando::TermineRichtungUmkehren);
                 }
             }),
         });
@@ -2471,6 +2502,70 @@ impl Editorbereich {
         }
     }
 
+    /// Traegt die Senke fuer Kommandos aus der Tabelle ein (siehe
+    /// [`EditorIvars::kommandomelder`]).
+    pub fn kommandomelder_setzen(&self, melden: Kommandomelder) {
+        *self.ivars().kommandomelder.borrow_mut() = Some(melden);
+    }
+
+    /// Gibt ein Kommando an die Senke, falls jemand zuhoert.
+    ///
+    /// Die Ausleihe endet vor dem Ruf nicht, und das ist ohne Folgen: die
+    /// Senke fuehrt das Kommando beim Anwendungsdelegierten aus, und keiner
+    /// seiner Wege traegt eine zweite Senke ein.
+    fn kommando_melden(&self, kommando: Kommando) {
+        let melden = self.ivars().kommandomelder.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden(kommando);
+        }
+    }
+
+    /// In welcher Richtung die Termintabelle nach dem Datum ordnet; fuer die
+    /// Sitzung.
+    #[must_use]
+    pub fn terminrichtung(&self) -> Sortierrichtung {
+        self.ivars().terminrichtung.get()
+    }
+
+    /// Setzt die Richtung der Termintabelle, beim Aufbau aus der Sitzung.
+    ///
+    /// Der Pfeil im Kopf folgt, und eine gezeigte Termintabelle ordnet sich
+    /// neu; der Stand bleibt, wie er ist.
+    pub fn terminrichtung_setzen(&self, richtung: Sortierrichtung) {
+        self.ivars().terminrichtung.set(richtung);
+        self.ivars().eintraege.terminrichtung_zeigen(richtung);
+        self.tabelle_nachziehen();
+    }
+
+    /// Kehrt die Richtung der Termintabelle um (T4.2, T4.3, T5.5 der
+    /// Termine), der Rumpf von „Termine: Sortierrichtung umkehren".
+    ///
+    /// **Zuerst die laufende Zelle**, wie bei jeder Tabellenhandlung: eine
+    /// abgewiesene haelt den Befehl an, denn das Neuordnen luede die Tabelle
+    /// neu und verwuerfe ihren Text. Dann merkt es sich die gewaehlte Stelle,
+    /// kehrt die Richtung um, zieht die Tabelle nach und waehlt dieselbe
+    /// Stelle wieder; derselbe Termin bleibt gewaehlt, auch wenn er jetzt in
+    /// einer anderen Zeile steht. **Den Stand fasst es nicht an**: die Datei
+    /// bleibt in ihrer Reihenfolge, und die Rohansicht zeigt sie so.
+    pub fn terminrichtung_umkehren(&self) -> Editormeldung {
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return meldung;
+        }
+        if self.form() != Editorform::Termine {
+            return Editormeldung::Eintrag(Eintragsart::Termine, Eintragsantwort::KeineTabelle);
+        }
+        let gewaehlt = self.ivars().eintraege.gewaehlte_stelle();
+        let richtung = match self.ivars().terminrichtung.get() {
+            Sortierrichtung::Aufsteigend => Sortierrichtung::Absteigend,
+            Sortierrichtung::Absteigend => Sortierrichtung::Aufsteigend,
+        };
+        self.ivars().terminrichtung.set(richtung);
+        self.ivars().eintraege.terminrichtung_zeigen(richtung);
+        self.tabelle_nachziehen();
+        self.ivars().eintraege.auswahl_setzen(gewaehlt);
+        Editormeldung::Terminrichtung(richtung)
+    }
+
     /// Ob dieser Ersthelfer der Feldeditor einer Zelle der Eintragstabelle ist.
     ///
     /// Der Anwendungsdelegierte fragt danach in `ist_eigene_textflaeche` und im
@@ -2506,8 +2601,10 @@ impl Editorbereich {
     /// Anwendungsdelegierten `editor_stand_befragen`, die Frage vor dem
     /// Schliessen und dem Beenden. Dazu seit Schritt 4.3
     /// [`Self::zelle_abbrechen`], das eine Notizzelle mit `esc` uebernimmt,
-    /// und seit Schritt 5.5 [`Self::pin_aendern`] vor dem PIN-Blatt.
-    /// Die Liste haelt die Probe `die_zellenuebernahme_hat_genau_diese_rufer`.
+    /// und seit Schritt 5.5 [`Self::pin_aendern`] vor dem PIN-Blatt, seit
+    /// Schritt 8 des Plans der Termine [`Self::terminrichtung_umkehren`] vor
+    /// dem Neuordnen. Die Liste haelt die Probe
+    /// `die_zellenuebernahme_hat_genau_diese_rufer`.
     pub fn zelle_uebernehmen(&self) -> Zellenausgang {
         let Some(fenster) = self.ivars().bereich.window() else {
             return Zellenausgang::KeineZelle;
@@ -7738,7 +7835,13 @@ mod tests {
         pruefung: bool,
     ) -> (eintragsansicht::Zellenwege, Rc<RefCell<Vec<String>>>) {
         let buch = Rc::new(RefCell::new(Vec::new()));
-        let (p, f, a, n) = (buch.clone(), buch.clone(), buch.clone(), buch.clone());
+        let (p, f, a, n, k) = (
+            buch.clone(),
+            buch.clone(),
+            buch.clone(),
+            buch.clone(),
+            buch.clone(),
+        );
         let wege = eintragsansicht::Zellenwege {
             pruefen: Box::new(move |zelle, text| {
                 p.borrow_mut().push(format!(
@@ -7760,6 +7863,9 @@ mod tests {
             }),
             anlegen: Box::new(move || {
                 n.borrow_mut().push("anlegen".to_owned());
+            }),
+            kopf_geklickt: Box::new(move || {
+                k.borrow_mut().push("kopf".to_owned());
             }),
         };
         (wege, buch)
@@ -8207,9 +8313,10 @@ mod tests {
     }
 
     /// **Die eine Uebernahmestelle und ihre Rufer.** `zelle_uebernehmen` wird
-    /// von genau diesen sieben gerufen — seit Schritt 4.3 auch von
-    /// `zelle_abbrechen`, das eine Notizzelle mit `esc` uebernimmt, seit
-    /// Schritt 5.5 von `pin_aendern` vor dem PIN-Blatt —, von jedem vor allem anderen, was den
+    /// von genau den Rufern der Liste darunter gerufen — seit Schritt 4.3 auch
+    /// von `zelle_abbrechen`, das eine Notizzelle mit `esc` uebernimmt, seit
+    /// Schritt 5.5 von `pin_aendern` vor dem PIN-Blatt, seit Schritt 8 des
+    /// Plans der Termine von `terminrichtung_umkehren` —, von jedem vor allem anderen, was den
     /// Stand liest oder die Flaeche wechselt; und die Uebernahme selbst geht
     /// ueber `bearbeitung_beenden`, also ueber die zwei Delegiertenwege, und
     /// nicht an ihnen vorbei.
@@ -8226,6 +8333,7 @@ mod tests {
             (&editor, "handlung_ausfuehren"),
             (&editor, "zelle_abbrechen"),
             (&editor, "pin_aendern"),
+            (&editor, "terminrichtung_umkehren"),
             (&anwendung, "editor_stand_befragen"),
         ];
         for (quelle, name) in rufer {
@@ -8256,7 +8364,7 @@ mod tests {
         assert_eq!(
             codezeilen(&editor) + codezeilen(&anwendung),
             rufer.len(),
-            "ein Rufer ausser den sieben"
+            "ein Rufer ausser denen der Liste"
         );
         assert!(
             rumpf(&editor, "zelle_uebernehmen")
@@ -8512,6 +8620,7 @@ mod tests {
                 }),
                 abhaken: Box::new(|_| {}),
                 anlegen: Box::new(|| {}),
+                kopf_geklickt: Box::new(|| {}),
             });
             feld.setStringValue(ns_string!("Brot und Butter"));
             eintraege.zelle_geendet(&feld);
@@ -9334,6 +9443,109 @@ mod tests {
         assert!(
             rumpf(&editor, "tabelle_nachziehen").contains(concat!("termine::", "heute()")),
             "die Tabelle liest den Tag ueber die eine Stelle im Kern"
+        );
+    }
+    /// T4.2 und T4.3 der Termine: das Umkehren der Richtung ordnet allein die
+    /// Zeilen und fasst den Stand nicht an, uebernimmt zuerst eine laufende
+    /// Zelle und waehlt danach dieselbe Stelle wieder; die Tabelle zeigt in
+    /// beiden Richtungen dieselben Termine, und die Rohansicht bleibt Text in
+    /// der Reihenfolge der Datei. Gelesen am Rumpf, weil sich ein Editorbereich
+    /// unter `libtest` nicht bauen laesst; die Ordnung selbst an `terminzeilen`.
+    #[test]
+    fn das_umkehren_der_richtung_ordnet_die_zeilen_und_laesst_den_stand() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let umkehren = rumpf(&quelle, "terminrichtung_umkehren");
+        let zelle = umkehren
+            .find(concat!("self.zelle_", "uebernehmen()"))
+            .expect("die laufende Zelle wird zuerst uebernommen");
+        let gemerkt = umkehren
+            .find(concat!("eintraege.gewaehlte_", "stelle()"))
+            .expect("die gewaehlte Stelle wird gemerkt");
+        let nachgezogen = umkehren
+            .find(concat!("self.tabelle_", "nachziehen()"))
+            .expect("die Tabelle zieht nach");
+        let gewaehlt = umkehren
+            .find(concat!("eintraege.auswahl_", "setzen(gewaehlt)"))
+            .expect("dieselbe Stelle wird wieder gewaehlt");
+        assert!(zelle < gemerkt && gemerkt < nachgezogen && nachgezogen < gewaehlt);
+        for nadel in [
+            concat!(".bear", "beiten("),
+            concat!("umbau_", "anwenden("),
+            concat!("stand_", "einsetzen("),
+            concat!("modell.borrow_", "mut("),
+        ] {
+            assert!(
+                !umkehren.contains(nadel),
+                "terminrichtung_umkehren ruft {nadel}"
+            );
+        }
+
+        let auf = eintragsansicht::terminzeilen(TERMINE, Sortierrichtung::Aufsteigend, None);
+        let ab = eintragsansicht::terminzeilen(TERMINE, Sortierrichtung::Absteigend, None);
+        let stellen = |zeilen: &[eintragsansicht::Terminzeile]| -> Vec<usize> {
+            zeilen.iter().map(|termin| termin.stelle).collect()
+        };
+        assert_eq!(stellen(&auf), [2, 1, 0]);
+        assert_eq!(stellen(&ab), [0, 1, 2]);
+        assert_eq!(
+            editorform(Ansicht::Roh, Dateityp::Eintraege(Sonderdatei::Termine)),
+            Editorform::Text,
+            "die Rohansicht zeigt die Datei in ihrer Reihenfolge"
+        );
+        assert_eq!(
+            Editormeldung::Terminrichtung(Sortierrichtung::Absteigend).text(),
+            "Termine absteigend sortiert"
+        );
+        assert_eq!(
+            Editormeldung::Terminrichtung(Sortierrichtung::Aufsteigend).text(),
+            "Termine aufsteigend sortiert"
+        );
+    }
+
+    /// Entscheidung 8 des Plans der Termine: der Klick auf den Kopf „Datum"
+    /// holt erst den Fokus in die Tabelle und meldet dann das Kommando; der
+    /// Editorbereich reicht es als `TermineRichtungUmkehren` nach oben, und
+    /// oben ist es derselbe Melder wie der der Bereichsleiste.
+    #[test]
+    fn der_klick_auf_den_kopf_datum_geht_den_weg_der_taste() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let ansicht = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let klick = rumpf(&ansicht, "kopf_geklickt");
+        let spalte = klick
+            .find("DATUMSSPALTE")
+            .expect("allein die Datumsspalte zaehlt");
+        let fokus = klick
+            .find(concat!("self.fokus_in_die_", "tabelle()"))
+            .expect("der Klick holt den Fokus");
+        let melden = klick
+            .find(concat!("(wege.kopf_", "geklickt)()"))
+            .expect("der Klick meldet sich");
+        assert!(spalte < fokus && fokus < melden);
+
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        let anfang = editor
+            .find("kopf_geklickt: Box::new(move || {")
+            .expect("der Weg steht in bauen");
+        assert!(
+            editor[anfang..anfang + 200].contains(concat!(
+                "editor.kommando_melden(Kommando::TermineRichtung",
+                "Umkehren)"
+            )),
+            "der Editorbereich reicht ein Kommando nach oben"
+        );
+
+        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
+        let aufbau = rumpf(&anwendung, "oberflaeche_aufbauen");
+        for nadel in [
+            concat!("editor.kommandomelder_setzen(self.klick", "melder())"),
+            concat!("bereichsleiste.melder_setzen(self.klick", "melder())"),
+        ] {
+            assert!(aufbau.contains(nadel), "der Aufbau setzt {nadel} nicht");
+        }
+        assert!(
+            rumpf(&anwendung, "klickmelder")
+                .contains(concat!("selbst.kommando_", "ausfuehren(kommando, None)"))
         );
     }
 }

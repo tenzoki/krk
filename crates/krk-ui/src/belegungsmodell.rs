@@ -502,7 +502,10 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EintragRunter
         | Kommando::EintragLoeschen
         | Kommando::AufgabeAbhaken
-        | Kommando::PinAendern => Funktionsbereich::Home,
+        | Kommando::PinAendern
+        // Das Umkehren der Termintabelle steht unter „Home" bei den uebrigen
+        // Befehlen des Notizordners (Schritt 8 des Plans der Termine).
+        | Kommando::TermineRichtungUmkehren => Funktionsbereich::Home,
         // Der Git-Bereich, und die zwei Befehle folgen demselben Satz wie das
         // Ein- und Ausblenden der Vorschau und des Editors weiter oben: die
         // Gliederung fragt nach der **Gegend der Anwendung**, und wer den
@@ -1496,7 +1499,8 @@ mod tests {
     ///
     /// **Anders als die Probe des Editors haelt diese die Reihenfolge**, weil
     /// der Spec sie zusagt: „Notizordner öffnen" zuerst, dann die sechs
-    /// Eintragsbefehle, zuletzt „PIN ändern". Die Folge kommt aus der Folge
+    /// Eintragsbefehle, dann „PIN ändern" und seit den Terminen zuletzt
+    /// „Termine: Sortierrichtung umkehren". Die Folge kommt aus der Folge
     /// der Bloecke in `resources/default-keymap.toml`; wer dort einen Block
     /// verschiebt, bekommt hier die Rechnung.
     ///
@@ -1509,7 +1513,7 @@ mod tests {
     /// Probe des Editors darueber.
     #[test]
     fn der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge() {
-        const HOMEBEFEHLE: [&str; 9] = [
+        const HOMEBEFEHLE: [&str; 10] = [
             "notizzettel",
             "ort_waehlen",
             "eintrag_hinzufuegen",
@@ -1519,6 +1523,8 @@ mod tests {
             "eintrag_loeschen",
             "aufgabe_abhaken",
             "pin_aendern",
+            // Schritt 8 des Plans der Termine: am Ende der Befehle unter Home.
+            "termine_richtung_umkehren",
         ];
 
         let belegung = Belegung::auslieferung();

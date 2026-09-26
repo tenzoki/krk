@@ -1383,8 +1383,11 @@ mod tests {
     /// Reihenfolge der Belegung; die Verdeckung greift unveraendert davor.
     #[test]
     fn eine_geteilte_kombination_nennt_beide_kennungen() {
+        // `cmd+2` und nicht `cmd+1`: `cmd+1` traegt seit Schritt 8 des Plans
+        // der Termine in der Auslieferung selbst schon zwei Funktionen, und
+        // eine dritte waere ein Konflikt.
         let mut belegung = Belegung::auslieferung();
-        let kombination = Kombination::lesen("cmd+1").expect("gueltige Schreibweise");
+        let kombination = Kombination::lesen("cmd+2").expect("gueltige Schreibweise");
         belegung
             .zuweisen("editor_sichern", kombination)
             .expect("Dateifenster und Editor schliessen einander aus");
@@ -1394,13 +1397,24 @@ mod tests {
             matches!(nachschlag, Nachschlag::Geteilt(..)),
             "{nachschlag:?}"
         );
-        let offen = protokollzeile(druck, Some('1'), nachschlag, false);
+        let offen = protokollzeile(druck, Some('2'), nachschlag, false);
         assert!(
-            offen.ends_with("funktion=sortierung_name|editor_sichern"),
+            offen.ends_with("funktion=sortierung_groesse|editor_sichern"),
             "{offen}"
         );
-        let verdeckt = protokollzeile(druck, Some('1'), nachschlag, true);
-        assert_eq!(verdeckt, offen, "cmd+1 fuegt keinen Text ein");
+        let verdeckt = protokollzeile(druck, Some('2'), nachschlag, true);
+        assert_eq!(verdeckt, offen, "cmd+2 fuegt keinen Text ein");
+
+        // Und der Fall der Auslieferung selbst.
+        let ab_werk = Belegung::auslieferung();
+        let druck = Kombination::lesen("cmd+1")
+            .expect("gueltige Schreibweise")
+            .tastendruck();
+        let offen = protokollzeile(druck, Some('1'), ab_werk.nachschlag(druck), false);
+        assert!(
+            offen.ends_with("funktion=sortierung_name|termine_richtung_umkehren"),
+            "{offen}"
+        );
     }
 
     /// Was keinen Text einfuegt, bleibt auch bei geheimem Tippen offen: ein

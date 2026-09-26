@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 102 Funktionen mit zusammen 104 Kombinationen.
+# Ausgeliefert sind 103 Funktionen mit zusammen 105 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1388,6 +1388,26 @@ tasten = ["shift+cmd+p"]
 # verschluesselt gesichert ist; sonst ist der Eintrag ausgegraut. p wie PIN;
 # shift+cmd+p war am 260926 in keiner Liste dieser Datei belegt
 # (Datensatz 260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md).
+
+[[funktion]]
+id = "termine_richtung_umkehren"
+name = "Termine: Sortierrichtung umkehren"
+tasten = ["cmd+1"]
+# Allein in der Termintabelle von appointments.md im Editor: kehrt die
+# Ordnung nach dem Datum um, aufsteigend oder absteigend, ohne die Datei
+# anzufassen. cmd+1 ist dieselbe Kombination wie sortierung_name weiter
+# oben, und sortierung_name behaelt sie: die zwei Funktionen wirken nie
+# zugleich, die eine allein im Editor und die andere allein im Dateifenster,
+# und zwei Funktionen eines Zustellers duerfen eine Kombination teilen, wenn
+# ihre Wirkungsbereiche einander so ausschliessen (Datensatz
+# 260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md).
+# Im Hauptmenue zeigt der fruehere Eintrag der Leiste das Kuerzel, also
+# dieser unter "Home"; "Nach Name sortieren" steht dann ohne Kuerzel da und
+# sortiert mit cmd+1 im Dateifenster weiter.
+#
+# Wer eine eigene keymap.toml hat, bekommt die Funktion unbelegt hinzu, bis
+# er sie in F1 belegt: "Termine: Sortierrichtung umkehren" waehlen, cmd+t,
+# cmd+1, die Ansicht verlassen.
 
 # ── Die Neuerungen auf Verlangen ─────────────────────────────────────────────
 # Die Runde der Ablageneuerungen. Beim Start meldet KRK von sich aus, dass

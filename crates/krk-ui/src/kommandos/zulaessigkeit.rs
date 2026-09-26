@@ -493,6 +493,16 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Termine => false,
             Editorform::Aufgaben => true,
         },
+        // Allein die Termintabelle ordnet nach dem Datum und hat eine
+        // Richtung, die sich umkehren laesst (Schritt 8 des Plans der
+        // Termine).
+        Wirkungsbereich::Termine => match form {
+            Editorform::Text
+            | Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse => false,
+            Editorform::Termine => true,
+        },
         // Die Geheimnisse fragen nicht die Form, sondern die Datei; das
         // steht in `datei_passt`. Auch in der Rohansicht haelt der Editor
         // dieselbe `secrets.txt` mit derselben PIN.
@@ -532,6 +542,7 @@ fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool) -> bool {
         | Wirkungsbereich::Eintraege
         | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
+        | Wirkungsbereich::Termine
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
@@ -738,7 +749,7 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 13] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 14] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
@@ -750,6 +761,7 @@ mod tests {
         (Wirkungsbereich::Eintraege, Kommando::EintragHinzufuegen),
         (Wirkungsbereich::Reihenfolge, Kommando::EintragHoch),
         (Wirkungsbereich::Aufgaben, Kommando::AufgabeAbhaken),
+        (Wirkungsbereich::Termine, Kommando::TermineRichtungUmkehren),
         (Wirkungsbereich::Geheimnisse, Kommando::PinAendern),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
         (Wirkungsbereich::Navigator, Kommando::AuswahlHoch),
@@ -978,7 +990,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 13] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 14] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -990,6 +1002,8 @@ mod tests {
             // Reihenfolge, gleich der Zeile darueber
             [false, false, false, false, false, false],
             // Aufgaben
+            [false, false, false, false, false, false],
+            // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
@@ -998,7 +1012,7 @@ mod tests {
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 13] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 14] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1011,6 +1025,8 @@ mod tests {
             [false, false, false, true, false, false],
             // Aufgaben
             [false, false, false, true, false, false],
+            // Termine
+            [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
             [true, false, true, false, false, false],
@@ -1020,7 +1036,7 @@ mod tests {
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 13] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 14] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1032,6 +1048,8 @@ mod tests {
             // Reihenfolge, gleich der Zeile darueber
             [false, false, false, true, false, false],
             // Aufgaben
+            [false, false, false, false, false, false],
+            // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
@@ -1043,7 +1061,7 @@ mod tests {
         // Wie die Notiztabelle, nur ohne die Zeile `Reihenfolge`: die
         // Termintabelle ordnet nach dem Datum, und verschieben laesst sich
         // darin nichts (Schritt 6 des Plans der Termine, T3.7).
-        const IN_DER_TERMINTABELLE: [[bool; 6]; 13] = [
+        const IN_DER_TERMINTABELLE: [[bool; 6]; 14] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1056,6 +1074,8 @@ mod tests {
             [false, false, false, false, false, false],
             // Aufgaben
             [false, false, false, false, false, false],
+            // Termine: allein hier
+            [false, false, false, true, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
             [true, false, true, false, false, false],
@@ -1063,7 +1083,7 @@ mod tests {
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 13] = [[false; 6]; 13];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 14] = [[false; 6]; 14];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1081,7 +1101,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 13]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 14]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),
@@ -1969,6 +1989,40 @@ mod tests {
                 lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Notizen)
             ),
             "in der Notiztabelle verschiebt es weiter"
+        );
+    }
+    /// T5.5 und T5.6 der Termine: „Termine: Sortierrichtung umkehren" ist
+    /// allein mit dem Fokus im Editor und der Termintabelle zulaessig, und in
+    /// jeder Lage, in der „Nach Name sortieren" zulaessig ist, waehlt `cmd+1`
+    /// die Sortierung; in der Termintabelle mit dem Fokus im Editor waehlt es
+    /// die Richtung.
+    #[test]
+    fn cmd_1_sortiert_im_dateifenster_und_kehrt_in_der_termintabelle_um() {
+        let (erste, zweite) = (Kommando::SortierungName, Kommando::TermineRichtungUmkehren);
+        let mut umgekehrt = 0usize;
+        for lage in jede_lage() {
+            let ohne_hindernis = !lage.blatt_steht
+                && !lage.ersthelfer_gehoert_appkit
+                && lage.schluesselfenster_gehoert_krk;
+            assert_eq!(
+                zulaessig(zweite, lage),
+                ohne_hindernis
+                    && lage.fokus == Fokus::Editor
+                    && lage.editorform == Editorform::Termine,
+                "{lage:?}"
+            );
+            let gewaehlt = waehlen(erste, zweite, lage);
+            if zulaessig(erste, lage) {
+                assert_eq!(gewaehlt, erste, "{lage:?}");
+            }
+            if zulaessig(zweite, lage) {
+                assert_eq!(gewaehlt, zweite, "{lage:?}");
+                umgekehrt += 1;
+            }
+        }
+        assert!(
+            umgekehrt > 0,
+            "die Richtung ist in keiner Lage gewaehlt worden"
         );
     }
 }

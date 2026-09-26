@@ -328,7 +328,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
    - Closes (am Baum): T6.1 bis T6.3.
    - Dependencies: 6
 
-8. **8 `cmd+1` kehrt die Richtung um**
+8. [DONE] **8 `cmd+1` kehrt die Richtung um**
    - Executor: `code-implementer`
    - Files:
      - Kern: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/tests/belegung.rs`, `crates/krk-core/src/ablage/sitzung.rs`, `crates/krk-core/tests/ablage.rs`

@@ -91,6 +91,7 @@ use krk_core::ablage::{
 };
 
 use krk_core::heimordner::{Heimordner, Sonderdatei};
+use krk_core::verzeichnis::Richtung;
 
 use crate::spalten::Spalte;
 use crate::tabs::Tabuebersicht;
@@ -570,12 +571,17 @@ impl Fenstermodell {
     /// **Der gemerkte Notizordner kommt ebenfalls von aussen** und wird
     /// durchgeschrieben: welcher Ort zuletzt gegolten hat, weiss der
     /// Anwendungsdelegierte, und dieses Modell kennt keinen Ort.
+    ///
+    /// **Die Richtung der Termintabelle ebenso**: sie wohnt im Editorbereich,
+    /// der die Tabelle ordnet, und wird durchgeschrieben (Schritt 8 des Plans
+    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
     pub fn sitzung(
         &self,
         fenster: [Fensterzustand; 2],
         editor: Option<PathBuf>,
         gitanteil: Option<f64>,
         notizordner: Option<PathBuf>,
+        terminrichtung: Option<Richtung>,
         heim: Option<&Heimordner>,
     ) -> Sitzung {
         Sitzung {
@@ -583,6 +589,7 @@ impl Fenstermodell {
             editor: merkbare_editordatei(editor, heim),
             gitanteil,
             notizordner,
+            terminrichtung,
             breiten: self.breiten,
             sichtbar: self.sichtbar,
             spalten: self.spalten,
@@ -2942,7 +2949,7 @@ mod tests {
         let gewuenscht = Bereich::Editor.anfangsbreite() + BREITENSCHRITT;
         assert_eq!(modell.breiten().editor, Some(gewuenscht));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         assert!(
             text.contains("editor"),
@@ -3097,7 +3104,7 @@ mod tests {
         let mut modell = modell();
         assert!(modell.spalte_umschalten(Spalte::Groesse));
 
-        let sitzung = modell.sitzung(fenster, None, None, None, None);
+        let sitzung = modell.sitzung(fenster, None, None, None, None, None);
         assert!(
             !sitzung.spalten.groesse,
             "die Spalte Groesse ist nicht weggeschaltet"
@@ -3119,7 +3126,7 @@ mod tests {
         assert!(modell.spalte_umschalten(Spalte::Groesse));
         assert!(modell.spalte_umschalten(Spalte::Typ));
 
-        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None, None);
+        let sitzung = modell.sitzung(Sitzung::default().fenster, None, None, None, None, None);
         let text = toml::to_string(&sitzung).expect("die Sitzung laesst sich schreiben");
         let gelesen: Sitzung = toml::from_str(&text).expect("die Sitzung laesst sich lesen");
         let wieder = Fenstermodell::aus_sitzung(&gelesen);
@@ -3166,6 +3173,7 @@ mod tests {
             None,
             Some(0.4),
             None,
+            None,
             Some(&heim),
         );
 
@@ -3175,6 +3183,7 @@ mod tests {
                 Sitzung::default().fenster,
                 Some(geheimnisse.clone()),
                 Some(0.4),
+                None,
                 None,
                 Some(&heim),
             );
@@ -3188,6 +3197,22 @@ mod tests {
                 !text.contains("secrets"),
                 "session.toml nennt die Datei: {text}"
             );
+        }
+    }
+
+    /// Die Richtung der Termintabelle kommt von aussen und geht unveraendert
+    /// in die Sitzung, gesetzt wie ungesetzt (T5.7 der Termine).
+    #[test]
+    fn die_richtung_der_termine_geht_unveraendert_in_die_sitzung() {
+        let modell = modell();
+        for richtung in [
+            None,
+            Some(Richtung::Aufsteigend),
+            Some(Richtung::Absteigend),
+        ] {
+            let sitzung =
+                modell.sitzung(Sitzung::default().fenster, None, None, None, richtung, None);
+            assert_eq!(sitzung.terminrichtung, richtung);
         }
     }
 
@@ -3208,6 +3233,7 @@ mod tests {
             let sitzung = modell.sitzung(
                 Sitzung::default().fenster,
                 Some(datei.clone()),
+                None,
                 None,
                 None,
                 heim,
@@ -3246,6 +3272,7 @@ mod tests {
             gelesen.editor.clone(),
             gelesen.gitanteil,
             gelesen.notizordner.clone(),
+            None,
             Some(&heim),
         );
         assert_eq!(

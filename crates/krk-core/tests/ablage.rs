@@ -172,6 +172,7 @@ fn beispielsitzung() -> Sitzung {
         editor: Some(PathBuf::from("/Users/pruefung/Projekte/notiz.md")),
         gitanteil: Some(0.375),
         notizordner: Some(PathBuf::from("/Users/pruefung/Notizen")),
+        terminrichtung: Some(Richtung::Absteigend),
         breiten: Breiten {
             lesezeichen: Some(180.0),
             links: Some(520.5),
@@ -862,6 +863,39 @@ fn der_gitanteil_steht_nur_dann_in_der_datei_wenn_eine_teilung_gesetzt_ist() {
         .filter(|zeile| zeile.starts_with("gitanteil"))
         .collect();
     assert_eq!(zeilen, ["gitanteil = 0.375"], "{mit}");
+}
+
+/// T5.7 der Termine: eine `session.toml` ohne `terminrichtung` laedt mit
+/// `None` und behaelt jede andere Angabe; eine mit `terminrichtung =
+/// "absteigend"` uebersteht Schreiben und Lesen, und die Zeile steht nur dann in
+/// der Datei, wenn die Richtung gesetzt ist.
+#[test]
+fn die_richtung_der_termine_uebersteht_schreiben_und_lesen_und_fehlt_ohne_folgen() {
+    let (_ordner, ablage) = ablage("terminrichtung");
+    let ohne = Sitzung {
+        terminrichtung: None,
+        ..beispielsitzung()
+    };
+    gesichert(&ablage, Datei::Sitzung, &ohne).expect("schreiben gescheitert");
+    let text = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    assert!(
+        !text
+            .lines()
+            .any(|zeile| zeile.starts_with("terminrichtung")),
+        "ohne gesetzte Richtung steht eine in session.toml: {text}"
+    );
+    assert_eq!(gelesene_sitzung(&ablage), ohne, "jede andere Angabe bleibt");
+
+    let mit = beispielsitzung();
+    assert_eq!(mit.terminrichtung, Some(Richtung::Absteigend));
+    gesichert(&ablage, Datei::Sitzung, &mit).expect("zweites Schreiben gescheitert");
+    let text = fs::read_to_string(ablage.pfad(Datei::Sitzung)).expect("lesen gescheitert");
+    let zeilen: Vec<&str> = text
+        .lines()
+        .filter(|zeile| zeile.starts_with("terminrichtung"))
+        .collect();
+    assert_eq!(zeilen, ["terminrichtung = \"absteigend\""], "{text}");
+    assert_eq!(gelesene_sitzung(&ablage), mit);
 }
 
 /// Eine `session.toml` aus der Zeit vor der Bereichsleisten-Runde bleibt
@@ -4048,6 +4082,7 @@ fn jede_geschriebene_session_toml_traegt_einen_obersten_schluessel() {
         editor: None,
         gitanteil: None,
         notizordner: None,
+        terminrichtung: None,
         breiten: Breiten::default(),
         sichtbar: Sichtbarkeit {
             lesezeichen: false,
