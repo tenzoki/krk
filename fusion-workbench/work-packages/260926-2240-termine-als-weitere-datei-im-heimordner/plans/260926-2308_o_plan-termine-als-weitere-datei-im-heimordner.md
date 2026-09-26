@@ -266,7 +266,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
    - Closes: nichts vom Spec; die Voraussetzung für Schritt 6.
    - Dependencies: none
 
-6. **6 Die Termintabelle im Editor**
+6. [DONE] **6 Die Termintabelle im Editor**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, `crates/krk-ui/src/appkit/eintragsansicht.rs`, `crates/krk-ui/src/appkit/editor.rs`
    - Changes:

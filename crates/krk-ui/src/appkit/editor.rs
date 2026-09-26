@@ -549,12 +549,13 @@ use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::heimordner::Sonderdatei;
 use krk_core::heimordner::eintraege::{
-    self, Aufgaben, Neustand, Notizen, Richtung, aufgaben, notizen,
+    self, Aufgaben, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
 };
 use krk_core::heimordner::tresor::Pin;
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
 };
+use krk_core::verzeichnis::Richtung as Sortierrichtung;
 
 use crate::editormodell::{
     Ansicht, Dateityp, Editormodell, Ladeausgang, Pinform, Pinwechselausgang, Sicherungsausgang,
@@ -888,6 +889,14 @@ pub enum Eintragsantwort {
     /// `cmd+z` nimmt die Uebernahme zurueck (C5, Moeglichkeit 2 von
     /// `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`).
     MitEscUebernommen,
+    /// Ein neuer Termin braucht das heutige Datum, und die Uhr hat keines
+    /// geliefert; es ist nichts hinzugefuegt (Schritt 6 des Plans der
+    /// Termine).
+    HeuteUnbestimmt,
+    /// Die Termintabelle ordnet nach dem Datum, und verschieben laesst sich
+    /// darin nichts. Die Zulaessigkeit haelt die zwei Befehle vorher an; der
+    /// Satz ist die ehrliche Antwort, falls ein Rufer doch durchkommt.
+    NachDatumGeordnet,
 }
 
 impl Eintragsantwort {
@@ -899,37 +908,57 @@ impl Eintragsantwort {
     /// Falsches sagt.
     #[must_use]
     pub fn text(self, art: Eintragsart) -> &'static str {
-        use Eintragsart::{Aufgaben as A, Notizen as N};
+        use Eintragsart::{Aufgaben as A, Notizen as N, Termine as T};
         match (self, art) {
             (Self::KeineTabelle, A) => "der Editor zeigt keine Aufgabentabelle",
             (Self::KeineTabelle, N) => "der Editor zeigt keine Notiztabelle",
+            (Self::KeineTabelle, T) => "der Editor zeigt keine Termintabelle",
             (Self::KeinEintragGewaehlt, A) => "es ist keine Aufgabe gewählt",
             (Self::KeinEintragGewaehlt, N) => "es ist keine Notiz gewählt",
+            (Self::KeinEintragGewaehlt, T) => "es ist kein Termin gewählt",
             (Self::Hinzugefuegt, A) => "neue Aufgabe am Ende; return übernimmt den Text",
             (Self::Hinzugefuegt, N) => {
                 "neue Notiz am Ende; tab wechselt zum Text, cmd+return übernimmt"
+            }
+            (Self::Hinzugefuegt, T) => {
+                "Termin hinzugefügt, mit dem heutigen Datum; tab wechselt zum Text, cmd+return übernimmt"
             }
             (Self::BearbeitungBegonnen, A) => "return übernimmt, esc verwirft",
             (Self::BearbeitungBegonnen, N) => {
                 "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Text einen Zeilenumbruch"
             }
+            (Self::BearbeitungBegonnen, T) => {
+                "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Termin einen Zeilenumbruch"
+            }
             (Self::Uebernommen, A) => "Aufgabe übernommen",
             (Self::Uebernommen, N) => "Notiz übernommen",
+            (Self::Uebernommen, T) => "Termin übernommen",
             (Self::Abgehakt, A) => "Aufgabe abgehakt",
             (Self::Abgehakt, N) => "eine Notiz hat kein Kästchen",
+            (Self::Abgehakt, T) => "ein Termin hat kein Kästchen",
             (Self::WiederOffen, A) => "Aufgabe wieder offen",
             (Self::WiederOffen, N) => "eine Notiz hat kein Kästchen",
+            (Self::WiederOffen, T) => "ein Termin hat kein Kästchen",
             (Self::Verschoben, A) => "Aufgabe verschoben",
             (Self::Verschoben, N) => "Notiz verschoben",
             (Self::SchonOben, A) => "die Aufgabe steht schon oben",
             (Self::SchonOben, N) => "die Notiz steht schon oben",
             (Self::SchonUnten, A) => "die Aufgabe steht schon unten",
             (Self::SchonUnten, N) => "die Notiz steht schon unten",
+            // Termine verschieben sich nicht; ein Rufer, der trotzdem hier
+            // ankommt, bekommt die Ordnung genannt.
+            (Self::Verschoben | Self::SchonOben | Self::SchonUnten, T)
+            | (Self::NachDatumGeordnet, A | N | T) => {
+                "Termine stehen nach ihrem Datum; verschieben lässt sich keiner."
+            }
             (Self::Geloescht, A) => "Aufgabe gelöscht; cmd+z holt sie zurück",
             (Self::Geloescht, N) => "Notiz gelöscht; cmd+z holt sie zurück",
-            (Self::ZelleBleibt, A | N) => "die Zelle bleibt in Bearbeitung",
+            (Self::Geloescht, T) => "Termin gelöscht; cmd+z holt ihn zurück",
+            (Self::ZelleBleibt, A | N | T) => "die Zelle bleibt in Bearbeitung",
             (Self::MitEscUebernommen, A) => "Aufgabe übernommen; cmd+z nimmt es zurück",
             (Self::MitEscUebernommen, N) => "Notiz übernommen; cmd+z nimmt es zurück",
+            (Self::MitEscUebernommen, T) => "Termin übernommen; cmd+z nimmt es zurück",
+            (Self::HeuteUnbestimmt, A | N | T) => "Das heutige Datum ließ sich nicht bestimmen.",
         }
     }
 }
@@ -979,18 +1008,24 @@ enum Handlung {
 ///
 /// **Die Notiztabelle kennt kein Abhaken**: die Zulaessigkeit haelt den
 /// Befehl dort an, und kommt er trotzdem an, antwortet er wie in der
-/// Textflaeche, ohne Umbau.
+/// Textflaeche, ohne Umbau. Die Termintabelle ebenso.
+///
+/// **Die Termintabelle rechnet ueber `termine`**: ein neuer Termin traegt
+/// `heute`, und ohne `heute` entsteht keiner; verschieben laesst sich nichts,
+/// weil sie nach dem Datum ordnet. `stelle` ist auch hier die Stelle im Stand
+/// und nie die Zeile auf dem Schirm; die Umrechnung steht in der Tabelle.
 fn handlung_rechnen(
     stand: &str,
     art: Eintragsart,
     handlung: Handlung,
     zeile: Option<usize>,
+    heute: Option<Tag>,
 ) -> (Editormeldung, Option<Neustand>) {
     use Eintragsantwort as A;
     let antwort = |antwort| Editormeldung::Eintrag(art, antwort);
     let anzahl = match art {
         Eintragsart::Aufgaben => Aufgaben::lesen(stand).bloecke().len(),
-        Eintragsart::Notizen => Notizen::lesen(stand).bloecke().len(),
+        Eintragsart::Notizen | Eintragsart::Termine => Notizen::lesen(stand).bloecke().len(),
     };
     let gewaehlt = zeile.filter(|stelle| *stelle < anzahl);
     let ohne_auswahl = (antwort(A::KeinEintragGewaehlt), None);
@@ -999,6 +1034,10 @@ fn handlung_rechnen(
             let neu = match art {
                 Eintragsart::Aufgaben => aufgaben::hinzufuegen(stand, ""),
                 Eintragsart::Notizen => notizen::hinzufuegen(stand, "", ""),
+                Eintragsart::Termine => match heute {
+                    Some(heute) => Ok(termine::hinzufuegen(stand, heute)),
+                    None => return (antwort(A::HeuteUnbestimmt), None),
+                },
             };
             match neu {
                 Ok(neustand) => (antwort(A::Hinzugefuegt), Some(neustand)),
@@ -1009,6 +1048,9 @@ fn handlung_rechnen(
             Some(_) => (antwort(A::BearbeitungBegonnen), None),
             None => ohne_auswahl,
         },
+        Handlung::Verschieben(_) if art == Eintragsart::Termine => {
+            (antwort(A::NachDatumGeordnet), None)
+        }
         Handlung::Verschieben(richtung) => {
             let Some(stelle) = gewaehlt else {
                 return ohne_auswahl;
@@ -1016,6 +1058,9 @@ fn handlung_rechnen(
             let verschoben = match art {
                 Eintragsart::Aufgaben => aufgaben::verschieben(stand, stelle, richtung),
                 Eintragsart::Notizen => notizen::verschieben(stand, stelle, richtung),
+                // Oben beantwortet; die Zeile steht, damit die Unterscheidung
+                // vollstaendig bleibt.
+                Eintragsart::Termine => None,
             };
             match verschoben {
                 Some(neustand) => (antwort(A::Verschoben), Some(neustand)),
@@ -1029,13 +1074,14 @@ fn handlung_rechnen(
             let geloescht = gewaehlt.and_then(|stelle| match art {
                 Eintragsart::Aufgaben => aufgaben::loeschen(stand, stelle),
                 Eintragsart::Notizen => notizen::loeschen(stand, stelle),
+                Eintragsart::Termine => termine::loeschen(stand, stelle),
             });
             match geloescht {
                 Some(neustand) => (antwort(A::Geloescht), Some(neustand)),
                 None => ohne_auswahl,
             }
         }
-        Handlung::Abhaken if art == Eintragsart::Notizen => (
+        Handlung::Abhaken if art != Eintragsart::Aufgaben => (
             Editormeldung::Eintrag(Eintragsart::Aufgaben, A::KeineTabelle),
             None,
         ),
@@ -1512,7 +1558,9 @@ const ABWEICHUNGSZEICHEN: &str = "•";
 ///
 /// **Rein und ohne Fenster pruefbar.** In der Aufgabentabelle ist es der Text
 /// der Aufgabe, in der Notiztabelle Thema oder Text der Notiz je nach Spalte,
-/// und die andere Haelfte bleibt, wie die Ableitung sie zeigt. `Ok(None)`: kein
+/// in der Termintabelle Datum oder Text des Termins, und die andere Haelfte
+/// bleibt, wie die Ableitung sie zeigt. Die Zelle nennt eine Stelle im Stand
+/// und keine Zeile des Schirms. `Ok(None)`: kein
 /// Umbau, weil nichts geaendert ist, es den Eintrag nicht gibt oder der Editor
 /// keine Tabelle zeigt.
 fn zellenrechnung(
@@ -1535,6 +1583,41 @@ fn zellenrechnung(
             } else {
                 notizen::aendern(stand, zelle.stelle, text, &alt.text)
             }
+        }
+        // Die Termine rechnen ueber `termine::aendern`, das ein geaendertes
+        // Datum prueft und eine Kopfzeile im Text abweist (Schritt 6 des
+        // Plans der Termine).
+        Editorform::Termine => {
+            let Some(alt) = Notizen::lesen(stand).notiz(zelle.stelle) else {
+                return Ok(None);
+            };
+            if zelle.spalte == eintragsansicht::TERMINSPALTE {
+                termine::aendern(stand, zelle.stelle, alt.thema, text)
+            } else {
+                termine::aendern(stand, zelle.stelle, text, &alt.text)
+            }
+        }
+    }
+}
+
+/// Nach welcher Form sich `esc` in einer Zelle dieser Form und dieser Spalte
+/// richtet (T3.9 der Termine).
+///
+/// **Rein und ohne Fenster pruefbar.** Jede Form richtet sich nach sich
+/// selbst, bis auf die Termintabelle: ihre Datumszelle ist einzeilig und
+/// richtet sich nach der Aufgabenzelle, die verwirft; ihre Terminzelle traegt
+/// Absaetze und richtet sich nach der Notizzelle, die uebernimmt, weil ein
+/// Verwerfen ohne Meldung mehrere Absaetze verloere. Ohne laufende Zelle gilt
+/// die Terminzelle; `zelle_uebernehmen` findet dann keine und tut nichts.
+#[must_use]
+fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
+    match form {
+        Editorform::Termine if spalte == Some(eintragsansicht::DATUMSSPALTE) => {
+            Editorform::Aufgaben
+        }
+        Editorform::Termine => Editorform::Notizen,
+        Editorform::Text | Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => {
+            form
         }
     }
 }
@@ -1598,11 +1681,7 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
             ),
         )
         | (Ansicht::Format, Dateityp::Markdown | Dateityp::Sonstiges) => Editorform::Text,
-        // Zwischenstand: `appointments.md` zeigt in der Formatansicht Markdown
-        // in der Textflaeche, bis Schritt 6 des Plans
-        // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md` die
-        // Termintabelle baut und diese Zeile abloest.
-        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Termine)) => Editorform::Text,
+        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Termine)) => Editorform::Termine,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen)) => Editorform::Notizen,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Geheimnisse)) => Editorform::Geheimnisse,
@@ -1661,7 +1740,10 @@ fn oeffnungsweg(
 fn flaeche_der_form(form: Editorform) -> Flaeche {
     match form {
         Editorform::Text => Flaeche::Textflaeche,
-        Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => Flaeche::Tabelle,
+        Editorform::Aufgaben
+        | Editorform::Notizen
+        | Editorform::Geheimnisse
+        | Editorform::Termine => Flaeche::Tabelle,
     }
 }
 
@@ -1674,6 +1756,7 @@ fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
         Editorform::Text => None,
         Editorform::Aufgaben => Some(Eintragsart::Aufgaben),
         Editorform::Notizen | Editorform::Geheimnisse => Some(Eintragsart::Notizen),
+        Editorform::Termine => Some(Eintragsart::Termine),
     }
 }
 
@@ -2044,6 +2127,12 @@ pub struct EditorIvars {
     /// sagt, dass `esc` uebernommen hat (C5). AppKit meldet das Ende einer
     /// Zelle ohne Auskunft darueber, ob sich etwas geaendert hat.
     zelle_umgebaut: Cell<bool>,
+    /// In welcher Richtung die Termintabelle nach dem Datum ordnet.
+    ///
+    /// Eine Angabe der Anzeige und nicht des Standes: sie ordnet die Zeilen
+    /// in [`Editorbereich::tabelle_nachziehen`] und aendert an der Datei
+    /// nichts.
+    terminrichtung: Cell<Sortierrichtung>,
 }
 
 define_class!(
@@ -2193,6 +2282,7 @@ impl Editorbereich {
             meldungsmelder: RefCell::new(None),
             zellenabweisung: Cell::new(None),
             zelle_umgebaut: Cell::new(false),
+            terminrichtung: Cell::new(Sortierrichtung::Aufsteigend),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -2455,15 +2545,22 @@ impl Editorbereich {
     /// dort nicht, weil eine Notizzelle mehrere Absaetze tragen kann, die ein
     /// Verwerfen ohne Meldung verloere. Die Tabelle der Geheimnisse folgt
     /// derselben Regel (C7, Schritt 5.4b).
+    ///
+    /// **Die Termintabelle folgt je Spalte einer der beiden Regeln** (T3.9 der
+    /// Termine), nach [`esc_regel`]: die Datumszelle ist einzeilig und
+    /// verwirft wie die Aufgabenzelle, die Terminzelle traegt Absaetze und
+    /// uebernimmt wie die Notizzelle, mit dem Satz ueber einen Termin.
     pub fn zelle_abbrechen(&self) {
-        match self.form() {
+        let form = self.form();
+        let art = eintragsart_der_form(form).unwrap_or(Eintragsart::Notizen);
+        match esc_regel(form, self.laufende_spalte()) {
             Editorform::Aufgaben => self.zelle_verwerfen(),
             Editorform::Notizen | Editorform::Geheimnisse => {
                 if self.zelle_uebernehmen() == Zellenausgang::Uebernommen
                     && self.ivars().zelle_umgebaut.get()
                 {
                     self.meldung_melden(Editormeldung::Eintrag(
-                        Eintragsart::Notizen,
+                        art,
                         Eintragsantwort::MitEscUebernommen,
                     ));
                 }
@@ -2471,7 +2568,19 @@ impl Editorbereich {
             // Ohne Tabelle laeuft keine Zelle; der Rang in `abbrechen` fragt
             // vorher danach.
             Editorform::Text => {}
+            // `esc_regel` nennt fuer die Termintabelle je Spalte die Regel
+            // der Aufgaben oder der Notizen und diese Form nie.
+            Editorform::Termine => {}
         }
+    }
+
+    /// Die Spalte der laufenden Zelle, falls eine laeuft.
+    fn laufende_spalte(&self) -> Option<usize> {
+        let ersthelfer = self.ivars().bereich.window()?.firstResponder()?;
+        self.ivars()
+            .eintraege
+            .laufende_zelle(&ersthelfer)
+            .map(|zelle| zelle.spalte)
     }
 
     /// Beendet eine laufende Zelle verwerfend; ohne laufende Zelle geschieht
@@ -2595,8 +2704,20 @@ impl Editorbereich {
             return Editormeldung::Eintrag(art, Eintragsantwort::Uebernommen);
         }
         let stelle = stelle.or_else(|| self.ivars().eintraege.gewaehlte_stelle());
-        let (meldung, neustand) =
-            handlung_rechnen(self.ivars().modell.borrow().stand(), art, handlung, stelle);
+        // Die Uhr wird allein fuer einen neuen Termin gelesen, ueber die eine
+        // Stelle im Kern.
+        let heute = if handlung == Handlung::Hinzufuegen && art == Eintragsart::Termine {
+            termine::heute()
+        } else {
+            None
+        };
+        let (meldung, neustand) = handlung_rechnen(
+            self.ivars().modell.borrow().stand(),
+            art,
+            handlung,
+            stelle,
+            heute,
+        );
         let auswahl = neustand.as_ref().and_then(|neustand| neustand.auswahl);
         if let Some(neustand) = neustand {
             self.umbau_anwenden(neustand);
@@ -2729,13 +2850,13 @@ impl Editorbereich {
                 Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse) => {
                     Zeilen::Notizen(eintragsansicht::notizzeilen(modell.stand()))
                 }
-                // Zwischenstand: `appointments.md` hat bis Schritt 6 des Plans
-                // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`
-                // keine Tabelle und bekommt wie jede Datei ohne Tabelle die
-                // leere Aufgabenliste; Schritt 6 loest diese Zeile ab.
-                Dateityp::Eintraege(Sonderdatei::Termine)
-                | Dateityp::Markdown
-                | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),
+                Dateityp::Eintraege(Sonderdatei::Termine) => {
+                    Zeilen::Termine(eintragsansicht::terminzeilen(
+                        modell.stand(),
+                        self.ivars().terminrichtung.get(),
+                    ))
+                }
+                Dateityp::Markdown | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),
             }
         };
         self.ivars().eintraege.zeilen_zeigen(zeilen);
@@ -7935,7 +8056,7 @@ mod tests {
         use Eintragsantwort as A;
         let umbau = |handlung, zeile| {
             let (meldung, neustand) =
-                handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, handlung, zeile);
+                handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, handlung, zeile, None);
             (meldung, neustand.map(|neustand| neustand.text))
         };
         let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Aufgaben, antwort);
@@ -7950,9 +8071,15 @@ mod tests {
             ))
         );
         assert_eq!(
-            handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, Handlung::Hinzufuegen, None)
-                .1
-                .and_then(|neustand| neustand.auswahl),
+            handlung_rechnen(
+                AUFGABEN,
+                Eintragsart::Aufgaben,
+                Handlung::Hinzufuegen,
+                None,
+                None
+            )
+            .1
+            .and_then(|neustand| neustand.auswahl),
             Some(2),
             "die neue Aufgabe ist gewaehlt, ihre Zelle geht danach in Bearbeitung"
         );
@@ -8630,7 +8757,7 @@ mod tests {
         use Eintragsantwort as A;
         let umbau = |handlung, zeile| {
             let (meldung, neustand) =
-                handlung_rechnen(NOTIZEN, Eintragsart::Notizen, handlung, zeile);
+                handlung_rechnen(NOTIZEN, Eintragsart::Notizen, handlung, zeile, None);
             (
                 meldung,
                 neustand.map(|neustand| (neustand.text, neustand.auswahl)),
@@ -8752,5 +8879,371 @@ mod tests {
             satz.contains("übernommen") && satz.contains("cmd+z"),
             "{satz}"
         );
+    }
+    // ------------------------------------------------------------------
+    // Die Termintabelle (Schritt 6 des Plans
+    // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`)
+    // ------------------------------------------------------------------
+    //
+    // Dieselbe Zerlegung wie bei der Notiztabelle. **Das Risiko dieser Tabelle
+    // ist die Naht zwischen Zeile und Stelle**: sie ordnet nach dem Datum, und
+    // jede Stelle, die eine Zeilennummer als Stelle weiterreichte, aenderte
+    // oder loeschte den falschen Termin. Die erste Probe faehrt deshalb
+    // Loeschen, Aendern und Hinzufuegen an einer gebauten Tabelle, deren Folge
+    // die umgekehrte der Datei ist, und nimmt die Stelle jedes Mal von der
+    // Tabelle, wie `handlung_ausfuehren` es tut.
+
+    /// `appointments.md` der Proben: Vorspann und drei Termine in
+    /// **umgekehrter** Reihenfolge der Datei.
+    const TERMINE: &str = "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261001\neins\n";
+
+    /// Der feste Tag der Proben, statt der Uhr.
+    fn tag(jahr: u16, monat: u8, tag: u8) -> Tag {
+        Tag::neu(jahr, monat, tag).expect("ein Tag im Kalender")
+    }
+
+    /// Zeigt einen Stand in der Tabelle, aufsteigend, und setzt danach die
+    /// Auswahl des Neustands, wie `umbau_anwenden` es tut.
+    fn termine_zeigen(eintraege: &Eintragsansicht, stand: &str, auswahl: Option<usize>) {
+        eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
+            stand,
+            Sortierrichtung::Aufsteigend,
+        ));
+        eintraege.auswahl_setzen(auswahl);
+    }
+
+    /// Waehlt die Zeile auf dem Schirm, wie ein Klick es taete.
+    fn zeile_waehlen(eintraege: &Eintragsansicht, zeile: usize) {
+        eintraege.tabelle().selectRowIndexes_byExtendingSelection(
+            &objc2_foundation::NSIndexSet::indexSetWithIndex(zeile),
+            false,
+        );
+    }
+
+    /// T3.1 bis T3.5 und T4.2 an einer gebauten Tabelle mit umgekehrter
+    /// Folge: gewaehlt, geloescht, geaendert und angelegt wird an der Stelle,
+    /// die die Zeile zeigt, und nie an der Stelle, die ihre Nummer waere.
+    #[test]
+    fn die_termintabelle_loescht_aendert_und_legt_an_der_stelle_der_zeile_an() {
+        use Eintragsantwort as A;
+        use eintragsansicht::{DATUMSSPALTE, TERMINSPALTE, Zelle};
+        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Termine, antwort);
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let tabelle = eintraege.tabelle();
+            termine_zeigen(&eintraege, TERMINE, None);
+            assert_eq!(eintraege.art(), Eintragsart::Termine);
+            assert_eq!(tabelle.numberOfRows(), 3);
+            assert_eq!(tabelle.numberOfColumns(), 2, "Datum und Termin");
+            assert!(
+                tabelle.headerView().is_some(),
+                "die Spalten tragen ihre Namen"
+            );
+
+            // Auswahl: die erste Zeile ist gewaehlt und zeigt den fruehesten
+            // Termin, der in der Datei an letzter Stelle steht.
+            assert_eq!(tabelle.selectedRow(), 0);
+            assert_eq!(eintraege.gewaehlte_stelle(), Some(2));
+            eintraege.auswahl_setzen(Some(0));
+            assert_eq!(
+                tabelle.selectedRow(),
+                2,
+                "die Stelle 0 steht in der letzten Zeile"
+            );
+            eintraege.auswahl_setzen(Some(1));
+            assert_eq!(tabelle.selectedRow(), 1);
+
+            // Bearbeitungsbeginn: die Datumszelle der Zeile, die die Stelle zeigt.
+            assert_eq!(
+                eintraege.ziel_der_zelle(Zelle {
+                    stelle: 2,
+                    spalte: DATUMSSPALTE
+                }),
+                Some((0, 0))
+            );
+            assert_eq!(
+                eintraege.ziel_der_zelle(Zelle {
+                    stelle: 0,
+                    spalte: TERMINSPALTE
+                }),
+                Some((2, 1))
+            );
+            assert_eq!(
+                eintraege.ziel_der_zelle(Zelle {
+                    stelle: 3,
+                    spalte: 0
+                }),
+                None
+            );
+
+            // Loeschen der gewaehlten Zeile 0: der frueheste Termin und kein
+            // anderer.
+            zeile_waehlen(&eintraege, 0);
+            let (meldung, neu) = handlung_rechnen(
+                TERMINE,
+                Eintragsart::Termine,
+                Handlung::Loeschen,
+                eintraege.gewaehlte_stelle(),
+                None,
+            );
+            assert_eq!(meldung, antwort(A::Geloescht));
+            let neu = neu.expect("geloescht ist ein Umbau");
+            assert_eq!(
+                neu.text,
+                "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n"
+            );
+            termine_zeigen(&eintraege, &neu.text, neu.auswahl);
+            assert_eq!(tabelle.numberOfRows(), 2);
+
+            // Aendern des Datums des obersten Termins auf einen spaeteren Tag:
+            // allein seine Kopfzeile aendert sich, und nach dem Umbau steht er
+            // an seiner neuen Zeile und ist gewaehlt.
+            termine_zeigen(&eintraege, TERMINE, None);
+            zeile_waehlen(&eintraege, 0);
+            let stelle = eintraege
+                .gewaehlte_stelle()
+                .expect("eine Zeile ist gewaehlt");
+            let neu = zellenrechnung(
+                Editorform::Termine,
+                TERMINE,
+                Zelle {
+                    stelle,
+                    spalte: DATUMSSPALTE,
+                },
+                " 261005 ",
+            )
+            .expect("ein gueltiges Datum")
+            .expect("das Datum ist neu");
+            assert_eq!(
+                neu.text,
+                "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261005\neins\n"
+            );
+            termine_zeigen(&eintraege, &neu.text, neu.auswahl);
+            assert_eq!(tabelle.selectedRow(), 2, "er steht jetzt zuunterst");
+            assert_eq!(
+                eintraege.gewaehlte_stelle(),
+                Some(2),
+                "und ist derselbe Termin"
+            );
+
+            // Aendern des Textes der mittleren Zeile: allein ihre Textzeilen.
+            termine_zeigen(&eintraege, TERMINE, None);
+            zeile_waehlen(&eintraege, 1);
+            let stelle = eintraege
+                .gewaehlte_stelle()
+                .expect("eine Zeile ist gewaehlt");
+            let neu = zellenrechnung(
+                Editorform::Termine,
+                TERMINE,
+                Zelle {
+                    stelle,
+                    spalte: TERMINSPALTE,
+                },
+                "zwei\nmit Absatz",
+            )
+            .expect("ein Text ohne Kopfzeile")
+            .expect("der Text ist neu");
+            assert_eq!(
+                neu.text,
+                "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\nmit Absatz\n## 261001\neins\n"
+            );
+
+            // Hinzufuegen mit festem Tag: am Ende der Datei, gewaehlt, und auf
+            // dem Schirm dort, wo sein Datum ihn einordnet; seine Datumszelle
+            // ist die Zelle, die danach in Bearbeitung geht.
+            let (meldung, neu) = handlung_rechnen(
+                TERMINE,
+                Eintragsart::Termine,
+                Handlung::Hinzufuegen,
+                None,
+                Some(tag(2026, 10, 2)),
+            );
+            assert_eq!(meldung, antwort(A::Hinzugefuegt));
+            let neu = neu.expect("hinzugefuegt ist ein Umbau");
+            assert_eq!(neu.text, format!("{TERMINE}## 261002\n"));
+            assert_eq!(neu.auswahl, Some(3));
+            termine_zeigen(&eintraege, &neu.text, neu.auswahl);
+            assert_eq!(
+                tabelle.selectedRow(),
+                1,
+                "ohne Uhrzeit vor 09:30 desselben Tages, nach dem Vortag"
+            );
+            assert_eq!(
+                eintraege.ziel_der_zelle(Zelle {
+                    stelle: 3,
+                    spalte: DATUMSSPALTE
+                }),
+                Some((1, 0))
+            );
+        });
+    }
+
+    /// T3.1 bis T3.5 in ihrer reinen Haelfte: ohne Tag entsteht kein Termin,
+    /// ein ungueltiges Datum und eine Kopfzeile im Text werden abgewiesen und
+    /// lassen den Stand, verschieben und abhaken tut nichts, und ein
+    /// unveraendert gelassenes ungueltiges Datum sperrt den Text nicht.
+    #[test]
+    fn jede_terminhandlung_rechnet_ueber_den_kern_und_antwortet() {
+        use Eintragsantwort as A;
+        use eintragsansicht::{DATUMSSPALTE, TERMINSPALTE, Zelle};
+        use krk_core::heimordner::eintraege::Abweisung as Eintragsabweisung;
+        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Termine, antwort);
+        let rechnen = |handlung, stelle| {
+            handlung_rechnen(TERMINE, Eintragsart::Termine, handlung, stelle, None)
+        };
+        assert_eq!(
+            rechnen(Handlung::Hinzufuegen, None),
+            (antwort(A::HeuteUnbestimmt), None),
+            "ohne heutiges Datum entsteht nichts"
+        );
+        assert_eq!(
+            antwort(A::HeuteUnbestimmt).text(),
+            "Das heutige Datum ließ sich nicht bestimmen."
+        );
+        for richtung in [Richtung::Hoch, Richtung::Runter] {
+            assert_eq!(
+                rechnen(Handlung::Verschieben(richtung), Some(1)),
+                (antwort(A::NachDatumGeordnet), None)
+            );
+        }
+        assert_eq!(
+            antwort(A::NachDatumGeordnet).text(),
+            "Termine stehen nach ihrem Datum; verschieben lässt sich keiner."
+        );
+        assert_eq!(
+            rechnen(Handlung::Abhaken, Some(0)),
+            (
+                Editormeldung::Eintrag(Eintragsart::Aufgaben, A::KeineTabelle),
+                None
+            ),
+            "ein Termin hat kein Kaestchen"
+        );
+        assert_eq!(
+            rechnen(Handlung::Bearbeiten, Some(2)),
+            (antwort(A::BearbeitungBegonnen), None)
+        );
+        assert_eq!(
+            rechnen(Handlung::Loeschen, Some(3)),
+            (antwort(A::KeinEintragGewaehlt), None)
+        );
+        assert!(antwort(A::Geloescht).text().contains("Termin"));
+
+        let datum = Zelle {
+            stelle: 0,
+            spalte: DATUMSSPALTE,
+        };
+        let text = Zelle {
+            stelle: 0,
+            spalte: TERMINSPALTE,
+        };
+        let zelle = |zelle, eingabe| zellenrechnung(Editorform::Termine, TERMINE, zelle, eingabe);
+        assert_eq!(
+            zelle(datum, "261332"),
+            Err(Eintragsabweisung::UngueltigesDatum)
+        );
+        assert_eq!(
+            zelle(datum, " 2610 "),
+            Err(Eintragsabweisung::UngueltigesDatum)
+        );
+        assert_eq!(
+            zelle(text, "drei\n## vier"),
+            Err(Eintragsabweisung::KopfzeileImTermintext)
+        );
+        assert_eq!(zelle(datum, "261003"), Ok(None), "unveraendert");
+        assert_eq!(zelle(text, "drei"), Ok(None), "unveraendert");
+
+        let ungueltig = "## xyz\nalt\n";
+        let neu = zellenrechnung(
+            Editorform::Termine,
+            ungueltig,
+            Zelle {
+                stelle: 0,
+                spalte: TERMINSPALTE,
+            },
+            "neu",
+        )
+        .expect("das ungueltige Datum bleibt ungeprueft stehen")
+        .expect("der Text ist neu");
+        assert_eq!(neu.text, "## xyz\nneu\n");
+    }
+
+    /// Die Termintabelle ist eine Form des Editors mit ihrer eigenen Art;
+    /// `appointments.md` ausserhalb des Notizordners ist Markdown und bleibt
+    /// Text (T3.10).
+    #[test]
+    fn die_termine_haben_ihre_form_und_ausserhalb_des_notizordners_bleiben_sie_text() {
+        let termine = Dateityp::Eintraege(Sonderdatei::Termine);
+        assert_eq!(editorform(Ansicht::Format, termine), Editorform::Termine);
+        assert_eq!(editorform(Ansicht::Roh, termine), Editorform::Text);
+        assert_eq!(flaeche_der_form(Editorform::Termine), Flaeche::Tabelle);
+        assert_eq!(
+            eintragsart_der_form(Editorform::Termine),
+            Some(Eintragsart::Termine)
+        );
+        assert_eq!(
+            editorform(Ansicht::Format, Dateityp::Markdown),
+            Editorform::Text,
+            "eine appointments.md anderswo ist gewoehnliches Markdown"
+        );
+    }
+
+    /// T3.9: `esc` in der Datumszelle richtet sich nach der Aufgabenzelle und
+    /// verwirft, in der Terminzelle nach der Notizzelle und uebernimmt; jede
+    /// andere Form nach sich selbst. Der Rang der Zelle in `abbrechen` bleibt,
+    /// also leert keines von beiden den Filtertext.
+    #[test]
+    fn esc_verwirft_die_datumszelle_und_uebernimmt_die_terminzelle() {
+        use eintragsansicht::{DATUMSSPALTE, TERMINSPALTE};
+        assert_eq!(
+            esc_regel(Editorform::Termine, Some(DATUMSSPALTE)),
+            Editorform::Aufgaben
+        );
+        assert_eq!(
+            esc_regel(Editorform::Termine, Some(TERMINSPALTE)),
+            Editorform::Notizen
+        );
+        assert_eq!(esc_regel(Editorform::Termine, None), Editorform::Notizen);
+        for form in [
+            Editorform::Text,
+            Editorform::Aufgaben,
+            Editorform::Notizen,
+            Editorform::Geheimnisse,
+        ] {
+            for spalte in [None, Some(DATUMSSPALTE), Some(TERMINSPALTE)] {
+                assert_eq!(esc_regel(form, spalte), form, "{form:?} {spalte:?}");
+            }
+        }
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        assert!(
+            rumpf(&quelle, "zelle_abbrechen").contains(concat!("esc_", "regel(")),
+            "zelle_abbrechen fragt die Regel"
+        );
+        assert_eq!(
+            Editormeldung::Eintrag(Eintragsart::Termine, Eintragsantwort::MitEscUebernommen).text(),
+            "Termin übernommen; cmd+z nimmt es zurück"
+        );
+    }
+
+    /// `tabelle_nachziehen` liest den Stand und schreibt ihn nicht: die Datei
+    /// gilt danach nicht als geaendert, und die Termintabelle ordnet allein
+    /// ihre Zeilen.
+    #[test]
+    fn das_nachziehen_der_termintabelle_aendert_den_stand_nicht() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let nachziehen = rumpf(&quelle, "tabelle_nachziehen");
+        assert!(nachziehen.contains(concat!("eintragsansicht::termin", "zeilen(")));
+        for nadel in [
+            concat!("borrow_", "mut("),
+            concat!(".bear", "beiten("),
+            concat!("umbau_", "anwenden("),
+            concat!("stand_", "einsetzen("),
+        ] {
+            assert!(
+                !nachziehen.contains(nadel),
+                "tabelle_nachziehen ruft {nadel}"
+            );
+        }
     }
 }

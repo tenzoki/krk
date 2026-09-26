@@ -253,10 +253,12 @@ pub struct Lage {
 /// Dateityp ableitet; ohne AppKit bleibt dieses Modul trotzdem, denn der Wert
 /// ist eine Aufzaehlung und keine Flaeche.
 ///
-/// **Die vier Werte des Plans**: die Notiztabelle ist mit Schritt 4.3 als
-/// `Notizen` dazugekommen, die Geheimnisse mit Schritt 5.4b als `Geheimnisse`.
-/// Jede vollstaendige Fallunterscheidung ueber diesen Typ haelt den Bau an,
-/// sobald einer dazukommt.
+/// **Gewachsen mit den Eintragsdateien**: die Notiztabelle ist mit Schritt 4.3
+/// als `Notizen` dazugekommen, die Geheimnisse mit Schritt 5.4b als
+/// `Geheimnisse`, die Termine mit Schritt 6 des Plans
+/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md` als
+/// `Termine`. Jede vollstaendige Fallunterscheidung ueber diesen Typ haelt den
+/// Bau an, sobald einer dazukommt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Editorform {
     /// Die Textflaeche: jede Datei in der Rohansicht und jede Datei ausser
@@ -275,6 +277,16 @@ pub enum Editorform {
     /// Form tragen, und nimmt dieselben Befehle an; ein eigener Wert, weil
     /// „PIN ändern" aus Schritt 5.5 allein hier wirkt.
     Geheimnisse,
+    /// Die Termintabelle: `appointments.md` im erkannten Heimordner in der
+    /// Formatansicht (Schritt 6 des Plans der Termine).
+    ///
+    /// **Der Unterschied zur Notiztabelle ist die Ordnung.** Sie zeigt ihre
+    /// Eintraege nach dem Datum und nicht in der Reihenfolge der Datei; die
+    /// Befehle, die die Reihenfolge der Datei aendern, tragen deshalb einen
+    /// eigenen Wirkungsbereich und wirken hier nicht (Entscheidung 2 des
+    /// Plans). Alle uebrigen Befehle der Eintragstabelle nimmt sie an wie die
+    /// Notiztabelle.
+    Termine,
 }
 
 /// Ob dieser Befehl in dieser Lage wirken darf.
@@ -453,25 +465,32 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
     match bereich {
         Wirkungsbereich::Editortext => match form {
             Editorform::Text => true,
-            Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => false,
+            Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine => false,
         },
         Wirkungsbereich::Eintraege => match form {
             Editorform::Text => false,
-            Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => true,
+            Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine => true,
         },
-        // Das Verschieben verlangt eine Tabelle in Dateireihenfolge. Heute
-        // steht jede Eintragstabelle so; die Zeile ist ein eigener Wert, damit
-        // eine nach dem Datum geordnete Tabelle ihn hier ablehnen kann
-        // (Entscheidung 2 des Plans
-        // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+        // Das Verschieben verlangt eine Tabelle in Dateireihenfolge. Die
+        // Termintabelle ordnet nach dem Datum und lehnt es ab (Entscheidung 2
+        // des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
         Wirkungsbereich::Reihenfolge => match form {
-            Editorform::Text => false,
+            Editorform::Text | Editorform::Termine => false,
             Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => true,
         },
         // Die Notiztabelle traegt keine Kaestchen, die der Geheimnisse als
-        // dieselbe Tabelle ebenso wenig.
+        // dieselbe Tabelle ebenso wenig, die der Termine auch nicht.
         Wirkungsbereich::Aufgaben => match form {
-            Editorform::Text | Editorform::Notizen | Editorform::Geheimnisse => false,
+            Editorform::Text
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine => false,
             Editorform::Aufgaben => true,
         },
         // Die Geheimnisse fragen nicht die Form, sondern die Datei; das
@@ -833,11 +852,12 @@ mod tests {
     /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
     /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
     /// laufen.
-    const JEDE_FORM: [Editorform; 4] = [
+    const JEDE_FORM: [Editorform; 5] = [
         Editorform::Text,
         Editorform::Aufgaben,
         Editorform::Notizen,
         Editorform::Geheimnisse,
+        Editorform::Termine,
     ];
 
     /// [`JEDE_FORM`] fuehrt jede Variante von [`Editorform`] genau einmal.
@@ -1020,6 +1040,29 @@ mod tests {
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
+        // Wie die Notiztabelle, nur ohne die Zeile `Reihenfolge`: die
+        // Termintabelle ordnet nach dem Datum, und verschieben laesst sich
+        // darin nichts (Schritt 6 des Plans der Termine, T3.7).
+        const IN_DER_TERMINTABELLE: [[bool; 6]; 13] = [
+            [true, false, false, false, false, false],
+            [false, true, false, false, false, false],
+            [true, false, true, true, false, false],
+            [false, false, false, true, false, false],
+            // Editortext
+            [false, false, false, false, false, false],
+            // Eintraege
+            [false, false, false, true, false, false],
+            // Reihenfolge: ueberall nein
+            [false, false, false, false, false, false],
+            // Aufgaben
+            [false, false, false, false, false, false],
+            // Geheimnisse: ohne `pin_aenderbar` nirgends
+            [false, false, false, false, false, false],
+            [true, false, true, false, false, false],
+            [true, true, true, false, true, false],
+            [false, false, true, false, false, false],
+            [true, true, true, true, true, true],
+        ];
         const ALLES_ABGEWIESEN: [[bool; 6]; 13] = [[false; 6]; 13];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
@@ -1030,6 +1073,7 @@ mod tests {
             // Die Geheimnisse zeigen dieselbe Tabelle wie die Notizen und
             // nehmen dieselben Befehle an (Schritt 5.4b).
             Editorform::Notizen | Editorform::Geheimnisse => IN_DER_NOTIZTABELLE,
+            Editorform::Termine => IN_DER_TERMINTABELLE,
         };
 
         let mut geprueft = 0usize;
@@ -1744,6 +1788,12 @@ mod tests {
                     Editorform::Notizen | Editorform::Geheimnisse => {
                         kommando != Kommando::AufgabeAbhaken
                     }
+                    // Die Termintabelle ordnet nach dem Datum: kein
+                    // Verschieben und kein Kaestchen (T3.7).
+                    Editorform::Termine => !matches!(
+                        kommando,
+                        Kommando::AufgabeAbhaken | Kommando::EintragHoch | Kommando::EintragRunter
+                    ),
                 };
                 for fokus in JEDER_FOKUS {
                     assert_eq!(
@@ -1791,6 +1841,7 @@ mod tests {
                 Editorform::Aufgaben,
                 Editorform::Notizen,
                 Editorform::Geheimnisse,
+                Editorform::Termine,
             ] {
                 assert!(
                     !zulaessig(
@@ -1888,5 +1939,36 @@ mod tests {
                 );
             }
         }
+    }
+    /// T3.7 der Termine: in der Termintabelle, mit dem Fokus im Editor, ist
+    /// „Eintrag hinzufügen" zulaessig, „Eintrag nach oben" und „nach unten"
+    /// nicht, weil sie nach dem Datum ordnet, und „Aufgabe abhaken" und „PIN
+    /// ändern" ebenso wenig. Die Tafel haelt dasselbe Feld fuer Feld; hier
+    /// steht es mit seinem Grund.
+    #[test]
+    fn in_der_termintabelle_wirkt_das_anlegen_und_kein_verschieben() {
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        let termine = lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Termine);
+        assert!(zulaessig(Kommando::EintragHinzufuegen, termine));
+        assert!(zulaessig(Kommando::EintragBearbeiten, termine));
+        assert!(zulaessig(Kommando::EintragLoeschen, termine));
+        for kommando in [
+            Kommando::EintragHoch,
+            Kommando::EintragRunter,
+            Kommando::AufgabeAbhaken,
+            Kommando::PinAendern,
+        ] {
+            assert!(
+                !zulaessig(kommando, termine),
+                "{kommando:?} wirkt in der Termintabelle"
+            );
+        }
+        assert!(
+            zulaessig(
+                Kommando::EintragHoch,
+                lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Notizen)
+            ),
+            "in der Notiztabelle verschiebt es weiter"
+        );
     }
 }
