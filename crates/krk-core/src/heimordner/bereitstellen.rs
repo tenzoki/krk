@@ -30,11 +30,17 @@
 //! geht nichts, und die zweite Instanz hat nichts uebernommen, weil ihr
 //! `mkdir(2)` gescheitert ist.
 //!
-//! # Was hier nicht entsteht
+//! # `.secrets.txt` entsteht leer und ohne PIN
 //!
-//! `.secrets.txt` entsteht nicht in dieser Stufe, sondern mit C7 in Stufe 5:
-//! eine leere Datei ohne die Regeln aus C7 liesse sich im Editor oeffnen und mit
-//! Klartext sichern. Angelegt wird genau, was [`Sonderdatei::ALLE`] fuehrt.
+//! Angelegt wird genau, was [`Sonderdatei::ALLE`] fuehrt, und seit Schritt 5.2
+//! gehoert `.secrets.txt` dazu, ohne dass dieser Weg eine Zeile dafuer traegt:
+//! sie entsteht ueber dasselbe exklusive Oeffnen **mit null Bytes**, und eine
+//! PIN fragt F2 dabei nie. Eine leere Datei traegt noch keinen Kopf; die PIN
+//! legt das erste Oeffnen im Editor fest
+//! (`260926-0007_*_wann-entsteht-secrets-txt-und-was-geschieht-mit-fehlenden-dateien.md`).
+//! Bis Stufe 1 entstand sie hier nicht, weil eine leere Datei ohne die Regeln
+//! aus C7 sich im Editor oeffnen und mit Klartext sichern liesse; diese Regeln
+//! bringt Stufe 5 mit.
 //!
 //! # Die alten Zettel
 //!
@@ -315,7 +321,9 @@ fn anlegen_mit_vorlauf(
         let pfad = ordner.join(sorte.dateiname());
         let inhalt = match (sorte, &befunde) {
             (Sonderdatei::Notizen, Some((_, notizen))) => notizen.as_str(),
-            (Sonderdatei::Notizen | Sonderdatei::Aufgaben, _) => "",
+            // `.secrets.txt` entsteht leer wie `tasks.txt`: null Bytes und
+            // kein Kopf, die PIN legt erst das erste Oeffnen im Editor fest.
+            (Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse, _) => "",
         };
         vorlauf(&pfad);
         let ausgang = exklusiv_anlegen(&pfad, inhalt);

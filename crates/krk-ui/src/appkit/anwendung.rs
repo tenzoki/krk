@@ -1425,8 +1425,16 @@ impl Anwendungsdelegierter {
         *ivars.modell.borrow_mut() = Fenstermodell::aus_sitzung(&sitzung);
 
         let dateifenster = [
-            Dateifenster::bauen(mtm, Tabliste::aus_zustand(&sitzung.fenster[0])),
-            Dateifenster::bauen(mtm, Tabliste::aus_zustand(&sitzung.fenster[1])),
+            // Jede Tabliste bekommt eine Abschrift des einen Griffs und fragt
+            // ihn je Lesevorgang nach der Eigenschaft „steht immer“ (5.2).
+            Dateifenster::bauen(
+                mtm,
+                Tabliste::aus_zustand(&sitzung.fenster[0], Rc::clone(&ivars.heim)),
+            ),
+            Dateifenster::bauen(
+                mtm,
+                Tabliste::aus_zustand(&sitzung.fenster[1], Rc::clone(&ivars.heim)),
+            ),
         ];
         let leiste = Leiste::bauen(mtm);
         let vorschau = Vorschaufenster::bauen(mtm, Rc::clone(&ivars.heim));

@@ -443,7 +443,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
     - Closes (am Baum): C7.2, C7.3, C7.4, C7.5, C7.6, C7.7, C7.17.
     - Dependencies: 4.4
 
-20. **5.2 `.secrets.txt` entsteht, steht immer und bekommt im erkannten Ordner keinen Inhaltsauftrag**
+20. [DONE] **5.2 `.secrets.txt` entsteht, steht immer und bekommt im erkannten Ordner keinen Inhaltsauftrag**
     - Executor: `code-implementer`
     - Files: `crates/krk-core/src/heimordner/{mod.rs,bereitstellen.rs}`, `crates/krk-core/src/verzeichnis/modell.rs`, `crates/krk-core/tests/{heimordner.rs,verzeichnis.rs}`, `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/anwendung.rs` (Weitergabe des Griffs), `crates/krk-ui/src/editormodell.rs`, `crates/krk-ui/src/hervorhebung.rs`, und jede Stelle, die der Übersetzer für die neue Variante nennt
     - Changes:

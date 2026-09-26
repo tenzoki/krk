@@ -172,6 +172,7 @@ use std::sync::OnceLock;
 use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, sync_channel};
 use std::thread;
 
+use krk_core::heimordner::Sonderdatei;
 use syntect::easy::ScopeRegionIterator;
 use syntect::highlighting::{Color, FontStyle, Highlighter, ThemeSet};
 use syntect::parsing::{
@@ -435,9 +436,18 @@ fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
 /// heisst: die Vorschau rendert sie, und die Formatansicht des Editors zeigt
 /// sie bis zur Tabellenform ebenso (Schritt 2.1 des Arbeitspakets
 /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
+///
+/// **`.secrets.txt` ist einfacher Text.** Erreicht wird der Wert hier nie:
+/// Vorschau und Editor zweigen fuer sie vorher ab, die Vorschau mit einem
+/// Hinweis statt eines Inhalts, der Editor mit der PIN (Schritte 5.3 und 5.4a).
+/// Die Zeile ordnet sie trotzdem ausdruecklich ein, damit keine weitere
+/// Sonderdatei still als Markdown durchgeht.
 pub fn art(pfad: Option<&Path>, typ: Dateityp) -> Darstellungsart {
     match typ {
-        Dateityp::Markdown | Dateityp::Eintraege(_) => Darstellungsart::Markdown,
+        Dateityp::Markdown | Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => {
+            Darstellungsart::Markdown
+        }
+        Dateityp::Eintraege(Sonderdatei::Geheimnisse) => Darstellungsart::EinfacherText,
         Dateityp::Sonstiges => match sprache_fuer(pfad) {
             Some(_) => Darstellungsart::Code,
             None => Darstellungsart::EinfacherText,
@@ -1697,6 +1707,18 @@ mod tests {
         assert!(ueberschrift(&eintraege), "{:?}", eintraege.auszeichnungen);
         let nach_endung = formatieren(quelle, Some(&datei), Dateityp::Sonstiges, Tafel::Hell);
         assert!(!ueberschrift(&nach_endung));
+    }
+
+    /// `.secrets.txt` ist fuer die Darstellung einfacher Text und keine
+    /// Eintragsdatei mit Markdown (Schritt 5.2); erreicht wird der Wert nie,
+    /// weil Vorschau und Editor vorher abzweigen.
+    #[test]
+    fn die_geheimnisse_sind_fuer_die_darstellung_einfacher_text() {
+        let typ = Dateityp::Eintraege(Sonderdatei::Geheimnisse);
+        assert_eq!(
+            art(Some(&pfad(".secrets.txt")), typ),
+            Darstellungsart::EinfacherText
+        );
     }
 
     /// Ohne gehaltene Datei gibt es keinen Pfad, und die Kiste kennt keine

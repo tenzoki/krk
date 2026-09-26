@@ -1556,6 +1556,11 @@ enum Tauschschritt {
 /// Auffangzweig: ein neuer Dateityp und eine neue Sonderdatei halten hier den
 /// Bau an. `notes.txt` zeigt seit Schritt 4.3 des Plans in der Formatansicht
 /// die Notiztabelle; bis dahin zeigte sie Markdown in der Textflaeche.
+///
+/// **`.secrets.txt` zeigt dieselbe Notiztabelle**, weil ihre Eintraege die
+/// Form von `notes.txt` tragen. Eine eigene Form `Editorform::Geheimnisse`
+/// bringt erst Schritt 5.4b mit, zusammen mit der PIN davor; bis dahin ordnet
+/// diese Zeile die Sonderdatei aus 5.2 nur ein, damit der Bau steht.
 #[must_use]
 fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
     match (ansicht, typ) {
@@ -1563,11 +1568,15 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
             Ansicht::Roh,
             Dateityp::Markdown
             | Dateityp::Sonstiges
-            | Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben),
+            | Dateityp::Eintraege(
+                Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse,
+            ),
         )
         | (Ansicht::Format, Dateityp::Markdown | Dateityp::Sonstiges) => Editorform::Text,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
-        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen)) => Editorform::Notizen,
+        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse)) => {
+            Editorform::Notizen
+        }
     }
 }
 
@@ -2619,7 +2628,7 @@ impl Editorbereich {
                 Dateityp::Eintraege(Sonderdatei::Aufgaben) => {
                     Zeilen::Aufgaben(eintragsansicht::aufgabenzeilen(modell.stand()))
                 }
-                Dateityp::Eintraege(Sonderdatei::Notizen) => {
+                Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse) => {
                     Zeilen::Notizen(eintragsansicht::notizzeilen(modell.stand()))
                 }
                 Dateityp::Markdown | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),

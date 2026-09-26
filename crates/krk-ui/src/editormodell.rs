@@ -326,9 +326,11 @@ pub enum Dateityp {
     Sonstiges,
     /// Eine der Eintragsdateien im erkannten `~/krkhome/`.
     ///
-    /// Die Vorschau rendert sie als Markdown mit Aufgabenkaestchen
-    /// (`crate::markdown::Lesart::Eintragsdatei`); die Formatansicht des
-    /// Editors zeigt sie bis zur Tabellenform als Markdown.
+    /// Die Vorschau rendert `notes.txt` und `tasks.txt` als Markdown mit
+    /// Aufgabenkaestchen (`crate::markdown::Lesart::Eintragsdatei`); die
+    /// Formatansicht des Editors zeigt sie als Tabelle. `.secrets.txt` ist
+    /// seit Schritt 5.2 ebenfalls ein Wert dieser Art, und Vorschau und Editor
+    /// zweigen fuer sie ab, bevor sie etwas lesen (5.3, 5.4a).
     Eintraege(Sonderdatei),
 }
 
@@ -2368,7 +2370,7 @@ mod tests {
         (heim, geschrieben, ziel)
     }
 
-    /// C4.1 fuer den Dateityp: die zwei Dateien im erkannten Ordner sind
+    /// C4.1 fuer den Dateityp: die drei Dateien im erkannten Ordner sind
     /// Eintragsdateien, ueber die geschriebene und ueber die aufgeloeste Form,
     /// und eine gleichnamige Datei anderswo bleibt, was ihre Endung sagt.
     #[test]
@@ -2385,6 +2387,12 @@ mod tests {
             assert_eq!(
                 Dateityp::von_pfad(&basis.join("tasks.txt"), Some(&heim)),
                 Dateityp::Eintraege(Sonderdatei::Aufgaben),
+                "{}",
+                basis.display()
+            );
+            assert_eq!(
+                Dateityp::von_pfad(&basis.join(".secrets.txt"), Some(&heim)),
+                Dateityp::Eintraege(Sonderdatei::Geheimnisse),
                 "{}",
                 basis.display()
             );

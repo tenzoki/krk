@@ -1590,6 +1590,125 @@ fn inhaltsmodell() -> Ordnermodell {
     ])
 }
 
+// ---------------------------------------------------------------------------
+// Die Ausnahme „steht immer“ (C7.11 bis C7.13 des Arbeitspakets
+// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`)
+// ---------------------------------------------------------------------------
+
+/// Der Name, den der Heimordner fuer `~/krkhome/` als „steht immer“ nennt.
+const GEHEIMNISSE: &str = ".secrets.txt";
+
+/// Ein Modell auf dem Weg, den ein Lesevorgang geht: die Eigenschaft wird
+/// **vor** dem ersten Stapel gesetzt, wie `Tabliste::lesen_starten` es tut.
+fn heimmodell(immer: Option<&'static str>, ausblenden: bool) -> Ordnermodell {
+    let mut modell = Ordnermodell::neu(1);
+    modell.tief_setzen(false);
+    modell.verstecke_ausblenden_setzen(ausblenden);
+    modell.lesevorgang_beginnen(2);
+    modell.immer_gelistet_setzen(immer);
+    modell.anhaengen([
+        handeintrag(GEHEIMNISSE, Typ::Datei),
+        handeintrag(".DS_Store", Typ::Datei),
+        handeintrag("notes.txt", Typ::Datei),
+    ]);
+    modell.abschliessen();
+    modell
+}
+
+/// C7.11: mit der Eigenschaft steht `.secrets.txt` bei aus- und bei
+/// eingeblendeten Verstecken, `.DS_Store` folgt dem Umschalter; das
+/// Kennzeichen `versteckt` bleibt am Eintrag (C7.12).
+#[test]
+fn die_geheimnisse_stehen_im_erkannten_ordner_gleich_wie_der_umschalter_steht() {
+    for ausblenden in [true, false] {
+        let modell = heimmodell(Some(GEHEIMNISSE), ausblenden);
+        let gezeigt = namen(&modell);
+        assert!(
+            gezeigt.contains(&GEHEIMNISSE),
+            "ausblenden={ausblenden}: {gezeigt:?}"
+        );
+        assert_eq!(
+            gezeigt.contains(&".DS_Store"),
+            !ausblenden,
+            "ausblenden={ausblenden}: .DS_Store folgt dem Umschalter"
+        );
+        let eintrag = &modell.eintraege()[index_von(&modell, GEHEIMNISSE) as usize];
+        assert!(eintrag.versteckt, "das Kennzeichen bleibt am Eintrag");
+    }
+
+    // Der Umschalter an einem gelesenen Modell aendert daran nichts.
+    let mut modell = heimmodell(Some(GEHEIMNISSE), false);
+    modell.verstecke_umschalten();
+    assert_eq!(namen(&modell), vec![GEHEIMNISSE, "notes.txt"]);
+}
+
+/// C7.11: ohne die Eigenschaft, also in jedem anderen Ordner, folgt
+/// `.secrets.txt` dem Umschalter wie jeder versteckte Eintrag.
+#[test]
+fn ohne_die_eigenschaft_folgen_die_geheimnisse_dem_umschalter() {
+    assert!(!namen(&heimmodell(None, true)).contains(&GEHEIMNISSE));
+    assert!(namen(&heimmodell(None, false)).contains(&GEHEIMNISSE));
+}
+
+/// C7.13: mit Filtertext ab der Schwelle und „Content“ bekommt `.secrets.txt`
+/// unter der Eigenschaft keinen Inhaltsauftrag, bei aus- und bei
+/// eingeblendeten Verstecken; eine gewoehnliche Datei daneben bekommt ihn.
+/// Ueber `.secrets.txt` entscheidet dann allein der Name.
+#[test]
+fn die_geheimnisse_bekommen_im_erkannten_ordner_keinen_inhaltsauftrag() {
+    for ausblenden in [true, false] {
+        let mut modell = heimmodell(Some(GEHEIMNISSE), ausblenden);
+        modell.inhalt_setzen(true);
+        modell.filtertext_setzen("geheimnis");
+        assert!(modell.inhalt_wirkt(), "die Probe liegt ueber der Schwelle");
+
+        let auftraege = modell.auftraege();
+        let geheim = index_von(&modell, GEHEIMNISSE);
+        let notizen = index_von(&modell, "notes.txt");
+        assert!(
+            auftraege.iter().all(|auftrag| auftrag.index != geheim),
+            "ausblenden={ausblenden}: .secrets.txt hat einen Auftrag: {auftraege:?}"
+        );
+        assert!(
+            auftraege
+                .iter()
+                .any(|auftrag| auftrag.index == notizen && auftrag.art == Auftragsart::Inhalt),
+            "ausblenden={ausblenden}: die gewoehnliche Datei hat keinen: {auftraege:?}"
+        );
+        assert!(
+            !namen(&modell).contains(&GEHEIMNISSE),
+            "ausblenden={ausblenden}: ihr Name traegt den Filter nicht, also faellt sie"
+        );
+        // Ein Befund, der sie dennoch erreichte, stellte sie nicht hin: sie
+        // steht unter keinem Vorbehalt.
+        modell.befunde_setzen([(geheim, Befund::Treffer)]);
+        assert!(!namen(&modell).contains(&GEHEIMNISSE));
+
+        // Traegt ihr Name den Filter, steht sie.
+        modell.filtertext_setzen("secret");
+        assert!(
+            namen(&modell).contains(&GEHEIMNISSE),
+            "ausblenden={ausblenden}: der Name traegt den Filter"
+        );
+    }
+
+    // Die Gegenprobe ohne Eigenschaft und mit eingeblendeten Verstecken: dort
+    // bekommt `.secrets.txt` den Auftrag wie jede gelistete Datei. Genau das
+    // haelt das Kennzeichen `versteckt` nicht auf, und deshalb steht die Regel
+    // am Namen.
+    let mut anderswo = heimmodell(None, false);
+    anderswo.inhalt_setzen(true);
+    anderswo.filtertext_setzen("geheimnis");
+    let geheim = index_von(&anderswo, GEHEIMNISSE);
+    assert!(
+        anderswo
+            .auftraege()
+            .iter()
+            .any(|auftrag| auftrag.index == geheim),
+        "ausserhalb des erkannten Ordners liest der Inhaltsfilter sie wie jede Datei"
+    );
+}
+
 /// C1.1, C1.2, C1.10: die Schwelle von drei Zeichen ohne tiefe Suche, und was
 /// unterhalb von ihr geschieht.
 ///

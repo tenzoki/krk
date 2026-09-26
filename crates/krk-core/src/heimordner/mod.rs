@@ -3,7 +3,7 @@
 //! F2 fuehrt in einen Dateilisten-Tab auf `~/krkhome/`, und an diesem Ordner
 //! haengen mehrere Regeln: die Vorschau rendert `notes.txt` und `tasks.txt`
 //! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
-//! Tabelle, und spaeter steht `.secrets.txt` dort immer in der Liste. **Jede
+//! Tabelle, und `.secrets.txt` steht dort immer in der Liste. **Jede
 //! dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
 //! Die Form der Eintraege in den zwei Dateien steht in [`eintraege`], das
@@ -84,25 +84,39 @@ pub const ORDNERNAME: &str = "krkhome";
 /// Eine der Dateien im Heimordner, die KRK als Eintragsdatei behandelt.
 ///
 /// **Vollstaendig und ohne Auffangzweig**, damit eine weitere Datei den Bau an
-/// jeder Stelle anhaelt, die nach der Sorte fragt. Die Stufe 5 dieser Arbeit
-/// fuegt `.secrets.txt` hinzu.
+/// jeder Stelle anhaelt, die nach der Sorte fragt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Sonderdatei {
     /// `notes.txt`: Notizen aus Thema und Text.
     Notizen,
     /// `tasks.txt`: Aufgaben mit Erledigt-Kaestchen.
     Aufgaben,
+    /// `.secrets.txt`: Eintraege wie in `notes.txt`, verschluesselt nach dem
+    /// Format aus [`tresor`].
+    ///
+    /// Sie entsteht bei F2 wie die zwei anderen ueber [`bereitstellen`] und
+    /// dort **mit null Bytes**: eine leere Datei traegt noch keinen Kopf, und
+    /// die PIN legt erst das erste Oeffnen im Editor fest
+    /// (`260926-0007_*_wann-entsteht-secrets-txt-und-was-geschieht-mit-fehlenden-dateien.md`).
+    /// Im erkannten Ordner steht sie immer in der Liste, obwohl ihr Name mit
+    /// einem Punkt beginnt; die Regel steht bei [`Heimordner::immer_gelistet`].
+    Geheimnisse,
 }
 
 impl Sonderdatei {
     /// Jede Eintragsdatei, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Sonderdatei; 2] = [Sonderdatei::Notizen, Sonderdatei::Aufgaben];
+    pub const ALLE: [Sonderdatei; 3] = [
+        Sonderdatei::Notizen,
+        Sonderdatei::Aufgaben,
+        Sonderdatei::Geheimnisse,
+    ];
 
     /// Der Dateiname im Heimordner.
     pub const fn dateiname(self) -> &'static str {
         match self {
             Sonderdatei::Notizen => "notes.txt",
             Sonderdatei::Aufgaben => "tasks.txt",
+            Sonderdatei::Geheimnisse => ".secrets.txt",
         }
     }
 }
@@ -206,6 +220,22 @@ impl Heimordner {
             .find(|sorte| name == sorte.dateiname())?;
         let ordner = pfad.parent()?;
         self.ist(ordner).then_some(sorte)
+    }
+
+    /// Der Name des Eintrags, der im gefragten Ordner immer in der Liste
+    /// steht, oder `None`.
+    ///
+    /// **Eine Eigenschaft des Ordners und keine des Eintrags**
+    /// (`260926-0007_*_was-heisst-immer-gelistet-fuer-secrets-txt.md`,
+    /// Moeglichkeit 1): gefragt wird einmal je Lesevorgang und nicht je
+    /// Eintrag, und das Ordnermodell haelt die Antwort
+    /// (`Ordnermodell::immer_gelistet_setzen`). Das Kennzeichen `versteckt`
+    /// bleibt am Eintrag stehen. Im erkannten Ordner ist es `.secrets.txt`, in
+    /// jedem anderen nichts. **Kein Systemaufruf**, denn gefragt wird allein
+    /// [`Heimordner::ist`].
+    pub fn immer_gelistet(&self, ordner: &Path) -> Option<&'static str> {
+        self.ist(ordner)
+            .then_some(Sonderdatei::Geheimnisse.dateiname())
     }
 }
 

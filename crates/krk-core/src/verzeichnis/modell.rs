@@ -66,6 +66,9 @@
 //! Eintrag und [`Ordnermodell::sicht_neu_aufbauen`] je Eintrag des Bestands.
 //!
 //! ```text
+//! versteckt und "steht immer"? ── ja ─> steht, wenn kein Filtertext steht
+//!            │ nein                     oder der Name ihn traegt, sonst
+//!            │                          faellt weg; nie ein Inhaltsauftrag
 //! versteckt und ausgeblendet? ── ja ──> faellt weg
 //!            │ nein
 //! steht ein Filtertext?       ── nein ─> steht in der Liste
@@ -86,6 +89,34 @@
 //! ein Treffer?" — sind der letzte Schritt und stehen in
 //! [`Ordnermodell::sichtbar`]; alles davor rechnet `zeilengrund_von` und legt
 //! es als `Zeilengrund` ab.
+//!
+//! # Die Ausnahme „steht immer“ sitzt im Zweig der Verstecke
+//!
+//! In `~/krkhome/` steht `.secrets.txt` immer in der Liste, gleich wie der
+//! Umschalter fuer versteckte Eintraege steht, und bekommt vom Inhaltsfilter
+//! nie einen Auftrag (C7 des Arbeitspakets
+//! `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`). **Die Ausnahme ist
+//! eine Eigenschaft des Ordners** und keine des Eintrags
+//! (`260926-0007_*_was-heisst-immer-gelistet-fuer-secrets-txt.md`): wer den
+//! Lesevorgang beginnt, setzt sie einmal ueber
+//! [`Ordnermodell::immer_gelistet_setzen`], und das Kennzeichen `versteckt`
+//! bleibt am Eintrag stehen. Dieses Modell kennt den Heimordner nicht; es
+//! bekommt allein den Namen.
+//!
+//! **Die Regel steht im Zweig der versteckten Eintraege und nirgends sonst**,
+//! und daran haengen L3 und L10: ein gewoehnlicher Eintrag in jedem Ordner und
+//! ein versteckter in jedem anderen Ordner durchlaufen den Pruefschritt ohne
+//! einen Namensvergleich; verglichen wird allein bei einem versteckten Eintrag
+//! unter gesetzter Eigenschaft. Fuer den getroffenen Eintrag gilt dann **allein
+//! der Name**. Einen Inhaltsvorbehalt bekommt er nie, denn das Kennzeichen
+//! `versteckt` haelt den Inhaltsfilter nicht auf, sobald die Verstecke
+//! eingeblendet sind
+//! (`260926-0050_*_wie-weit-reicht-der-inhaltsfilter-liest-secrets-txt-nicht-wenn-das-kennzeichen-versteckt-ihn-nicht-haelt.md`,
+//! Moeglichkeit 1). **Die tiefe Suche aus einem uebergeordneten Ordner ist
+//! davon unberuehrt** und liest das Chiffrat wie jede andere Datei darunter;
+//! Klartext erreicht sie nie. Die Probe
+//! `die_ausnahme_steht_im_zweig_der_verstecke` im Pruefmodul haelt die Lage
+//! des Vergleichs.
 //!
 //! **Bis zur Runde 10 stand die Regel zweimal wortgleich da**, einmal in
 //! `anhaengen` und einmal in `sicht_neu_aufbauen`, und trug damals nur ihren
@@ -108,6 +139,13 @@
 //! sechzigmal in der Sekunde ein. Der Zeilengrund haelt das Ergebnis der fuenf
 //! fest, und ein eintreffender Befund baut damit die Sicht neu auf, ohne die
 //! Namensfrage noch einmal an 100.000 Eintraege zu stellen.
+//!
+//! **Seit Schritt 5.2 des Arbeitspakets
+//! `260925-2356-f2-oeffnet-krkhome-statt-notizfenster` steht eine weitere
+//! Eingabe daneben, und sie gehoert zur Seite der fuenf:** die Eigenschaft
+//! „steht immer“ des gelesenen Ordners. Sie kommt zwar von aussen, aber einmal
+//! je Lesevorgang und nicht je Befund, und der Zeilengrund haelt ihr Ergebnis
+//! wie das der fuenf. Der Abschnitt darueber sagt, wo sie wirkt.
 //!
 //! # Ein Befund gilt nur zu der Frage, die ihn erzeugt hat
 //!
@@ -403,6 +441,17 @@ pub struct Ordnermodell {
     /// Inhalt noch dem vorigen Lauf, die Generation aber schon dem neuen; der
     /// Modulkopf schreibt aus, warum das die richtige Reihenfolge ist.
     ersatz_ausstehend: bool,
+    /// Der Name des Eintrags, der in diesem Ordner immer in der Liste steht,
+    /// oder `None`.
+    ///
+    /// **Eine Eigenschaft des gelesenen Ordners**, einmal je Lesevorgang
+    /// gesetzt von dem, der den Ordner kennt ([`Ordnermodell::immer_gelistet_setzen`]).
+    /// Gelesen wird sie allein im Zweig der versteckten Eintraege von
+    /// `zeilengrund_von`; der Modulkopf sagt unter
+    /// `# Die Ausnahme „steht immer“ sitzt im Zweig der Verstecke`, warum dort.
+    /// `&'static str`, weil der Name eine Konstante des Kerns ist und kein
+    /// Text, den ein Lesevorgang mitbringt.
+    immer_gelistet: Option<&'static str>,
 }
 
 impl Ordnermodell {
@@ -449,6 +498,7 @@ impl Ordnermodell {
             grund: Vec::new(),
             gitmarke: Vec::new(),
             ersatz_ausstehend: false,
+            immer_gelistet: None,
         }
     }
 
@@ -629,6 +679,40 @@ impl Ordnermodell {
     /// Kehrt die Sichtbarkeit versteckter Eintraege um.
     pub fn verstecke_umschalten(&mut self) {
         self.verstecke_ausblenden_setzen(!self.verstecke_ausblenden);
+    }
+
+    /// Der Name des Eintrags, der in diesem Ordner immer in der Liste steht.
+    #[must_use]
+    pub fn immer_gelistet(&self) -> Option<&'static str> {
+        self.immer_gelistet
+    }
+
+    /// Setzt die Eigenschaft „steht immer“ des gelesenen Ordners.
+    ///
+    /// **Einmal je Lesevorgang, bevor sein erster Stapel eintrifft**; der
+    /// Rufer ist `krk-ui`s `Tabliste::lesen_starten`, der den Ordner kennt und
+    /// den Heimordner fragt. Der Modulkopf sagt, was die Eigenschaft im
+    /// Pruefschritt bewirkt.
+    ///
+    /// **Steht ein Ersatz aus, rechnet der Setzer nichts nach.** Der bisherige
+    /// Bestand gehoert dann dem vorigen Ordner, und sein Zeilengrund ist unter
+    /// dessen Eigenschaft richtig gerechnet; der neue Bestand beginnt mit dem
+    /// ersten Stapel und fragt dort schon den neuen Wert. Ein Nachrechnen hier
+    /// liefe beim Wechsel aus einem grossen Ordner nach `~/krkhome/` einmal
+    /// ueber den ganzen alten Bestand, um ihn gleich darauf zu verwerfen. Ohne
+    /// ausstehenden Ersatz und bei einem neuen Wert rechnet er nach wie jeder
+    /// andere Setzer einer Eingabe des Pruefschritts; bei gleichem Wert tut er
+    /// nichts.
+    pub fn immer_gelistet_setzen(&mut self, name: Option<&'static str>) {
+        if self.immer_gelistet == name {
+            return;
+        }
+        self.immer_gelistet = name;
+        if self.ersatz_ausstehend {
+            return;
+        }
+        self.grund_neu_rechnen();
+        self.sicht_neu_aufbauen();
     }
 
     /// Alle gelesenen Eintraege in Lesereihenfolge, auch die ausgeblendeten.
@@ -822,9 +906,27 @@ impl Ordnermodell {
             return Zeilengrund::FaelltWeg;
         };
 
-        // versteckt und Verstecke ausgeblendet?
-        if self.verstecke_ausblenden && eintrag.versteckt {
-            return Zeilengrund::FaelltWeg;
+        // Der Zweig der Verstecke. **Allein in ihm steht die Ausnahme „steht
+        // immer“**, und der Name wird allein hier verglichen: ein gewoehnlicher
+        // Eintrag kommt an keinem Vergleich vorbei, ein versteckter in einem
+        // Ordner ohne die Eigenschaft allein an der Frage, ob sie steht. Der
+        // getroffene Eintrag steht unabhaengig vom Umschalter und bekommt nie
+        // einen Inhaltsvorbehalt; ueber ihn entscheidet allein sein Name. Der
+        // Modulkopf schreibt aus, warum.
+        if eintrag.versteckt {
+            if let Some(name) = self.immer_gelistet
+                && eintrag.name == name
+            {
+                return if self.filtertext.is_empty() || self.name_traegt_den_filter(index as u32) {
+                    Zeilengrund::Steht
+                } else {
+                    Zeilengrund::FaelltWeg
+                };
+            }
+            // versteckt und Verstecke ausgeblendet?
+            if self.verstecke_ausblenden {
+                return Zeilengrund::FaelltWeg;
+            }
         }
 
         // steht ein Filtertext?
@@ -888,8 +990,9 @@ impl Ordnermodell {
     /// Rechnet den Zeilengrund jedes Eintrags neu.
     ///
     /// **Zu rufen, wann immer sich eine Eingabe des Pruefschritts aendert**,
-    /// und das sind genau drei Anlaesse: der Filtertext, einer der beiden
-    /// Schalter, und das Aus- und Einblenden der versteckten Eintraege. Ein
+    /// und das sind genau vier Anlaesse: der Filtertext, einer der beiden
+    /// Schalter, das Aus- und Einblenden der versteckten Eintraege und die
+    /// Eigenschaft „steht immer“ ausserhalb eines ausstehenden Ersatzes. Ein
     /// eintreffender Befund gehoert ausdruecklich **nicht** dazu — er ist die
     /// Antwort und nicht die Frage —, und ein Sortierwechsel ebenso wenig.
     fn grund_neu_rechnen(&mut self) {
@@ -2016,6 +2119,99 @@ mod tests {
             name_in_zeile(&modell, 0),
             Some("aaa.txt"),
             "befunde_setzen baut die Sicht neu auf und sortiert dabei"
+        );
+    }
+
+    /// Die Lage der Ausnahme „steht immer“ im Pruefschritt (C7.12, C7.13 des
+    /// Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
+    ///
+    /// **Das haelt kein Uebersetzer, und daran haengen L3 und L10**: stuende der
+    /// Namensvergleich vor dem Zweig der Verstecke, zahlte jeder Eintrag jedes
+    /// Ordners einen Vergleich mehr. Die Probe liest den Rumpf von
+    /// `zeilengrund_von`, schneidet den Zweig `if eintrag.versteckt {` bis zu
+    /// seiner schliessenden Klammer auf derselben Einrueckung heraus und
+    /// verlangt, dass `immer_gelistet` im Rumpf vorkommt und allein in diesem
+    /// Zweig. Kommentarzeilen zaehlen nicht.
+    #[test]
+    fn die_ausnahme_steht_im_zweig_der_verstecke() {
+        let quelle = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/verzeichnis/modell.rs"
+        ))
+        .expect("modell.rs ist nicht lesbar");
+        let kopf = "    fn zeilengrund_von(";
+        let beginn = quelle.find(kopf).expect("zeilengrund_von steht nicht da");
+        let rest = &quelle[beginn..];
+        let ende = rest.find("\n    }\n").expect("der Rumpf endet nicht");
+        let zeilen: Vec<&str> = rest[..ende]
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .collect();
+
+        let zweigkopf = "        if eintrag.versteckt {";
+        let anfang = zeilen
+            .iter()
+            .position(|zeile| *zeile == zweigkopf)
+            .expect("der Zweig der Verstecke steht nicht im Rumpf");
+        let schluss = anfang
+            + zeilen[anfang..]
+                .iter()
+                .position(|zeile| *zeile == "        }")
+                .expect("der Zweig der Verstecke endet nicht");
+
+        let fundstellen: Vec<usize> = zeilen
+            .iter()
+            .enumerate()
+            .filter(|(_, zeile)| zeile.contains("immer_gelistet"))
+            .map(|(stelle, _)| stelle)
+            .collect();
+        assert!(
+            !fundstellen.is_empty(),
+            "zeilengrund_von fragt die Eigenschaft nicht"
+        );
+        for stelle in fundstellen {
+            assert!(
+                anfang < stelle && stelle < schluss,
+                "`immer_gelistet` steht ausserhalb des Zweiges der Verstecke: {}",
+                zeilen[stelle]
+            );
+        }
+        // Und vor dem Zweig steht keine Frage an den Namen: der Zweig ist der
+        // erste Schritt nach dem Holen des Eintrags.
+        assert!(
+            !zeilen[..anfang].iter().any(|zeile| zeile.contains(".name")),
+            "vor dem Zweig der Verstecke wird der Name gefragt"
+        );
+    }
+
+    /// Setzt die Eigenschaft nach dem Lesen, ohne ausstehenden Ersatz, rechnet
+    /// das Modell nach; mit ausstehendem Ersatz behaelt der alte Bestand den
+    /// Zeilengrund seines Ordners.
+    #[test]
+    fn die_eigenschaft_rechnet_allein_ohne_ausstehenden_ersatz_nach() {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen([
+            eintrag(".secrets.txt", Typ::Datei),
+            eintrag("notes.txt", Typ::Datei),
+        ]);
+        modell.abschliessen();
+        assert_eq!(modell.zeilenzahl(), 1, "ausgeblendet ohne Eigenschaft");
+
+        modell.immer_gelistet_setzen(Some(".secrets.txt"));
+        assert_eq!(modell.zeilenzahl(), 2, "nachgerechnet mit Eigenschaft");
+
+        modell.lesevorgang_beginnen(2);
+        modell.immer_gelistet_setzen(None);
+        assert_eq!(
+            modell.zeilenzahl(),
+            2,
+            "der alte Bestand gehoert dem alten Ordner und bleibt, wie er war"
+        );
+        modell.anhaengen([eintrag(".secrets.txt", Typ::Datei)]);
+        assert_eq!(
+            modell.zeilenzahl(),
+            0,
+            "der neue Bestand fragt schon den neuen Wert"
         );
     }
 }

@@ -164,6 +164,40 @@ fn gleichnamige_dateien_anderswo_und_andere_namen_sind_keine_eintragsdateien() {
     );
 }
 
+/// C7.11: `immer_gelistet` nennt `.secrets.txt` fuer den erkannten Ordner, in
+/// beiden Formen, und fuer jeden anderen Ordner nichts.
+#[test]
+fn immer_gelistet_nennt_die_geheimnisse_allein_im_erkannten_ordner() {
+    let ordner = Pruefordner::neu("heim-immer");
+    let zuhause = kanonisch(&ordner);
+    let ziel = zuhause.join("ablage-ziel");
+    fs::create_dir(&ziel).expect("Zielordner laesst sich nicht anlegen");
+    std::os::unix::fs::symlink(&ziel, zuhause.join(ORDNERNAME))
+        .expect("Verweis laesst sich nicht anlegen");
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+
+    for erkannt in [zuhause.join(ORDNERNAME), ziel.clone()] {
+        assert_eq!(
+            heim.immer_gelistet(&erkannt),
+            Some(".secrets.txt"),
+            "{}",
+            erkannt.display()
+        );
+    }
+    assert_eq!(
+        Sonderdatei::Geheimnisse.dateiname(),
+        ".secrets.txt",
+        "der Name, den die Ausnahme nennt, ist der der Sonderdatei"
+    );
+    for anderer in [
+        zuhause.clone(),
+        ziel.join("unter"),
+        zuhause.join("krkhome-alt"),
+    ] {
+        assert_eq!(heim.immer_gelistet(&anderer), None, "{}", anderer.display());
+    }
+}
+
 /// Ein Schlussstrich und doppelte Trennstriche aendern die Antwort nicht.
 #[test]
 fn ein_schlussstrich_aendert_die_antwort_nicht() {
@@ -201,7 +235,8 @@ fn rumpf(inhalt: &str, name: &str) -> String {
         .join("\n")
 }
 
-/// `ist` und `sonderdatei` stellen keinen Systemaufruf.
+/// `ist` und `sonderdatei` stellen keinen Systemaufruf, und `immer_gelistet`
+/// ebenso wenig.
 ///
 /// Gefragt werden sie je Lesevorgang eines Tabs auf dem Hauptfaden; ein
 /// Dateisystemaufruf dort blockierte an einem haengenden Netzlaufwerk die
@@ -209,9 +244,11 @@ fn rumpf(inhalt: &str, name: &str) -> String {
 /// deshalb liest diese Probe die beiden Ruempfe.
 ///
 /// **Was sie nicht sieht:** einen Systemaufruf in einer Hilfsfunktion, die
-/// einer der Ruempfe ruft. Heute ruft `sonderdatei` allein `ist`, und `ist`
-/// keine Funktion dieses Moduls; wer eine Hilfsfunktion einzieht, nimmt ihren
-/// Namen hier auf.
+/// einer der Ruempfe ruft. Heute rufen `sonderdatei` und `immer_gelistet`
+/// allein `ist`, und `ist` keine Funktion dieses Moduls; wer eine
+/// Hilfsfunktion einzieht, nimmt ihren Namen hier auf. `immer_gelistet` steht
+/// seit Schritt 5.2 dabei, weil `Tabliste::lesen_starten` es je Lesevorgang
+/// auf dem Hauptfaden fragt.
 #[test]
 fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
     let inhalt = fs::read_to_string(concat!(
@@ -231,7 +268,7 @@ fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
         "is_symlink(",
         "File::",
     ];
-    for name in ["ist", "sonderdatei"] {
+    for name in ["ist", "sonderdatei", "immer_gelistet"] {
         let rumpf = rumpf(&inhalt, name);
         // Ein leer geschnittener Rumpf bestuende jede Nadel; er muss mindestens
         // den Wert befragen, den er pruefen soll.
@@ -1019,25 +1056,39 @@ fn eine_vorhandene_datei_bleibt_und_eine_fehlende_entsteht_leer() {
     );
     assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
     assert!(!bereitstellung.ordner_angelegt);
-    assert_eq!(bereitstellung.angelegt, vec![Sonderdatei::Aufgaben]);
+    assert_eq!(
+        bereitstellung.angelegt,
+        vec![Sonderdatei::Aufgaben, Sonderdatei::Geheimnisse]
+    );
     assert_eq!(bereitstellung.uebernahme, None);
     assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
     lage.zettel_unveraendert();
 }
 
-/// C2: der erste Aufruf legt Ordner, `notes.txt` und `tasks.txt` an und sonst
-/// nichts, insbesondere keine `.secrets.txt` vor der Stufe 5.
+/// C2, C7.1: der erste Aufruf legt Ordner, `notes.txt`, `tasks.txt` und
+/// `.secrets.txt` an und sonst nichts; `.secrets.txt` hat null Bytes.
 #[test]
-fn der_erste_aufruf_legt_genau_die_zwei_dateien_an() {
+fn der_erste_aufruf_legt_genau_die_drei_dateien_an() {
     let lage = Lage::neu("heim-erster", [None, None]);
 
     let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
 
     assert!(bereitstellung.ordner_angelegt);
     assert_eq!(bereitstellung.angelegt, Sonderdatei::ALLE.to_vec());
-    assert_eq!(namen_in(&lage.heimpfad()), vec!["notes.txt", "tasks.txt"]);
+    assert_eq!(
+        namen_in(&lage.heimpfad()),
+        vec![".secrets.txt", "notes.txt", "tasks.txt"]
+    );
     assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
     assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
+    let geheimnisse = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
+    assert_eq!(
+        fs::metadata(&geheimnisse)
+            .expect(".secrets.txt fehlt")
+            .len(),
+        0,
+        "`.secrets.txt` entsteht mit null Bytes"
+    );
     let uebernahme = bereitstellung.uebernahme.as_ref().expect("Uebernahme");
     assert_eq!(uebernahme.ausgang, Uebernahmeausgang::NichtsZuUebernehmen);
     assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
@@ -1180,6 +1231,37 @@ fn nach_geloeschter_notizdatei_kommt_keine_zweite_uebernahme() {
     lage.zettel_unveraendert();
 }
 
+/// C7.1: eine vorhandene `.secrets.txt` bleibt Byte fuer Byte, gleich ob sie
+/// Chiffrat oder null Bytes traegt; F2 fragt dabei keine PIN und legt nichts
+/// daneben an.
+#[test]
+fn eine_vorhandene_geheimnisdatei_bleibt_byte_fuer_byte() {
+    for (zweck, vorher) in [
+        (
+            "heim-geheim-voll",
+            b"KRKSEC\x01\x00\xff Chiffrat".as_slice(),
+        ),
+        ("heim-geheim-leer", b"".as_slice()),
+    ] {
+        let lage = Lage::neu(zweck, [None, None]);
+        fs::create_dir(lage.heimpfad()).expect("Heimordner");
+        let pfad = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
+        fs::write(&pfad, vorher).expect(".secrets.txt");
+
+        let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+        assert_eq!(fs::read(&pfad).expect(".secrets.txt fehlt"), vorher);
+        assert!(
+            !bereitstellung.angelegt.contains(&Sonderdatei::Geheimnisse),
+            "{bereitstellung:?}"
+        );
+        assert_eq!(
+            namen_in(&lage.heimpfad()),
+            vec![".secrets.txt", "notes.txt", "tasks.txt"]
+        );
+    }
+}
+
 /// Eine gewoehnliche Datei an der Stelle von `krkhome`: `KeinOrdner`, und die
 /// Datei bleibt, wie sie war.
 #[test]
@@ -1207,7 +1289,10 @@ fn ein_verweis_auf_einen_ordner_laesst_die_dateien_im_ziel_entstehen() {
 
     let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
 
-    assert_eq!(namen_in(&ziel), vec!["notes.txt", "tasks.txt"]);
+    assert_eq!(
+        namen_in(&ziel),
+        vec![".secrets.txt", "notes.txt", "tasks.txt"]
+    );
     assert!(!bereitstellung.ordner_angelegt);
     assert_eq!(bereitstellung.uebernahme, None);
     assert!(
