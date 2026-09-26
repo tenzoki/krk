@@ -464,6 +464,12 @@ diesem Dateifenster schon ein Tab auf `~/krkhome/`, wird er sichtbar; sonst
 entsteht ein neuer. Ein Blatt geht dabei nicht auf. Der Tab ist ein gewöhnlicher
 Tab der Dateiliste und steht nach einem Neustart wieder da.
 
+**Alle Befehle zum Notizordner stehen im Hauptmenü „Home“**, gleich hinter
+dem Anwendungsmenü: „Notizordner öffnen“, die sechs Befehle der Tabellen im
+Editor und „PIN ändern“. Unter „Anwendung“ und „Editor“ stehen sie nicht
+mehr. Tasten und Wirkung sind geblieben, nur der Platz in der Menüleiste hat
+sich geändert.
+
 **Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt`,
 `tasks.txt` und `secrets.txt`. Fehlt später eine der drei Dateien, legt der
 nächste `f2` sie leer wieder an, mit null Bytes. Eine vorhandene Datei
@@ -561,10 +567,12 @@ gewöhnliche Textdateien, und verloren geht nichts.
 **Mit einer eigenen `keymap.toml` heißt der Menüeintrag weiter „Notizzettel
 anzeigen“.** Der Name kommt aus der eigenen Datei, und die Meldung beim Start
 vergleicht allein die Kennungen der Befehle. Die Kennung ist geblieben, also
-meldet sie nichts. `f2` und `cmd+k` führen trotzdem nach `~/krkhome/`. Den neuen
-Namen „Notizordner öffnen“ bringt die Belegungsansicht: **F1**, dann `cmd+r`
-für den Auslieferungsstand, dann „Fertig“. Das überschreibt die ganze eigene
-Belegung mit der Auslieferungsfassung, also auch jede eigene Tastenzuweisung.
+meldet sie nichts. `f2` und `cmd+k` führen trotzdem nach `~/krkhome/`, und der
+Eintrag steht unter dem alten Namen im Menü „Home“. **Einen Handgriff an der
+eigenen Belegung braucht das nicht.** Insbesondere ist `cmd+r` in der
+Belegungsansicht dafür nicht nötig: es brächte zwar den neuen Namen, setzt aber
+die ganze eigene Belegung auf die Auslieferungsfassung zurück, also auch jede
+eigene Tastenzuweisung.
 
 ### Aufgaben in der Tabelle bearbeiten
 
@@ -592,7 +600,7 @@ zum Anfang der Datei.
 | `cmd+c` | den Text der gewählten Aufgabe kopieren |
 | `cmd+z` | jede dieser Handlungen zurücknehmen |
 
-Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Editor“. Wirken können
+Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Home“. Wirken können
 sie nur, solange der Fokus im Editor steht und dieser eine der zwei Tabellen
 zeigt; das Abhaken wirkt allein in der Aufgabentabelle. Sonst sind sie
 ausgegraut, und ihre Tasten wirken so, als wären sie nicht belegt.
@@ -631,11 +639,12 @@ Treffer landete unsichtbar darin. In der Rohansicht derselben Datei stehen sie
 wie gewohnt bereit.
 
 **Mit einer eigenen `keymap.toml` tragen die sechs Befehle keine Tasten.** KRK
-hängt sie unbelegt an ihre Gruppe an, und über das Hauptmenü „Editor“ sind sie
-trotzdem erreichbar. Doppelklick, Kästchen, `cmd+c` und `cmd+z` wirken ohnehin.
-Die Tasten bringt derselbe Handgriff wie oben beim Menüeintrag des
-Notizordners: **F1**, dann `cmd+r`, dann „Fertig“, mit demselben Preis für jede
-eigene Tastenzuweisung.
+hängt sie beim Start unbelegt an, und über das Hauptmenü „Home“ sind sie
+trotzdem erreichbar, ohne jeden Handgriff an der eigenen Belegung.
+Doppelklick, Kästchen, `cmd+c` und `cmd+z` wirken ohnehin. Wer eine Taste
+will, weist sie in der Belegungsansicht einzeln zu: **F1**, den Befehl wählen,
+`cmd+t`, die Taste drücken, „Fertig“. `cmd+r` ist dafür nicht nötig; es setzt
+die ganze eigene Belegung zurück, also auch jede eigene Tastenzuweisung.
 
 ### Notizen in der Tabelle bearbeiten
 
@@ -829,7 +838,7 @@ Geheimnisse im Klartext in die Lesezeichen.
 
 #### Die PIN ändern
 
-**„PIN ändern“ liegt auf `shift+cmd+p`** und steht im Hauptmenü „Editor“. Der
+**„PIN ändern“ liegt auf `shift+cmd+p`** und steht im Hauptmenü „Home“. Der
 Befehl wirkt nur, wenn der Editor `secrets.txt` entsperrt hält, der Fokus im
 Editor steht und die Datei **schon einmal gesichert** ist. Eine Datei, deren PIN
 eben erst festgelegt und nie gesichert wurde, trägt noch keine PIN, die sich
@@ -847,10 +856,11 @@ nächsten `cmd+s` auf die Platte, dann unter der neuen PIN. Ab dem Ende des
 Befehls öffnet allein die neue PIN die Datei.
 
 **Mit einer eigenen `keymap.toml` trägt „PIN ändern“ keine Taste.** KRK hängt
-den Befehl unbelegt an seine Gruppe an, und über das Hauptmenü „Editor“ ist er
-trotzdem erreichbar. Die Taste bringt derselbe Handgriff wie bei den
-Tabellenbefehlen: **F1**, dann `cmd+r`, dann „Fertig“, mit demselben Preis für
-jede eigene Tastenzuweisung.
+den Befehl beim Start unbelegt an, und über das Hauptmenü „Home“ ist er
+trotzdem erreichbar, ohne jeden Handgriff an der eigenen Belegung. Eine Taste
+bekommt er wie die Tabellenbefehle, einzeln in der Belegungsansicht: **F1**,
+den Befehl wählen, `cmd+t`, die Taste drücken, „Fertig“. `cmd+r` ist dafür nicht
+nötig und setzt die ganze eigene Belegung zurück.
 
 Wie die Datei aufgebaut ist und wie man sie ohne KRK entschlüsselt, steht in
 `README.md` unter „Das Dateiformat von `secrets.txt`“.

@@ -621,6 +621,25 @@ mod tests {
         );
     }
 
+    /// „Home" ist das zweite Obermenue, unmittelbar hinter dem der Anwendung
+    /// (H1 des Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// Die Stelle ist eine Vorgabe des Spec und keine Mac-Regel; wer sie in der
+    /// Durchsicht verschiebt, zieht diese Probe mit. Dass jede Funktion dabei
+    /// genau einmal in der Leiste steht, also nichts unter „Anwendung" oder
+    /// „Editor" zurueckbleibt, haelt
+    /// `jede_funktion_der_belegung_steht_genau_einmal_im_menue`.
+    #[test]
+    fn home_ist_das_zweite_obermenue() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        assert_eq!(
+            leiste.get(1).map(|obermenue| obermenue.titel),
+            Some(Funktionsbereich::Home.name()),
+            "das Obermenue des Notizordners steht nicht hinter dem der Anwendung"
+        );
+    }
+
     /// Innerhalb eines Obermenues bleibt die Reihenfolge der Belegungsdatei
     /// erhalten; eine zweite Sortierung entsteht nicht.
     #[test]

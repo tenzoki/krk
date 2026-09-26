@@ -104,6 +104,22 @@ pub enum Funktionsbereich {
     /// Steht seit der Runde 7 vorn, weil macOS den Titel des ersten
     /// Obermenues ohnehin durch den Namen aus der `Info.plist` ersetzt.
     Anwendung,
+    /// Der Notizordner: ihn oeffnen, die Eintragstabelle im Editor bedienen und
+    /// die PIN der `secrets.txt` aendern (H1 des Spec
+    /// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// **Der erste Bereich, der nach einem Gegenstand und nicht nach einer
+    /// Gegend des Fensters benannt ist.** Die Eintragsbefehle wirken im Editor
+    /// und „Notizordner öffnen" in jedem Bereich; wer sie sucht, sucht sie aber
+    /// beim Notizordner und nicht bei der Fensterfläche, in der sie gerade
+    /// wirken (Nutzerentscheid
+    /// `260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md`).
+    ///
+    /// **Steht unmittelbar hinter [`Funktionsbereich::Anwendung`]**, weil das
+    /// erste eigene Obermenue die sichtbarste Stelle der Leiste ist. Die Stelle
+    /// ist eine Vorgabe des Spec und keine Mac-Regel; anders als die zwei
+    /// Enden der Leiste laesst sie sich in der Durchsicht frei verschieben.
+    Home,
     /// Bewegung, Navigation, Markierung, Sortierung und Sichtbarkeit in der
     /// Dateiliste (C2, C10).
     Dateilisting,
@@ -158,8 +174,9 @@ impl Funktionsbereich {
     ///
     /// Dieselbe Folge wie die Aufzaehlung darueber, und dort steht auch, warum
     /// sie seit der Runde 7 eine Mac-Menueleiste beschreibt.
-    pub const ALLE: [Funktionsbereich; 10] = [
+    pub const ALLE: [Funktionsbereich; 11] = [
         Funktionsbereich::Anwendung,
+        Funktionsbereich::Home,
         Funktionsbereich::Dateilisting,
         Funktionsbereich::Dateioperationen,
         Funktionsbereich::Tabs,
@@ -198,6 +215,7 @@ impl Funktionsbereich {
     pub const fn name(self) -> &'static str {
         match self {
             Funktionsbereich::Anwendung => "Anwendung",
+            Funktionsbereich::Home => "Home",
             Funktionsbereich::Dateilisting => "Dateilisting",
             Funktionsbereich::Dateioperationen => "Dateioperationen",
             Funktionsbereich::Tabs => "Tabs",
@@ -398,13 +416,6 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // Menueleiste, und `Fenster` fuehrt die Bereiche **dieses** Fensters.
         // Diese Runde fuehrt keine zweiten Fenster ein.
         //
-        // Der Notizordner steht mit hier und bekommt **keinen** eigenen
-        // Funktionsbereich: er waere ein Obermenue mit einem einzigen Eintrag,
-        // und diese Gliederung fragt nach der Gegend der Anwendung. F2 wirkt
-        // aus jedem Bereich und fuehrt an einen festen Ort der Anwendung,
-        // `~/krkhome/`; unter `Dateifenster` stuende er zwischen Befehlen, die
-        // einen Ordner voraussetzen, statt einen herzustellen.
-        //
         // Die Belegungsdatei steht neben der Belegungsansicht und **nicht**
         // unter `Vorschau`, obwohl sie dort erscheint. Diese Gliederung fragt
         // nach der Gegend der Anwendung und nicht nach dem Mechanismus: wer
@@ -418,7 +429,6 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::BelegungsdateiAnsehen
         | Kommando::Beenden
         | Kommando::WeitereInstanz
-        | Kommando::Notizordner
         // Die Ablageneuerungen stehen hier, weil ihr Blatt am Hauptfenster
         // haengt und ihr Gegenstand
         // ist die Ablage der Anwendung als ganze. Ein eigener
@@ -465,19 +475,33 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EditorWeitersuchen
         | Kommando::EditorRueckwaertsSuchen
         | Kommando::EditorErsetzen
-        | Kommando::EditorAlleErsetzen
-        // Die sechs Befehle der Eintragstabelle (Schritt 3.3 der
-        // krkhome-Arbeit) aus demselben Satz: die Tabelle steht im Editor, und
-        // wer sie bedienen will, sucht unter "Editor".
+        | Kommando::EditorAlleErsetzen => Funktionsbereich::Editor,
+        // Der Notizordner und alles, was an ihm haengt: F2, die sechs Befehle
+        // der Eintragstabelle und „PIN ändern".
+        //
+        // **Hier fragt die Gliederung ausnahmsweise nach dem Gegenstand und
+        // nicht nach der Gegend.** Bis zum 260926 stand F2 unter "Anwendung",
+        // mit der Begruendung, ein eigener Bereich waere ein Obermenue mit einem
+        // einzigen Eintrag, und die Eintragsbefehle standen unter "Editor", weil
+        // die Tabelle im Editor steht. Seit die Eintragstabelle und die PIN
+        // dazugekommen sind, traegt die erste Begruendung nicht mehr, und die
+        // zweite verteilte einen Gegenstand auf zwei Obermenues: wer seine
+        // Notizen bedienen will, sucht sie beim Notizordner und nicht bei der
+        // Flaeche, in der ein Befehl gerade wirkt. Der Nutzer hat das Menue
+        // „Home" entschieden
+        // (`260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md`).
+        //
+        // Der Wirkungsbereich bleibt, wo er war: die Eintragsbefehle und „PIN
+        // ändern" wirken weiter allein im Editor, F2 weiter ueberall. Nur die
+        // Stelle in der Leiste zieht um.
+        Kommando::Notizordner
         | Kommando::EintragHinzufuegen
         | Kommando::EintragBearbeiten
         | Kommando::EintragHoch
         | Kommando::EintragRunter
         | Kommando::EintragLoeschen
         | Kommando::AufgabeAbhaken
-        // „PIN ändern" (Schritt 5.5 der krkhome-Arbeit) aus demselben Satz:
-        // es wirkt an der Datei, die der Editor haelt.
-        | Kommando::PinAendern => Funktionsbereich::Editor,
+        | Kommando::PinAendern => Funktionsbereich::Home,
         // Der Git-Bereich, und die zwei Befehle folgen demselben Satz wie das
         // Ein- und Ausblenden der Vorschau und des Editors weiter oben: die
         // Gliederung fragt nach der **Gegend der Anwendung**, und wer den
@@ -1421,11 +1445,10 @@ mod tests {
     /// mit.
     #[test]
     fn der_bereich_editor_fuehrt_genau_die_befehle_des_editors() {
-        // Die sechs vorletzten sind die Befehle der Eintragstabelle aus
-        // Schritt 3.3 der krkhome-Arbeit. Der letzte ist „PIN ändern" aus
-        // Schritt 5.5; seine Zeile in der Auslieferungsbelegung kommt mit
-        // Schritt 5.6, und bis dahin ist diese Probe rot.
-        const EDITORBEFEHLE: [&str; 20] = [
+        // Die Befehle der Eintragstabelle und „PIN ändern" stehen seit dem
+        // 260926 unter „Home" und nicht mehr hier; ihre Probe ist
+        // `der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge`.
+        const EDITORBEFEHLE: [&str; 13] = [
             "bearbeiten",
             "editor_rundweg",
             "fokus_editor",
@@ -1439,13 +1462,6 @@ mod tests {
             "editor_rueckwaerts_suchen",
             "editor_ersetzen",
             "editor_alle_ersetzen",
-            "eintrag_hinzufuegen",
-            "eintrag_bearbeiten",
-            "eintrag_hoch",
-            "eintrag_runter",
-            "eintrag_loeschen",
-            "aufgabe_abhaken",
-            "pin_aendern",
         ];
 
         let belegung = Belegung::auslieferung();
@@ -1470,6 +1486,55 @@ mod tests {
             gefuehrt.len(),
             EDITORBEFEHLE.len(),
             "unter Editor stehen andere Funktionen als die benannten: {gefuehrt:?}"
+        );
+    }
+
+    /// Die Ansicht fuehrt unter „Home" genau die Befehle des Notizordners, und
+    /// zwar in dieser Folge (H1 des Spec
+    /// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// **Anders als die Probe des Editors haelt diese die Reihenfolge**, weil
+    /// der Spec sie zusagt: „Notizordner öffnen" zuerst, dann die sechs
+    /// Eintragsbefehle, zuletzt „PIN ändern". Die Folge kommt aus der Folge
+    /// der Bloecke in `resources/default-keymap.toml`; wer dort einen Block
+    /// verschiebt, bekommt hier die Rechnung.
+    ///
+    /// **Eine Kombination verlangt sie nicht.** Dass ein Befehl im Menue steht,
+    /// haengt nicht an einer Taste, und ein spaeterer Eintrag dieses Bereichs
+    /// darf ab Werk ohne eine ausgeliefert werden.
+    ///
+    /// Die Kennungen stehen ausgeschrieben und nicht aus
+    /// [`bereich_des_kommandos`] abgeleitet, aus demselben Grund wie bei der
+    /// Probe des Editors darueber.
+    #[test]
+    fn der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge() {
+        const HOMEBEFEHLE: [&str; 8] = [
+            "notizzettel",
+            "eintrag_hinzufuegen",
+            "eintrag_bearbeiten",
+            "eintrag_hoch",
+            "eintrag_runter",
+            "eintrag_loeschen",
+            "aufgabe_abhaken",
+            "pin_aendern",
+        ];
+
+        let belegung = Belegung::auslieferung();
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let gefuehrt = funktionen_unter(&modell, Funktionsbereich::Home.name());
+        let erwartet: Vec<String> = HOMEBEFEHLE
+            .iter()
+            .map(|kennung| {
+                belegung
+                    .funktion(kennung)
+                    .unwrap_or_else(|| panic!("die Auslieferungsbelegung kennt {kennung} nicht"))
+                    .name()
+                    .to_owned()
+            })
+            .collect();
+        assert_eq!(
+            gefuehrt, erwartet,
+            "unter Home stehen andere Funktionen oder dieselben in anderer Folge"
         );
     }
 

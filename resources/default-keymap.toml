@@ -1257,11 +1257,13 @@ gehalten_von = "menue"
 # ── Der Notizordner ──────────────────────────────────────────────────────────
 # C1 der krkhome-Runde. Der Befehl oeffnet im aktiven Dateifenster einen Tab
 # auf ~/krkhome/ oder macht einen vorhandenen sichtbar; das Notizblatt der
-# Runde 9, das hier bis dahin stand, ist gefallen. Der Block steht zwischen
-# der Belegungsansicht und der weiteren Instanz, also bei der Anwendung als
-# ganze: `bereich_des_kommandos` in `crates/krk-ui/src/belegungsmodell.rs`
-# fuehrt `Kommando::Notizordner` unter `Funktionsbereich::Anwendung`, und die
-# Reihenfolge der Bloecke ist die Reihenfolge im Menue.
+# Runde 9, das hier bis dahin stand, ist gefallen. Der Block eroeffnet das
+# Menue "Home": `bereich_des_kommandos` in
+# `crates/krk-ui/src/belegungsmodell.rs` fuehrt `Kommando::Notizordner` mit den
+# Eintraegen im Editor darunter unter `Funktionsbereich::Home`, und die
+# Reihenfolge der Bloecke ist die Reihenfolge im Menue. Dass er zwischen den
+# Textbefehlen und den Neuerungen steht, ordnet ihn keinem Menue zu; die
+# Gliederung kommt aus dem Code und nicht aus dieser Datei.
 #
 # **Die Kennung "notizzettel" stammt aus der Runde 9 und bleibt aus einem
 # Grund:** eine vollstaendige eigene keymap.toml des Nutzers fuehrt sie, und
@@ -1293,7 +1295,8 @@ tasten = ["f2", "cmd+k"]
 # Sechs Funktionen fuer die Tabelle, in der die Formatansicht des Editors
 # `tasks.txt` zeigt. Der Block steht unmittelbar hinter "notizzettel", weil die
 # Reihenfolge der Bloecke die Reihenfolge im Menue ist und der Spec
-# "Notizordner oeffnen" vor den Eintragsbefehlen verlangt
+# "Notizordner oeffnen" vor den Eintragsbefehlen verlangt; im Menue "Home"
+# folgen sie ihm, wie hier dem Block darueber
 # (`work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/plans/260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
 # Wirksam sind die sechs allein, solange der Editor die Tabelle zeigt; sonst
 # sind sie ausgegraut, und die Taste geht an AppKit.
@@ -1370,8 +1373,8 @@ tasten = ["shift+cmd+p"]
 # Weg zum Einzelnen auf Verlangen, und nach der Startmeldung der einzige.
 #
 # Der Block steht zwischen den Eintraegen im Editor, die dem Notizordner
-# folgen, und der weiteren Instanz, also bei der Anwendung als ganze:
-# `bereich_des_kommandos` in
+# folgen und mit ihm im Menue "Home" stehen, und der weiteren Instanz, also
+# bei der Anwendung als ganze: `bereich_des_kommandos` in
 # `crates/krk-ui/src/belegungsmodell.rs` fuehrt "neuerungen_zeigen" unter
 # `Funktionsbereich::Anwendung`, und die Reihenfolge der Bloecke ist die
 # Reihenfolge im Menue.

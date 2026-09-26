@@ -668,8 +668,46 @@ mod tests {
             .collect();
         assert_eq!(
             ueberschriften, erwartet,
-            "ab Werk ist jeder Bereich besetzt, also stehen alle zehn in ihrer Reihenfolge"
+            "ab Werk ist jeder Bereich besetzt, also steht jeder in seiner Reihenfolge"
         );
+    }
+
+    /// Die Markdown-Ausgabe fuehrt einen Abschnitt „Home" mit denselben
+    /// Funktionen, die die Gliederung dorthin stellt (H1 des Spec
+    /// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+    ///
+    /// Die Erwartung kommt aus [`nach_bereichen`] und nicht aus einer Liste:
+    /// welche Befehle unter „Home" stehen, haelt die Probe
+    /// `der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge` im
+    /// Belegungsmodell. Hier steht allein, dass die Ausgabe dem folgt. Wie
+    /// ueberall in dieser Datei fallen die unbelegten aus der Erwartung.
+    #[test]
+    fn der_abschnitt_home_fuehrt_die_funktionen_des_bereichs() {
+        let belegung = Belegung::auslieferung();
+        let text = markdown(&belegung);
+
+        let erwartet: Vec<&str> = nach_bereichen(&belegung)
+            .into_iter()
+            .find(|(bereich, _)| *bereich == Funktionsbereich::Home)
+            .map(|(_, stellen)| stellen)
+            .expect("die Gliederung fuehrt keinen Bereich Home")
+            .into_iter()
+            .map(|stelle| &belegung.funktionen()[stelle])
+            .filter(|funktion| !funktion.tasten().is_empty())
+            .map(Funktion::name)
+            .collect();
+        assert!(!erwartet.is_empty(), "ab Werk ist unter Home nichts belegt");
+
+        let kopf = format!("## {}", Funktionsbereich::Home.name());
+        let abschnitt = text
+            .split_once(kopf.as_str())
+            .map(|(_, rest)| rest.split("\n## ").next().unwrap_or(rest))
+            .expect("die Datei fuehrt keinen Abschnitt Home");
+        let gefunden: Vec<String> = funktionszeilen(abschnitt)
+            .iter()
+            .map(|zeile| zellen(zeile)[0].to_owned())
+            .collect();
+        assert_eq!(gefunden, erwartet);
     }
 
     /// Innerhalb eines Abschnitts bleibt die Reihenfolge der Belegungsdatei

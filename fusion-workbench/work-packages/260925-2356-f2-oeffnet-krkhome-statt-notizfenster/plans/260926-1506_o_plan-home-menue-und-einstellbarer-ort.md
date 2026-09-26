@@ -179,7 +179,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
    - Closes (am Baum): H1.3 in seinem Teil zur Belegungsdatei.
    - Dependencies: none
 
-2. **1.2 Der Funktionsbereich „Home“**
+2. [DONE] **1.2 Der Funktionsbereich „Home“**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/menuemodell.rs` (Proben), `crates/krk-ui/src/belegungsausgabe.rs` (Proben), `crates/krk-core/src/tasten/belegung.rs` (Doc-Kommentare der acht Varianten, wo sie ein Menü nennen), weitere Dateien unter `crates/` allein für Prosastellen, die die Suchen unten finden
    - Changes:
@@ -191,7 +191,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
    - Closes (am Baum): H1.1 ohne „Ort wählen…“ (das folgt in 3.5), H1.2, H1.3, H1.4 (keine Kennung ändert sich; die Probe aus der ersten Arbeit, dass eine Belegung mit `id = "notizzettel"` ohne Ersetzung lädt, bleibt grün), H1.5, H1.6.
    - Dependencies: 1.1
 
-3. **1.3 Anleitung für Stufe 1**
+3. [DONE] **1.3 Anleitung für Stufe 1**
    - Executor: `code-implementer`
    - Files: `HowTo.md`
    - Changes: Jede Stelle, die „Notizordner öffnen“, die sechs Eintragsbefehle oder „PIN ändern“ im Hauptmenü „Anwendung“ oder „Editor“ verortet, nennt „Home“; der Abschnitt zu F2 sagt, dass alle Befehle zum Notizordner unter „Home“ stehen.

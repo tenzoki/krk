@@ -6,7 +6,8 @@
 //!
 //! **Was in der Leiste steht, entscheidet diese Datei seit der Runde 7 nicht
 //! mehr.** [`crate::menuemodell::aufbau`] rechnet die Leiste aus der Belegung
-//! aus — neun Obermenues und einen Eintrag je Funktion der Belegung —, und
+//! aus — ein Obermenue je besetztem Funktionsbereich und einen Eintrag je
+//! Funktion der Belegung —, und
 //! [`hauptmenue`] setzt
 //! den Wert in `NSMenu` und `NSMenuItem` um. Bis dahin standen hier drei
 //! Untermenues und zehn Eintraege als Programmtext, und ihre Reihenfolge war
