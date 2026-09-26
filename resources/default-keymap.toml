@@ -1174,7 +1174,7 @@ tasten = ["shift+cmd+x"]
 id = "pin_aendern"
 name = "PIN ändern"
 tasten = ["shift+cmd+p"]
-# Allein fuer .secrets.txt im Editor, und erst nachdem die Datei einmal
+# Allein fuer secrets.txt im Editor, und erst nachdem die Datei einmal
 # verschluesselt gesichert ist; sonst ist der Eintrag ausgegraut. p wie PIN;
 # shift+cmd+p war am 260926 in keiner Liste dieser Datei belegt
 # (Datensatz 260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md).

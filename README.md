@@ -125,9 +125,9 @@ Auslieferungsfassung. Aus der beiseitegelegten holt man sie sich Zeile für Zeil
 zurück, und das Blatt aus „Neuerungen anzeigen" sagt dabei unter „Nur in Ihrer
 Datei", welche Einträge das sind.
 
-## Das Dateiformat von `.secrets.txt`
+## Das Dateiformat von `secrets.txt`
 
-`~/krkhome/.secrets.txt` hält die Geheimnisse des Notizordners verschlüsselt;
+`~/krkhome/secrets.txt` hält die Geheimnisse des Notizordners verschlüsselt;
 wie man sie in KRK bedient und wovor die PIN schützt, steht in `HowTo.md`.
 **Dieser Abschnitt beschreibt die Datei so, dass sich ihr Inhalt mit der PIN
 auch ohne KRK entschlüsseln lässt.** Die verbindliche Quelle ist der Modulkopf

@@ -465,15 +465,17 @@ entsteht ein neuer. Ein Blatt geht dabei nicht auf. Der Tab ist ein gewöhnliche
 Tab der Dateiliste und steht nach einem Neustart wieder da.
 
 **Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt`,
-`tasks.txt` und `.secrets.txt`. Fehlt später eine der drei Dateien, legt der
+`tasks.txt` und `secrets.txt`. Fehlt später eine der drei Dateien, legt der
 nächste `f2` sie leer wieder an, mit null Bytes. Eine vorhandene Datei
-überschreibt KRK nie. Beim Start legt KRK nichts an, auch nicht für einen
+überschreibt KRK nie. Wer aus einer früheren Fassung noch eine `.secrets.txt`
+mit Punkt hat, findet sie nach dem nächsten `f2` als `secrets.txt` wieder;
+was dabei im Einzelnen geschieht, steht unter „Geheimnisse in `secrets.txt`“. Beim Start legt KRK nichts an, auch nicht für einen
 wiederhergestellten Tab auf den Ordner. Steht an der Stelle von `~/krkhome` eine
 gewöhnliche Datei, nennt die Statuszeile den Grund, und kein Tab geht auf.
 
 **Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. `notes.txt`
 und `tasks.txt` sind reiner Text und lassen sich genauso in jedem anderen
-Textprogramm pflegen. `.secrets.txt` ist verschlüsselt und öffnet sich allein in
+Textprogramm pflegen. `secrets.txt` ist verschlüsselt und öffnet sich allein in
 KRK mit einer PIN; davon handelt der letzte Teil dieses Abschnitts.
 
 **Eine Notiz in `notes.txt`** beginnt mit einer Zeile `## <Thema>`. Alles
@@ -687,28 +689,48 @@ der Zeilensprung sind in der Tabelle ausgegraut.
 Wer mit `shift+cmd+return` eine Notiz anlegt und die Zelle ohne Eingabe
 schließt, behält eine leere Notiz in der Datei. Ein `cmd+z` nimmt sie zurück.
 
-### Geheimnisse in `.secrets.txt`
+### Geheimnisse in `secrets.txt`
 
-**`.secrets.txt` hält Einträge, die kein Programm nebenbei mitlesen soll.** Sie
+**`secrets.txt` hält Einträge, die kein Programm nebenbei mitlesen soll.** Sie
 hat dieselbe Form wie `notes.txt`, ein Thema je Zeile `## <Thema>` und der Text
 darunter. Auf der Platte steht sie aber nur verschlüsselt, und geöffnet wird sie
 mit einer vierstelligen PIN.
 
-**Die Datei steht in `~/krkhome/` immer in der Liste**, obwohl ihr Name mit einem
-Punkt beginnt. Der Umschalter für versteckte Einträge (`shift+cmd+h`) ändert
-daran nichts; andere versteckte Einträge im Ordner, etwa `.DS_Store`, folgen ihm
-weiter. In jedem anderen Ordner ist eine `.secrets.txt` eine gewöhnliche
-versteckte Datei. Ein Filtertext wirkt auf ihren Namen wie auf jeden anderen.
+**Die Datei steht in der Liste wie jede andere.** Ihr Name beginnt nicht mit
+einem Punkt, der Umschalter für versteckte Einträge (`shift+cmd+h`) betrifft sie
+also nicht. Ein Filtertext wirkt auf ihren Namen wie auf jeden anderen. Den
+Inhalt liest der Filter in `~/krkhome/` nie; mehr dazu unter „Was die PIN
+schützt und was nicht“. In jedem anderen Ordner ist eine `secrets.txt` eine
+gewöhnliche Datei.
+
+**Eine `.secrets.txt` aus einer früheren Fassung benennt `f2` um.** Früher hieß
+die Datei `.secrets.txt`, mit Punkt, und war ein versteckter Eintrag. Steht eine
+solche in `~/krkhome/` und noch keine `secrets.txt`, gibt ihr der nächste `f2`
+den neuen Namen, und die Statuszeile meldet „.secrets.txt heißt jetzt
+secrets.txt“. Der Inhalt bleibt Byte für Byte, wie er war, und dieselbe PIN
+öffnet ihn. Drei Fälle weichen davon ab:
+
+- **Stehen beide Dateien schon da**, benennt KRK keine um und überschreibt
+  keine. Es gilt `secrets.txt`, und die Statuszeile sagt es. `.secrets.txt` ist
+  für KRK dann eine gewöhnliche versteckte Datei und öffnet sich nicht mehr mit
+  der PIN. Wer ihren Inhalt statt des neuen haben will, legt `secrets.txt`
+  beiseite; der nächste `f2` benennt dann `.secrets.txt` um.
+- **Scheitert das Umbenennen**, bleibt `.secrets.txt` unverändert, und KRK legt
+  daneben **keine** leere `secrets.txt` an. Die Statuszeile nennt den Grund, und
+  der nächste `f2` versucht es wieder.
+- **Lässt sich nur der alte Name nicht entfernen**, tragen beide Namen dieselbe
+  Datei, und die Statuszeile nennt den Grund. Es gilt `secrets.txt`; den alten
+  Namen legt man selbst weg, der Inhalt bleibt dabei unter dem neuen.
 
 **Die Vorschau zeigt ihren Inhalt nie.** Sie liest die Datei nicht und zeigt
 stattdessen den Satz „Diese Datei ist verschlüsselt und öffnet sich mit F4 und
-der PIN im Editor.“ Die Sitzung merkt sich `.secrets.txt` ebenfalls nie: wer
+der PIN im Editor.“ Die Sitzung merkt sich `secrets.txt` ebenfalls nie: wer
 KRK mit der geöffneten Datei beendet, findet den Editor nach dem Neustart ohne
 sie, und kein Blatt fragt nach einer PIN.
 
 #### Die PIN festlegen und eingeben
 
-`f4` oder `cmd+e` auf `.secrets.txt` öffnet zuerst ein Blatt. Es fragt nach der
+`f4` oder `cmd+e` auf `secrets.txt` öffnet zuerst ein Blatt. Es fragt nach der
 PIN, und zwar auf zwei Arten:
 
 | Die Datei … | Das Blatt verlangt |
@@ -743,7 +765,7 @@ Inhalt wieder, und das nächste Öffnen fragt erneut. Den Editor nur auszublende
 Festlegen schließt, ohne zu sichern, behält eine Datei mit null Bytes, und das
 nächste Öffnen fragt wieder nach einer neuen PIN.
 
-**Eine auf null Bytes abgeschnittene `.secrets.txt` gilt beim nächsten Öffnen
+**Eine auf null Bytes abgeschnittene `secrets.txt` gilt beim nächsten Öffnen
 als neue Datei.** Das Blatt fragt dann nach einer neuen PIN und nicht nach der
 alten. Der frühere Inhalt ist in diesem Fall schon mit dem Abschneiden fort,
 nicht erst mit der neuen PIN.
@@ -766,7 +788,7 @@ sie nicht.
 - Indexern wie Spotlight und Sicherungen wie Time Machine, die die Datei als
   Ganzes mitnehmen; auch sie bekommen nur das Chiffrat.
 - dem Inhaltsfilter von KRK: im Ordner `~/krkhome/` liest „Content“ die Datei
-  nie, gleich wie der Umschalter für versteckte Einträge steht. Die tiefe Suche
+  nie. Die tiefe Suche
   mit „Content“ aus einem übergeordneten Ordner liest sie wie jede andere Datei
   darunter, findet dort aber nur Chiffrat und keinen Eintrag.
 - dem beiläufigen Weitergeben, wenn der Ordner mitkopiert oder geteilt wird.
@@ -799,14 +821,14 @@ dem Klartext. Spotlight findet sie, und sie bleibt liegen, bis man sie löscht.
 Wer ein Geheimnis gezogen hat, legt den Ausschnitt danach in den Papierkorb und
 leert ihn.
 
-**Eine Textmarke gibt es in `.secrets.txt` nicht.** `cmd+d` legt dort keine an,
+**Eine Textmarke gibt es in `secrets.txt` nicht.** `cmd+d` legt dort keine an,
 und die Statuszeile sagt, warum: die Textmarke schriebe eine Zeile der
 Geheimnisse im Klartext in die Lesezeichen.
 
 #### Die PIN ändern
 
 **„PIN ändern“ liegt auf `shift+cmd+p`** und steht im Hauptmenü „Editor“. Der
-Befehl wirkt nur, wenn der Editor `.secrets.txt` entsperrt hält, der Fokus im
+Befehl wirkt nur, wenn der Editor `secrets.txt` entsperrt hält, der Fokus im
 Editor steht und die Datei **schon einmal gesichert** ist. Eine Datei, deren PIN
 eben erst festgelegt und nie gesichert wurde, trägt noch keine PIN, die sich
 ändern ließe; sonst ist der Eintrag ausgegraut.
@@ -829,4 +851,4 @@ Tabellenbefehlen: **F1**, dann `cmd+r`, dann „Fertig“, mit demselben Preis f
 jede eigene Tastenzuweisung.
 
 Wie die Datei aufgebaut ist und wie man sie ohne KRK entschlüsselt, steht in
-`README.md` unter „Das Dateiformat von `.secrets.txt`“.
+`README.md` unter „Das Dateiformat von `secrets.txt`“.

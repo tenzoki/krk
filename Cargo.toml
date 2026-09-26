@@ -566,7 +566,7 @@ gix = { version = "0.87", default-features = false, features = [
     "sha1",
 ] }
 
-# Die Verschluesselung von `~/krkhome/.secrets.txt` (Stufe 5, C7 des Spec
+# Die Verschluesselung von `~/krkhome/secrets.txt` (Stufe 5, C7 des Spec
 # `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`):
 # XChaCha20-Poly1305 fuer den Inhalt, Argon2id fuer den Schluessel aus der
 # vierstelligen PIN. Verfahren und Bedrohungsmodell hat der Nutzer gewaehlt
@@ -661,7 +661,7 @@ argon2 = { version = "0.6", default-features = false, features = ["alloc"] }
 # zweimal bezahlt
 # (`ein_neuer_schluessel_zieht_frisches_salz_mit_den_parametern_des_codes` in
 # `crates/krk-core/tests/heimordner.rs`), lief damit 19,8 s statt 1,1 s, und ein
-# im Profil `dev` gebautes KRK fror beim Oeffnen von `.secrets.txt` den
+# im Profil `dev` gebautes KRK fror beim Oeffnen von `secrets.txt` den
 # Ladefaden entsprechend lange ein. `blake2` steht daneben, weil Argon2id seine
 # Bloecke damit fuellt. Am eigenen Code aendert das nichts: er bleibt
 # unoptimiert und damit so gut zu untersuchen wie bisher.
