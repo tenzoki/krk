@@ -2733,7 +2733,10 @@ impl Editorbereich {
             self.melden(Ladeausgang::ZelleAbgewiesen(meldung.text()));
             return;
         }
-        let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad);
+        // Ohne PIN: `.secrets.txt` weist das Modell damit ab, bevor es liest
+        // (Schritt 5.4a der krkhome-Arbeit). Die PIN aus dem Blatt reicht
+        // Schritt 5.4b ueber denselben Ruf herein.
+        let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, None);
         match sofort {
             Some(ausgang) => self.melden(ausgang),
             None => self.takt_starten(),
