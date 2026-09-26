@@ -4,8 +4,8 @@
 **Status:** Draft
 **Source:** Arbeitspaket `260925-2356-f2-oeffnet-krkhome-statt-notizfenster.md`, Abschnitt `## Directive`, in den Worten des Nutzers: „das notizfenster wird komplett umgebaut und erweitert. das blockierende fenster entfällt. stattdessen öffne F2 einen neuen dateilisten tab in ~/krkhome/" mit den drei Dateien `notes.txt`, `tasks.txt` und `.secrets.txt`.
 **Grundlage erhoben:** 260926-0007, am Baum unter `crates/` und `resources/` sowie am Spec der Runde 9 (`260813-2348_*_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`)
-**Überarbeitet:** 260926, gegen die Antworten des Nutzers in den zehn Datensätzen unter `decisions/` dieses Arbeitspakets und gegen die Zweitlesung `260926-0017-zweitlesung-spec-f2-krkhome.md`; ein zweites Mal gegen die drei Datensätze, die aus dem Plan hervorgegangen sind (`260926-0050_*_…` zweimal, `260926-0112_*_…`), und gegen die Zweitlesung des Plans `260926-0107-zweitlesung-plan-f2-krkhome.md`. Berührt hat die zweite Überarbeitung die Ausgangslage zum Inhaltsfilter, C5 (Beschreibung, ein neues Kriterium, ein Nutzerkriterium, eine Entscheidung), C6 (eine Entscheidung zu den Tasten), C7 (Beschreibung, die Kriterien C7.3 und C7.13, ein geschärftes und ein neues Nutzerkriterium, drei Entscheidungen), eine Zeile der Constraints, drei Punkte unter `## Open for Planner` und die Tabelle unter `## Decisions`.
-**Offene Nutzerfragen:** keine. Alle dreizehn Datensätze tragen eine Antwort (Marker `_a_`); sie stehen unten unter `## Decisions` mit der Stelle, an der jede Antwort in die Abnahme eingeht.
+**Überarbeitet:** 260926, gegen die Antworten des Nutzers in den zehn Datensätzen unter `decisions/` dieses Arbeitspakets und gegen die Zweitlesung `260926-0017-zweitlesung-spec-f2-krkhome.md`; ein zweites Mal gegen die drei Datensätze, die aus dem Plan hervorgegangen sind (`260926-0050_*_…` zweimal, `260926-0112_*_…`), und gegen die Zweitlesung des Plans `260926-0107-zweitlesung-plan-f2-krkhome.md`. Berührt hat die zweite Überarbeitung die Ausgangslage zum Inhaltsfilter, C5 (Beschreibung, ein neues Kriterium, ein Nutzerkriterium, eine Entscheidung), C6 (eine Entscheidung zu den Tasten), C7 (Beschreibung, die Kriterien C7.3 und C7.13, ein geschärftes und ein neues Nutzerkriterium, drei Entscheidungen), eine Zeile der Constraints, drei Punkte unter `## Open for Planner` und die Tabelle unter `## Decisions`. Ein drittes Mal, eng, gegen die zwei Datensätze `260926-0115_*_…`: die Beschreibung und das Kriterium zur Ordnererkennung in C2 samt einer Entscheidung, je ein Kriterium und eine Entscheidung zu `esc` in C5 und C6, dazu ein Nutzerkriterium und ein Satz der Beschreibung in C5, ein Punkt unter `## Open for Planner` und zwei Zeilen der Tabelle unter `## Decisions`.
+**Offene Nutzerfragen:** keine. Alle fünfzehn Datensätze tragen eine Antwort (Marker `_a_`); sie stehen unten unter `## Decisions` mit der Stelle, an der jede Antwort in die Abnahme eingeht.
 
 ---
 
@@ -152,7 +152,7 @@ Die Abnahmekriterien jeder Fähigkeit stehen in zwei Listen, wie in den Specs de
 
 ### C2: Der Ordner und die Klartextdateien entstehen bei F2, und KRK erkennt den Ordner an einer Stelle
 
-**Description:** Gibt es `~/krkhome/` noch nicht, legt F2 den Ordner an und darin `notes.txt` und `tasks.txt`. Fehlt später eine der beiden, legt der nächste F2 sie leer wieder an. Eine vorhandene Datei überschreibt KRK nie, auch nicht, wenn eine zweite KRK-Instanz im selben Augenblick F2 drückt. Beim Start legt KRK nichts an, auch nicht für einen wiederhergestellten Tab auf den Ordner. Ist `~/krkhome` ein symbolischer Verweis auf einen Ordner, gilt dieser Ordner als `~/krkhome/`, und jede Regel dieser Arbeit, die am Ordner hängt, erkennt ihn an einer Stelle, gleich über welchen Pfad der Nutzer ihn erreicht.
+**Description:** Gibt es `~/krkhome/` noch nicht, legt F2 den Ordner an und darin `notes.txt` und `tasks.txt`. Fehlt später eine der beiden, legt der nächste F2 sie leer wieder an. Eine vorhandene Datei überschreibt KRK nie, auch nicht, wenn eine zweite KRK-Instanz im selben Augenblick F2 drückt. Beim Start legt KRK nichts an, auch nicht für einen wiederhergestellten Tab auf den Ordner. Ist `~/krkhome` ein symbolischer Verweis auf einen Ordner, gilt dieser Ordner als `~/krkhome/`, und jede Regel dieser Arbeit, die am Ordner hängt, erkennt ihn an einer Stelle, über den Verweis `~/krkhome` ebenso wie über sein Ziel. Eine dritte Schreibweise, etwa ein weiterer Verweis, den der Nutzer selbst anderswo anlegt, erkennt KRK nicht; dort erscheinen die Dateien wie gewöhnliche Dateien, und verloren geht nichts.
 
 Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch ohne Sondereditor im bestehenden Editor und in jedem anderen Textprogramm pflegen kann:
 
@@ -166,7 +166,7 @@ Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch oh
 - [ ] Beim Start legt KRK weder den Ordner noch eine Datei an, auch nicht, wenn die Sitzung einen Tab auf `~/krkhome/` wiederherstellt. Eine Probe hält fest, dass der Weg der Sitzungswiederherstellung das Anlegen nicht erreicht.
 - [ ] Die Form der Einträge ist an einer Stelle beschrieben, und Lesen und Schreiben einer Datei in dieser Form ergeben wieder dieselbe Datei, solange nichts geändert wurde, auch bei Aufgaben in den großzügig gelesenen Schreibweisen.
 - [ ] Fremde Zeilen bleiben beim Lesen und Zurückschreiben erhalten; eine Probe verschiebt eine Aufgabe über eine fremde Zeile hinweg und findet die fremde Zeile unter der Aufgabe, zu der sie gehört, und einen Vorspann oben.
-- [ ] Die Erkennung „das ist `~/krkhome/`" steht an einer Stelle und hält den Ordner über seinen aufgelösten Ort fest und nicht über den Pfadtext. Eine Probe erreicht einen Ordner über einen symbolischen Verweis und über sein Ziel und bekommt beide Male dieselbe Antwort; die Regeln aus C1, C4 und C7, die am Ordner hängen, fragen diese eine Stelle.
+- [ ] Die Erkennung „das ist `~/krkhome/`" steht an einer Stelle und kennt den Ordner in zwei Pfadformen, der geschriebenen (`~/krkhome`) und der aufgelösten (dem Ziel des Verweises); ein gefragter Pfad gilt als der Ordner, wenn er als Text einer der beiden gleicht, und die Frage selbst greift nicht auf das Dateisystem zu. Eine dritte Schreibweise desselben Ordners wird nicht erkannt. Eine Probe erreicht einen Ordner über einen symbolischen Verweis und über sein Ziel und bekommt beide Male dieselbe Antwort; die Regeln aus C1, C4 und C7, die am Ordner hängen, fragen diese eine Stelle.
 
 **Acceptance criteria, nur am laufenden Bündel prüfbar (Nutzerarbeit):**
 - [ ] Ohne `~/krkhome/` F2 drücken: der Ordner steht da, darin `notes.txt` und `tasks.txt`, und es erscheint kein Blatt.
@@ -179,6 +179,7 @@ Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch oh
 - Markdown-nahe Textform mit den vier Regeln zu fremden Zeilen, zu `## ` im Notiztext, zum großzügigen Lesen und zur Begründung von `## ` (`260926-0007_*_in-welchem-format-stehen-notes-txt-und-tasks-txt.md`, Möglichkeit 1).
 - Fehlende Dateien legt jeder F2 neu an, exklusiv geöffnet, und überschreibt nie (`260926-0007_*_wann-entsteht-secrets-txt-und-was-geschieht-mit-fehlenden-dateien.md`).
 - Der Ort ist fest `~/krkhome/`; die Einstellbarkeit ist spätere Arbeit; der Ordner wird auch über einen symbolischen Verweis erkannt (`260926-0007_*_ist-der-ort-krkhome-fest-oder-einstellbar.md`, Möglichkeit 3).
+- Der Ordner wird an zwei Pfadformen erkannt, der geschriebenen und der aufgelösten, als Text verglichen; eine dritte Schreibweise, die der Nutzer selbst anlegt, wird nicht erkannt (`260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md`, Möglichkeit 1).
 - `.secrets.txt` entsteht nicht in Stufe 1, sondern mit C7 in Stufe 5 (Vorgabe: eine leere `.secrets.txt` ohne die Regeln aus C7 ließe sich mit F4 als gewöhnlicher Text öffnen und mit Klartext sichern).
 
 ### C3: Das Notizblatt entfällt, und die alten Zettel gehen nicht verloren
@@ -237,6 +238,7 @@ Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch oh
 - [ ] Jeder neue Befehl hat einen eigenen Ausführungszweig und endet nicht in einem Auffangzweig.
 - [ ] Die Befehle sind allein zulässig, wenn der Editor `tasks.txt` aus dem erkannten Ordner hält und die Formatansicht zeigt; bei jeder anderen Datei sind sie im Hauptmenü ausgegraut und tun über die Taste nichts.
 - [ ] Die Textfläche, in der der Nutzer den Text einer Aufgabe tippt, ist als KRKs eigene Textfläche angemeldet, so dass die Befehle von KRK beim Tippen wirken.
+- [ ] `esc` in einer Aufgabenzelle verwirft die Änderung an der Zelle und beendet ihre Bearbeitung; die Aufgabe trägt wieder ihren vorigen Text, und der Stand des Editors ist unberührt. `esc` leert dabei keinen Filtertext.
 
 **Acceptance criteria, nur am laufenden Bündel prüfbar (Nutzerarbeit):** (vorher der Handgriff F1, `cmd+r`, Ansicht verlassen)
 - [ ] Jeder neue Befehl im Hauptmenü tut, was sein Name sagt, einmal über das Menü und einmal über seine Taste.
@@ -255,13 +257,14 @@ Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch oh
 - Erledigte Aufgaben bleiben an ihrer Stelle und wandern nicht ans Ende (Vorgabe).
 - Neue Aufgaben entstehen am Ende der Liste (Vorgabe).
 - Die Tasten der zwei Editoren und der PIN-Änderung sind sieben: `shift+cmd+return` legt einen Eintrag an, `cmd+return` beginnt die Bearbeitung und übernimmt eine Zelle, `opt+cmd+up` und `opt+cmd+down` verschieben, `shift+cmd+delete` löscht, `shift+cmd+x` hakt ab, `shift+cmd+p` ändert die PIN (C7). `shift+cmd+delete` wird trotz seiner Bedeutung „Papierkorb entleeren" im Finder vergeben; die Wirkung bleibt auf die Tabelle im Editor beschränkt und ist mit `cmd+z` zurückzunehmen. Jede Taste bleibt in der Belegungsansicht änderbar (`260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md`, Möglichkeit 1 und die Tasten wie im Plan).
+- `esc` verwirft in der Aufgabenzelle, nach der Mac-Konvention, weil eine einzeilige Zelle nach dem Verwerfen ihren alten Text an derselben Stelle zeigt; in einer geänderten Notizzelle übernimmt es (C5). Die Trennlinie ist, ob die Zelle Zeilenumbrüche trägt (`260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`, Möglichkeit 2).
 - Beim Tippen in einer Aufgabe wirken KRKs Befehle weiter (Vorgabe nach der Regel des Projekts, dass die Textflächen eines Bereichs der Fensterzeile als eigene angemeldet werden, `CLAUDE.md`, Absatz zum Ereignisabgriff; ein Bereich, in dem beim Tippen kein Befehl wirkt, wäre der Zustand, den das Projekt nur für Blätter will).
 
 ### Stufe 4
 
 ### C5: Der Notizeditor
 
-**Description:** Öffnet der Nutzer `notes.txt` im Editor, zeigt die Formatansicht die Notizen als Tabelle mit den Spalten Thema und Notiz. Er kann eine Notiz hinzufügen, Thema und Text einer Notiz ändern, eine Notiz löschen und eine Notiz nach oben oder unten verschieben. Der Text einer Notiz darf mehrere Zeilen tragen. Eine Zeile im Notiztext, die mit `## ` beginnt, weist der Editor ab und sagt in der Statuszeile, warum. In einer Notizzelle schreibt `return` einen Zeilenumbruch; die Bearbeitung der Zelle endet mit `cmd+return` oder einem Klick daneben. Für Sichern, Rückgängig, die Rohansicht und das Tippen in einer Zelle gilt dasselbe wie beim Aufgabeneditor (C6).
+**Description:** Öffnet der Nutzer `notes.txt` im Editor, zeigt die Formatansicht die Notizen als Tabelle mit den Spalten Thema und Notiz. Er kann eine Notiz hinzufügen, Thema und Text einer Notiz ändern, eine Notiz löschen und eine Notiz nach oben oder unten verschieben. Der Text einer Notiz darf mehrere Zeilen tragen. Eine Zeile im Notiztext, die mit `## ` beginnt, weist der Editor ab und sagt in der Statuszeile, warum. In einer Notizzelle schreibt `return` einen Zeilenumbruch; die Bearbeitung der Zelle endet mit `cmd+return` oder einem Klick daneben. `esc` beendet sie ebenfalls und übernimmt dabei eine geänderte Zelle, statt sie zu verwerfen; `cmd+z` nimmt die Übernahme zurück. Für Sichern, Rückgängig, die Rohansicht und das Tippen in einer Zelle gilt dasselbe wie beim Aufgabeneditor (C6).
 
 **Acceptance criteria, am Baum nachweisbar:**
 - [ ] Jede der vier Handlungen (hinzufügen, ändern, löschen, verschieben) ist ohne Fenster am Modell prüfbar und ergibt als Textänderung am Stand des Editors die erwartete Datei; ein Vorspann vor der ersten Themenzeile bleibt oben stehen.
@@ -272,6 +275,7 @@ Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch oh
 - [ ] Die Befehle sind allein zulässig, wenn der Editor `notes.txt` aus dem erkannten Ordner hält und die Formatansicht zeigt, und sonst im Hauptmenü ausgegraut.
 - [ ] Die Zellen, in denen der Nutzer Thema und Notiz tippt, sind als KRKs eigene Textflächen angemeldet.
 - [ ] In einer Notizzelle schreibt `return` einen Zeilenumbruch in den Text der Zelle und beendet die Bearbeitung nicht; `cmd+return` übernimmt die Zelle.
+- [ ] `esc` in einer geänderten Notizzelle, ob Thema oder Notiz, übernimmt die Zelle als eine Handlung, die `cmd+z` zurücknimmt, und die Statuszeile sagt, dass übernommen wurde und `cmd+z` es zurücknimmt; eine unveränderte Zelle verlässt `esc` ohne Änderung am Stand. `esc` leert dabei keinen Filtertext.
 
 **Acceptance criteria, nur am laufenden Bündel prüfbar (Nutzerarbeit):** (vorher der Handgriff F1, `cmd+r`, Ansicht verlassen)
 - [ ] `notes.txt` im Editor öffnen: die Notizen stehen als Tabelle aus Thema und Notiz.
@@ -281,6 +285,7 @@ Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch oh
 - [ ] Eine Notiz löschen, `cmd+z`: sie steht wieder da.
 - [ ] Mit ungesicherter Änderung den Editor schließen: die bestehende Rückfrage erscheint.
 - [ ] In einer Zelle tippen und dabei F2 drücken: das Dateifenster zeigt `~/krkhome/`.
+- [ ] In den Text einer Notiz zwei Absätze tippen und `esc` drücken: der Text steht in der Notiz, die Statuszeile nennt `cmd+z`, und `cmd+z` stellt den vorigen Text wieder her.
 - [ ] Jede der vier Handlungen gelingt allein mit der Tastatur und ebenso mit der Maus.
 
 **Decisions made:**
@@ -289,6 +294,7 @@ Die zwei Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch oh
 - Die Sonderform wohnt in der Formatansicht, jede Handlung ist eine Textänderung am Stand des Editors (`260926-0007_*_wo-werden-notizen-und-aufgaben-bearbeitet-und-wo-gerendert.md`, Möglichkeit 1).
 - Eine Zeile `## ` im Notiztext wird abgewiesen und nicht umgeschrieben (`260926-0007_*_in-welchem-format-stehen-notes-txt-und-tasks-txt.md`).
 - `return` schreibt in einer Notizzelle einen Zeilenumbruch, beendet wird mit `cmd+return` oder einem Klick daneben; das weicht bewusst von der Mac-Konvention für Tabellenzellen ab, weil der häufige Fall, mehrzeiliger Notiztext, sonst je Zeile eine Zusatztaste bräuchte. Die Tasten sind dieselben sieben wie in C6 (`260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md`, Möglichkeit 1).
+- `esc` übernimmt eine geänderte Notizzelle und verwirft nicht, weil eine Zelle mit Zeilenumbrüchen mehrere Absätze tragen kann, die ein Verwerfen ohne Meldung verlöre; in der Aufgabenzelle verwirft es (C6). Dieselbe Regel gilt für die Tabelle von `.secrets.txt` (C7) (`260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`, Möglichkeit 2).
 
 ### Stufe 5
 
@@ -405,7 +411,7 @@ Die Verschlüsselung soll allein verhindern, dass Agenten, Werkzeuge und Indexer
 - Welches Bedienelement die Zellen trägt und wie seine Textflächen als KRKs eigene angemeldet werden. Ein Textfeld in einer Tabellenzelle bekommt als Ersthelfer AppKits Feldeditor, und der Ereignisabgriff reicht dann jeden Tastendruck an AppKit weiter; die Anmeldung geht über `Anwendungsdelegierter::ist_eigene_textflaeche` (`CLAUDE.md`, Absatz zum Ereignisabgriff). Dazu gehört, welche Tasten beim Tippen der Zelle und welche den Befehlen von KRK gehören, und dass die Kombinationen der Tabellenhandlungen nicht mit dem Tippen in der Zelle zusammenstoßen. Vom Nutzer entschieden ist dabei, dass `return` in einer Notizzelle einen Zeilenumbruch schreibt und `cmd+return` die Zelle übernimmt (C5).
 - Die Tastenkombination des Öffnens von `.secrets.txt`, falls es einen eigenen Befehl braucht, vorzuschlagen gegen die freie Belegung. Die sieben Kombinationen der Editorhandlungen und der PIN-Änderung sind entschieden (C6, Decisions made).
 - Wie die Zulässigkeit der neuen Befehle an „der Editor hält diese Datei in der Formatansicht" hängt, an der einen Stelle für Zulässigkeitsfragen (`krk-ui/src/kommandos/zulaessigkeit.rs`) und mit den Einträgen in `Kommando::wirkungsbereich`, `bereich_des_kommandos` und `Kommando::KENNUNGEN`.
-- Die Ordnererkennung aus C2: über den aufgelösten Pfad oder über Gerät und Inode, und wo sie steht, damit C1, C4 und C7 sie fragen und keine zweite entsteht.
+- Die Ordnererkennung aus C2: wie die zwei Pfadformen entstehen und wann die aufgelöste nachgezogen wird (die Wahl zwischen Pfadformen und Gerät und Inode hat der Nutzer getroffen, C2), und wo sie steht, damit C1, C4 und C7 sie fragen und keine zweite entsteht.
 - Die Darstellung der Aufgabenkästchen in der Vorschau, beschränkt auf die zwei Dateien, etwa über die Zusatzoption des bestehenden Markdown-Zerlegers allein für diese Pfade.
 - Was aus `Kommando::Notizzettel` im Code wird (die Kennung `notizzettel` bleibt), aus dem Blatt `blaetter/zettel.rs`, `zettelmodell.rs`, den Varianten `Datei::Zettel` in der Ablageaufzählung und dem Feld `zettel` der Sitzung, und welche Proben dabei mitgehen. Fällt `Datei::Zettel` aus `Datei::ALLE`, braucht die Übernahme die alten Pfade weiter, an einer Stelle außerhalb von `ALLE`, und die vollständigen Fallunterscheidungen daneben in `ablage/neuerungen.rs` ziehen nach; der Übersetzer nennt sie, und die Probe `jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung` hält die Liste.
 - Wo die Ausnahme „steht immer" im Prüfschritt der Sichtbarkeit ihren Platz findet: als Eigenschaft des Ordnermodells, die beim Lesen einmal gesetzt wird, ohne eine zweite Sichtbarkeitsregel daneben und ohne das Kennzeichen „versteckt" umzustellen. An derselben Stelle steht die Regel, dass `.secrets.txt` dort keinen Inhaltsauftrag bekommt (C7). Die Zweitlesung des Plans rät, beides in den Zweig für versteckte Einträge zu legen, so dass es in jedem anderen Ordner nur versteckte Einträge berührt.
@@ -419,7 +425,7 @@ Die Verschlüsselung soll allein verhindern, dass Agenten, Werkzeuge und Indexer
 
 ## Decisions
 
-Alle dreizehn Datensätze liegen unter `decisions/` dieses Arbeitspakets und sind vom Nutzer beantwortet. Die letzten drei sind aus dem Plan und seiner Zweitlesung hervorgegangen.
+Alle fünfzehn Datensätze liegen unter `decisions/` dieses Arbeitspakets und sind vom Nutzer beantwortet. Die letzten fünf sind aus dem Plan und seiner Zweitlesung hervorgegangen.
 
 | Datensatz | Antwort in Kürze | geht ein in |
 |---|---|---|
@@ -436,6 +442,8 @@ Alle dreizehn Datensätze liegen unter `decisions/` dieses Arbeitspakets und sin
 | `260926-0050_*_zieht-jede-sicherung-von-secrets-txt-ein-neues-salz-wenn-das-eine-halbe-sekunde-je-cmd-s-kostet.md` | neues Salz nur beim Festlegen oder Ändern der PIN, neue Nonce je Sicherung, abgeleiteter Schlüssel gehalten, solange die Datei offen ist | C7 |
 | `260926-0050_*_wie-weit-reicht-der-inhaltsfilter-liest-secrets-txt-nicht-wenn-das-kennzeichen-versteckt-ihn-nicht-haelt.md` | im erkannten Ordner nie ein Inhaltsauftrag für `.secrets.txt`, über die Ausnahme und den Namen; die tiefe Suche von oben liest weiter Chiffrat | C7 |
 | `260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md` | `return` schreibt einen Zeilenumbruch, `cmd+return` übernimmt; sieben Tasten wie im Plan, `shift+cmd+delete` trotz Finder | C5, C6, C7 |
+| `260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md` | zwei Pfadformen, geschrieben und aufgelöst, als Text verglichen; eine dritte Schreibweise wird nicht erkannt | C2, C4, C7 |
+| `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md` | `esc` verwirft in der Aufgabenzelle und übernimmt eine geänderte Notizzelle, `cmd+z` nimmt es zurück | C5, C6, C7 |
 
 ## User Decisions Pending
 
