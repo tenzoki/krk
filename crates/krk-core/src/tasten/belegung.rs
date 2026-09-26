@@ -107,24 +107,55 @@
 //!
 //! Daraus folgt die vollstaendige Regel, und sie ist eine Regel und keine
 //! Ausnahme fuer eine einzelne Taste: **zwei Funktionen sind genau dann ein
-//! Konflikt, wenn sie dieselbe Kombination tragen und denselben Zusteller
-//! haben.** Sie greift an vier Stellen, und keine davon ist entbehrlich:
+//! Konflikt, wenn sie dieselbe Kombination tragen, denselben Zusteller haben
+//! und ihre Wirkungsbereiche einander nicht ausschliessen.** Die zweite Haelfte
+//! steht im naechsten Abschnitt. Die Regel greift an vier Stellen, und keine
+//! davon ist entbehrlich:
 //!
 //! | Stelle | Warum |
 //! |---|---|
-//! | [`Belegung::konflikte`] | jedes Einlesen laeuft ueber [`Belegung::bauen`] darauf |
-//! | [`Belegung::zuweisen`] | die Umbelegung durch den Nutzer aus C3 |
+//! | [`Belegung::konflikte`] | jedes Einlesen laeuft ueber [`Belegung::bauen`] darauf; fragt `begegnen` |
+//! | [`Belegung::zuweisen`] | die Umbelegung durch den Nutzer aus C3; fragt dasselbe `begegnen` |
 //! | [`Belegung::nachschlag`] | der Abgriff darf nur sehen, was er selbst zustellt |
 //! | [`Funktion::kommando`] | eine zugestellte Funktion fuehrt KRK nie selbst aus |
 //!
-//! Die dritte Stelle traegt die Regel erst: der Nachschlag liefert den ersten
-//! Treffer, und ohne das Ueberspringen haenge das Verhalten an der Reihenfolge
-//! der Eintraege. Stuende `text_alles_auswaehlen` in der Datei des Nutzers vor
-//! `alle_markieren`, faende der Abgriff eine Funktion ohne Kommando, reichte den
-//! Tastendruck weiter, und das Markieren aller Eintraege waere still tot.
+//! Die dritte Stelle traegt die Regel erst: ohne das Ueberspringen haenge das
+//! Verhalten an der Reihenfolge der Eintraege. Stuende `text_alles_auswaehlen`
+//! in der Datei des Nutzers vor `alle_markieren`, faende der Abgriff eine
+//! Funktion ohne Kommando, reichte den Tastendruck weiter, und das Markieren
+//! aller Eintraege waere still tot.
 //!
 //! Nutzerentscheid vom 260805,
 //! `decisions/260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md`.
+//!
+//! # Zwei Funktionen eines Zustellers auf einer Kombination
+//!
+//! **Seit dem 260926 duerfen zwei Funktionen desselben Zustellers eine
+//! Kombination tragen, wenn nie beide zugleich zulaessig sein koennen.**
+//! Entschieden wird das aus einer Eingabe, die der Kern selbst hat: jeder
+//! [`Wirkungsbereich`] steht ueber eine vollstaendige Fallunterscheidung auf
+//! einer [`Seite`], und zwei Bereiche schliessen einander genau dann aus, wenn
+//! der eine allein im Editor und der andere allein ausserhalb wirkt
+//! ([`Wirkungsbereich::schliesst_aus`]). Eine Funktion ohne Kommando hat keinen
+//! Wirkungsbereich und schliesst nichts aus. `konflikte` und `zuweisen` fragen
+//! dafuer dieselbe private Funktion `begegnen`; zwei Fassungen der Regel gibt
+//! es nicht.
+//!
+//! **Die Regel ist groeber als die wirkliche Zulaessigkeit**, und der Fehler
+//! faellt immer auf die Seite des gemeldeten Konflikts: zwei Bereiche derselben
+//! Seite, etwa `Eintraege` und `Editortext`, sind der Form nach nie zugleich
+//! zulaessig und bleiben trotzdem ein Konflikt. Dass die Seiten mit der
+//! wirklichen Regel uebereinstimmen, haelt in `krk-ui` die Probe
+//! `einander_ausschliessende_bereiche_sind_nie_zugleich_zulaessig` ueber jeden
+//! Fokus, jede Form und jede Lage.
+//!
+//! Der Nachschlag antwortet fuer eine solche Kombination mit
+//! [`Nachschlag::Geteilt`], und welche der zwei Funktionen gemeint ist,
+//! entscheidet die Oberflaeche aus der einen Lage, die sie je Eingabe ohnehin
+//! erhebt; nach der Regel oben ist hoechstens eine zulaessig. Im Hauptmenue
+//! zeigt der Eintrag das Kuerzel, der in der Leiste frueher steht. Entscheid
+//! `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`,
+//! Moeglichkeit 1.
 //!
 //! # Der Wirkungsbereich: welcher Bereich den Fokus haben muss
 //!
@@ -449,6 +480,62 @@ impl Wirkungsbereich {
             Wirkungsbereich::Ueberall => "überall",
         }
     }
+
+    /// Auf welcher Seite des Editors dieser Bereich wirkt.
+    ///
+    /// **Vollstaendige Fallunterscheidung ohne Auffangzweig**: ein weiterer
+    /// Wert haelt den Bau hier an und bekommt seine Seite bewusst, denn an ihr
+    /// haengt, ob er eine Kombination mit einer anderen Funktion teilen darf
+    /// (Modulkopf, „Zwei Funktionen eines Zustellers auf einer Kombination“).
+    /// Die Seite folgt der Tafel von `fokus::wirkt` in `krk-ui`: `Editor`
+    /// heisst „wirkt allein mit dem Fokus im Editor“, `Ausserhalb` „wirkt nie
+    /// mit dem Fokus im Editor“.
+    #[must_use]
+    pub const fn seite(self) -> Seite {
+        match self {
+            Wirkungsbereich::Editor
+            | Wirkungsbereich::Editortext
+            | Wirkungsbereich::Eintraege
+            | Wirkungsbereich::Aufgaben
+            | Wirkungsbereich::Geheimnisse => Seite::Editor,
+            Wirkungsbereich::Dateifenster
+            | Wirkungsbereich::Leiste
+            | Wirkungsbereich::Tabbereich
+            | Wirkungsbereich::Navigator
+            | Wirkungsbereich::Vorschau => Seite::Ausserhalb,
+            Wirkungsbereich::Dateibereiche | Wirkungsbereich::Ueberall => Seite::Beide,
+        }
+    }
+
+    /// Ob dieser Bereich und `andere` nie zugleich wirken koennen: genau
+    /// dann, wenn der eine auf der Seite [`Seite::Editor`] und der andere auf
+    /// [`Seite::Ausserhalb`] steht.
+    ///
+    /// Gleiche Seiten schliessen einander nie aus, und [`Seite::Beide`]
+    /// schliesst nichts aus. Die Regel ist damit symmetrisch.
+    #[must_use]
+    pub const fn schliesst_aus(self, andere: Wirkungsbereich) -> bool {
+        matches!(
+            (self.seite(), andere.seite()),
+            (Seite::Editor, Seite::Ausserhalb) | (Seite::Ausserhalb, Seite::Editor)
+        )
+    }
+}
+
+/// Auf welcher Seite des Editors ein [`Wirkungsbereich`] wirkt.
+///
+/// Die grobe Einteilung, an der die Belegung entscheidet, ob zwei Funktionen
+/// eines Zustellers eine Kombination teilen duerfen; sie ist disjunkt und
+/// vollstaendig, weil jeder Bereich in [`Wirkungsbereich::seite`] in genau
+/// einem Zweig steht.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Seite {
+    /// Wirkt allein mit dem Fokus im Editor.
+    Editor,
+    /// Wirkt nie mit dem Fokus im Editor.
+    Ausserhalb,
+    /// Wirkt im Editor und ausserhalb.
+    Beide,
 }
 
 /// Was ein Tastendruck im Dateifenster ausloest.
@@ -1568,6 +1655,16 @@ impl Funktion {
         Kommando::aus_kennung(&self.kennung)
     }
 
+    /// Der Wirkungsbereich des Kommandos dieser Funktion, oder `None`, wenn
+    /// sie keines hat.
+    ///
+    /// Eine Funktion ohne Kommando hat keinen Wirkungsbereich und schliesst
+    /// deshalb nichts aus; fuer die Konfliktregel begegnet sie jeder anderen
+    /// desselben Zustellers.
+    pub fn wirkungsbereich(&self) -> Option<Wirkungsbereich> {
+        self.kommando().map(Kommando::wirkungsbereich)
+    }
+
     /// Wie eine Meldung diese Funktion benennt.
     #[must_use]
     pub fn benennung(&self) -> Funktionsname {
@@ -1580,6 +1677,14 @@ impl Funktion {
 pub enum Nachschlag<'a> {
     /// Die Kombination gehoert dieser Funktion.
     Funktion(&'a Funktion),
+    /// Die Kombination gehoert zwei Funktionen, deren Wirkungsbereiche
+    /// einander ausschliessen, in der Reihenfolge der Belegung.
+    ///
+    /// Welche gemeint ist, entscheidet der Aufrufer an der Lage, in der der
+    /// Tastendruck ankommt; nach der Konfliktregel ist hoechstens eine der
+    /// beiden zulaessig (Modulkopf, „Zwei Funktionen eines Zustellers auf einer
+    /// Kombination“).
+    Geteilt(&'a Funktion, &'a Funktion),
     /// Keine Funktion, und keine Befehlstaste gehalten: der Tastendruck faellt
     /// auf das Tippen durch.
     ///
@@ -1686,8 +1791,21 @@ impl Belegung {
     ///    Ein Nachschlag, der beides gegen den Code fuehrte, traefe auf einer
     ///    franzoesischen Tastatur zwei verschiedene Tasten auf derselben
     ///    Funktion, und die Konflikterkennung saehe das nie.
+    ///
+    /// # Zwei Treffer
+    ///
+    /// **Der Lauf sammelt die Treffer, statt beim ersten zurueckzukehren**:
+    /// eine Kombination kann seit dem 260926 zwei Funktionen gehoeren, deren
+    /// Wirkungsbereiche einander ausschliessen, und dann antwortet er mit
+    /// [`Nachschlag::Geteilt`] in der Reihenfolge der Belegung. Mehr als zwei
+    /// kann [`Belegung::bauen`] nicht durchlassen: drei Funktionen, die einander
+    /// paarweise ausschliessen, braeuchten drei Seiten, und es gibt nur zwei,
+    /// die einander ausschliessen. Der Lauf ist damit fuer jeden Treffer so
+    /// lang wie der, den ein Anschlag ohne Funktion schon immer faehrt, und
+    /// nie laenger.
     #[must_use]
     pub fn nachschlag(&self, druck: Tastendruck) -> Nachschlag<'_> {
+        let mut erste: Option<&Funktion> = None;
         for funktion in &self.funktionen {
             if funktion.gehalten_von.is_some() {
                 continue;
@@ -1696,8 +1814,14 @@ impl Belegung {
                 kombination.maske() == druck.maske
                     && kombination.taste().kennung() == druck.kennung()
             }) {
-                return Nachschlag::Funktion(funktion);
+                match erste {
+                    None => erste = Some(funktion),
+                    Some(erste) => return Nachschlag::Geteilt(erste, funktion),
+                }
             }
+        }
+        if let Some(funktion) = erste {
+            return Nachschlag::Funktion(funktion);
         }
         // Hinter der Suche und nicht davor: was oben eine Funktion gefunden hat,
         // kommt hier nicht mehr an, und diese Unterscheidung kann deshalb keinem
@@ -1718,13 +1842,13 @@ impl Belegung {
     /// Gibt einer Funktion eine weitere Kombination.
     ///
     /// Traegt die Funktion sie schon, geschieht nichts und es ist kein Fehler.
-    /// Traegt eine **andere Funktion desselben Zustellers** sie, bleibt die
+    /// Traegt eine **andere Funktion, der sie begegnet**, sie, bleibt die
     /// Belegung unveraendert und der [`Konflikt`] nennt beide Funktionen.
     ///
-    /// Der Zusteller steht hier aus demselben Grund wie in
-    /// [`Belegung::konflikte`]: sonst meldete die Belegungsansicht aus C3 einen
-    /// Konflikt, den das Einlesen nicht kennt, und die beiden Wege in dieselbe
-    /// Belegung widersprachen einander.
+    /// Gefragt wird dasselbe `begegnen` wie in [`Belegung::konflikte`]: sonst
+    /// meldete die Belegungsansicht aus C3 einen Konflikt, den das Einlesen
+    /// nicht kennt, oder liesse einen durch, den das Einlesen abweist, und die
+    /// beiden Wege in dieselbe Belegung widersprachen einander.
     #[allow(clippy::result_large_err)]
     pub fn zuweisen(
         &mut self,
@@ -1738,11 +1862,10 @@ impl Belegung {
         else {
             return Err(Zuweisungsfehler::UnbekannteFunktion(kennung.to_owned()));
         };
-        let zusteller = self.funktionen[stelle].gehalten_von.clone();
-
+        let bewerber = &self.funktionen[stelle];
         if let Some(andere) = self.funktionen.iter().find(|funktion| {
             funktion.kennung != kennung
-                && funktion.gehalten_von == zusteller
+                && begegnen(funktion, bewerber)
                 && funktion.tasten.contains(&kombination)
         }) {
             return Err(Zuweisungsfehler::Konflikt(Konflikt {
@@ -1763,8 +1886,9 @@ impl Belegung {
         *self = Self::auslieferung();
     }
 
-    /// Jede Kombination, die zwei Funktionen **desselben Zustellers**
-    /// beanspruchen.
+    /// Jede Kombination, die zwei Funktionen beanspruchen, **die einander
+    /// begegnen**: desselben Zustellers und mit Wirkungsbereichen, die einander
+    /// nicht ausschliessen.
     ///
     /// Leer fuer jede Belegung, die [`Belegung::vom_nutzer`] oder
     /// [`Belegung::auslieferung`] geliefert hat: beide weisen eine
@@ -1772,20 +1896,16 @@ impl Belegung {
     /// trotzdem als eigener Aufruf da, weil das Abnahmekriterium von C3 sie
     /// woertlich verlangt.
     ///
-    /// Der Zusteller gehoert in den Vergleich, weil zwei Funktionen einander
-    /// nur begegnen koennen, wenn beide im selben Fokuszustand erreichbar sind;
-    /// der Modulkopf schreibt die Regel aus. Ausgeliefert gibt es genau einen
-    /// Fall: `cmd+a` markiert im Dateifenster alle Eintraege und waehlt im
-    /// Textfeld den Text aus.
+    /// Der Zusteller und die Wirkungsbereiche gehoeren in den Vergleich, weil
+    /// zwei Funktionen einander nur begegnen koennen, wenn beide im selben
+    /// Fokuszustand erreichbar sind; der Modulkopf schreibt die Regel aus.
     #[must_use]
     pub fn konflikte(&self) -> Vec<Konflikt> {
         let mut gefunden = Vec::new();
         for (stelle, funktion) in self.funktionen.iter().enumerate() {
             for kombination in &funktion.tasten {
                 for vorige in self.funktionen.iter().take(stelle) {
-                    if vorige.gehalten_von == funktion.gehalten_von
-                        && vorige.tasten.contains(kombination)
-                    {
+                    if begegnen(vorige, funktion) && vorige.tasten.contains(kombination) {
                         gefunden.push(Konflikt {
                             kombination: *kombination,
                             andere: vorige.benennung(),
@@ -1890,6 +2010,24 @@ impl Belegung {
             Some(konflikt) => Err(Belegungsfehler::Konflikt(konflikt)),
             None => Ok(belegung),
         }
+    }
+}
+
+/// Ob zwei Funktionen einander begegnen koennen, eine Kombination also nicht
+/// teilen duerfen: derselbe Zusteller, und ihre Wirkungsbereiche schliessen
+/// einander nicht aus.
+///
+/// **Die eine Fassung der Konfliktregel**, gefragt von
+/// [`Belegung::konflikte`] und [`Belegung::zuweisen`]. Hat eine der beiden
+/// keinen Wirkungsbereich, weil sie kein Kommando hat, begegnen sie einander;
+/// nur zwei bekannte Bereiche koennen einander ausschliessen.
+fn begegnen(eine: &Funktion, andere: &Funktion) -> bool {
+    if eine.gehalten_von != andere.gehalten_von {
+        return false;
+    }
+    match (eine.wirkungsbereich(), andere.wirkungsbereich()) {
+        (Some(eine), Some(andere)) => !eine.schliesst_aus(andere),
+        _ => true,
     }
 }
 

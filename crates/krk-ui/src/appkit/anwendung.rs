@@ -3654,8 +3654,23 @@ impl Anwendungsdelegierter {
         }
 
         match eingabe {
-            Eingabe::Kommando { kommando, anschlag } => {
-                self.kommando_ausfuehren(kommando, Some(anschlag))
+            Eingabe::Kommando {
+                kommando,
+                ausweich,
+                anschlag,
+            } => {
+                // **Die Lage wird hier einmal erhoben und an die Wahl wie an
+                // die Ausfuehrung gereicht.** Traegt die Kombination zwei
+                // Funktionen, deren Wirkungsbereiche einander ausschliessen,
+                // waehlt `zulaessigkeit::waehlen` auf derselben Lage die
+                // zulaessige; eine zweite Erhebung entsteht dabei nicht
+                // (Entscheid `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
+                let lage = self.lage();
+                let gewaehlt = match ausweich {
+                    Some(zweite) => zulaessigkeit::waehlen(kommando, zweite, lage),
+                    None => kommando,
+                };
+                self.kommando_ausfuehren_bei(gewaehlt, Some(anschlag), lage)
             }
             Eingabe::Zeichen(zeichen) => {
                 // **Dieselbe Erhebung wie im Kommandozweig, und drei der vier
@@ -3808,9 +3823,13 @@ impl Anwendungsdelegierter {
     ///
     /// **Die eine Erhebung, und die eine Aufrufstelle von
     /// [`ereignisse::ersthelfer_gehoert_appkit`].** Ihre Abnehmer sind
-    /// namentlich: der
-    /// Kommandozweig in [`Self::kommando_ausfuehren`] gibt sie an
-    /// [`zulaessigkeit::zulaessig`], der Zeichenzweig von
+    /// namentlich: [`Self::kommando_ausfuehren`] erhebt sie fuer den Menueweg
+    /// und die Bereichsleiste und gibt sie ueber
+    /// [`Self::kommando_ausfuehren_bei`] an [`zulaessigkeit::zulaessig`], der
+    /// Kommandozweig von [`Anwendungsdelegierter::eingabe_ausfuehren`] erhebt
+    /// sie einmal je Tastendruck und gibt dieselbe Lage an
+    /// [`zulaessigkeit::waehlen`] und danach an `kommando_ausfuehren_bei`, der
+    /// Zeichenzweig von
     /// [`Anwendungsdelegierter::eingabe_ausfuehren`] liest drei der vier Werte einzeln heraus,
     /// [`Self::bearbeiten_am_dateifenster`] gibt sie an
     /// [`zulaessigkeit::dateiablage_zulaessig`], und die Ausgrauung des
@@ -3968,6 +3987,25 @@ impl Anwendungsdelegierter {
     /// `decisions/260814-2102_*_gehoert-die-fallunterscheidung-der-rueckschritt-taste-in-die-zulaessigkeitsregel.md`.
     #[must_use = "ein nicht ausgefuehrtes Kommando laeuft weiter"]
     fn kommando_ausfuehren(&self, kommando: Kommando, anschlag: Option<Anschlag>) -> bool {
+        self.kommando_ausfuehren_bei(kommando, anschlag, self.lage())
+    }
+
+    /// Der Rumpf von [`Self::kommando_ausfuehren`] auf einer schon erhobenen
+    /// [`Lage`].
+    ///
+    /// **Eigens getrennt, damit der Tastendruck die Lage einmal erhebt**: der
+    /// Kommandozweig von [`Self::eingabe_ausfuehren`] braucht sie vor der
+    /// Ausfuehrung schon fuer [`zulaessigkeit::waehlen`], und eine zweite
+    /// Erhebung desselben Augenblicks koennte von der ersten abweichen. Menue
+    /// und Bereichsleiste gehen ueber [`Self::kommando_ausfuehren`], das die
+    /// Lage selbst erhebt. Was dieser Rumpf verspricht, steht dort.
+    #[must_use = "ein nicht ausgefuehrtes Kommando laeuft weiter"]
+    fn kommando_ausfuehren_bei(
+        &self,
+        kommando: Kommando,
+        anschlag: Option<Anschlag>,
+        lage: Lage,
+    ) -> bool {
         // Die vier Bestandteile und ihre Herleitung stehen in
         // `kommandos::zulaessigkeit`. Kurz: die Blattsperre laesst allein den
         // Abbruch durch, ein Textfeld behaelt seine AppKit-Bedeutung, ein fremdes
@@ -3986,7 +4024,6 @@ impl Anwendungsdelegierter {
         // Blatt. Dass ein zweiter Operationsbefehl nichts startet, prueft
         // `auftrag_stellen` und meldet es; eine Tastensperre dafuer waere zu
         // grob.
-        let lage = self.lage();
         if !zulaessigkeit::zulaessig(kommando, lage) {
             // **Eine Abweisung durch die Blattsperre sagt, dass sie abgewiesen
             // hat.** Bis zum 260904 stand hier ein nacktes `return false`: kein
@@ -10387,7 +10424,7 @@ mod zweigproben {
 
     #[test]
     fn jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig() {
-        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren");
+        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren_bei");
         for befehl in BEFEHLE {
             let nadel = format!("{}::{befehl} => self.", concat!("Kom", "mando"));
             assert_eq!(
@@ -10539,7 +10576,7 @@ mod notizordnerproben {
             "{oeffnen} hat nicht genau einen Rufer"
         );
         assert_eq!(
-            aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren"), oeffnen),
+            aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren_bei"), oeffnen),
             1,
             "der eine Rufer von {oeffnen} ist nicht der Zweig in kommando_ausfuehren"
         );
@@ -10617,7 +10654,7 @@ mod notizordnerproben {
         assert_eq!(aufrufstellen(&rumpf(&quelle, waehlen), uebernehmen), 1);
         assert_eq!(rufer(waehlen), [(datei.clone(), 1)]);
         assert_eq!(
-            aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren"), waehlen),
+            aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren_bei"), waehlen),
             1
         );
         assert_eq!(
@@ -10755,7 +10792,7 @@ mod zoomproben {
 
     #[test]
     fn die_drei_zoombefehle_haben_genau_hier_ihren_zweig() {
-        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren");
+        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren_bei");
         for kennung in KENNUNGEN {
             assert_eq!(
                 rumpf.matches(&zweig(kennung)).count(),
@@ -10798,7 +10835,7 @@ mod angleichproben {
     fn der_befehl_steht_vor_dem_auffangzweig() {
         let zweig = concat!("Kommando::Ordner", "Angleichen =>");
         let auffang = concat!("andere ", "=> self.bereichskommando");
-        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren");
+        let rumpf = rumpf(&diese_datei(), "kommando_ausfuehren_bei");
         let stelle_zweig = rumpf
             .find(zweig)
             .expect("das Angleichen hat keinen Ausführungszweig und täte damit nichts");
@@ -11001,7 +11038,7 @@ mod aktivschreiberproben {
         let wechsel = concat!("fenster_", "wechseln(");
         let rang = concat!("fokus_", "setzen(Fokus::Dateifenster)");
         let zweig = zweig(
-            &rumpf(&diese_datei(), "kommando_ausfuehren"),
+            &rumpf(&diese_datei(), "kommando_ausfuehren_bei"),
             "FensterWechseln",
         );
         let stelle_wechsel = zweig
@@ -11398,7 +11435,7 @@ mod rundwegproben {
     /// Bedeutung wechselt. Ein `true` an dieser Aufrufstelle taete genau das.
     #[test]
     fn opt_cmd_e_schliesst_ohne_die_vorschau_danach() {
-        let rumpf = rumpf_von("kommando_ausfuehren");
+        let rumpf = rumpf_von("kommando_ausfuehren_bei");
         let zweig = concat!("Kommando::EditorSchliessen => self.editor_", "schliessen(");
         let stelle = rumpf
             .find(zweig)

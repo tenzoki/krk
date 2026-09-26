@@ -82,6 +82,12 @@
 //! Befehl von KRK ohnehin ueber den Ereignisabgriff erreichbar bleibt und eine
 //! zugestellte Funktion nicht.
 //!
+//! **Seit dem 260926 koennen auch zwei Befehle des Ereignisabgriffs eine
+//! Kombination tragen**, wenn ihre Wirkungsbereiche einander ausschliessen
+//! (Modulkopf von `krk_core::tasten::belegung`). Dann behaelt der Befehl das
+//! Kuerzel, der in der Leiste frueher steht; die Rechnung steht an
+//! [`fruehere_behalten_das_kuerzel`].
+//!
 //! # Was diese Runde am sichtbaren Menue aendert, ohne es zu wollen
 //!
 //! Die Reihenfolge innerhalb eines Obermenues kommt jetzt aus der
@@ -256,7 +262,7 @@ pub enum Eintrag<'a> {
 pub fn aufbau(belegung: &Belegung) -> Vec<Obermenue<'_>> {
     let funktionen = belegung.funktionen();
     let zugestellt = zugestellte_kuerzel(belegung);
-    belegungsmodell::nach_bereichen(belegung)
+    let mut leiste: Vec<Obermenue<'_>> = belegungsmodell::nach_bereichen(belegung)
         .into_iter()
         .map(|(bereich, stellen)| {
             let mut eintraege: Vec<Eintrag<'_>> = stellen
@@ -272,7 +278,50 @@ pub fn aufbau(belegung: &Belegung) -> Vec<Obermenue<'_>> {
                 eintraege,
             }
         })
-        .collect()
+        .collect();
+    fruehere_behalten_das_kuerzel(&mut leiste);
+    leiste
+}
+
+/// Nimmt einem Befehl das Kuerzel, das ein frueher in der Leiste stehender
+/// Befehl schon traegt.
+///
+/// **Die Regel, die AppKit ohnehin anwendet, als Rechnung im Modell
+/// ausgeschrieben**: zwei gleiche Tastenentsprechungen in einer Leiste
+/// entscheidet AppKit fuer den frueher stehenden Eintrag und nimmt dem
+/// spaeteren das Zeichen still (gemessen am 260813, siehe
+/// [`zugestellte_kuerzel`]). Seit dem 260926 duerfen zwei Befehle des
+/// Ereignisabgriffs eine Kombination teilen, wenn ihre Wirkungsbereiche
+/// einander ausschliessen (Entscheid
+/// `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`,
+/// Entscheidung 7 des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+/// Beide bleiben ueber den Abgriff erreichbar, der jeden Tastendruck vor dem
+/// Menue sieht und den zulaessigen ausfuehrt; der spaetere verliert allein
+/// die **Anzeige**, denselben Preis, den `cmd+a` seit dem 260813 traegt. Die
+/// Probe `keine_zwei_eintraege_tragen_dieselbe_kombination` bleibt damit
+/// gruen, ohne dass die Reihenfolge der Belegungsdatei still entscheidet.
+///
+/// Gefragt werden allein [`Eintrag::Befehl`]e; ein Textbefehl hat den
+/// Vortritt schon ueber [`zugestellte_kuerzel`] bekommen. Ein Durchgang ueber
+/// eine Leiste von einigen Dutzend Eintraegen, einmal beim Bau des Menues.
+fn fruehere_behalten_das_kuerzel(leiste: &mut [Obermenue<'_>]) {
+    let mut vergeben: Vec<Kombination> = Vec::new();
+    for eintrag in leiste
+        .iter_mut()
+        .flat_map(|obermenue| obermenue.eintraege.iter_mut())
+    {
+        let Eintrag::Befehl { kombination, .. } = eintrag else {
+            continue;
+        };
+        let Some(gefuehrt) = *kombination else {
+            continue;
+        };
+        if vergeben.contains(&gefuehrt) {
+            *kombination = None;
+        } else {
+            vergeben.push(gefuehrt);
+        }
+    }
 }
 
 /// Der Eintrag zu einer Funktion.
@@ -670,6 +719,9 @@ mod tests {
         let leiste = aufbau(&belegung);
         let mut mit_mehreren = 0_usize;
         let mut ohne = 0_usize;
+        // Die Kuerzel, die Befehle frueher in der Leiste schon zeigen; die
+        // zweite Ausnahme unten fragt sie.
+        let mut frueher: Vec<Kombination> = Vec::new();
 
         for eintrag in leiste
             .iter()
@@ -693,12 +745,18 @@ mod tests {
                 .expect("jeder Eintrag kommt aus der Belegung")
                 .tasten();
             let erste = tasten.first().copied();
-            // Die eine Ausnahme: ein Befehl, dessen erste Kombination schon ein
-            // Zusteller als Kuerzel traegt, zeigt keines. Die Probe daneben
-            // haelt die Ausnahme fest.
+            // Zwei Ausnahmen: ein Befehl, dessen erste Kombination schon ein
+            // Zusteller als Kuerzel traegt, zeigt keines, und ebenso einer,
+            // dessen erste Kombination ein frueher stehender Befehl zeigt. Die
+            // Proben daneben halten beide fest.
+            let ist_befehl = matches!(eintrag, Eintrag::Befehl { .. });
             let abgetreten = erste.is_some_and(|erste| {
-                zugestellte_kuerzel(&belegung).contains(&erste) && zusteller(kennung).is_none()
+                (zugestellte_kuerzel(&belegung).contains(&erste) && zusteller(kennung).is_none())
+                    || (ist_befehl && frueher.contains(&erste))
             });
+            if ist_befehl && let Some(gezeigt) = kombination {
+                frueher.push(gezeigt);
+            }
             assert_eq!(
                 kombination,
                 if abgetreten { None } else { erste },
@@ -866,8 +924,62 @@ mod tests {
     /// der Reihenfolge der Belegungsdatei und nicht an einer Ueberlegung.
     #[test]
     fn keine_zwei_eintraege_tragen_dieselbe_kombination() {
-        let belegung = Belegung::auslieferung();
+        keine_doppelte_kombination_in(&Belegung::auslieferung());
+        keine_doppelte_kombination_in(&mit_geteilter_kombination());
+    }
+
+    /// Die Auslieferungsbelegung, in der `editor_sichern` statt `cmd+s` die
+    /// Kombination `cmd+1` von `sortierung_name` teilt: Dateifenster und
+    /// Editor schliessen einander aus, also laedt sie ohne Konflikt.
+    fn mit_geteilter_kombination() -> Belegung {
+        use krk_core::tasten::Belegungsdatei;
+        use krk_core::tasten::belegung::AUSLIEFERUNGSTEXT;
+        let alt = "id = \"editor_sichern\"\nname = \"Sichern\"\ntasten = [\"cmd+s\"]";
+        assert!(
+            AUSLIEFERUNGSTEXT.contains(alt),
+            "der Eintrag von editor_sichern steht nicht mehr in dieser Form in der Auslieferung"
+        );
+        let text = AUSLIEFERUNGSTEXT.replacen(
+            alt,
+            "id = \"editor_sichern\"\nname = \"Sichern\"\ntasten = [\"cmd+1\"]",
+            1,
+        );
+        let datei: Belegungsdatei = toml::from_str(&text).expect("gueltiges TOML");
+        Belegung::vom_nutzer(&datei).expect("die geteilte Kombination ist kein Konflikt")
+    }
+
+    /// Bei einer Kombination auf zwei Befehlen behaelt der frueher in der
+    /// Leiste stehende das Kuerzel, und der spaetere zeigt keines
+    /// (Entscheidung 7 des Plans
+    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+    #[test]
+    fn bei_einer_geteilten_kombination_behaelt_der_fruehere_befehl_das_kuerzel() {
+        let belegung = mit_geteilter_kombination();
         let leiste = aufbau(&belegung);
+        let cmd_1 = Kombination::lesen("cmd+1").expect("cmd+1 ist eine Kombination");
+        let befehle: Vec<(&str, Option<Kombination>)> = leiste
+            .iter()
+            .flat_map(|obermenue| obermenue.eintraege.iter())
+            .filter_map(|eintrag| match eintrag {
+                Eintrag::Befehl {
+                    kennung,
+                    kombination,
+                    ..
+                } if ["sortierung_name", "editor_sichern"].contains(kennung) => {
+                    Some((*kennung, *kombination))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(befehle.len(), 2, "{befehle:?}");
+        assert_eq!(befehle[0].1, Some(cmd_1), "der fruehere zeigt cmd+1 nicht");
+        assert_eq!(befehle[1].1, None, "der spaetere zeigt ein Kuerzel");
+    }
+
+    /// Die Zusage von [`keine_zwei_eintraege_tragen_dieselbe_kombination`]
+    /// fuer eine Belegung.
+    fn keine_doppelte_kombination_in(belegung: &Belegung) {
+        let leiste = aufbau(belegung);
         let mut gesehen: Vec<(Kombination, &str)> = Vec::new();
         for eintrag in leiste
             .iter()

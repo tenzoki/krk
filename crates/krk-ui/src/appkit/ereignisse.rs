@@ -353,6 +353,13 @@ pub enum Eingabe {
     Kommando {
         /// Die nachgeschlagene Funktion.
         kommando: Kommando,
+        /// Die zweite Funktion derselben Kombination, wenn der Nachschlag
+        /// [`Nachschlag::Geteilt`] ergab; `None` sonst.
+        ///
+        /// Welche der beiden gilt, entscheidet die Senke an der Lage, in der
+        /// der Tastendruck ankommt (`zulaessigkeit::waehlen`); der Abgriff
+        /// kennt die Lage nicht und soll sie nicht kennen.
+        ausweich: Option<Kommando>,
         /// Der Anschlag, der sie ausgeloest hat.
         anschlag: Anschlag,
     },
@@ -678,8 +685,28 @@ fn behandeln(
         // und ein Nachschlag ohne Kommando kommt bei der Zulaessigkeitsfrage
         // gar nicht erst an. Siehe den Modulkopf.
         Nachschlag::Funktion(funktion) => match funktion.kommando() {
-            Some(kommando) => senke(Eingabe::Kommando { kommando, anschlag }),
+            Some(kommando) => senke(Eingabe::Kommando {
+                kommando,
+                ausweich: None,
+                anschlag,
+            }),
             None => false,
+        },
+        // Zwei Funktionen auf einer Kombination, deren Wirkungsbereiche
+        // einander ausschliessen: beide gehen an die Senke, die an der Lage
+        // waehlt. Hat nur eine ein Kommando, gilt sie allein.
+        Nachschlag::Geteilt(erste, zweite) => match (erste.kommando(), zweite.kommando()) {
+            (Some(kommando), ausweich) => senke(Eingabe::Kommando {
+                kommando,
+                ausweich,
+                anschlag,
+            }),
+            (None, Some(kommando)) => senke(Eingabe::Kommando {
+                kommando,
+                ausweich: None,
+                anschlag,
+            }),
+            (None, None) => false,
         },
         // Eine Taste, die keiner Funktion gehoert und keine Befehlstaste haelt:
         // sie tippt in den Filtertext des sichtbaren Tabs. Ob das Zeichen
@@ -877,6 +904,11 @@ fn protokollzeile(
     };
     let funktion = match nachschlag {
         Nachschlag::Funktion(funktion) => funktion.kennung().to_owned(),
+        // Beide Kennungen, in der Reihenfolge der Belegung: welche gilt,
+        // entscheidet erst die Senke an der Lage.
+        Nachschlag::Geteilt(erste, zweite) => {
+            format!("{}|{}", erste.kennung(), zweite.kennung())
+        }
         Nachschlag::Tippen => "(Tippen)".to_owned(),
         Nachschlag::Unbelegt => "(unbelegt)".to_owned(),
     };
@@ -1274,12 +1306,19 @@ mod tests {
                     text.chars().next(),
                     rohe_flaggen(kombination.maske()).0 as u64,
                 );
-                let Nachschlag::Funktion(getroffen) = belegung.nachschlag(druck) else {
-                    panic!("{kombination} findet als gesendetes Ereignis keine Funktion");
+                // Eine geteilte Kombination findet zwei Funktionen; die
+                // gesuchte muss eine davon sein.
+                let getroffen: Vec<&str> = match belegung.nachschlag(druck) {
+                    Nachschlag::Funktion(getroffen) => vec![getroffen.kennung()],
+                    Nachschlag::Geteilt(erste, zweite) => {
+                        vec![erste.kennung(), zweite.kennung()]
+                    }
+                    Nachschlag::Tippen | Nachschlag::Unbelegt => {
+                        panic!("{kombination} findet als gesendetes Ereignis keine Funktion")
+                    }
                 };
-                assert_eq!(
-                    getroffen.kennung(),
-                    funktion.kennung(),
+                assert!(
+                    getroffen.contains(&funktion.kennung()),
                     "{kombination} findet als gesendetes Ereignis eine andere Funktion"
                 );
                 geprueft += 1;
@@ -1338,6 +1377,30 @@ mod tests {
                 "{name} mit {getippt:?}"
             );
         }
+    }
+
+    /// Eine geteilte Kombination nennt im Protokoll beide Kennungen, in der
+    /// Reihenfolge der Belegung; die Verdeckung greift unveraendert davor.
+    #[test]
+    fn eine_geteilte_kombination_nennt_beide_kennungen() {
+        let mut belegung = Belegung::auslieferung();
+        let kombination = Kombination::lesen("cmd+1").expect("gueltige Schreibweise");
+        belegung
+            .zuweisen("editor_sichern", kombination)
+            .expect("Dateifenster und Editor schliessen einander aus");
+        let druck = kombination.tastendruck();
+        let nachschlag = belegung.nachschlag(druck);
+        assert!(
+            matches!(nachschlag, Nachschlag::Geteilt(..)),
+            "{nachschlag:?}"
+        );
+        let offen = protokollzeile(druck, Some('1'), nachschlag, false);
+        assert!(
+            offen.ends_with("funktion=sortierung_name|editor_sichern"),
+            "{offen}"
+        );
+        let verdeckt = protokollzeile(druck, Some('1'), nachschlag, true);
+        assert_eq!(verdeckt, offen, "cmd+1 fuegt keinen Text ein");
     }
 
     /// Was keinen Text einfuegt, bleibt auch bei geheimem Tippen offen: ein

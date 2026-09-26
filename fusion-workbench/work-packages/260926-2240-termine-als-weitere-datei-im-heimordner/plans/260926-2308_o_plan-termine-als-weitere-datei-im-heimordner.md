@@ -185,7 +185,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
 
 ### Stufe B: die Belegung
 
-3. **3 Die Konfliktregel kennt einander ausschließende Wirkungsbereiche**
+3. [DONE] **3 Die Konfliktregel kennt einander ausschließende Wirkungsbereiche**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/src/tasten/mod.rs` (Wiederausfuhr), `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/appkit/ereignisse.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, `crates/krk-ui/src/menuemodell.rs`, `resources/default-keymap.toml` (allein Kommentare)
    - Changes, nach Möglichkeit 1 des Entscheids `260926-2308_*_…`:

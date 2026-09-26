@@ -123,9 +123,13 @@
 #
 # Daraus folgt, dass dieselbe Kombination bei zwei Funktionen stehen darf,
 # sofern verschiedene Zusteller sie tragen. Ein Konflikt sind zwei Funktionen
-# genau dann, wenn sie dieselbe Kombination tragen und denselben Zusteller
-# haben; der Fokusvorbehalt teilt jeden Tastendruck genau einem der beiden zu,
-# und zwei Funktionen mit verschiedenen Zustellern begegnen einander nie. Zwei
+# genau dann, wenn sie dieselbe Kombination tragen, denselben Zusteller haben
+# und ihre Wirkungsbereiche einander nicht ausschliessen; der Fokusvorbehalt
+# teilt jeden Tastendruck genau einem der beiden Zusteller zu, und zwei
+# Funktionen mit verschiedenen Zustellern begegnen einander nie. Seit dem
+# 260926 duerfen deshalb auch zwei Funktionen des Ereignisabgriffs eine
+# Kombination tragen, wenn die eine allein im Editor und die andere allein
+# ausserhalb wirkt (Modulkopf von `crates/krk-core/src/tasten/belegung.rs`). Zwei
 # vom Menue gehaltene Funktionen auf einer Kombination bleiben ein Konflikt,
 # zwei Funktionen des Dateifensters erst recht. Ausgeliefert steht die
 # Doppelung bei cmd+a und bei cmd+f; eine Zahl steht hier nicht, weil die
@@ -527,7 +531,7 @@ tasten = ["cmd+f"]
 gehalten_von = "menue"
 # cmd+f steht auch bei "editor_suchen" weiter unten, und das ist kein
 # Konflikt: dort stellt der Ereignisabgriff zu, hier das Menue, und ein
-# Konflikt sind zwei Funktionen genau dann, wenn sie dieselbe Kombination und
+# Konflikt sind zwei Funktionen nur, wenn sie dieselbe Kombination und
 # denselben Zusteller tragen. Mit dem Fokus im Editor sucht cmd+f im Text, mit
 # dem Fokus im Dateifenster haengt es die Zwischenablage an den Filtertext an
 # (Nutzerentscheid vom 260805,
@@ -536,10 +540,16 @@ gehalten_von = "menue"
 # "text_alles_auswaehlen"; der Kommentar dort sagt es fuer jenes Paar.
 #
 # Der **Zusteller** traegt das Paar und nicht der Wirkungsbereich. Zwei vom
-# Ereignisabgriff zugestellte Funktionen mit verschiedenem Wirkungsbereich
-# blieben ein Konflikt, und die eingebettete Belegung braeche beim ersten
-# Zugriff ab; derselbe Datensatz schreibt das aus. Ohne `gehalten_von` waere
-# diese Zeile also nicht die zweite Zustellung, sondern der Abbruch.
+# Ereignisabgriff zugestellte Funktionen sind ein Konflikt, wenn ihre
+# Wirkungsbereiche einander nicht ausschliessen, und die eingebettete Belegung
+# braeche dann beim ersten Zugriff ab. Die Regel hat zwei Haelften: gleicher
+# Zusteller, und Wirkungsbereiche, die einander nicht ausschliessen, also nicht
+# der eine allein im Editor und der andere allein ausserhalb (Entscheid
+# `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
+# "filter_einfuegen" traegt kein Kommando und damit keinen Wirkungsbereich,
+# und eine Funktion ohne Wirkungsbereich schliesst nichts aus. Ohne
+# `gehalten_von` waere diese Zeile also nicht die zweite Zustellung, sondern
+# der Abbruch.
 #
 # **Die zwei Paare trennen den Anschlag an verschiedenen Stellen, und cmd+a ist
 # deshalb kein Beleg fuer cmd+f.** Gelesen in
@@ -1316,9 +1326,11 @@ tasten = []
 # frei, und keine davon hat im Feldeditor von AppKit eine eingefuehrte
 # Bedeutung: `StandardKeyBinding.dict` belegt keine. Die naeherliegenden nackten
 # Tasten sind vergeben: `return` oeffnet mit dem Standardprogramm, `delete`
-# raeumt in den Papierkorb und `space` markiert einen Eintrag, und die
-# Konfliktregel aus C3 kennt keinen Bereich, also teilt sich keine davon eine
-# Kombination mit einem Tabellenbefehl. `shift+delete` und `opt+cmd+delete`
+# raeumt in den Papierkorb und `space` markiert einen Eintrag. Die
+# Konfliktregel liesse seit dem 260926 eine davon mit einem Tabellenbefehl
+# teilen, weil Dateifenster und Editor einander ausschliessen; geteilt ist
+# trotzdem keine, weil jede Doppelung im Menue ein Kuerzel kostet.
+# `shift+delete` und `opt+cmd+delete`
 # bleiben absichtlich frei.
 #
 # **`shift+cmd+delete` heisst im Finder "Papierkorb entleeren" und wird hier

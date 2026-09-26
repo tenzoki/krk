@@ -14,7 +14,9 @@ use krk_core::ablage::{Ablage, Ablageort, Datei};
 use krk_core::tasten::belegung::{self, Belegung, Belegungsfehler, Zuweisungsfehler};
 use krk_core::tasten::normalisierung::roh;
 use krk_core::tasten::parser::{self, Herkunft};
-use krk_core::tasten::{Kombination, Kommando, ModMaske, Nachschlag, Tastendruck, Wirkungsbereich};
+use krk_core::tasten::{
+    Kombination, Kommando, ModMaske, Nachschlag, Seite, Tastendruck, Wirkungsbereich,
+};
 
 mod gemeinsam;
 use gemeinsam::{Pruefordner, varianten_der_aufzaehlung};
@@ -255,6 +257,59 @@ fn frei() -> Kombination {
         }
     }
     panic!("die Auslieferungsbelegung laesst keine Kombination mit Zusatztaste frei");
+}
+
+/// Die Funktionen, die ein Nachschlag trifft: eine, zwei bei einer geteilten
+/// Kombination, sonst keine.
+///
+/// **Die Proben, die jede ausgelieferte Kombination nachschlagen, fragen
+/// hierueber**, seit eine Kombination zwei Funktionen tragen darf, deren
+/// Wirkungsbereiche einander ausschliessen (Modulkopf von
+/// `krk_core::tasten::belegung`): die gesuchte Funktion muss eine der
+/// getroffenen sein, und welche der beiden ein Anschlag meint, entscheidet
+/// erst die Oberflaeche an der Lage.
+fn getroffene<'a>(nachschlag: Nachschlag<'a>) -> Vec<&'a belegung::Funktion> {
+    match nachschlag {
+        Nachschlag::Funktion(funktion) => vec![funktion],
+        Nachschlag::Geteilt(erste, zweite) => vec![erste, zweite],
+        Nachschlag::Tippen | Nachschlag::Unbelegt => Vec::new(),
+    }
+}
+
+/// Die Auslieferungsbelegung als Nutzerdatei, in der jede genannte Funktion
+/// die genannte Kombination **zuerst** traegt, vor ihren ausgelieferten.
+///
+/// Aus dem Text der Auslieferung und nicht von Hand, damit der Wortschatz
+/// gilt und jede andere Funktion bleibt, wie sie ausgeliefert ist.
+fn auslieferung_mit(zusaetze: &[(&str, &str)]) -> String {
+    let mut text = belegung::AUSLIEFERUNGSTEXT.to_owned();
+    for (kennung, kombination) in zusaetze {
+        let kopf = format!("id = \"{kennung}\"\n");
+        let beginn = text
+            .find(&kopf)
+            .unwrap_or_else(|| panic!("{kennung} steht nicht in der Auslieferung"));
+        let tasten = beginn
+            + text[beginn..]
+                .find("tasten = [")
+                .unwrap_or_else(|| panic!("{kennung} hat keine Zeile tasten"))
+            + "tasten = [".len();
+        let leer = text[tasten..].starts_with(']');
+        let zusatz = if leer {
+            format!("\"{kombination}\"")
+        } else {
+            format!("\"{kombination}\", ")
+        };
+        text.insert_str(tasten, &zusatz);
+    }
+    text
+}
+
+/// [`auslieferung_mit`] als Belegung des Nutzers gebaut, samt ihrem Fehler.
+#[allow(clippy::result_large_err)]
+fn nutzerbelegung_mit(zusaetze: &[(&str, &str)]) -> Result<Belegung, Belegungsfehler> {
+    let datei: belegung::Belegungsdatei =
+        toml::from_str(&auslieferung_mit(zusaetze)).expect("gueltiges TOML");
+    Belegung::vom_nutzer(&datei)
 }
 
 // ---------------------------------------------------------------------------
@@ -841,6 +896,121 @@ fn der_rueckweg_ueber_die_belegungsdatei_traegt_den_zusteller_mit() {
 }
 
 // ---------------------------------------------------------------------------
+// Einander ausschliessende Wirkungsbereiche (Schritt 3 des Plans
+// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`)
+// ---------------------------------------------------------------------------
+//
+// Die zweite Haelfte der Konfliktregel: zwei Funktionen desselben Zustellers
+// duerfen eine Kombination tragen, wenn ihre Wirkungsbereiche einander
+// ausschliessen, also der eine allein im Editor und der andere allein
+// ausserhalb wirkt (Entscheid
+// `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
+// Die Proben arbeiten mit `editor_sichern`, weil die neue Funktion der Termine
+// erst mit Schritt 8 entsteht; die Regel haengt an keiner Kennung.
+
+/// `editor_sichern` zusaetzlich auf `cmd+1` laedt ohne Ersetzung, und der
+/// Nachschlag nennt beide Funktionen in der Reihenfolge der Belegung.
+#[test]
+fn eine_kombination_im_editor_und_im_dateifenster_ist_kein_konflikt() {
+    let ordner = Pruefordner::neu("geteilt");
+    let ablage = ablage_mit(&ordner, &auslieferung_mit(&[("editor_sichern", "cmd+1")]));
+    let geladen = geladene_belegung(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "cmd+1 auf Dateifenster und Editor ist ein Konflikt geworden"
+    );
+    let belegung = geladen.wert;
+    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("cmd+1").tastendruck())
+    else {
+        panic!("cmd+1 ergibt keinen geteilten Nachschlag");
+    };
+    assert_eq!(erste.kennung(), "sortierung_name");
+    assert_eq!(zweite.kennung(), "editor_sichern");
+    assert_eq!(
+        Wirkungsbereich::Dateifenster.seite(),
+        Seite::Ausserhalb,
+        "die Probe haengt an der Seite des Dateifensters"
+    );
+    assert!(Wirkungsbereich::Dateifenster.schliesst_aus(Wirkungsbereich::Editor));
+    assert!(Wirkungsbereich::Editor.schliesst_aus(Wirkungsbereich::Dateifenster));
+}
+
+/// Zwei Funktionen, die beide ausserhalb des Editors wirken, bleiben auf
+/// einer Kombination ein Konflikt, und die Meldung nennt beide.
+#[test]
+fn eine_kombination_zweimal_im_dateifenster_bleibt_ein_konflikt() {
+    let Err(Belegungsfehler::Konflikt(konflikt)) =
+        nutzerbelegung_mit(&[("sortierung_groesse", "cmd+1")])
+    else {
+        panic!("cmd+1 auf zwei Sortierungen ist kein Konflikt mehr");
+    };
+    assert_eq!(konflikt.andere.kennung, "sortierung_name");
+    assert_eq!(konflikt.bewerber.kennung, "sortierung_groesse");
+}
+
+/// Ein Befehl, der ueberall wirkt, schliesst nichts aus und bleibt auf einer
+/// Kombination mit jedem anderen ein Konflikt.
+#[test]
+fn eine_kombination_mit_einem_befehl_fuer_ueberall_bleibt_ein_konflikt() {
+    assert_eq!(Wirkungsbereich::Ueberall.seite(), Seite::Beide);
+    let Err(Belegungsfehler::Konflikt(konflikt)) =
+        nutzerbelegung_mit(&[("fenster_schliessen", "cmd+1")])
+    else {
+        panic!("cmd+1 auf fenster_schliessen ist kein Konflikt mehr");
+    };
+    assert_eq!(konflikt.andere.kennung, "sortierung_name");
+}
+
+/// Drei Funktionen auf einer Kombination sind immer ein Konflikt: zwei davon
+/// stehen auf derselben Seite.
+#[test]
+fn drei_funktionen_auf_einer_kombination_sind_ein_konflikt() {
+    let Err(Belegungsfehler::Konflikt(konflikt)) =
+        nutzerbelegung_mit(&[("editor_sichern", "cmd+1"), ("eintrag_loeschen", "cmd+1")])
+    else {
+        panic!("cmd+1 auf drei Funktionen ist kein Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "editor_sichern");
+    assert_eq!(konflikt.bewerber.kennung, "eintrag_loeschen");
+}
+
+/// Die Umbelegung folgt derselben Regel wie das Einlesen, in beiden
+/// Richtungen: was das Einlesen annimmt, nimmt `zuweisen` an, und was es
+/// abweist, weist `zuweisen` ab, gleich welche der beiden Funktionen die
+/// Kombination zuerst traegt.
+#[test]
+fn die_umbelegung_folgt_derselben_regel_wie_das_einlesen() {
+    let cmd_1 = kombi("cmd+1");
+    let cmd_s = ausgeliefert("editor_sichern");
+
+    // Editor auf die Kombination des Dateifensters, und umgekehrt.
+    let mut belegung = Belegung::auslieferung();
+    assert_eq!(belegung.zuweisen("editor_sichern", cmd_1), Ok(()));
+    assert!(belegung.konflikte().is_empty());
+    assert_eq!(belegung.zuweisen("sortierung_groesse", cmd_s), Ok(()));
+    assert!(belegung.konflikte().is_empty());
+
+    // Dieselbe Seite: Konflikt, in beiden Richtungen, mit beiden Namen.
+    let Err(Zuweisungsfehler::Konflikt(konflikt)) =
+        Belegung::auslieferung().zuweisen("sortierung_groesse", cmd_1)
+    else {
+        panic!("cmd+1 an eine zweite Sortierung lieferte keinen Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "sortierung_name");
+    let Err(Zuweisungsfehler::Konflikt(konflikt)) =
+        Belegung::auslieferung().zuweisen("eintrag_loeschen", cmd_s)
+    else {
+        panic!("cmd+s an einen zweiten Befehl des Editors lieferte keinen Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "editor_sichern");
+
+    // Das Einlesen gibt dieselben Antworten.
+    assert!(nutzerbelegung_mit(&[("editor_sichern", "cmd+1")]).is_ok());
+    assert!(nutzerbelegung_mit(&[("sortierung_groesse", "cmd+s")]).is_ok());
+    assert!(nutzerbelegung_mit(&[("eintrag_loeschen", "cmd+s")]).is_err());
+}
+
+// ---------------------------------------------------------------------------
 // Die Tastencodes und ihre Herkunft
 // ---------------------------------------------------------------------------
 
@@ -991,16 +1161,16 @@ fn beide_ausgelieferten_wege_treffen_dieselbe_funktion() {
         }
         geprueft += 1;
         for kombination in funktion.tasten() {
-            let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombination.tastendruck())
-            else {
-                panic!(
-                    "{kombination} trifft keine Funktion, obwohl {} sie traegt",
-                    funktion.kennung()
-                );
-            };
-            assert_eq!(
-                getroffen.kennung(),
-                funktion.kennung(),
+            let getroffen = getroffene(belegung.nachschlag(kombination.tastendruck()));
+            assert!(
+                !getroffen.is_empty(),
+                "{kombination} trifft keine Funktion, obwohl {} sie traegt",
+                funktion.kennung()
+            );
+            assert!(
+                getroffen
+                    .iter()
+                    .any(|getroffen| getroffen.kennung() == funktion.kennung()),
                 "{kombination} steht bei {} und trifft eine andere Funktion",
                 funktion.kennung()
             );
@@ -1202,16 +1372,16 @@ fn jede_belegte_kombination_wird_weiterhin_als_funktion_gefunden() {
             continue;
         }
         for kombination in funktion.tasten() {
-            let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombination.tastendruck())
-            else {
-                panic!(
-                    "{kombination} von {} faellt nicht mehr auf eine Funktion",
-                    funktion.kennung()
-                );
-            };
-            assert_eq!(
-                getroffen.kennung(),
-                funktion.kennung(),
+            let getroffen = getroffene(belegung.nachschlag(kombination.tastendruck()));
+            assert!(
+                !getroffen.is_empty(),
+                "{kombination} von {} faellt nicht mehr auf eine Funktion",
+                funktion.kennung()
+            );
+            assert!(
+                getroffen
+                    .iter()
+                    .any(|getroffen| getroffen.kennung() == funktion.kennung()),
                 "{kombination} trifft eine andere Funktion"
             );
             geprueft += 1;
@@ -1299,15 +1469,20 @@ fn jedes_gebaute_kommando_haengt_an_seiner_ausgelieferten_taste() {
             "{kommando:?} ist gebaut, und {kennung} traegt ab Werk keine Kombination"
         );
         for kombination in funktion.tasten() {
-            let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombination.tastendruck())
-            else {
-                panic!("{kombination} trifft keine Funktion, obwohl {kennung} sie traegt");
-            };
-            assert_eq!(
-                getroffen.kommando(),
-                Some(kommando),
-                "{kombination} steht bei {kennung} und fuehrt zu {}",
-                getroffen.kennung()
+            let getroffen = getroffene(belegung.nachschlag(kombination.tastendruck()));
+            assert!(
+                !getroffen.is_empty(),
+                "{kombination} trifft keine Funktion, obwohl {kennung} sie traegt"
+            );
+            assert!(
+                getroffen
+                    .iter()
+                    .any(|getroffen| getroffen.kommando() == Some(kommando)),
+                "{kombination} steht bei {kennung} und fuehrt zu {:?}",
+                getroffen
+                    .iter()
+                    .map(|getroffen| getroffen.kennung())
+                    .collect::<Vec<_>>()
             );
         }
     }

@@ -297,6 +297,30 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
     gestattet(Anspruch::Kommando(kommando), lage)
 }
 
+/// Welches von zwei Kommandos derselben Kombination ein Tastendruck in dieser
+/// Lage meint.
+///
+/// Gerufen fuer [`krk_core::tasten::Nachschlag::Geteilt`]: die Belegung laesst
+/// zwei Funktionen eines Zustellers eine Kombination nur tragen, wenn ihre
+/// Wirkungsbereiche einander ausschliessen, und dann ist in jeder Lage
+/// hoechstens eine zulaessig (Entscheid
+/// `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
+/// **`zweite`, wenn allein sie zulaessig ist, sonst `erste`.** Ist keine
+/// zulaessig, bleibt es bei der ersten, und ihre Abweisung verhaelt sich wie
+/// vor dieser Regel, samt der Meldung einer Blattsperre.
+///
+/// Rein und auf derselben [`Lage`], die der Rufer danach an die Ausfuehrung
+/// gibt: die Wahl erhebt nichts und ist kein dritter Frager ausserhalb dieser
+/// Datei, denn sie ruft [`zulaessig`] hier.
+#[must_use = "fallengelassen laeuft der Tastendruck mit keinem der beiden Kommandos weiter"]
+pub fn waehlen(erste: Kommando, zweite: Kommando, lage: Lage) -> Kommando {
+    if !zulaessig(erste, lage) && zulaessig(zweite, lage) {
+        zweite
+    } else {
+        erste
+    }
+}
+
 /// Ob die Dateiablage in dieser Lage wirken darf (A11 der Runde 22, A9 der
 /// Runde 21): die drei Selektoren, die der Delegierte am Dateifenster
 /// beantwortet, `copy:` und `cut:` seit der Runde 22 und `filterEinfuegen:`
@@ -1031,6 +1055,111 @@ mod tests {
             geprueft,
             JEDE_FORM.len() * achtel_zahl * STELLVERTRETER.len() * Fokus::ALLE.len(),
             "die Tafel deckt nicht jeden Fall ab"
+        );
+    }
+
+    /// Jede Lage, die die Regel unterscheidet: jeder Fokus, jede Form, alle
+    /// acht Achtel aus Blattstand, Ersthelferbefund und Schluesselfenster und
+    /// beide Werte von `pin_aenderbar`.
+    fn jede_lage() -> Vec<Lage> {
+        let mut lagen = Vec::new();
+        for fokus in JEDER_FOKUS {
+            for form in JEDE_FORM {
+                for (blatt, appkit, krk) in HINDERNISSE.into_iter().chain([OHNE_HINDERNIS]) {
+                    for pin_aenderbar in [false, true] {
+                        lagen.push(Lage {
+                            pin_aenderbar,
+                            ..lage_in(blatt, appkit, krk, fokus, form)
+                        });
+                    }
+                }
+            }
+        }
+        lagen
+    }
+
+    /// Zwei Kommandos, deren Wirkungsbereiche einander nach dem Kern
+    /// ausschliessen, sind in keiner Lage zugleich zulaessig.
+    ///
+    /// **Sie haelt die Seiten des Kerns gegen die wirkliche Regel**
+    /// (Entscheid `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`):
+    /// `Wirkungsbereich::seite` ist eine grobe Einteilung im Kern, die
+    /// Zulaessigkeit steht hier. Laeuft ueber jedes gebaute Kommando und nicht
+    /// allein ueber die Stellvertreter, damit auch ein Befehl der
+    /// Ausnahmelisten mitgeprueft ist; die Probe ist damit vom Tag an gehalten,
+    /// an dem ein neuer Wirkungsbereich oder ein neuer Fokuswert dazukommt.
+    #[test]
+    fn einander_ausschliessende_bereiche_sind_nie_zugleich_zulaessig() {
+        let lagen = jede_lage();
+        let mut paare = 0usize;
+        for (eine, _) in Kommando::KENNUNGEN {
+            for (andere, _) in Kommando::KENNUNGEN {
+                if !eine
+                    .wirkungsbereich()
+                    .schliesst_aus(andere.wirkungsbereich())
+                {
+                    continue;
+                }
+                paare += 1;
+                for &lage in &lagen {
+                    assert!(
+                        !(zulaessig(eine, lage) && zulaessig(andere, lage)),
+                        "{eine:?} und {andere:?} schliessen einander nach dem Kern aus und \
+                         sind zugleich zulaessig in {lage:?}"
+                    );
+                }
+            }
+        }
+        assert!(
+            paare > 0,
+            "kein Paar schliesst einander aus; die Probe prueft nichts"
+        );
+    }
+
+    /// Die Wahl zwischen zwei Kommandos einer geteilten Kombination: ist die
+    /// erste zulaessig, bleibt sie; ist allein die zweite zulaessig, gilt die
+    /// zweite; ist keine zulaessig, bleibt die erste.
+    #[test]
+    fn waehlen_nimmt_die_zulaessige_der_beiden() {
+        let lagen = jede_lage();
+        let mut zweite_gewaehlt = 0usize;
+        for (eine_seite, erste) in STELLVERTRETER {
+            for (andere_seite, zweite) in STELLVERTRETER {
+                if !eine_seite.schliesst_aus(andere_seite) {
+                    continue;
+                }
+                for &lage in &lagen {
+                    let gewaehlt = waehlen(erste, zweite, lage);
+                    if zulaessig(erste, lage) {
+                        assert_eq!(gewaehlt, erste, "{erste:?}/{zweite:?} in {lage:?}");
+                    } else if zulaessig(zweite, lage) {
+                        assert_eq!(gewaehlt, zweite, "{erste:?}/{zweite:?} in {lage:?}");
+                        zweite_gewaehlt += 1;
+                    } else {
+                        assert_eq!(gewaehlt, erste, "{erste:?}/{zweite:?} in {lage:?}");
+                    }
+                }
+            }
+        }
+        assert!(zweite_gewaehlt > 0, "die zweite ist nie gewaehlt worden");
+        // Der Fall dieser Arbeit, ausgeschrieben: `cmd+1` sortiert mit dem
+        // Fokus im Dateifenster nach Name und sichert im Editor.
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        assert_eq!(
+            waehlen(
+                Kommando::SortierungName,
+                Kommando::EditorSichern,
+                lage(blatt, appkit, krk, Fokus::Dateifenster)
+            ),
+            Kommando::SortierungName
+        );
+        assert_eq!(
+            waehlen(
+                Kommando::SortierungName,
+                Kommando::EditorSichern,
+                lage(blatt, appkit, krk, Fokus::Editor)
+            ),
+            Kommando::EditorSichern
         );
     }
 

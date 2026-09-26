@@ -1413,20 +1413,43 @@ mod tests {
     /// ausloest, aber etwas anderes als eine Fortsetzung dieses einen Weges.
     /// Wer die Aufrufe heute sehen will, nimmt
     /// ``grep -rn 'kommando_ausfuehren(' crates/krk-ui/src``.
+    ///
+    /// **Seit dem 260926 hat der Weg zwei Eingaenge und bleibt einer.** Der
+    /// Tastendruck erhebt die Lage selbst, weil er sie vorher fuer die Wahl
+    /// zwischen zwei Funktionen einer geteilten Kombination braucht, und ruft
+    /// deshalb `kommando_ausfuehren_bei` mit ihr; Menue und Bereichsleiste
+    /// rufen weiter `kommando_ausfuehren`, das die Lage erhebt und an
+    /// denselben Rumpf weiterreicht. Gezaehlt werden beide Namen, und die eine
+    /// Weiterreichung faellt heraus, denn sie ist kein Aufrufer, sondern der
+    /// Uebergang zwischen den zwei Eingaengen (Schritt 3 des Plans
+    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
     #[test]
     fn der_delegierte_wird_an_genau_drei_stellen_um_einen_befehl_gebeten() {
         let name = concat!("kommando_", "ausfuehren");
+        let rumpfname = concat!("kommando_", "ausfuehren_bei");
+        let weiterreichung = format!("self.{rumpfname}(kommando, anschlag, self.lage())");
         let dateien = quelldateien();
 
-        let vom_delegierten: usize = dateien
+        let zaehlen = |nadel: &str| -> usize {
+            dateien
+                .iter()
+                .map(|(_, inhalt)| {
+                    ["self.", "selbst."]
+                        .into_iter()
+                        .map(|empfaenger| inhalt.matches(&format!("{empfaenger}{nadel}(")).count())
+                        .sum::<usize>()
+                })
+                .sum()
+        };
+        let weitergereicht: usize = dateien
             .iter()
-            .map(|(_, inhalt)| {
-                ["self.", "selbst."]
-                    .into_iter()
-                    .map(|empfaenger| inhalt.matches(&format!("{empfaenger}{name}(")).count())
-                    .sum::<usize>()
-            })
+            .map(|(_, inhalt)| inhalt.matches(&weiterreichung).count())
             .sum();
+        assert_eq!(
+            weitergereicht, 1,
+            "kommando_ausfuehren reicht nicht genau einmal an seinen Rumpf weiter"
+        );
+        let vom_delegierten = zaehlen(name) + zaehlen(rumpfname) - weitergereicht;
         assert_eq!(
             vom_delegierten, 3,
             "der eine Ausfuehrungsweg hat nicht die drei Aufrufer Tastendruck, \
