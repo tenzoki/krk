@@ -2,21 +2,27 @@
 //! Textflaeche abgeschaltet gehoeren.
 //!
 //! ```text
-//!   editor::textflaeche_bauen ──> automatiken_abschalten(&NSTextView)
-//!                                          │
-//!                                          └─> setzen_falls_vorhanden
+//!   editor::textflaeche_bauen ──────────┐
+//!   eintragsansicht::Zelleneditor::neu ─┼─> automatiken_abschalten(&NSTextView)
+//!     und ::wird_ersthelfer ────────────┘            │
+//!                                                    └─> setzen_falls_vorhanden
 //! ```
 //!
-//! **Ein Modul, obwohl es heute wieder eine Flaeche gibt.** Bis zur Runde 8
-//! stand die Frage mitten in `super::editor::textflaeche_bauen`, und das war
-//! richtig, solange es genau eine bearbeitbare `NSTextView` gab. Mit dem
-//! Notizzettel der Runde 9 gab es zwei, und zwei Aufzaehlungen derselben
-//! Einstellungen waeren zwei Wahrheiten darueber gewesen, was „abgeschaltet"
-//! heisst. Seit F2 nach `~/krkhome/` fuehrt, ist das Notizblatt fort, und der
-//! Editor ist wieder der einzige Rufer. Das Modul bleibt trotzdem stehen: die
-//! Antwort ist eine eigene Frage und nicht ein Teil des Flaechenbaus, und die
-//! naechste bearbeitbare Flaeche fragt hier, statt eine zweite Aufzaehlung zu
-//! beginnen.
+//! **Ein Modul, und zwei Flaechen.** Bis zur Runde 8 stand die Frage mitten in
+//! `super::editor::textflaeche_bauen`, und das war richtig, solange es genau
+//! eine bearbeitbare `NSTextView` gab. Mit dem Notizzettel der Runde 9 gab es
+//! zwei, und zwei Aufzaehlungen derselben Einstellungen waeren zwei Wahrheiten
+//! darueber gewesen, was „abgeschaltet" heisst. Seit F2 nach `~/krkhome/`
+//! fuehrt, ist das Notizblatt fort; die zweite Flaeche ist seither der eigene
+//! Feldeditor der Eintragszellen ([`super::eintragsansicht`]), in denen
+//! `tasks.txt`, `notes.txt` und `.secrets.txt` bearbeitet werden. Er fragte
+//! hier bis zur Schlussdurchsicht des Arbeitspakets nicht, und seine Zellen
+//! ersetzten beim Tippen still, etwa `omw` durch `On my way!` — in
+//! `.secrets.txt` vor dem Verschluesseln
+//! (`shared/consultations/260926-1047-schlussdurchsicht-f2-krkhome.md`,
+//! Befund B). Er ruft die Regel zweimal, beim Bau und beim Beginn jeder
+//! Bearbeitung, weil AppKit die Schreibwerkzeuge dazwischen zuruecksetzt; der
+//! Grund steht an der Klasse.
 //!
 //! **Die Vorschau ist keine dieser Flaechen und darf es nicht werden.** Sie
 //! setzt `setEditable(false)`, und daran haengt der Satz: was der Nutzer dort
@@ -272,37 +278,54 @@ mod tests {
     ///
     /// # Was diese Nadel nicht sieht
     ///
-    /// **Sie bindet an zwei Schreibweisen, und das ist ihre Grenze.** Gesucht
-    /// wird eine Datei, die eine `NSTextView` **anlegt** und in einer Codezeile
-    /// `setEditable(true)` schreibt. Eine Flaeche, die ihre Bearbeitbarkeit ueber
+    /// **Sie bindet an zwei Formen, und das ist ihre Grenze.** Gesucht wird
+    /// eine Datei, die eine `NSTextView` **anlegt** und in einer Codezeile
+    /// `setEditable(true)` schreibt, und eine Datei, die eine **Unterklasse**
+    /// von `NSTextView` baut und sie in einer Codezeile mit
+    /// `setFieldEditor(true)` zum Feldeditor macht. Die zweite Form ist
+    /// nachgetragen, seit der Feldeditor der Eintragszellen durch die erste
+    /// gefallen war: er entsteht ueber `Self::alloc` und ist bearbeitbar, ohne
+    /// je `setEditable(true)` zu schreiben, weil ein Feldeditor es ab Werk ist.
+    /// Eine Flaeche, die ihre Bearbeitbarkeit ueber
     /// `setValue:forKey:` setzt, die den Aufruf ueber zwei Zeilen umbricht oder
     /// die sie in einer anderen Datei einschaltet als der, die sie anlegt,
     /// entgeht ihr vollstaendig. Der Kopf von `crates/krk-core/tests/baum.rs`
     /// sagt, warum keine Nadel restlos dicht ist; hier steht der blinde Fleck,
     /// statt vom Namen der Probe ueberschrieben zu werden.
     ///
-    /// **Und sie sieht nur `NSTextView`.** Ein bearbeitbares `NSTextField` —
-    /// `appkit/tabelle.rs` traegt eines, das Umbenennen in der Liste — faellt aus
-    /// der Frage heraus: [`super::automatiken_abschalten`] nimmt eine
-    /// `NSTextView` entgegen, und der Feldeditor eines Textfeldes gehoert dem
-    /// Fenster und nicht der Zelle. Ob die Automatiken **dort** abgeschaltet
-    /// gehoeren, ist eine eigene Frage; diese Probe beantwortet sie nicht und
-    /// behauptet auch nicht, sie sei gestellt.
+    /// **Und sie sieht nur `NSTextView`.** Ein bearbeitbares `NSTextField`,
+    /// dessen Feldeditor KRK **nicht** selbst baut — `appkit/tabelle.rs` traegt
+    /// eines, das Umbenennen in der Liste —, faellt aus der Frage heraus: dort
+    /// setzt AppKit den Feldeditor des Fensters ein, und keine Datei im Baum legt
+    /// ihn an. Ob die Automatiken **dort** abgeschaltet gehoeren, ist eine eigene
+    /// Frage; diese Probe beantwortet sie nicht und behauptet auch nicht, sie sei
+    /// gestellt. Die Textfelder der Eintragstabelle fallen nicht heraus, weil
+    /// ihr Feldeditor die zweite Form oben ist.
+    ///
+    /// **Und sie sieht den Aufruf, nicht seinen Zeitpunkt.** Dass der
+    /// Feldeditor der Zellen die Regel auch **nach** dem Einrichten durch AppKit
+    /// ruft, haelt `der_zelleneditor_schaltet_die_automatiken_bei_jedem_beginn_wieder_ab`
+    /// unter `mod tests` in [`super::super::editor`].
     #[test]
     fn jede_bearbeitbare_textflaeche_schaltet_die_automatiken_ab() {
         let angelegt = concat!("NSTextView::", "alloc");
         let bearbeitbar = concat!("setEditable(", "true)");
+        let unterklasse = concat!("super = ", "NSTextView)");
+        let feldeditor = concat!("setFieldEditor(", "true)");
         let abschaltung = concat!("automatiken_", "abschalten");
+        let im_code = |inhalt: &str, nadel: &str| {
+            inhalt
+                .lines()
+                .any(|zeile| !zeile.trim_start().starts_with("//") && zeile.contains(nadel))
+        };
 
         let ohne: Vec<String> = quelldateien()
             .into_iter()
-            .filter(|(_, inhalt)| inhalt.contains(angelegt))
             .filter(|(_, inhalt)| {
-                inhalt.lines().any(|zeile| {
-                    !zeile.trim_start().starts_with("//") && zeile.contains(bearbeitbar)
-                })
+                (inhalt.contains(angelegt) && im_code(inhalt, bearbeitbar))
+                    || (im_code(inhalt, unterklasse) && im_code(inhalt, feldeditor))
             })
-            .filter(|(_, inhalt)| !inhalt.contains(abschaltung))
+            .filter(|(_, inhalt)| !im_code(inhalt, abschaltung))
             .map(|(name, _)| name)
             .collect();
 

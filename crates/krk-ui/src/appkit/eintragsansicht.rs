@@ -184,7 +184,11 @@
 //! und `removeAllActions`, `setAllowsUndo:` und `setFieldEditor:`
 //! (`NSTextView.h`, `NSText.h:93`) und die **gebauten** Methoden `undoManager`
 //! (`NSResponder.h:309`), `undo:`, `redo:` und `becomeFirstResponder`
-//! (`NSResponder.h:105`). Die Konstanten
+//! (`NSResponder.h:105`). Die Abschaltung der Automatiken am [`Zelleneditor`]
+//! beruehrt ihre Setzer nicht in dieser Datei, sondern ueber
+//! [`super::textautomatik::automatiken_abschalten`]; deren Alter fuehrt der
+//! Kopf jenes Moduls (die juengsten seit 15.0, einer ueber der Untergrenze und
+//! deshalb erst nach einer Frage an die Laufzeit gesetzt). Die Konstanten
 //! `NSControlStateValueOn` und `NSControlStateValueOff` (`NSCell.h:74` und
 //! `:73`) tragen keine Angabe. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`).
@@ -252,7 +256,7 @@ use objc2_foundation::{
 
 use krk_core::heimordner::eintraege::{Aufgaben, Notizen, aufgabenzeile};
 
-use super::zwischenablage;
+use super::{textautomatik, zwischenablage};
 
 /// Die Hoehe einer Zeile in Punkten.
 ///
@@ -583,7 +587,22 @@ define_class!(
     /// **AppKit richtet ihn beim Beginn jeder Bearbeitung selbst ein**, wie den
     /// eigenen: gemessen sind 21 Eigenschaften, darunter Rich Text, die
     /// Automatiken und `allowsUndo`, und alle stehen wie beim Feldeditor von
-    /// AppKit. Diese Klasse aendert allein, wohin `cmd+z` geht.
+    /// AppKit. Diese Klasse aendert daran zweierlei: wohin `cmd+z` geht, und
+    /// dass die Automatiken aus [`super::textautomatik::automatiken_abschalten`]
+    /// abgeschaltet sind.
+    ///
+    /// **Die Abschaltung steht an zwei Zeitpunkten, und beide sind gemessen.**
+    /// Ab Werk stehen an diesem Feldeditor Textersetzung, Rechtschreibkorrektur
+    /// und `smartInsertDelete` an (`messung-eigener.txt` unter
+    /// `spikes/zellen-rueckgaengig/`), und am 260926 auf macOS 15.7.9 ersetzte
+    /// derselbe Feldeditor ohne Abschaltung `omw` durch `On my way!` — in
+    /// `.secrets.txt` ein still geaendertes Passwort. Beim Bau gesetzt, bleiben
+    /// acht der neun Einstellungen ueber den Beginn einer Bearbeitung stehen.
+    /// Die neunte nicht: AppKit setzt `writingToolsBehavior` beim Einrichten
+    /// **vor** `becomeFirstResponder` auf `Limited` (2) zurueck. Deshalb ruft
+    /// [`Self::wird_ersthelfer`] die eine Regel nach der Oberklasse ein zweites
+    /// Mal, und danach steht sie auf `None`. Eine zweite Aufzaehlung der
+    /// Schalter entsteht dabei nicht.
     // SAFETY:
     // - Die Oberklasse NSTextView stellt an eine Unterklasse keine Bedingung,
     //   die diese Klasse verletzt: sie ruft den bezeichneten Erzeuger
@@ -650,6 +669,12 @@ define_class!(
         /// dies bei jedem Beginn einer Bearbeitung, und ein Wechsel des
         /// Schluesselfensters mitten im Tippen ruft es nicht (Fall 5 und 6 der
         /// Messung).
+        ///
+        /// **Und jede Zelle beginnt mit abgeschalteten Automatiken.** AppKit
+        /// hat den Feldeditor zu diesem Zeitpunkt schon eingerichtet und dabei
+        /// die Schreibwerkzeuge wieder auf `Limited` gestellt; der Ruf nach der
+        /// Oberklasse ist der erste Punkt, an dem die Abschaltung das letzte
+        /// Wort hat (gemessen, Doc-Kommentar der Klasse).
         // SAFETY: Die Signatur entspricht der von NSResponder
         // (`NSResponder.h:105`).
         #[unsafe(method(becomeFirstResponder))]
@@ -659,6 +684,7 @@ define_class!(
             let angenommen: bool = unsafe { msg_send![super(self), becomeFirstResponder] };
             if angenommen {
                 self.ivars().removeAllActions();
+                textautomatik::automatiken_abschalten(self);
             }
             angenommen
         }
@@ -672,6 +698,12 @@ impl Zelleneditor {
     /// [`Eintragsansicht::laufende_zelle`] ihn als Feldeditor erkennen;
     /// `allowsUndo` setzte AppKit beim Beginn ohnehin, es steht hier, weil
     /// [`Self::rueckgaengig`] ohne es nichts zurueckzunehmen haette.
+    ///
+    /// Die Abschaltung der Automatiken steht schon hier und nicht erst beim
+    /// Beginn einer Bearbeitung: so traegt der gebaute Feldeditor sie, ohne
+    /// dass ein Fenster ihn einrichtet, und die Probe ueber jede bearbeitbare
+    /// Flaeche misst ihn wie die des Editors. Warum sie beim Beginn ein
+    /// zweites Mal steht, sagt der Doc-Kommentar der Klasse.
     fn neu(mtm: MainThreadMarker) -> Retained<Self> {
         let this = Self::alloc(mtm).set_ivars(NSUndoManager::new(mtm));
         // SAFETY: `initWithFrame:` von NSTextView hat die hier angenommene
@@ -680,6 +712,7 @@ impl Zelleneditor {
         let this: Retained<Self> = unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] };
         this.setFieldEditor(true);
         this.setAllowsUndo(true);
+        textautomatik::automatiken_abschalten(&this);
         this
     }
 }

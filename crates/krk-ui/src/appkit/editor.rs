@@ -6434,9 +6434,13 @@ mod tests {
     /// Seit der Runde 9 lautet die Aussage „jede bearbeitbare Flaeche in KRK" und
     /// nicht mehr „die Flaeche des Editors" (C3 der Runde 9). Bis F2 nach
     /// `~/krkhome/` fuehrte, stand die Flaeche des Notizzettels mit in der
-    /// Liste; seither ist die des Editors die einzige. Die Liste bleibt, damit
+    /// Liste; seither steht dort der eigene Feldeditor der Eintragszellen, in
+    /// denen auch `.secrets.txt` bearbeitet wird. Die Liste bleibt, damit
     /// die naechste bearbeitbare Flaeche eine Zeile bekommt und nicht eine
     /// zweite Probe, und [`EINSTELLUNGEN`] steht weiter an **einer** Stelle.
+    /// Gemessen wird der Feldeditor, wie er gebaut ist; dass die Abschaltung
+    /// das Einrichten durch AppKit uebersteht, haelt
+    /// [`der_zelleneditor_schaltet_die_automatiken_bei_jedem_beginn_wieder_ab`].
     ///
     /// **Was die Probe nicht sieht:** eine weitere bearbeitbare Flaeche einer
     /// spaeteren Runde, die die Abschaltung nicht ruft. Der Bau haelt dabei nicht
@@ -6479,7 +6483,16 @@ mod tests {
 
         an_einer_flaeche(|mtm| {
             let (_rolle, editorflaeche) = textflaeche_bauen(mtm, probenrahmen());
-            let unsere = [("die Flaeche des Editors", editorflaeche)];
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, _) = felder_der_zeile(&eintraege, 0);
+            let zelleneditor = eintraege
+                .feldeditor_fuer(&feld)
+                .expect("ein Feld der Tabelle bekommt den eigenen Feldeditor");
+            let unsere = [
+                ("die Flaeche des Editors", editorflaeche),
+                ("dem Feldeditor der Eintragszellen", zelleneditor),
+            ];
             let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
             for setzer in abgeschaltet {
                 let name = merkmalsname(setzer);
@@ -6513,6 +6526,61 @@ mod tests {
                     "{setzer} steht schon ab Werk auf aus; dann sagt diese Probe ueber die \
                      Zeile in der Abschaltung nichts, und der Vergleich braucht einen \
                      anderen Zeugen"
+                );
+            }
+        });
+    }
+
+    /// Der Feldeditor der Eintragszellen schaltet die Automatiken beim Beginn
+    /// jeder Bearbeitung ein zweites Mal ab, **nach** dem Einrichten durch AppKit.
+    ///
+    /// **Was AppKit dabei tut, ist gemessen und steht hier als Vorbedingung.**
+    /// Am 260926 auf macOS 15.7.9 (Swift, ein Fenster, ein `NSTextField` mit
+    /// eigenem Feldeditor aus `windowWillReturnFieldEditor:toObject:`): die acht
+    /// Einstellungen der Abschaltung, beim Bau gesetzt, ueberstehen das
+    /// Einrichten; `writingToolsBehavior` nicht — AppKit setzt es **vor**
+    /// `becomeFirstResponder` auf `Limited` (2). Ohne Fenster richtet AppKit
+    /// nichts ein, also stellt die Probe diesen einen Schritt nach: sie legt
+    /// die Schreibwerkzeuge auf `Limited` und ruft danach `becomeFirstResponder`,
+    /// wie AppKit es tut. Danach muss jede abgeschaltete Einstellung wieder aus
+    /// stehen, nicht nur die eine.
+    ///
+    /// **Was sie nicht sieht:** eine kuenftige Fassung von AppKit, die eine
+    /// weitere Einstellung beim Einrichten zuruecksetzt, oder eine, die es erst
+    /// **nach** `becomeFirstResponder` tut. Beides zeigte sich nur am Buendel.
+    #[test]
+    fn der_zelleneditor_schaltet_die_automatiken_bei_jedem_beginn_wieder_ab() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, _) = felder_der_zeile(&eintraege, 0);
+            let zelleneditor = eintraege
+                .feldeditor_fuer(&feld)
+                .expect("ein Feld der Tabelle bekommt den eigenen Feldeditor");
+
+            // Der eine gemessene Schritt des Einrichtens durch AppKit.
+            zelleneditor.setWritingToolsBehavior(NSWritingToolsBehavior::Limited);
+            // SAFETY: `becomeFirstResponder` von NSResponder nimmt kein
+            // Argument und liefert ein BOOL.
+            let angenommen: bool = unsafe { msg_send![&*zelleneditor, becomeFirstResponder] };
+            assert!(
+                angenommen,
+                "ohne Fenster nimmt der Feldeditor den Rang an; sonst misst diese Probe nichts"
+            );
+
+            for (setzer, einordnung) in EINSTELLUNGEN {
+                if *einordnung != Einordnung::Abgeschaltet {
+                    continue;
+                }
+                let name = merkmalsname(setzer);
+                let Some(wert) = merkmal_falls_vorhanden(&zelleneditor, &name) else {
+                    continue;
+                };
+                assert_eq!(
+                    wert,
+                    aus_bedeutet(setzer),
+                    "{setzer} steht nach dem Beginn einer Bearbeitung nicht auf aus — \
+                     die Zelle veraenderte Getipptes, in .secrets.txt vor dem Verschluesseln"
                 );
             }
         });
