@@ -217,6 +217,33 @@ pub struct Lage {
     pub fokus: Fokus,
 }
 
+/// Was der Editor gerade zeigt: Text in der Textflaeche oder die Eintraege
+/// einer Datei aus `~/krkhome/` als Tabelle.
+///
+/// **Der Typ steht hier und nicht im Editor**, weil die Frage, die ihn braucht,
+/// hier gestellt wird: ab Schritt 3.3 des Plans
+/// `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
+/// traegt die [`Lage`] ihn als fuenftes Feld, und die Befehle der Tabelle wirken
+/// nur in der passenden Form. Bis dahin liest ihn allein der Editor, der ihn
+/// in `Editorbereich::form` aus Ansicht und Dateityp ableitet; ohne AppKit
+/// bleibt dieses Modul trotzdem, denn der Wert ist eine Aufzaehlung und keine
+/// Flaeche.
+///
+/// **Zwei Werte und nicht die vier des Plans**, weil nur zwei gebaut sind: die
+/// Notiztabelle kommt in Schritt 4.3 als `Notizen`, die Geheimnisse in Stufe 5
+/// als `Geheimnisse`. Ein Wert ohne Erzeuger waere eine Form, die der Editor nie
+/// zeigt, und jede vollstaendige Fallunterscheidung ueber diesen Typ haelt den
+/// Bau an, sobald einer dazukommt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Editorform {
+    /// Die Textflaeche: jede Datei in der Rohansicht und jede Datei ausser
+    /// `tasks.txt` im erkannten Heimordner in der Formatansicht.
+    Text,
+    /// Die Aufgabentabelle: `tasks.txt` im erkannten Heimordner in der
+    /// Formatansicht.
+    Aufgaben,
+}
+
 /// Ob dieser Befehl in dieser Lage wirken darf.
 ///
 /// **Die eine Stelle, an der die Frage beantwortet wird**, und die eine

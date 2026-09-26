@@ -2872,7 +2872,10 @@ impl Anwendungsdelegierter {
         match ziel {
             Fokus::Leiste => Some(self.ivars().leiste.get()?.quelle().liste()),
             Fokus::Vorschau => Some(self.ivars().vorschau.get()?.fokusansicht()),
-            Fokus::Editor => Some(self.ivars().editor.get()?.textflaeche()),
+            // Die Textflaeche oder die Tabelle der Eintragsansicht, je nachdem,
+            // welche der Editor gerade zeigt; eine ausgeblendete bekaeme den Rang
+            // und gaebe ihn sofort wieder ab.
+            Fokus::Editor => Some(self.ivars().editor.get()?.fokusziel()),
             // Das **aktive** Dateifenster: es gibt zwei Listen und einen
             // Fokuswert, und welche der beiden gemeint ist, sagt das
             // Fenstermodell.
@@ -9504,7 +9507,7 @@ mod faengerproben {
     }
 }
 
-/// Zwei Helfer, mit denen die Pruefmodule dieser Datei ihren eigenen Quelltext
+/// Die Helfer, mit denen die Pruefmodule dieser Datei ihren eigenen Quelltext
 /// lesen.
 ///
 /// Sie standen bis zur krkhome-Arbeit im Pruefmodul des Notizzettels, das sie
@@ -9517,16 +9520,25 @@ mod faengerproben {
 /// der Datei liegen, die sie lesen; als ein Stueck geschrieben faende jede sich
 /// selbst. Der Kopf von [`crate::quellbaum`] beschreibt die Bauform und sagt
 /// auch, was sie nicht kann.
+///
+/// **`datei` und `rumpf` gelten dem ganzen Teilbaum `appkit/`**: der Editor
+/// liest mit ihnen seine eigenen Ruempfe (Schritt 3.2a der krkhome-Arbeit), und
+/// ein zweites Paar dort waere eine zweite Antwort darauf, wo ein Rumpf endet.
 #[cfg(test)]
-mod quelltextproben {
+pub(super) mod quelltextproben {
     use crate::quellbaum::quelldateien;
 
     /// Der Quelltext dieser Datei.
     pub(super) fn diese_datei() -> String {
+        datei("krk-ui/src/appkit/anwendung.rs")
+    }
+
+    /// Der Quelltext einer Datei des Quellbaums, gerechnet ab `crates/`.
+    pub(in crate::appkit) fn datei(pfad: &str) -> String {
         quelldateien()
             .into_iter()
-            .find(|(name, _)| name == "krk-ui/src/appkit/anwendung.rs")
-            .expect("die Datei des Anwendungsdelegierten steht im Quellbaum")
+            .find(|(name, _)| name == pfad)
+            .unwrap_or_else(|| panic!("{pfad} steht nicht im Quellbaum"))
             .1
     }
 
@@ -9536,11 +9548,11 @@ mod quelltextproben {
     /// einer Methode; die Doc-Kommentare stehen vor dem `fn` und kommen damit
     /// gar nicht herein. Die Kommentarzeilen **im** Rumpf werden abgezogen,
     /// denn eine Nadel darf keine Prosa treffen.
-    pub(super) fn rumpf(inhalt: &str, name: &str) -> String {
+    pub(in crate::appkit) fn rumpf(inhalt: &str, name: &str) -> String {
         let kopf = format!("fn {name}(");
         let beginn = inhalt
             .find(&kopf)
-            .unwrap_or_else(|| panic!("{kopf} steht nicht in dieser Datei"));
+            .unwrap_or_else(|| panic!("{kopf} steht nicht in der gelesenen Datei"));
         let rest = &inhalt[beginn..];
         let ende = rest
             .find("\n    }\n")

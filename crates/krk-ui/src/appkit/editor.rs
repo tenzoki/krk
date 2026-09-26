@@ -89,6 +89,35 @@
 //! ein; C10 sagt eine Anzeige fuer beide Flaechen zu und nicht zwei aehnliche.
 //! Im Editor steht sie immer: der Spec laesst sie nicht abschalten.
 //!
+//! # Zwei Flaechen fuer eine Formatansicht
+//!
+//! **`tasks.txt` im erkannten `~/krkhome/` zeigt die Formatansicht als Tabelle**
+//! ([`super::eintragsansicht`]), deckungsgleich mit der Rolle der Textflaeche;
+//! jede andere Datei und jede Datei in der Rohansicht zeigt die Textflaeche.
+//! Welche der beiden zu sehen ist, folgt aus der [`Editorform`], die
+//! [`editorform`] aus Ansicht und Dateityp ableitet, und gewechselt wird an
+//! einer Stelle, [`Editorbereich::flaeche_waehlen`], und nur bei einem Wechsel
+//! von Datei oder Ansicht:
+//!
+//! ```text
+//!   Oeffnen, Schliessen, ctrl+cmd+e ──> flaeche_waehlen ──> tauschschritte
+//!                                                         └> tausch_ausfuehren
+//!   Umbau, cmd+z, Tippen ──> stand_erneuern / text_zurueckschreiben
+//!                                     └> tabelle_nachziehen (nur die Zeilen)
+//! ```
+//!
+//! **Die Tabelle ist eine Sicht und kein zweiter Stand.** Eine Tabellenhandlung
+//! rechnet der Kern aus dem alten Stand in einen neuen, und
+//! [`Editorbereich::umbau_anwenden`] schreibt ihn auf dem Weg des Ersetzens ein:
+//! ein Stand, ein Verwalter, ein Stapel. Nimmt ein `cmd+z` mit der Tabelle als
+//! Ersthelfer eine Tipp-Handlung der ausgeblendeten Textflaeche zurueck, kommt
+//! das ueber `textDidChange:` und [`Editorbereich::text_zurueckschreiben`] an,
+//! und die Tabelle zieht von dort nach. Der Plan dazu ist
+//! `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
+//! im Arbeitspaket `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`,
+//! Schritt 3.2a, mit der Zweitlesung
+//! `shared/consultations/260926-0107-zweitlesung-plan-f2-krkhome.md`.
+//!
 //! **Was hier steht und was im Modell.** Welche Datei der Editor haelt, ihr
 //! Stand, ob er von der Datei abweicht, die Ansichtswahl, der Dateityp und der
 //! Suchlauf wohnen in [`Editormodell`] und damit ausserhalb von `appkit/`.
@@ -474,15 +503,24 @@
 //! `NSRunLoopCommonModes` (`:14`) steht seit 10.5; alle uebrigen tragen im SDK
 //! keine eigene Verfuegbarkeitsangabe und stehen damit seit 10.0.
 //!
-//! **Drei Namen kommen erst im Pruefmodul dieser Datei herein**, ueber eine
+//! **Der Flaechentausch fragt das Fenster**, ohne einen Namen dafuer
+//! hereinzuholen: `window` an der Ansicht, `firstResponder` und
+//! `makeFirstResponder:` am `NSWindow`, `isDescendantOf:` und `setHidden:` an der
+//! `NSView`. `NSWindow` und `NSResponder` stehen seit macOS 10.0, und keine
+//! der fuenf Methoden traegt im SDK eine eigene Angabe.
+//!
+//! **Vier Namen kommen erst im Pruefmodul dieser Datei herein**, ueber eine
 //! eingerueckte `use`-Zeile, und stehen deshalb hier und nicht oben:
+//! `NSResponder` (`NSResponder.h:21`, ohne eigene Angabe; die Proben des
+//! Flaechentauschs ueberschreiben an einer Unterklasse `undoManager`,
+//! `NSResponder.h:309`, ebenfalls ohne Angabe),
 //! `NSNumber` (`NSValue.h:42`, ohne eigene Angabe), die Aufzaehlung
 //! `NSTextInputTraitType` (`NSTextCheckingClient.h:22`, schliesst mit blossem
 //! `};`) und `NSWritingToolsBehavior` (`:28`, `API_AVAILABLE(macos(15.0))` —
 //! auf dem Zielsystem und nicht darueber). Die Probe
 //! `jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt`
 //! (`krk-core/tests/baum.rs`) sieht eine eingerueckte `use`-Zeile **nicht**;
-//! diese drei stehen hier, weil ein Mensch sie nachgetragen hat, und nicht,
+//! diese vier stehen hier, weil ein Mensch sie nachgetragen hat, und nicht,
 //! weil ein Prueflauf sie eingefordert haette.
 
 use std::cell::{Cell, RefCell};
@@ -509,16 +547,22 @@ use objc2::rc::autoreleasepool;
 #[cfg(test)]
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
+use krk_core::heimordner::Sonderdatei;
+use krk_core::heimordner::eintraege::Neustand;
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
 };
 
-use crate::editormodell::{Ansicht, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf};
+use crate::editormodell::{
+    Ansicht, Dateityp, Editormodell, Ladeausgang, Sicherungsausgang, Suchlauf,
+};
 use crate::heimgriff::Heimgriff;
 use crate::hervorhebung::{
     Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
+use crate::kommandos::zulaessigkeit::Editorform;
 
+use super::eintragsansicht::{self, Eintragsansicht};
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
@@ -1212,6 +1256,126 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 /// sichtbar.
 const ABWEICHUNGSZEICHEN: &str = "•";
 
+/// Welche der beiden Flaechen des Editors zu sehen ist.
+///
+/// **Zwei Flaechen, eine Ansicht.** Beide liegen deckungsgleich unter dem
+/// Kopf; die Textflaeche zeigt jede Datei in der Rohansicht und fast jede in
+/// der Formatansicht, die [`Eintragsansicht`] zeigt `tasks.txt` im erkannten
+/// `~/krkhome/` in der Formatansicht. Welche es ist, folgt aus der
+/// [`Editorform`] ueber [`flaeche_der_form`], und gewechselt wird allein in
+/// [`Editorbereich::flaeche_waehlen`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Flaeche {
+    /// Die `NSTextView` in ihrer Rolle.
+    Textflaeche,
+    /// Die Tabelle der Eintragsansicht in ihrer Rolle.
+    Tabelle,
+}
+
+/// Ein Schritt des Flaechentauschs, in der Reihenfolge, in der er geschieht.
+///
+/// **Die Reihenfolge ist die ganze Aussage**, und sie steht deshalb als Wert
+/// und nicht als drei Zeilen in einer Funktion: [`tauschschritte`] legt sie
+/// fest und ist ohne Fenster pruefbar, [`Editorbereich::flaeche_waehlen`]
+/// fuehrt sie aus und fuegt nichts hinzu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Tauschschritt {
+    /// Die Flaeche wird sichtbar.
+    Einblenden(Flaeche),
+    /// Der Ersthelfer geht auf die Flaeche ueber.
+    Ersthelfer(Flaeche),
+    /// Die Flaeche wird ausgeblendet.
+    Ausblenden(Flaeche),
+}
+
+/// Die Form, die der Editor bei dieser Ansicht und diesem Dateityp zeigt.
+///
+/// **Die eine Stelle, an der das entschieden wird**, und vollstaendig ohne
+/// Auffangzweig: ein neuer Dateityp und eine neue Sonderdatei halten hier den
+/// Bau an. `notes.txt` bleibt bis zu Schritt 4.3 des Plans in der Textflaeche
+/// und zeigt dort, was sie seit Schritt 2.1 zeigt, naemlich Markdown.
+#[must_use]
+fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
+    match (ansicht, typ) {
+        (
+            Ansicht::Roh,
+            Dateityp::Markdown
+            | Dateityp::Sonstiges
+            | Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben),
+        )
+        | (
+            Ansicht::Format,
+            Dateityp::Markdown | Dateityp::Sonstiges | Dateityp::Eintraege(Sonderdatei::Notizen),
+        ) => Editorform::Text,
+        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
+    }
+}
+
+/// Die Flaeche, die eine Form zeigt.
+#[must_use]
+fn flaeche_der_form(form: Editorform) -> Flaeche {
+    match form {
+        Editorform::Text => Flaeche::Textflaeche,
+        Editorform::Aufgaben => Flaeche::Tabelle,
+    }
+}
+
+/// Die Schritte, die von der gezeigten zur gewuenschten Flaeche fuehren.
+///
+/// **Gleiche Flaechen, keine Schritte.** Damit ruft ein Ansichtswechsel oder
+/// ein Dateiwechsel, der die Flaeche nicht aendert, weder `setHidden:` noch
+/// `makeFirstResponder:`.
+///
+/// **Sonst: erst einblenden, dann den Ersthelfer uebergeben, dann ausblenden.**
+/// Eine ausgeblendete Ansicht, die den Ersthelfer haelt, laesst AppKit den Rang
+/// neu vergeben, und dabei laeuft `makeFirstResponder:` ein zweites Mal durch
+/// die Ueberschreibung in [`super::fenster`] und ihren Melder — dieselbe Falle,
+/// vor der `CLAUDE.md` am Nachzug der Fokusanzeige warnt. Uebergeben wird nur,
+/// wenn die alte Flaeche den Rang haelt: steht der Fokus anderswo, bleibt er
+/// dort, und ein Tausch holt ihn nicht in den Editor.
+///
+/// Uebergeben wird an eine **sichtbare** Flaeche; deshalb steht das Einblenden
+/// vor der Uebergabe und nicht danach.
+#[must_use]
+fn tauschschritte(
+    gezeigt: Flaeche,
+    gewuenscht: Flaeche,
+    alte_haelt_ersthelfer: bool,
+) -> Vec<Tauschschritt> {
+    if gezeigt == gewuenscht {
+        return Vec::new();
+    }
+    let mut schritte = vec![Tauschschritt::Einblenden(gewuenscht)];
+    if alte_haelt_ersthelfer {
+        schritte.push(Tauschschritt::Ersthelfer(gewuenscht));
+    }
+    schritte.push(Tauschschritt::Ausblenden(gezeigt));
+    schritte
+}
+
+/// Fuehrt die Schritte des Tauschs in ihrer Reihenfolge aus.
+///
+/// `rolle` nennt die Ansicht, die eine Flaeche ein- und ausblendet;
+/// `uebergeben` gibt ihr den Ersthelfer. **Eine freie Funktion und kein Teil
+/// von [`Editorbereich::flaeche_waehlen`]**, damit die Proben sie ohne
+/// Editorbereich fahren koennen: dessen Aufbau schreibt mit `setString:` in eine
+/// `NSTextView`, und das endet auf dem Faden von `libtest` mit `SIGSEGV`
+/// (gemessen am 260926, siehe die Proben am Fuss dieser Datei). Die Rollen und
+/// der Ersthelfer lassen sich dort bauen und befragen, ein Fenster nicht.
+fn tausch_ausfuehren<'a>(
+    schritte: &[Tauschschritt],
+    rolle: impl Fn(Flaeche) -> &'a NSView,
+    mut uebergeben: impl FnMut(Flaeche),
+) {
+    for schritt in schritte {
+        match *schritt {
+            Tauschschritt::Einblenden(flaeche) => rolle(flaeche).setHidden(false),
+            Tauschschritt::Ersthelfer(flaeche) => uebergeben(flaeche),
+            Tauschschritt::Ausblenden(flaeche) => rolle(flaeche).setHidden(true),
+        }
+    }
+}
+
 define_class!(
     /// Die Ansicht, in der Kopf und Textflaeche haengen — und die Stelle, an
     /// der KRK den Wechsel des Erscheinungsbildes bemerkt (S34).
@@ -1344,11 +1508,26 @@ pub struct EditorIvars {
     kopf: Retained<NSTextField>,
     /// Die Textflaeche selbst, editierbar und mit einem Textspeicher.
     ///
-    /// Die Bildlaufansicht um sie herum steht hier **nicht**: sie haengt in
-    /// [`Self::bereich`], der sie festhaelt, und niemand hier spricht sie an.
-    /// Wer sie braucht — S33, um nach einem Ansichtswechsel die Nummernspalte
-    /// neu zeichnen zu lassen —, bekommt sie ueber `enclosingScrollView`.
+    /// Die Bildlaufansicht um sie herum steht daneben in [`Self::textrolle`],
+    /// seit der Flaechentausch sie ein- und ausblendet. Die aelteren Wege —
+    /// S33, um nach einem Ansichtswechsel die Nummernspalte neu zeichnen zu
+    /// lassen, und der Umbruch — fragen weiter `enclosingScrollView` und
+    /// bekommen dasselbe Objekt.
     text: Retained<NSTextView>,
+    /// Die Rolle um die Textflaeche, die [`Editorbereich::flaeche_waehlen`]
+    /// ein- und ausblendet.
+    textrolle: Retained<NSScrollView>,
+    /// Die Tabelle fuer `tasks.txt` in der Formatansicht, deckungsgleich mit
+    /// der Rolle der Textflaeche und ausgeblendet, solange die Textflaeche zu
+    /// sehen ist.
+    eintraege: Retained<Eintragsansicht>,
+    /// Welche der beiden Flaechen gerade zu sehen ist.
+    ///
+    /// Geschrieben allein von [`Editorbereich::flaeche_waehlen`]; gelesen von
+    /// dort und von [`Editorbereich::fokusziel`]. Die gewuenschte Flaeche
+    /// folgt aus dem Modell, die gezeigte steht hier, und der Vergleich der
+    /// beiden ist die Frage, ob getauscht wird.
+    gezeigt: Cell<Flaeche>,
     /// Der Stand des Editors, ohne AppKit.
     modell: RefCell<Editormodell>,
     /// Der Zeitgeber, der die Meldung des Arbeitsfadens abholt.
@@ -1570,17 +1749,19 @@ impl Editorbereich {
         // Der Bildlauf fuellt alles unter dem Kopf und waechst mit; der Kopf
         // klebt oben und waechst nur in der Breite. Dieselbe Aufteilung wie
         // Tableiste und Inhaltsflaeche in `super::vorschau`.
-        let (rolle, text) = textflaeche_bauen(
-            mtm,
-            NSRect::new(
-                NSPoint::ZERO,
-                NSSize::new(
-                    AUFBAUGROESSE.width,
-                    AUFBAUGROESSE.height - statuszeile::HOEHE,
-                ),
+        let flaechenrahmen = NSRect::new(
+            NSPoint::ZERO,
+            NSSize::new(
+                AUFBAUGROESSE.width,
+                AUFBAUGROESSE.height - statuszeile::HOEHE,
             ),
         );
+        let (rolle, text) = textflaeche_bauen(mtm, flaechenrahmen);
         bereich.addSubview(&rolle);
+        // Die Tabelle liegt deckungsgleich darueber und entsteht ausgeblendet;
+        // welche der beiden zu sehen ist, entscheidet `flaeche_waehlen`.
+        let eintraege = Eintragsansicht::bauen(mtm, flaechenrahmen);
+        bereich.addSubview(eintraege.rolle());
 
         let kopf = kopf_bauen(mtm);
         kopf.setFrame(NSRect::new(
@@ -1600,6 +1781,9 @@ impl Editorbereich {
             bereich,
             kopf,
             text,
+            textrolle: rolle,
+            eintraege,
+            gezeigt: Cell::new(Flaeche::Textflaeche),
             modell: RefCell::new(Editormodell::neu(heim)),
             takt: RefCell::new(None),
             melden: RefCell::new(None),
@@ -1675,6 +1859,186 @@ impl Editorbereich {
     /// [`Self::stand_einsetzen`].
     pub fn textflaeche(&self) -> &NSTextView {
         &self.ivars().text
+    }
+
+    /// Die Ansicht, die den Eingabefokus bekommt, wenn er in den Editor geht:
+    /// die Textflaeche oder die Tabelle, je nachdem, welche zu sehen ist.
+    ///
+    /// Der Anwendungsdelegierte fragt danach, wenn er den Fokus in den Editor
+    /// setzt; eine ausgeblendete Flaeche bekaeme den Rang sonst und gaebe ihn
+    /// sofort wieder ab (siehe [`tauschschritte`]).
+    pub fn fokusziel(&self) -> &NSView {
+        self.ansicht_der_flaeche(self.ivars().gezeigt.get())
+    }
+
+    /// Was der Editor gerade zeigt (Plan des Arbeitspakets
+    /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`, Schritt 3.2a).
+    ///
+    /// Aus dem Modell abgeleitet und nicht aus der gezeigten Flaeche gelesen:
+    /// die Form ist die Frage, welche Befehle hier wirken (ab Schritt 3.3), und
+    /// die Antwort darauf haengt an Ansicht und Datei und nicht daran, ob der
+    /// Tausch schon gelaufen ist. [`Self::flaeche_waehlen`] haelt die beiden
+    /// nach jedem Wechsel beieinander.
+    #[must_use]
+    pub fn form(&self) -> Editorform {
+        let modell = self.ivars().modell.borrow();
+        editorform(modell.ansicht(), modell.typ())
+    }
+
+    /// Schreibt den Neustand einer Tabellenhandlung ein, als eine
+    /// ruecknehmbare Handlung (C6).
+    ///
+    /// **Derselbe Weg wie [`Self::treffer_ersetzen`] und kein zweiter**:
+    /// Abschrift des alten Standes, [`Editormodell::bearbeiten`],
+    /// [`Umkehrpunkt::zwischen`], [`Self::verlauf_fuer_umbau`] gegen das
+    /// [`STAPELBUDGET`], [`Self::stand_erneuern`]. Die Handlung landet damit im
+    /// Verwalter, in dem die Textflaeche ihr Tippen fuehrt, und ein `cmd+z` mit
+    /// der Tabelle als Ersthelfer nimmt sie zurueck, weil die Tabelle ueber die
+    /// Antwortkette denselben Verwalter findet. Abweichungsmarke, Sichern und
+    /// die Rueckfrage beim Schliessen sehen den neuen Stand, weil er im Modell
+    /// steht und nirgends sonst.
+    ///
+    /// **Die Flaechen bleiben, wie sie sind.** Ein Umbau aendert weder Ansicht
+    /// noch Datei, also ruft er [`Self::flaeche_waehlen`] nicht; die Tabelle
+    /// zieht ihre Zeilen ueber [`Self::stand_erneuern`] nach, und danach steht
+    /// die Auswahl, die der Kern genannt hat.
+    ///
+    /// Die Antwort von [`Editormodell::bearbeiten`] faellt: der Umkehrpunkt
+    /// entsteht gegen den Stand, den das Modell danach haelt, und passt deshalb
+    /// auch dann, wenn die Wandlung in die gehaltene Form zugegriffen hat.
+    #[expect(
+        dead_code,
+        reason = "die Rufer sind die Tabellenhandlungen ab Schritt 3.2b; bis dahin haelt allein die Quelltextprobe `der_umbau_geht_den_weg_des_ersetzens` den Rumpf"
+    )]
+    pub fn umbau_anwenden(&self, neustand: Neustand) {
+        let Neustand { text, auswahl } = neustand;
+        let schreibmarke = self.ivars().text.selectedRange();
+        let punkt = {
+            let mut modell = self.ivars().modell.borrow_mut();
+            let vorher = modell.stand().to_owned();
+            let _ = modell.bearbeiten(text);
+            Umkehrpunkt::zwischen(&vorher, modell.stand(), schreibmarke)
+        };
+        let verlauf = self.verlauf_fuer_umbau(punkt);
+        self.stand_erneuern(verlauf);
+        self.ivars().eintraege.auswahl_setzen(auswahl);
+    }
+
+    /// Zeigt die Flaeche, die zur Form des Editors gehoert, und uebergibt den
+    /// Ersthelfer, wenn die bisherige ihn haelt.
+    ///
+    /// **Gerufen allein bei einem Wechsel von Datei oder Ansicht**: nach einem
+    /// gelungenen Oeffnen ([`Self::ladeausgang_einziehen`],
+    /// [`Self::zurueckgehaltenes_uebernehmen`]), nach dem Aufgeben der Datei
+    /// ([`Self::schliessen`]) und nach [`Self::ansicht_umschalten`]. **Nie aus
+    /// [`Self::stand_erneuern`]**, das bei jedem Umbau und jedem `cmd+z` laeuft,
+    /// also auch mitten in einem Rueckgaengig-Block; ein `makeFirstResponder:`
+    /// von dort landete mitten in einem anderen. Eine Quelltextprobe haelt
+    /// die Ruempfe von `stand_erneuern`, `text_zurueckschreiben`,
+    /// `umbau_anwenden`, `darstellung_nachziehen` und `tabelle_nachziehen`
+    /// frei von beiden Aufrufen.
+    ///
+    /// **Das Schliessen steht dabei, obwohl es keine Datei laedt**: es wechselt
+    /// den Dateityp auf den einer leeren Flaeche, und ohne den Ruf bliebe eine
+    /// Tabelle ohne Datei stehen, deren Form das Modell schon als Text meldet.
+    ///
+    /// Welche Schritte in welcher Reihenfolge, sagt [`tauschschritte`]; hier
+    /// steht allein ihre Ausfuehrung. Die gezeigte Flaeche wird **vor** den
+    /// Schritten umgestellt, damit [`Self::fokusziel`] schon die neue nennt,
+    /// wenn die Uebergabe des Ersthelfers den Melder des Hauptfensters ausloest
+    /// und der Anwendungsdelegierte nachfragt.
+    ///
+    /// **Lehnt AppKit die Uebergabe ab**, wird trotzdem ausgeblendet: eine
+    /// `NSTextView` und eine `NSTableView` geben den Rang ohne Rueckfrage ab,
+    /// solange keine Zelle bearbeitet wird, und die Zellenbearbeitung kommt
+    /// erst mit Schritt 3.2b, der die laufende Zelle vor jedem Ansichtswechsel
+    /// uebernimmt.
+    fn flaeche_waehlen(&self) {
+        let schritte = self.tausch_planen();
+        if schritte.is_empty() {
+            return;
+        }
+        self.ivars().gezeigt.set(flaeche_der_form(self.form()));
+        let fenster = self.ivars().bereich.window();
+        tausch_ausfuehren(
+            &schritte,
+            |flaeche| self.flaechenrolle(flaeche),
+            |flaeche| {
+                if let Some(fenster) = fenster.as_deref() {
+                    // Die Antwort faellt; warum, steht im Doc-Kommentar unter
+                    // „Lehnt AppKit die Uebergabe ab".
+                    let _ = fenster.makeFirstResponder(Some(self.ansicht_der_flaeche(flaeche)));
+                }
+            },
+        );
+    }
+
+    /// Die Schritte, die [`Self::flaeche_waehlen`] jetzt ausfuehren wuerde.
+    ///
+    /// Stimmen gezeigte und gewuenschte Flaeche ueberein, ist die Antwort die
+    /// leere Liste, und das Fenster wird gar nicht erst gefragt; so ist es nach
+    /// jedem Tausch, und ein zweiter Ruf tut nichts. Sonst entscheidet allein,
+    /// ob der Ersthelfer in der Rolle der alten Flaeche liegt, und die
+    /// Reihenfolge legt [`tauschschritte`] fest.
+    fn tausch_planen(&self) -> Vec<Tauschschritt> {
+        let gezeigt = self.ivars().gezeigt.get();
+        let gewuenscht = flaeche_der_form(self.form());
+        if gezeigt == gewuenscht {
+            return Vec::new();
+        }
+        let alte = self.flaechenrolle(gezeigt);
+        let haelt = self
+            .ivars()
+            .bereich
+            .window()
+            .and_then(|fenster| fenster.firstResponder())
+            .is_some_and(|ersthelfer| {
+                ersthelfer
+                    .downcast_ref::<NSView>()
+                    .is_some_and(|ansicht| ansicht.isDescendantOf(alte))
+            });
+        tauschschritte(gezeigt, gewuenscht, haelt)
+    }
+
+    /// Die Rolle, die eine Flaeche traegt: sie wird ein- und ausgeblendet.
+    fn flaechenrolle(&self, flaeche: Flaeche) -> &NSView {
+        match flaeche {
+            Flaeche::Textflaeche => &self.ivars().textrolle,
+            Flaeche::Tabelle => self.ivars().eintraege.rolle(),
+        }
+    }
+
+    /// Die Ansicht einer Flaeche, die den Ersthelfer nimmt.
+    fn ansicht_der_flaeche(&self, flaeche: Flaeche) -> &NSView {
+        match flaeche {
+            Flaeche::Textflaeche => &self.ivars().text,
+            Flaeche::Tabelle => self.ivars().eintraege.tabelle(),
+        }
+    }
+
+    /// Leitet die Zeilen der Tabelle aus dem gehaltenen Stand neu ab.
+    ///
+    /// Gerufen nach jeder Aenderung des Standes: aus [`Self::stand_erneuern`]
+    /// und aus [`Self::text_zurueckschreiben`]. Das zweite ist der Weg, auf dem
+    /// ein `cmd+z` einer Tipp-Handlung ankommt — die Textflaeche nimmt es
+    /// zurueck, auch wenn sie ausgeblendet ist, und meldet es ueber
+    /// `textDidChange:` —, und ohne diesen Ruf zeigte die Tabelle danach den
+    /// Stand vor dem Rueckgaengig. Fuer jede andere Datei als `tasks.txt`
+    /// kommt die leere Liste an, und [`Eintragsansicht::zeilen_zeigen`] tut dann
+    /// nichts.
+    fn tabelle_nachziehen(&self) {
+        let zeilen = {
+            let modell = self.ivars().modell.borrow();
+            match modell.typ() {
+                Dateityp::Eintraege(Sonderdatei::Aufgaben) => {
+                    eintragsansicht::aufgabenzeilen(modell.stand())
+                }
+                Dateityp::Eintraege(Sonderdatei::Notizen)
+                | Dateityp::Markdown
+                | Dateityp::Sonstiges => Vec::new(),
+            }
+        };
+        self.ivars().eintraege.zeilen_zeigen(zeilen);
     }
 
     /// Ob der Editor eine Datei haelt (C1, C2).
@@ -1829,6 +2193,7 @@ impl Editorbereich {
         if ausgang == Ladeausgang::Geoeffnet {
             // Ein Dateiwechsel: der Verlauf gehoerte der vorigen Datei.
             self.stand_erneuern(Verlauf::Faellt);
+            self.flaeche_waehlen();
         }
         self.melden(ausgang);
     }
@@ -1859,6 +2224,7 @@ impl Editorbereich {
         // und `darstellung_nachziehen` raeumt die gesetzten Merkmale ab und
         // laesst einen laufenden Einfaerbungsfaden fallen.
         self.stand_erneuern(Verlauf::Faellt);
+        self.flaeche_waehlen();
     }
 
     /// Holt die Meldung des Arbeitsfadens ab (C2).
@@ -1907,7 +2273,9 @@ impl Editorbereich {
             // verlangen als die vorige: Schrift, Umbruch und Einfaerbung
             // haengen am Dateityp und an der Sprache, die die Kiste kennt.
             // `Faellt`, weil der Verlauf auf den Text der vorigen Datei zeigte.
+            // Die Flaeche danach: die neue Datei kann eine andere verlangen.
             self.stand_erneuern(Verlauf::Faellt);
+            self.flaeche_waehlen();
         }
         self.melden(ausgang);
     }
@@ -2073,6 +2441,8 @@ impl Editorbereich {
         // Anfrage kostet nichts, solange schon eine laeuft; siehe
         // [`Self::einfaerbung_anfordern`].
         self.einfaerbung_anfordern();
+        // Die Tabelle zeigt denselben Stand; siehe `tabelle_nachziehen`.
+        self.tabelle_nachziehen();
     }
 
     /// Schreibt Dateiname und Abweichungszeichen in den Kopf (C4).
@@ -2349,6 +2719,7 @@ impl Editorbereich {
         self.stand_einsetzen(verlauf);
         self.kopf_nachziehen();
         self.darstellung_nachziehen();
+        self.tabelle_nachziehen();
     }
 
     /// Bringt die Textflaeche auf den gehaltenen Stand, nachdem die Wandlung in
@@ -2879,6 +3250,7 @@ impl Editorbereich {
         // lassen.
         let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
         self.darstellung_nachziehen();
+        self.flaeche_waehlen();
     }
 
     /// Setzt Grundschrift, Umbruch und Merkmale auf die gewaehlte Ansicht (C3).
@@ -3421,7 +3793,7 @@ mod tests {
     use krk_core::text::marke::wiederfinden;
     use krk_core::text::suche;
     use objc2::runtime::{AnyClass, AnyProtocol, Sel};
-    use objc2_app_kit::{NSTextInputTraitType, NSWritingToolsBehavior};
+    use objc2_app_kit::{NSResponder, NSTextInputTraitType, NSWritingToolsBehavior};
     use objc2_foundation::NSNumber;
 
     use super::*;
@@ -5638,5 +6010,393 @@ mod tests {
                 "{name} bringt Zeichen in den Text, die niemand getippt hat"
             );
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Der Umbauweg und der Flaechentausch (Schritt 3.2a der krkhome-Arbeit)
+    // ------------------------------------------------------------------
+    //
+    // **Ein ganzer Editorbereich steht in keiner dieser Proben, und das ist
+    // gemessen und nicht bequem.** Am 260926 an dieser Datei: ein `NSWindow`
+    // endet auf dem Faden von `libtest` mit „Rust cannot catch foreign
+    // exceptions" und `SIGABRT`, und schon `setString:` an einer nackten
+    // `NSTextView` endet dort mit `SIGSEGV`, mit und ohne Freigabeverbund.
+    // `Editorbereich::bauen` schreibt ueber `stand_erneuern` in seine Flaeche,
+    // also ist er hier nicht zu bauen. Die Proben darunter fahren deshalb die
+    // Teile, die sich ohne ihn fahren lassen: die reinen Regeln, die Tabelle,
+    // den Tausch an echten Rollen, den gemeinsamen Verwalter an echten
+    // Flaechen und die Ruempfe. Was dabei offen bleibt, ist Nutzerarbeit am
+    // laufenden Buendel; die Ausweichform waere ein Pruefziel ohne `libtest`,
+    // und das haengt an `decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`
+    // (zurueckgestellt).
+
+    /// `tasks.txt` der Proben: Vorspann, zwei Aufgaben, eine fremde Zeile an
+    /// der ersten.
+    const AUFGABEN: &str = "# Aufgaben\n- [ ] Brot\n  fremde Zeile\n- [x] Steuer\n";
+
+    define_class!(
+        /// Ein Glied der Antwortkette, das einen Rueckgaengigverwalter hat.
+        ///
+        /// **Der Ersatz fuer das Fenster, das die Proben nicht haben.**
+        /// `undoManager` von `NSResponder` fragt ohne eigene Antwort das
+        /// naechste Glied der Kette; haengt dieses Objekt hinter einer Ansicht,
+        /// finden alle Flaechen darin **denselben** Verwalter, wie sie im
+        /// Programm den des Fensters finden.
+        // SAFETY:
+        // - Die Oberklasse NSResponder stellt keine Bedingungen an
+        //   Unterklassen; die eine Ueberschreibung liefert ein Objekt, das
+        //   dieses Objekt selbst haelt.
+        // - Die Klasse implementiert `Drop` nicht.
+        #[unsafe(super = NSResponder)]
+        #[thread_kind = MainThreadOnly]
+        #[ivars = Retained<NSUndoManager>]
+        struct Verwalterhalter;
+
+        // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+        unsafe impl NSObjectProtocol for Verwalterhalter {}
+
+        impl Verwalterhalter {
+            // SAFETY: Die Signatur entspricht der Eigenschaft von NSResponder
+            // (`NSResponder.h:309`).
+            #[unsafe(method_id(undoManager))]
+            fn verwalter(&self) -> Option<Retained<NSUndoManager>> {
+                Some(self.ivars().clone())
+            }
+        }
+    );
+
+    /// Gleiche Flaechen: kein Schritt, gleich wer den Ersthelfer haelt. Damit
+    /// ruft ein zweiter Ruf von `flaeche_waehlen` weder `setHidden:` noch
+    /// `makeFirstResponder:`.
+    #[test]
+    fn ohne_wechsel_der_flaeche_gibt_es_keinen_tauschschritt() {
+        for flaeche in [Flaeche::Textflaeche, Flaeche::Tabelle] {
+            for haelt in [false, true] {
+                assert!(tauschschritte(flaeche, flaeche, haelt).is_empty());
+            }
+        }
+    }
+
+    /// Der Ersthelfer geht auf die neue Flaeche ueber, **bevor** die alte
+    /// ausgeblendet wird, und die neue ist dabei schon sichtbar.
+    #[test]
+    fn der_ersthelfer_geht_vor_dem_ausblenden_auf_die_neue_flaeche() {
+        use Flaeche::{Tabelle, Textflaeche};
+        use Tauschschritt::{Ausblenden, Einblenden, Ersthelfer};
+        assert_eq!(
+            tauschschritte(Textflaeche, Tabelle, true),
+            vec![
+                Einblenden(Tabelle),
+                Ersthelfer(Tabelle),
+                Ausblenden(Textflaeche)
+            ]
+        );
+        assert_eq!(
+            tauschschritte(Tabelle, Textflaeche, true),
+            vec![
+                Einblenden(Textflaeche),
+                Ersthelfer(Textflaeche),
+                Ausblenden(Tabelle)
+            ]
+        );
+    }
+
+    /// Haelt die alte Flaeche den Ersthelfer nicht, bleibt er, wo er ist: ein
+    /// Dateiwechsel aus dem Dateifenster heraus holt den Fokus nicht in den
+    /// Editor.
+    #[test]
+    fn ohne_ersthelfer_wird_nur_getauscht() {
+        use Flaeche::{Tabelle, Textflaeche};
+        use Tauschschritt::{Ausblenden, Einblenden};
+        assert_eq!(
+            tauschschritte(Textflaeche, Tabelle, false),
+            vec![Einblenden(Tabelle), Ausblenden(Textflaeche)]
+        );
+    }
+
+    /// Die Tabelle gehoert allein zu `tasks.txt` in der Formatansicht; eine
+    /// `.md`, `notes.txt` und jede Datei in der Rohansicht zeigen die
+    /// Textflaeche.
+    #[test]
+    fn die_form_folgt_aus_ansicht_und_dateityp() {
+        let aufgaben = Dateityp::Eintraege(Sonderdatei::Aufgaben);
+        assert_eq!(editorform(Ansicht::Format, aufgaben), Editorform::Aufgaben);
+        assert_eq!(flaeche_der_form(Editorform::Aufgaben), Flaeche::Tabelle);
+        assert_eq!(editorform(Ansicht::Roh, aufgaben), Editorform::Text);
+        assert_eq!(flaeche_der_form(Editorform::Text), Flaeche::Textflaeche);
+        for typ in [
+            Dateityp::Markdown,
+            Dateityp::Sonstiges,
+            Dateityp::Eintraege(Sonderdatei::Notizen),
+        ] {
+            for ansicht in [Ansicht::Roh, Ansicht::Format] {
+                assert_eq!(
+                    editorform(ansicht, typ),
+                    Editorform::Text,
+                    "{typ:?} {ansicht:?}"
+                );
+            }
+        }
+    }
+
+    /// Der Tausch an echten Rollen: im Augenblick der Uebergabe ist die neue
+    /// Flaeche schon sichtbar und die alte noch nicht ausgeblendet, danach ist
+    /// nur die neue zu sehen. Die Uebergabe selbst zeichnet die Probe auf, weil
+    /// `makeFirstResponder:` ein Fenster braucht.
+    #[test]
+    fn beim_tausch_ist_die_neue_flaeche_sichtbar_bevor_der_ersthelfer_uebergeht() {
+        an_einer_flaeche(|mtm| {
+            let (textrolle, _text) = textflaeche_bauen(mtm, probenrahmen());
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let rolle = |flaeche: Flaeche| -> &NSView {
+                match flaeche {
+                    Flaeche::Textflaeche => &textrolle,
+                    Flaeche::Tabelle => eintraege.rolle(),
+                }
+            };
+            for (alt, neu) in [
+                (Flaeche::Textflaeche, Flaeche::Tabelle),
+                (Flaeche::Tabelle, Flaeche::Textflaeche),
+            ] {
+                let mut uebergaben = Vec::new();
+                tausch_ausfuehren(&tauschschritte(alt, neu, true), rolle, |flaeche| {
+                    uebergaben.push((flaeche, rolle(neu).isHidden(), rolle(alt).isHidden()));
+                });
+                assert_eq!(
+                    uebergaben,
+                    vec![(neu, false, false)],
+                    "eine Uebergabe, an die sichtbare neue Flaeche, solange die alte noch steht"
+                );
+                assert!(!rolle(neu).isHidden(), "{neu:?} ist zu sehen");
+                assert!(rolle(alt).isHidden(), "{alt:?} ist ausgeblendet");
+            }
+        });
+    }
+
+    /// Die Tabelle leitet ihre Zeilen aus dem Stand ab, beschneidet die
+    /// Auswahl, wenn eine Zeile faellt, und nimmt keine Stelle hinter der
+    /// letzten an.
+    #[test]
+    fn die_tabelle_zeigt_die_zeilen_des_standes() {
+        use krk_core::heimordner::eintraege::aufgaben;
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            assert!(eintraege.rolle().isHidden(), "sie entsteht ausgeblendet");
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            assert_eq!(
+                eintraege.tabelle().numberOfRows(),
+                2,
+                "Vorspann und fremde Zeile sind keine Zeilen"
+            );
+
+            eintraege.auswahl_setzen(Some(1));
+            assert_eq!(eintraege.tabelle().selectedRow(), 1);
+            eintraege.auswahl_setzen(Some(2));
+            assert_eq!(
+                eintraege.tabelle().selectedRow(),
+                1,
+                "eine Stelle hinter der letzten Zeile laesst die Auswahl stehen"
+            );
+
+            let ohne_letzte = aufgaben::loeschen(AUFGABEN, 1).expect("die zweite Aufgabe steht");
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&ohne_letzte.text));
+            assert_eq!(eintraege.tabelle().numberOfRows(), 1);
+            assert_eq!(
+                eintraege.tabelle().selectedRow(),
+                0,
+                "die Auswahl rueckt auf die neue letzte Zeile"
+            );
+
+            eintraege.zeilen_zeigen(Vec::new());
+            assert_eq!(eintraege.tabelle().numberOfRows(), 0);
+        });
+    }
+
+    /// Textflaeche und Tabelle finden ueber die Antwortkette **denselben**
+    /// Verwalter. Das ist die Bedingung dafuer, dass ein `cmd+z` mit der
+    /// Tabelle als Ersthelfer das Tippen der ausgeblendeten Textflaeche und
+    /// jeden Umbau zuruecknimmt: `NSWindow` beantwortet `undo:` mit dem
+    /// Verwalter des Ersthelfers (Kopf von `rueckgaengigstapel_leeren`), und es
+    /// gibt nur einen.
+    #[test]
+    fn textflaeche_und_tabelle_finden_denselben_verwalter() {
+        an_einer_flaeche(|mtm| {
+            let sicht = Editorsicht::neu(mtm, probenrahmen());
+            let (textrolle, text) = textflaeche_bauen(mtm, probenrahmen());
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            sicht.addSubview(&textrolle);
+            sicht.addSubview(eintraege.rolle());
+            assert!(
+                text.undoManager().is_none(),
+                "die Voraussetzung: ohne Kette gibt es keinen Verwalter"
+            );
+
+            let verwalter = NSUndoManager::new(mtm);
+            let halter = Verwalterhalter::alloc(mtm).set_ivars(verwalter.clone());
+            // SAFETY: `init` von NSObject, die NSResponder erbt, hat die hier
+            // angenommene Signatur.
+            let halter: Retained<Verwalterhalter> = unsafe { msg_send![super(halter), init] };
+            // SAFETY: Die Sicht hat keine Oberansicht und damit kein naechstes
+            // Glied; der Halter hat selbst keines, ein Ring entsteht nicht, und
+            // er lebt bis zum Ende dieser Probe.
+            unsafe { sicht.setNextResponder(Some(&halter)) };
+
+            let von_text = text.undoManager().expect("die Textflaeche findet ihn");
+            let von_tabelle = eintraege
+                .tabelle()
+                .undoManager()
+                .expect("die Tabelle findet ihn");
+            assert!(von_text.isEqual(Some(&verwalter)));
+            assert!(
+                von_tabelle.isEqual(Some(&verwalter)),
+                "ein Verwalter und kein zweiter Stapel"
+            );
+            eintraege.rolle().setHidden(false);
+            textrolle.setHidden(true);
+            assert!(
+                text.undoManager()
+                    .is_some_and(|v| v.isEqual(Some(&verwalter))),
+                "auch ausgeblendet bleibt die Textflaeche an demselben Verwalter"
+            );
+        });
+    }
+
+    /// Jede Handlung des Kerns an `tasks.txt` ist ueber einen [`Umkehrpunkt`]
+    /// Byte fuer Byte zuruecknehmbar und wiederherstellbar — das ist, was
+    /// `umbau_anwenden` in den Verwalter legt.
+    #[test]
+    fn jede_aufgabenhandlung_ist_ueber_einen_umkehrpunkt_zuruecknehmbar() {
+        use krk_core::heimordner::eintraege::{Richtung, aufgaben};
+        let neustaende = [
+            aufgaben::hinzufuegen(AUFGABEN, "Milch").expect("ein Text ohne Umbruch"),
+            aufgaben::text_aendern(AUFGABEN, 0, "Brot und Butter")
+                .expect("ein Text ohne Umbruch")
+                .expect("die Aufgabe steht und der Text ist neu"),
+            aufgaben::abhaken(AUFGABEN, 1).expect("die zweite Aufgabe steht"),
+            aufgaben::loeschen(AUFGABEN, 0).expect("die erste Aufgabe steht"),
+            aufgaben::verschieben(AUFGABEN, 1, Richtung::Hoch).expect("sie hat eine darueber"),
+        ];
+        for neustand in neustaende {
+            let punkt = Umkehrpunkt::zwischen(AUFGABEN, &neustand.text, NSRange::new(0, 0));
+            let zurueck = punkt.angewandt_auf(&neustand.text);
+            assert_eq!(zurueck, AUFGABEN, "zurueck aus {:?}", neustand.text);
+            let gegenweg = Umkehrpunkt::zwischen(&neustand.text, &zurueck, NSRange::new(0, 0));
+            assert_eq!(gegenweg.angewandt_auf(&zurueck), neustand.text);
+        }
+    }
+
+    /// `umbau_anwenden` geht den Weg von `treffer_ersetzen` und keinen
+    /// zweiten: Abschrift, `bearbeiten`, Umkehrpunkt, Budget, `stand_erneuern`.
+    /// Er leert keinen Verlauf und laesst keinen fallen.
+    #[test]
+    fn der_umbau_geht_den_weg_des_ersetzens() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let umbau = rumpf(&quelle, "umbau_anwenden");
+        for nadel in [
+            concat!(".bear", "beiten("),
+            concat!("Umkehrpunkt::zwi", "schen("),
+            concat!("self.verlauf_fuer", "_umbau("),
+            concat!("self.stand_er", "neuern("),
+        ] {
+            assert!(umbau.contains(nadel), "umbau_anwenden ruft {nadel} nicht");
+        }
+        for nadel in [
+            concat!("Verlauf::Fa", "ellt"),
+            concat!("rueckgaengigstapel", "_leeren("),
+        ] {
+            assert!(!umbau.contains(nadel), "umbau_anwenden ruft {nadel}");
+        }
+    }
+
+    /// Die Tabelle zieht nach jeder Aenderung des Standes nach: aus
+    /// `stand_erneuern` (Umbau, Umkehren, Oeffnen, Schliessen) und aus
+    /// `text_zurueckschreiben`, dem Weg, auf dem das Tippen **und** sein
+    /// Rueckgaengig ankommen. Ohne den zweiten zeigte die Tabelle nach einem
+    /// `cmd+z` auf eine Tipp-Handlung der Rohansicht den Stand davor.
+    #[test]
+    fn die_tabelle_zieht_nach_jeder_aenderung_des_standes_nach() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        for name in ["stand_erneuern", "text_zurueckschreiben"] {
+            assert!(
+                rumpf(&quelle, name).contains(concat!("self.tabelle_", "nachziehen(")),
+                "{name} zieht die Tabelle nicht nach"
+            );
+        }
+    }
+
+    /// Die Nachzuege des Standes ruehren die Flaechen nicht an: weder
+    /// `setHidden:` noch `makeFirstResponder:` steht in ihren Ruempfen. Ein
+    /// Tausch aus `stand_erneuern` liefe bei jedem Umbau und jedem `cmd+z`,
+    /// also auch mitten in einem Rueckgaengig-Block. Bauart von
+    /// `der_nachzug_der_anzeige_ruehrt_die_auslegung_nicht_an`.
+    ///
+    /// **Was sie nicht sieht:** einen Weg, der ueber eine dritte Funktion zum
+    /// Tausch fuehrt, ohne sie hier beim Namen zu nennen. Deshalb stehen die
+    /// beiden Gerufenen `darstellung_nachziehen` und `tabelle_nachziehen` mit
+    /// in der Liste, und die Probe darunter haelt die Rufer des Tauschs.
+    #[test]
+    fn die_nachzuege_des_standes_ruehren_die_flaechen_nicht_an() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        for name in [
+            "stand_erneuern",
+            "text_zurueckschreiben",
+            "umbau_anwenden",
+            "darstellung_nachziehen",
+            "tabelle_nachziehen",
+        ] {
+            let rumpf = rumpf(&quelle, name);
+            for nadel in [
+                concat!("set", "Hidden("),
+                concat!("makeFirst", "Responder("),
+                concat!("flaeche_", "waehlen("),
+                concat!("tausch_", "ausfuehren("),
+            ] {
+                assert!(!rumpf.contains(nadel), "{name} ruft {nadel}");
+            }
+        }
+    }
+
+    /// Getauscht wird allein bei einem Wechsel von Datei oder Ansicht:
+    /// `flaeche_waehlen` hat genau diese vier Rufer, `makeFirstResponder:`
+    /// steht im Editor an genau einer Stelle, in `flaeche_waehlen`, und
+    /// `setHidden:` allein in `tausch_ausfuehren`.
+    #[test]
+    fn getauscht_wird_allein_bei_einem_wechsel_von_datei_oder_ansicht() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let (code, _) = quelle
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .expect("das Pruefmodul steht am Fuss der Datei");
+
+        let rufer = [
+            "ladeausgang_einziehen",
+            "zurueckgehaltenes_uebernehmen",
+            "schliessen",
+            "ansicht_umschalten",
+        ];
+        for name in rufer {
+            assert!(
+                rumpf(&quelle, name).contains(concat!("self.flaeche_", "waehlen()")),
+                "{name} tauscht nicht"
+            );
+        }
+        let zeilen = |nadel: &str| {
+            code.lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(nadel))
+                .count()
+        };
+        assert_eq!(
+            zeilen(concat!("self.flaeche_", "waehlen()")),
+            rufer.len(),
+            "ein Rufer ausser den vier"
+        );
+        assert_eq!(zeilen(concat!("makeFirst", "Responder(")), 1);
+        assert!(rumpf(&quelle, "flaeche_waehlen").contains(concat!("makeFirst", "Responder(")));
+        assert_eq!(zeilen(concat!("set", "Hidden(")), 2);
+        assert!(rumpf(&quelle, "tausch_ausfuehren<'a>").contains(concat!("set", "Hidden(")));
     }
 }

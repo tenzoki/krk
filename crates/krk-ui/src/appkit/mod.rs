@@ -65,6 +65,9 @@
 //! eine editierbare `NSTextView` in einer `NSScrollView`, waehrend gehaltene
 //! Datei, Stand, Ansichtswahl und Suchlauf in `crate::editormodell` wohnen. Er
 //! und die Vorschau teilen sich denselben Platz in der Fensterzeile.
+//! [`eintragsansicht`] haelt die Tabelle, die der Editor in der Formatansicht
+//! von `tasks.txt` im erkannten `~/krkhome/` an Stelle der Textflaeche zeigt;
+//! sie ist eine Sicht auf den Stand des Editors und haelt keinen eigenen.
 //! [`textautomatik`] haelt die eine Antwort darauf, welche Automatiken an einer
 //! bearbeitbaren Textflaeche abgeschaltet gehoeren. Sie stand bis zur Runde 8
 //! mitten in [`editor`], und das trug, solange es genau eine bearbeitbare
@@ -234,6 +237,7 @@ mod betrachter;
 mod bildtakt;
 mod blaetter;
 mod editor;
+mod eintragsansicht;
 mod ereignisse;
 mod fenster;
 mod finder;

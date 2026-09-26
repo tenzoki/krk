@@ -1,0 +1,467 @@
+//! Die Eintragsansicht: `tasks.txt` aus dem erkannten `~/krkhome/` als Tabelle
+//! in der Formatansicht des Editors (C6 des Arbeitspakets
+//! `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
+//!
+//! ```text
+//! ┌──────────────────────────────┐
+//! │ • tasks.txt                  │  der Kopf gehoert dem Editor
+//! ├──────────────────────────────┤
+//! │ NSScrollView                 │  liegt deckungsgleich ueber der Rolle
+//! │  ┌─────────────────────────┐ │  der Textflaeche; eine der beiden ist
+//! │  │ ☐ Brot kaufen           │ │  ausgeblendet
+//! │  │ ☑ Steuer                │ │
+//! │  └─────────────────────────┘ │
+//! └──────────────────────────────┘
+//! ```
+//!
+//! # Eine Sicht auf den Stand des Editors und kein eigenes Modell
+//!
+//! **Die Tabelle haelt keine Eintraege, sondern eine Ableitung.** Ihre Zeilen
+//! entstehen aus dem Stand, den das [`crate::editormodell::Editormodell`] haelt,
+//! ueber [`aufgabenzeilen`], und das ist die eine Stelle der Ableitung; sie
+//! liest den Stand mit `krk_core::heimordner::eintraege::Aufgaben`, derselben
+//! Zerlegung, mit der die Handlungen des Kerns rechnen. Gerufen wird sie vom
+//! Editorbereich nach jeder Aenderung des Standes, und
+//! [`Eintragsansicht::zeilen_zeigen`] laedt die Tabelle nur dann neu, wenn sich
+//! die abgeleiteten Zeilen wirklich geaendert haben: der Editorbereich ruft
+//! auch beim Tippen in einer ganz anderen Datei, und dann ist nichts zu tun.
+//!
+//! **Jede Aenderung geht deshalb durch den Editor.** Eine Handlung an der
+//! Tabelle rechnet der Kern aus dem alten Stand in einen neuen, und
+//! `Editorbereich::umbau_anwenden` schreibt ihn auf demselben Weg ein wie das
+//! Ersetzen der Suche: ein Stand, ein Rueckgaengigverwalter, eine
+//! Abweichungsmarke. Ein zweiter Stapel fuer die Tabelle entsteht nicht; wie der
+//! Verwalter des Fensters auch mit der Tabelle als Ersthelfer derselbe bleibt,
+//! steht im Modulkopf von [`super::editor`] unter
+//! `rueckgaengigstapel_leeren`.
+//!
+//! # Dieser Stand zeigt nur an
+//!
+//! Schritt 3.2a des Plans
+//! `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
+//! baut die Tabelle **anzeigend**: das Ankreuzfeld zeigt den Zustand der
+//! Aufgabe und ist abgeschaltet, das Textfeld ist ein Etikett, und die Zeilen
+//! lassen sich mit Maus und Pfeiltasten waehlen. Die Pfeile kommen von AppKit:
+//! der Ereignisabgriff reicht eine Taste, deren Befehl hier nicht wirkt,
+//! unveraendert weiter ([`super::ereignisse`]). Zellenbearbeitung, die Handlung
+//! am Ankreuzfeld und `copy:` bringt Schritt 3.2b.
+//!
+//! **Die Tabelle ist eine eigene Klasse, obwohl sie heute nichts
+//! ueberschreibt.** [`Eintragstabelle`] ist die Naemlichkeit, an der Schritt 3.2b
+//! die laufende Zelle erkennt (ein Feldeditor, dessen Delegierter unter dieser
+//! Tabelle liegt), und die Stelle, an der `copy:` ankommt. Eine blosse
+//! `NSTableView` jetzt und eine Unterklasse dann waere ein Umbau des Aufbaus
+//! zwischen zwei Schritten, die denselben Aufbau brauchen.
+//!
+//! # Ab welchem macOS die angesprochenen Klassen stehen
+//!
+//! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSButton`,
+//! `NSTextField`, `NSFont`, `NSIndexSet`, `NSObject` und `NSString` stehen seit
+//! macOS 10.0 zur Verfuegung, ebenso die drei bedienten Protokolle
+//! `NSTableViewDataSource`, `NSTableViewDelegate` und
+//! `NSControlTextEditingDelegate` samt `NSObjectProtocol`, dem Kistennamen des
+//! Protokolls `NSObject` (`objc/NSObject.h`), und die Aufzaehlungen
+//! `NSAutoresizingMaskOptions`, `NSTableColumnResizingOptions` und
+//! `NSLineBreakMode` (`NSParagraphStyle.h:25`). Ohne eigene
+//! Verfuegbarkeitsangabe und damit seit 10.0 stehen die hier gerufenen Methoden
+//! `alloc`, `init`, `initWithFrame:`, `addSubview:`, `setFrame:`,
+//! `setAutoresizingMask:`, `setHidden:`, `setHasVerticalScroller:`,
+//! `setAutohidesScrollers:`, `setDocumentView:`, `setRowHeight:`
+//! (`NSTableView.h:206`), `setHeaderView:` (`:156`), `initWithIdentifier:`
+//! (`NSTableColumn.h:31`), `setResizingMask:`, `addTableColumn:`
+//! (`NSTableView.h:226`), `reloadData` (`:256`), `numberOfRows` (`:222`),
+//! `scrollRowToVisible:` (`:250`), `selectRowIndexes:byExtendingSelection:`
+//! (`:353`), `selectedRow` (`:361`), `setAllowsEmptySelection:` (`:330`),
+//! `setAllowsMultipleSelection:` (`:326`), `setDataSource:`, `setDelegate:`,
+//! `setEnabled:`, `setState:`, `setFont:`, `setRefusesFirstResponder:`,
+//! `systemFontOfSize:`, `smallSystemFontSize`, `systemFontSize` und
+//! `indexSetWithIndex:`, dazu die hier **gebaute** Protokollmethode
+//! `numberOfRowsInTableView:` (`NSTableView.h:743`). Die Konstanten
+//! `NSControlStateValueOn` und `NSControlStateValueOff` (`NSCell.h:74` und
+//! `:73`) tragen keine Angabe. Das Buendel zielt auf 15.0
+//! (`.cargo/config.toml`).
+//!
+//! **Diese Beruehrungen sind juenger als ihre Klasse, und alle liegen unter dem
+//! Zielsystem:**
+//!
+//! - `tableView:viewForTableColumn:row:` seit 10.7 (`NSTableView.h:593`)
+//! - `lineBreakMode` seit 10.10 (`NSControl.h:65`)
+//! - `setUsesAutomaticRowHeights:` seit 10.13 (`NSTableView.h:574`)
+//! - `NSTextField::labelWithString:` und
+//!   `NSButton::checkboxWithTitle:target:action:` seit 10.12
+//!   (`NSTextField.h:93`, `NSButton.h:59`)
+//! - `NSTableViewStyle` samt `setStyle:` seit 11.0 (`NSTableView.h:77` und
+//!   `:377`) — die hoechste Untergrenze dieser Datei
+//!
+//! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
+//! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
+//! `objc2` fuehrt keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer
+//! haelt die Untergrenze nicht; die Nennung hier ist die Gegenmassnahme. Die
+//! Angaben sind aus den Koepfen von [`super::git`] und [`super::bereichsleiste`]
+//! uebernommen, die dieselben Namen am SDK nachgelesen haben.
+//!
+//! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
+//! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die Zeichenkette
+//! beim Uebersetzen und hat keines; `NSPoint`, `NSRect` und `NSSize` sind
+//! C-Strukturen (`NSGeometry.h:23`, `:33` und `:28`); `NSInteger` ist ein
+//! Ganzzahltyp (`objc/NSObjCRuntime.h:13`); alle uebrigen tragen im SDK keine
+//! eigene Verfuegbarkeitsangabe und stehen damit seit 10.0.
+
+use std::cell::RefCell;
+
+use objc2::rc::Retained;
+use objc2::runtime::ProtocolObject;
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
+use objc2_app_kit::{
+    NSAutoresizingMaskOptions, NSButton, NSControlStateValueOff, NSControlStateValueOn,
+    NSControlTextEditingDelegate, NSFont, NSLineBreakMode, NSScrollView, NSTableColumn,
+    NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
+    NSTableViewStyle, NSTextField, NSView,
+};
+use objc2_foundation::{
+    MainThreadMarker, NSIndexSet, NSInteger, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
+    NSString, ns_string,
+};
+
+use krk_core::heimordner::eintraege::{Aufgaben, aufgabenzeile};
+
+/// Die Hoehe einer Zeile in Punkten.
+///
+/// Etwas hoeher als die zwanzig der Dateiliste: die Zeile traegt ein
+/// Ankreuzfeld in der gewoehnlichen Groesse und Text in der Systemschrift, weil
+/// sie gelesen und nicht ueberflogen wird. Fest, weil eine Aufgabe eine Zeile
+/// ist (`krk_core::heimordner::eintraege::Abweisung::UmbruchImAufgabentext`).
+const ZEILENHOEHE: f64 = 24.0;
+
+/// Der Einzug des Ankreuzfeldes gegenueber dem Rand der Spalte.
+const EINZUG: f64 = 4.0;
+
+/// Die Breite, die das Ankreuzfeld samt Abstand zum Text belegt.
+const KASTENBREITE: f64 = 22.0;
+
+/// Die Breite, mit der eine Zelle entsteht, bevor die Tabelle sie auslegt.
+///
+/// Wie in [`super::git`]: der Wert selbst ist gleichgueltig, das Verhaeltnis
+/// in ihm nicht. Eine Beschriftung mit fester linker Kante und beweglicher
+/// Breite behaelt beim Auslegen ihren rechten Abstand.
+const AUFBAUBREITE: f64 = 400.0;
+
+/// Eine Zeile der Aufgabentabelle, abgeleitet aus einem Block des Standes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Eintragszeile {
+    /// Ob das Kaestchen `[x]` oder `[X]` traegt.
+    pub erledigt: bool,
+    /// Der Text der Aufgabe, ohne Kaestchen und ohne Zeilenumbruch.
+    pub text: String,
+}
+
+/// Die Zeilen der Aufgabentabelle zu einem Stand von `tasks.txt`.
+///
+/// **Die eine Stelle der Ableitung**, und sie zaehlt wie der Kern: eine Zeile
+/// je Block aus `Aufgaben::bloecke`, der Vorspann ohne Zeile, eine fremde Zeile
+/// als Teil der Aufgabe darueber und ohne eigene Zeile. Damit ist die Stelle
+/// einer Zeile dieselbe Zahl, die `Neustand::auswahl` und jede Handlung des
+/// Kerns als `index` fuehren.
+///
+/// Die Kopfzeile eines Blocks ist nach der Zerlegung immer eine Aufgabenzeile;
+/// `filter_map` statt eines Abbruchs, weil eine Tabelle mit einer Zeile weniger
+/// ein Anzeigefehler waere und ein Absturz des Editors ein Verlust.
+#[must_use = "die Zeilen sind die ganze Auskunft"]
+pub fn aufgabenzeilen(stand: &str) -> Vec<Eintragszeile> {
+    Aufgaben::lesen(stand)
+        .bloecke()
+        .iter()
+        .filter_map(|block| aufgabenzeile(block.kopf()))
+        .map(|zeile| Eintragszeile {
+            erledigt: zeile.erledigt,
+            text: zeile.text.to_owned(),
+        })
+        .collect()
+}
+
+define_class!(
+    /// Die Tabelle der Eintragsansicht.
+    ///
+    /// Heute ohne Ueberschreibung; warum sie trotzdem eine eigene Klasse ist,
+    /// steht im Modulkopf.
+    // SAFETY:
+    // - Die Oberklasse `NSTableView` stellt an eine Unterklasse keine
+    //   Bedingung, die diese Klasse verletzt: sie ruft den bezeichneten
+    //   Erzeuger `initWithFrame:` der Oberklasse und ist weder ihre eigene
+    //   Datenquelle noch ihr eigener Delegierter.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSTableView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = ()]
+    pub struct Eintragstabelle;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Eintragstabelle {}
+);
+
+impl Eintragstabelle {
+    /// Eine leere Tabelle mit dem genannten Rahmen.
+    fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(());
+        // SAFETY: `initWithFrame:` von NSView, die NSTableView erbt, hat die
+        // hier angenommene Signatur.
+        unsafe { msg_send![super(this), initWithFrame: rahmen] }
+    }
+}
+
+/// Was die Eintragsansicht haelt.
+pub struct EintragsansichtIvars {
+    /// Die Rolle um die Tabelle; sie haengt der Editorbereich in seine Ansicht.
+    rolle: Retained<NSScrollView>,
+    /// Die Tabelle selbst; sie nimmt den Ersthelferrang an.
+    tabelle: Retained<Eintragstabelle>,
+    /// Die zuletzt abgeleiteten Zeilen.
+    ///
+    /// Keine zweite Wahrheit neben dem Stand: sie werden allein von
+    /// [`Eintragsansicht::zeilen_zeigen`] geschrieben, und das bekommt sie aus
+    /// [`aufgabenzeilen`] ueber den Stand des Editors.
+    zeilen: RefCell<Vec<Eintragszeile>>,
+}
+
+define_class!(
+    /// Datenquelle und Delegierter der Eintragstabelle, und Halter ihrer
+    /// Rolle.
+    ///
+    /// Ein Objekt fuer beide Rollen, wie beim Git-Bereich: eine Spalte, ein
+    /// Zustand, und zwei Objekte dafuer waeren zwei Halter desselben.
+    // SAFETY:
+    // - Die Oberklasse NSObject stellt keine Bedingungen an Unterklassen.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSObject)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = EintragsansichtIvars]
+    pub struct Eintragsansicht;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Eintragsansicht {}
+
+    // SAFETY: `NSTableViewDataSource` stellt keine Bedingungen.
+    unsafe impl NSTableViewDataSource for Eintragsansicht {
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(numberOfRowsInTableView:))]
+        fn zeilenzahl(&self, _tabelle: &NSTableView) -> NSInteger {
+            NSInteger::try_from(self.ivars().zeilen.borrow().len()).unwrap_or(NSInteger::MAX)
+        }
+    }
+
+    // SAFETY: `NSControlTextEditingDelegate` ist Oberprotokoll von
+    // `NSTableViewDelegate` und hat nur wahlfreie Methoden. In diesem Stand
+    // wird kein Text bearbeitet; die beiden Methoden der Uebernahme bringt
+    // Schritt 3.2b.
+    unsafe impl NSControlTextEditingDelegate for Eintragsansicht {}
+
+    // SAFETY: `NSTableViewDelegate` stellt keine Bedingungen.
+    unsafe impl NSTableViewDelegate for Eintragsansicht {
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSTableView.h:593`).
+        #[unsafe(method_id(tableView:viewForTableColumn:row:))]
+        fn ansicht_fuer_zelle(
+            &self,
+            _tabelle: &NSTableView,
+            _spalte: Option<&NSTableColumn>,
+            zeile: NSInteger,
+        ) -> Option<Retained<NSView>> {
+            self.zellenansicht(zeile)
+        }
+    }
+);
+
+impl Eintragsansicht {
+    /// Baut Rolle und Tabelle, leer und ausgeblendet.
+    ///
+    /// **Ausgeblendet**, weil die Textflaeche die Flaeche ist, mit der der
+    /// Editor entsteht; welche der beiden zu sehen ist, entscheidet allein
+    /// `Editorbereich::flaeche_waehlen`.
+    pub fn bauen(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let tabelle = Eintragstabelle::neu(mtm, rahmen);
+        tabelle.setRowHeight(ZEILENHOEHE);
+        tabelle.setUsesAutomaticRowHeights(false);
+        tabelle.setStyle(NSTableViewStyle::FullWidth);
+        tabelle.setHeaderView(None);
+        tabelle.setAllowsEmptySelection(true);
+        tabelle.setAllowsMultipleSelection(false);
+
+        let spalte =
+            NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), ns_string!("aufgabe"));
+        spalte.setResizingMask(NSTableColumnResizingOptions::AutoresizingMask);
+        tabelle.addTableColumn(&spalte);
+
+        let rolle = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rahmen);
+        rolle.setHasVerticalScroller(true);
+        rolle.setAutohidesScrollers(true);
+        rolle.setDocumentView(Some(&tabelle));
+        rolle.setAutoresizingMask(
+            NSAutoresizingMaskOptions::ViewWidthSizable
+                | NSAutoresizingMaskOptions::ViewHeightSizable,
+        );
+        rolle.setHidden(true);
+
+        let this = Self::alloc(mtm).set_ivars(EintragsansichtIvars {
+            rolle,
+            tabelle,
+            zeilen: RefCell::new(Vec::new()),
+        });
+        // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
+        let this: Retained<Self> = unsafe { msg_send![super(this), init] };
+
+        // SAFETY: Das Objekt beantwortet beide Protokolle, die es oben
+        // implementiert. Getragen wird der Aufruf davon, dass `dataSource` und
+        // `delegate` nullende schwache Eigenschaften sind ("This is a weak
+        // property", `objc2-app-kit-0.3.2/src/generated/NSTableView.rs:402-421`)
+        // und dass dieses Objekt die Tabelle selbst festhaelt.
+        unsafe {
+            this.ivars()
+                .tabelle
+                .setDataSource(Some(ProtocolObject::from_ref(&*this)));
+            this.ivars()
+                .tabelle
+                .setDelegate(Some(ProtocolObject::from_ref(&*this)));
+        }
+        this
+    }
+
+    /// Die Rolle um die Tabelle, die der Editorbereich einhaengt und ein- und
+    /// ausblendet.
+    pub fn rolle(&self) -> &NSScrollView {
+        &self.ivars().rolle
+    }
+
+    /// Die Tabelle, die den Eingabefokus traegt, solange die Ansicht zu sehen
+    /// ist.
+    pub fn tabelle(&self) -> &NSTableView {
+        &self.ivars().tabelle
+    }
+
+    /// Zeigt die genannten Zeilen, falls sie sich von den gezeigten
+    /// unterscheiden.
+    ///
+    /// **Gleiche Zeilen laden nicht neu.** Der Editorbereich ruft nach jeder
+    /// Aenderung seines Standes, also auch bei jedem Anschlag in einer
+    /// Quelltextdatei, fuer die hier die leere Liste ankommt; ein `reloadData`
+    /// je Anschlag waere ein Auslegen fuer nichts.
+    ///
+    /// **Die Auswahl bleibt auf ihrer Stelle**, auf die neue Laenge
+    /// beschnitten: loescht ein `cmd+z` die letzte Aufgabe, steht sie danach
+    /// auf der neuen letzten und nicht auf keiner. Wohin eine Handlung sie
+    /// setzt, sagt der Kern ueber `Neustand::auswahl` und
+    /// [`Self::auswahl_setzen`], nicht diese Funktion.
+    pub fn zeilen_zeigen(&self, zeilen: Vec<Eintragszeile>) {
+        if *self.ivars().zeilen.borrow() == zeilen {
+            return;
+        }
+        let laenge = zeilen.len();
+        let vorher = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
+        // Die Ausleihe endet an ihrem Semikolon: `reloadData` fragt die Zeilen
+        // gleich wieder ab.
+        *self.ivars().zeilen.borrow_mut() = zeilen;
+        self.ivars().tabelle.reloadData();
+        let stelle =
+            vorher.and_then(|stelle| laenge.checked_sub(1).map(|letzte| stelle.min(letzte)));
+        self.auswahl_setzen(stelle);
+    }
+
+    /// Waehlt die Zeile an der genannten Stelle und bringt sie ins Bild.
+    ///
+    /// `None` und eine Stelle hinter der letzten Zeile lassen die Auswahl, wie
+    /// sie ist: eine Handlung ohne Auswahl danach hat keine gewaehlt, und eine
+    /// zu grosse Stelle beantwortete AppKit mit einer Ausnahme, die Rust nicht
+    /// fangen kann.
+    pub fn auswahl_setzen(&self, stelle: Option<usize>) {
+        let Some(stelle) = stelle else {
+            return;
+        };
+        if stelle >= self.ivars().zeilen.borrow().len() {
+            return;
+        }
+        let tabelle = &self.ivars().tabelle;
+        tabelle
+            .selectRowIndexes_byExtendingSelection(&NSIndexSet::indexSetWithIndex(stelle), false);
+        tabelle.scrollRowToVisible(NSInteger::try_from(stelle).unwrap_or(NSInteger::MAX));
+    }
+
+    /// Die Ansicht fuer eine Zeile: das Ankreuzfeld und daneben der Text.
+    ///
+    /// **Das Ankreuzfeld ist abgeschaltet** und traegt keine Handlung; ein
+    /// eingeschaltetes Feld ohne Handlung schaltete sichtbar um und aenderte
+    /// nichts. Schritt 3.2b schaltet es ein und haengt `aufgabe_abhaken` daran.
+    /// Den Ersthelferrang nimmt es nicht an: der gehoert der Tabelle.
+    fn zellenansicht(&self, zeile: NSInteger) -> Option<Retained<NSView>> {
+        let mtm = self.mtm();
+        let stelle = usize::try_from(zeile).ok()?;
+        let eintrag = self.ivars().zeilen.borrow().get(stelle)?.clone();
+
+        // SAFETY: Ohne Ziel und ohne Handlung verlangt der Erzeuger nichts
+        // ueber Lebensdauer oder Signatur.
+        let kasten =
+            unsafe { NSButton::checkboxWithTitle_target_action(ns_string!(""), None, None, mtm) };
+        kasten.setState(if eintrag.erledigt {
+            NSControlStateValueOn
+        } else {
+            NSControlStateValueOff
+        });
+        kasten.setEnabled(false);
+        kasten.setRefusesFirstResponder(true);
+        kasten.setFrame(NSRect::new(
+            NSPoint::new(EINZUG, 0.0),
+            NSSize::new(KASTENBREITE, ZEILENHOEHE),
+        ));
+
+        let beschriftung = NSTextField::labelWithString(&NSString::from_str(&eintrag.text), mtm);
+        beschriftung.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
+        beschriftung.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+        let links = EINZUG + KASTENBREITE;
+        beschriftung.setFrame(NSRect::new(
+            NSPoint::new(links, 0.0),
+            NSSize::new(AUFBAUBREITE - links - EINZUG, ZEILENHOEHE - 4.0),
+        ));
+        beschriftung.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
+
+        let zelle = NSView::initWithFrame(
+            NSView::alloc(mtm),
+            NSRect::new(NSPoint::ZERO, NSSize::new(AUFBAUBREITE, ZEILENHOEHE)),
+        );
+        zelle.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
+        zelle.addSubview(&kasten);
+        zelle.addSubview(&beschriftung);
+        Some(zelle)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// C6.2: aus Vorspann, zwei Aufgaben und einer fremden Zeile entstehen
+    /// genau zwei Zeilen, in der Reihenfolge der Datei, mit dem Zustand ihres
+    /// Kaestchens; die fremde Zeile ist keine Zeile der Tabelle.
+    #[test]
+    fn aus_vorspann_zwei_aufgaben_und_einer_fremden_zeile_entstehen_zwei_zeilen() {
+        let stand = "# Aufgaben\n\n- [ ] Brot\n  fremde Zeile\n  * [X] Steuer\n";
+        assert_eq!(
+            aufgabenzeilen(stand),
+            vec![
+                Eintragszeile {
+                    erledigt: false,
+                    text: "Brot".to_owned(),
+                },
+                Eintragszeile {
+                    erledigt: true,
+                    text: "Steuer".to_owned(),
+                },
+            ]
+        );
+    }
+
+    /// Ein Stand ohne Aufgabe gibt keine Zeile, auch der leere.
+    #[test]
+    fn ohne_aufgabe_gibt_es_keine_zeile() {
+        assert!(aufgabenzeilen("").is_empty());
+        assert!(aufgabenzeilen("nur Vorspann\n").is_empty());
+    }
+}
