@@ -168,7 +168,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
 
 ### Stufe 1: das Menü „Home“ (H1)
 
-1. **1.1 Die Belegung ordnet den Eintragsblock hinter den Notizordner**
+1. [DONE] **1.1 Die Belegung ordnet den Eintragsblock hinter den Notizordner**
    - Executor: `data-implementer`
    - Files: `resources/default-keymap.toml`
    - Changes:
