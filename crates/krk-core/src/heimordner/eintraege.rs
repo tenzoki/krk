@@ -1,6 +1,7 @@
-//! Die Form der Eintraege in `notes.txt` und `tasks.txt`, an einer Stelle.
+//! Die Form der Eintraege in `notes.txt`, `tasks.txt` und `appointments.md`,
+//! an einer Stelle.
 //!
-//! Beide Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch
+//! Die Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch
 //! ohne Sondereditor in jedem Textprogramm pflegen kann
 //! (`260926-0007_*_in-welchem-format-stehen-notes-txt-und-tasks-txt.md`,
 //! Moeglichkeit 1, mit den vier Regeln der Zweitlesung des Spec):
@@ -14,6 +15,15 @@
 //!   `[x]` und eine Einrueckung davor gelten ebenso. Geschrieben wird eine
 //!   Zeile allein dann neu, wenn eine Handlung sie beruehrt hat, und dann in der
 //!   Grundform ([`aufgabe_in_grundform`]).
+//! - **Ein Termin** in `appointments.md` ist eine Notiz, deren Thema ein
+//!   Datum ist: die Kopfzeile ist eine Themenzeile `## YYMMDD` oder
+//!   `## YYMMDD HH:MM` ([`termindatum`]), alles bis zur naechsten Themenzeile
+//!   ist sein Text. **Eine Kopfzeile mit ungueltigem Datum ist trotzdem ein
+//!   Termin**, dessen Datumstext der rohe Text nach `## ` ist; so geht keine
+//!   von Hand vertippte Zeile im Text des Vorgaengers verloren
+//!   (`260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`, A2).
+//!   Gelesen wird er deshalb mit [`Notizen::lesen`] und keinem zweiten Leser,
+//!   und die Handlungen in [`termine`] rechnen ueber [`notizen`].
 //! - **Eine fremde Zeile**, die keiner Eintragsform folgt, bleibt erhalten. In
 //!   `tasks.txt` haengt sie an der Aufgabe ueber ihr und wandert mit ihr; in
 //!   `notes.txt` ist alles nach einer Themenzeile Notiztext. Was vor dem ersten
@@ -42,7 +52,9 @@
 //!
 //! Eine Handlung ist eine reine Funktion vom alten Stand auf einen
 //! [`Neustand`]: sie rechnet, der Editor wendet an. Die fuenf an `tasks.txt`
-//! stehen in [`aufgaben`], die vier an `notes.txt` in [`notizen`].
+//! stehen in [`aufgaben`], die vier an `notes.txt` in [`notizen`], die drei
+//! an `appointments.md` in [`termine`], dort neben der Anzeigeordnung nach
+//! dem Datum und der Frage nach dem heutigen Tag.
 //!
 //! **Eine Handlung schreibt allein die Zeilen neu, die sie beruehrt**, und die
 //! in der Grundform: Abhaken und Textaendern ersetzen die Kopfzeile ihres
@@ -449,6 +461,15 @@ pub enum Abweisung {
     /// Nutzer bearbeitet; abgewiesen und nicht umgeschrieben
     /// (`260926-0007_*_in-welchem-format-stehen-notes-txt-und-tasks-txt.md`).
     ThemenzeileImNotiztext,
+    /// Das geaenderte Datum eines Termins folgt nicht der Form `YYMMDD` oder
+    /// `YYMMDD HH:MM`, oder es nennt einen Tag oder eine Uhrzeit, die es nicht
+    /// gibt ([`termindatum`]). Abgewiesen und nicht still berichtigt (A3 des
+    /// Spec der Termine).
+    UngueltigesDatum,
+    /// Eine Zeile im Termintext beginnt mit `## `. Dieselbe Regel wie
+    /// [`Abweisung::ThemenzeileImNotiztext`], mit eigenem Wortlaut, weil „die
+    /// naechste Notiz" in der Termintabelle falsch spraeche.
+    KopfzeileImTermintext,
 }
 
 impl Abweisung {
@@ -461,6 +482,12 @@ impl Abweisung {
             Self::UmbruchImThema => "Ein Thema ist eine Zeile und trägt keinen Zeilenumbruch.",
             Self::ThemenzeileImNotiztext => {
                 "Eine Zeile im Notiztext darf nicht mit „## “ beginnen, denn so beginnt die nächste Notiz."
+            }
+            Self::UngueltigesDatum => {
+                "Ein Datum steht als YYMMDD oder YYMMDD HH:MM, etwa 261002 oder 261002 09:30."
+            }
+            Self::KopfzeileImTermintext => {
+                "Eine Zeile im Termintext darf nicht mit „## “ beginnen, denn so beginnt der nächste Termin."
             }
         }
     }
@@ -660,6 +687,16 @@ pub mod notizen {
     #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts hinzugefuegt"]
     pub fn hinzufuegen(stand: &str, thema: &str, text: &str) -> Result<Neustand, Abweisung> {
         let text = pruefen(thema, text)?;
+        Ok(angehaengt(stand, thema, text))
+    }
+
+    /// Der Rumpf von [`hinzufuegen`] nach der Pruefung: `thema` traegt keinen
+    /// Umbruch, `text` keine Themenzeile und keinen Schlussumbruch.
+    ///
+    /// Eigens herausgezogen, damit [`super::termine::hinzufuegen`] eine
+    /// Kopfzeile, die schon als gueltig feststeht, ohne eine Abweisung
+    /// anhaengen kann, die es nie geben kann; die Mechanik bleibt eine.
+    pub(super) fn angehaengt(stand: &str, thema: &str, text: &str) -> Neustand {
         let anzahl = Notizen::lesen(stand).bloecke().len();
         let mut neu = String::with_capacity(stand.len() + thema.len() + text.len() + 8);
         neu.push_str(stand);
@@ -672,10 +709,10 @@ pub mod notizen {
         if !schluss {
             let _ = neu.pop();
         }
-        Ok(Neustand {
+        Neustand {
             text: neu,
             auswahl: Some(anzahl),
-        })
+        }
     }
 
     /// Ersetzt Thema und Text der Notiz an `index`.
@@ -757,5 +794,282 @@ pub mod notizen {
         Notizen::lesen(stand)
             .zerlegung
             .verschoben(index, richtung, stand)
+    }
+}
+
+/// Ein Kalendertag, wie ihn die Kopfzeile eines Termins nennt.
+///
+/// Die Felder sind privat, damit es keinen Tag gibt, den der Kalender nicht
+/// kennt: jeder Wert entsteht ueber [`Tag::neu`] und ist damit ein Tag
+/// zwischen dem 1. Januar 2000 und dem 31. Dezember 2099. **Die zwei Ziffern
+/// des Jahres bedeuten immer dieses Jahrhundert** (A14 des Spec der Termine):
+/// eindeutig und pruefbar, und Termine vor 2000 sind nicht der Gegenstand.
+///
+/// Die abgeleitete Ordnung vergleicht Jahr, dann Monat, dann Tag, also die
+/// Folge im Kalender.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Tag {
+    jahr: u16,
+    monat: u8,
+    tag: u8,
+}
+
+impl Tag {
+    /// Der Tag, wenn es ihn gibt: `jahr` von 2000 bis 2099, `monat` von 1 bis
+    /// 12, `tag` von 1 bis zum letzten Tag dieses Monats in diesem Jahr,
+    /// Schaltjahre eingeschlossen.
+    #[must_use]
+    pub fn neu(jahr: u16, monat: u8, tag: u8) -> Option<Tag> {
+        if !(2000..=2099).contains(&jahr) || !(1..=12).contains(&monat) {
+            return None;
+        }
+        if tag == 0 || tag > tage_im_monat(jahr, monat) {
+            return None;
+        }
+        Some(Tag { jahr, monat, tag })
+    }
+
+    /// Der Tag einer zerlegten Ortszeit, oder `None`, wenn er ausserhalb der
+    /// Jahre 2000 bis 2099 liegt.
+    #[must_use]
+    pub fn aus_ortszeit(zeit: crate::verzeichnis::sys::Ortszeit) -> Option<Tag> {
+        let jahr = u16::try_from(zeit.jahr).ok()?;
+        Tag::neu(jahr, zeit.monat, zeit.tag)
+    }
+
+    /// Das Jahr mit seinem Jahrhundert, von 2000 bis 2099.
+    pub fn jahr(self) -> u16 {
+        self.jahr
+    }
+
+    /// Der Monat von 1 bis 12.
+    pub fn monat(self) -> u8 {
+        self.monat
+    }
+
+    /// Der Tag im Monat, von 1 an.
+    pub fn tag(self) -> u8 {
+        self.tag
+    }
+
+    /// Der Tag in der Form der Kopfzeile, `YYMMDD`.
+    #[must_use]
+    pub fn kopftext(self) -> String {
+        format!("{:02}{:02}{:02}", self.jahr - 2000, self.monat, self.tag)
+    }
+}
+
+/// Wie viele Tage der Monat `monat` im Jahr `jahr` hat; `monat` liegt von 1
+/// bis 12.
+fn tage_im_monat(jahr: u16, monat: u8) -> u8 {
+    match monat {
+        2 if ist_schaltjahr(jahr) => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    }
+}
+
+/// Die gregorianische Schaltjahrregel, ausgeschrieben statt auf „durch vier
+/// teilbar" verkuerzt: im Bereich 2000 bis 2099 gaebe beides dieselbe Antwort,
+/// aber nur die ganze Regel bleibt richtig, wenn der Bereich je waechst.
+fn ist_schaltjahr(jahr: u16) -> bool {
+    (jahr.is_multiple_of(4) && !jahr.is_multiple_of(100)) || jahr.is_multiple_of(400)
+}
+
+/// Das Datum eines Termins, mit oder ohne Uhrzeit.
+///
+/// **Die abgeleitete Ordnung ist die Anzeigeordnung** der Termintabelle: erst
+/// der Tag, dann die Uhrzeit, und weil `None` vor jedem `Some` steht, steht ein
+/// Termin ohne Uhrzeit vor denen mit Uhrzeit am selben Tag (A7 des Spec der
+/// Termine: ein ganztaegiger Termin gilt vom Beginn des Tages an).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Termindatum {
+    /// Der Kalendertag.
+    pub tag: Tag,
+    /// Stunde von 0 bis 23 und Minute von 0 bis 59, wenn die Kopfzeile eine
+    /// Uhrzeit nennt.
+    pub zeit: Option<(u8, u8)>,
+}
+
+/// Der Datumstext eines Termins als Datum gelesen, oder `None`, wenn er keines
+/// ist.
+///
+/// Streng und ohne Grosszuegigkeit: genau sechs Ziffern `YYMMDD`, optional
+/// gefolgt von genau einem Leerzeichen und `HH:MM` mit je zwei Ziffern, und
+/// sonst nichts, auch kein Leerraum und kein Zeilenumbruch. Der Tag muss im
+/// Kalender stehen ([`Tag::neu`]), die Stunde von 00 bis 23 und die Minute von
+/// 00 bis 59 reichen. Wer eine Eingabe trimmen will, trimmt vor dem Aufruf;
+/// [`termine::aendern`] tut es.
+#[must_use]
+pub fn termindatum(text: &str) -> Option<Termindatum> {
+    let bytes = text.as_bytes();
+    let (datum, zeit) = match bytes.len() {
+        6 => (bytes, None),
+        12 if bytes[6] == b' ' && bytes[9] == b':' => (&bytes[..6], Some(&bytes[7..])),
+        _ => return None,
+    };
+    let jahr = zweistellig(&datum[0..2])?;
+    let monat = zweistellig(&datum[2..4])?;
+    let tag = Tag::neu(2000 + u16::from(jahr), monat, zweistellig(&datum[4..6])?)?;
+    let zeit = match zeit {
+        None => None,
+        Some(zeit) => {
+            let stunde = zweistellig(&zeit[0..2])?;
+            let minute = zweistellig(&zeit[3..5])?;
+            if stunde > 23 || minute > 59 {
+                return None;
+            }
+            Some((stunde, minute))
+        }
+    };
+    Some(Termindatum { tag, zeit })
+}
+
+/// Zwei ASCII-Ziffern als Zahl von 0 bis 99, sonst `None`.
+fn zweistellig(paar: &[u8]) -> Option<u8> {
+    match paar {
+        [zehner @ b'0'..=b'9', einer @ b'0'..=b'9'] => Some((zehner - b'0') * 10 + (einer - b'0')),
+        _ => None,
+    }
+}
+
+/// Die Handlungen an `appointments.md`, die Anzeigeordnung nach dem Datum und
+/// die Frage nach dem heutigen Tag.
+///
+/// **Ein Termin ist eine Notiz, deren Thema ein Datum ist** (Modulkopf), und
+/// jede Handlung hier rechnet ueber [`notizen`]: dieselbe Zerlegung,
+/// dieselbe Byte-Treue, dasselbe Dateiende. Was eine Notiz nicht kennt, steht
+/// allein hier: die Pruefung des Datums, die Ordnung nach ihm und der heutige
+/// Tag.
+///
+/// `stelle` zaehlt jeweils ueber die Termine **in der Reihenfolge der Datei**
+/// ohne den Vorspann, wie [`Notizen::bloecke`] und [`Neustand::auswahl`], und
+/// nie in der Reihenfolge der Anzeige. Die Anzeige ist eine Folge von Stellen
+/// ([`termine::anzeigeordnung`]); die Datei ordnet sie nicht um.
+pub mod termine {
+    use std::cmp::Reverse;
+    use std::time::SystemTime;
+
+    use super::{Abweisung, Neustand, Notizen, Tag, notizen, termindatum};
+    use crate::verzeichnis::Richtung;
+
+    /// Haengt einen Termin mit dem Datum `heute`, ohne Uhrzeit und mit leerem
+    /// Text, ans Ende der Datei; er ist danach gewaehlt.
+    ///
+    /// Das heutige Datum und nicht ein leeres (A5 des Spec der Termine): ein
+    /// leerer Termin waere sofort ungueltig und stuende am Ende statt dort, wo
+    /// der Nutzer weiterschreibt. Das Dateiende bleibt wie bei
+    /// [`notizen::hinzufuegen`], dessen Rumpf das hier ist.
+    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts hinzugefuegt"]
+    pub fn hinzufuegen(stand: &str, heute: Tag) -> Neustand {
+        notizen::angehaengt(stand, &heute.kopftext(), "")
+    }
+
+    /// Ersetzt Datum und Text des Termins an `stelle`.
+    ///
+    /// Die Datumseingabe wird an beiden Enden getrimmt. **Allein ein
+    /// geaendertes Datum wird geprueft**: weicht es vom bisherigen Datumstext
+    /// ab, muss es [`termindatum`] bestehen, sonst
+    /// [`Abweisung::UngueltigesDatum`]. Ein unveraendert gelassenes ungueltiges
+    /// Datum wird also nicht geprueft, sonst liesse sich der Text eines
+    /// Termins mit vertippter Kopfzeile nicht aendern, ohne erst das Datum zu
+    /// berichtigen. Eine Zeile mit `## ` im Text ist
+    /// [`Abweisung::KopfzeileImTermintext`]. Danach rechnet
+    /// [`notizen::aendern`], und die Kopfzeile wird allein bei geaendertem
+    /// Datum neu geschrieben, die Textzeilen allein bei geaendertem Text.
+    /// `Ok(None)`, wenn es den Termin nicht gibt oder nichts sich aendert.
+    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geaendert"]
+    pub fn aendern(
+        stand: &str,
+        stelle: usize,
+        datum: &str,
+        text: &str,
+    ) -> Result<Option<Neustand>, Abweisung> {
+        let datum = datum.trim();
+        let Some(alt) = Notizen::lesen(stand).notiz(stelle) else {
+            return Ok(None);
+        };
+        if datum != alt.thema && termindatum(datum).is_none() {
+            return Err(Abweisung::UngueltigesDatum);
+        }
+        notizen::aendern(stand, stelle, datum, text).map_err(|abweisung| match abweisung {
+            Abweisung::ThemenzeileImNotiztext => Abweisung::KopfzeileImTermintext,
+            andere => andere,
+        })
+    }
+
+    /// Entfernt den Termin an `stelle` ganz, wie [`notizen::loeschen`] eine
+    /// Notiz. Die Auswahl danach zaehlt in der Reihenfolge der Datei.
+    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geloescht"]
+    pub fn loeschen(stand: &str, stelle: usize) -> Option<Neustand> {
+        notizen::loeschen(stand, stelle)
+    }
+
+    /// Die Stellen der Termine in der Reihenfolge der Anzeige.
+    ///
+    /// Gueltige Termine stehen nach ihrem [`super::Termindatum`]; in der
+    /// absteigenden Richtung wird allein der Vergleich umgekehrt. **Die
+    /// Sortierung ist stabil**: Termine mit gleichem Datum und gleicher
+    /// Uhrzeit behalten in beiden Richtungen die Reihenfolge der Datei.
+    /// Termine mit ungueltigem Datum stehen in beiden Richtungen am Ende, in
+    /// der Reihenfolge der Datei.
+    #[must_use]
+    pub fn anzeigeordnung(stand: &str, richtung: Richtung) -> Vec<usize> {
+        let notizen = Notizen::lesen(stand);
+        let mut gueltig = Vec::new();
+        let mut ungueltig = Vec::new();
+        for stelle in 0..notizen.bloecke().len() {
+            match notizen
+                .notiz(stelle)
+                .and_then(|notiz| termindatum(notiz.thema))
+            {
+                Some(datum) => gueltig.push((datum, stelle)),
+                None => ungueltig.push(stelle),
+            }
+        }
+        match richtung {
+            Richtung::Aufsteigend => gueltig.sort_by_key(|(datum, _)| *datum),
+            Richtung::Absteigend => gueltig.sort_by_key(|(datum, _)| Reverse(*datum)),
+        }
+        gueltig
+            .into_iter()
+            .map(|(_, stelle)| stelle)
+            .chain(ungueltig)
+            .collect()
+    }
+
+    /// Der Stand mit den Terminen in aufsteigender Anzeigeordnung, hinter dem
+    /// Vorspann und mit dem Dateiende des Standes.
+    ///
+    /// Fuer eine lesende Darstellung: jeder Termin kommt mit seinen eigenen
+    /// Zeilen, und der Text entsteht im Speicher. Geschrieben wird er nie.
+    #[must_use]
+    pub fn in_anzeigeordnung(stand: &str) -> String {
+        let reihenfolge = anzeigeordnung(stand, Richtung::Aufsteigend);
+        Notizen::lesen(stand)
+            .zerlegung
+            .in_reihenfolge(&reihenfolge, stand)
+    }
+
+    /// Ob der Termin mit diesem Datumstext am Tag `heute` liegt, mit oder ohne
+    /// Uhrzeit. Ein ungueltiges Datum liegt an keinem Tag.
+    ///
+    /// Die Uhr liest diese Frage nicht selbst; `heute` kommt vom Rufer, damit
+    /// sie ohne Uhr pruefbar ist.
+    #[must_use]
+    pub fn ist_heute(datumstext: &str, heute: Tag) -> bool {
+        termindatum(datumstext).is_some_and(|datum| datum.tag == heute)
+    }
+
+    /// Der heutige Tag nach der Uhr dieses Macs, in seiner Ortszeit.
+    ///
+    /// **Die eine Stelle, an der die Uhr fuer die Termine gelesen wird**; die
+    /// Probe `die_uhr_der_termine_wird_an_einer_stelle_gelesen`
+    /// (`tests/heimordner.rs`) haelt das. `None`, wenn sich die Uhrzeit nicht
+    /// in einen Tag der Jahre 2000 bis 2099 uebersetzen laesst.
+    #[must_use]
+    pub fn heute() -> Option<Tag> {
+        Tag::aus_ortszeit(crate::verzeichnis::sys::ortszeit(SystemTime::now())?)
     }
 }

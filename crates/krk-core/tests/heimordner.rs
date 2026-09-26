@@ -30,8 +30,8 @@ use krk_core::ablage::einstellungen::Ortswert;
 use krk_core::ablage::merker::{self, Merker};
 use krk_core::ablage::{Ablage, Ablageort, Datei, Geladen, Grund};
 use krk_core::heimordner::eintraege::{
-    Abweisung, Aufgaben, Notiz, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
-    ist_themenzeile, notizen,
+    Abweisung, Aufgaben, Notiz, Notizen, Richtung, Tag, Termindatum, aufgabe_in_grundform,
+    aufgaben, aufgabenzeile, ist_themenzeile, notizen, termindatum, termine,
 };
 use krk_core::heimordner::ort::{
     Notizort, Ortsfehler, abweisungssatz, gehaltene_notizdatei, im_ablageordner, notizort,
@@ -46,6 +46,7 @@ use krk_core::heimordner::{
     ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, Bereitstellung, Heimordner, Hindernis,
     ORDNERNAME, Sonderdatei, Uebernahmeausgang, Zettelbefund, Zettelmerker, bereitstellen,
 };
+use krk_core::verzeichnis::Richtung as SortRichtung;
 
 /// Der Pruefordner in der Schreibweise, die `canonicalize` fuer ihn liefert.
 fn kanonisch(ordner: &Pruefordner) -> PathBuf {
@@ -1016,6 +1017,343 @@ fn notiz_verschieben_nimmt_den_text_mit() {
     assert_eq!(notizen::verschieben(NOTIZSTAND, 2, Richtung::Runter), None);
     assert_eq!(notizen::verschieben(NOTIZSTAND, 3, Richtung::Hoch), None);
     assert_eq!(notizen::verschieben("", 0, Richtung::Runter), None);
+}
+
+// ---------------------------------------------------------------------------
+// Die Terminform (Schritt 1 des Plans
+// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`)
+// ---------------------------------------------------------------------------
+
+/// Eine Termindatei mit Vorspann, zwei Terminen mit Uhrzeit, einem ohne und
+/// einer ungueltigen Kopfzeile, ohne Schlussumbruch.
+const TERMINSTAND: &str = "# Termine
+
+## 261002 09:30
+Zahnarzt
+Dr. Beispiel
+
+## 260927 14:00
+Anruf Werkstatt
+
+## xyz
+vertippt
+## 261002
+Steuererklärung";
+
+/// Ein fester Tag fuer die Proben, der 26. September 2026.
+fn tag(jahr: u16, monat: u8, tag: u8) -> Tag {
+    Tag::neu(jahr, monat, tag).expect("den Tag gibt es")
+}
+
+/// T2.1: eine Termindatei liest sich mit dem Leser der Notizen und schreibt
+/// sich Byte fuer Byte zurueck, mit Vorspann, ohne Schlussumbruch und mit einer
+/// Kopfzeile, deren Datum ungueltig ist.
+#[test]
+fn eine_termindatei_liest_und_schreibt_sich_byte_fuer_byte() {
+    for stand in [
+        TERMINSTAND,
+        "## 261002\n",
+        "Vorspann ohne Termin",
+        "## 991231 23:59\nText\n\n\n## 000101\n",
+    ] {
+        assert_eq!(Notizen::lesen(stand).schreiben(), stand, "{stand:?}");
+    }
+    let gelesen = Notizen::lesen(TERMINSTAND);
+    assert_eq!(gelesen.vorspann(), ["# Termine\n", "\n"]);
+    assert_eq!(gelesen.bloecke().len(), 4);
+}
+
+/// T2.2: die Tafel der Datumspruefung, je Fall eine Zeile.
+#[test]
+fn die_datumspruefung_folgt_der_tafel() {
+    let angenommen = [
+        ("261002", tag(2026, 10, 2), None),
+        ("261002 09:30", tag(2026, 10, 2), Some((9, 30))),
+        ("280229", tag(2028, 2, 29), None),
+        ("991231 23:59", tag(2099, 12, 31), Some((23, 59))),
+        ("000101 00:00", tag(2000, 1, 1), Some((0, 0))),
+    ];
+    for (text, erwarteter_tag, zeit) in angenommen {
+        assert_eq!(
+            termindatum(text),
+            Some(Termindatum {
+                tag: erwarteter_tag,
+                zeit
+            }),
+            "{text:?}"
+        );
+    }
+    let abgewiesen = [
+        "260229",
+        "261301",
+        "261000",
+        "261032",
+        "26102",
+        "2610022",
+        "261002 24:00",
+        "261002 9:30",
+        "261002 09:60",
+        "261002  09:30",
+        "261002 09:30 Zahnarzt",
+    ];
+    for text in abgewiesen {
+        assert_eq!(termindatum(text), None, "{text:?}");
+    }
+    // Das Jahr 2000 ist ein Schaltjahr, der Monat mit 30 Tagen hat keinen 31.
+    assert!(termindatum("000229").is_some());
+    assert_eq!(termindatum("260431"), None);
+    // Kein Leerraum und kein Umbruch um das Datum; getrimmt wird vorher.
+    assert_eq!(termindatum(" 261002"), None);
+    assert_eq!(termindatum("261002\n"), None);
+    assert_eq!(tag(2026, 9, 26).kopftext(), "260926");
+    assert_eq!(tag(2000, 1, 1).kopftext(), "000101");
+    assert_eq!(Tag::neu(1999, 12, 31), None);
+    assert_eq!(Tag::neu(2100, 1, 1), None);
+}
+
+/// T2.3: eine Zeile `## <Text>` mit ungueltigem Datum ist ein Termin, dessen
+/// Datumstext der Text nach `## ` ist.
+#[test]
+fn eine_kopfzeile_mit_ungueltigem_datum_ist_ein_termin() {
+    let gelesen = Notizen::lesen("## xyz\nText\n");
+    assert_eq!(gelesen.notiz(0), Some(notiz("xyz", "Text")));
+    assert_eq!(
+        termine::anzeigeordnung("## xyz\nText\n", SortRichtung::Aufsteigend),
+        [0]
+    );
+    assert_eq!(
+        Notizen::lesen(TERMINSTAND).notiz(2),
+        Some(notiz("xyz", "vertippt"))
+    );
+}
+
+/// T3.1, T3.2: Hinzufuegen haengt `## YYMMDD` des Tages mit leerem Text ans
+/// Ende und waehlt den neuen Termin; ein Vorspann bleibt oben, das Dateiende
+/// bleibt.
+#[test]
+fn ein_neuer_termin_traegt_das_heutige_datum_und_steht_am_ende() {
+    let heute = tag(2026, 9, 26);
+    let neu = termine::hinzufuegen("# Termine\n\n## 261002\nA\n", heute);
+    assert_eq!(neu.text, "# Termine\n\n## 261002\nA\n## 260926\n");
+    assert_eq!(neu.auswahl, Some(1));
+    let gelesen = Notizen::lesen(&neu.text);
+    assert_eq!(gelesen.vorspann(), ["# Termine\n", "\n"]);
+    assert_eq!(gelesen.notiz(1), Some(notiz("260926", "")));
+
+    let leer = termine::hinzufuegen("", heute);
+    assert_eq!(leer.text, "## 260926\n");
+    assert_eq!(leer.auswahl, Some(0));
+
+    let ohne_schluss = termine::hinzufuegen(TERMINSTAND, heute);
+    assert_eq!(ohne_schluss.text, format!("{TERMINSTAND}\n## 260926"));
+    assert_eq!(ohne_schluss.auswahl, Some(4));
+}
+
+/// T3.5: ein geaendertes Datum schreibt allein die Kopfzeile, ein geaenderter
+/// Text allein die Textzeilen; die Auswahl bleibt auf der Stelle in der Datei.
+#[test]
+fn datum_und_text_aendern_schreiben_allein_ihre_zeilen() {
+    let datum = termine::aendern(TERMINSTAND, 0, "261003 10:00", "Zahnarzt\nDr. Beispiel")
+        .expect("zulaessig")
+        .expect("den Termin gibt es");
+    assert_eq!(abweichende_zeilen(TERMINSTAND, &datum.text), [2]);
+    assert_eq!(
+        datum.text.split_inclusive('\n').nth(2),
+        Some("## 261003 10:00\n")
+    );
+    assert_eq!(datum.auswahl, Some(0));
+
+    let text = termine::aendern(TERMINSTAND, 1, "260927 14:00", "Werkstatt anrufen")
+        .expect("zulaessig")
+        .expect("den Termin gibt es");
+    assert_eq!(abweichende_zeilen(TERMINSTAND, &text.text), [7]);
+    assert_eq!(
+        Notizen::lesen(&text.text).notiz(1),
+        Some(notiz("260927 14:00", "Werkstatt anrufen"))
+    );
+
+    // Leerraum um ein gueltiges Datum wird vor der Pruefung entfernt.
+    let getrimmt = termine::aendern(TERMINSTAND, 3, "  261005 \t", "Steuererklärung")
+        .expect("zulaessig")
+        .expect("den Termin gibt es");
+    assert!(getrimmt.text.ends_with("## 261005\nSteuererklärung"));
+
+    // Unveraendert ergibt nichts, auch mit Leerraum um das alte Datum.
+    assert_eq!(
+        termine::aendern(TERMINSTAND, 3, " 261002 ", "Steuererklärung"),
+        Ok(None)
+    );
+    assert_eq!(termine::aendern(TERMINSTAND, 9, "261002", ""), Ok(None));
+}
+
+/// T3.3, T3.4: ein ungueltiges Datum wird abgewiesen, auch mit Leerraum
+/// drumherum, und eine Zeile mit `## ` im Text ebenso; eine Abweisung ist kein
+/// Neustand, der Stand bleibt. Ein unveraendert gelassenes ungueltiges Datum
+/// wird nicht geprueft.
+#[test]
+fn ein_ungueltiges_datum_und_eine_kopfzeile_im_text_werden_abgewiesen() {
+    for datum in [
+        "261340",
+        "  261340  ",
+        "",
+        "morgen",
+        "261002 9:30",
+        "261002\n09:30",
+    ] {
+        assert_eq!(
+            termine::aendern(TERMINSTAND, 0, datum, "Zahnarzt\nDr. Beispiel"),
+            Err(Abweisung::UngueltigesDatum),
+            "{datum:?}"
+        );
+    }
+    for text in ["## x", "davor\n## 261002"] {
+        assert_eq!(
+            termine::aendern(TERMINSTAND, 0, "261002 09:30", text),
+            Err(Abweisung::KopfzeileImTermintext),
+            "{text:?}"
+        );
+    }
+
+    // Der Termin mit ungueltigem Datum laesst sich im Text aendern, ohne dass
+    // sein Datum erst berichtigt werden muss, und berichtigen laesst es sich.
+    let text = termine::aendern(TERMINSTAND, 2, "xyz", "neu")
+        .expect("das alte Datum wird nicht geprueft")
+        .expect("den Termin gibt es");
+    assert_eq!(
+        Notizen::lesen(&text.text).notiz(2),
+        Some(notiz("xyz", "neu"))
+    );
+    let berichtigt = termine::aendern(TERMINSTAND, 2, "261010", "vertippt")
+        .expect("zulaessig")
+        .expect("den Termin gibt es");
+    assert_eq!(
+        Notizen::lesen(&berichtigt.text).notiz(2),
+        Some(notiz("261010", "vertippt"))
+    );
+
+    assert!(
+        Abweisung::UngueltigesDatum
+            .meldung()
+            .contains("YYMMDD HH:MM")
+    );
+    assert!(
+        Abweisung::KopfzeileImTermintext
+            .meldung()
+            .contains("nächste Termin")
+    );
+}
+
+/// T3.1: Loeschen nimmt den Termin an seiner Stelle in der Datei ganz weg.
+#[test]
+fn ein_termin_wird_ganz_geloescht() {
+    let neu = termine::loeschen(TERMINSTAND, 1).expect("den Termin gibt es");
+    assert_eq!(
+        neu.text,
+        "# Termine\n\n## 261002 09:30\nZahnarzt\nDr. Beispiel\n\n## xyz\nvertippt\n## 261002\nSteuererklärung"
+    );
+    assert_eq!(neu.auswahl, Some(1));
+    assert_eq!(termine::loeschen(TERMINSTAND, 4), None);
+}
+
+/// T4.1 woertlich: aufsteigend und absteigend, gleiche Schluessel in der
+/// Reihenfolge der Datei, ungueltige in beiden Richtungen am Ende.
+#[test]
+fn die_termine_ordnen_sich_nach_datum_und_uhrzeit() {
+    let stand = "## 261002 09:30\n## 260927 14:00\n## 261002\n## xyz\n## 261002 09:30\n";
+    let kopf = |reihenfolge: Vec<usize>| -> Vec<String> {
+        let notizen = Notizen::lesen(stand);
+        reihenfolge
+            .into_iter()
+            .map(|stelle| format!("{stelle}:{}", notizen.notiz(stelle).expect("da").thema))
+            .collect()
+    };
+    assert_eq!(
+        kopf(termine::anzeigeordnung(stand, SortRichtung::Aufsteigend)),
+        [
+            "1:260927 14:00",
+            "2:261002",
+            "0:261002 09:30",
+            "4:261002 09:30",
+            "3:xyz"
+        ]
+    );
+    assert_eq!(
+        kopf(termine::anzeigeordnung(stand, SortRichtung::Absteigend)),
+        [
+            "0:261002 09:30",
+            "4:261002 09:30",
+            "2:261002",
+            "1:260927 14:00",
+            "3:xyz"
+        ]
+    );
+    assert!(termine::anzeigeordnung("", SortRichtung::Aufsteigend).is_empty());
+
+    // Die Anzeigeordnung als Text: Vorspann oben, aufsteigend, der ungueltige
+    // am Ende, das Dateiende bleibt, und die Datei selbst bleibt unberuehrt.
+    assert_eq!(
+        termine::in_anzeigeordnung(TERMINSTAND),
+        "# Termine\n\n## 260927 14:00\nAnruf Werkstatt\n\n## 261002\nSteuererklärung\n## 261002 09:30\nZahnarzt\nDr. Beispiel\n\n## xyz\nvertippt"
+    );
+}
+
+/// T6.1: `ist_heute` nimmt den Tag entgegen, statt die Uhr zu lesen.
+#[test]
+fn heute_ist_der_tag_mit_und_ohne_uhrzeit() {
+    let heute = tag(2026, 9, 26);
+    assert!(termine::ist_heute("260926", heute));
+    assert!(termine::ist_heute("260926 08:15", heute));
+    assert!(!termine::ist_heute("260925", heute));
+    assert!(!termine::ist_heute("260927 00:00", heute));
+    assert!(!termine::ist_heute("260926 25:00", heute));
+    assert!(!termine::ist_heute("xyz", heute));
+}
+
+/// T6.2: im ganzen Baum unter `crates/` liest allein `termine::heute` die Uhr
+/// und rechnet sie in die Ortszeit um.
+///
+/// Gesucht sind die Dateien, in denen ausserhalb von Kommentaren beides
+/// steht, `SystemTime::now()` und ein Aufruf von `ortszeit`. Die Nadeln sind
+/// zusammengesetzt, damit diese Probe sich nicht selbst findet. **Was sie
+/// nicht sieht:** eine Uhr, die in einer Datei gelesen und in einer anderen
+/// umgerechnet wird; der Kopf von `tests/baum.rs` sagt, warum keine Suche im
+/// Quelltext restlos dicht ist.
+#[test]
+fn die_uhr_der_termine_wird_an_einer_stelle_gelesen() {
+    let uhr = concat!("SystemTime", "::now()");
+    let umrechnung = concat!("ortszeit", "(");
+    let mut fundstellen = Vec::new();
+    for (name, inhalt) in gemeinsam::quelldateien() {
+        let zeilen: Vec<&str> = inhalt
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .collect();
+        let liest_die_uhr = zeilen.iter().any(|zeile| zeile.contains(uhr));
+        let rechnet_um = zeilen.iter().any(|zeile| zeile.contains(umrechnung));
+        if liest_die_uhr && rechnet_um {
+            fundstellen.push(name);
+        }
+    }
+    assert_eq!(fundstellen, ["krk-core/src/heimordner/eintraege.rs"]);
+
+    let (_, eintraege) = gemeinsam::quelldateien()
+        .into_iter()
+        .find(|(name, _)| name == "krk-core/src/heimordner/eintraege.rs")
+        .expect("die Datei steht im Baum");
+    let rumpf = eintraege
+        .split("pub fn heute() -> Option<Tag> {")
+        .nth(1)
+        .and_then(|rest| rest.split("\n    }\n").next())
+        .expect("termine::heute steht in der Datei");
+    assert!(rumpf.contains(uhr) && rumpf.contains(umrechnung));
+    assert_eq!(
+        eintraege
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//") && zeile.contains(uhr))
+            .count(),
+        1,
+        "die Uhr wird in eintraege.rs genau einmal gelesen"
+    );
 }
 
 // ---------------------------------------------------------------------------

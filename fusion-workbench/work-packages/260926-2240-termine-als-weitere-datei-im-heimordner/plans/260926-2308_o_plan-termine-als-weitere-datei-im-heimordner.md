@@ -114,7 +114,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 1
 
 ### Stufe A: der Kern
 
-1. **1 Die Terminform im Kern**
+1. [DONE] **1 Die Terminform im Kern**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/heimordner/eintraege.rs`, `crates/krk-core/tests/heimordner.rs` (oder das Prüfmodul von `eintraege.rs`, je nachdem, wo die Proben der Notizen heute stehen)
    - Changes:
