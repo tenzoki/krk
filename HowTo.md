@@ -82,12 +82,24 @@ nächstliegende Beispiel für den Fall, den das Blatt beschreibt.
 | `settings.toml` | Nur den erklärenden Kommentarblock. Die Einstellung selbst wirkt bereits, mit dem Wert aus der Auslieferungsfassung. |
 | `keymap.toml` | Die ausgelieferten Tastenkombinationen. KRK hängt die Funktion unbelegt an: in ihrer Gruppe hinter die Funktionen, die die eigene Datei dort nennt, und fehlen mehrere, untereinander in der Folge der Auslieferung. Über das Hauptmenü bleibt sie erreichbar. |
 
-Der Handgriff ist bei allen dreien derselbe: KRK beenden, die betroffene Datei
-**beiseitelegen** und nicht löschen, KRK starten. Sie entsteht neu aus der
-Auslieferungsfassung, samt allen Kommentaren darin; die eigenen Zeilen holt man
-sich aus der beiseitegelegten zurück, und das Blatt sagt unter „Nur in Ihrer
-Datei", welche das sind. Im Einzelnen steht der Weg in `README.md` unter
-„Neuerungen an den eigenen Dateien übernehmen".
+Für `readers.toml` und `settings.toml` ist der Handgriff derselbe: KRK beenden,
+die betroffene Datei **beiseitelegen** und nicht löschen, KRK starten. Sie
+entsteht neu aus der Auslieferungsfassung, samt allen Kommentaren darin; die
+eigenen Zeilen holt man sich aus der beiseitegelegten zurück, und das Blatt sagt
+unter „Nur in Ihrer Datei", welche das sind.
+
+**Bei `keymap.toml` greift dieser Handgriff nicht**, denn KRK legt sie beim
+Start nicht an: beiseitegelegt bleibt sie fort, und KRK arbeitet mit der
+Auslieferungsbelegung. Steht die Datei gar nicht erst da, ist nichts zu tun.
+Steht sie da, führt der Weg durch die Anwendung: in der F1-Ansicht
+**Auslieferungszustand** (`cmd+r`), und das Verlassen der Ansicht schreibt
+`keymap.toml` mit dem Auslieferungsstand; die eigenen Zuweisungen sind danach
+fort, wer sie behalten will, legt die Datei vorher beiseite. Eine einzelne neue
+Funktion belegt man ohne jedes Zurücksetzen: in der F1-Ansicht wählen,
+**Zuweisen** (`cmd+t`), die Kombination drücken und die Ansicht verlassen.
+
+Im Einzelnen stehen beide Wege in `README.md` unter „Neuerungen an den eigenen
+Dateien übernehmen".
 
 Außerhalb dieses Ordners schreibt KRK an genau eine feste Stelle: die
 Markdown-Ausgabe der Tastenbelegung geht nach `~/Downloads/KRK-Tastenbelegung.md`,
