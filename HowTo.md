@@ -753,6 +753,9 @@ Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Home“. Wirken könne
 sie nur, solange der Fokus im Editor steht und dieser eine der zwei Tabellen
 zeigt; das Abhaken wirkt allein in der Aufgabentabelle. Sonst sind sie
 ausgegraut, und ihre Tasten wirken so, als wären sie nicht belegt.
+Nach dem Öffnen ist die erste Aufgabe gewählt, damit die Tasten sofort eine
+Zeile vor sich haben, und ein Klick auf das Kästchen holt den Fokus in die
+Tabelle wie ein Klick auf den Text.
 
 **Jede Handlung ändert zuerst nur den Stand im Editor.** Auf die Platte kommt
 sie mit `cmd+s`, wie jede andere Änderung im Editor. Abhaken schreibt allein
@@ -822,7 +825,9 @@ Löschen nimmt eine Notiz ganz, also Thema und Text.
 Es sind dieselben Befehle wie in der Aufgabentabelle. „Aufgabe abhaken oder
 öffnen“ bleibt hier ausgegraut, denn eine Notiz hat kein Kästchen. Wie dort
 kommt jede Handlung erst mit `cmd+s` auf die Platte, und Suchen, Ersetzen und
-der Zeilensprung sind in der Tabelle ausgegraut.
+der Zeilensprung sind in der Tabelle ausgegraut. Nach dem Öffnen ist auch hier
+die erste Notiz gewählt, sodass die Befehle für die gewählte Notiz sofort
+wirken.
 
 **In einer offenen Zelle gelten andere Regeln als in der Aufgabentabelle:**
 

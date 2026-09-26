@@ -7754,6 +7754,114 @@ mod tests {
         });
     }
 
+    /// Der Klick ins Ankreuzfeld holt den Fokus in die Tabelle, wie ein Klick
+    /// auf den Text der Zeile
+    /// (`issues/260926-1737_*_die-neuen-tastenkombinationen-der-eintragstabelle-wirken-beim-nutzer-nicht-und-am-nachbau-in-jeder-lage.md`).
+    ///
+    /// Zerlegt wie `esc_verwirft_die_aufgabenzelle_und_laesst_den_stand`,
+    /// weil der Wechsel ein Fenster braucht: **am Rumpf gelesen**, dass
+    /// `kastenGeklickt:` erst abhakt und dann den Fokus holt, und dass der
+    /// Wechsel ueber `makeFirstResponder:` des Fensters geht und nichts
+    /// ausblendet; **an echten Ansichten gefahren** die Frage, ob der Rang
+    /// schon bei der Tabelle liegt. Dort sagt sie ja fuer die Tabelle und
+    /// alles unter ihr, das Kaestchen eingeschlossen, und nein fuer jede
+    /// fremde Ansicht und fuer keinen Ersthelfer.
+    #[test]
+    fn der_klick_ins_ankreuzfeld_holt_den_fokus_in_die_tabelle() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let klick = rumpf(&quelle, "kasten_geklickt");
+        let abhaken = klick
+            .find(concat!("(wege.", "abhaken)(zeile)"))
+            .expect("der Klick hakt ab");
+        let fokus = klick
+            .find(concat!("self.fokus_in_die_", "tabelle()"))
+            .expect("der Klick holt den Fokus");
+        assert!(abhaken < fokus, "erst abhaken, dann den Fokus holen");
+        let holen = rumpf(&quelle, "fokus_in_die_tabelle");
+        let frage = holen
+            .find(concat!("self.haelt_den_", "fokus("))
+            .expect("gefragt wird, ob die Tabelle den Rang schon haelt");
+        let wechsel = holen
+            .find(concat!("fenster.makeFirst", "Responder(Some(tabelle))"))
+            .expect("der Wechsel geht ueber das Fenster");
+        assert!(frage < wechsel);
+        assert!(!holen.contains(concat!("set", "Hidden(")));
+
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, kasten) = felder_der_zeile(&eintraege, 1);
+            let tabelle: &NSResponder = eintraege.tabelle();
+            let (kasten, feld): (&NSResponder, &NSResponder) = (&kasten, &feld);
+            assert!(eintraege.haelt_den_fokus(Some(tabelle)));
+            assert!(eintraege.haelt_den_fokus(Some(kasten)));
+            assert!(eintraege.haelt_den_fokus(Some(feld)));
+            let fremd = NSView::initWithFrame(NSView::alloc(mtm), probenrahmen());
+            let fremd: &NSResponder = &fremd;
+            assert!(
+                !eintraege.haelt_den_fokus(Some(fremd)),
+                "eine Ansicht ausserhalb, etwa die Dateiliste, haelt ihn nicht"
+            );
+            assert!(!eintraege.haelt_den_fokus(None));
+        });
+    }
+
+    /// Nach dem Neuladen ist eine Zeile gewaehlt, sobald es eine gibt: die
+    /// erste, wenn keine gewaehlt war, sonst die gewaehlte; eine leere Tabelle
+    /// waehlt nichts, und die Auswahl einer Handlung setzt sich danach durch
+    /// (`issues/260926-1737_*_…`). Die Regel selbst haelt
+    /// `ohne_auswahl_ist_nach_dem_neuladen_die_erste_zeile_gewaehlt` in
+    /// [`super::super::eintragsansicht`]; hier wird sie an der Tabelle gefahren.
+    #[test]
+    fn nach_dem_neuladen_ist_eine_zeile_gewaehlt() {
+        use krk_core::heimordner::eintraege::aufgaben;
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            assert_eq!(
+                eintraege.tabelle().selectedRow(),
+                0,
+                "nach dem Oeffnen ist die erste Zeile gewaehlt"
+            );
+
+            eintraege.auswahl_setzen(Some(1));
+            let abgehakt = aufgaben::abhaken(AUFGABEN, 0).expect("die erste Aufgabe steht");
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&abgehakt.text));
+            assert_eq!(
+                eintraege.tabelle().selectedRow(),
+                1,
+                "eine bestehende Auswahl bleibt"
+            );
+
+            let neustand = aufgaben::abhaken(&abgehakt.text, 1).expect("die zweite Aufgabe steht");
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&neustand.text));
+            eintraege.auswahl_setzen(neustand.auswahl);
+            assert_eq!(
+                eintraege.tabelle().selectedRow(),
+                1,
+                "die Auswahl der Handlung gilt"
+            );
+
+            eintraege
+                .tabelle()
+                .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::new(), false);
+            eintraege.zeilen_zeigen(Zeilen::Notizen(eintragsansicht::notizzeilen(NOTIZEN)));
+            assert_eq!(
+                eintraege.tabelle().selectedRow(),
+                0,
+                "auch nach einem Wechsel der Art"
+            );
+
+            eintraege.zeilen_zeigen(Zeilen::Aufgaben(Vec::new()));
+            assert_eq!(
+                eintraege.tabelle().selectedRow(),
+                -1,
+                "die leere Tabelle waehlt nichts"
+            );
+        });
+    }
+
     /// Ein Doppelklick unter die Zeilen, auch in die leere Tabelle, ruft den
     /// Weg `anlegen` und sonst keinen; die Kopfzeile ruft nichts
     /// (`issues/260926-1400_*_eine-zelle-der-eintragstabelle-laesst-sich-im-laufenden-buendel-nicht-bearbeiten.md`).

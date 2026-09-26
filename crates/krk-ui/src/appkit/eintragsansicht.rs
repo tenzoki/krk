@@ -95,7 +95,7 @@
 //!   esc (Rang in `abbrechen`)        ──> bearbeitung_verwerfen  ──> Anzeige zurueck
 //!                                        (Notizzelle: zelle_uebernehmen, Schritt 4.3)
 //!   tab in der Notiztabelle          ──> bearbeitung_beenden, dann naechste Zelle
-//!   Ankreuzfeld                      ──> abhaken
+//!   Ankreuzfeld                      ──> abhaken, dann Fokus in die Tabelle
 //!   Doppelklick auf eine Zelle       ──> zelle_beginnen
 //!   Doppelklick unter die Zeilen     ──> anlegen (auch in der leeren Tabelle)
 //! ```
@@ -177,7 +177,7 @@
 //! `setEnabled:`, `setState:`, `setFont:`, `setEditable:`, `setBordered:`,
 //! `setDrawsBackground:`, `stringValue`, `setStringValue:`,
 //! `setRefusesFirstResponder:`, `isFieldEditor` (`NSText.h:93`), `string`,
-//! `delegate`, `isDescendantOf:`, `firstResponder`, `makeFirstResponder:`,
+//! `delegate`, `isDescendantOf:`, `window`, `firstResponder`, `makeFirstResponder:`,
 //! `object`, `systemFontOfSize:`, `smallSystemFontSize`, `systemFontSize`,
 //! `indexSetWithIndex:`, `tableColumns`, `removeTableColumn:`, `setTitle:`,
 //! `setWidth:`, `setMinWidth:`, `width`, `identifier`, `columnWithIdentifier:`,
@@ -548,6 +548,22 @@ pub fn doppelklick(zeile: NSInteger, spalte: NSInteger, in_der_tabelle: bool) ->
         Err(_) if in_der_tabelle => Doppelklick::Anlegen,
         Err(_) => Doppelklick::Nichts,
     }
+}
+
+/// Welche Zeile nach einem Neuladen der Tabelle gewaehlt ist, aus der
+/// Auswahl davor und der neuen Zeilenzahl.
+///
+/// **Rein und ohne Fenster pruefbar.** Eine Auswahl davor bleibt auf ihrer
+/// Stelle, auf die letzte Zeile beschnitten. Ohne Auswahl davor ist es die
+/// erste Zeile: jeder Befehl der Tabelle bis auf das Anlegen gilt der
+/// gewaehlten Zeile, und ohne eine antworteten Bearbeiten, Verschieben,
+/// Loeschen und Abhaken nach dem Oeffnen nur in der Statuszeile
+/// (`issues/260926-1737_*_die-neuen-tastenkombinationen-der-eintragstabelle-wirken-beim-nutzer-nicht-und-am-nachbau-in-jeder-lage.md`).
+/// Eine leere Tabelle hat keine Zeile zu waehlen.
+#[must_use]
+pub fn auswahl_nach_neuladen(vorher: Option<usize>, laenge: usize) -> Option<usize> {
+    let letzte = laenge.checked_sub(1)?;
+    Some(vorher.map_or(0, |stelle| stelle.min(letzte)))
 }
 
 /// Die vier Wege aus der Tabelle in den Editor.
@@ -1004,6 +1020,13 @@ define_class!(
         /// **Das Kaestchen zeigt danach die Ableitung und nicht den Klick:**
         /// AppKit schaltet es beim Klick selbst um, und wird die Handlung
         /// abgewiesen, laedt die Tabelle nicht neu und liesse es falsch stehen.
+        ///
+        /// **Danach liegt der Fokus in der Tabelle**, wie nach einem Klick auf
+        /// den Text der Zeile ([`Eintragsansicht::fokus_in_die_tabelle`]).
+        /// Das Kaestchen selbst nimmt den Rang nicht an, und ohne diesen
+        /// Schritt blieb er, wo er war, etwa im Dateifenster, und die Tasten
+        /// der Tabelle gingen ins Leere. Erst nach dem Abhaken, weil das eine
+        /// laufende Zelle zuerst uebernimmt und eine abgewiesene stehen laesst.
         // SAFETY: Die Signatur ist die einer Aktion mit dem Absender als
         // Argument; Absender ist allein das Ankreuzfeld aus `zellenansicht`.
         #[unsafe(method(kastenGeklickt:))]
@@ -1014,6 +1037,7 @@ define_class!(
             if let Some(wege) = self.ivars().wege.borrow().as_ref() {
                 (wege.abhaken)(zeile);
             }
+            self.fokus_in_die_tabelle();
             if let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(kasten))
                 && let Zeilen::Aufgaben(zeilen) = &*self.ivars().zeilen.borrow()
                 && let Some(eintrag) = zeilen.get(zeile)
@@ -1181,9 +1205,12 @@ impl Eintragsansicht {
     ///
     /// **Die Auswahl bleibt auf ihrer Stelle**, auf die neue Laenge
     /// beschnitten: loescht ein `cmd+z` die letzte Aufgabe, steht sie danach
-    /// auf der neuen letzten und nicht auf keiner. Wohin eine Handlung sie
-    /// setzt, sagt der Kern ueber `Neustand::auswahl` und
-    /// [`Self::auswahl_setzen`], nicht diese Funktion.
+    /// auf der neuen letzten und nicht auf keiner. **War keine gewaehlt, ist
+    /// es danach die erste Zeile**, nach der Regel [`auswahl_nach_neuladen`]:
+    /// nach dem Oeffnen, nach dem Neuladen am neuen Ort und nach einem
+    /// `umkehren` ohne Auswahl. Wohin eine Handlung sie setzt, sagt der Kern
+    /// ueber `Neustand::auswahl` und [`Self::auswahl_setzen`], nicht diese
+    /// Funktion; `Editorbereich::umbau_anwenden` setzt sie nach dem Neuladen.
     ///
     /// **Eine offene Zelle wird zuerst verworfen**, und zwar vor dem Vergleich:
     /// gerufen wird nach jeder Aenderung des Standes, und steht dabei eine Zelle
@@ -1224,9 +1251,7 @@ impl Eintragsansicht {
             );
         }
         self.ivars().tabelle.reloadData();
-        let stelle =
-            vorher.and_then(|stelle| laenge.checked_sub(1).map(|letzte| stelle.min(letzte)));
-        self.auswahl_setzen(stelle);
+        self.auswahl_setzen(auswahl_nach_neuladen(vorher, laenge));
     }
 
     /// Welche Art von Eintraegen die Tabelle gerade zeigt.
@@ -1424,6 +1449,40 @@ impl Eintragsansicht {
         self.ivars().verwerfen.set(true);
         let _ = fenster.makeFirstResponder(Some(&self.ivars().tabelle));
         self.ivars().verwerfen.set(false);
+    }
+
+    /// Holt den Fokus in die Tabelle, falls ihn nicht schon sie oder eine
+    /// ihrer Zellen haelt: der zweite Schritt eines Klicks ins Ankreuzfeld.
+    ///
+    /// **Ueber `makeFirstResponder:` des Fensters**, und damit durch die
+    /// Ueberschreibung in `super::fenster`, deren Melder Fokusanzeige und
+    /// aktiven Bereich nachzieht wie bei jedem anderen Wechsel. Getauscht wird
+    /// nichts: die Tabelle ist zu sehen, sonst gaebe es kein Kaestchen zum
+    /// Anklicken. Haelt eine Zelle den Rang, bleibt er bei ihr; eine
+    /// abgewiesene Zelle nach dem Abhaken beendete der Wechsel sonst ein
+    /// zweites Mal.
+    fn fokus_in_die_tabelle(&self) {
+        let tabelle = &self.ivars().tabelle;
+        let Some(fenster) = tabelle.window() else {
+            return;
+        };
+        let ersthelfer = fenster.firstResponder();
+        if !self.haelt_den_fokus(ersthelfer.as_deref()) {
+            let _ = fenster.makeFirstResponder(Some(tabelle));
+        }
+    }
+
+    /// Ob dieser Ersthelfer die Tabelle ist oder unter ihr liegt, der
+    /// Feldeditor einer laufenden Zelle eingeschlossen.
+    ///
+    /// `pub(super)` allein fuer die Proben in [`super::editor`], die kein
+    /// Fenster haben und den Ersthelfer deshalb hereinreichen.
+    #[must_use]
+    pub(super) fn haelt_den_fokus(&self, ersthelfer: Option<&NSResponder>) -> bool {
+        let tabelle: &NSView = &self.ivars().tabelle;
+        ersthelfer
+            .and_then(|ersthelfer| ersthelfer.downcast_ref::<NSView>())
+            .is_some_and(|ansicht| ansicht.isDescendantOf(tabelle))
     }
 
     /// Die Antwort auf `control:textShouldEndEditing:`.
@@ -1660,7 +1719,8 @@ impl Eintragsansicht {
     /// `editColumn:row:withEvent:select:` weiss, welches Feld es bearbeitet.
     /// Das Ankreuzfeld nimmt den Ersthelferrang nicht an: der gehoert der
     /// Tabelle, und ein Klick darauf soll keine laufende Zelle beenden, ohne
-    /// dass `aufgabe_abhaken` sie vorher uebernommen hat.
+    /// dass `aufgabe_abhaken` sie vorher uebernommen hat. Nach dem Abhaken
+    /// holt der Klick den Rang in die Tabelle (`kastenGeklickt:`).
     fn aufgabenzelle(&self, eintrag: &Eintragszeile) -> Retained<NSView> {
         let mtm = self.ivars().mtm;
 
@@ -1812,6 +1872,24 @@ mod tests {
         assert_eq!(doppelklick(-1, -1, true), Doppelklick::Anlegen);
         assert_eq!(doppelklick(-1, 0, true), Doppelklick::Anlegen);
         assert_eq!(doppelklick(-1, 1, false), Doppelklick::Nichts);
+    }
+
+    /// Die Regel der Auswahl nach dem Neuladen: ohne Auswahl davor die erste
+    /// Zeile, eine Auswahl davor bleibt und wird auf die letzte Zeile
+    /// beschnitten, und eine leere Tabelle waehlt nichts
+    /// (`issues/260926-1737_*_…`).
+    #[test]
+    fn ohne_auswahl_ist_nach_dem_neuladen_die_erste_zeile_gewaehlt() {
+        assert_eq!(auswahl_nach_neuladen(None, 3), Some(0));
+        assert_eq!(auswahl_nach_neuladen(None, 1), Some(0));
+        assert_eq!(auswahl_nach_neuladen(None, 0), None);
+        assert_eq!(
+            auswahl_nach_neuladen(Some(2), 3),
+            Some(2),
+            "eine Auswahl bleibt"
+        );
+        assert_eq!(auswahl_nach_neuladen(Some(5), 3), Some(2), "beschnitten");
+        assert_eq!(auswahl_nach_neuladen(Some(0), 0), None);
     }
 
     /// Ein Stand ohne Aufgabe gibt keine Zeile, auch der leere.
