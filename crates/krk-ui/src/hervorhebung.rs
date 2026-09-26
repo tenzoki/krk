@@ -437,7 +437,7 @@ fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
 /// sie bis zur Tabellenform ebenso (Schritt 2.1 des Arbeitspakets
 /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
 ///
-/// **`.secrets.txt` ist einfacher Text.** Erreicht wird der Wert hier nie:
+/// **`secrets.txt` ist einfacher Text.** Erreicht wird der Wert hier nie:
 /// Vorschau und Editor zweigen fuer sie vorher ab, die Vorschau mit einem
 /// Hinweis statt eines Inhalts, der Editor mit der PIN (Schritte 5.3 und 5.4a).
 /// Die Zeile ordnet sie trotzdem ausdruecklich ein, damit keine weitere
@@ -1709,14 +1709,14 @@ mod tests {
         assert!(!ueberschrift(&nach_endung));
     }
 
-    /// `.secrets.txt` ist fuer die Darstellung einfacher Text und keine
+    /// `secrets.txt` ist fuer die Darstellung einfacher Text und keine
     /// Eintragsdatei mit Markdown (Schritt 5.2); erreicht wird der Wert nie,
     /// weil Vorschau und Editor vorher abzweigen.
     #[test]
     fn die_geheimnisse_sind_fuer_die_darstellung_einfacher_text() {
         let typ = Dateityp::Eintraege(Sonderdatei::Geheimnisse);
         assert_eq!(
-            art(Some(&pfad(".secrets.txt")), typ),
+            art(Some(&pfad("secrets.txt")), typ),
             Darstellungsart::EinfacherText
         );
     }

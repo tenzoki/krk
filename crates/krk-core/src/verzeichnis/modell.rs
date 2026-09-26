@@ -66,9 +66,6 @@
 //! Eintrag und [`Ordnermodell::sicht_neu_aufbauen`] je Eintrag des Bestands.
 //!
 //! ```text
-//! versteckt und "steht immer"? ── ja ─> steht, wenn kein Filtertext steht
-//!            │ nein                     oder der Name ihn traegt, sonst
-//!            │                          faellt weg; nie ein Inhaltsauftrag
 //! versteckt und ausgeblendet? ── ja ──> faellt weg
 //!            │ nein
 //! steht ein Filtertext?       ── nein ─> steht in der Liste
@@ -77,6 +74,8 @@
 //!            │ nein
 //! ist es ein Ordner?          ── nein ─> wirkt "Content"? ── nein ─> faellt weg
 //!            │ ja                            │ ja
+//!            │                        "ohne Inhaltsauftrag"? ─ ja ─> faellt weg
+//!            │                               │ nein
 //!            │                        traegt der Inhalt? ── Treffer ──> steht
 //!            │                                           └ sonst ────> faellt weg
 //! wirkt "Deep"?               ── nein ─> steht in der Liste
@@ -90,33 +89,34 @@
 //! [`Ordnermodell::sichtbar`]; alles davor rechnet `zeilengrund_von` und legt
 //! es als `Zeilengrund` ab.
 //!
-//! # Die Ausnahme „steht immer“ sitzt im Zweig der Verstecke
+//! # Die Ausnahme „ohne Inhaltsauftrag“ sitzt im Inhaltszweig
 //!
-//! In `~/krkhome/` steht `.secrets.txt` immer in der Liste, gleich wie der
-//! Umschalter fuer versteckte Eintraege steht, und bekommt vom Inhaltsfilter
-//! nie einen Auftrag (C7 des Arbeitspakets
-//! `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`). **Die Ausnahme ist
-//! eine Eigenschaft des Ordners** und keine des Eintrags
-//! (`260926-0007_*_was-heisst-immer-gelistet-fuer-secrets-txt.md`): wer den
-//! Lesevorgang beginnt, setzt sie einmal ueber
-//! [`Ordnermodell::immer_gelistet_setzen`], und das Kennzeichen `versteckt`
-//! bleibt am Eintrag stehen. Dieses Modell kennt den Heimordner nicht; es
-//! bekommt allein den Namen.
+//! In `~/krkhome/` bekommt `secrets.txt` vom Inhaltsfilter nie einen Auftrag
+//! (C7 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`,
+//! `260926-0050_*_wie-weit-reicht-der-inhaltsfilter-liest-secrets-txt-nicht-wenn-das-kennzeichen-versteckt-ihn-nicht-haelt.md`,
+//! Moeglichkeit 1). **Die Ausnahme ist eine Eigenschaft des Ordners** und
+//! keine des Eintrags: wer den Lesevorgang beginnt, setzt sie einmal ueber
+//! [`Ordnermodell::ohne_inhaltsauftrag_setzen`]. Dieses Modell kennt den
+//! Heimordner nicht; es bekommt allein den Namen.
 //!
-//! **Die Regel steht im Zweig der versteckten Eintraege und nirgends sonst**,
-//! und daran haengen L3 und L10: ein gewoehnlicher Eintrag in jedem Ordner und
-//! ein versteckter in jedem anderen Ordner durchlaufen den Pruefschritt ohne
-//! einen Namensvergleich; verglichen wird allein bei einem versteckten Eintrag
-//! unter gesetzter Eigenschaft. Fuer den getroffenen Eintrag gilt dann **allein
-//! der Name**. Einen Inhaltsvorbehalt bekommt er nie, denn das Kennzeichen
-//! `versteckt` haelt den Inhaltsfilter nicht auf, sobald die Verstecke
-//! eingeblendet sind
-//! (`260926-0050_*_wie-weit-reicht-der-inhaltsfilter-liest-secrets-txt-nicht-wenn-das-kennzeichen-versteckt-ihn-nicht-haelt.md`,
-//! Moeglichkeit 1). **Die tiefe Suche aus einem uebergeordneten Ordner ist
-//! davon unberuehrt** und liest das Chiffrat wie jede andere Datei darunter;
-//! Klartext erreicht sie nie. Die Probe
-//! `die_ausnahme_steht_im_zweig_der_verstecke` im Pruefmodul haelt die Lage
-//! des Vergleichs.
+//! **Die Regel steht im Inhaltszweig hinter der Frage, ob „Content“ wirkt, und
+//! nirgends sonst**, und daran haengen L3 und L10: ohne Filtertext, bei einem
+//! Namenstreffer, bei einem Ordner und bei ausgeschaltetem Inhaltsfilter kommt
+//! kein Eintrag an ihr vorbei; im Inhaltszweig fragt sie zuerst die
+//! Eigenschaft und erst bei gesetzter den Namen. In jedem anderen Ordner
+//! kostet sie damit eine Frage nach `None` je Inhaltskandidat, und der wird
+//! danach ohnehin gelesen. Fuer den getroffenen Eintrag gilt dann **allein der
+//! Name**: traegt er den Filter, steht die Zeile schon davor, sonst faellt sie.
+//! **Die tiefe Suche aus einem uebergeordneten Ordner ist davon unberuehrt**
+//! und liest das Chiffrat wie jede andere Datei darunter; Klartext erreicht sie
+//! nie. Die Probe `die_ausnahme_steht_im_inhaltszweig` im Pruefmodul haelt die
+//! Lage des Vergleichs.
+//!
+//! **Bis zum 260926 stand sie im Zweig der Verstecke** und hielt dort zugleich
+//! eine versteckte `.secrets.txt` gleich wie der Umschalter in der Liste. Seit
+//! die Datei `secrets.txt` ohne Punkt heisst, steht sie in jeder Liste wie jede
+//! andere, und dieser Teil ist entfallen
+//! (`260926-1308_*_heisst-die-geheimnisdatei-secrets-txt-ohne-punkt.md`).
 //!
 //! **Bis zur Runde 10 stand die Regel zweimal wortgleich da**, einmal in
 //! `anhaengen` und einmal in `sicht_neu_aufbauen`, und trug damals nur ihren
@@ -143,7 +143,7 @@
 //! **Seit Schritt 5.2 des Arbeitspakets
 //! `260925-2356-f2-oeffnet-krkhome-statt-notizfenster` steht eine weitere
 //! Eingabe daneben, und sie gehoert zur Seite der fuenf:** die Eigenschaft
-//! „steht immer“ des gelesenen Ordners. Sie kommt zwar von aussen, aber einmal
+//! „ohne Inhaltsauftrag“ des gelesenen Ordners. Sie kommt zwar von aussen, aber einmal
 //! je Lesevorgang und nicht je Befund, und der Zeilengrund haelt ihr Ergebnis
 //! wie das der fuenf. Der Abschnitt darueber sagt, wo sie wirkt.
 //!
@@ -441,17 +441,16 @@ pub struct Ordnermodell {
     /// Inhalt noch dem vorigen Lauf, die Generation aber schon dem neuen; der
     /// Modulkopf schreibt aus, warum das die richtige Reihenfolge ist.
     ersatz_ausstehend: bool,
-    /// Der Name des Eintrags, der in diesem Ordner immer in der Liste steht,
-    /// oder `None`.
+    /// Der Name des Eintrags, dem der Inhaltsfilter in diesem Ordner nie einen
+    /// Auftrag gibt, oder `None`.
     ///
     /// **Eine Eigenschaft des gelesenen Ordners**, einmal je Lesevorgang
-    /// gesetzt von dem, der den Ordner kennt ([`Ordnermodell::immer_gelistet_setzen`]).
-    /// Gelesen wird sie allein im Zweig der versteckten Eintraege von
-    /// `zeilengrund_von`; der Modulkopf sagt unter
-    /// `# Die Ausnahme „steht immer“ sitzt im Zweig der Verstecke`, warum dort.
-    /// `&'static str`, weil der Name eine Konstante des Kerns ist und kein
-    /// Text, den ein Lesevorgang mitbringt.
-    immer_gelistet: Option<&'static str>,
+    /// gesetzt von dem, der den Ordner kennt ([`Ordnermodell::ohne_inhaltsauftrag_setzen`]).
+    /// Gelesen wird sie allein im Inhaltszweig von `zeilengrund_von`; der
+    /// Modulkopf sagt unter `# Die Ausnahme „ohne Inhaltsauftrag“ sitzt im
+    /// Inhaltszweig`, warum dort. `&'static str`, weil der Name eine Konstante
+    /// des Kerns ist und kein Text, den ein Lesevorgang mitbringt.
+    ohne_inhaltsauftrag: Option<&'static str>,
 }
 
 impl Ordnermodell {
@@ -498,7 +497,7 @@ impl Ordnermodell {
             grund: Vec::new(),
             gitmarke: Vec::new(),
             ersatz_ausstehend: false,
-            immer_gelistet: None,
+            ohne_inhaltsauftrag: None,
         }
     }
 
@@ -681,13 +680,14 @@ impl Ordnermodell {
         self.verstecke_ausblenden_setzen(!self.verstecke_ausblenden);
     }
 
-    /// Der Name des Eintrags, der in diesem Ordner immer in der Liste steht.
+    /// Der Name des Eintrags, dem der Inhaltsfilter in diesem Ordner nie einen
+    /// Auftrag gibt.
     #[must_use]
-    pub fn immer_gelistet(&self) -> Option<&'static str> {
-        self.immer_gelistet
+    pub fn ohne_inhaltsauftrag(&self) -> Option<&'static str> {
+        self.ohne_inhaltsauftrag
     }
 
-    /// Setzt die Eigenschaft „steht immer“ des gelesenen Ordners.
+    /// Setzt die Eigenschaft „ohne Inhaltsauftrag“ des gelesenen Ordners.
     ///
     /// **Einmal je Lesevorgang, bevor sein erster Stapel eintrifft**; der
     /// Rufer ist `krk-ui`s `Tabliste::lesen_starten`, der den Ordner kennt und
@@ -703,11 +703,11 @@ impl Ordnermodell {
     /// ausstehenden Ersatz und bei einem neuen Wert rechnet er nach wie jeder
     /// andere Setzer einer Eingabe des Pruefschritts; bei gleichem Wert tut er
     /// nichts.
-    pub fn immer_gelistet_setzen(&mut self, name: Option<&'static str>) {
-        if self.immer_gelistet == name {
+    pub fn ohne_inhaltsauftrag_setzen(&mut self, name: Option<&'static str>) {
+        if self.ohne_inhaltsauftrag == name {
             return;
         }
-        self.immer_gelistet = name;
+        self.ohne_inhaltsauftrag = name;
         if self.ersatz_ausstehend {
             return;
         }
@@ -906,27 +906,9 @@ impl Ordnermodell {
             return Zeilengrund::FaelltWeg;
         };
 
-        // Der Zweig der Verstecke. **Allein in ihm steht die Ausnahme „steht
-        // immer“**, und der Name wird allein hier verglichen: ein gewoehnlicher
-        // Eintrag kommt an keinem Vergleich vorbei, ein versteckter in einem
-        // Ordner ohne die Eigenschaft allein an der Frage, ob sie steht. Der
-        // getroffene Eintrag steht unabhaengig vom Umschalter und bekommt nie
-        // einen Inhaltsvorbehalt; ueber ihn entscheidet allein sein Name. Der
-        // Modulkopf schreibt aus, warum.
-        if eintrag.versteckt {
-            if let Some(name) = self.immer_gelistet
-                && eintrag.name == name
-            {
-                return if self.filtertext.is_empty() || self.name_traegt_den_filter(index as u32) {
-                    Zeilengrund::Steht
-                } else {
-                    Zeilengrund::FaelltWeg
-                };
-            }
-            // versteckt und Verstecke ausgeblendet?
-            if self.verstecke_ausblenden {
-                return Zeilengrund::FaelltWeg;
-            }
+        // versteckt und Verstecke ausgeblendet?
+        if eintrag.versteckt && self.verstecke_ausblenden {
+            return Zeilengrund::FaelltWeg;
         }
 
         // steht ein Filtertext?
@@ -955,11 +937,18 @@ impl Ordnermodell {
         // genau daran haengt, dass die beiden Treffergruende sich nicht
         // ueberschneiden.
         if !(eintrag.ist_ordner() || eintrag.ist_verknuepfung()) {
-            return if self.inhalt_wirkt() {
-                Zeilengrund::UnterVorbehalt(Auftragsart::Inhalt)
-            } else {
-                Zeilengrund::FaelltWeg
-            };
+            if !self.inhalt_wirkt() {
+                return Zeilengrund::FaelltWeg;
+            }
+            // Die Ausnahme „ohne Inhaltsauftrag“: erst die Eigenschaft des
+            // Ordners, dann der Name. In jedem anderen Ordner endet die Frage
+            // an `None`; der Modulkopf schreibt aus, warum sie hier steht.
+            if let Some(name) = self.ohne_inhaltsauftrag
+                && eintrag.name == name
+            {
+                return Zeilengrund::FaelltWeg;
+            }
+            return Zeilengrund::UnterVorbehalt(Auftragsart::Inhalt);
         }
 
         // wirkt der Filter der Tiefe? Nicht "steht das Kennzeichen": unterhalb
@@ -992,7 +981,7 @@ impl Ordnermodell {
     /// **Zu rufen, wann immer sich eine Eingabe des Pruefschritts aendert**,
     /// und das sind genau vier Anlaesse: der Filtertext, einer der beiden
     /// Schalter, das Aus- und Einblenden der versteckten Eintraege und die
-    /// Eigenschaft „steht immer“ ausserhalb eines ausstehenden Ersatzes. Ein
+    /// Eigenschaft „ohne Inhaltsauftrag“ ausserhalb eines ausstehenden Ersatzes. Ein
     /// eintreffender Befund gehoert ausdruecklich **nicht** dazu — er ist die
     /// Antwort und nicht die Frage —, und ein Sortierwechsel ebenso wenig.
     fn grund_neu_rechnen(&mut self) {
@@ -2122,18 +2111,19 @@ mod tests {
         );
     }
 
-    /// Die Lage der Ausnahme „steht immer“ im Pruefschritt (C7.12, C7.13 des
+    /// Die Lage der Ausnahme „ohne Inhaltsauftrag“ im Pruefschritt (C7.13 des
     /// Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
     ///
     /// **Das haelt kein Uebersetzer, und daran haengen L3 und L10**: stuende der
-    /// Namensvergleich vor dem Zweig der Verstecke, zahlte jeder Eintrag jedes
-    /// Ordners einen Vergleich mehr. Die Probe liest den Rumpf von
-    /// `zeilengrund_von`, schneidet den Zweig `if eintrag.versteckt {` bis zu
-    /// seiner schliessenden Klammer auf derselben Einrueckung heraus und
-    /// verlangt, dass `immer_gelistet` im Rumpf vorkommt und allein in diesem
-    /// Zweig. Kommentarzeilen zaehlen nicht.
+    /// Namensvergleich vor dem Inhaltszweig, zahlte jeder Eintrag jedes Ordners
+    /// einen Vergleich mehr. Die Probe liest den Rumpf von `zeilengrund_von`,
+    /// schneidet den Inhaltszweig bis zu seiner schliessenden Klammer auf
+    /// derselben Einrueckung heraus und verlangt, dass `ohne_inhaltsauftrag`
+    /// im Rumpf vorkommt, allein in diesem Zweig und erst nach der Frage, ob
+    /// „Content“ wirkt, und dass der Name ausserhalb des Zweiges nicht
+    /// verglichen wird. Kommentarzeilen zaehlen nicht.
     #[test]
-    fn die_ausnahme_steht_im_zweig_der_verstecke() {
+    fn die_ausnahme_steht_im_inhaltszweig() {
         let quelle = std::fs::read_to_string(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/src/verzeichnis/modell.rs"
@@ -2148,21 +2138,26 @@ mod tests {
             .filter(|zeile| !zeile.trim_start().starts_with("//"))
             .collect();
 
-        let zweigkopf = "        if eintrag.versteckt {";
+        let zweigkopf = "        if !(eintrag.ist_ordner() || eintrag.ist_verknuepfung()) {";
         let anfang = zeilen
             .iter()
             .position(|zeile| *zeile == zweigkopf)
-            .expect("der Zweig der Verstecke steht nicht im Rumpf");
+            .expect("der Inhaltszweig steht nicht im Rumpf");
         let schluss = anfang
             + zeilen[anfang..]
                 .iter()
                 .position(|zeile| *zeile == "        }")
-                .expect("der Zweig der Verstecke endet nicht");
+                .expect("der Inhaltszweig endet nicht");
+        let wirkt = anfang
+            + zeilen[anfang..schluss]
+                .iter()
+                .position(|zeile| zeile.contains("self.inhalt_wirkt()"))
+                .expect("der Inhaltszweig fragt nicht, ob \"Content\" wirkt");
 
         let fundstellen: Vec<usize> = zeilen
             .iter()
             .enumerate()
-            .filter(|(_, zeile)| zeile.contains("immer_gelistet"))
+            .filter(|(_, zeile)| zeile.contains("ohne_inhaltsauftrag"))
             .map(|(stelle, _)| stelle)
             .collect();
         assert!(
@@ -2171,17 +2166,29 @@ mod tests {
         );
         for stelle in fundstellen {
             assert!(
-                anfang < stelle && stelle < schluss,
-                "`immer_gelistet` steht ausserhalb des Zweiges der Verstecke: {}",
+                wirkt < stelle && stelle < schluss,
+                "`ohne_inhaltsauftrag` steht ausserhalb des Inhaltszweiges oder vor der Frage nach \"Content\": {}",
                 zeilen[stelle]
             );
         }
-        // Und vor dem Zweig steht keine Frage an den Namen: der Zweig ist der
-        // erste Schritt nach dem Holen des Eintrags.
-        assert!(
-            !zeilen[..anfang].iter().any(|zeile| zeile.contains(".name")),
-            "vor dem Zweig der Verstecke wird der Name gefragt"
-        );
+        // Ausserhalb des Zweiges steht keine Frage an den Namen: der
+        // Namensfilter geht ueber den Index und nicht ueber das Feld.
+        for (stelle, zeile) in zeilen.iter().enumerate() {
+            if zeile.contains("eintrag.name") {
+                assert!(
+                    wirkt < stelle && stelle < schluss,
+                    "ausserhalb des Inhaltszweiges wird der Name gefragt: {zeile}"
+                );
+            }
+        }
+    }
+
+    /// Ein Modell mit Filtertext ueber der Schwelle und „Content“ ein, damit
+    /// jede Datei im Inhaltszweig ankommt.
+    fn mit_inhaltsfilter(modell: &mut Ordnermodell) {
+        modell.inhalt_setzen(true);
+        modell.filtertext_setzen("geheimnis");
+        assert!(modell.inhalt_wirkt(), "die Probe liegt ueber der Schwelle");
     }
 
     /// Setzt die Eigenschaft nach dem Lesen, ohne ausstehenden Ersatz, rechnet
@@ -2191,26 +2198,31 @@ mod tests {
     fn die_eigenschaft_rechnet_allein_ohne_ausstehenden_ersatz_nach() {
         let mut modell = Ordnermodell::neu(1);
         modell.anhaengen([
-            eintrag(".secrets.txt", Typ::Datei),
+            eintrag("secrets.txt", Typ::Datei),
             eintrag("notes.txt", Typ::Datei),
         ]);
         modell.abschliessen();
-        assert_eq!(modell.zeilenzahl(), 1, "ausgeblendet ohne Eigenschaft");
+        mit_inhaltsfilter(&mut modell);
+        assert_eq!(
+            modell.auftraege().len(),
+            2,
+            "ohne Eigenschaft zwei Auftraege"
+        );
 
-        modell.immer_gelistet_setzen(Some(".secrets.txt"));
-        assert_eq!(modell.zeilenzahl(), 2, "nachgerechnet mit Eigenschaft");
+        modell.ohne_inhaltsauftrag_setzen(Some("secrets.txt"));
+        assert_eq!(modell.auftraege().len(), 1, "nachgerechnet mit Eigenschaft");
 
         modell.lesevorgang_beginnen(2);
-        modell.immer_gelistet_setzen(None);
+        modell.ohne_inhaltsauftrag_setzen(None);
         assert_eq!(
-            modell.zeilenzahl(),
-            2,
+            modell.auftraege().len(),
+            1,
             "der alte Bestand gehoert dem alten Ordner und bleibt, wie er war"
         );
-        modell.anhaengen([eintrag(".secrets.txt", Typ::Datei)]);
+        modell.anhaengen([eintrag("secrets.txt", Typ::Datei)]);
         assert_eq!(
-            modell.zeilenzahl(),
-            0,
+            modell.auftraege().len(),
+            1,
             "der neue Bestand fragt schon den neuen Wert"
         );
     }

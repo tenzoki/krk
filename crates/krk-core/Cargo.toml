@@ -50,7 +50,7 @@ flate2 = { workspace = true }
 # Pruefrepository nicht zu belegen. Die Merkmalswahl und der Befund zu `cc` und
 # `-sys` stehen in der Wurzel-`Cargo.toml`.
 gix = { workspace = true }
-# Die Verschluesselung von `.secrets.txt` mit ihrer Schluesselableitung. Sie
+# Die Verschluesselung von `secrets.txt` mit ihrer Schluesselableitung. Sie
 # steht hier und nicht in `krk-ui`, weil das Format im Kern liegt:
 # `heimordner::tresor` ist die einzige Stelle, die die zwei Kisten nennt, und
 # seine Proben pruefen Kopf, Abweisung und Rundlauf ohne Fenster. `krk-ui` hat

@@ -596,7 +596,7 @@ define_class!(
     /// und `smartInsertDelete` an (`messung-eigener.txt` unter
     /// `spikes/zellen-rueckgaengig/`), und am 260926 auf macOS 15.7.9 ersetzte
     /// derselbe Feldeditor ohne Abschaltung `omw` durch `On my way!` — in
-    /// `.secrets.txt` ein still geaendertes Passwort. Beim Bau gesetzt, bleiben
+    /// `secrets.txt` ein still geaendertes Passwort. Beim Bau gesetzt, bleiben
     /// acht der neun Einstellungen ueber den Beginn einer Bearbeitung stehen.
     /// Die neunte nicht: AppKit setzt `writingToolsBehavior` beim Einrichten
     /// **vor** `becomeFirstResponder` auf `Limited` (2) zurueck. Deshalb ruft

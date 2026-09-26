@@ -174,20 +174,20 @@
 //! behandeln ist, und `None`, wenn der Aufrufer nichts zu tun hat und auf den
 //! Faden wartet.
 //!
-//! # `.secrets.txt`: gelesen mit PIN, gesichert als Chiffrat
+//! # `secrets.txt`: gelesen mit PIN, gesichert als Chiffrat
 //!
 //! Seit Schritt 5.4a der krkhome-Arbeit (C7) haelt das Modell neben dem Stand
 //! einen [`Schutz`], und er entscheidet, wie der Stand auf die Platte geht:
 //!
 //! ```text
-//!  oeffnen(pfad, pin) ──> .secrets.txt? ──nein, ohne PIN──> Faden: datei::oeffnen
+//!  oeffnen(pfad, pin) ──> secrets.txt? ──nein, ohne PIN──> Faden: datei::oeffnen
 //!                              │                             Schutz::Klartext
 //!                              ├──ja, ohne PIN──> Abgewiesen, kein Faden
 //!                              └──ja, mit PIN───> Faden: leer? neuer_schluessel
 //!                                                      : tresor::oeffnen
 //!                                                 Schutz::Verschluesselt
 //!
-//!  sichern ──> Stempel gleich? ──> Klartext:       .secrets.txt? nicht schreiben
+//!  sichern ──> Stempel gleich? ──> Klartext:       secrets.txt? nicht schreiben
 //!                                                  sonst datei::sichern
 //!                                  Verschluesselt: Chiffrat::verschliessen
 //!                                                  ──> Chiffrat::schreiben
@@ -199,7 +199,7 @@
 //! Quelltext; die Faelle, in denen sich die Erkennung zwischen Oeffnen und
 //! Sichern aendert, stehen an [`Editormodell::uebernehmen`] und
 //! [`Editormodell::sichern`]. **Unter einer dritten Schreibweise** (ein
-//! zweiter Verweis anderswo) erkennt der Pfadtext `.secrets.txt` nicht; die
+//! zweiter Verweis anderswo) erkennt der Pfadtext `secrets.txt` nicht; die
 //! Erkennung kennt zwei Pfadformen, wie der Nutzer es gewaehlt hat
 //! (`260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md`).
 //! Oeffnen, Uebernahme und Sichern fragen deshalb seit dem 260926 fuer eine
@@ -380,7 +380,7 @@ pub enum Dateityp {
     ///
     /// Die Vorschau rendert `notes.txt` und `tasks.txt` als Markdown mit
     /// Aufgabenkaestchen (`crate::markdown::Lesart::Eintragsdatei`); die
-    /// Formatansicht des Editors zeigt sie als Tabelle. `.secrets.txt` ist
+    /// Formatansicht des Editors zeigt sie als Tabelle. `secrets.txt` ist
     /// seit Schritt 5.2 ebenfalls ein Wert dieser Art, und Vorschau und Editor
     /// zweigen fuer sie ab, bevor sie etwas lesen (5.3, 5.4a).
     Eintraege(Sonderdatei),
@@ -547,11 +547,11 @@ struct Gelesen {
 /// Speichers zu, und die Textflaeche haelt den Klartext ohnehin.
 #[derive(Debug, Default)]
 enum Schutz {
-    /// Jede Datei ausser `.secrets.txt`: gesichert wird der Stand in seiner
+    /// Jede Datei ausser `secrets.txt`: gesichert wird der Stand in seiner
     /// Sicherungsform.
     #[default]
     Klartext,
-    /// `.secrets.txt` im erkannten Heimordner: gesichert wird allein das
+    /// `secrets.txt` im erkannten Heimordner: gesichert wird allein das
     /// Chiffrat aus [`Chiffrat::verschliessen`], mit dem gehaltenen Schluessel
     /// und ohne neue Ableitung.
     Verschluesselt {
@@ -581,21 +581,21 @@ enum Schutz {
 /// Was der Arbeitsfaden lesen soll.
 ///
 /// **Entschieden wird in [`Editormodell::oeffnen`] und nicht auf dem Faden**:
-/// ob ein Pfad `.secrets.txt` im erkannten Heimordner ist, fragt das Modell,
-/// bevor es einen Faden startet, und `.secrets.txt` ohne PIN bekommt gar
+/// ob ein Pfad `secrets.txt` im erkannten Heimordner ist, fragt das Modell,
+/// bevor es einen Faden startet, und `secrets.txt` ohne PIN bekommt gar
 /// keinen.
 #[derive(Debug, Clone, Copy)]
 enum Leseauftrag {
     /// Eine gewoehnliche Textdatei, ueber `krk_core::text::datei::oeffnen`.
     Text,
-    /// `.secrets.txt` mit der eingegebenen PIN; `datei::oeffnen` wird dafuer
+    /// `secrets.txt` mit der eingegebenen PIN; `datei::oeffnen` wird dafuer
     /// nie erreicht.
     Geheimnisse(Pin),
 }
 
 /// Die Bytes, die von einem verschluesselten Stand auf die Platte gehen.
 ///
-/// **Ein eigener Typ, damit der Schreibweg fuer `.secrets.txt` keinen
+/// **Ein eigener Typ, damit der Schreibweg fuer `secrets.txt` keinen
 /// Klartext annehmen kann**: [`Chiffrat::schreiben`] nimmt allein diesen Wert,
 /// und er entsteht an genau einer Stelle, in [`Chiffrat::verschliessen`], aus
 /// `tresor::verschliessen`. Das Feld ist privat; die Probe
@@ -682,22 +682,22 @@ pub enum Pinwechselausgang {
 /// Der Satzschluss jeder Abweisung von „PIN ändern".
 const PIN_BLEIBT: &str = "die PIN bleibt, wie sie war";
 
-/// Die Grenze fuer das Lesen einer `.secrets.txt`: die Editorgrenze fuer den
+/// Die Grenze fuer das Lesen einer `secrets.txt`: die Editorgrenze fuer den
 /// Klartext, dazu der Kopf und die 16 Byte Pruefwert von Poly1305 (Kopftabelle
 /// im Modulkopf von `krk_core::heimordner::tresor`). Mehr kann ein Chiffrat
 /// nicht tragen, dessen Klartext der Editor annimmt.
 const GEHEIMNISGRENZE: u64 = datei::EDITORGRENZE + tresor::KOPFLAENGE as u64 + 16;
 
-/// Der Satz der Statuszeile, wenn `cmd+d` im Editor an `.secrets.txt` eine
+/// Der Satz der Statuszeile, wenn `cmd+d` im Editor an `secrets.txt` eine
 /// Textmarke anlegen soll; die Regel steht an
 /// [`Editormodell::textmarke_verweigert`].
-pub const KEINE_TEXTMARKE_IN_GEHEIMNISSEN: &str = "für .secrets.txt legt KRK keine Textmarke an: \
+pub const KEINE_TEXTMARKE_IN_GEHEIMNISSEN: &str = "für secrets.txt legt KRK keine Textmarke an: \
      sie schriebe eine Zeile der Geheimnisse im Klartext in die Lesezeichen";
 
-/// Der Grund, aus dem `.secrets.txt` ohne PIN nicht geoeffnet wird.
+/// Der Grund, aus dem `secrets.txt` ohne PIN nicht geoeffnet wird.
 const OHNE_PIN: &str = "sie ist verschlüsselt und öffnet sich allein mit der PIN";
 
-/// Eine Abweisung fuer `.secrets.txt`, im Wortlaut des Editors: der Pfad,
+/// Eine Abweisung fuer `secrets.txt`, im Wortlaut des Editors: der Pfad,
 /// "laesst sich nicht im Editor oeffnen:" und der Grund.
 ///
 /// **`KeinGueltigesZiel` und kein neuer Wert**, weil der Satz passt und die
@@ -721,7 +721,7 @@ fn text_lesen(pfad: &Path) -> Result<Gelesen, Abweisung> {
     })
 }
 
-/// Liest `.secrets.txt` mit der PIN und leitet dabei ab; laeuft auf dem
+/// Liest `secrets.txt` mit der PIN und leitet dabei ab; laeuft auf dem
 /// Arbeitsfaden, weil die Ableitung rund eine halbe Sekunde kostet.
 ///
 /// **Die Leere wird an den gelesenen Bytes entschieden und nicht an einem
@@ -873,7 +873,7 @@ pub enum Ladeausgang {
     /// eine Behandlung gibt und nicht zwei. Ein eigener Wert und nicht
     /// `Abgewiesen`, weil jene Abweisung eine Datei nennt und diese keine.
     ZelleAbgewiesen(String),
-    /// Die Datei ist `.secrets.txt` im erkannten Heimordner, und bevor gelesen
+    /// Die Datei ist `secrets.txt` im erkannten Heimordner, und bevor gelesen
     /// wird, gehoert die PIN erfragt (Schritt 5.4b der krkhome-Arbeit, C7.10).
     ///
     /// **Dieses Modell erzeugt den Wert nie**, wie [`Self::ZelleAbgewiesen`]:
@@ -1111,7 +1111,7 @@ impl Editormodell {
     }
 
     /// Ob sich die PIN der gehaltenen Datei aendern laesst: der Editor haelt
-    /// `.secrets.txt` entsperrt, und auf der Platte steht ihr Kopf (Schritt
+    /// `secrets.txt` entsperrt, und auf der Platte steht ihr Kopf (Schritt
     /// 5.4b der krkhome-Arbeit, gelesen ab 5.5).
     ///
     /// Eine leere Datei, deren PIN eben festgelegt und noch nie gesichert
@@ -1133,7 +1133,7 @@ impl Editormodell {
     /// wenn sie entstehen darf (C7.8 der krkhome-Arbeit).
     ///
     /// **Eine Textmarke traegt ihre Zeile im Klartext**, als `zeileninhalt` in
-    /// `bookmarks.toml`, und haelt der Editor `.secrets.txt`, ist diese Zeile
+    /// `bookmarks.toml`, und haelt der Editor `secrets.txt`, ist diese Zeile
     /// ein Geheimnis. Die Antwort ist deshalb fuer die Geheimnisse immer der
     /// eine Satz [`KEINE_TEXTMARKE_IN_GEHEIMNISSEN`]
     /// (`issues/260926-1004_*_eine-textmarke-in-secrets-txt-schreibt-eine-klartextzeile-in-die-lesezeichendatei.md`).
@@ -1145,7 +1145,7 @@ impl Editormodell {
             .then_some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN)
     }
 
-    /// Ob der Editor `.secrets.txt` haelt (C7 der krkhome-Arbeit).
+    /// Ob der Editor `secrets.txt` haelt (C7 der krkhome-Arbeit).
     ///
     /// **Die eine Antwort fuer jeden Weg, auf dem Inhalt der Geheimnisse aus
     /// KRK hinausgelangen koennte**: die Textmarke
@@ -1155,9 +1155,9 @@ impl Editormodell {
     /// Gefragt werden zwei Dinge, und jedes allein genuegt: der [`Schutz`],
     /// der einen Schluessel haelt, und die Erkennung des Pfadtexts. Der Schutz
     /// antwortet auch dann, wenn ein F2 die aufgeloeste Form des Heimordners
-    /// inzwischen anders fuehrt, und fuer `.secrets.txt` unter einer dritten
+    /// inzwischen anders fuehrt, und fuer `secrets.txt` unter einer dritten
     /// Schreibweise; die Erkennung antwortet auch fuer eine
-    /// leere `.secrets.txt`, deren Stand noch gar nichts traegt. **Kein
+    /// leere `secrets.txt`, deren Stand noch gar nichts traegt. **Kein
     /// Systemaufruf**, weil der Frager das Tastenprotokoll ist
     /// ([`Self::nennt_geheimnisdatei`]).
     #[must_use]
@@ -1262,13 +1262,13 @@ impl Editormodell {
     /// greift auf dieser Abkuerzung nicht, und sie soll es nicht: es wird
     /// nichts gelesen und nichts ersetzt, also ist auch nichts zu verlieren.
     ///
-    /// # `.secrets.txt` oeffnet sich allein mit der PIN
+    /// # `secrets.txt` oeffnet sich allein mit der PIN
     ///
     /// **Die Sperre sitzt hier und nicht bei einem Einstieg**, damit F4, der
     /// Uebergang aus der Vorschau, `cmd+e` und jeder kuenftige Weg sie erben,
     /// ohne sie zu kennen (Schritt 5.4a des Plans der krkhome-Arbeit). Gefragt
     /// wird die Erkennung ([`Self::ist_geheimnisdatei`]), **bevor** ein Faden
-    /// startet: ohne `pin` kommt `.secrets.txt` sofort als
+    /// startet: ohne `pin` kommt `secrets.txt` sofort als
     /// [`Ladeausgang::Abgewiesen`] zurueck, ohne dass ein Byte gelesen wurde,
     /// und `krk_core::text::datei::oeffnen` wird fuer sie nie erreicht. Mit
     /// `pin` liest und leitet der Faden ab ([`geheimnisse_lesen`]). Eine `pin`
@@ -1277,7 +1277,7 @@ impl Editormodell {
     /// Klartext waere die falsche Seite des Irrtums.
     ///
     /// **Die gehaltene Datei bleibt davon unberuehrt**: haelt der Editor
-    /// `.secrets.txt` schon, gilt die PIN, solange die Datei offen ist, und die
+    /// `secrets.txt` schon, gilt die PIN, solange die Datei offen ist, und die
     /// Abkuerzung darueber greift vor der Sperre.
     #[must_use]
     pub fn oeffnen(&mut self, pfad: &Path, pin: Option<Pin>) -> Option<Ladeausgang> {
@@ -1312,7 +1312,7 @@ impl Editormodell {
     /// Gibt ein laufendes Lesen auf, ohne etwas anderes anzufassen.
     ///
     /// Der Weg von `Editorbereich::datei_oeffnen`, wenn es fuer
-    /// `.secrets.txt` erst nach der PIN fragt: der letzte Befehl des Nutzers
+    /// `secrets.txt` erst nach der PIN fragt: der letzte Befehl des Nutzers
     /// gilt dieser Datei, also gehoert ein Lesen, das noch fuer eine andere
     /// laeuft, niemandem mehr. Derselbe Satz wie an [`Self::oeffnen`]:
     /// hoechstens ein Lesen ist offen, und es ist das zuletzt begonnene.
@@ -1320,12 +1320,12 @@ impl Editormodell {
         self.ladevorgang = None;
     }
 
-    /// Ob der Pfad `.secrets.txt` im erkannten Heimordner ist, unter jeder
+    /// Ob der Pfad `secrets.txt` im erkannten Heimordner ist, unter jeder
     /// Schreibweise.
     ///
     /// Die eine Frage, an der Sperre, Uebernahme und Sicherungsweg haengen;
     /// gestellt ueber [`Heimordner::sonderdatei_genau`], die fuer eine Datei
-    /// namens `.secrets.txt` ueber die zwei Pfadformen hinaus Geraet und Inode
+    /// namens `secrets.txt` ueber die zwei Pfadformen hinaus Geraet und Inode
     /// vergleicht
     /// (`260926-1119_*_bekommt-secrets-txt-unter-einer-dritten-schreibweise-eine-zusatzpruefung-und-gilt-ziehen-als-kopieren.md`).
     /// **Das ist ein `stat(2)` je Frage fuer genau diesen Namen** und keiner
@@ -1340,7 +1340,7 @@ impl Editormodell {
             .is_some_and(|sonderdatei| sonderdatei == Sonderdatei::Geheimnisse)
     }
 
-    /// Ob der Pfadtext `.secrets.txt` im erkannten Heimordner nennt, **ohne
+    /// Ob der Pfadtext `secrets.txt` im erkannten Heimordner nennt, **ohne
     /// Systemaufruf** ([`Heimordner::sonderdatei`]).
     ///
     /// Allein fuer [`Self::haelt_geheimnisse`], das bei jedem Tastendruck
@@ -1367,11 +1367,11 @@ impl Editormodell {
     /// Stempel und ohne Abweichung; ein Suchlauf ueber den alten Stand ist
     /// beendet, weil seine Versaetze in den neuen nicht mehr passen.
     ///
-    /// **Eine im Klartext gelesene `.secrets.txt` wird nicht aufgenommen.** Die
+    /// **Eine im Klartext gelesene `secrets.txt` wird nicht aufgenommen.** Die
     /// Sperre in [`Self::oeffnen`] fragt die Erkennung beim Start des Lesens;
     /// ein F2 dazwischen kann die aufgeloeste Form erneuern, und dann erkennt
     /// die Frage hier, was sie dort noch nicht erkannte. Der Editor hielte
-    /// sonst `.secrets.txt` ohne Schluessel, und abgewiesen wird deshalb, bevor
+    /// sonst `secrets.txt` ohne Schluessel, und abgewiesen wird deshalb, bevor
     /// irgendein Feld sich bewegt.
     fn uebernehmen(&mut self, pfad: PathBuf, geladen: Geladen) -> Ladeausgang {
         match geladen.ergebnis {
@@ -1379,7 +1379,7 @@ impl Editormodell {
                 if matches!(schutz, Schutz::Klartext) && self.ist_geheimnisdatei(&pfad) {
                     return Ladeausgang::Abgewiesen(gesperrt(&pfad, OHNE_PIN.to_owned()));
                 }
-                // Ein Schluessel heisst `.secrets.txt`, auch unter einer
+                // Ein Schluessel heisst `secrets.txt`, auch unter einer
                 // dritten Schreibweise, die der Pfadtext nicht erkennt; die
                 // Datei zeigt sich dann dennoch als Tabelle der Geheimnisse.
                 self.typ = if matches!(schutz, Schutz::Verschluesselt { .. }) {
@@ -1603,7 +1603,7 @@ impl Editormodell {
     /// klein; zu schliessen waere es allein mit einer Sperre auf der Datei, und
     /// die sagt weder C4 noch der Spec zu.
     ///
-    /// # `.secrets.txt` geht allein als Chiffrat auf die Platte
+    /// # `secrets.txt` geht allein als Chiffrat auf die Platte
     ///
     /// Der [`Schutz`] entscheidet und nicht der Pfad: haelt der Editor einen
     /// Schluessel, geht der Stand in seiner Sicherungsform durch
@@ -1614,9 +1614,9 @@ impl Editormodell {
     ///
     /// **Der Klartextweg fragt die Erkennung ein zweites Mal**, unmittelbar vor
     /// dem Schreiben: haelt der Editor keinen Schluessel und ist der Pfad
-    /// trotzdem `.secrets.txt`, wird nicht geschrieben. Erreichbar ist das nur,
+    /// trotzdem `secrets.txt`, wird nicht geschrieben. Erreichbar ist das nur,
     /// wenn die Erkennung sich nach dem Oeffnen geaendert hat; die Frage kostet
-    /// einen Textvergleich und fuer eine Datei namens `.secrets.txt` ein
+    /// einen Textvergleich und fuer eine Datei namens `secrets.txt` ein
     /// `stat(2)` fuer Geraet und Inode, auch unter einer dritten Schreibweise
     /// ([`Self::ist_geheimnisdatei`]), und schliesst den Weg, auf dem Klartext
     /// in die Datei kaeme.
@@ -1673,7 +1673,7 @@ impl Editormodell {
             Ok(()) => {
                 self.abweichung = false;
                 self.stempel = Stempel::von_pfad(&pfad);
-                // Eine leere `.secrets.txt` traegt nach dem ersten Sichern
+                // Eine leere `secrets.txt` traegt nach dem ersten Sichern
                 // ihren Kopf; ab jetzt laesst sich ihre PIN aendern.
                 if let Schutz::Verschluesselt {
                     kopf_auf_platte, ..
@@ -1721,7 +1721,7 @@ impl Editormodell {
         Ok(())
     }
 
-    /// Beginnt den Wechsel der PIN der gehaltenen `.secrets.txt` (C7.15,
+    /// Beginnt den Wechsel der PIN der gehaltenen `secrets.txt` (C7.15,
     /// Schritt 5.5 des Plans der krkhome-Arbeit).
     ///
     /// **Die alte PIN wird gegen die gehaltene verglichen**, bevor irgendetwas
@@ -3151,7 +3151,7 @@ mod tests {
                 basis.display()
             );
             assert_eq!(
-                Dateityp::von_pfad(&basis.join(".secrets.txt"), Some(&heim)),
+                Dateityp::von_pfad(&basis.join("secrets.txt"), Some(&heim)),
                 Dateityp::Eintraege(Sonderdatei::Geheimnisse),
                 "{}",
                 basis.display()
@@ -3286,7 +3286,7 @@ mod tests {
     }
 
     // ---------------------------------------------------------------------
-    // `.secrets.txt`: Schutz, Laden mit PIN, verschluesseltes Sichern
+    // `secrets.txt`: Schutz, Laden mit PIN, verschluesseltes Sichern
     // (Schritt 5.4a des Plans der krkhome-Arbeit)
     // ---------------------------------------------------------------------
 
@@ -3311,19 +3311,19 @@ mod tests {
     }
 
     /// Ein Pruef-krkhome samt Modell, das es kennt, und dem Pfad von
-    /// `.secrets.txt` in der geschriebenen Form.
+    /// `secrets.txt` in der geschriebenen Form.
     fn geheimnis_modell(ordner: &Pruefordner) -> (Editormodell, PathBuf, PathBuf) {
         let (heim, geschrieben, ziel) = pruef_krkhome(ordner);
         let griff = Heimgriff::default();
         heimgriff::ersetzen(&griff, heim);
         (
             Editormodell::neu(griff),
-            geschrieben.join(".secrets.txt"),
+            geschrieben.join("secrets.txt"),
             ziel,
         )
     }
 
-    /// Schreibt eine `.secrets.txt` mit kleinen Parametern, damit die Proben
+    /// Schreibt eine `secrets.txt` mit kleinen Parametern, damit die Proben
     /// nicht je Oeffnen eine halbe Sekunde warten. Geoeffnet wird sie mit den
     /// Parametern aus ihrem Kopf.
     fn verschlossen_ablegen(pfad: &Path, klartext: &str, ziffern: &str) {
@@ -3349,7 +3349,7 @@ mod tests {
         }
     }
 
-    /// C7.10 im Modell: ohne PIN weist das Modell `.secrets.txt` ab, **bevor
+    /// C7.10 im Modell: ohne PIN weist das Modell `secrets.txt` ab, **bevor
     /// ein Faden startet**, ueber beide Formen des Heimordners. Die Datei
     /// traegt Modus `000`: gaebe es ein Lesen, scheiterte es mit einem anderen
     /// Satz. Das ist der Weg von F4 und `cmd+e`, die beide hierher fuehren.
@@ -3362,7 +3362,7 @@ mod tests {
         std::fs::set_permissions(&geschrieben, std::fs::Permissions::from_mode(0o000))
             .expect("Modus 000");
 
-        for pfad in [&geschrieben, &ziel.join(".secrets.txt")] {
+        for pfad in [&geschrieben, &ziel.join("secrets.txt")] {
             let ausgang = modell
                 .oeffnen(pfad, None)
                 .expect("der Ausgang steht sofort fest");
@@ -3402,7 +3402,7 @@ mod tests {
         assert_eq!(modell.stand(), klartext);
     }
 
-    /// C7.8: haelt der Editor `.secrets.txt`, verweigert er die Textmarke,
+    /// C7.8: haelt der Editor `secrets.txt`, verweigert er die Textmarke,
     /// deren `zeileninhalt` eine Zeile der Geheimnisse im Klartext in die
     /// Lesezeichendatei truege; ueber beide Formen des Heimordners, mit
     /// gesichertem Kopf und als leere Datei mit eben festgelegter PIN
@@ -3414,7 +3414,7 @@ mod tests {
         assert_eq!(modell.textmarke_verweigert(), None, "ohne Datei");
 
         verschlossen_ablegen(&geschrieben, &format!("## Konto\n{GEHEIM}\n"), "0417");
-        for pfad in [geschrieben.clone(), ziel.join(".secrets.txt")] {
+        for pfad in [geschrieben.clone(), ziel.join("secrets.txt")] {
             let mut frisch = Editormodell::neu(modell.heim.clone());
             assert_eq!(frisch.oeffnen(&pfad, Some(pin("0417"))), None);
             assert_eq!(abwarten_mit_ableitung(&mut frisch), Ladeausgang::Geoeffnet);
@@ -3426,7 +3426,7 @@ mod tests {
             );
         }
 
-        std::fs::write(&geschrieben, b"").expect("leere .secrets.txt");
+        std::fs::write(&geschrieben, b"").expect("leere secrets.txt");
         assert_eq!(modell.oeffnen(&geschrieben, Some(pin("0417"))), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(
@@ -3437,15 +3437,15 @@ mod tests {
     }
 
     /// Die Gegenprobe: jede andere Datei bekommt ihre Textmarke, auch
-    /// `notes.txt` und `tasks.txt` im erkannten Ordner und eine `.secrets.txt`
+    /// `notes.txt` und `tasks.txt` im erkannten Ordner und eine `secrets.txt`
     /// ausserhalb davon, die eine gewoehnliche Textdatei ist.
     #[test]
     fn jede_andere_datei_bekommt_ihre_textmarke() {
         let ordner = Pruefordner::neu("geheim-textmarke-gegen");
         let (mut modell, geschrieben, _) = geheimnis_modell(&ordner);
         let anderswo = ordner.ordner("anderswo");
-        let daneben = anderswo.join(".secrets.txt");
-        std::fs::write(&daneben, "kein Geheimnis\n").expect(".secrets.txt anderswo");
+        let daneben = anderswo.join("secrets.txt");
+        std::fs::write(&daneben, "kein Geheimnis\n").expect("secrets.txt anderswo");
         let heim = geschrieben.parent().expect("der Heimordner").to_path_buf();
         for pfad in [heim.join("notes.txt"), heim.join("tasks.txt"), daneben] {
             assert_eq!(modell.oeffnen(&pfad, None), None, "{}", pfad.display());
@@ -3458,7 +3458,7 @@ mod tests {
     /// Schreibregel des Projekts, denn der Nutzer liest ihn in der Statuszeile.
     #[test]
     fn der_satz_der_verweigerten_textmarke_traegt_umlaute() {
-        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains(".secrets.txt"));
+        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("secrets.txt"));
         assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("für"));
         assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("Klartext"));
         assert!(!KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("fuer"));
@@ -3581,7 +3581,7 @@ mod tests {
         );
     }
 
-    /// Eine ausserhalb geaenderte `.secrets.txt` weist `sichern` ab wie jede
+    /// Eine ausserhalb geaenderte `secrets.txt` weist `sichern` ab wie jede
     /// Datei, und die fremden Bytes bleiben stehen.
     #[test]
     fn eine_fremd_geaenderte_secrets_txt_wird_nicht_ueberschrieben() {
@@ -3655,14 +3655,14 @@ mod tests {
     }
 
     /// Die Sperre haelt auch, wenn die Erkennung sich nach dem Oeffnen
-    /// aendert: eine im Klartext gelesene `.secrets.txt` wird nicht
+    /// aendert: eine im Klartext gelesene `secrets.txt` wird nicht
     /// aufgenommen, und eine im Klartext gehaltene wird nicht im Klartext
     /// geschrieben. Die Datei bleibt null Bytes.
     #[test]
     fn eine_spaet_erkannte_secrets_txt_wird_weder_aufgenommen_noch_im_klartext_geschrieben() {
         let ordner = Pruefordner::neu("geheim-spaet");
         let (heim, geschrieben, _) = pruef_krkhome(&ordner);
-        let pfad = geschrieben.join(".secrets.txt");
+        let pfad = geschrieben.join("secrets.txt");
         std::fs::write(&pfad, b"").expect("leere Datei");
 
         // Beim Lesen noch nicht erkannt, beim Aufnehmen schon.
@@ -3688,7 +3688,7 @@ mod tests {
         assert_eq!(std::fs::metadata(&pfad).expect("stat").len(), 0);
     }
 
-    /// `.secrets.txt` unter einer dritten Schreibweise des Heimordners, hier
+    /// `secrets.txt` unter einer dritten Schreibweise des Heimordners, hier
     /// ueber einen zweiten Verweis anderswo: ohne PIN weist das Modell ab,
     /// ohne einen Faden zu starten; mit PIN oeffnet es sie als Geheimnisse und
     /// sichert allein Chiffrat. Kommt sie am Oeffnen vorbei in den Editor, weil
@@ -3700,10 +3700,10 @@ mod tests {
     fn secrets_txt_unter_einer_dritten_schreibweise_oeffnet_allein_mit_pin_und_bleibt_chiffrat() {
         let ordner = Pruefordner::neu("geheim-dritte");
         let (heim, _, ziel) = pruef_krkhome(&ordner);
-        std::fs::write(ziel.join(".secrets.txt"), b"").expect("leere .secrets.txt");
+        std::fs::write(ziel.join("secrets.txt"), b"").expect("leere secrets.txt");
         let zweiter = ordner.pfad().join("zweiter-verweis");
         std::os::unix::fs::symlink(&ziel, &zweiter).expect("zweiter Verweis");
-        let dritte = zweiter.join(".secrets.txt");
+        let dritte = zweiter.join("secrets.txt");
         assert_eq!(
             heim.sonderdatei(&dritte),
             None,
@@ -3762,8 +3762,8 @@ mod tests {
 
         // Gleicher Name, andere Inode: eine gewoehnliche Textdatei.
         let anderswo = ordner.ordner("anderswo");
-        let daneben = anderswo.join(".secrets.txt");
-        std::fs::write(&daneben, "kein Geheimnis\n").expect(".secrets.txt anderswo");
+        let daneben = anderswo.join("secrets.txt");
+        std::fs::write(&daneben, "kein Geheimnis\n").expect("secrets.txt anderswo");
         let mut modell = Editormodell::neu(griff);
         assert_eq!(modell.oeffnen(&daneben, None), None);
         assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
@@ -3856,7 +3856,7 @@ mod tests {
     /// Die Sperre steht in `Editormodell::oeffnen` vor dem Start des Fadens,
     /// und `datei::oeffnen` hat genau einen Rufer, `text_lesen`, den allein der
     /// Leseauftrag `Text` erreicht; den erteilt `oeffnen` allein fuer eine
-    /// Datei, die nicht `.secrets.txt` ist.
+    /// Datei, die nicht `secrets.txt` ist.
     #[test]
     fn die_sperre_fragt_die_sonderdatei_vor_dem_lesen() {
         let code = code_vor_den_proben("krk-ui/src/editormodell.rs");
@@ -3887,14 +3887,14 @@ mod tests {
         assert!(rumpf_von(&code, concat!("fn text_", "lesen(")).contains(lesen));
     }
 
-    /// Kein Weg dieses Moduls schreibt Klartext nach `.secrets.txt`:
+    /// Kein Weg dieses Moduls schreibt Klartext nach `secrets.txt`:
     ///
     /// - das atomare Schreiben steht genau einmal da, in `Chiffrat::schreiben`,
     ///   und das nimmt allein ein `Chiffrat`;
     /// - ein `Chiffrat` entsteht genau an einer Stelle, aus
     ///   `tresor::verschliessen`, nach der Sicherungsform;
     /// - der Klartextweg `datei::sichern` steht genau einmal da, im Sichern,
-    ///   und hinter der Frage nach `.secrets.txt`;
+    ///   und hinter der Frage nach `secrets.txt`;
     /// - in der ganzen Kiste ruft allein dieses Modul `datei::sichern`.
     #[test]
     fn kein_weg_schreibt_klartext_nach_secrets_txt() {
@@ -3981,7 +3981,7 @@ mod tests {
         chiffrat.schreiben(ziel)
     }
 
-    /// Ein Modell, das `.secrets.txt` mit kleinen Parametern und der PIN
+    /// Ein Modell, das `secrets.txt` mit kleinen Parametern und der PIN
     /// `0417` entsperrt haelt.
     fn entsperrt(ordner: &Pruefordner, klartext: &str) -> (Editormodell, PathBuf) {
         let (mut modell, pfad, _) = geheimnis_modell(ordner);
@@ -4140,7 +4140,7 @@ mod tests {
         assert_eq!(neu.klartext, format!("## A\n{GEHEIM}\n").into_bytes());
     }
 
-    /// Eine leere `.secrets.txt`, deren PIN eben festgelegt und nie gesichert
+    /// Eine leere `secrets.txt`, deren PIN eben festgelegt und nie gesichert
     /// wurde, hat keine PIN zu aendern: `pin_aenderbar` sagt nein, und das
     /// Modell weist ab, ohne einen Faden zu starten.
     #[test]

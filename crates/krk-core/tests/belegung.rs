@@ -2378,7 +2378,7 @@ fn die_sechs_befehle_der_eintragstabelle_tragen_ihre_bereiche() {
 
 /// „PIN ändern" traegt den Bereich der Geheimnisse, und seine Kennung fuehrt
 /// zu ihm (C7.15, Kernhaelfte; Schritt 5.5 der krkhome-Arbeit). Ob der Editor
-/// `.secrets.txt` mit einem Kopf haelt, fragt `krk_ui`.
+/// `secrets.txt` mit einem Kopf haelt, fragt `krk_ui`.
 #[test]
 fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
     assert_eq!(

@@ -246,7 +246,7 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// in derselben Regel, die den Fokus fragt, und die Ausgrauung des Menues folgt
 /// daraus ohne eigenen Weg. Ein vierter, [`Wirkungsbereich::Geheimnisse`],
 /// kommt mit Schritt 5.5 fuer „PIN ändern" und fragt statt der Form, ob der
-/// Editor `.secrets.txt` mit einem Kopf auf der Platte haelt.
+/// Editor `secrets.txt` mit einem Kopf auf der Platte haelt.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
@@ -319,7 +319,7 @@ pub enum Wirkungsbereich {
     /// Der Wert allein des Abhakens: eine Notiz hat kein Kaestchen.
     Aufgaben,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor
-    /// `.secrets.txt` entsperrt haelt, deren PIN schon in einem Kopf auf der
+    /// `secrets.txt` entsperrt haelt, deren PIN schon in einem Kopf auf der
     /// Platte steht (C7 des Spec, Schritt 5.5 der krkhome-Arbeit).
     ///
     /// Der Wert allein von „PIN ändern". **Ob die Datei gehalten wird und einen
@@ -817,13 +817,13 @@ pub enum Kommando {
     /// [`Wirkungsbereich::Eintraege`]: eine Notiz hat kein Kaestchen, und in
     /// der Notiztabelle soll der Befehl ausgegraut sein.
     AufgabeAbhaken,
-    /// Die PIN der offenen `.secrets.txt` aendern: alte PIN, neue PIN
+    /// Die PIN der offenen `secrets.txt` aendern: alte PIN, neue PIN
     /// zweimal, dann verschluesselt KRK den Stand auf der Platte mit einem
     /// neuen Schluessel aus frischem Salz (C7 des Spec, Schritt 5.5 der
     /// krkhome-Arbeit).
     ///
     /// Traegt [`Wirkungsbereich::Geheimnisse`]: er wirkt allein mit dem Fokus
-    /// im Editor und nur, solange der Editor `.secrets.txt` haelt und ihre
+    /// im Editor und nur, solange der Editor `secrets.txt` haelt und ihre
     /// PIN schon in einem Kopf auf der Platte steht.
     PinAendern,
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
@@ -1331,7 +1331,7 @@ impl Kommando {
             | Kommando::EintragLoeschen => Wirkungsbereich::Eintraege,
             Kommando::AufgabeAbhaken => Wirkungsbereich::Aufgaben,
             // „PIN ändern" (C7, Schritt 5.5 der krkhome-Arbeit): allein an der
-            // entsperrten `.secrets.txt`, deren PIN schon in einem Kopf steht;
+            // entsperrten `secrets.txt`, deren PIN schon in einem Kopf steht;
             // ob das so ist, fragt `krk_ui`.
             Kommando::PinAendern => Wirkungsbereich::Geheimnisse,
             // Die Leiste (C5).

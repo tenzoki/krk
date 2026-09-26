@@ -18,7 +18,7 @@
 //! gepflegten Ablagedateien mitbringt; es ist **das einzige, das auch ohne
 //! Befund aufgeht**, denn der Nutzer hat danach gefragt. Das zwoelfte ist das
 //! PIN-Blatt ([`pin`]) aus Schritt 5.4b der krkhome-Arbeit: es fragt vor dem
-//! Oeffnen von `.secrets.txt` nach der PIN und ist das einzige, dessen
+//! Oeffnen von `secrets.txt` nach der PIN und ist das einzige, dessen
 //! bestaetigende Schaltflaeche erst mit einer gueltigen Eingabe wirkt
 //! ([`Blatt::bestaetigung_pruefen`]).
 //!

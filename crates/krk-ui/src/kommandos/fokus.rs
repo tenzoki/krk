@@ -425,7 +425,7 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         // Die drei Bereiche der Eintragstabellen und der Textflaeche (Schritt
         // 3.3 der krkhome-Arbeit) verlangen den Fokus wie `Editor`, ebenso der
         // der Geheimnisse (Schritt 5.5). Welche Form der Editor zeigt und ob
-        // er `.secrets.txt` mit einem Kopf haelt, fragt nicht diese Regel,
+        // er `secrets.txt` mit einem Kopf haelt, fragt nicht diese Regel,
         // sondern ihre zweite Haelfte in `zulaessigkeit::gestattet`; hier
         // steht allein der Fokus.
         Wirkungsbereich::Editor

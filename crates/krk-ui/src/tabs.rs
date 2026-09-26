@@ -34,11 +34,11 @@
 //! [`Tabliste::waehlen`] ihn nach. Der Fall ist die Ausnahme, und C8 deckt ihn:
 //! L5 deckt den Wechsel, die erste Bildschirmseite faellt unter L2.
 //!
-//! # Die Eigenschaft „steht immer“ je Lesevorgang
+//! # Die Eigenschaft „ohne Inhaltsauftrag“ je Lesevorgang
 //!
-//! In `~/krkhome/` steht `.secrets.txt` immer in der Liste und bekommt keinen
-//! Inhaltsauftrag; die Regel steht im Pruefschritt von [`Ordnermodell`], und
-//! welcher Name gilt, sagt [`krk_core::heimordner::Heimordner::immer_gelistet`].
+//! In `~/krkhome/` bekommt `secrets.txt` vom Inhaltsfilter keinen Auftrag; die
+//! Regel steht im Pruefschritt von [`Ordnermodell`], und welcher Name gilt,
+//! sagt [`krk_core::heimordner::Heimordner::ohne_inhaltsauftrag`].
 //! **Gefragt wird einmal je Lesevorgang in [`Tabliste::lesen_starten`]** und
 //! beim Bau eines Tabs, nie je Eintrag, und die Frage ist ein Textvergleich
 //! ueber den einen geteilten Wert aus [`crate::heimgriff`]:
@@ -164,16 +164,16 @@ pub struct Tabinhalt {
 impl Tabinhalt {
     /// Ein ungelesener Tab aus seinem gespeicherten Zustand.
     ///
-    /// `immer_gelistet` ist die Eigenschaft „steht immer“ seines Ordners, die
-    /// der Rufer ueber [`immer_gelistet_fuer`] erfragt; der Tab kennt den
+    /// `ohne_inhaltsauftrag` ist die Eigenschaft „ohne Inhaltsauftrag“ seines
+    /// Ordners, die der Rufer ueber [`ohne_inhaltsauftrag_fuer`] erfragt; der Tab kennt den
     /// Heimordner nicht. [`Tabliste::lesen_starten`] setzt sie je Lesevorgang
     /// ein weiteres Mal, und das ist die Stelle, die zaehlt; hier steht sie,
     /// damit auch ein ungelesenes Modell die Eigenschaft seines Ordners traegt.
-    fn aus_zustand(zustand: &Tabzustand, immer_gelistet: Option<&'static str>) -> Self {
+    fn aus_zustand(zustand: &Tabzustand, ohne_inhaltsauftrag: Option<&'static str>) -> Self {
         let mut modell = Ordnermodell::neu(GENERATION_LEER);
         modell.verstecke_ausblenden_setzen(zustand.verstecke_ausgeblendet);
         modell.sortierung_setzen(zustand.sortierung);
-        modell.immer_gelistet_setzen(immer_gelistet);
+        modell.ohne_inhaltsauftrag_setzen(ohne_inhaltsauftrag);
         Self {
             ordner: zustand.ordner.clone(),
             modell,
@@ -582,20 +582,20 @@ pub struct Tabliste {
     letzter_gitlauf: u64,
     /// Der eine geteilte Wert der Erkennung von `~/krkhome/`.
     ///
-    /// Gefragt allein ueber [`immer_gelistet_fuer`], je Lesevorgang und je
+    /// Gefragt allein ueber [`ohne_inhaltsauftrag_fuer`], je Lesevorgang und je
     /// gebautem Tab; der Modulkopf sagt, warum das keinen Systemaufruf kostet.
     heim: Heimgriff,
 }
 
-/// Die Eigenschaft „steht immer“ fuer diesen Ordner.
+/// Die Eigenschaft „ohne Inhaltsauftrag“ fuer diesen Ordner.
 ///
 /// **Ein Textvergleich und kein Systemaufruf**
-/// ([`krk_core::heimordner::Heimordner::immer_gelistet`]). Gefragt wird ueber
+/// ([`krk_core::heimordner::Heimordner::ohne_inhaltsauftrag`]). Gefragt wird ueber
 /// eine Abschrift des Wertes und nicht ueber eine Leihe, wie
 /// [`crate::heimgriff`] es fuer jeden Frager verlangt. Ohne Heimordner gibt es
 /// die Eigenschaft nirgends.
-fn immer_gelistet_fuer(heim: &Heimgriff, ordner: &Path) -> Option<&'static str> {
-    heimgriff::lesen(heim)?.immer_gelistet(ordner)
+fn ohne_inhaltsauftrag_fuer(heim: &Heimgriff, ordner: &Path) -> Option<&'static str> {
+    heimgriff::lesen(heim)?.ohne_inhaltsauftrag(ordner)
 }
 
 impl Tabliste {
@@ -606,11 +606,11 @@ impl Tabliste {
     /// [`Tabliste::nachzuegler_starten`].
     ///
     /// `heim` ist eine Abschrift des einen geteilten Griffs; die Tabliste
-    /// fragt ihn je Lesevorgang nach der Eigenschaft „steht immer“.
+    /// fragt ihn je Lesevorgang nach der Eigenschaft „ohne Inhaltsauftrag“.
     #[must_use]
     pub fn aus_zustand(zustand: &Fensterzustand, heim: Heimgriff) -> Self {
         let bauen = |zustand: &Tabzustand| {
-            Tabinhalt::aus_zustand(zustand, immer_gelistet_fuer(&heim, &zustand.ordner))
+            Tabinhalt::aus_zustand(zustand, ohne_inhaltsauftrag_fuer(&heim, &zustand.ordner))
         };
         let mut tabs: Vec<Tabinhalt> = zustand.tabs.iter().map(bauen).collect();
         if tabs.is_empty() {
@@ -637,7 +637,10 @@ impl Tabliste {
     /// Der eine Weg, auf dem die Tabliste nach ihrem Bau einen [`Tabinhalt`]
     /// entstehen laesst; er fragt den Heimordner, damit kein Rufer es vergisst.
     fn tab_bauen(&self, zustand: &Tabzustand) -> Tabinhalt {
-        Tabinhalt::aus_zustand(zustand, immer_gelistet_fuer(&self.heim, &zustand.ordner))
+        Tabinhalt::aus_zustand(
+            zustand,
+            ohne_inhaltsauftrag_fuer(&self.heim, &zustand.ordner),
+        )
     }
 
     /// Der gespeicherte Zustand dieses Dateifensters.
@@ -1384,8 +1387,8 @@ impl Tabliste {
     /// auf, bevor sein erster Stapel angehaengt war, und die Liste kam fuer die
     /// ganze Laufzeit nicht mehr zum Fuellen.
     ///
-    /// **Hier, und einmal je Lesevorgang, entsteht die Eigenschaft „steht
-    /// immer“** des gelesenen Ordners (C7.12 des Arbeitspakets
+    /// **Hier, und einmal je Lesevorgang, entsteht die Eigenschaft „ohne
+    /// Inhaltsauftrag“** des gelesenen Ordners (C7.12 des Arbeitspakets
     /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`): nach
     /// `lesevorgang_beginnen` und damit vor dem ersten Stapel, so dass jeder
     /// Eintrag des neuen Bestands schon unter ihr gefragt wird. Die Frage ist
@@ -1393,7 +1396,7 @@ impl Tabliste {
     fn lesen_starten(&mut self, stelle: usize) {
         self.letzte_generation += 1;
         let generation = self.letzte_generation;
-        let immer_gelistet = immer_gelistet_fuer(&self.heim, &self.tabs[stelle].ordner);
+        let ohne_inhaltsauftrag = ohne_inhaltsauftrag_fuer(&self.heim, &self.tabs[stelle].ordner);
         let tab = &mut self.tabs[stelle];
         // Der bisherige Lesevorgang faellt hier. Sein Arbeitsfaden bemerkt den
         // Abbruch und endet von selbst; auf ihn zu warten hiesse, eine
@@ -1413,7 +1416,7 @@ impl Tabliste {
         tab.modell.lesevorgang_beginnen(generation);
         // Nach dem Beginn und nicht davor: mit vorgemerktem Ersatz rechnet der
         // Setzer den alten Bestand nicht nach, der dem vorigen Ordner gehoert.
-        tab.modell.immer_gelistet_setzen(immer_gelistet);
+        tab.modell.ohne_inhaltsauftrag_setzen(ohne_inhaltsauftrag);
         tab.meldung = None;
         tab.gelesen = false;
         tab.lesevorgang = Some(Lesevorgang::starten(&tab.ordner, generation));
@@ -1670,7 +1673,7 @@ mod tests {
     }
 
     /// Ein Griff ohne Heimordner: fuer jede Probe, die die Eigenschaft
-    /// „steht immer“ nicht misst.
+    /// „ohne Inhaltsauftrag“ nicht misst.
     fn ohne_heim() -> Heimgriff {
         std::rc::Rc::new(std::cell::RefCell::new(None))
     }
@@ -3444,7 +3447,7 @@ mod tests {
         );
     }
 
-    /// C7.11, C7.12: die Tabliste setzt die Eigenschaft „steht immer“ fuer
+    /// C7.12, C7.13: die Tabliste setzt die Eigenschaft „ohne Inhaltsauftrag“ fuer
     /// einen Tab auf das Pruef-krkhome ueber die geschriebene und ueber die
     /// aufgeloeste Form, beim Bau und je Lesevorgang, und fuer einen Tab
     /// daneben nicht.
@@ -3461,8 +3464,8 @@ mod tests {
         let griff: Heimgriff = std::rc::Rc::new(std::cell::RefCell::new(Some(heim)));
 
         let erwartet = [
-            (geschrieben.clone(), Some(".secrets.txt")),
-            (ziel.clone(), Some(".secrets.txt")),
+            (geschrieben.clone(), Some("secrets.txt")),
+            (ziel.clone(), Some("secrets.txt")),
             (daneben.clone(), None),
         ];
         let pfade: Vec<String> = erwartet
@@ -3474,7 +3477,12 @@ mod tests {
 
         // Beim Bau, fuer jeden Tab und ohne zu lesen.
         for (tab, (pfad, soll)) in liste.tabs.iter().zip(&erwartet) {
-            assert_eq!(tab.modell.immer_gelistet(), *soll, "{}", pfad.display());
+            assert_eq!(
+                tab.modell.ohne_inhaltsauftrag(),
+                *soll,
+                "{}",
+                pfad.display()
+            );
         }
 
         // Je Lesevorgang: derselbe sichtbare Tab wandert ueber die drei Ordner,
@@ -3482,7 +3490,7 @@ mod tests {
         for (pfad, soll) in erwartet.iter().rev().chain(erwartet.iter()) {
             liste.ordner_setzen(pfad, None);
             assert_eq!(
-                liste.aktiver().modell().immer_gelistet(),
+                liste.aktiver().modell().ohne_inhaltsauftrag(),
                 *soll,
                 "nach dem Lesebeginn auf {}",
                 pfad.display()
@@ -3492,6 +3500,6 @@ mod tests {
         // Ohne Heimordner gibt es die Eigenschaft nirgends.
         let mut ohne = Tabliste::aus_zustand(&zustand(&namen), ohne_heim());
         ohne.ordner_setzen(&geschrieben, None);
-        assert_eq!(ohne.aktiver().modell().immer_gelistet(), None);
+        assert_eq!(ohne.aktiver().modell().ohne_inhaltsauftrag(), None);
     }
 }

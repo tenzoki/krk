@@ -96,7 +96,7 @@ use crate::spalten::Spalte;
 use crate::tabs::Tabuebersicht;
 
 /// Die Editordatei, wie die Sitzung sie nennen darf: jede ausser
-/// `.secrets.txt` im erkannten Ordner.
+/// `secrets.txt` im erkannten Ordner.
 ///
 /// **Die eine Stelle dieser Regel, und sie hat zwei Frager**: das Schreiben
 /// der Sitzung ([`Fenstermodell::sitzung`]) und das Wiederherstellen beim
@@ -560,7 +560,7 @@ impl Fenstermodell {
     /// Ansichten und nirgends sonst. Der Weg von dort hierher ist
     /// `krk_ui::appkit::git::Gitfenster::listenanteil`.
     ///
-    /// **`.secrets.txt` im erkannten Ordner nennt die Sitzung nie**
+    /// **`secrets.txt` im erkannten Ordner nennt die Sitzung nie**
     /// (C7 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`):
     /// die PIN gilt, solange die Datei im Editor offen ist, und ein Start, der
     /// sie wieder oeffnen wollte, haette keine. Die Regel steht in
@@ -3145,7 +3145,7 @@ mod tests {
         (heim, geschrieben, ziel)
     }
 
-    /// C7.14: eine Sitzung mit `.secrets.txt` im Editor nennt die Datei nicht,
+    /// C7.14: eine Sitzung mit `secrets.txt` im Editor nennt die Datei nicht,
     /// ueber die geschriebene und ueber die aufgeloeste Form, und traegt jede
     /// andere Angabe unveraendert. Gemessen an der Zeichenkette, die als
     /// `session.toml` auf die Platte geht.
@@ -3158,7 +3158,7 @@ mod tests {
         let ohne_datei = modell.sitzung(Sitzung::default().fenster, None, Some(0.4), Some(&heim));
 
         for basis in [&geschrieben, &ziel] {
-            let geheimnisse = basis.join(".secrets.txt");
+            let geheimnisse = basis.join("secrets.txt");
             let sitzung = modell.sitzung(
                 Sitzung::default().fenster,
                 Some(geheimnisse.clone()),
@@ -3178,19 +3178,19 @@ mod tests {
         }
     }
 
-    /// Die Regel greift allein `.secrets.txt` im erkannten Ordner: `notes.txt`
-    /// daneben, eine `.secrets.txt` in einem anderen Ordner und jede Datei ohne
+    /// Die Regel greift allein `secrets.txt` im erkannten Ordner: `notes.txt`
+    /// daneben, eine `secrets.txt` in einem anderen Ordner und jede Datei ohne
     /// Heimordner bleiben in der Sitzung stehen.
     #[test]
     fn die_sitzung_merkt_jede_andere_editordatei() {
         let ordner = crate::pruefordner::Pruefordner::neu("sitzung-andere");
         let (heim, geschrieben, _) = pruef_krkhome(&ordner);
         let modell = modell();
-        let anderswo = ordner.pfad().join(".secrets.txt");
+        let anderswo = ordner.pfad().join("secrets.txt");
         for (datei, heim) in [
             (geschrieben.join("notes.txt"), Some(&heim)),
             (anderswo, Some(&heim)),
-            (geschrieben.join(".secrets.txt"), None),
+            (geschrieben.join("secrets.txt"), None),
         ] {
             let sitzung =
                 modell.sitzung(Sitzung::default().fenster, Some(datei.clone()), None, heim);
@@ -3198,21 +3198,21 @@ mod tests {
         }
     }
 
-    /// Eine `session.toml` aus der Zeit vor der Regel, die `.secrets.txt` noch
+    /// Eine `session.toml` aus der Zeit vor der Regel, die `secrets.txt` noch
     /// nennt: der Start oeffnet sie nicht, und die naechste Sicherung der
     /// Sitzung laesst sie fallen. Beide Wege fragen dieselbe Regel.
     #[test]
     fn eine_aeltere_sitzung_mit_secrets_txt_oeffnet_sie_nicht() {
         let ordner = crate::pruefordner::Pruefordner::neu("sitzung-aelter");
         let (heim, geschrieben, _) = pruef_krkhome(&ordner);
-        let geheimnisse = geschrieben.join(".secrets.txt");
+        let geheimnisse = geschrieben.join("secrets.txt");
         let alt = Sitzung {
             editor: Some(geheimnisse.clone()),
             ..Sitzung::default()
         };
         let text = toml::to_string(&alt).expect("die Sitzung laesst sich schreiben");
         assert!(
-            text.contains(".secrets.txt"),
+            text.contains("secrets.txt"),
             "die aeltere Sitzung nennt sie"
         );
 

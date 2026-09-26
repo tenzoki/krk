@@ -1426,7 +1426,7 @@ impl Anwendungsdelegierter {
 
         let dateifenster = [
             // Jede Tabliste bekommt eine Abschrift des einen Griffs und fragt
-            // ihn je Lesevorgang nach der Eigenschaft „steht immer“ (5.2).
+            // ihn je Lesevorgang nach der Eigenschaft „ohne Inhaltsauftrag“ (5.2).
             Dateifenster::bauen(
                 mtm,
                 Tabliste::aus_zustand(&sitzung.fenster[0], Rc::clone(&ivars.heim)),
@@ -2586,7 +2586,7 @@ impl Anwendungsdelegierter {
     /// falsch: der Nutzer bekaeme dann stillschweigend ein anderes Lesezeichen,
     /// als er verlangt hat.
     ///
-    /// **`.secrets.txt` bekommt keine Textmarke** (C7.8 der krkhome-Arbeit):
+    /// **`secrets.txt` bekommt keine Textmarke** (C7.8 der krkhome-Arbeit):
     /// ihr `zeileninhalt` waere eine Zeile der Geheimnisse im Klartext in
     /// `bookmarks.toml`. Gefragt wird, bevor die Zeile ueberhaupt gelesen
     /// wird; die Regel steht bei
@@ -3128,11 +3128,11 @@ impl Anwendungsdelegierter {
     ///
     /// **Zwei Antworten, die es schon gibt, und keine neue Regel daneben:**
     /// das PIN-Blatt steht ([`Blattgriff::verdeckt_und_steht`]), oder der
-    /// Editor haelt `.secrets.txt` ([`Editorbereich::haelt_geheimnisse`],
+    /// Editor haelt `secrets.txt` ([`Editorbereich::haelt_geheimnisse`],
     /// dieselbe Antwort, die die Textmarke verweigert).
     ///
     /// **Der Editor zaehlt, gleich wo der Fokus steht.** Das ist vorsichtig
-    /// und kostet wenig: waehrend `.secrets.txt` offen ist, steht auch ein
+    /// und kostet wenig: waehrend `secrets.txt` offen ist, steht auch ein
     /// Anschlag in den Filtertext eines Dateifensters verdeckt im Protokoll.
     /// Eine Frage nach dem Fokus muesste jede Flaeche kennen, die im Editor
     /// Text annimmt — Tabelle, Rohansicht, Zelle, Suchfeld —, und die eine,
@@ -3779,7 +3779,7 @@ impl Anwendungsdelegierter {
                 .get()
                 .map_or(Editorform::Text, |editor| editor.form()),
             // Dieselbe Ausflucht: ohne Editorbereich haelt niemand
-            // `.secrets.txt`. Gelesen wird der Wert ab Schritt 5.5.
+            // `secrets.txt`. Gelesen wird der Wert ab Schritt 5.5.
             pin_aenderbar: self
                 .ivars()
                 .editor
@@ -8104,7 +8104,7 @@ impl Anwendungsdelegierter {
     /// Fokusbefehl aus C1 hervorholt, und ihn hier einzublenden hiesse, die
     /// gemerkte Sichtbarkeit zu uebergehen.
     ///
-    /// **`.secrets.txt` im erkannten Ordner oeffnet sie nicht und zeigt kein
+    /// **`secrets.txt` im erkannten Ordner oeffnet sie nicht und zeigt kein
     /// Blatt** (C7 des Arbeitspakets
     /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`, Schritt 5.3). Das
     /// Schreiben der Sitzung nennt die Datei nie; eine aeltere `session.toml`
@@ -8273,7 +8273,7 @@ impl Anwendungsdelegierter {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, &satz);
             }
-            // `.secrets.txt` auf einen Befehl hin: erst das PIN-Blatt, dann
+            // `secrets.txt` auf einen Befehl hin: erst das PIN-Blatt, dann
             // der Ladeauftrag mit PIN (Schritt 5.4b der krkhome-Arbeit). Aus
             // der Sitzung kommt der Wert nie, `Editorbereich::datei_oeffnen`
             // unterlaesst dort alles; der Zweig fragt trotzdem, damit ein
@@ -8309,7 +8309,7 @@ impl Anwendungsdelegierter {
         }
     }
 
-    /// Zeigt das PIN-Blatt fuer `.secrets.txt` und reicht die PIN an den
+    /// Zeigt das PIN-Blatt fuer `secrets.txt` und reicht die PIN an den
     /// Editor zurueck (Schritt 5.4b der krkhome-Arbeit, C7.10).
     ///
     /// **Der Delegierte zeigt nur**: ob gefragt wird und in welcher Form,
@@ -9885,7 +9885,7 @@ pub(super) mod quelltextproben {
     }
 }
 
-/// Die Textmarke an `.secrets.txt` (C7.8 der krkhome-Arbeit): `anlegeziel` ist
+/// Die Textmarke an `secrets.txt` (C7.8 der krkhome-Arbeit): `anlegeziel` ist
 /// die eine Stelle, an der eine Zeile des Editors in ein Lesezeichen geht, und
 /// sie fragt die Verweigerung, bevor sie die Zeile liest.
 ///

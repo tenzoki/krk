@@ -3,12 +3,12 @@
 //! F2 fuehrt in einen Dateilisten-Tab auf `~/krkhome/`, und an diesem Ordner
 //! haengen mehrere Regeln: die Vorschau rendert `notes.txt` und `tasks.txt`
 //! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
-//! Tabelle, und `.secrets.txt` steht dort immer in der Liste. **Jede
-//! dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
+//! Tabelle, und `secrets.txt` bekommt dort vom Inhaltsfilter keinen Auftrag.
+//! **Jede dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
 //! Die Form der Eintraege in den zwei Dateien steht in [`eintraege`], das
 //! Anlegen von Ordner und Dateien samt der einmaligen Uebernahme der alten
-//! Zettel in [`bereitstellen`], das Dateiformat von `.secrets.txt` mit Kopf,
+//! Zettel in [`bereitstellen`], das Dateiformat von `secrets.txt` mit Kopf,
 //! Ableitung und Verschluesselung in [`tresor`].
 //!
 //! # Zwei Formen, verglichen als Text
@@ -51,12 +51,12 @@
 //! Datensatz**: Geraet und Inode, erhoben im Lesefaden am offenen Deskriptor.
 //! Sie ist der Weg, wenn sich die Luecke im Gebrauch zeigt.
 //!
-//! **Fuer `.secrets.txt` gilt seit dem 260926 eine Ausnahme davon**, und nur
+//! **Fuer `secrets.txt` gilt seit dem 260926 eine Ausnahme davon**, und nur
 //! an zwei Stellen: beim Oeffnen und beim Sichern fragt der Editor
 //! [`Heimordner::sonderdatei_genau`], die fuer eine Datei dieses Namens
 //! Geraet und Inode gegen die geschriebene Form vergleicht
 //! (`260926-1119_*_bekommt-secrets-txt-unter-einer-dritten-schreibweise-eine-zusatzpruefung-und-gilt-ziehen-als-kopieren.md`,
-//! Moeglichkeit 1). Sonst ginge eine leere `.secrets.txt` unter einer dritten
+//! Moeglichkeit 1). Sonst ginge eine leere `secrets.txt` unter einer dritten
 //! Schreibweise ueber den Klartextweg. Dieselbe Regel fragt die Vorschau auf
 //! ihrem Lesefaden; alle uebrigen Frager bleiben beim Textvergleich ohne
 //! Systemaufruf.
@@ -80,8 +80,8 @@ pub mod eintraege;
 pub mod tresor;
 
 pub use bereitstellen::{
-    ALTE_ZETTEL, AlterZettel, Bereitstellung, Hindernis, Uebernahme, Uebernahmeausgang,
-    Zettelbefund, bereitstellen,
+    ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, AlterZettel, Bereitstellung, Hindernis,
+    Uebernahme, Uebernahmeausgang, Zettelbefund, bereitstellen,
 };
 
 use std::path::{Component, Path, PathBuf};
@@ -101,15 +101,19 @@ pub enum Sonderdatei {
     Notizen,
     /// `tasks.txt`: Aufgaben mit Erledigt-Kaestchen.
     Aufgaben,
-    /// `.secrets.txt`: Eintraege wie in `notes.txt`, verschluesselt nach dem
+    /// `secrets.txt`: Eintraege wie in `notes.txt`, verschluesselt nach dem
     /// Format aus [`tresor`].
     ///
     /// Sie entsteht bei F2 wie die zwei anderen ueber [`bereitstellen`] und
     /// dort **mit null Bytes**: eine leere Datei traegt noch keinen Kopf, und
     /// die PIN legt erst das erste Oeffnen im Editor fest
     /// (`260926-0007_*_wann-entsteht-secrets-txt-und-was-geschieht-mit-fehlenden-dateien.md`).
-    /// Im erkannten Ordner steht sie immer in der Liste, obwohl ihr Name mit
-    /// einem Punkt beginnt; die Regel steht bei [`Heimordner::immer_gelistet`].
+    /// Ihr Name traegt keinen Punkt vorn, sie steht also in jeder Liste wie
+    /// jede andere Datei
+    /// (`260926-1308_*_heisst-die-geheimnisdatei-secrets-txt-ohne-punkt.md`);
+    /// eine `.secrets.txt` aus der Zeit davor benennt [`bereitstellen`] um. Im
+    /// erkannten Ordner bekommt sie vom Inhaltsfilter keinen Auftrag; die Regel
+    /// steht bei [`Heimordner::ohne_inhaltsauftrag`].
     Geheimnisse,
 }
 
@@ -126,7 +130,7 @@ impl Sonderdatei {
         match self {
             Sonderdatei::Notizen => "notes.txt",
             Sonderdatei::Aufgaben => "tasks.txt",
-            Sonderdatei::Geheimnisse => ".secrets.txt",
+            Sonderdatei::Geheimnisse => "secrets.txt",
         }
     }
 }
@@ -232,24 +236,24 @@ impl Heimordner {
         self.ist(ordner).then_some(sorte)
     }
 
-    /// [`Heimordner::sonderdatei`], und fuer eine Datei namens `.secrets.txt`
+    /// [`Heimordner::sonderdatei`], und fuer eine Datei namens `secrets.txt`
     /// unter jeder Schreibweise des Ordners: **Geraet und Inode** gegen die
-    /// geschriebene Form `<heimordner>/.secrets.txt`.
+    /// geschriebene Form `<heimordner>/secrets.txt`.
     ///
     /// **Allein fuer das Oeffnen und das Sichern gedacht**
     /// (`260926-1119_*_bekommt-secrets-txt-unter-einer-dritten-schreibweise-eine-zusatzpruefung-und-gilt-ziehen-als-kopieren.md`,
     /// Moeglichkeit 1): erkennt der Pfadtext die Datei nicht, heisst sie aber
-    /// `.secrets.txt`, fragt diese Funktion das Dateisystem, und zwar mit
+    /// `secrets.txt`, fragt diese Funktion das Dateisystem, und zwar mit
     /// `metadata` an beiden Pfaden, also dem Verweis folgend. Jeder andere Name
     /// kommt ohne Systemaufruf zurueck, und die zwei Formen fuer `notes.txt` und
     /// `tasks.txt` bleiben, wie sie sind: an ihnen haengt kein Klartext.
     ///
     /// **Der Name wird ohne Ruecksicht auf Gross- und Kleinschreibung
-    /// verglichen**, weil `.Secrets.txt` auf einem Volume ohne diese
+    /// verglichen**, weil `Secrets.txt` auf einem Volume ohne diese
     /// Unterscheidung dieselbe Inode ist; ueber die Gleichheit entscheidet dann
     /// die Inode und nicht der Name.
     ///
-    /// **Im Zweifel ist es die Geheimnisdatei.** Fehlt `.secrets.txt` im
+    /// **Im Zweifel ist es die Geheimnisdatei.** Fehlt `secrets.txt` im
     /// Heimordner oder der gefragte Pfad, kann er sie nicht sein; laesst sich
     /// eine der beiden Seiten aus einem anderen Grund nicht erheben (Rechte,
     /// Ein-/Ausgabefehler), antwortet die Funktion ja. Die falsche Seite des
@@ -271,18 +275,20 @@ impl Heimordner {
         dieselbe_datei(pfad, &bezug).then_some(Sonderdatei::Geheimnisse)
     }
 
-    /// Der Name des Eintrags, der im gefragten Ordner immer in der Liste
-    /// steht, oder `None`.
+    /// Der Name des Eintrags, dem der Inhaltsfilter im gefragten Ordner nie
+    /// einen Auftrag gibt, oder `None`.
     ///
-    /// **Eine Eigenschaft des Ordners und keine des Eintrags**
-    /// (`260926-0007_*_was-heisst-immer-gelistet-fuer-secrets-txt.md`,
-    /// Moeglichkeit 1): gefragt wird einmal je Lesevorgang und nicht je
-    /// Eintrag, und das Ordnermodell haelt die Antwort
-    /// (`Ordnermodell::immer_gelistet_setzen`). Das Kennzeichen `versteckt`
-    /// bleibt am Eintrag stehen. Im erkannten Ordner ist es `.secrets.txt`, in
-    /// jedem anderen nichts. **Kein Systemaufruf**, denn gefragt wird allein
-    /// [`Heimordner::ist`].
-    pub fn immer_gelistet(&self, ordner: &Path) -> Option<&'static str> {
+    /// **Eine Eigenschaft des Ordners und keine des Eintrags**: gefragt wird
+    /// einmal je Lesevorgang und nicht je Eintrag, und das Ordnermodell haelt
+    /// die Antwort (`Ordnermodell::ohne_inhaltsauftrag_setzen`). Im erkannten
+    /// Ordner ist es `secrets.txt`, in jedem anderen nichts
+    /// (`260926-0050_*_wie-weit-reicht-der-inhaltsfilter-liest-secrets-txt-nicht-wenn-das-kennzeichen-versteckt-ihn-nicht-haelt.md`,
+    /// Moeglichkeit 1). Bis zum 260926 hiess sie `immer_gelistet` und hielt
+    /// zugleich eine versteckte `.secrets.txt` in der Liste; mit dem Namen ohne
+    /// Punkt ist dieser Teil entfallen
+    /// (`260926-1308_*_heisst-die-geheimnisdatei-secrets-txt-ohne-punkt.md`).
+    /// **Kein Systemaufruf**, denn gefragt wird allein [`Heimordner::ist`].
+    pub fn ohne_inhaltsauftrag(&self, ordner: &Path) -> Option<&'static str> {
         self.ist(ordner)
             .then_some(Sonderdatei::Geheimnisse.dateiname())
     }

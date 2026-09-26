@@ -229,13 +229,13 @@ pub struct Lage {
     /// Editor verlangen, und dort ist die Form die des Editors vor dem Nutzer.
     pub editorform: Editorform,
     /// Ob sich die PIN der gehaltenen Datei aendern laesst: der Editor haelt
-    /// `.secrets.txt` entsperrt, und auf der Platte steht schon ein Kopf, also
+    /// `secrets.txt` entsperrt, und auf der Platte steht schon ein Kopf, also
     /// eine gesicherte PIN (Schritt 5.4b der krkhome-Arbeit).
     ///
     /// Erhoben von `Anwendungsdelegierter::lage` ueber
     /// `Editorbereich::pin_aenderbar`; gelesen seit Schritt 5.5 von
     /// [`datei_passt`] fuer den Wirkungsbereich des Befehls „PIN ändern",
-    /// `Wirkungsbereich::Geheimnisse`. Eine leere `.secrets.txt`
+    /// `Wirkungsbereich::Geheimnisse`. Eine leere `secrets.txt`
     /// meldet `false`: ihre PIN steht noch in keinem Kopf, und das naechste
     /// Oeffnen fragt ohnehin nach einer neuen.
     pub pin_aenderbar: bool,
@@ -269,7 +269,7 @@ pub enum Editorform {
     /// Die Notiztabelle: `notes.txt` im erkannten Heimordner in der
     /// Formatansicht (Schritt 4.3).
     Notizen,
-    /// Die Tabelle der Geheimnisse: `.secrets.txt` im erkannten Heimordner in
+    /// Die Tabelle der Geheimnisse: `secrets.txt` im erkannten Heimordner in
     /// der Formatansicht, entsperrt mit der PIN (Schritt 5.4b). Sie zeigt
     /// dieselbe Tabelle wie [`Self::Notizen`], weil ihre Eintraege dieselbe
     /// Form tragen, und nimmt dieselben Befehle an; ein eigener Wert, weil
@@ -443,7 +443,7 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         },
         // Die Geheimnisse fragen nicht die Form, sondern die Datei; das
         // steht in `datei_passt`. Auch in der Rohansicht haelt der Editor
-        // dieselbe `.secrets.txt` mit derselben PIN.
+        // dieselbe `secrets.txt` mit derselben PIN.
         Wirkungsbereich::Dateifenster
         | Wirkungsbereich::Leiste
         | Wirkungsbereich::Dateibereiche
@@ -461,7 +461,7 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
 ///
 /// **Allein [`Wirkungsbereich::Geheimnisse`] fragt hier etwas**, naemlich
 /// [`Lage::pin_aenderbar`]: „PIN ändern" wirkt nur, solange der Editor
-/// `.secrets.txt` entsperrt haelt und ihre PIN schon in einem Kopf auf der
+/// `secrets.txt` entsperrt haelt und ihre PIN schon in einem Kopf auf der
 /// Platte steht. Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
 /// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
 /// bewusst.
@@ -767,7 +767,7 @@ mod tests {
     /// Die Lage aus fuenf Werten, in der Reihenfolge der Felder.
     ///
     /// `pin_aenderbar` steht auf `false`: der Editor haelt darin keine
-    /// entsperrte `.secrets.txt` mit Kopf, und „PIN ändern" ist in der Tafel
+    /// entsperrte `secrets.txt` mit Kopf, und „PIN ändern" ist in der Tafel
     /// deshalb ueberall abgewiesen. Die Lage mit `true` baut
     /// [`pin_aendern_wirkt_allein_mit_dem_fokus_im_editor_und_pin_aenderbar`]
     /// selbst.
@@ -1632,7 +1632,7 @@ mod tests {
     /// ohne Hindernis der Lage; mit jedem Hindernis ist der Befehl abgewiesen
     /// wie jeder andere. Ohne `pin_aenderbar` ist er also auch mit dem Fokus in
     /// der Tabelle der Geheimnisse unzulaessig und im Menue ausgegraut: eine
-    /// leere `.secrets.txt`, deren PIN noch in keinem Kopf steht, hat keine
+    /// leere `secrets.txt`, deren PIN noch in keinem Kopf steht, hat keine
     /// PIN zu aendern.
     #[test]
     fn pin_aendern_wirkt_allein_mit_dem_fokus_im_editor_und_pin_aenderbar() {

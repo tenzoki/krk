@@ -238,7 +238,7 @@ const BILDENDUNGEN: [&str; 10] = [
 /// [`Inhalt::Pdf`]-Meldung dafuer mitfuehrt.
 const PDFENDUNG: &str = "pdf";
 
-/// Was die Vorschau statt des Inhalts von `.secrets.txt` zeigt (C7).
+/// Was die Vorschau statt des Inhalts von `secrets.txt` zeigt (C7).
 ///
 /// **Ein Satz an den Nutzer und kein Inhalt**: die Datei ist verschluesselt,
 /// und geoeffnet wird sie im Editor mit der PIN. Die Vorschau liest sie dafuer
@@ -806,7 +806,7 @@ fn zu_gross_text(groesse: u64) -> String {
 /// stellt; gelesen wird mit demselben `bis_zur_grenze_lesen` wie jede
 /// Textdatei, also nur lesend.
 ///
-/// **`.secrets.txt` im erkannten Ordner wird nicht gelesen, auch nicht eine
+/// **`secrets.txt` im erkannten Ordner wird nicht gelesen, auch nicht eine
 /// leere** (C7 desselben Arbeitspakets, Schritt 5.3). Die Frage nach der
 /// Sonderdatei steht gleich hinter dem `lstat(2)` und vor jedem anderen Zweig,
 /// also vor dem Oeffnen einer Datei, vor dem Lesen eines Ordners fuer die
@@ -817,7 +817,7 @@ fn zu_gross_text(groesse: u64) -> String {
 ///
 /// **Gefragt wird die genaue Erkennung** ([`Heimordner::sonderdatei_genau`]),
 /// dieselbe eine Regel, die der Editor beim Oeffnen und Sichern fragt: fuer
-/// eine Datei namens `.secrets.txt` vergleicht sie ueber die zwei Pfadformen
+/// eine Datei namens `secrets.txt` vergleicht sie ueber die zwei Pfadformen
 /// hinaus Geraet und Inode, und damit bleibt die Datei auch unter einer
 /// dritten Schreibweise des Heimordners ungelesen. Das kostet fuer genau
 /// diesen Namen zwei `stat(2)` auf dem Lesefaden der Vorschau, der ohnehin
@@ -1244,7 +1244,7 @@ mod tests {
         assert_eq!([stand("notes.txt"), stand("tasks.txt")], vorher);
     }
 
-    /// Legt `.secrets.txt` mit dem genannten Inhalt im Ziel des
+    /// Legt `secrets.txt` mit dem genannten Inhalt im Ziel des
     /// Pruef-krkhome an und nimmt ihr jedes Recht (Modus `000`).
     ///
     /// **Der Modus ist der Beleg, dass nichts geoeffnet wurde**: jeder Versuch,
@@ -1252,14 +1252,14 @@ mod tests {
     /// nicht im Hinweis. Die Gegenprobe ohne Heimordner zeigt genau das.
     fn gesperrte_geheimnisse(ziel: &Path, inhalt: &[u8]) -> PathBuf {
         use std::os::unix::fs::PermissionsExt;
-        let pfad = ziel.join(".secrets.txt");
-        std::fs::write(&pfad, inhalt).expect(".secrets.txt");
+        let pfad = ziel.join("secrets.txt");
+        std::fs::write(&pfad, inhalt).expect("secrets.txt");
         std::fs::set_permissions(&pfad, std::fs::Permissions::from_mode(0o000))
             .expect("der Modus 000 laesst sich setzen");
         pfad
     }
 
-    /// C7.9: die Vorschau zeigt fuer `.secrets.txt` im erkannten Ordner den
+    /// C7.9: die Vorschau zeigt fuer `secrets.txt` im erkannten Ordner den
     /// Hinweis und liest nichts, ueber die geschriebene und ueber die
     /// aufgeloeste Form, fuer eine gefuellte und fuer eine leere Datei.
     #[test]
@@ -1274,7 +1274,7 @@ mod tests {
             for basis in [&geschrieben, &ziel] {
                 assert_eq!(
                     laden(
-                        &basis.join(".secrets.txt"),
+                        &basis.join("secrets.txt"),
                         Tafel::Hell,
                         &Profile::default(),
                         Some(&heim),
@@ -1290,7 +1290,7 @@ mod tests {
             assert!(
                 matches!(
                     laden(
-                        &ziel.join(".secrets.txt"),
+                        &ziel.join("secrets.txt"),
                         Tafel::Hell,
                         &Profile::default(),
                         None
@@ -1302,14 +1302,14 @@ mod tests {
         }
     }
 
-    /// Eine `.secrets.txt` ausserhalb des erkannten Ordners ist eine
+    /// Eine `secrets.txt` ausserhalb des erkannten Ordners ist eine
     /// gewoehnliche Textdatei und erscheint mit ihrem Inhalt: die Ausnahme
     /// haengt am Ordner und am Namen, nicht am Namen allein.
     #[test]
     fn secrets_txt_anderswo_erscheint_wie_jede_textdatei() {
         let ordner = Pruefordner::neu("secrets-anderswo");
         let (heim, _, _) = pruef_krkhome(&ordner);
-        let daneben = ordner.datei(".secrets.txt", "kein Geheimnis\n");
+        let daneben = ordner.datei("secrets.txt", "kein Geheimnis\n");
         assert_eq!(
             laden(&daneben, Tafel::Hell, &Profile::default(), Some(&heim)),
             Inhalt::Text("kein Geheimnis\n".to_owned())

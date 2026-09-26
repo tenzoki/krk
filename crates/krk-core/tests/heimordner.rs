@@ -35,8 +35,8 @@ use krk_core::heimordner::tresor::{
     SALZLAENGE, Schluessel,
 };
 use krk_core::heimordner::{
-    ALTE_ZETTEL, Bereitstellung, Heimordner, Hindernis, ORDNERNAME, Sonderdatei, Uebernahmeausgang,
-    Zettelbefund, bereitstellen,
+    ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, Bereitstellung, Heimordner, Hindernis,
+    ORDNERNAME, Sonderdatei, Uebernahmeausgang, Zettelbefund, bereitstellen,
 };
 
 /// Der Pruefordner in der Schreibweise, die `canonicalize` fuer ihn liefert.
@@ -103,7 +103,7 @@ fn ein_relatives_verweisziel_wird_gegen_das_benutzerverzeichnis_gesetzt() {
 }
 
 /// `260926-1119_*` Moeglichkeit 1: unter einer dritten Schreibweise erkennt
-/// die genaue Frage `.secrets.txt` an Geraet und Inode, auch unter anderer
+/// die genaue Frage `secrets.txt` an Geraet und Inode, auch unter anderer
 /// Gross- und Kleinschreibung des Namens; eine gleichnamige Datei anderswo
 /// bleibt eine gewoehnliche, und `notes.txt` bleibt bei den zwei Formen.
 #[test]
@@ -112,17 +112,17 @@ fn die_genaue_frage_erkennt_secrets_txt_unter_einer_dritten_schreibweise() {
     let zuhause = kanonisch(&ordner);
     let heimpfad = zuhause.join(ORDNERNAME);
     fs::create_dir(&heimpfad).expect("Heimordner laesst sich nicht anlegen");
-    fs::write(heimpfad.join(".secrets.txt"), b"").expect("leere Datei");
+    fs::write(heimpfad.join("secrets.txt"), b"").expect("leere Datei");
     fs::write(heimpfad.join("notes.txt"), b"").expect("Notizen");
     // Die dritte Schreibweise: ein zweiter Verweis anderswo auf den Ordner.
     let zweiter = zuhause.join("anderswo");
     std::os::unix::fs::symlink(&heimpfad, &zweiter).expect("zweiter Verweis");
     let fremd = zuhause.join("fremd");
     fs::create_dir(&fremd).expect("fremder Ordner");
-    fs::write(fremd.join(".secrets.txt"), b"").expect("gleichnamige Datei");
+    fs::write(fremd.join("secrets.txt"), b"").expect("gleichnamige Datei");
 
     let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
-    let dritte = zweiter.join(".secrets.txt");
+    let dritte = zweiter.join("secrets.txt");
     assert_eq!(
         heim.sonderdatei(&dritte),
         None,
@@ -133,21 +133,21 @@ fn die_genaue_frage_erkennt_secrets_txt_unter_einer_dritten_schreibweise() {
         Some(Sonderdatei::Geheimnisse)
     );
     assert_eq!(
-        heim.sonderdatei_genau(&heimpfad.join(".secrets.txt")),
+        heim.sonderdatei_genau(&heimpfad.join("secrets.txt")),
         Some(Sonderdatei::Geheimnisse)
     );
-    assert_eq!(heim.sonderdatei_genau(&fremd.join(".secrets.txt")), None);
+    assert_eq!(heim.sonderdatei_genau(&fremd.join("secrets.txt")), None);
     assert_eq!(heim.sonderdatei_genau(&zweiter.join("notes.txt")), None);
     assert_eq!(heim.sonderdatei_genau(&zweiter.join("fehlt.txt")), None);
 
-    // Ein zweiter Name derselben Inode mit anderer Schreibung: wie `.Secrets.txt`
+    // Ein zweiter Name derselben Inode mit anderer Schreibung: wie `Secrets.txt`
     // auf einem Volume ohne Unterscheidung von Gross und Klein.
-    // Ein eigener Ordner, weil `fremd/.secrets.txt` auf einem solchen Volume
+    // Ein eigener Ordner, weil `fremd/secrets.txt` auf einem solchen Volume
     // denselben Namen belegt.
     let dritter = zuhause.join("dritter");
     fs::create_dir(&dritter).expect("dritter Ordner");
-    let anders = dritter.join(".SECRETS.TXT");
-    fs::hard_link(heimpfad.join(".secrets.txt"), &anders).expect("zweiter Name");
+    let anders = dritter.join("SECRETS.TXT");
+    fs::hard_link(heimpfad.join("secrets.txt"), &anders).expect("zweiter Name");
     assert_eq!(
         heim.sonderdatei_genau(&anders),
         Some(Sonderdatei::Geheimnisse)
@@ -216,10 +216,10 @@ fn gleichnamige_dateien_anderswo_und_andere_namen_sind_keine_eintragsdateien() {
     );
 }
 
-/// C7.11: `immer_gelistet` nennt `.secrets.txt` fuer den erkannten Ordner, in
-/// beiden Formen, und fuer jeden anderen Ordner nichts.
+/// C7.13: `ohne_inhaltsauftrag` nennt `secrets.txt` fuer den erkannten
+/// Ordner, in beiden Formen, und fuer jeden anderen Ordner nichts.
 #[test]
-fn immer_gelistet_nennt_die_geheimnisse_allein_im_erkannten_ordner() {
+fn ohne_inhaltsauftrag_nennt_die_geheimnisse_allein_im_erkannten_ordner() {
     let ordner = Pruefordner::neu("heim-immer");
     let zuhause = kanonisch(&ordner);
     let ziel = zuhause.join("ablage-ziel");
@@ -230,15 +230,15 @@ fn immer_gelistet_nennt_die_geheimnisse_allein_im_erkannten_ordner() {
 
     for erkannt in [zuhause.join(ORDNERNAME), ziel.clone()] {
         assert_eq!(
-            heim.immer_gelistet(&erkannt),
-            Some(".secrets.txt"),
+            heim.ohne_inhaltsauftrag(&erkannt),
+            Some("secrets.txt"),
             "{}",
             erkannt.display()
         );
     }
     assert_eq!(
         Sonderdatei::Geheimnisse.dateiname(),
-        ".secrets.txt",
+        "secrets.txt",
         "der Name, den die Ausnahme nennt, ist der der Sonderdatei"
     );
     for anderer in [
@@ -246,7 +246,12 @@ fn immer_gelistet_nennt_die_geheimnisse_allein_im_erkannten_ordner() {
         ziel.join("unter"),
         zuhause.join("krkhome-alt"),
     ] {
-        assert_eq!(heim.immer_gelistet(&anderer), None, "{}", anderer.display());
+        assert_eq!(
+            heim.ohne_inhaltsauftrag(&anderer),
+            None,
+            "{}",
+            anderer.display()
+        );
     }
 }
 
@@ -287,8 +292,8 @@ fn rumpf(inhalt: &str, name: &str) -> String {
         .join("\n")
 }
 
-/// `ist` und `sonderdatei` stellen keinen Systemaufruf, und `immer_gelistet`
-/// ebenso wenig.
+/// `ist` und `sonderdatei` stellen keinen Systemaufruf, und
+/// `ohne_inhaltsauftrag` ebenso wenig.
 ///
 /// Gefragt werden sie je Lesevorgang eines Tabs auf dem Hauptfaden; ein
 /// Dateisystemaufruf dort blockierte an einem haengenden Netzlaufwerk die
@@ -296,11 +301,11 @@ fn rumpf(inhalt: &str, name: &str) -> String {
 /// deshalb liest diese Probe die beiden Ruempfe.
 ///
 /// **Was sie nicht sieht:** einen Systemaufruf in einer Hilfsfunktion, die
-/// einer der Ruempfe ruft. Heute rufen `sonderdatei` und `immer_gelistet`
+/// einer der Ruempfe ruft. Heute rufen `sonderdatei` und `ohne_inhaltsauftrag`
 /// allein `ist`, und `ist` keine Funktion dieses Moduls; wer eine
-/// Hilfsfunktion einzieht, nimmt ihren Namen hier auf. `immer_gelistet` steht
-/// seit Schritt 5.2 dabei, weil `Tabliste::lesen_starten` es je Lesevorgang
-/// auf dem Hauptfaden fragt.
+/// Hilfsfunktion einzieht, nimmt ihren Namen hier auf. `ohne_inhaltsauftrag`
+/// (bis zum 260926 `immer_gelistet`) steht seit Schritt 5.2 dabei, weil
+/// `Tabliste::lesen_starten` es je Lesevorgang auf dem Hauptfaden fragt.
 #[test]
 fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
     let inhalt = fs::read_to_string(concat!(
@@ -320,7 +325,7 @@ fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
         "is_symlink(",
         "File::",
     ];
-    for name in ["ist", "sonderdatei", "immer_gelistet"] {
+    for name in ["ist", "sonderdatei", "ohne_inhaltsauftrag"] {
         let rumpf = rumpf(&inhalt, name);
         // Ein leer geschnittener Rumpf bestuende jede Nadel; er muss mindestens
         // den Wert befragen, den er pruefen soll.
@@ -1118,7 +1123,7 @@ fn eine_vorhandene_datei_bleibt_und_eine_fehlende_entsteht_leer() {
 }
 
 /// C2, C7.1: der erste Aufruf legt Ordner, `notes.txt`, `tasks.txt` und
-/// `.secrets.txt` an und sonst nichts; `.secrets.txt` hat null Bytes.
+/// `secrets.txt` an und sonst nichts; `secrets.txt` hat null Bytes.
 #[test]
 fn der_erste_aufruf_legt_genau_die_drei_dateien_an() {
     let lage = Lage::neu("heim-erster", [None, None]);
@@ -1129,22 +1134,187 @@ fn der_erste_aufruf_legt_genau_die_drei_dateien_an() {
     assert_eq!(bereitstellung.angelegt, Sonderdatei::ALLE.to_vec());
     assert_eq!(
         namen_in(&lage.heimpfad()),
-        vec![".secrets.txt", "notes.txt", "tasks.txt"]
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
     assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
     let geheimnisse = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
     assert_eq!(
-        fs::metadata(&geheimnisse)
-            .expect(".secrets.txt fehlt")
-            .len(),
+        fs::metadata(&geheimnisse).expect("secrets.txt fehlt").len(),
         0,
-        "`.secrets.txt` entsteht mit null Bytes"
+        "`secrets.txt` entsteht mit null Bytes"
     );
     let uebernahme = bereitstellung.uebernahme.as_ref().expect("Uebernahme");
     assert_eq!(uebernahme.ausgang, Uebernahmeausgang::NichtsZuUebernehmen);
     assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
     lage.zettel_unveraendert();
+}
+
+// ---------------------------------------------------------------------------
+// Eine `.secrets.txt` von vorher wird zu `secrets.txt`
+// (`260926-1308_*_heisst-die-geheimnisdatei-secrets-txt-ohne-punkt.md`)
+// ---------------------------------------------------------------------------
+
+/// Ein Chiffrat, wie es der Editor schreibt, mit kleinen Parametern.
+fn ein_chiffrat() -> Vec<u8> {
+    tresor::verschliessen(BEKANNTER_EINTRAG.as_bytes(), &kleiner_schluessel("0417"))
+        .expect("verschliessen")
+}
+
+/// Steht allein `.secrets.txt`, heisst sie danach `secrets.txt`, Byte fuer Byte
+/// und dieselbe Inode; der alte Name ist weg, und die PIN oeffnet sie weiter.
+#[test]
+fn eine_alte_secrets_txt_wird_umbenannt_und_bleibt_byte_fuer_byte() {
+    use std::os::unix::fs::MetadataExt;
+    let lage = Lage::neu("heim-alt-umbenannt", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let alt = lage.heimpfad().join(ALTER_GEHEIMNISNAME);
+    let neu = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
+    let chiffrat = ein_chiffrat();
+    fs::write(&alt, &chiffrat).expect(".secrets.txt");
+    let inode = fs::metadata(&alt).expect(".secrets.txt").ino();
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(
+        bereitstellung.alte_geheimnisse,
+        Some(AlteGeheimnisse::Umbenannt)
+    );
+    assert!(!alt.exists(), "der alte Name steht noch");
+    assert_eq!(fs::read(&neu).expect("secrets.txt fehlt"), chiffrat);
+    assert_eq!(fs::metadata(&neu).expect("secrets.txt").ino(), inode);
+    let geoeffnet = tresor::oeffnen(&fs::read(&neu).expect("secrets.txt"), &pin("0417"))
+        .expect("die PIN oeffnet die umbenannte Datei");
+    assert_eq!(geoeffnet.klartext, BEKANNTER_EINTRAG.as_bytes());
+    assert!(
+        !bereitstellung.angelegt.contains(&Sonderdatei::Geheimnisse),
+        "{bereitstellung:?}"
+    );
+    assert_eq!(
+        namen_in(&lage.heimpfad()),
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
+    );
+    let meldungen = bereitstellung.meldungen().join("\n");
+    assert!(
+        meldungen.contains(".secrets.txt heißt jetzt secrets.txt"),
+        "{meldungen}"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// Stehen `.secrets.txt` und `secrets.txt`, bleiben beide Byte fuer Byte, und
+/// die Statuszeile sagt es.
+#[test]
+fn stehen_beide_bleiben_beide_und_die_statuszeile_sagt_es() {
+    let lage = Lage::neu("heim-alt-beide", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let alt = lage.heimpfad().join(ALTER_GEHEIMNISNAME);
+    let neu = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
+    let altes_chiffrat = ein_chiffrat();
+    let neues_chiffrat = ein_chiffrat();
+    assert_ne!(
+        altes_chiffrat, neues_chiffrat,
+        "jedes Chiffrat traegt seine Nonce"
+    );
+    fs::write(&alt, &altes_chiffrat).expect(".secrets.txt");
+    fs::write(&neu, &neues_chiffrat).expect("secrets.txt");
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(
+        bereitstellung.alte_geheimnisse,
+        Some(AlteGeheimnisse::BeideStehen)
+    );
+    assert_eq!(fs::read(&alt).expect(".secrets.txt"), altes_chiffrat);
+    assert_eq!(fs::read(&neu).expect("secrets.txt"), neues_chiffrat);
+    assert!(
+        !bereitstellung.angelegt.contains(&Sonderdatei::Geheimnisse),
+        "{bereitstellung:?}"
+    );
+    let meldungen = bereitstellung.meldungen().join("\n");
+    assert!(
+        meldungen.contains("secrets.txt und .secrets.txt stehen beide"),
+        "{meldungen}"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// Ohne `.secrets.txt` entsteht `secrets.txt` leer wie bisher, und es gibt
+/// nichts zu melden; eine vorhandene `secrets.txt` bleibt Byte fuer Byte.
+#[test]
+fn ohne_alte_datei_entsteht_secrets_txt_leer_oder_bleibt_wie_sie_war() {
+    let lage = Lage::neu("heim-alt-keine", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let neu = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
+
+    let erste = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(erste.alte_geheimnisse, None);
+    assert!(
+        erste.angelegt.contains(&Sonderdatei::Geheimnisse),
+        "{erste:?}"
+    );
+    assert_eq!(fs::metadata(&neu).expect("secrets.txt fehlt").len(), 0);
+    assert!(erste.meldungen().is_empty(), "{erste:?}");
+
+    let chiffrat = ein_chiffrat();
+    fs::write(&neu, &chiffrat).expect("secrets.txt");
+    let zweite = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(zweite.alte_geheimnisse, None);
+    assert!(zweite.angelegt.is_empty(), "{zweite:?}");
+    assert_eq!(fs::read(&neu).expect("secrets.txt"), chiffrat);
+    assert!(
+        !lage.heimpfad().join(ALTER_GEHEIMNISNAME).exists(),
+        "der alte Name entsteht nie"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// Laesst sich die alte Datei nicht umbenennen, bleibt sie unberuehrt, und
+/// daneben entsteht keine leere `secrets.txt`. Gespielt mit einem
+/// schreibgeschuetzten Heimordner: `link(2)` braucht das Schreibrecht am
+/// Ordner.
+#[test]
+fn eine_gescheiterte_umbenennung_legt_keine_leere_datei_daneben() {
+    use std::os::unix::fs::PermissionsExt;
+    let lage = Lage::neu("heim-alt-gescheitert", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    for sorte in [Sonderdatei::Notizen, Sonderdatei::Aufgaben] {
+        fs::write(lage.heimpfad().join(sorte.dateiname()), b"").expect("Eintragsdatei");
+    }
+    let alt = lage.heimpfad().join(ALTER_GEHEIMNISNAME);
+    let chiffrat = ein_chiffrat();
+    fs::write(&alt, &chiffrat).expect(".secrets.txt");
+    fs::set_permissions(lage.heimpfad(), fs::Permissions::from_mode(0o555)).expect("schreibschutz");
+
+    let bereitstellung = lage.bereitstellen();
+
+    fs::set_permissions(lage.heimpfad(), fs::Permissions::from_mode(0o755))
+        .expect("schreibschutz aufheben");
+    let bereitstellung = bereitstellung.expect("kein Hindernis erwartet");
+    assert!(
+        matches!(
+            bereitstellung.alte_geheimnisse,
+            Some(AlteGeheimnisse::Gescheitert(_))
+        ),
+        "{bereitstellung:?}"
+    );
+    assert_eq!(fs::read(&alt).expect(".secrets.txt"), chiffrat);
+    assert!(
+        !lage
+            .heimpfad()
+            .join(Sonderdatei::Geheimnisse.dateiname())
+            .exists(),
+        "neben der alten Datei ist eine neue entstanden"
+    );
+    assert!(
+        bereitstellung.nicht_angelegt.is_empty(),
+        "{bereitstellung:?}"
+    );
+    let meldungen = bereitstellung.meldungen().join("\n");
+    assert!(
+        meldungen.contains("lässt sich nicht in secrets.txt umbenennen"),
+        "{meldungen}"
+    );
 }
 
 /// C3.2: Hat derselbe Aufruf den Ordner angelegt, werden beide Zettel zu
@@ -1283,7 +1453,7 @@ fn nach_geloeschter_notizdatei_kommt_keine_zweite_uebernahme() {
     lage.zettel_unveraendert();
 }
 
-/// C7.1: eine vorhandene `.secrets.txt` bleibt Byte fuer Byte, gleich ob sie
+/// C7.1: eine vorhandene `secrets.txt` bleibt Byte fuer Byte, gleich ob sie
 /// Chiffrat oder null Bytes traegt; F2 fragt dabei keine PIN und legt nichts
 /// daneben an.
 #[test]
@@ -1298,18 +1468,18 @@ fn eine_vorhandene_geheimnisdatei_bleibt_byte_fuer_byte() {
         let lage = Lage::neu(zweck, [None, None]);
         fs::create_dir(lage.heimpfad()).expect("Heimordner");
         let pfad = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
-        fs::write(&pfad, vorher).expect(".secrets.txt");
+        fs::write(&pfad, vorher).expect("secrets.txt");
 
         let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
 
-        assert_eq!(fs::read(&pfad).expect(".secrets.txt fehlt"), vorher);
+        assert_eq!(fs::read(&pfad).expect("secrets.txt fehlt"), vorher);
         assert!(
             !bereitstellung.angelegt.contains(&Sonderdatei::Geheimnisse),
             "{bereitstellung:?}"
         );
         assert_eq!(
             namen_in(&lage.heimpfad()),
-            vec![".secrets.txt", "notes.txt", "tasks.txt"]
+            vec!["notes.txt", "secrets.txt", "tasks.txt"]
         );
     }
 }
@@ -1343,7 +1513,7 @@ fn ein_verweis_auf_einen_ordner_laesst_die_dateien_im_ziel_entstehen() {
 
     assert_eq!(
         namen_in(&ziel),
-        vec![".secrets.txt", "notes.txt", "tasks.txt"]
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert!(!bereitstellung.ordner_angelegt);
     assert_eq!(bereitstellung.uebernahme, None);
@@ -1396,7 +1566,7 @@ fn die_hindernisse_melden_sich_im_wortlaut() {
 }
 
 // ---------------------------------------------------------------------------
-// Das Dateiformat von .secrets.txt (Schritt 5.1, Faehigkeit C7)
+// Das Dateiformat von secrets.txt (Schritt 5.1, Faehigkeit C7)
 // ---------------------------------------------------------------------------
 
 /// Kleine Parameter, damit die Proben im Profil `dev` nicht auf die halbe
@@ -1462,7 +1632,7 @@ fn der_bekannte_eintrag_steht_nicht_im_chiffrat() {
 #[test]
 fn falsche_pin_und_veraendertes_byte_geben_dieselbe_abweisung() {
     let ordner = Pruefordner::neu("tresor-abweisung");
-    let pfad = ordner.pfad().join(".secrets.txt");
+    let pfad = ordner.pfad().join("secrets.txt");
     let datei = tresor::verschliessen(BEKANNTER_EINTRAG.as_bytes(), &kleiner_schluessel("0417"))
         .expect("verschliessen");
     fs::write(&pfad, &datei).expect("die Pruefdatei laesst sich nicht schreiben");

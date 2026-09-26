@@ -1,4 +1,4 @@
-//! Das PIN-Blatt vor `.secrets.txt` (C7 der krkhome-Arbeit, Schritt 5.4b).
+//! Das PIN-Blatt vor `secrets.txt` (C7 der krkhome-Arbeit, Schritt 5.4b).
 //!
 //! ```text
 //!  PIN für die Geheimnisse eingeben          Neue PIN für die Geheimnisse festlegen
@@ -19,7 +19,7 @@
 //!
 //! **Drei Formen, ein Blatt.** Welche gilt, sagt [`Pinform`]. Die ersten zwei
 //! entscheidet die Groesse der Datei in `Editorbereich::datei_oeffnen`: eine
-//! leere `.secrets.txt` hat noch keine PIN, und der Nutzer legt eine fest,
+//! leere `secrets.txt` hat noch keine PIN, und der Nutzer legt eine fest,
 //! **zweimal eingegeben**, weil eine vertippte neue PIN den Inhalt so
 //! endgueltig verschloesse wie eine vergessene (Spec, C7). Jede andere gibt er
 //! einmal ein. Die dritte, [`Pinform::Aendern`], ist die des Befehls „PIN

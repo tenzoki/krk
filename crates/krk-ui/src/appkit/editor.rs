@@ -1578,7 +1578,7 @@ enum Tauschschritt {
 /// Bau an. `notes.txt` zeigt seit Schritt 4.3 des Plans in der Formatansicht
 /// die Notiztabelle; bis dahin zeigte sie Markdown in der Textflaeche.
 ///
-/// **`.secrets.txt` hat seit Schritt 5.4b ihre eigene Form**,
+/// **`secrets.txt` hat seit Schritt 5.4b ihre eigene Form**,
 /// [`Editorform::Geheimnisse`]. Sie zeigt dieselbe Notiztabelle, weil ihre
 /// Eintraege die Form von `notes.txt` tragen ([`eintragsart_der_form`]), und
 /// ist ein eigener Wert, weil der Befehl „PIN ändern" aus Schritt 5.5 allein
@@ -1607,10 +1607,10 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
 enum Oeffnungsweg {
     /// Der gewoehnliche Ladeauftrag ohne PIN.
     Laden,
-    /// `.secrets.txt` auf einen Befehl hin: erst das PIN-Blatt, kein
+    /// `secrets.txt` auf einen Befehl hin: erst das PIN-Blatt, kein
     /// Ladeauftrag.
     PinErfragen,
-    /// `.secrets.txt` aus der Sitzung: nichts, kein Ladeauftrag und kein
+    /// `secrets.txt` aus der Sitzung: nichts, kein Ladeauftrag und kein
     /// Blatt.
     Unterlassen,
 }
@@ -1623,7 +1623,7 @@ enum Oeffnungsweg {
 /// ueber die Sonderdatei und ohne Auffangzweig: eine weitere Sonderdatei haelt
 /// hier den Bau an und bekommt ihren Weg bewusst.
 ///
-/// **Die schon gehaltene `.secrets.txt` laedt ohne PIN**, und das heisst: sie
+/// **Die schon gehaltene `secrets.txt` laedt ohne PIN**, und das heisst: sie
 /// nimmt im Modell die Abkuerzung `SchonOffen`. Die PIN gilt, solange die
 /// Datei offen ist (C7), und ein zweites F4 fragt deshalb nicht noch einmal.
 #[must_use]
@@ -1931,7 +1931,7 @@ pub struct EditorIvars {
     /// Modell haelt.
     ///
     /// [`Editorbereich::datei_oeffnen`] fragt ihn, bevor es einen Ladeauftrag
-    /// erteilt: `.secrets.txt` im erkannten Ordner geht erst ueber das
+    /// erteilt: `secrets.txt` im erkannten Ordner geht erst ueber das
     /// PIN-Blatt (Schritt 5.4b der krkhome-Arbeit). Ein Griff und keine
     /// Abschrift, aus demselben Grund wie im Modell.
     heim: Heimgriff,
@@ -2801,7 +2801,7 @@ impl Editorbereich {
     /// Stand vom 260810-1028. Wo sie bis zum Ausgang liegt und warum das keine
     /// Marke neben der Kette ist, steht an [`EditorIvars::herkunft`].
     ///
-    /// # `.secrets.txt` geht erst ueber das PIN-Blatt
+    /// # `secrets.txt` geht erst ueber das PIN-Blatt
     ///
     /// **Hier und nicht beim Anwendungsdelegierten**, weil diese Funktion die
     /// eine ist, durch die jedes Oeffnen geht (Schritt 5.4b der
@@ -2816,7 +2816,7 @@ impl Editorbereich {
     ///
     /// **Die Erkennung ist die genaue**
     /// (`krk_core::heimordner::Heimordner::sonderdatei_genau`): fuer eine Datei
-    /// namens `.secrets.txt` fragt sie ueber die zwei Pfadformen hinaus Geraet
+    /// namens `secrets.txt` fragt sie ueber die zwei Pfadformen hinaus Geraet
     /// und Inode, damit auch eine dritte Schreibweise des Heimordners ueber das
     /// Blatt geht und nie ohne PIN in den Editor kommt.
     ///
@@ -2834,7 +2834,7 @@ impl Editorbereich {
             self.melden(Ladeausgang::ZelleAbgewiesen(meldung.text()));
             return;
         }
-        // Die genaue Frage, damit `.secrets.txt` auch unter einer dritten
+        // Die genaue Frage, damit `secrets.txt` auch unter einer dritten
         // Schreibweise ueber das Blatt geht; ein `stat(2)` allein fuer diesen
         // Namen, siehe `Heimordner::sonderdatei_genau`.
         let sonderdatei =
@@ -2857,7 +2857,7 @@ impl Editorbereich {
             }
         }
         // Ohne PIN: fuer jede andere Datei der gewoehnliche Weg, und fuer die
-        // schon gehaltene `.secrets.txt` die Abkuerzung `SchonOffen`, denn die
+        // schon gehaltene `secrets.txt` die Abkuerzung `SchonOffen`, denn die
         // PIN gilt, solange die Datei offen ist.
         let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, None);
         match sofort {
@@ -2866,7 +2866,7 @@ impl Editorbereich {
         }
     }
 
-    /// Oeffnet `.secrets.txt` mit der PIN aus dem Blatt (Schritt 5.4b der
+    /// Oeffnet `secrets.txt` mit der PIN aus dem Blatt (Schritt 5.4b der
     /// krkhome-Arbeit).
     ///
     /// **Der Rueckweg des PIN-Blattes und nichts daneben.** Derselbe Ladeauftrag
@@ -2950,7 +2950,7 @@ impl Editorbereich {
         self.ivars().modell.borrow().textmarke_verweigert()
     }
 
-    /// Ob der Editor `.secrets.txt` haelt; die Regel steht bei
+    /// Ob der Editor `secrets.txt` haelt; die Regel steht bei
     /// [`Editormodell::haelt_geheimnisse`].
     ///
     /// **Ein gerade geliehenes Modell zaehlt als geheim.** Gefragt wird aus
@@ -6444,7 +6444,7 @@ mod tests {
     /// nicht mehr „die Flaeche des Editors" (C3 der Runde 9). Bis F2 nach
     /// `~/krkhome/` fuehrte, stand die Flaeche des Notizzettels mit in der
     /// Liste; seither steht dort der eigene Feldeditor der Eintragszellen, in
-    /// denen auch `.secrets.txt` bearbeitet wird. Die Liste bleibt, damit
+    /// denen auch `secrets.txt` bearbeitet wird. Die Liste bleibt, damit
     /// die naechste bearbeitbare Flaeche eine Zeile bekommt und nicht eine
     /// zweite Probe, und [`EINSTELLUNGEN`] steht weiter an **einer** Stelle.
     /// Gemessen wird der Feldeditor, wie er gebaut ist; dass die Abschaltung
@@ -6589,7 +6589,7 @@ mod tests {
                     wert,
                     aus_bedeutet(setzer),
                     "{setzer} steht nach dem Beginn einer Bearbeitung nicht auf aus — \
-                     die Zelle veraenderte Getipptes, in .secrets.txt vor dem Verschluesseln"
+                     die Zelle veraenderte Getipptes, in secrets.txt vor dem Verschluesseln"
                 );
             }
         });
@@ -7112,7 +7112,7 @@ mod tests {
         }
     }
 
-    /// Der Weg eines Oeffnens (Schritt 5.4b der krkhome-Arbeit): `.secrets.txt`
+    /// Der Weg eines Oeffnens (Schritt 5.4b der krkhome-Arbeit): `secrets.txt`
     /// geht auf einen Befehl hin ueber das PIN-Blatt, aus der Sitzung nirgends
     /// hin, und die schon gehaltene laedt ohne PIN ueber die Abkuerzung. Jede
     /// andere Datei laedt wie bisher.

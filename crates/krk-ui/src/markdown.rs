@@ -292,7 +292,7 @@ impl Lesart {
     /// `hervorhebung::art` ihn nicht als Markdown einordnet; er steht beim
     /// Grundumfang, weil das die Lesart ohne jede Zutat ist.
     ///
-    /// **`.secrets.txt` steht aus demselben Grund beim Grundumfang und nicht
+    /// **`secrets.txt` steht aus demselben Grund beim Grundumfang und nicht
     /// bei den Eintragsdateien.** Sie ist dem Dateityp nach eine, aber
     /// `hervorhebung::art` ordnet sie als einfachen Text ein, und die Vorschau
     /// zweigt fuer sie vor jedem Lesen mit einem Hinweis ab
@@ -3324,7 +3324,7 @@ mod tests {
     }
 
     /// Ein Dateityp wird an genau einer Stelle zur Lesart, und allein
-    /// `notes.txt` und `tasks.txt` bekommen Kaestchen; `.secrets.txt` erreicht
+    /// `notes.txt` und `tasks.txt` bekommen Kaestchen; `secrets.txt` erreicht
     /// das Rendern nie und steht beim Grundumfang.
     #[test]
     fn allein_eine_eintragsdatei_wird_als_eintragsdatei_gelesen() {

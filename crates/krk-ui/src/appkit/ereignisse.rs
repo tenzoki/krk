@@ -845,7 +845,7 @@ fn getipptes_zeichen(ereignis: &NSEvent) -> Option<char> {
 /// # Geheimes Tippen steht verdeckt in der Zeile
 ///
 /// **Seit dem 260926 zeigt der Modus nicht mehr jeden Anschlag.** Wer in
-/// `.secrets.txt` tippt oder ins PIN-Blatt, dessen Anschlaege gingen sonst
+/// `secrets.txt` tippt oder ins PIN-Blatt, dessen Anschlaege gingen sonst
 /// Zeichen fuer Zeichen auf die Standardausgabe, und genau die liest ein
 /// Agent, der KRK zur Fehlersuche mit `--tasten-protokoll` startet — das
 /// Bedrohungsmodell von C7 der krkhome-Arbeit
@@ -1342,7 +1342,7 @@ mod tests {
 
     /// Was keinen Text einfuegt, bleibt auch bei geheimem Tippen offen: ein
     /// Befehl, eine Bewegung, eine Funktionstaste. So bleibt das Protokoll
-    /// fuer die Frage brauchbar, welcher Befehl in `.secrets.txt` gefeuert hat.
+    /// fuer die Frage brauchbar, welcher Befehl in `secrets.txt` gefeuert hat.
     #[test]
     fn befehle_und_bewegungen_bleiben_im_verdeckten_protokoll_offen() {
         for (name, getippt, flaggen) in [

@@ -30,10 +30,10 @@
 //! geht nichts, und die zweite Instanz hat nichts uebernommen, weil ihr
 //! `mkdir(2)` gescheitert ist.
 //!
-//! # `.secrets.txt` entsteht leer und ohne PIN
+//! # `secrets.txt` entsteht leer und ohne PIN
 //!
 //! Angelegt wird genau, was [`Sonderdatei::ALLE`] fuehrt, und seit Schritt 5.2
-//! gehoert `.secrets.txt` dazu, ohne dass dieser Weg eine Zeile dafuer traegt:
+//! gehoert `secrets.txt` dazu, ohne dass dieser Weg eine Zeile dafuer traegt:
 //! sie entsteht ueber dasselbe exklusive Oeffnen **mit null Bytes**, und eine
 //! PIN fragt F2 dabei nie. Eine leere Datei traegt noch keinen Kopf; die PIN
 //! legt das erste Oeffnen im Editor fest
@@ -41,6 +41,26 @@
 //! Bis Stufe 1 entstand sie hier nicht, weil eine leere Datei ohne die Regeln
 //! aus C7 sich im Editor oeffnen und mit Klartext sichern liesse; diese Regeln
 //! bringt Stufe 5 mit.
+//!
+//! # Eine `.secrets.txt` von vorher wird zu `secrets.txt`
+//!
+//! Bis zum 260926 hiess die Datei `.secrets.txt`, mit Punkt
+//! (`260926-1308_*_heisst-die-geheimnisdatei-secrets-txt-ohne-punkt.md`).
+//! Steht eine solche im Heimordner und `secrets.txt` noch nicht, benennt F2 sie
+//! um, bevor es `secrets.txt` anlegen wuerde. **Umbenannt wird ueber einen
+//! harten Verweis und nicht ueber `rename(2)`**: `link(2)` scheitert, wenn der
+//! neue Name schon steht, und ersetzt nie; erst danach faellt der alte Name.
+//! `rename(2)` ersetzte ein vorhandenes `secrets.txt` still, und eine
+//! Existenzpruefung davor liesse den Wettlauf offen, den der Abschnitt
+//! darueber schliesst. Der Inhalt wird dabei nicht gelesen und nicht
+//! geschrieben; es bleibt dieselbe Inode, Byte fuer Byte.
+//!
+//! **Stehen beide, bleiben beide**, und die Statuszeile sagt es. Von da an gilt
+//! `secrets.txt`; `.secrets.txt` ist fuer KRK eine gewoehnliche versteckte
+//! Datei. Scheitert der Verweis aus einem anderen Grund, etwa auf einem
+//! Dateisystem ohne harte Verweise, bleibt `.secrets.txt` unberuehrt, es
+//! entsteht **keine** leere `secrets.txt` daneben, und die Statuszeile nennt
+//! den Grund; das naechste F2 versucht es wieder.
 //!
 //! # Die alten Zettel
 //!
@@ -134,6 +154,30 @@ pub struct Uebernahme {
     pub ausgang: Uebernahmeausgang,
 }
 
+/// Der Name der Geheimnisdatei bis zum 260926, allein fuer das Umbenennen.
+///
+/// Der gueltige Name steht an [`Sonderdatei::dateiname`] und nirgends sonst;
+/// dieser hier wird nie angelegt und nie gelesen, nur umbenannt.
+pub const ALTER_GEHEIMNISNAME: &str = ".secrets.txt";
+
+/// Was aus einer `.secrets.txt` von vorher geworden ist.
+///
+/// **Vollstaendig und ohne Auffangzweig**, damit ein weiterer Ausgang die
+/// Meldungen anhaelt, bis er einen Satz hat.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AlteGeheimnisse {
+    /// Sie heisst jetzt `secrets.txt`, dieselbe Inode, der alte Name ist weg.
+    Umbenannt,
+    /// `secrets.txt` stand schon; beide bleiben, wie sie sind.
+    BeideStehen,
+    /// Der harte Verweis ist gelungen, der alte Name laesst sich aber nicht
+    /// entfernen: beide Namen nennen dieselbe Datei. Der Grund des Systems.
+    AlterNameBleibt(String),
+    /// Der harte Verweis ist gescheitert; `.secrets.txt` ist unberuehrt, und
+    /// `secrets.txt` ist nicht angelegt. Der Grund des Systems.
+    Gescheitert(String),
+}
+
 /// Was ein Aufruf von [`bereitstellen`] getan hat.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[must_use = "traegt die Meldungen der Uebernahme; fallengelassen verschwindet ein abgewiesener Zettel ohne ein Wort"]
@@ -147,6 +191,9 @@ pub struct Bereitstellung {
     pub nicht_angelegt: Vec<(Sonderdatei, String)>,
     /// Die Uebernahme, genau dann vorhanden, wenn `ordner_angelegt` gilt.
     pub uebernahme: Option<Uebernahme>,
+    /// Was aus einer `.secrets.txt` von vorher geworden ist; `None`, wenn im
+    /// Heimordner keine stand.
+    pub alte_geheimnisse: Option<AlteGeheimnisse>,
 }
 
 /// Warum F2 keinen Tab oeffnet.
@@ -204,6 +251,24 @@ impl Bereitstellung {
                 "{} lässt sich nicht anlegen: {grund}",
                 sorte.dateiname()
             ));
+        }
+        let neu = Sonderdatei::Geheimnisse.dateiname();
+        let alt = ALTER_GEHEIMNISNAME;
+        match &self.alte_geheimnisse {
+            None => {}
+            Some(AlteGeheimnisse::Umbenannt) => {
+                saetze.push(format!("{alt} heißt jetzt {neu}"));
+            }
+            Some(AlteGeheimnisse::BeideStehen) => saetze.push(format!(
+                "{neu} und {alt} stehen beide in {}; KRK benennt keine um, und es gilt {neu}",
+                anzeigename()
+            )),
+            Some(AlteGeheimnisse::AlterNameBleibt(grund)) => saetze.push(format!(
+                "{alt} heißt jetzt auch {neu}, der alte Name lässt sich nicht entfernen: {grund}"
+            )),
+            Some(AlteGeheimnisse::Gescheitert(grund)) => saetze.push(format!(
+                "{alt} lässt sich nicht in {neu} umbenennen ({grund}); sie bleibt unverändert, und {neu} ist nicht angelegt"
+            )),
         }
         saetze
     }
@@ -316,12 +381,29 @@ fn anlegen_mit_vorlauf(
         angelegt: Vec::new(),
         nicht_angelegt: Vec::new(),
         uebernahme: None,
+        alte_geheimnisse: None,
     };
     for sorte in Sonderdatei::ALLE {
         let pfad = ordner.join(sorte.dateiname());
+        if sorte == Sonderdatei::Geheimnisse {
+            bereitstellung.alte_geheimnisse =
+                ohne_ersetzen_umbenennen(&ordner.join(ALTER_GEHEIMNISNAME), &pfad);
+            match &bereitstellung.alte_geheimnisse {
+                // Es gab keine alte Datei, oder `secrets.txt` stand schon: dann
+                // legt der gewoehnliche Weg an oder findet sie vor.
+                None | Some(AlteGeheimnisse::BeideStehen) => {}
+                // Sie heisst jetzt `secrets.txt`, oder eine Datei unter altem
+                // Namen soll nicht eine leere neue neben sich bekommen.
+                Some(
+                    AlteGeheimnisse::Umbenannt
+                    | AlteGeheimnisse::AlterNameBleibt(_)
+                    | AlteGeheimnisse::Gescheitert(_),
+                ) => continue,
+            }
+        }
         let inhalt = match (sorte, &befunde) {
             (Sonderdatei::Notizen, Some((_, notizen))) => notizen.as_str(),
-            // `.secrets.txt` entsteht leer wie `tasks.txt`: null Bytes und
+            // `secrets.txt` entsteht leer wie `tasks.txt`: null Bytes und
             // kein Kopf, die PIN legt erst das erste Oeffnen im Editor fest.
             (Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse, _) => "",
         };
@@ -342,6 +424,31 @@ fn anlegen_mit_vorlauf(
         }
     }
     Ok(bereitstellung)
+}
+
+/// Gibt der Datei `alt` den Namen `neu`, **ohne je eine vorhandene Datei zu
+/// ersetzen**: erst ein harter Verweis, der an einem vorhandenen `neu`
+/// scheitert, dann faellt `alt`. `None`, wenn es `alt` nicht gibt.
+///
+/// Meldet `link(2)` ein vorhandenes Ziel, wird `alt` noch einmal am Eintrag
+/// gefragt: fehlen beide Seiten nicht, stehen beide; fehlt `alt`, gab es nichts
+/// umzubenennen, gleich welchen Fehler das System zuerst nennt.
+fn ohne_ersetzen_umbenennen(alt: &Path, neu: &Path) -> Option<AlteGeheimnisse> {
+    match fs::hard_link(alt, neu) {
+        Ok(()) => Some(match fs::remove_file(alt) {
+            Ok(()) => AlteGeheimnisse::Umbenannt,
+            Err(fehler) => AlteGeheimnisse::AlterNameBleibt(fehler.to_string()),
+        }),
+        Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => None,
+        Err(fehler) if fehler.kind() == io::ErrorKind::AlreadyExists => {
+            match fs::symlink_metadata(alt) {
+                Ok(_) => Some(AlteGeheimnisse::BeideStehen),
+                Err(pruefung) if pruefung.kind() == io::ErrorKind::NotFound => None,
+                Err(pruefung) => Some(AlteGeheimnisse::Gescheitert(pruefung.to_string())),
+            }
+        }
+        Err(fehler) => Some(AlteGeheimnisse::Gescheitert(fehler.to_string())),
+    }
 }
 
 /// Was aus dem Anlegen von `notes.txt` fuer die Uebernahme folgt.

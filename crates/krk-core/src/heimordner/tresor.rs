@@ -1,4 +1,4 @@
-//! Das Dateiformat von `.secrets.txt`: Kopf, Schluesselableitung und
+//! Das Dateiformat von `secrets.txt`: Kopf, Schluesselableitung und
 //! Verschluesselung (Schritt 5.1 des Plans
 //! `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`,
 //! Faehigkeit C7 des Spec).
@@ -16,7 +16,7 @@
 //!
 //! # Der Kopf, Byte fuer Byte
 //!
-//! Eine nicht leere `.secrets.txt` ist eine Binaerdatei aus [`KOPFLAENGE`]
+//! Eine nicht leere `secrets.txt` ist eine Binaerdatei aus [`KOPFLAENGE`]
 //! Bytes Kopf und dem Chiffrat dahinter. Zahlen stehen als vorzeichenlose
 //! Ganzzahlen in der Bytefolge *little-endian*.
 //!
@@ -50,7 +50,7 @@
 //! [`oeffnen`] und in [`neuer_schluessel`]; [`verschliessen`] und
 //! [`oeffnen_mit`] nehmen den gehaltenen [`Schluessel`] und leiten nicht ab,
 //! und ein `cmd+s` an
-//! `.secrets.txt` kostet so viel wie an jeder anderen Datei. Die 24 Byte der
+//! `secrets.txt` kostet so viel wie an jeder anderen Datei. Die 24 Byte der
 //! Nonce von XChaCha20 sind gross genug, um sie je Sicherung zufaellig zu
 //! ziehen, ohne einen Zaehler zu verwalten.
 //!
@@ -120,7 +120,7 @@ use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::aead::{Aead, Generate, KeyInit, Payload};
 use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
 
-/// Die Kennung am Anfang jeder nicht leeren `.secrets.txt`.
+/// Die Kennung am Anfang jeder nicht leeren `secrets.txt`.
 pub const KENNUNG: [u8; 6] = *b"KRKSEC";
 
 /// Die Formatversion, die dieser Code schreibt. Gelesen wird jede Version, die
@@ -265,7 +265,7 @@ impl Parameter {
 /// Der aus PIN und Salz abgeleitete Schluessel, samt dem Salz und den
 /// Parametern, aus denen er stammt.
 ///
-/// Der Editor haelt ihn, solange `.secrets.txt` offen ist, und jede Sicherung
+/// Der Editor haelt ihn, solange `secrets.txt` offen ist, und jede Sicherung
 /// verschliesst mit ihm, ohne neu abzuleiten. Salz und Parameter reisen mit,
 /// weil [`verschliessen`] sie in den Kopf schreibt. `Debug` zeigt die
 /// Schluesselbytes nicht; getilgt werden sie nicht (Modulkopf).
@@ -298,7 +298,7 @@ impl std::fmt::Debug for Schluessel {
     }
 }
 
-/// Der gelesene Kopf einer `.secrets.txt`.
+/// Der gelesene Kopf einer `secrets.txt`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Kopf {
     version: u8,
@@ -536,7 +536,7 @@ pub fn verschliessen(klartext: &[u8], schluessel: &Schluessel) -> Result<Vec<u8>
     Ok(datei)
 }
 
-/// Oeffnet eine nicht leere `.secrets.txt` mit der PIN: liest den Kopf, leitet
+/// Oeffnet eine nicht leere `secrets.txt` mit der PIN: liest den Kopf, leitet
 /// mit dessen Salz und Parametern ab und entschluesselt. Schreibt nie; die
 /// Bytes der Datei sind nach jedem Ausgang dieselben.
 ///
@@ -555,7 +555,7 @@ pub fn oeffnen(bytes: &[u8], pin: &Pin) -> Result<Geoeffnet, Oeffnungsfehler> {
     })
 }
 
-/// Oeffnet eine nicht leere `.secrets.txt` mit einem **gehaltenen**
+/// Oeffnet eine nicht leere `secrets.txt` mit einem **gehaltenen**
 /// Schluessel, ohne abzuleiten; schreibt nie.
 ///
 /// Der Weg des Befehls „PIN ändern" (Schritt 5.5 des Plans der

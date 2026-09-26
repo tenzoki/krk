@@ -15,10 +15,10 @@
 //! darueber gewesen, was „abgeschaltet" heisst. Seit F2 nach `~/krkhome/`
 //! fuehrt, ist das Notizblatt fort; die zweite Flaeche ist seither der eigene
 //! Feldeditor der Eintragszellen ([`super::eintragsansicht`]), in denen
-//! `tasks.txt`, `notes.txt` und `.secrets.txt` bearbeitet werden. Er fragte
+//! `tasks.txt`, `notes.txt` und `secrets.txt` bearbeitet werden. Er fragte
 //! hier bis zur Schlussdurchsicht des Arbeitspakets nicht, und seine Zellen
 //! ersetzten beim Tippen still, etwa `omw` durch `On my way!` — in
-//! `.secrets.txt` vor dem Verschluesseln
+//! `secrets.txt` vor dem Verschluesseln
 //! (`shared/consultations/260926-1047-schlussdurchsicht-f2-krkhome.md`,
 //! Befund B). Er ruft die Regel zweimal, beim Bau und beim Beginn jeder
 //! Bearbeitung, weil AppKit die Schreibwerkzeuge dazwischen zuruecksetzt; der
