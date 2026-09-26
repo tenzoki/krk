@@ -260,7 +260,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
    - Closes (am Baum): C1.1.
    - Dependencies: 1.3b
 
-6. **1.5 Anleitung, README und CLAUDE.md für Stufe 1**
+6. [DONE] **1.5 Anleitung, README und CLAUDE.md für Stufe 1**
    - Executor: `code-implementer`
    - Files: `HowTo.md`, `README.md`, `CLAUDE.md`
    - Changes: `HowTo.md` ersetzt `## Der Notizzettel` durch einen Abschnitt über F2, `cmd+k`, `~/krkhome/`, die zwei Dateien, ihre Textform mit einem Beispiel je Datei, die einmalige Übernahme der alten Zettel und den Verweis als Weg zur Synchronisierung. Die Aufstellung der Ablagedateien nennt `note-1.txt` und `note-2.txt` nicht mehr als etwas, das KRK pflegt, und sagt, dass sie nach der Übernahme ohne Leser liegen. `README.md` streicht die zwei Notizzettel unter dem, was ein Löschwerkzeug mitnimmt, und nennt dort `~/krkhome/` nicht, weil der Ordner nicht im Ablageordner liegt. `CLAUDE.md` zieht die Aussagen nach, die Stufe 1 falsch gemacht hat: das Beispiel „`Esc` schließt den Notizzettel“ im Absatz zum Ereignisabgriff bekommt ein anderes Blatt mit Textfeld als Beispiel, und `textautomatik` gilt nur noch dem Editor. Die Zeile 9 der Rundentabelle bleibt als Aufzeichnung.

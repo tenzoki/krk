@@ -30,13 +30,19 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 | `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung | nur der Nutzer |
 | `readers.toml` | die Leseprofile der Vorschau | nur der Nutzer |
 | `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind | KRK |
-| `note-1.txt`, `note-2.txt` | die zwei Notizzettel | KRK |
 
 Wer die Liste am Baum nachlesen will, liest sie an ihrer Quelle und nicht hier:
 
 ```sh
 awk '/pub const ALLE: \[Datei;/,/\];/' crates/krk-core/src/ablage/pfade.rs
 ```
+
+**Die Notizen liegen nicht hier, sondern in `~/krkhome/`** (siehe „Der
+Notizordner“ weiter unten). Ein Löschwerkzeug, das den Ablageordner mitnimmt,
+lässt `~/krkhome/` stehen. Wer KRK aus der Zeit des Notizblatts kennt, findet
+im Ablageordner vielleicht noch `note-1.txt` und `note-2.txt`. KRK hat sie
+einmal nach `~/krkhome/notes.txt` übernommen und liest und schreibt sie seither
+nicht mehr. Sie liegen ohne Leser da und dürfen bleiben oder gehen.
 
 **`settings.toml` und `readers.toml` legt KRK beim ersten Start an und schreibt
 sie danach nie wieder.** Weder überschreibend noch ergänzend, gleich was
@@ -449,29 +455,84 @@ zu ihnen steht in `README.md` unter „Neuerungen an den eigenen Dateien
 
 ---
 
-## Der Notizzettel
+## Der Notizordner
 
-`f2` oder `cmd+k` öffnet ihn. Er ist ein Blatt mit zwei Zetteln als
-anklickbaren Tabs über einer bearbeitbaren Textfläche, ohne Zeilennummern, ohne
-Hervorhebung und ohne Suche. `Esc` oder „Fertig" schließt ihn.
+`f2` oder `cmd+k` führt nach `~/krkhome/`, gleich wo der Fokus gerade steht.
+Das aktive Dateifenster zeigt den Ordner, und der Fokus geht dorthin. Steht in
+diesem Dateifenster schon ein Tab auf `~/krkhome/`, wird er sichtbar; sonst
+entsteht ein neuer. Ein Blatt geht dabei nicht auf. Der Tab ist ein gewöhnlicher
+Tab der Dateiliste und steht nach einem Neustart wieder da.
 
-**Geschrieben wird an vier Momenten, und jeder ist ein Weg aus dem Zettel
-heraus:** der Klick auf den anderen Tab, das Schließen des Blattes, das
-Schließen des Fensters mit `shift+cmd+w`, und das Beenden von KRK. Geschrieben
-wird dabei jeder abweichende Zettel und nicht nur der offene. Steht ein Zettel
-so da wie seine Datei, wird nichts geschrieben.
+**Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt` und
+`tasks.txt`. Fehlt später eine der beiden Dateien, legt der nächste `f2` sie
+leer wieder an. Eine vorhandene Datei überschreibt KRK nie. Beim Start legt KRK
+nichts an, auch nicht für einen wiederhergestellten Tab auf den Ordner. Steht
+an der Stelle von `~/krkhome` eine gewöhnliche Datei, nennt die Statuszeile den
+Grund, und kein Tab geht auf.
 
-Zwei Regeln, die zusammengehören:
+**Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. Beide Dateien
+sind reiner Text und lassen sich genauso in jedem anderen Textprogramm pflegen.
 
-- **Eine gescheiterte Sicherung wirft den Stand nicht weg.** Der Zettel bleibt
-  abweichend, der nächste Moment versucht es erneut, und der Grund geht in die
-  Statuszeile, damit niemand darauf baut, dass sein Text auf der Platte liegt.
-- **Der getippte Stand gewinnt beim Öffnen.** Weicht ein Zettel von seiner Datei
-  ab, bleibt sein gehaltener Text stehen, und das frisch Gelesene wird
-  verworfen. Der Preis ist benannt und angenommen: wer einen abweichenden Zettel
-  öffnet, sieht nicht, was eine zweite Instanz von KRK inzwischen in die Datei
-  geschrieben hat.
+**Eine Notiz in `notes.txt`** beginnt mit einer Zeile `## <Thema>`. Alles
+darunter bis zur nächsten solchen Zeile ist ihr Text:
 
-Dass `Esc` den Zettel schließt und nicht etwa eine Dateioperation abbricht,
-hängt daran, dass seine Textfläche bei KRKs Befehlsprüfung bewusst **nicht**
-angemeldet ist. Ihre Tasten gehören AppKit, und genau das ist hier erwünscht.
+```text
+## Einkauf
+Brot, Milch
+und Kaffee für das Büro
+
+## Idee
+### Zwischenüberschrift im Text
+Eine Zeile mit # oder ### eröffnet keine neue Notiz.
+```
+
+`## ` und nicht `# `, damit eine Zeile `# …` als Überschrift der ganzen Datei
+frei bleibt.
+
+**Eine Aufgabe in `tasks.txt`** ist eine Zeile `- [ ] <Text>`, erledigt
+`- [x] <Text>`. Die Reihenfolge der Zeilen ist die Reihenfolge der Aufgaben:
+
+```text
+- [ ] Steuererklärung abgeben
+- [x] Reifen wechseln
+  Termin in der Werkstatt stand am Dienstag
+- [ ] Zahnarzt anrufen
+```
+
+KRK liest großzügig: `- [X]`, `* [ ]`, `* [x]` und eingerückte Aufgaben gelten
+ebenso. Eine Zeile, die keiner dieser Formen folgt, bleibt erhalten. In
+`tasks.txt` gehört sie zur Aufgabe über ihr, wie die Werkstattzeile im Beispiel.
+
+**Die Zettel des früheren Notizblatts stehen als Notizen in `notes.txt`.**
+Übernommen wird genau einmal, nämlich in dem Augenblick, in dem ein `f2` den
+Ordner `~/krkhome/` selbst anlegt. Jeder nicht leere Zettel wird dabei zu einer
+Notiz mit dem Thema „Zettel 1“ beziehungsweise „Zettel 2“, und sein Text bleibt
+unverändert. Ein Zettel, der selbst eine Zeile mit `## ` trägt, wird nicht
+übernommen, weil diese Zeile eine eigene Notiz eröffnete; die Statuszeile nennt
+ihn. Gab es den Ordner schon, übernimmt KRK nichts, auch wenn `notes.txt` darin
+fehlt und neu entsteht. `note-1.txt` und `note-2.txt` bleiben in jedem Fall
+unverändert im Ablageordner liegen.
+
+**Wer die Notizen auf mehreren Geräten haben will, legt `~/krkhome` als
+symbolischen Verweis an**, etwa auf einen Ordner in einem synchronisierten
+Speicher:
+
+```sh
+ln -s ~/Library/Mobile\ Documents/com~apple~CloudDocs/krkhome ~/krkhome
+```
+
+`ln -s` legt den Verweis nur an, wenn unter `~/krkhome` noch nichts steht; ein
+schon angelegter Ordner zieht vorher mit seinem Inhalt an das Ziel um. KRK
+behandelt dann das Ziel des Verweises als `~/krkhome/` und legt fehlende
+Dateien dort an. Erkannt wird der Ordner über den Verweis `~/krkhome` und über
+sein Ziel. Ein weiterer Verweis, den man selbst anderswo auf denselben Ordner
+setzt, wird nicht erkannt: dort erscheinen `notes.txt` und `tasks.txt` wie
+gewöhnliche Textdateien, und verloren geht nichts.
+
+**Mit einer eigenen `keymap.toml` heißt der Menüeintrag weiter „Notizzettel
+anzeigen“.** Der Name kommt aus der eigenen Datei, und die Meldung beim Start
+vergleicht allein die Kennungen der Befehle. Die Kennung ist geblieben, also
+meldet sie nichts. `f2` und `cmd+k` führen trotzdem nach `~/krkhome/`. Den neuen
+Namen „Notizordner öffnen“ bringt die Belegungsansicht: **F1**, dann `cmd+r`
+für den Auslieferungsstand, dann „Fertig“. Das überschreibt die ganze eigene
+Belegung mit der Auslieferungsfassung, also auch jede eigene Tastenzuweisung.

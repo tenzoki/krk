@@ -36,8 +36,8 @@ Anwendung selbst aus, mit **F1**. Im Quellbaum liegt dieselbe Datei als
 Löschen ist es nicht. Werkzeuge, die eine App samt ihrer Stützdateien entfernen
 — der App Deleter von ForkLift ist eines —, nehmen dabei den Ordner
 `~/Library/Application Support/KRK/` mit. Dort hält KRK alles, was es sich
-merkt: die Lesezeichen, die gesicherte Sitzung, die abweichende Tastenbelegung
-und die zwei Notizzettel. Nach so einem Löschen sind sie fort.
+merkt: die Lesezeichen, die gesicherte Sitzung und die abweichende
+Tastenbelegung. Nach so einem Löschen sind sie fort.
 
 Wer doch löschen will, kopiert `~/Library/Application Support/KRK/` vorher an
 eine andere Stelle und schreibt die Kopie nach der Installation zurück.
