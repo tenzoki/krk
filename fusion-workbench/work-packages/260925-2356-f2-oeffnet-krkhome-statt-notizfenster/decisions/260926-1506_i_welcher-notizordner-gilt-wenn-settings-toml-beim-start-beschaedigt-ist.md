@@ -32,3 +32,9 @@ Mit Stufe 2 des Spec kommt der Ort des Notizordners aus `settings.toml`. Für ei
 ## Recommendation
 
 Möglichkeit 1. Sie ist die Regel, die der Spec für den unzulässigen Wert schon gewählt hat, und sie hat dieselbe Begründung: ein Ersatzort ist nur dann harmlos, wenn der Nutzer nie einen anderen eingestellt hat, und genau das weiß KRK bei einer beschädigten Datei nicht. Der Preis ist ein F2, das mit Grund nichts tut, bis die Datei berichtigt ist. Die Zweitlesung `260926-1520-zweitlesung-home-menue-und-einstellbarer-ort.md` stimmt ihr in der oben geschärften Fassung zu. Der Plan baut auf diese Möglichkeit; eine andere Antwort ändert allein den markierten Zweig in `heimordner::ort::notizort` (Schritt 2.4), seine Probe und den Satz in `HowTo.md`.
+
+---
+Answered: dieser Datensatz `## Options` und 260926-1655-schlussdurchsicht-home-menue-und-einstellbarer-ort.md — Möglichkeit 1 mit der Schärfung M3: bei beschädigter oder unlesbarer settings.toml gilt kein Notizordner, F2 nennt Grund und Ausweg und legt nichts an; secrets.txt bleibt am zuletzt geltenden Ort, sonst an ~/krkhome geschützt (Schutzort); ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: f3587cb — notizort und heimgriff::Notizlage mit Schutzort; Meldung mit Ort wählen in 95e36cd

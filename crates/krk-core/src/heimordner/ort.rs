@@ -214,10 +214,9 @@ pub fn notizort(
 ) -> Notizort {
     match schaden {
         None | Some(Grund::NichtAnlegbar(_)) => {}
-        // OFFENE NUTZERFRAGE: dieser eine Zweig haengt an der Antwort auf
-        // `260926-1506_*_welcher-notizordner-gilt-wenn-settings-toml-beim-start-beschaedigt-ist.md`.
-        // Gebaut ist die empfohlene Moeglichkeit 1 in der Schaerfung der
-        // Zweitlesung: bei einer beschaedigten oder unlesbaren Datei weiss KRK
+        // Entschieden vom Nutzer am 260926 in
+        // `260926-1506_*_welcher-notizordner-gilt-wenn-settings-toml-beim-start-beschaedigt-ist.md`,
+        // Moeglichkeit 1 in der Schaerfung der Zweitlesung: bei einer beschaedigten oder unlesbaren Datei weiss KRK
         // nicht, ob der Nutzer einen anderen Ort eingestellt hat, und ein
         // Ersatzort legte bei F2 Dateien dort an, wo er nicht mehr notiert.
         // Eine andere Antwort aendert allein diesen Zweig, seine Probe in

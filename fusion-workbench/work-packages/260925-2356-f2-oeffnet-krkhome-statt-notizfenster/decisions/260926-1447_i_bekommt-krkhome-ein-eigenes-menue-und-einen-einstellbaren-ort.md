@@ -28,3 +28,6 @@ Menü „Home“; „Ort wählen…“ mit Ordnerdialog und Schlüssel in `setti
 
 ---
 Answered: dieser Datensatz `## Recommendation` — Menü „Home“ mit Notizordner öffnen, den sechs Eintragsbefehlen und PIN ändern; der Ort wird über „Ort wählen…“ (Ordnerdialog) oder von Hand in `settings.toml` gesetzt, Vorgabe `~/krkhome`; beim Ortswechsel wird nichts verschoben, fehlende Dateien entstehen am neuen Ort leer und die Statuszeile nennt den alten Ort; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: c87312b (Menü Home), 00b9c77 und f3587cb (Ort aus settings.toml), 59985ed und 95e36cd (Ort wählen)
