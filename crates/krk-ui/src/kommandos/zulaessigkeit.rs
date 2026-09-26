@@ -242,19 +242,23 @@ pub struct Lage {
 /// Dateityp ableitet; ohne AppKit bleibt dieses Modul trotzdem, denn der Wert
 /// ist eine Aufzaehlung und keine Flaeche.
 ///
-/// **Zwei Werte und nicht die vier des Plans**, weil nur zwei gebaut sind: die
-/// Notiztabelle kommt in Schritt 4.3 als `Notizen`, die Geheimnisse in Stufe 5
-/// als `Geheimnisse`. Ein Wert ohne Erzeuger waere eine Form, die der Editor nie
-/// zeigt, und jede vollstaendige Fallunterscheidung ueber diesen Typ haelt den
-/// Bau an, sobald einer dazukommt.
+/// **Drei Werte und nicht die vier des Plans**, weil nur drei gebaut sind: die
+/// Notiztabelle ist mit Schritt 4.3 als `Notizen` dazugekommen, die Geheimnisse
+/// kommen in Stufe 5 als `Geheimnisse`. Ein Wert ohne Erzeuger waere eine Form,
+/// die der Editor nie zeigt, und jede vollstaendige Fallunterscheidung ueber
+/// diesen Typ haelt den Bau an, sobald einer dazukommt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Editorform {
     /// Die Textflaeche: jede Datei in der Rohansicht und jede Datei ausser
-    /// `tasks.txt` im erkannten Heimordner in der Formatansicht.
+    /// `tasks.txt` und `notes.txt` im erkannten Heimordner in der
+    /// Formatansicht.
     Text,
     /// Die Aufgabentabelle: `tasks.txt` im erkannten Heimordner in der
     /// Formatansicht.
     Aufgaben,
+    /// Die Notiztabelle: `notes.txt` im erkannten Heimordner in der
+    /// Formatansicht (Schritt 4.3).
+    Notizen,
 }
 
 /// Ob dieser Befehl in dieser Lage wirken darf.
@@ -392,8 +396,8 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
 ///
 /// **Vollstaendig ueber beide Aufzaehlungen und ohne Auffangzweig.** Ein
 /// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
-/// bewusst, ebenso eine weitere Form: die Notiztabelle aus Schritt 4.3 muss
-/// sagen, ob sie eine Eintragstabelle ist und ob sie Kaestchen traegt. Die
+/// bewusst, ebenso eine weitere Form: die Notiztabelle aus Schritt 4.3 sagt
+/// hier, dass sie eine Eintragstabelle ist und keine Kaestchen traegt. Die
 /// Bereiche ohne eigene Form antworten ja, gleich was der Editor zeigt; das
 /// Sichern, das Schliessen und der Ansichtswechsel wirken damit auch aus der
 /// Tabelle heraus.
@@ -406,14 +410,15 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
     match bereich {
         Wirkungsbereich::Editortext => match form {
             Editorform::Text => true,
-            Editorform::Aufgaben => false,
+            Editorform::Aufgaben | Editorform::Notizen => false,
         },
         Wirkungsbereich::Eintraege => match form {
             Editorform::Text => false,
-            Editorform::Aufgaben => true,
+            Editorform::Aufgaben | Editorform::Notizen => true,
         },
+        // Die Notiztabelle traegt keine Kaestchen.
         Wirkungsbereich::Aufgaben => match form {
-            Editorform::Text => false,
+            Editorform::Text | Editorform::Notizen => false,
             Editorform::Aufgaben => true,
         },
         Wirkungsbereich::Dateifenster
@@ -728,7 +733,8 @@ mod tests {
     /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
     /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
     /// laufen.
-    const JEDE_FORM: [Editorform; 2] = [Editorform::Text, Editorform::Aufgaben];
+    const JEDE_FORM: [Editorform; 3] =
+        [Editorform::Text, Editorform::Aufgaben, Editorform::Notizen];
 
     /// [`JEDE_FORM`] fuehrt jede Variante von [`Editorform`] genau einmal.
     #[test]
@@ -880,6 +886,24 @@ mod tests {
             [false, false, true, false, false, false],
             [true, true, true, true, true, true],
         ];
+        // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
+        // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 11] = [
+            [true, false, false, false, false, false],
+            [false, true, false, false, false, false],
+            [true, false, true, true, false, false],
+            [false, false, false, true, false, false],
+            // Editortext
+            [false, false, false, false, false, false],
+            // Eintraege
+            [false, false, false, true, false, false],
+            // Aufgaben
+            [false, false, false, false, false, false],
+            [true, false, true, false, false, false],
+            [true, true, true, false, true, false],
+            [false, false, true, false, false, false],
+            [true, true, true, true, true, true],
+        ];
         const ALLES_ABGEWIESEN: [[bool; 6]; 11] = [[false; 6]; 11];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
@@ -887,6 +911,7 @@ mod tests {
         let ohne_sperre = |form: Editorform| match form {
             Editorform::Text => IN_DER_TEXTFLAECHE,
             Editorform::Aufgaben => IN_DER_AUFGABENTABELLE,
+            Editorform::Notizen => IN_DER_NOTIZTABELLE,
         };
 
         let mut geprueft = 0usize;
@@ -1441,12 +1466,12 @@ mod tests {
     /// Editor und in der passenden Form (C6.5, C6.6, Probenhaelfte; Schritt
     /// 3.3 der krkhome-Arbeit).
     ///
-    /// Ueber jeden Fokuswert und jede Form, ohne Hindernis der Lage. Heute
-    /// gibt es eine Tabellenform, die Aufgabentabelle, und in ihr wirken alle
-    /// sechs; in der Textflaeche keiner. **Mit der Notiztabelle aus Schritt
-    /// 4.3 trennen sie sich**: die fuenf `Eintrag*` wirken dann in jeder
-    /// Tabellenform, `AufgabeAbhaken` in der Notiztabelle nicht. Die Erwartung
-    /// steht deshalb als `match` ueber die Form, und eine weitere Form haelt
+    /// Ueber jeden Fokuswert und jede Form, ohne Hindernis der Lage. In der
+    /// Textflaeche wirkt keiner. **Seit der Notiztabelle aus Schritt 4.3
+    /// trennen sie sich**: die fuenf `Eintrag*` wirken in jeder Tabellenform,
+    /// `AufgabeAbhaken` allein in der Aufgabentabelle und in der Notiztabelle
+    /// nicht (C5: dieselben Befehle und keine zweiten). Die Erwartung steht
+    /// deshalb als `match` ueber Befehl und Form, und eine weitere Form haelt
     /// den Bau hier an, statt still als „keine Tabelle" zu gelten.
     #[test]
     fn die_sechs_befehle_der_eintragstabelle_wirken_nur_im_editor_in_passender_form() {
@@ -1463,6 +1488,7 @@ mod tests {
                 let form_passt = match form {
                     Editorform::Text => false,
                     Editorform::Aufgaben => true,
+                    Editorform::Notizen => kommando != Kommando::AufgabeAbhaken,
                 };
                 for fokus in JEDER_FOKUS {
                     assert_eq!(
@@ -1506,13 +1532,15 @@ mod tests {
                 ),
                 "{kommando:?} wirkt in der Textflaeche nicht mehr"
             );
-            assert!(
-                !zulaessig(
-                    kommando,
-                    lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Aufgaben)
-                ),
-                "{kommando:?} wirkt in der Aufgabentabelle auf die ausgeblendete Textflaeche"
-            );
+            for tabelle in [Editorform::Aufgaben, Editorform::Notizen] {
+                assert!(
+                    !zulaessig(
+                        kommando,
+                        lage_in(blatt, appkit, krk, Fokus::Editor, tabelle)
+                    ),
+                    "{kommando:?} wirkt in der Tabelle {tabelle:?} auf die ausgeblendete Textflaeche"
+                );
+            }
         }
     }
 

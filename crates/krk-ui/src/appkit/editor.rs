@@ -548,7 +548,9 @@ use objc2::rc::autoreleasepool;
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::heimordner::Sonderdatei;
-use krk_core::heimordner::eintraege::{self, Aufgaben, Neustand, Richtung, aufgaben};
+use krk_core::heimordner::eintraege::{
+    self, Aufgaben, Neustand, Notizen, Richtung, aufgaben, notizen,
+};
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
 };
@@ -562,7 +564,7 @@ use crate::hervorhebung::{
 };
 use crate::kommandos::zulaessigkeit::Editorform;
 
-use super::eintragsansicht::{self, Eintragsansicht, Zellenwege};
+use super::eintragsansicht::{self, Eintragsansicht, Eintragsart, Zeilen, Zelle, Zellenwege};
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
@@ -727,9 +729,10 @@ pub enum Editormeldung {
     /// steht in `krk_core::heimordner::eintraege::Abweisung::meldung` und wird
     /// hier nicht ein zweites Mal gebaut, wie bei [`Self::Abgewiesen`].
     EintragAbgewiesen(eintraege::Abweisung),
-    /// Die Antwort einer Handlung an der Eintragstabelle (C6 desselben
-    /// Arbeitspakets).
-    Eintrag(Eintragsantwort),
+    /// Die Antwort einer Handlung an der Eintragstabelle (C6 und C5 desselben
+    /// Arbeitspakets), mit der Art der Tabelle, weil der Satz eine Aufgabe oder
+    /// eine Notiz nennt.
+    Eintrag(Eintragsart, Eintragsantwort),
 }
 
 impl Editormeldung {
@@ -815,18 +818,18 @@ impl Editormeldung {
                 zahl => format!("{zahl} Treffer ersetzt"),
             },
             Self::EintragAbgewiesen(abweisung) => abweisung.meldung().to_owned(),
-            Self::Eintrag(antwort) => antwort.text().to_owned(),
+            Self::Eintrag(art, antwort) => antwort.text(*art).to_owned(),
         }
     }
 }
 
-/// Was eine Handlung an der Eintragstabelle dem Nutzer sagt (C6).
+/// Was eine Handlung an der Eintragstabelle dem Nutzer sagt (C6, C5).
 ///
 /// **Jede Handlung antwortet**, auch die gelungene, aus demselben Grund, aus
 /// dem [`Editormeldung::Gesichert`] sich meldet: kommentarlos nichts zu tun ist
 /// nicht zulaessig, und eine Handlung, die nichts tun kann, sagt warum. Ein Wert
 /// je Antwort und keine Zeichenkette beim Rufer; die Saetze stehen in
-/// [`Self::text`], vollstaendig und ohne Auffangzweig.
+/// [`Self::text`], je [`Eintragsart`], vollstaendig und ohne Auffangzweig.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Eintragsantwort {
     /// Der Editor zeigt keine Aufgabentabelle; die Handlung hat keinen
@@ -862,25 +865,52 @@ pub enum Eintragsantwort {
     /// AppKit hat das Ende der Zelle abgelehnt, ohne dass die Pruefung einen
     /// Grund genannt haette.
     ZelleBleibt,
+    /// `esc` hat eine geaenderte Zelle uebernommen und nicht verworfen, und
+    /// `cmd+z` nimmt die Uebernahme zurueck (C5, Moeglichkeit 2 von
+    /// `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`).
+    MitEscUebernommen,
 }
 
 impl Eintragsantwort {
-    /// Der Satz fuer die Statuszeile.
+    /// Der Satz fuer die Statuszeile, in der Tabelle dieser Art.
+    ///
+    /// `Abgehakt` und `WiederOffen` gibt es in der Notiztabelle nicht, die
+    /// Zulaessigkeit laesst das Abhaken dort nicht durch; ihre Saetze nennen
+    /// die Notiz trotzdem, damit die Tafel vollstaendig bleibt und nichts
+    /// Falsches sagt.
     #[must_use]
-    pub fn text(self) -> &'static str {
-        match self {
-            Self::KeineTabelle => "der Editor zeigt keine Aufgabentabelle",
-            Self::KeinEintragGewaehlt => "es ist keine Aufgabe gewählt",
-            Self::Hinzugefuegt => "neue Aufgabe am Ende; return übernimmt den Text",
-            Self::BearbeitungBegonnen => "return übernimmt, esc verwirft",
-            Self::Uebernommen => "Aufgabe übernommen",
-            Self::Abgehakt => "Aufgabe abgehakt",
-            Self::WiederOffen => "Aufgabe wieder offen",
-            Self::Verschoben => "Aufgabe verschoben",
-            Self::SchonOben => "die Aufgabe steht schon oben",
-            Self::SchonUnten => "die Aufgabe steht schon unten",
-            Self::Geloescht => "Aufgabe gelöscht; cmd+z holt sie zurück",
-            Self::ZelleBleibt => "die Zelle bleibt in Bearbeitung",
+    pub fn text(self, art: Eintragsart) -> &'static str {
+        use Eintragsart::{Aufgaben as A, Notizen as N};
+        match (self, art) {
+            (Self::KeineTabelle, A) => "der Editor zeigt keine Aufgabentabelle",
+            (Self::KeineTabelle, N) => "der Editor zeigt keine Notiztabelle",
+            (Self::KeinEintragGewaehlt, A) => "es ist keine Aufgabe gewählt",
+            (Self::KeinEintragGewaehlt, N) => "es ist keine Notiz gewählt",
+            (Self::Hinzugefuegt, A) => "neue Aufgabe am Ende; return übernimmt den Text",
+            (Self::Hinzugefuegt, N) => {
+                "neue Notiz am Ende; tab wechselt zum Text, cmd+return übernimmt"
+            }
+            (Self::BearbeitungBegonnen, A) => "return übernimmt, esc verwirft",
+            (Self::BearbeitungBegonnen, N) => {
+                "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Text einen Zeilenumbruch"
+            }
+            (Self::Uebernommen, A) => "Aufgabe übernommen",
+            (Self::Uebernommen, N) => "Notiz übernommen",
+            (Self::Abgehakt, A) => "Aufgabe abgehakt",
+            (Self::Abgehakt, N) => "eine Notiz hat kein Kästchen",
+            (Self::WiederOffen, A) => "Aufgabe wieder offen",
+            (Self::WiederOffen, N) => "eine Notiz hat kein Kästchen",
+            (Self::Verschoben, A) => "Aufgabe verschoben",
+            (Self::Verschoben, N) => "Notiz verschoben",
+            (Self::SchonOben, A) => "die Aufgabe steht schon oben",
+            (Self::SchonOben, N) => "die Notiz steht schon oben",
+            (Self::SchonUnten, A) => "die Aufgabe steht schon unten",
+            (Self::SchonUnten, N) => "die Notiz steht schon unten",
+            (Self::Geloescht, A) => "Aufgabe gelöscht; cmd+z holt sie zurück",
+            (Self::Geloescht, N) => "Notiz gelöscht; cmd+z holt sie zurück",
+            (Self::ZelleBleibt, A | N) => "die Zelle bleibt in Bearbeitung",
+            (Self::MitEscUebernommen, A) => "Aufgabe übernommen; cmd+z nimmt es zurück",
+            (Self::MitEscUebernommen, N) => "Notiz übernommen; cmd+z nimmt es zurück",
         }
     }
 }
@@ -903,7 +933,7 @@ pub enum Zellenausgang {
     Abgewiesen(Editormeldung),
 }
 
-/// Eine Handlung an der Aufgabentabelle, wie [`Editorbereich::handlung_ausfuehren`]
+/// Eine Handlung an der Eintragstabelle, wie [`Editorbereich::handlung_ausfuehren`]
 /// sie ausfuehrt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Handlung {
@@ -919,48 +949,77 @@ enum Handlung {
     Abhaken,
 }
 
-/// Was eine Handlung am Stand bewirkt und was sie dem Nutzer sagt (C6).
+/// Was eine Handlung am Stand bewirkt und was sie dem Nutzer sagt (C6, C5).
 ///
 /// **Rein und ohne Fenster pruefbar**: die Rechnung steht im Kern
-/// (`krk_core::heimordner::eintraege::aufgaben`), und hier wird allein
-/// entschieden, welche Handlung des Kerns gilt und welche Antwort daraus wird.
-/// `zeile` ist die Aufgabe, auf die sie wirkt; eine Stelle hinter der letzten
-/// zaehlt wie keine. Ein `None` als Neustand heisst: kein Umbau, auch nicht ein
-/// leerer, und damit keine Handlung im Rueckgaengigstapel.
+/// (`krk_core::heimordner::eintraege::aufgaben` und `notizen`), und hier wird
+/// allein entschieden, welche Handlung des Kerns gilt und welche Antwort daraus
+/// wird. `zeile` ist der Eintrag, auf den sie wirkt; eine Stelle hinter dem
+/// letzten zaehlt wie keine. Ein `None` als Neustand heisst: kein Umbau, auch
+/// nicht ein leerer, und damit keine Handlung im Rueckgaengigstapel.
+///
+/// **Die Notiztabelle kennt kein Abhaken**: die Zulaessigkeit haelt den
+/// Befehl dort an, und kommt er trotzdem an, antwortet er wie in der
+/// Textflaeche, ohne Umbau.
 fn handlung_rechnen(
     stand: &str,
+    art: Eintragsart,
     handlung: Handlung,
     zeile: Option<usize>,
 ) -> (Editormeldung, Option<Neustand>) {
     use Eintragsantwort as A;
-    let anzahl = Aufgaben::lesen(stand).bloecke().len();
+    let antwort = |antwort| Editormeldung::Eintrag(art, antwort);
+    let anzahl = match art {
+        Eintragsart::Aufgaben => Aufgaben::lesen(stand).bloecke().len(),
+        Eintragsart::Notizen => Notizen::lesen(stand).bloecke().len(),
+    };
     let gewaehlt = zeile.filter(|stelle| *stelle < anzahl);
-    let ohne_auswahl = (Editormeldung::Eintrag(A::KeinEintragGewaehlt), None);
+    let ohne_auswahl = (antwort(A::KeinEintragGewaehlt), None);
     match handlung {
-        Handlung::Hinzufuegen => match aufgaben::hinzufuegen(stand, "") {
-            Ok(neustand) => (Editormeldung::Eintrag(A::Hinzugefuegt), Some(neustand)),
-            Err(abweisung) => (Editormeldung::EintragAbgewiesen(abweisung), None),
-        },
+        Handlung::Hinzufuegen => {
+            let neu = match art {
+                Eintragsart::Aufgaben => aufgaben::hinzufuegen(stand, ""),
+                Eintragsart::Notizen => notizen::hinzufuegen(stand, "", ""),
+            };
+            match neu {
+                Ok(neustand) => (antwort(A::Hinzugefuegt), Some(neustand)),
+                Err(abweisung) => (Editormeldung::EintragAbgewiesen(abweisung), None),
+            }
+        }
         Handlung::Bearbeiten => match gewaehlt {
-            Some(_) => (Editormeldung::Eintrag(A::BearbeitungBegonnen), None),
+            Some(_) => (antwort(A::BearbeitungBegonnen), None),
             None => ohne_auswahl,
         },
         Handlung::Verschieben(richtung) => {
             let Some(stelle) = gewaehlt else {
                 return ohne_auswahl;
             };
-            match aufgaben::verschieben(stand, stelle, richtung) {
-                Some(neustand) => (Editormeldung::Eintrag(A::Verschoben), Some(neustand)),
+            let verschoben = match art {
+                Eintragsart::Aufgaben => aufgaben::verschieben(stand, stelle, richtung),
+                Eintragsart::Notizen => notizen::verschieben(stand, stelle, richtung),
+            };
+            match verschoben {
+                Some(neustand) => (antwort(A::Verschoben), Some(neustand)),
                 None => match richtung {
-                    Richtung::Hoch => (Editormeldung::Eintrag(A::SchonOben), None),
-                    Richtung::Runter => (Editormeldung::Eintrag(A::SchonUnten), None),
+                    Richtung::Hoch => (antwort(A::SchonOben), None),
+                    Richtung::Runter => (antwort(A::SchonUnten), None),
                 },
             }
         }
-        Handlung::Loeschen => match gewaehlt.and_then(|stelle| aufgaben::loeschen(stand, stelle)) {
-            Some(neustand) => (Editormeldung::Eintrag(A::Geloescht), Some(neustand)),
-            None => ohne_auswahl,
-        },
+        Handlung::Loeschen => {
+            let geloescht = gewaehlt.and_then(|stelle| match art {
+                Eintragsart::Aufgaben => aufgaben::loeschen(stand, stelle),
+                Eintragsart::Notizen => notizen::loeschen(stand, stelle),
+            });
+            match geloescht {
+                Some(neustand) => (antwort(A::Geloescht), Some(neustand)),
+                None => ohne_auswahl,
+            }
+        }
+        Handlung::Abhaken if art == Eintragsart::Notizen => (
+            Editormeldung::Eintrag(Eintragsart::Aufgaben, A::KeineTabelle),
+            None,
+        ),
         Handlung::Abhaken => {
             let Some((stelle, neustand)) = gewaehlt
                 .and_then(|stelle| aufgaben::abhaken(stand, stelle).map(|neu| (stelle, neu)))
@@ -970,12 +1029,12 @@ fn handlung_rechnen(
             let erledigt = eintragsansicht::aufgabenzeilen(&neustand.text)
                 .get(stelle)
                 .is_some_and(|eintrag| eintrag.erledigt);
-            let antwort = if erledigt {
+            let geschehen = if erledigt {
                 A::Abgehakt
             } else {
                 A::WiederOffen
             };
-            (Editormeldung::Eintrag(antwort), Some(neustand))
+            (antwort(geschehen), Some(neustand))
         }
     }
 }
@@ -1430,12 +1489,41 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 /// sichtbar.
 const ABWEICHUNGSZEICHEN: &str = "•";
 
+/// Was der Text einer Zelle am Stand aendert; die Rechnung des Kerns.
+///
+/// **Rein und ohne Fenster pruefbar.** In der Aufgabentabelle ist es der Text
+/// der Aufgabe, in der Notiztabelle Thema oder Text der Notiz je nach Spalte,
+/// und die andere Haelfte bleibt, wie die Ableitung sie zeigt. `Ok(None)`: kein
+/// Umbau, weil nichts geaendert ist, es den Eintrag nicht gibt oder der Editor
+/// keine Tabelle zeigt.
+fn zellenrechnung(
+    form: Editorform,
+    stand: &str,
+    zelle: Zelle,
+    text: &str,
+) -> Result<Option<Neustand>, eintraege::Abweisung> {
+    match form {
+        Editorform::Text => Ok(None),
+        Editorform::Aufgaben => aufgaben::text_aendern(stand, zelle.zeile, text),
+        Editorform::Notizen => {
+            let Some(alt) = Notizen::lesen(stand).notiz(zelle.zeile) else {
+                return Ok(None);
+            };
+            if zelle.spalte == eintragsansicht::NOTIZSPALTE {
+                notizen::aendern(stand, zelle.zeile, alt.thema, text)
+            } else {
+                notizen::aendern(stand, zelle.zeile, text, &alt.text)
+            }
+        }
+    }
+}
+
 /// Welche der beiden Flaechen des Editors zu sehen ist.
 ///
 /// **Zwei Flaechen, eine Ansicht.** Beide liegen deckungsgleich unter dem
 /// Kopf; die Textflaeche zeigt jede Datei in der Rohansicht und fast jede in
-/// der Formatansicht, die [`Eintragsansicht`] zeigt `tasks.txt` im erkannten
-/// `~/krkhome/` in der Formatansicht. Welche es ist, folgt aus der
+/// der Formatansicht, die [`Eintragsansicht`] zeigt `tasks.txt` und
+/// `notes.txt` im erkannten `~/krkhome/` in der Formatansicht. Welche es ist, folgt aus der
 /// [`Editorform`] ueber [`flaeche_der_form`], und gewechselt wird allein in
 /// [`Editorbereich::flaeche_waehlen`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1466,8 +1554,8 @@ enum Tauschschritt {
 ///
 /// **Die eine Stelle, an der das entschieden wird**, und vollstaendig ohne
 /// Auffangzweig: ein neuer Dateityp und eine neue Sonderdatei halten hier den
-/// Bau an. `notes.txt` bleibt bis zu Schritt 4.3 des Plans in der Textflaeche
-/// und zeigt dort, was sie seit Schritt 2.1 zeigt, naemlich Markdown.
+/// Bau an. `notes.txt` zeigt seit Schritt 4.3 des Plans in der Formatansicht
+/// die Notiztabelle; bis dahin zeigte sie Markdown in der Textflaeche.
 #[must_use]
 fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
     match (ansicht, typ) {
@@ -1477,11 +1565,9 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
             | Dateityp::Sonstiges
             | Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben),
         )
-        | (
-            Ansicht::Format,
-            Dateityp::Markdown | Dateityp::Sonstiges | Dateityp::Eintraege(Sonderdatei::Notizen),
-        ) => Editorform::Text,
+        | (Ansicht::Format, Dateityp::Markdown | Dateityp::Sonstiges) => Editorform::Text,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
+        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen)) => Editorform::Notizen,
     }
 }
 
@@ -1490,7 +1576,18 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
 fn flaeche_der_form(form: Editorform) -> Flaeche {
     match form {
         Editorform::Text => Flaeche::Textflaeche,
-        Editorform::Aufgaben => Flaeche::Tabelle,
+        Editorform::Aufgaben | Editorform::Notizen => Flaeche::Tabelle,
+    }
+}
+
+/// Die Art der Eintragstabelle, die eine Form zeigt; `None` fuer die
+/// Textflaeche. Die Geheimnisse aus Stufe 5 werden hier als Notizen stehen.
+#[must_use]
+fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
+    match form {
+        Editorform::Text => None,
+        Editorform::Aufgaben => Some(Eintragsart::Aufgaben),
+        Editorform::Notizen => Some(Eintragsart::Notizen),
     }
 }
 
@@ -1844,6 +1941,15 @@ pub struct EditorIvars {
     /// Zustand ueber die Zelle, sondern der Rueckweg einer Antwort aus einem
     /// Rueckruf.
     zellenabweisung: Cell<Option<eintraege::Abweisung>>,
+    /// Ob die zuletzt beendete Zelle einen Umbau festgeschrieben hat.
+    ///
+    /// Dieselbe Bauart wie [`Self::zellenabweisung`]: geleert von
+    /// [`Editorbereich::zelle_uebernehmen`], gesetzt von
+    /// `zelle_festschreiben` und gelesen allein von
+    /// [`Editorbereich::zelle_abbrechen`], das nur einer geaenderten Notizzelle
+    /// sagt, dass `esc` uebernommen hat (C5). AppKit meldet das Ende einer
+    /// Zelle ohne Auskunft darueber, ob sich etwas geaendert hat.
+    zelle_umgebaut: Cell<bool>,
 }
 
 define_class!(
@@ -1991,6 +2097,7 @@ impl Editorbereich {
             stapelbytes: Rc::new(Cell::new(0)),
             meldungsmelder: RefCell::new(None),
             zellenabweisung: Cell::new(None),
+            zelle_umgebaut: Cell::new(false),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -2012,14 +2119,14 @@ impl Editorbereich {
             Weak::from_retained(&this),
         );
         this.ivars().eintraege.wege_setzen(Zellenwege {
-            pruefen: Box::new(move |zeile, text| {
+            pruefen: Box::new(move |zelle, text| {
                 pruefer
                     .load()
-                    .is_none_or(|editor| editor.zelle_pruefen(zeile, text))
+                    .is_none_or(|editor| editor.zelle_pruefen(zelle, text))
             }),
-            festschreiben: Box::new(move |zeile, text| {
+            festschreiben: Box::new(move |zelle, text| {
                 if let Some(editor) = schreiber.load() {
-                    editor.zelle_festschreiben(zeile, text);
+                    editor.zelle_festschreiben(zelle, text);
                 }
             }),
             abhaken: Box::new(move |zeile| {
@@ -2202,8 +2309,9 @@ impl Editorbereich {
     /// erste Handlung**: [`Self::sichern`], [`Self::datei_oeffnen`],
     /// [`Self::ansicht_umschalten`], [`Self::handlung_ausfuehren`] und beim
     /// Anwendungsdelegierten `editor_stand_befragen`, die Frage vor dem
-    /// Schliessen und dem Beenden. Die Liste haelt die Probe
-    /// `die_zellenuebernahme_hat_genau_diese_rufer`.
+    /// Schliessen und dem Beenden. Dazu seit Schritt 4.3
+    /// [`Self::zelle_abbrechen`], das eine Notizzelle mit `esc` uebernimmt.
+    /// Die Liste haelt die Probe `die_zellenuebernahme_hat_genau_diese_rufer`.
     pub fn zelle_uebernehmen(&self) -> Zellenausgang {
         let Some(fenster) = self.ivars().bereich.window() else {
             return Zellenausgang::KeineZelle;
@@ -2212,12 +2320,16 @@ impl Editorbereich {
             return Zellenausgang::KeineZelle;
         }
         self.ivars().zellenabweisung.set(None);
+        self.ivars().zelle_umgebaut.set(false);
         if self.ivars().eintraege.bearbeitung_beenden(&fenster) {
             return Zellenausgang::Uebernommen;
         }
         let meldung = match self.ivars().zellenabweisung.take() {
             Some(abweisung) => Editormeldung::EintragAbgewiesen(abweisung),
-            None => Editormeldung::Eintrag(Eintragsantwort::ZelleBleibt),
+            None => Editormeldung::Eintrag(
+                eintragsart_der_form(self.form()).unwrap_or(Eintragsart::Aufgaben),
+                Eintragsantwort::ZelleBleibt,
+            ),
         };
         Zellenausgang::Abgewiesen(meldung)
     }
@@ -2228,13 +2340,27 @@ impl Editorbereich {
     /// **Die eine Stelle der Regel aus
     /// `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`**
     /// (Moeglichkeit 2): die Aufgabenzelle verwirft und zeigt danach den
-    /// abgeleiteten Text. Die Notizzelle aus Schritt 4.3 bekommt hier ihren
-    /// eigenen Zweig, der eine geaenderte Zelle uebernimmt; nach Moeglichkeit 1
-    /// uebernaehme auch die Aufgabenzelle, und der Unterschied waere dieser
-    /// eine Zweig.
+    /// abgeleiteten Text. **Die Notizzelle uebernimmt** (Schritt 4.3, C5),
+    /// ueber [`Self::zelle_uebernehmen`] und damit ueber dieselben zwei
+    /// Delegiertenwege wie jedes andere Ende: eine geaenderte Zelle wird eine
+    /// Handlung, die `cmd+z` zuruecknimmt, und die Statuszeile sagt es; eine
+    /// unveraenderte endet ohne Umbau und ohne Meldung; eine abgewiesene bleibt
+    /// offen, und ihren Grund hat die Pruefung schon gemeldet. Verworfen wird
+    /// dort nicht, weil eine Notizzelle mehrere Absaetze tragen kann, die ein
+    /// Verwerfen ohne Meldung verloere.
     pub fn zelle_abbrechen(&self) {
         match self.form() {
             Editorform::Aufgaben => self.zelle_verwerfen(),
+            Editorform::Notizen => {
+                if self.zelle_uebernehmen() == Zellenausgang::Uebernommen
+                    && self.ivars().zelle_umgebaut.get()
+                {
+                    self.meldung_melden(Editormeldung::Eintrag(
+                        Eintragsart::Notizen,
+                        Eintragsantwort::MitEscUebernommen,
+                    ));
+                }
+            }
             // Ohne Tabelle laeuft keine Zelle; der Rang in `abbrechen` fragt
             // vorher danach.
             Editorform::Text => {}
@@ -2257,8 +2383,8 @@ impl Editorbereich {
     /// Eine Abweisung meldet sich selbst in der Statuszeile — ein Klick daneben
     /// hat keinen Befehl, der sie weitergaebe — und legt ihren Grund fuer
     /// [`Self::zelle_uebernehmen`] bereit.
-    fn zelle_pruefen(&self, zeile: usize, text: &str) -> bool {
-        match self.zelle_rechnen(zeile, text) {
+    fn zelle_pruefen(&self, zelle: Zelle, text: &str) -> bool {
+        match self.zelle_rechnen(zelle, text) {
             Ok(_) => true,
             Err(abweisung) => {
                 self.ivars().zellenabweisung.set(Some(abweisung));
@@ -2275,21 +2401,25 @@ impl Editorbereich {
     /// beendet eine Zelle auch ohne zu fragen, bei `reloadData` etwa (gemessen
     /// am 260816 an der Umbenennung in [`super::tabelle`]). Der Text faellt
     /// dann, und das sagt die Statuszeile, statt ihn still zu verlieren.
-    fn zelle_festschreiben(&self, zeile: usize, text: &str) {
-        match self.zelle_rechnen(zeile, text) {
-            Ok(Some(neustand)) => self.umbau_anwenden(neustand),
+    fn zelle_festschreiben(&self, zelle: Zelle, text: &str) {
+        match self.zelle_rechnen(zelle, text) {
+            Ok(Some(neustand)) => {
+                self.ivars().zelle_umgebaut.set(true);
+                self.umbau_anwenden(neustand);
+            }
             Ok(None) => {}
             Err(abweisung) => self.meldung_melden(Editormeldung::EintragAbgewiesen(abweisung)),
         }
     }
 
-    /// Was der Text dieser Zelle am Stand aendert; die Rechnung des Kerns.
+    /// Was der Text dieser Zelle am Stand aendert, nach [`zellenrechnung`].
     fn zelle_rechnen(
         &self,
-        zeile: usize,
+        zelle: Zelle,
         text: &str,
     ) -> Result<Option<Neustand>, eintraege::Abweisung> {
-        aufgaben::text_aendern(self.ivars().modell.borrow().stand(), zeile, text)
+        let form = self.form();
+        zellenrechnung(form, self.ivars().modell.borrow().stand(), zelle, text)
     }
 
     /// Das Ankreuzfeld einer Zeile: dieselbe Handlung wie
@@ -2301,28 +2431,30 @@ impl Editorbereich {
         self.meldung_melden(meldung);
     }
 
-    /// Eine leere Aufgabe ans Ende, ihre Zelle danach in Bearbeitung (C6).
+    /// Ein leerer Eintrag ans Ende, seine erste Zelle danach in Bearbeitung
+    /// (C6, C5).
     pub fn eintrag_hinzufuegen(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Hinzufuegen, None)
     }
 
-    /// Uebernimmt eine laufende Zelle, oder setzt die gewaehlte in
-    /// Bearbeitung (C6).
+    /// Uebernimmt eine laufende Zelle, oder setzt die erste Zelle der
+    /// gewaehlten Zeile in Bearbeitung (C6, C5).
     pub fn eintrag_bearbeiten(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Bearbeiten, None)
     }
 
-    /// Die gewaehlte Aufgabe eine Stelle nach oben (C6).
+    /// Der gewaehlte Eintrag eine Stelle nach oben (C6, C5).
     pub fn eintrag_hoch(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Verschieben(Richtung::Hoch), None)
     }
 
-    /// Die gewaehlte Aufgabe eine Stelle nach unten (C6).
+    /// Der gewaehlte Eintrag eine Stelle nach unten (C6, C5).
     pub fn eintrag_runter(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Verschieben(Richtung::Runter), None)
     }
 
-    /// Die gewaehlte Aufgabenzeile fort (C6).
+    /// Der gewaehlte Eintrag fort: die Aufgabenzeile, oder die ganze Notiz
+    /// (C6, C5).
     pub fn eintrag_loeschen(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Loeschen, None)
     }
@@ -2332,13 +2464,14 @@ impl Editorbereich {
         self.handlung_ausfuehren(Handlung::Abhaken, None)
     }
 
-    /// **Der eine Helfer, durch den jede Tabellenhandlung geht** (C6).
+    /// **Der eine Helfer, durch den jede Tabellenhandlung geht** (C6, C5).
     ///
     /// Zuerst die laufende Zelle: eine abgewiesene haelt die Handlung an,
     /// denn sie rechnete sonst auf einem Stand ohne den getippten Text. Dann
-    /// die Form, dann die Rechnung ueber [`handlung_rechnen`], dann der Umbau
+    /// die Form und mit ihr die Art der Tabelle, dann die Rechnung ueber
+    /// [`handlung_rechnen`], dann der Umbau
     /// ueber [`Self::umbau_anwenden`] und damit ueber den einen Weg in den
-    /// Verwalter. `zeile` nennt die Aufgabe, `None` heisst die gewaehlte.
+    /// Verwalter. `zeile` nennt den Eintrag, `None` heisst den gewaehlten.
     ///
     /// **`Bearbeiten` bei laufender Zelle uebernimmt sie und beginnt keine
     /// neue**: so beendet `cmd+return` eine Zelle, und ein zweites `cmd+return`
@@ -2348,16 +2481,15 @@ impl Editorbereich {
         if let Zellenausgang::Abgewiesen(meldung) = zelle {
             return meldung;
         }
-        match self.form() {
-            Editorform::Aufgaben => {}
-            Editorform::Text => return Editormeldung::Eintrag(Eintragsantwort::KeineTabelle),
-        }
+        let Some(art) = eintragsart_der_form(self.form()) else {
+            return Editormeldung::Eintrag(Eintragsart::Aufgaben, Eintragsantwort::KeineTabelle);
+        };
         if handlung == Handlung::Bearbeiten && zelle == Zellenausgang::Uebernommen {
-            return Editormeldung::Eintrag(Eintragsantwort::Uebernommen);
+            return Editormeldung::Eintrag(art, Eintragsantwort::Uebernommen);
         }
         let zeile = zeile.or_else(|| self.ivars().eintraege.gewaehlte_zeile());
         let (meldung, neustand) =
-            handlung_rechnen(self.ivars().modell.borrow().stand(), handlung, zeile);
+            handlung_rechnen(self.ivars().modell.borrow().stand(), art, handlung, zeile);
         let auswahl = neustand.as_ref().and_then(|neustand| neustand.auswahl);
         if let Some(neustand) = neustand {
             self.umbau_anwenden(neustand);
@@ -2365,7 +2497,7 @@ impl Editorbereich {
         let zu_bearbeiten = match handlung {
             Handlung::Hinzufuegen => auswahl,
             Handlung::Bearbeiten => zeile.filter(|_| {
-                meldung == Editormeldung::Eintrag(Eintragsantwort::BearbeitungBegonnen)
+                meldung == Editormeldung::Eintrag(art, Eintragsantwort::BearbeitungBegonnen)
             }),
             Handlung::Verschieben(_) | Handlung::Loeschen | Handlung::Abhaken => None,
         };
@@ -2476,19 +2608,21 @@ impl Editorbereich {
     /// ein `cmd+z` einer Tipp-Handlung ankommt — die Textflaeche nimmt es
     /// zurueck, auch wenn sie ausgeblendet ist, und meldet es ueber
     /// `textDidChange:` —, und ohne diesen Ruf zeigte die Tabelle danach den
-    /// Stand vor dem Rueckgaengig. Fuer jede andere Datei als `tasks.txt`
-    /// kommt die leere Liste an, und [`Eintragsansicht::zeilen_zeigen`] tut dann
-    /// nichts.
+    /// Stand vor dem Rueckgaengig. Fuer jede andere Datei als `tasks.txt` und
+    /// `notes.txt` kommt die leere Aufgabenliste an, und
+    /// [`Eintragsansicht::zeilen_zeigen`] tut dann nichts, solange die Tabelle
+    /// schon Aufgaben zeigt.
     fn tabelle_nachziehen(&self) {
         let zeilen = {
             let modell = self.ivars().modell.borrow();
             match modell.typ() {
                 Dateityp::Eintraege(Sonderdatei::Aufgaben) => {
-                    eintragsansicht::aufgabenzeilen(modell.stand())
+                    Zeilen::Aufgaben(eintragsansicht::aufgabenzeilen(modell.stand()))
                 }
-                Dateityp::Eintraege(Sonderdatei::Notizen)
-                | Dateityp::Markdown
-                | Dateityp::Sonstiges => Vec::new(),
+                Dateityp::Eintraege(Sonderdatei::Notizen) => {
+                    Zeilen::Notizen(eintragsansicht::notizzeilen(modell.stand()))
+                }
+                Dateityp::Markdown | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),
             }
         };
         self.ivars().eintraege.zeilen_zeigen(zeilen);
@@ -6605,9 +6739,10 @@ mod tests {
         );
     }
 
-    /// Die Tabelle gehoert allein zu `tasks.txt` in der Formatansicht; eine
-    /// `.md`, `notes.txt` und jede Datei in der Rohansicht zeigen die
-    /// Textflaeche.
+    /// Die Tabelle gehoert zu `tasks.txt` und seit Schritt 4.3 zu `notes.txt`
+    /// in der Formatansicht; eine `.md` und jede Datei in der Rohansicht zeigen
+    /// die Textflaeche. Beide Tabellenformen zeigen dieselbe Flaeche, in ihrer
+    /// eigenen Art.
     #[test]
     fn die_form_folgt_aus_ansicht_und_dateityp() {
         let aufgaben = Dateityp::Eintraege(Sonderdatei::Aufgaben);
@@ -6615,11 +6750,20 @@ mod tests {
         assert_eq!(flaeche_der_form(Editorform::Aufgaben), Flaeche::Tabelle);
         assert_eq!(editorform(Ansicht::Roh, aufgaben), Editorform::Text);
         assert_eq!(flaeche_der_form(Editorform::Text), Flaeche::Textflaeche);
-        for typ in [
-            Dateityp::Markdown,
-            Dateityp::Sonstiges,
-            Dateityp::Eintraege(Sonderdatei::Notizen),
-        ] {
+        let notizen = Dateityp::Eintraege(Sonderdatei::Notizen);
+        assert_eq!(editorform(Ansicht::Format, notizen), Editorform::Notizen);
+        assert_eq!(flaeche_der_form(Editorform::Notizen), Flaeche::Tabelle);
+        assert_eq!(editorform(Ansicht::Roh, notizen), Editorform::Text);
+        assert_eq!(eintragsart_der_form(Editorform::Text), None);
+        assert_eq!(
+            eintragsart_der_form(Editorform::Aufgaben),
+            Some(Eintragsart::Aufgaben)
+        );
+        assert_eq!(
+            eintragsart_der_form(Editorform::Notizen),
+            Some(Eintragsart::Notizen)
+        );
+        for typ in [Dateityp::Markdown, Dateityp::Sonstiges] {
             for ansicht in [Ansicht::Roh, Ansicht::Format] {
                 assert_eq!(
                     editorform(ansicht, typ),
@@ -6698,7 +6842,7 @@ mod tests {
                 "die Auswahl rueckt auf die neue letzte Zeile"
             );
 
-            eintraege.zeilen_zeigen(Vec::new());
+            eintraege.zeilen_zeigen(Zeilen::Aufgaben(Vec::new()));
             assert_eq!(eintraege.tabelle().numberOfRows(), 0);
         });
     }
@@ -6980,6 +7124,16 @@ mod tests {
         });
     }
 
+    /// Die Spalte im Buch der aufzeichnenden Wege: nichts fuer die erste,
+    /// damit die Eintraege der Aufgabentabelle lesen wie vor Schritt 4.3.
+    fn spaltenzusatz(zelle: eintragsansicht::Zelle) -> String {
+        if zelle.spalte == eintragsansicht::THEMENSPALTE {
+            String::new()
+        } else {
+            format!("/{}", zelle.spalte)
+        }
+    }
+
     /// Die Wege der Ansicht, aufgezeichnet.
     fn aufzeichnende_wege(
         pruefung: bool,
@@ -6987,12 +7141,20 @@ mod tests {
         let buch = Rc::new(RefCell::new(Vec::new()));
         let (p, f, a) = (buch.clone(), buch.clone(), buch.clone());
         let wege = eintragsansicht::Zellenwege {
-            pruefen: Box::new(move |zeile, text| {
-                p.borrow_mut().push(format!("pruefen {zeile} {text}"));
+            pruefen: Box::new(move |zelle, text| {
+                p.borrow_mut().push(format!(
+                    "pruefen {}{} {text}",
+                    zelle.zeile,
+                    spaltenzusatz(zelle)
+                ));
                 pruefung
             }),
-            festschreiben: Box::new(move |zeile, text| {
-                f.borrow_mut().push(format!("festschreiben {zeile} {text}"));
+            festschreiben: Box::new(move |zelle, text| {
+                f.borrow_mut().push(format!(
+                    "festschreiben {}{} {text}",
+                    zelle.zeile,
+                    spaltenzusatz(zelle)
+                ));
             }),
             abhaken: Box::new(move |zeile| {
                 a.borrow_mut().push(format!("abhaken {zeile}"));
@@ -7042,7 +7204,9 @@ mod tests {
 
     /// `zelle_abbrechen` verwirft die Aufgabenzelle (Moeglichkeit 2 von
     /// `260926-0115_*_was-tut-esc-*`), und nach dem Abbruch ist der Stand
-    /// unveraendert: kein Weg von dort fuehrt in einen Umbau, und waehrend
+    /// unveraendert: der Weg dorthin, `zelle_verwerfen`, fuehrt in keinen
+    /// Umbau, und die Uebernahme der Notizzelle steht allein in ihrem eigenen
+    /// Zweig (Schritt 4.3); waehrend
     /// `bearbeitung_verwerfen` den Ersthelfer wechselt, sagt die Pruefung ja,
     /// ohne zu fragen, und das Ende schreibt nichts fest. **Gelesen am Rumpf**,
     /// weil der Wechsel ein Fenster braucht; ausserhalb des Wechsels gilt die
@@ -7077,15 +7241,37 @@ mod tests {
             )),
             "die Aufgabenzelle verwirft (Moeglichkeit 2)"
         );
-        for name in ["zelle_abbrechen", "zelle_verwerfen"] {
-            let rumpf = rumpf(&editor, name);
-            for nadel in [
-                concat!("umbau_", "anwenden("),
-                concat!("zelle_", "uebernehmen("),
-                concat!("zelle_", "festschreiben("),
-            ] {
-                assert!(!rumpf.contains(nadel), "{name} ruft {nadel}");
-            }
+        let notizzweig = abbrechen
+            .split_once("Editorform::Notizen =>")
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("Editorform::Text =>"))
+            .map(|(zweig, _)| zweig)
+            .expect("zelle_abbrechen traegt den Zweig der Notizzelle vor dem der Textflaeche");
+        assert!(
+            notizzweig.contains(concat!("self.zelle_", "uebernehmen()")),
+            "die Notizzelle uebernimmt (Moeglichkeit 2)"
+        );
+        assert_eq!(
+            abbrechen.matches(concat!("zelle_", "uebernehmen(")).count(),
+            1,
+            "uebernommen wird allein im Zweig der Notizzelle"
+        );
+        for nadel in [
+            concat!("umbau_", "anwenden("),
+            concat!("zelle_", "festschreiben("),
+        ] {
+            assert!(!abbrechen.contains(nadel), "zelle_abbrechen ruft {nadel}");
+        }
+        let verwerfen_im_editor = rumpf(&editor, "zelle_verwerfen");
+        for nadel in [
+            concat!("umbau_", "anwenden("),
+            concat!("zelle_", "uebernehmen("),
+            concat!("zelle_", "festschreiben("),
+        ] {
+            assert!(
+                !verwerfen_im_editor.contains(nadel),
+                "zelle_verwerfen ruft {nadel}"
+            );
         }
 
         an_einer_flaeche(|mtm| {
@@ -7135,10 +7321,11 @@ mod tests {
     fn jede_handlung_rechnet_ueber_den_kern_und_antwortet() {
         use Eintragsantwort as A;
         let umbau = |handlung, zeile| {
-            let (meldung, neustand) = handlung_rechnen(AUFGABEN, handlung, zeile);
+            let (meldung, neustand) =
+                handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, handlung, zeile);
             (meldung, neustand.map(|neustand| neustand.text))
         };
-        let antwort = Editormeldung::Eintrag;
+        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Aufgaben, antwort);
 
         let (meldung, text) = umbau(Handlung::Hinzufuegen, None);
         assert_eq!(meldung, antwort(A::Hinzugefuegt));
@@ -7150,7 +7337,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            handlung_rechnen(AUFGABEN, Handlung::Hinzufuegen, None)
+            handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, Handlung::Hinzufuegen, None)
                 .1
                 .and_then(|neustand| neustand.auswahl),
             Some(2),
@@ -7235,14 +7422,27 @@ mod tests {
             1,
             "genau ein Umbau, und nur fuer einen geaenderten Text"
         );
-        assert!(festschreiben.contains(concat!("Ok(Some(neustand)) => self.umbau_", "anwenden(")));
+        let geaendert = festschreiben
+            .find("Ok(Some(neustand)) =>")
+            .expect("der Zweig des geaenderten Textes steht im Rumpf");
+        let ohne = festschreiben
+            .find("Ok(None) =>")
+            .expect("der Zweig des unveraenderten Textes steht im Rumpf");
+        let umbau = festschreiben
+            .find(concat!("self.umbau_", "anwenden("))
+            .expect("der Umbau steht im Rumpf");
+        assert!(
+            geaendert < umbau && umbau < ohne,
+            "der Umbau steht im Zweig des geaenderten Textes"
+        );
         let pruefen = rumpf(&quelle, "zelle_pruefen");
         assert!(pruefen.contains(concat!("zellen", "abweisung.set(Some(")));
         assert!(!pruefen.contains(concat!("umbau_", "anwenden(")));
     }
 
     /// **Die eine Uebernahmestelle und ihre Rufer.** `zelle_uebernehmen` wird
-    /// von genau diesen fuenf gerufen, von jedem vor allem anderen, was den
+    /// von genau diesen sechs gerufen — seit Schritt 4.3 auch von
+    /// `zelle_abbrechen`, das eine Notizzelle mit `esc` uebernimmt —, von jedem vor allem anderen, was den
     /// Stand liest oder die Flaeche wechselt; und die Uebernahme selbst geht
     /// ueber `bearbeitung_beenden`, also ueber die zwei Delegiertenwege, und
     /// nicht an ihnen vorbei.
@@ -7257,6 +7457,7 @@ mod tests {
             (&editor, "datei_oeffnen"),
             (&editor, "ansicht_umschalten"),
             (&editor, "handlung_ausfuehren"),
+            (&editor, "zelle_abbrechen"),
             (&anwendung, "editor_stand_befragen"),
         ];
         for (quelle, name) in rufer {
@@ -7287,7 +7488,7 @@ mod tests {
         assert_eq!(
             codezeilen(&editor) + codezeilen(&anwendung),
             rufer.len(),
-            "ein Rufer ausser den fuenf"
+            "ein Rufer ausser den sechs"
         );
         assert!(
             rumpf(&editor, "zelle_uebernehmen")
@@ -7555,5 +7756,376 @@ mod tests {
                 "nach dem Ende gilt die Frage wieder"
             );
         });
+    }
+
+    // ------------------------------------------------------------------
+    // Die Notiztabelle (Schritt 4.3 der krkhome-Arbeit, C5)
+    // ------------------------------------------------------------------
+    //
+    // Dieselbe Zerlegung wie in 3.2a und 3.2b, aus demselben gemessenen Grund:
+    // was ein Fenster braucht — `makeFirstResponder:`, der Feldeditor im Feld,
+    // das Wachsen der Zeile beim Tippen —, ist Nutzerarbeit am laufenden
+    // Buendel. Gefahren werden die reinen Regeln, die Tabelle ohne Fenster und
+    // die Ruempfe.
+
+    /// `notes.txt` der Proben: Vorspann, eine Notiz mit zwei Absaetzen und
+    /// Trenner, eine ohne Text.
+    const NOTIZEN: &str = "Vorspann\n## Einkauf\nBrot\n\nMilch\n\n## Reise\n";
+
+    /// C5: aus Vorspann und zwei Notizen entstehen zwei Zeilen mit Thema und
+    /// mehrzeiligem Text; die Tabelle traegt dann zwei Spalten mit Kopfzeile
+    /// und Zeilenhoehe nach dem Inhalt, und mit Aufgaben wieder eine ohne
+    /// Kopfzeile in fester Hoehe.
+    #[test]
+    fn die_notiztabelle_leitet_zwei_zeilen_mit_thema_und_mehrzeiligem_text_ab() {
+        use eintragsansicht::Notizzeile;
+        assert_eq!(
+            eintragsansicht::notizzeilen(NOTIZEN),
+            vec![
+                Notizzeile {
+                    thema: "Einkauf".to_owned(),
+                    text: "Brot\n\nMilch".to_owned(),
+                },
+                Notizzeile {
+                    thema: "Reise".to_owned(),
+                    text: String::new(),
+                },
+            ],
+            "der Vorspann ist keine Zeile, der Trenner gehoert nicht zum Text"
+        );
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let tabelle = eintraege.tabelle();
+            assert_eq!(tabelle.numberOfColumns(), 1);
+            assert!(tabelle.headerView().is_none());
+
+            eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
+            assert_eq!(eintraege.art(), Eintragsart::Notizen);
+            assert_eq!(tabelle.numberOfRows(), 2);
+            assert_eq!(tabelle.numberOfColumns(), 2, "Thema und Notiz");
+            assert!(
+                tabelle.headerView().is_some(),
+                "die Spalten tragen ihre Namen"
+            );
+            assert!(
+                tabelle.usesAutomaticRowHeights(),
+                "die Zeile waechst mit dem Text"
+            );
+
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            assert_eq!(eintraege.art(), Eintragsart::Aufgaben);
+            assert_eq!(tabelle.numberOfColumns(), 1);
+            assert!(tabelle.headerView().is_none());
+            assert!(!tabelle.usesAutomaticRowHeights());
+        });
+    }
+
+    /// Die Zellen der Notiztabelle, **am Rumpf gelesen**: eine Zelle mit Auto
+    /// Layout laesst sich auf dem Faden von `libtest` nicht bauen (gemessen am
+    /// 260926: `viewAtColumn:row:makeIfNecessary:` wirft dort „Modifications to
+    /// the layout engine must not be performed from a background thread",
+    /// Rust faengt es nicht). Gehalten wird, was die Messung verlangt: das Feld
+    /// ist ein [`eintragsansicht::Notizfeld`], traegt den vertikalen
+    /// Stauchwiderstand `NSLayoutPriorityRequired`, haengt ueber Auto Layout an
+    /// seiner Zelle, und jeder Anschlag macht seine Eigenhoehe ungueltig, die
+    /// waehrend der Bearbeitung die des Feldeditors ist. `noteHeightOf…` steht
+    /// nirgends, weil es nach der Messung nichts beitraegt.
+    #[test]
+    fn die_notizzelle_waechst_nach_dem_gemessenen_verfahren() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let zelle = rumpf(&quelle, "notizzelle");
+        for nadel in [
+            "Notizfeld::neu(",
+            "setContentCompressionResistancePriority_forOrientation(",
+            "NSLayoutPriorityRequired",
+            "NSLayoutConstraintOrientation::Vertical",
+            "setTranslatesAutoresizingMaskIntoConstraints(false)",
+            "setPreferredMaxLayoutWidth(",
+            "setDelegate(",
+            "setTextField(",
+            ".setActive(true)",
+        ] {
+            assert!(zelle.contains(nadel), "notizzelle ruft {nadel} nicht");
+        }
+        assert!(
+            rumpf(&quelle, "eigengroesse").contains("self.feldeditorhoehe()"),
+            "die Eigengroesse fragt waehrend der Bearbeitung den Feldeditor"
+        );
+        let hoehe = rumpf(&quelle, "feldeditorhoehe");
+        for nadel in [
+            "currentEditor()",
+            "ensureLayoutForTextContainer(",
+            "usedRectForTextContainer(",
+            "textContainerInset()",
+        ] {
+            assert!(hoehe.contains(nadel), "feldeditorhoehe ruft {nadel} nicht");
+        }
+        assert!(
+            rumpf(&quelle, "text_geaendert").contains("invalidateIntrinsicContentSize()"),
+            "jeder Anschlag misst neu"
+        );
+        assert!(
+            rumpf(&quelle, "zelle_geendet").contains("invalidateIntrinsicContentSize()"),
+            "das Ende misst neu"
+        );
+        assert!(
+            !quelle.contains(concat!("noteHeightOfRows", "WithIndexesChanged(")),
+            "nach der Messung nicht noetig"
+        );
+    }
+
+    /// `tab` in der Notiztabelle uebernimmt ueber den Weg jedes Endes und
+    /// beginnt die naechste Zelle erst danach, und nur, wenn AppKit den
+    /// Wechsel angenommen hat; `return` in der Notizspalte schreibt den Umbruch
+    /// am Feldeditor vorbei an AppKits Ende. Am Rumpf gelesen, weil beides ein
+    /// Fenster braucht.
+    #[test]
+    fn tab_uebernimmt_und_beginnt_danach_die_naechste_zelle() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let ausfuehren = rumpf(&quelle, "zellenbefehl_ausfuehren");
+        let beenden = ausfuehren
+            .find(concat!("self.bearbeitung_", "beenden("))
+            .expect("tab uebernimmt");
+        let beginnen = ausfuehren
+            .find(concat!("self.zelle_", "beginnen("))
+            .expect("und beginnt die naechste Zelle");
+        assert!(beenden < beginnen);
+        assert!(ausfuehren.contains(concat!("&& self.bearbeitung_", "beenden(")));
+        assert!(ausfuehren.contains("insertNewlineIgnoringFieldEditor"));
+    }
+
+    /// C5: in der Notizspalte schreibt `return` einen Zeilenumbruch und beendet
+    /// die Zelle nicht; in der Themenspalte und in der Aufgabenzelle beendet es
+    /// sie wie bisher. `tab` wechselt in der Notiztabelle die Zelle, zeilenweise.
+    #[test]
+    fn return_schreibt_in_der_notizzelle_einen_umbruch_und_beendet_die_aufgabenzelle() {
+        use eintragsansicht::{NOTIZSPALTE, THEMENSPALTE, Zelle, Zellenbefehl, zellenbefehl};
+        let zeilenende = sel!(insertNewline:);
+        assert_eq!(
+            zellenbefehl(Eintragsart::Notizen, NOTIZSPALTE, zeilenende),
+            Zellenbefehl::Umbruch
+        );
+        assert_eq!(
+            zellenbefehl(Eintragsart::Notizen, THEMENSPALTE, zeilenende),
+            Zellenbefehl::Appkit,
+            "ein Thema traegt keinen Umbruch"
+        );
+        assert_eq!(
+            zellenbefehl(Eintragsart::Aufgaben, THEMENSPALTE, zeilenende),
+            Zellenbefehl::Appkit,
+            "die Aufgabenzelle endet mit return"
+        );
+        for spalte in [THEMENSPALTE, NOTIZSPALTE] {
+            assert_eq!(
+                zellenbefehl(Eintragsart::Notizen, spalte, sel!(insertTab:)),
+                Zellenbefehl::Weiter(true)
+            );
+            assert_eq!(
+                zellenbefehl(Eintragsart::Notizen, spalte, sel!(insertBacktab:)),
+                Zellenbefehl::Weiter(false)
+            );
+            assert_eq!(
+                zellenbefehl(Eintragsart::Notizen, spalte, sel!(cancelOperation:)),
+                Zellenbefehl::Appkit
+            );
+        }
+        assert_eq!(
+            zellenbefehl(Eintragsart::Aufgaben, THEMENSPALTE, sel!(insertTab:)),
+            Zellenbefehl::Appkit
+        );
+
+        let zelle = |zeile, spalte| Zelle { zeile, spalte };
+        let weiter = eintragsansicht::naechste_zelle;
+        assert_eq!(weiter(zelle(0, 0), true, 2), Some(zelle(0, 1)));
+        assert_eq!(weiter(zelle(0, 1), true, 2), Some(zelle(1, 0)));
+        assert_eq!(weiter(zelle(1, 1), true, 2), None, "nach der letzten Zelle");
+        assert_eq!(weiter(zelle(1, 0), false, 2), Some(zelle(0, 1)));
+        assert_eq!(weiter(zelle(1, 1), false, 2), Some(zelle(1, 0)));
+        assert_eq!(weiter(zelle(0, 0), false, 2), None, "vor der ersten Zelle");
+    }
+
+    /// Die Zelle der Notiztabelle rechnet ueber den Kern: ein geaenderter Text
+    /// oder ein geaendertes Thema ergibt einen Umbau mit genau dieser Haelfte,
+    /// ein unveraenderter keinen, eine Zeile mit `## ` im Text und ein Umbruch
+    /// im Thema eine Abweisung ohne Umbau, deren Satz der Kern stellt.
+    #[test]
+    fn die_notizzelle_rechnet_ueber_den_kern_und_weist_eine_themenzeile_ab() {
+        use eintragsansicht::{NOTIZSPALTE, THEMENSPALTE, Zelle};
+        use krk_core::heimordner::eintraege::Abweisung as Eintragsabweisung;
+        let text = Zelle {
+            zeile: 0,
+            spalte: NOTIZSPALTE,
+        };
+        let thema = Zelle {
+            zeile: 0,
+            spalte: THEMENSPALTE,
+        };
+        let rechnen = |zelle, eingabe| zellenrechnung(Editorform::Notizen, NOTIZEN, zelle, eingabe);
+
+        let neu = rechnen(text, "Brot\n\nMilch\nKaese")
+            .expect("ein Text ohne Themenzeile")
+            .expect("der Text ist neu");
+        assert_eq!(
+            neu.text, "Vorspann\n## Einkauf\nBrot\n\nMilch\nKaese\n\n## Reise\n",
+            "der Text ist ersetzt, Thema und Trenner bleiben"
+        );
+        let neu = rechnen(thema, "Markt")
+            .expect("ein Thema ohne Umbruch")
+            .expect("das Thema ist neu");
+        assert_eq!(neu.text, "Vorspann\n## Markt\nBrot\n\nMilch\n\n## Reise\n");
+
+        assert_eq!(rechnen(text, "Brot\n\nMilch"), Ok(None), "unveraendert");
+        assert_eq!(rechnen(thema, "Einkauf"), Ok(None), "unveraendert");
+        assert_eq!(
+            rechnen(text, "Brot\n## x"),
+            Err(Eintragsabweisung::ThemenzeileImNotiztext)
+        );
+        assert_eq!(
+            rechnen(thema, "Ein\nkauf"),
+            Err(Eintragsabweisung::UmbruchImThema)
+        );
+        assert_eq!(
+            Editormeldung::EintragAbgewiesen(Eintragsabweisung::ThemenzeileImNotiztext).text(),
+            Eintragsabweisung::ThemenzeileImNotiztext.meldung()
+        );
+        assert_eq!(
+            zellenrechnung(Editorform::Text, NOTIZEN, text, "egal"),
+            Ok(None),
+            "ohne Tabelle rechnet keine Zelle"
+        );
+    }
+
+    /// Jede Handlung an der Notiztabelle rechnet ueber den Kern und antwortet
+    /// in Saetzen ueber Notizen; eine neue Notiz ist leer und gewaehlt, und
+    /// das Abhaken gibt es hier nicht.
+    #[test]
+    fn jede_notizhandlung_rechnet_ueber_den_kern_und_antwortet() {
+        use Eintragsantwort as A;
+        let umbau = |handlung, zeile| {
+            let (meldung, neustand) =
+                handlung_rechnen(NOTIZEN, Eintragsart::Notizen, handlung, zeile);
+            (
+                meldung,
+                neustand.map(|neustand| (neustand.text, neustand.auswahl)),
+            )
+        };
+        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Notizen, antwort);
+
+        assert_eq!(
+            umbau(Handlung::Hinzufuegen, None),
+            (
+                antwort(A::Hinzugefuegt),
+                Some((format!("{NOTIZEN}## \n"), Some(2)))
+            )
+        );
+        assert_eq!(
+            umbau(Handlung::Verschieben(Richtung::Runter), Some(0)),
+            (
+                antwort(A::Verschoben),
+                Some((
+                    "Vorspann\n## Reise\n## Einkauf\nBrot\n\nMilch\n\n".to_owned(),
+                    Some(1)
+                ))
+            )
+        );
+        assert_eq!(
+            umbau(Handlung::Verschieben(Richtung::Hoch), Some(0)),
+            (antwort(A::SchonOben), None)
+        );
+        assert_eq!(
+            umbau(Handlung::Loeschen, Some(0)),
+            (
+                antwort(A::Geloescht),
+                Some(("Vorspann\n## Reise\n".to_owned(), Some(0)))
+            )
+        );
+        assert_eq!(
+            umbau(Handlung::Bearbeiten, Some(1)),
+            (antwort(A::BearbeitungBegonnen), None)
+        );
+        assert_eq!(
+            umbau(Handlung::Abhaken, Some(0)),
+            (
+                Editormeldung::Eintrag(Eintragsart::Aufgaben, A::KeineTabelle),
+                None
+            ),
+            "eine Notiz hat kein Kaestchen"
+        );
+        assert_eq!(
+            umbau(Handlung::Loeschen, Some(2)),
+            (antwort(A::KeinEintragGewaehlt), None)
+        );
+        assert!(antwort(A::Geloescht).text().contains("Notiz"));
+        assert!(antwort(A::KeinEintragGewaehlt).text().contains("Notiz"));
+    }
+
+    /// Jede Handlung des Kerns an `notes.txt` ist ueber einen [`Umkehrpunkt`]
+    /// Byte fuer Byte zuruecknehmbar und wiederherstellbar — das ist, was
+    /// `umbau_anwenden` in den Verwalter legt, fuer Notizen wie in 3.2a fuer
+    /// Aufgaben. Es gibt keinen zweiten Stapel.
+    #[test]
+    fn jede_notizhandlung_ist_ueber_einen_umkehrpunkt_zuruecknehmbar() {
+        let neustaende = [
+            notizen::hinzufuegen(NOTIZEN, "Neu", "zwei\nZeilen").expect("zulaessig"),
+            notizen::aendern(NOTIZEN, 0, "Einkauf", "Brot\nButter")
+                .expect("zulaessig")
+                .expect("der Text ist neu"),
+            notizen::loeschen(NOTIZEN, 0).expect("die erste Notiz steht"),
+            notizen::verschieben(NOTIZEN, 1, Richtung::Hoch).expect("sie hat eine darueber"),
+        ];
+        for neustand in neustaende {
+            let punkt = Umkehrpunkt::zwischen(NOTIZEN, &neustand.text, NSRange::new(0, 0));
+            let zurueck = punkt.angewandt_auf(&neustand.text);
+            assert_eq!(zurueck, NOTIZEN, "zurueck aus {:?}", neustand.text);
+            let gegenweg = Umkehrpunkt::zwischen(&neustand.text, &zurueck, NSRange::new(0, 0));
+            assert_eq!(gegenweg.angewandt_auf(&zurueck), neustand.text);
+        }
+    }
+
+    /// C5: `esc` in einer geaenderten Notizzelle uebernimmt und meldet `cmd+z`;
+    /// in einer unveraenderten endet die Zelle ohne Umbau und ohne Meldung.
+    /// **Am Rumpf gelesen**, weil die Uebernahme ein Fenster braucht: die
+    /// Meldung haengt an der Marke, die allein das Festschreiben eines Umbaus
+    /// setzt und die `zelle_uebernehmen` vorher loescht; dass eine
+    /// unveraenderte Zelle keinen Umbau ergibt, faehrt
+    /// `die_notizzelle_rechnet_ueber_den_kern_und_weist_eine_themenzeile_ab`.
+    #[test]
+    fn esc_uebernimmt_eine_geaenderte_notizzelle_und_meldet_cmd_z() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let uebernehmen = rumpf(&quelle, "zelle_uebernehmen");
+        let loeschen = uebernehmen
+            .find(concat!("zelle_umgebaut.set(", "false)"))
+            .expect("die Marke wird vor dem Wechsel geloescht");
+        let wechsel = uebernehmen
+            .find(concat!("bearbeitung_", "beenden("))
+            .expect("der Wechsel steht im Rumpf");
+        assert!(loeschen < wechsel);
+        let festschreiben = rumpf(&quelle, "zelle_festschreiben");
+        let setzen = festschreiben
+            .find(concat!("zelle_umgebaut.set(", "true)"))
+            .expect("das Festschreiben setzt die Marke");
+        let umbau = festschreiben
+            .find(concat!("self.umbau_", "anwenden("))
+            .expect("und baut um");
+        assert!(setzen < umbau);
+        assert_eq!(
+            festschreiben
+                .matches(concat!("zelle_umgebaut.", "set("))
+                .count(),
+            1,
+            "allein ein Umbau setzt sie"
+        );
+        let abbrechen = rumpf(&quelle, "zelle_abbrechen");
+        assert!(abbrechen.contains(concat!("zelle_umgebaut.", "get()")));
+        assert!(abbrechen.contains(concat!("Eintragsantwort::MitEsc", "Uebernommen")));
+        let satz =
+            Editormeldung::Eintrag(Eintragsart::Notizen, Eintragsantwort::MitEscUebernommen).text();
+        assert!(
+            satz.contains("übernommen") && satz.contains("cmd+z"),
+            "{satz}"
+        );
     }
 }
