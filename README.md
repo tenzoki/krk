@@ -62,8 +62,14 @@ nicht von selbst an. Die eigene Datei bleibt, wie sie ist, und das ist kein
 Fehler: eine unveränderte Datei ist nicht beschädigt.
 
 **Wie die drei entstehen, ist nicht dasselbe, und daran hängt der Handgriff
-weiter unten.** `settings.toml` und `readers.toml` legt KRK beim ersten Start
-an und schreibt sie danach nie wieder. `keymap.toml` legt KRK überhaupt nicht
+weiter unten.** `readers.toml` legt KRK beim ersten Start an und schreibt sie
+danach nie wieder. `settings.toml` legt KRK ebenso beim ersten Start an und
+schreibt sie danach an genau einer Stelle: „Ort wählen…“ im Menü „Home“ ersetzt
+allein den Wert von `notizordner`, oder hängt ihn samt Kommentarzeile ans Ende,
+wenn der Schlüssel fehlt, und jedes andere Byte bleibt stehen. Eine beschädigte
+`settings.toml` und eine, die ein symbolischer Verweis ist, schreibt KRK gar
+nicht; im zweiten Fall nennt die Statuszeile die Zeile, die man von Hand in die
+Zieldatei einträgt. `keymap.toml` legt KRK überhaupt nicht
 an: sie entsteht erst, wenn der Nutzer seine Belegung in der F1-Ansicht ändert,
 und geschrieben wird sie dann von dieser Ansicht, beim Verlassen und nur, wenn
 sich etwas geändert hat. Wer seine Belegung nie geändert hat, hat die Datei
@@ -106,6 +112,11 @@ Schritten, für jede betroffene Datei einzeln:
 3. KRK starten. Die Datei entsteht neu aus der Auslieferungsfassung, samt allen
    Kommentaren darin.
 
+Eine neu entstandene `settings.toml` nennt wieder den Vorgabeort `~/krkhome`.
+Wer den Notizordner über „Ort wählen…“ oder von Hand anderswohin gelegt hat,
+holt sich die Zeile `notizordner = …` wie jede eigene Zeile aus der
+beiseitegelegten Datei zurück oder wählt den Ort noch einmal.
+
 **Bei `keymap.toml` greift dieser Handgriff nicht**, denn KRK legt sie beim
 Start nicht an: beiseitegelegt bleibt sie fort, und KRK arbeitet mit der
 einkompilierten Auslieferungsbelegung. Steht die Datei gar nicht erst da, ist
@@ -129,7 +140,7 @@ Datei", welche Einträge das sind.
 
 `secrets.txt` im Notizordner hält dessen Geheimnisse verschlüsselt. Wo der
 Notizordner liegt, steht in `settings.toml` unter `notizordner`, ab Werk
-`~/krkhome`; wie man die Geheimnisse in KRK bedient und wovor die PIN schützt,
+`~/krkhome`, gesetzt von Hand oder über „Ort wählen…“ im Menü „Home“; wie man die Geheimnisse in KRK bedient und wovor die PIN schützt,
 steht in `HowTo.md`.
 **Dieser Abschnitt beschreibt die Datei so, dass sich ihr Inhalt mit der PIN
 auch ohne KRK entschlüsseln lässt.** Die verbindliche Quelle ist der Modulkopf

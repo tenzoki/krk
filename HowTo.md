@@ -27,7 +27,7 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 | `keymap.toml` | die eigene Tastenbelegung | KRK und der Nutzer |
 | `bookmarks.toml` | die Lesezeichen | KRK |
 | `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten | KRK |
-| `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | nur der Nutzer |
+| `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | der Nutzer; KRK allein den Ort des Notizordners, über „Ort wählen…“ |
 | `readers.toml` | die Leseprofile der Vorschau | nur der Nutzer |
 | `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind | KRK |
 
@@ -45,10 +45,17 @@ findet im Ablageordner vielleicht noch `note-1.txt` und `note-2.txt`. KRK hat
 sie einmal nach `notes.txt` im Notizordner übernommen und liest und schreibt
 sie seither nicht mehr. Sie liegen ohne Leser da und dürfen bleiben oder gehen.
 
-**`settings.toml` und `readers.toml` legt KRK beim ersten Start an und schreibt
-sie danach nie wieder.** Weder überschreibend noch ergänzend, gleich was
-darinsteht. Für die Einstellungen ist das gewollt, denn ein Schreibpfad löschte
-die Kommentare, die den Sinn der Datei ausmachen; ein Feld, das die eigene Datei
+**`readers.toml` legt KRK beim ersten Start an und schreibt sie danach nie
+wieder.** Weder überschreibend noch ergänzend, gleich was darinsteht.
+
+**`settings.toml` legt KRK ebenso beim ersten Start an und schreibt sie danach
+an genau einer Stelle.** „Ort wählen…“ im Menü „Home“ ersetzt darin allein den
+Wert von `notizordner`; fehlt der Schlüssel, hängt es ihn mit einer
+Kommentarzeile ans Ende. Jede andere Zeile bleibt Zeichen für Zeichen stehen,
+jeder Kommentar eingeschlossen. Ist die Datei beschädigt oder ein symbolischer
+Verweis, schreibt KRK sie gar nicht (siehe „Der Ort des Notizordners“). Einen
+Schreibweg für die ganze Datei gibt es bewusst nicht, denn er löschte die
+Kommentare, die den Sinn der Datei ausmachen; ein Feld, das die eigene Datei
 nicht nennt, kommt ohnehin aus der Auslieferungsfassung.
 
 **Eine neue KRK-Fassung bringt Einträge mit, die in den eigenen Dateien
@@ -462,15 +469,20 @@ zu ihnen steht in `README.md` unter „Neuerungen an den eigenen Dateien
 `f2` oder `cmd+k` führt in den Notizordner, ab Werk `~/krkhome/`, gleich wo der
 Fokus gerade steht. Das aktive Dateifenster zeigt den Ordner, und der Fokus geht
 dorthin. Steht in diesem Dateifenster schon ein Tab auf den Notizordner, wird er
-sichtbar; sonst entsteht ein neuer. Wo der Notizordner liegt, stellt man in
-`settings.toml` ein; davon handelt „Der Ort des Notizordners“ weiter unten. Ein Blatt geht dabei nicht auf. Der Tab ist ein gewöhnlicher
-Tab der Dateiliste und steht nach einem Neustart wieder da.
+sichtbar; sonst entsteht ein neuer. Ein Blatt geht dabei nicht auf. Der Tab ist
+ein gewöhnlicher Tab der Dateiliste und steht nach einem Neustart wieder da. Wo
+der Notizordner liegt, wählt man über „Ort wählen…“ oder trägt es in
+`settings.toml` ein; davon handelt „Der Ort des Notizordners“ weiter unten.
 
 **Alle Befehle zum Notizordner stehen im Hauptmenü „Home“**, gleich hinter
-dem Anwendungsmenü: „Notizordner öffnen“, die sechs Befehle der Tabellen im
-Editor und „PIN ändern“. Unter „Anwendung“ und „Editor“ stehen sie nicht
-mehr. Tasten und Wirkung sind geblieben, nur der Platz in der Menüleiste hat
-sich geändert.
+dem Anwendungsmenü: „Notizordner öffnen“, „Ort wählen…“, die sechs Befehle der
+Tabellen im Editor und „PIN ändern“. Unter „Anwendung“ und „Editor“ stehen sie
+nicht mehr. Tasten und Wirkung der älteren Befehle sind geblieben, nur der Platz
+in der Menüleiste hat sich geändert. „Ort wählen…“ hat ab Werk keine Taste; wer
+eine will, weist sie in der Belegungsansicht (F1) zu. Mit einer eigenen
+`keymap.toml` steht der Befehl ohne Kürzel unter „Home“, hinter den Befehlen,
+die die eigene Datei dort nennt, und dafür ist an der eigenen Belegung nichts zu
+tun.
 
 **Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt`,
 `tasks.txt` und `secrets.txt`. Fehlt später eine der drei Dateien, legt der
@@ -556,7 +568,7 @@ unverändert im Ablageordner liegen.
 einen Ordner in einem synchronisierten Speicher** (siehe „Der Ort des
 Notizordners“). Der ältere, zweite Weg bleibt: `~/krkhome` als symbolischen
 Verweis anlegen. Nötig ist er allein für den Vorgabeort, denn einen anderen Ort
-nennt man in `settings.toml` gleich selbst:
+wählt man über „Ort wählen…“ oder nennt ihn in `settings.toml` gleich selbst:
 
 ```sh
 ln -s ~/Library/Mobile\ Documents/com~apple~CloudDocs/krkhome ~/krkhome
@@ -589,6 +601,10 @@ Werk:
 notizordner = "~/krkhome"
 ```
 
+Gesetzt wird der Wert auf zwei Wegen: über „Ort wählen…“ im Menü „Home“, das
+sofort gilt, oder von Hand in der Datei, was ab dem nächsten Start gilt. Beide
+Wege prüfen den Ort nach denselben Regeln.
+
 Der Wert beginnt mit `~/` für das eigene Benutzerverzeichnis oder mit `/`, etwa
 `"~/Dropbox/Notizen"` oder `"/Volumes/Daten/Notizen"`. Ein leerer oder
 relativer Wert, `~` allein, `~name/…` für ein fremdes Benutzerverzeichnis, ein
@@ -597,28 +613,109 @@ Wert, der kein Text ist, und ein Ort im Ablageordner von KRK gelten nicht.
 beim Start, `f2` nennt ihn noch einmal, legt nichts an und öffnet keinen Tab.
 Fehlt der Schlüssel in der eigenen Datei, gilt `~/krkhome`.
 
-**Ein Wechsel verschiebt nichts.** Die Dateien am alten Ort bleiben liegen, und
-was am neuen Ort fehlt, legt erst der nächste `f2` dort leer an; beim Start legt
-KRK nie etwas an. Ein Wechsel von Hand in `settings.toml` gilt ab dem nächsten
-Start, und die Statuszeile nennt dann einmal den neuen und den alten Ort. Die
-Regeln des Notizordners (die gerenderte Vorschau, die Tabellen im Editor, die
-PIN für `secrets.txt`, der Inhaltsfilter) gelten danach am neuen Ort und am
-alten nicht mehr. Eine `secrets.txt` am alten Ort ist dann eine gewöhnliche
-Datei; ihr Chiffrat öffnet der Editor nicht als Text.
+**„Ort wählen…“ öffnet einen Ordnerdialog am Hauptfenster**, der beim geltenden
+Ort beginnt und fragt „Wo soll der Notizordner liegen?“. Wählen lässt sich
+genau ein Ordner und keine Datei, übernommen wird er mit „Wählen“. Ein
+Finder-Alias auf einen Ordner führt zu diesem Ordner, und einen neuen Ordner
+legt man im Dialog selbst an. `esc` oder „Abbrechen“ schließt den Dialog, und
+nichts ändert sich.
+
+**Der gewählte Ort gilt sofort.** KRK trägt ihn als `notizordner` in
+`settings.toml` ein: einen Ordner im eigenen Benutzerverzeichnis in der Form
+`~/…`, jeden anderen mit vollem Pfad. Die Statuszeile nennt beide Orte:
+
+> Der Notizordner ist jetzt „~/Dropbox/Notizen“; am alten Ort „~/krkhome“ bleibt
+> alles liegen, und F2 führt zum neuen
+
+Jeder Tab auf dem alten oder dem neuen Ort liest seinen Ordner neu, auch ein
+verdeckter. Die Vorschau zeigt `notes.txt` und `tasks.txt` ohne neue Auswahl so,
+wie es zum neuen Ort passt: dort gerendert, am alten Ort als Text. **Angelegt
+wird dabei nichts, und kein Tab geht auf.** Was am neuen Ort fehlt, legt erst
+der nächste `f2` an. Ist der gewählte Ordner schon der Notizordner, bleibt alles,
+wie es ist:
+
+> „~/krkhome“ ist schon der Notizordner; settings.toml bleibt, wie sie ist
+
+Nannte `settings.toml` seit dem Start von Hand einen anderen Ort, und man wählt
+den geltenden, schreibt KRK ihn zurück und meldet: „settings.toml nannte seit
+dem Start einen anderen Ort; jetzt steht dort wieder „~/krkhome“, und der
+Notizordner bleibt, wo er ist“.
+
+**Solange der Editor eine Datei des Notizordners hält, wählt KRK keinen anderen
+Ort.** Gemeint sind `notes.txt`, `tasks.txt` und `secrets.txt`, am geltenden
+Ort wie am gewählten; das zweite trifft etwa eine `notes.txt`, die am gewählten
+Ort noch als gewöhnlicher Text offen ist. Die Statuszeile nennt die Datei:
+
+> Zuerst notes.txt im Editor schließen; solange der Editor eine Datei des
+> Notizordners hält, wählt KRK keinen anderen Ort
+
+Ein gewählter Ordner, der nach den Regeln oben nicht gilt, wird mit derselben
+Meldung abgewiesen wie ein Wert von Hand. Für den Ablageordner von KRK prüft
+„Ort wählen…“ zusätzlich, ob der Ordner erst über einen Verweis dorthin führt.
+In jedem dieser Fälle bleibt der geltende Ort.
+
+**In eine beschädigte `settings.toml` schreibt KRK nicht**, und der Ort bleibt,
+wie er ist. Die Statuszeile nennt den Befund:
+
+> settings.toml ist zuerst von Hand zu berichtigen, KRK schreibt sie so nicht: …
+
+**Ist `settings.toml` ein symbolischer Verweis**, etwa weil sie selbst in einem
+synchronisierten Speicher liegt, ersetzt KRK den Verweis nicht durch eine Datei.
+Die Statuszeile gibt stattdessen die Zeile mit, die man von Hand in die
+Zieldatei einträgt:
+
+> settings.toml ist ein symbolischer Verweis, und KRK ersetzt ihn nicht durch
+> eine Datei; der Ort bleibt, wie er ist. Von Hand in die Zieldatei eintragen:
+> notizordner = "~/Dropbox/Notizen"
+
+Die eingetragene Zeile gilt dann wie jeder Wechsel von Hand ab dem nächsten
+Start. Ist die Datei nicht lesbar oder lässt sie sich nicht schreiben, sagt die
+Statuszeile das ebenso, und die Datei bleibt, wie sie war. Fehlt `settings.toml`
+ganz, legt „Ort wählen…“ sie aus der Auslieferungsfassung an, mit dem gewählten
+Ort.
+
+**Ein Wechsel verschiebt nichts**, gleich auf welchem Weg er kommt. Die Dateien
+am alten Ort bleiben liegen, und was am neuen Ort fehlt, legt erst der nächste
+`f2` dort leer an; beim Start legt KRK nie etwas an. Ein Wechsel von Hand in
+`settings.toml` gilt ab dem nächsten Start, und die Statuszeile nennt dann einmal
+den neuen und den alten Ort. Die Regeln des Notizordners (die gerenderte
+Vorschau, die Tabellen im Editor, die PIN für `secrets.txt`, der Inhaltsfilter)
+gelten danach am neuen Ort und am alten nicht mehr. Eine `secrets.txt` am alten
+Ort ist dann eine gewöhnliche Datei; ihr Chiffrat öffnet der Editor nicht als
+Text.
+
+**Zwei Grenzen hat der sofortige Wechsel.** Eine zweite laufende KRK-Instanz,
+etwa aus „Weitere Instanz starten“, kennt den neuen Ort erst nach ihrem
+Neustart. Bis dahin behandelt sie den alten Ort als Notizordner, **und ihr `f2`
+legt am alten Ort an, was dort fehlt.** Außerdem kann ein Textprogramm, das
+`settings.toml` offen hält, den geschriebenen Wert beim eigenen Sichern wieder
+überschreiben; ab dem nächsten Start gilt dann dessen Stand. Wer die Datei von
+Hand bearbeitet, schließt sie deshalb vor „Ort wählen…“ oder öffnet sie danach
+neu.
 
 **Ist `settings.toml` beschädigt oder nicht lesbar, gilt kein Notizordner.**
 Das gilt auch, wenn der Fehler an einer ganz anderen Zeile steht, etwa ein
 Tippfehler an `terminal`: KRK weiß dann nicht, ob ein anderer Ort eingestellt
 ist, und legt lieber nichts an als am falschen Ort. Die Statuszeile nennt den
-Schaden beim Start, `f2` nennt ihn noch einmal samt dem Weg hinaus:
-`settings.toml` berichtigen und KRK neu starten. Dasselbe gilt, wenn KRK die
-Datei beim Start gar nicht lesen konnte, weil sich der Ablageordner nicht öffnen
-oder seine Sperre nicht nehmen ließ; dann hilft der Neustart allein. Fehlte die
-Datei nur und ließ sich nicht anlegen, gilt `~/krkhome`, denn dann hat niemand
-einen anderen Ort eingestellt. **`secrets.txt` am zuletzt geltenden Ort bleibt
-in dieser Lage geschützt**: Vorschau, Editor und Inhaltsfilter behandeln den
+Schaden beim Start, `f2` nennt ihn noch einmal samt zwei Wegen hinaus:
+`settings.toml` berichtigen und KRK neu starten, oder nach dem Berichtigen den
+Ort über „Home“ → „Ort wählen…“ setzen. Der zweite Weg braucht keinen Neustart.
+„Ort wählen…“ liest die Datei beim Schreiben neu; ist sie berichtigt, gilt der
+gewählte Ort sofort, und ist sie es nicht, nennt die Statuszeile den Befund.
+Konnte KRK die Datei beim Start gar nicht lesen, weil sich der Ablageordner
+nicht öffnen oder seine Sperre nicht nehmen ließ, gilt ebenfalls kein
+Notizordner, und die Meldung nennt den Neustart als Weg. Fehlte die Datei nur
+und ließ sich nicht anlegen, gilt `~/krkhome`, denn dann hat niemand einen
+anderen Ort eingestellt. **`secrets.txt` am zuletzt geltenden Ort bleibt in
+dieser Lage geschützt**: Vorschau, Editor und Inhaltsfilter behandeln den
 Ordner, der beim letzten Start galt (ohne einen solchen `~/krkhome`), weiter als
 Notizordner, nur `f2` legt dort nichts an.
+
+**Wer `settings.toml` beiseitelegt**, wie es „Wo KRK seine eigenen Dateien
+ablegt“ für die Neuerungen einer neuen Fassung beschreibt, bekommt eine neue
+Datei mit `~/krkhome`. Die Zeile `notizordner = …` holt man sich wie jede
+eigene Zeile aus der beiseitegelegten zurück, oder man wählt den Ort noch
+einmal.
 
 **Eine ältere KRK-Fassung kennt den Schlüssel nicht.** Sie weist eine
 `settings.toml`, die ihn führt, als beschädigt ab, lässt die Datei liegen und

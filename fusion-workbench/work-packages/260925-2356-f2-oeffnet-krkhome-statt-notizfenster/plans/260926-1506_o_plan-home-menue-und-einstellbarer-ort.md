@@ -358,7 +358,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. Z
     - Closes (am Baum): H1.1 vollständig, H3.1 im Teil der Belegung, H3.13 im Teil der Auslieferungsfassung.
     - Dependencies: 3.4
 
-14. **3.6 Anleitung und README für Stufe 3**
+14. [DONE] **3.6 Anleitung und README für Stufe 3**
     - Executor: `code-implementer`
     - Files: `HowTo.md`, `README.md`, `CLAUDE.md` (allein Aussagen, die Stufe 3 falsch gemacht hat)
     - Changes: `HowTo.md` beschreibt „Ort wählen…“ im Menü „Home“: es verschiebt nichts und legt nichts an, F2 führt danach zum neuen Ort; es verweigert sich, solange der Editor eine Datei des geltenden oder des gewählten Orts hält; es schreibt nicht in eine beschädigte `settings.toml` und nicht in eine, die ein symbolischer Verweis ist, und sagt dann, welche Zeile von Hand einzutragen ist; es ist der Weg aus einer beschädigten Datei, sobald sie berichtigt ist, ohne Neustart. Eine zweite laufende KRK-Instanz kennt den neuen Ort erst nach ihrem Neustart, **und ihr F2 legt bis dahin am alten Ort an, was dort fehlt**. Ein Textprogramm, das `settings.toml` offen hält, kann den geschriebenen Wert beim eigenen Sichern wieder überschreiben. Die Aussage „KRK schreibt `settings.toml` nie“ zieht nach, wo sie steht. `README.md` ebenso, wo es die Schreibwege der Ablage nennt. `CLAUDE.md`: nur eine Aussage, die jetzt falsch ist.
