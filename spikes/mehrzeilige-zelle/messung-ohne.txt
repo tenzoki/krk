@@ -1,0 +1,16 @@
+Durchgang ohne
+Version 15.7.9 (Build 24G830)
+Anwendung aktiv: ja, Fenster ist Schlüsselfenster: ja
+Vergleichszeile mit drei Zeilen, nie bearbeitet: Zeilenhöhe 52.0
+Ausgang:
+  nach editColumn Zeilenhöhe   20.0  Feld   16.0  intrinsisch   16.0  Feldeditor   16.0  Textzeilen 1  Ersthelfer NSTextView  Feldeditor-Ersthelfer ja
+Zeile 1:
+  ohne Zutun Zeilenhöhe   20.0  Feld   16.0  intrinsisch   16.0  Feldeditor   16.0  Textzeilen 1  Ersthelfer NSTextView  Feldeditor-Ersthelfer ja
+  -> ohne Zutun gewachsen: nein
+Zeile 2:
+  ohne Zutun Zeilenhöhe   20.0  Feld   16.0  intrinsisch   16.0  Feldeditor   32.0  Textzeilen 2  Ersthelfer NSTextView  Feldeditor-Ersthelfer ja
+  -> ohne Zutun gewachsen: nein
+Zeile 3:
+  ohne Zutun Zeilenhöhe   20.0  Feld   16.0  intrinsisch   16.0  Feldeditor   48.0  Textzeilen 3  Ersthelfer NSTextView  Feldeditor-Ersthelfer ja
+  -> ohne Zutun gewachsen: nein
+Anschläge gesehen 37, davon am Schlüsselfenster vorbei zugestellt 0

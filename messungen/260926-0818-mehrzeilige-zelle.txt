@@ -1,0 +1,149 @@
+KRK — Waechst eine mehrzeilige Zelle beim Tippen mit?
+=====================================================
+
+Wozu dieser Lauf
+----------------
+Schritt 4.2 des Plans
+`fusion-workbench/work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/plans/260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`.
+Die Notiztabelle aus 4.3 braucht eine Zeile, die waehrend des Tippens im
+Feldeditor mit dem Notiztext waechst. Im Baum gibt es dafuer kein Vorbild:
+`usesAutomaticRowHeights` steht in `appkit/tabelle.rs` nur im
+Untergrenzen-Abschnitt, und die Aufgabentabelle (`appkit/eintragsansicht.rs`)
+legt ihre Zellen mit Rahmen und fester Zeilenhoehe an. Der Plan verlangt drei
+Antworten je getippter Zeile: die Hoehe der Zeile, ob sie ohne Zutun waechst,
+ob sie nach `noteHeightOfRowsWithIndexesChanged:` waechst, und welcher
+Ersthelfer danach steht.
+
+Er entscheidet nichts ueber KRK selbst; er sagt 4.3, welche Form traegt.
+
+Bedingungen
+-----------
+Zeitpunkt             2026-09-26, 08:00 bis 08:18 Ortszeit
+hw.model              MacBookPro15,1 (das Referenzgeraet der zehn Zusagen)
+machdep.cpu           Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
+sw_vers               macOS 15.7.9 24G830
+Werkzeug              Wegwerf-Programm `spikes/mehrzeilige-zelle/zelle.swift`,
+                      Apple Swift 6.2.4, `swiftc` ohne Optimierungsschalter;
+                      Aufruf `spikes/mehrzeilige-zelle/starten.sh alle`
+Vordergrund           Das Programm laeuft als `.regular`, ruft
+                      `activate(ignoringOtherApps:)` und kam in jedem Durchgang
+                      selbst nach vorn: "Anwendung aktiv: ja, Fenster ist
+                      Schluesselfenster: ja". Keine Nutzerarbeit noetig.
+Tastenweg             37 Anschlaege je Durchgang ueber `NSApp.postEvent(_:atStart:)`
+                      in die eigene Ereignisschlange, gesehen von einem lokalen
+                      Abgriff auf `keyDown`; 0 davon am Schluesselfenster vorbei
+                      zugestellt. Kein osascript.
+Einzelbelege          `spikes/mehrzeilige-zelle/messung-<durchgang>.txt`, je
+                      Durchgang eine Datei, vom Programm selbst geschrieben.
+
+Aufbau
+------
+Eine `NSTableView` mit zwei Spalten (Thema 140 pt, Notiz 300 pt),
+`usesAutomaticRowHeights = true`. Je Zelle eine `NSTableCellView` mit einem
+`NSTextField(wrappingLabelWithString:)`, editierbar, `usesSingleLineMode =
+false`, `maximumNumberOfLines = 0`, Zeilenumbruch nach Woertern,
+`preferredMaxLayoutWidth` = Spaltenbreite minus Rand, per Auto Layout an alle
+vier Kanten der Zelle gebunden. Der Delegierte bildet `insertNewline:` auf
+`insertNewlineIgnoringFieldEditor:` ab. Die Bearbeitung beginnt ueber
+`editColumn:row:withEvent:select:`, derselbe Weg wie in `eintragsansicht.rs`.
+Getippt wird in die Notizzelle der ersten Zeile: "erste Zeile", dann
+Umbruch und "zweite Zeile", dann Umbruch und "dritte Zeile"; gemessen wird
+0,4 s nach jeder Zeile. Die zweite Zeile der Tabelle traegt drei Textzeilen
+und wird nie bearbeitet; sie ist die Vergleichszeile.
+
+Die Durchgaenge
+---------------
+ohne weich          nichts; das Feld behaelt die Vorgabe seines vertikalen
+                    Stauchwiderstands
+ohne                nichts; ab hier traegt das Feld vertikal den
+                    Stauchwiderstand `.required`
+note                nach jeder Zeile `noteHeightOfRowsWithIndexesChanged:`
+intrinsisch         davor `invalidateIntrinsicContentSize` am Feld
+jeanschlag          beides aus `controlTextDidChange:`, also je Anschlag
+feldeditormass      wie jeanschlag, das Feld meldet waehrend der Bearbeitung
+                    als Eigenhoehe die belegte Hoehe des Feldeditortexts
+                    (Unterklasse, `intrinsicContentSize` ueberschrieben:
+                    `layoutManager.usedRect(for: textContainer)` plus
+                    zweimal `textContainerInset.height`)
+feldeditorohnenote  wie feldeditormass, aber ohne `noteHeight…`
+
+Ergebnis
+--------
+Zeilenhoehe in pt nach dem Tippen der jeweiligen Zeile; Ausgang 20,0.
+"Feldeditor" ist die Rahmenhoehe des Feldeditors, "Ersthelfer" ob der
+Feldeditor danach noch Ersthelfer des Fensters ist.
+
+Durchgang            Vergleich  Z.1   Z.2   Z.3   Feldeditor Z.1/2/3  Ersthelfer
+ohne weich            20,0      20,0  20,0  20,0  16 / 32 / 48        ja, ja, ja
+ohne                  52,0      20,0  20,0  20,0  16 / 32 / 48        ja, ja, ja
+note (davor/danach)   52,0      20/20 20/20 20/20 16 / 32 / 48        ja, ja, ja
+intrinsisch (d./d.)   52,0      20/20 20/20 20/20 16 / 32 / 48        ja, ja, ja
+jeanschlag            52,0      20,0  20,0  20,0  16 / 32 / 48        ja, ja, ja
+feldeditormass        52,0      20,0  36,0  52,0  16 / 32 / 48        ja, ja, ja
+feldeditorohnenote    52,0      20,0  36,0  52,0  16 / 32 / 48        ja, ja, ja
+
+Die drei Fragen des Plans
+-------------------------
+1. Waechst die Zeile ohne Zutun?  Nein. In keinem Durchgang ohne Zutun.
+2. Waechst sie nach `noteHeightOfRowsWithIndexesChanged:`?  Nein, auch nicht
+   mit `invalidateIntrinsicContentSize` davor, auch nicht je Anschlag. Der
+   Grund ist gemessen: das `NSTextField` meldet waehrend der Bearbeitung
+   unveraendert die Eigenhoehe seines alten Werts (16,0 pt), waehrend der
+   Feldeditor selbst auf 32 und 48 pt waechst und ueber den Zeilenrand
+   hinaus abgeschnitten wird. Nachmessen misst also richtig, aber an einer
+   Groesse, die sich nicht aendert.
+3. Welcher Ersthelfer steht danach?  In jedem Durchgang und nach jeder
+   Zeile der Feldeditor (`NSTextView`, identisch mit `currentEditor()` des
+   Feldes). Kein Nachmessen hat ihm den Rang genommen, auch nicht das
+   Wachsen der Zeile in `feldeditormass`; alle 37 Anschlaege kamen im Text
+   an.
+
+Was traegt
+----------
+Die Zeile waechst mit, wenn zwei Dinge zusammenkommen, und nur dann:
+
+a) Das Feld traegt vertikal den Stauchwiderstand `.required`. Ohne ihn
+   gewinnt die Hoehenbindung, die die Tabelle an jede Zeilenansicht legt
+   (`NSTableRowView_Encapsulated_Layout_Height`, Rang 500), und nicht einmal
+   die nie bearbeitete dreizeilige Vergleichszeile waechst: 20,0 pt statt
+   52,0 pt, bei einer `fittingSize` der Zelle von 52 pt (Durchgang
+   `ohne weich`).
+b) Das Feld meldet waehrend der Bearbeitung die Hoehe des Feldeditortexts
+   als Eigenhoehe, und `controlTextDidChange:` macht diese Eigenhoehe je
+   Anschlag ungueltig. `noteHeightOfRowsWithIndexesChanged:` ist dafuer
+   nicht noetig: `feldeditorohnenote` waechst genau wie `feldeditormass`.
+
+Welcher Zweig von 4.3
+---------------------
+Die Haltestelle aus 4.2 ist in ihrem Wortlaut beruehrt: mit
+`noteHeightOfRowsWithIndexesChanged:` allein waechst die Zeile nicht. In ihrem
+Zweck ist sie es nicht: eine Form, die innerhalb des Spec bleibt ("Tabelle
+mit den Spalten Thema und Notiz"), ist gemessen und traegt, und der
+Feldeditor behaelt den Ersthelferrang. Die Ausweichform (Themenliste mit
+Textflaeche daneben) ist damit nicht noetig.
+
+Das Nachmessen, das 4.3 verlangt, ist deshalb:
+- das Notizfeld als Unterklasse von `NSTextField` (Vorbild im Baum:
+  `define_class!` mit `super = NSTextField` in `appkit/tabelle.rs`), die
+  `intrinsicContentSize` ueberschreibt und waehrend einer Bearbeitung die
+  belegte Hoehe des Feldeditortexts meldet;
+- in `controlTextDidChange:` je Anschlag `invalidateIntrinsicContentSize`
+  an diesem Feld;
+- vertikaler Stauchwiderstand `.required` am Feld, Auto-Layout-Bindungen an
+  die Zelle statt Rahmen und fester `ZEILENHOEHE`;
+- `noteHeightOfRowsWithIndexesChanged:` ist nicht erforderlich.
+
+Ob der beruehrte Wortlaut der Haltestelle die Stufe trotzdem anhaelt, ist
+eine Frage an den, der 4.3 freigibt, und keine dieses Laufs.
+
+Was die Messung nicht deckt
+---------------------------
+- Das Schrumpfen einer Zeile beim Loeschen von Umbruechen ist nicht
+  gemessen, ebenso wenig die Hoehe nach dem Ende der Bearbeitung.
+- Umbruch durch Ueberlaenge einer Zeile (statt durch `return`) ist nicht
+  gemessen; die belegte Hoehe des Layoutverwalters schliesst ihn nach
+  Bauart ein, belegt ist das hier nicht.
+- Gemessen ist an einer Tabelle mit zwei Zeilen, ohne Rollen, in einem
+  Swift-Programm und nicht ueber `objc2`; die gemessene Groesse ist ein
+  Verhalten von AppKit und haengt nicht an der Sprache des Aufrufers.
+- Eine Systemfassung, macOS 15.7.9.
