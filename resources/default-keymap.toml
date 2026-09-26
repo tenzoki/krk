@@ -1254,12 +1254,22 @@ tasten = ["shift+cmd+z"]
 gehalten_von = "menue"
 # Das Gegenstueck, ebenfalls der Mac-Standard.
 
-# ── Der Notizzettel ──────────────────────────────────────────────────────────
-# C1 der Notizzettel-Runde. Der Block steht zwischen der Belegungsansicht und
-# der weiteren Instanz, also bei der Anwendung als ganze:
-# `bereich_des_kommandos` in `crates/krk-ui/src/belegungsmodell.rs` fuehrt
-# "notizzettel" unter `Funktionsbereich::Anwendung`, und die Reihenfolge der
-# Bloecke ist die Reihenfolge im Menue.
+# ── Der Notizordner ──────────────────────────────────────────────────────────
+# C1 der krkhome-Runde. Der Befehl oeffnet im aktiven Dateifenster einen Tab
+# auf ~/krkhome/ oder macht einen vorhandenen sichtbar; das Notizblatt der
+# Runde 9, das hier bis dahin stand, ist gefallen. Der Block steht zwischen
+# der Belegungsansicht und der weiteren Instanz, also bei der Anwendung als
+# ganze: `bereich_des_kommandos` in `crates/krk-ui/src/belegungsmodell.rs`
+# fuehrt `Kommando::Notizordner` unter `Funktionsbereich::Anwendung`, und die
+# Reihenfolge der Bloecke ist die Reihenfolge im Menue.
+#
+# **Die Kennung "notizzettel" stammt aus der Runde 9 und bleibt aus einem
+# Grund:** eine vollstaendige eigene keymap.toml des Nutzers fuehrt sie, und
+# `Belegung::bauen` weist eine unbekannte Kennung ab und setzt dann die ganze
+# Auslieferungsbelegung ein. Mit der alten Kennung laedt die eigene Belegung
+# weiter; Name und Wirkung aendern sich, die Kennung nicht. Der Name im
+# Hauptmenue kommt dabei aus der Nutzerdatei und bleibt dort der alte, bis der
+# Nutzer seine Belegung zuruecksetzt.
 #
 # **Zwei Kombinationen in einer Zeile, und das ist keine Doppelung.** F2 kommt
 # aus der Norton-Reihe, in der die Funktionstasten die Befehle tragen; cmd+k
@@ -1276,7 +1286,7 @@ gehalten_von = "menue"
 
 [[funktion]]
 id = "notizzettel"
-name = "Notizzettel anzeigen"
+name = "Notizordner öffnen"
 tasten = ["f2", "cmd+k"]
 
 # ── Die Neuerungen auf Verlangen ─────────────────────────────────────────────
@@ -1285,7 +1295,7 @@ tasten = ["f2", "cmd+k"]
 # Auslieferungsfassung zurueckliegt, einmal je Fassung. Dieser Eintrag ist der
 # Weg zum Einzelnen auf Verlangen, und nach der Startmeldung der einzige.
 #
-# Der Block steht zwischen dem Notizzettel und der weiteren Instanz, also bei
+# Der Block steht zwischen dem Notizordner und der weiteren Instanz, also bei
 # der Anwendung als ganze: `bereich_des_kommandos` in
 # `crates/krk-ui/src/belegungsmodell.rs` fuehrt "neuerungen_zeigen" unter
 # `Funktionsbereich::Anwendung`, und die Reihenfolge der Bloecke ist die

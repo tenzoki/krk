@@ -252,7 +252,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
    - Closes (am Baum): C3.6.
    - Dependencies: 1.3a
 
-5. **1.4 Die Belegung nennt den neuen Befehl**
+5. [DONE] **1.4 Die Belegung nennt den neuen Befehl**
    - Executor: `data-implementer`
    - Files: `resources/default-keymap.toml`
    - Changes: der Eintrag `id = "notizzettel"` bekommt `name = "Notizordner öffnen"`; `tasten = ["f2", "cmd+k"]` bleibt. Der Kommentar über dem Block sagt, dass die Kennung aus der Runde 9 stammt und aus einem Grund bleibt, nämlich damit eine vollständige eigene Belegung weiter lädt (`Belegung::bauen` weist eine unbekannte Kennung ab und setzt die ganze Auslieferungsbelegung ein). Der Kommentar des folgenden Blocks, der „zwischen dem Notizzettel und der weiteren Instanz“ steht, zieht nach. Kopfzahlen bleiben.
