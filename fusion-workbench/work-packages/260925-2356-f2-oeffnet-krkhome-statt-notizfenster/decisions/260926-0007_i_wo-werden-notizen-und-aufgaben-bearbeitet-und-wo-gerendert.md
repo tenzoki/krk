@@ -35,3 +35,6 @@ Wir empfehlen Möglichkeit 1. Sie ordnet das Neue in die bestehende Teilung ein,
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0017-zweitlesung-spec-f2-krkhome.md — Möglichkeit 1, jede Tabellenhandlung wird als Textänderung am Editorstand ausgeführt, damit Sichern, Rückfrage und Rückgängig greifen; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: e6cc96b — Tabellenhandlungen als Textänderung am Editorstand über den Umbauweg; Vorschau liest nur (e98fd5d)

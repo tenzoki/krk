@@ -39,3 +39,6 @@ Wir empfehlen Möglichkeit 3. Sie hält jede Sicherung so schnell wie bei jeder 
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0107-zweitlesung-plan-f2-krkhome.md — Möglichkeit 3, neues Salz nur beim Festlegen oder Ändern der PIN, neue Nonce je Sicherung, der abgeleitete Schlüssel wird gehalten, solange die Datei offen ist; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 916412d — neues Salz allein mit neuer_schluessel, neue Nonce je Sicherung, gehaltener Schlüssel; PIN ändern in d3a9983

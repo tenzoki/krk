@@ -41,3 +41,6 @@ Wir empfehlen Möglichkeit 1. Sie hält, was das Bedrohungsmodell verlangt, und 
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0107-zweitlesung-plan-f2-krkhome.md — Möglichkeit 1, die Zusage gilt im erkannten Ordner über die Ausnahme; die tiefe Suche aus einem übergeordneten Ordner liest weiter das Chiffrat, was unter dem Bedrohungsmodell des Nutzers hinnehmbar ist; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 6f50611 — im erkannten Ordner kein Inhaltsauftrag für .secrets.txt, entschieden am Namen im Zweig der Verstecke

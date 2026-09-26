@@ -30,3 +30,6 @@ Möglichkeit 1: das Kopieren ist eine bewusste Handlung des Nutzers und kein ver
 
 ---
 Answered: dieser Datensatz `## Recommendation` — Möglichkeit 1, Kopieren bleibt erlaubt, die Anleitung nennt das Risiko; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: ff34370 — Kopieren bleibt erlaubt, HowTo.md nennt das Risiko über pbpaste

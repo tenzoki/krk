@@ -40,3 +40,6 @@ Wir empfehlen Möglichkeit 3, vorbehaltlich dessen, wofür der Nutzer die Datei 
 
 ---
 Answered: 260926-0017-zweitlesung-spec-f2-krkhome.md — Möglichkeit 1, die vierstellige PIN, XChaCha20-Poly1305 mit Argon2id, binäre Datei mit versioniertem Kopf, eine Meldung für falsche PIN oder veränderte Datei; Bedrohungsmodell des Nutzers: allein das versehentliche Lesen durch Agenten, Werkzeuge und Indexer, ein Angriff mit einer Kopie der Datei liegt außerhalb; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 916412d — vierstellige PIN, XChaCha20-Poly1305 mit Argon2id, versionierter Kopf; Laden und Sichern in 9e40d5c

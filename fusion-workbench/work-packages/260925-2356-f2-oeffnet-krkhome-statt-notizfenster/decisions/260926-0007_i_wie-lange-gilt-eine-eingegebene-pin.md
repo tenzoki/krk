@@ -36,3 +36,6 @@ Wir empfehlen Möglichkeit 1 zusammen mit (a). Möglichkeit 1 hält die Regel an
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0017-zweitlesung-spec-f2-krkhome.md — Möglichkeit 1 mit dem Befehl PIN ändern; `.secrets.txt` wird nicht in der Sitzung gemerkt; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 9e40d5c — Schlüssel und PIN gelten, solange die Datei offen ist; PIN ändern in d3a9983; nie in der Sitzung (8d6e0d0)

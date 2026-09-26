@@ -36,3 +36,6 @@ Wir empfehlen Möglichkeit 1. Der Weg, auf dem der Nutzer den Ordner erreicht, i
 
 ---
 Answered: dieser Datensatz `## Recommendation` — Möglichkeit 1, zwei Pfadformen als Text verglichen; der Wortlaut von C2.6 im Spec wird nachgezogen; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 87d5ff6 — zwei Pfadformen als Text verglichen, ohne Systemaufruf; ergänzt durch ffd0d7f für .secrets.txt

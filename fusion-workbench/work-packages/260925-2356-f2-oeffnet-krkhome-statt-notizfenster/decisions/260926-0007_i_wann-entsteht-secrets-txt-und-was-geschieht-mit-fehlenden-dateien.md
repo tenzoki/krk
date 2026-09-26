@@ -35,3 +35,6 @@ Wir empfehlen Möglichkeit 2 mit einer Einschränkung: bricht der Nutzer die Abf
 
 ---
 Answered: 260926-0017-zweitlesung-spec-f2-krkhome.md — keine der drei Möglichkeiten: F2 legt `.secrets.txt` leer mit null Bytes an und fragt nie nach einer PIN, das erste Öffnen legt die PIN fest; fehlende Dateien legt F2 mit `create_new` neu an und überschreibt nie; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 6f50611 — .secrets.txt entsteht mit null Bytes ohne PIN, fehlende Dateien mit create_new (be0e5b2)

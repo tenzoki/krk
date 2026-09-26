@@ -32,3 +32,6 @@ Möglichkeit 1 und die Tasten wie im Plan.
 
 ---
 Answered: dieser Datensatz `## Recommendation` — Möglichkeit 1, `return` schreibt einen Zeilenumbruch; die sieben Tasten wie im Plan, `shift+cmd+delete` trotz der Finder-Bedeutung; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: d356ca6 — return schreibt im Notiztext einen Umbruch; die Tasten in 970abb0 und d3a9983

@@ -34,3 +34,6 @@ Wir empfehlen Möglichkeit 1, mit der Ausnahme als benannter Eigenschaft des Ord
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0017-zweitlesung-spec-f2-krkhome.md — Möglichkeit 1, als Eigenschaft des Ordners beim Lesen gesetzt, ohne das Kennzeichen `versteckt` umzustellen; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 6f50611 — Ausnahme als Ordnereigenschaft im Zweig der versteckten Einträge

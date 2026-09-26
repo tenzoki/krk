@@ -34,3 +34,6 @@ Wir empfehlen Möglichkeit 3. Die Directive nennt den Ort ausdrücklich, und jed
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0017-zweitlesung-spec-f2-krkhome.md — Möglichkeit 3, fest `~/krkhome/`, Einstellbarkeit als spätere Arbeit; der Ordner wird auch über einen symbolischen Verweis erkannt; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 87d5ff6 — Heimordner fest auf ~/krkhome, Verweis erkannt; F2 in 4c2ca49

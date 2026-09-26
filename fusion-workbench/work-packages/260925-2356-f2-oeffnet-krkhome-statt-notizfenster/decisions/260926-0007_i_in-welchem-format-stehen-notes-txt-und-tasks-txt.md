@@ -35,3 +35,6 @@ Wir empfehlen Möglichkeit 1. Sie ist die einzige, unter der Stufe 1 ohne Sonder
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0017-zweitlesung-spec-f2-krkhome.md — Möglichkeit 1, Markdown-nahe Textform, mit den vier Regeln der Zweitlesung (fremde Zeile wandert mit der Aufgabe darüber, Notizzeile mit `## ` wird abgewiesen, Aufgaben großzügig gelesen und nur berührte Zeilen neu geschrieben, `## ` begründet); ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: 87d5ff6 — eintraege.rs liest und schreibt notes.txt und tasks.txt in der Markdown-nahen Form, 3687a16 und 764ebd3 die Handlungen

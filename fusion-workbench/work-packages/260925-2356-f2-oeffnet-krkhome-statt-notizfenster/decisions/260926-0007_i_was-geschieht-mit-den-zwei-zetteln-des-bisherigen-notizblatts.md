@@ -35,3 +35,6 @@ Wir empfehlen Möglichkeit 1. Sie ist die einzige, bei der der Nutzer nichts tun
 
 ---
 Answered: dieser Datensatz `## Options` und 260926-0017-zweitlesung-spec-f2-krkhome.md — Möglichkeit 1, einmalige Übernahme, ausgelöst allein durch das Anlegen des Ordners und nicht der Datei; das alte Sitzungsfeld darf entfallen; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: be0e5b2 — einmalige Übernahme beim Anlegen des Ordners, alte Dateien unangetastet

@@ -37,3 +37,6 @@ Wir empfehlen Möglichkeit 2. Sie hält den Constraint dort, wo er bedroht ist, 
 
 ---
 Answered: dieser Datensatz `## Recommendation` — Möglichkeit 2, esc verwirft in der Aufgabenzelle und übernimmt eine geänderte Notizzelle; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: e6f5b2e — esc verwirft in der Aufgabenzelle; die Notizzelle übernimmt in d356ca6

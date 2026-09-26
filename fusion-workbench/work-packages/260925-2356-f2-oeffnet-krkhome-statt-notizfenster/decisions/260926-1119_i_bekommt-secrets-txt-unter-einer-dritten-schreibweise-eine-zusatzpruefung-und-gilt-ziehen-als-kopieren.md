@@ -28,3 +28,6 @@ Möglichkeit 1 für (a), Möglichkeit 3 für (b).
 
 ---
 Answered: dieser Datensatz `## Recommendation` — (a) Zusatzprüfung über Gerät und Inode beim Öffnen und Sichern von Dateien namens `.secrets.txt`; (b) Ziehen gilt wie Kopieren, die Anleitung nennt die Klartextdatei; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: ffd0d7f — (a) Gerät und Inode beim Öffnen und Sichern; (b) HowTo.md nennt die Klartextdatei beim Ziehen in 86fe9a9
