@@ -464,15 +464,17 @@ diesem Dateifenster schon ein Tab auf `~/krkhome/`, wird er sichtbar; sonst
 entsteht ein neuer. Ein Blatt geht dabei nicht auf. Der Tab ist ein gewöhnlicher
 Tab der Dateiliste und steht nach einem Neustart wieder da.
 
-**Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt` und
-`tasks.txt`. Fehlt später eine der beiden Dateien, legt der nächste `f2` sie
-leer wieder an. Eine vorhandene Datei überschreibt KRK nie. Beim Start legt KRK
-nichts an, auch nicht für einen wiederhergestellten Tab auf den Ordner. Steht
-an der Stelle von `~/krkhome` eine gewöhnliche Datei, nennt die Statuszeile den
-Grund, und kein Tab geht auf.
+**Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt`,
+`tasks.txt` und `.secrets.txt`. Fehlt später eine der drei Dateien, legt der
+nächste `f2` sie leer wieder an, mit null Bytes. Eine vorhandene Datei
+überschreibt KRK nie. Beim Start legt KRK nichts an, auch nicht für einen
+wiederhergestellten Tab auf den Ordner. Steht an der Stelle von `~/krkhome` eine
+gewöhnliche Datei, nennt die Statuszeile den Grund, und kein Tab geht auf.
 
-**Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. Beide Dateien
-sind reiner Text und lassen sich genauso in jedem anderen Textprogramm pflegen.
+**Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. `notes.txt`
+und `tasks.txt` sind reiner Text und lassen sich genauso in jedem anderen
+Textprogramm pflegen. `.secrets.txt` ist verschlüsselt und öffnet sich allein in
+KRK mit einer PIN; davon handelt der letzte Teil dieses Abschnitts.
 
 **Eine Notiz in `notes.txt`** beginnt mit einer Zeile `## <Thema>`. Alles
 darunter bis zur nächsten solchen Zeile ist ihr Text:
@@ -684,3 +686,140 @@ der Zeilensprung sind in der Tabelle ausgegraut.
 
 Wer mit `shift+cmd+return` eine Notiz anlegt und die Zelle ohne Eingabe
 schließt, behält eine leere Notiz in der Datei. Ein `cmd+z` nimmt sie zurück.
+
+### Geheimnisse in `.secrets.txt`
+
+**`.secrets.txt` hält Einträge, die kein Programm nebenbei mitlesen soll.** Sie
+hat dieselbe Form wie `notes.txt`, ein Thema je Zeile `## <Thema>` und der Text
+darunter. Auf der Platte steht sie aber nur verschlüsselt, und geöffnet wird sie
+mit einer vierstelligen PIN.
+
+**Die Datei steht in `~/krkhome/` immer in der Liste**, obwohl ihr Name mit einem
+Punkt beginnt. Der Umschalter für versteckte Einträge (`shift+cmd+h`) ändert
+daran nichts; andere versteckte Einträge im Ordner, etwa `.DS_Store`, folgen ihm
+weiter. In jedem anderen Ordner ist eine `.secrets.txt` eine gewöhnliche
+versteckte Datei. Ein Filtertext wirkt auf ihren Namen wie auf jeden anderen.
+
+**Die Vorschau zeigt ihren Inhalt nie.** Sie liest die Datei nicht und zeigt
+stattdessen den Satz „Diese Datei ist verschlüsselt und öffnet sich mit F4 und
+der PIN im Editor.“ Die Sitzung merkt sich `.secrets.txt` ebenfalls nie: wer
+KRK mit der geöffneten Datei beendet, findet den Editor nach dem Neustart ohne
+sie, und kein Blatt fragt nach einer PIN.
+
+#### Die PIN festlegen und eingeben
+
+`f4` oder `cmd+e` auf `.secrets.txt` öffnet zuerst ein Blatt. Es fragt nach der
+PIN, und zwar auf zwei Arten:
+
+| Die Datei … | Das Blatt verlangt |
+|---|---|
+| hat null Bytes, ist also neu | eine neue PIN, zweimal einzugeben; beide Eingaben müssen gleich sein |
+| hat einen Inhalt | die PIN, einmal |
+
+Eine PIN besteht aus genau vier Ziffern. Solange die Eingabe keine vier Ziffern
+sind oder die Wiederholung abweicht, bleibt die bestätigende Schaltfläche
+abgeschaltet, und eine Zeile unter den Feldern nennt den Grund. `Esc` schließt
+das Blatt, und die Datei bleibt zu.
+
+Danach steht der Inhalt im Editor, in der Formatansicht als dieselbe Tabelle
+wie bei `notes.txt`, mit denselben Griffen. `ctrl+cmd+e` zeigt den Rohtext.
+`cmd+s` sichert verschlüsselt und dauert so lange wie bei jeder anderen Datei;
+die Wartezeit von rund einer halben Sekunde fällt allein beim Öffnen, beim
+Festlegen und beim Ändern der PIN an.
+
+**Eine falsche PIN öffnet nichts**, und das Blatt geht nicht von selbst wieder
+auf. Die Statuszeile meldet „PIN falsch oder Datei verändert“. Dieselbe Meldung
+kommt, wenn jemand die Datei außerhalb von KRK verändert hat, denn beides lässt
+sich nicht unterscheiden. Für einen neuen Versuch wieder `f4`. Ist schon der
+Anfang der Datei unlesbar, sagt die Statuszeile „Der Kopf der Datei ist
+beschädigt“ und nennt den Grund. KRK sperrt nach Fehlversuchen nicht.
+
+**Die PIN gilt, solange die Datei im Editor offen ist.** Wer den Editor
+schließt, darin eine andere Datei öffnet oder KRK beendet, verschließt den
+Inhalt wieder, und das nächste Öffnen fragt erneut. Den Editor nur auszublenden
+(`opt+cmd+b`) verschließt nichts.
+
+**Eine neue PIN steht erst mit dem ersten `cmd+s` in der Datei.** Wer nach dem
+Festlegen schließt, ohne zu sichern, behält eine Datei mit null Bytes, und das
+nächste Öffnen fragt wieder nach einer neuen PIN.
+
+**Eine auf null Bytes abgeschnittene `.secrets.txt` gilt beim nächsten Öffnen
+als neue Datei.** Das Blatt fragt dann nach einer neuen PIN und nicht nach der
+alten. Der frühere Inhalt ist in diesem Fall schon mit dem Abschneiden fort,
+nicht erst mit der neuen PIN.
+
+#### Eine vergessene PIN
+
+**Eine vergessene PIN verschließt den Inhalt endgültig.** KRK hält keine
+Hintertür und keine zweite Kopie. Die PIN steht nirgends außer im Gedächtnis
+dessen, der sie festgelegt hat. Das Blatt sagt das bei jeder Abfrage.
+
+#### Was die PIN schützt und was nicht
+
+Die PIN soll verhindern, dass der Inhalt versehentlich gelesen wird. Mehr soll
+sie nicht.
+
+**Sie schützt vor:**
+
+- Agenten und Kommandozeilenwerkzeugen, die über den Ordner lesen, etwa `cat`
+  oder `grep`; sie sehen nur Binärdaten.
+- Indexern wie Spotlight und Sicherungen wie Time Machine, die die Datei als
+  Ganzes mitnehmen; auch sie bekommen nur das Chiffrat.
+- dem Inhaltsfilter von KRK: im Ordner `~/krkhome/` liest „Content“ die Datei
+  nie, gleich wie der Umschalter für versteckte Einträge steht. Die tiefe Suche
+  mit „Content“ aus einem übergeordneten Ordner liest sie wie jede andere Datei
+  darunter, findet dort aber nur Chiffrat und keinen Eintrag.
+- dem beiläufigen Weitergeben, wenn der Ordner mitkopiert oder geteilt wird.
+
+**Sie schützt nicht vor:**
+
+- jemandem mit einer Kopie der Datei, der gezielt alle zehntausend PINs
+  durchprobiert. Jeder Versuch kostet auf dem Referenz-Mac rund eine halbe
+  Sekunde, alle zusammen also rund anderthalb Stunden, auf einem schnelleren
+  Rechner oder mit mehreren Kernen zugleich weniger. Wer `~/krkhome` in einen
+  synchronisierten Speicher legt, legt dort auch eine solche Kopie ab.
+- einem Programm, das mitliest, solange die Datei im Editor offen ist; dann
+  steht der Inhalt im Klartext im Speicher.
+- Schadsoftware, die unter dem eigenen Benutzerkonto läuft.
+
+KRK sagt auch nicht zu, dass Schlüssel und Klartext nach dem Schließen aus dem
+Speicher getilgt werden.
+
+**Kopierter Text liegt im Klartext in der Zwischenablage.** `cmd+c` aus der
+Tabelle oder aus dem Rohtext ist erlaubt. Danach kann jedes Programm des
+Benutzerkontos den Text lesen, ein Agent im Terminal etwa mit `pbpaste`. Ein
+Verlauf der Zwischenablage behält ihn, und bei eingeschalteter Übergabe an
+andere Geräte (Handoff) erreicht er auch diese. Wer ein Geheimnis kopiert hat,
+kopiert danach etwas Harmloses darüber.
+
+**Eine Textmarke gibt es in `.secrets.txt` nicht.** `cmd+d` legt dort keine an,
+und die Statuszeile sagt, warum: die Textmarke schriebe eine Zeile der
+Geheimnisse im Klartext in die Lesezeichen.
+
+#### Die PIN ändern
+
+**„PIN ändern“ liegt auf `shift+cmd+p`** und steht im Hauptmenü „Editor“. Der
+Befehl wirkt nur, wenn der Editor `.secrets.txt` entsperrt hält, der Fokus im
+Editor steht und die Datei **schon einmal gesichert** ist. Eine Datei, deren PIN
+eben erst festgelegt und nie gesichert wurde, trägt noch keine PIN, die sich
+ändern ließe; sonst ist der Eintrag ausgegraut.
+
+Das Blatt fragt die alte PIN einmal und die neue zweimal. Ob die alte stimmt,
+prüft KRK erst nach dem Blatt; stimmt sie nicht, meldet die Statuszeile „die
+alte PIN stimmt nicht; die PIN bleibt, wie sie war“. Hat sich die Datei außerhalb
+von KRK geändert, weist der Befehl ab wie das Sichern.
+
+**Ungesicherte Änderungen bleiben dabei ungesichert.** Der Befehl verschlüsselt
+den Stand, der auf der Platte steht, neu mit der neuen PIN. Was im Editor seit
+dem letzten `cmd+s` dazugekommen ist, bleibt im Editor und geht erst mit dem
+nächsten `cmd+s` auf die Platte, dann unter der neuen PIN. Ab dem Ende des
+Befehls öffnet allein die neue PIN die Datei.
+
+**Mit einer eigenen `keymap.toml` trägt „PIN ändern“ keine Taste.** KRK hängt
+den Befehl unbelegt an seine Gruppe an, und über das Hauptmenü „Editor“ ist er
+trotzdem erreichbar. Die Taste bringt derselbe Handgriff wie bei den
+Tabellenbefehlen: **F1**, dann `cmd+r`, dann „Fertig“, mit demselben Preis für
+jede eigene Tastenzuweisung.
+
+Wie die Datei aufgebaut ist und wie man sie ohne KRK entschlüsselt, steht in
+`README.md` unter „Das Dateiformat von `.secrets.txt`“.

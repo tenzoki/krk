@@ -508,7 +508,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
     - Acceptance: `make check` grün.
     - Dependencies: 5.5
 
-26. **5.7 Anleitung, README und CLAUDE.md für Stufe 5**
+26. [DONE] **5.7 Anleitung, README und CLAUDE.md für Stufe 5**
     - Executor: `code-implementer`
     - Files: `HowTo.md`, `README.md`, `CLAUDE.md`
     - Changes: `HowTo.md` beschreibt `.secrets.txt`, das Festlegen und Eingeben der PIN, was sie schützt und was nicht, dass eine vergessene PIN den Inhalt endgültig verschließt, dass kopierter Text im Klartext in der Zwischenablage liegt und jedes Programm des Kontos ihn lesen kann, „PIN ändern“, **dass eine auf null Bytes abgeschnittene `.secrets.txt` beim nächsten Öffnen als neue Datei gilt und nach einer neuen PIN fragt**, und dass die tiefe Suche mit „Content“ aus einem übergeordneten Ordner die Datei als Chiffrat liest. `README.md` beschreibt den Kopf Byte für Byte samt Ableitung und Verfahren, so dass sich die Einträge mit der PIN ohne KRK entschlüsseln lassen, **und sagt, dass angehobene Parameter der Ableitung eine bestehende Datei erst mit dem nächsten Ändern der PIN erreichen und nicht mit dem nächsten Sichern**. `CLAUDE.md` nennt die zwei Kisten im Absatz zur C-Freiheit mit der Wendung „Namen auf `-sys`“.

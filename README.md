@@ -125,6 +125,74 @@ Auslieferungsfassung. Aus der beiseitegelegten holt man sie sich Zeile für Zeil
 zurück, und das Blatt aus „Neuerungen anzeigen" sagt dabei unter „Nur in Ihrer
 Datei", welche Einträge das sind.
 
+## Das Dateiformat von `.secrets.txt`
+
+`~/krkhome/.secrets.txt` hält die Geheimnisse des Notizordners verschlüsselt;
+wie man sie in KRK bedient und wovor die PIN schützt, steht in `HowTo.md`.
+**Dieser Abschnitt beschreibt die Datei so, dass sich ihr Inhalt mit der PIN
+auch ohne KRK entschlüsseln lässt.** Die verbindliche Quelle ist der Modulkopf
+von `crates/krk-core/src/heimordner/tresor.rs`; die Probe
+`eine_von_hand_gebaute_datei_mit_kleineren_parametern_oeffnet` in
+`crates/krk-core/tests/heimordner.rs` baut eine Datei allein nach dieser
+Beschreibung und öffnet sie.
+
+**Eine Datei mit null Bytes hat keinen Inhalt und keine PIN.** KRK legt sie so
+an, und das erste Öffnen legt die PIN fest. Jede nicht leere Datei ist eine
+Binärdatei aus 60 Byte Kopf und dem Chiffrat dahinter. Zahlen stehen als
+vorzeichenlose Ganzzahlen in der Bytefolge *little-endian*.
+
+| Versatz | Länge | Inhalt |
+|---:|---:|---|
+| 0 | 6 | Kennung, die ASCII-Zeichen `KRKSEC` |
+| 6 | 1 | Formatversion, heute `1` |
+| 7 | 1 | Kennung der Ableitung, heute `1`: Argon2id in der Fassung `0x13` |
+| 8 | 4 | Speicher der Ableitung in KiB (`m`) |
+| 12 | 4 | Durchläufe der Ableitung (`t`) |
+| 16 | 4 | Parallelität der Ableitung (`p`) |
+| 20 | 16 | Salz |
+| 36 | 24 | Nonce von XChaCha20-Poly1305 |
+| 60 | Rest | Chiffrat, an seinem Ende 16 Byte Prüfwert von Poly1305 |
+
+**Entschlüsseln geht in zwei Schritten.**
+
+1. Den Schlüssel ableiten: 32 Byte aus Argon2id, Fassung `0x13`, mit `m`, `t`
+   und `p` aus dem Kopf. Kennwort sind die vier Ziffern der PIN als
+   ASCII-Bytes, `"0417"` also die Bytes `30 34 31 37`. Dazu das Salz aus dem
+   Kopf, ohne Geheimwert und ohne zusätzliche Daten.
+2. Mit XChaCha20-Poly1305 entschlüsseln: Schlüssel aus Schritt 1, Nonce aus dem
+   Kopf, Chiffrat samt Prüfwert ab Byte 60. **Die ganzen 60 Byte des Kopfes sind
+   die zusätzlichen authentifizierten Daten**, so wie sie in der Datei stehen.
+
+Heraus kommt Text in UTF-8, in derselben Form wie `notes.txt`: je Eintrag eine
+Zeile `## <Thema>` und der Text darunter, mit einem Zeilenumbruch am Ende. Wer
+eine Zahl im Kopf ändert, bekommt beim Entschlüsseln dieselbe Abweisung wie mit
+einer falschen PIN. Werkzeuge auf der Grundlage von libsodium rechnen Argon2id
+allein mit einer Spur; für eine Datei mit `p = 1`, wie KRK sie heute schreibt,
+genügt das.
+
+**Die Parameter stehen im Kopf und nicht im Code.** Eine Datei öffnet mit den
+Parametern, mit denen sie geschrieben wurde. Welche Parameter KRK für einen
+neuen Schlüssel nimmt, sagt `Parameter::DES_CODES` in `tresor.rs`. Bei der
+Aufnahme am 260926 waren es 128 MiB Speicher, sieben Durchläufe und eine Spur,
+auf dem Referenzgerät gemessen mit rund 0,54 s je Ableitung; die ganze
+Messreihe steht im Modulkopf derselben Datei. Jede Sicherung zieht eine neue Nonce und behält Salz und
+Parameter; ein neues Salz entsteht allein beim Festlegen und beim Ändern der
+PIN.
+
+**Angehobene Parameter erreichen eine bestehende Datei erst mit dem nächsten
+Ändern der PIN**, nicht mit dem nächsten Sichern. Eine gewöhnliche Sicherung
+übernimmt Salz und Parameter aus dem Schlüssel, der beim Öffnen abgeleitet
+wurde. Erst „PIN ändern“ (`shift+cmd+p`) leitet mit den Parametern der
+laufenden Fassung neu ab.
+
+**Ein Kopf über festen Obergrenzen gilt als beschädigt**: mehr als 4 GiB
+Speicher, mehr als 64 Durchläufe oder mehr als 16 Spuren. KRK meldet dann „Der
+Kopf der Datei ist beschädigt“, leitet nicht ab und lässt die Datei unberührt.
+Die Grenzen verhindern, dass ein beschädigter Kopf den Ladefaden für eine
+Ableitung über Terabytes anhält. Sie lassen zugleich Raum, die Parameter
+anzuheben. Hebt eine spätere Fassung sie über diese Grenzen, gilt ihre Datei
+einem älteren KRK als beschädigt, und ihr Inhalt bleibt unberührt.
+
 ---
 
 Alles Weitere richtet sich an den, der KRK baut, signiert und ausliefert.
