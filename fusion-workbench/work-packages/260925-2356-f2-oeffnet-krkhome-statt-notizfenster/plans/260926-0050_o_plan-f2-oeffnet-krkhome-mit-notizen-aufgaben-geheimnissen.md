@@ -285,7 +285,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
    - Closes (am Baum): C4.1, C4.2, C4.3.
    - Dependencies: 1.1, 1.5
 
-8. **2.2 Anleitung für Stufe 2**
+8. [DONE] **2.2 Anleitung für Stufe 2**
    - Executor: `code-implementer`
    - Files: `HowTo.md`
    - Changes: der Abschnitt aus 1.5 sagt, dass die Vorschau beide Dateien gerendert zeigt, dass die Formatansicht des Editors sie bis zur Tabellenform ebenso als Markdown zeigt, und dass das Abhaken im Editor geschieht.
@@ -296,7 +296,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
 
 ### Stufe 3: Aufgaben bearbeiten (C6)
 
-9. **3.1 Die Handlungen an Aufgaben im Kern**
+9. [DONE] **3.1 Die Handlungen an Aufgaben im Kern**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/heimordner/eintraege.rs`, `crates/krk-core/tests/heimordner.rs`
    - Changes: zu `verschieben` kommen `hinzufuegen(stand, text)` (am Ende, mit ergänztem Umbruch davor, wenn die Datei ohne endet), `text_aendern(stand, index, text)`, `abhaken(stand, index)` (schaltet um) und `loeschen(stand, index)`, alle mit `Option<Neustand>` oder einem `Result` mit Abweisung, wo eine Eingabe unzulässig ist (ein Aufgabentext mit Zeilenumbruch). Eine berührte Zeile wird in der Grundform geschrieben, jede andere bleibt roh. **`loeschen` entfernt allein die Aufgabenzeile**; ihre fremden Zeilen bleiben stehen und hängen danach an der Aufgabe darüber oder am Vorspann (siehe Open Questions).

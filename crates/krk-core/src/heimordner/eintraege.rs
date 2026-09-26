@@ -40,9 +40,21 @@
 //! # Handlungen
 //!
 //! Eine Handlung ist eine reine Funktion vom alten Stand auf einen
-//! [`Neustand`]: sie rechnet, der Editor wendet an. Die erste steht in
-//! [`aufgaben`], weil die Probe zu den fremden Zeilen sie braucht; die
-//! uebrigen folgen mit den Stufen, die sie bedienen.
+//! [`Neustand`]: sie rechnet, der Editor wendet an. Die fuenf an `tasks.txt`
+//! stehen in [`aufgaben`]; die an `notes.txt` folgen mit der Stufe, die sie
+//! bedient.
+//!
+//! **Eine Handlung schreibt allein die Zeile neu, die sie beruehrt**, und die
+//! in der Grundform: Abhaken und Textaendern ersetzen die Kopfzeile ihres
+//! Blocks, Hinzufuegen haengt eine an, Loeschen nimmt eine weg, Verschieben
+//! schreibt gar keine Zeile neu. Jede andere Zeile bleibt Byte fuer Byte, und
+//! fuer das Dateiende gilt die Regel aus dem vorigen Abschnitt.
+//!
+//! **Keine Handlung liefert einen Neustand, der nichts aendert.** `None` heisst
+//! bei jeder: es gibt nichts zu tun, weil der Eintrag fehlt, am Rand steht oder
+//! schon den verlangten Text traegt. Der Editor legt fuer `None` keinen Umbau
+//! und damit keine Handlung auf den Rueckgaengigstapel. Eine unzulaessige
+//! Eingabe ist davon getrennt eine [`Abweisung`].
 
 /// Die Zeilenmarke einer Themenzeile.
 const THEMENMARKE: &str = "## ";
@@ -196,10 +208,46 @@ impl<'a> Zerlegung<'a> {
                 text.push('\n');
             }
         }
-        if !stand.ends_with('\n') && text.ends_with('\n') {
-            let _ = text.pop();
-        }
+        dateiende_angleichen(&mut text, stand);
         text
+    }
+
+    /// Der Stand mit ersetzter oder entfernter Kopfzeile des Blocks an
+    /// `stelle`; jede andere Zeile bleibt, wie sie war.
+    ///
+    /// `Some(zeile)` ersetzt die Kopfzeile durch `zeile`, ohne Umbruch
+    /// uebergeben; sie bekommt den Umbruch, den die alte trug, so dass das
+    /// Dateiende bleibt. `None` entfernt die Kopfzeile, und ihr Anhang haengt
+    /// danach am Block darueber oder am Vorspann.
+    fn mit_kopfzeile(&self, stelle: usize, zeile: Option<&str>, stand: &str) -> String {
+        let mut text: String = self.vorspann.concat();
+        for (nummer, block) in self.bloecke.iter().enumerate() {
+            if nummer != stelle {
+                text.push_str(&block.zeilen.concat());
+                continue;
+            }
+            if let Some(zeile) = zeile {
+                text.push_str(zeile);
+                if block.kopf().ends_with('\n') {
+                    text.push('\n');
+                }
+            }
+            text.push_str(&block.anhang().concat());
+        }
+        dateiende_angleichen(&mut text, stand);
+        text
+    }
+}
+
+/// Nimmt dem neuen Text den Schlussumbruch, wenn der alte Stand ohne endete.
+///
+/// Das ist die eine Stelle, an der die Regel „der fehlende Schlussumbruch
+/// gehoert dem Dateiende" aus dem Modulkopf durchgesetzt wird. Einen fehlenden
+/// Umbruch ergaenzt sie nie: endete der alte Stand mit einem, endet jede
+/// Zusammensetzung aus seinen Zeilen ohnehin mit einem.
+fn dateiende_angleichen(text: &mut String, stand: &str) {
+    if !stand.ends_with('\n') && text.ends_with('\n') {
+        let _ = text.pop();
     }
 }
 
@@ -287,9 +335,159 @@ pub enum Richtung {
     Runter,
 }
 
+/// Warum eine Handlung eine Eingabe nicht annimmt.
+///
+/// Eine Abweisung laesst den Stand, wie er ist; der Editor laesst die Zelle in
+/// Bearbeitung und schreibt [`Abweisung::meldung`] in die Statuszeile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Abweisung {
+    /// Der Text einer Aufgabe traegt einen Zeilenumbruch. Eine Aufgabe ist eine
+    /// Zeile; der Rest hinter dem Umbruch waere eine fremde Zeile oder eine
+    /// zweite Aufgabe, und keins von beiden hat der Nutzer verlangt.
+    UmbruchImAufgabentext,
+}
+
+impl Abweisung {
+    /// Der Grund im Wortlaut der Statuszeile.
+    pub fn meldung(self) -> &'static str {
+        match self {
+            Self::UmbruchImAufgabentext => {
+                "Eine Aufgabe ist eine Zeile und trägt keinen Zeilenumbruch."
+            }
+        }
+    }
+}
+
 /// Die Handlungen an `tasks.txt`.
+///
+/// `index` zaehlt jeweils ueber die Aufgaben ohne den Vorspann, wie
+/// [`Aufgaben::bloecke`] und [`Neustand::auswahl`].
 pub mod aufgaben {
-    use super::{Aufgaben, Neustand, Richtung};
+    use super::{
+        Abweisung, Aufgaben, Aufgabenzeile, Neustand, Richtung, aufgabe_in_grundform, aufgabenzeile,
+    };
+
+    /// Weist einen Aufgabentext ab, der keine Zeile ist.
+    fn text_pruefen(text: &str) -> Result<(), Abweisung> {
+        if text.contains('\n') {
+            Err(Abweisung::UmbruchImAufgabentext)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Haengt eine offene Aufgabe mit `text` ans Ende der Datei; sie ist danach
+    /// gewaehlt.
+    ///
+    /// Endet die Datei ohne Umbruch, bekommt ihre letzte Zeile einen, und die
+    /// neue Aufgabe endet ohne: das Dateiende bleibt (Modulkopf). Eine leere
+    /// Datei hat kein Dateiende zu wahren und bekommt die Zeile samt Umbruch,
+    /// wie jede Zeile, die ein Textprogramm schreibt. Ein leerer Text ist
+    /// zulaessig; der Editor legt so eine Aufgabe an, deren Text der Nutzer
+    /// danach tippt.
+    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts hinzugefuegt"]
+    pub fn hinzufuegen(stand: &str, text: &str) -> Result<Neustand, Abweisung> {
+        text_pruefen(text)?;
+        let anzahl = Aufgaben::lesen(stand).bloecke().len();
+        let mut neu = String::with_capacity(stand.len() + text.len() + 8);
+        neu.push_str(stand);
+        let schluss = stand.is_empty() || stand.ends_with('\n');
+        if !schluss {
+            neu.push('\n');
+        }
+        neu.push_str(&aufgabe_in_grundform(false, text));
+        if schluss {
+            neu.push('\n');
+        }
+        Ok(Neustand {
+            text: neu,
+            auswahl: Some(anzahl),
+        })
+    }
+
+    /// Ersetzt den Text der Aufgabe an `index` und laesst ihren Erledigt-Zustand.
+    ///
+    /// Die Aufgabenzeile wird in der Grundform geschrieben, ihre fremden Zeilen
+    /// und jede andere Zeile bleiben. `Ok(None)`, wenn es die Aufgabe nicht
+    /// gibt oder sie den Text schon traegt: eine Zelle, die ohne Aenderung
+    /// verlassen wird, schreibt ihre Zeile deshalb nicht in die Grundform um.
+    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geaendert"]
+    pub fn text_aendern(
+        stand: &str,
+        index: usize,
+        text: &str,
+    ) -> Result<Option<Neustand>, Abweisung> {
+        text_pruefen(text)?;
+        let aufgaben = Aufgaben::lesen(stand);
+        let Some(alt) = gelesen(&aufgaben, index) else {
+            return Ok(None);
+        };
+        if alt.text == text {
+            return Ok(None);
+        }
+        Ok(Some(Neustand {
+            text: aufgaben.zerlegung.mit_kopfzeile(
+                index,
+                Some(&aufgabe_in_grundform(alt.erledigt, text)),
+                stand,
+            ),
+            auswahl: Some(index),
+        }))
+    }
+
+    /// Hakt die Aufgabe an `index` ab oder oeffnet sie wieder.
+    ///
+    /// Geschrieben wird allein ihre Zeile, in der Grundform; die Aufgabe bleibt
+    /// an ihrer Stelle. `None`, wenn es die Aufgabe nicht gibt.
+    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts abgehakt"]
+    pub fn abhaken(stand: &str, index: usize) -> Option<Neustand> {
+        let aufgaben = Aufgaben::lesen(stand);
+        let alt = gelesen(&aufgaben, index)?;
+        Some(Neustand {
+            text: aufgaben.zerlegung.mit_kopfzeile(
+                index,
+                Some(&aufgabe_in_grundform(!alt.erledigt, alt.text)),
+                stand,
+            ),
+            auswahl: Some(index),
+        })
+    }
+
+    /// Entfernt die Aufgabenzeile an `index`.
+    ///
+    /// **Allein die Aufgabenzeile**: ihre fremden Zeilen bleiben stehen und
+    /// haengen danach an der Aufgabe darueber oder, war es die erste, am
+    /// Vorspann. Was der Nutzer von Hand geschrieben hat, verschwindet so nicht
+    /// mit einer Handlung, die ihm nur die Aufgabe zeigt. Gewaehlt ist danach
+    /// die Aufgabe, die an die Stelle nachrueckt, sonst die davor; `None` als
+    /// Auswahl, wenn keine bleibt. `None` insgesamt, wenn es die Aufgabe nicht
+    /// gibt.
+    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geloescht"]
+    pub fn loeschen(stand: &str, index: usize) -> Option<Neustand> {
+        let aufgaben = Aufgaben::lesen(stand);
+        let anzahl = aufgaben.bloecke().len();
+        if index >= anzahl {
+            return None;
+        }
+        let auswahl = if index + 1 < anzahl {
+            Some(index)
+        } else {
+            index.checked_sub(1)
+        };
+        Some(Neustand {
+            text: aufgaben.zerlegung.mit_kopfzeile(index, None, stand),
+            auswahl,
+        })
+    }
+
+    /// Die Aufgabe an `index`, als Aufgabenzeile gelesen.
+    ///
+    /// `None` allein, wenn es die Aufgabe nicht gibt: jede Kopfzeile eines
+    /// Aufgabenblocks ist nach [`Aufgaben::lesen`] eine Aufgabenzeile, weil die
+    /// Zerlegung dieselbe Frage stellt.
+    fn gelesen<'a>(aufgaben: &Aufgaben<'a>, index: usize) -> Option<Aufgabenzeile<'a>> {
+        aufgabenzeile(aufgaben.bloecke().get(index)?.kopf())
+    }
 
     /// Tauscht die Aufgabe an `index` mit ihrer Nachbarin in `richtung`.
     ///

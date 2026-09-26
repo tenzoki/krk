@@ -1,5 +1,6 @@
 //! Abnahme des Heimordners `~/krkhome/`: Erkennung und Form der Eintraege
-//! (Schritt 1.1), Anlegen und Uebernahme der alten Zettel (Schritt 1.2) des
+//! (Schritt 1.1), Anlegen und Uebernahme der alten Zettel (Schritt 1.2) und die
+//! Handlungen an Aufgaben (Schritt 3.1, Faehigkeit C6) des
 //! Plans `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`,
 //! Faehigkeiten C2 und C3 des Spec. Die Rennprobe zum exklusiven Anlegen steht
 //! im Pruefmodul von `heimordner/bereitstellen.rs`, weil sie einen privaten
@@ -25,7 +26,8 @@ use std::path::{Path, PathBuf};
 
 use gemeinsam::Pruefordner;
 use krk_core::heimordner::eintraege::{
-    Aufgaben, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile, ist_themenzeile,
+    Abweisung, Aufgaben, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
+    ist_themenzeile,
 };
 use krk_core::heimordner::{
     ALTE_ZETTEL, Bereitstellung, Heimordner, Hindernis, ORDNERNAME, Sonderdatei, Uebernahmeausgang,
@@ -392,6 +394,212 @@ fn der_fehlende_schlussumbruch_bleibt_am_dateiende() {
 
     let zurueck = aufgaben::verschieben(&hoch.text, 0, Richtung::Runter).expect("zurueck");
     assert_eq!(zurueck.text, stand);
+}
+
+// ---------------------------------------------------------------------------
+// Die Handlungen an Aufgaben (Schritt 3.1)
+// ---------------------------------------------------------------------------
+
+/// Ein Stand mit Vorspann, einer grosszuegig geschriebenen Aufgabe, fremden
+/// Zeilen an zwei Aufgaben und einer Grundform-Aufgabe dazwischen.
+const HANDLUNGSSTAND: &str = "\
+# Aufgaben
+- [ ] eins
+  gehoert zu eins
+\t* [X] zwei
+- [ ] drei
+  gehoert zu drei
+";
+
+/// Die Zeilen, in denen zwei Staende gleicher Zeilenzahl sich unterscheiden.
+fn abweichende_zeilen(alt: &str, neu: &str) -> Vec<usize> {
+    let alt: Vec<&str> = alt.split_inclusive('\n').collect();
+    let neu: Vec<&str> = neu.split_inclusive('\n').collect();
+    assert_eq!(alt.len(), neu.len(), "die Zeilenzahl hat sich geaendert");
+    alt.iter()
+        .zip(&neu)
+        .enumerate()
+        .filter(|(_, (a, n))| a != n)
+        .map(|(nummer, _)| nummer)
+        .collect()
+}
+
+/// C6.1: Hinzufuegen haengt eine offene Aufgabe in Grundform ans Ende, hinter
+/// die fremden Zeilen der letzten, und waehlt sie.
+#[test]
+fn hinzufuegen_haengt_eine_offene_aufgabe_ans_ende() {
+    let neu = aufgaben::hinzufuegen(HANDLUNGSSTAND, "vier").expect("einzeilig");
+    assert_eq!(neu.text, format!("{HANDLUNGSSTAND}- [ ] vier\n"));
+    assert_eq!(neu.auswahl, Some(3));
+    assert_eq!(Aufgaben::lesen(&neu.text).bloecke().len(), 4);
+
+    // Eine leere Datei bekommt die Zeile samt Umbruch, ein Vorspann ohne
+    // Aufgabe bleibt oben, und ein leerer Text ist eine Aufgabe.
+    let leer = aufgaben::hinzufuegen("", "erste").expect("einzeilig");
+    assert_eq!(leer.text, "- [ ] erste\n");
+    assert_eq!(leer.auswahl, Some(0));
+    let nur_vorspann = aufgaben::hinzufuegen("# Titel\n", "").expect("leer ist zulaessig");
+    assert_eq!(nur_vorspann.text, "# Titel\n- [ ] \n");
+    assert_eq!(nur_vorspann.auswahl, Some(0));
+    let gelesen = Aufgaben::lesen(&nur_vorspann.text);
+    assert_eq!(gelesen.vorspann(), ["# Titel\n"]);
+    assert_eq!(
+        aufgabenzeile(gelesen.bloecke()[0].kopf()).map(|a| a.text),
+        Some("")
+    );
+}
+
+/// Endet die Datei ohne Umbruch, bekommt die alte letzte Zeile einen, und die
+/// neue Aufgabe endet ohne.
+#[test]
+fn hinzufuegen_wahrt_das_dateiende() {
+    let neu = aufgaben::hinzufuegen("- [x] eins\nfremd ohne Schluss", "zwei").expect("einzeilig");
+    assert_eq!(neu.text, "- [x] eins\nfremd ohne Schluss\n- [ ] zwei");
+    assert_eq!(neu.auswahl, Some(1));
+}
+
+/// Ein Aufgabentext mit Umbruch wird abgewiesen, beim Hinzufuegen wie beim
+/// Aendern, und kein Neustand entsteht.
+#[test]
+fn ein_umbruch_im_aufgabentext_wird_abgewiesen() {
+    assert_eq!(
+        aufgaben::hinzufuegen(HANDLUNGSSTAND, "zwei\nZeilen"),
+        Err(Abweisung::UmbruchImAufgabentext)
+    );
+    assert_eq!(
+        aufgaben::text_aendern(HANDLUNGSSTAND, 0, "zwei\nZeilen"),
+        Err(Abweisung::UmbruchImAufgabentext)
+    );
+    assert_eq!(
+        aufgaben::text_aendern(HANDLUNGSSTAND, 0, "Schluss\n"),
+        Err(Abweisung::UmbruchImAufgabentext)
+    );
+    // Die Abweisung geht vor jeder anderen Antwort, auch ohne Aufgabe.
+    assert_eq!(
+        aufgaben::text_aendern("", 5, "a\nb"),
+        Err(Abweisung::UmbruchImAufgabentext)
+    );
+    assert!(
+        Abweisung::UmbruchImAufgabentext
+            .meldung()
+            .contains("Zeilenumbruch")
+    );
+}
+
+/// C6.1: Textaendern schreibt genau die Aufgabenzeile in Grundform neu, laesst
+/// den Erledigt-Zustand und jede andere Zeile.
+#[test]
+fn text_aendern_schreibt_allein_die_aufgabenzeile_neu() {
+    let neu = aufgaben::text_aendern(HANDLUNGSSTAND, 1, "zwei neu")
+        .expect("einzeilig")
+        .expect("die Aufgabe gibt es");
+    assert_eq!(
+        neu.text,
+        "# Aufgaben\n- [ ] eins\n  gehoert zu eins\n- [x] zwei neu\n- [ ] drei\n  gehoert zu drei\n"
+    );
+    assert_eq!(neu.auswahl, Some(1));
+    assert_eq!(abweichende_zeilen(HANDLUNGSSTAND, &neu.text), [3]);
+}
+
+/// Ein unveraenderter Text und eine fehlende Aufgabe ergeben keinen Neustand;
+/// die grosszuegig geschriebene Zeile bleibt damit roh.
+#[test]
+fn text_aendern_ohne_aenderung_ergibt_nichts() {
+    assert_eq!(aufgaben::text_aendern(HANDLUNGSSTAND, 1, "zwei"), Ok(None));
+    assert_eq!(aufgaben::text_aendern(HANDLUNGSSTAND, 3, "vier"), Ok(None));
+    assert_eq!(aufgaben::text_aendern("", 0, "a"), Ok(None));
+}
+
+/// C6.3: Abhaken aendert genau eine Zeile und nicht die Stelle der Aufgabe;
+/// eine eingerueckte `* [X]`-Aufgabe kommt geoeffnet als `- [ ] ` in Grundform
+/// zurueck, ihre Nachbarn unveraendert.
+#[test]
+fn abhaken_schreibt_genau_eine_zeile_in_grundform() {
+    let geoeffnet = aufgaben::abhaken(HANDLUNGSSTAND, 1).expect("die Aufgabe gibt es");
+    assert_eq!(abweichende_zeilen(HANDLUNGSSTAND, &geoeffnet.text), [3]);
+    assert_eq!(
+        geoeffnet.text.split_inclusive('\n').nth(3),
+        Some("- [ ] zwei\n")
+    );
+    assert_eq!(geoeffnet.auswahl, Some(1));
+
+    // Die Stelle bleibt: dieselben Aufgaben in derselben Reihenfolge.
+    let texte = |stand: &str| -> Vec<String> {
+        Aufgaben::lesen(stand)
+            .bloecke()
+            .iter()
+            .map(|block| {
+                aufgabenzeile(block.kopf())
+                    .expect("Aufgabe")
+                    .text
+                    .to_owned()
+            })
+            .collect()
+    };
+    assert_eq!(texte(&geoeffnet.text), texte(HANDLUNGSSTAND));
+
+    let erledigt = aufgaben::abhaken(HANDLUNGSSTAND, 0).expect("die Aufgabe gibt es");
+    assert_eq!(abweichende_zeilen(HANDLUNGSSTAND, &erledigt.text), [1]);
+    assert_eq!(
+        erledigt.text.split_inclusive('\n').nth(1),
+        Some("- [x] eins\n")
+    );
+
+    // Zweimal abgehakt steht die Grundform-Aufgabe wieder Byte fuer Byte da.
+    let zurueck = aufgaben::abhaken(&erledigt.text, 0).expect("die Aufgabe gibt es");
+    assert_eq!(zurueck.text, HANDLUNGSSTAND);
+
+    assert_eq!(aufgaben::abhaken(HANDLUNGSSTAND, 3), None);
+}
+
+/// Die letzte Zeile ohne Umbruch bleibt beim Abhaken ohne.
+#[test]
+fn abhaken_wahrt_das_dateiende() {
+    let neu = aufgaben::abhaken("- [ ] eins\n  * [ ] zwei", 1).expect("die Aufgabe gibt es");
+    assert_eq!(neu.text, "- [ ] eins\n- [x] zwei");
+}
+
+/// C6.1: Loeschen entfernt allein die Aufgabenzeile; ihre fremden Zeilen
+/// haengen danach an der Aufgabe darueber, und die nachrueckende ist gewaehlt.
+#[test]
+fn loeschen_entfernt_allein_die_aufgabenzeile() {
+    let neu = aufgaben::loeschen(HANDLUNGSSTAND, 2).expect("die Aufgabe gibt es");
+    assert_eq!(
+        neu.text,
+        "# Aufgaben\n- [ ] eins\n  gehoert zu eins\n\t* [X] zwei\n  gehoert zu drei\n"
+    );
+    assert_eq!(neu.auswahl, Some(1));
+    let gelesen = Aufgaben::lesen(&neu.text);
+    assert_eq!(gelesen.bloecke()[1].anhang(), ["  gehoert zu drei\n"]);
+
+    // Die erste geloescht: ihre fremde Zeile faellt in den Vorspann, die
+    // zweite rueckt an die Stelle und ist gewaehlt.
+    let erste = aufgaben::loeschen(HANDLUNGSSTAND, 0).expect("die Aufgabe gibt es");
+    assert_eq!(
+        erste.text,
+        "# Aufgaben\n  gehoert zu eins\n\t* [X] zwei\n- [ ] drei\n  gehoert zu drei\n"
+    );
+    assert_eq!(erste.auswahl, Some(0));
+    assert_eq!(
+        Aufgaben::lesen(&erste.text).vorspann(),
+        ["# Aufgaben\n", "  gehoert zu eins\n"]
+    );
+
+    // Die letzte und einzige: keine Auswahl bleibt.
+    let einzige = aufgaben::loeschen("- [ ] allein\n", 0).expect("die Aufgabe gibt es");
+    assert_eq!(einzige.text, "");
+    assert_eq!(einzige.auswahl, None);
+
+    assert_eq!(aufgaben::loeschen(HANDLUNGSSTAND, 3), None);
+    assert_eq!(aufgaben::loeschen("", 0), None);
+}
+
+/// Die letzte Zeile ohne Umbruch geloescht: die neue letzte verliert ihren.
+#[test]
+fn loeschen_wahrt_das_dateiende() {
+    let neu = aufgaben::loeschen("- [ ] eins\n- [ ] zwei", 1).expect("die Aufgabe gibt es");
+    assert_eq!(neu.text, "- [ ] eins");
+    assert_eq!(neu.auswahl, Some(0));
 }
 
 // ---------------------------------------------------------------------------
