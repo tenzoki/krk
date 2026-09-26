@@ -101,8 +101,9 @@ Hauptmenü ist er trotzdem erreichbar.
   Auslieferungsfassung. Was fehlt, ist ihr erklärender Kommentarblock — man
   erfährt aus der eigenen Datei nicht, dass es sie gibt.
 - `keymap.toml`: KRK hängt eine Funktion, die die eigene Datei nicht nennt,
-  unbelegt hinten an ihre Gruppe an. Der Befehl steht im Hauptmenü und tut, was
-  er soll, aber ohne Tastenkombination und nicht an seinem Platz.
+  unbelegt an: in ihrer Gruppe hinter die Funktionen, die die eigene Datei dort
+  nennt, und fehlen mehrere, untereinander in der Folge der Auslieferung. Der
+  Befehl steht im Hauptmenü und tut, was er soll, nur ohne Tastenkombination.
 
 Die Neuerungen an `settings.toml` und `readers.toml` holt man sich in drei
 Schritten, für jede betroffene Datei einzeln:

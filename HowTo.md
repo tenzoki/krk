@@ -80,7 +80,7 @@ nächstliegende Beispiel für den Fall, den das Blatt beschreibt.
 |---|---|
 | `readers.toml` | Alles. Das Profil gibt es für KRK nicht, und die Vorschau zeigt an dem Ort, den es erkannt hätte, weiter die Metadaten. |
 | `settings.toml` | Nur den erklärenden Kommentarblock. Die Einstellung selbst wirkt bereits, mit dem Wert aus der Auslieferungsfassung. |
-| `keymap.toml` | Die ausgelieferten Tastenkombinationen. Die Funktion hängt KRK unbelegt hinten an ihre Gruppe, über das Hauptmenü bleibt sie erreichbar. |
+| `keymap.toml` | Die ausgelieferten Tastenkombinationen. KRK hängt die Funktion unbelegt an: in ihrer Gruppe hinter die Funktionen, die die eigene Datei dort nennt, und fehlen mehrere, untereinander in der Folge der Auslieferung. Über das Hauptmenü bleibt sie erreichbar. |
 
 Der Handgriff ist bei allen dreien derselbe: KRK beenden, die betroffene Datei
 **beiseitelegen** und nicht löschen, KRK starten. Sie entsteht neu aus der
@@ -554,8 +554,10 @@ ohne Kästchen. Eine `notes.txt` oder `tasks.txt` in einem anderen Ordner bleibt
 gewöhnlicher Text.
 
 **Die Zettel des früheren Notizblatts stehen als Notizen in `notes.txt`.**
-Übernommen wird genau einmal, nämlich in dem Augenblick, in dem ein `f2` den
-Vorgabeort `~/krkhome/` selbst anlegt. An jedem anderen Ort entsteht
+Übernommen wird in dem Augenblick, in dem ein `f2` den Vorgabeort
+`~/krkhome/` selbst anlegt, und zwar jedes Mal, wenn er das tut: wer
+`~/krkhome/` löscht, bekommt beim nächsten `f2` die alten Zettel ein weiteres
+Mal als Notizen. An jedem anderen Ort entsteht
 `notes.txt` leer, auch wenn `f2` den Ordner dort neu anlegt. Jeder nicht leere Zettel wird dabei zu einer
 Notiz mit dem Thema „Zettel 1“ beziehungsweise „Zettel 2“, und sein Text bleibt
 unverändert. Ein Zettel, der selbst eine Zeile mit `## ` trägt, wird nicht
