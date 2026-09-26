@@ -518,11 +518,10 @@ Vorschau sie als Fortsetzungszeile dieser Aufgabe, so wie die Werkstattzeile im
 Beispiel. Mit einer Leerzeile davor steht sie als eigener Absatz. KRK folgt
 dabei den Regeln von CommonMark, nach denen jede Markdown-Datei gelesen wird.
 
-**Die Formatansicht des Editors zeigt `notes.txt` vorerst als Markdown**
-(`ctrl+cmd+e`). Die Themen erscheinen dort als Überschriften, obwohl die Datei
-auf `.txt` endet. Eine Tabelle für die Notizen folgt in einer späteren Fassung.
-`tasks.txt` steht in der Formatansicht schon als Tabelle; wie man sie bedient,
-steht am Ende dieses Abschnitts.
+**Die Formatansicht des Editors zeigt beide Dateien als Tabelle**
+(`ctrl+cmd+e`): `tasks.txt` mit einer Zeile je Aufgabe, `notes.txt` mit den
+Spalten Thema und Notiz. Wie man die zwei Tabellen bedient, steht am Ende
+dieses Abschnitts.
 
 **Die Kästchen gibt es nur für diese zwei Dateien in `~/krkhome/`.** Eine
 `.md`-Datei mit `- [ ]` an einem anderen Ort zeigt die Vorschau wie bisher,
@@ -589,9 +588,9 @@ zum Anfang der Datei.
 | `cmd+z` | jede dieser Handlungen zurücknehmen |
 
 Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Editor“. Wirken können
-sie nur, solange der Fokus im Editor steht und dieser die Aufgabentabelle zeigt;
-sonst sind sie ausgegraut, und ihre Tasten wirken so, als wären sie nicht
-belegt.
+sie nur, solange der Fokus im Editor steht und dieser eine der zwei Tabellen
+zeigt; das Abhaken wirkt allein in der Aufgabentabelle. Sonst sind sie
+ausgegraut, und ihre Tasten wirken so, als wären sie nicht belegt.
 
 **Jede Handlung ändert zuerst nur den Stand im Editor.** Auf die Platte kommt
 sie mit `cmd+s`, wie jede andere Änderung im Editor. Abhaken schreibt allein
@@ -632,3 +631,56 @@ trotzdem erreichbar. Doppelklick, Kästchen, `cmd+c` und `cmd+z` wirken ohnehin.
 Die Tasten bringt derselbe Handgriff wie oben beim Menüeintrag des
 Notizordners: **F1**, dann `cmd+r`, dann „Fertig“, mit demselben Preis für jede
 eigene Tastenzuweisung.
+
+### Notizen in der Tabelle bearbeiten
+
+**In der Formatansicht des Editors steht `notes.txt` als Tabelle mit zwei
+Spalten**, links das Thema, rechts der Text der Notiz. Die Kopfzeile trägt die
+Namen „Thema“ und „Notiz“. Eine Zeile ist so hoch wie ihr Text: eine Notiz mit
+drei Zeilen belegt drei Zeilen, und beim Tippen wächst sie mit. Eine lange
+Zeile bricht an der Spaltenbreite um. Die Themenspalte lässt sich an ihrer
+Kante in der Kopfzeile breiter oder schmaler ziehen.
+
+**Die Tabelle zeigt allein die Notizen.** Text vor dem ersten `## ` sieht man
+nur in der Rohansicht, und er bleibt beim Verschieben und Löschen oben stehen.
+Löschen nimmt eine Notiz ganz, also Thema und Text.
+
+| Griff | Wirkung |
+|---|---|
+| Doppelklick auf eine Zelle | diese Zelle öffnet sich, ihr Text ist ausgewählt |
+| `cmd+return` | das Thema der gewählten Notiz öffnen; in einer offenen Zelle den Text übernehmen |
+| `shift+cmd+return` | eine leere Notiz ans Ende, ihr Thema gleich offen |
+| `opt+cmd+up`, `opt+cmd+down` | die gewählte Notiz eine Stelle nach oben oder unten |
+| `shift+cmd+delete` | die gewählte Notiz löschen, ohne Rückfrage |
+| `cmd+c` | den Text der gewählten Notiz kopieren; ist er leer, das Thema |
+| `cmd+z` | jede dieser Handlungen zurücknehmen |
+
+Es sind dieselben Befehle wie in der Aufgabentabelle. „Aufgabe abhaken oder
+öffnen“ bleibt hier ausgegraut, denn eine Notiz hat kein Kästchen. Wie dort
+kommt jede Handlung erst mit `cmd+s` auf die Platte, und Suchen, Ersetzen und
+der Zeilensprung sind in der Tabelle ausgegraut.
+
+**In einer offenen Zelle gelten andere Regeln als in der Aufgabentabelle:**
+
+- `return` schreibt im Text der Notiz einen Zeilenumbruch, und die Zelle bleibt
+  offen. Im Thema übernimmt `return` die Zelle, denn ein Thema ist eine Zeile.
+- `tab` übernimmt die Zelle und öffnet die nächste: vom Thema in den Text
+  derselben Notiz, vom Text in das Thema der nächsten. `shift+tab` geht
+  denselben Weg zurück. Nach der letzten Zelle bleibt der Fokus in der Tabelle,
+  und keine Zelle ist mehr offen.
+- `cmd+return` oder ein Klick daneben übernehmen den Text.
+- `esc` übernimmt eine geänderte Zelle und verwirft sie nicht. Die Statuszeile
+  sagt dazu, dass `cmd+z` die Übernahme zurücknimmt. Eine unveränderte Zelle
+  schließt `esc` einfach. Der Grund für diese Regel: eine Notiz kann mehrere
+  Absätze tragen, und ein Verwerfen nähme sie ohne Warnung mit.
+- Eine Zeile im Text, die mit `## ` beginnt, weist KRK ab, denn so beginnt die
+  nächste Notiz. Die Zelle bleibt offen, und die Statuszeile nennt den Grund.
+  `#` und `###` am Zeilenanfang sind erlaubt.
+- Ein Thema mit Zeilenumbruch, etwa aus der Zwischenablage eingefügt, weist
+  KRK ebenso ab.
+- Das Übernehmen vor `cmd+s`, `ctrl+cmd+e`, dem Schließen des Editors und
+  `cmd+q` gilt wie in der Aufgabentabelle, und `cmd+z` nimmt in einer offenen
+  Zelle nur das Getippte zurück.
+
+Wer mit `shift+cmd+return` eine Notiz anlegt und die Zelle ohne Eingabe
+schließt, behält eine leere Notiz in der Datei. Ein `cmd+z` nimmt sie zurück.
