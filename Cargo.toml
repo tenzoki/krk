@@ -565,3 +565,108 @@ gix = { version = "0.87", default-features = false, features = [
     "parallel",
     "sha1",
 ] }
+
+# Die Verschluesselung von `~/krkhome/.secrets.txt` (Stufe 5, C7 des Spec
+# `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`):
+# XChaCha20-Poly1305 fuer den Inhalt, Argon2id fuer den Schluessel aus der
+# vierstelligen PIN. Verfahren und Bedrohungsmodell hat der Nutzer gewaehlt
+# (`260926-0007_*_wie-wird-secrets-txt-verschluesselt-und-was-schuetzt-eine-vierstellige-pin.md`,
+# Moeglichkeit 1: allein das versehentliche Lesen durch Agenten, Werkzeuge und
+# Indexer), die Kisten die Zweitlesung
+# `fusion-workbench/shared/consultations/260926-0017-zweitlesung-spec-f2-krkhome.md`.
+# Das Dateiformat steht im Modulkopf von `krk-core/src/heimordner/tresor.rs`,
+# der einzigen Stelle, die die zwei Kisten nennt.
+#
+# Keine bestehende Abhaengigkeit leistet ein AEAD-Verfahren oder eine
+# Schluesselableitung aus einem Kennwort: `gix` bringt ueber `sha1` eine
+# Pruefsumme mit und sonst nichts, `icu_collator` sortiert, `regex` vergleicht
+# Muster, `toml` zerlegt, `zip` packt, `pulldown-cmark` rendert Markdown,
+# `syntect` faerbt ein, `signal-hook` faengt Signale, die `objc2`-Kisten reichen
+# AppKit durch. **Zwei Alternativen scheiden aus, und beide an einer
+# gemessenen Eigenschaft:** `ring` baut C und Assembler, und `age` 0.12 baut
+# zwar ohne C, zieht aber rund 185 Kisten herein, von denen der Kennwortweg
+# keine braucht (beides erhoben von der Zweitlesung am 260926).
+#
+# **Die Merkmalswahl ist Sparsamkeit und nicht die Bedingung der Einbindung**,
+# denn keiner der beiden Vorgabesaetze zieht C herein. Bei
+# `chacha20poly1305` bleiben von `["alloc", "getrandom"]` beide an: `alloc`
+# verschluesselt in einen `Vec`, und `getrandom` gibt ueber den Zug `Generate`
+# den Zufall des Betriebssystems fuer Salz und Nonce her. **Damit entsteht
+# keine dritte unmittelbare Abhaengigkeit**: `getrandom` kommt ueber
+# `crypto-common` in genau der Fassung 0.4.3 an, die ueber `gix-utils` schon im
+# Baum steht (`cargo tree --target aarch64-apple-darwin -e normal,build -i
+# getrandom`, am 260926). Bei `argon2` bleibt von `["alloc", "getrandom",
+# "password-hash"]` allein `alloc`, denn nur hinter ihm steht
+# `Argon2::hash_password_into`; `password-hash` baute das PHC-Zeichenkettenformat
+# fuer gespeicherte Kennwortpruefsummen, und KRK speichert keine. `parallel`
+# bleibt aus, weil es `rayon` hereinholte und die gemessenen Parameter mit
+# einer Spur auskommen. `zeroize` bleibt aus, und das ist keine Nachlaessigkeit:
+# der Spec sagt kein Tilgen des Speichers zu, weil der Editor den Klartext
+# ohnehin haelt, und ein Merkmal, das ein Tilgen andeutete, versprache mehr, als
+# der Bau haelt.
+#
+# **Die Parameter von Argon2id sind auf dem Referenzgeraet gemessen und nicht
+# geschaetzt.** Am 260926 auf `MacBookPro15,1` im Profil `release`: 128 MiB
+# Speicher, sieben Durchlaeufe und eine Spur kosten im Median 0,537 s je
+# Ableitung, die Reihe naechst der halben Sekunde, die C7 verlangt. Die ganze
+# Messreihe und die Probe, die sie faehrt, stehen im Modulkopf von
+# `heimordner/tresor.rs`.
+#
+# **Was die zwei Kisten mitbringen, ist gezaehlt und nicht geschaetzt.** Am
+# 260926 auf diesem Geraet erhoben, mit `cargo tree --workspace --target <ziel>
+# -e normal,build` vor und nach der Aufnahme und dem Vergleich der beiden
+# `Cargo.lock`:
+#
+# - **Der Baum des Bauziels waechst auf `aarch64-apple-darwin` von 198 auf
+#   215 Eintraege, also um 17**: die zwei Kisten selbst und `aead`,
+#   `base64ct`, `blake2`, `block-buffer`, `chacha20`, `cipher`, `cmov`,
+#   `crypto-common`, `ctutils`, `digest`, `hybrid-array`, `inout`, `poly1305`,
+#   `rand_core` und `universal-hash`, alle aus der `RustCrypto`-Familie.
+#   **Auf `x86_64-apple-darwin` sind es 18**, von 198 auf 216: dort kommt
+#   `cpufeatures` 0.3.1 dazu, das die Befehlssatzerweiterungen von Intel zur
+#   Laufzeit erfragt, neben dem vorhandenen 0.2.17. `Cargo.lock`, das alle Ziele
+#   und abgeschaltete Merkmale fuehrt, waechst von 219 auf 239 Eintraege; die
+#   zwei darueber, `password-hash` und `phc`, haengen am abgeschalteten Merkmal
+#   `password-hash` und werden nie uebersetzt.
+# - **Weder `cc` noch ein `-sys`-Paket kommt hinzu.** Auf den beiden
+#   Mac-Zielen kommt weder `cc` noch ein Paket mit einem Namen auf `-sys` im
+#   Baum an; beide Laeufe von `cargo tree --target <ziel> -e normal,build`
+#   liefern null Treffer, am Projektbaum gemessen und nicht am Pruef-Workspace
+#   der Zweitlesung. `Cargo.lock` fuehrt daneben `windows-sys` und
+#   `linux-raw-sys`, beide an fremden Zielen. Keine der 18 Kisten traegt ein
+#   `build.rs` oder eine Datei in C oder Assembler. Die Zusage aus der
+#   Technologiewahl haelt: die Bauvoraussetzungen aendern sich nicht.
+# - **Die Mindestfassung passt.** Alle 18 verlangen Rust 1.85, das Projekt
+#   faehrt 1.97.1.
+#
+# **Die Fassungen sind auf `"0.11"` und `"0.6"` festgenagelt und nicht auf
+# `"0"`**, aus demselben Grund wie bei `gix`: unter 1.0 darf jede kleine
+# Fassung brechen, und ein Bruch im Verfahren waere hier nicht ein roter Bau,
+# sondern eine Datei, die sich nicht mehr oeffnet. Das Format haengt allerdings
+# an keiner Fassung, sondern an den Verfahren selbst; eine neuere Fassung, die
+# XChaCha20-Poly1305 und Argon2id in der Fassung `0x13` weiter rechnet, oeffnet
+# jede alte Datei.
+chacha20poly1305 = { version = "0.11", default-features = false, features = [
+    "alloc",
+    "getrandom",
+] }
+# Die Schluesselableitung dazu; Begruendung, Merkmalswahl und Befund zu `cc`
+# und `-sys` stehen bei `chacha20poly1305` darueber, weil beide Kisten zusammen
+# aufgenommen sind und zwei Zahlen fuer einen Baum zwei Wahrheiten waeren.
+argon2 = { version = "0.6", default-features = false, features = ["alloc"] }
+
+# Argon2id im Profil `dev` voll optimiert, und nur diese Rechnung. Die Ableitung
+# mit den Parametern des Codes kostet im Profil `release` rund eine halbe
+# Sekunde, unoptimiert am 260926 gemessen rund zehn: die eine Probe, die sie
+# zweimal bezahlt
+# (`ein_neuer_schluessel_zieht_frisches_salz_mit_den_parametern_des_codes` in
+# `crates/krk-core/tests/heimordner.rs`), lief damit 19,8 s statt 1,1 s, und ein
+# im Profil `dev` gebautes KRK fror beim Oeffnen von `.secrets.txt` den
+# Ladefaden entsprechend lange ein. `blake2` steht daneben, weil Argon2id seine
+# Bloecke damit fuellt. Am eigenen Code aendert das nichts: er bleibt
+# unoptimiert und damit so gut zu untersuchen wie bisher.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3

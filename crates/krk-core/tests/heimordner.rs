@@ -30,6 +30,10 @@ use krk_core::heimordner::eintraege::{
     Abweisung, Aufgaben, Notiz, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
     ist_themenzeile, notizen,
 };
+use krk_core::heimordner::tresor::{
+    self, FORMATVERSION, KOPFLAENGE, Kopf, Kopfschaden, Oeffnungsfehler, Parameter, Pin, Pinfehler,
+    SALZLAENGE, Schluessel,
+};
 use krk_core::heimordner::{
     ALTE_ZETTEL, Bereitstellung, Heimordner, Hindernis, ORDNERNAME, Sonderdatei, Uebernahmeausgang,
     Zettelbefund, bereitstellen,
@@ -1252,4 +1256,476 @@ fn die_hindernisse_melden_sich_im_wortlaut() {
         Hindernis::KeinBenutzerverzeichnis.meldung(),
         "Das System nennt kein Benutzerverzeichnis, also gibt es kein ~/krkhome"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Das Dateiformat von .secrets.txt (Schritt 5.1, Faehigkeit C7)
+// ---------------------------------------------------------------------------
+
+/// Kleine Parameter, damit die Proben im Profil `dev` nicht auf die halbe
+/// Sekunde der echten warten. Die Parameter reisen im Kopf mit, also prueft
+/// jede Probe mit ihnen denselben Weg wie mit denen des Codes.
+fn klein() -> Parameter {
+    Parameter::neu(64, 1, 1).expect("die kleinen Parameter sind gueltig")
+}
+
+fn pin(ziffern: &str) -> Pin {
+    Pin::aus_eingabe(ziffern).expect("vier Ziffern")
+}
+
+/// Ein Schluessel mit festem Salz und kleinen Parametern.
+fn kleiner_schluessel(ziffern: &str) -> Schluessel {
+    tresor::schluessel_ableiten(&pin(ziffern), &[3; SALZLAENGE], klein()).expect("Ableitung")
+}
+
+/// Der bekannte Eintrag, dessen Text in keinem Chiffrat vorkommen darf.
+const BEKANNTER_EINTRAG: &str = "## Bank\nKontonummer 4711-0815-GEHEIM\n";
+
+fn enthaelt(heuhaufen: &[u8], nadel: &[u8]) -> bool {
+    heuhaufen
+        .windows(nadel.len())
+        .any(|fenster| fenster == nadel)
+}
+
+/// C7.5: Verschliessen und Oeffnen mit derselben PIN ergibt wieder dieselben
+/// Bytes, auch fuer einen leeren Inhalt.
+#[test]
+fn verschliessen_und_oeffnen_ergeben_denselben_klartext() {
+    let schluessel = kleiner_schluessel("0417");
+    for klartext in ["", BEKANNTER_EINTRAG, "Umlaute äöü\r\nohne Schluss"] {
+        let datei = tresor::verschliessen(klartext.as_bytes(), &schluessel).expect("verschliessen");
+        let geoeffnet = tresor::oeffnen(&datei, &pin("0417")).expect("oeffnen");
+        assert_eq!(geoeffnet.klartext, klartext.as_bytes());
+        assert_eq!(geoeffnet.schluessel, schluessel);
+    }
+}
+
+/// C7.3 und C7.4: die Datei beginnt mit dem Kopf, und der Text des bekannten
+/// Eintrags kommt in ihr nicht vor, weder ganz noch in einem Stueck.
+#[test]
+fn der_bekannte_eintrag_steht_nicht_im_chiffrat() {
+    let datei = tresor::verschliessen(BEKANNTER_EINTRAG.as_bytes(), &kleiner_schluessel("0417"))
+        .expect("verschliessen");
+
+    assert_eq!(&datei[..6], b"KRKSEC");
+    assert_eq!(datei.len(), KOPFLAENGE + BEKANNTER_EINTRAG.len() + 16);
+    for stueck in ["Kontonummer", "4711-0815", "GEHEIM", "Bank"] {
+        assert!(
+            !enthaelt(&datei, stueck.as_bytes()),
+            "`{stueck}` steht im Chiffrat"
+        );
+    }
+}
+
+/// C7.6: eine falsche PIN und ein veraendertes Byte geben dieselbe Abweisung,
+/// keinen Text, und die Datei auf der Platte bleibt Byte fuer Byte dieselbe.
+/// Das gilt fuer ein Byte im Chiffrat, im Pruefwert und in jedem Feld des
+/// Kopfes, das die Pruefung gelten laesst: der ganze Kopf geht als
+/// zusaetzliche authentifizierte Daten ein.
+#[test]
+fn falsche_pin_und_veraendertes_byte_geben_dieselbe_abweisung() {
+    let ordner = Pruefordner::neu("tresor-abweisung");
+    let pfad = ordner.pfad().join(".secrets.txt");
+    let datei = tresor::verschliessen(BEKANNTER_EINTRAG.as_bytes(), &kleiner_schluessel("0417"))
+        .expect("verschliessen");
+    fs::write(&pfad, &datei).expect("die Pruefdatei laesst sich nicht schreiben");
+
+    let gelesen = fs::read(&pfad).expect("lesbar");
+    let ausgang = tresor::oeffnen(&gelesen, &pin("0418"));
+    assert_eq!(
+        ausgang.as_ref().map(|g| g.klartext.clone()).unwrap_err(),
+        &Oeffnungsfehler::PinFalschOderVeraendert
+    );
+    assert_eq!(
+        fs::read(&pfad).expect("lesbar"),
+        datei,
+        "die Datei hat sich geaendert"
+    );
+
+    // Ein Byte im Chiffrat, das letzte Byte des Pruefwerts, und je ein Byte
+    // in Speicher, Durchlaeufen, Salz und Nonce des Kopfes. In den zwei
+    // Parameterfeldern wird das Bit fuer die Zwei gekippt (64 KiB werden 66,
+    // ein Durchlauf wird drei), damit der Wert in den Grenzen bleibt und die
+    // Probe die Pruefung erreicht statt den Kopfschaden.
+    let stellen = [KOPFLAENGE + 3, datei.len() - 1, 8, 12, 20, 36, 59];
+    for stelle in stellen {
+        let mut veraendert = datei.clone();
+        veraendert[stelle] ^= if stelle == 8 || stelle == 12 {
+            0x02
+        } else {
+            0x01
+        };
+        let ausgang = tresor::oeffnen(&veraendert, &pin("0417"));
+        assert!(
+            matches!(ausgang, Err(Oeffnungsfehler::PinFalschOderVeraendert)),
+            "Byte {stelle}: {ausgang:?}"
+        );
+    }
+}
+
+/// C7.6: jeder Schaden am Kopf wird als solcher gemeldet, bevor abgeleitet
+/// wird.
+#[test]
+fn jeder_kopfschaden_wird_als_solcher_gemeldet() {
+    let datei =
+        tresor::verschliessen(b"Inhalt", &kleiner_schluessel("0417")).expect("verschliessen");
+    let mit = |stelle: usize, bytes: &[u8]| {
+        let mut kopie = datei.clone();
+        kopie[stelle..stelle + bytes.len()].copy_from_slice(bytes);
+        kopie
+    };
+    let faelle: Vec<(&str, Vec<u8>, Kopfschaden)> = vec![
+        ("leer", Vec::new(), Kopfschaden::Abgeschnitten),
+        (
+            "nur die Kennung",
+            b"KRKSEC".to_vec(),
+            Kopfschaden::Abgeschnitten,
+        ),
+        (
+            "mitten im Kopf",
+            datei[..KOPFLAENGE - 1].to_vec(),
+            Kopfschaden::Abgeschnitten,
+        ),
+        (
+            "fremde Kennung",
+            mit(0, b"KRKSEX"),
+            Kopfschaden::FalscheKennung,
+        ),
+        (
+            "Klartext",
+            b"## Thema\nText\n".to_vec(),
+            Kopfschaden::FalscheKennung,
+        ),
+        ("Version 0", mit(6, &[0]), Kopfschaden::UnbekannteVersion(0)),
+        ("Version 2", mit(6, &[2]), Kopfschaden::UnbekannteVersion(2)),
+        (
+            "Ableitung 2",
+            mit(7, &[2]),
+            Kopfschaden::UnbekannteAbleitung(2),
+        ),
+        (
+            "kein Speicher",
+            mit(8, &0u32.to_le_bytes()),
+            Kopfschaden::UngueltigeParameter,
+        ),
+        (
+            "zu viel Speicher",
+            mit(8, &u32::MAX.to_le_bytes()),
+            Kopfschaden::UngueltigeParameter,
+        ),
+        (
+            "kein Durchlauf",
+            mit(12, &0u32.to_le_bytes()),
+            Kopfschaden::UngueltigeParameter,
+        ),
+        (
+            "zu viele Durchlaeufe",
+            mit(12, &65u32.to_le_bytes()),
+            Kopfschaden::UngueltigeParameter,
+        ),
+        (
+            "keine Spur",
+            mit(16, &0u32.to_le_bytes()),
+            Kopfschaden::UngueltigeParameter,
+        ),
+        (
+            "zu viele Spuren",
+            mit(16, &17u32.to_le_bytes()),
+            Kopfschaden::UngueltigeParameter,
+        ),
+    ];
+    for (name, bytes, schaden) in faelle {
+        let ausgang = tresor::oeffnen(&bytes, &pin("0417"));
+        assert!(
+            matches!(&ausgang, Err(Oeffnungsfehler::KopfBeschaedigt(s)) if *s == schaden),
+            "{name}: {ausgang:?}"
+        );
+    }
+}
+
+/// C7.7 und die Beschreibung des Kopfes: eine Datei, allein nach der Tabelle
+/// im Modulkopf von `heimordner/tresor.rs` gebaut, mit den Kisten selbst und
+/// ohne einen Weg dieses Moduls, mit Formatversion 1 und Parametern, die
+/// kleiner sind als die des Codes, oeffnet mit derselben PIN. Die Parameter
+/// lesen sich also aus dem Kopf und nicht aus dem Code.
+#[test]
+fn eine_von_hand_gebaute_datei_mit_kleineren_parametern_oeffnet() {
+    use argon2::{Algorithm, Argon2, Params, Version};
+    use chacha20poly1305::aead::{Aead, KeyInit, Payload};
+    use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
+
+    let (m, t, p) = (32u32, 2u32, 1u32);
+    assert!(m < Parameter::DES_CODES.speicher_kib());
+    let salz = [0x5a; 16];
+    let nonce = [0xa5; 24];
+    let mut kopf = Vec::new();
+    kopf.extend_from_slice(b"KRKSEC");
+    kopf.push(1);
+    kopf.push(1);
+    kopf.extend_from_slice(&m.to_le_bytes());
+    kopf.extend_from_slice(&t.to_le_bytes());
+    kopf.extend_from_slice(&p.to_le_bytes());
+    kopf.extend_from_slice(&salz);
+    kopf.extend_from_slice(&nonce);
+    assert_eq!(kopf.len(), 60);
+
+    let mut schluessel = [0u8; 32];
+    Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(m, t, p, Some(32)).expect("Parameter"),
+    )
+    .hash_password_into(b"9031", &salz, &mut schluessel)
+    .expect("Ableitung");
+    let chiffrat = XChaCha20Poly1305::new(&Key::from(schluessel))
+        .encrypt(
+            &XNonce::from(nonce),
+            Payload {
+                msg: BEKANNTER_EINTRAG.as_bytes(),
+                aad: &kopf,
+            },
+        )
+        .expect("Verschluesselung");
+    let mut datei = kopf.clone();
+    datei.extend_from_slice(&chiffrat);
+
+    let geoeffnet = tresor::oeffnen(&datei, &pin("9031")).expect("die Datei oeffnet nicht");
+    assert_eq!(geoeffnet.klartext, BEKANNTER_EINTRAG.as_bytes());
+    assert_eq!(
+        geoeffnet.schluessel.parameter(),
+        Parameter::neu(m, t, p).expect("gueltig")
+    );
+    assert_eq!(geoeffnet.schluessel.salz(), &salz);
+    assert_eq!(
+        Kopf::lesen(&datei).expect("lesbar").version(),
+        FORMATVERSION
+    );
+}
+
+/// C7.3: zwei Sicherungen desselben Klartexts mit demselben Schluessel
+/// ergeben verschiedene Bytes, weil jede eine neue Nonce zieht, und tragen
+/// dasselbe Salz und dieselben Parameter.
+#[test]
+fn zwei_sicherungen_ergeben_verschiedene_bytes_mit_demselben_salz() {
+    let schluessel = kleiner_schluessel("0417");
+    let erste = tresor::verschliessen(BEKANNTER_EINTRAG.as_bytes(), &schluessel).expect("erste");
+    let zweite = tresor::verschliessen(BEKANNTER_EINTRAG.as_bytes(), &schluessel).expect("zweite");
+
+    assert_ne!(erste, zweite);
+    let (kopf1, kopf2) = (
+        Kopf::lesen(&erste).expect("lesbar"),
+        Kopf::lesen(&zweite).expect("lesbar"),
+    );
+    assert_eq!(kopf1.salz(), kopf2.salz());
+    assert_eq!(kopf1.salz(), schluessel.salz());
+    assert_eq!(kopf1.parameter(), kopf2.parameter());
+    assert_ne!(kopf1.nonce(), kopf2.nonce());
+}
+
+/// C7.3: der Schluessel aus `oeffnen` verschliesst so, dass Salz und
+/// Parameter im neuen Kopf denen der geoeffneten Datei gleichen. Eine
+/// gewoehnliche Sicherung uebernimmt sie also und hebt die Parameter nicht auf
+/// die des Codes an.
+#[test]
+fn der_schluessel_aus_oeffnen_behaelt_salz_und_parameter() {
+    let alt = tresor::verschliessen(b"vorher", &kleiner_schluessel("2468")).expect("verschliessen");
+    let geoeffnet = tresor::oeffnen(&alt, &pin("2468")).expect("oeffnen");
+    let neu = tresor::verschliessen(b"nachher", &geoeffnet.schluessel).expect("verschliessen");
+
+    let (kopf_alt, kopf_neu) = (
+        Kopf::lesen(&alt).expect("lesbar"),
+        Kopf::lesen(&neu).expect("lesbar"),
+    );
+    assert_eq!(kopf_neu.salz(), kopf_alt.salz());
+    assert_eq!(kopf_neu.parameter(), kopf_alt.parameter());
+    assert_ne!(kopf_neu.parameter(), Parameter::DES_CODES);
+    assert_eq!(
+        tresor::oeffnen(&neu, &pin("2468"))
+            .expect("oeffnen")
+            .klartext,
+        b"nachher"
+    );
+}
+
+/// C7.3: ein neuer Schluessel zieht ein frisches Salz und nimmt die Parameter
+/// des Codes. Die einzige Probe, die die volle Ableitung bezahlt, und zwar
+/// zweimal.
+#[test]
+fn ein_neuer_schluessel_zieht_frisches_salz_mit_den_parametern_des_codes() {
+    let erster = tresor::neuer_schluessel(&pin("1357")).expect("erster");
+    let zweiter = tresor::neuer_schluessel(&pin("1357")).expect("zweiter");
+
+    assert_eq!(erster.parameter(), Parameter::DES_CODES);
+    assert_ne!(erster.salz(), zweiter.salz());
+    assert_ne!(erster, zweiter);
+}
+
+/// C7.2: die PIN besteht aus genau vier ASCII-Ziffern.
+#[test]
+fn die_pin_nimmt_genau_vier_ziffern_an() {
+    for zahl in 0..10_000 {
+        let eingabe = format!("{zahl:04}");
+        assert!(Pin::aus_eingabe(&eingabe).is_ok(), "{eingabe} abgewiesen");
+    }
+    for eingabe in [
+        "",
+        "123",
+        "12345",
+        "abcd",
+        "12a4",
+        " 1234",
+        "1234 ",
+        "12 4",
+        "1234\n",
+        "\t123",
+        "-123",
+        "+123",
+        "١٢٣٤",
+        "１２３４",
+    ] {
+        assert_eq!(
+            Pin::aus_eingabe(eingabe),
+            Err(Pinfehler::KeineVierZiffern),
+            "{eingabe:?} angenommen"
+        );
+    }
+}
+
+/// Die Saetze, die aus diesem Format an den Nutzer gehen, im Wortlaut und mit
+/// Umlauten. Fuer eine falsche PIN und eine veraenderte Datei ist es ein Satz.
+#[test]
+fn die_meldungen_des_tresors_stehen_im_wortlaut() {
+    assert_eq!(
+        Oeffnungsfehler::PinFalschOderVeraendert.meldung(),
+        "PIN falsch oder Datei verändert"
+    );
+    assert_eq!(
+        Pinfehler::KeineVierZiffern.meldung(),
+        "Die PIN besteht aus genau vier Ziffern."
+    );
+    assert_eq!(
+        Oeffnungsfehler::KopfBeschaedigt(Kopfschaden::UnbekannteVersion(7)).meldung(),
+        "Der Kopf der Datei ist beschädigt: unbekannte Formatversion 7"
+    );
+    assert_eq!(
+        Oeffnungsfehler::KopfBeschaedigt(Kopfschaden::UngueltigeParameter).meldung(),
+        "Der Kopf der Datei ist beschädigt: die Parameter der Ableitung sind ungültig"
+    );
+}
+
+/// Der Rumpf einer freien Funktion in `heimordner/tresor.rs`, ohne
+/// Kommentarzeilen; er endet an der ersten schliessenden Klammer am
+/// Zeilenanfang.
+fn freier_rumpf(inhalt: &str, name: &str) -> String {
+    let kopf = format!("\npub fn {name}(");
+    let beginn = inhalt
+        .find(&kopf)
+        .unwrap_or_else(|| panic!("{kopf} steht nicht in heimordner/tresor.rs"));
+    let rest = &inhalt[beginn..];
+    let ende = rest
+        .find("\n}\n")
+        .unwrap_or_else(|| panic!("der Rumpf von {name} endet nicht"));
+    rest[..ende]
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// C7.3: eine gewoehnliche Sicherung leitet nicht ab. `verschliessen` nennt
+/// weder die Ableitung noch Argon2, und abgeleitet wird allein in `oeffnen`
+/// und `neuer_schluessel`, deren einziger Weg `schluessel_ableiten` ist.
+#[test]
+fn verschliessen_leitet_nicht_ab_und_abgeleitet_wird_an_zwei_stellen() {
+    let inhalt = fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/heimordner/tresor.rs"
+    ))
+    .expect("heimordner/tresor.rs ist nicht lesbar");
+
+    let verschliessen = freier_rumpf(&inhalt, "verschliessen");
+    assert!(
+        verschliessen.contains("encrypt"),
+        "nicht gelesen:\n{verschliessen}"
+    );
+    for nadel in [
+        "schluessel_ableiten",
+        "neuer_schluessel",
+        "Argon2",
+        "hash_password",
+    ] {
+        assert!(
+            !verschliessen.contains(nadel),
+            "verschliessen nennt `{nadel}`:\n{verschliessen}"
+        );
+    }
+
+    // Ausserhalb des Pruefmoduls steht `hash_password_into` einmal, in
+    // `schluessel_ableiten`, und `schluessel_ableiten(` wird genau zweimal
+    // gerufen, in `oeffnen` und in `neuer_schluessel`.
+    let code = inhalt
+        .split("#[cfg(test)]")
+        .next()
+        .expect("Code vor den Proben");
+    let code: String = code
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_eq!(code.matches("hash_password_into").count(), 1);
+    assert_eq!(
+        code.matches("schluessel_ableiten(").count(),
+        3,
+        "Definition und zwei Rufer"
+    );
+    assert!(freier_rumpf(&inhalt, "oeffnen").contains("schluessel_ableiten("));
+    assert!(freier_rumpf(&inhalt, "neuer_schluessel").contains("schluessel_ableiten("));
+}
+
+/// Die Messung, aus der [`Parameter::DES_CODES`] stammt. Laeuft nur auf
+/// ausdruecklichen Aufruf und nur sinnvoll im Profil `release`:
+///
+/// ```sh
+/// cargo test --release -p krk-core --test heimordner -- --ignored argon2 --nocapture
+/// ```
+///
+/// Gibt je Reihe aus Speicher und Durchlaeufen den Median aus fuenf
+/// Ableitungen aus. Das Ergebnis vom 260926 auf dem Referenzgeraet steht im
+/// Modulkopf von `heimordner/tresor.rs`.
+#[test]
+#[ignore = "Messung auf dem Referenzgeraet, nur im Profil release aussagekraeftig"]
+fn argon2_parameter_auf_dem_referenzgeraet_messen() {
+    use std::time::Instant;
+
+    let pin = pin("0417");
+    let salz = [0x42; SALZLAENGE];
+    for (speicher_mib, durchlaeufe) in [
+        (64, 3),
+        (128, 2),
+        (128, 3),
+        (128, 4),
+        (128, 5),
+        (128, 6),
+        (128, 7),
+        (192, 3),
+        (256, 2),
+        (256, 3),
+        (256, 4),
+        (384, 2),
+        (512, 2),
+    ] {
+        let parameter = Parameter::neu(speicher_mib * 1024, durchlaeufe, 1).expect("gueltig");
+        let mut zeiten: Vec<f64> = (0..5)
+            .map(|_| {
+                let beginn = Instant::now();
+                let _ = tresor::schluessel_ableiten(&pin, &salz, parameter).expect("Ableitung");
+                beginn.elapsed().as_secs_f64()
+            })
+            .collect();
+        zeiten.sort_by(f64::total_cmp);
+        println!(
+            "argon2id m={speicher_mib} MiB t={durchlaeufe} p=1: Median {:.3} s (min {:.3}, max {:.3})",
+            zeiten[2], zeiten[0], zeiten[4]
+        );
+    }
 }

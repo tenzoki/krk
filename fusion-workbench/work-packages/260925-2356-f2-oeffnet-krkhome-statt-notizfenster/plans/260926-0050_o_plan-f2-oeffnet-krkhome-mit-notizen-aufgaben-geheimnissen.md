@@ -417,7 +417,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
     - Closes (am Baum): C5.1, C5.3, C5.4, C5.5, C5.6, C5.7, C5.8.
     - Dependencies: 3.3, 4.1, 4.2
 
-18. **4.4 Anleitung für Stufe 4**
+18. [DONE] **4.4 Anleitung für Stufe 4**
     - Executor: `code-implementer`
     - Files: `HowTo.md`
     - Changes: die Notiztabelle, `return` als Zeilenumbruch in der Notizzelle, `cmd+return`, `tab` und ein Klick daneben zum Übernehmen, `esc` nach der Antwort des Datensatzes, die Abweisung einer `## `-Zeile.
@@ -430,7 +430,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
 
 **Die zwei Datensätze, die Stufe 5 vorausgesetzt hat, sind beantwortet:** `260926-0050_*_zieht-jede-sicherung-von-secrets-txt-ein-neues-salz-wenn-das-eine-halbe-sekunde-je-cmd-s-kostet.md` mit Möglichkeit 3 (neues Salz nur beim Festlegen und Ändern der PIN, neue Nonce je Sicherung, der abgeleitete Schlüssel wird gehalten) und `260926-0050_*_wie-weit-reicht-der-inhaltsfilter-liest-secrets-txt-nicht-wenn-das-kennzeichen-versteckt-ihn-nicht-haelt.md` mit Möglichkeit 1 (im erkannten Ordner über die Ausnahme und den Namen; die tiefe Suche von oben liest weiter Chiffrat). Der Spec trägt C7.3 und C7.13 in der Fassung dieser Antworten; die Schritte unten bauen darauf und nennen die Gegenmöglichkeiten nicht mehr.
 
-19. **5.1 Das Dateiformat und die zwei Kisten**
+19. [DONE] **5.1 Das Dateiformat und die zwei Kisten**
     - Executor: `code-implementer`
     - Files: `Cargo.toml` (Wurzel), `crates/krk-core/Cargo.toml`, `Cargo.lock`, `crates/krk-core/src/heimordner/tresor.rs` (neu), `crates/krk-core/tests/heimordner.rs`
     - Changes:

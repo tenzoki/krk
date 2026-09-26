@@ -8,7 +8,8 @@
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
 //! Die Form der Eintraege in den zwei Dateien steht in [`eintraege`], das
 //! Anlegen von Ordner und Dateien samt der einmaligen Uebernahme der alten
-//! Zettel in [`bereitstellen`].
+//! Zettel in [`bereitstellen`], das Dateiformat von `.secrets.txt` mit Kopf,
+//! Ableitung und Verschluesselung in [`tresor`].
 //!
 //! # Zwei Formen, verglichen als Text
 //!
@@ -66,6 +67,7 @@
 
 mod bereitstellen;
 pub mod eintraege;
+pub mod tresor;
 
 pub use bereitstellen::{
     ALTE_ZETTEL, AlterZettel, Bereitstellung, Hindernis, Uebernahme, Uebernahmeausgang,
