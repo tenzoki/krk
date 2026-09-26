@@ -8907,17 +8907,6 @@ impl Anwendungsdelegierter {
     // Der Zeilensprung, die Suche und das Ersetzen (C5)
     // ------------------------------------------------------------------
 
-    /// Fuehrt einen Editorbefehl aus, der genau eine Meldung liefert.
-    ///
-    /// **Die eine Stelle fuer die vier Befehle ohne Blatt** — Weitersuchen,
-    /// rueckwaerts Weitersuchen, Ersetzen und Alle ersetzen. Sie haben denselben
-    /// Zuschnitt: ein Ruf in den Editor, eine Meldung in die Statuszeile, und
-    /// der Tastendruck ist verbraucht. Vier gleichlautende Funktionen daneben
-    /// waeren vier Gelegenheiten, den Zuschnitt verschieden zu schreiben.
-    ///
-    /// Was der Befehl tut, entscheidet der Editor, und ob er ueberhaupt etwas
-    /// tun kann, ebenfalls: laeuft keine Suche, kommt die Meldung darueber
-    /// zurueck. Diese Funktion stellt keine zweite Vorbedingung daneben.
     /// Der Melder fuer ein Kommando aus einem Klick: auf einen Schalter der
     /// Bereichsleiste oder auf den Kopf „Datum" der Termintabelle.
     ///
@@ -8953,6 +8942,19 @@ impl Anwendungsdelegierter {
         ausgefuehrt
     }
 
+    /// Fuehrt einen Editorbefehl aus, der genau eine Meldung liefert.
+    ///
+    /// **Die eine Stelle fuer die Befehle ohne Blatt**, die so antworten, von
+    /// Weitersuchen und Ersetzen bis zu den Handlungen der Eintragstabellen.
+    /// Welche es sind, sagt `grep -n 'self.editorbefehl(' crates/krk-ui/src/appkit/anwendung.rs`
+    /// und keine Zahl an dieser Stelle. Sie haben denselben Zuschnitt: ein Ruf
+    /// in den Editor, eine Meldung in die Statuszeile, und der Tastendruck ist
+    /// verbraucht. Gleichlautende Funktionen daneben waeren je eine
+    /// Gelegenheit, den Zuschnitt verschieden zu schreiben.
+    ///
+    /// Was der Befehl tut, entscheidet der Editor, und ob er ueberhaupt etwas
+    /// tun kann, ebenfalls: laeuft keine Suche, kommt die Meldung darueber
+    /// zurueck. Diese Funktion stellt keine zweite Vorbedingung daneben.
     fn editorbefehl(&self, tun: fn(&Editorbereich) -> Editormeldung) -> bool {
         let Some(editor) = self.ivars().editor.get() else {
             return false;
