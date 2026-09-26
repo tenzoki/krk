@@ -35,32 +35,46 @@
 //! steht im Modulkopf von [`super::editor`] unter
 //! `rueckgaengigstapel_leeren`.
 //!
-//! # Dieser Stand zeigt nur an
+//! # Zellen, und wer sie beendet
 //!
-//! Schritt 3.2a des Plans
+//! Seit Schritt 3.2b des Plans
 //! `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
-//! baut die Tabelle **anzeigend**: das Ankreuzfeld zeigt den Zustand der
-//! Aufgabe und ist abgeschaltet, das Textfeld ist ein Etikett, und die Zeilen
-//! lassen sich mit Maus und Pfeiltasten waehlen. Die Pfeile kommen von AppKit:
-//! der Ereignisabgriff reicht eine Taste, deren Befehl hier nicht wirkt,
-//! unveraendert weiter ([`super::ereignisse`]). Zellenbearbeitung, die Handlung
-//! am Ankreuzfeld und `copy:` bringt Schritt 3.2b.
+//! ist das Textfeld jeder Zeile bearbeitbar und das Ankreuzfeld eingeschaltet.
+//! **Die Tabelle rechnet dabei nichts selbst.** Was aus einem getippten Text
+//! oder einem Klick ins Kaestchen wird, entscheidet der Editorbereich ueber die
+//! drei Wege in [`Zellenwege`]; diese Datei meldet allein, welche Zeile es
+//! betrifft und was in ihr steht.
 //!
-//! **Die Tabelle ist eine eigene Klasse, obwohl sie heute nichts
-//! ueberschreibt.** [`Eintragstabelle`] ist die Naemlichkeit, an der Schritt 3.2b
-//! die laufende Zelle erkennt (ein Feldeditor, dessen Delegierter unter dieser
-//! Tabelle liegt), und die Stelle, an der `copy:` ankommt. Eine blosse
-//! `NSTableView` jetzt und eine Unterklasse dann waere ein Umbau des Aufbaus
-//! zwischen zwei Schritten, die denselben Aufbau brauchen.
+//! ```text
+//!   Klick daneben, tab, return ──> control:textShouldEndEditing: ──> pruefen
+//!                                   │ ja                            (nein: Zelle bleibt)
+//!                                   └> controlTextDidEndEditing:  ──> festschreiben
+//!   Editorbereich::zelle_uebernehmen ──> bearbeitung_beenden ──┘ (derselbe Weg)
+//!   esc (Rang in `abbrechen`)        ──> bearbeitung_verwerfen  ──> Anzeige zurueck
+//!   Ankreuzfeld                      ──> abhaken
+//! ```
+//!
+//! **Welche Zelle laeuft, wird im Augenblick der Frage gelesen und nirgends
+//! gemerkt.** [`Eintragsansicht::laufende_zelle`] sagt ja, wenn der Ersthelfer
+//! ein Feldeditor ist und sein Delegierter unter [`Eintragstabelle`] liegt.
+//! `controlTextDidBeginEditing:` kaeme erst mit dem ersten Zeichen (gemessen am
+//! 260815 an der Umbenennung in [`super::tabelle`]), und ein gemerktes Feld
+//! braeuchte eine zweite Stelle, die es wieder vergisst.
+//!
+//! **Die Tabelle ist deshalb eine eigene Klasse:** sie ist die Naemlichkeit,
+//! an der die laufende Zelle erkannt wird, und die Stelle, an der `copy:`
+//! ankommt.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSButton`,
-//! `NSTextField`, `NSFont`, `NSIndexSet`, `NSObject` und `NSString` stehen seit
-//! macOS 10.0 zur Verfuegung, ebenso die drei bedienten Protokolle
-//! `NSTableViewDataSource`, `NSTableViewDelegate` und
-//! `NSControlTextEditingDelegate` samt `NSObjectProtocol`, dem Kistennamen des
-//! Protokolls `NSObject` (`objc/NSObject.h`), und die Aufzaehlungen
+//! `NSTextField`, `NSControl`, `NSText`, `NSTextView`, `NSResponder`,
+//! `NSWindow`, `NSFont`, `NSIndexSet`, `NSNotification`, `NSObject` und
+//! `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso die vier bedienten
+//! Protokolle `NSTableViewDataSource`, `NSTableViewDelegate`,
+//! `NSControlTextEditingDelegate` und `NSTextFieldDelegate`
+//! (`NSTextField.h:124`, ohne Angabe) samt `NSObjectProtocol`, dem Kistennamen
+//! des Protokolls `NSObject` (`objc/NSObject.h`), und die Aufzaehlungen
 //! `NSAutoresizingMaskOptions`, `NSTableColumnResizingOptions` und
 //! `NSLineBreakMode` (`NSParagraphStyle.h:25`). Ohne eigene
 //! Verfuegbarkeitsangabe und damit seit 10.0 stehen die hier gerufenen Methoden
@@ -71,12 +85,19 @@
 //! (`NSTableColumn.h:31`), `setResizingMask:`, `addTableColumn:`
 //! (`NSTableView.h:226`), `reloadData` (`:256`), `numberOfRows` (`:222`),
 //! `scrollRowToVisible:` (`:250`), `selectRowIndexes:byExtendingSelection:`
-//! (`:353`), `selectedRow` (`:361`), `setAllowsEmptySelection:` (`:330`),
-//! `setAllowsMultipleSelection:` (`:326`), `setDataSource:`, `setDelegate:`,
-//! `setEnabled:`, `setState:`, `setFont:`, `setRefusesFirstResponder:`,
-//! `systemFontOfSize:`, `smallSystemFontSize`, `systemFontSize` und
-//! `indexSetWithIndex:`, dazu die hier **gebaute** Protokollmethode
-//! `numberOfRowsInTableView:` (`NSTableView.h:743`). Die Konstanten
+//! (`:353`), `selectedRow` (`:361`), `clickedRow`, `setAllowsEmptySelection:`
+//! (`:330`), `setAllowsMultipleSelection:` (`:326`), `setDataSource:`,
+//! `dataSource`, `setDelegate:`, `setDoubleAction:`,
+//! `editColumn:row:withEvent:select:`, `setTarget:`, `setAction:`,
+//! `setEnabled:`, `setState:`, `setFont:`, `setEditable:`, `setBordered:`,
+//! `setDrawsBackground:`, `stringValue`, `setStringValue:`,
+//! `setRefusesFirstResponder:`, `isFieldEditor` (`NSText.h:93`), `string`,
+//! `delegate`, `isDescendantOf:`, `firstResponder`, `makeFirstResponder:`,
+//! `object`, `systemFontOfSize:`, `smallSystemFontSize`, `systemFontSize` und
+//! `indexSetWithIndex:`, dazu die hier **gebauten** Methoden
+//! `numberOfRowsInTableView:` (`NSTableView.h:743`),
+//! `control:textShouldEndEditing:` und `controlTextDidEndEditing:`
+//! (`NSControl.h`) und die Aktion `copy:`. Die Konstanten
 //! `NSControlStateValueOn` und `NSControlStateValueOff` (`NSCell.h:74` und
 //! `:73`) tragen keine Angabe. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`).
@@ -85,11 +106,15 @@
 //! Zielsystem:**
 //!
 //! - `tableView:viewForTableColumn:row:` seit 10.7 (`NSTableView.h:593`)
+//! - `NSTableCellView` samt `setTextField:` seit 10.7
+//!   (`NSTableCellView.h:23`), `rowForView:` und `columnForView:` seit 10.7
+//!   (`NSTableView.h:477` und `:478`), `viewAtColumn:row:makeIfNecessary:`
+//!   seit 10.7 (`:472`, allein in einer Probe)
 //! - `lineBreakMode` seit 10.10 (`NSControl.h:65`)
 //! - `setUsesAutomaticRowHeights:` seit 10.13 (`NSTableView.h:574`)
-//! - `NSTextField::labelWithString:` und
+//! - `NSTextField::textFieldWithString:` und
 //!   `NSButton::checkboxWithTitle:target:action:` seit 10.12
-//!   (`NSTextField.h:93`, `NSButton.h:59`)
+//!   (`NSTextField.h:115`, `NSButton.h:59`)
 //! - `NSTableViewStyle` samt `setStyle:` seit 11.0 (`NSTableView.h:77` und
 //!   `:377`) — die hoechste Untergrenze dieser Datei
 //!
@@ -102,29 +127,33 @@
 //!
 //! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
 //! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
-//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die Zeichenkette
+//! Kiste und hat kein macOS-Alter, `AnyObject` und `Sel` sind Typen der
+//! Laufzeit; das Makro `ns_string!` baut die Zeichenkette
 //! beim Uebersetzen und hat keines; `NSPoint`, `NSRect` und `NSSize` sind
 //! C-Strukturen (`NSGeometry.h:23`, `:33` und `:28`); `NSInteger` ist ein
 //! Ganzzahltyp (`objc/NSObjCRuntime.h:13`); alle uebrigen tragen im SDK keine
 //! eigene Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
-use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
+use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSButton, NSControlStateValueOff, NSControlStateValueOn,
-    NSControlTextEditingDelegate, NSFont, NSLineBreakMode, NSScrollView, NSTableColumn,
-    NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
-    NSTableViewStyle, NSTextField, NSView,
+    NSAutoresizingMaskOptions, NSButton, NSControl, NSControlStateValueOff, NSControlStateValueOn,
+    NSControlTextEditingDelegate, NSFont, NSLineBreakMode, NSResponder, NSScrollView,
+    NSTableCellView, NSTableColumn, NSTableColumnResizingOptions, NSTableView,
+    NSTableViewDataSource, NSTableViewDelegate, NSTableViewStyle, NSText, NSTextField,
+    NSTextFieldDelegate, NSTextView, NSView, NSWindow,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSIndexSet, NSInteger, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
-    NSString, ns_string,
+    MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
+    NSRect, NSSize, NSString, ns_string,
 };
 
 use krk_core::heimordner::eintraege::{Aufgaben, aufgabenzeile};
+
+use super::zwischenablage;
 
 /// Die Hoehe einer Zeile in Punkten.
 ///
@@ -146,6 +175,9 @@ const KASTENBREITE: f64 = 22.0;
 /// in ihm nicht. Eine Beschriftung mit fester linker Kante und beweglicher
 /// Breite behaelt beim Auslegen ihren rechten Abstand.
 const AUFBAUBREITE: f64 = 400.0;
+
+/// Die Spalte des Textes; die Aufgabentabelle hat nur diese eine.
+const TEXTSPALTE: NSInteger = 0;
 
 /// Eine Zeile der Aufgabentabelle, abgeleitet aus einem Block des Standes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,11 +212,45 @@ pub fn aufgabenzeilen(stand: &str) -> Vec<Eintragszeile> {
         .collect()
 }
 
+/// Die Zelle, deren Text gerade im Feldeditor steht.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Zelle {
+    /// Die Stelle der Zeile, gezaehlt wie `Neustand::auswahl`.
+    pub zeile: usize,
+    /// Die Spalte; die Aufgabentabelle hat eine, die Notiztabelle aus Schritt
+    /// 4.3 bekommt zwei.
+    pub spalte: usize,
+}
+
+/// Der Weg der Pruefung: Zeile und getippter Text, zurueck ein Ja oder Nein.
+pub type Zellenpruefung = Box<dyn Fn(usize, &str) -> bool>;
+
+/// Der Weg des Festschreibens: Zeile und Text, mit dem die Zelle geendet hat.
+pub type Zellenende = Box<dyn Fn(usize, &str)>;
+
+/// Die drei Wege aus der Tabelle in den Editor.
+///
+/// **Rueckrufe und kein Verweis auf den Editorbereich**, aus zwei Gruenden:
+/// die Tabelle soll die Rechnung nicht kennen, und die Proben koennen die
+/// Ansicht ohne einen Editorbereich bauen, der sich unter `libtest` nicht
+/// bauen laesst (Kopf der Proben in [`super::editor`]). Der Editorbereich traegt
+/// sie in `Editorbereich::bauen` ein und haelt sich darin **schwach**, sonst
+/// schloesse sich der Ring Editorbereich → Ansicht → Rueckruf → Editorbereich.
+pub struct Zellenwege {
+    /// Ob die Zelle mit diesem Text enden darf. `false` laesst sie in
+    /// Bearbeitung; den Grund meldet der Editor selbst.
+    pub pruefen: Zellenpruefung,
+    /// Die Zelle ist mit diesem Text zu Ende gegangen.
+    pub festschreiben: Zellenende,
+    /// Das Ankreuzfeld dieser Zeile ist angeklickt worden.
+    pub abhaken: Box<dyn Fn(usize)>,
+}
+
 define_class!(
     /// Die Tabelle der Eintragsansicht.
     ///
-    /// Heute ohne Ueberschreibung; warum sie trotzdem eine eigene Klasse ist,
-    /// steht im Modulkopf.
+    /// Eine eigene Klasse, weil sie die Naemlichkeit ist, an der die laufende
+    /// Zelle erkannt wird, und weil `copy:` hier ankommt; siehe den Modulkopf.
     // SAFETY:
     // - Die Oberklasse `NSTableView` stellt an eine Unterklasse keine
     //   Bedingung, die diese Klasse verletzt: sie ruft den bezeichneten
@@ -198,6 +264,40 @@ define_class!(
 
     // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
     unsafe impl NSObjectProtocol for Eintragstabelle {}
+
+    impl Eintragstabelle {
+        /// `cmd+c` und "Bearbeiten › Kopieren" mit der Tabelle als Ersthelfer:
+        /// der Text der gewaehlten Aufgabe geht als Text in die
+        /// Zwischenablage (C6).
+        ///
+        /// Gelesen wird aus der Ableitung und nicht aus der Zelle, ueber die
+        /// Datenquelle, die die Ableitung haelt. Ohne gewaehlte Zeile bleibt
+        /// die Ablage, wie sie war. Die Oberklasse wird nicht gerufen:
+        /// `NSTableView` beantwortet `copy:` nicht, und der Weg ginge sonst die
+        /// Kette hinauf zum Kopieren der Dateiverweise beim
+        /// Anwendungsdelegierten, das hier nichts zu kopieren hat. Die Antwort
+        /// der Ablage faellt, wie bei der Textanzeige der Vorschau: die Tabelle
+        /// hat keine eigene Meldezeile.
+        // SAFETY: Die Signatur ist die einer Aktion: ein optionales
+        // Objektargument, keine Rueckgabe.
+        #[unsafe(method(copy:))]
+        fn kopieren(&self, _absender: Option<&AnyObject>) {
+            // SAFETY: Ein Leser ohne Vorbedingung; die Datenquelle ist eine
+            // nullende schwache Eigenschaft.
+            let quelle = unsafe { self.dataSource() };
+            let Some(quelle) = quelle else {
+                return;
+            };
+            let Some(ansicht) =
+                AsRef::<AnyObject>::as_ref(&*quelle).downcast_ref::<Eintragsansicht>()
+            else {
+                return;
+            };
+            if let Some(text) = ansicht.gewaehlter_text() {
+                let _ = zwischenablage::text_schreiben(&text);
+            }
+        }
+    }
 );
 
 impl Eintragstabelle {
@@ -222,14 +322,30 @@ pub struct EintragsansichtIvars {
     /// [`Eintragsansicht::zeilen_zeigen`] geschrieben, und das bekommt sie aus
     /// [`aufgabenzeilen`] ueber den Stand des Editors.
     zeilen: RefCell<Vec<Eintragszeile>>,
+    /// Die Wege in den Editor; `None`, bis der Editorbereich sie eintraegt.
+    wege: RefCell<Option<Zellenwege>>,
+    /// Ob die gerade endende Bearbeitung verworfen wird.
+    ///
+    /// Gesetzt allein fuer die Dauer von [`Eintragsansicht::bearbeitung_verwerfen`],
+    /// und das ist kein gemerkter Zustand ueber die Zelle, sondern die Antwort
+    /// auf die Frage, **wie** sie endet: die beiden Delegiertenmethoden laufen
+    /// innerhalb jenes einen `makeFirstResponder:`.
+    verwerfen: Cell<bool>,
+    /// Der Hauptfadenbeweis vom Aufbau.
+    ///
+    /// Gemerkt und nicht mit `mtm()` erfragt, weil `mtm()` den wirklichen
+    /// Hauptfaden prueft und die Proben unter `libtest` ihn nur behaupten
+    /// (`an_einer_flaeche` in [`super::editor`]); im Programm sind beide
+    /// Antworten dieselbe.
+    mtm: MainThreadMarker,
 }
 
 define_class!(
-    /// Datenquelle und Delegierter der Eintragstabelle, und Halter ihrer
-    /// Rolle.
+    /// Datenquelle und Delegierter der Eintragstabelle und ihrer Textfelder,
+    /// und Halter ihrer Rolle.
     ///
-    /// Ein Objekt fuer beide Rollen, wie beim Git-Bereich: eine Spalte, ein
-    /// Zustand, und zwei Objekte dafuer waeren zwei Halter desselben.
+    /// Ein Objekt fuer alle Rollen, wie beim Git-Bereich: eine Spalte, ein
+    /// Zustand, und mehrere Objekte dafuer waeren mehrere Halter desselben.
     // SAFETY:
     // - Die Oberklasse NSObject stellt keine Bedingungen an Unterklassen.
     // - Die Klasse implementiert `Drop` nicht.
@@ -251,10 +367,37 @@ define_class!(
     }
 
     // SAFETY: `NSControlTextEditingDelegate` ist Oberprotokoll von
-    // `NSTableViewDelegate` und hat nur wahlfreie Methoden. In diesem Stand
-    // wird kein Text bearbeitet; die beiden Methoden der Uebernahme bringt
-    // Schritt 3.2b.
-    unsafe impl NSControlTextEditingDelegate for Eintragsansicht {}
+    // `NSTableViewDelegate` und `NSTextFieldDelegate` und hat nur wahlfreie
+    // Methoden. Die beiden hier sind die Uebernahme einer Zelle (Modulkopf).
+    unsafe impl NSControlTextEditingDelegate for Eintragsansicht {
+        /// Darf die Zelle mit dem getippten Text enden?
+        ///
+        /// Der Text kommt aus dem Feldeditor, den AppKit mitgibt; das Feld
+        /// selbst traegt ihn erst nach dem Ende.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`objc2-app-kit-0.3.2/src/generated/NSControl.rs:514`).
+        #[unsafe(method(control:textShouldEndEditing:))]
+        fn darf_enden(&self, feld: &NSControl, feldeditor: &NSText) -> bool {
+            self.zelle_darf_enden(feld, &feldeditor.string().to_string())
+        }
+
+        /// Die Zelle ist zu Ende gegangen.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`objc2-app-kit-0.3.2/src/generated/NSControl.rs:493`).
+        #[unsafe(method(controlTextDidEndEditing:))]
+        fn hat_geendet(&self, meldung: &NSNotification) {
+            let feld = meldung
+                .object()
+                .and_then(|feld| feld.downcast::<NSTextField>().ok());
+            if let Some(feld) = feld {
+                self.zelle_geendet(&feld);
+            }
+        }
+    }
+
+    // SAFETY: `NSTextFieldDelegate` stellt keine Bedingungen; es ist der
+    // Protokolltyp, den `NSTextField::setDelegate:` verlangt.
+    unsafe impl NSTextFieldDelegate for Eintragsansicht {}
 
     // SAFETY: `NSTableViewDelegate` stellt keine Bedingungen.
     unsafe impl NSTableViewDelegate for Eintragsansicht {
@@ -270,7 +413,52 @@ define_class!(
             self.zellenansicht(zeile)
         }
     }
+
+    impl Eintragsansicht {
+        /// Das Ankreuzfeld einer Zeile ist angeklickt worden.
+        ///
+        /// Die Zeile kommt von der Tabelle ueber `rowForView:` und nicht aus
+        /// einem gemerkten Zustand, wie beim Umbenennen in [`super::tabelle`].
+        /// **Das Kaestchen zeigt danach die Ableitung und nicht den Klick:**
+        /// AppKit schaltet es beim Klick selbst um, und wird die Handlung
+        /// abgewiesen, laedt die Tabelle nicht neu und liesse es falsch stehen.
+        // SAFETY: Die Signatur ist die einer Aktion mit dem Absender als
+        // Argument; Absender ist allein das Ankreuzfeld aus `zellenansicht`.
+        #[unsafe(method(kastenGeklickt:))]
+        fn kasten_geklickt(&self, kasten: &NSButton) {
+            let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(kasten)) else {
+                return;
+            };
+            if let Some(wege) = self.ivars().wege.borrow().as_ref() {
+                (wege.abhaken)(zeile);
+            }
+            if let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(kasten))
+                && let Some(eintrag) = self.ivars().zeilen.borrow().get(zeile)
+            {
+                kasten.setState(kastenzustand(eintrag.erledigt));
+            }
+        }
+
+        /// Doppelklick auf eine Zeile: ihre Zelle geht in Bearbeitung.
+        // SAFETY: Die Signatur ist die einer Aktion; der Absender ist die
+        // Tabelle und wird nicht gebraucht.
+        #[unsafe(method(zeileDoppelt:))]
+        fn zeile_doppelt(&self, _absender: Option<&AnyObject>) {
+            if let Ok(zeile) = usize::try_from(self.ivars().tabelle.clickedRow()) {
+                let _ = self.bearbeitung_beginnen(zeile);
+            }
+        }
+    }
 );
+
+/// Der Zustand eines Ankreuzfeldes zu einem Erledigt-Wert.
+fn kastenzustand(erledigt: bool) -> NSInteger {
+    if erledigt {
+        NSControlStateValueOn
+    } else {
+        NSControlStateValueOff
+    }
+}
 
 impl Eintragsansicht {
     /// Baut Rolle und Tabelle, leer und ausgeblendet.
@@ -306,6 +494,9 @@ impl Eintragsansicht {
             rolle,
             tabelle,
             zeilen: RefCell::new(Vec::new()),
+            wege: RefCell::new(None),
+            verwerfen: Cell::new(false),
+            mtm,
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -314,16 +505,22 @@ impl Eintragsansicht {
         // implementiert. Getragen wird der Aufruf davon, dass `dataSource` und
         // `delegate` nullende schwache Eigenschaften sind ("This is a weak
         // property", `objc2-app-kit-0.3.2/src/generated/NSTableView.rs:402-421`)
-        // und dass dieses Objekt die Tabelle selbst festhaelt.
+        // und dass dieses Objekt die Tabelle selbst festhaelt. Ziel und
+        // Doppelaktion: `NSControl` haelt sein Ziel schwach (`NSControl.h:24`),
+        // und die Aktion ist die Methode, die dieses Objekt oben dafuer traegt.
         unsafe {
-            this.ivars()
-                .tabelle
-                .setDataSource(Some(ProtocolObject::from_ref(&*this)));
-            this.ivars()
-                .tabelle
-                .setDelegate(Some(ProtocolObject::from_ref(&*this)));
+            let tabelle = &this.ivars().tabelle;
+            tabelle.setDataSource(Some(ProtocolObject::from_ref(&*this)));
+            tabelle.setDelegate(Some(ProtocolObject::from_ref(&*this)));
+            tabelle.setTarget(Some(&this));
+            tabelle.setDoubleAction(Some(sel!(zeileDoppelt:)));
         }
         this
+    }
+
+    /// Traegt die drei Wege in den Editor ein (siehe [`Zellenwege`]).
+    pub fn wege_setzen(&self, wege: Zellenwege) {
+        *self.ivars().wege.borrow_mut() = Some(wege);
     }
 
     /// Die Rolle um die Tabelle, die der Editorbereich einhaengt und ein- und
@@ -356,7 +553,7 @@ impl Eintragsansicht {
             return;
         }
         let laenge = zeilen.len();
-        let vorher = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
+        let vorher = self.gewaehlte_zeile();
         // Die Ausleihe endet an ihrem Semikolon: `reloadData` fragt die Zeilen
         // gleich wieder ab.
         *self.ivars().zeilen.borrow_mut() = zeilen;
@@ -385,51 +582,205 @@ impl Eintragsansicht {
         tabelle.scrollRowToVisible(NSInteger::try_from(stelle).unwrap_or(NSInteger::MAX));
     }
 
+    /// Die gewaehlte Zeile, falls eine gewaehlt ist.
+    #[must_use]
+    pub fn gewaehlte_zeile(&self) -> Option<usize> {
+        usize::try_from(self.ivars().tabelle.selectedRow()).ok()
+    }
+
+    /// Der abgeleitete Text der gewaehlten Aufgabe, fuer `copy:`.
+    #[must_use]
+    fn gewaehlter_text(&self) -> Option<String> {
+        let zeile = self.gewaehlte_zeile()?;
+        self.ivars()
+            .zeilen
+            .borrow()
+            .get(zeile)
+            .map(|eintrag| eintrag.text.clone())
+    }
+
+    /// Die Zelle, die gerade bearbeitet wird, falls der Ersthelfer ihr
+    /// Feldeditor ist (C6.7).
+    ///
+    /// **Gelesen im Augenblick der Frage und nirgends gemerkt**, im selben
+    /// Zuschnitt wie `bereich_des_ersthelfers` beim Anwendungsdelegierten: der
+    /// Ersthelfer ist ein Feldeditor (`isFieldEditor`), und sein Delegierter,
+    /// das Textfeld, dessen Text er traegt, liegt unter [`Eintragstabelle`].
+    /// Damit ist eine Zelle erkannt, sobald AppKit den Feldeditor einsetzt,
+    /// und nicht erst nach dem ersten Zeichen; und der Feldeditor eines
+    /// Blattes oder eines anderen Textfeldes faellt heraus, weil sein
+    /// Delegierter anderswo liegt.
+    ///
+    /// Die Textflaeche des Editors ist kein Feldeditor und faellt an der
+    /// ersten Frage heraus.
+    #[must_use]
+    pub fn laufende_zelle(&self, ersthelfer: &NSResponder) -> Option<Zelle> {
+        let feldeditor = ersthelfer.downcast_ref::<NSTextView>()?;
+        if !feldeditor.isFieldEditor() {
+            return None;
+        }
+        let delegierter = feldeditor.delegate()?;
+        let feld = AsRef::<AnyObject>::as_ref(&*delegierter).downcast_ref::<NSView>()?;
+        self.zelle_von(feld)
+    }
+
+    /// Die Zelle, in der die genannte Ansicht liegt, falls sie unter der
+    /// Tabelle liegt.
+    fn zelle_von(&self, ansicht: &NSView) -> Option<Zelle> {
+        let tabelle = &self.ivars().tabelle;
+        if !ansicht.isDescendantOf(tabelle) {
+            return None;
+        }
+        let zeile = usize::try_from(tabelle.rowForView(ansicht)).ok()?;
+        let spalte = usize::try_from(tabelle.columnForView(ansicht)).ok()?;
+        Some(Zelle { zeile, spalte })
+    }
+
+    /// Setzt die Zelle der genannten Zeile in Bearbeitung, der Text ist
+    /// ausgewaehlt.
+    ///
+    /// Derselbe Weg wie das Umbenennen in [`super::tabelle`]:
+    /// `editColumn:row:withEvent:select:` macht den Feldeditor des Fensters
+    /// zum Ersthelfer und stellt ihn in das Textfeld der Zelle. Liefert
+    /// `false`, wenn es die Zeile nicht gibt.
+    pub fn bearbeitung_beginnen(&self, zeile: usize) -> bool {
+        if zeile >= self.ivars().zeilen.borrow().len() {
+            return false;
+        }
+        let Ok(zeile) = NSInteger::try_from(zeile) else {
+            return false;
+        };
+        let tabelle = &self.ivars().tabelle;
+        tabelle.scrollRowToVisible(zeile);
+        tabelle.editColumn_row_withEvent_select(TEXTSPALTE, zeile, None, true);
+        true
+    }
+
+    /// Beendet eine laufende Bearbeitung **uebernehmend**: die Tabelle nimmt
+    /// den Ersthelfer, und AppKit fragt dabei die beiden Delegiertenmethoden.
+    ///
+    /// Liefert, ob AppKit den Wechsel angenommen hat. `false` heisst: die
+    /// Pruefung hat den Text abgewiesen, und die Zelle steht weiter in
+    /// Bearbeitung. Der eine Rufer ist `Editorbereich::zelle_uebernehmen`.
+    #[must_use = "ein abgelehnter Wechsel heisst, dass die Zelle weiter bearbeitet wird"]
+    pub fn bearbeitung_beenden(&self, fenster: &NSWindow) -> bool {
+        fenster.makeFirstResponder(Some(&self.ivars().tabelle))
+    }
+
+    /// Beendet eine laufende Bearbeitung **verwerfend**: kein Umbau, und die
+    /// Zelle zeigt danach wieder den abgeleiteten Text.
+    ///
+    /// Derselbe Wechsel wie [`Self::bearbeitung_beenden`], mit gesetztem
+    /// [`EintragsansichtIvars::verwerfen`]: die Pruefung sagt ja, ohne zu
+    /// rechnen, und das Ende schreibt nichts fest. Nicht `abortEditing`: das
+    /// laesst den Ersthelferrang an keiner benannten Stelle zurueck, und der
+    /// Fokus soll in der Tabelle bleiben.
+    pub fn bearbeitung_verwerfen(&self, fenster: &NSWindow) {
+        self.ivars().verwerfen.set(true);
+        let _ = fenster.makeFirstResponder(Some(&self.ivars().tabelle));
+        self.ivars().verwerfen.set(false);
+    }
+
+    /// Die Antwort auf `control:textShouldEndEditing:`.
+    ///
+    /// `pub(super)` allein fuer die Proben in [`super::editor`], die den
+    /// Feldeditor nicht beschreiben koennen (`setString:` endet unter `libtest`
+    /// mit `SIGSEGV`) und den Text deshalb unmittelbar hereinreichen.
+    pub(super) fn zelle_darf_enden(&self, feld: &NSControl, text: &str) -> bool {
+        if self.ivars().verwerfen.get() {
+            return true;
+        }
+        let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(feld)) else {
+            return true;
+        };
+        self.ivars()
+            .wege
+            .borrow()
+            .as_ref()
+            .is_none_or(|wege| (wege.pruefen)(zeile, text))
+    }
+
+    /// Die Antwort auf `controlTextDidEndEditing:`.
+    ///
+    /// **Das Feld zeigt danach die Ableitung.** Nach einem Umbau hat
+    /// `reloadData` die Zelle ohnehin neu gebaut, und das Feld steht in keiner
+    /// Zeile mehr; nach einem Ende ohne Umbau — verworfen, unveraendert, oder
+    /// ein Ende, bei dem AppKit nicht gefragt hat — stuende sonst der getippte
+    /// Text da und behauptete eine Aenderung, die nicht im Stand steht.
+    pub(super) fn zelle_geendet(&self, feld: &NSTextField) {
+        if !self.ivars().verwerfen.get()
+            && let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(feld))
+        {
+            let text = feld.stringValue().to_string();
+            if let Some(wege) = self.ivars().wege.borrow().as_ref() {
+                (wege.festschreiben)(zeile, &text);
+            }
+        }
+        if let Ok(zeile) = usize::try_from(self.ivars().tabelle.rowForView(feld))
+            && let Some(eintrag) = self.ivars().zeilen.borrow().get(zeile)
+        {
+            feld.setStringValue(&NSString::from_str(&eintrag.text));
+        }
+    }
+
     /// Die Ansicht fuer eine Zeile: das Ankreuzfeld und daneben der Text.
     ///
-    /// **Das Ankreuzfeld ist abgeschaltet** und traegt keine Handlung; ein
-    /// eingeschaltetes Feld ohne Handlung schaltete sichtbar um und aenderte
-    /// nichts. Schritt 3.2b schaltet es ein und haengt `aufgabe_abhaken` daran.
-    /// Den Ersthelferrang nimmt es nicht an: der gehoert der Tabelle.
+    /// Eine `NSTableCellView` mit dem Textfeld als `textField`, damit
+    /// `editColumn:row:withEvent:select:` weiss, welches Feld es bearbeitet.
+    /// Das Ankreuzfeld nimmt den Ersthelferrang nicht an: der gehoert der
+    /// Tabelle, und ein Klick darauf soll keine laufende Zelle beenden, ohne
+    /// dass `aufgabe_abhaken` sie vorher uebernommen hat.
     fn zellenansicht(&self, zeile: NSInteger) -> Option<Retained<NSView>> {
-        let mtm = self.mtm();
+        let mtm = self.ivars().mtm;
         let stelle = usize::try_from(zeile).ok()?;
         let eintrag = self.ivars().zeilen.borrow().get(stelle)?.clone();
 
-        // SAFETY: Ohne Ziel und ohne Handlung verlangt der Erzeuger nichts
-        // ueber Lebensdauer oder Signatur.
-        let kasten =
-            unsafe { NSButton::checkboxWithTitle_target_action(ns_string!(""), None, None, mtm) };
-        kasten.setState(if eintrag.erledigt {
-            NSControlStateValueOn
-        } else {
-            NSControlStateValueOff
-        });
-        kasten.setEnabled(false);
+        // SAFETY: Ziel ist dieses Objekt, das die Tabelle ueberlebt, und
+        // `NSControl` haelt es schwach (`NSControl.h:24`); die Aktion ist die
+        // Methode, die es oben dafuer traegt, mit dem Absender als Argument.
+        let kasten = unsafe {
+            NSButton::checkboxWithTitle_target_action(
+                ns_string!(""),
+                Some(self),
+                Some(sel!(kastenGeklickt:)),
+                mtm,
+            )
+        };
+        kasten.setState(kastenzustand(eintrag.erledigt));
         kasten.setRefusesFirstResponder(true);
         kasten.setFrame(NSRect::new(
             NSPoint::new(EINZUG, 0.0),
             NSSize::new(KASTENBREITE, ZEILENHOEHE),
         ));
 
-        let beschriftung = NSTextField::labelWithString(&NSString::from_str(&eintrag.text), mtm);
-        beschriftung.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
-        beschriftung.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+        let feld = NSTextField::textFieldWithString(&NSString::from_str(&eintrag.text), mtm);
+        feld.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
+        feld.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+        feld.setBordered(false);
+        feld.setDrawsBackground(false);
+        feld.setEditable(true);
         let links = EINZUG + KASTENBREITE;
-        beschriftung.setFrame(NSRect::new(
-            NSPoint::new(links, 0.0),
+        feld.setFrame(NSRect::new(
+            NSPoint::new(links, 2.0),
             NSSize::new(AUFBAUBREITE - links - EINZUG, ZEILENHOEHE - 4.0),
         ));
-        beschriftung.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
+        feld.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
+        // SAFETY: Der Delegierte ist dieses Objekt, das die Tabelle und damit
+        // das Feld ueberlebt; `delegate` ist eine nullende schwache
+        // Eigenschaft (`objc2-app-kit-0.3.2/src/generated/NSTextField.rs:238-250`).
+        unsafe { feld.setDelegate(Some(ProtocolObject::from_ref(self))) };
 
-        let zelle = NSView::initWithFrame(
-            NSView::alloc(mtm),
+        let zelle = NSTableCellView::initWithFrame(
+            NSTableCellView::alloc(mtm),
             NSRect::new(NSPoint::ZERO, NSSize::new(AUFBAUBREITE, ZEILENHOEHE)),
         );
         zelle.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
         zelle.addSubview(&kasten);
-        zelle.addSubview(&beschriftung);
-        Some(zelle)
+        zelle.addSubview(&feld);
+        // SAFETY: Das Feld ist eine Unteransicht der Zelle und lebt so lange
+        // wie sie; die Eigenschaft ist `weak` (`NSTableCellView.h`).
+        unsafe { zelle.setTextField(Some(&feld)) };
+        Some(Retained::into_super(zelle))
     }
 }
 

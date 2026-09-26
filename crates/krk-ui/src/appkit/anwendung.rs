@@ -328,7 +328,7 @@ use super::blaetter::{
     self, Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen,
     startmeldungen, uebersprungen,
 };
-use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft};
+use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft, Zellenausgang};
 use super::ereignisse::{self, Anschlag, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::finder;
@@ -516,6 +516,25 @@ const CODE_EINGABE: u16 = code_von_pflicht("return");
 /// Sie heisst dort `delete`, wie auf der Mac-Tastatur; der Code 51 ist
 /// `kVK_Delete`, die Taste ueber dem Backslash, und nicht `kVK_ForwardDelete`.
 const CODE_RUECKTASTE: u16 = code_von_pflicht("delete");
+
+/// Wie der Stand des Editors vor einem Anlass aus C4 steht; die Antwort von
+/// [`Anwendungsdelegierter::editor_stand_befragen`].
+///
+/// **Drei Werte und kein `bool`**, weil seit Schritt 3.2b der krkhome-Arbeit
+/// eine dritte Antwort moeglich ist: die laufende Zelle der Eintragstabelle
+/// liess sich nicht uebernehmen, und dann darf der Anlass weder laufen noch
+/// die Nachfrage mit „Verwerfen" anbieten. Die beiden Rufer verzweigen
+/// vollstaendig und ohne Auffangzweig darueber.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Standlage {
+    /// Nichts weicht von der Datei ab, oder es gibt keinen Editor.
+    Gesichert,
+    /// Der Stand weicht ab; die Nachfrage aus C4 steht bevor.
+    Ungesichert,
+    /// Eine Zelle bleibt in Bearbeitung; der Grund steht schon in der
+    /// Statuszeile.
+    ZelleAbgewiesen,
+}
 
 /// Ein Vorgang, der den ungesicherten Stand des Editors verlieren wuerde (C4).
 ///
@@ -1439,6 +1458,16 @@ impl Anwendungsdelegierter {
         editor.melder_setzen(Box::new(move |ausgang, herkunft| {
             if let Some(selbst) = schwach.load() {
                 selbst.editorausgang_behandeln(ausgang, herkunft);
+            }
+        }));
+        // Der zweite Rueckweg des Editors traegt Meldungen, die aus AppKit
+        // heraus entstehen und keinen Befehl haben, der sie weitergaebe: eine
+        // abgewiesene Zelle nach einem Klick daneben, das Ankreuzfeld (C6).
+        // Schwach, aus demselben Grund.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        editor.meldungsmelder_setzen(Box::new(move |meldung| {
+            if let Some(selbst) = schwach.load() {
+                selbst.editormeldung_zeigen(&meldung);
             }
         }));
         let git = Gitfenster::bauen(mtm);
@@ -3066,15 +3095,23 @@ impl Anwendungsdelegierter {
         )
     }
 
-    /// Ob dieser Ersthelfer eine der beiden **eigenen** Textflaechen von KRK
-    /// ist.
+    /// Ob dieser Ersthelfer eine der **eigenen** Textflaechen von KRK ist.
     ///
-    /// Es sind genau zwei, und sie stehen hier einzeln: die Textflaeche des
-    /// Editors ([`Editorbereich::textflaeche`]) und die Textanzeige der
-    /// Vorschau ([`Vorschaufenster::textflaeche`]). Beide sind Bereiche der
-    /// Fensterzeile, beide **wollen** KRKs Tastenbefehle mit dem Fokus in sich
-    /// selbst, und beide sind selbst eine `NSTextView` und fielen ohne diese
-    /// Frage unter den Fokusvorbehalt.
+    /// Es sind drei, und sie stehen hier einzeln: die Textflaeche des Editors
+    /// ([`Editorbereich::textflaeche`]), die Textanzeige der Vorschau
+    /// ([`Vorschaufenster::textflaeche`]) und seit Schritt 3.2b der
+    /// krkhome-Arbeit der Feldeditor einer Zelle der Eintragstabelle im Editor
+    /// ([`Editorbereich::bearbeitet_zelle`]). Alle drei liegen in Bereichen der
+    /// Fensterzeile, alle drei **wollen** KRKs Tastenbefehle mit dem Fokus in
+    /// sich selbst — `F2`, `cmd+s`, `esc` fuer die Zelle —, und alle drei sind
+    /// eine `NSTextView` und fielen ohne diese Frage unter den Fokusvorbehalt.
+    ///
+    /// **Die Zelle wird anders erkannt als die beiden Flaechen**, und das ist
+    /// kein Bruch der Regel: den Feldeditor teilen sich alle Textfelder des
+    /// Fensters, also traegt er keine Naemlichkeit, die hier verglichen werden
+    /// koennte. Gefragt wird deshalb nach seinem Delegierten, der unter der
+    /// Eintragstabelle liegen muss; der Feldeditor eines Blattes gehoert dem
+    /// Panel des Blattes und hat seinen Delegierten dort.
     ///
     /// **Die Flaeche eines Blattes wird hier ausdruecklich nicht genannt, und
     /// das ist keine Luecke.** Fuer sie ist das Gegenteil erwuenscht: solange
@@ -3113,6 +3150,7 @@ impl Anwendungsdelegierter {
     /// Vorschau.
     ///
     /// [`Editorbereich::textflaeche`]: super::editor::Editorbereich::textflaeche
+    /// [`Editorbereich::bearbeitet_zelle`]: super::editor::Editorbereich::bearbeitet_zelle
     /// [`Vorschaufenster::textflaeche`]: super::vorschau::Vorschaufenster::textflaeche
     fn ist_eigene_textflaeche(&self, ersthelfer: &NSResponder) -> bool {
         let editorflaeche = self
@@ -3125,8 +3163,13 @@ impl Anwendungsdelegierter {
             .vorschau
             .get()
             .is_some_and(|vorschau| ersthelfer.isEqual(Some(vorschau.textflaeche())));
+        let eintragszelle = self
+            .ivars()
+            .editor
+            .get()
+            .is_some_and(|editor| editor.bearbeitet_zelle(ersthelfer));
 
-        editorflaeche || vorschauflaeche
+        editorflaeche || vorschauflaeche || eintragszelle
     }
 
     /// Richtet den Abgriff nach einer Umbelegung neu ein (C3).
@@ -6467,24 +6510,36 @@ impl Anwendungsdelegierter {
 
     /// Der Abbruchbefehl (C4, C1.7).
     ///
-    /// **Drei Raenge, und die Reihenfolge ist bindend.** Ein offenes Blatt
+    /// **Vier Raenge, und die Reihenfolge ist bindend.** Ein offenes Blatt
     /// zuerst, weil die Konfliktfrage waehrend eines laufenden Vorgangs steht
-    /// und der Abbruch dann ihr gilt. Dann eine laufende Dateioperation. Und
-    /// zuletzt der Filtertext des sichtbaren Tabs im aktiven Dateifenster —
-    /// genau an der Stelle, an der die Taste bis zum 260815 nichts mehr zu tun
-    /// fand und `false` lieferte.
+    /// und der Abbruch dann ihr gilt. Dann eine Zelle der Eintragstabelle, die
+    /// gerade bearbeitet wird. Dann eine laufende Dateioperation. Und zuletzt
+    /// der Filtertext des sichtbaren Tabs im aktiven Dateifenster — genau an
+    /// der Stelle, an der die Taste bis zum 260815 nichts mehr zu tun fand und
+    /// `false` lieferte.
     ///
     /// ```text
-    /// esc ──> steht ein Blatt?            ──ja──> es schliessen
+    /// esc ──> steht ein Blatt?                ──ja──> es schliessen
     ///          │ nein
-    ///          └──> laeuft eine Operation? ──ja──> sie abbrechen
+    ///          └──> wird eine Zelle bearbeitet? ──ja──> editor.zelle_abbrechen()
     ///                │ nein
-    ///                └──> steht ein Filtertext? ──ja──> ihn loeschen
+    ///                └──> laeuft eine Operation? ──ja──> sie abbrechen
     ///                      │ nein
-    ///                      └──> nichts, wie vor dieser Runde
+    ///                      └──> steht ein Filtertext? ──ja──> ihn loeschen
+    ///                            │ nein
+    ///                            └──> nichts, wie vor dieser Runde
     /// ```
     ///
-    /// **Der dritte Rang haengt an
+    /// **Der Rang der Zelle steht unmittelbar nach dem Blatt** (Schritt 3.2b
+    /// der krkhome-Arbeit). Er muss vor dem Filtertext stehen, sonst leerte
+    /// `esc` in einer Zelle den Filter eines Dateifensters, das der Nutzer
+    /// gerade nicht bedient, und liesse die Zelle offen. Vor der Operation
+    /// steht er, weil `esc` dem gilt, was der Nutzer vor Augen hat: die Zelle,
+    /// in der er tippt. Was `esc` in der Zelle tut, entscheidet
+    /// `Editorbereich::zelle_abbrechen` nach
+    /// `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`.
+    ///
+    /// **Der letzte Rang haengt an
     /// `decisions/260814-1830_*_an-welcher-stelle-der-bedeutungen-von-esc-steht-der-filtertext.md`.**
     /// Eine andere Antwort verschiebt ihn innerhalb dieser Funktion und aendert
     /// sonst nichts; die Raenge sind hier eine Reihenfolge und keine verstreute
@@ -6522,6 +6577,18 @@ impl Anwendungsdelegierter {
             }
             return false;
         }
+        // Der Rang der Zelle, gelesen im Augenblick des Tastendrucks.
+        if let Some(editor) = self.ivars().editor.get()
+            && self
+                .ivars()
+                .fenster
+                .get()
+                .and_then(|fenster| fenster.firstResponder())
+                .is_some_and(|ersthelfer| editor.bearbeitet_zelle(&ersthelfer))
+        {
+            editor.zelle_abbrechen();
+            return true;
+        }
         let laufender = {
             let vorgang = self.ivars().vorgang.borrow();
             vorgang.as_ref().map(|vorgang| {
@@ -6533,7 +6600,7 @@ impl Anwendungsdelegierter {
             self.fortschritt_zeigen(seite, &operationen::abbruchzeile(&art));
             return true;
         }
-        // Der dritte Rang. `Kommando::Abbrechen` traegt
+        // Der letzte Rang. `Kommando::Abbrechen` traegt
         // `Wirkungsbereich::Ueberall`, kommt also auch aus dem Editor und aus
         // der Leiste an; getroffen wird dann derselbe Tab wie beim Umschalten
         // der tiefen Suche, naemlich der sichtbare des **aktiven**
@@ -8092,6 +8159,15 @@ impl Anwendungsdelegierter {
             // Kommentarlos nichts zu tun ist in keinem Fall zulaessig: der
             // Grund geht in die Statuszeile und unterscheidet dort zu gross von
             // nicht als Text lesbar (zehntes Abnahmekriterium von C2).
+            // Eine Zelle der Eintragstabelle liess sich nicht uebernehmen, und
+            // das Oeffnen ist unterblieben, bevor gelesen wurde (Schritt 3.2b
+            // der krkhome-Arbeit). Der Satz ist fertig; die vorgemerkte Marke
+            // ist oben schon gefallen, weil sie zu einem Oeffnen gehoerte, das
+            // nicht stattfindet.
+            Ladeausgang::ZelleAbgewiesen(satz) => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.antwort_zeigen(aktiv, &satz);
+            }
             Ladeausgang::Abgewiesen(abweisung) if !aus_sitzung => {
                 self.editormeldung_zeigen(&Editormeldung::Abgewiesen(abweisung));
             }
@@ -8212,6 +8288,14 @@ impl Anwendungsdelegierter {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, "der Editor hält keine Datei");
                 true
+            }
+            // Eine Zelle der Eintragstabelle liess sich nicht uebernehmen; es
+            // wurde nicht geschrieben, und ein wartender Anlass unterbleibt
+            // wie nach einem gescheiterten Schreiben.
+            Sicherungsausgang::ZelleAbgewiesen(grund) => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.antwort_zeigen(aktiv, &grund);
+                false
             }
         }
     }
@@ -8349,14 +8433,35 @@ impl Anwendungsdelegierter {
     // Die Nachfrage vor den drei Anlaessen (C4)
     // ------------------------------------------------------------------
 
-    /// Ob der Editor Aenderungen haelt, die nicht in seiner Datei stehen (C4).
+    /// Wie der Stand des Editors vor einem Anlass aus C4 steht.
     ///
-    /// Die eine Abfrage dafuer; ohne gebauten Editor ist die Antwort `false`.
-    fn editor_haelt_ungesicherten_stand(&self) -> bool {
-        self.ivars()
-            .editor
-            .get()
-            .is_some_and(|editor| editor.hat_ungesicherten_stand())
+    /// **Die eine Frage vor dem Schliessen und dem Beenden**, und seit Schritt
+    /// 3.2b der krkhome-Arbeit uebernimmt sie zuerst eine laufende Zelle der
+    /// Eintragstabelle: deren getippter Text steht bis dahin allein im
+    /// Feldeditor, und ein Stand, der ihn nicht traegt, wuerde als gesichert
+    /// gemeldet und mit dem Anlass verworfen. Sie ersetzt die fruehere Abfrage
+    /// `editor_haelt_ungesicherten_stand`, statt neben ihr zu stehen: eine
+    /// zweite Frage daneben waere die Stelle, an der ein kuenftiger Anlass die
+    /// Uebernahme uebergeht.
+    ///
+    /// Eine abgewiesene Zelle meldet ihren Grund hier, einmal fuer beide
+    /// Rufer. Ohne gebauten Editor ist der Stand gesichert.
+    fn editor_stand_befragen(&self) -> Standlage {
+        let Some(editor) = self.ivars().editor.get() else {
+            return Standlage::Gesichert;
+        };
+        match editor.zelle_uebernehmen() {
+            Zellenausgang::Abgewiesen(meldung) => {
+                self.editormeldung_zeigen(&meldung);
+                return Standlage::ZelleAbgewiesen;
+            }
+            Zellenausgang::KeineZelle | Zellenausgang::Uebernommen => {}
+        }
+        if editor.hat_ungesicherten_stand() {
+            Standlage::Ungesichert
+        } else {
+            Standlage::Gesichert
+        }
     }
 
     /// Beginnt einen der Anlaesse aus C4 und stellt die Nachfrage, falls noetig.
@@ -8373,12 +8478,19 @@ impl Anwendungsdelegierter {
     /// Liefert, ob der Tastendruck verbraucht ist — was er in beiden Faellen
     /// ist, sobald es einen Editor gibt: entweder der Anlass ist gelaufen, oder
     /// das Blatt steht.
+    ///
+    /// **Eine abgewiesene Zelle haelt den Anlass an**, ohne Nachfrage und ohne
+    /// [`Self::anlass_unterbleibt`]: der Grund steht schon in der Statuszeile,
+    /// der Editor bleibt, wie er ist, und der Tastendruck ist verbraucht.
     fn anlass_beginnen(&self, anlass: Anlass) -> bool {
-        if !self.editor_haelt_ungesicherten_stand() {
-            self.anlass_ausfuehren(anlass);
-            return true;
+        match self.editor_stand_befragen() {
+            Standlage::Gesichert => {
+                self.anlass_ausfuehren(anlass);
+                true
+            }
+            Standlage::Ungesichert => self.nachfrage_zeigen(anlass),
+            Standlage::ZelleAbgewiesen => true,
         }
-        self.nachfrage_zeigen(anlass)
     }
 
     /// Zeigt die Nachfrage aus C4 und laesst den Anlass in der Schliessung
@@ -8674,11 +8786,17 @@ impl Anwendungsdelegierter {
     /// Begruendung im Einzelnen steht an
     /// [`Editorbereich::ansicht_umschalten`](super::editor::Editorbereich::ansicht_umschalten)
     /// und im Modulkopf von [`crate::editormodell`].
+    ///
+    /// **Eine Ausnahme von der stummen Antwort**: laesst sich eine Zelle der
+    /// Eintragstabelle nicht uebernehmen, unterbleibt der Wechsel, und der
+    /// Grund geht in die Statuszeile.
     fn editor_ansicht_umschalten(&self) -> bool {
         let Some(editor) = self.ivars().editor.get() else {
             return false;
         };
-        editor.ansicht_umschalten();
+        if let Some(meldung) = editor.ansicht_umschalten() {
+            self.editormeldung_zeigen(&meldung);
+        }
         true
     }
 
@@ -8699,9 +8817,19 @@ impl Anwendungsdelegierter {
     /// darauf zu stapeln hiesse, dem Nutzer zwei Fragen zugleich zu stellen und
     /// die erste unbeantwortet abzuraeumen; er beantwortet stattdessen die
     /// stehende und beendet danach.
+    ///
+    /// **Eine abgewiesene Zelle der Eintragstabelle haelt das Beenden an**
+    /// (`TerminateCancel`), und die Statuszeile sagt warum; angeboten wird
+    /// nicht die Nachfrage mit „Verwerfen", denn der Nutzer hat an der Zelle
+    /// noch etwas zu tun, das die Nachfrage nicht zeigt.
     fn beenden_erlauben(&self) -> NSApplicationTerminateReply {
-        if self.ivars().beenden_ohne_nachfrage.get() || !self.editor_haelt_ungesicherten_stand() {
+        if self.ivars().beenden_ohne_nachfrage.get() {
             return NSApplicationTerminateReply::TerminateNow;
+        }
+        match self.editor_stand_befragen() {
+            Standlage::Gesichert => return NSApplicationTerminateReply::TerminateNow,
+            Standlage::ZelleAbgewiesen => return NSApplicationTerminateReply::TerminateCancel,
+            Standlage::Ungesichert => {}
         }
         if self.blatt_steht() {
             return NSApplicationTerminateReply::TerminateCancel;
@@ -9562,6 +9690,58 @@ pub(super) mod quelltextproben {
             .filter(|zeile| !zeile.trim_start().starts_with("//"))
             .collect::<Vec<_>>()
             .join("\n")
+    }
+}
+
+/// Die Zelle der Eintragstabelle beim Anwendungsdelegierten (Schritt 3.2b der
+/// krkhome-Arbeit): die Frage vor Schliessen und Beenden und die Anmeldung als
+/// eigene Textflaeche. Ihren Rang in `abbrechen` haelt die Rangprobe in
+/// `kommandos::operationen::abbruchrangfolge`, bei den uebrigen Raengen.
+///
+/// **Am Rumpf gelesen**, weil jede der drei Stellen ein Fenster mit einem
+/// Feldeditor braucht und `libtest` keines hergibt; die Begruendung steht im
+/// Pruefmodul von [`super::editor`].
+#[cfg(test)]
+mod zellenproben {
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    /// `editor_stand_befragen` ersetzt die fruehere Frage nach dem
+    /// ungesicherten Stand und hat genau ihre zwei Rufer; die alte Frage steht
+    /// nirgends mehr, sonst gaebe es einen Weg am Uebernehmen vorbei.
+    #[test]
+    fn die_standfrage_hat_genau_die_zwei_rufer_schliessen_und_beenden() {
+        let quelle = diese_datei();
+        let (code, _) = quelle
+            .split_once(concat!("#[cfg(test)]\nmod ", "zellenproben {"))
+            .expect("das Pruefmodul steht hinter dem Code");
+        let nadel = concat!("self.editor_stand_", "befragen()");
+        let rufer = ["anlass_beginnen", "beenden_erlauben"];
+        for name in rufer {
+            assert!(
+                rumpf(&quelle, name).contains(nadel),
+                "{name} fragt nicht nach dem Stand"
+            );
+        }
+        let zeilen = code
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .filter(|zeile| zeile.contains(nadel))
+            .count();
+        assert_eq!(zeilen, rufer.len(), "ein Rufer ausser den zwei");
+        assert!(
+            !code.contains(concat!("editor_haelt_ungesicherten_", "stand(")),
+            "die alte Frage steht wieder im Baum"
+        );
+    }
+
+    /// Die Zelle ist die dritte eigene Textflaeche: mit ihrem Feldeditor als
+    /// Ersthelfer wirken KRKs Befehle, allen voran `esc` fuer den Rang oben.
+    #[test]
+    fn die_zelle_ist_eine_eigene_textflaeche() {
+        assert!(
+            rumpf(&diese_datei(), "ist_eigene_textflaeche")
+                .contains(concat!("editor.bearbeitet_", "zelle(ersthelfer)"))
+        );
     }
 }
 

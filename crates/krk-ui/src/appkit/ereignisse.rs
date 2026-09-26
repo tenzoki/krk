@@ -941,6 +941,16 @@ mod tests {
     /// entscheidet, ob irgendwo dieselbe Sache noch einmal gebaut ist; der Kopf
     /// von [`crate::quellbaum`] sagt, was daraus folgt.
     ///
+    /// **Eine Datei steht mit Namen daneben, und sie stellt eine andere
+    /// Frage.** `Eintragsansicht::laufende_zelle` (`appkit/eintragsansicht.rs`,
+    /// Schritt 3.2b der krkhome-Arbeit) fragt nicht, ob der Ersthelfer AppKit
+    /// gehoert, sondern ob er **der Feldeditor einer bestimmten Zelle** ist; die
+    /// Klasse braucht sie allein, um `isFieldEditor` und den Delegierten zu
+    /// erreichen. Ihre Antwort geht als dritte eigene Textflaeche in
+    /// `ist_eigene_textflaeche` und damit **in** diese Frage hinein, statt neben
+    /// ihr zu stehen. Gehalten wird die Ausnahme eng: genau eine Typpruefung in
+    /// jener Datei, und sie steht neben `isFieldEditor`.
+    ///
     /// **Fuer die Typpruefung zaehlt die Probe Dateien und nicht
     /// Fundstellen.** Es sind heute drei Zeilen, eine je Textklasse, und eine
     /// vierte Textklasse in derselben Funktion waere eine zulaessige Aenderung
@@ -974,9 +984,26 @@ mod tests {
             .collect();
         assert_eq!(
             mit_typpruefung,
-            vec!["krk-ui/src/appkit/ereignisse.rs".to_owned()],
-            "die Pruefung auf die Textklassen steht nicht allein in dieser Datei"
+            vec![
+                "krk-ui/src/appkit/eintragsansicht.rs".to_owned(),
+                "krk-ui/src/appkit/ereignisse.rs".to_owned()
+            ],
+            "die Pruefung auf die Textklassen steht nicht allein in dieser Datei \
+             und der Naemlichkeitsfrage der Eintragszelle"
         );
+        let (_, zelle) = quelldateien()
+            .into_iter()
+            .find(|(name, _)| name == "krk-ui/src/appkit/eintragsansicht.rs")
+            .expect("die Eintragsansicht steht im Quellbaum");
+        assert_eq!(
+            typpruefungen
+                .iter()
+                .map(|nadel| zelle.matches(nadel).count())
+                .sum::<usize>(),
+            1,
+            "die Eintragsansicht prueft die Textklasse nicht genau einmal"
+        );
+        assert!(zelle.contains(concat!(".isField", "Editor()")));
     }
 
     /// Die Menge der eigenen Textflaechen steht an genau einer Stelle, und es

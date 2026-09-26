@@ -520,7 +520,8 @@ impl Ladevorgang {
 
 /// Wie ein Ladevorgang ausgegangen ist.
 ///
-/// **Vier Werte, ueberschneidungsfrei und vollstaendig.** Entweder der Editor
+/// **Vier Werte aus dem Modell, ueberschneidungsfrei und vollstaendig**, dazu
+/// [`Self::ZelleAbgewiesen`], den allein die Ansicht erzeugt. Entweder der Editor
 /// haelt danach eine neue Datei, oder er hielt sie schon und nichts hat sich
 /// bewegt, oder die gelesene Datei wartet auf die Nachfrage aus C4, oder er
 /// haelt weiter, was er vorher hielt, und der Nutzer bekommt den Grund. Ein
@@ -563,6 +564,16 @@ pub enum Ladeausgang {
     Zurueckgehalten,
     /// Der Grund gehoert in die Statuszeile aus C1. Der bisherige Stand bleibt.
     Abgewiesen(Abweisung),
+    /// Eine Zelle der Eintragstabelle liess sich nicht uebernehmen, und das
+    /// Oeffnen unterbleibt, bevor gelesen wird (Schritt 3.2b des Plans der
+    /// krkhome-Arbeit). Der Satz sagt, warum.
+    ///
+    /// **Dieses Modell erzeugt den Wert nie**; er entsteht in
+    /// `Editorbereich::datei_oeffnen`, das vor dem Oeffnen die laufende Zelle
+    /// uebernimmt, und geht durch dieselbe Senke wie jeder Ausgang, damit es
+    /// eine Behandlung gibt und nicht zwei. Ein eigener Wert und nicht
+    /// `Abgewiesen`, weil jene Abweisung eine Datei nennt und diese keine.
+    ZelleAbgewiesen(String),
 }
 
 /// Eine gelesene Datei, die auf die Antwort der Nachfrage aus C4 wartet.
@@ -620,6 +631,16 @@ pub enum Sicherungsausgang {
     Gescheitert(String),
     /// Der Editor haelt keine Datei; es gibt nichts zu sichern.
     NichtsGehalten,
+    /// Eine Zelle der Eintragstabelle liess sich nicht uebernehmen; es wurde
+    /// nicht geschrieben, und ein Anlass, der auf dieses Sichern gewartet hat,
+    /// unterbleibt (Schritt 3.2b des Plans der krkhome-Arbeit).
+    ///
+    /// **Dieses Modell erzeugt den Wert nie**: die Zelle kennt allein
+    /// `Editorbereich::sichern`, das sie vor dem Schreiben uebernimmt. Er steht
+    /// neben [`Self::Gescheitert`] und nicht darin, damit der vollstaendige
+    /// `match` beim Anwendungsdelegierten ihn eigens einordnen muss: ein
+    /// Sichern, das nie angefangen hat, ist kein gescheitertes Schreiben.
+    ZelleAbgewiesen(String),
 }
 
 /// Was der Editor ueber die geoeffnete Datei weiss (C2 bis C6).
@@ -1402,6 +1423,32 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(&pfad).expect("die Datei ist nach dem Sichern lesbar"),
             "erste Zeile\nzweite Zeile\n"
+        );
+    }
+
+    /// C6.7 an der Haelfte ohne Fenster: der Text einer Aufgabenzelle, ueber
+    /// den Kern zu einem Neustand gerechnet und auf dem Umbauweg ins Modell
+    /// gebracht (`Editormodell::bearbeiten`, wie `umbau_anwenden` es ruft),
+    /// steht nach dem naechsten Sichern in der Datei, und jede andere Zeile
+    /// bleibt Byte fuer Byte. Die andere Haelfte — dass `sichern` die laufende
+    /// Zelle zuerst uebernimmt — haelt die Quelltextprobe
+    /// `die_zellenuebernahme_hat_genau_diese_rufer` in `appkit/editor.rs`.
+    #[test]
+    fn ein_uebernommener_zellentext_steht_nach_dem_sichern_in_der_datei() {
+        use krk_core::heimordner::eintraege::aufgaben;
+        let ordner = Pruefordner::neu("zellentext");
+        let vorher = "# Aufgaben\n- [ ] Brot\n  fremde Zeile\n* [X] Steuer\n";
+        let pfad = ordner.datei("tasks.txt", vorher);
+        let mut modell = geoeffnet(&pfad);
+
+        let neustand = aufgaben::text_aendern(modell.stand(), 0, "Brot und Butter")
+            .expect("ein Text ohne Umbruch")
+            .expect("die Aufgabe steht, und der Text ist neu");
+        let _ = modell.bearbeiten(neustand.text);
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+        assert_eq!(
+            std::fs::read_to_string(&pfad).expect("die Datei ist nach dem Sichern lesbar"),
+            "# Aufgaben\n- [ ] Brot und Butter\n  fremde Zeile\n* [X] Steuer\n"
         );
     }
 

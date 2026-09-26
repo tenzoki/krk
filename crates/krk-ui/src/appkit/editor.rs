@@ -533,8 +533,8 @@ use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSEvent, NSFont, NSMenu, NSScrollView, NSTextAlignment,
-    NSTextDelegate, NSTextField, NSTextView, NSTextViewDelegate, NSView,
+    NSAutoresizingMaskOptions, NSColor, NSEvent, NSFont, NSMenu, NSResponder, NSScrollView,
+    NSTextAlignment, NSTextDelegate, NSTextField, NSTextView, NSTextViewDelegate, NSView,
 };
 use objc2_foundation::{
     MainThreadMarker, NSNotification, NSObject, NSObjectProtocol, NSPoint, NSRange, NSRect,
@@ -548,7 +548,7 @@ use objc2::rc::autoreleasepool;
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::heimordner::Sonderdatei;
-use krk_core::heimordner::eintraege::Neustand;
+use krk_core::heimordner::eintraege::{self, Aufgaben, Neustand, Richtung, aufgaben};
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
 };
@@ -562,7 +562,7 @@ use crate::hervorhebung::{
 };
 use crate::kommandos::zulaessigkeit::Editorform;
 
-use super::eintragsansicht::{self, Eintragsansicht};
+use super::eintragsansicht::{self, Eintragsansicht, Zellenwege};
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::statuszeile;
@@ -594,6 +594,8 @@ use super::textmerkmale;
 ///  Zeilennummer ausserhalb       krk_core::text::zeilen (S35)
 ///  Stand der Suche               crate::editormodell::Suchlauf (S36)
 ///  Zahl der ersetzten Treffer    krk_core::text::suche (S37)
+///  Abweisung einer Zelle         krk_core::heimordner::eintraege (3.2b der krkhome-Arbeit)
+///  Antwort einer Tabellenhandlung  Editorbereich::handlung_ausfuehren (dieselbe)
 /// ```
 ///
 /// **Die Tafel zaehlt Ausloeser, die Aufzaehlung darunter zaehlt Varianten, und
@@ -718,6 +720,16 @@ pub enum Editormeldung {
         /// Die Zahl der ersetzten Treffer; 0, wenn keiner gefunden wurde.
         zahl: usize,
     },
+    /// Eine Zelle der Eintragstabelle nimmt den getippten Text nicht an (C6
+    /// des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
+    ///
+    /// Die Zelle bleibt in Bearbeitung und der Stand, wie er ist. Der Satz
+    /// steht in `krk_core::heimordner::eintraege::Abweisung::meldung` und wird
+    /// hier nicht ein zweites Mal gebaut, wie bei [`Self::Abgewiesen`].
+    EintragAbgewiesen(eintraege::Abweisung),
+    /// Die Antwort einer Handlung an der Eintragstabelle (C6 desselben
+    /// Arbeitspakets).
+    Eintrag(Eintragsantwort),
 }
 
 impl Editormeldung {
@@ -802,6 +814,161 @@ impl Editormeldung {
                 1 => "ein Treffer ersetzt".to_owned(),
                 zahl => format!("{zahl} Treffer ersetzt"),
             },
+            Self::EintragAbgewiesen(abweisung) => abweisung.meldung().to_owned(),
+            Self::Eintrag(antwort) => antwort.text().to_owned(),
+        }
+    }
+}
+
+/// Was eine Handlung an der Eintragstabelle dem Nutzer sagt (C6).
+///
+/// **Jede Handlung antwortet**, auch die gelungene, aus demselben Grund, aus
+/// dem [`Editormeldung::Gesichert`] sich meldet: kommentarlos nichts zu tun ist
+/// nicht zulaessig, und eine Handlung, die nichts tun kann, sagt warum. Ein Wert
+/// je Antwort und keine Zeichenkette beim Rufer; die Saetze stehen in
+/// [`Self::text`], vollstaendig und ohne Auffangzweig.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Eintragsantwort {
+    /// Der Editor zeigt keine Aufgabentabelle; die Handlung hat keinen
+    /// Gegenstand. Ab Schritt 3.3 haelt die Zulaessigkeit den Befehl vorher an.
+    KeineTabelle,
+    /// Die Handlung braucht eine gewaehlte Aufgabe, und es ist keine gewaehlt.
+    KeinEintragGewaehlt,
+    /// Eine leere Aufgabe steht am Ende, und ihre Zelle ist in Bearbeitung.
+    Hinzugefuegt,
+    /// Die Zelle der gewaehlten Aufgabe ist in Bearbeitung.
+    BearbeitungBegonnen,
+    /// Die laufende Zelle ist uebernommen.
+    Uebernommen,
+    /// Die Aufgabe ist abgehakt.
+    Abgehakt,
+    /// Die Aufgabe ist wieder offen.
+    WiederOffen,
+    /// Die Aufgabe hat mit ihrer Nachbarin getauscht.
+    Verschoben,
+    /// Die Aufgabe steht schon zuoberst.
+    SchonOben,
+    /// Die Aufgabe steht schon zuunterst.
+    SchonUnten,
+    /// Die Aufgabenzeile ist fort; ihre fremden Zeilen bleiben.
+    Geloescht,
+    /// AppKit hat das Ende der Zelle abgelehnt, ohne dass die Pruefung einen
+    /// Grund genannt haette.
+    ZelleBleibt,
+}
+
+impl Eintragsantwort {
+    /// Der Satz fuer die Statuszeile.
+    #[must_use]
+    pub fn text(self) -> &'static str {
+        match self {
+            Self::KeineTabelle => "der Editor zeigt keine Aufgabentabelle",
+            Self::KeinEintragGewaehlt => "es ist keine Aufgabe gewählt",
+            Self::Hinzugefuegt => "neue Aufgabe am Ende; return übernimmt den Text",
+            Self::BearbeitungBegonnen => "return übernimmt, esc verwirft",
+            Self::Uebernommen => "Aufgabe übernommen",
+            Self::Abgehakt => "Aufgabe abgehakt",
+            Self::WiederOffen => "Aufgabe wieder offen",
+            Self::Verschoben => "Aufgabe verschoben",
+            Self::SchonOben => "die Aufgabe steht schon oben",
+            Self::SchonUnten => "die Aufgabe steht schon unten",
+            Self::Geloescht => "Aufgabe gelöscht; cmd+z holt sie zurück",
+            Self::ZelleBleibt => "die Zelle bleibt in Bearbeitung",
+        }
+    }
+}
+
+/// Wie der Versuch ausgegangen ist, eine laufende Zelle zu uebernehmen (C6.7).
+///
+/// Der Ausgang von [`Editorbereich::zelle_uebernehmen`], der einen
+/// Eintrittsstelle fuer KRKs eigene Wege. **Wer `Abgewiesen` bekommt, laesst
+/// seinen Anlass unterbleiben**: die Zelle steht weiter in Bearbeitung und
+/// traegt Text, der nicht im Stand steht, und ein Sichern, Schliessen oder
+/// Wechseln danach naehme ihn nicht mit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "ein abgewiesener Ausgang verlangt, dass der Anlass unterbleibt"]
+pub enum Zellenausgang {
+    /// Es wurde keine Zelle bearbeitet.
+    KeineZelle,
+    /// Die Zelle ist zu Ende; ein geaenderter Text steht als Umbau im Stand.
+    Uebernommen,
+    /// Die Zelle bleibt in Bearbeitung, aus dem genannten Grund.
+    Abgewiesen(Editormeldung),
+}
+
+/// Eine Handlung an der Aufgabentabelle, wie [`Editorbereich::handlung_ausfuehren`]
+/// sie ausfuehrt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Handlung {
+    /// Eine leere Aufgabe ans Ende, danach ihre Zelle in Bearbeitung.
+    Hinzufuegen,
+    /// Die Zelle der gewaehlten Aufgabe in Bearbeitung.
+    Bearbeiten,
+    /// Die gewaehlte Aufgabe eine Stelle weiter.
+    Verschieben(Richtung),
+    /// Die gewaehlte Aufgabenzeile fort.
+    Loeschen,
+    /// Die gewaehlte Aufgabe abhaken oder wieder oeffnen.
+    Abhaken,
+}
+
+/// Was eine Handlung am Stand bewirkt und was sie dem Nutzer sagt (C6).
+///
+/// **Rein und ohne Fenster pruefbar**: die Rechnung steht im Kern
+/// (`krk_core::heimordner::eintraege::aufgaben`), und hier wird allein
+/// entschieden, welche Handlung des Kerns gilt und welche Antwort daraus wird.
+/// `zeile` ist die Aufgabe, auf die sie wirkt; eine Stelle hinter der letzten
+/// zaehlt wie keine. Ein `None` als Neustand heisst: kein Umbau, auch nicht ein
+/// leerer, und damit keine Handlung im Rueckgaengigstapel.
+fn handlung_rechnen(
+    stand: &str,
+    handlung: Handlung,
+    zeile: Option<usize>,
+) -> (Editormeldung, Option<Neustand>) {
+    use Eintragsantwort as A;
+    let anzahl = Aufgaben::lesen(stand).bloecke().len();
+    let gewaehlt = zeile.filter(|stelle| *stelle < anzahl);
+    let ohne_auswahl = (Editormeldung::Eintrag(A::KeinEintragGewaehlt), None);
+    match handlung {
+        Handlung::Hinzufuegen => match aufgaben::hinzufuegen(stand, "") {
+            Ok(neustand) => (Editormeldung::Eintrag(A::Hinzugefuegt), Some(neustand)),
+            Err(abweisung) => (Editormeldung::EintragAbgewiesen(abweisung), None),
+        },
+        Handlung::Bearbeiten => match gewaehlt {
+            Some(_) => (Editormeldung::Eintrag(A::BearbeitungBegonnen), None),
+            None => ohne_auswahl,
+        },
+        Handlung::Verschieben(richtung) => {
+            let Some(stelle) = gewaehlt else {
+                return ohne_auswahl;
+            };
+            match aufgaben::verschieben(stand, stelle, richtung) {
+                Some(neustand) => (Editormeldung::Eintrag(A::Verschoben), Some(neustand)),
+                None => match richtung {
+                    Richtung::Hoch => (Editormeldung::Eintrag(A::SchonOben), None),
+                    Richtung::Runter => (Editormeldung::Eintrag(A::SchonUnten), None),
+                },
+            }
+        }
+        Handlung::Loeschen => match gewaehlt.and_then(|stelle| aufgaben::loeschen(stand, stelle)) {
+            Some(neustand) => (Editormeldung::Eintrag(A::Geloescht), Some(neustand)),
+            None => ohne_auswahl,
+        },
+        Handlung::Abhaken => {
+            let Some((stelle, neustand)) = gewaehlt
+                .and_then(|stelle| aufgaben::abhaken(stand, stelle).map(|neu| (stelle, neu)))
+            else {
+                return ohne_auswahl;
+            };
+            let erledigt = eintragsansicht::aufgabenzeilen(&neustand.text)
+                .get(stelle)
+                .is_some_and(|eintrag| eintrag.erledigt);
+            let antwort = if erledigt {
+                A::Abgehakt
+            } else {
+                A::WiederOffen
+            };
+            (Editormeldung::Eintrag(antwort), Some(neustand))
         }
     }
 }
@@ -1495,6 +1662,11 @@ impl Oeffnungsherkunft {
 /// kann kein Ausgang verlieren und kein zweiter ueberschreiben.
 pub type Ausgangsmelder = Box<dyn Fn(Ladeausgang, Oeffnungsherkunft)>;
 
+/// Die Senke fuer Meldungen des Editors, die aus AppKit heraus entstehen und
+/// keinen Befehl haben, der sie weitergaebe (siehe
+/// [`EditorIvars::meldungsmelder`]).
+pub type Meldungsmelder = Box<dyn Fn(Editormeldung)>;
+
 /// Was der Editorbereich haelt.
 pub struct EditorIvars {
     /// Die Ansicht, die in die Aufteilung gehaengt wird: Kopf und Bildlauf
@@ -1649,6 +1821,22 @@ pub struct EditorIvars {
     /// [`Stapellast`]; eine zweite schreibende Stelle waere eine zweite Wahrheit
     /// darueber, was im Stapel steht.
     stapelbytes: Rc<Cell<usize>>,
+    /// Die Senke fuer Meldungen, die nicht als Antwort auf einen Befehl
+    /// entstehen, sondern aus AppKit heraus: eine abgewiesene Zelle nach einem
+    /// Klick daneben, ein Klick ins Ankreuzfeld (C6).
+    ///
+    /// Sie haelt den Anwendungsdelegierten **schwach**, wie [`Self::melden`];
+    /// `None`, solange der Aufbau nicht so weit ist.
+    meldungsmelder: RefCell<Option<Meldungsmelder>>,
+    /// Der Grund, aus dem die Pruefung die zuletzt gefragte Zelle abgewiesen
+    /// hat.
+    ///
+    /// Geleert von [`Editorbereich::zelle_uebernehmen`] vor dem Wechsel des
+    /// Ersthelfers und gelesen gleich danach: AppKit meldet eine abgelehnte
+    /// Uebergabe als blosses `false`, und der Grund steht allein hier. Kein
+    /// Zustand ueber die Zelle, sondern der Rueckweg einer Antwort aus einem
+    /// Rueckruf.
+    zellenabweisung: Cell<Option<eintraege::Abweisung>>,
 }
 
 define_class!(
@@ -1794,6 +1982,8 @@ impl Editorbereich {
             tafel: Cell::new(tafel),
             ersatz: RefCell::new(String::new()),
             stapelbytes: Rc::new(Cell::new(0)),
+            meldungsmelder: RefCell::new(None),
+            zellenabweisung: Cell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -1806,6 +1996,31 @@ impl Editorbereich {
         // Derselbe Grund an der Ansicht: der Wechsel des Erscheinungsbildes
         // laeuft ueber sie hierher, und "hierher" gibt es erst ab dieser Zeile.
         this.ivars().bereich.ziel_setzen(&this);
+        // Die drei Wege aus der Tabelle, aus demselben Grund erst hier. Jeder
+        // haelt den Editorbereich schwach; die Begruendung steht an
+        // `Zellenwege`.
+        let (pruefer, schreiber, haker) = (
+            Weak::from_retained(&this),
+            Weak::from_retained(&this),
+            Weak::from_retained(&this),
+        );
+        this.ivars().eintraege.wege_setzen(Zellenwege {
+            pruefen: Box::new(move |zeile, text| {
+                pruefer
+                    .load()
+                    .is_none_or(|editor| editor.zelle_pruefen(zeile, text))
+            }),
+            festschreiben: Box::new(move |zeile, text| {
+                if let Some(editor) = schreiber.load() {
+                    editor.zelle_festschreiben(zeile, text);
+                }
+            }),
+            abhaken: Box::new(move |zeile| {
+                if let Some(editor) = haker.load() {
+                    editor.kasten_abhaken(zeile);
+                }
+            }),
+        });
 
         // Die Flaeche zeigt von der ersten Zeichnung an den Stand des Modells
         // und nicht irgendeinen. Beim Aufbau ist er leer, weil der Editor keine
@@ -1906,10 +2121,6 @@ impl Editorbereich {
     /// Die Antwort von [`Editormodell::bearbeiten`] faellt: der Umkehrpunkt
     /// entsteht gegen den Stand, den das Modell danach haelt, und passt deshalb
     /// auch dann, wenn die Wandlung in die gehaltene Form zugegriffen hat.
-    #[expect(
-        dead_code,
-        reason = "die Rufer sind die Tabellenhandlungen ab Schritt 3.2b; bis dahin haelt allein die Quelltextprobe `der_umbau_geht_den_weg_des_ersetzens` den Rumpf"
-    )]
     pub fn umbau_anwenden(&self, neustand: Neustand) {
         let Neustand { text, auswahl } = neustand;
         let schreibmarke = self.ivars().text.selectedRange();
@@ -1922,6 +2133,248 @@ impl Editorbereich {
         let verlauf = self.verlauf_fuer_umbau(punkt);
         self.stand_erneuern(verlauf);
         self.ivars().eintraege.auswahl_setzen(auswahl);
+    }
+
+    // ------------------------------------------------------------------
+    // Die Zellen der Eintragstabelle (C6.7)
+    // ------------------------------------------------------------------
+
+    /// Traegt die Senke fuer Meldungen ein, die aus AppKit heraus entstehen
+    /// (siehe [`EditorIvars::meldungsmelder`]).
+    pub fn meldungsmelder_setzen(&self, melden: Meldungsmelder) {
+        *self.ivars().meldungsmelder.borrow_mut() = Some(melden);
+    }
+
+    /// Gibt eine Meldung an die Senke, falls jemand zuhoert.
+    fn meldung_melden(&self, meldung: Editormeldung) {
+        let melden = self.ivars().meldungsmelder.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden(meldung);
+        }
+    }
+
+    /// Ob dieser Ersthelfer der Feldeditor einer Zelle der Eintragstabelle ist.
+    ///
+    /// Der Anwendungsdelegierte fragt danach in `ist_eigene_textflaeche` und im
+    /// Rang der Zelle in `abbrechen`. Beantwortet wird die Frage in
+    /// [`Eintragsansicht::laufende_zelle`], im Augenblick der Frage und ohne
+    /// gemerkten Zustand.
+    #[must_use]
+    pub fn bearbeitet_zelle(&self, ersthelfer: &NSResponder) -> bool {
+        self.ivars().eintraege.laufende_zelle(ersthelfer).is_some()
+    }
+
+    /// Ob im Fenster des Editors gerade eine Zelle bearbeitet wird.
+    fn zelle_laeuft(&self) -> bool {
+        self.ivars()
+            .bereich
+            .window()
+            .and_then(|fenster| fenster.firstResponder())
+            .is_some_and(|ersthelfer| self.bearbeitet_zelle(&ersthelfer))
+    }
+
+    /// **Die eine Eintrittsstelle fuer KRKs eigene Wege**, eine laufende Zelle
+    /// zu uebernehmen (C6.7).
+    ///
+    /// Laeuft eine, nimmt die Tabelle den Ersthelfer, und AppKit ruft dabei die
+    /// zwei Delegiertenmethoden, durch die auch ein Klick daneben und `tab`
+    /// gehen: die Pruefung ueber [`Self::zelle_pruefen`] und das Festschreiben
+    /// ueber [`Self::zelle_festschreiben`]. Einen zweiten Weg der Uebernahme
+    /// gibt es damit nicht, nur einen zweiten Anlass.
+    ///
+    /// **Jeder Weg, der den Stand liest oder die Flaeche wechselt, ruft sie als
+    /// erste Handlung**: [`Self::sichern`], [`Self::datei_oeffnen`],
+    /// [`Self::ansicht_umschalten`], [`Self::handlung_ausfuehren`] und beim
+    /// Anwendungsdelegierten `editor_stand_befragen`, die Frage vor dem
+    /// Schliessen und dem Beenden. Die Liste haelt die Probe
+    /// `die_zellenuebernahme_hat_genau_diese_rufer`.
+    pub fn zelle_uebernehmen(&self) -> Zellenausgang {
+        let Some(fenster) = self.ivars().bereich.window() else {
+            return Zellenausgang::KeineZelle;
+        };
+        if !self.zelle_laeuft() {
+            return Zellenausgang::KeineZelle;
+        }
+        self.ivars().zellenabweisung.set(None);
+        if self.ivars().eintraege.bearbeitung_beenden(&fenster) {
+            return Zellenausgang::Uebernommen;
+        }
+        let meldung = match self.ivars().zellenabweisung.take() {
+            Some(abweisung) => Editormeldung::EintragAbgewiesen(abweisung),
+            None => Editormeldung::Eintrag(Eintragsantwort::ZelleBleibt),
+        };
+        Zellenausgang::Abgewiesen(meldung)
+    }
+
+    /// `esc` in einer Zelle: der Rang der Zelle in `abbrechen` beim
+    /// Anwendungsdelegierten (C6.7).
+    ///
+    /// **Die eine Stelle der Regel aus
+    /// `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`**
+    /// (Moeglichkeit 2): die Aufgabenzelle verwirft und zeigt danach den
+    /// abgeleiteten Text. Die Notizzelle aus Schritt 4.3 bekommt hier ihren
+    /// eigenen Zweig, der eine geaenderte Zelle uebernimmt; nach Moeglichkeit 1
+    /// uebernaehme auch die Aufgabenzelle, und der Unterschied waere dieser
+    /// eine Zweig.
+    pub fn zelle_abbrechen(&self) {
+        match self.form() {
+            Editorform::Aufgaben => self.zelle_verwerfen(),
+            // Ohne Tabelle laeuft keine Zelle; der Rang in `abbrechen` fragt
+            // vorher danach.
+            Editorform::Text => {}
+        }
+    }
+
+    /// Beendet eine laufende Zelle verwerfend; ohne laufende Zelle geschieht
+    /// nichts, und der Fokus bleibt, wo er ist.
+    fn zelle_verwerfen(&self) {
+        if !self.zelle_laeuft() {
+            return;
+        }
+        if let Some(fenster) = self.ivars().bereich.window() {
+            self.ivars().eintraege.bearbeitung_verwerfen(&fenster);
+        }
+    }
+
+    /// Die Pruefung der Zelle, fuer `control:textShouldEndEditing:`.
+    ///
+    /// Eine Abweisung meldet sich selbst in der Statuszeile — ein Klick daneben
+    /// hat keinen Befehl, der sie weitergaebe — und legt ihren Grund fuer
+    /// [`Self::zelle_uebernehmen`] bereit.
+    fn zelle_pruefen(&self, zeile: usize, text: &str) -> bool {
+        match self.zelle_rechnen(zeile, text) {
+            Ok(_) => true,
+            Err(abweisung) => {
+                self.ivars().zellenabweisung.set(Some(abweisung));
+                self.meldung_melden(Editormeldung::EintragAbgewiesen(abweisung));
+                false
+            }
+        }
+    }
+
+    /// Das Festschreiben der Zelle, fuer `controlTextDidEndEditing:`.
+    ///
+    /// Ein unveraenderter Text ergibt keinen Umbau. **Die Abweisung ist hier
+    /// nicht ausgeschlossen**, obwohl die Pruefung vorher gefragt hat: AppKit
+    /// beendet eine Zelle auch ohne zu fragen, bei `reloadData` etwa (gemessen
+    /// am 260816 an der Umbenennung in [`super::tabelle`]). Der Text faellt
+    /// dann, und das sagt die Statuszeile, statt ihn still zu verlieren.
+    fn zelle_festschreiben(&self, zeile: usize, text: &str) {
+        match self.zelle_rechnen(zeile, text) {
+            Ok(Some(neustand)) => self.umbau_anwenden(neustand),
+            Ok(None) => {}
+            Err(abweisung) => self.meldung_melden(Editormeldung::EintragAbgewiesen(abweisung)),
+        }
+    }
+
+    /// Was der Text dieser Zelle am Stand aendert; die Rechnung des Kerns.
+    fn zelle_rechnen(
+        &self,
+        zeile: usize,
+        text: &str,
+    ) -> Result<Option<Neustand>, eintraege::Abweisung> {
+        aufgaben::text_aendern(self.ivars().modell.borrow().stand(), zeile, text)
+    }
+
+    /// Das Ankreuzfeld einer Zeile: dieselbe Handlung wie
+    /// [`Self::aufgabe_abhaken`], an der Zeile des Kaestchens statt an der
+    /// gewaehlten. Die Antwort geht an die Senke, weil kein Befehl sie
+    /// weitergibt.
+    fn kasten_abhaken(&self, zeile: usize) {
+        let meldung = self.handlung_ausfuehren(Handlung::Abhaken, Some(zeile));
+        self.meldung_melden(meldung);
+    }
+
+    /// Eine leere Aufgabe ans Ende, ihre Zelle danach in Bearbeitung (C6).
+    #[expect(
+        dead_code,
+        reason = "der Befehl `EintragHinzufuegen` kommt mit Schritt 3.3"
+    )]
+    pub fn eintrag_hinzufuegen(&self) -> Editormeldung {
+        self.handlung_ausfuehren(Handlung::Hinzufuegen, None)
+    }
+
+    /// Uebernimmt eine laufende Zelle, oder setzt die gewaehlte in
+    /// Bearbeitung (C6).
+    #[expect(
+        dead_code,
+        reason = "der Befehl `EintragBearbeiten` kommt mit Schritt 3.3"
+    )]
+    pub fn eintrag_bearbeiten(&self) -> Editormeldung {
+        self.handlung_ausfuehren(Handlung::Bearbeiten, None)
+    }
+
+    /// Die gewaehlte Aufgabe eine Stelle nach oben (C6).
+    #[expect(dead_code, reason = "der Befehl `EintragHoch` kommt mit Schritt 3.3")]
+    pub fn eintrag_hoch(&self) -> Editormeldung {
+        self.handlung_ausfuehren(Handlung::Verschieben(Richtung::Hoch), None)
+    }
+
+    /// Die gewaehlte Aufgabe eine Stelle nach unten (C6).
+    #[expect(dead_code, reason = "der Befehl `EintragRunter` kommt mit Schritt 3.3")]
+    pub fn eintrag_runter(&self) -> Editormeldung {
+        self.handlung_ausfuehren(Handlung::Verschieben(Richtung::Runter), None)
+    }
+
+    /// Die gewaehlte Aufgabenzeile fort (C6).
+    #[expect(
+        dead_code,
+        reason = "der Befehl `EintragLoeschen` kommt mit Schritt 3.3"
+    )]
+    pub fn eintrag_loeschen(&self) -> Editormeldung {
+        self.handlung_ausfuehren(Handlung::Loeschen, None)
+    }
+
+    /// Die gewaehlte Aufgabe abhaken oder wieder oeffnen (C6).
+    #[expect(
+        dead_code,
+        reason = "der Befehl `AufgabeAbhaken` kommt mit Schritt 3.3"
+    )]
+    pub fn aufgabe_abhaken(&self) -> Editormeldung {
+        self.handlung_ausfuehren(Handlung::Abhaken, None)
+    }
+
+    /// **Der eine Helfer, durch den jede Tabellenhandlung geht** (C6).
+    ///
+    /// Zuerst die laufende Zelle: eine abgewiesene haelt die Handlung an,
+    /// denn sie rechnete sonst auf einem Stand ohne den getippten Text. Dann
+    /// die Form, dann die Rechnung ueber [`handlung_rechnen`], dann der Umbau
+    /// ueber [`Self::umbau_anwenden`] und damit ueber den einen Weg in den
+    /// Verwalter. `zeile` nennt die Aufgabe, `None` heisst die gewaehlte.
+    ///
+    /// **`Bearbeiten` bei laufender Zelle uebernimmt sie und beginnt keine
+    /// neue**: so beendet `cmd+return` eine Zelle, und ein zweites `cmd+return`
+    /// oeffnet sie wieder.
+    fn handlung_ausfuehren(&self, handlung: Handlung, zeile: Option<usize>) -> Editormeldung {
+        let zelle = self.zelle_uebernehmen();
+        if let Zellenausgang::Abgewiesen(meldung) = zelle {
+            return meldung;
+        }
+        match self.form() {
+            Editorform::Aufgaben => {}
+            Editorform::Text => return Editormeldung::Eintrag(Eintragsantwort::KeineTabelle),
+        }
+        if handlung == Handlung::Bearbeiten && zelle == Zellenausgang::Uebernommen {
+            return Editormeldung::Eintrag(Eintragsantwort::Uebernommen);
+        }
+        let zeile = zeile.or_else(|| self.ivars().eintraege.gewaehlte_zeile());
+        let (meldung, neustand) =
+            handlung_rechnen(self.ivars().modell.borrow().stand(), handlung, zeile);
+        let auswahl = neustand.as_ref().and_then(|neustand| neustand.auswahl);
+        if let Some(neustand) = neustand {
+            self.umbau_anwenden(neustand);
+        }
+        let zu_bearbeiten = match handlung {
+            Handlung::Hinzufuegen => auswahl,
+            Handlung::Bearbeiten => zeile.filter(|_| {
+                meldung == Editormeldung::Eintrag(Eintragsantwort::BearbeitungBegonnen)
+            }),
+            Handlung::Verschieben(_) | Handlung::Loeschen | Handlung::Abhaken => None,
+        };
+        if let Some(stelle) = zu_bearbeiten {
+            let _ = self.ivars().eintraege.bearbeitung_beginnen(stelle);
+        }
+        meldung
     }
 
     /// Zeigt die Flaeche, die zur Form des Editors gehoert, und uebergibt den
@@ -1950,9 +2403,11 @@ impl Editorbereich {
     ///
     /// **Lehnt AppKit die Uebergabe ab**, wird trotzdem ausgeblendet: eine
     /// `NSTextView` und eine `NSTableView` geben den Rang ohne Rueckfrage ab,
-    /// solange keine Zelle bearbeitet wird, und die Zellenbearbeitung kommt
-    /// erst mit Schritt 3.2b, der die laufende Zelle vor jedem Ansichtswechsel
-    /// uebernimmt.
+    /// solange keine Zelle bearbeitet wird, und eine laufende Zelle haben die
+    /// Rufer vorher beendet — [`Self::ansicht_umschalten`] und
+    /// [`Self::datei_oeffnen`] uebernehmend ueber [`Self::zelle_uebernehmen`],
+    /// [`Self::schliessen`] verwerfend. Eine abgewiesene Zelle haelt die ersten
+    /// beiden an, bevor es hierher kommt.
     fn flaeche_waehlen(&self) {
         let schritte = self.tausch_planen();
         if schritte.is_empty() {
@@ -2128,7 +2583,15 @@ impl Editorbereich {
     /// Stand vom 260810-1028. Wo sie bis zum Ausgang liegt und warum das keine
     /// Marke neben der Kette ist, steht an [`EditorIvars::herkunft`].
     pub fn datei_oeffnen(&self, pfad: &Path, herkunft: Oeffnungsherkunft) {
+        // Erst die laufende Zelle, dann der Wechsel: ein Oeffnen nach einer
+        // abgewiesenen Zelle naehme ihr den getippten Text. Die Herkunft wird
+        // trotzdem vor dem Melden gesetzt, weil `melden` sie liest.
+        let zelle = self.zelle_uebernehmen();
         self.ivars().herkunft.set(herkunft);
+        if let Zellenausgang::Abgewiesen(meldung) = zelle {
+            self.melden(Ladeausgang::ZelleAbgewiesen(meldung.text()));
+            return;
+        }
         let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad);
         match sofort {
             Some(ausgang) => self.melden(ausgang),
@@ -2159,6 +2622,11 @@ impl Editorbereich {
     /// dieser Datei.
     #[must_use = "ein gescheitertes Sichern meldet sich nur ueber diesen Ausgang; fallengelassen glaubt der Nutzer, die Datei stehe auf der Platte"]
     pub fn sichern(&self) -> Sicherungsausgang {
+        // Erst die laufende Zelle: ihr getippter Text steht bis dahin allein im
+        // Feldeditor und nicht im Stand (C6.7).
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return Sicherungsausgang::ZelleAbgewiesen(meldung.text());
+        }
         let ausgang = self.ivars().modell.borrow_mut().sichern();
         if matches!(ausgang, Sicherungsausgang::Gesichert(_)) {
             self.kopf_nachziehen();
@@ -2217,6 +2685,11 @@ impl Editorbereich {
     /// die beiden Anzeigen ziehen ueber dieselben zwei Stellen nach wie nach
     /// jedem anderen Wechsel des Gehaltenen.
     pub fn schliessen(&self) {
+        // Eine noch laufende Zelle endet verwerfend: gerufen wird erst nach der
+        // Frage, die sie schon uebernommen hat, also bleibt hier nur ein Rest
+        // zu verwerfen. Ohne diese Zeile beendete der Flaechentausch darunter
+        // die Zelle uebernehmend, auf einem Stand, den es nicht mehr gibt.
+        self.zelle_verwerfen();
         self.ivars().modell.borrow_mut().schliessen();
         // Die Datei ist aufgegeben, und mit ihr ihr Verlauf. Die dritte der
         // drei Zeilen, die `stand_erneuern` zusammenhaelt, taugt hier
@@ -3243,7 +3716,17 @@ impl Editorbereich {
     /// **Die Schreibmarke bleibt, wo sie ist**, und zwar ohne eigenen Bau: sie
     /// haengt an Zeichenstellen des Textspeichers, und der bleibt Zeichen fuer
     /// Zeichen derselbe. Das elfte Abnahmekriterium von C3 faellt daraus an.
-    pub fn ansicht_umschalten(&self) {
+    ///
+    /// **Eine laufende Zelle wird zuerst uebernommen** (C6.7), denn der Wechsel
+    /// blendet die Tabelle aus, und ihr getippter Text stuende sonst in einem
+    /// Feldeditor, den niemand mehr sieht. Wird sie abgewiesen, unterbleibt der
+    /// Wechsel, und die Antwort ist der Grund; sonst ist sie `None`, weil der
+    /// Wechsel sichtbar genug ist.
+    #[must_use = "eine abgewiesene Zelle haelt den Wechsel an, und der Grund gehoert in die Statuszeile"]
+    pub fn ansicht_umschalten(&self) -> Option<Editormeldung> {
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return Some(meldung);
+        }
         // `let _ =`: die Antwort ist die neue Ansicht, und die liest
         // `darstellung_nachziehen` gleich darunter selbst aus dem Modell. Ein
         // zweiter Weg dorthin waere die Gelegenheit, beide auseinanderlaufen zu
@@ -3251,6 +3734,7 @@ impl Editorbereich {
         let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
         self.darstellung_nachziehen();
         self.flaeche_waehlen();
+        None
     }
 
     /// Setzt Grundschrift, Umbruch und Merkmale auf die gewaehlte Ansicht (C3).
@@ -6398,5 +6882,409 @@ mod tests {
         assert!(rumpf(&quelle, "flaeche_waehlen").contains(concat!("makeFirst", "Responder(")));
         assert_eq!(zeilen(concat!("set", "Hidden(")), 2);
         assert!(rumpf(&quelle, "tausch_ausfuehren<'a>").contains(concat!("set", "Hidden(")));
+    }
+
+    // ------------------------------------------------------------------
+    // Zellen, Anmeldung und die eine Uebernahmestelle (Schritt 3.2b)
+    // ------------------------------------------------------------------
+    //
+    // **Dieselbe Zerlegung wie in 3.2a, aus demselben gemessenen Grund.** Eine
+    // laufende Zelle braucht einen Feldeditor im Fenster, und ein Fenster
+    // endet unter `libtest` mit `SIGABRT`. Gefahren werden deshalb die Teile
+    // ohne Fenster: die Erkennung an einem selbst gebauten Feldeditor, die zwei
+    // Delegiertenwege der Ansicht an echten Feldern mit aufzeichnenden Wegen,
+    // die reine Rechnung jeder Handlung, und die Ruempfe der Rufer. Was offen
+    // bleibt — `makeFirstResponder:` loest wirklich die zwei Delegiertenwege
+    // aus, `esc` erreicht den Rang der Zelle —, ist Nutzerarbeit am laufenden
+    // Buendel.
+
+    /// Das Textfeld und das Ankreuzfeld einer Zeile, wie die Tabelle sie baut.
+    fn felder_der_zeile(
+        eintraege: &Eintragsansicht,
+        zeile: isize,
+    ) -> (Retained<NSTextField>, Retained<objc2_app_kit::NSButton>) {
+        let zelle = eintraege
+            .tabelle()
+            .viewAtColumn_row_makeIfNecessary(0, zeile, true)
+            .expect("die Tabelle baut die Zelle auch ohne Fenster");
+        let zelle = zelle
+            .downcast::<objc2_app_kit::NSTableCellView>()
+            .expect("die Zelle ist eine NSTableCellView");
+        // SAFETY: Ein Leser ohne Vorbedingung.
+        let feld = unsafe { zelle.textField() }.expect("die Zelle nennt ihr Textfeld");
+        let kasten = zelle
+            .subviews()
+            .iter()
+            .find_map(|ansicht| ansicht.downcast::<objc2_app_kit::NSButton>().ok())
+            .expect("die Zelle traegt ein Ankreuzfeld");
+        (feld, kasten)
+    }
+
+    /// Ein Feldeditor mit dem genannten Delegierten, ohne Fenster.
+    fn feldeditor_fuer(mtm: MainThreadMarker, delegierter: &NSObject) -> Retained<NSTextView> {
+        let feldeditor = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+        feldeditor.setFieldEditor(true);
+        // SAFETY: `setDelegate:` nimmt ein Objekt; die Eigenschaft ist schwach,
+        // und der Delegierte lebt in jeder Probe laenger als der Feldeditor.
+        // Ein `NSTextField` erfuellt `NSTextViewDelegate` in der Kiste nicht
+        // dem Typ nach, im Programm aber so, wie AppKit ihn beim Bearbeiten
+        // einsetzt; deshalb `msg_send!` statt des getypten Setzers.
+        let _: () = unsafe { msg_send![&feldeditor, setDelegate: delegierter] };
+        feldeditor
+    }
+
+    /// C6.7: die laufende Zelle wird am Feldeditor erkannt, **bevor ein
+    /// Zeichen getippt ist** — gefragt wird nach Feldeditor und Delegiertem,
+    /// nicht nach einer Meldung ueber den Beginn. Der Feldeditor eines fremden
+    /// Textfeldes, eine gewoehnliche Textflaeche mit demselben Delegierten und
+    /// die Textflaeche des Editors werden nicht erkannt.
+    #[test]
+    fn die_laufende_zelle_wird_vor_dem_ersten_zeichen_erkannt_und_ein_fremdes_feld_nicht() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, _) = felder_der_zeile(&eintraege, 1);
+
+            let feldeditor = feldeditor_fuer(mtm, &feld);
+            assert_eq!(
+                eintraege.laufende_zelle(&feldeditor),
+                Some(eintragsansicht::Zelle {
+                    zeile: 1,
+                    spalte: 0
+                }),
+                "ein Feldeditor, dessen Delegierter das Feld der zweiten Zeile ist"
+            );
+
+            let fremd = NSTextField::textFieldWithString(ns_string!("Blatt"), mtm);
+            let fremder_editor = feldeditor_fuer(mtm, &fremd);
+            assert_eq!(
+                eintraege.laufende_zelle(&fremder_editor),
+                None,
+                "ein Textfeld ausserhalb der Tabelle, etwa in einem Blatt"
+            );
+
+            let keine_feldeditorin = feldeditor_fuer(mtm, &feld);
+            keine_feldeditorin.setFieldEditor(false);
+            assert_eq!(eintraege.laufende_zelle(&keine_feldeditorin), None);
+
+            let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+            assert_eq!(eintraege.laufende_zelle(&textflaeche), None);
+            assert_eq!(eintraege.laufende_zelle(eintraege.tabelle()), None);
+        });
+    }
+
+    /// Die Wege der Ansicht, aufgezeichnet.
+    fn aufzeichnende_wege(
+        pruefung: bool,
+    ) -> (eintragsansicht::Zellenwege, Rc<RefCell<Vec<String>>>) {
+        let buch = Rc::new(RefCell::new(Vec::new()));
+        let (p, f, a) = (buch.clone(), buch.clone(), buch.clone());
+        let wege = eintragsansicht::Zellenwege {
+            pruefen: Box::new(move |zeile, text| {
+                p.borrow_mut().push(format!("pruefen {zeile} {text}"));
+                pruefung
+            }),
+            festschreiben: Box::new(move |zeile, text| {
+                f.borrow_mut().push(format!("festschreiben {zeile} {text}"));
+            }),
+            abhaken: Box::new(move |zeile| {
+                a.borrow_mut().push(format!("abhaken {zeile}"));
+            }),
+        };
+        (wege, buch)
+    }
+
+    /// Die zwei Delegiertenwege: die Pruefung fragt mit Zeile und getipptem
+    /// Text, ihr Nein bleibt ein Nein; das Ende schreibt genau einmal fest und
+    /// zeigt danach die Ableitung, nicht den getippten Text.
+    #[test]
+    fn eine_endende_zelle_wird_geprueft_einmal_festgeschrieben_und_zeigt_die_ableitung() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, _) = felder_der_zeile(&eintraege, 0);
+
+            let (wege, buch) = aufzeichnende_wege(false);
+            eintraege.wege_setzen(wege);
+            assert!(
+                !eintraege.zelle_darf_enden(&feld, "a\nb"),
+                "ein Nein der Pruefung laesst die Zelle in Bearbeitung"
+            );
+
+            let (wege, buch_ja) = aufzeichnende_wege(true);
+            eintraege.wege_setzen(wege);
+            assert!(eintraege.zelle_darf_enden(&feld, "Brot und Butter"));
+            feld.setStringValue(ns_string!("Brot und Butter"));
+            eintraege.zelle_geendet(&feld);
+            assert_eq!(*buch.borrow(), vec!["pruefen 0 a\nb".to_owned()]);
+            assert_eq!(
+                *buch_ja.borrow(),
+                vec![
+                    "pruefen 0 Brot und Butter".to_owned(),
+                    "festschreiben 0 Brot und Butter".to_owned()
+                ],
+                "genau ein Festschreiben, mit dem Text des Feldes"
+            );
+            assert_eq!(
+                feld.stringValue().to_string(),
+                "Brot",
+                "ohne Umbau zeigt die Zelle den abgeleiteten Text"
+            );
+        });
+    }
+
+    /// `zelle_abbrechen` verwirft die Aufgabenzelle (Moeglichkeit 2 von
+    /// `260926-0115_*_was-tut-esc-*`), und nach dem Abbruch ist der Stand
+    /// unveraendert: kein Weg von dort fuehrt in einen Umbau, und waehrend
+    /// `bearbeitung_verwerfen` den Ersthelfer wechselt, sagt die Pruefung ja,
+    /// ohne zu fragen, und das Ende schreibt nichts fest. **Gelesen am Rumpf**,
+    /// weil der Wechsel ein Fenster braucht; ausserhalb des Wechsels gilt die
+    /// Pruefung wieder, und das faehrt der zweite Teil an einem echten Feld.
+    #[test]
+    fn esc_verwirft_die_aufgabenzelle_und_laesst_den_stand() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let verwerfen = rumpf(&quelle, "bearbeitung_verwerfen");
+        let setzen = verwerfen
+            .find(concat!("verwerfen.set(", "true)"))
+            .expect("die Marke wird gesetzt");
+        let wechsel = verwerfen
+            .find(concat!("makeFirst", "Responder("))
+            .expect("der Wechsel steht im Rumpf");
+        let loeschen = verwerfen
+            .find(concat!("verwerfen.set(", "false)"))
+            .expect("die Marke wird geloescht");
+        assert!(setzen < wechsel && wechsel < loeschen);
+        for name in ["zelle_darf_enden", "zelle_geendet"] {
+            assert!(
+                rumpf(&quelle, name).contains(concat!("verwerfen.", "get()")),
+                "{name} fragt die Marke nicht"
+            );
+        }
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        let abbrechen = rumpf(&editor, "zelle_abbrechen");
+        assert!(
+            abbrechen.contains(concat!(
+                "Editorform::Aufgaben => self.zelle_",
+                "verwerfen()"
+            )),
+            "die Aufgabenzelle verwirft (Moeglichkeit 2)"
+        );
+        for name in ["zelle_abbrechen", "zelle_verwerfen"] {
+            let rumpf = rumpf(&editor, name);
+            for nadel in [
+                concat!("umbau_", "anwenden("),
+                concat!("zelle_", "uebernehmen("),
+                concat!("zelle_", "festschreiben("),
+            ] {
+                assert!(!rumpf.contains(nadel), "{name} ruft {nadel}");
+            }
+        }
+
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (feld, _) = felder_der_zeile(&eintraege, 1);
+            let (wege, buch) = aufzeichnende_wege(false);
+            eintraege.wege_setzen(wege);
+            assert!(
+                !eintraege.zelle_darf_enden(&feld, "vertippt"),
+                "ausserhalb des Verwerfens fragt die Pruefung, und ihr Nein gilt"
+            );
+            assert_eq!(buch.borrow().len(), 1);
+        });
+    }
+
+    /// Das Ankreuzfeld ist eingeschaltet, zielt auf die Ansicht und ruft den
+    /// Weg `abhaken` mit **seiner** Zeile; danach zeigt es die Ableitung und
+    /// nicht den Klick.
+    #[test]
+    fn das_ankreuzfeld_ruft_abhaken_mit_seiner_zeile_und_zeigt_danach_die_ableitung() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            let (_, kasten) = felder_der_zeile(&eintraege, 1);
+            assert!(kasten.isEnabled(), "das Kaestchen ist bedienbar");
+            assert_eq!(kasten.action(), Some(sel!(kastenGeklickt:)));
+            let (wege, buch) = aufzeichnende_wege(true);
+            eintraege.wege_setzen(wege);
+
+            kasten.setState(objc2_app_kit::NSControlStateValueOff);
+            // SAFETY: Die Aktion nimmt den Absender; das ist der Weg, den AppKit
+            // beim Klick nimmt.
+            let _: () = unsafe { msg_send![&*eintraege, kastenGeklickt: &*kasten] };
+            assert_eq!(*buch.borrow(), vec!["abhaken 1".to_owned()]);
+            assert_eq!(
+                kasten.state(),
+                objc2_app_kit::NSControlStateValueOn,
+                "die zweite Aufgabe ist erledigt, und das zeigt das Kaestchen wieder"
+            );
+        });
+    }
+
+    /// Jede Handlung rechnet ueber den Kern und antwortet: mit Umbau, wo sie
+    /// etwas aendert, ohne, wo sie nichts tun kann, und nie kommentarlos.
+    #[test]
+    fn jede_handlung_rechnet_ueber_den_kern_und_antwortet() {
+        use Eintragsantwort as A;
+        let umbau = |handlung, zeile| {
+            let (meldung, neustand) = handlung_rechnen(AUFGABEN, handlung, zeile);
+            (meldung, neustand.map(|neustand| neustand.text))
+        };
+        let antwort = Editormeldung::Eintrag;
+
+        let (meldung, text) = umbau(Handlung::Hinzufuegen, None);
+        assert_eq!(meldung, antwort(A::Hinzugefuegt));
+        assert_eq!(
+            text.as_deref(),
+            Some(concat!(
+                "# Aufgaben\n- [ ] Brot\n  fremde Zeile\n- [x] Steuer\n",
+                "- [ ] \n"
+            ))
+        );
+        assert_eq!(
+            handlung_rechnen(AUFGABEN, Handlung::Hinzufuegen, None)
+                .1
+                .and_then(|neustand| neustand.auswahl),
+            Some(2),
+            "die neue Aufgabe ist gewaehlt, ihre Zelle geht danach in Bearbeitung"
+        );
+
+        assert_eq!(umbau(Handlung::Abhaken, Some(0)).0, antwort(A::Abgehakt));
+        assert_eq!(umbau(Handlung::Abhaken, Some(1)).0, antwort(A::WiederOffen));
+        assert_eq!(
+            umbau(Handlung::Abhaken, Some(1)).1.as_deref(),
+            Some("# Aufgaben\n- [ ] Brot\n  fremde Zeile\n- [ ] Steuer\n")
+        );
+        assert_eq!(
+            umbau(Handlung::Verschieben(Richtung::Hoch), Some(0)),
+            (antwort(A::SchonOben), None)
+        );
+        assert_eq!(
+            umbau(Handlung::Verschieben(Richtung::Runter), Some(1)),
+            (antwort(A::SchonUnten), None)
+        );
+        assert_eq!(
+            umbau(Handlung::Verschieben(Richtung::Runter), Some(0))
+                .1
+                .as_deref(),
+            Some("# Aufgaben\n- [x] Steuer\n- [ ] Brot\n  fremde Zeile\n")
+        );
+        assert_eq!(
+            umbau(Handlung::Loeschen, Some(0)),
+            (
+                antwort(A::Geloescht),
+                Some("# Aufgaben\n  fremde Zeile\n- [x] Steuer\n".to_owned())
+            )
+        );
+        assert_eq!(
+            umbau(Handlung::Bearbeiten, Some(1)),
+            (antwort(A::BearbeitungBegonnen), None),
+            "Bearbeiten aendert den Stand nicht, es oeffnet die Zelle"
+        );
+        for handlung in [
+            Handlung::Bearbeiten,
+            Handlung::Verschieben(Richtung::Hoch),
+            Handlung::Loeschen,
+            Handlung::Abhaken,
+        ] {
+            for zeile in [None, Some(2)] {
+                assert_eq!(
+                    umbau(handlung, zeile),
+                    (antwort(A::KeinEintragGewaehlt), None),
+                    "{handlung:?} ohne gueltige Auswahl"
+                );
+            }
+        }
+    }
+
+    /// Der Weg der Zelle in den Stand: ein geaenderter Text ergibt genau einen
+    /// Umbau, ein unveraenderter keinen, einer mit Umbruch eine Abweisung ohne
+    /// Umbau; und die Abweisung traegt den Satz des Kerns in die Statuszeile.
+    #[test]
+    fn eine_zelle_ergibt_einen_umbau_keinen_oder_eine_abweisung() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        use krk_core::heimordner::eintraege::Abweisung as Eintragsabweisung;
+        assert!(matches!(
+            aufgaben::text_aendern(AUFGABEN, 0, "Brot und Butter"),
+            Ok(Some(_))
+        ));
+        assert_eq!(aufgaben::text_aendern(AUFGABEN, 0, "Brot"), Ok(None));
+        assert_eq!(
+            aufgaben::text_aendern(AUFGABEN, 0, "Brot\nButter"),
+            Err(Eintragsabweisung::UmbruchImAufgabentext)
+        );
+        assert_eq!(
+            Editormeldung::EintragAbgewiesen(Eintragsabweisung::UmbruchImAufgabentext).text(),
+            Eintragsabweisung::UmbruchImAufgabentext.meldung()
+        );
+
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let festschreiben = rumpf(&quelle, "zelle_festschreiben");
+        assert_eq!(
+            festschreiben
+                .matches(concat!("self.umbau_", "anwenden("))
+                .count(),
+            1,
+            "genau ein Umbau, und nur fuer einen geaenderten Text"
+        );
+        assert!(festschreiben.contains(concat!("Ok(Some(neustand)) => self.umbau_", "anwenden(")));
+        let pruefen = rumpf(&quelle, "zelle_pruefen");
+        assert!(pruefen.contains(concat!("zellen", "abweisung.set(Some(")));
+        assert!(!pruefen.contains(concat!("umbau_", "anwenden(")));
+    }
+
+    /// **Die eine Uebernahmestelle und ihre Rufer.** `zelle_uebernehmen` wird
+    /// von genau diesen fuenf gerufen, von jedem vor allem anderen, was den
+    /// Stand liest oder die Flaeche wechselt; und die Uebernahme selbst geht
+    /// ueber `bearbeitung_beenden`, also ueber die zwei Delegiertenwege, und
+    /// nicht an ihnen vorbei.
+    #[test]
+    fn die_zellenuebernahme_hat_genau_diese_rufer() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
+        let nadel = concat!(".zelle_", "uebernehmen()");
+        let rufer = [
+            (&editor, "sichern"),
+            (&editor, "datei_oeffnen"),
+            (&editor, "ansicht_umschalten"),
+            (&editor, "handlung_ausfuehren"),
+            (&anwendung, "editor_stand_befragen"),
+        ];
+        for (quelle, name) in rufer {
+            let rumpf = rumpf(quelle, name);
+            let stelle = rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{name} uebernimmt die Zelle nicht"));
+            for spaeter in [
+                ".modell",
+                concat!("flaeche_", "waehlen("),
+                concat!("hat_ungesicherten_", "stand("),
+                concat!("umbau_", "anwenden("),
+            ] {
+                if let Some(dort) = rumpf.find(spaeter) {
+                    assert!(stelle < dort, "{name} liest {spaeter} vor der Uebernahme");
+                }
+            }
+        }
+        let codezeilen = |quelle: &str| -> usize {
+            let (code, _) = quelle
+                .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+                .unwrap_or((quelle, ""));
+            code.lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(nadel))
+                .count()
+        };
+        assert_eq!(
+            codezeilen(&editor) + codezeilen(&anwendung),
+            rufer.len(),
+            "ein Rufer ausser den fuenf"
+        );
+        assert!(
+            rumpf(&editor, "zelle_uebernehmen")
+                .contains(concat!("eintraege.bearbeitung_", "beenden("))
+        );
     }
 }

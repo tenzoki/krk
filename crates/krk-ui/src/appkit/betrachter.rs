@@ -738,7 +738,8 @@ mod tests {
     ///
     /// Seit der Runde 22 ist `copy:` zweimal ueberschrieben: hier fuer die
     /// Auswahl aus dem PDF und beim Anwendungsdelegierten fuer die
-    /// Dateiliste; `cut:` steht allein beim Delegierten, und seit dem 260907
+    /// Dateiliste; seit Schritt 3.2b der krkhome-Arbeit ein drittes Mal an der
+    /// Eintragstabelle des Editors, fuer den Text der gewaehlten Aufgabe; `cut:` steht allein beim Delegierten, und seit dem 260907
     /// ebenso `filterEinfuegen:`, das den Filtertext der Dateiliste fuellt.
     /// Alle gehen durch die eine Huelle `zwischenablage.rs`.
     ///
@@ -795,8 +796,13 @@ mod tests {
         };
         assert_eq!(
             stellen_von(kopieren),
-            vec![(DELEGIERTER.to_owned(), 1), (DIESE_DATEI.to_owned(), 1)],
-            "`copy:` steht nicht genau je einmal beim Anwendungsdelegierten und im Betrachter"
+            vec![
+                (DELEGIERTER.to_owned(), 1),
+                (DIESE_DATEI.to_owned(), 1),
+                ("krk-ui/src/appkit/eintragsansicht.rs".to_owned(), 1)
+            ],
+            "`copy:` steht nicht genau je einmal beim Anwendungsdelegierten, im \
+             Betrachter und an der Eintragstabelle"
         );
         assert_eq!(
             stellen_von(ausschneiden),

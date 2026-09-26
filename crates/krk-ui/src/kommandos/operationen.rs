@@ -3001,15 +3001,19 @@ mod abbruchrangfolge {
         rumpf.to_owned()
     }
 
-    /// Die drei Raenge stehen in der zugesagten Reihenfolge: Blatt, Vorgang,
-    /// Filtertext.
+    /// Die vier Raenge stehen in der zugesagten Reihenfolge: Blatt, Zelle der
+    /// Eintragstabelle, Vorgang, Filtertext.
+    ///
+    /// Der Rang der Zelle kam mit Schritt 3.2b der krkhome-Arbeit dazu und
+    /// steht unmittelbar nach dem Blatt; vor dem Filtertext muss er stehen,
+    /// sonst leerte `esc` in einer Zelle den Filter und liesse die Zelle offen.
     ///
     /// Gesucht wird je Rang das Stueck, an dem er seinen Gegenstand holt, und
     /// verglichen werden die Fundstellen. Ein vertauschter Rang verschiebt die
     /// Reihenfolge und laesst die Probe rot werden; ein Rang, der ganz
     /// verschwindet, laesst sie an seiner eigenen Zusicherung scheitern.
     #[test]
-    fn die_drei_raenge_stehen_in_der_zugesagten_reihenfolge() {
+    fn die_vier_raenge_stehen_in_der_zugesagten_reihenfolge() {
         let rumpf = rumpf_von_abbrechen();
         let stelle = |nadel: &str| {
             rumpf
@@ -3018,12 +3022,17 @@ mod abbruchrangfolge {
         };
 
         let blatt = stelle("offenes_blatt");
+        let zelle = stelle("zelle_abbrechen()");
         let vorgang = stelle("ivars().vorgang");
         let filter = stelle("filter_leeren()");
 
         assert!(
-            blatt < vorgang,
-            "das offene Blatt steht nicht mehr vor der laufenden Operation"
+            blatt < zelle,
+            "das offene Blatt steht nicht mehr vor der Zelle der Eintragstabelle"
+        );
+        assert!(
+            zelle < vorgang,
+            "die Zelle der Eintragstabelle steht nicht mehr vor der laufenden Operation"
         );
         assert!(
             vorgang < filter,
@@ -3031,33 +3040,33 @@ mod abbruchrangfolge {
         );
     }
 
-    /// Die zwei vorderen Raenge springen frueh zurueck, und der dritte ist der
+    /// Die drei vorderen Raenge springen frueh zurueck, und der letzte ist der
     /// letzte Ausdruck.
     ///
-    /// Ohne den fruehen Ruecksprung waere die Reihenfolge keine: ein Blatt und
-    /// ein laufender Vorgang wuerden beide abgebrochen, und der Filtertext
-    /// dazu. Gezaehlt werden deshalb die zwei `return true;` vor dem dritten
-    /// Rang.
+    /// Ohne den fruehen Ruecksprung waere die Reihenfolge keine: ein Blatt, eine
+    /// Zelle und ein laufender Vorgang wuerden alle abgebrochen, und der
+    /// Filtertext dazu. Gezaehlt werden deshalb die drei `return true;` vor dem
+    /// letzten Rang; bis Schritt 3.2b der krkhome-Arbeit waren es zwei.
     ///
-    /// **Ein vierter Rang haelt die Probe an** (C3.5): das Anhalten des
+    /// **Ein fuenfter Rang haelt die Probe an** (C3.5): das Anhalten des
     /// Durchlaufs bekommt keinen eigenen, weil das Loeschen des Filtertexts
     /// ihn beendet.
     #[test]
-    fn die_zwei_vorderen_raenge_springen_frueh_zurueck() {
+    fn die_drei_vorderen_raenge_springen_frueh_zurueck() {
         let rumpf = rumpf_von_abbrechen();
         let filter = rumpf
             .find("filter_leeren()")
-            .expect("der dritte Rang steht nicht mehr im Rumpf von abbrechen");
+            .expect("der letzte Rang steht nicht mehr im Rumpf von abbrechen");
 
         let ruecksprunge = rumpf[..filter].matches("return true;").count();
         assert_eq!(
-            ruecksprunge, 2,
-            "vor dem dritten Rang stehen {ruecksprunge} fruehe Ruecksprunge und nicht zwei"
+            ruecksprunge, 3,
+            "vor dem letzten Rang stehen {ruecksprunge} fruehe Ruecksprunge und nicht drei"
         );
         assert_eq!(
             rumpf.matches("filter_leeren()").count(),
             1,
-            "der dritte Rang steht nicht genau einmal da"
+            "der letzte Rang steht nicht genau einmal da"
         );
     }
 }
