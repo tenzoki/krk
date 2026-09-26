@@ -792,6 +792,13 @@ Verlauf der Zwischenablage behält ihn, und bei eingeschalteter Übergabe an
 andere Geräte (Handoff) erreicht er auch diese. Wer ein Geheimnis kopiert hat,
 kopiert danach etwas Harmloses darüber.
 
+**Gezogener Text wird eine Klartextdatei.** Markierten Text aus dem Editor auf
+den Schreibtisch oder in ein Finder-Fenster zu ziehen ist erlaubt wie das
+Kopieren. Der Finder legt daraus aber eine Datei an, einen Textausschnitt mit
+dem Klartext. Spotlight findet sie, und sie bleibt liegen, bis man sie löscht.
+Wer ein Geheimnis gezogen hat, legt den Ausschnitt danach in den Papierkorb und
+leert ihn.
+
 **Eine Textmarke gibt es in `.secrets.txt` nicht.** `cmd+d` legt dort keine an,
 und die Statuszeile sagt, warum: die Textmarke schriebe eine Zeile der
 Geheimnisse im Klartext in die Lesezeichen.
