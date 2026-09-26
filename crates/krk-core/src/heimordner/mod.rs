@@ -6,7 +6,9 @@
 //! Tabelle, und spaeter steht `.secrets.txt` dort immer in der Liste. **Jede
 //! dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
-//! Die Form der Eintraege in den zwei Dateien steht in [`eintraege`].
+//! Die Form der Eintraege in den zwei Dateien steht in [`eintraege`], das
+//! Anlegen von Ordner und Dateien samt der einmaligen Uebernahme der alten
+//! Zettel in [`bereitstellen`].
 //!
 //! # Zwei Formen, verglichen als Text
 //!
@@ -62,7 +64,13 @@
 //! (`260926-0007_*_ist-der-ort-krkhome-fest-oder-einstellbar.md`); ein
 //! einstellbarer Ort erbte die Frage nach den Schreibweisen unveraendert.
 
+mod bereitstellen;
 pub mod eintraege;
+
+pub use bereitstellen::{
+    ALTE_ZETTEL, AlterZettel, Bereitstellung, Hindernis, Uebernahme, Uebernahmeausgang,
+    Zettelbefund, bereitstellen,
+};
 
 use std::path::{Component, Path, PathBuf};
 

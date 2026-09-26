@@ -210,7 +210,7 @@ Die Kanten zwischen den Stufen sind zweierlei, und beide stehen in den Schritten
    - Closes (am Baum): C2.4, C2.5, C2.6 in seinem Kernteil (die Probe zur einen Stelle folgt in 1.3a), in der Reichweite des Datensatzes zu den zwei Pfadformen.
    - Dependencies: none; der Datensatz `260926-0115_*_erkennt-krk-den-heimordner-…` trägt eine Antwort, bevor der Schritt beginnt.
 
-2. **1.2 Ordner und Dateien anlegen, alte Zettel übernehmen**
+2. [DONE] **1.2 Ordner und Dateien anlegen, alte Zettel übernehmen**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/heimordner/bereitstellen.rs` (neu), `crates/krk-core/src/heimordner/mod.rs`, `crates/krk-core/tests/heimordner.rs`
    - Changes:

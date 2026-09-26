@@ -1,6 +1,9 @@
 //! Abnahme des Heimordners `~/krkhome/`: Erkennung und Form der Eintraege
-//! (Schritt 1.1 des Plans `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`,
-//! Faehigkeit C2 des Spec).
+//! (Schritt 1.1), Anlegen und Uebernahme der alten Zettel (Schritt 1.2) des
+//! Plans `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`,
+//! Faehigkeiten C2 und C3 des Spec. Die Rennprobe zum exklusiven Anlegen steht
+//! im Pruefmodul von `heimordner/bereitstellen.rs`, weil sie einen privaten
+//! Einhaengepunkt braucht.
 //!
 //! Ohne Fenster. Die Erkennung wird an einem Pruefordner geprueft, der die
 //! Rolle des Benutzerverzeichnisses spielt; das echte Benutzerverzeichnis
@@ -24,7 +27,10 @@ use gemeinsam::Pruefordner;
 use krk_core::heimordner::eintraege::{
     Aufgaben, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile, ist_themenzeile,
 };
-use krk_core::heimordner::{Heimordner, ORDNERNAME, Sonderdatei};
+use krk_core::heimordner::{
+    ALTE_ZETTEL, Bereitstellung, Heimordner, Hindernis, ORDNERNAME, Sonderdatei, Uebernahmeausgang,
+    Zettelbefund, bereitstellen,
+};
 
 /// Der Pruefordner in der Schreibweise, die `canonicalize` fuer ihn liefert.
 fn kanonisch(ordner: &Pruefordner) -> PathBuf {
@@ -386,4 +392,346 @@ fn der_fehlende_schlussumbruch_bleibt_am_dateiende() {
 
     let zurueck = aufgaben::verschieben(&hoch.text, 0, Richtung::Runter).expect("zurueck");
     assert_eq!(zurueck.text, stand);
+}
+
+// ---------------------------------------------------------------------------
+// Anlegen und Uebernahme (Schritt 1.2)
+// ---------------------------------------------------------------------------
+
+/// Ein Benutzerverzeichnis mit Ablageordner und zwei alten Zetteln, deren
+/// Inhalt die Probe waehlt; `None` heisst: der Zettel fehlt.
+///
+/// Haelt den Pruefordner, damit `Drop` ihn erst am Ende der Probe abraeumt,
+/// und merkt sich die Zettel, damit jede Probe sie am Ende unveraendert findet.
+struct Lage {
+    _ordner: Pruefordner,
+    zuhause: PathBuf,
+    ablage: PathBuf,
+    zettel: [Option<&'static [u8]>; 2],
+}
+
+impl Lage {
+    fn neu(zweck: &str, zettel: [Option<&'static [u8]>; 2]) -> Self {
+        let ordner = Pruefordner::neu(zweck);
+        let zuhause = kanonisch(&ordner);
+        let ablage = zuhause.join("ablage");
+        fs::create_dir(&ablage).expect("Ablageordner laesst sich nicht anlegen");
+        for (alter, inhalt) in ALTE_ZETTEL.iter().zip(zettel) {
+            if let Some(inhalt) = inhalt {
+                fs::write(ablage.join(alter.datei), inhalt).expect("Zettel");
+            }
+        }
+        Self {
+            _ordner: ordner,
+            zuhause,
+            ablage,
+            zettel,
+        }
+    }
+
+    fn heim(&self) -> Heimordner {
+        Heimordner::im_benutzerverzeichnis(&self.zuhause)
+    }
+
+    fn heimpfad(&self) -> PathBuf {
+        self.zuhause.join(ORDNERNAME)
+    }
+
+    fn bereitstellen(&self) -> Result<Bereitstellung, Hindernis> {
+        bereitstellen(&self.heim(), &self.ablage)
+    }
+
+    fn lesen(&self, sorte: Sonderdatei) -> String {
+        fs::read_to_string(self.heimpfad().join(sorte.dateiname()))
+            .unwrap_or_else(|_| panic!("{} fehlt", sorte.dateiname()))
+    }
+
+    /// C3.5: die alten Zettel sind Byte fuer Byte, was sie vorher waren, und ein
+    /// fehlender ist nicht entstanden.
+    fn zettel_unveraendert(&self) {
+        for (alter, inhalt) in ALTE_ZETTEL.iter().zip(self.zettel) {
+            let pfad = self.ablage.join(alter.datei);
+            match inhalt {
+                Some(inhalt) => assert_eq!(
+                    fs::read(&pfad).expect("der Zettel ist weg"),
+                    inhalt,
+                    "{} ist veraendert",
+                    alter.datei
+                ),
+                None => assert!(!pfad.exists(), "{} ist entstanden", alter.datei),
+            }
+        }
+    }
+}
+
+/// Die Namen im Ordner, sortiert.
+fn namen_in(ordner: &Path) -> Vec<String> {
+    let mut namen: Vec<String> = fs::read_dir(ordner)
+        .expect("der Ordner ist nicht lesbar")
+        .map(|eintrag| {
+            eintrag
+                .expect("Eintrag")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    namen.sort();
+    namen
+}
+
+/// C2.2, C2.1 fuer den gewoehnlichen Weg: eine vorhandene Datei bleibt Byte fuer
+/// Byte, eine fehlende entsteht leer.
+#[test]
+fn eine_vorhandene_datei_bleibt_und_eine_fehlende_entsteht_leer() {
+    let lage = Lage::neu("heim-vorhanden", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let vorher = b"## Eigenes\nnicht anfassen\r\n\xef\xbb\xbf";
+    fs::write(lage.heimpfad().join("notes.txt"), vorher).expect("notes.txt");
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(
+        fs::read(lage.heimpfad().join("notes.txt")).expect("notes.txt"),
+        vorher
+    );
+    assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
+    assert!(!bereitstellung.ordner_angelegt);
+    assert_eq!(bereitstellung.angelegt, vec![Sonderdatei::Aufgaben]);
+    assert_eq!(bereitstellung.uebernahme, None);
+    assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
+    lage.zettel_unveraendert();
+}
+
+/// C2: der erste Aufruf legt Ordner, `notes.txt` und `tasks.txt` an und sonst
+/// nichts, insbesondere keine `.secrets.txt` vor der Stufe 5.
+#[test]
+fn der_erste_aufruf_legt_genau_die_zwei_dateien_an() {
+    let lage = Lage::neu("heim-erster", [None, None]);
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert!(bereitstellung.ordner_angelegt);
+    assert_eq!(bereitstellung.angelegt, Sonderdatei::ALLE.to_vec());
+    assert_eq!(namen_in(&lage.heimpfad()), vec!["notes.txt", "tasks.txt"]);
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
+    assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
+    let uebernahme = bereitstellung.uebernahme.as_ref().expect("Uebernahme");
+    assert_eq!(uebernahme.ausgang, Uebernahmeausgang::NichtsZuUebernehmen);
+    assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
+    lage.zettel_unveraendert();
+}
+
+/// C3.2: Hat derselbe Aufruf den Ordner angelegt, werden beide Zettel zu
+/// Notizen, Text unveraendert und ein fehlender Schlussumbruch ergaenzt.
+#[test]
+fn beide_zettel_werden_zu_notizen_wenn_der_ordner_neu_ist() {
+    let lage = Lage::neu(
+        "heim-uebernahme",
+        [
+            Some("erste Zeile\n# eine Raute\n### drei Rauten\n".as_bytes()),
+            Some("ohne Schlussumbruch".as_bytes()),
+        ],
+    );
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(
+        lage.lesen(Sonderdatei::Notizen),
+        "## Zettel 1\nerste Zeile\n# eine Raute\n### drei Rauten\n## Zettel 2\nohne Schlussumbruch\n"
+    );
+    assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
+    let uebernahme = bereitstellung.uebernahme.as_ref().expect("Uebernahme");
+    assert_eq!(uebernahme.ausgang, Uebernahmeausgang::Geschrieben);
+    assert_eq!(
+        bereitstellung.meldungen(),
+        vec!["Zettel 1 und Zettel 2 als Notizen in notes.txt übernommen".to_owned()]
+    );
+    // Die Notizen liest die eine Form wieder als zwei Bloecke.
+    let stand = lage.lesen(Sonderdatei::Notizen);
+    assert_eq!(Notizen::lesen(&stand).bloecke().len(), 2);
+    lage.zettel_unveraendert();
+}
+
+/// C3.3: Ein Zettel mit einer Themenzeile wird nicht uebernommen, der andere
+/// schon, und die Meldung nennt den abgewiesenen samt seiner Datei.
+#[test]
+fn ein_zettel_mit_themenzeile_bleibt_draussen_der_andere_kommt() {
+    let lage = Lage::neu(
+        "heim-themenzeile",
+        [
+            Some("oben\n## mitten drin\nunten\n".as_bytes()),
+            Some("harmlos\n".as_bytes()),
+        ],
+    );
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "## Zettel 2\nharmlos\n");
+    let uebernahme = bereitstellung.uebernahme.as_ref().expect("Uebernahme");
+    assert_eq!(uebernahme.zettel[0].1, Zettelbefund::Themenzeile);
+    assert_eq!(uebernahme.zettel[1].1, Zettelbefund::Notiz);
+    assert_eq!(
+        bereitstellung.meldungen(),
+        vec![
+            "Zettel 2 als Notiz in notes.txt übernommen".to_owned(),
+            "Zettel 1 ist nicht übernommen, weil er eine Zeile mit „## “ trägt; note-1.txt liegt unverändert im Ablageordner".to_owned(),
+        ]
+    );
+    lage.zettel_unveraendert();
+}
+
+/// C3.2: Ein Zettel aus nichts als Leerraum und ein fehlender ergeben keine
+/// Notiz und keine Meldung.
+#[test]
+fn leerraum_und_ein_fehlender_zettel_ergeben_keine_notiz() {
+    let lage = Lage::neu("heim-leerraum", [Some(" \n\t\n".as_bytes()), None]);
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
+    let uebernahme = bereitstellung.uebernahme.as_ref().expect("Uebernahme");
+    assert_eq!(uebernahme.zettel[0].1, Zettelbefund::Leer);
+    assert_eq!(uebernahme.zettel[1].1, Zettelbefund::Fehlt);
+    assert_eq!(uebernahme.ausgang, Uebernahmeausgang::NichtsZuUebernehmen);
+    assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
+    lage.zettel_unveraendert();
+}
+
+/// Ein Zettel, der sich nicht als Text lesen laesst, wird nicht uebernommen und
+/// gemeldet; der andere kommt trotzdem.
+#[test]
+fn ein_unlesbarer_zettel_wird_gemeldet_und_nicht_uebernommen() {
+    let lage = Lage::neu(
+        "heim-unlesbar",
+        [
+            Some(b"gut\n".as_slice()),
+            Some(b"\xff\xfe kein UTF-8".as_slice()),
+        ],
+    );
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "## Zettel 1\ngut\n");
+    let meldungen = bereitstellung.meldungen();
+    assert_eq!(meldungen.len(), 2, "{meldungen:?}");
+    assert!(
+        meldungen[1].starts_with("Zettel 2 ist nicht übernommen")
+            && meldungen[1].ends_with("note-2.txt liegt unverändert im Ablageordner"),
+        "{meldungen:?}"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// C3.4: Bestand der Ordner schon, uebernimmt KRK nichts, auch wenn
+/// `notes.txt` fehlt und neu entsteht.
+#[test]
+fn ein_bestehender_ordner_bekommt_nichts_uebernommen() {
+    let lage = Lage::neu("heim-bestehend", [Some("Text\n".as_bytes()), None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
+    assert!(!bereitstellung.ordner_angelegt);
+    assert_eq!(bereitstellung.uebernahme, None);
+    lage.zettel_unveraendert();
+}
+
+/// C3.4, der Weg des Nutzers: `notes.txt` nach der Uebernahme loeschen, noch
+/// einmal F2: sie entsteht leer, und die Zettel kommen kein zweites Mal.
+#[test]
+fn nach_geloeschter_notizdatei_kommt_keine_zweite_uebernahme() {
+    let lage = Lage::neu("heim-zweiter", [Some("Text\n".as_bytes()), None]);
+    let erste = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(
+        erste.uebernahme.map(|u| u.ausgang),
+        Some(Uebernahmeausgang::Geschrieben)
+    );
+    fs::remove_file(lage.heimpfad().join("notes.txt")).expect("notes.txt loeschen");
+
+    let zweite = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
+    assert_eq!(zweite.angelegt, vec![Sonderdatei::Notizen]);
+    assert_eq!(zweite.uebernahme, None);
+    lage.zettel_unveraendert();
+}
+
+/// Eine gewoehnliche Datei an der Stelle von `krkhome`: `KeinOrdner`, und die
+/// Datei bleibt, wie sie war.
+#[test]
+fn eine_datei_an_der_stelle_des_ordners_ist_kein_ordner() {
+    let lage = Lage::neu("heim-datei", [Some("Text\n".as_bytes()), None]);
+    fs::write(lage.heimpfad(), b"ich bin eine Datei").expect("Datei");
+
+    assert_eq!(lage.bereitstellen(), Err(Hindernis::KeinOrdner));
+
+    assert_eq!(
+        fs::read(lage.heimpfad()).expect("die Datei ist weg"),
+        b"ich bin eine Datei"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// Ein Verweis auf einen Ordner: die Dateien entstehen im Ziel, und weil der
+/// Verweis schon stand, wird nichts uebernommen.
+#[test]
+fn ein_verweis_auf_einen_ordner_laesst_die_dateien_im_ziel_entstehen() {
+    let lage = Lage::neu("heim-verweisziel", [Some("Text\n".as_bytes()), None]);
+    let ziel = lage.zuhause.join("anderswo");
+    fs::create_dir(&ziel).expect("Zielordner");
+    std::os::unix::fs::symlink(&ziel, lage.heimpfad()).expect("Verweis");
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(namen_in(&ziel), vec!["notes.txt", "tasks.txt"]);
+    assert!(!bereitstellung.ordner_angelegt);
+    assert_eq!(bereitstellung.uebernahme, None);
+    assert!(
+        fs::symlink_metadata(lage.heimpfad())
+            .expect("der Verweis ist weg")
+            .file_type()
+            .is_symlink(),
+        "der Verweis ist ersetzt"
+    );
+    lage.zettel_unveraendert();
+}
+
+/// Ein Verweis ins Leere: `Unerreichbar`, und das fehlende Ziel entsteht nicht.
+#[test]
+fn ein_verweis_ins_leere_ist_unerreichbar() {
+    let lage = Lage::neu("heim-leere", [None, None]);
+    let ziel = lage.zuhause.join("gibt-es-nicht");
+    std::os::unix::fs::symlink(&ziel, lage.heimpfad()).expect("Verweis");
+
+    let ausgang = lage.bereitstellen();
+
+    assert!(
+        matches!(ausgang, Err(Hindernis::Unerreichbar(_))),
+        "{ausgang:?}"
+    );
+    assert!(!ziel.exists(), "das Ziel ist entstanden");
+}
+
+/// Die Saetze der Statuszeile fuer die vier Hindernisse, im Wortlaut, mit
+/// Umlauten und mit dem Ordner so, wie der Nutzer ihn kennt.
+#[test]
+fn die_hindernisse_melden_sich_im_wortlaut() {
+    assert_eq!(
+        Hindernis::KeinOrdner.meldung(),
+        "~/krkhome ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"
+    );
+    assert_eq!(
+        Hindernis::Unerreichbar("Grund".to_owned()).meldung(),
+        "~/krkhome ist nicht erreichbar: Grund"
+    );
+    assert_eq!(
+        Hindernis::NichtAnlegbar("Grund".to_owned()).meldung(),
+        "~/krkhome lässt sich nicht anlegen: Grund"
+    );
+    assert_eq!(
+        Hindernis::KeinBenutzerverzeichnis.meldung(),
+        "Das System nennt kein Benutzerverzeichnis, also gibt es kein ~/krkhome"
+    );
 }
