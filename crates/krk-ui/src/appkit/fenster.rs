@@ -321,6 +321,16 @@ pub struct FensterIvars {
     /// Stark gehalten, wie die Quellen: die Ansicht haelt weder das Fenster
     /// noch diesen Delegierten, ein Ring entsteht nicht.
     eintraege: Retained<Eintragsansicht>,
+    /// Der Melder, den [`FensterDelegierter::schliessmelder_setzen`] eintraegt
+    /// und `windowWillClose:` nach dem Abbruch der Lesevorgaenge ruft.
+    ///
+    /// Er haelt den Anwendungsdelegierten **schwach**, aus dem Grund im
+    /// Modulkopf. Heute schliesst er die Quicknote (Schritt 6 des Plans
+    /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`):
+    /// ein geschlossenes Fenster zeigt sie nicht mehr, und ein
+    /// wiedergeoeffnetes zeigt die Datei darunter. `None` heisst: der Aufbau
+    /// ist noch nicht so weit.
+    schliessmelder: RefCell<Option<Box<dyn Fn()>>>,
 }
 
 define_class!(
@@ -343,6 +353,12 @@ define_class!(
         fn fenster_schliesst(&self, _meldung: &NSNotification) {
             for quelle in &self.ivars().quellen {
                 quelle.lesen_abbrechen();
+            }
+            // Lesend ausgeliehen, wie `Hauptfenster::melden`: der einzige
+            // schreibende Zugriff ist `schliessmelder_setzen` beim Aufbau.
+            let schliessmelder = self.ivars().schliessmelder.borrow();
+            if let Some(melden) = schliessmelder.as_ref() {
+                melden();
             }
         }
 
@@ -372,9 +388,23 @@ impl FensterDelegierter {
         quellen: [Retained<DateifensterQuelle>; 2],
         eintraege: Retained<Eintragsansicht>,
     ) -> Retained<Self> {
-        let this = Self::alloc(mtm).set_ivars(FensterIvars { quellen, eintraege });
+        let this = Self::alloc(mtm).set_ivars(FensterIvars {
+            quellen,
+            eintraege,
+            schliessmelder: RefCell::new(None),
+        });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
+    }
+
+    /// Traegt den Melder ein, den `windowWillClose:` nach dem Abbruch der
+    /// Lesevorgaenge ruft.
+    ///
+    /// Gerufen vom Aufbau der Oberflaeche mit einem Rueckruf, der den
+    /// Anwendungsdelegierten schwach haelt; derselbe Zuschnitt wie
+    /// [`Hauptfenster::melder_setzen`].
+    pub fn schliessmelder_setzen(&self, melden: Box<dyn Fn()>) {
+        *self.ivars().schliessmelder.borrow_mut() = Some(melden);
     }
 }
 

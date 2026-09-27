@@ -3428,6 +3428,40 @@ mod tests {
         }
     }
 
+    /// Die Sitzung einer offenen Quicknote (Schritt 6): an einer Kopie des
+    /// Modells ergibt die Rueckkehr dieselbe Sichtbarkeit wie am Original, und
+    /// das Original bleibt dabei, wie es auf dem Schirm steht.
+    #[test]
+    fn die_rueckkehr_an_einer_kopie_gleicht_der_am_original() {
+        for rand in [
+            None,
+            Some(Bereich::Vorschau),
+            Some(Bereich::Editor),
+            Some(Bereich::Git),
+        ] {
+            let vorher = mit_rand(rand);
+            let rueckkehr = vorher.randrueckkehr();
+            let mut original = vorher.clone();
+            let _ = original.einblenden(Bereich::Editor, weit());
+            let auf_dem_schirm = original.sichtbarkeit();
+
+            let mut kopie = original.clone();
+            let _ = kopie.rand_zurueckstellen(rueckkehr, weit());
+            assert_eq!(
+                original.sichtbarkeit(),
+                auf_dem_schirm,
+                "{rand:?}: die Kopie hat das Original veraendert"
+            );
+
+            let _ = original.rand_zurueckstellen(rueckkehr, weit());
+            assert_eq!(
+                kopie.sichtbarkeit(),
+                original.sichtbarkeit(),
+                "{rand:?}: die Kopie sagt etwas anderes als das Original"
+            );
+        }
+    }
+
     /// `Ausblenden` bei einem Editor, der schon nicht mehr steht, tut nichts.
     #[test]
     fn ausblenden_ohne_stehenden_editor_tut_nichts() {

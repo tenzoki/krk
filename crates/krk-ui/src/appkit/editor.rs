@@ -2523,6 +2523,16 @@ impl Editorbereich {
         self.ivars().quicknote_rueckkehr.get().is_some()
     }
 
+    /// Die Rueckkehr der offenen Quicknote, ohne sie zu verlassen; `None`,
+    /// wenn keine offen ist.
+    ///
+    /// Gelesen von `Anwendungsdelegierter::sitzung_bauen`, das damit die
+    /// Sichtbarkeit schreibt, die das Schliessen herstellen wuerde.
+    #[must_use]
+    pub fn quicknote_rueckkehr(&self) -> Option<Rueckkehr> {
+        self.ivars().quicknote_rueckkehr.get()
+    }
+
     /// Ob dieser Ersthelfer die Textflaeche der Quicknote ist.
     ///
     /// Ueber `isEqual`, wie jede eigene Textflaeche beim
@@ -3303,6 +3313,11 @@ impl Editorbereich {
             self.melden(Ladeausgang::ZelleAbgewiesen(meldung.text()));
             return;
         }
+        // Eine Datei kommt herein, also zeigt der Editor sie und nicht die
+        // Quicknote (Schritt 6 des Plans der Quicknote). `let _ =`: Rand und
+        // Fokus stellt hier niemand zurueck, weil der Befehl, der oeffnet, den
+        // Fokus selbst setzt und der Rand ohnehin den Editor zeigt.
+        let _ = self.quicknote_verlassen();
         // Die genaue Frage, damit `secrets.txt` auch unter einer dritten
         // Schreibweise ueber das Blatt geht; ein `stat(2)` allein fuer diesen
         // Namen, siehe `Heimordner::sonderdatei_genau`.
@@ -7616,6 +7631,29 @@ mod tests {
             "das Modell wird vor der Quicknote gefragt"
         );
         assert!(rumpf.contains("In der Quicknote gibt es keine Textmarken."));
+    }
+
+    /// Eine Datei, die hereinkommt, verlaesst die Quicknote, und zwar nach der
+    /// Uebernahme der Zelle (Schritt 6 des Plans der Quicknote): eine
+    /// abgewiesene Zelle haelt das Oeffnen an und laesst die Quicknote, wie sie
+    /// war.
+    #[test]
+    fn eine_hereinkommende_datei_verlaesst_die_quicknote_nach_der_zelle() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let rumpf = rumpf(&datei("krk-ui/src/appkit/editor.rs"), "datei_oeffnen");
+        let zelle = rumpf
+            .find(concat!("self.zelle_", "uebernehmen()"))
+            .expect("datei_oeffnen uebernimmt die Zelle nicht mehr");
+        let abgewiesen = rumpf
+            .find(concat!("Ladeausgang::Zelle", "Abgewiesen("))
+            .expect("datei_oeffnen meldet die abgewiesene Zelle nicht mehr");
+        let verlassen = rumpf
+            .find(concat!("self.quicknote_", "verlassen()"))
+            .expect("datei_oeffnen verlaesst die Quicknote nicht");
+        let modell = rumpf
+            .find(concat!(".oeffnen(pfad, ", "None)"))
+            .expect("datei_oeffnen oeffnet nicht mehr ueber das Modell");
+        assert!(zelle < abgewiesen && abgewiesen < verlassen && verlassen < modell);
     }
 
     /// Die gebaute Flaeche der Quicknote ist kein Rich Text, nimmt keine

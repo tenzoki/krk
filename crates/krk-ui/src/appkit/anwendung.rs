@@ -1642,6 +1642,18 @@ impl Anwendungsdelegierter {
         // Delegierten **schwach**, aus demselben Grund wie die uebrigen Melder
         // hier.
         bereichsleiste.melder_setzen(self.klickmelder());
+        // **Das Schliessen des Hauptfensters schliesst die Quicknote** (Schritt
+        // 6 des Plans der Quicknote): ueber `quicknote_schliessen`, damit Rand
+        // und Fokus zurueckstehen, wenn das Fenster wieder aufgeht. Kein
+        // Empfaenger am Melder des Ersthelfers kommt dafuer dazu; der Rueckruf
+        // haelt den Delegierten **schwach**, aus dem Grund der uebrigen Melder.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        fenster_delegierter.schliessmelder_setzen(Box::new(move || {
+            if let Some(selbst) = schwach.load() {
+                // `let _ =`: war keine Quicknote offen, ist nichts zu tun.
+                let _ = selbst.quicknote_schliessen();
+            }
+        }));
 
         // Ab hier nur noch als `NSWindow`: jede uebrige Fensterberuehrung ruft
         // ohnehin nur Methoden der Oberklasse.
@@ -9351,6 +9363,10 @@ impl Anwendungsdelegierter {
         let Some(pfad) = editor.pfad() else {
             return false;
         };
+        // Die Nachfrage gilt dem Stand der gehaltenen Datei, und die gehoert
+        // dann auf den Schirm und nicht unter die Quicknote (Entscheidung 12
+        // des Plans der Quicknote). `let _ =`: war keine offen, bleibt alles.
+        let _ = self.quicknote_schliessen();
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = ungesichert::zeigen(self.mtm(), fenster, &pfad, move |antwort| {
             let Some(selbst) = schwach.load() else {
@@ -9573,6 +9589,19 @@ impl Anwendungsdelegierter {
         match weg {
             Rundweg::AusDerDateiliste => self.im_editor_oeffnen(),
             Rundweg::AusDerVorschau => self.editor_aus_vorschau(),
+            // In der Quicknote schliesst `cmd+e` die Quicknote und nicht die
+            // Datei darunter (A2 des Spec): die Datei bleibt, und eine
+            // Nachfrage fragte nach einem Stand, den der Nutzer nicht vor
+            // Augen hat.
+            Rundweg::ZurueckInDieDateiliste
+                if self
+                    .ivars()
+                    .editor
+                    .get()
+                    .is_some_and(|editor| editor.quicknote_offen()) =>
+            {
+                self.quicknote_schliessen()
+            }
             Rundweg::ZurueckInDieDateiliste => self.editor_schliessen(true),
         }
     }
@@ -9748,7 +9777,27 @@ impl Anwendungsdelegierter {
             .editor
             .get()
             .map(|editor| editor.terminrichtung());
-        self.ivars().modell.borrow().sitzung(
+        // **Eine offene Quicknote schreibt die Sichtbarkeit, die ihr Schliessen
+        // herstellen wuerde** (Schritt 6 des Plans der Quicknote): gebaut wird
+        // aus einer Kopie des Modells, an der die Rueckkehr des Randes gelaufen
+        // ist, und das Modell selbst bleibt, wie es auf dem Schirm steht. Eine
+        // offene und eine geschlossene Quicknote ergeben so dieselbe
+        // `session.toml`; ihr Puffer kommt nicht hinein.
+        let rueckkehr = self
+            .ivars()
+            .editor
+            .get()
+            .and_then(|editor| editor.quicknote_rueckkehr());
+        let mass = self.zeilenmass();
+        let schirm = self.ivars().modell.borrow();
+        let zurueckgestellt = rueckkehr.zip(mass).map(|(rueckkehr, mass)| {
+            let mut kopie = schirm.clone();
+            // `let _ =`: ob sich die Sichtbarkeit der Kopie geaendert hat,
+            // zieht nichts nach; geschrieben wird sie so oder so.
+            let _ = kopie.rand_zurueckstellen(rueckkehr.rand, mass);
+            kopie
+        });
+        zurueckgestellt.as_ref().unwrap_or(&schirm).sitzung(
             fenster,
             editor,
             gitanteil,
@@ -10771,6 +10820,94 @@ mod quicknoteproben {
             !rumpf.contains(concat!("editor.", "pfad()")),
             "angezeigte_datei sieht durch die Quicknote auf die Datei darunter"
         );
+    }
+
+    /// `cmd+e` schliesst in der Quicknote die Quicknote und nicht die Datei
+    /// darunter (Schritt 6, A2 des Spec).
+    #[test]
+    fn der_rundweg_schliesst_in_der_quicknote_ueber_quicknote_schliessen() {
+        let rumpf = rumpf(&diese_datei(), "editor_rundweg");
+        let frage = rumpf
+            .find(concat!("editor.quicknote_", "offen()"))
+            .expect("der Rundweg fragt nicht, ob die Quicknote offen ist");
+        let quicknote = rumpf
+            .find(concat!("self.quicknote_", "schliessen()"))
+            .expect("der Rundweg schliesst die Quicknote nicht");
+        let datei = rumpf
+            .find(concat!("self.editor_", "schliessen(true)"))
+            .expect("der Rundweg schliesst die Datei nicht mehr");
+        assert!(frage < quicknote && quicknote < datei);
+    }
+
+    /// Das Schliessen des Hauptfensters schliesst die Quicknote: der Aufbau
+    /// setzt den Schliessmelder, und `windowWillClose:` ruft ihn nach dem
+    /// Abbruch der Lesevorgaenge (Schritt 6).
+    #[test]
+    fn das_schliessen_des_fensters_schliesst_die_quicknote() {
+        let aufbau = rumpf(&diese_datei(), "oberflaeche_aufbauen");
+        let setzen = aufbau
+            .find(concat!("fenster_delegierter.schliess", "melder_setzen("))
+            .expect("der Aufbau setzt den Schliessmelder nicht");
+        assert!(
+            aufbau[setzen..].contains(concat!("selbst.quicknote_", "schliessen()")),
+            "der Schliessmelder schliesst die Quicknote nicht"
+        );
+
+        let fenster = super::quelltextproben::datei("krk-ui/src/appkit/fenster.rs");
+        let beginn = fenster
+            .find(concat!("fn fenster_", "schliesst("))
+            .expect("windowWillClose: steht nicht mehr in fenster.rs");
+        let ende = beginn
+            + fenster[beginn..]
+                .find(concat!("fn feld", "editor("))
+                .expect("auf windowWillClose: folgt der Feldeditor");
+        let schliesst = &fenster[beginn..ende];
+        let abbrechen = schliesst
+            .find(concat!("quelle.lesen_", "abbrechen()"))
+            .expect("windowWillClose: bricht die Lesevorgaenge nicht mehr ab");
+        let melden = schliesst
+            .find(concat!("self.ivars().schliess", "melder.borrow()"))
+            .expect("windowWillClose: ruft den Schliessmelder nicht");
+        assert!(abbrechen < melden, "gemeldet wird vor dem Abbruch");
+    }
+
+    /// Die Nachfrage aus C4 raeumt die Quicknote weg, bevor das Blatt aufgeht
+    /// (Entscheidung 12 des Plans der Quicknote).
+    #[test]
+    fn die_nachfrage_schliesst_die_quicknote_vor_dem_blatt() {
+        let rumpf = rumpf(&diese_datei(), "nachfrage_zeigen");
+        let schliessen = rumpf
+            .find(concat!("self.quicknote_", "schliessen()"))
+            .expect("die Nachfrage schliesst die Quicknote nicht");
+        let blatt = rumpf
+            .find(concat!("ungesichert::", "zeigen("))
+            .expect("die Nachfrage zeigt ihr Blatt nicht mehr");
+        assert!(schliessen < blatt, "das Blatt geht vor dem Schliessen auf");
+    }
+
+    /// Die Sitzung nennt die Quicknote nicht: kein Feld von `Sitzung` und
+    /// seinen Unterstrukturen, und `sitzung_bauen` liest ihren Puffer nicht;
+    /// gelesen wird allein ihre Rueckkehr, an einer Kopie des Modells
+    /// (Schritt 6).
+    #[test]
+    fn die_sitzung_nennt_die_quicknote_nicht() {
+        let sitzung = super::quelltextproben::datei("krk-core/src/ablage/sitzung.rs");
+        assert!(
+            !sitzung.to_lowercase().contains("quicknote"),
+            "die Sitzung nennt die Quicknote"
+        );
+        let rumpf = rumpf(&diese_datei(), "sitzung_bauen");
+        assert!(
+            !rumpf.contains(concat!("quicknote_", "text(")),
+            "sitzung_bauen liest den Puffer der Quicknote"
+        );
+        let kopie = rumpf
+            .find(concat!("schirm.", "clone()"))
+            .expect("sitzung_bauen baut nicht aus einer Kopie des Modells");
+        let zurueck = rumpf
+            .find(concat!("kopie.rand_", "zurueckstellen("))
+            .expect("die Kopie stellt den Rand nicht zurueck");
+        assert!(kopie < zurueck);
     }
 
     /// Die Rueckkehr des Randes wird erhoben, bevor der Editor eingeblendet

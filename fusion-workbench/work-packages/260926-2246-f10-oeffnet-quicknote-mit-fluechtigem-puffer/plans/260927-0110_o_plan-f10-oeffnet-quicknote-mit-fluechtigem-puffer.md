@@ -240,7 +240,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 3
    - Acceptance: `make check` grün.
    - Dependencies: Schritt 2
 
-6. **Wege hinaus und die Sitzung**
+6. [DONE] **Wege hinaus und die Sitzung**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/fenster.rs`
    - Changes:
