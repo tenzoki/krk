@@ -302,7 +302,7 @@ use crate::editormodell::{Ladeausgang, Pinform, Sicherungsausgang};
 use crate::fenstermodell::{
     BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in, spalte_sichtbar_in,
 };
-use crate::fenstertitel;
+use crate::fenstertitel::{self, Editoranzeige};
 use crate::heimgriff::{self, Heimgriff, Notizlage};
 use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::blattmeldung;
@@ -4647,7 +4647,13 @@ impl Anwendungsdelegierter {
             .vorschau
             .get()
             .and_then(|vorschau| vorschau.angezeigter_pfad());
-        let editor_pfad = self.ivars().editor.get().and_then(|editor| editor.pfad());
+        // `angezeigter_pfad` und nicht `pfad`: bei offener Quicknote zeigt der
+        // Editor keine Datei (Entscheidung 9 des Plans der Quicknote).
+        let editor_pfad = self
+            .ivars()
+            .editor
+            .get()
+            .and_then(|editor| editor.angezeigter_pfad());
         angezeigtedatei::welche(
             vorschau_sichtbar,
             vorschau_pfad,
@@ -6509,18 +6515,22 @@ impl Anwendungsdelegierter {
         };
         let aktiv = self.ivars().modell.borrow().aktiv();
         let ordner = dateifenster[aktiv.index()].quelle().angezeigter_ordner();
-        let editordatei = self.ivars().editor.get().and_then(|editor| editor.pfad());
+        let editor = self.ivars().editor.get();
+        let quicknote_offen = editor.is_some_and(|editor| editor.quicknote_offen());
+        let editordatei = editor.and_then(|editor| editor.pfad());
+        let editoranzeige = if quicknote_offen {
+            Editoranzeige::Quicknote
+        } else {
+            Editoranzeige::Datei(editordatei.as_deref())
+        };
         let vorschaudatei = self
             .ivars()
             .vorschau
             .get()
             .and_then(|vorschau| vorschau.angezeigter_pfad());
-        let Some(titel) = fenstertitel::titel(
-            fokus,
-            &ordner,
-            editordatei.as_deref(),
-            vorschaudatei.as_deref(),
-        ) else {
+        let Some(titel) =
+            fenstertitel::titel(fokus, &ordner, editoranzeige, vorschaudatei.as_deref())
+        else {
             return;
         };
         fenster.setTitle(&NSString::from_str(&titel));
@@ -10744,6 +10754,22 @@ mod quicknoteproben {
         assert!(
             !rumpf.contains(concat!("haelt_", "geheimnisse")),
             "das Kopieren der Quicknote fragt die Geheimnisse (Entscheidung 4)"
+        );
+    }
+
+    /// Teilen und „Ordner der Datei zeigen" sehen nicht durch die Quicknote:
+    /// `angezeigte_datei` fragt den Editor nach dem angezeigten und nicht nach
+    /// dem gehaltenen Pfad (Entscheidung 9 des Plans der Quicknote).
+    #[test]
+    fn die_angezeigte_datei_fragt_den_angezeigten_pfad_des_editors() {
+        let rumpf = rumpf(&diese_datei(), "angezeigte_datei");
+        assert!(
+            rumpf.contains(concat!("editor.angezeigter_", "pfad()")),
+            "angezeigte_datei fragt den Editor nicht nach dem angezeigten Pfad"
+        );
+        assert!(
+            !rumpf.contains(concat!("editor.", "pfad()")),
+            "angezeigte_datei sieht durch die Quicknote auf die Datei darunter"
         );
     }
 

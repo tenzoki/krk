@@ -21,7 +21,8 @@
 //! ```text
 //!  Fokus ──┬─ Dateifenster ──> der angezeigte Ordner
 //!          ├─ Leiste ────────> der Ordner des aktiven Dateifensters
-//!          ├─ Editor ────────> seine Datei, sonst der Ordner
+//!          ├─ Editor ────────> „Quicknote", wenn sie offen ist,
+//!          │                   sonst seine Datei, sonst der Ordner
 //!          ├─ Vorschau ──────> ihre Datei, sonst der Ordner
 //!          ├─ Git ───────────> der Ordner des aktiven Dateifensters
 //!          └─ Anderswo ──────> None, also: den Titel stehen lassen
@@ -64,6 +65,19 @@ use std::path::Path;
 
 use crate::kommandos::fokus::Fokus;
 
+/// Was der Editorbereich zeigt, soweit der Titel danach fragt.
+///
+/// `Datei` traegt die gehaltene Datei oder `None`, wenn er keine haelt;
+/// `Quicknote` heisst, die Quicknote liegt ueber einer etwaigen Datei, und
+/// die Datei zaehlt fuer den Titel nicht.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Editoranzeige<'a> {
+    /// Die Flaeche der Datei; `None`, wenn der Editor keine haelt.
+    Datei(Option<&'a Path>),
+    /// Die offene Quicknote.
+    Quicknote,
+}
+
 /// Der Fenstertitel zu diesem Fokus, oder `None` fuer "stehen lassen".
 ///
 /// **Eine erschoepfende Fallunterscheidung ueber die Fokuswerte, ohne
@@ -79,10 +93,15 @@ use crate::kommandos::fokus::Fokus;
 /// `aktiver_ordner` ist der Ordner, den das **aktive** Dateifenster zeigt. Er
 /// wird in jedem Fall ausser [`Fokus::Anderswo`] gebraucht und deshalb nicht
 /// als `Option` gefuehrt: ein Dateifenster zeigt immer einen Ordner.
+///
+/// **Die offene Quicknote hat keinen Pfad und nennt sich selbst**: steht der
+/// Fokus im Editor und zeigt der die Quicknote, heisst der Titel „Quicknote",
+/// und die Datei darunter kommt nicht hinein, weil sie nicht zu sehen ist
+/// (Schritt 5 des Plans der Quicknote).
 pub fn titel(
     fokus: Fokus,
     aktiver_ordner: &Path,
-    editordatei: Option<&Path>,
+    editor: Editoranzeige<'_>,
     vorschaudatei: Option<&Path>,
 ) -> Option<String> {
     let pfad = match fokus {
@@ -90,7 +109,10 @@ pub fn titel(
         // Die Auswahl in der Leiste setzt den Ordner des aktiven
         // Dateifensters; sie hat keinen eigenen Pfad, sondern genau diesen.
         Fokus::Leiste => aktiver_ordner,
-        Fokus::Editor => editordatei.unwrap_or(aktiver_ordner),
+        Fokus::Editor => match editor {
+            Editoranzeige::Datei(datei) => datei.unwrap_or(aktiver_ordner),
+            Editoranzeige::Quicknote => return Some(String::from("Quicknote")),
+        },
         Fokus::Vorschau => vorschaudatei.unwrap_or(aktiver_ordner),
         // Der Git-Bereich zeigt den Zustand des aktiven Ordners und haelt
         // keinen eigenen Pfad (C2.3); dieselbe Antwort und derselbe Grund wie
@@ -125,7 +147,14 @@ mod tests {
         let editor = PathBuf::from("/Users/k1/Projekte/krk/README.md");
         let vorschau = PathBuf::from("/Users/k1/Bilder/schirm.png");
 
-        let fuer = |fokus| titel(fokus, &ordner, Some(&editor), Some(&vorschau));
+        let fuer = |fokus| {
+            titel(
+                fokus,
+                &ordner,
+                Editoranzeige::Datei(Some(&editor)),
+                Some(&vorschau),
+            )
+        };
 
         assert_eq!(
             fuer(Fokus::Dateifenster).as_deref(),
@@ -146,6 +175,26 @@ mod tests {
             "der Git-Bereich zeigt den Zustand des aktiven Ordners und hat keinen eigenen Pfad"
         );
         assert_eq!(fuer(Fokus::Anderswo), None);
+
+        // Die offene Quicknote: im Editor heisst der Titel „Quicknote", und
+        // die Datei darunter kommt nicht hinein; jeder andere Fokuswert
+        // antwortet wie ohne sie.
+        let mit_quicknote =
+            |fokus| titel(fokus, &ordner, Editoranzeige::Quicknote, Some(&vorschau));
+        assert_eq!(
+            mit_quicknote(Fokus::Editor).as_deref(),
+            Some("Quicknote"),
+            "im Editor nennt der Titel die Quicknote"
+        );
+        for fokus in Fokus::ALLE {
+            if fokus != Fokus::Editor {
+                assert_eq!(
+                    mit_quicknote(fokus),
+                    fuer(fokus),
+                    "die Quicknote aendert den Titel bei {fokus:?}"
+                );
+            }
+        }
     }
 
     /// Der Editor gewinnt gegen das aktive Dateifenster (C11, drittes
@@ -158,7 +207,13 @@ mod tests {
     fn der_editor_gewinnt_gegen_den_ordner_des_aktiven_dateifensters() {
         let editor = PathBuf::from("/ganz/woanders/notiz.txt");
         assert_eq!(
-            titel(Fokus::Editor, &ordner(), Some(&editor), None).as_deref(),
+            titel(
+                Fokus::Editor,
+                &ordner(),
+                Editoranzeige::Datei(Some(&editor)),
+                None
+            )
+            .as_deref(),
             Some("/ganz/woanders/notiz.txt")
         );
     }
@@ -173,11 +228,11 @@ mod tests {
     #[test]
     fn ein_bereich_ohne_pfad_faellt_auf_den_ordner() {
         assert_eq!(
-            titel(Fokus::Editor, &ordner(), None, None).as_deref(),
+            titel(Fokus::Editor, &ordner(), Editoranzeige::Datei(None), None).as_deref(),
             Some("/Users/k1/Projekte")
         );
         assert_eq!(
-            titel(Fokus::Vorschau, &ordner(), None, None).as_deref(),
+            titel(Fokus::Vorschau, &ordner(), Editoranzeige::Datei(None), None).as_deref(),
             Some("/Users/k1/Projekte")
         );
     }
@@ -190,7 +245,7 @@ mod tests {
     #[test]
     fn der_pfad_steht_ungekuerzt() {
         let tief = PathBuf::from("/Users/k1/Library/Caches/krk-messplatz/lauf/ordner");
-        let titel = titel(Fokus::Dateifenster, &tief, None, None)
+        let titel = titel(Fokus::Dateifenster, &tief, Editoranzeige::Datei(None), None)
             .expect("das Dateifenster liefert immer einen Titel");
         assert_eq!(titel, "/Users/k1/Library/Caches/krk-messplatz/lauf/ordner");
         assert!(!titel.contains('~'), "der Benutzerordner ist gekuerzt");
@@ -209,7 +264,7 @@ mod tests {
             "die Probe braucht einen Pfad, den es nicht gibt"
         );
         assert_eq!(
-            titel(Fokus::Dateifenster, &fort, None, None).as_deref(),
+            titel(Fokus::Dateifenster, &fort, Editoranzeige::Datei(None), None).as_deref(),
             Some("/Volumes/abgezogen/ordner")
         );
     }

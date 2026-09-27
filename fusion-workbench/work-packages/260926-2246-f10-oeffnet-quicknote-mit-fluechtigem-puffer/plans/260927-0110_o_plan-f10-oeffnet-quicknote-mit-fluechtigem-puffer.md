@@ -228,7 +228,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 3
    - Acceptance: `make check` grün.
    - Dependencies: Schritt 2
 
-5. **Was durch die Quicknote nicht hindurchgreift**
+5. [DONE] **Was durch die Quicknote nicht hindurchgreift**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/editor.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/fenstertitel.rs`
    - Changes:

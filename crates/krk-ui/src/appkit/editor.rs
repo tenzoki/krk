@@ -3205,6 +3205,21 @@ impl Editorbereich {
         self.ivars().modell.borrow().pfad().map(Path::to_path_buf)
     }
 
+    /// Die Datei, die der Editor **zeigt**; `None` bei offener Quicknote,
+    /// sonst [`Self::pfad`] (Entscheidung 9 des Plans der Quicknote).
+    ///
+    /// Teilen und „Ordner der Datei zeigen" fragen hiernach und sehen damit
+    /// nicht durch die Quicknote auf die Datei darunter. [`Self::pfad`] bleibt
+    /// die gehaltene Datei und bedient weiter Sitzung, Dateisystemwache und
+    /// Nachfrage.
+    #[must_use]
+    pub fn angezeigter_pfad(&self) -> Option<PathBuf> {
+        if self.quicknote_offen() {
+            return None;
+        }
+        self.pfad()
+    }
+
     /// Der Satz ueber eine fremde Aenderung, einmal je Aenderung (C4).
     ///
     /// **Verglichen wird im Modell und hier nicht ein zweites Mal.** Diese
@@ -3399,8 +3414,18 @@ impl Editorbereich {
     /// Warum an der gehaltenen Datei keine Textmarke entsteht (C7.8 der
     /// krkhome-Arbeit); die Regel steht bei
     /// [`Editormodell::textmarke_verweigert`].
+    ///
+    /// **Die offene Quicknote geht vor** (Entscheidung 8 des Plans der
+    /// Quicknote): sie hat keine Datei, auf die sich eine Marke bezoege, und
+    /// die Datei darunter ist nicht zu sehen. Gefragt wird sie vor dem Modell,
+    /// damit keine Zeile der unsichtbaren Datei nach `bookmarks.toml` geht.
+    /// Diese Stelle bleibt damit die eine Sperre vor dem Lesen einer Zeile,
+    /// jetzt mit zwei Gruenden.
     #[must_use]
     pub fn textmarke_verweigert(&self) -> Option<&'static str> {
+        if self.quicknote_offen() {
+            return Some("In der Quicknote gibt es keine Textmarken.");
+        }
         self.ivars().modell.borrow().textmarke_verweigert()
     }
 
@@ -7567,6 +7592,30 @@ mod tests {
             esc_regel(Editorform::Quicknote, None),
             Editorform::Quicknote
         );
+    }
+
+    /// Die Textmarke fragt die Quicknote vor dem Modell (Entscheidung 8 des
+    /// Plans der Quicknote): sonst gaebe eine offene `secrets.txt` darunter
+    /// ihren Satz, oder eine Datei darunter bekaeme eine Marke, die der Nutzer
+    /// nicht vor Augen hat.
+    #[test]
+    fn die_textmarke_fragt_die_quicknote_vor_dem_modell() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let rumpf = rumpf(
+            &datei("krk-ui/src/appkit/editor.rs"),
+            "textmarke_verweigert",
+        );
+        let quicknote = rumpf
+            .find(concat!("self.quicknote_", "offen()"))
+            .expect("textmarke_verweigert fragt die Quicknote nicht");
+        let modell = rumpf
+            .find(concat!(".textmarke_", "verweigert()"))
+            .expect("textmarke_verweigert fragt das Modell nicht mehr");
+        assert!(
+            quicknote < modell,
+            "das Modell wird vor der Quicknote gefragt"
+        );
+        assert!(rumpf.contains("In der Quicknote gibt es keine Textmarken."));
     }
 
     /// Die gebaute Flaeche der Quicknote ist kein Rich Text, nimmt keine
