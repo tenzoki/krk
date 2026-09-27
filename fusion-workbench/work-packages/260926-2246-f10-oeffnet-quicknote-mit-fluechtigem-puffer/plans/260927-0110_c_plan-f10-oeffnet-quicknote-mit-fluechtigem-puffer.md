@@ -1,7 +1,7 @@
 # Implementation Plan: F10 öffnet eine Quicknote mit flüchtigem Puffer
 
 **Date:** 2026-09-27
-**Status:** Ready for Review
+**Status:** Complete
 **Spec:** `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md` (Q1 bis Q4, Annahmen A1 bis A15). Gebaute Grundlage: HEAD `f6981bf`, also einschließlich der Termine aus dem Arbeitspaket `260926-2240-termine-als-weitere-datei-im-heimordner` (`cf458eb..f6981bf`: geteilte Kombination über `Nachschlag::Geteilt` und `zulaessigkeit::waehlen`, `Wirkungsbereich::Reihenfolge` und `Wirkungsbereich::Termine`, `Editorform::Termine`, die Naht zwischen Stelle und Zeile in `appkit/eintragsansicht.rs`, `heute_nachziehen` als dritter Empfänger am Melder des Hauptfensters, `terminrichtung` in `session.toml`). Die Schlussdurchsicht jener Arbeit läuft gleichzeitig; dieser Plan ändert an ihr nichts.
 **Modus:** autonom. Der Nutzer hat die Arbeit ohne Rückfragen beauftragt; jeder offene Punkt ist unten unter `## Entscheidungen des Plans` mit Grund entschieden.
 **Decidability:** Vier Fragen tragen den Plan, und jede ist aus den Eingaben ihres Mechanismus entscheidbar. **Erstens „ist die Quicknote offen, und steht der Fokus in ihr?“**: der erste Teil ist ein Wert, den genau ein Schreiber hält (`Editorbereich`, Feld der Rückkehr, `Some` heißt offen), der zweite ist die Nämlichkeit des Ersthelfers mit der einen Textfläche der Quicknote, dieselbe Frage, die `ist_eigene_textflaeche` für jede eigene Fläche schon stellt. **Zweitens „welcher Bereich stand vor F10 am rechten Rand und kommt beim Schließen zurück?“**: entscheidbar im Augenblick von F10 aus der Sichtbarkeit im `Fenstermodell` und dort als Wert gemerkt; nachträglich wäre sie es nicht mehr, deshalb wird sie nicht nachträglich gestellt. **Drittens „bleibt der Puffer nach dieser Änderung innerhalb von `EDITORGRENZE`?“**: entscheidbar im Delegierten der Textfläche aus der Länge des Textes, der Länge des ersetzten Bereichs und der Länge der Einfügung. **Viertens „ist der Text in der Zwischenablage angekommen?“**: der Wahrheitswert von `zwischenablage::text_schreiben`. **Nicht aus dem Code entscheidbar ist, ob F10 auf der Tastatur des Nutzers KRK erreicht**, weil macOS die Taste je nach Systemeinstellung als Medientaste abfängt; diese Frage wandert deshalb in den Abnahmelauf des Nutzers und ist die zweite Haltestelle des Spec.
@@ -267,7 +267,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 3
    - Acceptance: `make check` grün; jede Taste, jeder Menüname und jeder Satz der Statuszeile, den `HowTo.md` nennt, steht wortgleich im Baum (vom Ausführenden gegen `resources/default-keymap.toml` und die Sätze aus Schritt 3 bis 5 gehalten).
    - Dependencies: Schritte 3, 4, 5, 6
 
-8. **`CLAUDE.md`**
+8. [DONE] **`CLAUDE.md`**
    - Executor: `code-implementer`
    - Files: `CLAUDE.md`
    - Changes: allein Aussagen, die mit dieser Arbeit falsch oder unvollständig geworden sind, jede an ihrer Stelle und ohne neue Zahl.
