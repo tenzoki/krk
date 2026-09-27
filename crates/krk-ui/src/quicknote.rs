@@ -19,8 +19,33 @@
 //! Sichtbarkeitswechsel beim Anwendungsdelegierten, der die Rueckkehr dort
 //! fallen laesst.
 
+use krk_core::text::datei::EDITORGRENZE;
+
 use crate::fenstermodell::Randrueckkehr;
 use crate::kommandos::fokus::Fokus;
+
+/// Wie viele Bytes der Puffer der Quicknote in UTF-8 hoechstens haelt (Q3 des
+/// Spec): dieselbe Grenze wie der Editor, `EDITORGRENZE`.
+///
+/// Ein eigener Name, damit die Rufer die Grenze der Quicknote nennen und nicht
+/// die einer Datei; die Zusicherung darunter haelt beide beim Uebersetzen
+/// aneinander, wie `STAPELBUDGET` im Editor.
+pub const QUICKNOTEGRENZE: u64 = EDITORGRENZE;
+const _: () = assert!(QUICKNOTEGRENZE == EDITORGRENZE);
+
+/// Ob eine Aenderung den Puffer innerhalb von [`QUICKNOTEGRENZE`] laesst
+/// (Entscheidung 6 des Plans).
+///
+/// `obergrenze_nachher` ist eine Schranke, die ohne Durchlauf ueber den Text
+/// zu haben ist; `genau_nachher` rechnet die genaue Laenge des Ergebnisses in
+/// UTF-8 und wird **allein dann** gerufen, wenn die Schranke ueber der Grenze
+/// liegt. Ein Anschlag in einer kleinen Notiz kostet damit keinen Durchlauf.
+/// Genau auf der Grenze passt die Aenderung, ein Byte darueber nicht.
+#[must_use]
+pub fn aenderung_passt(obergrenze_nachher: usize, genau_nachher: impl FnOnce() -> usize) -> bool {
+    let passt = |laenge: usize| u64::try_from(laenge).is_ok_and(|laenge| laenge <= QUICKNOTEGRENZE);
+    passt(obergrenze_nachher) || passt(genau_nachher())
+}
 
 /// Was ein F10 in dieser Lage tut.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -173,6 +198,34 @@ mod tests {
         );
         assert!(ausgang.leert_den_puffer());
         assert!(ausgang.schliesst());
+    }
+
+    /// Solange die Schranke passt, wird die genaue Laenge nicht gerechnet.
+    #[test]
+    fn eine_passende_schranke_rechnet_nicht_genau() {
+        assert!(aenderung_passt(0, || panic!(
+            "die genaue Laenge wurde gerechnet"
+        )));
+        let grenze = usize::try_from(QUICKNOTEGRENZE).expect("die Grenze passt in usize");
+        assert!(aenderung_passt(grenze, || panic!(
+            "die genaue Laenge wurde gerechnet"
+        )));
+    }
+
+    /// Ueber der Schranke entscheidet die genaue Laenge: genau auf der Grenze
+    /// passt es, ein Byte darueber nicht.
+    #[test]
+    fn genau_auf_der_grenze_passt_es_ein_byte_darueber_nicht() {
+        let grenze = usize::try_from(QUICKNOTEGRENZE).expect("die Grenze passt in usize");
+        assert!(aenderung_passt(usize::MAX, || grenze));
+        assert!(!aenderung_passt(usize::MAX, || grenze + 1));
+        assert!(!aenderung_passt(grenze + 1, || grenze + 1));
+    }
+
+    /// Die Grenze der Quicknote ist die des Editors.
+    #[test]
+    fn die_grenze_ist_die_des_editors() {
+        assert_eq!(QUICKNOTEGRENZE, EDITORGRENZE);
     }
 
     /// Ein gescheitertes Kopieren leert nicht und schliesst nicht.

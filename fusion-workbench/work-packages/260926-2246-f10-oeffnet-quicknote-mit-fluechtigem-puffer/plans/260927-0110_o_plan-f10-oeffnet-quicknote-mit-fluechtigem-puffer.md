@@ -216,7 +216,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 3
    - Acceptance: `make check` grün.
    - Dependencies: Schritt 2
 
-4. **Die Einfügegrenze**
+4. [DONE] **Die Einfügegrenze**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/quicknote.rs`, `crates/krk-ui/src/appkit/quicknote.rs`, `crates/krk-ui/src/appkit/editor.rs`
    - Changes:

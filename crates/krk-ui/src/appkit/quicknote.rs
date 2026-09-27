@@ -42,6 +42,20 @@
 //! diese Datei nicht, das Kopieren geht beim Anwendungsdelegierten ueber
 //! `super::zwischenablage::text_schreiben`.
 //!
+//! # Die Grenze des Puffers
+//!
+//! **Jede Aenderung des Textes geht durch
+//! `textView:shouldChangeTextInRange:replacementString:`**, Tippen,
+//! Einfuegen, Ziehen und Dienste gleichermassen; dort fragt diese Klasse
+//! `crate::quicknote::aenderung_passt`, ob das Ergebnis innerhalb von
+//! `QUICKNOTEGRENZE` bleibt. Liegt es darueber, unterbleibt die Aenderung
+//! ganz, und der Grenzmelder, den der Editorbereich beim Bau setzt, sagt es
+//! in der Statuszeile. Die Schranke vorab ist die UTF-16-Laenge mal drei, die
+//! Obergrenze, die `maximumLengthOfBytesUsingEncoding:` fuer UTF-8 nennt,
+//! hier mit `saturating_mul` gerechnet statt erfragt, weil die Methode einen
+//! Ueberlauf als 0 meldete; die genaue Laenge rechnet
+//! `lengthOfBytesUsingEncoding:` erst, wenn die Schranke nicht passt.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSView`, `NSScrollView`, `NSTextView`, `NSColor`, `NSObject` und
@@ -56,7 +70,10 @@
 //! eigene Verfuegbarkeitsangabe. Ebenso seit 10.0: `NSString`, `NSRange`, die
 //! Textmethoden `string`, `setString:`, `replaceCharactersInRange:withString:`,
 //! `shouldChangeTextInRange:replacementString:`, `didChangeText` und
-//! `breakUndoCoalescing`, `removeAllActions` am Verwalter, `window` und
+//! `breakUndoCoalescing`, `length`, `substringWithRange:` und
+//! `lengthOfBytesUsingEncoding:` mit `NSUTF8StringEncoding` (`NSString.h:294`),
+//! die Delegiertenmethode `textView:shouldChangeTextInRange:replacementString:`
+//! (`NSTextView.h:620`), `removeAllActions` am Verwalter, `window` und
 //! `makeFirstResponder:`, `sizeToFit` und `setRefusesFirstResponder:` an
 //! `NSButton`. **Juenger als seine Klasse ist allein
 //! `buttonWithTitle:target:action:`**, seit macOS 10.12 (`NSButton.h:40`,
@@ -69,7 +86,7 @@
 use std::cell::RefCell;
 
 use objc2::rc::Retained;
-use objc2::runtime::{AnyObject, ProtocolObject, Sel};
+use objc2::runtime::{AnyObject, Bool, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSButton, NSColor, NSScrollView, NSTextDelegate, NSTextView,
@@ -77,13 +94,14 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{
     MainThreadMarker, NSObject, NSObjectProtocol, NSPoint, NSRange, NSRect, NSSize, NSString,
-    NSUndoManager, ns_string,
+    NSUTF8StringEncoding, NSUndoManager, ns_string,
 };
 
 use krk_core::tasten::Kommando;
 
 use crate::editormodell::Ansicht;
 use crate::hervorhebung::Darstellungsart;
+use crate::quicknote;
 
 use super::bereichsleiste::Kommandomelder;
 use super::{textautomatik, textmerkmale};
@@ -105,6 +123,9 @@ pub struct QuicknoteIvars {
     /// Die Senke fuer den Klick auf eine Schaltflaeche; `None`, bis der
     /// Editorbereich sie setzt. Sie haelt den Editorbereich schwach.
     knopfmelder: RefCell<Option<Kommandomelder>>,
+    /// Die Senke fuer eine Aenderung, die die Grenze abgewiesen hat; `None`,
+    /// bis der Editorbereich sie setzt. Sie haelt den Editorbereich schwach.
+    grenzmelder: RefCell<Option<Box<dyn Fn()>>>,
 }
 
 define_class!(
@@ -133,6 +154,46 @@ define_class!(
         #[unsafe(method_id(undoManagerForTextView:))]
         fn verwalter_fuer(&self, _flaeche: &NSTextView) -> Option<Retained<NSUndoManager>> {
             Some(self.ivars().verwalter.clone())
+        }
+
+        /// Laesst eine Aenderung allein zu, wenn der Puffer danach innerhalb
+        /// der Grenze bleibt (Modulkopf, „Die Grenze des Puffers").
+        ///
+        /// `None` als Ersatz ist eine reine Aenderung der Merkmale und passt
+        /// immer.
+        // SAFETY: Die Signatur entspricht der des Protokolls
+        // (`NSTextView.h:620`).
+        #[unsafe(method(textView:shouldChangeTextInRange:replacementString:))]
+        fn aenderung_pruefen(
+            &self,
+            flaeche: &NSTextView,
+            bereich: NSRange,
+            ersatz: Option<&NSString>,
+        ) -> Bool {
+            let Some(ersatz) = ersatz else {
+                return Bool::YES;
+            };
+            let text = flaeche.string();
+            let schranke = text
+                .length()
+                .saturating_add(ersatz.length())
+                .saturating_mul(3);
+            let passt = quicknote::aenderung_passt(schranke, || {
+                let ohne = text
+                    .lengthOfBytesUsingEncoding(NSUTF8StringEncoding)
+                    .saturating_sub(
+                        text.substringWithRange(bereich)
+                            .lengthOfBytesUsingEncoding(NSUTF8StringEncoding),
+                    );
+                ohne.saturating_add(ersatz.lengthOfBytesUsingEncoding(NSUTF8StringEncoding))
+            });
+            if !passt {
+                let melder = self.ivars().grenzmelder.borrow();
+                if let Some(melder) = melder.as_ref() {
+                    melder();
+                }
+            }
+            Bool::new(passt)
         }
     }
 
@@ -221,6 +282,7 @@ impl Quicknote {
             text,
             verwalter: NSUndoManager::new(mtm),
             knopfmelder: RefCell::new(None),
+            grenzmelder: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -271,6 +333,11 @@ impl Quicknote {
             self.ivars().rolle.addSubview(&knopf);
             links += groesse.width + KNOPFABSTAND;
         }
+    }
+
+    /// Traegt die Senke fuer eine abgewiesene Aenderung ein.
+    pub fn grenzmelder_setzen(&self, melder: Box<dyn Fn()>) {
+        *self.ivars().grenzmelder.borrow_mut() = Some(melder);
     }
 
     /// Traegt die Senke fuer einen Klick ein.

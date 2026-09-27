@@ -607,6 +607,7 @@ use super::textmerkmale;
 ///  Antwort einer Tabellenhandlung  Editorbereich::handlung_ausfuehren (dieselbe)
 ///  Ausgang von „PIN ändern"      crate::editormodell::Pinwechselausgang (5.5 derselben)
 ///  Ausgang des Kopierens         crate::quicknote::kopieren (Schritt 3 der Quicknote)
+///  Grenze der Quicknote          crate::quicknote::aenderung_passt (Schritt 4 derselben)
 /// ```
 ///
 /// **Die Tafel zaehlt Ausloeser, die Aufzaehlung darunter zaehlt Varianten, und
@@ -769,6 +770,9 @@ pub enum Editormeldung {
     /// Die Zwischenablage hat den Text der Quicknote nicht angenommen; er
     /// bleibt stehen.
     QuicknoteNichtKopiert,
+    /// Eine Aenderung haette den Puffer der Quicknote ueber ihre Grenze
+    /// gebracht und ist unterblieben (Q3 des Spec der Quicknote).
+    QuicknoteZuGross,
 }
 
 impl Editormeldung {
@@ -874,6 +878,9 @@ impl Editormeldung {
             Self::QuicknoteNichtKopiert => {
                 "Die Quicknote ließ sich nicht in die Zwischenablage kopieren; ihr Text bleibt stehen."
                     .to_owned()
+            }
+            Self::QuicknoteZuGross => {
+                "Der Text ist zu groß für die Quicknote; eingefügt wurde nichts.".to_owned()
             }
         }
     }
@@ -2545,6 +2552,14 @@ impl Editorbereich {
             quicknote.knopfmelder_setzen(Box::new(move |kommando| {
                 if let Some(editor) = schwach.load() {
                     editor.kommando_melden(kommando);
+                }
+            }));
+            // Eine abgewiesene Aenderung hat keinen Befehl, der ihre Antwort
+            // weitergaebe; sie geht an die Senke der Meldungen.
+            let schwach = Weak::from_retained(&self.retain());
+            quicknote.grenzmelder_setzen(Box::new(move || {
+                if let Some(editor) = schwach.load() {
+                    editor.meldung_melden(Editormeldung::QuicknoteZuGross);
                 }
             }));
             quicknote
@@ -7522,6 +7537,7 @@ mod tests {
             Editormeldung::QuicknoteKopiert { zeichen: 7 },
             Editormeldung::QuicknoteLeer,
             Editormeldung::QuicknoteNichtKopiert,
+            Editormeldung::QuicknoteZuGross,
         ]
         .iter()
         .map(Editormeldung::text)
