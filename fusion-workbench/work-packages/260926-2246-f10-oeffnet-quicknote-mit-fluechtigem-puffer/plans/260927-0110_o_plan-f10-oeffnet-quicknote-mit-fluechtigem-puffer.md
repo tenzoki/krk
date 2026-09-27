@@ -256,7 +256,7 @@ Jede Kante ist eine Abhängigkeit, die der Schritt unter `Dependencies` nennt. 3
 
 ### Stufe C: Anleitung und Projektbeschreibung
 
-7. **`HowTo.md` und `README.md`**
+7. [DONE] **`HowTo.md` und `README.md`**
    - Executor: `code-implementer`
    - Files: `HowTo.md`, `README.md`
    - Changes:

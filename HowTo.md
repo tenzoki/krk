@@ -279,6 +279,7 @@ Git-Bereich. Nie sind zwei von ihnen zugleich zu sehen.
 | `shift+cmd+y` | Fokus in die Vorschau |
 | `cmd+s` | sichern |
 | `cmd+plus`, `cmd+minus`, `cmd+0` | Vorschau vergrößern, verkleinern, Ausgangsgröße |
+| `f10` | die Quicknote öffnen und schließen, siehe „Die Quicknote“ |
 
 **`cmd+e` tut Verschiedenes, je nachdem, wo der Fokus steht:**
 
@@ -295,6 +296,82 @@ Weg haben will und seinen Stand behalten, nimmt `opt+cmd+b`.
 Der PDF-Betrachter der Vorschau kennt außer den drei Zoombefehlen keine eigenen
 Tasten. Bild-auf, Bild-ab, Pos1 und Ende sind dort keine Befehle von KRK; sie
 laufen an AppKit weiter und blättern.
+
+---
+
+## Die Quicknote
+
+`f10` öffnet im Editorbereich eine Quicknote: eine leere Schreibfläche für eine
+Notiz, die keine Datei braucht. Steht der Editor nicht am rechten Rand, kommt
+er hervor. Was dort vorher stand, die Vorschau oder der Git-Bereich, kommt beim
+Schließen zurück, und der Fokus geht dorthin, wo er vor `f10` stand. Solange
+die Quicknote offen ist, heißt der Kopf des Editors „Quicknote“, und mit dem
+Fokus darin auch der Fenstertitel.
+
+| Taste | Wirkung |
+|---|---|
+| `f10` | öffnen; steht der Fokus woanders, holt `f10` ihn in die offene Quicknote, steht er darin, schließt `f10` sie |
+| `shift+f10` | kopieren und schließen, wie die Schaltfläche „Kopieren“ |
+| `esc`, `cmd+e` | schließen, wie die Schaltfläche „Schließen“ |
+
+Oben in der Fläche stehen drei Schaltflächen:
+
+- **Leeren** löscht den ganzen Text. `cmd+z` nimmt das zurück, solange die
+  Quicknote offen ist.
+- **Schließen** blendet sie aus. Der Text bleibt stehen und ist beim nächsten
+  `f10` wieder da.
+- **Kopieren** legt den **ganzen** Text in die Zwischenablage, nicht die
+  Auswahl, leert die Quicknote danach und schließt sie. Die Statuszeile sagt
+  „Die Quicknote ist in der Zwischenablage“ und nennt die Zahl der Zeichen. Eine
+  leere Quicknote kopiert nichts: sie schließt, und die Zwischenablage bleibt,
+  wie sie war. Lässt sich der Text nicht kopieren, bleibt er stehen und die
+  Quicknote offen.
+
+Im Hauptmenü stehen die drei als „Quicknote öffnen und schließen“, „Quicknote
+kopieren und schließen“ und „Quicknote leeren“ unter „Editor“; „Quicknote
+leeren“ hat ab Werk keine Taste.
+
+**Der Text liegt allein im Arbeitsspeicher.** KRK schreibt ihn nirgends hin,
+auch nicht in die Sitzung. Mit dem Beenden von KRK oder mit einem Absturz ist er
+verloren, und KRK fragt vorher nicht nach. Wer ihn behalten will, kopiert ihn.
+
+**Eine im Editor offene Datei liegt unberührt darunter.** Ihr Stand, ihre
+Schreibmarke und ihr Rückgängig bleiben, wie sie waren, und nach dem Schließen
+ist sie wieder zu sehen. Die Befehle, die dieser Datei gelten, sind in der
+Quicknote ausgegraut: „Sichern“, „Editor schließen“ (`opt+cmd+e`), „Zwischen
+Roh- und Formatansicht wechseln“, Suchen und Ersetzen, „Zu Zeile springen“ und
+„PIN ändern“. „Lesezeichen anlegen“ (`cmd+d`) ist nicht ausgegraut, legt aber
+nichts an; die Statuszeile sagt „In der Quicknote gibt es keine Textmarken.“
+„Teilen“ und „Ordner der angezeigten Datei zeigen“ sehen die Datei darunter
+nicht und antworten, als zeige der Editor keine.
+
+**Die Quicknote schließt auch ohne eigenen Befehl**: wenn `opt+cmd+b` den
+Editor ausblendet oder die Vorschau oder der Git-Bereich seinen Platz
+einnimmt, wenn eine Datei in den Editor kommt, etwa mit `f4`, wenn das
+Hauptfenster geschlossen wird und bevor KRK nach einem ungesicherten Stand der
+Datei darunter fragt. Der Text bleibt in jedem dieser Fälle stehen.
+
+**Die Quicknote nimmt so viel Text auf, wie der Editor aus einer Datei
+annimmt.** Eine Änderung, die darüber hinausginge, ob getippt, eingefügt oder
+hineingezogen, unterbleibt ganz, und die Statuszeile sagt „Der Text ist zu groß
+für die Quicknote; eingefügt wurde nichts.“ Ist das Fenster zu schmal, um den
+Editor einzublenden, sagt sie „Für die Quicknote ist das Fenster zu schmal.“
+
+**Text aus `secrets.txt` darf in die Quicknote.** Wer ihn dorthin einfügt, hat
+ihn danach im Arbeitsspeicher stehen, bis er kopiert, geleert oder KRK beendet
+wird, und „Kopieren“ legt ihn ohne weitere Frage in die Zwischenablage, wie es
+ein Kopieren aus `secrets.txt` selbst täte.
+
+**Mit einer eigenen `keymap.toml` trägt keine der drei Funktionen eine
+Taste.** KRK hängt sie beim Start unbelegt an; über das Hauptmenü „Editor“ und
+die Schaltflächen wirken sie trotzdem. `f10` und `shift+f10` weist man einzeln
+zu: **F1**, „Quicknote öffnen und schließen“ wählen, **Zuweisen** (`cmd+t`),
+`f10` drücken; ebenso „Quicknote kopieren und schließen“ mit `shift+f10`; die
+Ansicht mit **Fertig** verlassen. Auf Apple-Tastaturen ist die nackte `f10` ab
+Werk „Ton aus“, und KRK bekommt sie dann nur mit gehaltener fn-Taste, beim
+Zuweisen wie beim Benutzen. **Nicht `cmd+r`**: es brächte die Tasten zwar mit,
+setzt aber die ganze eigene Belegung auf die Auslieferungsfassung zurück, also
+auch jede eigene Tastenzuweisung.
 
 ---
 

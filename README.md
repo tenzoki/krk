@@ -136,7 +136,12 @@ Sortierrichtung umkehren“: die Auslieferung legt sie auf `cmd+1`, eine eigene
 `keymap.toml` von vorher führt sie unbelegt, und `cmd+1` lässt sich ihr
 zuweisen, obwohl „Nach Name sortieren“ dieselbe Kombination trägt. Die eine
 wirkt allein im Editor, die andere allein im Dateifenster, und so ist das kein
-Konflikt; die Regel steht in `HowTo.md` unter „Die Tastaturbelegung“.
+Konflikt; die Regel steht in `HowTo.md` unter „Die Tastaturbelegung“. Das
+zweite Beispiel ist die Quicknote: die Auslieferung legt „Quicknote öffnen und
+schließen“ auf `f10` und „Quicknote kopieren und schließen“ auf `shift+f10`,
+eine eigene `keymap.toml` von vorher führt beide unbelegt, und jede bekommt
+ihre Taste auf demselben Weg; die Einzelheiten, auch zur fn-Taste, stehen in
+`HowTo.md` unter „Die Quicknote“.
 
 **Beiseitelegen und nicht löschen.** Es ist derselbe Grund wie beim
 Installieren: was KRK sich merkt, liegt außerhalb des Bündels, und ein
