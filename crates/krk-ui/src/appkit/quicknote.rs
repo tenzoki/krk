@@ -30,6 +30,18 @@
 //! Ausnahme davon ist der Feldeditor, der `undo:` selbst beantworten muss
 //! (`Zelleneditor` in `super::eintragsansicht`), und die Quicknote hat keinen.
 //!
+//! **Auch der leere eigene Stapel greift nicht zur Datei durch**, gemessen am
+//! 260927 (`messungen/260927-0232-quicknote-rueckgaengig.txt`): direkt nach
+//! dem Oeffnen, nach `setString:` plus `removeAllActions` (der Weg von
+//! [`Quicknote::nach_kopie_leeren`]) und nach dem Zuruecknehmen der letzten
+//! Tipp-Handlung sind „Rueckgaengig“ und, bei leerem Wiederholstapel,
+//! „Wiederholen“ grau, und das Tastenaequivalent loest nichts aus. An der
+//! Menuepruefung vorbei nimmt `NSWindow.undo:` den Verwalter des Ersthelfers,
+//! also diesen hier, und tut nichts; der Verwalter des Fensters bleibt in
+//! jedem Zustand unberuehrt. Beim Feldeditor der Messung vom 260926 war es
+//! umgekehrt, und das ist der Grund, aus dem der `Zelleneditor` `undo:` selbst
+//! beantwortet und diese Flaeche nicht.
+//!
 //! # Die drei Schaltflaechen
 //!
 //! Oben in der Rolle stehen „Leeren", „Schließen" und „Kopieren", von links

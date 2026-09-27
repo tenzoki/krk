@@ -5136,17 +5136,25 @@ fn textflaeche_bauen(
 /// Editors die einzige in KRK, die diesen Verwalter benutzt, und dieser Ruf
 /// nimmt niemandem etwas fort.
 ///
-/// **Die Grenze liesse sich enger ziehen, und sie ist es nicht.**
-/// `undoManagerForTextView:` am Delegierten gaebe der Flaeche einen **eigenen**
-/// Verwalter, und dass er vom Menue aus erreichbar bliebe, ist mitgemessen:
-/// `undo:` beantwortet in der ganzen Antwortkette allein `NSWindow` — nicht
-/// `NSTextView`, nicht `NSApplication`, nicht `NSResponder` —, und `NSWindow`
-/// nimmt dabei den Verwalter des **Ersthelfers** und nicht seinen eigenen. Der
-/// Weg steht damit offen, wird aber nicht genommen: es gibt keinen zweiten
-/// Anmelder, und ein Verwalter mehr waere ein Mechanismus ohne Fall.
+/// **Die Grenze liesse sich fuer diese Flaeche enger ziehen, und sie ist es
+/// nicht.** `undoManagerForTextView:` am Delegierten gaebe ihr einen
+/// **eigenen** Verwalter, und dass er vom Menue aus erreichbar bliebe, ist
+/// mitgemessen: `undo:` beantwortet in der ganzen Antwortkette allein
+/// `NSWindow` — nicht `NSTextView`, nicht `NSApplication`, nicht
+/// `NSResponder` —, und `NSWindow` nimmt dabei den Verwalter des
+/// **Ersthelfers** und nicht seinen eigenen. **Genommen wird der Weg von der
+/// Quicknote** ([`super::quicknote`], `verwalter_fuer`): ihre Flaeche ist eine
+/// gewoehnliche `NSTextView` und bekommt ihren eigenen Verwalter ueber den
+/// Delegierten, damit ihr Tippen nicht in diesem Verwalter landet und ein
+/// Leeren hier ihren Stapel nicht mitnimmt. Dass `cmd+z` auch bei leerem
+/// eigenem Stapel nicht bis zu diesem Verwalter durchgreift, ist am 260927
+/// gemessen (`messungen/260927-0232-quicknote-rueckgaengig.txt`): der Eintrag
+/// ist dann grau, und an der Pruefung vorbei nimmt `NSWindow.undo:` den
+/// eigenen Verwalter und tut nichts. Die Textflaeche des Editors selbst bleibt
+/// am Verwalter des Fensters.
 ///
-/// **Fuer einen Feldeditor gilt der letzte Satz nicht in der Richtung
-/// `cmd+z`**, gemessen am 260926
+/// **Fuer einen Feldeditor gilt die Regel vom Verwalter des Ersthelfers nicht
+/// in der Richtung `cmd+z`**, gemessen am 260926
 /// (`messungen/260926-0828-zellen-rueckgaengig.txt`): ist sein eigener Stapel
 /// leer, nimmt `NSWindow.undo:` die naechste Handlung aus **diesem** Verwalter
 /// zurueck, und ein ueberschriebenes `undoManager` am Feldeditor aendert daran

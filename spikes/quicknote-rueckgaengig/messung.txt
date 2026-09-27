@@ -1,0 +1,47 @@
+Version 15.7.9 (Build 24G830)
+Anwendung aktiv: ja, Fenster ist Schlüsselfenster: ja
+Vorlauf: 'abc' in die Datei tippen, dann eine Handlung am Verwalter des Fensters anmelden
+    Verwalter der Datei ist der des Fensters: ja
+    Verwalter der Quicknote ist der eigene: ja, ist der des Fensters: nein
+    Ausgang                            Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig frei, Wiederholen grau
+Zustand 1: Quicknote öffnen (Ersthelfer), nichts getippt, cmd+z, dann shift+cmd+z
+    nach dem Öffnen                    Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+    nach cmd+z                         Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+    nach zweitem cmd+z                 Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+      Wiederholen ist grau: der Menueeintrag loest nichts aus
+    nach shift+cmd+z                   Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+Zustand 2: 'xyz' tippen, dann setString("") und removeAllActions am eigenen Verwalter, cmd+z, shift+cmd+z
+    nach 'xyz'                         Quicknote 'xyz' Datei 'abc' | eigener Verwalter canUndo ja canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig frei, Wiederholen grau
+    nach setString/removeAllActions    Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+    nach cmd+z                         Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+      Wiederholen ist grau: der Menueeintrag loest nichts aus
+    nach shift+cmd+z                   Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+Zustand 3: 'qq' tippen, cmd+z (nimmt das Tippen), cmd+z (eigener Undo-Stapel leer), shift+cmd+z zweimal
+    nach 'qq'                          Quicknote 'qq' Datei 'abc' | eigener Verwalter canUndo ja canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig frei, Wiederholen grau
+      undo: beim Fenster: Ersthelfer NSTextView, dessen Verwalter ist der eigene der Quicknote
+    nach cmd+z 1                       Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo ja | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 1 redo: 0 | Menü Rückgängig grau, Wiederholen frei
+    nach cmd+z 2                       Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo ja | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 1 redo: 0 | Menü Rückgängig grau, Wiederholen frei
+      redo: beim Fenster: Ersthelfer NSTextView, dessen Verwalter ist der eigene der Quicknote
+    nach shift+cmd+z 1                 Quicknote 'qq' Datei 'abc' | eigener Verwalter canUndo ja canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 1 redo: 1 | Menü Rückgängig frei, Wiederholen grau
+      Wiederholen ist grau: der Menueeintrag loest nichts aus
+    nach shift+cmd+z 2                 Quicknote 'qq' Datei 'abc' | eigener Verwalter canUndo ja canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 1 redo: 1 | Menü Rückgängig frei, Wiederholen grau
+Zustand 4: 'lm' tippen, Leeren als Handlung, cmd+z dreimal
+    nach 'lm'                          Quicknote 'lm' Datei 'abc' | eigener Verwalter canUndo ja canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig frei, Wiederholen grau
+    nach Leeren                        Quicknote '' Datei 'abc' | eigener Verwalter canUndo ja canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig frei, Wiederholen grau
+      undo: beim Fenster: Ersthelfer NSTextView, dessen Verwalter ist der eigene der Quicknote
+    nach cmd+z 1                       Quicknote 'lm' Datei 'abc' | eigener Verwalter canUndo ja canRedo ja | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 1 redo: 0 | Menü Rückgängig frei, Wiederholen frei
+      undo: beim Fenster: Ersthelfer NSTextView, dessen Verwalter ist der eigene der Quicknote
+    nach cmd+z 2                       Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo ja | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 2 redo: 0 | Menü Rückgängig grau, Wiederholen frei
+    nach cmd+z 3                       Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo ja | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 2 redo: 0 | Menü Rückgängig grau, Wiederholen frei
+Zustand 5: Quicknote öffnen, nichts getippt, undo: und redo: über sendAction an der Menüprüfung vorbei
+    nach dem Öffnen                    Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+      undo: beim Fenster: Ersthelfer NSTextView, dessen Verwalter ist der eigene der Quicknote
+      sendAction undo: angenommen: ja
+    nach undo:                         Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 1 redo: 0 | Menü Rückgängig grau, Wiederholen grau
+      redo: beim Fenster: Ersthelfer NSTextView, dessen Verwalter ist der eigene der Quicknote
+      sendAction redo: angenommen: ja
+    nach redo:                         Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 1 redo: 1 | Menü Rückgängig grau, Wiederholen grau
+Gegenprobe: Datei als Ersthelfer, cmd+z
+    Datei vorn                         Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo nein | Fensterhandlung zurück 0 wieder 0 | undo: am Fenster 0 redo: 0 | Menü Rückgängig frei, Wiederholen grau
+      undo: beim Fenster: Ersthelfer NSTextView, dessen Verwalter ist der des Fensters
+    nach cmd+z                         Quicknote '' Datei 'abc' | eigener Verwalter canUndo nein canRedo nein | Fensterverwalter canUndo ja canRedo ja | Fensterhandlung zurück 1 wieder 0 | undo: am Fenster 1 redo: 0 | Menü Rückgängig frei, Wiederholen frei
