@@ -117,11 +117,12 @@
 //! laesst jedes andere Byte stehen
 //! ([`einstellungen::notizordner_schreiben`], seit Schritt 3.1 des Plans
 //! `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`). „Auf
-//! Werkseinstellungen zuruecksetzen…“ schreibt beide Dateien noch einmal
-//! woertlich als Auslieferungsfassung, nachdem es ihre alte Fassung
-//! beiseitegelegt hat ([`werkszustand::zuruecksetzen`]). Keiner der zwei
-//! Schreiber ersetzt eine Datei, die ein symbolischer Verweis ist;
-//! `notizordner_schreiben` schreibt dazu eine beschaedigte Datei nicht.
+//! Werkseinstellungen zuruecksetzen…“ schreibt `readers.toml` noch einmal
+//! woertlich als Auslieferungsfassung und `settings.toml` als
+//! Auslieferungsfassung mit dem uebernommenen Wert von `notizordner`, nachdem
+//! es ihre alte Fassung beiseitegelegt hat ([`werkszustand::zuruecksetzen`]).
+//! Keiner der zwei Schreiber ersetzt eine Datei, die ein symbolischer Verweis
+//! ist, und keiner schreibt eine beschaedigte `settings.toml`.
 //!
 //! # Ein beschaedigter Bestand laesst KRK starten
 //!

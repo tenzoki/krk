@@ -11,6 +11,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use krk_core::ablage::einstellungen::{Ortswert, Schreibhindernis};
 use krk_core::ablage::neuerungen::Vergleichsform;
 use krk_core::ablage::werkszustand::{self, Werkshindernis, Werkszustand, Zurueckgesetzt};
 use krk_core::ablage::{Ablage, Ablageort, Datei, einstellungen, leseprofile};
@@ -88,10 +89,13 @@ fn lesen(pfad: &Path) -> Vec<u8> {
     fs::read(pfad).unwrap_or_else(|fehler| panic!("{} nicht lesbar: {fehler}", pfad.display()))
 }
 
-/// C2.1: danach sind `readers.toml` und `settings.toml` bytegleich mit ihrer
-/// Auslieferungsfassung, mit vorher eigenen Dateien und mit vorher fehlenden.
+/// C2.1: danach ist `readers.toml` bytegleich mit ihrer Auslieferungsfassung,
+/// und `settings.toml` ist ihre Auslieferungsfassung mit dem Wert von
+/// `notizordner` aus der alten Datei. Beide Vorher-Faelle tragen keinen
+/// `notizordner`, also ist `settings.toml` hier die Auslieferungsfassung Byte
+/// fuer Byte (C2.10).
 #[test]
-fn c2_1_beide_dateien_stehen_woertlich_als_auslieferungsfassung_da() {
+fn c2_1_beide_dateien_stehen_als_auslieferungsfassung_da_settings_mit_ihrem_notizordner() {
     for vorher in [&alle_drei()[..], &[]] {
         let ordner = Pruefordner::neu("werk-c2-1");
         let (ablage, _) = ablage_mit(&ordner, vorher);
@@ -393,4 +397,154 @@ fn die_zurueckgesetzten_dateien_sind_die_verglichenen() {
         .filter(|&welche| Vergleichsform::fuer(welche) != Vergleichsform::Nicht)
         .collect();
     assert_eq!(beruehrt, verglichen);
+}
+
+/// Setzt zurueck mit einer eigenen `readers.toml` und `keymap.toml` neben der
+/// genannten `settings.toml` und liefert die Ablage samt Wurzel.
+fn mit_einstellungen(ordner: &Pruefordner, einstellungen: &str) -> (Ablage, PathBuf) {
+    ablage_mit(
+        ordner,
+        &[
+            (Datei::Einstellungen, einstellungen),
+            (Datei::Leser, EIGENE_PROFILE),
+            (Datei::Belegung, EIGENE_BELEGUNG),
+        ],
+    )
+}
+
+/// Die Auslieferungsfassung mit einem anderen Quelltext an der Stelle des
+/// ausgelieferten Werts von `notizordner`.
+fn auslieferung_mit(quelltext: &str) -> String {
+    let ausgeliefert = "notizordner = \"~/krkhome\"";
+    assert_eq!(
+        einstellungen::AUSLIEFERUNGSTEXT
+            .matches(ausgeliefert)
+            .count(),
+        1,
+        "die Auslieferungsfassung traegt den Wert nicht genau einmal in dieser Schreibweise"
+    );
+    einstellungen::AUSLIEFERUNGSTEXT.replace(ausgeliefert, &format!("notizordner = {quelltext}"))
+}
+
+/// Laedt `settings.toml` so, wie der Betrieb es tut.
+fn eingestellt(ablage: &Ablage) -> einstellungen::Einstellungen {
+    let geladen = ablage
+        .durchgang(einstellungen::laden)
+        .expect("die Schreibsperre laesst sich nicht nehmen");
+    assert!(geladen.ersetzung.is_none(), "{:?}", geladen.ersetzung);
+    geladen.wert
+}
+
+/// C2.10: ein eigener Text als Wert bleibt in der Auslieferungsfassung stehen,
+/// `terminal` geht auf die Auslieferung, und die Sicherung traegt die alte
+/// Datei bytegleich.
+#[test]
+fn c2_10_ein_eigener_notizordner_bleibt_und_der_rest_geht_auf_die_auslieferung() {
+    let alt = "terminal = \"com.googlecode.iterm2\"\nnotizordner = \"~/Dropbox/krkhome\"\n";
+    let ordner = Pruefordner::neu("werk-c2-10-text");
+    let (ablage, wurzel) = mit_einstellungen(&ordner, alt);
+    let _ = zuruecksetzen(&ablage).expect("das Zuruecksetzen scheitert");
+
+    assert_eq!(
+        lesen(&ablage.pfad(Datei::Einstellungen)),
+        auslieferung_mit("\"~/Dropbox/krkhome\"").as_bytes()
+    );
+    let wert = eingestellt(&ablage);
+    assert_eq!(
+        wert.terminal,
+        einstellungen::Einstellungen::auslieferung().terminal
+    );
+    assert_eq!(
+        wert.notizordner,
+        Ortswert::Text("~/Dropbox/krkhome".to_owned())
+    );
+    assert_eq!(
+        lesen(&wurzel.join(format!("settings.toml.{}", stempel()))),
+        alt.as_bytes()
+    );
+}
+
+/// C2.10: ein Wert anderen Typs bleibt in seiner Schreibweise stehen und wird
+/// weiter als Wert gemeldet, nicht als Schaden der Datei.
+#[test]
+fn c2_10_ein_wert_anderen_typs_bleibt_stehen() {
+    let ordner = Pruefordner::neu("werk-c2-10-zahl");
+    let (ablage, _) = mit_einstellungen(&ordner, "notizordner = 5\n");
+    let _ = zuruecksetzen(&ablage).expect("das Zuruecksetzen scheitert");
+
+    assert_eq!(
+        lesen(&ablage.pfad(Datei::Einstellungen)),
+        auslieferung_mit("5").as_bytes()
+    );
+    assert_eq!(
+        eingestellt(&ablage).notizordner,
+        Ortswert::KeinText("5".to_owned())
+    );
+}
+
+/// C2.10: ein Wert wie in der Auslieferung ergibt die Auslieferungsfassung
+/// Byte fuer Byte.
+#[test]
+fn c2_10_der_ausgelieferte_wert_ergibt_die_auslieferungsfassung() {
+    let ordner = Pruefordner::neu("werk-c2-10-gleich");
+    let (ablage, _) = mit_einstellungen(
+        &ordner,
+        "terminal = \"com.googlecode.iterm2\"\nnotizordner = \"~/krkhome\"\n",
+    );
+    let _ = zuruecksetzen(&ablage).expect("das Zuruecksetzen scheitert");
+    assert_eq!(
+        lesen(&ablage.pfad(Datei::Einstellungen)),
+        einstellungen::AUSLIEFERUNGSTEXT.as_bytes()
+    );
+}
+
+/// C2.12: eine beschaedigte `settings.toml` bricht ab, schon in der Lage ohne
+/// Sperre und unter der Sperre ebenso; alle drei Dateien sind bytegleich, und
+/// kein Sicherungsname steht.
+#[test]
+fn c2_12_eine_beschaedigte_settings_toml_bricht_ab_bevor_etwas_geschieht() {
+    for kaputt in [
+        "terminal = \"com.apple.Terminal\n",
+        "unbekannt = 1\n",
+        "[notizordner]\nx = 1\n",
+    ] {
+        let ordner = Pruefordner::neu("werk-c2-12");
+        let (ablage, wurzel) = mit_einstellungen(&ordner, kaputt);
+        let namen_vorher = namen(&wurzel);
+
+        let vorab = werkszustand::lage(|welche| ablage.pfad(welche));
+        assert!(
+            matches!(
+                vorab,
+                Err(Werkshindernis::Einstellungen(
+                    Schreibhindernis::Beschaedigt(_)
+                ))
+            ),
+            "{kaputt:?}: {vorab:?}"
+        );
+        let hindernis = zuruecksetzen(&ablage).expect_err("das Zuruecksetzen ist gelungen");
+        assert!(
+            matches!(
+                hindernis,
+                Werkshindernis::Einstellungen(Schreibhindernis::Beschaedigt(_))
+            ),
+            "{kaputt:?}: {hindernis:?}"
+        );
+        assert!(
+            hindernis
+                .meldung()
+                .contains("settings.toml ist zuerst von Hand zu berichtigen")
+                && hindernis.meldung().ends_with("Nichts ist zurückgesetzt."),
+            "{}",
+            hindernis.meldung()
+        );
+
+        assert_eq!(namen(&wurzel), namen_vorher);
+        assert_eq!(lesen(&ablage.pfad(Datei::Einstellungen)), kaputt.as_bytes());
+        assert_eq!(lesen(&ablage.pfad(Datei::Leser)), EIGENE_PROFILE.as_bytes());
+        assert_eq!(
+            lesen(&ablage.pfad(Datei::Belegung)),
+            EIGENE_BELEGUNG.as_bytes()
+        );
+    }
 }

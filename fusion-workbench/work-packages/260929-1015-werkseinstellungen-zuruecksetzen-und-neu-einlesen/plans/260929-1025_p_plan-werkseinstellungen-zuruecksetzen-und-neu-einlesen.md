@@ -231,7 +231,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit der Schritte 3, 
    - Acceptance: `make check` grün; keine Probe ausser der genannten ändert ihre Erwartung. Das Verhalten beim Start ist unverändert, belegt durch Befund (c) aus Schritt 1.
    - Dependencies: Schritte 1 und 2 (Tor)
 
-5. **Kern: `settings.toml` geht auf die Auslieferungsfassung und behält den Wert von `notizordner`**
+5. [DONE] **Kern: `settings.toml` geht auf die Auslieferungsfassung und behält den Wert von `notizordner`**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/ablage/einstellungen.rs`, `crates/krk-core/src/ablage/werkszustand.rs`, `crates/krk-core/src/ablage/mod.rs` (allein der Modulkopf), `crates/krk-core/tests/werkszustand.rs`
    - Changes, nach Entscheidung 2:

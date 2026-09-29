@@ -9,9 +9,26 @@
 //! ```
 //!
 //! Welche Dateien es sind, sagt [`Werkszustand::fuer`] und keine Liste
-//! daneben: `settings.toml` und `readers.toml` stehen danach woertlich als
-//! ihre eingebettete Auslieferungsfassung da, `keymap.toml` fehlt, und jede
-//! andere Ablagedatei bleibt unberuehrt.
+//! daneben: `readers.toml` steht danach woertlich als ihre eingebettete
+//! Auslieferungsfassung da, `settings.toml` als ihre Auslieferungsfassung mit
+//! dem Wert von `notizordner` aus der alten Datei, `keymap.toml` fehlt, und
+//! jede andere Ablagedatei bleibt unberuehrt.
+//!
+//! # Der Notizordner bleibt
+//!
+//! Der Nutzer hat am 260929 entschieden: „Der Notizordner bleibt immer, wie er
+//! ist. Der Rest von settings.toml geht auf Werkseinstellung.“ (Spec, Abschnitt
+//! „Änderung 260929“). Der Wert von `notizordner` kommt deshalb in seiner alten
+//! Schreibweise in die neue Fassung, auch wenn er kein Text ist, und zwar ueber
+//! dieselbe Ersetzung, ueber die „Ort waehlen…“ ihn schreibt
+//! (`einstellungen::wert_einsetzen`). **Eine beschaedigte `settings.toml` bricht
+//! ab, bevor etwas geschieht**: aus ihr laesst sich kein Wert uebernehmen, und
+//! die Auslieferungsfassung an ihre Stelle zu schreiben, setzte beim naechsten
+//! Start `~/krkhome` in Kraft, also genau den Wechsel, den der Befehl nie
+//! ausloesen soll. „Beschaedigt“ heisst dabei dasselbe wie bei
+//! `einstellungen::notizordner_schreiben`, denn beide fragen
+//! `einstellungen::ortsstelle`. Keine Datei im Notizordner wird angefasst; dieses
+//! Modul kennt nur den Ablageordner.
 //!
 //! # Vier Stufen unter einem Zugang
 //!
@@ -24,12 +41,14 @@
 //!    ab: `rename` ersetzte ihn still durch eine gewoehnliche Datei, und die
 //!    Datei, auf die er zeigt, bliebe beim alten Stand. Dieselbe Regel haelt
 //!    `einstellungen::notizordner_schreiben`. Etwas anderes als eine
-//!    gewoehnliche Datei bricht ebenso ab.
+//!    gewoehnliche Datei bricht ebenso ab. Dieselbe Stufe stellt die neuen
+//!    Fassungen fest und liest dafuer die alte `settings.toml`; ist sie
+//!    beschaedigt oder nicht lesbar, bricht sie hier ab.
 //! 2. **Beiseite.** Jede vorhandene Datei bekommt einen zweiten Namen,
 //!    `<name>.<JJMMTT-HHMM>`, ueber `link(2)`.
-//! 3. **Vorbereitet.** `settings.toml` und `readers.toml` werden ueber
-//!    [`atomar::vorbereiten`] vollstaendig in ihre Nachbardateien geschrieben;
-//!    die Ziele sind dabei noch alt.
+//! 3. **Vorbereitet.** Die neuen Fassungen aus der Lage, fuer `settings.toml`
+//!    und `readers.toml`, werden ueber [`atomar::vorbereiten`] vollstaendig in
+//!    ihre Nachbardateien geschrieben; die Ziele sind dabei noch alt.
 //! 4. **Vollzogen.** Beide Nachbardateien werden umbenannt, und `keymap.toml`
 //!    wird entfernt.
 //!
@@ -97,7 +116,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use super::{Datei, Zugang, atomar, einstellungen, einzeilig, leseprofile};
+use super::einstellungen::{self, Schreibhindernis};
+use super::{Datei, Zugang, atomar, einzeilig, leseprofile};
 use crate::verzeichnis::sys::ortszeit;
 
 /// Die hoechste Nummer, die ein Sicherungsname in derselben Minute bekommt.
@@ -112,6 +132,10 @@ pub const HOECHSTE_NUMMER: u32 = 99;
 pub enum Werkszustand {
     /// Die Datei steht danach woertlich mit diesem Text da.
     Wortlaut(&'static str),
+    /// Die Datei steht danach als eingebettete Auslieferungsfassung von
+    /// `settings.toml` da, in die der Wert von `notizordner` aus der alten
+    /// Datei uebernommen ist (`einstellungen::auslieferung_mit_notizordner`).
+    MitNotizordner,
     /// Die Datei fehlt danach.
     Fehlt,
     /// Das Zuruecksetzen fasst die Datei nicht an.
@@ -127,7 +151,7 @@ impl Werkszustand {
     /// gegeneinander.
     pub const fn fuer(welche: Datei) -> Self {
         match welche {
-            Datei::Einstellungen => Werkszustand::Wortlaut(einstellungen::AUSLIEFERUNGSTEXT),
+            Datei::Einstellungen => Werkszustand::MitNotizordner,
             Datei::Leser => Werkszustand::Wortlaut(leseprofile::AUSLIEFERUNGSTEXT),
             Datei::Belegung => Werkszustand::Fehlt,
             Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => Werkszustand::Unberuehrt,
@@ -171,6 +195,10 @@ pub enum Werkshindernis {
     /// Die Nachbardatei der neuen Fassung ist gescheitert. Traegt die Meldung
     /// des Systems.
     NichtVorbereitet(Datei, String),
+    /// Aus der alten `settings.toml` laesst sich der Wert von `notizordner`
+    /// nicht uebernehmen, weil sie beschaedigt ist. Traegt den Befund, den
+    /// auch „Ort waehlen…“ gaebe.
+    Einstellungen(Schreibhindernis),
     /// Das Hindernis ist eingetreten, und danach liess sich mindestens ein
     /// Sicherungsname dieses Laufs nicht wieder entfernen.
     ///
@@ -217,6 +245,9 @@ impl Werkshindernis {
                 "Die neue Fassung von {} ließ sich nicht schreiben ({befund}); nichts ist zurückgesetzt.",
                 welche.dateiname()
             ),
+            Werkshindernis::Einstellungen(befund) => {
+                format!("{}. Nichts ist zurückgesetzt.", befund.meldung())
+            }
             Werkshindernis::NichtZurueckgebaut { hindernis, liegen } => format!(
                 "{} Liegen geblieben ist eine zweite Kopie des unveränderten Inhalts unter {}.",
                 hindernis.meldung(),
@@ -244,10 +275,13 @@ pub enum Stand {
     Fehlt,
 }
 
-/// Die Lage der beruehrten Ablagedateien, wie [`lage`] sie gefunden hat.
+/// Die Lage der beruehrten Ablagedateien, wie [`lage`] sie gefunden hat,
+/// samt ihren neuen Fassungen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lage {
     staende: Vec<(Datei, Stand)>,
+    /// Je Datei, die danach dasteht, ihr neuer Text.
+    neue_fassungen: Vec<(Datei, String)>,
 }
 
 impl Lage {
@@ -264,15 +298,20 @@ impl Lage {
 }
 
 /// Fragt jede beruehrte Ablagedatei, ob sie steht, fehlt oder das
-/// Zuruecksetzen verhindert.
+/// Zuruecksetzen verhindert, und stellt ihre neue Fassung fest.
 ///
-/// **Ohne Sperre aufrufbar**, weil sie nur fragt; die Oberflaeche fragt so vor
-/// der Rueckfrage, was diese sagen muss. [`zuruecksetzen`] fragt unter der
-/// Sperre ein zweites Mal selbst.
+/// **Ohne Sperre aufrufbar**, weil sie nur fragt und liest; die Oberflaeche
+/// fragt so vor der Rueckfrage, was diese sagen muss, und bricht bei einem
+/// Verweis oder einer beschaedigten `settings.toml` ab, bevor sie aufgeht.
+/// [`zuruecksetzen`] fragt unter der Sperre ein zweites Mal selbst. Jede
+/// Datei wird dabei hoechstens einmal gelesen, und gelesen wird allein die
+/// alte `settings.toml`.
 pub fn lage(pfad: impl Fn(Datei) -> PathBuf) -> Result<Lage, Werkshindernis> {
     let mut staende = Vec::new();
+    let mut neue_fassungen = Vec::new();
     for welche in beruehrte() {
-        let stand = match fs::symlink_metadata(pfad(welche)) {
+        let stelle = pfad(welche);
+        let stand = match fs::symlink_metadata(&stelle) {
             Ok(art) if art.file_type().is_symlink() => {
                 return Err(Werkshindernis::Verweis(welche));
             }
@@ -287,8 +326,41 @@ pub fn lage(pfad: impl Fn(Datei) -> PathBuf) -> Result<Lage, Werkshindernis> {
             }
         };
         staende.push((welche, stand));
+        if let Some(fassung) = neue_fassung(welche, &stelle, stand)? {
+            neue_fassungen.push((welche, fassung));
+        }
     }
-    Ok(Lage { staende })
+    Ok(Lage {
+        staende,
+        neue_fassungen,
+    })
+}
+
+/// Der Text, den eine beruehrte Datei nach dem Zuruecksetzen traegt; `None`,
+/// wenn sie danach fehlt.
+fn neue_fassung(
+    welche: Datei,
+    stelle: &Path,
+    stand: Stand,
+) -> Result<Option<String>, Werkshindernis> {
+    match Werkszustand::fuer(welche) {
+        Werkszustand::Wortlaut(text) => Ok(Some(text.to_owned())),
+        Werkszustand::MitNotizordner => {
+            let alt = match stand {
+                Stand::Steht => {
+                    let bytes = fs::read(stelle).map_err(|fehler| {
+                        Werkshindernis::NichtLesbar(welche, einzeilig(&fehler.to_string()))
+                    })?;
+                    Some(einstellungen::als_text(bytes).map_err(Werkshindernis::Einstellungen)?)
+                }
+                Stand::Fehlt => None,
+            };
+            einstellungen::auslieferung_mit_notizordner(alt.as_deref())
+                .map(Some)
+                .map_err(Werkshindernis::Einstellungen)
+        }
+        Werkszustand::Fehlt | Werkszustand::Unberuehrt => Ok(None),
+    }
 }
 
 /// Was aus einer beruehrten Ablagedatei geworden ist.
@@ -445,10 +517,8 @@ pub fn zuruecksetzen(
     // Stufe 3: die neuen Fassungen stehen vollstaendig in ihren
     // Nachbardateien, die Ziele sind noch alt.
     let mut vorbereitet: Vec<(Datei, atomar::Nachbardatei)> = Vec::new();
-    for welche in beruehrte() {
-        let Werkszustand::Wortlaut(text) = Werkszustand::fuer(welche) else {
-            continue;
-        };
+    for (welche, text) in &lage.neue_fassungen {
+        let welche = *welche;
         match atomar::vorbereiten(&zugang.pfad(welche), &mut text.as_bytes()) {
             Ok(nachbar) => vorbereitet.push((welche, nachbar)),
             Err(fehler) => {
@@ -466,11 +536,11 @@ pub fn zuruecksetzen(
     let mut dateien = Vec::new();
     for welche in beruehrte() {
         let vollzug = match Werkszustand::fuer(welche) {
-            Werkszustand::Wortlaut(_) => {
+            Werkszustand::Wortlaut(_) | Werkszustand::MitNotizordner => {
                 let stelle = vorbereitet
                     .iter()
                     .position(|(datei, _)| *datei == welche)
-                    .expect("jede Datei mit Wortlaut ist in Stufe 3 vorbereitet");
+                    .expect("jede Datei mit neuer Fassung ist in Stufe 3 vorbereitet");
                 let (_, nachbar) = vorbereitet.swap_remove(stelle);
                 nachbar.umbenennen()
             }
