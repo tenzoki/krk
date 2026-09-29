@@ -3072,3 +3072,4 @@
 {"ts":"2026-09-29T15:53:50","person":"Kai Stalmann <kai@stalmann.org>","checkout":"6c11b1f2","session_id":"85a83b93-7770-409f-b4d7-bcf37317471f","event":"gate_hit","detail":"work package to be finished"}
 {"ts":"2026-09-29T15:53:50","person":"Kai Stalmann <kai@stalmann.org>","checkout":"6c11b1f2","session_id":"85a83b93-7770-409f-b4d7-bcf37317471f","event":"gate_response","detail":"proceed — answered by **Mode:** autonomous on 260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum"}
 {"ts":"2026-09-29T15:53:50","person":"Kai Stalmann <kai@stalmann.org>","checkout":"6c11b1f2","session_id":"85a83b93-7770-409f-b4d7-bcf37317471f","event":"portfolio_refresh","detail":"260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum"}
+{"ts":"2026-09-29T15:53:50","event":"commit","person":"Kai Stalmann <kai@stalmann.org>","checkout":"6c11b1f2","session_id":"85a83b93-7770-409f-b4d7-bcf37317471f","detail":"84049f2 chore(werkbank): die Bildfolge nach Aufnahmedatum ist gebaut"}
