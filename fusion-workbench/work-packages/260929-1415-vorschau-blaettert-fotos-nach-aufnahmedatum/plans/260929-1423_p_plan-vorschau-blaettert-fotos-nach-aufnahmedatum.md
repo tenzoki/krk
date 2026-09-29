@@ -256,7 +256,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
    - Acceptance: `make check` grün; keine Probe außer den genannten ändert ihre Erwartung.
    - Dependencies: Schritt 7
 
-9. **Sprung zum Foto**
+9. [DONE] **Sprung zum Foto**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/vorschau.rs`
    - Changes (Entscheidungen 16 und 17): `Vorschaufenster::folgebild() -> Option<PathBuf>` liefert den Pfad des Fotos an der Stelle, wenn seine Gruppe geordnet ist. `zum_eintrag_springen(datei, meldung)` wird aus `ordner_der_datei_zeigen` herausgezogen; `ordner_der_datei_zeigen` ruft ihn still. Die Vormerkung in `Tabliste` trägt das Meldekennzeichen, `wunschauswahl_anwenden` liefert `Gewaehlt`, `Ausgefiltert` oder `Fehlt`, und der Einzug des Lesevorgangs zeigt bei gesetztem Kennzeichen die Fenstermeldung. `ordner_lesen` bekommt den Parameter, jeder bisherige Rufer übergibt „still“. Zweig `Kommando::ZumBild => self.zum_bild_springen()` in `kommando_ausfuehren_bei`. Der Filtertext folgt der bestehenden Regel über den Ordnerwechsel (C4.4), die Sortierung der Liste bleibt (C4.3).

@@ -95,6 +95,13 @@ pub struct Tabinhalt {
     /// Lesevorgangs. Ein Name und keine Zeilennummer: zwischen Beenden und
     /// Neustart kann sich der Ordnerinhalt geaendert haben.
     wunschauswahl: Option<String>,
+    /// Ob der Abschluss des Lesevorgangs meldet, wenn die `wunschauswahl`
+    /// ausgefiltert ist oder fehlt (C4.4 und C4.7 des Spec der Bildfolge).
+    ///
+    /// Gesetzt allein vom Sprung zum Foto ueber eine [`Vormerkung`] mit
+    /// [`Wunschmeldung::Melden`]; jeder andere Weg, der einen Namen vormerkt,
+    /// bleibt still wie vor der Bildfolge.
+    wunsch_melden: bool,
     bildlauf: f64,
     /// Ob die Ansicht die gemerkte Bildlaufposition noch herstellen muss.
     ///
@@ -184,6 +191,7 @@ impl Tabinhalt {
             durchlauf: None,
             zu_gross: 0,
             wunschauswahl: zustand.auswahl.clone(),
+            wunsch_melden: false,
             bildlauf: zustand.bildlauf,
             bildlauf_offen: zustand.bildlauf > 0.0,
             meldung: None,
@@ -412,17 +420,84 @@ impl Tabinhalt {
     /// Gerufen, sobald der Lesevorgang abgeschlossen und damit sortiert ist.
     /// Findet sich der Name nicht mehr, bleibt die Auswahl leer; der Ordner
     /// kann sich seit der letzten Sitzung geaendert haben.
-    fn wunschauswahl_anwenden(&mut self) {
-        let Some(name) = self.wunschauswahl.take() else {
-            return;
-        };
+    ///
+    /// **Seit der Bildfolge sagt sie, was daraus geworden ist**
+    /// ([`Wunschausgang`]), und `None` heisst: es war kein Name vorgemerkt.
+    /// Die Auswahl steht auch auf einem ausgefilterten Eintrag, wie vor der
+    /// Bildfolge; neu ist allein, dass der Rufer davon erfaehrt.
+    fn wunschauswahl_anwenden(&mut self) -> Option<Wunschausgang> {
+        let name = self.wunschauswahl.take()?;
         let gefunden = self
             .modell
             .eintraege()
             .iter()
             .position(|eintrag| eintrag.name == name);
-        if let Some(index) = gefunden {
-            self.modell.auswahl_setzen(Some(index as u32));
+        let Some(index) = gefunden else {
+            return Some(Wunschausgang::Fehlt);
+        };
+        self.modell.auswahl_setzen(Some(index as u32));
+        if self.modell.zeile_von(index as u32).is_some() {
+            Some(Wunschausgang::Gewaehlt)
+        } else {
+            Some(Wunschausgang::Ausgefiltert)
+        }
+    }
+
+    /// Der Satz, den der Abschluss des Lesevorgangs zu einem vorgemerkten
+    /// Namen zeigt, oder keiner (C4.4 und C4.7 des Spec der Bildfolge).
+    ///
+    /// Allein bei gesetztem Kennzeichen, und allein fuer die zwei Ausgaenge,
+    /// in denen der Nutzer das Gesuchte nicht vor sich hat. Die
+    /// Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
+    fn wunschmeldung(name: &str, ausgang: Wunschausgang) -> Option<String> {
+        match ausgang {
+            Wunschausgang::Gewaehlt => None,
+            Wunschausgang::Ausgefiltert => Some(format!("{name} ist ausgefiltert.")),
+            Wunschausgang::Fehlt => Some(format!("{name} ist nicht mehr da.")),
+        }
+    }
+}
+
+/// Was aus einem vorgemerkten Namen am Ende des Lesevorgangs geworden ist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Wunschausgang {
+    /// Der Eintrag steht im Bestand und in der Sichtreihenfolge und ist
+    /// ausgewaehlt.
+    Gewaehlt,
+    /// Der Eintrag steht im Bestand, aber ein Filtertext verdeckt ihn; die
+    /// Auswahl steht trotzdem auf ihm.
+    Ausgefiltert,
+    /// Der Eintrag steht nicht im Bestand: geloescht oder verschoben.
+    Fehlt,
+}
+
+/// Ob ein vorgemerkter Name seinen Ausgang meldet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Wunschmeldung {
+    /// Kein Wort, wie jede Vormerkung vor der Bildfolge.
+    Still,
+    /// Ausgefiltert und fehlend werden in der Statuszeile gemeldet; der
+    /// Sprung zum Foto der Bildfolge (C4.4, C4.7).
+    Melden,
+}
+
+/// Ein Name, auf den die Auswahl springt, sobald der Ordner gelesen ist, und
+/// ob sein Ausgang gemeldet wird.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Vormerkung {
+    /// Der Name des Eintrags.
+    pub name: String,
+    /// Ob der Ausgang gemeldet wird.
+    pub meldung: Wunschmeldung,
+}
+
+impl Vormerkung {
+    /// Eine Vormerkung ohne Meldung, wie jede vor der Bildfolge.
+    #[must_use]
+    pub fn still(name: String) -> Self {
+        Self {
+            name,
+            meldung: Wunschmeldung::Still,
         }
     }
 }
@@ -896,7 +971,12 @@ impl Tabliste {
     /// getragen und nicht ueber [`Tabzustand`], der `session.toml` schreibt:
     /// ein wiederhergestellter Filter der Tiefe oder des Inhalts ohne
     /// Filtertext waere ein Zustand, den nichts anzeigt und der nichts tut.
-    pub fn ordner_setzen(&mut self, ordner: impl Into<PathBuf>, auswahl: Option<String>) {
+    ///
+    /// **Die Vormerkung traegt seit der Bildfolge ihr Meldekennzeichen**
+    /// ([`Vormerkung`]); gesetzt ist es allein beim Sprung zum Foto, und der
+    /// Abschluss des Lesevorgangs meldet dann, ob das Foto ausgefiltert ist
+    /// oder fehlt.
+    pub fn ordner_setzen(&mut self, ordner: impl Into<PathBuf>, auswahl: Option<Vormerkung>) {
         let stelle = self.aktiv;
         let sortierung = self.tabs[stelle].modell.sortierung();
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
@@ -914,8 +994,12 @@ impl Tabliste {
         let mut zustand = Tabzustand::auf(ordner);
         zustand.sortierung = sortierung;
         zustand.verstecke_ausgeblendet = verstecke;
-        zustand.auswahl = auswahl;
+        let melden = auswahl
+            .as_ref()
+            .is_some_and(|vormerkung| vormerkung.meldung == Wunschmeldung::Melden);
+        zustand.auswahl = auswahl.map(|vormerkung| vormerkung.name);
         self.tabs[stelle] = self.tab_bauen(&zustand);
+        self.tabs[stelle].wunsch_melden = melden;
         let modell = &mut self.tabs[stelle].modell;
         // Unbedingt gesetzt und nicht nur, wenn sich etwas aendert: das frische
         // Modell hat null Eintraege, beide Setzer bauen also eine leere Sicht
@@ -1685,7 +1769,19 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
                     einzug.meldung_neu = true;
                 }
                 tab.modell.abschliessen();
-                tab.wunschauswahl_anwenden();
+                let gesucht = tab.wunschauswahl.clone();
+                let ausgang = tab.wunschauswahl_anwenden();
+                // Die Meldung des Sprungs zum Foto, allein bei gesetztem
+                // Kennzeichen; ein Lesefehler darueber hat den Vorrang.
+                if tab.wunsch_melden
+                    && tab.meldung.is_none()
+                    && let (Some(name), Some(ausgang)) = (gesucht, ausgang)
+                    && let Some(satz) = Tabinhalt::wunschmeldung(&name, ausgang)
+                {
+                    tab.meldung = Some(satz);
+                    einzug.meldung_neu = true;
+                }
+                tab.wunsch_melden = false;
                 tab.gelesen = true;
                 einzug.fertig = true;
                 break;
@@ -2123,7 +2219,7 @@ mod tests {
         let mut liste = liste(&[&hier]);
         liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
 
-        liste.ordner_setzen(&eltern, Some(verlassen.clone()));
+        liste.ordner_setzen(&eltern, Some(Vormerkung::still(verlassen.clone())));
 
         assert_eq!(
             liste.aktiver().modell().filtertext(),
@@ -3644,5 +3740,107 @@ mod tests {
         // Steht der sichtbare Tab auf einem der Orte, sagt die Antwort es.
         let _ = liste.waehlen(1);
         assert!(liste.heimordner_gewechselt(Some(&alt), &neu));
+    }
+
+    // ------------------------------------------------------------------
+    // Die Vormerkung mit Meldung (Schritt 9 des Plans der Bildfolge)
+    // ------------------------------------------------------------------
+
+    /// Zieht ein, bis der sichtbare Tab fertig gelesen ist.
+    fn fertig_lesen(liste: &mut Tabliste) {
+        let beginn = std::time::Instant::now();
+        while liste.aktiver().liest() {
+            let _ = liste.einziehen();
+            assert!(
+                beginn.elapsed() < std::time::Duration::from_secs(5),
+                "der Lesevorgang ist nicht fertig geworden"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+    }
+
+    fn gemeldet(name: &str) -> Vormerkung {
+        Vormerkung {
+            name: name.to_owned(),
+            meldung: Wunschmeldung::Melden,
+        }
+    }
+
+    /// C4.3: die Vormerkung waehlt den Namen bei jeder Sortierung, und ohne
+    /// Hindernis entsteht keine Meldung.
+    #[test]
+    fn die_vormerkung_waehlt_den_namen_bei_jeder_sortierung() {
+        let ordner = Pruefordner::neu("sprung-sortierung");
+        let monat = ordner.ordner("08");
+        for (name, inhalt) in [("a.jpg", "aaa"), ("b.jpg", "b"), ("c.jpg", "cc")] {
+            ordner.datei(&format!("08/{name}"), inhalt);
+        }
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        for sortierung in krk_core::verzeichnis::Sortierung::alle() {
+            liste
+                .aktiver_mut()
+                .modell_mut()
+                .sortierung_setzen(sortierung);
+            liste.ordner_setzen(&monat, Some(gemeldet("b.jpg")));
+            fertig_lesen(&mut liste);
+            assert_eq!(
+                liste.aktiver().auswahlname().as_deref(),
+                Some("b.jpg"),
+                "{sortierung:?}"
+            );
+            assert_eq!(liste.aktiver().meldung(), None, "{sortierung:?}");
+        }
+    }
+
+    /// C4.4: ein ausgefilterter Name wird ausgewaehlt und gemeldet.
+    #[test]
+    fn ein_ausgefilterter_name_wird_gemeldet() {
+        let ordner = Pruefordner::neu("sprung-filter");
+        let monat = ordner.ordner("08");
+        ordner.datei("08/bild.jpg", "");
+        ordner.datei("08/andere.jpg", "");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        liste.aktiver_mut().modell_mut().filtertext_setzen("andere");
+        liste.ordner_setzen(&monat, Some(gemeldet("bild.jpg")));
+        fertig_lesen(&mut liste);
+        assert_eq!(
+            liste.aktiver().meldung(),
+            Some("bild.jpg ist ausgefiltert.")
+        );
+        assert_eq!(liste.aktiver().auswahlname().as_deref(), Some("bild.jpg"));
+        assert_eq!(liste.aktiver().modell().filtertext(), "andere");
+    }
+
+    /// C4.7: ein Name, den es nicht mehr gibt, wird gemeldet.
+    #[test]
+    fn ein_fehlender_name_wird_gemeldet() {
+        let ordner = Pruefordner::neu("sprung-fehlt");
+        let monat = ordner.ordner("08");
+        ordner.datei("08/andere.jpg", "");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        liste.ordner_setzen(&monat, Some(gemeldet("weg.jpg")));
+        fertig_lesen(&mut liste);
+        assert_eq!(
+            liste.aktiver().meldung(),
+            Some("weg.jpg ist nicht mehr da.")
+        );
+    }
+
+    /// Ohne Kennzeichen entsteht in keinem der Faelle eine Meldung, wie vor
+    /// der Bildfolge.
+    #[test]
+    fn ohne_kennzeichen_bleibt_die_vormerkung_still() {
+        let ordner = Pruefordner::neu("sprung-still");
+        let monat = ordner.ordner("08");
+        ordner.datei("08/bild.jpg", "");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        liste.ordner_setzen(&monat, Some(Vormerkung::still("weg.jpg".to_owned())));
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().meldung(), None);
+
+        liste.aktiver_mut().modell_mut().filtertext_setzen("andere");
+        liste.ordner_setzen(&monat, Some(Vormerkung::still("bild.jpg".to_owned())));
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().meldung(), None);
     }
 }

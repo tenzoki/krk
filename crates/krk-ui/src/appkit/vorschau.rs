@@ -1177,6 +1177,13 @@ impl Vorschaufenster {
         bewegt
     }
 
+    /// Der Pfad des Fotos an der Stelle der Bildfolge, sobald seine Gruppe
+    /// geordnet ist (C4 des Spec der Bildfolge); gefragt vom Sprung zum Foto.
+    #[must_use]
+    pub fn folgebild(&self) -> Option<PathBuf> {
+        self.ivars().modell.borrow().folgebild()
+    }
+
     /// Ob der aktive Vorschau-Tab eine Bildfolge zeigt; gefragt von
     /// `Anwendungsdelegierter::lage` fuer die Zulaessigkeit der drei Befehle
     /// der Bildfolge.

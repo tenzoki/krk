@@ -1161,6 +1161,24 @@ impl Vorschaumodell {
         self.tabs[self.aktiv].blaettern(richtung, datumsleser)
     }
 
+    /// Der Pfad des Fotos an der Stelle der Bildfolge des aktiven Tabs,
+    /// sobald seine Gruppe geordnet ist; sonst keiner (C4, Entscheidung 16
+    /// des Plans der Bildfolge).
+    #[must_use]
+    pub fn folgebild(&self) -> Option<PathBuf> {
+        match self.aktiver_inhalt() {
+            Inhalt::Bildfolge(folge) => folge.foto().map(|foto| foto.pfad().to_path_buf()),
+            Inhalt::Leer
+            | Inhalt::Text(_)
+            | Inhalt::Markdown(_)
+            | Inhalt::Bild { .. }
+            | Inhalt::Pdf { .. }
+            | Inhalt::Metadaten { .. }
+            | Inhalt::Zusammenfassung(_)
+            | Inhalt::Hinweis(_) => None,
+        }
+    }
+
     /// Ob der aktive Tab eine Bildfolge zeigt.
     ///
     /// Eine Frage der Zulaessigkeit von Blaettern und Sprung

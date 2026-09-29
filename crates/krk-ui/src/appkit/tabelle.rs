@@ -363,7 +363,7 @@ use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
 use crate::spalten::Spalte;
-use crate::tabs::{Auswahlversuch, Tabliste};
+use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung};
 
 use super::abwurf;
 use super::blaetter;
@@ -1710,7 +1710,9 @@ impl DateifensterQuelle {
     ///
     /// `auswahl` ist der Name des Eintrags, auf den die Auswahl springt, sobald
     /// gelesen ist: beim Aufstieg der verlassene Ordner (C2), beim Sprung aus
-    /// der Zwischenablage die genannte Datei (C10).
+    /// der Zwischenablage die genannte Datei (C10). Seit der Bildfolge traegt
+    /// die [`Vormerkung`] ein Meldekennzeichen; jeder Rufer ausser dem Sprung
+    /// zum Foto bleibt still.
     ///
     /// **Seit der Runde 13 nennt ein Tastenbefehl ein anderes Dateifenster als
     /// das aktive:** `Anwendungsdelegierter::ordner_angleichen` stellt das
@@ -1719,7 +1721,7 @@ impl DateifensterQuelle {
     /// nur aus dem Messmodus, und der ist kein Befehl. Fuer diese Methode
     /// aendert das nichts: sie wechselt den Ordner des **sichtbaren** Tabs und
     /// legt keinen neuen an, gleich von welcher Seite aus gerufen.
-    pub fn ordner_lesen(&self, pfad: &Path, auswahl: Option<String>) {
+    pub fn ordner_lesen(&self, pfad: &Path, auswahl: Option<Vormerkung>) {
         self.fenstermeldung_loeschen();
         self.ivars().tabs.borrow_mut().ordner_setzen(pfad, auswahl);
         self.nach_lesebeginn();
@@ -2912,7 +2914,7 @@ impl DateifensterQuelle {
     fn ordner_aufwaerts(&self) {
         let hier = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
         if let Some((eltern, verlassen)) = aufwaerts(&hier) {
-            self.ordner_lesen(&eltern, Some(verlassen));
+            self.ordner_lesen(&eltern, Some(Vormerkung::still(verlassen)));
         }
     }
 
@@ -2987,7 +2989,9 @@ impl DateifensterQuelle {
     fn pfad_anspringen(&self, pfad: &Path) {
         let angezeigt = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
         match pfadeingabe::pruefen(pfad, &angezeigt) {
-            Ergebnis::Wechseln { ordner, auswahl } => self.ordner_lesen(&ordner, auswahl),
+            Ergebnis::Wechseln { ordner, auswahl } => {
+                self.ordner_lesen(&ordner, auswahl.map(Vormerkung::still));
+            }
             Ergebnis::NurAuswahl { name } => self.eintrag_anspringen(&name),
             Ergebnis::Meldung(text) => self.befehlsantwort_zeigen(&text),
         }

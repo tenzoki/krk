@@ -320,7 +320,7 @@ use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
 use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
-use crate::tabs::{Auswahlversuch, Tabliste};
+use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung, Wunschmeldung};
 use crate::vorschaumodell::Blaetterrichtung;
 
 use super::aufteilung::Aufteilung;
@@ -2507,7 +2507,7 @@ impl Anwendungsdelegierter {
             } => {
                 self.dateifenster(aktiv)
                     .quelle()
-                    .ordner_lesen(ordner, eintrag.clone());
+                    .ordner_lesen(ordner, eintrag.clone().map(Vormerkung::still));
                 self.sitzung_vormerken();
             }
             Ziel::Textstelle {
@@ -4539,6 +4539,9 @@ impl Anwendungsdelegierter {
             // haelt beide Zeilen.
             Kommando::BildVor => self.bild_blaettern(Blaetterrichtung::Vor),
             Kommando::BildZurueck => self.bild_blaettern(Blaetterrichtung::Zurueck),
+            // Der Sprung zum Foto (C4). Fokus in der Dateiliste, der Gegenstand
+            // in der Vorschau, aus demselben Grund wie das Blaettern hier.
+            Kommando::ZumBild => self.zum_bild_springen(),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
@@ -4692,6 +4695,11 @@ impl Anwendungsdelegierter {
     ///
     /// Liefert immer `true`, wie [`Self::terminal_oeffnen`]: der Befehl war
     /// zustaendig, auch wenn er nur etwas zu melden hatte.
+    ///
+    /// **Der Sprung selbst steht seit der Bildfolge in
+    /// [`Self::zum_eintrag_springen`]**, den auch [`Self::zum_bild_springen`]
+    /// ruft; dieser Befehl uebergibt [`Wunschmeldung::Still`] und verhaelt
+    /// sich wie zuvor.
     fn ordner_der_datei_zeigen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let Some(datei) = self.angezeigte_datei() else {
@@ -4705,6 +4713,20 @@ impl Anwendungsdelegierter {
             );
             return true;
         };
+        self.zum_eintrag_springen(&datei, Wunschmeldung::Still);
+        true
+    }
+
+    /// Fuehrt das aktive Dateifenster in den Ordner der Datei und merkt ihren
+    /// Namen fuer die Auswahl vor.
+    ///
+    /// **Der eine Rumpf zweier Befehle**: „Ordner der angezeigten Datei
+    /// zeigen" (still) und „Zum angezeigten Bild springen" (meldend, C4.4 und
+    /// C4.7 des Spec der Bildfolge). Die Meldung entsteht erst am Ende des
+    /// Lesevorgangs, weil erst dann feststeht, ob das Foto ausgefiltert ist
+    /// oder fehlt; hier wird nichts vorhergesagt.
+    fn zum_eintrag_springen(&self, datei: &Path, meldung: Wunschmeldung) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
         // Ein Pfad ohne Elternteil ist die Wurzel selbst: der Ordner der Datei
         // `/x` ist `/`. `Path::parent` liefert dafuer `None`, und das ist kein
         // Fehler, sondern das Ende des Aufstiegs — eine Meldung waere hier
@@ -4713,15 +4735,33 @@ impl Anwendungsdelegierter {
         let (ordner, auswahl) = match datei.parent() {
             Some(eltern) => (
                 eltern.to_path_buf(),
-                datei
-                    .file_name()
-                    .map(|name| name.to_string_lossy().into_owned()),
+                datei.file_name().map(|name| Vormerkung {
+                    name: name.to_string_lossy().into_owned(),
+                    meldung,
+                }),
             ),
-            None => (datei.clone(), None),
+            None => (datei.to_path_buf(), None),
         };
         self.dateifenster(aktiv)
             .quelle()
             .ordner_lesen(&ordner, auswahl);
+    }
+
+    /// Fuehrt die Dateiliste zum Foto, das die Bildfolge zeigt (C4 des Spec
+    /// der Bildfolge).
+    ///
+    /// Steht an der Stelle noch kein geordnetes Foto, springt der Befehl nicht,
+    /// sondern sagt es in der Statuszeile (Entscheidung 16 des Plans). Die
+    /// Sortierung der Liste bleibt, und der Filtertext folgt der Regel jedes
+    /// Ordnerwechsels (C4.3, C4.4). Liefert immer `true`: der Befehl war
+    /// zustaendig.
+    fn zum_bild_springen(&self) -> bool {
+        let Some(foto) = self.vorschau().folgebild() else {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, "Die Bildfolge wird noch vorbereitet.");
+            return true;
+        };
+        self.zum_eintrag_springen(&foto, Wunschmeldung::Melden);
         true
     }
 
@@ -10994,7 +11034,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 17] = [
+    const BEFEHLE: [&str; 18] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -11012,6 +11052,7 @@ mod zweigproben {
         "Werkseinstellungen",
         "BildVor",
         "BildZurueck",
+        "ZumBild",
     ];
 
     #[test]
@@ -11643,6 +11684,33 @@ mod notizordnerproben {
 ///
 /// **Was sie nicht sieht:** einen Griff in einer Hilfsfunktion, die der Rumpf
 /// ruft; sie liest den Rumpf und nicht den Aufrufbaum darunter.
+/// Der Sprung zum Foto und der Ordnersprung teilen ihren Rumpf (Entscheidung
+/// 17 des Plans der Bildfolge): beide rufen `zum_eintrag_springen`, und
+/// keiner der zwei Rumpfe ruft `ordner_lesen` unmittelbar.
+#[cfg(test)]
+mod sprungproben {
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    #[test]
+    fn beide_spruenge_gehen_durch_den_einen_helfer() {
+        let datei = diese_datei();
+        for befehl in [
+            concat!("ordner_der_datei_", "zeigen"),
+            concat!("zum_bild_", "springen"),
+        ] {
+            let rumpf = rumpf(&datei, befehl);
+            assert!(
+                rumpf.contains(concat!("self.zum_eintrag_", "springen(")),
+                "{befehl} ruft den gemeinsamen Helfer nicht"
+            );
+            assert!(
+                !rumpf.contains(concat!(".ordner_", "lesen(")),
+                "{befehl} ruft ordner_lesen unmittelbar"
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod blaetterproben {
     use super::quelltextproben::{diese_datei, rumpf};
