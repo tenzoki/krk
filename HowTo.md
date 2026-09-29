@@ -557,25 +557,34 @@ fusion-Werkbank sind es diese:
 
 | Profil | erkennt | zeigt |
 |---|---|---|
-| die Wurzel | den Ordner mit `.fusion-setup` darin | Projekt, Einrichtungszeitpunkt, fusion-Fassung, Zahl der Runden, offene gemeinsame Defekte, Nachrichten im Forum |
+| die Wurzel | den Ordner mit `.fusion-setup` darin | Projekt, Einrichtungszeitpunkt, fusion-Fassung, Zahl der Arbeitspakete, offene gemeinsame Defekte, Nachrichten im Forum |
 | Projektwurzel mit fusion-Werkbank | den Ordner, der `fusion-workbench` enthält | dieselben Angaben, eine Ebene höher gelesen |
-| eine Runde | einen Ordner unmittelbar unter `circles/`, an seinem Pfad | Titel der Runde, ihren Zustand, die Querverweise, wer sie eingetragen hat, und den Text der Directive |
-| alle Runden | `circles/` | Runden gesamt und die offenen Defekte aller Runden |
+| ein Arbeitspaket | einen Ordner unmittelbar unter `work-packages/`, an seinem Pfad | Titel des Arbeitspakets, seinen Status, die Querverweise, wer es eingetragen hat, und den Text der Directive |
+| alle Arbeitspakete | `work-packages/` | Arbeitspakete gesamt und die offenen Defekte aller Arbeitspakete |
 | der gemeinsame Speicher | `shared/` | je Unterspeicher die Zahl der Datensätze und das jüngste Datum, bei Verläufen und Untersuchungen nur die Zahl |
 | ein Speicher | einen der Unterspeicher | Zahl der Datensätze und die jüngsten davon |
 | ein Defektspeicher | `issues/` | Datensätze gesamt, offen, geschlossen, zurückgestellt, und die jüngsten davon |
 | der Ablagespeicher | `archive/` | Zahl der Läufe und das Datum der letzten Ablage |
 
 Praktisch heißt das: ein Klick auf den Projektordner beantwortet „wie viele
-Runden gibt es, wie viele Defekte sind offen, und liegt eine Nachricht", ein
-Klick auf einen Circle-Ordner beantwortet „was war die Directive und wie weit
-ist sie", und ein Klick auf `issues/` beantwortet „wie viel liegt hier offen".
+Arbeitspakete gibt es, wie viele Defekte sind offen, und liegt eine Nachricht",
+ein Klick auf den Ordner eines Arbeitspakets beantwortet „was war die Directive
+und wie weit ist sie", und ein Klick auf `issues/` beantwortet „wie viel liegt
+hier offen".
+
+Die Profile folgen den Ordnernamen ab fusion 12: `work-packages/`, `plans/` und
+`consultations/`. Eine Werkbank, die ihre Speicher noch unter den Namen von
+vor fusion 12 führt, erkennen sie an diesen Stellen nicht, und die Vorschau
+zeigt dort die Metadaten; `/fusion:migrate` benennt die Ordner um.
 
 **Und die Einschränkung von oben gilt hier:** neue Profile einer neuen
 KRK-Fassung kommen nicht von selbst. Dass es welche gibt, meldet KRK beim ersten
-Start der neuen Fassung, und „Neuerungen anzeigen" nennt sie beim Namen; der Weg
-zu ihnen steht in `README.md` unter „Neuerungen an den eigenen Dateien
-übernehmen".
+Start der neuen Fassung, und „Neuerungen anzeigen" nennt sie beim Namen. Wer
+schon eine eigene `readers.toml` hat, sieht die umbenannten Profile erst, wenn
+er KRK beendet, die Datei **beiseitelegt** und KRK neu startet; sie entsteht
+dann neu aus der Auslieferungsfassung, und eigene Zeilen holt man sich aus der
+beiseitegelegten zurück. Der Weg im Einzelnen steht oben unter den Neuerungen
+und in `README.md` unter „Neuerungen an den eigenen Dateien übernehmen".
 
 ---
 

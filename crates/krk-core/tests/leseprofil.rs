@@ -2960,7 +2960,7 @@ fn eine_verknuepfung_auf_einen_ordner_bekommt_keine_zaehlzeilen() {
 ///
 /// Ein Pfad und kein blosser Name, weil das mitgelieferte Profil genau auf
 /// diesen Pfad sieht; der Grund steht bei [`runde`].
-const RUNDE_IM_PRUEFORDNER: &str = "fusion-workbench/circles/260824-0530-eine-runde";
+const RUNDE_IM_PRUEFORDNER: &str = "fusion-workbench/work-packages/260824-0530-eine-runde";
 
 /// Ein Rundenverzeichnis in der Gestalt dieser Werkbank, mit vollem Bestand.
 ///
@@ -3078,7 +3078,7 @@ fn werkbankbestand(wurzel: &Path) {
         r#"{"setup_at":"260801-0900","setup_pwd":"/Users/k/krk","plugin_version":"5.3.1"}"#,
     );
 
-    let circles = wurzel.join("circles");
+    let circles = wurzel.join("work-packages");
     for nummer in 0..3 {
         std::fs::create_dir_all(circles.join(format!("2608{nummer:02}-eine-runde")))
             .expect("das Circle-Verzeichnis laesst sich nicht anlegen");
@@ -4200,7 +4200,7 @@ fn die_mitgelieferten_profile_bleiben_unter_den_zahlen_ihrer_abnahmekriterien() 
             "Projekt",
             "Eingerichtet",
             "fusion-Fassung",
-            "Runden",
+            "Arbeitspakete",
             "Offene Defekte, gemeinsam",
             "Nachrichten"
         ],
@@ -4337,7 +4337,7 @@ fn die_mitgelieferten_profile_bleiben_unter_den_zahlen_ihrer_abnahmekriterien() 
         projektorte,
         [
             "fusion-workbench",
-            "fusion-workbench/circles",
+            "fusion-workbench/work-packages",
             "fusion-workbench/shared/issues",
             "fusion-workbench/shared/forum"
         ],
@@ -4565,7 +4565,7 @@ fn ohne_die_setup_datei_fallen_allein_die_drei_feldzeilen_der_projektwurzel() {
             "Projekt",
             "Eingerichtet",
             "fusion-Fassung",
-            "Runden",
+            "Arbeitspakete",
             "Offene Defekte, gemeinsam",
             "Nachrichten"
         ],
@@ -4582,7 +4582,7 @@ fn ohne_die_setup_datei_fallen_allein_die_drei_feldzeilen_der_projektwurzel() {
             ("Eingerichtet", true),
             ("fusion-Fassung", true),
             // Die drei Zaehlungszeilen, die sie nicht nennen.
-            ("Runden", false),
+            ("Arbeitspakete", false),
             ("Offene Defekte, gemeinsam", false),
             ("Nachrichten", false),
         ],
@@ -4629,7 +4629,7 @@ fn die_mitgelieferten_profile_greifen_ausserhalb_einer_werkbank_nicht() {
     let fremd = Pruefordner::neu("c5-9-fremder-ordner");
     fremd.datei("Notizen.md", "# Notizen\n");
     fremd.datei(".versteckt", "");
-    for name in ["issues", "decisions", "planning", "circles", "archive"] {
+    for name in ["issues", "decisions", "plans", "work-packages", "archive"] {
         let unterordner = fremd.ordner(name);
         schreiben(&unterordner, "260906-1200_o_ein Datensatz.md", "Text\n");
     }
@@ -4637,7 +4637,7 @@ fn die_mitgelieferten_profile_greifen_ausserhalb_einer_werkbank_nicht() {
     for ordner in [
         fremd.pfad().to_path_buf(),
         fremd.unter("issues"),
-        fremd.unter("circles"),
+        fremd.unter("work-packages"),
         fremd.unter("archive"),
     ] {
         assert!(

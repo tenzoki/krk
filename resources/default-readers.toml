@@ -19,8 +19,8 @@
 # war.
 #
 # Die Profile unten beschreiben zwei Werkbänke. Die von fusion, das seine
-# Arbeit in Runden schneidet und den Stand jedes Datensatzes als Marker im
-# Dateinamen trägt, und die von flight, das dieselben Arten von Datensätzen
+# Arbeit in Arbeitspakete schneidet und den Stand der meisten Datensätze als
+# Marker im Dateinamen trägt, und die von flight, das dieselben Arten von Datensätzen
 # flach an der Wurzel führt und keine Marker kennt. Wer mit keinem von beiden
 # arbeitet, kann alle Profile ersetzen und verliert nichts.
 #
@@ -87,7 +87,7 @@
 # Jeder Baustein darf `ordner` nennen, einen Unterordner des erkannten Ordners.
 # Ohne die Angabe ist der erkannte Ordner selbst gemeint. Abgewiesen werden ein
 # absoluter Pfad, ein `.`, ein `..` sowie ein doppelter und ein ABSCHLIESSENDER
-# Schrägstrich: `ordner = "planning/"` ist keine Verschreibung, sondern eine
+# Schrägstrich: `ordner = "plans/"` ist keine Verschreibung, sondern eine
 # gewöhnliche Schreibgewohnheit, und kostet die Zeile trotzdem ihren Baustein.
 # Was aufgelöst doch aus dem Ordner herausführt, wird ebenso abgewiesen: eine
 # Zusammenfassung liest nie außerhalb des Ordners, über den sie spricht.
@@ -103,8 +103,8 @@
 #
 # Damit beantwortet eine Zeile eine Frage über den ganzen Bestand einer Ebene
 # darunter, ohne dass ihre Kosten mit dem Bestand wachsen: das Verzeichnis
-# aller Runden zählt seine Zustände so, gleich ob es zwanzig Runden führt oder
-# zweihundert.
+# aller Arbeitspakete zählt die offenen Defekte darin so, gleich ob es zwanzig
+# Arbeitspakete führt oder zweihundert.
 #
 # Vier Dinge gehören dazu, jedes mit seinem Grund:
 #
@@ -207,7 +207,7 @@
 #
 #   [[profil.zeile]]
 #   beschriftung = "Spec"
-#   vorhandensein = { ordner = "planning", muster = '_._spec-' }
+#   vorhandensein = { ordner = "plans", muster = '_._spec-' }
 #
 # Zur Verankerung: `datei`, `kennzeichen`, `pfad` und das `muster` der übrigen
 # Bausteine laufen gegen einen einzelnen Namen oder einen Pfad, also gegen eine
@@ -267,7 +267,7 @@
 #
 # EIN ORT KOSTET GENAU EINEN LESELAUF, gleich wie viele Zeilen ihn nennen: der
 # erkannte Ordner ebenso wie jeder Unterordner und jeder Platzhalterlauf. Zwei
-# Zeilen über `planning` teilen sich also eine Lesung, und die Zahl der
+# Zeilen über `plans` teilen sich also eine Lesung, und die Zahl der
 # Leseläufe eines Profils ist die Zahl der VERSCHIEDENEN Orte darin — PLUS
 # EINEN LAUF FÜR DIE ERKENNUNG, wenn das Profil über sein `kennzeichen`
 # erkannt wurde und keine seiner Zeilen den erkannten Ordner selbst nennt.
@@ -294,8 +294,8 @@
 # Datei, `juengste` mit `zeigt = "titel"` deren `anzahl`; `zeigt = "datum"`,
 # `zaehlung` und `vorhandensein` lesen keine. Die Zahl der Öffnungen eines
 # Profils ist damit die Zahl der VERSCHIEDENEN Dateien, die seine Zeilen
-# lesen. Die fünf Feldzeilen des Rundenprofils unten nennen alle denselben
-# Datensatz der Runde und teilen sich dessen eine Öffnung; eine Feldzeile und
+# lesen. Die fünf Feldzeilen des Arbeitspaketprofils unten nennen alle
+# denselben Datensatz des Arbeitspakets und teilen sich dessen eine Öffnung; eine Feldzeile und
 # ein Titel der jüngsten zehn teilen sie sich ebenso, wenn sie auf dieselbe
 # Datei treffen.
 #
@@ -395,8 +395,8 @@ kennzeichen = '^\.fusion-setup$'
   feld = { datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
 
   [[profil.zeile]]
-  beschriftung = "Runden"
-  zaehlung = { ordner = "circles" }
+  beschriftung = "Arbeitspakete"
+  zaehlung = { ordner = "work-packages" }
 
   [[profil.zeile]]
   beschriftung = "Offene Defekte, gemeinsam"
@@ -406,19 +406,24 @@ kennzeichen = '^\.fusion-setup$'
   beschriftung = "Nachrichten"
   zaehlung = { ordner = "shared/forum", muster = '\.md$' }
 
-# Ein Speicher, gemeinsam oder in einer Runde.
+# Ein Speicher, gemeinsam oder in einem Arbeitspaket.
 #
-# Ein Profil für die neun Speichernamen unter `shared/` und die fünf, die
-# daneben in jeder Runde stehen. Vier der neun — `checkouts`, `consult`,
-# `investigations` und `memos` — gibt es nach den Konventionen der Werkbank
-# allein unter `shared/`; sie stehen in der Aufzählung, weil das Muster für
-# beide Orte dasselbe ist. `checkouts` steht dort seit fusion 11 an der Stelle
-# von `backlog`: ein Vorhaben ist kein Datensatz in einem Speicher mehr,
-# sondern ein eigenes Verzeichnis unter `circles`, und der alte Speicher ist
-# weggefallen. Ein Eintrag heißt dort `6c11b1f2.md` und trägt als Titel
-# `Checkout 6c11b1f2`; die zehn Titel sind damit die Liste der Arbeitskopien. Wie viele Ordner das trifft, sagt der Bestand und
-# nicht diese Zeile: die Zahl wächst mit jeder Runde. Der Defektspeicher steht
+# Ein Profil für die zehn Speichernamen unter `shared/` und die sechs, die
+# daneben in jedem Arbeitspaket stehen. Vier der zehn — `checkouts`,
+# `consultations`, `investigations` und `memos` — gibt es nach den
+# Konventionen der Werkbank allein unter `shared/`; sie stehen in der
+# Aufzählung, weil das Muster für beide Orte dasselbe ist. `checkouts` steht
+# dort an der Stelle von `backlog`: ein Vorhaben ist kein Datensatz in einem
+# Speicher mehr, sondern ein eigenes Verzeichnis unter `work-packages`, und der
+# alte Speicher ist eingefroren. Ein Eintrag heißt dort `6c11b1f2.md` und trägt
+# als Titel `Checkout 6c11b1f2`; die zehn Titel sind damit die Liste der
+# Arbeitskopien. Wie viele Ordner das trifft, sagt der Bestand und nicht diese
+# Zeile: die Zahl wächst mit jedem Arbeitspaket. Der Defektspeicher steht
 # darunter als eigenes Profil, weil er nach Markern aufschlüsselt.
+#
+# `discussions` trägt Marker wie ein Defektspeicher, aber nur zwei, `_o_` für
+# eine Diskussion, die noch läuft oder abgebrochen ist, und `_c_` für eine
+# geschlossene; die zwei Zeilen hier genügen ihm.
 #
 # Der Entscheidungsspeicher `decisions` steht in derselben Aufzählung und trägt
 # damit dieselben zwei Zeilen wie ein Analysespeicher, obwohl seine fünf Marker
@@ -427,7 +432,7 @@ kennzeichen = '^\.fusion-setup$'
 # Defektspeichers darunter.
 [[profil]]
 name = "fusion-Werkbank: ein Speicher"
-pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|checkouts|consult|decisions|history|investigations|memos|planning|reviews)$'
+pfad = 'fusion-workbench/(shared|work-packages/[^/]+)/(analyses|checkouts|consultations|decisions|discussions|history|investigations|memos|plans|reviews)$'
 
   [[profil.zeile]]
   beschriftung = "Datensätze"
@@ -437,7 +442,7 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|checkouts|consult|deci
   beschriftung = "Die jüngsten zehn"
   juengste = { muster = '\.md$', anzahl = 10 }
 
-# Ein Defektspeicher, gemeinsam oder in einer Runde.
+# Ein Defektspeicher, gemeinsam oder in einem Arbeitspaket.
 #
 # Der Marker im Dateinamen trägt den Stand, und das Vokabular der Werkbank hat
 # vier davon: `_o_` offen, `_p_` in Arbeit, `_c_` geschlossen, `_d_`
@@ -450,7 +455,7 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/(analyses|checkouts|consult|deci
 # führt, wird als Differenz sichtbar.
 [[profil]]
 name = "fusion-Werkbank: ein Defektspeicher"
-pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
+pfad = 'fusion-workbench/(shared|work-packages/[^/]+)/issues$'
 
   [[profil.zeile]]
   beschriftung = "Datensätze"
@@ -492,7 +497,7 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
 # `shared/` führt. Das ist der Zuschnitt des Speicherprofils oben, das aus
 # demselben Grund vier Namen für beide Orte führt, die es nur unter `shared/`
 # gibt: ein Pfadmuster, das nicht trifft, kostet keinen Systemaufruf, und ein
-# Speicher, der einmal doch in einer Runde stünde, verlöre sonst seine
+# Speicher, der einmal doch in einem Arbeitspaket stünde, verlöre sonst seine
 # Zusammenfassung.
 #
 # DIE TITELZEILE DIESER EINTRÄGE STEHT OHNE RAUTE, und das ist kein Sonderfall:
@@ -512,7 +517,7 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/issues$'
 # und `zeigt = "datum"` lesen aus dem Verzeichniseintrag und öffnen nichts.
 [[profil]]
 name = "fusion-Werkbank: der Forum-Speicher"
-pfad = 'fusion-workbench/(shared|circles/[^/]+)/forum$'
+pfad = 'fusion-workbench/(shared|work-packages/[^/]+)/forum$'
 
   [[profil.zeile]]
   beschriftung = "Nachrichten"
@@ -526,14 +531,15 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/forum$'
   beschriftung = "Die jüngsten zehn"
   juengste = { muster = '\.md$', anzahl = 10 }
 
-# Das Verzeichnis aller Runden.
+# Das Verzeichnis aller Arbeitspakete.
 #
 # ZWEI ZEILEN, UND DIE SECHS ZUSTANDSZEILEN SIND GEFALLEN. Bis fusion 10 stand
 # der Zustand einer Runde als Marker im DATEINAMEN ihres Datensatzes, eine
 # Ebene tiefer (`<runde>/_X_circle.md`), und sechs Zählzeilen mit
 # `ordner = "*"` schlüsselten ihn über alle Runden hinweg auf. Seit Fassung 11
-# heißt der Datensatz wie sein Verzeichnis, trägt keinen Marker mehr und führt
-# den Zustand als Kopfzeile `**Status:**` in seinem Inneren.
+# heißt der Datensatz eines Arbeitspakets wie sein Verzeichnis, trägt keinen
+# Marker mehr und führt den Zustand als Kopfzeile `**Status:**` in seinem
+# Inneren.
 #
 # MIT DEN VIER BAUSTEINEN IST DIE AUFSCHLÜSSELUNG DAMIT NICHT MEHR ZU HABEN,
 # und das ist keine Lücke dieser Datei, sondern die Grenze des Platzhalters:
@@ -543,22 +549,23 @@ pfad = 'fusion-workbench/(shared|circles/[^/]+)/forum$'
 # zählte, stünde an einer umgestellten Werkbank auf null, und null ist hier
 # keine Auskunft, sondern eine falsche.
 #
-# WER DEN ZUSTAND EINER EINZELNEN RUNDE BRAUCHT, wählt deren Verzeichnis aus:
-# das Profil „fusion-Werkbank: eine Runde" weiter unten liest die Kopfzeile.
+# WER DEN ZUSTAND EINES EINZELNEN ARBEITSPAKETS BRAUCHT, wählt dessen
+# Verzeichnis aus: das Profil „fusion-Werkbank: ein Arbeitspaket" weiter unten
+# liest die Kopfzeile.
 #
-# ZWEI LESELÄUFE, gleich wie viele Runden darin stehen. Die Zeile „Runden"
-# nennt das Verzeichnis selbst, die Defektzeile nennt `*/issues` und kostet den
+# ZWEI LESELÄUFE, gleich wie viele Arbeitspakete darin stehen. Die Zeile
+# „Arbeitspakete" nennt das Verzeichnis selbst, die Defektzeile nennt `*/issues` und kostet den
 # zweiten; die Erkennung über `pfad` kostet nichts dazu.
 [[profil]]
-name = "fusion-Werkbank: alle Runden"
-pfad = 'fusion-workbench/circles$'
+name = "fusion-Werkbank: alle Arbeitspakete"
+pfad = 'fusion-workbench/work-packages$'
 
   [[profil.zeile]]
-  beschriftung = "Runden"
+  beschriftung = "Arbeitspakete"
   zaehlung = { }
 
   [[profil.zeile]]
-  beschriftung = "Offene Defekte, alle Runden"
+  beschriftung = "Offene Defekte, alle Arbeitspakete"
   zaehlung = { ordner = "*/issues", muster = '_o_.*\.md$' }
 
 # Der Ablagespeicher.
@@ -590,7 +597,7 @@ pfad = 'fusion-workbench/circles$'
 # sähe, schlösse auf drei abgelegte Datensätze je Lauf, und es sind rund
 # dreiunddreißig — 167 Dateien, mit dem `find` oben gezählt. Sie setzte
 # außerdem voraus, dass jeder Lauf seinen Bestand unter `shared/` ablegt; ein
-# Lauf, der eine Runde mitnimmt, fiele aus der Zählung. Eine Zeile, die in die
+# Lauf, der ein Arbeitspaket mitnimmt, fiele aus der Zählung. Eine Zeile, die in die
 # falsche Richtung gelesen wird, ist schlechter als keine.
 #
 # Die sachlich richtige Antwort wäre eine Tiefenangabe am Baustein. Sie ist ein
@@ -612,17 +619,24 @@ pfad = 'fusion-workbench/archive$'
 
 # Der gemeinsame Speicher.
 #
-# Er führt zehn Unterspeicher. Acht bekommen zwei Zeilen: wie viele Datensätze
-# darin stehen und wann zuletzt einer geschrieben wurde. Zwei bekommen allein
-# die Zählzeile, und der übernächste Absatz sagt, warum. Achtzehn Zeilen, aber
-# nur ZEHN Leseläufe, denn die Zeilen eines Unterspeichers nennen denselben Ort
-# und teilen sich seine Lesung. Die Erkennung über `pfad` kostet keinen Lauf
-# dazu. Von den zwölf erlaubten Läufen bleiben damit zwei übrig; wer einen
-# elften Unterspeicher aufnimmt, rechnet nach, was er kostet.
+# Zehn seiner Unterspeicher stehen hier. Acht bekommen zwei Zeilen: wie viele
+# Datensätze darin stehen und wann zuletzt einer geschrieben wurde. Zwei
+# bekommen allein die Zählzeile, und der übernächste Absatz sagt, warum.
+# Achtzehn Zeilen, aber nur ZEHN Leseläufe, denn die Zeilen eines
+# Unterspeichers nennen denselben Ort und teilen sich seine Lesung. Die
+# Erkennung über `pfad` kostet keinen Lauf dazu. Von den zwölf erlaubten Läufen
+# bleiben damit zwei übrig; wer einen elften Unterspeicher aufnimmt, rechnet
+# nach, was er kostet.
+#
+# ZWEI UNTERSPEICHER STEHEN NICHT HIER, `forum` und `discussions`, und beide
+# aus dem Grund des Haushalts: ein elfter Ort nähme den vorletzten Lauf.
+# `forum` ist dafür im Wurzelprofil oben verdichtet, wo es auffällt;
+# `discussions` beantwortet das Profil „ein Speicher", sobald man den Ordner
+# selbst auswählt.
 #
 # `checkouts` STEHT AN DER STELLE VON `backlog`, und das ist ein Tausch und
-# keine Erweiterung: der Ideenspeicher ist mit fusion 11 weggefallen, weil ein
-# Vorhaben seitdem ein eigenes Verzeichnis unter `circles` ist, und
+# keine Erweiterung: der Ideenspeicher ist mit fusion 11 eingefroren, weil ein
+# Vorhaben seitdem ein eigenes Verzeichnis unter `work-packages` ist, und
 # `checkouts` ist neu und führt eine Datei je Arbeitskopie, die auf dieser
 # Werkbank arbeitet. Seine Datumszeile ist nicht eingefroren: sie zeigt, wann
 # sich eine Arbeitskopie zuletzt eingetragen oder aufgefrischt hat.
@@ -662,11 +676,11 @@ pfad = 'fusion-workbench/shared$'
 
   [[profil.zeile]]
   beschriftung = "Beratungen"
-  zaehlung = { ordner = "consult", muster = '\.md$' }
+  zaehlung = { ordner = "consultations", muster = '\.md$' }
 
   [[profil.zeile]]
   beschriftung = "Beratungen, zuletzt"
-  juengste = { ordner = "consult", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+  juengste = { ordner = "consultations", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
   beschriftung = "Entscheidungen"
@@ -702,11 +716,11 @@ pfad = 'fusion-workbench/shared$'
 
   [[profil.zeile]]
   beschriftung = "Planung"
-  zaehlung = { ordner = "planning", muster = '\.md$' }
+  zaehlung = { ordner = "plans", muster = '\.md$' }
 
   [[profil.zeile]]
   beschriftung = "Planung, zuletzt"
-  juengste = { ordner = "planning", muster = '\.md$', anzahl = 1, zeigt = "datum" }
+  juengste = { ordner = "plans", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
   [[profil.zeile]]
   beschriftung = "Durchsichten"
@@ -716,26 +730,26 @@ pfad = 'fusion-workbench/shared$'
   beschriftung = "Durchsichten, zuletzt"
   juengste = { ordner = "reviews", muster = '\.md$', anzahl = 1, zeigt = "datum" }
 
-# Eine einzelne Runde.
+# Ein einzelnes Arbeitspaket.
 #
-# ERKANNT ÜBER DEN PFAD UND NICHT MEHR ÜBER DEN NAMEN DES DATENSATZES. Bis
-# fusion 10 hieß er `_X_circle.md` und trug den Zustand als Marker; seit
-# Fassung 11 heißt er wie sein Verzeichnis und trägt keinen. Ein `kennzeichen`
-# auf den alten Namen sähe eine heutige Runde nicht mehr; das Pfadmuster sieht
-# beide Formen und damit auch eine Werkbank, die beide nebeneinander führt —
-# den gewöhnlichen Fall nach einer Umstellung, denn die vorhandenen Datensätze
+# ERKANNT ÜBER DEN PFAD UND NICHT ÜBER DEN NAMEN DES DATENSATZES. Bis fusion 10
+# hieß er `_X_circle.md` und trug den Zustand als Marker; seit Fassung 11
+# heißt er wie sein Verzeichnis und trägt keinen. Ein `kennzeichen` auf den
+# alten Namen sähe ein heutiges Arbeitspaket nicht; das Pfadmuster sieht beide
+# Formen und damit auch eine Werkbank, die beide nebeneinander führt — den
+# gewöhnlichen Fall nach einer Umstellung, denn die vorhandenen Datensätze
 # werden nicht umbenannt.
 #
-# DAMIT TRIFFT ERSTMALS EIN PFADMUSTER DIESER DATEI EIN RUNDENVERZEICHNIS, und
-# dieses Profil kann im ersten Durchgang überholt werden. Heute wird es das
-# nicht: `fusion-workbench/circles$` verlangt das Verzeichnis ALLER Runden, die
-# drei Speicherprofile verlangen eine Ebene mehr, und keines der übrigen nennt
-# `circles`. Wer über dieser Stelle ein Profil mit einem `pfad` einfügt, prüft
-# es nach.
+# DAMIT TRIFFT EIN PFADMUSTER DIESER DATEI EIN PAKETVERZEICHNIS, und dieses
+# Profil kann im ersten Durchgang überholt werden. Heute wird es das nicht:
+# `fusion-workbench/work-packages$` verlangt das Verzeichnis ALLER
+# Arbeitspakete, die drei Speicherprofile verlangen eine Ebene mehr, und keines
+# der übrigen nennt `work-packages`. Wer über dieser Stelle ein Profil mit
+# einem `pfad` einfügt, prüft es nach.
 #
 # DER ZUSTAND STEHT ALS EINE ZEILE UND NICHT MEHR ALS VIER. Sie heißt `Status`
 # nach der Kopfzeile, die sie liest, und `feld` gibt diese Kopfzeile
-# `**Status:**` des Datensatzes wieder, wie sie dasteht: an einem Datensatz der
+# `**Status:**` des Datensatzes wieder, wie sie dasteht: an einem Datensatz ab
 # Fassung 11 das heutige Vokabular, an einem älteren das damalige. Das ist an
 # einer gemischten Werkbank die ehrlichere Auskunft als vier Ja/Nein-Zeilen,
 # die den Zustand in ein Vokabular übersetzen, das der Datensatz selbst nicht
@@ -750,10 +764,10 @@ pfad = 'fusion-workbench/shared$'
 #
 # VIER ZEILEN SIND HIER GEFALLEN: „Spec", „Plan", „Entscheidungen" und „Die
 # jüngsten zehn Verläufe". Der Nutzer hat am 260916 an einem Tor entschieden,
-# dass die Vorschau den Kopf des Rundendatensatzes und seine Directive zeigt
+# dass die Vorschau den Kopf des Paketdatensatzes und seine Directive zeigt
 # und sonst nichts. Ob ein Spec und ein Plan stehen, wie viele Entscheidungen
-# gefallen sind und was zuletzt im Verlauf abgelegt wurde, liest man seitdem in
-# `planning`, `decisions` und `history` selbst und nicht in der Vorschau.
+# gefallen sind und was zuletzt im Verlauf abgelegt wurde, liest man in
+# `plans`, `decisions` und `history` selbst und nicht in der Vorschau.
 #
 # ZWEI DER FÜNF ZEILEN STEHEN OFT LEER, und das ist die Konvention der Werkbank
 # und kein Schreibfehler in dieser Datei: `**Cross-references:**` und
@@ -771,13 +785,13 @@ pfad = 'fusion-workbench/shared$'
 #
 # EIN LESELAUF, EINE ÖFFNUNG. Gelesen wird allein der erkannte Ordner: jede der
 # fünf Zeilen nennt ihn, keine nennt einen Unterordner, und die Erkennung über
-# `pfad` kostet keinen Lauf. Geöffnet wird allein der Rundendatensatz — alle
+# `pfad` kostet keinen Lauf. Geöffnet wird allein der Paketdatensatz — alle
 # fünf Feldzeilen nennen dieselbe Datei und teilen sich deren eine Öffnung.
 # Damit ist dieses Profil nicht mehr das mit den meisten Öffnungen; das war es,
 # solange die Verlaufszeile zehn Titel las.
 [[profil]]
-name = "fusion-Werkbank: eine Runde"
-pfad = 'fusion-workbench/circles/[^/]+$'
+name = "fusion-Werkbank: ein Arbeitspaket"
+pfad = 'fusion-workbench/work-packages/[^/]+$'
 
   [[profil.zeile]]
   beschriftung = "Titel"
@@ -842,8 +856,8 @@ kennzeichen = '^fusion-workbench$'
   feld = { ordner = "fusion-workbench", datei = '^\.fusion-setup$', feldmuster = '"plugin_version":"([^"]*)"' }
 
   [[profil.zeile]]
-  beschriftung = "Runden"
-  zaehlung = { ordner = "fusion-workbench/circles" }
+  beschriftung = "Arbeitspakete"
+  zaehlung = { ordner = "fusion-workbench/work-packages" }
 
   [[profil.zeile]]
   beschriftung = "Offene Defekte, gemeinsam"
@@ -858,12 +872,12 @@ kennzeichen = '^fusion-workbench$'
 # ============================================================================
 #
 # flight ist die kleinere Schwester von fusion: dieselbe Art von Datensätzen,
-# aber ohne Runden und ohne Zustandsmarker im Dateinamen. Die Speicher liegen
+# aber ohne Arbeitspakete und ohne Zustandsmarker im Dateinamen. Die Speicher liegen
 # flach an der Wurzel der Werkbank, und ein Datensatz heißt schlicht
 # `260528-14-40-route-option-a.md`. Jede Zeile, die bei fusion nach Markern
 # aufschlüsselt, hat hier also keinen Gegenstand, und deshalb stehen unten vier
 # Profile und nicht acht: der Defektspeicher mit seiner Aufschlüsselung nach
-# Markern und die zwei Rundenprofile haben hier nichts zu zeigen, und die
+# Markern und die zwei Arbeitspaketprofile haben hier nichts zu zeigen, und die
 # Aufgabe des gemeinsamen Speichers fällt dem Wurzelprofil zu, weil eine
 # flight-Werkbank kein `shared/` hat und ihre Speicher flach führt.
 #
