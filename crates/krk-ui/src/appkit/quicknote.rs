@@ -278,10 +278,10 @@ impl Quicknote {
         text.setMinSize(NSSize::ZERO);
         text.setMaxSize(NSSize::new(f64::MAX, f64::MAX));
         text.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
-        text.setFont(Some(&textmerkmale::grundschrift(
-            Ansicht::Roh,
-            Darstellungsart::EinfacherText,
-        )));
+        // Schrift und Grundabsatz als Vorgabe: der Puffer ist anfangs leer,
+        // und ohne Vorgabe tabbte getippter Text auf die 28-Punkt-Stopps des
+        // Systems (siehe `textmerkmale::grund_vorgeben`).
+        textmerkmale::grund_vorgeben(&text, Ansicht::Roh, Darstellungsart::EinfacherText);
         // Die dynamischen Systemfarben ziehen den Wechsel des
         // Erscheinungsbildes selbst nach; ein eigener Nachzug entsteht nicht.
         text.setTextColor(Some(&NSColor::textColor()));

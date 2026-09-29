@@ -99,11 +99,17 @@
 //! [`tastenhinweis`] dem Nutzer ansagt, und die Escape-Taste faellt wie ueberall
 //! auf "Abbrechen".
 //!
-//! Zwei Antworten bleiben im Feld ohne Taste: das Ersetzen und
-//! "Umbenennen" liegen auf Cmd+Return und Opt+Return, und ob der Feldeditor die
-//! beiden durchlaesst, ist am laufenden Buendel zu messen und nicht hier zu
-//! behaupten. Erreichbar sind sie in jedem Fall, indem der Nutzer das Feld
-//! wieder verlaesst oder die Maus nimmt.
+//! **Opt+Return loest im Feld "Umbenennen" aus, mit dem getippten Namen.** Der
+//! Feldeditor macht aus der Kombination `insertNewlineIgnoringFieldEditor:`,
+//! und seit `ab8d7db` gibt der Waechter diesen Befehl an die Schaltflaeche auf
+//! [`Taste::EingabeMitWahl`] weiter, sobald [`super::wahlstelle`] eine liefert
+//! ([`super::Blatt::zeigen_mit_wahl`] hinterlegt den Weg); in beiden Gestalten
+//! dieses Blattes ist das "Umbenennen". Das ist Code und keine Messung.
+//! Ungemessen bleibt allein Cmd+Return im Feld, also das Ersetzen: ob der
+//! Feldeditor die Kombination an die Schaltflaeche durchlaesst, ist am
+//! laufenden Buendel zu messen und nicht hier zu behaupten. Erreichbar ist es
+//! in jedem Fall, indem der Nutzer das Feld wieder verlaesst oder die Maus
+//! nimmt.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!

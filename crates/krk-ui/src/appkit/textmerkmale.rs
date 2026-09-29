@@ -107,7 +107,12 @@
 //! `locationForGlyphAtIndex:` an `NSLayoutManager` (`NSLayoutManager.h:91`,
 //! `:173`, `:186`, `:260`), `addLayoutManager:` an `NSTextStorage`
 //! (`NSTextStorage.h:45`) und `replaceCharactersInRange:withString:`
-//! (`NSAttributedString.h:66`), alle ohne eigene Angabe.
+//! (`NSAttributedString.h:66`), alle ohne eigene Angabe. Die Vorgabe an der
+//! Flaeche ([`grund_vorgeben`]) spricht `typingAttributes` und
+//! `setTypingAttributes:` (`NSTextView.h:375`) sowie `defaultParagraphStyle`
+//! (`NSTextView.h:392`) an, beide ohne eigene Angabe, und fuer die Kopie der
+//! Anschlagsmerkmale `mutableCopy` und `setObject:forKey:` an
+//! `NSMutableDictionary` (`NSDictionary.h:102`), ebenso ohne Angabe.
 //!
 //! **Die Wahl der Farbtafel ist die juengste Beruehrung dieser Datei und liegt
 //! immer noch weit unter dem Zielsystem.** `NSAppearance` steht seit macOS 10.9
@@ -130,6 +135,9 @@
 //! `NSStringDrawing`, `NSMutableAttributedString` und `ns_string` stehen im
 //! Absatz zum Grundabsatz, `NSTextContainer`, `NSTextStorage`,
 //! `NSLayoutManager` und `NSParagraphStyle` der Probe weiter oben;
+//! `NSMutableCopying` ist das Protokoll hinter `mutableCopy`
+//! (`NSObject.h:22`) und traegt wie `NSMutableDictionary`
+//! (`NSDictionary.h:99`) keine eigene Angabe;
 //! alle uebrigen tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen
 //! damit seit 10.0.
 
@@ -144,7 +152,8 @@ use objc2_app_kit::{
     NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
 };
 use objc2_foundation::{
-    NSArray, NSDictionary, NSMutableAttributedString, NSNumber, NSRange, NSString, ns_string,
+    NSArray, NSDictionary, NSMutableAttributedString, NSMutableCopying, NSNumber, NSRange,
+    NSString, ns_string,
 };
 
 use crate::editormodell::Ansicht;
@@ -469,6 +478,54 @@ fn grund_legen(speicher: &NSMutableAttributedString, ansicht: Ansicht, art: Dars
     unsafe { speicher.addAttributes_range(&grundmerkmal, ganz) };
 }
 
+/// Setzt Grundschrift und [`grundabsatz`] als Vorgabe einer bearbeitbaren
+/// Flaeche, also auch fuer den naechsten Anschlag (C3).
+///
+/// # Warum neben [`grund_legen`] (Defekt 260929-1141, Quicknote)
+///
+/// [`grund_legen`] beschreibt allein Text, der schon im Speicher steht. Ist
+/// der Speicher leer, setzt es nichts, und getippter Text erbt die
+/// `typingAttributes` der Flaeche, die ohne diese Funktion den Absatzstil des
+/// Systems mit seinen 28-Punkt-Stopps tragen. Das traf die Quicknote immer und
+/// eine leer geoeffnete Datei in der Rohansicht des Editors; in der
+/// Formatansicht holte die Einfaerbung es zufaellig nach.
+///
+/// **Die eine Stelle fuer beide Flaechen**: der Editor ruft sie beim Bau und
+/// bei jedem Nachziehen der Darstellung, die Quicknote beim Bau. Sie setzt die
+/// Schrift mit `setFont:`, damit keine Flaeche die Schrift ohne den Absatz
+/// bekommt, dazu `defaultParagraphStyle` und den Absatzstil der
+/// `typingAttributes`; die uebrigen Anschlagsmerkmale (Farbe) bleiben, siehe
+/// [`anschlagsmerkmale`]. Die Vorschau ist nicht bearbeitbar und braucht sie
+/// nicht. Die Probe `beide_bearbeitbaren_flaechen_nehmen_die_vorgabe_von_hier`
+/// haelt, dass Editor und Quicknote hier hereinrufen und keine von beiden die
+/// Schrift daran vorbei setzt.
+pub fn grund_vorgeben(text: &NSTextView, ansicht: Ansicht, art: Darstellungsart) {
+    let schrift = grundschrift(ansicht, art);
+    text.setFont(Some(&schrift));
+    let stil = grundabsatz(&schrift);
+    text.setDefaultParagraphStyle(Some(&stil));
+    let merkmale = anschlagsmerkmale(&text.typingAttributes(), &stil);
+    // SAFETY: Das Verzeichnis ist das der Flaeche, um einen Absatzstil unter
+    // dessen Namen ergaenzt, und damit ein gueltiges Merkmalsverzeichnis.
+    unsafe { text.setTypingAttributes(&merkmale) };
+}
+
+/// Die Anschlagsmerkmale einer Flaeche mit dem uebergebenen Absatzstil statt
+/// ihres bisherigen; alle uebrigen Merkmale bleiben, wie sie waren.
+///
+/// Eine eigene Funktion, weil sie ohne `NSTextView` pruefbar ist (Modulkopf
+/// der Proben in [`super::editor`]).
+fn anschlagsmerkmale(
+    vorhandene: &NSDictionary<NSString, AnyObject>,
+    stil: &NSMutableParagraphStyle,
+) -> Retained<NSDictionary<NSString, AnyObject>> {
+    let merkmale = vorhandene.mutableCopy();
+    // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils. Es
+    // wird gelesen und nicht geschrieben.
+    merkmale.insert(unsafe { NSParagraphStyleAttributeName }, stil);
+    Retained::into_super(merkmale)
+}
+
 /// Die Grundschrift einer Ansicht: die Schrift, in der jede Stelle steht, die
 /// keine eigene Auszeichnung traegt (C3).
 ///
@@ -482,9 +539,10 @@ fn grund_legen(speicher: &NSMutableAttributedString, ansicht: Ansicht, art: Dars
 /// Welche Groesse dabei die Grundlage ist, sagt [`grundmerkmale`], und diese
 /// Funktion rechnet sie nicht nach.
 ///
-/// **Sie steht hier und nicht bei ihren drei Aufrufern.** Der Editor setzt sie
-/// mit `setFont:` an der Flaeche und damit auch fuer den naechsten Anschlag —
-/// beim Bau der Flaeche und bei jedem Nachziehen der Darstellung —, die Vorschau
+/// **Sie steht hier und nicht bei ihren Aufrufern.** Editor und Quicknote setzen
+/// sie ueber [`grund_vorgeben`] an der Flaeche und damit auch fuer den naechsten
+/// Anschlag — der Editor beim Bau der Flaeche und bei jedem Nachziehen der
+/// Darstellung —, die Vorschau
 /// ebenso beim Bau ihrer Textanzeige, und [`zuruecksetzen`] setzt sie als
 /// Merkmal ueber den ganzen Textspeicher, um eine weggefallene Auszeichnung
 /// zurueckzunehmen. Zwei Rechnungen daneben waeren die erste Gelegenheit, dass
@@ -765,6 +823,81 @@ mod proben {
             (stil.headIndent() - 2.0 * LISTENEINZUG).abs() < f64::EPSILON,
             "der Einzug selbst ist verloren gegangen"
         );
+    }
+
+    /// Die Anschlagsmerkmale tragen nach [`anschlagsmerkmale`] den
+    /// [`grundabsatz`] und behalten jedes andere Merkmal (Defekt 260929-1141,
+    /// Quicknote und leer geoeffnete Datei).
+    ///
+    /// Ohne `NSTextView`, aus demselben Grund wie [`gelegt`]; dass beide
+    /// Flaechen ueberhaupt hier hereinrufen, haelt die Probe darunter.
+    #[test]
+    fn die_anschlagsmerkmale_tragen_den_grundabsatz_und_behalten_den_rest() {
+        let schrift = grundschrift(Ansicht::Roh, Darstellungsart::EinfacherText);
+        let schritt = TABSPALTEN * leerzeichenbreite(&schrift);
+        let vorhandene = schriftmerkmal(&schrift);
+        let merkmale = anschlagsmerkmale(&vorhandene, &grundabsatz(&schrift));
+        // SAFETY: Zwei Fremdsymbole von AppKit, Merkmalsnamen; nur gelesen.
+        let (absatzname, schriftname) =
+            unsafe { (NSParagraphStyleAttributeName, NSFontAttributeName) };
+        let stil = merkmale
+            .objectForKey(absatzname)
+            .expect("die Anschlagsmerkmale tragen keinen Absatzstil")
+            .downcast::<NSParagraphStyle>()
+            .expect("unter dem Namen des Absatzstils steht ein Absatzstil");
+        assert_eq!(
+            stil.tabStops().count(),
+            0,
+            "der Anschlag fuehrt feste Stopps"
+        );
+        assert!(
+            (stil.defaultTabInterval() - schritt).abs() < f64::EPSILON,
+            "der Anschlag traegt den Schritt {} statt {schritt}",
+            stil.defaultTabInterval()
+        );
+        assert!(
+            merkmale.objectForKey(schriftname).is_some(),
+            "die Schrift des Anschlags ist verloren gegangen"
+        );
+        assert_eq!(
+            merkmale.count(),
+            2,
+            "die Vorgabe hat mehr als den Absatz geaendert"
+        );
+    }
+
+    /// Editor und Quicknote nehmen Schrift und Grundabsatz aus
+    /// [`grund_vorgeben`] und setzen die Schrift nirgends daran vorbei.
+    ///
+    /// Eine Quelltextprobe, weil die Wirkung an einer `NSTextView` haengt, die
+    /// unter `libtest` nicht zu bauen ist. **Was sie faengt:** einen
+    /// zurueckkehrenden `setFont:` mit der Grundschrift an einer der beiden
+    /// Flaechen, der die Schrift ohne den Absatz setzte. **Was sie nicht
+    /// sieht:** eine dritte bearbeitbare Flaeche, die weder das eine noch das
+    /// andere tut.
+    #[test]
+    fn beide_bearbeitbaren_flaechen_nehmen_die_vorgabe_von_hier() {
+        let flaechen = [
+            ("editor.rs", include_str!("editor.rs"), 2),
+            ("quicknote.rs", include_str!("quicknote.rs"), 1),
+        ];
+        for (name, quelle, erwartet) in flaechen {
+            let ohne_proben = quelle
+                .split("\n#[cfg(test)]\nmod ")
+                .next()
+                .unwrap_or(quelle);
+            let rufe = ohne_proben
+                .matches("textmerkmale::grund_vorgeben(&")
+                .count();
+            assert_eq!(
+                rufe, erwartet,
+                "{name}: {rufe} Rufe von grund_vorgeben statt {erwartet}"
+            );
+            assert!(
+                !ohne_proben.contains("setFont(Some(&textmerkmale::grundschrift"),
+                "{name}: setzt die Grundschrift an grund_vorgeben vorbei"
+            );
+        }
     }
 
     /// Die sechs Eingabepaare von [`grundmerkmale`], Zeile fuer Zeile.

@@ -4771,10 +4771,11 @@ impl Editorbereich {
     /// `setFont:` schreibt ueber den ganzen Textspeicher **und** setzt die
     /// Merkmale des naechsten Anschlags. Beides ist gewollt: ohne das zweite
     /// truege ein neu getipptes Zeichen die Schrift der vorigen Ansicht.
+    /// Gesetzt wird ueber [`textmerkmale::grund_vorgeben`], das zur Schrift den
+    /// Grundabsatz als Vorgabe legt; sonst tabbte getippter Text in einer leer
+    /// geoeffneten Datei auf die 28-Punkt-Stopps des Systems.
     fn grundschrift_setzen(&self, ansicht: Ansicht, art: Darstellungsart) {
-        self.ivars()
-            .text
-            .setFont(Some(&textmerkmale::grundschrift(ansicht, art)));
+        textmerkmale::grund_vorgeben(&self.ivars().text, ansicht, art);
         // Die Systemfarbe und nicht die der Tafel: sie loest sich in Hell wie in
         // Dunkel gegen den Grund der Flaeche auf, und der Grund bleibt nach S34
         // die Systemfarbe. Aus der Tafel kommen allein die Vordergrundfarben
@@ -5151,10 +5152,7 @@ fn textflaeche_bauen(
     text.setMinSize(NSSize::ZERO);
     text.setMaxSize(NSSize::new(f64::MAX, f64::MAX));
     text.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
-    text.setFont(Some(&textmerkmale::grundschrift(
-        Ansicht::Roh,
-        Darstellungsart::EinfacherText,
-    )));
+    textmerkmale::grund_vorgeben(&text, Ansicht::Roh, Darstellungsart::EinfacherText);
     rolle.setDocumentView(Some(&text));
     // Die Nummernspalte aus C10, dieselbe Klasse, die die Vorschau einhaengt.
     // Sie steht im Editor immer: der Spec laesst sie nicht abschalten, und der
