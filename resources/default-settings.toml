@@ -12,7 +12,8 @@
 # den Wert von `notizordner` aus der alten Datei und liest sie sofort neu ein;
 # eine beschaedigte Datei setzt der Befehl nicht zurueck, sie ist zuerst von
 # Hand zu berichtigen. Ist die Datei ein symbolischer Verweis, schreibt KRK sie
-# auf keinem der zwei Wege und nennt die Zeile zum Eintragen von Hand.
+# auf keinem der zwei Wege: "Ort waehlen..." nennt dann die Zeile zum Eintragen
+# von Hand, das Zuruecksetzen bricht ab und nennt allein die Datei.
 #
 # Quelle: Spec `260802-1036_*_spec-navigator-geruest.md`, Faehigkeit C11.
 # Bindend ist ausserdem der Datensatz
