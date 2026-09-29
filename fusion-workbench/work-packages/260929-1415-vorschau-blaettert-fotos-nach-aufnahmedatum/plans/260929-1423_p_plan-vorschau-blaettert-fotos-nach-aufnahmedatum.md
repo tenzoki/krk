@@ -275,7 +275,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
     - Dependencies: Schritt 6
     - **Berichtigung beim Bau:** Die Zusage „keine geänderte Erwartung“ in Schritt 10 und 11 übersah, dass vier Proben (`ablage/leseprofile.rs` zweimal, `tests/ablage.rs`, `ausgelieferte()` in `tests/leseprofil.rs`) die Zahl der ausgelieferten Profile fest auf 13 hielten; sie zählen seither die `[[profil]]`-Blöcke der Auslieferungsfassung, und ein getroffener Fotoordner ohne Foto fällt nach dem Überblick des Spec auf das Default-Profil zurück, statt allein Name und Pfad zu zeigen.
 
-11. **Proben an der Auslieferungsfassung**
+11. [DONE] **Proben an der Auslieferungsfassung**
     - Executor: `code-implementer`
     - Files: `crates/krk-core/tests/leseprofil.rs`, `crates/krk-core/src/ablage/leseprofile.rs` (allein Proben), `crates/krk-core/tests/ablage.rs` oder `crates/krk-core/src/ablage/neuerungen.rs` (allein Proben)
     - Changes: allein Proben. Mit den Profilen der Auslieferungsfassung: `…/Fotos/2008` erkennt das Jahresprofil, `…/Fotos/2008/08` das Monatsprofil, beide unter zwei verschiedenen Wurzeln (C6.1); `…/Fotos/Urlaub` und `…/Fotos/2008/August` erkennen keines der zwei (C6.2); eine Nutzerdatei ohne die zwei Profile ergibt bei `neuerungen::erheben` beide Namen unter `nur_ausgeliefert`, und `startzeile` zählt sie mit (C6.3). `die_auslieferungsfassung_nennt_jeden_bausteinnamen` oder eine Schwesterprobe verlangt zusätzlich, dass der Kopf den Tisch `bildfolge` nennt.

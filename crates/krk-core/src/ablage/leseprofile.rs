@@ -204,6 +204,64 @@ mod tests {
         );
     }
 
+    /// Die Schwesterprobe fuer die Bildfolge (C1.4 und C5.6 des Spec der
+    /// Bildfolge): der Kommentarteil nennt den Tisch `bildfolge`, zeigt ihn
+    /// in beiden Formen an einem Beispiel, und er nennt die vier Grenzen der
+    /// Bildfolge mit den Werten der Konstanten in `leseprofil/mod.rs`.
+    ///
+    /// **Gesucht wird wie oben allein in den Kommentarzeilen**: die zwei
+    /// Fotoprofile der Auslieferungsfassung schreiben `bildfolge = {` ohnehin
+    /// aus, und eine Suche ueber den ganzen Text bestuende auch an einem Kopf,
+    /// der die Bildfolge mit keinem Wort erklaert.
+    ///
+    /// **Die Grenzen werden aus den Konstanten geschrieben und nicht
+    /// abgeschrieben.** Aendert jemand eine davon, wird die Probe rot, bis der
+    /// Kopf nachgezogen ist; eine Zahl im Kopf, die keine Konstante traegt,
+    /// sieht sie dagegen nicht.
+    #[test]
+    fn die_auslieferungsfassung_erklaert_die_bildfolge_und_ihre_grenzen() {
+        use crate::ablage::neuerungen::zahl;
+        use crate::leseprofil::{
+            HOECHSTENS_BILDGRUPPEN, HOECHSTENS_BYTES_JE_FOTO, HOECHSTENS_EINTRAEGE_JE_BILDORDNER,
+            HOECHSTENS_FOTOS,
+        };
+
+        let kommentar: String = AUSLIEFERUNGSTEXT
+            .lines()
+            .map(str::trim_start)
+            .filter(|zeile| zeile.starts_with('#'))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        for gesucht in [
+            "Die Bildfolge",
+            "bildfolge = { ordner = \"*\" }",
+            "bildfolge = { }",
+        ] {
+            assert!(
+                kommentar.contains(gesucht),
+                "der Kommentarteil der Auslieferungsfassung nennt nicht: {gesucht}"
+            );
+        }
+
+        let kib_je_foto = usize::try_from(HOECHSTENS_BYTES_JE_FOTO / 1024)
+            .expect("die Grenze je Foto passt in usize");
+        for grenze in [
+            format!("höchstens {} Fotos je Folge", zahl(HOECHSTENS_FOTOS)),
+            format!("höchstens {} Ordner", zahl(HOECHSTENS_BILDGRUPPEN)),
+            format!(
+                "höchstens {} Einträge je Leselauf der Folge",
+                zahl(HOECHSTENS_EINTRAEGE_JE_BILDORDNER)
+            ),
+            format!("höchstens {} KB je Foto", zahl(kib_je_foto)),
+        ] {
+            assert!(
+                kommentar.contains(&grenze),
+                "der Kommentarteil nennt die Grenze der Bildfolge nicht so: {grenze}"
+            );
+        }
+    }
+
     /// C3.4 der Runde 19: Keine Zeile der mitgelieferten Profile nennt einen
     /// der zwei neuen Schluessel, und die Zahl der Profile bleibt die der
     /// Auslieferungsfassung.

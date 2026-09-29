@@ -4951,6 +4951,60 @@ fn ein_entferntes_profil_steht_in_der_hinrichtung_und_ein_eigenes_in_der_gegenri
     );
 }
 
+/// C6.3 des Spec der Bildfolge: eine `readers.toml` von vor der Bildfolge
+/// fuehrt die zwei Fotoprofile nicht, und der Vergleich nennt genau diese zwei
+/// Namen in der Hinrichtung; die Startzeile zaehlt sie mit.
+///
+/// **Die Nutzerdatei ist die Auslieferungsfassung bis vor dem Jahresprofil**,
+/// am Text geschnitten wie bei [`ohne_den_ersten_block`]. Dass die zwei
+/// Fotoprofile die letzten Bloecke sind, setzt die Probe nicht voraus, sondern
+/// prueft es mit: stuende ein anderes Profil dahinter, naennte die Hinrichtung
+/// auch dessen Namen, und die Gleichheit unten waere rot.
+#[test]
+fn eine_readers_toml_ohne_die_fotoprofile_meldet_genau_ihre_zwei_namen() {
+    let (_ordner, ablage) = ablage("neuerungen-fotoprofile");
+    auslieferungsfassungen_schreiben(&ablage);
+
+    let text = leseprofile::AUSLIEFERUNGSTEXT;
+    let jahr = text
+        .find("name = \"Fotos: ein Jahr\"")
+        .expect("die Auslieferungsfassung fuehrt das Jahresprofil");
+    let anfang = text[..jahr]
+        .rfind("\n[[profil]]\n")
+        .expect("das Jahresprofil steht in einem Block [[profil]]");
+    fs::write(ablage.pfad(Datei::Leser), &text[..=anfang])
+        .expect("readers.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let zeile = zeile(&bestand, Datei::Leser);
+    assert_eq!(zeile.befund, Befund::Verglichen);
+    assert_eq!(
+        zeile.nur_ausgeliefert,
+        vec![
+            String::from("Fotos: ein Jahr"),
+            String::from("Fotos: ein Monat")
+        ],
+        "die Hinrichtung nennt nicht genau die zwei Fotoprofile"
+    );
+    assert!(
+        zeile.nur_beim_nutzer.is_empty(),
+        "{:?}",
+        zeile.nur_beim_nutzer
+    );
+    let startzeile = neuerungen::startzeile(&bestand, None).expect("es gibt eine Startzeile");
+    assert!(
+        startzeile.starts_with("Neu in dieser Fassung: 2 Einträge in readers.toml. "),
+        "die Startzeile zaehlt die zwei Fotoprofile nicht: {startzeile}"
+    );
+    let blatt = neuerungen::blatttext(&bestand);
+    for name in ["Fotos: ein Jahr", "Fotos: ein Monat"] {
+        assert!(
+            blatt.contains(name),
+            "das Blatt nennt {name} nicht:\n{blatt}"
+        );
+    }
+}
+
 /// Eine `keymap.toml` ohne eine ausgelieferte `id` liefert genau diese `id`.
 #[test]
 fn eine_keymap_ohne_eine_ausgelieferte_id_liefert_genau_diese_id() {

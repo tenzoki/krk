@@ -5660,3 +5660,100 @@ fn ein_leerer_monat_zeigt_die_zeilen_des_default_profils() {
     let auskunft = zusammenfassen(&profile, &monat).expect("der Ordner bekommt eine Auskunft");
     assert!(matches!(auskunft, Auskunft::Default(_)), "{auskunft:?}");
 }
+
+// ---------------------------------------------------------------------------
+// Die Fotoprofile der Auslieferungsfassung (Schritt 11 des Plans der Bildfolge)
+// ---------------------------------------------------------------------------
+
+/// Die zwei Namen der Fotoprofile, wie die Auslieferungsfassung sie fuehrt.
+const JAHRESPROFIL: &str = "Fotos: ein Jahr";
+const MONATSPROFIL: &str = "Fotos: ein Monat";
+
+/// C6.1 des Spec der Bildfolge, am Pfadtext: das Jahresprofil trifft
+/// `…/Fotos/2008`, das Monatsprofil `…/Fotos/2008/08`, gleich wo `Fotos`
+/// liegt. Die Erkennung geht dabei allein ueber `pfad`; der Bestand wird fuer
+/// keinen der Treffer geholt.
+#[test]
+fn die_fotoprofile_der_auslieferung_treffen_jahr_und_monat_unter_jeder_wurzel() {
+    let profile = ausgelieferte();
+    for wurzel in ["/Users/k/Fotos", "/Volumes/Archiv/Familie/Fotos", "/Fotos"] {
+        let gerufen = Cell::new(0);
+        assert_eq!(
+            erkannt(&profile, &format!("{wurzel}/2008"), &[], &gerufen).as_deref(),
+            Some(JAHRESPROFIL),
+            "{wurzel}/2008"
+        );
+        assert_eq!(
+            erkannt(&profile, &format!("{wurzel}/2008/08"), &[], &gerufen).as_deref(),
+            Some(MONATSPROFIL),
+            "{wurzel}/2008/08"
+        );
+        assert_eq!(
+            gerufen.get(),
+            0,
+            "die Erkennung holt den Bestand unter {wurzel}"
+        );
+    }
+}
+
+/// C6.1 des Spec der Bildfolge, am Bestand: unter zwei verschiedenen Wurzeln
+/// liefert die Auslieferungsfassung fuer den Jahresordner eine Folge aus seinen
+/// Monatsordnern und fuer den Monatsordner eine aus ihm selbst.
+#[test]
+fn die_fotoprofile_der_auslieferung_liefern_unter_zwei_wurzeln_eine_bildfolge() {
+    let profile = ausgelieferte();
+    let erste = Pruefordner::neu("fotoprofile-erste-wurzel");
+    let zweite = Pruefordner::neu("fotoprofile-zweite-wurzel");
+    for (ordner, unter) in [(&erste, "Fotos"), (&zweite, "Archiv/Familie/Fotos")] {
+        let jahr = ordner.ordner(&format!("{unter}/2008"));
+        let monat = ordner.ordner(&format!("{unter}/2008/08"));
+        ordner.datei(&format!("{unter}/2008/08/IMG_0970.jpg"), b"");
+        ordner.datei(&format!("{unter}/2008/08/Bild.JPG"), b"");
+
+        let Some(Auskunft::Bildfolge(jahresfolge)) = zusammenfassen(&profile, &jahr) else {
+            panic!("{} bekommt keine Bildfolge", jahr.display());
+        };
+        assert_eq!(jahresfolge.gesamt(), 2);
+        let gruppen: Vec<&Path> = jahresfolge.gruppen().iter().map(|g| g.ordner()).collect();
+        assert_eq!(
+            gruppen,
+            [monat.as_path()],
+            "die Jahresfolge liest ihre Monate"
+        );
+
+        let Some(Auskunft::Bildfolge(monatsfolge)) = zusammenfassen(&profile, &monat) else {
+            panic!("{} bekommt keine Bildfolge", monat.display());
+        };
+        assert_eq!(monatsfolge.gesamt(), 2);
+        let gruppen: Vec<&Path> = monatsfolge.gruppen().iter().map(|g| g.ordner()).collect();
+        assert_eq!(
+            gruppen,
+            [monat.as_path()],
+            "die Monatsfolge liest den Monat selbst"
+        );
+    }
+}
+
+/// C6.2 des Spec der Bildfolge: `…/Fotos/Urlaub`, `…/Fotos/2008/August` und
+/// ihre Nachbarn treffen keines der zwei Fotoprofile.
+#[test]
+fn die_fotoprofile_der_auslieferung_treffen_urlaub_und_august_nicht() {
+    let profile = ausgelieferte();
+    for pfad in [
+        "/Users/k/Fotos/Urlaub",
+        "/Users/k/Fotos/2008/August",
+        "/Users/k/Fotos",
+        "/Users/k/Fotos/20081",
+        "/Users/k/Fotos/2008/8",
+        "/Users/k/Fotos/2008/08/tief",
+        "/Users/k/MeineFotos/2008",
+        "/Users/k/Fotos/2008/08/IMG_0970.jpg",
+    ] {
+        let gerufen = Cell::new(0);
+        let name = erkannt(&profile, pfad, &[], &gerufen);
+        assert!(
+            !matches!(name.as_deref(), Some(JAHRESPROFIL | MONATSPROFIL)),
+            "{pfad} trifft ein Fotoprofil: {name:?}"
+        );
+    }
+}
