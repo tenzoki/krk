@@ -33,3 +33,6 @@ Die Probe `die_bildfolge_geht_vor_und_wirkt_allein_in_der_dateiliste` (`kommando
 - Eine Probe im Modell: nach `datei_anzeigen` mit einem anderen Pfad antwortet die Frage nein, bevor die neue Meldung eingezogen ist.
 - Eine Probe: die Frage antwortet nein, wenn der gefragte Pfad nicht der Pfad des Tabs ist.
 - Am Bündel: links `Fotos` mit Zeile `2008`, Tab nach rechts in einen Ordner mit ausgewählter Datei; Cmd+Pfeil hoch steigt rechts auf, Return öffnet die Datei mit dem Standardprogramm.
+
+---
+Resolved: `Lage::bildfolge` kommt allein aus `Anwendungsdelegierter::bildfolge_steht`, das die Vorschau mit `DateifensterQuelle::beschrieben` des aktiven Dateifensters fragt (`Vorschaumodell::zeigt_bildfolge_von`: gleicher Pfad, kein wartender Auftrag); Proben `die_bildfolge_gilt_allein_fuer_ihren_pfad_und_nicht_vor_einer_neuen_lieferung` und `die_bildfolge_der_lage_fragt_den_pfad_des_aktiven_dateifensters`, die Abnahme am Buendel bleibt Nutzerarbeit.

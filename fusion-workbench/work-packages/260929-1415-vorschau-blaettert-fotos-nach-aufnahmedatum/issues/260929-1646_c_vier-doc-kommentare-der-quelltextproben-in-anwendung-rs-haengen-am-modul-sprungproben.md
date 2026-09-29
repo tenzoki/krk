@@ -21,3 +21,6 @@ Jeden Block über sein eigenes `#[cfg(test)] mod …` setzen; der Angleichen-Blo
 
 - Vor jedem der Module `angleichproben`, `zoomproben`, `blaetterproben` und `sprungproben` steht genau der Doc-Block, der von ihm spricht.
 - `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` bleibt grün.
+
+---
+Resolved: jeder der vier Doc-Bloecke steht ueber seinem eigenen `#[cfg(test)] mod` (`angleichproben`, `zoomproben`, `blaetterproben`, `sprungproben`); `cargo doc` mit `-D warnings` gruen.

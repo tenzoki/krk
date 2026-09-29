@@ -241,11 +241,14 @@ pub struct Lage {
     /// meldet `false`: ihre PIN steht noch in keinem Kopf, und das naechste
     /// Oeffnen fragt ohnehin nach einer neuen.
     pub pin_aenderbar: bool,
-    /// Ob die Vorschau sichtbar ist und im aktiven Tab eine Bildfolge zeigt
+    /// Ob die Vorschau sichtbar ist und im aktiven Tab eine Bildfolge fuer
+    /// genau den Pfad zeigt, den das aktive Dateifenster beschreibt, ohne
+    /// wartenden neueren Auftrag
     /// (Spec `260929-1313_*_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md`).
     ///
-    /// Erhoben von `Anwendungsdelegierter::lage` ueber
-    /// `Vorschaufenster::zeigt_bildfolge` und die Sichtbarkeit des Bereichs;
+    /// Erhoben von `Anwendungsdelegierter::bildfolge_steht` innerhalb von
+    /// `Anwendungsdelegierter::lage`, ueber
+    /// `Vorschaufenster::zeigt_bildfolge_von` und die Sichtbarkeit des Bereichs;
     /// gelesen allein von [`folge_passt`] fuer `Wirkungsbereich::Bildfolge`.
     /// Dieselbe Bauart wie [`Lage::editorform`]: der Kern sagt, dass die Frage
     /// zu stellen ist, und die Oberflaeche beantwortet sie.

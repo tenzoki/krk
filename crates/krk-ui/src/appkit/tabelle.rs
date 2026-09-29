@@ -600,7 +600,9 @@ pub type Auswahlmelder = Box<dyn Fn(PathBuf)>;
 /// beantwortet ein Leseprofil in `readers.toml` und nicht diese Datei
 /// (`shared/decisions/260825-1725_*_was-zeigt-die-vorschau-wenn-keine-zeile-ausgewaehlt-ist.md`).
 ///
-/// **Genau ein Rufer**, [`DateifensterQuelle::auswahl_merken`]. Sie steht
+/// **Genau ein Rufer**, [`DateifensterQuelle::beschreibung`], die ihr
+/// Ergebnis an [`DateifensterQuelle::auswahl_merken`] und an
+/// [`DateifensterQuelle::beschrieben`] weitergibt. Sie steht
 /// trotzdem als eigene Funktion da, aus demselben Grund wie die
 /// Rueckschrittregel in [`crate::kommandos::rueckschritt`]: eine Regel, die als
 /// Zeile mitten in einem AppKit-Weg steht, erreicht keine Probe.
@@ -2688,8 +2690,8 @@ impl DateifensterQuelle {
     /// Haelt fest, welcher Eintrag der ausgewaehlten Zeile entspricht, und
     /// meldet, was die Vorschau daraufhin zu beschreiben hat.
     ///
-    /// Der Weg von der Zeile zum Eintrag laeuft genau hier und sonst nirgends.
-    /// Gerufen wird er von jeder Stelle, an der sich die Auswahl der Tabelle
+    /// Der Weg von der Zeile zum Eintrag laeuft ueber
+    /// [`Self::beschreibung`] und sonst nirgends. Gerufen wird er von jeder Stelle, an der sich die Auswahl der Tabelle
     /// aendert: von [`DateifensterQuelle::auswahl_bewegen`] und vom
     /// Auswahlrueckruf des Delegierten, den die Maus ausloest — und seit dem
     /// 260825 von [`Self::nach_lesebeginn`], damit ein Ordnerwechsel den Weg
@@ -2697,28 +2699,55 @@ impl DateifensterQuelle {
     ///
     /// **Gemeldet wird immer ein Pfad.** Steht keine Zeile auf einem Eintrag,
     /// ist es der angezeigte Ordner; die Regel und ihre Begruendung stehen bei
-    /// [`zu_beschreiben`]. Der Ordner liegt dabei ohnehin schon in der Hand:
-    /// die Zeile darunter braucht ihn, um den Namen des Eintrags zu einem Pfad
-    /// zu machen.
+    /// [`zu_beschreiben`].
     fn auswahl_merken(&self) {
-        let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
-        let pfad = {
-            let mut tabs = self.ivars().tabs.borrow_mut();
-            let ordner = tabs.aktiver().ordner().to_path_buf();
-            let modell = tabs.aktiver_mut().modell_mut();
-            let eintrag = zeile.and_then(|zeile| modell.eintragsindex(zeile));
-            modell.auswahl_setzen(eintrag);
-            let gewaehlt = eintrag
-                .and_then(|eintrag| modell.eintraege().get(eintrag as usize))
-                .map(|eintrag| ordner.join(&eintrag.name));
-            zu_beschreiben(gewaehlt, ordner)
-        };
+        let (eintrag, pfad) = self.beschreibung();
+        self.ivars()
+            .tabs
+            .borrow_mut()
+            .aktiver_mut()
+            .modell_mut()
+            .auswahl_setzen(eintrag);
         // Nach dem Ende der Ausleihe: der Melder fuellt die Vorschau aus C6,
         // und die gehoert einem anderen Halter.
         let melden = self.ivars().auswahlmelder.borrow();
         if let Some(melden) = melden.as_ref() {
             melden(pfad);
         }
+    }
+
+    /// Der Eintrag der ausgewaehlten Zeile und der Pfad, den die Vorschau zu
+    /// beschreiben hat.
+    ///
+    /// **Die eine Herleitung von der Zeile zum beschriebenen Pfad**, mit zwei
+    /// Rufern: [`Self::auswahl_merken`] meldet ihr Ergebnis an die Vorschau,
+    /// [`Self::beschrieben`] liest es fuer die Zulaessigkeit der Bildfolge ab.
+    /// Stuenden beide Herleitungen einzeln da, koennte die Frage, ob die
+    /// Vorschau zeigt, was dieses Fenster beschreibt, gegen eine andere Antwort
+    /// pruefen als die, die gemeldet wurde.
+    fn beschreibung(&self) -> (Option<u32>, PathBuf) {
+        let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
+        let tabs = self.ivars().tabs.borrow();
+        let ordner = tabs.aktiver().ordner().to_path_buf();
+        let modell = tabs.aktiver().modell();
+        let eintrag = zeile.and_then(|zeile| modell.eintragsindex(zeile));
+        let gewaehlt = eintrag
+            .and_then(|eintrag| modell.eintraege().get(eintrag as usize))
+            .map(|eintrag| ordner.join(&eintrag.name));
+        (eintrag, zu_beschreiben(gewaehlt, ordner))
+    }
+
+    /// Was die Vorschau fuer dieses Dateifenster jetzt zu beschreiben hat: der
+    /// ausgewaehlte Eintrag, ohne Auswahl der angezeigte Ordner
+    /// ([`zu_beschreiben`]).
+    ///
+    /// Gefragt von `Anwendungsdelegierter::lage` fuer `Lage::bildfolge`: die
+    /// Bildfolge der Vorschau gilt allein, wenn sie fuer genau diesen Pfad
+    /// steht (`issues/260929-1646_*_lage-bildfolge-fragt-allein-den-vorschauinhalt-*.md`
+    /// im Arbeitspaket `260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum`).
+    #[must_use]
+    pub fn beschrieben(&self) -> PathBuf {
+        self.beschreibung().1
     }
 
     /// Zeigt in der Tabelle die Auswahl, die im Modell steht.
@@ -6375,7 +6404,8 @@ mod tests {
     /// keine andere Datei des Baums den Namen der Regel ueberhaupt fuehrt: sie
     /// ist privat, und eine zweite Fassung anderswo entschiede dieselbe Frage
     /// ein zweites Mal. Die zweite haelt die Regel bei einem Rufer, naemlich
-    /// [`DateifensterQuelle::auswahl_merken`]. Die dritte haelt den Melder bei
+    /// [`DateifensterQuelle::beschreibung`], der einen Herleitung, die
+    /// `auswahl_merken` und `beschrieben` teilen. Die dritte haelt den Melder bei
     /// drei Rufern: der Tastatur ueber `zeile_setzen`, dem Auswahlrueckruf des
     /// Delegierten, den die Maus ausloest, und seit dem 260825
     /// [`DateifensterQuelle::nach_lesebeginn`] fuer den Ordnerwechsel.
@@ -6416,7 +6446,7 @@ mod tests {
             aufrufstellen(code, regel),
             1,
             "die Regel hat nicht genau einen Rufer; \
-             der einzige ist DateifensterQuelle::auswahl_merken"
+             der einzige ist DateifensterQuelle::beschreibung"
         );
         assert_eq!(
             aufrufstellen(code, melden),

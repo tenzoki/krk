@@ -223,7 +223,7 @@ use std::time::SystemTime;
 use krk_core::bild::Aufnahmezeit;
 use krk_core::heimordner::eintraege::termine;
 use krk_core::heimordner::{Heimordner, Sonderdatei};
-use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto};
+use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto, Kuerzung};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
@@ -465,14 +465,15 @@ impl Folgeanzeige {
         &self.bild
     }
 
-    /// Die Stelle von eins gezaehlt, die Zahl der Fotos und ob die Folge
-    /// gekuerzt ist: die drei Angaben des Zaehlers in der Statuszeile.
+    /// Die Stelle von eins gezaehlt, die Zahl der Fotos und an welchen
+    /// Grenzen die Folge gekuerzt ist: die drei Angaben des Zaehlers in der
+    /// Statuszeile.
     #[must_use]
-    pub fn stand(&self) -> (usize, usize, bool) {
+    pub fn stand(&self) -> (usize, usize, Kuerzung) {
         (
             self.stelle + 1,
             self.verzeichnis.gesamt(),
-            self.verzeichnis.ist_gekuerzt(),
+            self.verzeichnis.kuerzung(),
         )
     }
 
@@ -1209,20 +1210,29 @@ impl Vorschaumodell {
         }
     }
 
-    /// Ob der aktive Tab eine Bildfolge zeigt.
+    /// Ob der aktive Tab eine Bildfolge **fuer genau diesen Pfad** zeigt und
+    /// kein neuerer Auftrag in ihm wartet.
     ///
     /// Eine Frage der Zulaessigkeit von Blaettern und Sprung
-    /// (`zulaessigkeit::Lage::bildfolge`); gefragt wird der Inhalt und nicht,
-    /// ob noch etwas nachkommt.
+    /// (`zulaessigkeit::Lage::bildfolge`); gefragt wird mit dem Pfad, den das
+    /// aktive Dateifenster jetzt beschreibt. Der Inhalt allein genuegt nicht:
+    /// nach einem Fensterwechsel steht die Folge des anderen Fensters noch da,
+    /// und nach einem Auswahlwechsel bleibt die alte Folge stehen, bis der neue
+    /// Auftrag geliefert hat. In beiden Lagen gehoeren die geteilten
+    /// Kombinationen dem Dateifenster
+    /// (`issues/260929-1646_*_lage-bildfolge-fragt-allein-den-vorschauinhalt-*.md`).
+    /// Ob noch Gruppen nachkommen, fragt sie nicht. Die Regel ist dieselbe, die
+    /// eine stehende Folge vor dem Neuladen bewahrt ([`Vorschautab::zeigt_folge_von`]).
     #[must_use]
-    pub fn zeigt_bildfolge(&self) -> bool {
-        matches!(self.aktiver_inhalt(), Inhalt::Bildfolge(_))
+    pub fn zeigt_bildfolge_von(&self, pfad: &Path) -> bool {
+        self.tabs[self.aktiv].zeigt_folge_von(pfad)
     }
 
-    /// Die Stelle von eins gezaehlt, die Zahl der Fotos und ob die Folge
-    /// gekuerzt ist, falls der aktive Tab eine Bildfolge zeigt.
+    /// Die Stelle von eins gezaehlt, die Zahl der Fotos und an welchen
+    /// Grenzen die Folge gekuerzt ist, falls der aktive Tab eine Bildfolge
+    /// zeigt.
     #[must_use]
-    pub fn bildstand(&self) -> Option<(usize, usize, bool)> {
+    pub fn bildstand(&self) -> Option<(usize, usize, Kuerzung)> {
         match self.aktiver_inhalt() {
             Inhalt::Bildfolge(folge) => Some(folge.stand()),
             Inhalt::Leer
@@ -3157,7 +3167,7 @@ pfad = 'werkbank'
             *folge.bild(),
             Inhalt::Hinweis("Die Bildfolge wird vorbereitet: 2 Fotos.".to_owned())
         );
-        assert_eq!(modell.bildstand(), Some((1, 2, false)));
+        assert_eq!(modell.bildstand(), Some((1, 2, Kuerzung::default())));
         assert!(modell.wartet_noch(), "die Gruppe steht noch aus");
 
         FREI_VORBEREITET.store(true, Ordering::SeqCst);
@@ -3352,7 +3362,7 @@ pfad = 'werkbank'
         bis(&mut modell, |modell| {
             !modell.laedt_noch() && !modell.wartet_noch()
         });
-        assert_eq!(modell.bildstand(), Some((1, 3, false)));
+        assert_eq!(modell.bildstand(), Some((1, 3, Kuerzung::default())));
 
         assert!(
             !modell.blaettern(Blaetterrichtung::Zurueck),
@@ -3360,7 +3370,7 @@ pfad = 'werkbank'
         );
         assert!(modell.blaettern(Blaetterrichtung::Vor));
         assert!(modell.blaettern(Blaetterrichtung::Vor));
-        assert_eq!(modell.bildstand(), Some((3, 3, false)));
+        assert_eq!(modell.bildstand(), Some((3, 3, Kuerzung::default())));
         assert_eq!(name_des_fotos(&modell).as_deref(), Some("c.jpg"));
         assert!(
             !modell.blaettern(Blaetterrichtung::Vor),
@@ -3372,7 +3382,54 @@ pfad = 'werkbank'
             Inhalt::Bild { .. }
         ));
         assert!(modell.blaettern(Blaetterrichtung::Zurueck));
-        assert_eq!(modell.bildstand(), Some((2, 3, false)));
+        assert_eq!(modell.bildstand(), Some((2, 3, Kuerzung::default())));
+    }
+
+    /// Die Frage der Zulaessigkeit nach der Bildfolge antwortet allein fuer
+    /// den Pfad der Folge und nie, solange ein neuerer Auftrag wartet
+    /// (`issues/260929-1646_*_lage-bildfolge-fragt-allein-den-vorschauinhalt-*.md`).
+    ///
+    /// **Zwei Lagen.** Ein anderer Pfad steht fuer den Fensterwechsel: das
+    /// andere Dateifenster beschreibt etwas anderes, und die Folge des ersten
+    /// steht noch da. Der Auftrag vor dem Einziehen steht fuer den
+    /// Auswahlwechsel: der Tab zeigt die alte Folge weiter, und weder ihr Pfad
+    /// noch der neue bekommt ein Ja. **Ihre Blindheit:** dass
+    /// `Anwendungsdelegierter::lage` mit dem Pfad des aktiven Dateifensters
+    /// fragt, haelt die Quelltextprobe in `blaetterproben` und nicht diese.
+    #[test]
+    fn die_bildfolge_gilt_allein_fuer_ihren_pfad_und_nicht_vor_einer_neuen_lieferung() {
+        let ordner = Pruefordner::neu("bildfolge-zugehoerig");
+        let jahr = jahr_mit_drei_monaten(&ordner);
+        let mut modell = Vorschaumodell::neu();
+        modell.datumsleser = |_: &Path| None;
+        modell.datei_anzeigen(&jahr, Tafel::Hell, jahresprofil(), None);
+        assert!(
+            !modell.zeigt_bildfolge_von(&jahr),
+            "vor der ersten Lieferung steht keine Folge"
+        );
+        bis(&mut modell, |modell| !modell.laedt_noch());
+        assert!(modell.zeigt_bildfolge_von(&jahr));
+
+        let anderswo = ordner.ordner("anderswo");
+        assert!(
+            !modell.zeigt_bildfolge_von(&anderswo),
+            "die Folge gilt fuer den Pfad eines anderen Dateifensters"
+        );
+
+        let datei = jahr.join("01").join("a.jpg");
+        modell.datei_anzeigen(&datei, Tafel::Hell, jahresprofil(), None);
+        assert!(
+            matches!(modell.aktiver_inhalt(), Inhalt::Bildfolge(_)),
+            "die Probe setzt voraus, dass die alte Folge bis zur Lieferung steht"
+        );
+        assert!(
+            !modell.zeigt_bildfolge_von(&jahr),
+            "die alte Folge gilt noch, obwohl ein neuer Auftrag wartet"
+        );
+        assert!(
+            !modell.zeigt_bildfolge_von(&datei),
+            "die alte Folge gilt fuer den neuen Pfad"
+        );
     }
 
     static FREI_MAERZ: AtomicBool = AtomicBool::new(false);
@@ -3403,7 +3460,7 @@ pfad = 'werkbank'
         });
         assert!(modell.blaettern(Blaetterrichtung::Vor));
         assert!(modell.blaettern(Blaetterrichtung::Vor));
-        assert_eq!(modell.bildstand(), Some((3, 3, false)));
+        assert_eq!(modell.bildstand(), Some((3, 3, Kuerzung::default())));
         assert!(matches!(
             folge_des_aktiven(&modell).bild(),
             Inhalt::Hinweis(_)

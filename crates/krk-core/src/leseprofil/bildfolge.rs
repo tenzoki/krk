@@ -52,6 +52,13 @@
 //! Fotos mehr laegen. Eine Gruppe, deren Lesung an der Eintragsgrenze abbricht,
 //! traegt bei, was gelesen ist, und macht die Folge ebenfalls gekuerzt.
 //!
+//! **Die Kuerzung traegt ihren Grund** ([`Kuerzung`], je [`Grenze`] ein
+//! Merkmal): die Statuszeile nennt die Grenze, die gegriffen hat, und nicht
+//! immer die Fotogrenze. Eine Folge von 900 Fotos, die an der Ordner- oder an
+//! der Eintragsgrenze gekuerzt ist, hiesse sonst „nach 7.500 Fotos gekuerzt“
+//! (`issues/260929-1646_*_der-zaehler-nennt-jede-gekuerzte-folge-*.md` im
+//! Arbeitspaket `260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum`).
+//!
 //! # Abbruch
 //!
 //! [`Bildverzeichnis::gruppe_ordnen`] fragt vor jedem Foto `weiter` und hoert
@@ -148,12 +155,82 @@ impl Foto {
     }
 }
 
+/// Eine Grenze, an der eine Bildfolge gekuerzt werden kann.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Grenze {
+    /// [`HOECHSTENS_FOTOS`]: die Folge ist voll, oder die Gruppe an der Grenze
+    /// traegt nur ihre fruehesten Fotos bei.
+    Fotos,
+    /// [`HOECHSTENS_BILDGRUPPEN`]: weitere Ordner werden nicht mehr gelesen,
+    /// ob als Gruppen gezaehlt oder als Leselaeufe, die auch ein Ordner ohne
+    /// Fotos kostet.
+    Ordner,
+    /// [`HOECHSTENS_EINTRAEGE_JE_BILDORDNER`]: ein Leselauf ist abgeschnitten,
+    /// und was darin fehlt, haengt von der Lesereihenfolge des Verzeichnisses
+    /// ab.
+    Eintraege,
+}
+
+impl Grenze {
+    /// Die Zahl, bei der die Grenze greift.
+    #[must_use]
+    pub fn hoechstens(self) -> usize {
+        match self {
+            Self::Fotos => HOECHSTENS_FOTOS,
+            Self::Ordner => HOECHSTENS_BILDGRUPPEN,
+            Self::Eintraege => HOECHSTENS_EINTRAEGE_JE_BILDORDNER,
+        }
+    }
+}
+
+/// Welche Grenzen eine Bildfolge gekuerzt haben; ohne eine ist sie
+/// vollstaendig. Es koennen mehrere zugleich gegriffen haben.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Kuerzung {
+    fotos: bool,
+    ordner: bool,
+    eintraege: bool,
+}
+
+impl Kuerzung {
+    /// Dieselbe Kuerzung, zusaetzlich an der genannten Grenze.
+    #[must_use]
+    pub fn mit(mut self, grenze: Grenze) -> Self {
+        match grenze {
+            Grenze::Fotos => self.fotos = true,
+            Grenze::Ordner => self.ordner = true,
+            Grenze::Eintraege => self.eintraege = true,
+        }
+        self
+    }
+
+    /// Ob irgendeine Grenze gegriffen hat.
+    #[must_use]
+    pub fn ist_gekuerzt(self) -> bool {
+        self.fotos || self.ordner || self.eintraege
+    }
+
+    /// Die Grenzen, die gegriffen haben, in fester Reihenfolge: Fotos,
+    /// Ordner, Eintraege.
+    #[must_use]
+    pub fn grenzen(self) -> Vec<Grenze> {
+        [
+            (self.fotos, Grenze::Fotos),
+            (self.ordner, Grenze::Ordner),
+            (self.eintraege, Grenze::Eintraege),
+        ]
+        .into_iter()
+        .filter_map(|(gegriffen, grenze)| gegriffen.then_some(grenze))
+        .collect()
+    }
+}
+
 /// Was die Erhebung ueber eine Bildfolge weiss, bevor ein Datum gelesen ist.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bildverzeichnis {
     gruppen: Vec<Gruppe>,
     gesamt: usize,
-    gekuerzt: bool,
+    kuerzung: Kuerzung,
     haushalt: Bildhaushalt,
 }
 
@@ -170,7 +247,12 @@ impl Bildverzeichnis {
 
     /// Ob eine Grenze Fotos oder Ordner aus der Folge gelassen hat.
     pub fn ist_gekuerzt(&self) -> bool {
-        self.gekuerzt
+        self.kuerzung.ist_gekuerzt()
+    }
+
+    /// Welche Grenzen die Folge gekuerzt haben.
+    pub fn kuerzung(&self) -> Kuerzung {
+        self.kuerzung
     }
 
     /// Was die Erhebung verbraucht hat.
@@ -266,7 +348,7 @@ pub fn verzeichnis_erheben(
 ) -> Option<Bildverzeichnis> {
     let ort = angabe.ort();
     let mut haushalt = Bildhaushalt::neu();
-    let mut gekuerzt = false;
+    let mut kuerzung = Kuerzung::default();
 
     let mut anzeige = ausgewaehlt.to_path_buf();
     let mut lesepfad = wurzel.to_path_buf();
@@ -286,7 +368,9 @@ pub fn verzeichnis_erheben(
             }
             let stand =
                 leser::lesen_hoechstens(&lesepfad, HOECHSTENS_EINTRAEGE_JE_BILDORDNER).ok()?;
-            gekuerzt |= stand.abgeschnitten;
+            if stand.abgeschnitten {
+                kuerzung = kuerzung.mit(Grenze::Eintraege);
+            }
             let mut unter: Vec<&Eintrag> = stand
                 .eintraege
                 .iter()
@@ -315,22 +399,24 @@ pub fn verzeichnis_erheben(
 
     let mut gruppen = Vec::new();
     for (zur_anzeige, zum_lesen) in ordner {
-        if haushalt.gruppen() >= HOECHSTENS_BILDGRUPPEN || haushalt.fotos() >= HOECHSTENS_FOTOS {
-            gekuerzt = true;
+        if let Some(voll) = volle_grenzen(&haushalt, kuerzung) {
+            kuerzung = voll;
             break;
         }
         let Some(zum_lesen) = innerhalb(wurzel, &zum_lesen) else {
             continue;
         };
         if !haushalt.leselauf_nehmen() {
-            gekuerzt = true;
+            kuerzung = kuerzung.mit(Grenze::Ordner);
             break;
         }
         let Ok(stand) = leser::lesen_hoechstens(&zum_lesen, HOECHSTENS_EINTRAEGE_JE_BILDORDNER)
         else {
             continue;
         };
-        gekuerzt |= stand.abgeschnitten;
+        if stand.abgeschnitten {
+            kuerzung = kuerzung.mit(Grenze::Eintraege);
+        }
         let fotos: Vec<Fotoeintrag> = stand
             .eintraege
             .into_iter()
@@ -345,10 +431,16 @@ pub fn verzeichnis_erheben(
             continue;
         }
         let Some(beitrag) = haushalt.gruppe_nehmen(fotos.len()) else {
-            gekuerzt = true;
+            // `gruppe_nehmen` sagt nein aus denselben zwei Gruenden, die
+            // `volle_grenzen` oben schon fragt; ein Nein ohne einen davon gibt
+            // es nicht, und die Folge gilt dann an beiden als gekuerzt.
+            kuerzung = volle_grenzen(&haushalt, kuerzung)
+                .unwrap_or_else(|| kuerzung.mit(Grenze::Fotos).mit(Grenze::Ordner));
             break;
         };
-        gekuerzt |= beitrag < fotos.len();
+        if beitrag < fotos.len() {
+            kuerzung = kuerzung.mit(Grenze::Fotos);
+        }
         gruppen.push(Gruppe {
             ordner: zur_anzeige,
             fotos,
@@ -359,7 +451,24 @@ pub fn verzeichnis_erheben(
     Some(Bildverzeichnis {
         gesamt: haushalt.fotos(),
         gruppen,
-        gekuerzt,
+        kuerzung,
         haushalt,
     })
+}
+
+/// Die Kuerzung um die Grenzen erweitert, die eine weitere Gruppe schon
+/// ausschliessen; `None`, solange Platz ist.
+///
+/// Dieselben zwei Fragen wie in [`Bildhaushalt::gruppe_nehmen`], hier getrennt,
+/// damit die Kuerzung die Grenze nennt, die gegriffen hat.
+fn volle_grenzen(haushalt: &Bildhaushalt, mut kuerzung: Kuerzung) -> Option<Kuerzung> {
+    let ordner = haushalt.gruppen() >= HOECHSTENS_BILDGRUPPEN;
+    let fotos = haushalt.fotos() >= HOECHSTENS_FOTOS;
+    if fotos {
+        kuerzung = kuerzung.mit(Grenze::Fotos);
+    }
+    if ordner {
+        kuerzung = kuerzung.mit(Grenze::Ordner);
+    }
+    (ordner || fotos).then_some(kuerzung)
 }

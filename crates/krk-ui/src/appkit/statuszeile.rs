@@ -194,6 +194,7 @@ use objc2_app_kit::{NSColor, NSFont, NSTextAlignment, NSTextField, NSView};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString, ns_string};
 
 use krk_core::ablage::{Fensterseite, Sichtbarkeit};
+use krk_core::leseprofil::bildfolge::{Grenze, Kuerzung};
 
 use crate::fenstermodell::{Bereich, sichtbar_in};
 use crate::kommandos::operationen::zahl;
@@ -576,21 +577,33 @@ pub fn seitenzaehler_text(aktuell: usize, gesamt: usize) -> String {
 }
 
 /// Der Satz des Zaehlers einer Bildfolge: "Bild N von M", bei gekuerzter
-/// Folge mit dem Zusatz, nach wie vielen Fotos (Entscheidung 13 des Plans der
+/// Folge mit dem Zusatz, an welcher Grenze (Entscheidung 13 des Plans der
 /// Bildfolge, C3.5 und C5.1 des Spec).
 ///
-/// Derselbe Rang und dasselbe Zahlenformat wie [`seitenzaehler_text`]; die
-/// Grenze im Zusatz kommt aus `krk_core::leseprofil::HOECHSTENS_FOTOS` und
-/// steht kein zweites Mal im Text.
-pub fn bildzaehler_text(aktuell: usize, gesamt: usize, gekuerzt: bool) -> String {
+/// Derselbe Rang und dasselbe Zahlenformat wie [`seitenzaehler_text`]. **Der
+/// Zusatz nennt die Grenzen, die gegriffen haben**, und nicht immer die
+/// Fotogrenze (`issues/260929-1646_*_der-zaehler-nennt-jede-gekuerzte-folge-*.md`
+/// im Arbeitspaket `260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum`);
+/// die Zahl jeder Grenze kommt aus `Grenze::hoechstens` und steht kein
+/// zweites Mal im Text.
+pub fn bildzaehler_text(aktuell: usize, gesamt: usize, kuerzung: Kuerzung) -> String {
     let grundsatz = format!("Bild {} von {}", zahl(aktuell), zahl(gesamt));
-    if gekuerzt {
-        format!(
-            "{grundsatz} (Folge nach {} Fotos gekürzt)",
-            zahl(krk_core::leseprofil::HOECHSTENS_FOTOS)
-        )
-    } else {
+    let gruende: Vec<String> = kuerzung
+        .grenzen()
+        .into_iter()
+        .map(|grenze| {
+            let hoechstens = zahl(grenze.hoechstens());
+            match grenze {
+                Grenze::Fotos => format!("nach {hoechstens} Fotos"),
+                Grenze::Ordner => format!("nach {hoechstens} Ordnern"),
+                Grenze::Eintraege => format!("an {hoechstens} Einträgen eines Ordners"),
+            }
+        })
+        .collect();
+    if gruende.is_empty() {
         grundsatz
+    } else {
+        format!("{grundsatz} (Folge {} gekürzt)", gruende.join(" und "))
     }
 }
 
@@ -975,6 +988,7 @@ mod tests {
         bildzaehler_text, filterstand_text, seitenzaehler_text, sichtbar_in, zeile, zeilentext,
     };
     use krk_core::ablage::{Fensterseite, Sichtbarkeit};
+    use krk_core::leseprofil::bildfolge::{Grenze, Kuerzung};
 
     /// Beide Dateifenster stehen: die Lage, in der die Zeile fast immer
     /// schreibt, und der Auslieferungszustand der Ablage.
@@ -2046,10 +2060,44 @@ mod tests {
     fn der_seitenzaehler_satz_nennt_seite_und_seitenzahl_mit_tausenderpunkten() {
         assert_eq!(seitenzaehler_text(1, 9), "Seite 1 von 9");
         assert_eq!(seitenzaehler_text(1200, 3400), "Seite 1.200 von 3.400");
-        assert_eq!(bildzaehler_text(3, 41, false), "Bild 3 von 41");
         assert_eq!(
-            bildzaehler_text(3, 7_500, true),
+            bildzaehler_text(3, 41, Kuerzung::default()),
+            "Bild 3 von 41"
+        );
+        assert_eq!(
+            bildzaehler_text(3, 7_500, Kuerzung::default().mit(Grenze::Fotos)),
             "Bild 3 von 7.500 (Folge nach 7.500 Fotos gekürzt)"
+        );
+    }
+
+    /// Der Zusatz nennt die Grenze, die gegriffen hat: eine an der Ordner-
+    /// oder an der Eintragsgrenze gekuerzte Folge unter 7.500 Fotos nennt
+    /// keine 7.500
+    /// (`issues/260929-1646_*_der-zaehler-nennt-jede-gekuerzte-folge-*.md`).
+    #[test]
+    fn der_bildzaehler_nennt_die_grenze_die_gekuerzt_hat() {
+        let ordner = bildzaehler_text(1, 900, Kuerzung::default().mit(Grenze::Ordner));
+        assert_eq!(ordner, "Bild 1 von 900 (Folge nach 60 Ordnern gekürzt)");
+        let eintraege = bildzaehler_text(1, 900, Kuerzung::default().mit(Grenze::Eintraege));
+        assert_eq!(
+            eintraege,
+            "Bild 1 von 900 (Folge an 10.000 Einträgen eines Ordners gekürzt)"
+        );
+        for satz in [&ordner, &eintraege] {
+            assert!(
+                !satz.contains("7.500"),
+                "der Zusatz nennt die Fotogrenze: {satz}"
+            );
+        }
+        assert_eq!(
+            bildzaehler_text(
+                7_500,
+                7_500,
+                Kuerzung::default()
+                    .mit(Grenze::Eintraege)
+                    .mit(Grenze::Fotos)
+            ),
+            "Bild 7.500 von 7.500 (Folge nach 7.500 Fotos und an 10.000 Einträgen eines Ordners gekürzt)"
         );
     }
 }

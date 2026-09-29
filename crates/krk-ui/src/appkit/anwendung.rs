@@ -4000,16 +4000,41 @@ impl Anwendungsdelegierter {
                 .editor
                 .get()
                 .is_some_and(|editor| editor.pin_aenderbar()),
-            // Eine ausgeblendete Vorschau zeigt keine Bildfolge, auch wenn ihr
-            // Modell noch eine haelt: geblaettert wird allein, was zu sehen
-            // ist. Ohne Vorschaufenster, vor dem Aufbau, gibt es keine.
-            bildfolge: self.ivars().modell.borrow().sichtbar(Bereich::Vorschau)
-                && self
-                    .ivars()
-                    .vorschau
-                    .get()
-                    .is_some_and(|vorschau| vorschau.zeigt_bildfolge()),
+            bildfolge: self.bildfolge_steht(),
         }
+    }
+
+    /// Ob die Vorschau eine Bildfolge zeigt, die zu dem gehoert, was das
+    /// aktive Dateifenster jetzt beschreibt; der Wert von `Lage::bildfolge`.
+    ///
+    /// **Allein von [`Self::lage`] gerufen**, also Teil der einen Erhebung, und
+    /// damit fragen die Zulaessigkeit (`folge_passt`) und der Ausfuehrungszweig
+    /// hinter ihr dieselbe Antwort. Drei Bedingungen: die Vorschau ist
+    /// sichtbar (geblaettert wird allein, was zu sehen ist), und ihr aktiver
+    /// Tab zeigt die Folge fuer genau den Pfad, den das aktive Dateifenster
+    /// beschreibt, ohne dass ein neuerer Auftrag in ihm wartet
+    /// ([`Vorschaufenster::zeigt_bildfolge_von`]). Die zweite Bedingung nimmt
+    /// den Fensterwechsel, die dritte die Spanne zwischen Auswahlwechsel und
+    /// Lieferung heraus; in beiden Lagen gehoeren `cmd+up` und `return` dem
+    /// Dateifenster
+    /// (`issues/260929-1646_*_lage-bildfolge-fragt-allein-den-vorschauinhalt-*.md`
+    /// im Arbeitspaket `260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum`).
+    /// Vor dem Aufbau der Oberflaeche gibt es keine Folge.
+    fn bildfolge_steht(&self) -> bool {
+        let (sichtbar, aktiv) = {
+            let modell = self.ivars().modell.borrow();
+            (modell.sichtbar(Bereich::Vorschau), modell.aktiv())
+        };
+        if !sichtbar {
+            return false;
+        }
+        let (Some(vorschau), Some(dateifenster)) =
+            (self.ivars().vorschau.get(), self.ivars().dateifenster.get())
+        else {
+            return false;
+        };
+        let beschrieben = dateifenster[aktiv.index()].quelle().beschrieben();
+        vorschau.zeigt_bildfolge_von(&beschrieben)
     }
 
     /// Der eine Rumpf der drei Selektoren `copy:`, `cut:` und
@@ -11692,43 +11717,6 @@ mod notizordnerproben {
     }
 }
 
-/// Was am Angleichen aus C1 bis C3 der Runde 13 **ohne Fenster** zu messen ist.
-///
-/// Der Befehl selbst laesst sich hier nicht ausfuehren: er braucht das
-/// Fenstermodell, zwei Dateifenster und eine Aufteilung, und der
-/// Anwendungsdelegierte ist ohne laufende Anwendung nicht zu bauen. Was die
-/// Kriterien aus C1 und C2 am gebauten Buendel verlangen, steht deshalb im Plan
-/// unter "Nutzerarbeit" und wird hier **nicht** behauptet.
-///
-/// Was bleibt, sind drei Aussagen ueber den **Baum**, und jede von ihnen ist
-/// eine Falle, die kein Uebersetzer haelt: der fehlende Ausfuehrungszweig, die
-/// Sichtbarkeitsfrage nach dem Einblenden statt davor, und ein Griff an Fokus
-/// oder Sichtbarkeit, den C1 und C2 ausschliessen. Sie werden am Quelltext
-/// gelesen, mit derselben Rumpfregel wie in [`quelltextproben`].
-///
-/// **Was die drei nicht sehen:** eine Wirkung, die aus diesem Rumpf in eine
-/// spaeter gerufene Hilfsfunktion gewandert ist. Sie lesen den Rumpf und nicht
-/// den Aufrufbaum darunter.
-/// Die drei Zoombefehle der Runde 20 haben ihren Ausfuehrungszweig beim
-/// Anwendungsdelegierten und nirgends sonst (C3.8).
-///
-/// Der Ausfuehrungszweig ist die Stelle, die niemand haelt: das `match` in
-/// `kommando_ausfuehren` endet auf einen Auffangzweig, und ein Kommando ohne
-/// eigene Zeile uebersteht Bau und jede Belegungsprobe und tut nichts. Diese
-/// Probe liest den Rumpf von `kommando_ausfuehren` in dieser Datei und
-/// verlangt jede der drei Kennungen als `Kommando::… =>` genau einmal; in
-/// `tabelle.rs` verlangt sie keine, denn dort gehoeren die drei nicht hin —
-/// ein Dateifenster hat keinen Zoom.
-///
-/// **Was sie nicht sieht:** einen Zweig, der zwar steht, aber das Falsche
-/// ruft. Ob `zoomen` das Richtige tut, prueft `betrachter.rs` an seinen
-/// eigenen Proben.
-/// Das Blaettern der Bildfolge greift nicht in die Dateiliste (C3.1 des Spec
-/// der Bildfolge): der Rumpf von `bild_blaettern` ruft weder `zeile_setzen`
-/// noch `auswahl_merken` noch `ordner_lesen`.
-///
-/// **Was sie nicht sieht:** einen Griff in einer Hilfsfunktion, die der Rumpf
-/// ruft; sie liest den Rumpf und nicht den Aufrufbaum darunter.
 /// Der Sprung zum Foto und der Ordnersprung teilen ihren Rumpf (Entscheidung
 /// 17 des Plans der Bildfolge): beide rufen `zum_eintrag_springen`, und
 /// keiner der zwei Rumpfe ruft `ordner_lesen` unmittelbar.
@@ -11756,6 +11744,21 @@ mod sprungproben {
     }
 }
 
+/// Das Blaettern der Bildfolge greift nicht in die Dateiliste (C3.1 des Spec
+/// der Bildfolge): der Rumpf von `bild_blaettern` ruft weder `zeile_setzen`
+/// noch `auswahl_merken` noch `ordner_lesen`.
+///
+/// **Was sie nicht sieht:** einen Griff in einer Hilfsfunktion, die der Rumpf
+/// ruft; sie liest den Rumpf und nicht den Aufrufbaum darunter.
+///
+/// **Seit dem Befund `260929-1646` haelt eine zweite Probe die Erhebung von
+/// `Lage::bildfolge`**: `lage` nimmt den Wert allein aus `bildfolge_steht`, und
+/// der fragt die Vorschau mit dem Pfad, den das aktive Dateifenster beschreibt
+/// (`issues/260929-1646_*_lage-bildfolge-fragt-allein-den-vorschauinhalt-*.md`).
+/// Dass die Vorschau diese Frage richtig beantwortet, haelt die Probe
+/// `die_bildfolge_gilt_allein_fuer_ihren_pfad_und_nicht_vor_einer_neuen_lieferung`
+/// in `vorschaumodell.rs`; welches Fenster gerade aktiv ist, sieht keine der
+/// zwei, das bleibt am Buendel zu pruefen.
 #[cfg(test)]
 mod blaetterproben {
     use super::quelltextproben::{diese_datei, rumpf};
@@ -11775,8 +11778,49 @@ mod blaetterproben {
             assert!(!rumpf.contains(griff), "bild_blaettern ruft {griff}");
         }
     }
+
+    #[test]
+    fn die_bildfolge_der_lage_fragt_den_pfad_des_aktiven_dateifensters() {
+        let datei = diese_datei();
+        let lage = rumpf(&datei, "lage");
+        assert!(
+            lage.contains(concat!("bildfolge: self.bildfolge_", "steht(),")),
+            "lage erhebt Lage::bildfolge nicht ueber bildfolge_steht"
+        );
+        let steht = rumpf(&datei, concat!("bildfolge_", "steht"));
+        let beschrieben = steht
+            .find(concat!(".quelle().beschrie", "ben()"))
+            .expect("bildfolge_steht fragt nicht, was das aktive Dateifenster beschreibt");
+        let frage = steht
+            .find(concat!("vorschau.zeigt_bildfolge_", "von(&beschrieben)"))
+            .expect("bildfolge_steht fragt die Vorschau nicht mit dem beschriebenen Pfad");
+        assert!(beschrieben < frage);
+        assert!(
+            steht.contains(concat!("modell.ak", "tiv()")),
+            "bildfolge_steht fragt nicht nach dem aktiven Dateifenster"
+        );
+        assert_eq!(
+            datei.matches(concat!("self.bildfolge_", "steht()")).count(),
+            1,
+            "bildfolge_steht hat einen Rufer neben lage, also eine zweite Erhebung"
+        );
+    }
 }
 
+/// Die drei Zoombefehle der Runde 20 haben ihren Ausfuehrungszweig beim
+/// Anwendungsdelegierten und nirgends sonst (C3.8).
+///
+/// Der Ausfuehrungszweig ist die Stelle, die niemand haelt: das `match` in
+/// `kommando_ausfuehren` endet auf einen Auffangzweig, und ein Kommando ohne
+/// eigene Zeile uebersteht Bau und jede Belegungsprobe und tut nichts. Diese
+/// Probe liest den Rumpf von `kommando_ausfuehren` in dieser Datei und
+/// verlangt jede der drei Kennungen als `Kommando::… =>` genau einmal; in
+/// `tabelle.rs` verlangt sie keine, denn dort gehoeren die drei nicht hin —
+/// ein Dateifenster hat keinen Zoom.
+///
+/// **Was sie nicht sieht:** einen Zweig, der zwar steht, aber das Falsche
+/// ruft. Ob `zoomen` das Richtige tut, prueft `betrachter.rs` an seinen
+/// eigenen Proben.
 #[cfg(test)]
 mod zoomproben {
     use super::quelltextproben::{diese_datei, rumpf};
@@ -11821,6 +11865,23 @@ mod zoomproben {
     }
 }
 
+/// Was am Angleichen aus C1 bis C3 der Runde 13 **ohne Fenster** zu messen ist.
+///
+/// Der Befehl selbst laesst sich hier nicht ausfuehren: er braucht das
+/// Fenstermodell, zwei Dateifenster und eine Aufteilung, und der
+/// Anwendungsdelegierte ist ohne laufende Anwendung nicht zu bauen. Was die
+/// Kriterien aus C1 und C2 am gebauten Buendel verlangen, steht deshalb im Plan
+/// unter "Nutzerarbeit" und wird hier **nicht** behauptet.
+///
+/// Was bleibt, sind drei Aussagen ueber den **Baum**, und jede von ihnen ist
+/// eine Falle, die kein Uebersetzer haelt: der fehlende Ausfuehrungszweig, die
+/// Sichtbarkeitsfrage nach dem Einblenden statt davor, und ein Griff an Fokus
+/// oder Sichtbarkeit, den C1 und C2 ausschliessen. Sie werden am Quelltext
+/// gelesen, mit derselben Rumpfregel wie in [`quelltextproben`].
+///
+/// **Was die drei nicht sehen:** eine Wirkung, die aus diesem Rumpf in eine
+/// spaeter gerufene Hilfsfunktion gewandert ist. Sie lesen den Rumpf und nicht
+/// den Aufrufbaum darunter.
 #[cfg(test)]
 mod angleichproben {
     use super::quelltextproben::{diese_datei, rumpf};

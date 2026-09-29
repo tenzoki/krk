@@ -30,3 +30,6 @@ Die Kürzung trägt ihren Grund (etwa `Kuerzung::{Fotos, Ordner, Eintraege}` sta
 
 - Eine Kernprobe: eine Folge aus 61 Monatsordnern mit je einem Foto ist gekürzt, und ihr Grund ist die Ordnergrenze.
 - Eine Probe am Zähler: eine an der Ordner- oder Eintragsgrenze gekürzte Folge unter 7.500 Fotos nennt keine 7.500.
+
+---
+Resolved: die Kuerzung traegt ihren Grund (`bildfolge::Kuerzung` je `Grenze` Fotos, Ordner, Eintraege), `bildzaehler_text` nennt die gegriffenen Grenzen, HowTo.md zieht mit; Proben `eine_an_der_ordnergrenze_gekuerzte_folge_nennt_die_ordnergrenze` und `der_bildzaehler_nennt_die_grenze_die_gekuerzt_hat`.

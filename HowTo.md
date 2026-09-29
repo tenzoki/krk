@@ -688,9 +688,11 @@ Monatsfolge, wenn in `Fotos/2008` die Zeile `08` ausgewählt ist.
 - **Nur mit dem Fokus in der Dateiliste.** Mit dem Fokus in der Vorschau
   gelten Cmd+Pfeil wie bisher.
 - **Die Statuszeile** zeigt „Bild 3 von 41“, solange eine Bildfolge steht.
-  Eine Folge nimmt höchstens 7.500 Fotos auf; hat ein Ordner mehr, enthält sie
-  die ersten 7.500, und die Statuszeile sagt dazu „(Folge nach 7.500 Fotos
-  gekürzt)“. Solange die Aufnahmedaten gelesen werden, steht in der Vorschau
+  Eine Folge nimmt höchstens 7.500 Fotos aus höchstens 60 Ordnern auf und
+  liest je Ordner höchstens 10.000 Einträge; greift eine dieser Grenzen, enthält
+  sie die ersten Fotos, und die Statuszeile nennt die Grenze, etwa „(Folge nach
+  7.500 Fotos gekürzt)“, „(Folge nach 60 Ordnern gekürzt)“ oder „(Folge an
+  10.000 Einträgen eines Ordners gekürzt)“. Solange die Aufnahmedaten gelesen werden, steht in der Vorschau
   „Die Bildfolge wird vorbereitet: 1.000 Fotos.“, und die Dateiliste nimmt
   jeden Tastendruck an.
 - **Ein neuer Ordner, eine neue Folge:** wechselt die Auswahl und kommt sie

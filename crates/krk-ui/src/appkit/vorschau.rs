@@ -1192,12 +1192,13 @@ impl Vorschaufenster {
         self.ivars().modell.borrow().gezeigtes_folgebild()
     }
 
-    /// Ob der aktive Vorschau-Tab eine Bildfolge zeigt; gefragt von
-    /// `Anwendungsdelegierter::lage` fuer die Zulaessigkeit der drei Befehle
-    /// der Bildfolge.
+    /// Ob der aktive Vorschau-Tab eine Bildfolge fuer genau diesen Pfad zeigt
+    /// und nichts Neueres laedt; gefragt von `Anwendungsdelegierter::lage` fuer
+    /// die Zulaessigkeit der drei Befehle der Bildfolge. Die Regel steht an
+    /// [`Vorschaumodell::zeigt_bildfolge_von`].
     #[must_use]
-    pub fn zeigt_bildfolge(&self) -> bool {
-        self.ivars().modell.borrow().zeigt_bildfolge()
+    pub fn zeigt_bildfolge_von(&self, pfad: &Path) -> bool {
+        self.ivars().modell.borrow().zeigt_bildfolge_von(pfad)
     }
 
     /// Ob ein Vorschau-Tab noch auf seinen Arbeitsfaden wartet.
@@ -1254,9 +1255,9 @@ impl Vorschaufenster {
     /// der Bildfolge): eine Vorschau zeigt nie zugleich PDF und Bildfolge.
     pub fn seitenzaehler(&self) -> Option<String> {
         let bildstand = self.ivars().modell.borrow().bildstand();
-        if let Some((aktuell, gesamt, gekuerzt)) = bildstand {
+        if let Some((aktuell, gesamt, kuerzung)) = bildstand {
             return Some(super::statuszeile::bildzaehler_text(
-                aktuell, gesamt, gekuerzt,
+                aktuell, gesamt, kuerzung,
             ));
         }
         if self.ivars().flaeche.get() != Flaeche::Betrachter {

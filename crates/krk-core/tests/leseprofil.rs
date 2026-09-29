@@ -50,7 +50,7 @@ use std::time::{Duration, SystemTime};
 
 use krk_core::ablage::leseprofile::AUSLIEFERUNGSTEXT;
 use krk_core::bild::{Aufnahmezeit, Datumsleser};
-use krk_core::leseprofil::bildfolge::{Bildverzeichnis, verzeichnis_erheben};
+use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Grenze, verzeichnis_erheben};
 use krk_core::leseprofil::datei::{Profildatei, pruefen};
 use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{
@@ -5467,6 +5467,7 @@ fn eine_folge_ueber_der_grenze_wird_in_folgenreihenfolge_gekuerzt() {
     let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
     assert_eq!(verzeichnis.gesamt(), HOECHSTENS_FOTOS);
     assert!(verzeichnis.ist_gekuerzt());
+    assert_eq!(verzeichnis.kuerzung().grenzen(), [Grenze::Fotos]);
     assert_eq!(verzeichnis.gruppen()[1].beitrag(), 2);
 
     let leser = tafelleser(vec![
@@ -5486,6 +5487,25 @@ fn eine_folge_ueber_der_grenze_wird_in_folgenreihenfolge_gekuerzt() {
         ["y.jpg", "z.jpg"],
         "die Kappungsgruppe liefert ihre fruehesten"
     );
+}
+
+/// Die Kuerzung nennt ihren Grund: 61 Monatsordner mit je einem Foto ergeben
+/// 60 Gruppen, und gegriffen hat die Ordnergrenze und nicht die Fotogrenze
+/// (`issues/260929-1646_*_der-zaehler-nennt-jede-gekuerzte-folge-*.md` im
+/// Arbeitspaket `260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum`).
+#[test]
+fn eine_an_der_ordnergrenze_gekuerzte_folge_nennt_die_ordnergrenze() {
+    let ordner = Pruefordner::neu("bildfolge-ordnergrenze");
+    let monate = Grenze::Ordner.hoechstens() + 1;
+    for nummer in 0..monate {
+        ordner.ordner(&format!("{nummer:03}"));
+        ordner.datei(&format!("{nummer:03}/a.jpg"), b"");
+    }
+    let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
+    assert_eq!(verzeichnis.gruppen().len(), Grenze::Ordner.hoechstens());
+    assert_eq!(verzeichnis.gesamt(), Grenze::Ordner.hoechstens());
+    assert!(verzeichnis.ist_gekuerzt());
+    assert_eq!(verzeichnis.kuerzung().grenzen(), [Grenze::Ordner]);
 }
 
 /// C5.5: ein Leser, der fuer jedes zweite Foto nichts liefert, bricht nichts
