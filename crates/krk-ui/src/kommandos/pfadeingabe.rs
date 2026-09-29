@@ -20,7 +20,7 @@
 
 use std::path::{Path, PathBuf};
 
-use krk_core::verzeichnis::aufwaerts;
+use krk_core::verzeichnis::{aufwaerts, datenschutzsperre};
 
 /// Wohin das aktive Dateifenster nach der Pruefung geht.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -80,10 +80,9 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
         // Leserecht (Nutzerentscheid vom 260907-1210,
         // `shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`).
         if let Err(fehler) = std::fs::read_dir(pfad) {
-            return Ergebnis::Meldung(format!(
-                "{} lässt sich nicht lesen: {fehler}",
-                pfad.display()
-            ));
+            return Ergebnis::Meldung(datenschutzsperre(pfad, &fehler).unwrap_or_else(|| {
+                format!("{} lässt sich nicht lesen: {fehler}", pfad.display())
+            }));
         }
         return Ergebnis::Wechseln {
             ordner: pfad.to_path_buf(),

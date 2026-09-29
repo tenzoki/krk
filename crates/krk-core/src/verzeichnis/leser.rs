@@ -52,6 +52,43 @@ pub const STAPELGROESSE: usize = 1024;
 /// Wie viele fertige Stapel im Kanal warten duerfen.
 const KANALTIEFE: usize = 1;
 
+/// `EPERM` aus `<sys/errno.h>`. `krk-core` fuehrt kein `libc`, und die
+/// Nummer ist auf beiden Mac-Zielen dieselbe.
+const EPERM: i32 = 1;
+
+/// Die Statuszeile fuer einen Ordner, den der Datenschutz von macOS sperrt,
+/// oder `None` fuer jeden anderen Lesefehler.
+///
+/// **Hier und nur hier faellt die Unterscheidung zwischen `EPERM` und
+/// `EACCES`.** Rust bildet beide auf `io::ErrorKind::PermissionDenied` ab,
+/// sie haben aber verschiedene Abhilfen: `EACCES` (13) ist das fehlende
+/// Unix-Leserecht, `EPERM` (1) beim Oeffnen eines Ordners gibt macOS, wenn
+/// die Datenschutzsperre (TCC) greift, etwa an
+/// `~/Pictures/Photos Library.photoslibrary`, und abhelfen kann allein der
+/// Festplattenvollzugriff. Jede Stelle, an der ein Lesefehler eines Ordners
+/// nutzersichtbar wird, fragt diese Funktion zuerst und behaelt fuer `None`
+/// ihre eigene Meldung; heute sind das der Einzug des Lesevorgangs
+/// (`krk-ui/src/tabs.rs`, `lesemeldungen_einziehen`) und der Pfadsprung
+/// (`krk-ui/src/kommandos/pfadeingabe.rs`).
+///
+/// Der Text ist nutzersichtbar und traegt deshalb Umlaute.
+#[must_use]
+pub fn datenschutzsperre(ordner: &Path, fehler: &io::Error) -> Option<String> {
+    if fehler.raw_os_error() != Some(EPERM) {
+        return None;
+    }
+    // Der Name und nicht der ganze Pfad: die Zeile traegt den Weg zur
+    // Freigabe, und der Pfad steht ohnehin im Fenstertitel.
+    let name = ordner.file_name().map_or_else(
+        || ordner.display().to_string(),
+        |name| name.to_string_lossy().into_owned(),
+    );
+    Some(format!(
+        "macOS sperrt den Zugriff auf „{name}“. Freigabe: Systemeinstellungen › \
+         Datenschutz & Sicherheit › Festplattenvollzugriff › KRK, danach KRK neu starten."
+    ))
+}
+
 /// Wie ein Lesevorgang geendet hat.
 #[derive(Debug)]
 pub enum Abschluss {

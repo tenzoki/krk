@@ -4375,3 +4375,54 @@ fn eine_benannte_roehre_ohne_schreiber_haelt_den_schwungleser_nicht_an() {
         "die Antwort kommt vom Aufrufer und traegt keine Betriebssystemnummer: {fehler:?}"
     );
 }
+
+/// Die Datenschutzsperre von macOS (`EPERM`) bekommt ihre eigene Meldung mit
+/// dem Weg zur Freigabe; das fehlende Unix-Leserecht (`EACCES`) und jeder
+/// andere Fehler bekommen keine und behalten die Meldung ihres Rufers.
+///
+/// Beide Nummern treffen in Rust auf `io::ErrorKind::PermissionDenied`, und
+/// genau deshalb wird hier an der Nummer und nicht an der Art gemessen.
+#[test]
+fn allein_eperm_meldet_die_datenschutzsperre() {
+    use krk_core::verzeichnis::datenschutzsperre;
+
+    let ordner = Path::new("/Users/nutzer/Pictures/Photos Library.photoslibrary");
+
+    let gesperrt = datenschutzsperre(ordner, &std::io::Error::from_raw_os_error(1))
+        .expect("EPERM beim Lesen eines Ordners ist die Datenschutzsperre");
+    assert!(
+        gesperrt.contains("„Photos Library.photoslibrary“"),
+        "die Meldung nennt den Ordner nicht: {gesperrt}"
+    );
+    assert!(
+        gesperrt.contains("macOS sperrt"),
+        "die Meldung nennt die Sperre nicht: {gesperrt}"
+    );
+    assert!(
+        gesperrt.contains("Datenschutz & Sicherheit › Festplattenvollzugriff"),
+        "die Meldung nennt den Weg zur Freigabe nicht: {gesperrt}"
+    );
+    assert!(
+        gesperrt.contains("neu starten"),
+        "die Meldung sagt nicht, dass KRK neu starten muss: {gesperrt}"
+    );
+
+    assert_eq!(
+        datenschutzsperre(ordner, &std::io::Error::from_raw_os_error(13)),
+        None,
+        "EACCES ist das fehlende Leserecht und keine Datenschutzsperre"
+    );
+    assert_eq!(
+        datenschutzsperre(ordner, &std::io::Error::from_raw_os_error(2)),
+        None,
+        "ENOENT ist keine Datenschutzsperre"
+    );
+    assert_eq!(
+        datenschutzsperre(
+            ordner,
+            &std::io::Error::from(std::io::ErrorKind::PermissionDenied)
+        ),
+        None,
+        "ein Fehler ohne Betriebssystemnummer ist keine Datenschutzsperre"
+    );
+}

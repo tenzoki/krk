@@ -107,6 +107,18 @@ mit festem Namen und ohne Laufnummer.
 
 ---
 
+## Ordner, die macOS sperrt
+
+Manche Ordner gibt macOS nur Programmen mit **Festplattenvollzugriff** heraus,
+etwa `~/Pictures/Photos Library.photoslibrary`. Ohne ihn bleibt die Dateiliste
+leer, und die Statuszeile meldet „macOS sperrt den Zugriff auf …“. Abhilfe:
+Systemeinstellungen › Datenschutz & Sicherheit › Festplattenvollzugriff, KRK
+einschalten und KRK neu starten. Fehlt dagegen das gewöhnliche Leserecht des
+Ordners, meldet die Statuszeile wie bisher, dass er sich nicht lesen ließ; der
+Festplattenvollzugriff hilft dann nicht.
+
+---
+
 ## Der Dateilistenfilter
 
 Jedes Zeichen, das im Dateifenster getippt wird und keiner Funktion gehört,

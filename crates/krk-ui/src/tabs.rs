@@ -52,7 +52,9 @@ use krk_core::git::Marke;
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung};
 use krk_core::heimordner::Heimordner;
 use krk_core::verzeichnis::modell::Befund;
-use krk_core::verzeichnis::{Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell};
+use krk_core::verzeichnis::{
+    Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell, datenschutzsperre,
+};
 
 use crate::gitmodell::Gitmodell;
 use crate::heimgriff::{self, Heimgriff};
@@ -1673,10 +1675,13 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
             }
             Meldung::Fertig { abschluss, .. } => {
                 if let Abschluss::Fehler(fehler) = &abschluss {
-                    tab.meldung = Some(format!(
-                        "{} ließ sich nicht vollständig lesen: {fehler}",
-                        tab.ordner.display()
-                    ));
+                    tab.meldung =
+                        Some(datenschutzsperre(&tab.ordner, fehler).unwrap_or_else(|| {
+                            format!(
+                                "{} ließ sich nicht vollständig lesen: {fehler}",
+                                tab.ordner.display()
+                            )
+                        }));
                     einzug.meldung_neu = true;
                 }
                 tab.modell.abschliessen();

@@ -185,7 +185,7 @@ pub use durchlauf::{Auftrag, Auftragsart, Befundmeldung, Durchlauf};
 pub use eintrag::{Eintrag, Typ};
 pub use filter::Muster;
 pub use inhalt::{Inhaltsbefund, traegt_der_inhalt};
-pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, lesen};
+pub use leser::{Abschluss, Lesevorgang, Meldung, STAPELGROESSE, datenschutzsperre, lesen};
 pub use loeschzielbefund::{Erlaubnisbefund, Warnbefund};
 pub use modell::{Markierungsstand, Ordnermodell};
 pub use sortierung::{Richtung, Schluessel, Sortierung};
