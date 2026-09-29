@@ -35,3 +35,6 @@ Wir empfehlen Möglichkeit 1, vorbehaltlich des Urteils aus Schritt 2 des Plans.
 
 ---
 Answered: 260929-1437-klaerung-verengung-in-der-konfliktregel.md `Urteil` — Möglichkeit 1 in der Mengenform: die Bildfolge ist eine engere Form des Dateifensters, eine Kombination trägt höchstens zwei Funktionen, die Regel `im_weg(traeger, bewerber)` prüft alle Träger, `nachschlag` liefert die engere zuerst; große TIFF über 256 KiB ordnen nach Änderungsdatum (kamadak-exif, 260929-1441-klaerung-aufnahmedatum-ohne-c.md); ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: edb7a19 — Verengung in Mengenform (im_weg, weiter/verengt, engere zuerst im Nachschlag), Wirkungsbereich Bildfolge und Lage.bildfolge gebaut

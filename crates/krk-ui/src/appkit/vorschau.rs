@@ -330,7 +330,8 @@ use crate::hervorhebung::{
 };
 use crate::markdown::Quellbezug;
 use crate::vorschaumodell::{
-    Inhalt, Metadaten, Tabstand, Vorschaumodell, Zwischenablageinhalt, rechte_text,
+    Blaetterrichtung, Inhalt, Metadaten, Tabstand, Vorschaumodell, Zwischenablageinhalt,
+    rechte_text,
 };
 
 use super::betrachter::{Deutung, Pdfbetrachter, Zoom};
@@ -1158,6 +1159,22 @@ impl Vorschaufenster {
     /// Modells endet mit dieser Zeile, vor jedem Objective-C-Aufruf.
     fn teilbare_pfade(&self) -> Vec<PathBuf> {
         self.angezeigter_pfad().into_iter().collect()
+    }
+
+    /// Blaettert die Bildfolge des aktiven Tabs um ein Foto (C3 des Spec der
+    /// Bildfolge) und zeichnet neu, samt dem Zaehler der Statuszeile.
+    ///
+    /// Ohne Bildfolge und am Anfang oder Ende der Folge tut es nichts und
+    /// liefert `false`. Der Takt laeuft danach, weil das Foto an der neuen
+    /// Stelle erst geladen wird.
+    #[must_use = "die Antwort sagt, ob sich die Stelle bewegt hat"]
+    pub fn blaettern(&self, richtung: Blaetterrichtung) -> bool {
+        let bewegt = self.ivars().modell.borrow_mut().blaettern(richtung);
+        if bewegt {
+            self.anzeigen();
+            self.takt_starten();
+        }
+        bewegt
     }
 
     /// Ob der aktive Vorschau-Tab eine Bildfolge zeigt; gefragt von

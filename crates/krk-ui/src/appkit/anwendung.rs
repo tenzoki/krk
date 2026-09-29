@@ -321,6 +321,7 @@ use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zus
 use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste};
+use crate::vorschaumodell::Blaetterrichtung;
 
 use super::aufteilung::Aufteilung;
 use super::belegungsansicht::{self, Belegungsquelle};
@@ -2309,6 +2310,20 @@ impl Anwendungsdelegierter {
             .vorschau
             .get()
             .expect("das Vorschaufenster steht seit `oberflaeche_aufbauen`")
+    }
+
+    /// Blaettert die Bildfolge der Vorschau um ein Foto (C3 des Spec der
+    /// Bildfolge).
+    ///
+    /// **Die Dateiliste bleibt unberuehrt** (C3.1): der Rumpf ruft allein die
+    /// Vorschau, und die Probe `blaetterproben` haelt, dass darin kein Griff
+    /// an Auswahl oder Ordner steht. Liefert `false`, auch wenn sich die Stelle
+    /// bewegt hat: Aufteilung und Sitzung aendern sich nicht, denn die Stelle
+    /// der Folge merkt sich KRK ueber keine Sitzung hinweg (Spec, Out of
+    /// Scope).
+    fn bild_blaettern(&self, richtung: Blaetterrichtung) -> bool {
+        let _ = self.vorschau().blaettern(richtung);
+        false
     }
 
     /// Der Git-Bereich (C1 der Runde 23).
@@ -4516,6 +4531,14 @@ impl Anwendungsdelegierter {
             Kommando::VorschauVergroessern => self.vorschau().zoomen(Zoom::Groesser),
             Kommando::VorschauVerkleinern => self.vorschau().zoomen(Zoom::Kleiner),
             Kommando::VorschauAusgangsgroesse => self.vorschau().zoomen(Zoom::Ausgangsgroesse),
+            // Das Blaettern der Bildfolge (C3 des Spec der Bildfolge). **Hier
+            // und nicht bei `bereichskommando`**: der Fokus liegt im
+            // Dateifenster, die Wirkung in der Vorschau, und das Dateifenster
+            // liesse die zwei durch seinen Auffangzweig fallen. Die Probe
+            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`
+            // haelt beide Zeilen.
+            Kommando::BildVor => self.bild_blaettern(Blaetterrichtung::Vor),
+            Kommando::BildZurueck => self.bild_blaettern(Blaetterrichtung::Zurueck),
             // Alles uebrige gehoert dem Bereich, der den Fokus hat.
             andere => self.bereichskommando(fokus, andere),
         };
@@ -10971,7 +10994,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 15] = [
+    const BEFEHLE: [&str; 17] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -10987,6 +11010,8 @@ mod zweigproben {
         "QuicknoteKopieren",
         "QuicknoteLeeren",
         "Werkseinstellungen",
+        "BildVor",
+        "BildZurueck",
     ];
 
     #[test]
@@ -11612,6 +11637,33 @@ mod notizordnerproben {
 /// **Was sie nicht sieht:** einen Zweig, der zwar steht, aber das Falsche
 /// ruft. Ob `zoomen` das Richtige tut, prueft `betrachter.rs` an seinen
 /// eigenen Proben.
+/// Das Blaettern der Bildfolge greift nicht in die Dateiliste (C3.1 des Spec
+/// der Bildfolge): der Rumpf von `bild_blaettern` ruft weder `zeile_setzen`
+/// noch `auswahl_merken` noch `ordner_lesen`.
+///
+/// **Was sie nicht sieht:** einen Griff in einer Hilfsfunktion, die der Rumpf
+/// ruft; sie liest den Rumpf und nicht den Aufrufbaum darunter.
+#[cfg(test)]
+mod blaetterproben {
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    #[test]
+    fn das_blaettern_ruehrt_die_dateiliste_nicht_an() {
+        let rumpf = rumpf(&diese_datei(), "bild_blaettern");
+        assert!(
+            rumpf.contains(concat!(".blae", "ttern(")),
+            "bild_blaettern ruft die Vorschau nicht"
+        );
+        for griff in [
+            concat!("zeile_", "setzen("),
+            concat!("auswahl_", "merken("),
+            concat!("ordner_", "lesen("),
+        ] {
+            assert!(!rumpf.contains(griff), "bild_blaettern ruft {griff}");
+        }
+    }
+}
+
 #[cfg(test)]
 mod zoomproben {
     use super::quelltextproben::{diese_datei, rumpf};

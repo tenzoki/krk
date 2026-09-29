@@ -483,6 +483,31 @@ impl Folgeanzeige {
         self.gruppen.get(gruppe)?.as_ref()?.get(index)
     }
 
+    /// Versetzt die Stelle um eins; am Anfang und am Ende nichts (C3.3 des
+    /// Spec der Bildfolge). Liefert, ob sie sich bewegt hat.
+    ///
+    /// Die Stelle wandert auch in eine noch nicht geordnete Gruppe; dort steht
+    /// der Hinweis, bis die Gruppe eintrifft (Entscheidung 15 des Plans). Liegt
+    /// sie in einer geordneten, bleibt das bisherige Bild stehen, bis das neue
+    /// geladen ist.
+    fn stelle_versetzen(&mut self, richtung: Blaetterrichtung) -> bool {
+        let neu = match richtung {
+            Blaetterrichtung::Vor => self.stelle + 1,
+            Blaetterrichtung::Zurueck => match self.stelle.checked_sub(1) {
+                Some(neu) => neu,
+                None => return false,
+            },
+        };
+        if neu >= self.verzeichnis.gesamt() {
+            return false;
+        }
+        self.stelle = neu;
+        if self.foto().is_none() {
+            self.bild = Inhalt::Hinweis(vorbereitungshinweis(self.verzeichnis.gesamt()));
+        }
+        true
+    }
+
     /// Nimmt eine geordnete Gruppe auf. Liefert, ob sie die Stelle traegt,
     /// also ob die Anzeige jetzt ein Foto laden kann.
     fn gruppe_aufnehmen(&mut self, meldung: Gruppenmeldung) -> bool {
@@ -494,6 +519,15 @@ impl Folgeanzeige {
             .ort_der_stelle(self.stelle)
             .is_some_and(|(gruppe, _)| gruppe == meldung.index)
     }
+}
+
+/// In welche Richtung eine Bildfolge blaettert (C3 des Spec der Bildfolge).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Blaetterrichtung {
+    /// Zum naechsten Foto, `cmd+down`.
+    Vor,
+    /// Zum vorigen Foto, `cmd+up`.
+    Zurueck,
 }
 
 /// Der Satz, der dasteht, solange das Foto an der Stelle nicht geladen ist
@@ -780,6 +814,29 @@ impl Vorschautab {
             ));
         }
         geaendert
+    }
+
+    /// Blaettert die Bildfolge des Tabs und startet das Laden des Fotos an der
+    /// neuen Stelle, wenn seine Gruppe geordnet ist. Liefert, ob sich die
+    /// Stelle bewegt hat.
+    fn blaettern(&mut self, richtung: Blaetterrichtung, datumsleser: Datumsleserfunktion) -> bool {
+        let (Some(betrieb), Inhalt::Bildfolge(anzeige)) = (self.folge.as_mut(), &mut self.inhalt)
+        else {
+            return false;
+        };
+        if !anzeige.stelle_versetzen(richtung) {
+            return false;
+        }
+        betrieb.bildvorgang = anzeige.foto().map(|foto| {
+            Ladevorgang::starten(
+                foto.pfad().to_path_buf(),
+                betrieb.tafel,
+                Arc::default(),
+                None,
+                datumsleser,
+            )
+        });
+        true
     }
 
     /// Ob an der Bildfolge des Tabs noch etwas aussteht.
@@ -1090,6 +1147,18 @@ impl Vorschaumodell {
     #[must_use]
     pub fn wartet_noch(&self) -> bool {
         self.laedt_noch() || self.tabs.iter().any(Vorschautab::folge_wartet)
+    }
+
+    /// Blaettert die Bildfolge des aktiven Tabs um ein Foto (C3 des Spec der
+    /// Bildfolge). Am Anfang und am Ende tut es nichts und liefert `false`,
+    /// ebenso ohne Bildfolge.
+    ///
+    /// Die Auswahl der Dateiliste beruehrt es nicht: das Modell der Vorschau
+    /// kennt sie gar nicht (C3.1).
+    #[must_use = "die Antwort sagt, ob die Ansicht neu zu zeichnen und der Takt anzuwerfen ist"]
+    pub fn blaettern(&mut self, richtung: Blaetterrichtung) -> bool {
+        let datumsleser = self.datumsleser;
+        self.tabs[self.aktiv].blaettern(richtung, datumsleser)
     }
 
     /// Ob der aktive Tab eine Bildfolge zeigt.
@@ -3189,6 +3258,124 @@ pfad = 'werkbank'
             1,
             "ausserhalb des Pruefmoduls ruft genau der Arbeitsfaden nachliefern"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Blaettern (Schritt 8 des Plans der Bildfolge)
+    // -----------------------------------------------------------------------
+
+    /// Ein Jahr mit drei Monaten: `01` mit zwei Fotos, `02` ohne, `03` mit
+    /// einem. Liefert den Ordner des Jahres.
+    fn jahr_mit_drei_monaten(ordner: &Pruefordner) -> PathBuf {
+        let jahr = ordner.ordner("Fotos/2008");
+        for monat in ["01", "02", "03"] {
+            ordner.ordner(&format!("Fotos/2008/{monat}"));
+        }
+        ordner.datei("Fotos/2008/01/a.jpg", b"");
+        ordner.datei("Fotos/2008/01/b.jpg", b"");
+        ordner.datei("Fotos/2008/02/notiz.txt", b"");
+        ordner.datei("Fotos/2008/03/c.jpg", b"");
+        jahr
+    }
+
+    fn jahresprofil() -> Arc<Profile> {
+        Arc::new(profile_aus(
+            "[[profil]]\nname = \"Jahr\"\npfad = '/Fotos/[0-9]{4}$'\nbildfolge = { ordner = \"*\" }\n",
+        ))
+    }
+
+    fn name_des_fotos(modell: &Vorschaumodell) -> Option<String> {
+        folge_des_aktiven(modell)
+            .foto()
+            .and_then(|foto| foto.pfad().file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+    }
+
+    /// C2.5, C3.3 und C3.5: vorwaerts ueber das Ende eines Monats auf das
+    /// erste Foto des naechsten mit Fotos, am Anfang und am Ende nichts, und
+    /// der Zaehler folgt der Stelle.
+    #[test]
+    fn das_blaettern_laeuft_ueber_die_monate_und_haelt_an_den_enden() {
+        let ordner = Pruefordner::neu("bildfolge-blaettern");
+        let jahr = jahr_mit_drei_monaten(&ordner);
+        let mut modell = Vorschaumodell::neu();
+        modell.datumsleser = |_: &Path| None;
+        modell.datei_anzeigen(&jahr, Tafel::Hell, jahresprofil(), None);
+        bis(&mut modell, |modell| {
+            !modell.laedt_noch() && !modell.wartet_noch()
+        });
+        assert_eq!(modell.bildstand(), Some((1, 3, false)));
+
+        assert!(
+            !modell.blaettern(Blaetterrichtung::Zurueck),
+            "auf dem ersten Foto tut Zurueck nichts"
+        );
+        assert!(modell.blaettern(Blaetterrichtung::Vor));
+        assert!(modell.blaettern(Blaetterrichtung::Vor));
+        assert_eq!(modell.bildstand(), Some((3, 3, false)));
+        assert_eq!(name_des_fotos(&modell).as_deref(), Some("c.jpg"));
+        assert!(
+            !modell.blaettern(Blaetterrichtung::Vor),
+            "auf dem letzten Foto tut Vor nichts und beginnt nicht von vorn"
+        );
+        bis(&mut modell, |modell| !modell.wartet_noch());
+        assert!(matches!(
+            folge_des_aktiven(&modell).bild(),
+            Inhalt::Bild { .. }
+        ));
+        assert!(modell.blaettern(Blaetterrichtung::Zurueck));
+        assert_eq!(modell.bildstand(), Some((2, 3, false)));
+    }
+
+    static FREI_MAERZ: AtomicBool = AtomicBool::new(false);
+
+    fn maerz_wartet(pfad: &Path) -> Option<Aufnahmezeit> {
+        if pfad.to_string_lossy().contains("/03/") {
+            while !FREI_MAERZ.load(Ordering::SeqCst) {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+        None
+    }
+
+    /// Entscheidung 15: eine Stelle in einer noch nicht geordneten Gruppe zeigt
+    /// den Hinweis und nach der Nachlieferung das Foto.
+    #[test]
+    fn eine_stelle_in_einer_ungeordneten_gruppe_zeigt_den_hinweis_bis_sie_eintrifft() {
+        let ordner = Pruefordner::neu("bildfolge-ungeordnet");
+        let jahr = jahr_mit_drei_monaten(&ordner);
+        let mut modell = Vorschaumodell::neu();
+        modell.datumsleser = maerz_wartet;
+        modell.datei_anzeigen(&jahr, Tafel::Hell, jahresprofil(), None);
+        bis(&mut modell, |modell| {
+            matches!(
+                folge_des_aktiven_oder_nichts(modell),
+                Some(Inhalt::Bild { .. })
+            )
+        });
+        assert!(modell.blaettern(Blaetterrichtung::Vor));
+        assert!(modell.blaettern(Blaetterrichtung::Vor));
+        assert_eq!(modell.bildstand(), Some((3, 3, false)));
+        assert!(matches!(
+            folge_des_aktiven(&modell).bild(),
+            Inhalt::Hinweis(_)
+        ));
+        assert_eq!(name_des_fotos(&modell), None, "die Gruppe steht noch aus");
+
+        FREI_MAERZ.store(true, Ordering::SeqCst);
+        bis(&mut modell, |modell| !modell.wartet_noch());
+        assert_eq!(name_des_fotos(&modell).as_deref(), Some("c.jpg"));
+        assert!(matches!(
+            folge_des_aktiven(&modell).bild(),
+            Inhalt::Bild { .. }
+        ));
+    }
+
+    fn folge_des_aktiven_oder_nichts(modell: &Vorschaumodell) -> Option<&Inhalt> {
+        match modell.aktiver_inhalt() {
+            Inhalt::Bildfolge(folge) => Some(folge.bild()),
+            _ => None,
+        }
     }
 
     /// Eine Bildfolge mit einem Foto, fuer die Proben, die einen Wert jeder

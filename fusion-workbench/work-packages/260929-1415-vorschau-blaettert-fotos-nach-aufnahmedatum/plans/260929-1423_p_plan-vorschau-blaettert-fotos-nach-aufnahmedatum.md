@@ -247,7 +247,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
    - Acceptance: `make check` grün. **Zwischenstand, nicht auslieferbar**: bei stehender Bildfolge wählt Cmd+Pfeil hoch „Voriges Bild“, und das tut bis Schritt 8 nichts.
    - Dependencies: Schritte 2 und 6
 
-8. **Blättern**
+8. [DONE] **Blättern**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes: `Vorschaumodell::blaettern(richtung) -> bool` versetzt die Stelle um eins, am Anfang und am Ende nichts (Entscheidung 15), und startet für eine geordnete Stelle den `Ladevorgang` des Bildes, sonst steht der Hinweis. `Vorschaufenster::blaettern` ruft es, startet den Takt und meldet den Zähler. In `kommando_ausfuehren_bei` je ein eigener Zweig für `BildVor` und `BildZurueck` nach dem Muster der Zoombefehle, mit dem Kommentar, warum sie nicht über `bereichskommando` laufen (der Fokus liegt im Dateifenster, die Wirkung in der Vorschau). Die Auswahl der Dateiliste wird nicht berührt (C3.1).
