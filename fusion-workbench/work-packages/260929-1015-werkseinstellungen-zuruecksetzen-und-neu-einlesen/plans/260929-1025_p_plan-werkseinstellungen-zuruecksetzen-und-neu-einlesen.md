@@ -312,7 +312,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit der Schritte 3, 
    - Acceptance: `make check` grün, insbesondere `die_auslieferungsfassung_traegt_ihre_kommentare`, `die_auslieferungsfassung_nennt_jeden_bausteinnamen`, `die_eingebettete_fassung_besteht_ihre_eigene_pruefung` und `die_zwei_zahlen_im_kopf_der_auslieferungsbelegung_stimmen_noch` ohne geänderte Erwartung; `git diff` zeigt allein Zeilen, die mit `#` beginnen.
    - Dependencies: Schritt 8
 
-10. **`README.md` und `HowTo.md`**
+10. [DONE] **`README.md` und `HowTo.md`**
     - Executor: `code-implementer`
     - Files: `README.md`, `HowTo.md`
     - Changes:

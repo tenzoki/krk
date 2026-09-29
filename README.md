@@ -63,18 +63,23 @@ Fehler: eine unveränderte Datei ist nicht beschädigt.
 
 **Wie die drei entstehen, ist nicht dasselbe, und daran hängt der Handgriff
 weiter unten.** `readers.toml` legt KRK beim ersten Start an und schreibt sie
-danach nie wieder. `settings.toml` legt KRK ebenso beim ersten Start an und
-schreibt sie danach an genau einer Stelle: „Ort wählen…“ im Menü „Home“ ersetzt
-allein den Wert von `notizordner`, oder hängt ihn samt Kommentarzeile ans Ende,
-wenn der Schlüssel fehlt, und jedes andere Byte bleibt stehen. Eine beschädigte
-`settings.toml` und eine, die ein symbolischer Verweis ist, schreibt KRK gar
-nicht; im zweiten Fall nennt die Statuszeile die Zeile, die man von Hand in die
-Zieldatei einträgt. `keymap.toml` legt KRK überhaupt nicht
+danach allein beim Zurücksetzen auf Werkseinstellungen, sonst nie.
+`settings.toml` legt KRK ebenso beim ersten Start an und schreibt sie danach
+auf zwei Wegen. „Ort wählen…“ im Menü „Home“ ersetzt allein den Wert von
+`notizordner`, oder hängt ihn samt Kommentarzeile ans Ende, wenn der Schlüssel
+fehlt, und jedes andere Byte bleibt stehen. Das Zurücksetzen auf
+Werkseinstellungen schreibt die ganze Datei als Auslieferungsfassung neu und
+behält dabei den Wert von `notizordner` in seiner alten Schreibweise. Eine
+beschädigte `settings.toml` und eine, die ein symbolischer Verweis ist,
+schreibt KRK auf keinem der beiden Wege; bei „Ort wählen…“ nennt die
+Statuszeile im zweiten Fall die Zeile, die man von Hand in die Zieldatei
+einträgt. `keymap.toml` legt KRK überhaupt nicht
 an: sie entsteht erst, wenn der Nutzer seine Belegung in der F1-Ansicht ändert,
 und geschrieben wird sie dann von dieser Ansicht, beim Verlassen und nur, wenn
-sich etwas geändert hat. Wer seine Belegung nie geändert hat, hat die Datei
-nicht, und das Blatt aus „Neuerungen anzeigen" sagt für sie „Diese Datei liegt
-nicht in Ihrer Ablage".
+sich etwas geändert hat. Das Zurücksetzen auf Werkseinstellungen legt sie
+beiseite, und danach fehlt sie. Wer seine Belegung nie geändert hat, hat die
+Datei nicht, und das Blatt aus „Neuerungen anzeigen" sagt für sie „Diese Datei
+liegt nicht in Ihrer Ablage".
 
 **KRK sagt es beim Start.** Liegt eine der drei hinter der Auslieferungsfassung
 zurück, steht in der Statuszeile eine Zeile, die je betroffener Datei die Zahl
@@ -105,7 +110,35 @@ Hauptmenü ist er trotzdem erreichbar.
   nennt, und fehlen mehrere, untereinander in der Folge der Auslieferung. Der
   Befehl steht im Hauptmenü und tut, was er soll, nur ohne Tastenkombination.
 
-Die Neuerungen an `settings.toml` und `readers.toml` holt man sich in drei
+**Der erste Weg ist der Befehl „Auf Werkseinstellungen zurücksetzen…“** im
+Menü „KRK“, unmittelbar unter „Neuerungen anzeigen“; in der F1-Ansicht steht er
+in der Gruppe „Anwendung“, ab Werk ohne Tastenkombination. Nach einer
+Rückfrage, in der „Abbrechen“ vorbelegt ist (`return` und `esc` brechen ab,
+`cmd+return` bestätigt), setzt er alle drei Dateien in einem Zug zurück und
+liest den neuen Stand sofort ein, ohne Neustart. Seine Folgen:
+
+- **Die alten Dateien liegen mit Zeitstempel im Ablageordner.** Jede der drei,
+  die dastand, liegt unverändert unter `<name>.<JJMMTT-HHMM>`, etwa
+  `readers.toml.260929-0815`; ein zweiter Lauf in derselben Minute hängt `-2`
+  an. Gelöscht und überschrieben wird keine Sicherung, und die Statuszeile
+  nennt den vollen Pfad jeder einzelnen.
+- `readers.toml` steht danach als Auslieferungsfassung da, `settings.toml`
+  ebenso bis auf den Wert von `notizordner`, und `keymap.toml` fehlt.
+- **Eigene Zuweisungen gehen aus dem Betrieb.** Es gilt die mitgelieferte
+  Belegung, und die eigene liegt allein in der Sicherung.
+- **Der Notizordner und sein Inhalt bleiben, wie sie sind.** Der Wert von
+  `notizordner` in `settings.toml` bleibt in seiner alten Schreibweise stehen,
+  `f2` öffnet danach denselben Ordner, und der Befehl schreibt, verschiebt und
+  löscht darin keine Datei.
+- **Eine beschädigte `settings.toml` ist vorher zu berichtigen.** Aus ihr lässt
+  sich der Wert von `notizordner` nicht übernehmen, also setzt der Befehl dann
+  keine der drei Dateien zurück, und die Rückfrage geht gar nicht erst auf; die
+  Statuszeile sagt „settings.toml ist zuerst von Hand zu berichtigen, KRK
+  schreibt sie so nicht: … Nichts ist zurückgesetzt.“ Ist eine der drei ein
+  symbolischer Verweis, bricht er ebenso vor jeder Änderung ab und nennt sie.
+
+**Der zweite Weg geht von Hand und nimmt sich eine Datei einzeln vor.** Die
+Neuerungen an `settings.toml` und `readers.toml` holt man sich so in drei
 Schritten, für jede betroffene Datei einzeln:
 
 1. KRK beenden.
@@ -113,10 +146,11 @@ Schritten, für jede betroffene Datei einzeln:
 3. KRK starten. Die Datei entsteht neu aus der Auslieferungsfassung, samt allen
    Kommentaren darin.
 
-Eine neu entstandene `settings.toml` nennt wieder den Vorgabeort `~/krkhome`.
-Wer den Notizordner über „Ort wählen…“ oder von Hand anderswohin gelegt hat,
-holt sich die Zeile `notizordner = …` wie jede eigene Zeile aus der
-beiseitegelegten Datei zurück oder wählt den Ort noch einmal.
+Eine so neu entstandene `settings.toml` nennt wieder den Vorgabeort
+`~/krkhome`, anders als nach dem Befehl. Wer den Notizordner über „Ort wählen…“
+oder von Hand anderswohin gelegt hat, holt sich die Zeile `notizordner = …` wie
+jede eigene Zeile aus der beiseitegelegten Datei zurück oder wählt den Ort noch
+einmal.
 
 **Bei `keymap.toml` greift dieser Handgriff nicht**, denn KRK legt sie beim
 Start nicht an: beiseitegelegt bleibt sie fort, und KRK arbeitet mit der
@@ -131,7 +165,9 @@ vorher beiseite.
 **Eine einzelne neue Funktion belegt man ohne jedes Zurücksetzen.** In der
 F1-Ansicht die Funktion wählen, **Zuweisen** (`cmd+t`), die Kombination
 drücken und die Ansicht verlassen; die eigene Belegung bleibt dabei bis auf
-diese eine Zuweisung, wie sie war. Das nächstliegende Beispiel ist „Termine:
+diese eine Zuweisung, wie sie war. „Auf Werkseinstellungen zurücksetzen…“ ist
+dafür der falsche Weg, denn es nimmt alle eigenen Zuweisungen aus dem Betrieb.
+Das nächstliegende Beispiel ist „Termine:
 Sortierrichtung umkehren“: die Auslieferung legt sie auf `cmd+1`, eine eigene
 `keymap.toml` von vorher führt sie unbelegt, und `cmd+1` lässt sich ihr
 zuweisen, obwohl „Nach Name sortieren“ dieselbe Kombination trägt. Die eine

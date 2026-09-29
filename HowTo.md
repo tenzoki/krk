@@ -24,11 +24,11 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 
 | Datei | Inhalt | Wer schreibt |
 |---|---|---|
-| `keymap.toml` | die eigene Tastenbelegung | KRK und der Nutzer |
+| `keymap.toml` | die eigene Tastenbelegung | KRK beim Verlassen der F1-Ansicht mit einer Änderung, und der Nutzer von Hand; von selbst legt KRK sie nie an, und „Auf Werkseinstellungen zurücksetzen…“ legt sie beiseite |
 | `bookmarks.toml` | die Lesezeichen | KRK |
 | `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten, die Richtung der Termintabelle | KRK |
-| `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | der Nutzer; KRK allein den Ort des Notizordners, über „Ort wählen…“ |
-| `readers.toml` | die Leseprofile der Vorschau | nur der Nutzer |
+| `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | der Nutzer; KRK beim ersten Start, beim Zurücksetzen auf Werkseinstellungen und dazwischen allein den Ort des Notizordners, über „Ort wählen…“ |
+| `readers.toml` | die Leseprofile der Vorschau | der Nutzer; KRK beim ersten Start und beim Zurücksetzen auf Werkseinstellungen |
 | `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind, und ob die alten Zettel schon nach `notes.txt` übernommen sind | KRK |
 
 Wer die Liste am Baum nachlesen will, liest sie an ihrer Quelle und nicht hier:
@@ -45,18 +45,22 @@ findet im Ablageordner vielleicht noch `note-1.txt` und `note-2.txt`. KRK hat
 sie einmal nach `notes.txt` im Notizordner übernommen und liest und schreibt
 sie seither nicht mehr. Sie liegen ohne Leser da und dürfen bleiben oder gehen.
 
-**`readers.toml` legt KRK beim ersten Start an und schreibt sie danach nie
-wieder.** Weder überschreibend noch ergänzend, gleich was darinsteht.
+**`readers.toml` legt KRK beim ersten Start an und schreibt sie danach allein
+auf ausdrücklichen Befehl**, beim Zurücksetzen auf Werkseinstellungen (siehe
+unten). Von selbst schreibt KRK sie nie, weder überschreibend noch ergänzend,
+gleich was darinsteht.
 
 **`settings.toml` legt KRK ebenso beim ersten Start an und schreibt sie danach
-an genau einer Stelle.** „Ort wählen…“ im Menü „Home“ ersetzt darin allein den
+an zwei Stellen.** „Ort wählen…“ im Menü „Home“ ersetzt darin allein den
 Wert von `notizordner`; fehlt der Schlüssel, hängt es ihn mit einer
 Kommentarzeile ans Ende. Jede andere Zeile bleibt Zeichen für Zeichen stehen,
-jeder Kommentar eingeschlossen. Ist die Datei beschädigt oder ein symbolischer
-Verweis, schreibt KRK sie gar nicht (siehe „Der Ort des Notizordners“). Einen
-Schreibweg für die ganze Datei gibt es bewusst nicht, denn er löschte die
-Kommentare, die den Sinn der Datei ausmachen; ein Feld, das die eigene Datei
-nicht nennt, kommt ohnehin aus der Auslieferungsfassung.
+jeder Kommentar eingeschlossen. „Auf Werkseinstellungen zurücksetzen…“ schreibt
+dagegen die ganze Datei neu, als Auslieferungsfassung samt ihren Kommentaren, in
+die allein der bisherige Wert von `notizordner` eingesetzt ist; die alte Fassung
+legt es vorher beiseite. Ist die Datei beschädigt oder ein symbolischer
+Verweis, schreibt KRK sie auf keinem der beiden Wege (siehe „Der Ort des
+Notizordners“). Ein Feld, das die eigene Datei nicht nennt, kommt ohnehin aus
+der Auslieferungsfassung.
 
 **Eine neue KRK-Fassung bringt Einträge mit, die in den eigenen Dateien
 fehlen.** Betroffen sind die drei von Hand gepflegten `keymap.toml`,
@@ -82,21 +86,64 @@ nächstliegende Beispiel für den Fall, den das Blatt beschreibt.
 | `settings.toml` | Nur den erklärenden Kommentarblock. Die Einstellung selbst wirkt bereits, mit dem Wert aus der Auslieferungsfassung. |
 | `keymap.toml` | Die ausgelieferten Tastenkombinationen. KRK hängt die Funktion unbelegt an: in ihrer Gruppe hinter die Funktionen, die die eigene Datei dort nennt, und fehlen mehrere, untereinander in der Folge der Auslieferung. Über das Hauptmenü bleibt sie erreichbar. |
 
-Für `readers.toml` und `settings.toml` ist der Handgriff derselbe: KRK beenden,
-die betroffene Datei **beiseitelegen** und nicht löschen, KRK starten. Sie
-entsteht neu aus der Auslieferungsfassung, samt allen Kommentaren darin; die
-eigenen Zeilen holt man sich aus der beiseitegelegten zurück, und das Blatt sagt
-unter „Nur in Ihrer Datei", welche das sind.
+**Der erste Weg ist der Befehl „Auf Werkseinstellungen zurücksetzen…“** im
+Menü „KRK“, unmittelbar unter „Neuerungen anzeigen“. Ab Werk trägt er keine
+Tastenkombination; in der F1-Ansicht steht er in der Gruppe „Anwendung“ und
+lässt sich dort belegen wie jede andere Funktion. Er setzt alle drei Dateien in
+einem Zug zurück, nach einer Rückfrage, in der „Abbrechen“ vorbelegt ist:
+`return` und `esc` brechen ab, `cmd+return` bestätigt, ebenso ein Klick auf
+„Zurücksetzen“. Danach gilt:
+
+- Jede der drei, die dastand, liegt unverändert im Ablageordner unter ihrem
+  Namen mit angehängtem Zeitstempel, etwa `readers.toml.260929-0815`. Ein
+  zweiter Lauf in derselben Minute hängt `-2` an und überschreibt keine frühere
+  Sicherung. Gelöscht wird keine. Die Statuszeile nennt den vollen Pfad jeder
+  Sicherung und jede Datei, die nicht dastand.
+- `readers.toml` steht als Auslieferungsfassung da, samt allen Kommentaren.
+- `settings.toml` steht als Auslieferungsfassung da, mit einer Ausnahme: der
+  Wert von `notizordner` bleibt der bisherige. **Der Notizordner und alle
+  Dateien darin bleiben unberührt**; Notizen, Aufgaben, Termine und
+  `secrets.txt` liegen danach am selben Ort wie vorher.
+- `keymap.toml` fehlt, und es gilt die mitgelieferte Tastenbelegung. **Alle
+  eigenen Tastenzuweisungen gehen damit aus dem Betrieb**; sie liegen danach
+  allein in der Sicherung.
+- KRK liest den neuen Stand sofort ein, ohne Neustart: Vorschau,
+  Tastenbelegung, Hauptmenü und Terminal folgen ihm.
+
+Die eigenen Zeilen holt man sich aus der Sicherung zurück, und das Blatt aus
+„Neuerungen anzeigen" sagt unter „Nur in Ihrer Datei", welche das sind.
+
+**Ist `settings.toml` beschädigt oder nicht lesbar, setzt der Befehl nichts
+zurück**, und die Rückfrage geht gar nicht erst auf. Bei einer beschädigten
+Datei sagt die Statuszeile:
+
+> settings.toml ist zuerst von Hand zu berichtigen, KRK schreibt sie so nicht:
+> … Nichts ist zurückgesetzt.
+
+Aus einer solchen Datei lässt sich der Ort des Notizordners nicht übernehmen,
+und `~/krkhome` an seine Stelle zu setzen, wäre ein stiller Umzug. Also zuerst
+die Datei berichtigen, dann den Befehl noch einmal wählen. Ist eine der drei ein
+symbolischer Verweis, bricht der Befehl ebenso vor jeder Änderung ab und nennt
+die Datei.
+
+**Der zweite Weg geht von Hand und nimmt sich eine Datei einzeln vor.** Für
+`readers.toml` und `settings.toml` ist er derselbe: KRK beenden, die betroffene
+Datei **beiseitelegen** und nicht löschen, KRK starten. Sie entsteht neu aus der
+Auslieferungsfassung, samt allen Kommentaren darin. **Eine so neu entstandene
+`settings.toml` nennt wieder den Vorgabeort `~/krkhome`**, anders als nach dem
+Befehl; davon handelt „Der Ort des Notizordners“ weiter unten.
 
 **Bei `keymap.toml` greift dieser Handgriff nicht**, denn KRK legt sie beim
 Start nicht an: beiseitegelegt bleibt sie fort, und KRK arbeitet mit der
 Auslieferungsbelegung. Steht die Datei gar nicht erst da, ist nichts zu tun.
-Steht sie da, führt der Weg durch die Anwendung: in der F1-Ansicht
-**Auslieferungszustand** (`cmd+r`), und das Verlassen der Ansicht schreibt
-`keymap.toml` mit dem Auslieferungsstand; die eigenen Zuweisungen sind danach
-fort, wer sie behalten will, legt die Datei vorher beiseite. Eine einzelne neue
-Funktion belegt man ohne jedes Zurücksetzen: in der F1-Ansicht wählen,
-**Zuweisen** (`cmd+t`), die Kombination drücken und die Ansicht verlassen.
+Steht sie da und soll allein die Belegung zurück, führt der Weg durch die
+Anwendung: in der F1-Ansicht **Auslieferungszustand** (`cmd+r`), und das
+Verlassen der Ansicht schreibt `keymap.toml` mit dem Auslieferungsstand; die
+eigenen Zuweisungen sind danach fort, wer sie behalten will, legt die Datei
+vorher beiseite. Eine einzelne neue Funktion belegt man ohne jedes Zurücksetzen:
+in der F1-Ansicht wählen, **Zuweisen** (`cmd+t`), die Kombination drücken und
+die Ansicht verlassen. Das Zurücksetzen auf Werkseinstellungen wäre dafür der
+falsche Weg, denn es nimmt alle eigenen Zuweisungen aus dem Betrieb.
 
 Im Einzelnen stehen beide Wege in `README.md` unter „Neuerungen an den eigenen
 Dateien übernehmen".
@@ -592,11 +639,17 @@ zeigt dort die Metadaten; `/fusion:migrate` benennt die Ordner um.
 **Und die Einschränkung von oben gilt hier:** neue Profile einer neuen
 KRK-Fassung kommen nicht von selbst. Dass es welche gibt, meldet KRK beim ersten
 Start der neuen Fassung, und „Neuerungen anzeigen" nennt sie beim Namen. Wer
-schon eine eigene `readers.toml` hat, sieht die umbenannten Profile erst, wenn
-er KRK beendet, die Datei **beiseitelegt** und KRK neu startet; sie entsteht
-dann neu aus der Auslieferungsfassung, und eigene Zeilen holt man sich aus der
-beiseitegelegten zurück. Der Weg im Einzelnen steht oben unter den Neuerungen
-und in `README.md` unter „Neuerungen an den eigenen Dateien übernehmen".
+schon eine eigene `readers.toml` hat, sieht die umbenannten Profile erst nach
+einem Zurücksetzen. Der erste Weg ist „Auf Werkseinstellungen zurücksetzen…“ im
+Menü „KRK“: die Vorschau zeigt die mitgelieferten Profile sofort, ohne
+Neustart, und die eigene Datei liegt mit Zeitstempel im Ablageordner. Der
+Befehl setzt dabei auch `settings.toml` und `keymap.toml` zurück, mit allen
+eigenen Tastenzuweisungen. Wer allein die Profile zurückholen will, beendet
+KRK, legt `readers.toml` **beiseite** und startet KRK neu; sie entsteht dann
+neu aus der Auslieferungsfassung. Eigene Zeilen holt man sich auf beiden Wegen
+aus der beiseitegelegten Datei zurück. Im Einzelnen stehen die Wege oben unter
+den Neuerungen und in `README.md` unter „Neuerungen an den eigenen Dateien
+übernehmen".
 
 ---
 
@@ -856,11 +909,18 @@ dieser Lage geschützt**: Vorschau, Editor und Inhaltsfilter behandeln den
 Ordner, der beim letzten Start galt (ohne einen solchen `~/krkhome`), weiter als
 Notizordner, nur `f2` legt dort nichts an.
 
-**Wer `settings.toml` beiseitelegt**, wie es „Wo KRK seine eigenen Dateien
-ablegt“ für die Neuerungen einer neuen Fassung beschreibt, bekommt eine neue
-Datei mit `~/krkhome`. Die Zeile `notizordner = …` holt man sich wie jede
-eigene Zeile aus der beiseitegelegten zurück, oder man wählt den Ort noch
-einmal.
+**Das Zurücksetzen auf Werkseinstellungen und das Beiseitelegen von Hand
+wirken am Notizordner verschieden.** „Auf Werkseinstellungen zurücksetzen…“ im
+Menü „KRK“ behält den eingestellten Notizordner: die neue `settings.toml` trägt
+den bisherigen Wert von `notizordner` in derselben Schreibweise, `f2` öffnet
+danach denselben Ordner, und keine Datei darin wird angefasst. Eine beschädigte
+`settings.toml` setzt der Befehl deshalb gar nicht zurück, denn aus ihr ließe
+sich der Wert nicht übernehmen. **Wer `settings.toml` dagegen von Hand
+beiseitelegt**, wie es „Wo KRK seine eigenen Dateien ablegt“ als zweiten Weg
+beschreibt, bekommt beim nächsten Start eine neue Datei mit `~/krkhome`, und
+der Notizordner ist dann wieder `~/krkhome`. Die Dateien am alten Ort bleiben
+dort liegen; die Zeile `notizordner = …` holt man sich wie jede eigene Zeile aus
+der beiseitegelegten zurück, oder man wählt den Ort noch einmal.
 
 **Eine ältere KRK-Fassung kennt den Schlüssel nicht.** Sie weist eine
 `settings.toml`, die ihn führt, als beschädigt ab, lässt die Datei liegen und
