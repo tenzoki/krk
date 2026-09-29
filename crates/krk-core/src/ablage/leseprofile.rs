@@ -12,8 +12,10 @@
 //! # Die Vorlage ist [`super::einstellungen`], und die Abweichungen sind zwei
 //!
 //! Der Weg ist derselbe: die Auslieferungsfassung steht einkompiliert da, wird
-//! beim ersten Start **woertlich** geschrieben und danach von KRK nie wieder
-//! angefasst. Der Grund ist derselbe: `serde` kennt keine Kommentare, und die
+//! beim ersten Start **woertlich** geschrieben und danach von KRK allein noch
+//! durch „Auf Werkseinstellungen zuruecksetzen…“ angefasst, das die alte
+//! Fassung beiseitelegt und die Auslieferungsfassung noch einmal woertlich an
+//! ihre Stelle schreibt ([`super::werkszustand`]). Der Grund ist derselbe: `serde` kennt keine Kommentare, und die
 //! Kommentarzeilen der Auslieferungsfassung sind der Zweck der Datei
 //! und nicht ihre Verzierung — wie viele es sind, sagt der Dateibestand und
 //! nicht diese Zeile, denn die Zahl waechst mit jedem Profil. Sie nennen die

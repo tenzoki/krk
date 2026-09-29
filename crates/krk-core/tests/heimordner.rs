@@ -1403,6 +1403,12 @@ fn heute_ist_der_tag_mit_und_ohne_uhrzeit() {
 /// nicht sieht:** eine Uhr, die in einer Datei gelesen und in einer anderen
 /// umgerechnet wird; der Kopf von `tests/baum.rs` sagt, warum keine Suche im
 /// Quelltext restlos dicht ist.
+///
+/// **Sie gilt der Uhr der Termine.** Eine zweite Uhr fuer einen anderen Zweck
+/// ist kein Verstoss gegen ihre Zusage: das Zuruecksetzen auf
+/// Werkseinstellungen liest die Uhr in der Oberflaeche und rechnet sie in
+/// `ablage::werkszustand` in den Stempel seiner Sicherungen um, also traegt
+/// keine Datei beides.
 #[test]
 fn die_uhr_der_termine_wird_an_einer_stelle_gelesen() {
     let uhr = concat!("SystemTime", "::now()");

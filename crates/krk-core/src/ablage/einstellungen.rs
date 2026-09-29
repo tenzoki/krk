@@ -29,7 +29,7 @@
 //! laesst, Kommentare eingeschlossen. `notizordner` ist der erste solche Wert;
 //! sein Schreibweg ist [`notizordner_schreiben`].
 //!
-//! # Die Datei entsteht einmal und hat danach genau einen Schreibweg
+//! # Die Datei entsteht einmal und hat danach zwei Schreibwege
 //!
 //! [`laden`] legt sie beim ersten Start an, und zwar **woertlich aus
 //! [`AUSLIEFERUNGSTEXT`]** und nicht ueber [`Zugang::sichern`]. Der Unterschied
@@ -44,8 +44,11 @@
 //! [`atomar::schreiben`], derselbe Ablageort, dieselbe Behandlung einer
 //! beschaedigten Datei. Allein die Nutzlast ist eine andere.
 //!
-//! **Danach schreibt allein „Ort waehlen…“ die Datei, und dort allein den Wert
-//! von `notizordner`** ([`notizordner_schreiben`]). Es liest die Datei unter
+//! **Danach schreiben zwei Befehle die Datei.** „Auf Werkseinstellungen
+//! zuruecksetzen…“ legt sie beiseite und schreibt [`AUSLIEFERUNGSTEXT`] noch
+//! einmal woertlich an ihre Stelle; der Weg steht in
+//! [`super::werkszustand`] und ersetzt die ganze Datei. „Ort waehlen…“
+//! schreibt allein den Wert von `notizordner` ([`notizordner_schreiben`]). Es liest die Datei unter
 //! der Schreibsperre, laesst den Leser den Byte-Bereich des Werts melden
 //! (`toml::Spanned`) und ersetzt genau diesen Bereich; fehlt der Schluessel,
 //! haengt es ihn samt einer Kommentarzeile ans Ende, mit dem Zeilenende der
@@ -236,8 +239,9 @@ struct Einstellungsdatei {
 /// Die kaputte Datei bleibt aus demselben Grund liegen wie eine kaputte
 /// `keymap.toml`: sie ist von Hand geschrieben, und ein Tippfehler darf die
 /// Arbeit des Nutzers nicht loeschen. Ueberschrieben wird sie auch spaeter
-/// nicht: der eine Schreibweg, [`notizordner_schreiben`], weist eine
-/// beschaedigte Datei ab.
+/// nicht von selbst: [`notizordner_schreiben`] weist eine beschaedigte Datei
+/// ab, und das Zuruecksetzen in [`super::werkszustand`] legt sie beiseite,
+/// bevor es die Auslieferungsfassung an ihre Stelle schreibt.
 ///
 /// Hoechstens eine Meldung kann anfallen: angelegt wird nur, was fehlt, und
 /// eine fehlende Datei traegt keine Ersetzung.
@@ -345,8 +349,9 @@ fn toml_text(wert: &str) -> String {
 /// Schreibt den Ort des Notizordners in `settings.toml` und aendert dabei kein
 /// anderes Byte der Datei.
 ///
-/// **Der eine Schreibweg in diese Datei neben ihrer Anlage**; gerufen von „Ort
-/// waehlen…“ (H3 des Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
+/// **Einer der zwei Schreibwege in diese Datei neben ihrer Anlage**, und der
+/// einzige, der einen Wert darin ersetzt; der andere ist das Zuruecksetzen in
+/// [`super::werkszustand`]. Gerufen von „Ort waehlen…“ (H3 des Spec `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
 /// Der Rufer haelt die Schreibsperre, weil es einen [`Zugang`] nur im
 /// Durchgang gibt; gelesen wird darunter, damit „derselbe Ort?“ am Wert
 /// entschieden wird, der **jetzt** in der Datei steht (S4 der Zweitlesung).

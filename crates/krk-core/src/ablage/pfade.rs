@@ -150,9 +150,11 @@ pub enum Datei {
     /// `settings.toml`: die von Hand gepflegten Einstellungen (C11), siehe
     /// [`super::einstellungen`].
     ///
-    /// Eine der beiden, die KRK im Betrieb nicht schreibt; die andere ist
-    /// [`Datei::Leser`]. Sie entsteht beim ersten Start aus der eingebetteten
-    /// Auslieferungsfassung und bleibt danach dem Nutzer ueberlassen.
+    /// Eine der beiden, die KRK im Betrieb nur auf ausdruecklichen Befehl
+    /// schreibt; die andere ist [`Datei::Leser`]. Sie entsteht beim ersten
+    /// Start aus der eingebetteten Auslieferungsfassung und bleibt danach dem
+    /// Nutzer ueberlassen, bis auf „Ort waehlen…“ und das Zuruecksetzen in
+    /// [`super::werkszustand`].
     Einstellungen,
     /// `readers.toml`: die von Hand gepflegten Leseprofile, aus denen die
     /// Vorschau ihre Zusammenfassung baut (C1 der Runde 16).
@@ -238,7 +240,8 @@ impl Datei {
     /// `settings.toml` und `keymap.toml` und nicht neben `bookmarks.toml`**
     /// (C1.4 der Runde 16): sie wird von Hand gepflegt, und wer sie bis auf
     /// ihre Kommentare leerraeumt, meint „keine Profile" und keinen Schaden.
-    /// KRK schreibt sie im Betrieb nie, also kann eine Datei ohne obersten
+    /// KRK schreibt sie im Betrieb allein beim Zuruecksetzen, und dann
+    /// woertlich als Auslieferungsfassung, also kann eine Datei ohne obersten
     /// Schluessel hier kein Zeichen fuer einen Schaden sein.
     ///
     /// **Die drei uebrigen tragen [`Leerbefund::Vorgabe`]**, und die Trennung

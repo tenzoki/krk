@@ -12,9 +12,9 @@
 //!
 //! ```text
 //! pfade ──> mod (Ablage ──> Zugang: laden, sichern, melden) ──> atomar
-//!                   │         ^         ^          ^            ^         ^        ^
-//!                sperre       │         │          │            │         │        │
-//!                        lesezeichen sitzung einstellungen leseprofile merker neuerungen
+//!                   │         ^         ^          ^            ^         ^        ^          ^
+//!                sperre       │         │          │            │         │        │          │
+//!                        lesezeichen sitzung einstellungen leseprofile merker neuerungen werkszustand
 //! ```
 //!
 //! [`pfade`] loest den Ordner auf und legt ihn beim ersten Start an.
@@ -47,6 +47,13 @@
 //! aus demselben Grund eine zweite Auskunft, dass F2 die alten Zettel schon
 //! nach `notes.txt` uebernommen hat.
 //!
+//! [`werkszustand`] haelt ebenfalls keinen eigenen Inhalt. Es setzt die von
+//! Hand gepflegten Dateien auf den Zustand eines ersten Starts zurueck,
+//! nachdem es ihre alten Fassungen unter einem Namen mit Zeitstempel
+//! beiseitegelegt hat; welche das sind, sagt
+//! [`werkszustand::Werkszustand::fuer`] als weitere je Datei beantwortete
+//! Frage.
+//!
 //! # Jeder Weg auf die Platte geht durch die Schreibsperre
 //!
 //! **[`Zugang`] steht zwischen der Ablage und [`atomar::schreiben`].** Ein
@@ -69,8 +76,8 @@
 //! **Von dieser Luecke bewacht eine Probe die eine Haelfte, und die andere
 //! bewacht nichts.** `nur_benannte_dateien_erreichen_das_atomare_schreiben` in
 //! `krk-core/tests/baum.rs` zaehlt, welche Quelldateien des ganzen Baums
-//! [`atomar::schreiben`] ueberhaupt erreichen koennen; eine weitere laesst sie
-//! rot werden. Der **zweite** Bestandteil, [`Ablage::pfad`] plus ein beliebiger
+//! [`atomar::schreiben`] oder seine erste Haelfte [`atomar::vorbereiten`]
+//! ueberhaupt erreichen koennen; eine weitere laesst sie rot werden. Der **zweite** Bestandteil, [`Ablage::pfad`] plus ein beliebiger
 //! Schreibaufruf der Standardbibliothek, braucht [`atomar::schreiben`] gar
 //! nicht und ist von keiner Probe gezaehlt. Wer den Satz „die Luecke ist
 //! bewacht" liest, liest deshalb zu viel hinein
@@ -92,8 +99,7 @@
 //! unbewachte Aussage ueber den damaligen Baum
 //! (`issues/260813-0540_*_kein-schreibweg-an-der-sperre-vorbei-ist-nicht-typgesichert-und-ungeprueft.md`).
 //!
-//! # Zwei der sechs Ablagedateien entstehen einmal und gehen nie ueber die
-//! Serialisierung
+//! # Zwei der sechs Ablagedateien gehen nie ueber die Serialisierung
 //!
 //! `settings.toml` aus Schritt 18c und, seit der Runde 16, `readers.toml` sind
 //! die von Hand gepflegten Dateien, und sie gehen als einzige **nicht** ueber
@@ -106,12 +112,16 @@
 //! gelesen wird, und eine beschaedigte Datei fuehrt zu gar keinem Profil statt
 //! zur Auslieferungsfassung.
 //!
-//! **`readers.toml` wird danach nie wieder geschrieben, `settings.toml` an
-//! genau einer Stelle**: „Ort waehlen…“ schreibt dort allein den Wert von
-//! `notizordner` und laesst jedes andere Byte stehen
+//! **Danach schreibt KRK beide nur noch auf ausdruecklichen Befehl.** „Ort
+//! waehlen…“ schreibt in `settings.toml` allein den Wert von `notizordner` und
+//! laesst jedes andere Byte stehen
 //! ([`einstellungen::notizordner_schreiben`], seit Schritt 3.1 des Plans
-//! `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`). Eine beschaedigte
-//! Datei und eine, die ein symbolischer Verweis ist, schreibt es nicht.
+//! `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`). „Auf
+//! Werkseinstellungen zuruecksetzen…“ schreibt beide Dateien noch einmal
+//! woertlich als Auslieferungsfassung, nachdem es ihre alte Fassung
+//! beiseitegelegt hat ([`werkszustand::zuruecksetzen`]). Keiner der zwei
+//! Schreiber ersetzt eine Datei, die ein symbolischer Verweis ist;
+//! `notizordner_schreiben` schreibt dazu eine beschaedigte Datei nicht.
 //!
 //! # Ein beschaedigter Bestand laesst KRK starten
 //!
@@ -265,6 +275,7 @@ pub mod neuerungen;
 pub mod pfade;
 pub mod sitzung;
 pub mod sperre;
+pub mod werkszustand;
 
 use std::fmt;
 use std::fs::{self, File};
@@ -311,10 +322,10 @@ pub enum Grund {
     /// Nur `settings.toml` und, seit der Runde 16, `readers.toml` koennen ihn
     /// tragen. Sie sind die beiden, die KRK beim ersten Start von sich aus
     /// anlegt, weil keine Serialisierung sie schreibt und der Nutzer sonst
-    /// nichts zu pflegen haette; der eine Schreibweg in `settings.toml`,
-    /// [`einstellungen::notizordner_schreiben`], ersetzt allein einen Wert in
-    /// einer Datei, die es schon gibt, oder legt sie aus der
-    /// Auslieferungsfassung an. Bei jeder anderen Ablagedatei ist eine fehlende
+    /// nichts zu pflegen haette; die Schreibwege im Betrieb,
+    /// [`einstellungen::notizordner_schreiben`] und
+    /// [`werkszustand::zuruecksetzen`], melden ihr Scheitern selbst und tragen
+    /// diesen Grund nicht. Bei jeder anderen Ablagedatei ist eine fehlende
     /// Datei der erste Start und keine Meldung wert.
     NichtAnlegbar(String),
 }

@@ -301,6 +301,10 @@ fn keine_code_zeile_unter_leseprofil_erreicht_den_ausblendeschalter() {
 /// diesen Absatz gelesen. Der Befund dazu ist
 /// `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0715_*`.
 ///
+/// **Die fuenfte Nadel ist `vorbereiten`**, die erste Haelfte von `schreiben`:
+/// sie schreibt die Nachbardatei auf die Platte, und seit dem Zuruecksetzen auf
+/// Werkseinstellungen ruft sie eine Datei im Betrieb getrennt vom Umbenennen.
+///
 /// Gesucht wird in Code-Zeilen: eine Datei, die den Namen nur bespricht — der
 /// Kopf von `ablage::sperre` etwa, oder diese Zeile hier —, erreicht nichts.
 /// Was daneben bleibt, ist ein Pfad, den jemand ueber zwei Zeilen umbricht;
@@ -310,6 +314,10 @@ fn keine_code_zeile_unter_leseprofil_erreicht_den_ausblendeschalter() {
 fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
     let wege = [
         concat!("atomar::", "schreiben"),
+        // Die erste Haelfte des atomaren Schreibens, ohne das Umbenennen; wer
+        // sie ruft, schreibt ebenso auf die Platte (seit dem Zuruecksetzen auf
+        // Werkseinstellungen, das beide Haelften getrennt braucht).
+        concat!("atomar::", "vorbereiten"),
         concat!("atomar::", "{"),
         concat!("atomar::", "*"),
         concat!("atomar", " as "),
@@ -328,6 +336,10 @@ fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
             // Die Anlage von `readers.toml`, unter einem Durchgang.
             "krk-core/src/ablage/leseprofile.rs".to_owned(),
             "krk-core/src/ablage/mod.rs".to_owned(),
+            // Das Zuruecksetzen auf Werkseinstellungen schreibt `settings.toml`
+            // und `readers.toml` ueber `vorbereiten`, unter einem Durchgang, und
+            // benennt erst um, wenn jede Sicherung steht.
+            "krk-core/src/ablage/werkszustand.rs".to_owned(),
             // Der Editor sichert seine Datei, ausserhalb des Ablageordners.
             "krk-core/src/text/datei.rs".to_owned(),
             // Der Rundlauf schreibt `settings.toml`, unter einem Durchgang.

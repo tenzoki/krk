@@ -189,7 +189,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit jedes Schritts 3
 
 ### Stufe B: Bausteine
 
-3. **Kern: `ablage/werkszustand.rs` legt beiseite und setzt zurück**
+3. [DONE] **Kern: `ablage/werkszustand.rs` legt beiseite und setzt zurück**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/ablage/werkszustand.rs` (neu), `crates/krk-core/src/ablage/mod.rs` (Moduleintrag, Modulkopf), `crates/krk-core/src/ablage/einstellungen.rs` und `crates/krk-core/src/ablage/leseprofile.rs` (allein die Modulköpfe), `crates/krk-core/tests/werkszustand.rs` (neu), `crates/krk-core/tests/baum.rs`, `crates/krk-core/tests/heimordner.rs` (allein der Doc-Kommentar der Uhrprobe)
    - Changes:

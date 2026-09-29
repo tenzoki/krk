@@ -118,8 +118,9 @@ use super::{Anzeige, Baustein, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile,
 /// Die Gestalt von `readers.toml` und `default-readers.toml`, unveraendert.
 ///
 /// **Bewusst ohne `Serialize`.** KRK schreibt diese Datei nach ihrer Anlage
-/// beim ersten Start nie wieder; ein Serialisierungsweg waere der zweite Weg
-/// zu ihr, und er hinterliesse sie ohne ihre Kommentarzeilen. Dieselbe Wahl
+/// beim ersten Start allein noch beim Zuruecksetzen, und dann woertlich als
+/// Auslieferungsfassung; ein Serialisierungsweg waere ein weiterer Weg zu ihr,
+/// und er hinterliesse sie ohne ihre Kommentarzeilen. Dieselbe Wahl
 /// trifft `ablage::einstellungen::Einstellungsdatei`.
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
