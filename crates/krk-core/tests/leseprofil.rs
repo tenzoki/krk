@@ -1359,6 +1359,9 @@ fn erkannte(auskunft: Auskunft) -> Zusammenfassung {
         Auskunft::Default(zeilen) => {
             panic!("kein Profil hat erkannt; das Default-Profil liefert {zeilen:?}")
         }
+        Auskunft::Bildfolge(verzeichnis) => {
+            panic!("das Profil liefert eine Bildfolge statt Zeilen: {verzeichnis:?}")
+        }
     }
 }
 
@@ -2419,6 +2422,9 @@ fn default_gezaehlt(profile: &Profile, ordner: &Path) -> (Vec<Zusammenfassungsze
         Some((Auskunft::Default(zeilen), haushalt)) => (zeilen, haushalt),
         Some((Auskunft::Erkannt(zusammenfassung), _)) => {
             panic!("ein Profil hat den Pruefordner erkannt: {zusammenfassung:?}")
+        }
+        Some((Auskunft::Bildfolge(verzeichnis), _)) => {
+            panic!("ein Profil mit Bildfolge hat den Pruefordner erkannt: {verzeichnis:?}")
         }
         None => panic!("der Ordner {} bekommt keine Auskunft", ordner.display()),
     }
@@ -5339,7 +5345,7 @@ fn die_monate_laufen_nach_namen_und_die_fotos_darin_nach_datum() {
     ]);
     let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
     assert_eq!(verzeichnis.gesamt(), 4);
-    assert!(!verzeichnis.gekuerzt());
+    assert!(!verzeichnis.ist_gekuerzt());
     assert_eq!(
         folge(&verzeichnis, &leser),
         ["b.jpg", "a.jpg", "c.jpg", "d.jpg"]
@@ -5451,7 +5457,7 @@ fn eine_folge_ueber_der_grenze_wird_in_folgenreihenfolge_gekuerzt() {
     }
     let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
     assert_eq!(verzeichnis.gesamt(), HOECHSTENS_FOTOS);
-    assert!(verzeichnis.gekuerzt());
+    assert!(verzeichnis.ist_gekuerzt());
     assert_eq!(verzeichnis.gruppen()[1].beitrag(), 2);
 
     let leser = tafelleser(vec![
@@ -5561,4 +5567,48 @@ fn die_erhebung_liest_allein_die_ordner_der_folge() {
     assert_eq!(haushalt.leselaeufe(), 4);
     assert_eq!(haushalt.gruppen(), 3);
     assert_eq!(haushalt.fotos(), verzeichnis.gesamt());
+}
+
+/// Schritt 6: ein Profil ohne Bildfolge nimmt denselben Weg wie vor der
+/// Bildfolge, auch ueber einem Ordner voller Fotos, und verbraucht denselben
+/// Haushalt: einen Leselauf fuer die eine Zaehlzeile am erkannten Ordner.
+/// Die Erhebung einer Bildfolge laeuft dabei nicht, denn es entsteht kein
+/// Bildverzeichnis, das einen Bildhaushalt truege.
+#[test]
+fn ein_profil_ohne_bildfolge_verbraucht_denselben_haushalt() {
+    let ordner = Pruefordner::neu("bildfolge-ohne");
+    let jahr = ordner.ordner("Fotos/2008");
+    ordner.ordner("Fotos/2008/01");
+    ordner.datei("Fotos/2008/01/a.jpg", b"");
+    ordner.datei("Fotos/2008/b.jpg", b"");
+    let (profile, _) = gepruefte(
+        "[[profil]]\nname = \"Jahr\"\npfad = 'Fotos/[0-9]{4}$'\n\n  [[profil.zeile]]\n  beschriftung = \"Eintraege\"\n  zaehlung = { }\n",
+    );
+    let (auskunft, haushalt) =
+        zusammenfassen_gezaehlt(&profile, &jahr).expect("der Ordner bekommt eine Auskunft");
+    assert!(matches!(auskunft, Auskunft::Erkannt(_)), "{auskunft:?}");
+    assert_eq!(haushalt.leselaeufe(), 1);
+    assert_eq!(haushalt.oeffnungen(), 0);
+}
+
+/// C1.5: ein Profil mit Bildfolge ueber einem Ordner ohne Fotos liefert seine
+/// Zeilen, und mit Fotos die Bildfolge.
+#[test]
+fn ein_profil_mit_bildfolge_ohne_fotos_liefert_seine_zeilen() {
+    let ordner = Pruefordner::neu("bildfolge-ohne-fotos");
+    let jahr = ordner.ordner("Fotos/2008");
+    ordner.ordner("Fotos/2008/01");
+    ordner.datei("Fotos/2008/01/notiz.txt", b"");
+    let (profile, _) = gepruefte(
+        "[[profil]]\nname = \"Jahr\"\npfad = 'Fotos/[0-9]{4}$'\nbildfolge = { ordner = \"*\" }\n\n  [[profil.zeile]]\n  beschriftung = \"Eintraege\"\n  zaehlung = { }\n",
+    );
+    let zeilen = zusammenfassen(&profile, &jahr).expect("der Ordner bekommt eine Auskunft");
+    assert!(matches!(zeilen, Auskunft::Erkannt(_)), "{zeilen:?}");
+
+    ordner.datei("Fotos/2008/01/a.jpg", b"");
+    let folge = zusammenfassen(&profile, &jahr).expect("der Ordner bekommt eine Auskunft");
+    let Auskunft::Bildfolge(verzeichnis) = folge else {
+        panic!("keine Bildfolge: {folge:?}");
+    };
+    assert_eq!(verzeichnis.gesamt(), 1);
 }

@@ -219,7 +219,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
 
 ### Stufe C: Vorschau und Befehle
 
-6. **Die Vorschau zeigt die Bildfolge**
+6. [DONE] **Die Vorschau zeigt die Bildfolge**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/leseprofil/mod.rs`, `crates/krk-core/src/leseprofil/bausteine.rs`, `crates/krk-core/tests/leseprofil.rs`, `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/appkit/statuszeile.rs`
    - Changes:

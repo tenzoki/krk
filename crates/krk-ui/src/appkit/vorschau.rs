@@ -1208,7 +1208,17 @@ impl Vorschaufenster {
     ///
     /// **Den Satz formt [`super::statuszeile::seitenzaehler_text`]** neben dem
     /// Rang, den er fuellt; hier steht kein Wortlaut und kein Zahlenformat.
+    ///
+    /// **Eine Bildfolge nimmt denselben Rang** und liefert „Bild N von M"
+    /// ([`super::statuszeile::bildzaehler_text`], Entscheidung 13 des Plans
+    /// der Bildfolge): eine Vorschau zeigt nie zugleich PDF und Bildfolge.
     pub fn seitenzaehler(&self) -> Option<String> {
+        let bildstand = self.ivars().modell.borrow().bildstand();
+        if let Some((aktuell, gesamt, gekuerzt)) = bildstand {
+            return Some(super::statuszeile::bildzaehler_text(
+                aktuell, gesamt, gekuerzt,
+            ));
+        }
         if self.ivars().flaeche.get() != Flaeche::Betrachter {
             return None;
         }
@@ -1317,8 +1327,11 @@ impl Vorschaufenster {
             self.anzeigen();
         }
         self.einfaerbung_einziehen();
-        let laedt_noch = self.ivars().modell.borrow().laedt_noch();
-        if !laedt_noch && self.ivars().einfaerbung.borrow().is_none() {
+        // `wartet_noch` und nicht `laedt_noch`: die Nachlieferung einer
+        // Bildfolge haelt den Takt am Leben, ohne dass die Endbedingung von
+        // L7 davon wuesste.
+        let wartet_noch = self.ivars().modell.borrow().wartet_noch();
+        if !wartet_noch && self.ivars().einfaerbung.borrow().is_none() {
             self.takt_beenden();
         }
     }
@@ -1354,6 +1367,34 @@ impl Vorschaufenster {
             rolle.setRulersVisible(zeigt_nummern);
         }
 
+        self.inhalt_zeigen(inhalt);
+
+        // Erst nachdem der Text steht: der Vorgang faerbt genau diese Zeichen
+        // ein, und was hier eben gesetzt worden ist, hat den Text davor
+        // ersetzt.
+        self.einfaerbung_nachfuehren();
+
+        {
+            let leiste = self.ivars().tableiste.borrow();
+            if let Some(leiste) = leiste.as_ref() {
+                leiste.setzen(&titel, aktiv);
+            }
+        }
+
+        // Zuletzt, wenn die Flaeche steht: der Zuhoerer fragt
+        // `seitenzaehler`, und das liest die eben gesetzte Flaeche (C4.4,
+        // C4.7). Ein Tabwechsel ueber `tab_waehlen` kommt hier durch und
+        // braucht keinen zweiten Ruf.
+        self.seiten_melden();
+    }
+
+    /// Bringt einen [`Inhalt`] auf die Flaeche, die ihn zeigt.
+    ///
+    /// Aus [`Self::anzeigen`] herausgezogen, weil eine Bildfolge das Bild an
+    /// ihrer Stelle selbst als [`Inhalt`] traegt und es denselben Weg nimmt
+    /// wie jeder andere Inhalt (Entscheidung 12 des Plans der Bildfolge): eine
+    /// vierte Flaeche und ein weiterer Schalter entstehen nicht.
+    fn inhalt_zeigen(&self, inhalt: Inhalt) {
         match inhalt {
             Inhalt::Leer => self.text_zeigen(LEERTEXT),
             Inhalt::Text(text) => self.text_zeigen(&text),
@@ -1404,25 +1445,10 @@ impl Vorschaufenster {
             Inhalt::Zusammenfassung(zusammenfassung) => {
                 self.text_zeigen(&zusammenfassung.als_text());
             }
+            // Das Bild an der Stelle: der Hinweis, solange es vorbereitet
+            // wird, das Foto oder, ueber der Bildgrenze, seine Metadaten.
+            Inhalt::Bildfolge(folge) => self.inhalt_zeigen(folge.bild().clone()),
         }
-
-        // Erst nachdem der Text steht: der Vorgang faerbt genau diese Zeichen
-        // ein, und was hier eben gesetzt worden ist, hat den Text davor
-        // ersetzt.
-        self.einfaerbung_nachfuehren();
-
-        {
-            let leiste = self.ivars().tableiste.borrow();
-            if let Some(leiste) = leiste.as_ref() {
-                leiste.setzen(&titel, aktiv);
-            }
-        }
-
-        // Zuletzt, wenn die Flaeche steht: der Zuhoerer fragt
-        // `seitenzaehler`, und das liest die eben gesetzte Flaeche (C4.4,
-        // C4.7). Ein Tabwechsel ueber `tab_waehlen` kommt hier durch und
-        // braucht keinen zweiten Ruf.
-        self.seiten_melden();
     }
 
     /// Schreibt Beschriftungen und aktive Stelle in die Tableiste.
@@ -1824,7 +1850,7 @@ impl Vorschaufenster {
 /// Sprache haengt, und `syntect` haette an ihr nichts zu faerben.
 ///
 /// **Eine reine Fallunterscheidung ohne Auffangzweig**, wie die uebrigen dieser
-/// Art im Programm: ein achter [`Inhalt`] haelt den Bau an und erzwingt die
+/// Art im Programm: ein weiterer [`Inhalt`] haelt den Bau an und erzwingt die
 /// Antwort auf die Frage, ob er eingefaerbt wird.
 ///
 /// Keine Groessenschranke: eingefaerbt wird jede Datei, die die Vorschau
@@ -1856,6 +1882,9 @@ fn einzufaerben<'a>(
         // Der Betrachter zeichnet Seiten; Quelltext zum Einfaerben gibt es
         // dort nicht (Runde 20).
         Inhalt::Pdf { .. } => None,
+        // Eine Bildfolge zeigt ein Foto, seine Metadaten oder einen Hinweis;
+        // nichts davon ist Quelltext.
+        Inhalt::Bildfolge(_) => None,
         Inhalt::Leer
         | Inhalt::Markdown(_)
         | Inhalt::Bild { .. }
@@ -1964,6 +1993,25 @@ mod tests {
     /// [`einzufaerben`] auf und nicht erst am Bild.
     #[test]
     fn eingefaerbt_wird_genau_darstellungsart_code() {
+        /// Eine Bildfolge mit einem Foto, ueber denselben Weg wie im Betrieb.
+        fn bildfolge_mit_einem_foto() -> Inhalt {
+            use krk_core::leseprofil::bildfolge::verzeichnis_erheben;
+            use krk_core::leseprofil::{Bildfolgeangabe, Ortsangabe};
+            let ordner = crate::pruefordner::Pruefordner::neu("vorschau-einfaerben-bildfolge");
+            ordner.datei("a.jpg", b"");
+            let wurzel =
+                std::fs::canonicalize(ordner.pfad()).expect("der Pruefordner loest sich auf");
+            let verzeichnis = verzeichnis_erheben(
+                &Bildfolgeangabe::neu(Ortsangabe::wurzel()),
+                ordner.pfad(),
+                &wurzel,
+            )
+            .expect("die Folge laesst sich erheben");
+            Inhalt::Bildfolge(Box::new(crate::vorschaumodell::Folgeanzeige::neu(
+                verzeichnis,
+            )))
+        }
+
         let quelltext = PathBuf::from("/tmp/beispiel.rs");
         let unbekannt = PathBuf::from("/tmp/beispiel.krk-gibt-es-nicht");
         let markdown = PathBuf::from("/tmp/beispiel.md");
@@ -2024,6 +2072,7 @@ mod tests {
                 zaehlzeilen: Vec::new(),
             },
             Inhalt::Hinweis("etwas ging nicht".to_owned()),
+            bildfolge_mit_einem_foto(),
         ];
         for inhalt in &uebrige {
             assert!(

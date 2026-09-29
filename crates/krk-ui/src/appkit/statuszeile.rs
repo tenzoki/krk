@@ -575,6 +575,25 @@ pub fn seitenzaehler_text(aktuell: usize, gesamt: usize) -> String {
     format!("Seite {} von {}", zahl(aktuell), zahl(gesamt))
 }
 
+/// Der Satz des Zaehlers einer Bildfolge: "Bild N von M", bei gekuerzter
+/// Folge mit dem Zusatz, nach wie vielen Fotos (Entscheidung 13 des Plans der
+/// Bildfolge, C3.5 und C5.1 des Spec).
+///
+/// Derselbe Rang und dasselbe Zahlenformat wie [`seitenzaehler_text`]; die
+/// Grenze im Zusatz kommt aus `krk_core::leseprofil::HOECHSTENS_FOTOS` und
+/// steht kein zweites Mal im Text.
+pub fn bildzaehler_text(aktuell: usize, gesamt: usize, gekuerzt: bool) -> String {
+    let grundsatz = format!("Bild {} von {}", zahl(aktuell), zahl(gesamt));
+    if gekuerzt {
+        format!(
+            "{grundsatz} (Folge nach {} Fotos gekürzt)",
+            zahl(krk_core::leseprofil::HOECHSTENS_FOTOS)
+        )
+    } else {
+        grundsatz
+    }
+}
+
 /// Woher eine Meldung kommt: aus einem der zwei Dateifenster oder aus dem
 /// Vorschaufenster.
 ///
@@ -953,7 +972,7 @@ impl Statuszeile {
 mod tests {
     use super::{
         Art, Bereich, Filterstand, Herkunft, Herkunftsart, Meldung, Quellen, Rang,
-        filterstand_text, seitenzaehler_text, sichtbar_in, zeile, zeilentext,
+        bildzaehler_text, filterstand_text, seitenzaehler_text, sichtbar_in, zeile, zeilentext,
     };
     use krk_core::ablage::{Fensterseite, Sichtbarkeit};
 
@@ -2027,5 +2046,10 @@ mod tests {
     fn der_seitenzaehler_satz_nennt_seite_und_seitenzahl_mit_tausenderpunkten() {
         assert_eq!(seitenzaehler_text(1, 9), "Seite 1 von 9");
         assert_eq!(seitenzaehler_text(1200, 3400), "Seite 1.200 von 3.400");
+        assert_eq!(bildzaehler_text(3, 41, false), "Bild 3 von 41");
+        assert_eq!(
+            bildzaehler_text(3, 7_500, true),
+            "Bild 3 von 7.500 (Folge nach 7.500 Fotos gekürzt)"
+        );
     }
 }

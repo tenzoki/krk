@@ -170,21 +170,67 @@
 //! laesst den alten Empfaenger fallen, das `send` des ueberholten Fadens
 //! scheitert still, und eine Generationspruefung braucht es nicht. Die
 //! Zwischenablage liegt im Arbeitsspeicher und braucht keinen Faden.
+//!
+//! # Die Bildfolge liefert nach
+//!
+//! Seit der Bildfolge schickt der Faden fuer einen Ordner mit Bildfolge
+//! **mehr als eine Meldung** (Spec
+//! `260929-1313_*_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md`). Die
+//! erste ist wie jede andere ein [`Inhalt`], hier [`Inhalt::Bildfolge`] mit
+//! den erhobenen Gruppen und dem Hinweis, dass die Folge vorbereitet wird.
+//! Danach ordnet derselbe Faden Gruppe fuer Gruppe nach Aufnahmedatum und
+//! schickt jede ueber einen zweiten Kanal, sobald sie geordnet ist.
+//!
+//! ```text
+//! Faden krk-vorschau: laden ──> Geladen { Inhalt::Bildfolge, Nachlieferung }
+//!                     └─ je Gruppe: gruppe_ordnen ──> Gruppenmeldung
+//! Tab:  ladevorgang ──(erste Meldung)──> inhalt, folge.nachlieferung
+//!       folge.nachlieferung ──> Folgeanzeige::gruppen
+//!       folge.bildvorgang  ──> Folgeanzeige::bild   (derselbe laden-Weg)
+//! ```
+//!
+//! **Die Nachlieferung beendet das Laden im Sinne von L7 nicht.**
+//! [`Vorschaumodell::laedt_noch`] beantwortet weiterhin allein, ob ein Tab auf
+//! seinen ersten Inhalt wartet, und ist falsch, sobald die Folge mit ihrem
+//! Hinweis steht; ob danach noch Gruppen oder ein Foto ausstehen, sagt
+//! [`Vorschaumodell::wartet_noch`], und daran haengt allein der Takt der
+//! Ansicht (Entscheidung 10 des Plans).
+//!
+//! **Der Abbruch ist eine Marke und keine zweite Leitung** (Entscheidung 9).
+//! Der Vorgang haelt eine [`Abbruchmarke`]; faellt sie, etwa weil der Nutzer
+//! einen anderen Eintrag waehlt, fragt der Faden sie vor jedem Foto und hoert
+//! auf (C5.4). Das stille Scheitern des `send` bleibt der zweite, groebere
+//! Halt.
+//!
+//! **Das Foto an einer Stelle laedt `laden` selbst**, ueber einen weiteren
+//! [`Ladevorgang`] in [`Folgebetrieb::bildvorgang`] (Entscheidung 11). So
+//! bekommt ein Foto ueber [`BILDGRENZE`] an seiner Stelle die Metadaten (C2.7),
+//! und `laden` behaelt genau einen Rufer. Das Ergebnis ersetzt allein das Bild
+//! der Folge und nie den Inhalt des Tabs.
+//!
+//! **Derselbe Pfad erneut gemeldet startet eine stehende Folge nicht neu**
+//! (Entscheidung 8): eine Auffrischung meldet die Auswahl ein zweites Mal, und
+//! der Nutzer verloere sonst seine Stelle. Ein Auswahlwechsel und die Rueckkehr
+//! (C3.6) sowie das Neuladen beim Zuruecksetzen laden neu.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
+use krk_core::bild::Aufnahmezeit;
 use krk_core::heimordner::eintraege::termine;
 use krk_core::heimordner::{Heimordner, Sonderdatei};
+use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
 
 use crate::editormodell::Dateityp;
 use crate::hervorhebung::{self, Darstellungsart, Tafel};
+use crate::kommandos::operationen::zahl;
 use crate::markdown::{self, Gerendert, Lesart};
 
 /// Bis zu welcher Groesse eine Textdatei als Inhalt erscheint (C6).
@@ -337,8 +383,8 @@ pub enum Inhalt {
     /// Default-Profils mit**, und die leere Folge heisst „keine Zaehlzeilen".
     /// Ein Ordner ohne Profiltreffer bekommt die drei Zeilen des
     /// [`defaultprofil`](fn@krk_core::leseprofil::defaultprofil), eine Datei
-    /// und eine Verknuepfung bekommen keine (C1.6, C1.7). Ein achter Wert
-    /// von [`Inhalt`] waere der teurere Weg und der schlechtere: jede
+    /// und eine Verknuepfung bekommen keine (C1.6, C1.7). Ein eigener Wert
+    /// von [`Inhalt`] dafuer waere der teurere Weg und der schlechtere: jede
     /// vollstaendige Fallunterscheidung ueber `Inhalt` — die Nummernspalte,
     /// die Einfaerbung, die Anzeige — muesste eine Frage beantworten, deren
     /// Antwort ausnahmslos „wie bei den Metadaten" lautet. Der Unterschied
@@ -372,14 +418,138 @@ pub enum Inhalt {
     /// Der Wert wandert **strukturiert** bis in die Ansicht und wird erst dort
     /// zu Text; der Grund steht an seinem Typ im Kern.
     Zusammenfassung(krk_core::leseprofil::Zusammenfassung),
+    /// Die Bildfolge eines erkannten Ordners: seine Fotos in der Reihenfolge
+    /// der Folge, und was an der Stelle steht, die der Nutzer ansieht.
+    ///
+    /// **In einem `Box`**, aus demselben Grund wie [`Inhalt::Markdown`]. Die
+    /// schweren Teile, Verzeichnis und geordnete Gruppen, liegen darin noch
+    /// einmal unter `Arc`, damit der Klon beim Neuzeichnen keine Fotoliste
+    /// kopiert.
+    Bildfolge(Box<Folgeanzeige>),
     /// Ein Satz an den Nutzer: die leere Zwischenablage, ein Lesefehler.
     Hinweis(String),
+}
+
+/// Was eine Bildfolge zeigt: die erhobenen Gruppen, die davon schon
+/// geordneten, die Stelle und das Bild dort.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Folgeanzeige {
+    /// Die erhobenen Gruppen, noch ungeordnet.
+    verzeichnis: Arc<Bildverzeichnis>,
+    /// Je Gruppe ihre geordneten Fotos, sobald die Nachlieferung sie gebracht
+    /// hat; `None` heisst „wird noch vorbereitet".
+    gruppen: Vec<Option<Arc<Vec<Foto>>>>,
+    /// Die Stelle in der ganzen Folge, von null gezaehlt.
+    stelle: usize,
+    /// Was an der Stelle steht: der Hinweis, solange das Foto nicht geladen
+    /// ist, danach [`Inhalt::Bild`] oder, ueber [`BILDGRENZE`] oder
+    /// unlesbar, [`Inhalt::Metadaten`].
+    bild: Inhalt,
+}
+
+impl Folgeanzeige {
+    /// Eine Folge auf ihrer ersten Stelle, ohne geordnete Gruppe.
+    pub(crate) fn neu(verzeichnis: Bildverzeichnis) -> Self {
+        let hinweis = vorbereitungshinweis(verzeichnis.gesamt());
+        Self {
+            gruppen: vec![None; verzeichnis.gruppen().len()],
+            verzeichnis: Arc::new(verzeichnis),
+            stelle: 0,
+            bild: Inhalt::Hinweis(hinweis),
+        }
+    }
+
+    /// Was an der Stelle steht; siehe das Feld.
+    #[must_use]
+    pub fn bild(&self) -> &Inhalt {
+        &self.bild
+    }
+
+    /// Die Stelle von eins gezaehlt, die Zahl der Fotos und ob die Folge
+    /// gekuerzt ist: die drei Angaben des Zaehlers in der Statuszeile.
+    #[must_use]
+    pub fn stand(&self) -> (usize, usize, bool) {
+        (
+            self.stelle + 1,
+            self.verzeichnis.gesamt(),
+            self.verzeichnis.ist_gekuerzt(),
+        )
+    }
+
+    /// Das Foto an der Stelle, sobald seine Gruppe geordnet ist.
+    #[must_use]
+    pub fn foto(&self) -> Option<&Foto> {
+        let (gruppe, index) = self.verzeichnis.ort_der_stelle(self.stelle)?;
+        self.gruppen.get(gruppe)?.as_ref()?.get(index)
+    }
+
+    /// Nimmt eine geordnete Gruppe auf. Liefert, ob sie die Stelle traegt,
+    /// also ob die Anzeige jetzt ein Foto laden kann.
+    fn gruppe_aufnehmen(&mut self, meldung: Gruppenmeldung) -> bool {
+        let Some(platz) = self.gruppen.get_mut(meldung.index) else {
+            return false;
+        };
+        *platz = Some(Arc::new(meldung.fotos));
+        self.verzeichnis
+            .ort_der_stelle(self.stelle)
+            .is_some_and(|(gruppe, _)| gruppe == meldung.index)
+    }
+}
+
+/// Der Satz, der dasteht, solange das Foto an der Stelle nicht geladen ist
+/// (C5.3 des Spec der Bildfolge). Die Zahl geht durch dasselbe Zahlenformat
+/// wie der Zaehler der Statuszeile.
+fn vorbereitungshinweis(gesamt: usize) -> String {
+    format!("Die Bildfolge wird vorbereitet: {} Fotos.", zahl(gesamt))
+}
+
+/// Eine geordnete Gruppe, wie der Faden sie nachliefert.
+#[derive(Debug)]
+struct Gruppenmeldung {
+    /// Welche Gruppe des Verzeichnisses.
+    index: usize,
+    /// Ihr Beitrag zur Folge, geordnet.
+    fotos: Vec<Foto>,
+}
+
+/// Die Marke, an der der Faden einer Bildfolge sein Aufhoeren abliest.
+///
+/// **Faellt sie, ist die Marke gesetzt**: wer den Vorgang oder den Betrieb
+/// einer Folge fallen laesst, bricht das Lesen der Aufnahmedaten ab, ohne
+/// dass eine Stelle daran denken muesste (C5.4).
+#[derive(Debug)]
+struct Abbruchmarke(Arc<AtomicBool>);
+
+impl Drop for Abbruchmarke {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Der Betrieb einer stehenden Bildfolge in einem Tab: was noch nachkommt und
+/// welches Foto gerade geladen wird.
+///
+/// **Ein eigenes Feld neben dem [`Ladevorgang`] des Tabs** (Entscheidung 10
+/// des Plans), damit [`Vorschaumodell::laedt_noch`] weiter allein nach dem
+/// ersten Inhalt fragt.
+#[derive(Debug)]
+struct Folgebetrieb {
+    /// Die noch ausstehenden Gruppen; `None`, sobald der Faden fertig ist.
+    nachlieferung: Option<Receiver<Gruppenmeldung>>,
+    /// Die Marke des Fadens; faellt mit dem Betrieb.
+    _abbruch: Option<Abbruchmarke>,
+    /// Das Laden des Fotos an der Stelle, falls eines laeuft.
+    bildvorgang: Option<Ladevorgang>,
+    /// Die Tafel des Auftrags, fuer das Laden der Fotos.
+    tafel: Tafel,
 }
 
 /// Was der Arbeitsfaden fuer einen Tab geladen hat.
 #[derive(Debug)]
 struct Geladen {
     inhalt: Inhalt,
+    /// Bei einer Bildfolge der Kanal, ueber den ihre Gruppen nachkommen.
+    nachlieferung: Option<Receiver<Gruppenmeldung>>,
 }
 
 /// Ein laufendes Laden einer Vorschaudatei.
@@ -392,6 +562,11 @@ pub struct Ladevorgang {
     /// Welche Datei geladen wird. Beim Eintreffen der Meldung wird sie zum
     /// angezeigten Pfad des Tabs.
     pfad: PathBuf,
+    /// Die Marke des Fadens. Kommt eine Bildfolge, wandert sie in den
+    /// [`Folgebetrieb`]; sonst faellt sie mit dem Vorgang.
+    abbruch: Option<Abbruchmarke>,
+    /// Die Tafel des Auftrags, die eine Bildfolge fuer ihre Fotos mitnimmt.
+    tafel: Tafel,
 }
 
 impl Ladevorgang {
@@ -410,24 +585,59 @@ impl Ladevorgang {
     /// **Der Heimordner faehrt als Abschrift mit** und nicht als Griff: ein
     /// `Rc` erreicht diesen Faden nicht, und die Abschrift ist der Wert, der
     /// beim Auftrag galt ([`crate::heimgriff`]).
+    ///
+    /// **Der Datumsleser faehrt als Funktionszeiger mit**: im Betrieb ist es
+    /// [`krk_core::bild::aufnahmedatum()`], eine Probe reicht einen eigenen
+    /// herein ([`Vorschaumodell::datumsleser`]).
     fn starten(
         pfad: PathBuf,
         tafel: Tafel,
         profile: Arc<Profile>,
         heim: Option<Heimordner>,
+        datumsleser: Datumsleserfunktion,
     ) -> Self {
-        // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
+        // Tiefe 1 genuegt: der Faden schickt genau eine erste Meldung, und
+        // was eine Bildfolge nachliefert, geht ueber ihren eigenen Kanal.
         let (sender, empfaenger) = sync_channel(1);
+        let marke = Arc::new(AtomicBool::new(false));
         let fuer_faden = pfad.clone();
+        let marke_im_faden = Arc::clone(&marke);
         let ergebnis = thread::Builder::new()
             .name("krk-vorschau".to_owned())
             .spawn(move || {
-                let _ = SyncSender::send(
+                let inhalt = laden(&fuer_faden, tafel, &profile, heim.as_ref());
+                let verzeichnis = match &inhalt {
+                    Inhalt::Bildfolge(folge) => Some(Arc::clone(&folge.verzeichnis)),
+                    Inhalt::Leer
+                    | Inhalt::Text(_)
+                    | Inhalt::Markdown(_)
+                    | Inhalt::Bild { .. }
+                    | Inhalt::Pdf { .. }
+                    | Inhalt::Metadaten { .. }
+                    | Inhalt::Zusammenfassung(_)
+                    | Inhalt::Hinweis(_) => None,
+                };
+                let Some(verzeichnis) = verzeichnis else {
+                    let _ = SyncSender::send(
+                        &sender,
+                        Geladen {
+                            inhalt,
+                            nachlieferung: None,
+                        },
+                    );
+                    return;
+                };
+                let (nachsender, nachempfaenger) = channel();
+                let gesendet = SyncSender::send(
                     &sender,
                     Geladen {
-                        inhalt: laden(&fuer_faden, tafel, &profile, heim.as_ref()),
+                        inhalt,
+                        nachlieferung: Some(nachempfaenger),
                     },
                 );
+                if gesendet.is_ok() {
+                    nachliefern(&verzeichnis, &nachsender, datumsleser, &marke_im_faden);
+                }
             });
         if let Err(fehler) = ergebnis {
             // Ohne Faden kommt nie eine Meldung; der Kanal ist zu diesem
@@ -436,7 +646,44 @@ impl Ladevorgang {
             // einzige Spur, die der Fall hinterlaesst.
             eprintln!("krk: der Vorschau-Arbeitsfaden liess sich nicht starten: {fehler}");
         }
-        Self { empfaenger, pfad }
+        Self {
+            empfaenger,
+            pfad,
+            abbruch: Some(Abbruchmarke(marke)),
+            tafel,
+        }
+    }
+}
+
+/// Wie der Faden an ein Aufnahmedatum kommt: ein Funktionszeiger, der den
+/// Faden erreicht und keinen Wert des Rufers leiht.
+type Datumsleserfunktion = fn(&Path) -> Option<Aufnahmezeit>;
+
+/// Ordnet die Gruppen einer Bildfolge der Reihe nach und schickt jede,
+/// sobald sie geordnet ist.
+///
+/// **Der eine Rufer von `gruppe_ordnen` im ausgelieferten Programm**, und er
+/// laeuft allein auf dem Faden, den [`Ladevorgang::starten`] fuer den
+/// ausgewaehlten Ordner startet. Vor jeder Gruppe und, in `gruppe_ordnen`,
+/// vor jedem Foto fragt er die Marke; ein gescheitertes `send` heisst, dass
+/// niemand mehr zuhoert, und beendet ihn ebenso.
+fn nachliefern(
+    verzeichnis: &Bildverzeichnis,
+    sender: &Sender<Gruppenmeldung>,
+    datumsleser: Datumsleserfunktion,
+    marke: &AtomicBool,
+) {
+    let weiter = || !marke.load(Ordering::Relaxed);
+    for index in 0..verzeichnis.gruppen().len() {
+        if !weiter() {
+            return;
+        }
+        let Some(fotos) = verzeichnis.gruppe_ordnen(index, &datumsleser, &weiter) else {
+            return;
+        };
+        if sender.send(Gruppenmeldung { index, fotos }).is_err() {
+            return;
+        }
     }
 }
 
@@ -456,6 +703,9 @@ struct Vorschautab {
     pfad: Option<PathBuf>,
     /// Das laufende Laden, falls eines laeuft.
     ladevorgang: Option<Ladevorgang>,
+    /// Der Betrieb einer stehenden Bildfolge, falls der Tab eine zeigt und
+    /// noch etwas nachkommen kann.
+    folge: Option<Folgebetrieb>,
 }
 
 impl Vorschautab {
@@ -465,7 +715,78 @@ impl Vorschautab {
             inhalt: Inhalt::Leer,
             pfad: None,
             ladevorgang: None,
+            folge: None,
         }
+    }
+
+    /// Ob der Tab fuer genau diesen Pfad eine Bildfolge zeigt und nichts
+    /// anderes laedt (Entscheidung 8 des Plans).
+    fn zeigt_folge_von(&self, pfad: &Path) -> bool {
+        self.ladevorgang.is_none()
+            && self.pfad.as_deref() == Some(pfad)
+            && matches!(self.inhalt, Inhalt::Bildfolge(_))
+    }
+
+    /// Holt ab, was die Bildfolge des Tabs nachliefert, und startet das
+    /// Laden des Fotos an der Stelle, sobald seine Gruppe da ist.
+    ///
+    /// Liefert, ob sich die Anzeige geaendert hat.
+    fn folge_nachziehen(&mut self, datumsleser: Datumsleserfunktion) -> bool {
+        let (Some(betrieb), Inhalt::Bildfolge(anzeige)) = (self.folge.as_mut(), &mut self.inhalt)
+        else {
+            return false;
+        };
+        let mut geaendert = false;
+        let mut foto_laden = false;
+        if let Some(empfaenger) = betrieb.nachlieferung.as_ref() {
+            loop {
+                match empfaenger.try_recv() {
+                    Ok(meldung) => {
+                        foto_laden |= anzeige.gruppe_aufnehmen(meldung);
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                        betrieb.nachlieferung = None;
+                        break;
+                    }
+                }
+            }
+        }
+        if let Some(vorgang) = betrieb.bildvorgang.as_ref() {
+            match vorgang.empfaenger.try_recv() {
+                Ok(geladen) => {
+                    if anzeige
+                        .foto()
+                        .is_some_and(|foto| foto.pfad() == vorgang.pfad)
+                    {
+                        anzeige.bild = geladen.inhalt;
+                        geaendert = true;
+                    }
+                    betrieb.bildvorgang = None;
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => {}
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    betrieb.bildvorgang = None;
+                }
+            }
+        }
+        if foto_laden && let Some(foto) = anzeige.foto() {
+            betrieb.bildvorgang = Some(Ladevorgang::starten(
+                foto.pfad().to_path_buf(),
+                betrieb.tafel,
+                Arc::default(),
+                None,
+                datumsleser,
+            ));
+        }
+        geaendert
+    }
+
+    /// Ob an der Bildfolge des Tabs noch etwas aussteht.
+    fn folge_wartet(&self) -> bool {
+        self.folge
+            .as_ref()
+            .is_some_and(|betrieb| betrieb.nachlieferung.is_some() || betrieb.bildvorgang.is_some())
     }
 }
 
@@ -501,7 +822,8 @@ impl Tabstand<'_> {
             return true;
         }
         match self.inhalt {
-            Inhalt::Zusammenfassung(_) => true,
+            // Die Bildfolge steht allein, weil ein Profil sie nennt.
+            Inhalt::Zusammenfassung(_) | Inhalt::Bildfolge(_) => true,
             Inhalt::Metadaten { metadaten, .. } => metadaten.typ != Typ::Datei,
             Inhalt::Leer
             | Inhalt::Text(_)
@@ -522,6 +844,9 @@ impl Tabstand<'_> {
 pub struct Vorschaumodell {
     tabs: Vec<Vorschautab>,
     aktiv: usize,
+    /// Wie eine Bildfolge an ihre Aufnahmedaten kommt. Im Betrieb
+    /// [`krk_core::bild::aufnahmedatum()`]; eine Probe setzt einen eigenen.
+    datumsleser: Datumsleserfunktion,
 }
 
 impl Default for Vorschaumodell {
@@ -537,6 +862,7 @@ impl Vorschaumodell {
         Self {
             tabs: vec![Vorschautab::leer()],
             aktiv: 0,
+            datumsleser: krk_core::bild::aufnahmedatum,
         }
     }
 
@@ -633,6 +959,10 @@ impl Vorschaumodell {
     /// leerer Satz heisst „keine Profile" und ist kein Fehlerfall, dann zeigt
     /// ein Ordner seine Metadaten. Warum sie als `Arc` und nicht als Kopie
     /// reisen, steht an [`Ladevorgang::starten`].
+    ///
+    /// **Eine stehende Bildfolge fuer genau diesen Pfad bleibt stehen**
+    /// (Entscheidung 8 des Plans); siehe den Modulkopf. Jeder andere Auftrag
+    /// laesst den Betrieb einer Folge fallen und bricht ihr Lesen damit ab.
     pub fn datei_anzeigen(
         &mut self,
         pfad: &Path,
@@ -640,13 +970,19 @@ impl Vorschaumodell {
         profile: Arc<Profile>,
         heim: Option<Heimordner>,
     ) {
+        let datumsleser = self.datumsleser;
         let tab = &mut self.tabs[self.aktiv];
+        if tab.zeigt_folge_von(pfad) {
+            return;
+        }
         tab.titel = titel_von(pfad);
+        tab.folge = None;
         tab.ladevorgang = Some(Ladevorgang::starten(
             pfad.to_path_buf(),
             tafel,
             profile,
             heim,
+            datumsleser,
         ));
     }
 
@@ -700,11 +1036,13 @@ impl Vorschaumodell {
             if !treffer(&stand) {
                 continue;
             }
+            tab.folge = None;
             tab.ladevorgang = Some(Ladevorgang::starten(
                 pfad,
                 tafel,
                 Arc::clone(profile),
                 heim.cloned(),
+                self.datumsleser,
             ));
             auftraege += 1;
         }
@@ -720,6 +1058,7 @@ impl Vorschaumodell {
         let tab = &mut self.tabs[self.aktiv];
         tab.titel = "Zwischenablage".to_owned();
         tab.ladevorgang = None;
+        tab.folge = None;
         tab.pfad = None;
         tab.inhalt = match inhalt {
             Zwischenablageinhalt::Text(text) => Inhalt::Text(text),
@@ -734,10 +1073,40 @@ impl Vorschaumodell {
         };
     }
 
-    /// Ob irgendein Tab noch auf seinen Arbeitsfaden wartet.
+    /// Ob irgendein Tab noch auf seinen ersten Inhalt wartet.
+    ///
+    /// **Die Nachlieferung einer Bildfolge zaehlt nicht dazu**: sobald die
+    /// Folge mit ihrem Hinweis steht, ist diese Antwort falsch, auch wenn
+    /// Gruppen ausstehen. Daran haengt die Endbedingung von L7; siehe den
+    /// Modulkopf.
     #[must_use]
     pub fn laedt_noch(&self) -> bool {
         self.tabs.iter().any(|tab| tab.ladevorgang.is_some())
+    }
+
+    /// Ob irgendein Tab noch etwas erwartet: seinen ersten Inhalt, eine Gruppe
+    /// seiner Bildfolge oder ihr Foto an der Stelle. Daran haengt der Takt der
+    /// Ansicht.
+    #[must_use]
+    pub fn wartet_noch(&self) -> bool {
+        self.laedt_noch() || self.tabs.iter().any(Vorschautab::folge_wartet)
+    }
+
+    /// Die Stelle von eins gezaehlt, die Zahl der Fotos und ob die Folge
+    /// gekuerzt ist, falls der aktive Tab eine Bildfolge zeigt.
+    #[must_use]
+    pub fn bildstand(&self) -> Option<(usize, usize, bool)> {
+        match self.aktiver_inhalt() {
+            Inhalt::Bildfolge(folge) => Some(folge.stand()),
+            Inhalt::Leer
+            | Inhalt::Text(_)
+            | Inhalt::Markdown(_)
+            | Inhalt::Bild { .. }
+            | Inhalt::Pdf { .. }
+            | Inhalt::Metadaten { .. }
+            | Inhalt::Zusammenfassung(_)
+            | Inhalt::Hinweis(_) => None,
+        }
     }
 
     /// Welche Datei der aktive Tab zeigt; `None`, wenn keine Datei.
@@ -780,6 +1149,9 @@ impl Vorschaumodell {
             // Der Betrachter zeichnet Seiten und keine Zeilen; eine
             // Nummernspalte daneben zaehlte nichts, was dasteht.
             Inhalt::Pdf { .. } => false,
+            // Eine Bildfolge zeigt ein Foto oder dessen Metadaten, und keines
+            // von beiden hat Dateizeilen.
+            Inhalt::Bildfolge(_) => false,
             Inhalt::Leer
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
@@ -794,28 +1166,41 @@ impl Vorschaumodell {
     /// die Ansicht neu zeichnen. Ein inaktiver Tab fuellt sich still, wie die
     /// verdeckten Tabs eines Dateifensters.
     #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht neu zeichnen"]
+    ///
+    /// Seit der Bildfolge holt er dabei auch ab, was eine stehende Folge
+    /// nachliefert, und startet das Laden ihres Fotos ([`Vorschautab::folge_nachziehen`]).
     pub fn einziehen(&mut self) -> bool {
         let mut aktiver_geaendert = false;
+        let datumsleser = self.datumsleser;
         for (stelle, tab) in self.tabs.iter_mut().enumerate() {
-            let Some(vorgang) = tab.ladevorgang.as_ref() else {
-                continue;
-            };
-            let geladener_pfad = vorgang.pfad.clone();
-            match vorgang.empfaenger.try_recv() {
-                Ok(geladen) => {
-                    tab.inhalt = geladen.inhalt;
-                    tab.pfad = Some(geladener_pfad);
-                    tab.ladevorgang = None;
-                    if stelle == self.aktiv {
-                        aktiver_geaendert = true;
+            let mut geaendert = false;
+            if let Some(vorgang) = tab.ladevorgang.as_mut() {
+                let geladener_pfad = vorgang.pfad.clone();
+                match vorgang.empfaenger.try_recv() {
+                    Ok(geladen) => {
+                        let abbruch = vorgang.abbruch.take();
+                        tab.folge = geladen.nachlieferung.map(|nachlieferung| Folgebetrieb {
+                            nachlieferung: Some(nachlieferung),
+                            _abbruch: abbruch,
+                            bildvorgang: None,
+                            tafel: vorgang.tafel,
+                        });
+                        tab.inhalt = geladen.inhalt;
+                        tab.pfad = Some(geladener_pfad);
+                        tab.ladevorgang = None;
+                        geaendert = true;
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Empty) => {}
+                    // Der Faden ist ohne Meldung gefallen; darauf zu warten hat
+                    // keinen Sinn mehr.
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                        tab.ladevorgang = None;
                     }
                 }
-                Err(std::sync::mpsc::TryRecvError::Empty) => {}
-                // Der Faden ist ohne Meldung gefallen; darauf zu warten hat
-                // keinen Sinn mehr.
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                    tab.ladevorgang = None;
-                }
+            }
+            geaendert |= tab.folge_nachziehen(datumsleser);
+            if geaendert && stelle == self.aktiv {
+                aktiver_geaendert = true;
             }
         }
         aktiver_geaendert
@@ -952,9 +1337,10 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
         // Metadaten mit allen sechs Angaben und kein zweiter Zweig daneben
         // (C2.5).
         //
-        // Seit der Runde 19 hat der Kern drei Ausgaenge, und die Verzweigung
-        // ist vollstaendig ohne Auffangzweig: die Zusammenfassung eines
-        // erkannten Ordners ersetzt die Metadaten, die Zeilen des
+        // Seit der Runde 19 hat der Kern mehrere Ausgaenge, und die
+        // Verzweigung ist vollstaendig ohne Auffangzweig: die Zusammenfassung
+        // eines erkannten Ordners ersetzt die Metadaten, seine Bildfolge
+        // ebenso (Spec der Bildfolge, C1.1), die Zeilen des
         // Default-Profils treten unter sie (C2.1), und eine Verknuepfung
         // oder ein Ordner, den der Kern nicht lesen kann, behaelt die sechs
         // Angaben allein (C1.7). Welcher Ausgang es ist, entscheidet der Kern
@@ -962,6 +1348,11 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
         // ohne Zaehlzeilen durch, den der Kern zaehlen wollte.
         return match zusammenfassen(profile, pfad) {
             Some(Auskunft::Erkannt(zusammenfassung)) => Inhalt::Zusammenfassung(zusammenfassung),
+            // Die Bildfolge steht mit ihrem Hinweis da; die Gruppen ordnet
+            // derselbe Faden danach, siehe den Modulkopf.
+            Some(Auskunft::Bildfolge(verzeichnis)) => {
+                Inhalt::Bildfolge(Box::new(Folgeanzeige::neu(verzeichnis)))
+            }
             Some(Auskunft::Default(zaehlzeilen)) => Inhalt::Metadaten {
                 metadaten,
                 zaehlzeilen,
@@ -1993,6 +2384,7 @@ mod tests {
             inhalt,
             pfad: Some(pfad.to_path_buf()),
             ladevorgang: None,
+            folge: None,
         }
     }
 
@@ -2023,6 +2415,7 @@ mod tests {
             Tafel::Hell,
             Arc::default(),
             None,
+            krk_core::bild::aufnahmedatum,
         ));
         let mut modell = Vorschaumodell::neu();
         modell.tabs = vec![
@@ -2062,6 +2455,7 @@ mod tests {
                 )),
                 &pfad("werkbank"),
             ),
+            fester_tab(probenfolge(&pfad("Fotos")), &pfad("Fotos")),
             ladend,
         ];
 
@@ -2079,12 +2473,12 @@ mod tests {
         assert_eq!(
             neu_geladen,
             [
-                false, false, false, false, false, false, false, true, true, true, true
+                false, false, false, false, false, false, false, true, true, true, true, true
             ]
         );
-        assert_eq!(auftraege, 4);
+        assert_eq!(auftraege, 5);
         assert_eq!(
-            modell.tabs[10]
+            modell.tabs[11]
                 .ladevorgang
                 .as_ref()
                 .map(|vorgang| &vorgang.pfad),
@@ -2251,6 +2645,14 @@ pfad = 'fusion-workbench$'
             .zeigt_dateitext(),
             "die Zahlen zaehlten die Zeilen der Zusammenfassung, und daneben \
              steht keine Datei mit diesen Zeilen"
+        );
+        assert!(
+            !tab_setzen(
+                probenfolge(Path::new("/tmp/probe/Fotos")),
+                Some("/tmp/probe/Fotos")
+            )
+            .zeigt_dateitext(),
+            "eine Bildfolge zeigt ein Foto und keine Dateizeilen"
         );
     }
 
@@ -2563,5 +2965,238 @@ pfad = 'werkbank'
             1,
             "ausserhalb des Pruefmoduls ruft genau der Arbeitsfaden laden"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Die Bildfolge (Schritt 6 des Plans der Bildfolge)
+    // -----------------------------------------------------------------------
+
+    use std::sync::atomic::AtomicUsize;
+    use std::time::Instant;
+
+    /// Ein Profil fuer den Ordner `Fotos` mit Bildfolge und ohne Zeilen.
+    fn fotoprofil() -> Arc<Profile> {
+        Arc::new(profile_aus(
+            "[[profil]]\nname = \"Fotos\"\npfad = '/Fotos$'\nbildfolge = { }\n",
+        ))
+    }
+
+    /// Zieht ein, bis `fertig` ja sagt; nach fuenf Sekunden ist das ein
+    /// Befund und kein Warten mehr.
+    fn bis(modell: &mut Vorschaumodell, fertig: impl Fn(&Vorschaumodell) -> bool) {
+        let beginn = Instant::now();
+        while !fertig(modell) {
+            let _ = modell.einziehen();
+            assert!(
+                beginn.elapsed() < Duration::from_secs(5),
+                "die Vorschau ist nicht fertig geworden"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    fn folge_des_aktiven(modell: &Vorschaumodell) -> &Folgeanzeige {
+        match modell.aktiver_inhalt() {
+            Inhalt::Bildfolge(folge) => folge,
+            anderes => panic!("keine Bildfolge, sondern {anderes:?}"),
+        }
+    }
+
+    static FREI_VORBEREITET: AtomicBool = AtomicBool::new(false);
+
+    fn wartender_leser(_: &Path) -> Option<Aufnahmezeit> {
+        while !FREI_VORBEREITET.load(Ordering::SeqCst) {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        None
+    }
+
+    /// Entscheidung 10: die erste Meldung ist die Folge mit ihrem Hinweis,
+    /// und `laedt_noch` ist danach falsch, obwohl die Gruppe aussteht;
+    /// `wartet_noch` haelt den Takt. Nach der Nachlieferung steht das Foto.
+    #[test]
+    fn die_folge_steht_mit_hinweis_bevor_die_gruppen_geordnet_sind() {
+        let ordner = Pruefordner::neu("bildfolge-hinweis");
+        let fotos = ordner.ordner("Fotos");
+        ordner.datei("Fotos/a.jpg", b"");
+        ordner.datei("Fotos/b.jpg", b"");
+        let mut modell = Vorschaumodell::neu();
+        modell.datumsleser = wartender_leser;
+        modell.datei_anzeigen(&fotos, Tafel::Hell, fotoprofil(), None);
+        bis(&mut modell, |modell| !modell.laedt_noch());
+
+        let folge = folge_des_aktiven(&modell);
+        assert_eq!(
+            *folge.bild(),
+            Inhalt::Hinweis("Die Bildfolge wird vorbereitet: 2 Fotos.".to_owned())
+        );
+        assert_eq!(modell.bildstand(), Some((1, 2, false)));
+        assert!(modell.wartet_noch(), "die Gruppe steht noch aus");
+
+        FREI_VORBEREITET.store(true, Ordering::SeqCst);
+        bis(&mut modell, |modell| !modell.wartet_noch());
+        assert!(
+            matches!(folge_des_aktiven(&modell).bild(), Inhalt::Bild { .. }),
+            "nach der Nachlieferung steht das Foto"
+        );
+    }
+
+    static GERUFEN_ABBRUCH: AtomicUsize = AtomicUsize::new(0);
+    static FREI_ABBRUCH: AtomicBool = AtomicBool::new(false);
+
+    fn haltender_leser(_: &Path) -> Option<Aufnahmezeit> {
+        GERUFEN_ABBRUCH.fetch_add(1, Ordering::SeqCst);
+        while !FREI_ABBRUCH.load(Ordering::SeqCst) {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        None
+    }
+
+    /// C5.4: ein zweiter Auftrag mit anderem Pfad setzt die Abbruchmarke, und
+    /// der Leser wird danach nicht mehr gerufen.
+    #[test]
+    fn ein_auswahlwechsel_haelt_das_lesen_der_aufnahmedaten_an() {
+        let ordner = Pruefordner::neu("bildfolge-abbruch");
+        let fotos = ordner.ordner("Fotos");
+        for name in ["a.jpg", "b.jpg", "c.jpg", "d.jpg"] {
+            ordner.datei(&format!("Fotos/{name}"), b"");
+        }
+        let anderes = ordner.datei("notiz.txt", "notiz\n");
+        let mut modell = Vorschaumodell::neu();
+        modell.datumsleser = haltender_leser;
+        modell.datei_anzeigen(&fotos, Tafel::Hell, fotoprofil(), None);
+        let beginn = Instant::now();
+        while GERUFEN_ABBRUCH.load(Ordering::SeqCst) == 0 {
+            let _ = modell.einziehen();
+            assert!(beginn.elapsed() < Duration::from_secs(5));
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        modell.datei_anzeigen(&anderes, Tafel::Hell, fotoprofil(), None);
+        FREI_ABBRUCH.store(true, Ordering::SeqCst);
+        bis(&mut modell, |modell| !modell.wartet_noch());
+        std::thread::sleep(Duration::from_millis(200));
+        assert_eq!(
+            GERUFEN_ABBRUCH.load(Ordering::SeqCst),
+            1,
+            "nach dem Auswahlwechsel wurde weiter gelesen"
+        );
+        assert_eq!(*modell.aktiver_inhalt(), Inhalt::Text("notiz\n".to_owned()));
+    }
+
+    static GERUFEN_GLEICH: AtomicUsize = AtomicUsize::new(0);
+
+    fn zaehlender_leser(_: &Path) -> Option<Aufnahmezeit> {
+        GERUFEN_GLEICH.fetch_add(1, Ordering::SeqCst);
+        None
+    }
+
+    /// Entscheidung 8: derselbe Pfad erneut gemeldet laesst die stehende
+    /// Folge stehen und liest nichts neu.
+    #[test]
+    fn derselbe_pfad_laesst_die_stehende_folge_stehen() {
+        let ordner = Pruefordner::neu("bildfolge-gleich");
+        let fotos = ordner.ordner("Fotos");
+        ordner.datei("Fotos/a.jpg", b"");
+        ordner.datei("Fotos/b.jpg", b"");
+        let mut modell = Vorschaumodell::neu();
+        modell.datumsleser = zaehlender_leser;
+        modell.datei_anzeigen(&fotos, Tafel::Hell, fotoprofil(), None);
+        bis(&mut modell, |modell| {
+            !modell.laedt_noch() && !modell.wartet_noch()
+        });
+        let vorher = modell.aktiver_inhalt().clone();
+        let gerufen = GERUFEN_GLEICH.load(Ordering::SeqCst);
+        assert_eq!(gerufen, 2);
+
+        modell.datei_anzeigen(&fotos, Tafel::Hell, fotoprofil(), None);
+        assert!(
+            !modell.laedt_noch(),
+            "es wurde kein neuer Auftrag gestartet"
+        );
+        assert_eq!(*modell.aktiver_inhalt(), vorher);
+        assert_eq!(GERUFEN_GLEICH.load(Ordering::SeqCst), gerufen);
+    }
+
+    /// C2.7: ein Foto ueber der Bildgrenze bleibt in der Folge und zeigt an
+    /// seiner Stelle seine Metadaten.
+    #[test]
+    fn ein_foto_ueber_der_bildgrenze_zeigt_an_seiner_stelle_die_metadaten() {
+        let ordner = Pruefordner::neu("bildfolge-gross");
+        let fotos = ordner.ordner("Fotos");
+        let gross = ordner.datei("Fotos/gross.jpg", b"");
+        std::fs::File::options()
+            .write(true)
+            .open(&gross)
+            .and_then(|datei| datei.set_len(BILDGRENZE + 1))
+            .expect("die Datei laesst sich luecken");
+        let mut modell = Vorschaumodell::neu();
+        modell.datumsleser = |_: &Path| None;
+        modell.datei_anzeigen(&fotos, Tafel::Hell, fotoprofil(), None);
+        bis(&mut modell, |modell| {
+            !modell.laedt_noch() && !modell.wartet_noch()
+        });
+        assert!(
+            matches!(folge_des_aktiven(&modell).bild(), Inhalt::Metadaten { .. }),
+            "{:?}",
+            folge_des_aktiven(&modell).bild()
+        );
+    }
+
+    /// `gruppe_ordnen` hat im Betriebscode genau einen Rufer, und er steht in
+    /// `nachliefern`, das allein der Faden aus `Ladevorgang::starten` ruft;
+    /// nach dem Muster von
+    /// `zusammenfassen_hat_einen_rufer_und_der_haengt_am_arbeitsfaden`.
+    #[test]
+    fn gruppe_ordnen_hat_einen_rufer_und_der_haengt_am_arbeitsfaden() {
+        let name = concat!("gruppe_", "ordnen");
+        let rufer: Vec<(String, usize)> = crate::quellbaum::quelldateien()
+            .into_iter()
+            .filter(|(datei, _)| datei.starts_with("krk-ui/"))
+            .map(|(datei, inhalt)| (datei, crate::quellbaum::aufrufstellen(&inhalt, name)))
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+        assert_eq!(
+            rufer,
+            vec![("krk-ui/src/vorschaumodell.rs".to_owned(), 1)],
+            "in krk-ui ruft genau eine Stelle {name}"
+        );
+        let (_, diese_datei) = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/vorschaumodell.rs")
+            .expect("diese Datei steht im Quellbaum");
+        let (ohne_proben, _) = diese_datei
+            .split_once("#[cfg(test)]")
+            .expect("das Pruefmodul dieser Datei ist mit #[cfg(test)] angemeldet");
+        let rumpf = ohne_proben
+            .split_once(concat!("fn nach", "liefern("))
+            .map(|(_, rest)| rest)
+            .and_then(|rest| rest.split_once("\n}\n"))
+            .map(|(rumpf, _)| rumpf)
+            .expect("nachliefern steht in dieser Datei");
+        assert_eq!(crate::quellbaum::aufrufstellen(rumpf, name), 1);
+        assert_eq!(
+            crate::quellbaum::aufrufstellen(ohne_proben, concat!("nach", "liefern")),
+            1,
+            "ausserhalb des Pruefmoduls ruft genau der Arbeitsfaden nachliefern"
+        );
+    }
+
+    /// Eine Bildfolge mit einem Foto, fuer die Proben, die einen Wert jeder
+    /// Variante von [`Inhalt`] brauchen. Der Pfad benennt nur den
+    /// Pruefordner; die Folge entsteht ueber denselben Weg wie im Betrieb.
+    fn probenfolge(zweck: &Path) -> Inhalt {
+        use krk_core::leseprofil::bildfolge::verzeichnis_erheben;
+        use krk_core::leseprofil::{Bildfolgeangabe, Ortsangabe};
+        let ordner =
+            crate::pruefordner::Pruefordner::neu(&format!("probenfolge-{}", titel_von(zweck)));
+        ordner.datei("a.jpg", b"");
+        let wurzel = std::fs::canonicalize(ordner.pfad()).expect("der Pruefordner loest sich auf");
+        let verzeichnis = verzeichnis_erheben(
+            &Bildfolgeangabe::neu(Ortsangabe::wurzel()),
+            ordner.pfad(),
+            &wurzel,
+        )
+        .expect("die Folge laesst sich erheben");
+        Inhalt::Bildfolge(Box::new(Folgeanzeige::neu(verzeichnis)))
     }
 }

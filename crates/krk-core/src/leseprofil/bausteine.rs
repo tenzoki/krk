@@ -246,6 +246,7 @@ use crate::verzeichnis::leser::{self, Lesestand};
 use crate::verzeichnis::sys::ortszeit;
 use crate::verzeichnis::{Eintrag, Typ};
 
+use super::bildfolge::verzeichnis_erheben;
 use super::defaultprofil::defaultprofil;
 use super::erkennung::erkennen;
 use super::{
@@ -259,11 +260,12 @@ use super::{
 
 /// Die Auskunft ueber einen ausgewaehlten Ordner, oder `None`.
 ///
-/// Sie hat seit der Runde 19 zwei Gestalten, und der Rufer bekommt gesagt,
-/// welche ([`Auskunft`]): erkennt ein Profil aus `readers.toml` den Ordner,
-/// ersetzt seine Zusammenfassung die Metadatenanzeige; erkennt keines ihn,
-/// treten die drei Zeilen des eingebauten [`defaultprofil`] unter sie (C1.1,
-/// C1.2). Der Rueckfallweg ist damit **einer** und liegt hier und nicht beim
+/// Sie hat seit der Runde 19 zwei Gestalten und seit der Bildfolge drei, und
+/// der Rufer bekommt gesagt, welche ([`Auskunft`]): erkennt ein Profil aus
+/// `readers.toml` den Ordner, ersetzt seine Zusammenfassung die
+/// Metadatenanzeige, oder, wenn es eine Bildfolge nennt und darunter Fotos
+/// liegen, seine Bildfolge; erkennt keines ihn, treten die drei Zeilen des
+/// eingebauten [`defaultprofil`] unter sie (C1.1, C1.2). Der Rueckfallweg ist damit **einer** und liegt hier und nicht beim
 /// Rufer, aus demselben Grund, aus dem C2.6 hier gehalten wird.
 ///
 /// `None` heisst: der Eintrag bekommt keine der zwei Auskuenfte, und die
@@ -328,6 +330,18 @@ pub fn zusammenfassen_gezaehlt(profile: &Profile, ordner: &Path) -> Option<(Ausk
     // Beide Zweige rechnen in **diesem** Lauf; der Modulkopf sagt, warum das
     // die ganze Bauart hinter C4.2 ist.
     let auskunft = match erkennen(profile, ordner, &|| lauf.eintraege()) {
+        // Die Bildfolge vor den Zeilen, und allein mit mindestens einem Foto
+        // (C1.5 des Spec der Bildfolge). Ein Profil ohne Bildfolge nimmt den
+        // Arm darunter wie vor der Bildfolge und stellt keinen weiteren
+        // Systemaufruf: gefragt wird allein das Feld am Profil.
+        Some(profil)
+            if let Some(verzeichnis) = profil
+                .bildfolge()
+                .and_then(|angabe| verzeichnis_erheben(angabe, ordner, &wurzel))
+                && verzeichnis.gesamt() > 0 =>
+        {
+            Auskunft::Bildfolge(verzeichnis)
+        }
         Some(profil) => Auskunft::Erkannt(Zusammenfassung::neu(
             ordnername(ordner),
             ordner.to_path_buf(),

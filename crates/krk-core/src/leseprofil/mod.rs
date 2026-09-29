@@ -12,7 +12,10 @@
 //! kein Profil, tritt seit der Runde 19 das eingebaute [`defaultprofil()`] ein,
 //! und der Rufer erfaehrt ueber [`Auskunft`], welche der zwei Antworten er
 //! bekommen hat: die erkannte ersetzt die Metadatenanzeige, die des
-//! Default-Profils tritt unter sie.
+//! Default-Profils tritt unter sie. Seit der Bildfolge gibt es eine dritte:
+//! nennt das erkannte Profil eine Bildfolge und liegen darunter Fotos, liefert
+//! [`Auskunft::Bildfolge`] die erhobenen Gruppen, und die Vorschau zeigt das
+//! erste Foto.
 //!
 //! ```text
 //! readers.toml ──serde──> datei::Profildatei ──datei::pruefen──> Profile
@@ -20,15 +23,15 @@
 //!                            ausgewaehlter Ordner ──erkennung───────┘
 //!                                                   │
 //!                                    bausteine::zusammenfassen
-//!                                      │                      │
-//!                             Profil trifft         keines trifft, Ordner
-//!                                      │                      │
-//!                                      v                      v
-//!                     Auskunft::Erkannt(Zusammenfassung)   Auskunft::Default(Zeilen)
-//!                                      │                      │
-//!                                  als_text              zeilen_als_text
-//!                                      v                      v
-//!                          ersetzt die Metadaten   tritt unter die Metadaten
+//!                          │                        │                      │
+//!           Profil mit Bildfolge,       Profil trifft          keines trifft, Ordner
+//!              Fotos darunter                       │                      │
+//!                          v                        v                      v
+//!   Auskunft::Bildfolge(Bildverzeichnis)  Auskunft::Erkannt(…)   Auskunft::Default(Zeilen)
+//!                          │                        │                      │
+//!             bildfolge::gruppe_ordnen          als_text              zeilen_als_text
+//!                          v                        v                      v
+//!                 zeigt das erste Foto   ersetzt die Metadaten   tritt unter die Metadaten
 //! ```
 //!
 //! **Ein Profil kann statt seiner Zeilen eine Bildfolge nennen** (Spec
@@ -718,13 +721,14 @@ impl Zusammenfassung {
     }
 }
 
-/// Was die Auswertung fuer einen Ordner liefert, und welche der zwei
-/// Antworten es ist.
+/// Was die Auswertung fuer einen Ordner liefert, und welche der Antworten es
+/// ist.
 ///
-/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: die zwei Werte
+/// Eine vollstaendige Fallunterscheidung ohne Auffangzweig: die Werte
 /// unterscheiden sich darin, was die Vorschau mit ihnen tut, und dieser
 /// Unterschied gehoert in den Typ und nicht in eine Prosastelle beim Rufer.
-/// Ein dritter Wert haelt den Bau in `vorschaumodell::laden` an.
+/// Ein weiterer Wert haelt den Bau in `vorschaumodell::laden` an; so ist
+/// [`Auskunft::Bildfolge`] hineingekommen.
 ///
 /// Was **keine** Auskunft bekommt, sagt `Option` darum herum: ein Eintrag, der
 /// sich nicht aufloesen laesst oder aufgeloest kein Verzeichnis ist (C2.6 der
@@ -740,6 +744,15 @@ pub enum Auskunft {
     /// Metadatenangaben (C1.1, C2.1); eine Kopfzeile tragen sie nicht, denn
     /// Name und Pfad stehen schon darueber.
     Default(Vec<Zusammenfassungszeile>),
+    /// Ein Profil mit Bildfolge hat den Ordner erkannt, und darunter liegt
+    /// mindestens ein Foto. Die Vorschau zeigt Fotos statt der Zeilen; ohne
+    /// Fotos kommt dasselbe Profil als [`Auskunft::Erkannt`] mit seinen Zeilen
+    /// (C1.5 des Spec der Bildfolge).
+    ///
+    /// Das Verzeichnis ist erhoben und noch nicht geordnet: die Aufnahmedaten
+    /// liest [`bildfolge::Bildverzeichnis::gruppe_ordnen`] je Gruppe, auf dem
+    /// Faden des Rufers.
+    Bildfolge(bildfolge::Bildverzeichnis),
 }
 
 /// Zeilen aus Beschriftung und Wert als Text, jede mit fuehrendem Umbruch.

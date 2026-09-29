@@ -169,7 +169,7 @@ impl Bildverzeichnis {
     }
 
     /// Ob eine Grenze Fotos oder Ordner aus der Folge gelassen hat.
-    pub fn gekuerzt(&self) -> bool {
+    pub fn ist_gekuerzt(&self) -> bool {
         self.gekuerzt
     }
 
