@@ -52,3 +52,6 @@ solange niemand sie prüft.
 
 Geprüft mit den zwei Suchkommandos oben und gegen den Absatz „Wie die drei entstehen" in
 `HowTo.md`.
+
+---
+Resolved: e8b1e82 — die Spalte „Wer schreibt“ in HowTo.md `## Wo KRK seine eigenen Dateien ablegt` folgt durchgehend der Lesart „wer die Datei schreibt“ und nennt für keymap.toml, settings.toml und readers.toml auch das Zurücksetzen (Schritt 10 von 260929-1025_*_plan-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md).
