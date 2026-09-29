@@ -389,7 +389,7 @@ pub enum Dateityp {
 /// Die Endungen, die als Markdown gelten.
 ///
 /// Verglichen ohne Ruecksicht auf Gross- und Kleinschreibung, wie
-/// `BILDENDUNGEN` in [`crate::vorschaumodell`]. Die Liste nennt die Endungen,
+/// `krk_core::bild::ENDUNGEN` fuer die Bilder. Die Liste nennt die Endungen,
 /// die auf einem Mac ueblich sind; eine Endung, die fehlt, bekommt die
 /// gewoehnliche Formatansicht und keinen Fehler.
 const MARKDOWNENDUNGEN: [&str; 4] = ["md", "markdown", "mdown", "mkd"];

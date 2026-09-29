@@ -184,7 +184,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
 
 ### Stufe B: der Kern
 
-3. **Die Bildendungen ziehen in den Kern**
+3. [DONE] **Die Bildendungen ziehen in den Kern**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/lib.rs`, `crates/krk-core/src/bild/mod.rs` (neu), `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/editormodell.rs` (allein der Verweis im Doc-Kommentar)
    - Changes: `krk_core::bild::ENDUNGEN` mit den zehn Endungen und `pub fn ist_fotoname(name: &str) -> bool` (Endung klein verglichen); der Modulkopf sagt, dass die Liste die Vorschau und die Bildfolge speist und nirgends sonst stehen darf. `vorschaumodell::ist_bildpfad` fragt die Kernfunktion, `BILDENDUNGEN` fällt. Kein Verhalten ändert sich.

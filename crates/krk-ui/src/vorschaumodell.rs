@@ -220,20 +220,12 @@ const _: () = assert!(BILDGRENZE > TEXTGRENZE);
 /// Defekt, der die fehlende Haelfte gemeldet hat, ist `260809-1610`.
 const _: () = assert!(krk_core::text::datei::EDITORGRENZE > TEXTGRENZE);
 
-/// Die Dateiendungen, die als gaengige Bildformate gelten (C6).
-///
-/// Verglichen ohne Ruecksicht auf Gross- und Kleinschreibung. Die Liste nennt,
-/// was `NSImage` auf jedem macOS dieser Runde liest; ein Format, das die
-/// Dekodierung dann doch nicht nimmt, faellt in der Ansicht auf die Metadaten
-/// zurueck, die jede [`Inhalt::Bild`]-Meldung dafuer mitfuehrt.
-const BILDENDUNGEN: [&str; 10] = [
-    "png", "jpg", "jpeg", "gif", "tif", "tiff", "heic", "heif", "bmp", "icns",
-];
-
 /// Die eine Dateiendung, die den Betrachter erreicht (Runde 20, A10).
 ///
-/// Verglichen ohne Ruecksicht auf Gross- und Kleinschreibung, an derselben
-/// Stelle wie die Bildendungen ([`endung_klein`]). Magic Bytes liest die
+/// Verglichen ohne Ruecksicht auf Gross- und Kleinschreibung ([`endung_klein`]).
+/// Die Bildendungen stehen seit der Arbeit an der Bildfolge im Kern
+/// (`krk_core::bild::ENDUNGEN`), weil die Bildfolge eines Leseprofils dieselbe
+/// Liste braucht. Magic Bytes liest die
 /// Vorschau nicht, so wenig wie beim Bild: eine Datei mit dieser Endung, die
 /// kein PDF ist, faellt in der Ansicht auf die Metadaten zurueck, die jede
 /// [`Inhalt::Pdf`]-Meldung dafuer mitfuehrt.
@@ -1083,17 +1075,23 @@ fn vorschautext(typ: Dateityp, text: String) -> String {
 
 /// Die Endung des Pfades in Kleinschreibung, oder keine.
 ///
-/// Die eine Stelle, an der die Gross- und Kleinschreibung einer Endung
-/// faellt (C1.5, A10 der Runde 20); [`ist_bildpfad`] und [`ist_pdfpfad`]
-/// vergleichen beide gegen ihr Ergebnis.
+/// Die Stelle, an der die Gross- und Kleinschreibung der PDF-Endung faellt
+/// (A10 der Runde 20); [`ist_pdfpfad`] vergleicht gegen ihr Ergebnis. Fuer die
+/// Bildendungen faellt sie in `krk_core::bild::ist_fotoname`, das
+/// [`ist_bildpfad`] fragt.
 fn endung_klein(pfad: &Path) -> Option<String> {
     pfad.extension()
         .map(|endung| endung.to_string_lossy().to_ascii_lowercase())
 }
 
-/// Ob der Pfad auf eines der gaengigen Bildformate endet.
+/// Ob der Pfad auf eines der gaengigen Bildformate endet (C6).
+///
+/// Die Liste steht im Kern, `krk_core::bild::ENDUNGEN`; ein Format, das die
+/// Dekodierung dann doch nicht nimmt, faellt in der Ansicht auf die Metadaten
+/// zurueck, die jede [`Inhalt::Bild`]-Meldung dafuer mitfuehrt.
 fn ist_bildpfad(pfad: &Path) -> bool {
-    endung_klein(pfad).is_some_and(|endung| BILDENDUNGEN.contains(&endung.as_str()))
+    pfad.file_name()
+        .is_some_and(|name| krk_core::bild::ist_fotoname(&name.to_string_lossy()))
 }
 
 /// Ob der Pfad auf `pdf` endet und damit den Betrachter erreicht.

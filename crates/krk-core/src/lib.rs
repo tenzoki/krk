@@ -59,6 +59,7 @@
 //! Runde 18 `localtime_r` hinzugebracht haben.
 
 pub mod ablage;
+pub mod bild;
 pub mod git;
 pub mod heimordner;
 pub mod leseprofil;
