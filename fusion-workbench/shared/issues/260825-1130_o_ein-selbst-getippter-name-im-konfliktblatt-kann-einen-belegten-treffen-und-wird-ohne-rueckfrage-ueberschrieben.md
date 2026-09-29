@@ -51,3 +51,5 @@ Nebenwirkung aus der Zeile `Also seen` steht ebenfalls: `halbes_archiv_wegraeume
 (`zippen.rs:277-286`) nimmt weiter `fs::remove_file` und nicht den Papierkorb. Der Datensatz ist
 in dieser Runde nicht angefasst worden und war das nach seiner eigenen Begründung auch nicht zu
 erwarten.
+
+Also seen: 260929-1141 by reviewer — seit `ab8d7db` loest Opt+Return im Namensfeld des Konfliktblatts "Umbenennen" mit dem getippten Namen aus (`blaetter/mod.rs`, `befehl_umleiten`), der Weg in diesen Defekt ist damit per Tastatur erreichbar.

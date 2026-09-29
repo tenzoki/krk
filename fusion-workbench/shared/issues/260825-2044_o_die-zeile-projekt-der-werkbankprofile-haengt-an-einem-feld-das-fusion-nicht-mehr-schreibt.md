@@ -72,3 +72,5 @@ anfassen darf.
 nimmt in C3.7 ausdrücklich ab, dass `"setup_pwd":"[^"]*/([^"/]+)"` den Projektnamen
 liefert. Das Kriterium war beim Abnehmen wahr und ist es an diesem Baum nicht mehr; es ist
 kein Fehler der Abnahme, sondern eine Änderung an fusion darunter.
+
+Also seen: 260929-1141 by reviewer — `9ea57a3` zieht die fusion-Profile auf fusion 12 und laesst die Zeile "Projekt" (`setup_pwd`) stehen; `fusion-workbench/.fusion-setup` unter 12.0.1 fuehrt allein `setup_at` und `plugin_version`.
