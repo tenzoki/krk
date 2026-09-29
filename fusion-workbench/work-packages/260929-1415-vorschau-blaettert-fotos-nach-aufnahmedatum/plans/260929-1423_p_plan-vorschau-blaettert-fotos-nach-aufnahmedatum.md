@@ -282,7 +282,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
     - Acceptance: `make check` grün; keine bestehende Probe ändert ihre Erwartung.
     - Dependencies: Schritt 10
 
-12. **Der Messweg für den Nutzer, und die kopflose Vorabmessung**
+12. [DONE] **Der Messweg für den Nutzer, und die kopflose Vorabmessung**
     - Executor: `code-implementer`
     - Files: `crates/krk-bench/src/main.rs`, `crates/krk-bench/src/fotoordner.rs` (neu), `crates/krk-bench/src/messen.rs`, `crates/krk-ui/src/messmodus.rs`, `crates/krk-ui/src/appkit/anwendung.rs` (allein der Messmodus-Anschluss), `Makefile`, `messungen/<stempel>-bildfolge-kopflos.txt` (neu, Ergebnis des Laufs)
     - Changes:

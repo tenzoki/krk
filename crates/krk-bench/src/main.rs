@@ -9,7 +9,9 @@
 //! ```
 //!
 //! `fixture` legt einen reproduzierbaren Pruefordner an, `messen` faehrt die
-//! Messreihe darauf. Die Abnahme der Zeitzusagen aus C8 braucht **drei**
+//! Messreihe darauf. Daneben stehen `alle` und `durchstich` fuer die Zusagen
+//! aus C8 am Buendel und, seit der Bildfolge, `fotoordner` und `bildfolge` fuer
+//! deren zwei Messwege; die Hilfe unten nennt alle mit ihren Angaben. Die Abnahme der Zeitzusagen aus C8 braucht **drei**
 //! Pruefordner, die dieser Befehl einzeln erzeugt:
 //!
 //! ```text
@@ -28,6 +30,7 @@
 
 mod bericht;
 mod fixture;
+mod fotoordner;
 mod messen;
 /// Der Wegwerfordner der Proben. Nur im Probenbau uebersetzt, weil ihn kein
 /// ausgeliefertes Programm braucht.
@@ -49,7 +52,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use messen::{Cache, Durchstich, Gesamtlauf, Messreihe, WIEDERHOLUNGEN};
+use messen::{
+    Bildfolgelauf, Cache, Durchstich, Gesamtlauf, KopfloseBildfolge, Messreihe, WIEDERHOLUNGEN,
+};
 
 const HILFE: &str = "\
 krk-bench — Pruefordner-Erzeuger und kopflose Messstrecke
@@ -93,6 +98,26 @@ krk-bench — Pruefordner-Erzeuger und kopflose Messstrecke
                  tut.
       --ziel     ein anderer Berichtsordner als messungen/.
       Rueckgabewert 0, wenn alle fuenf Zusagen ihre Zahl halten, sonst 1.
+
+  krk-bench fotoordner --fotos N --groesse BYTES --seed S --out PFAD
+      Legt PFAD/Fotos/2008/01 bis 12 mit N kleinen JPEG-Fotos an, deren
+      Aufnahmedaten (DateTimeOriginal) gegen die Namen laufen, jedes mit
+      echten Bytes auf BYTES aufgefuellt, dazu PFAD/Fotos/2007 leer als
+      zweite Zeile. Die Verteilung auf die Monate haengt am Startwert S. Der
+      Zielordner muss fehlen oder leer sein; neben ihm entsteht ein Steckbrief.
+
+  krk-bench bildfolge --kopflos PFAD [--ziel PFAD]
+      Misst im Kern, ohne Fenster, zwanzigmal warm die Erhebung der Bildfolge
+      eines Jahres- oder Monatsordners (etwa PFAD/Fotos/2008) und das Ordnen
+      ihrer ersten Gruppe nach Aufnahmedatum, mit den Profilen der
+      Auslieferungsfassung. Eine Untergrenze, keine Zusage.
+
+  krk-bench bildfolge --buendel PFAD --ordner PFAD --zeile NAME [--runden N]
+                      [--ziel PFAD]
+      Misst in der Anwendung zwanzigmal je Runde die Spanne von der Auswahl
+      der Zeile NAME im Ordner (etwa PFAD/Fotos und 2008) bis zum Zeichen-
+      durchgang mit dem ersten Foto der Folge. Verlangt KRK im Vordergrund;
+      der Ordner braucht neben NAME eine zweite Zeile.
 
   krk-bench --hilfe
 ";
@@ -139,6 +164,8 @@ fn ausfuehren(argumente: &[String]) -> Result<(), Abbruch> {
         "messen" => messen_fahren(&argumente[1..]),
         "durchstich" => durchstich_fahren(&argumente[1..]),
         "alle" => alle_fahren(&argumente[1..]),
+        "fotoordner" => fotoordner_bauen(&argumente[1..]),
+        "bildfolge" => bildfolge_fahren(&argumente[1..]),
         "--hilfe" | "--help" | "-h" | "hilfe" => {
             println!("{HILFE}");
             Ok(())
@@ -386,6 +413,134 @@ fn alle_fahren(argumente: &[String]) -> Result<(), Abbruch> {
 }
 
 // ---------------------------------------------------------------------------
+// fotoordner und bildfolge
+// ---------------------------------------------------------------------------
+
+fn fotoordner_bauen(argumente: &[String]) -> Result<(), Abbruch> {
+    let mut fotos: Option<usize> = None;
+    let mut groesse: Option<u64> = None;
+    let mut startwert: Option<u64> = None;
+    let mut ziel: Option<PathBuf> = None;
+
+    let mut rest = argumente.iter();
+    while let Some(marke) = rest.next() {
+        match marke.as_str() {
+            "--fotos" => fotos = Some(zahl(&mut rest, "--fotos")?),
+            "--groesse" => groesse = Some(zahl(&mut rest, "--groesse")?),
+            "--seed" => startwert = Some(zahl(&mut rest, "--seed")?),
+            "--out" => ziel = Some(PathBuf::from(wert(&mut rest, "--out")?)),
+            anderes => {
+                return Err(Abbruch::Aufruf(format!(
+                    "fotoordner kennt {anderes:?} nicht"
+                )));
+            }
+        }
+    }
+
+    let fotos = fotos.ok_or_else(|| Abbruch::Aufruf("--fotos fehlt".to_owned()))?;
+    let groesse = groesse.ok_or_else(|| Abbruch::Aufruf("--groesse fehlt".to_owned()))?;
+    let startwert = startwert.ok_or_else(|| Abbruch::Aufruf("--seed fehlt".to_owned()))?;
+    let ziel = ziel.ok_or_else(|| Abbruch::Aufruf("--out fehlt".to_owned()))?;
+    if fotos == 0 {
+        return Err(Abbruch::Aufruf(
+            "ein Fotoordner ohne Fotos zeigt keine Bildfolge".to_owned(),
+        ));
+    }
+
+    let angelegt = fotoordner::erzeugen(&ziel, fotos, groesse, startwert)?;
+    println!(
+        "Fotoordner {} angelegt: {fotos} Fotos zu je {} Bytes, je Monat {:?}, Startwert \
+         {startwert}.",
+        angelegt.jahr.display(),
+        angelegt.groesse,
+        angelegt.je_monat
+    );
+    println!("Steckbrief: {}", angelegt.steckbrief.display());
+    Ok(())
+}
+
+fn bildfolge_fahren(argumente: &[String]) -> Result<(), Abbruch> {
+    let mut kopflos: Option<PathBuf> = None;
+    let mut programm: Option<PathBuf> = None;
+    let mut ordner: Option<PathBuf> = None;
+    let mut zeile: Option<String> = None;
+    let mut runden: usize = 1;
+    let mut ziel = PathBuf::from(bericht::MESSUNGEN);
+
+    let mut rest = argumente.iter();
+    while let Some(marke) = rest.next() {
+        match marke.as_str() {
+            "--kopflos" => kopflos = Some(PathBuf::from(wert(&mut rest, "--kopflos")?)),
+            "--buendel" => programm = Some(PathBuf::from(wert(&mut rest, "--buendel")?)),
+            "--ordner" => ordner = Some(PathBuf::from(wert(&mut rest, "--ordner")?)),
+            "--zeile" => zeile = Some(wert(&mut rest, "--zeile")?.clone()),
+            "--runden" => runden = zahl(&mut rest, "--runden")?,
+            "--ziel" => ziel = PathBuf::from(wert(&mut rest, "--ziel")?),
+            anderes => {
+                return Err(Abbruch::Aufruf(format!(
+                    "bildfolge kennt {anderes:?} nicht"
+                )));
+            }
+        }
+    }
+
+    match (kopflos, programm) {
+        (Some(ordner_kopflos), None) => {
+            if ordner.is_some() || zeile.is_some() {
+                return Err(Abbruch::Aufruf(
+                    "--kopflos nimmt den Jahres- oder Monatsordner selbst; --ordner und \
+                     --zeile gehoeren zu --buendel"
+                        .to_owned(),
+                ));
+            }
+            let lauf = KopfloseBildfolge {
+                ordner: ordner_kopflos,
+                wiederholungen: WIEDERHOLUNGEN,
+            };
+            let ergebnis = lauf.fahren()?;
+            let text = messen::bildfolge_bericht(&lauf.ordner, None, WIEDERHOLUNGEN, &ergebnis);
+            let geschrieben = messen::bildfolge_schreiben(&ziel, &text, true)?;
+            print!("{text}");
+            println!("Bericht: {}", geschrieben.display());
+            Ok(())
+        }
+        (None, Some(programm)) => {
+            let ordner = ordner.ok_or_else(|| Abbruch::Aufruf("--ordner fehlt".to_owned()))?;
+            let zeile = zeile.ok_or_else(|| Abbruch::Aufruf("--zeile fehlt".to_owned()))?;
+            if runden == 0 {
+                return Err(Abbruch::Aufruf(
+                    "eine Messung ohne Runden ergibt keine Zahl".to_owned(),
+                ));
+            }
+            let lauf = Bildfolgelauf {
+                programm,
+                ordner,
+                zeile,
+                wiederholungen: WIEDERHOLUNGEN,
+                runden,
+            };
+            let ergebnis = lauf.fahren()?;
+            let text = messen::bildfolge_bericht(
+                &lauf.ordner,
+                Some(&lauf.programm),
+                WIEDERHOLUNGEN,
+                &ergebnis,
+            );
+            let geschrieben = messen::bildfolge_schreiben(&ziel, &text, false)?;
+            print!("{text}");
+            println!("Bericht: {}", geschrieben.display());
+            Ok(())
+        }
+        (Some(_), Some(_)) => Err(Abbruch::Aufruf(
+            "--kopflos und --buendel schliessen einander aus".to_owned(),
+        )),
+        (None, None) => Err(Abbruch::Aufruf(
+            "bildfolge braucht --kopflos PFAD oder --buendel PFAD".to_owned(),
+        )),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Befehlszeile
 // ---------------------------------------------------------------------------
 
@@ -484,6 +639,64 @@ mod tests {
     #[test]
     fn messen_verlangt_einen_ordner() {
         assert!(ist_aufruffehler(messen_fahren(&worte(&["--kopflos"]))));
+    }
+
+    #[test]
+    fn fotoordner_verlangt_alle_vier_angaben_und_mindestens_ein_foto() {
+        let voll = [
+            "--fotos",
+            "3",
+            "--groesse",
+            "0",
+            "--seed",
+            "1",
+            "--out",
+            "/tmp/krk-egal",
+        ];
+        for weg in 0..4 {
+            let ohne: Vec<&str> = voll
+                .chunks(2)
+                .enumerate()
+                .filter(|(stelle, _)| *stelle != weg)
+                .flat_map(|(_, paar)| paar.iter().copied())
+                .collect();
+            assert!(
+                ist_aufruffehler(fotoordner_bauen(&worte(&ohne))),
+                "{ohne:?}"
+            );
+        }
+        let mut null = voll;
+        null[1] = "0";
+        assert!(ist_aufruffehler(fotoordner_bauen(&worte(&null))));
+    }
+
+    #[test]
+    fn bildfolge_verlangt_genau_einen_weg_und_seine_angaben() {
+        assert!(ist_aufruffehler(bildfolge_fahren(&[])));
+        assert!(ist_aufruffehler(bildfolge_fahren(&worte(&[
+            "--kopflos",
+            "/tmp/a",
+            "--buendel",
+            "/tmp/b"
+        ]))));
+        assert!(ist_aufruffehler(bildfolge_fahren(&worte(&[
+            "--buendel",
+            "/tmp/b",
+            "--ordner",
+            "/tmp/Fotos"
+        ]))));
+        assert!(ist_aufruffehler(bildfolge_fahren(&worte(&[
+            "--buendel",
+            "/tmp/b",
+            "--zeile",
+            "2008"
+        ]))));
+        assert!(ist_aufruffehler(bildfolge_fahren(&worte(&[
+            "--kopflos",
+            "/tmp/a",
+            "--zeile",
+            "2008"
+        ]))));
     }
 
     #[test]

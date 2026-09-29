@@ -373,7 +373,7 @@ pub fn erzeugen(ziel: &Path, anzahl: usize, startwert: u64) -> io::Result<Erzeug
 }
 
 /// Bricht ab, wenn im Zielordner schon etwas liegt.
-fn pruefen_dass_leer(ziel: &Path) -> io::Result<()> {
+pub(crate) fn pruefen_dass_leer(ziel: &Path) -> io::Result<()> {
     match fs::read_dir(ziel) {
         Ok(mut eintraege) => {
             if eintraege.next().is_some() {
@@ -552,7 +552,7 @@ pub fn steckbriefpfad(ordner: &Path) -> io::Result<PathBuf> {
 }
 
 /// Baut einen Pfad neben dem Pruefordner, mit der genannten Endung.
-fn nebenpfad(ordner: &Path, endung: &str) -> io::Result<PathBuf> {
+pub(crate) fn nebenpfad(ordner: &Path, endung: &str) -> io::Result<PathBuf> {
     let name = ordner.file_name().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidInput,

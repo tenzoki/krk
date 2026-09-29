@@ -1184,6 +1184,14 @@ impl Vorschaufenster {
         self.ivars().modell.borrow().folgebild()
     }
 
+    /// Das Foto, das die Bildfolge an ihrer Stelle **zeigt**, geladen und
+    /// nicht mehr als Hinweis; gefragt allein vom Messmodus fuer die
+    /// Endbedingung der Messung der Bildfolge.
+    #[must_use]
+    pub fn gezeigtes_folgebild(&self) -> Option<PathBuf> {
+        self.ivars().modell.borrow().gezeigtes_folgebild()
+    }
+
     /// Ob der aktive Vorschau-Tab eine Bildfolge zeigt; gefragt von
     /// `Anwendungsdelegierter::lage` fuer die Zulaessigkeit der drei Befehle
     /// der Bildfolge.

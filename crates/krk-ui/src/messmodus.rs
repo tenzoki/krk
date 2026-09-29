@@ -9,7 +9,7 @@
 //! Bildgrenzen und der [`Zustand`] der Oberflaeche. **In dieser Datei steht
 //! keine `use objc2`-Zeile**, und das ist nachpruefbar, nicht nur gemeint.
 //!
-//! # Vier Aufgaben, weil sie verschiedene Dinge messen
+//! # Fuenf Aufgaben, weil sie verschiedene Dinge messen
 //!
 //! - [`Aufgabe::Start`] misst L4 am Durchstich (S8) und braucht dafuer
 //!   **einen Prozessstart je Wiederholung**. Die Anwendung meldet den
@@ -28,6 +28,11 @@
 //!   stellt die Sitzung aus `session.toml` wieder her — geschrieben hat sie
 //!   der Sitzungslauf davor — und meldet den Zeitpunkt, an dem beide
 //!   sichtbaren Tabs ihre erste Bildschirmseite zeigen.
+//! - [`Aufgabe::Bildfolge`] misst **keine** Zusage aus C8, sondern die Spanne,
+//!   an der Haltepunkt 3 des Spec der Bildfolge haengt: vom Auswaehlen eines
+//!   Jahres- oder Monatsordners bis zum Zeichendurchgang, der das erste Foto
+//!   seiner Folge traegt. Sie laeuft ueber die Schritte der Sitzungsstrecke,
+//!   ohne deren Messplan, und nimmt die Profile der Auslieferungsfassung.
 //!
 //! # Wie eine Spanne hier zustande kommt
 //!
@@ -152,6 +157,17 @@ pub enum Aufgabe {
     /// L4 auf der Pruefsitzung: `session.toml` wiederherstellen und melden,
     /// wann beide sichtbaren Tabs ihre erste Bildschirmseite zeigen (S21).
     SitzungsStart,
+    /// Die Spanne bis zum ersten Foto einer Bildfolge (Schritt 12 des Plans
+    /// der Bildfolge): das linke Dateifenster zeigt `ordner`, gemessen wird
+    /// die Auswahl der Zeile `zeile` bis zum Zeichendurchgang mit dem ersten
+    /// Foto. Keine Zusage aus C8.
+    Bildfolge {
+        /// Der Ordner, den das linke Dateifenster zeigt, etwa `…/Fotos`.
+        ordner: PathBuf,
+        /// Der Name der Zeile darin, deren Auswahl die Folge zeigt, etwa
+        /// `2008`. Der Ordner braucht daneben eine zweite Zeile.
+        zeile: String,
+    },
 }
 
 impl Aufgabe {
@@ -172,7 +188,10 @@ impl Aufgabe {
             return Ok(None);
         };
         let art = argumente.get(stelle + 1).ok_or_else(|| {
-            format!("{MARKE} braucht eine Aufgabe: start, spannen, sitzungsstart oder <plan.toml>")
+            format!(
+                "{MARKE} braucht eine Aufgabe: start, spannen, sitzungsstart, bildfolge oder \
+                 <plan.toml>"
+            )
         })?;
 
         match art.as_str() {
@@ -184,6 +203,10 @@ impl Aufgabe {
                 ordner100k: pfad(argumente, "--ordner100k")?,
             })),
             "sitzungsstart" => Ok(Some(Aufgabe::SitzungsStart)),
+            "bildfolge" => Ok(Some(Aufgabe::Bildfolge {
+                ordner: pfad(argumente, "--ordner")?,
+                zeile: zeilenname(argumente)?,
+            })),
             planpfad => Ok(Some(Aufgabe::Sitzung {
                 plan: Box::new(Messplan::lesen(Path::new(planpfad))?),
             })),
@@ -197,7 +220,7 @@ impl Aufgabe {
     /// Weg, denn genau dieser Weg ist Teil dessen, was L4 und L5 messen.
     pub fn startordner(&self) -> Option<&Path> {
         match self {
-            Aufgabe::Start { ordner } => Some(ordner),
+            Aufgabe::Start { ordner } | Aufgabe::Bildfolge { ordner, .. } => Some(ordner),
             Aufgabe::Spannen { ordner_a, .. } => Some(ordner_a),
             Aufgabe::Sitzung { .. } | Aufgabe::SitzungsStart => None,
         }
@@ -415,6 +438,26 @@ fn pfad(argumente: &[String], marke: &str) -> Result<PathBuf, String> {
         .ok_or_else(|| format!("{marke} braucht einen Pfad"))
 }
 
+/// Der Name der Zeile fuer [`Aufgabe::Bildfolge`].
+///
+/// Ein Name und kein Pfad: die Zeile steht im Ordner aus `--ordner`, und ein
+/// Schraegstrich darin trafe keine Zeile der Liste.
+fn zeilenname(argumente: &[String]) -> Result<String, String> {
+    let stelle = argumente
+        .iter()
+        .position(|wort| wort == "--zeile")
+        .ok_or_else(|| "--zeile fehlt".to_owned())?;
+    let name = argumente
+        .get(stelle + 1)
+        .ok_or_else(|| "--zeile braucht einen Namen".to_owned())?;
+    if name.is_empty() || name.contains('/') {
+        return Err(format!(
+            "--zeile nimmt den Namen einer Zeile im Ordner aus --ordner, nicht {name:?}"
+        ));
+    }
+    Ok(name.clone())
+}
+
 /// Was die Oberflaeche an einer Bildgrenze ueber sich sagt.
 ///
 /// Gewoehnliche Rust-Werte, kein AppKit-Wert. Die drei Zahlen oben sind
@@ -469,6 +512,11 @@ pub struct Sitzungslage {
     pub vorschau_pfad: Option<PathBuf>,
     /// Ob ein Vorschau-Tab noch auf seinen Arbeitsfaden wartet (L7).
     pub vorschau_laedt: bool,
+    /// Das Foto, das die Bildfolge des aktiven Vorschau-Tabs an ihrer Stelle
+    /// **zeigt**, also geladen und nicht mehr als Hinweis „wird vorbereitet";
+    /// `None` ohne Bildfolge und solange das Foto aussteht (Schritt 12 der
+    /// Bildfolge).
+    pub vorschau_folgebild: Option<PathBuf>,
     /// Ob die Vorgangsanzeige einer Dateioperation in einer Statuszeile
     /// steht (L8).
     pub vorgang_sichtbar: bool,
@@ -517,6 +565,9 @@ pub enum Handlung {
     /// Im rechten Dateifenster den genannten Ordner in den sichtbaren Tab
     /// lesen.
     RechtsLesen(PathBuf),
+    /// Im aktiven Dateifenster irgendeine Zeile auswaehlen, die nicht den
+    /// genannten Namen traegt (Bildfolge). Scheitert, wenn es keine gibt.
+    AndereWaehlen(String),
 }
 
 /// Ein Schritt des Ablaufs.
@@ -608,6 +659,10 @@ enum Sitzungsgroesse {
     L7Ordner,
     L8,
     L9,
+    /// Keine Zusage aus C8: die Spanne bis zum ersten Foto einer Bildfolge,
+    /// an der Haltepunkt 3 ihres Spec haengt. Sie steht hier, weil sie auf
+    /// demselben Ablauf misst; die zehn Zahlen aus C8 bleiben zehn.
+    Bildfolge,
 }
 
 impl Sitzungsgroesse {
@@ -623,6 +678,7 @@ impl Sitzungsgroesse {
             Self::L7Ordner => "l7-ordner",
             Self::L8 => "l8",
             Self::L9 => "l9",
+            Self::Bildfolge => "bildfolge",
         }
     }
 }
@@ -632,6 +688,14 @@ impl Sitzungsgroesse {
 enum Sitzungsschritt {
     /// Ungemessen warten, bis die Bedingung steht.
     Warten(Bedingung),
+    /// Eine Vorbereitung an die Oberflaeche geben und ab diesem Takt messen,
+    /// bis die Endbedingung der Groesse steht (Bildfolge). Anders als
+    /// [`Sitzungsschritt::Taste`] geht der Ausloeser nicht ueber die
+    /// Ereignisschlange, sondern unmittelbar an die Liste.
+    Messen {
+        handlung: Handlung,
+        messung: Sitzungsgroesse,
+    },
     /// Eine ungemessene Vorbereitung an die Oberflaeche geben.
     Handeln(Handlung),
     /// Eine Taste in die Ereignisschlange stellen. Mit Messgroesse ist es
@@ -673,6 +737,10 @@ enum Bedingung {
     /// ginge dann sofort durch, und die gemessene Taste faende die Auswahl
     /// noch dort vor, wo sie hinspringen soll.
     VorschauStehtWoanders(PathBuf),
+    /// Die Vorschau zeigt fuer den genannten Pfad das erste Foto seiner
+    /// Bildfolge; dieselbe Endbedingung wie die der Messung
+    /// [`Sitzungsgroesse::Bildfolge`], ungemessen.
+    FolgebildSteht(PathBuf),
     /// Keine Dateioperation laeuft mehr.
     VorgangVorbei,
 }
@@ -696,6 +764,7 @@ impl Bedingung {
                     && !lage.vorschau_laedt
                     && lage.vorschau_pfad.as_deref() != Some(pfad.as_path())
             }
+            Bedingung::FolgebildSteht(pfad) => folgebild_steht(lage, pfad),
             Bedingung::VorgangVorbei => !lage.vorgang_laeuft,
         }
     }
@@ -746,6 +815,7 @@ struct Sitzungswerte {
     l7_ordner: Vec<Duration>,
     l8: Vec<Duration>,
     l9: Vec<Duration>,
+    bildfolge: Vec<Duration>,
 }
 
 impl Sitzungswerte {
@@ -759,10 +829,11 @@ impl Sitzungswerte {
             Sitzungsgroesse::L7Ordner => self.l7_ordner.push(wert),
             Sitzungsgroesse::L8 => self.l8.push(wert),
             Sitzungsgroesse::L9 => self.l9.push(wert),
+            Sitzungsgroesse::Bildfolge => self.bildfolge.push(wert),
         }
     }
 
-    fn alle(&self) -> [(&'static str, &Vec<Duration>); 8] {
+    fn alle(&self) -> [(&'static str, &Vec<Duration>); 9] {
         [
             ("l1", &self.l1),
             ("l5-tab", &self.l5_tab),
@@ -772,6 +843,7 @@ impl Sitzungswerte {
             ("l7-ordner", &self.l7_ordner),
             ("l8", &self.l8),
             ("l9", &self.l9),
+            ("bildfolge", &self.bildfolge),
         ]
     }
 }
@@ -819,7 +891,23 @@ fn sitzungsmessung_fertig(
                 && !lage.vorschau_laedt
         }
         Sitzungsgroesse::L8 => lage.vorgang_sichtbar,
+        // Die Vorschau zeigt fuer **diesen** Ordner das erste Foto seiner
+        // Folge, und die Liste steht auf ihm. `unterordner` ist hier das
+        // Ziel der Auswahl, `ordner/zeile` aus der Aufgabe.
+        Sitzungsgroesse::Bildfolge => {
+            lage.auswahl_pfad.as_deref() == Some(unterordner) && folgebild_steht(lage, unterordner)
+        }
     }
+}
+
+/// Ob die Vorschau fuer `ordner` ein Foto seiner Bildfolge zeigt.
+///
+/// Gefragt wird das **gezeigte** Foto und nicht der Inhalt: die Folge steht
+/// schon mit ihrem Hinweis „wird vorbereitet", und die Messung endet erst am
+/// Bild. Die Stelle fragt die Bedingung nicht: nach einem Auswahlwechsel
+/// beginnt jede Folge auf ihrem ersten Foto (C3.6 des Spec der Bildfolge).
+fn folgebild_steht(lage: &Sitzungslage, ordner: &Path) -> bool {
+    lage.vorschau_pfad.as_deref() == Some(ordner) && lage.vorschau_folgebild.is_some()
 }
 
 /// Ob eine Sitzungsmessung an dieser Stelle ueberhaupt beginnen kann.
@@ -845,6 +933,9 @@ fn messung_unmoeglich(groesse: Sitzungsgroesse, lage: &Sitzungslage) -> Option<S
         }),
         Sitzungsgroesse::L8 => lage.vorgang_laeuft.then(|| {
             "es laeuft noch eine Dateioperation; L8 braucht einen frischen Start".to_owned()
+        }),
+        Sitzungsgroesse::Bildfolge => liste_leer.then(|| {
+            "die Liste ist leer; es gibt keine Zeile, die sich auswaehlen liesse".to_owned()
         }),
         // Die drei Wechsel-Groessen haben keine Vorbedingung, und zwar je aus
         // demselben Grund: sie messen einen Wechsel und nicht eine Bewegung
@@ -1067,6 +1158,34 @@ fn sitzungsschritte(plan: &Messplan) -> Vec<Sitzungsschritt> {
     schritte
 }
 
+/// Baut die Schrittliste der Aufgabe [`Aufgabe::Bildfolge`].
+///
+/// Erst steht der Ordner, dann ein ungemessener Vorlauf: die Zeile auswaehlen
+/// und ihr erstes Foto abwarten, damit der erste von zwanzig Werten keine
+/// kalte Zahl in die warme Reihe traegt. Je Wiederholung dann eine andere
+/// Zeile, deren Vorschau abgewartet wird, und die gemessene Auswahl der Zeile.
+/// Der Umweg ueber die andere Zeile ist noetig, weil eine Folge, die schon
+/// steht, bei derselben Auswahl stehen bleibt (Entscheidung 8 des Plans der
+/// Bildfolge) und erst ein Wechsel sie neu beginnen laesst (C3.6).
+fn bildfolgeschritte(ordner: &Path, zeile: &str) -> Vec<Sitzungsschritt> {
+    use Sitzungsschritt as S;
+    let ziel = ordner.join(zeile);
+    let mut schritte = vec![
+        S::Warten(Bedingung::LinksGelesen),
+        S::Handeln(Handlung::Auswaehlen(zeile.to_owned())),
+        S::Warten(Bedingung::FolgebildSteht(ziel.clone())),
+    ];
+    for _ in 0..WIEDERHOLUNGEN {
+        schritte.push(S::Handeln(Handlung::AndereWaehlen(zeile.to_owned())));
+        schritte.push(S::Warten(Bedingung::VorschauStehtWoanders(ziel.clone())));
+        schritte.push(S::Messen {
+            handlung: Handlung::Auswaehlen(zeile.to_owned()),
+            messung: Sitzungsgroesse::Bildfolge,
+        });
+    }
+    schritte
+}
+
 /// Ein laufender Messlauf.
 pub struct Messlauf {
     aufgabe: Aufgabe,
@@ -1095,10 +1214,14 @@ impl Messlauf {
     pub fn neu(aufgabe: Aufgabe) -> Self {
         let sitzungsschritte = match &aufgabe {
             Aufgabe::Sitzung { plan } => sitzungsschritte(plan),
+            Aufgabe::Bildfolge { ordner, zeile } => bildfolgeschritte(ordner, zeile),
             _ => Vec::new(),
         };
         let schritte = match &aufgabe {
-            Aufgabe::Start { .. } | Aufgabe::Sitzung { .. } | Aufgabe::SitzungsStart => Vec::new(),
+            Aufgabe::Start { .. }
+            | Aufgabe::Sitzung { .. }
+            | Aufgabe::SitzungsStart
+            | Aufgabe::Bildfolge { .. } => Vec::new(),
             Aufgabe::Spannen {
                 ordner_a,
                 ordner100k,
@@ -1174,7 +1297,10 @@ impl Messlauf {
         if matches!(self.aufgabe, Aufgabe::Start { .. } | Aufgabe::SitzungsStart) {
             return Anweisung::Warten;
         }
-        if matches!(self.aufgabe, Aufgabe::Sitzung { .. }) {
+        if matches!(
+            self.aufgabe,
+            Aufgabe::Sitzung { .. } | Aufgabe::Bildfolge { .. }
+        ) {
             return self.sitzung_weiter(&zustand);
         }
         if let Some(grund) = self.haengt() {
@@ -1262,7 +1388,10 @@ impl Messlauf {
         if matches!(self.aufgabe, Aufgabe::Start { .. } | Aufgabe::SitzungsStart) {
             return self.bildgrenze_beim_start(&zustand);
         }
-        if matches!(self.aufgabe, Aufgabe::Sitzung { .. }) {
+        if matches!(
+            self.aufgabe,
+            Aufgabe::Sitzung { .. } | Aufgabe::Bildfolge { .. }
+        ) {
             return self.sitzung_bildgrenze(jetzt, &zustand);
         }
 
@@ -1397,6 +1526,27 @@ impl Messlauf {
                 self.sitzungsstelle += 1;
                 Anweisung::Handeln(handlung)
             }
+            Sitzungsschritt::Messen { handlung, messung } => {
+                let Some(lage) = zustand.sitzung.as_ref() else {
+                    return Anweisung::Abbruch(
+                        "die Oberflaeche meldet keine Sitzungslage; die Strecke kann so \
+                         nichts messen"
+                            .to_owned(),
+                    );
+                };
+                if let Some(grund) = messung_unmoeglich(messung, lage) {
+                    return Anweisung::Abbruch(grund);
+                }
+                // Der Zeitpunkt liegt vor dem Aufruf an die Liste, den der
+                // Aufrufer gleich absetzt; dieselbe Regel wie bei einer Taste.
+                self.sitzungslauf = Sitzungslauf::Misst {
+                    t0: Instant::now(),
+                    groesse: messung,
+                    vorher: Vorher::aus(lage),
+                    bilder: 0,
+                };
+                Anweisung::Handeln(handlung)
+            }
             Sitzungsschritt::Taste { funktion, messung } => {
                 let Some(lage) = zustand.sitzung.as_ref() else {
                     return Anweisung::Abbruch(
@@ -1502,6 +1652,9 @@ impl Messlauf {
                     (Aufgabe::Sitzung { plan }, Some(lage)) => {
                         sitzungsmessung_fertig(groesse, vorher, lage, &plan.unterordner)
                     }
+                    (Aufgabe::Bildfolge { ordner, zeile }, Some(lage)) => {
+                        sitzungsmessung_fertig(groesse, vorher, lage, &ordner.join(zeile))
+                    }
                     _ => false,
                 };
                 if fertig {
@@ -1531,7 +1684,7 @@ impl Messlauf {
     fn ordner_a(&self) -> &Path {
         match &self.aufgabe {
             Aufgabe::Spannen { ordner_a, .. } => ordner_a,
-            Aufgabe::Start { ordner } => ordner,
+            Aufgabe::Start { ordner } | Aufgabe::Bildfolge { ordner, .. } => ordner,
             // Die Sitzungsstrecke laeuft nicht ueber diese Schritte.
             Aufgabe::Sitzung { plan } => plan.ordner_a(),
             Aufgabe::SitzungsStart => Path::new("/"),
@@ -1541,7 +1694,7 @@ impl Messlauf {
     fn ordner100k(&self) -> &Path {
         match &self.aufgabe {
             Aufgabe::Spannen { ordner100k, .. } => ordner100k,
-            Aufgabe::Start { ordner } => ordner,
+            Aufgabe::Start { ordner } | Aufgabe::Bildfolge { ordner, .. } => ordner,
             // Die Sitzungsstrecke laeuft nicht ueber diese Schritte.
             Aufgabe::Sitzung { plan } => plan.ordner_a(),
             Aufgabe::SitzungsStart => Path::new("/"),
@@ -1569,7 +1722,10 @@ impl Messlauf {
     /// zweiter Berichtsschreiber daneben waere eine zweite Wahrheit.
     pub fn ausgeben(&self) {
         self.rate_ausgeben();
-        if matches!(self.aufgabe, Aufgabe::Sitzung { .. }) {
+        if matches!(
+            self.aufgabe,
+            Aufgabe::Sitzung { .. } | Aufgabe::Bildfolge { .. }
+        ) {
             for (name, werte) in self.sitzungswerte.alle() {
                 for wert in werte {
                     melden(&format!("wert {name} {}", wert.as_nanos()));
@@ -1658,6 +1814,124 @@ mod tests {
     fn eine_unbekannte_aufgabe_ist_ein_fehler() {
         assert!(Aufgabe::aus_argumenten(&worte(&["--messmodus", "alles"])).is_err());
         assert!(Aufgabe::aus_argumenten(&worte(&["--messmodus"])).is_err());
+    }
+
+    /// Die Aufgabe der Bildfolge braucht Ordner und Zeile, und die Zeile ist
+    /// ein Name und kein Pfad (Schritt 12 des Plans der Bildfolge).
+    #[test]
+    fn die_bildfolgeaufgabe_braucht_ordner_und_zeile() {
+        assert_eq!(
+            Aufgabe::aus_argumenten(&worte(&[
+                "--messmodus",
+                "bildfolge",
+                "--ordner",
+                "/p/Fotos",
+                "--zeile",
+                "2008"
+            ])),
+            Ok(Some(Aufgabe::Bildfolge {
+                ordner: PathBuf::from("/p/Fotos"),
+                zeile: "2008".to_owned(),
+            }))
+        );
+        for unvollstaendig in [
+            vec!["--messmodus", "bildfolge", "--ordner", "/p/Fotos"],
+            vec!["--messmodus", "bildfolge", "--zeile", "2008"],
+            vec![
+                "--messmodus",
+                "bildfolge",
+                "--ordner",
+                "/p/Fotos",
+                "--zeile",
+            ],
+            vec![
+                "--messmodus",
+                "bildfolge",
+                "--ordner",
+                "/p/Fotos",
+                "--zeile",
+                "2008/08",
+            ],
+        ] {
+            assert!(
+                Aufgabe::aus_argumenten(&worte(&unvollstaendig)).is_err(),
+                "{unvollstaendig:?}"
+            );
+        }
+        let aufgabe = Aufgabe::Bildfolge {
+            ordner: PathBuf::from("/p/Fotos"),
+            zeile: "2008".to_owned(),
+        };
+        assert_eq!(aufgabe.startordner(), Some(Path::new("/p/Fotos")));
+    }
+
+    /// Die Schrittliste der Bildfolge: Vorlauf, dann je Wiederholung eine
+    /// andere Zeile, ihre Vorschau und die gemessene Auswahl.
+    #[test]
+    fn die_bildfolge_misst_zwanzigmal_nach_einem_vorlauf() {
+        let schritte = bildfolgeschritte(Path::new("/p/Fotos"), "2008");
+        let gemessen = schritte
+            .iter()
+            .filter(|schritt| {
+                matches!(
+                    schritt,
+                    Sitzungsschritt::Messen {
+                        messung: Sitzungsgroesse::Bildfolge,
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(gemessen, WIEDERHOLUNGEN);
+        assert_eq!(schritte.len(), 3 + 3 * WIEDERHOLUNGEN);
+        assert_eq!(
+            schritte[2],
+            Sitzungsschritt::Warten(Bedingung::FolgebildSteht(PathBuf::from("/p/Fotos/2008")))
+        );
+    }
+
+    /// Eine Messung der Bildfolge endet erst, wenn die Vorschau fuer die
+    /// Zeile ein Foto zeigt, nicht schon am Hinweis „wird vorbereitet".
+    #[test]
+    fn die_bildfolgemessung_endet_am_gezeigten_foto() {
+        let ordner = Planordner::neu("bildfolge-ende");
+        let ziel = ordner.unter("Fotos/2008");
+        let mut lauf = Messlauf::neu(Aufgabe::Bildfolge {
+            ordner: ordner.unter("Fotos"),
+            zeile: "2008".to_owned(),
+        });
+        let mut stehend = lage(&ordner);
+        stehend.auswahl_pfad = Some(ordner.unter("Fotos/2007"));
+        stehend.vorschau_pfad = Some(ordner.unter("Fotos/2007"));
+        let mut folge = lage(&ordner);
+        folge.auswahl_pfad = Some(ziel.clone());
+        folge.vorschau_pfad = Some(ziel.clone());
+        folge.vorschau_folgebild = Some(ordner.unter("Fotos/2008/01/IMG_00001.jpg"));
+        // Den Vorlauf ueberspringen: bis zur ersten gemessenen Auswahl.
+        lauf.sitzungsstelle = 3;
+        assert_eq!(
+            lauf.naechster_schritt(mit_lage(stehend.clone())),
+            Anweisung::Handeln(Handlung::AndereWaehlen("2008".to_owned()))
+        );
+        assert_eq!(
+            lauf.naechster_schritt(mit_lage(stehend.clone())),
+            Anweisung::Warten
+        );
+        assert_eq!(
+            lauf.naechster_schritt(mit_lage(stehend.clone())),
+            Anweisung::Handeln(Handlung::Auswaehlen("2008".to_owned()))
+        );
+
+        let mut hinweis = folge.clone();
+        hinweis.vorschau_folgebild = None;
+        let jetzt = Instant::now();
+        let _ = lauf.bildgrenze(jetzt, mit_lage(hinweis));
+        assert!(
+            lauf.sitzungswerte.bildfolge.is_empty(),
+            "am Hinweis gemessen"
+        );
+        let _ = lauf.bildgrenze(jetzt, mit_lage(folge));
+        assert_eq!(lauf.sitzungswerte.bildfolge.len(), 1);
     }
 
     fn spannenlauf() -> Messlauf {
@@ -1944,6 +2218,7 @@ mod tests {
             ordner_rechts: ordner.unter("b"),
             vorschau_pfad: None,
             vorschau_laedt: false,
+            vorschau_folgebild: None,
             vorgang_sichtbar: false,
             vorgang_laeuft: false,
         }

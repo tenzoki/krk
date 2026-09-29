@@ -1,0 +1,52 @@
+KRK — Messbericht der Bildfolge, kopflos (Schritt 12 der Bildfolge)
+===================================================================
+
+Bedingungen
+-----------
+Zeitpunkt             2026-09-29T14:32:34Z
+hw.model              MacBookPro15,1
+sw_vers               macOS 15.8 24H23
+Bildwiederholrate     entfaellt, gemessen ohne Fenster
+Cache-Zustand         warm, ein ungezaehlter Vorlauf vor der Reihe
+Wiederholungen        20 je Groesse und Runde, 1 Runden
+Gemessener Ordner     /Users/k1/Library/Caches/krk-messplatz/fotoordner/Fotos/2008
+Steckbrief            1000 Fotos zu je 1000000 Bytes, Startwert 8, je Monat [87, 68, 81, 91, 91, 90, 74, 70, 88, 88, 80, 92]
+Folge                 1000 Fotos aus 12 Ordnern; die erste Gruppe traegt 87, davon 87 mit dem Datum aus den Bilddaten
+Profile               die Auslieferungsfassung von readers.toml, nicht die Ablage
+Werkzeug              krk-bench 2.1.1, Ziel x86_64-macos, Bau mit Optimierung (release)
+
+Zahlen
+------
+Keine Zeile ist eine Zusage aus C8; die Spalte "Abnahme nach" sagt deshalb "keine".
+
+      Gemessene Groesse                                                        p95 schlecht       Median      Minimum      Maximum   Abnahme nach
+B1    Erkennung und Erhebung der Folge, ohne Datei zu oeffnen                      4.103 ms     3.914 ms     3.875 ms     4.410 ms   keine
+B2    dazu die erste Gruppe nach Aufnahmedatum geordnet                            6.731 ms     6.205 ms     6.126 ms     6.747 ms   keine
+
+Einzelwerte
+-----------
+B1 (Erkennung und Erhebung der Folge, ohne Datei zu oeffnen):
+  Runde 1:
+    4.103 ms  3.920 ms  3.947 ms  3.925 ms  3.891 ms
+    3.879 ms  3.875 ms  3.879 ms  3.882 ms  3.885 ms
+    3.879 ms  4.410 ms  3.951 ms  3.897 ms  3.928 ms
+    3.918 ms  3.920 ms  3.967 ms  3.905 ms  3.910 ms
+B2 (dazu die erste Gruppe nach Aufnahmedatum geordnet):
+  Runde 1:
+    6.445 ms  6.236 ms  6.230 ms  6.178 ms  6.156 ms
+    6.126 ms  6.132 ms  6.152 ms  6.144 ms  6.151 ms
+    6.731 ms  6.747 ms  6.295 ms  6.202 ms  6.241 ms
+    6.206 ms  6.238 ms  6.267 ms  6.205 ms  6.186 ms
+
+Lesart
+------
+B1 und B2 sind der Anteil des Kerns an der Spanne bis zum ersten Foto, und zwar
+seine Untergrenze: gemessen ist die Arbeit, die die Vorschau auf ihrem
+Arbeitsfaden vor dem ersten Foto tut (Erkennung, das Lesen der Ordner, das
+Ordnen der ersten Gruppe nach Aufnahmedatum mit dem Leser des Kerns). Es fehlen
+das Starten des Fadens, das Laden und Dekodieren des ersten Fotos und das
+Zeichnen. Ob die zwei Sekunden aus Haltepunkt 3 halten, entscheidet allein der
+Lauf im Buendel am Referenzgeraet (make bildfolge); er verlangt KRK im
+Vordergrund und ist Nutzerarbeit.
+
+Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert.

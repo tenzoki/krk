@@ -121,6 +121,33 @@ pub fn laden(zugang: &Zugang<'_>) -> (Geladen<Profile>, Vec<String>) {
     (Geladen { wert, ersetzung }, meldungen)
 }
 
+/// Die geprueften Profile der Auslieferungsfassung, ohne die Ablage zu
+/// beruehren.
+///
+/// **Der Weg der Messstrecken der Bildfolge und kein Weg des Starts.** Ein
+/// Messlauf liest `readers.toml` nicht (sonst maesse er, was der Nutzer
+/// zuletzt eingetragen hat), braucht aber die zwei Fotoprofile, deren Folge er
+/// misst: `krk-bench bildfolge` im Kern und `--messmodus bildfolge` in der
+/// Anwendung nehmen deshalb diese Fassung. Der Start geht weiter allein ueber
+/// [`laden`].
+///
+/// Die zweite Haelfte sind die Meldungen aus [`datei::pruefen`]; dass sie
+/// leer ist, haelt `die_eingebettete_fassung_besteht_ihre_eigene_pruefung`.
+/// Ein Text, der kein TOML ist, ergibt keinen Profilsatz und die eine Meldung
+/// des Lesers.
+#[must_use = "ohne die Profile misst die Strecke keine Bildfolge"]
+pub fn ausgelieferte() -> (Profile, Vec<String>) {
+    match toml::from_str::<datei::Profildatei>(AUSLIEFERUNGSTEXT) {
+        Ok(gelesen) => datei::pruefen(gelesen),
+        Err(fehler) => (
+            Profile::default(),
+            vec![format!(
+                "die Auslieferungsfassung von readers.toml ist kein gültiges TOML: {fehler}"
+            )],
+        ),
+    }
+}
+
 /// Schreibt die Auslieferungsfassung woertlich, falls die Datei fehlt.
 ///
 /// Wiederholbar wie [`super::einstellungen`] es an derselben Stelle ist: eine

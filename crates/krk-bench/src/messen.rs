@@ -2483,6 +2483,463 @@ Runde wechselt, kein Urteil ist. Eine Zusage gilt hier nur dann als gehalten,
 wenn sie es in jeder Runde tut.
 ";
 
+// ---------------------------------------------------------------------------
+// Die Bildfolge (Schritt 12 des Plans der Bildfolge)
+// ---------------------------------------------------------------------------
+//
+// Zwei Wege, und keiner misst eine Zusage aus C8: die Bildfolge setzt keine
+// elfte Zahl, und die Schwelle aus Haltepunkt 3 ihres Spec (zwei Sekunden vom
+// Auswaehlen eines Jahresordners mit 1.000 Fotos bis zum ersten gezeigten
+// Foto) ist ein Haltepunkt. Jede Zeile traegt deshalb `Abnahmemass::Keine`.
+//
+// - **Kopflos** misst der Kern allein: Erkennung, das Lesen der Ordner und das
+//   Ordnen der ersten Gruppe nach Aufnahmedatum, mit dem Leser, den die
+//   Vorschau nimmt. Das ist eine Untergrenze dessen, was bis zum ersten Foto
+//   vergeht; Faden, Laden und Dekodieren des Fotos und das Zeichnen fehlen.
+//   Diesen Weg darf ein Agent fahren.
+// - **Im Buendel** misst die Anwendung von der Auswahl der Zeile bis zum Ende
+//   des Zeichendurchgangs, der das erste Foto der Folge traegt. Der Lauf
+//   verlangt KRK im Vordergrund und ist Nutzerarbeit.
+
+/// Wie lange der Messlauf der Bildfolge in der Anwendung hoechstens dauern
+/// darf. Zwanzig Wiederholungen zu je hoechstens der Geduld des Messmodus
+/// (zehn Sekunden) und ein Vorlauf passen hinein.
+const FRIST_BILDFOLGE: Duration = Duration::from_secs(300);
+
+/// Was die Erhebung ueber die gemessene Folge weiss.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bildbestand {
+    /// Wie viele Fotos die Folge traegt.
+    pub fotos: usize,
+    /// Aus wie vielen Ordnern sie stammen.
+    pub gruppen: usize,
+    /// Wie viele Fotos die erste Gruppe traegt.
+    pub erste_gruppe: usize,
+    /// Wie viele davon ihr Datum aus den Bilddaten haben und nicht aus dem
+    /// Aenderungsdatum.
+    pub aus_bilddaten: usize,
+    /// Ob eine Grenze der Bildfolge die Folge gekuerzt hat.
+    pub gekuerzt: bool,
+}
+
+/// Was ein Messweg der Bildfolge ergeben hat.
+#[derive(Debug, Clone)]
+pub struct Bildfolgeergebnis {
+    /// Die gemessene Folge.
+    pub bestand: Bildbestand,
+    /// Die Bildwiederholrate, die die Anwendung gemeldet hat; `None` kopflos.
+    pub bildwiederholrate: Option<i64>,
+    /// Die gemessenen Groessen, jede mit `Abnahmemass::Keine`.
+    pub zusagen: Vec<Zusage>,
+}
+
+/// Ein Durchgang des Kerns ueber einen Jahres- oder Monatsordner: Erkennung
+/// und Erhebung, dann das Ordnen der ersten Gruppe. Liefert beide Spannen vom
+/// selben Anfang und den Bestand.
+///
+/// Die Profile sind die der Auslieferungsfassung
+/// ([`krk_core::ablage::leseprofile::ausgelieferte`]) und nicht die der
+/// Ablage, aus demselben Grund wie im Messmodus: gemessen wird, was
+/// ausgeliefert ist, und nicht, was jemand zuletzt eingetragen hat.
+fn bildfolge_durchgang(
+    profile: &krk_core::leseprofil::Profile,
+    ordner: &Path,
+) -> io::Result<(Duration, Duration, Bildbestand)> {
+    use krk_core::leseprofil::{Auskunft, zusammenfassen};
+
+    let t0 = Instant::now();
+    let Some(Auskunft::Bildfolge(verzeichnis)) = zusammenfassen(profile, ordner) else {
+        return Err(io::Error::other(format!(
+            "{} ergibt keine Bildfolge: kein Fotoprofil der Auslieferungsfassung trifft den \
+             Ordner, oder unter ihm liegt kein Foto. Die ausgelieferten Muster verlangen \
+             …/Fotos/<vier Ziffern> oder …/Fotos/<vier Ziffern>/<zwei Ziffern>",
+            ordner.display()
+        )));
+    };
+    let erhoben = t0.elapsed();
+    let erste = verzeichnis
+        .gruppe_ordnen(0, &krk_core::bild::aufnahmedatum, &|| true)
+        .ok_or_else(|| io::Error::other("das Ordnen der ersten Gruppe wurde abgebrochen"))?;
+    let geordnet = t0.elapsed();
+    Ok((
+        erhoben,
+        geordnet,
+        Bildbestand {
+            fotos: verzeichnis.gesamt(),
+            gruppen: verzeichnis.gruppen().len(),
+            erste_gruppe: erste.len(),
+            aus_bilddaten: erste.iter().filter(|foto| foto.aus_bilddaten()).count(),
+            gekuerzt: verzeichnis.ist_gekuerzt(),
+        },
+    ))
+}
+
+/// Die Profile der Auslieferungsfassung, oder der Abbruch, wenn die Fassung
+/// beanstandet wird.
+fn ausgelieferte_profile() -> io::Result<krk_core::leseprofil::Profile> {
+    let (profile, meldungen) = krk_core::ablage::leseprofile::ausgelieferte();
+    if meldungen.is_empty() {
+        Ok(profile)
+    } else {
+        Err(io::Error::other(format!(
+            "die Auslieferungsfassung von readers.toml wird beanstandet: {}",
+            meldungen.join("; ")
+        )))
+    }
+}
+
+/// Die kopflose Vorabmessung der Bildfolge.
+#[derive(Debug, Clone)]
+pub struct KopfloseBildfolge {
+    /// Der Jahres- oder Monatsordner, etwa `PFAD/Fotos/2008`.
+    pub ordner: PathBuf,
+    /// Wie oft gemessen wird, nach einem ungezaehlten Vorlauf.
+    pub wiederholungen: usize,
+}
+
+impl KopfloseBildfolge {
+    /// Faehrt einen ungezaehlten Vorlauf und die Wiederholungen.
+    ///
+    /// Warm, wie jede kopflose Reihe dieses Werkzeugs: der Vorlauf haelt die
+    /// kalte Zahl aus der warmen Reihe. Aendert sich der Bestand zwischen zwei
+    /// Laeufen, wird die Reihe verworfen; sie misste dann nicht dasselbe.
+    pub fn fahren(&self) -> io::Result<Bildfolgeergebnis> {
+        if self.wiederholungen == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "eine Messreihe ohne Laeufe ergibt keine Zahl",
+            ));
+        }
+        let profile = ausgelieferte_profile()?;
+        let (_, _, bestand) = bildfolge_durchgang(&profile, &self.ordner)?;
+        let mut erhoben = Vec::with_capacity(self.wiederholungen);
+        let mut geordnet = Vec::with_capacity(self.wiederholungen);
+        for nummer in 1..=self.wiederholungen {
+            let (bis_erhoben, bis_geordnet, lauf) = bildfolge_durchgang(&profile, &self.ordner)?;
+            if lauf != bestand {
+                return Err(io::Error::other(format!(
+                    "Lauf {nummer} hat eine andere Folge erhoben als der Vorlauf ({lauf:?} statt \
+                     {bestand:?}); die Reihe wird verworfen"
+                )));
+            }
+            erhoben.push(bis_erhoben);
+            geordnet.push(bis_geordnet);
+        }
+        Ok(Bildfolgeergebnis {
+            bestand,
+            bildwiederholrate: None,
+            zusagen: vec![
+                Zusage {
+                    kennung: "B1",
+                    was: "Erkennung und Erhebung der Folge, ohne Datei zu oeffnen",
+                    mass: Abnahmemass::Keine,
+                    runden: vec![erhoben],
+                },
+                Zusage {
+                    kennung: "B2",
+                    was: "dazu die erste Gruppe nach Aufnahmedatum geordnet",
+                    mass: Abnahmemass::Keine,
+                    runden: vec![geordnet],
+                },
+            ],
+        })
+    }
+}
+
+/// Der Messlauf der Bildfolge in der Anwendung.
+#[derive(Debug, Clone)]
+pub struct Bildfolgelauf {
+    /// Das Binaerprogramm im Buendel, `KRK.app/Contents/MacOS/krk`.
+    pub programm: PathBuf,
+    /// Der Ordner, den das linke Dateifenster zeigt, etwa `PFAD/Fotos`.
+    pub ordner: PathBuf,
+    /// Die Zeile darin, deren Auswahl die Folge zeigt, etwa `2008`.
+    pub zeile: String,
+    /// Wie oft je Runde gemessen wird.
+    pub wiederholungen: usize,
+    /// Wie oft die ganze Messung wiederholt wird.
+    pub runden: usize,
+}
+
+impl Bildfolgelauf {
+    /// Erhebt den Bestand im Kern und faehrt die Runden in der Anwendung.
+    pub fn fahren(&self) -> io::Result<Bildfolgeergebnis> {
+        if self.runden == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "eine Messung ohne Runden ergibt keine Zahl",
+            ));
+        }
+        let profile = ausgelieferte_profile()?;
+        let (_, _, bestand) = bildfolge_durchgang(&profile, &self.ordner.join(&self.zeile))?;
+
+        let ordner = self.ordner.display().to_string();
+        let mut raten = Vec::with_capacity(self.runden);
+        let mut runden = Vec::with_capacity(self.runden);
+        for nummer in 1..=self.runden {
+            eprintln!("krk-bench: Runde {nummer} von {}", self.runden);
+            let ausgang = lauf_fahren(
+                &self.programm,
+                &[
+                    "--messmodus",
+                    "bildfolge",
+                    "--ordner",
+                    &ordner,
+                    "--zeile",
+                    &self.zeile,
+                ],
+                FRIST_BILDFOLGE,
+            )?;
+            if !ausgang.messzeilen.iter().any(|zeile| zeile == "fertig") {
+                return Err(io::Error::other(format!(
+                    "der Messlauf der Anwendung ist nicht bis zum Ende gekommen.{}",
+                    ausgang.klage()
+                )));
+            }
+            raten
+                .push(zahl_lesen(&ausgang.messzeilen, "bildwiederholrate").map(|zahl| zahl as i64));
+            let werte = werte_lesen(&ausgang.messzeilen, "bildfolge");
+            if werte.len() != self.wiederholungen {
+                return Err(io::Error::other(format!(
+                    "die Anwendung hat fuer bildfolge {} Werte geliefert, erwartet waren {}. \
+                     Die Reihe wird verworfen.",
+                    werte.len(),
+                    self.wiederholungen
+                )));
+            }
+            runden.push(werte);
+        }
+        Ok(Bildfolgeergebnis {
+            bestand,
+            bildwiederholrate: rate_ueber_runden(&raten)?,
+            zusagen: vec![Zusage {
+                kennung: "B3",
+                was: "Auswahl der Zeile bis Ende des Zeichendurchgangs mit dem ersten Foto",
+                mass: Abnahmemass::Keine,
+                runden,
+            }],
+        })
+    }
+}
+
+/// Die Schwelle aus Haltepunkt 3 des Spec der Bildfolge.
+const HALTEPUNKT_3: Duration = Duration::from_secs(2);
+
+/// Setzt den Bericht eines Messwegs der Bildfolge zusammen.
+///
+/// `programm` ist `None` fuer den kopflosen Weg; daran haengen Titel,
+/// Bedingungen und die Lesart am Ende.
+pub fn bildfolge_bericht(
+    ordner: &Path,
+    programm: Option<&Path>,
+    wiederholungen: usize,
+    ergebnis: &Bildfolgeergebnis,
+) -> String {
+    let mut text = String::new();
+    let titel = match programm {
+        None => "KRK — Messbericht der Bildfolge, kopflos (Schritt 12 der Bildfolge)",
+        Some(_) => "KRK — Messbericht der Bildfolge im Buendel (Schritt 12 der Bildfolge)",
+    };
+    let _ = writeln!(text, "{titel}");
+    let _ = writeln!(text, "{}", "=".repeat(titel.chars().count()));
+    let _ = writeln!(text);
+
+    let _ = writeln!(text, "Bedingungen");
+    let _ = writeln!(text, "-----------");
+    let mut zeile = |name: &str, wert: &str| {
+        let _ = writeln!(text, "{name:<22}{wert}");
+    };
+    zeile("Zeitpunkt", &bericht::zeitstempel(SystemTime::now()));
+    zeile(
+        "hw.model",
+        &bericht::befehl_ausgabe("/usr/sbin/sysctl", &["-n", "hw.model"]),
+    );
+    zeile("sw_vers", &bericht::betriebssystem());
+    zeile(
+        "Bildwiederholrate",
+        &match ergebnis.bildwiederholrate {
+            Some(hertz) => format!("{hertz} Hz, gemeldet von der Anwendung"),
+            None if programm.is_none() => "entfaellt, gemessen ohne Fenster".to_owned(),
+            None => "nicht gemeldet".to_owned(),
+        },
+    );
+    zeile(
+        "Cache-Zustand",
+        "warm, ein ungezaehlter Vorlauf vor der Reihe",
+    );
+    let runden = ergebnis
+        .zusagen
+        .first()
+        .map_or(0, |zusage| zusage.runden.len());
+    zeile(
+        "Wiederholungen",
+        &format!("{wiederholungen} je Groesse und Runde, {runden} Runden"),
+    );
+    zeile("Gemessener Ordner", &ordner.display().to_string());
+    let jahr = match programm {
+        None => ordner.to_path_buf(),
+        // Im Buendel ist der Ordner der, den die Liste zeigt; der
+        // Steckbrief haengt am Jahr darunter.
+        Some(_) => ordner.join(crate::fotoordner::JAHR),
+    };
+    zeile(
+        "Steckbrief",
+        &match crate::fotoordner::steckbrief_zum_jahr(&jahr) {
+            Some(brief) => format!(
+                "{} Fotos zu je {} Bytes, Startwert {}, je Monat {:?}",
+                brief.fotos, brief.groesse, brief.startwert, brief.je_monat
+            ),
+            None => "keiner (ein Fotoordner, den krk-bench nicht angelegt hat)".to_owned(),
+        },
+    );
+    let bestand = &ergebnis.bestand;
+    zeile(
+        "Folge",
+        &format!(
+            "{} Fotos aus {} Ordnern{}; die erste Gruppe traegt {}, davon {} mit dem Datum \
+             aus den Bilddaten",
+            bestand.fotos,
+            bestand.gruppen,
+            if bestand.gekuerzt { ", gekuerzt" } else { "" },
+            bestand.erste_gruppe,
+            bestand.aus_bilddaten
+        ),
+    );
+    zeile(
+        "Profile",
+        "die Auslieferungsfassung von readers.toml, nicht die Ablage",
+    );
+    if let Some(programm) = programm {
+        zeile("Gemessenes Buendel", &programm.display().to_string());
+    }
+    zeile(
+        "Werkzeug",
+        &format!(
+            "krk-bench {}, Ziel {}-{}, {}",
+            env!("CARGO_PKG_VERSION"),
+            std::env::consts::ARCH,
+            std::env::consts::OS,
+            bericht::bauart()
+        ),
+    );
+    let _ = writeln!(text);
+
+    let _ = writeln!(text, "Zahlen");
+    let _ = writeln!(text, "------");
+    let _ = writeln!(
+        text,
+        "Keine Zeile ist eine Zusage aus C8; die Spalte \"Abnahme nach\" sagt deshalb \"keine\"."
+    );
+    let _ = writeln!(text);
+    let _ = writeln!(
+        text,
+        "{:<6}{:<72}{:>13}{:>13}{:>13}{:>13}   Abnahme nach",
+        "", "Gemessene Groesse", "p95 schlecht", "Median", "Minimum", "Maximum"
+    );
+    for zusage in &ergebnis.zusagen {
+        let _ = writeln!(
+            text,
+            "{:<6}{:<72}{:>13}{:>13}{:>13}{:>13}   {}",
+            zusage.kennung,
+            zusage.was,
+            bericht::spanne(zusage.schlechtestes_perzentil()),
+            bericht::spanne(zusage.median()),
+            bericht::spanne(zusage.minimum()),
+            bericht::spanne(zusage.maximum()),
+            zusage.mass.beschreibung()
+        );
+    }
+    let _ = writeln!(text);
+
+    let _ = writeln!(text, "Einzelwerte");
+    let _ = writeln!(text, "-----------");
+    for zusage in &ergebnis.zusagen {
+        let _ = writeln!(text, "{} ({}):", zusage.kennung, zusage.was);
+        for (nummer, runde) in zusage.runden.iter().enumerate() {
+            let werte: Vec<String> = runde.iter().copied().map(bericht::spanne).collect();
+            let _ = writeln!(text, "  Runde {}:", nummer + 1);
+            for buendel in werte.chunks(5) {
+                let _ = writeln!(text, "    {}", buendel.join("  "));
+            }
+        }
+    }
+    let _ = writeln!(text);
+
+    let _ = writeln!(text, "Lesart");
+    let _ = writeln!(text, "------");
+    match programm {
+        None => text.push_str(LESART_KOPFLOS),
+        Some(_) => {
+            text.push_str(LESART_BUENDEL);
+            if let Some(zusage) = ergebnis.zusagen.first() {
+                let _ = writeln!(
+                    text,
+                    "\nHaltepunkt 3: der groesste Einzelwert aller Runden ist {}, das schlechteste \
+                     95. Perzentil {}; die Schwelle sind {} Sekunden. {}",
+                    bericht::spanne(zusage.maximum()),
+                    bericht::spanne(zusage.schlechtestes_perzentil()),
+                    HALTEPUNKT_3.as_secs(),
+                    if zusage.maximum() > HALTEPUNKT_3 {
+                        "Die Schwelle ist ueberschritten; ueber Grenze oder Vorgehen entscheidet \
+                         der Nutzer."
+                    } else {
+                        "Kein Einzelwert liegt darueber."
+                    }
+                );
+            }
+        }
+    }
+    text
+}
+
+/// Was der kopflose Weg misst und was nicht.
+const LESART_KOPFLOS: &str = "\
+B1 und B2 sind der Anteil des Kerns an der Spanne bis zum ersten Foto, und zwar
+seine Untergrenze: gemessen ist die Arbeit, die die Vorschau auf ihrem
+Arbeitsfaden vor dem ersten Foto tut (Erkennung, das Lesen der Ordner, das
+Ordnen der ersten Gruppe nach Aufnahmedatum mit dem Leser des Kerns). Es fehlen
+das Starten des Fadens, das Laden und Dekodieren des ersten Fotos und das
+Zeichnen. Ob die zwei Sekunden aus Haltepunkt 3 halten, entscheidet allein der
+Lauf im Buendel am Referenzgeraet (make bildfolge); er verlangt KRK im
+Vordergrund und ist Nutzerarbeit.
+
+Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert.
+";
+
+/// Was der Weg im Buendel misst.
+const LESART_BUENDEL: &str = "\
+B3 beginnt am Takt des Messmodus, unmittelbar bevor die Anwendung die Zeile im
+linken Dateifenster auswaehlt, und endet mit dem Zeichendurchgang, nach dem die
+Vorschau das erste Foto der Folge zeigt. Vor jeder Wiederholung waehlt der Lauf
+ungemessen eine andere Zeile desselben Ordners und wartet deren Vorschau ab;
+die Folge beginnt damit jedes Mal neu (C3.6 des Spec der Bildfolge). Die
+Auswahl geht nicht ueber die Ereignisschlange, sondern unmittelbar an die
+Liste, wie die Vorbereitungen der Sitzungsstrecke.
+
+Das 95. Perzentil ist der Wert des naechsten Rangs, nicht interpoliert.
+";
+
+/// Schreibt den Bericht eines Messwegs der Bildfolge in den Messungenordner.
+pub fn bildfolge_schreiben(ziel: &Path, text: &str, kopflos: bool) -> io::Result<PathBuf> {
+    if !ziel.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!(
+                "{} gibt es nicht. Rufe das Werkzeug aus dem Projektwurzelverzeichnis \
+                 auf oder nenne den Ordner ueber --ziel.",
+                ziel.display()
+            ),
+        ));
+    }
+    let pfad = ziel.join(format!(
+        "{}-bildfolge-{}.txt",
+        bericht::kurzstempel(SystemTime::now()),
+        if kopflos { "kopflos" } else { "buendel" }
+    ));
+    bericht::ohne_ueberschreiben(&pfad, text)?;
+    Ok(pfad)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2492,6 +2949,43 @@ mod tests {
 
     fn ms(zahl: u64) -> Duration {
         Duration::from_millis(zahl)
+    }
+
+    /// Die kopflose Messung der Bildfolge laeuft auf einem erzeugten
+    /// Fotoordner durch, misst jede Wiederholung und findet jedes Datum der
+    /// ersten Gruppe in den Bilddaten; ein Ordner ohne Folge bricht ab.
+    #[test]
+    fn die_kopflose_bildfolge_misst_einen_erzeugten_fotoordner() {
+        let ordner = Wegwerfordner::neu("bildfolge-kopflos");
+        let angelegt = crate::fotoordner::erzeugen(&ordner.pfad().join("platz"), 36, 2048, 5)
+            .expect("der Fotoordner entsteht");
+        let lauf = KopfloseBildfolge {
+            ordner: angelegt.jahr.clone(),
+            wiederholungen: 3,
+        };
+        let ergebnis = lauf.fahren().expect("die Reihe laeuft durch");
+        assert_eq!(ergebnis.bestand.fotos, 36);
+        let erster_monat = angelegt
+            .je_monat
+            .iter()
+            .copied()
+            .find(|zahl| *zahl > 0)
+            .expect("ein Monat traegt Fotos");
+        assert_eq!(ergebnis.bestand.erste_gruppe, erster_monat);
+        assert_eq!(ergebnis.bestand.aus_bilddaten, erster_monat);
+        for zusage in &ergebnis.zusagen {
+            assert_eq!(zusage.mass, Abnahmemass::Keine);
+            assert_eq!(zusage.runden, vec![zusage.runden[0].clone()]);
+            assert_eq!(zusage.runden[0].len(), 3);
+        }
+        let text = bildfolge_bericht(&lauf.ordner, None, 3, &ergebnis);
+        assert!(text.contains("Untergrenze"), "{text}");
+
+        let ohne = KopfloseBildfolge {
+            ordner: ordner.pfad().join("platz").join("Fotos").join("2007"),
+            wiederholungen: 3,
+        };
+        assert!(ohne.fahren().is_err(), "ein leeres Jahr ergibt keine Folge");
     }
 
     #[test]

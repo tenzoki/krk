@@ -2121,6 +2121,23 @@ impl Anwendungsdelegierter {
             Some(Aufgabe::Start { .. } | Aufgabe::Spannen { .. }) => {
                 return (Sitzung::default(), Vec::new(), messort());
             }
+            Some(Aufgabe::Bildfolge { .. }) => {
+                // Die Bildfolge misst, was ausgeliefert ist: die zwei
+                // Fotoprofile aus der eingebetteten Fassung und nicht die
+                // `readers.toml` des Nutzers, die sie vielleicht nicht fuehrt.
+                // Beanstandet sie der eigene Pruefer, gibt es keine Zahl.
+                let (profile, meldungen) = krk_core::ablage::leseprofile::ausgelieferte();
+                if !meldungen.is_empty() {
+                    eprintln!(
+                        "krk: die Auslieferungsfassung von readers.toml wird beanstandet: {}. \
+                         Es wird keine Zahl ausgegeben.",
+                        meldungen.join("; ")
+                    );
+                    std::process::exit(4);
+                }
+                *ivars.profile.borrow_mut() = Arc::new(profile);
+                return (Sitzung::default(), Vec::new(), messort());
+            }
             Some(Aufgabe::Sitzung { plan }) => {
                 // Herstellen heisst schreiben: die folgenden L4-Starts finden
                 // dieselbe Lage in `session.toml` vor. Scheitert das, gibt es
@@ -10333,6 +10350,28 @@ impl Anwendungsdelegierter {
                     .quelle()
                     .ordner_lesen(&pfad, None);
             }
+            Handlung::AndereWaehlen(name) => {
+                let quelle = self.dateifenster(aktiv).quelle();
+                let Some(andere) = quelle.alle_namen().into_iter().find(|zeile| *zeile != name)
+                else {
+                    return Err(format!(
+                        "{} traegt neben {name} keine zweite Zeile; die Messung der Bildfolge \
+                         waehlt vor jeder Wiederholung eine andere aus, damit die Folge neu \
+                         beginnt",
+                        quelle.angezeigter_ordner().display()
+                    ));
+                };
+                match quelle.eintrag_waehlen(&andere) {
+                    Auswahlversuch::Gewaehlt(_) | Auswahlversuch::Vorgemerkt => {}
+                    Auswahlversuch::Unbekannt => {
+                        return Err(crate::messmodus::auswahl_ohne_eintrag(
+                            &andere,
+                            &quelle.angezeigter_ordner(),
+                            quelle.zeilen(),
+                        ));
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -10349,9 +10388,14 @@ impl Anwendungsdelegierter {
         let rechts = self.dateifenster(Fensterseite::Rechts).quelle();
         let aktiv = self.ivars().modell.borrow().aktiv();
         let aktiv_quelle = self.dateifenster(aktiv).quelle();
-        let (vorschau_pfad, vorschau_laedt) = match self.ivars().vorschau.get() {
-            Some(vorschau) => (vorschau.angezeigter_pfad(), vorschau.laedt_noch()),
-            None => (None, false),
+        let (vorschau_pfad, vorschau_laedt, vorschau_folgebild) = match self.ivars().vorschau.get()
+        {
+            Some(vorschau) => (
+                vorschau.angezeigter_pfad(),
+                vorschau.laedt_noch(),
+                vorschau.gezeigtes_folgebild(),
+            ),
+            None => (None, false, None),
         };
         Zustand {
             zeilen: links.zeilen(),
@@ -10378,6 +10422,7 @@ impl Anwendungsdelegierter {
                 ordner_rechts: rechts.angezeigter_ordner(),
                 vorschau_pfad,
                 vorschau_laedt,
+                vorschau_folgebild,
                 vorgang_sichtbar: links.vorgang_sichtbar() || rechts.vorgang_sichtbar(),
                 vorgang_laeuft: self.ivars().vorgang.borrow().is_some(),
             }),

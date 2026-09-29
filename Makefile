@@ -242,6 +242,33 @@ alle: ## Alle zehn Zusagen messen (S21): make alle RUNDEN=1
 	  --kopierziel $(KOPIERZIEL) \
 	  --runden $(or $(RUNDEN),1)
 
+# Der Fotoordner der Bildfolge: tausend Fotos unter Fotos/2008/01 bis 12, dazu
+# Fotos/2007 leer als zweite Zeile. Die Groesse je Foto besteht aus echten
+# Bytes und nicht aus einem Loch, also belegen tausend Fotos zu einem MB auch
+# ein GB auf der Platte; FOTOS= und GROESSE= waehlen andere Zahlen.
+FOTOORDNER := $(MESSPLATZ)/fotoordner
+
+.PHONY: fotoordner
+fotoordner: ## Den Fotoordner der Bildfolge anlegen: make fotoordner FOTOS=1000 GROESSE=1000000
+	$(CARGO) run -p krk-bench --release -- fotoordner \
+	  --fotos $(or $(FOTOS),1000) \
+	  --groesse $(or $(GROESSE),1000000) \
+	  --seed 8 \
+	  --out $(FOTOORDNER)
+
+# Die Messung am Buendel waehlt im linken Dateifenster die Zeile ZEILE des
+# Ordners ORDNER und misst bis zum ersten gezeigten Foto; vorbelegt ist der
+# Fotoordner von `make fotoordner`. Ein eigener Fotoordner geht mit
+# ORDNER=/pfad/zu/Fotos ZEILE=2019, sofern daneben eine zweite Zeile steht.
+# Wie jede Messung im Buendel verlangt der Lauf KRK im Vordergrund.
+.PHONY: bildfolge
+bildfolge: bundle ## Zeit bis zum ersten Foto der Bildfolge messen, KRK im Vordergrund: make bildfolge RUNDEN=1
+	$(CARGO) run -p krk-bench --release -- bildfolge \
+	  --buendel $(BINAER) \
+	  --ordner $(or $(ORDNER),$(FOTOORDNER)/Fotos) \
+	  --zeile $(or $(ZEILE),2008) \
+	  --runden $(or $(RUNDEN),1)
+
 .PHONY: durchstich
 durchstich: bundle ## Die fuenf Zusagen am Buendel messen: make durchstich RUNDEN=5
 	$(CARGO) run -p krk-bench --release -- durchstich \
