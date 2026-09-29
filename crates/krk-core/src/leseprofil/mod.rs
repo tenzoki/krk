@@ -31,6 +31,14 @@
 //!                          ersetzt die Metadaten   tritt unter die Metadaten
 //! ```
 //!
+//! **Ein Profil kann statt seiner Zeilen eine Bildfolge nennen** (Spec
+//! `260929-1313_*_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md`). Sie
+//! ist kein fuenfter Baustein, sondern eine Angabe am Profil
+//! ([`Bildfolgeangabe`]): sie ersetzt die Zeilen, statt eine davon zu sein.
+//! Welche Fotos darunter liegen und in welcher Reihenfolge, erhebt und ordnet
+//! [`bildfolge`] mit eigenen Grenzen und einem eigenen [`Bildhaushalt`]; der
+//! [`Haushalt`] der Zeilen bleibt davon unberuehrt.
+//!
 //! Eine Verknuepfung bekommt keine der zwei Antworten (Festlegung A4, C1.7):
 //! `zusammenfassen` liefert dort `None`, und die Vorschau bleibt bei den
 //! sechs Metadatenangaben allein.
@@ -110,6 +118,7 @@ use regex::Regex;
 use crate::verzeichnis::Typ;
 
 pub mod bausteine;
+pub mod bildfolge;
 pub mod datei;
 pub mod defaultprofil;
 pub mod erkennung;
@@ -176,6 +185,30 @@ pub const HOECHSTENS_BYTES: u64 = 64 * 1024;
 /// in `crate::bild::aufnahmedatum`, hinter dem Begrenzer dort.
 pub const HOECHSTENS_BYTES_JE_FOTO: u64 = 256 * 1024;
 
+/// Wie viele Fotos eine Bildfolge hoechstens aufnimmt (C5.1 des Spec der
+/// Bildfolge).
+///
+/// Hat ein Ordner mehr, enthaelt die Folge die ersten in der Reihenfolge der
+/// Folge, und sie gilt als gekuerzt. Ein Jahr mit rund zwanzig Aufnahmen am
+/// Tag bleibt darunter (Nutzerangabe vom 260929).
+pub const HOECHSTENS_FOTOS: usize = 7_500;
+
+/// Aus wie vielen Ordnern eine Bildfolge hoechstens stammt.
+///
+/// Ein Jahr hat zwoelf Monatsordner; die Grenze laesst fuenf Jahre zu, falls
+/// jemand den Platzhalter eine Ebene hoeher ansetzt. Ordner darueber hinaus
+/// kommen nicht in die Folge, und sie gilt als gekuerzt.
+pub const HOECHSTENS_BILDGRUPPEN: usize = 60;
+
+/// Wie viele Eintraege ein einzelner Verzeichnisleselauf der Bildfolge
+/// hoechstens liefert.
+///
+/// Hoeher als [`HOECHSTENS_EINTRAEGE`] der Zeilen, weil ein Monatsordner mit
+/// mehr als zweitausend Fotos kein Ausnahmefall ist; die Grenzen der Zeilen
+/// bleiben davon unberuehrt (C5.2). Ein Ordner, dessen Lesung hier abbricht,
+/// traegt bei, was gelesen ist, und die Folge gilt als gekuerzt.
+pub const HOECHSTENS_EINTRAEGE_JE_BILDORDNER: usize = 10_000;
+
 /// Wie viele Eintraege der Baustein „juengste N" liefert, hoechstens (C6.3).
 ///
 /// Eine groessere Zahl in der Datei wird auf diesen Wert **gekappt** und nicht
@@ -229,6 +262,7 @@ pub struct Profil {
     pfad: Option<Regex>,
     kennzeichen: Option<Regex>,
     zeilen: Vec<Zeile>,
+    bildfolge: Option<Bildfolgeangabe>,
 }
 
 impl Profil {
@@ -238,13 +272,24 @@ impl Profil {
         pfad: Option<Regex>,
         kennzeichen: Option<Regex>,
         zeilen: Vec<Zeile>,
+        bildfolge: Option<Bildfolgeangabe>,
     ) -> Self {
         Self {
             name,
             pfad,
             kennzeichen,
             zeilen,
+            bildfolge,
         }
+    }
+
+    /// Die Bildfolge des Profils, oder keine.
+    ///
+    /// Traegt ein Profil eine und liegen darunter Fotos, zeigt die Vorschau das
+    /// erste Foto statt der Zeilen; ohne Fotos gelten die Zeilen (C1.5 des
+    /// Spec der Bildfolge).
+    pub fn bildfolge(&self) -> Option<&Bildfolgeangabe> {
+        self.bildfolge.as_ref()
     }
 
     /// Der Name aus der Datei.
@@ -303,7 +348,33 @@ impl Zeile {
     }
 }
 
+/// Woher die Fotos einer Bildfolge kommen, geprueft.
+///
+/// Die Ortsangabe ist dieselbe wie die eines Bausteins und geht durch dieselbe
+/// Pruefung ([`Ortsangabe::aus_angabe`]). Ohne Angabe ist der erkannte Ordner
+/// selbst die eine Gruppe der Folge (ein Monat); `*` macht jeden Unterordner
+/// zu einer Gruppe (ein Jahr).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bildfolgeangabe {
+    ort: Ortsangabe,
+}
+
+impl Bildfolgeangabe {
+    /// Eine gepruefte Angabe aus ihrer Ortsangabe.
+    pub fn neu(ort: Ortsangabe) -> Self {
+        Self { ort }
+    }
+
+    /// Wo die Fotos liegen, relativ zum erkannten Ordner.
+    pub fn ort(&self) -> &Ortsangabe {
+        &self.ort
+    }
+}
+
 /// Der feste Bausteinsatz aus C3: vier Bausteine und kein fuenfter.
+///
+/// Die Bildfolge ist kein fuenfter: sie steht als [`Bildfolgeangabe`] am
+/// Profil und ersetzt die Zeilen, statt eine davon zu sein.
 ///
 /// Eine vollstaendige Fallunterscheidung ohne Auffangzweig. Ein fuenfter
 /// Baustein haelt jeden Rechner an und erzwingt eine bewusste Einordnung;
@@ -916,6 +987,75 @@ impl Haushalt {
     /// Wie viele Dateien tatsaechlich geoeffnet wurden.
     pub fn oeffnungen(self) -> u32 {
         self.oeffnungen
+    }
+}
+
+/// Was die Erhebung einer Bildfolge verbraucht hat.
+///
+/// **Ein eigener Haushalt neben dem [`Haushalt`] der Zeilen**, damit dessen
+/// Grenzen unveraendert gelten (C5.2 des Spec der Bildfolge). Er zaehlt wie
+/// jener die tatsaechlichen und nicht die versuchten Laeufe.
+///
+/// **Eine Zahl der Oeffnungen fuehrt er nicht, und das ist keine Luecke**: die
+/// Erhebung ([`bildfolge::verzeichnis_erheben`]) nimmt keinen Leser an und
+/// hat damit keinen Weg, eine Datei zu oeffnen. Die Datumslesungen fallen erst
+/// beim Ordnen einer Gruppe an, je eine je Foto der Gruppe, und sind damit
+/// durch die Folge selbst begrenzt: hoechstens [`HOECHSTENS_FOTOS`] und die
+/// Fotos der einen Gruppe, an der gekuerzt wird.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Bildhaushalt {
+    leselaeufe: u32,
+    gruppen: usize,
+    fotos: usize,
+}
+
+impl Bildhaushalt {
+    /// Ein unverbrauchter Haushalt.
+    pub fn neu() -> Self {
+        Self::default()
+    }
+
+    /// Bucht einen Verzeichnisleselauf und sagt, ob er noch im Haushalt lag:
+    /// einer fuer den Ordner vor dem Platzhalter und einer je Gruppe.
+    #[must_use = "wer nicht hinsieht, liest ueber die Grenze hinaus"]
+    pub fn leselauf_nehmen(&mut self) -> bool {
+        let hoechstens = u32::try_from(HOECHSTENS_BILDGRUPPEN + 1).unwrap_or(u32::MAX);
+        if self.leselaeufe >= hoechstens {
+            return false;
+        }
+        self.leselaeufe += 1;
+        true
+    }
+
+    /// Bucht eine Gruppe mit `fotos` Fotos, von denen hoechstens so viele in
+    /// die Folge kommen, wie [`HOECHSTENS_FOTOS`] noch zulaesst.
+    ///
+    /// Liefert, wie viele es sind; `None` heisst, dass die Gruppe keinen
+    /// Platz mehr hatte und nicht gebucht ist.
+    #[must_use = "die Antwort ist der Beitrag der Gruppe zur Folge"]
+    pub fn gruppe_nehmen(&mut self, fotos: usize) -> Option<usize> {
+        if self.gruppen >= HOECHSTENS_BILDGRUPPEN || self.fotos >= HOECHSTENS_FOTOS {
+            return None;
+        }
+        let beitrag = fotos.min(HOECHSTENS_FOTOS - self.fotos);
+        self.gruppen += 1;
+        self.fotos += beitrag;
+        Some(beitrag)
+    }
+
+    /// Wie viele Verzeichnisleselaeufe tatsaechlich stattgefunden haben.
+    pub fn leselaeufe(self) -> u32 {
+        self.leselaeufe
+    }
+
+    /// Wie viele Gruppen in der Folge stehen.
+    pub fn gruppen(self) -> usize {
+        self.gruppen
+    }
+
+    /// Wie viele Fotos in der Folge stehen.
+    pub fn fotos(self) -> usize {
+        self.fotos
     }
 }
 

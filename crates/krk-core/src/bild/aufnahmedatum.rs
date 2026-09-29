@@ -153,8 +153,9 @@ impl Aufnahmezeit {
 /// der Bildfolge ohne echte Bilddateien pruefbar sind: eine Probe reicht einen
 /// Leser herein, der zaehlt oder fuer bestimmte Namen nichts liefert. Im
 /// Betrieb ist es [`aufnahmedatum`]. `Sync`, weil der Leser auf dem Faden der
-/// Vorschau laeuft.
-pub type Datumsleser = dyn Fn(&Path) -> Option<Aufnahmezeit> + Sync;
+/// Vorschau laeuft. Die Lebensdauer laesst einen Leser zu, der Werte des
+/// Rufers leiht, etwa einen Zaehler einer Probe.
+pub type Datumsleser<'a> = dyn Fn(&Path) -> Option<Aufnahmezeit> + Sync + 'a;
 
 /// Das Aufnahmedatum eines Fotos aus seinen Bilddaten, oder `None`.
 ///

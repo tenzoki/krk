@@ -203,7 +203,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
    - Acceptance: `make check` grün; `cargo tree --target aarch64-apple-darwin -e normal,build` und `cargo tree --target x86_64-apple-darwin -e normal,build` nennen weder `cc` noch ein Paket mit einem Namen auf `-sys`; `genau_zwei_dateien_oeffnen_die_regel_deny_unsafe_code` ändert ihre Erwartung nicht (bei Urteil ImageIO liegt die Datei unter `appkit/`); der awk-Lauf aus `CLAUDE.md` für `ohne_warten_oeffnen` nennt den neuen Rufer.
    - Dependencies: Schritt 3
 
-5. **Die Bildfolge im Leseprofil: Datei, Prüfung, Gruppen, Ordnung, Grenzen**
+5. [DONE] **Die Bildfolge im Leseprofil: Datei, Prüfung, Gruppen, Ordnung, Grenzen**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/leseprofil/mod.rs`, `crates/krk-core/src/leseprofil/datei.rs`, `crates/krk-core/src/leseprofil/bildfolge.rs` (neu), `crates/krk-core/tests/leseprofil.rs`
    - Changes:

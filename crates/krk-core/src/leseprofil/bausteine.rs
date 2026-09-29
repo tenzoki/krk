@@ -678,8 +678,7 @@ impl<'w> Lauf<'w> {
     /// gemessen wird; die zwei Rufer sind die Ortsangabe eines Bausteins und
     /// jeder einzelne Treffer eines Platzhalterlaufs.
     fn innerhalb(&self, pfad: &Path) -> Option<PathBuf> {
-        let aufgeloest = std::fs::canonicalize(pfad).ok()?;
-        aufgeloest.starts_with(self.wurzel).then_some(aufgeloest)
+        innerhalb(self.wurzel, pfad)
     }
 
     /// Der Ordner, in dem ein Baustein arbeitet, aufgeloest und geprueft.
@@ -912,6 +911,17 @@ impl<'w> Lauf<'w> {
             None => Wert::Nicht,
         }
     }
+}
+
+/// Loest einen Pfad auf und haelt ihn gegen die aufgeloeste Wurzel (C3.13,
+/// zweite Haelfte).
+///
+/// Die eine Stelle, an der die Schranke gemessen wird. Ihre zwei Rufer sind
+/// [`Lauf::innerhalb`] fuer die Zeilen und die Erhebung der Bildfolge in
+/// [`super::bildfolge`], die dieselbe Schranke haelt.
+pub(super) fn innerhalb(wurzel: &Path, pfad: &Path) -> Option<PathBuf> {
+    let aufgeloest = std::fs::canonicalize(pfad).ok()?;
+    aufgeloest.starts_with(wurzel).then_some(aufgeloest)
 }
 
 // ---------------------------------------------------------------------------

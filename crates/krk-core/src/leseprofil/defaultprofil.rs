@@ -93,7 +93,7 @@ static DEFAULTPROFIL: LazyLock<Profil> = LazyLock::new(|| {
             )
         })
         .collect();
-    Profil::neu(NAME.to_owned(), None, None, zeilen)
+    Profil::neu(NAME.to_owned(), None, None, zeilen, None)
 });
 
 /// Das eingebaute Default-Profil.

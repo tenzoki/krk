@@ -26,8 +26,9 @@
 //!
 //! # Wo `deny_unknown_fields` steht und wo nicht
 //!
-//! An [`Profildatei`], an [`Zeilendatei`] und an jedem der vier
-//! Bausteintische; allein [`Profilblock`] traegt ihn nicht.
+//! An [`Profildatei`], an [`Zeilendatei`], an jedem der vier
+//! Bausteintische und seit der Bildfolge an ihrem Tisch [`Bildfolgedatei`];
+//! allein [`Profilblock`] traegt ihn nicht.
 //!
 //! **Was das kostet, haengt davon ab, ob eine zweite Angabe danebensteht, und
 //! die eine Haelfte kostet sehr wohl etwas.** Ein verschriebenes `kennzeichnen`
@@ -36,7 +37,11 @@
 //! Steht ein `pfad` daneben, wird derselbe Schreibfehler **still uebergangen**:
 //! das Profil greift weiter, allein ueber den Pfad, und niemand erfaehrt, dass
 //! sein Kennzeichen nie geprueft worden ist. Dasselbe gilt fuer `zeilen` statt
-//! `zeile`, das ein Profil ohne eine einzige Zeile stehen laesst.
+//! `zeile`, das ein Profil ohne eine einzige Zeile stehen laesst, und fuer
+//! einen verschriebenen Tischnamen `bildfolg` statt `bildfolge`: das Profil
+//! steht dann ohne Bildfolge da und zeigt seine Zeilen. **Ein verschriebener
+//! Schluessel innerhalb** des Tisches `bildfolge` faellt dagegen auf, denn der
+//! Tisch traegt die Marke.
 //! `resources/default-readers.toml` schreibt die Fallunterscheidung im
 //! Kommentarkopf aus, dort, wo der Nutzer sie liest; hier steht sie, weil dies
 //! die Stelle ist, an der ein Entwickler nachliest, warum [`Profilblock`] als
@@ -63,7 +68,7 @@
 //! das abgewiesene Stueck noch Sinn ergibt:
 //!
 //! - **Die ganze Datei faellt weg**, wenn `serde` sie nicht in diese Gestalt
-//!   bringt: ein unbekannter Schluessel an einer der sechs Stellen mit
+//!   bringt: ein unbekannter Schluessel an einer der Stellen mit
 //!   `deny_unknown_fields`, eine Zahl ausserhalb ihres Bereichs, ein
 //!   Tischname, den es nicht gibt, seit der Runde 18 ein Wert fuer `zeigt`,
 //!   den es nicht gibt ([`Anzeigedatei`]), und seit der Runde 19 ebenso ein
@@ -96,8 +101,13 @@
 //!   (`gekappte_anzahl`). Die Zeile steht dann in jeder
 //!   Zusammenfassung mit ihrem Platzhalter, und die uebrigen Zeilen bleiben
 //!   unberuehrt (C3.12).
+//! - **Das Profil verliert seine Bildfolge und behaelt seine Zeilen**, wenn
+//!   ihre Ortsangabe schon am Text abgewiesen wird. Die Reichweite ist
+//!   dieselbe Ebene wie bei einer Zeile: die Bildfolge ist eine Angabe am
+//!   Profil neben den Zeilen, und ohne sie zeigt das Profil, was es sonst
+//!   zeigt.
 //!
-//! Die zweite und die dritte Reichweite melden aus [`pruefen`], und **jede
+//! Die zweite, die dritte und die Bildfolge melden aus [`pruefen`], und **jede
 //! Meldung nennt den Profilnamen, bei einer Zeile deren Beschriftung, und den
 //! Grund**. Die erste kann das nicht: dort ist noch kein Profil gelesen, und
 //! die Zeilennummer der Meldung ist alles, was `serde` an dieser Stelle hat.
@@ -109,7 +119,10 @@
 use regex::Regex;
 use serde::Deserialize;
 
-use super::{Anzeige, Baustein, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile, Typ, Zeile};
+use super::{
+    Anzeige, Baustein, Bildfolgeangabe, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile, Typ,
+    Zeile,
+};
 
 // ---------------------------------------------------------------------------
 // Die Gestalt der Datei
@@ -145,6 +158,24 @@ pub struct Profilblock {
     /// Kopfzeile aus Name und Pfad.
     #[serde(default)]
     pub zeile: Vec<Zeilendatei>,
+    /// Die Bildfolge: `bildfolge = { }` oder `bildfolge = { ordner = "*" }`.
+    ///
+    /// Ein verschriebener Tischname wird wie jeder unbekannte Schluessel an
+    /// diesem Block still uebergangen; siehe den Modulkopf.
+    pub bildfolge: Option<Bildfolgedatei>,
+}
+
+/// Der Tisch `bildfolge` eines Profils.
+///
+/// **Mit `deny_unknown_fields`**: ein verschriebener Schluessel darin kostet
+/// die ganze Datei, wie in jedem Bausteintisch (C1.3 des Spec der Bildfolge).
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Bildfolgedatei {
+    /// Wo die Fotos liegen, relativ zum erkannten Ordner. Fehlt die Angabe,
+    /// liegen sie im erkannten Ordner selbst; `*` nimmt jeden Unterordner als
+    /// eine Gruppe der Folge.
+    pub ordner: Option<String>,
 }
 
 /// Eine `[[profil.zeile]]`, wie sie in der Datei steht.
@@ -412,6 +443,7 @@ pub fn pruefen(datei: Profildatei) -> (Profile, Vec<String>) {
             pfad,
             kennzeichen,
             zeile,
+            bildfolge,
         } = block;
 
         let pfad = match erkennungsmuster(pfad.as_deref(), "das Pfadmuster") {
@@ -441,7 +473,14 @@ pub fn pruefen(datei: Profildatei) -> (Profile, Vec<String>) {
             .into_iter()
             .map(|zeile| zeile_pruefen(&name, zeile, &mut meldungen))
             .collect();
-        geprueft.push(Profil::neu(name, pfad, kennzeichen, zeilen));
+        let bildfolge = bildfolge.and_then(|tisch| match ortsangabe(tisch.ordner.as_deref()) {
+            Ok(ort) => Some(Bildfolgeangabe::neu(ort)),
+            Err(grund) => {
+                meldungen.push(profilmeldung(&name, &format!("die Bildfolge: {grund}")));
+                None
+            }
+        });
+        geprueft.push(Profil::neu(name, pfad, kennzeichen, zeilen, bildfolge));
     }
 
     (Profile::aus(geprueft), meldungen)

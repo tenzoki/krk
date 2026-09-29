@@ -49,12 +49,15 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use krk_core::ablage::leseprofile::AUSLIEFERUNGSTEXT;
+use krk_core::bild::{Aufnahmezeit, Datumsleser};
+use krk_core::leseprofil::bildfolge::{Bildverzeichnis, verzeichnis_erheben};
 use krk_core::leseprofil::datei::{Profildatei, pruefen};
 use krk_core::leseprofil::erkennung::erkennen;
 use krk_core::leseprofil::{
-    Anzeige, Auskunft, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_JUENGSTE,
-    HOECHSTENS_LESELAEUFE, HOECHSTENS_OEFFNUNGEN, Haushalt, Profil, Profile, Wert, Zusammenfassung,
-    Zusammenfassungszeile, zeilen_als_text, zusammenfassen, zusammenfassen_gezaehlt,
+    Anzeige, Auskunft, Baustein, HOECHSTENS_BYTES, HOECHSTENS_EINTRAEGE, HOECHSTENS_FOTOS,
+    HOECHSTENS_JUENGSTE, HOECHSTENS_LESELAEUFE, HOECHSTENS_OEFFNUNGEN, Haushalt, Profil, Profile,
+    Wert, Zusammenfassung, Zusammenfassungszeile, zeilen_als_text, zusammenfassen,
+    zusammenfassen_gezaehlt,
 };
 use krk_core::verzeichnis::sys::ortszeit;
 use krk_core::verzeichnis::{Eintrag, Typ};
@@ -5254,4 +5257,308 @@ fn die_zwei_flight_profile_bleiben_unter_ihren_zahlen() {
             "«Ablagen, zuletzt» liefert kein Datum, sondern {ablagen:?}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// Die Bildfolge (Schritt 5 des Plans der Bildfolge)
+// ---------------------------------------------------------------------------
+
+/// Ein Profil mit Bildfolge und nichts sonst, geprueft.
+fn bildfolgeprofil(tisch: &str) -> Profile {
+    let (profile, meldungen) = gepruefte(&format!(
+        "[[profil]]\nname = \"Fotos\"\npfad = 'Fotos/[0-9]{{4}}$'\nbildfolge = {tisch}\n"
+    ));
+    assert!(meldungen.is_empty(), "unerwartete Meldungen: {meldungen:?}");
+    profile
+}
+
+/// Erhebt die Bildfolge des einen Profils ueber einem Pruefordner.
+fn erhoben(tisch: &str, ordner: &Path) -> Bildverzeichnis {
+    let profile = bildfolgeprofil(tisch);
+    let angabe = profile
+        .iter()
+        .next()
+        .and_then(Profil::bildfolge)
+        .expect("das Profil traegt seine Bildfolge");
+    let wurzel = std::fs::canonicalize(ordner).expect("der Pruefordner loest sich auf");
+    verzeichnis_erheben(angabe, ordner, &wurzel).expect("die Folge laesst sich erheben")
+}
+
+fn zeit(monat: u8, tag: u8) -> Aufnahmezeit {
+    Aufnahmezeit::neu(2008, monat, tag, 12, 0, 0).expect("das Datum ist gueltig")
+}
+
+/// Ein Leser aus einer festen Tafel von Namen und Daten; jeder andere Name
+/// hat kein Datum.
+fn tafelleser(
+    tafel: Vec<(&'static str, Aufnahmezeit)>,
+) -> impl Fn(&Path) -> Option<Aufnahmezeit> + Sync {
+    move |pfad: &Path| {
+        let name = pfad.file_name()?.to_str()?;
+        tafel
+            .iter()
+            .find(|(gesucht, _)| *gesucht == name)
+            .map(|(_, zeit)| *zeit)
+    }
+}
+
+/// Alle Gruppen geordnet, als Namen in der Reihenfolge der Folge.
+fn folge(verzeichnis: &Bildverzeichnis, leser: &Datumsleser<'_>) -> Vec<String> {
+    (0..verzeichnis.gruppen().len())
+        .flat_map(|index| {
+            verzeichnis
+                .gruppe_ordnen(index, leser, &|| true)
+                .expect("nicht abgebrochen")
+        })
+        .map(|foto| {
+            foto.pfad()
+                .file_name()
+                .expect("ein Name")
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect()
+}
+
+/// C2.2 und C2.4: innerhalb eines Monats das frueheste zuerst, und alle Fotos
+/// aus `01` vor allen aus `02`, obwohl die Daten gegen die Namen stehen.
+#[test]
+fn die_monate_laufen_nach_namen_und_die_fotos_darin_nach_datum() {
+    let ordner = Pruefordner::neu("bildfolge-jahr");
+    for monat in ["10", "02", "01"] {
+        ordner.ordner(monat);
+    }
+    for name in ["01/a.jpg", "01/b.jpg", "02/c.jpg", "10/d.jpg"] {
+        ordner.datei(name, b"");
+    }
+    let leser = tafelleser(vec![
+        ("a.jpg", zeit(1, 20)),
+        ("b.jpg", zeit(1, 10)),
+        ("c.jpg", zeit(1, 1)),
+        ("d.jpg", zeit(1, 5)),
+    ]);
+    let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
+    assert_eq!(verzeichnis.gesamt(), 4);
+    assert!(!verzeichnis.gekuerzt());
+    assert_eq!(
+        folge(&verzeichnis, &leser),
+        ["b.jpg", "a.jpg", "c.jpg", "d.jpg"]
+    );
+    assert_eq!(
+        verzeichnis.gruppen()[0].ordner(),
+        ordner.pfad().join("01"),
+        "die Gruppe traegt die Schreibweise des ausgewaehlten Pfades"
+    );
+}
+
+/// C2.3: ohne Datum das Aenderungsdatum, bei Gleichstand der Name.
+#[test]
+fn ohne_datum_gilt_das_aenderungsdatum_und_bei_gleichstand_der_name() {
+    let ordner = Pruefordner::neu("bildfolge-aenderungsdatum");
+    let spaet = ordner.datei("a-spaet.jpg", b"");
+    let frueh_z = ordner.datei("z-frueh.jpg", b"");
+    let frueh_m = ordner.datei("m-frueh.jpg", b"");
+    // 2008-06-01 und 2008-01-01, jeweils mittags in UTC.
+    geaendert_setzen(&spaet, 1_212_321_600);
+    geaendert_setzen(&frueh_z, 1_199_188_800);
+    geaendert_setzen(&frueh_m, 1_199_188_800);
+    let ohne: &Datumsleser<'_> = &|_: &Path| None;
+    let verzeichnis = erhoben("{ }", ordner.pfad());
+    assert_eq!(
+        folge(&verzeichnis, ohne),
+        ["m-frueh.jpg", "z-frueh.jpg", "a-spaet.jpg"]
+    );
+    let fotos = verzeichnis
+        .gruppe_ordnen(0, ohne, &|| true)
+        .expect("nicht abgebrochen");
+    assert!(fotos.iter().all(|foto| !foto.aus_bilddaten()));
+}
+
+/// C2.1 und C2.6: allein Dateien mit Bildendung unmittelbar in einem Monat,
+/// ohne Ruecksicht auf die Schreibung; keine Verknuepfung, kein Ordner, keine
+/// andere Datei, kein versteckter Eintrag, nichts direkt im Jahr und nichts
+/// tiefer.
+#[test]
+fn allein_die_fotos_unmittelbar_in_einem_monat_gehoeren_zur_folge() {
+    let ordner = Pruefordner::neu("bildfolge-auswahl");
+    ordner.ordner("01/tief");
+    ordner.ordner("01/ordner.jpg");
+    ordner.datei("direkt-im-jahr.jpg", b"");
+    ordner.datei("01/tief/zu-tief.jpg", b"");
+    ordner.datei("01/IMG.JPG", b"");
+    ordner.datei("01/bild.heic", b"");
+    ordner.datei("01/notiz.txt", b"");
+    ordner.datei("01/._IMG.JPG", b"");
+    ordner.datei("01/.versteckt.png", b"");
+    ordner.verknuepfung("01/verweis.jpg", ordner.pfad().join("direkt-im-jahr.jpg"));
+
+    let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
+    let mut namen: Vec<&str> = verzeichnis.gruppen()[0]
+        .fotos()
+        .iter()
+        .map(|foto| foto.name())
+        .collect();
+    namen.sort_unstable();
+    assert_eq!(namen, ["IMG.JPG", "bild.heic"]);
+    assert_eq!(
+        verzeichnis.gruppen().len(),
+        1,
+        "`tief` ist keine Gruppe des Jahres"
+    );
+}
+
+/// C2.5: ein Monat ohne Fotos fehlt in der Gruppenliste.
+#[test]
+fn ein_monat_ohne_fotos_fehlt_in_der_folge() {
+    let ordner = Pruefordner::neu("bildfolge-leerer-monat");
+    for monat in ["01", "02", "03"] {
+        ordner.ordner(monat);
+    }
+    ordner.datei("01/a.jpg", b"");
+    ordner.datei("02/notiz.txt", b"");
+    ordner.datei("03/c.png", b"");
+    let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
+    let ordnernamen: Vec<String> = verzeichnis
+        .gruppen()
+        .iter()
+        .map(|gruppe| {
+            gruppe
+                .ordner()
+                .file_name()
+                .expect("ein Name")
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    assert_eq!(ordnernamen, ["01", "03"]);
+    assert_eq!(verzeichnis.ort_der_stelle(1), Some((1, 0)));
+    assert_eq!(verzeichnis.ort_der_stelle(2), None);
+}
+
+/// C5.1: 7.501 Fotos ueber zwei Gruppen ergeben 7.500, die Folge ist
+/// gekuerzt, und aus der Kappungsgruppe kommen die fruehesten.
+#[test]
+fn eine_folge_ueber_der_grenze_wird_in_folgenreihenfolge_gekuerzt() {
+    let ordner = Pruefordner::neu("bildfolge-grenze");
+    ordner.ordner("01");
+    ordner.ordner("02");
+    let im_ersten = HOECHSTENS_FOTOS - 2;
+    for nummer in 0..im_ersten {
+        ordner.datei(&format!("01/{nummer:05}.jpg"), b"");
+    }
+    for name in ["x.jpg", "y.jpg", "z.jpg"] {
+        ordner.datei(&format!("02/{name}"), b"");
+    }
+    let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
+    assert_eq!(verzeichnis.gesamt(), HOECHSTENS_FOTOS);
+    assert!(verzeichnis.gekuerzt());
+    assert_eq!(verzeichnis.gruppen()[1].beitrag(), 2);
+
+    let leser = tafelleser(vec![
+        ("x.jpg", zeit(3, 3)),
+        ("y.jpg", zeit(3, 1)),
+        ("z.jpg", zeit(3, 2)),
+    ]);
+    let zweite = verzeichnis
+        .gruppe_ordnen(1, &leser, &|| true)
+        .expect("nicht abgebrochen");
+    let namen: Vec<_> = zweite
+        .iter()
+        .map(|foto| foto.pfad().file_name().expect("ein Name").to_owned())
+        .collect();
+    assert_eq!(
+        namen,
+        ["y.jpg", "z.jpg"],
+        "die Kappungsgruppe liefert ihre fruehesten"
+    );
+}
+
+/// C5.5: ein Leser, der fuer jedes zweite Foto nichts liefert, bricht nichts
+/// ab.
+#[test]
+fn ein_foto_ohne_lesbares_datum_bricht_die_folge_nicht_ab() {
+    let ordner = Pruefordner::neu("bildfolge-unlesbar");
+    for nummer in 0..6 {
+        ordner.datei(&format!("{nummer}.jpg"), b"");
+    }
+    let leser = |pfad: &Path| {
+        let nummer: u8 = pfad.file_stem()?.to_str()?.parse().ok()?;
+        nummer.is_multiple_of(2).then(|| zeit(2, 10 - nummer))
+    };
+    let verzeichnis = erhoben("{ }", ordner.pfad());
+    let fotos = verzeichnis
+        .gruppe_ordnen(0, &leser, &|| true)
+        .expect("nicht abgebrochen");
+    assert_eq!(fotos.len(), 6);
+    assert_eq!(fotos.iter().filter(|foto| foto.aus_bilddaten()).count(), 3);
+}
+
+/// C5.4: sagt `weiter` nach dem dritten Foto nein, wird der Leser genau
+/// dreimal gerufen.
+#[test]
+fn der_abbruch_haelt_die_datumslesungen_an() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let ordner = Pruefordner::neu("bildfolge-abbruch");
+    for nummer in 0..10 {
+        ordner.datei(&format!("{nummer}.jpg"), b"");
+    }
+    let gerufen = AtomicUsize::new(0);
+    let leser = |_: &Path| {
+        gerufen.fetch_add(1, Ordering::SeqCst);
+        None
+    };
+    let gefragt = Cell::new(0);
+    let weiter = || {
+        gefragt.set(gefragt.get() + 1);
+        gefragt.get() <= 3
+    };
+    let verzeichnis = erhoben("{ }", ordner.pfad());
+    assert_eq!(verzeichnis.gruppe_ordnen(0, &leser, &weiter), None);
+    assert_eq!(gerufen.load(Ordering::SeqCst), 3);
+}
+
+/// C1.3: ein verschriebener Schluessel im Tisch `bildfolge` kostet die ganze
+/// Datei, und die Meldung nennt ihn.
+#[test]
+fn ein_verschriebener_schluessel_in_der_bildfolge_kostet_die_datei() {
+    let fehler = toml::from_str::<Profildatei>(
+        "[[profil]]\nname = \"Fotos\"\npfad = 'x$'\nbildfolge = { ordnr = \"*\" }\n",
+    )
+    .expect_err("der Text kommt durch, obwohl er einen falschen Schluessel traegt");
+    assert!(fehler.to_string().contains("ordnr"), "{fehler}");
+}
+
+/// Eine Ortsangabe, die schon am Text abgewiesen wird, kostet das Profil seine
+/// Bildfolge und laesst die Zeilen stehen.
+#[test]
+fn eine_abgewiesene_ortsangabe_nimmt_nur_die_bildfolge_weg() {
+    let (profile, meldungen) = gepruefte(
+        "[[profil]]\nname = \"Fotos\"\npfad = 'x$'\nbildfolge = { ordner = \"../weg\" }\n\n  [[profil.zeile]]\n  beschriftung = \"Eintraege\"\n  zaehlung = { }\n",
+    );
+    let profil = profile.iter().next().expect("das Profil steht");
+    assert!(profil.bildfolge().is_none());
+    assert_eq!(profil.zeilen().len(), 1);
+    assert_eq!(meldungen.len(), 1, "{meldungen:?}");
+    assert!(meldungen[0].contains("Fotos") && meldungen[0].contains("Bildfolge"));
+}
+
+/// Die Erhebung liest Verzeichnisse und oeffnet keine Datei: sie nimmt keinen
+/// Leser an, und gezaehlt wird ein Leselauf fuer das Jahr und einer je
+/// Monat.
+#[test]
+fn die_erhebung_liest_allein_die_ordner_der_folge() {
+    let ordner = Pruefordner::neu("bildfolge-haushalt");
+    for monat in ["01", "02", "03"] {
+        ordner.ordner(monat);
+        ordner.datei(&format!("{monat}/a.jpg"), b"");
+    }
+    // Eine benannte Roehre mit Bildendung haelt die Erhebung nicht an, weil
+    // sie nichts oeffnet.
+    ordner.roehre("01/roehre.jpg");
+    let verzeichnis = erhoben("{ ordner = \"*\" }", ordner.pfad());
+    let haushalt = verzeichnis.haushalt();
+    assert_eq!(haushalt.leselaeufe(), 4);
+    assert_eq!(haushalt.gruppen(), 3);
+    assert_eq!(haushalt.fotos(), verzeichnis.gesamt());
 }
