@@ -257,7 +257,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 use dispatch2::DispatchQueue;
 use objc2::rc::Retained;
@@ -279,7 +279,7 @@ use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
     Ablage, Aenderung, Ausgang, Datei, Einstellungen, Fensterseite, Grund, Lesezeichen,
     Lesezeichenliste, Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen,
-    leseprofile, lesezeichen, pfade,
+    leseprofile, lesezeichen, pfade, werkszustand,
 };
 use krk_core::heimordner::ort::{self, Notizort, Ortsfehler};
 use krk_core::heimordner::{self, Heimordner};
@@ -314,6 +314,7 @@ use crate::kommandos::operationen::{
 };
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::rundweg::{Rundweg, rundweg};
+use crate::kommandos::werkseinstellungen;
 use crate::kommandos::zulaessigkeit::{self, Editorform, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
@@ -796,24 +797,32 @@ pub struct AnwendungsIvars {
     /// Veraenderlich seit Schritt 20: verlaesst der Nutzer die
     /// Belegungsansicht mit Aenderungen, tritt die gesicherte Belegung hier an
     /// die Stelle der geladenen, und Menue wie Ereignisabgriff werden auf sie
-    /// nachgezogen. Eine Quelle, dieselben zwei Abnehmer.
+    /// nachgezogen. Eine Quelle, dieselben zwei Abnehmer. Seit dem
+    /// Zuruecksetzen auf Werkseinstellungen geschieht dasselbe mit der
+    /// Belegung, die nach dem Zuruecksetzen gilt; beide Wege gehen durch
+    /// [`Anwendungsdelegierter::belegung_uebernehmen`].
     belegung: RefCell<Belegung>,
     /// Die von Hand gepflegten Einstellungen aus `settings.toml` (C11).
     ///
-    /// Sie haengen hier, wo schon die Belegung und die Sitzung haengen: einmal
-    /// beim Start geladen, danach unveraendert. Kein Weg in dieser Runde
-    /// schreibt sie, und keiner liest die Datei ein zweites Mal. Bis
+    /// Sie haengen hier, wo schon die Belegung und die Sitzung haengen: beim
+    /// Start geladen und ein zweites Mal allein beim Zuruecksetzen auf
+    /// Werkseinstellungen. „Ort waehlen…“ setzt darin den Wert von
+    /// `notizordner`. **Den geltenden Notizordner setzt dieses Feld nicht**:
+    /// den traegt allein der Griff des Heimordners, und den Wert hier liest im
+    /// Betrieb niemand; `terminal` dagegen liest „Terminal oeffnen“ bei jedem
+    /// Aufruf von hier. Bis
     /// [`Anwendungsdelegierter::sitzung_laden`] gelaufen ist, steht hier die eingebettete
     /// Auslieferungsfassung; im Messmodus bleibt es dabei, weil dort nichts
     /// geladen wird.
     einstellungen: RefCell<Einstellungen>,
     /// Die geprueften Leseprofile aus `readers.toml` (C1 der Runde 16).
     ///
-    /// Sie haengen neben den Einstellungen und aus demselben Grund: einmal beim
-    /// Start geladen, danach unveraendert. C4.5 sagt genau das zu — eine
-    /// waehrend des Laufs geaenderte `readers.toml` erreicht KRK erst mit dem
-    /// naechsten Start, und ein Beobachter auf der Datei entsteht in dieser
-    /// Runde nicht.
+    /// Sie haengen neben den Einstellungen und aus demselben Grund: beim Start
+    /// geladen und ein zweites Mal allein beim Zuruecksetzen auf
+    /// Werkseinstellungen, das sie zugleich an die Vorschau gibt. C4.5 der
+    /// Runde 16 („es gilt der Stand des Starts“) faellt damit bewusst; eine von
+    /// Hand geaenderte `readers.toml` erreicht KRK weiter erst mit dem naechsten
+    /// Start, und ein Beobachter auf der Datei entsteht nicht.
     ///
     /// **Ein [`Arc`] und keine Kopie.** Der Satz reist bis auf den Arbeitsfaden
     /// des Vorschaumodells mit; dieselbe Ueberlegung traegt [`Inhalt::Bild`]
@@ -836,10 +845,11 @@ pub struct AnwendungsIvars {
     /// steht hier als `Some` und traegt trotzdem die vollen Pfade, die das
     /// Blatt auf Abruf in jedem Fall zeigt.
     ///
-    /// **Er wird nach dem Start nicht nachgezogen**, und ein `Some` bleibt
-    /// deshalb bis zum Beenden, was es war. Das ist keine Sparsamkeit, sondern
-    /// die Wahrheit ueber KRK: die Leseprofile und die Belegung, mit denen die
-    /// laufende Anwendung arbeitet, sind die vom Start.
+    /// **Nachgezogen wird er allein beim Zuruecksetzen auf
+    /// Werkseinstellungen**, und dann als `Some` mit dem Stand danach (C3.9).
+    /// Sonst bleibt ein `Some` bis zum Beenden, was es war: die Leseprofile und
+    /// die Belegung, mit denen die laufende Anwendung arbeitet, sind die vom
+    /// Start oder vom letzten Zuruecksetzen.
     ///
     /// **Ein `None` fuellt sich auch dann nicht.** Traegt der Nutzer den Befehl
     /// vor, erhebt [`Anwendungsdelegierter::neuerungen_zeigen`] auf Verlangen
@@ -851,14 +861,17 @@ pub struct AnwendungsIvars {
     /// beim Start vorgefunden haben (Runde 24).
     ///
     /// **Das eine Urteil ueber „diese Datei ist beschaedigt", und es kommt vom
-    /// Start.** `neuerungen::erheben` leitet es nicht selbst her — der Grund
-    /// steht im Kopf von [`krk_core::ablage::neuerungen`] —, und es gibt in
-    /// KRK nur ein Urteil: die Belegung, die Einstellungen und die Leseprofile,
-    /// mit denen die laufende Anwendung arbeitet, sind die vom Start. Deshalb
-    /// bedient dieses Feld **beide** Wege ins Blatt, den Start und den Abruf.
+    /// Start oder vom letzten Zuruecksetzen.** `neuerungen::erheben` leitet es
+    /// nicht selbst her — der Grund steht im Kopf von
+    /// [`krk_core::ablage::neuerungen`] —, und es gibt in KRK nur ein Urteil:
+    /// das ueber die Belegung, die Einstellungen und die Leseprofile, mit denen
+    /// die laufende Anwendung arbeitet. Deshalb bedient dieses Feld **beide**
+    /// Wege ins Blatt, den Start und den Abruf.
     ///
     /// **Gesetzt in [`Anwendungsdelegierter::sitzung_laden`]**, aus den zwei
-    /// Ladern jenes Durchgangs und der Belegungsmeldung darunter. Bis dahin
+    /// Ladern jenes Durchgangs und der Belegungsmeldung darunter, und ein
+    /// zweites Mal in [`Anwendungsdelegierter::werkseinstellungen_vollziehen`],
+    /// aus denselben Ladern im Durchgang des Zuruecksetzens. Bis dahin
     /// steht hier, was [`Anwendungsdelegierter::neu`] weiss: das Urteil ueber
     /// `keymap.toml`, das [`starten`] schon eingeholt hat, und fuer die zwei
     /// uebrigen „kein Leser hat sie verworfen" — was vor ihrem ersten Lauf
@@ -2195,6 +2208,9 @@ impl Anwendungsdelegierter {
         let _ = ivars.sitzungsrecht.set(recht);
 
         // **Ein Durchgang fuer alles, was der Start aus der Ablage braucht.**
+        // Den zweiten Zeitpunkt fuer Einstellungen, Leseprofile, Belegung und
+        // Neuerungen hat allein das Zuruecksetzen auf Werkseinstellungen, ueber
+        // denselben Leseweg `nutzerdateien_lesen`.
         // Die Sitzung, die Einstellungen, die Leseprofile und seit der Runde 24
         // die Erhebung der Neuerungen werden unter derselben Schreibsperre
         // gelesen; das Lesen steht mit darunter, weil schon `Zugang::laden`
@@ -2263,7 +2279,8 @@ impl Anwendungsdelegierter {
         *ivars.neuerungen.borrow_mut() = bestand;
         // Das Urteil der drei Leser bleibt stehen: es ist das eine, an dem auch
         // der Abruf sich haelt, denn womit KRK arbeitet, steht seit dem Start
-        // fest. Siehe das Feld und `neuerungen_zeigen`.
+        // fest, bis ein Zuruecksetzen es neu setzt. Siehe das Feld und
+        // `neuerungen_zeigen`.
         *ivars.urteile.borrow_mut() = urteile;
         meldungen.extend(neuerungsmeldungen);
         // Derselbe Zugang traegt die Lesezeichen aus C5. Er wird hier einmal
@@ -4436,6 +4453,12 @@ impl Anwendungsdelegierter {
             // abdeckt; gehalten wird sie von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
             Kommando::NeuerungenZeigen => self.neuerungen_zeigen(),
+            // Das Zuruecksetzen auf Werkseinstellungen, aus demselben Grund wie
+            // die Neuerungen darueber: `Ueberall` als Wirkungsbereich, ein
+            // Blatt am Hauptfenster und die Ablage als Gegenstand. Ohne diesen
+            // Zweig stuende der Befehl im Menue „KRK“ und taete nichts; gehalten
+            // von `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::Werkseinstellungen => self.werkseinstellungen(),
             // Cmd+W aus jedem Fokus (C4 der Runde 4). Der einzige Befehl
             // dieser Runde, der ueber die Bereiche hinweg entscheidet, und
             // deshalb der einzige, der hier einen Zweig bekommt: er traegt
@@ -4919,7 +4942,8 @@ impl Anwendungsdelegierter {
     /// # Der gehaltene Bestand, und was gilt, wenn keiner gehalten wird
     ///
     /// [`AnwendungsIvars::neuerungen`] traegt den Stand vom Start, sobald der
-    /// Start erhoben hat. `None` heisst dort **nicht** „kein Unterschied",
+    /// Start erhoben hat, und nach einem Zuruecksetzen auf Werkseinstellungen
+    /// den Stand danach. `None` heisst dort **nicht** „kein Unterschied",
     /// sondern „nicht erhoben, weil fuer diese Fassung schon gemeldet ist" —
     /// und das ist der haeufigste Fall, denn er tritt bei jedem zweiten und
     /// jedem weiteren Start derselben Fassung ein. Dieser Zweig darf die zwei
@@ -4960,8 +4984,8 @@ impl Anwendungsdelegierter {
     ///
     /// **Der zweite ist, dass es nur ein Urteil gibt.** „Beschaedigt" heisst
     /// hier „KRK hat diese Datei verworfen und arbeitet auf dem
-    /// Auslieferungszustand weiter", und das entscheidet sich einmal, beim
-    /// Start. Der Schlusssatz des Blattes sagt dem Nutzer genau das: eine
+    /// Auslieferungszustand weiter", und das entscheidet sich beim Start und
+    /// beim Zuruecksetzen auf Werkseinstellungen, bei keinem anderen Anlass. Der Schlusssatz des Blattes sagt dem Nutzer genau das: eine
     /// geaenderte Datei wirkt erst beim naechsten Start.
     ///
     /// # Zwei Ausgaenge, und der zweite wird gemeldet
@@ -4985,9 +5009,10 @@ impl Anwendungsdelegierter {
             self.neuerungen_blatt(fenster, bestand);
             return true;
         }
-        // **Das Urteil ueber „beschaedigt" kommt auch hier vom Start** und wird
-        // nicht neu eingeholt; die Begruendung steht im Absatz „Der Befund
-        // bleibt der vom Start" am Kopf dieser Funktion.
+        // **Das Urteil ueber „beschaedigt" kommt auch hier vom Start oder vom
+        // letzten Zuruecksetzen** und wird nicht neu eingeholt; die Begruendung
+        // steht im Absatz „Der Befund bleibt der vom Start" am Kopf dieser
+        // Funktion.
         let urteile = *self.ivars().urteile.borrow();
         match self.unter_der_sperre(|zugang| neuerungen::erheben(zugang, urteile)) {
             Ok(bestand) => self.neuerungen_blatt(fenster, &bestand),
@@ -5031,6 +5056,167 @@ impl Anwendungsdelegierter {
             }
         });
         self.blatt_oeffnet(griff);
+    }
+
+    // ------------------------------------------------------------------
+    // Auf Werkseinstellungen zuruecksetzen
+    // ------------------------------------------------------------------
+
+    /// Fragt vorab, was die Rueckfrage sagen muss, und zeigt sie (C1 des Spec
+    /// `260929-0759_*_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`,
+    /// Entscheidung 10 des Plans).
+    ///
+    /// **Vor der Rueckfrage wird nichts geschrieben.** In dieser Reihenfolge:
+    /// ohne Ablageordner die Statuszeile und kein Blatt (C2.9); dann die Lage
+    /// der drei Dateien ueber [`werkszustand::lage`], ohne Sperre, weil sie nur
+    /// fragt und liest. Ein Verweis und eine beschaedigte oder unlesbare
+    /// `settings.toml` brechen hier ab, und die Rueckfrage geht nicht auf
+    /// (C2.12). Ob eine eigene `keymap.toml` steht, speist den Satz aus C1.5.
+    /// Nach der Bestaetigung fragt der Kern die Lage unter der Sperre selbst
+    /// noch einmal, denn dazwischen kann der Nutzer eine Datei geaendert haben.
+    ///
+    /// **Den Notizordner fragt dieser Weg nicht**: der Befehl wechselt ihn nie
+    /// und fasst keine Datei darin an (Spec, Abschnitt „Änderung 260929“).
+    ///
+    /// Liefert `true`, sobald das Blatt steht oder die Meldung hinausgegangen
+    /// ist.
+    fn werkseinstellungen(&self) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        // Die Ausleihe der Ablage endet mit diesem Block, vor jeder Meldung.
+        let lage = self
+            .ivars()
+            .ablage
+            .borrow()
+            .as_ref()
+            .map(|ablage| werkszustand::lage(|welche| ablage.pfad(welche)));
+        let lage = match lage {
+            Some(Ok(lage)) => lage,
+            None => {
+                self.antwort_zeigen(
+                    aktiv,
+                    "Es gibt keinen Ablageordner, und damit nichts zurückzusetzen.",
+                );
+                return true;
+            }
+            Some(Err(hindernis)) => {
+                self.antwort_zeigen(aktiv, &hindernis.meldung());
+                return true;
+            }
+        };
+        let (frage, erlaeuterung) = werkseinstellungen::rueckfrage(&werkseinstellungen::Vorlage {
+            keymap_steht: lage.steht(Datei::Belegung),
+        });
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = loeschbestaetigung::zeigen(
+            self.mtm(),
+            fenster,
+            &frage,
+            &erlaeuterung,
+            werkseinstellungen::SCHALTFLAECHE,
+            true,
+            move |bestaetigt| {
+                let Some(selbst) = schwach.load() else {
+                    return;
+                };
+                selbst.blatt_geschlossen();
+                if bestaetigt {
+                    selbst.werkseinstellungen_vollziehen();
+                }
+            },
+        );
+        self.blatt_oeffnet(griff);
+        true
+    }
+
+    /// Setzt die drei Dateien zurueck und liest den neuen Stand im selben
+    /// Durchgang ein (C2, C3).
+    ///
+    /// **Ein Durchgang unter der Sperre**, darin nacheinander
+    /// [`werkszustand::zuruecksetzen`], `belegung::laden`,
+    /// [`nutzerdateien_lesen`] und `neuerungen::erheben`. Ein Hindernis des
+    /// Zuruecksetzens beendet den Durchgang, bevor gelesen wird, und geht als
+    /// Satz in die Statuszeile (C2.7, C2.12). Gerufen wird `neuerungen::erheben`
+    /// und nicht [`neuerungen_erheben`], denn dieses liest und schreibt
+    /// `reported.toml`, und die Merkdatei bleibt unberuehrt (C2.6).
+    ///
+    /// **Nach dem Durchgang, in dieser Reihenfolge**: die Einstellungen in die
+    /// ivars, damit `terminal` beim naechsten „Terminal oeffnen“ gilt (C3.4);
+    /// die Belegung ueber [`Self::belegung_uebernehmen`] (C3.2, C3.3); die
+    /// Profile in [`AnwendungsIvars::profile`] und in die Vorschau (C3.1); die
+    /// Urteile und der neue Bestand der Neuerungen (C3.9); zuletzt die
+    /// Befehlsantwort (C2.8).
+    ///
+    /// **Der Notizordner bleibt, wie er ist** (C3.5): kein Aufruf hier setzt
+    /// den Griff des Heimordners, merkt einen Ort vor oder schreibt die
+    /// Sitzung. Den geltenden Ort traegt allein der Griff, und der Wert von
+    /// `notizordner` in den neu gelesenen Einstellungen liest im Betrieb
+    /// niemand. Die Probe `der_werkseinstellungsbefehl_fasst_den_notizordner_nicht_an`
+    /// haelt das am Rumpf.
+    fn werkseinstellungen_vollziehen(&self) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let ergebnis = self.unter_der_sperre(|zugang| {
+            let zurueckgesetzt = werkszustand::zuruecksetzen(zugang, SystemTime::now())?;
+            let belegung = belegung::laden(zugang);
+            let dateien = nutzerdateien_lesen(zugang, belegung.ist_ersetzt());
+            let bestand = neuerungen::erheben(zugang, dateien.urteile);
+            Ok::<_, werkszustand::Werkshindernis>((zurueckgesetzt, belegung, dateien, bestand))
+        });
+        let (zurueckgesetzt, belegung, dateien, bestand) = match ergebnis {
+            Ok(Ok(alles)) => alles,
+            Ok(Err(hindernis)) => {
+                self.antwort_zeigen(aktiv, &hindernis.meldung());
+                return;
+            }
+            Err(Sperrhindernis::OhneOrdner) => {
+                self.antwort_zeigen(
+                    aktiv,
+                    "Es gibt keinen Ablageordner, und damit nichts zurückzusetzen.",
+                );
+                return;
+            }
+            Err(Sperrhindernis::Gesperrt(fehler)) => {
+                self.antwort_zeigen(
+                    aktiv,
+                    &format!(
+                        "Nichts ist zurückgesetzt: die Schreibsperre der Ablage lässt sich nicht \
+                         nehmen ({fehler})."
+                    ),
+                );
+                return;
+            }
+        };
+        let Nutzerdateien {
+            einstellungen: (eingestellt, meldung_einstellungen),
+            einstellungsschaden: _,
+            profile: (profile, meldung_profile),
+            profilmeldungen,
+            urteile,
+        } = dateien;
+        let (belegung, meldung_belegung) = belegung.mit_meldung();
+
+        *self.ivars().einstellungen.borrow_mut() = eingestellt;
+        self.belegung_uebernehmen(belegung);
+        let profile = Arc::new(profile);
+        *self.ivars().profile.borrow_mut() = Arc::clone(&profile);
+        self.vorschau().profile_uebernehmen(profile);
+        *self.ivars().urteile.borrow_mut() = urteile;
+        *self.ivars().neuerungen.borrow_mut() = Some(bestand);
+
+        let weitere: Vec<String> = meldung_belegung
+            .into_iter()
+            .chain(meldung_einstellungen)
+            .chain(meldung_profile)
+            .chain(profilmeldungen)
+            .collect();
+        let mut antwort = zurueckgesetzt.meldung();
+        if !weitere.is_empty() {
+            antwort.push(' ');
+            antwort.push_str(&weitere.join("; "));
+        }
+        self.antwort_zeigen(aktiv, &antwort);
     }
 
     // ------------------------------------------------------------------
@@ -10776,7 +10962,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 14] = [
+    const BEFEHLE: [&str; 15] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -10791,6 +10977,7 @@ mod zweigproben {
         "QuicknoteUmschalten",
         "QuicknoteKopieren",
         "QuicknoteLeeren",
+        "Werkseinstellungen",
     ];
 
     #[test]
@@ -10804,6 +10991,100 @@ mod zweigproben {
                 "`Kommando::{befehl}` hat nicht genau einen eigenen Ausfuehrungszweig; ohne ihn \
                  faellt der Befehl durch den Auffangzweig, steht im Hauptmenue und tut nichts"
             );
+        }
+    }
+}
+
+/// Die Wege des Zuruecksetzens auf Werkseinstellungen beim
+/// Anwendungsdelegierten (Schritt 8 des Plans
+/// `260929-1025_*_plan-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`).
+///
+/// **Am Rumpf gelesen**, weil beide Wege ein Fenster und ein Blatt verlangen,
+/// die `libtest` nicht hergibt. Was sie auf dem Schirm und auf der Platte des
+/// Nutzers tun, prueft der Abnahmelauf; den Vorgang im Kern halten die Proben
+/// in `krk-core/tests/werkszustand.rs`.
+#[cfg(test)]
+mod werkseinstellungsproben {
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    fn stelle(rumpf: &str, nadel: &str, wo: &str) -> usize {
+        rumpf
+            .find(nadel)
+            .unwrap_or_else(|| panic!("`{nadel}` steht nicht im Rumpf von {wo}"))
+    }
+
+    /// Vor der Rueckfrage wird nichts geschrieben: im Rumpf von
+    /// `werkseinstellungen` steht die Lage vor der Rueckfrage, und das
+    /// Zuruecksetzen steht dort nicht (C1.3, C2.12).
+    #[test]
+    fn vor_der_rueckfrage_wird_nur_gefragt() {
+        let rumpf = rumpf(&diese_datei(), "werkseinstellungen");
+        let lage = stelle(
+            &rumpf,
+            concat!("werkszustand::", "lage("),
+            "werkseinstellungen",
+        );
+        let blatt = stelle(
+            &rumpf,
+            concat!("loeschbestaetigung::", "zeigen("),
+            "werkseinstellungen",
+        );
+        assert!(
+            lage < blatt,
+            "die Rueckfrage geht auf, bevor die Lage gefragt ist"
+        );
+        assert!(
+            !rumpf.contains(concat!("zuruecksetzen", "(")),
+            "vor der Rueckfrage wird zurueckgesetzt"
+        );
+    }
+
+    /// Im Rumpf von `werkseinstellungen_vollziehen` laufen Zuruecksetzen,
+    /// Leseweg und Erhebung in dieser Reihenfolge unter der Sperre, und die
+    /// Merkdatei der Neuerungen bleibt unberuehrt (C2.6, C3.9).
+    #[test]
+    fn der_vollzug_liest_im_selben_durchgang_und_laesst_die_merkdatei() {
+        let rumpf = rumpf(&diese_datei(), "werkseinstellungen_vollziehen");
+        let wo = "werkseinstellungen_vollziehen";
+        let sperre = stelle(&rumpf, concat!("unter_der_", "sperre("), wo);
+        let zurueck = stelle(&rumpf, concat!("werkszustand::", "zuruecksetzen("), wo);
+        let lesen = stelle(&rumpf, concat!("nutzerdateien_", "lesen("), wo);
+        let erheben = stelle(&rumpf, concat!("neuerungen::", "erheben("), wo);
+        assert!(sperre < zurueck && zurueck < lesen && lesen < erheben);
+        assert!(!rumpf.contains(concat!("neuerungen_", "erheben(")));
+        assert!(!rumpf.contains(concat!("merker", "::")));
+    }
+
+    /// Der Befehl fasst den Notizordner nicht an: in den Rumpfen von
+    /// `werkseinstellungen` und `werkseinstellungen_vollziehen` steht kein Weg,
+    /// der den Ort wechselt, den Griff setzt, einen Ort vormerkt, die Sitzung
+    /// schreibt, einen Heimordner nachzieht, `notizordner` schreibt oder den
+    /// Heimordner bereitstellt.
+    ///
+    /// Sie haelt die Klausel „Kein Schritt schreibt, verschiebt oder loescht
+    /// eine Datei im Notizordner“ unter `## Where this work stops` des Plans,
+    /// soweit ein Quelltext sie halten kann. **Was sie nicht sieht:** einen Weg
+    /// ueber einen dritten, neu gebauten Helfer, den einer der zwei Rumpfe
+    /// ruft; dessen Rumpf liest sie nicht.
+    #[test]
+    fn der_werkseinstellungsbefehl_fasst_den_notizordner_nicht_an() {
+        let quelle = diese_datei();
+        for name in ["werkseinstellungen", "werkseinstellungen_vollziehen"] {
+            let rumpf = rumpf(&quelle, name);
+            for nadel in [
+                concat!("ort_", "wechseln("),
+                concat!("heimgriff::", "ersetzen("),
+                concat!("sitzung_", "vormerken("),
+                concat!("heimordner_", "gewechselt("),
+                concat!("gemerkter_", "ort"),
+                concat!("notizordner_", "schreiben("),
+                concat!("bereit", "stellen"),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "`{nadel}` steht im Rumpf von {name}; der Befehl erreicht den Notizordner"
+                );
+            }
         }
     }
 }
@@ -12179,62 +12460,19 @@ mod loeschzielproben {
     }
 }
 
-/// Der eine Weg, auf dem die Leseprofile in KRK hereinkommen (Runde 16).
+/// Der eine Weg, auf dem die Leseprofile in KRK hereinkommen (Runde 16), und
+/// seine zwei Zeitpunkte.
 ///
-/// Eine Zaehlprobe ueber den Baum und keine ueber ein Ergebnis: die Zusage aus
-/// C4.5 lautet, dass `readers.toml` **einmal beim Start** gelesen wird, und an
-/// keinem Rueckgabewert ist abzulesen, dass es keine zweite Lesestelle gibt.
+/// Eine Zaehlprobe ueber den Baum und keine ueber ein Ergebnis: an keinem
+/// Rueckgabewert ist abzulesen, dass es keine weitere Lesestelle gibt.
 #[cfg(test)]
 mod leseprofilproben {
     use crate::quellbaum::{aufrufstellen, quelldateien};
 
-    /// [`krk_core::ablage::leseprofile::laden`] wird im Baum genau einmal
-    /// gerufen, und zwar in dieser Datei (C4.5).
-    ///
-    /// Der Aufruf steht im **einen** Durchgang von
-    /// [`Anwendungsdelegierter::sitzung_laden`](super::Anwendungsdelegierter),
-    /// zusammen mit der Sitzung und den Einstellungen. Ein zweiter Rufer waere
-    /// ein zweiter Zeitpunkt, zu dem KRK die Datei laese, und damit ein zweiter
-    /// Profilstand neben dem des Starts.
-    ///
-    /// **Sie ist die Gegenprobe zur Zaehlprobe der Vorschau.** Jene
-    /// (`vorschau::tests::die_profile_haben_genau_einen_schreiber_und_einen_rufer`)
-    /// haelt fest, dass die Profile genau einmal an die Vorschau uebergeben
-    /// werden; sie sieht aber nicht, ob ueberhaupt welche gelesen wurden. Diese
-    /// haelt die andere Haelfte der Kette.
-    ///
-    /// # Gezaehlt wird der Betriebscode und nicht der ganze Baum
-    ///
-    /// **Seit dem 260910**, und der Anlass war ein roter Lauf: die Runde 24
-    /// brauchte in `krk-core/tests/ablage.rs` eine Probe, die die Reihenfolge
-    /// des Starts nachfaehrt — Einstellungen, Leseprofile, dann die Erhebung
-    /// der Neuerungen —, und dafuer ruft sie beide Lader. Ein Ruf aus einem
-    /// Probenziel ist **keine** zweite Lesestelle: er laeuft in keinem Start
-    /// von KRK, und die Zusage aus C4.5 sagt ueber ihn nichts. Gezaehlt wird
-    /// deshalb, was unter einem `src/` steht, und dort alles vor dem ersten
-    /// `#[cfg(test)]` — dieselbe Schnittstelle wie in
-    /// `vorschaumodell::tests::zusammenfassen_hat_einen_rufer_…`.
-    ///
-    /// Die Zusage selbst ist damit unberuehrt: ein zweiter Rufer im
-    /// Betriebscode macht diese Probe weiter rot, gleich in welcher Datei er
-    /// steht.
-    ///
-    /// # Was diese Probe nicht sieht
-    ///
-    /// Gezaehlt wird die **Aufrufform** `leseprofile::laden(`. Nicht gezaehlt
-    /// ist damit die Weitergabe der Funktion als Wert, wie sie
-    /// `krk-core/tests/ablage.rs` mit `.durchgang(leseprofile::laden)` schreibt:
-    /// dort ruft der Durchgang, und im Quelltext steht keine Klammer. Daneben
-    /// gelten die Grenzen aus dem Kopf von [`crate::quellbaum`], insbesondere
-    /// ein Aufruf unter einem anderen Namen ueber `use … as anders;`.
-    #[test]
-    fn die_leseprofile_werden_im_baum_genau_einmal_geladen() {
-        // Die Nadel steht zusammengesetzt da: die Probe liegt in der Datei, die
-        // sie zaehlt, und als ein Stueck geschrieben faende sie sich selbst.
-        let nadel = concat!("leseprofile::", "laden");
-        let diese_datei = "krk-ui/src/appkit/anwendung.rs";
-
-        let rufer: Vec<(String, usize)> = quelldateien()
+    /// Die Aufrufstellen einer Nadel im Betriebscode, je Datei unter einem
+    /// `src/`, und dort alles vor dem ersten `#[cfg(test)]`.
+    fn im_betrieb(nadel: &str) -> Vec<(String, usize)> {
+        quelldateien()
             .into_iter()
             .filter(|(datei, _)| datei.contains("/src/"))
             .map(|(datei, inhalt)| {
@@ -12244,14 +12482,70 @@ mod leseprofilproben {
                 (datei, aufrufstellen(betrieb, nadel))
             })
             .filter(|(_, zahl)| *zahl > 0)
-            .collect();
+            .collect()
+    }
+
+    /// [`krk_core::ablage::leseprofile::laden`] wird im Betriebscode genau
+    /// einmal gerufen, in `nutzerdateien_lesen`, und dieser eine Leseweg hat
+    /// genau zwei Rufer: `sitzung_laden` und `werkseinstellungen_vollziehen`.
+    ///
+    /// **Ein Leseweg, zwei Zeitpunkte.** Bis zum Zuruecksetzen auf
+    /// Werkseinstellungen hiess die Probe
+    /// `die_leseprofile_werden_im_baum_genau_einmal_geladen` und hielt C4.5 der
+    /// Runde 16, „einmal beim Start“. Jene Zusage faellt nach dem Spec
+    /// `260929-0759_*_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`
+    /// bewusst: KRK liest die Profile beim Start und beim Zuruecksetzen, und
+    /// bei keinem anderen Anlass. Gehalten wird deshalb beides, dass es einen
+    /// Leseweg gibt, und dass genau diese zwei Zeitpunkte ihn gehen. Ein
+    /// dritter Rufer waere ein dritter Profilstand und macht die Probe rot.
+    ///
+    /// **Sie ist die Gegenprobe zur Zaehlprobe der Vorschau**
+    /// (`vorschau::tests::die_profile_haben_einen_schreiber_und_zwei_rufer`):
+    /// jene haelt, wie die Profile an die Vorschau gehen, diese, dass sie
+    /// ueberhaupt gelesen werden.
+    ///
+    /// # Gezaehlt wird der Betriebscode und nicht der ganze Baum
+    ///
+    /// **Seit dem 260910**: `krk-core/tests/ablage.rs` faehrt die Reihenfolge
+    /// des Starts nach und ruft dafuer beide Lader. Ein Ruf aus einem
+    /// Probenziel laeuft in keinem Start von KRK.
+    ///
+    /// # Was diese Probe nicht sieht
+    ///
+    /// Gezaehlt wird die **Aufrufform** mit Klammer; die Weitergabe der
+    /// Funktion als Wert und ein Aufruf unter einem anderen Namen ueber
+    /// `use … as anders;` sieht sie nicht (Kopf von [`crate::quellbaum`]).
+    /// Welche Rumpfe die zwei Rufe tragen, liest sie am Quelltext dieser
+    /// Datei.
+    #[test]
+    fn die_leseprofile_haben_einen_leseweg_und_zwei_zeitpunkte() {
+        // Die Nadeln stehen zusammengesetzt da: die Probe liegt in der Datei,
+        // die sie zaehlt, und als ein Stueck geschrieben faende sie sich selbst.
+        let lader = concat!("leseprofile::", "laden");
+        let leseweg = concat!("nutzerdateien_", "lesen");
+        let diese_datei = "krk-ui/src/appkit/anwendung.rs";
 
         assert_eq!(
-            rufer,
+            im_betrieb(lader),
             vec![(diese_datei.to_owned(), 1)],
-            "`{nadel}` wird nicht genau einmal und nicht in dieser Datei gerufen; \
-             die Leseprofile kommen einmal beim Start herein und danach nicht mehr"
+            "`{lader}` wird im Betriebscode nicht genau einmal und nicht in dieser Datei gerufen"
         );
+        assert_eq!(
+            im_betrieb(leseweg),
+            vec![(diese_datei.to_owned(), 2)],
+            "`{leseweg}` hat nicht genau zwei Rufer im Betriebscode"
+        );
+
+        let quelle = super::quelltextproben::diese_datei();
+        let lesestelle = super::quelltextproben::rumpf(&quelle, leseweg);
+        assert_eq!(aufrufstellen(&lesestelle, lader), 1);
+        for rufer in ["sitzung_laden", "werkseinstellungen_vollziehen"] {
+            assert_eq!(
+                aufrufstellen(&super::quelltextproben::rumpf(&quelle, rufer), leseweg),
+                1,
+                "{rufer} ruft den einen Leseweg nicht"
+            );
+        }
     }
 }
 

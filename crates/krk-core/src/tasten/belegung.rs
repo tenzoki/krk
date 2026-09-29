@@ -1117,7 +1117,8 @@ pub enum Kommando {
     /// entschieden vom Nutzer am 260910-1600; die Begruendung steht an
     /// `Anwendungsdelegierter::neuerungen_zeigen` in `krk-ui`. Womit KRK
     /// **arbeitet**, aendert das nicht: die Leseprofile und die Belegung der
-    /// laufenden Anwendung sind in beiden Faellen die vom Start.
+    /// laufenden Anwendung sind in beiden Faellen die vom Start oder vom
+    /// letzten [`Kommando::Werkseinstellungen`].
     ///
     /// **Wirkt ueberall, wie [`Kommando::Notizordner`] daneben.** Das Blatt
     /// faehrt am Hauptfenster herunter und betrifft die Ablage, nicht einen

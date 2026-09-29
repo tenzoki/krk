@@ -2117,37 +2117,34 @@ mod tests {
     }
 
     /// Das Merkfeld der Profile hat genau einen Schreiber, und
-    /// `profile_uebernehmen` genau einen Rufer, und der steht beim
-    /// Anwendungsdelegierten.
+    /// `profile_uebernehmen` genau zwei Rufer, beide beim
+    /// Anwendungsdelegierten: `oberflaeche_aufbauen` und
+    /// `werkseinstellungen_vollziehen`.
     ///
-    /// **Beide Haelften stehen als „genau einmal" da.** Zugesagt ist erstens,
-    /// dass [`Vorschaufenster::profile_uebernehmen`] der eine Schreiber des
-    /// Merkfeldes ist, und zweitens, dass genau eine Stelle im Baum ihn ruft,
-    /// naemlich `oberflaeche_aufbauen` in `appkit/anwendung.rs`. Ein weiterer
-    /// Schreiber oder Rufer waere ein weiterer Zeitpunkt, zu dem die Vorschau
-    /// andere Profile bekaeme, und an keinem Rueckgabewert waere einer davon
-    /// abzulesen. Gezaehlt wird deshalb im Baum.
+    /// **Zugesagt ist erstens**, dass [`Vorschaufenster::profile_uebernehmen`]
+    /// der eine Schreiber des Merkfeldes ist, und **zweitens**, dass genau
+    /// diese zwei Stellen im Baum ihn rufen: der Start und das Zuruecksetzen
+    /// auf Werkseinstellungen. Ein weiterer Schreiber oder Rufer waere ein
+    /// weiterer Zeitpunkt, zu dem die Vorschau andere Profile bekaeme, und an
+    /// keinem Rueckgabewert waere er abzulesen. Gezaehlt wird deshalb im Baum.
     ///
-    /// **Der Schreiber heisst seit dem Zuruecksetzen auf Werkseinstellungen
-    /// `profile.replace`**, weil das Merkfeld keine `OnceCell` mehr ist, und
-    /// der Rufer `profile_uebernehmen` statt `profile_setzen`: C4.5 der Runde
-    /// 16 faellt nach dem Spec
-    /// `260929-0759_*_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`
-    /// bewusst, und der zweite Rufer kommt mit dem Befehl.
+    /// **Bis zum Zuruecksetzen auf Werkseinstellungen hiess die Probe
+    /// `die_profile_haben_genau_einen_schreiber_und_einen_rufer`** und hielt
+    /// C4.5 der Runde 16, „es gilt der Stand des Starts“; die Zusage faellt nach
+    /// dem Spec `260929-0759_*_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`
+    /// bewusst. Der Schreiber heisst `profile.replace`, weil das Merkfeld keine
+    /// `OnceCell` mehr ist.
     ///
     /// # Was diese Probe nicht sieht
     ///
     /// **Sie sagt nichts darueber, ob die Profile ueberhaupt gelesen wurden.**
-    /// Ein Rufer, der einen leeren Satz uebergibt, besteht sie muehelos; dass
-    /// `readers.toml` beim Start einmal gelesen wird, misst die Zaehlprobe
-    /// ueber `leseprofile::laden` beim Anwendungsdelegierten und nicht diese.
-    ///
-    /// Daneben gelten die Grenzen aus dem Kopf von [`crate::quellbaum`]:
-    /// [`aufrufstellen`] zaehlt jede Empfaengerform und jeden Pfad, aber
-    /// keinen Aufruf unter einem anderen Namen.
+    /// Das misst `leseprofilproben::die_leseprofile_haben_einen_leseweg_und_zwei_zeitpunkte`
+    /// beim Anwendungsdelegierten. Daneben gelten die Grenzen aus dem Kopf von
+    /// [`crate::quellbaum`]: [`aufrufstellen`] zaehlt jede Empfaengerform und
+    /// jeden Pfad, aber keinen Aufruf unter einem anderen Namen.
     #[test]
-    fn die_profile_haben_genau_einen_schreiber_und_einen_rufer() {
-        // Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum,
+    fn die_profile_haben_einen_schreiber_und_zwei_rufer() {
+        // Die Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum,
         // den sie liest, und als ein Stueck geschrieben faende jede sich
         // selbst.
         let schreiber = concat!("profile", ".replace");
@@ -2170,13 +2167,28 @@ mod tests {
             "`{schreiber}` steht nicht genau einmal, und zwar in der Vorschau; \
              das Merkfeld hat einen Schreiber, und der heisst `{rufer}`"
         );
-
         assert_eq!(
             zaehlen(rufer),
-            vec![(anwendung.to_owned(), 1)],
-            "`{rufer}` wird nicht genau einmal und beim Anwendungsdelegierten \
-             gerufen; die Profile gehen beim Aufbau der Oberflaeche herein"
+            vec![(anwendung.to_owned(), 2)],
+            "`{rufer}` wird nicht genau zweimal und beim Anwendungsdelegierten gerufen"
         );
+
+        let (_, quelle) = dateien
+            .iter()
+            .find(|(datei, _)| datei == anwendung)
+            .expect("anwendung.rs steht im Quellbaum");
+        for name in ["oberflaeche_aufbauen", "werkseinstellungen_vollziehen"] {
+            let kopf = format!("fn {name}(");
+            let rest = &quelle[quelle
+                .find(&kopf)
+                .unwrap_or_else(|| panic!("{kopf} steht nicht in anwendung.rs"))..];
+            let rumpf = &rest[..rest.find("\n    }\n").expect("der Rumpf endet")];
+            assert_eq!(
+                aufrufstellen(rumpf, rufer),
+                1,
+                "{name} ruft `{rufer}` nicht genau einmal"
+            );
+        }
     }
 
     /// Das Vorschaumodell weiss von der Einfaerbung nichts (C4, elftes

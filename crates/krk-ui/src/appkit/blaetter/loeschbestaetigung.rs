@@ -1,4 +1,13 @@
-//! Die eine Rueckfrage vor dem Raeumen in den Papierkorb (C2, C3).
+//! Die eine Rueckfrage vor dem Raeumen in den Papierkorb (C2, C3), und seit
+//! dem Zuruecksetzen auf Werkseinstellungen auch vor diesem.
+//!
+//! **Zwei Anlaesse, ein Blatt.** Der zweite Rufer ist
+//! `Anwendungsdelegierter::werkseinstellungen`; er reicht seinen eigenen
+//! Wortlaut aus `crate::kommandos::werkseinstellungen` herein, die
+//! Schaltflaeche „Zurücksetzen“ und `laut`, weil der Befehl in jedem Fall
+//! Bestand des Nutzers aus dem Betrieb nimmt. Schaltflaechen, Tasten und der
+//! Hinweissatz sind fuer beide Anlaesse dieselben; alles, was unten ueber das
+//! Raeumen steht, gilt dem ersten.
 //!
 //! Genau einmal je Vorgang, unabhaengig von der Zahl der betroffenen Eintraege
 //! und unabhaengig davon, welche der drei Tasten oder ob der Menueeintrag ihn

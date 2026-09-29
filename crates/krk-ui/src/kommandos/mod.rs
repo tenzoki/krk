@@ -44,6 +44,8 @@
 //! kontextmenue Was das Kontextmenue der Dateiliste traegt und worauf jeder
 //!              Eintrag wirkt: der Archivname, der Ordnername zurueck und die
 //!              Archive, die Unzip meint (Runde 17)
+//! werkseinstellungen Der Wortlaut der Rueckfrage vor dem Zuruecksetzen auf
+//!              Werkseinstellungen (Spec `260929-0759_*`)
 //! ```
 //!
 //! **`abwurfregel` und `kontextmenue` stehen am Schluss, und sie sind die zwei
@@ -142,4 +144,5 @@ pub mod operationen;
 pub mod pfadeingabe;
 pub mod rueckschritt;
 pub mod rundweg;
+pub mod werkseinstellungen;
 pub mod zulaessigkeit;

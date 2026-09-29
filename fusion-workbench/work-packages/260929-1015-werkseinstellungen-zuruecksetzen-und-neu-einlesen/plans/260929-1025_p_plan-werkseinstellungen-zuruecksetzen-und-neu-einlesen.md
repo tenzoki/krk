@@ -285,7 +285,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit der Schritte 3, 
 
 ### Stufe C: der Befehl wirkt
 
-8. **Vorabfrage, Rückfrage, Vollzug und neu einlesen**
+8. [DONE] **Vorabfrage, Rückfrage, Vollzug und neu einlesen**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/kommandos/werkseinstellungen.rs` (neu, ohne AppKit), `crates/krk-ui/src/kommandos/mod.rs` (Moduleintrag und Modulkopf, der die Module ohne Tastenbefehl abgrenzt, falls er ihn nennen muss), `crates/krk-ui/src/appkit/blaetter/loeschbestaetigung.rs` (allein der Modulkopf), `crates/krk-ui/src/appkit/vorschau.rs` (allein die Probe)
    - Changes:
