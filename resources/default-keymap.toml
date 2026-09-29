@@ -31,7 +31,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 106 Funktionen mit zusammen 107 Kombinationen.
+# Ausgeliefert sind 107 Funktionen mit zusammen 107 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1467,6 +1467,22 @@ tasten = ["cmd+1"]
 id = "neuerungen_zeigen"
 name = "Neuerungen anzeigen"
 tasten = ["opt+cmd+i"]
+
+# ── Auf Werkseinstellungen zuruecksetzen ─────────────────────────────────────
+# Setzt readers.toml, settings.toml und keymap.toml nach einer Rueckfrage auf
+# den Zustand eines ersten Starts zurueck, legt die alten Fassungen mit
+# Zeitstempel beiseite und liest den neuen Stand sofort ein; der Notizordner
+# bleibt dabei, wie er ist. Der Eintrag steht im selben Block wie "Neuerungen
+# anzeigen" und damit im selben Block im Menue "KRK" (C1.1).
+#
+# Ab Werk ohne Kombination, wie "Ort waehlen…": ein versehentlicher Anschlag
+# naehme alle eigenen Tastenzuweisungen aus dem Betrieb (C1.2). In F1 laesst
+# er sich belegen wie jede andere Funktion.
+
+[[funktion]]
+id = "werkseinstellungen"
+name = "Auf Werkseinstellungen zurücksetzen…"
+tasten = []
 
 # ── Eine weitere Instanz von KRK ─────────────────────────────────────────────
 # C3 der Runde 7. Der Eintrag steht hier bei der Anwendung als ganze und nicht

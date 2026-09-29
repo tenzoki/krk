@@ -1123,6 +1123,19 @@ pub enum Kommando {
     /// faehrt am Hauptfenster herunter und betrifft die Ablage, nicht einen
     /// der Bereiche der Fensterzeile.
     NeuerungenZeigen,
+    /// `readers.toml`, `settings.toml` und `keymap.toml` nach einer Rueckfrage
+    /// auf den Zustand eines ersten Starts zuruecksetzen, die alten Fassungen
+    /// mit Zeitstempel beiseitelegen und den neuen Stand sofort einlesen (Spec
+    /// `260929-0759_*_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`).
+    ///
+    /// Der Notizordner bleibt dabei, wie er ist: `settings.toml` behaelt den
+    /// Wert von `notizordner`. Den Vorgang im Kern traegt
+    /// `ablage::werkszustand`.
+    ///
+    /// **Wirkt ueberall, wie [`Kommando::NeuerungenZeigen`] daneben**, und ab
+    /// Werk ohne Kombination: ein versehentlicher Anschlag naehme alle eigenen
+    /// Tastenzuweisungen aus dem Betrieb.
+    Werkseinstellungen,
 }
 
 /// Die Aufzaehlung passt in die Umwandlung, ueber die [`Kommando::kennung`]
@@ -1145,7 +1158,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 99] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 100] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1277,6 +1290,7 @@ impl Kommando {
         (Kommando::FokusGit, "fokus_git"),
         (Kommando::SpalteMarkeUmschalten, "spalte_marke_umschalten"),
         (Kommando::NeuerungenZeigen, "neuerungen_zeigen"),
+        (Kommando::Werkseinstellungen, "werkseinstellungen"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -1437,6 +1451,11 @@ impl Kommando {
             // aus sehen, wo er gerade steht, und nicht erst den Fokus
             // umsetzen.
             | Kommando::NeuerungenZeigen
+            // Das Zuruecksetzen auf Werkseinstellungen aus demselben Grund wie
+            // die Neuerungen darueber: seine Rueckfrage haengt als Blatt am
+            // Hauptfenster, sein Gegenstand ist die Ablage, und kein Bereich
+            // der Fensterzeile ist davon betroffen.
+            | Kommando::Werkseinstellungen
             // F10 holt die Quicknote aus jedem Bereich heraus und setzt den
             // Fokus selbst in den Editor; ein Vorbehalt verlangte den Zustand,
             // den der Befehl erst herstellt, wie beim Notizordner darueber.

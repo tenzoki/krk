@@ -185,7 +185,7 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// einer Datei. Die zweite Quelle ist hier `resources/default-keymap.toml`,
 /// und die liest [`ab_werk_traegt_genau_diese_liste_keine_kombination`] ueber
 /// [`Belegung::auslieferung`].
-const OHNE_KOMBINATION_AB_WERK: [&str; 9] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 10] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
@@ -195,6 +195,7 @@ const OHNE_KOMBINATION_AB_WERK: [&str; 9] = [
     "quicknote_leeren",
     "belegungsdatei_ansehen",
     "ort_waehlen",
+    "werkseinstellungen",
 ];
 
 /// Die Kombination zu einer Zeichenkette, oder ein Abbruch mit klarer Meldung.
@@ -1203,6 +1204,45 @@ fn eine_eigene_belegung_ohne_die_quicknote_laedt_und_fuehrt_sie_unbelegt() {
             Nachschlag::Funktion(_) | Nachschlag::Geteilt(..)
         ),
         "F10 trifft in einer Belegung ohne die Quicknote eine Funktion"
+    );
+}
+
+/// C1.2 der Werkseinstellungen: eine Nutzerbelegung von vor dem Befehl laedt
+/// ohne Ersetzung und fuehrt „Auf Werkseinstellungen zuruecksetzen…“
+/// unbelegt; die Auslieferung fuehrt ihn ebenso ohne Kombination.
+#[test]
+fn eine_eigene_belegung_ohne_die_werkseinstellungen_laedt_und_fuehrt_sie_unbelegt() {
+    let block = "[[funktion]]\nid = \"werkseinstellungen\"\nname = \"Auf Werkseinstellungen zurücksetzen…\"\ntasten = []\n";
+    assert_eq!(
+        belegung::AUSLIEFERUNGSTEXT.matches(block).count(),
+        1,
+        "der Block der Werkseinstellungen steht nicht genau einmal in der Auslieferung"
+    );
+    let ohne = belegung::AUSLIEFERUNGSTEXT.replace(block, "");
+    assert!(!ohne.contains("id = \"werkseinstellungen\""));
+
+    let ordner = Pruefordner::neu("werkseinstellungen-ohne");
+    let ablage = ablage_mit(&ordner, &ohne);
+    let geladen = geladene_belegung(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine Belegung ohne die Werkseinstellungen wurde abgewiesen"
+    );
+    let funktion = geladen
+        .wert
+        .funktion("werkseinstellungen")
+        .expect("werkseinstellungen kommt nicht hinzu");
+    assert!(
+        funktion.tasten().is_empty(),
+        "werkseinstellungen kommt belegt an"
+    );
+    assert_eq!(funktion.kommando(), Some(Kommando::Werkseinstellungen));
+    assert!(
+        Belegung::auslieferung()
+            .funktion("werkseinstellungen")
+            .expect("die Auslieferung fuehrt werkseinstellungen")
+            .tasten()
+            .is_empty()
     );
 }
 
@@ -2613,7 +2653,8 @@ fn der_fokuswechsel_wirkt_aus_jedem_bereich_heraus() {
 ///
 /// [`jedes_kommando_traegt_genau_einen_wirkungsbereich`] haelt daneben, dass
 /// **jedes** Kommando einen Bereich traegt; welchen, sagt es nicht. Diese Probe
-/// sagt es fuer diese sechs.
+/// sagt es fuer die, die sie aufzaehlt; seit dem Zuruecksetzen auf
+/// Werkseinstellungen steht dieser Befehl mit darin.
 #[test]
 fn die_anwendungsweiten_befehle_wirken_aus_jedem_bereich_heraus() {
     for kommando in [
@@ -2623,6 +2664,7 @@ fn die_anwendungsweiten_befehle_wirken_aus_jedem_bereich_heraus() {
         Kommando::OrtWaehlen,
         Kommando::BelegungAnsehen,
         Kommando::BelegungsdateiAnsehen,
+        Kommando::Werkseinstellungen,
     ] {
         assert_eq!(
             kommando.wirkungsbereich(),

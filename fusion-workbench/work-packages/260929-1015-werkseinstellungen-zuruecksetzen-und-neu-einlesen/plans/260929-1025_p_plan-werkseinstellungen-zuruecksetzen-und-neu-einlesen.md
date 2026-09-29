@@ -266,7 +266,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit der Schritte 3, 
    - Acceptance: `make check` grün; keine Probe ausser der genannten ändert ihre Erwartung. Der Diff von `sitzung_laden` verschiebt Aufrufe und fügt keinen hinzu (Grundlage der L4-Klausel unter `## Where this work stops`).
    - Dependencies: Schritte 1 und 2 (Tor)
 
-7. **Das Kommando im Kern, in der Belegung, im Menü und in der Zulässigkeit**
+7. [DONE] **Das Kommando im Kern, in der Belegung, im Menü und in der Zulässigkeit**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `resources/default-keymap.toml`, `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/menuemodell.rs` (allein die neue Probe), `crates/krk-ui/src/kommandos/zulaessigkeit.rs` (allein die neue Probe)
    - Changes, **die Pflichtstellen einzeln**:

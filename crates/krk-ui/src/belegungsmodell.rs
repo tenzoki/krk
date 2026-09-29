@@ -439,7 +439,12 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // den Unterschied zwischen der Nutzerfassung und der
         // Auslieferungsfassung; wer ihn sucht, sucht ihn bei den zwei
         // Eintraegen, die die Ablage schon fuehren.
-        | Kommando::NeuerungenZeigen => Funktionsbereich::Anwendung,
+        | Kommando::NeuerungenZeigen
+        // Das Zuruecksetzen auf Werkseinstellungen neben den Neuerungen: sein
+        // Gegenstand sind dieselben drei Dateien der Ablage, und wer die
+        // Neuerungen gelesen hat, findet den Befehl, der sie uebernimmt,
+        // unmittelbar darunter (C1.1, C1.2).
+        | Kommando::Werkseinstellungen => Funktionsbereich::Anwendung,
         // Der eingebaute Editor, und `bearbeiten` steht mit darin.
         //
         // Es ist die einzige Stelle, an der diese Gliederung und

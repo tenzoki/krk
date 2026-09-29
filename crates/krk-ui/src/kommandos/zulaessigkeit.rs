@@ -1703,6 +1703,34 @@ mod tests {
         }
     }
 
+    /// C1.7 der Werkseinstellungen: „Auf Werkseinstellungen zuruecksetzen…“
+    /// kommt ohne Blatt aus jedem Fokus durch und bei stehendem Blatt in
+    /// keinem.
+    ///
+    /// Derselbe Grund wie bei „Ort waehlen…“ darueber: der Befehl oeffnet
+    /// selbst ein Blatt, die Rueckfrage, und kaeme er waehrend eines anderen
+    /// durch, stuende ein zweites ueber dem ersten. Die Zaehlprobe
+    /// `waehrend_eines_blattes_kommen_genau_diese_vier_durch` bleibt, wie sie
+    /// ist.
+    #[test]
+    fn der_werkseinstellungsbefehl_kommt_bei_stehendem_blatt_nicht_durch() {
+        let kommando = Kommando::Werkseinstellungen;
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
+        assert!(!immer_erreichbar(kommando));
+        assert!(!operationen::waehrend_blatt_erlaubt(kommando));
+
+        for fokus in JEDER_FOKUS {
+            assert!(
+                zulaessig(kommando, lage(false, false, true, fokus)),
+                "der Befehl kommt ohne Blatt in {fokus:?} nicht durch"
+            );
+            assert!(
+                !zulaessig(kommando, lage(true, false, true, fokus)),
+                "der Befehl kommt bei stehendem Blatt in {fokus:?} durch"
+            );
+        }
+    }
+
     /// Die Ausnahmeliste fuehrt nach der Notizzettel-Runde dieselben drei
     /// Befehle wie davor.
     ///

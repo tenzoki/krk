@@ -595,6 +595,40 @@ mod tests {
         }
     }
 
+    /// C1.1 und C1.2 der Werkseinstellungen: im Menue der Anwendung steht
+    /// „Auf Werkseinstellungen zurücksetzen…“ unmittelbar hinter „Neuerungen
+    /// anzeigen“, und ohne Kuerzel.
+    #[test]
+    fn die_werkseinstellungen_stehen_hinter_den_neuerungen_und_ohne_kuerzel() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let anwendung = leiste
+            .iter()
+            .find(|obermenue| obermenue.titel == Funktionsbereich::Anwendung.name())
+            .expect("das Menue der Anwendung steht in der Leiste");
+        let befehle: Vec<(&str, Option<Kombination>)> = anwendung
+            .eintraege
+            .iter()
+            .filter_map(|eintrag| match eintrag {
+                Eintrag::Befehl {
+                    kennung,
+                    kombination,
+                    ..
+                } => Some((*kennung, *kombination)),
+                _ => None,
+            })
+            .collect();
+        let stelle = befehle
+            .iter()
+            .position(|(kennung, _)| *kennung == "neuerungen_zeigen")
+            .expect("„Neuerungen anzeigen“ steht im Menue der Anwendung");
+        assert_eq!(
+            befehle.get(stelle + 1),
+            Some(&("werkseinstellungen", None)),
+            "hinter „Neuerungen anzeigen“ steht nicht der Befehl ohne Kuerzel"
+        );
+    }
+
     // -----------------------------------------------------------------------
     // C2.2: die eine Gliederung, drei Abnehmer
     // -----------------------------------------------------------------------
