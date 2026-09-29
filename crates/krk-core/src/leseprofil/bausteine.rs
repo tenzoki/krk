@@ -14,6 +14,7 @@
 //!   │    └─ keines trifft ────> ist der Eintrag selbst ein Verzeichnis?
 //!   │                             ├─ nein (Verknuepfung) ─> None   (A4, C1.7)
 //!   │                             └─ ja ─> das eingebaute Default-Profil
+//!   ├─ Bildfolge ohne Foto, Profil ohne Zeilen ─> wie „keines trifft"
 //!   └─ je Zeile ein Baustein ─> Wert oder Wert::Nicht   (derselbe Lauf)
 //! ```
 //!
@@ -265,8 +266,12 @@ use super::{
 /// `readers.toml` den Ordner, ersetzt seine Zusammenfassung die
 /// Metadatenanzeige, oder, wenn es eine Bildfolge nennt und darunter Fotos
 /// liegen, seine Bildfolge; erkennt keines ihn, treten die drei Zeilen des
-/// eingebauten [`defaultprofil`] unter sie (C1.1, C1.2). Der Rueckfallweg ist damit **einer** und liegt hier und nicht beim
-/// Rufer, aus demselben Grund, aus dem C2.6 hier gehalten wird.
+/// eingebauten [`defaultprofil`] unter sie (C1.1, C1.2). **Dieselben drei
+/// Zeilen bekommt ein Ordner, den ein Profil mit Bildfolge und ohne eigene
+/// Zeilen erkennt und unter dem kein Foto liegt**: das Profil hat dann nichts
+/// zu zeigen, und der Ordner zeigt, was er ohne es zeigte. Der Rueckfallweg
+/// ist damit **einer** und liegt hier und nicht beim Rufer, aus demselben
+/// Grund, aus dem C2.6 hier gehalten wird.
 ///
 /// `None` heisst: der Eintrag bekommt keine der zwei Auskuenfte, und die
 /// Vorschau zeigt die sechs Metadatenangaben allein. Das trifft einen Ordner,
@@ -342,12 +347,19 @@ pub fn zusammenfassen_gezaehlt(profile: &Profile, ordner: &Path) -> Option<(Ausk
         {
             Auskunft::Bildfolge(verzeichnis)
         }
-        Some(profil) => Auskunft::Erkannt(Zusammenfassung::neu(
-            ordnername(ordner),
-            ordner.to_path_buf(),
-            lauf.zeilen_rechnen(profil),
-        )),
-        None => {
+        // Eine leere Folge an einem Profil ohne Zeilen hat nichts zu zeigen,
+        // und der Ordner bekommt die Vorschau, die er ohne das Profil bekaeme:
+        // die Zaehlzeilen des Default-Profils unter seinen Metadaten
+        // (Ueberblick des Spec der Bildfolge, „Folge enthaelt Fotos? nein ->
+        // Vorschau wie bisher"). Traegt das Profil Zeilen, gelten sie (C1.5).
+        Some(profil) if !(profil.bildfolge().is_some() && profil.zeilen().is_empty()) => {
+            Auskunft::Erkannt(Zusammenfassung::neu(
+                ordnername(ordner),
+                ordner.to_path_buf(),
+                lauf.zeilen_rechnen(profil),
+            ))
+        }
+        Some(_) | None => {
             if !ist_selbst_ein_verzeichnis(ordner) {
                 return None;
             }

@@ -290,7 +290,7 @@ impl Profil {
     ///
     /// Traegt ein Profil eine und liegen darunter Fotos, zeigt die Vorschau das
     /// erste Foto statt der Zeilen; ohne Fotos gelten die Zeilen (C1.5 des
-    /// Spec der Bildfolge).
+    /// Spec der Bildfolge), und ohne Zeilen die des eingebauten Default-Profils.
     pub fn bildfolge(&self) -> Option<&Bildfolgeangabe> {
         self.bildfolge.as_ref()
     }
@@ -747,7 +747,8 @@ pub enum Auskunft {
     /// Ein Profil mit Bildfolge hat den Ordner erkannt, und darunter liegt
     /// mindestens ein Foto. Die Vorschau zeigt Fotos statt der Zeilen; ohne
     /// Fotos kommt dasselbe Profil als [`Auskunft::Erkannt`] mit seinen Zeilen
-    /// (C1.5 des Spec der Bildfolge).
+    /// (C1.5 des Spec der Bildfolge), und traegt es keine, kommt der Ordner als
+    /// [`Auskunft::Default`], so als haette kein Profil ihn erkannt.
     ///
     /// Das Verzeichnis ist erhoben und noch nicht geordnet: die Aufnahmedaten
     /// liest [`bildfolge::Bildverzeichnis::gruppe_ordnen`] je Gruppe, auf dem

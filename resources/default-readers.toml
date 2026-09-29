@@ -25,7 +25,9 @@
 # Arbeit in Arbeitspakete schneidet und den Stand der meisten Datensätze als
 # Marker im Dateinamen trägt, und die von flight, das dieselben Arten von Datensätzen
 # flach an der Wurzel führt und keine Marker kennt. Wer mit keinem von beiden
-# arbeitet, kann alle Profile ersetzen und verliert nichts.
+# arbeitet, kann alle Profile ersetzen und verliert nichts. Ganz unten stehen
+# dazu zwei Profile, die keine Zeilen zeigen, sondern Fotos: eines für einen
+# Jahresordner `Fotos/2008` und eines für einen Monatsordner `Fotos/2008/08`.
 #
 # Geändert wird die Datei bei ausgeschaltetem KRK, oder die Änderung wirkt erst
 # beim nächsten Start: KRK liest sie beim Start und nach "Auf
@@ -45,7 +47,8 @@
 # Drei Reichweiten gibt es, und diese ist die weiteste:
 #
 #   1. Die ganze Datei fällt weg — ein unbekannter Schlüssel an der obersten
-#      Ebene, in einer `[[profil.zeile]]` oder in einem Bausteintisch, ein
+#      Ebene, in einer `[[profil.zeile]]`, in einem Bausteintisch oder im
+#      Tisch `bildfolge`, ein
 #      Tischname, den es nicht gibt, ein Wert für `zeigt`, den es nicht gibt,
 #      ein fehlender `name`, oder sonst etwas, das nicht in die erwartete
 #      Gestalt passt.
@@ -60,7 +63,10 @@
 #      heraus, trägt mehr als einen Platzhalter, oder einen Platzhalter an
 #      einem Baustein, der keinen annimmt. Die Zeile zeigt dann ihre
 #      Beschriftung und den Platzhalter `--`, die übrigen Zeilen stimmen
-#      weiter.
+#      weiter. Auf derselben Ebene verliert ein Profil seine Bildfolge und
+#      behält seine Zeilen, wenn der `ordner` der Bildfolge aus einem dieser
+#      Gründe nicht taugt; die Meldung beim Start nennt das Profil und den
+#      Grund.
 #
 # Der `[[profil]]`-Block selbst ist die eine Stelle, an der ein unbekannter
 # Schlüssel NICHT gemeldet, sondern übergangen wird. Was er kostet, ist das,
@@ -68,7 +74,10 @@
 # nimmt dem Profil sein Erkennungsmuster, und es fällt in die zweite Reichweite
 # oder greift, steht ein `pfad` daneben, still über diesen allein; `zeilen`
 # statt `zeile` lässt ein Profil ohne eine einzige Zeile stehen, und das ohne
-# jede Meldung.
+# jede Meldung; `bildfolg` statt `bildfolge` lässt es ohne Bildfolge stehen,
+# ebenso still, und es zeigt dann seine Zeilen oder, hat es keine, allein Name
+# und Pfad des Ordners. Ein verschriebener Schlüssel INNERHALB des Tisches
+# `bildfolge`, etwa `ordnr`, fällt dagegen in die erste Reichweite.
 
 # ----------------------------------------------------------------------------
 # Der Aufbau: Profil, Zeile, genau ein Baustein
@@ -76,7 +85,9 @@
 #
 # Ein `[[profil]]` trägt einen `name` (er dient allein den Meldungen und wird
 # nicht angezeigt), dazu `pfad` oder `kennzeichen` oder beides, und darunter
-# beliebig viele `[[profil.zeile]]`.
+# beliebig viele `[[profil.zeile]]`. Neben seinen Zeilen darf ein Profil eine
+# Bildfolge nennen, `bildfolge = { }`; was sie tut, sagt der Abschnitt „Die
+# Bildfolge" weiter unten.
 #
 # Eine `[[profil.zeile]]` trägt eine `beschriftung` und GENAU EINEN der vier
 # Bausteine `zaehlung`, `juengste`, `feld` und `vorhandensein`. Keiner ist zu
@@ -221,6 +232,59 @@
 # Anfang seines Ausdrucks; wer über Zeilengrenzen hinweg greifen will, `(?s)`.
 
 # ----------------------------------------------------------------------------
+# Die Bildfolge
+# ----------------------------------------------------------------------------
+#
+# `bildfolge` — statt Zeilen zeigt die Vorschau ein Foto, und Cmd+Pfeil runter
+# und Cmd+Pfeil hoch blättern durch die Fotos des ausgewählten Ordners, solange
+# die Dateiliste den Fokus hat. Die Statuszeile sagt dazu „Bild 3 von 41",
+# Return führt die Dateiliste in den Ordner des angezeigten Fotos und wählt es
+# dort aus. Die Bildfolge ist KEIN FÜNFTER BAUSTEIN: sie steht am Profil und
+# nicht in einer `[[profil.zeile]]`, und sie ersetzt die Zeilen, statt eine von
+# ihnen zu sein.
+#
+# Ihr einziger Schlüssel ist `ordner`, mit denselben Regeln wie bei den
+# Bausteinen. Ohne ihn liegen die Fotos im erkannten Ordner selbst, das ist
+# ein Monat; `ordner = "*"` nimmt jeden Unterordner als eine Gruppe der Folge,
+# das ist ein Jahr aus seinen Monaten. Erkannt wird ein solches Profil wie
+# jedes andere über `pfad` oder `kennzeichen`. Einen festen Ordnernamen kennt
+# KRK dabei nicht; wer seine Fotos unter `Bilder` statt unter `Fotos` führt,
+# schreibt das Muster um und bekommt dasselbe Verhalten:
+#
+#   [[profil]]
+#   name = "Bilder: ein Jahr"
+#   pfad = '/Bilder/[0-9]{4}$'
+#   bildfolge = { ordner = "*" }
+#
+#   [[profil]]
+#   name = "Bilder: ein Monat"
+#   pfad = '/Bilder/[0-9]{4}/[0-9]{2}$'
+#   bildfolge = { }
+#
+# ALS FOTO ZÄHLT eine Datei mit einer der Endungen png, jpg, jpeg, gif, tif,
+# tiff, heic, heif, bmp und icns, gleich wie groß oder klein geschrieben.
+# Ordner und Verknüpfungen zählen nicht, und ebenso wenig eine versteckte Datei,
+# deren Name mit einem Punkt beginnt: auf fremden Datenträgern liegt neben jedem
+# Foto eine Begleitdatei `._IMG_0970.jpg`, die sonst als Foto in der Folge
+# stünde. Beim Jahr zählen allein Fotos, die unmittelbar in einem Unterordner
+# liegen, nicht die im Jahresordner selbst und nicht die in tieferen Ordnern.
+#
+# DIE REIHENFOLGE: Die Gruppen laufen nach ihrem Namen, in der Ordnung der
+# Namensspalte, also beim Jahr erst alle Fotos aus `01`, dann alle aus `02`,
+# auch wenn ein Foto in `02` früher aufgenommen ist. Ein Unterordner ohne
+# Fotos wird übersprungen. Innerhalb einer Gruppe laufen die Fotos nach dem
+# Aufnahmedatum aus den Bilddaten (EXIF). Wo die Bilddaten keines hergeben —
+# gif, bmp und icns tragen keines, eine große TIFF liegt über der Lesegrenze
+# unten —, gilt das Änderungsdatum; bei gleichem Zeitpunkt entscheidet der Name.
+# Kein Foto fällt aus der Folge, weil ihm das Datum fehlt.
+#
+# SIE GEHT DEN ZEILEN VOR, solange die Folge wenigstens ein Foto trägt. Liegt
+# kein einziges darunter, zeigt das Profil seine Zeilen, und ein Profil ohne
+# Zeilen, wie die zwei ganz unten, zeigt dann die gewohnte Vorschau eines
+# Ordners: seine Metadaten und darunter die drei Zählzeilen des eingebauten
+# Default-Profils, so als hätte kein Profil ihn erkannt.
+
+# ----------------------------------------------------------------------------
 # Welches Profil gewinnt
 # ----------------------------------------------------------------------------
 #
@@ -323,6 +387,24 @@
 # Wird eine der Grenzen erreicht, bricht nichts ab: die übrigen Zeilen zeigen
 # ihren Platzhalter `--`. Eine Zählung über 2.000 Einträgen nennt die Zahl der
 # gefundenen Treffer und sagt dazu, dass die Lesung abgebrochen wurde.
+#
+# DIE BILDFOLGE HAT EIGENE GRENZEN, und die Zahlen oben gelten für sie nicht,
+# so wie ihre für die Zeilen nicht gelten. Eine Zusammenfassung in Zeilen wird
+# durch die Bildfolge nicht teurer:
+#
+#   höchstens 7.500 Fotos je Folge
+#   höchstens 60 Ordner, aus denen die Fotos einer Folge stammen
+#   höchstens 10.000 Einträge je Leselauf der Folge
+#   höchstens 256 KB je Foto beim Lesen des Aufnahmedatums
+#
+# Ein Monat kostet einen Leselauf, ein Jahr einen für den Jahresordner und
+# einen je Unterordner, auch je einen ohne Fotos. Das Lesen der Ordner öffnet
+# keine Datei; danach wird je Foto einmal das Aufnahmedatum gelesen, Gruppe für
+# Gruppe, und bis dahin zeigt die Vorschau, dass die Folge vorbereitet wird.
+# Wechselt die Auswahl, hört das Lesen auf.
+#
+# Wird eine der Grenzen erreicht, enthält die Folge die ersten Fotos in der
+# Reihenfolge oben, und die Statuszeile sagt dazu, dass sie gekürzt ist.
 
 # ============================================================================
 # Die Profile für eine fusion-Werkbank
@@ -1077,3 +1159,35 @@ kennzeichen = '^flight-workbench$'
   [[profil.zeile]]
   beschriftung = "Ablagen, zuletzt"
   juengste = { ordner = "flight-workbench/archive", anzahl = 1, zeigt = "datum" }
+
+# ============================================================================
+# Die Profile für Fotoordner
+# ============================================================================
+#
+# Zwei Profile für Fotos, die nach Jahr und Monat abgelegt sind:
+# `Fotos/2008/08/IMG_0970.jpg`. Wo `Fotos` im Dateisystem liegt, ist gleich;
+# das Muster verlangt allein, dass ein Ordner genau dieses Namens darüber
+# steht. `Fotos/Urlaub` und `Fotos/2008/August` trifft keines der zwei, und
+# wer seine Ordner anders nennt, schreibt die Muster um, wie der Abschnitt „Die
+# Bildfolge" oben zeigt.
+#
+# KEINES TRÄGT ZEILEN. Liegt in einem getroffenen Ordner kein Foto, zeigt die
+# Vorschau deshalb, was sie dort ohne diese zwei Profile zeigte: die
+# Metadaten und darunter die drei Zählzeilen des eingebauten Default-Profils.
+# Wer dort lieber eigene Zeilen sähe, gibt dem Profil welche.
+#
+# Die Erkennung über `pfad` kostet keinen Leselauf, und die zwei Muster können
+# nicht beide denselben Ordner treffen: das `$` am Ende hält das Jahresmuster
+# vom Monatsordner fern. Keines der Werkbankprofile oben nennt `Fotos`.
+
+# Ein Jahr: die Fotos jedes Monatsordners, Monat für Monat.
+[[profil]]
+name = "Fotos: ein Jahr"
+pfad = '/Fotos/[0-9]{4}$'
+bildfolge = { ordner = "*" }
+
+# Ein Monat: die Fotos des Monatsordners selbst.
+[[profil]]
+name = "Fotos: ein Monat"
+pfad = '/Fotos/[0-9]{4}/[0-9]{2}$'
+bildfolge = { }

@@ -139,6 +139,21 @@ fn anlegen_falls_fehlt(zugang: &Zugang<'_>) -> io::Result<()> {
 mod tests {
     use super::*;
 
+    /// Wie viele `[[profil]]`-Bloecke die Auslieferungsfassung ausserhalb
+    /// ihrer Kommentare fuehrt.
+    ///
+    /// Die Zahl der mitgelieferten Profile wird abgeleitet und nicht behauptet;
+    /// gehalten wird, dass die Pruefung keinen Block still verliert. Dieselbe
+    /// Zaehlung steht fuer die Proben unter `tests/` in
+    /// `tests/gemeinsam/mod.rs` (`profilbloecke`), die dieses Modul nicht
+    /// erreicht.
+    fn profilbloecke() -> usize {
+        AUSLIEFERUNGSTEXT
+            .lines()
+            .filter(|zeile| zeile.trim() == "[[profil]]")
+            .count()
+    }
+
     /// Der **Kommentarteil** der Auslieferungsfassung erklaert jeden der vier
     /// Bausteine und zeigt je einen an einem Beispiel (C5.10).
     ///
@@ -193,11 +208,12 @@ mod tests {
     /// der zwei neuen Schluessel, und die Zahl der Profile bleibt die der
     /// Auslieferungsfassung.
     ///
-    /// **Wie viele Profile das sind, steht hier nicht als Wort**, sondern
-    /// einmal als Zahl in der Zusicherung unten; erhoben wird sie mit
-    /// `grep -c '^\[\[' resources/default-readers.toml`. Die Zusicherung
-    /// haelt sie, statt sie nur zu nennen: wer der Datei ein Profil
-    /// hinzufuegt, faellt hier auf und zieht die Zahl bewusst nach.
+    /// **Wie viele Profile das sind, steht hier nicht**, weder als Wort noch
+    /// als Zahl: die Zusicherung unten haelt die Zahl der geprueften Profile
+    /// gegen die der `[[profil]]`-Bloecke im Text ([`profilbloecke`]). Bis zur
+    /// Bildfolge stand dort eine feste Zahl, die jedes neue Profil von Hand
+    /// nachziehen musste; gehalten wird jetzt, dass die Pruefung keinen Block
+    /// still verliert.
     ///
     /// Gezaehlt wird ueber die **Nicht-Kommentarzeilen**, und das ist der
     /// Kern der Probe: der Kommentarteil derselben Datei beschreibt `typ`
@@ -228,8 +244,8 @@ mod tests {
         let (profile, _) = datei::pruefen(gelesen);
         assert_eq!(
             profile.zahl(),
-            13,
-            "die Zahl der mitgelieferten Profile hat sich geaendert"
+            profilbloecke(),
+            "die Pruefung verliert ein Profil der Auslieferungsfassung"
         );
         let zaehlungen_mit_neuen_schluesseln = profile
             .iter()
@@ -268,9 +284,8 @@ mod tests {
         );
         assert_eq!(
             profile.zahl(),
-            13,
-            "die Zahl der mitgelieferten Profile hat sich geaendert; die Zusicherung ist \
-             mitzuziehen"
+            profilbloecke(),
+            "die Pruefung verliert ein Profil der Auslieferungsfassung"
         );
     }
 }

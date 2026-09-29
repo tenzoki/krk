@@ -50,7 +50,7 @@ use krk_core::verzeichnis::sys::{self, Sperrversuch};
 use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
 
 mod gemeinsam;
-use gemeinsam::{Pruefordner, rechtesperre_haelt_oder_abbruch};
+use gemeinsam::{Pruefordner, profilbloecke, rechtesperre_haelt_oder_abbruch};
 
 // ---------------------------------------------------------------------------
 // Stellvertreter
@@ -2577,7 +2577,7 @@ fn eine_fehlende_readers_toml_entsteht_byteweise_und_bleibt_beim_zweiten_start_l
     );
     assert_eq!(
         geladen.wert.zahl(),
-        13,
+        profilbloecke(leseprofile::AUSLIEFERUNGSTEXT),
         "der erste Start arbeitet nicht mit allen mitgelieferten Profilen"
     );
     assert_eq!(

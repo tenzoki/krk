@@ -63,7 +63,8 @@ use krk_core::verzeichnis::sys::ortszeit;
 use krk_core::verzeichnis::{Eintrag, Typ};
 
 use gemeinsam::{
-    Pruefordner, kind_mit_deskriptorgrenze, kindauftrag, rechtesperre_haelt_oder_abbruch,
+    Pruefordner, kind_mit_deskriptorgrenze, kindauftrag, profilbloecke,
+    rechtesperre_haelt_oder_abbruch,
 };
 
 mod gemeinsam;
@@ -3162,8 +3163,8 @@ fn ausgelieferte() -> Profile {
     );
     assert_eq!(
         profile.zahl(),
-        13,
-        "die Zahl der mitgelieferten Profile hat sich geaendert"
+        profilbloecke(AUSLIEFERUNGSTEXT),
+        "die Pruefung verliert ein Profil der Auslieferungsfassung"
     );
     profile
 }
@@ -4609,16 +4610,24 @@ fn ohne_die_setup_datei_fallen_allein_die_drei_feldzeilen_der_projektwurzel() {
     );
 }
 
-/// C5.9: Das **mitgelieferte** Profil greift nur in einer Werkbank.
+/// C5.9: Die mitgelieferten **Werkbankprofile** greifen nur in einer Werkbank.
 ///
 /// Ein gewoehnlicher Ordner bekommt das eingebaute Default-Profil und kein
 /// erkanntes, und zwar auch dann, wenn er Unterordner traegt, die in einer
-/// Werkbank einen Speicher benennten. Zwei Sperren halten das, und die Probe
-/// prueft beide: die Profile mit Pfadmuster verlangen `fusion-workbench/`
-/// oder `flight-workbench/` **im Pfad**, die mit Kennzeichendatei verlangen
-/// einen der vier Eintraege `.fusion-setup`, `_._circle.md`,
-/// `fusion-workbench` und `.flight-setup` beziehungsweise `flight-workbench`
-/// **im Ordner**.
+/// Werkbank einen Speicher benennten. Zwei Sperren halten das fuer die
+/// Werkbankprofile, und die Probe prueft beide: die Profile mit Pfadmuster
+/// verlangen `fusion-workbench/` oder `flight-workbench/` **im Pfad**, die mit
+/// Kennzeichendatei verlangen einen der vier Eintraege `.fusion-setup`,
+/// `_._circle.md`, `fusion-workbench` und `.flight-setup` beziehungsweise
+/// `flight-workbench` **im Ordner**.
+///
+/// **Die zwei Fotoprofile tragen keine Werkbanksperre**, und das ist ihr
+/// Zweck: sie greifen an jedem Ort, dessen Pfad auf `/Fotos/` und vier
+/// beziehungsweise vier und zwei Ziffern endet (C6.1 des Spec der
+/// Bildfolge). Ihre Sperre ist dieses Muster, und keiner der gewoehnlichen
+/// Ordner unten erfuellt es; dass sie dort greifen, wo es erfuellt ist, und
+/// an `Fotos/Urlaub` nicht, halten die Proben zu C6.1 und C6.2 der
+/// Bildfolge.
 ///
 /// **Wie viele auf welcher Seite stehen, steht hier nicht**, und der Grund ist
 /// ein Befund: bis zum 260908 sprach dieser Absatz von „sechs" und „sechs",
@@ -4626,8 +4635,8 @@ fn ohne_die_setup_datei_fallen_allein_die_drei_feldzeilen_der_projektwurzel() {
 /// fuenf Kennzeichen. Erhoben werden die zwei Seiten mit
 /// `grep -c '^pfad = ' resources/default-readers.toml` und
 /// `grep -c '^kennzeichen = '` darueber; die Aussage der Probe haengt an
-/// keiner der zwei Zahlen, sondern daran, dass **jedes** Profil eine der zwei
-/// Sperren traegt.
+/// keiner der zwei Zahlen, sondern daran, dass **jedes** Profil eine Sperre
+/// traegt, die ein gewoehnlicher Ordner nicht erfuellt.
 ///
 /// **Ohne diese Probe war die Zusage nur fuer heute nachgesehen.** Ein
 /// weiteres Pfadmuster, das den Werkbanknamen weglaesst, ergaebe einen gruenen
@@ -5611,4 +5620,43 @@ fn ein_profil_mit_bildfolge_ohne_fotos_liefert_seine_zeilen() {
         panic!("keine Bildfolge: {folge:?}");
     };
     assert_eq!(verzeichnis.gesamt(), 1);
+}
+
+/// Ueberblick des Spec der Bildfolge („Folge enthaelt Fotos? nein -> Vorschau
+/// wie bisher"): ein Profil mit Bildfolge und **ohne** Zeilen ueber einem
+/// Ordner ohne Fotos laesst den Ordner die Vorschau zeigen, die er ohne das
+/// Profil zeigte, also die Zeilen des eingebauten Default-Profils, und nicht
+/// eine Zusammenfassung ohne Zeile, die allein Name und Pfad truege. Mit
+/// einem Foto darunter kommt die Bildfolge.
+#[test]
+fn ein_profil_mit_bildfolge_ohne_zeilen_und_ohne_fotos_faellt_auf_das_default_profil() {
+    let ordner = Pruefordner::neu("bildfolge-ohne-zeilen");
+    let jahr = ordner.ordner("Fotos/2008");
+    ordner.ordner("Fotos/2008/01");
+    ordner.datei("Fotos/2008/01/notiz.txt", b"");
+    let profile = bildfolgeprofil("{ ordner = \"*\" }");
+
+    let ohne_profil = zusammenfassen(&Profile::aus(Vec::new()), &jahr)
+        .expect("der Ordner bekommt ohne Profil eine Auskunft");
+    let rueckfall = zusammenfassen(&profile, &jahr).expect("der Ordner bekommt eine Auskunft");
+    assert!(matches!(rueckfall, Auskunft::Default(_)), "{rueckfall:?}");
+    assert_eq!(rueckfall, ohne_profil);
+
+    ordner.datei("Fotos/2008/01/a.jpg", b"");
+    let folge = zusammenfassen(&profile, &jahr).expect("der Ordner bekommt eine Auskunft");
+    assert!(matches!(folge, Auskunft::Bildfolge(_)), "{folge:?}");
+}
+
+/// Dieselbe Regel am Monat, dessen Bildfolge den erkannten Ordner selbst
+/// liest: ein leerer Monatsordner zeigt die Zeilen des Default-Profils.
+#[test]
+fn ein_leerer_monat_zeigt_die_zeilen_des_default_profils() {
+    let ordner = Pruefordner::neu("bildfolge-leerer-monat");
+    let monat = ordner.ordner("Fotos/2008/08");
+    let (profile, meldungen) = gepruefte(
+        "[[profil]]\nname = \"Monat\"\npfad = 'Fotos/[0-9]{4}/[0-9]{2}$'\nbildfolge = { }\n",
+    );
+    assert!(meldungen.is_empty(), "{meldungen:?}");
+    let auskunft = zusammenfassen(&profile, &monat).expect("der Ordner bekommt eine Auskunft");
+    assert!(matches!(auskunft, Auskunft::Default(_)), "{auskunft:?}");
 }

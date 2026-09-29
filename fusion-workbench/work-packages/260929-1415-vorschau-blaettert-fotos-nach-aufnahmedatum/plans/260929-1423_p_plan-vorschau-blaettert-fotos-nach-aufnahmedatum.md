@@ -267,12 +267,13 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
 
 ### Stufe D: Profile, Messweg, Texte
 
-10. **Zwei Profile und ihr Kopfkommentar in der Auslieferungsfassung**
+10. [DONE] **Zwei Profile und ihr Kopfkommentar in der Auslieferungsfassung**
     - Executor: `data-implementer`
     - Files: `resources/default-readers.toml`
     - Changes: zwei `[[profil]]`-Blöcke in einem eigenen `# ===`-Abschnitt „Die Profile für Fotoordner“ hinter den flight-Profilen: `name = "Fotos: ein Jahr"`, `pfad = '/Fotos/[0-9]{4}$'`, `bildfolge = { ordner = "*" }`; `name = "Fotos: ein Monat"`, `pfad = '/Fotos/[0-9]{4}/[0-9]{2}$'`, `bildfolge = { }`. Keiner trägt Zeilen. Im Kopf: ein Abschnitt „Die Bildfolge“ im Umfang der vier Bausteine (was sie tut, ein Beispiel mit umgeschriebenem Muster `Bilder/[0-9]{4}$`, welche Einträge Fotos sind, Reihenfolge, Vorrang vor Zeilen, die stille Hälfte eines verschriebenen Tischnamens) (C1.4); im Abschnitt „Was eine Zusammenfassung höchstens kostet“ die vier Grenzen der Bildfolge aus Entscheidung 3 mit ihren Werten aus `leseprofil/mod.rs` (C5.6); im Abschnitt „Der Aufbau“ ein Satz, dass ein Profil neben seinen Zeilen eine Bildfolge nennen darf.
     - Acceptance: `make check` grün, insbesondere `die_eingebettete_fassung_besteht_ihre_eigene_pruefung`, `die_auslieferungsfassung_traegt_ihre_kommentare` und `die_auslieferungsfassung_nennt_jeden_bausteinnamen` ohne geänderte Erwartung. Jede Zahl im Kopf steht als Konstante in `leseprofil/mod.rs`.
     - Dependencies: Schritt 6
+    - **Berichtigung beim Bau:** Die Zusage „keine geänderte Erwartung“ in Schritt 10 und 11 übersah, dass vier Proben (`ablage/leseprofile.rs` zweimal, `tests/ablage.rs`, `ausgelieferte()` in `tests/leseprofil.rs`) die Zahl der ausgelieferten Profile fest auf 13 hielten; sie zählen seither die `[[profil]]`-Blöcke der Auslieferungsfassung, und ein getroffener Fotoordner ohne Foto fällt nach dem Überblick des Spec auf das Default-Profil zurück, statt allein Name und Pfad zu zeigen.
 
 11. **Proben an der Auslieferungsfassung**
     - Executor: `code-implementer`

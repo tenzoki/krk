@@ -527,6 +527,25 @@ pub fn varianten_der_aufzaehlung(datei: &str, name: &str) -> Vec<String> {
         .collect()
 }
 
+/// Wie viele `[[profil]]`-Bloecke ein Text von `readers.toml` fuehrt, gezaehlt
+/// am Text und nicht am Leser.
+///
+/// **Die Zahl der mitgelieferten Profile wird abgeleitet und nicht behauptet.**
+/// Bis zur Bildfolge stand sie als `13` in vier Proben und musste mit jedem
+/// Profil der Auslieferungsfassung von Hand nachgezogen werden; was die Proben
+/// halten wollen, ist nicht die Zahl, sondern dass die Pruefung kein Profil
+/// der Auslieferungsfassung still verliert. Gegen diese Zaehlung gehalten,
+/// sagt jede von ihnen genau das.
+///
+/// Gezaehlt wird die Zeile `[[profil]]` ausserhalb eines Kommentars: der Kopf
+/// der Auslieferungsfassung zeigt Beispielprofile hinter `#`, und die zaehlen
+/// nicht. Das ist die Rust-Fassung von `grep -c '^\[\[profil\]\]'`.
+pub fn profilbloecke(text: &str) -> usize {
+    text.lines()
+        .filter(|zeile| zeile.trim() == "[[profil]]")
+        .count()
+}
+
 /// Die Zeilen des Aufzaehlungsblocks, getrimmt und ohne Kommentare, Attribute
 /// und Leerzeilen.
 ///
