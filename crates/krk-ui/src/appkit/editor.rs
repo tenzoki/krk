@@ -570,6 +570,7 @@ use crate::kommandos::zulaessigkeit::Editorform;
 use crate::quicknote::Rueckkehr;
 
 use super::bereichsleiste::Kommandomelder;
+use super::blaetter::suche::Suchwahl;
 use super::eintragsansicht::{self, Eintragsansicht, Eintragsart, Zeilen, Zelle, Zellenwege};
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
@@ -4381,6 +4382,83 @@ impl Editorbereich {
         self.suchmeldung()
     }
 
+    /// Fuehrt aus, was der Nutzer im Suchblatt gewaehlt hat (C5).
+    ///
+    /// **Kein dritter Suchweg, sondern die vorhandenen in der Reihenfolge, die
+    /// das Blatt verlangt.** Die beiden Texte werden zuerst uebernommen, dann
+    /// geht jede Wahl durch denselben Befehl wie ihre Taste: `cmd+g`
+    /// ([`Self::weitersuchen`]), `shift+cmd+r` ([`Self::treffer_ersetzen`]) und
+    /// `ctrl+cmd+r` ([`Self::alle_treffer_ersetzen`]). Rueckgaengigstapel,
+    /// Budget und Abweichungsmarke haengen damit an denselben Stellen wie
+    /// bisher, und das Sammelersetzen bleibt ein einziger Schritt fuer `cmd+z`.
+    ///
+    /// **Ob weitergesucht oder neu gesucht wird, entscheidet
+    /// [`Self::steht_auf_treffer`].** Steht der angesteuerte Treffer desselben
+    /// Suchtexts noch ausgewaehlt, geht "Weitersuchen" zum naechsten und
+    /// "Ersetzen" ersetzt ihn. Sonst — neuer Suchtext, keine laufende Suche oder
+    /// eine Schreibmarke, die der Nutzer inzwischen versetzt hat — beginnt die
+    /// Suche ab der Schreibmarke wie bisher, und "Ersetzen" ersetzt den Treffer,
+    /// den sie ansteuert. Ohne diese Frage fande ein zweites "Weitersuchen" mit
+    /// unveraendertem Text denselben Treffer wieder, denn die Schreibmarke steht
+    /// an seinem Anfang.
+    ///
+    /// Der Ersatztext wird in jedem Fall uebernommen, auch wenn nicht neu
+    /// gesucht wird: der Nutzer kann ihn im Blatt geaendert haben, und die
+    /// Tastenbefehle danach setzen ihn ein.
+    #[must_use = "der Stand der Suche steht allein in dieser Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
+    pub fn suchblatt_beantworten(
+        &self,
+        wahl: Suchwahl,
+        gesucht: &str,
+        ersatz: &str,
+    ) -> Editormeldung {
+        let steht = self.steht_auf_treffer(gesucht);
+        *self.ivars().ersatz.borrow_mut() = ersatz.to_owned();
+        match wahl {
+            Suchwahl::Weitersuchen if steht => self.weitersuchen(),
+            Suchwahl::Weitersuchen => self.suche_beginnen(gesucht, ersatz),
+            Suchwahl::Ersetzen => {
+                if !steht {
+                    // Die Meldung der begonnenen Suche geht in der des
+                    // Ersetzens auf; ohne Treffer sagt jene dasselbe.
+                    let _ = self.suche_beginnen(gesucht, ersatz);
+                }
+                self.treffer_ersetzen()
+            }
+            Suchwahl::AlleErsetzen => {
+                // Neu gesucht wird immer: das Sammelersetzen haengt nicht an
+                // der Schreibmarke, aber an einem Suchlauf mit diesem Text.
+                let _ = self.suche_beginnen(gesucht, ersatz);
+                self.alle_treffer_ersetzen()
+            }
+        }
+    }
+
+    /// Ob in der Flaeche genau der angesteuerte Treffer eines Suchlaufs ueber
+    /// `gesucht` ausgewaehlt ist.
+    ///
+    /// Die Frage hinter [`Self::suchblatt_beantworten`]. Verglichen wird in
+    /// UTF-16 an der Auswahl der Flaeche, weil der Nutzer die Schreibmarke dort
+    /// und nicht im Modell versetzt.
+    fn steht_auf_treffer(&self, gesucht: &str) -> bool {
+        let bereich = {
+            let modell = self.ivars().modell.borrow();
+            let Some(treffer) = modell
+                .suchlauf()
+                .filter(|lauf| lauf.gesucht() == gesucht)
+                .and_then(Suchlauf::angesteuert)
+            else {
+                return false;
+            };
+            koordinaten::in_utf16(modell.stand(), &[treffer.anfang, treffer.ende])
+        };
+        let [von, bis] = bereich[..] else {
+            return false;
+        };
+        let auswahl = self.ivars().text.selectedRange();
+        auswahl.location == von && auswahl.length == bis.saturating_sub(von)
+    }
+
     /// `cmd+g`: steuert den naechsten Treffer an (C5).
     #[must_use = "der Stand der Suche steht allein in dieser Antwort; fallengelassen tut der Befehl kommentarlos nichts"]
     pub fn weitersuchen(&self) -> Editormeldung {
@@ -8006,6 +8084,50 @@ mod tests {
         ] {
             assert!(!umbau.contains(nadel), "umbau_anwenden ruft {nadel}");
         }
+    }
+
+    /// Das Suchblatt fuehrt die Wege der Tastenbefehle aus und keinen dritten.
+    ///
+    /// `suchblatt_beantworten` ruft die drei Befehle hinter `cmd+g`,
+    /// `shift+cmd+r` und `ctrl+cmd+r` samt dem Suchbeginn und schreibt selbst
+    /// weder in den Stand noch in den Rueckgaengigstapel: Budget und der eine
+    /// Rueckgaengig-Schritt des Sammelersetzens haengen damit an denselben
+    /// Stellen wie bei der Taste. Und das Blatt erreicht diesen Weg: der
+    /// Rueckruf in `editor_suchen` (`anwendung.rs`) ruft ihn und nicht mehr
+    /// allein den Suchbeginn.
+    #[test]
+    fn das_suchblatt_geht_die_wege_der_tastenbefehle() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let antwort = rumpf(&quelle, "suchblatt_beantworten");
+        for nadel in [
+            concat!("self.weiter", "suchen()"),
+            concat!("self.treffer_er", "setzen()"),
+            concat!("self.alle_treffer_er", "setzen()"),
+            concat!("self.suche_be", "ginnen("),
+        ] {
+            assert!(
+                antwort.contains(nadel),
+                "suchblatt_beantworten ruft {nadel} nicht"
+            );
+        }
+        for nadel in [
+            concat!(".bear", "beiten("),
+            concat!("self.verlauf_fuer", "_umbau("),
+            concat!("self.stand_er", "neuern("),
+            concat!("Umkehrpunkt::zwi", "schen("),
+        ] {
+            assert!(
+                !antwort.contains(nadel),
+                "suchblatt_beantworten ruft {nadel}"
+            );
+        }
+
+        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
+        assert!(
+            rumpf(&anwendung, "editor_suchen").contains(concat!(".suchblatt_beant", "worten(")),
+            "das Suchblatt erreicht suchblatt_beantworten nicht"
+        );
     }
 
     /// Die Tabelle zieht nach jeder Aenderung des Standes nach: aus

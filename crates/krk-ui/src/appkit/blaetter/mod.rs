@@ -200,7 +200,9 @@
 //! `NSWindow`, `NSObject`, `NSString` und `NSNotification` stehen seit macOS
 //! 10.0 zur Verfuegung, ebenso die Protokolle `NSControlTextEditingDelegate`
 //! und `NSTextFieldDelegate` samt der beiden hier beantworteten Methoden
-//! `control:textView:doCommandBySelector:` und `controlTextDidChange:`, dazu
+//! `control:textView:doCommandBySelector:` und `controlTextDidChange:` samt
+//! der darin verglichenen Befehle `insertNewline:`, `cancelOperation:` und
+//! `insertNewlineIgnoringFieldEditor:` (`NSResponder.h`), dazu
 //! die Aufzaehlungen `NSAlertStyle` und `NSEventModifierFlags` und die
 //! Zugriffe `setInitialFirstResponder:`, `setNextKeyView:` und
 //! `NSTextField.delegate`, dazu `NSAlert.buttons`, `NSArray` mit
@@ -296,6 +298,15 @@ pub struct WaechterIvars {
     /// Pruefung selbst an. Ein `Rc` aus demselben Grund wie bei
     /// [`Self::aenderung`].
     pruefung: RefCell<Option<Rc<dyn Fn() -> bool>>>,
+    /// Was zu tun ist, wenn der Nutzer im Feld Wahltaste und Eingabetaste
+    /// drueckt.
+    ///
+    /// Wahlfrei, weil es nur ein Blatt setzt, das eine Schaltflaeche auf
+    /// [`Taste::EingabeMitWahl`] traegt ([`wahlstelle`]). Ohne diesen Weg macht
+    /// der Feldeditor aus der Kombination `insertNewlineIgnoringFieldEditor:`
+    /// und setzt einen Zeilenumbruch ins Feld, statt die Schaltflaeche
+    /// auszuloesen, die der erlaeuternde Text des Blattes ansagt.
+    wahl: RefCell<Option<Box<dyn Fn()>>>,
 }
 
 define_class!(
@@ -339,6 +350,12 @@ define_class!(
                 self.antworten(false);
                 return objc2::runtime::Bool::YES;
             }
+            // Wahltaste und Eingabetaste: nur uebernommen, wenn das Blatt eine
+            // Schaltflaeche darauf gelegt hat. Sonst bleibt der Befehl beim
+            // Feldeditor, wie vor diesem Zweig.
+            if befehl == sel!(insertNewlineIgnoringFieldEditor:) && self.waehlen() {
+                return objc2::runtime::Bool::YES;
+            }
             objc2::runtime::Bool::NO
         }
 
@@ -376,6 +393,7 @@ impl Eingabewaechter {
             antwort: RefCell::new(None),
             aenderung: RefCell::new(None),
             pruefung: RefCell::new(None),
+            wahl: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -394,6 +412,22 @@ impl Eingabewaechter {
     fn bestaetigung_erlaubt(&self) -> bool {
         let pruefung = self.ivars().pruefung.borrow().clone();
         pruefung.is_none_or(|pruefen| pruefen())
+    }
+
+    /// Ruft den hinterlegten Weg fuer Wahltaste und Eingabetaste, falls es
+    /// einen gibt, und sagt, ob es einen gab.
+    ///
+    /// Die Ausleihe endet vor dem Aufruf, aus demselben Grund wie in
+    /// [`Self::antworten`].
+    fn waehlen(&self) -> bool {
+        let wahl = self.ivars().wahl.borrow_mut().take();
+        match wahl {
+            Some(wahl) => {
+                wahl();
+                true
+            }
+            None => false,
+        }
     }
 
     /// Ruft den hinterlegten Antwortweg.
@@ -614,6 +648,24 @@ pub fn bestaetigungsstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> usize {
         .unwrap_or_else(|| abbruchstelle(schaltflaechen))
 }
 
+/// Die Stelle der Schaltflaeche auf Wahltaste und Eingabetaste, falls das Blatt
+/// eine traegt.
+///
+/// Die dritte Frage dieser Art neben [`abbruchstelle`] und
+/// [`bestaetigungsstelle`], und wie die zweite aus der [`Taste`] abgeleitet:
+/// der [`Eingabewaechter`] gibt die Kombination, die der Feldeditor sonst als
+/// Zeilenumbruch ins Feld setzt, der Schaltflaeche zurueck, der sie gehoert.
+/// `None` heisst: der Waechter uebernimmt die Kombination nicht, und das Feld
+/// verhaelt sich wie vor dem 260929.
+///
+/// Bei mehreren zaehlt die erste, wie in den beiden Regeln darueber.
+#[must_use]
+pub fn wahlstelle(schaltflaechen: &[Schaltflaeche<'_>]) -> Option<usize> {
+    schaltflaechen
+        .iter()
+        .position(|schaltflaeche| schaltflaeche.taste == Taste::EingabeMitWahl)
+}
+
 /// Ein stehendes Blatt, das der Aufrufer wieder schliessen kann.
 ///
 /// Der Abbruchbefehl braucht das: `esc` schliesst ein stehendes Blatt ueber
@@ -716,6 +768,11 @@ pub struct Blatt {
     /// Schaltflaeche die Taste selbst, und niemand muss rechnen, wem sie
     /// gehoert.
     bestaetigungsstelle: usize,
+    /// Die Stelle der Schaltflaeche auf Wahltaste und Eingabetaste, falls es
+    /// eine gibt; aus [`wahlstelle`]. Gebraucht allein vom
+    /// [`Eingabewaechter`], aus demselben Grund wie
+    /// [`Self::bestaetigungsstelle`].
+    wahlstelle: Option<usize>,
     /// Der Delegierte des Eingabefeldes, falls es eines gibt.
     ///
     /// Ein `NSControl` haelt seinen Delegierten schwach; die starke Richtung
@@ -725,7 +782,7 @@ pub struct Blatt {
 
 /// Die beiden Schaltflaechen von [`Blatt::neu`], in bindender Reihenfolge.
 ///
-/// **Als reine Funktion herausgezogen, damit der Bauplan der sechs Blaetter aus
+/// **Als reine Funktion herausgezogen, damit der Bauplan der Blaetter aus
 /// [`Blatt::neu`] ohne AppKit und ohne Hauptfaden pruefbar ist.** Dieselbe
 /// Bauform wie `super::loeschbestaetigung::schaltflaechen`, und aus demselben
 /// Grund: an einem gebauten `NSAlert` ist nicht mehr abzulesen, welche seiner
@@ -821,6 +878,7 @@ impl Blatt {
             antworten,
             abbruchstelle: abbruchstelle(schaltflaechen),
             bestaetigungsstelle: bestaetigungsstelle(schaltflaechen),
+            wahlstelle: wahlstelle(schaltflaechen),
             waechter: None,
         }
     }
@@ -1036,6 +1094,14 @@ impl Blatt {
                 };
                 elternfenster.endSheet_returnCode(&blattfenster, antwort);
             }));
+            if let Some(stelle) = self.wahlstelle {
+                let wahlcode = antwort_von_stelle(stelle);
+                let blattfenster = self.warnung.window();
+                let elternfenster = fenster.retain();
+                *waechter.ivars().wahl.borrow_mut() = Some(Box::new(move || {
+                    elternfenster.endSheet_returnCode(&blattfenster, wahlcode);
+                }));
+            }
         }
 
         Blattgriff {
@@ -1140,6 +1206,27 @@ mod tests {
         );
     }
 
+    /// Die Tafel von [`wahlstelle`]: die Schaltflaeche auf Wahltaste und
+    /// Eingabetaste wird gefunden, und ein Blatt ohne sie bekommt keinen Weg.
+    ///
+    /// Die zweite Zeile ist die Zusage an jedes andere Blatt: ohne eine solche
+    /// Schaltflaeche uebernimmt der Waechter die Kombination nicht, und das
+    /// Feld verhaelt sich wie vor dem 260929.
+    #[test]
+    fn die_tafel_der_waehlenden_stelle() {
+        assert_eq!(
+            wahlstelle(&super::suche::schaltflaechen()),
+            Some(2),
+            "im Suchblatt liegt \"Alle ersetzen\" auf Wahltaste und Eingabetaste"
+        );
+        assert_eq!(
+            wahlstelle(&standardschaltflaechen("Sichern")),
+            None,
+            "ein Blatt aus Blatt::neu traegt keine Schaltflaeche auf Wahltaste und Eingabetaste"
+        );
+        assert_eq!(wahlstelle(&[]), None, "ein Blatt ohne Schaltflaeche");
+    }
+
     /// Die Eingabetaste im Feld faellt nie auf einen ausfuehrenden Ausgang,
     /// dem sie nicht gehoert.
     ///
@@ -1178,12 +1265,14 @@ mod tests {
         let loeschrueckfrage =
             super::loeschbestaetigung::schaltflaechen("In den Papierkorb räumen");
         let blatt_neu = standardschaltflaechen("Sichern");
+        let suchblatt = super::suche::schaltflaechen();
 
         for schaltflaechen in [
             &ein_ziel[..],
             &mehrere_ziele[..],
             &loeschrueckfrage[..],
             &blatt_neu[..],
+            &suchblatt[..],
         ] {
             let stelle = bestaetigungsstelle(schaltflaechen);
             assert_eq!(
@@ -1236,7 +1325,7 @@ mod tests {
     /// trat nicht ein
     /// (`issues/260817-1419_*_die-zusicherung-gegen-ein-blatt-ohne-ungefaehrlichen-ausgang-greift-in-keinem-bau.md`).
     ///
-    /// **Die sechs Blaetter aus [`Blatt::neu`] sieht diese Zaehlung nicht**, und
+    /// **Die Blaetter aus [`Blatt::neu`] sieht diese Zaehlung nicht**, und
     /// sie soll es nicht: ihre Dateien bringen keine Schaltflaechen mit. Deren
     /// gemeinsamer Bauplan ist eigens gemessen, an
     /// `der_bauplan_von_blatt_neu_hat_einen_ungefaehrlichen_ausgang`.
@@ -1266,11 +1355,11 @@ mod tests {
 
     /// Der Bauplan von [`Blatt::neu`] traegt einen ungefaehrlichen Ausgang.
     ///
-    /// **Die sechs Blaetter, die ueber [`Blatt::neu`] entstehen, bringen ihre
+    /// **Die Blaetter, die ueber [`Blatt::neu`] entstehen, bringen ihre
     /// Schaltflaechen nicht selbst mit**, also kann die Zaehlprobe darueber sie
     /// nicht sehen: ihre Dateien nennen [`Wirkung::Liegenlassen`] nicht und
     /// muessen es auch nicht. Gemessen wird stattdessen der eine Bauplan, den
-    /// alle sechs teilen, und zwar an derselben reinen Funktion, die
+    /// alle teilen, und zwar an derselben reinen Funktion, die
     /// [`Blatt::neu`] einsetzt.
     #[test]
     fn der_bauplan_von_blatt_neu_hat_einen_ungefaehrlichen_ausgang() {

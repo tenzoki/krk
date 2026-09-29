@@ -9207,6 +9207,11 @@ impl Anwendungsdelegierter {
 
     /// `cmd+f`: fragt nach Such- und Ersatztext und beginnt die Suche (C5).
     ///
+    /// **Das Blatt fragt auch, was geschehen soll**: Weitersuchen, Ersetzen
+    /// oder Alle ersetzen, je eine Schaltflaeche. Ausgefuehrt wird die Wahl in
+    /// `Editorbereich::suchblatt_beantworten` ueber dieselben Wege wie die
+    /// Tastenbefehle.
+    ///
     /// **Ein Blatt fuer beide Texte**, und der Ersatztext bleibt danach beim
     /// Editor stehen: `shift+cmd+r` und `ctrl+cmd+r` setzen ihn ein, ohne ein
     /// zweites Mal zu fragen. Der Grund steht im Modulkopf von
@@ -9231,14 +9236,14 @@ impl Anwendungsdelegierter {
             &fenster,
             &gesucht,
             &ersatz,
-            move |gesucht, ersatz| {
+            move |wahl, gesucht, ersatz| {
                 let Some(selbst) = schwach.load() else {
                     return;
                 };
                 let Some(editor) = selbst.ivars().editor.get() else {
                     return;
                 };
-                let meldung = editor.suche_beginnen(&gesucht, &ersatz);
+                let meldung = editor.suchblatt_beantworten(wahl, &gesucht, &ersatz);
                 selbst.editormeldung_zeigen(&meldung);
             },
         );

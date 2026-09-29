@@ -3,8 +3,16 @@
 //! ```text
 //!  ┌ Suchen nach:    [____________________] ┐  zwei Eingabefelder,
 //!  │ Ersetzen durch: [____________________] ┘  ein Eingabewaechter
-//!  └ [Abbrechen]                    [Suche]
+//!  └ [Abbrechen] [Alle ersetzen] [Ersetzen] [Weitersuchen]
 //! ```
+//!
+//! **Das Blatt traegt seit dem 260929 alle drei Handlungen als Schaltflaeche.**
+//! Bis dahin hatte es allein "Suche", und Ersetzen, Alle ersetzen und
+//! Weitersuchen waren nur ueber ihre Tastenbefehle und das Menue "Editor" zu
+//! erreichen; wer im Blatt nach ihnen suchte, fand sie nicht und hielt sie fuer
+//! nicht gebaut. Die Schaltflaechen fuehren dieselben Wege des Editorbereichs
+//! aus wie die Tastenbefehle und bauen keinen zweiten; welche Handlung was
+//! bedeutet, steht bei [`Suchwahl`].
 //!
 //! **Ein Blatt fuer beide Befehle.** Der Spec traegt Suchen und Ersetzen unter
 //! einem Buchstaben (C5), und der Ersatztext gehoert zum Suchtext: `cmd+f`
@@ -13,11 +21,15 @@
 //! allein fuer den Ersatztext waere eine zweite Stelle, an der der Nutzer
 //! dieselbe Suche noch einmal beschreiben muesste.
 //!
-//! **Dieses Blatt sucht nicht.** Es liefert zwei Zeichenketten; gesucht und
+//! **Dieses Blatt sucht nicht.** Es liefert zwei Zeichenketten und die gewaehlte
+//! [`Suchwahl`]; gesucht und
 //! ersetzt wird in `krk_core::text::suche`, gehalten wird der Suchlauf in
 //! `crate::editormodell`. Gross- und Kleinschreibung, regulaere Ausdruecke und
 //! die Suchrichtung sind nach dem Spec **nicht** festgelegt und kommen nicht
-//! hinzu; deshalb traegt das Blatt kein einziges Kaestchen. Jeder Schalter
+//! hinzu; deshalb traegt das Blatt kein einziges Kaestchen. Eine Schaltflaeche
+//! fuer das Rueckwaertssuchen traegt es aus demselben Grund nicht: sie waere
+//! die fuenfte, und `ctrl+cmd+g` erreicht den vorigen Treffer, sobald das Blatt
+//! zu ist. Jeder Schalter
 //! waere ein Bedienelement und ein Abnahmekriterium mehr.
 //!
 //! **Ein Blatt haelt genau einen Eingabewaechter, auch bei zwei Feldern.** Der
@@ -59,7 +71,66 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSTextAlignment, NSTextField, NSView, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
-use super::{Blatt, Blattgriff};
+use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
+
+/// Was der Nutzer im Blatt gewaehlt hat.
+///
+/// **Jeder Wert fuehrt einen Weg aus, den es als Tastenbefehl schon gibt**,
+/// naemlich `cmd+g`, `shift+cmd+r` und `ctrl+cmd+r`; der Unterschied ist
+/// allein, dass das Blatt die beiden Texte zuerst uebernimmt. Wie ein Wert
+/// ausgefuehrt wird, entscheidet `Editorbereich::suchblatt_beantworten` und
+/// nicht diese Datei.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Suchwahl {
+    /// Den naechsten Treffer ansteuern; bei einem neuen Suchtext den ersten ab
+    /// der Schreibmarke.
+    Weitersuchen,
+    /// Den angesteuerten Treffer ersetzen und den naechsten ansteuern.
+    Ersetzen,
+    /// Alle Treffer in einem Zug ersetzen.
+    AlleErsetzen,
+}
+
+/// Die Schaltflaechen des Blattes, in bindender Reihenfolge.
+///
+/// Die erste steht rechts und ist die hervorgehobene. Die Eingabetaste gehoert
+/// "Weitersuchen", weil sie nichts veraendert; die beiden Ersetzungen liegen
+/// auf Eingabetaste mit Befehls- und mit Wahltaste, damit eine reflexhafte
+/// Bestaetigung nie ersetzt, und die Escape-Taste bricht ab. Die Stellen
+/// liest [`suchwahl_von_stelle`] zurueck; dass beide zueinander passen, haelt
+/// die Probe `jede_stelle_hat_ihre_wahl`.
+///
+/// `pub(super)`, damit die Proben in [`super`] diese Liste lesen, statt sie
+/// nachzubauen.
+#[must_use]
+pub(super) fn schaltflaechen() -> [Schaltflaeche<'static>; 4] {
+    [
+        Schaltflaeche::neu("Weitersuchen", Taste::Eingabe, Wirkung::Ausfuehren),
+        Schaltflaeche::neu("Ersetzen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
+        Schaltflaeche::neu("Alle ersetzen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
+        Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+    ]
+}
+
+/// Welche Wahl die Schaltflaeche an dieser Stelle von [`schaltflaechen`]
+/// bedeutet; `None` fuer den Abbruch und fuer jede Stelle, die es nicht gibt.
+#[must_use]
+fn suchwahl_von_stelle(stelle: usize) -> Option<Suchwahl> {
+    match stelle {
+        0 => Some(Suchwahl::Weitersuchen),
+        1 => Some(Suchwahl::Ersetzen),
+        2 => Some(Suchwahl::AlleErsetzen),
+        _ => None,
+    }
+}
+
+/// Der Satz unter der Frage, der die beiden Kombinationen mit Zusatztaste
+/// nennt.
+///
+/// Ohne ihn waeren sie unauffindbar; so verlangt es der Doc-Kommentar von
+/// [`Taste`]. Der Wortlaut folgt dem des Konfliktblattes (`Cmd+Return`, `Opt+Return`).
+const ERLAEUTERUNG: &str = "Return sucht weiter, Cmd+Return ersetzt den Treffer, \
+                            Opt+Return ersetzt alle, Esc bricht ab.";
 
 /// Die Breite der Beigabe in Punkten.
 ///
@@ -84,9 +155,10 @@ const SPALTENABSTAND: f64 = 8.0;
 
 /// Zeigt die Frage nach Such- und Ersatztext am Fenster.
 ///
-/// Kehrt sofort zurueck. `fertig` bekommt den Suchtext und den Ersatztext, in
-/// dieser Reihenfolge, und laeuft auf dem Hauptfaden, wenn der Nutzer
-/// bestaetigt hat; bricht er ab, laeuft es gar nicht.
+/// Kehrt sofort zurueck. `fertig` bekommt die gewaehlte [`Suchwahl`], den
+/// Suchtext und den Ersatztext, in dieser Reihenfolge, und laeuft auf dem
+/// Hauptfaden, wenn der Nutzer eine der drei ausfuehrenden Schaltflaechen
+/// gewaehlt hat; bricht er ab, laeuft es gar nicht.
 ///
 /// **Beide Texte gehen unveraendert hinaus**, ohne `trim` und ohne Wandlung.
 /// Ein fuehrendes Leerzeichen ist im Suchtext ein Zeichen wie jedes andere,
@@ -98,7 +170,7 @@ pub fn zeigen(
     fenster: &NSWindow,
     gesucht: &str,
     ersatz: &str,
-    fertig: impl Fn(String, String) + 'static,
+    fertig: impl Fn(Suchwahl, String, String) + 'static,
 ) -> Blattgriff {
     let hoehe = 2.0f64.mul_add(ZEILENHOEHE, ZEILENABSTAND);
     let beigabe = NSView::initWithFrame(
@@ -137,7 +209,8 @@ pub fn zeigen(
         ersatzfeld.setNextKeyView(Some(&suchfeld));
     }
 
-    let mut blatt = Blatt::neu(mtm, "Wonach suchen?", "Suche");
+    let mut blatt = Blatt::mit_schaltflaechen(mtm, "Wonach suchen?", &schaltflaechen());
+    blatt.erlaeuterung_setzen(ERLAEUTERUNG);
     // Die drei Schritte einzeln und nicht ueber `textfeld_setzen`: die Beigabe
     // ist der Rahmen um die beiden Felder und nicht eines davon, und
     // Ersthelfer ist das Suchfeld. Der Waechter ist fuer beide derselbe.
@@ -148,9 +221,10 @@ pub fn zeigen(
 
     let suchfeld: Retained<NSTextField> = suchfeld;
     let ersatzfeld: Retained<NSTextField> = ersatzfeld;
-    blatt.zeigen(fenster, move |bestaetigt| {
-        if bestaetigt {
+    blatt.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| {
+        if let Some(wahl) = suchwahl_von_stelle(stelle) {
             fertig(
+                wahl,
                 suchfeld.stringValue().to_string(),
                 ersatzfeld.stringValue().to_string(),
             );
@@ -188,4 +262,72 @@ fn eingabezeile(
     feld.setStringValue(&NSString::from_str(startwert));
     beigabe.addSubview(&feld);
     feld
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{Taste, Wirkung, abbruchstelle, bestaetigungsstelle};
+    use super::*;
+
+    /// Jede ausfuehrende Schaltflaeche bedeutet eine Wahl, und die
+    /// liegenlassende keine.
+    ///
+    /// Haelt [`schaltflaechen`] und [`suchwahl_von_stelle`] aneinander: wer die
+    /// Reihenfolge der einen dreht, ohne die andere nachzuziehen, bekommt hier
+    /// die Beschriftung der verrutschten Schaltflaeche im Fehlschlag.
+    #[test]
+    fn jede_stelle_hat_ihre_wahl() {
+        let erwartet = [
+            ("Weitersuchen", Some(Suchwahl::Weitersuchen)),
+            ("Ersetzen", Some(Suchwahl::Ersetzen)),
+            ("Alle ersetzen", Some(Suchwahl::AlleErsetzen)),
+            ("Abbrechen", None),
+        ];
+        let liste = schaltflaechen();
+        assert_eq!(liste.len(), erwartet.len());
+        for (stelle, (schaltflaeche, (titel, wahl))) in liste.iter().zip(erwartet).enumerate() {
+            assert_eq!(schaltflaeche.titel, titel, "an Stelle {stelle}");
+            assert_eq!(
+                suchwahl_von_stelle(stelle),
+                wahl,
+                "\"{titel}\" bedeutet die falsche Wahl"
+            );
+            assert_eq!(
+                schaltflaeche.wirkung == Wirkung::Liegenlassen,
+                wahl.is_none(),
+                "\"{titel}\" hat eine Wirkung, die nicht zu ihrer Wahl passt"
+            );
+        }
+        assert_eq!(suchwahl_von_stelle(liste.len()), None);
+    }
+
+    /// Die Eingabetaste ersetzt nie, und ein Abbruch faellt auf "Abbrechen".
+    #[test]
+    fn die_eingabetaste_sucht_und_ersetzt_nicht() {
+        let liste = schaltflaechen();
+        assert_eq!(
+            suchwahl_von_stelle(bestaetigungsstelle(&liste)),
+            Some(Suchwahl::Weitersuchen)
+        );
+        assert_eq!(suchwahl_von_stelle(abbruchstelle(&liste)), None);
+        assert_eq!(liste[abbruchstelle(&liste)].taste, Taste::Escape);
+    }
+
+    /// Der erlaeuternde Satz nennt jede Kombination mit Zusatztaste, die eine
+    /// Schaltflaeche traegt.
+    #[test]
+    fn die_erlaeuterung_nennt_beide_zusatztasten() {
+        for schaltflaeche in schaltflaechen() {
+            let angesagt = match schaltflaeche.taste {
+                Taste::EingabeMitBefehl => "Cmd+Return",
+                Taste::EingabeMitWahl => "Opt+Return",
+                Taste::Eingabe | Taste::Escape => continue,
+            };
+            assert!(
+                ERLAEUTERUNG.contains(angesagt),
+                "die Erlaeuterung nennt {angesagt} fuer \"{}\" nicht",
+                schaltflaeche.titel
+            );
+        }
+    }
 }
