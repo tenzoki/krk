@@ -32,3 +32,6 @@ Der Spec verlangt, dass Cmd+Pfeil hoch neben „In den übergeordneten Ordner“
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1, vorbehaltlich des Urteils aus Schritt 2 des Plans. Sie hält die Regel an einer Stelle und lässt die zwei Zusteller der Wahl (Ereignisabgriff und Menü) unberührt. Die Mengenform ist keine zweite Regel: sie ist dieselbe Frage, gestellt an die Funktionen, die die Kombination schon tragen, statt an eine davon.
+
+---
+Answered: 260929-1437-klaerung-verengung-in-der-konfliktregel.md `Urteil` — Möglichkeit 1 in der Mengenform: die Bildfolge ist eine engere Form des Dateifensters, eine Kombination trägt höchstens zwei Funktionen, die Regel `im_weg(traeger, bewerber)` prüft alle Träger, `nachschlag` liefert die engere zuerst; große TIFF über 256 KiB ordnen nach Änderungsdatum (kamadak-exif, 260929-1441-klaerung-aufnahmedatum-ohne-c.md); ruled by user, Kai Stalmann <kai@stalmann.org>

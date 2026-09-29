@@ -78,8 +78,8 @@ flowchart LR
 
 ### Entscheidungen
 
-1. [IN PROGRESS] **Schlüssel in `readers.toml`: `bildfolge = { }` am Profil, mit einem wahlfreien `ordner`.** Ohne `ordner` ist der erkannte Ordner die eine Gruppe (Monat), `ordner = "*"` macht jeden Unterordner zur Gruppe (Jahr). Die Ortsangabe geht durch `Ortsangabe::aus_angabe` und die aufgelöste Prüfung wie bei jedem Baustein, mit höchstens einem Platzhalter. Der Tisch trägt `deny_unknown_fields`: ein verschriebener Schlüssel darin kostet die Datei (C1.3). **Ein verschriebener Tischname `bildfolg` wird dagegen still übergangen**, weil `Profilblock` die Marke nicht trägt; das ist dieselbe benannte Lücke wie bei `kennzeichnen` und wird im Kopfkommentar ausgeschrieben, nicht behoben.
-2. [IN PROGRESS] **Die Bildfolge ist kein fünfter Baustein**, sondern eine Angabe am Profil: sie ersetzt die Zeilen, statt eine davon zu sein. `Baustein` bleibt bei vier, `BAUSTEINNAMEN` unverändert.
+1. **Schlüssel in `readers.toml`: `bildfolge = { }` am Profil, mit einem wahlfreien `ordner`.** Ohne `ordner` ist der erkannte Ordner die eine Gruppe (Monat), `ordner = "*"` macht jeden Unterordner zur Gruppe (Jahr). Die Ortsangabe geht durch `Ortsangabe::aus_angabe` und die aufgelöste Prüfung wie bei jedem Baustein, mit höchstens einem Platzhalter. Der Tisch trägt `deny_unknown_fields`: ein verschriebener Schlüssel darin kostet die Datei (C1.3). **Ein verschriebener Tischname `bildfolg` wird dagegen still übergangen**, weil `Profilblock` die Marke nicht trägt; das ist dieselbe benannte Lücke wie bei `kennzeichnen` und wird im Kopfkommentar ausgeschrieben, nicht behoben.
+2. **Die Bildfolge ist kein fünfter Baustein**, sondern eine Angabe am Profil: sie ersetzt die Zeilen, statt eine davon zu sein. `Baustein` bleibt bei vier, `BAUSTEINNAMEN` unverändert.
 3. **Grenzen der Bildfolge, eigene Konstanten neben denen der Zusammenfassung:** `HOECHSTENS_FOTOS = 7_500` (Spec C5.1); `HOECHSTENS_BILDGRUPPEN = 60` (fünf Jahre Monatsordner, falls jemand `*` weiter oben ansetzt); `HOECHSTENS_EINTRAEGE_JE_BILDORDNER = 10_000` je Verzeichnisleselauf der Folge; `HOECHSTENS_BYTES_JE_FOTO` aus dem Urteil von Schritt 1 (Vorschlag: 256 KiB). Gezählt wird in einem eigenen `Bildhaushalt`, der `Haushalt` der Textzeilen bleibt unberührt (C5.2). Die Zahl der Datumslesungen ist durch die Folge selbst begrenzt: höchstens die Fotos der Gruppen, die ganz oder teilweise in die Folge kommen, also höchstens 7.500 plus die Einträge der einen Gruppe, an der gekürzt wird.
 4. **Gekürzt wird in Folgenreihenfolge.** Gruppen kommen nach Namen hinein, solange die Zahl unter 7.500 bleibt; die Gruppe, an der die Grenze fällt, wird ganz geordnet und nur mit ihren frühesten Fotos aufgenommen (C5.1). Eine Gruppe, deren Verzeichnisleselauf an `HOECHSTENS_EINTRAEGE_JE_BILDORDNER` abbricht, gilt ebenfalls als gekürzt; es wird nur geordnet, was gelesen ist.
 5. **Welche Einträge Fotos sind:** Einträge vom Typ `Datei` (nie Verknüpfung, nie Ordner) mit einer der zehn Endungen, ohne Rücksicht auf Groß- und Kleinschreibung (C2.1). Die Endungsliste zieht in den Kern und hat danach genau eine Fassung (Schritt 3). Versteckte Einträge zählen nach dem Wortlaut des Spec mit; siehe `## Open Questions`.
@@ -157,7 +157,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
 
 ### Stufe A: die Haltepunkte
 
-1. [IN PROGRESS] **Klärung: das Aufnahmedatum ohne C auf beiden Mac-Zielen, je Format** (Haltepunkte 1 und 2 des Spec)
+1. [DONE] **Klärung: das Aufnahmedatum ohne C auf beiden Mac-Zielen, je Format** (Haltepunkte 1 und 2 des Spec)
    - Executor: `analyst`
    - Files: keine Änderung am Baum; ein Bericht nach `$OUT_ANALYSIS` des Arbeitspakets, Thema `klaerung-aufnahmedatum-ohne-c`. Versuche laufen in einer Wegwerfkiste im eigenen Arbeitsverzeichnis des Agenten, nie im Workspace.
    - Changes: beantworten, jede Antwort mit Befehl, Ausgabe oder Quelltextstelle belegt:
@@ -170,7 +170,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
    - Acceptance: Der Bericht endet mit genau einer Zeile `Urteil: Go (<Kiste und Fassung, oder ImageIO>)` oder `Urteil: Stop`. **Go** heißt: ein Kandidat liest das Datum auf beiden Mac-Zielen ohne `cc` und ohne Paket auf `-sys`, mindestens für `jpg`/`jpeg`. **Stop** heißt: keiner tut das (Haltepunkt 1). Darüber steht eine Tabelle je Format mit `liest`, `Änderungsdatum` oder `Stop für dieses Format`. `make check` bleibt unberührt, weil kein Quelltext sich ändert.
    - Dependencies: none
 
-2. [IN PROGRESS] **Klärung: die Verengung passt an die eine Stelle der Konfliktregel** (Haltepunkt 4 des Spec)
+2. [DONE] **Klärung: die Verengung passt an die eine Stelle der Konfliktregel** (Haltepunkt 4 des Spec)
    - Executor: `analyst`
    - Files: keine Änderung am Baum; ein Bericht nach `$OUT_ANALYSIS` des Arbeitspakets, Thema `klaerung-verengung-in-der-konfliktregel`
    - Changes: Am Quelltext von `crates/krk-core/src/tasten/belegung.rs` (`begegnen`, `konflikte`, `zuweisen`, `nachschlag`, `Wirkungsbereich::seite`, `schliesst_aus`), `crates/krk-ui/src/kommandos/zulaessigkeit.rs` (`Lage`, `gestattet`, `form_passt`, `waehlen`, `jede_lage`, `STELLVERTRETER`, die Tafeln), `kommandos/fokus.rs` (`wirkt`), `appkit/ereignisse.rs` (`Eingabe::Kommando`) und `menuemodell.rs` (`fruehere_behalten_das_kuerzel`) beantworten, jeweils mit Funktion und Datei belegt:
