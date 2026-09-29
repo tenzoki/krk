@@ -165,7 +165,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit jedes Schritts 3
 
 ### Stufe A: die zwei Haltepunkte
 
-1. **Klärung: die Vorschau übernimmt einen neuen Profilstand ohne Neuaufbau ihrer Tabs** (Haltepunkt 1 des Spec)
+1. [DONE] **Klärung: die Vorschau übernimmt einen neuen Profilstand ohne Neuaufbau ihrer Tabs** (Haltepunkt 1 des Spec)
    - Executor: `analyst`
    - Files: keine Änderung am Baum; ein Bericht nach `$OUT_ANALYSIS` des Arbeitspakets, Thema `klaerung-vorschau-uebernimmt-profilstand`
    - Changes: Am Quelltext von `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/vorschaumodell.rs` und `crates/krk-ui/src/appkit/anwendung.rs` beantworten, jede Antwort mit Datei und Funktion belegt:
@@ -176,7 +176,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit jedes Schritts 3
    - Acceptance: Der Bericht endet mit genau einer Zeile `Urteil: Go` oder `Urteil: Stop`. **Go** heißt: (a) bis (d) tragen Entscheidung 1 so, wie sie steht, oder mit einer benannten Berichtigung, die weder einen Tab neu baut noch einen zweiten Ladeweg einführt. **Stop** heißt: mindestens ein profilabhängiger Inhalt lässt sich nur durch Neuaufbau des Tabs oder einen Neustart übernehmen; der Bericht nennt ihn. `make check` bleibt unberührt, weil kein Quelltext sich ändert.
    - Dependencies: none
 
-2. **Klärung: der Weg von „Ort wählen…“ lässt sich mit festem Ziel gehen, ohne seine Prüfungen zu verdoppeln** (Haltepunkt 2 des Spec)
+2. [DONE] **Klärung: der Weg von „Ort wählen…“ lässt sich mit festem Ziel gehen, ohne seine Prüfungen zu verdoppeln** (Haltepunkt 2 des Spec)
    - Executor: `analyst`
    - Files: keine Änderung am Baum; ein Bericht nach `$OUT_ANALYSIS` des Arbeitspakets, Thema `klaerung-ortsweg-mit-festem-ziel`
    - Changes: Am Quelltext von `ort_waehlen`, `ort_uebernehmen`, `ort_wechseln` und `gehaltene_notizdatei` (`crates/krk-ui/src/appkit/anwendung.rs`), `crates/krk-core/src/heimordner/ort.rs` und den Proben `die_ortswahl_hat_genau_eine_rufkette` und `die_ortswahl_fragt_vor_dem_schreiben_und_setzt_den_griff_vor_dem_nachzug` beantworten:
