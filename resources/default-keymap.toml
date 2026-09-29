@@ -1182,9 +1182,14 @@ tasten = []
 # Kombination traegt.
 #
 # **Die Datei hat zwei Schreiber**, und ein spaeterer Leser sieht das sonst
-# nicht. KRK liest sie einmal beim Start und laedt sie im Betrieb nicht nach
-# (`krk_core::tasten::belegung::fuer_den_betrieb`); eine Aenderung von Hand
-# wirkt deshalb erst beim naechsten Start. Und die Belegungsansicht auf f1
+# nicht. KRK liest sie beim Start und laedt sie im Betrieb von sich aus nicht
+# nach (`krk_core::tasten::belegung::fuer_den_betrieb`); eine Aenderung von
+# Hand wirkt deshalb erst beim naechsten Start. Der eine zweite Zeitpunkt ist
+# "Auf Werkseinstellungen zuruecksetzen…" im Menue "KRK": der Befehl legt die
+# Datei nach einer Rueckfrage als `keymap.toml.<JJMMTT-HHMM>` beiseite,
+# entfernt sie und uebernimmt sofort die Auslieferungsbelegung; eine
+# Handaenderung, die noch nicht eingelesen war, liegt danach allein in der
+# beiseitegelegten Fassung. Und die Belegungsansicht auf f1
 # schreibt beim Verlassen **mit einer Aenderung** die ganze Arbeitskopie
 # zurueck, die sie aus dem Stand des Starts gebaut hat
 # (`Anwendungsdelegierter::belegungsansicht_verlassen`); jede Handaenderung

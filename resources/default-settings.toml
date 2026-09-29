@@ -3,12 +3,16 @@
 # Diese Datei ist die alleinige Quelle der ausgelieferten Einstellungen. Die
 # Ablage aus Schritt 18c des Plans bindet sie ueber `include_str!` ein und legt
 # `~/Library/Application Support/KRK/settings.toml` beim ersten Start aus ihr
-# an, samt dieser Kommentare. Danach ist sie die eine Datei der Ablage, die von
-# Hand gepflegt wird, und KRK schreibt sie an genau einer Stelle: "Ort
-# waehlen..." im Menue "Home" ersetzt allein den Wert von `notizordner` und
-# laesst jedes andere Byte stehen, diese Kommentare eingeschlossen. Ist die
-# Datei ein symbolischer Verweis, schreibt KRK sie nie und nennt die Zeile zum
-# Eintragen von Hand.
+# an, samt dieser Kommentare. Danach wird sie von Hand gepflegt, und KRK
+# schreibt sie an zwei Stellen. "Ort waehlen..." im Menue "Home" ersetzt allein
+# den Wert von `notizordner` und laesst jedes andere Byte stehen, diese
+# Kommentare eingeschlossen. "Auf Werkseinstellungen zuruecksetzen..." im Menue
+# "KRK" legt die Datei nach einer Rueckfrage als `settings.toml.<JJMMTT-HHMM>`
+# beiseite, schreibt sie als diese Auslieferungsfassung neu, uebernimmt dabei
+# den Wert von `notizordner` aus der alten Datei und liest sie sofort neu ein;
+# eine beschaedigte Datei setzt der Befehl nicht zurueck, sie ist zuerst von
+# Hand zu berichtigen. Ist die Datei ein symbolischer Verweis, schreibt KRK sie
+# auf keinem der zwei Wege und nennt die Zeile zum Eintragen von Hand.
 #
 # Quelle: Spec `260802-1036_*_spec-navigator-geruest.md`, Faehigkeit C11.
 # Bindend ist ausserdem der Datensatz

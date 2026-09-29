@@ -305,7 +305,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit der Schritte 3, 
 
 ### Stufe D: was der Nutzer und der nächste Leser lesen
 
-9. **Kommentare in den Auslieferungsfassungen**
+9. [DONE] **Kommentare in den Auslieferungsfassungen**
    - Executor: `data-implementer`
    - Files: `resources/default-settings.toml`, `resources/default-readers.toml`, `resources/default-keymap.toml`
    - Changes: allein Kommentarzeilen, die mit Schritt 8 falsch geworden sind: der Kopf von `default-settings.toml` („KRK schreibt sie an genau einer Stelle“; das Zurücksetzen schreibt die ganze Datei neu und übernimmt dabei den Wert von `notizordner`, eine beschädigte Datei setzt es nicht zurück), der Kopf von `default-readers.toml` („nach ihrer Anlage nie wieder überschreibt“), der Absatz „Die Datei hat zwei Schreiber“ in `default-keymap.toml` („liest sie einmal beim Start“). Jede Stelle nennt den Befehl „Auf Werkseinstellungen zurücksetzen…“ im Menü „KRK“ als zweiten Anlass. Kein Wert, kein Schlüssel, kein `[[funktion]]` und kein `[[profil]]` ändert sich. Die geänderten Kommentare gehören danach zu dem Text, den der Befehl bei einem Nutzer als Auslieferungsfassung schreibt.

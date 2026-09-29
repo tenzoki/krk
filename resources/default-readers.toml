@@ -3,9 +3,12 @@
 # Diese Datei ist die alleinige Quelle der ausgelieferten Leseprofile. KRK
 # bindet sie über `include_str!` ein und legt
 # `~/Library/Application Support/KRK/readers.toml` beim ersten Start wörtlich
-# aus ihr an, samt dieser Kommentare. Danach schreibt KRK die Nutzerdatei nicht
-# mehr: sie ist neben `settings.toml` die zweite Datei, die KRK nach ihrer
-# Anlage nie wieder überschreibt.
+# aus ihr an, samt dieser Kommentare. Danach schreibt KRK die Nutzerdatei aus
+# eigenem Antrieb nicht mehr, auch dann nicht, wenn eine neue Fassung Profile
+# mitbringt. Ein einziger Befehl schreibt sie noch: "Auf Werkseinstellungen
+# zurücksetzen…" im Menü "KRK" legt sie nach einer Rückfrage als
+# `readers.toml.<JJMMTT-HHMM>` beiseite, schreibt sie wörtlich als diese
+# Auslieferungsfassung neu und liest sie sofort ein.
 #
 # Quelle: Spec `260824-0613_*_spec-vorschau-zeigt-profil-zusammenfassung-statt-
 # metadaten.md`, Fähigkeit C5. Bindend ist außerdem der Datensatz
@@ -25,7 +28,8 @@
 # arbeitet, kann alle Profile ersetzen und verliert nichts.
 #
 # Geändert wird die Datei bei ausgeschaltetem KRK, oder die Änderung wirkt erst
-# beim nächsten Start: KRK liest sie einmal und beobachtet sie nicht.
+# beim nächsten Start: KRK liest sie beim Start und nach "Auf
+# Werkseinstellungen zurücksetzen…" und beobachtet sie nicht.
 
 # ----------------------------------------------------------------------------
 # Was ein Schreibfehler kostet
