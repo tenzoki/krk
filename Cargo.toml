@@ -654,6 +654,54 @@ chacha20poly1305 = { version = "0.11", default-features = false, features = [
 # und `-sys` stehen bei `chacha20poly1305` darueber, weil beide Kisten zusammen
 # aufgenommen sind und zwei Zahlen fuer einen Baum zwei Wahrheiten waeren.
 argon2 = { version = "0.6", default-features = false, features = ["alloc"] }
+# Der Leser des Aufnahmedatums fuer die Bildfolge der Leseprofile
+# (`krk-core/src/bild/aufnahmedatum.rs`). Welche Kiste, entscheidet die Klaerung
+# `work-packages/260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum/analyses/260929-1441-klaerung-aufnahmedatum-ohne-c.md`,
+# Urteil „Go (kamadak-exif =0.6.1, im Kern)“. Drei Kandidaten standen zur Wahl.
+#
+# **`nom-exif` scheidet aus**, weil es `chrono` mit dessen Vorgabemerkmalen
+# einbindet und darueber `iana-time-zone` samt `core-foundation-sys` hereinholt;
+# von aussen laesst sich das nicht abschalten. **ImageIO ueber `objc2-image-io`
+# scheidet aus**, obwohl es ohne C auskaeme: es bildet die Datei selbst ab, die
+# Lesegrenze je Foto waere dort eine Beobachtung an Apples Umsetzung und keine
+# Zusage, der Leser laege mit `unsafe` unter `krk-ui/src/appkit/`, und je Foto
+# kostete er gemessen 12- bis 60-mal so viel Zeit (HEIC rund 1,1 ms statt
+# 25 µs). `kamadak-exif` liest im Kern, ohne `unsafe` und hinter einem
+# Begrenzer, den KRK selbst haelt.
+#
+# Keine bestehende Abhaengigkeit liest EXIF: `icu_collator` sortiert, `regex`
+# vergleicht Muster, `zip` packt, `gix` liest Repositorys, die `objc2`-Kisten
+# reichen AppKit durch.
+#
+# **Der Preis faellt auf TIFF**, und der Nutzer hat ihn am 260929 angenommen:
+# die Kiste liest eine TIFF-Datei ganz (`read_from_container` haengt den Rest
+# mit `read_to_end` an), der Begrenzer bricht sie bei
+# `leseprofil::HOECHSTENS_BYTES_JE_FOTO` ab, und eine Foto-TIFF darueber ordnet
+# nach ihrem Aenderungsdatum.
+#
+# **Was die Kiste mitbringt, ist gezaehlt und nicht geschaetzt.** Am 260929 auf
+# diesem Geraet erhoben, mit `cargo tree --workspace --target <ziel> -e
+# normal,build` vor und nach der Aufnahme:
+#
+# - **Zwei neue Pakete je Mac-Ziel**, die Kiste selbst und `mutate_once` 0.1.2,
+#   beide unter BSD-2-Clause: der Baum waechst auf `aarch64-apple-darwin` von
+#   215 auf 217 Eintraege, auf `x86_64-apple-darwin` von 216 auf 218, und
+#   `Cargo.lock` von 239 auf 241. Die Kiste hat keine Merkmale, also gibt es keine
+#   abzuwaehlen; `default-features = false` steht trotzdem da, damit eine
+#   spaetere Fassung mit Vorgabemerkmalen nichts still hereinbringt.
+# - **Weder `cc` noch ein `-sys`-Paket kommt hinzu.** Auf den beiden
+#   Mac-Zielen kommt weder `cc` noch ein Paket mit einem Namen auf `-sys` im
+#   Baum an; `Cargo.lock` fuehrt daneben `windows-sys` und `linux-raw-sys`,
+#   beide an fremden Zielen. Pruefmittel ist `cargo tree --target <ziel> -e
+#   normal,build` und nicht ein `grep` ueber `Cargo.lock`. Keine der zwei Kisten
+#   traegt ein `build.rs`. Die Zusage aus der Technologiewahl haelt: die
+#   Bauvoraussetzungen aendern sich nicht.
+#
+# **Die Fassung ist auf `=0.6.1` festgenagelt**, strenger als `gix`: unter 1.0
+# darf jede kleine Fassung brechen, und die gemessenen Lesemengen je Format, auf
+# denen `HOECHSTENS_BYTES_JE_FOTO` ruht, gelten fuer genau diesen Quelltext.
+# Wer die Fassung hebt, misst sie neu.
+kamadak-exif = { version = "=0.6.1", default-features = false }
 
 # Argon2id im Profil `dev` voll optimiert, und nur diese Rechnung. Die Ableitung
 # mit den Parametern des Codes kostet im Profil `release` rund eine halbe

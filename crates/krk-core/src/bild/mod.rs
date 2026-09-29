@@ -13,8 +13,15 @@
 //! nennt, was `NSImage` auf jedem macOS dieser Anwendung liest; ein Format, das
 //! die Dekodierung dann doch nicht nimmt, faellt in der Ansicht auf die
 //! Metadaten zurueck.
+//!
+//! Daneben steht [`aufnahmedatum()`], der Leser des Aufnahmedatums, nach dem die
+//! Bildfolge ihre Fotos ordnet.
 
 use std::path::Path;
+
+pub mod aufnahmedatum;
+
+pub use aufnahmedatum::{Aufnahmezeit, Datumsleser, aufnahmedatum};
 
 /// Die Dateiendungen, die als gaengige Bildformate gelten, klein geschrieben.
 pub const ENDUNGEN: [&str; 10] = [

@@ -892,7 +892,9 @@ unsafe extern "C" {
 /// `crate::operation::entpacken` — und seit dem Defekt `260826-1221` vom
 /// Verzeichnisleser [`Schwungleser::oeffnen`] in dieser Datei, der bis dahin
 /// als einziger Oeffner **dieser Datei** mit `File::open` an einer benannten
-/// Roehre haengen blieb. Die Einengung gehoert dazu: `File::open` steht daneben
+/// Roehre haengen blieb — und seit der Bildfolge vom Leser des Aufnahmedatums
+/// [`crate::bild::aufnahmedatum()`], der am Deskriptor `is_file()` verlangt und
+/// sonst kein Datum liefert. Die Einengung gehoert dazu: `File::open` steht daneben
 /// noch im Kopieren und im Entpacken unter `crate::operation`, je auf einem
 /// Pfad, den der Code kurz zuvor selbst angelegt hat. Dort haengt
 /// nur, wer den Pfad dazwischen durch eine Roehre ersetzt, und das ist ein
@@ -941,7 +943,7 @@ unsafe extern "C" {
 /// Der Defekt, der die Funktion verlangt hat, ist `260809-1652`; der zweite
 /// Aufrufer ist mit `260810-1247` dazugekommen, der dritte mit der Runde 16, der
 /// vierte und der fuenfte mit der Runde 17, der sechste mit dem Defekt
-/// `260826-1221`. **Wie viele es heute sind, steht hier trotzdem nicht**: die
+/// `260826-1221`, der siebte mit der Bildfolge. **Wie viele es heute sind, steht hier trotzdem nicht**: die
 /// Zahl waechst mit jeder Runde, die einen weiteren Leser baut, und der
 /// Ordinalsatz oben ist die Herkunft und keine Zusage ueber den heutigen Stand
 /// (`shared/issues/260826-1933_*_zwei-prosastellen-an-ohne-warten-oeffnen-zaehlen-fuenf-rufer-*`).

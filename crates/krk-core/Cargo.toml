@@ -59,3 +59,10 @@ gix = { workspace = true }
 # Befund zu `cc` und `-sys` stehen in der Wurzel-`Cargo.toml`.
 chacha20poly1305 = { workspace = true }
 argon2 = { workspace = true }
+# Der Leser des Aufnahmedatums fuer die Bildfolge. Er steht hier und nicht in
+# `krk-ui`, weil Ordnen, Grenzen und Abbruch der Bildfolge ohne Fenster
+# pruefbar sein sollen: `bild::aufnahmedatum` ist die einzige Stelle, die die
+# Kiste nennt, und seine Proben lesen die Pruefbilder unter
+# `tests/bilder/`. Die Merkmalswahl und der Befund zu `cc` und `-sys` stehen in
+# der Wurzel-`Cargo.toml`.
+kamadak-exif = { workspace = true }

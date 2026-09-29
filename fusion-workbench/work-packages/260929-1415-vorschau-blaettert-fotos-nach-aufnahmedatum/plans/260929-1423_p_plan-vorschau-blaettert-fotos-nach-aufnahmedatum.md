@@ -191,7 +191,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
    - Acceptance: `make check` grün; keine Probe ändert ihre Erwartung. `grep -rn '"heic"' crates/*/src` nennt allein `krk-core/src/bild/mod.rs`.
    - Dependencies: Schritte 1 und 2 (Tor)
 
-4. **Der Leser des Aufnahmedatums**
+4. [DONE] **Der Leser des Aufnahmedatums**
    - Executor: `code-implementer`
    - Files, **bei Urteil Rust-Kiste**: `Cargo.toml` (Wurzel, `[workspace.dependencies]`), `crates/krk-core/Cargo.toml`, `crates/krk-core/src/bild/aufnahmedatum.rs` (neu), `crates/krk-core/src/bild/mod.rs`, `crates/krk-core/tests/bild.rs` (neu), `crates/krk-core/tests/bilder/` (neu, die Prüfbilder aus Schritt 1 (e)). **Bei Urteil ImageIO**: statt der Kernkiste `crates/krk-ui/Cargo.toml` und `crates/krk-ui/src/appkit/aufnahmedatum.rs` (neu, mit Untergrenzen-Abschnitt); Typ und Signatur im Kern bleiben dieselben.
    - Changes:

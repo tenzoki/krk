@@ -163,6 +163,19 @@ pub const HOECHSTENS_EINTRAEGE: usize = 2_000;
 /// Wie viele Bytes ein Baustein aus einer Datei liest, hoechstens (C6.6).
 pub const HOECHSTENS_BYTES: u64 = 64 * 1024;
 
+/// Wie viele Bytes der Leser des Aufnahmedatums aus einem Foto liest,
+/// hoechstens (C5 des Spec der Bildfolge).
+///
+/// Gemessen an `kamadak-exif` 0.6.1: der groesste Bedarf eines Formats, das
+/// sein Datum vor den Bilddaten traegt, lag bei 27.365 Bytes (HEIC mit `meta`
+/// hinter `mdat`), und ein JPEG-APP1-Segment ist hoechstens 65.535 Bytes lang.
+/// Die Grenze traegt beides mit Abstand und ist zugleich der Preis eines Fotos
+/// ohne Datum. Eine Foto-TIFF und ein PNG mit `eXIf` hinter den Bilddaten
+/// liegen darueber und ordnen nach dem Aenderungsdatum; die Messreihe steht in
+/// der Klaerung `260929-1441-klaerung-aufnahmedatum-ohne-c.md`. Gezaehlt wird
+/// in `crate::bild::aufnahmedatum`, hinter dem Begrenzer dort.
+pub const HOECHSTENS_BYTES_JE_FOTO: u64 = 256 * 1024;
+
 /// Wie viele Eintraege der Baustein „juengste N" liefert, hoechstens (C6.3).
 ///
 /// Eine groessere Zahl in der Datei wird auf diesen Wert **gekappt** und nicht
