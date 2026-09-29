@@ -83,11 +83,31 @@
 //! (`NSFont.h:87`), `fontDescriptorWithSymbolicTraits:`
 //! (`NSFontDescriptor.h:92`) und `fontWithDescriptor:size:` (`NSFont.h:31`),
 //! dazu der Wert `NSFontDescriptorTraitItalic` (`NSFontDescriptor.h:22`) —
-//! sowie `beginEditing`, `endEditing`, `addAttributes:range:` und
-//! `removeAttribute:range:` an `NSMutableAttributedString`
-//! (`NSAttributedString.h:85`, `:86`, `:76`, `:77`). Die vier Merkmalsnamen
+//! sowie `beginEditing`, `endEditing` und `addAttributes:range:` an
+//! `NSMutableAttributedString` (`NSAttributedString.h:85`, `:86`, `:76`); das
+//! `removeAttribute:range:` daneben (`:77`) ist mit dem Grundabsatz vom 260929
+//! aus dieser Datei gefallen. Die vier Merkmalsnamen
 //! tragen `macos(10.0)` (`NSAttributedString.h:26`, `:27`, `:28`, `:34`),
 //! `NSUnderlineStyleSingle` keine Angabe (`:64`). Alle Zahlen am SDK gelesen.
+//!
+//! **Der Grundabsatz (260929) liegt ebenso unter dem Zielsystem.**
+//! `setTabStops:` und `setDefaultTabInterval:` an `NSMutableParagraphStyle`
+//! tragen `macos(10.0)` (`NSParagraphStyle.h:127`, `:128`), die Leser
+//! `tabStops` und `defaultTabInterval` der Probe an `NSParagraphStyle`
+//! (`NSParagraphStyle.h:68`, macOS 10.0) ebenso (`:99`, `:100`), `headIndent`
+//! ohne eigene Angabe;
+//! `sizeWithAttributes:` aus der Kategorie `NSStringDrawing` traegt
+//! `macos(10.0)` (`NSStringDrawing.h:39`), und die Klasse
+//! `NSMutableAttributedString` (`NSAttributedString.h:63`) sowie `length` und
+//! `string` (`:32`) tragen keine eigene Angabe. `ns_string!` ist ein Makro von
+//! `objc2-foundation` und spricht keine Methode an. Die Probe baut ohne Flaeche
+//! und beruehrt dafuer `NSTextContainer` mit `initWithSize:`, das juengste
+//! Stueck dieses Abschnitts mit `macos(10.11)` (`NSTextContainer.h:25`), dazu
+//! `addTextContainer:`, `ensureLayoutForTextContainer:`, `numberOfGlyphs` und
+//! `locationForGlyphAtIndex:` an `NSLayoutManager` (`NSLayoutManager.h:91`,
+//! `:173`, `:186`, `:260`), `addLayoutManager:` an `NSTextStorage`
+//! (`NSTextStorage.h:45`) und `replaceCharactersInRange:withString:`
+//! (`NSAttributedString.h:66`), alle ohne eigene Angabe.
 //!
 //! **Die Wahl der Farbtafel ist die juengste Beruehrung dieser Datei und liegt
 //! immer noch weit unter dem Zielsystem.** `NSAppearance` steht seit macOS 10.9
@@ -107,6 +127,9 @@
 //! Merkmalsschluessel `NSFontAttributeName` (`NSAttributedString.h:26`),
 //! `NSForegroundColorAttributeName` (`:28`), `NSParagraphStyleAttributeName`
 //! (`:27`) und `NSUnderlineStyleAttributeName` (`:34`) tragen `macos(10.0)`;
+//! `NSStringDrawing`, `NSMutableAttributedString` und `ns_string` stehen im
+//! Absatz zum Grundabsatz, `NSTextContainer`, `NSTextStorage`,
+//! `NSLayoutManager` und `NSParagraphStyle` der Probe weiter oben;
 //! alle uebrigen tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen
 //! damit seit 10.0.
 
@@ -117,10 +140,12 @@ use objc2::runtime::AnyObject;
 use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSColor, NSFont,
     NSFontAttributeName, NSFontDescriptorSymbolicTraits, NSForegroundColorAttributeName,
-    NSMutableParagraphStyle, NSParagraphStyleAttributeName, NSTextView, NSUnderlineStyle,
-    NSUnderlineStyleAttributeName, NSView,
+    NSMutableParagraphStyle, NSParagraphStyleAttributeName, NSStringDrawing, NSTextView,
+    NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
 };
-use objc2_foundation::{NSArray, NSDictionary, NSNumber, NSRange, NSString};
+use objc2_foundation::{
+    NSArray, NSDictionary, NSMutableAttributedString, NSNumber, NSRange, NSString, ns_string,
+};
 
 use crate::editormodell::Ansicht;
 use crate::hervorhebung::{Auszeichnung, Darstellungsart, Farbe, Formatierung, Tafel};
@@ -165,6 +190,54 @@ const LISTENEINZUG: f64 = 20.0;
 /// verschachteln, und eine Grenze ist deshalb keine Vorsicht, sondern die
 /// Bedingung dafuer, dass die Zeile sichtbar bleibt.
 const EINZUGSGRENZE: u8 = 8;
+
+/// Wie viele Leerzeichenbreiten ein Tabulatorschritt misst (C3, C6).
+///
+/// **Vier und nicht acht**, weil vier die Vorgabe der gaengigen Editoren ist
+/// und die Vorschau ein schmaler Bereich der Fensterzeile: acht Spalten je
+/// Schritt schoeben eine zweifach eingerueckte Zeile um sechzehn Zeichen nach
+/// rechts. Die Zahl ist gewaehlt und nicht abgeleitet; sie gilt fuer Editor und
+/// Vorschau gleich, weil beide ihren Absatzstil aus [`grundabsatz`] nehmen.
+const TABSPALTEN: f64 = 4.0;
+
+/// Der Absatzstil jeder Stelle ohne eigenen Einzug: keine festen Tabstopps,
+/// dafuer ein Schritt von [`TABSPALTEN`] Leerzeichenbreiten der Grundschrift.
+///
+/// # Warum es ihn gibt (Defekt 260929, Tabulatoren in der Vorschau)
+///
+/// Ohne eigenen Absatzstil gilt der des Systems, und der traegt zwoelf
+/// Tabstopps im Abstand von **28 Punkt** (`NSParagraphStyle.h:99`). Das ist
+/// kein Vielfaches der Spaltenbreite der festen Schrift: bei der kleinen
+/// Systemschriftgroesse misst ein Zeichen rund 6,6 Punkt, und ein Wort aus vier
+/// Zeichen endet 1,5 Punkt vor dem ersten Stopp. `Wort\tWort` stand damit als
+/// `WortWort` da (gemessen: das zweite `W` bei 33,0, das Tabzeichen bei 31,5),
+/// in Vorschau und Editor gleich, weil beide ueber [`zuruecksetzen`] gehen.
+///
+/// **Ein Schritt in Spalten und keine Stopps in Punkt.** Liegen die Stopps auf
+/// Vielfachen der Spaltenbreite, springt ein Tabulator wie im Terminal auf die
+/// naechste Spalte, die durch [`TABSPALTEN`] teilbar ist, und laesst mindestens
+/// eine Spalte Zwischenraum. Die leere Liste der Stopps ist dabei tragend: nur
+/// jenseits des letzten Stopps gilt `defaultTabInterval`
+/// (`NSParagraphStyle.h:100`), und ohne Stopp ist das von Anfang an.
+///
+/// Gemessen wird die Breite an einem Leerzeichen der uebergebenen Schrift. In
+/// der festen Schrift ist das genau eine Spalte; in der Systemschrift der
+/// Formatansicht gibt es keine Spalten, und der Schritt ist dort vier
+/// Leerzeichen breit, ohne einen Mindestabstand zusagen zu koennen.
+fn grundabsatz(schrift: &NSFont) -> Retained<NSMutableParagraphStyle> {
+    let stil = NSMutableParagraphStyle::new();
+    stil.setTabStops(Some(&NSArray::new()));
+    stil.setDefaultTabInterval(TABSPALTEN * leerzeichenbreite(schrift));
+    stil
+}
+
+/// Die Breite eines Leerzeichens in dieser Schrift, in Punkt.
+fn leerzeichenbreite(schrift: &NSFont) -> f64 {
+    let merkmale = schriftmerkmal(schrift);
+    // SAFETY: Das Verzeichnis traegt allein die Schrift und ist damit ein
+    // gueltiges Merkmalsverzeichnis einer Zeichenkette.
+    unsafe { ns_string!(" ").sizeWithAttributes(Some(&merkmale)) }.width
+}
 
 /// Traegt eine fertige Formatierung in eine Textflaeche und meldet, ob sie
 /// gesetzt hat (C3).
@@ -234,7 +307,9 @@ pub fn anwenden(
                 schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse * faktor))
             }
             Auszeichnung::FesteSchrift => schriftmerkmal(&feste_schrift(grundgroesse)),
-            Auszeichnung::Listenzeile { tiefe } => einzugsmerkmal(tiefe),
+            Auszeichnung::Listenzeile { tiefe } => {
+                einzugsmerkmal(tiefe, &grundschrift(ansicht, art))
+            }
             Auszeichnung::Betonung => schriftmerkmal(&kursive_schrift(grundgroesse)),
             Auszeichnung::StarkeBetonung => {
                 schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse))
@@ -357,20 +432,41 @@ pub fn anwenden(
 /// Merkmal des Layoutverwalters, und die werden vollstaendig geleert; der
 /// Textspeicher traegt keine.
 pub fn zuruecksetzen(text: &NSTextView, ansicht: Ansicht, art: Darstellungsart) {
-    let grundmerkmal = schriftmerkmal(&grundschrift(ansicht, art));
     // SAFETY: Speicher und Verwalter bringt die Flaeche selbst mit und wird
     // hier nur beschrieben; die Bereiche decken genau den vorhandenen Text.
     unsafe {
         if let Some(speicher) = text.textStorage() {
+            grund_legen(&speicher, ansicht, art);
             let ganz = NSRange::new(0, speicher.length());
-            speicher.removeAttribute_range(NSParagraphStyleAttributeName, ganz);
-            speicher.addAttributes_range(&grundmerkmal, ganz);
             if let Some(verwalter) = text.layoutManager() {
                 let leer: Retained<NSDictionary<NSString, AnyObject>> = NSDictionary::new();
                 verwalter.setTemporaryAttributes_forCharacterRange(&leer, ganz);
             }
         }
     }
+}
+
+/// Legt Grundschrift und [`grundabsatz`] ueber den ganzen Text; der Teil von
+/// [`zuruecksetzen`], der den Textspeicher beschreibt.
+///
+/// **Der Absatzstil wird nicht entfernt, sondern ersetzt.** Bis zum 260929
+/// stand hier `removeAttribute:` fuer den Absatzstil, und damit galt der des
+/// Systems mit seinen 28-Punkt-Stopps (siehe [`grundabsatz`]). `addAttributes:`
+/// ersetzt bei gleichem Namen, also faellt der Einzug einer vorigen Listenzeile
+/// weiterhin mit.
+///
+/// Eine eigene Funktion und nicht der Rumpf von [`zuruecksetzen`], weil sie
+/// allein den Speicher braucht: die Probe
+/// `ein_tabulator_laesst_mindestens_eine_spalte_zwischenraum` faehrt sie an
+/// einem Speicher ohne Flaeche, denn schon das Beschreiben einer nackten
+/// `NSTextView` endet unter `libtest` mit `SIGSEGV` (Modulkopf der Proben in
+/// [`super::editor`]).
+fn grund_legen(speicher: &NSMutableAttributedString, ansicht: Ansicht, art: Darstellungsart) {
+    let grundmerkmal = grundmerkmale_des_textes(&grundschrift(ansicht, art));
+    let ganz = NSRange::new(0, speicher.length());
+    // SAFETY: Der Bereich deckt genau den vorhandenen Text, und das
+    // Verzeichnis traegt eine Schrift und einen Absatzstil unter ihren Namen.
+    unsafe { speicher.addAttributes_range(&grundmerkmal, ganz) };
 }
 
 /// Die Grundschrift einer Ansicht: die Schrift, in der jede Stelle steht, die
@@ -510,14 +606,29 @@ fn schriftmerkmal(schrift: &NSFont) -> Retained<NSDictionary<NSString, AnyObject
     NSDictionary::from_slices(&schluessel, &werte)
 }
 
+/// Die Merkmale, die [`zuruecksetzen`] ueber den ganzen Text legt: die
+/// Grundschrift und der [`grundabsatz`] zu ihr.
+fn grundmerkmale_des_textes(schrift: &NSFont) -> Retained<NSDictionary<NSString, AnyObject>> {
+    let stil = grundabsatz(schrift);
+    // SAFETY: Zwei Fremdsymbole von AppKit, die Merkmalsnamen von Schrift und
+    // Absatzstil. Sie werden gelesen und nicht geschrieben.
+    let schluessel = unsafe { [NSFontAttributeName, NSParagraphStyleAttributeName] };
+    let werte: [&AnyObject; 2] = [schrift, &stil];
+    NSDictionary::from_slices(&schluessel, &werte)
+}
+
 /// Ein Merkmalsverzeichnis mit dem Einzug einer Listenzeile darin (C3).
 ///
 /// **Der Einzug waechst mit der Tiefe**, gedeckelt bei [`EINZUGSGRENZE`]. Bis
 /// zum 260812 war er fest, und damit stand eine dreistufige Liste flach da
 /// (Defekt `260812-1805`).
-fn einzugsmerkmal(tiefe: u8) -> Retained<NSDictionary<NSString, AnyObject>> {
+///
+/// **Auf dem [`grundabsatz`] und nicht auf einem leeren Stil**, denn der
+/// Absatzstil ersetzt den des Grundes ganz: ohne ihn fielen die Tabulatoren
+/// einer Listenzeile auf die 28 Punkt des Systems zurueck.
+fn einzugsmerkmal(tiefe: u8, schrift: &NSFont) -> Retained<NSDictionary<NSString, AnyObject>> {
     let einzug = LISTENEINZUG * f64::from(tiefe.clamp(1, EINZUGSGRENZE));
-    let stil = NSMutableParagraphStyle::new();
+    let stil = grundabsatz(schrift);
     // Beide, damit die erste Zeile mit dem Aufzaehlungszeichen genauso weit
     // einrueckt wie ihre Fortsetzung nach einem Umbruch; sonst haengt das
     // Zeichen als einziges am linken Rand.
@@ -545,7 +656,116 @@ fn nsfarbe(farbe: Farbe) -> Retained<NSColor> {
 
 #[cfg(test)]
 mod proben {
+    use objc2::AnyThread;
+    use objc2_app_kit::{NSLayoutManager, NSParagraphStyle, NSTextContainer, NSTextStorage};
+    use objc2_foundation::NSSize;
+
     use super::*;
+
+    /// Legt den Grund ueber einen Speicher ohne Flaeche und liefert ihn mit
+    /// der waagrechten Lage jedes Zeichens.
+    ///
+    /// **Ohne `NSTextView`**: schon das Beschreiben einer nackten Flaeche endet
+    /// unter `libtest` mit `SIGSEGV` (Modulkopf der Proben in
+    /// [`super::super::editor`]). Speicher, Layoutverwalter und Behaelter
+    /// sind dieselben drei Glieder, die eine Flaeche in sich traegt, und
+    /// [`grund_legen`] ist genau der Teil von [`zuruecksetzen`], der den
+    /// Speicher beschreibt.
+    fn gelegt(
+        text: &str,
+        ansicht: Ansicht,
+        art: Darstellungsart,
+    ) -> (Retained<NSTextStorage>, Vec<f64>) {
+        let speicher = NSTextStorage::new();
+        let verwalter = NSLayoutManager::new();
+        let behaelter = NSTextContainer::initWithSize(
+            NSTextContainer::alloc(),
+            NSSize::new(10_000.0, 10_000.0),
+        );
+        verwalter.addTextContainer(&behaelter);
+        speicher.addLayoutManager(&verwalter);
+        speicher.replaceCharactersInRange_withString(NSRange::new(0, 0), &NSString::from_str(text));
+        grund_legen(&speicher, ansicht, art);
+        verwalter.ensureLayoutForTextContainer(&behaelter);
+        let lagen = (0..verwalter.numberOfGlyphs())
+            .map(|stelle| verwalter.locationForGlyphAtIndex(stelle).x)
+            .collect();
+        (speicher, lagen)
+    }
+
+    /// Ein Tabulator laesst in der festen Schrift mindestens eine Spalte
+    /// Zwischenraum und springt auf die naechste durch [`TABSPALTEN`] teilbare
+    /// Spalte (Defekt 260929, „zwei durch Tab getrennte Woerter erscheinen
+    /// ohne Zwischenraum“).
+    ///
+    /// **Was sie faengt:** den Rueckfall auf den Absatzstil des Systems. Dessen
+    /// Stopps liegen alle 28 Punkt, und `Wort\tWort` stand damit bei 1,5 Punkt
+    /// Abstand als ein Wort da; mit `removeAttribute:` statt des
+    /// [`grundabsatz`] in [`grund_legen`] wird sie rot.
+    ///
+    /// Die Zeichen selbst bleiben, was sie waren: der Grund ist ein Merkmal und
+    /// ersetzt kein `\t` durch Leerzeichen. Daran haengt, dass das Kopieren aus
+    /// Vorschau und Editor weiter den Tabulator liefert.
+    #[test]
+    fn ein_tabulator_laesst_mindestens_eine_spalte_zwischenraum() {
+        let spalte = leerzeichenbreite(&grundschrift(Ansicht::Roh, Darstellungsart::EinfacherText));
+        assert!(spalte > 0.0, "die feste Schrift misst kein Leerzeichen");
+        // (Text, Stelle des Zeichens hinter dem Tabulator, erwartete Spalte)
+        let faelle = [
+            ("a\tb", 2, 4.0),
+            ("abc\tb", 4, 4.0),
+            ("Wort\tWort", 5, 8.0),
+            ("abcde\tx", 6, 8.0),
+            ("\t\tx", 2, 8.0),
+        ];
+        for (text, hinter, spalte_erwartet) in faelle {
+            let (speicher, lagen) = gelegt(text, Ansicht::Roh, Darstellungsart::EinfacherText);
+            assert_eq!(
+                speicher.string().to_string(),
+                text,
+                "{text:?}: der Grund hat die Zeichen veraendert"
+            );
+            let spalten = (lagen[hinter] - lagen[0]) / spalte;
+            assert!(
+                (spalten - spalte_erwartet).abs() < 0.01,
+                "{text:?}: das Zeichen hinter dem Tabulator steht in Spalte {spalten:.2} statt \
+                 {spalte_erwartet}"
+            );
+            assert!(
+                lagen[hinter] - lagen[hinter - 1] >= spalte * 0.99,
+                "{text:?}: der Tabulator ist schmaler als eine Spalte und laesst keinen \
+                 Zwischenraum"
+            );
+        }
+    }
+
+    /// Der Einzug einer Listenzeile traegt denselben Tabulatorschritt wie der
+    /// Grund und faellt nicht auf die 28 Punkt des Systems zurueck.
+    ///
+    /// `addAttributes:` ersetzt den Absatzstil des Grundes ganz; baute
+    /// [`einzugsmerkmal`] auf einem leeren Stil auf, verloere jede Listenzeile
+    /// der Formatansicht die Tabulatoren wieder.
+    #[test]
+    fn der_listeneinzug_behaelt_den_tabulatorschritt() {
+        let schrift = grundschrift(Ansicht::Format, Darstellungsart::Markdown);
+        let schritt = TABSPALTEN * leerzeichenbreite(&schrift);
+        let merkmale = einzugsmerkmal(2, &schrift);
+        // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils.
+        let stil = unsafe { merkmale.objectForKey(NSParagraphStyleAttributeName) }
+            .expect("der Einzug setzt einen Absatzstil")
+            .downcast::<NSParagraphStyle>()
+            .expect("unter dem Namen des Absatzstils steht ein Absatzstil");
+        assert_eq!(stil.tabStops().count(), 0, "der Einzug fuehrt feste Stopps");
+        assert!(
+            (stil.defaultTabInterval() - schritt).abs() < f64::EPSILON,
+            "der Einzug traegt den Schritt {} statt {schritt}",
+            stil.defaultTabInterval()
+        );
+        assert!(
+            (stil.headIndent() - 2.0 * LISTENEINZUG).abs() < f64::EPSILON,
+            "der Einzug selbst ist verloren gegangen"
+        );
+    }
 
     /// Die sechs Eingabepaare von [`grundmerkmale`], Zeile fuer Zeile.
     ///
