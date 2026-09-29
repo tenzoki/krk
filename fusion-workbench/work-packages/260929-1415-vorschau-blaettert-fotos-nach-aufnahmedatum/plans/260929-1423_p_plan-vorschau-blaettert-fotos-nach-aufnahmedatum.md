@@ -293,7 +293,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
     - Acceptance: `make check` grün; der kopflose Lauf auf einem Prüfordner mit 1.000 Fotos ist gefahren, und sein Bericht liegt unter `messungen/`. Der Lauf im Bündel ist **nicht** Teil der Abnahme dieses Schritts: er verlangt KRK im Vordergrund und ist Nutzerarbeit.
     - Dependencies: Schritte 6 und 10
 
-13. **`HowTo.md` und `README.md`**
+13. [DONE] **`HowTo.md` und `README.md`**
     - Executor: `code-implementer`
     - Files: `HowTo.md`, `README.md`
     - Changes:

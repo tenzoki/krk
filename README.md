@@ -101,7 +101,13 @@ Hauptmenü ist er trotzdem erreichbar.
 **Was ein fehlender Eintrag kostet, ist bei den drei Dateien verschieden.**
 
 - `readers.toml`: Das neue Profil gibt es für KRK nicht. Die Vorschau zeigt an
-  dem Ort, den es erkannt hätte, weiter die Metadaten.
+  dem Ort, den es erkannt hätte, weiter die Metadaten. So geht es etwa mit den
+  zwei Profilen „Fotos: ein Jahr“ und „Fotos: ein Monat“, die die Bildfolge
+  mitbringt: eine `readers.toml` von vorher führt sie nicht, die Startzeile
+  zählt sie als „2 Einträge in readers.toml“, und bis zur Übernahme zeigt ein
+  Ordner `…/Fotos/2008` seine Metadaten statt seiner Fotos. Übernommen werden
+  sie auf einem der zwei Wege darunter; `HowTo.md` beschreibt beide unter
+  „Die Bildfolge“.
 - `settings.toml`: Die neue Einstellung wirkt schon, mit dem Wert der
   Auslieferungsfassung. Was fehlt, ist ihr erklärender Kommentarblock — man
   erfährt aus der eigenen Datei nicht, dass es sie gibt.
@@ -342,6 +348,36 @@ aus. Und gemessen wird am Bündel und nicht am nackten Binärprogramm, weil der
 Zugriff auf Schreibtisch, Dokumente, Downloads und Netzlaufwerke über den
 Systemmechanismus für Transparenz, Zustimmung und Kontrolle läuft, und der greift
 am signierten Anwendungsbündel an.
+
+### Die Bildfolge messen
+
+Wie lange es vom Auswählen eines Jahresordners bis zum ersten gezeigten Foto
+dauert, messen zwei Ziele. Keine der Zahlen ist eine Zeitzusage; die Schwelle
+von zwei Sekunden bei 1.000 Fotos ist ein Haltepunkt des Spec der Bildfolge.
+
+```sh
+make fotoordner                 # 1.000 Fotos zu 1 MB unter ~/Library/Caches/krk-messplatz/fotoordner
+make bildfolge RUNDEN=1         # baut das Bündel und misst darin, zwanzigmal je Runde
+```
+
+`make fotoordner` legt `Fotos/2008/01` bis `12` mit kleinen JPEG-Fotos an,
+deren Aufnahmedaten gegen die Namen laufen, und `Fotos/2007` leer als zweite
+Zeile; `FOTOS=` und `GROESSE=` wählen andere Zahlen. Die Größe besteht aus
+echten Bytes, tausend Fotos zu einem MB belegen also ein GB.
+
+**`make bildfolge` verlangt KRK im Vordergrund**, wie jede Messung am Bündel:
+aus einem Terminalfenster im Vordergrund starten und während des Laufs nicht
+in einer anderen Anwendung weiterarbeiten. Gemessen wird von der Auswahl der
+Zeile `2008` bis zum Zeichendurchgang mit dem ersten Foto, mit den Profilen
+der Auslieferungsfassung und nicht mit der eigenen `readers.toml`. Ein eigener
+Fotoordner geht mit `make bildfolge ORDNER=/pfad/zu/Fotos ZEILE=2019`, sofern
+in `Fotos` neben der Zeile eine zweite steht. Der Bericht landet unter
+`messungen/`.
+
+Ohne Fenster misst `cargo run -p krk-bench --release -- bildfolge --kopflos
+~/Library/Caches/krk-messplatz/fotoordner/Fotos/2008` allein den Anteil des
+Kerns: Erkennung, das Lesen der Ordner und das Ordnen der ersten Gruppe. Das
+ist eine Untergrenze und ersetzt den Lauf am Bündel nicht.
 
 ## Signierung
 

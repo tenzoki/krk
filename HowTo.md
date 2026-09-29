@@ -651,6 +651,87 @@ aus der beiseitegelegten Datei zurück. Im Einzelnen stehen die Wege oben unter
 den Neuerungen und in `README.md` unter „Neuerungen an den eigenen Dateien
 übernehmen".
 
+### Die Bildfolge: durch die Fotos eines Jahres oder Monats blättern
+
+Ein Profil kann statt Zeilen eine **Bildfolge** tragen. Trifft es den
+ausgewählten Ordner und liegen darunter Fotos, zeigt die Vorschau das erste
+Foto statt einer Zusammenfassung. Die Auslieferungsfassung bringt dafür zwei
+Profile mit: „Fotos: ein Jahr“ für einen Ordner `…/Fotos/2008` und „Fotos: ein
+Monat“ für einen Ordner `…/Fotos/2008/08`, gleich wo `Fotos` liegt. Ein Ordner
+`Fotos/Urlaub` oder `Fotos/2008/August` trifft keines der zwei; wer seine
+Fotos unter anderen Namen ablegt, schreibt das Muster in `readers.toml` um,
+und die Datei zeigt dazu ein Beispiel unter „Die Bildfolge“.
+
+**Sie gilt für den ausgewählten Ordner**, wie jede Zusammenfassung. Die
+Jahresfolge sieht man, wenn in `Fotos` die Zeile `2008` ausgewählt ist, die
+Monatsfolge, wenn in `Fotos/2008` die Zeile `08` ausgewählt ist.
+
+- **Welche Fotos:** Dateien mit den Endungen png, jpg, jpeg, gif, tif, tiff,
+  heic, heif, bmp und icns, gleich wie geschrieben. Versteckte Dateien, deren
+  Name mit einem Punkt beginnt, zählen nicht. Beim Jahr zählen allein die
+  Fotos, die unmittelbar in einem Monatsordner liegen.
+- **In welcher Reihenfolge:** die Monatsordner nach ihrem Namen, also alle
+  Fotos aus `01` vor allen aus `02`. Innerhalb eines Monats nach dem
+  Aufnahmedatum aus den Bilddaten; wo die Bilddaten keines hergeben, gilt das
+  Änderungsdatum, bei gleichem Zeitpunkt der Name. Ein Monatsordner ohne Fotos
+  wird übersprungen.
+- **Blättern:** Cmd+Pfeil runter zeigt das nächste Foto, Cmd+Pfeil hoch das
+  vorige. Am ersten und am letzten Foto tut die Taste nichts, und die Folge
+  beginnt nicht von vorn. Die Auswahl in der Dateiliste bleibt dabei stehen.
+- **Zum Foto springen:** Return führt die Dateiliste in den Ordner des
+  angezeigten Fotos und wählt es dort aus; die Liste behält ihre Sortierung,
+  und ein Filtertext bleibt nach derselben Regel stehen wie bei jedem
+  Ordnerwechsel. Verdeckt er das Foto, sagt die Statuszeile „IMG_0970.jpg ist
+  ausgefiltert.“, ist das Foto inzwischen fort, „IMG_0970.jpg ist nicht mehr
+  da.“. Solange das angezeigte Foto noch vorbereitet wird, springt Return
+  nicht und meldet „Die Bildfolge wird noch vorbereitet.“.
+- **Nur mit dem Fokus in der Dateiliste.** Mit dem Fokus in der Vorschau
+  gelten Cmd+Pfeil wie bisher.
+- **Die Statuszeile** zeigt „Bild 3 von 41“, solange eine Bildfolge steht.
+  Eine Folge nimmt höchstens 7.500 Fotos auf; hat ein Ordner mehr, enthält sie
+  die ersten 7.500, und die Statuszeile sagt dazu „(Folge nach 7.500 Fotos
+  gekürzt)“. Solange die Aufnahmedaten gelesen werden, steht in der Vorschau
+  „Die Bildfolge wird vorbereitet: 1.000 Fotos.“, und die Dateiliste nimmt
+  jeden Tastendruck an.
+- **Ein neuer Ordner, eine neue Folge:** wechselt die Auswahl und kommt sie
+  zurück, beginnt die Folge wieder beim ersten Foto. Liegt in einem getroffenen
+  Ordner kein einziges Foto, zeigt die Vorschau die gewohnten Metadaten mit den
+  drei Zählzeilen.
+
+**An diesen Orten wechseln Cmd+Pfeil hoch und Return ihren Sinn.** Cmd+Pfeil
+hoch heißt dort „Voriges Bild“ und nicht „In den übergeordneten Ordner“, Return
+heißt „Zum angezeigten Bild springen“ und nicht „Mit dem Standardprogramm
+öffnen“. Überall sonst gilt die gewohnte Bedeutung, und **Pfeil links führt in
+jeder Lage in den übergeordneten Ordner**. Die drei Befehle „Nächstes Bild“,
+„Voriges Bild“ und „Zum angezeigten Bild springen“ stehen im Menü „Vorschau“
+und in der F1-Ansicht in der Gruppe „Vorschau“; dass zwei davon eine
+Kombination mit einem Befehl des Dateifensters teilen, ist kein Konflikt,
+denn sie wirken allein, solange eine Bildfolge steht.
+
+**Die zwei Profile übernehmen, wer KRK schon gestartet hat.** Eine vorhandene
+`readers.toml` bekommt sie nicht von selbst; „Neuerungen anzeigen“ nennt sie
+beim Namen. Zwei Wege gibt es:
+
+1. **„Auf Werkseinstellungen zurücksetzen…“** im Menü „KRK“. Die zwei Profile
+   wirken sofort, ohne Neustart. **Der Befehl setzt zugleich die Belegung und
+   die Einstellungen zurück:** `keymap.toml` mit allen eigenen
+   Tastenzuweisungen und `settings.toml` stehen danach im Auslieferungszustand,
+   die alten Dateien liegen mit Zeitstempel im Ablageordner. **Der Notizordner
+   bleibt**, samt seinem gewählten Ort und seinem Inhalt.
+2. **Von Hand:** die zwei `[[profil]]`-Blöcke vom Ende der Auslieferungsfassung
+   (`resources/default-readers.toml`, Abschnitt „Die Profile für Fotoordner“)
+   bei ausgeschaltetem KRK in die eigene `readers.toml` kopieren. Die übrige
+   Datei bleibt, wie sie ist.
+
+**Wer eine eigene `keymap.toml` führt, findet die drei Befehle unbelegt.** Sie
+stehen im Menü „Vorschau“ und wirken von dort aus, nur ohne Kombination. Belegt werden sie in
+der F1-Ansicht: den Befehl wählen, **Zuweisen** (`cmd+t`), die Kombination
+drücken, die Ansicht verlassen. `cmd+up` und `return` lassen sich dabei
+zuweisen, obwohl „In den übergeordneten Ordner“ und „Mit dem Standardprogramm
+öffnen“ sie tragen. Die Auslieferungsbelegung zurückzuholen (`cmd+r` in der
+F1-Ansicht) ist dafür der falsche Weg, denn es nimmt alle eigenen
+Zuweisungen mit.
+
 ---
 
 ## Der Notizordner
