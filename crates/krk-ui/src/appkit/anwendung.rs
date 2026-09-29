@@ -277,9 +277,9 @@ use krk_core::ablage::merker::{self, LAUFENDE_FASSUNG};
 use krk_core::ablage::neuerungen::{self, Bestand, Leserurteile};
 use krk_core::ablage::sitzung::Sitzungsschreiber;
 use krk_core::ablage::{
-    Ablage, Aenderung, Ausgang, Datei, Einstellungen, Fensterseite, Lesezeichen, Lesezeichenliste,
-    Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen, leseprofile, lesezeichen,
-    pfade,
+    Ablage, Aenderung, Ausgang, Datei, Einstellungen, Fensterseite, Grund, Lesezeichen,
+    Lesezeichenliste, Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen,
+    leseprofile, lesezeichen, pfade,
 };
 use krk_core::heimordner::ort::{self, Notizort, Ortsfehler};
 use krk_core::heimordner::{self, Heimordner};
@@ -505,6 +505,73 @@ fn neuerungen_erheben(
         pfade::benutzerverzeichnis().as_deref(),
     ));
     (Some(bestand), meldungen)
+}
+
+/// Was [`nutzerdateien_lesen`] aus `settings.toml` und `readers.toml` gelesen
+/// hat, samt den Meldungen und den Urteilen der drei Leser.
+#[must_use = "die Meldungen der zwei Lader sind die einzige Auskunft ueber eine ersetzte Datei oder ein abgewiesenes Profil"]
+struct Nutzerdateien {
+    /// Die Einstellungen und der Satz zu ihrer Ersetzung, falls eine noetig war.
+    einstellungen: (Einstellungen, Option<String>),
+    /// Der Grund der Ersetzung von `settings.toml`, gelesen vor dem Satz, der
+    /// ihn in Worte fasst: an ihm haengt beim Start, ob ein Notizordner gilt.
+    einstellungsschaden: Option<Grund>,
+    /// Die Leseprofile und der Satz zu ihrer Ersetzung, falls eine noetig war.
+    profile: (Profile, Option<String>),
+    /// Je eine Zeile fuer ein abgewiesenes Profil und eine Zeile, die ihren
+    /// Baustein verloren hat.
+    profilmeldungen: Vec<String>,
+    /// Die Urteile der drei Leser, fuer die Erhebung der Neuerungen.
+    urteile: Leserurteile,
+}
+
+/// Liest `settings.toml` und `readers.toml` ueber ihre zwei Lader, in dieser
+/// Reihenfolge, und stellt die Urteile der drei Leser zusammen.
+///
+/// **Ein Leseweg fuer zwei Zeitpunkte**: den Start in
+/// [`Anwendungsdelegierter::sitzung_laden`] und das Zuruecksetzen auf
+/// Werkseinstellungen. Beide rufen danach die Erhebung der Neuerungen mit den
+/// Urteilen, die hier entstehen. Das Urteil ueber `keymap.toml` kommt herein,
+/// weil dessen Lader woanders laeuft: beim Start in `starten`, vor
+/// `NSApplication`.
+///
+/// **Zwei Sorten Meldung kommen aus den Leseprofilen.** Die `Ersetzung` sagt,
+/// dass die Datei beiseitegelegt oder nicht anlegbar war (C1.6, C1.7 der Runde
+/// 16); die Liste daneben nennt jedes abgewiesene Profil und jede Zeile, die
+/// ihren Baustein verloren hat (C2.7, C3.10). Beide gehen in dieselbe
+/// Statuszeile, aber nicht durch dieselbe Tuer — warum, steht im Kopf von
+/// `krk_core::ablage::leseprofile`.
+fn nutzerdateien_lesen(zugang: &Zugang<'_>, belegung_ersetzt: bool) -> Nutzerdateien {
+    // Die Einstellungen aus C11. Der Aufruf legt `settings.toml` beim ersten
+    // Start an.
+    let geladene_einstellungen = einstellungen::laden(zugang);
+    let einstellungen_ersetzt = geladene_einstellungen.ist_ersetzt();
+    // Der Grund der Ersetzung, gelesen vor `mit_meldung`, das ihn in einen
+    // Satz verwandelt.
+    let einstellungsschaden = geladene_einstellungen
+        .ersetzung
+        .as_ref()
+        .map(|ersetzung| ersetzung.grund.clone());
+    // Die Leseprofile aus C1 der Runde 16, ueber denselben Zugang: der Aufruf
+    // legt `readers.toml` beim ersten Start an.
+    let (profile, profilmeldungen) = leseprofile::laden(zugang);
+    // **Die drei Urteile stammen aus genau diesen Ladern und werden nicht
+    // daneben hergeleitet** (Runde 24, berichtigt am 260911). Ob eine
+    // Ablagedatei beschaedigt ist, weiss allein ihr eigener Leser; der Kopf von
+    // `krk_core::ablage::neuerungen` traegt den Fall, den eine zweite
+    // Beurteilung gekostet hat.
+    let urteile = Leserurteile {
+        belegung: belegung_ersetzt,
+        einstellungen: einstellungen_ersetzt,
+        leseprofile: profile.ist_ersetzt(),
+    };
+    Nutzerdateien {
+        einstellungen: geladene_einstellungen.mit_meldung(),
+        einstellungsschaden,
+        profile: profile.mit_meldung(),
+        profilmeldungen,
+        urteile,
+    }
 }
 
 /// Der Tastencode der Eingabetaste, aus der einen Tastentabelle des Kerns.
@@ -2136,66 +2203,28 @@ impl Anwendungsdelegierter {
         // darunter, und mit dem naechsten waere sie falsch.
         let gelesen = ablage.durchgang(|zugang| {
             let sitzung = zugang.laden::<Sitzung>(Datei::Sitzung).mit_meldung();
-            // Die Einstellungen aus C11, ueber denselben Zugang. Der Aufruf legt
-            // `settings.toml` beim ersten Start an; ohne diese Anlage haette der
-            // Nutzer nichts zu pflegen, weil in dieser Runde keine Ansicht die
-            // Datei schreibt.
-            let geladene_einstellungen = einstellungen::laden(zugang);
-            let einstellungen_ersetzt = geladene_einstellungen.ist_ersetzt();
-            // Der Grund der Ersetzung, gelesen vor `mit_meldung`, das ihn in
-            // einen Satz verwandelt: an ihm haengt, ob ein Notizordner gilt.
-            let einstellungsschaden = geladene_einstellungen
-                .ersetzung
-                .as_ref()
-                .map(|ersetzung| ersetzung.grund.clone());
-            let eingestellt = (geladene_einstellungen.mit_meldung(), einstellungsschaden);
-            // Die Leseprofile aus C1 der Runde 16, ueber denselben Zugang und
-            // aus demselben Grund wie die Einstellungen: der Aufruf legt
-            // `readers.toml` beim ersten Start an, und ein zweiter Durchgang
-            // stellte dieselbe Frage nach dem Ablageordner ein zweites Mal.
-            //
-            // **Zwei Sorten Meldung kommen heraus.** Die `Ersetzung` sagt, dass
-            // die Datei beiseitegelegt oder nicht anlegbar war (C1.6, C1.7); die
-            // Liste daneben nennt jedes abgewiesene Profil und jede Zeile, die
-            // ihren Baustein verloren hat (C2.7, C3.10). Beide gehen in dieselbe
-            // Statuszeile, aber nicht durch dieselbe Tuer — warum, steht im Kopf
-            // von `krk_core::ablage::leseprofile`.
-            let (profile, profilmeldungen) = leseprofile::laden(zugang);
-            // **Die drei Urteile stammen aus genau diesen Ladern und werden
-            // nicht daneben hergeleitet** (Runde 24, berichtigt am 260911). Ob
-            // eine Ablagedatei beschaedigt ist, weiss allein ihr eigener Leser;
-            // der Kopf von `krk_core::ablage::neuerungen` traegt den Fall, den
-            // eine zweite Beurteilung gekostet hat. Das Urteil ueber
-            // `keymap.toml` kommt von `belegung::fuer_den_betrieb` und liegt
-            // seit `neu` in den ivars, denn jener Lader laeuft in `starten`,
-            // vor `NSApplication` und damit vor dem Delegierten.
-            let urteile = Leserurteile {
-                einstellungen: einstellungen_ersetzt,
-                leseprofile: profile.ist_ersetzt(),
-                ..*ivars.urteile.borrow()
-            };
+            // Die Einstellungen und die Leseprofile ueber denselben Zugang, auf
+            // demselben Leseweg wie beim Zuruecksetzen auf Werkseinstellungen.
+            // Beide Lader legen ihre Datei beim ersten Start an; ein zweiter
+            // Durchgang stellte dieselbe Frage nach dem Ablageordner ein
+            // zweites Mal. Das Urteil ueber `keymap.toml` kommt von
+            // `belegung::fuer_den_betrieb` und liegt seit `neu` in den ivars,
+            // denn jener Lader laeuft in `starten`, vor `NSApplication` und
+            // damit vor dem Delegierten.
+            let dateien = nutzerdateien_lesen(zugang, ivars.urteile.borrow().belegung);
             // **Die Erhebung der Neuerungen steht als Letztes im Durchgang**
             // (Runde 24), und die Reihenfolge ist tragend und keine Laune: die
-            // zwei Aufrufe darueber legen `settings.toml` und `readers.toml`
+            // zwei Lader darueber legen `settings.toml` und `readers.toml`
             // beim ersten Start an. Wer davor erhoebe, hielte die
             // Auslieferungsfassung gegen zwei Dateien, die es in dieser
             // Sekunde noch nicht gibt, und meldete dem Nutzer am ersten Tag
             // jeden Eintrag als Neuerung. Seit dem 260911 haengt die Erhebung
             // auch sachlich an ihnen: sie braucht ihr Urteil.
+            let urteile = dateien.urteile;
             let erhoben = neuerungen_erheben(zugang, urteile);
-            (
-                sitzung,
-                eingestellt,
-                (profile.mit_meldung(), profilmeldungen),
-                (erhoben, urteile),
-            )
+            (sitzung, dateien, erhoben)
         });
-        let (
-            (sitzung, meldung),
-            ((eingestellt, meldung_einstellungen), einstellungsschaden),
-            ((profile, meldung_profile), profilmeldungen),
-            ((bestand, neuerungsmeldungen), urteile),
-        ) = match gelesen {
+        let ((sitzung, meldung), dateien, (bestand, neuerungsmeldungen)) = match gelesen {
             Ok(alles) => alles,
             Err(fehler) => {
                 meldungen.push(format!(
@@ -2208,6 +2237,13 @@ impl Anwendungsdelegierter {
                 return (Sitzung::default(), meldungen, Err(ungelesen));
             }
         };
+        let Nutzerdateien {
+            einstellungen: (eingestellt, meldung_einstellungen),
+            einstellungsschaden,
+            profile: (profile, meldung_profile),
+            profilmeldungen,
+            urteile,
+        } = dateien;
         meldungen.extend(meldung);
         let notizort = ort::notizort(
             &eingestellt.notizordner,
@@ -5058,18 +5094,25 @@ impl Anwendungsdelegierter {
                  lässt sich nicht nehmen ({fehler})"
             )),
         };
-        *self.ivars().belegung.borrow_mut() = belegung;
-
-        // Menue und Abgriff auf die neue Belegung, ueber dieselben Wege wie
-        // beim Start.
-        let hauptmenue = menue::hauptmenue(self.mtm(), &self.ivars().belegung.borrow());
-        NSApplication::sharedApplication(self.mtm()).setMainMenu(Some(&hauptmenue));
-        self.tastenabgriff_nachziehen();
+        self.belegung_uebernehmen(belegung);
 
         if let Some(meldung) = meldung {
             let aktiv = self.ivars().modell.borrow().aktiv();
             self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
+    }
+
+    /// Macht eine Belegung zur geltenden und baut Hauptmenue und
+    /// Ereignisabgriff auf sie neu auf, ueber dieselben Wege wie beim Start.
+    ///
+    /// Gerufen, wenn die F1-Ansicht mit einer Aenderung schliesst; die
+    /// Umbelegung wirkt damit sofort und nicht erst nach einem Neustart.
+    /// Gesichert wird hier nichts: das ist Sache des Rufers.
+    fn belegung_uebernehmen(&self, belegung: Belegung) {
+        *self.ivars().belegung.borrow_mut() = belegung;
+        let hauptmenue = menue::hauptmenue(self.mtm(), &self.ivars().belegung.borrow());
+        NSApplication::sharedApplication(self.mtm()).setMainMenu(Some(&hauptmenue));
+        self.tastenabgriff_nachziehen();
     }
 
     // ------------------------------------------------------------------
@@ -12760,22 +12803,50 @@ mod neuerungsproben {
             .into_iter()
             .find(|(datei, _)| datei == "krk-ui/src/appkit/anwendung.rs")
             .expect("diese Datei steht im Quellbaum");
-        let durchgang = quelle
-            .split_once("fn sitzung_laden")
-            .expect("sitzung_laden steht in dieser Datei")
-            .1;
-        let stelle = |nadel: &str| {
-            durchgang
-                .find(nadel)
-                .unwrap_or_else(|| panic!("`{nadel}` steht nicht mehr in `sitzung_laden`"))
+        // Seit Schritt 6 des Plans
+        // `260929-1025_*_plan-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`
+        // stehen die zwei Lader in `nutzerdateien_lesen`, einer freien
+        // Funktion, und `sitzung_laden` ruft sie vor der Erhebung.
+        let durchgang = super::quelltextproben::rumpf(&quelle, "sitzung_laden");
+        let leseweg = {
+            let kopf = concat!("fn nutzerdateien_", "lesen(");
+            let rest = &quelle[quelle
+                .find(kopf)
+                .expect("nutzerdateien_lesen steht in dieser Datei")..];
+            rest[..rest.find("\n}\n").expect("der Rumpf endet")].to_owned()
+        };
+        let stelle = |text: &str, nadel: &str, wo: &str| {
+            text.find(nadel)
+                .unwrap_or_else(|| panic!("`{nadel}` steht nicht mehr in `{wo}`"))
         };
 
-        let einstellungen = stelle(concat!("einstellungen::", "laden(zugang)"));
-        let profile = stelle(concat!("leseprofile::", "laden(zugang)"));
-        let erhebung = stelle(concat!("neuerungen_", "erheben(zugang, urteile)"));
-
+        let einstellungen = stelle(
+            &leseweg,
+            concat!("einstellungen::", "laden(zugang)"),
+            "nutzerdateien_lesen",
+        );
+        let profile = stelle(
+            &leseweg,
+            concat!("leseprofile::", "laden(zugang)"),
+            "nutzerdateien_lesen",
+        );
         assert!(
-            erhebung > einstellungen && erhebung > profile,
+            einstellungen < profile,
+            "die zwei Lader stehen nicht mehr in ihrer Reihenfolge"
+        );
+
+        let lesen = stelle(
+            &durchgang,
+            concat!("nutzerdateien_", "lesen("),
+            "sitzung_laden",
+        );
+        let erhebung = stelle(
+            &durchgang,
+            concat!("neuerungen_", "erheben(zugang, urteile)"),
+            "sitzung_laden",
+        );
+        assert!(
+            erhebung > lesen,
             "die Erhebung steht nicht mehr hinter beiden Ladern; auf einer frischen \
              Installation vergliche sie gegen Dateien, die es noch nicht gibt"
         );

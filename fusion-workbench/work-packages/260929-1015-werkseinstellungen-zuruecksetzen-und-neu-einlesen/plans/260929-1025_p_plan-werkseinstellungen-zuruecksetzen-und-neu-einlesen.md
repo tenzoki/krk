@@ -258,7 +258,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit der Schritte 3, 
    - Acceptance: `make check` grün; außer den hier genannten Proben ändert keine ihre Erwartung, und `c2_1_…` ändert allein Name und Doc-Kommentar. `git diff --stat` nennt allein die Dateien unter Files. `werkszustand::zuruecksetzen` hat weiter allein Probenrufer; der Betriebsrufer kommt in Schritt 8.
    - Dependencies: Schritt 3
 
-6. **Ein Leseweg für die zwei Dateien des Starts, eine Übernahme der Belegung**
+6. [DONE] **Ein Leseweg für die zwei Dateien des Starts, eine Übernahme der Belegung**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes: Aus dem Durchgang von `sitzung_laden` wird die freie Funktion `nutzerdateien_lesen(zugang, belegung_ersetzt: bool) -> Nutzerdateien` gezogen, neben `neuerungen_erheben`: sie ruft `einstellungen::laden` und `leseprofile::laden` in der heutigen Reihenfolge und liefert Einstellungen samt Ersetzungsgrund, Profile samt beiden Meldungsarten und die `Leserurteile`. `sitzung_laden` ruft sie und danach `neuerungen_erheben(zugang, urteile)`, in derselben Reihenfolge und mit denselben Aufrufen wie heute; kein Systemaufruf kommt dazu und keiner fällt weg. Aus `belegungsansicht_verlassen` wird `belegung_uebernehmen(&self, belegung)` gezogen: Belegung in die Ivars, Hauptmenü neu, `tastenabgriff_nachziehen`. Beide haben in diesem Schritt einen Rufer.
