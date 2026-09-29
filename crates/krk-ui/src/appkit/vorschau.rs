@@ -329,7 +329,9 @@ use crate::hervorhebung::{
     self, Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
 use crate::markdown::Quellbezug;
-use crate::vorschaumodell::{Inhalt, Metadaten, Vorschaumodell, Zwischenablageinhalt, rechte_text};
+use crate::vorschaumodell::{
+    Inhalt, Metadaten, Tabstand, Vorschaumodell, Zwischenablageinhalt, rechte_text,
+};
 
 use super::betrachter::{Deutung, Pdfbetrachter, Zoom};
 use super::nummernspalte::{self, Nummernspalte};
@@ -715,16 +717,20 @@ pub struct VorschaufensterIvars {
     /// Die geprueften Leseprofile, mit denen ein ausgewaehlter Ordner
     /// erkannt wird (Runde 16).
     ///
-    /// **Sie stehen nach dem Aufbau der Oberflaeche fest und wechseln
-    /// danach nicht mehr** (C4.5); deshalb eine [`OnceCell`] und keine
-    /// [`RefCell`]. Der eine Schreiber ist
-    /// [`Vorschaufenster::profile_setzen`], und dessen Doc-Kommentar sagt,
-    /// warum die Profile hier wohnen und nicht im [`Vorschaumodell`].
+    /// **Gesetzt beim Start und beim Zuruecksetzen auf Werkseinstellungen,
+    /// bei keinem anderen Anlass**, und ohne Beobachter auf `readers.toml`;
+    /// eine von Hand geaenderte Datei erreicht KRK erst mit dem naechsten
+    /// Start. C4.5 der Runde 16 („es gilt der Stand des Starts") faellt damit
+    /// bewusst (Spec `260929-0759_*_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`,
+    /// C3). Deshalb eine [`RefCell`] und keine `OnceCell` mehr. Der eine
+    /// Schreiber ist [`Vorschaufenster::profile_uebernehmen`], und dessen
+    /// Doc-Kommentar sagt, warum die Profile hier wohnen und nicht im
+    /// [`Vorschaumodell`].
     ///
     /// Leer heisst „keine Profile" und ist kein Fehlerfall: im Messmodus
     /// liest KRK die Ablage gar nicht erst, und dann zeigt jeder Ordner
     /// seine Metadaten.
-    profile: OnceCell<Arc<Profile>>,
+    profile: RefCell<Arc<Profile>>,
     /// Der Formatierer fuer das Aenderungsdatum der Metadaten.
     datumsformat: Retained<NSDateFormatter>,
     /// Der Formatierer fuer die Groesse der Metadaten.
@@ -880,7 +886,7 @@ impl Vorschaufenster {
             einfaerbungsstand: RefCell::new(None),
             einfaerbung_erneut: Cell::new(false),
             tafel: Cell::new(tafel),
-            profile: OnceCell::new(),
+            profile: RefCell::new(Arc::default()),
             datumsformat,
             groessenformat,
         });
@@ -1022,15 +1028,22 @@ impl Vorschaufenster {
         &self.ivars().text
     }
 
-    /// Uebergibt der Vorschau die geprueften Leseprofile (Runde 16).
+    /// Uebergibt der Vorschau einen Satz gepruefter Leseprofile und laedt
+    /// jeden Tab neu, dessen Inhalt von ihm abhaengt (Runde 16, Entscheidung 1
+    /// des Plans `260929-1025_*_plan-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`).
     ///
-    /// **Der eine Schreiber des Merkfeldes, und er hat einen Rufer:**
-    /// `Anwendungsdelegierter::oberflaeche_aufbauen` ruft ihn einmal, nachdem
-    /// die Bereiche stehen, mit dem Satz, den `sitzung_laden` gelesen hat. Ein
-    /// zweiter Rufer waere ein zweiter Zeitpunkt, zu dem die Vorschau andere
-    /// Profile bekaeme, und C4.5 sagt das Gegenteil zu: es gilt der Stand des
-    /// Starts, und eine geaenderte `readers.toml` erreicht KRK erst mit dem
-    /// naechsten Start.
+    /// **Der eine Schreiber des Merkfeldes, und er hat zwei Anlaesse:** den
+    /// Aufbau der Oberflaeche beim Start und das Zuruecksetzen auf
+    /// Werkseinstellungen. Einen Beobachter auf `readers.toml` gibt es nicht.
+    ///
+    /// **Neu geladen wird ueber denselben Weg wie nach einem Ortswechsel**,
+    /// [`Vorschaumodell::neu_laden_wo`], mit der Frage
+    /// [`Tabstand::haengt_an_den_profilen`] je Tab: aktive und verdeckte Tabs
+    /// gleich, auch bei ausgeblendeter Vorschau, und kein Tab wird neu gebaut.
+    /// Das Merkfeld wird **vor** der Frage gesetzt, also traegt jeder Auftrag,
+    /// der dann laeuft, den alten Satz und wird ersetzt. Beim Start zeigt noch
+    /// kein Tab etwas, das Nachladen findet keinen Treffer, und der Ladetakt
+    /// bleibt aus; er laeuft nur bei mehr als null Auftraegen an.
     ///
     /// **Warum die Profile hier wohnen und nicht im [`Vorschaumodell`].** Das
     /// Modell haelt, was ein Tab zeigt; die Profile sind Bestand der
@@ -1039,13 +1052,20 @@ impl Vorschaufenster {
     /// Anlegen jedes Tabs mitbekommen und haette dann eine Auskunft zu
     /// halten, die mit dem angezeigten Tab nichts zu tun hat.
     ///
-    /// **Ein zweiter Aufruf schreibt nicht**, und der Rueckgabewert faellt
-    /// hier mit `let _ =` weg: dieselbe Form wie an den uebrigen
-    /// `OnceCell`-Feldern des Programms, und sie heisst wie ueberall „ich
-    /// brauche den Wert nicht". Dass es beim einen Aufruf bleibt, misst die
-    /// Probe `die_profile_haben_genau_einen_schreiber_und_einen_rufer`.
-    pub fn profile_setzen(&self, profile: Arc<Profile>) {
-        let _ = self.ivars().profile.set(profile);
+    /// Dass es bei einem Schreiber bleibt, misst die Probe
+    /// `die_profile_haben_genau_einen_schreiber_und_einen_rufer`.
+    pub fn profile_uebernehmen(&self, profile: Arc<Profile>) {
+        let _ = self.ivars().profile.replace(profile);
+        let aktuell = Arc::clone(&self.ivars().profile.borrow());
+        let auftraege = self.ivars().modell.borrow_mut().neu_laden_wo(
+            |tab: &Tabstand<'_>| tab.haengt_an_den_profilen(),
+            self.ivars().tafel.get(),
+            &aktuell,
+            heimgriff::lesen(&self.ivars().heim).as_ref(),
+        );
+        if auftraege > 0 {
+            self.takt_starten();
+        }
     }
 
     /// Zeigt den genannten Eintrag im aktiven Tab (C6).
@@ -1058,13 +1078,16 @@ impl Vorschaufenster {
         // braucht sie deshalb jetzt. Gefragt wird nicht hier, sondern beim
         // Aufbau und bei jedem Wechsel des Erscheinungsbildes — die eine
         // Zuordnung dazu steht in [`textmerkmale::tafel_der_erscheinung`].
-        // Die Profile kommen aus dem Merkfeld, das `profile_setzen` einmal
-        // beim Aufbau der Oberflaeche fuellt. Ist es leer, heisst das „keine
-        // Profile" und ist kein Fehlerfall: im Messmodus liest KRK die Ablage
-        // gar nicht erst, und dann zeigt auch ein erkennbarer Ordner seine
-        // Metadaten. Der leere Satz nimmt denselben Weg wie ein voller; eine
-        // Verzweigung danach stuende sonst hier und im Modell ein zweites Mal.
-        let profile = self.ivars().profile.get().cloned().unwrap_or_default();
+        // Die Profile kommen aus dem Merkfeld, das `profile_uebernehmen` beim
+        // Aufbau der Oberflaeche und beim Zuruecksetzen fuellt, gelesen im
+        // Augenblick dieses Auftrags; so holt auch der Nachtrag einer
+        // ausgeblendeten Vorschau den Satz, der jetzt gilt. Ist es leer, heisst
+        // das „keine Profile" und ist kein Fehlerfall: im Messmodus liest KRK
+        // die Ablage gar nicht erst, und dann zeigt auch ein erkennbarer Ordner
+        // seine Metadaten. Der leere Satz nimmt denselben Weg wie ein voller;
+        // eine Verzweigung danach stuende sonst hier und im Modell ein zweites
+        // Mal.
+        let profile = Arc::clone(&self.ivars().profile.borrow());
         self.ivars().modell.borrow_mut().datei_anzeigen(
             pfad,
             self.ivars().tafel.get(),
@@ -1092,11 +1115,11 @@ impl Vorschaufenster {
     /// hat. `notes.txt` am alten Ort erscheint danach als Text, am neuen
     /// gerendert, ohne dass der Nutzer sie neu waehlt.
     pub fn heimordner_gewechselt(&self, alt: Option<&Heimordner>, neu: &Heimordner) {
-        let profile = self.ivars().profile.get().cloned().unwrap_or_default();
+        let profile = Arc::clone(&self.ivars().profile.borrow());
         let auftraege = self.ivars().modell.borrow_mut().neu_laden_wo(
-            |pfad| {
-                neu.sonderdatei(pfad).is_some()
-                    || alt.is_some_and(|alt| alt.sonderdatei(pfad).is_some())
+            |tab| {
+                neu.sonderdatei(tab.pfad).is_some()
+                    || alt.is_some_and(|alt| alt.sonderdatei(tab.pfad).is_some())
             },
             self.ivars().tafel.get(),
             &profile,
@@ -2093,21 +2116,24 @@ mod tests {
         );
     }
 
-    /// Das Merkfeld der Profile hat genau einen Schreiber, und `profile_setzen`
-    /// genau einen Rufer, und der steht beim Anwendungsdelegierten (C4.5).
+    /// Das Merkfeld der Profile hat genau einen Schreiber, und
+    /// `profile_uebernehmen` genau einen Rufer, und der steht beim
+    /// Anwendungsdelegierten.
     ///
     /// **Beide Haelften stehen als „genau einmal" da.** Zugesagt ist erstens,
-    /// dass [`Vorschaufenster::profile_setzen`] der eine Schreiber des
+    /// dass [`Vorschaufenster::profile_uebernehmen`] der eine Schreiber des
     /// Merkfeldes ist, und zweitens, dass genau eine Stelle im Baum ihn ruft,
-    /// naemlich `oberflaeche_aufbauen` in `appkit/anwendung.rs`. Ein zweiter
-    /// Schreiber wie ein zweiter Rufer waere ein zweiter Zeitpunkt, zu dem die
-    /// Vorschau andere Profile bekaeme, und an keinem Rueckgabewert waere
-    /// einer von beiden abzulesen. Gezaehlt wird deshalb im Baum.
+    /// naemlich `oberflaeche_aufbauen` in `appkit/anwendung.rs`. Ein weiterer
+    /// Schreiber oder Rufer waere ein weiterer Zeitpunkt, zu dem die Vorschau
+    /// andere Profile bekaeme, und an keinem Rueckgabewert waere einer davon
+    /// abzulesen. Gezaehlt wird deshalb im Baum.
     ///
-    /// Die zweite Haelfte stand bis zum Schritt 11 der Runde 16 als obere
-    /// Schranke da, weil es den Rufer noch nicht gab; seit jener Schritt ihn
-    /// gebaut hat, ist sie eine Gleichheit und faengt damit auch den Fall, dass
-    /// ihn jemand wieder ausbaut.
+    /// **Der Schreiber heisst seit dem Zuruecksetzen auf Werkseinstellungen
+    /// `profile.replace`**, weil das Merkfeld keine `OnceCell` mehr ist, und
+    /// der Rufer `profile_uebernehmen` statt `profile_setzen`: C4.5 der Runde
+    /// 16 faellt nach dem Spec
+    /// `260929-0759_*_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`
+    /// bewusst, und der zweite Rufer kommt mit dem Befehl.
     ///
     /// # Was diese Probe nicht sieht
     ///
@@ -2124,8 +2150,8 @@ mod tests {
         // Beide Nadeln stehen zusammengesetzt da: die Probe liegt in dem Baum,
         // den sie liest, und als ein Stueck geschrieben faende jede sich
         // selbst.
-        let schreiber = concat!("profile", ".set");
-        let rufer = concat!("profile_", "setzen");
+        let schreiber = concat!("profile", ".replace");
+        let rufer = concat!("profile_", "uebernehmen");
         let vorschau = "krk-ui/src/appkit/vorschau.rs";
         let anwendung = "krk-ui/src/appkit/anwendung.rs";
 
@@ -2149,8 +2175,7 @@ mod tests {
             zaehlen(rufer),
             vec![(anwendung.to_owned(), 1)],
             "`{rufer}` wird nicht genau einmal und beim Anwendungsdelegierten \
-             gerufen; die Profile gehen einmal beim Aufbau der Oberflaeche \
-             herein und wechseln danach nicht mehr"
+             gerufen; die Profile gehen beim Aufbau der Oberflaeche herein"
         );
     }
 

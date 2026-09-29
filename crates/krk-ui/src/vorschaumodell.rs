@@ -477,6 +477,50 @@ impl Vorschautab {
     }
 }
 
+/// Was die Trefferfrage von [`Vorschaumodell::neu_laden_wo`] an einem Tab
+/// sieht.
+#[derive(Debug)]
+pub struct Tabstand<'a> {
+    /// Die Datei, die der Tab gerade laedt, sonst die, die er zeigt.
+    pub pfad: &'a Path,
+    inhalt: &'a Inhalt,
+    laedt: bool,
+}
+
+impl Tabstand<'_> {
+    /// Ob dieser Tab unter einem anderen Profilsatz etwas anderes zeigen
+    /// koennte.
+    ///
+    /// `laden` liest den Satz allein im Zweig fuer alles, was keine Datei ist,
+    /// und dieser Zweig liefert eine [`Inhalt::Zusammenfassung`] oder
+    /// [`Inhalt::Metadaten`] eines Ordners oder einer Verknuepfung; eine
+    /// Verknuepfung auf einen Ordner kann unter einem anderen Satz erkannt
+    /// werden. Metadaten einer **Datei** entstehen allein im Dateizweig als
+    /// Rueckfall und haengen nicht daran.
+    ///
+    /// **Ein laufender Auftrag haengt immer daran.** Er haelt keinen Verweis
+    /// auf seinen Satz, und das braucht er nicht: wer einen neuen Satz
+    /// uebernimmt, setzt ihn vor dieser Frage, also traegt jeder Auftrag, der
+    /// dann laeuft, den alten, auch einer, dessen Ergebnis schon im Kanal
+    /// wartet.
+    #[must_use]
+    pub fn haengt_an_den_profilen(&self) -> bool {
+        if self.laedt {
+            return true;
+        }
+        match self.inhalt {
+            Inhalt::Zusammenfassung(_) => true,
+            Inhalt::Metadaten { metadaten, .. } => metadaten.typ != Typ::Datei,
+            Inhalt::Leer
+            | Inhalt::Text(_)
+            | Inhalt::Markdown(_)
+            | Inhalt::Bild { .. }
+            | Inhalt::Pdf { .. }
+            | Inhalt::Hinweis(_) => false,
+        }
+    }
+}
+
 /// Die Tabs des Vorschaufensters (C6).
 ///
 /// Dieselben Regeln wie die [`Tabliste`](crate::tabs::Tabliste) eines
@@ -614,23 +658,34 @@ impl Vorschaumodell {
         ));
     }
 
-    /// Startet fuer jeden Tab, dessen Datei `treffer` erfuellt, einen neuen
-    /// Ladeauftrag mit der hereingereichten Abschrift des Heimordners
-    /// (Schritt 3.4 des Plans
-    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`).
+    /// Startet fuer jeden Tab, den `treffer` annimmt, einen neuen Ladeauftrag
+    /// mit dem hereingereichten Profilsatz und der hereingereichten Abschrift
+    /// des Heimordners.
+    ///
+    /// **Zwei Anlaesse gehen diesen einen Weg.** Ein Wechsel des Notizordners
+    /// fragt nach dem Pfad (Schritt 3.4 des Plans
+    /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`), das
+    /// Zuruecksetzen auf Werkseinstellungen nach
+    /// [`Tabstand::haengt_an_den_profilen`] (Entscheidung 1 des Plans
+    /// `260929-1025_*_plan-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`).
+    /// Die Frage ist **ein** Praedikat je Tab, und je Treffer startet genau ein
+    /// Auftrag.
     ///
     /// **Der Ladeauftrag haelt eine Abschrift des Werts vom Auftrag**
     /// ([`crate::heimgriff`]), und ob `notes.txt` gerendert oder als Text
     /// erscheint, haengt an ihr; ein Wechsel des Orts erreicht einen Tab also
-    /// erst mit einem neuen Auftrag. Gefragt wird die Datei, die gerade
-    /// geladen wird, sonst die angezeigte: ein laufender Auftrag traegt noch
-    /// die alte Abschrift und wird ersetzt. Titel und Inhalt bleiben bis zur
-    /// Lieferung stehen, wie bei [`Vorschaumodell::datei_anzeigen`]. Liefert
-    /// die Zahl der neuen Auftraege.
+    /// erst mit einem neuen Auftrag. Dasselbe gilt fuer den Profilsatz. Gefragt
+    /// wird die Datei, die gerade geladen wird, sonst die angezeigte: ein
+    /// laufender Auftrag traegt noch den alten Wert und wird ersetzt, und sein
+    /// Ergebnis faellt mit seinem Empfaenger. Ein Tab ohne Datei und ohne
+    /// Auftrag, der leere oder die Zwischenablage, wird nicht gefragt. Titel,
+    /// Inhalt und der aktive Tab bleiben bis zur Lieferung stehen, wie bei
+    /// [`Vorschaumodell::datei_anzeigen`]. Liefert die Zahl der neuen
+    /// Auftraege.
     #[must_use = "die Zahl sagt, ob der Ladetakt anzuwerfen ist"]
     pub fn neu_laden_wo(
         &mut self,
-        treffer: impl Fn(&Path) -> bool,
+        treffer: impl Fn(&Tabstand<'_>) -> bool,
         tafel: Tafel,
         profile: &Arc<Profile>,
         heim: Option<&Heimordner>,
@@ -642,9 +697,17 @@ impl Vorschaumodell {
                 .as_ref()
                 .map(|vorgang| vorgang.pfad.clone())
                 .or_else(|| tab.pfad.clone());
-            let Some(pfad) = pfad.filter(|pfad| treffer(pfad)) else {
+            let Some(pfad) = pfad else {
                 continue;
             };
+            let stand = Tabstand {
+                pfad: &pfad,
+                inhalt: &tab.inhalt,
+                laedt: tab.ladevorgang.is_some(),
+            };
+            if !treffer(&stand) {
+                continue;
+            }
             tab.ladevorgang = Some(Ladevorgang::starten(
                 pfad,
                 tafel,
@@ -1907,8 +1970,9 @@ mod tests {
             "Einkauf\n\nBrot"
         );
 
-        let treffer =
-            |pfad: &Path| neu.sonderdatei(pfad).is_some() || alt.sonderdatei(pfad).is_some();
+        let treffer = |tab: &Tabstand<'_>| {
+            neu.sonderdatei(tab.pfad).is_some() || alt.sonderdatei(tab.pfad).is_some()
+        };
         let auftraege = modell.neu_laden_wo(treffer, Tafel::Hell, &profile, Some(&neu));
         assert_eq!(auftraege, 1, "allein der Tab mit notes.txt laedt neu");
         assert!(modell.tabs[0].ladevorgang.is_some());
@@ -1921,6 +1985,167 @@ mod tests {
             *modell.aktiver_inhalt(),
             Inhalt::Text("## Einkauf\nBrot\n".to_owned()),
             "am alten Ort erscheint notes.txt nach dem Wechsel als Text"
+        );
+    }
+
+    /// Ein Tab mit festem Inhalt und Pfad, ohne Auftrag.
+    fn fester_tab(inhalt: Inhalt, pfad: &Path) -> Vorschautab {
+        Vorschautab {
+            titel: titel_von(pfad),
+            inhalt,
+            pfad: Some(pfad.to_path_buf()),
+            ladevorgang: None,
+        }
+    }
+
+    /// Metadaten der Probe mit dem genannten Typ.
+    fn metadaten_vom_typ(typ: Typ) -> Inhalt {
+        Inhalt::Metadaten {
+            metadaten: Metadaten {
+                typ,
+                ..probenmetadaten()
+            },
+            zaehlzeilen: Vec::new(),
+        }
+    }
+
+    /// Entscheidung 1 des Plans
+    /// `260929-1025_*_plan-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md`:
+    /// die Trefferfrage an einem Modell mit je einem Tab jeder
+    /// `Inhalt`-Variante und einem ladenden Tab nimmt genau die
+    /// Zusammenfassung, die Metadaten eines Ordners und einer Verknuepfung und
+    /// den ladenden Tab; die Metadaten einer Datei nicht.
+    #[test]
+    fn die_profilfrage_nimmt_genau_die_profilabhaengigen_tabs() {
+        let ordner = Pruefordner::neu("vorschau-profilfrage");
+        let pfad = |name: &str| ordner.unter(name);
+        let mut ladend = fester_tab(Inhalt::Text("alt".to_owned()), &pfad("laedt.txt"));
+        ladend.ladevorgang = Some(Ladevorgang::starten(
+            pfad("laedt-neu.txt"),
+            Tafel::Hell,
+            Arc::default(),
+            None,
+        ));
+        let mut modell = Vorschaumodell::neu();
+        modell.tabs = vec![
+            fester_tab(Inhalt::Leer, &pfad("leer")),
+            fester_tab(Inhalt::Text("t".to_owned()), &pfad("text.txt")),
+            fester_tab(
+                Inhalt::Markdown(Box::new(crate::markdown::rendern(
+                    "# T\n",
+                    Tafel::Hell,
+                    crate::markdown::Lesart::Markdown,
+                ))),
+                &pfad("text.md"),
+            ),
+            fester_tab(
+                Inhalt::Bild {
+                    daten: Arc::new(vec![0]),
+                    metadaten: None,
+                },
+                &pfad("bild.png"),
+            ),
+            fester_tab(
+                Inhalt::Pdf {
+                    daten: Arc::new(vec![0]),
+                    metadaten: probenmetadaten(),
+                },
+                &pfad("seite.pdf"),
+            ),
+            fester_tab(Inhalt::Hinweis("h".to_owned()), &pfad("hinweis")),
+            fester_tab(metadaten_vom_typ(Typ::Datei), &pfad("roh.bin")),
+            fester_tab(metadaten_vom_typ(Typ::Ordner), &pfad("ordner")),
+            fester_tab(metadaten_vom_typ(Typ::Verknuepfung), &pfad("verweis")),
+            fester_tab(
+                Inhalt::Zusammenfassung(krk_core::leseprofil::Zusammenfassung::neu(
+                    "werkbank".to_owned(),
+                    pfad("werkbank"),
+                    Vec::new(),
+                )),
+                &pfad("werkbank"),
+            ),
+            ladend,
+        ];
+
+        let auftraege = modell.neu_laden_wo(
+            |tab: &Tabstand<'_>| tab.haengt_an_den_profilen(),
+            Tafel::Hell,
+            &Arc::default(),
+            None,
+        );
+        let neu_geladen: Vec<bool> = modell
+            .tabs
+            .iter()
+            .map(|tab| tab.ladevorgang.is_some())
+            .collect();
+        assert_eq!(
+            neu_geladen,
+            [
+                false, false, false, false, false, false, false, true, true, true, true
+            ]
+        );
+        assert_eq!(auftraege, 4);
+        assert_eq!(
+            modell.tabs[10]
+                .ladevorgang
+                .as_ref()
+                .map(|vorgang| &vorgang.pfad),
+            Some(&pfad("laedt-neu.txt")),
+            "ein ladender Tab laedt die Datei seines Auftrags neu, nicht die angezeigte"
+        );
+    }
+
+    /// Entscheidung 1: ein verdeckter Tab wird wie der aktive neu geladen, der
+    /// aktive bleibt der aktive, und nach der Lieferung zeigt ein Ordner, den
+    /// erst der neue Satz erkennt, seine Zusammenfassung.
+    #[test]
+    fn ein_neuer_profilsatz_erreicht_auch_den_verdeckten_tab() {
+        let ordner = Pruefordner::neu("vorschau-neuer-satz");
+        let werkbank = ordner.ordner("fusion-workbench");
+        let mut modell = Vorschaumodell::neu();
+        modell.datei_anzeigen(&werkbank, Tafel::Hell, Arc::default(), None);
+        modell.oeffnen();
+        let text = ordner.datei("notiz.txt", "notiz\n");
+        modell.datei_anzeigen(&text, Tafel::Hell, Arc::default(), None);
+        while modell.laedt_noch() {
+            let _ = modell.einziehen();
+            std::thread::yield_now();
+        }
+        assert!(matches!(modell.tabs[0].inhalt, Inhalt::Metadaten { .. }));
+        assert_eq!(modell.aktive_stelle(), 1);
+
+        let profile = Arc::new(profile_aus(
+            r#"
+[[profil]]
+name = "Eine Werkbank"
+pfad = 'fusion-workbench$'
+
+  [[profil.zeile]]
+  beschriftung = "Datensaetze"
+  zaehlung = { muster = '\.md$' }
+"#,
+        ));
+        let auftraege = modell.neu_laden_wo(
+            |tab: &Tabstand<'_>| tab.haengt_an_den_profilen(),
+            Tafel::Hell,
+            &profile,
+            None,
+        );
+        assert_eq!(auftraege, 1, "allein der verdeckte Ordnertab laedt neu");
+        assert_eq!(
+            modell.aktive_stelle(),
+            1,
+            "der aktive Tab bleibt der aktive"
+        );
+        while modell.laedt_noch() {
+            let _ = modell.einziehen();
+            std::thread::yield_now();
+        }
+        assert_eq!(modell.aktive_stelle(), 1);
+        assert!(
+            matches!(modell.tabs[0].inhalt, Inhalt::Zusammenfassung(_)),
+            "{:?}",
+            modell.tabs[0].inhalt
         );
     }
 

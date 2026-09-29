@@ -1663,13 +1663,14 @@ impl Anwendungsdelegierter {
         // schwach, die Tabelle haelt Datenquelle und Delegierten schwach.
         let _ = ivars.dateifenster.set(dateifenster);
         let _ = ivars.leiste.set(leiste);
-        // **Die Leseprofile gehen genau hier herein und nirgends sonst** (C4.5).
-        // `sitzung_laden` hat sie oben in dieser Funktion gelesen; die Vorschau
-        // steht seit wenigen Zeilen, und ein zweiter Zeitpunkt spaeter waere ein
-        // zweiter Satz Profile. Im Messmodus ist der Satz leer, und das ist die
-        // Folge und kein Versehen; der Doc-Kommentar von `sitzung_laden` schreibt
-        // sie aus.
-        vorschau.profile_setzen(Arc::clone(&ivars.profile.borrow()));
+        // **Die Leseprofile des Starts gehen hier herein.** `sitzung_laden` hat
+        // sie oben in dieser Funktion gelesen, und die Vorschau steht seit
+        // wenigen Zeilen; noch zeigt kein Tab etwas, also laedt die Uebernahme
+        // nichts nach und wirft keinen Ladetakt an. Einen zweiten Anlass gibt
+        // es allein im Zuruecksetzen auf Werkseinstellungen. Im Messmodus ist
+        // der Satz leer, und das ist die Folge und kein Versehen; der
+        // Doc-Kommentar von `sitzung_laden` schreibt sie aus.
+        vorschau.profile_uebernehmen(Arc::clone(&ivars.profile.borrow()));
         let _ = ivars.vorschau.set(vorschau);
         let _ = ivars.editor.set(editor);
         let _ = ivars.git.set(git);
@@ -1995,7 +1996,7 @@ impl Anwendungsdelegierter {
     /// **Seit der Runde 16 kommen die Leseprofile im selben Durchgang mit**, und
     /// im Messmodus bleibt [`AnwendungsIvars::profile`] deshalb leer: alle vier
     /// Aufgaben kehren zurueck, bevor der Durchgang laeuft, also uebergibt
-    /// [`Vorschaufenster::profile_setzen`] dort einen leeren Profilsatz. Das ist
+    /// [`Vorschaufenster::profile_uebernehmen`] dort einen leeren Profilsatz. Das ist
     /// die Folge und kein Versehen — ohne Profil aus der Ablage zeigt kein
     /// Ordner eine Zusammenfassung.
     ///

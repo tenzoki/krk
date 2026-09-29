@@ -211,7 +211,7 @@ Die Kante von Stufe A nach Stufe B steht für die Abhängigkeit jedes Schritts 3
    - Acceptance: `make check` grün; keine Probe ausser den zwei genannten ändert ihre Erwartung. `werkszustand::zuruecksetzen` hat in diesem Schritt allein Probenrufer; der Betriebsrufer kommt in Schritt 8.
    - Dependencies: Schritte 1 und 2 (Tor)
 
-4. **Vorschau: `profile_uebernehmen` ersetzt `profile_setzen`**
+4. [DONE] **Vorschau: `profile_uebernehmen` ersetzt `profile_setzen`**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/vorschau.rs`, `crates/krk-ui/src/vorschaumodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs` (die eine Aufrufstelle und ihr Kommentar)
    - Changes: nach Entscheidung 1 und in der Gestalt, die der Bericht aus Schritt 1 bestätigt oder berichtigt hat. `VorschaufensterIvars::profile` wird `RefCell<Arc<Profile>>`; `datei_anzeigen` und `heimordner_gewechselt` lesen es über `borrow`. `profile_setzen` heißt `profile_uebernehmen` und lädt nach dem Setzen jeden profilabhängigen Tab neu. Im Modell trägt die Schleife von `neu_laden_wo` die Trefferfrage an den Tab; `heimordner_gewechselt` gibt seine Pfadfrage weiter wie bisher. Der Doc-Kommentar des Feldes und der Methode sagt nicht mehr „steht nach dem Aufbau fest“ (C4.5 der Runde 16 fällt nach dem Spec bewusst), sondern: gesetzt beim Start und beim Zurücksetzen, bei keinem anderen Anlass, ohne Beobachter auf der Datei. Der Kommentar an der Aufrufstelle in `oberflaeche_aufbauen` ebenso.
