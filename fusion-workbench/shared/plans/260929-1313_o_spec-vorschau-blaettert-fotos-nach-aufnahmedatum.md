@@ -45,7 +45,8 @@ flowchart LR
 **Description:** Als Foto zählt jede Datei mit einer der Endungen, die die Vorschau heute schon als Bild zeigt. Innerhalb eines Ordners laufen die Fotos nach ihrem Aufnahmedatum aus den Bilddaten. In der Jahresfolge laufen die Monatsordner nach Namen, und am Ende eines Monats geht es mit dem ersten Foto des nächsten weiter.
 
 **Acceptance criteria:**
-- [ ] Als Fotos zählen genau die Dateien mit den Endungen png, jpg, jpeg, gif, tif, tiff, heic, heif, bmp und icns, ohne Rücksicht auf Groß- und Kleinschreibung. Ordner, Verknüpfungen und andere Dateien zählen nicht.
+- [ ] Als Fotos zählen genau die Dateien mit den Endungen png, jpg, jpeg, gif, tif, tiff, heic, heif, bmp und icns, ohne Rücksicht auf Groß- und Kleinschreibung, deren Name nicht mit einem Punkt beginnt. Ordner, Verknüpfungen, versteckte Einträge (etwa die AppleDouble-Datei `._IMG_0970.jpg` neben einem Foto auf einem fremden Dateisystem) und andere Dateien zählen nicht.
+  Geändert 260929 auf Nutzerentscheid: versteckte Einträge zählen nicht als Foto; bis dahin schloss der Wortlaut sie ein.
 - [ ] In einem Monatsordner mit drei Fotos, deren Aufnahmedaten in umgekehrter Reihenfolge zu ihren Namen stehen, zeigt die Vorschau zuerst das Foto mit dem frühesten Aufnahmedatum.
 - [ ] Ein Foto ohne lesbares Aufnahmedatum wird mit seinem Änderungsdatum eingeordnet. Haben zwei Fotos denselben Zeitpunkt, entscheidet der Name.
 - [ ] In der Jahresfolge kommen alle Fotos des Monatsordners `01` vor allen Fotos des Monatsordners `02`, auch wenn ein Foto in `02` ein früheres Aufnahmedatum trägt.

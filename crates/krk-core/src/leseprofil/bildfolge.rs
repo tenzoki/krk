@@ -35,7 +35,9 @@
 //! Ein Eintrag vom Typ Datei, nie eine Verknuepfung und nie ein Ordner, mit
 //! einer der Endungen aus [`crate::bild::ENDUNGEN`], ohne Ruecksicht auf die
 //! Schreibung (C2.1). **Ein versteckter Eintrag, dessen Name mit einem Punkt
-//! beginnt, zaehlt nicht** (Nutzerentscheid vom 260929): auf Datentraegern mit
+//! beginnt, zaehlt nicht** (Nutzerentscheid vom 260929, niedergelegt in C2.1
+//! des Spec `260929-1313_*_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md`
+//! unter `shared/plans/`): auf Datentraegern mit
 //! fremdem Dateisystem liegt neben jedem Foto eine AppleDouble-Datei
 //! `._IMG_0970.jpg`, die sonst als Foto mit ihren Metadaten in der Folge
 //! stuende.

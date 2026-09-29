@@ -31,3 +31,9 @@ Wer mit Pfeil rechts in `Fotos/2008` hineingeht, steht dort ohne ausgewählte Ze
 ## Recommendation
 
 Möglichkeit 1, mit dem Satz in `HowTo.md`. Die Directive des Arbeitspakets sagt wörtlich „Wenn man **innerhalb** eines Jahresordners ist (Fotos/2008/) … Mit CMD-Pfeil-{hoch/runter} soll dann durch die Bilder navigiert werden“; der Fall ohne Auswahl ist genau dieser Wortlaut, und Möglichkeit 2 nähme ihn zurück. Der Preis ist der Tastenweg „hineingehen, Cmd+Pfeil hoch“, der dort nichts Sichtbares tut; ihn soll der Nutzer kennen, bevor er die Frage schließt. Wählt er Möglichkeit 2, fällt sie mit dem Fix des verlinkten Defekts zusammen, weil beide verlangen, dass die Lage weiß, was das aktive Dateifenster gerade beschreibt. **inference:** Wie oft Cmd+Pfeil hoch im Ordner selbst zum Aufsteigen gedrückt wird, ist aus dem Tastenweg geschlossen und nicht gemessen.
+
+---
+Answered: 260929-1646-reviewer-bildfolge-und-nachtraege.md `Offene Frage` — Möglichkeit 1: ohne ausgewählte Zeile zeigt die Vorschau die Folge des angezeigten Ordners, cmd+up blättert dort und steigt nicht auf; HowTo.md beschreibt es; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: HowTo.md, Abschnitt Bildfolge, beschreibt das Blaettern ohne ausgewaehlte Zeile (der Commit traegt es) — HowTo.md beschreibt das Blättern ohne ausgewählte Zeile

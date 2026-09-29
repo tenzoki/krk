@@ -24,3 +24,6 @@ Den Entscheid als Datensatz im Arbeitspaket niederlegen (Frage „zählen verste
 
 - Ein Entscheidungsdatensatz im Speicher des Arbeitspakets trägt die Antwort und wer sie gegeben hat.
 - Der Modulkopf von `bildfolge.rs` zitiert ihn in Sternform.
+
+---
+Resolved: Nutzer hat den Ausschluss am 260929 bestätigt; Spec C2.1 nachgezogen, Code-Kommentar verweist darauf

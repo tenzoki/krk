@@ -666,6 +666,12 @@ und die Datei zeigt dazu ein Beispiel unter „Die Bildfolge“.
 Jahresfolge sieht man, wenn in `Fotos` die Zeile `2008` ausgewählt ist, die
 Monatsfolge, wenn in `Fotos/2008` die Zeile `08` ausgewählt ist.
 
+**Ohne ausgewählte Zeile gilt der angezeigte Ordner.** Wer in `Fotos/2008`
+oder `Fotos/2008/08` hineingeht, hat dort keine Zeile ausgewählt, und die
+Vorschau zeigt die Folge dieses Ordners. Cmd+Pfeil hoch blättert dann in
+dieser Folge und steigt nicht nach oben; auf dem ersten Foto geschieht nichts.
+Aufsteigen geht dort mit Pfeil links.
+
 - **Welche Fotos:** Dateien mit den Endungen png, jpg, jpeg, gif, tif, tiff,
   heic, heif, bmp und icns, gleich wie geschrieben. Versteckte Dateien, deren
   Name mit einem Punkt beginnt, zählen nicht. Beim Jahr zählen allein die
@@ -703,7 +709,8 @@ Monatsfolge, wenn in `Fotos/2008` die Zeile `08` ausgewählt ist.
 **An diesen Orten wechseln Cmd+Pfeil hoch und Return ihren Sinn.** Cmd+Pfeil
 hoch heißt dort „Voriges Bild“ und nicht „In den übergeordneten Ordner“, Return
 heißt „Zum angezeigten Bild springen“ und nicht „Mit dem Standardprogramm
-öffnen“. Überall sonst gilt die gewohnte Bedeutung, und **Pfeil links führt in
+öffnen“, auch im angezeigten Jahres- oder Monatsordner ohne ausgewählte Zeile.
+Überall sonst gilt die gewohnte Bedeutung, und **Pfeil links führt in
 jeder Lage in den übergeordneten Ordner**. Die drei Befehle „Nächstes Bild“,
 „Voriges Bild“ und „Zum angezeigten Bild springen“ stehen im Menü „Vorschau“
 und in der F1-Ansicht in der Gruppe „Vorschau“; dass zwei davon eine
