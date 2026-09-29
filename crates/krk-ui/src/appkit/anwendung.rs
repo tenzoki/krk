@@ -3968,6 +3968,15 @@ impl Anwendungsdelegierter {
                 .editor
                 .get()
                 .is_some_and(|editor| editor.pin_aenderbar()),
+            // Eine ausgeblendete Vorschau zeigt keine Bildfolge, auch wenn ihr
+            // Modell noch eine haelt: geblaettert wird allein, was zu sehen
+            // ist. Ohne Vorschaufenster, vor dem Aufbau, gibt es keine.
+            bildfolge: self.ivars().modell.borrow().sichtbar(Bereich::Vorschau)
+                && self
+                    .ivars()
+                    .vorschau
+                    .get()
+                    .is_some_and(|vorschau| vorschau.zeigt_bildfolge()),
         }
     }
 

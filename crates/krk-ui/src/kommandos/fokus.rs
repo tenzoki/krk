@@ -413,7 +413,10 @@ pub const fn rahmenrolle(bereich: Bereich, fokus: Fokus, aktiv: Fensterseite) ->
 pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
     match bereich {
         Wirkungsbereich::Ueberall => true,
-        Wirkungsbereich::Dateifenster => fokus == Fokus::Dateifenster,
+        // Die Bildfolge verlangt den Fokus wie das Dateifenster, das sie
+        // verengt; ob die Vorschau eine Bildfolge zeigt, fragt nicht diese
+        // Regel, sondern `zulaessigkeit::folge_passt`.
+        Wirkungsbereich::Dateifenster | Wirkungsbereich::Bildfolge => fokus == Fokus::Dateifenster,
         Wirkungsbereich::Leiste => fokus == Fokus::Leiste,
         // Positiv aufgezaehlt und **nicht** als `fokus != Fokus::Leiste`, aus
         // demselben Grund wie beim Navigator darunter: die Verneinung liesse
@@ -509,7 +512,7 @@ mod tests {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
         // Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 6]); 15] = [
+        const TAFEL: [(Wirkungsbereich, [bool; 6]); 16] = [
             (
                 Wirkungsbereich::Dateifenster,
                 [true, false, false, false, false, false],
@@ -565,6 +568,10 @@ mod tests {
             (
                 Wirkungsbereich::Vorschau,
                 [false, false, true, false, false, false],
+            ),
+            (
+                Wirkungsbereich::Bildfolge,
+                [true, false, false, false, false, false],
             ),
             (
                 Wirkungsbereich::Ueberall,
@@ -930,11 +937,12 @@ mod tests {
         let mut durchgelassen = 0;
         for (kommando, kennung) in Kommando::KENNUNGEN {
             match kommando.wirkungsbereich() {
-                // Die drei Bereichsbefehle und der Navigator enden am Editor.
-                Wirkungsbereich::Dateifenster => {
+                // Die drei Bereichsbefehle und der Navigator enden am Editor,
+                // die drei Befehle der Bildfolge mit ihnen.
+                Wirkungsbereich::Dateifenster | Wirkungsbereich::Bildfolge => {
                     abgewiesen += 1;
                     assert!(
-                        !wirkt(Wirkungsbereich::Dateifenster, Fokus::Editor),
+                        !wirkt(kommando.wirkungsbereich(), Fokus::Editor),
                         "„{kennung}“ wirkt mit der Schreibmarke im Editor"
                     );
                 }

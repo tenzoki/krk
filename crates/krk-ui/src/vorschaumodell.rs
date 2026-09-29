@@ -1092,6 +1092,16 @@ impl Vorschaumodell {
         self.laedt_noch() || self.tabs.iter().any(Vorschautab::folge_wartet)
     }
 
+    /// Ob der aktive Tab eine Bildfolge zeigt.
+    ///
+    /// Eine Frage der Zulaessigkeit von Blaettern und Sprung
+    /// (`zulaessigkeit::Lage::bildfolge`); gefragt wird der Inhalt und nicht,
+    /// ob noch etwas nachkommt.
+    #[must_use]
+    pub fn zeigt_bildfolge(&self) -> bool {
+        matches!(self.aktiver_inhalt(), Inhalt::Bildfolge(_))
+    }
+
     /// Die Stelle von eins gezaehlt, die Zahl der Fotos und ob die Folge
     /// gekuerzt ist, falls der aktive Tab eine Bildfolge zeigt.
     #[must_use]

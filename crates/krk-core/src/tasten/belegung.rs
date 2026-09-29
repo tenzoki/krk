@@ -131,15 +131,31 @@
 //! # Zwei Funktionen eines Zustellers auf einer Kombination
 //!
 //! **Seit dem 260926 duerfen zwei Funktionen desselben Zustellers eine
-//! Kombination tragen, wenn nie beide zugleich zulaessig sein koennen.**
-//! Entschieden wird das aus einer Eingabe, die der Kern selbst hat: jeder
-//! [`Wirkungsbereich`] steht ueber eine vollstaendige Fallunterscheidung auf
-//! einer [`Seite`], und zwei Bereiche schliessen einander genau dann aus, wenn
-//! der eine allein im Editor und der andere allein ausserhalb wirkt
-//! ([`Wirkungsbereich::schliesst_aus`]). Eine Funktion ohne Kommando hat keinen
-//! Wirkungsbereich und schliesst nichts aus. `konflikte` und `zuweisen` fragen
-//! dafuer dieselbe private Funktion `begegnen`; zwei Fassungen der Regel gibt
-//! es nicht.
+//! Kombination tragen, und es gibt dafuer zwei Arten des Teilens.** Beide
+//! entscheidet der Kern aus Eingaben, die er selbst hat:
+//!
+//! - **Ausschluss**: jeder [`Wirkungsbereich`] steht ueber eine vollstaendige
+//!   Fallunterscheidung auf einer [`Seite`], und zwei Bereiche schliessen
+//!   einander genau dann aus, wenn der eine allein im Editor und der andere
+//!   allein ausserhalb wirkt ([`Wirkungsbereich::schliesst_aus`]). Dann ist nie
+//!   mehr als eine der zwei zulaessig.
+//! - **Verengung** (seit der Bildfolge, Entscheid
+//!   `260929-1423_*_wie-teilen-zwei-funktionen-eine-kombination-wenn-die-eine-nur-bei-stehender-bildfolge-wirkt.md`,
+//!   Moeglichkeit 1): ein Bereich kann einen anderen verengen
+//!   ([`Wirkungsbereich::weiter`], [`Wirkungsbereich::verengt`]); wo der engere
+//!   zulaessig ist, ist es der weitere auch, und dann geht der engere vor.
+//!   `Bildfolge` verengt `Dateifenster`: `cmd+up` heisst mit stehender
+//!   Bildfolge „Voriges Bild“ und sonst „In den übergeordneten Ordner“.
+//!
+//! Eine Funktion ohne Kommando hat keinen Wirkungsbereich und teilt mit
+//! keiner. **Eine Kombination traegt je Zusteller hoechstens zwei
+//! Funktionen**, und das ist seit der Verengung eine Regel und keine Folgerung
+//! mehr: eine Funktion des Editors, eine des Dateifensters und eine der
+//! Bildfolge vertragen sich paarweise, und ohne die Regel ginge die dritte im
+//! Nachschlag still verloren. `konflikte` und `zuweisen` fragen dafuer
+//! dieselbe private Funktion `im_weg`, die den Bewerber gegen **alle**
+//! bisherigen Traeger der Kombination haelt; zwei Fassungen der Regel gibt es
+//! nicht.
 //!
 //! **Die Regel ist groeber als die wirkliche Zulaessigkeit**, und der Fehler
 //! faellt immer auf die Seite des gemeldeten Konflikts: zwei Bereiche derselben
@@ -152,7 +168,8 @@
 //! Der Nachschlag antwortet fuer eine solche Kombination mit
 //! [`Nachschlag::Geteilt`], und welche der zwei Funktionen gemeint ist,
 //! entscheidet die Oberflaeche aus der einen Lage, die sie je Eingabe ohnehin
-//! erhebt; nach der Regel oben ist hoechstens eine zulaessig. Im Hauptmenue
+//! erhebt; nach der Regel oben ist hoechstens eine zulaessig, oder die engere
+//! geht vor, und der Nachschlag nennt sie deshalb zuerst. Im Hauptmenue
 //! zeigt der Eintrag das Kuerzel, der in der Leiste frueher steht. Entscheid
 //! `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`,
 //! Moeglichkeit 1.
@@ -468,6 +485,20 @@ pub enum Wirkungsbereich {
     /// der Vorschau und ohne PDF werden die drei entgegengenommen und tun
     /// nichts.
     Vorschau,
+    /// Wirkt nur, wenn der Fokus in einem Dateifenster steht **und** die
+    /// Vorschau eine Bildfolge zeigt (Spec
+    /// `260929-1313_*_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md`, C3
+    /// und C4).
+    ///
+    /// Der Wert der drei Befehle der Bildfolge: [`Kommando::BildVor`],
+    /// [`Kommando::BildZurueck`] und [`Kommando::ZumBild`]. Er **verengt**
+    /// [`Wirkungsbereich::Dateifenster`] ([`Wirkungsbereich::weiter`]): wo er
+    /// zulaessig ist, ist es jener auch, und deshalb duerfen `cmd+up` und
+    /// `return` je einem Befehl beider Bereiche gehoeren. **Ob die Vorschau eine
+    /// Bildfolge zeigt, weiss der Kern nicht**; die Frage stellt `krk_ui` in
+    /// seiner Zulaessigkeitsregel, wie bei [`Wirkungsbereich::Editortext`] die
+    /// Form.
+    Bildfolge,
     /// Wirkt ohne Vorbehalt.
     ///
     /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als
@@ -522,6 +553,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
             Wirkungsbereich::Navigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
             Wirkungsbereich::Vorschau => "Vorschau",
+            Wirkungsbereich::Bildfolge => "Dateifenster, solange die Vorschau eine Bildfolge zeigt",
             Wirkungsbereich::Ueberall => "überall",
         }
     }
@@ -550,7 +582,8 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Leiste
             | Wirkungsbereich::Tabbereich
             | Wirkungsbereich::Navigator
-            | Wirkungsbereich::Vorschau => Seite::Ausserhalb,
+            | Wirkungsbereich::Vorschau
+            | Wirkungsbereich::Bildfolge => Seite::Ausserhalb,
             Wirkungsbereich::Dateibereiche | Wirkungsbereich::Ueberall => Seite::Beide,
         }
     }
@@ -567,6 +600,55 @@ impl Wirkungsbereich {
             (self.seite(), andere.seite()),
             (Seite::Editor, Seite::Ausserhalb) | (Seite::Ausserhalb, Seite::Editor)
         )
+    }
+
+    /// Der Bereich, den dieser verengt, oder keiner: wo dieser zulaessig ist,
+    /// ist jener es auch.
+    ///
+    /// **Vollstaendige Fallunterscheidung ohne Auffangzweig**: ein weiterer
+    /// Wert haelt den Bau hier an und wird bewusst eingeordnet. Daraus folgt
+    /// ohne Zutat, dass jeder Bereich hoechstens einen verengt. Zwei
+    /// Kernproben halten, dass kein Bereich sich selbst verengt und dass eine
+    /// Verengung auf derselben [`Seite`] bleibt; damit sind Ausschluss und
+    /// Verengung disjunkt. Eine Verengung ueber mehrere Stufen gibt es bewusst
+    /// nicht: `Bildfolge` liegt der Sache nach auch in `Navigator`, und ein
+    /// Teilen mit dessen Befehlen bleibt ein Konflikt, die sichere Richtung
+    /// des Fehlers.
+    #[must_use]
+    pub const fn weiter(self) -> Option<Wirkungsbereich> {
+        match self {
+            Wirkungsbereich::Bildfolge => Some(Wirkungsbereich::Dateifenster),
+            Wirkungsbereich::Dateifenster
+            | Wirkungsbereich::Leiste
+            | Wirkungsbereich::Dateibereiche
+            | Wirkungsbereich::Editor
+            | Wirkungsbereich::Editortext
+            | Wirkungsbereich::Eintraege
+            | Wirkungsbereich::Reihenfolge
+            | Wirkungsbereich::Aufgaben
+            | Wirkungsbereich::Termine
+            | Wirkungsbereich::Geheimnisse
+            | Wirkungsbereich::Quicknote
+            | Wirkungsbereich::Tabbereich
+            | Wirkungsbereich::Navigator
+            | Wirkungsbereich::Vorschau
+            | Wirkungsbereich::Ueberall => None,
+        }
+    }
+
+    /// Ob dieser Bereich `andere` verengt, also `self.weiter()` genau
+    /// `andere` ist.
+    ///
+    /// Anders als [`Wirkungsbereich::schliesst_aus`] nicht symmetrisch: die
+    /// Richtung sagt, welche von zwei Funktionen vorgeht.
+    #[must_use]
+    pub const fn verengt(self, andere: Wirkungsbereich) -> bool {
+        match self.weiter() {
+            // Verglichen ueber die Stelle, weil eine `const fn` `PartialEq`
+            // nicht rufen kann; die Aufzaehlung traegt keine Daten.
+            Some(weiter) => weiter as u8 == andere as u8,
+            None => false,
+        }
     }
 }
 
@@ -1137,6 +1219,25 @@ pub enum Kommando {
     /// Werk ohne Kombination: ein versehentlicher Anschlag naehme alle eigenen
     /// Tastenzuweisungen aus dem Betrieb.
     Werkseinstellungen,
+    /// Das naechste Foto einer stehenden Bildfolge zeigen (C3 des Spec
+    /// `260929-1313_*_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md`).
+    ///
+    /// Traegt [`Wirkungsbereich::Bildfolge`]: der Fokus steht in der
+    /// Dateiliste, die Wirkung in der Vorschau, und die Auswahl der Dateiliste
+    /// bleibt, wo sie ist. Auf dem letzten Foto tut der Befehl nichts.
+    BildVor,
+    /// Das vorige Foto einer stehenden Bildfolge zeigen (C3).
+    ///
+    /// Teilt `cmd+up` mit [`Kommando::OrdnerAufwaerts`] nach der Verengung aus
+    /// dem Modulkopf; mit stehender Bildfolge geht er vor. Auf dem ersten Foto
+    /// tut er nichts.
+    BildZurueck,
+    /// Die Dateiliste in den Ordner des angezeigten Fotos fuehren und es dort
+    /// auswaehlen (C4).
+    ///
+    /// Teilt `return` mit [`Kommando::MitStandardprogrammOeffnen`], wie
+    /// [`Kommando::BildZurueck`] `cmd+up` teilt.
+    ZumBild,
 }
 
 /// Die Aufzaehlung passt in die Umwandlung, ueber die [`Kommando::kennung`]
@@ -1159,7 +1260,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 100] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 103] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1292,6 +1393,9 @@ impl Kommando {
         (Kommando::SpalteMarkeUmschalten, "spalte_marke_umschalten"),
         (Kommando::NeuerungenZeigen, "neuerungen_zeigen"),
         (Kommando::Werkseinstellungen, "werkseinstellungen"),
+        (Kommando::BildVor, "bild_vor"),
+        (Kommando::BildZurueck, "bild_zurueck"),
+        (Kommando::ZumBild, "zum_bild"),
     ];
 
     /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
@@ -1521,6 +1625,14 @@ impl Kommando {
             Kommando::VorschauVergroessern
             | Kommando::VorschauVerkleinern
             | Kommando::VorschauAusgangsgroesse => Wirkungsbereich::Vorschau,
+            // Die drei Befehle der Bildfolge: der Fokus in der Dateiliste und
+            // eine Bildfolge in der Vorschau. Der Bereich verengt das
+            // Dateifenster, und deshalb teilen `bild_zurueck` und `zum_bild`
+            // ihre Kombination mit `ordner_aufwaerts` und
+            // `mit_standardprogramm_oeffnen` (Modulkopf).
+            Kommando::BildVor | Kommando::BildZurueck | Kommando::ZumBild => {
+                Wirkungsbereich::Bildfolge
+            }
             // Die Befehle, die an der Datei arbeiten, die der Editor haelt,
             // gleich wie er sie zeigt (C3 und C4 der Editor-Runde). Mit dem
             // Fokus anderswo gibt es keine solche Datei.
@@ -1797,12 +1909,14 @@ pub enum Nachschlag<'a> {
     /// Die Kombination gehoert dieser Funktion.
     Funktion(&'a Funktion),
     /// Die Kombination gehoert zwei Funktionen, deren Wirkungsbereiche
-    /// einander ausschliessen, in der Reihenfolge der Belegung.
+    /// einander ausschliessen oder von denen die eine die andere verengt.
     ///
+    /// Die Reihenfolge ist bei einem Ausschluss die der Belegung und bei einer
+    /// Verengung **die engere zuerst**, gleich wie die Datei sie ordnet.
     /// Welche gemeint ist, entscheidet der Aufrufer an der Lage, in der der
-    /// Tastendruck ankommt; nach der Konfliktregel ist hoechstens eine der
-    /// beiden zulaessig (Modulkopf, „Zwei Funktionen eines Zustellers auf einer
-    /// Kombination“).
+    /// Tastendruck ankommt: nach der Konfliktregel ist hoechstens eine der
+    /// beiden zulaessig, oder die engere geht vor (Modulkopf, „Zwei Funktionen
+    /// eines Zustellers auf einer Kombination“).
     Geteilt(&'a Funktion, &'a Funktion),
     /// Keine Funktion, und keine Befehlstaste gehalten: der Tastendruck faellt
     /// auf das Tippen durch.
@@ -1915,13 +2029,15 @@ impl Belegung {
     ///
     /// **Der Lauf sammelt die Treffer, statt beim ersten zurueckzukehren**:
     /// eine Kombination kann seit dem 260926 zwei Funktionen gehoeren, deren
-    /// Wirkungsbereiche einander ausschliessen, und dann antwortet er mit
-    /// [`Nachschlag::Geteilt`] in der Reihenfolge der Belegung. Mehr als zwei
-    /// kann [`Belegung::bauen`] nicht durchlassen: drei Funktionen, die einander
-    /// paarweise ausschliessen, braeuchten drei Seiten, und es gibt nur zwei,
-    /// die einander ausschliessen. Der Lauf ist damit fuer jeden Treffer so
-    /// lang wie der, den ein Anschlag ohne Funktion schon immer faehrt, und
-    /// nie laenger.
+    /// Wirkungsbereiche einander ausschliessen oder einander verengen, und dann
+    /// antwortet er mit [`Nachschlag::Geteilt`]. Bei einer Verengung nennt er
+    /// die engere zuerst, **im Code und nicht nach der Datei**: eine eigene
+    /// `keymap.toml` kann die zwei in beliebiger Reihenfolge fuehren, und der
+    /// Vorrang der engeren darf daran nicht haengen. Mehr als zwei kann
+    /// [`Belegung::bauen`] nicht durchlassen, denn die Konfliktregel laesst je
+    /// Zusteller hoechstens zwei zu (`im_weg`). Der Lauf ist damit fuer jeden
+    /// Treffer so lang wie der, den ein Anschlag ohne Funktion schon immer
+    /// faehrt, und nie laenger.
     #[must_use]
     pub fn nachschlag(&self, druck: Tastendruck) -> Nachschlag<'_> {
         let mut erste: Option<&Funktion> = None;
@@ -1935,7 +2051,18 @@ impl Belegung {
             }) {
                 match erste {
                     None => erste = Some(funktion),
-                    Some(erste) => return Nachschlag::Geteilt(erste, funktion),
+                    Some(erste) => {
+                        let zweite_verengt =
+                            match (funktion.wirkungsbereich(), erste.wirkungsbereich()) {
+                                (Some(zweite), Some(erste)) => zweite.verengt(erste),
+                                _ => false,
+                            };
+                        return if zweite_verengt {
+                            Nachschlag::Geteilt(funktion, erste)
+                        } else {
+                            Nachschlag::Geteilt(erste, funktion)
+                        };
+                    }
                 }
             }
         }
@@ -1961,10 +2088,10 @@ impl Belegung {
     /// Gibt einer Funktion eine weitere Kombination.
     ///
     /// Traegt die Funktion sie schon, geschieht nichts und es ist kein Fehler.
-    /// Traegt eine **andere Funktion, der sie begegnet**, sie, bleibt die
-    /// Belegung unveraendert und der [`Konflikt`] nennt beide Funktionen.
+    /// Steht ihr ein **bisheriger Traeger** im Weg, bleibt die Belegung
+    /// unveraendert und der [`Konflikt`] nennt beide Funktionen.
     ///
-    /// Gefragt wird dasselbe `begegnen` wie in [`Belegung::konflikte`]: sonst
+    /// Gefragt wird dasselbe `im_weg` wie in [`Belegung::konflikte`]: sonst
     /// meldete die Belegungsansicht aus C3 einen Konflikt, den das Einlesen
     /// nicht kennt, oder liesse einen durch, den das Einlesen abweist, und die
     /// beiden Wege in dieselbe Belegung widersprachen einander.
@@ -1982,11 +2109,14 @@ impl Belegung {
             return Err(Zuweisungsfehler::UnbekannteFunktion(kennung.to_owned()));
         };
         let bewerber = &self.funktionen[stelle];
-        if let Some(andere) = self.funktionen.iter().find(|funktion| {
-            funktion.kennung != kennung
-                && begegnen(funktion, bewerber)
-                && funktion.tasten.contains(&kombination)
-        }) {
+        let traeger: Vec<&Funktion> = self
+            .funktionen
+            .iter()
+            .filter(|funktion| {
+                funktion.kennung != kennung && funktion.tasten.contains(&kombination)
+            })
+            .collect();
+        if let Some(andere) = im_weg(&traeger, bewerber) {
             return Err(Zuweisungsfehler::Konflikt(Konflikt {
                 kombination,
                 andere: andere.benennung(),
@@ -2005,9 +2135,15 @@ impl Belegung {
         *self = Self::auslieferung();
     }
 
-    /// Jede Kombination, die zwei Funktionen beanspruchen, **die einander
-    /// begegnen**: desselben Zustellers und mit Wirkungsbereichen, die einander
-    /// nicht ausschliessen.
+    /// Jede Kombination, an der eine Funktion ihre frueheren Traeger nicht
+    /// mittragen darf: desselben Zustellers, und weder schliessen die
+    /// Wirkungsbereiche einander aus noch verengt der eine den anderen, oder
+    /// die Kombination traegt beim selben Zusteller schon zwei.
+    ///
+    /// **Je Funktion und Kombination hoechstens ein Konflikt**, denn `im_weg`
+    /// nennt den ersten Traeger, an dem der Bewerber scheitert. Bis zur
+    /// Bildfolge stand hier je frueherem Partner einer; kein Rufer zaehlt die
+    /// Laenge, `bauen` nimmt den ersten.
     ///
     /// Leer fuer jede Belegung, die [`Belegung::vom_nutzer`] oder
     /// [`Belegung::auslieferung`] geliefert hat: beide weisen eine
@@ -2023,14 +2159,18 @@ impl Belegung {
         let mut gefunden = Vec::new();
         for (stelle, funktion) in self.funktionen.iter().enumerate() {
             for kombination in &funktion.tasten {
-                for vorige in self.funktionen.iter().take(stelle) {
-                    if begegnen(vorige, funktion) && vorige.tasten.contains(kombination) {
-                        gefunden.push(Konflikt {
-                            kombination: *kombination,
-                            andere: vorige.benennung(),
-                            bewerber: funktion.benennung(),
-                        });
-                    }
+                let traeger: Vec<&Funktion> = self
+                    .funktionen
+                    .iter()
+                    .take(stelle)
+                    .filter(|vorige| vorige.tasten.contains(kombination))
+                    .collect();
+                if let Some(vorige) = im_weg(&traeger, funktion) {
+                    gefunden.push(Konflikt {
+                        kombination: *kombination,
+                        andere: vorige.benennung(),
+                        bewerber: funktion.benennung(),
+                    });
                 }
             }
         }
@@ -2132,22 +2272,41 @@ impl Belegung {
     }
 }
 
-/// Ob zwei Funktionen einander begegnen koennen, eine Kombination also nicht
-/// teilen duerfen: derselbe Zusteller, und ihre Wirkungsbereiche schliessen
-/// einander nicht aus.
+/// Die eine Fassung der Konfliktregel: der Traeger, an dem `bewerber` auf
+/// dieser Kombination scheitert, oder `None`, wenn er sie mittragen darf.
 ///
-/// **Die eine Fassung der Konfliktregel**, gefragt von
-/// [`Belegung::konflikte`] und [`Belegung::zuweisen`]. Hat eine der beiden
-/// keinen Wirkungsbereich, weil sie kein Kommando hat, begegnen sie einander;
-/// nur zwei bekannte Bereiche koennen einander ausschliessen.
-fn begegnen(eine: &Funktion, andere: &Funktion) -> bool {
-    if eine.gehalten_von != andere.gehalten_von {
-        return false;
+/// Gefragt von [`Belegung::konflikte`] und [`Belegung::zuweisen`], mit allen
+/// Funktionen, die die Kombination schon tragen, und nicht mit einer davon.
+/// Der Rumpf in dieser Reihenfolge:
+///
+/// 1. Traeger eines anderen Zustellers fallen heraus; ihnen begegnet der
+///    Bewerber nie.
+/// 2. Der erste verbleibende Traeger, mit dem der Bewerber nicht teilen darf,
+///    wird genannt. Teilen duerfen zwei, wenn beide einen Wirkungsbereich haben
+///    und der eine den anderen ausschliesst oder verengt; ohne Kommando gibt
+///    es keinen Bereich und kein Teilen.
+/// 3. Traegt die Kombination beim selben Zusteller schon zwei, wird der erste
+///    genannt: hoechstens zwei, siehe den Modulkopf.
+fn im_weg<'a>(traeger: &[&'a Funktion], bewerber: &Funktion) -> Option<&'a Funktion> {
+    let gleiche: Vec<&'a Funktion> = traeger
+        .iter()
+        .copied()
+        .filter(|funktion| funktion.gehalten_von == bewerber.gehalten_von)
+        .collect();
+    let duerfen_teilen =
+        |eine: &Funktion| match (eine.wirkungsbereich(), bewerber.wirkungsbereich()) {
+            (Some(eine), Some(andere)) => {
+                eine.schliesst_aus(andere) || eine.verengt(andere) || andere.verengt(eine)
+            }
+            _ => false,
+        };
+    if let Some(unvertraeglich) = gleiche.iter().find(|funktion| !duerfen_teilen(funktion)) {
+        return Some(unvertraeglich);
     }
-    match (eine.wirkungsbereich(), andere.wirkungsbereich()) {
-        (Some(eine), Some(andere)) => !eine.schliesst_aus(andere),
-        _ => true,
+    if gleiche.len() >= 2 {
+        return gleiche.first().copied();
     }
+    None
 }
 
 impl Default for Belegung {

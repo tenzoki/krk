@@ -231,7 +231,7 @@ Die Tor-Kanten von 1 und 2 nach 3 stehen für alle Schritte ab 3: kein Umbau beg
    - Acceptance: `make check` grün; keine Probe außer den genannten ändert ihre Erwartung. **Zwischenstand, nicht auslieferbar**: die Folge steht still auf Foto 1, bis Schritt 8 blättert; die Auslieferungsfassung trägt noch kein Profil mit Bildfolge.
    - Dependencies: Schritt 5
 
-7. **Belegung, Kommandos und Zulässigkeit**
+7. [DONE] **Belegung, Kommandos und Zulässigkeit**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/tasten/belegung.rs`, `crates/krk-core/tests/belegung.rs`, `resources/default-keymap.toml`, `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, `crates/krk-ui/src/kommandos/fokus.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/menuemodell.rs` (allein Proben), `crates/krk-ui/src/appkit/anwendung.rs` (allein `lage()`)
    - Changes, **die Pflichtstellen einzeln**, in der Fassung, die der Bericht aus Schritt 2 bestätigt:

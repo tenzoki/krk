@@ -693,8 +693,9 @@ fn behandeln(
             None => false,
         },
         // Zwei Funktionen auf einer Kombination, deren Wirkungsbereiche
-        // einander ausschliessen: beide gehen an die Senke, die an der Lage
-        // waehlt. Hat nur eine ein Kommando, gilt sie allein.
+        // einander ausschliessen oder von denen die eine die andere verengt
+        // (die engere steht dann vorn): beide gehen an die Senke, die an der
+        // Lage waehlt. Hat nur eine ein Kommando, gilt sie allein.
         Nachschlag::Geteilt(erste, zweite) => match (erste.kommando(), zweite.kommando()) {
             (Some(kommando), ausweich) => senke(Eingabe::Kommando {
                 kommando,
@@ -904,8 +905,9 @@ fn protokollzeile(
     };
     let funktion = match nachschlag {
         Nachschlag::Funktion(funktion) => funktion.kennung().to_owned(),
-        // Beide Kennungen, in der Reihenfolge der Belegung: welche gilt,
-        // entscheidet erst die Senke an der Lage.
+        // Beide Kennungen, in der Reihenfolge des Nachschlags (bei einer
+        // Verengung die engere zuerst): welche gilt, entscheidet erst die
+        // Senke an der Lage.
         Nachschlag::Geteilt(erste, zweite) => {
             format!("{}|{}", erste.kennung(), zweite.kennung())
         }

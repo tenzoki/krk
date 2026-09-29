@@ -98,7 +98,9 @@
 //!    oder eine Eintragstabelle zeigt; jeder andere Bereich sagt dazu ja. Sie
 //!    steht bei (3) und nicht als fuenfter Bestandteil, weil sie wie der
 //!    Fokus nach dem Wirkungsbereich fragt und nicht nach der Lage; die
-//!    Ausnahmeliste hebt sie deshalb ebenso wenig auf.
+//!    Ausnahmeliste hebt sie deshalb ebenso wenig auf. Aus demselben Grund
+//!    stehen hier die Datei, die der Editor haelt ([`datei_passt`]), und seit
+//!    der Bildfolge, ob die Vorschau eine Bildfolge zeigt ([`folge_passt`]).
 //! 4. **Das Schluesselfenster gehoert KRK.** Es ist das Hauptfenster oder ein
 //!    Blatt, das daran haengt; steht ein fremdes Fenster vorn, wirkt kein
 //!    Befehl.
@@ -187,7 +189,7 @@ use super::operationen;
 /// Zeichenzweig liest drei davon heraus. Zwei Erhebungen
 /// desselben Augenblicks koennten auseinanderlaufen, eine kann es nicht.
 ///
-/// `Copy`, weil der Wert sechs kleine Felder traegt und die Tafel ihn einmal je
+/// `Copy`, weil der Wert nur kleine Felder traegt und die Tafel ihn einmal je
 /// Fall durchreicht. **Wie viele Faelle das sind, steht hier nicht**, sondern
 /// rechnet `die_tafel_aus_allen_faellen_geht_auf` in dieser Datei aus dem
 /// Produkt der drei Aufzaehlungen; die Zahl stand einmal auf 140, dann auf 280,
@@ -239,6 +241,15 @@ pub struct Lage {
     /// meldet `false`: ihre PIN steht noch in keinem Kopf, und das naechste
     /// Oeffnen fragt ohnehin nach einer neuen.
     pub pin_aenderbar: bool,
+    /// Ob die Vorschau sichtbar ist und im aktiven Tab eine Bildfolge zeigt
+    /// (Spec `260929-1313_*_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md`).
+    ///
+    /// Erhoben von `Anwendungsdelegierter::lage` ueber
+    /// `Vorschaufenster::zeigt_bildfolge` und die Sichtbarkeit des Bereichs;
+    /// gelesen allein von [`folge_passt`] fuer `Wirkungsbereich::Bildfolge`.
+    /// Dieselbe Bauart wie [`Lage::editorform`]: der Kern sagt, dass die Frage
+    /// zu stellen ist, und die Oberflaeche beantwortet sie.
+    pub bildfolge: bool,
 }
 
 /// Was der Editor gerade zeigt: Text in der Textflaeche oder die Eintraege
@@ -247,7 +258,7 @@ pub struct Lage {
 /// **Der Typ steht hier und nicht im Editor**, weil die Frage, die ihn braucht,
 /// hier gestellt wird: seit Schritt 3.3 des Plans
 /// `260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`
-/// traegt die [`Lage`] ihn als fuenftes Feld, und die Befehle der Tabelle wirken
+/// traegt die [`Lage`] ihn als eigenes Feld, und die Befehle der Tabelle wirken
 /// nur in der passenden Form, die Textbefehle nur in der Textflaeche. Erzeugt
 /// wird er im Editor, der ihn in `Editorbereich::form` aus Ansicht und
 /// Dateityp ableitet; ohne AppKit bleibt dieses Modul trotzdem, denn der Wert
@@ -324,12 +335,17 @@ pub fn zulaessig(kommando: Kommando, lage: Lage) -> bool {
 ///
 /// Gerufen fuer [`krk_core::tasten::Nachschlag::Geteilt`]: die Belegung laesst
 /// zwei Funktionen eines Zustellers eine Kombination nur tragen, wenn ihre
-/// Wirkungsbereiche einander ausschliessen, und dann ist in jeder Lage
-/// hoechstens eine zulaessig (Entscheid
-/// `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
-/// **`zweite`, wenn allein sie zulaessig ist, sonst `erste`.** Ist keine
-/// zulaessig, bleibt es bei der ersten, und ihre Abweisung verhaelt sich wie
-/// vor dieser Regel, samt der Meldung einer Blattsperre.
+/// Wirkungsbereiche einander ausschliessen oder der eine den anderen verengt
+/// (Entscheide
+/// `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`
+/// und
+/// `260929-1423_*_wie-teilen-zwei-funktionen-eine-kombination-wenn-die-eine-nur-bei-stehender-bildfolge-wirkt.md`).
+/// Bei einem Ausschluss ist in jeder Lage hoechstens eine zulaessig; bei einer
+/// Verengung liefert der Nachschlag die engere zuerst, und sind beide
+/// zulaessig, geht sie vor. **`zweite`, wenn allein sie zulaessig ist, sonst
+/// `erste`**, und diese eine Regel traegt beide Arten. Ist keine zulaessig,
+/// bleibt es bei der ersten, und ihre Abweisung verhaelt sich wie vor dieser
+/// Regel, samt der Meldung einer Blattsperre.
 ///
 /// Rein und auf derselben [`Lage`], die der Rufer danach an die Ausfuehrung
 /// gibt: die Wahl erhebt nichts und ist kein dritter Frager ausserhalb dieser
@@ -434,7 +450,7 @@ impl Anspruch {
     }
 }
 
-/// Der eine Rumpf der Regel: die vier Bestandteile aus dem Modulkopf.
+/// Der eine Rumpf der Regel: die Bestandteile aus dem Modulkopf.
 ///
 /// Bis zur Runde 22 war das der Rumpf von [`zulaessig`]; er ist unveraendert
 /// hierher gewandert und fragt seit dem den [`Anspruch`] statt das Kommando.
@@ -454,6 +470,7 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
         && fokus::wirkt(bereich, lage.fokus)
         && form_passt(bereich, lage.editorform)
         && datei_passt(bereich, lage.pin_aenderbar)
+        && folge_passt(bereich, lage.bildfolge)
 }
 
 /// Ob der Editor in der Form ist, die dieser Wirkungsbereich verlangt (die
@@ -560,6 +577,7 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
+        | Wirkungsbereich::Bildfolge
         | Wirkungsbereich::Ueberall => true,
     }
 }
@@ -589,6 +607,37 @@ fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool) -> bool {
         | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Termine
+        | Wirkungsbereich::Quicknote
+        | Wirkungsbereich::Tabbereich
+        | Wirkungsbereich::Navigator
+        | Wirkungsbereich::Vorschau
+        | Wirkungsbereich::Bildfolge
+        | Wirkungsbereich::Ueberall => true,
+    }
+}
+
+/// Ob die Vorschau zeigt, was dieser Wirkungsbereich verlangt (eine weitere
+/// Haelfte von Bestandteil (3), seit der Bildfolge).
+///
+/// **Allein [`Wirkungsbereich::Bildfolge`] fragt hier etwas**, naemlich
+/// [`Lage::bildfolge`]. Vollstaendig und ohne Auffangzweig wie
+/// [`form_passt`] und [`datei_passt`]: ein weiterer Wirkungsbereich haelt den
+/// Bau hier an. Eine eigene Funktion, weil die Frage eine dritte ist: nicht
+/// was der Editor zeigt oder haelt, sondern was die Vorschau zeigt.
+#[must_use = "fallengelassen laeuft der Befehl ohne stehende Bildfolge weiter"]
+fn folge_passt(bereich: Wirkungsbereich, bildfolge: bool) -> bool {
+    match bereich {
+        Wirkungsbereich::Bildfolge => bildfolge,
+        Wirkungsbereich::Dateifenster
+        | Wirkungsbereich::Leiste
+        | Wirkungsbereich::Dateibereiche
+        | Wirkungsbereich::Editor
+        | Wirkungsbereich::Editortext
+        | Wirkungsbereich::Eintraege
+        | Wirkungsbereich::Reihenfolge
+        | Wirkungsbereich::Aufgaben
+        | Wirkungsbereich::Termine
+        | Wirkungsbereich::Geheimnisse
         | Wirkungsbereich::Quicknote
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
@@ -796,7 +845,7 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 15] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 16] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
@@ -814,6 +863,7 @@ mod tests {
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
         (Wirkungsbereich::Navigator, Kommando::AuswahlHoch),
         (Wirkungsbereich::Vorschau, Kommando::VorschauVergroessern),
+        (Wirkungsbereich::Bildfolge, Kommando::BildZurueck),
         (Wirkungsbereich::Ueberall, Kommando::LeisteUmschalten),
     ];
 
@@ -887,7 +937,9 @@ mod tests {
     /// entsperrte `secrets.txt` mit Kopf, und „PIN ändern" ist in der Tafel
     /// deshalb ueberall abgewiesen. Die Lage mit `true` baut
     /// [`pin_aendern_wirkt_allein_mit_dem_fokus_im_editor_und_pin_aenderbar`]
-    /// selbst.
+    /// selbst. `bildfolge` steht ebenso auf `false`, und die drei Befehle der
+    /// Bildfolge sind in der Tafel ueberall abgewiesen; die Lage mit `true`
+    /// bauen [`jede_lage`] und die Proben der Bildfolge.
     fn lage_in(
         blatt_steht: bool,
         ersthelfer_gehoert_appkit: bool,
@@ -902,6 +954,7 @@ mod tests {
             fokus,
             editorform,
             pin_aenderbar: false,
+            bildfolge: false,
         }
     }
 
@@ -1039,7 +1092,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 15] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 16] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1061,9 +1114,11 @@ mod tests {
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
+            // Bildfolge: ohne stehende Bildfolge nirgends
+            [false, false, false, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 15] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 16] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1085,11 +1140,13 @@ mod tests {
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
+            // Bildfolge: ohne stehende Bildfolge nirgends
+            [false, false, false, false, false, false],
             [true, true, true, true, true, true],
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 15] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 16] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1111,12 +1168,14 @@ mod tests {
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
+            // Bildfolge: ohne stehende Bildfolge nirgends
+            [false, false, false, false, false, false],
             [true, true, true, true, true, true],
         ];
         // Wie die Notiztabelle, nur ohne die Zeile `Reihenfolge`: die
         // Termintabelle ordnet nach dem Datum, und verschieben laesst sich
         // darin nichts (Schritt 6 des Plans der Termine, T3.7).
-        const IN_DER_TERMINTABELLE: [[bool; 6]; 15] = [
+        const IN_DER_TERMINTABELLE: [[bool; 6]; 16] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1138,13 +1197,15 @@ mod tests {
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
+            // Bildfolge: ohne stehende Bildfolge nirgends
+            [false, false, false, false, false, false],
             [true, true, true, true, true, true],
         ];
         // Wie die Textflaeche, nur dass jede Zeile, die an der Datei darunter
         // arbeitet, ueberall nein sagt und allein die Zeile `Quicknote` mit
         // dem Fokus im Editor ja (Schritt 2 des Plans der Quicknote,
         // Entscheidung 7).
-        const IN_DER_QUICKNOTE: [[bool; 6]; 15] = [
+        const IN_DER_QUICKNOTE: [[bool; 6]; 16] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1167,9 +1228,11 @@ mod tests {
             [true, false, true, false, false, false],
             [true, true, true, false, true, false],
             [false, false, true, false, false, false],
+            // Bildfolge: ohne stehende Bildfolge nirgends
+            [false, false, false, false, false, false],
             [true, true, true, true, true, true],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 15] = [[false; 6]; 15];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 16] = [[false; 6]; 16];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1188,7 +1251,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 15]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 16]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),
@@ -1231,22 +1294,101 @@ mod tests {
 
     /// Jede Lage, die die Regel unterscheidet: jeder Fokus, jede Form, alle
     /// acht Achtel aus Blattstand, Ersthelferbefund und Schluesselfenster und
-    /// beide Werte von `pin_aenderbar`.
+    /// beide Werte von `pin_aenderbar` und von `bildfolge`.
+    ///
+    /// **Die zweite Dimension von `bildfolge` steht von Hand da**: das Literal
+    /// in [`lage_in`] zwingt nur zu einem Wert, und eine Schleife ueber beide
+    /// ergaenzt niemand von selbst.
     fn jede_lage() -> Vec<Lage> {
         let mut lagen = Vec::new();
         for fokus in JEDER_FOKUS {
             for form in JEDE_FORM {
                 for (blatt, appkit, krk) in HINDERNISSE.into_iter().chain([OHNE_HINDERNIS]) {
                     for pin_aenderbar in [false, true] {
-                        lagen.push(Lage {
-                            pin_aenderbar,
-                            ..lage_in(blatt, appkit, krk, fokus, form)
-                        });
+                        for bildfolge in [false, true] {
+                            lagen.push(Lage {
+                                pin_aenderbar,
+                                bildfolge,
+                                ..lage_in(blatt, appkit, krk, fokus, form)
+                            });
+                        }
                     }
                 }
             }
         }
         lagen
+    }
+
+    /// Eine Verengung ist in keiner Lage ohne ihren weiteren Bereich
+    /// zulaessig: wo die engere Funktion zulaessig ist, ist es die weitere
+    /// auch (Entscheid
+    /// `260929-1423_*_wie-teilen-zwei-funktionen-eine-kombination-wenn-die-eine-nur-bei-stehender-bildfolge-wirkt.md`).
+    ///
+    /// Laeuft ueber jedes Paar aus `KENNUNGEN` und nicht allein ueber die
+    /// Stellvertreter, damit die Ausnahmelisten mitgeprueft sind: stuende ein
+    /// Befehl der Bildfolge auf `immer_erreichbar` oder
+    /// `waehrend_blatt_erlaubt` und sein weiterer nicht, waere er waehrend
+    /// eines Blattes zulaessig und jener nicht. Zwei Absicherungen gegen einen
+    /// leeren Lauf: mindestens ein Paar, und mindestens eine Lage, in der die
+    /// engere zulaessig ist.
+    #[test]
+    fn eine_verengung_ist_nie_ohne_ihren_weiteren_bereich_zulaessig() {
+        let lagen = jede_lage();
+        let mut paare = 0usize;
+        let mut engere_zulaessig = 0usize;
+        for (eine, _) in Kommando::KENNUNGEN {
+            for (andere, _) in Kommando::KENNUNGEN {
+                if !eine.wirkungsbereich().verengt(andere.wirkungsbereich()) {
+                    continue;
+                }
+                paare += 1;
+                for &lage in &lagen {
+                    if zulaessig(eine, lage) {
+                        engere_zulaessig += 1;
+                        assert!(
+                            zulaessig(andere, lage),
+                            "{eine:?} verengt {andere:?} und ist ohne ihn zulaessig in {lage:?}"
+                        );
+                    }
+                }
+            }
+        }
+        assert!(
+            paare > 0,
+            "kein Paar verengt einander; die Probe prueft nichts"
+        );
+        assert!(
+            engere_zulaessig > 0,
+            "die engere ist in keiner Lage zulaessig; jede_lage fuehrt `bildfolge` nicht"
+        );
+    }
+
+    /// C3.1, C3.4 und C4 des Spec der Bildfolge: mit stehender Bildfolge und
+    /// dem Fokus in der Dateiliste waehlt `cmd+up` „Voriges Bild“ und `return`
+    /// den Sprung, ohne Bildfolge die bisherigen Befehle, und mit dem Fokus in
+    /// der Vorschau ist keiner der beiden zulaessig.
+    #[test]
+    fn die_bildfolge_geht_vor_und_wirkt_allein_in_der_dateiliste() {
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        let in_der_liste = lage(blatt, appkit, krk, Fokus::Dateifenster);
+        let mit_folge = Lage {
+            bildfolge: true,
+            ..in_der_liste
+        };
+        for (engere, weitere) in [
+            (Kommando::BildZurueck, Kommando::OrdnerAufwaerts),
+            (Kommando::ZumBild, Kommando::MitStandardprogrammOeffnen),
+        ] {
+            assert_eq!(waehlen(engere, weitere, mit_folge), engere);
+            assert_eq!(waehlen(engere, weitere, in_der_liste), weitere);
+            for fokus in [Fokus::Vorschau, Fokus::Editor, Fokus::Leiste] {
+                let anderswo = Lage { fokus, ..mit_folge };
+                assert!(!zulaessig(engere, anderswo), "{engere:?} in {fokus:?}");
+                assert!(!zulaessig(weitere, anderswo), "{weitere:?} in {fokus:?}");
+            }
+        }
+        assert!(zulaessig(Kommando::BildVor, mit_folge));
+        assert!(!zulaessig(Kommando::BildVor, in_der_liste));
     }
 
     /// Zwei Kommandos, deren Wirkungsbereiche einander nach dem Kern
@@ -1336,10 +1478,10 @@ mod tests {
 
     /// Mit dem Fokus im Editor ist ein Befehl des Dateifensters unzulaessig.
     ///
-    /// Der Bestandteil (3) allein, ohne Blatt und ohne Textfeld: `return` liegt
-    /// auf [`Kommando::Oeffnen`], und mit der Schreibmarke im Editor soll es
-    /// einen Zeilenumbruch setzen und keine Datei an das Standardprogramm
-    /// uebergeben.
+    /// Der Bestandteil (3) allein, ohne Blatt und ohne Textfeld:
+    /// [`Kommando::Oeffnen`] liegt auf `right`, und mit der Schreibmarke im
+    /// Editor soll die Taste die Schreibmarke bewegen und in keinen Ordner
+    /// einsteigen.
     #[test]
     fn ein_befehl_des_dateifensters_wirkt_im_editor_nicht() {
         assert!(!zulaessig(

@@ -1053,6 +1053,39 @@ mod tests {
         assert_eq!(letzter, Some("termine_richtung_umkehren"));
     }
 
+    /// C3.7 des Spec der Bildfolge: nach der bestehenden Regel fuer geteilte
+    /// Kuerzel zeigt „Voriges Bild" `cmd+up`, „Nächstes Bild" `cmd+down`,
+    /// „Zum angezeigten Bild springen" kein Kuerzel, und „In den
+    /// übergeordneten Ordner" weiter seine erste Kombination `left`.
+    #[test]
+    fn die_befehle_der_bildfolge_tragen_ihre_kuerzel_nach_der_regel() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let kuerzel = |gesucht: &str| {
+            leiste
+                .iter()
+                .flat_map(|obermenue| obermenue.eintraege.iter())
+                .find_map(|eintrag| match eintrag {
+                    Eintrag::Befehl {
+                        kennung,
+                        kombination,
+                        ..
+                    } if *kennung == gesucht => Some(*kombination),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{gesucht} steht nicht im Menue"))
+        };
+        let lesen = |text: &str| Kombination::lesen(text).expect("eine Kombination");
+        assert_eq!(kuerzel("bild_zurueck"), Some(lesen("cmd+up")));
+        assert_eq!(kuerzel("bild_vor"), Some(lesen("cmd+down")));
+        assert_eq!(kuerzel("zum_bild"), None);
+        assert_eq!(kuerzel("ordner_aufwaerts"), Some(lesen("left")));
+        assert_eq!(
+            kuerzel("mit_standardprogramm_oeffnen"),
+            Some(lesen("return"))
+        );
+    }
+
     /// Die drei Befehle der Quicknote stehen im Obermenue „Editor", in der
     /// Reihenfolge der Auslieferungsbelegung, zwei mit Kuerzel und „Quicknote
     /// leeren" ohne (Schritt 1 des Plans

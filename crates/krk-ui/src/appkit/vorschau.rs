@@ -1160,6 +1160,14 @@ impl Vorschaufenster {
         self.angezeigter_pfad().into_iter().collect()
     }
 
+    /// Ob der aktive Vorschau-Tab eine Bildfolge zeigt; gefragt von
+    /// `Anwendungsdelegierter::lage` fuer die Zulaessigkeit der drei Befehle
+    /// der Bildfolge.
+    #[must_use]
+    pub fn zeigt_bildfolge(&self) -> bool {
+        self.ivars().modell.borrow().zeigt_bildfolge()
+    }
+
     /// Ob ein Vorschau-Tab noch auf seinen Arbeitsfaden wartet.
     ///
     /// Nur zum Ablesen, fuer dieselbe Endbedingung.

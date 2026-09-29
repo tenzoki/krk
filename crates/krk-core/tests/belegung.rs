@@ -2421,7 +2421,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
         // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5,
         // `Reihenfolge` und `Termine` mit den Terminen, `Quicknote` mit der
-        // Quicknote auf F10.
+        // Quicknote auf F10, `Bildfolge` mit den drei Befehlen der Bildfolge.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
@@ -2440,6 +2440,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
                     | Wirkungsbereich::Vorschau
+                    | Wirkungsbereich::Bildfolge
                     | Wirkungsbereich::Ueberall
             ),
             "{kennung} traegt keinen der Bereiche"
@@ -2859,7 +2860,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 15] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 16] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2883,6 +2884,10 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 15] = [
         "Dateifenster, Leiste, Vorschau und Git-Bereich",
     ),
     (Wirkungsbereich::Vorschau, "Vorschau"),
+    (
+        Wirkungsbereich::Bildfolge,
+        "Dateifenster, solange die Vorschau eine Bildfolge zeigt",
+    ),
     (Wirkungsbereich::Ueberall, "überall"),
 ];
 
@@ -2913,7 +2918,8 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Tabbereich => 11,
         Wirkungsbereich::Navigator => 12,
         Wirkungsbereich::Vorschau => 13,
-        Wirkungsbereich::Ueberall => 14,
+        Wirkungsbereich::Bildfolge => 14,
+        Wirkungsbereich::Ueberall => 15,
     }
 }
 
@@ -3179,4 +3185,132 @@ gehalten_von = "menue"
         [Kombination::lesen("ctrl+c").expect("gueltige Schreibweise")],
         "die Tasten kommen nicht mehr aus der Nutzerdatei"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Die Verengung (Schritt 7 des Plans der Bildfolge)
+// ---------------------------------------------------------------------------
+//
+// Die zweite Art des Teilens: ein Bereich verengt einen anderen, und die
+// engere Funktion geht vor (Entscheid
+// `260929-1423_*_wie-teilen-zwei-funktionen-eine-kombination-wenn-die-eine-nur-bei-stehender-bildfolge-wirkt.md`,
+// Moeglichkeit 1, in der Mengenform der Klaerung
+// `260929-1437-klaerung-verengung-in-der-konfliktregel.md`).
+
+/// Kein Bereich verengt sich selbst.
+#[test]
+fn kein_bereich_verengt_sich_selbst() {
+    for (bereich, _) in jeder_wirkungsbereich_im_quelltext() {
+        assert_ne!(
+            bereich.weiter(),
+            Some(bereich),
+            "{bereich:?} verengt sich selbst"
+        );
+        assert!(!bereich.verengt(bereich));
+    }
+}
+
+/// Eine Verengung bleibt auf derselben Seite; damit sind Ausschluss und
+/// Verengung disjunkt, und jedes Paar faellt in genau eine Klasse.
+#[test]
+fn eine_verengung_bleibt_auf_derselben_seite() {
+    let mut verengungen = 0usize;
+    for (bereich, _) in jeder_wirkungsbereich_im_quelltext() {
+        if let Some(weiter) = bereich.weiter() {
+            verengungen += 1;
+            assert_eq!(
+                bereich.seite(),
+                weiter.seite(),
+                "{bereich:?} verengt {weiter:?}"
+            );
+            assert!(bereich.verengt(weiter));
+            assert!(!weiter.verengt(bereich), "die Verengung ist gerichtet");
+            assert!(!bereich.schliesst_aus(weiter));
+        }
+    }
+    assert!(verengungen > 0, "kein Bereich verengt einen anderen");
+    assert_eq!(
+        Wirkungsbereich::Bildfolge.weiter(),
+        Some(Wirkungsbereich::Dateifenster)
+    );
+}
+
+/// C3.7, C3.8 und C4: die Auslieferung teilt `cmd+up` und `return`, und der
+/// Nachschlag nennt die engere zuerst, obwohl sie in der Datei spaeter steht.
+#[test]
+fn die_auslieferung_teilt_cmd_up_und_return_mit_der_bildfolge() {
+    let belegung = Belegung::auslieferung();
+    assert!(belegung.konflikte().is_empty());
+    for (kombination, engere, weitere) in [
+        ("cmd+up", "bild_zurueck", "ordner_aufwaerts"),
+        ("return", "zum_bild", "mit_standardprogramm_oeffnen"),
+    ] {
+        let Nachschlag::Geteilt(erste, zweite) =
+            belegung.nachschlag(kombi(kombination).tastendruck())
+        else {
+            panic!("{kombination} ergibt keinen geteilten Nachschlag");
+        };
+        assert_eq!(erste.kennung(), engere, "{kombination}");
+        assert_eq!(zweite.kennung(), weitere, "{kombination}");
+    }
+    let Nachschlag::Funktion(vor) = belegung.nachschlag(kombi("cmd+down").tastendruck()) else {
+        panic!("cmd+down gehoert nicht genau einer Funktion");
+    };
+    assert_eq!(vor.kennung(), "bild_vor");
+}
+
+/// C3.8: zwei Funktionen der Bildfolge auf einer Kombination bleiben ein
+/// Konflikt, ebenso drei Funktionen desselben Zustellers, die sich paarweise
+/// vertragen (Editor, Dateifenster, Bildfolge): mehr als zwei traegt keine
+/// Kombination.
+#[test]
+fn die_verengung_laesst_hoechstens_zwei_zu() {
+    let Err(Belegungsfehler::Konflikt(konflikt)) = nutzerbelegung_mit(&[("bild_vor", "cmd+up")])
+    else {
+        panic!("cmd+up auf zwei Befehlen der Bildfolge ist kein Konflikt");
+    };
+    assert_eq!(konflikt.bewerber.kennung, "bild_zurueck");
+
+    let Err(Belegungsfehler::Konflikt(konflikt)) =
+        nutzerbelegung_mit(&[("termine_richtung_umkehren", "cmd+up")])
+    else {
+        panic!("cmd+up auf drei Funktionen ist kein Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "ordner_aufwaerts");
+    assert_eq!(konflikt.bewerber.kennung, "termine_richtung_umkehren");
+
+    // Die Bildfolge verengt allein das Dateifenster und nicht den Navigator.
+    assert!(nutzerbelegung_mit(&[("bild_vor", "up")]).is_err());
+}
+
+/// Die Umbelegung folgt derselben Regel: `zuweisen` laesst eine Kombination
+/// des Dateifensters fuer einen Befehl der Bildfolge zu und weist eine
+/// zweite der Bildfolge und eine dritte Funktion ab.
+#[test]
+fn die_umbelegung_folgt_der_verengung() {
+    let mut belegung = Belegung::auslieferung();
+    assert_eq!(belegung.zuweisen("bild_vor", kombi("left")), Ok(()));
+    assert!(belegung.konflikte().is_empty());
+    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("left").tastendruck())
+    else {
+        panic!("left ergibt keinen geteilten Nachschlag");
+    };
+    assert_eq!(
+        (erste.kennung(), zweite.kennung()),
+        ("bild_vor", "ordner_aufwaerts"),
+        "die engere zuerst, obwohl sie in der Datei spaeter steht"
+    );
+
+    let Err(Zuweisungsfehler::Konflikt(konflikt)) =
+        Belegung::auslieferung().zuweisen("bild_vor", kombi("cmd+up"))
+    else {
+        panic!("cmd+up an einen zweiten Befehl der Bildfolge lieferte keinen Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "bild_zurueck");
+    let Err(Zuweisungsfehler::Konflikt(konflikt)) =
+        Belegung::auslieferung().zuweisen("termine_richtung_umkehren", kombi("cmd+up"))
+    else {
+        panic!("cmd+up an eine dritte Funktion lieferte keinen Konflikt");
+    };
+    assert_eq!(konflikt.andere.kennung, "ordner_aufwaerts");
 }

@@ -386,12 +386,19 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // demselben Satz hier: der Betrachter ist eine Ansicht des
         // Vorschaufensters, und die drei tragen als einzige
         // `Wirkungsbereich::Vorschau`.
+        //
+        // Die drei Befehle der Bildfolge ebenso, hinter den Zoombefehlen: sie
+        // wirken mit dem Fokus in der Dateiliste, aber was sie bewegen, steht
+        // in der Vorschau.
         Kommando::VorschauUmschalten
         | Kommando::ZwischenablageAnsehen
         | Kommando::FokusVorschau
         | Kommando::VorschauVergroessern
         | Kommando::VorschauVerkleinern
-        | Kommando::VorschauAusgangsgroesse => Funktionsbereich::Vorschau,
+        | Kommando::VorschauAusgangsgroesse
+        | Kommando::BildVor
+        | Kommando::BildZurueck
+        | Kommando::ZumBild => Funktionsbereich::Vorschau,
         // Die Leiste aus C5 samt ihrem Ein- und Ausblenden aus C7 und den
         // beiden Fokusbefehlen, die zwischen ihr und dem Dateifenster
         // wechseln.
