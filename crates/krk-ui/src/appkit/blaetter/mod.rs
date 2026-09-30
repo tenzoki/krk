@@ -295,9 +295,10 @@ pub struct WaechterIvars {
     aenderung: RefCell<Option<Rc<dyn Fn()>>>,
     /// Ob die Eingabetaste im Feld bestaetigen darf.
     ///
-    /// Wahlfrei, weil allein das PIN-Blatt es setzt
-    /// ([`Blatt::bestaetigung_pruefen`]): dort schliesst eine abgewiesene
-    /// Eingabe das Blatt nicht. Sagt die Pruefung nein, verbraucht der Waechter
+    /// Wahlfrei, weil es nur die Blaetter setzen, bei denen eine abgewiesene
+    /// Eingabe das Blatt nicht schliessen soll; welche das sind, sagen die
+    /// Rufer von [`Blatt::bestaetigung_pruefen`] und keine Aufzaehlung in
+    /// dieser Prosa. Sagt die Pruefung nein, verbraucht der Waechter
     /// die Taste und beendet nichts; was der Nutzer davon sieht, zeigt die
     /// Pruefung selbst an. Ein `Rc` aus demselben Grund wie bei
     /// [`Self::aenderung`].

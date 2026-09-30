@@ -16,6 +16,11 @@
 //!
 //!  betroffene Eintraege ────> oeffnungsbezug() ──> der Eintrag, nach dessen Typ
 //!                                                  das System gefragt wird
+//!
+//!  betroffene Eintraege ─┐
+//!  sichtbare Zeilen ─────┴──> duplikatbezug() ──> die eine gewoehnliche Datei,
+//!                                                 die dupliziert wird, oder
+//!                                                 der Grund, warum keine
 //! ```
 //!
 //! # Die eine Frage dieses Moduls
@@ -137,6 +142,13 @@
 //! [`oeffnungsbezug`] und [`oeffnungsmarke`], beim Klick [`oeffnungsstelle`];
 //! was sie damit an das System richtet, steht in `crate::appkit::oeffnenmit`.
 //!
+//! Seit dem 260930 fragt sie in ihrem `duplikatbefund` das [`duplikatbezug`],
+//! aus demselben Grund wie beim Entpacken: die Vorhersage „genau eine
+//! gewoehnliche Datei" liest den Typ aus den **sichtbaren Zeilen**, und das
+//! Ordnermodell gehoert jener Quelle. Die Ausfuehrung beim
+//! Anwendungsdelegierten liest den [`Duplikatbefund`], den sie sich von der
+//! Quelle geben laesst, und oeffnet bei einer Datei das Namensblatt.
+//!
 //! # Was der 260907 hinzugelegt hat
 //!
 //! Einen weiteren Wert in [`Kontextbefehl`], „Im Finder anzeigen", und keine
@@ -163,7 +175,7 @@
 //! ```
 //!
 //! **Was die Aufzaehlung traegt, ist der Eintrag und nicht das Untermenue.**
-//! [`Kontextbefehl::OeffnenMit`] ist ein fester Eintrag wie die vier anderen:
+//! [`Kontextbefehl::OeffnenMit`] ist ein fester Eintrag wie jeder andere:
 //! er steht immer da, an einer festen Stelle, mit einem festen Titel. Die
 //! Anwendungen darunter sind **keine** Werte der Aufzaehlung, und ein Wert
 //! `OeffnenMit(usize)`, der die Stelle mitfuehrte, waere die Auskunft, die
@@ -202,7 +214,7 @@ use std::cmp::Reverse;
 use std::path::{Path, PathBuf};
 
 use krk_core::operation::umbenennen::{Namensfehler, name_pruefen, namen_teilen};
-use krk_core::verzeichnis::Ordnermodell;
+use krk_core::verzeichnis::{Ordnermodell, Typ};
 
 /// Die Endung, an der ein Archiv erkannt und mit der eines benannt wird.
 ///
@@ -274,6 +286,14 @@ pub enum Kontextbefehl {
     Zippen,
     /// Jedes betroffene Archiv in einen eigenen neuen Ordner entpacken.
     Entpacken,
+    /// Die eine betroffene gewoehnliche Datei unter einem neuen Namen in
+    /// ihren Ordner duplizieren (260930).
+    ///
+    /// **Der erste Eintrag, der vor seiner Wirkung ein Blatt oeffnet**: die
+    /// Frage nach dem Namen. Worauf er wirkt, rechnet [`duplikatbezug`]; was
+    /// danach geschieht, steht bei `Art::Duplizieren` im Kern und im Zweig
+    /// beim Anwendungsdelegierten.
+    Duplizieren,
     /// Den angezeigten Ordner im Finder oeffnen.
     ImFinderOeffnen,
     /// Die betroffenen Eintraege im Finder aufdecken, also in einem
@@ -295,10 +315,10 @@ impl Kontextbefehl {
     /// Reihenfolge im Menue dieselbe Angabe wie die Reihenfolge hier, und ein
     /// weiterer Befehl erscheint, ohne dass jemand eine zweite Stelle nachzieht.
     ///
-    /// **Die Feldbreite in der Typangabe haelt den Bau nicht an.**
-    /// `[Kontextbefehl; 5]` zwingt zu fuenf Gliedern und sagt nichts darueber,
-    /// welche fuenf: eine sechste Variante von [`Kontextbefehl`], die niemand
-    /// hier eintraegt, uebersetzt vorbei. Bis zum 260831 stand hier das Gegenteil
+    /// **Die Feldbreite in der Typangabe haelt den Bau nicht an.** Sie zwingt
+    /// zu so vielen Gliedern, wie in der Typangabe stehen, und sagt nichts
+    /// darueber, welche: eine weitere Variante von [`Kontextbefehl`], die
+    /// niemand hier eintraegt, uebersetzt vorbei. Bis zum 260831 stand hier das Gegenteil
     /// (`issues/260831-1212_*_kontextmenue-rs-behauptet-eine-feldbreite-halte-den-bau-an-und-ist-die-siebte-stelle-dieser-art.md`),
     /// und gemessen ist die Behauptung in
     /// `issues/260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md`.
@@ -322,10 +342,14 @@ impl Kontextbefehl {
     ///
     /// **„Öffnen mit" steht vorn**, weil das Oeffnen der haeufigste Griff ist
     /// und weil die zwei Finder-Eintraege am Ende beieinander bleiben sollen.
-    pub const ALLE: [Kontextbefehl; 5] = [
+    /// **„Duplizieren…" steht hinter „Unzip" und vor den Finder-Eintraegen**
+    /// (260930): „Zip" und „Unzip" bleiben ein Paar, die Finder-Eintraege
+    /// bleiben am Ende beieinander.
+    pub const ALLE: [Kontextbefehl; 6] = [
         Kontextbefehl::OeffnenMit,
         Kontextbefehl::Zippen,
         Kontextbefehl::Entpacken,
+        Kontextbefehl::Duplizieren,
         Kontextbefehl::ImFinderOeffnen,
         Kontextbefehl::ImFinderAnzeigen,
     ];
@@ -349,12 +373,19 @@ impl Kontextbefehl {
     /// vollendet; ein abgeschlossenes „Öffnen" versprach dasselbe wie der
     /// Doppelklick und die Taste aus der Runde 4, die daneben unangetastet
     /// bleiben.
+    ///
+    /// **„Duplizieren…" endet auf das Auslassungszeichen**, weil der Eintrag
+    /// vor seiner Wirkung fragt, wie „Ort wählen…" und „Auf Werkseinstellungen
+    /// zurücksetzen…" im Hauptmenue (Plan
+    /// `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`,
+    /// Entscheidung 8).
     #[must_use]
     pub fn titel(self) -> &'static str {
         match self {
             Kontextbefehl::OeffnenMit => "Öffnen mit",
             Kontextbefehl::Zippen => "Zip",
             Kontextbefehl::Entpacken => "Unzip",
+            Kontextbefehl::Duplizieren => "Duplizieren…",
             Kontextbefehl::ImFinderOeffnen => "Im Finder öffnen",
             Kontextbefehl::ImFinderAnzeigen => "Im Finder anzeigen",
         }
@@ -379,20 +410,23 @@ impl Kontextbefehl {
     /// nicht nur genauer, sondern die Bedingung dafuer, dass die fremde Zusage
     /// stehen bleibt.
     /// **Die Marken folgen der Reihenfolge der Aufzaehlung**, und dass „Öffnen
-    /// mit" sie am 260918 vorn angefuehrt und die vier uebrigen um eins
-    /// weitergerueckt hat, kostet nichts: eine Marke ist eine Kennung und keine
-    /// Ablage. Sie entsteht bei jedem Menuebau neu und ueberdauert weder einen
-    /// Rechtsklick noch eine Sitzung. **Die Marken des Untermenues stehen nicht
-    /// hier**, sondern bei [`oeffnungsmarke`]; sie zaehlen eine eigene Folge auf
-    /// einem eigenen Selektor und koennen mit diesen nicht zusammenstossen.
+    /// mit" sie am 260918 vorn angefuehrt und die uebrigen um eins
+    /// weitergerueckt hat, kostet nichts, ebenso wenig wie das Nachruecken der
+    /// zwei Finder-Werte hinter „Duplizieren…" am 260930: eine Marke ist eine
+    /// Kennung und keine Ablage. Sie entsteht bei jedem Menuebau neu und
+    /// ueberdauert weder einen Rechtsklick noch eine Sitzung. **Die Marken des
+    /// Untermenues stehen nicht hier**, sondern bei [`oeffnungsmarke`]; sie
+    /// zaehlen eine eigene Folge auf einem eigenen Selektor und koennen mit
+    /// diesen nicht zusammenstossen.
     #[must_use]
     pub fn menuemarke(self) -> isize {
         match self {
             Kontextbefehl::OeffnenMit => 1,
             Kontextbefehl::Zippen => 2,
             Kontextbefehl::Entpacken => 3,
-            Kontextbefehl::ImFinderOeffnen => 4,
-            Kontextbefehl::ImFinderAnzeigen => 5,
+            Kontextbefehl::Duplizieren => 4,
+            Kontextbefehl::ImFinderOeffnen => 5,
+            Kontextbefehl::ImFinderAnzeigen => 6,
         }
     }
 
@@ -519,6 +553,115 @@ pub fn oeffnungsmarke(stelle: usize) -> isize {
 #[must_use]
 pub fn oeffnungsstelle(marke: isize) -> Option<usize> {
     usize::try_from(marke.checked_sub(1)?).ok()
+}
+
+/// Was „Duplizieren…" vorgefunden hat (260930).
+///
+/// **Eine Aufzaehlung und kein `Option`**, aus demselben Grund wie beim
+/// [`Entpackbefund`]: die Fehlbefunde tragen verschiedene Saetze in der
+/// Statuszeile, und der Rufer soll nicht aus einem leeren Wert raten muessen,
+/// welcher vorlag. Die Faelle sind ueberschneidungsfrei und vollstaendig: kein
+/// betroffener Eintrag, mehrere, oder genau einer, und der ist nach seinem
+/// [`Typ`] im Ordnermodell eine Datei, ein Ordner oder eine Verknuepfung.
+///
+/// **Das ist die Vorhersage, und die Entscheidung faellt im Kern**
+/// (Entscheidung 3 des Plans
+/// `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`):
+/// `Typ::Datei` ist im Ordnermodell das Auffangfach fuer alles, was weder
+/// Ordner noch Verknuepfung ist, und traegt Roehre, Socket und Geraetedatei
+/// mit; die Liste kann sie von einer gewoehnlichen Datei nicht trennen, und
+/// sie kann einen Augenblick alt sein. `duplizieren::eintrag_duplizieren` im
+/// Kern fragt deshalb `lstat` unmittelbar vor der Uebertragung und
+/// ueberspringt alles, was keine gewoehnliche Datei ist. Hier wird allein
+/// entschieden, ob das Namensblatt aufgeht oder die Statuszeile den Grund
+/// nennt, warum nicht.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Duplikatbefund {
+    /// Genau ein betroffener Eintrag, und die Liste fuehrt ihn als Datei.
+    ///
+    /// Das Namensblatt geht auf, mit `name` als Vorgabe; `quelle` ist der
+    /// volle Pfad, der in `Auftrag::duplizieren` geht.
+    Datei {
+        /// Der volle Pfad der Datei, die dupliziert wird.
+        quelle: PathBuf,
+        /// Ihr Name, die Vorgabe des Namensblatts.
+        name: String,
+    },
+    /// Genau ein betroffener Eintrag, und er ist ein Ordner.
+    ///
+    /// Dupliziert wird allein eine gewoehnliche Datei (Nutzerentscheid N1 vom
+    /// 260930, „nur gewoehnliche dateien"); der Name steht im Satz der
+    /// Statuszeile.
+    Ordner {
+        /// Der Name des Ordners, fuer die Meldung.
+        name: String,
+    },
+    /// Genau ein betroffener Eintrag, und er ist eine symbolische
+    /// Verknuepfung.
+    ///
+    /// Auch eine Verknuepfung auf eine Datei ist keine gewoehnliche Datei; ein
+    /// Duplikat waere entweder eine zweite Verknuepfung oder eine Kopie des
+    /// Ziels, und keines von beiden hat der Nutzer bestellt.
+    Verknuepfung {
+        /// Der Name der Verknuepfung, fuer die Meldung.
+        name: String,
+    },
+    /// Kein betroffener Eintrag: nichts markiert und nichts ausgewaehlt, oder
+    /// der betroffene Eintrag steht nicht unter den sichtbaren Zeilen.
+    Nichts,
+    /// Mehrere betroffene Eintraege. Dupliziert wird genau eine Datei, und
+    /// welche von mehreren gemeint waere, ist keine Frage, die dieses Modul
+    /// beantworten kann.
+    Mehrere,
+}
+
+/// Worauf „Duplizieren…" wirkt: die eine gewoehnliche Datei, oder der Grund,
+/// warum keine.
+///
+/// **Ohne Dateizugriff**, wie alles in diesem Modul: der Typ kommt aus dem
+/// [`Ordnermodell`], das ihn beim Lesen des Ordners erhoben hat, und gesucht
+/// wird ueber [`Ordnermodell::zeilen`], also ueber die sichtbaren Zeilen — aus
+/// demselben Grund wie bei [`entpackziel`]. `betroffen` ist von derselben
+/// Herkunft ([`super::operationen::betroffene`]) und traegt die Markierung
+/// vor der Auswahl; eine zweite Auswahlregel entsteht nicht (Entscheidung 2
+/// des Plans).
+///
+/// **Genau einer, und der eine ist eine Datei**: das ist die einzige Lage, in
+/// der das Blatt aufgeht. Mehrere markierte Eintraege sind [`Duplikatbefund::Mehrere`],
+/// auch wenn jeder davon eine Datei ist. Steht der eine betroffene Eintrag
+/// nicht unter den sichtbaren Zeilen, gilt [`Duplikatbefund::Nichts`]: dann
+/// hat der Nutzer beim Klicken nichts vor sich gehabt, worauf der Befehl
+/// wirken koennte.
+///
+/// **Die Fallunterscheidung ueber [`Typ`] ist vollstaendig und ohne
+/// Auffangzweig**; ein weiterer Typ haelt den Bau hier an, statt still als
+/// Datei zu gelten.
+///
+/// `#[must_use]`: der Befund entscheidet, ob ein Blatt aufgeht; fiele er
+/// still weg, klickte der Nutzer und nichts geschaehe.
+#[must_use]
+pub fn duplikatbezug(modell: &Ordnermodell, betroffen: &[PathBuf]) -> Duplikatbefund {
+    let einziger = match betroffen {
+        [] => return Duplikatbefund::Nichts,
+        [einziger] => einziger,
+        _ => return Duplikatbefund::Mehrere,
+    };
+    let Some(name) = einziger.file_name() else {
+        return Duplikatbefund::Nichts;
+    };
+    let name = name.to_string_lossy();
+    let Some(eintrag) = modell.zeilen().find(|eintrag| eintrag.name == name) else {
+        return Duplikatbefund::Nichts;
+    };
+    let name = eintrag.name.clone();
+    match eintrag.typ {
+        Typ::Datei => Duplikatbefund::Datei {
+            quelle: einziger.clone(),
+            name,
+        },
+        Typ::Ordner => Duplikatbefund::Ordner { name },
+        Typ::Verknuepfung => Duplikatbefund::Verknuepfung { name },
+    }
 }
 
 /// Was Unzip vorgefunden hat.
@@ -1122,12 +1265,17 @@ mod tests {
     /// ist der Zweck dieser Tafel seit dem 260907: sie unterscheiden sich in
     /// einem Wort, und eine Vertauschung von „oeffnen" und „anzeigen" beschriebe
     /// jeweils die Wirkung des anderen Eintrags.
-    const TAFEL: [(Kontextbefehl, &str, isize); 5] = [
+    ///
+    /// **„Duplizieren…" steht mit seinem Auslassungszeichen da** (260930): der
+    /// Eintrag fragt vor seiner Wirkung, und ein Titel ohne das Zeichen
+    /// verspraeche eine Wirkung auf den Klick.
+    const TAFEL: [(Kontextbefehl, &str, isize); 6] = [
         (Kontextbefehl::OeffnenMit, "Öffnen mit", 1),
         (Kontextbefehl::Zippen, "Zip", 2),
         (Kontextbefehl::Entpacken, "Unzip", 3),
-        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 4),
-        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 5),
+        (Kontextbefehl::Duplizieren, "Duplizieren…", 4),
+        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 5),
+        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 6),
     ];
 
     /// Die Tafel ueber jeden Wert, an einem Stueck.
@@ -1204,9 +1352,13 @@ mod tests {
     /// **Die Zusage, um derentwillen die Zaehlung bei eins beginnt.** Ein
     /// Menueeintrag, an dem niemand `setTag:` gerufen hat, traegt die Null;
     /// begaenne die Zaehlung dort, loeste er das Packen aus.
+    ///
+    /// Die erste freie Marke hinter der Liste steht mit in der Tafel und
+    /// rueckt mit jedem weiteren Befehl um eins; seit dem 260930 ist es die
+    /// Sieben.
     #[test]
     fn die_null_und_alles_daneben_benennen_keinen_befehl() {
-        for marke in [-1, 0, 6, 99] {
+        for marke in [-1, 0, 7, 99] {
             assert_eq!(
                 Kontextbefehl::von_menuemarke(marke),
                 None,
@@ -1271,6 +1423,118 @@ mod tests {
                 "die Marke {marke} benennt eine Stelle"
             );
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Worauf „Duplizieren…" wirkt (260930)
+    // ------------------------------------------------------------------
+
+    fn modell_aus(eintraege: &[(&str, Typ)]) -> Ordnermodell {
+        let mut modell = Ordnermodell::neu(1);
+        modell.anhaengen(eintraege.iter().map(|(name, typ)| eintrag(name, *typ)));
+        modell.abschliessen();
+        modell
+    }
+
+    /// Die Tafel von [`duplikatbezug`] ueber jede Lage, an einem Stueck.
+    ///
+    /// **Sie haelt den Nutzerentscheid N1 vom 260930 am Baum**: der Eintrag
+    /// wirkt allein bei genau einem betroffenen Eintrag, und der muss die
+    /// Liste als Datei fuehren. Ein Ordner, eine Verknuepfung, zwei markierte
+    /// Dateien und die leere Menge bekommen je ihren eigenen Befund, damit die
+    /// Statuszeile den Grund nennen kann.
+    ///
+    /// Die betroffene Menge kommt aus [`super::super::operationen::betroffene`]
+    /// und nicht von Hand, damit die letzte Zeile der Tafel prueft, was der
+    /// Rechtsklick wirklich vorfindet: eine markierte Datei gewinnt gegen eine
+    /// anders stehende Auswahl, wie bei jedem Befehl dieses Menues.
+    #[test]
+    fn duplikatbezug_nennt_die_eine_datei_oder_den_grund() {
+        use super::super::operationen::betroffene;
+
+        let ordner = ordner();
+        let bestand = [
+            ("bericht.txt", Typ::Datei),
+            ("notizen.md", Typ::Datei),
+            ("Unterlagen", Typ::Ordner),
+            ("verweis", Typ::Verknuepfung),
+        ];
+        // Was ausgewaehlt und was markiert ist, und was dabei herauskommt.
+        let tafel: [(Option<&str>, &[&str], Duplikatbefund); 6] = [
+            (None, &[], Duplikatbefund::Nichts),
+            (
+                Some("bericht.txt"),
+                &[],
+                Duplikatbefund::Datei {
+                    quelle: ordner.join("bericht.txt"),
+                    name: "bericht.txt".to_owned(),
+                },
+            ),
+            (
+                Some("Unterlagen"),
+                &[],
+                Duplikatbefund::Ordner {
+                    name: "Unterlagen".to_owned(),
+                },
+            ),
+            (
+                Some("verweis"),
+                &[],
+                Duplikatbefund::Verknuepfung {
+                    name: "verweis".to_owned(),
+                },
+            ),
+            (
+                None,
+                &["bericht.txt", "notizen.md"],
+                Duplikatbefund::Mehrere,
+            ),
+            (
+                Some("Unterlagen"),
+                &["notizen.md"],
+                Duplikatbefund::Datei {
+                    quelle: ordner.join("notizen.md"),
+                    name: "notizen.md".to_owned(),
+                },
+            ),
+        ];
+        for (auswahl, markiert, erwartet) in tafel {
+            let mut modell = modell_aus(&bestand);
+            if let Some(name) = auswahl {
+                let index = modell.index_von_namen(name).expect("steht da");
+                modell.auswahl_setzen(Some(index));
+            }
+            for name in markiert {
+                let index = modell.index_von_namen(name).expect("steht da");
+                modell.markierung_umschalten(index);
+            }
+            let betroffen = betroffene(&modell, ordner);
+            assert_eq!(
+                duplikatbezug(&modell, &betroffen.pfade),
+                erwartet,
+                "Auswahl {auswahl:?}, markiert {markiert:?}"
+            );
+        }
+    }
+
+    /// Ein betroffener Eintrag, der nicht unter den sichtbaren Zeilen steht,
+    /// ist nichts.
+    ///
+    /// Die Lage entsteht, wenn der Rufer eine Menge hereinreicht, die nicht
+    /// aus demselben Stand des Ordners stammt; das Blatt geht dann nicht auf,
+    /// statt eine Datei zu duplizieren, die der Nutzer nicht vor sich hatte.
+    #[test]
+    fn ein_betroffener_eintrag_ausserhalb_der_sichtbaren_zeilen_ist_nichts() {
+        let modell = modell_aus(&[("bericht.txt", Typ::Datei)]);
+        assert_eq!(
+            duplikatbezug(&modell, &[ordner().join("fremd.txt")]),
+            Duplikatbefund::Nichts
+        );
+        assert_eq!(
+            duplikatbezug(&modell, &[PathBuf::from("/")]),
+            Duplikatbefund::Nichts,
+            "das Wurzelverzeichnis hat keinen Namen"
+        );
     }
 
     // ------------------------------------------------------------------

@@ -6,9 +6,16 @@
 //! ```text
 //! name_pruefen  ──> anlegen.rs (Ordner und Datei anlegen)
 //!               ──> umbenennen (hier)
+//!               ──> duplizieren.rs (je Name, vor jedem ausschliessenden Versuch)
+//!               ──> mod.rs, zippen.rs, entpacken.rs (die Antwort "umbenennen in"
+//!                   der drei Zielklaerer, in mod.rs unter dem Alias namen_pruefen)
 //! freier_name   ──> fortschritt.rs (Konfliktregel "automatisch umbenennen")
 //! umbenennen    ──> eintrag_umbenennen (hier), je Eintrag des Stapels
 //! ```
+//!
+//! Wer einen Rufer von `name_pruefen` hinzufuegt, traegt ihn hier ein; die
+//! Erhebung ist `grep -rn "name_pruefen(\|namen_pruefen(" crates/krk-core/src/operation`
+//! ueber die Codezeilen.
 //!
 //! Der Stapel fuehrt [`umbenennen`] je Eintrag aus; ein zweiter
 //! Umbenennungsweg daneben entsteht nicht. Seit S17c laeuft er ueber die
@@ -102,8 +109,8 @@ pub fn umbenennen(pfad: &Path, neuer_name: &str) -> io::Result<PathBuf> {
 /// Die Arbeit selbst ist [`umbenennen`]; hier kommt dazu, was jede Art der
 /// Operationsmaschine tut: den fertigen Eintrag melden, und einen gescheiterten
 /// mit Grund ueberspringen, statt den Stapel abzubrechen. Die Abbruchpruefung
-/// zwischen zwei Eintraegen steht wie bei den vier uebrigen Arten eine Ebene
-/// hoeher, in [`super::ausfuehren`].
+/// zwischen zwei Eintraegen steht wie bei jeder anderen Art dieser Bahn eine
+/// Ebene hoeher, in [`super::ausfuehren`].
 ///
 /// Gemeldet wird die Groesse des Eintrags, obwohl `rename(2)` keinen Inhalt
 /// anfasst. Dasselbe tut das Verschieben innerhalb eines Datentraegers, das

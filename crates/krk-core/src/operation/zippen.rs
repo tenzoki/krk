@@ -17,7 +17,8 @@
 //! Die uebrigen Arten haben je Quelle ein eigenes Ziel; das Packen hat **ein**
 //! Ziel fuer den ganzen Lauf, und dieses Ziel wird einmal geoeffnet und einmal
 //! geschlossen. Wer den Schreiber durch [`super::einen_abarbeiten`] faedelte,
-//! reichte einen Zustand durch vier Arten hindurch, die ihn nicht ansehen.
+//! reichte einen Zustand durch jede andere Art der Schleife hindurch, die ihn
+//! nicht ansieht.
 //! [`super::ausfuehren`] verzweigt deshalb ueber die Art, vollstaendig und ohne
 //! Auffangzweig.
 //!

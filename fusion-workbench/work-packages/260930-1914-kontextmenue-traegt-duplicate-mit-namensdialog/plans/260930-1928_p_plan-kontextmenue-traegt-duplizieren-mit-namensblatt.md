@@ -172,7 +172,7 @@ Die Schritte 1 und 2 hängen nicht aneinander; sie landen trotzdem in der Nummer
 
 ### Stufe B: der Befehl wirkt
 
-3. [IN PROGRESS] **Kontextmenü: der Eintrag, das Blatt, der Auftrag, die erneute Frage und die Auswahl**
+3. [DONE] **Kontextmenü: der Eintrag, das Blatt, der Auftrag, die erneute Frage und die Auswahl**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/kommandos/kontextmenue.rs`, `crates/krk-ui/src/kommandos/operationen.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:
@@ -199,7 +199,7 @@ Die Schritte 1 und 2 hängen nicht aneinander; sie landen trotzdem in der Nummer
 
 ### Stufe C: was Nutzer und nächster Leser lesen
 
-4. **`HowTo.md`: eine Datei duplizieren**
+4. [IN PROGRESS] **`HowTo.md`: eine Datei duplizieren**
    - Executor: `code-implementer`
    - Files: `HowTo.md`
    - Changes: ein Abschnitt `## Eine Datei duplizieren` hinter `## Der Dateilistenfilter`, mit dessen Trennlinie. Er sagt: wo der Eintrag steht (Rechtsklick in der Dateiliste, „Duplizieren…“), dass er keine Taste und keinen Hauptmenüeintrag hat, worauf er wirkt (genau eine gewöhnliche Datei; bei einem Ordner, einer Verknüpfung, mehreren markierten Einträgen oder gar keinem meldet die Statuszeile den Grund), was das Blatt zeigt (alter Name vorausgefüllt und ausgewählt, „Duplizieren“ und „Abbrechen“, `Esc` schließt), was es nicht bestätigen lässt (leerer Name, Schrägstrich, `.` und `..`, mit dem Grund unter dem Feld), was bei einem vergebenen Namen geschieht (nichts wird überschrieben, das Blatt geht mit dem Grund erneut auf, auch beim unveränderten alten Namen), wo das Duplikat entsteht (im selben Ordner) und dass danach die Auswahl auf ihm steht. Ein Satz nennt, dass das Duplizieren als Vorgang läuft: Fortschritt in der Statuszeile, `Esc` bricht ab. `README.md` bleibt unverändert, weil sie keine Bedienung beschreibt.

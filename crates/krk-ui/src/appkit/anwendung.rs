@@ -307,10 +307,12 @@ use crate::heimgriff::{self, Heimgriff, Notizlage};
 use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::blattmeldung;
 use crate::kommandos::fokus::{self, Fokus};
-use crate::kommandos::kontextmenue::{self, Anwendung, Entpackbefund, Kontextbefehl, Kontextwahl};
+use crate::kommandos::kontextmenue::{
+    self, Anwendung, Duplikatbefund, Entpackbefund, Kontextbefehl, Kontextwahl,
+};
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{
-    self, Anlegeart, Auswahl, Dateiablage, Konfliktfrage, Vorgangszustand,
+    self, Anlegeart, Auswahl, Dateiablage, Konfliktform, Konfliktfrage, Vorgangszustand,
 };
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::rundweg::{Rundweg, rundweg};
@@ -682,6 +684,13 @@ enum Anlass {
 /// Antwort; sie baut einen Zustand mehr, den keine Zusage verlangt.
 struct Vorgang {
     /// Was geschieht. Traegt die Ueberschrift und die Abschlussmeldung.
+    ///
+    /// **Fuer das Duplizieren traegt es den zuletzt beauftragten Namen**
+    /// (260930): jede Antwort auf die Namensnachfrage
+    /// ([`Anwendungsdelegierter::duplikatname_nachfragen`]) schreibt ihn in
+    /// `Art::Duplizieren { neuer_name }` hinein, damit der Abschluss die
+    /// Auswahl auf den Namen setzt, unter dem das Duplikat wirklich entstanden
+    /// ist, und nicht auf den ersten Wunsch.
     art: Art,
     /// Das Dateifenster, das den Vorgang begonnen hat.
     ///
@@ -704,8 +713,8 @@ struct Vorgang {
     /// Wie viele markierte Eintraege gar nicht erst in den Auftrag kamen
     /// (Runde 17).
     ///
-    /// **Null bei jedem Weg ausser den zweien des Kontextmenues.** Allein Zip
-    /// und Unzip nehmen einen markierten Eintrag aus dem Lauf, naemlich den,
+    /// **Null bei jedem Weg ausser Zip und Unzip.** Allein diese zwei nehmen
+    /// einen markierten Eintrag aus dem Lauf, naemlich den,
     /// den derselbe Lauf als Ziel anlegt; die Regel steht in
     /// [`crate::kommandos::kontextmenue`]. Der Abschlusstext nennt die Zahl,
     /// damit ein Befehl nicht wortlos weniger tut, als der Nutzer markiert hat
@@ -3903,9 +3912,12 @@ impl Anwendungsdelegierter {
     /// **Ein liegengebliebener Griff ist dabei harmlos**, und das ist keine
     /// Nachlaessigkeit, sondern der Grund, aus dem der erste Rang von
     /// [`Self::abbrechen`] nach der **Naemlichkeit** fragt, bevor er ihn nimmt,
-    /// und nicht allein danach, ob ueberhaupt ein Blatt steht: die fuenf
-    /// Eingabeblaetter melden ihr Schliessen nicht, ihr Griff bleibt also bis
-    /// zum naechsten Blatt stehen. Steht kein Blatt, faellt der Rang auf die
+    /// und nicht allein danach, ob ueberhaupt ein Blatt steht: die
+    /// Eingabeblaetter, auf deren Antwort kein Arbeitsfaden wartet, melden ihr
+    /// Schliessen nicht, ihr Griff bleibt also bis zum naechsten Blatt stehen
+    /// (das Namensblatt des Duplizierens meldet es seit dem 260930, weil beim
+    /// erneuten Aufgehen ein Arbeitsfaden auf die Antwort wartet und der
+    /// naechste Durchgang sie abholen muss). Steht kein Blatt, faellt der Rang auf die
     /// Frage `blatt_steht` zurueck; steht eines ohne Griff, etwa der
     /// Ordnerdialog von „Ort waehlen…“, antwortet [`Blattgriff::steht`] mit
     /// nein, der Griff bleibt liegen, und `esc` geht an AppKit und damit an
@@ -7936,28 +7948,33 @@ impl Anwendungsdelegierter {
     /// anfangen darf, liest hier `ivars().vorgang` und nirgends sonst. Eine
     /// zweite Prueferei waeren zwei Antworten auf dieselbe Frage.
     ///
-    /// **Sechs Wege fragen, und sie teilen sich in fuenf und einen.** Fuenf
-    /// folgen einer ausdruecklichen Handlung des Nutzers und nehmen deshalb den
-    /// meldenden Mantel [`Self::vorgang_laeuft_schon`], denn auf einen
-    /// Tastendruck und ebenso auf einen angeklickten Menueeintrag gehoert eine
-    /// Antwort in die Statuszeile: die vier Befehle aus der Auswahl
+    /// **Die Wege, die fragen, teilen sich in die meldenden und einen
+    /// stillen.** Die meldenden folgen einer ausdruecklichen Handlung des
+    /// Nutzers und nehmen deshalb den meldenden Mantel
+    /// [`Self::vorgang_laeuft_schon`], denn auf einen Tastendruck und ebenso
+    /// auf einen angeklickten Menueeintrag gehoert eine Antwort in die
+    /// Statuszeile: die vier Befehle aus der Auswahl
     /// ([`Self::auftrag_stellen`]), das Stapel-Umbenennen
     /// ([`Self::stapel_beauftragen`]), die Vorstufe der Loeschrueckfrage
     /// ([`Self::loeschen_nach_rueckfrage`], die von der Antwort allein braucht,
-    /// **ob** es einen Vorgang gibt) und seit der Runde 17 die zwei Zweige des
-    /// Kontextmenues, die einen Auftrag stellen
-    /// ([`Self::zipauftrag_stellen`] und [`Self::entpackauftrag_stellen`]).
-    /// Die beiden Finder-Zweige jenes Menues fragen nicht:
+    /// **ob** es einen Vorgang gibt), seit der Runde 17 die zwei Zweige des
+    /// Kontextmenues, die ihren Auftrag beim Klick stellen
+    /// ([`Self::zipauftrag_stellen`] und [`Self::entpackauftrag_stellen`]),
+    /// und seit dem 260930 der dritte, der vor dem Auftrag ein Blatt oeffnet
+    /// und deshalb **zweimal** fragt: [`Self::duplikat_erfragen`] beim Klick
+    /// und [`Self::duplikatauftrag_stellen`] nach der Bestaetigung, weil
+    /// waehrend des stehenden Blattes ein Abwurf einen Vorgang begonnen haben
+    /// kann. Die beiden Finder-Zweige jenes Menues fragen nicht:
     /// [`Self::im_finder_oeffnen`] und [`Self::im_finder_anzeigen`] stellen
     /// keinen Auftrag.
     ///
-    /// Der sechste ist der Abwurf aus einer fremden Anwendung (C6 der Runde 13),
+    /// Der stille ist der Abwurf aus einer fremden Anwendung (C6 der Runde 13),
     /// und er nimmt die Frage **ohne** die Meldung. Der Grund ist der Ort seines
     /// Fragers: `validateDrop:` laeuft bei jeder Zeigerbewegung, und eine
     /// Meldung von dort schriebe die Statuszeile mehrmals je Sekunde voll. Was
     /// der Abwurf stattdessen zeigt, ist der Zeiger selbst.
     ///
-    /// Der sechste Weg ist damit **keine zweite Pruefung**, sondern dieselbe
+    /// Der stille Weg ist damit **keine zweite Pruefung**, sondern dieselbe
     /// ohne ihre Nebenwirkung.
     ///
     /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
@@ -7979,7 +7996,9 @@ impl Anwendungsdelegierter {
     /// startet (C4).
     ///
     /// Der meldende Mantel um [`Self::vorgang_laeuft`]; die Frage selbst und
-    /// ihre vier Wege stehen dort. Die Meldung geht als **Befehlsantwort** an
+    /// ihre Wege stehen dort, darunter seit dem 260930 der Duplizier-Zweig des
+    /// Kontextmenues, der ihn zweimal nimmt, einmal beim Klick und einmal nach
+    /// dem Blatt. Die Meldung geht als **Befehlsantwort** an
     /// das Dateifenster, in dem der Nutzer die Taste gedrueckt hat, und steht
     /// damit auch dann in der Zeile, wenn genau dieses Fenster den laufenden
     /// Vorgang begonnen hat. Bis zum 260804-1915 war sie eine Fenstermeldung und
@@ -8088,11 +8107,18 @@ impl Anwendungsdelegierter {
     ///
     /// Lauter duenne Zweige und kein Rumpf: was jeder tut, steht in seiner
     /// eigenen Funktion, damit diese Stelle allein die Zuordnung traegt.
+    ///
+    /// **Seit dem 260930 oeffnet ein Zweig vor seiner Wirkung ein Blatt**:
+    /// [`Self::duplikat_erfragen`] fragt nach dem Namen des Duplikats und
+    /// stellt den Auftrag erst aus dem Rueckruf des Blattes. Fuer diese Stelle
+    /// aendert das nichts, der Zweig ist so duenn wie die anderen; was sich
+    /// aendert, steht dort.
     fn kontextbefehl_ausfuehren(&self, seite: Fensterseite, befehl: Kontextbefehl) {
         match befehl {
             Kontextbefehl::OeffnenMit => self.keine_anwendung_melden(seite),
             Kontextbefehl::Zippen => self.zipauftrag_stellen(seite),
             Kontextbefehl::Entpacken => self.entpackauftrag_stellen(seite),
+            Kontextbefehl::Duplizieren => self.duplikat_erfragen(seite),
             Kontextbefehl::ImFinderOeffnen => self.im_finder_oeffnen(seite),
             Kontextbefehl::ImFinderAnzeigen => self.im_finder_anzeigen(seite),
         }
@@ -8295,6 +8321,234 @@ impl Anwendungsdelegierter {
         );
     }
 
+    /// Fragt nach dem Namen des Duplikats und stellt danach den Auftrag
+    /// (260930).
+    ///
+    /// **Der Zweig von [`Kontextbefehl::Duplizieren`], und der erste des
+    /// Kontextmenues, der vor seiner Wirkung ein Blatt oeffnet.** Der Plan
+    /// dieser Arbeit
+    /// (`260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`)
+    /// schreibt die Kette aus; hier steht ihr erstes Glied: der Klick, der
+    /// Befund, das Blatt.
+    ///
+    /// **Er wirkt allein auf genau eine gewoehnliche Datei** (Nutzerentscheid
+    /// N1 vom 260930), und worauf, sagt [`kontextmenue::duplikatbezug`] ueber
+    /// `DateifensterQuelle::duplikatbefund` und nicht diese Stelle: die
+    /// betroffenen Eintraege zuerst, wie bei jedem Befehl dieses Menues, und
+    /// der Typ aus den sichtbaren Zeilen. Jeder Befund ausser der Datei
+    /// schreibt seinen Satz in die Statuszeile und oeffnet kein Blatt; das
+    /// ist die Regel der Directive der Runde 17 (wo ein Befehl nichts
+    /// vorfindet, meldet er es), und der Eintrag bleibt immer bedienbar
+    /// (Entscheidung 2 des Plans).
+    ///
+    /// **Das Blatt ist das Namensblatt des Anlegens in seiner zweiten Gestalt**
+    /// ([`namenseingabe::geprueft_zeigen`]): der alte Name steht ausgewaehlt
+    /// als Vorgabe, ohne Grund unter dem Feld, und
+    /// [`operationen::namensgrund`] prueft die Eingabe, damit ein leerer Name,
+    /// ein Schraegstrich, `.` und `..` das Blatt gar nicht erst schliessen
+    /// (Entscheidung 6). Ob der Name vergeben ist, prueft niemand vorher; das
+    /// beantwortet das Dateisystem im Arbeitsfaden, und die Antwort oeffnet
+    /// dasselbe Blatt ueber [`Self::duplikatname_nachfragen`] erneut.
+    ///
+    /// **Seite, Datei und angezeigter Ordner stehen seit dem Klick fest und
+    /// reisen im Rueckruf mit.** Der Rueckruf fragt nichts erneut: was der
+    /// Nutzer beim Klicken vor sich hatte, ist das, worauf er dupliziert.
+    /// Der Griff geht ueber [`Self::blatt_oeffnet`] in den Schlitz, damit `esc`
+    /// das Blatt schliesst; **jeder Ausgang ruft [`Self::blatt_geschlossen`]**
+    /// (Entscheidung 12), damit ein Durchgang folgt, der einen inzwischen
+    /// eingetroffenen Bericht abholt.
+    ///
+    /// **Auf dem Hauptfaden steht hier kein Dateisystemaufruf**: der Befund
+    /// liest das Ordnermodell, die Pruefung liest den Text, und alles, was
+    /// die Platte fragt, laeuft im Arbeitsfaden. Die Probe
+    /// `der_duplikatweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf` haelt
+    /// das am Rumpf.
+    fn duplikat_erfragen(&self, seite: Fensterseite) {
+        if self.vorgang_laeuft_schon(seite) {
+            return;
+        }
+        let quelle = self.dateifenster(seite).quelle();
+        let (datei, name) = match quelle.duplikatbefund() {
+            Duplikatbefund::Datei {
+                quelle: datei,
+                name,
+            } => (datei, name),
+            Duplikatbefund::Ordner { name } => {
+                self.antwort_zeigen(seite, &operationen::ordner_nicht_zu_duplizieren(&name));
+                return;
+            }
+            Duplikatbefund::Verknuepfung { name } => {
+                self.antwort_zeigen(
+                    seite,
+                    &operationen::verknuepfung_nicht_zu_duplizieren(&name),
+                );
+                return;
+            }
+            Duplikatbefund::Nichts => {
+                self.antwort_zeigen(seite, &operationen::nichts_zu_duplizieren());
+                return;
+            }
+            Duplikatbefund::Mehrere => {
+                self.antwort_zeigen(seite, &operationen::mehrere_zu_duplizieren());
+                return;
+            }
+        };
+        let ordner = quelle.angezeigter_ordner();
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = namenseingabe::geprueft_zeigen(
+            self.mtm(),
+            fenster,
+            namenseingabe::Vorlage {
+                frage: operationen::duplikatfrage(),
+                bestaetigen: operationen::duplikat_bestaetigen(),
+                vorgabe: &name,
+                grund: None,
+                pruefen: Some(operationen::namensgrund),
+            },
+            move |antwort| {
+                let Some(selbst) = schwach.load() else {
+                    return;
+                };
+                if let Some(neuer_name) = antwort {
+                    selbst.duplikatauftrag_stellen(
+                        seite,
+                        datei.clone(),
+                        ordner.clone(),
+                        neuer_name,
+                    );
+                }
+                selbst.blatt_geschlossen();
+            },
+        );
+        self.blatt_oeffnet(griff);
+    }
+
+    /// Stellt den Duplizierauftrag, nachdem das Namensblatt bestaetigt wurde
+    /// (260930).
+    ///
+    /// **Er fragt [`Self::vorgang_laeuft_schon`] ein zweites Mal**, obwohl
+    /// [`Self::duplikat_erfragen`] beim Klick schon gefragt hat: zwischen
+    /// Klick und Bestaetigung steht das Blatt, und das haelt die Oberflaeche
+    /// nicht an. Ein Abwurf aus einer fremden Anwendung kann in dieser Spanne
+    /// einen Vorgang begonnen haben, und KRK haelt genau einen.
+    ///
+    /// Der Auftrag entsteht ueber [`Auftrag::duplizieren`] und traegt eine
+    /// Quelle und einen **Namen**, keinen Zielpfad: „im selben Ordner" folgt
+    /// aus der Bauform der Art. Eine Position, denn es ist ein Eintrag;
+    /// nichts ausgelassen, denn der Schnitt der Archivwege hat hier keinen
+    /// Gegenstand.
+    fn duplikatauftrag_stellen(
+        &self,
+        seite: Fensterseite,
+        quelle: PathBuf,
+        ordner: PathBuf,
+        name: String,
+    ) {
+        if self.vorgang_laeuft_schon(seite) {
+            return;
+        }
+        // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
+        // es keinen: die Bestaetigung eines Blattes ist ein Klick oder die
+        // Eingabetaste im Blatt, und beide hat das Blatt schon verbraucht.
+        let _ = self.auftrag_starten(seite, Auftrag::duplizieren(quelle, name), ordner, 1, 0);
+    }
+
+    /// Fragt nach einem anderen Namen, weil der gewuenschte vergeben ist
+    /// (260930).
+    ///
+    /// **Der zweite Zweig von [`Self::konflikt_fragen`]**, den
+    /// [`operationen::konfliktform`] allein `Art::Duplizieren` zuweist. Die
+    /// Frage kommt ueber denselben Kanal wie jede Konfliktfrage, also aus
+    /// [`Self::vorgang_zeichnen`] und einen Durchgang nach dem Schliessen des
+    /// vorigen Blattes; das erneute Aufgehen ist damit kein zweiter
+    /// Mechanismus, sondern der Weg, auf dem heute die zweite Konfliktfrage
+    /// eines Kopiervorgangs ihr Blatt bekommt (Entscheidung 12 des Plans).
+    ///
+    /// **Das Blatt ist dasselbe wie beim ersten Aufgehen, mit zwei
+    /// Unterschieden** (Entscheidung 7): die Vorgabe ist der zuletzt versuchte
+    /// Name, gelesen aus dem Ziel der Frage, und unter dem Feld steht der
+    /// Grund „es gibt schon einen Eintrag namens …"
+    /// ([`operationen::name_vergeben`]), der mit dem ersten Anschlag dem
+    /// Urteil der Pruefung ueber den neuen Text weicht.
+    ///
+    /// **Jede Antwort erreicht den Arbeitsfaden**, der auf sie wartet: ein
+    /// Name geht als [`Konfliktantwort::UmbenennenIn`] zurueck und wird
+    /// zugleich in die [`Art`] des gehaltenen [`Vorgang`] geschrieben, damit
+    /// der Abschluss die Auswahl auf den Namen setzt, unter dem das Duplikat
+    /// wirklich entsteht; jeder andere Ausgang geht als
+    /// [`Konfliktantwort::Abbrechen`] zurueck, und der Kern beendet den
+    /// Vorgang, ohne etwas anzulegen. Auf beiden Wegen folgt
+    /// [`Self::blatt_geschlossen`], damit der naechste Durchgang eine weitere
+    /// Frage oder den Bericht abholt. Die Probe
+    /// `jede_antwort_auf_die_namensnachfrage_erreicht_den_arbeitsfaden` haelt
+    /// die zwei Antworten am Rumpf.
+    ///
+    /// Ein leerer Name erreicht diese Stelle nicht: die Pruefung des Blattes
+    /// laesst ihn nicht bestaetigen, und der Bauer antwortet dann mit `None`.
+    /// Der Kern prueft den Namen vor dem naechsten Versuch trotzdem noch
+    /// einmal, ueber `name_pruefen`.
+    fn duplikatname_nachfragen(&self, frage: Konfliktfrage) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let versucht = frage
+            .ziel
+            .file_name()
+            .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+        let grund = operationen::name_vergeben(&versucht);
+        let antwortweg = frage.antwort.clone();
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = namenseingabe::geprueft_zeigen(
+            self.mtm(),
+            fenster,
+            namenseingabe::Vorlage {
+                frage: operationen::duplikatfrage(),
+                bestaetigen: operationen::duplikat_bestaetigen(),
+                vorgabe: &versucht,
+                grund: Some(&grund),
+                pruefen: Some(operationen::namensgrund),
+            },
+            move |antwort| {
+                let entscheid = match antwort {
+                    Some(name) => {
+                        if let Some(selbst) = schwach.load() {
+                            selbst.duplikatnamen_merken(&name);
+                        }
+                        Konfliktentscheid::einmal(Konfliktantwort::UmbenennenIn(name))
+                    }
+                    None => Konfliktentscheid::einmal(Konfliktantwort::Abbrechen),
+                };
+                let _ = antwortweg.send(entscheid);
+                if let Some(selbst) = schwach.load() {
+                    selbst.blatt_geschlossen();
+                }
+            },
+        );
+        self.blatt_oeffnet(griff);
+    }
+
+    /// Schreibt den zuletzt beauftragten Namen in die [`Art`] des gehaltenen
+    /// [`Vorgang`] (260930).
+    ///
+    /// Die eine Stelle, die `Art::Duplizieren { neuer_name }` nach dem Start
+    /// aendert; warum, steht am Feld [`Vorgang::art`]. Steht kein Vorgang oder
+    /// ist er keiner des Duplizierens, geschieht nichts: dann wartet auch kein
+    /// Arbeitsfaden auf einen Namen. Die Ausleihe endet mit der Anweisung,
+    /// vor dem Senden der Antwort.
+    fn duplikatnamen_merken(&self, name: &str) {
+        if let Some(Vorgang {
+            art: Art::Duplizieren { neuer_name },
+            ..
+        }) = self.ivars().vorgang.borrow_mut().as_mut()
+        {
+            *neuer_name = name.to_owned();
+        }
+    }
+
     /// Oeffnet den angezeigten Ordner im Finder (Runde 17).
     ///
     /// **Er wirkt auf den angezeigten Ordner und deckt keinen Eintrag auf**;
@@ -8378,21 +8632,25 @@ impl Anwendungsdelegierter {
 
     /// Startet einen fertigen Auftrag auf der Operationsmaschine.
     ///
-    /// Der gemeinsame Teil aller **sechs** Wege hinein: Arbeitsfaden ueber
+    /// Der gemeinsame Teil aller Wege hinein: Arbeitsfaden ueber
     /// [`krk_core::operation::starten`], Vermittlerfaden fuer die Meldungen und
     /// der [`Vorgang`], an dem der Hauptfaden ihn wiederfindet. Liefert immer
     /// `true`: der Tastendruck ist verbraucht, gleich ob der Faden zustande kam.
     ///
-    /// Die sechs, in der Reihenfolge ihres Hinzukommens: die vier Befehle aus
+    /// Die Rufer, in der Reihenfolge ihres Hinzukommens: die vier Befehle aus
     /// der Auswahl ([`Self::auftrag_stellen`]), das Stapel-Umbenennen
     /// ([`Self::stapel_beauftragen`]), das bestaetigte Loeschen
     /// ([`Self::loeschauftrag_stellen`]), der Abwurf aus einer fremden
-    /// Anwendung ([`Self::abwurf_ausfuehren`]) und die zwei Zweige des
-    /// Kontextmenues, die einen Auftrag stellen ([`Self::zipauftrag_stellen`]
-    /// und [`Self::entpackauftrag_stellen`]).
+    /// Anwendung ([`Self::abwurf_ausfuehren`]), die zwei Archivzweige des
+    /// Kontextmenues ([`Self::zipauftrag_stellen`] und
+    /// [`Self::entpackauftrag_stellen`]) und seit dem 260930 das Duplizieren
+    /// aus demselben Menue ([`Self::duplikatauftrag_stellen`]), das als
+    /// einziger Rufer aus dem Rueckruf eines Blattes kommt. Wie viele es sind,
+    /// sagt `grep -n 'auftrag_starten(' crates/krk-ui/src/appkit/anwendung.rs`
+    /// und keine Zahl in dieser Prosa.
     ///
-    /// **`ausgelassen` ist bei vier der sechs Wege null**, und das ist keine
-    /// Nachlaessigkeit: allein die zwei Zweige des Kontextmenues nehmen einen
+    /// **`ausgelassen` ist bei jedem Weg ausser den zwei Archivzweigen null**,
+    /// und das ist keine Nachlaessigkeit: allein Zip und Unzip nehmen einen
     /// markierten Eintrag aus dem Lauf. Was die Zahl bedeutet und warum sie erst
     /// im Abschlusstext erscheint, steht bei [`Vorgang::ausgelassen`].
     ///
@@ -8570,13 +8828,24 @@ impl Anwendungsdelegierter {
     ///
     /// Beide Rechnungen stehen hier und nicht im Blatt, weil das Blatt die
     /// [`Art`] nicht kennt und nicht kennenlernen soll.
+    ///
+    /// **Seit dem 260930 steht vor beiden die Wahl des Blattes**, ueber
+    /// [`operationen::konfliktform`], vollstaendig und ohne Auffangzweig: das
+    /// Duplizieren fragt ueber denselben Kanal nach einem **anderen Namen**
+    /// und nie nach dem Ersetzen, und seine Frage bekommt deshalb nicht das
+    /// Konfliktblatt, sondern das Namensblatt erneut
+    /// ([`Self::duplikatname_nachfragen`]). Jede andere Art nimmt den Zweig
+    /// darunter, der bis dahin der ganze Rumpf war.
     fn konflikt_fragen(&self, frage: Konfliktfrage, art: &Art) {
+        let gestalt = match operationen::konfliktform(art) {
+            Konfliktform::Blatt(gestalt) => gestalt,
+            Konfliktform::Namensnachfrage => return self.duplikatname_nachfragen(frage),
+        };
         let Some(fenster) = self.ivars().fenster.get() else {
             return;
         };
 
         let vorschlag = freier_name(&frage.ziel);
-        let gestalt = operationen::konfliktgestalt(art);
         let antwortweg = frage.antwort.clone();
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = konflikt::zeigen(
@@ -8673,12 +8942,13 @@ impl Anwendungsdelegierter {
             Art::UmbenennenImStapel { neue_namen } => {
                 if let Some(erster) = neue_namen.first() {
                     // **Der Rueckgabewert wird hier bewusst verworfen.**
-                    // `eintrag_waehlen` hat fuenf Aufrufer, und zwei von ihnen
+                    // `eintrag_waehlen` hat mehrere Aufrufer, und zwei von ihnen
                     // werten `Auswahlversuch::Unbekannt` aus: `eintrag_anspringen`
                     // (C10) meldet den fehlenden Namen, und die Messhandlung
                     // `Auswaehlen` macht daraus einen Abbruchgrund des
-                    // Messlaufs. Die drei uebrigen verwerfen ihn, und
-                    // erreichbar ist er von ihnen hier und in
+                    // Messlaufs. Die uebrigen verwerfen ihn, und
+                    // erreichbar ist er von ihnen hier, im Zweig
+                    // `Art::Duplizieren` darunter und in
                     // `anlegen_ausfuehren`; in `umbenennen_ausfuehren` nicht,
                     // weil dort der Ordner unmittelbar vor der Auffrischung aus
                     // derselben Seite kommt. Der Vorgang laeuft im
@@ -8709,16 +8979,36 @@ impl Anwendungsdelegierter {
             // damit moeglicherweise mehrere Ordner an; welcher von ihnen die
             // Auswahl bekaeme, waere eine willkuerliche Wahl.
             //
-            // **`Art::Duplizieren` steht hier ohne eigenen Rumpf, solange kein
-            // Weg der Oberflaeche einen solchen Auftrag stellt.** Die Art ist
-            // im Kern gebaut und hier allein eingeordnet; wer ihr den ersten
-            // Rufer gibt, gibt ihr an dieser Stelle auch ihren Zweig.
+            // **Beim Duplizieren greift keiner der zwei Gruende** (Entscheidung
+            // 9 des Plans
+            // `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`):
+            // es entsteht genau ein Eintrag, der Nutzer hat ihn eben benannt,
+            // und als Naechstes weggeraeumt wird nichts. Die Auswahl steht
+            // deshalb danach auf dem Duplikat, wie nach dem Anlegen.
             Art::Kopieren { .. }
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
             | Art::Zippen { .. }
-            | Art::Entpacken { .. }
-            | Art::Duplizieren { .. } => {}
+            | Art::Entpacken { .. } => {}
+            // Der Name ist der zuletzt beauftragte, weil jede Antwort auf die
+            // Namensnachfrage ihn in die Art geschrieben hat (`Vorgang::art`).
+            // Gewaehlt wird nur, wenn der Bericht das Duplikat als entstanden
+            // ausweist; ein abgebrochener Lauf und eine uebersprungene Quelle
+            // lassen die Auswahl stehen. Blendet ein Filtertext das Duplikat
+            // aus, bleibt es still, wie beim Anlegen.
+            Art::Duplizieren { neuer_name } => {
+                if operationen::duplikat_entstanden(bericht) {
+                    // **Bewusst verworfen.** `Unbekannt` ist ueber die
+                    // Datentraegerwache erreichbar, und gemeldet wird dann
+                    // nichts; die Begruendung steht im Doc-Kommentar von
+                    // `anlegen_ausfuehren`. So entschieden vom Nutzer am 260810
+                    // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
+                    let _ = self
+                        .dateifenster(vorgang.seite)
+                        .quelle()
+                        .eintrag_waehlen(neuer_name);
+                }
+            }
         }
 
         // **Der vierte Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**
@@ -12890,7 +13180,7 @@ mod kontextproben {
         /// Befehl, Zweig und die Nadel, an der die Wirkung des Zweigs zu
         /// erkennen ist. Die Nadeln stehen zusammengesetzt da, aus demselben
         /// Grund wie in der Probe darueber.
-        const ZWEIGE: [(&str, &str, &str); 5] = [
+        const ZWEIGE: [(&str, &str, &str); 6] = [
             (
                 "Kontextbefehl::OeffnenMit",
                 "keine_anwendung_melden",
@@ -12905,6 +13195,14 @@ mod kontextproben {
                 "Kontextbefehl::Entpacken",
                 "entpackauftrag_stellen",
                 concat!("Auftrag::", "entpacken("),
+            ),
+            // Die Wirkung des Duplizierens ist das Blatt: der Auftrag folgt
+            // erst aus dessen Rueckruf, und die Kette dahinter haelt
+            // `der_duplikatweg_reisst_nirgends_ab`.
+            (
+                "Kontextbefehl::Duplizieren",
+                "duplikat_erfragen",
+                concat!("namenseingabe::", "geprueft_zeigen("),
             ),
             (
                 "Kontextbefehl::ImFinderOeffnen",
@@ -12934,6 +13232,128 @@ mod kontextproben {
                 rumpf(&datei, zweig).contains(wirkung),
                 "{zweig} ruft {wirkung} nicht: der Zweig ist da und wirkt nicht"
             );
+        }
+    }
+
+    /// Der Duplikatweg reisst nirgends ab: Klick, Blatt, Auftrag, erneute
+    /// Frage (260930).
+    ///
+    /// **Drei Glieder, weil die Tafel darueber nur das erste sieht.** Sie
+    /// haelt, dass der Zweig das Blatt oeffnet; was aus dem Rueckruf des
+    /// Blattes wird, steht in einer Abschlussfunktion, die kein Zweig der
+    /// Verzweigung ist. Ohne diese Probe koennte der Rueckruf den Auftrag
+    /// vergessen, `duplikatauftrag_stellen` einen anderen Auftrag stellen oder
+    /// `konflikt_fragen` die Namensnachfrage an das Konfliktblatt geben, und
+    /// jede andere Probe bliebe gruen: das Blatt stuende da, und danach
+    /// geschaehe nichts oder das Falsche.
+    ///
+    /// Gehalten wird je Glied eine Nadel im Rumpf, und fuer die Gabelung in
+    /// `konflikt_fragen` die **Paarung** auf einer Zeile, wie in der Tafel
+    /// darueber: `Konfliktform::Namensnachfrage` und `duplikatname_nachfragen`
+    /// muessen beisammenstehen, sonst koennte der Wert an den anderen Zweig
+    /// gehen.
+    ///
+    /// **Was sie nicht sieht:** ob die Nadel in einem Zweig steht, den der
+    /// Rumpf nie erreicht. Sie liest Zeilen und keinen Datenfluss.
+    #[test]
+    fn der_duplikatweg_reisst_nirgends_ab() {
+        let datei = diese_datei();
+
+        let erfragen = rumpf(&datei, "duplikat_erfragen");
+        assert!(
+            erfragen.contains(concat!("namenseingabe::", "geprueft_zeigen(")),
+            "duplikat_erfragen oeffnet das Namensblatt nicht"
+        );
+        assert!(
+            erfragen.contains(concat!("duplikatauftrag_", "stellen(")),
+            "der Rueckruf des Namensblatts stellt den Auftrag nicht"
+        );
+
+        let stellen = rumpf(&datei, "duplikatauftrag_stellen");
+        assert!(
+            stellen.contains(concat!("Auftrag::", "duplizieren(")),
+            "duplikatauftrag_stellen stellt keinen Duplizierauftrag"
+        );
+
+        let gabelung = rumpf(&datei, "konflikt_fragen");
+        let paarungen = gabelung
+            .lines()
+            .filter(|zeile| {
+                zeile.contains("Konfliktform::Namensnachfrage")
+                    && zeile.contains(concat!("duplikatname_", "nachfragen("))
+            })
+            .count();
+        assert_eq!(
+            paarungen, 1,
+            "die Namensnachfrage und ihr Zweig stehen nicht auf genau einer Zeile beisammen: \
+             der vergebene Name bekaeme das Konfliktblatt"
+        );
+    }
+
+    /// Jede Antwort auf die Namensnachfrage erreicht den Arbeitsfaden
+    /// (260930).
+    ///
+    /// **Der Arbeitsfaden wartet, solange das Blatt steht.** Ein Ausgang des
+    /// Blattes, der keine Antwort schickt, liesse ihn fuer immer warten; das
+    /// ist das Risiko, das der Plan an erster Stelle nennt. Gehalten wird am
+    /// Rumpf, dass beide Antworten dastehen, ein Name als `UmbenennenIn` und
+    /// alles andere als `Abbrechen`, dass danach `blatt_geschlossen` folgt,
+    /// damit der naechste Durchgang eine weitere Frage abholt, und dass das
+    /// Konfliktblatt hier **nicht** aufgeht: es boete das Ersetzen an, das
+    /// der Kern fuer diese Art nicht kennt.
+    ///
+    /// **Was sie nicht sieht:** ob die Antwort auf jedem Weg des Rueckrufs
+    /// wirklich gesendet wird. Dass der Bauer des Blattes den Rueckruf auf
+    /// jedem Weg genau einmal ruft, halten die Proben in `namenseingabe.rs`.
+    #[test]
+    fn jede_antwort_auf_die_namensnachfrage_erreicht_den_arbeitsfaden() {
+        let rumpf = rumpf(&diese_datei(), "duplikatname_nachfragen");
+        for nadel in [
+            "Konfliktantwort::UmbenennenIn",
+            "Konfliktantwort::Abbrechen",
+            concat!("blatt_", "geschlossen("),
+        ] {
+            assert!(
+                rumpf.contains(nadel),
+                "duplikatname_nachfragen enthaelt {nadel} nicht: eine Antwort erreicht den \
+                 Arbeitsfaden nicht"
+            );
+        }
+        assert!(
+            !rumpf.contains(concat!("konflikt::", "zeigen(")),
+            "die Namensnachfrage oeffnet das Konfliktblatt"
+        );
+    }
+
+    /// Der Duplikatweg stellt auf dem Hauptfaden keinen Systemaufruf (260930).
+    ///
+    /// **Daran haengt die Zusage, dass diese Arbeit keinen Abnahmelauf gegen
+    /// die zehn Zeitzusagen schuldet** (`## Where this work stops` des Plans):
+    /// der Befund liest das Ordnermodell, die Pruefung liest den Text, und
+    /// alles, was die Platte fragt, laeuft im Arbeitsfaden. Gehalten wird an
+    /// den Codezeilen der drei Ruempfe, dass weder `fs::` noch `metadata(`
+    /// noch `exists(` darin steht.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. Sie liest die Ruempfe und nicht den Aufrufbaum darunter;
+    /// `duplikatbefund` und `namensgrund` tragen ihre Zusage in ihren eigenen
+    /// Doc-Kommentaren, und `betroffene` und `duplikatbezug` fragen das
+    /// Modell, das der Leser des Ordners gefuellt hat.
+    #[test]
+    fn der_duplikatweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        for name in [
+            "duplikat_erfragen",
+            "duplikatauftrag_stellen",
+            "duplikatname_nachfragen",
+        ] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in ["fs::", "metadata(", "exists("] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
         }
     }
 

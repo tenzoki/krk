@@ -358,7 +358,9 @@ use crate::kommandos::abwurfregel::{
     self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang,
 };
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
-use crate::kommandos::kontextmenue::{self, Anwendung, Entpackbefund, Kontextbefehl, Kontextwahl};
+use crate::kommandos::kontextmenue::{
+    self, Anwendung, Duplikatbefund, Entpackbefund, Kontextbefehl, Kontextwahl,
+};
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis};
@@ -2083,9 +2085,11 @@ impl DateifensterQuelle {
     /// dagegen ausdruecklich vorgesehen.
     ///
     /// **Ein Ziel setzt jene Huelle nicht, und hier bekommt der Eintrag
-    /// eines.** Das Hauptmenue laesst die Antwortkette entscheiden; diese drei
-    /// Eintraege koennen das nicht, denn ihr Befehl haengt an der Fensterseite,
-    /// aus der der Rechtsklick kam, und die kennt nur diese Quelle.
+    /// eines.** Das Hauptmenue laesst die Antwortkette entscheiden; die
+    /// eigenen Eintraege koennen das nicht, denn ihr Befehl haengt an der
+    /// Fensterseite, aus der der Rechtsklick kam, und die kennt nur diese
+    /// Quelle. Wie viele es sind, sagt [`Kontextbefehl::ALLE`] und keine Zahl
+    /// in dieser Prosa.
     ///
     /// **Kein Eintrag wird ausgegraut und keiner weggelassen**, auch dann
     /// nicht, wenn er nichts vorfinden wird. Was er vorfindet, entscheidet
@@ -2284,6 +2288,27 @@ impl DateifensterQuelle {
         let tab = tabs.aktiver();
         let betroffen = operationen::betroffene(tab.modell(), tab.ordner());
         kontextmenue::entpackziel(tab.modell(), &betroffen.pfade, tab.ordner())
+    }
+
+    /// Worauf der Eintrag „Duplizieren…" des Kontextmenues in diesem
+    /// Dateifenster wirkt (260930).
+    ///
+    /// Die Bauform von [`Self::entpackbefund`], aus demselben Zuschnitt und
+    /// mit derselben Begruendung: die Regel steht in
+    /// [`kontextmenue::duplikatbezug`] und ist ohne Fenster pruefbar, sie
+    /// fragt neben den betroffenen Eintraegen den **Typ aus den sichtbaren
+    /// Zeilen**, also das [`Ordnermodell`] des sichtbaren Tabs, und beide
+    /// Fragen gehen durch dieselbe Ausleihe, damit Auswahl und Bestand aus
+    /// einem Stand desselben Ordners kommen.
+    ///
+    /// **Kein Dateizugriff.** Der Typ ist der, den der Leser des Ordners
+    /// erhoben hat; ob der Eintrag im Augenblick des Anlegens noch eine
+    /// gewoehnliche Datei ist, entscheidet der Kern im Arbeitsfaden.
+    pub fn duplikatbefund(&self) -> Duplikatbefund {
+        let tabs = self.ivars().tabs.borrow();
+        let tab = tabs.aktiver();
+        let betroffen = operationen::betroffene(tab.modell(), tab.ordner());
+        kontextmenue::duplikatbezug(tab.modell(), &betroffen.pfade)
     }
 
     /// Legt den Pfad des angezeigten Ordners in die Zwischenablage (C1).
@@ -5622,11 +5647,12 @@ impl Dateifenster {
         }
 
         // Das Kontextmenue aus C1 der Runde 6. Es entsteht hier leer und
-        // bekommt seine vier Eintraege erst beim Rechtsklick, in
+        // bekommt seine Eintraege erst beim Rechtsklick, in
         // `menuNeedsUpdate:` oben; ein Menue mit festem Bestand koennte die
         // betroffenen Eintraege nicht nennen, weil die sich zwischen zwei
-        // Klicks aendern. Seit der Runde 17 sind es vier statt einem: der
-        // Freigabeeintrag des Systems und die drei eigenen Befehle.
+        // Klicks aendern. Bis zur Runde 17 war es allein der Freigabeeintrag
+        // des Systems; seither stehen die eigenen Befehle daneben, und wie
+        // viele, sagt `Kontextbefehl::ALLE`.
         //
         // SAFETY: `setMenu:` ist als Setzer einer `strong`-Eigenschaft
         // unsicher gebunden und verlangt nichts weiter, als dass das Menue

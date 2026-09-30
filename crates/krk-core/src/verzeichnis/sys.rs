@@ -515,7 +515,8 @@ const COPYFILE_CLONE: u32 = 0x0100_0000;
 ///
 /// **Es steht in beiden Uebertragungsarten und nicht nur in der einen.** Ueber
 /// ein vorhandenes Ziel entscheidet die Konfliktregel und nicht `copyfile(3)`,
-/// und diese Zusage haengt an keiner Wahl, die der Aufrufer trifft:
+/// beim Duplizieren die Namensfrage (`operation::duplizieren`, seit dem
+/// 260930), und diese Zusage haengt an keiner Wahl, die der Aufrufer trifft:
 /// [`Uebertragungsart::ImmerBytes`] bekommt sie genauso wie
 /// [`Uebertragungsart::KlonenWennMoeglich`], die es frueher ueber
 /// [`COPYFILE_CLONE`] mitbrachte.
@@ -682,7 +683,8 @@ extern "C" fn statusrueckruf(
 ///
 /// Ein vorhandenes Ziel laesst den Aufruf scheitern, und zwar in **jeder**
 /// [`Uebertragungsart`]: [`COPYFILE_EXCL`] steht ausserhalb der Wahl. Ueber ein
-/// vorhandenes Ziel entscheidet die Konfliktregel, nicht diese Funktion.
+/// vorhandenes Ziel entscheidet die Konfliktregel, beim Duplizieren die
+/// Namensfrage (`operation::duplizieren`), nicht diese Funktion.
 pub fn datei_kopieren(
     quelle: &Path,
     ziel: &Path,

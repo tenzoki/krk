@@ -9,8 +9,11 @@
 //! Uebergabe an das Standardprogramm aus C3, und seit dem 260812
 //! [`nichts_zu_teilen`] fuer das Teilen aus C1 der Runde 6, und seit der
 //! Runde 17 [`nichts_zu_packen`], [`kein_archiv`], [`mehrere_archive`] und
-//! [`kein_finder`] und seit dem 260907 [`nichts_anzuzeigen`] fuer die
-//! eigenen Eintraege des Kontextmenues, deren Regel in
+//! [`kein_finder`], seit dem 260907 [`nichts_anzuzeigen`] und seit dem 260930
+//! [`duplikatfrage`], [`duplikat_bestaetigen`], [`name_vergeben`],
+//! [`nichts_zu_duplizieren`], [`mehrere_zu_duplizieren`],
+//! [`ordner_nicht_zu_duplizieren`] und [`verknuepfung_nicht_zu_duplizieren`]
+//! fuer die eigenen Eintraege des Kontextmenues, deren Regel in
 //! [`super::kontextmenue`] steht, und seit der Runde 22 [`Dateiablage`],
 //! [`namenszeilen`], [`ablagemeldung`] und [`verweise_abgewiesen`] fuer die
 //! Dateiverweise, die `cmd+c` und `cmd+x` im Dateifenster ablegen, und seit
@@ -123,8 +126,8 @@ use krk_core::ablage::neuerungen::gekuerzt;
 #[cfg(test)]
 use krk_core::ablage::neuerungen::HOECHSTENS_EINZELN;
 use krk_core::operation::{
-    Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Uebersprungen,
-    name_pruefen,
+    Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Namensfehler,
+    Uebersprungen, name_pruefen,
 };
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Ordnermodell;
@@ -517,10 +520,11 @@ fn ueberschrift(art: &Art) -> &'static str {
 /// annimmt; fiele er still weg, stuende das Blatt in der vierantwortigen
 /// Gestalt da, ohne dass eine Probe es saehe.
 ///
-/// Gefragt wird sie ueber [`konfliktgestalt`], und die eine Stelle, die diese
-/// ruft, ist `Anwendungsdelegierter::konflikt_fragen`; sie reicht die Vorgabe
-/// an `crate::appkit::blaetter::konflikt::zeigen` weiter. Das Blatt selbst
-/// kennt die [`Art`] nicht und soll sie nicht kennenlernen.
+/// Gefragt wird sie ueber [`konfliktgestalt`], das seit dem 260930 allein
+/// [`konfliktform`] ruft, und die eine Stelle, die jenes ruft, ist
+/// `Anwendungsdelegierter::konflikt_fragen`; sie reicht die Vorgabe an
+/// `crate::appkit::blaetter::konflikt::zeigen` weiter. Das Blatt selbst kennt
+/// die [`Art`] nicht und soll sie nicht kennenlernen.
 #[must_use]
 pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
     match art {
@@ -623,9 +627,11 @@ pub struct Konfliktgestalt {
 
 /// Die Vorgabe des Konfliktblattes fuer diese [`Art`].
 ///
-/// Gefragt wird sie an genau einer Stelle, naemlich in
-/// `Anwendungsdelegierter::konflikt_fragen`, und die reicht sie an
-/// `crate::appkit::blaetter::konflikt::zeigen` weiter.
+/// Gefragt wird sie an genau einer Stelle, naemlich in [`konfliktform`], und
+/// ueber deren Wert reicht `Anwendungsdelegierter::konflikt_fragen` sie an
+/// `crate::appkit::blaetter::konflikt::zeigen` weiter. Bis zum 260930 fragte
+/// `konflikt_fragen` unmittelbar; seit das Duplizieren seine Konfliktfrage mit
+/// einem anderen Blatt beantwortet, steht die Wahl des Blattes davor.
 ///
 /// `#[must_use]`: sie rechnet nur und wirkt nicht; fiele sie still weg, bekaeme
 /// das Blatt eine Vorgabe, die niemand gerechnet hat.
@@ -634,6 +640,54 @@ pub fn konfliktgestalt(art: &Art) -> Konfliktgestalt {
     Konfliktgestalt {
         genau_ein_ziel: erzeugt_genau_ein_ziel(art),
         ersetzung: ersetzungsweg(art),
+    }
+}
+
+/// Mit welchem Blatt der Hauptfaden die Konfliktfrage einer [`Art`]
+/// beantwortet (260930).
+///
+/// **Zwei Fragen reisen ueber denselben Kanal**, und sie brauchen zwei
+/// Blaetter. Das Kopieren, Verschieben, Packen und Entpacken fragen „am Ziel
+/// steht schon ein Eintrag, was nun?" und bekommen das Konfliktblatt mit den
+/// Antworten Ersetzen, Ueberspringen, Umbenennen, Abbrechen. Das Duplizieren
+/// fragt „der Name ist vergeben, unter welchem anderen?" und bekommt das
+/// Namensblatt erneut, mit dem Grund unter dem Feld; eine Antwort, die
+/// ersetzt, gibt es auf diesem Weg nicht (`krk_core::operation::Art::Duplizieren`).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Konfliktform {
+    /// Das Konfliktblatt, mit dieser Vorgabe.
+    Blatt(Konfliktgestalt),
+    /// Das Namensblatt, erneut, mit dem zuletzt versuchten Namen als Vorgabe
+    /// und dem Grund unter dem Feld.
+    Namensnachfrage,
+}
+
+/// Welches Blatt die Konfliktfrage dieser [`Art`] bekommt.
+///
+/// Die vierte vollstaendige Rechnung ueber [`Art`] in dieser Datei, und wie
+/// die drei davor ohne Auffangzweig: eine weitere Vorgangsart haelt den Bau
+/// hier an, statt still das Konfliktblatt zu bekommen, das fuer sie das
+/// Ersetzen anboete. Gefragt wird sie an genau einer Stelle,
+/// `Anwendungsdelegierter::konflikt_fragen`, die ueber den Wert vollstaendig
+/// verzweigt.
+///
+/// **Die Arten, die nie fragen, bekommen trotzdem einen Wert**, denselben wie
+/// bei [`ersetzungsweg`] und aus demselben Grund: die Rechnung ist
+/// vollstaendig, und ein Zweig, der spaeter fragt, findet seine Zeile vor.
+///
+/// `#[must_use]`: der Wert entscheidet, welches Blatt aufgeht; fiele er still
+/// weg, stuende das Konfliktblatt vor einer Frage, die es nicht beantworten
+/// kann.
+#[must_use]
+pub fn konfliktform(art: &Art) -> Konfliktform {
+    match art {
+        Art::Duplizieren { .. } => Konfliktform::Namensnachfrage,
+        Art::Kopieren { .. }
+        | Art::Verschieben { .. }
+        | Art::InDenPapierkorb
+        | Art::UmbenennenImStapel { .. }
+        | Art::Zippen { .. }
+        | Art::Entpacken { .. } => Konfliktform::Blatt(konfliktgestalt(art)),
     }
 }
 
@@ -742,6 +796,22 @@ pub fn abschlusstext(
         ));
     }
     text
+}
+
+/// Ob ein Duplizierlauf sein Duplikat angelegt hat (260930).
+///
+/// **Gefragt wird am Bericht und nicht am Dateisystem**: der Hauptfaden
+/// stellt keinen Systemaufruf. Ja heisst [`Abschluss::Fertig`] und genau ein
+/// uebertragener Eintrag; ein abgebrochener Lauf und ein Lauf, der die eine
+/// Quelle uebersprungen hat, haben nichts angelegt, und die Auswahl bleibt
+/// dann, wo sie war (Entscheidung 9 des Plans
+/// `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`).
+///
+/// Ein Rufer, der Abschlusszweig `Art::Duplizieren` in
+/// `Anwendungsdelegierter::vorgang_beenden`.
+#[must_use]
+pub fn duplikat_entstanden(bericht: &Bericht) -> bool {
+    bericht.abschluss == Abschluss::Fertig && bericht.eintraege == 1
 }
 
 /// Die Abschlussliste der uebersprungenen Eintraege mit ihrem Grund (C4).
@@ -854,6 +924,121 @@ pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
 #[must_use]
 fn schon_vergeben(name: &str) -> String {
     format!("es gibt schon einen Eintrag namens „{name}“")
+}
+
+// ----------------------------------------------------------------------
+// Duplizieren aus dem Kontextmenue (260930)
+// ----------------------------------------------------------------------
+
+/// Die Frage in der Kopfzeile des Namensblatts beim Duplizieren.
+///
+/// Nach dem Muster von [`Anlegeart::frage`]: dieselbe Bauform, ein anderer
+/// Gegenstand (Entscheidung 8 des Plans
+/// `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`).
+/// **Beim erneuten Aufgehen dieselbe Frage**, denn es ist dieselbe Frage; was
+/// sich unterscheidet, ist der Grund unter dem Feld ([`name_vergeben`]).
+#[must_use]
+pub fn duplikatfrage() -> &'static str {
+    "Wie soll das Duplikat heißen?"
+}
+
+/// Die Beschriftung der bestaetigenden Schaltflaeche des Namensblatts beim
+/// Duplizieren.
+///
+/// Sie nennt die Wirkung wie „Anlegen" beim Anlegen; „Abbrechen" daneben
+/// kommt aus den Standardschaltflaechen jedes Blattes.
+#[must_use]
+pub fn duplikat_bestaetigen() -> &'static str {
+    "Duplizieren"
+}
+
+/// Der Grund unter dem Feld, wenn das Namensblatt erneut aufgeht, weil der
+/// Name vergeben ist.
+///
+/// **Derselbe Satz wie beim Anlegen und beim Umbenennen** ([`schon_vergeben`]):
+/// dieselbe Lage des Ordners, derselbe Satz. `name` ist der zuletzt
+/// versuchte Name, den der Kern als vergeben gemeldet hat; beim ersten Versuch
+/// ist das meist der unveraenderte alte, und auch der bekommt keinen eigenen
+/// Satz.
+#[must_use]
+pub fn name_vergeben(name: &str) -> String {
+    schon_vergeben(name)
+}
+
+/// Die Pruefung des Namensblatts beim Duplizieren: der Grund, aus dem die
+/// getrimmte Eingabe nicht bestaetigt werden darf, oder `None`.
+///
+/// **Ueber [`name_pruefen`] und keine zweite Regel** (Entscheidung 6 des
+/// Plans): der leere Name, der Schraegstrich, das Nullbyte und `.` und `..`
+/// werden hier abgefangen, mit dem Satz aus `Namensfehler::grund`. Ob der
+/// Name vergeben ist, prueft diese Funktion nicht; das beantwortet das
+/// Dateisystem im Kern, und die Antwort oeffnet das Blatt erneut.
+///
+/// Die Signatur ist die von `blaetter::namenseingabe::Namenspruefung`, ein
+/// `fn` ohne Umgebung, damit das Blatt sie halten kann, ohne etwas zu
+/// halten. Getrimmt hat das Blatt vorher; die Pruefung trimmt nicht noch
+/// einmal, und `name_pruefen` faengt den Namen aus Leerzeichen ohnehin.
+#[must_use]
+pub fn namensgrund(eingabe: &str) -> Option<&'static str> {
+    name_pruefen(eingabe).err().map(Namensfehler::grund)
+}
+
+/// Der Satz, wenn „Duplizieren…" keinen Eintrag vorfindet.
+///
+/// **Ein weiterer Eingang von [`nichts_betroffen`]**, aus demselben Grund
+/// wie beim Packen und beim Aufdecken: der Eintrag wirkt auf
+/// [`betroffene`] und findet auf dieselbe Weise nichts. Ein Rufer, der
+/// Duplizier-Zweig des Kontextmenues
+/// (`Anwendungsdelegierter::duplikat_erfragen`), auf den Befund
+/// [`super::kontextmenue::Duplikatbefund::Nichts`].
+#[must_use]
+pub fn nichts_zu_duplizieren() -> String {
+    nichts_betroffen("zu duplizieren")
+}
+
+/// Der Satz, wenn „Duplizieren…" mehrere Eintraege vorfindet.
+///
+/// Er beginnt wie [`nichts_zu_duplizieren`], damit beide Saetze als dieselbe
+/// Folge lesbar sind, und nennt danach die Regel: dupliziert wird genau eine
+/// Datei. Derselbe Rufer, auf den Befund
+/// [`super::kontextmenue::Duplikatbefund::Mehrere`].
+#[must_use]
+pub fn mehrere_zu_duplizieren() -> String {
+    "nichts zu duplizieren: es sind mehrere Einträge markiert, und dupliziert wird genau \
+     eine Datei"
+        .to_owned()
+}
+
+/// Der Satz, wenn der eine betroffene Eintrag ein Ordner ist.
+///
+/// Er nennt den Namen, damit der Nutzer sieht, worauf der Klick gefallen
+/// ist, und die Regel aus dem Nutzerentscheid N1 vom 260930. Derselbe
+/// Rufer, auf den Befund [`super::kontextmenue::Duplikatbefund::Ordner`].
+#[must_use]
+pub fn ordner_nicht_zu_duplizieren(name: &str) -> String {
+    nicht_zu_duplizieren(name, "ein Ordner")
+}
+
+/// Der Satz, wenn der eine betroffene Eintrag eine Verknuepfung ist.
+///
+/// Dieselbe Bauform wie [`ordner_nicht_zu_duplizieren`], mit dem anderen
+/// Typ. Derselbe Rufer, auf den Befund
+/// [`super::kontextmenue::Duplikatbefund::Verknuepfung`].
+#[must_use]
+pub fn verknuepfung_nicht_zu_duplizieren(name: &str) -> String {
+    nicht_zu_duplizieren(name, "eine Verknüpfung")
+}
+
+/// Die gemeinsame Haelfte der zwei Saetze darueber.
+///
+/// Getrennt wird nur, was sich unterscheidet, naemlich der Typ; die Regel
+/// dahinter steht an einer Stelle.
+#[must_use]
+fn nicht_zu_duplizieren(name: &str, typ: &str) -> String {
+    format!(
+        "nichts zu duplizieren: „{name}“ ist {typ}, und dupliziert wird allein eine gewöhnliche \
+         Datei"
+    )
 }
 
 // ----------------------------------------------------------------------
@@ -2494,6 +2679,166 @@ mod tests {
             !finder.contains('\n'),
             "die Statuszeile ist einzeilig: {finder}"
         );
+    }
+
+    // ------------------------------------------------------------------
+    // Duplizieren aus dem Kontextmenue (260930)
+    // ------------------------------------------------------------------
+
+    /// Der Wortlaut jedes Satzes des Duplizierens, Zeichen fuer Zeichen.
+    ///
+    /// **Von Hand geschrieben und mit Umlauten**, weil das der Nutzerentscheid
+    /// N2 vom 260930 ist („ja, mach das auch auf deutsch") und keine Probe
+    /// die Naht zwischen Umlaut und Umschrift haelt: hier steht jeder Satz,
+    /// den der Nutzer auf diesem Weg liest, so da, wie er ihn liest.
+    #[test]
+    fn jeder_satz_des_duplizierens_traegt_seinen_wortlaut_mit_umlauten() {
+        assert_eq!(duplikatfrage(), "Wie soll das Duplikat heißen?");
+        assert_eq!(duplikat_bestaetigen(), "Duplizieren");
+        assert_eq!(
+            name_vergeben("bericht.txt"),
+            "es gibt schon einen Eintrag namens „bericht.txt“"
+        );
+        assert_eq!(
+            nichts_zu_duplizieren(),
+            "nichts zu duplizieren: nichts markiert und nichts ausgewählt"
+        );
+        assert_eq!(
+            mehrere_zu_duplizieren(),
+            "nichts zu duplizieren: es sind mehrere Einträge markiert, und dupliziert wird \
+             genau eine Datei"
+        );
+        assert_eq!(
+            ordner_nicht_zu_duplizieren("Unterlagen"),
+            "nichts zu duplizieren: „Unterlagen“ ist ein Ordner, und dupliziert wird allein \
+             eine gewöhnliche Datei"
+        );
+        assert_eq!(
+            verknuepfung_nicht_zu_duplizieren("verweis"),
+            "nichts zu duplizieren: „verweis“ ist eine Verknüpfung, und dupliziert wird \
+             allein eine gewöhnliche Datei"
+        );
+    }
+
+    /// Die Saetze der Statuszeile bleiben einzeilig, und der vergebene Name
+    /// bekommt denselben Satz wie beim Anlegen.
+    #[test]
+    fn die_saetze_des_duplizierens_sind_einzeilig_und_der_vergebene_name_teilt_seinen_satz() {
+        for satz in [
+            nichts_zu_duplizieren(),
+            mehrere_zu_duplizieren(),
+            ordner_nicht_zu_duplizieren("a"),
+            verknuepfung_nicht_zu_duplizieren("a"),
+        ] {
+            assert!(satz.starts_with("nichts zu duplizieren: "), "{satz}");
+            assert!(
+                !satz.contains('\n'),
+                "die Statuszeile ist einzeilig: {satz}"
+            );
+        }
+        let fehler = io::Error::from(io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            name_vergeben("a.txt"),
+            anlegefehler(Anlegeart::Datei, "a.txt", &fehler)
+        );
+    }
+
+    /// Die Pruefung des Namensblatts antwortet mit dem Satz aus
+    /// `Namensfehler::grund` und mit nichts sonst.
+    ///
+    /// Die fuenf Fehleingaben aus Entscheidung 6 des Plans und ein
+    /// gewoehnlicher Name, je gegen die Quelle des Satzes gehalten, damit
+    /// keine zweite Fassung entsteht.
+    #[test]
+    fn namensgrund_nennt_den_grund_aus_namensfehler_und_sonst_keinen() {
+        let tafel = [
+            ("", Some(Namensfehler::Leer)),
+            ("  ", Some(Namensfehler::Leer)),
+            ("a/b", Some(Namensfehler::Schraegstrich)),
+            (".", Some(Namensfehler::Punktname)),
+            ("..", Some(Namensfehler::Punktname)),
+            ("bericht.txt", None),
+        ];
+        for (eingabe, erwartet) in tafel {
+            assert_eq!(
+                namensgrund(eingabe),
+                erwartet.map(Namensfehler::grund),
+                "{eingabe:?}"
+            );
+        }
+    }
+
+    /// Die Tafel von [`konfliktform`] ueber alle Werte von [`Art`], von Hand
+    /// geschrieben.
+    ///
+    /// **Dieselbe zweite Haelfte wie bei den drei Rechnungen davor**: der
+    /// Uebersetzer erzwingt, dass jeder Wert beantwortet wird, nicht, dass
+    /// eine Probe jeden nennt. Allein das Duplizieren bekommt die
+    /// Namensnachfrage; jede andere Art bekommt das Konfliktblatt mit genau
+    /// der Vorgabe, die [`konfliktgestalt`] ihr rechnet.
+    #[test]
+    fn allein_das_duplizieren_bekommt_die_namensnachfrage() {
+        let ziel = PathBuf::from("/tmp/x");
+        let blatt = |genau_ein_ziel, ersetzung| {
+            Konfliktform::Blatt(Konfliktgestalt {
+                genau_ein_ziel,
+                ersetzung,
+            })
+        };
+        let tafel: [(Art, Konfliktform); 7] = [
+            (
+                Art::Kopieren { ziel: ziel.clone() },
+                blatt(false, Ersetzungsweg::Endgueltig),
+            ),
+            (
+                Art::Verschieben { ziel: ziel.clone() },
+                blatt(false, Ersetzungsweg::Endgueltig),
+            ),
+            (
+                Art::InDenPapierkorb,
+                blatt(false, Ersetzungsweg::Endgueltig),
+            ),
+            (
+                Art::UmbenennenImStapel {
+                    neue_namen: Vec::new(),
+                },
+                blatt(false, Ersetzungsweg::Endgueltig),
+            ),
+            (
+                Art::Zippen { ziel: ziel.clone() },
+                blatt(true, Ersetzungsweg::Papierkorb),
+            ),
+            (
+                Art::Entpacken {
+                    ziele: vec![ziel.clone()],
+                },
+                blatt(true, Ersetzungsweg::Papierkorb),
+            ),
+            (
+                Art::Duplizieren {
+                    neuer_name: "a".to_owned(),
+                },
+                Konfliktform::Namensnachfrage,
+            ),
+        ];
+        for (art, erwartet) in tafel {
+            assert_eq!(konfliktform(&art), erwartet, "{art:?}");
+        }
+    }
+
+    /// Ein Duplikat ist entstanden, wenn der Lauf fertig ist und genau einen
+    /// Eintrag uebertragen hat.
+    #[test]
+    fn ein_duplikat_ist_entstanden_wenn_der_lauf_fertig_ist_und_einen_eintrag_traegt() {
+        let bericht = |abschluss, eintraege| Bericht {
+            abschluss,
+            eintraege,
+            bytes: 0,
+            uebersprungen: Vec::new(),
+        };
+        assert!(duplikat_entstanden(&bericht(Abschluss::Fertig, 1)));
+        assert!(!duplikat_entstanden(&bericht(Abschluss::Fertig, 0)));
+        assert!(!duplikat_entstanden(&bericht(Abschluss::Abgebrochen, 1)));
     }
 
     // ------------------------------------------------------------------
