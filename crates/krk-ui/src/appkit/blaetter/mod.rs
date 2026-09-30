@@ -18,9 +18,13 @@
 //! gepflegten Ablagedateien mitbringt; es ist **das einzige, das auch ohne
 //! Befund aufgeht**, denn der Nutzer hat danach gefragt. Das zwoelfte ist das
 //! PIN-Blatt ([`pin`]) aus Schritt 5.4b der krkhome-Arbeit: es fragt vor dem
-//! Oeffnen von `secrets.txt` nach der PIN und ist das einzige, dessen
-//! bestaetigende Schaltflaeche erst mit einer gueltigen Eingabe wirkt
-//! ([`Blatt::bestaetigung_pruefen`]).
+//! Oeffnen von `secrets.txt` nach der PIN, und seine bestaetigende
+//! Schaltflaeche wirkt erst mit einer gueltigen Eingabe
+//! ([`Blatt::bestaetigung_pruefen`]). Bis zum 260930 war es das einzige
+//! Blatt dieser Bauart; seitdem prueft auch die Namenseingabe so, sobald ihr
+//! Bauer eine Pruefung bekommt ([`namenseingabe::geprueft_zeigen`]). Wer die
+//! Blaetter dieser Bauart zaehlen will, zaehlt die Rufer von
+//! [`Blatt::bestaetigung_pruefen`] und nicht diesen Kopf.
 //!
 //! **Daneben liegt seit Stufe 3 der Home-Arbeit ein Blatt, das keines dieser
 //! Huelle ist**: der Ordnerdialog von „Ort waehlen…“ ([`ortwahl`]) ist ein
@@ -961,8 +965,11 @@ impl Blatt {
     /// Laesst die Eingabetaste in einem bewachten Feld nur bestaetigen, solange
     /// `pruefen` ja sagt.
     ///
-    /// **Fuer ein Blatt, das eine abgewiesene Eingabe nicht schliessen soll**,
-    /// heute allein das PIN-Blatt. Die Taste faellt dann nicht an AppKit
+    /// **Fuer ein Blatt, das eine abgewiesene Eingabe nicht schliessen soll**:
+    /// das PIN-Blatt ([`pin`]) und die Namenseingabe, sobald ihre Vorlage eine
+    /// Pruefung traegt ([`namenseingabe::geprueft_zeigen`]); wer die Rufer
+    /// zaehlen will, zaehlt sie mit `grep -rn 'bestaetigung_pruefen(' crates/krk-ui/src`
+    /// und nicht hier. Die Taste faellt dann nicht an AppKit
     /// zurueck, sondern ist verbraucht: der Feldeditor machte sonst aus ihr
     /// ein Ende der Bearbeitung, und die Vorgabeschaltflaeche kaeme doch noch
     /// an die Reihe. Die Schaltflaeche selbst haelt der Aufrufer ueber

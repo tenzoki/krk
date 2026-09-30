@@ -154,7 +154,7 @@ Die Schritte 1 und 2 hängen nicht aneinander; sie landen trotzdem in der Nummer
    - Acceptance: `make check` grün. Jede Probe des Kopierens, Verschiebens, Packens und Entpackens in `crates/krk-core/tests/operation.rs` besteht mit unveränderter Erwartung. `Auftrag::duplizieren` hat in diesem Schritt allein Probenrufer; im Bündel ändert sich nichts Sichtbares.
    - Dependencies: none
 
-2. [IN PROGRESS] **Namensblatt: ein Bauer mit Grund, Prüfung und Abbruchmeldung**
+2. [DONE] **Namensblatt: ein Bauer mit Grund, Prüfung und Abbruchmeldung**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/blaetter/namenseingabe.rs`, `crates/krk-ui/src/appkit/blaetter/mod.rs` (allein Modulkopf und der Doc-Kommentar von `Blatt::bestaetigung_pruefen`)
    - Changes:
@@ -172,7 +172,7 @@ Die Schritte 1 und 2 hängen nicht aneinander; sie landen trotzdem in der Nummer
 
 ### Stufe B: der Befehl wirkt
 
-3. **Kontextmenü: der Eintrag, das Blatt, der Auftrag, die erneute Frage und die Auswahl**
+3. [IN PROGRESS] **Kontextmenü: der Eintrag, das Blatt, der Auftrag, die erneute Frage und die Auswahl**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/kommandos/kontextmenue.rs`, `crates/krk-ui/src/kommandos/operationen.rs`, `crates/krk-ui/src/appkit/tabelle.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:
