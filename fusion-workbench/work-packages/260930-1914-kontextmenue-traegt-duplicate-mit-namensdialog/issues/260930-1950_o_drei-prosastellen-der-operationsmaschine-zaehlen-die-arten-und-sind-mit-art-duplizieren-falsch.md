@@ -1,0 +1,16 @@
+Drei Prosastellen der Operationsmaschine zählen die Arten und sind mit `Art::Duplizieren` falsch oder unvollständig
+---
+Schritt 1 des Plans `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md` fügt `Art::Duplizieren` hinzu und darf allein die dort genannten Dateien anfassen. Drei Doc-Kommentare außerhalb dieser Liste nennen eine Zahl über die Arten oder eine Aufstellung der Rufer und stimmen seitdem nicht mehr (oder stimmten schon vorher nicht):
+
+1. `crates/krk-core/src/operation/umbenennen.rs`, Doc-Kommentar von `eintrag_umbenennen`: „Die Abbruchpruefung zwischen zwei Eintraegen steht wie bei den vier uebrigen Arten eine Ebene hoeher“. Bis zum Schritt 1 waren es vier (Kopieren, Verschieben, Papierkorb, Entpacken), seither fünf. Die Zahl fällt: „wie bei jeder anderen Art dieser Bahn“.
+2. `crates/krk-core/src/operation/umbenennen.rs`, Modulkopf, Schaubild der Rufer von `name_pruefen`: nennt `anlegen.rs` und `umbenennen`. Seit dem Schritt 1 ruft auch `duplizieren::eintrag_duplizieren` die Prüfung je Name, und `super::ziel_klaeren` (`operation/mod.rs`, über den Alias `namen_pruefen`) fehlte dort schon vorher.
+3. `crates/krk-core/src/operation/zippen.rs`, Modulkopf, Abschnitt „Warum das Packen neben der Quelle-fuer-Quelle-Schleife steht“: „reichte einen Zustand durch vier Arten hindurch, die ihn nicht ansehen“. Die Schleife trug vor dem Schritt 1 fünf Arten und trägt jetzt sechs; die Zahl war schon mit dem Entpacken falsch geworden. Die Zahl fällt: „durch jede andere Art der Schleife hindurch“.
+
+Daneben, kleiner: `crates/krk-core/src/verzeichnis/sys.rs` sagt an `COPYFILE_EXCL` und an `datei_kopieren` „Ueber ein vorhandenes Ziel entscheidet die Konfliktregel, nicht diese Funktion“. Für das Duplizieren entscheidet nicht die Konfliktregel, sondern die Antwort des Nutzers über `Steuerung::namen_erfragen`, die die Regel nicht liest; die Aussage bleibt für das Kopieren wahr und ist für den neuen Rufer unvollständig. Ein Satz „beim Duplizieren die Namensfrage“ genügt.
+
+Erhebung: `grep -n "vier uebrigen Arten\|vier Arten" crates/krk-core/src/operation/umbenennen.rs crates/krk-core/src/operation/zippen.rs` und `awk '/^\/\/! name_pruefen/,/^\/\/! umbenennen/' crates/krk-core/src/operation/umbenennen.rs`.
+
+Abnahme: keine der drei Stellen trägt eine Zahl über die Arten; das Schaubild in `umbenennen.rs` führt jeden Rufer von `name_pruefen`, den `grep -rn "name_pruefen(\|namen_pruefen(" crates/krk-core/src/operation` in Codezeilen zeigt; `make check` grün.
+---
+**Filed by:** code-implementer, Kai Stalmann <kai@stalmann.org>
+Gefunden beim Schritt 1 des Plans, beim Nachziehen der Zahlwörter in den erlaubten Dateien (`auftrag.rs`, `mod.rs`, `operationen.rs`, `auffrischung.rs`). Die Dateien dieses Datensatzes standen nicht auf der Liste des Schritts und sind unverändert; der Schritt 3 oder 5 desselben Plans kann sie mitnehmen, weil beide ohnehin Prosa über `Art::Duplizieren` nachziehen.

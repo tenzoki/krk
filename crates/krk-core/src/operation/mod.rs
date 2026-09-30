@@ -1,5 +1,5 @@
 //! Die Operationsmaschine: Kopieren, Verschieben, Loeschen, Anlegen,
-//! Umbenennen (C4), Packen, Entpacken.
+//! Umbenennen (C4), Packen, Entpacken, Duplizieren.
 //!
 //! ```text
 //!            Auftrag ──> starten ──> Arbeitsfaden ──> ausfuehren
@@ -9,6 +9,7 @@
 //!                          │                    quelle_fuer_quelle
 //!                          │                             ├─> kopieren
 //!                          │                             ├─> verschieben
+//!                          │                             ├─> duplizieren
 //!  Hauptfaden <── Lauf ────┘                             ├─> entpacken
 //!    Meldung  <── Kanal <── Steuerung <──────────────────┴─> loeschen
 //!    abbrechen ─> AtomicBool ─┘                                 │
@@ -20,6 +21,12 @@
 //!
 //!            anlegen, umbenennen: ohne Faden, sofort fertig
 //! ```
+//!
+//! Das Duplizieren uebertraegt ueber den Dateirumpf des Kopierens
+//! (`kopieren::datei_uebertragen`) und stellt seine Konfliktfrage anders: nicht
+//! vor dem Schreiben und nicht nach dem Ersetzen, sondern nach einem anderen
+//! Namen, sobald das Dateisystem den gewuenschten als vergeben meldet. Die
+//! Begruendung steht im Kopf von [`duplizieren`].
 //!
 //! # Der Hauptfaden fuehrt keine Dateisystem-Arbeit aus
 //!
@@ -51,10 +58,13 @@
 //!
 //! Sie sammelt Eintrag und Grund und kommt in die Abschlussliste (C4). Nur zwei
 //! Dinge beenden einen Vorgang vorzeitig: der Abbruchbefehl des Nutzers und
-//! seine Antwort "abbrechen" auf eine Konfliktfrage.
+//! seine Antwort "abbrechen" auf eine Konfliktfrage. Beim Duplizieren ist das
+//! jede Antwort, die keinen anderen Namen nennt: der Vorgang hat eine Quelle,
+//! und ohne Namen bleibt ihm nichts zu tun.
 
 pub mod anlegen;
 pub mod auftrag;
+mod duplizieren;
 mod entpacken;
 pub mod fortschritt;
 mod kopieren;
@@ -236,7 +246,10 @@ pub fn starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
 /// ueber [`quelle_fuer_quelle`]. Das Packen hat **ein** Ziel fuer den ganzen
 /// Lauf, das einmal geoeffnet und einmal geschlossen wird; die Begruendung
 /// steht im Kopf von [`zippen`]. Das Entpacken ist sein Spiegelbild und laeuft
-/// in der Schleife: es gibt jedem Archiv seinen eigenen Zielordner.
+/// in der Schleife: es gibt jedem Archiv seinen eigenen Zielordner. Das
+/// Duplizieren laeuft ebenfalls in der Schleife, mit genau einer Quelle: sein
+/// Ziel gehoert dieser Quelle, und es erbt so die Abbruchpruefung und den
+/// Abschluss der Bahn, statt beide ein zweites Mal hinzuschreiben.
 ///
 /// **Der [`Papierkorb`] geht in beide Bahnen**, seit auch der Packlauf ein
 /// vorhandenes Ziel dorthin raeumt statt es zu loeschen.
@@ -251,7 +264,8 @@ fn ausfuehren(
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
         | Art::UmbenennenImStapel { .. }
-        | Art::Entpacken { .. } => quelle_fuer_quelle(auftrag, papierkorb, steuerung),
+        | Art::Entpacken { .. }
+        | Art::Duplizieren { .. } => quelle_fuer_quelle(auftrag, papierkorb, steuerung),
     }
 }
 
@@ -261,10 +275,11 @@ fn quelle_fuer_quelle(
     papierkorb: &dyn Papierkorb,
     steuerung: &mut Steuerung,
 ) -> Abschluss {
-    // Die Stelle laeuft mit, weil zwei Arten ihre zweite Angabe an ihr finden:
-    // das Stapel-Umbenennen den neuen Namen, das Entpacken den Zielordner.
-    // Beide stehen in der Art, Stelle fuer Stelle zu `quellen`; die uebrigen
-    // Arten dieser Bahn sehen die Stelle nicht.
+    // Die Stelle laeuft mit, weil einige Arten ihre zweite Angabe an ihr
+    // finden: das Stapel-Umbenennen den neuen Namen, das Entpacken den
+    // Zielordner, beide Stelle fuer Stelle zu `quellen`, und das Duplizieren
+    // seinen einen Namen an der Stelle 0. Die uebrigen Arten dieser Bahn sehen
+    // die Stelle nicht.
     for (stelle, pfad) in auftrag.quellen.iter().enumerate() {
         if steuerung.abgebrochen() {
             return Abschluss::Abgebrochen;
@@ -327,6 +342,24 @@ fn einen_abarbeiten(
             // wie beim Stapel-Umbenennen eine Zeile darueber.
             None => {
                 steuerung.ueberspringen(pfad, "es fehlt der Zielordner");
+                Ablauf::Weiter
+            }
+        },
+        Art::Duplizieren { .. } => match auftrag.neuer_name(stelle) {
+            Some(neuer_name) => duplizieren::eintrag_duplizieren(
+                &quelle,
+                neuer_name,
+                auftrag.uebertragung,
+                steuerung,
+            ),
+            // `Auftrag::duplizieren` nimmt genau eine Quelle, und ihr gehoert
+            // der Name. Der Fall ist trotzdem behandelt, aus demselben Grund
+            // wie beim Stapel-Umbenennen: die Felder des Auftrags sind
+            // oeffentlich, und eine von Hand angehaengte zweite Quelle soll in
+            // der Abschlussliste stehen, statt den einen Namen ein zweites Mal
+            // zu beanspruchen.
+            None => {
+                steuerung.ueberspringen(pfad, "es fehlt der neue Name");
                 Ablauf::Weiter
             }
         },

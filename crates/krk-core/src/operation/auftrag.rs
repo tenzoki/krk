@@ -6,10 +6,10 @@
 //!
 //! **Das Ziel steht in der Art und nicht daneben.** Kopieren und Verschieben
 //! brauchen einen Zielordner, Papierkorb und Stapelumbenennen nicht, das Packen
-//! eine Zieldatei und das Entpacken eine ganze Liste davon. Ein flaches Feld
-//! `ziel` haette bei mehreren Arten keinen Wert, den der Aufrufer sinnvoll
-//! fuellen koennte, und jede Auswertung muesste sich darauf verlassen, dass er
-//! ihn trotzdem richtig gefuellt hat.
+//! eine Zieldatei, das Entpacken eine ganze Liste davon und das Duplizieren
+//! einen Namen. Ein flaches Feld `ziel` haette bei mehreren Arten keinen Wert,
+//! den der Aufrufer sinnvoll fuellen koennte, und jede Auswertung muesste sich
+//! darauf verlassen, dass er ihn trotzdem richtig gefuellt hat.
 
 use std::path::{Path, PathBuf};
 
@@ -87,6 +87,38 @@ pub enum Art {
         /// Wie ein Zielordner heisst, rechnet die Oberflaeche; der Kern bekommt
         /// die fertigen Pfade.
         ziele: Vec<PathBuf>,
+    },
+    /// Die eine Quelle unter einem anderen Namen in **ihren eigenen** Ordner
+    /// duplizieren.
+    ///
+    /// **Eine eigene Art und kein Kopieren mit anderem Namen.**
+    /// [`Art::Kopieren`] traegt die Zusage "die Quellen behalten ihre Namen",
+    /// weist Quelle und Ziel im selben Ordner ab und klaert ein vorhandenes
+    /// Ziel ueber [`super::ziel_klaeren`], dessen Zweig "ueberschreiben" den
+    /// vorhandenen Eintrag endgueltig entfernt. Ein Feld "anderer Name" dort
+    /// liesse genau diesen Zweig erreichbar. Diese Art ruft ihn nie; uebertragen
+    /// wird ueber denselben Rumpf wie beim Kopieren
+    /// (`kopieren::datei_uebertragen`), und wo die Konfliktfrage sitzt, steht
+    /// im Kopf von [`super::duplizieren`].
+    ///
+    /// **Nicht zu ueberschreiben haelt das Dateisystem, und gefragt wird nach
+    /// jedem Versuch neu.** Eine Vorabpruefung gibt es nicht: angelegt wird
+    /// ausschliessend, und meldet das Dateisystem einen vergebenen Namen, geht
+    /// die Frage nach einem anderen Namen ueber den Konfliktkanal
+    /// ([`super::Meldung::Konflikt`]) an den Hauptfaden. Jede Antwort, die kein
+    /// Name ist, beendet den Vorgang, ohne etwas anzulegen. **Die
+    /// [`Konfliktregel`] des Auftrags gilt fuer diese Art deshalb nicht**: sie
+    /// regelt Ersetzen und Ueberspringen ueber mehrere Quellen, und diese Art
+    /// hat eine Quelle und ersetzt nie.
+    Duplizieren {
+        /// Der Name des Duplikats, **kein** Pfad.
+        ///
+        /// Der Name und nicht ein voller Zielpfad, damit "im selben Ordner" aus
+        /// der Bauform folgt: das Ziel ist der Pfad der Quelle mit diesem Namen
+        /// an der letzten Stelle. Ob er ein Name ist, prueft der Kern mit
+        /// [`super::name_pruefen`], bevor er ins Dateisystem geht; ob er frei
+        /// ist, beantwortet allein das Dateisystem.
+        neuer_name: String,
     },
 }
 
@@ -180,18 +212,45 @@ impl Auftrag {
         Self::neu(quellen, Art::Entpacken { ziele })
     }
 
+    /// Die genannte Datei unter dem neuen Namen in ihren eigenen Ordner
+    /// duplizieren.
+    ///
+    /// Genommen wird **eine** Quelle und keine Liste: die Art traegt einen
+    /// Namen, und ein zweiter Eintrag haette keinen.
+    ///
+    /// **Die Konfliktregel gilt fuer diese Art nicht**, gleich was
+    /// [`Auftrag::mit_konfliktregel`] danach setzt. Ein vergebener Name wird
+    /// unter jeder Regel erfragt und nie ersetzt, uebersprungen oder von selbst
+    /// umbenannt; die Begruendung steht an [`Art::Duplizieren`].
+    #[must_use]
+    pub fn duplizieren(quelle: PathBuf, neuer_name: impl Into<String>) -> Self {
+        Self::neu(
+            vec![quelle],
+            Art::Duplizieren {
+                neuer_name: neuer_name.into(),
+            },
+        )
+    }
+
     /// Der neue Name der Quelle an dieser Stelle, sofern die Art einen kennt.
     ///
     /// **Die Unterscheidung ist vollstaendig und hat keinen Auffangzweig**, wie
     /// die von [`Auftrag::zielordner`] zwei Bildschirmseiten tiefer. Eine
-    /// siebte Art, die wie diese eine Angabe **je Stelle** zu den Quellen
+    /// weitere Art, die wie diese eine Angabe **je Stelle** zu den Quellen
     /// fuehrt, haelt damit den Bau an. Mit `_ => None` uebersetzte sie
     /// anstandslos und meldete je Eintrag "es fehlt der neue Name" in die
     /// Abschlussliste statt in die Fehlerliste des Uebersetzers
     /// (Defekt `260826-1221`).
+    ///
+    /// **Das Duplizieren traegt einen Namen und keine Liste**, und er gehoert
+    /// der Stelle 0: [`Auftrag::duplizieren`] nimmt genau eine Quelle. Ein von
+    /// Hand gebauter Auftrag mit einer zweiten Quelle findet an deren Stelle
+    /// keinen Namen, und der Lauf meldet es je Eintrag, statt denselben Namen
+    /// ein zweites Mal zu vergeben.
     pub(crate) fn neuer_name(&self, stelle: usize) -> Option<&str> {
         match &self.art {
             Art::UmbenennenImStapel { neue_namen } => neue_namen.get(stelle).map(String::as_str),
+            Art::Duplizieren { neuer_name } => (stelle == 0).then_some(neuer_name.as_str()),
             Art::Kopieren { .. }
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
@@ -211,7 +270,8 @@ impl Auftrag {
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
             | Art::UmbenennenImStapel { .. }
-            | Art::Zippen { .. } => None,
+            | Art::Zippen { .. }
+            | Art::Duplizieren { .. } => None,
         }
     }
 
@@ -240,14 +300,17 @@ impl Auftrag {
 
     /// Der Zielordner, sofern die Art einen hat.
     ///
-    /// **Vier Arten haben keinen, und `None` ist bei keiner ein vergessener
-    /// Fall.** Beim Papierkorb liegt das Ziel ausserhalb des Auftrags. Beim
-    /// Stapel-Umbenennen bleibt jeder Eintrag, wo er ist. Beim Packen ist das
-    /// Ziel eine **Datei** und keine Ablage fuer weitere Eintraege; wer es hier
-    /// zurueckgaebe, gaebe einen Ordnerpfad heraus, der keiner ist. Beim
-    /// Entpacken hat **jede Quelle** ihren eigenen Zielordner; einer davon waere
-    /// eine willkuerliche Wahl, und die Stelle, die danach fragt, ist
-    /// [`Auftrag::entpackziel`].
+    /// **Allein das Kopieren und das Verschieben haben einen, und `None` ist
+    /// bei keiner anderen Art ein vergessener Fall.** Beim Papierkorb liegt das
+    /// Ziel ausserhalb des Auftrags. Beim Stapel-Umbenennen bleibt jeder
+    /// Eintrag, wo er ist. Beim Packen ist das Ziel eine **Datei** und keine
+    /// Ablage fuer weitere Eintraege; wer es hier zurueckgaebe, gaebe einen
+    /// Ordnerpfad heraus, der keiner ist. Beim Entpacken hat **jede Quelle**
+    /// ihren eigenen Zielordner; einer davon waere eine willkuerliche Wahl, und
+    /// die Stelle, die danach fragt, ist [`Auftrag::entpackziel`]. Beim
+    /// Duplizieren entsteht das Duplikat im Ordner der Quelle; der Auftrag
+    /// traegt dafuer einen Namen und keinen Ordner, und die Stelle, die danach
+    /// fragt, ist [`Auftrag::neuer_name`].
     #[must_use]
     pub fn zielordner(&self) -> Option<&PathBuf> {
         match &self.art {
@@ -255,7 +318,8 @@ impl Auftrag {
             Art::InDenPapierkorb
             | Art::UmbenennenImStapel { .. }
             | Art::Zippen { .. }
-            | Art::Entpacken { .. } => None,
+            | Art::Entpacken { .. }
+            | Art::Duplizieren { .. } => None,
         }
     }
 }
@@ -346,6 +410,31 @@ mod tests {
     fn eine_andere_art_kennt_kein_entpackziel() {
         let auftrag = Auftrag::zippen(vec![PathBuf::from("/tmp/a")], "/tmp/a.zip");
         assert_eq!(auftrag.entpackziel(0), None);
+    }
+
+    #[test]
+    fn ein_duplizierauftrag_traegt_eine_quelle_und_ihren_namen_an_der_stelle_null() {
+        let auftrag = Auftrag::duplizieren(PathBuf::from("/tmp/a.txt"), "b.txt");
+
+        assert_eq!(auftrag.quellen, vec![PathBuf::from("/tmp/a.txt")]);
+        assert_eq!(
+            auftrag.art,
+            Art::Duplizieren {
+                neuer_name: "b.txt".to_owned()
+            }
+        );
+        assert_eq!(auftrag.neuer_name(0), Some("b.txt"));
+        assert_eq!(
+            auftrag.neuer_name(1),
+            None,
+            "der Name gehoert der einen Quelle und keiner zweiten"
+        );
+        assert_eq!(auftrag.entpackziel(0), None);
+        assert_eq!(
+            auftrag.zielordner(),
+            None,
+            "das Duplikat entsteht im Ordner der Quelle, und der Auftrag traegt einen Namen"
+        );
     }
 
     #[test]

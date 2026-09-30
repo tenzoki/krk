@@ -469,13 +469,14 @@ fn ueberschrift(art: &Art) -> &'static str {
         Art::UmbenennenImStapel { .. } => "Umbenennen",
         Art::Zippen { .. } => "Packen",
         Art::Entpacken { .. } => "Entpacken",
+        Art::Duplizieren { .. } => "Duplizieren",
     }
 }
 
 /// Ob der Vorgang genau **eine** Zieldatei erzeugt.
 ///
 /// Die zweite vollstaendige Rechnung ueber [`Art`], und sie steht neben der
-/// ersten: wer einen siebten Wert hinzufuegt, findet die Stellen an einem
+/// ersten: wer einen weiteren Wert hinzufuegt, findet die Stellen an einem
 /// Fleck statt verstreut. Seit dem 260907 steht [`ersetzungsweg`] als dritte
 /// daneben, und [`konfliktgestalt`] fasst diese beiden zusammen, weil sie
 /// dieselbe Frage an dieselbe [`Art`] stellen.
@@ -488,7 +489,7 @@ fn ueberschrift(art: &Art) -> &'static str {
 /// (`decisions/260825-0711_*_welche-antworten-bietet-das-konfliktblatt-bei-genau-einer-zieldatei.md`,
 /// Moeglichkeit 2).
 ///
-/// Die sechs Werte und ihre Antwort:
+/// Die Werte und ihre Antwort:
 ///
 /// | Art | genau ein Ziel | warum |
 /// |---|---|---|
@@ -498,6 +499,13 @@ fn ueberschrift(art: &Art) -> &'static str {
 /// | UmbenennenImStapel | nein | je Quelle ein neuer Name |
 /// | Zippen | **ja** | ein Archiv fuer den ganzen Lauf |
 /// | Entpacken | wenn genau ein Archiv | je Archiv ein Zielordner |
+/// | Duplizieren | **ja** | eine Quelle, ein Duplikat |
+///
+/// **Das Duplizieren erzeugt genau ein Ziel und stellt trotzdem nicht die
+/// Frage dieses Blattes.** Sein Konflikt ist ein vergebener Name, und gefragt
+/// wird nach einem anderen Namen und nie nach dem Ersetzen
+/// (`krk_core::operation::Art::Duplizieren`). Der Wert steht hier, weil die
+/// Rechnung vollstaendig ist und die Aussage stimmt.
 ///
 /// **Das Entpacken haengt an einer Zahl und nicht am Wert**, und das ist die
 /// Folge der dritten Nutzerentscheidung dieser Runde: seit ein Vorgang mehrere
@@ -520,7 +528,7 @@ pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
         | Art::UmbenennenImStapel { .. } => false,
-        Art::Zippen { .. } => true,
+        Art::Zippen { .. } | Art::Duplizieren { .. } => true,
         Art::Entpacken { ziele } => ziele.len() == 1,
     }
 }
@@ -547,15 +555,15 @@ pub enum Ersetzungsweg {
 /// Welchen Weg das Ersetzen des vorhandenen Eintrags bei dieser [`Art`] nimmt.
 ///
 /// Die dritte vollstaendige Rechnung ueber [`Art`], und sie steht neben den
-/// beiden anderen: wer einen siebten Wert hinzufuegt, findet alle drei Stellen
+/// beiden anderen: wer einen weiteren Wert hinzufuegt, findet alle drei Stellen
 /// an einem Fleck.
 ///
 /// **Geraten wird hier nichts.** Jeder Wert bekommt den Weg, den sein
 /// Ausfuehrungszweig im Kern wirklich nimmt, und die Fallunterscheidung hat
-/// keinen Auffangzweig: eine siebte Vorgangsart haelt den Bau an, statt still
+/// keinen Auffangzweig: eine weitere Vorgangsart haelt den Bau an, statt still
 /// in eine Beschriftung zu fallen, die ihre Wirkung falsch ansagt.
 ///
-/// Die sechs Werte, ihr Weg und die Stelle, die ihn nimmt:
+/// Die Werte, ihr Weg und die Stelle, die ihn nimmt:
 ///
 /// | Art | Weg | wer raeumt |
 /// |---|---|---|
@@ -565,16 +573,22 @@ pub enum Ersetzungsweg {
 /// | UmbenennenImStapel | endgueltig | **niemand**, siehe unten |
 /// | Zippen | Papierkorb | `zielarchiv_klaeren` ueber die `Papierkorb`-Schnittstelle |
 /// | Entpacken | Papierkorb | `zielordner_klaeren` ueber dieselbe Schnittstelle |
+/// | Duplizieren | endgueltig | **niemand**, siehe unten |
 ///
-/// **Zwei Arten fragen nie, und sie bekommen trotzdem einen Wert.** Weder das
-/// Raeumen in den Papierkorb noch das Stapel-Umbenennen ruft
-/// `Steuerung::konflikt_loesen`; das Konfliktblatt steht in beiden Faellen
-/// nicht, und welchen Wert sie tragen, sieht der Nutzer heute nicht. Sie tragen
-/// `Endgueltig`, weil von den zwei moeglichen Irrtuemern nur einer etwas
-/// kostet: eine Beschriftung, die zu viel ankuendigt, erschreckt einmal; eine,
-/// die zu wenig ankuendigt, laesst den Nutzer eine Datei fuer holbar halten,
-/// die weg ist. Wer einer der beiden Arten spaeter einen Konfliktzweig gibt,
-/// aendert die Zeile hier mit.
+/// **Bei den Arten, die nie nach dem Ersetzen fragen, raeumt niemand, und sie
+/// bekommen trotzdem einen Wert.** Weder das Raeumen in den Papierkorb noch
+/// das Stapel-Umbenennen ruft `Steuerung::konflikt_loesen`; das Konfliktblatt
+/// steht in beiden Faellen nicht, und welchen Wert sie tragen, sieht der Nutzer
+/// heute nicht. **Das Duplizieren ersetzt nie**: es ruft `konflikt_loesen`
+/// ebenso wenig, seine Frage bei einem vergebenen Namen geht ueber
+/// `Steuerung::namen_erfragen` und lautet „unter welchem anderen Namen?", und
+/// jede Antwort, die kein Name ist, beendet den Vorgang, ohne etwas anzulegen.
+/// Eine Beschriftung ueber das Ersetzen hat an ihm keinen Gegenstand. Alle
+/// diese Arten tragen `Endgueltig`, weil von den zwei moeglichen Irrtuemern nur
+/// einer etwas kostet: eine Beschriftung, die zu viel ankuendigt, erschreckt
+/// einmal; eine, die zu wenig ankuendigt, laesst den Nutzer eine Datei fuer
+/// holbar halten, die weg ist. Wer einer dieser Arten spaeter einen Zweig gibt,
+/// der ersetzt, aendert die Zeile hier mit.
 ///
 /// `#[must_use]`: der Rueckgabewert entscheidet die Beschriftung der ersten
 /// Schaltflaeche des Konfliktblattes; fiele er still weg, stuende dort der Weg
@@ -583,8 +597,11 @@ pub enum Ersetzungsweg {
 pub fn ersetzungsweg(art: &Art) -> Ersetzungsweg {
     match art {
         Art::Kopieren { .. } | Art::Verschieben { .. } => Ersetzungsweg::Endgueltig,
-        // Die zwei ohne Konfliktzweig; die Begruendung steht im Doc-Kommentar.
-        Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } => Ersetzungsweg::Endgueltig,
+        // Die Arten, die nie nach dem Ersetzen fragen; die Begruendung steht im
+        // Doc-Kommentar.
+        Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } | Art::Duplizieren { .. } => {
+            Ersetzungsweg::Endgueltig
+        }
         Art::Zippen { .. } | Art::Entpacken { .. } => Ersetzungsweg::Papierkorb,
     }
 }
@@ -2096,7 +2113,7 @@ mod tests {
     }
 
     /// Seit S17c laeuft das Stapel-Umbenennen ueber die Operationsmaschine und
-    /// bekommt denselben Abschlusstext wie die vier uebrigen Arten. Die beiden
+    /// bekommt denselben Abschlusstext wie die uebrigen Arten. Die beiden
     /// Zahlen darin sagen zusammen, was `stapelbericht` vorher in einem eigenen
     /// Satz sagte: umbenannt wurden 48 Eintraege, bestaetigt hatte der Nutzer
     /// 50 Zeilen, also sind zwei stehengeblieben.
@@ -2625,16 +2642,21 @@ mod tests {
     // Was ein Vorgang erzeugt (Runde 17)
     // ------------------------------------------------------------------
 
-    /// Die Tafel ueber alle sechs Werte von [`Art`], von Hand geschrieben.
+    /// Die Tafel ueber alle Werte von [`Art`], von Hand geschrieben.
     ///
     /// **Sie ist die zweite Haelfte der Vollstaendigkeit.** Der Uebersetzer
     /// erzwingt, dass [`erzeugt_genau_ein_ziel`] jeden Wert beantwortet, aber
-    /// nicht, dass eine Probe jeden nennt; ein siebter Wert liefe sonst
+    /// nicht, dass eine Probe jeden nennt; ein weiterer Wert liefe sonst
     /// ungeprueft mit.
+    ///
+    /// Bis zum Duplizieren hiess die Probe
+    /// `genau_ein_ziel_erzeugt_allein_das_packen`; seither erzeugt auch das
+    /// Duplizieren genau ein Ziel, und das Entpacken eines einzelnen Archivs
+    /// tat es schon vorher (die Probe darunter).
     #[test]
-    fn genau_ein_ziel_erzeugt_allein_das_packen() {
+    fn genau_ein_ziel_erzeugen_das_packen_und_das_duplizieren() {
         let ziel = PathBuf::from("/tmp/x");
-        let tafel: [(Art, bool); 6] = [
+        let tafel: [(Art, bool); 7] = [
             (Art::Kopieren { ziel: ziel.clone() }, false),
             (Art::Verschieben { ziel: ziel.clone() }, false),
             (Art::InDenPapierkorb, false),
@@ -2650,6 +2672,12 @@ mod tests {
                     ziele: vec![ziel.clone(), ziel.clone()],
                 },
                 false,
+            ),
+            (
+                Art::Duplizieren {
+                    neuer_name: "a".to_owned(),
+                },
+                true,
             ),
         ];
         for (art, erwartet) in tafel {
@@ -2682,22 +2710,23 @@ mod tests {
         assert!(!erzeugt_genau_ein_ziel(&zwei));
     }
 
-    /// Die Tafel ueber alle sechs Werte von [`Art`], von Hand geschrieben.
+    /// Die Tafel ueber alle Werte von [`Art`], von Hand geschrieben.
     ///
     /// **Dieselbe zweite Haelfte wie eine Tafel weiter oben**, fuer die zweite
     /// Rechnung: der Uebersetzer erzwingt, dass [`ersetzungsweg`] jeden Wert
-    /// beantwortet, aber nicht, dass eine Probe jeden nennt. Ein siebter Wert
-    /// haelt den Bau an; ein sechster, der spaeter den Weg wechselt, faellt
+    /// beantwortet, aber nicht, dass eine Probe jeden nennt. Ein weiterer Wert
+    /// haelt den Bau an; ein vorhandener, der spaeter den Weg wechselt, faellt
     /// hier auf.
     ///
-    /// Die Zeilen fuer `InDenPapierkorb` und `UmbenennenImStapel` halten den
-    /// Wert der zwei Arten fest, die das Blatt nie zu sehen bekommen. Sie
-    /// stehen hier, damit ein spaeterer Konfliktzweig fuer eine von beiden
-    /// nicht stillschweigend die Beschriftung des anderen Falles bekommt.
+    /// Die Zeilen fuer `InDenPapierkorb`, `UmbenennenImStapel` und
+    /// `Duplizieren` halten den Wert der Arten fest, die nie nach dem Ersetzen
+    /// fragen. Sie stehen hier, damit ein spaeterer Zweig, der ersetzt, fuer
+    /// eine von ihnen nicht stillschweigend die Beschriftung des anderen
+    /// Falles bekommt.
     #[test]
     fn der_ersetzungsweg_folgt_der_stelle_die_wegraeumt() {
         let ziel = PathBuf::from("/tmp/x");
-        let tafel: [(Art, Ersetzungsweg); 6] = [
+        let tafel: [(Art, Ersetzungsweg); 7] = [
             (
                 Art::Kopieren { ziel: ziel.clone() },
                 Ersetzungsweg::Endgueltig,
@@ -2722,6 +2751,12 @@ mod tests {
                     ziele: vec![ziel.clone()],
                 },
                 Ersetzungsweg::Papierkorb,
+            ),
+            (
+                Art::Duplizieren {
+                    neuer_name: "a".to_owned(),
+                },
+                Ersetzungsweg::Endgueltig,
             ),
         ];
         for (art, erwartet) in tafel {
@@ -2751,6 +2786,9 @@ mod tests {
             Art::Zippen { ziel: ziel.clone() },
             Art::Entpacken {
                 ziele: vec![ziel.clone()],
+            },
+            Art::Duplizieren {
+                neuer_name: "a".to_owned(),
             },
         ];
         for art in arten {

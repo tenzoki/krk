@@ -45,7 +45,8 @@ use std::time::{Duration, Instant};
 
 use krk_core::operation::{
     Abschluss, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Konfliktregel, Lauf, Meldung,
-    OhnePapierkorb, Papierkorb, datei_anlegen, freier_name, ordner_anlegen, starten, umbenennen,
+    Namensfehler, OhnePapierkorb, Papierkorb, datei_anlegen, freier_name, ordner_anlegen, starten,
+    umbenennen,
 };
 use krk_core::verzeichnis::sys::Uebertragungsart;
 
@@ -2861,5 +2862,566 @@ fn ein_fehlendes_archiv_wird_gemeldet_und_die_uebrigen_werden_entpackt() {
     assert_eq!(
         fs::read_to_string(ziel_da.join("drin.txt")).expect("drin.txt fehlt"),
         "drin"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Duplizieren
+// ---------------------------------------------------------------------------
+
+/// Faehrt einen Auftrag zu Ende und beantwortet jede Konfliktfrage mit der
+/// naechsten Antwort der Liste; liefert den Bericht und jede gestellte Frage
+/// als Paar aus Quelle und Ziel.
+///
+/// **Geht die Liste aus, faellt der Antwortkanal**, und das gilt im Kern als
+/// Abbruch. Eine Probe, die keine Antwort geben will, reicht deshalb eine leere
+/// Liste und keinen eigenen Empfaenger; eine, die den Abbruch als Antwort
+/// pruefen will, reicht [`Konfliktantwort::Abbrechen`]. Beides ist ein Weg, den
+/// die Oberflaeche nimmt, und die Proben unterscheiden sie.
+fn mit_antworten(
+    auftrag: Auftrag,
+    antworten: Vec<Konfliktantwort>,
+) -> (Bericht, Vec<(PathBuf, PathBuf)>) {
+    let lauf = starten(auftrag, Arc::new(OhnePapierkorb));
+    let mut antworten = antworten.into_iter();
+    let mut fragen = Vec::new();
+    let mut bericht = None;
+    while let Ok(meldung) = lauf.meldungen().recv() {
+        match meldung {
+            Meldung::Konflikt {
+                quelle,
+                ziel,
+                antwort,
+            } => {
+                fragen.push((quelle, ziel));
+                if let Some(naechste) = antworten.next() {
+                    antwort
+                        .send(Konfliktentscheid::einmal(naechste))
+                        .expect("Antwort laesst sich nicht senden");
+                }
+            }
+            Meldung::Fertig(fertig) => {
+                bericht = Some(fertig);
+                break;
+            }
+            _ => {}
+        }
+    }
+    lauf.warten();
+    (
+        bericht.expect("der Lauf hat keine Abschlussmeldung geschickt"),
+        fragen,
+    )
+}
+
+/// Die Namen der Eintraege eines Ordners, sortiert, ohne einer Verknuepfung zu
+/// folgen.
+fn namen_im_ordner(ordner: &Path) -> Vec<String> {
+    let mut namen: Vec<String> = fs::read_dir(ordner)
+        .expect("Ordner nicht lesbar")
+        .map(|eintrag| {
+            eintrag
+                .expect("Eintrag nicht lesbar")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    namen.sort();
+    namen
+}
+
+/// Der Inhalt einer Pruefdatei des Duplizierens: Bytes, die kein Text sind,
+/// damit "bytegleich" mehr sagt als "derselbe Text".
+const ROHBYTES: &[u8] = b"KRK\x00\xff\xfe Duplikat\n\x80\x81";
+
+/// Ein freier Name legt das Duplikat bytegleich daneben, und die Quelle bleibt,
+/// wie sie war.
+#[test]
+fn ein_freier_name_legt_das_duplikat_bytegleich_daneben() {
+    let ordner = Pruefordner::neu("dup-frei");
+    let quelle = ordner.datei("bericht.txt", ROHBYTES);
+
+    let (bericht, fragen) = mit_antworten(
+        Auftrag::duplizieren(quelle.clone(), "bericht 2.txt"),
+        Vec::new(),
+    );
+
+    assert!(fragen.is_empty(), "ein freier Name fragt nicht: {fragen:?}");
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 1);
+    assert_eq!(bericht.bytes, ROHBYTES.len() as u64);
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    assert_eq!(
+        fs::read(ordner.unter("bericht 2.txt")).expect("das Duplikat fehlt"),
+        ROHBYTES
+    );
+    assert_eq!(fs::read(&quelle).expect("die Quelle ist weg"), ROHBYTES);
+    assert_eq!(
+        namen_im_ordner(ordner.pfad()),
+        vec!["bericht 2.txt".to_owned(), "bericht.txt".to_owned()]
+    );
+}
+
+/// Ein vergebener Name loest genau eine Frage aus, deren Ziel der vergebene
+/// Pfad ist; nach der Antwort mit einem freien Namen steht das Duplikat unter
+/// diesem, und die Datei am vergebenen Namen ist bytegleich.
+#[test]
+fn ein_vergebener_name_fragt_einmal_und_das_duplikat_entsteht_unter_der_antwort() {
+    let ordner = Pruefordner::neu("dup-vergeben");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let belegt = ordner.datei("belegt.txt", "alt");
+
+    let (bericht, fragen) = mit_antworten(
+        Auftrag::duplizieren(quelle.clone(), "belegt.txt"),
+        vec![Konfliktantwort::UmbenennenIn("frei.txt".to_owned())],
+    );
+
+    assert_eq!(fragen, vec![(quelle.clone(), belegt.clone())]);
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 1);
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    assert_eq!(
+        fs::read_to_string(&belegt).expect("der belegte Name ist weg"),
+        "alt",
+        "der vorhandene Eintrag wurde angefasst"
+    );
+    assert_eq!(
+        fs::read_to_string(ordner.unter("frei.txt")).expect("das Duplikat fehlt"),
+        "neu"
+    );
+    assert_eq!(
+        fs::read_to_string(&quelle).expect("die Quelle ist weg"),
+        "neu"
+    );
+}
+
+/// Der eigene Name der Quelle ist ein vergebener Name wie jeder andere: eine
+/// Frage, und nach der Antwort "abbrechen" endet der Lauf abgebrochen, ohne
+/// dass der Ordner sich geaendert hat.
+#[test]
+fn der_eigene_name_der_quelle_ist_ein_vergebener_name() {
+    let ordner = Pruefordner::neu("dup-eigener-name");
+    let quelle = ordner.datei("bericht.txt", ROHBYTES);
+    let vorher = namen_im_ordner(ordner.pfad());
+
+    let (bericht, fragen) = mit_antworten(
+        Auftrag::duplizieren(quelle.clone(), "bericht.txt"),
+        vec![Konfliktantwort::Abbrechen],
+    );
+
+    assert_eq!(fragen, vec![(quelle.clone(), quelle.clone())]);
+    assert_eq!(bericht.abschluss, Abschluss::Abgebrochen);
+    assert_eq!(bericht.eintraege, 0);
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "uebersprungen: {:?}",
+        bericht.uebersprungen
+    );
+    assert_eq!(fs::read(&quelle).expect("die Quelle ist weg"), ROHBYTES);
+    assert_eq!(namen_im_ordner(ordner.pfad()), vorher);
+}
+
+/// Ein zweiter vergebener Name als Antwort loest eine zweite Frage aus, und
+/// ueberschrieben ist danach keine der zwei vorhandenen Dateien.
+#[test]
+fn ein_zweiter_vergebener_name_fragt_ein_zweites_mal() {
+    let ordner = Pruefordner::neu("dup-zweimal");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let erste = ordner.datei("belegt-1.txt", "alt 1");
+    let zweite = ordner.datei("belegt-2.txt", "alt 2");
+
+    let (bericht, fragen) = mit_antworten(
+        Auftrag::duplizieren(quelle.clone(), "belegt-1.txt"),
+        vec![
+            Konfliktantwort::UmbenennenIn("belegt-2.txt".to_owned()),
+            Konfliktantwort::UmbenennenIn("frei.txt".to_owned()),
+        ],
+    );
+
+    assert_eq!(
+        fragen,
+        vec![
+            (quelle.clone(), erste.clone()),
+            (quelle.clone(), zweite.clone())
+        ]
+    );
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 1);
+    assert_eq!(fs::read_to_string(&erste).expect("weg"), "alt 1");
+    assert_eq!(fs::read_to_string(&zweite).expect("weg"), "alt 2");
+    assert_eq!(
+        fs::read_to_string(ordner.unter("frei.txt")).expect("das Duplikat fehlt"),
+        "neu"
+    );
+}
+
+/// Jeder Wert von [`Konfliktregel`], von Hand geschrieben.
+///
+/// Die Fallunterscheidung darunter hat keinen Auffangzweig: ein weiterer Wert
+/// haelt den Bau hier an, statt in der Tafel zu fehlen.
+fn jede_konfliktregel() -> [Konfliktregel; 5] {
+    let regeln = [
+        Konfliktregel::Fragen,
+        Konfliktregel::Ueberschreiben,
+        Konfliktregel::Ueberspringen,
+        Konfliktregel::AutomatischUmbenennen,
+        Konfliktregel::Abbrechen,
+    ];
+    for regel in regeln {
+        match regel {
+            Konfliktregel::Fragen
+            | Konfliktregel::Ueberschreiben
+            | Konfliktregel::Ueberspringen
+            | Konfliktregel::AutomatischUmbenennen
+            | Konfliktregel::Abbrechen => {}
+        }
+    }
+    regeln
+}
+
+/// Unter jedem Wert von [`Konfliktregel`] bleibt die Datei am vergebenen Namen
+/// bytegleich, und ohne eine Antwort mit einem Namen entsteht kein weiterer
+/// Eintrag: ausdruecklich auch unter `Ueberschreiben`, das beim Kopieren ohne
+/// Frage ersetzte, und unter `AutomatischUmbenennen`, das dort von selbst
+/// einen freien Namen naehme.
+///
+/// **Die Regel wird nicht gelesen, und deshalb wird unter jeder gefragt.**
+/// Gefragt wird genau einmal, und jede Antwort, die kein Name ist, beendet den
+/// Vorgang: der fallen gelassene Kanal, "ueberschreiben", "ueberspringen" und
+/// "abbrechen" gleichermassen.
+#[test]
+fn keine_konfliktregel_laesst_das_duplizieren_ersetzen_oder_von_selbst_umbenennen() {
+    let ordner = Pruefordner::neu("dup-regeln");
+    let antworten: [Option<Konfliktantwort>; 4] = [
+        None,
+        Some(Konfliktantwort::Ueberschreiben),
+        Some(Konfliktantwort::Ueberspringen),
+        Some(Konfliktantwort::Abbrechen),
+    ];
+    for (nummer, regel) in jede_konfliktregel().into_iter().enumerate() {
+        for (weitere, antwort) in antworten.iter().enumerate() {
+            let fall = ordner.ordner(&format!("fall-{nummer}-{weitere}"));
+            let quelle = fall.join("bericht.txt");
+            fs::write(&quelle, "neu").expect("nicht schreibbar");
+            let belegt = fall.join("belegt.txt");
+            fs::write(&belegt, ROHBYTES).expect("nicht schreibbar");
+
+            let (bericht, fragen) = mit_antworten(
+                Auftrag::duplizieren(quelle.clone(), "belegt.txt").mit_konfliktregel(regel),
+                antwort.iter().cloned().collect(),
+            );
+
+            assert_eq!(
+                fragen,
+                vec![(quelle.clone(), belegt.clone())],
+                "unter {regel:?} mit der Antwort {antwort:?} wurde nicht genau einmal gefragt"
+            );
+            assert_eq!(
+                bericht.abschluss,
+                Abschluss::Abgebrochen,
+                "unter {regel:?} mit der Antwort {antwort:?}"
+            );
+            assert_eq!(bericht.eintraege, 0, "unter {regel:?} mit {antwort:?}");
+            assert_eq!(
+                fs::read(&belegt).expect("der belegte Name ist weg"),
+                ROHBYTES,
+                "unter {regel:?} mit der Antwort {antwort:?} wurde der vorhandene Eintrag angefasst"
+            );
+            assert_eq!(
+                namen_im_ordner(&fall),
+                vec!["belegt.txt".to_owned(), "bericht.txt".to_owned()],
+                "unter {regel:?} mit der Antwort {antwort:?} ist ein weiterer Eintrag entstanden"
+            );
+        }
+    }
+}
+
+/// Ein Lauf, dessen Frage niemand beantwortet, endet abgebrochen und legt
+/// nichts an; nach dem Vorbild von
+/// `eine_unbeantwortete_rueckfrage_gilt_als_abbruch`.
+#[test]
+fn eine_unbeantwortete_namensfrage_gilt_als_abbruch_und_legt_nichts_an() {
+    let ordner = Pruefordner::neu("dup-unbeantwortet");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let belegt = ordner.datei("belegt.txt", "alt");
+
+    let lauf = starten(
+        Auftrag::duplizieren(quelle.clone(), "belegt.txt"),
+        Arc::new(OhnePapierkorb),
+    );
+    let mut abschluss = None;
+    while let Ok(meldung) = lauf.meldungen().recv() {
+        match meldung {
+            // Der Kanal fuer die Antwort wird hier fallen gelassen.
+            Meldung::Konflikt { .. } => {}
+            Meldung::Fertig(bericht) => {
+                abschluss = Some(bericht.abschluss);
+                break;
+            }
+            _ => {}
+        }
+    }
+    lauf.warten();
+
+    assert_eq!(abschluss, Some(Abschluss::Abgebrochen));
+    assert_eq!(fs::read_to_string(&belegt).expect("weg"), "alt");
+    assert_eq!(
+        namen_im_ordner(ordner.pfad()),
+        vec!["belegt.txt".to_owned(), "bericht.txt".to_owned()]
+    );
+}
+
+/// Ein Ordner, eine Verknuepfung auf eine Datei, eine verwaiste Verknuepfung
+/// und eine benannte Roehre als Quelle werden je mit "keine gewöhnliche Datei"
+/// uebersprungen, und unter dem neuen Namen steht nichts.
+///
+/// **Der Lauf ueber die Roehre kehrt zurueck, statt an ihr zu warten.** Ohne
+/// die Typfrage vor der Uebertragung ginge die Roehre an `copyfile(3)`, und
+/// dessen `open` stuende, bis ein Schreiber kaeme. Gewartet wird deshalb mit
+/// Frist, und die Frist ist der Befund.
+#[test]
+fn was_keine_gewoehnliche_datei_ist_wird_nicht_dupliziert() {
+    let ordner = Pruefordner::neu("dup-keine-datei");
+    let datei = ordner.datei("datei.txt", "Inhalt");
+    let quellen = [
+        ("ordner", ordner.ordner("unterordner")),
+        ("verknuepfung", ordner.verknuepfung("verweis", &datei)),
+        (
+            "verwaist",
+            ordner.verknuepfung("verwaist", ordner.unter("nirgends")),
+        ),
+        ("roehre", ordner.roehre("roehre")),
+    ];
+
+    for (was, quelle) in quellen {
+        let lauf = starten(
+            Auftrag::duplizieren(quelle.clone(), "duplikat"),
+            Arc::new(OhnePapierkorb),
+        );
+        let bericht = bericht_mit_frist(lauf.meldungen(), Duration::from_secs(2))
+            .unwrap_or_else(|| panic!("das Duplizieren haengt an {was}; die Typfrage fehlt"));
+        lauf.warten();
+
+        assert_eq!(bericht.abschluss, Abschluss::Fertig, "{was}");
+        assert_eq!(bericht.eintraege, 0, "{was}");
+        assert_eq!(
+            bericht.uebersprungen.len(),
+            1,
+            "{was}: uebersprungen: {:?}",
+            bericht.uebersprungen
+        );
+        assert_eq!(bericht.uebersprungen[0].pfad, quelle, "{was}");
+        assert_eq!(
+            bericht.uebersprungen[0].grund, "keine gewöhnliche Datei",
+            "{was}"
+        );
+        assert!(
+            fs::symlink_metadata(ordner.unter("duplikat")).is_err(),
+            "{was}: unter dem neuen Namen steht etwas"
+        );
+    }
+}
+
+/// Ein Text, der kein Name ist, wird mit dem Satz aus [`Namensfehler::grund`]
+/// uebersprungen, ohne dass gefragt oder etwas angelegt wird; fuer `a/b` mit
+/// einem vorhandenen Unterordner `a` steht danach nichts in `a`.
+#[test]
+fn ein_text_der_kein_name_ist_wird_mit_seinem_grund_uebersprungen() {
+    let ordner = Pruefordner::neu("dup-kein-name");
+    let quelle = ordner.datei("bericht.txt", "neu");
+    let unterordner = ordner.ordner("a");
+    let vorher = namen_im_ordner(ordner.pfad());
+    let tafel = [
+        ("", Namensfehler::Leer),
+        ("  ", Namensfehler::Leer),
+        ("a/b", Namensfehler::Schraegstrich),
+        ("a\0b", Namensfehler::Nullbyte),
+        (".", Namensfehler::Punktname),
+        ("..", Namensfehler::Punktname),
+    ];
+
+    for (name, fehler) in tafel {
+        let (bericht, fragen) =
+            mit_antworten(Auftrag::duplizieren(quelle.clone(), name), Vec::new());
+
+        assert!(fragen.is_empty(), "{name:?}: gefragt wurde {fragen:?}");
+        assert_eq!(bericht.abschluss, Abschluss::Fertig, "{name:?}");
+        assert_eq!(bericht.eintraege, 0, "{name:?}");
+        assert_eq!(
+            bericht.uebersprungen.len(),
+            1,
+            "{name:?}: uebersprungen: {:?}",
+            bericht.uebersprungen
+        );
+        assert_eq!(bericht.uebersprungen[0].pfad, quelle, "{name:?}");
+        assert_eq!(bericht.uebersprungen[0].grund, fehler.grund(), "{name:?}");
+        assert_eq!(namen_im_ordner(ordner.pfad()), vorher, "{name:?}");
+    }
+    assert!(
+        namen_im_ordner(&unterordner).is_empty(),
+        "in a steht etwas: {:?}",
+        namen_im_ordner(&unterordner)
+    );
+}
+
+/// Ein vergebener Name fuehrt in beiden Werten von [`Uebertragungsart`] zur
+/// Frage und laesst das Vorhandene bytegleich; nach dem Vorbild von
+/// [`ein_vorhandenes_ziel_weist_jede_uebertragungsart_ab`], eine Ebene hoeher.
+///
+/// **Die Zusage haengt nicht an der Wahl des Aufrufers**: `COPYFILE_EXCL`
+/// steht in beiden Uebertragungsarten, und die Frage kommt aus dem Fehler, den
+/// es liefert. Fiele es aus einer Art heraus, ersetzte das Duplizieren dort
+/// still, und diese Probe wuerde rot.
+#[test]
+fn ein_vergebener_name_fuehrt_in_jeder_uebertragungsart_zur_frage() {
+    let ordner = Pruefordner::neu("dup-uebertragungsart");
+    for art in [
+        Uebertragungsart::KlonenWennMoeglich,
+        Uebertragungsart::ImmerBytes,
+    ] {
+        let fall = ordner.ordner(&format!("{art:?}"));
+        let quelle = fall.join("bericht.txt");
+        fs::write(&quelle, "neu").expect("nicht schreibbar");
+        let belegt = fall.join("belegt.txt");
+        fs::write(&belegt, ROHBYTES).expect("nicht schreibbar");
+
+        let (bericht, fragen) = mit_antworten(
+            Auftrag::duplizieren(quelle.clone(), "belegt.txt").mit_uebertragung(art),
+            vec![Konfliktantwort::UmbenennenIn("frei.txt".to_owned())],
+        );
+
+        assert_eq!(fragen, vec![(quelle.clone(), belegt.clone())], "{art:?}");
+        assert_eq!(bericht.abschluss, Abschluss::Fertig, "{art:?}");
+        assert_eq!(bericht.eintraege, 1, "{art:?}");
+        assert_eq!(
+            fs::read(&belegt).expect("der belegte Name ist weg"),
+            ROHBYTES,
+            "{art:?} hat den vorhandenen Eintrag angefasst"
+        );
+        assert_eq!(
+            fs::read_to_string(fall.join("frei.txt")).expect("das Duplikat fehlt"),
+            "neu",
+            "{art:?}"
+        );
+    }
+}
+
+/// Ein Ordner und ein verwaister Verweis am gewuenschten Namen sind vergebene
+/// Namen, in beiden Uebertragungsarten: es wird gefragt, der Ordner behaelt
+/// seinen Inhalt, der Verweis bleibt ein Verweis, und hinter dem Verweis
+/// entsteht nichts.
+///
+/// **Der verwaiste Verweis ist der Fall, der etwas kostet.** Folgte
+/// `copyfile(3)` dem Namen, legte es die Datei dort an, wohin der Verweis
+/// zeigt, und der Nutzer faende sein Duplikat an einem Ort, den er nie genannt
+/// hat. Die Messung vom 260930 im Kopf von `operation/duplizieren.rs` nennt
+/// beide Faelle; diese Probe faehrt sie nach.
+#[test]
+fn ein_ordner_und_ein_verwaister_verweis_am_namen_sind_vergebene_namen() {
+    let ordner = Pruefordner::neu("dup-ordner-verweis");
+    for art in [
+        Uebertragungsart::KlonenWennMoeglich,
+        Uebertragungsart::ImmerBytes,
+    ] {
+        let fall = ordner.ordner(&format!("{art:?}"));
+        let quelle = fall.join("bericht.txt");
+        fs::write(&quelle, "neu").expect("nicht schreibbar");
+        let belegter_ordner = fall.join("ordner");
+        fs::create_dir(&belegter_ordner).expect("nicht anlegbar");
+        fs::write(belegter_ordner.join("drin.txt"), "drin").expect("nicht schreibbar");
+        let nirgends = fall.join("nirgends");
+        let verweis = fall.join("verweis");
+        std::os::unix::fs::symlink(&nirgends, &verweis).expect("nicht anlegbar");
+
+        for name in ["ordner", "verweis"] {
+            let (bericht, fragen) = mit_antworten(
+                Auftrag::duplizieren(quelle.clone(), name).mit_uebertragung(art),
+                Vec::new(),
+            );
+
+            assert_eq!(
+                fragen,
+                vec![(quelle.clone(), fall.join(name))],
+                "{art:?} bei {name}"
+            );
+            assert_eq!(
+                bericht.abschluss,
+                Abschluss::Abgebrochen,
+                "{art:?} bei {name}"
+            );
+            assert_eq!(bericht.eintraege, 0, "{art:?} bei {name}");
+        }
+
+        assert_eq!(
+            fs::read_to_string(belegter_ordner.join("drin.txt")).expect("der Ordner ist angefasst"),
+            "drin",
+            "{art:?}"
+        );
+        assert!(
+            fs::symlink_metadata(&verweis)
+                .expect("der Verweis ist weg")
+                .is_symlink(),
+            "{art:?}: der Verweis ist kein Verweis mehr"
+        );
+        assert_eq!(
+            fs::read_link(&verweis).expect("der Verweis ist weg"),
+            nirgends,
+            "{art:?}"
+        );
+        assert!(
+            fs::symlink_metadata(&nirgends).is_err(),
+            "{art:?}: hinter dem verwaisten Verweis ist etwas entstanden"
+        );
+        assert_eq!(
+            namen_im_ordner(&fall),
+            vec![
+                "bericht.txt".to_owned(),
+                "ordner".to_owned(),
+                "verweis".to_owned()
+            ],
+            "{art:?}"
+        );
+    }
+}
+
+/// Eine zweite Quelle, die jemand von Hand an den Auftrag haengt, bekommt den
+/// Namen nicht ein zweites Mal, sondern steht mit "es fehlt der neue Name" in
+/// der Abschlussliste; die erste wird dupliziert.
+#[test]
+fn eine_zweite_quelle_am_duplizierauftrag_bekommt_den_namen_nicht() {
+    let ordner = Pruefordner::neu("dup-zweite-quelle");
+    let erste = ordner.datei("eins.txt", "eins");
+    let zweite = ordner.datei("zwei.txt", "zwei");
+    let mut auftrag = Auftrag::duplizieren(erste, "duplikat.txt");
+    auftrag.quellen.push(zweite.clone());
+
+    let (bericht, fragen) = mit_antworten(auftrag, Vec::new());
+
+    assert!(fragen.is_empty(), "{fragen:?}");
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 1);
+    assert_eq!(bericht.uebersprungen.len(), 1);
+    assert_eq!(bericht.uebersprungen[0].pfad, zweite);
+    assert_eq!(bericht.uebersprungen[0].grund, "es fehlt der neue Name");
+    assert_eq!(
+        fs::read_to_string(ordner.unter("duplikat.txt")).expect("das Duplikat fehlt"),
+        "eins"
+    );
+    assert_eq!(
+        namen_im_ordner(ordner.pfad()),
+        vec![
+            "duplikat.txt".to_owned(),
+            "eins.txt".to_owned(),
+            "zwei.txt".to_owned()
+        ]
     );
 }

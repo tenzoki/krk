@@ -2,11 +2,23 @@
 //!
 //! ```text
 //! eintrag_kopieren ──> ziel_klaeren (Konflikt)
-//!                  ──> kopieren_nach ──> Typ::Datei        ──> sys::datei_kopieren
+//!                  ──> kopieren_nach ──> Typ::Datei        ──> datei ──> datei_uebertragen
 //!                                    ──> Typ::Ordner       ──> verzeichnis::lesen ──┐
 //!                                    ──> Typ::Verknuepfung ──> fs::symlink          │
 //!                                    <──────────────────────── je Eintrag ──────────┘
+//!
+//! duplizieren::eintrag_duplizieren ──────────────────────────> datei_uebertragen
+//!                                                                     │
+//!                                                            sys::datei_kopieren
 //! ```
+//!
+//! **Die Uebertragung einer Datei steht einmal da und hat zwei Rufer.**
+//! [`datei_uebertragen`] traegt Fortschritt, Abbruch und das Wegraeumen der
+//! halben Zieldatei und gibt einen Fehler von `copyfile(3)` an seinen Rufer
+//! zurueck, statt ihn zu verbuchen. Das Kopieren verbucht ihn als
+//! uebersprungenen Eintrag; das Duplizieren liest an ihm ab, ob der Name
+//! vergeben war, und fragt dann nach einem anderen. Einen zweiten Kopierweg
+//! daneben gibt es nicht.
 //!
 //! **Der Abstieg laeuft ueber den vorhandenen Leser.** `copyfile(3)` kennt ein
 //! `COPYFILE_RECURSIVE` und koennte einen Ordner selbst durchlaufen. Genau das
@@ -66,14 +78,53 @@ pub(crate) fn kopieren_nach(
 }
 
 /// Kopiert eine einzelne Datei.
+///
+/// Die Arbeit selbst ist [`datei_uebertragen`]; hier kommt dazu, was das
+/// Kopieren mit einem Fehler von `copyfile(3)` tut: es verbucht ihn als
+/// uebersprungenen Eintrag, und der Stapel laeuft weiter.
 fn datei(
     quelle: &Quelle<'_>,
     ziel: &Path,
     art: Uebertragungsart,
     steuerung: &mut Steuerung,
 ) -> Ablauf {
+    match datei_uebertragen(quelle, ziel, art, steuerung) {
+        Ok(ablauf) => ablauf,
+        Err(fehler) => {
+            steuerung.ueberspringen(quelle.pfad, grund(&fehler));
+            Ablauf::Weiter
+        }
+    }
+}
+
+/// Uebertraegt eine einzelne Datei an ein Ziel, das es noch nicht geben darf.
+///
+/// **Der eine Rumpf fuer das Kopieren und das Duplizieren.** Er meldet den
+/// Fortschritt, reicht den Abbruch in den Statusrueckruf von `copyfile(3)`,
+/// raeumt nach einem Abbruch die halbe Zieldatei weg und verbucht die fertige
+/// Datei.
+///
+/// **Einen Fehler von `copyfile(3)` verbucht er nicht, er gibt ihn zurueck.**
+/// Was ein Fehler bedeutet, weiss der Rufer: [`datei`] ueberspringt den Eintrag
+/// mit seinem Grund, `duplizieren::eintrag_duplizieren` fragt bei
+/// [`io::ErrorKind::AlreadyExists`] nach einem anderen Namen. Bis zum
+/// Duplizieren stand die Verbuchung hier mit im Rumpf, und ob der Grund "am
+/// Ziel steht schon ein Eintrag" war, liess sich danach nur noch am Text des
+/// Berichts ablesen.
+///
+/// **Angelegt wird ausschliessend.** `sys::datei_kopieren` setzt
+/// `COPYFILE_EXCL` in jeder [`Uebertragungsart`]; ein vorhandenes Ziel laesst
+/// den Aufruf scheitern, bevor ein Byte geschrieben ist. Die halbe Zieldatei,
+/// die nach einem Abbruch faellt, hat deshalb dieser Aufruf selbst angelegt und
+/// nie ein anderer.
+pub(crate) fn datei_uebertragen(
+    quelle: &Quelle<'_>,
+    ziel: &Path,
+    art: Uebertragungsart,
+    steuerung: &mut Steuerung,
+) -> io::Result<Ablauf> {
     let pfad = quelle.pfad;
-    let ergebnis = {
+    let kopie = {
         let mut melden = |bytes: u64| {
             steuerung.zwischenstand(pfad, bytes);
             if steuerung.abgebrochen() {
@@ -83,40 +134,33 @@ fn datei(
             }
         };
         sys_datei_kopieren(pfad, ziel, art, &mut melden)
-    };
+    }?;
 
-    match ergebnis {
-        Ok(kopie) if kopie.abgebrochen => {
-            steuerung.teilstueck(kopie.bytes);
-            // Die halbe Datei am Ziel ist kein Ergebnis, sondern ein Rest. Wer
-            // sie stehen liesse, hinterliesse dem Nutzer eine Datei, die
-            // aussieht wie seine und es nicht ist.
-            if let Err(fehler) = fs::remove_file(ziel)
-                && fehler.kind() != io::ErrorKind::NotFound
-            {
-                steuerung.ueberspringen(
-                    ziel,
-                    format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
-                );
-            }
-            Ablauf::Abgebrochen
+    if kopie.abgebrochen {
+        steuerung.teilstueck(kopie.bytes);
+        // Die halbe Datei am Ziel ist kein Ergebnis, sondern ein Rest. Wer
+        // sie stehen liesse, hinterliesse dem Nutzer eine Datei, die
+        // aussieht wie seine und es nicht ist.
+        if let Err(fehler) = fs::remove_file(ziel)
+            && fehler.kind() != io::ErrorKind::NotFound
+        {
+            steuerung.ueberspringen(
+                ziel,
+                format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
+            );
         }
-        Ok(kopie) => {
-            // Ein Klon bewegt keine Bytes. Uebertragen ist der Inhalt der Datei
-            // trotzdem, und die Zahl im Fortschritt meint den Inhalt.
-            let bytes = if kopie.geklont {
-                quelle.groesse
-            } else {
-                kopie.bytes
-            };
-            steuerung.eintrag_fertig(pfad, bytes);
-            Ablauf::Weiter
-        }
-        Err(fehler) => {
-            steuerung.ueberspringen(pfad, grund(&fehler));
-            Ablauf::Weiter
-        }
+        return Ok(Ablauf::Abgebrochen);
     }
+
+    // Ein Klon bewegt keine Bytes. Uebertragen ist der Inhalt der Datei
+    // trotzdem, und die Zahl im Fortschritt meint den Inhalt.
+    let bytes = if kopie.geklont {
+        quelle.groesse
+    } else {
+        kopie.bytes
+    };
+    steuerung.eintrag_fertig(pfad, bytes);
+    Ok(Ablauf::Weiter)
 }
 
 /// Kopiert einen Ordner samt Inhalt, Eintrag fuer Eintrag.

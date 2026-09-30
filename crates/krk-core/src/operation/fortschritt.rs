@@ -12,7 +12,15 @@
 //!   Abbruchgriff::abbrechen ──┘ (dasselbe Kennzeichen)
 //!   Lauf::meldungen      <───Kanal─────   Steuerung::{fortschritt, ueberspringen}
 //!   Konfliktentscheid    ──Kanal──────>   Steuerung::konflikt_loesen (wartet)
+//!                                         Steuerung::namen_erfragen  (wartet)
 //! ```
+//!
+//! Die zwei Frager der letzten Zeile stellen dieselbe [`Meldung::Konflikt`]
+//! ueber denselben privaten Weg und lesen die Antwort verschieden:
+//! [`Steuerung::konflikt_loesen`] fragt unter der Konfliktregel des Laufs,
+//! was mit einem vorhandenen Ziel geschieht; [`Steuerung::namen_erfragen`]
+//! fragt ohne Regel nach einem anderen Namen und kennt keine Antwort, die
+//! ersetzt.
 //!
 //! [`Abbruchgriff`] gibt es, weil der [`Lauf`] nicht zwischen zwei Faeden
 //! geteilt werden kann; wer ihn einem Faden gibt und trotzdem abbrechen koennen
@@ -393,6 +401,40 @@ impl Steuerung {
         }
     }
 
+    /// Fragt nach einem anderen Namen, weil der gewuenschte vergeben ist.
+    ///
+    /// Der Frager des Duplizierens (`duplizieren::eintrag_duplizieren`).
+    /// `quelle` ist die Datei, die dupliziert wird, `ziel` der Pfad, an dem das
+    /// Dateisystem eben einen vorhandenen Eintrag gemeldet hat; beide reisen in
+    /// der [`Meldung::Konflikt`] zum Hauptfaden.
+    ///
+    /// **Die Frage geht denselben Weg wie [`Steuerung::konflikt_loesen`] unter
+    /// [`Konfliktregel::Fragen`], und die Regel des Laufs liest sie nicht.**
+    /// Die Regel sagt, was mit einem vorhandenen Ziel geschieht: ersetzen,
+    /// ueberspringen, von selbst umbenennen. Keine dieser Antworten gibt es
+    /// beim Duplizieren, und ein Lauf, der sie der Regel entnaehme, ersetzte
+    /// unter `Ueberschreiben` einen Eintrag, nach dem niemand gefragt wurde.
+    ///
+    /// **Nur ein Name ist eine Antwort.** [`Konfliktantwort::UmbenennenIn`]
+    /// wird `Some(name)`; jede andere Antwort, ein fehlender Sender und ein
+    /// fallen gelassener Antwortkanal werden `None`, und der Rufer beendet den
+    /// Vorgang, ohne etwas anzulegen. Ob der Name ein Name ist und ob er frei
+    /// ist, prueft diese Funktion nicht: das erste tut der Rufer ueber
+    /// `name_pruefen`, das zweite beantwortet das Dateisystem beim naechsten
+    /// Versuch.
+    ///
+    /// `#[must_use]`: ein fallen gelassenes `None` hiesse, nach einer
+    /// ausgebliebenen Antwort weiterzumachen.
+    #[must_use]
+    pub(crate) fn namen_erfragen(&mut self, quelle: &Path, ziel: &Path) -> Option<String> {
+        match self.nachfragen(quelle, ziel) {
+            Konfliktantwort::UmbenennenIn(name) => Some(name),
+            Konfliktantwort::Ueberschreiben
+            | Konfliktantwort::Ueberspringen
+            | Konfliktantwort::Abbrechen => None,
+        }
+    }
+
     fn nachfragen(&mut self, quelle: &Path, ziel: &Path) -> Konfliktantwort {
         let Some(sender) = &self.sender else {
             return Konfliktantwort::Abbrechen;
@@ -473,6 +515,86 @@ mod tests {
         );
         let antwort = steuerung.konflikt_loesen(Path::new("/tmp/a"), Path::new("/tmp/b"));
         assert_eq!(antwort, Konfliktantwort::Abbrechen);
+    }
+
+    /// Beantwortet die naechste Konfliktfrage des Kanals mit `entscheid`.
+    fn einmal_antworten(
+        empfaenger: Receiver<Meldung>,
+        entscheid: Konfliktentscheid,
+    ) -> std::thread::JoinHandle<()> {
+        std::thread::spawn(move || {
+            let Ok(Meldung::Konflikt { antwort, .. }) = empfaenger.recv() else {
+                panic!("keine Konfliktfrage angekommen");
+            };
+            antwort
+                .send(entscheid)
+                .expect("Antwort laesst sich nicht senden");
+        })
+    }
+
+    /// Die Namensfrage nimmt allein einen Namen als Antwort, und sie wird unter
+    /// jeder Konfliktregel gestellt.
+    ///
+    /// **Die Regel des Laufs steht in der Tafel, damit abzulesen ist, dass sie
+    /// nicht gelesen wird**: unter `Ueberschreiben` antwortete
+    /// [`Steuerung::konflikt_loesen`] ohne zu fragen, und der Beantworter hier
+    /// bliebe ohne Frage stehen.
+    #[test]
+    fn die_namensfrage_wird_unter_jeder_regel_gestellt_und_nimmt_allein_einen_namen() {
+        let tafel = [
+            (
+                Konfliktregel::Fragen,
+                Konfliktantwort::UmbenennenIn("anders.txt".to_owned()),
+                Some("anders.txt"),
+            ),
+            (
+                Konfliktregel::Ueberschreiben,
+                Konfliktantwort::UmbenennenIn("anders.txt".to_owned()),
+                Some("anders.txt"),
+            ),
+            (
+                Konfliktregel::AutomatischUmbenennen,
+                Konfliktantwort::Abbrechen,
+                None,
+            ),
+            (
+                Konfliktregel::Ueberspringen,
+                Konfliktantwort::Ueberschreiben,
+                None,
+            ),
+            (
+                Konfliktregel::Abbrechen,
+                Konfliktantwort::Ueberspringen,
+                None,
+            ),
+        ];
+        for (regel, antwort, erwartet) in tafel {
+            let (mut steuerung, empfaenger) = steuerung_mit_kanal(regel);
+            let beantworter =
+                einmal_antworten(empfaenger, Konfliktentscheid::einmal(antwort.clone()));
+
+            let name = steuerung.namen_erfragen(Path::new("/tmp/a"), Path::new("/tmp/b"));
+            beantworter.join().expect("Beantworter gescheitert");
+
+            assert_eq!(
+                name.as_deref(),
+                erwartet,
+                "unter {regel:?} mit der Antwort {antwort:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn ohne_gegenueber_gibt_die_namensfrage_keinen_namen() {
+        let mut steuerung = Steuerung::neu(
+            Arc::new(AtomicBool::new(false)),
+            None,
+            Konfliktregel::AutomatischUmbenennen,
+        );
+        assert_eq!(
+            steuerung.namen_erfragen(Path::new("/tmp/a"), Path::new("/tmp/b")),
+            None
+        );
     }
 
     #[test]

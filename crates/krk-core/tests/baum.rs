@@ -1443,3 +1443,72 @@ fn der_name_krkhome_steht_im_ausgelieferten_code_allein_bei_der_erkennung() {
         "der Name des Heimordners steht im ausgelieferten Code nicht allein bei der Erkennung"
     );
 }
+
+/// Das Duplizieren kennt keinen Weg, der einen Eintrag entfernt.
+///
+/// **Was hier gehalten wird.** `Art::Duplizieren` sagt zu, dass ein vergebener
+/// Name nichts ersetzt. Die Proben in `tests/operation.rs` halten das am
+/// Ergebnis, unter jeder Konfliktregel und bei jeder Antwort; diese hier haelt
+/// es am Baum: in den Codezeilen von `krk-core/src/operation/duplizieren.rs`
+/// steht keiner der Aufrufe, ueber die die Operationsmaschine sonst etwas
+/// wegnimmt oder umhaengt. Das sind der Zielklaerer des Kopierens
+/// (`ziel_klaeren(`, dessen Zweig "ueberschreiben" endgueltig loescht), der
+/// Baumloescher (`baum_entfernen(`), der Papierkorb (`in_den_papierkorb(`), die
+/// zwei Loeschaufrufe der Standardbibliothek (`remove_file(` und jedes
+/// `remove_dir`) und jedes Umbenennen (`rename`, das auch `renamex_np` und
+/// `fs::rename` trifft).
+///
+/// **Die Gegenprobe haelt die Nadeln am Leben.** Jede von ihnen muss in einer
+/// Codezeile der uebrigen Operationsmaschine oder ihrer Systemschicht stehen;
+/// sonst hiesse der Aufruf inzwischen anders, und die Probe bestuende, ohne
+/// etwas zu belegen.
+///
+/// # Was diese Nadel nicht sieht
+///
+/// **Den Rumpf von `kopieren::datei_uebertragen`**, den das Duplizieren ruft:
+/// er raeumt nach einem Abbruch allein die eigene halbe Zieldatei weg, und die
+/// hat derselbe Aufruf ausschliessend angelegt. Er steht in `kopieren.rs` und
+/// damit ausserhalb der Datei, die hier gelesen wird. Ebenso wenig sieht sie
+/// einen Weg ueber einen weiteren Helfer in einer anderen Datei; der Kopf
+/// dieser Datei sagt, warum keine Nadel restlos dicht ist.
+#[test]
+fn das_duplizieren_kennt_keinen_weg_der_einen_eintrag_entfernt() {
+    let datei = "krk-core/src/operation/duplizieren.rs";
+    let nadeln = [
+        concat!("ziel_", "klaeren("),
+        concat!("baum_", "entfernen("),
+        concat!("in_den_", "papierkorb("),
+        concat!("remove_", "file("),
+        concat!("remove_", "dir"),
+        concat!("ren", "ame"),
+    ];
+    let baum = quelldateien();
+
+    let (_, inhalt) = baum
+        .iter()
+        .find(|(name, _)| name == datei)
+        .unwrap_or_else(|| panic!("{datei} steht nicht mehr im Baum"));
+    assert!(
+        im_code(inhalt, concat!("fn eintrag_", "duplizieren(")),
+        "{datei} erklaert das Duplizieren nicht mehr; die Probe laese eine leere Huelle"
+    );
+
+    for nadel in nadeln {
+        let lebt = baum.iter().any(|(name, anderer)| {
+            name != datei
+                && (name.starts_with("krk-core/src/operation/")
+                    || name == "krk-core/src/verzeichnis/sys.rs")
+                && im_code(anderer, nadel)
+        });
+        assert!(
+            lebt,
+            "die Nadel `{nadel}` steht in keiner Codezeile der Operationsmaschine mehr; \
+             umbenannt? Dann belegt diese Probe nichts"
+        );
+        assert!(
+            !im_code(inhalt, nadel),
+            "{datei} fuehrt `{nadel}` in einer Codezeile; das Duplizieren soll keinen Weg \
+             kennen, der einen Eintrag entfernt oder umhaengt"
+        );
+    }
+}

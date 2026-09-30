@@ -364,7 +364,8 @@ pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
         | Art::Zippen { .. }
-        | Art::Entpacken { .. } => false,
+        | Art::Entpacken { .. }
+        | Art::Duplizieren { .. } => false,
     }
 }
 
@@ -850,6 +851,9 @@ mod tests {
             Art::Entpacken {
                 ziele: vec![PathBuf::from("/quelle.zip")],
             },
+            Art::Duplizieren {
+                neuer_name: "kopie.txt".to_owned(),
+            },
         ]
     }
 
@@ -919,7 +923,7 @@ mod tests {
     ///
     /// **Die Probe darunter prueft eine Zuordnung, diese hier ihre
     /// Vollstaendigkeit.** Der Uebersetzer haelt allein
-    /// [`schiebt_auffrischung_auf`]: eine siebte Variante haelt dort den Bau
+    /// [`schiebt_auffrischung_auf`]: eine weitere Variante haelt dort den Bau
     /// an. Er haelt **nicht**, dass die Probe sie auch anfasst — eine
     /// hinzugekommene Art bekaeme dort ihre Einordnung und bliebe hier
     /// ungeprueft, und genau das ist in der Runde 17 zweimal geschehen.

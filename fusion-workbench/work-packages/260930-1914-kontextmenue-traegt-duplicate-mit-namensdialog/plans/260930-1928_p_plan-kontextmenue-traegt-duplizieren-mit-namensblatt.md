@@ -129,7 +129,7 @@ Die Schritte 1 und 2 hängen nicht aneinander; sie landen trotzdem in der Nummer
 
 ### Stufe A: Bausteine ohne Menüeintrag
 
-1. [IN PROGRESS] **Kern: `Art::Duplizieren` überträgt ausschließend und fragt bei einem vergebenen Namen nach**
+1. [DONE] **Kern: `Art::Duplizieren` überträgt ausschließend und fragt bei einem vergebenen Namen nach**
    - Executor: `code-implementer`
    - Files: `crates/krk-core/src/operation/auftrag.rs`, `crates/krk-core/src/operation/kopieren.rs`, `crates/krk-core/src/operation/duplizieren.rs` (neu), `crates/krk-core/src/operation/fortschritt.rs`, `crates/krk-core/src/operation/mod.rs`, `crates/krk-core/tests/operation.rs`, `crates/krk-core/tests/baum.rs`; in `krk-ui` allein die Stellen, an denen der Übersetzer wegen der neuen Variante anhält: `crates/krk-ui/src/kommandos/operationen.rs`, `crates/krk-ui/src/auffrischung.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
    - Changes:
@@ -154,7 +154,7 @@ Die Schritte 1 und 2 hängen nicht aneinander; sie landen trotzdem in der Nummer
    - Acceptance: `make check` grün. Jede Probe des Kopierens, Verschiebens, Packens und Entpackens in `crates/krk-core/tests/operation.rs` besteht mit unveränderter Erwartung. `Auftrag::duplizieren` hat in diesem Schritt allein Probenrufer; im Bündel ändert sich nichts Sichtbares.
    - Dependencies: none
 
-2. **Namensblatt: ein Bauer mit Grund, Prüfung und Abbruchmeldung**
+2. [IN PROGRESS] **Namensblatt: ein Bauer mit Grund, Prüfung und Abbruchmeldung**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/blaetter/namenseingabe.rs`, `crates/krk-ui/src/appkit/blaetter/mod.rs` (allein Modulkopf und der Doc-Kommentar von `Blatt::bestaetigung_pruefen`)
    - Changes:

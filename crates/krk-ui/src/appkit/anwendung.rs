@@ -767,10 +767,14 @@ impl Vorgang {
             // Entpacken ebenso, und dass es mehrere Zielordner anlegt, aendert
             // daran nichts: jeder von ihnen entsteht **in** diesem einen
             // Ordner, und aufgefrischt wird der Ordner und nicht der Eintrag.
+            // Das Duplizieren ebenso: das Duplikat entsteht im Ordner seiner
+            // Quelle, das folgt aus der Bauform von `Art::Duplizieren`, die
+            // einen Namen traegt und keinen Pfad.
             Art::InDenPapierkorb
             | Art::UmbenennenImStapel { .. }
             | Art::Zippen { .. }
-            | Art::Entpacken { .. } => {}
+            | Art::Entpacken { .. }
+            | Art::Duplizieren { .. } => {}
         }
         ordner
     }
@@ -8704,11 +8708,17 @@ impl Anwendungsdelegierter {
             // dazu.** Ein Vorgang entpackt jedes betroffene Archiv und legt
             // damit moeglicherweise mehrere Ordner an; welcher von ihnen die
             // Auswahl bekaeme, waere eine willkuerliche Wahl.
+            //
+            // **`Art::Duplizieren` steht hier ohne eigenen Rumpf, solange kein
+            // Weg der Oberflaeche einen solchen Auftrag stellt.** Die Art ist
+            // im Kern gebaut und hier allein eingeordnet; wer ihr den ersten
+            // Rufer gibt, gibt ihr an dieser Stelle auch ihren Zweig.
             Art::Kopieren { .. }
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
             | Art::Zippen { .. }
-            | Art::Entpacken { .. } => {}
+            | Art::Entpacken { .. }
+            | Art::Duplizieren { .. } => {}
         }
 
         // **Der vierte Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**
