@@ -1,7 +1,7 @@
 # Implementation Plan: Das Kontextmenü der Dateiliste trägt „Duplizieren…“ mit Namensblatt
 
 **Date:** 2026-09-30
-**Status:** Ready for Review
+**Status:** Complete
 **Spec:** none — planned from raw request. Shaping wurde übersprungen; die Directive steht im Datensatz `260930-1914-kontextmenue-traegt-duplicate-mit-namensdialog.md`, der `**Mode:** autonomous` trägt. Gebaute Grundlage: HEAD `17750c7`, Fassung 2.2.0.
 **Decidability:** Drei Fragen tragen den Plan. **Erstens „ist der gewünschte Name frei?“**: aus der gelesenen Liste und aus einem `lstat` vor dem Anlegen ist sie nicht entscheidbar, denn ein fremdes Programm kann den Namen dazwischen vergeben, und ob zwei Schreibungen derselbe Eintrag sind, weiß allein der Datenträger. Der Mechanismus sagt deshalb nichts vorher: der Arbeitsfaden versucht das ausschließende Anlegen über `copyfile(3)` mit `COPYFILE_EXCL`, und das Dateisystem antwortet mit `EEXIST`. Gemessen am 260930 auf diesem Gerät (macOS 15.8, APFS) in beiden Übertragungsarten: `EEXIST` für den eigenen Namen, für eine andere Groß- und Kleinschreibung, für eine vorhandene Datei, für einen verwaisten symbolischen Verweis und für einen Ordner, Quelle und Ziel danach bytegleich. **Zweitens „ist die Eingabe überhaupt ein Name?“**: entscheidbar am Text durch `krk_core::operation::name_pruefen`, und deshalb schon im Blatt beantwortet. **Drittens „ist der betroffene Eintrag eine gewöhnliche Datei?“**: aus der Liste nur vorhersagbar, weil `Typ::Datei` auch Röhre, Socket und Gerätedatei trägt und die Liste einen Augenblick alt sein kann. Entschieden wird sie im Arbeitsfaden durch `lstat` unmittelbar vor der Übertragung; offen bleibt allein das Fenster zwischen diesem `lstat` und `copyfile(3)` gegen ein fremdes Programm, ein Wettlauf und kein gewöhnlicher Weg.
 
@@ -199,14 +199,14 @@ Die Schritte 1 und 2 hängen nicht aneinander; sie landen trotzdem in der Nummer
 
 ### Stufe C: was Nutzer und nächster Leser lesen
 
-4. [IN PROGRESS] **`HowTo.md`: eine Datei duplizieren**
+4. [DONE] **`HowTo.md`: eine Datei duplizieren**
    - Executor: `code-implementer`
    - Files: `HowTo.md`
    - Changes: ein Abschnitt `## Eine Datei duplizieren` hinter `## Der Dateilistenfilter`, mit dessen Trennlinie. Er sagt: wo der Eintrag steht (Rechtsklick in der Dateiliste, „Duplizieren…“), dass er keine Taste und keinen Hauptmenüeintrag hat, worauf er wirkt (genau eine gewöhnliche Datei; bei einem Ordner, einer Verknüpfung, mehreren markierten Einträgen oder gar keinem meldet die Statuszeile den Grund), was das Blatt zeigt (alter Name vorausgefüllt und ausgewählt, „Duplizieren“ und „Abbrechen“, `Esc` schließt), was es nicht bestätigen lässt (leerer Name, Schrägstrich, `.` und `..`, mit dem Grund unter dem Feld), was bei einem vergebenen Namen geschieht (nichts wird überschrieben, das Blatt geht mit dem Grund erneut auf, auch beim unveränderten alten Namen), wo das Duplikat entsteht (im selben Ordner) und dass danach die Auswahl auf ihm steht. Ein Satz nennt, dass das Duplizieren als Vorgang läuft: Fortschritt in der Statuszeile, `Esc` bricht ab. `README.md` bleibt unverändert, weil sie keine Bedienung beschreibt.
    - Acceptance: `make check` grün (der Schritt ändert keinen Code). Jeder Satz des Abschnitts ist am Stand von Schritt 3 gelesen: die zitierten Beschriftungen stimmen Zeichen für Zeichen mit `Kontextbefehl::titel` und den Textfunktionen aus `operationen.rs` überein. Die Betriebsregel „die alte … löschen“ ist nicht berührt.
    - Dependencies: Schritt 3
 
-5. **`CLAUDE.md`: der dritte Wert aus dem Kontextmenü und was ihn hält**
+5. [DONE] **`CLAUDE.md`: der dritte Wert aus dem Kontextmenü und was ihn hält**
    - Executor: `code-implementer`
    - Files: `CLAUDE.md`
    - Changes:

@@ -233,6 +233,69 @@ Hauptmenü, und wer eine Taste will, weist sie in der Belegungsansicht zu.
 
 ---
 
+## Eine Datei duplizieren
+
+**Der Eintrag steht allein im Menü der rechten Maustaste über der Dateiliste**
+und heißt „Duplizieren…“, zwischen „Unzip“ und „Im Finder öffnen“. Eine Taste
+trägt er nicht, und im Hauptmenü steht er nicht; in der Belegungsansicht (F1)
+findet man ihn deshalb auch nicht, denn er ist keine Funktion, die sich einer
+Taste zuweisen ließe.
+
+**Er wirkt auf genau eine gewöhnliche Datei.** Betroffen ist, worauf auch `f5`
+und `f6` wirken: die markierten Einträge, sonst die ausgewählte Zeile, und ein
+Rechtsklick auf eine unmarkierte Zeile rückt die Auswahl vorher auf diese
+Zeile. Ist das keine einzelne gewöhnliche Datei, geht kein Blatt auf, und die
+Statuszeile sagt, warum:
+
+| Lage | Statuszeile |
+|---|---|
+| nichts markiert und nichts ausgewählt | „nichts zu duplizieren: nichts markiert und nichts ausgewählt“ |
+| mehrere Einträge markiert | „nichts zu duplizieren: es sind mehrere Einträge markiert, und dupliziert wird genau eine Datei“ |
+| ein Ordner | „nichts zu duplizieren: „<name>“ ist ein Ordner, und dupliziert wird allein eine gewöhnliche Datei“ |
+| eine Verknüpfung | „nichts zu duplizieren: „<name>“ ist eine Verknüpfung, und dupliziert wird allein eine gewöhnliche Datei“ |
+
+Was die Liste als Datei führt und keine ist, etwa eine benannte Röhre, weist
+erst der Vorgang selbst ab, mit dem Grund „keine gewöhnliche Datei“ in der
+Liste der übersprungenen Einträge.
+
+**Das Blatt fragt „Wie soll das Duplikat heißen?“** Im Feld steht der alte
+Name, ganz ausgewählt: das erste getippte Zeichen ersetzt ihn samt Endung, und
+wer nur den Stamm ändern will, setzt die Einfügemarke vorher mit einer
+Pfeiltaste oder einem Klick ins Feld. Die Schaltflächen heißen „Duplizieren“
+und „Abbrechen“; die Eingabetaste bestätigt, `Esc` schließt das Blatt, und
+angelegt ist dann nichts.
+
+**Was kein Name ist, lässt das Blatt nicht bestätigen.** Bei einem leeren
+Namen, einem Namen mit Schrägstrich und bei `.` und `..` bleibt „Duplizieren“
+abgeschaltet, die Eingabetaste tut nichts, und die Zeile unter dem Feld nennt
+den Grund: „der Name ist leer“, „ein Name darf keinen Schrägstrich enthalten“,
+„'.' und '..' sind keine Namen“. Leerzeichen an beiden Enden des Namens fallen
+weg.
+
+**Ein vergebener Name überschreibt nichts.** Ob der Name frei ist, prüft KRK
+nicht vorher; das entscheidet der Datenträger beim Anlegen. Ist der Name
+vergeben, geht dasselbe Blatt erneut auf, mit dem zuletzt versuchten Namen im
+Feld und dem Grund „es gibt schon einen Eintrag namens „<name>““ darunter. Das
+gilt auch für den unveränderten alten Namen, den häufigsten Fall, wenn die
+Eingabetaste zu früh fällt, und auf einem Mac-Datenträger in der Vorgabe auch
+für einen Namen, der sich vom vorhandenen nur in der Groß- und Kleinschreibung
+unterscheidet. Das Blatt geht so oft wieder auf, wie ein vergebener Name
+genannt wird; „Abbrechen“ oder `Esc` beenden den Vorgang, und die vorhandene
+Datei ist danach unverändert.
+
+**Das Duplikat entsteht im selben Ordner wie die Datei**, und danach steht die
+Auswahl auf ihm. Blendet ein Filtertext das Duplikat aus, bleibt die Auswahl,
+wo sie war.
+
+**Das Duplizieren ist ein Vorgang wie das Kopieren.** Die Statuszeile zeigt
+„Duplizieren“ mit dem Fortschritt, und `Esc` bricht ab, ohne eine halbe Datei
+zu hinterlassen. Jeder andere Fehlschlag, etwa fehlende Rechte, ein voller
+Datenträger oder eine inzwischen verschwundene Datei, öffnet das Blatt nicht
+erneut, sondern steht mit seinem Grund in der Liste der übersprungenen
+Einträge, die nach dem Vorgang aufgeht.
+
+---
+
 ## Die Tastaturbelegung
 
 **F1** öffnet sie. Sie ist ein Blatt am Hauptfenster und kein eigenes Fenster.
