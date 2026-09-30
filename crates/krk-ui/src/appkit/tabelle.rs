@@ -1551,10 +1551,10 @@ impl DateifensterQuelle {
     ///
     /// **Der eine Aufrufer steht im Aufbau der Oberflaeche**, je Fensterseite
     /// einmal (`Anwendungsdelegierter::oberflaeche_aufbauen`). Ohne ihn faellt
-    /// [`Self::kontextbefehl_melden`] still durch, und die drei Menueeintraege
-    /// stuenden da und taeten nichts — genau die Falle, gegen die der eine
-    /// Selektor und die Marke gebaut sind. Dass er gesetzt wird, haelt die
-    /// Probe `der_kontextmelder_wird_beim_aufbau_gesetzt` beim
+    /// [`Self::kontextbefehl_melden`] still durch, und die eigenen
+    /// Menueeintraege stuenden da und taeten nichts — genau die Falle, gegen
+    /// die der eine Selektor und die Marke gebaut sind. Dass er gesetzt wird,
+    /// haelt die Probe `der_kontextmelder_wird_beim_aufbau_gesetzt` beim
     /// Anwendungsdelegierten; eine Probe an dieser Stelle koennte es nicht,
     /// denn sie brauchte den Hauptfaden.
     pub fn kontextmelder_setzen(&self, melden: Kontextmelder) {

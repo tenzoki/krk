@@ -13304,7 +13304,13 @@ mod kontextproben {
     ///
     /// **Was sie nicht sieht:** ob die Antwort auf jedem Weg des Rueckrufs
     /// wirklich gesendet wird. Dass der Bauer des Blattes den Rueckruf auf
-    /// jedem Weg genau einmal ruft, halten die Proben in `namenseingabe.rs`.
+    /// jedem Weg genau einmal ruft, haelt keine Probe, sondern die Bauform:
+    /// `geprueft_zeigen` (`blaetter/namenseingabe.rs`) ruft `fertig` am Ende
+    /// seines Rueckrufs unbedingt, und `Blatt::zeigen_mit_wahl`
+    /// (`blaetter/mod.rs`) ruft diesen Rueckruf aus dem einen Abschlussblock
+    /// von AppKit. Die Proben in `namenseingabe.rs` pruefen allein
+    /// `blattstand`; wer `geprueft_zeigen` umbaut und `fertig` auf einem Weg
+    /// vergisst, wird von keiner Probe angehalten.
     #[test]
     fn jede_antwort_auf_die_namensnachfrage_erreicht_den_arbeitsfaden() {
         let rumpf = rumpf(&diese_datei(), "duplikatname_nachfragen");
