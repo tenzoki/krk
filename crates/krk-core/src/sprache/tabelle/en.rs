@@ -798,6 +798,100 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::MetadatenGeaendert => "Modified: {datum}",
         Text::MetadatenRechte => "Permissions: {rechte}",
         Text::MetadatenTyp => "Type: {typ}",
+        Text::StartAblageordnerNichtGeoeffnet => {
+            "the data folder could not be opened, the session will not be saved: {fehler}"
+        }
+        Text::OrtUrsacheAblageordnerNichtGeoeffnet => {
+            "the data folder could not be opened: {fehler}"
+        }
+        Text::StartSchreibsperreNichtGenommen => {
+            "the write lock of the data folder cannot be taken, nothing is loaded and nothing is saved: {fehler}"
+        }
+        Text::OrtUrsacheSchreibsperreNichtGenommen => {
+            "the write lock of the data folder could not be taken: {fehler}"
+        }
+        Text::OrtUrsacheStartNochNichtGelesen => "start-up has not read it yet",
+        Text::LesezeichenZielFehlt => "“{name}” is missing: {pfad} no longer exists",
+        Text::LesezeichenGesperrt => {
+            "the bookmarks could not be changed, the write lock of the data folder cannot be taken: {fehler}"
+        }
+        Text::LesezeichenVonAndererInstanzGeaendert => {
+            "this bookmark is no longer in the list as it was; another instance of KRK has changed or deleted it"
+        }
+        Text::LesezeichenNichtGesichert => "the bookmarks could not be saved: {fehler}",
+        Text::LesezeichenNameFrage => "What should the bookmark be called?",
+        Text::LesezeichenAngelegt => "Bookmark “{name}” created",
+        Text::EditorHaeltKeineDatei => "the Editor holds no file",
+        Text::HinweisTastenabgriffTitel => "KRK cannot read keystrokes",
+        Text::HinweisTastenabgriffText => {
+            "The keyboard tap could not be set up. Without it no key moves the selection and no keyboard shortcut works. KRK quits rather than continuing with a window that cannot be controlled from the keyboard."
+        }
+        Text::OrdnerNichtBeobachtet => {
+            "the folders cannot be watched; outside changes appear only after a folder change"
+        }
+        Text::KeineAngezeigteDatei => "no file is shown that could be jumped to",
+        Text::BildfolgeNochInVorbereitung => "The photo sequence is still being prepared.",
+        Text::AngleichenFensterZuSchmal => {
+            "the window is too narrow; nothing was shown and nothing was set"
+        }
+        Text::AngleichenZeigtSchon => "the other file pane already shows this folder",
+        Text::AngleichenEingeblendetZeigtSchon => {
+            "the other file pane was shown and already shows this folder"
+        }
+        Text::NeuerungenOhneAblageordner => {
+            "there is no data folder, and so no files that could lag behind this version"
+        }
+        Text::NeuerungenGesperrt => {
+            "What’s New cannot be checked: the write lock of the data folder cannot be taken ({fehler})"
+        }
+        Text::WerksOhneAblageordner => "There is no data folder, and so nothing to reset.",
+        Text::WerksGesperrt => {
+            "Nothing has been reset: the write lock of the data folder cannot be taken ({fehler})."
+        }
+        Text::BelegungNichtGesichert => "the key bindings apply, but could not be saved: {fehler}",
+        Text::BelegungOhneAblageordner => {
+            "the key bindings apply, but without a data folder they are not saved and will be lost on quitting"
+        }
+        Text::BelegungGesperrt => {
+            "the key bindings apply, but are not saved: the write lock of the data folder cannot be taken ({fehler})"
+        }
+        Text::OrtKeinUtf8 => {
+            "The chosen location cannot be written to settings.toml: its path is not valid UTF-8"
+        }
+        Text::OrtOhneAblageordner => {
+            "There is no data folder and so no settings.toml into which KRK could write the location; the notes folder stays where it is"
+        }
+        Text::OrtGesperrt => {
+            "The location cannot be written to settings.toml: the write lock of the data folder cannot be taken ({fehler}); the notes folder stays where it is"
+        }
+        Text::LoeschblattSchaltflaeche => "Move to Trash",
+        Text::NichtsAusgewaehlt => "nothing is selected",
+        Text::StapelKeineRegel => "nothing to rename: no rule could be built from the fields",
+        Text::StapelJedeZeileMitHinweis => "nothing to rename: every line carries a note",
+        Text::QuelleUndZielDerselbeOrdner => "source and destination are the same folder",
+        Text::VorgangNichtGestartet => "the operation could not be started: {fehler}",
+        Text::VorschauKeineDateiZumBearbeiten => "the Preview shows no file to edit",
+        Text::QuicknoteFensterZuSchmal => "The window is too narrow for the Quicknote.",
+        Text::SitzungNichtGesichert => "the session could not be saved: {fehler}",
+        Text::WeitereInstanzOhneBuendel => {
+            "KRK is not running from a bundle; another instance only starts the built KRK.app"
+        }
+        Text::AuswurfDateifensterZeigt => "{name} was ejected; the file pane now shows {ziel}",
+        Text::StartOhneSitzungsrecht => {
+            "another instance of KRK is already running; tabs and layout of this window will not be saved"
+        }
+        Text::StartNeuerungenNichtVermerkt => {
+            "it could not be recorded that this version’s What’s New has been reported; the message will return at the next start: {fehler}"
+        }
+        Text::StartSitzungsrechtNichtAngefordert => {
+            "the session right cannot be requested, the session will not be saved: {fehler}"
+        }
+        Text::StartLesezeichenNichtGeladen => {
+            "the bookmarks could not be loaded, the write lock of the data folder cannot be taken: {fehler}"
+        }
+        Text::HeimOhneSperreAngelegt => {
+            "the write lock of the data folder cannot be taken ({fehler}); F2 created without it"
+        }
     }
 }
 
@@ -861,6 +955,14 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::BildfolgeVorbereitet => (
             "The photo sequence is being prepared: {n} photo.",
             "The photo sequence is being prepared: {n} photos.",
+        ),
+        Zahlwort::AuswurfDateifensterUndVerdeckteTabs => (
+            "{name} was ejected; the file pane and one hidden tab now show {ziel}",
+            "{name} was ejected; the file pane and {n} hidden tabs now show {ziel}",
+        ),
+        Zahlwort::AuswurfVerdeckteTabs => (
+            "{name} was ejected; one hidden tab now shows {ziel}",
+            "{name} was ejected; {n} hidden tabs now show {ziel}",
         ),
     }
 }

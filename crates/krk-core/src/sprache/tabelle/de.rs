@@ -834,6 +834,106 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::MetadatenGeaendert => "Geändert: {datum}",
         Text::MetadatenRechte => "Rechte: {rechte}",
         Text::MetadatenTyp => "Typ: {typ}",
+        Text::StartAblageordnerNichtGeoeffnet => {
+            "der Ablageordner ließ sich nicht öffnen, die Sitzung wird nicht gesichert: {fehler}"
+        }
+        Text::OrtUrsacheAblageordnerNichtGeoeffnet => {
+            "der Ablageordner ließ sich nicht öffnen: {fehler}"
+        }
+        Text::StartSchreibsperreNichtGenommen => {
+            "die Schreibsperre der Ablage lässt sich nicht nehmen, es wird nichts geladen und nichts gesichert: {fehler}"
+        }
+        Text::OrtUrsacheSchreibsperreNichtGenommen => {
+            "die Schreibsperre der Ablage ließ sich nicht nehmen: {fehler}"
+        }
+        Text::OrtUrsacheStartNochNichtGelesen => "der Start hat sie noch nicht gelesen",
+        Text::LesezeichenZielFehlt => "„{name}“ fehlt: {pfad} gibt es nicht mehr",
+        Text::LesezeichenGesperrt => {
+            "die Lesezeichen ließen sich nicht ändern, die Schreibsperre der Ablage ist nicht zu nehmen: {fehler}"
+        }
+        Text::LesezeichenVonAndererInstanzGeaendert => {
+            "dieses Lesezeichen steht nicht mehr so in der Liste; eine andere Instanz von KRK hat es geändert oder gelöscht"
+        }
+        Text::LesezeichenNichtGesichert => "die Lesezeichen ließen sich nicht sichern: {fehler}",
+        Text::LesezeichenNameFrage => "Wie soll das Lesezeichen heißen?",
+        Text::LesezeichenAngelegt => "Lesezeichen „{name}“ angelegt",
+        Text::EditorHaeltKeineDatei => "der Editor hält keine Datei",
+        Text::HinweisTastenabgriffTitel => "KRK kann keine Tastendrücke lesen",
+        Text::HinweisTastenabgriffText => {
+            "Der Tastenabgriff ließ sich nicht einrichten. Ohne ihn bewegt keine Taste die Auswahl, und kein Tastenkürzel wirkt. KRK wird beendet, statt mit einem Fenster ohne Tastatursteuerung weiterzulaufen."
+        }
+        Text::OrdnerNichtBeobachtet => {
+            "die Ordner lassen sich nicht beobachten; fremde Änderungen erscheinen erst nach einem Ordnerwechsel"
+        }
+        Text::KeineAngezeigteDatei => "keine angezeigte Datei, zu der gesprungen werden könnte",
+        Text::BildfolgeNochInVorbereitung => "Die Bildfolge wird noch vorbereitet.",
+        Text::AngleichenFensterZuSchmal => {
+            "das Fenster ist zu schmal; es wurde nichts eingeblendet und nichts gestellt"
+        }
+        Text::AngleichenZeigtSchon => "das andere Dateifenster zeigt diesen Ordner bereits",
+        Text::AngleichenEingeblendetZeigtSchon => {
+            "das andere Dateifenster wurde eingeblendet und zeigt diesen Ordner bereits"
+        }
+        Text::NeuerungenOhneAblageordner => {
+            "es gibt keinen Ablageordner, und damit keine Dateien, die hinter dieser Fassung zurückliegen könnten"
+        }
+        Text::NeuerungenGesperrt => {
+            "die Neuerungen lassen sich nicht nachsehen: die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler})"
+        }
+        Text::WerksOhneAblageordner => {
+            "Es gibt keinen Ablageordner, und damit nichts zurückzusetzen."
+        }
+        Text::WerksGesperrt => {
+            "Nichts ist zurückgesetzt: die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler})."
+        }
+        Text::BelegungNichtGesichert => "die Belegung gilt, ließ sich aber nicht sichern: {fehler}",
+        Text::BelegungOhneAblageordner => {
+            "die Belegung gilt, ist aber ohne Ablageordner nicht gesichert und geht mit dem Beenden verloren"
+        }
+        Text::BelegungGesperrt => {
+            "die Belegung gilt, ist aber nicht gesichert: die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler})"
+        }
+        Text::OrtKeinUtf8 => {
+            "Der gewählte Ort lässt sich nicht in settings.toml schreiben: sein Pfad ist kein gültiges UTF-8"
+        }
+        Text::OrtOhneAblageordner => {
+            "Es gibt keinen Ablageordner und damit keine settings.toml, in die KRK den Ort schreiben könnte; der Notizordner bleibt, wo er ist"
+        }
+        Text::OrtGesperrt => {
+            "Der Ort lässt sich nicht in settings.toml schreiben: die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); der Notizordner bleibt, wo er ist"
+        }
+        Text::LoeschblattSchaltflaeche => "In den Papierkorb räumen",
+        Text::NichtsAusgewaehlt => "es ist nichts ausgewählt",
+        Text::StapelKeineRegel => {
+            "nichts umzubenennen: aus den Feldern ließ sich keine Regel bauen"
+        }
+        Text::StapelJedeZeileMitHinweis => "nichts umzubenennen: jede Zeile trägt einen Hinweis",
+        Text::QuelleUndZielDerselbeOrdner => "Quelle und Ziel sind derselbe Ordner",
+        Text::VorgangNichtGestartet => "die Operation ließ sich nicht starten: {fehler}",
+        Text::VorschauKeineDateiZumBearbeiten => "die Vorschau zeigt keine Datei zum Bearbeiten",
+        Text::QuicknoteFensterZuSchmal => "Für die Quicknote ist das Fenster zu schmal.",
+        Text::SitzungNichtGesichert => "die Sitzung ließ sich nicht sichern: {fehler}",
+        Text::WeitereInstanzOhneBuendel => {
+            "KRK läuft nicht aus einem Bündel; eine weitere Instanz startet nur das gebaute KRK.app"
+        }
+        Text::AuswurfDateifensterZeigt => {
+            "{name} wurde ausgeworfen; das Dateifenster zeigt jetzt {ziel}"
+        }
+        Text::StartOhneSitzungsrecht => {
+            "eine weitere Instanz von KRK läuft schon; Tabs und Aufteilung dieses Fensters werden nicht gesichert"
+        }
+        Text::StartNeuerungenNichtVermerkt => {
+            "es ließ sich nicht vermerken, dass die Neuerungen dieser Fassung gemeldet sind; die Meldung kommt beim nächsten Start wieder: {fehler}"
+        }
+        Text::StartSitzungsrechtNichtAngefordert => {
+            "das Sitzungsrecht lässt sich nicht anfordern, die Sitzung wird nicht gesichert: {fehler}"
+        }
+        Text::StartLesezeichenNichtGeladen => {
+            "die Lesezeichen ließen sich nicht laden, die Schreibsperre der Ablage ist nicht zu nehmen: {fehler}"
+        }
+        Text::HeimOhneSperreAngelegt => {
+            "die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); F2 hat ohne sie angelegt"
+        }
     }
 }
 
@@ -909,6 +1009,14 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::BildfolgeVorbereitet => (
             "Die Bildfolge wird vorbereitet: {n} Foto.",
             "Die Bildfolge wird vorbereitet: {n} Fotos.",
+        ),
+        Zahlwort::AuswurfDateifensterUndVerdeckteTabs => (
+            "{name} wurde ausgeworfen; das Dateifenster und ein verdeckter Tab zeigen jetzt {ziel}",
+            "{name} wurde ausgeworfen; das Dateifenster und {n} verdeckte Tabs zeigen jetzt {ziel}",
+        ),
+        Zahlwort::AuswurfVerdeckteTabs => (
+            "{name} wurde ausgeworfen; ein verdeckter Tab zeigt jetzt {ziel}",
+            "{name} wurde ausgeworfen; {n} verdeckte Tabs zeigen jetzt {ziel}",
         ),
     }
 }

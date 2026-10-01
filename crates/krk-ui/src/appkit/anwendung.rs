@@ -288,6 +288,7 @@ use krk_core::operation::{
     self, Abschluss, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung,
     Namensfehler, freier_name,
 };
+use krk_core::sprache::{self, Text, satz, text};
 use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
@@ -375,13 +376,17 @@ const FINDERKENNUNG: &str = "com.apple.finder";
 ///
 /// **Er nennt die Folge und nicht den Mechanismus.** „Sitzungsrecht" ist ein
 /// Wort dieses Bauplans; was der Nutzer merkt, ist, dass dieses Fenster seine
-/// Tabs und seine Aufteilung nicht wiederfindet. Er steht als Konstante da,
+/// Tabs und seine Aufteilung nicht wiederfindet. Er steht als eigene Funktion da,
 /// damit die Probe ihn nennen kann, ohne ihn abzuschreiben: `sitzung_laden`
 /// braucht einen Ablageordner und ein Fenster und ist ohne beides nicht zu
 /// pruefen. **Dass der Satz in der Statuszeile ankommt, sieht der Nutzer am
 /// laufenden Buendel**; er geht denselben Weg wie jede andere Startmeldung.
-const OHNE_SITZUNGSRECHT: &str = "eine weitere Instanz von KRK läuft schon; Tabs und Aufteilung \
-                                  dieses Fensters werden nicht gesichert";
+/// Eine Funktion und keine Konstante, weil der Wortlaut aus der Sprachtabelle
+/// kommt und keine `const` die geltende Sprache lesen kann.
+#[must_use]
+fn ohne_sitzungsrecht() -> &'static str {
+    text(Text::StartOhneSitzungsrecht)
+}
 
 /// Welche Station des Faengers einen Tastendruck der Belegungsansicht bekommt.
 ///
@@ -499,9 +504,9 @@ fn neuerungen_erheben(
     }
     let bestand = neuerungen::erheben(zugang, urteile);
     if let Err(fehler) = merker::vermerken(zugang, LAUFENDE_FASSUNG) {
-        meldungen.push(format!(
-            "es ließ sich nicht vermerken, dass die Neuerungen dieser Fassung gemeldet sind; \
-             die Meldung kommt beim nächsten Start wieder: {fehler}"
+        meldungen.push(satz(
+            Text::StartNeuerungenNichtVermerkt,
+            &[("fehler", &fehler)],
         ));
     }
     meldungen.extend(neuerungen::startzeile(
@@ -2200,11 +2205,13 @@ impl Anwendungsdelegierter {
         let ablage = match Ablage::im_benutzerverzeichnis() {
             Ok(ablage) => ablage,
             Err(fehler) => {
-                meldungen.push(format!(
-                    "der Ablageordner ließ sich nicht öffnen, die Sitzung wird nicht gesichert: {fehler}"
+                meldungen.push(satz(
+                    Text::StartAblageordnerNichtGeoeffnet,
+                    &[("fehler", &fehler)],
                 ));
-                let ungelesen = Ortsfehler::EinstellungenUngelesen(format!(
-                    "der Ablageordner ließ sich nicht öffnen: {fehler}"
+                let ungelesen = Ortsfehler::EinstellungenUngelesen(satz(
+                    Text::OrtUrsacheAblageordnerNichtGeoeffnet,
+                    &[("fehler", &fehler)],
                 ));
                 return (Sitzung::default(), meldungen, Err(ungelesen));
             }
@@ -2222,9 +2229,9 @@ impl Anwendungsdelegierter {
         let recht = match Sitzungsrecht::nehmen(ablage.ort()) {
             Ok(recht) => recht,
             Err(fehler) => {
-                meldungen.push(format!(
-                    "das Sitzungsrecht lässt sich nicht anfordern, die Sitzung wird nicht \
-                     gesichert: {fehler}"
+                meldungen.push(satz(
+                    Text::StartSitzungsrechtNichtAngefordert,
+                    &[("fehler", &fehler)],
                 ));
                 Sitzungsrecht::ohne()
             }
@@ -2234,7 +2241,7 @@ impl Anwendungsdelegierter {
             // C3.10: eine Instanz, die die Sitzung nicht schreibt, sagt es beim
             // Start einmal. Der Satz nennt die Folge und nicht den Mechanismus:
             // was der Nutzer merkt, ist die nicht gemerkte Aufteilung.
-            meldungen.push(OHNE_SITZUNGSRECHT.to_owned());
+            meldungen.push(ohne_sitzungsrecht().to_owned());
         }
         let _ = ivars.sitzungsrecht.set(recht);
 
@@ -2274,12 +2281,13 @@ impl Anwendungsdelegierter {
         let ((sitzung, meldung), dateien, (bestand, neuerungsmeldungen)) = match gelesen {
             Ok(alles) => alles,
             Err(fehler) => {
-                meldungen.push(format!(
-                    "die Schreibsperre der Ablage lässt sich nicht nehmen, es wird nichts \
-                     geladen und nichts gesichert: {fehler}"
+                meldungen.push(satz(
+                    Text::StartSchreibsperreNichtGenommen,
+                    &[("fehler", &fehler)],
                 ));
-                let ungelesen = Ortsfehler::EinstellungenUngelesen(format!(
-                    "die Schreibsperre der Ablage ließ sich nicht nehmen: {fehler}"
+                let ungelesen = Ortsfehler::EinstellungenUngelesen(satz(
+                    Text::OrtUrsacheSchreibsperreNichtGenommen,
+                    &[("fehler", &fehler)],
                 ));
                 return (Sitzung::default(), meldungen, Err(ungelesen));
             }
@@ -2466,9 +2474,9 @@ impl Anwendungsdelegierter {
             // Nutzerfrage; sie steht in demselben Datensatz.
             Err(Sperrhindernis::OhneOrdner) => Lesezeichenliste::default(),
             Err(Sperrhindernis::Gesperrt(fehler)) => {
-                meldungen.push(format!(
-                    "die Lesezeichen ließen sich nicht laden, die Schreibsperre der Ablage \
-                     ist nicht zu nehmen: {fehler}"
+                meldungen.push(satz(
+                    Text::StartLesezeichenNichtGeladen,
+                    &[("fehler", &fehler)],
                 ));
                 Lesezeichenliste::default()
             }
@@ -2517,17 +2525,14 @@ impl Anwendungsdelegierter {
     fn leistenauswahl_ausfuehren(&self, auswahl: &crate::leistenmodell::Auswahl) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         if !auswahl.gueltig {
-            self.antwort_zeigen(
-                aktiv,
-                // Kurz genug fuer die Statuszeile: sie ist einzeilig, und ein
-                // laengerer Satz endet am rechten Rand des Dateifensters mit
-                // drei Punkten. Gemessen am 260805 im laufenden Buendel.
-                &format!(
-                    "„{}“ fehlt: {} gibt es nicht mehr",
-                    auswahl.name,
-                    auswahl.pfad().display()
-                ),
+            // Kurz genug fuer die Statuszeile: sie ist einzeilig, und ein
+            // laengerer Satz endet am rechten Rand des Dateifensters mit
+            // drei Punkten. Gemessen am 260805 im laufenden Buendel.
+            let antwort = satz(
+                Text::LesezeichenZielFehlt,
+                &[("name", &auswahl.name), ("pfad", &auswahl.pfad().display())],
             );
+            self.antwort_zeigen(aktiv, &antwort);
             return;
         }
         match &auswahl.ziel {
@@ -2651,10 +2656,7 @@ impl Anwendungsdelegierter {
             Err(Sperrhindernis::Gesperrt(fehler)) => {
                 self.antwort_zeigen(
                     seite,
-                    &format!(
-                        "die Lesezeichen ließen sich nicht ändern, die Schreibsperre der \
-                         Ablage ist nicht zu nehmen: {fehler}"
-                    ),
+                    &satz(Text::LesezeichenGesperrt, &[("fehler", &fehler)]),
                 );
                 return false;
             }
@@ -2683,17 +2685,13 @@ impl Anwendungsdelegierter {
             // geaendert hat. Der Satz nannte bis zur Runde 7 allein die
             // Loeschung und schickte den Nutzer damit ein Lesezeichen suchen,
             // das umbenannt in der Leiste steht.
-            self.antwort_zeigen(
-                seite,
-                "dieses Lesezeichen steht nicht mehr so in der Liste; eine andere Instanz \
-                 von KRK hat es geändert oder gelöscht",
-            );
+            self.antwort_zeigen(seite, text(Text::LesezeichenVonAndererInstanzGeaendert));
             return false;
         }
         if let Some(Err(fehler)) = geschrieben {
             self.antwort_zeigen(
                 seite,
-                &format!("die Lesezeichen ließen sich nicht sichern: {fehler}"),
+                &satz(Text::LesezeichenNichtGesichert, &[("fehler", &fehler)]),
             );
             return false;
         }
@@ -2742,8 +2740,8 @@ impl Anwendungsdelegierter {
         let griff = namenseingabe::frei_zeigen(
             self.mtm(),
             fenster,
-            "Wie soll das Lesezeichen heißen?",
-            "Anlegen",
+            text(Text::LesezeichenNameFrage),
+            text(Text::AnlegenBestaetigen),
             &vorschlag,
             move |name| {
                 if let Some(selbst) = schwach.load() {
@@ -2799,7 +2797,7 @@ impl Anwendungsdelegierter {
             let (Some(datei), Some((zeile, zeileninhalt))) =
                 (editor.pfad(), editor.schreibmarkenzeile())
             else {
-                self.antwort_zeigen(seite, "der Editor hält keine Datei");
+                self.antwort_zeigen(seite, text(Text::EditorHaeltKeineDatei));
                 return None;
             };
             let vorschlag = match datei.file_name() {
@@ -2901,7 +2899,10 @@ impl Anwendungsdelegierter {
                 ziel: ziel.clone(),
             },
         ) {
-            self.antwort_zeigen(seite, &format!("Lesezeichen „{}“ angelegt", name.trim()));
+            self.antwort_zeigen(
+                seite,
+                &satz(Text::LesezeichenAngelegt, &[("name", &name.trim())]),
+            );
         }
     }
 
@@ -2923,8 +2924,8 @@ impl Anwendungsdelegierter {
         let griff = namenseingabe::frei_zeigen(
             self.mtm(),
             fenster,
-            "Wie soll das Lesezeichen heißen?",
-            "Umbenennen",
+            text(Text::LesezeichenNameFrage),
+            text(Text::BlattUmbenennen),
             &alt,
             move |name| {
                 if let Some(selbst) = schwach.load() {
@@ -3275,10 +3276,8 @@ impl Anwendungsdelegierter {
         self.ivars().beenden_ohne_nachfrage.set(true);
         hinweis::zeigen(
             self.mtm(),
-            "KRK kann keine Tastendrücke lesen",
-            "Der Tastenabgriff ließ sich nicht einrichten. Ohne ihn bewegt keine \
-             Taste die Auswahl, und kein Tastenkürzel wirkt. KRK wird beendet, \
-             statt mit einem Fenster ohne Tastatursteuerung weiterzulaufen.",
+            text(Text::HinweisTastenabgriffTitel),
+            text(Text::HinweisTastenabgriffText),
         );
         self.beenden();
     }
@@ -3590,9 +3589,7 @@ impl Anwendungsdelegierter {
             // hinzunehmen waere die Sorte Fehler, die erst dem Nutzer auffaellt.
             self.dateifenster(self.ivars().modell.borrow().aktiv())
                 .quelle()
-                .meldung_zeigen(
-                    "die Ordner lassen sich nicht beobachten; fremde Änderungen erscheinen erst nach einem Ordnerwechsel",
-                );
+                .meldung_zeigen(text(Text::OrdnerNichtBeobachtet));
         }
         *self.ivars().dateisystemwache.borrow_mut() = wache;
     }
@@ -4765,10 +4762,7 @@ impl Anwendungsdelegierter {
             // ebenso fuer den Nutzer, der den Editor abgeschaltet hat, wie
             // fuer den, dessen Vorschau nichts zeigt (C2, fuenftes
             // Kriterium).
-            self.antwort_zeigen(
-                aktiv,
-                "keine angezeigte Datei, zu der gesprungen werden könnte",
-            );
+            self.antwort_zeigen(aktiv, text(Text::KeineAngezeigteDatei));
             return true;
         };
         self.zum_eintrag_springen(&datei, Wunschmeldung::Still);
@@ -4816,7 +4810,7 @@ impl Anwendungsdelegierter {
     fn zum_bild_springen(&self) -> bool {
         let Some(foto) = self.vorschau().folgebild() else {
             let aktiv = self.ivars().modell.borrow().aktiv();
-            self.antwort_zeigen(aktiv, "Die Bildfolge wird noch vorbereitet.");
+            self.antwort_zeigen(aktiv, text(Text::BildfolgeNochInVorbereitung));
             return true;
         };
         self.zum_eintrag_springen(&foto, Wunschmeldung::Melden);
@@ -4966,10 +4960,7 @@ impl Anwendungsdelegierter {
         // waere der Absturz.
         let sichtbar = self.ivars().modell.borrow().sichtbar(bereich);
         if !sichtbar && !self.bereich_einblenden(bereich) {
-            self.antwort_zeigen(
-                aktiv,
-                "das Fenster ist zu schmal; es wurde nichts eingeblendet und nichts gestellt",
-            );
+            self.antwort_zeigen(aktiv, text(Text::AngleichenFensterZuSchmal));
             return false;
         }
 
@@ -4980,11 +4971,11 @@ impl Anwendungsdelegierter {
             // dann braucht die Fensterzeile ihren Nachzug.
             self.antwort_zeigen(
                 aktiv,
-                if sichtbar {
-                    "das andere Dateifenster zeigt diesen Ordner bereits"
+                text(if sichtbar {
+                    Text::AngleichenZeigtSchon
                 } else {
-                    "das andere Dateifenster wurde eingeblendet und zeigt diesen Ordner bereits"
-                },
+                    Text::AngleichenEingeblendetZeigtSchon
+                }),
             );
             return !sichtbar;
         }
@@ -5152,20 +5143,13 @@ impl Anwendungsdelegierter {
             // hier bleibt zu sagen, warum **dieser** Befehl nichts zeigt.
             Err(Sperrhindernis::OhneOrdner) => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
-                self.antwort_zeigen(
-                    aktiv,
-                    "es gibt keinen Ablageordner, und damit keine Dateien, die hinter dieser \
-                     Fassung zurückliegen könnten",
-                );
+                self.antwort_zeigen(aktiv, text(Text::NeuerungenOhneAblageordner));
             }
             Err(Sperrhindernis::Gesperrt(fehler)) => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(
                     aktiv,
-                    &format!(
-                        "die Neuerungen lassen sich nicht nachsehen: die Schreibsperre der Ablage \
-                         lässt sich nicht nehmen ({fehler})"
-                    ),
+                    &satz(Text::NeuerungenGesperrt, &[("fehler", &fehler)]),
                 );
             }
         }
@@ -5225,10 +5209,7 @@ impl Anwendungsdelegierter {
         let lage = match lage {
             Some(Ok(lage)) => lage,
             None => {
-                self.antwort_zeigen(
-                    aktiv,
-                    "Es gibt keinen Ablageordner, und damit nichts zurückzusetzen.",
-                );
+                self.antwort_zeigen(aktiv, text(Text::WerksOhneAblageordner));
                 return true;
             }
             Some(Err(hindernis)) => {
@@ -5301,20 +5282,11 @@ impl Anwendungsdelegierter {
                 return;
             }
             Err(Sperrhindernis::OhneOrdner) => {
-                self.antwort_zeigen(
-                    aktiv,
-                    "Es gibt keinen Ablageordner, und damit nichts zurückzusetzen.",
-                );
+                self.antwort_zeigen(aktiv, text(Text::WerksOhneAblageordner));
                 return;
             }
             Err(Sperrhindernis::Gesperrt(fehler)) => {
-                self.antwort_zeigen(
-                    aktiv,
-                    &format!(
-                        "Nichts ist zurückgesetzt: die Schreibsperre der Ablage lässt sich nicht \
-                         nehmen ({fehler})."
-                    ),
-                );
+                self.antwort_zeigen(aktiv, &satz(Text::WerksGesperrt, &[("fehler", &fehler)]));
                 return;
             }
         };
@@ -5398,17 +5370,13 @@ impl Anwendungsdelegierter {
         // Sorte Fehler, die erst Tage spaeter auffaellt.
         let meldung = match self.unter_der_sperre(|zugang| belegung.sichern(zugang)) {
             Ok(Ok(())) => None,
-            Ok(Err(fehler)) => Some(format!(
-                "die Belegung gilt, ließ sich aber nicht sichern: {fehler}"
-            )),
-            Err(Sperrhindernis::OhneOrdner) => Some(
-                "die Belegung gilt, ist aber ohne Ablageordner nicht gesichert und geht mit dem Beenden verloren"
-                    .to_owned(),
-            ),
-            Err(Sperrhindernis::Gesperrt(fehler)) => Some(format!(
-                "die Belegung gilt, ist aber nicht gesichert: die Schreibsperre der Ablage \
-                 lässt sich nicht nehmen ({fehler})"
-            )),
+            Ok(Err(fehler)) => Some(satz(Text::BelegungNichtGesichert, &[("fehler", &fehler)])),
+            Err(Sperrhindernis::OhneOrdner) => {
+                Some(text(Text::BelegungOhneAblageordner).to_owned())
+            }
+            Err(Sperrhindernis::Gesperrt(fehler)) => {
+                Some(satz(Text::BelegungGesperrt, &[("fehler", &fehler)]))
+            }
         };
         self.belegung_uebernehmen(belegung);
 
@@ -5589,10 +5557,7 @@ impl Anwendungsdelegierter {
             // Der Start hat das Fehlen des Ablageordners schon gemeldet.
             Err(Sperrhindernis::OhneOrdner) => anlegen(None),
             Err(Sperrhindernis::Gesperrt(fehler)) => {
-                sperrsatz = Some(format!(
-                    "die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); \
-                     F2 hat ohne sie angelegt"
-                ));
+                sperrsatz = Some(satz(Text::HeimOhneSperreAngelegt, &[("fehler", &fehler)]));
                 anlegen(None)
             }
         };
@@ -5622,7 +5587,8 @@ impl Anwendungsdelegierter {
         let mut meldungen = bereitstellung.meldungen();
         meldungen.extend(sperrsatz);
         if !meldungen.is_empty() {
-            self.antwort_zeigen(aktiv, &meldungen.join("; "));
+            let antwort = meldungen.join("; ");
+            self.antwort_zeigen(aktiv, &antwort);
         }
         let _ = self.fokus_holen(Fokus::Dateifenster);
         true
@@ -5746,9 +5712,8 @@ impl Anwendungsdelegierter {
         let zuhause = pfade::benutzerverzeichnis();
         let ablageordner = self.ablageordner();
         let Some(text) = ort::schreibform(pfad, zuhause.as_deref()) else {
-            melden(
-                "Der gewählte Ort lässt sich nicht in settings.toml schreiben: sein Pfad ist kein gültiges UTF-8",
-            );
+            // `sprache::text` ausgeschrieben: `text` ist hier der Ortstext.
+            melden(sprache::text(Text::OrtKeinUtf8));
             return;
         };
         let neuer_pfad = match ort::ort_lesen(&text, zuhause.as_deref(), Some(&ablageordner)) {
@@ -5804,15 +5769,11 @@ impl Anwendungsdelegierter {
                 return;
             }
             Err(Sperrhindernis::OhneOrdner) => {
-                melden(
-                    "Es gibt keinen Ablageordner und damit keine settings.toml, in die KRK den Ort schreiben könnte; der Notizordner bleibt, wo er ist",
-                );
+                melden(sprache::text(Text::OrtOhneAblageordner));
                 return;
             }
             Err(Sperrhindernis::Gesperrt(fehler)) => {
-                melden(&format!(
-                    "Der Ort lässt sich nicht in settings.toml schreiben: die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); der Notizordner bleibt, wo er ist"
-                ));
+                melden(&satz(Text::OrtGesperrt, &[("fehler", &fehler)]));
                 return;
             }
         };
@@ -6962,7 +6923,7 @@ impl Anwendungsdelegierter {
     /// `Wirkungsbereich::Dateifenster`, und die Zuleitung weist ihn ab, bevor
     /// er hier ankommt.
     fn in_den_papierkorb(&self) -> bool {
-        self.loeschen_nach_rueckfrage("In den Papierkorb räumen")
+        self.loeschen_nach_rueckfrage(text(Text::LoeschblattSchaltflaeche))
     }
 
     /// Was ein Druck auf `delete` bedeutet: ein Zeichen des Filtertexts
@@ -7205,7 +7166,7 @@ impl Anwendungsdelegierter {
                 true
             }
             Vorstufe::NichtsAusgewaehlt => {
-                self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
+                self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
                 true
             }
             // Kein Blatt, kein Auftrag, und die Statuszeile nennt Befund, Folge
@@ -7681,7 +7642,7 @@ impl Anwendungsdelegierter {
         let quelle = self.dateifenster(seite).quelle();
         let auswahl = quelle.betroffene_eintraege();
         if auswahl.ist_leer() {
-            self.antwort_zeigen(seite, "es ist nichts ausgewählt");
+            self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
             return true;
         }
         let Some(fenster) = self.ivars().fenster.get() else {
@@ -7752,11 +7713,11 @@ impl Anwendungsdelegierter {
             // Zeilen absuchen
             // (`issues/260826-1333_*_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md`).
             let grund = if vorschau.zeilen().is_empty() {
-                "nichts umzubenennen: aus den Feldern ließ sich keine Regel bauen"
+                Text::StapelKeineRegel
             } else {
-                "nichts umzubenennen: jede Zeile trägt einen Hinweis"
+                Text::StapelJedeZeileMitHinweis
             };
-            self.antwort_zeigen(seite, grund);
+            self.antwort_zeigen(seite, text(grund));
             return;
         }
         let auftrag = Auftrag::umbenennen_im_stapel(paare);
@@ -7918,7 +7879,7 @@ impl Anwendungsdelegierter {
         let quelle = self.dateifenster(aktiv).quelle();
         let auswahl = quelle.betroffene_eintraege();
         if auswahl.ist_leer() {
-            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
+            self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
             return true;
         }
         let quellordner = quelle.angezeigter_ordner();
@@ -7927,7 +7888,7 @@ impl Anwendungsdelegierter {
         }) || art.eq(&Art::Verschieben {
             ziel: quellordner.clone(),
         }) {
-            self.antwort_zeigen(aktiv, "Quelle und Ziel sind derselbe Ordner");
+            self.antwort_zeigen(aktiv, text(Text::QuelleUndZielDerselbeOrdner));
             return true;
         }
 
@@ -8689,7 +8650,7 @@ impl Anwendungsdelegierter {
             // hat noch nichts angefasst.
             self.antwort_zeigen(
                 seite,
-                &format!("die Operation ließ sich nicht starten: {fehler}"),
+                &satz(Text::VorgangNichtGestartet, &[("fehler", &fehler)]),
             );
             return true;
         }
@@ -9160,7 +9121,7 @@ impl Anwendungsdelegierter {
             // `auftrag_stellen` und `stapel_umbenennen`. `true` verbraucht den
             // Tastendruck, aus demselben Grund wie dort: F4 auf leerer Auswahl
             // gehoert nicht in die Menueleiste.
-            self.antwort_zeigen(aktiv, "es ist nichts ausgewählt");
+            self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
             return true;
         };
         self.editor_oeffnen_lassen(&pfad, Oeffnungsherkunft::Befehl)
@@ -9209,7 +9170,7 @@ impl Anwendungsdelegierter {
             // ueber die der Editor etwas zu melden haette, also `antwort_zeigen`
             // und keine `Editormeldung`.
             let aktiv = self.ivars().modell.borrow().aktiv();
-            self.antwort_zeigen(aktiv, "die Vorschau zeigt keine Datei zum Bearbeiten");
+            self.antwort_zeigen(aktiv, text(Text::VorschauKeineDateiZumBearbeiten));
             return true;
         };
         self.editor_oeffnen_lassen(&pfad, Oeffnungsherkunft::Befehl)
@@ -9602,7 +9563,7 @@ impl Anwendungsdelegierter {
             }
             Sicherungsausgang::NichtsGehalten => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
-                self.antwort_zeigen(aktiv, "der Editor hält keine Datei");
+                self.antwort_zeigen(aktiv, text(Text::EditorHaeltKeineDatei));
                 true
             }
             // Eine Zelle der Eintragstabelle liess sich nicht uebernehmen; es
@@ -9698,7 +9659,7 @@ impl Anwendungsdelegierter {
         };
         if !sichtbar && !self.bereich_einblenden(Bereich::Editor) {
             let aktiv = self.ivars().modell.borrow().aktiv();
-            self.antwort_zeigen(aktiv, "Für die Quicknote ist das Fenster zu schmal.");
+            self.antwort_zeigen(aktiv, text(Text::QuicknoteFensterZuSchmal));
             return false;
         }
         if let Err(meldung) = editor.quicknote_zeigen(Rueckkehr { fokus, rand }) {
@@ -9915,7 +9876,7 @@ impl Anwendungsdelegierter {
         };
         if !editor.haelt_datei() {
             let aktiv = self.ivars().modell.borrow().aktiv();
-            self.antwort_zeigen(aktiv, "der Editor hält keine Datei");
+            self.antwort_zeigen(aktiv, text(Text::EditorHaeltKeineDatei));
             return None;
         }
         Some(fenster.retain())
@@ -10499,7 +10460,7 @@ impl Anwendungsdelegierter {
             // In die Zeile des aktiven Dateifensters, aus demselben Grund wie
             // die Startmeldungen: die Sitzung gehoert der Anwendung und keiner
             // Seite, und der Nutzer sieht auf die Seite, in der er arbeitet.
-            let meldung = format!("die Sitzung ließ sich nicht sichern: {fehler}");
+            let meldung = satz(Text::SitzungNichtGesichert, &[("fehler", &fehler)]);
             let aktiv = self.ivars().modell.borrow().aktiv();
             self.dateifenster(aktiv).quelle().meldung_zeigen(&meldung);
         }
@@ -11064,17 +11025,18 @@ mod faengerproben {
     /// weiterreicht, das nur dieser Bauplan kennt.
     #[test]
     fn der_satz_ohne_sitzungsrecht_nennt_die_folge_und_nicht_den_mechanismus() {
+        let wortlaut = ohne_sitzungsrecht();
         assert!(
-            OHNE_SITZUNGSRECHT.contains("weitere Instanz"),
-            "der Satz nennt den Grund nicht: {OHNE_SITZUNGSRECHT}"
+            wortlaut.contains("weitere Instanz"),
+            "der Satz nennt den Grund nicht: {wortlaut}"
         );
         assert!(
-            OHNE_SITZUNGSRECHT.contains("nicht gesichert"),
-            "der Satz nennt die Folge nicht: {OHNE_SITZUNGSRECHT}"
+            wortlaut.contains("nicht gesichert"),
+            "der Satz nennt die Folge nicht: {wortlaut}"
         );
         assert!(
-            !OHNE_SITZUNGSRECHT.contains("Sitzungsrecht"),
-            "der Satz reicht ein Wort dieses Bauplans an den Nutzer weiter: {OHNE_SITZUNGSRECHT}"
+            !wortlaut.contains("Sitzungsrecht"),
+            "der Satz reicht ein Wort dieses Bauplans an den Nutzer weiter: {wortlaut}"
         );
     }
 

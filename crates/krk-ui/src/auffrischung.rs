@@ -81,10 +81,12 @@
 //! einer Frage und keine zwei Regeln: der zweite beantwortet dieselbe Frage
 //! genauer, wenn der erste sie verneint.
 
+use std::fmt;
 use std::path::{Component, Path, PathBuf};
 
 use krk_core::ablage::Fensterseite;
 use krk_core::operation::Art;
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz};
 
 /// Was der Auffrischungspfad von den beiden Dateifenstern braucht.
 ///
@@ -483,26 +485,23 @@ pub fn datentraeger_verloren(
 
 /// Der Satz, den die Statuszeile nach einem Auswurf traegt.
 ///
-/// Vier Faelle, und jeder sagt genau, was umgezogen ist. Der fuenfte, "nichts
-/// umgezogen", kommt nicht vor: [`datentraeger_verloren`] ruft erst, wenn
-/// mindestens ein Tab getroffen ist.
+/// Drei Formen, und jede sagt genau, was umgezogen ist: allein das sichtbare
+/// Dateifenster, das Dateifenster samt verdeckten Tabs, allein verdeckte
+/// Tabs; die Zahl der verdeckten Tabs traegt je ein [`Zahlwort`] mit Einzahl
+/// und Mehrzahl. Die vierte Form, "nichts umgezogen", kommt nicht vor:
+/// [`datentraeger_verloren`] ruft erst, wenn mindestens ein Tab getroffen ist.
 fn auswurfmeldung(name: &str, ziel: &Path, sichtbar: bool, verdeckt: usize) -> String {
     let ziel = ziel.display();
+    let werte: [(&str, &dyn fmt::Display); 2] = [("name", &name), ("ziel", &ziel)];
+    let verdeckte = verdeckt as u64;
     match (sichtbar, verdeckt) {
-        (true, 0) => format!("{name} wurde ausgeworfen; das Dateifenster zeigt jetzt {ziel}"),
-        (true, 1) => format!(
-            "{name} wurde ausgeworfen; das Dateifenster und ein verdeckter Tab zeigen jetzt {ziel}"
+        (true, 0) => satz(Text::AuswurfDateifensterZeigt, &werte),
+        (true, _) => anzahl(
+            Zahlwort::AuswurfDateifensterUndVerdeckteTabs,
+            verdeckte,
+            &werte,
         ),
-        (true, zahl) => format!(
-            "{name} wurde ausgeworfen; das Dateifenster und {zahl} verdeckte Tabs zeigen jetzt \
-             {ziel}"
-        ),
-        (false, 1) => {
-            format!("{name} wurde ausgeworfen; ein verdeckter Tab zeigt jetzt {ziel}")
-        }
-        (false, zahl) => {
-            format!("{name} wurde ausgeworfen; {zahl} verdeckte Tabs zeigen jetzt {ziel}")
-        }
+        (false, _) => anzahl(Zahlwort::AuswurfVerdeckteTabs, verdeckte, &werte),
     }
 }
 

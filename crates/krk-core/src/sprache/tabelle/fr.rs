@@ -894,6 +894,110 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::MetadatenGeaendert => "Modifié\u{a0}: {datum}",
         Text::MetadatenRechte => "Droits\u{a0}: {rechte}",
         Text::MetadatenTyp => "Type\u{a0}: {typ}",
+        Text::StartAblageordnerNichtGeoeffnet => {
+            "le dossier de données n’a pas pu être ouvert, la session ne sera pas enregistrée\u{a0}: {fehler}"
+        }
+        Text::OrtUrsacheAblageordnerNichtGeoeffnet => {
+            "le dossier de données n’a pas pu être ouvert\u{a0}: {fehler}"
+        }
+        Text::StartSchreibsperreNichtGenommen => {
+            "le verrou d’écriture du dossier de données ne peut pas être pris, rien n’est chargé ni enregistré\u{a0}: {fehler}"
+        }
+        Text::OrtUrsacheSchreibsperreNichtGenommen => {
+            "le verrou d’écriture du dossier de données n’a pas pu être pris\u{a0}: {fehler}"
+        }
+        Text::OrtUrsacheStartNochNichtGelesen => "le démarrage ne l’a pas encore lu",
+        Text::LesezeichenZielFehlt => "«\u{a0}{name}\u{a0}» est absent\u{a0}: {pfad} n’existe plus",
+        Text::LesezeichenGesperrt => {
+            "les signets n’ont pas pu être modifiés, le verrou d’écriture du dossier de données ne peut pas être pris\u{a0}: {fehler}"
+        }
+        Text::LesezeichenVonAndererInstanzGeaendert => {
+            "ce signet n’est plus tel quel dans la liste\u{202f}; une autre instance de KRK l’a modifié ou supprimé"
+        }
+        Text::LesezeichenNichtGesichert => {
+            "les signets n’ont pas pu être enregistrés\u{a0}: {fehler}"
+        }
+        Text::LesezeichenNameFrage => "Quel nom donner au signet\u{202f}?",
+        Text::LesezeichenAngelegt => "Signet «\u{a0}{name}\u{a0}» créé",
+        Text::EditorHaeltKeineDatei => "l’Éditeur ne contient aucun fichier",
+        Text::HinweisTastenabgriffTitel => "KRK ne peut pas lire les frappes de touches",
+        Text::HinweisTastenabgriffText => {
+            "L’interception du clavier n’a pas pu être mise en place. Sans elle, aucune touche ne déplace la sélection et aucun raccourci clavier n’agit. KRK se ferme plutôt que de continuer avec une fenêtre sans commande au clavier."
+        }
+        Text::OrdnerNichtBeobachtet => {
+            "les dossiers ne peuvent pas être surveillés\u{202f}; les modifications extérieures n’apparaîtront qu’après un changement de dossier"
+        }
+        Text::KeineAngezeigteDatei => "aucun fichier affiché vers lequel aller",
+        Text::BildfolgeNochInVorbereitung => "La série de photos se prépare encore.",
+        Text::AngleichenFensterZuSchmal => {
+            "la fenêtre est trop étroite\u{202f}; rien n’a été affiché ni réglé"
+        }
+        Text::AngleichenZeigtSchon => "l’autre volet de fichiers montre déjà ce dossier",
+        Text::AngleichenEingeblendetZeigtSchon => {
+            "l’autre volet de fichiers a été affiché et montre déjà ce dossier"
+        }
+        Text::NeuerungenOhneAblageordner => {
+            "il n’y a pas de dossier de données, et donc pas de fichiers qui pourraient être en retard sur cette version"
+        }
+        Text::NeuerungenGesperrt => {
+            "les nouveautés ne peuvent pas être consultées\u{a0}: le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})"
+        }
+        Text::WerksOhneAblageordner => {
+            "Il n’y a pas de dossier de données, et donc rien à réinitialiser."
+        }
+        Text::WerksGesperrt => {
+            "Rien n’a été réinitialisé\u{a0}: le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})."
+        }
+        Text::BelegungNichtGesichert => {
+            "les raccourcis s’appliquent, mais n’ont pas pu être enregistrés\u{a0}: {fehler}"
+        }
+        Text::BelegungOhneAblageordner => {
+            "les raccourcis s’appliquent, mais sans dossier de données ils ne sont pas enregistrés et seront perdus à la fermeture"
+        }
+        Text::BelegungGesperrt => {
+            "les raccourcis s’appliquent, mais ne sont pas enregistrés\u{a0}: le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})"
+        }
+        Text::OrtKeinUtf8 => {
+            "L’emplacement choisi ne peut pas être écrit dans settings.toml\u{a0}: son chemin n’est pas en UTF-8 valide"
+        }
+        Text::OrtOhneAblageordner => {
+            "Il n’y a pas de dossier de données, et donc pas de settings.toml où KRK pourrait écrire l’emplacement\u{202f}; le dossier de notes reste où il est"
+        }
+        Text::OrtGesperrt => {
+            "L’emplacement ne peut pas être écrit dans settings.toml\u{a0}: le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})\u{202f}; le dossier de notes reste où il est"
+        }
+        Text::LoeschblattSchaltflaeche => "Mettre à la Corbeille",
+        Text::NichtsAusgewaehlt => "rien n’est sélectionné",
+        Text::StapelKeineRegel => {
+            "rien à renommer\u{a0}: aucune règle n’a pu être construite à partir des champs"
+        }
+        Text::StapelJedeZeileMitHinweis => "rien à renommer\u{a0}: chaque ligne porte une remarque",
+        Text::QuelleUndZielDerselbeOrdner => "la source et la destination sont le même dossier",
+        Text::VorgangNichtGestartet => "l’opération n’a pas pu démarrer\u{a0}: {fehler}",
+        Text::VorschauKeineDateiZumBearbeiten => "l’Aperçu ne montre aucun fichier à modifier",
+        Text::QuicknoteFensterZuSchmal => "La fenêtre est trop étroite pour la Quicknote.",
+        Text::SitzungNichtGesichert => "la session n’a pas pu être enregistrée\u{a0}: {fehler}",
+        Text::WeitereInstanzOhneBuendel => {
+            "KRK ne s’exécute pas depuis un bundle\u{202f}; une autre instance ne démarre que le KRK.app construit"
+        }
+        Text::AuswurfDateifensterZeigt => {
+            "{name} a été éjecté\u{202f}; le volet de fichiers montre maintenant {ziel}"
+        }
+        Text::StartOhneSitzungsrecht => {
+            "une autre instance de KRK est déjà en cours\u{202f}; les onglets et la disposition de cette fenêtre ne seront pas enregistrés"
+        }
+        Text::StartNeuerungenNichtVermerkt => {
+            "impossible de noter que les nouveautés de cette version ont été signalées\u{202f}; le message reviendra au prochain démarrage\u{a0}: {fehler}"
+        }
+        Text::StartSitzungsrechtNichtAngefordert => {
+            "le droit de session ne peut pas être demandé, la session ne sera pas enregistrée\u{a0}: {fehler}"
+        }
+        Text::StartLesezeichenNichtGeladen => {
+            "les signets n’ont pas pu être chargés, le verrou d’écriture du dossier de données ne peut pas être pris\u{a0}: {fehler}"
+        }
+        Text::HeimOhneSperreAngelegt => {
+            "le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})\u{202f}; F2 a créé sans lui"
+        }
     }
 }
 
@@ -964,6 +1068,14 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::BildfolgeVorbereitet => (
             "La série de photos se prépare\u{a0}: {n} photo.",
             "La série de photos se prépare\u{a0}: {n} photos.",
+        ),
+        Zahlwort::AuswurfDateifensterUndVerdeckteTabs => (
+            "{name} a été éjecté\u{202f}; le volet de fichiers et un onglet masqué montrent maintenant {ziel}",
+            "{name} a été éjecté\u{202f}; le volet de fichiers et {n} onglets masqués montrent maintenant {ziel}",
+        ),
+        Zahlwort::AuswurfVerdeckteTabs => (
+            "{name} a été éjecté\u{202f}; un onglet masqué montre maintenant {ziel}",
+            "{name} a été éjecté\u{202f}; {n} onglets masqués montrent maintenant {ziel}",
         ),
     }
 }

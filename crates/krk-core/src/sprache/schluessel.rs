@@ -784,7 +784,8 @@ pub enum Text {
     AnlegenFrageOrdner,
     /// `Anlegeart::frage` fuer `Datei`.
     AnlegenFrageDatei,
-    /// `Anlegeart::bestaetigen`: die bestaetigende Schaltflaeche.
+    /// `Anlegeart::bestaetigen`: die bestaetigende Schaltflaeche; ebenso im
+    /// Namensblatt eines neuen Lesezeichens.
     AnlegenBestaetigen,
     /// `operationen::angelegt_text` fuer einen Ordner; `{name}`.
     AngelegtOrdner,
@@ -964,8 +965,9 @@ pub enum Text {
     /// das Suchblatt und die Nachfrage vor dem Verlust eines ungesicherten
     /// Standes.
     BlattAbbrechen,
-    /// Die Schaltflaeche „Umbenennen“: im Konfliktblatt und als bestaetigende
-    /// Schaltflaeche des Stapel-Umbenennens.
+    /// Die Schaltflaeche „Umbenennen“: im Konfliktblatt, als bestaetigende
+    /// Schaltflaeche des Stapel-Umbenennens und im Namensblatt beim Umbenennen
+    /// eines Lesezeichens.
     BlattUmbenennen,
     /// Die Beschriftung des Suchfeldes im Suchblatt und im Stapel-Umbenennen.
     BlattFeldSuchenNach,
@@ -1287,11 +1289,137 @@ pub enum Text {
     /// Die sechste Metadatenzeile; `{typ}`. Die Zaehlzeilen des
     /// Default-Profils treten unmittelbar hinter sie.
     MetadatenTyp,
+    /// `Anwendungsdelegierter::sitzung_laden`: die Startmeldung, wenn der
+    /// Ablageordner nicht aufgeht; `{fehler}`.
+    StartAblageordnerNichtGeoeffnet,
+    /// Dieselbe Lage als `{ursache}` in `Text::OrtEinstellungenUngelesen`;
+    /// `{fehler}`.
+    OrtUrsacheAblageordnerNichtGeoeffnet,
+    /// `sitzung_laden`: die Startmeldung, wenn die Schreibsperre der Ablage
+    /// nicht zu nehmen ist; `{fehler}`.
+    StartSchreibsperreNichtGenommen,
+    /// Dieselbe Lage als `{ursache}` in `Text::OrtEinstellungenUngelesen`;
+    /// `{fehler}`.
+    OrtUrsacheSchreibsperreNichtGenommen,
+    /// `Notizlage::default` in `krk-ui/src/heimgriff.rs`: die `{ursache}`,
+    /// solange der Start `settings.toml` noch nicht gelesen hat.
+    OrtUrsacheStartNochNichtGelesen,
+    /// `leistenauswahl_ausfuehren`: das Ziel eines Lesezeichens gibt es nicht
+    /// mehr; `{name}`, `{pfad}`.
+    LesezeichenZielFehlt,
+    /// `lesezeichen_aendern`: die Schreibsperre der Ablage ist nicht zu
+    /// nehmen; `{fehler}`.
+    LesezeichenGesperrt,
+    /// `lesezeichen_aendern`: das Lesezeichen steht nicht mehr so in der
+    /// Datei, eine andere Instanz war schneller.
+    LesezeichenVonAndererInstanzGeaendert,
+    /// `lesezeichen_aendern`: das Schreiben ist gescheitert; `{fehler}`.
+    LesezeichenNichtGesichert,
+    /// Die Kopfzeile des Namensblattes beim Anlegen und beim Umbenennen eines
+    /// Lesezeichens.
+    LesezeichenNameFrage,
+    /// `lesezeichen_anlegen_ausfuehren`: die Antwort nach dem Anlegen;
+    /// `{name}`.
+    LesezeichenAngelegt,
+    /// `anlegeziel`, `sichern_ausfuehren` und `editorblatt_moeglich`: der
+    /// Befehl braucht eine Datei im Editor, und er haelt keine.
+    EditorHaeltKeineDatei,
+    /// `ohne_tastenabgriff_beenden`: der Titel des modalen Hinweises.
+    HinweisTastenabgriffTitel,
+    /// `ohne_tastenabgriff_beenden`: der Text des modalen Hinweises.
+    HinweisTastenabgriffText,
+    /// `dateisystemwache_einrichten`: FSEvents liefert keinen Strom.
+    OrdnerNichtBeobachtet,
+    /// `ordner_der_datei_zeigen`: weder Editor noch Vorschau zeigen eine
+    /// Datei.
+    KeineAngezeigteDatei,
+    /// `zum_bild_springen`: die Bildfolge hat ihr Foto noch nicht geladen.
+    BildfolgeNochInVorbereitung,
+    /// `ordner_angleichen`: das andere Dateifenster liess sich nicht
+    /// einblenden.
+    AngleichenFensterZuSchmal,
+    /// `ordner_angleichen`: das andere Dateifenster zeigt den Ordner schon.
+    AngleichenZeigtSchon,
+    /// `ordner_angleichen`: das andere Dateifenster wurde eingeblendet und
+    /// zeigt den Ordner schon.
+    AngleichenEingeblendetZeigtSchon,
+    /// `neuerungen_zeigen`: ohne Ablageordner gibt es nichts zu vergleichen.
+    NeuerungenOhneAblageordner,
+    /// `neuerungen_zeigen`: die Schreibsperre der Ablage ist nicht zu nehmen;
+    /// `{fehler}`.
+    NeuerungenGesperrt,
+    /// `werkseinstellungen` und `werkseinstellungen_vollziehen`: ohne
+    /// Ablageordner gibt es nichts zurueckzusetzen.
+    WerksOhneAblageordner,
+    /// `werkseinstellungen_vollziehen`: die Schreibsperre der Ablage ist nicht
+    /// zu nehmen; `{fehler}`.
+    WerksGesperrt,
+    /// `belegungsansicht_schliessen`: die Belegung gilt, das Schreiben ist
+    /// gescheitert; `{fehler}`.
+    BelegungNichtGesichert,
+    /// `belegungsansicht_schliessen`: die Belegung gilt, ohne Ablageordner
+    /// bleibt sie ungesichert.
+    BelegungOhneAblageordner,
+    /// `belegungsansicht_schliessen`: die Belegung gilt, die Schreibsperre der
+    /// Ablage ist nicht zu nehmen; `{fehler}`.
+    BelegungGesperrt,
+    /// `ort_uebernehmen`: der gewaehlte Ort traegt kein gueltiges UTF-8.
+    OrtKeinUtf8,
+    /// `ort_uebernehmen`: ohne Ablageordner gibt es keine `settings.toml`.
+    OrtOhneAblageordner,
+    /// `ort_uebernehmen`: die Schreibsperre der Ablage ist nicht zu nehmen;
+    /// `{fehler}`.
+    OrtGesperrt,
+    /// `in_den_papierkorb`: die bestaetigende Schaltflaeche der
+    /// Loeschrueckfrage.
+    LoeschblattSchaltflaeche,
+    /// Die Antwort auf einen Befehl im Dateifenster ohne Auswahl: der
+    /// Loeschweg, das Stapel-Umbenennen, jeder Auftrag und F4.
+    NichtsAusgewaehlt,
+    /// `stapel_umbenennen_ausfuehren`: aus den Feldern liess sich keine Regel
+    /// bauen.
+    StapelKeineRegel,
+    /// `stapel_umbenennen_ausfuehren`: die Regel steht, jede Zeile traegt
+    /// einen Hinweis.
+    StapelJedeZeileMitHinweis,
+    /// `auftrag_stellen`: Kopieren oder Verschieben in den eigenen Ordner.
+    QuelleUndZielDerselbeOrdner,
+    /// `auftrag_starten`: der Vermittlerfaden liess sich nicht starten;
+    /// `{fehler}`.
+    VorgangNichtGestartet,
+    /// `editor_aus_vorschau`: die Vorschau zeigt keine Datei.
+    VorschauKeineDateiZumBearbeiten,
+    /// `quicknote_oeffnen`: der Editorbereich liess sich nicht einblenden.
+    QuicknoteFensterZuSchmal,
+    /// `sitzung_sichern`: das Schreiben der Sitzung ist gescheitert;
+    /// `{fehler}`.
+    SitzungNichtGesichert,
+    /// `weitereinstanz::ohne_buendel`: KRK laeuft nicht aus einem Buendel.
+    WeitereInstanzOhneBuendel,
+    /// `auffrischung::auswurfmeldung`: ein Datentraeger ist ausgeworfen, und
+    /// allein das sichtbare Dateifenster ist umgezogen; `{name}`, `{ziel}`.
+    AuswurfDateifensterZeigt,
+    /// `Anwendungsdelegierter::ohne_sitzungsrecht`: die Startmeldung einer
+    /// Instanz, die die Sitzung nicht schreibt (C3.10). Nennt die Folge und
+    /// nicht den Mechanismus.
+    StartOhneSitzungsrecht,
+    /// `neuerungen_erheben`: die Merkdatei liess sich nicht schreiben;
+    /// `{fehler}`.
+    StartNeuerungenNichtVermerkt,
+    /// `sitzung_laden`: das Sitzungsrecht liess sich nicht anfordern;
+    /// `{fehler}`.
+    StartSitzungsrechtNichtAngefordert,
+    /// `lesezeichen_laden`: die Schreibsperre der Ablage ist nicht zu nehmen;
+    /// `{fehler}`.
+    StartLesezeichenNichtGeladen,
+    /// `heimordner_oeffnen`: F2 hat ohne die Schreibsperre der Ablage
+    /// angelegt; `{fehler}`.
+    HeimOhneSperreAngelegt,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 548] = [
+    pub const ALLE: [Text; 594] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1840,6 +1968,52 @@ impl Text {
         Text::MetadatenGeaendert,
         Text::MetadatenRechte,
         Text::MetadatenTyp,
+        Text::StartAblageordnerNichtGeoeffnet,
+        Text::OrtUrsacheAblageordnerNichtGeoeffnet,
+        Text::StartSchreibsperreNichtGenommen,
+        Text::OrtUrsacheSchreibsperreNichtGenommen,
+        Text::OrtUrsacheStartNochNichtGelesen,
+        Text::LesezeichenZielFehlt,
+        Text::LesezeichenGesperrt,
+        Text::LesezeichenVonAndererInstanzGeaendert,
+        Text::LesezeichenNichtGesichert,
+        Text::LesezeichenNameFrage,
+        Text::LesezeichenAngelegt,
+        Text::EditorHaeltKeineDatei,
+        Text::HinweisTastenabgriffTitel,
+        Text::HinweisTastenabgriffText,
+        Text::OrdnerNichtBeobachtet,
+        Text::KeineAngezeigteDatei,
+        Text::BildfolgeNochInVorbereitung,
+        Text::AngleichenFensterZuSchmal,
+        Text::AngleichenZeigtSchon,
+        Text::AngleichenEingeblendetZeigtSchon,
+        Text::NeuerungenOhneAblageordner,
+        Text::NeuerungenGesperrt,
+        Text::WerksOhneAblageordner,
+        Text::WerksGesperrt,
+        Text::BelegungNichtGesichert,
+        Text::BelegungOhneAblageordner,
+        Text::BelegungGesperrt,
+        Text::OrtKeinUtf8,
+        Text::OrtOhneAblageordner,
+        Text::OrtGesperrt,
+        Text::LoeschblattSchaltflaeche,
+        Text::NichtsAusgewaehlt,
+        Text::StapelKeineRegel,
+        Text::StapelJedeZeileMitHinweis,
+        Text::QuelleUndZielDerselbeOrdner,
+        Text::VorgangNichtGestartet,
+        Text::VorschauKeineDateiZumBearbeiten,
+        Text::QuicknoteFensterZuSchmal,
+        Text::SitzungNichtGesichert,
+        Text::WeitereInstanzOhneBuendel,
+        Text::AuswurfDateifensterZeigt,
+        Text::StartOhneSitzungsrecht,
+        Text::StartNeuerungenNichtVermerkt,
+        Text::StartSitzungsrechtNichtAngefordert,
+        Text::StartLesezeichenNichtGeladen,
+        Text::HeimOhneSperreAngelegt,
     ];
 }
 
@@ -1934,11 +2108,18 @@ pub enum Zahlwort {
     /// `vorschaumodell::vorbereitungshinweis`: der Satz, solange das Foto an
     /// der Stelle nicht geladen ist, mit der Zahl der Fotos der Folge.
     BildfolgeVorbereitet,
+    /// `auffrischung::auswurfmeldung`: das sichtbare Dateifenster und die
+    /// verdeckten Tabs sind umgezogen; `{name}`, `{ziel}`, die Einzahl laesst
+    /// `{n}` aus.
+    AuswurfDateifensterUndVerdeckteTabs,
+    /// `auffrischung::auswurfmeldung`: allein verdeckte Tabs sind umgezogen;
+    /// `{name}`, `{ziel}`, die Einzahl laesst `{n}` aus.
+    AuswurfVerdeckteTabs,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 30] = [
+    pub const ALLE: [Zahlwort; 32] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -1969,5 +2150,7 @@ impl Zahlwort {
         Zahlwort::EditorZeilenHinterDerLetzten,
         Zahlwort::QuicknoteKopiert,
         Zahlwort::BildfolgeVorbereitet,
+        Zahlwort::AuswurfDateifensterUndVerdeckteTabs,
+        Zahlwort::AuswurfVerdeckteTabs,
     ];
 }

@@ -47,6 +47,7 @@ use std::rc::Rc;
 
 use krk_core::heimordner::Heimordner;
 use krk_core::heimordner::ort::{Notizort, Ortsfehler};
+use krk_core::sprache::{Text, text};
 
 /// Was der Griff haelt: der geltende Ort oder sein Fehler, und fuer den Fehler
 /// den Ordner, an dem die Schutzregeln weiter gelten.
@@ -88,7 +89,9 @@ impl Default for Notizlage {
     /// Der Platzhalter aus [`ungelesen`]: kein Ort und kein Schutzort.
     fn default() -> Self {
         Self::ohne_ort(
-            Ortsfehler::EinstellungenUngelesen("der Start hat sie noch nicht gelesen".to_owned()),
+            Ortsfehler::EinstellungenUngelesen(
+                text(Text::OrtUrsacheStartNochNichtGelesen).to_owned(),
+            ),
             None,
         )
     }

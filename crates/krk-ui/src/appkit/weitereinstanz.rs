@@ -63,17 +63,22 @@
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
 
+use krk_core::sprache::{Text, text};
 use objc2::rc::Retained;
 use objc2_app_kit::{NSWorkspace, NSWorkspaceOpenConfiguration};
 use objc2_foundation::{NSBundle, NSURL};
 
 /// Der Satz, den KRK meldet, wenn es nicht aus einem Buendel laeuft (C3.6).
 ///
-/// Er steht als Konstante da und nicht als Zeichenkette im Rumpf, damit die
+/// Er steht als eigene Funktion da und nicht als Ausdruck im Rumpf, damit die
 /// Probe ihn nennen kann, ohne ihn abzuschreiben: [`starten`] selbst laesst
-/// sich ohne laufendes Buendel nicht pruefen.
-pub const OHNE_BUENDEL: &str =
-    "KRK läuft nicht aus einem Bündel; eine weitere Instanz startet nur das gebaute KRK.app";
+/// sich ohne laufendes Buendel nicht pruefen. Eine Funktion und keine
+/// Konstante, weil der Wortlaut aus der Sprachtabelle kommt und keine `const`
+/// die geltende Sprache lesen kann.
+#[must_use]
+pub fn ohne_buendel() -> &'static str {
+    text(Text::WeitereInstanzOhneBuendel)
+}
 
 /// Der Ort des Buendels, in dem die laufende Instanz steckt.
 ///
@@ -105,7 +110,7 @@ fn eigenes_buendel() -> Option<Retained<NSURL>> {
 #[must_use = "die Antwort ist der Satz fuer die Statuszeile; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn starten() -> Option<&'static str> {
     let Some(adresse) = eigenes_buendel() else {
-        return Some(OHNE_BUENDEL);
+        return Some(ohne_buendel());
     };
     let einstellung = NSWorkspaceOpenConfiguration::configuration();
     // Der eine Schalter, der LaunchServices davon abhaelt, statt einer zweiten
@@ -166,6 +171,6 @@ mod tests {
             eigenes_buendel().is_none(),
             "der Probenlauf steckt unerwartet in einem Buendel"
         );
-        assert!(OHNE_BUENDEL.contains("Bündel"));
+        assert!(ohne_buendel().contains("Bündel"));
     }
 }

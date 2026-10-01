@@ -177,6 +177,13 @@
 //! | Metadaten: Name / Pfad / Groesse / Geaendert / Rechte / Typ | Nom / Chemin / Taille / Modifié / Droits / Type | Name / Path / Size / Modified / Permissions / Type |
 //! | Leeren / Kopieren (Schaltflaechen der Quicknote) | Vider / Copier | Clear / Copy |
 //! | Tastennamen in der Statuszeile (`return`, `tab`, `esc`, `cmd+z`) | unveraendert | unveraendert |
+//! | Schreibsperre (der Ablage) | verrou d’écriture | write lock |
+//! | Sitzung | session | session |
+//! | Tastenabgriff | interception du clavier | keyboard tap |
+//! | Buendel (`KRK.app`) | bundle | bundle |
+//! | auswerfen (einen Datentraeger) | éjecter | eject |
+//! | verdeckter Tab | onglet masqué | hidden tab |
+//! | eine Fassung, hinter der eine Datei zurueckliegt | version sur laquelle un fichier est en retard | version a file lags behind |
 //!
 //! # Die Befehlsnamen
 //!
