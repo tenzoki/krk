@@ -31,6 +31,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::sprache::{Text, text};
 use crate::verzeichnis::lesen;
 
 use super::fortschritt::Steuerung;
@@ -61,9 +62,7 @@ pub struct OhnePapierkorb;
 
 impl Papierkorb for OhnePapierkorb {
     fn in_den_papierkorb(&self, _pfad: &Path) -> io::Result<PathBuf> {
-        Err(io::Error::other(
-            "kein Papierkorb eingehängt; es wurde nichts gelöscht",
-        ))
+        Err(io::Error::other(text(Text::VorgangKeinPapierkorb)))
     }
 }
 

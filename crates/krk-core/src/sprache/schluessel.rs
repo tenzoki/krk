@@ -127,11 +127,113 @@ pub enum Text {
     EinheitGigabyte,
     /// Die Einheit ab 1.000.000.000.000 Bytes.
     EinheitTerabyte,
+    /// `operation::grund` bei `PermissionDenied`: der Grund in der
+    /// Abschlussliste eines Vorgangs.
+    VorgangKeineRechte,
+    /// `operation::grund` bei `NotFound`.
+    VorgangGibtEsNichtMehr,
+    /// `operation::grund` bei `AlreadyExists`, und die Antwort
+    /// „ueberspringen“ auf eine Konfliktfrage in jedem der drei Zielklaerer.
+    VorgangAmZielStehtEintrag,
+    /// `operation::grund` bei `StorageFull`.
+    VorgangKeinPlatzAufDemDatentraeger,
+    /// `operation::starten`, wenn kein Arbeitsfaden zu bekommen ist; `{grund}`
+    /// ist der Systemtext.
+    VorgangKeinArbeitsfaden,
+    /// `einen_abarbeiten`: ein Eintrag des Stapel-Umbenennens oder des
+    /// Duplizierens ohne neuen Namen.
+    VorgangNeuerNameFehlt,
+    /// `einen_abarbeiten`: ein Archiv ohne Zielordner.
+    VorgangZielordnerFehlt,
+    /// `einen_abarbeiten`: der Zweig fuer das Packen, den die Schleife nicht
+    /// erreicht.
+    VorgangPackenNichtQuelleFuerQuelle,
+    /// `zielpfad` und `quellen_packen`: ein Pfad ohne letzten Namensteil.
+    VorgangPfadBenenntKeinenEintrag,
+    /// `zielpfad`: die erste der zwei Naemlichkeitsfragen.
+    VorgangQuelleUndZielDerselbeEintrag,
+    /// `zielpfad`: die zweite der zwei Naemlichkeitsfragen.
+    VorgangZielLiegtInDerQuelle,
+    /// `ziel_klaeren`: das Wegraeumen vor dem Ueberschreiben ist gescheitert;
+    /// `{grund}`.
+    VorgangZielNichtErsetzt,
+    /// Die halbe Datei oder das halbe Archiv nach einem Abbruch; `{grund}`.
+    VorgangNachAbbruchNichtWeggeraeumt,
+    /// `kopieren::ordner`: Rechte und Datum des Ordners; `{grund}`.
+    VorgangOrdnerangabenNichtKopiert,
+    /// `verschieben::verschmelzen`: der leere Quellordner blieb; `{grund}`.
+    VorgangOrdnerSelbstBlieb,
+    /// `verschieben::ueber_datentraeger`: ein Kind ist nicht angekommen.
+    VorgangNichtVollstaendigKopiert,
+    /// `verschieben::ueber_datentraeger`: die Quelle liess sich nach der Kopie
+    /// nicht entfernen; `{grund}`.
+    VorgangKopiertAberInQuelleGeblieben,
+    /// `OhnePapierkorb`: der Papierkorb, den es nicht gibt.
+    VorgangKeinPapierkorb,
+    /// Duplizieren und Packen: die Quelle ist Ordner, Verknuepfung, Roehre,
+    /// Socket oder Geraetedatei.
+    VorgangKeineGewoehnlicheDatei,
+    /// Packen und Entpacken: das Ziel liess sich vor dem Ueberschreiben nicht
+    /// in den Papierkorb raeumen; `{grund}`.
+    VorgangZielNichtInPapierkorb,
+    /// `entpacken`: ein Archiveintrag `{name}`, dessen Name ueber `..`
+    /// hinausfuehrt.
+    EntpackenEintragFuehrtHeraus,
+    /// `entpacken`: ein Archiveintrag `{name}` mit dem Grund `{grund}` aus
+    /// `kette_anlegen`.
+    EntpackenEintragMitGrund,
+    /// `entpacken`: am Ziel von `{name}` steht eine Verknuepfung.
+    EntpackenAmZielStehtVerknuepfung,
+    /// `entpacken::kette_anlegen`: eine Komponente, die kein blosser Name ist.
+    EntpackenWegMitUnzulaessigemBestandteil,
+    /// `entpacken::kette_anlegen`: eine Verknuepfung auf dem Weg.
+    EntpackenWegDurchVerknuepfung,
+    /// `entpacken::kette_anlegen`: eine Datei, wo ein Ordner stehen muesste.
+    EntpackenDateiStattOrdnerAufDemWeg,
+    /// `entpacken::verknuepfung_ablegen`: der Inhalt ist kein UTF-8.
+    EntpackenVerweiszielKeinText,
+    /// `zippen::lauf`: `finish` ist gescheitert; `{fehler}` ist der Text der
+    /// Kiste.
+    PackenArchivUnfertig,
+    /// `zippen`: `start_file`, `add_directory` oder `add_symlink` ist
+    /// gescheitert; `{fehler}`.
+    PackenKeinPlatzImArchiv,
+    /// `zippen::datei_packen`: `abort_file` ist gescheitert; `{fehler}`.
+    PackenHalberEintragImArchiv,
+    /// `zippen::datei_packen`: `write_all` ist gescheitert; `{fehler}`.
+    PackenNichtInsArchivGeschrieben,
+    /// `Regelfehler::Startwert` in der Hinweiszeile des Stapelumbenennens;
+    /// `{text}` ist die Eingabe.
+    StapelKeinStartwert,
+    /// `Regelfehler::Stellenzahl`; `{text}` ist die Eingabe, `{hoechste}` die
+    /// Obergrenze.
+    StapelKeineStellenzahl,
+    /// `Abweisung::KeinGueltigesZiel` mit Deskriptormangel in der Statuszeile
+    /// des Editors; `{pfad}`, `{grund}`.
+    EditorKeinFreierDateizugriff,
+    /// `Abweisung::KeinGueltigesZiel` ohne Mangel; `{pfad}`, `{grund}`.
+    EditorNichtZuOeffnen,
+    /// `Abweisung::ZuGross`; `{pfad}`, `{groesse}` und `{grenze}` in Bytes.
+    EditorZuGross,
+    /// `Abweisung::NichtAlsTextLesbar`; `{pfad}`.
+    EditorKeineTextdatei,
+    /// `text::datei::lesen`: der Satzteil `{grund}` fuer einen Ordner.
+    EditorOrdnerHatKeinenText,
+    /// `text::datei::lesen`: der Satzteil `{grund}` fuer alles, was weder
+    /// Ordner noch gewoehnliche Datei ist.
+    EditorKeineGewoehnlicheDatei,
+    /// `verzeichnis::datenschutzsperre` in der Statuszeile; `{name}` ist der
+    /// Ordnername.
+    LesenDatenschutzsperre,
+    /// `Schwungleser::oeffnen`: der Pfad `{pfad}` benennt kein Verzeichnis.
+    LesenKeinVerzeichnis,
+    /// `sys::als_c_pfad`: der Pfad `{pfad}` traegt ein Nullbyte.
+    LesenPfadMitNullbyte,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 49] = [
+    pub const ALLE: [Text; 91] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -181,6 +283,48 @@ impl Text {
         Text::EinheitMegabyte,
         Text::EinheitGigabyte,
         Text::EinheitTerabyte,
+        Text::VorgangKeineRechte,
+        Text::VorgangGibtEsNichtMehr,
+        Text::VorgangAmZielStehtEintrag,
+        Text::VorgangKeinPlatzAufDemDatentraeger,
+        Text::VorgangKeinArbeitsfaden,
+        Text::VorgangNeuerNameFehlt,
+        Text::VorgangZielordnerFehlt,
+        Text::VorgangPackenNichtQuelleFuerQuelle,
+        Text::VorgangPfadBenenntKeinenEintrag,
+        Text::VorgangQuelleUndZielDerselbeEintrag,
+        Text::VorgangZielLiegtInDerQuelle,
+        Text::VorgangZielNichtErsetzt,
+        Text::VorgangNachAbbruchNichtWeggeraeumt,
+        Text::VorgangOrdnerangabenNichtKopiert,
+        Text::VorgangOrdnerSelbstBlieb,
+        Text::VorgangNichtVollstaendigKopiert,
+        Text::VorgangKopiertAberInQuelleGeblieben,
+        Text::VorgangKeinPapierkorb,
+        Text::VorgangKeineGewoehnlicheDatei,
+        Text::VorgangZielNichtInPapierkorb,
+        Text::EntpackenEintragFuehrtHeraus,
+        Text::EntpackenEintragMitGrund,
+        Text::EntpackenAmZielStehtVerknuepfung,
+        Text::EntpackenWegMitUnzulaessigemBestandteil,
+        Text::EntpackenWegDurchVerknuepfung,
+        Text::EntpackenDateiStattOrdnerAufDemWeg,
+        Text::EntpackenVerweiszielKeinText,
+        Text::PackenArchivUnfertig,
+        Text::PackenKeinPlatzImArchiv,
+        Text::PackenHalberEintragImArchiv,
+        Text::PackenNichtInsArchivGeschrieben,
+        Text::StapelKeinStartwert,
+        Text::StapelKeineStellenzahl,
+        Text::EditorKeinFreierDateizugriff,
+        Text::EditorNichtZuOeffnen,
+        Text::EditorZuGross,
+        Text::EditorKeineTextdatei,
+        Text::EditorOrdnerHatKeinenText,
+        Text::EditorKeineGewoehnlicheDatei,
+        Text::LesenDatenschutzsperre,
+        Text::LesenKeinVerzeichnis,
+        Text::LesenPfadMitNullbyte,
     ];
 }
 

@@ -166,6 +166,8 @@ use std::io;
 use std::io::{Read, Seek};
 use std::path::{Path, PathBuf};
 
+use crate::sprache::{Text, satz, text};
+
 /// Die Bytefolgenmarke, wie `String::from_utf8` sie liefert: ein Zeichen am
 /// Anfang der Zeichenkette und keine drei Bytes mehr.
 const BYTEFOLGENMARKE: char = '\u{feff}';
@@ -273,11 +275,12 @@ impl Abweisung {
     /// (`shared/issues/260826-1223_*_lesen-trennt-den-deskriptormangel-nicht-*`).
     ///
     /// **Die Byteangaben stehen roh und nicht in MB.** Der menschenlesbare
-    /// Groessensatz des Programms ist `menge` in
-    /// `krk-ui/src/kommandos/operationen.rs`, und der liegt in der anderen
-    /// Kiste. Ihn hier nachzubauen hiesse, zwei Schreibweisen fuer dieselbe
-    /// Groesse zu haben; die Ansicht kann stattdessen aus den Feldern des
-    /// Wertes ihren eigenen Satz bauen, wenn sie einen schoeneren will.
+    /// Groessensatz des Programms ist `sprache::menge`; bis zur Sprachtabelle
+    /// lag er in `krk-ui`, und der Satz hier ist mit dem Umzug nicht auf ihn
+    /// umgestellt worden, weil die Wortlautproben die rohe Zahl halten. Die
+    /// Ansicht kann aus den Feldern des Wertes ihren eigenen Satz bauen, wenn
+    /// sie einen schoeneren will. Der Wortlaut kommt aus der Sprachtabelle,
+    /// `pfad`, `grund` und die Byteangaben werden eingesetzt.
     #[must_use]
     pub fn meldung(&self) -> String {
         match self {
@@ -285,31 +288,28 @@ impl Abweisung {
                 pfad,
                 grund,
                 mangel: true,
-            } => {
-                format!(
-                    "{} lässt sich gerade nicht öffnen: KRK hat keinen freien Dateizugriff mehr ({grund}); nach dem Ende der laufenden Suche noch einmal versuchen",
-                    pfad.display()
-                )
-            }
+            } => satz(
+                Text::EditorKeinFreierDateizugriff,
+                &[("pfad", &pfad.display()), ("grund", grund)],
+            ),
             Abweisung::KeinGueltigesZiel {
                 pfad,
                 grund,
                 mangel: false,
-            } => {
-                format!(
-                    "{} lässt sich nicht im Editor öffnen: {grund}",
-                    pfad.display()
-                )
-            }
-            Abweisung::ZuGross { pfad, groesse } => format!(
-                "{} ist mit {groesse} Bytes zu groß für den Editor; die Grenze liegt bei {EDITORGRENZE} Bytes",
-                pfad.display()
+            } => satz(
+                Text::EditorNichtZuOeffnen,
+                &[("pfad", &pfad.display()), ("grund", grund)],
+            ),
+            Abweisung::ZuGross { pfad, groesse } => satz(
+                Text::EditorZuGross,
+                &[
+                    ("pfad", &pfad.display()),
+                    ("groesse", groesse),
+                    ("grenze", &EDITORGRENZE),
+                ],
             ),
             Abweisung::NichtAlsTextLesbar { pfad } => {
-                format!(
-                    "{} ist keine Textdatei und wird nicht geöffnet",
-                    pfad.display()
-                )
+                satz(Text::EditorKeineTextdatei, &[("pfad", &pfad.display())])
             }
         }
     }
@@ -517,11 +517,12 @@ pub fn lesen(pfad: &Path) -> Textstand {
 
     if !angaben.is_file() {
         return kein_ziel(
-            String::from(if angaben.is_dir() {
-                "ein Ordner hat keinen Text, den der Editor zeigen könnte"
+            text(if angaben.is_dir() {
+                Text::EditorOrdnerHatKeinenText
             } else {
-                "das ist keine gewöhnliche Datei"
-            }),
+                Text::EditorKeineGewoehnlicheDatei
+            })
+            .to_owned(),
             false,
         );
     }

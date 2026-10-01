@@ -29,6 +29,7 @@
 use std::fmt;
 
 use crate::operation::umbenennen::namen_teilen;
+use crate::sprache::{Text, satz};
 
 /// Wie viele Stellen eine fortlaufende Nummer hoechstens tragen darf.
 ///
@@ -210,16 +211,20 @@ pub enum Regelfehler {
 }
 
 impl fmt::Display for Regelfehler {
+    /// Der Satz fuer die Hinweiszeile des Blattes, aus der Sprachtabelle; die
+    /// Eingabe des Nutzers wird eingesetzt und nicht ein zweites Mal gelesen,
+    /// also kann sie keinen Platzhalter vortaeuschen.
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Regelfehler::Startwert(text) => {
-                write!(ausgabe, "„{text}“ ist kein Startwert für die Nummerierung")
+        let satz = match self {
+            Regelfehler::Startwert(eingabe) => {
+                satz(Text::StapelKeinStartwert, &[("text", eingabe)])
             }
-            Regelfehler::Stellenzahl(text) => write!(
-                ausgabe,
-                "„{text}“ ist keine Stellenzahl zwischen 1 und {HOECHSTE_STELLENZAHL}"
+            Regelfehler::Stellenzahl(eingabe) => satz(
+                Text::StapelKeineStellenzahl,
+                &[("text", eingabe), ("hoechste", &HOECHSTE_STELLENZAHL)],
             ),
-        }
+        };
+        ausgabe.write_str(&satz)
     }
 }
 

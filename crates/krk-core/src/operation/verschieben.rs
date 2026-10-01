@@ -20,6 +20,7 @@
 
 use std::path::Path;
 
+use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::sys::{EXDEV, Uebertragungsart, im_datentraeger_verschieben};
 use crate::verzeichnis::{Typ, lesen};
 
@@ -98,9 +99,9 @@ fn verschmelzen(
         Ok(()) => steuerung.eintrag_fertig(quelle.pfad, 0),
         Err(fehler) => steuerung.ueberspringen(
             quelle.pfad,
-            format!(
-                "Inhalt verschoben, der Ordner selbst blieb: {}",
-                grund(&fehler)
+            satz(
+                Text::VorgangOrdnerSelbstBlieb,
+                &[("grund", &grund(&fehler))],
             ),
         ),
     }
@@ -137,10 +138,7 @@ fn ueber_datentraeger(
         // gescheitert, und der Ordner bekommt seine eigene Zeile.
         let selbst_genannt = seither.iter().any(|eintrag| eintrag.pfad == quelle.pfad);
         if !selbst_genannt {
-            steuerung.ueberspringen(
-                quelle.pfad,
-                "nicht vollständig kopiert, in der Quelle geblieben",
-            );
+            steuerung.ueberspringen(quelle.pfad, text(Text::VorgangNichtVollstaendigKopiert));
         }
         return Ablauf::Weiter;
     }
@@ -148,7 +146,10 @@ fn ueber_datentraeger(
     if let Err(fehler) = loeschen::baum_entfernen(quelle.pfad) {
         steuerung.ueberspringen(
             quelle.pfad,
-            format!("kopiert, aber in der Quelle geblieben: {}", grund(&fehler)),
+            satz(
+                Text::VorgangKopiertAberInQuelleGeblieben,
+                &[("grund", &grund(&fehler))],
+            ),
         );
     }
     Ablauf::Weiter

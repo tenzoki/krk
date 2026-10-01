@@ -162,6 +162,8 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::sprache::{Text, satz};
+
 use super::eintrag::Typ;
 
 /// Groesse des Antwortpuffers. Apples Beispiel zu `getattrlistbulk` verwendet
@@ -262,7 +264,7 @@ impl Schwungleser {
         if !verzeichnis.metadata()?.is_dir() {
             return Err(io::Error::new(
                 io::ErrorKind::NotADirectory,
-                format!("{} ist kein Verzeichnis", pfad.display()),
+                satz(Text::LesenKeinVerzeichnis, &[("pfad", &pfad.display())]),
             ));
         }
         Ok(Self {
@@ -1258,7 +1260,7 @@ fn als_c_pfad(pfad: &Path) -> io::Result<CString> {
     CString::new(pfad.as_os_str().as_bytes()).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("{} enthält ein Nullbyte", pfad.display()),
+            satz(Text::LesenPfadMitNullbyte, &[("pfad", &pfad.display())]),
         )
     })
 }

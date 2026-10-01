@@ -43,6 +43,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread::{self, JoinHandle};
 
+use crate::sprache::{Text, satz};
+
 use super::eintrag::Eintrag;
 use super::sys::Schwungleser;
 
@@ -83,10 +85,7 @@ pub fn datenschutzsperre(ordner: &Path, fehler: &io::Error) -> Option<String> {
         || ordner.display().to_string(),
         |name| name.to_string_lossy().into_owned(),
     );
-    Some(format!(
-        "macOS sperrt den Zugriff auf „{name}“. Freigabe: Systemeinstellungen › \
-         Datenschutz & Sicherheit › Festplattenvollzugriff › KRK, danach KRK neu starten."
-    ))
+    Some(satz(Text::LesenDatenschutzsperre, &[("name", &name)]))
 }
 
 /// Wie ein Lesevorgang geendet hat.

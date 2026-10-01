@@ -70,6 +70,72 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EinheitMegabyte => "MB",
         Text::EinheitGigabyte => "GB",
         Text::EinheitTerabyte => "TB",
+        Text::VorgangKeineRechte => "keine Rechte",
+        Text::VorgangGibtEsNichtMehr => "gibt es nicht mehr",
+        Text::VorgangAmZielStehtEintrag => "am Ziel steht schon ein Eintrag",
+        Text::VorgangKeinPlatzAufDemDatentraeger => "kein Platz mehr auf dem Datenträger",
+        Text::VorgangKeinArbeitsfaden => "kein Arbeitsfaden frei: {grund}",
+        Text::VorgangNeuerNameFehlt => "es fehlt der neue Name",
+        Text::VorgangZielordnerFehlt => "es fehlt der Zielordner",
+        Text::VorgangPackenNichtQuelleFuerQuelle => "das Packen läuft nicht Quelle für Quelle",
+        Text::VorgangPfadBenenntKeinenEintrag => "der Pfad benennt keinen Eintrag",
+        Text::VorgangQuelleUndZielDerselbeEintrag => "Quelle und Ziel sind derselbe Eintrag",
+        Text::VorgangZielLiegtInDerQuelle => "das Ziel liegt in der Quelle",
+        Text::VorgangZielNichtErsetzt => "das Ziel ließ sich nicht ersetzen: {grund}",
+        Text::VorgangNachAbbruchNichtWeggeraeumt => "nach dem Abbruch nicht weggeräumt: {grund}",
+        Text::VorgangOrdnerangabenNichtKopiert => {
+            "Inhalt kopiert, Rechte und Datum des Ordners nicht: {grund}"
+        }
+        Text::VorgangOrdnerSelbstBlieb => "Inhalt verschoben, der Ordner selbst blieb: {grund}",
+        Text::VorgangNichtVollstaendigKopiert => {
+            "nicht vollständig kopiert, in der Quelle geblieben"
+        }
+        Text::VorgangKopiertAberInQuelleGeblieben => {
+            "kopiert, aber in der Quelle geblieben: {grund}"
+        }
+        Text::VorgangKeinPapierkorb => "kein Papierkorb eingehängt; es wurde nichts gelöscht",
+        Text::VorgangKeineGewoehnlicheDatei => "keine gewöhnliche Datei",
+        Text::VorgangZielNichtInPapierkorb => {
+            "das Ziel ließ sich nicht in den Papierkorb räumen: {grund}"
+        }
+        Text::EntpackenEintragFuehrtHeraus => {
+            "„{name}“ führt aus dem Zielordner heraus und ist ausgelassen"
+        }
+        Text::EntpackenEintragMitGrund => "„{name}“: {grund}",
+        Text::EntpackenAmZielStehtVerknuepfung => "„{name}“: am Ziel steht schon eine Verknüpfung",
+        Text::EntpackenWegMitUnzulaessigemBestandteil => {
+            "der Weg zum Eintrag trägt einen unzulässigen Bestandteil"
+        }
+        Text::EntpackenWegDurchVerknuepfung => {
+            "der Weg zum Eintrag führt durch eine Verknüpfung aus dem Zielordner heraus"
+        }
+        Text::EntpackenDateiStattOrdnerAufDemWeg => {
+            "auf dem Weg zum Eintrag steht eine Datei, wo ein Ordner stehen müsste"
+        }
+        Text::EntpackenVerweiszielKeinText => "das Verweisziel ist kein gültiger Text",
+        Text::PackenArchivUnfertig => "das Archiv blieb unfertig: {fehler}",
+        Text::PackenKeinPlatzImArchiv => "kein Platz im Archiv: {fehler}",
+        Text::PackenHalberEintragImArchiv => "der halbe Eintrag blieb im Archiv: {fehler}",
+        Text::PackenNichtInsArchivGeschrieben => "nicht ins Archiv geschrieben: {fehler}",
+        Text::StapelKeinStartwert => "„{text}“ ist kein Startwert für die Nummerierung",
+        Text::StapelKeineStellenzahl => "„{text}“ ist keine Stellenzahl zwischen 1 und {hoechste}",
+        Text::EditorKeinFreierDateizugriff => {
+            "{pfad} lässt sich gerade nicht öffnen: KRK hat keinen freien Dateizugriff mehr ({grund}); nach dem Ende der laufenden Suche noch einmal versuchen"
+        }
+        Text::EditorNichtZuOeffnen => "{pfad} lässt sich nicht im Editor öffnen: {grund}",
+        Text::EditorZuGross => {
+            "{pfad} ist mit {groesse} Bytes zu groß für den Editor; die Grenze liegt bei {grenze} Bytes"
+        }
+        Text::EditorKeineTextdatei => "{pfad} ist keine Textdatei und wird nicht geöffnet",
+        Text::EditorOrdnerHatKeinenText => {
+            "ein Ordner hat keinen Text, den der Editor zeigen könnte"
+        }
+        Text::EditorKeineGewoehnlicheDatei => "das ist keine gewöhnliche Datei",
+        Text::LesenDatenschutzsperre => {
+            "macOS sperrt den Zugriff auf „{name}“. Freigabe: Systemeinstellungen › Datenschutz & Sicherheit › Festplattenvollzugriff › KRK, danach KRK neu starten."
+        }
+        Text::LesenKeinVerzeichnis => "{pfad} ist kein Verzeichnis",
+        Text::LesenPfadMitNullbyte => "{pfad} enthält ein Nullbyte",
     }
 }
 

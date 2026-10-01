@@ -64,6 +64,17 @@
 //! | Thema (einer Notiz) | sujet | topic |
 //! | Platzhalter `*` | joker | wildcard |
 //! | vorgemerkt (Git) | indexé | staged |
+//! | Eintrag (eines Ordners, eines Archivs) | entrée | entry |
+//! | Quelle / Ziel (eines Vorgangs) | source / destination | source / destination |
+//! | Zielordner | dossier de destination | destination folder |
+//! | Archiv | archive | archive |
+//! | Arbeitsfaden | fil de travail | worker thread |
+//! | Dateizugriff (Deskriptor) | descripteur de fichier | file descriptor |
+//! | Abbruch (eines Vorgangs) | annulation | cancelling |
+//! | Nummerierung / Startwert / Stellenzahl | numérotation / valeur de départ / nombre de chiffres | numbering / starting value / number of digits |
+//! | Systemeinstellungen | Réglages Système | System Settings |
+//! | Datenschutz & Sicherheit | Confidentialité et sécurité | Privacy & Security |
+//! | Festplattenvollzugriff | Accès complet au disque | Full Disk Access |
 //!
 //! # Typografie
 //!

@@ -97,6 +97,7 @@
 use std::fs;
 use std::io;
 
+use crate::sprache::{Text, text};
 use crate::verzeichnis::sys::Uebertragungsart;
 
 use super::fortschritt::Steuerung;
@@ -104,17 +105,15 @@ use super::kopieren::datei_uebertragen;
 use super::umbenennen::name_pruefen;
 use super::{Ablauf, Quelle, grund};
 
-/// Der Grund, mit dem eine Quelle ausgelassen wird, die keine gewoehnliche
-/// Datei ist: Ordner, Verknuepfung, Roehre, Socket, Geraetedatei.
-const KEINE_GEWOEHNLICHE_DATEI: &str = "keine gewöhnliche Datei";
-
 /// Dupliziert eine gewoehnliche Datei unter `neuer_name` in ihren eigenen
 /// Ordner.
 ///
 /// Die Reihenfolge ist die des Schaubilds im Modulkopf:
 ///
 /// 1. `lstat` an der Quelle. Ein Fehler wird mit seinem Grund uebersprungen,
-///    alles ausser einer gewoehnlichen Datei mit `KEINE_GEWOEHNLICHE_DATEI`.
+///    alles ausser einer gewoehnlichen Datei (Ordner, Verknuepfung, Roehre,
+///    Socket, Geraetedatei) mit `Text::VorgangKeineGewoehnlicheDatei`, dem
+///    Grund, den auch das Packen nennt.
 ///    Einer Verknuepfung wird dabei nicht gefolgt: auch eine Verknuepfung auf
 ///    eine Datei ist keine gewoehnliche Datei.
 /// 2. Je Name, beginnend mit `neuer_name`: [`name_pruefen`], dann der
@@ -141,7 +140,7 @@ pub(crate) fn eintrag_duplizieren(
     match fs::symlink_metadata(quelle.pfad) {
         Ok(angaben) if angaben.file_type().is_file() => {}
         Ok(_) => {
-            steuerung.ueberspringen(quelle.pfad, KEINE_GEWOEHNLICHE_DATEI);
+            steuerung.ueberspringen(quelle.pfad, text(Text::VorgangKeineGewoehnlicheDatei));
             return Ablauf::Weiter;
         }
         Err(fehler) => {

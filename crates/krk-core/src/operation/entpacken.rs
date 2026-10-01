@@ -118,6 +118,7 @@ use zip::ZipArchive;
 use zip::extra_fields::ExtraField;
 use zip::read::ZipFile;
 
+use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::sys::ohne_warten_oeffnen;
 
 use super::fortschritt::Steuerung;
@@ -202,16 +203,16 @@ fn zielordner_klaeren(
             Err(fehler) => {
                 steuerung.ueberspringen(
                     quelle.pfad,
-                    format!(
-                        "das Ziel ließ sich nicht in den Papierkorb räumen: {}",
-                        grund(&fehler)
+                    satz(
+                        Text::VorgangZielNichtInPapierkorb,
+                        &[("grund", &grund(&fehler))],
                     ),
                 );
                 Zielentscheid::Ueberspringen
             }
         },
         Konfliktantwort::Ueberspringen => {
-            steuerung.ueberspringen(quelle.pfad, "am Ziel steht schon ein Eintrag");
+            steuerung.ueberspringen(quelle.pfad, text(Text::VorgangAmZielStehtEintrag));
             Zielentscheid::Ueberspringen
         }
         Konfliktantwort::UmbenennenIn(name) => match name_pruefen(&name) {
@@ -269,7 +270,7 @@ fn eintraege_entpacken(
             drop(eintrag);
             steuerung.ueberspringen(
                 archivpfad,
-                format!("«{name}» führt aus dem Zielordner heraus und ist ausgelassen"),
+                satz(Text::EntpackenEintragFuehrtHeraus, &[("name", &name)]),
             );
             continue;
         };
@@ -288,7 +289,13 @@ fn eintraege_entpacken(
         if let Err(fehler) = kette_anlegen(zielordner, kette) {
             let name = eintrag.name().to_owned();
             drop(eintrag);
-            steuerung.ueberspringen(archivpfad, format!("«{name}»: {}", grund(&fehler)));
+            steuerung.ueberspringen(
+                archivpfad,
+                satz(
+                    Text::EntpackenEintragMitGrund,
+                    &[("name", &name), ("grund", &grund(&fehler))],
+                ),
+            );
             continue;
         }
 
@@ -315,7 +322,7 @@ fn eintraege_entpacken(
             drop(eintrag);
             steuerung.ueberspringen(
                 archivpfad,
-                format!("«{name}»: am Ziel steht schon eine Verknüpfung"),
+                satz(Text::EntpackenAmZielStehtVerknuepfung, &[("name", &name)]),
             );
             continue;
         }
@@ -436,22 +443,20 @@ fn kette_anlegen(wurzel: &Path, kette: &Path) -> io::Result<()> {
         // Fallunterscheidung vollstaendig ist und weil ein leises Durchwinken
         // hier die Sperre selbst waere, die aufgehoben wird.
         let Component::Normal(name) = teil else {
-            return Err(io::Error::other(
-                "der Weg zum Eintrag trägt einen unzulässigen Bestandteil",
-            ));
+            return Err(io::Error::other(text(
+                Text::EntpackenWegMitUnzulaessigemBestandteil,
+            )));
         };
         hier.push(name);
         match fs::symlink_metadata(&hier) {
             Ok(vorhanden) if vorhanden.is_symlink() => {
-                return Err(io::Error::other(
-                    "der Weg zum Eintrag führt durch eine Verknüpfung aus dem Zielordner heraus",
-                ));
+                return Err(io::Error::other(text(Text::EntpackenWegDurchVerknuepfung)));
             }
             Ok(vorhanden) if vorhanden.is_dir() => {}
             Ok(_) => {
-                return Err(io::Error::other(
-                    "auf dem Weg zum Eintrag steht eine Datei, wo ein Ordner stehen müsste",
-                ));
+                return Err(io::Error::other(text(
+                    Text::EntpackenDateiStattOrdnerAufDemWeg,
+                )));
             }
             Err(_) => fs::create_dir(&hier)?,
         }
@@ -473,7 +478,7 @@ fn verknuepfung_ablegen(eintrag: &mut impl Read, pfad: &Path) -> io::Result<()> 
     // fordern.
     eintrag.take(1024).read_to_end(&mut verweis)?;
     let verweis = String::from_utf8(verweis)
-        .map_err(|_| io::Error::other("das Verweisziel ist kein gültiger Text"))?;
+        .map_err(|_| io::Error::other(text(Text::EntpackenVerweiszielKeinText)))?;
     std::os::unix::fs::symlink(verweis, pfad)
 }
 
@@ -537,7 +542,10 @@ fn halbe_datei_wegraeumen(pfad: &Path, steuerung: &mut Steuerung) {
     {
         steuerung.ueberspringen(
             pfad,
-            format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
+            satz(
+                Text::VorgangNachAbbruchNichtWeggeraeumt,
+                &[("grund", &grund(&fehler))],
+            ),
         );
     }
 }

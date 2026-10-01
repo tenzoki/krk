@@ -357,6 +357,16 @@ impl Steuerung {
     }
 
     /// Verbucht einen ausgelassenen Eintrag und meldet ihn sofort.
+    ///
+    /// **`grund` ist ein Tabellenwert**, also `sprache::text` oder
+    /// `sprache::satz` ueber einen Schluessel aus `Text`, oder der Wortlaut,
+    /// den das System oder die Zip-Kiste zu einem Fehler liefert
+    /// (`super::grund`, `ZipError::to_string`); ein Stringliteral und ein
+    /// `format!` stehen an keiner Rufstelle. Die Senkenprobe
+    /// `keine_senke_der_oberflaeche_bekommt_ein_literal` in
+    /// `crates/krk-core/tests/baum.rs` haelt das an den Argumenten jedes
+    /// Rufers. Der Nutzer liest den Grund in der Abschlussliste, und in der
+    /// Sprache, die macOS gewaehlt hat, kommt er allein aus der Tabelle an.
     pub(crate) fn ueberspringen(&mut self, pfad: &Path, grund: impl Into<String>) {
         let eintrag = Uebersprungen {
             pfad: pfad.to_path_buf(),

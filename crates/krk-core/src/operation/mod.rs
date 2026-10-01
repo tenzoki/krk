@@ -82,6 +82,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::channel;
 use std::thread;
 
+use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::Typ;
 
 pub use anlegen::{datei_anlegen, ordner_anlegen};
@@ -225,7 +226,7 @@ pub fn starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
                     .iter()
                     .map(|pfad| Uebersprungen {
                         pfad: pfad.clone(),
-                        grund: format!("kein Arbeitsfaden frei: {}", grund(&fehler)),
+                        grund: satz(Text::VorgangKeinArbeitsfaden, &[("grund", &grund(&fehler))]),
                     })
                     .collect(),
             }));
@@ -331,7 +332,7 @@ fn einen_abarbeiten(
             // gleich lang. Der Fall ist trotzdem behandelt, weil ein leiser
             // Ausfall hier hiesse, einen Eintrag stillschweigend auszulassen.
             None => {
-                steuerung.ueberspringen(pfad, "es fehlt der neue Name");
+                steuerung.ueberspringen(pfad, text(Text::VorgangNeuerNameFehlt));
                 Ablauf::Weiter
             }
         },
@@ -341,7 +342,7 @@ fn einen_abarbeiten(
             // gleich lang. Der Fall ist trotzdem behandelt, aus demselben Grund
             // wie beim Stapel-Umbenennen eine Zeile darueber.
             None => {
-                steuerung.ueberspringen(pfad, "es fehlt der Zielordner");
+                steuerung.ueberspringen(pfad, text(Text::VorgangZielordnerFehlt));
                 Ablauf::Weiter
             }
         },
@@ -359,7 +360,7 @@ fn einen_abarbeiten(
             // der Abschlussliste stehen, statt den einen Namen ein zweites Mal
             // zu beanspruchen.
             None => {
-                steuerung.ueberspringen(pfad, "es fehlt der neue Name");
+                steuerung.ueberspringen(pfad, text(Text::VorgangNeuerNameFehlt));
                 Ablauf::Weiter
             }
         },
@@ -369,7 +370,7 @@ fn einen_abarbeiten(
         // Auffangzweig hat; sein Rumpf meldet statt stillzuschweigen, damit ein
         // spaeterer Umbau der Verzweigung nicht unbemerkt hier landet.
         Art::Zippen { .. } => {
-            steuerung.ueberspringen(pfad, "das Packen läuft nicht Quelle für Quelle");
+            steuerung.ueberspringen(pfad, text(Text::VorgangPackenNichtQuelleFuerQuelle));
             Ablauf::Weiter
         }
     }
@@ -426,16 +427,16 @@ fn einen_abarbeiten(
 /// sind sie nicht zu messen.
 fn zielpfad(quelle: &Quelle<'_>, zielordner: &Path, steuerung: &mut Steuerung) -> Option<PathBuf> {
     let Some(name) = quelle.pfad.file_name() else {
-        steuerung.ueberspringen(quelle.pfad, "der Pfad benennt keinen Eintrag");
+        steuerung.ueberspringen(quelle.pfad, text(Text::VorgangPfadBenenntKeinenEintrag));
         return None;
     };
     let ziel = zielordner.join(name);
     if benennen_denselben_eintrag(&ziel, quelle.pfad) {
-        steuerung.ueberspringen(quelle.pfad, "Quelle und Ziel sind derselbe Eintrag");
+        steuerung.ueberspringen(quelle.pfad, text(Text::VorgangQuelleUndZielDerselbeEintrag));
         return None;
     }
     if quelle.typ == Typ::Ordner && liegt_im_ordner(zielordner, quelle.pfad) {
-        steuerung.ueberspringen(quelle.pfad, "das Ziel liegt in der Quelle");
+        steuerung.ueberspringen(quelle.pfad, text(Text::VorgangZielLiegtInDerQuelle));
         return None;
     }
     Some(ziel)
@@ -551,13 +552,13 @@ pub(crate) fn ziel_klaeren(
             Err(fehler) => {
                 steuerung.ueberspringen(
                     quelle.pfad,
-                    format!("das Ziel ließ sich nicht ersetzen: {}", grund(&fehler)),
+                    satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
                 );
                 Zielentscheid::Ueberspringen
             }
         },
         Konfliktantwort::Ueberspringen => {
-            steuerung.ueberspringen(quelle.pfad, "am Ziel steht schon ein Eintrag");
+            steuerung.ueberspringen(quelle.pfad, text(Text::VorgangAmZielStehtEintrag));
             Zielentscheid::Ueberspringen
         }
         Konfliktantwort::UmbenennenIn(name) => match namen_pruefen(&name) {
@@ -587,15 +588,16 @@ fn typ_und_groesse(pfad: &Path) -> io::Result<(Typ, u64)> {
 
 /// Uebersetzt einen Systemfehler in den Grund, den die Abschlussliste zeigt.
 ///
-/// Die vier haeufigen Faelle stehen auf Deutsch da, weil der Nutzer sie liest.
-/// Alles andere behaelt den Wortlaut des Systems: eine erfundene Uebersetzung
-/// waere ungenauer als das Original.
+/// Die vier haeufigen Faelle kommen aus der Sprachtabelle, weil der Nutzer
+/// sie liest. Alles andere behaelt den Wortlaut des Systems: eine erfundene
+/// Uebersetzung waere ungenauer als das Original, und der Systemtext ist nach
+/// C2 des Specs kein Text der Oberflaeche.
 pub(crate) fn grund(fehler: &io::Error) -> String {
     match fehler.kind() {
-        io::ErrorKind::PermissionDenied => "keine Rechte".to_owned(),
-        io::ErrorKind::NotFound => "gibt es nicht mehr".to_owned(),
-        io::ErrorKind::AlreadyExists => "am Ziel steht schon ein Eintrag".to_owned(),
-        io::ErrorKind::StorageFull => "kein Platz mehr auf dem Datenträger".to_owned(),
+        io::ErrorKind::PermissionDenied => text(Text::VorgangKeineRechte).to_owned(),
+        io::ErrorKind::NotFound => text(Text::VorgangGibtEsNichtMehr).to_owned(),
+        io::ErrorKind::AlreadyExists => text(Text::VorgangAmZielStehtEintrag).to_owned(),
+        io::ErrorKind::StorageFull => text(Text::VorgangKeinPlatzAufDemDatentraeger).to_owned(),
         _ => fehler.to_string(),
     }
 }

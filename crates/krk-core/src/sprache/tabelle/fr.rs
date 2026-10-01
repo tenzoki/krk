@@ -74,6 +74,90 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EinheitMegabyte => "Mo",
         Text::EinheitGigabyte => "Go",
         Text::EinheitTerabyte => "To",
+        Text::VorgangKeineRechte => "droits insuffisants",
+        Text::VorgangGibtEsNichtMehr => "n’existe plus",
+        Text::VorgangAmZielStehtEintrag => "une entrée existe déjà à la destination",
+        Text::VorgangKeinPlatzAufDemDatentraeger => "plus d’espace libre sur le volume",
+        Text::VorgangKeinArbeitsfaden => "aucun fil de travail libre\u{a0}: {grund}",
+        Text::VorgangNeuerNameFehlt => "le nouveau nom manque",
+        Text::VorgangZielordnerFehlt => "le dossier de destination manque",
+        Text::VorgangPackenNichtQuelleFuerQuelle => {
+            "la compression ne se fait pas source par source"
+        }
+        Text::VorgangPfadBenenntKeinenEintrag => "le chemin ne désigne aucune entrée",
+        Text::VorgangQuelleUndZielDerselbeEintrag => {
+            "la source et la destination sont la même entrée"
+        }
+        Text::VorgangZielLiegtInDerQuelle => "la destination se trouve dans la source",
+        Text::VorgangZielNichtErsetzt => "la destination n’a pas pu être remplacée\u{a0}: {grund}",
+        Text::VorgangNachAbbruchNichtWeggeraeumt => {
+            "non supprimé après l’annulation\u{a0}: {grund}"
+        }
+        Text::VorgangOrdnerangabenNichtKopiert => {
+            "contenu copié, mais pas les droits ni la date du dossier\u{a0}: {grund}"
+        }
+        Text::VorgangOrdnerSelbstBlieb => {
+            "contenu déplacé, mais le dossier lui-même est resté\u{a0}: {grund}"
+        }
+        Text::VorgangNichtVollstaendigKopiert => "copie incomplète, resté dans la source",
+        Text::VorgangKopiertAberInQuelleGeblieben => {
+            "copié, mais resté dans la source\u{a0}: {grund}"
+        }
+        Text::VorgangKeinPapierkorb => {
+            "aucune Corbeille n’est branchée\u{202f}; rien n’a été supprimé"
+        }
+        Text::VorgangKeineGewoehnlicheDatei => "pas un fichier ordinaire",
+        Text::VorgangZielNichtInPapierkorb => {
+            "la destination n’a pas pu être placée dans la Corbeille\u{a0}: {grund}"
+        }
+        Text::EntpackenEintragFuehrtHeraus => {
+            "«\u{a0}{name}\u{a0}» sort du dossier de destination et est ignoré"
+        }
+        Text::EntpackenEintragMitGrund => "«\u{a0}{name}\u{a0}»\u{a0}: {grund}",
+        Text::EntpackenAmZielStehtVerknuepfung => {
+            "«\u{a0}{name}\u{a0}»\u{a0}: un lien symbolique existe déjà à la destination"
+        }
+        Text::EntpackenWegMitUnzulaessigemBestandteil => {
+            "le chemin vers l’entrée contient un élément interdit"
+        }
+        Text::EntpackenWegDurchVerknuepfung => {
+            "le chemin vers l’entrée traverse un lien symbolique qui sort du dossier de destination"
+        }
+        Text::EntpackenDateiStattOrdnerAufDemWeg => {
+            "sur le chemin vers l’entrée se trouve un fichier là où il faudrait un dossier"
+        }
+        Text::EntpackenVerweiszielKeinText => "la cible du lien n’est pas un texte valide",
+        Text::PackenArchivUnfertig => "l’archive est restée inachevée\u{a0}: {fehler}",
+        Text::PackenKeinPlatzImArchiv => "pas de place dans l’archive\u{a0}: {fehler}",
+        Text::PackenHalberEintragImArchiv => {
+            "l’entrée à moitié écrite est restée dans l’archive\u{a0}: {fehler}"
+        }
+        Text::PackenNichtInsArchivGeschrieben => "non écrit dans l’archive\u{a0}: {fehler}",
+        Text::StapelKeinStartwert => {
+            "«\u{a0}{text}\u{a0}» n’est pas une valeur de départ pour la numérotation"
+        }
+        Text::StapelKeineStellenzahl => {
+            "«\u{a0}{text}\u{a0}» n’est pas un nombre de chiffres entre 1 et {hoechste}"
+        }
+        Text::EditorKeinFreierDateizugriff => {
+            "{pfad} ne peut pas être ouvert pour le moment\u{a0}: KRK n’a plus de descripteur de fichier libre ({grund})\u{202f}; réessayer après la fin de la recherche en cours"
+        }
+        Text::EditorNichtZuOeffnen => {
+            "{pfad} ne peut pas être ouvert dans l’Éditeur\u{a0}: {grund}"
+        }
+        Text::EditorZuGross => {
+            "{pfad} pèse {groesse} octets, trop pour l’Éditeur\u{202f}; la limite est de {grenze} octets"
+        }
+        Text::EditorKeineTextdatei => "{pfad} n’est pas un fichier texte et ne sera pas ouvert",
+        Text::EditorOrdnerHatKeinenText => {
+            "un dossier n’a pas de texte que l’Éditeur pourrait afficher"
+        }
+        Text::EditorKeineGewoehnlicheDatei => "ce n’est pas un fichier ordinaire",
+        Text::LesenDatenschutzsperre => {
+            "macOS bloque l’accès à «\u{a0}{name}\u{a0}». Autorisation\u{a0}: Réglages Système › Confidentialité et sécurité › Accès complet au disque › KRK, puis relancer KRK."
+        }
+        Text::LesenKeinVerzeichnis => "{pfad} n’est pas un dossier",
+        Text::LesenPfadMitNullbyte => "{pfad} contient un octet nul",
     }
 }
 

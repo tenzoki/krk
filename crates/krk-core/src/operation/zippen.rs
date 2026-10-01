@@ -151,6 +151,7 @@ use zip::DateTime;
 use zip::ZipWriter;
 use zip::write::FullFileOptions;
 
+use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::{Typ, lesen};
 
 use super::fortschritt::Steuerung;
@@ -224,7 +225,10 @@ pub(crate) fn lauf(
         Packschritt::Weiter => match schreiber.finish() {
             Ok(_) => return Abschluss::Fertig,
             Err(fehler) => {
-                steuerung.ueberspringen(&archiv, format!("das Archiv blieb unfertig: {fehler}"));
+                steuerung.ueberspringen(
+                    &archiv,
+                    satz(Text::PackenArchivUnfertig, &[("fehler", &fehler)]),
+                );
                 Abschluss::Fertig
             }
         },
@@ -286,16 +290,16 @@ fn zielarchiv_klaeren(
             Err(fehler) => {
                 steuerung.ueberspringen(
                     ziel,
-                    format!(
-                        "das Ziel ließ sich nicht in den Papierkorb räumen: {}",
-                        grund(&fehler)
+                    satz(
+                        Text::VorgangZielNichtInPapierkorb,
+                        &[("grund", &grund(&fehler))],
                     ),
                 );
                 Zielentscheid::Ueberspringen
             }
         },
         Konfliktantwort::Ueberspringen => {
-            steuerung.ueberspringen(ziel, "am Ziel steht schon ein Eintrag");
+            steuerung.ueberspringen(ziel, text(Text::VorgangAmZielStehtEintrag));
             Zielentscheid::Ueberspringen
         }
         Konfliktantwort::UmbenennenIn(name) => match name_pruefen(&name) {
@@ -322,7 +326,10 @@ fn halbes_archiv_wegraeumen(archiv: &Path, steuerung: &mut Steuerung) {
     {
         steuerung.ueberspringen(
             archiv,
-            format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
+            satz(
+                Text::VorgangNachAbbruchNichtWeggeraeumt,
+                &[("grund", &grund(&fehler))],
+            ),
         );
     }
 }
@@ -338,7 +345,7 @@ fn quellen_packen(
             return Packschritt::Abgebrochen;
         }
         let Some(name) = pfad.file_name() else {
-            steuerung.ueberspringen(pfad, "der Pfad benennt keinen Eintrag");
+            steuerung.ueberspringen(pfad, text(Text::VorgangPfadBenenntKeinenEintrag));
             continue;
         };
         let (typ, groesse) = match typ_und_groesse(pfad) {
@@ -407,7 +414,7 @@ fn datei_packen(
     let angaben = match gelesen.metadata() {
         Ok(angaben) if angaben.is_file() => angaben,
         Ok(_) => {
-            steuerung.ueberspringen(quelle.pfad, "keine gewöhnliche Datei");
+            steuerung.ueberspringen(quelle.pfad, text(Text::VorgangKeineGewoehnlicheDatei));
             return Packschritt::Weiter;
         }
         Err(fehler) => {
@@ -418,7 +425,10 @@ fn datei_packen(
 
     let wahl = dateiwahl(&angaben);
     if let Err(fehler) = schreiber.start_file(name_im_archiv, wahl) {
-        steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));
+        steuerung.ueberspringen(
+            quelle.pfad,
+            satz(Text::PackenKeinPlatzImArchiv, &[("fehler", &fehler)]),
+        );
         return Packschritt::ArchivHin;
     }
 
@@ -439,7 +449,7 @@ fn datei_packen(
                     Err(fehler) => {
                         steuerung.ueberspringen(
                             quelle.pfad,
-                            format!("der halbe Eintrag blieb im Archiv: {fehler}"),
+                            satz(Text::PackenHalberEintragImArchiv, &[("fehler", &fehler)]),
                         );
                         Packschritt::ArchivHin
                     }
@@ -450,7 +460,10 @@ fn datei_packen(
             steuerung.teilstueck(bytes);
             steuerung.ueberspringen(
                 quelle.pfad,
-                format!("nicht ins Archiv geschrieben: {fehler}"),
+                satz(
+                    Text::PackenNichtInsArchivGeschrieben,
+                    &[("fehler", &fehler)],
+                ),
             );
             return Packschritt::ArchivHin;
         }
@@ -479,7 +492,10 @@ fn ordner_packen(
 ) -> Packschritt {
     let wahl = ordnerwahl(quelle.pfad);
     if let Err(fehler) = schreiber.add_directory(name_im_archiv, wahl) {
-        steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));
+        steuerung.ueberspringen(
+            quelle.pfad,
+            satz(Text::PackenKeinPlatzImArchiv, &[("fehler", &fehler)]),
+        );
         return Packschritt::ArchivHin;
     }
 
@@ -537,7 +553,10 @@ fn verknuepfung_packen(
             Packschritt::Weiter
         }
         Err(fehler) => {
-            steuerung.ueberspringen(quelle.pfad, format!("kein Platz im Archiv: {fehler}"));
+            steuerung.ueberspringen(
+                quelle.pfad,
+                satz(Text::PackenKeinPlatzImArchiv, &[("fehler", &fehler)]),
+            );
             Packschritt::ArchivHin
         }
     }

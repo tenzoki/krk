@@ -37,6 +37,7 @@ use std::fs::{self, File, FileTimes};
 use std::io;
 use std::path::Path;
 
+use crate::sprache::{Text, satz};
 use crate::verzeichnis::sys::{Uebertragungsart, Weiter, datei_kopieren as sys_datei_kopieren};
 use crate::verzeichnis::{Typ, lesen};
 
@@ -146,7 +147,10 @@ pub(crate) fn datei_uebertragen(
         {
             steuerung.ueberspringen(
                 ziel,
-                format!("nach dem Abbruch nicht weggeräumt: {}", grund(&fehler)),
+                satz(
+                    Text::VorgangNachAbbruchNichtWeggeraeumt,
+                    &[("grund", &grund(&fehler))],
+                ),
             );
         }
         return Ok(Ablauf::Abgebrochen);
@@ -204,9 +208,9 @@ fn ordner(
     if let Err(fehler) = ordnerangaben_uebernehmen(quelle.pfad, ziel) {
         steuerung.ueberspringen(
             ziel,
-            format!(
-                "Inhalt kopiert, Rechte und Datum des Ordners nicht: {}",
-                grund(&fehler)
+            satz(
+                Text::VorgangOrdnerangabenNichtKopiert,
+                &[("grund", &grund(&fehler))],
             ),
         );
     }

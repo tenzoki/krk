@@ -66,6 +66,72 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EinheitMegabyte => "MB",
         Text::EinheitGigabyte => "GB",
         Text::EinheitTerabyte => "TB",
+        Text::VorgangKeineRechte => "no permission",
+        Text::VorgangGibtEsNichtMehr => "no longer exists",
+        Text::VorgangAmZielStehtEintrag => "an entry already exists at the destination",
+        Text::VorgangKeinPlatzAufDemDatentraeger => "no space left on the volume",
+        Text::VorgangKeinArbeitsfaden => "no worker thread available: {grund}",
+        Text::VorgangNeuerNameFehlt => "the new name is missing",
+        Text::VorgangZielordnerFehlt => "the destination folder is missing",
+        Text::VorgangPackenNichtQuelleFuerQuelle => "zipping does not run source by source",
+        Text::VorgangPfadBenenntKeinenEintrag => "the path does not name an entry",
+        Text::VorgangQuelleUndZielDerselbeEintrag => "source and destination are the same entry",
+        Text::VorgangZielLiegtInDerQuelle => "the destination lies inside the source",
+        Text::VorgangZielNichtErsetzt => "the destination could not be replaced: {grund}",
+        Text::VorgangNachAbbruchNichtWeggeraeumt => "not removed after cancelling: {grund}",
+        Text::VorgangOrdnerangabenNichtKopiert => {
+            "contents copied, but not the folder’s permissions and date: {grund}"
+        }
+        Text::VorgangOrdnerSelbstBlieb => "contents moved, but the folder itself remained: {grund}",
+        Text::VorgangNichtVollstaendigKopiert => "not completely copied, left in the source",
+        Text::VorgangKopiertAberInQuelleGeblieben => "copied, but left in the source: {grund}",
+        Text::VorgangKeinPapierkorb => "no Trash attached; nothing was deleted",
+        Text::VorgangKeineGewoehnlicheDatei => "not a regular file",
+        Text::VorgangZielNichtInPapierkorb => {
+            "the destination could not be moved to the Trash: {grund}"
+        }
+        Text::EntpackenEintragFuehrtHeraus => {
+            "“{name}” leads out of the destination folder and is skipped"
+        }
+        Text::EntpackenEintragMitGrund => "“{name}”: {grund}",
+        Text::EntpackenAmZielStehtVerknuepfung => {
+            "“{name}”: a symbolic link already exists at the destination"
+        }
+        Text::EntpackenWegMitUnzulaessigemBestandteil => {
+            "the path to the entry contains an invalid component"
+        }
+        Text::EntpackenWegDurchVerknuepfung => {
+            "the path to the entry passes through a symbolic link out of the destination folder"
+        }
+        Text::EntpackenDateiStattOrdnerAufDemWeg => {
+            "on the path to the entry there is a file where a folder should be"
+        }
+        Text::EntpackenVerweiszielKeinText => "the link target is not valid text",
+        Text::PackenArchivUnfertig => "the archive was left unfinished: {fehler}",
+        Text::PackenKeinPlatzImArchiv => "no room in the archive: {fehler}",
+        Text::PackenHalberEintragImArchiv => {
+            "the half-written entry remained in the archive: {fehler}"
+        }
+        Text::PackenNichtInsArchivGeschrieben => "not written to the archive: {fehler}",
+        Text::StapelKeinStartwert => "“{text}” is not a starting value for the numbering",
+        Text::StapelKeineStellenzahl => {
+            "“{text}” is not a number of digits between 1 and {hoechste}"
+        }
+        Text::EditorKeinFreierDateizugriff => {
+            "{pfad} cannot be opened right now: KRK has no file descriptor left ({grund}); try again after the running search has finished"
+        }
+        Text::EditorNichtZuOeffnen => "{pfad} cannot be opened in the Editor: {grund}",
+        Text::EditorZuGross => {
+            "{pfad} is {groesse} bytes, too large for the Editor; the limit is {grenze} bytes"
+        }
+        Text::EditorKeineTextdatei => "{pfad} is not a text file and will not be opened",
+        Text::EditorOrdnerHatKeinenText => "a folder has no text the Editor could show",
+        Text::EditorKeineGewoehnlicheDatei => "that is not a regular file",
+        Text::LesenDatenschutzsperre => {
+            "macOS blocks access to “{name}”. To allow it: System Settings › Privacy & Security › Full Disk Access › KRK, then restart KRK."
+        }
+        Text::LesenKeinVerzeichnis => "{pfad} is not a directory",
+        Text::LesenPfadMitNullbyte => "{pfad} contains a null byte",
     }
 }
 
