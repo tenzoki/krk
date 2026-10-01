@@ -758,6 +758,142 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::PfadeingabeFrage => "Vers quel dossier\u{202f}?",
         Text::PfadeingabeGehe => "Aller",
         Text::HinweisOk => "OK",
+        Text::EditorTrefferVon => "Résultat {nummer} sur {anzahl}",
+        Text::EditorKeinTrefferFuer => "Aucun résultat pour «\u{a0}{text}\u{a0}»",
+        Text::EditorKeinWeitererTrefferFuer => "Aucun autre résultat pour «\u{a0}{text}\u{a0}»",
+        Text::PinBleibt => "le code PIN reste tel qu’il était",
+        Text::PinNichtAbleitbarGrund => {
+            "le nouveau code PIN ne peut pas être dérivé\u{a0}: {fehler}\u{202f}; {bleibt}"
+        }
+        Text::EditorKeineTextmarkeInGeheimnissen => {
+            "pour secrets.txt, KRK ne crée aucun signet de texte\u{a0}: il écrirait une ligne des secrets en clair dans les signets"
+        }
+        Text::EditorOhnePin => "il est chiffré et ne s’ouvre qu’avec le code PIN",
+        Text::EditorKeineVerschluesselteDatei => {
+            "ce n’est pas un fichier chiffré du dossier de notes"
+        }
+        Text::EditorGeheimnisseZuGross => "il est trop volumineux pour l’Éditeur",
+        Text::EditorGeheimnisseKeinDateizugriff => "KRK n’a plus de descripteur de fichier libre",
+        Text::EditorGeheimnisseNichtLesbar => "il ne peut pas être lu",
+        Text::EditorFremdGeaendertNichtUeberschrieben => {
+            "{pfad} a été modifié en dehors de KRK et ne sera pas écrasé"
+        }
+        Text::EditorVerschluesseltKeinKlartext => {
+            "{pfad} est chiffré et ne sera pas écrit en clair"
+        }
+        Text::EditorNichtGesichert => "{pfad} n’a pas pu être enregistré\u{a0}: {fehler}",
+        Text::EditorFremdGeaendert => "{pfad} a été modifié en dehors de KRK",
+        Text::PinKeineDatei => "l’Éditeur ne tient aucun fichier\u{202f}; {bleibt}",
+        Text::PinNochNichtGesichert => {
+            "{pfad} ne porte pas encore de code PIN enregistré\u{202f}; enregistrer d’abord, modifier ensuite"
+        }
+        Text::PinWirdSchonGeaendert => "le code PIN est déjà en cours de modification",
+        Text::PinFremdGeaendert => "{pfad} a été modifié en dehors de KRK\u{202f}; {bleibt}",
+        Text::PinNichtVerschluesselt => "{pfad} n’est pas chiffré\u{202f}; {bleibt}",
+        Text::PinAlteStimmtNicht => "l’ancien code PIN est incorrect\u{202f}; {bleibt}",
+        Text::PinNichtAbleitbar => "le nouveau code PIN n’a pas pu être dérivé\u{202f}; {bleibt}",
+        Text::PinGrundBleibt => "{grund}\u{202f}; {bleibt}",
+        Text::PinDateiGrundBleibt => "{pfad}\u{a0}: {grund}\u{202f}; {bleibt}",
+        Text::PinNichtMehrOffen => "{pfad} n’est plus ouvert\u{202f}; {bleibt}",
+        Text::PinNichtMehrEntsperrt => "{pfad} n’est plus déverrouillé\u{202f}; {bleibt}",
+        Text::PinNichtLesbar => "{pfad} ne peut pas être lu\u{202f}; {bleibt}",
+        Text::PinNichtAlsTextLesbar => "{pfad} n’est pas lisible comme texte\u{202f}; {bleibt}",
+        Text::PinNichtGeschrieben => {
+            "{pfad} n’a pas pu être écrit\u{a0}: {fehler}\u{202f}; {bleibt}"
+        }
+        Text::EditorMarkeFuehrtAufZeile => "le signet mène à la ligne {zeile}",
+        Text::EditorZeilenZaehlenAbEins => {
+            "les lignes se comptent à partir de 1\u{202f}; le curseur est au début du fichier"
+        }
+        Text::EditorKeineZeileMehr => {
+            "le fichier n’a plus de ligne {zeile}\u{202f}; le curseur est à la fin du fichier"
+        }
+        Text::EditorMarkenstelleGeaendert => "le passage mémorisé a changé\u{202f}; {wohin}",
+        Text::EditorGesichert => "{pfad} enregistré",
+        Text::EditorKeineZeilennummer => "«\u{a0}{eingabe}\u{a0}» n’est pas un numéro de ligne",
+        Text::EditorKeineSuche => "aucune recherche n’est en cours",
+        Text::EditorKeinTrefferErsetzt => "aucun résultat remplacé",
+        Text::EditorPinGeaendert => "le code PIN de {pfad} est modifié",
+        Text::EditorTermineAufsteigend => "Rendez-vous triés par ordre croissant",
+        Text::EditorTermineAbsteigend => "Rendez-vous triés par ordre décroissant",
+        Text::QuicknoteLeer => {
+            "La Quicknote est vide\u{202f}; le presse-papiers reste tel qu’il était."
+        }
+        Text::QuicknoteNichtKopiert => {
+            "La Quicknote n’a pas pu être copiée dans le presse-papiers\u{202f}; son texte reste en place."
+        }
+        Text::QuicknoteZuGross => {
+            "Le texte est trop long pour la Quicknote\u{202f}; rien n’a été collé."
+        }
+        Text::QuicknoteKeineTextmarken => "Dans la Quicknote, il n’y a pas de signets de texte.",
+        Text::QuicknoteLeeren => "Vider",
+        Text::QuicknoteKopieren => "Copier",
+        Text::EintragKeineAufgabentabelle => "l’Éditeur n’affiche pas de tableau des tâches",
+        Text::EintragKeineNotiztabelle => "l’Éditeur n’affiche pas de tableau des notes",
+        Text::EintragKeineTermintabelle => "l’Éditeur n’affiche pas de tableau des rendez-vous",
+        Text::EintragKeineAufgabeGewaehlt => "aucune tâche n’est sélectionnée",
+        Text::EintragKeineNotizGewaehlt => "aucune note n’est sélectionnée",
+        Text::EintragKeinTerminGewaehlt => "aucun rendez-vous n’est sélectionné",
+        Text::EintragAufgabeHinzugefuegt => {
+            "nouvelle tâche à la fin\u{202f}; return valide le texte"
+        }
+        Text::EintragNotizHinzugefuegt => {
+            "nouvelle note à la fin\u{202f}; tab passe au texte, cmd+return valide"
+        }
+        Text::EintragTerminHinzugefuegt => {
+            "rendez-vous ajouté, à la date du jour\u{202f}; tab passe au texte, cmd+return valide"
+        }
+        Text::EintragAufgabeBearbeitung => "return valide, esc abandonne",
+        Text::EintragNotizBearbeitung => {
+            "cmd+return valide, tab change de cellule, return insère un saut de ligne dans le texte"
+        }
+        Text::EintragTerminBearbeitung => {
+            "cmd+return valide, tab change de cellule, return insère un saut de ligne dans le rendez-vous"
+        }
+        Text::EintragAufgabeUebernommen => "tâche validée",
+        Text::EintragNotizUebernommen => "note validée",
+        Text::EintragTerminUebernommen => "rendez-vous validé",
+        Text::EintragAufgabeAbgehakt => "tâche cochée",
+        Text::EintragNotizOhneKaestchen => "une note n’a pas de case à cocher",
+        Text::EintragTerminOhneKaestchen => "un rendez-vous n’a pas de case à cocher",
+        Text::EintragAufgabeWiederOffen => "tâche de nouveau ouverte",
+        Text::EintragAufgabeVerschoben => "tâche déplacée",
+        Text::EintragNotizVerschoben => "note déplacée",
+        Text::EintragAufgabeSchonOben => "la tâche est déjà en haut",
+        Text::EintragNotizSchonOben => "la note est déjà en haut",
+        Text::EintragAufgabeSchonUnten => "la tâche est déjà en bas",
+        Text::EintragNotizSchonUnten => "la note est déjà en bas",
+        Text::EintragTermineNachDatum => {
+            "Les rendez-vous sont classés par date\u{202f}; aucun ne peut être déplacé."
+        }
+        Text::EintragAufgabeGeloescht => "tâche supprimée\u{202f}; cmd+z la rétablit",
+        Text::EintragNotizGeloescht => "note supprimée\u{202f}; cmd+z la rétablit",
+        Text::EintragTerminGeloescht => "rendez-vous supprimé\u{202f}; cmd+z le rétablit",
+        Text::EintragZelleBleibt => "la cellule reste en cours de modification",
+        Text::EintragAufgabeMitEscUebernommen => "tâche validée\u{202f}; cmd+z annule",
+        Text::EintragNotizMitEscUebernommen => "note validée\u{202f}; cmd+z annule",
+        Text::EintragTerminMitEscUebernommen => "rendez-vous validé\u{202f}; cmd+z annule",
+        Text::EintragHeuteUnbestimmt => "La date du jour n’a pas pu être déterminée.",
+        Text::VorschauGeheimnishinweis => {
+            "Ce fichier est chiffré et s’ouvre avec F4 et le code PIN dans l’Éditeur."
+        }
+        Text::VorschautabLeer => "Vide",
+        Text::VorschautabZwischenablage => "Presse-papiers",
+        Text::VorschauZwischenablageLeer => "Le presse-papiers est vide.",
+        Text::VorschauBildZuGross => {
+            "L’image du presse-papiers pèse {groesse} Mo. L’Aperçu affiche les images jusqu’à {grenze} Mo."
+        }
+        Text::VorschauNichtLesbar => "{pfad} n’a pas pu être lu\u{a0}: {fehler}",
+        Text::VorschauLeertext => {
+            "Aucun contenu. La sélection dans le volet de fichiers remplit cet onglet."
+        }
+        Text::VorschauBildNichtDarstellbar => "L’image du presse-papiers n’a pas pu être affichée.",
+        Text::MetadatenName => "Nom\u{a0}: {name}",
+        Text::MetadatenPfad => "Chemin\u{a0}: {pfad}",
+        Text::MetadatenGroesse => "Taille\u{a0}: {groesse}",
+        Text::MetadatenGeaendert => "Modifié\u{a0}: {datum}",
+        Text::MetadatenRechte => "Droits\u{a0}: {rechte}",
+        Text::MetadatenTyp => "Type\u{a0}: {typ}",
     }
 }
 
@@ -816,6 +952,19 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::StapelEintraege => ("{n} entrée", "{n} entrées"),
         Zahlwort::StapelWerdenUmbenannt => ("{n} sera renommée", "{n} seront renommées"),
         Zahlwort::StapelBleibenStehen => ("{n} reste inchangée", "{n} restent inchangées"),
+        Zahlwort::EditorTrefferErsetzt => ("un résultat remplacé", "{n} résultats remplacés"),
+        Zahlwort::EditorZeilenHinterDerLetzten => (
+            "le fichier a {n} ligne\u{202f}; le curseur est à la fin du fichier",
+            "le fichier a {n} lignes\u{202f}; le curseur est à la fin du fichier",
+        ),
+        Zahlwort::QuicknoteKopiert => (
+            "La Quicknote est dans le presse-papiers\u{a0}: {n} caractère.",
+            "La Quicknote est dans le presse-papiers\u{a0}: {n} caractères.",
+        ),
+        Zahlwort::BildfolgeVorbereitet => (
+            "La série de photos se prépare\u{a0}: {n} photo.",
+            "La série de photos se prépare\u{a0}: {n} photos.",
+        ),
     }
 }
 

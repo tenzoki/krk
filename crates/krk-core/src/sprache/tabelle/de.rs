@@ -706,6 +706,134 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::PfadeingabeFrage => "Zu welchem Ordner?",
         Text::PfadeingabeGehe => "Gehe",
         Text::HinweisOk => "OK",
+        Text::EditorTrefferVon => "Treffer {nummer} von {anzahl}",
+        Text::EditorKeinTrefferFuer => "Kein Treffer für „{text}“",
+        Text::EditorKeinWeitererTrefferFuer => "Kein weiterer Treffer für „{text}“",
+        Text::PinBleibt => "die PIN bleibt, wie sie war",
+        Text::PinNichtAbleitbarGrund => {
+            "die neue PIN lässt sich nicht ableiten: {fehler}; {bleibt}"
+        }
+        Text::EditorKeineTextmarkeInGeheimnissen => {
+            "für secrets.txt legt KRK keine Textmarke an: sie schriebe eine Zeile der Geheimnisse im Klartext in die Lesezeichen"
+        }
+        Text::EditorOhnePin => "sie ist verschlüsselt und öffnet sich allein mit der PIN",
+        Text::EditorKeineVerschluesselteDatei => {
+            "sie ist keine verschlüsselte Datei im Notizordner"
+        }
+        Text::EditorGeheimnisseZuGross => "sie ist zu groß für den Editor",
+        Text::EditorGeheimnisseKeinDateizugriff => "KRK hat keinen freien Dateizugriff mehr",
+        Text::EditorGeheimnisseNichtLesbar => "sie lässt sich nicht lesen",
+        Text::EditorFremdGeaendertNichtUeberschrieben => {
+            "{pfad} hat sich außerhalb von KRK geändert und wird nicht überschrieben"
+        }
+        Text::EditorVerschluesseltKeinKlartext => {
+            "{pfad} ist verschlüsselt und wird nicht im Klartext geschrieben"
+        }
+        Text::EditorNichtGesichert => "{pfad} ließ sich nicht sichern: {fehler}",
+        Text::EditorFremdGeaendert => "{pfad} hat sich außerhalb von KRK geändert",
+        Text::PinKeineDatei => "der Editor hält keine Datei; {bleibt}",
+        Text::PinNochNichtGesichert => {
+            "{pfad} trägt noch keine gesicherte PIN; erst sichern, dann ändern"
+        }
+        Text::PinWirdSchonGeaendert => "die PIN wird schon geändert",
+        Text::PinFremdGeaendert => "{pfad} hat sich außerhalb von KRK geändert; {bleibt}",
+        Text::PinNichtVerschluesselt => "{pfad} ist nicht verschlüsselt; {bleibt}",
+        Text::PinAlteStimmtNicht => "die alte PIN stimmt nicht; {bleibt}",
+        Text::PinNichtAbleitbar => "die neue PIN ließ sich nicht ableiten; {bleibt}",
+        Text::PinGrundBleibt => "{grund}; {bleibt}",
+        Text::PinDateiGrundBleibt => "{pfad}: {grund}; {bleibt}",
+        Text::PinNichtMehrOffen => "{pfad} ist nicht mehr offen; {bleibt}",
+        Text::PinNichtMehrEntsperrt => "{pfad} ist nicht mehr entsperrt; {bleibt}",
+        Text::PinNichtLesbar => "{pfad} lässt sich nicht lesen; {bleibt}",
+        Text::PinNichtAlsTextLesbar => "{pfad} ist nicht als Text lesbar; {bleibt}",
+        Text::PinNichtGeschrieben => "{pfad} ließ sich nicht schreiben: {fehler}; {bleibt}",
+        Text::EditorMarkeFuehrtAufZeile => "die Marke führt auf Zeile {zeile}",
+        Text::EditorZeilenZaehlenAbEins => {
+            "Zeilen zählen ab 1; die Schreibmarke steht am Dateianfang"
+        }
+        Text::EditorKeineZeileMehr => {
+            "die Datei hat keine Zeile {zeile} mehr; die Schreibmarke steht am Dateiende"
+        }
+        Text::EditorMarkenstelleGeaendert => "die gemerkte Stelle hat sich geändert; {wohin}",
+        Text::EditorGesichert => "{pfad} gesichert",
+        Text::EditorKeineZeilennummer => "„{eingabe}“ ist keine Zeilennummer",
+        Text::EditorKeineSuche => "es läuft keine Suche",
+        Text::EditorKeinTrefferErsetzt => "kein Treffer ersetzt",
+        Text::EditorPinGeaendert => "die PIN von {pfad} ist geändert",
+        Text::EditorTermineAufsteigend => "Termine aufsteigend sortiert",
+        Text::EditorTermineAbsteigend => "Termine absteigend sortiert",
+        Text::QuicknoteLeer => "Die Quicknote ist leer; die Zwischenablage bleibt, wie sie war.",
+        Text::QuicknoteNichtKopiert => {
+            "Die Quicknote ließ sich nicht in die Zwischenablage kopieren; ihr Text bleibt stehen."
+        }
+        Text::QuicknoteZuGross => "Der Text ist zu groß für die Quicknote; eingefügt wurde nichts.",
+        Text::QuicknoteKeineTextmarken => "In der Quicknote gibt es keine Textmarken.",
+        Text::QuicknoteLeeren => "Leeren",
+        Text::QuicknoteKopieren => "Kopieren",
+        Text::EintragKeineAufgabentabelle => "der Editor zeigt keine Aufgabentabelle",
+        Text::EintragKeineNotiztabelle => "der Editor zeigt keine Notiztabelle",
+        Text::EintragKeineTermintabelle => "der Editor zeigt keine Termintabelle",
+        Text::EintragKeineAufgabeGewaehlt => "es ist keine Aufgabe gewählt",
+        Text::EintragKeineNotizGewaehlt => "es ist keine Notiz gewählt",
+        Text::EintragKeinTerminGewaehlt => "es ist kein Termin gewählt",
+        Text::EintragAufgabeHinzugefuegt => "neue Aufgabe am Ende; return übernimmt den Text",
+        Text::EintragNotizHinzugefuegt => {
+            "neue Notiz am Ende; tab wechselt zum Text, cmd+return übernimmt"
+        }
+        Text::EintragTerminHinzugefuegt => {
+            "Termin hinzugefügt, mit dem heutigen Datum; tab wechselt zum Text, cmd+return übernimmt"
+        }
+        Text::EintragAufgabeBearbeitung => "return übernimmt, esc verwirft",
+        Text::EintragNotizBearbeitung => {
+            "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Text einen Zeilenumbruch"
+        }
+        Text::EintragTerminBearbeitung => {
+            "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Termin einen Zeilenumbruch"
+        }
+        Text::EintragAufgabeUebernommen => "Aufgabe übernommen",
+        Text::EintragNotizUebernommen => "Notiz übernommen",
+        Text::EintragTerminUebernommen => "Termin übernommen",
+        Text::EintragAufgabeAbgehakt => "Aufgabe abgehakt",
+        Text::EintragNotizOhneKaestchen => "eine Notiz hat kein Kästchen",
+        Text::EintragTerminOhneKaestchen => "ein Termin hat kein Kästchen",
+        Text::EintragAufgabeWiederOffen => "Aufgabe wieder offen",
+        Text::EintragAufgabeVerschoben => "Aufgabe verschoben",
+        Text::EintragNotizVerschoben => "Notiz verschoben",
+        Text::EintragAufgabeSchonOben => "die Aufgabe steht schon oben",
+        Text::EintragNotizSchonOben => "die Notiz steht schon oben",
+        Text::EintragAufgabeSchonUnten => "die Aufgabe steht schon unten",
+        Text::EintragNotizSchonUnten => "die Notiz steht schon unten",
+        Text::EintragTermineNachDatum => {
+            "Termine stehen nach ihrem Datum; verschieben lässt sich keiner."
+        }
+        Text::EintragAufgabeGeloescht => "Aufgabe gelöscht; cmd+z holt sie zurück",
+        Text::EintragNotizGeloescht => "Notiz gelöscht; cmd+z holt sie zurück",
+        Text::EintragTerminGeloescht => "Termin gelöscht; cmd+z holt ihn zurück",
+        Text::EintragZelleBleibt => "die Zelle bleibt in Bearbeitung",
+        Text::EintragAufgabeMitEscUebernommen => "Aufgabe übernommen; cmd+z nimmt es zurück",
+        Text::EintragNotizMitEscUebernommen => "Notiz übernommen; cmd+z nimmt es zurück",
+        Text::EintragTerminMitEscUebernommen => "Termin übernommen; cmd+z nimmt es zurück",
+        Text::EintragHeuteUnbestimmt => "Das heutige Datum ließ sich nicht bestimmen.",
+        Text::VorschauGeheimnishinweis => {
+            "Diese Datei ist verschlüsselt und öffnet sich mit F4 und der PIN im Editor."
+        }
+        Text::VorschautabLeer => "Leer",
+        Text::VorschautabZwischenablage => "Zwischenablage",
+        Text::VorschauZwischenablageLeer => "Die Zwischenablage ist leer.",
+        Text::VorschauBildZuGross => {
+            "Das Bild in der Zwischenablage ist {groesse} MB groß. Die Vorschau zeigt Bilder bis {grenze} MB."
+        }
+        Text::VorschauNichtLesbar => "{pfad} ließ sich nicht lesen: {fehler}",
+        Text::VorschauLeertext => "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.",
+        Text::VorschauBildNichtDarstellbar => {
+            "Das Bild aus der Zwischenablage ließ sich nicht darstellen."
+        }
+        Text::MetadatenName => "Name: {name}",
+        Text::MetadatenPfad => "Pfad: {pfad}",
+        Text::MetadatenGroesse => "Größe: {groesse}",
+        Text::MetadatenGeaendert => "Geändert: {datum}",
+        Text::MetadatenRechte => "Rechte: {rechte}",
+        Text::MetadatenTyp => "Typ: {typ}",
     }
 }
 
@@ -769,6 +897,19 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::StapelEintraege => ("{n} Eintrag", "{n} Einträge"),
         Zahlwort::StapelWerdenUmbenannt => ("{n} wird umbenannt", "{n} werden umbenannt"),
         Zahlwort::StapelBleibenStehen => ("{n} bleibt stehen", "{n} bleiben stehen"),
+        Zahlwort::EditorTrefferErsetzt => ("ein Treffer ersetzt", "{n} Treffer ersetzt"),
+        Zahlwort::EditorZeilenHinterDerLetzten => (
+            "die Datei hat {n} Zeile; die Schreibmarke steht am Dateiende",
+            "die Datei hat {n} Zeilen; die Schreibmarke steht am Dateiende",
+        ),
+        Zahlwort::QuicknoteKopiert => (
+            "Die Quicknote ist in der Zwischenablage: {n} Zeichen.",
+            "Die Quicknote ist in der Zwischenablage: {n} Zeichen.",
+        ),
+        Zahlwort::BildfolgeVorbereitet => (
+            "Die Bildfolge wird vorbereitet: {n} Foto.",
+            "Die Bildfolge wird vorbereitet: {n} Fotos.",
+        ),
     }
 }
 

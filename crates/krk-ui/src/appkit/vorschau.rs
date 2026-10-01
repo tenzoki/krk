@@ -320,6 +320,7 @@ use objc2_foundation::{
 
 use krk_core::heimordner::Heimordner;
 use krk_core::leseprofil::{Profile, Zusammenfassungszeile, zeilen_als_text};
+use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Typ;
 
@@ -352,8 +353,11 @@ const AUFBAUGROESSE: NSSize = NSSize::new(260.0, 400.0);
 /// haeufiger zu fragen braechte nichts, weil nicht oefter gezeichnet wird.
 const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 
-/// Was ein leerer Tab sagt, statt eine leere Flaeche zu zeigen.
-const LEERTEXT: &str = "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.";
+/// Was ein leerer Tab sagt, statt eine leere Flaeche zu zeigen; eine
+/// Funktion und keine Konstante, weil kein `const` einen Tabellentext haelt.
+fn leertext() -> &'static str {
+    text(Text::VorschauLeertext)
+}
 
 /// Welche der drei Ansichten in der Inhaltsflaeche steht (Runde 20).
 ///
@@ -1437,7 +1441,7 @@ impl Vorschaufenster {
     /// vierte Flaeche und ein weiterer Schalter entstehen nicht.
     fn inhalt_zeigen(&self, inhalt: Inhalt) {
         match inhalt {
-            Inhalt::Leer => self.text_zeigen(LEERTEXT),
+            Inhalt::Leer => self.text_zeigen(leertext()),
             Inhalt::Text(text) => self.text_zeigen(&text),
             // Der gerenderte Text und seine Auszeichnungen in einem Zug: die
             // Umsetzung ist die des Editors, und eine zweite daneben entsteht
@@ -1785,9 +1789,7 @@ impl Vorschaufenster {
                     let zeilen = self.metadaten_text(metadaten, &[]);
                     self.text_zeigen(&zeilen);
                 }
-                None => {
-                    self.text_zeigen("Das Bild aus der Zwischenablage ließ sich nicht darstellen.")
-                }
+                None => self.text_zeigen(text(Text::VorschauBildNichtDarstellbar)),
             },
         }
     }
@@ -1827,16 +1829,23 @@ impl Vorschaufenster {
             // wert, wie in der Datumsspalte aus C1.
             Err(_) => String::new(),
         };
-        format!(
-            "Name: {}\nPfad: {}\nGröße: {}\nGeändert: {}\nRechte: {}\nTyp: {}{}",
-            metadaten.name,
-            metadaten.pfad.display(),
-            groesse,
-            geaendert,
-            rechte_text(metadaten.rechte),
-            typ_beschriften(metadaten.typ),
-            zeilen_als_text(zaehlzeilen),
-        )
+        // Sechs Zeilen, je ein Tabelleneintrag mit einem Platzhalter; die
+        // Zaehlzeilen treten unmittelbar hinter die sechste.
+        let zeilen = [
+            satz(Text::MetadatenName, &[("name", &metadaten.name)]),
+            satz(Text::MetadatenPfad, &[("pfad", &metadaten.pfad.display())]),
+            satz(Text::MetadatenGroesse, &[("groesse", &groesse)]),
+            satz(Text::MetadatenGeaendert, &[("datum", &geaendert)]),
+            satz(
+                Text::MetadatenRechte,
+                &[("rechte", &rechte_text(metadaten.rechte))],
+            ),
+            satz(
+                Text::MetadatenTyp,
+                &[("typ", &typ_beschriften(metadaten.typ))],
+            ),
+        ];
+        format!("{}{}", zeilen.join("\n"), zeilen_als_text(zaehlzeilen))
     }
 
     /// Haengt den Zeitgeber in die Laufschleife, falls er noch nicht laeuft.
@@ -2169,9 +2178,10 @@ mod tests {
     /// dieser Datei den Hauptfaden behauptet, und diese Runde aendert das
     /// nicht. Gehalten wird deshalb am Quelltext: der eine Rufer von
     /// `zeilen_als_text` in dieser Datei steht im Rumpf von `metadaten_text`,
-    /// und die Formatzeile dort endet auf `Typ: {}{}`, also auf die sechste
-    /// Angabe und unmittelbar dahinter die Zaehlzeilen. Ob die sechs Zeilen
-    /// richtig dastehen, prueft der Abnahmelauf am Buendel (Schritt 8).
+    /// und die sechste Zeile dort ist der Eintrag `Text::MetadatenTyp`, hinter
+    /// dem der Rufer von `zeilen_als_text` steht, also die Zaehlzeilen
+    /// unmittelbar hinter der sechsten Angabe. Ob die sechs Zeilen richtig
+    /// dastehen, prueft der Abnahmelauf am Buendel (Schritt 8).
     #[test]
     fn die_zaehlzeilen_folgen_in_metadaten_text_auf_die_zeile_typ() {
         let rufer = concat!("zeilen_als", "_text");
@@ -2199,10 +2209,15 @@ mod tests {
             1,
             "der eine Rufer von {rufer} steht nicht im Rumpf von metadaten_text"
         );
+        let typzeile = rumpf
+            .find(concat!("Text::Metadaten", "Typ"))
+            .expect("metadaten_text baut die sechste Zeile nicht aus Text::MetadatenTyp");
+        let zaehlzeilen = rumpf
+            .find(rufer)
+            .expect("der Rufer von zeilen_als_text steht nicht im Rumpf");
         assert!(
-            rumpf.contains(concat!("Typ: {}", "{}\""),),
-            "die Formatzeile von metadaten_text endet nicht auf die Zeile Typ mit den \
-             Zaehlzeilen unmittelbar dahinter"
+            typzeile < zaehlzeilen,
+            "die Zaehlzeilen stehen in metadaten_text nicht unmittelbar hinter der Zeile Typ"
         );
     }
 

@@ -167,6 +167,16 @@
 //! | OK (Schaltflaeche des Hinweises) | OK | OK |
 //! | Return (Tastenname in einer Erlaeuterung) | Entrée | Return |
 //! | Cmd+Return / Opt+Return | Cmd+Entrée / Opt+Entrée | Cmd+Return / Opt+Return |
+//! | Textmarke (ein Lesezeichen auf eine Zeile) | signet de texte | text bookmark |
+//! | Schreibmarke | curseur | cursor |
+//! | Treffer (der Suche im Editor) | résultat | match |
+//! | Zelle (der Eintragstabelle) | cellule | cell |
+//! | uebernehmen (eine Zelle, einen Eintrag) | valider | accept |
+//! | Kaestchen (einer Aufgabe) | case à cocher | checkbox |
+//! | abhaken | cocher | check off |
+//! | Metadaten: Name / Pfad / Groesse / Geaendert / Rechte / Typ | Nom / Chemin / Taille / Modifié / Droits / Type | Name / Path / Size / Modified / Permissions / Type |
+//! | Leeren / Kopieren (Schaltflaechen der Quicknote) | Vider / Copier | Clear / Copy |
+//! | Tastennamen in der Statuszeile (`return`, `tab`, `esc`, `cmd+z`) | unveraendert | unveraendert |
 //!
 //! # Die Befehlsnamen
 //!

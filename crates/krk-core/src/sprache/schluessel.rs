@@ -716,7 +716,8 @@ pub enum Text {
     TabelleZwischenablageKeinZiel,
     /// `eintrag_anspringen`: `{name}` steht nicht in der gelesenen Liste.
     TabelleNichtInDerListe,
-    /// Der Fenstertitel, solange der Editor die Quicknote zeigt.
+    /// Der Fenstertitel, solange der Editor die Quicknote zeigt, und der
+    /// Kopf des Editorbereichs ueber ihr.
     FenstertitelQuicknote,
     /// `statuszeile::filterstand_text`: der Satz des Filterstands;
     /// `{filtertext}`, `{gezeigt}`, `{vorhanden}` und die drei Satzteile
@@ -955,7 +956,8 @@ pub enum Text {
     /// `Systempapierkorb::in_den_papierkorb`; `{pfad}`.
     PapierkorbKeinUtf8Pfad,
     /// Die Schaltflaeche, die ein meldendes Blatt schliesst: die
-    /// Startmeldungen, die Abschlussliste und die Neuerungen.
+    /// Startmeldungen, die Abschlussliste und die Neuerungen; dazu die
+    /// Schaltflaeche in der Rolle der Quicknote.
     BlattSchliessen,
     /// Die abbrechende Schaltflaeche jedes Blattes: `standardschaltflaechen`
     /// in `appkit/blaetter/mod.rs`, das Konfliktblatt, die Loeschrueckfrage,
@@ -1068,11 +1070,228 @@ pub enum Text {
     PfadeingabeGehe,
     /// `hinweis::zeigen`: die eine Schaltflaeche des modalen Hinweises.
     HinweisOk,
+    /// `Suchlauf::meldung` im Editor: ein angesteuerter Treffer; `{nummer}`
+    /// und `{anzahl}`.
+    EditorTrefferVon,
+    /// `Suchlauf::meldung`: kein Treffer fuer `{text}`.
+    EditorKeinTrefferFuer,
+    /// `Suchlauf::meldung`: die Treffer sind erschoepft.
+    EditorKeinWeitererTrefferFuer,
+    /// Der Satzschluss jeder Abweisung von „PIN aendern“ im Editormodell,
+    /// als `{bleibt}` in jedem `Pin…`-Satz, der ihn traegt.
+    PinBleibt,
+    /// `Pinwechsel::starten`: kein Faden fuer die Ableitung; `{fehler}` ist
+    /// der Systemtext, `{bleibt}` der Satzschluss.
+    PinNichtAbleitbarGrund,
+    /// `Editormodell::textmarke_verweigert`: `cmd+d` an `secrets.txt`.
+    EditorKeineTextmarkeInGeheimnissen,
+    /// `Editormodell::oeffnen`: `secrets.txt` ohne PIN, als Grund hinter
+    /// „laesst sich nicht im Editor oeffnen“.
+    EditorOhnePin,
+    /// `Editormodell::oeffnen`: eine PIN fuer eine Datei, die keine
+    /// `secrets.txt` ist.
+    EditorKeineVerschluesselteDatei,
+    /// `geheimnisse_lesen` bei `Lesehindernis::ZuGross`.
+    EditorGeheimnisseZuGross,
+    /// `geheimnisse_lesen` bei `Lesehindernis::Deskriptormangel`.
+    EditorGeheimnisseKeinDateizugriff,
+    /// `geheimnisse_lesen` bei `Lesehindernis::Fehler`.
+    EditorGeheimnisseNichtLesbar,
+    /// `Editormodell::sichern`: die Datei hat sich von aussen geaendert;
+    /// `{pfad}`.
+    EditorFremdGeaendertNichtUeberschrieben,
+    /// `Editormodell::sichern`: ein Klartextstand fuer `secrets.txt`.
+    EditorVerschluesseltKeinKlartext,
+    /// `Editormodell::sichern`: das Schreiben ist gescheitert; `{pfad}`,
+    /// `{fehler}`.
+    EditorNichtGesichert,
+    /// `Editormodell::fremde_aenderung_melden`: die Datei hat sich von aussen
+    /// geaendert; `{pfad}`.
+    EditorFremdGeaendert,
+    /// `Editormodell::pin_aenderung_pruefen`: keine Datei gehalten; `{bleibt}`.
+    PinKeineDatei,
+    /// `pin_aenderung_pruefen`: die Datei traegt noch keinen Kopf; `{pfad}`.
+    PinNochNichtGesichert,
+    /// `pin_aenderung_pruefen`: ein Wechsel laeuft schon.
+    PinWirdSchonGeaendert,
+    /// `pin_aenderung_pruefen` und `umschluesseln`: die Datei hat sich von
+    /// aussen geaendert; `{pfad}`, `{bleibt}`.
+    PinFremdGeaendert,
+    /// `Editormodell::pin_aendern`: die Datei ist nicht verschluesselt;
+    /// `{pfad}`, `{bleibt}`.
+    PinNichtVerschluesselt,
+    /// `pin_aendern`: die alte PIN stimmt nicht; `{bleibt}`.
+    PinAlteStimmtNicht,
+    /// `pinwechsel_einziehen`: der Faden ist ohne Antwort geendet; `{bleibt}`.
+    PinNichtAbleitbar,
+    /// `pinwechsel_einziehen`: ein Grund des Tresors mit dem Satzschluss;
+    /// `{grund}`, `{bleibt}`.
+    PinGrundBleibt,
+    /// `umschluesseln`: ein Grund des Tresors zu einer Datei; `{pfad}`,
+    /// `{grund}`, `{bleibt}`.
+    PinDateiGrundBleibt,
+    /// `umschluesseln`: der Editor haelt inzwischen eine andere Datei;
+    /// `{pfad}`, `{bleibt}`.
+    PinNichtMehrOffen,
+    /// `umschluesseln`: der Schutz ist inzwischen Klartext; `{pfad}`,
+    /// `{bleibt}`.
+    PinNichtMehrEntsperrt,
+    /// `umschluesseln`: die Datei laesst sich nicht lesen; `{pfad}`,
+    /// `{bleibt}`.
+    PinNichtLesbar,
+    /// `umschluesseln`: der Klartext ist kein Text; `{pfad}`, `{bleibt}`.
+    PinNichtAlsTextLesbar,
+    /// `umschluesseln`: das Schreiben ist gescheitert; `{pfad}`, `{fehler}`,
+    /// `{bleibt}`.
+    PinNichtGeschrieben,
+    /// `Editormeldung::MarkenstelleGeaendert` bei `Zeilenlage::Getroffen`:
+    /// der Teilsatz `{wohin}`; `{zeile}`.
+    EditorMarkeFuehrtAufZeile,
+    /// `Editormeldung::MarkenstelleGeaendert` bei `Zeilenlage::VorDerErsten`
+    /// und `Editormeldung::ZeileVorDerErsten`.
+    EditorZeilenZaehlenAbEins,
+    /// `Editormeldung::MarkenstelleGeaendert` bei
+    /// `Zeilenlage::HinterDerLetzten`; `{zeile}`.
+    EditorKeineZeileMehr,
+    /// `Editormeldung::MarkenstelleGeaendert`: der Satz um `{wohin}`.
+    EditorMarkenstelleGeaendert,
+    /// `Editormeldung::Gesichert`; `{pfad}`.
+    EditorGesichert,
+    /// `Editormeldung::KeineZeilennummer`; `{eingabe}`.
+    EditorKeineZeilennummer,
+    /// `Editormeldung::KeineSuche`.
+    EditorKeineSuche,
+    /// `Editormeldung::Ersetzt` mit 0; die Formen ab 1 traegt
+    /// `Zahlwort::EditorTrefferErsetzt`.
+    EditorKeinTrefferErsetzt,
+    /// `Editormeldung::PinGeaendert`; `{pfad}`.
+    EditorPinGeaendert,
+    /// `Editormeldung::Terminrichtung(Aufsteigend)`.
+    EditorTermineAufsteigend,
+    /// `Editormeldung::Terminrichtung(Absteigend)`.
+    EditorTermineAbsteigend,
+    /// `Editormeldung::QuicknoteLeer`.
+    QuicknoteLeer,
+    /// `Editormeldung::QuicknoteNichtKopiert`.
+    QuicknoteNichtKopiert,
+    /// `Editormeldung::QuicknoteZuGross`.
+    QuicknoteZuGross,
+    /// `Editorbereich::textmarke_verweigert` bei offener Quicknote.
+    QuicknoteKeineTextmarken,
+    /// Die Schaltflaeche „Leeren“ in der Rolle der Quicknote.
+    QuicknoteLeeren,
+    /// Die Schaltflaeche „Kopieren“ in der Rolle der Quicknote; ein eigener
+    /// Schluessel neben `VorgangsartKopieren`, weil die Ueberschrift eines
+    /// laufenden Vorgangs in Englisch ein anderes Wort traegt.
+    QuicknoteKopieren,
+    /// `Eintragsantwort::KeineTabelle` in der Aufgabentabelle.
+    EintragKeineAufgabentabelle,
+    /// `Eintragsantwort::KeineTabelle` in der Notiztabelle.
+    EintragKeineNotiztabelle,
+    /// `Eintragsantwort::KeineTabelle` in der Termintabelle.
+    EintragKeineTermintabelle,
+    /// `Eintragsantwort::KeinEintragGewaehlt`, Aufgaben.
+    EintragKeineAufgabeGewaehlt,
+    /// `Eintragsantwort::KeinEintragGewaehlt`, Notizen.
+    EintragKeineNotizGewaehlt,
+    /// `Eintragsantwort::KeinEintragGewaehlt`, Termine.
+    EintragKeinTerminGewaehlt,
+    /// `Eintragsantwort::Hinzugefuegt`, Aufgaben.
+    EintragAufgabeHinzugefuegt,
+    /// `Eintragsantwort::Hinzugefuegt`, Notizen.
+    EintragNotizHinzugefuegt,
+    /// `Eintragsantwort::Hinzugefuegt`, Termine.
+    EintragTerminHinzugefuegt,
+    /// `Eintragsantwort::BearbeitungBegonnen`, Aufgaben.
+    EintragAufgabeBearbeitung,
+    /// `Eintragsantwort::BearbeitungBegonnen`, Notizen.
+    EintragNotizBearbeitung,
+    /// `Eintragsantwort::BearbeitungBegonnen`, Termine.
+    EintragTerminBearbeitung,
+    /// `Eintragsantwort::Uebernommen`, Aufgaben.
+    EintragAufgabeUebernommen,
+    /// `Eintragsantwort::Uebernommen`, Notizen.
+    EintragNotizUebernommen,
+    /// `Eintragsantwort::Uebernommen`, Termine.
+    EintragTerminUebernommen,
+    /// `Eintragsantwort::Abgehakt`, Aufgaben.
+    EintragAufgabeAbgehakt,
+    /// `Eintragsantwort::Abgehakt` und `WiederOffen` in der Notiztabelle.
+    EintragNotizOhneKaestchen,
+    /// `Eintragsantwort::Abgehakt` und `WiederOffen` in der Termintabelle.
+    EintragTerminOhneKaestchen,
+    /// `Eintragsantwort::WiederOffen`, Aufgaben.
+    EintragAufgabeWiederOffen,
+    /// `Eintragsantwort::Verschoben`, Aufgaben.
+    EintragAufgabeVerschoben,
+    /// `Eintragsantwort::Verschoben`, Notizen.
+    EintragNotizVerschoben,
+    /// `Eintragsantwort::SchonOben`, Aufgaben.
+    EintragAufgabeSchonOben,
+    /// `Eintragsantwort::SchonOben`, Notizen.
+    EintragNotizSchonOben,
+    /// `Eintragsantwort::SchonUnten`, Aufgaben.
+    EintragAufgabeSchonUnten,
+    /// `Eintragsantwort::SchonUnten`, Notizen.
+    EintragNotizSchonUnten,
+    /// `Eintragsantwort::NachDatumGeordnet` und jedes Verschieben in der
+    /// Termintabelle.
+    EintragTermineNachDatum,
+    /// `Eintragsantwort::Geloescht`, Aufgaben.
+    EintragAufgabeGeloescht,
+    /// `Eintragsantwort::Geloescht`, Notizen.
+    EintragNotizGeloescht,
+    /// `Eintragsantwort::Geloescht`, Termine.
+    EintragTerminGeloescht,
+    /// `Eintragsantwort::ZelleBleibt`, jede Tabelle.
+    EintragZelleBleibt,
+    /// `Eintragsantwort::MitEscUebernommen`, Aufgaben.
+    EintragAufgabeMitEscUebernommen,
+    /// `Eintragsantwort::MitEscUebernommen`, Notizen.
+    EintragNotizMitEscUebernommen,
+    /// `Eintragsantwort::MitEscUebernommen`, Termine.
+    EintragTerminMitEscUebernommen,
+    /// `Eintragsantwort::HeuteUnbestimmt`, jede Tabelle.
+    EintragHeuteUnbestimmt,
+    /// Die Vorschau statt des Inhalts von `secrets.txt`.
+    VorschauGeheimnishinweis,
+    /// Der Titel eines leeren Vorschautabs in der Tableiste.
+    VorschautabLeer,
+    /// Der Titel des Vorschautabs, der die Zwischenablage zeigt.
+    VorschautabZwischenablage,
+    /// `Vorschaumodell::zwischenablage_anzeigen`: die Zwischenablage traegt
+    /// weder Text noch Bild.
+    VorschauZwischenablageLeer,
+    /// `zu_gross_text`: ein Bild der Zwischenablage ueber der Bildgrenze;
+    /// `{groesse}` und `{grenze}` in MB.
+    VorschauBildZuGross,
+    /// `vorschaumodell::laden`: der Eintrag liess sich nicht lesen; `{pfad}`,
+    /// `{fehler}`.
+    VorschauNichtLesbar,
+    /// `Vorschaufenster`: was ein leerer Tab statt einer leeren Flaeche sagt.
+    VorschauLeertext,
+    /// `Vorschaufenster::bild_zeigen`: `NSImage` liest die Daten der
+    /// Zwischenablage nicht.
+    VorschauBildNichtDarstellbar,
+    /// `Vorschaufenster::metadaten_text`: die erste der sechs
+    /// Metadatenzeilen; `{name}`.
+    MetadatenName,
+    /// Die zweite Metadatenzeile; `{pfad}`.
+    MetadatenPfad,
+    /// Die dritte Metadatenzeile; `{groesse}`.
+    MetadatenGroesse,
+    /// Die vierte Metadatenzeile; `{datum}`.
+    MetadatenGeaendert,
+    /// Die fuenfte Metadatenzeile; `{rechte}`.
+    MetadatenRechte,
+    /// Die sechste Metadatenzeile; `{typ}`. Die Zaehlzeilen des
+    /// Default-Profils treten unmittelbar hinter sie.
+    MetadatenTyp,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 454] = [
+    pub const ALLE: [Text; 548] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1527,6 +1746,100 @@ impl Text {
         Text::PfadeingabeFrage,
         Text::PfadeingabeGehe,
         Text::HinweisOk,
+        Text::EditorTrefferVon,
+        Text::EditorKeinTrefferFuer,
+        Text::EditorKeinWeitererTrefferFuer,
+        Text::PinBleibt,
+        Text::PinNichtAbleitbarGrund,
+        Text::EditorKeineTextmarkeInGeheimnissen,
+        Text::EditorOhnePin,
+        Text::EditorKeineVerschluesselteDatei,
+        Text::EditorGeheimnisseZuGross,
+        Text::EditorGeheimnisseKeinDateizugriff,
+        Text::EditorGeheimnisseNichtLesbar,
+        Text::EditorFremdGeaendertNichtUeberschrieben,
+        Text::EditorVerschluesseltKeinKlartext,
+        Text::EditorNichtGesichert,
+        Text::EditorFremdGeaendert,
+        Text::PinKeineDatei,
+        Text::PinNochNichtGesichert,
+        Text::PinWirdSchonGeaendert,
+        Text::PinFremdGeaendert,
+        Text::PinNichtVerschluesselt,
+        Text::PinAlteStimmtNicht,
+        Text::PinNichtAbleitbar,
+        Text::PinGrundBleibt,
+        Text::PinDateiGrundBleibt,
+        Text::PinNichtMehrOffen,
+        Text::PinNichtMehrEntsperrt,
+        Text::PinNichtLesbar,
+        Text::PinNichtAlsTextLesbar,
+        Text::PinNichtGeschrieben,
+        Text::EditorMarkeFuehrtAufZeile,
+        Text::EditorZeilenZaehlenAbEins,
+        Text::EditorKeineZeileMehr,
+        Text::EditorMarkenstelleGeaendert,
+        Text::EditorGesichert,
+        Text::EditorKeineZeilennummer,
+        Text::EditorKeineSuche,
+        Text::EditorKeinTrefferErsetzt,
+        Text::EditorPinGeaendert,
+        Text::EditorTermineAufsteigend,
+        Text::EditorTermineAbsteigend,
+        Text::QuicknoteLeer,
+        Text::QuicknoteNichtKopiert,
+        Text::QuicknoteZuGross,
+        Text::QuicknoteKeineTextmarken,
+        Text::QuicknoteLeeren,
+        Text::QuicknoteKopieren,
+        Text::EintragKeineAufgabentabelle,
+        Text::EintragKeineNotiztabelle,
+        Text::EintragKeineTermintabelle,
+        Text::EintragKeineAufgabeGewaehlt,
+        Text::EintragKeineNotizGewaehlt,
+        Text::EintragKeinTerminGewaehlt,
+        Text::EintragAufgabeHinzugefuegt,
+        Text::EintragNotizHinzugefuegt,
+        Text::EintragTerminHinzugefuegt,
+        Text::EintragAufgabeBearbeitung,
+        Text::EintragNotizBearbeitung,
+        Text::EintragTerminBearbeitung,
+        Text::EintragAufgabeUebernommen,
+        Text::EintragNotizUebernommen,
+        Text::EintragTerminUebernommen,
+        Text::EintragAufgabeAbgehakt,
+        Text::EintragNotizOhneKaestchen,
+        Text::EintragTerminOhneKaestchen,
+        Text::EintragAufgabeWiederOffen,
+        Text::EintragAufgabeVerschoben,
+        Text::EintragNotizVerschoben,
+        Text::EintragAufgabeSchonOben,
+        Text::EintragNotizSchonOben,
+        Text::EintragAufgabeSchonUnten,
+        Text::EintragNotizSchonUnten,
+        Text::EintragTermineNachDatum,
+        Text::EintragAufgabeGeloescht,
+        Text::EintragNotizGeloescht,
+        Text::EintragTerminGeloescht,
+        Text::EintragZelleBleibt,
+        Text::EintragAufgabeMitEscUebernommen,
+        Text::EintragNotizMitEscUebernommen,
+        Text::EintragTerminMitEscUebernommen,
+        Text::EintragHeuteUnbestimmt,
+        Text::VorschauGeheimnishinweis,
+        Text::VorschautabLeer,
+        Text::VorschautabZwischenablage,
+        Text::VorschauZwischenablageLeer,
+        Text::VorschauBildZuGross,
+        Text::VorschauNichtLesbar,
+        Text::VorschauLeertext,
+        Text::VorschauBildNichtDarstellbar,
+        Text::MetadatenName,
+        Text::MetadatenPfad,
+        Text::MetadatenGroesse,
+        Text::MetadatenGeaendert,
+        Text::MetadatenRechte,
+        Text::MetadatenTyp,
     ];
 }
 
@@ -1611,11 +1924,21 @@ pub enum Zahlwort {
     /// `zusammenfassung` mit Kollisionen: die Zahl der Eintraege, die stehen
     /// bleiben, als `{stehend}`.
     StapelBleibenStehen,
+    /// `Editormeldung::Ersetzt` ab einem Treffer; die Null traegt
+    /// `Text::EditorKeinTrefferErsetzt`, und die Einzahl laesst `{n}` aus.
+    EditorTrefferErsetzt,
+    /// `Editormeldung::ZeileHinterDerLetzten`: die Zeilenzahl der Datei.
+    EditorZeilenHinterDerLetzten,
+    /// `Editormeldung::QuicknoteKopiert`: die Zahl der kopierten Zeichen.
+    QuicknoteKopiert,
+    /// `vorschaumodell::vorbereitungshinweis`: der Satz, solange das Foto an
+    /// der Stelle nicht geladen ist, mit der Zahl der Fotos der Folge.
+    BildfolgeVorbereitet,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 26] = [
+    pub const ALLE: [Zahlwort; 30] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -1642,5 +1965,9 @@ impl Zahlwort {
         Zahlwort::StapelEintraege,
         Zahlwort::StapelWerdenUmbenannt,
         Zahlwort::StapelBleibenStehen,
+        Zahlwort::EditorTrefferErsetzt,
+        Zahlwort::EditorZeilenHinterDerLetzten,
+        Zahlwort::QuicknoteKopiert,
+        Zahlwort::BildfolgeVorbereitet,
     ];
 }

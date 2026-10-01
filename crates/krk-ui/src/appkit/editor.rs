@@ -552,6 +552,7 @@ use krk_core::heimordner::eintraege::{
     self, Aufgaben, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
 };
 use krk_core::heimordner::tresor::Pin;
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
@@ -830,59 +831,57 @@ impl Editormeldung {
             // im Zeilensprung darunter.
             Self::MarkenstelleGeaendert { zeile, lage } => {
                 let wohin = match lage {
-                    Zeilenlage::Getroffen => format!("die Marke führt auf Zeile {zeile}"),
-                    Zeilenlage::VorDerErsten => {
-                        "Zeilen zählen ab 1; die Schreibmarke steht am Dateianfang".to_owned()
+                    Zeilenlage::Getroffen => {
+                        satz(Text::EditorMarkeFuehrtAufZeile, &[("zeile", zeile)])
                     }
-                    Zeilenlage::HinterDerLetzten => format!(
-                        "die Datei hat keine Zeile {zeile} mehr; die Schreibmarke steht am Dateiende"
-                    ),
+                    Zeilenlage::VorDerErsten => text(Text::EditorZeilenZaehlenAbEins).to_owned(),
+                    Zeilenlage::HinterDerLetzten => {
+                        satz(Text::EditorKeineZeileMehr, &[("zeile", zeile)])
+                    }
                 };
-                format!("die gemerkte Stelle hat sich geändert; {wohin}")
+                satz(Text::EditorMarkenstelleGeaendert, &[("wohin", &wohin)])
             }
-            Self::Gesichert { pfad } => format!("{} gesichert", pfad.display()),
+            Self::Gesichert { pfad } => satz(Text::EditorGesichert, &[("pfad", &pfad.display())]),
             Self::SichernGescheitert { grund } => grund.clone(),
-            Self::KeineZeilennummer { eingabe } => format!("„{eingabe}“ ist keine Zeilennummer"),
-            Self::ZeileVorDerErsten => {
-                "Zeilen zählen ab 1; die Schreibmarke steht am Dateianfang".to_owned()
+            Self::KeineZeilennummer { eingabe } => {
+                satz(Text::EditorKeineZeilennummer, &[("eingabe", eingabe)])
             }
-            Self::ZeileHinterDerLetzten { zeilenzahl } => {
-                format!("die Datei hat {zeilenzahl} Zeilen; die Schreibmarke steht am Dateiende")
-            }
+            Self::ZeileVorDerErsten => text(Text::EditorZeilenZaehlenAbEins).to_owned(),
+            Self::ZeileHinterDerLetzten { zeilenzahl } => anzahl(
+                Zahlwort::EditorZeilenHinterDerLetzten,
+                u64::try_from(*zeilenzahl).unwrap_or(u64::MAX),
+                &[],
+            ),
             Self::Suchstand { satz } => satz.clone(),
-            Self::KeineSuche => "es läuft keine Suche".to_owned(),
-            // Die drei Faelle sind ueberschneidungsfrei und vollstaendig; der
-            // Unterschied ist die deutsche Zahlform und nicht die Sache.
-            Self::Ersetzt { zahl } => match zahl {
-                0 => "kein Treffer ersetzt".to_owned(),
-                1 => "ein Treffer ersetzt".to_owned(),
-                zahl => format!("{zahl} Treffer ersetzt"),
-            },
+            Self::KeineSuche => text(Text::EditorKeineSuche).to_owned(),
+            // Die Null ist ein eigener Satz, die Formen ab 1 ein Zahlwort;
+            // der Unterschied ist die Zahlform und nicht die Sache.
+            Self::Ersetzt { zahl: 0 } => text(Text::EditorKeinTrefferErsetzt).to_owned(),
+            Self::Ersetzt { zahl } => anzahl(
+                Zahlwort::EditorTrefferErsetzt,
+                u64::try_from(*zahl).unwrap_or(u64::MAX),
+                &[],
+            ),
             Self::EintragAbgewiesen(abweisung) => abweisung.meldung().to_owned(),
             Self::Eintrag(art, antwort) => antwort.text(*art).to_owned(),
             Self::PinGeaendert { pfad } => {
-                format!("die PIN von {} ist geändert", pfad.display())
+                satz(Text::EditorPinGeaendert, &[("pfad", &pfad.display())])
             }
             Self::PinNichtGeaendert { grund } => grund.clone(),
             Self::Terminrichtung(Sortierrichtung::Aufsteigend) => {
-                "Termine aufsteigend sortiert".to_owned()
+                text(Text::EditorTermineAufsteigend).to_owned()
             }
             Self::Terminrichtung(Sortierrichtung::Absteigend) => {
-                "Termine absteigend sortiert".to_owned()
+                text(Text::EditorTermineAbsteigend).to_owned()
             }
-            Self::QuicknoteKopiert { zeichen } => {
-                format!("Die Quicknote ist in der Zwischenablage: {zeichen} Zeichen.")
-            }
-            Self::QuicknoteLeer => {
-                "Die Quicknote ist leer; die Zwischenablage bleibt, wie sie war.".to_owned()
-            }
-            Self::QuicknoteNichtKopiert => {
-                "Die Quicknote ließ sich nicht in die Zwischenablage kopieren; ihr Text bleibt stehen."
-                    .to_owned()
-            }
-            Self::QuicknoteZuGross => {
-                "Der Text ist zu groß für die Quicknote; eingefügt wurde nichts.".to_owned()
-            }
+            Self::QuicknoteKopiert { zeichen } => anzahl(
+                Zahlwort::QuicknoteKopiert,
+                u64::try_from(*zeichen).unwrap_or(u64::MAX),
+                &[],
+            ),
+            Self::QuicknoteLeer => text(Text::QuicknoteLeer).to_owned(),
+            Self::QuicknoteNichtKopiert => text(Text::QuicknoteNichtKopiert).to_owned(),
+            Self::QuicknoteZuGross => text(Text::QuicknoteZuGross).to_owned(),
         }
     }
 }
@@ -953,57 +952,46 @@ impl Eintragsantwort {
     #[must_use]
     pub fn text(self, art: Eintragsart) -> &'static str {
         use Eintragsart::{Aufgaben as A, Notizen as N, Termine as T};
-        match (self, art) {
-            (Self::KeineTabelle, A) => "der Editor zeigt keine Aufgabentabelle",
-            (Self::KeineTabelle, N) => "der Editor zeigt keine Notiztabelle",
-            (Self::KeineTabelle, T) => "der Editor zeigt keine Termintabelle",
-            (Self::KeinEintragGewaehlt, A) => "es ist keine Aufgabe gewählt",
-            (Self::KeinEintragGewaehlt, N) => "es ist keine Notiz gewählt",
-            (Self::KeinEintragGewaehlt, T) => "es ist kein Termin gewählt",
-            (Self::Hinzugefuegt, A) => "neue Aufgabe am Ende; return übernimmt den Text",
-            (Self::Hinzugefuegt, N) => {
-                "neue Notiz am Ende; tab wechselt zum Text, cmd+return übernimmt"
-            }
-            (Self::Hinzugefuegt, T) => {
-                "Termin hinzugefügt, mit dem heutigen Datum; tab wechselt zum Text, cmd+return übernimmt"
-            }
-            (Self::BearbeitungBegonnen, A) => "return übernimmt, esc verwirft",
-            (Self::BearbeitungBegonnen, N) => {
-                "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Text einen Zeilenumbruch"
-            }
-            (Self::BearbeitungBegonnen, T) => {
-                "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Termin einen Zeilenumbruch"
-            }
-            (Self::Uebernommen, A) => "Aufgabe übernommen",
-            (Self::Uebernommen, N) => "Notiz übernommen",
-            (Self::Uebernommen, T) => "Termin übernommen",
-            (Self::Abgehakt, A) => "Aufgabe abgehakt",
-            (Self::Abgehakt, N) => "eine Notiz hat kein Kästchen",
-            (Self::Abgehakt, T) => "ein Termin hat kein Kästchen",
-            (Self::WiederOffen, A) => "Aufgabe wieder offen",
-            (Self::WiederOffen, N) => "eine Notiz hat kein Kästchen",
-            (Self::WiederOffen, T) => "ein Termin hat kein Kästchen",
-            (Self::Verschoben, A) => "Aufgabe verschoben",
-            (Self::Verschoben, N) => "Notiz verschoben",
-            (Self::SchonOben, A) => "die Aufgabe steht schon oben",
-            (Self::SchonOben, N) => "die Notiz steht schon oben",
-            (Self::SchonUnten, A) => "die Aufgabe steht schon unten",
-            (Self::SchonUnten, N) => "die Notiz steht schon unten",
+        let schluessel = match (self, art) {
+            (Self::KeineTabelle, A) => Text::EintragKeineAufgabentabelle,
+            (Self::KeineTabelle, N) => Text::EintragKeineNotiztabelle,
+            (Self::KeineTabelle, T) => Text::EintragKeineTermintabelle,
+            (Self::KeinEintragGewaehlt, A) => Text::EintragKeineAufgabeGewaehlt,
+            (Self::KeinEintragGewaehlt, N) => Text::EintragKeineNotizGewaehlt,
+            (Self::KeinEintragGewaehlt, T) => Text::EintragKeinTerminGewaehlt,
+            (Self::Hinzugefuegt, A) => Text::EintragAufgabeHinzugefuegt,
+            (Self::Hinzugefuegt, N) => Text::EintragNotizHinzugefuegt,
+            (Self::Hinzugefuegt, T) => Text::EintragTerminHinzugefuegt,
+            (Self::BearbeitungBegonnen, A) => Text::EintragAufgabeBearbeitung,
+            (Self::BearbeitungBegonnen, N) => Text::EintragNotizBearbeitung,
+            (Self::BearbeitungBegonnen, T) => Text::EintragTerminBearbeitung,
+            (Self::Uebernommen, A) => Text::EintragAufgabeUebernommen,
+            (Self::Uebernommen, N) => Text::EintragNotizUebernommen,
+            (Self::Uebernommen, T) => Text::EintragTerminUebernommen,
+            (Self::Abgehakt, A) => Text::EintragAufgabeAbgehakt,
+            (Self::Abgehakt | Self::WiederOffen, N) => Text::EintragNotizOhneKaestchen,
+            (Self::Abgehakt | Self::WiederOffen, T) => Text::EintragTerminOhneKaestchen,
+            (Self::WiederOffen, A) => Text::EintragAufgabeWiederOffen,
+            (Self::Verschoben, A) => Text::EintragAufgabeVerschoben,
+            (Self::Verschoben, N) => Text::EintragNotizVerschoben,
+            (Self::SchonOben, A) => Text::EintragAufgabeSchonOben,
+            (Self::SchonOben, N) => Text::EintragNotizSchonOben,
+            (Self::SchonUnten, A) => Text::EintragAufgabeSchonUnten,
+            (Self::SchonUnten, N) => Text::EintragNotizSchonUnten,
             // Termine verschieben sich nicht; ein Rufer, der trotzdem hier
             // ankommt, bekommt die Ordnung genannt.
             (Self::Verschoben | Self::SchonOben | Self::SchonUnten, T)
-            | (Self::NachDatumGeordnet, A | N | T) => {
-                "Termine stehen nach ihrem Datum; verschieben lässt sich keiner."
-            }
-            (Self::Geloescht, A) => "Aufgabe gelöscht; cmd+z holt sie zurück",
-            (Self::Geloescht, N) => "Notiz gelöscht; cmd+z holt sie zurück",
-            (Self::Geloescht, T) => "Termin gelöscht; cmd+z holt ihn zurück",
-            (Self::ZelleBleibt, A | N | T) => "die Zelle bleibt in Bearbeitung",
-            (Self::MitEscUebernommen, A) => "Aufgabe übernommen; cmd+z nimmt es zurück",
-            (Self::MitEscUebernommen, N) => "Notiz übernommen; cmd+z nimmt es zurück",
-            (Self::MitEscUebernommen, T) => "Termin übernommen; cmd+z nimmt es zurück",
-            (Self::HeuteUnbestimmt, A | N | T) => "Das heutige Datum ließ sich nicht bestimmen.",
-        }
+            | (Self::NachDatumGeordnet, A | N | T) => Text::EintragTermineNachDatum,
+            (Self::Geloescht, A) => Text::EintragAufgabeGeloescht,
+            (Self::Geloescht, N) => Text::EintragNotizGeloescht,
+            (Self::Geloescht, T) => Text::EintragTerminGeloescht,
+            (Self::ZelleBleibt, A | N | T) => Text::EintragZelleBleibt,
+            (Self::MitEscUebernommen, A) => Text::EintragAufgabeMitEscUebernommen,
+            (Self::MitEscUebernommen, N) => Text::EintragNotizMitEscUebernommen,
+            (Self::MitEscUebernommen, T) => Text::EintragTerminMitEscUebernommen,
+            (Self::HeuteUnbestimmt, A | N | T) => Text::EintragHeuteUnbestimmt,
+        };
+        text(schluessel)
     }
 }
 
@@ -1598,8 +1586,11 @@ const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 /// sichtbar.
 const ABWEICHUNGSZEICHEN: &str = "•";
 
-/// Was der Kopf bei offener Quicknote nennt.
-const QUICKNOTEKOPF: &str = "Quicknote";
+/// Was der Kopf bei offener Quicknote nennt: derselbe Eintrag wie der
+/// Fenstertitel, weil es dasselbe Wort ist.
+fn quicknotekopf() -> &'static str {
+    text(Text::FenstertitelQuicknote)
+}
 
 /// Was der Text einer Zelle am Stand aendert; die Rechnung des Kerns.
 ///
@@ -3440,7 +3431,7 @@ impl Editorbereich {
     #[must_use]
     pub fn textmarke_verweigert(&self) -> Option<&'static str> {
         if self.quicknote_offen() {
-            return Some("In der Quicknote gibt es keine Textmarken.");
+            return Some(text(Text::QuicknoteKeineTextmarken));
         }
         self.ivars().modell.borrow().textmarke_verweigert()
     }
@@ -3824,7 +3815,7 @@ impl Editorbereich {
         // Bei offener Quicknote nennt der Kopf sie und nicht die Datei
         // darunter; er ist die Titelzeile, die Q1 des Spec verlangt.
         let zeile = if self.quicknote_offen() {
-            QUICKNOTEKOPF.to_owned()
+            quicknotekopf().to_owned()
         } else {
             let modell = self.ivars().modell.borrow();
             kopfzeile(modell.pfad(), modell.hat_ungesicherten_stand())
@@ -7714,7 +7705,7 @@ mod tests {
             quicknote < modell,
             "das Modell wird vor der Quicknote gefragt"
         );
-        assert!(rumpf.contains("In der Quicknote gibt es keine Textmarken."));
+        assert!(rumpf.contains(concat!("Text::Quicknote", "KeineTextmarken")));
     }
 
     /// Eine Datei, die hereinkommt, verlaesst die Quicknote, und zwar nach der

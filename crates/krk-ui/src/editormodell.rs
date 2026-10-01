@@ -292,6 +292,7 @@
 // Einzelnen steht das am jeweiligen `#[test]`. Der Datensatz ist
 // `issues/260810-0212_*_drei-stuecke-des-editormodells-haben-keinen-aufrufer-und-der-plan-nennt-keinen.md`
 // samt seinem Nachtrag, der aus den drei des Titels vier macht.
+use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
@@ -301,6 +302,7 @@ use std::time::SystemTime;
 use krk_core::ablage::atomar;
 use krk_core::heimordner::tresor::{self, Pin, Schluessel, Tresorfehler};
 use krk_core::heimordner::{Heimordner, Sonderdatei};
+use krk_core::sprache::{Text, satz, text};
 use krk_core::text::datei::Lesehindernis;
 use krk_core::text::{Abweisung, Treffer, datei, suche};
 
@@ -506,11 +508,17 @@ impl Suchlauf {
     #[must_use]
     pub fn meldung(&self) -> String {
         match self.nummer() {
-            Some(nummer) => format!("Treffer {nummer} von {}", self.zahl()),
+            Some(nummer) => satz(
+                Text::EditorTrefferVon,
+                &[("nummer", &nummer), ("anzahl", &self.zahl())],
+            ),
             None if self.treffer.is_empty() => {
-                format!("Kein Treffer für „{}“", self.gesucht)
+                satz(Text::EditorKeinTrefferFuer, &[("text", &self.gesucht)])
             }
-            None => format!("Kein weiterer Treffer für „{}“", self.gesucht),
+            None => satz(
+                Text::EditorKeinWeitererTrefferFuer,
+                &[("text", &self.gesucht)],
+            ),
         }
     }
 }
@@ -657,7 +665,7 @@ impl Pinwechsel {
                 let _ = SyncSender::send(&sender, tresor::neuer_schluessel(&neue));
             })
             .map_err(|fehler| {
-                format!("die neue PIN lässt sich nicht ableiten: {fehler}; {PIN_BLEIBT}")
+                mit_pin_bleibt(Text::PinNichtAbleitbarGrund, &[("fehler", &fehler)])
             })?;
         Ok(Self {
             empfaenger,
@@ -669,7 +677,7 @@ impl Pinwechsel {
 
 /// Wie ein Wechsel der PIN ausgegangen ist (Schritt 5.5).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[must_use = "der Ausgang ist die einzige Antwort auf „PIN ändern“; fallengelassen erfaehrt der Nutzer nicht, ob die neue PIN gilt"]
+#[must_use = "der Ausgang ist die einzige Antwort auf „PIN aendern“; fallengelassen erfaehrt der Nutzer nicht, ob die neue PIN gilt"]
 pub enum Pinwechselausgang {
     /// Der neue Kopf steht auf der Platte, und ab jetzt oeffnet allein die neue
     /// PIN die Datei.
@@ -679,8 +687,16 @@ pub enum Pinwechselausgang {
     Gescheitert(String),
 }
 
-/// Der Satzschluss jeder Abweisung von „PIN ändern".
-const PIN_BLEIBT: &str = "die PIN bleibt, wie sie war";
+/// Ein Satz der Abweisung von „PIN aendern“ mit seinem Satzschluss: der
+/// Schluessel traegt den Platzhalter `{bleibt}`, und hier bekommt er den
+/// einen Eintrag `Text::PinBleibt`, damit kein Rufer ihn vergisst.
+fn mit_pin_bleibt(schluessel: Text, werte: &[(&str, &dyn fmt::Display)]) -> String {
+    let bleibt = text(Text::PinBleibt);
+    let mut alle: Vec<(&str, &dyn fmt::Display)> = Vec::with_capacity(werte.len() + 1);
+    alle.push(("bleibt", &bleibt));
+    alle.extend_from_slice(werte);
+    satz(schluessel, &alle)
+}
 
 /// Die Grenze fuer das Lesen einer `secrets.txt`: die Editorgrenze fuer den
 /// Klartext, dazu der Kopf und die 16 Byte Pruefwert von Poly1305 (Kopftabelle
@@ -690,12 +706,12 @@ const GEHEIMNISGRENZE: u64 = datei::EDITORGRENZE + tresor::KOPFLAENGE as u64 + 1
 
 /// Der Satz der Statuszeile, wenn `cmd+d` im Editor an `secrets.txt` eine
 /// Textmarke anlegen soll; die Regel steht an
-/// [`Editormodell::textmarke_verweigert`].
-pub const KEINE_TEXTMARKE_IN_GEHEIMNISSEN: &str = "für secrets.txt legt KRK keine Textmarke an: \
-     sie schriebe eine Zeile der Geheimnisse im Klartext in die Lesezeichen";
-
-/// Der Grund, aus dem `secrets.txt` ohne PIN nicht geoeffnet wird.
-const OHNE_PIN: &str = "sie ist verschlüsselt und öffnet sich allein mit der PIN";
+/// [`Editormodell::textmarke_verweigert`]. Eine Funktion und keine
+/// Konstante, weil kein `const` einen Tabellentext haelt.
+#[must_use]
+pub fn keine_textmarke_in_geheimnissen() -> &'static str {
+    text(Text::EditorKeineTextmarkeInGeheimnissen)
+}
 
 /// Eine Abweisung fuer `secrets.txt`, im Wortlaut des Editors: der Pfad,
 /// "laesst sich nicht im Editor oeffnen:" und der Grund.
@@ -735,14 +751,14 @@ fn text_lesen(pfad: &Path) -> Result<Gelesen, Abweisung> {
 fn geheimnisse_lesen(pfad: &Path, pin: &Pin) -> Result<Gelesen, Abweisung> {
     let bytes = datei::bis_zur_grenze_lesen(pfad, GEHEIMNISGRENZE).map_err(|hindernis| {
         let (grund, mangel) = match hindernis {
-            Lesehindernis::ZuGross => ("sie ist zu groß für den Editor", false),
-            Lesehindernis::KeineDatei => ("das ist keine gewöhnliche Datei", false),
-            Lesehindernis::Deskriptormangel => ("KRK hat keinen freien Dateizugriff mehr", true),
-            Lesehindernis::Fehler => ("sie lässt sich nicht lesen", false),
+            Lesehindernis::ZuGross => (Text::EditorGeheimnisseZuGross, false),
+            Lesehindernis::KeineDatei => (Text::EditorKeineGewoehnlicheDatei, false),
+            Lesehindernis::Deskriptormangel => (Text::EditorGeheimnisseKeinDateizugriff, true),
+            Lesehindernis::Fehler => (Text::EditorGeheimnisseNichtLesbar, false),
         };
         Abweisung::KeinGueltigesZiel {
             pfad: pfad.to_path_buf(),
-            grund: grund.to_owned(),
+            grund: text(grund).to_owned(),
             mangel,
         }
     })?;
@@ -1135,14 +1151,14 @@ impl Editormodell {
     /// **Eine Textmarke traegt ihre Zeile im Klartext**, als `zeileninhalt` in
     /// `bookmarks.toml`, und haelt der Editor `secrets.txt`, ist diese Zeile
     /// ein Geheimnis. Die Antwort ist deshalb fuer die Geheimnisse immer der
-    /// eine Satz [`KEINE_TEXTMARKE_IN_GEHEIMNISSEN`]
+    /// eine Satz [`keine_textmarke_in_geheimnissen`]
     /// (`issues/260926-1004_*_eine-textmarke-in-secrets-txt-schreibt-eine-klartextzeile-in-die-lesezeichendatei.md`).
     ///
     /// Ob es eine Geheimnisdatei ist, sagt [`Self::haelt_geheimnisse`].
     #[must_use]
     pub fn textmarke_verweigert(&self) -> Option<&'static str> {
         self.haelt_geheimnisse()
-            .then_some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN)
+            .then_some(keine_textmarke_in_geheimnissen())
     }
 
     /// Ob der Editor `secrets.txt` haelt (C7 der krkhome-Arbeit).
@@ -1295,13 +1311,16 @@ impl Editormodell {
                 // Auch hier gehoert ein laufendes Lesen niemandem mehr: der
                 // letzte Befehl des Nutzers galt dieser Datei.
                 self.ladevorgang = None;
-                return Some(Ladeausgang::Abgewiesen(gesperrt(pfad, OHNE_PIN.to_owned())));
+                return Some(Ladeausgang::Abgewiesen(gesperrt(
+                    pfad,
+                    text(Text::EditorOhnePin).to_owned(),
+                )));
             }
             (false, Some(_)) => {
                 self.ladevorgang = None;
                 return Some(Ladeausgang::Abgewiesen(gesperrt(
                     pfad,
-                    "sie ist keine verschlüsselte Datei im Notizordner".to_owned(),
+                    text(Text::EditorKeineVerschluesselteDatei).to_owned(),
                 )));
             }
         };
@@ -1377,7 +1396,10 @@ impl Editormodell {
         match geladen.ergebnis {
             Ok(Gelesen { stand, schutz }) => {
                 if matches!(schutz, Schutz::Klartext) && self.ist_geheimnisdatei(&pfad) {
-                    return Ladeausgang::Abgewiesen(gesperrt(&pfad, OHNE_PIN.to_owned()));
+                    return Ladeausgang::Abgewiesen(gesperrt(
+                        &pfad,
+                        text(Text::EditorOhnePin).to_owned(),
+                    ));
                 }
                 // Ein Schluessel heisst `secrets.txt`, auch unter einer
                 // dritten Schreibweise, die der Pfadtext nicht erkennt; die
@@ -1641,17 +1663,17 @@ impl Editormodell {
             return Sicherungsausgang::NichtsGehalten;
         };
         if self.fremd_geaendert() {
-            return Sicherungsausgang::Gescheitert(format!(
-                "{} hat sich außerhalb von KRK geändert und wird nicht überschrieben",
-                pfad.display()
+            return Sicherungsausgang::Gescheitert(satz(
+                Text::EditorFremdGeaendertNichtUeberschrieben,
+                &[("pfad", &pfad.display())],
             ));
         }
         let geschrieben = match &self.schutz {
             Schutz::Klartext => {
                 if self.ist_geheimnisdatei(&pfad) {
-                    return Sicherungsausgang::Gescheitert(format!(
-                        "{} ist verschlüsselt und wird nicht im Klartext geschrieben",
-                        pfad.display()
+                    return Sicherungsausgang::Gescheitert(satz(
+                        Text::EditorVerschluesseltKeinKlartext,
+                        &[("pfad", &pfad.display())],
                     ));
                 }
                 datei::sichern(&pfad, &self.stand)
@@ -1660,10 +1682,9 @@ impl Editormodell {
                 match Chiffrat::verschliessen(&self.stand, schluessel) {
                     Ok(chiffrat) => chiffrat_schreiben(&pfad, &chiffrat),
                     Err(fehler) => {
-                        return Sicherungsausgang::Gescheitert(format!(
-                            "{} ließ sich nicht sichern: {}",
-                            pfad.display(),
-                            fehler.meldung()
+                        return Sicherungsausgang::Gescheitert(satz(
+                            Text::EditorNichtGesichert,
+                            &[("pfad", &pfad.display()), ("fehler", &fehler.meldung())],
                         ));
                     }
                 }
@@ -1683,9 +1704,9 @@ impl Editormodell {
                 }
                 Sicherungsausgang::Gesichert(pfad)
             }
-            Err(fehler) => Sicherungsausgang::Gescheitert(format!(
-                "{} ließ sich nicht sichern: {fehler}",
-                pfad.display()
+            Err(fehler) => Sicherungsausgang::Gescheitert(satz(
+                Text::EditorNichtGesichert,
+                &[("pfad", &pfad.display()), ("fehler", &fehler)],
             )),
         }
     }
@@ -1701,21 +1722,21 @@ impl Editormodell {
     /// vor jedem Sichern.
     pub fn pin_aenderung_pruefen(&self) -> Result<(), String> {
         let Some(pfad) = self.pfad.as_deref() else {
-            return Err(format!("der Editor hält keine Datei; {PIN_BLEIBT}"));
+            return Err(mit_pin_bleibt(Text::PinKeineDatei, &[]));
         };
         if !self.pin_aenderbar() {
-            return Err(format!(
-                "{} trägt noch keine gesicherte PIN; erst sichern, dann ändern",
-                pfad.display()
+            return Err(satz(
+                Text::PinNochNichtGesichert,
+                &[("pfad", &pfad.display())],
             ));
         }
         if self.pinwechsel.is_some() {
-            return Err("die PIN wird schon geändert".to_owned());
+            return Err(text(Text::PinWirdSchonGeaendert).to_owned());
         }
         if self.fremd_geaendert() {
-            return Err(format!(
-                "{} hat sich außerhalb von KRK geändert; {PIN_BLEIBT}",
-                pfad.display()
+            return Err(mit_pin_bleibt(
+                Text::PinFremdGeaendert,
+                &[("pfad", &pfad.display())],
             ));
         }
         Ok(())
@@ -1738,16 +1759,16 @@ impl Editormodell {
     pub fn pin_aendern(&mut self, alte: Pin, neue: Pin) -> Result<(), String> {
         self.pin_aenderung_pruefen()?;
         let Some(pfad) = self.pfad.clone() else {
-            return Err(format!("der Editor hält keine Datei; {PIN_BLEIBT}"));
+            return Err(mit_pin_bleibt(Text::PinKeineDatei, &[]));
         };
         let Schutz::Verschluesselt { pin, .. } = &self.schutz else {
-            return Err(format!(
-                "{} ist nicht verschlüsselt; {PIN_BLEIBT}",
-                pfad.display()
+            return Err(mit_pin_bleibt(
+                Text::PinNichtVerschluesselt,
+                &[("pfad", &pfad.display())],
             ));
         };
         if *pin != alte {
-            return Err(format!("die alte PIN stimmt nicht; {PIN_BLEIBT}"));
+            return Err(mit_pin_bleibt(Text::PinAlteStimmtNicht, &[]));
         }
         self.pinwechsel = Some(Pinwechsel::starten(pfad, neue)?);
         Ok(())
@@ -1793,8 +1814,9 @@ impl Editormodell {
             Err(std::sync::mpsc::TryRecvError::Empty) => return None,
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                 self.pinwechsel = None;
-                return Some(Pinwechselausgang::Gescheitert(format!(
-                    "die neue PIN ließ sich nicht ableiten; {PIN_BLEIBT}"
+                return Some(Pinwechselausgang::Gescheitert(mit_pin_bleibt(
+                    Text::PinNichtAbleitbar,
+                    &[],
                 )));
             }
         };
@@ -1802,9 +1824,9 @@ impl Editormodell {
         let neuer = match geliefert {
             Ok(neuer) => neuer,
             Err(fehler) => {
-                return Some(Pinwechselausgang::Gescheitert(format!(
-                    "{}; {PIN_BLEIBT}",
-                    fehler.meldung()
+                return Some(Pinwechselausgang::Gescheitert(mit_pin_bleibt(
+                    Text::PinGrundBleibt,
+                    &[("grund", &fehler.meldung())],
                 )));
             }
         };
@@ -1833,31 +1855,40 @@ impl Editormodell {
         chiffrat_schreiben: impl FnOnce(&Path, &Chiffrat) -> io::Result<()>,
     ) -> Result<(), String> {
         let name = pfad.display();
+        let mit_name = |schluessel: Text| mit_pin_bleibt(schluessel, &[("pfad", &name)]);
+        let mit_grund = |grund: String| {
+            mit_pin_bleibt(
+                Text::PinDateiGrundBleibt,
+                &[("pfad", &name), ("grund", &grund)],
+            )
+        };
         if self.pfad.as_deref() != Some(pfad) {
-            return Err(format!("{name} ist nicht mehr offen; {PIN_BLEIBT}"));
+            return Err(mit_name(Text::PinNichtMehrOffen));
         }
         let Schutz::Verschluesselt {
             schluessel: gehalten,
             ..
         } = &self.schutz
         else {
-            return Err(format!("{name} ist nicht mehr entsperrt; {PIN_BLEIBT}"));
+            return Err(mit_name(Text::PinNichtMehrEntsperrt));
         };
         if self.fremd_geaendert() {
-            return Err(format!(
-                "{name} hat sich außerhalb von KRK geändert; {PIN_BLEIBT}"
-            ));
+            return Err(mit_name(Text::PinFremdGeaendert));
         }
         let bytes = datei::bis_zur_grenze_lesen(pfad, GEHEIMNISGRENZE)
-            .map_err(|_| format!("{name} lässt sich nicht lesen; {PIN_BLEIBT}"))?;
-        let klartext = tresor::oeffnen_mit(&bytes, gehalten)
-            .map_err(|fehler| format!("{name}: {}; {PIN_BLEIBT}", fehler.meldung()))?;
-        let stand = datei::einlesen(klartext)
-            .ok_or_else(|| format!("{name} ist nicht als Text lesbar; {PIN_BLEIBT}"))?;
-        let chiffrat = Chiffrat::verschliessen(&stand, neuer)
-            .map_err(|fehler| format!("{name}: {}; {PIN_BLEIBT}", fehler.meldung()))?;
-        chiffrat_schreiben(pfad, &chiffrat)
-            .map_err(|fehler| format!("{name} ließ sich nicht schreiben: {fehler}; {PIN_BLEIBT}"))
+            .map_err(|_| mit_name(Text::PinNichtLesbar))?;
+        let klartext =
+            tresor::oeffnen_mit(&bytes, gehalten).map_err(|fehler| mit_grund(fehler.meldung()))?;
+        let stand =
+            datei::einlesen(klartext).ok_or_else(|| mit_name(Text::PinNichtAlsTextLesbar))?;
+        let chiffrat =
+            Chiffrat::verschliessen(&stand, neuer).map_err(|fehler| mit_grund(fehler.meldung()))?;
+        chiffrat_schreiben(pfad, &chiffrat).map_err(|fehler| {
+            mit_pin_bleibt(
+                Text::PinNichtGeschrieben,
+                &[("pfad", &name), ("fehler", &fehler)],
+            )
+        })
     }
 
     /// Gibt die gehaltene Datei auf (C1, C4).
@@ -1968,9 +1999,9 @@ impl Editormodell {
             .pfad
             .as_ref()
             .expect("ohne gehaltene Datei meldet `fremd_geaendert` nichts");
-        Some(format!(
-            "{} hat sich außerhalb von KRK geändert",
-            pfad.display()
+        Some(satz(
+            Text::EditorFremdGeaendert,
+            &[("pfad", &pfad.display())],
         ))
     }
 
@@ -3420,7 +3451,7 @@ mod tests {
             assert_eq!(abwarten_mit_ableitung(&mut frisch), Ladeausgang::Geoeffnet);
             assert_eq!(
                 frisch.textmarke_verweigert(),
-                Some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN),
+                Some(keine_textmarke_in_geheimnissen()),
                 "{}",
                 pfad.display()
             );
@@ -3431,7 +3462,7 @@ mod tests {
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(
             modell.textmarke_verweigert(),
-            Some(KEINE_TEXTMARKE_IN_GEHEIMNISSEN),
+            Some(keine_textmarke_in_geheimnissen()),
             "leere Datei"
         );
     }
@@ -3458,10 +3489,11 @@ mod tests {
     /// Schreibregel des Projekts, denn der Nutzer liest ihn in der Statuszeile.
     #[test]
     fn der_satz_der_verweigerten_textmarke_traegt_umlaute() {
-        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("secrets.txt"));
-        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("für"));
-        assert!(KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("Klartext"));
-        assert!(!KEINE_TEXTMARKE_IN_GEHEIMNISSEN.contains("fuer"));
+        let satz = keine_textmarke_in_geheimnissen();
+        assert!(satz.contains("secrets.txt"));
+        assert!(satz.contains("für"));
+        assert!(satz.contains("Klartext"));
+        assert!(!satz.contains("fuer"));
     }
 
     /// Eine falsche PIN und ein veraendertes Byte geben dieselbe eine Meldung,

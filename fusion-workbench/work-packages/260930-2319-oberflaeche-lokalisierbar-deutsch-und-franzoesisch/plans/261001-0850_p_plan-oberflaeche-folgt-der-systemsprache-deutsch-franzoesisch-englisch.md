@@ -195,7 +195,7 @@ Für jede Umstellung gilt dieselbe Handwerksregel: der deutsche Tabelleneintrag 
      - `make check` grün.
    - Dependencies: Schritt 1 (unabhängig von 7 und 8)
 
-10. [IN PROGRESS] **Die Oberfläche: Editor, Vorschau, Quicknote**
+10. [DONE] **Die Oberfläche: Editor, Vorschau, Quicknote**
     - Executor: `code-implementer`
     - Files: `crates/krk-ui/src/editormodell.rs`, `crates/krk-ui/src/appkit/editor.rs` (`Editormeldung::text`, `Eintragsantwort::text`, die Quicknote-Sätze), `crates/krk-ui/src/appkit/quicknote.rs`, `crates/krk-ui/src/quicknote.rs`, `crates/krk-ui/src/appkit/vorschau.rs` (die sechs Metadatenzeilen, der Leertext, der Darstellungsfehler), `crates/krk-ui/src/vorschaumodell.rs` (Geheimnishinweis, Bildfolgehinweis, Zwischenablage, Bildgrenze, Lesefehler, `rechte_text`), `crates/krk-ui/src/appkit/nummernspalte.rs` (sofern Text), `crates/krk-core/src/sprache/schluessel.rs`, `tabelle/de.rs`, `fr.rs`, `en.rs`
     - Changes: Die Metadatenzeilen werden sechs Schlüssel mit je einem Platzhalter statt eines verketteten Literals; der Bildfolgehinweis wird ein `Zahlwort` („1 Foto“ gegen „{n} Fotos“); die „Treffer ersetzt“-Dreiteilung (0, 1, n) wird ein `Zahlwort` plus ein eigener Schlüssel für 0; die Eintragsantworten (15 Varianten mal 3 Arten) bleiben ein vollständiges Tupel-`match`, dessen Arme Schlüssel liefern.
@@ -205,7 +205,7 @@ Für jede Umstellung gilt dieselbe Handwerksregel: der deutsche Tabelleneintrag 
       - `make check` grün.
     - Dependencies: Schritt 1 (unabhängig von 7, 8, 9)
 
-11. **Die Oberfläche: der Anwendungsdelegierte und der Rest**
+11. [IN PROGRESS] **Die Oberfläche: der Anwendungsdelegierte und der Rest**
     - Executor: `code-implementer`
     - Files: `crates/krk-ui/src/appkit/anwendung.rs`, `crates/krk-ui/src/appkit/weitereinstanz.rs`, `crates/krk-ui/src/appkit/git.rs`, `crates/krk-ui/src/appkit/volumes.rs`, `crates/krk-ui/src/appkit/suche.rs`, `crates/krk-ui/src/gitmodell.rs`, `crates/krk-ui/src/appkit/ereignisse.rs` (sofern eine Zeichenkette ein Fenster erreicht; das Tastenprotokoll bleibt), jede weitere Datei unter `crates/krk-ui/src/`, die nach den Schritten 7 bis 10 noch ein Literal mit Umlaut außerhalb des Prüfmoduls trägt (erhoben mit dem `grep` aus Schritt 3 über `crates/krk-ui/src`), `crates/krk-core/src/sprache/schluessel.rs`, `tabelle/de.rs`, `fr.rs`, `en.rs`
     - Changes: Die Startmeldungen des Delegierten, die Lesezeichenfragen, der Hinweis `ohne_tastenabgriff_beenden`, „Für die Quicknote ist das Fenster zu schmal“, die Meldungen zu Ort, Werkseinstellungen und Heimordner, die Sätze der weiteren Instanz, die Beschriftungen des Git-Bereichs und der Datenträgerleiste. `antwort_zeigen`, `meldung_zeigen`, `befehlsantwort_zeigen`, `editormeldung_zeigen` behalten ihre Signatur (`&str`); jeder Rufer reicht einen Tabellenwert oder einen vom Kern gelieferten Text.

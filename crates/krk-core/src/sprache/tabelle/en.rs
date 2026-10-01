@@ -676,6 +676,128 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::PfadeingabeFrage => "Which folder?",
         Text::PfadeingabeGehe => "Go",
         Text::HinweisOk => "OK",
+        Text::EditorTrefferVon => "Match {nummer} of {anzahl}",
+        Text::EditorKeinTrefferFuer => "No match for “{text}”",
+        Text::EditorKeinWeitererTrefferFuer => "No further match for “{text}”",
+        Text::PinBleibt => "the PIN stays as it was",
+        Text::PinNichtAbleitbarGrund => "the new PIN cannot be derived: {fehler}; {bleibt}",
+        Text::EditorKeineTextmarkeInGeheimnissen => {
+            "for secrets.txt KRK creates no text bookmark: it would write a line of the secrets in plain text into the bookmarks"
+        }
+        Text::EditorOhnePin => "it is encrypted and opens only with the PIN",
+        Text::EditorKeineVerschluesselteDatei => "it is not an encrypted file in the notes folder",
+        Text::EditorGeheimnisseZuGross => "it is too large for the Editor",
+        Text::EditorGeheimnisseKeinDateizugriff => "KRK has no free file descriptor left",
+        Text::EditorGeheimnisseNichtLesbar => "it cannot be read",
+        Text::EditorFremdGeaendertNichtUeberschrieben => {
+            "{pfad} has changed outside KRK and will not be overwritten"
+        }
+        Text::EditorVerschluesseltKeinKlartext => {
+            "{pfad} is encrypted and will not be written in plain text"
+        }
+        Text::EditorNichtGesichert => "{pfad} could not be saved: {fehler}",
+        Text::EditorFremdGeaendert => "{pfad} has changed outside KRK",
+        Text::PinKeineDatei => "the Editor holds no file; {bleibt}",
+        Text::PinNochNichtGesichert => "{pfad} carries no saved PIN yet; save first, then change",
+        Text::PinWirdSchonGeaendert => "the PIN is already being changed",
+        Text::PinFremdGeaendert => "{pfad} has changed outside KRK; {bleibt}",
+        Text::PinNichtVerschluesselt => "{pfad} is not encrypted; {bleibt}",
+        Text::PinAlteStimmtNicht => "the old PIN is wrong; {bleibt}",
+        Text::PinNichtAbleitbar => "the new PIN could not be derived; {bleibt}",
+        Text::PinGrundBleibt => "{grund}; {bleibt}",
+        Text::PinDateiGrundBleibt => "{pfad}: {grund}; {bleibt}",
+        Text::PinNichtMehrOffen => "{pfad} is no longer open; {bleibt}",
+        Text::PinNichtMehrEntsperrt => "{pfad} is no longer unlocked; {bleibt}",
+        Text::PinNichtLesbar => "{pfad} cannot be read; {bleibt}",
+        Text::PinNichtAlsTextLesbar => "{pfad} is not readable as text; {bleibt}",
+        Text::PinNichtGeschrieben => "{pfad} could not be written: {fehler}; {bleibt}",
+        Text::EditorMarkeFuehrtAufZeile => "the bookmark leads to line {zeile}",
+        Text::EditorZeilenZaehlenAbEins => {
+            "lines count from 1; the cursor is at the start of the file"
+        }
+        Text::EditorKeineZeileMehr => {
+            "the file no longer has a line {zeile}; the cursor is at the end of the file"
+        }
+        Text::EditorMarkenstelleGeaendert => "the remembered location has changed; {wohin}",
+        Text::EditorGesichert => "{pfad} saved",
+        Text::EditorKeineZeilennummer => "“{eingabe}” is not a line number",
+        Text::EditorKeineSuche => "no search is running",
+        Text::EditorKeinTrefferErsetzt => "no match replaced",
+        Text::EditorPinGeaendert => "the PIN of {pfad} is changed",
+        Text::EditorTermineAufsteigend => "Appointments sorted ascending",
+        Text::EditorTermineAbsteigend => "Appointments sorted descending",
+        Text::QuicknoteLeer => "The Quicknote is empty; the clipboard stays as it was.",
+        Text::QuicknoteNichtKopiert => {
+            "The Quicknote could not be copied to the clipboard; its text stays in place."
+        }
+        Text::QuicknoteZuGross => "The text is too large for the Quicknote; nothing was pasted.",
+        Text::QuicknoteKeineTextmarken => "There are no text bookmarks in the Quicknote.",
+        Text::QuicknoteLeeren => "Clear",
+        Text::QuicknoteKopieren => "Copy",
+        Text::EintragKeineAufgabentabelle => "the Editor shows no task table",
+        Text::EintragKeineNotiztabelle => "the Editor shows no note table",
+        Text::EintragKeineTermintabelle => "the Editor shows no appointment table",
+        Text::EintragKeineAufgabeGewaehlt => "no task is selected",
+        Text::EintragKeineNotizGewaehlt => "no note is selected",
+        Text::EintragKeinTerminGewaehlt => "no appointment is selected",
+        Text::EintragAufgabeHinzugefuegt => "new task at the end; return accepts the text",
+        Text::EintragNotizHinzugefuegt => {
+            "new note at the end; tab moves to the text, cmd+return accepts"
+        }
+        Text::EintragTerminHinzugefuegt => {
+            "appointment added, with today’s date; tab moves to the text, cmd+return accepts"
+        }
+        Text::EintragAufgabeBearbeitung => "return accepts, esc discards",
+        Text::EintragNotizBearbeitung => {
+            "cmd+return accepts, tab changes the cell, return writes a line break in the text"
+        }
+        Text::EintragTerminBearbeitung => {
+            "cmd+return accepts, tab changes the cell, return writes a line break in the appointment"
+        }
+        Text::EintragAufgabeUebernommen => "task accepted",
+        Text::EintragNotizUebernommen => "note accepted",
+        Text::EintragTerminUebernommen => "appointment accepted",
+        Text::EintragAufgabeAbgehakt => "task checked off",
+        Text::EintragNotizOhneKaestchen => "a note has no checkbox",
+        Text::EintragTerminOhneKaestchen => "an appointment has no checkbox",
+        Text::EintragAufgabeWiederOffen => "task open again",
+        Text::EintragAufgabeVerschoben => "task moved",
+        Text::EintragNotizVerschoben => "note moved",
+        Text::EintragAufgabeSchonOben => "the task is already at the top",
+        Text::EintragNotizSchonOben => "the note is already at the top",
+        Text::EintragAufgabeSchonUnten => "the task is already at the bottom",
+        Text::EintragNotizSchonUnten => "the note is already at the bottom",
+        Text::EintragTermineNachDatum => {
+            "Appointments are ordered by their date; none can be moved."
+        }
+        Text::EintragAufgabeGeloescht => "task deleted; cmd+z brings it back",
+        Text::EintragNotizGeloescht => "note deleted; cmd+z brings it back",
+        Text::EintragTerminGeloescht => "appointment deleted; cmd+z brings it back",
+        Text::EintragZelleBleibt => "the cell stays in editing",
+        Text::EintragAufgabeMitEscUebernommen => "task accepted; cmd+z takes it back",
+        Text::EintragNotizMitEscUebernommen => "note accepted; cmd+z takes it back",
+        Text::EintragTerminMitEscUebernommen => "appointment accepted; cmd+z takes it back",
+        Text::EintragHeuteUnbestimmt => "Today’s date could not be determined.",
+        Text::VorschauGeheimnishinweis => {
+            "This file is encrypted and opens with F4 and the PIN in the Editor."
+        }
+        Text::VorschautabLeer => "Empty",
+        Text::VorschautabZwischenablage => "Clipboard",
+        Text::VorschauZwischenablageLeer => "The clipboard is empty.",
+        Text::VorschauBildZuGross => {
+            "The image in the clipboard is {groesse} MB. The Preview shows images up to {grenze} MB."
+        }
+        Text::VorschauNichtLesbar => "{pfad} could not be read: {fehler}",
+        Text::VorschauLeertext => "No content. The selection in the file pane fills this tab.",
+        Text::VorschauBildNichtDarstellbar => {
+            "The image from the clipboard could not be displayed."
+        }
+        Text::MetadatenName => "Name: {name}",
+        Text::MetadatenPfad => "Path: {pfad}",
+        Text::MetadatenGroesse => "Size: {groesse}",
+        Text::MetadatenGeaendert => "Modified: {datum}",
+        Text::MetadatenRechte => "Permissions: {rechte}",
+        Text::MetadatenTyp => "Type: {typ}",
     }
 }
 
@@ -727,6 +849,19 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::StapelEintraege => ("{n} entry", "{n} entries"),
         Zahlwort::StapelWerdenUmbenannt => ("{n} will be renamed", "{n} will be renamed"),
         Zahlwort::StapelBleibenStehen => ("{n} stays as it is", "{n} stay as they are"),
+        Zahlwort::EditorTrefferErsetzt => ("one match replaced", "{n} matches replaced"),
+        Zahlwort::EditorZeilenHinterDerLetzten => (
+            "the file has {n} line; the cursor is at the end of the file",
+            "the file has {n} lines; the cursor is at the end of the file",
+        ),
+        Zahlwort::QuicknoteKopiert => (
+            "The Quicknote is in the clipboard: {n} character.",
+            "The Quicknote is in the clipboard: {n} characters.",
+        ),
+        Zahlwort::BildfolgeVorbereitet => (
+            "The photo sequence is being prepared: {n} photo.",
+            "The photo sequence is being prepared: {n} photos.",
+        ),
     }
 }
 

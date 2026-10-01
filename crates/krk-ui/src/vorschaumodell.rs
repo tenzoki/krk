@@ -225,12 +225,12 @@ use krk_core::heimordner::eintraege::termine;
 use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto, Kuerzung};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::text::datei::bis_zur_grenze_lesen;
 use krk_core::verzeichnis::Typ;
 
 use crate::editormodell::Dateityp;
 use crate::hervorhebung::{self, Darstellungsart, Tafel};
-use crate::kommandos::operationen::zahl;
 use crate::markdown::{self, Gerendert, Lesart};
 
 /// Bis zu welcher Groesse eine Textdatei als Inhalt erscheint (C6).
@@ -282,9 +282,12 @@ const PDFENDUNG: &str = "pdf";
 /// **Ein Satz an den Nutzer und kein Inhalt**: die Datei ist verschluesselt,
 /// und geoeffnet wird sie im Editor mit der PIN. Die Vorschau liest sie dafuer
 /// nicht ([`laden`]); was sie zeigt, ist allein dieser Text, und was sich in
-/// ihr markieren und kopieren laesst, ist ebenfalls allein dieser Text.
-const GEHEIMNISHINWEIS: &str =
-    "Diese Datei ist verschlüsselt und öffnet sich mit F4 und der PIN im Editor.";
+/// ihr markieren und kopieren laesst, ist ebenfalls allein dieser Text. Eine
+/// Funktion und keine Konstante, weil kein `const` einen Tabellentext haelt.
+#[must_use]
+fn geheimnishinweis() -> &'static str {
+    text(Text::VorschauGeheimnishinweis)
+}
 
 /// Die Metadaten eines Eintrags, wie C6 sie fuer alles Uebrige verlangt.
 ///
@@ -535,7 +538,11 @@ pub enum Blaetterrichtung {
 /// (C5.3 des Spec der Bildfolge). Die Zahl geht durch dasselbe Zahlenformat
 /// wie der Zaehler der Statuszeile.
 fn vorbereitungshinweis(gesamt: usize) -> String {
-    format!("Die Bildfolge wird vorbereitet: {} Fotos.", zahl(gesamt))
+    anzahl(
+        Zahlwort::BildfolgeVorbereitet,
+        u64::try_from(gesamt).unwrap_or(u64::MAX),
+        &[],
+    )
 }
 
 /// Eine geordnete Gruppe, wie der Faden sie nachliefert.
@@ -746,7 +753,7 @@ struct Vorschautab {
 impl Vorschautab {
     fn leer() -> Self {
         Self {
-            titel: "Leer".to_owned(),
+            titel: text(Text::VorschautabLeer).to_owned(),
             inhalt: Inhalt::Leer,
             pfad: None,
             ladevorgang: None,
@@ -1114,7 +1121,7 @@ impl Vorschaumodell {
     /// neuere Quelle.
     pub fn zwischenablage_anzeigen(&mut self, inhalt: Zwischenablageinhalt) {
         let tab = &mut self.tabs[self.aktiv];
-        tab.titel = "Zwischenablage".to_owned();
+        tab.titel = text(Text::VorschautabZwischenablage).to_owned();
         tab.ladevorgang = None;
         tab.folge = None;
         tab.pfad = None;
@@ -1126,7 +1133,7 @@ impl Vorschaumodell {
             },
             Zwischenablageinhalt::BildZuGross(groesse) => Inhalt::Hinweis(zu_gross_text(groesse)),
             Zwischenablageinhalt::Leer => {
-                Inhalt::Hinweis("Die Zwischenablage ist leer.".to_owned())
+                Inhalt::Hinweis(text(Text::VorschauZwischenablageLeer).to_owned())
             }
         };
     }
@@ -1386,10 +1393,9 @@ pub enum Zwischenablageinhalt {
 /// entsteht nicht, und wer die Konstante aendert, aendert den Satz mit.
 fn zu_gross_text(groesse: u64) -> String {
     let in_mb = |bytes: u64| bytes / (1024 * 1024);
-    format!(
-        "Das Bild in der Zwischenablage ist {} MB groß. Die Vorschau zeigt Bilder bis {} MB.",
-        in_mb(groesse),
-        in_mb(BILDGRENZE)
+    satz(
+        Text::VorschauBildZuGross,
+        &[("groesse", &in_mb(groesse)), ("grenze", &in_mb(BILDGRENZE))],
     )
 }
 
@@ -1432,7 +1438,7 @@ fn zu_gross_text(groesse: u64) -> String {
 /// also vor dem Oeffnen einer Datei, vor dem Lesen eines Ordners fuer die
 /// Zusammenfassung und vor dem Dateityp, der weiter unten ueber die
 /// Darstellung entscheidet. Das Bedrohungsmodell ist das versehentliche Lesen
-/// ([`GEHEIMNISHINWEIS`]); eine Vorschau, die das Chiffrat liest, um es dann
+/// ([`geheimnishinweis`]); eine Vorschau, die das Chiffrat liest, um es dann
 /// nicht zu zeigen, haette die Datei schon beruehrt.
 ///
 /// **Gefragt wird die genaue Erkennung** ([`Heimordner::sonderdatei_genau`]),
@@ -1448,14 +1454,14 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
     let roh = match std::fs::symlink_metadata(pfad) {
         Ok(roh) => roh,
         Err(fehler) => {
-            return Inhalt::Hinweis(format!(
-                "{} ließ sich nicht lesen: {fehler}",
-                pfad.display()
+            return Inhalt::Hinweis(satz(
+                Text::VorschauNichtLesbar,
+                &[("pfad", &pfad.display()), ("fehler", &fehler)],
             ));
         }
     };
     if heim.and_then(|heim| heim.sonderdatei_genau(pfad)) == Some(Sonderdatei::Geheimnisse) {
-        return Inhalt::Hinweis(GEHEIMNISHINWEIS.to_owned());
+        return Inhalt::Hinweis(geheimnishinweis().to_owned());
     }
     let metadaten = Metadaten {
         name: titel_von(pfad),
@@ -1886,7 +1892,7 @@ mod tests {
         );
         assert_eq!(
             lies(&anderswo.join("secrets.txt")),
-            Inhalt::Hinweis(GEHEIMNISHINWEIS.to_owned())
+            Inhalt::Hinweis(geheimnishinweis().to_owned())
         );
         assert_eq!(
             lies(&alt.join("secrets.txt")),
@@ -2049,7 +2055,7 @@ mod tests {
                         &Profile::default(),
                         Some(&heim),
                     ),
-                    Inhalt::Hinweis(GEHEIMNISHINWEIS.to_owned()),
+                    Inhalt::Hinweis(geheimnishinweis().to_owned()),
                     "{name} ueber {}",
                     basis.display()
                 );
@@ -2088,14 +2094,17 @@ mod tests {
 
     /// Der Hinweis traegt den Wortlaut mit Umlauten, wie jede Zeichenkette,
     /// die ein Mensch durch KRKs Oberflaeche liest, und nennt Taste und PIN.
+    /// Gelesen ueber die Funktion dieser Datei, die in `cargo test` den
+    /// deutschen Tabelleneintrag liefert; das Literal bleibt, weil die Probe
+    /// den Wortlaut haelt.
     #[test]
     fn der_geheimnishinweis_nennt_f4_und_pin_mit_umlauten() {
         assert_eq!(
-            GEHEIMNISHINWEIS,
+            geheimnishinweis(),
             "Diese Datei ist verschlüsselt und öffnet sich mit F4 und der PIN im Editor."
         );
         for umschrift in ["verschluesselt", "oeffnet"] {
-            assert!(!GEHEIMNISHINWEIS.contains(umschrift), "{umschrift}");
+            assert!(!geheimnishinweis().contains(umschrift), "{umschrift}");
         }
     }
 

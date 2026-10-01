@@ -44,8 +44,9 @@
 //!
 //! # Die drei Schaltflaechen
 //!
-//! Oben in der Rolle stehen „Leeren", „Schließen" und „Kopieren", von links
-//! nach rechts (Entscheidung 2 des Plans). **Ein Klick ist ein Kommando** und
+//! Oben in der Rolle stehen Leeren, Schliessen und Kopieren, von links nach
+//! rechts (Entscheidung 2 des Plans), beschriftet aus der Sprachtabelle.
+//! **Ein Klick ist ein Kommando** und
 //! geht ueber den Knopfmelder, den der Editorbereich beim Bau setzt, durch
 //! dieselbe Zulaessigkeit wie die Taste; die Schaltflaechen nehmen den
 //! Ersthelferrang nicht an, und ein Klick holt zuerst den Fokus in die
@@ -109,6 +110,7 @@ use objc2_foundation::{
     NSUTF8StringEncoding, NSUndoManager, ns_string,
 };
 
+use krk_core::sprache::{Text, text};
 use krk_core::tasten::Kommando;
 
 use crate::editormodell::Ansicht;
@@ -312,13 +314,14 @@ impl Quicknote {
     fn knoepfe_bauen(&self, mtm: MainThreadMarker, rahmen: NSRect) {
         // Von links nach rechts; welches Kommando ein Selektor meldet, steht
         // an seiner Methode oben.
-        let knoepfe: [(&str, Sel); 3] = [
-            ("Leeren", sel!(quicknoteLeeren:)),
-            ("Schließen", sel!(quicknoteSchliessen:)),
-            ("Kopieren", sel!(quicknoteKopieren:)),
+        let knoepfe: [(Text, Sel); 3] = [
+            (Text::QuicknoteLeeren, sel!(quicknoteLeeren:)),
+            (Text::BlattSchliessen, sel!(quicknoteSchliessen:)),
+            (Text::QuicknoteKopieren, sel!(quicknoteKopieren:)),
         ];
         let mut links = KNOPFABSTAND;
         for (titel, aktion) in knoepfe {
+            let titel = text(titel);
             // SAFETY: `self` beantwortet den Selektor mit der ueblichen
             // Aktionssignatur (siehe `define_class!` oben), und `sel!` liefert
             // einen gueltigen Selektor.
