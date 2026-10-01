@@ -468,6 +468,227 @@ pub fn betriebscode(inhalt: &str) -> Vec<&str> {
     zeilen
 }
 
+/// Der Betriebscode einer Datei als ein Text, dazu je Zeile ihre Nummer in
+/// der Datei.
+///
+/// [`betriebscode`] liefert Zeilen und laesst die des Pruefmoduls aus; wer
+/// den Rest als einen Text lesen will, etwa weil ein Literal ueber eine
+/// Zeilengrenze reicht, fuegt ihn hier zusammen und behaelt die Nummern, die
+/// eine Fundstelle in der Datei nennen. Die Nummer der Zeile `i` des Textes
+/// ist `nummern[i]`, von 1 gezaehlt.
+pub fn betriebscode_als_text(inhalt: &str) -> (String, Vec<usize>) {
+    let nummer_an: std::collections::HashMap<usize, usize> = inhalt
+        .lines()
+        .enumerate()
+        .map(|(i, zeile)| (zeile.as_ptr() as usize, i + 1))
+        .collect();
+    let zeilen = betriebscode(inhalt);
+    let nummern = zeilen
+        .iter()
+        .map(|zeile| nummer_an[&(zeile.as_ptr() as usize)])
+        .collect();
+    (zeilen.join("\n"), nummern)
+}
+
+/// Ein Stueck Quelltext nach [`zerlegt`]: Code oder ein Literal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Stueck<'a> {
+    /// Quelltext ausserhalb von Literalen und Kommentaren, von der genannten
+    /// Zeile an (von 0 gezaehlt, bezogen auf den uebergebenen Text).
+    Code { text: &'a str, zeile: usize },
+    /// Ein String-, Rohstring- oder Zeichenliteral: `text` ist der Inhalt
+    /// zwischen den Begrenzern, so wie er dasteht, Escapes nicht aufgeloest;
+    /// `roh` sagt, ob es ein Rohstring (`r"…"`, `r#"…"#`) ist, in dem ein
+    /// Rueckstrich nichts bedeutet.
+    Literal {
+        text: &'a str,
+        zeile: usize,
+        roh: bool,
+    },
+}
+
+/// Zerlegt Rust-Quelltext in Code und Literale; Kommentare fallen weg.
+///
+/// **Wozu.** Zwei Proben der Sprachtabelle fragen nach Stringliteralen des
+/// Betriebscodes, und ein Zeilenmuster sieht ein Literal nicht, das mit `\`
+/// am Zeilenende weitergeht, ein `r#"…"#` ueber mehrere Zeilen oder ein
+/// Anfuehrungszeichen in einem Kommentar. Gelesen wird deshalb Zeichen fuer
+/// Zeichen, mit den Regeln, die ein Literal von Code trennen: `//` bis zum
+/// Zeilenende und `/* … */` (geschachtelt) sind Kommentare; `"…"` mit
+/// Escapes, auch mit Praefix `b` oder `c`, ist ein String; `r"…"`, `r#"…"#`
+/// (beliebig viele `#`), auch mit `br` oder `cr`, ist ein Rohstring; `'x'`
+/// und `'\…'` sind Zeichenliterale, waehrend `'a` ohne schliessendes `'` eine
+/// Lebensdauer ist und Code bleibt.
+///
+/// Die Zeilenangabe je Stueck ist die Zeile des uebergebenen Textes, von 0
+/// gezaehlt; [`betriebscode_als_text`] liefert dazu die Nummern in der Datei.
+///
+/// # Was diese Zerlegung nicht sieht
+///
+/// Sie liest Text und keinen Syntaxbaum. Ein Literal, das ein Makro aus
+/// Teilen baut (`concat!`), ist je Teil ein Literal, und ein `#` in einem
+/// Rohstring-Begrenzer, der laenger ist als jeder im Baum, kostet nichts.
+/// Ein Quelltext, der nicht uebersetzt (ein Literal ohne Ende), laesst sie
+/// anhalten statt still weiterlesen.
+pub fn zerlegt(text: &str) -> Vec<Stueck<'_>> {
+    let b = text.as_bytes();
+    let mut stuecke = Vec::new();
+    let mut i = 0;
+    let mut anfang = 0;
+    let mut zeile = 0;
+    let mut code_zeile = 0;
+
+    let zeilen_in = |von: usize, bis: usize| text[von..bis].matches('\n').count();
+    let ist_namenszeichen = |z: u8| z.is_ascii_alphanumeric() || z == b'_';
+
+    // Schliesst das laufende Codestueck vor `bis` ab.
+    fn code_bis<'a>(
+        text: &'a str,
+        stuecke: &mut Vec<Stueck<'a>>,
+        anfang: usize,
+        bis: usize,
+        code_zeile: usize,
+    ) {
+        if bis > anfang {
+            stuecke.push(Stueck::Code {
+                text: &text[anfang..bis],
+                zeile: code_zeile,
+            });
+        }
+    }
+
+    while i < b.len() {
+        let z = b[i];
+        if z == b'/' && b.get(i + 1) == Some(&b'/') {
+            code_bis(text, &mut stuecke, anfang, i, code_zeile);
+            let ende = text[i..].find('\n').map_or(b.len(), |n| i + n);
+            i = ende;
+            anfang = i;
+            code_zeile = zeile;
+            continue;
+        }
+        if z == b'/' && b.get(i + 1) == Some(&b'*') {
+            code_bis(text, &mut stuecke, anfang, i, code_zeile);
+            let mut tiefe = 0usize;
+            let mut j = i;
+            loop {
+                assert!(j < b.len(), "ein Blockkommentar ohne Ende ab Zeile {zeile}");
+                if b[j] == b'/' && b.get(j + 1) == Some(&b'*') {
+                    tiefe += 1;
+                    j += 2;
+                } else if b[j] == b'*' && b.get(j + 1) == Some(&b'/') {
+                    tiefe -= 1;
+                    j += 2;
+                    if tiefe == 0 {
+                        break;
+                    }
+                } else {
+                    j += 1;
+                }
+            }
+            zeile += zeilen_in(i, j);
+            i = j;
+            anfang = i;
+            code_zeile = zeile;
+            continue;
+        }
+        if z == b'"' {
+            code_bis(text, &mut stuecke, anfang, i, code_zeile);
+            let mut j = i + 1;
+            loop {
+                assert!(j < b.len(), "ein Stringliteral ohne Ende ab Zeile {zeile}");
+                match b[j] {
+                    b'\\' => j += 2,
+                    b'"' => break,
+                    _ => j += 1,
+                }
+            }
+            stuecke.push(Stueck::Literal {
+                text: &text[i + 1..j],
+                zeile,
+                roh: false,
+            });
+            zeile += zeilen_in(i, j);
+            i = j + 1;
+            anfang = i;
+            code_zeile = zeile;
+            continue;
+        }
+        if z == b'\'' {
+            let folgt = text[i + 1..].chars().next();
+            let schluss = match folgt {
+                // Hinter dem Rueckstrich steht das maskierte Zeichen, auch
+                // ein `'`; das schliessende `'` kommt fruehestens danach.
+                Some('\\') => text
+                    .get(i + 3..)
+                    .and_then(|rest| rest.find('\''))
+                    .map(|n| i + 3 + n),
+                Some(zeichen) if b.get(i + 1 + zeichen.len_utf8()) == Some(&b'\'') => {
+                    Some(i + 1 + zeichen.len_utf8())
+                }
+                _ => None,
+            };
+            if let Some(j) = schluss {
+                code_bis(text, &mut stuecke, anfang, i, code_zeile);
+                stuecke.push(Stueck::Literal {
+                    text: &text[i + 1..j],
+                    zeile,
+                    roh: false,
+                });
+                i = j + 1;
+                anfang = i;
+                code_zeile = zeile;
+                continue;
+            }
+            // Eine Lebensdauer oder ein Sprungziel: Code.
+            i += 1;
+            continue;
+        }
+        if ist_namenszeichen(z) {
+            let mut j = i;
+            while j < b.len() && ist_namenszeichen(b[j]) {
+                j += 1;
+            }
+            let name = &text[i..j];
+            let rohpraefix =
+                matches!(name, "r" | "br" | "cr") && matches!(b.get(j), Some(b'#') | Some(b'"'));
+            if rohpraefix {
+                let mut rauten = 0usize;
+                while b.get(j + rauten) == Some(&b'#') {
+                    rauten += 1;
+                }
+                if b.get(j + rauten) == Some(&b'"') {
+                    code_bis(text, &mut stuecke, anfang, i, code_zeile);
+                    let inhalt_ab = j + rauten + 1;
+                    let ende = format!("\"{}", "#".repeat(rauten));
+                    let n = text[inhalt_ab..]
+                        .find(&ende)
+                        .unwrap_or_else(|| panic!("ein Rohstring ohne Ende ab Zeile {zeile}"));
+                    let inhalt_bis = inhalt_ab + n;
+                    stuecke.push(Stueck::Literal {
+                        text: &text[inhalt_ab..inhalt_bis],
+                        zeile,
+                        roh: true,
+                    });
+                    zeile += zeilen_in(i, inhalt_bis);
+                    i = inhalt_bis + ende.len();
+                    anfang = i;
+                    code_zeile = zeile;
+                    continue;
+                }
+            }
+            i = j;
+            continue;
+        }
+        if z == b'\n' {
+            zeile += 1;
+        }
+        i += 1;
+    }
+    code_bis(text, &mut stuecke, anfang, b.len(), code_zeile);
+    stuecke
+}
+
 /// Zaehlt die Aufrufstellen einer Funktion in einer Datei, unabhaengig davon,
 /// **wie** der Aufruf geschrieben ist.
 ///

@@ -43,7 +43,10 @@
 //! Probe dieser Art.
 
 mod gemeinsam;
-use gemeinsam::{aufrufstellen, betriebscode, quelldateien, varianten_der_aufzaehlung};
+use gemeinsam::{
+    aufrufstellen, betriebscode, betriebscode_als_text, quelldateien, varianten_der_aufzaehlung,
+    zerlegt,
+};
 
 /// Ob eine Nadel in einer **Code**-Zeile der Datei steht und nicht in einem
 /// Kommentar.
@@ -1330,8 +1333,8 @@ fn jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt() {
     );
 }
 
-/// Der Kuerzer langer Namenslisten hat genau zwei Rufer, und den Wortlaut
-/// „… und N weitere" traegt er allein.
+/// Der Kuerzer langer Namenslisten hat genau zwei Rufer, und den deutschen
+/// Wortlaut „… und N weitere" traegt allein die Sprachtabelle.
 ///
 /// **Die Bauform stammt von `die_zeichenregel_hat_drei_rufer_und_der_vergleich_drei`**
 /// (`krk-core/tests/verzeichnis.rs`), und die Frage ist dieselbe: eine Regel,
@@ -1340,15 +1343,21 @@ fn jeder_frameworkimport_steht_namentlich_im_untergrenzen_abschnitt() {
 /// ein Rufer ist: `namenszeile` in `ablage/neuerungen.rs` kuerzt die Namen des
 /// Blattes, `uebersprungenliste` in `kommandos/operationen.rs` die
 /// Abschlussliste der uebersprungenen Eintraege. Ein dritter Rufer ist kein
-/// Fehler, sondern ein Grund, diese Zeile zu aendern; eine dritte Fassung des
+/// Fehler, sondern ein Grund, diese Zeile zu aendern; eine zweite Fassung des
 /// **Wortlauts** ist einer, und die faengt die zweite Behauptung.
+///
+/// **Der Wortlaut wohnt seit der Sprachtabelle in `sprache/tabelle/de.rs`**,
+/// als Zahlwort `GekuerztWeitere`, und der Kuerzer selbst weiter in
+/// `ablage/neuerungen.rs`; die Aussage ist dieselbe wie vorher, nur steht der
+/// Satz jetzt dort, wo jeder deutsche Satz steht.
 #[test]
 fn der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer() {
     let kuerzer = concat!("gekue", "rzt");
     let heimat = "krk-core/src/ablage/neuerungen.rs";
+    let wortheimat = "krk-core/src/sprache/tabelle/de.rs";
     // Der Wortlaut in zwei Stuecken, damit diese Datei sich nicht selbst
     // findet; dasselbe Mittel wie bei jeder Nadel dieser Datei.
-    let wortlaut = concat!("… und {} ", "weitere");
+    let wortlaut = concat!("… und {n} ", "weitere");
 
     let mut rufer = Vec::new();
     let mut wortlautstellen = Vec::new();
@@ -1385,8 +1394,8 @@ fn der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer() {
     );
     assert_eq!(
         wortlautstellen,
-        vec![heimat.to_owned()],
-        "der Wortlaut „… und N weitere\" steht nicht mehr allein in {heimat}"
+        vec![wortheimat.to_owned()],
+        "der Wortlaut „… und N weitere\" steht nicht mehr allein in {wortheimat}"
     );
 }
 
@@ -1497,4 +1506,368 @@ fn das_duplizieren_kennt_keinen_weg_der_einen_eintrag_entfernt() {
              kennen, der einen Eintrag entfernt oder umhaengt"
         );
     }
+}
+
+/// Die Dateien, deren Betriebscode die Nahtproben der Sprachtabelle lesen:
+/// der Kern und die Oberflaeche, je ihr `src/`, und zwar als der Text ohne
+/// Pruefmodul samt den Zeilennummern der Datei.
+///
+/// Gelesen werden die zwei Kisten, aus denen KRK gebaut ist. `krk-bench` ist
+/// die Messstrecke, deren Ausgabe durch kein Fenster geht; ob die Umlautregel
+/// die Terminalausgabe erreicht, ist die offene Entscheidung
+/// `shared/decisions/260907-0826_*_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md`,
+/// und bis sie faellt, ist jene Kiste nicht Gegenstand. Das ist der Umfang
+/// der Regel und keine Ausnahme von ihr; eine dritte Kiste, aus der ein
+/// Fenster gebaut wuerde, kaeme hier dazu.
+fn betriebscode_der_oberflaeche() -> Vec<(String, String, Vec<usize>)> {
+    quelldateien()
+        .into_iter()
+        .filter(|(name, _)| name.starts_with("krk-core/src/") || name.starts_with("krk-ui/src/"))
+        .map(|(name, inhalt)| {
+            let (text, nummern) = betriebscode_als_text(&inhalt);
+            (name, text, nummern)
+        })
+        .collect()
+}
+
+/// Ob ein Literal, so wie es im Quelltext steht, eines der Zeichen
+/// `äöüÄÖÜß` traegt: als Zeichen selbst, oder in einem gewoehnlichen String
+/// als `\u{…}`-Schreibweise desselben Zeichens.
+fn traegt_umlaut(literal: &str, roh: bool) -> bool {
+    const UMLAUTE: [char; 7] = ['ä', 'ö', 'ü', 'Ä', 'Ö', 'Ü', 'ß'];
+    if literal.chars().any(|zeichen| UMLAUTE.contains(&zeichen)) {
+        return true;
+    }
+    if roh {
+        return false;
+    }
+    let mut rest = literal;
+    while let Some(stelle) = rest.find("\\u{") {
+        let hex = &rest[stelle + 3..];
+        let Some(ende) = hex.find('}') else { break };
+        let zeichen = u32::from_str_radix(&hex[..ende], 16)
+            .ok()
+            .and_then(char::from_u32);
+        if zeichen.is_some_and(|zeichen| UMLAUTE.contains(&zeichen)) {
+            return true;
+        }
+        rest = &hex[ende + 1..];
+    }
+    false
+}
+
+/// Kein Stringliteral des Betriebscodes traegt einen Umlaut, ausser in der
+/// Sprachtabelle (C5 des Spec
+/// `261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md`).
+///
+/// **Was gehalten wird.** Seit der Umlautregel vom 260907 tragen Kommentare,
+/// Bezeichner und Diagnostik die Umschrift, und seit der Sprachtabelle ist
+/// jeder Text, den ein Mensch durch KRKs Fenster liest, ein Eintrag der
+/// Tabellen unter `krk-core/src/sprache/tabelle/`. Ein Literal mit `ä`, `ö`,
+/// `ü`, `Ä`, `Ö`, `Ü` oder `ß` ausserhalb dieses Ortes ist damit in jedem
+/// Fall ein Fehler: entweder ein nutzersichtbarer Text, der nicht durch die
+/// Tabelle geht, oder eine Diagnostik, die die Umschrift verlangt. Die Probe
+/// fragt deshalb **nicht**, ob jemand das Literal sieht, denn das ist am
+/// Quelltext nicht entscheidbar (`**Decidability:**` im Plan
+/// `261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md`);
+/// sie fragt nach dem Zeichen, und das ist es.
+///
+/// **Gelesen wird jedes Literal**, ueber [`zerlegt`]: gewoehnliche Strings
+/// auch ueber Zeilengrenzen und mit `\`-Fortsetzung, Rohstrings, Zeichen-
+/// literale, und die Schreibweise `\u{e4}` zaehlt wie das Zeichen. Kommentare
+/// zaehlen nicht, und gehalten werden auch `assert!`, `panic!`, `expect`,
+/// `unreachable!`, `#[must_use = "…"]`, `eprintln!`, `println!` und
+/// `reason = "…"` an einem Lint-Attribut: Diagnostik ist Umschrift, und ein
+/// Umlaut dort wuerde sonst als nutzersichtbar gelesen.
+///
+/// **Die eine Ausnahme ist ein Ort und keine Liste**: Dateien unter
+/// `krk-core/src/sprache/tabelle/` tragen die deutschen Eintraege mit
+/// Umlauten, und eine vierte Tabelle dort braucht keinen Eintrag hier. Welche
+/// Dateien gelesen werden, sagt [`betriebscode_der_oberflaeche`].
+///
+/// # Was diese Probe nicht sieht
+///
+/// **Deutsche Prosa ohne Umlaut in einem Literal**, etwa `"Name: {}"` oder
+/// `"Fertig"`: sie traegt keines der sieben Zeichen und geht hier durch. Fuer
+/// die bekannten Senken haelt das die zweite Probe,
+/// [`keine_senke_der_oberflaeche_bekommt_ein_literal`]; was keine der beiden
+/// sieht, ist ein Text, der in einer Variablen gebaut und erst dann an eine
+/// Senke gereicht wird. Diese Luecke schliesst kein Muster ueber den
+/// Quelltext, sondern erst ein Typ, den jede Senke verlangt, und den baut
+/// diese Arbeit nicht.
+#[test]
+fn kein_stringliteral_des_betriebscodes_traegt_einen_umlaut_ausser_in_der_sprachtabelle() {
+    let tabellenort = "krk-core/src/sprache/tabelle/";
+    let mut fundstellen = Vec::new();
+    let mut tabellen_gelesen = 0usize;
+    for (name, text, nummern) in betriebscode_der_oberflaeche() {
+        if name.starts_with(tabellenort) {
+            tabellen_gelesen += 1;
+            continue;
+        }
+        for stueck in zerlegt(&text) {
+            if let gemeinsam::Stueck::Literal { text, zeile, roh } = stueck
+                && traegt_umlaut(text, roh)
+            {
+                fundstellen.push(format!("{name}:{}: \"{text}\"", nummern[zeile]));
+            }
+        }
+    }
+    assert!(
+        tabellen_gelesen > 0,
+        "unter {tabellenort} steht keine Datei mehr; die Ausnahme der Probe laeuft leer"
+    );
+    assert!(
+        fundstellen.is_empty(),
+        "diese Literale des Betriebscodes tragen einen Umlaut ausserhalb der Sprachtabelle; \
+         ein nutzersichtbarer Text wird ein Eintrag aller drei Tabellen, eine Diagnostik \
+         nimmt die Umschrift:\n{}",
+        fundstellen.join("\n")
+    );
+}
+
+/// Die Zerlegung, auf der beide Nahtproben ruhen, trennt Literale von
+/// Lebensdauern, Kommentaren und Code, und liest Rohstrings, Fortsetzungen
+/// und Zeichenliterale als das, was sie sind.
+///
+/// Ein Zeilenmuster sah fuenf Stellen in `appkit/anwendung.rs` nicht, deren
+/// Literal mit `\` am Zeilenende weitergeht; diese Probe haelt die Faelle,
+/// die den Unterschied machen, an einem Stueck Quelltext, das jeden von ihnen
+/// traegt.
+#[test]
+fn die_zerlegung_trennt_literale_von_lebensdauern_kommentaren_und_rohstrings() {
+    use gemeinsam::Stueck;
+
+    let quelle = concat!(
+        "fn f<'a>(x: &'a str) -> &'static str { // \"kein Literal\"\n",
+        "    let a = 'x'; let b = '\\''; let c = '\\u{e4}'; let d = b'\\n';\n",
+        "    /* \"auch /* nicht */ keines\" */\n",
+        "    let e = \"zwei \\\n",
+        "        Zeilen\";\n",
+        "    let f = r#\"roh \"mit\" # Raute\"#; let g = br\"bytes\"; let h = \"\\\"\";\n",
+        "    'aussen: loop { break 'aussen }\n",
+        "    \"\"\n",
+        "}\n",
+    );
+    let literale: Vec<(&str, usize, bool)> = zerlegt(quelle)
+        .into_iter()
+        .filter_map(|stueck| match stueck {
+            Stueck::Literal { text, zeile, roh } => Some((text, zeile, roh)),
+            Stueck::Code { .. } => None,
+        })
+        .collect();
+    assert_eq!(
+        literale,
+        vec![
+            ("x", 1, false),
+            ("\\'", 1, false),
+            ("\\u{e4}", 1, false),
+            ("\\n", 1, false),
+            ("zwei \\\n        Zeilen", 3, false),
+            ("roh \"mit\" # Raute", 5, true),
+            ("bytes", 5, true),
+            ("\\\"", 5, false),
+            ("", 7, false),
+        ]
+    );
+    assert!(traegt_umlaut("\\u{e4}", false));
+    assert!(!traegt_umlaut("\\u{e4}", true));
+    assert!(traegt_umlaut("Gr\u{f6}sse", true));
+    assert!(!traegt_umlaut("Groesse", false));
+}
+
+/// Die Senken der Oberflaeche: die Stellen, an denen ein Text ein Fenster,
+/// ein Blatt, die Statuszeile oder die Abschlussliste erreicht.
+///
+/// Eine Nadel, die auf `(` endet, trifft genau diesen Namen vor der Klammer;
+/// eine ohne `(` trifft jeden Namen, der so beginnt (`initWithTitle` trifft
+/// auch den Erzeuger von `NSMenuItem`, dessen Name so beginnt und mit
+/// `action` und `keyEquivalent` weitergeht). Eine Fundstelle mitten in einem
+/// laengeren Namen (`befehlsantwort_zeigen` fuer `antwort_zeigen`) und die
+/// Erklaerung selbst (`fn` davor) sind keine Aufrufe.
+///
+/// Jede Nadel steht zusammengesetzt da, wie jede Nadel dieser Datei: andere
+/// Zaehlproben lesen den ganzen Baum, diese Datei eingeschlossen, und
+/// zaehlten ein Literal `mit_schaltflaechen(` hier als Aufruf.
+///
+/// `Statuszeile::zeigen` steht nicht darunter, obwohl der Plan es nennt: die
+/// Methode wird ueber eine Variable gerufen (`zeile.zeigen(…)`), und ihr Text
+/// erreicht die Zeile ueber `setStringValue`, das in der Liste steht.
+const SENKEN: [&str; 23] = [
+    concat!("meldung_", "zeigen("),
+    concat!("befehlsantwort_", "zeigen("),
+    concat!("antwort_", "zeigen("),
+    concat!("editormeldung_", "zeigen("),
+    concat!("erlaeuterung_", "setzen("),
+    concat!("mit_schalt", "flaechen("),
+    concat!("Blatt::", "neu("),
+    concat!("Schaltflaeche::", "neu("),
+    concat!("ueber", "springen("),
+    concat!("labelWith", "String("),
+    concat!("wrappingLabelWith", "String("),
+    concat!("set", "Title("),
+    concat!("setString", "Value("),
+    concat!("setTool", "Tip("),
+    concat!("initWith", "Title"),
+    concat!("checkboxWith", "Title"),
+    concat!("buttonWith", "Title"),
+    concat!("setLabel_for", "Segment("),
+    concat!("set", "Prompt("),
+    concat!("set", "Message("),
+    concat!("setMessage", "Text("),
+    concat!("setInformative", "Text("),
+    concat!("addButtonWith", "Title("),
+];
+
+/// Die Stellen in einem Codestueck, an denen eine Senke gerufen wird: je
+/// Fundstelle der Index unmittelbar hinter der oeffnenden Klammer.
+fn senkenaufrufe(code: &str, nadel: &str) -> Vec<usize> {
+    let genau = nadel.ends_with('(');
+    let name = nadel.trim_end_matches('(');
+    let ist_namenszeichen = |z: char| z.is_alphanumeric() || z == '_';
+    code.match_indices(name)
+        .filter_map(|(stelle, _)| {
+            let davor = &code[..stelle];
+            if davor.chars().next_back().is_some_and(ist_namenszeichen)
+                || davor.trim_end().ends_with("fn")
+            {
+                return None;
+            }
+            let mut dahinter = stelle + name.len();
+            if !genau {
+                while code[dahinter..].starts_with(ist_namenszeichen) {
+                    dahinter += code[dahinter..].chars().next()?.len_utf8();
+                }
+            }
+            code[dahinter..].starts_with('(').then_some(dahinter + 1)
+        })
+        .collect()
+}
+
+/// Keine Senke der Oberflaeche bekommt ein Stringliteral oder ein `format!`
+/// als Argument (C5 des Spec
+/// `261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md`).
+///
+/// **Was gehalten wird.** Die Umlautprobe darueber sieht deutsche Prosa ohne
+/// Umlaut nicht. Fuer die Stellen, an denen ein Text ein Fenster erreicht,
+/// haelt diese Probe deshalb die andere Haelfte: in der Argumentliste jeder
+/// Senke aus [`SENKEN`], von der oeffnenden bis zur schliessenden Klammer
+/// (Klammern gezaehlt, Literale und Kommentare dabei uebergangen), steht
+/// weder ein `format!` noch ein Stringliteral, ausser dem leeren `""` und den
+/// Platzhalternamen eines `satz`- oder `anzahl`-Aufrufs, also einem Literal
+/// unmittelbar hinter einer Tupelklammer und vor einem Komma
+/// (`("name", &wert)`). Ein Kommentar in der Argumentliste zaehlt nicht,
+/// auch wenn er ein Anfuehrungszeichen traegt.
+///
+/// **[`SENKEN`] ist eine Liste von Senken, keine Liste von Ausnahmen.** Sie
+/// nennt, wo ein Text ankommt; welcher Text, sagt die Tabelle. Jede Nadel
+/// muss im Betriebscode mindestens einmal gerufen werden, sonst hiesse die
+/// Senke inzwischen anders, und die Probe bestuende, ohne etwas zu belegen.
+///
+/// # Was diese Probe nicht sieht
+///
+/// **Einen Text, der eine Zeile vorher in einer Variablen entsteht** und
+/// dann an die Senke geht (`let text = "Fertig"; meldung_zeigen(text)`), und
+/// eine Senke, die nicht in der Liste steht. Beides schliesst erst ein Typ,
+/// den jede Senke verlangt; siehe den Doc-Kommentar der Umlautprobe.
+#[test]
+fn keine_senke_der_oberflaeche_bekommt_ein_literal() {
+    use gemeinsam::Stueck;
+
+    let mut fundstellen = Vec::new();
+    let mut gerufen = std::collections::BTreeMap::new();
+    for (name, text, nummern) in betriebscode_der_oberflaeche() {
+        let stuecke = zerlegt(&text);
+        for (p, stueck) in stuecke.iter().enumerate() {
+            let Stueck::Code { text: code, zeile } = stueck else {
+                continue;
+            };
+            for nadel in SENKEN {
+                for hinter_klammer in senkenaufrufe(code, nadel) {
+                    *gerufen.entry(nadel).or_insert(0usize) += 1;
+                    let nummer = nummern[zeile + code[..hinter_klammer].matches('\n').count()];
+                    let mut tiefe = 1usize;
+                    let mut verstoesse = Vec::new();
+                    // Der Code vor dem laufenden Stueck, getrimmt: an ihm wird
+                    // entschieden, ob ein Literal ein Platzhaltername ist.
+                    let mut davor = code[..hinter_klammer].to_owned();
+                    let mut q = p;
+                    let mut ab = hinter_klammer;
+                    'argumente: loop {
+                        match &stuecke[q] {
+                            Stueck::Code { text: code, .. } => {
+                                for (stelle, zeichen) in code[ab..].char_indices() {
+                                    match zeichen {
+                                        '(' => tiefe += 1,
+                                        ')' => {
+                                            tiefe -= 1;
+                                            if tiefe == 0 {
+                                                let bisher = &code[ab..ab + stelle];
+                                                if bisher.contains("format!") {
+                                                    verstoesse.push("format!".to_owned());
+                                                }
+                                                break 'argumente;
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                if code[ab..].contains("format!") {
+                                    verstoesse.push("format!".to_owned());
+                                }
+                                davor = code[ab..].to_owned();
+                            }
+                            Stueck::Literal { text, .. } => {
+                                let vor_klammer = davor.trim_end().strip_suffix('(');
+                                let tupelklammer = vor_klammer.is_some_and(|rest| {
+                                    let letztes = rest.trim_end().chars().next_back();
+                                    !letztes.is_some_and(|z| {
+                                        z.is_alphanumeric() || z == '_' || z == '!'
+                                    })
+                                });
+                                let platzhaltername = tupelklammer
+                                    && matches!(
+                                        stuecke.get(q + 1),
+                                        Some(Stueck::Code { text, .. }) if text.starts_with(',')
+                                    );
+                                if !text.is_empty() && !platzhaltername {
+                                    verstoesse.push(format!("\"{text}\""));
+                                }
+                                davor.clear();
+                            }
+                        }
+                        q += 1;
+                        ab = 0;
+                        assert!(
+                            q < stuecke.len(),
+                            "{name}:{nummer}: die Argumentliste von `{nadel}` endet nicht"
+                        );
+                    }
+                    if !verstoesse.is_empty() {
+                        fundstellen.push(format!(
+                            "{name}:{nummer}: `{nadel}` bekommt {}",
+                            verstoesse.join(", ")
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    let ungerufen: Vec<&str> = SENKEN
+        .iter()
+        .copied()
+        .filter(|nadel| !gerufen.contains_key(nadel))
+        .collect();
+    assert!(
+        ungerufen.is_empty(),
+        "diese Senken werden im Betriebscode nicht gerufen; umbenannt? Dann belegt die \
+         Probe dort nichts: {}",
+        ungerufen.join(", ")
+    );
+    assert!(
+        fundstellen.is_empty(),
+        "diese Senken bekommen ein Literal oder ein format! statt eines Tabellenwerts:\n{}",
+        fundstellen.join("\n")
+    );
 }

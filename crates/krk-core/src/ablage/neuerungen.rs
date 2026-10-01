@@ -127,7 +127,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use super::{Datei, Geladen, Zugang, einstellungen, leseprofile, pfade};
-use crate::sprache::{Text, Zahlwort, anzahl, satz, text, zahl};
+use crate::sprache::{Text, Zahlwort, anzahl, satz, text};
 use crate::tasten::belegung;
 
 /// Was bei einer Ablagedatei ein Eintrag ist.
@@ -858,18 +858,20 @@ pub const HOECHSTENS_EINZELN: usize = 12;
 /// Kuerzt eine lange Liste auf [`HOECHSTENS_EINZELN`] Glieder und beziffert
 /// den Rest in einem weiteren Glied.
 ///
-/// **Der Wortlaut „… und N weitere" steht hier und sonst nirgends.** Zwei
-/// Rufer teilen ihn: die Abschlussliste der uebersprungenen Eintraege in
-/// `krk_ui::kommandos::operationen` und die Namenszeile des Blattes nebenan.
-/// Wie viele Rufer es sind, haelt die Probe
+/// **Der Kuerzer steht hier und sonst nirgends, und sein Wortlaut ist das
+/// Zahlwort [`Zahlwort::GekuerztWeitere`] der Sprachtabelle**, je Sprache
+/// an einer Stelle. Zwei Rufer teilen ihn: die Abschlussliste der
+/// uebersprungenen Eintraege in `krk_ui::kommandos::operationen` und die
+/// Namenszeile des Blattes nebenan. Wie viele Rufer es sind und dass der
+/// deutsche Wortlaut allein in der Tabelle steht, haelt die Probe
 /// `der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer` in
-/// `krk-core/tests/baum.rs`; eine dritte Fassung des Wortlauts faellt dort
+/// `krk-core/tests/baum.rs`; eine zweite Fassung des Wortlauts faellt dort
 /// auf, statt still danebenzustehen.
 ///
-/// Die Zahl schreibt [`zahl`] aus `crate::sprache`; sie stand vom 260910 bis
-/// zur Sprachtabelle neben diesem Kuerzer, weil er sie braucht und der Kern
-/// die Oberflaeche nicht rufen kann, und ist mit der Tabelle dorthin gezogen,
-/// wo die Schreibweise je Sprache entschieden wird.
+/// Die Zahl gruppiert [`anzahl`] aus `crate::sprache` in der Schreibweise
+/// der geltenden Sprache; bis zur Sprachtabelle stand der Formatierer neben
+/// diesem Kuerzer, weil er ihn braucht und der Kern die Oberflaeche nicht
+/// rufen kann.
 ///
 /// Eine Liste bis zur Grenze kommt unveraendert zurueck, auch die leere.
 #[must_use]
@@ -877,7 +879,8 @@ pub fn gekuerzt(mut glieder: Vec<String>) -> Vec<String> {
     let ganz = glieder.len();
     if ganz > HOECHSTENS_EINZELN {
         glieder.truncate(HOECHSTENS_EINZELN);
-        glieder.push(format!("… und {} weitere", zahl(ganz - HOECHSTENS_EINZELN)));
+        let rest = (ganz - HOECHSTENS_EINZELN) as u64;
+        glieder.push(anzahl(Zahlwort::GekuerztWeitere, rest, &[]));
     }
     glieder
 }

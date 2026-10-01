@@ -4,3 +4,6 @@ CLAUDE.md nennt acht Wortlautproben der Umlaut-Umstellung; der Beleg zählt vier
 ---
 **Filed by:** requirements-designer, Kai Stalmann <kai@stalmann.org>
 Gefunden bei der Bestandserhebung für den Spec zur Lokalisierung der Oberfläche, Stand `e984b3f`. Abnahme: `CLAUDE.md` nennt an der Stelle keine Zahl, sondern den Erhebungsbefehl, nach dem Muster der übrigen Zählstellen der Datei.
+
+---
+Resolved: Schritt 12 des Plans `261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md` — `CLAUDE.md` `## Sprache` nennt an der Stelle keine Zahl mehr, sondern den Erhebungsbefehl `grep -rn 'assert.*[äöüß]' crates | wc -l`, nach dem Muster der übrigen Zählstellen der Datei; der Satz über die 61 nachgezogenen Zeichenketten ist mit ihm gefallen, weil die Sprachtabelle seitdem jeden nutzersichtbaren Text trägt.

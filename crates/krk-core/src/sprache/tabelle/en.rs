@@ -964,6 +964,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "{name} was ejected; one hidden tab now shows {ziel}",
             "{name} was ejected; {n} hidden tabs now show {ziel}",
         ),
+        Zahlwort::GekuerztWeitere => ("… and {n} more", "… and {n} more"),
     }
 }
 

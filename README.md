@@ -42,6 +42,16 @@ Tastenbelegung. Nach so einem Löschen sind sie fort.
 Wer doch löschen will, kopiert `~/Library/Application Support/KRK/` vorher an
 eine andere Stelle und schreibt die Kopie nach der Installation zurück.
 
+Die Regel ist gemessen und nicht geraten: sie stammt aus der Untersuchung eines
+Lesezeichenverlusts nach einer Installation am 260820. Wer im Quellbaum liest,
+findet sie unter
+`fusion-workbench/shared/analyses/260820-2242-lesezeichenverlust-nach-installation.md`;
+wer nur das Zip in der Hand hat, braucht diese Datei nicht, denn die Regel steht
+hier vollständig. Dasselbe sagt der Text jeder Releaseseite: er steht an **einer**
+Stelle, als Konstante `RELEASETEXT` in `xtask/src/veroeffentlichung.rs`, und jede
+seiner Aussagen hängt dort an einer eigenen Behauptung der Probe
+`der_releasetext_traegt_jede_seiner_aussagen`.
+
 ## Die Sprache wählen
 
 KRK bietet Deutsch, Französisch und Englisch an und trifft selbst keine Wahl
@@ -54,15 +64,23 @@ auswählen, und beim nächsten Start spricht KRK sie. Eine Einstellung in KRK
 selbst gibt es dafür nicht, und ein Neustart ist nötig, weil macOS die
 Sprache eines Programms beim Start festlegt.
 
-Die Regel ist gemessen und nicht geraten: sie stammt aus der Untersuchung eines
-Lesezeichenverlusts nach einer Installation am 260820. Wer im Quellbaum liest,
-findet sie unter
-`fusion-workbench/shared/analyses/260820-2242-lesezeichenverlust-nach-installation.md`;
-wer nur das Zip in der Hand hat, braucht diese Datei nicht, denn die Regel steht
-hier vollständig. Dasselbe sagt der Text jeder Releaseseite: er steht an **einer**
-Stelle, als Konstante `RELEASETEXT` in `xtask/src/veroeffentlichung.rs`, und jede
-seiner Aussagen hängt dort an einer eigenen Behauptung der Probe
-`der_releasetext_traegt_jede_seiner_aussagen`.
+Die französischen und die englischen Texte hat ein Agent am 261001 übersetzt,
+und die Durchsicht Fläche für Fläche gegen die laufende Anwendung steht aus;
+die Kopfzeile von `crates/krk-core/src/sprache/tabelle/fr.rs` und `en.rs` sagt
+das, bis sie gefahren ist.
+
+Für die Arbeit am Quelltext: jeder Text, den ein Mensch durch KRKs Fenster
+liest, ist ein Eintrag der drei Tabellen unter `crates/krk-core/src/sprache/`
+unter einem ASCII-Schlüssel, und ein neuer Text entsteht nur so. Die Naht
+zwischen Umlaut und Umschrift halten seitdem zwei Proben in
+`crates/krk-core/tests/baum.rs`:
+`kein_stringliteral_des_betriebscodes_traegt_einen_umlaut_ausser_in_der_sprachtabelle`
+lässt im Betriebscode von `krk-core` und `krk-ui` außerhalb der Tabellen kein
+Stringliteral mit `äöüÄÖÜß` durch, auch nicht in einer Diagnostik, und
+`keine_senke_der_oberflaeche_bekommt_ein_literal` hält, dass die Stellen, an
+denen ein Text ein Fenster erreicht, kein Literal und kein `format!` bekommen.
+Was beide nicht sehen, sagt ihr Doc-Kommentar; die Regel im Einzelnen steht im
+Modulkopf von `crates/krk-core/src/sprache/mod.rs`.
 
 ## Neuerungen an den eigenen Dateien übernehmen
 

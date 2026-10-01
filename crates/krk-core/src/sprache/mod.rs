@@ -32,7 +32,17 @@
 //!   (`shared/decisions/260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md`),
 //!   und die Tabellen sind seit dieser Arbeit die eine Stelle im Betriebscode,
 //!   an der ein Umlaut in einem Stringliteral steht. Ein Schluessel ist ein
-//!   Bezeichner und damit ASCII.
+//!   Bezeichner und damit ASCII. **Die Naht halten zwei Proben in
+//!   `crates/krk-core/tests/baum.rs`**:
+//!   `kein_stringliteral_des_betriebscodes_traegt_einen_umlaut_ausser_in_der_sprachtabelle`
+//!   laesst im Betriebscode von `krk-core` und `krk-ui` ausserhalb von
+//!   `sprache/tabelle/` kein Literal mit `äöüÄÖÜß` durch, auch nicht in einer
+//!   Diagnostik, und `keine_senke_der_oberflaeche_bekommt_ein_literal`
+//!   haelt, dass die Stellen, an denen ein Text ein Fenster erreicht, kein
+//!   Literal und kein `format!` bekommen. Was keine der beiden sieht, ist
+//!   deutsche Prosa ohne Umlaut, die in einer Variablen gebaut an eine Senke
+//!   geht; das schloesse erst ein Typ, den jede Senke verlangt, und den gibt
+//!   es nicht.
 //! - **Ein Tabellentext traegt keine geschweifte Klammer ausser als
 //!   Platzhalter.** `{name}` ist ein Platzhalter, den [`satz`] und [`anzahl`]
 //!   einsetzen; die Reihenfolge der Platzhalter darf je Sprache verschieden

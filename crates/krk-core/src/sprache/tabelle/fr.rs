@@ -1077,6 +1077,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "{name} a été éjecté\u{202f}; un onglet masqué montre maintenant {ziel}",
             "{name} a été éjecté\u{202f}; {n} onglets masqués montrent maintenant {ziel}",
         ),
+        Zahlwort::GekuerztWeitere => ("… et {n} autre", "… et {n} autres"),
     }
 }
 

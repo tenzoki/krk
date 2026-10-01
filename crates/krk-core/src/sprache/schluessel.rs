@@ -2115,11 +2115,15 @@ pub enum Zahlwort {
     /// `auffrischung::auswurfmeldung`: allein verdeckte Tabs sind umgezogen;
     /// `{name}`, `{ziel}`, die Einzahl laesst `{n}` aus.
     AuswurfVerdeckteTabs,
+    /// `neuerungen::gekuerzt`: das letzte Glied einer gekuerzten Namensliste,
+    /// das den Rest beziffert; der eine Wortlaut fuer jede Liste, die KRK
+    /// kuerzt.
+    GekuerztWeitere,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 32] = [
+    pub const ALLE: [Zahlwort; 33] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2152,5 +2156,6 @@ impl Zahlwort {
         Zahlwort::BildfolgeVorbereitet,
         Zahlwort::AuswurfDateifensterUndVerdeckteTabs,
         Zahlwort::AuswurfVerdeckteTabs,
+        Zahlwort::GekuerztWeitere,
     ];
 }

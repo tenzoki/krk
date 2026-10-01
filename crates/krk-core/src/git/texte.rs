@@ -51,9 +51,11 @@ pub fn unveraendert() -> &'static str {
 /// Wie eine Zeile ihre Angaben trennt.
 ///
 /// Ein Mittelpunkt, wie ihn die Statuszeile der Operationen schon fuehrt
-/// (`krk-ui/src/kommandos/operationen.rs`, `TRENNER`), und aus demselben
-/// Grund: die Zeile ist einzeilig, und ein Umbruch waere dort abgeschnitten
-/// statt gelesen.
+/// (in den zwei Tabelleneintraegen `VorgangWirdVorbereitet` und
+/// `VorgangZeile` unter `crate::sprache::tabelle`, begruendet am
+/// Doc-Kommentar von `krk_ui::kommandos::operationen::abbruchhinweis`), und
+/// aus demselben Grund: die Zeile ist einzeilig, und ein Umbruch waere dort
+/// abgeschnitten statt gelesen.
 const TRENNER: &str = " · ";
 
 /// Die obere Zeile des Git-Bereichs (A6).

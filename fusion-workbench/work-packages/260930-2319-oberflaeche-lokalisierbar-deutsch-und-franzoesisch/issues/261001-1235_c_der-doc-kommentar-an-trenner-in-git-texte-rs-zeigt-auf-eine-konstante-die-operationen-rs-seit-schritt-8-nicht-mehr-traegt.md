@@ -7,3 +7,6 @@ Der Doc-Kommentar an `TRENNER` in `git/texte.rs` zeigt auf eine Konstante, die `
 Evidenzpfad: `grep -n 'TRENNER' crates/krk-core/src/git/texte.rs crates/krk-ui/src/kommandos/operationen.rs` zeigt den Zeiger in `texte.rs` und keinen Treffer in `operationen.rs`.
 
 Abnahme: der Doc-Kommentar an `TRENNER` in `git/texte.rs` nennt die Stelle, an der der Mittelpunkt der Vorgangszeile heute steht (die zwei Tabelleneinträge oder `operationen::abbruchhinweis`), und `grep -n 'operationen.rs`, `TRENNER`' crates/krk-core/src/git/texte.rs` ist leer. Wer Schritt 11 oder 12 ausführt und `git/texte.rs` ohnehin liest, zieht die Zeile mit; sonst ist es eine eigene Kleinaufgabe.
+
+---
+Resolved: Schritt 12 des Plans `261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md` — der Doc-Kommentar an `TRENNER` in `crates/krk-core/src/git/texte.rs` nennt die zwei Tabelleneinträge `VorgangWirdVorbereitet` und `VorgangZeile` unter `crate::sprache::tabelle` und den Doc-Kommentar von `krk_ui::kommandos::operationen::abbruchhinweis`; `grep -n 'operationen.rs`, `TRENNER' crates/krk-core/src/git/texte.rs` ist leer. Allein der Kommentar ist geändert.

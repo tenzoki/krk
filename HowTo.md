@@ -18,6 +18,31 @@ Ablageordner mit, und darin liegt alles, was sich das Programm merkt.
 
 ---
 
+## Die Sprache
+
+KRK spricht Deutsch, Französisch und Englisch, und welche Sprache gilt,
+entscheidet macOS: aus der Sprachliste des Systems, oder aus einer eigenen Wahl
+für KRK. Eine Einstellung in KRK selbst gibt es dafür nicht. Steht in der Liste
+keine der drei Sprachen, spricht KRK Englisch.
+
+Eine andere Sprache als die des Systems wählt man in den Systemeinstellungen
+unter „Allgemein“ › „Sprache & Region“, im Abschnitt „Apps“: mit „+“ KRK
+hinzufügen und die Sprache auswählen. Die Wahl wirkt beim nächsten Start; ein
+laufendes KRK wechselt nicht, weil macOS die Sprache eines Programms beim
+Start festlegt.
+
+Mit derselben Wahl beschriftet macOS, was es selbst stellt: die Größenangaben
+in der Dateiliste, in der Vorschau und in der Statuszeile, das Datumsformat,
+das Kontextmenü eines Textfeldes, das Über-Fenster und die Rückfrage beim
+ersten Zugriff auf einen geschützten Ordner. Menüs, Blätter, Statuszeile und
+Vorschau von KRK folgen ihr, und beide Hälften sind so immer einig.
+
+Die französischen und die englischen Texte hat ein Agent übersetzt; wer eine
+Stelle findet, die sich wie eine Übersetzung liest oder etwas anderes sagt als
+die deutsche, meldet sie, denn durchgesehen ist bis dahin nur das Deutsche.
+
+---
+
 ## Wo KRK seine eigenen Dateien ablegt
 
 Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
