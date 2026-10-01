@@ -1,0 +1,11 @@
+/* Uebersetzt von einem Agenten am 261001; vom Nutzer noch nicht durchgesehen. Die fuenf Erlaubnistexte in Franzoesisch; die Schluessel sind die der resources/Info.plist. Vor dem Semikolon steht U+202F, das schmale geschuetzte Leerzeichen der franzoesischen Typografie. */
+
+"NSDesktopFolderUsageDescription" = "KRK affiche votre Bureau comme un dossier pour que vous puissiez ouvrir, copier, déplacer et renommer les fichiers qu’il contient.";
+
+"NSDocumentsFolderUsageDescription" = "KRK affiche votre dossier Documents pour que vous puissiez ouvrir, copier, déplacer et renommer les fichiers qu’il contient.";
+
+"NSDownloadsFolderUsageDescription" = "KRK affiche votre dossier Téléchargements pour que vous puissiez ouvrir, copier, déplacer et renommer les fichiers téléchargés ; sur votre commande, KRK y enregistre en outre les raccourcis clavier sous forme de fichier Markdown.";
+
+"NSRemovableVolumesUsageDescription" = "KRK affiche les supports amovibles connectés, comme les clés USB et les disques durs externes, pour que vous puissiez copier et déplacer des fichiers entre eux et votre Mac.";
+
+"NSNetworkVolumesUsageDescription" = "KRK affiche les volumes réseau déjà connectés comme n’importe quel autre dossier pour que vous puissiez y ouvrir et modifier des fichiers ; KRK n’établit lui-même aucune connexion à un serveur.";

@@ -1,0 +1,11 @@
+/* Uebersetzt von einem Agenten am 261001; vom Nutzer noch nicht durchgesehen. Die fuenf Erlaubnistexte in Englisch; die Schluessel sind die der resources/Info.plist. */
+
+"NSDesktopFolderUsageDescription" = "KRK shows your Desktop as a folder so that you can open, copy, move and rename the files in it.";
+
+"NSDocumentsFolderUsageDescription" = "KRK shows your Documents folder so that you can open, copy, move and rename the files in it.";
+
+"NSDownloadsFolderUsageDescription" = "KRK shows your Downloads folder so that you can open, copy, move and rename downloaded files from there; on your command, KRK also saves the key bindings as a Markdown file in this folder.";
+
+"NSRemovableVolumesUsageDescription" = "KRK shows connected removable media such as USB sticks and external hard drives so that you can copy and move files between them and your Mac.";
+
+"NSNetworkVolumesUsageDescription" = "KRK shows already connected network volumes like any other folder so that you can open and edit files in them; KRK does not establish a connection to a server itself.";

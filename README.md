@@ -42,6 +42,18 @@ Tastenbelegung. Nach so einem Löschen sind sie fort.
 Wer doch löschen will, kopiert `~/Library/Application Support/KRK/` vorher an
 eine andere Stelle und schreibt die Kopie nach der Installation zurück.
 
+## Die Sprache wählen
+
+KRK bietet Deutsch, Französisch und Englisch an und trifft selbst keine Wahl
+darunter: welche Sprache gilt, entscheidet macOS aus der Sprachwahl je
+Programm, und ohne eine eigene Wahl für KRK aus der Sprachliste des Systems.
+Steht darin keine der drei, spricht KRK Englisch. Eine andere Sprache als die
+des Systems wählt man in den Systemeinstellungen unter „Allgemein“ → „Sprache
+& Region“, dort im Abschnitt „Apps“: mit „+“ KRK hinzufügen, die Sprache
+auswählen, und beim nächsten Start spricht KRK sie. Eine Einstellung in KRK
+selbst gibt es dafür nicht, und ein Neustart ist nötig, weil macOS die
+Sprache eines Programms beim Start festlegt.
+
 Die Regel ist gemessen und nicht geraten: sie stammt aus der Untersuchung eines
 Lesezeichenverlusts nach einer Installation am 260820. Wer im Quellbaum liest,
 findet sie unter
@@ -331,7 +343,8 @@ Abschnitt `[alias]` der `.cargo/config.toml`.
 
 Der Befehl übersetzt das Binärziel im Profil `release`, legt `target/KRK.app` neu
 an, kopiert `resources/Info.plist` mit eingesetzter Version, schreibt
-`Contents/PkgInfo` und signiert das Bündel:
+`Contents/PkgInfo`, erzeugt das Symbol, kopiert die drei Sprachordner und
+signiert das Bündel:
 
 ```text
 target/KRK.app/
@@ -339,8 +352,18 @@ target/KRK.app/
     ├── Info.plist      Kopie von resources/Info.plist, Version eingesetzt
     ├── PkgInfo         die acht Bytes APPL????
     ├── MacOS/krk       das übersetzte Binärziel
-    └── Resources/      noch leer
+    └── Resources/
+        ├── KRK.icns    das Symbol, beim Bau aus iconset/ erzeugt
+        ├── de.lproj/   Kopie von resources/de.lproj/, die Erlaubnistexte auf Deutsch
+        ├── fr.lproj/   Kopie von resources/fr.lproj/, auf Französisch
+        └── en.lproj/   Kopie von resources/en.lproj/, auf Englisch
 ```
+
+Die drei Sprachordner sind die Sprachen, die KRK anbietet; dieselbe Liste
+steht als `CFBundleLocalizations` in `resources/Info.plist` und als `SPRACHEN`
+in `xtask/src/bundle.rs`, und der Bau bricht ab, wenn die beiden auseinander
+laufen oder ein Ordner fehlt. Wie der Nutzer die Sprache wählt, steht unter
+`## Die Sprache wählen`.
 
 Das Profil ist `release`, weil dasselbe Bündel später die Zeitzusagen aus dem
 Spec misst; Zahlen aus einem unoptimierten Bau sagen über diese Zusagen nichts

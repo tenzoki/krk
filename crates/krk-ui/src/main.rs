@@ -136,5 +136,18 @@ fn main() {
             std::process::exit(AUFRUFFEHLER);
         }
     };
+    // Die Sprache steht einmal je Prozess, und sie steht hier: nach der
+    // Argumentauswertung, damit eine fehlerhafte Befehlszeile vor jedem
+    // Systemaufruf abbricht, und vor `starten`, damit die Belegung und das
+    // Hauptmenue sie schon vorfinden. `Err` hiesse, dass der Wert schon
+    // stand, und das kann nur ein zweiter Rufer sein; den gibt es nicht. Die
+    // Zeile schliesst den Fall aus und behandelt ihn nicht.
+    if let Err(stehende) = krk_core::sprache::festlegen(appkit::sprache::vom_system()) {
+        eprintln!(
+            "krk: die Sprache ist schon auf {} festgelegt; festlegen hat genau einen Rufer",
+            stehende.kennung()
+        );
+        std::process::exit(AUFRUFFEHLER);
+    }
     appkit::starten(tasten_protokoll, menue_protokoll, messaufgabe);
 }

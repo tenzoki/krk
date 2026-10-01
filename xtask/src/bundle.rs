@@ -8,7 +8,11 @@
 //!     ├── Info.plist            Kopie von resources/Info.plist, Version eingesetzt
 //!     ├── PkgInfo               die acht Bytes APPL????
 //!     ├── MacOS/krk             das uebersetzte Binaerziel
-//!     └── Resources/KRK.icns    das Symbol, aus iconset/ erzeugt
+//!     └── Resources/
+//!         ├── KRK.icns          das Symbol, aus iconset/ erzeugt
+//!         ├── de.lproj/         Kopie von resources/de.lproj/, die Erlaubnistexte
+//!         ├── fr.lproj/         Kopie von resources/fr.lproj/
+//!         └── en.lproj/         Kopie von resources/en.lproj/
 //! ```
 //!
 //! **Das Symbol liegt nicht im Baum, es entsteht beim Bau.** Die Quelle sind
@@ -16,12 +20,21 @@
 //! der Dateiname kommt aus `CFBundleIconFile` der `resources/Info.plist`.
 //! Warum erzeugt und nicht eingecheckt, steht bei [`SYMBOLGROESSEN`].
 //!
+//! **Die Sprachordner liegen im Baum und werden kopiert.** Welche es sind,
+//! sagt [`SPRACHEN`], und dieselbe Liste muss `CFBundleLocalizations` der
+//! `resources/Info.plist` nennen: ein Ordner ohne Eintrag in der Liste wird
+//! von Foundation nicht angeboten, ein Eintrag ohne Ordner traegt keine
+//! Erlaubnistexte. Beides prueft [`sprachen_pruefen`], bevor ein Verzeichnis
+//! entsteht. Was die Ordner tragen und wie macOS die Sprache daraus waehlt,
+//! steht an `CFBundleLocalizations` in der `resources/Info.plist`.
+//!
 //! **Die Reihenfolge ist Absicht.** Alles, was scheitern kann, scheitert bevor
 //! ein Verzeichnis entsteht: erst die Versionsersetzung, dann der Name des
-//! Binaerprogramms, dann die Signaturidentitaet, und erst danach wird
-//! uebersetzt und geschrieben. Ein abgebrochener Lauf hinterlaesst so kein
-//! halbes Buendel, und wer die Identitaet noch nicht angelegt hat, erfaehrt es
-//! vor und nicht nach einem vollstaendigen Uebersetzungslauf.
+//! Binaerprogramms, dann die Symbol- und die Sprachquellen, dann die
+//! Signaturidentitaet, und erst danach wird uebersetzt und geschrieben. Ein
+//! abgebrochener Lauf hinterlaesst so kein halbes Buendel, und wer die
+//! Identitaet noch nicht angelegt hat, erfaehrt es vor und nicht nach einem
+//! vollstaendigen Uebersetzungslauf.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -106,6 +119,31 @@ const SYMBOLWERKSTATT: &str = "krk-symbol.iconset";
 /// Quelle fuer `iconutil`; sie liegt im Baum, ohne am Bau teilzunehmen. Ebenso
 /// die beiden SVGs: sie sind die Zeichenquelle, aus der die PNGs entstanden
 /// sind, und kein Format, das ein Buendel traegt.
+/// Die Sprachen, deren `.lproj`-Ordner ins Buendel wandern, als Kennungen.
+///
+/// Je Kennung liegt `resources/<kennung>.lproj/` im Baum und kommt nach
+/// `Contents/Resources/<kennung>.lproj/`. Die Liste ist dieselbe wie
+/// `CFBundleLocalizations` in `resources/Info.plist` und dieselbe wie
+/// `krk_core::sprache::Sprache::ALLE`; dass die ersten beiden gleich sind,
+/// haelt [`sprachen_pruefen`] bei jedem Bau, dass die dritte dazu passt, die
+/// Probe `die_sprachen_des_buendels_sind_die_der_tabelle` im Pruefmodul.
+/// `xtask` haengt dafuer nicht an `krk-core`: die Kennungen stehen als
+/// Zeichenketten da, weil das Bauwerkzeug den Kern nicht uebersetzen soll,
+/// und die Probe liest sie aus dem Quelltext.
+///
+/// Die Reihenfolge ist die der `Info.plist` und entscheidet nichts; welche
+/// Sprache gilt, waehlt macOS aus der Sprachwahl des Nutzers.
+const SPRACHEN: [&str; 3] = ["de", "fr", "en"];
+
+/// Die Datei, die jeder Sprachordner mindestens traegt: die fuenf
+/// Erlaubnistexte des Systemmechanismus fuer Transparenz, Zustimmung und
+/// Kontrolle in dieser Sprache.
+///
+/// macOS liest sie unter genau diesem Namen aus dem Ordner der gewaehlten
+/// Sprache; fehlt sie, zeigt der Berechtigungsdialog den Text aus der
+/// `Info.plist`, also Deutsch, gleich welche Sprache gewaehlt ist.
+const ERLAUBNISTEXTE: &str = "InfoPlist.strings";
+
 const SYMBOLGROESSEN: [(&str, &str); 10] = [
     ("icon_16x16.png", "icon-16.png"),
     ("icon_16x16@2x.png", "icon-32.png"),
@@ -183,10 +221,11 @@ pub(crate) struct Vorlage {
 /// Liest und prueft die Buendelbeschreibung, bevor irgendetwas entsteht.
 ///
 /// Traegt die Abbruchreihenfolge aus dem Modulkopf: Versionsersetzung,
-/// Binaername, Symbolname und die Symbolquellen scheitern hier, vor dem ersten
-/// Uebersetzungslauf und vor dem ersten angelegten Verzeichnis. Dass die zehn
-/// PNG-Quellen schon hier geprueft werden und nicht erst bei der Montage, ist
-/// derselbe Gedanke: ein fehlendes `iconset/` soll vor und nicht nach einem
+/// Binaername, Symbolname, die Symbolquellen und die Sprachquellen scheitern
+/// hier, vor dem ersten Uebersetzungslauf und vor dem ersten angelegten
+/// Verzeichnis. Dass die zehn PNG-Quellen und die drei Sprachordner schon hier
+/// geprueft werden und nicht erst bei der Montage, ist derselbe Gedanke: ein
+/// fehlendes `iconset/` oder `fr.lproj/` soll vor und nicht nach einem
 /// vollstaendigen Uebersetzungslauf auffallen.
 pub(crate) fn vorbereiten() -> Result<Vorlage, Abbruch> {
     let wurzel = wurzel();
@@ -202,6 +241,7 @@ pub(crate) fn vorbereiten() -> Result<Vorlage, Abbruch> {
     let binaername = binaername(&vorlage)?;
     let symbolname = symbolname(&vorlage)?;
     symbolquellen_pruefen(&wurzel)?;
+    sprachen_pruefen(&vorlage, &wurzel)?;
     Ok(Vorlage {
         wurzel,
         plist,
@@ -253,6 +293,11 @@ impl Vorlage {
         // Beglaubigung nimmt ein so veraendertes Buendel nicht an.
         let symbol_pfad = resources.join(&self.symbolname);
         symbol_bauen(&self.wurzel, &symbol_pfad)?;
+
+        // Aus demselben Grund hier und nicht nach der Rueckkehr: ein
+        // Sprachordner ausserhalb der Signatur liesse die Beglaubigung
+        // scheitern.
+        sprachordner_kopieren(&self.wurzel, &resources)?;
 
         println!("Version {VERSION} in {} eingesetzt.", plist_pfad.display());
         Ok(buendel)
@@ -429,6 +474,100 @@ fn symbolquellen_pruefen(wurzel: &Path) -> Result<(), Abbruch> {
     Ok(())
 }
 
+/// Wo der Sprachordner einer Kennung im Baum liegt.
+#[must_use]
+fn sprachquelle(wurzel: &Path, kennung: &str) -> PathBuf {
+    wurzel.join("resources").join(format!("{kennung}.lproj"))
+}
+
+/// Prueft, dass die Sprachen des Buendels an beiden Stellen dieselben sind
+/// und jede ihre Erlaubnistexte im Baum hat.
+///
+/// Die eine Stelle ist `CFBundleLocalizations` in der Buendelbeschreibung,
+/// die andere [`SPRACHEN`]; sie muessen dieselbe Menge nennen, in derselben
+/// Reihenfolge, damit der Vergleich keine zweite Regel darueber braucht, was
+/// „dieselbe Liste“ heisst. Dazu muss je Kennung
+/// `resources/<kennung>.lproj/InfoPlist.strings` liegen. Alles drei scheitert
+/// hier, vor dem ersten Uebersetzungslauf, wie die Symbolquellen.
+fn sprachen_pruefen(vorlage: &str, wurzel: &Path) -> Result<(), Abbruch> {
+    let genannt = plist_zeichenkettenliste(vorlage, "CFBundleLocalizations").ok_or_else(|| {
+        Abbruch::Lauf(
+            "resources/Info.plist nennt keinen Schluessel CFBundleLocalizations mit einer Liste \
+             von Zeichenketten. Ohne ihn ist KRK fuer Foundation ein englisches Programm, \
+             gleich welche Sprache der Nutzer gewaehlt hat."
+                .to_owned(),
+        )
+    })?;
+    if genannt != SPRACHEN {
+        return Err(Abbruch::Lauf(format!(
+            "CFBundleLocalizations in resources/Info.plist nennt {genannt:?}, SPRACHEN in \
+             xtask/src/bundle.rs nennt {SPRACHEN:?}. Beide Listen muessen gleich sein: ein \
+             Ordner ohne Eintrag wird nicht angeboten, ein Eintrag ohne Ordner traegt keine \
+             Erlaubnistexte. Es wird kein Buendel gebaut."
+        )));
+    }
+    for kennung in SPRACHEN {
+        let texte = sprachquelle(wurzel, kennung).join(ERLAUBNISTEXTE);
+        if !texte.is_file() {
+            return Err(Abbruch::Lauf(format!(
+                "{} fehlt. Jeder Sprachordner traegt die Erlaubnistexte in seiner Sprache; ohne \
+                 sie zeigte der Berechtigungsdialog in dieser Sprache den deutschen Text aus der \
+                 Info.plist. Es wird kein Buendel gebaut.",
+                texte.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Kopiert jeden Sprachordner aus [`SPRACHEN`] nach `Contents/Resources/`.
+///
+/// Kopiert werden die gewoehnlichen Dateien des Ordners, flach; ein
+/// Unterordner darin waere ein Fall, den dieses Projekt nicht hat, und er
+/// bricht ab, statt still zu fehlen. Dass jeder Ordner da ist und die
+/// Erlaubnistexte traegt, hat [`sprachen_pruefen`] vor dem Uebersetzen
+/// gehalten.
+fn sprachordner_kopieren(wurzel: &Path, resources: &Path) -> Result<(), Abbruch> {
+    for kennung in SPRACHEN {
+        let quelle = sprachquelle(wurzel, kennung);
+        let ziel = resources.join(format!("{kennung}.lproj"));
+        fs::create_dir_all(&ziel).map_err(|fehler| schreibfehler("anlegen", &ziel, &fehler))?;
+        let eintraege = fs::read_dir(&quelle).map_err(|fehler| {
+            Abbruch::Lauf(format!("{} ist nicht lesbar: {fehler}", quelle.display()))
+        })?;
+        for eintrag in eintraege {
+            let eintrag = eintrag.map_err(|fehler| {
+                Abbruch::Lauf(format!(
+                    "ein Eintrag in {} ist nicht lesbar: {fehler}",
+                    quelle.display()
+                ))
+            })?;
+            let von = eintrag.path();
+            if !von.is_file() {
+                return Err(Abbruch::Lauf(format!(
+                    "{} ist keine gewoehnliche Datei. Ein Sprachordner traegt allein Dateien; \
+                     was darunter liegt, kaeme nicht ins Buendel.",
+                    von.display()
+                )));
+            }
+            let hin = ziel.join(eintrag.file_name());
+            fs::copy(&von, &hin).map_err(|fehler| {
+                Abbruch::Lauf(format!(
+                    "{} laesst sich nicht nach {} kopieren: {fehler}",
+                    von.display(),
+                    hin.display()
+                ))
+            })?;
+        }
+    }
+    println!(
+        "Sprachordner nach {} kopiert: {}",
+        resources.display(),
+        SPRACHEN.join(", ")
+    );
+    Ok(())
+}
+
 /// Erzeugt die `.icns` aus den PNGs unter `iconset/` und legt sie unter `ziel`
 /// ab.
 ///
@@ -508,6 +647,33 @@ pub(crate) fn plist_zeichenkette(plist: &str, schluessel: &str) -> Option<String
     }
     let (wert, _) = hinter_beginn.split_once("</string>")?;
     Some(wert.trim().to_owned())
+}
+
+/// Liest die Zeichenketten einer Liste aus einer Property-Liste im XML-Format.
+///
+/// Das Gegenstueck zu [`plist_zeichenkette`] fuer das Muster
+/// `<key>…</key><array><string>…</string>…</array>`, mit derselben Enge:
+/// steht zwischen Schluessel und `<array>` ein weiterer `<key>`, ist der
+/// gesuchte Schluessel nicht mit einer Liste belegt, und die Funktion liefert
+/// nichts. Gelesen werden allein die `<string>`-Glieder bis zum `</array>`;
+/// ein Glied anderen Typs stuende in einer Datei dieses Projekts nicht, und
+/// es wuerde uebergangen statt gemeldet.
+#[must_use]
+fn plist_zeichenkettenliste(plist: &str, schluessel: &str) -> Option<Vec<String>> {
+    let marke = format!("<key>{schluessel}</key>");
+    let hinter_schluessel = plist.split_once(&marke)?.1;
+    let (zwischenraum, hinter_beginn) = hinter_schluessel.split_once("<array>")?;
+    if zwischenraum.contains("<key>") {
+        return None;
+    }
+    let (liste, _) = hinter_beginn.split_once("</array>")?;
+    let glieder = liste
+        .split("<string>")
+        .skip(1)
+        .filter_map(|stueck| stueck.split_once("</string>"))
+        .map(|(wert, _)| wert.trim().to_owned())
+        .collect();
+    Some(glieder)
 }
 
 /// Uebersetzt das Binaerziel, wahlweise fuer ein ausdrueckliches Ziel-Tripel.
@@ -727,5 +893,187 @@ mod tests {
     fn ein_schluessel_ohne_zeichenkette_liefert_nicht_den_naechsten_wert() {
         let plist = "<key>NSHighResolutionCapable</key><true/>\n<key>CFBundleName</key><string>KRK</string>";
         assert!(plist_zeichenkette(plist, "NSHighResolutionCapable").is_none());
+    }
+
+    #[test]
+    fn eine_liste_wird_glied_fuer_glied_gelesen() {
+        let plist = "<key>CFBundleLocalizations</key>\n\t<array>\n\t\t<string>de</string>\n\t\t<string>fr</string>\n\t</array>\n<key>X</key><string>y</string>";
+        assert_eq!(
+            plist_zeichenkettenliste(plist, "CFBundleLocalizations").unwrap(),
+            vec!["de".to_owned(), "fr".to_owned()]
+        );
+    }
+
+    #[test]
+    fn ein_schluessel_ohne_liste_liefert_nicht_die_naechste_liste() {
+        let plist = "<key>CFBundleName</key><string>KRK</string>\n<key>CFBundleLocalizations</key><array><string>de</string></array>";
+        assert!(plist_zeichenkettenliste(plist, "CFBundleName").is_none());
+        assert!(plist_zeichenkettenliste(plist, "Fehlt").is_none());
+    }
+
+    /// Die Schluessel der Erlaubnistexte, wie die Buendelbeschreibung sie
+    /// fuehrt: jeder `<key>`, der auf `NS` beginnt und auf `UsageDescription`
+    /// endet.
+    fn erlaubnisschluessel(plist: &str) -> Vec<String> {
+        plist
+            .split("<key>")
+            .skip(1)
+            .filter_map(|stueck| stueck.split_once("</key>"))
+            .map(|(schluessel, _)| schluessel.trim().to_owned())
+            .filter(|schluessel| {
+                schluessel.starts_with("NS") && schluessel.ends_with("UsageDescription")
+            })
+            .collect()
+    }
+
+    /// Die Paare einer `.strings`-Datei im Format `"Schluessel" = "Text";`.
+    ///
+    /// Bewusst kein Parser, wie [`plist_zeichenkette`]: die drei Dateien
+    /// liegen im selben Projekt, je Paar eine Zeile, ohne maskierte
+    /// Anfuehrungszeichen. Eine Zeile, die nicht mit `"` beginnt, ist ein
+    /// Kommentar oder leer.
+    fn strings_paare(inhalt: &str) -> Vec<(String, String)> {
+        inhalt
+            .lines()
+            .filter_map(|zeile| {
+                let zeile = zeile.trim();
+                let ohne_erstes = zeile.strip_prefix('"')?;
+                let (schluessel, rest) = ohne_erstes.split_once('"')?;
+                let (_, wert) = rest.split_once("= \"")?;
+                let wert = wert.strip_suffix("\";")?;
+                Some((schluessel.to_owned(), wert.to_owned()))
+            })
+            .collect()
+    }
+
+    fn erlaubnistexte(kennung: &str) -> String {
+        let pfad = sprachquelle(&wurzel(), kennung).join(ERLAUBNISTEXTE);
+        fs::read_to_string(&pfad)
+            .unwrap_or_else(|fehler| panic!("{} ist lesbar: {fehler}", pfad.display()))
+    }
+
+    /// `resources/` traegt genau die `.lproj`-Ordner aus [`SPRACHEN`].
+    ///
+    /// Dieselbe Absicht wie `jede_png_quelle_wird_gebraucht`: ein vierter
+    /// Ordner im Baum, der in keiner Liste steht, kaeme nicht ins Buendel, und
+    /// die Ergaenzung soll eine bewusste sein.
+    #[test]
+    fn resources_traegt_genau_die_sprachordner_aus_sprachen() {
+        let mut im_baum: Vec<String> = fs::read_dir(wurzel().join("resources"))
+            .unwrap()
+            .map(|eintrag| eintrag.unwrap().path())
+            .filter(|pfad| pfad.is_dir())
+            .filter_map(|pfad| {
+                pfad.file_name()?
+                    .to_str()?
+                    .strip_suffix(".lproj")
+                    .map(str::to_owned)
+            })
+            .collect();
+        im_baum.sort_unstable();
+        let mut erwartet: Vec<String> = SPRACHEN.iter().map(|s| (*s).to_owned()).collect();
+        erwartet.sort_unstable();
+        assert_eq!(im_baum, erwartet);
+    }
+
+    #[test]
+    fn die_ausgelieferte_plist_nennt_genau_die_sprachen() {
+        assert_eq!(
+            plist_zeichenkettenliste(AUSGELIEFERTE_PLIST, "CFBundleLocalizations").unwrap(),
+            SPRACHEN
+        );
+        sprachen_pruefen(AUSGELIEFERTE_PLIST, &wurzel()).unwrap();
+    }
+
+    #[test]
+    fn ohne_sprachordner_entsteht_kein_buendel() {
+        let ohne = wurzel().join("target").join("ohne-sprachordner");
+        assert!(matches!(
+            sprachen_pruefen(AUSGELIEFERTE_PLIST, &ohne),
+            Err(Abbruch::Lauf(_))
+        ));
+    }
+
+    #[test]
+    fn eine_abweichende_sprachliste_bricht_ab() {
+        let plist =
+            "<key>CFBundleLocalizations</key><array><string>de</string><string>en</string></array>";
+        assert!(matches!(
+            sprachen_pruefen(plist, &wurzel()),
+            Err(Abbruch::Lauf(_))
+        ));
+    }
+
+    /// Die Entwicklungsregion ist `en`, und das ist der Rueckfall fuer jede
+    /// nicht angebotene Sprache; warum, steht an dem Schluessel in der
+    /// `resources/Info.plist`.
+    #[test]
+    fn die_entwicklungsregion_ist_en() {
+        assert_eq!(
+            plist_zeichenkette(AUSGELIEFERTE_PLIST, "CFBundleDevelopmentRegion").unwrap(),
+            "en"
+        );
+    }
+
+    /// Jede `InfoPlist.strings` nennt genau die Erlaubnisschluessel der
+    /// Buendelbeschreibung, jeden einmal, und keinen anderen.
+    #[test]
+    fn jede_erlaubnistextdatei_nennt_genau_die_schluessel_der_plist() {
+        let mut aus_plist = erlaubnisschluessel(AUSGELIEFERTE_PLIST);
+        aus_plist.sort_unstable();
+        assert!(
+            !aus_plist.is_empty(),
+            "die Plist fuehrt keinen Erlaubnisschluessel"
+        );
+        for kennung in SPRACHEN {
+            let paare = strings_paare(&erlaubnistexte(kennung));
+            let mut schluessel: Vec<String> = paare.iter().map(|(s, _)| s.clone()).collect();
+            schluessel.sort_unstable();
+            assert_eq!(schluessel, aus_plist, "{kennung}.lproj/{ERLAUBNISTEXTE}");
+            for (schluessel, wert) in &paare {
+                assert!(!wert.trim().is_empty(), "{kennung}: {schluessel} ist leer");
+            }
+        }
+    }
+
+    /// Die deutsche Datei traegt die Texte der Buendelbeschreibung Zeichen
+    /// fuer Zeichen: beide sind derselbe Text an zwei Stellen, und die Probe
+    /// ist das, was die zwei Stellen aneinander haelt.
+    #[test]
+    fn die_deutschen_erlaubnistexte_sind_die_der_plist() {
+        for (schluessel, wert) in strings_paare(&erlaubnistexte("de")) {
+            assert_eq!(
+                plist_zeichenkette(AUSGELIEFERTE_PLIST, &schluessel).as_deref(),
+                Some(wert.as_str()),
+                "{schluessel}"
+            );
+        }
+    }
+
+    /// [`SPRACHEN`] nennt dieselben Kennungen wie `Sprache::kennung` im Kern.
+    ///
+    /// `xtask` haengt nicht an `krk-core`, also liest die Probe die Kennungen
+    /// aus dem Quelltext von `crates/krk-core/src/sprache/mod.rs`: die
+    /// Literale im Rumpf von `fn kennung`, bis zur schliessenden Klammer der
+    /// Funktion. Eine vierte Sprache im Kern haelt den Bau des Buendels damit
+    /// an, bis sie einen Ordner hat.
+    #[test]
+    fn die_sprachen_des_buendels_sind_die_der_tabelle() {
+        let quelle = wurzel()
+            .join("crates")
+            .join("krk-core")
+            .join("src")
+            .join("sprache")
+            .join("mod.rs");
+        let inhalt = fs::read_to_string(&quelle).unwrap();
+        let (_, hinter) = inhalt
+            .split_once("fn kennung(")
+            .expect("Sprache::kennung steht im Kern");
+        let (rumpf, _) = hinter.split_once("\n    }").expect("die Funktion endet");
+        let mut im_kern: Vec<&str> = rumpf.split('"').skip(1).step_by(2).collect();
+        im_kern.sort_unstable();
+        let mut hier: Vec<&str> = SPRACHEN.to_vec();
+        hier.sort_unstable();
+        assert_eq!(hier, im_kern);
     }
 }

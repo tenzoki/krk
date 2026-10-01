@@ -1,0 +1,11 @@
+/* Die fuenf Erlaubnistexte in Deutsch, Zeichen fuer Zeichen die Werte aus resources/Info.plist; die Probe die_deutschen_erlaubnistexte_sind_die_der_plist in xtask/src/bundle.rs haelt beide gleich. */
+
+"NSDesktopFolderUsageDescription" = "KRK zeigt deinen Schreibtisch als Ordner an, damit du die Dateien darin öffnen, kopieren, verschieben und umbenennen kannst.";
+
+"NSDocumentsFolderUsageDescription" = "KRK zeigt deinen Dokumentenordner an, damit du die Dateien darin öffnen, kopieren, verschieben und umbenennen kannst.";
+
+"NSDownloadsFolderUsageDescription" = "KRK zeigt deinen Download-Ordner an, damit du geladene Dateien von dort öffnen, kopieren, verschieben und umbenennen kannst; auf deinen Befehl hin sichert KRK außerdem die Tastenbelegung als Markdown-Datei in diesen Ordner.";
+
+"NSRemovableVolumesUsageDescription" = "KRK zeigt angeschlossene Wechselmedien wie USB-Sticks und externe Festplatten an, damit du Dateien zwischen ihnen und deinem Mac kopieren und verschieben kannst.";
+
+"NSNetworkVolumesUsageDescription" = "KRK zeigt bereits verbundene Netzlaufwerke wie jeden anderen Ordner an, damit du Dateien darin öffnen und bearbeiten kannst; eine eigene Verbindung zu einem Server baut KRK nicht auf.";

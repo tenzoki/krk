@@ -51,7 +51,12 @@
 //! ```
 //!
 //! [`anwendung`] haelt `NSApplication` und den Anwendungsdelegierten und ist
-//! der einzige Eintrittspunkt von aussen. [`menue`] baut das Hauptmenue von
+//! der Eintrittspunkt, der die Anwendung startet; der eine Weg daneben ist
+//! [`sprache`], das `main` vor dem Start fragt, welche Sprache macOS fuer
+//! dieses Programm gewaehlt hat (`NSBundle::mainBundle().preferredLocalizations`),
+//! und das nichts weiter tut: die Antwort traegt `main` in den Kern, und
+//! kein Modul dieses Verzeichnisses fragt danach ein zweites Mal.
+//! [`menue`] baut das Hauptmenue von
 //! Hand, weil es ohne Oberflaechenbau kein Nib gibt, aus dem es kaeme.
 //! [`fenster`] baut das Fenster und seinen Delegierten. [`leiste`] haelt die
 //! Lesezeichen- und Geraeteleiste aus C5, den zweiten fokussierbaren Bereich.
@@ -251,6 +256,7 @@ mod nummernspalte;
 mod oeffnenmit;
 mod papierkorb;
 mod quicknote;
+pub mod sprache;
 mod standardprogramm;
 mod statuszeile;
 mod tabelle;

@@ -130,12 +130,20 @@ mod tests {
     /// dass der Ort im Buendel richtig herauskommt, sieht der Nutzer am
     /// laufenden `KRK.app`. Nachweisbar ist hier die andere Haelfte, und sie
     /// ist die, an der ein Fehler unbemerkt bliebe: es gibt im Baum keine
-    /// zweite Antwort auf die Frage nach dem eigenen Ort. Gezaehlt werden
-    /// Erklaerungen und nicht Aufrufer; die Unterscheidung steht in
+    /// zweite Stelle, die den eigenen Ort ueber `bundleURL` liest. Gezaehlt
+    /// werden Erklaerungen und nicht Aufrufer; die Unterscheidung steht in
     /// [`crate::quellbaum`].
+    ///
+    /// Die Nadel ist `bundleURL()` und nicht `mainBundle()`: das Hauptbuendel
+    /// beantwortet mehr als die Frage nach dem Ort, und `sprache` fragt es nach
+    /// `preferredLocalizations`, ohne den Ort zu bestimmen. Eine Nadel am
+    /// Hauptbuendel zaehlte jeden solchen Leser mit. Was die Probe nicht sieht,
+    /// ist eine zweite Stelle, die den Ort ueber einen anderen Ausdruck
+    /// bestimmt, etwa `bundlePath` oder `executableURL`; heute steht keiner
+    /// davon im Baum, und wer einen einfuehrt, nimmt ihn in die Nadelmenge auf.
     #[test]
     fn der_eigene_buendelort_wird_an_genau_einer_stelle_bestimmt() {
-        let nadel = concat!("mainBundle", "()");
+        let nadel = concat!("bundleURL", "()");
         let dateien: Vec<String> = crate::quellbaum::quelldateien()
             .into_iter()
             .filter(|(_, inhalt)| inhalt.contains(nadel))

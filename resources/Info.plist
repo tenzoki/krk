@@ -15,72 +15,93 @@
 	<string>KRK</string>
 
 	<!--
-	  Die Sprachen, die KRK anbietet. **Ohne diesen Schluessel ist KRK fuer
-	  Foundation ein englisches Programm**, ganz gleich, wie das System
-	  eingestellt ist: `Bundle.main.preferredLocalizations` liefert dann
-	  `["en"]`, und der `NSByteCountFormatter` der Groessenspalte beschriftet
-	  jede Angabe unter 1.000 Bytes englisch, `Zero KB`, `1 byte`, `512 bytes`.
-	  Foundation schneidet die Sprachwahl des Nutzers gegen die Sprachen des
-	  Buendels, und die stehen allein in dieser Datei. Ueber die
-	  Registrierungsebene der Nutzervorgaben ist der Wert nicht zu erreichen:
-	  mit `AppleLanguages = ["de"]` blieb `preferredLocalizations` gemessen bei
-	  `["en"]`, weil es ohne Eintrag hier nichts zu schneiden gibt. Defekt
-	  `issues/260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md`.
+	  Die Sprachen, die KRK anbietet: Deutsch, Franzoesisch und Englisch. Welche
+	  davon gilt, entscheidet macOS aus der Sprachwahl je Programm, und KRK
+	  liest die Antwort beim Start an genau einer Stelle,
+	  `crates/krk-ui/src/appkit/sprache.rs` (`preferredLocalizations`, erster
+	  Eintrag); eine eigene Sprachwahl trifft KRK nicht und bietet keine an.
+	  **Ohne diesen Schluessel ist KRK fuer Foundation ein englisches
+	  Programm**, ganz gleich, wie das System eingestellt ist: Foundation
+	  schneidet die Sprachwahl des Nutzers gegen die Sprachen des Buendels, und
+	  die stehen in dieser Liste und in den `.lproj`-Ordnern unter
+	  `Contents/Resources/`. Ueber die Registrierungsebene der Nutzervorgaben
+	  ist der Wert nicht zu erreichen (Defekt
+	  `issues/260806-1215_*_der-groessenformatierer-schreibt-nicht-nur-null-sondern-jede-byte-angabe-auf-englisch.md`).
 
-	  **Die Reihenfolge dieser Liste waehlt nicht aus.** Foundation geht die
-	  Sprachliste des Nutzers der Reihe nach durch und nimmt die erste Sprache,
-	  die hier ueberhaupt angeboten wird; diese Liste sagt allein, welche
-	  Sprachen zur Wahl stehen. Fuehrt die Sprachwahl des Nutzers keine davon,
-	  entscheidet `CFBundleDevelopmentRegion` weiter unten. Ein Rueckfall auf die
-	  erste Sprache dieser Liste greift nur, solange `en` nicht darin steht;
-	  sobald `en` hier steht, gewinnt es den Rueckfall unabhaengig von seinem
-	  Platz. Gemessen am 260807 an gebauten Buendeln: Liste `de, en` mit
-	  Sprachwahl `en-US, de-DE` liefert `en`, Liste `en, de` mit Sprachwahl
-	  `de-DE` liefert `de`, und Liste `de, en` mit Sprachwahl `fr-FR` liefert
-	  ohne Entwicklungsregion `en`, mit `CFBundleDevelopmentRegion = de` dagegen
-	  `de`. Defekt
-	  `issues/260807-0754_*_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md`.
+	  **Die gemessene Regel vom 261001.** Gemessen an Scratch-Buendeln, die sich
+	  allein in dieser Liste, in `CFBundleDevelopmentRegion` und in den
+	  `.lproj`-Ordnern unterscheiden, mit der Sprachwahl je Buendelkennung ueber
+	  `AppleLanguages`; die Zelle ist der erste Eintrag von
+	  `preferredLocalizations` fuer die Liste `de, fr, en`:
 
-	  `de` steht dennoch vorn: die Reihenfolge ist eine Nutzerentscheidung vom
-	  260807 und nennt die Projektsprache aus `CLAUDE.md` an erster Stelle. Sie
-	  ist unschaedlich, sie waehlt nur nichts aus.
+	    Sprachwahl          Region en   Region de
+	    de-DE               de          de
+	    de-CH               de          de
+	    fr-CA               fr          fr
+	    fr-FR, de-DE        fr          fr
+	    en-US, de-DE        en          en
+	    en-GB               en          en
+	    ja                  en          de
+	    pt-BR, es-ES        en          de
 
-	  **Eigene `.lproj`-Ordner hat KRK nicht**, und der Schluessel legt keine an.
-	  Er sagt Foundation allein, welche Sprachen das Programm anbietet, und
-	  wirkt damit auf jede Ausgabe, die Foundation oder AppKit selbst
-	  beschriftet. Betroffen sind die von AppKit gestellten Texte, etwa das
-	  Kontextmenue eines Textfeldes; nicht betroffen sind die Spalte
-	  "Aenderungsdatum", die schon heute deutsch ist, weil `NSDateFormatter` der
-	  Region des Systems folgt und nicht dieser Liste, und ebenso wenig die
-	  Schaltflaechen der Blaetter, deren Beschriftungen KRK in
-	  `appkit/blaetter/mod.rs` und `appkit/hinweis.rs` alle selbst setzt.
+	  Der erste Eintrag ist immer eine der angebotenen Sprachen ohne
+	  Regionszusatz. **Die Reihenfolge dieser Liste waehlt nicht aus**, und sie
+	  entscheidet auch den Rueckfall nicht: fuehrt die Sprachwahl des Nutzers
+	  keine der drei, gewinnt `CFBundleDevelopmentRegion` weiter unten, und zwar
+	  auch dann, wenn `en` in dieser Liste steht. Der aeltere Befund vom 260807,
+	  `en` gewinne den Rueckfall, sobald es in der Liste stehe, gilt nur ohne
+	  die Entwicklungsregion
+	  (`issues/260807-0754_*_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md`).
+	  `de` steht vorn, weil es die Projektsprache aus `CLAUDE.md` ist; die
+	  Reihenfolge ist unschaedlich, sie waehlt nur nichts aus.
+
+	  **Die drei `.lproj`-Ordner tragen die fuenf Erlaubnistexte** aus dem Ende
+	  dieser Datei in je einer `InfoPlist.strings`, damit der
+	  Berechtigungsdialog in der gewaehlten Sprache erscheint; `cargo xtask
+	  bundle` kopiert sie aus `resources/<sprache>.lproj/` ins Buendel, und
+	  welche drei es sind, sagt `SPRACHEN` in `xtask/src/bundle.rs`. Mit den
+	  Ordnern fuehrt `localizations` jede Sprache zweimal, einmal aus diesem
+	  Schluessel und einmal aus dem Ordner; das ist unschaedlich, gelesen wird
+	  der erste Eintrag von `preferredLocalizations`. Die Ordner sind zugleich
+	  der Weg, auf dem die Systemeinstellung „Apps“ unter „Sprache & Region“
+	  die Sprachen eines Programms erkennt und zur Wahl stellt; das ist eine
+	  Erwartung und keine Messung, und der Nutzer prueft sie am gebauten
+	  Buendel.
+
+	  Die Liste wirkt daneben auf jede Ausgabe, die Foundation oder AppKit
+	  selbst beschriftet, etwa das Kontextmenue eines Textfeldes und die
+	  Groessenangaben des `NSByteCountFormatter` unter 1.000 Bytes. Nicht
+	  betroffen ist die Spalte "Aenderungsdatum": `NSDateFormatter` folgt der
+	  Region des Systems und nicht dieser Liste.
 	-->
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>de</string>
+		<string>fr</string>
 		<string>en</string>
 	</array>
 
 	<!--
-	  Die Sprache, in der die Zeichenketten von KRK urspruenglich geschrieben
-	  sind, und damit der Rueckfall fuer jede Sprachwahl, die keine der oben
-	  angebotenen Sprachen fuehrt. **Ohne diesen Schluessel gewinnt `en` den
-	  Rueckfall**, weil `en` in `CFBundleLocalizations` steht: ein Nutzer mit
-	  franzoesischer Sprachwahl bekaeme dann wieder `Zero KB`, `1 byte`,
-	  `512 bytes` in der Groessenspalte, in den Metadatenzeilen der Vorschau und
-	  im fuenften Rang der Statuszeile. Gemessen am 260807 an zwei gebauten
-	  Buendeln, die sich allein in diesem Schluessel unterscheiden: bei
-	  Sprachwahl `fr-FR` liefert `preferredLocalizations` ohne ihn `en`, mit ihm
-	  `de`.
+	  Der Rueckfall fuer jede Sprachwahl, die keine der oben angebotenen
+	  Sprachen fuehrt: Englisch, nach dem Nutzerentscheid vom 261001 (Spec
+	  `261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md`).
+	  Die Messung vom 261001 in der Tabelle oben zeigt, dass dieser Schluessel
+	  den Rueckfall entscheidet und nicht die Liste: mit `ja` oder `pt-BR,
+	  es-ES` als Sprachwahl liefert `preferredLocalizations` bei Region `en`
+	  `en` und bei Region `de` `de`, obwohl `en` in beiden Faellen in der Liste
+	  steht. Fuer „Rueckfall auf Englisch“ muss der Schluessel deshalb auf
+	  `en`, und bis zum 261001 stand er auf `de`
+	  (`issues/260807-0745_*_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`).
 
-	  Der Schluessel legt keinen `.lproj`-Ordner an und braucht keinen. Er ist
-	  eine Angabe ueber das Buendel, die Foundation und der Finder lesen, und
-	  `de` ist fuer ein Programm richtig, dessen Prosa durchgaengig deutsch ist.
-	  Defekt
-	  `issues/260807-0745_*_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md`.
+	  Der Schluessel sagt nicht, in welcher Sprache die Quelltabelle der
+	  Oberflaeche geschrieben ist; die ist Deutsch, und
+	  `krk_core::sprache::geltende` antwortet Deutsch, solange nichts gesetzt
+	  ist. Er ist eine Angabe ueber das Buendel, die Foundation und der Finder
+	  lesen, und er legt keinen `.lproj`-Ordner an; die drei Ordner stehen im
+	  Baum unter `resources/`.
 	-->
 	<key>CFBundleDevelopmentRegion</key>
-	<string>de</string>
+	<string>en</string>
 
 	<!--
 	  Der Name des Binaerprogramms, nicht der des Cargo-Pakets: das Paket heisst
@@ -189,6 +210,14 @@
 	  Deutsch nach Plan (Schritt 4 und `### Frage 7`) und nach der Projektsprache
 	  `de`; Du-Form, weil die deutschsprachige Oberflaeche von macOS 15 sie im
 	  umgebenden Dialogtext ebenfalls verwendet.
+
+	  Seit dem 261001 stehen dieselben fuenf Schluessel in
+	  `resources/de.lproj/InfoPlist.strings`, `fr.lproj` und `en.lproj`, und
+	  macOS nimmt den Text aus dem Ordner der gewaehlten Sprache; die Texte hier
+	  sind der Rueckfall, wenn kein Ordner greift. Die deutsche Datei traegt sie
+	  Zeichen fuer Zeichen, gehalten von der Probe
+	  `die_deutschen_erlaubnistexte_sind_die_der_plist` in `xtask/src/bundle.rs`;
+	  wer einen Text hier aendert, aendert ihn dort mit.
 	-->
 	<key>NSDesktopFolderUsageDescription</key>
 	<string>KRK zeigt deinen Schreibtisch als Ordner an, damit du die Dateien darin öffnen, kopieren, verschieben und umbenennen kannst.</string>
