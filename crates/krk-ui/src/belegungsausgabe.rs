@@ -229,10 +229,15 @@ fn zeile(funktion: &Funktion) -> String {
 
 /// Der Text einer Zelle, mit maskiertem senkrechten Strich.
 ///
-/// Der Name einer Funktion kommt aus der Belegungsdatei und damit
-/// moeglicherweise aus der `keymap.toml` des Nutzers. Ein Name mit einem
-/// senkrechten Strich zerbraeche die Tabelle; die Maskierung ist eine Zeile und
-/// eine Probe.
+/// Der Name einer Funktion kommt seit C3 der Lokalisierung aus der
+/// Sprachtabelle (`krk_core::sprache`, je Sprache `kommandoname` und
+/// `zugestellt_name`) und nicht mehr aus der `keymap.toml` des Nutzers; ein
+/// `name` dort wird geduldet und nie angezeigt. Dass kein Tabellenname einen
+/// senkrechten Strich traegt, haelt
+/// `kein_funktionsname_ist_leer_oder_traegt_einen_senkrechten_strich`
+/// (`crates/krk-core/tests/belegung.rs`); die Maskierung bleibt trotzdem, weil
+/// eine spaetere Sprache einen Namen mit `|` schreiben koennte und ein Name
+/// die Tabelle nicht zerbrechen darf. Sie ist eine Zeile und eine Probe.
 fn maskiert(text: &str) -> String {
     text.replace('|', "\\|")
 }
@@ -999,29 +1004,26 @@ mod tests {
     // -----------------------------------------------------------------------
 
     /// Ein Name mit einem senkrechten Strich zerbricht die Tabelle nicht.
+    ///
+    /// Bis zu C3 der Lokalisierung setzte die Probe den Namen ueber eine
+    /// Nutzerdatei; dieser Weg ist gefallen, weil der Name aus der
+    /// Sprachtabelle kommt und `name` in der Datei nie angezeigt wird. Die
+    /// Maskierung gilt weiter fuer jeden Tabellennamen, den eine spaetere
+    /// Sprache mit `|` schreiben koennte, und wird deshalb direkt an
+    /// [`maskiert`] gehalten: der Strich ist maskiert, und eine daraus gebaute
+    /// Zeile traegt trotzdem drei Zellen.
     #[test]
     fn ein_name_mit_senkrechtem_strich_zerbricht_die_tabelle_nicht() {
-        let belegung = belegung_aus(
-            r#"
-            [[funktion]]
-            id = "kopieren"
-            name = "Kopieren | mit Strich"
-            tasten = ["f5"]
-            "#,
-        );
-        let text = markdown(&belegung);
-        let zeilen = funktionszeilen(&text);
-        assert_eq!(zeilen.len(), 1);
-        assert!(
-            zeilen[0].contains("Kopieren \\| mit Strich"),
-            "der Strich ist nicht maskiert: {}",
-            zeilen[0]
-        );
+        let zelle = maskiert("Kopieren | mit Strich");
         assert_eq!(
-            zellen(zeilen[0]).len(),
+            zelle, "Kopieren \\| mit Strich",
+            "der Strich ist nicht maskiert"
+        );
+        let zeile = format!("| {zelle} | F5 | |");
+        assert_eq!(
+            zellen(&zeile).len(),
             3,
-            "die Zeile traegt trotz des Strichs drei Spalten: {}",
-            zeilen[0]
+            "die Zeile traegt trotz des Strichs nicht drei Spalten: {zeile}"
         );
     }
 

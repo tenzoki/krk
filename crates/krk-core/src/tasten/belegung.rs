@@ -45,14 +45,24 @@
 //! keine Eingabe; rueckwaertsvertraeglich ist das, weil die Belegungsansicht
 //! denselben Wert zurueckschreibt.
 //!
-//! **`name` und `reserviert_fuer` kommen weiter aus der Datei**, und das ist
-//! keine Nachlaessigkeit, sondern die Grenze des Schnitts. Keines von beiden
-//! entscheidet, ob ein Befehl ankommt: `name` ist die Beschriftung, und
-//! `reserviert_fuer` haengt allein einen Zusatz an den Text der Belegungsansicht
-//! (`krk-ui/src/belegungsmodell.rs`, `funktionstext`). Beide aus dem Wortschatz
-//! zu nehmen naehme dem Nutzer eine Umbenennung, die niemandem schadet, und
-//! verwuerfe still das `reserviert_fuer` einer `keymap.toml` aus einer aelteren
-//! Fassung, mit dem jene Stelle ausdruecklich rechnet.
+//! **`name` ist seit der Sprachtabelle wie `gehalten_von` eine Duldung beim
+//! Lesen, und `reserviert_fuer` kommt weiter aus der Datei.** Der Name einer
+//! Funktion kommt aus `crate::sprache` in der geltenden Sprache, geschluesselt
+//! ueber [`Funktionsschluessel`] (Spec
+//! `261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md`,
+//! C3): ein Feld `name` in einer eigenen `keymap.toml` wird gelesen, damit
+//! eine Datei aus einer frueheren Fassung ohne Fehler und ohne Meldung laedt,
+//! und nie angezeigt; beim Sichern schreibt [`Belegung::sichern`] es in der
+//! geltenden Sprache, damit die Datei lesbar bleibt, wenn der Nutzer sie ueber
+//! „Tastaturdefinition oeffnen“ ansieht. Die Umbenennung ueber die eigene
+//! Datei, die bis dahin niemandem schadete, ist damit gefallen, weil ein
+//! deutscher Name in der Datei einer franzoesischen Oberflaeche schadete.
+//! `reserviert_fuer` entscheidet weiter nicht, ob ein Befehl ankommt, haengt
+//! allein einen Zusatz an den Text der Belegungsansicht
+//! (`krk-ui/src/belegungsmodell.rs`, `funktionstext`), und bleibt deshalb
+//! Sache der Datei: es aus dem Wortschatz zu nehmen verwuerfe still das
+//! `reserviert_fuer` einer `keymap.toml` aus einer aelteren Fassung, mit dem
+//! jene Stelle ausdruecklich rechnet.
 //!
 //! # Was ein Nachschlag antwortet
 //!
@@ -216,7 +226,7 @@ use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 
 use crate::ablage::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, melden};
-use crate::sprache::{Text, text};
+use crate::sprache::{Sprache, Text, funktionsname, satz, text};
 
 use super::konflikt::{Funktionsname, Konflikt};
 use super::parser::{Kombination, Schreibfehler};
@@ -1404,11 +1414,12 @@ impl Kommando {
         (Kommando::ZumBild, "zum_bild"),
     ];
 
-    /// Das Kommando zu einer Kennung, falls es in dieser Runde schon eines gibt.
+    /// Das Kommando zu einer Kennung, falls die Kennung eines benennt.
     ///
-    /// `None` heisst nicht "unbekannte Funktion", sondern "noch nicht gebaut".
-    /// Ob die Kennung ueberhaupt zum Wortschatz gehoert, hat die Belegung schon
-    /// beim Einlesen geprueft.
+    /// `None` heisst nicht fuer sich "unbekannte Funktion": die vom Hauptmenue
+    /// zugestellten Funktionen tragen kein Kommando und stehen in
+    /// [`Zugestellt::KENNUNGEN`]. Wer beide Arten sucht, fragt
+    /// [`Funktionsschluessel::aus_kennung`].
     pub fn aus_kennung(kennung: &str) -> Option<Kommando> {
         Self::KENNUNGEN
             .into_iter()
@@ -1833,12 +1844,129 @@ impl Kommando {
     }
 }
 
+/// Die Funktionen, die nicht der Ereignisabgriff ausfuehrt, sondern das
+/// Hauptmenue zustellt: die Textbefehle des Menues „Bearbeiten“ und das
+/// Einfuegen in den Filter.
+///
+/// Sie tragen kein [`Kommando`], weil KRK sie nie selbst ausfuehrt (vierte
+/// Stelle der Zustellerregel im Modulkopf), und brauchten deshalb bis zu
+/// dieser Arbeit keine Aufzaehlung: ihr Name kam aus der Belegungsdatei. Seit
+/// der Name aus der Sprachtabelle kommt, braucht jede von ihnen einen
+/// Schluessel, und die Tabellen verzweigen ueber diese Aufzaehlung ohne
+/// Auffangzweig, wie ueber `Kommando`: eine achte zugestellte Funktion haelt
+/// den Bau an, bis sie drei Namen hat.
+///
+/// Wie bei [`Kommando`] ist [`Zugestellt::KENNUNGEN`] die eine Verbindung zur
+/// Kennung in der Datei, und die Probe
+/// `jede_variante_von_zugestellt_steht_genau_einmal_in_kennungen`
+/// (`crates/krk-core/tests/belegung.rs`) haelt die Liste gegen die
+/// Aufzaehlung.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Zugestellt {
+    /// Die Zwischenablage an den Filtertext der Dateiliste haengen.
+    FilterEinfuegen,
+    /// Ausschneiden im Textfeld.
+    TextAusschneiden,
+    /// Kopieren im Textfeld.
+    TextKopieren,
+    /// Einfuegen im Textfeld.
+    TextEinfuegen,
+    /// Alles auswaehlen im Textfeld.
+    TextAllesAuswaehlen,
+    /// Rueckgaengig im Textfeld.
+    TextRueckgaengig,
+    /// Wiederholen im Textfeld.
+    TextWiederholen,
+}
+
+/// Dieselbe Schranke wie unter [`Kommando`]: [`Zugestellt::kennung`]
+/// vergleicht ueber `as u16`.
+const _: () = assert!(Zugestellt::KENNUNGEN.len() <= u16::MAX as usize);
+
+impl Zugestellt {
+    /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
+    /// fuehrt, je zugestellter Funktion.
+    pub const KENNUNGEN: [(Zugestellt, &'static str); 7] = [
+        (Zugestellt::FilterEinfuegen, "filter_einfuegen"),
+        (Zugestellt::TextAusschneiden, "text_ausschneiden"),
+        (Zugestellt::TextKopieren, "text_kopieren"),
+        (Zugestellt::TextEinfuegen, "text_einfuegen"),
+        (Zugestellt::TextAllesAuswaehlen, "text_alles_auswaehlen"),
+        (Zugestellt::TextRueckgaengig, "text_rueckgaengig"),
+        (Zugestellt::TextWiederholen, "text_wiederholen"),
+    ];
+
+    /// Die zugestellte Funktion zu einer Kennung, falls es eine ist.
+    pub fn aus_kennung(kennung: &str) -> Option<Zugestellt> {
+        Self::KENNUNGEN
+            .into_iter()
+            .find(|(_, benannt)| *benannt == kennung)
+            .map(|(zugestellt, _)| zugestellt)
+    }
+
+    /// Die Kennung dieser zugestellten Funktion; das Gegenstueck zu
+    /// [`Zugestellt::aus_kennung`], nach dem Muster von [`Kommando::kennung`].
+    #[must_use]
+    pub const fn kennung(self) -> &'static str {
+        let mut stelle = 0;
+        while stelle < Self::KENNUNGEN.len() {
+            let (zugestellt, kennung) = Self::KENNUNGEN[stelle];
+            if zugestellt as u16 == self as u16 {
+                return kennung;
+            }
+            stelle += 1;
+        }
+        panic!("jede zugestellte Funktion steht in KENNUNGEN")
+    }
+}
+
+/// Der Schluessel einer Funktion: das, worunter die Sprachtabelle ihren Namen
+/// fuehrt.
+///
+/// Jede Funktion der Belegung ist entweder ein [`Kommando`] oder eine vom
+/// Hauptmenue [`Zugestellt`]e, und eine dritte Art gibt es nicht:
+/// [`Belegung::bauen`] weist eine Kennung ab, die keines von beiden ist, fuer
+/// die Auslieferung wie fuer die Nutzerdatei. Damit ist die Kennung aus der
+/// Datei nur noch die Schreibweise des Schluessels, und [`Funktion`] haelt den
+/// Schluessel statt eines Namens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Funktionsschluessel {
+    /// Eine Funktion, die der Ereignisabgriff als Kommando ausfuehrt.
+    Kommando(Kommando),
+    /// Eine Funktion, die das Hauptmenue zustellt.
+    Zugestellt(Zugestellt),
+}
+
+impl Funktionsschluessel {
+    /// Der Schluessel zu einer Kennung, aus beiden `KENNUNGEN`; `None` ist
+    /// eine Kennung, die KRK nicht kennt.
+    pub fn aus_kennung(kennung: &str) -> Option<Self> {
+        if let Some(kommando) = Kommando::aus_kennung(kennung) {
+            return Some(Self::Kommando(kommando));
+        }
+        Zugestellt::aus_kennung(kennung).map(Self::Zugestellt)
+    }
+
+    /// Die Kennung, unter der die Belegungsdatei diese Funktion fuehrt.
+    #[must_use]
+    pub const fn kennung(self) -> &'static str {
+        match self {
+            Self::Kommando(kommando) => kommando.kennung(),
+            Self::Zugestellt(zugestellt) => zugestellt.kennung(),
+        }
+    }
+}
+
 /// Eine Funktion mit allen ihren Kombinationen: eine Zeile der
 /// Belegungsansicht.
+///
+/// Sie haelt ihren [`Funktionsschluessel`] und keinen Namen: der Name kommt
+/// aus der Sprachtabelle, in der Sprache, die beim Aufruf von
+/// [`Funktion::name`] gilt, und die Kennung ist die Schreibweise des
+/// Schluessels in der Datei.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Funktion {
-    kennung: String,
-    name: String,
+    schluessel: Funktionsschluessel,
     tasten: Vec<Kombination>,
     reserviert_fuer: Option<String>,
     gehalten_von: Option<String>,
@@ -1847,14 +1975,33 @@ pub struct Funktion {
 impl Funktion {
     /// Der maschinenlesbare Bezeichner, unter dem `keymap.toml` sie fuehrt.
     #[must_use]
-    pub fn kennung(&self) -> &str {
-        &self.kennung
+    pub fn kennung(&self) -> &'static str {
+        self.schluessel.kennung()
     }
 
-    /// Die deutsche Beschriftung fuer die Belegungsansicht.
+    /// Der Schluessel, unter dem die Sprachtabelle ihren Namen fuehrt.
     #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn schluessel(&self) -> Funktionsschluessel {
+        self.schluessel
+    }
+
+    /// Die Beschriftung fuer die Belegungsansicht, das Hauptmenue und jede
+    /// Meldung, in der geltenden Sprache.
+    ///
+    /// Aus der Sprachtabelle und nie aus einer Datei: ein `name` in der
+    /// eigenen `keymap.toml` wird geduldet und nicht gelesen (Modulkopf,
+    /// „Die Nutzerdatei ersetzt, sie ergaenzt nicht“).
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        funktionsname(self.schluessel)
+    }
+
+    /// Die Beschriftung in einer ausdruecklich genannten Sprache; fuer die
+    /// Proben, die jede Sprache sehen wollen, waehrend `cargo test` immer
+    /// Deutsch gilt.
+    #[must_use]
+    pub fn name_in(&self, sprache: Sprache) -> &'static str {
+        sprache.funktionsname(self.schluessel)
     }
 
     /// Alle Kombinationen, die diese Funktion ausloesen.
@@ -1879,17 +2026,22 @@ impl Funktion {
         self.gehalten_von.as_deref()
     }
 
-    /// Das Kommando dieser Funktion, falls diese Runde es schon ausfuehrt.
+    /// Das Kommando dieser Funktion, falls sie eines traegt.
     ///
     /// Eine zugestellte Funktion hat nie eines: was das Hauptmenue zustellt,
-    /// fuehrt die Antwortkette aus und nicht KRK. Ohne diese Zeile haenge die
-    /// Zusage daran, dass [`Kommando::KENNUNGEN`] die vier Textbefehle zufaellig
-    /// nicht nennt — die vierte Stelle der Zustellerregel aus dem Modulkopf.
+    /// fuehrt die Antwortkette aus und nicht KRK. Die Frage nach dem Zusteller
+    /// steht vor der nach dem Schluessel, damit die Zusage nicht daran haengt,
+    /// dass der Schluessel einer zugestellten Funktion zufaellig kein
+    /// [`Kommando`] ist — die vierte Stelle der Zustellerregel aus dem
+    /// Modulkopf.
     pub fn kommando(&self) -> Option<Kommando> {
         if self.gehalten_von.is_some() {
             return None;
         }
-        Kommando::aus_kennung(&self.kennung)
+        match self.schluessel {
+            Funktionsschluessel::Kommando(kommando) => Some(kommando),
+            Funktionsschluessel::Zugestellt(_) => None,
+        }
     }
 
     /// Der Wirkungsbereich des Kommandos dieser Funktion, oder `None`, wenn
@@ -1902,10 +2054,11 @@ impl Funktion {
         self.kommando().map(Kommando::wirkungsbereich)
     }
 
-    /// Wie eine Meldung diese Funktion benennt.
+    /// Wie eine Meldung diese Funktion benennt: mit der Kennung und dem Namen
+    /// in der Sprache, die im Augenblick des Aufrufs gilt.
     #[must_use]
     pub fn benennung(&self) -> Funktionsname {
-        Funktionsname::neu(&self.kennung, &self.name)
+        Funktionsname::neu(self.kennung(), self.name())
     }
 }
 
@@ -1977,7 +2130,7 @@ impl Belegung {
     pub fn funktion(&self, kennung: &str) -> Option<&Funktion> {
         self.funktionen
             .iter()
-            .find(|funktion| funktion.kennung == kennung)
+            .find(|funktion| funktion.kennung() == kennung)
     }
 
     /// Was ein Tastendruck ausloest.
@@ -2110,7 +2263,7 @@ impl Belegung {
         let Some(stelle) = self
             .funktionen
             .iter()
-            .position(|funktion| funktion.kennung == kennung)
+            .position(|funktion| funktion.kennung() == kennung)
         else {
             return Err(Zuweisungsfehler::UnbekannteFunktion(kennung.to_owned()));
         };
@@ -2119,7 +2272,7 @@ impl Belegung {
             .funktionen
             .iter()
             .filter(|funktion| {
-                funktion.kennung != kennung && funktion.tasten.contains(&kombination)
+                funktion.kennung() != kennung && funktion.tasten.contains(&kombination)
             })
             .collect();
         if let Some(andere) = im_weg(&traeger, bewerber) {
@@ -2196,7 +2349,12 @@ impl Belegung {
     ///
     /// `wortschatz` ist `None` fuer die Auslieferungsbelegung, die ihn erst
     /// festlegt, und `Some` fuer jede Belegung des Nutzers, die sich daran
-    /// messen lassen muss.
+    /// messen lassen muss. **Eine Kennung, die kein [`Funktionsschluessel`]
+    /// ist, weist beide Wege ab**: die Nutzerdatei mit
+    /// [`Belegungsfehler::UnbekannteFunktion`] und dem Rueckfall auf die
+    /// Auslieferung, die Auslieferung selbst mit dem Abbruch beim ersten
+    /// Zugriff auf [`AUSLIEFERUNG`], denn eine Funktion ohne Schluessel haette
+    /// in keiner Sprache einen Namen.
     #[allow(clippy::result_large_err)]
     fn bauen(
         datei: &Belegungsdatei,
@@ -2221,9 +2379,15 @@ impl Belegung {
                 },
                 None => None,
             };
+            // `eintrag.name` wird hier nicht gelesen: der Name kommt aus der
+            // Sprachtabelle, und das Feld ist in der Nutzerdatei eine Duldung
+            // wie `gehalten_von` (Modulkopf).
+            let Some(schluessel) = Funktionsschluessel::aus_kennung(&eintrag.id) else {
+                return Err(Belegungsfehler::UnbekannteFunktion(eintrag.id.clone()));
+            };
             if funktionen
                 .iter()
-                .any(|funktion| funktion.kennung == eintrag.id)
+                .any(|funktion| funktion.schluessel == schluessel)
             {
                 return Err(Belegungsfehler::FunktionDoppelt(eintrag.id.clone()));
             }
@@ -2242,8 +2406,7 @@ impl Belegung {
             }
 
             funktionen.push(Funktion {
-                kennung: eintrag.id.clone(),
-                name: eintrag.name.clone(),
+                schluessel,
                 tasten,
                 reserviert_fuer: eintrag.reserviert_fuer.clone(),
                 gehalten_von: match bekannt {
@@ -2260,7 +2423,7 @@ impl Belegung {
             for bekannt in &wortschatz.funktionen {
                 if !funktionen
                     .iter()
-                    .any(|funktion| funktion.kennung == bekannt.kennung)
+                    .any(|funktion| funktion.schluessel == bekannt.schluessel)
                 {
                     funktionen.push(Funktion {
                         tasten: Vec::new(),
@@ -2428,16 +2591,18 @@ impl fmt::Display for Belegungsfehler {
                 kennung,
                 text,
                 fehler,
-            } => write!(
-                ausgabe,
-                "die Funktion {kennung} trägt die Kombination \"{text}\": {fehler}"
-            ),
-            Belegungsfehler::UnbekannteFunktion(kennung) => {
-                write!(ausgabe, "KRK kennt keine Funktion namens {kennung}")
-            }
-            Belegungsfehler::FunktionDoppelt(kennung) => {
-                write!(ausgabe, "die Funktion {kennung} steht zweimal")
-            }
+            } => ausgabe.write_str(&satz(
+                Text::BelegungSchreibweise,
+                &[("kennung", kennung), ("text", text), ("fehler", fehler)],
+            )),
+            Belegungsfehler::UnbekannteFunktion(kennung) => ausgabe.write_str(&satz(
+                Text::BelegungUnbekannteFunktion,
+                &[("kennung", kennung)],
+            )),
+            Belegungsfehler::FunktionDoppelt(kennung) => ausgabe.write_str(&satz(
+                Text::BelegungFunktionDoppelt,
+                &[("kennung", kennung)],
+            )),
             Belegungsfehler::Konflikt(konflikt) => konflikt.fmt(ausgabe),
         }
     }
@@ -2458,9 +2623,10 @@ impl fmt::Display for Zuweisungsfehler {
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Zuweisungsfehler::Konflikt(konflikt) => konflikt.fmt(ausgabe),
-            Zuweisungsfehler::UnbekannteFunktion(kennung) => {
-                write!(ausgabe, "KRK kennt keine Funktion namens {kennung}")
-            }
+            Zuweisungsfehler::UnbekannteFunktion(kennung) => ausgabe.write_str(&satz(
+                Text::BelegungUnbekannteFunktion,
+                &[("kennung", kennung)],
+            )),
         }
     }
 }
@@ -2500,14 +2666,18 @@ impl From<&Belegung> for Belegungsdatei {
     /// desselben Zustellers, das Einlesen meldete einen Konflikt, und der
     /// Nutzer haette eine Datei, die KRK selbst geschrieben und dann nicht mehr
     /// angenommen hat.
+    ///
+    /// `name` wird in der geltenden Sprache geschrieben, obwohl das Einlesen
+    /// es nie liest: die Datei bleibt damit lesbar, wenn der Nutzer sie ueber
+    /// „Tastaturdefinition oeffnen“ ansieht (Spec C3).
     fn from(belegung: &Belegung) -> Self {
         Self {
             funktionen: belegung
                 .funktionen
                 .iter()
                 .map(|funktion| Eintrag {
-                    id: funktion.kennung.clone(),
-                    name: funktion.name.clone(),
+                    id: funktion.kennung().to_owned(),
+                    name: Some(funktion.name().to_owned()),
                     tasten: funktion
                         .tasten
                         .iter()
@@ -2526,7 +2696,16 @@ impl From<&Belegung> for Belegungsdatei {
 #[serde(deny_unknown_fields)]
 struct Eintrag {
     id: String,
-    name: String,
+    /// Die Beschriftung, wie sie die Datei fuehrt: **beim Lesen geduldet und
+    /// nie gelesen**, beim Schreiben der Name in der geltenden Sprache.
+    ///
+    /// Bis zu dieser Arbeit war das Feld die Quelle des Namens und Pflicht;
+    /// seit der Name aus der Sprachtabelle kommt, ist es optional, damit eine
+    /// `keymap.toml` aus einer frueheren Fassung mit `name` ebenso laedt wie
+    /// die Auslieferungsfassung ohne. Weggelassen statt leer geschrieben, aus
+    /// dem Grund von `reserviert_fuer` darunter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
     tasten: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     reserviert_fuer: Option<String>,

@@ -22,9 +22,13 @@
 use std::collections::BTreeSet;
 
 use krk_core::sprache::{self, Sprache, Text, Zahlwort};
+use krk_core::tasten::{Funktionsschluessel, Kommando, Zugestellt};
 
-/// Jeder Eintrag einer Sprache mit seinem Namen: die `Text`-Eintraege und je
-/// `Zahlwort` beide Formen.
+/// Jeder Eintrag einer Sprache mit seinem Namen: die `Text`-Eintraege, je
+/// `Zahlwort` beide Formen, und seit Schritt 5 des Plans die Namen der
+/// Funktionen der Belegung ueber beide `KENNUNGEN`, damit die
+/// Typografieproben auch sie sehen (das franzoesische „Rendez-vous :“ etwa
+/// braucht sein geschuetztes Leerzeichen wie jeder andere Eintrag).
 fn eintraege(sprache: Sprache) -> Vec<(String, &'static str)> {
     let mut alle = Vec::new();
     for schluessel in Text::ALLE {
@@ -34,6 +38,18 @@ fn eintraege(sprache: Sprache) -> Vec<(String, &'static str)> {
         let (einzahl, mehrzahl) = sprache.zahlwort(schluessel);
         alle.push((format!("{schluessel:?} (Einzahl)"), einzahl));
         alle.push((format!("{schluessel:?} (Mehrzahl)"), mehrzahl));
+    }
+    for (kommando, _) in Kommando::KENNUNGEN {
+        alle.push((
+            format!("{kommando:?}"),
+            sprache.funktionsname(Funktionsschluessel::Kommando(kommando)),
+        ));
+    }
+    for (zugestellt, _) in Zugestellt::KENNUNGEN {
+        alle.push((
+            format!("{zugestellt:?}"),
+            sprache.funktionsname(Funktionsschluessel::Zugestellt(zugestellt)),
+        ));
     }
     alle
 }

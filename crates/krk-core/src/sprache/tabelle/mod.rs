@@ -91,6 +91,38 @@
 //! | Tresor, Kopf der Datei (`secrets.txt`) | en-tête du fichier | header of the file |
 //! | Repository, Commit, Branch (Git) | dépôt, commit, branche | repository, commit, branch |
 //! | abgeloest (HEAD) | détaché | detached |
+//! | Tab (eines Dateifensters) | onglet | tab |
+//! | markieren (Eintraege fuer einen Vorgang) | marquer | mark |
+//! | Marke (die Spalte des Git-Status) | marque | mark |
+//! | Fokus | focus | focus |
+//! | Standardprogramm | application par défaut | default application |
+//! | Terminal | Terminal | Terminal |
+//! | Roh- und Formatansicht | vue brute et vue formatée | raw and formatted view |
+//! | Neuerungen | nouveautés | What’s New |
+//! | Instanz | instance | instance |
+//! | Bild (einer Bildfolge) | image | image |
+//! | PIN | code PIN | PIN |
+//! | laufende Operation | opération en cours | running operation |
+//! | im Stapel (umbenennen) | par lot | batch |
+//! | Sortierrichtung | ordre de tri | sort order |
+//! | versteckte Dateien | fichiers cachés | hidden files |
+//! | Pfad | chemin | path |
+//! | Bildschirmseite | page d’écran | screen page |
+//! | Bereich (der Fensterzeile) | zone | area |
+//!
+//! # Die Befehlsnamen
+//!
+//! Jede Datei traegt daneben `kommandoname(Kommando)` und
+//! `zugestellt_name(Zugestellt)`, je ein `match` ohne Auffangzweig ueber die
+//! Aufzaehlungen aus `crate::tasten::belegung`; ein neues Kommando haelt den
+//! Bau in allen drei Dateien an, bis es seinen Namen hat. Die deutschen Namen
+//! sind die, die `resources/default-keymap.toml` bis zum Schritt 5 des Plans
+//! unter `name` trug, Zeichen fuer Zeichen. Die englischen Namen stehen in
+//! Title Case, weil sie Eintraege des Hauptmenues sind; die franzoesischen in
+//! Satzform, wie macOS seine franzoesischen Menues fuehrt. Je Sprache tragen
+//! keine zwei Funktionen denselben Namen; das haelt
+//! `keine_zwei_funktionen_tragen_in_einer_sprache_denselben_namen` in
+//! `crates/krk-core/tests/belegung.rs`.
 //!
 //! # Typografie
 //!

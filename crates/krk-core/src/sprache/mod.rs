@@ -65,6 +65,19 @@
 //! Sprachen werden deshalb ueber die Formen mit ausdruecklicher Sprache
 //! ([`Sprache::text`], [`Sprache::zahlwort`]) an den Tabellen geprueft.
 //!
+//! # Die Befehlsnamen
+//!
+//! Die Namen der Funktionen der Belegung sind Eintraege derselben Tabelle,
+//! geschluesselt ueber die Aufzaehlungen, die es schon gibt:
+//! `kommandoname(Kommando)` und `zugestellt_name(Zugestellt)` je Sprache,
+//! beide ohne Auffangzweig, zusammengefasst in [`funktionsname`] ueber den
+//! [`Funktionsschluessel`]. Ein neues Kommando haelt damit den Bau an, bis es
+//! drei Namen hat, und den drei Pflichtstellen eines neuen Kommandos kommt
+//! keine vierte hinzu, die nichts hielte. Die deutschen Namen sind die, die
+//! `resources/default-keymap.toml` bis zu dieser Arbeit unter `name` trug,
+//! Zeichen fuer Zeichen; das Feld ist in der Nutzerdatei seitdem eine
+//! Duldung (Modulkopf von `crate::tasten::belegung`).
+//!
 //! # Zahlen
 //!
 //! [`Sprache::zahl`] gruppiert Tausender (Deutsch Punkt, Franzoesisch ein
@@ -78,6 +91,8 @@
 
 use std::fmt;
 use std::sync::OnceLock;
+
+use crate::tasten::belegung::Funktionsschluessel;
 
 pub mod schluessel;
 mod tabelle;
@@ -233,6 +248,31 @@ impl Sprache {
         }
     }
 
+    /// Der Name einer Funktion der Belegung in dieser Sprache.
+    #[must_use]
+    pub const fn funktionsname(self, schluessel: Funktionsschluessel) -> &'static str {
+        match (self, schluessel) {
+            (Sprache::De, Funktionsschluessel::Kommando(kommando)) => {
+                tabelle::de::kommandoname(kommando)
+            }
+            (Sprache::De, Funktionsschluessel::Zugestellt(zugestellt)) => {
+                tabelle::de::zugestellt_name(zugestellt)
+            }
+            (Sprache::Fr, Funktionsschluessel::Kommando(kommando)) => {
+                tabelle::fr::kommandoname(kommando)
+            }
+            (Sprache::Fr, Funktionsschluessel::Zugestellt(zugestellt)) => {
+                tabelle::fr::zugestellt_name(zugestellt)
+            }
+            (Sprache::En, Funktionsschluessel::Kommando(kommando)) => {
+                tabelle::en::kommandoname(kommando)
+            }
+            (Sprache::En, Funktionsschluessel::Zugestellt(zugestellt)) => {
+                tabelle::en::zugestellt_name(zugestellt)
+            }
+        }
+    }
+
     /// Ein Satz mit eingesetzten Platzhaltern in dieser Sprache.
     #[must_use]
     pub fn satz(self, schluessel: Text, werte: &[(&str, &dyn fmt::Display)]) -> String {
@@ -328,6 +368,13 @@ pub fn zahl(wert: usize) -> String {
 #[must_use]
 pub fn menge(bytes: u64) -> String {
     geltende().menge(bytes)
+}
+
+/// Der Name einer Funktion der Belegung in der geltenden Sprache; siehe den
+/// Modulkopf unter „Die Befehlsnamen“.
+#[must_use]
+pub fn funktionsname(schluessel: Funktionsschluessel) -> &'static str {
+    geltende().funktionsname(schluessel)
 }
 
 /// Eine Ziffernfolge mit einem Trenner vor jeder Dreiergruppe.

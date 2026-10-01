@@ -5,6 +5,7 @@
 //! [`super`].
 
 use super::super::{Text, Zahlwort};
+use crate::tasten::belegung::{Kommando, Zugestellt};
 
 /// Der englische Eintrag zu einem Schluessel.
 pub(in super::super) const fn text(schluessel: Text) -> &'static str {
@@ -354,6 +355,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "“{zusatztaste}” comes after “{hinter}”; the order is {reihenfolge}"
         }
         Text::TasteUnbekannterName => "“{text}” is not a key name of this notation",
+        Text::FunktionsnameMitKennung => "“{name}” ({kennung})",
+        Text::BelegungKonflikt => {
+            "the combination {kombination} already belongs to the function {andere} and cannot be assigned to the function {bewerber} as well"
+        }
+        Text::BelegungSchreibweise => {
+            "the function {kennung} carries the combination “{text}”: {fehler}"
+        }
+        Text::BelegungUnbekannteFunktion => "KRK knows no function named {kennung}",
+        Text::BelegungFunktionDoppelt => "the function {kennung} appears twice",
     }
 }
 
@@ -371,5 +381,128 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} new", "{n} new"),
         Zahlwort::MarkeKonflikt => ("{n} in conflict", "{n} in conflict"),
         Zahlwort::MarkeUmbenannt => ("{n} renamed", "{n} renamed"),
+    }
+}
+
+/// Der englische Name eines Kommandos: der Eintrag des Hauptmenues, der
+/// Belegungsansicht und jeder Konfliktmeldung.
+pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str {
+    match schluessel {
+        Kommando::AuswahlHoch => "Move Selection Up One Entry",
+        Kommando::AuswahlRunter => "Move Selection Down One Entry",
+        Kommando::SeiteHoch => "Move Selection Up One Screen Page",
+        Kommando::SeiteRunter => "Move Selection Down One Screen Page",
+        Kommando::Listenanfang => "Go to Top of List",
+        Kommando::Listenende => "Go to End of List",
+        Kommando::Oeffnen => "Enter Selected Folder",
+        Kommando::OrdnerAufwaerts => "Go to Parent Folder",
+        Kommando::OrdnerDerDatei => "Show Folder of Displayed File",
+        Kommando::OrdnerAngleichen => "Set Other File Pane to This Folder",
+        Kommando::Pfadeingabe => "Enter Path and Go There",
+        Kommando::MarkierungUmschalten => "Mark Entry and Move to Next",
+        Kommando::AlleMarkieren => "Mark All Entries",
+        Kommando::MarkierungAufheben => "Clear All Marks",
+        Kommando::MarkierungUmkehren => "Invert Marks",
+        Kommando::SortierungName => "Sort by Name",
+        Kommando::SortierungGroesse => "Sort by Size",
+        Kommando::SortierungDatum => "Sort by Date Modified",
+        Kommando::SortierungTyp => "Sort by Type",
+        Kommando::SortierrichtungUmkehren => "Reverse Sort Order",
+        Kommando::VersteckteUmschalten => "Show or Hide Hidden Files",
+        Kommando::SpalteGroesseUmschalten => "Show or Hide Size Column",
+        Kommando::SpalteDatumUmschalten => "Show or Hide Date Modified Column",
+        Kommando::SpalteTypUmschalten => "Show or Hide Type Column",
+        Kommando::TiefeSucheUmschalten => "Turn Deep Search On or Off",
+        Kommando::InhaltssucheUmschalten => "Turn Content Search On or Off",
+        Kommando::ZwischenablageSpringen => "Go to Clipboard Contents",
+        Kommando::ZwischenablageAnsehen => "Show Clipboard",
+        Kommando::TabNeu => "Open New Tab",
+        Kommando::TabSchliessen => "Close Active Tab",
+        Kommando::TabNaechster => "Next Tab",
+        Kommando::TabVoriger => "Previous Tab",
+        Kommando::FensterWechseln => "Switch Active File Pane",
+        Kommando::LeisteUmschalten => "Show or Hide Bookmarks and Volumes Bar",
+        Kommando::ErstesFensterUmschalten => "Show or Hide Left File Pane",
+        Kommando::ZweitesFensterUmschalten => "Show or Hide Second File Pane",
+        Kommando::VorschauUmschalten => "Show or Hide Preview",
+        Kommando::FensterEinblenden => "Show Window",
+        Kommando::FensterSchliessen => "Close Window",
+        Kommando::BereichVerbreitern => "Widen Active Area",
+        Kommando::BereichVerschmaelern => "Narrow Active Area",
+        Kommando::Kopieren => "Copy to Other Pane",
+        Kommando::Verschieben => "Move to Other Pane",
+        Kommando::InPapierkorb => "Move to Trash",
+        Kommando::Abbrechen => "Cancel Running Operation",
+        Kommando::OrdnerAnlegen => "New Folder",
+        Kommando::DateiAnlegen => "New Empty File",
+        Kommando::UmbenennenStapel => "Batch Rename",
+        Kommando::Umbenennen => "Rename",
+        Kommando::TerminalOeffnen => "Open Folder in Terminal",
+        Kommando::OrdnerpfadKopieren => "Copy Path of Displayed Folder",
+        Kommando::EintragspfadKopieren => "Copy Path of Entry",
+        Kommando::MitStandardprogrammOeffnen => "Open with Default Application",
+        Kommando::Teilen => "Share",
+        Kommando::LesezeichenAnlegen => "Add Bookmark",
+        Kommando::LesezeichenUmbenennen => "Rename Bookmark",
+        Kommando::LesezeichenLoeschen => "Delete Bookmark",
+        Kommando::LesezeichenHoch => "Move Bookmark Up",
+        Kommando::LesezeichenRunter => "Move Bookmark Down",
+        Kommando::FokusLeiste => "Focus Bookmarks and Volumes Bar",
+        Kommando::FokusDateifenster => "Focus Back to File Pane",
+        Kommando::FokusVorschau => "Focus Preview",
+        Kommando::Bearbeiten => "Edit",
+        Kommando::EditorRundweg => "To Editor and Back",
+        Kommando::FokusEditor => "Focus Editor",
+        Kommando::EditorSchliessen => "Close Editor",
+        Kommando::EditorUmschalten => "Show or Hide Editor",
+        Kommando::EditorAnsichtUmschalten => "Switch Between Raw and Formatted View",
+        Kommando::EditorSichern => "Save",
+        Kommando::EditorZeileSpringen => "Go to Line",
+        Kommando::EditorSuchen => "Find in Text",
+        Kommando::EditorWeitersuchen => "Find Next",
+        Kommando::EditorRueckwaertsSuchen => "Find Previous",
+        Kommando::EditorErsetzen => "Replace",
+        Kommando::EditorAlleErsetzen => "Replace All",
+        Kommando::QuicknoteUmschalten => "Open or Close Quicknote",
+        Kommando::QuicknoteKopieren => "Copy Quicknote and Close",
+        Kommando::QuicknoteLeeren => "Clear Quicknote",
+        Kommando::EintragHinzufuegen => "Add Entry",
+        Kommando::EintragBearbeiten => "Edit Entry",
+        Kommando::EintragHoch => "Move Entry Up",
+        Kommando::EintragRunter => "Move Entry Down",
+        Kommando::EintragLoeschen => "Delete Entry",
+        Kommando::AufgabeAbhaken => "Check Off or Reopen Task",
+        Kommando::PinAendern => "Change PIN",
+        Kommando::TermineRichtungUmkehren => "Appointments: Reverse Sort Order",
+        Kommando::BelegungAnsehen => "Show Key Bindings",
+        Kommando::BelegungsdateiAnsehen => "Open Key Bindings File",
+        Kommando::Beenden => "Quit KRK",
+        Kommando::WeitereInstanz => "Launch Another Instance",
+        Kommando::Notizordner => "Open Notes Folder",
+        Kommando::OrtWaehlen => "Choose Location…",
+        Kommando::VorschauVergroessern => "Zoom In Preview",
+        Kommando::VorschauVerkleinern => "Zoom Out Preview",
+        Kommando::VorschauAusgangsgroesse => "Preview at Actual Size",
+        Kommando::GitBereichUmschalten => "Show or Hide Git Area",
+        Kommando::FokusGit => "Focus Git Area",
+        Kommando::SpalteMarkeUmschalten => "Show or Hide Mark Column",
+        Kommando::NeuerungenZeigen => "Show What’s New",
+        Kommando::Werkseinstellungen => "Reset to Factory Settings…",
+        Kommando::BildVor => "Next Image",
+        Kommando::BildZurueck => "Previous Image",
+        Kommando::ZumBild => "Go to Displayed Image",
+    }
+}
+
+/// Der englische Name einer vom Hauptmenue zugestellten Funktion.
+pub(in super::super) const fn zugestellt_name(schluessel: Zugestellt) -> &'static str {
+    match schluessel {
+        Zugestellt::FilterEinfuegen => "Paste into Filter",
+        Zugestellt::TextAusschneiden => "Cut",
+        Zugestellt::TextKopieren => "Copy",
+        Zugestellt::TextEinfuegen => "Paste",
+        Zugestellt::TextAllesAuswaehlen => "Select All",
+        Zugestellt::TextRueckgaengig => "Undo",
+        Zugestellt::TextWiederholen => "Redo",
     }
 }

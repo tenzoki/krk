@@ -10,8 +10,16 @@
 //! nennt, den Nutzer suchen laesst. Und ein Konflikt entsteht nur zwischen
 //! **verschiedenen** Funktionen: dass F5 und `shift+cmd+k` beide das Kopieren
 //! ausloesen, ist der ausgelieferte Normalfall und keine Kollision.
+//!
+//! Die Saetze kommen aus der Sprachtabelle (`crate::sprache`), in der Sprache,
+//! die beim Formatieren gilt; der Name der Funktion steht im
+//! [`Funktionsname`] in der Sprache, die galt, als der Konflikt entstand.
+//! Beide Zeitpunkte liegen im selben Prozess, und die Sprache wechselt in
+//! einem Prozess nicht.
 
 use std::fmt;
+
+use crate::sprache::{Text, satz};
 
 use super::parser::Kombination;
 
@@ -24,7 +32,8 @@ use super::parser::Kombination;
 pub struct Funktionsname {
     /// Der maschinenlesbare Bezeichner aus der Belegungsdatei.
     pub kennung: String,
-    /// Die deutsche Beschriftung fuer die Belegungsansicht.
+    /// Die Beschriftung aus der Sprachtabelle, in der Sprache zum Zeitpunkt
+    /// des Konflikts.
     pub name: String,
 }
 
@@ -41,7 +50,10 @@ impl Funktionsname {
 
 impl fmt::Display for Funktionsname {
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(ausgabe, "\"{}\" ({})", self.name, self.kennung)
+        ausgabe.write_str(&satz(
+            Text::FunktionsnameMitKennung,
+            &[("name", &self.name), ("kennung", &self.kennung)],
+        ))
     }
 }
 
@@ -58,12 +70,14 @@ pub struct Konflikt {
 
 impl fmt::Display for Konflikt {
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            ausgabe,
-            "die Kombination {} gehört schon der Funktion {} und lässt sich nicht \
-             zusätzlich der Funktion {} zuweisen",
-            self.kombination, self.andere, self.bewerber
-        )
+        ausgabe.write_str(&satz(
+            Text::BelegungKonflikt,
+            &[
+                ("kombination", &self.kombination),
+                ("andere", &self.andere),
+                ("bewerber", &self.bewerber),
+            ],
+        ))
     }
 }
 

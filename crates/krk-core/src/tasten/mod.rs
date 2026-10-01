@@ -38,8 +38,8 @@ pub mod normalisierung;
 pub mod parser;
 
 pub use belegung::{
-    Belegung, Belegungsdatei, Belegungsfehler, Funktion, Kommando, Nachschlag, Seite,
-    Wirkungsbereich, Zuweisungsfehler,
+    Belegung, Belegungsdatei, Belegungsfehler, Funktion, Funktionsschluessel, Kommando, Nachschlag,
+    Seite, Wirkungsbereich, Zugestellt, Zuweisungsfehler,
 };
 pub use konflikt::{Funktionsname, Konflikt};
 pub use normalisierung::{ModMaske, normalisieren};

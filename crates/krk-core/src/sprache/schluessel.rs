@@ -498,11 +498,24 @@ pub enum Text {
     TasteReihenfolgeVerletzt,
     /// `Schreibfehler::UnbekannterTastenname`; `{text}`.
     TasteUnbekannterName,
+    /// `Funktionsname` in jeder Konfliktmeldung: der Name der Funktion mit
+    /// ihrer Kennung; `{name}`, `{kennung}`.
+    FunktionsnameMitKennung,
+    /// `Konflikt`: eine Kombination, die zwei Funktionen beanspruchen;
+    /// `{kombination}`, `{andere}`, `{bewerber}`.
+    BelegungKonflikt,
+    /// `Belegungsfehler::Schreibweise`; `{kennung}`, `{text}`, `{fehler}`.
+    BelegungSchreibweise,
+    /// `Belegungsfehler::UnbekannteFunktion` und
+    /// `Zuweisungsfehler::UnbekannteFunktion`; `{kennung}`.
+    BelegungUnbekannteFunktion,
+    /// `Belegungsfehler::FunktionDoppelt`; `{kennung}`.
+    BelegungFunktionDoppelt,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 203] = [
+    pub const ALLE: [Text; 208] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -706,6 +719,11 @@ impl Text {
         Text::TasteZusatztasteDoppelt,
         Text::TasteReihenfolgeVerletzt,
         Text::TasteUnbekannterName,
+        Text::FunktionsnameMitKennung,
+        Text::BelegungKonflikt,
+        Text::BelegungSchreibweise,
+        Text::BelegungUnbekannteFunktion,
+        Text::BelegungFunktionDoppelt,
     ];
 }
 

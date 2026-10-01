@@ -7,6 +7,7 @@
 //! Umlautregel vom 260907 fuer nutzersichtbaren Text verlangt.
 
 use super::super::{Text, Zahlwort};
+use crate::tasten::belegung::{Kommando, Zugestellt};
 
 /// Der deutsche Eintrag zu einem Schluessel.
 pub(in super::super) const fn text(schluessel: Text) -> &'static str {
@@ -370,6 +371,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "„{zusatztaste}“ steht hinter „{hinter}“; die Reihenfolge ist {reihenfolge}"
         }
         Text::TasteUnbekannterName => "„{text}“ ist kein Tastenname dieser Schreibweise",
+        Text::FunktionsnameMitKennung => "„{name}“ ({kennung})",
+        Text::BelegungKonflikt => {
+            "die Kombination {kombination} gehört schon der Funktion {andere} und lässt sich nicht zusätzlich der Funktion {bewerber} zuweisen"
+        }
+        Text::BelegungSchreibweise => {
+            "die Funktion {kennung} trägt die Kombination „{text}“: {fehler}"
+        }
+        Text::BelegungUnbekannteFunktion => "KRK kennt keine Funktion namens {kennung}",
+        Text::BelegungFunktionDoppelt => "die Funktion {kennung} steht zweimal",
     }
 }
 
@@ -387,5 +397,128 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} neu", "{n} neu"),
         Zahlwort::MarkeKonflikt => ("{n} in Konflikt", "{n} in Konflikt"),
         Zahlwort::MarkeUmbenannt => ("{n} umbenannt", "{n} umbenannt"),
+    }
+}
+
+/// Der deutsche Name eines Kommandos: der Eintrag des Hauptmenues, der
+/// Belegungsansicht und jeder Konfliktmeldung.
+pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str {
+    match schluessel {
+        Kommando::AuswahlHoch => "Auswahl einen Eintrag nach oben",
+        Kommando::AuswahlRunter => "Auswahl einen Eintrag nach unten",
+        Kommando::SeiteHoch => "Auswahl eine Bildschirmseite nach oben",
+        Kommando::SeiteRunter => "Auswahl eine Bildschirmseite nach unten",
+        Kommando::Listenanfang => "An den Anfang der Liste",
+        Kommando::Listenende => "An das Ende der Liste",
+        Kommando::Oeffnen => "In den ausgewählten Ordner einsteigen",
+        Kommando::OrdnerAufwaerts => "In den übergeordneten Ordner",
+        Kommando::OrdnerDerDatei => "Ordner der angezeigten Datei zeigen",
+        Kommando::OrdnerAngleichen => "Anderes Dateifenster auf diesen Ordner stellen",
+        Kommando::Pfadeingabe => "Pfad eingeben und dorthin springen",
+        Kommando::MarkierungUmschalten => "Eintrag markieren und zum nächsten rücken",
+        Kommando::AlleMarkieren => "Alle Einträge markieren",
+        Kommando::MarkierungAufheben => "Jede Markierung aufheben",
+        Kommando::MarkierungUmkehren => "Markierung umkehren",
+        Kommando::SortierungName => "Nach Name sortieren",
+        Kommando::SortierungGroesse => "Nach Größe sortieren",
+        Kommando::SortierungDatum => "Nach Änderungsdatum sortieren",
+        Kommando::SortierungTyp => "Nach Typ sortieren",
+        Kommando::SortierrichtungUmkehren => "Sortierrichtung umkehren",
+        Kommando::VersteckteUmschalten => "Versteckte Dateien ein- und ausblenden",
+        Kommando::SpalteGroesseUmschalten => "Spalte Größe ein- und ausblenden",
+        Kommando::SpalteDatumUmschalten => "Spalte Änderungsdatum ein- und ausblenden",
+        Kommando::SpalteTypUmschalten => "Spalte Typ ein- und ausblenden",
+        Kommando::TiefeSucheUmschalten => "Tiefe Suche ein- und ausschalten",
+        Kommando::InhaltssucheUmschalten => "Inhaltssuche ein- und ausschalten",
+        Kommando::ZwischenablageSpringen => "Zum Inhalt der Zwischenablage springen",
+        Kommando::ZwischenablageAnsehen => "Zwischenablage ansehen",
+        Kommando::TabNeu => "Neuen Tab öffnen",
+        Kommando::TabSchliessen => "Aktiven Tab schließen",
+        Kommando::TabNaechster => "Zum nächsten Tab",
+        Kommando::TabVoriger => "Zum vorigen Tab",
+        Kommando::FensterWechseln => "Aktives Dateifenster wechseln",
+        Kommando::LeisteUmschalten => "Lesezeichen- und Geräteleiste ein- und ausblenden",
+        Kommando::ErstesFensterUmschalten => "Linkes Dateifenster ein- und ausblenden",
+        Kommando::ZweitesFensterUmschalten => "Zweites Dateifenster ein- und ausblenden",
+        Kommando::VorschauUmschalten => "Vorschau anzeigen und ausblenden",
+        Kommando::FensterEinblenden => "Fenster einblenden",
+        Kommando::FensterSchliessen => "Fenster schließen",
+        Kommando::BereichVerbreitern => "Aktiven Bereich verbreitern",
+        Kommando::BereichVerschmaelern => "Aktiven Bereich verschmälern",
+        Kommando::Kopieren => "In das andere Fenster kopieren",
+        Kommando::Verschieben => "In das andere Fenster verschieben",
+        Kommando::InPapierkorb => "In den Papierkorb räumen",
+        Kommando::Abbrechen => "Laufende Operation abbrechen",
+        Kommando::OrdnerAnlegen => "Ordner anlegen",
+        Kommando::DateiAnlegen => "Leere Datei anlegen",
+        Kommando::UmbenennenStapel => "Im Stapel umbenennen",
+        Kommando::Umbenennen => "Umbenennen",
+        Kommando::TerminalOeffnen => "Ordner im Terminal öffnen",
+        Kommando::OrdnerpfadKopieren => "Pfad des angezeigten Ordners kopieren",
+        Kommando::EintragspfadKopieren => "Pfad des Eintrags kopieren",
+        Kommando::MitStandardprogrammOeffnen => "Mit dem Standardprogramm öffnen",
+        Kommando::Teilen => "Teilen",
+        Kommando::LesezeichenAnlegen => "Lesezeichen anlegen",
+        Kommando::LesezeichenUmbenennen => "Lesezeichen umbenennen",
+        Kommando::LesezeichenLoeschen => "Lesezeichen löschen",
+        Kommando::LesezeichenHoch => "Lesezeichen nach oben verschieben",
+        Kommando::LesezeichenRunter => "Lesezeichen nach unten verschieben",
+        Kommando::FokusLeiste => "Fokus in die Lesezeichen- und Geräteleiste",
+        Kommando::FokusDateifenster => "Fokus zurück in das Dateifenster",
+        Kommando::FokusVorschau => "Fokus in das Vorschaufenster",
+        Kommando::Bearbeiten => "Bearbeiten",
+        Kommando::EditorRundweg => "In den Editor und zurück",
+        Kommando::FokusEditor => "Fokus in den Editor",
+        Kommando::EditorSchliessen => "Editor schließen",
+        Kommando::EditorUmschalten => "Editor ein- und ausblenden",
+        Kommando::EditorAnsichtUmschalten => "Zwischen Roh- und Formatansicht wechseln",
+        Kommando::EditorSichern => "Sichern",
+        Kommando::EditorZeileSpringen => "Zu Zeile springen",
+        Kommando::EditorSuchen => "Im Text suchen",
+        Kommando::EditorWeitersuchen => "Weitersuchen",
+        Kommando::EditorRueckwaertsSuchen => "Rückwärts weitersuchen",
+        Kommando::EditorErsetzen => "Ersetzen",
+        Kommando::EditorAlleErsetzen => "Alle ersetzen",
+        Kommando::QuicknoteUmschalten => "Quicknote öffnen und schließen",
+        Kommando::QuicknoteKopieren => "Quicknote kopieren und schließen",
+        Kommando::QuicknoteLeeren => "Quicknote leeren",
+        Kommando::EintragHinzufuegen => "Eintrag hinzufügen",
+        Kommando::EintragBearbeiten => "Eintrag bearbeiten",
+        Kommando::EintragHoch => "Eintrag nach oben",
+        Kommando::EintragRunter => "Eintrag nach unten",
+        Kommando::EintragLoeschen => "Eintrag löschen",
+        Kommando::AufgabeAbhaken => "Aufgabe abhaken oder öffnen",
+        Kommando::PinAendern => "PIN ändern",
+        Kommando::TermineRichtungUmkehren => "Termine: Sortierrichtung umkehren",
+        Kommando::BelegungAnsehen => "Tastaturbelegung anzeigen",
+        Kommando::BelegungsdateiAnsehen => "Tastaturdefinition öffnen",
+        Kommando::Beenden => "KRK beenden",
+        Kommando::WeitereInstanz => "Weitere Instanz starten",
+        Kommando::Notizordner => "Notizordner öffnen",
+        Kommando::OrtWaehlen => "Ort wählen…",
+        Kommando::VorschauVergroessern => "Vorschau vergrößern",
+        Kommando::VorschauVerkleinern => "Vorschau verkleinern",
+        Kommando::VorschauAusgangsgroesse => "Vorschau in Ausgangsgröße",
+        Kommando::GitBereichUmschalten => "Git-Bereich ein- und ausblenden",
+        Kommando::FokusGit => "Fokus in den Git-Bereich",
+        Kommando::SpalteMarkeUmschalten => "Spalte Marke ein- und ausblenden",
+        Kommando::NeuerungenZeigen => "Neuerungen anzeigen",
+        Kommando::Werkseinstellungen => "Auf Werkseinstellungen zurücksetzen…",
+        Kommando::BildVor => "Nächstes Bild",
+        Kommando::BildZurueck => "Voriges Bild",
+        Kommando::ZumBild => "Zum angezeigten Bild springen",
+    }
+}
+
+/// Der deutsche Name einer vom Hauptmenue zugestellten Funktion.
+pub(in super::super) const fn zugestellt_name(schluessel: Zugestellt) -> &'static str {
+    match schluessel {
+        Zugestellt::FilterEinfuegen => "In den Filter einfügen",
+        Zugestellt::TextAusschneiden => "Ausschneiden",
+        Zugestellt::TextKopieren => "Kopieren",
+        Zugestellt::TextEinfuegen => "Einfügen",
+        Zugestellt::TextAllesAuswaehlen => "Alles auswählen",
+        Zugestellt::TextRueckgaengig => "Rückgängig",
+        Zugestellt::TextWiederholen => "Wiederholen",
     }
 }

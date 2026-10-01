@@ -932,15 +932,20 @@ sein Ziel. Ein weiterer Verweis, den man selbst anderswo auf denselben Ordner
 setzt, wird nicht erkannt: dort erscheinen `notes.txt` und `tasks.txt` wie
 gewöhnliche Textdateien, und verloren geht nichts.
 
-**Mit einer eigenen `keymap.toml` heißt der Menüeintrag weiter „Notizzettel
-anzeigen“.** Der Name kommt aus der eigenen Datei, und die Meldung beim Start
-vergleicht allein die Kennungen der Befehle. Die Kennung ist geblieben, also
-meldet sie nichts. `f2` und `cmd+k` führen trotzdem in den Notizordner, und der
-Eintrag steht unter dem alten Namen im Menü „Home“. **Einen Handgriff an der
-eigenen Belegung braucht das nicht.** Insbesondere ist `cmd+r` in der
-Belegungsansicht dafür nicht nötig: es brächte zwar den neuen Namen, setzt aber
-die ganze eigene Belegung auf die Auslieferungsfassung zurück, also auch jede
-eigene Tastenzuweisung.
+**Auch mit einer eigenen `keymap.toml` heißt der Menüeintrag „Notizordner
+öffnen“.** Der Name eines Befehls kommt aus KRK selbst, in der Sprache, die
+macOS für KRK gewählt hat, und nicht aus der eigenen Datei: ein Feld `name` in
+`keymap.toml` wird gelesen und geduldet, aber nie angezeigt, und beim nächsten
+Sichern der Belegung schreibt KRK es in der geltenden Sprache neu, damit die
+Datei lesbar bleibt, wenn man sie über „Tastaturdefinition öffnen“ ansieht.
+Eine `keymap.toml` aus einer früheren Fassung, die noch „Notizzettel anzeigen“
+trägt, lädt deshalb ohne Fehler und ohne Meldung; die Meldung beim Start
+vergleicht allein die Kennungen der Befehle, und die Kennung ist geblieben.
+`f2` und `cmd+k` führen in den Notizordner, und der Eintrag steht unter dem
+heutigen Namen im Menü „Home“. **Einen Handgriff an der eigenen Belegung
+braucht das nicht**, und `cmd+r` in der Belegungsansicht ist dafür nicht nötig:
+es setzt die ganze eigene Belegung auf die Auslieferungsfassung zurück, also
+auch jede eigene Tastenzuweisung, und am Namen änderte es nichts.
 
 ### Der Ort des Notizordners
 

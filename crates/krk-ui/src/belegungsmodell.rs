@@ -68,7 +68,9 @@
 //! den Namen auf die Aufschrift gelegt. `die_beschriftung_nennt_die_taste_auf_
 //! einer_deutschen_tastatur` haelt es fest.
 
-use krk_core::tasten::{Belegung, Funktion, Kombination, Kommando, Tastendruck};
+use krk_core::tasten::{
+    Belegung, Funktion, Funktionsschluessel, Kombination, Kommando, Tastendruck, Zugestellt,
+};
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
 
 /// Die Funktionsbereiche der Belegungsansicht, in der Reihenfolge der
@@ -229,15 +231,18 @@ impl Funktionsbereich {
     }
 }
 
-/// Der Funktionsbereich einer Funktion, aus ihrer Kennung.
+/// Der Funktionsbereich einer Funktion, aus ihrem Schluessel.
 ///
-/// **Die eine Stelle der Zuordnung.** Fuer jede Funktion mit einem
-/// [`Kommando`] antwortet die vollstaendige Fallunterscheidung in
-/// [`bereich_des_kommandos`]; die Funktionen ohne Kommando stehen hier mit
-/// Namen, und es sind genau die, die nie eines bekommen: die vom Menue
-/// zugestellten. `None` heisst: die Zuordnung kennt diese Kennung nicht — das
-/// faengt die Pruefung `jede_kennung_hat_einen_funktionsbereich`, bevor es eine
-/// Ansicht erreicht.
+/// **Die eine Stelle der Zuordnung, und seit der Sprachtabelle haelt sie der
+/// Uebersetzer ganz.** Fuer jede Funktion mit einem [`Kommando`] antwortet die
+/// vollstaendige Fallunterscheidung in [`bereich_des_kommandos`], fuer jede
+/// vom Menue zugestellte die in [`bereich_der_zustellung`]; beide ohne
+/// Auffangzweig, und eine dritte Art von Funktion gibt es nicht
+/// ([`Funktionsschluessel`]). Bis zu dieser Arbeit verzweigte die zweite
+/// Haelfte ueber Kennungszeichenketten mit `None` als Auffangzweig, und die
+/// Probe `jede_kennung_hat_einen_funktionsbereich` fing eine vergessene
+/// Kennung, bevor sie eine Ansicht erreichte; heute uebersetzt eine neue
+/// zugestellte Funktion nicht, bevor sie hier ihren Bereich hat.
 ///
 /// **Zugestellt heisst nicht Textbefehl, und seit dem 260907 faellt das hier
 /// auf.** Die sechs Textbefehle des Menues „Bearbeiten" gehen nach
@@ -252,19 +257,24 @@ impl Funktionsbereich {
 /// reserviert war und kein Kommando trug. Seit S5 traegt er
 /// [`Kommando::Bearbeiten`], der Zweig darueber greift, und eine Zeile hier
 /// behauptete eine zweite Wahrheit ueber denselben Namen.
-pub fn bereich(kennung: &str) -> Option<Funktionsbereich> {
-    if let Some(kommando) = Kommando::aus_kennung(kennung) {
-        return Some(bereich_des_kommandos(kommando));
+pub const fn bereich(schluessel: Funktionsschluessel) -> Funktionsbereich {
+    match schluessel {
+        Funktionsschluessel::Kommando(kommando) => bereich_des_kommandos(kommando),
+        Funktionsschluessel::Zugestellt(zugestellt) => bereich_der_zustellung(zugestellt),
     }
-    match kennung {
-        "text_ausschneiden"
-        | "text_kopieren"
-        | "text_einfuegen"
-        | "text_alles_auswaehlen"
-        | "text_rueckgaengig"
-        | "text_wiederholen" => Some(Funktionsbereich::Textbefehle),
-        "filter_einfuegen" => Some(Funktionsbereich::Dateilisting),
-        _ => None,
+}
+
+/// Der Funktionsbereich jeder vom Menue zugestellten Funktion, ohne
+/// Auffangzweig; die zweite Haelfte von [`bereich`].
+const fn bereich_der_zustellung(zugestellt: Zugestellt) -> Funktionsbereich {
+    match zugestellt {
+        Zugestellt::TextAusschneiden
+        | Zugestellt::TextKopieren
+        | Zugestellt::TextEinfuegen
+        | Zugestellt::TextAllesAuswaehlen
+        | Zugestellt::TextRueckgaengig
+        | Zugestellt::TextWiederholen => Funktionsbereich::Textbefehle,
+        Zugestellt::FilterEinfuegen => Funktionsbereich::Dateilisting,
     }
 }
 
@@ -990,25 +1000,16 @@ fn gliederung(belegung: &Belegung) -> Vec<Zeile> {
 /// Ein Bereich ohne Funktion erscheint nicht in der Liste; in der
 /// Auslieferungsbelegung ist jeder Bereich besetzt.
 ///
-/// Eine Funktion ohne Bereich waere ein Programmierfehler — eine neue Funktion
-/// ist erst vollstaendig, wenn [`bereich`] sie einordnet, und die Pruefung
-/// `jede_kennung_hat_einen_funktionsbereich` haelt das fest. Sie still
-/// auszulassen hiesse, eine Funktion aus der Ansicht **und** aus der Datei
-/// verschwinden zu lassen, die beide vollstaendig sein sollen; deshalb bricht
-/// der Bau hier laut ab.
+/// Eine Funktion ohne Bereich gibt es seit der Sprachtabelle nicht mehr:
+/// [`bereich`] antwortet fuer jeden [`Funktionsschluessel`] ohne Auffangzweig,
+/// und eine neue Funktion uebersetzt nicht, bevor sie eingeordnet ist. Dass
+/// jede Funktion der Auslieferung in genau einer Gruppe steht, haelt die
+/// Pruefung `jede_kennung_hat_einen_funktionsbereich` weiter am Ergebnis.
 pub fn nach_bereichen(belegung: &Belegung) -> Vec<(Funktionsbereich, Vec<usize>)> {
     let bereiche: Vec<Funktionsbereich> = belegung
         .funktionen()
         .iter()
-        .map(|funktion| {
-            bereich(funktion.kennung()).unwrap_or_else(|| {
-                panic!(
-                    "die Funktion {} hat keinen Funktionsbereich; \
-                     die Zuordnung steht in belegungsmodell::bereich",
-                    funktion.kennung()
-                )
-            })
-        })
+        .map(|funktion| bereich(funktion.schluessel()))
         .collect();
 
     let mut gruppen = Vec::with_capacity(Funktionsbereich::ALLE.len());
@@ -1075,6 +1076,16 @@ mod tests {
 
     use super::*;
 
+    /// Der Funktionsbereich zu einer Kennung der Auslieferung, fuer die Proben,
+    /// die eine Funktion bei ihrer Kennung nennen; eine unbekannte Kennung
+    /// ist ein Fehler der Probe und haelt an.
+    fn bereich_der_kennung(kennung: &str) -> Funktionsbereich {
+        bereich(
+            Funktionsschluessel::aus_kennung(kennung)
+                .unwrap_or_else(|| panic!("{kennung} ist keine Kennung der Belegung")),
+        )
+    }
+
     /// Das Modell fuehrt jede Funktion der Belegung genau einmal: eine Zeile
     /// je Funktion, und der Papierkorb ist seit dem Wegfall des endgueltigen
     /// Loeschens die eine Zeile des Loeschwegs und nicht mehr eine von zweien.
@@ -1126,17 +1137,29 @@ mod tests {
         assert!(belegung.funktion("in_papierkorb").is_some());
     }
 
-    /// Jede Kennung der Auslieferungsbelegung hat einen Funktionsbereich.
+    /// Jede Kennung der Auslieferungsbelegung steht in genau einer Gruppe von
+    /// [`nach_bereichen`].
     ///
-    /// Die Haelfte der Zuordnung, die der Uebersetzer nicht erzwingen kann:
-    /// eine neue Funktion ohne Kommando (reserviert oder zugestellt) faellt
-    /// hier auf, bevor [`gliederung`] am lebenden Blatt abbricht.
+    /// Bis zur Sprachtabelle hielt die Probe die Haelfte der Zuordnung, die
+    /// der Uebersetzer nicht erzwingen konnte: eine zugestellte Funktion ohne
+    /// Zeile in [`bereich`]. Seit [`bereich`] ueber den
+    /// [`Funktionsschluessel`] ohne Auffangzweig verzweigt, haelt das der
+    /// Uebersetzer, und die Probe haelt das Ergebnis: keine Funktion faellt
+    /// aus der Gliederung heraus, und keine steht zweimal darin.
     #[test]
     fn jede_kennung_hat_einen_funktionsbereich() {
-        for funktion in Belegung::auslieferung().funktionen() {
-            assert!(
-                bereich(funktion.kennung()).is_some(),
-                "die Funktion {} hat keinen Funktionsbereich",
+        let belegung = Belegung::auslieferung();
+        let gruppen = nach_bereichen(&belegung);
+        for (stelle, funktion) in belegung.funktionen().iter().enumerate() {
+            let vorkommen = gruppen
+                .iter()
+                .flat_map(|(_, stellen)| stellen.iter())
+                .filter(|&&eingeordnet| eingeordnet == stelle)
+                .count();
+            assert_eq!(
+                vorkommen,
+                1,
+                "die Funktion {} steht in {vorkommen} Gruppen der Gliederung statt in einer",
                 funktion.kennung()
             );
         }
@@ -1508,7 +1531,7 @@ mod tests {
             assert!(
                 gefuehrt.iter().any(|name| name == funktion.name()),
                 "{kennung} steht nicht unter der Ueberschrift Editor, sondern in {:?}",
-                bereich(kennung)
+                bereich(funktion.schluessel())
             );
             assert_eq!(
                 funktion.tasten().is_empty(),
@@ -1589,13 +1612,13 @@ mod tests {
     #[test]
     fn die_beiden_neuen_umschalter_stehen_in_ihrem_bereich() {
         assert_eq!(
-            bereich("erstes_fenster_umschalten"),
-            Some(Funktionsbereich::Fenster),
+            bereich_der_kennung("erstes_fenster_umschalten"),
+            Funktionsbereich::Fenster,
             "das linke Dateifenster steht nicht bei den Fensterbefehlen"
         );
         assert_eq!(
-            bereich("editor_umschalten"),
-            Some(Funktionsbereich::Editor),
+            bereich_der_kennung("editor_umschalten"),
+            Funktionsbereich::Editor,
             "der Editorschalter steht nicht beim Editor"
         );
     }
@@ -1623,8 +1646,8 @@ mod tests {
         );
         for kennung in ["text_rueckgaengig", "text_wiederholen"] {
             assert_eq!(
-                bereich(kennung),
-                Some(Funktionsbereich::Textbefehle),
+                bereich_der_kennung(kennung),
+                Funktionsbereich::Textbefehle,
                 "{kennung} steht im falschen Abschnitt"
             );
         }
@@ -1640,8 +1663,8 @@ mod tests {
     #[test]
     fn der_ordnersprung_steht_unter_dateilisting() {
         assert_eq!(
-            bereich("ordner_der_datei"),
-            Some(Funktionsbereich::Dateilisting),
+            bereich_der_kennung("ordner_der_datei"),
+            Funktionsbereich::Dateilisting,
             "der Ordnersprung steht nicht beim Dateilisting"
         );
         let belegung = Belegung::auslieferung();
@@ -1669,8 +1692,8 @@ mod tests {
     #[test]
     fn das_ordnerangleichen_steht_unter_dateilisting() {
         assert_eq!(
-            bereich("ordner_angleichen"),
-            Some(Funktionsbereich::Dateilisting),
+            bereich_der_kennung("ordner_angleichen"),
+            Funktionsbereich::Dateilisting,
             "das Ordnerangleichen steht nicht beim Dateilisting"
         );
         let belegung = Belegung::auslieferung();

@@ -11,11 +11,13 @@
 use std::fs;
 
 use krk_core::ablage::{Ablage, Ablageort, Datei};
+use krk_core::sprache::Sprache;
 use krk_core::tasten::belegung::{self, Belegung, Belegungsfehler, Zuweisungsfehler};
 use krk_core::tasten::normalisierung::roh;
 use krk_core::tasten::parser::{self, Herkunft};
 use krk_core::tasten::{
-    Kombination, Kommando, ModMaske, Nachschlag, Seite, Tastendruck, Wirkungsbereich,
+    Funktionsschluessel, Kombination, Kommando, ModMaske, Nachschlag, Seite, Tastendruck,
+    Wirkungsbereich, Zugestellt,
 };
 
 mod gemeinsam;
@@ -2122,9 +2124,14 @@ tasten = ["ctrl+c"]
 /// ersten Start der neuen Fassung alle seine Tasten.
 ///
 /// Die Datei ist die Auslieferungsbelegung, wie `Belegung::sichern` sie
-/// schreibt, mit dem Namen, den die Funktion vor dieser Arbeit trug: so sieht
+/// schreibt, mit dem Namen, den die Funktion vor jener Arbeit trug: so sieht
 /// die `keymap.toml` eines Nutzers aus, der seine Belegung vor dem Wechsel
-/// einmal geaendert hat.
+/// einmal geaendert hat. **Seit der Sprachtabelle haelt die Probe damit auch
+/// C3 der Lokalisierung**: eine Datei aus einer frueheren Fassung mit `name`
+/// laedt ohne Fehler und ohne Meldung, der angezeigte Name kommt aus der
+/// Tabelle und nicht aus der Datei, und `sichern` schreibt `name` in der
+/// geltenden Sprache (der Block `block_neu`, gegen den die Probe die
+/// geschriebene Datei haelt).
 #[test]
 fn eine_vollstaendige_nutzerbelegung_mit_notizzettel_laedt_ohne_ersetzung() {
     let ordner = Pruefordner::neu("notizzettel");
@@ -2164,7 +2171,11 @@ fn eine_vollstaendige_nutzerbelegung_mit_notizzettel_laedt_ohne_ersetzung() {
         .funktion("notizzettel")
         .expect("die geladene Belegung fuehrt notizzettel");
     assert_eq!(funktion.kommando(), Some(Kommando::Notizordner));
-    assert_eq!(funktion.name(), alt, "der Name kommt aus der Nutzerdatei");
+    assert_eq!(
+        funktion.name(),
+        ausgeliefert,
+        "der Name kommt aus der Nutzerdatei statt aus der Sprachtabelle"
+    );
     let Nachschlag::Funktion(getroffen) = belegung.nachschlag(kombi("f2").tastendruck()) else {
         panic!("f2 trifft in der geladenen Belegung keine Funktion");
     };
@@ -3119,7 +3130,8 @@ fn die_sieben_befehle_der_leiste_sind_gebaut() {
     }
 }
 
-/// Den Zusteller setzt die Nutzerdatei nicht, den Namen setzt sie weiter.
+/// Den Zusteller und den Namen setzt die Nutzerdatei nicht, den Vorbehalt
+/// setzt sie weiter.
 ///
 /// **Der Zusteller ist die tragende Haelfte der Zustellerregel**, und ein von
 /// Hand gesetztes `gehalten_von = "menue"` an einem gebauten Befehl nahm ihn
@@ -3130,11 +3142,15 @@ fn die_sieben_befehle_der_leiste_sind_gebaut() {
 /// Befehl stand danach in der Belegungsansicht und tat nichts
 /// (`shared/issues/260826-1223_*_die-nutzerdatei-setzt-den-zusteller-frei-*`).
 ///
-/// **Der Name bleibt Sache der Nutzerdatei**, und die Probe haelt das
-/// ausdruecklich fest, damit es niemand aus Symmetrie mitzieht: eine
-/// Umbenennung schadet niemandem, waehrend ein Zusteller einen Befehl
-/// unerreichbar macht. Dasselbe gilt fuer `reserviert_fuer`, mit dem
-/// `krk-ui/src/belegungsmodell.rs` fuer alte Dateien ausdruecklich rechnet.
+/// **Der Name kommt seit der Sprachtabelle aus dem Kern und nicht aus der
+/// Datei** (Spec
+/// `261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md`,
+/// C3): bis zum 261001 hielt diese Probe das Gegenteil, weil eine Umbenennung
+/// ueber die eigene Datei niemandem schadete; ein deutscher Name in der Datei
+/// einer franzoesischen Oberflaeche schadet, und seitdem wird `name` gelesen,
+/// geduldet und nie angezeigt. `reserviert_fuer` bleibt Sache der Datei, weil
+/// `krk-ui/src/belegungsmodell.rs` fuer alte Dateien ausdruecklich damit
+/// rechnet.
 ///
 /// Die **Tasten** kommen weiterhin aus der Datei; sonst waere die Zusage „sie
 /// darf jede Kombination frei verteilen" mit dieser Aenderung gefallen.
@@ -3163,13 +3179,13 @@ gehalten_von = "menue"
 
     assert_eq!(
         gebaut.name(),
-        "Kaffee kochen",
-        "der Name kommt nicht mehr aus der Nutzerdatei"
+        ausgeliefert.name(),
+        "der Name kommt aus der Nutzerdatei statt aus der Sprachtabelle"
     );
     assert_ne!(
         gebaut.name(),
-        ausgeliefert.name(),
-        "die Auslieferung traegt denselben Namen; die Probe misst dann nichts"
+        "Kaffee kochen",
+        "der Name der Nutzerdatei wird angezeigt"
     );
     assert_eq!(
         gebaut.reserviert_fuer(),
@@ -3313,4 +3329,289 @@ fn die_umbelegung_folgt_der_verengung() {
         panic!("cmd+up an eine dritte Funktion lieferte keinen Konflikt");
     };
     assert_eq!(konflikt.andere.kennung, "ordner_aufwaerts");
+}
+
+// ---------------------------------------------------------------------------
+// Die Befehlsnamen aus der Sprachtabelle (C3 des Spec
+// `261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md`)
+// ---------------------------------------------------------------------------
+//
+// Der Uebersetzer haelt, dass jedes Kommando und jede zugestellte Funktion in
+// jeder Sprache einen Namen hat: `kommandoname` und `zugestellt_name` sind je
+// Sprache ein `match` ohne Auffangzweig. Was er nicht haelt, halten die Proben
+// hier: die Verbindung der Aufzaehlung `Zugestellt` zu ihren Kennungen, die
+// Verbindung beider Aufzaehlungen zur Auslieferungsbelegung, und je Sprache
+// die Eindeutigkeit, die Nichtleere und die Tabellentauglichkeit der Namen.
+// Die Sprachen werden ueber `Funktion::name_in` mit ausdruecklicher Sprache
+// gefragt, weil `geltende()` in `cargo test` immer Deutsch ist.
+
+/// Jede Variante von [`Zugestellt`] steht genau einmal in
+/// [`Zugestellt::KENNUNGEN`], und jeder Eintrag der Liste benennt eine
+/// Variante; nach dem Vorbild von
+/// [`jede_variante_von_kommando_steht_genau_einmal_in_kennungen`], aus
+/// demselben Grund: ohne Zeile dort uebersetzt die Variante, laesst sich aber
+/// in keiner Belegung an eine Taste binden.
+#[test]
+fn jede_variante_von_zugestellt_steht_genau_einmal_in_kennungen() {
+    let varianten = varianten_der_aufzaehlung("krk-core/src/tasten/belegung.rs", "Zugestellt");
+    let gefuehrt: Vec<String> = Zugestellt::KENNUNGEN
+        .into_iter()
+        .map(|(zugestellt, _)| format!("{zugestellt:?}"))
+        .collect();
+
+    let daneben: Vec<String> = varianten
+        .iter()
+        .map(|name| (name, gefuehrt.iter().filter(|zeile| *zeile == name).count()))
+        .filter(|(_, zahl)| *zahl != 1)
+        .map(|(name, zahl)| format!("{name} ({zahl}-mal)"))
+        .collect();
+    assert!(
+        daneben.is_empty(),
+        "diese Varianten von Zugestellt stehen nicht genau einmal in KENNUNGEN: {}",
+        daneben.join(", ")
+    );
+
+    let ueberzaehlig: Vec<&str> = gefuehrt
+        .iter()
+        .filter(|zeile| !varianten.contains(zeile))
+        .map(String::as_str)
+        .collect();
+    assert!(
+        ueberzaehlig.is_empty(),
+        "diese Eintraege von KENNUNGEN benennen keine Variante der Aufzaehlung: {}",
+        ueberzaehlig.join(", ")
+    );
+
+    for (zugestellt, kennung) in Zugestellt::KENNUNGEN {
+        assert_eq!(Zugestellt::aus_kennung(kennung), Some(zugestellt));
+        assert_eq!(zugestellt.kennung(), kennung);
+        assert_eq!(
+            Kommando::aus_kennung(kennung),
+            None,
+            "{kennung} ist zugleich ein Kommando und eine zugestellte Funktion"
+        );
+    }
+}
+
+/// Jede `id` der Auslieferungsbelegung loest sich zu einem
+/// [`Funktionsschluessel`] auf, und zwar zu dem, den die gebaute Funktion
+/// traegt.
+///
+/// Dass es so ist, haelt schon der Bau der Auslieferung, der eine Kennung
+/// ohne Schluessel abweist; die Probe sagt es mit Namen, statt den
+/// `LazyLock` abbrechen zu lassen.
+#[test]
+fn jede_funktion_der_auslieferung_hat_einen_schluessel() {
+    let belegung = Belegung::auslieferung();
+    let ids: Vec<String> = toml::from_str::<toml::Value>(belegung::AUSLIEFERUNGSTEXT)
+        .expect("gueltiges TOML")
+        .get("funktion")
+        .and_then(toml::Value::as_array)
+        .expect("die Auslieferung fuehrt [[funktion]]-Bloecke")
+        .iter()
+        .map(|block| {
+            block
+                .get("id")
+                .and_then(toml::Value::as_str)
+                .expect("jeder Block traegt eine id")
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(ids.len(), belegung.funktionen().len());
+    for id in &ids {
+        let schluessel = Funktionsschluessel::aus_kennung(id).unwrap_or_else(|| {
+            panic!("die Auslieferung fuehrt {id}, aber kein Schluessel kennt es")
+        });
+        assert_eq!(schluessel.kennung(), id);
+        let funktion = belegung
+            .funktion(id)
+            .unwrap_or_else(|| panic!("die gebaute Belegung fuehrt {id} nicht"));
+        assert_eq!(funktion.schluessel(), schluessel);
+    }
+}
+
+/// Die Umkehrung: jede Kennung aus [`Kommando::KENNUNGEN`] und
+/// [`Zugestellt::KENNUNGEN`] steht in der Auslieferungsbelegung, mit dem
+/// Zusteller, den ihre Art verlangt.
+#[test]
+fn jede_kennung_beider_listen_steht_in_der_auslieferung() {
+    let belegung = Belegung::auslieferung();
+    for (kommando, kennung) in Kommando::KENNUNGEN {
+        let funktion = belegung
+            .funktion(kennung)
+            .unwrap_or_else(|| panic!("{kommando:?} nennt {kennung}, die Auslieferung nicht"));
+        assert_eq!(
+            funktion.schluessel(),
+            Funktionsschluessel::Kommando(kommando)
+        );
+        assert_eq!(funktion.gehalten_von(), None, "{kennung} wird zugestellt");
+    }
+    for (zugestellt, kennung) in Zugestellt::KENNUNGEN {
+        let funktion = belegung
+            .funktion(kennung)
+            .unwrap_or_else(|| panic!("{zugestellt:?} nennt {kennung}, die Auslieferung nicht"));
+        assert_eq!(
+            funktion.schluessel(),
+            Funktionsschluessel::Zugestellt(zugestellt)
+        );
+        assert_eq!(
+            funktion.gehalten_von(),
+            Some("menue"),
+            "{kennung} traegt in der Auslieferung keinen Zusteller"
+        );
+        assert_eq!(funktion.kommando(), None);
+    }
+    assert_eq!(
+        Kommando::KENNUNGEN.len() + Zugestellt::KENNUNGEN.len(),
+        belegung.funktionen().len(),
+        "die Auslieferung fuehrt Funktionen, die in keiner der zwei Listen stehen"
+    );
+}
+
+/// Je Sprache tragen keine zwei Funktionen der Auslieferung denselben Namen.
+///
+/// Die Belegungsansicht sucht im Namen und meldet Konflikte mit ihm; zwei
+/// gleiche Namen liessen den Nutzer raten, welche Funktion gemeint ist. Der
+/// Uebersetzer sieht das nicht, denn zwei Zweige duerfen dieselbe Zeichenkette
+/// liefern. Die Erweiterung der Eindeutigkeitsprobe, die
+/// `krk-ui/src/belegungsmodell.rs` fuer die geltende Sprache fuehrt, auf alle
+/// drei.
+#[test]
+fn keine_zwei_funktionen_tragen_in_einer_sprache_denselben_namen() {
+    let belegung = Belegung::auslieferung();
+    for sprache in Sprache::ALLE {
+        let funktionen = belegung.funktionen();
+        for (stelle, eine) in funktionen.iter().enumerate() {
+            for andere in funktionen.iter().skip(stelle + 1) {
+                assert_ne!(
+                    eine.name_in(sprache),
+                    andere.name_in(sprache),
+                    "{} und {} heissen in {} beide {:?}",
+                    eine.kennung(),
+                    andere.kennung(),
+                    sprache.kennung(),
+                    eine.name_in(sprache)
+                );
+            }
+        }
+    }
+}
+
+/// Je Sprache ist kein Name leer, und keiner traegt einen senkrechten Strich.
+///
+/// Dieselben zwei Zusagen, die
+/// [`keine_beschriftung_ist_leer_oder_traegt_einen_senkrechten_strich`] fuer
+/// die Wirkungsbereiche haelt, und aus demselben Grund: die Markdown-Ausgabe
+/// maskiert ein `|` zwar, die Probe haelt, dass sie es nicht muss, und eine
+/// leere Zelle waere in der Datei die Auskunft „hier ist nichts“.
+#[test]
+fn kein_funktionsname_ist_leer_oder_traegt_einen_senkrechten_strich() {
+    for sprache in Sprache::ALLE {
+        for funktion in Belegung::auslieferung().funktionen() {
+            let name = funktion.name_in(sprache);
+            assert!(
+                !name.trim().is_empty(),
+                "{} traegt in {} einen leeren Namen",
+                funktion.kennung(),
+                sprache.kennung()
+            );
+            assert!(
+                !name.contains('|'),
+                "{} traegt in {} einen senkrechten Strich: {name}",
+                funktion.kennung(),
+                sprache.kennung()
+            );
+        }
+    }
+}
+
+/// Der deutsche Name ist der aus `name()` ohne `festlegen`, und `name_in`
+/// antwortet je Sprache aus derselben Tabelle wie `sprache::funktionsname`.
+#[test]
+fn der_name_ohne_sprache_ist_der_deutsche_und_name_in_folgt_der_tabelle() {
+    for funktion in Belegung::auslieferung().funktionen() {
+        assert_eq!(funktion.name(), funktion.name_in(Sprache::De));
+        for sprache in Sprache::ALLE {
+            assert_eq!(
+                funktion.name_in(sprache),
+                sprache.funktionsname(funktion.schluessel())
+            );
+        }
+    }
+}
+
+/// Eine Nutzerdatei ohne das Feld `name` laedt ohne Fehler und ohne Meldung,
+/// und die Funktion traegt den Namen aus der Tabelle; die Auslieferungsfassung
+/// fuehrt das Feld seit Schritt 6 des Plans nicht mehr, und eine eigene Datei
+/// darf es ebenso auslassen.
+#[test]
+fn eine_nutzerdatei_ohne_name_laedt_ohne_fehler_und_ohne_meldung() {
+    let ordner = Pruefordner::neu("ohne-name");
+    let ablage = ablage_mit(
+        &ordner,
+        r#"
+[[funktion]]
+id = "kopieren"
+tasten = ["ctrl+c"]
+"#,
+    );
+
+    let geladen = geladene_belegung(&ablage);
+
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine Nutzerdatei ohne name wurde durch die Auslieferung ersetzt"
+    );
+    let funktion = geladen
+        .wert
+        .funktion("kopieren")
+        .expect("die geladene Belegung fuehrt kopieren");
+    assert_eq!(funktion.tasten(), [kombi("ctrl+c")]);
+    assert_eq!(
+        funktion.name(),
+        Belegung::auslieferung()
+            .funktion("kopieren")
+            .expect("die Auslieferung fuehrt kopieren")
+            .name()
+    );
+}
+
+/// Nach `sichern` traegt die geschriebene Datei an jeder Funktion `name` mit
+/// dem Namen der geltenden Sprache, obwohl das Einlesen das Feld nie liest:
+/// die Datei bleibt lesbar, wenn der Nutzer sie ueber „Tastaturdefinition
+/// oeffnen“ ansieht (C3).
+#[test]
+fn nach_dem_sichern_traegt_jede_funktion_name_in_der_geltenden_sprache() {
+    let ordner = Pruefordner::neu("name-gesichert");
+    let ablage =
+        Ablage::oeffnen(Ablageort::an(ordner.pfad())).expect("die Ablage laesst sich oeffnen");
+    let belegung = Belegung::auslieferung();
+    belegung_sichern(&ablage, &belegung);
+
+    let geschrieben: toml::Value = toml::from_str(
+        &fs::read_to_string(ablage.pfad(Datei::Belegung)).expect("keymap.toml laesst sich lesen"),
+    )
+    .expect("die geschriebene Datei ist gueltiges TOML");
+    let bloecke = geschrieben
+        .get("funktion")
+        .and_then(toml::Value::as_array)
+        .expect("die geschriebene Datei fuehrt [[funktion]]-Bloecke");
+    assert_eq!(bloecke.len(), belegung.funktionen().len());
+    for block in bloecke {
+        let id = block
+            .get("id")
+            .and_then(toml::Value::as_str)
+            .expect("jeder Block traegt eine id");
+        let name = block.get("name").and_then(toml::Value::as_str);
+        assert_eq!(
+            name,
+            Some(
+                belegung
+                    .funktion(id)
+                    .expect("die Kennung ist bekannt")
+                    .name()
+            ),
+            "{id} traegt in der geschriebenen Datei nicht den Namen der geltenden Sprache"
+        );
+    }
 }

@@ -7,6 +7,7 @@
 //! damit sie im Quelltext zu sehen sind.
 
 use super::super::{Text, Zahlwort};
+use crate::tasten::belegung::{Kommando, Zugestellt};
 
 /// Der franzoesische Eintrag zu einem Schluessel.
 pub(in super::super) const fn text(schluessel: Text) -> &'static str {
@@ -394,6 +395,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TasteUnbekannterName => {
             "«\u{a0}{text}\u{a0}» n’est pas un nom de touche de cette notation"
         }
+        Text::FunktionsnameMitKennung => "«\u{a0}{name}\u{a0}» ({kennung})",
+        Text::BelegungKonflikt => {
+            "la combinaison {kombination} appartient déjà à la fonction {andere} et ne peut pas être attribuée en plus à la fonction {bewerber}"
+        }
+        Text::BelegungSchreibweise => {
+            "la fonction {kennung} porte la combinaison «\u{a0}{text}\u{a0}»\u{a0}: {fehler}"
+        }
+        Text::BelegungUnbekannteFunktion => "KRK ne connaît aucune fonction nommée {kennung}",
+        Text::BelegungFunktionDoppelt => "la fonction {kennung} figure deux fois",
     }
 }
 
@@ -411,5 +421,128 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} nouveau", "{n} nouveaux"),
         Zahlwort::MarkeKonflikt => ("{n} en conflit", "{n} en conflit"),
         Zahlwort::MarkeUmbenannt => ("{n} renommé", "{n} renommés"),
+    }
+}
+
+/// Der franzoesische Name eines Kommandos: der Eintrag des Hauptmenues, der
+/// Belegungsansicht und jeder Konfliktmeldung.
+pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str {
+    match schluessel {
+        Kommando::AuswahlHoch => "Sélection une entrée vers le haut",
+        Kommando::AuswahlRunter => "Sélection une entrée vers le bas",
+        Kommando::SeiteHoch => "Sélection une page d’écran vers le haut",
+        Kommando::SeiteRunter => "Sélection une page d’écran vers le bas",
+        Kommando::Listenanfang => "Au début de la liste",
+        Kommando::Listenende => "À la fin de la liste",
+        Kommando::Oeffnen => "Entrer dans le dossier sélectionné",
+        Kommando::OrdnerAufwaerts => "Vers le dossier parent",
+        Kommando::OrdnerDerDatei => "Afficher le dossier du fichier affiché",
+        Kommando::OrdnerAngleichen => "Placer l’autre volet de fichiers sur ce dossier",
+        Kommando::Pfadeingabe => "Saisir un chemin et y aller",
+        Kommando::MarkierungUmschalten => "Marquer l’entrée et passer à la suivante",
+        Kommando::AlleMarkieren => "Marquer toutes les entrées",
+        Kommando::MarkierungAufheben => "Supprimer toutes les marques",
+        Kommando::MarkierungUmkehren => "Inverser les marques",
+        Kommando::SortierungName => "Trier par nom",
+        Kommando::SortierungGroesse => "Trier par taille",
+        Kommando::SortierungDatum => "Trier par date de modification",
+        Kommando::SortierungTyp => "Trier par type",
+        Kommando::SortierrichtungUmkehren => "Inverser l’ordre de tri",
+        Kommando::VersteckteUmschalten => "Afficher ou masquer les fichiers cachés",
+        Kommando::SpalteGroesseUmschalten => "Afficher ou masquer la colonne Taille",
+        Kommando::SpalteDatumUmschalten => "Afficher ou masquer la colonne Date de modification",
+        Kommando::SpalteTypUmschalten => "Afficher ou masquer la colonne Type",
+        Kommando::TiefeSucheUmschalten => "Activer ou désactiver la recherche en profondeur",
+        Kommando::InhaltssucheUmschalten => "Activer ou désactiver la recherche dans le contenu",
+        Kommando::ZwischenablageSpringen => "Aller au contenu du Presse-papiers",
+        Kommando::ZwischenablageAnsehen => "Afficher le Presse-papiers",
+        Kommando::TabNeu => "Ouvrir un nouvel onglet",
+        Kommando::TabSchliessen => "Fermer l’onglet actif",
+        Kommando::TabNaechster => "Onglet suivant",
+        Kommando::TabVoriger => "Onglet précédent",
+        Kommando::FensterWechseln => "Changer de volet de fichiers actif",
+        Kommando::LeisteUmschalten => "Afficher ou masquer la barre des signets et des volumes",
+        Kommando::ErstesFensterUmschalten => "Afficher ou masquer le volet de fichiers gauche",
+        Kommando::ZweitesFensterUmschalten => "Afficher ou masquer le second volet de fichiers",
+        Kommando::VorschauUmschalten => "Afficher ou masquer l’Aperçu",
+        Kommando::FensterEinblenden => "Afficher la fenêtre",
+        Kommando::FensterSchliessen => "Fermer la fenêtre",
+        Kommando::BereichVerbreitern => "Élargir la zone active",
+        Kommando::BereichVerschmaelern => "Rétrécir la zone active",
+        Kommando::Kopieren => "Copier dans l’autre volet",
+        Kommando::Verschieben => "Déplacer vers l’autre volet",
+        Kommando::InPapierkorb => "Placer dans la Corbeille",
+        Kommando::Abbrechen => "Annuler l’opération en cours",
+        Kommando::OrdnerAnlegen => "Nouveau dossier",
+        Kommando::DateiAnlegen => "Nouveau fichier vide",
+        Kommando::UmbenennenStapel => "Renommer par lot",
+        Kommando::Umbenennen => "Renommer",
+        Kommando::TerminalOeffnen => "Ouvrir le dossier dans le Terminal",
+        Kommando::OrdnerpfadKopieren => "Copier le chemin du dossier affiché",
+        Kommando::EintragspfadKopieren => "Copier le chemin de l’entrée",
+        Kommando::MitStandardprogrammOeffnen => "Ouvrir avec l’application par défaut",
+        Kommando::Teilen => "Partager",
+        Kommando::LesezeichenAnlegen => "Ajouter un signet",
+        Kommando::LesezeichenUmbenennen => "Renommer le signet",
+        Kommando::LesezeichenLoeschen => "Supprimer le signet",
+        Kommando::LesezeichenHoch => "Déplacer le signet vers le haut",
+        Kommando::LesezeichenRunter => "Déplacer le signet vers le bas",
+        Kommando::FokusLeiste => "Focus sur la barre des signets et des volumes",
+        Kommando::FokusDateifenster => "Focus de retour sur le volet de fichiers",
+        Kommando::FokusVorschau => "Focus sur l’Aperçu",
+        Kommando::Bearbeiten => "Modifier",
+        Kommando::EditorRundweg => "Vers l’Éditeur et retour",
+        Kommando::FokusEditor => "Focus sur l’Éditeur",
+        Kommando::EditorSchliessen => "Fermer l’Éditeur",
+        Kommando::EditorUmschalten => "Afficher ou masquer l’Éditeur",
+        Kommando::EditorAnsichtUmschalten => "Basculer entre vue brute et vue formatée",
+        Kommando::EditorSichern => "Enregistrer",
+        Kommando::EditorZeileSpringen => "Aller à la ligne",
+        Kommando::EditorSuchen => "Rechercher dans le texte",
+        Kommando::EditorWeitersuchen => "Rechercher le suivant",
+        Kommando::EditorRueckwaertsSuchen => "Rechercher le précédent",
+        Kommando::EditorErsetzen => "Remplacer",
+        Kommando::EditorAlleErsetzen => "Tout remplacer",
+        Kommando::QuicknoteUmschalten => "Ouvrir ou fermer la Quicknote",
+        Kommando::QuicknoteKopieren => "Copier la Quicknote et la fermer",
+        Kommando::QuicknoteLeeren => "Vider la Quicknote",
+        Kommando::EintragHinzufuegen => "Ajouter une entrée",
+        Kommando::EintragBearbeiten => "Modifier l’entrée",
+        Kommando::EintragHoch => "Entrée vers le haut",
+        Kommando::EintragRunter => "Entrée vers le bas",
+        Kommando::EintragLoeschen => "Supprimer l’entrée",
+        Kommando::AufgabeAbhaken => "Cocher ou rouvrir la tâche",
+        Kommando::PinAendern => "Modifier le code PIN",
+        Kommando::TermineRichtungUmkehren => "Rendez-vous\u{a0}: inverser l’ordre de tri",
+        Kommando::BelegungAnsehen => "Afficher les raccourcis clavier",
+        Kommando::BelegungsdateiAnsehen => "Ouvrir le fichier des raccourcis clavier",
+        Kommando::Beenden => "Quitter KRK",
+        Kommando::WeitereInstanz => "Lancer une autre instance",
+        Kommando::Notizordner => "Ouvrir le dossier de notes",
+        Kommando::OrtWaehlen => "Choisir l’emplacement…",
+        Kommando::VorschauVergroessern => "Agrandir l’Aperçu",
+        Kommando::VorschauVerkleinern => "Réduire l’Aperçu",
+        Kommando::VorschauAusgangsgroesse => "Aperçu à la taille d’origine",
+        Kommando::GitBereichUmschalten => "Afficher ou masquer la zone Git",
+        Kommando::FokusGit => "Focus sur la zone Git",
+        Kommando::SpalteMarkeUmschalten => "Afficher ou masquer la colonne Marque",
+        Kommando::NeuerungenZeigen => "Afficher les nouveautés",
+        Kommando::Werkseinstellungen => "Rétablir les réglages d’usine…",
+        Kommando::BildVor => "Image suivante",
+        Kommando::BildZurueck => "Image précédente",
+        Kommando::ZumBild => "Aller à l’image affichée",
+    }
+}
+
+/// Der franzoesische Name einer vom Hauptmenue zugestellten Funktion.
+pub(in super::super) const fn zugestellt_name(schluessel: Zugestellt) -> &'static str {
+    match schluessel {
+        Zugestellt::FilterEinfuegen => "Coller dans le filtre",
+        Zugestellt::TextAusschneiden => "Couper",
+        Zugestellt::TextKopieren => "Copier",
+        Zugestellt::TextEinfuegen => "Coller",
+        Zugestellt::TextAllesAuswaehlen => "Tout sélectionner",
+        Zugestellt::TextRueckgaengig => "Annuler",
+        Zugestellt::TextWiederholen => "Rétablir",
     }
 }
