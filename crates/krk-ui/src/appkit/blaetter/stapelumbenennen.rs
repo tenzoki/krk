@@ -101,6 +101,7 @@ use objc2_foundation::{
     ns_string,
 };
 
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text, zahl};
 use krk_core::stapelumbenennen::{Regel, Vorschau, vorschau};
 
 use super::{Blatt, Blattgriff};
@@ -170,14 +171,17 @@ impl Spalte {
         }
     }
 
-    /// Die Ueberschrift, die der Nutzer liest.
+    /// Die Ueberschrift, die der Nutzer liest, aus der Sprachtabelle; anders
+    /// als die Kennung kein `ns_string!`, weil sie erst in der geltenden
+    /// Sprache entsteht.
     #[must_use]
-    fn titel(self) -> &'static NSString {
-        match self {
-            Spalte::Alt => ns_string!("Bisher"),
-            Spalte::Neu => ns_string!("Neu"),
-            Spalte::Grund => ns_string!("Hinweis"),
-        }
+    fn titel(self) -> Retained<NSString> {
+        let schluessel = match self {
+            Spalte::Alt => Text::StapelSpalteBisher,
+            Spalte::Neu => Text::StapelSpalteNeu,
+            Spalte::Grund => Text::StapelSpalteHinweis,
+        };
+        NSString::from_str(text(schluessel))
     }
 
     /// Die Breite in Punkten.
@@ -411,11 +415,8 @@ pub fn zeigen(
 ) -> Blattgriff {
     let (beigabe, tabelle, hinweis, felder) = beigabe_bauen(mtm);
 
-    let mut blatt = Blatt::neu(mtm, &frage(markierte.len()), "Umbenennen");
-    blatt.erlaeuterung_setzen(
-        "Die Vorschau zeigt, was der Befehl täte. Umbenannt wird erst mit Return; \
-         Esc bricht ab. Einträge mit einem Hinweis bleiben stehen.",
-    );
+    let mut blatt = Blatt::neu(mtm, &frage(markierte.len()), text(Text::BlattUmbenennen));
+    blatt.erlaeuterung_setzen(text(Text::StapelErlaeuterung));
     for feld in [
         &felder.suchen,
         &felder.ersetzen,
@@ -457,25 +458,54 @@ pub fn zeigen(
     })
 }
 
-/// Die Frage in der Kopfzeile des Blattes.
+/// Die Frage in der Kopfzeile des Blattes: ein `Zahlwort`, dessen Einzahl
+/// `{n}` auslaesst („Einen Eintrag umbenennen“).
 #[must_use]
 fn frage(eintraege: usize) -> String {
-    match eintraege {
-        1 => "Einen Eintrag umbenennen".to_owned(),
-        zahl => format!("{zahl} Einträge im Stapel umbenennen"),
-    }
+    anzahl(Zahlwort::StapelFrage, eintraege as u64, &[])
 }
 
 /// Die Zeile ueber der Vorschau, wenn die Regel lesbar ist.
 #[must_use]
 fn zusammenfassung(stand: &Vorschau) -> String {
-    let zeilen = stand.zeilen().len();
-    let kollisionen = stand.kollisionen();
-    let umzubenennen = stand.auszufuehren().count();
+    zusammenfassung_von(
+        stand.zeilen().len(),
+        stand.auszufuehren().count(),
+        stand.kollisionen(),
+    )
+}
+
+/// Der Rumpf von [`zusammenfassung`] ueber die drei Zahlen, damit die Probe
+/// ihn ohne eine gerechnete [`Vorschau`] fahren kann.
+///
+/// Jede Zahl geht als `Zahlwort` hinein und bekommt damit ihre Einzahl: ein
+/// Eintrag ergibt „1 Eintrag“ wie die Kopfzeile darueber, und nicht
+/// „1 Einträge“, wie es bis zu dieser Arbeit stand
+/// (`261001-0731_*_die-zusammenfassung-des-stapelumbenennens-schreibt-bei-einem-eintrag-1-eintraege.md`).
+/// Die Zahl der Eintraege mit neuem Namen im Satz ohne Kollision traegt kein
+/// Hauptwort und geht deshalb gruppiert ueber [`zahl`] hinein.
+#[must_use]
+fn zusammenfassung_von(zeilen: usize, umzubenennen: usize, kollisionen: usize) -> String {
+    let eintraege = anzahl(Zahlwort::StapelEintraege, zeilen as u64, &[]);
     if kollisionen == 0 {
-        return format!("{zeilen} Einträge, davon {umzubenennen} mit neuem Namen");
+        return satz(
+            Text::StapelZusammenfassungOhneKollisionen,
+            &[
+                ("eintraege", &eintraege),
+                ("umzubenennen", &zahl(umzubenennen)),
+            ],
+        );
     }
-    format!("{zeilen} Einträge: {umzubenennen} werden umbenannt, {kollisionen} bleiben stehen")
+    let umbenannt = anzahl(Zahlwort::StapelWerdenUmbenannt, umzubenennen as u64, &[]);
+    let stehend = anzahl(Zahlwort::StapelBleibenStehen, kollisionen as u64, &[]);
+    satz(
+        Text::StapelZusammenfassungMitKollisionen,
+        &[
+            ("eintraege", &eintraege),
+            ("umbenannt", &umbenannt),
+            ("stehend", &stehend),
+        ],
+    )
 }
 
 /// Baut die Beigabe: vier Eingabefelder, die Hinweiszeile und die Vorschau.
@@ -521,23 +551,30 @@ fn beigabe_bauen(
     let suchen = eingabezeile(
         mtm,
         &beigabe,
-        "Suchen nach:",
+        text(Text::BlattFeldSuchenNach),
         suchenzeile,
         BREITE - BESCHRIFTUNG,
     );
     let ersetzen = eingabezeile(
         mtm,
         &beigabe,
-        "Ersetzen durch:",
+        text(Text::BlattFeldErsetzenDurch),
         ersetzenzeile,
         BREITE - BESCHRIFTUNG,
     );
-    let nummer_ab = eingabezeile(mtm, &beigabe, "Nummer ab:", nummernzeile, NUMMERBREITE);
+    let nummer_ab = eingabezeile(
+        mtm,
+        &beigabe,
+        text(Text::StapelFeldNummerAb),
+        nummernzeile,
+        NUMMERBREITE,
+    );
 
     // Die Stellenzahl steht in derselben Zeile wie der Startwert: die beiden
     // gehoeren zusammen, und eine eigene Zeile machte das Blatt hoeher, ohne
     // etwas zu erklaeren.
-    let stellenbeschriftung = NSTextField::labelWithString(ns_string!("Stellen:"), mtm);
+    let stellenbeschriftung =
+        NSTextField::labelWithString(&NSString::from_str(text(Text::StapelFeldStellen)), mtm);
     stellenbeschriftung.setFrame(NSRect::new(
         NSPoint::new(
             BESCHRIFTUNG + NUMMERBREITE + BLOCKABSTAND * 2.0,
@@ -610,7 +647,7 @@ fn vorschautabelle(mtm: MainThreadMarker) -> (Retained<NSScrollView>, Retained<N
     tabelle.setStyle(NSTableViewStyle::FullWidth);
     for spalte in Spalte::ALLE {
         let kopf = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), spalte.kennung());
-        kopf.setTitle(spalte.titel());
+        kopf.setTitle(&spalte.titel());
         kopf.setWidth(spalte.breite());
         tabelle.addTableColumn(&kopf);
     }
@@ -642,5 +679,56 @@ fn schluesselring_legen(felder: &Regelfelder, tabelle: &NSTableView) {
         felder.nummer_ab.setNextKeyView(Some(&felder.stellen));
         felder.stellen.setNextKeyView(Some(tabelle));
         tabelle.setNextKeyView(Some(&felder.suchen));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{frage, zusammenfassung_von};
+
+    /// Die Kopfzeile und die Zeile ueber der Vorschau stimmen in der Zahlform
+    /// ueberein: ein Eintrag steht in beiden in der Einzahl, zwei in der
+    /// Mehrzahl, und eine grosse Zahl ist gruppiert.
+    ///
+    /// Bis zu dieser Arbeit stand die Kopfzeile bei einem Eintrag in der
+    /// Einzahl und die Zusammenfassung darunter in der Mehrzahl
+    /// (`261001-0731_*_die-zusammenfassung-des-stapelumbenennens-schreibt-bei-einem-eintrag-1-eintraege.md`).
+    /// Der Wortlaut ist der deutsche Tabelleneintrag; `cargo test` setzt keine
+    /// Sprache, und beide Funktionen antworten deshalb deutsch.
+    #[test]
+    fn kopfzeile_und_zusammenfassung_tragen_dieselbe_zahlform() {
+        assert_eq!(frage(1), "Einen Eintrag umbenennen");
+        assert_eq!(
+            zusammenfassung_von(1, 1, 0),
+            "1 Eintrag, davon 1 mit neuem Namen"
+        );
+        assert_eq!(
+            zusammenfassung_von(1, 0, 1),
+            "1 Eintrag: 0 werden umbenannt, 1 bleibt stehen"
+        );
+
+        assert_eq!(frage(2), "2 Einträge im Stapel umbenennen");
+        assert_eq!(
+            zusammenfassung_von(2, 2, 0),
+            "2 Einträge, davon 2 mit neuem Namen"
+        );
+        assert_eq!(
+            zusammenfassung_von(3, 2, 1),
+            "3 Einträge: 2 werden umbenannt, 1 bleibt stehen"
+        );
+        assert_eq!(
+            zusammenfassung_von(4, 2, 2),
+            "4 Einträge: 2 werden umbenannt, 2 bleiben stehen"
+        );
+
+        assert_eq!(frage(1234), "1.234 Einträge im Stapel umbenennen");
+        assert_eq!(
+            zusammenfassung_von(1234, 1234, 0),
+            "1.234 Einträge, davon 1.234 mit neuem Namen"
+        );
+        assert_eq!(
+            zusammenfassung_von(1234, 1000, 234),
+            "1.234 Einträge: 1.000 werden umbenannt, 234 bleiben stehen"
+        );
     }
 }

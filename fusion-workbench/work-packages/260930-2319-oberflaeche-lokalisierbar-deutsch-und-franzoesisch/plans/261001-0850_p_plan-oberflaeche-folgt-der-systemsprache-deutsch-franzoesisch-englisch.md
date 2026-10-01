@@ -184,7 +184,7 @@ Für jede Umstellung gilt dieselbe Handwerksregel: der deutsche Tabelleneintrag 
      - `make check` grün.
    - Dependencies: Schritte 1 und 3
 
-9. [IN PROGRESS] **Die Oberfläche: Blätter und der Hinweis**
+9. [DONE] **Die Oberfläche: Blätter und der Hinweis**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/blaetter/mod.rs`, `konflikt.rs`, `loeschbestaetigung.rs`, `namenseingabe.rs`, `neuerungen.rs`, `ortwahl.rs`, `pin.rs`, `stapelumbenennen.rs`, `suche.rs`, `ungesichert.rs`, `zeilennummer.rs`, `crates/krk-ui/src/appkit/hinweis.rs`, `crates/krk-core/src/sprache/schluessel.rs`, `tabelle/de.rs`, `fr.rs`, `en.rs`, der Defektdatensatz `261001-0731_*_die-zusammenfassung-des-stapelumbenennens-schreibt-bei-einem-eintrag-1-eintraege.md`
    - Changes: Jede Frage, Erläuterung, Schaltfläche, Feldbeschriftung und jeder Spaltenkopf der Blätter wird ein Schlüssel; `standardschaltflaechen` nimmt „Abbrechen“ aus der Tabelle; `NSOpenPanel::setPrompt` und `setMessage` in `ortwahl.rs` ebenso; `hinweis.rs` nimmt „OK“ aus der Tabelle, und der Kommentar daneben sagt, dass die Tabelle dieselbe Sprache trägt, die macOS für KRK gewählt hat, und die Schaltfläche deshalb nicht mehr gegen die Systemlokalisierung, sondern mit ihr beschriftet ist. `zusammenfassung` in `stapelumbenennen.rs` wird aus `Zahlwort`-Formen und einem Satzschlüssel mit Platzhaltern gebaut, sodass ein Eintrag „1 Eintrag“ ergibt und die Zahl über `zahl` gruppiert ist; eine Probe neben `frage` hält beide Zeilen für 1 und 2 Einträge; der Defektdatensatz bekommt `Resolved:` und `_c_`.
@@ -195,7 +195,7 @@ Für jede Umstellung gilt dieselbe Handwerksregel: der deutsche Tabelleneintrag 
      - `make check` grün.
    - Dependencies: Schritt 1 (unabhängig von 7 und 8)
 
-10. **Die Oberfläche: Editor, Vorschau, Quicknote**
+10. [IN PROGRESS] **Die Oberfläche: Editor, Vorschau, Quicknote**
     - Executor: `code-implementer`
     - Files: `crates/krk-ui/src/editormodell.rs`, `crates/krk-ui/src/appkit/editor.rs` (`Editormeldung::text`, `Eintragsantwort::text`, die Quicknote-Sätze), `crates/krk-ui/src/appkit/quicknote.rs`, `crates/krk-ui/src/quicknote.rs`, `crates/krk-ui/src/appkit/vorschau.rs` (die sechs Metadatenzeilen, der Leertext, der Darstellungsfehler), `crates/krk-ui/src/vorschaumodell.rs` (Geheimnishinweis, Bildfolgehinweis, Zwischenablage, Bildgrenze, Lesefehler, `rechte_text`), `crates/krk-ui/src/appkit/nummernspalte.rs` (sofern Text), `crates/krk-core/src/sprache/schluessel.rs`, `tabelle/de.rs`, `fr.rs`, `en.rs`
     - Changes: Die Metadatenzeilen werden sechs Schlüssel mit je einem Platzhalter statt eines verketteten Literals; der Bildfolgehinweis wird ein `Zahlwort` („1 Foto“ gegen „{n} Fotos“); die „Treffer ersetzt“-Dreiteilung (0, 1, n) wird ein `Zahlwort` plus ein eigener Schlüssel für 0; die Eintragsantworten (15 Varianten mal 3 Arten) bleiben ein vollständiges Tupel-`match`, dessen Arme Schlüssel liefern.

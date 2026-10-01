@@ -955,13 +955,124 @@ pub enum Text {
     /// `Systempapierkorb::in_den_papierkorb`; `{pfad}`.
     PapierkorbKeinUtf8Pfad,
     /// Die Schaltflaeche, die ein meldendes Blatt schliesst: die
-    /// Startmeldungen und die Abschlussliste.
+    /// Startmeldungen, die Abschlussliste und die Neuerungen.
     BlattSchliessen,
+    /// Die abbrechende Schaltflaeche jedes Blattes: `standardschaltflaechen`
+    /// in `appkit/blaetter/mod.rs`, das Konfliktblatt, die Loeschrueckfrage,
+    /// das Suchblatt und die Nachfrage vor dem Verlust eines ungesicherten
+    /// Standes.
+    BlattAbbrechen,
+    /// Die Schaltflaeche „Umbenennen“: im Konfliktblatt und als bestaetigende
+    /// Schaltflaeche des Stapel-Umbenennens.
+    BlattUmbenennen,
+    /// Die Beschriftung des Suchfeldes im Suchblatt und im Stapel-Umbenennen.
+    BlattFeldSuchenNach,
+    /// Die Beschriftung des Ersatzfeldes in denselben zwei Blaettern.
+    BlattFeldErsetzenDurch,
+    /// `konflikt::schaltflaechen`: die ueberspringende Schaltflaeche bei
+    /// mehreren Zielen.
+    KonfliktUeberspringen,
+    /// `konflikt::ersetzungsbeschriftung` fuer `Ersetzungsweg::Papierkorb`.
+    KonfliktInDenPapierkorbUndErsetzen,
+    /// `ersetzungsbeschriftung` fuer `Ersetzungsweg::Endgueltig`.
+    KonfliktEndgueltigLoeschenUndErsetzen,
+    /// `konflikt::tastenhinweis` bei genau einem Ziel; die Tastennamen
+    /// bleiben in jeder Sprache.
+    KonfliktTastenhinweisEinZiel,
+    /// `tastenhinweis` bei mehreren Zielen.
+    KonfliktTastenhinweisMehrereZiele,
+    /// `konflikt::zeigen`: die Kopfzeile des Blattes; `{name}`.
+    KonfliktFrage,
+    /// `konflikt::zeigen`: die Erlaeuterung; `{quelle}`, `{ziel}`,
+    /// `{hinweis}` (ein `KonfliktTastenhinweis…`).
+    KonfliktErlaeuterung,
+    /// `konflikt::zeigen`: das Kaestchen „fuer alle weiteren uebernehmen“.
+    KonfliktFuerAlleWeiteren,
+    /// `loeschbestaetigung::zeigen`: die Erlaeuterung samt dem Satz zu den
+    /// Tasten; `{erlaeuterung}` ist der Text aus `loeschwarnung`.
+    LoeschblattErlaeuterung,
+    /// `neuerungen::frage`: die Kopfzeile des Blattes auf Abruf.
+    NeuerungenBlattFrage,
+    /// `ortwahl::zeigen`: die bestaetigende Schaltflaeche des Ordnerdialogs.
+    OrtwahlWaehlen,
+    /// `ortwahl::zeigen`: die Zeile ueber der Ordnerliste.
+    OrtwahlFrage,
+    /// `pin::hinweis`: der Text unter der Frage des PIN-Blattes.
+    PinHinweis,
+    /// `pin::abweichung`: die zweite Eingabe weicht von der ersten ab.
+    PinAbweichung,
+    /// `pin::frage` fuer `Pinform::Festlegen`.
+    PinFrageFestlegen,
+    /// `pin::frage` fuer `Pinform::Eingeben`.
+    PinFrageEingeben,
+    /// `pin::frage` fuer `Pinform::Aendern`.
+    PinFrageAendern,
+    /// `pin::bestaetigen` fuer `Pinform::Festlegen`.
+    PinBestaetigenFestlegen,
+    /// `pin::bestaetigen` fuer `Pinform::Eingeben`.
+    PinBestaetigenEingeben,
+    /// `pin::bestaetigen` fuer `Pinform::Aendern`.
+    PinBestaetigenAendern,
+    /// `pin::beschriftungen`: das Feld der neuen PIN.
+    PinFeldNeuePin,
+    /// `pin::beschriftungen`: das Feld der Wiederholung.
+    PinFeldWiederholen,
+    /// `pin::beschriftungen`: das eine Feld beim Eingeben.
+    PinFeldPin,
+    /// `pin::beschriftungen`: das Feld der alten PIN beim Aendern.
+    PinFeldAltePin,
+    /// `stapelumbenennen::Spalte::titel` fuer `Spalte::Alt`.
+    StapelSpalteBisher,
+    /// `Spalte::titel` fuer `Spalte::Neu`.
+    StapelSpalteNeu,
+    /// `Spalte::titel` fuer `Spalte::Grund`.
+    StapelSpalteHinweis,
+    /// `stapelumbenennen::zeigen`: die Erlaeuterung unter der Frage.
+    StapelErlaeuterung,
+    /// `stapelumbenennen::beigabe_bauen`: das Feld des Startwerts.
+    StapelFeldNummerAb,
+    /// `beigabe_bauen`: das Feld der Stellenzahl.
+    StapelFeldStellen,
+    /// `stapelumbenennen::zusammenfassung` ohne Kollision; `{eintraege}` (ein
+    /// `Zahlwort::StapelEintraege`), `{umzubenennen}` (gruppierte Zahl).
+    StapelZusammenfassungOhneKollisionen,
+    /// `zusammenfassung` mit Kollisionen; `{eintraege}`, `{umbenannt}` (ein
+    /// `Zahlwort::StapelWerdenUmbenannt`), `{stehend}` (ein
+    /// `Zahlwort::StapelBleibenStehen`).
+    StapelZusammenfassungMitKollisionen,
+    /// `suche::schaltflaechen`: die Schaltflaeche auf der Eingabetaste.
+    SucheWeitersuchen,
+    /// `suche::schaltflaechen`: die ersetzende Schaltflaeche.
+    SucheErsetzen,
+    /// `suche::schaltflaechen`: die Schaltflaeche, die alle Treffer ersetzt.
+    SucheAlleErsetzen,
+    /// `suche::zeigen`: der Satz, der die Kombinationen mit Zusatztaste nennt.
+    SucheErlaeuterung,
+    /// `suche::zeigen`: die Kopfzeile des Blattes.
+    SucheFrage,
+    /// `ungesichert::schaltflaechen`: die sichernde Schaltflaeche.
+    UngesichertSichern,
+    /// `ungesichert::schaltflaechen`: die verwerfende Schaltflaeche.
+    UngesichertVerwerfen,
+    /// `ungesichert::zeigen`: die Kopfzeile; `{name}`.
+    UngesichertFrage,
+    /// `ungesichert::zeigen`: die Erlaeuterung; `{pfad}`.
+    UngesichertErlaeuterung,
+    /// `zeilennummer::zeigen`: die Kopfzeile des Blattes.
+    ZeilennummerFrage,
+    /// `zeilennummer::zeigen`: die bestaetigende Schaltflaeche.
+    ZeilennummerSpringe,
+    /// `pfadeingabe::zeigen` (das Blatt): die Kopfzeile.
+    PfadeingabeFrage,
+    /// `pfadeingabe::zeigen` (das Blatt): die bestaetigende Schaltflaeche.
+    PfadeingabeGehe,
+    /// `hinweis::zeigen`: die eine Schaltflaeche des modalen Hinweises.
+    HinweisOk,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 404] = [
+    pub const ALLE: [Text; 454] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1366,6 +1477,56 @@ impl Text {
         Text::TabNichtVollstaendigGelesen,
         Text::PapierkorbKeinUtf8Pfad,
         Text::BlattSchliessen,
+        Text::BlattAbbrechen,
+        Text::BlattUmbenennen,
+        Text::BlattFeldSuchenNach,
+        Text::BlattFeldErsetzenDurch,
+        Text::KonfliktUeberspringen,
+        Text::KonfliktInDenPapierkorbUndErsetzen,
+        Text::KonfliktEndgueltigLoeschenUndErsetzen,
+        Text::KonfliktTastenhinweisEinZiel,
+        Text::KonfliktTastenhinweisMehrereZiele,
+        Text::KonfliktFrage,
+        Text::KonfliktErlaeuterung,
+        Text::KonfliktFuerAlleWeiteren,
+        Text::LoeschblattErlaeuterung,
+        Text::NeuerungenBlattFrage,
+        Text::OrtwahlWaehlen,
+        Text::OrtwahlFrage,
+        Text::PinHinweis,
+        Text::PinAbweichung,
+        Text::PinFrageFestlegen,
+        Text::PinFrageEingeben,
+        Text::PinFrageAendern,
+        Text::PinBestaetigenFestlegen,
+        Text::PinBestaetigenEingeben,
+        Text::PinBestaetigenAendern,
+        Text::PinFeldNeuePin,
+        Text::PinFeldWiederholen,
+        Text::PinFeldPin,
+        Text::PinFeldAltePin,
+        Text::StapelSpalteBisher,
+        Text::StapelSpalteNeu,
+        Text::StapelSpalteHinweis,
+        Text::StapelErlaeuterung,
+        Text::StapelFeldNummerAb,
+        Text::StapelFeldStellen,
+        Text::StapelZusammenfassungOhneKollisionen,
+        Text::StapelZusammenfassungMitKollisionen,
+        Text::SucheWeitersuchen,
+        Text::SucheErsetzen,
+        Text::SucheAlleErsetzen,
+        Text::SucheErlaeuterung,
+        Text::SucheFrage,
+        Text::UngesichertSichern,
+        Text::UngesichertVerwerfen,
+        Text::UngesichertFrage,
+        Text::UngesichertErlaeuterung,
+        Text::ZeilennummerFrage,
+        Text::ZeilennummerSpringe,
+        Text::PfadeingabeFrage,
+        Text::PfadeingabeGehe,
+        Text::HinweisOk,
     ];
 }
 
@@ -1437,11 +1598,24 @@ pub enum Zahlwort {
     /// sie erst ab zwei Meldungen, die Einzahl steht der Vollstaendigkeit
     /// halber.
     StartMeldungen,
+    /// `stapelumbenennen::frage`: die Kopfzeile des Blattes; die Einzahl
+    /// laesst `{n}` aus.
+    StapelFrage,
+    /// `stapelumbenennen::zusammenfassung`: die Zahl der Eintraege in der
+    /// Zeile ueber der Vorschau, als `{eintraege}`; beide Formen tragen
+    /// `{n}`, damit ein Eintrag „1 Eintrag“ ergibt und nicht „ein Eintrag“.
+    StapelEintraege,
+    /// `zusammenfassung` mit Kollisionen: die Zahl der Eintraege, die
+    /// umbenannt werden, als `{umbenannt}`.
+    StapelWerdenUmbenannt,
+    /// `zusammenfassung` mit Kollisionen: die Zahl der Eintraege, die stehen
+    /// bleiben, als `{stehend}`.
+    StapelBleibenStehen,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 22] = [
+    pub const ALLE: [Zahlwort; 26] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -1464,5 +1638,9 @@ impl Zahlwort {
         Zahlwort::EinfuegenDateiverweise,
         Zahlwort::LoeschfrageEintraege,
         Zahlwort::StartMeldungen,
+        Zahlwort::StapelFrage,
+        Zahlwort::StapelEintraege,
+        Zahlwort::StapelWerdenUmbenannt,
+        Zahlwort::StapelBleibenStehen,
     ];
 }

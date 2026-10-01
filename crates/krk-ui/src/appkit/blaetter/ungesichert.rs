@@ -43,6 +43,8 @@ use std::path::Path;
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
+use krk_core::sprache::{Text, satz, text};
+
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Was der Nutzer auf die Nachfrage geantwortet hat (C4).
@@ -84,9 +86,21 @@ pub enum Antwort {
 #[must_use]
 fn schaltflaechen() -> [Schaltflaeche<'static>; 3] {
     [
-        Schaltflaeche::neu("Sichern", Taste::Eingabe, Wirkung::Ausfuehren),
-        Schaltflaeche::neu("Verwerfen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
-        Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+        Schaltflaeche::neu(
+            text(Text::UngesichertSichern),
+            Taste::Eingabe,
+            Wirkung::Ausfuehren,
+        ),
+        Schaltflaeche::neu(
+            text(Text::UngesichertVerwerfen),
+            Taste::EingabeMitBefehl,
+            Wirkung::Ausfuehren,
+        ),
+        Schaltflaeche::neu(
+            text(Text::BlattAbbrechen),
+            Taste::Escape,
+            Wirkung::Liegenlassen,
+        ),
     ]
 }
 
@@ -110,12 +124,12 @@ pub fn zeigen(
 
     let blatt = Blatt::mit_schaltflaechen(
         mtm,
-        &format!("„{name}“ hat ungesicherte Änderungen"),
+        &satz(Text::UngesichertFrage, &[("name", &name)]),
         &schaltflaechen(),
     );
-    blatt.erlaeuterung_setzen(&format!(
-        "{}\n\nReturn sichert, Cmd+Return verwirft die Änderungen, Esc bricht ab.",
-        datei.display()
+    blatt.erlaeuterung_setzen(&satz(
+        Text::UngesichertErlaeuterung,
+        &[("pfad", &datei.display())],
     ));
 
     blatt.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| {

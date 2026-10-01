@@ -155,6 +155,18 @@
 //! | Seite / Bild (Zaehler der Vorschau) | page / image | page / image |
 //! | Folge gekuerzt | série tronquée | sequence truncated |
 //! | linkes / rechtes Dateifenster | volet de fichiers gauche / droit | left / right file pane |
+//! | Umbenennen (Schaltflaeche) | Renommer | Rename |
+//! | Ueberspringen (Schaltflaeche des Konfliktblatts) | Ignorer | Skip |
+//! | ersetzen (den Eintrag am Ziel) | remplacer | replace |
+//! | Weitersuchen (Schaltflaeche) | Rechercher le suivant | Find Next |
+//! | Alle ersetzen (Schaltflaeche) | Tout remplacer | Replace All |
+//! | Bisher / Neu / Hinweis (Spalten der Vorschau des Stapel-Umbenennens) | Actuel / Nouveau / Remarque | Current / New / Note |
+//! | Waehlen (Schaltflaeche des Ordnerdialogs) | Choisir | Choose |
+//! | Springe / Gehe (Schaltflaechen der Eingabeblaetter) | Aller | Go |
+//! | Festlegen / Oeffnen / Aendern (Schaltflaechen des PIN-Blattes) | Définir / Ouvrir / Modifier | Set / Open / Change |
+//! | OK (Schaltflaeche des Hinweises) | OK | OK |
+//! | Return (Tastenname in einer Erlaeuterung) | Entrée | Return |
+//! | Cmd+Return / Opt+Return | Cmd+Entrée / Opt+Entrée | Cmd+Return / Opt+Return |
 //!
 //! # Die Befehlsnamen
 //!

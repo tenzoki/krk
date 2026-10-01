@@ -58,14 +58,17 @@
 //!
 //! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
 //! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
-//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
-//! Zeichenkette beim Uebersetzen und hat keines; die Aufzaehlung
-//! `NSAlertStyle` (`NSAlert.h:22`) schliesst mit blossem `};`; alle uebrigen
-//! tragen im SDK keine eigene Verfuegbarkeitsangabe und stehen damit seit
-//! 10.0.
+//! Kiste und hat kein macOS-Alter; die Aufzaehlung `NSAlertStyle`
+//! (`NSAlert.h:22`) schliesst mit blossem `};`; alle uebrigen tragen im SDK
+//! keine eigene Verfuegbarkeitsangabe und stehen damit seit 10.0. Das Makro
+//! `ns_string!` stand hier bis zur Sprachtabelle und baute die Beschriftung
+//! „OK“ beim Uebersetzen; seit sie aus der Tabelle kommt, entsteht sie zur
+//! Laufzeit ueber `NSString::from_str`.
 
 use objc2_app_kit::{NSAlert, NSAlertStyle, NSApplication};
-use objc2_foundation::{MainThreadMarker, NSString, ns_string};
+use objc2_foundation::{MainThreadMarker, NSString};
+
+use krk_core::sprache::{Text, text};
 
 /// Zeigt den Hinweis modal fuer die ganze Anwendung und kehrt zurueck, sobald
 /// der Nutzer bestaetigt hat.
@@ -85,12 +88,16 @@ pub fn zeigen(mtm: MainThreadMarker, titel: &str, satz: &str) {
     // ist.
     warnung.setAlertStyle(NSAlertStyle::Critical);
     // Die eine Schaltflaeche ausdruecklich und nicht die Vorgabe von `NSAlert`:
-    // deren Beschriftung kaeme aus der Lokalisierung von AppKit, und welche
-    // Sprache die trifft, entscheidet dann das System und nicht KRK. `NSAlert`
-    // gibt der ersten Schaltflaeche die Eingabetaste von sich aus; hier ist das
-    // die gewuenschte Vorgabe, und anders als in [`super::blaetter`] muss ihr
+    // deren Beschriftung kaeme aus der Lokalisierung von AppKit. Die
+    // Sprachtabelle traegt dieselbe Sprache, die macOS fuer KRK gewaehlt hat
+    // (`krk_core::sprache`, gesetzt in `main`), und die Schaltflaeche ist
+    // deshalb nicht mehr gegen die Systemlokalisierung, sondern mit ihr
+    // beschriftet; ausdruecklich bleibt sie, damit die Beschriftung aus
+    // derselben Tabelle kommt wie jede andere Flaeche von KRK. `NSAlert` gibt
+    // der ersten Schaltflaeche die Eingabetaste von sich aus; hier ist das die
+    // gewuenschte Vorgabe, und anders als in [`super::blaetter`] muss ihr
     // nichts nachgeholfen werden.
-    let _knopf = warnung.addButtonWithTitle(ns_string!("OK"));
+    let _knopf = warnung.addButtonWithTitle(&NSString::from_str(text(Text::HinweisOk)));
     // Ohne diesen Aufruf stuende der Hinweis hinter der Anwendung, aus der
     // heraus KRK gestartet wurde: sein Aufrufer zeigt ihn, bevor
     // `makeKeyAndOrderFront` das Hauptfenster nach vorn holt, und bis dahin hat

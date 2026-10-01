@@ -99,6 +99,8 @@
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
+use krk_core::sprache::{Text, satz, text};
+
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Die Stelle der Schaltflaeche, die den Vorgang ausloest.
@@ -123,7 +125,11 @@ const AUSFUEHRENDE_STELLE: usize = 1;
 #[must_use]
 pub(super) fn schaltflaechen(vorgang: &str) -> [Schaltflaeche<'_>; 2] {
     [
-        Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
+        Schaltflaeche::neu(
+            text(Text::BlattAbbrechen),
+            Taste::Eingabe,
+            Wirkung::Liegenlassen,
+        ),
         Schaltflaeche::neu(vorgang, Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
     ]
 }
@@ -147,8 +153,9 @@ pub fn zeigen(
     fertig: impl Fn(bool) + 'static,
 ) -> Blattgriff {
     let blatt = Blatt::mit_schaltflaechen(mtm, frage, &schaltflaechen(schaltflaeche));
-    blatt.erlaeuterung_setzen(&format!(
-        "{erlaeuterung}\n\nReturn und Esc brechen ab. Zum Bestätigen Cmd+Return."
+    blatt.erlaeuterung_setzen(&satz(
+        Text::LoeschblattErlaeuterung,
+        &[("erlaeuterung", &erlaeuterung)],
     ));
     if laut {
         blatt.als_warnung();

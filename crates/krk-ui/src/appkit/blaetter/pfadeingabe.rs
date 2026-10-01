@@ -30,6 +30,8 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSTextField, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
+use krk_core::sprache::{Text, text};
+
 use super::{Blatt, Blattgriff};
 
 /// Die Breite des Eingabefeldes in Punkten.
@@ -66,7 +68,11 @@ pub fn zeigen(
     // ein programmatischer Aufruf dafuer setzt.
     unsafe { feld.selectText(None) };
 
-    let mut blatt = Blatt::neu(mtm, "Zu welchem Ordner?", "Gehe");
+    let mut blatt = Blatt::neu(
+        mtm,
+        text(Text::PfadeingabeFrage),
+        text(Text::PfadeingabeGehe),
+    );
     blatt.textfeld_setzen(mtm, &feld);
 
     let feld: Retained<NSTextField> = feld;

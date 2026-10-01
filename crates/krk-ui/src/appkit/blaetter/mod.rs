@@ -272,6 +272,8 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{MainThreadMarker, NSObject, NSObjectProtocol, NSString, ns_string};
 
+use krk_core::sprache::{Text, text};
+
 /// Was der Waechter tut, wenn der Nutzer im Feld bestaetigt oder abbricht.
 ///
 /// `true` heisst bestaetigt.
@@ -796,11 +798,20 @@ pub struct Blatt {
 ///
 /// Die Reihenfolge ist bindend und steht bei [`Blatt::neu`] begruendet: die
 /// erste bestaetigt und traegt die Eingabetaste, die zweite bricht ab.
+///
+/// Die abbrechende Schaltflaeche traegt in jedem Blatt des Baums denselben
+/// Schluessel, `Text::BlattAbbrechen`; die Blaetter mit eigenem Bauplan
+/// nehmen ihn ebenso, und ein zweiter Schluessel fuer dasselbe Wort entsteht
+/// nicht.
 #[must_use]
 fn standardschaltflaechen(bestaetigen: &str) -> [Schaltflaeche<'_>; 2] {
     [
         Schaltflaeche::neu(bestaetigen, Taste::Eingabe, Wirkung::Ausfuehren),
-        Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+        Schaltflaeche::neu(
+            text(Text::BlattAbbrechen),
+            Taste::Escape,
+            Wirkung::Liegenlassen,
+        ),
     ]
 }
 

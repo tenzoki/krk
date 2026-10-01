@@ -45,14 +45,20 @@ use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
 use krk_core::ablage::neuerungen::{Bestand, blatttext};
+use krk_core::sprache::{Text, text};
 
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Die Kopfzeile des Blattes.
 ///
 /// Sie nennt den Gegenstand und nicht das Ergebnis: der Modulkopf sagt, warum
-/// keine zweite Fassung fuer den Fall ohne Unterschied danebensteht.
-pub const FRAGE: &str = "Ihre Ablagedateien und was diese Fassung mitbringt";
+/// keine zweite Fassung fuer den Fall ohne Unterschied danebensteht. Eine
+/// Funktion und keine Konstante, weil kein `const` einen Tabellentext haelt
+/// (Modulkopf von `krk_core::sprache`).
+#[must_use]
+fn frage() -> &'static str {
+    text(Text::NeuerungenBlattFrage)
+}
 
 /// Die eine Schaltflaeche des Blattes auf Abruf.
 ///
@@ -69,7 +75,7 @@ pub const FRAGE: &str = "Ihre Ablagedateien und was diese Fassung mitbringt";
 #[must_use]
 fn schaltflaechen() -> [Schaltflaeche<'static>; 1] {
     [Schaltflaeche::neu(
-        "Schließen",
+        text(Text::BlattSchliessen),
         Taste::Eingabe,
         Wirkung::Liegenlassen,
     )]
@@ -88,7 +94,7 @@ pub fn zeigen(
     bestand: &Bestand,
     fertig: impl Fn() + 'static,
 ) -> Blattgriff {
-    let blatt = Blatt::mit_schaltflaechen(mtm, FRAGE, &schaltflaechen());
+    let blatt = Blatt::mit_schaltflaechen(mtm, frage(), &schaltflaechen());
     blatt.erlaeuterung_setzen(&blatttext(bestand));
     blatt.zeigen_mit_wahl(fenster, move |_stelle, _fuer_alle| fertig())
 }
@@ -97,7 +103,7 @@ pub fn zeigen(
 mod tests {
     use crate::appkit::blaetter::abbruchstelle;
 
-    use super::{FRAGE, Taste, Wirkung, schaltflaechen};
+    use super::{Taste, Wirkung, frage, schaltflaechen};
 
     /// Der Bauplan traegt genau eine Schaltflaeche, und sie laesst liegen.
     ///
@@ -136,9 +142,12 @@ mod tests {
     /// gibt — und genau dann geht dieses Blatt trotzdem auf.
     #[test]
     fn die_kopfzeile_nennt_den_gegenstand_und_nicht_das_ergebnis() {
-        assert_eq!(FRAGE, "Ihre Ablagedateien und was diese Fassung mitbringt");
+        assert_eq!(
+            frage(),
+            "Ihre Ablagedateien und was diese Fassung mitbringt"
+        );
         assert!(
-            !FRAGE.contains("Neu"),
+            !frage().contains("Neu"),
             "die Kopfzeile nimmt einen Befund vorweg, den es nicht geben muss"
         );
     }

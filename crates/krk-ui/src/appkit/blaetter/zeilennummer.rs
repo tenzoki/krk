@@ -40,6 +40,8 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSTextField, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize};
 
+use krk_core::sprache::{Text, text};
+
 use super::{Blatt, Blattgriff};
 
 /// Die Breite des Eingabefeldes in Punkten.
@@ -69,7 +71,11 @@ pub fn zeigen(
         NSRect::new(NSPoint::ZERO, NSSize::new(FELDBREITE, FELDHOEHE)),
     );
 
-    let mut blatt = Blatt::neu(mtm, "Zu welcher Zeile?", "Springe");
+    let mut blatt = Blatt::neu(
+        mtm,
+        text(Text::ZeilennummerFrage),
+        text(Text::ZeilennummerSpringe),
+    );
     blatt.textfeld_setzen(mtm, &feld);
 
     let feld: Retained<NSTextField> = feld;

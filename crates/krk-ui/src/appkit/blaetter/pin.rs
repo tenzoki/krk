@@ -85,6 +85,7 @@ use objc2_app_kit::{NSSecureTextField, NSTextAlignment, NSTextField, NSView, NSW
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
 use krk_core::heimordner::tresor::{Pin, Pinfehler};
+use krk_core::sprache::{Text, text};
 
 use crate::editormodell::Pinform;
 
@@ -93,15 +94,21 @@ use super::{Blatt, Blattgriff};
 /// Der Text unter der Frage, in jeder Form derselbe (C7).
 ///
 /// **Der Wortlaut des Spec, ohne Zeitangabe**: wovor die PIN schuetzt, wovor
-/// nicht, und dass eine vergessene PIN den Inhalt endgueltig verschliesst. Mit
-/// Umlauten, weil der Nutzer ihn durch KRKs Oberflaeche liest; die Probe
-/// `der_wortlaut_des_blattes` haelt ihn fest.
-pub const HINWEIS: &str = "Die PIN hält Programme und Agenten vom Mitlesen ab. \
-    Gegen jemanden, der die Datei kopiert und gezielt angreift, schützt sie nicht. \
-    Eine vergessene PIN verschließt den Inhalt endgültig.";
+/// nicht, und dass eine vergessene PIN den Inhalt endgueltig verschliesst. Der
+/// deutsche Eintrag der Sprachtabelle traegt ihn mit Umlauten, weil der
+/// Nutzer ihn durch KRKs Oberflaeche liest; die Probe
+/// `der_wortlaut_des_blattes` haelt ihn fest. Eine Funktion und keine
+/// Konstante, weil kein `const` einen Tabellentext haelt.
+#[must_use]
+pub fn hinweis() -> &'static str {
+    text(Text::PinHinweis)
+}
 
 /// Der Grund, wenn die zweite Eingabe beim Festlegen von der ersten abweicht.
-pub const ABWEICHUNG: &str = "Die beiden Eingaben stimmen nicht überein.";
+#[must_use]
+pub fn abweichung() -> &'static str {
+    text(Text::PinAbweichung)
+}
 
 /// Die Breite der Beigabe in Punkten; sie bestimmt die Breite des Blattes.
 const BREITE: f64 = 300.0;
@@ -128,9 +135,9 @@ const SPALTENABSTAND: f64 = 8.0;
 #[must_use]
 pub fn frage(form: Pinform) -> &'static str {
     match form {
-        Pinform::Festlegen => "Neue PIN für die Geheimnisse festlegen",
-        Pinform::Eingeben => "PIN für die Geheimnisse eingeben",
-        Pinform::Aendern => "PIN für die Geheimnisse ändern",
+        Pinform::Festlegen => text(Text::PinFrageFestlegen),
+        Pinform::Eingeben => text(Text::PinFrageEingeben),
+        Pinform::Aendern => text(Text::PinFrageAendern),
     }
 }
 
@@ -138,21 +145,29 @@ pub fn frage(form: Pinform) -> &'static str {
 #[must_use]
 pub fn bestaetigen(form: Pinform) -> &'static str {
     match form {
-        Pinform::Festlegen => "Festlegen",
-        Pinform::Eingeben => "Öffnen",
-        Pinform::Aendern => "Ändern",
+        Pinform::Festlegen => text(Text::PinBestaetigenFestlegen),
+        Pinform::Eingeben => text(Text::PinBestaetigenEingeben),
+        Pinform::Aendern => text(Text::PinBestaetigenAendern),
     }
 }
 
 /// Die Beschriftungen der Felder, von oben nach unten; ihre Zahl ist die Zahl
 /// der Felder.
+///
+/// Ein `Vec` und kein fester Verweis, weil die Eintraege erst in der
+/// geltenden Sprache entstehen und kein `static` einen Tabellentext haelt.
 #[must_use]
-pub fn beschriftungen(form: Pinform) -> &'static [&'static str] {
-    match form {
-        Pinform::Festlegen => &["Neue PIN:", "Wiederholen:"],
-        Pinform::Eingeben => &["PIN:"],
-        Pinform::Aendern => &["Alte PIN:", "Neue PIN:", "Wiederholen:"],
-    }
+pub fn beschriftungen(form: Pinform) -> Vec<&'static str> {
+    let felder: &[Text] = match form {
+        Pinform::Festlegen => &[Text::PinFeldNeuePin, Text::PinFeldWiederholen],
+        Pinform::Eingeben => &[Text::PinFeldPin],
+        Pinform::Aendern => &[
+            Text::PinFeldAltePin,
+            Text::PinFeldNeuePin,
+            Text::PinFeldWiederholen,
+        ],
+    };
+    felder.iter().map(|feld| text(*feld)).collect()
 }
 
 /// Was das Blatt liefert: die eingegebene oder neue PIN, und in der Form
@@ -185,7 +200,7 @@ impl Eingabefehler {
     pub fn meldung(self) -> &'static str {
         match self {
             Eingabefehler::KeinePin(fehler) => fehler.meldung(),
-            Eingabefehler::Abweichung => ABWEICHUNG,
+            Eingabefehler::Abweichung => abweichung(),
         }
     }
 }
@@ -265,7 +280,7 @@ pub fn grund_beim_tippen(erste: &str, zweite: Option<&str>) -> Option<&'static s
         return Some(Pinfehler::KeineVierZiffern.meldung());
     }
     match zweite {
-        Some(wiederholt) if !erste.starts_with(wiederholt) => Some(ABWEICHUNG),
+        Some(wiederholt) if !erste.starts_with(wiederholt) => Some(abweichung()),
         Some(_) | None => None,
     }
 }
@@ -322,7 +337,7 @@ pub fn zeigen(
     }
 
     let mut blatt = Blatt::neu(mtm, frage(form), bestaetigen(form));
-    blatt.erlaeuterung_setzen(HINWEIS);
+    blatt.erlaeuterung_setzen(hinweis());
     blatt.beigabe_setzen(&beigabe);
     blatt.ersthelfer_setzen(&felder[0]);
     for feld in &felder {
@@ -413,11 +428,13 @@ mod tests {
     use super::*;
 
     /// Der Wortlaut des Blattes, Zeichen fuer Zeichen und mit Umlauten (C7:
-    /// „eine Probe haelt ihren Wortlaut fest").
+    /// „eine Probe haelt ihren Wortlaut fest"). Gelesen ueber die Funktionen
+    /// dieser Datei, die in `cargo test` den deutschen Tabelleneintrag
+    /// liefern; die Literale bleiben, weil die Probe den Wortlaut haelt.
     #[test]
     fn der_wortlaut_des_blattes() {
         assert_eq!(
-            HINWEIS,
+            hinweis(),
             "Die PIN hält Programme und Agenten vom Mitlesen ab. Gegen jemanden, der die \
              Datei kopiert und gezielt angreift, schützt sie nicht. Eine vergessene PIN \
              verschließt den Inhalt endgültig."
@@ -440,7 +457,7 @@ mod tests {
             ["Neue PIN:", "Wiederholen:"]
         );
         assert_eq!(beschriftungen(Pinform::Eingeben), ["PIN:"]);
-        assert_eq!(ABWEICHUNG, "Die beiden Eingaben stimmen nicht überein.");
+        assert_eq!(abweichung(), "Die beiden Eingaben stimmen nicht überein.");
         assert_eq!(
             Eingabefehler::KeinePin(Pinfehler::KeineVierZiffern).meldung(),
             "Die PIN besteht aus genau vier Ziffern."
@@ -487,7 +504,7 @@ mod tests {
         );
         assert_eq!(
             grund_der_felder(Pinform::Aendern, &felder("1111", "2222", "3")),
-            Some(ABWEICHUNG)
+            Some(abweichung())
         );
         assert_eq!(
             grund_der_felder(Pinform::Aendern, &felder("11", "2", "")),
@@ -568,8 +585,8 @@ mod tests {
         assert_eq!(grund_beim_tippen("12a", None), vier_ziffern);
         assert_eq!(grund_beim_tippen("12345", None), vier_ziffern);
         assert_eq!(grund_beim_tippen("1234", Some("12")), None);
-        assert_eq!(grund_beim_tippen("1234", Some("13")), Some(ABWEICHUNG));
-        assert_eq!(grund_beim_tippen("12", Some("1234")), Some(ABWEICHUNG));
+        assert_eq!(grund_beim_tippen("1234", Some("13")), Some(abweichung()));
+        assert_eq!(grund_beim_tippen("12", Some("1234")), Some(abweichung()));
         assert_eq!(grund_beim_tippen("1234", Some("1234")), None);
     }
 }

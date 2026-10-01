@@ -640,6 +640,72 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TabNichtVollstaendigGelesen => "{ordner} ließ sich nicht vollständig lesen: {fehler}",
         Text::PapierkorbKeinUtf8Pfad => "{pfad} ist kein gültiger UTF-8-Pfad",
         Text::BlattSchliessen => "Schließen",
+        Text::BlattAbbrechen => "Abbrechen",
+        Text::BlattUmbenennen => "Umbenennen",
+        Text::BlattFeldSuchenNach => "Suchen nach:",
+        Text::BlattFeldErsetzenDurch => "Ersetzen durch:",
+        Text::KonfliktUeberspringen => "Überspringen",
+        Text::KonfliktInDenPapierkorbUndErsetzen => "In den Papierkorb und ersetzen",
+        Text::KonfliktEndgueltigLoeschenUndErsetzen => "Endgültig löschen und ersetzen",
+        Text::KonfliktTastenhinweisEinZiel => {
+            "Return und Esc brechen ab, Cmd+Return ersetzt, Opt+Return benennt um."
+        }
+        Text::KonfliktTastenhinweisMehrereZiele => {
+            "Return überspringt, Cmd+Return ersetzt, Opt+Return benennt um, Esc bricht ab."
+        }
+        Text::KonfliktFrage => "„{name}“ gibt es am Ziel schon",
+        Text::KonfliktErlaeuterung => "Quelle: {quelle}\nZiel: {ziel}\n\n{hinweis}",
+        Text::KonfliktFuerAlleWeiteren => "Für alle weiteren übernehmen",
+        Text::LoeschblattErlaeuterung => {
+            "{erlaeuterung}\n\nReturn und Esc brechen ab. Zum Bestätigen Cmd+Return."
+        }
+        Text::NeuerungenBlattFrage => "Ihre Ablagedateien und was diese Fassung mitbringt",
+        Text::OrtwahlWaehlen => "Wählen",
+        Text::OrtwahlFrage => "Wo soll der Notizordner liegen?",
+        Text::PinHinweis => {
+            "Die PIN hält Programme und Agenten vom Mitlesen ab. Gegen jemanden, der die Datei kopiert und gezielt angreift, schützt sie nicht. Eine vergessene PIN verschließt den Inhalt endgültig."
+        }
+        Text::PinAbweichung => "Die beiden Eingaben stimmen nicht überein.",
+        Text::PinFrageFestlegen => "Neue PIN für die Geheimnisse festlegen",
+        Text::PinFrageEingeben => "PIN für die Geheimnisse eingeben",
+        Text::PinFrageAendern => "PIN für die Geheimnisse ändern",
+        Text::PinBestaetigenFestlegen => "Festlegen",
+        Text::PinBestaetigenEingeben => "Öffnen",
+        Text::PinBestaetigenAendern => "Ändern",
+        Text::PinFeldNeuePin => "Neue PIN:",
+        Text::PinFeldWiederholen => "Wiederholen:",
+        Text::PinFeldPin => "PIN:",
+        Text::PinFeldAltePin => "Alte PIN:",
+        Text::StapelSpalteBisher => "Bisher",
+        Text::StapelSpalteNeu => "Neu",
+        Text::StapelSpalteHinweis => "Hinweis",
+        Text::StapelErlaeuterung => {
+            "Die Vorschau zeigt, was der Befehl täte. Umbenannt wird erst mit Return; Esc bricht ab. Einträge mit einem Hinweis bleiben stehen."
+        }
+        Text::StapelFeldNummerAb => "Nummer ab:",
+        Text::StapelFeldStellen => "Stellen:",
+        Text::StapelZusammenfassungOhneKollisionen => {
+            "{eintraege}, davon {umzubenennen} mit neuem Namen"
+        }
+        Text::StapelZusammenfassungMitKollisionen => "{eintraege}: {umbenannt}, {stehend}",
+        Text::SucheWeitersuchen => "Weitersuchen",
+        Text::SucheErsetzen => "Ersetzen",
+        Text::SucheAlleErsetzen => "Alle ersetzen",
+        Text::SucheErlaeuterung => {
+            "Return sucht weiter, Cmd+Return ersetzt den Treffer, Opt+Return ersetzt alle, Esc bricht ab."
+        }
+        Text::SucheFrage => "Wonach suchen?",
+        Text::UngesichertSichern => "Sichern",
+        Text::UngesichertVerwerfen => "Verwerfen",
+        Text::UngesichertFrage => "„{name}“ hat ungesicherte Änderungen",
+        Text::UngesichertErlaeuterung => {
+            "{pfad}\n\nReturn sichert, Cmd+Return verwirft die Änderungen, Esc bricht ab."
+        }
+        Text::ZeilennummerFrage => "Zu welcher Zeile?",
+        Text::ZeilennummerSpringe => "Springe",
+        Text::PfadeingabeFrage => "Zu welchem Ordner?",
+        Text::PfadeingabeGehe => "Gehe",
+        Text::HinweisOk => "OK",
     }
 }
 
@@ -696,6 +762,13 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "Beim Start gab es eine Meldung",
             "Beim Start gab es {n} Meldungen",
         ),
+        Zahlwort::StapelFrage => (
+            "Einen Eintrag umbenennen",
+            "{n} Einträge im Stapel umbenennen",
+        ),
+        Zahlwort::StapelEintraege => ("{n} Eintrag", "{n} Einträge"),
+        Zahlwort::StapelWerdenUmbenannt => ("{n} wird umbenannt", "{n} werden umbenannt"),
+        Zahlwort::StapelBleibenStehen => ("{n} bleibt stehen", "{n} bleiben stehen"),
     }
 }
 

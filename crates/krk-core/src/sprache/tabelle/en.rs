@@ -610,6 +610,72 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TabNichtVollstaendigGelesen => "{ordner} could not be read completely: {fehler}",
         Text::PapierkorbKeinUtf8Pfad => "{pfad} is not a valid UTF-8 path",
         Text::BlattSchliessen => "Close",
+        Text::BlattAbbrechen => "Cancel",
+        Text::BlattUmbenennen => "Rename",
+        Text::BlattFeldSuchenNach => "Find:",
+        Text::BlattFeldErsetzenDurch => "Replace with:",
+        Text::KonfliktUeberspringen => "Skip",
+        Text::KonfliktInDenPapierkorbUndErsetzen => "Move to Trash and Replace",
+        Text::KonfliktEndgueltigLoeschenUndErsetzen => "Delete Permanently and Replace",
+        Text::KonfliktTastenhinweisEinZiel => {
+            "Return and Esc cancel, Cmd+Return replaces, Opt+Return renames."
+        }
+        Text::KonfliktTastenhinweisMehrereZiele => {
+            "Return skips, Cmd+Return replaces, Opt+Return renames, Esc cancels."
+        }
+        Text::KonfliktFrage => "“{name}” already exists at the destination",
+        Text::KonfliktErlaeuterung => "Source: {quelle}\nDestination: {ziel}\n\n{hinweis}",
+        Text::KonfliktFuerAlleWeiteren => "Apply to All Remaining",
+        Text::LoeschblattErlaeuterung => {
+            "{erlaeuterung}\n\nReturn and Esc cancel. Cmd+Return to confirm."
+        }
+        Text::NeuerungenBlattFrage => "Your data files and what this version brings",
+        Text::OrtwahlWaehlen => "Choose",
+        Text::OrtwahlFrage => "Where should the notes folder be?",
+        Text::PinHinweis => {
+            "The PIN keeps programs and agents from reading along. It does not protect against someone who copies the file and attacks it deliberately. A forgotten PIN locks the contents for good."
+        }
+        Text::PinAbweichung => "The two entries do not match.",
+        Text::PinFrageFestlegen => "Set a new PIN for the secrets",
+        Text::PinFrageEingeben => "Enter the PIN for the secrets",
+        Text::PinFrageAendern => "Change the PIN for the secrets",
+        Text::PinBestaetigenFestlegen => "Set",
+        Text::PinBestaetigenEingeben => "Open",
+        Text::PinBestaetigenAendern => "Change",
+        Text::PinFeldNeuePin => "New PIN:",
+        Text::PinFeldWiederholen => "Repeat:",
+        Text::PinFeldPin => "PIN:",
+        Text::PinFeldAltePin => "Old PIN:",
+        Text::StapelSpalteBisher => "Current",
+        Text::StapelSpalteNeu => "New",
+        Text::StapelSpalteHinweis => "Note",
+        Text::StapelErlaeuterung => {
+            "The preview shows what the command would do. Renaming happens only with Return; Esc cancels. Entries with a note stay as they are."
+        }
+        Text::StapelFeldNummerAb => "Number from:",
+        Text::StapelFeldStellen => "Digits:",
+        Text::StapelZusammenfassungOhneKollisionen => {
+            "{eintraege}, {umzubenennen} of them with a new name"
+        }
+        Text::StapelZusammenfassungMitKollisionen => "{eintraege}: {umbenannt}, {stehend}",
+        Text::SucheWeitersuchen => "Find Next",
+        Text::SucheErsetzen => "Replace",
+        Text::SucheAlleErsetzen => "Replace All",
+        Text::SucheErlaeuterung => {
+            "Return finds the next match, Cmd+Return replaces the match, Opt+Return replaces all, Esc cancels."
+        }
+        Text::SucheFrage => "Find what?",
+        Text::UngesichertSichern => "Save",
+        Text::UngesichertVerwerfen => "Don’t Save",
+        Text::UngesichertFrage => "“{name}” has unsaved changes",
+        Text::UngesichertErlaeuterung => {
+            "{pfad}\n\nReturn saves, Cmd+Return discards the changes, Esc cancels."
+        }
+        Text::ZeilennummerFrage => "Which line?",
+        Text::ZeilennummerSpringe => "Go",
+        Text::PfadeingabeFrage => "Which folder?",
+        Text::PfadeingabeGehe => "Go",
+        Text::HinweisOk => "OK",
     }
 }
 
@@ -657,6 +723,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "There was one message at start",
             "There were {n} messages at start",
         ),
+        Zahlwort::StapelFrage => ("Rename one entry", "Rename {n} entries in a batch"),
+        Zahlwort::StapelEintraege => ("{n} entry", "{n} entries"),
+        Zahlwort::StapelWerdenUmbenannt => ("{n} will be renamed", "{n} will be renamed"),
+        Zahlwort::StapelBleibenStehen => ("{n} stays as it is", "{n} stay as they are"),
     }
 }
 

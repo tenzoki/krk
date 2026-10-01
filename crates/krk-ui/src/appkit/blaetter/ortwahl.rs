@@ -84,11 +84,7 @@ use block2::RcBlock;
 use objc2_app_kit::{NSModalResponse, NSModalResponseOK, NSOpenPanel, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSString, NSURL};
 
-/// Die Beschriftung der bestaetigenden Schaltflaeche.
-const SCHALTFLAECHE: &str = "Wählen";
-
-/// Die Zeile ueber der Ordnerliste.
-const FRAGE: &str = "Wo soll der Notizordner liegen?";
+use krk_core::sprache::{Text, text};
 
 /// Zeigt den Ordnerdialog als Blatt am Fenster.
 ///
@@ -116,8 +112,10 @@ pub fn zeigen(
         let adresse = NSURL::fileURLWithPath(&NSString::from_str(beginn));
         dialog.setDirectoryURL(Some(&adresse));
     }
-    dialog.setPrompt(Some(&NSString::from_str(SCHALTFLAECHE)));
-    dialog.setMessage(Some(&NSString::from_str(FRAGE)));
+    // Die bestaetigende Schaltflaeche und die Zeile ueber der Ordnerliste
+    // kommen aus der Sprachtabelle wie jede Beschriftung eines Blattes.
+    dialog.setPrompt(Some(&NSString::from_str(text(Text::OrtwahlWaehlen))));
+    dialog.setMessage(Some(&NSString::from_str(text(Text::OrtwahlFrage))));
 
     // Der Block haelt den Dialog, damit `URLs` nach der Antwort noch zu
     // fragen ist. Der Ring Dialog → Block → Dialog bricht, sobald AppKit den

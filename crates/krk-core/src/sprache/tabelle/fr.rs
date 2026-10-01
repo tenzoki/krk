@@ -690,6 +690,74 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::PapierkorbKeinUtf8Pfad => "{pfad} n’est pas un chemin UTF-8 valide",
         Text::BlattSchliessen => "Fermer",
+        Text::BlattAbbrechen => "Annuler",
+        Text::BlattUmbenennen => "Renommer",
+        Text::BlattFeldSuchenNach => "Rechercher\u{a0}:",
+        Text::BlattFeldErsetzenDurch => "Remplacer par\u{a0}:",
+        Text::KonfliktUeberspringen => "Ignorer",
+        Text::KonfliktInDenPapierkorbUndErsetzen => "Mettre à la Corbeille et remplacer",
+        Text::KonfliktEndgueltigLoeschenUndErsetzen => "Supprimer définitivement et remplacer",
+        Text::KonfliktTastenhinweisEinZiel => {
+            "Entrée et Esc annulent, Cmd+Entrée remplace, Opt+Entrée renomme."
+        }
+        Text::KonfliktTastenhinweisMehrereZiele => {
+            "Entrée ignore, Cmd+Entrée remplace, Opt+Entrée renomme, Esc annule."
+        }
+        Text::KonfliktFrage => "«\u{a0}{name}\u{a0}» existe déjà à la destination",
+        Text::KonfliktErlaeuterung => {
+            "Source\u{a0}: {quelle}\nDestination\u{a0}: {ziel}\n\n{hinweis}"
+        }
+        Text::KonfliktFuerAlleWeiteren => "Appliquer à toutes les suivantes",
+        Text::LoeschblattErlaeuterung => {
+            "{erlaeuterung}\n\nEntrée et Esc annulent. Cmd+Entrée pour confirmer."
+        }
+        Text::NeuerungenBlattFrage => "Vos fichiers de données et ce que cette version apporte",
+        Text::OrtwahlWaehlen => "Choisir",
+        Text::OrtwahlFrage => "Où placer le dossier de notes\u{202f}?",
+        Text::PinHinweis => {
+            "Le code PIN empêche les programmes et les agents de lire le contenu. Il ne protège pas contre quelqu’un qui copie le fichier et l’attaque délibérément. Un code PIN oublié verrouille le contenu définitivement."
+        }
+        Text::PinAbweichung => "Les deux saisies ne correspondent pas.",
+        Text::PinFrageFestlegen => "Définir un nouveau code PIN pour les secrets",
+        Text::PinFrageEingeben => "Saisir le code PIN des secrets",
+        Text::PinFrageAendern => "Modifier le code PIN des secrets",
+        Text::PinBestaetigenFestlegen => "Définir",
+        Text::PinBestaetigenEingeben => "Ouvrir",
+        Text::PinBestaetigenAendern => "Modifier",
+        Text::PinFeldNeuePin => "Nouveau code PIN\u{a0}:",
+        Text::PinFeldWiederholen => "Répéter\u{a0}:",
+        Text::PinFeldPin => "Code PIN\u{a0}:",
+        Text::PinFeldAltePin => "Ancien code PIN\u{a0}:",
+        Text::StapelSpalteBisher => "Actuel",
+        Text::StapelSpalteNeu => "Nouveau",
+        Text::StapelSpalteHinweis => "Remarque",
+        Text::StapelErlaeuterung => {
+            "L’aperçu montre ce que ferait la commande. Le renommage n’a lieu qu’avec Entrée\u{202f}; Esc annule. Les entrées accompagnées d’une remarque restent inchangées."
+        }
+        Text::StapelFeldNummerAb => "Numéro à partir de\u{a0}:",
+        Text::StapelFeldStellen => "Chiffres\u{a0}:",
+        Text::StapelZusammenfassungOhneKollisionen => {
+            "{eintraege}, dont {umzubenennen} avec un nouveau nom"
+        }
+        Text::StapelZusammenfassungMitKollisionen => "{eintraege}\u{a0}: {umbenannt}, {stehend}",
+        Text::SucheWeitersuchen => "Rechercher le suivant",
+        Text::SucheErsetzen => "Remplacer",
+        Text::SucheAlleErsetzen => "Tout remplacer",
+        Text::SucheErlaeuterung => {
+            "Entrée cherche le suivant, Cmd+Entrée remplace le résultat, Opt+Entrée remplace tout, Esc annule."
+        }
+        Text::SucheFrage => "Que rechercher\u{202f}?",
+        Text::UngesichertSichern => "Enregistrer",
+        Text::UngesichertVerwerfen => "Ne pas enregistrer",
+        Text::UngesichertFrage => "«\u{a0}{name}\u{a0}» a des modifications non enregistrées",
+        Text::UngesichertErlaeuterung => {
+            "{pfad}\n\nEntrée enregistre, Cmd+Entrée abandonne les modifications, Esc annule."
+        }
+        Text::ZeilennummerFrage => "À quelle ligne\u{202f}?",
+        Text::ZeilennummerSpringe => "Aller",
+        Text::PfadeingabeFrage => "Vers quel dossier\u{202f}?",
+        Text::PfadeingabeGehe => "Aller",
+        Text::HinweisOk => "OK",
     }
 }
 
@@ -744,6 +812,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "Il y a eu un message au démarrage",
             "Il y a eu {n} messages au démarrage",
         ),
+        Zahlwort::StapelFrage => ("Renommer une entrée", "Renommer {n} entrées par lot"),
+        Zahlwort::StapelEintraege => ("{n} entrée", "{n} entrées"),
+        Zahlwort::StapelWerdenUmbenannt => ("{n} sera renommée", "{n} seront renommées"),
+        Zahlwort::StapelBleibenStehen => ("{n} reste inchangée", "{n} restent inchangées"),
     }
 }
 

@@ -71,6 +71,8 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSTextAlignment, NSTextField, NSView, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
+use krk_core::sprache::{Text, text};
+
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Was der Nutzer im Blatt gewaehlt hat.
@@ -105,10 +107,26 @@ pub enum Suchwahl {
 #[must_use]
 pub(super) fn schaltflaechen() -> [Schaltflaeche<'static>; 4] {
     [
-        Schaltflaeche::neu("Weitersuchen", Taste::Eingabe, Wirkung::Ausfuehren),
-        Schaltflaeche::neu("Ersetzen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
-        Schaltflaeche::neu("Alle ersetzen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
-        Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+        Schaltflaeche::neu(
+            text(Text::SucheWeitersuchen),
+            Taste::Eingabe,
+            Wirkung::Ausfuehren,
+        ),
+        Schaltflaeche::neu(
+            text(Text::SucheErsetzen),
+            Taste::EingabeMitBefehl,
+            Wirkung::Ausfuehren,
+        ),
+        Schaltflaeche::neu(
+            text(Text::SucheAlleErsetzen),
+            Taste::EingabeMitWahl,
+            Wirkung::Ausfuehren,
+        ),
+        Schaltflaeche::neu(
+            text(Text::BlattAbbrechen),
+            Taste::Escape,
+            Wirkung::Liegenlassen,
+        ),
     ]
 }
 
@@ -128,9 +146,14 @@ fn suchwahl_von_stelle(stelle: usize) -> Option<Suchwahl> {
 /// nennt.
 ///
 /// Ohne ihn waeren sie unauffindbar; so verlangt es der Doc-Kommentar von
-/// [`Taste`]. Der Wortlaut folgt dem des Konfliktblattes (`Cmd+Return`, `Opt+Return`).
-const ERLAEUTERUNG: &str = "Return sucht weiter, Cmd+Return ersetzt den Treffer, \
-                            Opt+Return ersetzt alle, Esc bricht ab.";
+/// [`Taste`]. Der Wortlaut folgt dem des Konfliktblattes (`Cmd+Return`,
+/// `Opt+Return`) und steht als `Text::SucheErlaeuterung` in der Sprachtabelle;
+/// die Probe `die_erlaeuterung_nennt_beide_zusatztasten` haelt ihn am
+/// deutschen Eintrag gegen die angelegten Tasten.
+#[must_use]
+fn erlaeuterung() -> &'static str {
+    text(Text::SucheErlaeuterung)
+}
 
 /// Die Breite der Beigabe in Punkten.
 ///
@@ -179,11 +202,17 @@ pub fn zeigen(
     );
 
     // Von unten nach oben, weil AppKit von unten nach oben misst.
-    let ersatzfeld = eingabezeile(mtm, &beigabe, "Ersetzen durch:", 0.0, ersatz);
+    let ersatzfeld = eingabezeile(
+        mtm,
+        &beigabe,
+        text(Text::BlattFeldErsetzenDurch),
+        0.0,
+        ersatz,
+    );
     let suchfeld = eingabezeile(
         mtm,
         &beigabe,
-        "Suchen nach:",
+        text(Text::BlattFeldSuchenNach),
         ZEILENHOEHE + ZEILENABSTAND,
         gesucht,
     );
@@ -209,8 +238,8 @@ pub fn zeigen(
         ersatzfeld.setNextKeyView(Some(&suchfeld));
     }
 
-    let mut blatt = Blatt::mit_schaltflaechen(mtm, "Wonach suchen?", &schaltflaechen());
-    blatt.erlaeuterung_setzen(ERLAEUTERUNG);
+    let mut blatt = Blatt::mit_schaltflaechen(mtm, text(Text::SucheFrage), &schaltflaechen());
+    blatt.erlaeuterung_setzen(erlaeuterung());
     // Die drei Schritte einzeln und nicht ueber `textfeld_setzen`: die Beigabe
     // ist der Rahmen um die beiden Felder und nicht eines davon, und
     // Ersthelfer ist das Suchfeld. Der Waechter ist fuer beide derselbe.
@@ -315,8 +344,14 @@ mod tests {
 
     /// Der erlaeuternde Satz nennt jede Kombination mit Zusatztaste, die eine
     /// Schaltflaeche traegt.
+    ///
+    /// Gemessen am deutschen Tabelleneintrag, weil die Probe die Mechanik
+    /// haelt (jede angelegte Zusatztaste steht im Satz) und nicht den
+    /// Wortlaut; die Tastennamen der anderen Sprachen sagt das Glossar in
+    /// `krk_core::sprache::tabelle`.
     #[test]
     fn die_erlaeuterung_nennt_beide_zusatztasten() {
+        let erlaeuterung = krk_core::sprache::Sprache::De.text(Text::SucheErlaeuterung);
         for schaltflaeche in schaltflaechen() {
             let angesagt = match schaltflaeche.taste {
                 Taste::EingabeMitBefehl => "Cmd+Return",
@@ -324,7 +359,7 @@ mod tests {
                 Taste::Eingabe | Taste::Escape => continue,
             };
             assert!(
-                ERLAEUTERUNG.contains(angesagt),
+                erlaeuterung.contains(angesagt),
                 "die Erlaeuterung nennt {angesagt} fuer \"{}\" nicht",
                 schaltflaeche.titel
             );

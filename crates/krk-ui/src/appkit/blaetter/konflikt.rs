@@ -137,6 +137,7 @@ use objc2_app_kit::{NSTextField, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
 use krk_core::operation::{Konfliktantwort, Konfliktentscheid};
+use krk_core::sprache::{Text, satz, text};
 
 use crate::kommandos::operationen::{Ersetzungsweg, Konfliktgestalt};
 
@@ -177,22 +178,39 @@ pub(super) fn schaltflaechen(gestalt: Konfliktgestalt) -> Vec<Schaltflaeche<'sta
         Taste::EingabeMitBefehl,
         Wirkung::Ausfuehren,
     );
+    let umbenennen = Schaltflaeche::neu(
+        text(Text::BlattUmbenennen),
+        Taste::EingabeMitWahl,
+        Wirkung::Ausfuehren,
+    );
     if gestalt.genau_ein_ziel {
         vec![
             ersetzen,
-            Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
-            // Die Eingabetaste und nicht die Escape-Taste: "Überspringen" hat
+            umbenennen,
+            // Die Eingabetaste und nicht die Escape-Taste: "Ueberspringen" hat
             // sie hier nicht mehr, und das Ersetzen darf sie nicht bekommen.
             // Die Escape-Taste erreicht dieselbe Schaltflaeche ueber den
             // Abbruchbefehl und den Blattgriff, siehe Modulkopf.
-            Schaltflaeche::neu("Abbrechen", Taste::Eingabe, Wirkung::Liegenlassen),
+            Schaltflaeche::neu(
+                text(Text::BlattAbbrechen),
+                Taste::Eingabe,
+                Wirkung::Liegenlassen,
+            ),
         ]
     } else {
         vec![
             ersetzen,
-            Schaltflaeche::neu("Überspringen", Taste::Eingabe, Wirkung::Ausfuehren),
-            Schaltflaeche::neu("Umbenennen", Taste::EingabeMitWahl, Wirkung::Ausfuehren),
-            Schaltflaeche::neu("Abbrechen", Taste::Escape, Wirkung::Liegenlassen),
+            Schaltflaeche::neu(
+                text(Text::KonfliktUeberspringen),
+                Taste::Eingabe,
+                Wirkung::Ausfuehren,
+            ),
+            umbenennen,
+            Schaltflaeche::neu(
+                text(Text::BlattAbbrechen),
+                Taste::Escape,
+                Wirkung::Liegenlassen,
+            ),
         ]
     }
 }
@@ -213,8 +231,8 @@ pub(super) fn schaltflaechen(gestalt: Konfliktgestalt) -> Vec<Schaltflaeche<'sta
 #[must_use]
 fn ersetzungsbeschriftung(weg: Ersetzungsweg) -> &'static str {
     match weg {
-        Ersetzungsweg::Papierkorb => "In den Papierkorb und ersetzen",
-        Ersetzungsweg::Endgueltig => "Endgültig löschen und ersetzen",
+        Ersetzungsweg::Papierkorb => text(Text::KonfliktInDenPapierkorbUndErsetzen),
+        Ersetzungsweg::Endgueltig => text(Text::KonfliktEndgueltigLoeschenUndErsetzen),
     }
 }
 
@@ -278,9 +296,9 @@ fn antwort(stelle: usize, genau_ein_ziel: bool, name: &str) -> Konfliktantwort {
 #[must_use]
 fn tastenhinweis(genau_ein_ziel: bool) -> &'static str {
     if genau_ein_ziel {
-        "Return und Esc brechen ab, Cmd+Return ersetzt, Opt+Return benennt um."
+        text(Text::KonfliktTastenhinweisEinZiel)
     } else {
-        "Return überspringt, Cmd+Return ersetzt, Opt+Return benennt um, Esc bricht ab."
+        text(Text::KonfliktTastenhinweisMehrereZiele)
     }
 }
 
@@ -314,14 +332,16 @@ pub fn zeigen(
 
     let mut blatt = Blatt::mit_schaltflaechen(
         mtm,
-        &format!("„{name}“ gibt es am Ziel schon"),
+        &satz(Text::KonfliktFrage, &[("name", &name)]),
         &schaltflaechen(gestalt),
     );
-    blatt.erlaeuterung_setzen(&format!(
-        "Quelle: {}\nZiel: {}\n\n{}",
-        quelle.display(),
-        ziel.display(),
-        tastenhinweis(gestalt.genau_ein_ziel)
+    blatt.erlaeuterung_setzen(&satz(
+        Text::KonfliktErlaeuterung,
+        &[
+            ("quelle", &quelle.display()),
+            ("ziel", &ziel.display()),
+            ("hinweis", &tastenhinweis(gestalt.genau_ein_ziel)),
+        ],
     ));
     blatt.beigabe_setzen(&feld);
     // Der Waechter, aber **nicht** `textfeld_setzen`: das machte das Feld
@@ -329,7 +349,7 @@ pub fn zeigen(
     // nicht wird. Gebraucht wird allein die dritte der drei Handlungen.
     blatt.waechter_anhaengen(mtm, &feld);
     if !gestalt.genau_ein_ziel {
-        blatt.wahl_fuer_alle_zeigen("Für alle weiteren übernehmen");
+        blatt.wahl_fuer_alle_zeigen(text(Text::KonfliktFuerAlleWeiteren));
     }
 
     let feld: Retained<NSTextField> = feld;
