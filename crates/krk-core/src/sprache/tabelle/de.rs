@@ -58,11 +58,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungKopfzeileImTermintext => {
             "Eine Zeile im Termintext darf nicht mit „## “ beginnen, denn so beginnt der nächste Termin."
         }
-        Text::MarkeGeaendert => "geändert",
-        Text::MarkeVorgemerkt => "vorgemerkt",
-        Text::MarkeNeu => "neu",
-        Text::MarkeKonflikt => "in Konflikt",
-        Text::MarkeUmbenannt => "umbenannt",
         Text::ZaehlzeileDateien => "Dateien",
         Text::ZaehlzeileOrdner => "Ordner",
         Text::ZaehlzeileVerknuepfungen => "Verknüpfungen",
@@ -136,6 +131,245 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::LesenKeinVerzeichnis => "{pfad} ist kein Verzeichnis",
         Text::LesenPfadMitNullbyte => "{pfad} enthält ein Nullbyte",
+        Text::AblageKeinGueltigesUtf8 => "keine gültige UTF-8-Folge",
+        Text::AblageOhneOberstenSchluessel => {
+            "die Datei trägt keinen einzigen obersten Schlüssel, und KRK schreibt sie nie so"
+        }
+        Text::AblageKeinBenutzerverzeichnis => "das System nennt kein Benutzerverzeichnis",
+        Text::AtomarOhneDateinamen => "{pfad} trägt keinen Dateinamen",
+        Text::AtomarRechteNichtUebertragen => {
+            "die Rechte {soll} von {pfad} lassen sich nicht übertragen; die Nachbardatei steht auf {gesetzt}"
+        }
+        Text::ErsetzungOhneSicherung => "{datei} {beschreibung} {ersatz}: {einzelheit}",
+        Text::ErsetzungGesichert => {
+            "Die bisherige Fassung liegt unter {sicherung}; {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::ErsetzungGekuerzt => {
+            "Die bisherige Fassung liegt gekürzt unter {sicherung}, gesichert sind allein ihre ersten {grenze} Bytes; {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::ErsetzungSchonVorhanden => {
+            "Die bisherige Fassung liegt seit einem früheren Start unter {sicherung} und bleibt dort; {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::ErsetzungSicherungGescheitert => {
+            "Der Inhalt ließ sich nicht zur Seite legen ({fehler}); {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::EinstellungenVerweis => {
+            "settings.toml ist ein symbolischer Verweis, und KRK ersetzt ihn nicht durch eine Datei; der Ort bleibt, wie er ist. Von Hand in die Zieldatei eintragen: {zeile}"
+        }
+        Text::EinstellungenBeschaedigt => {
+            "settings.toml ist zuerst von Hand zu berichtigen, KRK schreibt sie so nicht: {befund}"
+        }
+        Text::EinstellungenNichtLesbar => {
+            "settings.toml ist nicht lesbar, KRK schreibt sie nicht: {befund}"
+        }
+        Text::EinstellungenIntern => {
+            "settings.toml bleibt, wie sie ist: das Ergebnis hätte mehr geändert als den Notizordner ({befund})"
+        }
+        Text::EinstellungenNichtGeschrieben => {
+            "settings.toml ließ sich nicht schreiben und bleibt, wie sie war: {befund}"
+        }
+        Text::EinstellungenKeineGewoehnlicheDatei => {
+            "an ihrer Stelle steht keine gewöhnliche Datei"
+        }
+        Text::EinstellungenNotizordnerKeinEinzelwert => {
+            "notizordner steht nicht als einzelner Wert in einer Zeile „notizordner = …“ da"
+        }
+        Text::EinstellungenNeuerWertFehlt => "der neue Wert steht nicht als notizordner da",
+        Text::EinstellungenAndererWertGeaendert => "ein anderer Wert der Datei hätte sich geändert",
+        Text::WerksVerweis => {
+            "{datei} ist ein symbolischer Verweis, und KRK ersetzt ihn nicht durch eine Datei; nichts ist zurückgesetzt."
+        }
+        Text::WerksKeineDatei => {
+            "An der Stelle von {datei} steht keine gewöhnliche Datei; nichts ist zurückgesetzt."
+        }
+        Text::WerksNichtLesbar => {
+            "{datei} lässt sich nicht befragen ({befund}); nichts ist zurückgesetzt."
+        }
+        Text::WerksKeineOrtszeit => {
+            "Die Uhr dieses Geräts ergibt keinen Zeitstempel für die Sicherungen; nichts ist zurückgesetzt."
+        }
+        Text::WerksKeinFreierName => {
+            "Für {datei} ist in dieser Minute kein freier Sicherungsname mehr übrig; nichts ist zurückgesetzt."
+        }
+        Text::WerksNichtBeiseitegelegt => {
+            "{datei} ließ sich nicht beiseitelegen ({befund}); nichts ist zurückgesetzt."
+        }
+        Text::WerksNichtVorbereitet => {
+            "Die neue Fassung von {datei} ließ sich nicht schreiben ({befund}); nichts ist zurückgesetzt."
+        }
+        Text::WerksEinstellungen => "{befund}. Nichts ist zurückgesetzt.",
+        Text::WerksNichtZurueckgebaut => {
+            "{hindernis} Liegen geblieben ist eine zweite Kopie des unveränderten Inhalts unter {pfade}."
+        }
+        Text::WerksZurueckgesetzt => "Auf Werkseinstellungen zurückgesetzt.",
+        Text::WerksTeilweiseZurueckgesetzt => "Nur teilweise auf Werkseinstellungen zurückgesetzt.",
+        Text::WerksBeiseitegelegt => "Beiseitegelegt: {pfade}.",
+        Text::WerksStandNichtDa => "{datei} stand nicht da, für sie ist nichts beiseitegelegt.",
+        Text::WerksDateiNichtZurueckgesetzt => "{datei} ist nicht zurückgesetzt: {fehler}.",
+        Text::NeuerungenStartzeile => {
+            "Neu in dieser Fassung: {teile}. Ihre Dateien liegen unter {ordner}."
+        }
+        Text::NeuerungenDateiFehlt => {
+            "Diese Datei liegt nicht in Ihrer Ablage; verglichen wird nur, was dasteht."
+        }
+        Text::NeuerungenDateiBeschaedigt => {
+            "Diese Datei ist beschädigt und wird deshalb nicht verglichen."
+        }
+        Text::NeuerungenNeuInDieserFassung => "Neu in dieser Fassung",
+        Text::NeuerungenNurInIhrerDatei => "Nur in Ihrer Datei",
+        Text::NeuerungenZeileLeer => "{ueberschrift}: —",
+        Text::NeuerungenZeile => "{ueberschrift}: {namen}",
+        Text::NeuerungenKeineEigenenEintraege => {
+            "{zeile} (diese Datei kann keine eigenen Einträge führen; einen unbekannten Eintrag weist KRK als beschädigt ab)"
+        }
+        Text::NeuerungenPreisLeser => {
+            "Ein Profil, das Ihre Datei nicht führt, kostet die Zusammenfassung für diesen Ort: die Vorschau zeigt dort die Metadaten."
+        }
+        Text::NeuerungenPreisEinstellungen => {
+            "Ein Schlüssel, den Ihre Datei nicht führt, kostet allein den erklärenden Kommentarblock; den Wert selbst nimmt KRK aus der Auslieferungsfassung."
+        }
+        Text::NeuerungenPreisBelegung => {
+            "Eine Funktion, die Ihre Datei nicht führt, kostet ihre ausgelieferten Tastenkombinationen; über das Hauptmenü bleibt sie erreichbar."
+        }
+        Text::NeuerungenSchlusssatz => {
+            "Gezeigt ist der Stand, den KRK zuletzt gelesen hat. Womit KRK arbeitet, steht seit dem Start fest: eine geänderte Datei wirkt erst beim nächsten Start."
+        }
+        Text::OrtKeinBenutzerverzeichnis => {
+            "Das System nennt kein Benutzerverzeichnis, also gibt es keinen Notizordner"
+        }
+        Text::OrtLeer => {
+            "Der Notizordner in settings.toml ist leer; gültig ist ein Ort, der mit „~/“ oder „/“ beginnt, ab Werk „~/{ordnername}“"
+        }
+        Text::OrtNichtAbsolut => {
+            "Der Notizordner „{wert}“ in settings.toml beginnt weder mit „~/“ noch mit „/“"
+        }
+        Text::OrtFremdesBenutzerverzeichnis => {
+            "Der Notizordner „{wert}“ in settings.toml nennt ein fremdes Benutzerverzeichnis; gültig ist „~/“ für das eigene oder ein Pfad ab „/“"
+        }
+        Text::OrtKeinText => {
+            "Der Notizordner in settings.toml ist kein Text, sondern {wert}; gültig ist ein Ort in Anführungszeichen, etwa {beispiel}"
+        }
+        Text::OrtImAblageordner => {
+            "Der Notizordner „{wert}“ liegt im Ablageordner von KRK; ein Werkzeug, das KRK entfernt, nähme ihn mit, also gilt er nicht"
+        }
+        Text::OrtEinstellungenBeschaedigt => {
+            "settings.toml {satzteil}, also gilt kein Notizordner, und F2 legt nichts an: settings.toml berichtigen und KRK neu starten, oder nach dem Berichtigen den Ort über „Home“ → „Ort wählen…“ setzen"
+        }
+        Text::OrtEinstellungenUngelesen => {
+            "KRK konnte settings.toml beim Start nicht lesen ({ursache}), also gilt kein Notizordner, und F2 legt nichts an: KRK neu starten"
+        }
+        Text::OrtWechsel => {
+            "Der Notizordner ist jetzt „{neu}“; am alten Ort „{alt}“ bleibt alles liegen, und F2 führt zum neuen"
+        }
+        Text::OrtAbweisung => {
+            "Zuerst {datei} im Editor schließen; solange der Editor eine Datei des Notizordners hält, wählt KRK keinen anderen Ort"
+        }
+        Text::OrtGewaehlt => "Der Notizordner ist jetzt „{neu}“, und F2 führt dorthin",
+        Text::OrtSchonDerOrt => {
+            "„{neu}“ ist schon der Notizordner; settings.toml bleibt, wie sie ist"
+        }
+        Text::HeimKeinOrdner => {
+            "{ordner} ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"
+        }
+        Text::HeimNichtErreichbar => "{ordner} ist nicht erreichbar: {grund}",
+        Text::HeimNichtAnlegbar => "{name} lässt sich nicht anlegen: {grund}",
+        Text::HeimObererOrdnerFehlt => {
+            "{ordner} lässt sich nicht anlegen, weil der Ordner darüber fehlt, etwa ein nicht eingehängtes Laufwerk; KRK legt nichts an"
+        }
+        Text::HeimMerkerNichtVermerkt => {
+            "KRK kann sich nicht merken, dass die alten Zettel übernommen sind ({grund}); das nächste F2 versucht es wieder, und wird {ort} vorher gelöscht, übernimmt es sie noch einmal"
+        }
+        Text::HeimMerkerOhneAblage => {
+            "KRK kann sich ohne seinen Ablageordner nicht merken, dass die alten Zettel übernommen sind; ein späteres F2 holt das nach, und wird {ort} vorher gelöscht, übernimmt es sie noch einmal"
+        }
+        Text::HeimGeheimnisseUmbenannt => "{alt} heißt jetzt {neu}",
+        Text::HeimGeheimnisseBeideStehen => {
+            "{neu} und {alt} stehen beide in {ort}; KRK benennt keine um, und es gilt {neu}"
+        }
+        Text::HeimGeheimnisseAlterNameBleibt => {
+            "{alt} heißt jetzt auch {neu}, der alte Name lässt sich nicht entfernen: {grund}"
+        }
+        Text::HeimGeheimnisseNichtUmbenannt => {
+            "{alt} lässt sich nicht in {neu} umbenennen ({grund}); sie bleibt unverändert, und {neu} ist nicht angelegt"
+        }
+        Text::HeimZettelNotizenStandenSchon => {
+            "Die alten Zettel sind nicht übernommen, weil {notizen} schon stand; {dateien} liegen unverändert im Ablageordner"
+        }
+        Text::HeimZettelGescheitert => {
+            "Die alten Zettel sind nicht übernommen ({grund}); {dateien} liegen unverändert im Ablageordner"
+        }
+        Text::HeimZettelThemenzeile => {
+            "{thema} ist nicht übernommen, weil er eine Zeile mit „## “ trägt; {datei} liegt unverändert im Ablageordner"
+        }
+        Text::HeimZettelUnlesbar => {
+            "{thema} ist nicht übernommen ({grund}); {datei} liegt unverändert im Ablageordner"
+        }
+        Text::HeimZettelZuGross => "mit {groesse} Bytes zu groß",
+        Text::HeimZettelKeinText => "kein lesbarer Text",
+        Text::HeimAngefangeneDateiBleibt => {
+            "{fehler}; die angefangene Datei lässt sich nicht entfernen: {entfernen}"
+        }
+        Text::Und => "und",
+        Text::TresorKeinZufall => "Das System liefert keinen Zufallswert: {grund}",
+        Text::TresorAbleitung => "Der Schlüssel lässt sich nicht ableiten: {grund}",
+        Text::TresorVerschluesselung => "Der Inhalt lässt sich nicht verschlüsseln",
+        Text::TresorPinFalschOderVeraendert => "PIN falsch oder Datei verändert",
+        Text::TresorKopfBeschaedigt => "Der Kopf der Datei ist beschädigt: {grund}",
+        Text::TresorKopfKennungFehlt => "die Kennung am Anfang fehlt",
+        Text::TresorKopfAbgeschnitten => "die Datei ist abgeschnitten",
+        Text::TresorKopfUnbekannteVersion => "unbekannte Formatversion {version}",
+        Text::TresorKopfUnbekannteAbleitung => "unbekannte Ableitung {ableitung}",
+        Text::TresorKopfUngueltigeParameter => "die Parameter der Ableitung sind ungültig",
+        Text::ZusammenfassungKopf => "Name: {name}\nPfad: {pfad}",
+        Text::ZusammenfassungBlockzeile => "{beschriftung}:",
+        Text::ZusammenfassungZeile => "{beschriftung}: {wert}",
+        Text::ZusammenfassungPlatzhalter => "--",
+        Text::WertUeberGrenze => {
+            "mindestens {gezaehlt} (Lesung bei {grenze} Einträgen abgebrochen)"
+        }
+        Text::Ja => "ja",
+        Text::Nein => "nein",
+        Text::ProfilMeldung => "Profil „{profil}“: {grund}",
+        Text::ProfilZeilenmeldung => "Profil „{profil}“, Zeile „{beschriftung}“: {grund}",
+        Text::ProfilMehrereBausteine => {
+            "sie nennt {anzahl} Bausteine ({namen}) und nicht genau einen"
+        }
+        Text::ProfilKeinBaustein => "sie nennt keinen der vier Bausteine ({namen})",
+        Text::ProfilOhneErkennung => {
+            "es nennt weder ein Pfadmuster noch eine Kennzeichendatei und könnte damit nie treffen"
+        }
+        Text::ProfilBildfolge => "die Bildfolge: {grund}",
+        Text::ProfilPfadmuster => "das Pfadmuster",
+        Text::ProfilKennzeichendatei => "die Kennzeichendatei",
+        Text::ProfilErkennungsmusterNichtUebersetzt => {
+            "{was} {muster} lässt sich nicht übersetzen: {grund}"
+        }
+        Text::ProfilMusterNichtUebersetzt => {
+            "das Muster {muster} lässt sich nicht übersetzen: {grund}"
+        }
+        Text::ProfilFeldmusterFanggruppen => {
+            "das Feldmuster {muster} trägt {gruppen} Fanggruppen und nicht genau eine"
+        }
+        Text::ProfilOrtsangabe => "die Ortsangabe {angabe} {mangel}",
+        Text::ProfilOrtsangabeMitPlatzhalter => {
+            "die Ortsangabe {angabe} trägt einen Platzhalter, und der Baustein „{baustein}“ nimmt keinen an: er liest Dateien und braucht dafür ihren Pfad, den ein zusammengelegter Lesestand nicht trägt"
+        }
+        Text::ProfilJuengsteNull => "juengste mit anzahl = 0 kann nie einen Eintrag zeigen",
+        Text::GitKeinRepository => "Dieser Ordner liegt in keinem Git-Repository.",
+        Text::GitOhneCommit => "noch kein Commit",
+        Text::GitUnveraendert => "unverändert",
+        Text::GitImOrdner => "{marken} in diesem Ordner",
+        Text::GitKopfAbgeloest => "{kurzhash} (abgelöst)",
+        Text::TasteNameFehlt => "es fehlt der Tastenname",
+        Text::TasteKeineZusatztaste => "„{text}“ ist keine Zusatztaste; erlaubt sind {erlaubt}",
+        Text::TasteFnKeineZusatztaste => {
+            "fn ist keine Zusatztaste einer Belegung; Funktionstasten schlägt KRK über den Tastencode nach, und F3 mit gehaltener fn erzeugt denselben Tastencode wie ein nacktes F3"
+        }
+        Text::TasteZusatztasteDoppelt => "die Zusatztaste „{text}“ steht zweimal",
+        Text::TasteReihenfolgeVerletzt => {
+            "„{zusatztaste}“ steht hinter „{hinter}“; die Reihenfolge ist {reihenfolge}"
+        }
+        Text::TasteUnbekannterName => "„{text}“ ist kein Tastenname dieser Schreibweise",
     }
 }
 
@@ -143,5 +377,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
 pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &'static str) {
     match schluessel {
         Zahlwort::Byte => ("{n} Byte", "{n} Bytes"),
+        Zahlwort::NeuerungenEintraegeIn => ("{n} Eintrag in {datei}", "{n} Einträge in {datei}"),
+        Zahlwort::HeimZettelUebernommen => (
+            "{themen} als Notiz in {notizen} übernommen",
+            "{themen} als Notizen in {notizen} übernommen",
+        ),
+        Zahlwort::MarkeGeaendert => ("{n} geändert", "{n} geändert"),
+        Zahlwort::MarkeVorgemerkt => ("{n} vorgemerkt", "{n} vorgemerkt"),
+        Zahlwort::MarkeNeu => ("{n} neu", "{n} neu"),
+        Zahlwort::MarkeKonflikt => ("{n} in Konflikt", "{n} in Konflikt"),
+        Zahlwort::MarkeUmbenannt => ("{n} umbenannt", "{n} umbenannt"),
     }
 }

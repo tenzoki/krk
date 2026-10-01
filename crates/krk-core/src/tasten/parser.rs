@@ -163,6 +163,7 @@ use std::str::FromStr;
 
 use super::Tastendruck;
 use super::normalisierung::ModMaske;
+use crate::sprache::{Text, satz, text};
 
 /// Woher der Tastencode eines Eintrags stammt.
 ///
@@ -552,38 +553,36 @@ pub enum Schreibfehler {
 }
 
 impl fmt::Display for Schreibfehler {
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel; die Tastennamen stehen darin, wie der Nutzer
+    /// sie geschrieben hat.
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Schreibfehler::LeereTaste => ausgabe.write_str("es fehlt der Tastenname"),
-            Schreibfehler::UnbekannteZusatztaste(text) => write!(
-                ausgabe,
-                "\"{text}\" ist keine Zusatztaste; erlaubt sind {}",
-                zusatztasten_aufzaehlen()
+        let meldung = match self {
+            Schreibfehler::LeereTaste => text(Text::TasteNameFehlt).to_owned(),
+            Schreibfehler::UnbekannteZusatztaste(name) => satz(
+                Text::TasteKeineZusatztaste,
+                &[("text", name), ("erlaubt", &zusatztasten_aufzaehlen())],
             ),
-            Schreibfehler::FnAlsZusatztaste => ausgabe.write_str(
-                "fn ist keine Zusatztaste einer Belegung; Funktionstasten schlägt KRK \
-                 über den Tastencode nach, und F3 mit gehaltener fn erzeugt denselben \
-                 Tastencode wie ein nacktes F3",
-            ),
-            Schreibfehler::ZusatztasteDoppelt(text) => {
-                write!(ausgabe, "die Zusatztaste \"{text}\" steht zweimal")
+            Schreibfehler::FnAlsZusatztaste => text(Text::TasteFnKeineZusatztaste).to_owned(),
+            Schreibfehler::ZusatztasteDoppelt(name) => {
+                satz(Text::TasteZusatztasteDoppelt, &[("text", name)])
             }
             Schreibfehler::ReihenfolgeVerletzt {
                 zusatztaste,
                 hinter,
-            } => write!(
-                ausgabe,
-                "\"{zusatztaste}\" steht hinter \"{hinter}\"; \
-                 die Reihenfolge ist {}",
-                zusatztasten_aufzaehlen()
+            } => satz(
+                Text::TasteReihenfolgeVerletzt,
+                &[
+                    ("zusatztaste", zusatztaste),
+                    ("hinter", hinter),
+                    ("reihenfolge", &zusatztasten_aufzaehlen()),
+                ],
             ),
-            Schreibfehler::UnbekannterTastenname(text) => {
-                write!(
-                    ausgabe,
-                    "\"{text}\" ist kein Tastenname dieser Schreibweise"
-                )
+            Schreibfehler::UnbekannterTastenname(name) => {
+                satz(Text::TasteUnbekannterName, &[("text", name)])
             }
-        }
+        };
+        ausgabe.write_str(&meldung)
     }
 }
 

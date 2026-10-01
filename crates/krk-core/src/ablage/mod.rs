@@ -287,7 +287,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use crate::sprache::{Text, text};
+use crate::sprache::{Text, satz, text};
 use crate::text::datei::EDITORGRENZE;
 
 pub use einstellungen::Einstellungen;
@@ -494,37 +494,46 @@ impl fmt::Display for Ersetzung {
     /// gibt es seit der Runde 16 eine Datei, fuer die das nicht stimmt. Den
     /// Satzteil liefert jetzt [`Datei::ersatz`], und die Begruendung fuer diese
     /// Zustaendigkeit steht bei [`Ersatz`].
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), je Lage
+    /// ein Schluessel; die vier Teile `{datei}`, `{beschreibung}`, `{ersatz}`
+    /// und `{einzelheit}` tragen alle fuenf.
     fn fmt(&self, ausgabe: &mut fmt::Formatter<'_>) -> fmt::Result {
         let datei = self.datei.display();
         let beschreibung = self.grund.beschreibung();
         let ersatz = self.welche.ersatz().satzteil();
         let einzelheit = self.grund.einzelheit();
-        match &self.beiseite {
-            Beiseite::Nicht => write!(ausgabe, "{datei} {beschreibung} {ersatz}: {einzelheit}"),
-            Beiseite::Gesichert(pfad) => write!(
-                ausgabe,
-                "Die bisherige Fassung liegt unter {}; {datei} {beschreibung} {ersatz}: \
-                 {einzelheit}",
-                pfad.display()
+        let gemeinsam: [(&str, &dyn fmt::Display); 4] = [
+            ("datei", &datei),
+            ("beschreibung", &beschreibung),
+            ("ersatz", &ersatz),
+            ("einzelheit", &einzelheit),
+        ];
+        let (schluessel, eigener): (Text, Option<(&str, String)>) = match &self.beiseite {
+            Beiseite::Nicht => (Text::ErsetzungOhneSicherung, None),
+            Beiseite::Gesichert(pfad) => (
+                Text::ErsetzungGesichert,
+                Some(("sicherung", pfad.display().to_string())),
             ),
-            Beiseite::Gekuerzt(pfad) => write!(
-                ausgabe,
-                "Die bisherige Fassung liegt gekürzt unter {}, gesichert sind allein ihre \
-                 ersten {EDITORGRENZE} Bytes; {datei} {beschreibung} {ersatz}: {einzelheit}",
-                pfad.display()
+            Beiseite::Gekuerzt(pfad) => (
+                Text::ErsetzungGekuerzt,
+                Some(("sicherung", pfad.display().to_string())),
             ),
-            Beiseite::SchonVorhanden(pfad) => write!(
-                ausgabe,
-                "Die bisherige Fassung liegt seit einem früheren Start unter {} und bleibt dort; \
-                 {datei} {beschreibung} {ersatz}: {einzelheit}",
-                pfad.display()
+            Beiseite::SchonVorhanden(pfad) => (
+                Text::ErsetzungSchonVorhanden,
+                Some(("sicherung", pfad.display().to_string())),
             ),
-            Beiseite::Gescheitert(fehler) => write!(
-                ausgabe,
-                "Der Inhalt ließ sich nicht zur Seite legen ({fehler}); {datei} {beschreibung} \
-                 {ersatz}: {einzelheit}"
+            Beiseite::Gescheitert(fehler) => (
+                Text::ErsetzungSicherungGescheitert,
+                Some(("fehler", fehler.clone())),
             ),
+        };
+        let mut werte: Vec<(&str, &dyn fmt::Display)> = gemeinsam.to_vec();
+        if let Some((name, wert)) = &eigener {
+            werte.push((name, wert));
         }
+        werte.push(("grenze", &EDITORGRENZE));
+        ausgabe.write_str(&satz(schluessel, &werte))
     }
 }
 
@@ -765,7 +774,7 @@ impl Zugang<'_> {
                     ersetzung: Some(Ersetzung {
                         datei: pfad,
                         welche,
-                        grund: Grund::Beschaedigt(String::from("keine gültige UTF-8-Folge")),
+                        grund: Grund::Beschaedigt(text(Text::AblageKeinGueltigesUtf8).to_owned()),
                         beiseite,
                     }),
                 };
@@ -777,10 +786,9 @@ impl Zugang<'_> {
                 ersetzung: Some(Ersetzung {
                     datei: pfad,
                     welche,
-                    grund: Grund::Beschaedigt(String::from(
-                        "die Datei trägt keinen einzigen obersten Schlüssel, \
-                         und KRK schreibt sie nie so",
-                    )),
+                    grund: Grund::Beschaedigt(
+                        crate::sprache::text(Text::AblageOhneOberstenSchluessel).to_owned(),
+                    ),
                     // Hier wird nichts zur Seite gelegt, und der Grund steht
                     // bei [`Beiseite::Nicht`]: aus null obersten Schluesseln
                     // ist kein Bestand zu sichern, und der eine Platz bliebe

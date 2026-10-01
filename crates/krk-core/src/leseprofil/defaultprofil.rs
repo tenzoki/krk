@@ -50,10 +50,18 @@
 //! eine Probe ohne Fenster koennte die drei nicht sehen (C4.5). Hier stehen
 //! sie als Zeilen desselben Profils, das sie rechnet, und die Proben in
 //! `crates/krk-core/tests/leseprofil.rs` lesen sie ab wie jede andere.
+//!
+//! **Das Profil haelt die drei Beschriftungen als Schluessel der
+//! Sprachtabelle und nicht als Text.** Es steht fuer die Lebensdauer des
+//! Programms, und ein Text darin stuende in der Sprache des ersten Zugriffs;
+//! der Text entsteht deshalb erst, wenn `zusammenfassen` die Zeile
+//! beschriftet ([`Zeile::beschriftung`]), in der dann geltenden Sprache
+//! (Modulkopf von `crate::sprache`, „Kein `LazyLock` und kein `static` haelt
+//! einen Tabellentext“).
 
 use std::sync::LazyLock;
 
-use crate::sprache::{Text, text};
+use crate::sprache::Text;
 use crate::verzeichnis::Typ;
 
 use super::{Baustein, Ortsangabe, Profil, Zeile};
@@ -78,23 +86,15 @@ const NAME: &str = "Eingebautes Default-Profil";
 ///
 /// Ein `LazyLock` und kein `const`, weil [`Ortsangabe::wurzel`] einen `Vec`
 /// anlegt. Die drei Zeilen tragen kein Muster, also uebersetzt der erste
-/// Zugriff keinen regulaeren Ausdruck.
-///
-/// **Der erste Zugriff friert die drei Beschriftungen in der dann geltenden
-/// Sprache ein.** Das widerspricht der Regel im Kopf von `crate::sprache`,
-/// dass kein `static` einen Tabellentext haelt, und steht hier, weil die
-/// Zeile ihre Beschriftung heute als `String` traegt; `krk-ui` setzt die
-/// Sprache in `main` vor jedem Zugriff, also trifft es den Betrieb nicht.
-/// Schritt 4 des Plans
-/// `261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md`
-/// nimmt den Text aus dem Profil und beschriftet die Zeilen beim Bau der
-/// Zusammenfassung.
+/// Zugriff keinen regulaeren Ausdruck; und sie tragen ihre Beschriftung als
+/// Schluessel ([`Zeile::aus_tabelle`]), also friert der erste Zugriff keinen
+/// Text ein.
 static DEFAULTPROFIL: LazyLock<Profil> = LazyLock::new(|| {
     let zeilen = BESCHRIFTUNGEN
         .iter()
         .map(|(beschriftung, typ)| {
-            Zeile::neu(
-                text(*beschriftung).to_owned(),
+            Zeile::aus_tabelle(
+                *beschriftung,
                 Some(Baustein::Zaehlung {
                     ort: Ortsangabe::wurzel(),
                     muster: None,
@@ -128,7 +128,7 @@ mod tests {
         let zeilen = profil.zeilen();
         assert_eq!(zeilen.len(), 3);
         for (zeile, (beschriftung, typ)) in zeilen.iter().zip(BESCHRIFTUNGEN) {
-            assert_eq!(zeile.beschriftung(), text(beschriftung));
+            assert_eq!(zeile.beschriftung(), crate::sprache::text(beschriftung));
             let Some(Baustein::Zaehlung {
                 ort,
                 muster,

@@ -196,7 +196,7 @@ impl Gitmodell {
     #[must_use]
     pub fn zusammenfassung(&self) -> &str {
         match self.kopf {
-            Some(Kopf::OhneCommit(_)) => texte::OHNE_COMMIT,
+            Some(Kopf::OhneCommit(_)) => texte::ohne_commit(),
             _ => self.zusammenfassung.as_deref().unwrap_or_default(),
         }
     }
@@ -306,7 +306,10 @@ mod tests {
         let mut modell = Gitmodell::neu();
         modell.kopf_setzen(Kopf::OhneCommit("main".to_owned()));
         assert_eq!(modell.kopfzeile(), "main");
-        assert_eq!(modell.zusammenfassung(), krk_core::git::texte::OHNE_COMMIT);
+        assert_eq!(
+            modell.zusammenfassung(),
+            krk_core::git::texte::ohne_commit()
+        );
     }
 
     /// Eine Auswahl jenseits des Verlaufs waehlt nichts aus.

@@ -97,6 +97,7 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 
 use super::{Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, atomar, einzeilig};
+use crate::sprache::{self, Text, satz};
 
 /// Die Auslieferungsfassung der Einstellungen, in das Programm einkompiliert.
 ///
@@ -317,22 +318,25 @@ pub enum Schreibhindernis {
 impl Schreibhindernis {
     /// Der Satz fuer die Statuszeile.
     #[must_use]
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel.
     pub fn meldung(&self) -> String {
         match self {
-            Schreibhindernis::Verweis(zeile) => format!(
-                "settings.toml ist ein symbolischer Verweis, und KRK ersetzt ihn nicht durch eine Datei; der Ort bleibt, wie er ist. Von Hand in die Zieldatei eintragen: {zeile}"
-            ),
-            Schreibhindernis::Beschaedigt(befund) => format!(
-                "settings.toml ist zuerst von Hand zu berichtigen, KRK schreibt sie so nicht: {befund}"
-            ),
-            Schreibhindernis::NichtLesbar(befund) => {
-                format!("settings.toml ist nicht lesbar, KRK schreibt sie nicht: {befund}")
+            Schreibhindernis::Verweis(zeile) => {
+                satz(Text::EinstellungenVerweis, &[("zeile", zeile)])
             }
-            Schreibhindernis::Intern(befund) => format!(
-                "settings.toml bleibt, wie sie ist: das Ergebnis hätte mehr geändert als den Notizordner ({befund})"
-            ),
+            Schreibhindernis::Beschaedigt(befund) => {
+                satz(Text::EinstellungenBeschaedigt, &[("befund", befund)])
+            }
+            Schreibhindernis::NichtLesbar(befund) => {
+                satz(Text::EinstellungenNichtLesbar, &[("befund", befund)])
+            }
+            Schreibhindernis::Intern(befund) => {
+                satz(Text::EinstellungenIntern, &[("befund", befund)])
+            }
             Schreibhindernis::NichtGeschrieben(befund) => {
-                format!("settings.toml ließ sich nicht schreiben und bleibt, wie sie war: {befund}")
+                satz(Text::EinstellungenNichtGeschrieben, &[("befund", befund)])
             }
         }
     }
@@ -406,9 +410,9 @@ pub fn notizordner_schreiben(
             als_text(bytes)?
         }
         Ok(_) => {
-            return Err(Schreibhindernis::NichtLesbar(String::from(
-                "an ihrer Stelle steht keine gewöhnliche Datei",
-            )));
+            return Err(Schreibhindernis::NichtLesbar(
+                sprache::text(Text::EinstellungenKeineGewoehnlicheDatei).to_owned(),
+            ));
         }
         Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => AUSLIEFERUNGSTEXT.to_owned(),
         Err(fehler) => {
@@ -450,8 +454,9 @@ pub(super) struct Ortsstelle {
 /// Beide Schreiber in diese Datei fragen hier, damit sie denselben Befund
 /// geben.
 pub(super) fn als_text(bytes: Vec<u8>) -> Result<String, Schreibhindernis> {
-    String::from_utf8(bytes)
-        .map_err(|_| Schreibhindernis::Beschaedigt(String::from("keine gültige UTF-8-Folge")))
+    String::from_utf8(bytes).map_err(|_| {
+        Schreibhindernis::Beschaedigt(sprache::text(Text::AblageKeinGueltigesUtf8).to_owned())
+    })
 }
 
 /// Liest einen Text von `settings.toml` und sagt, wo `notizordner` steht:
@@ -471,9 +476,9 @@ pub(super) fn ortsstelle(text: &str) -> Result<Option<Ortsstelle>, Schreibhinder
     };
     let bereich = vorhanden.span();
     if !ist_einzelwert(&text[bereich.clone()], vorhanden.get_ref()) {
-        return Err(Schreibhindernis::Beschaedigt(String::from(
-            "notizordner steht nicht als einzelner Wert in einer Zeile „notizordner = …“ da",
-        )));
+        return Err(Schreibhindernis::Beschaedigt(
+            sprache::text(Text::EinstellungenNotizordnerKeinEinzelwert).to_owned(),
+        ));
     }
     Ok(Some(Ortsstelle {
         bereich,
@@ -596,12 +601,10 @@ fn pruefen(alt: &str, neu: &str, quelltext: &str) -> Result<(), String> {
     let _ = vorher.remove("notizordner");
     let erwartet = wert_aus_quelltext(quelltext);
     if erwartet.is_none() || nachher.remove("notizordner") != erwartet {
-        return Err(String::from("der neue Wert steht nicht als notizordner da"));
+        return Err(sprache::text(Text::EinstellungenNeuerWertFehlt).to_owned());
     }
     if vorher != nachher {
-        return Err(String::from(
-            "ein anderer Wert der Datei hätte sich geändert",
-        ));
+        return Err(sprache::text(Text::EinstellungenAndererWertGeaendert).to_owned());
     }
     Ok(())
 }

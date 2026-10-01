@@ -5,7 +5,7 @@
 //! steht ([`kopfzeile`]), was darunter steht ([`zusammenfassung`]), was eine
 //! Zeile der Verlaufsliste traegt ([`verlaufszeile`]), was die Flaeche unter
 //! der Liste fuer den ausgewaehlten Commit traegt ([`einzelheiten`]), und was
-//! in einem Ordner ohne Repository dasteht ([`KEIN_REPOSITORY`]).
+//! in einem Ordner ohne Repository dasteht ([`kein_repository`]).
 //!
 //! **Sie stehen im Kern und nicht in `krk-ui`, damit sie eine Probe haben.**
 //! `krk-ui` hat kein Bibliotheksziel; eine Datei unter `crates/krk-ui/tests/`
@@ -14,39 +14,39 @@
 //! unbemerkt aendert — dieselbe Herleitung, mit der die Meldungen der
 //! Statuszeile hier wohnen.
 //!
-//! **Die Schreibweise ist die mit Umlauten**, wie der Baum sie seit dem 260826
-//! fuehrt; die Frage ist als Datensatz offen
-//! (`shared/decisions/260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md`),
-//! und A14 der Runde 23 folgt bis dahin dem Baum.
+//! **Der Wortlaut steht in der Sprachtabelle** (`crate::sprache`), seit die
+//! Oberflaeche der Systemsprache folgt; die drei Saetze aus A14 der Runde 23
+//! sind die deutschen Eintraege zu [`kein_repository`], [`ohne_commit`] und
+//! [`unveraendert`], und die Wortlautprobe unten haelt sie weiter Zeichen
+//! fuer Zeichen. Bis dahin standen sie hier als Konstanten mit Umlauten
+//! (`shared/decisions/260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md`).
 
 use super::{Commit, KURZHASHLAENGE, Kopf, Marke};
 use crate::leseprofil::bausteine::kalendertext;
-use crate::sprache::{Text, text};
+use crate::sprache::{Text, Zahlwort, anzahl, satz, text};
 
 /// Was der Git-Bereich in einem Ordner ohne Repository zeigt (A14).
 ///
 /// Ein Satz und keine Fehlermeldung: die meisten Ordner, die KRK zeigt, liegen
 /// in keinem Git-Baum, also ist das der Normalfall und nicht der Sonderfall.
-pub const KEIN_REPOSITORY: &str = "Dieser Ordner liegt in keinem Git-Repository.";
+#[must_use]
+pub fn kein_repository() -> &'static str {
+    text(Text::GitKeinRepository)
+}
 
 /// Was an der Stelle der Zusammenfassung steht, solange kein Commit da ist
 /// (A7, A14).
-pub const OHNE_COMMIT: &str = "noch kein Commit";
+#[must_use]
+pub fn ohne_commit() -> &'static str {
+    text(Text::GitOhneCommit)
+}
 
 /// Was an der Stelle der Zusammenfassung steht, wenn keine Marke uebrig bleibt
 /// (A3, A14).
-pub const UNVERAENDERT: &str = "unverändert";
-
-/// Woran die Zusammenfassung sagt, dass sie den Ordner meint und nicht das
-/// Repository (A3).
-///
-/// Der Zusatz ist nicht Zierat: der Status ist ueber die Pfadmuster auf den
-/// angezeigten Ordner beschraenkt, und eine Zahl, die als Auskunft ueber das
-/// ganze Repository gelesen wuerde, waere falsch. Was die Wahl kostet, gehoert
-/// dazu: wer wissen will, ob das Repository als ganzes sauber ist, sieht es in
-/// KRK nicht — die repositoryweite Zusammenfassung kostete in einem Baum mit
-/// 100 000 Eintraegen gemessen 220 ms statt 12 ms.
-const ORDNERZUSATZ: &str = " in diesem Ordner";
+#[must_use]
+pub fn unveraendert() -> &'static str {
+    text(Text::GitUnveraendert)
+}
 
 /// Wie eine Zeile ihre Angaben trennt.
 ///
@@ -65,8 +65,8 @@ const TRENNER: &str = " · ";
 pub fn kopfzeile(kopf: &Kopf) -> String {
     match kopf {
         Kopf::Branch(name) | Kopf::OhneCommit(name) => name.clone(),
-        Kopf::Abgeloest(kurzhash) => format!("{kurzhash} (abgelöst)"),
-        Kopf::KeinRepository => KEIN_REPOSITORY.to_owned(),
+        Kopf::Abgeloest(kurzhash) => satz(Text::GitKopfAbgeloest, &[("kurzhash", kurzhash)]),
+        Kopf::KeinRepository => kein_repository().to_owned(),
     }
 }
 
@@ -74,26 +74,36 @@ pub fn kopfzeile(kopf: &Kopf) -> String {
 ///
 /// Je Markenzustand die Zahl der betroffenen Eintraege, die Zustaende mit null
 /// weggelassen, dazu der Zusatz, dass der Satz den Ordner meint. Bleibt keiner
-/// uebrig, steht [`UNVERAENDERT`] — **ohne** den Zusatz, weil A14 den Wortlaut
+/// uebrig, steht [`unveraendert`] — **ohne** den Zusatz, weil A14 den Wortlaut
 /// dieses einen Satzes ausschreibt und er dort aus einem Wort besteht. Das ist
 /// die einzige Stelle, an der A3 und A14 einander beruehren, und so ist sie
 /// aufgeloest.
 ///
+/// **Der Zusatz ist nicht Zierat** (`Text::GitImOrdner`): der Status ist
+/// ueber die Pfadmuster auf den angezeigten Ordner beschraenkt, und eine
+/// Zahl, die als Auskunft ueber das ganze Repository gelesen wuerde, waere
+/// falsch. Was die Wahl kostet, gehoert dazu: wer wissen will, ob das
+/// Repository als ganzes sauber ist, sieht es in KRK nicht — die
+/// repositoryweite Zusammenfassung kostete in einem Baum mit 100 000
+/// Eintraegen gemessen 220 ms statt 12 ms.
+///
 /// Die Reihenfolge der Zahlen ist die von [`Marke::ALLE`] und damit die der
-/// Aufzaehlung; eine zweite Reihenfolge daneben waere eine zweite Liste.
+/// Aufzaehlung; eine zweite Reihenfolge daneben waere eine zweite Liste. Jede
+/// Zahl geht mit ihrem Wort durch `anzahl`, damit das Franzoesische hinter
+/// einer Zahl ueber 1 die Mehrzahl bekommt.
 #[must_use = "die Zusammenfassung ist die zweite Zeile des Git-Bereichs"]
 pub fn zusammenfassung(marken: &[(String, Marke)]) -> String {
     let mut teile = Vec::new();
     for marke in Marke::ALLE {
         let zahl = marken.iter().filter(|(_, steht)| *steht == marke).count();
         if zahl > 0 {
-            teile.push(format!("{zahl} {}", wort(marke)));
+            teile.push(anzahl(wort(marke), zahl as u64, &[]));
         }
     }
     if teile.is_empty() {
-        return UNVERAENDERT.to_owned();
+        return unveraendert().to_owned();
     }
-    format!("{}{ORDNERZUSATZ}", teile.join(", "))
+    satz(Text::GitImOrdner, &[("marken", &teile.join(", "))])
 }
 
 /// Eine Zeile der Verlaufsliste (A5).
@@ -159,15 +169,17 @@ pub fn einzelheiten(commit: &Commit) -> String {
 /// Ausgeschriebene Woerter und nicht die Buchstaben der Spalte: die Spalte
 /// ist schmal und braucht ein Zeichen, der Satz ist es nicht und wird
 /// gelesen. Die deutschen fuenf sind so gewaehlt, dass sie hinter einer Zahl
-/// stehen koennen, ohne dekliniert zu werden. Der Wortlaut steht in der
-/// Sprachtabelle (`crate::sprache`), hier je Marke ihr Schluessel.
-fn wort(marke: Marke) -> &'static str {
+/// stehen koennen, ohne dekliniert zu werden; die franzoesischen brauchen
+/// hinter einer Zahl ueber 1 die Mehrzahl, deshalb ist jedes ein [`Zahlwort`]
+/// und kein [`Text`]. Der Wortlaut steht in der Sprachtabelle
+/// (`crate::sprache`), hier je Marke ihr Schluessel.
+const fn wort(marke: Marke) -> Zahlwort {
     match marke {
-        Marke::Geaendert => text(Text::MarkeGeaendert),
-        Marke::Vorgemerkt => text(Text::MarkeVorgemerkt),
-        Marke::Neu => text(Text::MarkeNeu),
-        Marke::Konflikt => text(Text::MarkeKonflikt),
-        Marke::Umbenannt => text(Text::MarkeUmbenannt),
+        Marke::Geaendert => Zahlwort::MarkeGeaendert,
+        Marke::Vorgemerkt => Zahlwort::MarkeVorgemerkt,
+        Marke::Neu => Zahlwort::MarkeNeu,
+        Marke::Konflikt => Zahlwort::MarkeKonflikt,
+        Marke::Umbenannt => Zahlwort::MarkeUmbenannt,
     }
 }
 
@@ -234,7 +246,7 @@ mod tests {
     fn ein_unveraenderter_ordner_traegt_genau_ein_wort() {
         assert_eq!(zusammenfassung(&[]), "unverändert");
         assert!(
-            !zusammenfassung(&[]).contains(ORDNERZUSATZ),
+            !zusammenfassung(&[]).contains("in diesem Ordner"),
             "A14 schreibt den Wortlaut dieses Satzes aus; er traegt den Zusatz nicht"
         );
     }
@@ -248,7 +260,7 @@ mod tests {
             "a1b2c3d (abgelöst)"
         );
         assert_eq!(kopfzeile(&Kopf::OhneCommit("master".to_owned())), "master");
-        assert_eq!(kopfzeile(&Kopf::KeinRepository), KEIN_REPOSITORY);
+        assert_eq!(kopfzeile(&Kopf::KeinRepository), kein_repository());
     }
 
     /// C3.3, A5: vier Angaben in einer Zeile, die Kurzbeschreibung vorn.
@@ -280,11 +292,11 @@ mod tests {
     #[test]
     fn die_drei_saetze_stehen_im_wortlaut_aus_a14() {
         assert_eq!(
-            KEIN_REPOSITORY,
+            kein_repository(),
             "Dieser Ordner liegt in keinem Git-Repository."
         );
-        assert_eq!(OHNE_COMMIT, "noch kein Commit");
-        assert_eq!(UNVERAENDERT, "unverändert");
+        assert_eq!(ohne_commit(), "noch kein Commit");
+        assert_eq!(unveraendert(), "unverändert");
     }
 
     /// C5.3, E11: jeder der fuenf Zustaende traegt seinen Buchstaben, und keine
@@ -315,18 +327,25 @@ mod tests {
         );
     }
 
-    /// Jede der fuenf traegt ein eigenes Wort; ohne die Zusicherung liest sich
-    /// „2 neu, 1 neu" wie ein Fehler der Zaehlung.
+    /// Jede der fuenf traegt ein eigenes Wort, in jeder Sprache und in
+    /// beiden Formen; ohne die Zusicherung liest sich „2 neu, 1 neu" wie ein
+    /// Fehler der Zaehlung.
     #[test]
     fn jede_marke_traegt_ihr_eigenes_wort() {
-        let mut woerter: Vec<&str> = Marke::ALLE.iter().map(|m| wort(*m)).collect();
-        woerter.sort_unstable();
-        woerter.dedup();
-        assert_eq!(
-            woerter.len(),
-            Marke::ALLE.len(),
-            "zwei Marken teilen sich ein Wort"
-        );
+        for sprache in crate::sprache::Sprache::ALLE {
+            let mut woerter: Vec<(&str, &str)> = Marke::ALLE
+                .iter()
+                .map(|m| sprache.zahlwort(wort(*m)))
+                .collect();
+            woerter.sort_unstable();
+            woerter.dedup();
+            assert_eq!(
+                woerter.len(),
+                Marke::ALLE.len(),
+                "zwei Marken teilen sich in {} ein Wort",
+                sprache.kennung()
+            );
+        }
     }
 
     /// Die Rangfolge ist total: keine zwei Marken teilen sich einen Rang.

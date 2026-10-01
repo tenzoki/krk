@@ -102,17 +102,6 @@ pub enum Text {
     AbweisungUngueltigesDatum,
     /// `Abweisung::KopfzeileImTermintext`.
     AbweisungKopfzeileImTermintext,
-    /// `Marke::Geaendert` in der Zusammenfassung des Git-Bereichs, hinter
-    /// einer Zahl.
-    MarkeGeaendert,
-    /// `Marke::Vorgemerkt`.
-    MarkeVorgemerkt,
-    /// `Marke::Neu`.
-    MarkeNeu,
-    /// `Marke::Konflikt`.
-    MarkeKonflikt,
-    /// `Marke::Umbenannt`.
-    MarkeUmbenannt,
     /// Die erste Zaehlzeile des Default-Profils in der Vorschau.
     ZaehlzeileDateien,
     /// Die zweite Zaehlzeile des Default-Profils.
@@ -229,11 +218,291 @@ pub enum Text {
     LesenKeinVerzeichnis,
     /// `sys::als_c_pfad`: der Pfad `{pfad}` traegt ein Nullbyte.
     LesenPfadMitNullbyte,
+    /// `Zugang::laden` und `einstellungen::als_text`: der Befund zu einer
+    /// Ablagedatei, die kein UTF-8 ist.
+    AblageKeinGueltigesUtf8,
+    /// `Zugang::laden`: der Befund zu einer Ablagedatei ohne obersten
+    /// Schluessel.
+    AblageOhneOberstenSchluessel,
+    /// `Ablageort::im_benutzerverzeichnis`: der Fehlertext, wenn das System
+    /// kein Benutzerverzeichnis nennt.
+    AblageKeinBenutzerverzeichnis,
+    /// `atomar::mit_endung`: der Pfad `{pfad}` traegt keinen Dateinamen.
+    AtomarOhneDateinamen,
+    /// `atomar::rechte_uebernehmen`: die Rechte `{soll}` von `{pfad}` sind
+    /// nicht uebertragen, die Nachbardatei steht auf `{gesetzt}`.
+    AtomarRechteNichtUebertragen,
+    /// `Ersetzung` ohne Sicherung in der Statuszeile beim Start: `{datei}`,
+    /// `{beschreibung}` (ein `Ablagegrund…`), `{ersatz}` (ein `Ersatz…`),
+    /// `{einzelheit}`.
+    ErsetzungOhneSicherung,
+    /// `Ersetzung` mit Sicherung unter `{sicherung}`.
+    ErsetzungGesichert,
+    /// `Ersetzung` mit gekuerzter Sicherung; `{grenze}` in Bytes.
+    ErsetzungGekuerzt,
+    /// `Ersetzung` mit einer Sicherung aus einem frueheren Start.
+    ErsetzungSchonVorhanden,
+    /// `Ersetzung`, deren Sicherung gescheitert ist; `{fehler}`.
+    ErsetzungSicherungGescheitert,
+    /// `Schreibhindernis::Verweis` in der Statuszeile; `{zeile}` ist die
+    /// Zeile zum Eintragen von Hand.
+    EinstellungenVerweis,
+    /// `Schreibhindernis::Beschaedigt`; `{befund}`.
+    EinstellungenBeschaedigt,
+    /// `Schreibhindernis::NichtLesbar`; `{befund}`.
+    EinstellungenNichtLesbar,
+    /// `Schreibhindernis::Intern`; `{befund}`.
+    EinstellungenIntern,
+    /// `Schreibhindernis::NichtGeschrieben`; `{befund}`.
+    EinstellungenNichtGeschrieben,
+    /// `notizordner_schreiben`: der Befund, wenn an der Stelle der Datei
+    /// etwas anderes als eine gewoehnliche Datei steht.
+    EinstellungenKeineGewoehnlicheDatei,
+    /// `einstellungen::ortsstelle`: der Befund, wenn `notizordner` nicht als
+    /// einzelner Wert dasteht.
+    EinstellungenNotizordnerKeinEinzelwert,
+    /// `einstellungen::pruefen`: der neue Wert steht nach der zweiten Lesung
+    /// nicht da.
+    EinstellungenNeuerWertFehlt,
+    /// `einstellungen::pruefen`: ein anderer Wert haette sich geaendert.
+    EinstellungenAndererWertGeaendert,
+    /// `Werkshindernis::Verweis` in der Statuszeile; `{datei}` ist der
+    /// Dateiname.
+    WerksVerweis,
+    /// `Werkshindernis::KeineDatei`; `{datei}`.
+    WerksKeineDatei,
+    /// `Werkshindernis::NichtLesbar`; `{datei}`, `{befund}`.
+    WerksNichtLesbar,
+    /// `Werkshindernis::KeineOrtszeit`.
+    WerksKeineOrtszeit,
+    /// `Werkshindernis::KeinFreierName`; `{datei}`.
+    WerksKeinFreierName,
+    /// `Werkshindernis::NichtBeiseitegelegt`; `{datei}`, `{befund}`.
+    WerksNichtBeiseitegelegt,
+    /// `Werkshindernis::NichtVorbereitet`; `{datei}`, `{befund}`.
+    WerksNichtVorbereitet,
+    /// `Werkshindernis::Einstellungen`; `{befund}` ist die Meldung des
+    /// `Schreibhindernis`.
+    WerksEinstellungen,
+    /// `Werkshindernis::NichtZurueckgebaut`; `{hindernis}` ist die Meldung
+    /// des ausloesenden Hindernisses, `{pfade}` die Liste der Sicherungen.
+    WerksNichtZurueckgebaut,
+    /// `Zurueckgesetzt::meldung`: der erste Satz, wenn jede Datei
+    /// zurueckgesetzt ist.
+    WerksZurueckgesetzt,
+    /// `Zurueckgesetzt::meldung`: der erste Satz, wenn nicht jede Datei
+    /// zurueckgesetzt ist.
+    WerksTeilweiseZurueckgesetzt,
+    /// `Zurueckgesetzt::meldung`: die Sicherungen `{pfade}`.
+    WerksBeiseitegelegt,
+    /// `Zurueckgesetzt::meldung`: `{datei}` stand vorher nicht da.
+    WerksStandNichtDa,
+    /// `Zurueckgesetzt::meldung`: `{datei}` ist nicht zurueckgesetzt;
+    /// `{fehler}`.
+    WerksDateiNichtZurueckgesetzt,
+    /// `neuerungen::startzeile`: die eine Zeile beim ersten Start einer
+    /// neuen Fassung; `{teile}` sind die Zahlen je Datei, `{ordner}` der
+    /// Ablageordner.
+    NeuerungenStartzeile,
+    /// `neuerungen::blatttext`: der Absatz zu einer Datei, die nicht dasteht.
+    NeuerungenDateiFehlt,
+    /// `neuerungen::blatttext`: der Absatz zu einer beschaedigten Datei.
+    NeuerungenDateiBeschaedigt,
+    /// `neuerungen::blatttext`: die Ueberschrift der Hinrichtung.
+    NeuerungenNeuInDieserFassung,
+    /// `neuerungen::blatttext`: die Ueberschrift der Gegenrichtung.
+    NeuerungenNurInIhrerDatei,
+    /// `neuerungen::namenszeile`: eine Zeile ohne Namen; `{ueberschrift}`.
+    NeuerungenZeileLeer,
+    /// `neuerungen::namenszeile`: eine Zeile mit Namen; `{ueberschrift}`,
+    /// `{namen}`.
+    NeuerungenZeile,
+    /// `neuerungen::gegenrichtung`: der Halbsatz hinter der leeren Zeile
+    /// `{zeile}` einer Datei, die keine eigenen Eintraege fuehren kann.
+    NeuerungenKeineEigenenEintraege,
+    /// `neuerungen::preis` fuer `readers.toml`.
+    NeuerungenPreisLeser,
+    /// `neuerungen::preis` fuer `settings.toml`.
+    NeuerungenPreisEinstellungen,
+    /// `neuerungen::preis` fuer `keymap.toml`.
+    NeuerungenPreisBelegung,
+    /// `neuerungen::blatttext`: der Schlusssatz des Blattes.
+    NeuerungenSchlusssatz,
+    /// `Ortsfehler::KeinBenutzerverzeichnis` in der Statuszeile.
+    OrtKeinBenutzerverzeichnis,
+    /// `Ortsfehler::Leer`; `{ordnername}` ist der Name des Heimordners ab
+    /// Werk.
+    OrtLeer,
+    /// `Ortsfehler::NichtAbsolut`; `{wert}`.
+    OrtNichtAbsolut,
+    /// `Ortsfehler::FremdesBenutzerverzeichnis`; `{wert}`.
+    OrtFremdesBenutzerverzeichnis,
+    /// `Ortsfehler::KeinText`; `{wert}` ist die TOML-Schreibweise des
+    /// Werts, `{beispiel}` die eines gueltigen Orts.
+    OrtKeinText,
+    /// `Ortsfehler::ImAblageordner`; `{wert}`.
+    OrtImAblageordner,
+    /// `Ortsfehler::EinstellungenBeschaedigt`; `{satzteil}` ist ein
+    /// `Ablagegrund…`.
+    OrtEinstellungenBeschaedigt,
+    /// `Ortsfehler::EinstellungenUngelesen`; `{ursache}`.
+    OrtEinstellungenUngelesen,
+    /// `ort::wechselsatz`: der Satz ueber einen Ortswechsel; `{neu}`,
+    /// `{alt}`.
+    OrtWechsel,
+    /// `ort::abweisungssatz`: „Ort waehlen…“ verweigert sich, solange der
+    /// Editor `{datei}` haelt.
+    OrtAbweisung,
+    /// `ort::wahlsatz` ohne alten Ort; `{neu}`.
+    OrtGewaehlt,
+    /// `ort::schon_der_ort`; `{neu}`.
+    OrtSchonDerOrt,
+    /// `Hindernis::KeinOrdner` in der Statuszeile nach F2; `{ordner}`.
+    HeimKeinOrdner,
+    /// `Hindernis::Unerreichbar`; `{ordner}`, `{grund}`.
+    HeimNichtErreichbar,
+    /// `Hindernis::NichtAnlegbar` und eine Eintragsdatei, die sich nicht
+    /// anlegen liess; `{name}`, `{grund}`.
+    HeimNichtAnlegbar,
+    /// `Hindernis::ObererOrdnerFehlt`; `{ordner}`.
+    HeimObererOrdnerFehlt,
+    /// `Zettelmerker::NichtVermerkt`; `{grund}`, `{ort}`.
+    HeimMerkerNichtVermerkt,
+    /// `Zettelmerker::OhneAblage` nach einer Uebernahme; `{ort}`.
+    HeimMerkerOhneAblage,
+    /// `AlteGeheimnisse::Umbenannt`; `{alt}`, `{neu}`.
+    HeimGeheimnisseUmbenannt,
+    /// `AlteGeheimnisse::BeideStehen`; `{neu}`, `{alt}`, `{ort}`.
+    HeimGeheimnisseBeideStehen,
+    /// `AlteGeheimnisse::AlterNameBleibt`; `{alt}`, `{neu}`, `{grund}`.
+    HeimGeheimnisseAlterNameBleibt,
+    /// `AlteGeheimnisse::Gescheitert`; `{alt}`, `{neu}`, `{grund}`.
+    HeimGeheimnisseNichtUmbenannt,
+    /// `Uebernahmeausgang::NotizenStandenSchon`; `{notizen}`, `{dateien}`.
+    HeimZettelNotizenStandenSchon,
+    /// `Uebernahmeausgang::Gescheitert`; `{grund}`, `{dateien}`.
+    HeimZettelGescheitert,
+    /// `Zettelbefund::Themenzeile`; `{thema}`, `{datei}`.
+    HeimZettelThemenzeile,
+    /// `Zettelbefund::Unlesbar`; `{thema}`, `{grund}`, `{datei}`.
+    HeimZettelUnlesbar,
+    /// `zettel_lesen`: der Grund fuer einen zu grossen Zettel; `{groesse}` in
+    /// Bytes.
+    HeimZettelZuGross,
+    /// `zettel_lesen`: der Grund fuer einen Zettel, der kein Text ist.
+    HeimZettelKeinText,
+    /// `exklusiv_anlegen`: die angefangene Datei blieb liegen; `{fehler}`,
+    /// `{entfernen}`.
+    HeimAngefangeneDateiBleibt,
+    /// Das Bindewort zwischen zwei Gliedern einer Aufzaehlung („a und b“).
+    Und,
+    /// `Tresorfehler::KeinZufall` in der Statuszeile; `{grund}`.
+    TresorKeinZufall,
+    /// `Tresorfehler::Ableitung`; `{grund}`.
+    TresorAbleitung,
+    /// `Tresorfehler::Verschluesselung`.
+    TresorVerschluesselung,
+    /// `Oeffnungsfehler::PinFalschOderVeraendert`.
+    TresorPinFalschOderVeraendert,
+    /// `Oeffnungsfehler::KopfBeschaedigt`; `{grund}` ist einer der
+    /// `TresorKopf…`-Eintraege.
+    TresorKopfBeschaedigt,
+    /// `Kopfschaden::FalscheKennung`.
+    TresorKopfKennungFehlt,
+    /// `Kopfschaden::Abgeschnitten`.
+    TresorKopfAbgeschnitten,
+    /// `Kopfschaden::UnbekannteVersion`; `{version}`.
+    TresorKopfUnbekannteVersion,
+    /// `Kopfschaden::UnbekannteAbleitung`; `{ableitung}`.
+    TresorKopfUnbekannteAbleitung,
+    /// `Kopfschaden::UngueltigeParameter`.
+    TresorKopfUngueltigeParameter,
+    /// `Zusammenfassung::als_text`: die zwei Kopfzeilen; `{name}`, `{pfad}`.
+    ZusammenfassungKopf,
+    /// `leseprofil::zeilen_als_text`: die Beschriftung einer Zeile, deren
+    /// Wert darunter rutscht; `{beschriftung}`.
+    ZusammenfassungBlockzeile,
+    /// `leseprofil::zeilen_als_text`: eine Zeile aus Beschriftung und Wert;
+    /// `{beschriftung}`, `{wert}`.
+    ZusammenfassungZeile,
+    /// `Wert::Nicht`: was an der Stelle eines Werts steht, ueber den nichts
+    /// zu sagen ist (C3.12 der Runde 16).
+    ZusammenfassungPlatzhalter,
+    /// `Wert::UeberGrenze`; `{gezaehlt}` sind die Treffer, `{grenze}` die
+    /// Lesegrenze.
+    WertUeberGrenze,
+    /// `Wert::Vorhanden(true)`.
+    Ja,
+    /// `Wert::Vorhanden(false)`.
+    Nein,
+    /// `leseprofil::datei::profilmeldung`: eine Meldung ueber ein Profil
+    /// beim Start; `{profil}`, `{grund}`.
+    ProfilMeldung,
+    /// `leseprofil::datei::zeilenmeldung`; `{profil}`, `{beschriftung}`,
+    /// `{grund}`.
+    ProfilZeilenmeldung,
+    /// `Zeilendatei::zerlegen`: eine Zeile mit mehr als einem Baustein;
+    /// `{anzahl}`, `{namen}`.
+    ProfilMehrereBausteine,
+    /// `Zeilendatei::zerlegen`: eine Zeile ohne Baustein; `{namen}` sind die
+    /// vier Tischnamen.
+    ProfilKeinBaustein,
+    /// `leseprofil::datei::pruefen`: ein Profil ohne Pfadmuster und ohne
+    /// Kennzeichendatei.
+    ProfilOhneErkennung,
+    /// `leseprofil::datei::pruefen`: der Grund einer abgewiesenen Bildfolge;
+    /// `{grund}`.
+    ProfilBildfolge,
+    /// `erkennungsmuster`: das erste der zwei Erkennungsmuster, als `{was}`
+    /// in `ProfilErkennungsmusterNichtUebersetzt`.
+    ProfilPfadmuster,
+    /// `erkennungsmuster`: das zweite der zwei Erkennungsmuster.
+    ProfilKennzeichendatei,
+    /// `erkennungsmuster`: `{was}` `{muster}` uebersetzt nicht; `{grund}`.
+    ProfilErkennungsmusterNichtUebersetzt,
+    /// `leseprofil::datei::muster`: ein Bausteinmuster uebersetzt nicht;
+    /// `{muster}`, `{grund}`.
+    ProfilMusterNichtUebersetzt,
+    /// `leseprofil::datei::feldmuster`; `{muster}`, `{gruppen}`.
+    ProfilFeldmusterFanggruppen,
+    /// `leseprofil::datei::ortsangabe`; `{angabe}`, `{mangel}` (ein
+    /// `Ortsmangel…`).
+    ProfilOrtsangabe,
+    /// `ortsangabe_ohne_platzhalter`; `{angabe}`, `{baustein}`.
+    ProfilOrtsangabeMitPlatzhalter,
+    /// `gekappte_anzahl`: `juengste` mit `anzahl = 0`.
+    ProfilJuengsteNull,
+    /// `git::texte::kein_repository`: die Kopfzeile des Git-Bereichs in
+    /// einem Ordner ohne Repository (A14 der Runde 23).
+    GitKeinRepository,
+    /// `git::texte::ohne_commit`: die Zusammenfassung, solange kein Commit
+    /// da ist.
+    GitOhneCommit,
+    /// `git::texte::unveraendert`: die Zusammenfassung ohne Marke.
+    GitUnveraendert,
+    /// `git::texte::zusammenfassung`: die Zahlen `{marken}` mit dem Zusatz,
+    /// dass der Satz den Ordner meint.
+    GitImOrdner,
+    /// `git::texte::kopfzeile` bei abgeloestem HEAD; `{kurzhash}`.
+    GitKopfAbgeloest,
+    /// `Schreibfehler::LeereTaste` in der Meldung zu einer Belegung.
+    TasteNameFehlt,
+    /// `Schreibfehler::UnbekannteZusatztaste`; `{text}`, `{erlaubt}`.
+    TasteKeineZusatztaste,
+    /// `Schreibfehler::FnAlsZusatztaste`.
+    TasteFnKeineZusatztaste,
+    /// `Schreibfehler::ZusatztasteDoppelt`; `{text}`.
+    TasteZusatztasteDoppelt,
+    /// `Schreibfehler::ReihenfolgeVerletzt`; `{zusatztaste}`, `{hinter}`,
+    /// `{reihenfolge}`.
+    TasteReihenfolgeVerletzt,
+    /// `Schreibfehler::UnbekannterTastenname`; `{text}`.
+    TasteUnbekannterName,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 91] = [
+    pub const ALLE: [Text; 203] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -271,11 +540,6 @@ impl Text {
         Text::AbweisungThemenzeileImNotiztext,
         Text::AbweisungUngueltigesDatum,
         Text::AbweisungKopfzeileImTermintext,
-        Text::MarkeGeaendert,
-        Text::MarkeVorgemerkt,
-        Text::MarkeNeu,
-        Text::MarkeKonflikt,
-        Text::MarkeUmbenannt,
         Text::ZaehlzeileDateien,
         Text::ZaehlzeileOrdner,
         Text::ZaehlzeileVerknuepfungen,
@@ -325,6 +589,123 @@ impl Text {
         Text::LesenDatenschutzsperre,
         Text::LesenKeinVerzeichnis,
         Text::LesenPfadMitNullbyte,
+        Text::AblageKeinGueltigesUtf8,
+        Text::AblageOhneOberstenSchluessel,
+        Text::AblageKeinBenutzerverzeichnis,
+        Text::AtomarOhneDateinamen,
+        Text::AtomarRechteNichtUebertragen,
+        Text::ErsetzungOhneSicherung,
+        Text::ErsetzungGesichert,
+        Text::ErsetzungGekuerzt,
+        Text::ErsetzungSchonVorhanden,
+        Text::ErsetzungSicherungGescheitert,
+        Text::EinstellungenVerweis,
+        Text::EinstellungenBeschaedigt,
+        Text::EinstellungenNichtLesbar,
+        Text::EinstellungenIntern,
+        Text::EinstellungenNichtGeschrieben,
+        Text::EinstellungenKeineGewoehnlicheDatei,
+        Text::EinstellungenNotizordnerKeinEinzelwert,
+        Text::EinstellungenNeuerWertFehlt,
+        Text::EinstellungenAndererWertGeaendert,
+        Text::WerksVerweis,
+        Text::WerksKeineDatei,
+        Text::WerksNichtLesbar,
+        Text::WerksKeineOrtszeit,
+        Text::WerksKeinFreierName,
+        Text::WerksNichtBeiseitegelegt,
+        Text::WerksNichtVorbereitet,
+        Text::WerksEinstellungen,
+        Text::WerksNichtZurueckgebaut,
+        Text::WerksZurueckgesetzt,
+        Text::WerksTeilweiseZurueckgesetzt,
+        Text::WerksBeiseitegelegt,
+        Text::WerksStandNichtDa,
+        Text::WerksDateiNichtZurueckgesetzt,
+        Text::NeuerungenStartzeile,
+        Text::NeuerungenDateiFehlt,
+        Text::NeuerungenDateiBeschaedigt,
+        Text::NeuerungenNeuInDieserFassung,
+        Text::NeuerungenNurInIhrerDatei,
+        Text::NeuerungenZeileLeer,
+        Text::NeuerungenZeile,
+        Text::NeuerungenKeineEigenenEintraege,
+        Text::NeuerungenPreisLeser,
+        Text::NeuerungenPreisEinstellungen,
+        Text::NeuerungenPreisBelegung,
+        Text::NeuerungenSchlusssatz,
+        Text::OrtKeinBenutzerverzeichnis,
+        Text::OrtLeer,
+        Text::OrtNichtAbsolut,
+        Text::OrtFremdesBenutzerverzeichnis,
+        Text::OrtKeinText,
+        Text::OrtImAblageordner,
+        Text::OrtEinstellungenBeschaedigt,
+        Text::OrtEinstellungenUngelesen,
+        Text::OrtWechsel,
+        Text::OrtAbweisung,
+        Text::OrtGewaehlt,
+        Text::OrtSchonDerOrt,
+        Text::HeimKeinOrdner,
+        Text::HeimNichtErreichbar,
+        Text::HeimNichtAnlegbar,
+        Text::HeimObererOrdnerFehlt,
+        Text::HeimMerkerNichtVermerkt,
+        Text::HeimMerkerOhneAblage,
+        Text::HeimGeheimnisseUmbenannt,
+        Text::HeimGeheimnisseBeideStehen,
+        Text::HeimGeheimnisseAlterNameBleibt,
+        Text::HeimGeheimnisseNichtUmbenannt,
+        Text::HeimZettelNotizenStandenSchon,
+        Text::HeimZettelGescheitert,
+        Text::HeimZettelThemenzeile,
+        Text::HeimZettelUnlesbar,
+        Text::HeimZettelZuGross,
+        Text::HeimZettelKeinText,
+        Text::HeimAngefangeneDateiBleibt,
+        Text::Und,
+        Text::TresorKeinZufall,
+        Text::TresorAbleitung,
+        Text::TresorVerschluesselung,
+        Text::TresorPinFalschOderVeraendert,
+        Text::TresorKopfBeschaedigt,
+        Text::TresorKopfKennungFehlt,
+        Text::TresorKopfAbgeschnitten,
+        Text::TresorKopfUnbekannteVersion,
+        Text::TresorKopfUnbekannteAbleitung,
+        Text::TresorKopfUngueltigeParameter,
+        Text::ZusammenfassungKopf,
+        Text::ZusammenfassungBlockzeile,
+        Text::ZusammenfassungZeile,
+        Text::ZusammenfassungPlatzhalter,
+        Text::WertUeberGrenze,
+        Text::Ja,
+        Text::Nein,
+        Text::ProfilMeldung,
+        Text::ProfilZeilenmeldung,
+        Text::ProfilMehrereBausteine,
+        Text::ProfilKeinBaustein,
+        Text::ProfilOhneErkennung,
+        Text::ProfilBildfolge,
+        Text::ProfilPfadmuster,
+        Text::ProfilKennzeichendatei,
+        Text::ProfilErkennungsmusterNichtUebersetzt,
+        Text::ProfilMusterNichtUebersetzt,
+        Text::ProfilFeldmusterFanggruppen,
+        Text::ProfilOrtsangabe,
+        Text::ProfilOrtsangabeMitPlatzhalter,
+        Text::ProfilJuengsteNull,
+        Text::GitKeinRepository,
+        Text::GitOhneCommit,
+        Text::GitUnveraendert,
+        Text::GitImOrdner,
+        Text::GitKopfAbgeloest,
+        Text::TasteNameFehlt,
+        Text::TasteKeineZusatztaste,
+        Text::TasteFnKeineZusatztaste,
+        Text::TasteZusatztasteDoppelt,
+        Text::TasteReihenfolgeVerletzt,
+        Text::TasteUnbekannterName,
     ];
 }
 
@@ -336,9 +717,36 @@ impl Text {
 pub enum Zahlwort {
     /// Eine Datenmenge unter 1.000 Bytes, hinter `Sprache::menge`.
     Byte,
+    /// `neuerungen::startzeile`: die Zahl der neuen Eintraege je Datei;
+    /// `{datei}` ist der Dateiname.
+    NeuerungenEintraegeIn,
+    /// `Uebernahme::meldungen`: die alten Zettel sind als Notiz oder als
+    /// Notizen uebernommen; gezaehlt werden die Themen `{themen}`, und beide
+    /// Formen lassen `{n}` aus; `{notizen}` ist der Dateiname.
+    HeimZettelUebernommen,
+    /// `Marke::Geaendert` in der Zusammenfassung des Git-Bereichs, hinter
+    /// seiner Zahl.
+    MarkeGeaendert,
+    /// `Marke::Vorgemerkt`.
+    MarkeVorgemerkt,
+    /// `Marke::Neu`.
+    MarkeNeu,
+    /// `Marke::Konflikt`.
+    MarkeKonflikt,
+    /// `Marke::Umbenannt`.
+    MarkeUmbenannt,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 1] = [Zahlwort::Byte];
+    pub const ALLE: [Zahlwort; 8] = [
+        Zahlwort::Byte,
+        Zahlwort::NeuerungenEintraegeIn,
+        Zahlwort::HeimZettelUebernommen,
+        Zahlwort::MarkeGeaendert,
+        Zahlwort::MarkeVorgemerkt,
+        Zahlwort::MarkeNeu,
+        Zahlwort::MarkeKonflikt,
+        Zahlwort::MarkeUmbenannt,
+    ];
 }

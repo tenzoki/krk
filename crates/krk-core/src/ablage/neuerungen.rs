@@ -127,7 +127,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use super::{Datei, Geladen, Zugang, einstellungen, leseprofile, pfade};
-use crate::sprache::zahl;
+use crate::sprache::{Text, Zahlwort, anzahl, satz, text, zahl};
 use crate::tasten::belegung;
 
 /// Was bei einer Ablagedatei ein Eintrag ist.
@@ -144,7 +144,9 @@ pub enum Vergleichsform {
     /// Die obersten Schluessel der Datei sind ihre Eintraege, und der Name
     /// eines Eintrags ist der Schluessel selbst.
     ///
-    /// Die Form von `settings.toml`, die heute genau einen fuehrt: `terminal`.
+    /// Die Form von `settings.toml`; welche Schluessel die Auslieferung
+    /// fuehrt, sagt `resources/default-settings.toml` und keine Zahl an
+    /// dieser Stelle (`grep -E '^[a-z_]+ =' resources/default-settings.toml`).
     ObersteSchluessel,
     /// Eine Tabellenfolge unter einem Tischnamen; jeder Tisch nennt seinen
     /// Namen in einem Schluesselfeld.
@@ -666,18 +668,21 @@ pub fn startzeile(bestand: &Bestand, benutzerverzeichnis: Option<&Path>) -> Opti
         .iter()
         .filter(|zeile| !zeile.nur_ausgeliefert.is_empty())
         .map(|zeile| {
-            let zahl = zeile.nur_ausgeliefert.len();
-            let wort = if zahl == 1 { "Eintrag" } else { "Einträge" };
-            format!("{zahl} {wort} in {}", zeile.welche.dateiname())
+            let zahl = zeile.nur_ausgeliefert.len() as u64;
+            anzahl(
+                Zahlwort::NeuerungenEintraegeIn,
+                zahl,
+                &[("datei", &zeile.welche.dateiname())],
+            )
         })
         .collect();
     if teile.is_empty() {
         return None;
     }
     let ordner = pfade::gekuerzt_fuer_anzeige(&bestand.ordner, benutzerverzeichnis);
-    Some(format!(
-        "Neu in dieser Fassung: {}. Ihre Dateien liegen unter {ordner}.",
-        teile.join(", ")
+    Some(satz(
+        Text::NeuerungenStartzeile,
+        &[("teile", &teile.join(", ")), ("ordner", &ordner)],
     ))
 }
 
@@ -719,43 +724,40 @@ pub fn startzeile(bestand: &Bestand, benutzerverzeichnis: Option<&Path>) -> Opti
 /// unberuehrt.
 #[must_use]
 pub fn blatttext(bestand: &Bestand) -> String {
-    let mut text = String::new();
+    let mut ausgabe = String::new();
     for zeile in &bestand.dateien {
-        text.push_str(zeile.welche.dateiname());
-        text.push('\n');
-        text.push_str(&zeile.pfad.display().to_string());
-        text.push('\n');
+        ausgabe.push_str(zeile.welche.dateiname());
+        ausgabe.push('\n');
+        ausgabe.push_str(&zeile.pfad.display().to_string());
+        ausgabe.push('\n');
         match zeile.befund {
             Befund::Fehlt => {
-                text.push_str(
-                    "Diese Datei liegt nicht in Ihrer Ablage; verglichen wird nur, was dasteht.\n",
-                );
+                ausgabe.push_str(text(Text::NeuerungenDateiFehlt));
+                ausgabe.push('\n');
             }
             Befund::Ersetzt => {
                 // Woertlich das Wort, das `Grund::beschreibung` dem Nutzer
                 // schon in der Statuszeile hinschreibt: eine Sache, eine
                 // Formulierung.
-                text.push_str("Diese Datei ist beschädigt und wird deshalb nicht verglichen.\n");
+                ausgabe.push_str(text(Text::NeuerungenDateiBeschaedigt));
+                ausgabe.push('\n');
             }
             Befund::Verglichen => {
-                text.push_str(&namenszeile(
-                    "Neu in dieser Fassung",
+                ausgabe.push_str(&namenszeile(
+                    Text::NeuerungenNeuInDieserFassung,
                     &zeile.nur_ausgeliefert,
                 ));
-                text.push_str(&gegenrichtung(zeile.welche, &zeile.nur_beim_nutzer));
-                if let Some(satz) = preis(zeile.welche) {
-                    text.push_str(satz);
-                    text.push('\n');
+                ausgabe.push_str(&gegenrichtung(zeile.welche, &zeile.nur_beim_nutzer));
+                if let Some(schluessel) = preis(zeile.welche) {
+                    ausgabe.push_str(text(schluessel));
+                    ausgabe.push('\n');
                 }
             }
         }
-        text.push('\n');
+        ausgabe.push('\n');
     }
-    text.push_str(
-        "Gezeigt ist der Stand, den KRK zuletzt gelesen hat. Womit KRK arbeitet, steht seit dem \
-         Start fest: eine geänderte Datei wirkt erst beim nächsten Start.",
-    );
-    text
+    ausgabe.push_str(text(Text::NeuerungenSchlusssatz));
+    ausgabe
 }
 
 /// Eine Zeile des Blattes: eine Ueberschrift und die Namen dahinter.
@@ -764,11 +766,24 @@ pub fn blatttext(bestand: &Bestand) -> String {
 /// Nutzer soll sehen, dass die Richtung gefragt und leer war, statt zu raten,
 /// ob sie geprueft wurde. Eine lange Liste geht durch [`gekuerzt`]:
 /// `keymap.toml` kann jede ausgelieferte Funktion nennen.
-fn namenszeile(ueberschrift: &str, namen: &[String]) -> String {
-    if namen.is_empty() {
-        return format!("{ueberschrift}: —\n");
-    }
-    format!("{ueberschrift}: {}\n", gekuerzt(namen.to_vec()).join(", "))
+fn namenszeile(ueberschrift: Text, namen: &[String]) -> String {
+    let ueberschrift = text(ueberschrift);
+    let mut zeile = if namen.is_empty() {
+        satz(
+            Text::NeuerungenZeileLeer,
+            &[("ueberschrift", &ueberschrift)],
+        )
+    } else {
+        satz(
+            Text::NeuerungenZeile,
+            &[
+                ("ueberschrift", &ueberschrift),
+                ("namen", &gekuerzt(namen.to_vec()).join(", ")),
+            ],
+        )
+    };
+    zeile.push('\n');
+    zeile
 }
 
 /// Die Zeile der Gegenrichtung, mit dem Grund dort, wo sie bauartbedingt leer
@@ -781,13 +796,14 @@ fn namenszeile(ueberschrift: &str, namen: &[String]) -> String {
 /// beantwortet das. Bei `readers.toml` bleibt der Gedankenstrich allein
 /// stehen, denn dort heisst er wirklich „geprueft und nichts gefunden".
 fn gegenrichtung(welche: Datei, namen: &[String]) -> String {
-    let zeile = namenszeile("Nur in Ihrer Datei", namen);
+    let zeile = namenszeile(Text::NeuerungenNurInIhrerDatei, namen);
     if namen.is_empty() && !eigene_eintraege_moeglich(welche) {
-        return format!(
-            "{} (diese Datei kann keine eigenen Einträge führen; einen unbekannten Eintrag \
-             weist KRK als beschädigt ab)\n",
-            zeile.trim_end()
+        let mut mit_grund = satz(
+            Text::NeuerungenKeineEigenenEintraege,
+            &[("zeile", &zeile.trim_end())],
         );
+        mit_grund.push('\n');
+        return mit_grund;
     }
     zeile
 }
@@ -814,20 +830,14 @@ fn gegenrichtung(welche: Datei, namen: &[String]) -> String {
 /// Probe `jede_verglichene_ablagedatei_nennt_ihren_preis` in
 /// `krk-core/tests/ablage.rs` — dieselbe Paarung und dieselbe Luecke wie bei
 /// [`auslieferung`], die der Uebersetzer nicht sieht.
-const fn preis(welche: Datei) -> Option<&'static str> {
+///
+/// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je Datei
+/// ihr Schluessel.
+const fn preis(welche: Datei) -> Option<Text> {
     match welche {
-        Datei::Leser => Some(
-            "Ein Profil, das Ihre Datei nicht führt, kostet die Zusammenfassung für diesen \
-             Ort: die Vorschau zeigt dort die Metadaten.",
-        ),
-        Datei::Einstellungen => Some(
-            "Ein Schlüssel, den Ihre Datei nicht führt, kostet allein den erklärenden \
-             Kommentarblock; den Wert selbst nimmt KRK aus der Auslieferungsfassung.",
-        ),
-        Datei::Belegung => Some(
-            "Eine Funktion, die Ihre Datei nicht führt, kostet ihre ausgelieferten \
-             Tastenkombinationen; über das Hauptmenü bleibt sie erreichbar.",
-        ),
+        Datei::Leser => Some(Text::NeuerungenPreisLeser),
+        Datei::Einstellungen => Some(Text::NeuerungenPreisEinstellungen),
+        Datei::Belegung => Some(Text::NeuerungenPreisBelegung),
         Datei::Lesezeichen | Datei::Sitzung | Datei::Merker => None,
     }
 }

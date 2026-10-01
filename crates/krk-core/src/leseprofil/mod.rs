@@ -118,7 +118,7 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-use crate::sprache::{Text, text};
+use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::Typ;
 
 pub mod bausteine;
@@ -324,22 +324,51 @@ impl Profil {
 /// Eine Zeile der Zusammenfassung: eine Beschriftung und ein Baustein.
 #[derive(Debug, Clone)]
 pub struct Zeile {
-    beschriftung: String,
+    beschriftung: Beschriftung,
     baustein: Option<Baustein>,
+}
+
+/// Woher die Beschriftung einer Zeile kommt.
+///
+/// Eine Zeile aus `readers.toml` traegt sie als Text des Nutzers, in seiner
+/// Sprache und Schreibweise; eine Zeile des eingebauten Default-Profils
+/// traegt einen Schluessel der Sprachtabelle, und der Text entsteht erst,
+/// wenn die Zusammenfassung gebaut wird. So haelt das Profil, das fuer die
+/// Lebensdauer des Programms steht, keinen Tabellentext (Modulkopf von
+/// `crate::sprache`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Beschriftung {
+    /// Der Text aus der Datei des Nutzers.
+    Nutzer(String),
+    /// Ein Schluessel der Sprachtabelle.
+    Tabelle(Text),
 }
 
 impl Zeile {
     /// Eine gepruefte Zeile. `None` als Baustein heisst: beim Laden abgewiesen.
     pub fn neu(beschriftung: String, baustein: Option<Baustein>) -> Self {
         Self {
-            beschriftung,
+            beschriftung: Beschriftung::Nutzer(beschriftung),
             baustein,
         }
     }
 
-    /// Die Beschriftung, wie sie in der Zusammenfassung links steht.
+    /// Eine Zeile, deren Beschriftung aus der Sprachtabelle kommt; der Weg
+    /// des Default-Profils.
+    pub fn aus_tabelle(beschriftung: Text, baustein: Option<Baustein>) -> Self {
+        Self {
+            beschriftung: Beschriftung::Tabelle(beschriftung),
+            baustein,
+        }
+    }
+
+    /// Die Beschriftung, wie sie in der Zusammenfassung links steht; fuer
+    /// einen Schluessel der Eintrag in der geltenden Sprache.
     pub fn beschriftung(&self) -> &str {
-        &self.beschriftung
+        match &self.beschriftung {
+            Beschriftung::Nutzer(beschriftung) => beschriftung,
+            Beschriftung::Tabelle(schluessel) => text(*schluessel),
+        }
     }
 
     /// Der Baustein, oder `None`, wenn er beim Laden abgewiesen wurde.
@@ -495,9 +524,10 @@ pub enum Anzeige {
 
 /// Das Stueck einer Ortsangabe, das fuer „jeder Unterordner hier" steht.
 ///
-/// **Nicht zu verwechseln mit [`PLATZHALTER`]**, das weiter unten steht: jenes
-/// ist das Zeichenpaar, das die Anzeige an die Stelle eines fehlenden Wertes
-/// setzt, dieses das Stueck, das in `readers.toml` einen Namen offen laesst.
+/// **Nicht zu verwechseln mit dem Platzhalter der Anzeige** (`--`,
+/// `Text::ZusammenfassungPlatzhalter` in der Sprachtabelle): jener ist das
+/// Zeichenpaar, das die Anzeige an die Stelle eines fehlenden Wertes setzt,
+/// dieses das Stueck, das in `readers.toml` einen Namen offen laesst.
 pub const PLATZHALTERSTUECK: &str = "*";
 
 /// Wo ein Baustein arbeitet, relativ zum erkannten Ordner.
@@ -715,7 +745,10 @@ impl Zusammenfassung {
     /// unveraendert weiter (C4.6).
     #[must_use = "der Text ist das Ergebnis; wer ihn fallen laesst, zeigt nichts an"]
     pub fn als_text(&self) -> String {
-        let mut ausgabe = format!("Name: {}\nPfad: {}", self.name, self.pfad.display());
+        let mut ausgabe = satz(
+            Text::ZusammenfassungKopf,
+            &[("name", &self.name), ("pfad", &self.pfad.display())],
+        );
         ausgabe.push_str(&zeilen_als_text(&self.zeilen));
         ausgabe
     }
@@ -779,24 +812,25 @@ pub fn zeilen_als_text(zeilen: &[Zusammenfassungszeile]) -> String {
     let mut ausgabe = String::new();
     for zeile in zeilen {
         let wert = zeile.wert().als_text();
+        let beschriftung = zeile.beschriftung();
+        ausgabe.push('\n');
         if matches!(zeile.wert(), Wert::Titel(_)) || wert.contains('\n') {
-            ausgabe.push_str(&format!("\n{}:", zeile.beschriftung()));
+            ausgabe.push_str(&satz(
+                Text::ZusammenfassungBlockzeile,
+                &[("beschriftung", &beschriftung)],
+            ));
             for teilzeile in wert.lines() {
                 ausgabe.push_str(&format!("\n{EINRUECKUNG}{teilzeile}"));
             }
         } else {
-            ausgabe.push_str(&format!("\n{}: {wert}", zeile.beschriftung()));
+            ausgabe.push_str(&satz(
+                Text::ZusammenfassungZeile,
+                &[("beschriftung", &beschriftung), ("wert", &wert)],
+            ));
         }
     }
     ausgabe
 }
-
-/// Was an der Stelle eines Wertes steht, ueber den nichts zu sagen ist (C3.12).
-///
-/// Kein neues Zeichen: die Metadatenanzeige schreibt es seit der Runde 1 in die
-/// Groessenzeile eines Ordners, und es heisst dort schon „darueber ist nichts
-/// zu sagen".
-pub const PLATZHALTER: &str = "--";
 
 /// Womit die Zeilen eines Blocks unter ihrer Beschriftung einruecken.
 const EINRUECKUNG: &str = "    ";
@@ -911,20 +945,25 @@ impl Wert {
     /// Text; dieselbe Regel, nach der `vorschaumodell::zu_gross_text` seine
     /// Grenze aus der Konstanten bildet.
     #[must_use]
+    ///
+    /// Der Wortlaut von Ja, Nein, dem Platzhalter und dem Satz ueber die
+    /// Grenze steht in der Sprachtabelle (`crate::sprache`). Der Platzhalter
+    /// `--` ist kein neues Zeichen: die Metadatenanzeige schreibt es seit der
+    /// Runde 1 in die Groessenzeile eines Ordners, und es heisst dort schon
+    /// „darueber ist nichts zu sagen" (C3.12).
     pub fn als_text(&self) -> String {
         match self {
             Wert::Zahl(zahl) => zahl.to_string(),
             Wert::ZahlMitVersteckten { zahl, versteckt } => format!("{zahl} ({versteckt})"),
-            Wert::UeberGrenze(gezaehlt) => {
-                format!(
-                    "mindestens {gezaehlt} (Lesung bei {HOECHSTENS_EINTRAEGE} Einträgen abgebrochen)"
-                )
-            }
-            Wert::Vorhanden(true) => "ja".to_owned(),
-            Wert::Vorhanden(false) => "nein".to_owned(),
-            Wert::Text(text) => text.clone(),
+            Wert::UeberGrenze(gezaehlt) => satz(
+                Text::WertUeberGrenze,
+                &[("gezaehlt", gezaehlt), ("grenze", &HOECHSTENS_EINTRAEGE)],
+            ),
+            Wert::Vorhanden(true) => text(Text::Ja).to_owned(),
+            Wert::Vorhanden(false) => text(Text::Nein).to_owned(),
+            Wert::Text(eigener) => eigener.clone(),
             Wert::Titel(titel) => titel.join("\n"),
-            Wert::Nicht => PLATZHALTER.to_owned(),
+            Wert::Nicht => text(Text::ZusammenfassungPlatzhalter).to_owned(),
         }
     }
 }

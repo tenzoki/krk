@@ -5370,6 +5370,25 @@ fn die_startzeile_nennt_jede_datei_mit_unterschied_und_den_ordner() {
     );
 }
 
+/// Die Startzeile schreibt einen Eintrag in der Einzahl: „1 Eintrag“, nicht
+/// „1 Einträge“. Die Mehrzahl haelt die Probe darueber mit ihren zwei mal
+/// zwei Eintraegen; beide Formen kommen aus demselben Zahlwort der
+/// Sprachtabelle, und diese Probe haelt, dass die Einzahl gewaehlt wird.
+#[test]
+fn die_startzeile_schreibt_einen_eintrag_in_der_einzahl() {
+    let (_ordner, ablage) = ablage("neuerungen-einzahl");
+    auslieferungsfassungen_schreiben(&ablage);
+    let (rest, _) = ohne_den_ersten_block(leseprofile::AUSLIEFERUNGSTEXT, "profil", "name");
+    fs::write(ablage.pfad(Datei::Leser), rest).expect("readers.toml laesst sich nicht hinlegen");
+
+    let bestand = erhobene_neuerungen(&ablage);
+    let startzeile = neuerungen::startzeile(&bestand, None).expect("es gibt eine Startzeile");
+    assert!(
+        startzeile.starts_with("Neu in dieser Fassung: 1 Eintrag in readers.toml. "),
+        "die Startzeile schreibt einen Eintrag nicht in der Einzahl: {startzeile}"
+    );
+}
+
 /// Der Wortlaut des Blatttextes: je verglichener Datei ihr voller Pfad und der
 /// Unterschied in beide Richtungen.
 ///

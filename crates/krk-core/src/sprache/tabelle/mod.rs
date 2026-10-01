@@ -75,6 +75,22 @@
 //! | Systemeinstellungen | Réglages Système | System Settings |
 //! | Datenschutz & Sicherheit | Confidentialité et sécurité | Privacy & Security |
 //! | Festplattenvollzugriff | Accès complet au disque | Full Disk Access |
+//! | Ablage, Ablageordner (`~/Library/Application Support/KRK`) | dossier de données | data folder |
+//! | Benutzerverzeichnis | dossier de départ | home directory |
+//! | Ort (des Notizordners) | emplacement | location |
+//! | Ort waehlen… (Menue Home) | Choisir l’emplacement… | Choose Location… |
+//! | Home (Menue) | Home | Home |
+//! | beiseitelegen (eine Sicherung) | mettre de côté | set aside |
+//! | zuruecksetzen (auf Werkseinstellungen) | réinitialiser | reset |
+//! | Zettel (die alten Notizzettel) | note | note |
+//! | uebernehmen (die alten Zettel) | reprendre | take over |
+//! | Baustein (eines Leseprofils) | brique | building block |
+//! | Pfadmuster / Kennzeichendatei | motif de chemin / fichier repère | path pattern / marker file |
+//! | Zusatztaste | touche de modification | modifier key |
+//! | Zusammenfassung (eines Profils) | résumé | summary |
+//! | Tresor, Kopf der Datei (`secrets.txt`) | en-tête du fichier | header of the file |
+//! | Repository, Commit, Branch (Git) | dépôt, commit, branche | repository, commit, branch |
+//! | abgeloest (HEAD) | détaché | detached |
 //!
 //! # Typografie
 //!
@@ -86,7 +102,12 @@
 //! Anfuehrungszeichen, Title Case in Menueeintraegen und Schaltflaechen,
 //! wie macOS sie fuehrt, Satzform in Statuszeile und Erlaeuterungen.
 //! Deutsch: der heutige Wortlaut mit „ “. Der Apostroph ist in allen drei
-//! Sprachen U+2019.
+//! Sprachen U+2019. **Kein Eintrag traegt ein ASCII-Anfuehrungszeichen**;
+//! wo eine Meldung die TOML- oder die Debug-Schreibweise eines Werts zeigt
+//! (`"~/krkhome"`, `"a(b"`), kommt sie als Platzhalterwert zur Laufzeit
+//! herein (`{beispiel}` in `OrtKeinText`, `{muster}` in den
+//! `Profil…`-Eintraegen), und der Rufer bildet sie mit `toml::Value` oder
+//! `{:?}`.
 
 pub(super) mod de;
 pub(super) mod en;

@@ -120,7 +120,7 @@ use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::aead::{Aead, Generate, KeyInit, Payload};
 use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
 
-use crate::sprache::{Text, text};
+use crate::sprache::{Text, satz, text};
 
 /// Die Kennung am Anfang jeder nicht leeren `secrets.txt`.
 pub const KENNUNG: [u8; 6] = *b"KRKSEC";
@@ -413,16 +413,13 @@ pub enum Tresorfehler {
 }
 
 impl Tresorfehler {
-    /// Der Satz fuer die Statuszeile.
+    /// Der Satz fuer die Statuszeile; der Wortlaut steht in der
+    /// Sprachtabelle (`crate::sprache`), hier je Wert sein Schluessel.
     pub fn meldung(&self) -> String {
         match self {
-            Tresorfehler::KeinZufall(grund) => {
-                format!("Das System liefert keinen Zufallswert: {grund}")
-            }
-            Tresorfehler::Ableitung(grund) => {
-                format!("Der Schlüssel lässt sich nicht ableiten: {grund}")
-            }
-            Tresorfehler::Verschluesselung => "Der Inhalt lässt sich nicht verschlüsseln".into(),
+            Tresorfehler::KeinZufall(grund) => satz(Text::TresorKeinZufall, &[("grund", grund)]),
+            Tresorfehler::Ableitung(grund) => satz(Text::TresorAbleitung, &[("grund", grund)]),
+            Tresorfehler::Verschluesselung => text(Text::TresorVerschluesselung).to_owned(),
         }
     }
 }
@@ -442,21 +439,28 @@ pub enum Oeffnungsfehler {
 
 impl Oeffnungsfehler {
     /// Der Satz fuer die Statuszeile. Fuer eine falsche PIN und eine
-    /// veraenderte Datei ist es derselbe.
+    /// veraenderte Datei ist es derselbe. Der Wortlaut steht in der
+    /// Sprachtabelle (`crate::sprache`), hier je Wert sein Schluessel.
     pub fn meldung(&self) -> String {
         match self {
-            Oeffnungsfehler::PinFalschOderVeraendert => "PIN falsch oder Datei verändert".into(),
+            Oeffnungsfehler::PinFalschOderVeraendert => {
+                text(Text::TresorPinFalschOderVeraendert).to_owned()
+            }
             Oeffnungsfehler::KopfBeschaedigt(schaden) => {
                 let grund = match schaden {
-                    Kopfschaden::FalscheKennung => "die Kennung am Anfang fehlt".to_string(),
-                    Kopfschaden::Abgeschnitten => "die Datei ist abgeschnitten".to_string(),
-                    Kopfschaden::UnbekannteVersion(v) => format!("unbekannte Formatversion {v}"),
-                    Kopfschaden::UnbekannteAbleitung(a) => format!("unbekannte Ableitung {a}"),
+                    Kopfschaden::FalscheKennung => text(Text::TresorKopfKennungFehlt).to_owned(),
+                    Kopfschaden::Abgeschnitten => text(Text::TresorKopfAbgeschnitten).to_owned(),
+                    Kopfschaden::UnbekannteVersion(v) => {
+                        satz(Text::TresorKopfUnbekannteVersion, &[("version", v)])
+                    }
+                    Kopfschaden::UnbekannteAbleitung(a) => {
+                        satz(Text::TresorKopfUnbekannteAbleitung, &[("ableitung", a)])
+                    }
                     Kopfschaden::UngueltigeParameter => {
-                        "die Parameter der Ableitung sind ungültig".to_string()
+                        text(Text::TresorKopfUngueltigeParameter).to_owned()
                     }
                 };
-                format!("Der Kopf der Datei ist beschädigt: {grund}")
+                satz(Text::TresorKopfBeschaedigt, &[("grund", &grund)])
             }
             Oeffnungsfehler::System(fehler) => fehler.meldung(),
         }

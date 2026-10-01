@@ -123,6 +123,7 @@ use super::{
     Anzeige, Baustein, Bildfolgeangabe, HOECHSTENS_JUENGSTE, Ortsangabe, Profil, Profile, Typ,
     Zeile,
 };
+use crate::sprache::{Text, satz, text};
 
 // ---------------------------------------------------------------------------
 // Die Gestalt der Datei
@@ -239,10 +240,9 @@ impl Zeilendatei {
             let namen: Vec<&str> = genannt.iter().map(|(name, _)| *name).collect();
             return (
                 beschriftung,
-                Err(format!(
-                    "sie nennt {} Bausteine ({}) und nicht genau einen",
-                    genannt.len(),
-                    namen.join(", ")
+                Err(satz(
+                    Text::ProfilMehrereBausteine,
+                    &[("anzahl", &genannt.len()), ("namen", &namen.join(", "))],
                 )),
             );
         }
@@ -250,9 +250,7 @@ impl Zeilendatei {
             Some((_, tisch)) => (beschriftung, Ok(tisch)),
             None => (
                 beschriftung,
-                Err(format!(
-                    "sie nennt keinen der vier Bausteine ({BAUSTEINNAMEN})"
-                )),
+                Err(satz(Text::ProfilKeinBaustein, &[("namen", &BAUSTEINNAMEN)])),
             ),
         }
     }
@@ -446,26 +444,23 @@ pub fn pruefen(datei: Profildatei) -> (Profile, Vec<String>) {
             bildfolge,
         } = block;
 
-        let pfad = match erkennungsmuster(pfad.as_deref(), "das Pfadmuster") {
+        let pfad = match erkennungsmuster(pfad.as_deref(), Text::ProfilPfadmuster) {
             Ok(muster) => muster,
             Err(grund) => {
                 meldungen.push(profilmeldung(&name, &grund));
                 continue;
             }
         };
-        let kennzeichen = match erkennungsmuster(kennzeichen.as_deref(), "die Kennzeichendatei") {
-            Ok(muster) => muster,
-            Err(grund) => {
-                meldungen.push(profilmeldung(&name, &grund));
-                continue;
-            }
-        };
+        let kennzeichen =
+            match erkennungsmuster(kennzeichen.as_deref(), Text::ProfilKennzeichendatei) {
+                Ok(muster) => muster,
+                Err(grund) => {
+                    meldungen.push(profilmeldung(&name, &grund));
+                    continue;
+                }
+            };
         if pfad.is_none() && kennzeichen.is_none() {
-            meldungen.push(profilmeldung(
-                &name,
-                "es nennt weder ein Pfadmuster noch eine Kennzeichendatei und könnte damit nie \
-                 treffen",
-            ));
+            meldungen.push(profilmeldung(&name, text(Text::ProfilOhneErkennung)));
             continue;
         }
 
@@ -476,7 +471,10 @@ pub fn pruefen(datei: Profildatei) -> (Profile, Vec<String>) {
         let bildfolge = bildfolge.and_then(|tisch| match ortsangabe(tisch.ordner.as_deref()) {
             Ok(ort) => Some(Bildfolgeangabe::neu(ort)),
             Err(grund) => {
-                meldungen.push(profilmeldung(&name, &format!("die Bildfolge: {grund}")));
+                meldungen.push(profilmeldung(
+                    &name,
+                    &satz(Text::ProfilBildfolge, &[("grund", &grund)]),
+                ));
                 None
             }
         });
@@ -540,20 +538,33 @@ fn uebersetzen(text: &str) -> Result<Regex, String> {
 /// Uebersetzt eines der beiden Erkennungsmuster eines Profils (C2.7).
 ///
 /// `was` benennt, welches von beiden gemeint ist; die zwei Aufrufer sind die
-/// zwei Muster, und ein dritter Satz entsteht nicht.
-fn erkennungsmuster(text: Option<&str>, was: &str) -> Result<Option<Regex>, String> {
-    match text {
+/// zwei Muster, und ein dritter Satz entsteht nicht. Das Muster steht in der
+/// Meldung in seiner Debug-Schreibweise, mit Anfuehrungszeichen, wie vor der
+/// Sprachtabelle.
+fn erkennungsmuster(muster: Option<&str>, was: Text) -> Result<Option<Regex>, String> {
+    match muster {
         None => Ok(None),
-        Some(text) => uebersetzen(text)
-            .map(Some)
-            .map_err(|grund| format!("{was} {text:?} lässt sich nicht übersetzen: {grund}")),
+        Some(muster) => uebersetzen(muster).map(Some).map_err(|grund| {
+            satz(
+                Text::ProfilErkennungsmusterNichtUebersetzt,
+                &[
+                    ("was", &text(was)),
+                    ("muster", &format_args!("{muster:?}")),
+                    ("grund", &grund),
+                ],
+            )
+        }),
     }
 }
 
 /// Uebersetzt ein Muster, das in einem Baustein dastehen muss.
-fn muster(text: &str) -> Result<Regex, String> {
-    uebersetzen(text)
-        .map_err(|grund| format!("das Muster {text:?} lässt sich nicht übersetzen: {grund}"))
+fn muster(muster: &str) -> Result<Regex, String> {
+    uebersetzen(muster).map_err(|grund| {
+        satz(
+            Text::ProfilMusterNichtUebersetzt,
+            &[("muster", &format_args!("{muster:?}")), ("grund", &grund)],
+        )
+    })
 }
 
 /// Uebersetzt ein Muster, das in einem Baustein fehlen darf.
@@ -570,14 +581,15 @@ fn wahlfreies_muster(text: Option<&str>) -> Result<Option<Regex>, String> {
 /// gefordert ist deshalb der Wert 2. Nicht fangende Gruppen `(?:…)` zaehlen
 /// nicht mit, und genau darum sind sie der Ausweg fuer ein Muster, das eine
 /// Alternative gruppieren will, ohne sie zu fangen.
-fn feldmuster(text: &str) -> Result<Regex, String> {
-    let ausdruck = muster(text)?;
+fn feldmuster(feld: &str) -> Result<Regex, String> {
+    let ausdruck = muster(feld)?;
     let gruppen = ausdruck.captures_len() - 1;
     if gruppen == 1 {
         return Ok(ausdruck);
     }
-    Err(format!(
-        "das Feldmuster {text:?} trägt {gruppen} Fanggruppen und nicht genau eine"
+    Err(satz(
+        Text::ProfilFeldmusterFanggruppen,
+        &[("muster", &format_args!("{feld:?}")), ("gruppen", &gruppen)],
     ))
 }
 
@@ -586,8 +598,15 @@ fn feldmuster(text: &str) -> Result<Regex, String> {
 fn ortsangabe(angabe: Option<&str>) -> Result<Ortsangabe, String> {
     match angabe {
         None => Ok(Ortsangabe::wurzel()),
-        Some(text) => Ortsangabe::aus_angabe(text)
-            .map_err(|mangel| format!("die Ortsangabe {text:?} {}", mangel.grund())),
+        Some(angabe) => Ortsangabe::aus_angabe(angabe).map_err(|mangel| {
+            satz(
+                Text::ProfilOrtsangabe,
+                &[
+                    ("angabe", &format_args!("{angabe:?}")),
+                    ("mangel", &mangel.grund()),
+                ],
+            )
+        }),
     }
 }
 
@@ -605,10 +624,12 @@ fn ortsangabe_ohne_platzhalter(angabe: Option<&str>, baustein: &str) -> Result<O
     let ort = ortsangabe(angabe)?;
     match angabe.filter(|_| ort.traegt_platzhalter()) {
         None => Ok(ort),
-        Some(text) => Err(format!(
-            "die Ortsangabe {text:?} trägt einen Platzhalter, und der Baustein \
-             \u{201e}{baustein}\u{201c} nimmt keinen an: er liest Dateien und braucht dafür \
-             ihren Pfad, den ein zusammengelegter Lesestand nicht trägt"
+        Some(angabe) => Err(satz(
+            Text::ProfilOrtsangabeMitPlatzhalter,
+            &[
+                ("angabe", &format_args!("{angabe:?}")),
+                ("baustein", &baustein),
+            ],
         )),
     }
 }
@@ -660,7 +681,7 @@ fn typ(angabe: Option<Typdatei>) -> Option<Typ> {
 /// behaelt ihre Beschriftung, und die Datei bleibt stehen.
 fn gekappte_anzahl(anzahl: u64) -> Result<u8, String> {
     if anzahl == 0 {
-        return Err("juengste mit anzahl = 0 kann nie einen Eintrag zeigen".to_owned());
+        return Err(text(Text::ProfilJuengsteNull).to_owned());
     }
     Ok(u8::try_from(anzahl)
         .unwrap_or(HOECHSTENS_JUENGSTE)
@@ -681,12 +702,24 @@ fn einzeilig(fehler: &regex::Error) -> String {
         .join(" ")
 }
 
-/// Eine Meldung ueber ein ganzes Profil.
+/// Eine Meldung ueber ein ganzes Profil; der Wortlaut steht in der
+/// Sprachtabelle (`crate::sprache`).
 fn profilmeldung(profil: &str, grund: &str) -> String {
-    format!("Profil \u{201e}{profil}\u{201c}: {grund}")
+    satz(
+        Text::ProfilMeldung,
+        &[("profil", &profil), ("grund", &grund)],
+    )
 }
 
-/// Eine Meldung ueber eine einzelne Zeile eines Profils.
+/// Eine Meldung ueber eine einzelne Zeile eines Profils; der Wortlaut steht
+/// in der Sprachtabelle (`crate::sprache`).
 fn zeilenmeldung(profil: &str, beschriftung: &str, grund: &str) -> String {
-    format!("Profil \u{201e}{profil}\u{201c}, Zeile \u{201e}{beschriftung}\u{201c}: {grund}")
+    satz(
+        Text::ProfilZeilenmeldung,
+        &[
+            ("profil", &profil),
+            ("beschriftung", &beschriftung),
+            ("grund", &grund),
+        ],
+    )
 }

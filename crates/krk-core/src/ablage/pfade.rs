@@ -375,7 +375,7 @@ impl Ablageort {
         let Some(zuhause) = benutzerverzeichnis() else {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
-                "das System nennt kein Benutzerverzeichnis",
+                text(Text::AblageKeinBenutzerverzeichnis),
             ));
         };
         let mut wurzel = zuhause;

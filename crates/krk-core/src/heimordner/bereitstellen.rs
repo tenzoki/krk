@@ -146,6 +146,7 @@
 //! der sich nicht als Text lesen laesst. Beide bekommen eine Meldung, und der
 //! andere Zettel wird trotzdem uebernommen.
 
+use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
@@ -154,6 +155,7 @@ use super::eintraege::ist_themenzeile;
 use super::{Heimordner, Sonderdatei};
 use crate::ablage::Zugang;
 use crate::ablage::merker::{self, Merker};
+use crate::sprache::{Text, Zahlwort, anzahl, satz, text};
 use crate::text::datei::{self, Textstand, Unlesbarkeit};
 
 /// Ein Zettel des Notizblatts der Runde 9: seine Datei im Ablageordner und das
@@ -321,20 +323,23 @@ pub enum Hindernis {
 impl Hindernis {
     /// Der Satz fuer die Statuszeile; `ordner` ist der Ort, wie ihn
     /// [`Heimordner::anzeigename`] nennt.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel.
     pub fn meldung(&self, ordner: &str) -> String {
         match self {
-            Hindernis::KeinOrdner => {
-                format!("{ordner} ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab")
-            }
-            Hindernis::Unerreichbar(grund) => {
-                format!("{ordner} ist nicht erreichbar: {grund}")
-            }
-            Hindernis::NichtAnlegbar(grund) => {
-                format!("{ordner} lässt sich nicht anlegen: {grund}")
-            }
-            Hindernis::ObererOrdnerFehlt => format!(
-                "{ordner} lässt sich nicht anlegen, weil der Ordner darüber fehlt, etwa ein nicht eingehängtes Laufwerk; KRK legt nichts an"
+            Hindernis::KeinOrdner => satz(Text::HeimKeinOrdner, &[("ordner", &ordner)]),
+            Hindernis::Unerreichbar(grund) => satz(
+                Text::HeimNichtErreichbar,
+                &[("ordner", &ordner), ("grund", grund)],
             ),
+            Hindernis::NichtAnlegbar(grund) => satz(
+                Text::HeimNichtAnlegbar,
+                &[("name", &ordner), ("grund", grund)],
+            ),
+            Hindernis::ObererOrdnerFehlt => {
+                satz(Text::HeimObererOrdnerFehlt, &[("ordner", &ordner)])
+            }
         }
     }
 }
@@ -354,41 +359,44 @@ impl Bereitstellung {
             .as_ref()
             .is_some_and(|uebernahme| uebernahme.ausgang == Uebernahmeausgang::Geschrieben);
         match &self.zettelmerker {
-            Zettelmerker::NichtsZuVermerken | Zettelmerker::StandSchon | Zettelmerker::Vermerkt => {}
-            Zettelmerker::NichtVermerkt(grund) => saetze.push(format!(
-                "KRK kann sich nicht merken, dass die alten Zettel übernommen sind ({grund}); das nächste F2 versucht es wieder, und wird {} vorher gelöscht, übernimmt es sie noch einmal",
-                self.ort
+            Zettelmerker::NichtsZuVermerken | Zettelmerker::StandSchon | Zettelmerker::Vermerkt => {
+            }
+            Zettelmerker::NichtVermerkt(grund) => saetze.push(satz(
+                Text::HeimMerkerNichtVermerkt,
+                &[("grund", grund), ("ort", &self.ort)],
             )),
             // Ohne Ablage hat der Start das Fehlen schon gemeldet; einen Satz
             // ist es erst wert, wenn dieser Aufruf uebernommen hat.
-            Zettelmerker::OhneAblage if uebernommen => saetze.push(format!(
-                "KRK kann sich ohne seinen Ablageordner nicht merken, dass die alten Zettel übernommen sind; ein späteres F2 holt das nach, und wird {} vorher gelöscht, übernimmt es sie noch einmal",
-                self.ort
-            )),
+            Zettelmerker::OhneAblage if uebernommen => {
+                saetze.push(satz(Text::HeimMerkerOhneAblage, &[("ort", &self.ort)]));
+            }
             Zettelmerker::OhneAblage => {}
         }
         for (sorte, grund) in &self.nicht_angelegt {
-            saetze.push(format!(
-                "{} lässt sich nicht anlegen: {grund}",
-                sorte.dateiname()
+            saetze.push(satz(
+                Text::HeimNichtAnlegbar,
+                &[("name", &sorte.dateiname()), ("grund", grund)],
             ));
         }
         let neu = Sonderdatei::Geheimnisse.dateiname();
         let alt = ALTER_GEHEIMNISNAME;
+        let namen: [(&str, &dyn fmt::Display); 2] = [("alt", &alt), ("neu", &neu)];
         match &self.alte_geheimnisse {
             None => {}
             Some(AlteGeheimnisse::Umbenannt) => {
-                saetze.push(format!("{alt} heißt jetzt {neu}"));
+                saetze.push(satz(Text::HeimGeheimnisseUmbenannt, &namen));
             }
-            Some(AlteGeheimnisse::BeideStehen) => saetze.push(format!(
-                "{neu} und {alt} stehen beide in {}; KRK benennt keine um, und es gilt {neu}",
-                self.ort
+            Some(AlteGeheimnisse::BeideStehen) => saetze.push(satz(
+                Text::HeimGeheimnisseBeideStehen,
+                &[("alt", &alt), ("neu", &neu), ("ort", &self.ort)],
             )),
-            Some(AlteGeheimnisse::AlterNameBleibt(grund)) => saetze.push(format!(
-                "{alt} heißt jetzt auch {neu}, der alte Name lässt sich nicht entfernen: {grund}"
+            Some(AlteGeheimnisse::AlterNameBleibt(grund)) => saetze.push(satz(
+                Text::HeimGeheimnisseAlterNameBleibt,
+                &[("alt", &alt), ("neu", &neu), ("grund", grund)],
             )),
-            Some(AlteGeheimnisse::Gescheitert(grund)) => saetze.push(format!(
-                "{alt} lässt sich nicht in {neu} umbenennen ({grund}); sie bleibt unverändert, und {neu} ist nicht angelegt"
+            Some(AlteGeheimnisse::Gescheitert(grund)) => saetze.push(satz(
+                Text::HeimGeheimnisseNichtUmbenannt,
+                &[("alt", &alt), ("neu", &neu), ("grund", grund)],
             )),
         }
         saetze
@@ -408,32 +416,36 @@ impl Uebernahme {
         match &self.ausgang {
             Uebernahmeausgang::Geschrieben => {
                 let themen: Vec<&str> = tragen_notiz.iter().map(|zettel| zettel.thema).collect();
-                let als = if themen.len() == 1 { "Notiz" } else { "Notizen" };
-                saetze.push(format!(
-                    "{} als {als} in {notizen} übernommen",
-                    themen.join(" und ")
+                saetze.push(anzahl(
+                    Zahlwort::HeimZettelUebernommen,
+                    themen.len() as u64,
+                    &[("themen", &verbunden(&themen)), ("notizen", &notizen)],
                 ));
             }
             Uebernahmeausgang::NichtsZuUebernehmen => {}
-            Uebernahmeausgang::NotizenStandenSchon => saetze.push(format!(
-                "Die alten Zettel sind nicht übernommen, weil {notizen} schon stand; {} liegen unverändert im Ablageordner",
-                dateien(&tragen_notiz)
+            Uebernahmeausgang::NotizenStandenSchon => saetze.push(satz(
+                Text::HeimZettelNotizenStandenSchon,
+                &[("notizen", &notizen), ("dateien", &dateien(&tragen_notiz))],
             )),
-            Uebernahmeausgang::Gescheitert(grund) => saetze.push(format!(
-                "Die alten Zettel sind nicht übernommen ({grund}); {} liegen unverändert im Ablageordner",
-                dateien(&tragen_notiz)
+            Uebernahmeausgang::Gescheitert(grund) => saetze.push(satz(
+                Text::HeimZettelGescheitert,
+                &[("grund", grund), ("dateien", &dateien(&tragen_notiz))],
             )),
         }
         for (zettel, befund) in &self.zettel {
             match befund {
                 Zettelbefund::Notiz | Zettelbefund::Leer | Zettelbefund::Fehlt => {}
-                Zettelbefund::Themenzeile => saetze.push(format!(
-                    "{} ist nicht übernommen, weil er eine Zeile mit „## “ trägt; {} liegt unverändert im Ablageordner",
-                    zettel.thema, zettel.datei
+                Zettelbefund::Themenzeile => saetze.push(satz(
+                    Text::HeimZettelThemenzeile,
+                    &[("thema", &zettel.thema), ("datei", &zettel.datei)],
                 )),
-                Zettelbefund::Unlesbar(grund) => saetze.push(format!(
-                    "{} ist nicht übernommen ({grund}); {} liegt unverändert im Ablageordner",
-                    zettel.thema, zettel.datei
+                Zettelbefund::Unlesbar(grund) => saetze.push(satz(
+                    Text::HeimZettelUnlesbar,
+                    &[
+                        ("thema", &zettel.thema),
+                        ("grund", grund),
+                        ("datei", &zettel.datei),
+                    ],
                 )),
             }
         }
@@ -441,13 +453,15 @@ impl Uebernahme {
     }
 }
 
-/// Die Dateinamen der genannten Zettel, mit „und“ verbunden.
+/// Die Dateinamen der genannten Zettel, mit dem Bindewort verbunden.
 fn dateien(zettel: &[&AlterZettel]) -> String {
-    zettel
-        .iter()
-        .map(|zettel| zettel.datei)
-        .collect::<Vec<_>>()
-        .join(" und ")
+    let namen: Vec<&str> = zettel.iter().map(|zettel| zettel.datei).collect();
+    verbunden(&namen)
+}
+
+/// Glieder, mit dem Bindewort der geltenden Sprache verbunden („a und b“).
+fn verbunden(glieder: &[&str]) -> String {
+    glieder.join(&format!(" {} ", text(Text::Und)))
 }
 
 /// Legt den Heimordner an, falls er fehlt, darin jede fehlende Eintragsdatei,
@@ -659,8 +673,9 @@ fn exklusiv_anlegen(pfad: &Path, inhalt: &str) -> Anlegeausgang {
             drop(datei);
             let grund = match fs::remove_file(pfad) {
                 Ok(()) => fehler.to_string(),
-                Err(entfernen) => format!(
-                    "{fehler}; die angefangene Datei lässt sich nicht entfernen: {entfernen}"
+                Err(entfernen) => satz(
+                    Text::HeimAngefangeneDateiBleibt,
+                    &[("fehler", &fehler), ("entfernen", &entfernen)],
                 ),
             };
             Anlegeausgang::Gescheitert(grund)
@@ -691,8 +706,10 @@ fn zettel_lesen(ablageordner: &Path) -> ([(AlterZettel, Zettelbefund); 2], Strin
                 }
             }
             Textstand::Unlesbar { grund, .. } => Zettelbefund::Unlesbar(match grund {
-                Unlesbarkeit::ZuGross(groesse) => format!("mit {groesse} Bytes zu groß"),
-                Unlesbarkeit::KeinText => "kein lesbarer Text".to_owned(),
+                Unlesbarkeit::ZuGross(groesse) => {
+                    satz(Text::HeimZettelZuGross, &[("groesse", &groesse)])
+                }
+                Unlesbarkeit::KeinText => text(Text::HeimZettelKeinText).to_owned(),
             }),
             Textstand::KeinGueltigesZiel { fehlt: true, .. } => Zettelbefund::Fehlt,
             Textstand::KeinGueltigesZiel { grund, .. } => Zettelbefund::Unlesbar(grund),

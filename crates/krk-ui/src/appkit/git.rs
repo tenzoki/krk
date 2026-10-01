@@ -1384,7 +1384,7 @@ mod tests {
     fn ohne_repository_steht_der_satz_aus_a14_allein_im_kopf() {
         let mut modell = Gitmodell::neu();
         modell.kopf_setzen(Kopf::KeinRepository);
-        assert_eq!(kopftext(&modell), texte::KEIN_REPOSITORY);
+        assert_eq!(kopftext(&modell), texte::kein_repository());
     }
 
     /// Ohne Auswahl faengt `down` oben an und `up` unten.

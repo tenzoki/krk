@@ -45,6 +45,7 @@ use std::path::{Component, Path, PathBuf};
 use super::{Heimordner, ORDNERNAME, lexikalisch_bereinigt};
 use crate::ablage::einstellungen::Ortswert;
 use crate::ablage::{Grund, pfade};
+use crate::sprache::{Text, satz, text};
 
 /// Der Notizordner, der gilt, oder der Grund, warum keiner gilt.
 ///
@@ -94,37 +95,41 @@ pub enum Ortsfehler {
 
 impl Ortsfehler {
     /// Der Satz fuer die Statuszeile. Nennt den Wert, wo es einen gibt.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel. Das Beispiel eines gueltigen Orts in
+    /// [`Ortsfehler::KeinText`] ist die TOML-Schreibweise des Vorgabeorts,
+    /// gebildet ueber `toml::Value` und nicht in der Tabelle, weil die
+    /// Tabelle kein ASCII-Anfuehrungszeichen traegt und der Nutzer genau
+    /// dieses tippen soll.
     pub fn meldung(&self) -> String {
         match self {
             Ortsfehler::KeinBenutzerverzeichnis => {
-                "Das System nennt kein Benutzerverzeichnis, also gibt es keinen Notizordner"
-                    .to_owned()
+                text(Text::OrtKeinBenutzerverzeichnis).to_owned()
             }
-            Ortsfehler::Leer => format!(
-                "Der Notizordner in settings.toml ist leer; gültig ist ein Ort, der mit „~/“ oder „/“ beginnt, ab Werk „~/{ORDNERNAME}“"
-            ),
-            Ortsfehler::NichtAbsolut(wert) => format!(
-                "Der Notizordner „{wert}“ in settings.toml beginnt weder mit „~/“ noch mit „/“"
-            ),
-            Ortsfehler::FremdesBenutzerverzeichnis(wert) => format!(
-                "Der Notizordner „{wert}“ in settings.toml nennt ein fremdes Benutzerverzeichnis; gültig ist „~/“ für das eigene oder ein Pfad ab „/“"
-            ),
-            Ortsfehler::KeinText(wert) => format!(
-                "Der Notizordner in settings.toml ist kein Text, sondern {wert}; gültig ist ein Ort in Anführungszeichen, etwa \"~/{ORDNERNAME}\""
-            ),
-            Ortsfehler::ImAblageordner(wert) => format!(
-                "Der Notizordner „{wert}“ liegt im Ablageordner von KRK; ein Werkzeug, das KRK entfernt, nähme ihn mit, also gilt er nicht"
-            ),
+            Ortsfehler::Leer => satz(Text::OrtLeer, &[("ordnername", &ORDNERNAME)]),
+            Ortsfehler::NichtAbsolut(wert) => satz(Text::OrtNichtAbsolut, &[("wert", wert)]),
+            Ortsfehler::FremdesBenutzerverzeichnis(wert) => {
+                satz(Text::OrtFremdesBenutzerverzeichnis, &[("wert", wert)])
+            }
+            Ortsfehler::KeinText(wert) => {
+                let beispiel = toml::Value::String(format!("~/{ORDNERNAME}")).to_string();
+                satz(
+                    Text::OrtKeinText,
+                    &[("wert", wert), ("beispiel", &beispiel)],
+                )
+            }
+            Ortsfehler::ImAblageordner(wert) => satz(Text::OrtImAblageordner, &[("wert", wert)]),
             // Zwei Wege hinaus, und der zweite traegt ohne Neustart:
             // `notizordner_schreiben` liest die Datei unter der Sperre neu, ist
             // sie inzwischen berichtigt, schreibt „Ort waehlen…“ und der Ort
             // gilt; ist sie es nicht, antwortet es mit dem Befund.
-            Ortsfehler::EinstellungenBeschaedigt(satzteil) => format!(
-                "settings.toml {satzteil}, also gilt kein Notizordner, und F2 legt nichts an: settings.toml berichtigen und KRK neu starten, oder nach dem Berichtigen den Ort über „Home“ → „Ort wählen…“ setzen"
-            ),
-            Ortsfehler::EinstellungenUngelesen(ursache) => format!(
-                "KRK konnte settings.toml beim Start nicht lesen ({ursache}), also gilt kein Notizordner, und F2 legt nichts an: KRK neu starten"
-            ),
+            Ortsfehler::EinstellungenBeschaedigt(satzteil) => {
+                satz(Text::OrtEinstellungenBeschaedigt, &[("satzteil", satzteil)])
+            }
+            Ortsfehler::EinstellungenUngelesen(ursache) => {
+                satz(Text::OrtEinstellungenUngelesen, &[("ursache", ursache)])
+            }
         }
     }
 }
@@ -258,9 +263,7 @@ fn gemerkt_gelesen(gemerkt: &Path, benutzerverzeichnis: Option<&Path>) -> PathBu
 /// Satz.
 #[must_use]
 pub fn wechselsatz(neu: &str, alt: &str) -> String {
-    format!(
-        "Der Notizordner ist jetzt „{neu}“; am alten Ort „{alt}“ bleibt alles liegen, und F2 führt zum neuen"
-    )
+    satz(Text::OrtWechsel, &[("neu", &neu), ("alt", &alt)])
 }
 
 /// Der Wechselsatz, wenn der geltende Ort ein anderer ist als der gemerkte,
@@ -412,9 +415,7 @@ pub fn gehaltene_notizdatei(
 /// Datei des Notizordners haelt.
 #[must_use]
 pub fn abweisungssatz(datei: &str) -> String {
-    format!(
-        "Zuerst {datei} im Editor schließen; solange der Editor eine Datei des Notizordners hält, wählt KRK keinen anderen Ort"
-    )
+    satz(Text::OrtAbweisung, &[("datei", &datei)])
 }
 
 /// Der Satz nach einem Wechsel ueber „Ort waehlen…“: der neue Ort, und wenn
@@ -426,7 +427,7 @@ pub fn abweisungssatz(datei: &str) -> String {
 pub fn wahlsatz(neu: &str, alt: Option<&str>) -> String {
     match alt {
         Some(alt) => wechselsatz(neu, alt),
-        None => format!("Der Notizordner ist jetzt „{neu}“, und F2 führt dorthin"),
+        None => satz(Text::OrtGewaehlt, &[("neu", &neu)]),
     }
 }
 
@@ -434,7 +435,7 @@ pub fn wahlsatz(neu: &str, alt: Option<&str>) -> String {
 /// `settings.toml` steht.
 #[must_use]
 pub fn schon_der_ort(neu: &str) -> String {
-    format!("„{neu}“ ist schon der Notizordner; settings.toml bleibt, wie sie ist")
+    satz(Text::OrtSchonDerOrt, &[("neu", &neu)])
 }
 
 /// Der Satz, wenn `settings.toml` seit dem Start von Hand einen anderen Ort

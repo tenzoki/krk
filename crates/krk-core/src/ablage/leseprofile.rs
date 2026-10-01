@@ -134,7 +134,10 @@ pub fn laden(zugang: &Zugang<'_>) -> (Geladen<Profile>, Vec<String>) {
 /// Die zweite Haelfte sind die Meldungen aus [`datei::pruefen`]; dass sie
 /// leer ist, haelt `die_eingebettete_fassung_besteht_ihre_eigene_pruefung`.
 /// Ein Text, der kein TOML ist, ergibt keinen Profilsatz und die eine Meldung
-/// des Lesers.
+/// des Lesers. **Sie steht in der Umschrift und nicht in der Sprachtabelle**:
+/// beide Rufer sind Messstrecken, die sie auf die Standardausgabe schreiben,
+/// und Terminalausgaben sind nicht Gegenstand der Tabelle (Modulkopf von
+/// `crate::sprache`).
 #[must_use = "ohne die Profile misst die Strecke keine Bildfolge"]
 pub fn ausgelieferte() -> (Profile, Vec<String>) {
     match toml::from_str::<datei::Profildatei>(AUSLIEFERUNGSTEXT) {
@@ -142,7 +145,7 @@ pub fn ausgelieferte() -> (Profile, Vec<String>) {
         Err(fehler) => (
             Profile::default(),
             vec![format!(
-                "die Auslieferungsfassung von readers.toml ist kein gültiges TOML: {fehler}"
+                "die Auslieferungsfassung von readers.toml ist kein gueltiges TOML: {fehler}"
             )],
         ),
     }

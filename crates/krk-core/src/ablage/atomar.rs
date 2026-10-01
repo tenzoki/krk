@@ -68,6 +68,8 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
+use crate::sprache::{Text, satz};
+
 /// Die Endung, die die Nachbardatei vom Ziel unterscheidet.
 pub const NACHBARENDUNG: &str = "neu";
 
@@ -139,7 +141,7 @@ fn mit_endung(ziel: &Path, endung: &str) -> io::Result<PathBuf> {
     let Some(name) = ziel.file_name() else {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("{} trägt keinen Dateinamen", ziel.display()),
+            satz(Text::AtomarOhneDateinamen, &[("pfad", &ziel.display())]),
         ));
     };
     let mut nachbarname = name.to_os_string();
@@ -235,9 +237,13 @@ fn rechte_uebernehmen(ziel: &Path, nachbar: &fs::File) -> io::Result<()> {
     nachbar.set_permissions(fs::Permissions::from_mode(soll))?;
     let gesetzt = rechte_am_deskriptor(nachbar)?;
     if gesetzt != soll {
-        return Err(io::Error::other(format!(
-            "die Rechte {soll:o} von {} lassen sich nicht übertragen; die Nachbardatei steht auf {gesetzt:o}",
-            ziel.display()
+        return Err(io::Error::other(satz(
+            Text::AtomarRechteNichtUebertragen,
+            &[
+                ("soll", &format_args!("{soll:o}")),
+                ("pfad", &ziel.display()),
+                ("gesetzt", &format_args!("{gesetzt:o}")),
+            ],
         )));
     }
     Ok(())

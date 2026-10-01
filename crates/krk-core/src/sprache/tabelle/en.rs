@@ -54,11 +54,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungKopfzeileImTermintext => {
             "A line in the appointment text must not begin with “## ”, because that is how the next appointment begins."
         }
-        Text::MarkeGeaendert => "modified",
-        Text::MarkeVorgemerkt => "staged",
-        Text::MarkeNeu => "new",
-        Text::MarkeKonflikt => "in conflict",
-        Text::MarkeUmbenannt => "renamed",
         Text::ZaehlzeileDateien => "Files",
         Text::ZaehlzeileOrdner => "Folders",
         Text::ZaehlzeileVerknuepfungen => "Symbolic links",
@@ -132,6 +127,233 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::LesenKeinVerzeichnis => "{pfad} is not a directory",
         Text::LesenPfadMitNullbyte => "{pfad} contains a null byte",
+        Text::AblageKeinGueltigesUtf8 => "not a valid UTF-8 sequence",
+        Text::AblageOhneOberstenSchluessel => {
+            "the file carries no top-level key at all, and KRK never writes it that way"
+        }
+        Text::AblageKeinBenutzerverzeichnis => "the system names no home directory",
+        Text::AtomarOhneDateinamen => "{pfad} carries no file name",
+        Text::AtomarRechteNichtUebertragen => {
+            "the permissions {soll} of {pfad} could not be transferred; the neighboring file is at {gesetzt}"
+        }
+        Text::ErsetzungOhneSicherung => "{datei} {beschreibung} {ersatz}: {einzelheit}",
+        Text::ErsetzungGesichert => {
+            "The previous version is under {sicherung}; {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::ErsetzungGekuerzt => {
+            "The previous version is under {sicherung}, truncated: only its first {grenze} bytes are saved; {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::ErsetzungSchonVorhanden => {
+            "The previous version has been under {sicherung} since an earlier start and stays there; {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::ErsetzungSicherungGescheitert => {
+            "The content could not be set aside ({fehler}); {datei} {beschreibung} {ersatz}: {einzelheit}"
+        }
+        Text::EinstellungenVerweis => {
+            "settings.toml is a symbolic link, and KRK does not replace it with a file; the location stays as it is. Enter by hand in the target file: {zeile}"
+        }
+        Text::EinstellungenBeschaedigt => {
+            "settings.toml must first be corrected by hand, KRK does not write it like this: {befund}"
+        }
+        Text::EinstellungenNichtLesbar => {
+            "settings.toml cannot be read, KRK does not write it: {befund}"
+        }
+        Text::EinstellungenIntern => {
+            "settings.toml stays as it is: the result would have changed more than the notes folder ({befund})"
+        }
+        Text::EinstellungenNichtGeschrieben => {
+            "settings.toml could not be written and stays as it was: {befund}"
+        }
+        Text::EinstellungenKeineGewoehnlicheDatei => {
+            "in its place stands something other than an ordinary file"
+        }
+        Text::EinstellungenNotizordnerKeinEinzelwert => {
+            "notizordner does not stand as a single value on a line “notizordner = …”"
+        }
+        Text::EinstellungenNeuerWertFehlt => "the new value does not stand as notizordner",
+        Text::EinstellungenAndererWertGeaendert => "another value of the file would have changed",
+        Text::WerksVerweis => {
+            "{datei} is a symbolic link, and KRK does not replace it with a file; nothing has been reset."
+        }
+        Text::WerksKeineDatei => {
+            "In the place of {datei} stands something other than an ordinary file; nothing has been reset."
+        }
+        Text::WerksNichtLesbar => "{datei} cannot be queried ({befund}); nothing has been reset.",
+        Text::WerksKeineOrtszeit => {
+            "The clock of this device yields no timestamp for the backups; nothing has been reset."
+        }
+        Text::WerksKeinFreierName => {
+            "For {datei} no free backup name is left in this minute; nothing has been reset."
+        }
+        Text::WerksNichtBeiseitegelegt => {
+            "{datei} could not be set aside ({befund}); nothing has been reset."
+        }
+        Text::WerksNichtVorbereitet => {
+            "The new version of {datei} could not be written ({befund}); nothing has been reset."
+        }
+        Text::WerksEinstellungen => "{befund}. Nothing has been reset.",
+        Text::WerksNichtZurueckgebaut => {
+            "{hindernis} A second copy of the unchanged content remains under {pfade}."
+        }
+        Text::WerksZurueckgesetzt => "Reset to factory settings.",
+        Text::WerksTeilweiseZurueckgesetzt => "Only partly reset to factory settings.",
+        Text::WerksBeiseitegelegt => "Set aside: {pfade}.",
+        Text::WerksStandNichtDa => "{datei} was not there, nothing has been set aside for it.",
+        Text::WerksDateiNichtZurueckgesetzt => "{datei} has not been reset: {fehler}.",
+        Text::NeuerungenStartzeile => {
+            "New in this version: {teile}. Your files are under {ordner}."
+        }
+        Text::NeuerungenDateiFehlt => {
+            "This file is not in your data folder; only what is there is compared."
+        }
+        Text::NeuerungenDateiBeschaedigt => "This file is damaged and is therefore not compared.",
+        Text::NeuerungenNeuInDieserFassung => "New in this version",
+        Text::NeuerungenNurInIhrerDatei => "Only in your file",
+        Text::NeuerungenZeileLeer => "{ueberschrift}: —",
+        Text::NeuerungenZeile => "{ueberschrift}: {namen}",
+        Text::NeuerungenKeineEigenenEintraege => {
+            "{zeile} (this file cannot carry entries of its own; KRK rejects an unknown entry as damaged)"
+        }
+        Text::NeuerungenPreisLeser => {
+            "A profile your file does not carry costs the summary for that location: the Preview shows the metadata there."
+        }
+        Text::NeuerungenPreisEinstellungen => {
+            "A key your file does not carry costs only the explanatory comment block; the value itself KRK takes from the shipped version."
+        }
+        Text::NeuerungenPreisBelegung => {
+            "A function your file does not carry costs its shipped key combinations; it remains reachable through the main menu."
+        }
+        Text::NeuerungenSchlusssatz => {
+            "Shown is the state KRK read last. What KRK works with has been fixed since start-up: a changed file takes effect only at the next start."
+        }
+        Text::OrtKeinBenutzerverzeichnis => {
+            "The system names no home directory, so there is no notes folder"
+        }
+        Text::OrtLeer => {
+            "The notes folder in settings.toml is empty; valid is a location starting with “~/” or “/”, by default “~/{ordnername}”"
+        }
+        Text::OrtNichtAbsolut => {
+            "The notes folder “{wert}” in settings.toml starts neither with “~/” nor with “/”"
+        }
+        Text::OrtFremdesBenutzerverzeichnis => {
+            "The notes folder “{wert}” in settings.toml names another user’s home directory; valid is “~/” for your own or a path starting with “/”"
+        }
+        Text::OrtKeinText => {
+            "The notes folder in settings.toml is not a text but {wert}; valid is a location in quotation marks, such as {beispiel}"
+        }
+        Text::OrtImAblageordner => {
+            "The notes folder “{wert}” lies in KRK’s data folder; a tool that removes KRK would take it along, so it does not count"
+        }
+        Text::OrtEinstellungenBeschaedigt => {
+            "settings.toml {satzteil}, so no notes folder applies, and F2 creates nothing: correct settings.toml and restart KRK, or after correcting it set the location via “Home” → “Choose Location…”"
+        }
+        Text::OrtEinstellungenUngelesen => {
+            "KRK could not read settings.toml at start-up ({ursache}), so no notes folder applies, and F2 creates nothing: restart KRK"
+        }
+        Text::OrtWechsel => {
+            "The notes folder is now “{neu}”; at the old location “{alt}” everything stays in place, and F2 leads to the new one"
+        }
+        Text::OrtAbweisung => {
+            "First close {datei} in the Editor; as long as the Editor holds a file of the notes folder, KRK chooses no other location"
+        }
+        Text::OrtGewaehlt => "The notes folder is now “{neu}”, and F2 leads there",
+        Text::OrtSchonDerOrt => "“{neu}” is already the notes folder; settings.toml stays as it is",
+        Text::HeimKeinOrdner => {
+            "{ordner} is not a folder; KRK creates nothing there and opens no tab"
+        }
+        Text::HeimNichtErreichbar => "{ordner} is not reachable: {grund}",
+        Text::HeimNichtAnlegbar => "{name} cannot be created: {grund}",
+        Text::HeimObererOrdnerFehlt => {
+            "{ordner} cannot be created because the folder above it is missing, such as a volume that is not mounted; KRK creates nothing"
+        }
+        Text::HeimMerkerNichtVermerkt => {
+            "KRK cannot remember that the old notes have been taken over ({grund}); the next F2 tries again, and if {ort} is deleted before then, it takes them over once more"
+        }
+        Text::HeimMerkerOhneAblage => {
+            "Without its data folder KRK cannot remember that the old notes have been taken over; a later F2 catches up on that, and if {ort} is deleted before then, it takes them over once more"
+        }
+        Text::HeimGeheimnisseUmbenannt => "{alt} is now called {neu}",
+        Text::HeimGeheimnisseBeideStehen => {
+            "{neu} and {alt} both exist in {ort}; KRK renames neither, and {neu} counts"
+        }
+        Text::HeimGeheimnisseAlterNameBleibt => {
+            "{alt} is now also called {neu}, the old name cannot be removed: {grund}"
+        }
+        Text::HeimGeheimnisseNichtUmbenannt => {
+            "{alt} cannot be renamed to {neu} ({grund}); it stays unchanged, and {neu} is not created"
+        }
+        Text::HeimZettelNotizenStandenSchon => {
+            "The old notes have not been taken over because {notizen} already existed; {dateien} remain unchanged in the data folder"
+        }
+        Text::HeimZettelGescheitert => {
+            "The old notes have not been taken over ({grund}); {dateien} remain unchanged in the data folder"
+        }
+        Text::HeimZettelThemenzeile => {
+            "{thema} has not been taken over because it carries a line starting with “## ”; {datei} remains unchanged in the data folder"
+        }
+        Text::HeimZettelUnlesbar => {
+            "{thema} has not been taken over ({grund}); {datei} remains unchanged in the data folder"
+        }
+        Text::HeimZettelZuGross => "too large at {groesse} bytes",
+        Text::HeimZettelKeinText => "no readable text",
+        Text::HeimAngefangeneDateiBleibt => {
+            "{fehler}; the started file cannot be removed: {entfernen}"
+        }
+        Text::Und => "and",
+        Text::TresorKeinZufall => "The system provides no random value: {grund}",
+        Text::TresorAbleitung => "The key cannot be derived: {grund}",
+        Text::TresorVerschluesselung => "The content cannot be encrypted",
+        Text::TresorPinFalschOderVeraendert => "Wrong PIN or file changed",
+        Text::TresorKopfBeschaedigt => "The header of the file is damaged: {grund}",
+        Text::TresorKopfKennungFehlt => "the identifier at the start is missing",
+        Text::TresorKopfAbgeschnitten => "the file is truncated",
+        Text::TresorKopfUnbekannteVersion => "unknown format version {version}",
+        Text::TresorKopfUnbekannteAbleitung => "unknown derivation {ableitung}",
+        Text::TresorKopfUngueltigeParameter => "the parameters of the derivation are invalid",
+        Text::ZusammenfassungKopf => "Name: {name}\nPath: {pfad}",
+        Text::ZusammenfassungBlockzeile => "{beschriftung}:",
+        Text::ZusammenfassungZeile => "{beschriftung}: {wert}",
+        Text::ZusammenfassungPlatzhalter => "--",
+        Text::WertUeberGrenze => "at least {gezaehlt} (reading stopped at {grenze} entries)",
+        Text::Ja => "yes",
+        Text::Nein => "no",
+        Text::ProfilMeldung => "Profile “{profil}”: {grund}",
+        Text::ProfilZeilenmeldung => "Profile “{profil}”, line “{beschriftung}”: {grund}",
+        Text::ProfilMehrereBausteine => {
+            "it names {anzahl} building blocks ({namen}) instead of exactly one"
+        }
+        Text::ProfilKeinBaustein => "it names none of the four building blocks ({namen})",
+        Text::ProfilOhneErkennung => {
+            "it names neither a path pattern nor a marker file and could therefore never match"
+        }
+        Text::ProfilBildfolge => "the photo sequence: {grund}",
+        Text::ProfilPfadmuster => "the path pattern",
+        Text::ProfilKennzeichendatei => "the marker file",
+        Text::ProfilErkennungsmusterNichtUebersetzt => "{was} {muster} cannot be compiled: {grund}",
+        Text::ProfilMusterNichtUebersetzt => "the pattern {muster} cannot be compiled: {grund}",
+        Text::ProfilFeldmusterFanggruppen => {
+            "the field pattern {muster} carries {gruppen} capture groups instead of exactly one"
+        }
+        Text::ProfilOrtsangabe => "the location {angabe} {mangel}",
+        Text::ProfilOrtsangabeMitPlatzhalter => {
+            "the location {angabe} carries a wildcard, and the building block “{baustein}” accepts none: it reads files and needs their path for that, which a merged reading state does not carry"
+        }
+        Text::ProfilJuengsteNull => "juengste with anzahl = 0 can never show an entry",
+        Text::GitKeinRepository => "This folder is not in any Git repository.",
+        Text::GitOhneCommit => "no commit yet",
+        Text::GitUnveraendert => "unchanged",
+        Text::GitImOrdner => "{marken} in this folder",
+        Text::GitKopfAbgeloest => "{kurzhash} (detached)",
+        Text::TasteNameFehlt => "the key name is missing",
+        Text::TasteKeineZusatztaste => "“{text}” is not a modifier key; allowed are {erlaubt}",
+        Text::TasteFnKeineZusatztaste => {
+            "fn is not a modifier key of a key binding; KRK looks function keys up by their key code, and F3 with fn held produces the same key code as a bare F3"
+        }
+        Text::TasteZusatztasteDoppelt => "the modifier key “{text}” appears twice",
+        Text::TasteReihenfolgeVerletzt => {
+            "“{zusatztaste}” comes after “{hinter}”; the order is {reihenfolge}"
+        }
+        Text::TasteUnbekannterName => "“{text}” is not a key name of this notation",
     }
 }
 
@@ -139,5 +361,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
 pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &'static str) {
     match schluessel {
         Zahlwort::Byte => ("{n} byte", "{n} bytes"),
+        Zahlwort::NeuerungenEintraegeIn => ("{n} entry in {datei}", "{n} entries in {datei}"),
+        Zahlwort::HeimZettelUebernommen => (
+            "{themen} taken over as a note into {notizen}",
+            "{themen} taken over as notes into {notizen}",
+        ),
+        Zahlwort::MarkeGeaendert => ("{n} modified", "{n} modified"),
+        Zahlwort::MarkeVorgemerkt => ("{n} staged", "{n} staged"),
+        Zahlwort::MarkeNeu => ("{n} new", "{n} new"),
+        Zahlwort::MarkeKonflikt => ("{n} in conflict", "{n} in conflict"),
+        Zahlwort::MarkeUmbenannt => ("{n} renamed", "{n} renamed"),
     }
 }

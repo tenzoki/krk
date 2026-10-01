@@ -118,6 +118,7 @@ use std::time::SystemTime;
 
 use super::einstellungen::{self, Schreibhindernis};
 use super::{Datei, Zugang, atomar, einzeilig, leseprofile};
+use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::sys::ortszeit;
 
 /// Die hoechste Nummer, die ein Sicherungsname in derselben Minute bekommt.
@@ -215,43 +216,43 @@ pub enum Werkshindernis {
 impl Werkshindernis {
     /// Der Satz fuer die Statuszeile: die Datei und der Grund, und dass nichts
     /// zurueckgesetzt ist.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel.
     #[must_use]
     pub fn meldung(&self) -> String {
         match self {
-            Werkshindernis::Verweis(welche) => format!(
-                "{} ist ein symbolischer Verweis, und KRK ersetzt ihn nicht durch eine Datei; nichts ist zurückgesetzt.",
-                welche.dateiname()
+            Werkshindernis::Verweis(welche) => {
+                satz(Text::WerksVerweis, &[("datei", &welche.dateiname())])
+            }
+            Werkshindernis::KeineDatei(welche) => {
+                satz(Text::WerksKeineDatei, &[("datei", &welche.dateiname())])
+            }
+            Werkshindernis::NichtLesbar(welche, befund) => satz(
+                Text::WerksNichtLesbar,
+                &[("datei", &welche.dateiname()), ("befund", befund)],
             ),
-            Werkshindernis::KeineDatei(welche) => format!(
-                "An der Stelle von {} steht keine gewöhnliche Datei; nichts ist zurückgesetzt.",
-                welche.dateiname()
+            Werkshindernis::KeineOrtszeit => text(Text::WerksKeineOrtszeit).to_owned(),
+            Werkshindernis::KeinFreierName(welche) => {
+                satz(Text::WerksKeinFreierName, &[("datei", &welche.dateiname())])
+            }
+            Werkshindernis::NichtBeiseitegelegt(welche, befund) => satz(
+                Text::WerksNichtBeiseitegelegt,
+                &[("datei", &welche.dateiname()), ("befund", befund)],
             ),
-            Werkshindernis::NichtLesbar(welche, befund) => format!(
-                "{} lässt sich nicht befragen ({befund}); nichts ist zurückgesetzt.",
-                welche.dateiname()
-            ),
-            Werkshindernis::KeineOrtszeit => String::from(
-                "Die Uhr dieses Geräts ergibt keinen Zeitstempel für die Sicherungen; nichts ist zurückgesetzt.",
-            ),
-            Werkshindernis::KeinFreierName(welche) => format!(
-                "Für {} ist in dieser Minute kein freier Sicherungsname mehr übrig; nichts ist zurückgesetzt.",
-                welche.dateiname()
-            ),
-            Werkshindernis::NichtBeiseitegelegt(welche, befund) => format!(
-                "{} ließ sich nicht beiseitelegen ({befund}); nichts ist zurückgesetzt.",
-                welche.dateiname()
-            ),
-            Werkshindernis::NichtVorbereitet(welche, befund) => format!(
-                "Die neue Fassung von {} ließ sich nicht schreiben ({befund}); nichts ist zurückgesetzt.",
-                welche.dateiname()
+            Werkshindernis::NichtVorbereitet(welche, befund) => satz(
+                Text::WerksNichtVorbereitet,
+                &[("datei", &welche.dateiname()), ("befund", befund)],
             ),
             Werkshindernis::Einstellungen(befund) => {
-                format!("{}. Nichts ist zurückgesetzt.", befund.meldung())
+                satz(Text::WerksEinstellungen, &[("befund", &befund.meldung())])
             }
-            Werkshindernis::NichtZurueckgebaut { hindernis, liegen } => format!(
-                "{} Liegen geblieben ist eine zweite Kopie des unveränderten Inhalts unter {}.",
-                hindernis.meldung(),
-                pfadliste(liegen)
+            Werkshindernis::NichtZurueckgebaut { hindernis, liegen } => satz(
+                Text::WerksNichtZurueckgebaut,
+                &[
+                    ("hindernis", &hindernis.meldung()),
+                    ("pfade", &pfadliste(liegen)),
+                ],
             ),
         }
     }
@@ -394,12 +395,15 @@ impl Zurueckgesetzt {
     /// Der Satz fuer die Statuszeile: die vollen Pfade der Sicherungen, jede
     /// Datei ohne Sicherung und jede, die nicht zurueckgesetzt ist (C2.4,
     /// C2.8).
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), je Satz
+    /// ein Schluessel.
     #[must_use]
     pub fn meldung(&self) -> String {
         let mut saetze = vec![if self.vollstaendig() {
-            String::from("Auf Werkseinstellungen zurückgesetzt.")
+            text(Text::WerksZurueckgesetzt).to_owned()
         } else {
-            String::from("Nur teilweise auf Werkseinstellungen zurückgesetzt.")
+            text(Text::WerksTeilweiseZurueckgesetzt).to_owned()
         }];
         let gesichert: Vec<PathBuf> = self
             .dateien
@@ -407,17 +411,21 @@ impl Zurueckgesetzt {
             .filter_map(|ausgang| ausgang.sicherung.clone())
             .collect();
         if !gesichert.is_empty() {
-            saetze.push(format!("Beiseitegelegt: {}.", pfadliste(&gesichert)));
+            saetze.push(satz(
+                Text::WerksBeiseitegelegt,
+                &[("pfade", &pfadliste(&gesichert))],
+            ));
         }
         for ausgang in &self.dateien {
             let name = ausgang.welche.dateiname();
             if ausgang.sicherung.is_none() {
-                saetze.push(format!(
-                    "{name} stand nicht da, für sie ist nichts beiseitegelegt."
-                ));
+                saetze.push(satz(Text::WerksStandNichtDa, &[("datei", &name)]));
             }
             if let Err(fehler) = &ausgang.vollzug {
-                saetze.push(format!("{name} ist nicht zurückgesetzt: {fehler}."));
+                saetze.push(satz(
+                    Text::WerksDateiNichtZurueckgesetzt,
+                    &[("datei", &name), ("fehler", fehler)],
+                ));
             }
         }
         saetze.join(" ")
