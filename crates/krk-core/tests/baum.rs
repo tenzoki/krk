@@ -1690,10 +1690,20 @@ fn die_zerlegung_trennt_literale_von_lebensdauern_kommentaren_und_rohstrings() {
 /// Zaehlproben lesen den ganzen Baum, diese Datei eingeschlossen, und
 /// zaehlten ein Literal `mit_schaltflaechen(` hier als Aufruf.
 ///
-/// `Statuszeile::zeigen` steht nicht darunter, obwohl der Plan es nennt: die
-/// Methode wird ueber eine Variable gerufen (`zeile.zeigen(…)`), und ihr Text
-/// erreicht die Zeile ueber `setStringValue`, das in der Liste steht.
-const SENKEN: [&str; 23] = [
+/// **Eine Huelle, die ihren Text als `&str` nimmt und erst intern an eine
+/// Senke weiterreicht, ist selbst eine Senke und steht in der Liste**: an der
+/// inneren Senke kommt der Text als Variable an (`NSString::from_str(text)`),
+/// und dort saehe die Probe nichts. Das sind `Statuszeile::meldung_setzen`,
+/// `hinweis::zeigen` und die drei Bauer der Namenseingabe. Die Statuszeile
+/// hiess bis zum 261001 `Statuszeile::zeigen` und ist umbenannt, damit ihr
+/// Name allein sie trifft: `zeigen(` traefe jedes `blatt.zeigen(…)`, dessen
+/// Argumentliste einen ganzen Abschlussblock traegt, und `zeile.zeigen(`
+/// hinge am Namen der Variablen. `hinweis::zeigen` und
+/// `namenseingabe::zeigen` stehen deshalb mit ihrem Modul da und werden nur
+/// so gefunden; `frei_zeigen` und `geprueft_zeigen` sind eindeutig und
+/// stehen ohne. Bei `geprueft_zeigen` steht der Text in der `Vorlage`, die
+/// als Strukturausdruck in der Argumentliste steht und dort mitgelesen wird.
+const SENKEN: [&str; 28] = [
     concat!("meldung_", "zeigen("),
     concat!("befehlsantwort_", "zeigen("),
     concat!("antwort_", "zeigen("),
@@ -1717,6 +1727,11 @@ const SENKEN: [&str; 23] = [
     concat!("setMessage", "Text("),
     concat!("setInformative", "Text("),
     concat!("addButtonWith", "Title("),
+    concat!("meldung_", "setzen("),
+    concat!("hinweis::", "zeigen("),
+    concat!("namenseingabe::", "zeigen("),
+    concat!("frei_", "zeigen("),
+    concat!("geprueft_", "zeigen("),
 ];
 
 /// Die Stellen in einem Codestueck, an denen eine Senke gerufen wird: je
@@ -1767,9 +1782,14 @@ fn senkenaufrufe(code: &str, nadel: &str) -> Vec<usize> {
 /// # Was diese Probe nicht sieht
 ///
 /// **Einen Text, der eine Zeile vorher in einer Variablen entsteht** und
-/// dann an die Senke geht (`let text = "Fertig"; meldung_zeigen(text)`), und
-/// eine Senke, die nicht in der Liste steht. Beides schliesst erst ein Typ,
-/// den jede Senke verlangt; siehe den Doc-Kommentar der Umlautprobe.
+/// dann an die Senke geht (`let text = "Fertig"; meldung_zeigen(text)`); eine
+/// `Vorlage` der Namenseingabe, die vor dem Aufruf in einer Variablen gebaut
+/// wird, gehoert dazu. Daneben eine Senke, die nicht in der Liste steht, also
+/// jede kuenftige Huelle mit `&str`-Parameter, solange niemand sie eintraegt,
+/// und einen Aufruf von `hinweis::zeigen` oder `namenseingabe::zeigen`, der
+/// ohne seinen Modulnamen geschrieben ist (`use …::zeigen`). Das schliesst
+/// erst ein Typ, den jede Senke verlangt; siehe den Doc-Kommentar der
+/// Umlautprobe.
 #[test]
 fn keine_senke_der_oberflaeche_bekommt_ein_literal() {
     use gemeinsam::Stueck;

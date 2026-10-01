@@ -1,0 +1,22 @@
+Die Senkenprobe sieht drei Senken mit `&str`-Parameter nicht, und ihr Doc-Kommentar sagt für eine das Gegenteil
+---
+`keine_senke_der_oberflaeche_bekommt_ein_literal` (`crates/krk-core/tests/baum.rs:1773-1873`) prüft allein die Argumente an der Aufrufstelle einer Nadel aus `SENKEN` (`:1696-1720`). Ein Literal, das an eine Funktion geht, die nicht in der Liste steht und ihren Parameter erst intern an eine gelistete Senke weiterreicht, erreicht diese Senke als Variable und geht durch.
+
+Drei Funktionen der Oberfläche sind solche Senken, nehmen Prosa als `&str` und stehen nicht in `SENKEN`:
+
+- `Statuszeile::zeigen(&self, meldung: Option<(&str, Art)>)` (`crates/krk-ui/src/appkit/statuszeile.rs:947`), Rumpf `self.feld.setStringValue(&NSString::from_str(text))` (`:950`). Rufer `anwendung.rs:6775`.
+- `hinweis::zeigen(mtm, titel: &str, satz: &str)` (`crates/krk-ui/src/appkit/hinweis.rs:80`), Rumpf `setMessageText`/`setInformativeText` über `NSString::from_str` (`:82-83`). Rufer `anwendung.rs:3277`.
+- `namenseingabe::zeigen` und `namenseingabe::frei_zeigen` (`crates/krk-ui/src/appkit/blaetter/namenseingabe.rs:210`, `frage: &str, bestaetigen: &str`). Rufer `anwendung.rs:2740`, `:2924`, `:7532`.
+
+Ein `zeile.zeigen(Some(("Fertig", Art::Vorgang)))` oder `hinweis::zeigen(mtm, "Achtung", "…")` bestünde beide Nahtproben, solange das Literal keinen Umlaut trägt.
+
+Für die erste sagt der Doc-Kommentar über `SENKEN` (`baum.rs:1693-1695`) ausdrücklich, sie sei gedeckt: „`Statuszeile::zeigen` steht nicht darunter, obwohl der Plan es nennt: die Methode wird ueber eine Variable gerufen (`zeile.zeigen(…)`), und ihr Text erreicht die Zeile ueber `setStringValue`, das in der Liste steht.“ Das hält nicht: an `setStringValue` kommt der Text als `&NSString::from_str(text)` an, also ohne Literal, und die Probe sieht dort nichts. Dass der Empfänger eine Variable ist, hindert `senkenaufrufe` (`:1724-1745`) auch nicht, denn die Nadel `zeigen(` sucht den Methodennamen und nicht den Empfänger. Der Abschnitt „Was diese Probe nicht sieht“ (`:1767-1772`) nennt „eine Senke, die nicht in der Liste steht“ allgemein, aber nicht diese drei, und die Zeile `:1693` behauptet für eine von ihnen das Gegenteil.
+
+Am Stand `e46a678` ist kein solcher Rufer mit Literal im Baum (geprüft an den genannten Rufstellen, alle über `text(…)`/`satz(…)`). Der Befund ist eine Lücke der Probe und eine falsche Zusicherung in ihrem Kommentar, kein Fehltext.
+
+Abnahme: die Probe sieht ein Literal an jeder der drei Stellen (etwa über die Nadeln `.zeigen(` mit Empfänger, `hinweis::zeigen(`, `namenseingabe::zeigen(`, `namenseingabe::frei_zeigen(`, oder über einen anderen Schnitt, den der Ausführende wählt), jede neue Nadel ist im Betriebscode mindestens einmal gerufen (die bestehende Prüfung `ungerufen`), und der Satz in `baum.rs:1693-1695` behauptet keine Deckung, die die Probe nicht leistet. Eine Kontrollprobe mit einem eingeschleusten Literal an einer der drei Stellen wird rot.
+---
+**Filed by:** reviewer, Kai Stalmann <kai@stalmann.org>
+Gefunden bei der Abschlussdurchsicht `261001-1929-reviewer-lokalisierung-abschluss.md` über `b81a284..e46a678`; Arbeitspaket `260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch`. Schwere: Medium.
+---
+Resolved: 261001 — `SENKEN` in `crates/krk-core/tests/baum.rs` führt fünf weitere Nadeln: `meldung_setzen(`, `hinweis::zeigen(`, `namenseingabe::zeigen(`, `frei_zeigen(` und `geprueft_zeigen(`. `Statuszeile::zeigen` heißt dafür `Statuszeile::meldung_setzen` (Erklärung in `appkit/statuszeile.rs`, Rufer `anwendung.rs:6775`, zwei Doc-Verweise in `statuszeile.rs` und `fenster.rs`), weil `zeigen(` jedes `blatt.zeigen(…)` samt Abschlussblock träfe und `zeile.zeigen(` am Variablennamen hinge. Bei `geprueft_zeigen` steht der Text in der `Vorlage`, die als Strukturausdruck in der Argumentliste mitgelesen wird. Der Doc-Kommentar über `SENKEN` behauptet keine Deckung über `setStringValue` mehr, sondern nennt die Regel (eine Hülle mit `&str`, die intern weiterreicht, ist selbst eine Senke), und „Was diese Probe nicht sieht“ nennt ausdrücklich: eine vorab in einer Variablen gebaute `Vorlage`, eine künftige Hülle, die niemand einträgt, und einen Aufruf von `hinweis::zeigen` oder `namenseingabe::zeigen` ohne Modulnamen. Kontrolllauf: je ein eingeschleustes Literal an allen sieben Rufstellen (`anwendung.rs:2740`, `:2924`, `:3277`, `:6775`, `:7532`, `:8363`, `:8466`) macht die Probe rot; jede neue Nadel ist gerufen (`ungerufen` bleibt leer). Nicht committet.

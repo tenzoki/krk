@@ -24,7 +24,7 @@
 //!
 //! **Die Art steht in der Signatur und nicht in einer zweiten Funktion.** Ein
 //! Fortschritt ist kein Fehler und wird nicht rot; eine zweite Funktion neben
-//! [`Statuszeile::zeigen`] waeren zwei Wahrheiten darueber, was in der Zeile
+//! [`Statuszeile::meldung_setzen`] waeren zwei Wahrheiten darueber, was in der Zeile
 //! steht.
 //!
 //! Was diese Zeile **nicht** traegt: den Lesefortschritt und die Zahl der
@@ -944,7 +944,7 @@ impl Statuszeile {
     /// beiden Zweigen und nicht in ihnen: eine geleerte Zeile hat nichts
     /// abzuschneiden, also nimmt derselbe Nachzug den Hinweis dort weg, ohne
     /// dass er einen eigenen Zweig braucht.
-    pub fn zeigen(&self, meldung: Option<(&str, Art)>) {
+    pub fn meldung_setzen(&self, meldung: Option<(&str, Art)>) {
         match meldung {
             Some((text, art)) => {
                 self.feld.setStringValue(&NSString::from_str(text));

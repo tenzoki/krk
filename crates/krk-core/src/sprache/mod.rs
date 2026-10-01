@@ -49,7 +49,16 @@
 //!   sein, ihre Menge nicht. Ein [`Zahlwort`] traegt zwei Formen, Einzahl und
 //!   Mehrzahl, und `{n}` steht fuer die gruppierte Zahl; die Einzahl darf
 //!   `{n}` auslassen. Welche Form welche Zahl bekommt, sagt
-//!   [`Sprache::mehrzahl`] je Sprache.
+//!   [`Sprache::mehrzahl`] je Sprache, mit einer Ausnahme, die allein
+//!   [`Sprache::form`] haelt: **eine Einzahl ohne `{n}` sagt „eins“ und gilt
+//!   deshalb allein fuer die 1.** Jede andere Zahl, die eine Sprache in die
+//!   Einzahl setzte, bekommt statt ihrer die Mehrzahl, heute allein die
+//!   franzoesische 0 („0 entrées“ statt „une entrée“). Eine Einzahl mit
+//!   `{n}` bleibt bei ihrer Sprachregel („0 octet“). Die Regel steht an der
+//!   Auswahl der Form und nicht in den Tabellen und nicht beim Rufer, damit
+//!   ein neues Zahlwort und eine neue Rufstelle sie erben; die Probe
+//!   `bei_null_sagt_keine_mengenangabe_eins` in `tests/sprache.rs` haelt sie
+//!   ueber `Zahlwort::ALLE` in jeder Sprache.
 //! - **Kein `LazyLock` und kein `static` haelt einen Tabellentext.** Ein
 //!   Text, der vor [`festlegen`] eingefroren wuerde, stuende in der
 //!   Quellsprache, gleich was macOS gewaehlt hat. Gehalten wird der
@@ -171,7 +180,9 @@ impl Sprache {
     /// Ob eine Zahl die Mehrzahlform bekommt.
     ///
     /// Deutsch und Englisch: alles ausser 1. Franzoesisch: alles ueber 1, die
-    /// Null steht dort in der Einzahl.
+    /// Null steht dort in der Einzahl. Das ist die Regel der Sprache; welche
+    /// Form eine Mengenangabe tatsaechlich bekommt, sagt [`Sprache::form`],
+    /// das eine Einzahl ohne `{n}` allein der 1 gibt.
     #[must_use]
     pub const fn mehrzahl(self, n: u64) -> bool {
         match self {
@@ -289,8 +300,24 @@ impl Sprache {
         eingesetzt(self.text(schluessel), werte)
     }
 
+    /// Welche der zwei Formen eines Zahlworts die Zahl `n` bekommt.
+    ///
+    /// Die Mehrzahl, wenn [`Sprache::mehrzahl`] es sagt; die Einzahl sonst,
+    /// es sei denn, sie laesst `{n}` aus und `n` ist nicht 1. Eine Einzahl
+    /// ohne `{n}` nennt die Zahl im Wort („une entrée“) und sagt damit
+    /// „eins“; fuer die franzoesische 0 waere das eine falsche Auskunft, und
+    /// die Mehrzahl traegt die Zahl. Siehe den Modulkopf unter „Die Regel“.
+    #[must_use]
+    pub fn form<'a>(self, einzahl: &'a str, mehrzahl: &'a str, n: u64) -> &'a str {
+        if self.mehrzahl(n) || (n != 1 && !einzahl.contains("{n}")) {
+            mehrzahl
+        } else {
+            einzahl
+        }
+    }
+
     /// Eine Mengenangabe in dieser Sprache: die Form nach
-    /// [`Sprache::mehrzahl`], `{n}` als gruppierte Zahl, die uebrigen
+    /// [`Sprache::form`], `{n}` als gruppierte Zahl, die uebrigen
     /// Platzhalter aus `werte`.
     #[must_use]
     pub fn anzahl(
@@ -300,7 +327,7 @@ impl Sprache {
         werte: &[(&str, &dyn fmt::Display)],
     ) -> String {
         let (einzahl, mehrzahl) = self.zahlwort(schluessel);
-        let vorlage = if self.mehrzahl(n) { mehrzahl } else { einzahl };
+        let vorlage = self.form(einzahl, mehrzahl, n);
         let zahl = self.zahl(n);
         let mut alle: Vec<(&str, &dyn fmt::Display)> = Vec::with_capacity(werte.len() + 1);
         alle.push(("n", &zahl));
@@ -472,25 +499,25 @@ mod tests {
         let _ = eingesetzt("{name}", &[]);
     }
 
-    /// `anzahl` nimmt fuer 1 die Einzahl, auch eine ohne `{n}`, und fuer 2
-    /// die Mehrzahl mit gruppierter Zahl. Gefahren an der Mechanik, weil
-    /// kein Zahlwort dieses Schrittes eine Einzahl ohne `{n}` traegt.
+    /// `form` gibt fuer 1 die Einzahl, auch eine ohne `{n}`, und fuer 2 die
+    /// Mehrzahl mit gruppierter Zahl. Eine Einzahl ohne `{n}` sagt „eins“
+    /// und bekommt die franzoesische 0 nicht: die geht an die Mehrzahl. Eine
+    /// Einzahl mit `{n}` behaelt die franzoesische 0. Gefahren an freien
+    /// Vorlagen, damit der Fall nicht an einem Tabelleneintrag haengt.
     #[test]
-    fn die_einzahl_darf_n_auslassen_und_die_mehrzahl_traegt_die_zahl() {
-        let (einzahl, mehrzahl) = ("Einen Eintrag umbenennen", "{n} Einträge umbenennen");
-        let mit = |sprache: Sprache, n: u64| {
-            let vorlage = if sprache.mehrzahl(n) {
-                mehrzahl
-            } else {
-                einzahl
-            };
+    fn die_einzahl_ohne_n_gilt_allein_fuer_die_eins() {
+        let mit = |sprache: Sprache, (einzahl, mehrzahl): (&str, &str), n: u64| {
             let zahl = sprache.zahl(n);
-            eingesetzt(vorlage, &[("n", &zahl)])
+            eingesetzt(sprache.form(einzahl, mehrzahl, n), &[("n", &zahl)])
         };
-        assert_eq!(mit(Sprache::De, 1), "Einen Eintrag umbenennen");
-        assert_eq!(mit(Sprache::De, 2000), "2.000 Einträge umbenennen");
-        assert_eq!(mit(Sprache::Fr, 0), "Einen Eintrag umbenennen");
-        assert_eq!(mit(Sprache::En, 0), "0 Einträge umbenennen");
+        let ohne_n = ("Einen Eintrag umbenennen", "{n} Einträge umbenennen");
+        let mit_n = ("{n} Eintrag", "{n} Einträge");
+        assert_eq!(mit(Sprache::De, ohne_n, 1), "Einen Eintrag umbenennen");
+        assert_eq!(mit(Sprache::De, ohne_n, 2000), "2.000 Einträge umbenennen");
+        assert_eq!(mit(Sprache::Fr, ohne_n, 1), "Einen Eintrag umbenennen");
+        assert_eq!(mit(Sprache::Fr, ohne_n, 0), "0 Einträge umbenennen");
+        assert_eq!(mit(Sprache::Fr, mit_n, 0), "0 Eintrag");
+        assert_eq!(mit(Sprache::En, ohne_n, 0), "0 Einträge umbenennen");
     }
 
     /// Der zweite Aufruf von `festlegen` aendert nichts und nennt den ersten

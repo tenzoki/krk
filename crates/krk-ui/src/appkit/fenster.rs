@@ -445,7 +445,7 @@ impl FensterDelegierter {
 /// diese Funktion dafuer nicht anfassen muessen; seit seiner Ruecknahme am
 /// 260812 ist es wieder das `NSTextField` selbst. Die Breite, die es dabei
 /// bekommt, ist zugleich die, gegen die
-/// [`super::statuszeile::Statuszeile::zeigen`] misst, ob eine Meldung einen
+/// [`super::statuszeile::Statuszeile::meldung_setzen`] misst, ob eine Meldung einen
 /// Kurzhinweis braucht.
 pub fn fensterinhalt(
     mtm: MainThreadMarker,

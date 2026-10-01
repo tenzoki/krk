@@ -32,10 +32,16 @@ laufendes KRK wechselt nicht, weil macOS die Sprache eines Programms beim
 Start festlegt.
 
 Mit derselben Wahl beschriftet macOS, was es selbst stellt: die Größenangaben
-in der Dateiliste, in der Vorschau und in der Statuszeile, das Datumsformat,
-das Kontextmenü eines Textfeldes, das Über-Fenster und die Rückfrage beim
-ersten Zugriff auf einen geschützten Ordner. Menüs, Blätter, Statuszeile und
-Vorschau von KRK folgen ihr, und beide Hälften sind so immer einig.
+in der Dateiliste, in der Vorschau und in der Statuszeile, das Kontextmenü
+eines Textfeldes, das Über-Fenster und die Rückfrage beim ersten Zugriff auf
+einen geschützten Ordner. Menüs, Blätter, Statuszeile und Vorschau von KRK
+folgen ihr, und diese beiden Hälften sind so immer einig.
+
+Das Datumsformat in der Dateiliste und in der Vorschau folgt
+dagegen voraussichtlich nicht der Sprachwahl, sondern der Region unter
+„Allgemein“ › „Sprache & Region“: wer die Region Deutschland eingestellt und
+KRK auf Französisch gestellt hat, sieht dann ein deutsches Datum neben
+französischen Menüs. Am gebauten Programm geprüft ist das noch nicht.
 
 Die französischen und die englischen Texte hat ein Agent übersetzt; wer eine
 Stelle findet, die sich wie eine Übersetzung liest oder etwas anderes sagt als

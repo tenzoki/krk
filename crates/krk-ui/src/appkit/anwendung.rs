@@ -6767,12 +6767,12 @@ impl Anwendungsdelegierter {
             .and_then(|vorschau| vorschau.seitenzaehler());
         let meldung = statuszeile::zeile(&links, &rechts, aktiv, &sichtbar, vorschau.as_deref());
         // Der Satz bekommt eine eigene Bindung, weil `zeilentext` eine
-        // Zeichenkette **baut** und `zeigen` eine ausleiht: ohne die Bindung
+        // Zeichenkette **baut** und `meldung_setzen` eine ausleiht: ohne die Bindung
         // gaebe es nichts, woraus die Ausleihe genommen werden koennte.
         let satz = meldung
             .as_ref()
             .map(|meldung| (statuszeile::zeilentext(meldung, aktiv), meldung.art));
-        zeile.zeigen(satz.as_ref().map(|(text, art)| (text.as_str(), *art)));
+        zeile.meldung_setzen(satz.as_ref().map(|(text, art)| (text.as_str(), *art)));
     }
 
     /// Schreibt die Rahmenfarben der sechs Bereiche und den Fenstertitel (C9,

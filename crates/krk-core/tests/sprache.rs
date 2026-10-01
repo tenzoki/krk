@@ -273,6 +273,42 @@ fn die_mehrzahlregel_je_sprache() {
     assert!(Sprache::Fr.mehrzahl(2));
 }
 
+/// Bei null sagt keine Mengenangabe „eins“: in jeder Sprache und fuer jedes
+/// `Zahlwort` traegt `anzahl(…, 0, …)` die Ziffer 0 oder ist die Mehrzahl.
+///
+/// Gehalten wird eine Eigenschaft der Ausgabe und keine Liste der Zahlwoerter,
+/// die nie mit null gerufen wuerden: das waere eine Behauptung ueber Rufer,
+/// die keine Probe entscheiden kann. Die uebrigen Platzhalter bekommen einen
+/// Wert ohne Ziffer, damit die 0 allein aus `{n}` kommen kann. Ein Zahlwort,
+/// das in keiner Form `{n}` traegt (`HeimZettelUebernommen`), besteht ueber
+/// den zweiten Zweig. Die Regel steht in `Sprache::form`.
+#[test]
+fn bei_null_sagt_keine_mengenangabe_eins() {
+    for sprache in Sprache::ALLE {
+        for schluessel in Zahlwort::ALLE {
+            let (einzahl, mehrzahl) = sprache.zahlwort(schluessel);
+            let mut namen = platzhalter(einzahl);
+            namen.extend(platzhalter(mehrzahl));
+            namen.remove("n");
+            let werte: Vec<(&str, &dyn std::fmt::Display)> = namen
+                .iter()
+                .map(|name| (name.as_str(), &"x" as &dyn std::fmt::Display))
+                .collect();
+            let aus = sprache.anzahl(schluessel, 0, &werte);
+            let als_mehrzahl = namen
+                .iter()
+                .fold(mehrzahl.replace("{n}", "0"), |text, name| {
+                    text.replace(&format!("{{{name}}}"), "x")
+                });
+            assert!(
+                aus.contains('0') || aus == als_mehrzahl,
+                "{schluessel:?} sagt in {} bei null `{aus}`",
+                sprache.kennung()
+            );
+        }
+    }
+}
+
 /// Tausender je Sprache: Punkt, schmales geschuetztes Leerzeichen, Komma.
 #[test]
 fn die_tausender_je_sprache() {
@@ -319,6 +355,12 @@ fn anzahl_und_satz_an_der_tabelle() {
         "2.000 Bytes"
     );
     assert_eq!(Sprache::Fr.anzahl(Zahlwort::Byte, 0, &[]), "0 octet");
+    assert_eq!(Sprache::Fr.anzahl(Zahlwort::Ordner, 0, &[]), "0 dossiers");
+    assert_eq!(Sprache::Fr.anzahl(Zahlwort::Eintraege, 0, &[]), "0 entrées");
+    assert_eq!(
+        Sprache::Fr.anzahl(Zahlwort::Eintraege, 1, &[]),
+        "une entrée"
+    );
     assert_eq!(Sprache::En.anzahl(Zahlwort::Byte, 0, &[]), "0 bytes");
     for sprache in Sprache::ALLE {
         assert_eq!(
