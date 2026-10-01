@@ -1,0 +1,6 @@
+Der Doc-Kommentar an `hauptmenue` nennt `Anwendungsdelegierter::menue_neu_bauen`; die Funktion heißt `belegung_uebernehmen`
+---
+`crates/krk-ui/src/appkit/menue.rs:461` sagt, der zweite Rufer von `hauptmenue` sei `Anwendungsdelegierter::menue_neu_bauen`. Eine Funktion dieses Namens gibt es nicht (`grep -rn 'fn menue_neu_bauen' crates/krk-ui/src` ist leer). Der zweite Rufer ist `Anwendungsdelegierter::belegung_uebernehmen` (`appkit/anwendung.rs`, `fn belegung_uebernehmen`), die seit dem Arbeitspaket zu den Werkseinstellungen zwei Rufer hat: `belegungsansicht_verlassen` und `werkseinstellungen_vollziehen`. Der Kommentar nennt auch nur zwei Anlässe des Menübaus, das sind heute drei Rufwege über zwei Stellen.
+---
+**Filed by:** requirements-designer, Kai Stalmann <kai@stalmann.org>
+Gefunden bei der Bestandserhebung für den Spec zur Lokalisierung der Oberfläche, Stand `e984b3f`. Abnahme: der Kommentar nennt die Funktion, die es gibt, und die Probe `das_menue_wird_an_zwei_anlaessen_gebaut` (`menue.rs`) bleibt grün. Für die Lokalisierung ist die Stelle tragend: `belegung_uebernehmen` ist der Weg, über den ein Sprachwechsel das Hauptmenü ohne Neustart neu bauen kann.

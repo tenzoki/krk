@@ -1,0 +1,6 @@
+Die Zusammenfassung des Stapelumbenennens schreibt bei einem Eintrag „1 Einträge, davon 1 mit neuem Namen“
+---
+`zusammenfassung` in `crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs` (die Zeile über der Vorschau) formatiert `"{zeilen} Einträge, davon {umzubenennen} mit neuem Namen"` und `"{zeilen} Einträge: {umzubenennen} werden umbenannt, {kollisionen} bleiben stehen"` ohne Einzahl, während `frage` in derselben Datei für einen Eintrag „Einen Eintrag umbenennen“ schreibt. Das Blatt zeigt bei einem Eintrag beide Zeilen übereinander: die Kopfzeile in der Einzahl, die Zusammenfassung in der Mehrzahl. Beide Stellen verzichten außerdem auf `zahl()` (Tausenderpunkt), das `eintraege_text` in `kommandos/operationen.rs` für denselben Zweck nutzt.
+---
+**Filed by:** requirements-designer, Kai Stalmann <kai@stalmann.org>
+Gefunden bei der Bestandserhebung für den Spec zur Lokalisierung der Oberfläche. Nachweis: `sed -n 460,480p crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs` am Stand `e984b3f`. Abnahme: das Blatt mit genau einem Eintrag zeigt in der Zeile über der Vorschau die Einzahl; eine Probe neben `frage` hält beide Zeilen für 1 und für 2 Einträge. Die Lokalisierung ersetzt jeden von Hand geschriebenen Plural ohnehin durch die Pluralregel der Sprache; wer sie baut, schließt diesen Defekt mit.
