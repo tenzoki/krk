@@ -5623,7 +5623,7 @@ fn eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere() {
 
     let text = neuerungen::blatttext(&bestand);
     let rest = fehlende - neuerungen::HOECHSTENS_EINZELN;
-    let schluss = format!("… und {} weitere", neuerungen::zahl(rest));
+    let schluss = format!("… und {} weitere", krk_core::sprache::zahl(rest));
     let hinrichtung = text
         .lines()
         .find(|zeile| zeile.starts_with("Neu in dieser Fassung: ") && zeile.contains("… und "))

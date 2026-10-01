@@ -43,7 +43,7 @@
 //! Probe dieser Art.
 
 mod gemeinsam;
-use gemeinsam::{aufrufstellen, quelldateien, varianten_der_aufzaehlung};
+use gemeinsam::{aufrufstellen, betriebscode, quelldateien, varianten_der_aufzaehlung};
 
 /// Ob eine Nadel in einer **Code**-Zeile der Datei steht und nicht in einem
 /// Kommentar.
@@ -1399,8 +1399,10 @@ fn der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer() {
 /// waere der Anfang einer zweiten Erkennung, die einen Verweis nicht kennt.
 ///
 /// **Gelesen wird der ausgelieferte Code**: Dateien unter `src/`, ohne
-/// Kommentarzeilen und ohne die Pruefmodule hinter `#[cfg(test)]`. Proben
-/// duerfen den Namen in Pfaden schreiben, und Prosa darf ihn nennen.
+/// Kommentarzeilen und ohne die Pruefmodule hinter `#[cfg(test)]`; den
+/// Schnitt am Pruefmodul traegt [`betriebscode`] in `gemeinsam`, dieselbe
+/// Regel, die die Umlautprobe und die Senkenprobe der Sprachtabelle nehmen.
+/// Proben duerfen den Namen in Pfaden schreiben, und Prosa darf ihn nennen.
 ///
 /// **Was die Probe nicht sieht:** den Namen aus Teilen zusammengesetzt, etwa
 /// ueber `concat!`. Das tut im Baum nur diese Datei, und sie liest sich damit
@@ -1413,23 +1415,7 @@ fn der_name_krkhome_steht_im_ausgelieferten_code_allein_bei_der_erkennung() {
         if !name.contains("/src/") {
             continue;
         }
-        let mut im_pruefmodul = false;
-        let mut vorgemerkt = false;
-        for zeile in inhalt.lines() {
-            if im_pruefmodul {
-                im_pruefmodul = zeile != "}";
-                continue;
-            }
-            if zeile == "#[cfg(test)]" {
-                vorgemerkt = true;
-                continue;
-            }
-            if vorgemerkt && zeile.starts_with("mod ") {
-                vorgemerkt = false;
-                im_pruefmodul = zeile.ends_with('{');
-                continue;
-            }
-            vorgemerkt = false;
+        for zeile in betriebscode(&inhalt) {
             if !zeile.trim_start().starts_with("//") && zeile.contains(nadel) {
                 stellen.push(format!("{name}: {}", zeile.trim()));
             }

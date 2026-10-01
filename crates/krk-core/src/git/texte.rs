@@ -21,6 +21,7 @@
 
 use super::{Commit, KURZHASHLAENGE, Kopf, Marke};
 use crate::leseprofil::bausteine::kalendertext;
+use crate::sprache::{Text, text};
 
 /// Was der Git-Bereich in einem Ordner ohne Repository zeigt (A14).
 ///
@@ -155,17 +156,18 @@ pub fn einzelheiten(commit: &Commit) -> String {
 
 /// Das Wort, mit dem die Zusammenfassung einen Markenzustand nennt.
 ///
-/// Ausgeschriebene deutsche Woerter und nicht die Buchstaben der Spalte: die
-/// Spalte ist schmal und braucht ein Zeichen, der Satz ist es nicht und wird
-/// gelesen. Alle fuenf sind so gewaehlt, dass sie hinter einer Zahl stehen
-/// koennen, ohne dekliniert zu werden.
+/// Ausgeschriebene Woerter und nicht die Buchstaben der Spalte: die Spalte
+/// ist schmal und braucht ein Zeichen, der Satz ist es nicht und wird
+/// gelesen. Die deutschen fuenf sind so gewaehlt, dass sie hinter einer Zahl
+/// stehen koennen, ohne dekliniert zu werden. Der Wortlaut steht in der
+/// Sprachtabelle (`crate::sprache`), hier je Marke ihr Schluessel.
 fn wort(marke: Marke) -> &'static str {
     match marke {
-        Marke::Geaendert => "geändert",
-        Marke::Vorgemerkt => "vorgemerkt",
-        Marke::Neu => "neu",
-        Marke::Konflikt => "in Konflikt",
-        Marke::Umbenannt => "umbenannt",
+        Marke::Geaendert => text(Text::MarkeGeaendert),
+        Marke::Vorgemerkt => text(Text::MarkeVorgemerkt),
+        Marke::Neu => text(Text::MarkeNeu),
+        Marke::Konflikt => text(Text::MarkeKonflikt),
+        Marke::Umbenannt => text(Text::MarkeUmbenannt),
     }
 }
 

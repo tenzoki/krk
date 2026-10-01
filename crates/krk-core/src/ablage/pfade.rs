@@ -57,6 +57,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::sprache::{Text, text};
+
 /// Was eine dastehende Ablagedatei bedeutet, aus der kein einziger oberster
 /// Schluessel kommt.
 ///
@@ -121,12 +123,13 @@ impl Ersatz {
     /// Der Satzteil, der die Auskunft in die Meldung traegt.
     ///
     /// Steht hier und nicht beim Formatierer, damit die Antwort und ihr
-    /// Wortlaut an einer Stelle bleiben; [`Grund::beschreibung`](super::Grund)
-    /// ist dieselbe Bauform.
-    pub(super) const fn satzteil(self) -> &'static str {
+    /// Schluessel an einer Stelle bleiben; [`Grund::beschreibung`](super::Grund)
+    /// ist dieselbe Bauform. Der Wortlaut steht in der Sprachtabelle
+    /// (`crate::sprache`).
+    pub(super) fn satzteil(self) -> &'static str {
         match self {
-            Ersatz::Auslieferungszustand => "und wird durch den Auslieferungszustand ersetzt",
-            Ersatz::Nichts => "und nichts tritt an ihre Stelle",
+            Ersatz::Auslieferungszustand => text(Text::ErsatzAuslieferungszustand),
+            Ersatz::Nichts => text(Text::ErsatzNichts),
         }
     }
 }

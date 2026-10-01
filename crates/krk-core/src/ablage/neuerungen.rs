@@ -127,6 +127,7 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use super::{Datei, Geladen, Zugang, einstellungen, leseprofile, pfade};
+use crate::sprache::zahl;
 use crate::tasten::belegung;
 
 /// Was bei einer Ablagedatei ein Eintrag ist.
@@ -844,26 +845,6 @@ const fn preis(welche: Datei) -> Option<&'static str> {
 /// Auskunft mehr. Der Rest wird gezaehlt.
 pub const HOECHSTENS_EINZELN: usize = 12;
 
-/// Die eine Schreibweise fuer eine Zahl in KRKs Oberflaeche.
-///
-/// Tausenderpunkte. Sie stand bis zum 260910 als `zahl` in
-/// `krk_ui::kommandos::operationen` und ist mit [`gekuerzt`] hierher gezogen,
-/// weil dieser Kuerzer sie braucht und der Kern die Oberflaeche nicht rufen
-/// kann. Der alte Ort holt sie ueber `pub(crate) use` zurueck; seine Rufer
-/// haben davon nichts gemerkt, und eine zweite Fassung ist nicht entstanden.
-#[must_use]
-pub fn zahl(wert: usize) -> String {
-    let ziffern = wert.to_string();
-    let mut aus = String::with_capacity(ziffern.len() + ziffern.len() / 3);
-    for (stelle, ziffer) in ziffern.chars().enumerate() {
-        if stelle > 0 && (ziffern.len() - stelle).is_multiple_of(3) {
-            aus.push('.');
-        }
-        aus.push(ziffer);
-    }
-    aus
-}
-
 /// Kuerzt eine lange Liste auf [`HOECHSTENS_EINZELN`] Glieder und beziffert
 /// den Rest in einem weiteren Glied.
 ///
@@ -874,6 +855,11 @@ pub fn zahl(wert: usize) -> String {
 /// `der_kuerzer_langer_namenslisten_hat_genau_zwei_rufer` in
 /// `krk-core/tests/baum.rs`; eine dritte Fassung des Wortlauts faellt dort
 /// auf, statt still danebenzustehen.
+///
+/// Die Zahl schreibt [`zahl`] aus `crate::sprache`; sie stand vom 260910 bis
+/// zur Sprachtabelle neben diesem Kuerzer, weil er sie braucht und der Kern
+/// die Oberflaeche nicht rufen kann, und ist mit der Tabelle dorthin gezogen,
+/// wo die Schreibweise je Sprache entschieden wird.
 ///
 /// Eine Liste bis zur Grenze kommt unveraendert zurueck, auch die leere.
 #[must_use]

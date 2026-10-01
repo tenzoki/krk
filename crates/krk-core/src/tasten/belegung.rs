@@ -216,6 +216,7 @@ use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 
 use crate::ablage::{Ablage, Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, melden};
+use crate::sprache::{Text, text};
 
 use super::konflikt::{Funktionsname, Konflikt};
 use super::parser::{Kombination, Schreibfehler};
@@ -536,25 +537,30 @@ impl Wirkungsbereich {
     /// eine Spalte, die zwei verschiedene Regeln gleich benennt; die Probe
     /// `keine_zwei_wirkungsbereiche_teilen_sich_eine_beschriftung` haelt es
     /// fest.
+    ///
+    /// **Der Wortlaut steht in der Sprachtabelle** (`crate::sprache`), hier
+    /// steht je Wert sein Schluessel; die Beschriftung kommt in der geltenden
+    /// Sprache. Deshalb ist die Funktion seit der Sprachtabelle kein
+    /// `const fn` mehr: die geltende Sprache ist ein Wert des Prozesses.
     #[must_use]
-    pub const fn beschriftung(self) -> &'static str {
+    pub fn beschriftung(self) -> &'static str {
         match self {
-            Wirkungsbereich::Dateifenster => "Dateifenster",
-            Wirkungsbereich::Leiste => "Lesezeichen- und Geräteleiste",
-            Wirkungsbereich::Dateibereiche => "Dateifenster, Vorschau und Editor",
-            Wirkungsbereich::Editor => "Editor",
-            Wirkungsbereich::Editortext => "Text im Editor",
-            Wirkungsbereich::Eintraege => "Einträge im Editor",
-            Wirkungsbereich::Reihenfolge => "Einträge in Dateireihenfolge im Editor",
-            Wirkungsbereich::Aufgaben => "Aufgaben im Editor",
-            Wirkungsbereich::Termine => "Termine im Editor",
-            Wirkungsbereich::Geheimnisse => "Geheimnisse im Editor",
-            Wirkungsbereich::Quicknote => "Quicknote im Editor",
-            Wirkungsbereich::Tabbereich => "Dateifenster und Vorschau",
-            Wirkungsbereich::Navigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
-            Wirkungsbereich::Vorschau => "Vorschau",
-            Wirkungsbereich::Bildfolge => "Dateifenster, solange die Vorschau eine Bildfolge zeigt",
-            Wirkungsbereich::Ueberall => "überall",
+            Wirkungsbereich::Dateifenster => text(Text::WirkungsbereichDateifenster),
+            Wirkungsbereich::Leiste => text(Text::WirkungsbereichLeiste),
+            Wirkungsbereich::Dateibereiche => text(Text::WirkungsbereichDateibereiche),
+            Wirkungsbereich::Editor => text(Text::WirkungsbereichEditor),
+            Wirkungsbereich::Editortext => text(Text::WirkungsbereichEditortext),
+            Wirkungsbereich::Eintraege => text(Text::WirkungsbereichEintraege),
+            Wirkungsbereich::Reihenfolge => text(Text::WirkungsbereichReihenfolge),
+            Wirkungsbereich::Aufgaben => text(Text::WirkungsbereichAufgaben),
+            Wirkungsbereich::Termine => text(Text::WirkungsbereichTermine),
+            Wirkungsbereich::Geheimnisse => text(Text::WirkungsbereichGeheimnisse),
+            Wirkungsbereich::Quicknote => text(Text::WirkungsbereichQuicknote),
+            Wirkungsbereich::Tabbereich => text(Text::WirkungsbereichTabbereich),
+            Wirkungsbereich::Navigator => text(Text::WirkungsbereichNavigator),
+            Wirkungsbereich::Vorschau => text(Text::WirkungsbereichVorschau),
+            Wirkungsbereich::Bildfolge => text(Text::WirkungsbereichBildfolge),
+            Wirkungsbereich::Ueberall => text(Text::WirkungsbereichUeberall),
         }
     }
 

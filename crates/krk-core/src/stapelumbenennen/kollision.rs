@@ -30,6 +30,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::operation::{Namensfehler, name_pruefen};
+use crate::sprache::{Text, text};
 
 /// Warum ein neuer Name nicht vergeben werden kann (C4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,12 +56,15 @@ impl Kollision {
     /// Grund steht in einer Spalte der Vorschau; ein Satz, der dort abgeschnitten
     /// wird, nennt den Grund nicht mehr. Am laufenden Buendel gemessen am
     /// 260804-2033: bei 240 Punkten Spaltenbreite passen rund dreissig Zeichen.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel.
     #[must_use]
     pub fn grund(self) -> &'static str {
         match self {
             Kollision::Unzulaessig(fehler) => fehler.grund(),
-            Kollision::Bestehender => "der Name ist schon vergeben",
-            Kollision::Doppelt => "zweimal derselbe neue Name",
+            Kollision::Bestehender => text(Text::KollisionBestehender),
+            Kollision::Doppelt => text(Text::KollisionDoppelt),
         }
     }
 }

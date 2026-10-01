@@ -66,6 +66,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use crate::sprache::{Text, text};
+
 /// Ein Lesezeichen: ein Name und das Ziel, auf das er zeigt.
 ///
 /// `#[serde(default)]` steht hier aus demselben Grund, aus dem jede Struktur in
@@ -260,9 +262,13 @@ pub enum Namenshinweis {
 
 impl Namenshinweis {
     /// Der Grund im Klartext, so wie ihn die Statuszeile zeigt.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`) unter dem
+    /// Schluessel, den auch `Namensfehler::Leer` traegt: ein Satz, eine
+    /// Stelle.
     pub fn grund(self) -> &'static str {
         match self {
-            Namenshinweis::Leer => "der Name ist leer",
+            Namenshinweis::Leer => text(Text::NameLeer),
         }
     }
 }

@@ -44,6 +44,12 @@
 //! die am Ordner haengt, fragt diese eine Stelle, und die Stelle ist ohne
 //! Fenster pruefbar.
 //!
+//! `sprache` traegt die Sprachtabellen der Oberflaeche in Deutsch,
+//! Franzoesisch und Englisch und den einen Wert, der sagt, welche gilt. Der
+//! Kern bekommt ihn von `krk-ui` beim Start als Wert und stellt dafuer keinen
+//! Systemaufruf; die Regel, nach der ein nutzersichtbarer Text entsteht,
+//! steht im Kopf jenes Moduls.
+//!
 //! Der Kern kennt AppKit nicht. Das ist der Grund, aus dem er ohne Fenster
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
 //!
@@ -64,6 +70,7 @@ pub mod git;
 pub mod heimordner;
 pub mod leseprofil;
 pub mod operation;
+pub mod sprache;
 pub mod stapelumbenennen;
 pub mod tasten;
 pub mod text;

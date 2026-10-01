@@ -29,6 +29,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::sprache::{Text, text};
 use crate::verzeichnis::sys::im_datentraeger_verschieben;
 
 use super::fortschritt::Steuerung;
@@ -49,13 +50,17 @@ pub enum Namensfehler {
 
 impl Namensfehler {
     /// Der Grund im Klartext, so wie ihn die Oberflaeche zeigt.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel; `NameLeer` teilt er sich mit dem leeren
+    /// Lesezeichennamen, weil beide denselben Satz zeigen.
     #[must_use]
     pub fn grund(self) -> &'static str {
         match self {
-            Namensfehler::Leer => "der Name ist leer",
-            Namensfehler::Schraegstrich => "ein Name darf keinen Schrägstrich enthalten",
-            Namensfehler::Nullbyte => "ein Name darf kein Nullbyte enthalten",
-            Namensfehler::Punktname => "'.' und '..' sind keine Namen",
+            Namensfehler::Leer => text(Text::NameLeer),
+            Namensfehler::Schraegstrich => text(Text::NameMitSchraegstrich),
+            Namensfehler::Nullbyte => text(Text::NameMitNullbyte),
+            Namensfehler::Punktname => text(Text::NamePunktname),
         }
     }
 }

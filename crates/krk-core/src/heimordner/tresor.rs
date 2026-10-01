@@ -120,6 +120,8 @@ use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::aead::{Aead, Generate, KeyInit, Payload};
 use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
 
+use crate::sprache::{Text, text};
+
 /// Die Kennung am Anfang jeder nicht leeren `secrets.txt`.
 pub const KENNUNG: [u8; 6] = *b"KRKSEC";
 
@@ -171,10 +173,11 @@ pub enum Pinfehler {
 }
 
 impl Pinfehler {
-    /// Der Satz fuer das Blatt der PIN-Abfrage.
+    /// Der Satz fuer das Blatt der PIN-Abfrage; der Wortlaut steht in der
+    /// Sprachtabelle (`crate::sprache`).
     pub fn meldung(&self) -> &'static str {
         match self {
-            Pinfehler::KeineVierZiffern => "Die PIN besteht aus genau vier Ziffern.",
+            Pinfehler::KeineVierZiffern => text(Text::PinKeineVierZiffern),
         }
     }
 }

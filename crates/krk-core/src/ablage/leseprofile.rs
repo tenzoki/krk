@@ -247,11 +247,11 @@ mod tests {
     /// sieht sie dagegen nicht.
     #[test]
     fn die_auslieferungsfassung_erklaert_die_bildfolge_und_ihre_grenzen() {
-        use crate::ablage::neuerungen::zahl;
         use crate::leseprofil::{
             HOECHSTENS_BILDGRUPPEN, HOECHSTENS_BYTES_JE_FOTO, HOECHSTENS_EINTRAEGE_JE_BILDORDNER,
             HOECHSTENS_FOTOS,
         };
+        use crate::sprache::zahl;
 
         let kommentar: String = AUSLIEFERUNGSTEXT
             .lines()

@@ -421,6 +421,53 @@ fn quellen_einsammeln(wurzel: &Path, ordner: &Path, gefunden: &mut Vec<(String, 
     }
 }
 
+/// Die Zeilen einer Quelldatei ausserhalb ihres Pruefmoduls, in der
+/// Reihenfolge der Datei: der ausgelieferte Code.
+///
+/// **Die eine Fassung der Schnittregel.** Sie stand bis zur Sprachtabelle im
+/// Rumpf von `der_name_krkhome_steht_im_ausgelieferten_code_allein_bei_der_erkennung`
+/// in `tests/baum.rs`; die Umlautprobe und die Senkenprobe jener Arbeit
+/// schneiden das Pruefmodul mit derselben Regel, und drei Proben sollen
+/// nicht drei Fassungen tragen.
+///
+/// Die Regel: ein Pruefmodul beginnt an einer Zeile `#[cfg(test)]`, auf die
+/// unmittelbar eine Zeile `mod …` in Spalte 0 folgt, die auf `{` endet, und
+/// es endet an der naechsten Zeile, die genau `}` ist. Ein `#[cfg(test)]`
+/// vor etwas anderem als `mod`, etwa vor einem einzelnen `use`, oeffnet
+/// kein Pruefmodul; acht Dateien des Baums tragen diese Form, und die Regel
+/// liest sie richtig, weil die Vormerkung mit der naechsten Zeile verfaellt.
+/// Kommentarzeilen bleiben stehen; wer sie nicht will, filtert sie selbst.
+///
+/// # Was diese Regel nicht sieht
+///
+/// Ein Pruefmodul, dessen `mod`-Zeile eingerueckt steht oder deren `{` auf
+/// einer eigenen Zeile folgt, und ein Pruefmodul, das vor seiner
+/// schliessenden Klammer eine Zeile `}` in Spalte 0 traegt: beides schreibt
+/// `rustfmt` nicht, und beides kaeme als Betriebscode zurueck.
+pub fn betriebscode(inhalt: &str) -> Vec<&str> {
+    let mut zeilen = Vec::new();
+    let mut im_pruefmodul = false;
+    let mut vorgemerkt = false;
+    for zeile in inhalt.lines() {
+        if im_pruefmodul {
+            im_pruefmodul = zeile != "}";
+            continue;
+        }
+        if zeile == "#[cfg(test)]" {
+            vorgemerkt = true;
+            continue;
+        }
+        if vorgemerkt && zeile.starts_with("mod ") {
+            vorgemerkt = false;
+            im_pruefmodul = zeile.ends_with('{');
+            continue;
+        }
+        vorgemerkt = false;
+        zeilen.push(zeile);
+    }
+    zeilen
+}
+
 /// Zaehlt die Aufrufstellen einer Funktion in einer Datei, unabhaengig davon,
 /// **wie** der Aufruf geschrieben ist.
 ///

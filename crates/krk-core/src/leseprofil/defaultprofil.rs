@@ -53,20 +53,21 @@
 
 use std::sync::LazyLock;
 
+use crate::sprache::{Text, text};
 use crate::verzeichnis::Typ;
 
 use super::{Baustein, Ortsangabe, Profil, Zeile};
 
 /// Die Beschriftungen der drei Zeilen, in der Reihenfolge der Anzeige
-/// (Festlegung A1).
+/// (Festlegung A1), als Schluessel der Sprachtabelle.
 ///
-/// Die dritte heisst „Verknuepfungen" mit Umlaut, weil sie Anzeigetext ist
-/// und keine Kennung; der Bezeichner daneben traegt ihn nicht, wie jeder
-/// Bezeichner dieses Baums.
-const BESCHRIFTUNGEN: [(&str, Typ); 3] = [
-    ("Dateien", Typ::Datei),
-    ("Ordner", Typ::Ordner),
-    ("Verknüpfungen", Typ::Verknuepfung),
+/// Der Wortlaut steht in `crate::sprache`; bis zur Sprachtabelle stand er
+/// hier, die dritte Zeile als „Verknuepfungen" mit Umlaut, weil sie
+/// Anzeigetext ist und keine Kennung.
+const BESCHRIFTUNGEN: [(Text, Typ); 3] = [
+    (Text::ZaehlzeileDateien, Typ::Datei),
+    (Text::ZaehlzeileOrdner, Typ::Ordner),
+    (Text::ZaehlzeileVerknuepfungen, Typ::Verknuepfung),
 ];
 
 /// Der Name, den das Profil fuer Meldungen traegt. Angezeigt wird er nicht.
@@ -78,12 +79,22 @@ const NAME: &str = "Eingebautes Default-Profil";
 /// Ein `LazyLock` und kein `const`, weil [`Ortsangabe::wurzel`] einen `Vec`
 /// anlegt. Die drei Zeilen tragen kein Muster, also uebersetzt der erste
 /// Zugriff keinen regulaeren Ausdruck.
+///
+/// **Der erste Zugriff friert die drei Beschriftungen in der dann geltenden
+/// Sprache ein.** Das widerspricht der Regel im Kopf von `crate::sprache`,
+/// dass kein `static` einen Tabellentext haelt, und steht hier, weil die
+/// Zeile ihre Beschriftung heute als `String` traegt; `krk-ui` setzt die
+/// Sprache in `main` vor jedem Zugriff, also trifft es den Betrieb nicht.
+/// Schritt 4 des Plans
+/// `261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md`
+/// nimmt den Text aus dem Profil und beschriftet die Zeilen beim Bau der
+/// Zusammenfassung.
 static DEFAULTPROFIL: LazyLock<Profil> = LazyLock::new(|| {
     let zeilen = BESCHRIFTUNGEN
         .iter()
         .map(|(beschriftung, typ)| {
             Zeile::neu(
-                (*beschriftung).to_owned(),
+                text(*beschriftung).to_owned(),
                 Some(Baustein::Zaehlung {
                     ort: Ortsangabe::wurzel(),
                     muster: None,
@@ -117,7 +128,7 @@ mod tests {
         let zeilen = profil.zeilen();
         assert_eq!(zeilen.len(), 3);
         for (zeile, (beschriftung, typ)) in zeilen.iter().zip(BESCHRIFTUNGEN) {
-            assert_eq!(zeile.beschriftung(), beschriftung);
+            assert_eq!(zeile.beschriftung(), text(beschriftung));
             let Some(Baustein::Zaehlung {
                 ort,
                 muster,
@@ -125,7 +136,7 @@ mod tests {
                 versteckt,
             }) = zeile.baustein()
             else {
-                panic!("die Zeile {beschriftung} ist keine Zaehlung");
+                panic!("die Zeile {beschriftung:?} ist keine Zaehlung");
             };
             assert_eq!(*ort, Ortsangabe::wurzel());
             assert!(muster.is_none());

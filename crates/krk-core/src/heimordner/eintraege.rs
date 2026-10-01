@@ -72,6 +72,8 @@
 //! und damit keine Handlung auf den Rueckgaengigstapel. Eine unzulaessige
 //! Eingabe ist davon getrennt eine [`Abweisung`].
 
+use crate::sprache::{Text, text};
+
 /// Die Zeilenmarke einer Themenzeile.
 const THEMENMARKE: &str = "## ";
 
@@ -473,22 +475,15 @@ pub enum Abweisung {
 }
 
 impl Abweisung {
-    /// Der Grund im Wortlaut der Statuszeile.
+    /// Der Grund im Wortlaut der Statuszeile; der Wortlaut steht in der
+    /// Sprachtabelle (`crate::sprache`), hier je Wert sein Schluessel.
     pub fn meldung(self) -> &'static str {
         match self {
-            Self::UmbruchImAufgabentext => {
-                "Eine Aufgabe ist eine Zeile und trägt keinen Zeilenumbruch."
-            }
-            Self::UmbruchImThema => "Ein Thema ist eine Zeile und trägt keinen Zeilenumbruch.",
-            Self::ThemenzeileImNotiztext => {
-                "Eine Zeile im Notiztext darf nicht mit „## “ beginnen, denn so beginnt die nächste Notiz."
-            }
-            Self::UngueltigesDatum => {
-                "Ein Datum steht als YYMMDD oder YYMMDD HH:MM, etwa 261002 oder 261002 09:30."
-            }
-            Self::KopfzeileImTermintext => {
-                "Eine Zeile im Termintext darf nicht mit „## “ beginnen, denn so beginnt der nächste Termin."
-            }
+            Self::UmbruchImAufgabentext => text(Text::AbweisungUmbruchImAufgabentext),
+            Self::UmbruchImThema => text(Text::AbweisungUmbruchImThema),
+            Self::ThemenzeileImNotiztext => text(Text::AbweisungThemenzeileImNotiztext),
+            Self::UngueltigesDatum => text(Text::AbweisungUngueltigesDatum),
+            Self::KopfzeileImTermintext => text(Text::AbweisungKopfzeileImTermintext),
         }
     }
 }

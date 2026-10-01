@@ -1138,12 +1138,13 @@ pub(crate) fn ordner_text(ordner: usize) -> String {
     }
 }
 
-/// Eine Zahl mit Punkten als Tausendertrennung, wie sie der Nutzer liest.
+/// Eine Zahl mit gruppierten Tausendern, wie sie der Nutzer liest.
 ///
 /// Die eine Schreibweise fuer Zahlen in der Oberflaeche. [`super::auswahl`]
 /// nimmt sie fuer den Markierungsstand mit, damit eine markierte Liste
-/// dieselben Punkte zeigt wie ein laufender Vorgang; seit der Runde 12 auch
-/// [`super::loeschwarnung`] fuer die Zahl der Eintraege in der Loeschfrage.
+/// dieselbe Gruppierung zeigt wie ein laufender Vorgang; seit der Runde 12
+/// auch [`super::loeschwarnung`] fuer die Zahl der Eintraege in der
+/// Loeschfrage.
 ///
 /// **`pub(crate)` und nicht `pub(super)`**, und das ist kein Versehen: der
 /// dritte Aufrufer ist `crate::appkit::statuszeile` und liegt ausserhalb von
@@ -1153,34 +1154,23 @@ pub(crate) fn ordner_text(ordner: usize) -> String {
 /// darauf: [`gekuerzt`] beziffert seinen Rest in derselben Schreibweise und
 /// wird auch vom Blatt auf Abruf gerufen, das der Kern baut. Zwei Fassungen
 /// haetten dem Nutzer dieselbe Zahl an zwei Blaettern verschieden
-/// geschrieben. Die Rufer haben vom Umzug nichts gemerkt: der Name steht hier
-/// weiter, und [`super::auswahl`], [`super::loeschwarnung`],
-/// `crate::appkit::statuszeile` und diese Datei greifen ihn wie zuvor.
-pub(crate) use krk_core::ablage::neuerungen::zahl;
+/// geschrieben. Seit der Sprachtabelle steht er in `krk_core::sprache`, wo
+/// das Trennzeichen je Sprache entschieden wird. Die Rufer haben von beiden
+/// Umzuegen nichts gemerkt: der Name steht hier weiter, und
+/// [`super::auswahl`], [`super::loeschwarnung`], `crate::appkit::statuszeile`
+/// und diese Datei greifen ihn wie zuvor.
+pub(crate) use krk_core::sprache::zahl;
 
 /// Eine Datenmenge in der Schreibweise, die der Nutzer im Blatt liest.
 ///
 /// Dezimalpraefixe, wie der Finder sie zeigt. Die Tabelle im Dateifenster
 /// formatiert ueber `NSByteCountFormatter` und bleibt dabei; sie beschriftet
 /// eine Zelle fester Breite, und diese Zeile beschriftet einen Satz. Zwei
-/// Aufrufer, zwei Anforderungen, und diese hier soll ohne AppKit pruefbar sein.
-#[must_use]
-fn menge(bytes: u64) -> String {
-    const EINHEITEN: [(u64, &str); 4] = [
-        (1_000_000_000_000, "TB"),
-        (1_000_000_000, "GB"),
-        (1_000_000, "MB"),
-        (1_000, "kB"),
-    ];
-    for (teiler, name) in EINHEITEN {
-        if bytes >= teiler {
-            let ganze = bytes / teiler;
-            let zehntel = (bytes % teiler) * 10 / teiler;
-            return format!("{ganze},{zehntel} {name}");
-        }
-    }
-    format!("{bytes} Bytes")
-}
+/// Aufrufer, zwei Anforderungen, und diese hier soll ohne AppKit pruefbar
+/// sein. **Der Rumpf steht seit der Sprachtabelle in `krk_core::sprache`**,
+/// weil Dezimaltrenner und Einheit je Sprache entschieden werden; die zwei
+/// Rufer in dieser Datei greifen den Namen wie zuvor.
+use krk_core::sprache::menge;
 
 // ----------------------------------------------------------------------
 // Der angezeigte Ordner an einer benannten Anwendung (C11, Schritt 18c)

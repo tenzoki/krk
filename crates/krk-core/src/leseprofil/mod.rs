@@ -118,6 +118,7 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
+use crate::sprache::{Text, text};
 use crate::verzeichnis::Typ;
 
 pub mod bausteine;
@@ -647,16 +648,15 @@ pub enum Ortsmangel {
 impl Ortsmangel {
     /// Der Satzteil, der den Mangel benennt, so wie ihn die Statuszeile zeigt.
     ///
-    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig.
+    /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig;
+    /// der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel.
     pub fn grund(self) -> &'static str {
         match self {
-            Ortsmangel::Absolut => "ist ein absoluter Pfad",
-            Ortsmangel::LeeresStueck => "trägt ein leeres Stück",
-            Ortsmangel::Punktstueck => "trägt ein Stück . oder ..",
-            Ortsmangel::MehrerePlatzhalter => {
-                "trägt mehr als einen Platzhalter * und damit Kosten, die erst am Bestand \
-                 feststünden"
-            }
+            Ortsmangel::Absolut => text(Text::OrtsmangelAbsolut),
+            Ortsmangel::LeeresStueck => text(Text::OrtsmangelLeeresStueck),
+            Ortsmangel::Punktstueck => text(Text::OrtsmangelPunktstueck),
+            Ortsmangel::MehrerePlatzhalter => text(Text::OrtsmangelMehrerePlatzhalter),
         }
     }
 }

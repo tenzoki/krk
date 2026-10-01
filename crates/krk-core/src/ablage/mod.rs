@@ -287,6 +287,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
+use crate::sprache::{Text, text};
 use crate::text::datei::EDITORGRENZE;
 
 pub use einstellungen::Einstellungen;
@@ -336,11 +337,14 @@ impl Grund {
     ///
     /// Die Fallunterscheidung ist vollstaendig und hat keinen Auffangzweig: ein
     /// weiterer Grund haelt den Bau an und erzwingt einen weiteren Satzteil.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`), hier je
+    /// Wert sein Schluessel.
     pub(crate) fn beschreibung(&self) -> &'static str {
         match self {
-            Grund::NichtLesbar(_) => "ist nicht lesbar",
-            Grund::Beschaedigt(_) => "ist beschädigt",
-            Grund::NichtAnlegbar(_) => "ließ sich nicht anlegen",
+            Grund::NichtLesbar(_) => text(Text::AblagegrundNichtLesbar),
+            Grund::Beschaedigt(_) => text(Text::AblagegrundBeschaedigt),
+            Grund::NichtAnlegbar(_) => text(Text::AblagegrundNichtAnlegbar),
         }
     }
 
