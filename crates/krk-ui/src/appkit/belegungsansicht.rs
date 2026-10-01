@@ -139,6 +139,7 @@ use objc2_foundation::{
     NSString, ns_string,
 };
 
+use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::{Tastendruck, code_von_pflicht};
 
 use crate::belegungsmodell::{Belegungsmodell, Suchlage, Zuweisung};
@@ -180,8 +181,10 @@ const CODE_ESC: u16 = code_von_pflicht("esc");
 /// Erlaeuterungszeile und die gesetzte Taste nicht auseinanderlaufen koennen.
 #[derive(Debug, Clone, Copy)]
 struct Schaltflaechentaste {
-    /// Die Beschriftung, wie sie auf der Schaltflaeche steht.
-    titel: &'static str,
+    /// Die Beschriftung, wie sie auf der Schaltflaeche steht, als Schluessel
+    /// der Sprachtabelle; [`Schaltflaechentaste::titel`] liest den Wortlaut in
+    /// der geltenden Sprache.
+    titel: Text,
     /// Ob die Befehlstaste dazugehoert. Fuer alle drei wahr, siehe
     /// [`SCHALTFLAECHEN`].
     mit_befehl: bool,
@@ -190,6 +193,11 @@ struct Schaltflaechentaste {
 }
 
 impl Schaltflaechentaste {
+    /// Die Beschriftung in der geltenden Sprache.
+    fn titel(self) -> &'static str {
+        text(self.titel)
+    }
+
     /// Die Kombination, wie die Erlaeuterungszeile sie nennt.
     ///
     /// **Gerechnet und nicht danebengeschrieben.** Der Satz unter der
@@ -236,7 +244,9 @@ impl Schaltflaechenzeichen {
     fn anzeige(self, mit_befehl: bool) -> String {
         let taste = match self {
             Schaltflaechenzeichen::Buchstabe(zeichen) => zeichen.to_ascii_uppercase().to_string(),
-            Schaltflaechenzeichen::Eingabetaste => "Eingabe".to_owned(),
+            Schaltflaechenzeichen::Eingabetaste => {
+                text(Text::BelegungsansichtTasteEingabe).to_owned()
+            }
         };
         if mit_befehl {
             format!("Cmd+{taste}")
@@ -267,17 +277,17 @@ impl Schaltflaechenzeichen {
 /// Erlaeuterungszeile alle drei nennen muss.
 const SCHALTFLAECHEN: [Schaltflaechentaste; 3] = [
     Schaltflaechentaste {
-        titel: "Zuweisen",
+        titel: Text::BelegungsansichtZuweisen,
         mit_befehl: true,
         zeichen: Schaltflaechenzeichen::Buchstabe('t'),
     },
     Schaltflaechentaste {
-        titel: "Auslieferungszustand",
+        titel: Text::BelegungsansichtAuslieferungszustand,
         mit_befehl: true,
         zeichen: Schaltflaechenzeichen::Buchstabe('r'),
     },
     Schaltflaechentaste {
-        titel: "Fertig",
+        titel: Text::BelegungsansichtFertig,
         mit_befehl: true,
         zeichen: Schaltflaechenzeichen::Eingabetaste,
     },
@@ -296,19 +306,19 @@ const FERTIG: usize = 2;
 /// er sie von dort liest, kann er keine Taste nennen, die eine Schaltflaeche
 /// nicht traegt.
 fn erlaeuterung() -> String {
-    format!(
-        "Jedes getippte Zeichen sucht in beiden Spalten und springt auf den ersten \
-         Treffer; die Eingabetaste geht zum nächsten, die Rücktaste kürzt den \
-         Suchtext. Pfeiltasten wählen die Funktion. {} ({}) nimmt die nächste \
-         gedrückte Kombination auf; esc bricht die Aufnahme ab. {} ({}) setzt \
-         alles zurück. {} ({}) oder esc verlässt die Ansicht und sichert die \
-         Änderungen.",
-        SCHALTFLAECHEN[ZUWEISEN].titel,
-        SCHALTFLAECHEN[ZUWEISEN].anzeige(),
-        SCHALTFLAECHEN[ZURUECKSETZEN].titel,
-        SCHALTFLAECHEN[ZURUECKSETZEN].anzeige(),
-        SCHALTFLAECHEN[FERTIG].titel,
-        SCHALTFLAECHEN[FERTIG].anzeige(),
+    satz(
+        Text::BelegungsansichtErlaeuterung,
+        &[
+            ("zuweisen", &SCHALTFLAECHEN[ZUWEISEN].titel()),
+            ("zuweisen_taste", &SCHALTFLAECHEN[ZUWEISEN].anzeige()),
+            ("zuruecksetzen", &SCHALTFLAECHEN[ZURUECKSETZEN].titel()),
+            (
+                "zuruecksetzen_taste",
+                &SCHALTFLAECHEN[ZURUECKSETZEN].anzeige(),
+            ),
+            ("fertig", &SCHALTFLAECHEN[FERTIG].titel()),
+            ("fertig_taste", &SCHALTFLAECHEN[FERTIG].anzeige()),
+        ],
     )
 }
 
@@ -400,7 +410,7 @@ define_class!(
         #[unsafe(method(zuweisenGedrueckt:))]
         fn zuweisen_gedrueckt(&self, _absender: Option<&AnyObject>) {
             let Some(zeile) = self.gewaehlte_zeile() else {
-                self.melden("Erst eine Funktion auswählen, dann Zuweisen drücken.");
+                self.melden(text(Text::BelegungsansichtErstWaehlen));
                 return;
             };
             let name = self
@@ -411,9 +421,7 @@ define_class!(
                 .map(str::to_owned)
                 .unwrap_or_default();
             self.ivars().nimmt_auf.set(true);
-            self.melden(&format!(
-                "Jetzt die gewünschte Kombination für »{name}« drücken; esc bricht ab."
-            ));
+            self.melden(&satz(Text::BelegungsansichtAufnahme, &[("name", &name)]));
         }
 
         /// Die Schaltflaeche "Zuruecksetzen": die Arbeitskopie zurueck auf den
@@ -425,7 +433,7 @@ define_class!(
             self.ivars().nimmt_auf.set(false);
             self.ivars().modell.borrow_mut().zuruecksetzen();
             self.nachziehen();
-            self.melden("Die Belegung ist auf den Auslieferungszustand zurückgesetzt.");
+            self.melden(text(Text::BelegungsansichtZurueckgesetzt));
         }
     }
 );
@@ -465,11 +473,11 @@ impl Belegungsquelle {
     pub fn tastendruck_aufnehmen(&self, druck: Tastendruck) {
         self.ivars().nimmt_auf.set(false);
         if druck.code == CODE_ESC && druck.maske.ist_leer() {
-            self.melden("Die Aufnahme ist abgebrochen; die Belegung ist unverändert.");
+            self.melden(text(Text::BelegungsansichtAufnahmeAbgebrochen));
             return;
         }
         let Some(zeile) = self.gewaehlte_zeile() else {
-            self.melden("Es ist keine Funktion ausgewählt; die Belegung ist unverändert.");
+            self.melden(text(Text::BelegungsansichtKeineFunktion));
             return;
         };
         let ergebnis = self.ivars().modell.borrow_mut().zuweisen(zeile, druck);
@@ -479,7 +487,10 @@ impl Belegungsquelle {
                 kombination,
             } => {
                 self.nachziehen();
-                self.melden(&format!("»{funktion}« liegt jetzt auf {kombination}."));
+                self.melden(&satz(
+                    Text::BelegungsansichtZugewiesen,
+                    &[("funktion", &funktion), ("kombination", &kombination)],
+                ));
             }
             // Die Satzzeichen, und vom Zehnerblock die Tasten ohne Zeichen aus
             // der Tastentabelle: die Schreibweise kennt keinen Namen, also
@@ -488,10 +499,7 @@ impl Belegungsquelle {
             // Die Ziffern des Blocks kommen hier nicht an; sie tragen den Namen
             // der oberen Reihe. Warum, sagt der Modulkopf von
             // `krk_core::tasten::parser`.
-            Zuweisung::OhneNamen => self.melden(
-                "Diese Taste hat in der Kombinationsschreibweise keinen Namen und lässt \
-                 sich nicht ablegen; die Belegung ist unverändert.",
-            ),
+            Zuweisung::OhneNamen => self.melden(text(Text::BelegungsansichtTasteOhneNamen)),
             // Der Konflikt samt Namen der anderen Funktion, woertlich aus dem
             // Kern (C3).
             Zuweisung::Abgelehnt(grund) => self.melden(&grund),
@@ -728,7 +736,7 @@ fn blattschaltflaechen() -> [Schaltflaeche<'static>; 1] {
     // "Fertig" auf Cmd+Eingabe statt auf der blossen Eingabetaste: die
     // Eingabetaste geht seit der Runde 7 zum naechsten Treffer der Suche.
     [Schaltflaeche::neu(
-        SCHALTFLAECHEN[FERTIG].titel,
+        SCHALTFLAECHEN[FERTIG].titel(),
         Taste::EingabeMitBefehl,
         // "Fertig" schliesst die Ansicht und richtet nichts an: jede Zuweisung
         // ist beim Druecken schon geschrieben.
@@ -764,12 +772,22 @@ pub fn zeigen(
     // die erste Funktionszeile, denn die Zeile 0 ist eine Ueberschrift.
     tabelle.setAllowsEmptySelection(false);
 
+    // Die Kennung ist ein Bezeichner und bleibt ein Literal; der Titel kommt
+    // aus der Sprachtabelle.
     for (kennung, titel, breite) in [
-        (ns_string!("funktion"), ns_string!("Funktion"), 300.0),
-        (ns_string!("belegung"), ns_string!("Belegung"), 220.0),
+        (
+            ns_string!("funktion"),
+            Text::BelegungsansichtSpalteFunktion,
+            300.0,
+        ),
+        (
+            ns_string!("belegung"),
+            Text::BelegungsansichtSpalteBelegung,
+            220.0,
+        ),
     ] {
         let spalte = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), kennung);
-        spalte.setTitle(titel);
+        spalte.setTitle(&NSString::from_str(text(titel)));
         spalte.setWidth(breite);
         tabelle.addTableColumn(&spalte);
     }
@@ -815,7 +833,7 @@ pub fn zeigen(
     // Aktionssignatur, und `sel!` liefert gueltige Selektoren.
     let zuweisen = unsafe {
         NSButton::buttonWithTitle_target_action(
-            &NSString::from_str(SCHALTFLAECHEN[ZUWEISEN].titel),
+            &NSString::from_str(SCHALTFLAECHEN[ZUWEISEN].titel()),
             Some(&*quelle),
             Some(sel!(zuweisenGedrueckt:)),
             mtm,
@@ -831,7 +849,7 @@ pub fn zeigen(
     // SAFETY: wie bei `zuweisen`.
     let zuruecksetzen = unsafe {
         NSButton::buttonWithTitle_target_action(
-            &NSString::from_str(SCHALTFLAECHEN[ZURUECKSETZEN].titel),
+            &NSString::from_str(SCHALTFLAECHEN[ZURUECKSETZEN].titel()),
             Some(&*quelle),
             Some(sel!(zuruecksetzenGedrueckt:)),
             mtm,
@@ -852,7 +870,11 @@ pub fn zeigen(
     beigabe.addSubview(&zuruecksetzen);
     beigabe.addSubview(&meldung);
 
-    let blatt = Blatt::mit_schaltflaechen(mtm, "Tastaturbelegung", &blattschaltflaechen());
+    let blatt = Blatt::mit_schaltflaechen(
+        mtm,
+        text(Text::BelegungsansichtTitel),
+        &blattschaltflaechen(),
+    );
     blatt.erlaeuterung_setzen(&erlaeuterung());
     blatt.beigabe_setzen(&beigabe);
     blatt.ersthelfer_setzen(&tabelle);
@@ -887,7 +909,8 @@ mod tests {
             "das Blatt der Belegungsansicht bietet mehr als das Fertig an"
         );
         assert_eq!(
-            schaltflaechen[0].titel, SCHALTFLAECHEN[FERTIG].titel,
+            schaltflaechen[0].titel,
+            SCHALTFLAECHEN[FERTIG].titel(),
             "die Schaltflaeche des Blattes und die Erlaeuterungszeile nennen verschiedene Titel"
         );
         assert_eq!(
@@ -959,7 +982,7 @@ mod tests {
             assert!(
                 angabe.mit_befehl,
                 "»{}« traegt keine Zusatztaste und naehme der Suche ein Zeichen weg",
-                angabe.titel
+                angabe.titel()
             );
         }
     }
@@ -975,9 +998,9 @@ mod tests {
         let satz = erlaeuterung();
         for angabe in SCHALTFLAECHEN {
             assert!(
-                satz.contains(angabe.titel),
+                satz.contains(angabe.titel()),
                 "die Erlaeuterung nennt »{}« nicht: {satz}",
-                angabe.titel
+                angabe.titel()
             );
             let anzeige = angabe.anzeige();
             assert!(

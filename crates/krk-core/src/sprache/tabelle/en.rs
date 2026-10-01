@@ -364,6 +364,118 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::BelegungUnbekannteFunktion => "KRK knows no function named {kennung}",
         Text::BelegungFunktionDoppelt => "the function {kennung} appears twice",
+        Text::MenueUeberKrk => "About KRK",
+        Text::MenueTastenbelegungAlsMarkdown => "Save Key Bindings as Markdown",
+        Text::FunktionsbereichAnwendung => "Application",
+        Text::FunktionsbereichHome => "Home",
+        Text::FunktionsbereichDateilisting => "File Listing",
+        Text::FunktionsbereichDateioperationen => "File Operations",
+        Text::FunktionsbereichTabs => "Tabs",
+        Text::FunktionsbereichVorschau => "Preview",
+        Text::FunktionsbereichLeisteUndFokus => "Bar and Focus",
+        Text::FunktionsbereichEditor => "Editor",
+        Text::FunktionsbereichGit => "Git",
+        Text::FunktionsbereichTextbefehle => "Edit",
+        Text::FunktionsbereichFenster => "Window",
+        Text::KontextOeffnenMit => "Open With",
+        Text::KontextZippen => "Zip",
+        Text::KontextEntpacken => "Unzip",
+        Text::KontextDuplizieren => "Duplicate…",
+        Text::KontextImFinderOeffnen => "Open in Finder",
+        Text::KontextImFinderAnzeigen => "Show in Finder",
+        Text::BereichLesezeichen => "Bookmarks",
+        Text::BereichLinks => "Left",
+        Text::BereichRechts => "Right",
+        Text::BereichVorschau => "Preview",
+        Text::BereichEditor => "Editor",
+        Text::BereichGit => "Git",
+        Text::BereichLesezeichenLang => "the bookmarks and volumes bar",
+        Text::BereichLinksLang => "the left file pane",
+        Text::BereichRechtsLang => "the right file pane",
+        Text::BereichVorschauLang => "the preview pane",
+        Text::BereichEditorLang => "the built-in editor",
+        Text::BereichGitLang => "the Git area",
+        Text::SpalteName => "Name",
+        Text::SpalteGroesse => "Size",
+        Text::SpalteDatum => "Date",
+        Text::SpalteTyp => "Type",
+        Text::SpalteMarke => "Mark",
+        Text::SpalteAenderungsdatum => "Date Modified",
+        Text::LeisteBereichUmschalten => "Show or hide {bereich}",
+        Text::LeisteSpalteUmschalten => "Show or hide the “{spalte}” column in both file lists",
+        Text::LeisteTiefeHinweis => "Extend the current filter to the subtree",
+        Text::LeisteInhaltHinweis => "Apply the current filter to the file contents as well",
+        Text::LeisteUeberschriftLesezeichen => "Bookmarks",
+        Text::LeisteUeberschriftGeraete => "Volumes and Locations",
+        Text::LeisteLesezeichenFehlt => "{name} (missing)",
+        Text::LeisteSinnbildTextstelle => "text location",
+        Text::TypOrdner => "folder",
+        Text::TypDatei => "file",
+        Text::TypVerknuepfung => "symbolic link",
+        Text::EintragsspalteAufgabe => "Task",
+        Text::EintragsspalteThema => "Topic",
+        Text::EintragsspalteNotiz => "Note",
+        Text::EintragsspalteDatum => "Date",
+        Text::EintragsspalteTermin => "Appointment",
+        Text::BelegungReserviertEditor => "the Editor",
+        Text::BelegungZusatzReserviert => "(reserved for {wofuer})",
+        Text::BelegungZustellerMenue => "menu shortcut",
+        Text::BelegungZusatzZusteller => "({zusteller})",
+        Text::BelegungKeineFunktionGewaehlt => "no function is selected",
+        Text::BelegungSucheLeer => "The search text is empty; every typed character searches.",
+        Text::BelegungSucheTreffer => "Search “{text}”: match {stelle} of {anzahl}.",
+        Text::BelegungSucheKeinTreffer => "Search “{text}”: no match.",
+        Text::BelegungsansichtTitel => "Key Bindings",
+        Text::BelegungsansichtZuweisen => "Assign",
+        Text::BelegungsansichtAuslieferungszustand => "Shipped Version",
+        Text::BelegungsansichtFertig => "Done",
+        Text::BelegungsansichtTasteEingabe => "Return",
+        Text::BelegungsansichtErlaeuterung => {
+            "Every typed character searches both columns and jumps to the first match; the Return key goes to the next one, the Backspace key shortens the search text. Arrow keys choose the function. {zuweisen} ({zuweisen_taste}) records the next pressed combination; esc cancels the recording. {zuruecksetzen} ({zuruecksetzen_taste}) resets everything. {fertig} ({fertig_taste}) or esc leaves the view and saves the changes."
+        }
+        Text::BelegungsansichtErstWaehlen => "Select a function first, then press Assign.",
+        Text::BelegungsansichtAufnahme => {
+            "Now press the desired combination for “{name}”; esc cancels."
+        }
+        Text::BelegungsansichtZurueckgesetzt => {
+            "The key bindings are reset to the shipped version."
+        }
+        Text::BelegungsansichtAufnahmeAbgebrochen => {
+            "The recording is cancelled; the key bindings are unchanged."
+        }
+        Text::BelegungsansichtKeineFunktion => {
+            "No function is selected; the key bindings are unchanged."
+        }
+        Text::BelegungsansichtZugewiesen => "“{funktion}” is now on {kombination}.",
+        Text::BelegungsansichtTasteOhneNamen => {
+            "This key has no name in the combination notation and cannot be stored; the key bindings are unchanged."
+        }
+        Text::BelegungsansichtSpalteFunktion => "Function",
+        Text::BelegungsansichtSpalteBelegung => "Binding",
+        Text::MarkdownUeberschrift => "# Key Bindings of KRK",
+        Text::MarkdownTabellenkopf => "| Function | Combinations | Acts in |",
+        Text::MarkdownNichtEingeordnet => "(not classified by KRK)",
+        Text::MarkdownWirktTextfelderUndEditor => "text fields and Editor",
+        Text::MarkdownGeschrieben => "Key bindings written: {pfad}",
+        Text::MarkdownKeinBenutzerverzeichnis => {
+            "the key bindings could not be written: the system names no home directory"
+        }
+        Text::MarkdownOrdnerFehlt => {
+            "the key bindings could not be written: the folder of {pfad} is missing"
+        }
+        Text::MarkdownZugriffAbgelehnt => {
+            "the key bindings could not be written: access to {pfad} is denied"
+        }
+        Text::MarkdownFehlgeschlagen => "the key bindings could not be written to {pfad}: {grund}",
+        Text::TabelleKeineDateiAufDatentraeger => "the source provides no file on the volume",
+        Text::TabelleNichtZuOeffnen => "{pfad} cannot be opened: {grund}",
+        Text::TabelleZwischenablageLeer => "the clipboard is empty",
+        Text::TabelleNichtAnBrowser => "{adresse} could not be handed to the system browser",
+        Text::TabelleZwischenablageKeinZiel => {
+            "the clipboard carries neither an absolute path nor a web address"
+        }
+        Text::TabelleNichtInDerListe => "{name} is not in the list",
+        Text::FenstertitelQuicknote => "Quicknote",
     }
 }
 

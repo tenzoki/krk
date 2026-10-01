@@ -318,6 +318,7 @@ use objc2_foundation::{
 };
 
 use krk_core::heimordner::eintraege::{Aufgaben, Notizen, Tag, aufgabenzeile, termine};
+use krk_core::sprache::{Text, text};
 use krk_core::verzeichnis::Richtung;
 
 use super::{textautomatik, zwischenablage};
@@ -2146,26 +2147,28 @@ fn spalten_einrichten(
     for spalte in alte {
         tabelle.removeTableColumn(&spalte);
     }
-    let spalte_bauen = |kennung: &NSString, titel: &NSString| {
+    // Die Kennung ist ein Bezeichner und bleibt ein Literal; der Titel kommt
+    // aus der Sprachtabelle.
+    let spalte_bauen = |kennung: &NSString, titel: Text| {
         let spalte = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), kennung);
-        spalte.setTitle(titel);
+        spalte.setTitle(&NSString::from_str(text(titel)));
         spalte
     };
     match art {
         Eintragsart::Aufgaben => {
-            let spalte = spalte_bauen(ns_string!("aufgabe"), ns_string!("Aufgabe"));
+            let spalte = spalte_bauen(ns_string!("aufgabe"), Text::EintragsspalteAufgabe);
             spalte.setResizingMask(NSTableColumnResizingOptions::AutoresizingMask);
             tabelle.addTableColumn(&spalte);
             tabelle.setUsesAutomaticRowHeights(false);
             tabelle.setHeaderView(None);
         }
         Eintragsart::Notizen => {
-            let thema = spalte_bauen(ns_string!("thema"), ns_string!("Thema"));
+            let thema = spalte_bauen(ns_string!("thema"), Text::EintragsspalteThema);
             thema.setResizingMask(NSTableColumnResizingOptions::UserResizingMask);
             thema.setWidth(THEMENBREITE);
             thema.setMinWidth(THEMENBREITE / 2.0);
             tabelle.addTableColumn(&thema);
-            let notiz = spalte_bauen(ns_string!("notiz"), ns_string!("Notiz"));
+            let notiz = spalte_bauen(ns_string!("notiz"), Text::EintragsspalteNotiz);
             notiz.setResizingMask(
                 NSTableColumnResizingOptions::AutoresizingMask
                     | NSTableColumnResizingOptions::UserResizingMask,
@@ -2178,12 +2181,12 @@ fn spalten_einrichten(
         // Dieselben zwei Spalten wie die Notiztabelle, unter ihren eigenen
         // Namen und mit einer schmaleren ersten.
         Eintragsart::Termine => {
-            let datum = spalte_bauen(ns_string!("datum"), ns_string!("Datum"));
+            let datum = spalte_bauen(ns_string!("datum"), Text::EintragsspalteDatum);
             datum.setResizingMask(NSTableColumnResizingOptions::UserResizingMask);
             datum.setWidth(DATUMSBREITE);
             datum.setMinWidth(DATUMSBREITE / 2.0);
             tabelle.addTableColumn(&datum);
-            let termin = spalte_bauen(ns_string!("termin"), ns_string!("Termin"));
+            let termin = spalte_bauen(ns_string!("termin"), Text::EintragsspalteTermin);
             termin.setResizingMask(
                 NSTableColumnResizingOptions::AutoresizingMask
                     | NSTableColumnResizingOptions::UserResizingMask,

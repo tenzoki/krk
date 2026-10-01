@@ -345,6 +345,7 @@ use objc2_foundation::{
 use krk_core::ablage::Dateifenster as Fensterzustand;
 use krk_core::git::Marke;
 use krk_core::heimordner::Heimordner;
+use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
 use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
@@ -448,11 +449,11 @@ fn kennung(spalte: Spalte) -> &'static NSString {
 /// Aufbau der Spalten der beiden Dateifenster.
 #[must_use]
 fn titel(spalte: Spalte) -> Retained<NSString> {
-    let text = match spalte {
-        Spalte::Geaendert => "Änderungsdatum",
+    let ueberschrift = match spalte {
+        Spalte::Geaendert => text(Text::SpalteAenderungsdatum),
         Spalte::Name | Spalte::Groesse | Spalte::Typ | Spalte::Marke => spalte.beschriftung(),
     };
-    NSString::from_str(text)
+    NSString::from_str(ueberschrift)
 }
 
 /// Anfangsbreite und Mindestbreite in Punkten.
@@ -665,8 +666,9 @@ pub type Kontextmelder = Box<dyn Fn(Kontextwahl)>;
 /// liefert (C7).
 ///
 /// **Die eine Meldung des Abwurfs.** Die vier uebrigen [`Abwurfgrund`]-Werte
-/// zeigen sich allein am Zeiger; warum, steht an jener Aufzaehlung.
-const KEINE_DATEI: &str = "die Quelle liefert keine Datei auf dem Datenträger";
+/// zeigen sich allein am Zeiger; warum, steht an jener Aufzaehlung. Als
+/// Schluessel der Sprachtabelle; der Wortlaut kommt in der geltenden Sprache.
+const KEINE_DATEI: Text = Text::TabelleKeineDateiAufDatentraeger;
 
 /// Ob ein neu gefaelltes Urteil eine Meldung in die Statuszeile schreibt (C7).
 ///
@@ -712,7 +714,7 @@ fn abwurfmeldung(gemerkt: Option<Abwurfgrund>, jetzt: Option<Abwurfgrund>) -> Op
         return None;
     }
     match jetzt {
-        Some(Abwurfgrund::KeineDatei) => Some(KEINE_DATEI),
+        Some(Abwurfgrund::KeineDatei) => Some(text(KEINE_DATEI)),
         // Ein angenommenes Urteil raeumt die stehende Meldung ausdruecklich
         // nicht weg: das taete eine zweite Loeschregel neben der der
         // Befehlsantwort.
@@ -2924,9 +2926,9 @@ impl DateifensterQuelle {
                 // Die Statuszeile aus C1 ist die eine Meldeflaeche dafuer,
                 // dieselbe, die "die Zwischenablage ist leer" traegt.
                 Verweisziel::Unerreichbar { grund } => {
-                    self.befehlsantwort_zeigen(&format!(
-                        "{} lässt sich nicht öffnen: {grund}",
-                        ziel.display()
+                    self.befehlsantwort_zeigen(&satz(
+                        Text::TabelleNichtZuOeffnen,
+                        &[("pfad", &ziel.display()), ("grund", &grund)],
                     ));
                     return Einstieg::Gemeldet;
                 }
@@ -3016,21 +3018,22 @@ impl DateifensterQuelle {
     /// die Navigation dahinter sind dieselben.
     fn zwischenablage_springen(&self) {
         let Some(inhalt) = super::zwischenablage::lesen() else {
-            self.befehlsantwort_zeigen("die Zwischenablage ist leer");
+            self.befehlsantwort_zeigen(text(Text::TabelleZwischenablageLeer));
             return;
         };
         match zwischenablage::deuten(&inhalt) {
             Ziel::Pfad(pfad) => self.pfad_anspringen(&pfad),
             Ziel::Web(adresse) => {
                 if !super::zwischenablage::im_browser_oeffnen(&adresse) {
-                    self.befehlsantwort_zeigen(&format!(
-                        "{adresse} ließ sich nicht an den Systembrowser übergeben"
+                    self.befehlsantwort_zeigen(&satz(
+                        Text::TabelleNichtAnBrowser,
+                        &[("adresse", &adresse)],
                     ));
                 }
             }
-            Ziel::Nichts => self.befehlsantwort_zeigen(
-                "die Zwischenablage trägt weder einen absoluten Pfad noch eine Web-Adresse",
-            ),
+            Ziel::Nichts => {
+                self.befehlsantwort_zeigen(text(Text::TabelleZwischenablageKeinZiel));
+            }
         }
     }
 
@@ -3059,7 +3062,7 @@ impl DateifensterQuelle {
     /// Statuszeile das, statt wortlos nichts zu tun.
     fn eintrag_anspringen(&self, name: &str) {
         if self.eintrag_waehlen(name) == Auswahlversuch::Unbekannt {
-            self.befehlsantwort_zeigen(&format!("{name} steht nicht in der Liste"));
+            self.befehlsantwort_zeigen(&satz(Text::TabelleNichtInDerListe, &[("name", &name)]));
         }
     }
 
@@ -5853,9 +5856,9 @@ fn spaltenkopf(mtm: MainThreadMarker, spalte: Spalte) -> Retained<NSTableColumn>
 #[must_use]
 pub(super) fn typ_beschriften(typ: Typ) -> &'static str {
     match typ {
-        Typ::Ordner => "Ordner",
-        Typ::Datei => "Datei",
-        Typ::Verknuepfung => "Verknüpfung",
+        Typ::Ordner => text(Text::TypOrdner),
+        Typ::Datei => text(Text::TypDatei),
+        Typ::Verknuepfung => text(Text::TypVerknuepfung),
     }
 }
 
@@ -6309,7 +6312,7 @@ mod tests {
                     "gemerkt={gemerkt:?}, jetzt={jetzt:?}"
                 );
                 if erwartet {
-                    assert_eq!(meldung, Some(KEINE_DATEI));
+                    assert_eq!(meldung, Some(text(KEINE_DATEI)));
                 }
             }
         }

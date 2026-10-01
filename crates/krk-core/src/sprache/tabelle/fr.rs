@@ -404,6 +404,134 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::BelegungUnbekannteFunktion => "KRK ne connaît aucune fonction nommée {kennung}",
         Text::BelegungFunktionDoppelt => "la fonction {kennung} figure deux fois",
+        Text::MenueUeberKrk => "À propos de KRK",
+        Text::MenueTastenbelegungAlsMarkdown => "Enregistrer les raccourcis clavier en Markdown",
+        Text::FunktionsbereichAnwendung => "Application",
+        Text::FunktionsbereichHome => "Home",
+        Text::FunktionsbereichDateilisting => "Liste de fichiers",
+        Text::FunktionsbereichDateioperationen => "Opérations sur les fichiers",
+        Text::FunktionsbereichTabs => "Onglets",
+        Text::FunktionsbereichVorschau => "Aperçu",
+        Text::FunktionsbereichLeisteUndFokus => "Barre et focus",
+        Text::FunktionsbereichEditor => "Éditeur",
+        Text::FunktionsbereichGit => "Git",
+        Text::FunktionsbereichTextbefehle => "Édition",
+        Text::FunktionsbereichFenster => "Fenêtre",
+        Text::KontextOeffnenMit => "Ouvrir avec",
+        Text::KontextZippen => "Zip",
+        Text::KontextEntpacken => "Unzip",
+        Text::KontextDuplizieren => "Dupliquer…",
+        Text::KontextImFinderOeffnen => "Ouvrir dans le Finder",
+        Text::KontextImFinderAnzeigen => "Afficher dans le Finder",
+        Text::BereichLesezeichen => "Signets",
+        Text::BereichLinks => "Gauche",
+        Text::BereichRechts => "Droite",
+        Text::BereichVorschau => "Aperçu",
+        Text::BereichEditor => "Éditeur",
+        Text::BereichGit => "Git",
+        Text::BereichLesezeichenLang => "la barre des signets et des volumes",
+        Text::BereichLinksLang => "le volet de fichiers gauche",
+        Text::BereichRechtsLang => "le volet de fichiers droit",
+        Text::BereichVorschauLang => "la fenêtre d’aperçu",
+        Text::BereichEditorLang => "l’éditeur intégré",
+        Text::BereichGitLang => "la zone Git",
+        Text::SpalteName => "Nom",
+        Text::SpalteGroesse => "Taille",
+        Text::SpalteDatum => "Date",
+        Text::SpalteTyp => "Type",
+        Text::SpalteMarke => "Marque",
+        Text::SpalteAenderungsdatum => "Date de modification",
+        Text::LeisteBereichUmschalten => "Afficher ou masquer {bereich}",
+        Text::LeisteSpalteUmschalten => {
+            "Afficher ou masquer la colonne «\u{a0}{spalte}\u{a0}» dans les deux listes de fichiers"
+        }
+        Text::LeisteTiefeHinweis => "Étendre le filtre en cours à la sous-arborescence",
+        Text::LeisteInhaltHinweis => "Appliquer le filtre en cours aussi au contenu des fichiers",
+        Text::LeisteUeberschriftLesezeichen => "Signets",
+        Text::LeisteUeberschriftGeraete => "Volumes et emplacements",
+        Text::LeisteLesezeichenFehlt => "{name} (absent)",
+        Text::LeisteSinnbildTextstelle => "passage de texte",
+        Text::TypOrdner => "dossier",
+        Text::TypDatei => "fichier",
+        Text::TypVerknuepfung => "lien symbolique",
+        Text::EintragsspalteAufgabe => "Tâche",
+        Text::EintragsspalteThema => "Sujet",
+        Text::EintragsspalteNotiz => "Note",
+        Text::EintragsspalteDatum => "Date",
+        Text::EintragsspalteTermin => "Rendez-vous",
+        Text::BelegungReserviertEditor => "l’Éditeur",
+        Text::BelegungZusatzReserviert => "(réservé pour {wofuer})",
+        Text::BelegungZustellerMenue => "raccourci du menu",
+        Text::BelegungZusatzZusteller => "({zusteller})",
+        Text::BelegungKeineFunktionGewaehlt => "aucune fonction n’est sélectionnée",
+        Text::BelegungSucheLeer => {
+            "Le texte de recherche est vide\u{202f}; chaque caractère saisi lance la recherche."
+        }
+        Text::BelegungSucheTreffer => {
+            "Recherche «\u{a0}{text}\u{a0}»\u{a0}: résultat {stelle} sur {anzahl}."
+        }
+        Text::BelegungSucheKeinTreffer => "Recherche «\u{a0}{text}\u{a0}»\u{a0}: aucun résultat.",
+        Text::BelegungsansichtTitel => "Raccourcis clavier",
+        Text::BelegungsansichtZuweisen => "Attribuer",
+        Text::BelegungsansichtAuslieferungszustand => "Version livrée",
+        Text::BelegungsansichtFertig => "Terminé",
+        Text::BelegungsansichtTasteEingabe => "Entrée",
+        Text::BelegungsansichtErlaeuterung => {
+            "Chaque caractère saisi cherche dans les deux colonnes et va au premier résultat\u{202f}; la touche Entrée passe au suivant, la touche de retour arrière raccourcit le texte de recherche. Les flèches choisissent la fonction. {zuweisen} ({zuweisen_taste}) enregistre la prochaine combinaison pressée\u{202f}; esc annule la saisie. {zuruecksetzen} ({zuruecksetzen_taste}) réinitialise tout. {fertig} ({fertig_taste}) ou esc quitte la vue et enregistre les modifications."
+        }
+        Text::BelegungsansichtErstWaehlen => {
+            "Sélectionner d’abord une fonction, puis appuyer sur Attribuer."
+        }
+        Text::BelegungsansichtAufnahme => {
+            "Appuyer maintenant sur la combinaison voulue pour «\u{a0}{name}\u{a0}»\u{202f}; esc annule."
+        }
+        Text::BelegungsansichtZurueckgesetzt => {
+            "Les raccourcis sont réinitialisés à la version livrée."
+        }
+        Text::BelegungsansichtAufnahmeAbgebrochen => {
+            "La saisie est annulée\u{202f}; les raccourcis sont inchangés."
+        }
+        Text::BelegungsansichtKeineFunktion => {
+            "Aucune fonction n’est sélectionnée\u{202f}; les raccourcis sont inchangés."
+        }
+        Text::BelegungsansichtZugewiesen => {
+            "«\u{a0}{funktion}\u{a0}» est maintenant sur {kombination}."
+        }
+        Text::BelegungsansichtTasteOhneNamen => {
+            "Cette touche n’a pas de nom dans la notation des combinaisons et ne peut pas être enregistrée\u{202f}; les raccourcis sont inchangés."
+        }
+        Text::BelegungsansichtSpalteFunktion => "Fonction",
+        Text::BelegungsansichtSpalteBelegung => "Raccourci",
+        Text::MarkdownUeberschrift => "# Raccourcis clavier de KRK",
+        Text::MarkdownTabellenkopf => "| Fonction | Combinaisons | Agit dans |",
+        Text::MarkdownNichtEingeordnet => "(non classé par KRK)",
+        Text::MarkdownWirktTextfelderUndEditor => "champs de texte et Éditeur",
+        Text::MarkdownGeschrieben => "Raccourcis clavier enregistrés\u{a0}: {pfad}",
+        Text::MarkdownKeinBenutzerverzeichnis => {
+            "les raccourcis clavier n’ont pas pu être enregistrés\u{a0}: le système ne nomme aucun dossier de départ"
+        }
+        Text::MarkdownOrdnerFehlt => {
+            "les raccourcis clavier n’ont pas pu être enregistrés\u{a0}: le dossier de {pfad} est absent"
+        }
+        Text::MarkdownZugriffAbgelehnt => {
+            "les raccourcis clavier n’ont pas pu être enregistrés\u{a0}: l’accès à {pfad} est refusé"
+        }
+        Text::MarkdownFehlgeschlagen => {
+            "les raccourcis clavier n’ont pas pu être enregistrés dans {pfad}\u{a0}: {grund}"
+        }
+        Text::TabelleKeineDateiAufDatentraeger => {
+            "la source ne fournit aucun fichier sur le volume"
+        }
+        Text::TabelleNichtZuOeffnen => "{pfad} ne peut pas être ouvert\u{a0}: {grund}",
+        Text::TabelleZwischenablageLeer => "le presse-papiers est vide",
+        Text::TabelleNichtAnBrowser => {
+            "{adresse} n’a pas pu être transmis au navigateur du système"
+        }
+        Text::TabelleZwischenablageKeinZiel => {
+            "le presse-papiers ne contient ni chemin absolu ni adresse web"
+        }
+        Text::TabelleNichtInDerListe => "{name} ne figure pas dans la liste",
+        Text::FenstertitelQuicknote => "Quicknote",
     }
 }
 

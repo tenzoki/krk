@@ -457,9 +457,15 @@ pub const KRK_KOMMANDO: &CStr = c"krkKommando:";
 /// Eintraege, jede Beschriftung und jede Kennung von Hand —, und ihre
 /// Reihenfolge war allein am laufenden Buendel nachzusehen.
 ///
-/// Gerufen wird sie an genau zwei Stellen: beim Start (`starten`) und nach einer
-/// Aenderung in der Belegungsansicht (`Anwendungsdelegierter::menue_neu_bauen`).
-/// Ein Kuerzel, das der Nutzer umbelegt, steht danach im Menue (C2.11).
+/// Gerufen wird sie an genau zwei Stellen: beim Start (`starten`) und in
+/// `Anwendungsdelegierter::belegung_uebernehmen`, das eine Belegung zur
+/// geltenden macht und selbst zwei Rufer hat, `belegungsansicht_verlassen`
+/// nach einer Aenderung in der Belegungsansicht und
+/// `werkseinstellungen_vollziehen` beim Zuruecksetzen. Ein Kuerzel, das der
+/// Nutzer umbelegt, steht danach im Menue (C2.11); die Titel kommen bei jedem
+/// Bau aus der Sprachtabelle, also in der Sprache, die `main` vor dem ersten
+/// Bau festgelegt hat. Die Probe `das_menue_wird_an_zwei_anlaessen_gebaut`
+/// zaehlt die zwei Aufrufstellen.
 #[must_use]
 pub fn hauptmenue(mtm: MainThreadMarker, belegung: &Belegung) -> Retained<NSMenu> {
     let hauptmenue = NSMenu::new(mtm);

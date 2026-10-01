@@ -380,6 +380,126 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::BelegungUnbekannteFunktion => "KRK kennt keine Funktion namens {kennung}",
         Text::BelegungFunktionDoppelt => "die Funktion {kennung} steht zweimal",
+        Text::MenueUeberKrk => "Über KRK",
+        Text::MenueTastenbelegungAlsMarkdown => "Tastenbelegung als Markdown sichern",
+        Text::FunktionsbereichAnwendung => "Anwendung",
+        Text::FunktionsbereichHome => "Home",
+        Text::FunktionsbereichDateilisting => "Dateilisting",
+        Text::FunktionsbereichDateioperationen => "Dateioperationen",
+        Text::FunktionsbereichTabs => "Tabs",
+        Text::FunktionsbereichVorschau => "Vorschau",
+        Text::FunktionsbereichLeisteUndFokus => "Leiste und Fokus",
+        Text::FunktionsbereichEditor => "Editor",
+        Text::FunktionsbereichGit => "Git",
+        Text::FunktionsbereichTextbefehle => "Bearbeiten",
+        Text::FunktionsbereichFenster => "Fenster",
+        Text::KontextOeffnenMit => "Öffnen mit",
+        Text::KontextZippen => "Zip",
+        Text::KontextEntpacken => "Unzip",
+        Text::KontextDuplizieren => "Duplizieren…",
+        Text::KontextImFinderOeffnen => "Im Finder öffnen",
+        Text::KontextImFinderAnzeigen => "Im Finder anzeigen",
+        Text::BereichLesezeichen => "Lesezeichen",
+        Text::BereichLinks => "Links",
+        Text::BereichRechts => "Rechts",
+        Text::BereichVorschau => "Vorschau",
+        Text::BereichEditor => "Editor",
+        Text::BereichGit => "Git",
+        Text::BereichLesezeichenLang => "Lesezeichen- und Geräteleiste",
+        Text::BereichLinksLang => "Linkes Dateifenster",
+        Text::BereichRechtsLang => "Rechtes Dateifenster",
+        Text::BereichVorschauLang => "Vorschaufenster",
+        Text::BereichEditorLang => "Eingebauter Editor",
+        Text::BereichGitLang => "Git-Bereich",
+        Text::SpalteName => "Name",
+        Text::SpalteGroesse => "Größe",
+        Text::SpalteDatum => "Datum",
+        Text::SpalteTyp => "Typ",
+        Text::SpalteMarke => "Marke",
+        Text::SpalteAenderungsdatum => "Änderungsdatum",
+        Text::LeisteBereichUmschalten => "{bereich} ein- und ausblenden",
+        Text::LeisteSpalteUmschalten => {
+            "Spalte „{spalte}“ in beiden Dateilisten ein- und ausblenden"
+        }
+        Text::LeisteTiefeHinweis => "Den stehenden Filter auf den Unterbaum ausdehnen",
+        Text::LeisteInhaltHinweis => {
+            "Den stehenden Filter auch auf den Inhalt der Dateien anwenden"
+        }
+        Text::LeisteUeberschriftLesezeichen => "Lesezeichen",
+        Text::LeisteUeberschriftGeraete => "Geräte und Orte",
+        Text::LeisteLesezeichenFehlt => "{name} (fehlt)",
+        Text::LeisteSinnbildTextstelle => "Textstelle",
+        Text::TypOrdner => "Ordner",
+        Text::TypDatei => "Datei",
+        Text::TypVerknuepfung => "Verknüpfung",
+        Text::EintragsspalteAufgabe => "Aufgabe",
+        Text::EintragsspalteThema => "Thema",
+        Text::EintragsspalteNotiz => "Notiz",
+        Text::EintragsspalteDatum => "Datum",
+        Text::EintragsspalteTermin => "Termin",
+        Text::BelegungReserviertEditor => "den Editor",
+        Text::BelegungZusatzReserviert => "(reserviert für {wofuer})",
+        Text::BelegungZustellerMenue => "Kürzel des Menüs",
+        Text::BelegungZusatzZusteller => "({zusteller})",
+        Text::BelegungKeineFunktionGewaehlt => "es ist keine Funktion ausgewählt",
+        Text::BelegungSucheLeer => "Der Suchtext ist leer; jedes getippte Zeichen sucht.",
+        Text::BelegungSucheTreffer => "Suche „{text}“: Treffer {stelle} von {anzahl}.",
+        Text::BelegungSucheKeinTreffer => "Suche „{text}“: kein Treffer.",
+        Text::BelegungsansichtTitel => "Tastaturbelegung",
+        Text::BelegungsansichtZuweisen => "Zuweisen",
+        Text::BelegungsansichtAuslieferungszustand => "Auslieferungszustand",
+        Text::BelegungsansichtFertig => "Fertig",
+        Text::BelegungsansichtTasteEingabe => "Eingabe",
+        Text::BelegungsansichtErlaeuterung => {
+            "Jedes getippte Zeichen sucht in beiden Spalten und springt auf den ersten Treffer; die Eingabetaste geht zum nächsten, die Rücktaste kürzt den Suchtext. Pfeiltasten wählen die Funktion. {zuweisen} ({zuweisen_taste}) nimmt die nächste gedrückte Kombination auf; esc bricht die Aufnahme ab. {zuruecksetzen} ({zuruecksetzen_taste}) setzt alles zurück. {fertig} ({fertig_taste}) oder esc verlässt die Ansicht und sichert die Änderungen."
+        }
+        Text::BelegungsansichtErstWaehlen => "Erst eine Funktion auswählen, dann Zuweisen drücken.",
+        Text::BelegungsansichtAufnahme => {
+            "Jetzt die gewünschte Kombination für „{name}“ drücken; esc bricht ab."
+        }
+        Text::BelegungsansichtZurueckgesetzt => {
+            "Die Belegung ist auf den Auslieferungszustand zurückgesetzt."
+        }
+        Text::BelegungsansichtAufnahmeAbgebrochen => {
+            "Die Aufnahme ist abgebrochen; die Belegung ist unverändert."
+        }
+        Text::BelegungsansichtKeineFunktion => {
+            "Es ist keine Funktion ausgewählt; die Belegung ist unverändert."
+        }
+        Text::BelegungsansichtZugewiesen => "„{funktion}“ liegt jetzt auf {kombination}.",
+        Text::BelegungsansichtTasteOhneNamen => {
+            "Diese Taste hat in der Kombinationsschreibweise keinen Namen und lässt sich nicht ablegen; die Belegung ist unverändert."
+        }
+        Text::BelegungsansichtSpalteFunktion => "Funktion",
+        Text::BelegungsansichtSpalteBelegung => "Belegung",
+        Text::MarkdownUeberschrift => "# Tastenbelegung von KRK",
+        Text::MarkdownTabellenkopf => "| Funktion | Kombinationen | Wirkt in |",
+        Text::MarkdownNichtEingeordnet => "(von KRK nicht eingeordnet)",
+        Text::MarkdownWirktTextfelderUndEditor => "Textfelder und Editor",
+        Text::MarkdownGeschrieben => "Tastenbelegung geschrieben: {pfad}",
+        Text::MarkdownKeinBenutzerverzeichnis => {
+            "die Tastenbelegung ließ sich nicht schreiben: das System nennt kein Benutzerverzeichnis"
+        }
+        Text::MarkdownOrdnerFehlt => {
+            "die Tastenbelegung ließ sich nicht schreiben: der Ordner zu {pfad} fehlt"
+        }
+        Text::MarkdownZugriffAbgelehnt => {
+            "die Tastenbelegung ließ sich nicht schreiben: der Zugriff auf {pfad} ist abgelehnt"
+        }
+        Text::MarkdownFehlgeschlagen => {
+            "die Tastenbelegung ließ sich nicht nach {pfad} schreiben: {grund}"
+        }
+        Text::TabelleKeineDateiAufDatentraeger => {
+            "die Quelle liefert keine Datei auf dem Datenträger"
+        }
+        Text::TabelleNichtZuOeffnen => "{pfad} lässt sich nicht öffnen: {grund}",
+        Text::TabelleZwischenablageLeer => "die Zwischenablage ist leer",
+        Text::TabelleNichtAnBrowser => "{adresse} ließ sich nicht an den Systembrowser übergeben",
+        Text::TabelleZwischenablageKeinZiel => {
+            "die Zwischenablage trägt weder einen absoluten Pfad noch eine Web-Adresse"
+        }
+        Text::TabelleNichtInDerListe => "{name} steht nicht in der Liste",
+        Text::FenstertitelQuicknote => "Quicknote",
     }
 }
 

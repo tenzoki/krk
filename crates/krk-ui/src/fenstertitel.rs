@@ -63,6 +63,8 @@
 
 use std::path::Path;
 
+use krk_core::sprache::{Text, text};
+
 use crate::kommandos::fokus::Fokus;
 
 /// Was der Editorbereich zeigt, soweit der Titel danach fragt.
@@ -111,7 +113,7 @@ pub fn titel(
         Fokus::Leiste => aktiver_ordner,
         Fokus::Editor => match editor {
             Editoranzeige::Datei(datei) => datei.unwrap_or(aktiver_ordner),
-            Editoranzeige::Quicknote => return Some(String::from("Quicknote")),
+            Editoranzeige::Quicknote => return Some(text(Text::FenstertitelQuicknote).to_owned()),
         },
         Fokus::Vorschau => vorschaudatei.unwrap_or(aktiver_ordner),
         // Der Git-Bereich zeigt den Zustand des aktiven Ordners und haelt

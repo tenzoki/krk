@@ -109,6 +109,28 @@
 //! | Pfad | chemin | path |
 //! | Bildschirmseite | page d’écran | screen page |
 //! | Bereich (der Fensterzeile) | zone | area |
+//! | Dateilisting (Menue) | Liste de fichiers | File Listing |
+//! | Dateioperationen (Menue) | Opérations sur les fichiers | File Operations |
+//! | Leiste und Fokus (Menue) | Barre et focus | Bar and Focus |
+//! | Anwendung (Menue) | Application | Application |
+//! | Spalte | colonne | column |
+//! | Groesse / Datum / Typ / Marke (Spalten) | Taille / Date / Type / Marque | Size / Date / Type / Mark |
+//! | Aenderungsdatum | date de modification | date modified |
+//! | Geraete und Orte (Leiste) | Volumes et emplacements | Volumes and Locations |
+//! | fehlt (ein Lesezeichen ohne Ziel) | absent | missing |
+//! | Textstelle (eines Lesezeichens) | passage de texte | text location |
+//! | Aufgabe / Thema / Notiz / Termin (Spalten des Editors) | Tâche / Sujet / Note / Rendez-vous | Task / Topic / Note / Appointment |
+//! | Zuweisen (F1-Ansicht) | Attribuer | Assign |
+//! | Fertig (Schaltflaeche) | Terminé | Done |
+//! | Aufnahme (einer Kombination) | saisie | recording |
+//! | Suche, Treffer | recherche, résultat | search, match |
+//! | reserviert fuer | réservé pour | reserved for |
+//! | Kuerzel des Menues | raccourci du menu | menu shortcut |
+//! | Wirkt in (Spalte der Markdown-Ausgabe) | Agit dans | Acts in |
+//! | nicht eingeordnet | non classé | not classified |
+//! | Textfelder | champs de texte | text fields |
+//! | Web-Adresse | adresse web | web address |
+//! | Systembrowser | navigateur du système | system browser |
 //!
 //! # Die Befehlsnamen
 //!

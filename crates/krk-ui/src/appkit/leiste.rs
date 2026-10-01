@@ -100,6 +100,7 @@ use objc2_foundation::{
     NSRect, NSSize, NSString, ns_string,
 };
 
+use krk_core::sprache::{Text, text};
 use krk_core::tasten::Kommando;
 
 use crate::leistenmodell::{Auswahl, Leistenmodell, Ort, Sinnbild, Zeile};
@@ -536,8 +537,8 @@ fn sinnbildansicht(
     // Sorte und nicht das Bedienelement, wie AppKit es fuer jede
     // Bildbeschreibung verlangt.
     let (name, beschreibung) = match sinnbild {
-        Sinnbild::Ordner => (SINNBILD_ORDNER, "Ordner"),
-        Sinnbild::Textstelle => (SINNBILD_TEXTSTELLE, "Textstelle"),
+        Sinnbild::Ordner => (SINNBILD_ORDNER, text(Text::TypOrdner)),
+        Sinnbild::Textstelle => (SINNBILD_TEXTSTELLE, text(Text::LeisteSinnbildTextstelle)),
     };
     let bild = NSImage::imageWithSystemSymbolName_accessibilityDescription(
         &NSString::from_str(name),

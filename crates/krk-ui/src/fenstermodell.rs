@@ -91,6 +91,7 @@ use krk_core::ablage::{
 };
 
 use krk_core::heimordner::{Heimordner, Sonderdatei};
+use krk_core::sprache::{Text, text};
 use krk_core::verzeichnis::Richtung;
 
 use crate::spalten::Spalte;
@@ -340,15 +341,19 @@ impl Bereich {
     /// Fallunterscheidungen ueber [`Bereich`]: ein siebter Bereich haelt den
     /// Bau an und erzwingt einen Namen fuer seinen Schalter, statt ihn still
     /// namenlos zu lassen.
+    ///
+    /// **Der Wortlaut steht in der Sprachtabelle** (`krk_core::sprache`), hier
+    /// steht je Wert sein Schluessel; die Aufschrift kommt in der geltenden
+    /// Sprache, und deshalb ist die Funktion kein `const fn`.
     #[must_use]
-    pub const fn beschriftung(self) -> &'static str {
+    pub fn beschriftung(self) -> &'static str {
         match self {
-            Bereich::Lesezeichen => "Lesezeichen",
-            Bereich::Links => "Links",
-            Bereich::Rechts => "Rechts",
-            Bereich::Vorschau => "Vorschau",
-            Bereich::Editor => "Editor",
-            Bereich::Git => "Git",
+            Bereich::Lesezeichen => text(Text::BereichLesezeichen),
+            Bereich::Links => text(Text::BereichLinks),
+            Bereich::Rechts => text(Text::BereichRechts),
+            Bereich::Vorschau => text(Text::BereichVorschau),
+            Bereich::Editor => text(Text::BereichEditor),
+            Bereich::Git => text(Text::BereichGit),
         }
     }
 
@@ -362,16 +367,19 @@ impl Bereich {
     /// sondern ein anderer Name fuer dieselbe Sache.
     ///
     /// **Vollstaendig und ohne Auffangzweig**, aus demselben Grund wie
-    /// [`Bereich::beschriftung`].
+    /// [`Bereich::beschriftung`]; der Wortlaut steht wie dort in der
+    /// Sprachtabelle. Der eine Rufer setzt ihn als `{bereich}` in den
+    /// Hinweistext `Text::LeisteBereichUmschalten` ein, und die franzoesischen
+    /// und englischen Eintraege tragen deshalb den Artikel mit.
     #[must_use]
-    pub const fn langname(self) -> &'static str {
+    pub fn langname(self) -> &'static str {
         match self {
-            Bereich::Lesezeichen => "Lesezeichen- und Geräteleiste",
-            Bereich::Links => "Linkes Dateifenster",
-            Bereich::Rechts => "Rechtes Dateifenster",
-            Bereich::Vorschau => "Vorschaufenster",
-            Bereich::Editor => "Eingebauter Editor",
-            Bereich::Git => "Git-Bereich",
+            Bereich::Lesezeichen => text(Text::BereichLesezeichenLang),
+            Bereich::Links => text(Text::BereichLinksLang),
+            Bereich::Rechts => text(Text::BereichRechtsLang),
+            Bereich::Vorschau => text(Text::BereichVorschauLang),
+            Bereich::Editor => text(Text::BereichEditorLang),
+            Bereich::Git => text(Text::BereichGitLang),
         }
     }
 }

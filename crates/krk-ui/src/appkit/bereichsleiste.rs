@@ -147,6 +147,7 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::{Sichtbarkeit, Spaltensichtbarkeit};
+use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::Kommando;
 
 use crate::fenstermodell::{Bereich, sichtbar_in, spalte_sichtbar_in};
@@ -243,11 +244,14 @@ const KOMMANDO_DER_TIEFE: Kommando = Kommando::TiefeSucheUmschalten;
 
 /// Die Aufschrift des Schalters der tiefen Suche (C2.1).
 ///
-/// **Englisch und nicht uebersetzt**, waehrend die acht anderen deutsch
-/// beschriftet sind. Das ist ein Nutzerentscheid ueber die Anzeige und keiner
-/// ueber die Kennung: die heisst `tiefe_suche_umschalten` und folgt der
-/// Schreibweise der uebrigen Befehle. Die Konstante steht hier, damit
-/// [`Bereichsleiste::bauen`] und die Probe dieselbe Zeichenkette lesen.
+/// **Englisch und nicht uebersetzt**, waehrend die uebrigen Schalter aus der
+/// Sprachtabelle beschriftet sind. Das ist ein Nutzerentscheid ueber die
+/// Anzeige und keiner ueber die Kennung: die heisst `tiefe_suche_umschalten`
+/// und folgt der Schreibweise der uebrigen Befehle. „Deep“ ist der Name des
+/// Ankreuzfelds wie ein Tastenname und steht deshalb in keiner der drei
+/// Tabellen (Glossar in `krk_core::sprache::tabelle`). Die Konstante steht
+/// hier, damit [`Bereichsleiste::bauen`] und die Probe dieselbe Zeichenkette
+/// lesen.
 const AUFSCHRIFT_DER_TIEFE: &str = "Deep";
 
 /// Das Kommando, das der Schalter des Inhaltsfilters schickt (C2.1 der
@@ -264,9 +268,11 @@ const KOMMANDO_DES_INHALTS: Kommando = Kommando::InhaltssucheUmschalten;
 /// Inhaltsfilter-Runde).
 ///
 /// **Englisch wie "Deep" und nicht uebersetzt**, waehrend die Schalter der
-/// beiden Gruppen deutsch beschriftet sind. Die Kennung des Befehls heisst
-/// dagegen `inhaltssuche_umschalten` und folgt der Schreibweise der uebrigen
-/// Befehle; Aufschrift und Kennung sind zwei verschiedene Dinge.
+/// beiden Gruppen aus der Sprachtabelle beschriftet sind; wie „Deep“ ist es
+/// der Name des Ankreuzfelds und steht in keiner der drei Tabellen. Die
+/// Kennung des Befehls heisst dagegen `inhaltssuche_umschalten` und folgt der
+/// Schreibweise der uebrigen Befehle; Aufschrift und Kennung sind zwei
+/// verschiedene Dinge.
 const AUFSCHRIFT_DES_INHALTS: &str = "Content";
 
 /// Die Stelle, an der der Schalter dieser Spalte in
@@ -544,7 +550,10 @@ impl Bereichsleiste {
                 sel!(bereichGedrueckt:),
                 Some(bereich.index()),
                 bereich.beschriftung(),
-                &format!("{} ein- und ausblenden", bereich.langname()),
+                &satz(
+                    Text::LeisteBereichUmschalten,
+                    &[("bereich", &bereich.langname())],
+                ),
             );
             einhaengen(&sicht, &schalter, &mut links);
             schalter
@@ -564,9 +573,9 @@ impl Bereichsleiste {
                 sel!(spalteGedrueckt:),
                 Some(stelle),
                 spalte.beschriftung(),
-                &format!(
-                    "Spalte »{}« in beiden Dateilisten ein- und ausblenden",
-                    spalte.beschriftung()
+                &satz(
+                    Text::LeisteSpalteUmschalten,
+                    &[("spalte", &spalte.beschriftung())],
                 ),
             );
             einhaengen(&sicht, &schalter, &mut links);
@@ -593,7 +602,7 @@ impl Bereichsleiste {
             sel!(tiefeGedrueckt:),
             None,
             AUFSCHRIFT_DER_TIEFE,
-            "Den stehenden Filter auf den Unterbaum ausdehnen",
+            text(Text::LeisteTiefeHinweis),
         );
         einhaengen(&sicht, &tiefenschalter, &mut links);
 
@@ -609,7 +618,7 @@ impl Bereichsleiste {
             sel!(inhaltGedrueckt:),
             None,
             AUFSCHRIFT_DES_INHALTS,
-            "Den stehenden Filter auch auf den Inhalt der Dateien anwenden",
+            text(Text::LeisteInhaltHinweis),
         );
         einhaengen(&sicht, &inhaltsschalter, &mut links);
 

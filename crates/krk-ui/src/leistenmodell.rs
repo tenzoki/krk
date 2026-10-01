@@ -43,20 +43,22 @@
 use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Ziel};
+use krk_core::sprache::{Text, satz, text};
 
-/// Die Ueberschrift des oberen Teils.
-pub const UEBERSCHRIFT_LESEZEICHEN: &str = "Lesezeichen";
+/// Die Ueberschrift des oberen Teils, als Schluessel der Sprachtabelle.
+pub const UEBERSCHRIFT_LESEZEICHEN: Text = Text::LeisteUeberschriftLesezeichen;
 
-/// Die Ueberschrift des unteren Teils.
-pub const UEBERSCHRIFT_GERAETE: &str = "Geräte und Orte";
+/// Die Ueberschrift des unteren Teils, als Schluessel der Sprachtabelle.
+pub const UEBERSCHRIFT_GERAETE: Text = Text::LeisteUeberschriftGeraete;
 
-/// Der Zusatz, mit dem ein ungueltiges Lesezeichen in der Leiste steht (C5).
+/// Die Zeile eines ungueltigen Lesezeichens in der Leiste: der Name mit einem
+/// Zusatz (C5), als Schluessel der Sprachtabelle mit dem Platzhalter `{name}`.
 ///
 /// Ein Wort und keine Farbe allein: die Leiste faerbt die Zeile zusaetzlich
 /// grau, aber eine Farbe ist bei Farbfehlsichtigkeit kein Kennzeichen. Dieselbe
 /// Ueberlegung wie bei der Markierung aus C2, die seit S16c neben der Farbe
 /// eine fette Schrift traegt.
-pub const ZUSATZ_UNGUELTIG: &str = " (fehlt)";
+pub const ZUSATZ_UNGUELTIG: Text = Text::LeisteLesezeichenFehlt;
 
 /// Ein Ort im unteren Teil der Leiste: ein Geraet oder ein Standardort.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,8 +113,8 @@ impl Teil {
     #[must_use]
     pub fn ueberschrift(self) -> &'static str {
         match self {
-            Teil::Lesezeichen => UEBERSCHRIFT_LESEZEICHEN,
-            Teil::Geraete => UEBERSCHRIFT_GERAETE,
+            Teil::Lesezeichen => text(UEBERSCHRIFT_LESEZEICHEN),
+            Teil::Geraete => text(UEBERSCHRIFT_GERAETE),
         }
     }
 }
@@ -350,7 +352,7 @@ impl Leistenmodell {
                 let gemerkt = self.lesezeichen.get(stelle)?;
                 Some(match gemerkt.gueltig {
                     true => gemerkt.lesezeichen.name.clone(),
-                    false => format!("{}{ZUSATZ_UNGUELTIG}", gemerkt.lesezeichen.name),
+                    false => satz(ZUSATZ_UNGUELTIG, &[("name", &gemerkt.lesezeichen.name)]),
                 })
             }
             Zeile::Ort(stelle) => Some(self.orte.get(stelle)?.name.clone()),

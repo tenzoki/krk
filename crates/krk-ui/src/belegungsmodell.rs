@@ -68,6 +68,7 @@
 //! den Namen auf die Aufschrift gelegt. `die_beschriftung_nennt_die_taste_auf_
 //! einer_deutschen_tastatur` haelt es fest.
 
+use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::{
     Belegung, Funktion, Funktionsschluessel, Kombination, Kommando, Tastendruck, Zugestellt,
 };
@@ -214,19 +215,24 @@ impl Funktionsbereich {
     /// (`issues/260813-0540_*_ein-doc-kommentar-begruendet-bearbeiten-mit-einem-mechanismus-den-es-nicht-gibt.md`).
     /// Die offene Frage, ob umbenannt werden **darf**, ist eine andere und steht
     /// in `decisions/260813-0159_*_darf-das-menue-die-eine-gliederung-umsortieren-und-umbenennen.md`.
-    pub const fn name(self) -> &'static str {
+    ///
+    /// **Der Wortlaut steht in der Sprachtabelle** (`krk_core::sprache`), hier
+    /// steht je Wert sein Schluessel, vollstaendig und ohne Auffangzweig; der
+    /// Name kommt in der geltenden Sprache, und deshalb ist die Funktion kein
+    /// `const fn`.
+    pub fn name(self) -> &'static str {
         match self {
-            Funktionsbereich::Anwendung => "Anwendung",
-            Funktionsbereich::Home => "Home",
-            Funktionsbereich::Dateilisting => "Dateilisting",
-            Funktionsbereich::Dateioperationen => "Dateioperationen",
-            Funktionsbereich::Tabs => "Tabs",
-            Funktionsbereich::Vorschau => "Vorschau",
-            Funktionsbereich::LeisteUndFokus => "Leiste und Fokus",
-            Funktionsbereich::Editor => "Editor",
-            Funktionsbereich::Git => "Git",
-            Funktionsbereich::Textbefehle => "Bearbeiten",
-            Funktionsbereich::Fenster => "Fenster",
+            Funktionsbereich::Anwendung => text(Text::FunktionsbereichAnwendung),
+            Funktionsbereich::Home => text(Text::FunktionsbereichHome),
+            Funktionsbereich::Dateilisting => text(Text::FunktionsbereichDateilisting),
+            Funktionsbereich::Dateioperationen => text(Text::FunktionsbereichDateioperationen),
+            Funktionsbereich::Tabs => text(Text::FunktionsbereichTabs),
+            Funktionsbereich::Vorschau => text(Text::FunktionsbereichVorschau),
+            Funktionsbereich::LeisteUndFokus => text(Text::FunktionsbereichLeisteUndFokus),
+            Funktionsbereich::Editor => text(Text::FunktionsbereichEditor),
+            Funktionsbereich::Git => text(Text::FunktionsbereichGit),
+            Funktionsbereich::Textbefehle => text(Text::FunktionsbereichTextbefehle),
+            Funktionsbereich::Fenster => text(Text::FunktionsbereichFenster),
         }
     }
 }
@@ -675,22 +681,30 @@ impl Belegungsmodell {
     /// es weiterhin tragen.
     pub fn funktionstext(&self, stelle: usize) -> Option<String> {
         let funktion = self.funktion(stelle)?;
-        let mut text = funktion.name().to_owned();
+        let mut aufschrift = funktion.name().to_owned();
         if let Some(wofuer) = funktion.reserviert_fuer() {
             let wofuer = match wofuer {
-                "editor" => "den Editor",
+                "editor" => text(Text::BelegungReserviertEditor),
                 andere => andere,
             };
-            text.push_str(&format!(" (reserviert für {wofuer})"));
+            aufschrift.push(' ');
+            aufschrift.push_str(&satz(
+                Text::BelegungZusatzReserviert,
+                &[("wofuer", &wofuer)],
+            ));
         }
         if let Some(zusteller) = funktion.gehalten_von() {
             let zusteller = match zusteller {
-                "menue" => "Kürzel des Menüs",
+                "menue" => text(Text::BelegungZustellerMenue),
                 andere => andere,
             };
-            text.push_str(&format!(" ({zusteller})"));
+            aufschrift.push(' ');
+            aufschrift.push_str(&satz(
+                Text::BelegungZusatzZusteller,
+                &[("zusteller", &zusteller)],
+            ));
         }
-        Some(text)
+        Some(aufschrift)
     }
 
     /// Alle Kombinationen der Funktion an dieser Stelle, in der Anzeigeform,
@@ -751,7 +765,7 @@ impl Belegungsmodell {
             return Zuweisung::OhneNamen;
         };
         let Some(funktion) = self.funktion(stelle) else {
-            return Zuweisung::Abgelehnt("es ist keine Funktion ausgewählt".to_owned());
+            return Zuweisung::Abgelehnt(text(Text::BelegungKeineFunktionGewaehlt).to_owned());
         };
         let kennung = funktion.kennung().to_owned();
         let name = funktion.name().to_owned();
@@ -914,16 +928,18 @@ impl Suchlage {
     /// darin (C1.9, C1.10).
     pub fn meldung(&self) -> String {
         if self.suchtext.is_empty() {
-            return "Der Suchtext ist leer; jedes getippte Zeichen sucht.".to_owned();
+            return text(Text::BelegungSucheLeer).to_owned();
         }
         match self.stelle {
-            Some(stelle) => format!(
-                "Suche »{}«: Treffer {} von {}.",
-                self.suchtext,
-                stelle + 1,
-                self.treffer.len()
+            Some(stelle) => satz(
+                Text::BelegungSucheTreffer,
+                &[
+                    ("text", &self.suchtext),
+                    ("stelle", &(stelle + 1)),
+                    ("anzahl", &self.treffer.len()),
+                ],
             ),
-            None => format!("Suche »{}«: kein Treffer.", self.suchtext),
+            None => satz(Text::BelegungSucheKeinTreffer, &[("text", &self.suchtext)]),
         }
     }
 

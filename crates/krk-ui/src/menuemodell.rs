@@ -103,6 +103,7 @@
 
 use core::ffi::CStr;
 
+use krk_core::sprache::{Text, text};
 use krk_core::tasten::{Belegung, Funktion, Kombination, Kommando};
 
 use crate::belegungsmodell::{self, Funktionsbereich};
@@ -115,18 +116,20 @@ use crate::belegungsmodell::{self, Funktionsbereich};
 /// verschwinden.
 const BEENDEN: &str = "beenden";
 
-/// Die Beschriftung des Markdown-Sonderpostens (C1 der Runde 3).
-const MARKDOWN_BESCHRIFTUNG: &str = "Tastenbelegung als Markdown sichern";
+/// Die Beschriftung des Markdown-Sonderpostens (C1 der Runde 3), als
+/// Schluessel der Sprachtabelle; der Wortlaut kommt in der geltenden Sprache.
+const MARKDOWN_BESCHRIFTUNG: Text = Text::MenueTastenbelegungAlsMarkdown;
 
 /// Der Selektor, den der Anwendungsdelegierte fuer den Markdown-Sonderposten
 /// fuehrt.
 const MARKDOWN_SELEKTOR: &CStr = c"tastenbelegungSichern:";
 
-/// Die Beschriftung des Ueber-Sonderpostens (C5.1).
+/// Die Beschriftung des Ueber-Sonderpostens (C5.1), als Schluessel der
+/// Sprachtabelle.
 ///
 /// Die Mac-Gewohnheit setzt diesen Eintrag ganz oben ins Anwendungsmenue, so
 /// wie sie das Beenden nach unten setzt.
-const UEBER_BESCHRIFTUNG: &str = "Über KRK";
+const UEBER_BESCHRIFTUNG: Text = Text::MenueUeberKrk;
 
 /// Der Selektor, den die Antwortkette fuer den Ueber-Sonderposten beantwortet.
 ///
@@ -454,7 +457,7 @@ fn zusteller(kennung: &str) -> Option<&'static CStr> {
 fn ueber_eintrag_einfuegen(eintraege: &mut Vec<Eintrag<'_>>) {
     let zusatz = [
         Eintrag::Sonderposten {
-            beschriftung: UEBER_BESCHRIFTUNG,
+            beschriftung: text(UEBER_BESCHRIFTUNG),
             selektor: UEBER_SELEKTOR,
         },
         Eintrag::Trenner,
@@ -472,7 +475,7 @@ fn ueber_eintrag_einfuegen(eintraege: &mut Vec<Eintrag<'_>>) {
 fn markdownausgabe_einfuegen(eintraege: &mut Vec<Eintrag<'_>>) {
     let sonderposten = [
         Eintrag::Sonderposten {
-            beschriftung: MARKDOWN_BESCHRIFTUNG,
+            beschriftung: text(MARKDOWN_BESCHRIFTUNG),
             selektor: MARKDOWN_SELEKTOR,
         },
         Eintrag::Trenner,
@@ -1168,7 +1171,7 @@ mod tests {
             .iter()
             .position(|eintrag| {
                 matches!(eintrag, Eintrag::Sonderposten { beschriftung, .. }
-                    if *beschriftung == MARKDOWN_BESCHRIFTUNG)
+                    if *beschriftung == text(MARKDOWN_BESCHRIFTUNG))
             })
             .expect("der Markdown-Eintrag steht im Anwendungsmenue");
 
@@ -1213,7 +1216,7 @@ mod tests {
                 Eintrag::Sonderposten {
                     beschriftung,
                     selektor,
-                } if *beschriftung == UEBER_BESCHRIFTUNG => Some((stelle, *selektor)),
+                } if *beschriftung == text(UEBER_BESCHRIFTUNG) => Some((stelle, *selektor)),
                 _ => None,
             })
             .expect("der Ueber-Eintrag steht im Anwendungsmenue");

@@ -135,6 +135,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use krk_core::ablage::{atomar, pfade};
+use krk_core::sprache::{self, Text, satz};
 use krk_core::tasten::{Belegung, Funktion, Wirkungsbereich};
 
 use crate::belegungsmodell::{nach_bereichen, tastenliste};
@@ -146,17 +147,20 @@ pub const DATEINAME: &str = "KRK-Tastenbelegung.md";
 /// nicht einstellbar.
 pub const ZIELORDNER: &str = "Downloads";
 
-/// Die Ueberschrift, mit der die Datei beginnt.
+/// Die Ueberschrift, mit der die Datei beginnt, als Schluessel der
+/// Sprachtabelle.
 ///
 /// **Genau eine, und kein Vorspann.** Kein Erzeugungszeitpunkt und keine
 /// Versionsangabe: eine Datei ohne Zeitstempel ist zwischen zwei Laeufen
 /// byteweise vergleichbar, und wer sie versioniert, bekommt einen leeren Diff,
 /// wenn sich an der Belegung nichts geaendert hat (Nutzerentscheid vom
-/// 260811-0115).
-const UEBERSCHRIFT: &str = "# Tastenbelegung von KRK";
+/// 260811-0115). Die Datei entsteht in der geltenden Sprache; wer die Sprache
+/// wechselt, bekommt beim naechsten Sichern eine andere Datei, und das ist
+/// die Folge davon, dass sie Text fuer den Nutzer ist.
+const UEBERSCHRIFT: Text = Text::MarkdownUeberschrift;
 
-/// Die Kopfzeile jeder Tabelle.
-const TABELLENKOPF: &str = "| Funktion | Kombinationen | Wirkt in |";
+/// Die Kopfzeile jeder Tabelle, als Schluessel der Sprachtabelle.
+const TABELLENKOPF: Text = Text::MarkdownTabellenkopf;
 
 /// Die Trennzeile unter der Kopfzeile.
 const TABELLENTRENNER: &str = "|---|---|---|";
@@ -188,7 +192,7 @@ const TABELLENTRENNER: &str = "|---|---|---|";
 ///
 /// [`Funktionsbereich`]: crate::belegungsmodell::Funktionsbereich
 pub fn markdown(belegung: &Belegung) -> String {
-    let mut text = String::from(UEBERSCHRIFT);
+    let mut text = String::from(sprache::text(UEBERSCHRIFT));
     text.push('\n');
 
     for (bereich, stellen) in nach_bereichen(belegung) {
@@ -205,7 +209,7 @@ pub fn markdown(belegung: &Belegung) -> String {
         text.push_str("## ");
         text.push_str(bereich.name());
         text.push_str("\n\n");
-        text.push_str(TABELLENKOPF);
+        text.push_str(sprache::text(TABELLENKOPF));
         text.push('\n');
         text.push_str(TABELLENTRENNER);
         text.push('\n');
@@ -262,8 +266,10 @@ fn maskiert(text: &str) -> String {
 /// niemand fuer eine Aussage darueber haelt, **wo** der Befehl wirkt: er sagt
 /// allein, dass KRK die Funktion nicht einordnen konnte. "Eingeordnet" ist
 /// dabei dasselbe Wort, das `belegungsmodell::bereich` fuer diese Rechnung
-/// fuehrt.
-const NICHT_EINGEORDNET: &str = "(von KRK nicht eingeordnet)";
+/// fuehrt. Als Schluessel der Sprachtabelle; dass der Eintrag in keiner
+/// Sprache leer ist, haelt `kein_eintrag_ist_leer` in
+/// `crates/krk-core/tests/sprache.rs`.
+const NICHT_EINGEORDNET: Text = Text::MarkdownNichtEingeordnet;
 
 /// Die dritte Spalte einer Zeile: wo der Befehl wirkt.
 ///
@@ -311,7 +317,9 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         //
         // Die Tabelle der Messung steht im Modulkopf von
         // `super::appkit::menue`, die Probe daneben unter `mod tests`.
-        "text_ausschneiden" | "text_kopieren" | "text_einfuegen" => "Textfelder und Editor",
+        "text_ausschneiden" | "text_kopieren" | "text_einfuegen" => {
+            sprache::text(Text::MarkdownWirktTextfelderUndEditor)
+        }
 
         // Dritte Lage: **die Messung hat die Ableitung gebrochen, und die
         // Zelle bleibt deshalb leer.** `NSTableView` beantwortet `selectAll:`
@@ -341,8 +349,10 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // `NSTextView` des Editors bringt ihren Rueckgaengigverwalter mit und
         // benutzt ihn, sobald `setAllowsUndo(true)` gesetzt ist, und genau das
         // geschieht in `super::appkit::editor`. Der Nutzer hat daraufhin am
-        // 260811-0935 "Editor" gesetzt.
-        "text_rueckgaengig" | "text_wiederholen" => "Editor",
+        // 260811-0935 "Editor" gesetzt; geschrieben steht es als die
+        // Beschriftung von `Wirkungsbereich::Editor`, weil es derselbe Ort
+        // mit demselben Wort ist und die Sprachtabelle ihn einmal fuehrt.
+        "text_rueckgaengig" | "text_wiederholen" => Wirkungsbereich::Editor.beschriftung(),
 
         // Fuenfte Lage: **am Code entscheidbar, ohne Messung und ohne
         // Naeherung.** `filter_einfuegen` ist zugestellt wie die vier Zeilen
@@ -408,7 +418,7 @@ fn wirkung(funktion: &Funktion) -> &'static str {
         // `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/issues/260811-0955_*_der-auffangzweig-in-wirkung-ist-erreichbar-bereich-und-wirkung-fragen-nicht-dasselbe.md`
         // legt beide Wege vor; gebaut ist der zweite, und die Ungleichheit
         // bleibt dort erfasst.
-        _ => NICHT_EINGEORDNET,
+        _ => sprache::text(NICHT_EINGEORDNET),
     }
 }
 
@@ -457,25 +467,17 @@ impl Ausgang {
     pub fn meldung_mit(&self, benutzerverzeichnis: Option<&Path>) -> String {
         let kurz = |pfad: &PathBuf| pfade::gekuerzt_fuer_anzeige(pfad, benutzerverzeichnis);
         match self {
-            Ausgang::Geschrieben(pfad) => {
-                format!("Tastenbelegung geschrieben: {}", kurz(pfad))
-            }
+            Ausgang::Geschrieben(pfad) => satz(Text::MarkdownGeschrieben, &[("pfad", &kurz(pfad))]),
             Ausgang::KeinBenutzerverzeichnis => {
-                "die Tastenbelegung ließ sich nicht schreiben: das System nennt kein \
-                 Benutzerverzeichnis"
-                    .to_owned()
+                sprache::text(Text::MarkdownKeinBenutzerverzeichnis).to_owned()
             }
-            Ausgang::OrdnerFehlt(pfad) => format!(
-                "die Tastenbelegung ließ sich nicht schreiben: der Ordner zu {} fehlt",
-                kurz(pfad)
-            ),
-            Ausgang::ZugriffAbgelehnt(pfad) => format!(
-                "die Tastenbelegung ließ sich nicht schreiben: der Zugriff auf {} ist abgelehnt",
-                kurz(pfad)
-            ),
-            Ausgang::Fehlgeschlagen(pfad, grund) => format!(
-                "die Tastenbelegung ließ sich nicht nach {} schreiben: {grund}",
-                kurz(pfad)
+            Ausgang::OrdnerFehlt(pfad) => satz(Text::MarkdownOrdnerFehlt, &[("pfad", &kurz(pfad))]),
+            Ausgang::ZugriffAbgelehnt(pfad) => {
+                satz(Text::MarkdownZugriffAbgelehnt, &[("pfad", &kurz(pfad))])
+            }
+            Ausgang::Fehlgeschlagen(pfad, grund) => satz(
+                Text::MarkdownFehlgeschlagen,
+                &[("pfad", &kurz(pfad)), ("grund", grund)],
             ),
         }
     }
@@ -550,7 +552,7 @@ mod tests {
     fn funktionszeilen(text: &str) -> Vec<&str> {
         text.lines()
             .filter(|zeile| zeile.starts_with("| "))
-            .filter(|zeile| **zeile != *TABELLENKOPF)
+            .filter(|zeile| **zeile != *sprache::text(TABELLENKOPF))
             .collect()
     }
 
@@ -767,7 +769,7 @@ mod tests {
             "nur der eine besetzte Bereich bekommt einen Abschnitt"
         );
         assert_eq!(
-            text.matches(TABELLENKOPF).count(),
+            text.matches(sprache::text(TABELLENKOPF)).count(),
             1,
             "es steht genau eine Tabelle da, und keine leere daneben"
         );
@@ -994,7 +996,8 @@ mod tests {
         // Und die Zelle des Zweigs bleibt von der bewusst leeren
         // unterscheidbar; die leere gehoert `text_alles_auswaehlen`.
         assert_ne!(
-            NICHT_EINGEORDNET, "",
+            sprache::text(NICHT_EINGEORDNET),
+            "",
             "die beiden Sachverhalte duerfen in der Datei nicht zusammenfallen"
         );
     }
@@ -1040,7 +1043,7 @@ mod tests {
             .lines()
             .filter(|zeile| zeile.starts_with("# "))
             .collect();
-        assert_eq!(ueberschriften, [UEBERSCHRIFT]);
+        assert_eq!(ueberschriften, [sprache::text(UEBERSCHRIFT)]);
         assert!(erster.starts_with("# Tastenbelegung von KRK\n"));
         assert!(
             erster.ends_with('\n'),
@@ -1050,7 +1053,7 @@ mod tests {
         // Kein Vorspann: unter der Ueberschrift folgt sofort der erste
         // Abschnitt, und zwischen beiden steht allein eine Leerzeile.
         let mut zeilen = erster.lines();
-        assert_eq!(zeilen.next(), Some(UEBERSCHRIFT));
+        assert_eq!(zeilen.next(), Some(sprache::text(UEBERSCHRIFT)));
         assert_eq!(zeilen.next(), Some(""));
         assert!(
             zeilen.next().is_some_and(|zeile| zeile.starts_with("## ")),

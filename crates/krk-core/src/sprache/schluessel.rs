@@ -511,11 +511,218 @@ pub enum Text {
     BelegungUnbekannteFunktion,
     /// `Belegungsfehler::FunktionDoppelt`; `{kennung}`.
     BelegungFunktionDoppelt,
+    /// Der Ueber-Sonderposten ganz oben im Anwendungsmenue.
+    MenueUeberKrk,
+    /// Der Markdown-Sonderposten ueber dem Beenden im Anwendungsmenue.
+    MenueTastenbelegungAlsMarkdown,
+    /// `Funktionsbereich::Anwendung`: der Titel des Obermenues, der
+    /// Gruppenueberschrift in der F1-Ansicht und des Abschnitts der
+    /// Markdown-Ausgabe.
+    FunktionsbereichAnwendung,
+    /// `Funktionsbereich::Home`.
+    FunktionsbereichHome,
+    /// `Funktionsbereich::Dateilisting`.
+    FunktionsbereichDateilisting,
+    /// `Funktionsbereich::Dateioperationen`.
+    FunktionsbereichDateioperationen,
+    /// `Funktionsbereich::Tabs`.
+    FunktionsbereichTabs,
+    /// `Funktionsbereich::Vorschau`.
+    FunktionsbereichVorschau,
+    /// `Funktionsbereich::LeisteUndFokus`.
+    FunktionsbereichLeisteUndFokus,
+    /// `Funktionsbereich::Editor`.
+    FunktionsbereichEditor,
+    /// `Funktionsbereich::Git`.
+    FunktionsbereichGit,
+    /// `Funktionsbereich::Textbefehle`: das Menue heisst nach der
+    /// Mac-Gewohnheit „Bearbeiten“ und nicht nach der Variante.
+    FunktionsbereichTextbefehle,
+    /// `Funktionsbereich::Fenster`.
+    FunktionsbereichFenster,
+    /// `Kontextbefehl::OeffnenMit` im Kontextmenue der Dateiliste.
+    KontextOeffnenMit,
+    /// `Kontextbefehl::Zippen`.
+    KontextZippen,
+    /// `Kontextbefehl::Entpacken`.
+    KontextEntpacken,
+    /// `Kontextbefehl::Duplizieren`.
+    KontextDuplizieren,
+    /// `Kontextbefehl::ImFinderOeffnen`.
+    KontextImFinderOeffnen,
+    /// `Kontextbefehl::ImFinderAnzeigen`.
+    KontextImFinderAnzeigen,
+    /// `Bereich::Lesezeichen`: die Aufschrift des Schalters in der
+    /// Bereichsleiste.
+    BereichLesezeichen,
+    /// `Bereich::Links`.
+    BereichLinks,
+    /// `Bereich::Rechts`.
+    BereichRechts,
+    /// `Bereich::Vorschau`.
+    BereichVorschau,
+    /// `Bereich::Editor`.
+    BereichEditor,
+    /// `Bereich::Git`.
+    BereichGit,
+    /// `Bereich::Lesezeichen`: der ausgeschriebene Name im Hinweistext des
+    /// Schalters, als `{bereich}` in `LeisteBereichUmschalten`; Franzoesisch
+    /// und Englisch tragen den Artikel mit, weil der Satz ihn braucht.
+    BereichLesezeichenLang,
+    /// `Bereich::Links`, ausgeschrieben.
+    BereichLinksLang,
+    /// `Bereich::Rechts`, ausgeschrieben.
+    BereichRechtsLang,
+    /// `Bereich::Vorschau`, ausgeschrieben.
+    BereichVorschauLang,
+    /// `Bereich::Editor`, ausgeschrieben.
+    BereichEditorLang,
+    /// `Bereich::Git`, ausgeschrieben.
+    BereichGitLang,
+    /// `Spalte::Name`: die Ueberschrift der Spalte und die Aufschrift ihres
+    /// Schalters.
+    SpalteName,
+    /// `Spalte::Groesse`.
+    SpalteGroesse,
+    /// `Spalte::Geaendert`: der kurze Name auf dem Schalter der Bereichsleiste.
+    SpalteDatum,
+    /// `Spalte::Typ`.
+    SpalteTyp,
+    /// `Spalte::Marke`.
+    SpalteMarke,
+    /// `Spalte::Geaendert`: die Ueberschrift ueber der Spalte, die anders
+    /// heisst als der Schalter.
+    SpalteAenderungsdatum,
+    /// Der Hinweistext eines Bereichsschalters; `{bereich}` ist ein
+    /// `Bereich…Lang`.
+    LeisteBereichUmschalten,
+    /// Der Hinweistext eines Spaltenschalters; `{spalte}` ist eine
+    /// `Spalte…`-Aufschrift.
+    LeisteSpalteUmschalten,
+    /// Der Hinweistext des Schalters „Deep“.
+    LeisteTiefeHinweis,
+    /// Der Hinweistext des Schalters „Content“.
+    LeisteInhaltHinweis,
+    /// `Teil::Lesezeichen`: die Ueberschrift des oberen Teils der Lesezeichen-
+    /// und Geraeteleiste.
+    LeisteUeberschriftLesezeichen,
+    /// `Teil::Geraete`: die Ueberschrift des unteren Teils.
+    LeisteUeberschriftGeraete,
+    /// Ein Lesezeichen `{name}`, dessen Ziel fehlt, in der Leiste.
+    LeisteLesezeichenFehlt,
+    /// `Sinnbild::Textstelle`: die Beschreibung des Sinnbilds fuer VoiceOver;
+    /// die des Ordners ist `TypOrdner`.
+    LeisteSinnbildTextstelle,
+    /// `Typ::Ordner` in der Metadatenanzeige der Vorschau und als
+    /// Beschreibung des Ordner-Sinnbilds der Leiste.
+    TypOrdner,
+    /// `Typ::Datei`.
+    TypDatei,
+    /// `Typ::Verknuepfung`.
+    TypVerknuepfung,
+    /// Die Spalte der Aufgabentabelle im Editor.
+    EintragsspalteAufgabe,
+    /// Die erste Spalte der Notiztabelle.
+    EintragsspalteThema,
+    /// Die zweite Spalte der Notiztabelle.
+    EintragsspalteNotiz,
+    /// Die erste Spalte der Termintabelle.
+    EintragsspalteDatum,
+    /// Die zweite Spalte der Termintabelle.
+    EintragsspalteTermin,
+    /// `Belegungsmodell::funktionstext`: wofuer `reserviert_fuer = "editor"`
+    /// steht, als `{wofuer}` in `BelegungZusatzReserviert`.
+    BelegungReserviertEditor,
+    /// `Belegungsmodell::funktionstext`: der Zusatz hinter einer reservierten
+    /// Funktion; `{wofuer}`.
+    BelegungZusatzReserviert,
+    /// `Belegungsmodell::funktionstext`: wofuer `gehalten_von = "menue"`
+    /// steht, als `{zusteller}` in `BelegungZusatzZusteller`.
+    BelegungZustellerMenue,
+    /// `Belegungsmodell::funktionstext`: der Zusatz hinter einer zugestellten
+    /// Funktion; `{zusteller}`.
+    BelegungZusatzZusteller,
+    /// `Belegungsmodell::zuweisen`: der Grund, wenn die Zeile keine Funktion
+    /// traegt.
+    BelegungKeineFunktionGewaehlt,
+    /// `Suchlage::meldung` ohne Suchtext.
+    BelegungSucheLeer,
+    /// `Suchlage::meldung` mit Treffer; `{text}`, `{stelle}`, `{anzahl}`.
+    BelegungSucheTreffer,
+    /// `Suchlage::meldung` ohne Treffer; `{text}`.
+    BelegungSucheKeinTreffer,
+    /// Der Titel des Blattes der F1-Ansicht.
+    BelegungsansichtTitel,
+    /// Die Schaltflaeche „Zuweisen“ der F1-Ansicht.
+    BelegungsansichtZuweisen,
+    /// Die Schaltflaeche „Auslieferungszustand“.
+    BelegungsansichtAuslieferungszustand,
+    /// Die Schaltflaeche „Fertig“.
+    BelegungsansichtFertig,
+    /// Der Name der Eingabetaste, wie die Erlaeuterungszeile ihn hinter
+    /// `Cmd+` nennt.
+    BelegungsansichtTasteEingabe,
+    /// Der Satz unter der Ueberschrift des Blattes; `{zuweisen}`,
+    /// `{zuweisen_taste}`, `{zuruecksetzen}`, `{zuruecksetzen_taste}`,
+    /// `{fertig}`, `{fertig_taste}`.
+    BelegungsansichtErlaeuterung,
+    /// Die Meldung, wenn Zuweisen ohne gewaehlte Funktion gedrueckt wird.
+    BelegungsansichtErstWaehlen,
+    /// Die Meldung waehrend der Aufnahme; `{name}`.
+    BelegungsansichtAufnahme,
+    /// Die Meldung nach dem Zuruecksetzen.
+    BelegungsansichtZurueckgesetzt,
+    /// Die Meldung nach `esc` waehrend der Aufnahme.
+    BelegungsansichtAufnahmeAbgebrochen,
+    /// Die Meldung, wenn die Aufnahme ohne gewaehlte Funktion endet.
+    BelegungsansichtKeineFunktion,
+    /// Die Meldung nach einer Zuweisung; `{funktion}`, `{kombination}`.
+    BelegungsansichtZugewiesen,
+    /// Die Meldung zu einer Taste ohne Namen in der Kombinationsschreibweise.
+    BelegungsansichtTasteOhneNamen,
+    /// Die erste Spalte der F1-Ansicht.
+    BelegungsansichtSpalteFunktion,
+    /// Die zweite Spalte der F1-Ansicht.
+    BelegungsansichtSpalteBelegung,
+    /// Die Ueberschrift der Markdown-Ausgabe der Tastenbelegung.
+    MarkdownUeberschrift,
+    /// Die Kopfzeile jeder Tabelle der Markdown-Ausgabe.
+    MarkdownTabellenkopf,
+    /// Die dritte Zelle einer Funktion, die KRK nicht einordnen kann.
+    MarkdownNichtEingeordnet,
+    /// Die dritte Zelle der drei Zwischenablage-Befehle.
+    MarkdownWirktTextfelderUndEditor,
+    /// `Ausgang::Geschrieben`; `{pfad}`.
+    MarkdownGeschrieben,
+    /// `Ausgang::KeinBenutzerverzeichnis`.
+    MarkdownKeinBenutzerverzeichnis,
+    /// `Ausgang::OrdnerFehlt`; `{pfad}`.
+    MarkdownOrdnerFehlt,
+    /// `Ausgang::ZugriffAbgelehnt`; `{pfad}`.
+    MarkdownZugriffAbgelehnt,
+    /// `Ausgang::Fehlgeschlagen`; `{pfad}`, `{grund}`.
+    MarkdownFehlgeschlagen,
+    /// `Abwurfgrund::KeineDatei`: die eine Meldung des Abwurfs in der
+    /// Statuszeile.
+    TabelleKeineDateiAufDatentraeger,
+    /// `in_zeile_einsteigen`: eine Verknuepfung mit unerreichbarem Ziel;
+    /// `{pfad}`, `{grund}`.
+    TabelleNichtZuOeffnen,
+    /// `zwischenablage_springen` ohne Inhalt in der Zwischenablage.
+    TabelleZwischenablageLeer,
+    /// `zwischenablage_springen`: der Systembrowser nimmt `{adresse}` nicht.
+    TabelleNichtAnBrowser,
+    /// `zwischenablage_springen`: die Zwischenablage traegt kein Ziel.
+    TabelleZwischenablageKeinZiel,
+    /// `eintrag_anspringen`: `{name}` steht nicht in der gelesenen Liste.
+    TabelleNichtInDerListe,
+    /// Der Fenstertitel, solange der Editor die Quicknote zeigt.
+    FenstertitelQuicknote,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 208] = [
+    pub const ALLE: [Text; 300] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -724,6 +931,98 @@ impl Text {
         Text::BelegungSchreibweise,
         Text::BelegungUnbekannteFunktion,
         Text::BelegungFunktionDoppelt,
+        Text::MenueUeberKrk,
+        Text::MenueTastenbelegungAlsMarkdown,
+        Text::FunktionsbereichAnwendung,
+        Text::FunktionsbereichHome,
+        Text::FunktionsbereichDateilisting,
+        Text::FunktionsbereichDateioperationen,
+        Text::FunktionsbereichTabs,
+        Text::FunktionsbereichVorschau,
+        Text::FunktionsbereichLeisteUndFokus,
+        Text::FunktionsbereichEditor,
+        Text::FunktionsbereichGit,
+        Text::FunktionsbereichTextbefehle,
+        Text::FunktionsbereichFenster,
+        Text::KontextOeffnenMit,
+        Text::KontextZippen,
+        Text::KontextEntpacken,
+        Text::KontextDuplizieren,
+        Text::KontextImFinderOeffnen,
+        Text::KontextImFinderAnzeigen,
+        Text::BereichLesezeichen,
+        Text::BereichLinks,
+        Text::BereichRechts,
+        Text::BereichVorschau,
+        Text::BereichEditor,
+        Text::BereichGit,
+        Text::BereichLesezeichenLang,
+        Text::BereichLinksLang,
+        Text::BereichRechtsLang,
+        Text::BereichVorschauLang,
+        Text::BereichEditorLang,
+        Text::BereichGitLang,
+        Text::SpalteName,
+        Text::SpalteGroesse,
+        Text::SpalteDatum,
+        Text::SpalteTyp,
+        Text::SpalteMarke,
+        Text::SpalteAenderungsdatum,
+        Text::LeisteBereichUmschalten,
+        Text::LeisteSpalteUmschalten,
+        Text::LeisteTiefeHinweis,
+        Text::LeisteInhaltHinweis,
+        Text::LeisteUeberschriftLesezeichen,
+        Text::LeisteUeberschriftGeraete,
+        Text::LeisteLesezeichenFehlt,
+        Text::LeisteSinnbildTextstelle,
+        Text::TypOrdner,
+        Text::TypDatei,
+        Text::TypVerknuepfung,
+        Text::EintragsspalteAufgabe,
+        Text::EintragsspalteThema,
+        Text::EintragsspalteNotiz,
+        Text::EintragsspalteDatum,
+        Text::EintragsspalteTermin,
+        Text::BelegungReserviertEditor,
+        Text::BelegungZusatzReserviert,
+        Text::BelegungZustellerMenue,
+        Text::BelegungZusatzZusteller,
+        Text::BelegungKeineFunktionGewaehlt,
+        Text::BelegungSucheLeer,
+        Text::BelegungSucheTreffer,
+        Text::BelegungSucheKeinTreffer,
+        Text::BelegungsansichtTitel,
+        Text::BelegungsansichtZuweisen,
+        Text::BelegungsansichtAuslieferungszustand,
+        Text::BelegungsansichtFertig,
+        Text::BelegungsansichtTasteEingabe,
+        Text::BelegungsansichtErlaeuterung,
+        Text::BelegungsansichtErstWaehlen,
+        Text::BelegungsansichtAufnahme,
+        Text::BelegungsansichtZurueckgesetzt,
+        Text::BelegungsansichtAufnahmeAbgebrochen,
+        Text::BelegungsansichtKeineFunktion,
+        Text::BelegungsansichtZugewiesen,
+        Text::BelegungsansichtTasteOhneNamen,
+        Text::BelegungsansichtSpalteFunktion,
+        Text::BelegungsansichtSpalteBelegung,
+        Text::MarkdownUeberschrift,
+        Text::MarkdownTabellenkopf,
+        Text::MarkdownNichtEingeordnet,
+        Text::MarkdownWirktTextfelderUndEditor,
+        Text::MarkdownGeschrieben,
+        Text::MarkdownKeinBenutzerverzeichnis,
+        Text::MarkdownOrdnerFehlt,
+        Text::MarkdownZugriffAbgelehnt,
+        Text::MarkdownFehlgeschlagen,
+        Text::TabelleKeineDateiAufDatentraeger,
+        Text::TabelleNichtZuOeffnen,
+        Text::TabelleZwischenablageLeer,
+        Text::TabelleNichtAnBrowser,
+        Text::TabelleZwischenablageKeinZiel,
+        Text::TabelleNichtInDerListe,
+        Text::FenstertitelQuicknote,
     ];
 }
 

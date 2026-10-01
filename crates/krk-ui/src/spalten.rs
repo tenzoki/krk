@@ -61,6 +61,8 @@
 //! Namensspalte fuer `editColumn:row:withEvent:select:` und, ab der
 //! Bereichsleiste, die Nummer, unter der ein Schalter seine Spalte nennt.
 
+use krk_core::sprache::{Text, text};
+
 /// Eine der fuenf Spalten des Dateifensters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Spalte {
@@ -142,13 +144,16 @@ impl Spalte {
     /// kein Versehen — "Datum" ist der Name, den der Nutzer dem Schalter
     /// gegeben hat, und ueber der Spalte stuende er zu knapp, weil dort auch
     /// die Uhrzeit steht.
+    ///
+    /// **Der Wortlaut steht in der Sprachtabelle** (`krk_core::sprache`), hier
+    /// steht je Wert sein Schluessel, vollstaendig und ohne Auffangzweig.
     pub fn beschriftung(self) -> &'static str {
         match self {
-            Spalte::Name => "Name",
-            Spalte::Groesse => "Größe",
-            Spalte::Geaendert => "Datum",
-            Spalte::Typ => "Typ",
-            Spalte::Marke => "Marke",
+            Spalte::Name => text(Text::SpalteName),
+            Spalte::Groesse => text(Text::SpalteGroesse),
+            Spalte::Geaendert => text(Text::SpalteDatum),
+            Spalte::Typ => text(Text::SpalteTyp),
+            Spalte::Marke => text(Text::SpalteMarke),
         }
     }
 

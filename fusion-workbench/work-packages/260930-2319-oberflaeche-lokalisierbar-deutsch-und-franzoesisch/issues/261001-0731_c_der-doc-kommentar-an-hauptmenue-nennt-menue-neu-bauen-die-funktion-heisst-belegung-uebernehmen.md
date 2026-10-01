@@ -4,3 +4,5 @@ Der Doc-Kommentar an `hauptmenue` nennt `Anwendungsdelegierter::menue_neu_bauen`
 ---
 **Filed by:** requirements-designer, Kai Stalmann <kai@stalmann.org>
 Gefunden bei der Bestandserhebung für den Spec zur Lokalisierung der Oberfläche, Stand `e984b3f`. Abnahme: der Kommentar nennt die Funktion, die es gibt, und die Probe `das_menue_wird_an_zwei_anlaessen_gebaut` (`menue.rs`) bleibt grün. Für die Lokalisierung ist die Stelle tragend: `belegung_uebernehmen` ist der Weg, über den ein Sprachwechsel das Hauptmenü ohne Neustart neu bauen kann.
+---
+Resolved: 261001-1203, Schritt 7 des Plans `261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md`. Der Doc-Kommentar an `hauptmenue` (`crates/krk-ui/src/appkit/menue.rs`) nennt jetzt `Anwendungsdelegierter::belegung_uebernehmen` als zweite Aufrufstelle und dessen zwei Rufer `belegungsansicht_verlassen` und `werkseinstellungen_vollziehen`; die Probe `das_menue_wird_an_zwei_anlaessen_gebaut` haelt die zwei Aufrufstellen unveraendert und ist gruen.

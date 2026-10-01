@@ -214,6 +214,7 @@ use std::cmp::Reverse;
 use std::path::{Path, PathBuf};
 
 use krk_core::operation::umbenennen::{Namensfehler, name_pruefen, namen_teilen};
+use krk_core::sprache::{Text, text};
 use krk_core::verzeichnis::{Ordnermodell, Typ};
 
 /// Die Endung, an der ein Archiv erkannt und mit der eines benannt wird.
@@ -379,15 +380,19 @@ impl Kontextbefehl {
     /// zurücksetzen…" im Hauptmenue (Plan
     /// `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`,
     /// Entscheidung 8).
+    ///
+    /// **Der Wortlaut steht in der Sprachtabelle** (`krk_core::sprache`), hier
+    /// steht je Wert sein Schluessel, vollstaendig und ohne Auffangzweig; der
+    /// Titel kommt in der geltenden Sprache.
     #[must_use]
     pub fn titel(self) -> &'static str {
         match self {
-            Kontextbefehl::OeffnenMit => "Öffnen mit",
-            Kontextbefehl::Zippen => "Zip",
-            Kontextbefehl::Entpacken => "Unzip",
-            Kontextbefehl::Duplizieren => "Duplizieren…",
-            Kontextbefehl::ImFinderOeffnen => "Im Finder öffnen",
-            Kontextbefehl::ImFinderAnzeigen => "Im Finder anzeigen",
+            Kontextbefehl::OeffnenMit => text(Text::KontextOeffnenMit),
+            Kontextbefehl::Zippen => text(Text::KontextZippen),
+            Kontextbefehl::Entpacken => text(Text::KontextEntpacken),
+            Kontextbefehl::Duplizieren => text(Text::KontextDuplizieren),
+            Kontextbefehl::ImFinderOeffnen => text(Text::KontextImFinderOeffnen),
+            Kontextbefehl::ImFinderAnzeigen => text(Text::KontextImFinderAnzeigen),
         }
     }
 
