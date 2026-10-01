@@ -1214,7 +1214,7 @@ fn eine_eigene_belegung_ohne_die_quicknote_laedt_und_fuehrt_sie_unbelegt() {
 /// unbelegt; die Auslieferung fuehrt ihn ebenso ohne Kombination.
 #[test]
 fn eine_eigene_belegung_ohne_die_werkseinstellungen_laedt_und_fuehrt_sie_unbelegt() {
-    let block = "[[funktion]]\nid = \"werkseinstellungen\"\nname = \"Auf Werkseinstellungen zurücksetzen…\"\ntasten = []\n";
+    let block = "[[funktion]]\nid = \"werkseinstellungen\"\ntasten = []\n";
     assert_eq!(
         belegung::AUSLIEFERUNGSTEXT.matches(block).count(),
         1,

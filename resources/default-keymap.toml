@@ -13,7 +13,6 @@
 #
 # Aufbau je Eintrag:
 #   id               maschinenlesbarer Bezeichner, ASCII, ohne Umlaute
-#   name             deutsche Beschriftung fuer die Belegungsansicht
 #   tasten           Liste aller Kombinationen, die diese Funktion ausloesen
 #   reserviert_fuer  optional; die Funktion ist benannt und ab Werk unbelegt
 #   gehalten_von     optional; wer den Tastendruck zustellt, nicht was er tut.
@@ -28,6 +27,15 @@
 #                    Kommandos eintraegt; bis zum 260810 stand hier
 #                    "belegung_ansehen" als Beispiel, und es traegt inzwischen
 #                    selbst ein Kommando.
+#
+# Ein Feld `name` fuehrt diese Datei nicht mehr. Die Beschriftung einer
+# Funktion kommt aus der Sprachtabelle im Kern
+# (`crates/krk-core/src/sprache/tabelle/`, je Sprache `kommandoname` und
+# `zugestellt_name`), in der Sprache, die macOS fuer KRK waehlt; bis zum
+# Schritt 5 des Plans der Lokalisierung stand sie hier als deutsches Feld
+# `name`. In einer eigenen `keymap.toml` wird ein Feld `name` geduldet, nie
+# gelesen und beim Sichern in der geltenden Sprache geschrieben
+# (`Eintrag` in `crates/krk-core/src/tasten/belegung.rs`).
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
@@ -160,34 +168,28 @@
 
 [[funktion]]
 id = "vorschau_umschalten"
-name = "Vorschau anzeigen und ausblenden"
 tasten = ["f3", "cmd+y"]
 # C3 setzt "Vorschau anzeigen" mit dem Ein- und Ausblenden des
 # Vorschaufensters aus C7 gleich: eine Funktion, ein Eintrag.
 
 [[funktion]]
 id = "kopieren"
-name = "In das andere Fenster kopieren"
 tasten = ["f5", "shift+cmd+k"]
 
 [[funktion]]
 id = "verschieben"
-name = "In das andere Fenster verschieben"
 tasten = ["f6", "shift+cmd+v"]
 
 [[funktion]]
 id = "ordner_anlegen"
-name = "Ordner anlegen"
 tasten = ["f7", "shift+cmd+n"]
 
 [[funktion]]
 id = "in_papierkorb"
-name = "In den Papierkorb räumen"
 tasten = ["delete", "cmd+delete", "f8"]
 
 [[funktion]]
 id = "bearbeiten"
-name = "Bearbeiten"
 tasten = ["f4"]
 # Der Eintrag stand bis zur Editor-Runde mit `reserviert_fuer = "editor"` und
 # ohne Kombination hier: die Norton-Bedeutung "Bearbeiten" zeigt auf den Editor,
@@ -217,69 +219,56 @@ tasten = ["f4"]
 
 [[funktion]]
 id = "tab_neu"
-name = "Neuen Tab öffnen"
 tasten = ["cmd+t"]
 
 [[funktion]]
 id = "tab_schliessen"
-name = "Aktiven Tab schließen"
 tasten = ["cmd+w"]
 
 [[funktion]]
 id = "tab_naechster"
-name = "Zum nächsten Tab"
 tasten = ["ctrl+tab"]
 
 [[funktion]]
 id = "tab_voriger"
-name = "Zum vorigen Tab"
 tasten = ["ctrl+shift+tab"]
 
 [[funktion]]
 id = "fenster_wechseln"
-name = "Aktives Dateifenster wechseln"
 tasten = ["tab"]
 
 # ── C2: Navigation in der Liste ──────────────────────────────────────────────
 
 [[funktion]]
 id = "auswahl_hoch"
-name = "Auswahl einen Eintrag nach oben"
 tasten = ["up"]
 
 [[funktion]]
 id = "auswahl_runter"
-name = "Auswahl einen Eintrag nach unten"
 tasten = ["down"]
 
 [[funktion]]
 id = "seite_hoch"
-name = "Auswahl eine Bildschirmseite nach oben"
 tasten = ["pageup"]
 
 [[funktion]]
 id = "seite_runter"
-name = "Auswahl eine Bildschirmseite nach unten"
 tasten = ["pagedown"]
 
 [[funktion]]
 id = "listenanfang"
-name = "An den Anfang der Liste"
 tasten = ["home"]
 
 [[funktion]]
 id = "listenende"
-name = "An das Ende der Liste"
 tasten = ["end"]
 
 [[funktion]]
 id = "oeffnen"
-name = "In den ausgewählten Ordner einsteigen"
 tasten = ["right"]
 
 [[funktion]]
 id = "ordner_aufwaerts"
-name = "In den übergeordneten Ordner"
 tasten = ["left", "cmd+up"]
 # Zwei Wege mit je eigenem Grund. left ist der Hauptweg aus dem Nutzerentscheid
 # vom 260805: eine Ordnernavigation ohne Zusatztaste ist schneller als eine mit,
@@ -292,7 +281,6 @@ tasten = ["left", "cmd+up"]
 
 [[funktion]]
 id = "ordner_der_datei"
-name = "Ordner der angezeigten Datei zeigen"
 tasten = ["opt+cmd+o"]
 # Die opt+cmd-Reihe ist keine einzige Familie. Sie traegt Befehle, die einen
 # Ordner herstellen oder liefern, dazu die Umschaltfamilie, die die Bereiche der
@@ -315,7 +303,6 @@ tasten = ["opt+cmd+o"]
 
 [[funktion]]
 id = "ordner_angleichen"
-name = "Anderes Dateifenster auf diesen Ordner stellen"
 tasten = ["opt+cmd+s"]
 # Der Befehl stellt das andere Dateifenster auf den Ordner, den das aktive
 # zeigt. Er gehoert damit in die opt+cmd-Reihe, und zwar auf deren liefernde
@@ -357,7 +344,6 @@ tasten = ["opt+cmd+s"]
 
 [[funktion]]
 id = "pfadeingabe"
-name = "Pfad eingeben und dorthin springen"
 tasten = ["shift+cmd+g"]
 # Der Finder legt "Gehe zum Ordner" auf dieselbe Kombination.
 
@@ -365,22 +351,18 @@ tasten = ["shift+cmd+g"]
 
 [[funktion]]
 id = "markierung_umschalten"
-name = "Eintrag markieren und zum nächsten rücken"
 tasten = ["space"]
 
 [[funktion]]
 id = "alle_markieren"
-name = "Alle Einträge markieren"
 tasten = ["cmd+a"]
 
 [[funktion]]
 id = "markierung_aufheben"
-name = "Jede Markierung aufheben"
 tasten = ["shift+cmd+a"]
 
 [[funktion]]
 id = "markierung_umkehren"
-name = "Markierung umkehren"
 tasten = ["shift+cmd+i"]
 
 # ── C2: Sortierung und Sichtbarkeit der Einträge ─────────────────────────────
@@ -389,32 +371,26 @@ tasten = ["shift+cmd+i"]
 
 [[funktion]]
 id = "sortierung_name"
-name = "Nach Name sortieren"
 tasten = ["cmd+1"]
 
 [[funktion]]
 id = "sortierung_groesse"
-name = "Nach Größe sortieren"
 tasten = ["cmd+2"]
 
 [[funktion]]
 id = "sortierung_datum"
-name = "Nach Änderungsdatum sortieren"
 tasten = ["cmd+3"]
 
 [[funktion]]
 id = "sortierung_typ"
-name = "Nach Typ sortieren"
 tasten = ["cmd+4"]
 
 [[funktion]]
 id = "sortierrichtung_umkehren"
-name = "Sortierrichtung umkehren"
 tasten = ["cmd+r"]
 
 [[funktion]]
 id = "versteckte_umschalten"
-name = "Versteckte Dateien ein- und ausblenden"
 tasten = ["shift+cmd+h"]
 # Der Finder legt das auf cmd+shift+Punkt. Die Schreibweise dieser Datei kennt
 # keinen Namen fuer die Punkt-Taste, deshalb steht hier h wie "hidden".
@@ -458,22 +434,18 @@ tasten = ["shift+cmd+h"]
 
 [[funktion]]
 id = "spalte_groesse_umschalten"
-name = "Spalte Größe ein- und ausblenden"
 tasten = []
 
 [[funktion]]
 id = "spalte_datum_umschalten"
-name = "Spalte Änderungsdatum ein- und ausblenden"
 tasten = []
 
 [[funktion]]
 id = "spalte_typ_umschalten"
-name = "Spalte Typ ein- und ausblenden"
 tasten = []
 
 [[funktion]]
 id = "spalte_marke_umschalten"
-name = "Spalte Marke ein- und ausblenden"
 tasten = []
 # Der vierte Spaltenschalter, ohne Kombination wie die drei darueber: der
 # Absatz vor "spalte_groesse_umschalten" begruendet die leere Tastenliste, und
@@ -501,7 +473,6 @@ tasten = []
 
 [[funktion]]
 id = "tiefe_suche_umschalten"
-name = "Tiefe Suche ein- und ausschalten"
 tasten = []
 
 # Der Schalter "Content" der Bereichsleiste steht unmittelbar neben "Deep" und
@@ -525,12 +496,10 @@ tasten = []
 
 [[funktion]]
 id = "inhaltssuche_umschalten"
-name = "Inhaltssuche ein- und ausschalten"
 tasten = []
 
 [[funktion]]
 id = "filter_einfuegen"
-name = "In den Filter einfügen"
 tasten = ["cmd+f"]
 gehalten_von = "menue"
 # cmd+f steht auch bei "editor_suchen" weiter unten, und das ist kein
@@ -584,25 +553,21 @@ gehalten_von = "menue"
 
 [[funktion]]
 id = "datei_anlegen"
-name = "Leere Datei anlegen"
 tasten = ["ctrl+cmd+n"]
 # Parallel zu shift+cmd+n fuer den neuen Ordner.
 
 [[funktion]]
 id = "umbenennen"
-name = "Umbenennen"
 tasten = ["shift+f6", "shift+cmd+u"]
 # Die Norton-Reihe legt das Umbenennen neben das Verschieben auf F6; die
 # Umschalttaste trennt die beiden. C3 belegt F6 selbst mit dem Verschieben.
 
 [[funktion]]
 id = "umbenennen_stapel"
-name = "Im Stapel umbenennen"
 tasten = ["ctrl+cmd+u"]
 
 [[funktion]]
 id = "abbrechen"
-name = "Laufende Operation abbrechen"
 tasten = ["esc"]
 
 # ── C5: Lesezeichen- und Geräteleiste ────────────────────────────────────────
@@ -611,7 +576,6 @@ tasten = ["esc"]
 
 [[funktion]]
 id = "lesezeichen_anlegen"
-name = "Lesezeichen anlegen"
 tasten = ["cmd+d"]
 # Ein Befehl, zwei Sorten. Mit dem Fokus im Dateifenster merkt er den
 # angezeigten Ordner, mit dem Fokus im Editor die Zeile der Schreibmarke als
@@ -622,37 +586,30 @@ tasten = ["cmd+d"]
 
 [[funktion]]
 id = "lesezeichen_umbenennen"
-name = "Lesezeichen umbenennen"
 tasten = ["ctrl+u"]
 
 [[funktion]]
 id = "lesezeichen_loeschen"
-name = "Lesezeichen löschen"
 tasten = ["ctrl+delete"]
 
 [[funktion]]
 id = "lesezeichen_hoch"
-name = "Lesezeichen nach oben verschieben"
 tasten = ["opt+up"]
 
 [[funktion]]
 id = "lesezeichen_runter"
-name = "Lesezeichen nach unten verschieben"
 tasten = ["opt+down"]
 
 [[funktion]]
 id = "fokus_leiste"
-name = "Fokus in die Lesezeichen- und Geräteleiste"
 tasten = ["shift+cmd+l"]
 
 [[funktion]]
 id = "fokus_dateifenster"
-name = "Fokus zurück in das Dateifenster"
 tasten = ["shift+cmd+d"]
 
 [[funktion]]
 id = "fokus_vorschau"
-name = "Fokus in das Vorschaufenster"
 tasten = ["shift+cmd+y"]
 # Der dritte Fokusbefehl. Er steht hier bei den beiden anderen und nicht unten
 # bei C7, weil dieser Block die Fokusbefehle fuehrt und nicht die Vorschau; das
@@ -667,7 +624,6 @@ tasten = ["shift+cmd+y"]
 
 [[funktion]]
 id = "fokus_git"
-name = "Fokus in den Git-Bereich"
 tasten = ["shift+cmd+b"]
 # Der fuenfte Fokusbefehl, neben shift+cmd+l fuer die Leiste, shift+cmd+d fuer
 # das Dateifenster, shift+cmd+y fuer die Vorschau und shift+cmd+e fuer den
@@ -708,12 +664,10 @@ tasten = ["shift+cmd+b"]
 
 [[funktion]]
 id = "leiste_umschalten"
-name = "Lesezeichen- und Geräteleiste ein- und ausblenden"
 tasten = ["opt+cmd+l"]
 
 [[funktion]]
 id = "erstes_fenster_umschalten"
-name = "Linkes Dateifenster ein- und ausblenden"
 tasten = ["opt+cmd+left"]
 # Eine Richtungstaste statt eines Buchstabens, als einziger Bruch mit der
 # Umschaltfamilie auf opt+cmd+<Buchstabe>: beide Dateifenster heissen
@@ -725,7 +679,6 @@ tasten = ["opt+cmd+left"]
 
 [[funktion]]
 id = "zweites_fenster_umschalten"
-name = "Zweites Dateifenster ein- und ausblenden"
 tasten = ["opt+cmd+d", "opt+cmd+right"]
 # opt+cmd+d bleibt und wechselt seinen Besitzer nicht; opt+cmd+right tritt
 # daneben, damit beide Dateifenster dasselbe Muster tragen. Das d ist hier eher
@@ -739,7 +692,6 @@ tasten = ["opt+cmd+d", "opt+cmd+right"]
 
 [[funktion]]
 id = "git_bereich_umschalten"
-name = "Git-Bereich ein- und ausblenden"
 tasten = ["opt+cmd+r"]
 # r wie "Repository". opt+cmd+r ist ab Werk frei; am 260831 gegen jede
 # tasten-Zeile dieser Datei nachgezaehlt, keine andere nennt es. Der Nutzer hat
@@ -759,7 +711,6 @@ tasten = ["opt+cmd+r"]
 
 [[funktion]]
 id = "fenster_einblenden"
-name = "Fenster einblenden"
 tasten = ["cmd+n"]
 # Der Rueckweg, nachdem das Fenster geschlossen wurde. KRK haelt in dieser
 # Runde genau ein Anwendungsfenster; der Eintrag legt deshalb kein neues an,
@@ -768,7 +719,6 @@ tasten = ["cmd+n"]
 
 [[funktion]]
 id = "fenster_schliessen"
-name = "Fenster schließen"
 tasten = ["shift+cmd+w"]
 # Das Gegenstueck zum Eintrag darueber und nach demselben Muster gebaut: eine
 # gewoehnliche Funktion mit einem Kommando, das am Anwendungsdelegierten
@@ -781,12 +731,10 @@ tasten = ["shift+cmd+w"]
 
 [[funktion]]
 id = "bereich_verbreitern"
-name = "Aktiven Bereich verbreitern"
 tasten = ["ctrl+right"]
 
 [[funktion]]
 id = "bereich_verschmaelern"
-name = "Aktiven Bereich verschmälern"
 tasten = ["ctrl+left"]
 
 # ── C10: die Zwischenablage als Quelle ───────────────────────────────────────
@@ -813,14 +761,12 @@ tasten = ["ctrl+left"]
 
 [[funktion]]
 id = "zwischenablage_ansehen"
-name = "Zwischenablage ansehen"
 tasten = ["shift+f3"]
 # F3 zeigt die Vorschau, die Umschalttaste davor wechselt die Quelle.
 # Dieselbe Systematik traegt die Belegung schon bei f6 gegen shift+f6.
 
 [[funktion]]
 id = "zwischenablage_springen"
-name = "Zum Inhalt der Zwischenablage springen"
 tasten = ["opt+cmd+g"]
 # Steht neben shift+cmd+g, der Pfadeingabe von Hand: dieselbe Handlung mit
 # vorausgefuelltem Wert.
@@ -852,17 +798,14 @@ tasten = ["opt+cmd+g"]
 
 [[funktion]]
 id = "vorschau_vergroessern"
-name = "Vorschau vergrößern"
 tasten = ["cmd+plus"]
 
 [[funktion]]
 id = "vorschau_verkleinern"
-name = "Vorschau verkleinern"
 tasten = ["cmd+minus"]
 
 [[funktion]]
 id = "vorschau_ausgangsgroesse"
-name = "Vorschau in Ausgangsgröße"
 tasten = ["cmd+0"]
 
 # ── Die Bildfolge der Vorschau ───────────────────────────────────────────────
@@ -881,19 +824,16 @@ tasten = ["cmd+0"]
 
 [[funktion]]
 id = "bild_vor"
-name = "Nächstes Bild"
 tasten = ["cmd+down"]
 # Frei vor dieser Arbeit; ohne stehende Bildfolge tut die Taste nichts.
 
 [[funktion]]
 id = "bild_zurueck"
-name = "Voriges Bild"
 tasten = ["cmd+up"]
 # Geteilt mit "ordner_aufwaerts", nach der Verengung aus dem Kopf dieser Datei.
 
 [[funktion]]
 id = "zum_bild"
-name = "Zum angezeigten Bild springen"
 tasten = ["return"]
 # Geteilt mit "mit_standardprogramm_oeffnen", nach derselben Regel. Im
 # Hauptmenue zeigt "Mit dem Standardprogramm öffnen" das Kuerzel, weil es in
@@ -907,7 +847,6 @@ tasten = ["return"]
 
 [[funktion]]
 id = "terminal_oeffnen"
-name = "Ordner im Terminal öffnen"
 tasten = ["ctrl+o"]
 # Der Weg von Total Commander, wo Ctrl+O die Kommandozeile oeffnet. Der Nutzer
 # hat das Vorbild am 260805 als tragenden Grund genannt und shift+cmd+t sowie
@@ -932,7 +871,6 @@ tasten = ["ctrl+o"]
 
 [[funktion]]
 id = "ordnerpfad_kopieren"
-name = "Pfad des angezeigten Ordners kopieren"
 tasten = ["opt+cmd+c"]
 # Der Preis dieser Kombination ist benannt und angenommen: der Finder legt
 # Opt+Cmd+C als "Pfadname kopieren" auf den **Eintrag**, hier meint sie den
@@ -943,7 +881,6 @@ tasten = ["opt+cmd+c"]
 
 [[funktion]]
 id = "eintragspfad_kopieren"
-name = "Pfad des Eintrags kopieren"
 tasten = ["shift+cmd+c"]
 # Das Vorbild ist ForkLift, wo Shift+Cmd+C den Pfad des Eintrags kopiert. Es ist
 # damit die einzige Kombination dieser Datei, die einem Vorbild aus ForkLift
@@ -957,7 +894,6 @@ tasten = ["shift+cmd+c"]
 
 [[funktion]]
 id = "teilen"
-name = "Teilen"
 tasten = ["shift+cmd+s"]
 # Die shift+cmd-Reihe traegt, was auf die betroffenen Eintraege wirkt:
 # shift+cmd+c kopiert ihren Pfad, shift+cmd+a hebt die Markierung auf,
@@ -978,7 +914,6 @@ tasten = ["shift+cmd+s"]
 
 [[funktion]]
 id = "mit_standardprogramm_oeffnen"
-name = "Mit dem Standardprogramm öffnen"
 tasten = ["return"]
 # Die Gewohnheit aus Norton Commander und dem Finder. Die Eingabetaste war seit
 # der Runde 1 ab Werk frei gehalten und vom Nutzer in C2 ausdruecklich fuer
@@ -1027,7 +962,6 @@ tasten = ["return"]
 
 [[funktion]]
 id = "editor_rundweg"
-name = "In den Editor und zurück"
 tasten = ["cmd+e"]
 # Der Rundweg zwischen Dateiliste und Editor, und was er tut, haengt am Fokus
 # (Nutzerentscheid vom 260823-0942,
@@ -1056,7 +990,6 @@ tasten = ["cmd+e"]
 
 [[funktion]]
 id = "fokus_editor"
-name = "Fokus in den Editor"
 tasten = ["shift+cmd+e"]
 # Der vierte Fokusbefehl. Die Familie steht seit der Runde 1 auf
 # shift+cmd+<Buchstabe>: shift+cmd+l fuer die Leiste, shift+cmd+d fuer das
@@ -1064,7 +997,6 @@ tasten = ["shift+cmd+e"]
 
 [[funktion]]
 id = "editor_schliessen"
-name = "Editor schließen"
 tasten = ["opt+cmd+e"]
 # Die Umschaltfamilie steht auf opt+cmd+<Buchstabe>: opt+cmd+l fuer die Leiste,
 # opt+cmd+d fuer das zweite Dateifenster, opt+cmd+b fuer den Editor. Seit dem
@@ -1084,7 +1016,6 @@ tasten = ["opt+cmd+e"]
 
 [[funktion]]
 id = "editor_umschalten"
-name = "Editor ein- und ausblenden"
 tasten = ["opt+cmd+b"]
 # b wie "bearbeiten", die Norton-Bedeutung von F4: der Buchstabe e des Editors
 # ist an "editor_schliessen" darueber vergeben, und eine ausgelieferte
@@ -1100,7 +1031,6 @@ tasten = ["opt+cmd+b"]
 
 [[funktion]]
 id = "editor_ansicht_umschalten"
-name = "Zwischen Roh- und Formatansicht wechseln"
 tasten = ["ctrl+cmd+e"]
 # Die vierte Ebene derselben e-Familie. ctrl+cmd traegt in dieser Belegung
 # schon die Zweitform einer Handlung: ctrl+cmd+u neben shift+cmd+u, ctrl+cmd+n
@@ -1108,13 +1038,11 @@ tasten = ["ctrl+cmd+e"]
 
 [[funktion]]
 id = "editor_sichern"
-name = "Sichern"
 tasten = ["cmd+s"]
 # Der Mac-Standard, und ab Werk frei.
 
 [[funktion]]
 id = "editor_zeile_springen"
-name = "Zu Zeile springen"
 tasten = ["cmd+j"]
 # BBEdit legt "Gehe zu Zeile" auf dieselbe Kombination. cmd+l waere der naehere
 # Buchstabe und bleibt frei, weil die l-Familie in dieser Belegung der
@@ -1122,19 +1050,16 @@ tasten = ["cmd+j"]
 
 [[funktion]]
 id = "editor_suchen"
-name = "Im Text suchen"
 tasten = ["cmd+f"]
 # Der Mac-Standard.
 
 [[funktion]]
 id = "editor_weitersuchen"
-name = "Weitersuchen"
 tasten = ["cmd+g"]
 # Der Mac-Standard.
 
 [[funktion]]
 id = "editor_rueckwaerts_suchen"
-name = "Rückwärts weitersuchen"
 tasten = ["ctrl+cmd+g"]
 # Der Mac-Standard waere shift+cmd+g, und der traegt seit der Runde 1 die
 # Pfadeingabe, weil der Finder "Gehe zum Ordner" dorthin legt. Zwei Funktionen
@@ -1143,14 +1068,12 @@ tasten = ["ctrl+cmd+g"]
 
 [[funktion]]
 id = "editor_ersetzen"
-name = "Ersetzen"
 tasten = ["shift+cmd+r"]
 # cmd+r traegt die Sortierrichtung. r wie "replace"; die Belegung nimmt an
 # mehreren Stellen den englischen Anfangsbuchstaben, wo der deutsche belegt ist.
 
 [[funktion]]
 id = "editor_alle_ersetzen"
-name = "Alle ersetzen"
 tasten = ["ctrl+cmd+r"]
 # Dieselbe Systematik wie "umbenennen" gegen "umbenennen_stapel": die
 # Einzelform auf shift+cmd, die Stapelform auf ctrl+cmd.
@@ -1164,21 +1087,18 @@ tasten = ["ctrl+cmd+r"]
 
 [[funktion]]
 id = "quicknote_umschalten"
-name = "Quicknote öffnen und schließen"
 tasten = ["f10"]
 # F10 war frei. Ein Cmd-Kuerzel daneben traegt die Funktion nicht, wie F1 und
 # F4: die Zwei-Wege-Regel aus C3 gilt den fuenf Funktionen der Norton-Reihe.
 
 [[funktion]]
 id = "quicknote_kopieren"
-name = "Quicknote kopieren und schließen"
 tasten = ["shift+f10"]
 # Die Umschalttaste bindet die verwandte Handlung an dieselbe F-Taste, wie
 # shift+f3 und shift+f6.
 
 [[funktion]]
 id = "quicknote_leeren"
-name = "Quicknote leeren"
 tasten = []
 # Ab Werk unbelegt: cmd+a und die Ruecktaste tun in der Quicknote dasselbe,
 # und cmd+return traegt "eintrag_bearbeiten". Erreichbar ist die Funktion ueber
@@ -1188,7 +1108,6 @@ tasten = []
 
 [[funktion]]
 id = "belegung_ansehen"
-name = "Tastaturbelegung anzeigen"
 tasten = ["f1"]
 # Das Vorbild ist die Norton-Reihe, wo F1 die Hilfe traegt; fuer eine
 # Anwendung mit der Tastatursteuerung als erster Maxime ist die
@@ -1200,7 +1119,6 @@ tasten = ["f1"]
 
 [[funktion]]
 id = "belegungsdatei_ansehen"
-name = "Tastaturdefinition öffnen"
 tasten = []
 # Der Befehl stellt die Belegungsdatei des Nutzers,
 # `~/Library/Application Support/KRK/keymap.toml`, in die Vorschau und holt
@@ -1291,19 +1209,16 @@ tasten = []
 
 [[funktion]]
 id = "text_ausschneiden"
-name = "Ausschneiden"
 tasten = ["cmd+x"]
 gehalten_von = "menue"
 
 [[funktion]]
 id = "text_kopieren"
-name = "Kopieren"
 tasten = ["cmd+c"]
 gehalten_von = "menue"
 
 [[funktion]]
 id = "text_einfuegen"
-name = "Einfügen"
 tasten = ["cmd+v"]
 gehalten_von = "menue"
 
@@ -1316,13 +1231,11 @@ gehalten_von = "menue"
 
 [[funktion]]
 id = "text_alles_auswaehlen"
-name = "Alles auswählen"
 tasten = ["cmd+a"]
 gehalten_von = "menue"
 
 [[funktion]]
 id = "text_rueckgaengig"
-name = "Rückgängig"
 tasten = ["cmd+z"]
 gehalten_von = "menue"
 # Der Mac-Standard. Im Editor beantwortet der Rueckgaengigverwalter der
@@ -1331,7 +1244,6 @@ gehalten_von = "menue"
 
 [[funktion]]
 id = "text_wiederholen"
-name = "Wiederholen"
 tasten = ["shift+cmd+z"]
 gehalten_von = "menue"
 # Das Gegenstueck, ebenfalls der Mac-Standard.
@@ -1352,8 +1264,10 @@ gehalten_von = "menue"
 # `Belegung::bauen` weist eine unbekannte Kennung ab und setzt dann die ganze
 # Auslieferungsbelegung ein. Mit der alten Kennung laedt die eigene Belegung
 # weiter; Name und Wirkung aendern sich, die Kennung nicht. Der Name im
-# Hauptmenue kommt dabei aus der Nutzerdatei und bleibt dort der alte, bis der
-# Nutzer seine Belegung zuruecksetzt.
+# Hauptmenue kam bis zum Schritt 5 des Plans der Lokalisierung aus dem Feld
+# `name` der Nutzerdatei und blieb dort der alte, bis der Nutzer seine
+# Belegung zuruecksetzte; seither kommt er aus der Sprachtabelle (Kopf der
+# Datei), und ein altes `name` in der Nutzerdatei wird nicht gelesen.
 #
 # **Zwei Kombinationen in einer Zeile, und das ist keine Doppelung.** F2 kommt
 # aus der Norton-Reihe, in der die Funktionstasten die Befehle tragen; cmd+k
@@ -1370,12 +1284,10 @@ gehalten_von = "menue"
 
 [[funktion]]
 id = "notizzettel"
-name = "Notizordner öffnen"
 tasten = ["f2", "cmd+k"]
 
 [[funktion]]
 id = "ort_waehlen"
-name = "Ort wählen…"
 tasten = []
 # Waehlt den Ort des Notizordners ueber einen Ordnerdialog und schreibt ihn als
 # `notizordner` nach settings.toml (Datensatz
@@ -1414,47 +1326,40 @@ tasten = []
 
 [[funktion]]
 id = "eintrag_hinzufuegen"
-name = "Eintrag hinzufügen"
 tasten = ["shift+cmd+return"]
 # Die Zweitform von cmd+return darunter: shift+cmd traegt das Anlegen, die
 # blanke Cmd-Ebene das Bearbeiten des Vorhandenen.
 
 [[funktion]]
 id = "eintrag_bearbeiten"
-name = "Eintrag bearbeiten"
 tasten = ["cmd+return"]
 # Oeffnet die Zelle der gewaehlten Zeile; waehrend eine Zelle laeuft, uebernimmt
 # dieselbe Kombination sie, und ein zweites cmd+return oeffnet sie wieder.
 
 [[funktion]]
 id = "eintrag_hoch"
-name = "Eintrag nach oben"
 tasten = ["opt+cmd+up"]
 # Die Pfeiltasten tragen in der Tabelle die Auswahl; opt+cmd davor verschiebt
 # die gewaehlte Zeile, statt die Auswahl zu bewegen.
 
 [[funktion]]
 id = "eintrag_runter"
-name = "Eintrag nach unten"
 tasten = ["opt+cmd+down"]
 # Das Gegenstueck zu "eintrag_hoch" darueber.
 
 [[funktion]]
 id = "eintrag_loeschen"
-name = "Eintrag löschen"
 tasten = ["shift+cmd+delete"]
 # Warum trotz der Finder-Bedeutung, steht im Blockkommentar oben.
 
 [[funktion]]
 id = "aufgabe_abhaken"
-name = "Aufgabe abhaken oder öffnen"
 tasten = ["shift+cmd+x"]
 # x wie das Kreuz im Kaestchen. cmd+x traegt das Ausschneiden; shift+cmd+x ist
 # ab Werk frei. Dieselbe Handlung wie ein Klick auf das Ankreuzfeld der Zeile.
 
 [[funktion]]
 id = "pin_aendern"
-name = "PIN ändern"
 tasten = ["shift+cmd+p"]
 # Allein fuer secrets.txt im Editor, und erst nachdem die Datei einmal
 # verschluesselt gesichert ist; sonst ist der Eintrag ausgegraut. p wie PIN;
@@ -1463,7 +1368,6 @@ tasten = ["shift+cmd+p"]
 
 [[funktion]]
 id = "termine_richtung_umkehren"
-name = "Termine: Sortierrichtung umkehren"
 tasten = ["cmd+1"]
 # Allein in der Termintabelle von appointments.md im Editor: kehrt die
 # Ordnung nach dem Datum um, aufsteigend oder absteigend, ohne die Datei
@@ -1508,7 +1412,6 @@ tasten = ["cmd+1"]
 
 [[funktion]]
 id = "neuerungen_zeigen"
-name = "Neuerungen anzeigen"
 tasten = ["opt+cmd+i"]
 
 # ── Auf Werkseinstellungen zuruecksetzen ─────────────────────────────────────
@@ -1524,7 +1427,6 @@ tasten = ["opt+cmd+i"]
 
 [[funktion]]
 id = "werkseinstellungen"
-name = "Auf Werkseinstellungen zurücksetzen…"
 tasten = []
 
 # ── Eine weitere Instanz von KRK ─────────────────────────────────────────────
@@ -1538,7 +1440,6 @@ tasten = []
 
 [[funktion]]
 id = "weitere_instanz"
-name = "Weitere Instanz starten"
 tasten = ["opt+cmd+n"]
 # Das n ist in dieser Datei die Taste des Neuen: shift+cmd+n legt einen Ordner
 # an, ctrl+cmd+n eine leere Datei, und das nackte cmd+n haelt bei
@@ -1560,7 +1461,6 @@ tasten = ["opt+cmd+n"]
 
 [[funktion]]
 id = "beenden"
-name = "KRK beenden"
 tasten = ["cmd+q"]
 # Der sechste und letzte Eintrag des Hauptmenues. C3 sagt zu, dass jede
 # Kombination, die in KRK etwas ausloest, in der Belegung steht, von der

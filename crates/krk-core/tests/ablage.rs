@@ -5163,27 +5163,25 @@ fn ein_unbekannter_eintrag_macht_settings_und_keymap_beschaedigt() {
 // gueltiges TOML, ihr Leser verwirft sie trotzdem, und der Bestand traegt
 // deshalb `Befund::Ersetzt` ohne einen Unterschied in irgendeiner Richtung.
 
-/// Die erste Funktion der Auslieferungsbelegung, als Kennung und Beschriftung.
+/// Die Kennung der ersten Funktion der Auslieferungsbelegung.
 ///
 /// Aus dem Text gelesen und nicht hier hingeschrieben: welche Funktion an
 /// erster Stelle steht, entscheidet `resources/default-keymap.toml`, und eine
-/// Kopie des Namens hier veraltete mit der naechsten Umstellung.
-fn erste_ausgelieferte_funktion() -> (String, String) {
+/// Kopie der Kennung hier veraltete mit der naechsten Umstellung. Allein die
+/// Kennung, keine Beschriftung: die Auslieferung fuehrt kein `name` mehr, seit
+/// der Name aus der Sprachtabelle kommt, und der Leser liest das Feld nie.
+fn erste_ausgelieferte_kennung() -> String {
     let tabelle: toml::Table =
         toml::from_str(belegung::AUSLIEFERUNGSTEXT).expect("die Auslieferungsbelegung ist TOML");
-    let erste = tabelle
+    tabelle
         .get("funktion")
         .and_then(toml::Value::as_array)
         .and_then(|folge| folge.first())
-        .expect("die Auslieferungsbelegung fuehrt keine Funktion");
-    let feld = |name: &str| {
-        erste
-            .get(name)
-            .and_then(toml::Value::as_str)
-            .unwrap_or_else(|| panic!("die erste Funktion nennt kein {name}"))
-            .to_owned()
-    };
-    (feld("id"), feld("name"))
+        .expect("die Auslieferungsbelegung fuehrt keine Funktion")
+        .get("id")
+        .and_then(toml::Value::as_str)
+        .expect("die erste Funktion nennt keine id")
+        .to_owned()
 }
 
 /// Prueft, dass eine Datei gueltiges TOML ist.
@@ -5209,12 +5207,10 @@ fn ist_gueltiges_toml(text: &str) -> bool {
 fn eine_keymap_in_falscher_schreibweise_gilt_als_beschaedigt() {
     let (_ordner, ablage) = ablage("neuerungen-keymap-schreibweise");
     auslieferungsfassungen_schreiben(&ablage);
-    let (kennung, name) = erste_ausgelieferte_funktion();
+    let kennung = erste_ausgelieferte_kennung();
     // "cmd+shift+k" statt "shift+cmd+k": dieselbe Kombination, in der falschen
     // Reihenfolge, also `Schreibfehler::ReihenfolgeVerletzt`.
-    let text = format!(
-        "[[funktion]]\nid = \"{kennung}\"\nname = \"{name}\"\ntasten = [\"cmd+shift+k\"]\n"
-    );
+    let text = format!("[[funktion]]\nid = \"{kennung}\"\ntasten = [\"cmd+shift+k\"]\n");
     assert!(
         ist_gueltiges_toml(&text),
         "die Pruefdatei ist schon kein gueltiges TOML; dann prueft diese Probe den alten Weg mit"
@@ -5611,7 +5607,7 @@ fn eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere() {
         .iter()
         .filter_map(|eintrag| Some(eintrag.get("id")?.as_str()?.to_owned()))
         .collect();
-    let (erste, name) = erste_ausgelieferte_funktion();
+    let erste = erste_ausgelieferte_kennung();
     let fehlende = kennungen.len() - 1;
     assert!(
         fehlende > neuerungen::HOECHSTENS_EINZELN,
@@ -5625,11 +5621,13 @@ fn eine_namensliste_jenseits_der_kuerzungsgrenze_endet_mit_und_n_weitere() {
     // **Der Block traegt jedes Pflichtfeld von `Eintrag`**, seit dem 260911.
     // Bis dahin stand hier `id` allein; `serde` weist einen solchen Block ab,
     // also war die Pruefdatei fuer `belegung::laden` beschaedigt, und die Probe
-    // lebte davon, dass der Vergleich das nicht bemerkte. Die leere Tastenliste
-    // ist dabei zulaessig und baut keinen Konflikt auf.
+    // lebte davon, dass der Vergleich das nicht bemerkte. Pflicht sind heute
+    // `id` und `tasten`; `name` ist seit der Sprachtabelle optional und steht
+    // deshalb nicht mehr hier. Die leere Tastenliste ist dabei zulaessig und
+    // baut keinen Konflikt auf.
     fs::write(
         ablage.pfad(Datei::Belegung),
-        format!("[[funktion]]\nid = \"{erste}\"\nname = \"{name}\"\ntasten = []\n"),
+        format!("[[funktion]]\nid = \"{erste}\"\ntasten = []\n"),
     )
     .expect("keymap.toml laesst sich nicht hinlegen");
 

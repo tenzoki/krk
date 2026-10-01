@@ -970,16 +970,13 @@ mod tests {
     fn mit_geteilter_kombination() -> Belegung {
         use krk_core::tasten::Belegungsdatei;
         use krk_core::tasten::belegung::AUSLIEFERUNGSTEXT;
-        let alt = "id = \"editor_sichern\"\nname = \"Sichern\"\ntasten = [\"cmd+s\"]";
+        let alt = "id = \"editor_sichern\"\ntasten = [\"cmd+s\"]";
         assert!(
             AUSLIEFERUNGSTEXT.contains(alt),
             "der Eintrag von editor_sichern steht nicht mehr in dieser Form in der Auslieferung"
         );
-        let text = AUSLIEFERUNGSTEXT.replacen(
-            alt,
-            "id = \"editor_sichern\"\nname = \"Sichern\"\ntasten = [\"cmd+2\"]",
-            1,
-        );
+        let text =
+            AUSLIEFERUNGSTEXT.replacen(alt, "id = \"editor_sichern\"\ntasten = [\"cmd+2\"]", 1);
         let datei: Belegungsdatei = toml::from_str(&text).expect("gueltiges TOML");
         Belegung::vom_nutzer(&datei).expect("die geteilte Kombination ist kein Konflikt")
     }
