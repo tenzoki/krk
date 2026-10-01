@@ -118,6 +118,7 @@ use objc2_foundation::{
 };
 
 use krk_core::operation::Papierkorb;
+use krk_core::sprache::{Text, satz};
 use krk_core::verzeichnis::Erlaubnisbefund;
 
 /// Der Papierkorb des Systems.
@@ -134,7 +135,7 @@ impl Papierkorb for Systempapierkorb {
         let Some(text) = pfad.to_str() else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("{} ist kein gültiger UTF-8-Pfad", pfad.display()),
+                satz(Text::PapierkorbKeinUtf8Pfad, &[("pfad", &pfad.display())]),
             ));
         };
         let url = NSURL::fileURLWithPath(&NSString::from_str(text));

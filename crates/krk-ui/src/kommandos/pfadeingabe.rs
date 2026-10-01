@@ -20,6 +20,7 @@
 
 use std::path::{Path, PathBuf};
 
+use krk_core::sprache::{Text, satz};
 use krk_core::verzeichnis::{aufwaerts, datenschutzsperre};
 
 /// Wohin das aktive Dateifenster nach der Pruefung geht.
@@ -52,7 +53,7 @@ pub enum Ergebnis {
 #[must_use]
 pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
     if !pfad.is_absolute() {
-        return Ergebnis::Meldung(format!("{} ist kein absoluter Pfad", pfad.display()));
+        return Ergebnis::Meldung(satz(Text::PfadNichtAbsolut, &[("pfad", &pfad.display())]));
     }
     // `metadata` folgt einer Verknuepfung. Das ist hier richtig: eine
     // Verknuepfung auf einen Ordner ist als Ziel eines Sprungs derselbe Ordner.
@@ -61,7 +62,10 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
     let angaben = match std::fs::metadata(pfad) {
         Ok(angaben) => angaben,
         Err(fehler) => {
-            return Ergebnis::Meldung(format!("{} gibt es nicht: {fehler}", pfad.display()));
+            return Ergebnis::Meldung(satz(
+                Text::PfadGibtEsNicht,
+                &[("pfad", &pfad.display()), ("fehler", &fehler)],
+            ));
         }
     };
 
@@ -81,7 +85,10 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
         // `shared/decisions/260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md`).
         if let Err(fehler) = std::fs::read_dir(pfad) {
             return Ergebnis::Meldung(datenschutzsperre(pfad, &fehler).unwrap_or_else(|| {
-                format!("{} lässt sich nicht lesen: {fehler}", pfad.display())
+                satz(
+                    Text::PfadNichtLesbar,
+                    &[("pfad", &pfad.display()), ("fehler", &fehler)],
+                )
             }));
         }
         return Ergebnis::Wechseln {
@@ -93,7 +100,7 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
     // Keine Ordner, also eine Datei: in ihren Ordner wechseln und die Auswahl
     // auf sie stellen (C10).
     let Some((ordner, name)) = aufwaerts(pfad) else {
-        return Ergebnis::Meldung(format!("{} liegt in keinem Ordner", pfad.display()));
+        return Ergebnis::Meldung(satz(Text::PfadInKeinemOrdner, &[("pfad", &pfad.display())]));
     };
     if gleicher_ordner(&ordner, angezeigt) {
         Ergebnis::NurAuswahl { name }

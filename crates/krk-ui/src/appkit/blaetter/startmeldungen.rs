@@ -54,6 +54,8 @@
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
+use krk_core::sprache::{Text, Zahlwort, anzahl, text};
+
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Was aus den gesammelten Startmeldungen wird.
@@ -87,7 +89,7 @@ pub fn auskunft(meldungen: &[String]) -> Auskunft<'_> {
         [] => Auskunft::Nichts,
         [einzige] => Auskunft::Zeile(einzige),
         mehrere => Auskunft::Blatt {
-            frage: format!("Beim Start gab es {} Meldungen", mehrere.len()),
+            frage: anzahl(Zahlwort::StartMeldungen, mehrere.len() as u64, &[]),
             liste: mehrere.join("\n"),
         },
     }
@@ -106,7 +108,7 @@ pub fn auskunft(meldungen: &[String]) -> Auskunft<'_> {
 #[must_use]
 fn schaltflaechen() -> [Schaltflaeche<'static>; 1] {
     [Schaltflaeche::neu(
-        "Schließen",
+        text(Text::BlattSchliessen),
         Taste::Eingabe,
         Wirkung::Liegenlassen,
     )]

@@ -51,6 +51,7 @@ use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
 use krk_core::git::Marke;
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung};
 use krk_core::heimordner::Heimordner;
+use krk_core::sprache::{Text, satz};
 use krk_core::verzeichnis::modell::Befund;
 use krk_core::verzeichnis::{
     Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell, datenschutzsperre,
@@ -452,8 +453,8 @@ impl Tabinhalt {
     fn wunschmeldung(name: &str, ausgang: Wunschausgang) -> Option<String> {
         match ausgang {
             Wunschausgang::Gewaehlt => None,
-            Wunschausgang::Ausgefiltert => Some(format!("{name} ist ausgefiltert.")),
-            Wunschausgang::Fehlt => Some(format!("{name} ist nicht mehr da.")),
+            Wunschausgang::Ausgefiltert => Some(satz(Text::TabAusgefiltert, &[("name", &name)])),
+            Wunschausgang::Fehlt => Some(satz(Text::TabNichtMehrDa, &[("name", &name)])),
         }
     }
 }
@@ -1761,9 +1762,9 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
                 if let Abschluss::Fehler(fehler) = &abschluss {
                     tab.meldung =
                         Some(datenschutzsperre(&tab.ordner, fehler).unwrap_or_else(|| {
-                            format!(
-                                "{} ließ sich nicht vollständig lesen: {fehler}",
-                                tab.ordner.display()
+                            satz(
+                                Text::TabNichtVollstaendigGelesen,
+                                &[("ordner", &tab.ordner.display()), ("fehler", &fehler)],
                             )
                         }));
                     einzug.meldung_neu = true;

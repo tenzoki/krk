@@ -129,6 +129,7 @@ use krk_core::operation::{
     Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Namensfehler,
     Uebersprungen, name_pruefen,
 };
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Ordnermodell;
 use krk_core::zwischenablage::Einfuegehindernis;
@@ -447,32 +448,37 @@ impl Vorgangszustand {
 // Die Texte, die der Nutzer liest
 // ----------------------------------------------------------------------
 
-/// Wie die Zeile ihre Angaben trennt.
-///
-/// Ein Mittelpunkt statt eines Zeilenumbruchs: die Statuszeile ist einzeilig
-/// (`NSTextField::setMaximumNumberOfLines(1)`), und ein Umbruch waere dort
-/// abgeschnitten statt gelesen.
-const TRENNER: &str = " · ";
-
 /// Was die Zeile ueber den Abbruch sagt.
 ///
 /// Er hat mit dem Blatt seine Schaltflaeche verloren und liegt weiter auf
 /// `esc` (`resources/default-keymap.toml`, Kennung `abbrechen`). Damit der
 /// Nutzer ihn findet, nennt die Zeile ihn; das ist die Antwort auf den
-/// Einwand, eine Zeile am Fuss sei leichter zu uebersehen als ein Blatt.
-const ABBRUCHHINWEIS: &str = "Esc bricht ab";
+/// Einwand, eine Zeile am Fuss sei leichter zu uebersehen als ein Blatt. Der
+/// Wortlaut steht in der Sprachtabelle unter `VorgangAbbruchhinweis`; die
+/// Mittelpunkte, die die Zeile als Trenner fuehrt, stehen in den zwei
+/// Vorgangssaetzen selbst, weil die Statuszeile einzeilig ist
+/// (`NSTextField::setMaximumNumberOfLines(1)`) und ein Umbruch dort
+/// abgeschnitten statt gelesen wuerde.
+#[must_use]
+fn abbruchhinweis() -> &'static str {
+    text(Text::VorgangAbbruchhinweis)
+}
 
 /// Womit eine Operation in der Zeile benannt wird.
+///
+/// Eine vollstaendige Fallunterscheidung ueber [`Art`], die ihre Variante auf
+/// einen Schluessel der Sprachtabelle abbildet; ein weiterer Wert haelt den
+/// Bau an.
 #[must_use]
 fn ueberschrift(art: &Art) -> &'static str {
     match art {
-        Art::Kopieren { .. } => "Kopieren",
-        Art::Verschieben { .. } => "Verschieben",
-        Art::InDenPapierkorb => "In den Papierkorb räumen",
-        Art::UmbenennenImStapel { .. } => "Umbenennen",
-        Art::Zippen { .. } => "Packen",
-        Art::Entpacken { .. } => "Entpacken",
-        Art::Duplizieren { .. } => "Duplizieren",
+        Art::Kopieren { .. } => text(Text::VorgangsartKopieren),
+        Art::Verschieben { .. } => text(Text::VorgangsartVerschieben),
+        Art::InDenPapierkorb => text(Text::VorgangsartInDenPapierkorb),
+        Art::UmbenennenImStapel { .. } => text(Text::VorgangsartUmbenennen),
+        Art::Zippen { .. } => text(Text::VorgangsartPacken),
+        Art::Entpacken { .. } => text(Text::VorgangsartEntpacken),
+        Art::Duplizieren { .. } => text(Text::VorgangsartDuplizieren),
     }
 }
 
@@ -710,20 +716,29 @@ pub fn konfliktform(art: &Art) -> Konfliktform {
 pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: usize) -> String {
     let was = ueberschrift(art);
     let Some(fortschritt) = fortschritt else {
-        return format!(
-            "{was} wird vorbereitet: {}{TRENNER}{ABBRUCHHINWEIS}",
-            positionen_text(positionen)
+        return satz(
+            Text::VorgangWirdVorbereitet,
+            &[
+                ("was", &was),
+                ("positionen", &positionen_text(positionen)),
+                ("abbruch", &abbruchhinweis()),
+            ],
         );
     };
     let name = fortschritt
         .eintrag
         .file_name()
         .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
-    format!(
-        "{was}: {}, {}, {}{TRENNER}{name}{TRENNER}{ABBRUCHHINWEIS}",
-        eintraege_text(fortschritt.eintraege as usize),
-        menge(fortschritt.bytes),
-        positionen_text(positionen),
+    satz(
+        Text::VorgangZeile,
+        &[
+            ("was", &was),
+            ("eintraege", &eintraege_text(fortschritt.eintraege as usize)),
+            ("menge", &menge(fortschritt.bytes)),
+            ("positionen", &positionen_text(positionen)),
+            ("name", &name),
+            ("abbruch", &abbruchhinweis()),
+        ],
     )
 }
 
@@ -734,10 +749,7 @@ pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: u
 /// weg, weil er beantwortet ist.
 #[must_use]
 pub fn abbruchzeile(art: &Art) -> String {
-    format!(
-        "{} wird abgebrochen, der Vorgang endet gleich …",
-        ueberschrift(art)
-    )
+    satz(Text::VorgangWirdAbgebrochen, &[("was", &ueberschrift(art))])
 }
 
 /// Die Meldung auf einen zweiten Operationsbefehl waehrend eines laufenden
@@ -747,7 +759,7 @@ pub fn abbruchzeile(art: &Art) -> String {
 /// sie baut einen Zustand mehr, den keine Zusage verlangt.
 #[must_use]
 pub fn schon_ein_vorgang(art: &Art) -> String {
-    format!("es läuft bereits eine Operation: {}", ueberschrift(art))
+    satz(Text::VorgangSchonEiner, &[("was", &ueberschrift(art))])
 }
 
 /// Die Meldung, die nach dem Ende eines Vorgangs in der Statuszeile steht.
@@ -773,29 +785,37 @@ pub fn abschlusstext(
     ausgelassen: usize,
 ) -> String {
     let was = ueberschrift(art);
-    let uebertragen = format!(
-        "{}, {} ({})",
-        eintraege_text(bericht.eintraege as usize),
-        menge(bericht.bytes),
-        positionen_text(positionen)
+    let uebertragen = satz(
+        Text::VorgangUebertragen,
+        &[
+            ("eintraege", &eintraege_text(bericht.eintraege as usize)),
+            ("menge", &menge(bericht.bytes)),
+            ("positionen", &positionen_text(positionen)),
+        ],
     );
-    let mut text = match bericht.abschluss {
-        Abschluss::Abgebrochen => format!("{was} abgebrochen: {uebertragen} übertragen"),
-        Abschluss::Fertig => format!("{was} fertig: {uebertragen}"),
+    let werte: [(&str, &dyn std::fmt::Display); 2] = [("was", &was), ("uebertragen", &uebertragen)];
+    let mut meldung = match bericht.abschluss {
+        Abschluss::Abgebrochen => satz(Text::VorgangAbgebrochen, &werte),
+        Abschluss::Fertig => satz(Text::VorgangFertig, &werte),
     };
+    // Die zwei Zusaetze sind je ein Zahlwort und kein Satz mit eingesetzter
+    // Zahl: in einer Sprache, die das Mitwort an die Zahl angleicht, haengt
+    // mehr als das Hauptwort an der Einzahl.
     if !bericht.uebersprungen.is_empty() {
-        text.push_str(&format!(
-            ", {} übersprungen",
-            eintraege_text(bericht.uebersprungen.len())
+        meldung.push_str(&anzahl(
+            Zahlwort::VorgangUebersprungen,
+            bericht.uebersprungen.len() as u64,
+            &[],
         ));
     }
     if ausgelassen > 0 {
-        text.push_str(&format!(
-            ", {} als Ziel dieses Laufs ausgelassen",
-            eintraege_text(ausgelassen)
+        meldung.push_str(&anzahl(
+            Zahlwort::VorgangAusgelassen,
+            ausgelassen as u64,
+            &[],
         ));
     }
-    text
+    meldung
 }
 
 /// Ob ein Duplizierlauf sein Duplikat angelegt hat (260930).
@@ -822,10 +842,11 @@ pub fn uebersprungenliste(uebersprungen: &[Uebersprungen]) -> Option<(String, St
     if uebersprungen.is_empty() {
         return None;
     }
-    let frage = match uebersprungen.len() {
-        1 => "Ein Eintrag wurde übersprungen".to_owned(),
-        zahl => format!("{} Einträge wurden übersprungen", self::zahl(zahl)),
-    };
+    let frage = anzahl(
+        Zahlwort::UebersprungenFrage,
+        uebersprungen.len() as u64,
+        &[],
+    );
     // Gebaut werden alle Zeilen und gekuerzt wird danach. Der umgekehrte Weg
     // (erst `take`, dann zaehlen) sparte das Formatieren der weggeworfenen
     // Zeilen und verlangte dafuer den Wortlaut „… und N weitere" ein zweites
@@ -837,7 +858,10 @@ pub fn uebersprungenliste(uebersprungen: &[Uebersprungen]) -> Option<(String, St
                 || eintrag.pfad.display().to_string(),
                 |name| name.to_string_lossy().into_owned(),
             );
-            format!("{name}: {}", eintrag.grund)
+            satz(
+                Text::UebersprungenZeile,
+                &[("name", &name), ("grund", &eintrag.grund)],
+            )
         })
         .collect();
     Some((frage, gekuerzt(zeilen).join("\n")))
@@ -866,31 +890,30 @@ impl Anlegeart {
     #[must_use]
     pub fn frage(self) -> &'static str {
         match self {
-            Anlegeart::Ordner => "Wie soll der neue Ordner heißen?",
-            Anlegeart::Datei => "Wie soll die neue Datei heißen?",
+            Anlegeart::Ordner => text(Text::AnlegenFrageOrdner),
+            Anlegeart::Datei => text(Text::AnlegenFrageDatei),
         }
     }
 
     /// Die Beschriftung der bestaetigenden Schaltflaeche.
     #[must_use]
     pub fn bestaetigen(self) -> &'static str {
-        "Anlegen"
-    }
-
-    /// Wie eine Meldung den angelegten Eintrag benennt.
-    #[must_use]
-    pub fn benennung(self) -> &'static str {
-        match self {
-            Anlegeart::Ordner => "Ordner",
-            Anlegeart::Datei => "Datei",
-        }
+        text(Text::AnlegenBestaetigen)
     }
 }
 
 /// Die Meldung, wenn ein Eintrag angelegt wurde (C4).
+///
+/// Je Art ein ganzer Satz und nicht ein Hauptwort, das in einen Satz
+/// eingesetzt wird: welche Form das Hauptwort am Satzanfang traegt,
+/// entscheidet die Sprache, und die Tabelle entscheidet sie je Satz.
 #[must_use]
 pub fn angelegt_text(art: Anlegeart, name: &str) -> String {
-    format!("{} „{name}“ angelegt", art.benennung())
+    let schluessel = match art {
+        Anlegeart::Ordner => Text::AngelegtOrdner,
+        Anlegeart::Datei => Text::AngelegtDatei,
+    };
+    satz(schluessel, &[("name", &name)])
 }
 
 /// Die Meldung, wenn ein Eintrag nicht angelegt werden konnte (C4).
@@ -905,14 +928,17 @@ pub fn angelegt_text(art: Anlegeart, name: &str) -> String {
 pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
     match fehler.kind() {
         io::ErrorKind::AlreadyExists => schon_vergeben(name),
-        io::ErrorKind::PermissionDenied => format!(
-            "keine Rechte, hier {} „{name}“ anzulegen",
-            match art {
-                Anlegeart::Ordner => "den Ordner",
-                Anlegeart::Datei => "die Datei",
-            }
+        io::ErrorKind::PermissionDenied => {
+            let schluessel = match art {
+                Anlegeart::Ordner => Text::AnlegenKeineRechteOrdner,
+                Anlegeart::Datei => Text::AnlegenKeineRechteDatei,
+            };
+            satz(schluessel, &[("name", &name)])
+        }
+        _ => satz(
+            Text::AnlegenGescheitert,
+            &[("name", &name), ("fehler", &fehler)],
         ),
-        _ => format!("„{name}“ ließ sich nicht anlegen: {fehler}"),
     }
 }
 
@@ -923,7 +949,7 @@ pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
 /// dieselbe Lage.
 #[must_use]
 fn schon_vergeben(name: &str) -> String {
-    format!("es gibt schon einen Eintrag namens „{name}“")
+    satz(Text::NameSchonVergeben, &[("name", &name)])
 }
 
 // ----------------------------------------------------------------------
@@ -939,7 +965,7 @@ fn schon_vergeben(name: &str) -> String {
 /// sich unterscheidet, ist der Grund unter dem Feld ([`name_vergeben`]).
 #[must_use]
 pub fn duplikatfrage() -> &'static str {
-    "Wie soll das Duplikat heißen?"
+    text(Text::DuplikatFrage)
 }
 
 /// Die Beschriftung der bestaetigenden Schaltflaeche des Namensblatts beim
@@ -949,7 +975,7 @@ pub fn duplikatfrage() -> &'static str {
 /// kommt aus den Standardschaltflaechen jedes Blattes.
 #[must_use]
 pub fn duplikat_bestaetigen() -> &'static str {
-    "Duplizieren"
+    text(Text::DuplikatBestaetigen)
 }
 
 /// Der Grund unter dem Feld, wenn das Namensblatt erneut aufgeht, weil der
@@ -993,7 +1019,7 @@ pub fn namensgrund(eingabe: &str) -> Option<&'static str> {
 /// [`super::kontextmenue::Duplikatbefund::Nichts`].
 #[must_use]
 pub fn nichts_zu_duplizieren() -> String {
-    nichts_betroffen("zu duplizieren")
+    nichts_betroffen(Text::NennformZuDuplizieren)
 }
 
 /// Der Satz, wenn „Duplizieren…" mehrere Eintraege vorfindet.
@@ -1004,9 +1030,7 @@ pub fn nichts_zu_duplizieren() -> String {
 /// [`super::kontextmenue::Duplikatbefund::Mehrere`].
 #[must_use]
 pub fn mehrere_zu_duplizieren() -> String {
-    "nichts zu duplizieren: es sind mehrere Einträge markiert, und dupliziert wird genau \
-     eine Datei"
-        .to_owned()
+    text(Text::DuplikatMehrere).to_owned()
 }
 
 /// Der Satz, wenn der eine betroffene Eintrag ein Ordner ist.
@@ -1016,7 +1040,7 @@ pub fn mehrere_zu_duplizieren() -> String {
 /// Rufer, auf den Befund [`super::kontextmenue::Duplikatbefund::Ordner`].
 #[must_use]
 pub fn ordner_nicht_zu_duplizieren(name: &str) -> String {
-    nicht_zu_duplizieren(name, "ein Ordner")
+    nicht_zu_duplizieren(name, Text::DuplikatTypOrdner)
 }
 
 /// Der Satz, wenn der eine betroffene Eintrag eine Verknuepfung ist.
@@ -1026,18 +1050,19 @@ pub fn ordner_nicht_zu_duplizieren(name: &str) -> String {
 /// [`super::kontextmenue::Duplikatbefund::Verknuepfung`].
 #[must_use]
 pub fn verknuepfung_nicht_zu_duplizieren(name: &str) -> String {
-    nicht_zu_duplizieren(name, "eine Verknüpfung")
+    nicht_zu_duplizieren(name, Text::DuplikatTypVerknuepfung)
 }
 
 /// Die gemeinsame Haelfte der zwei Saetze darueber.
 ///
 /// Getrennt wird nur, was sich unterscheidet, naemlich der Typ; die Regel
-/// dahinter steht an einer Stelle.
+/// dahinter steht an einer Stelle. `typ` ist einer der `DuplikatTyp…`
+/// der Tabelle.
 #[must_use]
-fn nicht_zu_duplizieren(name: &str, typ: &str) -> String {
-    format!(
-        "nichts zu duplizieren: „{name}“ ist {typ}, und dupliziert wird allein eine gewöhnliche \
-         Datei"
+fn nicht_zu_duplizieren(name: &str, typ: Text) -> String {
+    satz(
+        Text::DuplikatNichtGewoehnlich,
+        &[("name", &name), ("typ", &text(typ))],
     )
 }
 
@@ -1097,30 +1122,29 @@ pub fn umbenennungsfehler(neuer_name: &str, fehler: &io::Error) -> String {
     match fehler.kind() {
         io::ErrorKind::AlreadyExists => schon_vergeben(neuer_name),
         io::ErrorKind::PermissionDenied => {
-            format!("keine Rechte, hier in „{neuer_name}“ umzubenennen")
+            satz(Text::UmbenennenKeineRechte, &[("name", &neuer_name)])
         }
-        _ => format!("„{neuer_name}“ ließ sich nicht vergeben: {fehler}"),
+        _ => satz(
+            Text::UmbenennenGescheitert,
+            &[("name", &neuer_name), ("fehler", &fehler)],
+        ),
     }
 }
 
-/// Die Meldung nach einem ausgefuehrten Stapel-Umbenennen (C4).
+/// Die Zahl der Eintraege eines Vorgangs, "ein Eintrag" beziehungsweise
+/// "4.812 Einträge" (C4).
 ///
-/// "ein Eintrag" beziehungsweise "4.812 Einträge".
+/// Einzahl und Mehrzahl kommen aus dem [`Zahlwort`] und nicht aus einem
+/// Zweig hier; welche Form welche Zahl bekommt, entscheidet die Sprache.
 #[must_use]
 fn eintraege_text(eintraege: usize) -> String {
-    match eintraege {
-        1 => "ein Eintrag".to_owned(),
-        zahl => format!("{} Einträge", self::zahl(zahl)),
-    }
+    anzahl(Zahlwort::Eintraege, eintraege as u64, &[])
 }
 
-/// "3 Positionen" beziehungsweise "eine Position".
+/// "3 ausgewählte Positionen" beziehungsweise "eine ausgewählte Position".
 #[must_use]
 fn positionen_text(positionen: usize) -> String {
-    match positionen {
-        1 => "eine ausgewählte Position".to_owned(),
-        zahl => format!("{} ausgewählte Positionen", self::zahl(zahl)),
-    }
+    anzahl(Zahlwort::AusgewaehltePositionen, positionen as u64, &[])
 }
 
 /// "ein Ordner" beziehungsweise "3 Ordner".
@@ -1132,10 +1156,7 @@ fn positionen_text(positionen: usize) -> String {
 /// bleibt trotzdem hier, denn sie ist ein Zahlwort und kein Loeschtext.
 #[must_use]
 pub(crate) fn ordner_text(ordner: usize) -> String {
-    match ordner {
-        1 => "ein Ordner".to_owned(),
-        zahl => format!("{} Ordner", self::zahl(zahl)),
-    }
+    anzahl(Zahlwort::Ordner, ordner as u64, &[])
 }
 
 /// Eine Zahl mit gruppierten Tausendern, wie sie der Nutzer liest.
@@ -1203,10 +1224,13 @@ use krk_core::sprache::menge;
 pub fn ordner_fehlt(ordner: &Path) -> Option<String> {
     match std::fs::metadata(ordner) {
         Ok(angaben) if angaben.is_dir() => None,
-        Ok(_) => Some(format!("{} ist kein Ordner mehr", ordner.display())),
-        Err(fehler) => Some(format!(
-            "{} ist nicht mehr erreichbar: {fehler}",
-            ordner.display()
+        Ok(_) => Some(satz(
+            Text::OrdnerKeinOrdnerMehr,
+            &[("pfad", &ordner.display())],
+        )),
+        Err(fehler) => Some(satz(
+            Text::OrdnerNichtMehrErreichbar,
+            &[("pfad", &ordner.display()), ("fehler", &fehler)],
         )),
     }
 }
@@ -1227,11 +1251,7 @@ pub fn ordner_fehlt(ordner: &Path) -> Option<String> {
 /// Ein zweiter Lesepfad entsteht daraus ausdruecklich nicht.
 #[must_use]
 pub fn kein_terminal(kennung: &str) -> String {
-    format!(
-        "keine Anwendung mit der Bündelkennung „{kennung}“ installiert; \
-         settings.toml nennt sie unter terminal, eine Änderung wirkt erst \
-         nach einem Neustart"
-    )
+    satz(Text::KeinTerminal, &[("kennung", &kennung)])
 }
 
 // ----------------------------------------------------------------------
@@ -1296,8 +1316,8 @@ pub fn pfadzeilen(pfade: &[PathBuf]) -> String {
 #[must_use]
 pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
     match pfade {
-        [einziger] => format!("Pfad kopiert: {}", pfadtext(einziger)),
-        mehrere => format!("{} Pfade kopiert", mehrere.len()),
+        [einziger] => satz(Text::PfadKopiert, &[("pfad", &pfadtext(einziger))]),
+        mehrere => satz(Text::PfadeKopiert, &[("n", &zahl(mehrere.len()))]),
     }
 }
 
@@ -1314,7 +1334,7 @@ pub fn kopiermeldung(pfade: &[PathBuf]) -> String {
 /// daneben saehe wie eine andere Lage aus (C1.7 der Runde 22).
 #[must_use]
 pub fn nichts_zu_kopieren() -> String {
-    nichts_betroffen("zu kopieren")
+    nichts_betroffen(Text::NennformZuKopieren)
 }
 
 /// Der Satz, wenn beim Oeffner kein Eintrag betroffen ist (C3).
@@ -1324,7 +1344,7 @@ pub fn nichts_zu_kopieren() -> String {
 /// verschieden gebaute Saetze sonst wie zwei verschiedene Lagen aussaehe.
 #[must_use]
 pub fn nichts_zu_oeffnen() -> String {
-    nichts_betroffen("zu öffnen")
+    nichts_betroffen(Text::NennformZuOeffnen)
 }
 
 /// Der Satz, wenn beim Packen kein Eintrag betroffen ist (Runde 17).
@@ -1343,7 +1363,7 @@ pub fn nichts_zu_oeffnen() -> String {
 /// (`Anwendungsdelegierter::zipauftrag_stellen`).
 #[must_use]
 pub fn nichts_zu_packen() -> String {
-    nichts_betroffen("zu packen")
+    nichts_betroffen(Text::NennformZuPacken)
 }
 
 /// Der Satz, wenn „Im Finder anzeigen" keinen Eintrag vorfindet (260907).
@@ -1361,7 +1381,7 @@ pub fn nichts_zu_packen() -> String {
 /// (`Anwendungsdelegierter::im_finder_anzeigen`).
 #[must_use]
 pub fn nichts_anzuzeigen() -> String {
-    nichts_betroffen("anzuzeigen")
+    nichts_betroffen(Text::NennformAnzuzeigen)
 }
 
 /// Der Satz, wenn beim Teilen nichts zu uebergeben ist (C1 der Runde 6).
@@ -1381,7 +1401,7 @@ pub fn nichts_anzuzeigen() -> String {
 /// bleibt einzeilig.
 #[must_use]
 pub fn nichts_zu_teilen() -> String {
-    "nichts zu teilen: hier steht nichts, was an die Freigabedienste ginge".to_owned()
+    text(Text::NichtsZuTeilen).to_owned()
 }
 
 /// Der Satz, wenn Unzip kein Archiv vorfindet (Runde 17).
@@ -1402,7 +1422,7 @@ pub fn nichts_zu_teilen() -> String {
 /// [`super::kontextmenue::Entpackbefund::Keines`].
 #[must_use]
 pub fn kein_archiv() -> String {
-    "nichts zu entpacken: hier steht keine Datei mit der Endung .zip".to_owned()
+    text(Text::KeinArchiv).to_owned()
 }
 
 /// Der Satz, wenn die Ersatzregel von Unzip mehrere Archive vorfindet
@@ -1421,9 +1441,7 @@ pub fn kein_archiv() -> String {
 /// [`super::kontextmenue::Entpackbefund::Mehrere`].
 #[must_use]
 pub fn mehrere_archive() -> String {
-    "nichts zu entpacken: hier stehen mehrere Archive, und die Auswahl zeigt \
-     auf keines"
-        .to_owned()
+    text(Text::MehrereArchive).to_owned()
 }
 
 /// Der Satz, wenn das System keinen Finder nennt (Runde 17).
@@ -1448,7 +1466,7 @@ pub fn mehrere_archive() -> String {
 /// Lage dieselbe ist: das System nennt keinen Finder.
 #[must_use]
 pub fn kein_finder() -> String {
-    "der Finder ist nicht erreichbar: das System hat keine Anwendung dafür genannt".to_owned()
+    text(Text::KeinFinder).to_owned()
 }
 
 /// Die gemeinsame Haelfte der Saetze darueber.
@@ -1465,15 +1483,17 @@ pub fn kein_finder() -> String {
 /// Verb dabei ist: bei „anzeigen" wandert das `zu` in das Wort hinein
 /// („anzuzeigen"), und ein Rumpf mit festem `zu` haette „nichts zu anzeigen"
 /// geschrieben. Der Schnitt liegt deshalb eine Silbe frueher, und die drei
-/// aelteren Saetze lauten Zeichen fuer Zeichen wie zuvor.
+/// aelteren Saetze lauten Zeichen fuer Zeichen wie zuvor. Seit der
+/// Sprachtabelle ist die Nennform ein Schluessel (`Nennform…`) und der Rumpf
+/// der Satz `NichtsBetroffen`, der sie als `{nennform}` einsetzt.
 ///
 /// Sie sagt **nicht** "der Ordner ist leer": eine leere Menge entsteht auch in
 /// einem vollen Ordner, naemlich waehrend eines Lesevorgangs, nachdem
 /// `Ordnermodell::ersatz_einloesen` Markierung und Auswahl geleert hat und
 /// bevor die Auswahl wieder steht.
 #[must_use]
-fn nichts_betroffen(nennform: &str) -> String {
-    format!("nichts {nennform}: nichts markiert und nichts ausgewählt")
+fn nichts_betroffen(nennform: Text) -> String {
+    satz(Text::NichtsBetroffen, &[("nennform", &text(nennform))])
 }
 
 /// Die Meldung, wenn die Zwischenablage den Text nicht annimmt (C1, C2).
@@ -1491,7 +1511,7 @@ fn nichts_betroffen(nennform: &str) -> String {
 /// dieser meldet, dass die Ablage selbst nicht stattgefunden hat.
 #[must_use]
 pub fn ablage_weist_ab() -> String {
-    "die Zwischenablage hat den Text nicht angenommen".to_owned()
+    text(Text::AblageWeistTextAb).to_owned()
 }
 
 // ----------------------------------------------------------------------
@@ -1559,14 +1579,12 @@ pub fn namenszeilen(pfade: &[PathBuf]) -> String {
 #[must_use]
 pub fn ablagemeldung(befehl: Dateiablage, pfade: &[PathBuf]) -> String {
     let kopiert = match pfade {
-        [einziger] => format!("kopiert: {}", eintragsname(einziger)),
-        mehrere => format!("{} Einträge kopiert", zahl(mehrere.len())),
+        [einziger] => satz(Text::AbgelegtEiner, &[("name", &eintragsname(einziger))]),
+        mehrere => satz(Text::AbgelegtMehrere, &[("n", &zahl(mehrere.len()))]),
     };
     match befehl {
         Dateiablage::Kopieren => kopiert,
-        Dateiablage::Ausschneiden => {
-            format!("{kopiert} – verschieben tut das Ziel (Finder: opt+cmd+v)")
-        }
+        Dateiablage::Ausschneiden => satz(Text::AbgelegtAusgeschnitten, &[("kopiert", &kopiert)]),
     }
 }
 
@@ -1584,7 +1602,7 @@ pub fn ablagemeldung(befehl: Dateiablage, pfade: &[PathBuf]) -> String {
 /// stattgefunden hat, und nicht, was abgelegt wurde.
 #[must_use]
 pub fn verweise_abgewiesen() -> String {
-    "die Zwischenablage hat die Einträge nicht angenommen".to_owned()
+    text(Text::AblageWeistVerweiseAb).to_owned()
 }
 
 // ----------------------------------------------------------------------
@@ -1613,17 +1631,12 @@ pub fn verweise_abgewiesen() -> String {
 #[must_use]
 pub fn einfuegen_abgewiesen(hindernis: Einfuegehindernis) -> String {
     match hindernis {
-        Einfuegehindernis::KeinText => {
-            "nichts einzufügen: die Zwischenablage trägt keinen Text".to_owned()
+        Einfuegehindernis::KeinText => text(Text::EinfuegenKeinText).to_owned(),
+        Einfuegehindernis::Mehrzeilig => text(Text::EinfuegenMehrzeilig).to_owned(),
+        Einfuegehindernis::MehrereVerweise(verweise) => {
+            anzahl(Zahlwort::EinfuegenDateiverweise, verweise as u64, &[])
         }
-        Einfuegehindernis::Mehrzeilig => "nicht eingefügt: der Text hat mehrere Zeilen".to_owned(),
-        Einfuegehindernis::MehrereVerweise(anzahl) => format!(
-            "nicht eingefügt: die Zwischenablage trägt {} Dateiverweise",
-            zahl(anzahl)
-        ),
-        Einfuegehindernis::NichtsTragbar => {
-            "nichts einzufügen: der Text trägt kein Zeichen, das ein Name tragen kann".to_owned()
-        }
+        Einfuegehindernis::NichtsTragbar => text(Text::EinfuegenNichtsTragbar).to_owned(),
     }
 }
 
@@ -1667,29 +1680,34 @@ fn eintragsname(pfad: &Path) -> String {
 pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> String {
     let angenommen = match uebergeben {
         [] => None,
-        [einziger] => Some(format!(
-            "an das System übergeben: {}",
-            eintragsname(einziger)
+        [einziger] => Some(satz(
+            Text::UebergebenEiner,
+            &[("name", &eintragsname(einziger))],
         )),
-        mehrere => Some(format!(
-            "{} Einträge an das System übergeben",
-            mehrere.len()
+        mehrere => Some(satz(
+            Text::UebergebenMehrere,
+            &[("n", &zahl(mehrere.len()))],
         )),
     };
     let zurueck = match abgewiesen {
         [] => None,
-        [einziger] => Some(format!(
-            "das System hat {} nicht angenommen",
-            eintragsname(einziger)
+        [einziger] => Some(satz(
+            Text::NichtAngenommenEiner,
+            &[("name", &eintragsname(einziger))],
         )),
-        mehrere => Some(format!(
-            "das System hat {} von {} Einträgen nicht angenommen",
-            mehrere.len(),
-            uebergeben.len() + mehrere.len()
+        mehrere => Some(satz(
+            Text::NichtAngenommenMehrere,
+            &[
+                ("n", &zahl(mehrere.len())),
+                ("gesamt", &zahl(uebergeben.len() + mehrere.len())),
+            ],
         )),
     };
     match (angenommen, zurueck) {
-        (Some(genommen), Some(abgelehnt)) => format!("{genommen}; {abgelehnt}"),
+        (Some(genommen), Some(abgelehnt)) => satz(
+            Text::UebergebenUndAbgelehnt,
+            &[("genommen", &genommen), ("abgelehnt", &abgelehnt)],
+        ),
         (Some(genommen), None) => genommen,
         (None, Some(abgelehnt)) => abgelehnt,
         (None, None) => nichts_zu_oeffnen(),
@@ -1725,7 +1743,7 @@ pub fn oeffnungsmeldung(uebergeben: &[PathBuf], abgewiesen: &[PathBuf]) -> Strin
 /// Untermenue traegt; steht eines da, ist die Lage nicht diese.
 #[must_use]
 pub fn keine_anwendung() -> String {
-    "nichts zu öffnen: das System nennt für diesen Eintrag keine Anwendung".to_owned()
+    text(Text::KeineAnwendung).to_owned()
 }
 
 /// Die Meldung nach der Uebergabe an eine benannte Anwendung (260918).
@@ -1749,8 +1767,14 @@ pub fn keine_anwendung() -> String {
 pub fn oeffnungsmeldung_an(anwendung: &str, uebergeben: &[PathBuf]) -> String {
     match uebergeben {
         [] => nichts_zu_oeffnen(),
-        [einziger] => format!("an {anwendung} übergeben: {}", eintragsname(einziger)),
-        mehrere => format!("{} Einträge an {anwendung} übergeben", mehrere.len()),
+        [einziger] => satz(
+            Text::UebergebenAnEiner,
+            &[("anwendung", &anwendung), ("name", &eintragsname(einziger))],
+        ),
+        mehrere => satz(
+            Text::UebergebenAnMehrere,
+            &[("n", &zahl(mehrere.len())), ("anwendung", &anwendung)],
+        ),
     }
 }
 
@@ -1769,7 +1793,7 @@ pub fn oeffnungsmeldung_an(anwendung: &str, uebergeben: &[PathBuf]) -> String {
 /// er kaum, denn APFS nimmt einen solchen Namen gar nicht an.
 #[must_use]
 pub fn nicht_uebergeben(anwendung: &str) -> String {
-    format!("an {anwendung} nicht übergeben: ein Pfad trägt kein gültiges UTF-8")
+    satz(Text::NichtUebergebenAn, &[("anwendung", &anwendung)])
 }
 
 // ----------------------------------------------------------------------
@@ -1805,10 +1829,9 @@ fn belegungsdateiname() -> &'static str {
 /// im gemeinsamen Speicher aufgehoben.
 #[must_use]
 pub fn belegungsdatei_hat_zwei_schreiber() -> String {
-    format!(
-        "{} hat zwei Schreiber: eine Änderung von Hand wirkt erst beim nächsten Start, \
-         und die Belegungsansicht (F1) überschreibt sie beim Verlassen",
-        belegungsdateiname()
+    satz(
+        Text::BelegungsdateiZweiSchreiber,
+        &[("datei", &belegungsdateiname())],
     )
 }
 
@@ -1826,10 +1849,9 @@ pub fn belegungsdatei_hat_zwei_schreiber() -> String {
 /// einen Ort, an dem nichts steht.
 #[must_use]
 pub fn keine_belegungsdatei() -> String {
-    format!(
-        "{} gibt es noch nicht: sie entsteht, sobald die Belegungsansicht (F1) \
-         mit einer Änderung verlassen wird",
-        belegungsdateiname()
+    satz(
+        Text::BelegungsdateiFehltNoch,
+        &[("datei", &belegungsdateiname())],
     )
 }
 
@@ -1847,9 +1869,9 @@ pub fn keine_belegungsdatei() -> String {
 /// Fehler, den die Meldung vermeidet.
 #[must_use]
 pub fn belegungsdatei_ohne_ablageordner() -> String {
-    format!(
-        "{} ist nicht zu zeigen: KRK läuft ohne Ablageordner",
-        belegungsdateiname()
+    satz(
+        Text::BelegungsdateiOhneAblageordner,
+        &[("datei", &belegungsdateiname())],
     )
 }
 

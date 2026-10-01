@@ -22,6 +22,8 @@
 use objc2_app_kit::NSWindow;
 use objc2_foundation::MainThreadMarker;
 
+use krk_core::sprache::{Text, text};
+
 use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 
 /// Die eine Schaltflaeche der Abschlussliste.
@@ -39,7 +41,7 @@ use super::{Blatt, Blattgriff, Schaltflaeche, Taste, Wirkung};
 #[must_use]
 fn schaltflaechen() -> [Schaltflaeche<'static>; 1] {
     [Schaltflaeche::neu(
-        "Schließen",
+        text(Text::BlattSchliessen),
         Taste::Eingabe,
         Wirkung::Liegenlassen,
     )]

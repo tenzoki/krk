@@ -10,6 +10,7 @@
 //! nicht zu C4; die beiden Bausteine, aus denen sie sich zusammensetzt, leiht
 //! sie sich dort, statt sie ein zweites Mal zu schreiben.
 
+use krk_core::sprache::{Text, satz};
 use krk_core::verzeichnis::{Markierungsstand, Ordnermodell};
 
 use super::navigation::{Bewegung, zielzeile};
@@ -47,10 +48,13 @@ pub fn markierungsstand_text(stand: Markierungsstand, groesse: &str) -> Option<S
     if stand.ist_leer() {
         return None;
     }
-    Some(format!(
-        "{} markiert, davon {}, {groesse}",
-        zahl(stand.zahl),
-        ordner_text(stand.ordner)
+    Some(satz(
+        Text::Markierungsstand,
+        &[
+            ("n", &zahl(stand.zahl)),
+            ("ordner", &ordner_text(stand.ordner)),
+            ("groesse", &groesse),
+        ],
     ))
 }
 

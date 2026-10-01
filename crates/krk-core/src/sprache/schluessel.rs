@@ -718,11 +718,250 @@ pub enum Text {
     TabelleNichtInDerListe,
     /// Der Fenstertitel, solange der Editor die Quicknote zeigt.
     FenstertitelQuicknote,
+    /// `statuszeile::filterstand_text`: der Satz des Filterstands;
+    /// `{filtertext}`, `{gezeigt}`, `{vorhanden}` und die drei Satzteile
+    /// `{liest}`, `{zu_gross}`, `{ausgeblendet}`, die leer bleiben duerfen.
+    StatuszeileFilterstand,
+    /// `filterstand_text`: der Satzteil `{liest}`, solange der Inhalt gelesen
+    /// wird; er beginnt mit dem Komma, das ihn anhaengt.
+    StatuszeileInhaltWirdGelesen,
+    /// `statuszeile::seitenzaehler_text`; `{aktuell}`, `{gesamt}`.
+    StatuszeileSeiteVon,
+    /// `statuszeile::bildzaehler_text`; `{aktuell}`, `{gesamt}`.
+    StatuszeileBildVon,
+    /// `bildzaehler_text` bei gekuerzter Folge; `{grundsatz}` ist der
+    /// `StatuszeileBildVon`, `{gruende}` die Grenzen, mit `Und` verbunden.
+    StatuszeileFolgeGekuerzt,
+    /// `statuszeile::seitenname` fuer `Fensterseite::Links`.
+    StatuszeileLinkesDateifenster,
+    /// `Fensterseite::Rechts`.
+    StatuszeileRechtesDateifenster,
+    /// `statuszeile::zeilentext`: die Meldung einer inaktiven Seite mit ihrem
+    /// Namen davor; `{seite}`, `{text}`.
+    StatuszeileMeldungMitSeite,
+    /// `operationen::ueberschrift` fuer `Art::Kopieren`: womit die Statuszeile
+    /// einen laufenden Vorgang benennt.
+    VorgangsartKopieren,
+    /// `Art::Verschieben`.
+    VorgangsartVerschieben,
+    /// `Art::InDenPapierkorb`.
+    VorgangsartInDenPapierkorb,
+    /// `Art::UmbenennenImStapel`.
+    VorgangsartUmbenennen,
+    /// `Art::Zippen`.
+    VorgangsartPacken,
+    /// `Art::Entpacken`.
+    VorgangsartEntpacken,
+    /// `Art::Duplizieren`.
+    VorgangsartDuplizieren,
+    /// `operationen::vorgangszeile`: der Hinweis auf `esc` am Ende der
+    /// Zeile, als `{abbruch}`; der Tastenname bleibt in jeder Sprache.
+    VorgangAbbruchhinweis,
+    /// `vorgangszeile` ohne Fortschritt; `{was}`, `{positionen}`,
+    /// `{abbruch}`. Der Mittelpunkt trennt die Angaben, weil die Statuszeile
+    /// einzeilig ist und ein Umbruch dort abgeschnitten wuerde.
+    VorgangWirdVorbereitet,
+    /// `vorgangszeile` mit Fortschritt; `{was}`, `{eintraege}`, `{menge}`,
+    /// `{positionen}`, `{name}`, `{abbruch}`.
+    VorgangZeile,
+    /// `operationen::abbruchzeile`; `{was}`.
+    VorgangWirdAbgebrochen,
+    /// `operationen::schon_ein_vorgang`; `{was}`.
+    VorgangSchonEiner,
+    /// `operationen::abschlusstext`: die Angabe des Uebertragenen;
+    /// `{eintraege}`, `{menge}`, `{positionen}`.
+    VorgangUebertragen,
+    /// `abschlusstext` nach `Abschluss::Abgebrochen`; `{was}`,
+    /// `{uebertragen}`.
+    VorgangAbgebrochen,
+    /// `abschlusstext` nach `Abschluss::Fertig`; `{was}`, `{uebertragen}`.
+    VorgangFertig,
+    /// `operationen::uebersprungenliste`: eine Zeile der Liste; `{name}`,
+    /// `{grund}`.
+    UebersprungenZeile,
+    /// `Anlegeart::frage` fuer `Ordner`: die Kopfzeile des Eingabeblattes.
+    AnlegenFrageOrdner,
+    /// `Anlegeart::frage` fuer `Datei`.
+    AnlegenFrageDatei,
+    /// `Anlegeart::bestaetigen`: die bestaetigende Schaltflaeche.
+    AnlegenBestaetigen,
+    /// `operationen::angelegt_text` fuer einen Ordner; `{name}`.
+    AngelegtOrdner,
+    /// `angelegt_text` fuer eine Datei; `{name}`.
+    AngelegtDatei,
+    /// `operationen::anlegefehler` bei `PermissionDenied` fuer einen Ordner;
+    /// `{name}`.
+    AnlegenKeineRechteOrdner,
+    /// `anlegefehler` bei `PermissionDenied` fuer eine Datei; `{name}`.
+    AnlegenKeineRechteDatei,
+    /// `anlegefehler` fuer jeden anderen Fehler; `{name}`, `{fehler}`.
+    AnlegenGescheitert,
+    /// `operationen::schon_vergeben`: derselbe Satz beim Anlegen, Umbenennen
+    /// und Duplizieren; `{name}`.
+    NameSchonVergeben,
+    /// `operationen::duplikatfrage`: die Kopfzeile des Namensblatts.
+    DuplikatFrage,
+    /// `operationen::duplikat_bestaetigen`: die bestaetigende Schaltflaeche.
+    DuplikatBestaetigen,
+    /// `operationen::mehrere_zu_duplizieren`.
+    DuplikatMehrere,
+    /// `operationen::nicht_zu_duplizieren`; `{name}`, `{typ}` (ein
+    /// `DuplikatTyp…`).
+    DuplikatNichtGewoehnlich,
+    /// `ordner_nicht_zu_duplizieren`: der Typ als `{typ}`.
+    DuplikatTypOrdner,
+    /// `verknuepfung_nicht_zu_duplizieren`: der Typ als `{typ}`.
+    DuplikatTypVerknuepfung,
+    /// `operationen::umbenennungsfehler` bei `PermissionDenied`; `{name}`.
+    UmbenennenKeineRechte,
+    /// `umbenennungsfehler` fuer jeden anderen Fehler; `{name}`, `{fehler}`.
+    UmbenennenGescheitert,
+    /// `operationen::ordner_fehlt`: an der Stelle steht kein Ordner mehr;
+    /// `{pfad}`.
+    OrdnerKeinOrdnerMehr,
+    /// `ordner_fehlt`: der Ordner ist unerreichbar; `{pfad}`, `{fehler}`.
+    OrdnerNichtMehrErreichbar,
+    /// `operationen::kein_terminal`; `{kennung}`.
+    KeinTerminal,
+    /// `operationen::kopiermeldung` fuer einen Pfad; `{pfad}`.
+    PfadKopiert,
+    /// `kopiermeldung` fuer mehrere Pfade; `{n}`.
+    PfadeKopiert,
+    /// `operationen::nichts_betroffen`; `{nennform}` ist eine der
+    /// `Nennform…`.
+    NichtsBetroffen,
+    /// `nichts_zu_kopieren`: die Nennform in `NichtsBetroffen`.
+    NennformZuKopieren,
+    /// `nichts_zu_oeffnen`.
+    NennformZuOeffnen,
+    /// `nichts_zu_packen`.
+    NennformZuPacken,
+    /// `nichts_anzuzeigen`.
+    NennformAnzuzeigen,
+    /// `nichts_zu_duplizieren`.
+    NennformZuDuplizieren,
+    /// `operationen::nichts_zu_teilen`.
+    NichtsZuTeilen,
+    /// `operationen::kein_archiv`.
+    KeinArchiv,
+    /// `operationen::mehrere_archive`.
+    MehrereArchive,
+    /// `operationen::kein_finder`.
+    KeinFinder,
+    /// `operationen::ablage_weist_ab`.
+    AblageWeistTextAb,
+    /// `operationen::ablagemeldung` fuer einen Eintrag; `{name}`.
+    AbgelegtEiner,
+    /// `ablagemeldung` fuer mehrere Eintraege; `{n}`.
+    AbgelegtMehrere,
+    /// `ablagemeldung` nach `Dateiablage::Ausschneiden`; `{kopiert}` ist
+    /// einer der zwei Saetze davor.
+    AbgelegtAusgeschnitten,
+    /// `operationen::verweise_abgewiesen`.
+    AblageWeistVerweiseAb,
+    /// `Einfuegehindernis::KeinText` in `operationen::einfuegen_abgewiesen`.
+    EinfuegenKeinText,
+    /// `Einfuegehindernis::Mehrzeilig`.
+    EinfuegenMehrzeilig,
+    /// `Einfuegehindernis::NichtsTragbar`.
+    EinfuegenNichtsTragbar,
+    /// `operationen::oeffnungsmeldung`: ein Eintrag uebergeben; `{name}`.
+    UebergebenEiner,
+    /// `oeffnungsmeldung`: mehrere uebergeben; `{n}`.
+    UebergebenMehrere,
+    /// `oeffnungsmeldung`: ein Eintrag abgewiesen; `{name}`.
+    NichtAngenommenEiner,
+    /// `oeffnungsmeldung`: mehrere abgewiesen; `{n}`, `{gesamt}`.
+    NichtAngenommenMehrere,
+    /// `oeffnungsmeldung`: beide Haelften; `{genommen}`, `{abgelehnt}`.
+    UebergebenUndAbgelehnt,
+    /// `operationen::keine_anwendung`.
+    KeineAnwendung,
+    /// `operationen::oeffnungsmeldung_an`: ein Eintrag; `{anwendung}`,
+    /// `{name}`.
+    UebergebenAnEiner,
+    /// `oeffnungsmeldung_an`: mehrere; `{n}`, `{anwendung}`.
+    UebergebenAnMehrere,
+    /// `operationen::nicht_uebergeben`; `{anwendung}`.
+    NichtUebergebenAn,
+    /// `operationen::belegungsdatei_hat_zwei_schreiber`; `{datei}`.
+    BelegungsdateiZweiSchreiber,
+    /// `operationen::keine_belegungsdatei`; `{datei}`.
+    BelegungsdateiFehltNoch,
+    /// `operationen::belegungsdatei_ohne_ablageordner`; `{datei}`.
+    BelegungsdateiOhneAblageordner,
+    /// `auswahl::markierungsstand_text`; `{n}`, `{ordner}` (ein
+    /// `Zahlwort::Ordner`), `{groesse}`.
+    Markierungsstand,
+    /// `loeschwarnung::ohne_papierkorb`.
+    LoeschenOhnePapierkorb,
+    /// `Warngrund::Unentscheidbar`: die Fuegung in der Loeschfrage und in der
+    /// Erlaeuterung.
+    WarngrundUnentscheidbar,
+    /// `Warngrund::Netzlaufwerk`.
+    WarngrundNetzlaufwerk,
+    /// `Warngrund::Cloudort`.
+    WarngrundCloudort,
+    /// `Warngrund::AusserhalbBenutzerordner`.
+    WarngrundAusserhalbBenutzerordner,
+    /// `Warngrund::ImBenutzerordner`.
+    WarngrundImBenutzerordner,
+    /// `Warngrund::Arbeitsbaum`.
+    WarngrundArbeitsbaum,
+    /// `Warngrund::Umfang(GenauDieSchwelle)`; nennt die Zahl aus
+    /// `loeschwarnung::SCHWELLE`, und eine Zusicherung beim Uebersetzen haelt
+    /// beide in jeder Sprache aneinander.
+    WarngrundGenauDieSchwelle,
+    /// `Warngrund::Umfang(MehrAlsDieSchwelle)`; ebenso.
+    WarngrundMehrAlsDieSchwelle,
+    /// `loeschwarnung::frage_und_erlaeuterung`: der erste Satz der
+    /// Erlaeuterung; `{ordner}`.
+    LoeschenGeraeumtAus,
+    /// `frage_und_erlaeuterung`: der Absatz mit den uebrigen Gruenden;
+    /// `{gruende}`.
+    LoeschenAusserdem,
+    /// `frage_und_erlaeuterung`: der Absatz zu den Ordnern; `{ordner}` (ein
+    /// `Zahlwort::Ordner`).
+    LoeschenDarunterOrdner,
+    /// `blattmeldung::satz`: die abgewiesene Taste waehrend eines Blattes.
+    BlattSteht,
+    /// `pfadeingabe::pruefen`; `{pfad}`.
+    PfadNichtAbsolut,
+    /// `pfadeingabe::pruefen`; `{pfad}`, `{fehler}`.
+    PfadGibtEsNicht,
+    /// `pfadeingabe::pruefen`; `{pfad}`, `{fehler}`.
+    PfadNichtLesbar,
+    /// `pfadeingabe::pruefen`; `{pfad}`.
+    PfadInKeinemOrdner,
+    /// `werkseinstellungen::schaltflaeche`: die ausloesende Schaltflaeche.
+    WerksSchaltflaeche,
+    /// `werkseinstellungen::rueckfrage`: der Satz, dass der Notizordner
+    /// bleibt, als `{notizordner}` in `WerksErlaeuterung`.
+    WerksNotizordnerBleibt,
+    /// `werkseinstellungen::rueckfrage`: die Frage.
+    WerksFrage,
+    /// `werkseinstellungen::rueckfrage`: die Erlaeuterung; `{notizordner}`.
+    WerksErlaeuterung,
+    /// `werkseinstellungen::rueckfrage`: der Absatz bei eigener
+    /// `keymap.toml`.
+    WerksEigeneZuweisungen,
+    /// `tabs::wunschmeldung` fuer `Wunschausgang::Ausgefiltert`; `{name}`.
+    TabAusgefiltert,
+    /// `tabs::wunschmeldung` fuer `Wunschausgang::Fehlt`; `{name}`.
+    TabNichtMehrDa,
+    /// `tabs::lesemeldungen_einziehen`: ein Lesevorgang mit Fehler;
+    /// `{ordner}`, `{fehler}`.
+    TabNichtVollstaendigGelesen,
+    /// `Systempapierkorb::in_den_papierkorb`; `{pfad}`.
+    PapierkorbKeinUtf8Pfad,
+    /// Die Schaltflaeche, die ein meldendes Blatt schliesst: die
+    /// Startmeldungen und die Abschlussliste.
+    BlattSchliessen,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 300] = [
+    pub const ALLE: [Text; 404] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1023,6 +1262,110 @@ impl Text {
         Text::TabelleZwischenablageKeinZiel,
         Text::TabelleNichtInDerListe,
         Text::FenstertitelQuicknote,
+        Text::StatuszeileFilterstand,
+        Text::StatuszeileInhaltWirdGelesen,
+        Text::StatuszeileSeiteVon,
+        Text::StatuszeileBildVon,
+        Text::StatuszeileFolgeGekuerzt,
+        Text::StatuszeileLinkesDateifenster,
+        Text::StatuszeileRechtesDateifenster,
+        Text::StatuszeileMeldungMitSeite,
+        Text::VorgangsartKopieren,
+        Text::VorgangsartVerschieben,
+        Text::VorgangsartInDenPapierkorb,
+        Text::VorgangsartUmbenennen,
+        Text::VorgangsartPacken,
+        Text::VorgangsartEntpacken,
+        Text::VorgangsartDuplizieren,
+        Text::VorgangAbbruchhinweis,
+        Text::VorgangWirdVorbereitet,
+        Text::VorgangZeile,
+        Text::VorgangWirdAbgebrochen,
+        Text::VorgangSchonEiner,
+        Text::VorgangUebertragen,
+        Text::VorgangAbgebrochen,
+        Text::VorgangFertig,
+        Text::UebersprungenZeile,
+        Text::AnlegenFrageOrdner,
+        Text::AnlegenFrageDatei,
+        Text::AnlegenBestaetigen,
+        Text::AngelegtOrdner,
+        Text::AngelegtDatei,
+        Text::AnlegenKeineRechteOrdner,
+        Text::AnlegenKeineRechteDatei,
+        Text::AnlegenGescheitert,
+        Text::NameSchonVergeben,
+        Text::DuplikatFrage,
+        Text::DuplikatBestaetigen,
+        Text::DuplikatMehrere,
+        Text::DuplikatNichtGewoehnlich,
+        Text::DuplikatTypOrdner,
+        Text::DuplikatTypVerknuepfung,
+        Text::UmbenennenKeineRechte,
+        Text::UmbenennenGescheitert,
+        Text::OrdnerKeinOrdnerMehr,
+        Text::OrdnerNichtMehrErreichbar,
+        Text::KeinTerminal,
+        Text::PfadKopiert,
+        Text::PfadeKopiert,
+        Text::NichtsBetroffen,
+        Text::NennformZuKopieren,
+        Text::NennformZuOeffnen,
+        Text::NennformZuPacken,
+        Text::NennformAnzuzeigen,
+        Text::NennformZuDuplizieren,
+        Text::NichtsZuTeilen,
+        Text::KeinArchiv,
+        Text::MehrereArchive,
+        Text::KeinFinder,
+        Text::AblageWeistTextAb,
+        Text::AbgelegtEiner,
+        Text::AbgelegtMehrere,
+        Text::AbgelegtAusgeschnitten,
+        Text::AblageWeistVerweiseAb,
+        Text::EinfuegenKeinText,
+        Text::EinfuegenMehrzeilig,
+        Text::EinfuegenNichtsTragbar,
+        Text::UebergebenEiner,
+        Text::UebergebenMehrere,
+        Text::NichtAngenommenEiner,
+        Text::NichtAngenommenMehrere,
+        Text::UebergebenUndAbgelehnt,
+        Text::KeineAnwendung,
+        Text::UebergebenAnEiner,
+        Text::UebergebenAnMehrere,
+        Text::NichtUebergebenAn,
+        Text::BelegungsdateiZweiSchreiber,
+        Text::BelegungsdateiFehltNoch,
+        Text::BelegungsdateiOhneAblageordner,
+        Text::Markierungsstand,
+        Text::LoeschenOhnePapierkorb,
+        Text::WarngrundUnentscheidbar,
+        Text::WarngrundNetzlaufwerk,
+        Text::WarngrundCloudort,
+        Text::WarngrundAusserhalbBenutzerordner,
+        Text::WarngrundImBenutzerordner,
+        Text::WarngrundArbeitsbaum,
+        Text::WarngrundGenauDieSchwelle,
+        Text::WarngrundMehrAlsDieSchwelle,
+        Text::LoeschenGeraeumtAus,
+        Text::LoeschenAusserdem,
+        Text::LoeschenDarunterOrdner,
+        Text::BlattSteht,
+        Text::PfadNichtAbsolut,
+        Text::PfadGibtEsNicht,
+        Text::PfadNichtLesbar,
+        Text::PfadInKeinemOrdner,
+        Text::WerksSchaltflaeche,
+        Text::WerksNotizordnerBleibt,
+        Text::WerksFrage,
+        Text::WerksErlaeuterung,
+        Text::WerksEigeneZuweisungen,
+        Text::TabAusgefiltert,
+        Text::TabNichtMehrDa,
+        Text::TabNichtVollstaendigGelesen,
+        Text::PapierkorbKeinUtf8Pfad,
+        Text::BlattSchliessen,
     ];
 }
 
@@ -1052,11 +1395,53 @@ pub enum Zahlwort {
     MarkeKonflikt,
     /// `Marke::Umbenannt`.
     MarkeUmbenannt,
+    /// `statuszeile::filterstand_text`: der Satzteil `{zu_gross}` zu den
+    /// Dateien ueber der Lesegrenze; beide Formen beginnen mit dem Komma, das
+    /// sie anhaengt, und die Einzahl laesst `{n}` aus.
+    StatuszeileDateienZuGross,
+    /// `filterstand_text`: der Satzteil `{ausgeblendet}` zu den Markierungen,
+    /// die der Filter ausblendet; ebenso gebaut.
+    StatuszeileMarkierungenAusgeblendet,
+    /// `statuszeile::bildzaehler_text`: die Fotogrenze einer gekuerzten
+    /// Folge, als Glied von `{gruende}`.
+    BildfolgeGrenzeFotos,
+    /// `bildzaehler_text`: die Ordnergrenze.
+    BildfolgeGrenzeOrdner,
+    /// `bildzaehler_text`: die Grenze je Ordner.
+    BildfolgeGrenzeEintraege,
+    /// `operationen::eintraege_text`: die Zahl der Eintraege eines Vorgangs,
+    /// als `{eintraege}` in den Vorgangszeilen; die Einzahl laesst `{n}` aus.
+    Eintraege,
+    /// `operationen::positionen_text`: die ausgewaehlten Positionen eines
+    /// Vorgangs, als `{positionen}`; ebenso gebaut.
+    AusgewaehltePositionen,
+    /// `operationen::ordner_text`: die Ordner im Markierungsstand und in
+    /// der Loeschfrage, als `{ordner}`; ebenso gebaut.
+    Ordner,
+    /// `operationen::abschlusstext`: der Zusatz zu den uebersprungenen
+    /// Eintraegen; beide Formen beginnen mit dem Komma, das sie anhaengt.
+    VorgangUebersprungen,
+    /// `abschlusstext`: der Zusatz zu den Eintraegen, die derselbe Lauf als
+    /// Ziel ausgelassen hat; ebenso gebaut.
+    VorgangAusgelassen,
+    /// `operationen::uebersprungenliste`: die Kopfzeile des Blattes.
+    UebersprungenFrage,
+    /// `Einfuegehindernis::MehrereVerweise` in
+    /// `operationen::einfuegen_abgewiesen`: die Zahl der Dateiverweise.
+    EinfuegenDateiverweise,
+    /// `loeschwarnung::frage_und_erlaeuterung`: die Loeschfrage; `{grund}`
+    /// ist der genannte Warngrund mit seinem Abstand oder leer, und die
+    /// Einzahl laesst `{n}` aus.
+    LoeschfrageEintraege,
+    /// `startmeldungen::auskunft`: die Kopfzeile des Blattes; gerufen wird
+    /// sie erst ab zwei Meldungen, die Einzahl steht der Vollstaendigkeit
+    /// halber.
+    StartMeldungen,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 8] = [
+    pub const ALLE: [Zahlwort; 22] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -1065,5 +1450,19 @@ impl Zahlwort {
         Zahlwort::MarkeNeu,
         Zahlwort::MarkeKonflikt,
         Zahlwort::MarkeUmbenannt,
+        Zahlwort::StatuszeileDateienZuGross,
+        Zahlwort::StatuszeileMarkierungenAusgeblendet,
+        Zahlwort::BildfolgeGrenzeFotos,
+        Zahlwort::BildfolgeGrenzeOrdner,
+        Zahlwort::BildfolgeGrenzeEintraege,
+        Zahlwort::Eintraege,
+        Zahlwort::AusgewaehltePositionen,
+        Zahlwort::Ordner,
+        Zahlwort::VorgangUebersprungen,
+        Zahlwort::VorgangAusgelassen,
+        Zahlwort::UebersprungenFrage,
+        Zahlwort::EinfuegenDateiverweise,
+        Zahlwort::LoeschfrageEintraege,
+        Zahlwort::StartMeldungen,
     ];
 }

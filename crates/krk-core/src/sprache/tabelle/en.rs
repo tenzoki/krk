@@ -476,6 +476,140 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::TabelleNichtInDerListe => "{name} is not in the list",
         Text::FenstertitelQuicknote => "Quicknote",
+        Text::StatuszeileFilterstand => {
+            "Filter “{filtertext}”: {gezeigt} of {vorhanden} shown{liest}{zu_gross}{ausgeblendet}"
+        }
+        Text::StatuszeileInhaltWirdGelesen => ", reading content",
+        Text::StatuszeileSeiteVon => "Page {aktuell} of {gesamt}",
+        Text::StatuszeileBildVon => "Image {aktuell} of {gesamt}",
+        Text::StatuszeileFolgeGekuerzt => "{grundsatz} (sequence truncated {gruende})",
+        Text::StatuszeileLinkesDateifenster => "left file pane",
+        Text::StatuszeileRechtesDateifenster => "right file pane",
+        Text::StatuszeileMeldungMitSeite => "{seite}: {text}",
+        Text::VorgangsartKopieren => "Copying",
+        Text::VorgangsartVerschieben => "Moving",
+        Text::VorgangsartInDenPapierkorb => "Moving to Trash",
+        Text::VorgangsartUmbenennen => "Renaming",
+        Text::VorgangsartPacken => "Zipping",
+        Text::VorgangsartEntpacken => "Unzipping",
+        Text::VorgangsartDuplizieren => "Duplicating",
+        Text::VorgangAbbruchhinweis => "Esc cancels",
+        Text::VorgangWirdVorbereitet => "{was} is being prepared: {positionen} · {abbruch}",
+        Text::VorgangZeile => "{was}: {eintraege}, {menge}, {positionen} · {name} · {abbruch}",
+        Text::VorgangWirdAbgebrochen => {
+            "{was} is being cancelled, the operation will end shortly …"
+        }
+        Text::VorgangSchonEiner => "an operation is already running: {was}",
+        Text::VorgangUebertragen => "{eintraege}, {menge} ({positionen})",
+        Text::VorgangAbgebrochen => "{was} cancelled: {uebertragen} transferred",
+        Text::VorgangFertig => "{was} finished: {uebertragen}",
+        Text::UebersprungenZeile => "{name}: {grund}",
+        Text::AnlegenFrageOrdner => "What should the new folder be called?",
+        Text::AnlegenFrageDatei => "What should the new file be called?",
+        Text::AnlegenBestaetigen => "Create",
+        Text::AngelegtOrdner => "Folder “{name}” created",
+        Text::AngelegtDatei => "File “{name}” created",
+        Text::AnlegenKeineRechteOrdner => "no permission to create the folder “{name}” here",
+        Text::AnlegenKeineRechteDatei => "no permission to create the file “{name}” here",
+        Text::AnlegenGescheitert => "“{name}” could not be created: {fehler}",
+        Text::NameSchonVergeben => "an entry named “{name}” already exists",
+        Text::DuplikatFrage => "What should the duplicate be called?",
+        Text::DuplikatBestaetigen => "Duplicate",
+        Text::DuplikatMehrere => {
+            "nothing to duplicate: several entries are marked, and exactly one file is duplicated"
+        }
+        Text::DuplikatNichtGewoehnlich => {
+            "nothing to duplicate: “{name}” is {typ}, and only a regular file is duplicated"
+        }
+        Text::DuplikatTypOrdner => "a folder",
+        Text::DuplikatTypVerknuepfung => "a symbolic link",
+        Text::UmbenennenKeineRechte => "no permission to rename to “{name}” here",
+        Text::UmbenennenGescheitert => "“{name}” could not be assigned: {fehler}",
+        Text::OrdnerKeinOrdnerMehr => "{pfad} is no longer a folder",
+        Text::OrdnerNichtMehrErreichbar => "{pfad} is no longer reachable: {fehler}",
+        Text::KeinTerminal => {
+            "no application with the bundle identifier “{kennung}” is installed; settings.toml names it under terminal, and a change takes effect only after a restart"
+        }
+        Text::PfadKopiert => "Path copied: {pfad}",
+        Text::PfadeKopiert => "{n} paths copied",
+        Text::NichtsBetroffen => "nothing {nennform}: nothing marked and nothing selected",
+        Text::NennformZuKopieren => "to copy",
+        Text::NennformZuOeffnen => "to open",
+        Text::NennformZuPacken => "to zip",
+        Text::NennformAnzuzeigen => "to show",
+        Text::NennformZuDuplizieren => "to duplicate",
+        Text::NichtsZuTeilen => "nothing to share: nothing here could go to the sharing services",
+        Text::KeinArchiv => "nothing to unzip: there is no file with the extension .zip here",
+        Text::MehrereArchive => {
+            "nothing to unzip: there are several archives here, and the selection points at none of them"
+        }
+        Text::KeinFinder => "the Finder is not reachable: the system named no application for it",
+        Text::AblageWeistTextAb => "the clipboard did not accept the text",
+        Text::AbgelegtEiner => "copied: {name}",
+        Text::AbgelegtMehrere => "{n} entries copied",
+        Text::AbgelegtAusgeschnitten => {
+            "{kopiert} – the destination does the moving (Finder: opt+cmd+v)"
+        }
+        Text::AblageWeistVerweiseAb => "the clipboard did not accept the entries",
+        Text::EinfuegenKeinText => "nothing to paste: the clipboard holds no text",
+        Text::EinfuegenMehrzeilig => "not pasted: the text has several lines",
+        Text::EinfuegenNichtsTragbar => {
+            "nothing to paste: the text has no character a name can carry"
+        }
+        Text::UebergebenEiner => "handed to the system: {name}",
+        Text::UebergebenMehrere => "{n} entries handed to the system",
+        Text::NichtAngenommenEiner => "the system did not accept {name}",
+        Text::NichtAngenommenMehrere => "the system did not accept {n} of {gesamt} entries",
+        Text::UebergebenUndAbgelehnt => "{genommen}; {abgelehnt}",
+        Text::KeineAnwendung => "nothing to open: the system names no application for this entry",
+        Text::UebergebenAnEiner => "handed to {anwendung}: {name}",
+        Text::UebergebenAnMehrere => "{n} entries handed to {anwendung}",
+        Text::NichtUebergebenAn => "not handed to {anwendung}: a path is not valid UTF-8",
+        Text::BelegungsdateiZweiSchreiber => {
+            "{datei} has two writers: a change by hand takes effect only at the next start, and the key-binding view (F1) overwrites it on leaving"
+        }
+        Text::BelegungsdateiFehltNoch => {
+            "{datei} does not exist yet: it is created as soon as the key-binding view (F1) is left with a change"
+        }
+        Text::BelegungsdateiOhneAblageordner => {
+            "{datei} cannot be shown: KRK is running without a data folder"
+        }
+        Text::Markierungsstand => "{n} marked, including {ordner}, {groesse}",
+        Text::LoeschenOhnePapierkorb => {
+            "the destination has no Trash, nothing was deleted; delete in the Finder"
+        }
+        Text::WarngrundUnentscheidbar => "from a destination of unknown kind",
+        Text::WarngrundNetzlaufwerk => "from a network volume",
+        Text::WarngrundCloudort => "from a cloud folder",
+        Text::WarngrundAusserhalbBenutzerordner => "outside the home directory",
+        Text::WarngrundImBenutzerordner => "directly in the home directory",
+        Text::WarngrundArbeitsbaum => "from a Git working tree",
+        Text::WarngrundGenauDieSchwelle => "with 25 entries in total",
+        Text::WarngrundMehrAlsDieSchwelle => "with more than 25 entries in total",
+        Text::LoeschenGeraeumtAus => "Removing from {ordner}.",
+        Text::LoeschenAusserdem => "Also: {gruende}.",
+        Text::LoeschenDarunterOrdner => "Among them {ordner}, each with its entire contents.",
+        Text::BlattSteht => "not executed: a sheet is open over the window",
+        Text::PfadNichtAbsolut => "{pfad} is not an absolute path",
+        Text::PfadGibtEsNicht => "{pfad} does not exist: {fehler}",
+        Text::PfadNichtLesbar => "{pfad} cannot be read: {fehler}",
+        Text::PfadInKeinemOrdner => "{pfad} is in no folder",
+        Text::WerksSchaltflaeche => "Reset",
+        Text::WerksNotizordnerBleibt => "The notes folder and all files in it remain untouched.",
+        Text::WerksFrage => {
+            "Reset readers.toml, settings.toml and keymap.toml to factory settings?"
+        }
+        Text::WerksErlaeuterung => {
+            "Each of the three files present in the data folder is set aside by KRK under its name with a timestamp appended, for example readers.toml.YYMMDD-HHMM, and none of them is deleted. Afterwards readers.toml and settings.toml are as this version of KRK ships them, except that settings.toml keeps the configured notes folder; keymap.toml is absent, and the shipped key bindings apply. {notizordner} KRK reads the new state immediately."
+        }
+        Text::WerksEigeneZuweisungen => {
+            "All your own key assignments from keymap.toml thereby go out of use; afterwards they exist only in the backup."
+        }
+        Text::TabAusgefiltert => "{name} is filtered out.",
+        Text::TabNichtMehrDa => "{name} is no longer there.",
+        Text::TabNichtVollstaendigGelesen => "{ordner} could not be read completely: {fehler}",
+        Text::PapierkorbKeinUtf8Pfad => "{pfad} is not a valid UTF-8 path",
+        Text::BlattSchliessen => "Close",
     }
 }
 
@@ -493,6 +627,36 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} new", "{n} new"),
         Zahlwort::MarkeKonflikt => ("{n} in conflict", "{n} in conflict"),
         Zahlwort::MarkeUmbenannt => ("{n} renamed", "{n} renamed"),
+        Zahlwort::StatuszeileDateienZuGross => (", one file too large", ", {n} files too large"),
+        Zahlwort::StatuszeileMarkierungenAusgeblendet => {
+            (", one mark hidden", ", {n} marks hidden")
+        }
+        Zahlwort::BildfolgeGrenzeFotos => ("after {n} photo", "after {n} photos"),
+        Zahlwort::BildfolgeGrenzeOrdner => ("after {n} folder", "after {n} folders"),
+        Zahlwort::BildfolgeGrenzeEintraege => {
+            ("at {n} entry of one folder", "at {n} entries of one folder")
+        }
+        Zahlwort::Eintraege => ("one entry", "{n} entries"),
+        Zahlwort::AusgewaehltePositionen => ("one selected position", "{n} selected positions"),
+        Zahlwort::Ordner => ("one folder", "{n} folders"),
+        Zahlwort::VorgangUebersprungen => (", one entry skipped", ", {n} entries skipped"),
+        Zahlwort::VorgangAusgelassen => (
+            ", one entry left out as the destination of this run",
+            ", {n} entries left out as destinations of this run",
+        ),
+        Zahlwort::UebersprungenFrage => ("One entry was skipped", "{n} entries were skipped"),
+        Zahlwort::EinfuegenDateiverweise => (
+            "not pasted: the clipboard holds {n} file reference",
+            "not pasted: the clipboard holds {n} file references",
+        ),
+        Zahlwort::LoeschfrageEintraege => (
+            "Move this entry {grund}to the Trash?",
+            "Move these {n} entries {grund}to the Trash?",
+        ),
+        Zahlwort::StartMeldungen => (
+            "There was one message at start",
+            "There were {n} messages at start",
+        ),
     }
 }
 

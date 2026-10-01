@@ -174,7 +174,7 @@ Für jede Umstellung gilt dieselbe Handwerksregel: der deutsche Tabelleneintrag 
      - `make check` grün.
    - Dependencies: Schritte 1 und 5
 
-8. [IN PROGRESS] **Die Oberfläche: Statuszeile, Vorgangsmeldungen, Löschwarnung, Startmeldungen**
+8. [DONE] **Die Oberfläche: Statuszeile, Vorgangsmeldungen, Löschwarnung, Startmeldungen**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/statuszeile.rs`, `crates/krk-ui/src/kommandos/operationen.rs`, `crates/krk-ui/src/kommandos/auswahl.rs`, `crates/krk-ui/src/kommandos/loeschwarnung.rs`, `crates/krk-ui/src/kommandos/blattmeldung.rs`, `crates/krk-ui/src/kommandos/pfadeingabe.rs`, `crates/krk-ui/src/kommandos/werkseinstellungen.rs`, `crates/krk-ui/src/tabs.rs`, `crates/krk-ui/src/appkit/papierkorb.rs`, `crates/krk-ui/src/appkit/blaetter/startmeldungen.rs`, `crates/krk-ui/src/appkit/blaetter/uebersprungen.rs`, `crates/krk-core/src/sprache/schluessel.rs`, `tabelle/de.rs`, `fr.rs`, `en.rs`
    - Changes: `filterstand_text`, `bildzaehler_text`, `seitenzaehler_text`, `zeilentext`, `seitenname`, die Vorgangszeilen (`vorgangszeile`, `abbruchzeile`, `schon_ein_vorgang`, `abschlusstext`, `uebersprungenliste`, `ueberschrift(&Art)`, `Anlegeart`, `kopiermeldung`, `ablagemeldung`, die `nichts_zu_…`-Sätze, `ABBRUCHHINWEIS`, `TRENNER`), der Markierungsstand, die Löschwarnung (`ohne_papierkorb`, `wortlaut`, Frage und Erläuterung), die Blattmeldung, die Pfadeingabe, die Rückfrage der Werkseinstellungen, die Startmeldungen. Jeder Pluralzweig wird ein `Zahlwort` (`eintraege_text`, `positionen_text`, `ordner_text`, „Datei zu groß“, „Markierung ausgeblendet“, „Eintrag übersprungen“, die Grenzen der Bildfolge, „Meldungen beim Start“, „Dateiverweise“); die Sätze mit Slice-Mustern (`[einziger]` gegen mehrere) bleiben zwei Schlüssel, weil sie zwei Satzformen und keine Zahlform unterscheiden.
@@ -184,7 +184,7 @@ Für jede Umstellung gilt dieselbe Handwerksregel: der deutsche Tabelleneintrag 
      - `make check` grün.
    - Dependencies: Schritte 1 und 3
 
-9. **Die Oberfläche: Blätter und der Hinweis**
+9. [IN PROGRESS] **Die Oberfläche: Blätter und der Hinweis**
    - Executor: `code-implementer`
    - Files: `crates/krk-ui/src/appkit/blaetter/mod.rs`, `konflikt.rs`, `loeschbestaetigung.rs`, `namenseingabe.rs`, `neuerungen.rs`, `ortwahl.rs`, `pin.rs`, `stapelumbenennen.rs`, `suche.rs`, `ungesichert.rs`, `zeilennummer.rs`, `crates/krk-ui/src/appkit/hinweis.rs`, `crates/krk-core/src/sprache/schluessel.rs`, `tabelle/de.rs`, `fr.rs`, `en.rs`, der Defektdatensatz `261001-0731_*_die-zusammenfassung-des-stapelumbenennens-schreibt-bei-einem-eintrag-1-eintraege.md`
    - Changes: Jede Frage, Erläuterung, Schaltfläche, Feldbeschriftung und jeder Spaltenkopf der Blätter wird ein Schlüssel; `standardschaltflaechen` nimmt „Abbrechen“ aus der Tabelle; `NSOpenPanel::setPrompt` und `setMessage` in `ortwahl.rs` ebenso; `hinweis.rs` nimmt „OK“ aus der Tabelle, und der Kommentar daneben sagt, dass die Tabelle dieselbe Sprache trägt, die macOS für KRK gewählt hat, und die Schaltfläche deshalb nicht mehr gegen die Systemlokalisierung, sondern mit ihr beschriftet ist. `zusammenfassung` in `stapelumbenennen.rs` wird aus `Zahlwort`-Formen und einem Satzschlüssel mit Platzhaltern gebaut, sodass ein Eintrag „1 Eintrag“ ergibt und die Zahl über `zahl` gruppiert ist; eine Probe neben `frage` hält beide Zeilen für 1 und 2 Einträge; der Defektdatensatz bekommt `Resolved:` und `_c_`.

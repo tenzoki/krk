@@ -532,6 +532,164 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::TabelleNichtInDerListe => "{name} ne figure pas dans la liste",
         Text::FenstertitelQuicknote => "Quicknote",
+        Text::StatuszeileFilterstand => {
+            "Filtre «\u{a0}{filtertext}\u{a0}»\u{a0}: {gezeigt} sur {vorhanden} affichés{liest}{zu_gross}{ausgeblendet}"
+        }
+        Text::StatuszeileInhaltWirdGelesen => ", contenu en cours de lecture",
+        Text::StatuszeileSeiteVon => "Page {aktuell} sur {gesamt}",
+        Text::StatuszeileBildVon => "Image {aktuell} sur {gesamt}",
+        Text::StatuszeileFolgeGekuerzt => "{grundsatz} (série tronquée {gruende})",
+        Text::StatuszeileLinkesDateifenster => "volet de fichiers gauche",
+        Text::StatuszeileRechtesDateifenster => "volet de fichiers droit",
+        Text::StatuszeileMeldungMitSeite => "{seite}\u{a0}: {text}",
+        Text::VorgangsartKopieren => "Copie",
+        Text::VorgangsartVerschieben => "Déplacement",
+        Text::VorgangsartInDenPapierkorb => "Mise à la Corbeille",
+        Text::VorgangsartUmbenennen => "Renommage",
+        Text::VorgangsartPacken => "Compression",
+        Text::VorgangsartEntpacken => "Décompression",
+        Text::VorgangsartDuplizieren => "Duplication",
+        Text::VorgangAbbruchhinweis => "Esc annule",
+        Text::VorgangWirdVorbereitet => "{was} en préparation\u{a0}: {positionen} · {abbruch}",
+        Text::VorgangZeile => {
+            "{was}\u{a0}: {eintraege}, {menge}, {positionen} · {name} · {abbruch}"
+        }
+        Text::VorgangWirdAbgebrochen => {
+            "{was} en cours d’annulation, l’opération se termine dans un instant…"
+        }
+        Text::VorgangSchonEiner => "une opération est déjà en cours\u{a0}: {was}",
+        Text::VorgangUebertragen => "{eintraege}, {menge} ({positionen})",
+        Text::VorgangAbgebrochen => "{was}\u{a0}: annulé, {uebertragen} transférés",
+        Text::VorgangFertig => "{was}\u{a0}: terminé, {uebertragen}",
+        Text::UebersprungenZeile => "{name}\u{a0}: {grund}",
+        Text::AnlegenFrageOrdner => "Quel nom donner au nouveau dossier\u{202f}?",
+        Text::AnlegenFrageDatei => "Quel nom donner au nouveau fichier\u{202f}?",
+        Text::AnlegenBestaetigen => "Créer",
+        Text::AngelegtOrdner => "Dossier «\u{a0}{name}\u{a0}» créé",
+        Text::AngelegtDatei => "Fichier «\u{a0}{name}\u{a0}» créé",
+        Text::AnlegenKeineRechteOrdner => {
+            "droits insuffisants pour créer ici le dossier «\u{a0}{name}\u{a0}»"
+        }
+        Text::AnlegenKeineRechteDatei => {
+            "droits insuffisants pour créer ici le fichier «\u{a0}{name}\u{a0}»"
+        }
+        Text::AnlegenGescheitert => "«\u{a0}{name}\u{a0}» n’a pas pu être créé\u{a0}: {fehler}",
+        Text::NameSchonVergeben => "une entrée nommée «\u{a0}{name}\u{a0}» existe déjà",
+        Text::DuplikatFrage => "Quel nom donner au duplicata\u{202f}?",
+        Text::DuplikatBestaetigen => "Dupliquer",
+        Text::DuplikatMehrere => {
+            "rien à dupliquer\u{a0}: plusieurs entrées sont marquées, et on ne duplique qu’un seul fichier"
+        }
+        Text::DuplikatNichtGewoehnlich => {
+            "rien à dupliquer\u{a0}: «\u{a0}{name}\u{a0}» est {typ}, et on ne duplique qu’un fichier ordinaire"
+        }
+        Text::DuplikatTypOrdner => "un dossier",
+        Text::DuplikatTypVerknuepfung => "un lien symbolique",
+        Text::UmbenennenKeineRechte => {
+            "droits insuffisants pour renommer ici en «\u{a0}{name}\u{a0}»"
+        }
+        Text::UmbenennenGescheitert => {
+            "«\u{a0}{name}\u{a0}» n’a pas pu être attribué\u{a0}: {fehler}"
+        }
+        Text::OrdnerKeinOrdnerMehr => "{pfad} n’est plus un dossier",
+        Text::OrdnerNichtMehrErreichbar => "{pfad} n’est plus accessible\u{a0}: {fehler}",
+        Text::KeinTerminal => {
+            "aucune application portant l’identifiant de bundle «\u{a0}{kennung}\u{a0}» n’est installée\u{202f}; settings.toml la nomme sous terminal, une modification ne prend effet qu’après un redémarrage"
+        }
+        Text::PfadKopiert => "Chemin copié\u{a0}: {pfad}",
+        Text::PfadeKopiert => "{n} chemins copiés",
+        Text::NichtsBetroffen => "rien {nennform}\u{a0}: rien de marqué ni de sélectionné",
+        Text::NennformZuKopieren => "à copier",
+        Text::NennformZuOeffnen => "à ouvrir",
+        Text::NennformZuPacken => "à compresser",
+        Text::NennformAnzuzeigen => "à afficher",
+        Text::NennformZuDuplizieren => "à dupliquer",
+        Text::NichtsZuTeilen => {
+            "rien à partager\u{a0}: rien ici ne peut être transmis aux services de partage"
+        }
+        Text::KeinArchiv => "rien à décompresser\u{a0}: aucun fichier portant l’extension .zip ici",
+        Text::MehrereArchive => {
+            "rien à décompresser\u{a0}: plusieurs archives sont ici, et la sélection n’en désigne aucune"
+        }
+        Text::KeinFinder => {
+            "le Finder n’est pas accessible\u{a0}: le système n’a nommé aucune application pour cela"
+        }
+        Text::AblageWeistTextAb => "le presse-papiers n’a pas accepté le texte",
+        Text::AbgelegtEiner => "copié\u{a0}: {name}",
+        Text::AbgelegtMehrere => "{n} entrées copiées",
+        Text::AbgelegtAusgeschnitten => {
+            "{kopiert} – c’est la destination qui déplace (Finder\u{a0}: opt+cmd+v)"
+        }
+        Text::AblageWeistVerweiseAb => "le presse-papiers n’a pas accepté les entrées",
+        Text::EinfuegenKeinText => {
+            "rien à coller\u{a0}: le presse-papiers ne contient pas de texte"
+        }
+        Text::EinfuegenMehrzeilig => "non collé\u{a0}: le texte comporte plusieurs lignes",
+        Text::EinfuegenNichtsTragbar => {
+            "rien à coller\u{a0}: le texte ne contient aucun caractère qu’un nom puisse porter"
+        }
+        Text::UebergebenEiner => "transmis au système\u{a0}: {name}",
+        Text::UebergebenMehrere => "{n} entrées transmises au système",
+        Text::NichtAngenommenEiner => "le système n’a pas accepté {name}",
+        Text::NichtAngenommenMehrere => "le système n’a pas accepté {n} entrées sur {gesamt}",
+        Text::UebergebenUndAbgelehnt => "{genommen}\u{202f}; {abgelehnt}",
+        Text::KeineAnwendung => {
+            "rien à ouvrir\u{a0}: le système ne nomme aucune application pour cette entrée"
+        }
+        Text::UebergebenAnEiner => "transmis à {anwendung}\u{a0}: {name}",
+        Text::UebergebenAnMehrere => "{n} entrées transmises à {anwendung}",
+        Text::NichtUebergebenAn => {
+            "non transmis à {anwendung}\u{a0}: un chemin n’est pas en UTF-8 valide"
+        }
+        Text::BelegungsdateiZweiSchreiber => {
+            "{datei} a deux rédacteurs\u{a0}: une modification à la main ne prend effet qu’au prochain démarrage, et la vue des raccourcis (F1) l’écrase en la quittant"
+        }
+        Text::BelegungsdateiFehltNoch => {
+            "{datei} n’existe pas encore\u{a0}: il est créé dès que la vue des raccourcis (F1) est quittée avec une modification"
+        }
+        Text::BelegungsdateiOhneAblageordner => {
+            "{datei} ne peut pas être affiché\u{a0}: KRK fonctionne sans dossier de données"
+        }
+        Text::Markierungsstand => "{n} marqués, dont {ordner}, {groesse}",
+        Text::LoeschenOhnePapierkorb => {
+            "la destination n’a pas de Corbeille, rien n’a été supprimé\u{202f}; supprimer dans le Finder"
+        }
+        Text::WarngrundUnentscheidbar => "depuis une destination de nature inconnue",
+        Text::WarngrundNetzlaufwerk => "depuis un volume réseau",
+        Text::WarngrundCloudort => "depuis un dossier cloud",
+        Text::WarngrundAusserhalbBenutzerordner => "hors du dossier de départ",
+        Text::WarngrundImBenutzerordner => "directement dans le dossier de départ",
+        Text::WarngrundArbeitsbaum => "depuis une arborescence de travail Git",
+        Text::WarngrundGenauDieSchwelle => "avec 25 entrées au total",
+        Text::WarngrundMehrAlsDieSchwelle => "avec plus de 25 entrées au total",
+        Text::LoeschenGeraeumtAus => "Suppression depuis {ordner}.",
+        Text::LoeschenAusserdem => "De plus\u{a0}: {gruende}.",
+        Text::LoeschenDarunterOrdner => "Dont {ordner}, chacun avec tout son contenu.",
+        Text::BlattSteht => "non exécuté\u{a0}: une feuille est ouverte sur la fenêtre",
+        Text::PfadNichtAbsolut => "{pfad} n’est pas un chemin absolu",
+        Text::PfadGibtEsNicht => "{pfad} n’existe pas\u{a0}: {fehler}",
+        Text::PfadNichtLesbar => "{pfad} ne peut pas être lu\u{a0}: {fehler}",
+        Text::PfadInKeinemOrdner => "{pfad} ne se trouve dans aucun dossier",
+        Text::WerksSchaltflaeche => "Réinitialiser",
+        Text::WerksNotizordnerBleibt => {
+            "Le dossier de notes et tous les fichiers qu’il contient restent intacts."
+        }
+        Text::WerksFrage => {
+            "Réinitialiser readers.toml, settings.toml et keymap.toml aux réglages d’usine\u{202f}?"
+        }
+        Text::WerksErlaeuterung => {
+            "Chacun des trois fichiers présents dans le dossier de données est mis de côté par KRK sous son nom suivi d’un horodatage, par exemple readers.toml.AAMMJJ-HHMM, et aucun n’est supprimé. Ensuite, readers.toml et settings.toml sont tels que cette version de KRK les livre, sauf que settings.toml garde le dossier de notes réglé\u{202f}; keymap.toml est absent, et les raccourcis clavier livrés s’appliquent. {notizordner} KRK relit le nouvel état immédiatement."
+        }
+        Text::WerksEigeneZuweisungen => {
+            "Toutes les attributions de touches personnelles de keymap.toml cessent ainsi de s’appliquer\u{202f}; elles ne subsistent ensuite que dans la sauvegarde."
+        }
+        Text::TabAusgefiltert => "{name} est filtré.",
+        Text::TabNichtMehrDa => "{name} n’est plus là.",
+        Text::TabNichtVollstaendigGelesen => {
+            "{ordner} n’a pas pu être lu entièrement\u{a0}: {fehler}"
+        }
+        Text::PapierkorbKeinUtf8Pfad => "{pfad} n’est pas un chemin UTF-8 valide",
+        Text::BlattSchliessen => "Fermer",
     }
 }
 
@@ -549,6 +707,43 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} nouveau", "{n} nouveaux"),
         Zahlwort::MarkeKonflikt => ("{n} en conflit", "{n} en conflit"),
         Zahlwort::MarkeUmbenannt => ("{n} renommé", "{n} renommés"),
+        Zahlwort::StatuszeileDateienZuGross => (
+            ", un fichier trop volumineux",
+            ", {n} fichiers trop volumineux",
+        ),
+        Zahlwort::StatuszeileMarkierungenAusgeblendet => {
+            (", une marque masquée", ", {n} marques masquées")
+        }
+        Zahlwort::BildfolgeGrenzeFotos => ("après {n} photo", "après {n} photos"),
+        Zahlwort::BildfolgeGrenzeOrdner => ("après {n} dossier", "après {n} dossiers"),
+        Zahlwort::BildfolgeGrenzeEintraege => {
+            ("à {n} entrée d’un dossier", "à {n} entrées d’un dossier")
+        }
+        Zahlwort::Eintraege => ("une entrée", "{n} entrées"),
+        Zahlwort::AusgewaehltePositionen => {
+            ("une position sélectionnée", "{n} positions sélectionnées")
+        }
+        Zahlwort::Ordner => ("un dossier", "{n} dossiers"),
+        Zahlwort::VorgangUebersprungen => (", une entrée ignorée", ", {n} entrées ignorées"),
+        Zahlwort::VorgangAusgelassen => (
+            ", une entrée écartée comme destination de ce passage",
+            ", {n} entrées écartées comme destination de ce passage",
+        ),
+        Zahlwort::UebersprungenFrage => {
+            ("Une entrée a été ignorée", "{n} entrées ont été ignorées")
+        }
+        Zahlwort::EinfuegenDateiverweise => (
+            "non collé\u{a0}: le presse-papiers contient {n} référence de fichier",
+            "non collé\u{a0}: le presse-papiers contient {n} références de fichiers",
+        ),
+        Zahlwort::LoeschfrageEintraege => (
+            "Mettre cette entrée {grund}à la Corbeille\u{202f}?",
+            "Mettre ces {n} entrées {grund}à la Corbeille\u{202f}?",
+        ),
+        Zahlwort::StartMeldungen => (
+            "Il y a eu un message au démarrage",
+            "Il y a eu {n} messages au démarrage",
+        ),
     }
 }
 

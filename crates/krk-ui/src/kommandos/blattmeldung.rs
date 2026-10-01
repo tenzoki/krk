@@ -90,6 +90,7 @@
 //! setzen, und die erste Abweichung zwischen beiden waere ein Fehler ohne
 //! Pruefung.
 
+use krk_core::sprache::{Text, text};
 use krk_core::tasten::{Kommando, Tastendruck, code_von_pflicht};
 
 use super::operationen;
@@ -143,7 +144,7 @@ const BEDIENT_EIN_BLATT: [u16; 12] = [
 /// [`loeschwarnung`](super::loeschwarnung), das seine Stufenfolge und die Texte
 /// daraus ebenfalls in einem Modul haelt.
 fn satz() -> String {
-    "nicht ausgeführt: über dem Fenster steht ein Blatt".to_owned()
+    text(Text::BlattSteht).to_owned()
 }
 
 /// Ob diese Abweisung gemeldet wird, und mit welchem Satz.

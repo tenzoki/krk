@@ -5245,7 +5245,7 @@ impl Anwendungsdelegierter {
             fenster,
             &frage,
             &erlaeuterung,
-            werkseinstellungen::SCHALTFLAECHE,
+            werkseinstellungen::schaltflaeche(),
             true,
             move |bestaetigt| {
                 let Some(selbst) = schwach.load() else {

@@ -131,6 +131,30 @@
 //! | Textfelder | champs de texte | text fields |
 //! | Web-Adresse | adresse web | web address |
 //! | Systembrowser | navigateur du système | system browser |
+//! | Vorgang, Operation (laufend) | opération | operation |
+//! | Kopieren / Verschieben / Packen / Entpacken / Duplizieren (als Ueberschrift des laufenden Vorgangs) | Copie / Déplacement / Compression / Décompression / Duplication | Copying / Moving / Zipping / Unzipping / Duplicating |
+//! | uebersprungen (ein Eintrag im Vorgang) | ignoré | skipped |
+//! | ausgelassen (als Ziel dieses Laufs) | écarté comme destination de ce passage | left out as a destination of this run |
+//! | uebertragen (Eintraege eines Vorgangs) | transféré | transferred |
+//! | ausgewaehlte Position | position sélectionnée | selected position |
+//! | an das System uebergeben | transmis au système | handed to the system |
+//! | Duplikat | duplicata | duplicate |
+//! | Buendelkennung | identifiant de bundle | bundle identifier |
+//! | Freigabedienste | services de partage | sharing services |
+//! | Dateiverweis (in der Zwischenablage) | référence de fichier | file reference |
+//! | einfuegen (in den Filter) | coller | paste |
+//! | Netzlaufwerk | volume réseau | network volume |
+//! | Cloud-Ordner | dossier cloud | cloud folder |
+//! | Git-Arbeitsbaum | arborescence de travail Git | Git working tree |
+//! | Benutzerordner (in der Loeschwarnung, derselbe Ort wie das Benutzerverzeichnis) | dossier de départ | home directory |
+//! | raeumen (in den Papierkorb) | mettre à la Corbeille | move to the Trash |
+//! | Startmeldung | message au démarrage | message at start |
+//! | Zeitstempel | horodatage | timestamp |
+//! | Tastenzuweisung (eigene) | attribution de touches | key assignment |
+//! | Filterstand (Filter „…“: n von m angezeigt) | Filtre | Filter |
+//! | Seite / Bild (Zaehler der Vorschau) | page / image | page / image |
+//! | Folge gekuerzt | série tronquée | sequence truncated |
+//! | linkes / rechtes Dateifenster | volet de fichiers gauche / droit | left / right file pane |
 //!
 //! # Die Befehlsnamen
 //!

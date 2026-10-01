@@ -12,6 +12,12 @@
 //! Notizordner nie wechselt (Spec, Abschnitt „Änderung 260929“). Die Rueckfrage
 //! sagt deshalb in jedem Fall, dass der Notizordner und seine Dateien bleiben,
 //! und haengt allein an einer Frage: ob eine eigene `keymap.toml` steht.
+//!
+//! Jeder Wortlaut kommt aus der Sprachtabelle; die Schaltflaeche ist deshalb
+//! eine Funktion und keine Konstante, denn eine Konstante stuende in der
+//! Quellsprache, gleich was macOS gewaehlt hat.
+
+use krk_core::sprache::{Text, satz, text};
 
 /// Was die Rueckfrage sagen muss, erhoben vor ihr.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,10 +28,10 @@ pub struct Vorlage {
 }
 
 /// Die Beschriftung der Schaltflaeche, die den Vorgang ausloest.
-pub const SCHALTFLAECHE: &str = "Zurücksetzen";
-
-/// Der Satz, dass der Notizordner bleibt; er steht in jeder Rueckfrage.
-const NOTIZORDNER_BLEIBT: &str = "Der Notizordner und alle Dateien darin bleiben unberührt.";
+#[must_use]
+pub fn schaltflaeche() -> &'static str {
+    text(Text::WerksSchaltflaeche)
+}
 
 /// Frage und Erlaeuterung der Rueckfrage.
 ///
@@ -36,28 +42,24 @@ const NOTIZORDNER_BLEIBT: &str = "Der Notizordner und alle Dateien darin bleiben
 /// Betrieb gehen.
 #[must_use]
 pub fn rueckfrage(vorlage: &Vorlage) -> (String, String) {
-    let frage = String::from(
-        "readers.toml, settings.toml und keymap.toml auf Werkseinstellungen zurücksetzen?",
-    );
-    let mut erlaeuterung = format!(
-        "Jede der drei Dateien, die im Ablageordner steht, legt KRK unter ihrem Namen mit \
-         angehängtem Zeitstempel beiseite, etwa readers.toml.JJMMTT-HHMM, und löscht keine \
-         davon. Danach stehen readers.toml und settings.toml so da, wie diese Fassung von KRK \
-         sie mitbringt, nur behält settings.toml den eingestellten Notizordner; keymap.toml \
-         fehlt, und es gilt die mitgelieferte Tastenbelegung. {NOTIZORDNER_BLEIBT} KRK liest \
-         den neuen Stand sofort ein."
+    let frage = text(Text::WerksFrage).to_owned();
+    // Der Satz zum Notizordner steht in jeder Rueckfrage, als eigener
+    // Eintrag, damit die Probe ihn an der Tabelle halten kann.
+    let mut erlaeuterung = satz(
+        Text::WerksErlaeuterung,
+        &[("notizordner", &text(Text::WerksNotizordnerBleibt))],
     );
     if vorlage.keymap_steht {
-        erlaeuterung.push_str(
-            "\n\nAlle eigenen Tastenzuweisungen aus keymap.toml gehen damit aus dem Betrieb; \
-             sie liegen danach allein in der Sicherung.",
-        );
+        erlaeuterung.push_str("\n\n");
+        erlaeuterung.push_str(text(Text::WerksEigeneZuweisungen));
     }
     (frage, erlaeuterung)
 }
 
 #[cfg(test)]
 mod tests {
+    use krk_core::sprache::Sprache;
+
     use super::*;
 
     /// C1.4 und C1.5: fuer beide Werte von `keymap_steht` nennt die Rueckfrage
@@ -74,7 +76,7 @@ mod tests {
             }
             assert!(ganz.contains("mit angehängtem Zeitstempel beiseite"));
             assert!(ganz.contains("löscht keine davon"));
-            assert!(ganz.contains(NOTIZORDNER_BLEIBT));
+            assert!(ganz.contains(Sprache::De.text(Text::WerksNotizordnerBleibt)));
             assert!(
                 !ganz.contains("~/krkhome"),
                 "die Rueckfrage spricht von einem Ortswechsel"

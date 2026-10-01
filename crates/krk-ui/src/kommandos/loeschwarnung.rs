@@ -276,9 +276,10 @@
 
 use std::path::{Path, PathBuf};
 
+use krk_core::sprache::{Sprache, Text, Zahlwort, anzahl, satz, text};
 use krk_core::verzeichnis::{Erlaubnisbefund, Umfang, Warnbefund, umfang::SCHWELLE};
 
-use super::operationen::{Auswahl, ordner_text, pfadtext, zahl};
+use super::operationen::{Auswahl, ordner_text, pfadtext};
 
 /// Welche Stufe ein Loeschbefehl erreicht, bevor die Rueckfrage erscheint (C2,
 /// C4).
@@ -428,7 +429,7 @@ pub fn vor_der_rueckfrage(
 /// Statuszeile behielte den Text davor.
 #[must_use = "der Text ist die einzige Auskunft ueber einen Loeschbefehl, der nichts getan hat"]
 pub fn ohne_papierkorb() -> &'static str {
-    "das Ziel führt keinen Papierkorb, es wurde nichts gelöscht; im Finder löschen"
+    text(Text::LoeschenOhnePapierkorb)
 }
 
 // ---------------------------------------------------------------------------
@@ -528,16 +529,39 @@ pub enum Warngrund {
 /// von [`SCHWELLE`]. Es gibt kein Literal mehr, das mitgezogen werden koennte,
 /// und das Vorbild aus dem Editor bindet damit wie dort zwei Groessen und nicht
 /// eine Groesse an eine Zahl.
+///
+/// **Seit der Sprachtabelle liest sie die Wortlaute in jeder Sprache**, ueber
+/// [`jede_sprache_nennt_die_schwelle`]: die Zahl steht je Sprache in der
+/// Tabelle, und eine franzoesische Fassung, die bei 25 stehen bliebe, waehrend
+/// die Konstante steigt, nennte dieselbe falsche Zahl wie damals die deutsche.
 const _: () = assert!(
-    nennt_die_zahl(
-        Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle).wortlaut(),
-        SCHWELLE
-    ) && nennt_die_zahl(
-        Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle).wortlaut(),
-        SCHWELLE
-    ),
-    "die beiden Wortlaute des sechsten Ausloesers nennen nicht mehr die Zahl, die SCHWELLE traegt"
+    jede_sprache_nennt_die_schwelle(),
+    "die beiden Wortlaute des sechsten Ausloesers nennen nicht in jeder Sprache die Zahl, die SCHWELLE traegt"
 );
+
+/// Ob beide Wortlaute des Umfangs in jeder Sprache der Tabelle die
+/// Dezimalschreibung von [`SCHWELLE`] tragen.
+///
+/// `const fn` und eine Schleife ueber `Sprache::ALLE` statt dreier
+/// ausgeschriebener Glieder, damit eine vierte Sprache von selbst geprueft
+/// wird; gerufen wird sie allein von der Zusicherung darueber.
+const fn jede_sprache_nennt_die_schwelle() -> bool {
+    let mut stelle = 0;
+    while stelle < Sprache::ALLE.len() {
+        let sprache = Sprache::ALLE[stelle];
+        if !nennt_die_zahl(
+            sprache.text(Warngrund::Umfang(Umfangsgrund::GenauDieSchwelle).schluessel()),
+            SCHWELLE,
+        ) || !nennt_die_zahl(
+            sprache.text(Warngrund::Umfang(Umfangsgrund::MehrAlsDieSchwelle).schluessel()),
+            SCHWELLE,
+        ) {
+            return false;
+        }
+        stelle += 1;
+    }
+    true
+}
 
 /// Steht die Dezimalschreibung von `zahl` in `text`?
 ///
@@ -620,20 +644,30 @@ impl Warngrund {
     /// Funktion ist rein, und ohne ihren Rueckgabewert nennt die Rueckfrage
     /// ihren Grund nicht.
     ///
-    /// `const fn`, damit die Zusicherung ueber [`Umfangsgrund`] die beiden
-    /// Wortlaute des sechsten Ausloesers beim Uebersetzen lesen kann. Zur
-    /// Laufzeit aendert das nichts.
+    /// Der Wortlaut kommt aus der Sprachtabelle, ueber [`Warngrund::schluessel`];
+    /// die Zusicherung ueber [`Umfangsgrund`] liest die beiden Wortlaute des
+    /// sechsten Ausloesers beim Uebersetzen ueber denselben Schluessel, je
+    /// Sprache.
     #[must_use = "der Wortlaut ist der einzige Ertrag des Aufrufs; fallengelassen nennt die Rueckfrage ihren Grund nicht"]
-    pub const fn wortlaut(self) -> &'static str {
+    pub fn wortlaut(self) -> &'static str {
+        text(self.schluessel())
+    }
+
+    /// Der Schluessel des Wortlauts in der Sprachtabelle.
+    ///
+    /// Eine vollstaendige Fallunterscheidung ohne Auffangzweig, und `const fn`,
+    /// damit die Zusicherung beim Uebersetzen die Wortlaute des Umfangs in
+    /// jeder Sprache lesen kann.
+    const fn schluessel(self) -> Text {
         match self {
-            Self::Unentscheidbar => "von einem Ziel unbekannter Einordnung",
-            Self::Netzlaufwerk => "von einem Netzlaufwerk",
-            Self::Cloudort => "aus einem Cloud-Ordner",
-            Self::AusserhalbBenutzerordner => "außerhalb des Benutzerordners",
-            Self::ImBenutzerordner => "unmittelbar im Benutzerordner",
-            Self::Arbeitsbaum => "aus einem Git-Arbeitsbaum",
-            Self::Umfang(Umfangsgrund::GenauDieSchwelle) => "mit 25 Einträgen insgesamt",
-            Self::Umfang(Umfangsgrund::MehrAlsDieSchwelle) => "mit mehr als 25 Einträgen insgesamt",
+            Self::Unentscheidbar => Text::WarngrundUnentscheidbar,
+            Self::Netzlaufwerk => Text::WarngrundNetzlaufwerk,
+            Self::Cloudort => Text::WarngrundCloudort,
+            Self::AusserhalbBenutzerordner => Text::WarngrundAusserhalbBenutzerordner,
+            Self::ImBenutzerordner => Text::WarngrundImBenutzerordner,
+            Self::Arbeitsbaum => Text::WarngrundArbeitsbaum,
+            Self::Umfang(Umfangsgrund::GenauDieSchwelle) => Text::WarngrundGenauDieSchwelle,
+            Self::Umfang(Umfangsgrund::MehrAlsDieSchwelle) => Text::WarngrundMehrAlsDieSchwelle,
         }
     }
 }
@@ -880,24 +914,29 @@ pub fn frage_und_erlaeuterung(
         Some(grund) => format!("{} ", grund.wortlaut()),
         None => String::new(),
     };
-    let frage = match auswahl.zahl() {
-        1 => format!("Diesen Eintrag {genannt}in den Papierkorb räumen?"),
-        anzahl => format!(
-            "Diese {} Einträge {genannt}in den Papierkorb räumen?",
-            zahl(anzahl)
-        ),
-    };
-    let mut erlaeuterung = format!("Geräumt wird aus {}.", pfadtext(ordner));
+    let frage = anzahl(
+        Zahlwort::LoeschfrageEintraege,
+        auswahl.zahl() as u64,
+        &[("grund", &genannt)],
+    );
+    let mut erlaeuterung = satz(Text::LoeschenGeraeumtAus, &[("ordner", &pfadtext(ordner))]);
     // Die uebrigen Gruende, in der Rangfolge, in der sie hereinkamen. Der
-    // erste fehlt hier, weil er in der Frage steht.
+    // erste fehlt hier, weil er in der Frage steht. Der Absatzwechsel steht
+    // hier und nicht in der Tabelle: er ist Satzbau des Blattes und kein
+    // Wort einer Sprache.
     if let Some(uebrige) = gruende.get(1..).filter(|rest| !rest.is_empty()) {
         let aufzaehlung: Vec<&str> = uebrige.iter().map(|grund| grund.wortlaut()).collect();
-        erlaeuterung.push_str(&format!("\n\nAußerdem: {}.", aufzaehlung.join(", ")));
+        erlaeuterung.push_str("\n\n");
+        erlaeuterung.push_str(&satz(
+            Text::LoeschenAusserdem,
+            &[("gruende", &aufzaehlung.join(", "))],
+        ));
     }
     if auswahl.ordner > 0 {
-        erlaeuterung.push_str(&format!(
-            "\n\nDarunter {}, jeweils mit ihrem gesamten Inhalt.",
-            ordner_text(auswahl.ordner)
+        erlaeuterung.push_str("\n\n");
+        erlaeuterung.push_str(&satz(
+            Text::LoeschenDarunterOrdner,
+            &[("ordner", &ordner_text(auswahl.ordner))],
         ));
     }
     (frage, erlaeuterung)

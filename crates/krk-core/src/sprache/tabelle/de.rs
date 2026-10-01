@@ -500,6 +500,146 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::TabelleNichtInDerListe => "{name} steht nicht in der Liste",
         Text::FenstertitelQuicknote => "Quicknote",
+        Text::StatuszeileFilterstand => {
+            "Filter „{filtertext}“: {gezeigt} von {vorhanden} angezeigt{liest}{zu_gross}{ausgeblendet}"
+        }
+        Text::StatuszeileInhaltWirdGelesen => ", Inhalt wird gelesen",
+        Text::StatuszeileSeiteVon => "Seite {aktuell} von {gesamt}",
+        Text::StatuszeileBildVon => "Bild {aktuell} von {gesamt}",
+        Text::StatuszeileFolgeGekuerzt => "{grundsatz} (Folge {gruende} gekürzt)",
+        Text::StatuszeileLinkesDateifenster => "linkes Dateifenster",
+        Text::StatuszeileRechtesDateifenster => "rechtes Dateifenster",
+        Text::StatuszeileMeldungMitSeite => "{seite}: {text}",
+        Text::VorgangsartKopieren => "Kopieren",
+        Text::VorgangsartVerschieben => "Verschieben",
+        Text::VorgangsartInDenPapierkorb => "In den Papierkorb räumen",
+        Text::VorgangsartUmbenennen => "Umbenennen",
+        Text::VorgangsartPacken => "Packen",
+        Text::VorgangsartEntpacken => "Entpacken",
+        Text::VorgangsartDuplizieren => "Duplizieren",
+        Text::VorgangAbbruchhinweis => "Esc bricht ab",
+        Text::VorgangWirdVorbereitet => "{was} wird vorbereitet: {positionen} · {abbruch}",
+        Text::VorgangZeile => "{was}: {eintraege}, {menge}, {positionen} · {name} · {abbruch}",
+        Text::VorgangWirdAbgebrochen => "{was} wird abgebrochen, der Vorgang endet gleich …",
+        Text::VorgangSchonEiner => "es läuft bereits eine Operation: {was}",
+        Text::VorgangUebertragen => "{eintraege}, {menge} ({positionen})",
+        Text::VorgangAbgebrochen => "{was} abgebrochen: {uebertragen} übertragen",
+        Text::VorgangFertig => "{was} fertig: {uebertragen}",
+        Text::UebersprungenZeile => "{name}: {grund}",
+        Text::AnlegenFrageOrdner => "Wie soll der neue Ordner heißen?",
+        Text::AnlegenFrageDatei => "Wie soll die neue Datei heißen?",
+        Text::AnlegenBestaetigen => "Anlegen",
+        Text::AngelegtOrdner => "Ordner „{name}“ angelegt",
+        Text::AngelegtDatei => "Datei „{name}“ angelegt",
+        Text::AnlegenKeineRechteOrdner => "keine Rechte, hier den Ordner „{name}“ anzulegen",
+        Text::AnlegenKeineRechteDatei => "keine Rechte, hier die Datei „{name}“ anzulegen",
+        Text::AnlegenGescheitert => "„{name}“ ließ sich nicht anlegen: {fehler}",
+        Text::NameSchonVergeben => "es gibt schon einen Eintrag namens „{name}“",
+        Text::DuplikatFrage => "Wie soll das Duplikat heißen?",
+        Text::DuplikatBestaetigen => "Duplizieren",
+        Text::DuplikatMehrere => {
+            "nichts zu duplizieren: es sind mehrere Einträge markiert, und dupliziert wird genau eine Datei"
+        }
+        Text::DuplikatNichtGewoehnlich => {
+            "nichts zu duplizieren: „{name}“ ist {typ}, und dupliziert wird allein eine gewöhnliche Datei"
+        }
+        Text::DuplikatTypOrdner => "ein Ordner",
+        Text::DuplikatTypVerknuepfung => "eine Verknüpfung",
+        Text::UmbenennenKeineRechte => "keine Rechte, hier in „{name}“ umzubenennen",
+        Text::UmbenennenGescheitert => "„{name}“ ließ sich nicht vergeben: {fehler}",
+        Text::OrdnerKeinOrdnerMehr => "{pfad} ist kein Ordner mehr",
+        Text::OrdnerNichtMehrErreichbar => "{pfad} ist nicht mehr erreichbar: {fehler}",
+        Text::KeinTerminal => {
+            "keine Anwendung mit der Bündelkennung „{kennung}“ installiert; settings.toml nennt sie unter terminal, eine Änderung wirkt erst nach einem Neustart"
+        }
+        Text::PfadKopiert => "Pfad kopiert: {pfad}",
+        Text::PfadeKopiert => "{n} Pfade kopiert",
+        Text::NichtsBetroffen => "nichts {nennform}: nichts markiert und nichts ausgewählt",
+        Text::NennformZuKopieren => "zu kopieren",
+        Text::NennformZuOeffnen => "zu öffnen",
+        Text::NennformZuPacken => "zu packen",
+        Text::NennformAnzuzeigen => "anzuzeigen",
+        Text::NennformZuDuplizieren => "zu duplizieren",
+        Text::NichtsZuTeilen => {
+            "nichts zu teilen: hier steht nichts, was an die Freigabedienste ginge"
+        }
+        Text::KeinArchiv => "nichts zu entpacken: hier steht keine Datei mit der Endung .zip",
+        Text::MehrereArchive => {
+            "nichts zu entpacken: hier stehen mehrere Archive, und die Auswahl zeigt auf keines"
+        }
+        Text::KeinFinder => {
+            "der Finder ist nicht erreichbar: das System hat keine Anwendung dafür genannt"
+        }
+        Text::AblageWeistTextAb => "die Zwischenablage hat den Text nicht angenommen",
+        Text::AbgelegtEiner => "kopiert: {name}",
+        Text::AbgelegtMehrere => "{n} Einträge kopiert",
+        Text::AbgelegtAusgeschnitten => "{kopiert} – verschieben tut das Ziel (Finder: opt+cmd+v)",
+        Text::AblageWeistVerweiseAb => "die Zwischenablage hat die Einträge nicht angenommen",
+        Text::EinfuegenKeinText => "nichts einzufügen: die Zwischenablage trägt keinen Text",
+        Text::EinfuegenMehrzeilig => "nicht eingefügt: der Text hat mehrere Zeilen",
+        Text::EinfuegenNichtsTragbar => {
+            "nichts einzufügen: der Text trägt kein Zeichen, das ein Name tragen kann"
+        }
+        Text::UebergebenEiner => "an das System übergeben: {name}",
+        Text::UebergebenMehrere => "{n} Einträge an das System übergeben",
+        Text::NichtAngenommenEiner => "das System hat {name} nicht angenommen",
+        Text::NichtAngenommenMehrere => {
+            "das System hat {n} von {gesamt} Einträgen nicht angenommen"
+        }
+        Text::UebergebenUndAbgelehnt => "{genommen}; {abgelehnt}",
+        Text::KeineAnwendung => {
+            "nichts zu öffnen: das System nennt für diesen Eintrag keine Anwendung"
+        }
+        Text::UebergebenAnEiner => "an {anwendung} übergeben: {name}",
+        Text::UebergebenAnMehrere => "{n} Einträge an {anwendung} übergeben",
+        Text::NichtUebergebenAn => {
+            "an {anwendung} nicht übergeben: ein Pfad trägt kein gültiges UTF-8"
+        }
+        Text::BelegungsdateiZweiSchreiber => {
+            "{datei} hat zwei Schreiber: eine Änderung von Hand wirkt erst beim nächsten Start, und die Belegungsansicht (F1) überschreibt sie beim Verlassen"
+        }
+        Text::BelegungsdateiFehltNoch => {
+            "{datei} gibt es noch nicht: sie entsteht, sobald die Belegungsansicht (F1) mit einer Änderung verlassen wird"
+        }
+        Text::BelegungsdateiOhneAblageordner => {
+            "{datei} ist nicht zu zeigen: KRK läuft ohne Ablageordner"
+        }
+        Text::Markierungsstand => "{n} markiert, davon {ordner}, {groesse}",
+        Text::LoeschenOhnePapierkorb => {
+            "das Ziel führt keinen Papierkorb, es wurde nichts gelöscht; im Finder löschen"
+        }
+        Text::WarngrundUnentscheidbar => "von einem Ziel unbekannter Einordnung",
+        Text::WarngrundNetzlaufwerk => "von einem Netzlaufwerk",
+        Text::WarngrundCloudort => "aus einem Cloud-Ordner",
+        Text::WarngrundAusserhalbBenutzerordner => "außerhalb des Benutzerordners",
+        Text::WarngrundImBenutzerordner => "unmittelbar im Benutzerordner",
+        Text::WarngrundArbeitsbaum => "aus einem Git-Arbeitsbaum",
+        Text::WarngrundGenauDieSchwelle => "mit 25 Einträgen insgesamt",
+        Text::WarngrundMehrAlsDieSchwelle => "mit mehr als 25 Einträgen insgesamt",
+        Text::LoeschenGeraeumtAus => "Geräumt wird aus {ordner}.",
+        Text::LoeschenAusserdem => "Außerdem: {gruende}.",
+        Text::LoeschenDarunterOrdner => "Darunter {ordner}, jeweils mit ihrem gesamten Inhalt.",
+        Text::BlattSteht => "nicht ausgeführt: über dem Fenster steht ein Blatt",
+        Text::PfadNichtAbsolut => "{pfad} ist kein absoluter Pfad",
+        Text::PfadGibtEsNicht => "{pfad} gibt es nicht: {fehler}",
+        Text::PfadNichtLesbar => "{pfad} lässt sich nicht lesen: {fehler}",
+        Text::PfadInKeinemOrdner => "{pfad} liegt in keinem Ordner",
+        Text::WerksSchaltflaeche => "Zurücksetzen",
+        Text::WerksNotizordnerBleibt => "Der Notizordner und alle Dateien darin bleiben unberührt.",
+        Text::WerksFrage => {
+            "readers.toml, settings.toml und keymap.toml auf Werkseinstellungen zurücksetzen?"
+        }
+        Text::WerksErlaeuterung => {
+            "Jede der drei Dateien, die im Ablageordner steht, legt KRK unter ihrem Namen mit angehängtem Zeitstempel beiseite, etwa readers.toml.JJMMTT-HHMM, und löscht keine davon. Danach stehen readers.toml und settings.toml so da, wie diese Fassung von KRK sie mitbringt, nur behält settings.toml den eingestellten Notizordner; keymap.toml fehlt, und es gilt die mitgelieferte Tastenbelegung. {notizordner} KRK liest den neuen Stand sofort ein."
+        }
+        Text::WerksEigeneZuweisungen => {
+            "Alle eigenen Tastenzuweisungen aus keymap.toml gehen damit aus dem Betrieb; sie liegen danach allein in der Sicherung."
+        }
+        Text::TabAusgefiltert => "{name} ist ausgefiltert.",
+        Text::TabNichtMehrDa => "{name} ist nicht mehr da.",
+        Text::TabNichtVollstaendigGelesen => "{ordner} ließ sich nicht vollständig lesen: {fehler}",
+        Text::PapierkorbKeinUtf8Pfad => "{pfad} ist kein gültiger UTF-8-Pfad",
+        Text::BlattSchliessen => "Schließen",
     }
 }
 
@@ -517,6 +657,45 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} neu", "{n} neu"),
         Zahlwort::MarkeKonflikt => ("{n} in Konflikt", "{n} in Konflikt"),
         Zahlwort::MarkeUmbenannt => ("{n} umbenannt", "{n} umbenannt"),
+        Zahlwort::StatuszeileDateienZuGross => (", eine Datei zu groß", ", {n} Dateien zu groß"),
+        Zahlwort::StatuszeileMarkierungenAusgeblendet => (
+            ", eine Markierung ausgeblendet",
+            ", {n} Markierungen ausgeblendet",
+        ),
+        Zahlwort::BildfolgeGrenzeFotos => ("nach {n} Foto", "nach {n} Fotos"),
+        Zahlwort::BildfolgeGrenzeOrdner => ("nach {n} Ordner", "nach {n} Ordnern"),
+        Zahlwort::BildfolgeGrenzeEintraege => (
+            "an {n} Eintrag eines Ordners",
+            "an {n} Einträgen eines Ordners",
+        ),
+        Zahlwort::Eintraege => ("ein Eintrag", "{n} Einträge"),
+        Zahlwort::AusgewaehltePositionen => {
+            ("eine ausgewählte Position", "{n} ausgewählte Positionen")
+        }
+        Zahlwort::Ordner => ("ein Ordner", "{n} Ordner"),
+        Zahlwort::VorgangUebersprungen => {
+            (", ein Eintrag übersprungen", ", {n} Einträge übersprungen")
+        }
+        Zahlwort::VorgangAusgelassen => (
+            ", ein Eintrag als Ziel dieses Laufs ausgelassen",
+            ", {n} Einträge als Ziel dieses Laufs ausgelassen",
+        ),
+        Zahlwort::UebersprungenFrage => (
+            "Ein Eintrag wurde übersprungen",
+            "{n} Einträge wurden übersprungen",
+        ),
+        Zahlwort::EinfuegenDateiverweise => (
+            "nicht eingefügt: die Zwischenablage trägt {n} Dateiverweis",
+            "nicht eingefügt: die Zwischenablage trägt {n} Dateiverweise",
+        ),
+        Zahlwort::LoeschfrageEintraege => (
+            "Diesen Eintrag {grund}in den Papierkorb räumen?",
+            "Diese {n} Einträge {grund}in den Papierkorb räumen?",
+        ),
+        Zahlwort::StartMeldungen => (
+            "Beim Start gab es eine Meldung",
+            "Beim Start gab es {n} Meldungen",
+        ),
     }
 }
 

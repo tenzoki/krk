@@ -195,6 +195,7 @@ use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString, ns_s
 
 use krk_core::ablage::{Fensterseite, Sichtbarkeit};
 use krk_core::leseprofil::bildfolge::{Grenze, Kuerzung};
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 
 use crate::fenstermodell::{Bereich, sichtbar_in};
 use crate::kommandos::operationen::zahl;
@@ -514,8 +515,9 @@ pub struct Filterstand {
 ///
 /// **Jede Zahl geht durch [`zahl`]** und traegt damit dieselben
 /// Tausenderpunkte wie ein laufender Vorgang und der Markierungsstand daneben.
-/// Ein zweites Zahlenformat entsteht nicht. Der Groessenhinweis hat dafuer
-/// einen eigenen Singularzweig, genau wie der Markierungshinweis unter ihm.
+/// Ein zweites Zahlenformat entsteht nicht. Der Groessenhinweis und der
+/// Markierungshinweis sind je ein [`Zahlwort`] mit Einzahl und Mehrzahl, und
+/// die Einzahl steht in der Tabelle und nicht in einem Zweig hier.
 ///
 /// **Sie steht hier und nicht in [`crate::kommandos`]**, wo
 /// `auswahl::markierungsstand_text` fuer den Rang darunter steht. Jene braucht
@@ -532,31 +534,35 @@ pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> 
         return None;
     }
     let liest = if stand.liest_inhalt {
-        ", Inhalt wird gelesen"
+        text(Text::StatuszeileInhaltWirdGelesen)
     } else {
         ""
     };
-    // `zu_gross` zaehlt Dateien und kommt als `u64` vom Tab, weil der
-    // `Durchlauf` es so fuehrt. `zahl` nimmt ein `usize`; auf dem Bauziel sind
-    // beide gleich breit, und die Saettigung ist trotzdem ehrlicher als ein
-    // Abschneiden.
+    // Ein Satzteil ueber nichts bleibt leer: "0 Dateien zu gross" waere eine
+    // Auskunft ueber nichts. `zu_gross` zaehlt Dateien und kommt als `u64` vom
+    // Tab, weil der `Durchlauf` es so fuehrt.
     let zu_gross = match stand.zu_gross {
         0 => String::new(),
-        1 => ", eine Datei zu groß".to_owned(),
-        mehrere => format!(
-            ", {} Dateien zu groß",
-            zahl(usize::try_from(mehrere).unwrap_or(usize::MAX))
-        ),
+        mehrere => anzahl(Zahlwort::StatuszeileDateienZuGross, mehrere, &[]),
     };
     let ausgeblendet = match stand.ausgeblendete_markierungen {
         0 => String::new(),
-        1 => ", eine Markierung ausgeblendet".to_owned(),
-        mehrere => format!(", {} Markierungen ausgeblendet", zahl(mehrere)),
+        mehrere => anzahl(
+            Zahlwort::StatuszeileMarkierungenAusgeblendet,
+            mehrere as u64,
+            &[],
+        ),
     };
-    Some(format!(
-        "Filter \u{201e}{filtertext}\u{201c}: {} von {} angezeigt{liest}{zu_gross}{ausgeblendet}",
-        zahl(stand.gezeigt),
-        zahl(stand.vorhanden)
+    Some(satz(
+        Text::StatuszeileFilterstand,
+        &[
+            ("filtertext", &filtertext),
+            ("gezeigt", &zahl(stand.gezeigt)),
+            ("vorhanden", &zahl(stand.vorhanden)),
+            ("liest", &liest),
+            ("zu_gross", &zu_gross),
+            ("ausgeblendet", &ausgeblendet),
+        ],
     ))
 }
 
@@ -573,7 +579,10 @@ pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> 
 /// selbst; welche Seite die aktuelle ist, sagt PDFKit (C4.3), und wie sie
 /// heisst, sagt diese Zeile.
 pub fn seitenzaehler_text(aktuell: usize, gesamt: usize) -> String {
-    format!("Seite {} von {}", zahl(aktuell), zahl(gesamt))
+    satz(
+        Text::StatuszeileSeiteVon,
+        &[("aktuell", &zahl(aktuell)), ("gesamt", &zahl(gesamt))],
+    )
 }
 
 /// Der Satz des Zaehlers einer Bildfolge: "Bild N von M", bei gekuerzter
@@ -587,23 +596,33 @@ pub fn seitenzaehler_text(aktuell: usize, gesamt: usize) -> String {
 /// die Zahl jeder Grenze kommt aus `Grenze::hoechstens` und steht kein
 /// zweites Mal im Text.
 pub fn bildzaehler_text(aktuell: usize, gesamt: usize, kuerzung: Kuerzung) -> String {
-    let grundsatz = format!("Bild {} von {}", zahl(aktuell), zahl(gesamt));
+    let grundsatz = satz(
+        Text::StatuszeileBildVon,
+        &[("aktuell", &zahl(aktuell)), ("gesamt", &zahl(gesamt))],
+    );
     let gruende: Vec<String> = kuerzung
         .grenzen()
         .into_iter()
         .map(|grenze| {
-            let hoechstens = zahl(grenze.hoechstens());
-            match grenze {
-                Grenze::Fotos => format!("nach {hoechstens} Fotos"),
-                Grenze::Ordner => format!("nach {hoechstens} Ordnern"),
-                Grenze::Eintraege => format!("an {hoechstens} Einträgen eines Ordners"),
-            }
+            let zahlwort = match grenze {
+                Grenze::Fotos => Zahlwort::BildfolgeGrenzeFotos,
+                Grenze::Ordner => Zahlwort::BildfolgeGrenzeOrdner,
+                Grenze::Eintraege => Zahlwort::BildfolgeGrenzeEintraege,
+            };
+            anzahl(zahlwort, grenze.hoechstens() as u64, &[])
         })
         .collect();
     if gruende.is_empty() {
         grundsatz
     } else {
-        format!("{grundsatz} (Folge {} gekürzt)", gruende.join(" und "))
+        let bindewort = format!(" {} ", text(Text::Und));
+        satz(
+            Text::StatuszeileFolgeGekuerzt,
+            &[
+                ("grundsatz", &grundsatz),
+                ("gruende", &gruende.join(&bindewort)),
+            ],
+        )
     }
 }
 
@@ -849,14 +868,17 @@ pub fn zeile<'a>(
 /// Bereich gibt es hier nicht, weil es nur eine Vorschau gibt und der Satz
 /// selbst sagt, wovon er spricht.
 ///
-/// Die beiden Namen stehen hier und nicht im Kern: es sind Anzeigetexte, und
-/// [`Fensterseite`] ist ein Wert der Ablage, der von Anzeige nichts weiss.
+/// Die Zuordnung der beiden Namen steht hier und nicht im Kern: es sind
+/// Anzeigetexte, und [`Fensterseite`] ist ein Wert der Ablage, der von Anzeige
+/// nichts weiss; der Wortlaut kommt wie jeder Anzeigetext aus der
+/// Sprachtabelle.
 #[must_use]
 pub fn zeilentext(meldung: &Meldung<'_>, aktiv: Fensterseite) -> String {
     match meldung.herkunft {
-        Herkunft::Dateifenster(seite) if seite != aktiv => {
-            format!("{}: {}", seitenname(seite), meldung.text)
-        }
+        Herkunft::Dateifenster(seite) if seite != aktiv => satz(
+            Text::StatuszeileMeldungMitSeite,
+            &[("seite", &seitenname(seite)), ("text", &meldung.text)],
+        ),
         Herkunft::Dateifenster(_) | Herkunft::Vorschau => meldung.text.to_owned(),
     }
 }
@@ -865,10 +887,10 @@ pub fn zeilentext(meldung: &Meldung<'_>, aktiv: Fensterseite) -> String {
 ///
 /// Eine vollstaendige Fallunterscheidung ueber [`Fensterseite`]; ein dritter
 /// Wert haelt den Bau an.
-const fn seitenname(seite: Fensterseite) -> &'static str {
+fn seitenname(seite: Fensterseite) -> &'static str {
     match seite {
-        Fensterseite::Links => "linkes Dateifenster",
-        Fensterseite::Rechts => "rechtes Dateifenster",
+        Fensterseite::Links => text(Text::StatuszeileLinkesDateifenster),
+        Fensterseite::Rechts => text(Text::StatuszeileRechtesDateifenster),
     }
 }
 
