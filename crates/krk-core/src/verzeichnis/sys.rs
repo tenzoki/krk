@@ -1,5 +1,5 @@
-//! Die Systemschicht des Kerns: die sechs Schnittstellen, die KRK braucht, und
-//! die zehn Funktionen, die sie binden.
+//! Die Systemschicht des Kerns: die sieben Schnittstellen, die KRK braucht, und
+//! die elf Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -18,6 +18,7 @@
 //!                                             ├─> operation::zippen
 //!                                             ├─> operation::entpacken
 //!                                             └─> Schwungleser (in dieser Datei)
+//! fcntl(2), fsync(2) ──> auf_die_platte_...   ──> ablage::atomar
 //! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
 //!                        sperre_versuchen
 //!                        sperre_abgeben
@@ -25,17 +26,19 @@
 //!                                             └─> leseprofil::bausteine
 //! ```
 //!
-//! **Sechs ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! sechs Schnittstellen und zehn gebundene Funktionen, denn `copyfile(3)`
+//! **Sieben ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! sieben Schnittstellen und elf gebundene Funktionen, denn `copyfile(3)`
 //! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
 //! Aufrufe ueber die Sprachgrenze schon, und die Reichweite der Ausnahme oben
 //! liest ein Leser hier nach. Die Zeile steht wortgleich in `lib.rs` und in
 //! `verzeichnis/mod.rs`; die dritte Stelle hat der Defekt `260810-1017`
-//! nachgezogen, die fuenfte Schnittstelle die Runde 7 und die sechste die
-//! Runde 18. Gebunden sind alle zehn in den fuenf `unsafe extern "C"`-Bloecken
-//! dieses Moduls.
+//! nachgezogen, die fuenfte Schnittstelle die Runde 7, die sechste die
+//! Runde 18 und die siebte, `fsync(2)`, der Defekt vom 261004 (das Sichern auf
+//! einem Cryptomator-Tresor, siehe [`auf_die_platte_bringen`]). Gebunden sind
+//! alle elf in den fuenf `unsafe extern "C"`-Bloecken dieses Moduls; `fsync`
+//! steht im Block von `fcntl`, weil es dessen Rueckfall ist.
 //!
 //! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
 //! oder schreibt, sondern eine Absprache zwischen zwei Prozessen traegt.** An
@@ -847,6 +850,124 @@ unsafe extern "C" {
     /// Argumenten waere derselbe Aufruf mit dem falschen Argumentweg, und der
     /// Uebersetzer hat keine Gelegenheit, das zu bemerken.
     fn fcntl(fd: c_int, befehl: c_int, ...) -> c_int;
+
+    /// `int fsync(int fildes)`
+    ///
+    /// Steht im Block von `fcntl(2)`, weil es dessen Rueckfall ist und keine
+    /// eigene Frage beantwortet; warum es ihn braucht, steht bei
+    /// [`auf_die_platte_bringen`].
+    fn fsync(fd: c_int) -> c_int;
+}
+
+// ---------------------------------------------------------------------------
+// fcntl(2) mit F_FULLFSYNC und fsync(2): geschriebene Daten auf die Platte
+// ---------------------------------------------------------------------------
+
+/// `F_FULLFSYNC` aus `sys/fcntl.h`: den Inhalt bis auf das Speichermedium
+/// schreiben, am Cache des Laufwerks vorbei.
+const F_FULLFSYNC: c_int = 51;
+
+/// `EINTR` aus `sys/errno.h`: der Aufruf wurde von einem Signal unterbrochen.
+const EINTR: i32 = 4;
+
+/// `EINVAL` aus `sys/errno.h`.
+const EINVAL: i32 = 22;
+
+/// `ENOTTY` aus `sys/errno.h`, „Inappropriate ioctl for device“.
+const ENOTTY: i32 = 25;
+
+/// `ENOTSUP` aus `sys/errno.h`.
+const ENOTSUP: i32 = 45;
+
+/// Bringt den Inhalt einer geschriebenen Datei auf die Platte, so weit das
+/// Dateisystem es zulaesst.
+///
+/// # Warum nicht `File::sync_all`
+///
+/// `std` ruft fuer `sync_all` und `sync_data` auf Apple-Zielen allein
+/// `fcntl(fd, F_FULLFSYNC)` und faellt bei keinem Fehler auf `fsync(2)`
+/// zurueck (`library/std/src/sys/fs/unix.rs`, `File::fsync` und
+/// `File::datasync`, in Rust 1.97.1). Ein Dateisystem, das `F_FULLFSYNC` nicht
+/// kennt, laesst damit jedes Sichern scheitern, obwohl der Inhalt vollstaendig
+/// geschrieben ist. So berichtet vom Nutzer am 261004:
+/// auf einem Cryptomator-Tresor, also einer FUSE-Flaeche, brach das Sichern
+/// des Editors mit `ENOTTY` („Inappropriate ioctl for device“, os error 25)
+/// ab. `ENOTSUP` ist die Antwort, die andere Netz- und Fremddateisysteme an
+/// derselben Stelle geben koennen.
+///
+/// # Drei Stufen, und nur eine echte Stoerung haelt an
+///
+/// 1. **`F_FULLFSYNC`**, die staerkste Zusage, die macOS kennt.
+/// 2. Sagt das Dateisystem, dass es sie **nicht kennt** (`ENOTTY`, `ENOTSUP`,
+///    `EINVAL`), dann **`fsync(2)`**: es reicht den Inhalt an das Laufwerk,
+///    ohne dessen Cache zu leeren, und auf einer FUSE-Flaeche an den Dienst
+///    dahinter.
+/// 3. Kennt das Dateisystem auch das nicht, gilt die Haltbarkeit als
+///    **bestmoeglich erreicht** und das Schreiben als gelungen. Der Inhalt ist
+///    geschrieben und gelesen wird er von jedem in seinem neuen Stand; was
+///    fehlt, ist allein die Zusage fuer einen Stromausfall in den Sekunden
+///    danach, und die kann auf einem solchen Dateisystem niemand geben.
+///
+/// **Jeder andere Fehler haelt an**, auf jeder der zwei Stufen: `EIO`,
+/// `ENOSPC`, `EDQUOT` und alles Uebrige heissen, dass der Inhalt womoeglich
+/// nicht angekommen ist, und ein Sichern, das das verschwiege, waere genau der
+/// stille Fehlschlag, den dieses Projekt am 260904 behoben hat. Die Entscheidung
+/// steht allein in [`haltbar_machen_mit`], damit eine Probe sie ohne
+/// FUSE-Flaeche pruefen kann; ein Signal dazwischen (`EINTR`) wiederholt den
+/// Aufruf, wie es `std` tut.
+pub fn auf_die_platte_bringen(datei: &File) -> io::Result<()> {
+    let fd = datei.as_raw_fd();
+    haltbar_machen_mit(
+        // SICHERHEIT: `fd` gehoert dem `File` des Aufrufers und ist offen,
+        // solange dessen Leihe lebt. `F_FULLFSYNC` nimmt kein weiteres
+        // Argument und fasst keinen Speicher an; die 0 steht da, weil der
+        // Aufruf variadisch ist.
+        || ohne_unterbrechung(|| kernantwort(unsafe { fcntl(fd, F_FULLFSYNC, 0) })),
+        // SICHERHEIT: derselbe offene Deskriptor; `fsync` nimmt nur ihn.
+        || ohne_unterbrechung(|| kernantwort(unsafe { fsync(fd) })),
+    )
+}
+
+/// Macht aus der Rueckgabe `-1` eines Systemaufrufs den Fehler des Kerns.
+fn kernantwort(rueck: c_int) -> io::Result<()> {
+    if rueck == -1 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+/// Wiederholt einen Systemaufruf, solange ein Signal ihn unterbricht.
+fn ohne_unterbrechung(mut aufruf: impl FnMut() -> io::Result<()>) -> io::Result<()> {
+    loop {
+        match aufruf() {
+            Err(fehler) if fehler.raw_os_error() == Some(EINTR) => {}
+            ausgang => return ausgang,
+        }
+    }
+}
+
+/// Ob ein Fehler sagt, dass das Dateisystem die verlangte Synchronisierung
+/// nicht kennt, statt dass sie gescheitert waere.
+fn nicht_unterstuetzt(fehler: &io::Error) -> bool {
+    matches!(fehler.raw_os_error(), Some(ENOTTY | ENOTSUP | EINVAL))
+}
+
+/// Die Entscheidung von [`auf_die_platte_bringen`], ohne Systemaufruf: `voll`
+/// ist die erste Stufe, `einfach` der Rueckfall.
+fn haltbar_machen_mit(
+    voll: impl FnOnce() -> io::Result<()>,
+    einfach: impl FnOnce() -> io::Result<()>,
+) -> io::Result<()> {
+    match voll() {
+        Ok(()) => return Ok(()),
+        Err(fehler) if !nicht_unterstuetzt(&fehler) => return Err(fehler),
+        Err(_) => {}
+    }
+    match einfach() {
+        Err(fehler) if !nicht_unterstuetzt(&fehler) => Err(fehler),
+        _ => Ok(()),
+    }
 }
 
 /// Oeffnet einen Pfad zum Lesen, **ohne bei einer benannten Roehre zu warten**.
@@ -1476,5 +1597,127 @@ mod tests {
             0,
             "der Deskriptor traegt O_NONBLOCK noch, das Lesen koennte mit EAGAIN scheitern"
         );
+    }
+
+    /// Ein Fehler mit Betriebssystemnummer, wie ihn ein Systemaufruf liefert.
+    fn kernfehler(nummer: i32) -> io::Result<()> {
+        Err(io::Error::from_raw_os_error(nummer))
+    }
+
+    /// Die erste Stufe gelingt: der Rueckfall wird nicht gefragt.
+    #[test]
+    fn gelingt_f_fullfsync_wird_fsync_nicht_gerufen() {
+        let mut gefragt = false;
+        let ausgang = haltbar_machen_mit(
+            || Ok(()),
+            || {
+                gefragt = true;
+                Ok(())
+            },
+        );
+        assert!(ausgang.is_ok());
+        assert!(
+            !gefragt,
+            "fsync ist trotz gelungenem F_FULLFSYNC gerufen worden"
+        );
+    }
+
+    /// Der Defekt vom 261004: ein Dateisystem ohne `F_FULLFSYNC` laesst das
+    /// Sichern nicht mehr scheitern, sondern faellt auf `fsync(2)` zurueck,
+    /// fuer jede der drei Antworten, die „nicht unterstuetzt“ heissen.
+    #[test]
+    fn ohne_f_fullfsync_faellt_das_schreiben_auf_fsync_zurueck() {
+        for nummer in [ENOTTY, ENOTSUP, EINVAL] {
+            let mut gefragt = false;
+            let ausgang = haltbar_machen_mit(
+                || kernfehler(nummer),
+                || {
+                    gefragt = true;
+                    Ok(())
+                },
+            );
+            assert!(
+                ausgang.is_ok(),
+                "errno {nummer}: das Schreiben ist gescheitert"
+            );
+            assert!(gefragt, "errno {nummer}: fsync ist nicht gerufen worden");
+        }
+    }
+
+    /// Kennt das Dateisystem auch `fsync(2)` nicht, gilt die Haltbarkeit als
+    /// bestmoeglich erreicht, und das Schreiben gelingt.
+    #[test]
+    fn kennt_das_dateisystem_keine_synchronisierung_gelingt_das_schreiben() {
+        for erste in [ENOTTY, ENOTSUP, EINVAL] {
+            for zweite in [ENOTTY, ENOTSUP, EINVAL] {
+                assert!(
+                    haltbar_machen_mit(|| kernfehler(erste), || kernfehler(zweite)).is_ok(),
+                    "errno {erste} und dann {zweite}: das Schreiben ist gescheitert"
+                );
+            }
+        }
+    }
+
+    /// Eine echte Stoerung haelt an, auf jeder Stufe, und auf der ersten
+    /// fragt sie den Rueckfall gar nicht erst.
+    #[test]
+    fn eine_echte_stoerung_laesst_das_schreiben_scheitern() {
+        const EIO: i32 = 5;
+        const ENOSPC: i32 = 28;
+        const EDQUOT: i32 = 69;
+        for nummer in [EIO, ENOSPC, EDQUOT] {
+            let mut gefragt = false;
+            let ausgang = haltbar_machen_mit(
+                || kernfehler(nummer),
+                || {
+                    gefragt = true;
+                    Ok(())
+                },
+            );
+            assert_eq!(
+                ausgang.err().and_then(|fehler| fehler.raw_os_error()),
+                Some(nummer),
+                "errno {nummer} auf der ersten Stufe ist nicht durchgereicht worden"
+            );
+            assert!(
+                !gefragt,
+                "errno {nummer}: fsync ist nach einer Stoerung gerufen worden"
+            );
+
+            let ausgang = haltbar_machen_mit(|| kernfehler(ENOTTY), || kernfehler(nummer));
+            assert_eq!(
+                ausgang.err().and_then(|fehler| fehler.raw_os_error()),
+                Some(nummer),
+                "errno {nummer} auf dem Rueckfall ist nicht durchgereicht worden"
+            );
+        }
+    }
+
+    /// Ein Signal waehrend des Aufrufs wiederholt ihn, statt das Schreiben
+    /// scheitern zu lassen; jeder andere Fehler kommt beim ersten Mal zurueck.
+    #[test]
+    fn eine_unterbrechung_wiederholt_den_aufruf() {
+        let mut runden = 0;
+        let ausgang = ohne_unterbrechung(|| {
+            runden += 1;
+            if runden < 3 {
+                kernfehler(EINTR)
+            } else {
+                Ok(())
+            }
+        });
+        assert!(ausgang.is_ok());
+        assert_eq!(runden, 3, "die Unterbrechung ist nicht wiederholt worden");
+
+        let mut runden = 0;
+        let ausgang = ohne_unterbrechung(|| {
+            runden += 1;
+            kernfehler(ENOTTY)
+        });
+        assert_eq!(
+            ausgang.err().and_then(|fehler| fehler.raw_os_error()),
+            Some(ENOTTY)
+        );
+        assert_eq!(runden, 1, "ein gewoehnlicher Fehler ist wiederholt worden");
     }
 }

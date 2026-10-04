@@ -252,8 +252,15 @@ fn rechte_uebernehmen(ziel: &Path, nachbar: &fs::File) -> io::Result<()> {
 /// Der erste Schritt: den Inhalt vollstaendig in die Nachbardatei schreiben.
 ///
 /// Nach der Rueckkehr stehen die Daten auf der Platte, das Ziel ist noch alt.
-/// `sync_all` sorgt dafuer, dass das Umbenennen nicht einen Namen auf einen
-/// noch nicht geschriebenen Inhalt setzt.
+/// [`crate::verzeichnis::sys::auf_die_platte_bringen`] sorgt dafuer, dass das
+/// Umbenennen nicht einen Namen auf einen noch nicht geschriebenen Inhalt
+/// setzt, so weit das Dateisystem es zulaesst.
+///
+/// **`File::sync_all` steht hier nicht mehr, und das ist der Defekt vom
+/// 261004.** Es ruft auf macOS allein `F_FULLFSYNC` und liess jedes Sichern
+/// auf einem Dateisystem scheitern, das diesen Befehl nicht kennt, etwa einem
+/// Cryptomator-Tresor, mit „Inappropriate ioctl for device“. Die Stufen und
+/// welcher Fehler trotzdem anhaelt, stehen bei der gerufenen Funktion.
 ///
 /// Die Quelle wird bis zu ihrem Ende gelesen, und eine eigene Obergrenze setzt
 /// diese Funktion nicht; wer eine braucht, reicht einen begrenzten Leser
@@ -289,7 +296,7 @@ pub fn vorbereiten(ziel: &Path, quelle: &mut impl Read) -> io::Result<Nachbardat
     };
     rechte_uebernehmen(ziel, &datei)?;
     io::copy(quelle, &mut datei)?;
-    datei.sync_all()?;
+    crate::verzeichnis::sys::auf_die_platte_bringen(&datei)?;
     drop(datei);
     Ok(angelegt)
 }

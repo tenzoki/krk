@@ -55,14 +55,14 @@
 //!
 //! Die Regel oben lautet `deny` und nicht `forbid`, und der Unterschied ist
 //! Absicht: das Modul `verzeichnis::sys` bindet die Systemaufrufe
-//! `getattrlistbulk`, `copyfile`, `renamex_np`, `fcntl`, `flock` und
-//! `localtime_r` und traegt dafuer `#[allow(unsafe_code)]`. Das sind sechs
-//! Schnittstellen und zehn gebundene Funktionen, denn `copyfile(3)` braucht
+//! `getattrlistbulk`, `copyfile`, `renamex_np`, `fcntl`, `flock`,
+//! `localtime_r` und `fsync` und traegt dafuer `#[allow(unsafe_code)]`. Das sind sieben
+//! Schnittstellen und elf gebundene Funktionen, denn `copyfile(3)` braucht
 //! seine vier `copyfile_state_*`-Helfer. `forbid` liesse sich an dieser Stelle
 //! nicht oeffnen, das ist gerade sein Zweck. Es ist das einzige Modul mit
 //! dieser Ausnahme, und es ist das geblieben, als Schritt 15 `copyfile` und
-//! `renamex_np`, der Defekt `260809-1652` `fcntl`, die Runde 7 `flock` und die
-//! Runde 18 `localtime_r` hinzugebracht haben.
+//! `renamex_np`, der Defekt `260809-1652` `fcntl`, die Runde 7 `flock`, die
+//! Runde 18 `localtime_r` und der Defekt vom 261004 `fsync` hinzugebracht haben.
 
 pub mod ablage;
 pub mod bild;
