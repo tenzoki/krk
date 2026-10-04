@@ -297,7 +297,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use krk_core::ablage::atomar;
 use krk_core::heimordner::tresor::{self, Pin, Schluessel, Tresorfehler};
@@ -449,7 +449,40 @@ impl Stempel {
             groesse: roh.len(),
         })
     }
+
+    /// Ob der andere Stempel dieselbe Datei beschreibt (C4).
+    ///
+    /// **Die Zeit wird auf [`ZEITAUFLOESUNG`] genau verglichen und nicht auf
+    /// die Nanosekunde.** Google Drive (und mit ihm jeder Dateianbieter, der
+    /// Zeiten in Millisekunden fuehrt) setzt die Aenderungszeit einer eben
+    /// geschriebenen Datei Sekunden spaeter auf ihren Millisekundenwert
+    /// zurueck, ohne am Inhalt etwas zu aendern: gemessen an `notes.txt` im
+    /// Notizordner auf Google Drive, `mtime` mit 1790770829,279999971 und
+    /// `ctime` dreizehn Sekunden spaeter. Ein Vergleich auf die Nanosekunde
+    /// hielt das eigene Sichern danach fuer eine Aenderung von aussen, und
+    /// jedes weitere Sichern dieser Datei unterblieb; in der Nachfrage aus C4
+    /// stand der Nutzer damit in einer Schleife, aus der „Sichern“ nie
+    /// herausfuehrte.
+    ///
+    /// Gleich heisst: dieselbe Groesse und weniger als eine
+    /// [`ZEITAUFLOESUNG`] Abstand. Das deckt das Abschneiden wie das Runden
+    /// auf die Millisekunde. Was der Vergleich dafuer aufgibt, ist eine fremde
+    /// Aenderung, die die Groesse nicht bewegt **und** innerhalb derselben
+    /// Millisekunde wie das eigene Schreiben faellt.
+    #[must_use]
+    pub fn gleicht(&self, anderer: &Stempel) -> bool {
+        let abstand = self
+            .geaendert
+            .duration_since(anderer.geaendert)
+            .or_else(|_| anderer.geaendert.duration_since(self.geaendert))
+            .unwrap_or(Duration::MAX);
+        self.groesse == anderer.groesse && abstand < ZEITAUFLOESUNG
+    }
 }
+
+/// Die Aufloesung, auf die [`Stempel::gleicht`] Aenderungszeiten vergleicht:
+/// eine Millisekunde, die feinste, die Google Drive fuehrt.
+const ZEITAUFLOESUNG: Duration = Duration::from_millis(1);
 
 /// Der laufende Suchlauf im gehaltenen Stand (C5).
 ///
@@ -1950,7 +1983,7 @@ impl Editormodell {
         let Some(gemerkt) = self.stempel else {
             return true;
         };
-        Stempel::von_pfad(pfad) != Some(gemerkt)
+        !Stempel::von_pfad(pfad).is_some_and(|jetzt| jetzt.gleicht(&gemerkt))
     }
 
     /// Der Satz ueber eine fremde Aenderung, einmal je Aenderung (C4).
@@ -2839,6 +2872,82 @@ mod tests {
             modell.fremd_geaendert(),
             "C4: eine Aenderung von aussen wird bemerkt"
         );
+    }
+
+    /// Setzt die Aenderungszeit einer Pruefdatei, ohne ihren Inhalt anzufassen.
+    fn zeit_setzen(pfad: &Path, zeit: SystemTime) {
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(pfad)
+            .and_then(|datei| datei.set_modified(zeit))
+            .expect("die Aenderungszeit laesst sich setzen");
+    }
+
+    /// C4: setzt ein Dateianbieter die Aenderungszeit auf die Millisekunde
+    /// zurueck, ist das keine Aenderung von aussen, und „Sichern“ in der
+    /// Nachfrage sichert und nimmt die zurueckgehaltene Datei auf.
+    ///
+    /// **Der Nutzerbefund**: im Notizordner auf Google Drive kam die Nachfrage
+    /// nach jedem „Sichern“ wieder, weil das Sichern an
+    /// [`Editormodell::fremd_geaendert`] scheiterte. Google Drive setzt die
+    /// Zeit einer geschriebenen Datei Sekunden danach auf ihren
+    /// Millisekundenwert; die Probe stellt genau das nach, mit einer Zeit, die
+    /// unterhalb der Millisekunde nicht null ist, damit sie nicht zufaellig
+    /// gruen wird.
+    #[test]
+    fn eine_auf_die_millisekunde_gesetzte_zeit_haelt_das_sichern_nicht_auf() {
+        let ordner = Pruefordner::neu("stempel-millisekunde");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let genau = SystemTime::UNIX_EPOCH + Duration::new(1_790_770_829, 280_412_345);
+        let abgeschnitten = SystemTime::UNIX_EPOCH + Duration::new(1_790_770_829, 280_000_000);
+        zeit_setzen(&erste, genau);
+        let mut modell = geoeffnet(&erste);
+
+        zeit_setzen(&erste, abgeschnitten);
+        assert!(
+            !modell.fremd_geaendert(),
+            "eine auf die Millisekunde gesetzte Zeit ist keine Aenderung von aussen"
+        );
+
+        let _ = modell.bearbeiten("erste, bearbeitet\n".to_owned());
+        assert_eq!(modell.oeffnen(&zweite, None), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::Gesichert(erste.clone()),
+            "„Sichern“ in der Nachfrage schreibt"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&erste).expect("lesbar"),
+            "erste, bearbeitet\n"
+        );
+        assert!(!modell.hat_ungesicherten_stand());
+        assert_eq!(
+            modell.zurueckgehaltenes_uebernehmen(),
+            Some(Ladeausgang::Geoeffnet)
+        );
+        assert_eq!(modell.pfad(), Some(zweite.as_path()));
+        assert!(
+            !modell.hat_ungesicherten_stand(),
+            "die neue Datei steht ohne Abweichung da, eine zweite Nachfrage kommt nicht"
+        );
+    }
+
+    /// Die Kehrseite: eine fremde Aenderung, die die Groesse nicht bewegt und
+    /// die Zeit um mehr als eine Millisekunde, bleibt eine.
+    #[test]
+    fn eine_zeit_jenseits_der_millisekunde_bleibt_eine_aenderung_von_aussen() {
+        let ordner = Pruefordner::neu("stempel-jenseits");
+        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let genau = SystemTime::UNIX_EPOCH + Duration::new(1_790_770_829, 280_412_345);
+        zeit_setzen(&pfad, genau);
+        let modell = geoeffnet(&pfad);
+        std::fs::write(&pfad, "Inhal2\n").expect("die Datei laesst sich schreiben");
+        zeit_setzen(&pfad, genau + Duration::from_millis(2));
+        assert!(modell.fremd_geaendert());
+        zeit_setzen(&pfad, genau - Duration::from_millis(2));
+        assert!(modell.fremd_geaendert(), "auch rueckwaerts");
     }
 
     #[test]
