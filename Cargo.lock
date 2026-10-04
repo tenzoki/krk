@@ -1599,7 +1599,7 @@ dependencies = [
 
 [[package]]
 name = "krk-bench"
-version = "3.1.0"
+version = "3.1.1"
 dependencies = [
  "krk-core",
  "serde",
@@ -1609,7 +1609,7 @@ dependencies = [
 
 [[package]]
 name = "krk-core"
-version = "3.1.0"
+version = "3.1.1"
 dependencies = [
  "argon2",
  "chacha20poly1305",
@@ -1625,7 +1625,7 @@ dependencies = [
 
 [[package]]
 name = "krk-ui"
-version = "3.1.0"
+version = "3.1.1"
 dependencies = [
  "block2",
  "dispatch2",
@@ -2484,7 +2484,7 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 
 [[package]]
 name = "xtask"
-version = "3.1.0"
+version = "3.1.1"
 
 [[package]]
 name = "yoke"
