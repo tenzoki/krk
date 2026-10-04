@@ -331,6 +331,7 @@ use super::belegungsansicht::{self, Belegungsquelle};
 use super::bereichsleiste::{Bereichsleiste, Kommandomelder};
 use super::betrachter::Zoom;
 use super::bildtakt::{self, Zeichenende};
+use super::blaetter::fremdaenderung;
 use super::blaetter::ungesichert::{self, Antwort};
 use super::blaetter::{
     self, Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen,
@@ -613,6 +614,29 @@ enum Standlage {
     /// Eine Zelle bleibt in Bearbeitung; der Grund steht schon in der
     /// Statuszeile.
     ZelleAbgewiesen,
+}
+
+/// Wie ein Sichern beim Anwendungsdelegierten ausgegangen ist, nachdem sein
+/// Ausgang gemeldet wurde; die Antwort von
+/// [`Anwendungsdelegierter::sicherungsausgang_melden`].
+///
+/// **Drei Werte und kein `bool`**, seit die Aenderung von aussen ein Blatt
+/// bekommt (Nutzerentscheid vom 261004): ein Anlass, der auf das Sichern
+/// wartet, laeuft, unterbleibt, oder wartet weiter auf die Antwort auf das
+/// Blatt. Die Rufer verzweigen vollstaendig und ohne Auffangzweig darueber.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[must_use = "der Ausgang entscheidet, ob ein Anlass laufen darf"]
+enum Sicherungslage {
+    /// Der Stand steht in der Datei, oder es gab keine Datei; ein Anlass darf
+    /// laufen.
+    Gesichert,
+    /// Nicht geschrieben, und der Grund steht schon in der Statuszeile; ein
+    /// Anlass unterbleibt.
+    Unterblieben,
+    /// Nicht geschrieben, weil die Datei sich ausserhalb von KRK geaendert
+    /// hat; gemeldet ist noch nichts, und der Rufer fragt mit dem Blatt
+    /// [`fremdaenderung`].
+    FremdGeaendert(PathBuf),
 }
 
 /// Ein Vorgang, der den ungesicherten Stand des Editors verlieren wuerde (C4).
@@ -9491,12 +9515,14 @@ impl Anwendungsdelegierter {
 
     /// `cmd+s` schreibt den Stand des Editors in seine Datei (C4).
     ///
-    /// **Die Fallunterscheidung ueber den Ausgang steht hier einmal**, so wie
-    /// die ueber den Ladeausgang in [`Self::editorausgang_behandeln`]. Sie ist
-    /// vollstaendig und hat keinen Auffangzweig; ein vierter Ausgang haelt den
-    /// Bau an.
+    /// **Die Fallunterscheidung ueber den Ausgang steht einmal**, in
+    /// [`Self::sicherungsausgang_melden`], so wie die ueber den Ladeausgang in
+    /// [`Self::editorausgang_behandeln`]. Sie ist vollstaendig und hat keinen
+    /// Auffangzweig; ein weiterer Ausgang haelt den Bau an. Hat die Datei sich
+    /// ausserhalb von KRK geaendert, geht das Blatt [`fremdaenderung`] auf,
+    /// ohne wartenden Anlass.
     ///
-    /// **Beide Ausgaenge, die eine Datei betreffen, gehen ueber
+    /// **Die Ausgaenge, die eine geschriebene oder gescheiterte Datei betreffen, gehen ueber
     /// [`Editormeldung`]** und damit in die eine Meldeflaeche des Fensters, als
     /// [`Rang::Befehlsantwort`](statuszeile::Rang::Befehlsantwort). Der dritte betrifft keine Datei, weil es keine
     /// gibt; er nimmt
@@ -9521,50 +9547,62 @@ impl Anwendungsdelegierter {
         if self.ivars().editor.get().is_none() {
             return false;
         }
-        // `cmd+s` fragt nicht nach dem Ausgang: es gibt keinen Anlass, der auf
-        // dieses Sichern gewartet haette. Gemeldet ist er in jedem Fall schon,
-        // von `editor_stand_sichern` selbst. Das `let _ =` sagt genau das, seit
-        // der Rueckgabewert `#[must_use]` traegt.
-        let _ = self.editor_stand_sichern();
+        // Kein Anlass wartet auf dieses Sichern. Gesichert oder unterblieben
+        // ist gemeldet; die Aenderung von aussen bekommt ihr Blatt.
+        match self.editor_stand_sichern() {
+            Sicherungslage::Gesichert | Sicherungslage::Unterblieben => {}
+            Sicherungslage::FremdGeaendert(pfad) => self.fremdaenderung_fragen(&pfad, None),
+        }
         true
     }
 
-    /// Sichert und meldet; liefert, ob der Stand jetzt in der Datei steht.
+    /// Sichert und meldet; liefert, ob ein wartender Anlass laufen darf.
     ///
-    /// **Zwei Aufrufer, eine Fallunterscheidung.** `cmd+s` fragt nicht nach dem
-    /// Rueckgabewert, die Nachfrage aus C4 schon: das neunte Abnahmekriterium
-    /// von C4 verlangt, dass ein Anlass unterbleibt, wenn die Sicherung
-    /// gescheitert ist, statt den Stand mitzunehmen. Genau das ist dieser `bool`
-    /// — und er ist die eine Stelle, an der der Ausgang gelesen wird; eine
-    /// zweite Fehlerbehandlung an der Nachfrage entsteht nicht.
+    /// **Zwei Aufrufer, eine Fallunterscheidung.** `cmd+s` hat keinen Anlass,
+    /// die Nachfrage aus C4 schon: das neunte Abnahmekriterium von C4 verlangt,
+    /// dass ein Anlass unterbleibt, wenn die Sicherung gescheitert ist, statt
+    /// den Stand mitzunehmen. Gemeldet wird in [`Self::sicherungsausgang_melden`],
+    /// der einen Stelle, an der ein Sicherungsausgang gelesen wird; eine zweite
+    /// Fehlerbehandlung an der Nachfrage entsteht nicht.
     ///
-    /// **`NichtsGehalten` liefert `true`.** Ohne gehaltene Datei gibt es keinen
-    /// Stand, den ein Anlass verlieren koennte, also darf er laufen. Erreichbar
-    /// ist der Zweig aus der Nachfrage heraus nicht: sie steht nur, wenn der
-    /// Editor ungesicherten Stand haelt, und den haelt er nur mit einer Datei.
-    ///
-    /// **`#[must_use]`, seit dem 260904.** Der Wert entscheidet darueber, ob ein
-    /// Anlass den ungesicherten Stand mitnimmt; wer ihn stillschweigend fallen
-    /// laesst, laesst den Anlass laufen, obwohl das Schreiben gescheitert ist.
-    /// Der eine Rufer, der ihn wirklich nicht braucht, sagt es mit `let _ =`.
-    #[must_use = "der Ausgang entscheidet, ob ein Anlass laufen darf"]
-    fn editor_stand_sichern(&self) -> bool {
+    /// **Die Aenderung von aussen meldet sich hier nicht**, sondern kommt als
+    /// [`Sicherungslage::FremdGeaendert`] zum Rufer zurueck, der das Blatt mit
+    /// seinem Anlass oeffnet ([`Self::fremdaenderung_fragen`]). Bis zum 261004
+    /// war sie ein gescheitertes Sichern wie jedes andere, und „Sichern“ in der
+    /// Nachfrage fuehrte immer wieder auf dieselbe Nachfrage.
+    fn editor_stand_sichern(&self) -> Sicherungslage {
         let Some(editor) = self.ivars().editor.get() else {
-            return false;
+            return Sicherungslage::Unterblieben;
         };
-        match editor.sichern() {
+        let ausgang = editor.sichern();
+        self.sicherungsausgang_melden(ausgang)
+    }
+
+    /// Meldet den Ausgang eines Sicherns oder Ueberschreibens und sagt, was
+    /// ein wartender Anlass tun darf.
+    ///
+    /// **Die Fallunterscheidung ueber den Ausgang steht hier einmal**, fuer
+    /// [`Self::editor_stand_sichern`] und fuer die Antwort „Trotzdem
+    /// überschreiben“; sie ist vollstaendig und hat keinen Auffangzweig.
+    ///
+    /// **`NichtsGehalten` liefert [`Sicherungslage::Gesichert`].** Ohne
+    /// gehaltene Datei gibt es keinen Stand, den ein Anlass verlieren koennte,
+    /// also darf er laufen.
+    fn sicherungsausgang_melden(&self, ausgang: Sicherungsausgang) -> Sicherungslage {
+        match ausgang {
             Sicherungsausgang::Gesichert(pfad) => {
                 self.editormeldung_zeigen(&Editormeldung::Gesichert { pfad });
-                true
+                Sicherungslage::Gesichert
             }
             Sicherungsausgang::Gescheitert(grund) => {
                 self.editormeldung_zeigen(&Editormeldung::SichernGescheitert { grund });
-                false
+                Sicherungslage::Unterblieben
             }
+            Sicherungsausgang::FremdGeaendert(pfad) => Sicherungslage::FremdGeaendert(pfad),
             Sicherungsausgang::NichtsGehalten => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, text(Text::EditorHaeltKeineDatei));
-                true
+                Sicherungslage::Gesichert
             }
             // Eine Zelle der Eintragstabelle liess sich nicht uebernehmen; es
             // wurde nicht geschrieben, und ein wartender Anlass unterbleibt
@@ -9572,7 +9610,105 @@ impl Anwendungsdelegierter {
             Sicherungsausgang::ZelleAbgewiesen(grund) => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, &grund);
-                false
+                Sicherungslage::Unterblieben
+            }
+        }
+    }
+
+    /// Der Satz ueber eine Aenderung von aussen, wenn kein Blatt danach
+    /// fragen kann; der Anlass, falls einer wartet, unterbleibt.
+    ///
+    /// Erreicht wird er, wenn kein Fenster steht, an dem das Blatt haengen
+    /// koennte, und wenn ein Ueberschreiben trotz uebergangener Pruefung diesen
+    /// Ausgang liefert, was das Modell nicht tut. Ein zweites Blatt aus dem
+    /// ersten heraus waere dort genau die Schleife, die das Blatt beendet.
+    fn fremdaenderung_ohne_blatt(&self, pfad: &Path, anlass: Option<Anlass>) {
+        self.editormeldung_zeigen(&Editormeldung::SichernGescheitert {
+            grund: satz(
+                Text::EditorFremdGeaendertNichtUeberschrieben,
+                &[("pfad", &pfad.display())],
+            ),
+        });
+        if let Some(anlass) = anlass {
+            self.anlass_unterbleibt(anlass);
+        }
+    }
+
+    /// Fragt mit einem Blatt, was nach einem an einer Aenderung von aussen
+    /// abgewiesenen Sichern geschieht (C4, Nutzerentscheid vom 261004).
+    ///
+    /// **Der Anlass reist in der Schliessung mit**, wie bei
+    /// [`Self::nachfrage_zeigen`]: `None` heisst, `cmd+s` hat hierher
+    /// gefuehrt; `Some` heisst, „Sichern“ in der Nachfrage aus C4, und der
+    /// Anlass wartet auf die Antwort dieses Blattes. Er steht in keinem Feld.
+    ///
+    /// **Aus der Nachfrage heraus geht dieses Blatt in deren Abschlussblock
+    /// auf**, waehrend AppKit das erste noch abbaut. `beginSheet` reiht ein
+    /// zweites Blatt hinter ein noch haengendes ein, statt es zu verwerfen;
+    /// der Griff liegt sofort im Schlitz, und `esc` erreicht es, sobald es
+    /// steht.
+    fn fremdaenderung_fragen(&self, pfad: &Path, anlass: Option<Anlass>) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            self.fremdaenderung_ohne_blatt(pfad, anlass);
+            return;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = fremdaenderung::zeigen(self.mtm(), fenster, pfad, move |antwort| {
+            let Some(selbst) = schwach.load() else {
+                return;
+            };
+            selbst.blatt_geschlossen();
+            selbst.fremdaenderung_beantworten(anlass, antwort);
+        });
+        self.blatt_oeffnet(griff);
+    }
+
+    /// Was auf die Antwort auf das Blatt [`fremdaenderung`] folgt.
+    ///
+    /// | Antwort | ohne Anlass (`cmd+s`) | mit Anlass (Nachfrage aus C4) |
+    /// |---|---|---|
+    /// | Neu laden | die Platte in den Editor | der Anlass laeuft |
+    /// | Trotzdem überschreiben | schreiben | schreiben, dann der Anlass |
+    /// | Abbrechen | nichts | der Anlass unterbleibt |
+    ///
+    /// **„Neu laden“ mit Anlass liest nicht erst**: jeder der drei Anlaesse
+    /// gibt den Stand der gehaltenen Datei gleich danach auf (eine andere
+    /// Datei ersetzt ihn, das Schliessen gibt ihn frei, das Beenden nimmt ihn
+    /// mit), und eine Lieferung von der Platte, die erst nach dem Anlass
+    /// ankaeme, ueberschriebe dessen Ergebnis. Was der Nutzer sieht, ist
+    /// dasselbe wie nach Laden und Anlass: der getippte Stand ist fort, und der
+    /// Anlass ist gelaufen. Ein gescheitertes Ueberschreiben laesst den Anlass
+    /// unterbleiben wie jedes gescheiterte Sichern.
+    fn fremdaenderung_beantworten(&self, anlass: Option<Anlass>, antwort: fremdaenderung::Antwort) {
+        match antwort {
+            fremdaenderung::Antwort::NeuLaden => match anlass {
+                Some(anlass) => self.anlass_ausfuehren(anlass),
+                None => {
+                    if let Some(editor) = self.ivars().editor.get() {
+                        editor.neu_laden();
+                    }
+                }
+            },
+            fremdaenderung::Antwort::Ueberschreiben => {
+                let Some(editor) = self.ivars().editor.get() else {
+                    return;
+                };
+                let ausgang = editor.ueberschreiben();
+                match (self.sicherungsausgang_melden(ausgang), anlass) {
+                    (Sicherungslage::Gesichert, Some(anlass)) => self.anlass_ausfuehren(anlass),
+                    (Sicherungslage::Unterblieben, Some(anlass)) => {
+                        self.anlass_unterbleibt(anlass);
+                    }
+                    (Sicherungslage::Gesichert | Sicherungslage::Unterblieben, None) => {}
+                    (Sicherungslage::FremdGeaendert(pfad), anlass) => {
+                        self.fremdaenderung_ohne_blatt(&pfad, anlass);
+                    }
+                }
+            }
+            fremdaenderung::Antwort::Abbrechen => {
+                if let Some(anlass) = anlass {
+                    self.anlass_unterbleibt(anlass);
+                }
             }
         }
     }
@@ -9998,13 +10134,15 @@ impl Anwendungsdelegierter {
     /// mitzunehmen (neuntes Abnahmekriterium von C4).
     fn nachfrage_beantworten(&self, anlass: Anlass, antwort: Antwort) {
         match antwort {
-            Antwort::Sichern => {
-                if self.editor_stand_sichern() {
-                    self.anlass_ausfuehren(anlass);
-                } else {
-                    self.anlass_unterbleibt(anlass);
+            Antwort::Sichern => match self.editor_stand_sichern() {
+                Sicherungslage::Gesichert => self.anlass_ausfuehren(anlass),
+                Sicherungslage::Unterblieben => self.anlass_unterbleibt(anlass),
+                // Der Anlass wartet weiter, jetzt auf die Antwort auf das
+                // Blatt; er reist in dessen Schliessung mit.
+                Sicherungslage::FremdGeaendert(pfad) => {
+                    self.fremdaenderung_fragen(&pfad, Some(anlass));
                 }
-            }
+            },
             Antwort::Verwerfen => self.anlass_ausfuehren(anlass),
             Antwort::Abbrechen => self.anlass_unterbleibt(anlass),
         }

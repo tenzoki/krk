@@ -701,6 +701,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::UngesichertErlaeuterung => {
             "{pfad}\n\nReturn sichert, Cmd+Return verwirft die Änderungen, Esc bricht ab."
         }
+        Text::FremdaenderungNeuLaden => "Neu laden",
+        Text::FremdaenderungUeberschreiben => "Trotzdem überschreiben",
+        Text::FremdaenderungFrage => "„{name}“ hat sich außerhalb von KRK geändert",
+        Text::FremdaenderungErlaeuterung => {
+            "{pfad}\n\nNeu laden verwirft die Änderungen im Editor, Überschreiben ersetzt die Fassung auf der Platte. Return und Esc brechen ab, Opt+Return lädt neu, Cmd+Return überschreibt."
+        }
         Text::ZeilennummerFrage => "Zu welcher Zeile?",
         Text::ZeilennummerSpringe => "Springe",
         Text::PfadeingabeFrage => "Zu welchem Ordner?",

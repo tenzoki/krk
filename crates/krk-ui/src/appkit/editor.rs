@@ -3486,6 +3486,55 @@ impl Editorbereich {
         ausgang
     }
 
+    /// Schreibt den gehaltenen Stand ueber eine Datei, die sich von aussen
+    /// geaendert hat (C4, Nutzerentscheid vom 261004).
+    ///
+    /// **Der eine Rueckweg der Antwort „Trotzdem überschreiben“** und sonst
+    /// derselbe Zuschnitt wie [`Self::sichern`]: zuerst die laufende Zelle,
+    /// dann das Modell ([`Editormodell::ueberschreiben`]), dann der Kopf. Eine
+    /// Zelle laeuft hier in aller Regel nicht mehr, denn das Sichern davor hat
+    /// sie uebernommen, und solange das Blatt stand, bearbeitete niemand eine;
+    /// die Uebernahme steht trotzdem zuerst, weil dieser Weg den Stand liest
+    /// (`die_zellenuebernahme_hat_genau_diese_rufer`).
+    #[must_use = "ein gescheitertes Ueberschreiben meldet sich nur ueber diesen Ausgang"]
+    pub fn ueberschreiben(&self) -> Sicherungsausgang {
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return Sicherungsausgang::ZelleAbgewiesen(meldung.text());
+        }
+        let ausgang = self.ivars().modell.borrow_mut().ueberschreiben();
+        if matches!(ausgang, Sicherungsausgang::Gesichert(_)) {
+            self.kopf_nachziehen();
+        }
+        ausgang
+    }
+
+    /// Verwirft den gehaltenen Stand und laedt die Fassung der Platte (C4,
+    /// Nutzerentscheid vom 261004).
+    ///
+    /// **Der eine Rueckweg der Antwort „Neu laden“.** Gelesen wird ueber
+    /// [`Editormodell::neu_laden`], also hinter derselben Sperre fuer
+    /// `secrets.txt` wie jedes Oeffnen und mit der gehaltenen PIN; der Ausgang
+    /// geht durch dieselbe Senke wie jedes Oeffnen ([`Self::melden`]), und bei
+    /// [`Ladeausgang::Geoeffnet`] traegt [`Self::einziehen`] den neuen Stand in
+    /// die Flaeche. Eine Abweisung laesst den Stand und seine Abweichung
+    /// stehen, und ihr Grund geht in die Statuszeile. Die Herkunft ist ein
+    /// Befehl, wie bei [`Self::geheimnisse_oeffnen`].
+    ///
+    /// **Die laufende Zelle wird nicht uebernommen**: ihr Text ist Teil des
+    /// Standes, den der Nutzer eben verworfen hat.
+    pub fn neu_laden(&self) {
+        self.ivars().herkunft.set(Oeffnungsherkunft::Befehl);
+        let sofort = self.ivars().modell.borrow_mut().neu_laden();
+        match sofort {
+            Some(ausgang) => self.melden(ausgang),
+            None => {
+                if self.ivars().modell.borrow().laedt_noch() {
+                    self.takt_starten();
+                }
+            }
+        }
+    }
+
     /// Nimmt die zurueckgehaltene Datei jetzt auf (C4).
     ///
     /// Der Weg zurueck aus der Nachfrage, wenn der Nutzer mit "sichern" oder
@@ -8810,6 +8859,7 @@ mod tests {
         let nadel = concat!(".zelle_", "uebernehmen()");
         let rufer = [
             (&editor, "sichern"),
+            (&editor, "ueberschreiben"),
             (&editor, "datei_oeffnen"),
             (&editor, "ansicht_umschalten"),
             (&editor, "handlung_ausfuehren"),
@@ -8853,6 +8903,68 @@ mod tests {
             rumpf(&editor, "zelle_uebernehmen")
                 .contains(concat!("eintraege.bearbeitung_", "beenden("))
         );
+    }
+
+    /// Die Pruefung auf eine Aenderung von aussen uebergeht allein die Antwort
+    /// „Trotzdem überschreiben“, und „Neu laden“ verwirft allein auf diese
+    /// Antwort (Nutzerentscheid vom 261004).
+    ///
+    /// `.ueberschreiben()` steht in den Codezeilen von `krk-ui` genau zweimal:
+    /// in [`Editorbereich::ueberschreiben`], das das Modell ruft, und in
+    /// `fremdaenderung_beantworten` beim Anwendungsdelegierten, unter der
+    /// Antwort `Ueberschreiben`. Fuer `.neu_laden()` gilt dasselbe mit der
+    /// Antwort `NeuLaden`. Ein dritter Rufer, etwa ein `cmd+s`, das still
+    /// ueberschreibt, macht die Probe rot.
+    #[test]
+    fn das_ueberschreiben_hat_genau_einen_rufer() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
+        for (nadel, antwort) in [
+            (
+                concat!(".ueber", "schreiben()"),
+                concat!("Antwort::", "Ueberschreiben"),
+            ),
+            (
+                concat!(".neu_", "laden()"),
+                concat!("Antwort::", "NeuLaden"),
+            ),
+        ] {
+            let rufer: Vec<String> = crate::quellbaum::quelldateien()
+                .into_iter()
+                .filter(|(name, _)| name.starts_with("krk-ui/"))
+                .flat_map(|(name, inhalt)| {
+                    let (code, _) = inhalt
+                        .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+                        .map_or((inhalt.as_str(), ""), |(code, rest)| (code, rest));
+                    code.lines()
+                        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                        .filter(|zeile| zeile.contains(nadel))
+                        .map(|zeile| format!("{name}: {}", zeile.trim()))
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+            assert_eq!(rufer.len(), 2, "{nadel}: {rufer:#?}");
+            let name = nadel.trim_start_matches('.').trim_end_matches("()");
+            assert!(
+                rumpf(&editor, name).contains(&format!("modell.borrow_mut(){nadel}")),
+                "{name} im Editorbereich reicht an das Modell durch"
+            );
+            let beantworten = rumpf(&anwendung, "fremdaenderung_beantworten");
+            let zweig = beantworten
+                .find(antwort)
+                .unwrap_or_else(|| panic!("{antwort} hat keinen Zweig"));
+            let ruf = beantworten
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{nadel} steht nicht in fremdaenderung_beantworten"));
+            assert!(zweig < ruf, "{nadel} steht vor dem Zweig {antwort}");
+            if let Some(naechster) = beantworten[zweig + antwort.len()..].find("Antwort::") {
+                assert!(
+                    ruf < zweig + antwort.len() + naechster,
+                    "{nadel} steht unter einem anderen Zweig als {antwort}"
+                );
+            }
+        }
     }
 
     // ------------------------------------------------------------------

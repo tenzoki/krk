@@ -753,6 +753,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::UngesichertErlaeuterung => {
             "{pfad}\n\nEntrée enregistre, Cmd+Entrée abandonne les modifications, Esc annule."
         }
+        Text::FremdaenderungNeuLaden => "Recharger",
+        Text::FremdaenderungUeberschreiben => "Écraser quand même",
+        Text::FremdaenderungFrage => "«\u{a0}{name}\u{a0}» a été modifié en dehors de KRK",
+        Text::FremdaenderungErlaeuterung => {
+            "{pfad}\n\nRecharger abandonne les modifications de l’Éditeur, Écraser remplace la version sur le disque. Entrée et Esc annulent, Opt+Entrée recharge, Cmd+Entrée écrase."
+        }
         Text::ZeilennummerFrage => "À quelle ligne\u{202f}?",
         Text::ZeilennummerSpringe => "Aller",
         Text::PfadeingabeFrage => "Vers quel dossier\u{202f}?",

@@ -1,13 +1,17 @@
 //! Die gemeinsame Huelle fuer die Blaetter am Fenster.
 //!
 //! Ein Blatt ist ein Dialog, der am oberen Rand des Fensters herunterfaehrt und
-//! es blockiert, solange er steht. AppKit nennt das ein Sheet. In diesem
-//! Verzeichnis liegen zwoelf:
+//! es blockiert, solange er steht. AppKit nennt das ein Sheet. Welche in
+//! diesem Verzeichnis liegen, sagt `ls crates/krk-ui/src/appkit/blaetter` und
+//! keine Zahl an dieser Stelle; die Zahl zwoelf, die hier stand, hat die
+//! Ortswahl schon uebergangen. Darunter:
 //! die Pfadeingabe aus C2 und fuenf zu C4 der Runde 1 (Konflikt, Rueckfrage vor
 //! dem Raeumen in den Papierkorb, Abschlussliste der uebersprungenen Eintraege
 //! und seit Schritt 17 die Namenseingabe fuer das Anlegen sowie das Umbenennen
 //! im Stapel), dazu seit S27 der Editor-Runde die Nachfrage vor dem Verlust
-//! eines ungesicherten Standes ([`ungesichert`], C4 der Editor-Runde) und seit
+//! eines ungesicherten Standes ([`ungesichert`], C4 der Editor-Runde), seit dem
+//! 261004 daneben die Wahl nach einem Sichern, das an einer Aenderung von
+//! aussen abgewiesen wurde ([`fremdaenderung`]), und seit
 //! S35 und S36 die beiden Eingabeblaetter des Editors: die Frage nach der
 //! Zeilennummer ([`zeilennummer`]) und die nach Such- und Ersatztext
 //! ([`suche`]), beide C5 der Editor-Runde. Das zehnte ist seit der Runde 24
@@ -244,6 +248,7 @@
 //! Angabe); alle uebrigen tragen im SDK keine eigene Verfuegbarkeitsangabe und
 //! stehen damit seit 10.0.
 
+pub mod fremdaenderung;
 pub mod konflikt;
 pub mod loeschbestaetigung;
 pub mod namenseingabe;

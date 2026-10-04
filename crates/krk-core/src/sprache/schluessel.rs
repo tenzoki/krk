@@ -1062,6 +1062,16 @@ pub enum Text {
     UngesichertFrage,
     /// `ungesichert::zeigen`: die Erlaeuterung; `{pfad}`.
     UngesichertErlaeuterung,
+    /// `fremdaenderung::schaltflaechen`: die Schaltflaeche, die den Stand
+    /// verwirft und die Fassung der Platte laedt.
+    FremdaenderungNeuLaden,
+    /// `fremdaenderung::schaltflaechen`: die Schaltflaeche, die die Fassung
+    /// der Platte mit dem Stand ueberschreibt.
+    FremdaenderungUeberschreiben,
+    /// `fremdaenderung::zeigen`: die Kopfzeile; `{name}`.
+    FremdaenderungFrage,
+    /// `fremdaenderung::zeigen`: die Erlaeuterung; `{pfad}`.
+    FremdaenderungErlaeuterung,
     /// `zeilennummer::zeigen`: die Kopfzeile des Blattes.
     ZeilennummerFrage,
     /// `zeilennummer::zeigen`: die bestaetigende Schaltflaeche.
@@ -1419,7 +1429,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 594] = [
+    pub const ALLE: [Text; 598] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1869,6 +1879,10 @@ impl Text {
         Text::UngesichertVerwerfen,
         Text::UngesichertFrage,
         Text::UngesichertErlaeuterung,
+        Text::FremdaenderungNeuLaden,
+        Text::FremdaenderungUeberschreiben,
+        Text::FremdaenderungFrage,
+        Text::FremdaenderungErlaeuterung,
         Text::ZeilennummerFrage,
         Text::ZeilennummerSpringe,
         Text::PfadeingabeFrage,

@@ -826,6 +826,42 @@ fn geheimnisse_lesen(pfad: &Path, pin: &Pin) -> Result<Gelesen, Abweisung> {
 pub struct Ladevorgang {
     empfaenger: Receiver<Geladen>,
     pfad: PathBuf,
+    /// Wie die Lieferung zum Stand wird; siehe [`Uebernahme`].
+    uebernahme: Uebernahme,
+}
+
+/// Wie eine gelieferte Datei zum Stand des Editors wird.
+///
+/// **Zwei Werte, und nur einer davon verwirft einen ungesicherten Stand.**
+/// [`Editormodell::oeffnen`] erteilt allein [`Self::MitNachfrage`], und dann
+/// haelt [`Editormodell::uebernehmen_oder_zurueckhalten`] die Lieferung fuer
+/// die Nachfrage aus C4 zurueck. [`Self::Verwerfend`] erteilt allein
+/// [`Editormodell::neu_laden`], der Rueckweg der Antwort „Neu laden“ auf eine
+/// Aenderung von aussen: der Nutzer hat dort schon gesagt, dass sein Stand
+/// faellt, und eine zweite Frage danach waere dieselbe Frage noch einmal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Uebernahme {
+    /// Ein ungesicherter Stand haelt die Lieferung fuer die Nachfrage zurueck.
+    MitNachfrage,
+    /// Die Lieferung ersetzt den Stand der gehaltenen Datei ohne Nachfrage;
+    /// eine Abweisung laesst ihn stehen wie jede andere.
+    Verwerfend,
+}
+
+/// Ob das Sichern vor dem Schreiben nach einer Aenderung von aussen fragt
+/// (C4).
+///
+/// **Privat, und jeder Wert hat genau einen oeffentlichen Eingang**:
+/// [`Editormodell::sichern`] prueft, [`Editormodell::ueberschreiben`]
+/// uebergeht. Ein oeffentliches Argument an `sichern` waere eine Stelle, an der
+/// ein Rufer die Pruefung mit einem falschen Wert still abschaltet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Fremdpruefung {
+    /// Hat die Datei sich geaendert, unterbleibt das Schreiben, und der
+    /// Ausgang ist [`Sicherungsausgang::FremdGeaendert`].
+    Pruefen,
+    /// Der Nutzer hat die Aenderung von aussen gesehen und ueberschreibt sie.
+    Uebergehen,
 }
 
 impl Ladevorgang {
@@ -839,7 +875,7 @@ impl Ladevorgang {
     /// bliebe unbemerkt, bis das naechste Sichern sie ueberschreibt. Die Zusage
     /// von C4 lautet, fremde Aenderungen nicht ohne Zutun zu ueberschreiben;
     /// eine ueberfluessige Meldung haelt sie ein, ein Ueberschreiben nicht.
-    fn starten(pfad: PathBuf, auftrag: Leseauftrag) -> Self {
+    fn starten(pfad: PathBuf, auftrag: Leseauftrag, uebernahme: Uebernahme) -> Self {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
         let fuer_faden = pfad.clone();
@@ -861,7 +897,11 @@ impl Ladevorgang {
             // Grund wie in `vorschaumodell`.
             eprintln!("krk: der Editor-Arbeitsfaden liess sich nicht starten: {fehler}");
         }
-        Self { empfaenger, pfad }
+        Self {
+            empfaenger,
+            pfad,
+            uebernahme,
+        }
     }
 }
 
@@ -995,7 +1035,7 @@ struct Zurueckgehalten {
 
 /// Wie ein Sichern ausgegangen ist (C4).
 ///
-/// **Drei Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.**
+/// **Die Werte sind ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.**
 /// Das gescheiterte Sichern ist ein eigener Wert und kein Nichts, weil das
 /// neunte Abnahmekriterium von C4 zwei Sachen zugleich verlangt: den Grund in
 /// der Statuszeile und einen Stand, der stehen bleibt. Wer beides in "es hat
@@ -1025,13 +1065,24 @@ pub enum Sicherungsausgang {
     /// Der Grund gehoert in die Statuszeile; der Stand bleibt unveraendert
     /// stehen, und ein Anlass, der auf dieses Sichern gewartet hat, unterbleibt.
     ///
-    /// **Zwei Anlaesse fuehren hierher, und beide sagen dasselbe zu**: das
-    /// Schreiben ist gescheitert, und ein Schreiben, das unterblieben ist, weil
-    /// die Datei sich von aussen geaendert hat. Verschieden ist allein der Satz
-    /// darin. Sie zu trennen braechte dem Aufrufer nichts: er hat in beiden
-    /// Faellen dasselbe zu tun, naemlich den Grund zu zeigen und den Anlass
-    /// unterbleiben zu lassen.
+    /// Das Schreiben ist gescheitert, oder es durfte gar nicht erst beginnen,
+    /// weil der Stand einer `secrets.txt` im Klartext vorlag. Die Aenderung von
+    /// aussen kommt **nicht** hierher, sondern als [`Self::FremdGeaendert`].
     Gescheitert(String),
+    /// Geschrieben wurde nicht, weil die Datei sich seit dem Oeffnen oder dem
+    /// letzten Sichern ausserhalb von KRK geaendert hat oder verschwunden ist
+    /// ([`Editormodell::fremd_geaendert`]). Der Stand bleibt mit seiner
+    /// Abweichung stehen, und die Platte ist unberuehrt.
+    ///
+    /// **Ein eigener Wert und nicht [`Self::Gescheitert`]**, weil der Aufrufer
+    /// hier etwas anderes zu tun hat: bis zum 261004 trug derselbe Satz beide
+    /// Faelle, der Grund stand bis zum naechsten Tastendruck in der
+    /// Statuszeile, und „Sichern“ in der Nachfrage aus C4 drehte sich im Kreis,
+    /// weil kein Weg aus der Lage herausfuehrte. Seitdem fragt der Aufrufer mit
+    /// einem Blatt, ob neu geladen oder ueberschrieben wird
+    /// ([`Editormodell::neu_laden`], [`Editormodell::ueberschreiben`]).
+    /// Der Pfad steht dabei, weil das Blatt die Datei nennt.
+    FremdGeaendert(PathBuf),
     /// Der Editor haelt keine Datei; es gibt nichts zu sichern.
     NichtsGehalten,
     /// Eine Zelle der Eintragstabelle liess sich nicht uebernehmen; es wurde
@@ -1337,6 +1388,56 @@ impl Editormodell {
             self.ladevorgang = None;
             return Some(Ladeausgang::SchonOffen);
         }
+        self.lesen_beginnen(pfad, pin, Uebernahme::MitNachfrage)
+    }
+
+    /// Liest die gehaltene Datei neu und ersetzt ihren Stand, auch einen
+    /// ungesicherten (C4).
+    ///
+    /// **Der Rueckweg der Antwort „Neu laden“** auf das Blatt, das eine
+    /// Aenderung von aussen meldet ([`Sicherungsausgang::FremdGeaendert`]).
+    /// Der Nutzer hat damit gesagt, dass sein Stand faellt; eine Nachfrage aus
+    /// C4 kommt deshalb nicht, und die Lieferung geht ueber
+    /// [`Uebernahme::Verwerfend`] unmittelbar in [`Self::uebernehmen`].
+    ///
+    /// **Gelesen wird ueber denselben Weg wie beim Oeffnen**, mit derselben
+    /// Sperre fuer `secrets.txt` in [`Self::lesen_beginnen`]; allein die
+    /// Abkuerzung [`Ladeausgang::SchonOffen`] aus [`Self::oeffnen`] gilt hier
+    /// nicht, denn genau die gehaltene Datei soll neu gelesen werden. Die PIN
+    /// ist die gehaltene: haelt der Editor `secrets.txt` entsperrt, liest und
+    /// leitet der Faden mit ihr ab, und eine von aussen geaenderte PIN weist
+    /// ab wie jedes Oeffnen. Ohne Schluessel geht keine PIN mit, und eine
+    /// `secrets.txt` weist die Sperre dann ab, bevor ein Byte gelesen ist.
+    ///
+    /// **Eine Abweisung laesst den Stand stehen**, samt Abweichung: der Nutzer
+    /// verliert seine Aenderungen erst, wenn die Platte sie wirklich ersetzt.
+    /// `None` heisst wie bei [`Self::oeffnen`], dass ein Lesen laeuft; haelt
+    /// der Editor keine Datei, ist es ebenfalls `None`, und es laeuft keins
+    /// ([`Self::laedt_noch`] sagt es).
+    #[must_use]
+    pub fn neu_laden(&mut self) -> Option<Ladeausgang> {
+        let pfad = self.pfad.clone()?;
+        let pin = match &self.schutz {
+            Schutz::Klartext => None,
+            Schutz::Verschluesselt { pin, .. } => Some(*pin),
+        };
+        self.lesen_beginnen(&pfad, pin, Uebernahme::Verwerfend)
+    }
+
+    /// Beginnt das Lesen eines Pfades, hinter der Sperre fuer `secrets.txt`.
+    ///
+    /// **Die eine Stelle, die einen Ladevorgang startet**, mit genau zwei
+    /// Rufern: [`Self::oeffnen`] und [`Self::neu_laden`]. Die Sperre steht
+    /// deshalb hier und erreicht beide; was sie tut, steht an
+    /// [`Self::oeffnen`] unter „`secrets.txt` oeffnet sich allein mit der
+    /// PIN“. Die Probe `die_sperre_fragt_die_sonderdatei_vor_dem_lesen` haelt
+    /// die Reihenfolge und die zwei Rufer.
+    fn lesen_beginnen(
+        &mut self,
+        pfad: &Path,
+        pin: Option<Pin>,
+        uebernahme: Uebernahme,
+    ) -> Option<Ladeausgang> {
         let auftrag = match (self.ist_geheimnisdatei(pfad), pin) {
             (false, None) => Leseauftrag::Text,
             (true, Some(pin)) => Leseauftrag::Geheimnisse(pin),
@@ -1357,7 +1458,11 @@ impl Editormodell {
                 )));
             }
         };
-        self.ladevorgang = Some(Ladevorgang::starten(pfad.to_path_buf(), auftrag));
+        self.ladevorgang = Some(Ladevorgang::starten(
+            pfad.to_path_buf(),
+            auftrag,
+            uebernahme,
+        ));
         None
     }
 
@@ -1529,10 +1634,16 @@ impl Editormodell {
     pub fn einziehen(&mut self) -> Option<Ladeausgang> {
         let vorgang = self.ladevorgang.as_ref()?;
         let geladener_pfad = vorgang.pfad.clone();
+        let uebernahme = vorgang.uebernahme;
         match vorgang.empfaenger.try_recv() {
             Ok(geladen) => {
                 self.ladevorgang = None;
-                Some(self.uebernehmen_oder_zurueckhalten(geladener_pfad, geladen))
+                Some(match uebernahme {
+                    Uebernahme::MitNachfrage => {
+                        self.uebernehmen_oder_zurueckhalten(geladener_pfad, geladen)
+                    }
+                    Uebernahme::Verwerfend => self.uebernehmen(geladener_pfad, geladen),
+                })
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => None,
             // Der Faden ist ohne Meldung gefallen; darauf zu warten hat keinen
@@ -1635,20 +1746,21 @@ impl Editormodell {
     /// # Der Stempel wird vor dem Schreiben geprueft
     ///
     /// Hat die Datei sich seit dem Oeffnen oder dem letzten Sichern von aussen
-    /// geaendert, unterbleibt das Schreiben, und der Grund geht in die
-    /// Statuszeile. Das ist die eine Haelfte des achten Abnahmekriteriums von
+    /// geaendert, unterbleibt das Schreiben, und der Ausgang ist
+    /// [`Sicherungsausgang::FremdGeaendert`]; der Aufrufer fragt dann mit einem
+    /// Blatt, ob neu geladen ([`Self::neu_laden`]) oder ueberschrieben
+    /// ([`Self::ueberschreiben`]) wird. Das ist die eine Haelfte des achten Abnahmekriteriums von
     /// C4, die ohne Weiteres zuverlaessig ist: sie fragt in dem Augenblick, in
     /// dem es darauf ankommt, naemlich unmittelbar vor dem Ueberschreiben. Die
     /// andere Haelfte, das Melden im laufenden Betrieb, kommt mit S31.
     ///
     /// **Gefragt wird ueber [`Self::fremd_geaendert`] und nicht mit einer
     /// zweiten, enger geschnittenen Frage daneben.** Damit gilt eine
-    /// verschwundene oder unlesbar gewordene Datei ebenfalls als geaendert, und
-    /// **das ist der Preis, der hier steht und nicht verschwiegen wird:** wem
-    /// die geoeffnete Datei unter der Hand weggeraeumt wird, der bekommt sie
-    /// aus dem Editor heraus nicht wieder geschrieben, solange die Wahl aus dem
-    /// Zustandsbild des Specs (`Fremd` mit seinen zwei Ausgaengen) nicht
-    /// gebaut ist; sein Stand bleibt dabei vollstaendig stehen. Eine zweite
+    /// verschwundene oder unlesbar gewordene Datei ebenfalls als geaendert:
+    /// wem die geoeffnete Datei unter der Hand weggeraeumt wird, der bekommt
+    /// das Blatt und schreibt sie mit „Trotzdem überschreiben“ neu, waehrend
+    /// „Neu laden“ an der fehlenden Datei abgewiesen wird und den Stand stehen
+    /// laesst. Bis zum 261004 fuehrte aus dieser Lage kein Weg heraus. Eine zweite
     /// Frage, die das Verschwinden vom Aendern trennte, waere ein Sonderfall
     /// mit eigener Regel an einer Stelle, die genau eine Frage zu stellen hat.
     ///
@@ -1677,11 +1789,38 @@ impl Editormodell {
     /// in die Datei kaeme.
     #[must_use = "der Ausgang traegt den Grund eines gescheiterten Sicherns; fallengelassen glaubt der Nutzer, die Datei stehe auf der Platte"]
     pub fn sichern(&mut self) -> Sicherungsausgang {
-        self.sichern_ueber(|ziel, chiffrat| chiffrat.schreiben(ziel))
+        self.sichern_ueber(Fremdpruefung::Pruefen, |ziel, chiffrat| {
+            chiffrat.schreiben(ziel)
+        })
     }
 
-    /// [`Self::sichern`] mit einem hereingereichten Schreibweg fuer das
-    /// Chiffrat.
+    /// Schreibt den Stand in die gehaltene Datei, **auch wenn sie sich von
+    /// aussen geaendert hat** (C4).
+    ///
+    /// **Der Rueckweg der Antwort „Trotzdem überschreiben“** auf das Blatt,
+    /// das [`Sicherungsausgang::FremdGeaendert`] zeigt, und kein zweiter Weg
+    /// zum Sichern daneben: es geht durch denselben Rumpf wie
+    /// [`Self::sichern`] und uebergeht allein die Frage nach der fremden
+    /// Aenderung ([`Fremdpruefung::Uebergehen`]). Alles andere gilt
+    /// unveraendert: `secrets.txt` geht allein als [`Chiffrat`] auf die
+    /// Platte, ein Klartextstand fuer sie wird nicht geschrieben, das
+    /// Schreiben ist atomar, und danach steht der Stempel auf der eben
+    /// geschriebenen Datei, sodass das naechste [`Self::sichern`] wieder
+    /// gewoehnlich prueft.
+    ///
+    /// **Ein eigener Name und kein Argument an [`Self::sichern`]**, damit kein
+    /// bestehender Rufer die Pruefung aus Versehen uebergeht: wer
+    /// ueberschreibt, schreibt es hin. Die Rufer haelt die Probe
+    /// `das_ueberschreiben_hat_genau_einen_rufer` in `appkit/editor.rs`.
+    #[must_use = "der Ausgang traegt den Grund eines gescheiterten Sicherns; fallengelassen glaubt der Nutzer, die Datei stehe auf der Platte"]
+    pub fn ueberschreiben(&mut self) -> Sicherungsausgang {
+        self.sichern_ueber(Fremdpruefung::Uebergehen, |ziel, chiffrat| {
+            chiffrat.schreiben(ziel)
+        })
+    }
+
+    /// [`Self::sichern`] und [`Self::ueberschreiben`] mit einem
+    /// hereingereichten Schreibweg fuer das Chiffrat.
     ///
     /// **Die Naht gibt es allein fuer die Probe**, die die Bytes am Schreibweg
     /// abfaengt und das Bild der Nachbardatei vor dem `rename` liest; der
@@ -1690,16 +1829,19 @@ impl Editormodell {
     /// keinen Klartext annehmen kann.
     fn sichern_ueber(
         &mut self,
+        pruefung: Fremdpruefung,
         chiffrat_schreiben: impl FnOnce(&Path, &Chiffrat) -> io::Result<()>,
     ) -> Sicherungsausgang {
         let Some(pfad) = self.pfad.clone() else {
             return Sicherungsausgang::NichtsGehalten;
         };
-        if self.fremd_geaendert() {
-            return Sicherungsausgang::Gescheitert(satz(
-                Text::EditorFremdGeaendertNichtUeberschrieben,
-                &[("pfad", &pfad.display())],
-            ));
+        match pruefung {
+            Fremdpruefung::Pruefen => {
+                if self.fremd_geaendert() {
+                    return Sicherungsausgang::FremdGeaendert(pfad);
+                }
+            }
+            Fremdpruefung::Uebergehen => {}
         }
         let geschrieben = match &self.schutz {
             Schutz::Klartext => {
@@ -1972,8 +2114,9 @@ impl Editormodell {
     /// verschwundenen Datei einen Absatz darueber.
     ///
     /// **Der Preis steht hier und wird nicht verschwiegen:** in dieser Lage
-    /// meldet der Editor die fremde Aenderung und sichert nicht mehr, bis der
-    /// Nutzer die Datei neu oeffnet. Das ist die teurere Seite des Irrtums und
+    /// meldet der Editor die fremde Aenderung und sichert nicht mehr ohne
+    /// Rueckfrage, bis der Nutzer neu laedt oder ueberschreibt
+    /// ([`Sicherungsausgang::FremdGeaendert`]). Das ist die teurere Seite des Irrtums und
     /// die richtige: die andere schreibt ueber fremde Arbeit.
     #[must_use]
     pub fn fremd_geaendert(&self) -> bool {
@@ -2795,13 +2938,11 @@ mod tests {
         std::fs::write(&pfad, "von jemand anderem geschrieben\n")
             .expect("die Datei laesst sich von aussen schreiben");
 
-        match modell.sichern() {
-            Sicherungsausgang::Gescheitert(grund) => assert!(
-                grund.contains("außerhalb von KRK"),
-                "der Grund nennt die fremde Änderung: {grund}"
-            ),
-            sonst => panic!("die fremde Änderung haette das Schreiben anhalten muessen, {sonst:?}"),
-        }
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone()),
+            "die fremde Änderung haelt das Schreiben an und kommt als eigener Ausgang"
+        );
         assert_eq!(
             std::fs::read_to_string(&pfad).expect("die Datei ist lesbar"),
             "von jemand anderem geschrieben\n",
@@ -2825,8 +2966,9 @@ mod tests {
 
         std::fs::remove_file(&pfad).expect("die Datei laesst sich loeschen");
 
-        assert!(
-            matches!(modell.sichern(), Sicherungsausgang::Gescheitert(_)),
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone()),
             "eine verschwundene Datei gilt als von aussen geaendert"
         );
         assert!(!pfad.exists(), "geschrieben wurde nichts");
@@ -2983,9 +3125,189 @@ mod tests {
             modell.fremdaenderung_melden().is_some(),
             "und der erste der beiden Momente meldet"
         );
-        let Sicherungsausgang::Gescheitert(_) = modell.sichern() else {
+        let Sicherungsausgang::FremdGeaendert(_) = modell.sichern() else {
             panic!("der zweite Moment ueberschreibt nicht ungeprueft");
         };
+    }
+
+    /// Ein Modell, das `stand.txt` mit getipptem Stand haelt, waehrend auf
+    /// der Platte eine fremde Fassung steht; `sichern` hat eben
+    /// [`Sicherungsausgang::FremdGeaendert`] geliefert, und das Blatt steht.
+    fn fremd_geaendert_vor_dem_blatt(ordner: &Pruefordner) -> (Editormodell, PathBuf) {
+        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let mut modell = geoeffnet(&pfad);
+        let _ = modell.bearbeiten("im Editor getippt\n".to_owned());
+        std::fs::write(&pfad, "von jemand anderem, laenger geschrieben\n")
+            .expect("die Datei laesst sich von aussen schreiben");
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone())
+        );
+        (modell, pfad)
+    }
+
+    /// „Trotzdem überschreiben“: der Stand steht auf der Platte, die
+    /// Abweichung ist fort, der Stempel steht auf der eben geschriebenen
+    /// Datei, und das naechste Sichern prueft wieder gewoehnlich, ohne Blatt.
+    #[test]
+    fn das_ueberschreiben_schreibt_und_das_naechste_sichern_ist_gewoehnlich() {
+        let ordner = Pruefordner::neu("fremd-ueberschreiben");
+        let (mut modell, pfad) = fremd_geaendert_vor_dem_blatt(&ordner);
+
+        assert_eq!(
+            modell.ueberschreiben(),
+            Sicherungsausgang::Gesichert(pfad.clone())
+        );
+        assert_eq!(
+            std::fs::read_to_string(&pfad).expect("lesbar"),
+            "im Editor getippt\n"
+        );
+        assert!(!modell.hat_ungesicherten_stand());
+        assert!(
+            !modell.fremd_geaendert(),
+            "der Stempel steht auf der eben geschriebenen Datei"
+        );
+
+        let _ = modell.bearbeiten("danach weiter getippt\n".to_owned());
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::Gesichert(pfad.clone()),
+            "das naechste Sichern ist ein gewoehnliches"
+        );
+
+        // Und es prueft wieder: eine zweite fremde Aenderung haelt es an.
+        let _ = modell.bearbeiten("noch einmal getippt\n".to_owned());
+        std::fs::write(&pfad, "wieder von aussen, mit anderer Laenge\n").expect("schreiben");
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone())
+        );
+    }
+
+    /// Eine verschwundene Datei schreibt „Trotzdem überschreiben“ neu.
+    #[test]
+    fn das_ueberschreiben_legt_eine_verschwundene_datei_neu_an() {
+        let ordner = Pruefordner::neu("fremd-fort-ueberschreiben");
+        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let mut modell = geoeffnet(&pfad);
+        let _ = modell.bearbeiten("im Editor getippt\n".to_owned());
+        std::fs::remove_file(&pfad).expect("die Datei laesst sich loeschen");
+
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone())
+        );
+        assert_eq!(
+            modell.ueberschreiben(),
+            Sicherungsausgang::Gesichert(pfad.clone())
+        );
+        assert_eq!(
+            std::fs::read_to_string(&pfad).expect("lesbar"),
+            "im Editor getippt\n"
+        );
+        assert!(!modell.fremd_geaendert());
+    }
+
+    /// „Neu laden“: der Stand ist der der Platte, nichts weicht ab, keine
+    /// Nachfrage aus C4 haelt die Lieferung zurueck, und das naechste Sichern
+    /// ist ein gewoehnliches.
+    #[test]
+    fn das_neu_laden_ersetzt_den_stand_durch_die_platte() {
+        let ordner = Pruefordner::neu("fremd-neu-laden");
+        let (mut modell, pfad) = fremd_geaendert_vor_dem_blatt(&ordner);
+
+        assert_eq!(modell.neu_laden(), None, "gelesen wird auf dem Faden");
+        assert!(modell.laedt_noch());
+        assert_eq!(
+            abwarten(&mut modell),
+            Ladeausgang::Geoeffnet,
+            "der Nutzer hat schon gewaehlt; eine Nachfrage kommt nicht"
+        );
+        assert_eq!(modell.pfad(), Some(pfad.as_path()));
+        assert_eq!(modell.stand(), "von jemand anderem, laenger geschrieben\n");
+        assert!(!modell.hat_ungesicherten_stand());
+        assert!(!modell.fremd_geaendert());
+        assert_eq!(
+            std::fs::read_to_string(&pfad).expect("lesbar"),
+            "von jemand anderem, laenger geschrieben\n",
+            "neu laden schreibt nichts"
+        );
+
+        let _ = modell.bearbeiten("auf der neuen Fassung getippt\n".to_owned());
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+    }
+
+    /// „Neu laden“ an einer verschwundenen Datei wird abgewiesen und laesst
+    /// den Stand samt Abweichung stehen: der Nutzer verliert seine
+    /// Aenderungen erst, wenn die Platte sie wirklich ersetzt.
+    #[test]
+    fn ein_abgewiesenes_neu_laden_laesst_den_stand_stehen() {
+        let ordner = Pruefordner::neu("fremd-neu-laden-fort");
+        let pfad = ordner.datei("stand.txt", "Inhalt\n");
+        let mut modell = geoeffnet(&pfad);
+        let _ = modell.bearbeiten("im Editor getippt\n".to_owned());
+        std::fs::remove_file(&pfad).expect("die Datei laesst sich loeschen");
+
+        assert_eq!(modell.neu_laden(), None);
+        assert!(matches!(abwarten(&mut modell), Ladeausgang::Abgewiesen(_)));
+        assert_eq!(modell.pfad(), Some(pfad.as_path()));
+        assert_eq!(modell.stand(), "im Editor getippt\n");
+        assert!(modell.hat_ungesicherten_stand());
+    }
+
+    /// „Abbrechen“ ruft am Modell nichts: der Stand bleibt mit seiner
+    /// Abweichung, die Platte unberuehrt, und das naechste Sichern fragt
+    /// wieder, statt still zu schreiben.
+    #[test]
+    fn nach_dem_abbrechen_steht_alles_wie_vor_dem_blatt() {
+        let ordner = Pruefordner::neu("fremd-abbrechen");
+        let (mut modell, pfad) = fremd_geaendert_vor_dem_blatt(&ordner);
+
+        assert_eq!(modell.stand(), "im Editor getippt\n");
+        assert!(modell.hat_ungesicherten_stand());
+        assert!(!modell.laedt_noch());
+        assert_eq!(
+            std::fs::read_to_string(&pfad).expect("lesbar"),
+            "von jemand anderem, laenger geschrieben\n"
+        );
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone()),
+            "nach dem Abbrechen fragt das naechste Sichern wieder"
+        );
+    }
+
+    /// In der Nachfrage aus C4 beim Wechsel auf eine andere Datei: nach
+    /// „Trotzdem überschreiben“ nimmt der Editor die zurueckgehaltene Datei
+    /// auf, ohne dass eine zweite Nachfrage kommt.
+    #[test]
+    fn nach_dem_ueberschreiben_geht_der_wechsel_auf_die_andere_datei_weiter() {
+        let ordner = Pruefordner::neu("fremd-wechsel");
+        let erste = ordner.datei("erste.txt", "erste\n");
+        let zweite = ordner.datei("zweite.txt", "zweite\n");
+        let mut modell = geoeffnet(&erste);
+        let _ = modell.bearbeiten("erste, bearbeitet\n".to_owned());
+        assert_eq!(modell.oeffnen(&zweite, None), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Zurueckgehalten);
+
+        std::fs::write(&erste, "erste, von aussen und laenger\n").expect("schreiben");
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(erste.clone())
+        );
+        assert_eq!(
+            modell.ueberschreiben(),
+            Sicherungsausgang::Gesichert(erste.clone())
+        );
+        assert_eq!(
+            modell.zurueckgehaltenes_uebernehmen(),
+            Some(Ladeausgang::Geoeffnet)
+        );
+        assert_eq!(modell.pfad(), Some(zweite.as_path()));
+        assert_eq!(
+            std::fs::read_to_string(&erste).expect("lesbar"),
+            "erste, bearbeitet\n"
+        );
     }
 
     #[test]
@@ -3398,7 +3720,7 @@ mod tests {
         // setzt das Aufnehmen einer Datei.
         assert!(matches!(
             modell.sichern(),
-            Sicherungsausgang::Gescheitert(_)
+            Sicherungsausgang::FremdGeaendert(_)
         ));
 
         modell.schliessen();
@@ -3667,7 +3989,7 @@ mod tests {
         let _ = modell.bearbeiten(format!("## Konto\n{GEHEIM}"));
 
         let mut abbild = None;
-        let ausgang = modell.sichern_ueber(|ziel, chiffrat| {
+        let ausgang = modell.sichern_ueber(Fremdpruefung::Pruefen, |ziel, chiffrat| {
             let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.0.as_slice())?;
             abbild = Some(std::fs::read(nachbar.nachbarpfad())?);
             nachbar.umbenennen()
@@ -3736,12 +4058,89 @@ mod tests {
         std::fs::write(&pfad, b"von aussen, deutlich laenger als vorher").expect("schreiben");
         assert!(matches!(
             modell.sichern(),
-            Sicherungsausgang::Gescheitert(_)
+            Sicherungsausgang::FremdGeaendert(_)
         ));
         assert_eq!(
             std::fs::read(&pfad).expect("lesen"),
             b"von aussen, deutlich laenger als vorher"
         );
+    }
+
+    /// „Trotzdem überschreiben“ an `secrets.txt` geht denselben Weg wie jedes
+    /// Sichern: allein Chiffrat, im Bild der Nachbardatei vor dem `rename`
+    /// kein Klartext, mit dem gehaltenen Salz; und die gehaltene PIN oeffnet
+    /// die Datei danach. Uebergangen wird allein die Frage nach der fremden
+    /// Aenderung.
+    #[test]
+    fn das_ueberschreiben_einer_secrets_txt_schreibt_allein_chiffrat() {
+        let ordner = Pruefordner::neu("geheim-ueberschreiben");
+        let (mut modell, pfad, _) = geheimnis_modell(&ordner);
+        verschlossen_ablegen(&pfad, "## A\nalt\n", "0417");
+        let salz_vorher = *tresor::Kopf::lesen(&std::fs::read(&pfad).expect("lesen"))
+            .expect("Kopf")
+            .salz();
+        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        let _ = modell.bearbeiten(format!("## A\n{GEHEIM}\n"));
+
+        std::fs::write(&pfad, b"von aussen, deutlich laenger als vorher").expect("schreiben");
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone())
+        );
+
+        let mut abbild = None;
+        let ausgang = modell.sichern_ueber(Fremdpruefung::Uebergehen, |ziel, chiffrat| {
+            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.0.as_slice())?;
+            abbild = Some(std::fs::read(nachbar.nachbarpfad())?);
+            nachbar.umbenennen()
+        });
+        assert_eq!(ausgang, Sicherungsausgang::Gesichert(pfad.clone()));
+        let abbild = abbild.expect("der Schreibweg fuer das Chiffrat wurde gerufen");
+        assert!(
+            !enthaelt(&abbild, GEHEIM),
+            "die Nachbardatei traegt Klartext"
+        );
+        let platte = std::fs::read(&pfad).expect("lesen");
+        assert_eq!(platte, abbild);
+        assert!(platte.starts_with(&tresor::KENNUNG));
+        assert!(!enthaelt(&platte, GEHEIM), "die Datei traegt Klartext");
+        assert_eq!(
+            *tresor::Kopf::lesen(&platte).expect("Kopf").salz(),
+            salz_vorher,
+            "ueberschrieben wird mit dem gehaltenen Schluessel"
+        );
+        assert!(!modell.hat_ungesicherten_stand());
+        assert!(!modell.fremd_geaendert());
+
+        modell.schliessen();
+        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(modell.stand(), format!("## A\n{GEHEIM}\n"));
+    }
+
+    /// „Neu laden“ an `secrets.txt` liest mit der gehaltenen PIN, und der
+    /// Editor haelt die Datei danach weiter entsperrt mit dem Stand der
+    /// Platte.
+    #[test]
+    fn das_neu_laden_einer_secrets_txt_liest_mit_der_gehaltenen_pin() {
+        let ordner = Pruefordner::neu("geheim-neu-laden");
+        let (mut modell, pfad, _) = geheimnis_modell(&ordner);
+        verschlossen_ablegen(&pfad, "## A\nalt\n", "0417");
+        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        let _ = modell.bearbeiten(format!("## A\n{GEHEIM}\n"));
+
+        verschlossen_ablegen(&pfad, "## B\nvon aussen, mit mehr Zeichen\n", "0417");
+        assert_eq!(
+            modell.sichern(),
+            Sicherungsausgang::FremdGeaendert(pfad.clone())
+        );
+        assert_eq!(modell.neu_laden(), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(modell.stand(), "## B\nvon aussen, mit mehr Zeichen\n");
+        assert!(matches!(modell.schutz, Schutz::Verschluesselt { .. }));
+        assert!(!modell.hat_ungesicherten_stand());
     }
 
     /// Die neue Datei: null Bytes mit PIN oeffnen leitet einen neuen Schluessel
@@ -3994,26 +4393,51 @@ mod tests {
         &rest[..ende]
     }
 
-    /// Die Sperre steht in `Editormodell::oeffnen` vor dem Start des Fadens,
-    /// und `datei::oeffnen` hat genau einen Rufer, `text_lesen`, den allein der
-    /// Leseauftrag `Text` erreicht; den erteilt `oeffnen` allein fuer eine
-    /// Datei, die nicht `secrets.txt` ist.
+    /// Die Sperre steht in `Editormodell::lesen_beginnen` vor dem Start des
+    /// Fadens, und `lesen_beginnen` ist die eine Stelle, die einen
+    /// Ladevorgang startet, mit genau zwei Rufern: `oeffnen` und `neu_laden`.
+    /// `datei::oeffnen` hat genau einen Rufer, `text_lesen`, den allein der
+    /// Leseauftrag `Text` erreicht; den erteilt `lesen_beginnen` allein fuer
+    /// eine Datei, die nicht `secrets.txt` ist.
     #[test]
     fn die_sperre_fragt_die_sonderdatei_vor_dem_lesen() {
         let code = code_vor_den_proben("krk-ui/src/editormodell.rs");
-        let oeffnen = rumpf_von(&code, concat!("pub fn oeff", "nen(&mut self"));
-        let frage = oeffnen
+        let beginnen = rumpf_von(&code, concat!("fn lesen_", "beginnen("));
+        let frage = beginnen
             .find(concat!("self.ist_geheimnis", "datei(pfad)"))
-            .expect("oeffnen fragt die Erkennung");
-        let faden = oeffnen
+            .expect("lesen_beginnen fragt die Erkennung");
+        let faden = beginnen
             .find(concat!("Ladevorgang::", "starten("))
-            .expect("oeffnen startet den Faden");
+            .expect("lesen_beginnen startet den Faden");
         assert!(frage < faden, "die Erkennung steht nach dem Fadenstart");
-        assert!(oeffnen.contains(concat!("(false, None) => Leseauftrag::", "Text,")));
+        assert!(beginnen.contains(concat!("(false, None) => Leseauftrag::", "Text,")));
         assert_eq!(
-            oeffnen.matches(concat!("Leseauftrag::", "Text")).count(),
+            beginnen.matches(concat!("Leseauftrag::", "Text")).count(),
             1,
-            "der Textauftrag hat genau eine Stelle in oeffnen"
+            "der Textauftrag hat genau eine Stelle in lesen_beginnen"
+        );
+        assert_eq!(
+            code.matches(concat!("Ladevorgang::", "starten(")).count(),
+            1,
+            "ein Ladevorgang entsteht allein in lesen_beginnen"
+        );
+        let aufruf = concat!("self.lesen_", "beginnen(");
+        assert_eq!(
+            code.matches(aufruf).count(),
+            2,
+            "lesen_beginnen hat genau zwei Rufer"
+        );
+        let oeffnen = rumpf_von(&code, concat!("pub fn oeff", "nen(&mut self"));
+        assert!(oeffnen.contains(concat!(
+            "self.lesen_beginnen(pfad, pin, Uebernahme::",
+            "MitNachfrage)"
+        )));
+        let neu_laden = rumpf_von(&code, concat!("pub fn neu_", "laden(&mut self"));
+        assert!(neu_laden.contains(concat!("Uebernahme::", "Verwerfend)")));
+        assert_eq!(
+            code.matches(concat!("Uebernahme::", "Verwerfend)")).count(),
+            1,
+            "allein neu_laden erteilt einen verwerfenden Ladeauftrag"
         );
 
         let erkennung = rumpf_von(&code, concat!("fn ist_geheimnis", "datei("));
