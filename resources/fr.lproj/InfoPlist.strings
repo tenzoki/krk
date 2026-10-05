@@ -9,3 +9,6 @@
 "NSRemovableVolumesUsageDescription" = "KRK affiche les supports amovibles connectés, comme les clés USB et les disques durs externes, pour que vous puissiez copier et déplacer des fichiers entre eux et votre Mac.";
 
 "NSNetworkVolumesUsageDescription" = "KRK affiche les volumes réseau déjà connectés comme n’importe quel autre dossier pour que vous puissiez y ouvrir et modifier des fichiers ; KRK n’établit lui-même aucune connexion à un serveur.";
+
+/* Die drei Hinweise des Dialogs "Ueber KRK" (Urheberrecht, Herkunft, Haftungsausschluss), je eine Zeile; AppKit liest sie fuer den Standarddialog aus diesem Schluessel, siehe resources/Info.plist. */
+"NSHumanReadableCopyright" = "© 2026 qantr GmbH\nGénéré avec fusion.\nUtilisation à vos risques et périls, sans aucune garantie.";

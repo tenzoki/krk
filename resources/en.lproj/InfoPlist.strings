@@ -9,3 +9,6 @@
 "NSRemovableVolumesUsageDescription" = "KRK shows connected removable media such as USB sticks and external hard drives so that you can copy and move files between them and your Mac.";
 
 "NSNetworkVolumesUsageDescription" = "KRK shows already connected network volumes like any other folder so that you can open and edit files in them; KRK does not establish a connection to a server itself.";
+
+/* Die drei Hinweise des Dialogs "Ueber KRK" (Urheberrecht, Herkunft, Haftungsausschluss), je eine Zeile; AppKit liest sie fuer den Standarddialog aus diesem Schluessel, siehe resources/Info.plist. */
+"NSHumanReadableCopyright" = "© 2026 qantr GmbH\nGenerated with fusion.\nUse at your own risk, without warranty of any kind.";

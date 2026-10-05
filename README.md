@@ -379,7 +379,7 @@ target/KRK.app/
     ├── MacOS/krk       das übersetzte Binärziel
     └── Resources/
         ├── KRK.icns    das Symbol, beim Bau aus iconset/ erzeugt
-        ├── de.lproj/   Kopie von resources/de.lproj/, die Erlaubnistexte auf Deutsch
+        ├── de.lproj/   Kopie von resources/de.lproj/, die Erlaubnistexte und die Hinweise in „Über KRK“ auf Deutsch
         ├── fr.lproj/   Kopie von resources/fr.lproj/, auf Französisch
         └── en.lproj/   Kopie von resources/en.lproj/, auf Englisch
 ```

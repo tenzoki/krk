@@ -10,7 +10,7 @@
 //!     ├── MacOS/krk             das uebersetzte Binaerziel
 //!     └── Resources/
 //!         ├── KRK.icns          das Symbol, aus iconset/ erzeugt
-//!         ├── de.lproj/         Kopie von resources/de.lproj/, die Erlaubnistexte
+//!         ├── de.lproj/         Kopie von resources/de.lproj/, die Erlaubnistexte und Ueber-Hinweise
 //!         ├── fr.lproj/         Kopie von resources/fr.lproj/
 //!         └── en.lproj/         Kopie von resources/en.lproj/
 //! ```
@@ -137,11 +137,13 @@ const SPRACHEN: [&str; 3] = ["de", "fr", "en"];
 
 /// Die Datei, die jeder Sprachordner mindestens traegt: die fuenf
 /// Erlaubnistexte des Systemmechanismus fuer Transparenz, Zustimmung und
-/// Kontrolle in dieser Sprache.
+/// Kontrolle in dieser Sprache, und seit dem 261005 daneben die drei Hinweise
+/// des Dialogs „Über KRK“ unter `NSHumanReadableCopyright`.
 ///
 /// macOS liest sie unter genau diesem Namen aus dem Ordner der gewaehlten
-/// Sprache; fehlt sie, zeigt der Berechtigungsdialog den Text aus der
-/// `Info.plist`, also Deutsch, gleich welche Sprache gewaehlt ist.
+/// Sprache; fehlt sie, zeigen der Berechtigungsdialog und der Ueber-Dialog den
+/// Text aus der `Info.plist`, also Deutsch, gleich welche Sprache gewaehlt
+/// ist.
 const ERLAUBNISTEXTE: &str = "InfoPlist.strings";
 
 const SYMBOLGROESSEN: [(&str, &str); 10] = [
@@ -926,6 +928,21 @@ mod tests {
             .collect()
     }
 
+    /// Der Schluessel, aus dem AppKit den Text des Standarddialogs „Über KRK“
+    /// unter dem Versionsstand liest. Er traegt die drei Hinweise, je eine
+    /// Zeile.
+    const UEBER_HINWEISE: &str = "NSHumanReadableCopyright";
+
+    /// Die Urheberzeile des Ueber-Dialogs, in jeder Sprache dieselbe.
+    const URHEBERZEILE: &str = "© 2026 qantr GmbH";
+
+    /// Der Wert eines Paares, wie macOS ihn liest: `\n` einer
+    /// `.strings`-Datei ist ein Zeilenwechsel. Andere Maskierungen fuehrt
+    /// keine der drei Dateien.
+    fn gelesen(wert: &str) -> String {
+        wert.replace("\\n", "\n")
+    }
+
     /// Die Paare einer `.strings`-Datei im Format `"Schluessel" = "Text";`.
     ///
     /// Bewusst kein Parser, wie [`plist_zeichenkette`]: die drei Dateien
@@ -1016,15 +1033,21 @@ mod tests {
     }
 
     /// Jede `InfoPlist.strings` nennt genau die Erlaubnisschluessel der
-    /// Buendelbeschreibung, jeden einmal, und keinen anderen.
+    /// Buendelbeschreibung und den Schluessel der Ueber-Hinweise, jeden
+    /// einmal, und keinen anderen.
     #[test]
     fn jede_erlaubnistextdatei_nennt_genau_die_schluessel_der_plist() {
         let mut aus_plist = erlaubnisschluessel(AUSGELIEFERTE_PLIST);
-        aus_plist.sort_unstable();
         assert!(
             !aus_plist.is_empty(),
             "die Plist fuehrt keinen Erlaubnisschluessel"
         );
+        assert!(
+            plist_zeichenkette(AUSGELIEFERTE_PLIST, UEBER_HINWEISE).is_some(),
+            "die Plist fuehrt {UEBER_HINWEISE} nicht"
+        );
+        aus_plist.push(UEBER_HINWEISE.to_owned());
+        aus_plist.sort_unstable();
         for kennung in SPRACHEN {
             let paare = strings_paare(&erlaubnistexte(kennung));
             let mut schluessel: Vec<String> = paare.iter().map(|(s, _)| s.clone()).collect();
@@ -1038,16 +1061,68 @@ mod tests {
 
     /// Die deutsche Datei traegt die Texte der Buendelbeschreibung Zeichen
     /// fuer Zeichen: beide sind derselbe Text an zwei Stellen, und die Probe
-    /// ist das, was die zwei Stellen aneinander haelt.
+    /// ist das, was die zwei Stellen aneinander haelt. Sie gilt den fuenf
+    /// Erlaubnistexten und den Ueber-Hinweisen; verglichen wird der Wert, wie
+    /// macOS ihn liest ([`gelesen`]).
     #[test]
-    fn die_deutschen_erlaubnistexte_sind_die_der_plist() {
+    fn die_deutschen_buendeltexte_sind_die_der_plist() {
         for (schluessel, wert) in strings_paare(&erlaubnistexte("de")) {
             assert_eq!(
-                plist_zeichenkette(AUSGELIEFERTE_PLIST, &schluessel).as_deref(),
-                Some(wert.as_str()),
+                plist_zeichenkette(AUSGELIEFERTE_PLIST, &schluessel),
+                Some(gelesen(&wert)),
                 "{schluessel}"
             );
         }
+    }
+
+    /// Der Dialog „Über KRK“ traegt in jeder Sprache drei Hinweise, je eine
+    /// Zeile: Urheberrecht, Herkunft, Haftungsausschluss.
+    ///
+    /// Die Urheberzeile ist in jeder Sprache dieselbe, die zwei anderen
+    /// stehen hier im Wortlaut. **Was die Probe nicht sieht:** ob AppKit den
+    /// Text zeigt. Sie liest die Quelldateien und nicht den Dialog; dass der
+    /// Standarddialog den Schluessel liest und sein Feld mit dem Text
+    /// waechst, ist an der `resources/Info.plist` als Messung vermerkt.
+    #[test]
+    fn jede_sprache_traegt_die_drei_hinweise_des_ueber_dialogs() {
+        let erwartet = [
+            (
+                "de",
+                "Mit fusion erzeugt.",
+                "Nutzung auf eigene Gefahr, ohne jede Gewährleistung.",
+            ),
+            (
+                "fr",
+                "Généré avec fusion.",
+                "Utilisation à vos risques et périls, sans aucune garantie.",
+            ),
+            (
+                "en",
+                "Generated with fusion.",
+                "Use at your own risk, without warranty of any kind.",
+            ),
+        ];
+        assert_eq!(
+            erwartet.map(|(kennung, _, _)| kennung),
+            SPRACHEN,
+            "die Probe nennt nicht genau die Sprachen aus SPRACHEN"
+        );
+        for (kennung, herkunft, haftung) in erwartet {
+            let paare = strings_paare(&erlaubnistexte(kennung));
+            let wert = paare
+                .iter()
+                .find(|(schluessel, _)| schluessel == UEBER_HINWEISE)
+                .map(|(_, wert)| gelesen(wert))
+                .unwrap_or_else(|| panic!("{kennung}: {UEBER_HINWEISE} fehlt"));
+            assert_eq!(
+                wert.lines().collect::<Vec<_>>(),
+                [URHEBERZEILE, herkunft, haftung],
+                "{kennung}"
+            );
+        }
+        let rueckfall = plist_zeichenkette(AUSGELIEFERTE_PLIST, UEBER_HINWEISE).unwrap();
+        assert_eq!(rueckfall.lines().next(), Some(URHEBERZEILE));
+        assert_eq!(rueckfall.lines().count(), 3);
     }
 
     /// [`SPRACHEN`] nennt dieselben Kennungen wie `Sprache::kennung` im Kern.

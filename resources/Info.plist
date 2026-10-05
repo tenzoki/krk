@@ -166,6 +166,37 @@
 	<true/>
 
 	<!--
+	  Die drei Hinweise des Dialogs „Über KRK“: Urheberrecht, Herkunft und
+	  Haftungsausschluss, je eine Zeile. KRK baut keinen eigenen Dialog; der
+	  Menueeintrag ruft `orderFrontStandardAboutPanel:` an `NSApplication`
+	  (`crates/krk-ui/src/menuemodell.rs`, `UEBER_SELEKTOR`), und AppKit liest
+	  den Text unter dem Versionsstand aus genau diesem Schluessel. Das Feld
+	  bricht um und der Dialog waechst mit der Zeilenzahl (gemessen am 261005
+	  an einem Scratch-Programm mit den drei Wortlauten: 13 Punkt Feldhoehe
+	  bei einer Zeile, 39 bis 52 bei den drei Hinweisen, das Feld immer so
+	  hoch wie sein Text).
+
+	  **Die Zeilen des Werts beginnen in der ersten Spalte**, weil in einer
+	  XML-Zeichenkette jeder Einzug zum Text gehoert. Der Finder zeigt
+	  denselben Wert im Informationsfenster des Buendels.
+
+	  Die Hinweise sind Oberflaeche und stehen trotzdem nicht in der
+	  Sprachtabelle unter `crates/krk-core/src/sprache/tabelle/`: den
+	  Standarddialog beschriftet AppKit aus dem Buendel und nicht aus KRKs
+	  Code. Dieselben drei Zeilen stehen deshalb je Sprache in
+	  `resources/<sprache>.lproj/InfoPlist.strings`, dort mit `\n` statt des
+	  Zeilenwechsels; der Text hier ist der Rueckfall, wenn kein Ordner
+	  greift, und die deutsche Datei traegt ihn Zeichen fuer Zeichen. Gehalten
+	  von `die_deutschen_buendeltexte_sind_die_der_plist` und
+	  `jede_sprache_traegt_die_drei_hinweise_des_ueber_dialogs` in
+	  `xtask/src/bundle.rs`.
+	-->
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 qantr GmbH
+Mit fusion erzeugt.
+Nutzung auf eigene Gefahr, ohne jede Gewährleistung.</string>
+
+	<!--
 	  Hier standen bis zum 260805 `NSDisabledCharacterPaletteMenuItem` und
 	  `NSDisabledDictationMenuItem`, mit denen macOS dem Menue "Bearbeiten"
 	  nicht von sich aus "Emoji & Symbole" und "Diktat starten" dazustellen
@@ -216,7 +247,7 @@
 	  macOS nimmt den Text aus dem Ordner der gewaehlten Sprache; die Texte hier
 	  sind der Rueckfall, wenn kein Ordner greift. Die deutsche Datei traegt sie
 	  Zeichen fuer Zeichen, gehalten von der Probe
-	  `die_deutschen_erlaubnistexte_sind_die_der_plist` in `xtask/src/bundle.rs`;
+	  `die_deutschen_buendeltexte_sind_die_der_plist` in `xtask/src/bundle.rs`;
 	  wer einen Text hier aendert, aendert ihn dort mit.
 	-->
 	<key>NSDesktopFolderUsageDescription</key>

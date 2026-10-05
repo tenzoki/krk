@@ -1,4 +1,4 @@
-/* Die fuenf Erlaubnistexte in Deutsch, Zeichen fuer Zeichen die Werte aus resources/Info.plist; die Probe die_deutschen_erlaubnistexte_sind_die_der_plist in xtask/src/bundle.rs haelt beide gleich. */
+/* Die fuenf Erlaubnistexte in Deutsch, Zeichen fuer Zeichen die Werte aus resources/Info.plist; die Probe die_deutschen_buendeltexte_sind_die_der_plist in xtask/src/bundle.rs haelt beide gleich. */
 
 "NSDesktopFolderUsageDescription" = "KRK zeigt deinen Schreibtisch als Ordner an, damit du die Dateien darin öffnen, kopieren, verschieben und umbenennen kannst.";
 
@@ -9,3 +9,6 @@
 "NSRemovableVolumesUsageDescription" = "KRK zeigt angeschlossene Wechselmedien wie USB-Sticks und externe Festplatten an, damit du Dateien zwischen ihnen und deinem Mac kopieren und verschieben kannst.";
 
 "NSNetworkVolumesUsageDescription" = "KRK zeigt bereits verbundene Netzlaufwerke wie jeden anderen Ordner an, damit du Dateien darin öffnen und bearbeiten kannst; eine eigene Verbindung zu einem Server baut KRK nicht auf.";
+
+/* Die drei Hinweise des Dialogs "Ueber KRK" (Urheberrecht, Herkunft, Haftungsausschluss), je eine Zeile; AppKit liest sie fuer den Standarddialog aus diesem Schluessel, siehe resources/Info.plist. */
+"NSHumanReadableCopyright" = "© 2026 qantr GmbH\nMit fusion erzeugt.\nNutzung auf eigene Gefahr, ohne jede Gewährleistung.";
