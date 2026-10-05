@@ -213,7 +213,14 @@ zweite Beispiel ist die Quicknote: die Auslieferung legt „Quicknote öffnen un
 schließen“ auf `f10` und „Quicknote kopieren und schließen“ auf `shift+f10`,
 eine eigene `keymap.toml` von vorher führt beide unbelegt, und jede bekommt
 ihre Taste auf demselben Weg; die Einzelheiten, auch zur fn-Taste, stehen in
-`HowTo.md` unter „Die Quicknote“.
+`HowTo.md` unter „Die Quicknote“. Das dritte Beispiel sind zwei Tasten für
+die Eintragsdateien des Notizordners: die Auslieferung legt „Eintrag löschen“ zusätzlich auf das
+nackte `delete` und „Eintrag hinzufügen“ zusätzlich auf `cmd+n`, eine eigene
+`keymap.toml` von vorher führt beide Befehle mit ihren bisherigen Tasten, und
+beide Tasten lassen sich einzeln zuweisen, obwohl `delete` schon „In den
+Papierkorb räumen“ und `cmd+n` schon „Fenster einblenden“ gehört. Das erste
+Paar trennt der Fokus, im zweiten geht „Eintrag hinzufügen“ mit dem Fokus im
+Editor vor einer Eintragsdatei vor, in der Tabelle wie in der Rohansicht.
 
 **Beiseitelegen und nicht löschen.** Es ist derselbe Grund wie beim
 Installieren: was KRK sich merkt, liegt außerhalb des Bündels, und ein

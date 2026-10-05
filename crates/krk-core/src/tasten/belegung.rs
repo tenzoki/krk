@@ -156,6 +156,12 @@
 //!   zulaessig ist, ist es der weitere auch, und dann geht der engere vor.
 //!   `Bildfolge` verengt `Dateifenster`: `cmd+up` heisst mit stehender
 //!   Bildfolge „Voriges Bild“ und sonst „In den übergeordneten Ordner“.
+//!   Seit dem 261005 verengt `Eintragsdatei` ausserdem `Ueberall`: `cmd+n`
+//!   heisst mit dem Fokus im Editor vor einer Eintragsdatei „Eintrag
+//!   hinzufügen“ und sonst „Fenster einblenden“ (Nutzerauftrag vom 261005). Der weitere Bereich
+//!   einer Verengung steht auf derselben [`Seite`] wie der engere oder auf
+//!   [`Seite::Beide`]; ueber die Grenze zwischen Editor und Ausserhalb reicht
+//!   keine, und damit bleiben Ausschluss und Verengung disjunkt.
 //!
 //! Eine Funktion ohne Kommando hat keinen Wirkungsbereich und teilt mit
 //! keiner. **Eine Kombination traegt je Zusteller hoechstens zwei
@@ -374,11 +380,31 @@ pub enum Wirkungsbereich {
     /// Eintragstabelle zeigt (C6 des Spec
     /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
     ///
-    /// Der Wert der drei Befehle, die Eintraege anlegen, bearbeiten und
-    /// loeschen. Die Form fragt, wie bei [`Wirkungsbereich::Editortext`],
-    /// `krk_ui`. Das Verschieben traegt seit dem 260926
-    /// [`Wirkungsbereich::Reihenfolge`].
+    /// Der Wert der zwei Befehle, die Eintraege bearbeiten und loeschen. Die
+    /// Form fragt, wie bei [`Wirkungsbereich::Editortext`], `krk_ui`. Das
+    /// Verschieben traegt seit dem 260926 [`Wirkungsbereich::Reihenfolge`],
+    /// das Anlegen seit dem 261005 [`Wirkungsbereich::Eintragsdatei`].
     Eintraege,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor eine
+    /// Eintragsdatei des Notizordners haelt, gleich ob er sie als Tabelle
+    /// (Formatansicht) oder als Text (Rohansicht) zeigt (Nutzerauftrag vom
+    /// 261005: `cmd+n` legt einen neuen Eintrag an, gleich wo der Fokus im
+    /// Editor steht und gleich in welcher Ansicht).
+    ///
+    /// Der Wert des einen Befehls [`Kommando::EintragHinzufuegen`]. Der
+    /// Unterschied zu [`Wirkungsbereich::Eintraege`] ist die Rohansicht: dort
+    /// gibt es keine gewaehlte Zeile, also nichts zu bearbeiten und nichts zu
+    /// loeschen, aber ein neuer Eintrag laesst sich ans Ende der Datei
+    /// schreiben. **Welche Datei der Editor haelt, weiss der Kern nicht**; die
+    /// Frage stellt `krk_ui` in seiner Zulaessigkeitsregel, wie bei
+    /// [`Wirkungsbereich::Geheimnisse`].
+    ///
+    /// Er **verengt** [`Wirkungsbereich::Ueberall`]
+    /// ([`Wirkungsbereich::weiter`]): wo er zulaessig ist, ist es jener auch,
+    /// und deshalb duerfen `cmd+n` „Eintrag hinzufügen“ und „Fenster
+    /// einblenden“ zugleich gehoeren; vor einer Eintragsdatei geht der engere
+    /// vor.
+    Eintragsdatei,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor eine
     /// Eintragstabelle **in Dateireihenfolge** zeigt.
     ///
@@ -561,6 +587,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Editor => text(Text::WirkungsbereichEditor),
             Wirkungsbereich::Editortext => text(Text::WirkungsbereichEditortext),
             Wirkungsbereich::Eintraege => text(Text::WirkungsbereichEintraege),
+            Wirkungsbereich::Eintragsdatei => text(Text::WirkungsbereichEintragsdatei),
             Wirkungsbereich::Reihenfolge => text(Text::WirkungsbereichReihenfolge),
             Wirkungsbereich::Aufgaben => text(Text::WirkungsbereichAufgaben),
             Wirkungsbereich::Termine => text(Text::WirkungsbereichTermine),
@@ -589,6 +616,7 @@ impl Wirkungsbereich {
             Wirkungsbereich::Editor
             | Wirkungsbereich::Editortext
             | Wirkungsbereich::Eintraege
+            | Wirkungsbereich::Eintragsdatei
             | Wirkungsbereich::Reihenfolge
             | Wirkungsbereich::Aufgaben
             | Wirkungsbereich::Termine
@@ -624,16 +652,30 @@ impl Wirkungsbereich {
     /// **Vollstaendige Fallunterscheidung ohne Auffangzweig**: ein weiterer
     /// Wert haelt den Bau hier an und wird bewusst eingeordnet. Daraus folgt
     /// ohne Zutat, dass jeder Bereich hoechstens einen verengt. Zwei
-    /// Kernproben halten, dass kein Bereich sich selbst verengt und dass eine
-    /// Verengung auf derselben [`Seite`] bleibt; damit sind Ausschluss und
-    /// Verengung disjunkt. Eine Verengung ueber mehrere Stufen gibt es bewusst
-    /// nicht: `Bildfolge` liegt der Sache nach auch in `Navigator`, und ein
-    /// Teilen mit dessen Befehlen bleibt ein Konflikt, die sichere Richtung
-    /// des Fehlers.
+    /// Kernproben halten, dass kein Bereich sich selbst verengt und dass der
+    /// weitere Bereich auf derselben [`Seite`] steht wie der engere oder auf
+    /// [`Seite::Beide`]; damit sind Ausschluss und Verengung disjunkt. Eine
+    /// Verengung ueber mehrere Stufen gibt es bewusst nicht: `Bildfolge` liegt
+    /// der Sache nach auch in `Navigator` und in `Ueberall`, und ein Teilen
+    /// mit deren Befehlen bleibt ein Konflikt, die sichere Richtung des
+    /// Fehlers.
+    ///
+    /// **`Eintragsdatei` verengt `Ueberall`** (Nutzerauftrag vom 261005:
+    /// `cmd+n` legt vor einer Eintragsdatei einen Eintrag an und holt sonst
+    /// das Fenster zurueck). `Ueberall` fragt weder Fokus noch Form noch
+    /// Datei, ist also zulaessig, wo irgendein Bereich es ist; dass das auch
+    /// mit den Ausnahmelisten von `krk_ui` gilt, haelt dort die Probe
+    /// `eine_verengung_ist_nie_ohne_ihren_weiteren_bereich_zulaessig`. Die
+    /// Folge fuer die Umbelegung: der eine Befehl dieses Bereichs darf eine
+    /// Kombination mit jedem Befehl von `Ueberall` teilen und geht ihm vor
+    /// einer Eintragsdatei dann vor. Die uebrigen Bereiche der Editorseite
+    /// verengen nichts, obwohl es der Sache nach ebenso stimmte: eine
+    /// Verengung entsteht mit dem Paar, das sie braucht.
     #[must_use]
     pub const fn weiter(self) -> Option<Wirkungsbereich> {
         match self {
             Wirkungsbereich::Bildfolge => Some(Wirkungsbereich::Dateifenster),
+            Wirkungsbereich::Eintragsdatei => Some(Wirkungsbereich::Ueberall),
             Wirkungsbereich::Dateifenster
             | Wirkungsbereich::Leiste
             | Wirkungsbereich::Dateibereiche
@@ -1049,10 +1091,13 @@ pub enum Kommando {
     /// Zelle in Bearbeitung setzen (C6 des Spec
     /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
     ///
-    /// Die fuenf `Eintrag*`-Befehle tragen [`Wirkungsbereich::Eintraege`]: sie
-    /// wirken allein mit dem Fokus im Editor und nur, solange er eine
-    /// Eintragstabelle zeigt. Welche Form das ist, fragt `krk_ui` in seiner
-    /// Zulaessigkeitsregel; der Kern kennt den Bereich und nicht die Form.
+    /// Traegt seit dem 261005 [`Wirkungsbereich::Eintragsdatei`]: der Befehl
+    /// wirkt mit dem Fokus im Editor vor jeder Eintragsdatei, als Tabelle wie
+    /// in der Rohansicht, und schreibt dort denselben leeren Eintrag als Text
+    /// ans Ende. Das Bearbeiten und das Loeschen tragen
+    /// [`Wirkungsbereich::Eintraege`] und wirken allein, solange der Editor
+    /// eine Eintragstabelle zeigt. Welche Form und welche Datei das ist, fragt
+    /// `krk_ui` in seiner Zulaessigkeitsregel; der Kern kennt den Bereich.
     EintragHinzufuegen,
     /// Die Zelle des gewaehlten Eintrags in Bearbeitung setzen, oder eine
     /// laufende Zelle uebernehmen (C6).
@@ -1672,12 +1717,13 @@ impl Kommando {
             | Kommando::EditorRueckwaertsSuchen
             | Kommando::EditorErsetzen
             | Kommando::EditorAlleErsetzen => Wirkungsbereich::Editortext,
+            // Das Anlegen wirkt vor jeder Eintragsdatei, als Tabelle wie in
+            // der Rohansicht (Nutzerauftrag vom 261005).
+            Kommando::EintragHinzufuegen => Wirkungsbereich::Eintragsdatei,
             // Die Befehle der Eintragstabelle (C6 der krkhome-Arbeit). Diese
-            // drei wirken in jeder Tabellenform; das Abhaken allein in der
+            // zwei wirken in jeder Tabellenform; das Abhaken allein in der
             // Aufgabentabelle, denn eine Notiz hat kein Kaestchen.
-            Kommando::EintragHinzufuegen
-            | Kommando::EintragBearbeiten
-            | Kommando::EintragLoeschen => Wirkungsbereich::Eintraege,
+            Kommando::EintragBearbeiten | Kommando::EintragLoeschen => Wirkungsbereich::Eintraege,
             // Das Verschieben wirkt allein in einer Tabelle, die in der
             // Reihenfolge der Datei steht; die Termintabelle ordnet nach dem
             // Datum (Entscheidung 2 des Plans

@@ -35,6 +35,8 @@ pub enum Text {
     WirkungsbereichEditortext,
     /// `Wirkungsbereich::Eintraege`.
     WirkungsbereichEintraege,
+    /// `Wirkungsbereich::Eintragsdatei`.
+    WirkungsbereichEintragsdatei,
     /// `Wirkungsbereich::Reihenfolge`.
     WirkungsbereichReihenfolge,
     /// `Wirkungsbereich::Aufgaben`.
@@ -1429,13 +1431,14 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 598] = [
+    pub const ALLE: [Text; 599] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
         Text::WirkungsbereichEditor,
         Text::WirkungsbereichEditortext,
         Text::WirkungsbereichEintraege,
+        Text::WirkungsbereichEintragsdatei,
         Text::WirkungsbereichReihenfolge,
         Text::WirkungsbereichAufgaben,
         Text::WirkungsbereichTermine,

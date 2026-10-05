@@ -16,6 +16,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichEditor => "Editor",
         Text::WirkungsbereichEditortext => "text in the Editor",
         Text::WirkungsbereichEintraege => "entries in the Editor",
+        Text::WirkungsbereichEintragsdatei => "entry files in the Editor",
         Text::WirkungsbereichReihenfolge => "entries in file order in the Editor",
         Text::WirkungsbereichAufgaben => "tasks in the Editor",
         Text::WirkungsbereichTermine => "appointments in the Editor",

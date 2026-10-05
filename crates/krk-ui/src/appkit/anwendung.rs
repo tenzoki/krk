@@ -318,6 +318,7 @@ use crate::kommandos::operationen::{
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::rundweg::{Rundweg, rundweg};
 use crate::kommandos::werkseinstellungen;
+use crate::kommandos::zellentaste;
 use crate::kommandos::zulaessigkeit::{self, Editorform, Lage};
 use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
@@ -4037,6 +4038,12 @@ impl Anwendungsdelegierter {
                 .editor
                 .get()
                 .is_some_and(|editor| editor.pin_aenderbar()),
+            // Ohne Editorbereich haelt niemand eine Eintragsdatei.
+            eintragsdatei: self
+                .ivars()
+                .editor
+                .get()
+                .is_some_and(|editor| editor.haelt_eintragsdatei()),
             bildfolge: self.bildfolge_steht(),
         }
     }
@@ -4248,6 +4255,28 @@ impl Anwendungsdelegierter {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, &text);
             }
+            return false;
+        }
+
+        // **Ein Anschlag ohne `cmd` gehoert dem Text einer laufenden Zelle.**
+        // Die Zelle der Eintragstabelle ist eine eigene Textflaeche, also sagt
+        // die Zulaessigkeit zu jedem Tabellenbefehl ja; seit das nackte
+        // `delete` den gewaehlten Eintrag loescht (Nutzerauftrag vom 261005),
+        // naehme es in der Zelle sonst den ganzen Eintrag statt eines Zeichens.
+        // Die Regel steht in [`crate::kommandos::zellentaste`] und nicht hier.
+        // `false` reicht den Tastendruck unveraendert an AppKit weiter, und
+        // der Feldeditor nimmt das Zeichen zurueck. Der Menueweg reicht keinen
+        // Anschlag herein und geht an der Frage vorbei.
+        if let Some(anschlag) = anschlag
+            && zellentaste::gehoert_der_zelle(
+                self.ivars()
+                    .editor
+                    .get()
+                    .is_some_and(|editor| editor.zelle_laeuft()),
+                anschlag.druck.maske.enthaelt(ModMaske::BEFEHL),
+                kommando.wirkungsbereich().seite(),
+            )
+        {
             return false;
         }
 

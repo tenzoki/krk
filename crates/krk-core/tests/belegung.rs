@@ -2443,6 +2443,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Editor
                     | Wirkungsbereich::Editortext
                     | Wirkungsbereich::Eintraege
+                    | Wirkungsbereich::Eintragsdatei
                     | Wirkungsbereich::Reihenfolge
                     | Wirkungsbereich::Aufgaben
                     | Wirkungsbereich::Termine
@@ -2794,7 +2795,7 @@ fn die_sechs_befehle_der_eintragstabelle_tragen_ihre_bereiche() {
         (
             Kommando::EintragHinzufuegen,
             "eintrag_hinzufuegen",
-            Wirkungsbereich::Eintraege,
+            Wirkungsbereich::Eintragsdatei,
         ),
         (
             Kommando::EintragBearbeiten,
@@ -2871,7 +2872,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 16] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 17] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2900,6 +2901,7 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 16] = [
         "Dateifenster, solange die Vorschau eine Bildfolge zeigt",
     ),
     (Wirkungsbereich::Ueberall, "überall"),
+    (Wirkungsbereich::Eintragsdatei, "Eintragsdateien im Editor"),
 ];
 
 /// Die Stelle eines Bereichs in [`BESCHRIFTUNGEN`].
@@ -2931,6 +2933,7 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Vorschau => 13,
         Wirkungsbereich::Bildfolge => 14,
         Wirkungsbereich::Ueberall => 15,
+        Wirkungsbereich::Eintragsdatei => 16,
     }
 }
 
@@ -3226,18 +3229,28 @@ fn kein_bereich_verengt_sich_selbst() {
     }
 }
 
-/// Eine Verengung bleibt auf derselben Seite; damit sind Ausschluss und
-/// Verengung disjunkt, und jedes Paar faellt in genau eine Klasse.
+/// Der weitere Bereich einer Verengung steht auf derselben Seite wie der
+/// engere oder auf `Seite::Beide`; ueber die Grenze zwischen Editor und
+/// Ausserhalb reicht keine. Damit sind Ausschluss und Verengung disjunkt, und
+/// jedes Paar faellt in genau eine Klasse.
+///
+/// Bis zum 261005 hiess die Probe `eine_verengung_bleibt_auf_derselben_seite`
+/// und verlangte die gleiche Seite; `Eintragsdatei` gegen `Ueberall` ist die erste
+/// Verengung, deren weiterer Bereich auf beiden Seiten wirkt.
 #[test]
-fn eine_verengung_bleibt_auf_derselben_seite() {
+fn eine_verengung_reicht_nie_ueber_die_grenze_der_seiten() {
     let mut verengungen = 0usize;
     for (bereich, _) in jeder_wirkungsbereich_im_quelltext() {
         if let Some(weiter) = bereich.weiter() {
             verengungen += 1;
-            assert_eq!(
+            assert!(
+                weiter.seite() == bereich.seite() || weiter.seite() == Seite::Beide,
+                "{bereich:?} verengt {weiter:?} ueber die Grenze der Seiten"
+            );
+            assert_ne!(
                 bereich.seite(),
-                weiter.seite(),
-                "{bereich:?} verengt {weiter:?}"
+                Seite::Beide,
+                "{bereich:?} wirkt auf beiden Seiten und kann nichts verengen"
             );
             assert!(bereich.verengt(weiter));
             assert!(!weiter.verengt(bereich), "die Verengung ist gerichtet");
@@ -3248,6 +3261,10 @@ fn eine_verengung_bleibt_auf_derselben_seite() {
     assert_eq!(
         Wirkungsbereich::Bildfolge.weiter(),
         Some(Wirkungsbereich::Dateifenster)
+    );
+    assert_eq!(
+        Wirkungsbereich::Eintragsdatei.weiter(),
+        Some(Wirkungsbereich::Ueberall)
     );
 }
 
@@ -3273,6 +3290,56 @@ fn die_auslieferung_teilt_cmd_up_und_return_mit_der_bildfolge() {
         panic!("cmd+down gehoert nicht genau einer Funktion");
     };
     assert_eq!(vor.kennung(), "bild_vor");
+}
+
+/// Die zwei Teilungen vom 261005 (Nutzerauftrag vom selben Tag): das nackte
+/// `delete` gehoert dem Papierkorb im Dateifenster und dem Loeschen in den
+/// Eintragstabellen, ein Ausschluss in der Reihenfolge der Datei; `cmd+n`
+/// gehoert dem Anlegen vor einer Eintragsdatei und „Fenster einblenden“, eine
+/// Verengung mit der engeren zuerst, obwohl sie in der Datei spaeter steht.
+/// Die Wege von vorher bleiben: `shift+cmd+delete` und `shift+cmd+return`
+/// gehoeren je einer Funktion, ebenso `cmd+delete` und `f8`.
+#[test]
+fn die_auslieferung_teilt_delete_und_cmd_n_mit_den_eintragsbefehlen() {
+    let belegung = Belegung::auslieferung();
+    assert!(belegung.konflikte().is_empty());
+    for (kombination, erste_kennung, zweite_kennung) in [
+        ("delete", "in_papierkorb", "eintrag_loeschen"),
+        ("cmd+n", "eintrag_hinzufuegen", "fenster_einblenden"),
+    ] {
+        let Nachschlag::Geteilt(erste, zweite) =
+            belegung.nachschlag(kombi(kombination).tastendruck())
+        else {
+            panic!("{kombination} ergibt keinen geteilten Nachschlag");
+        };
+        assert_eq!(erste.kennung(), erste_kennung, "{kombination}");
+        assert_eq!(zweite.kennung(), zweite_kennung, "{kombination}");
+    }
+    assert!(
+        Kommando::InPapierkorb
+            .wirkungsbereich()
+            .schliesst_aus(Kommando::EintragLoeschen.wirkungsbereich())
+    );
+    assert!(
+        Kommando::EintragHinzufuegen
+            .wirkungsbereich()
+            .verengt(Kommando::FensterEinblenden.wirkungsbereich())
+    );
+    for (kombination, kennung) in [
+        ("shift+cmd+delete", "eintrag_loeschen"),
+        ("shift+cmd+return", "eintrag_hinzufuegen"),
+        ("cmd+delete", "in_papierkorb"),
+        ("f8", "in_papierkorb"),
+    ] {
+        let Nachschlag::Funktion(funktion) = belegung.nachschlag(kombi(kombination).tastendruck())
+        else {
+            panic!("{kombination} gehoert nicht genau einer Funktion");
+        };
+        assert_eq!(funktion.kennung(), kennung, "{kombination}");
+    }
+    // Das Loeschen und das Bearbeiten verengen nichts: ihre Kombinationen
+    // teilen sie mit keinem Befehl von `Ueberall`.
+    assert!(nutzerbelegung_mit(&[("eintrag_loeschen", "esc")]).is_err());
 }
 
 /// C3.8: zwei Funktionen der Bildfolge auf einer Kombination bleiben ein

@@ -1086,6 +1086,38 @@ mod tests {
         );
     }
 
+    /// Die zwei Teilungen vom 261005 kosten im Menue kein Kuerzel: „Eintrag
+    /// löschen“ und „Eintrag hinzufügen“ fuehren ihre geteilte Kombination
+    /// als zweite, und das Menue zeigt die erste. „In den Papierkorb räumen“
+    /// zeigt weiter `delete`, „Fenster einblenden“ weiter `cmd+n`.
+    #[test]
+    fn die_geteilten_tasten_der_eintragsbefehle_kosten_kein_kuerzel() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let kuerzel = |gesucht: &str| {
+            leiste
+                .iter()
+                .flat_map(|obermenue| obermenue.eintraege.iter())
+                .find_map(|eintrag| match eintrag {
+                    Eintrag::Befehl {
+                        kennung,
+                        kombination,
+                        ..
+                    } if *kennung == gesucht => Some(*kombination),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{gesucht} steht nicht im Menue"))
+        };
+        let lesen = |text: &str| Kombination::lesen(text).expect("eine Kombination");
+        assert_eq!(kuerzel("in_papierkorb"), Some(lesen("delete")));
+        assert_eq!(kuerzel("eintrag_loeschen"), Some(lesen("shift+cmd+delete")));
+        assert_eq!(kuerzel("fenster_einblenden"), Some(lesen("cmd+n")));
+        assert_eq!(
+            kuerzel("eintrag_hinzufuegen"),
+            Some(lesen("shift+cmd+return"))
+        );
+    }
+
     /// Die drei Befehle der Quicknote stehen im Obermenue „Editor", in der
     /// Reihenfolge der Auslieferungsbelegung, zwei mit Kuerzel und „Quicknote
     /// leeren" ohne (Schritt 1 des Plans

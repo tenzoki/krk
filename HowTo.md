@@ -398,7 +398,14 @@ wirken können. Das trifft auf zwei Fälle zu:
   andere allein außerhalb davon. So liegt `cmd+1` auf „Nach Name sortieren“ im
   Dateifenster und auf „Termine: Sortierrichtung umkehren“ in der Termintabelle
   des Editors. Welche der beiden ein Anschlag auslöst, entscheidet der Ort des
-  Fokus.
+  Fokus. Ebenso liegt `delete` auf „In den Papierkorb räumen“ im Dateifenster
+  und auf „Eintrag löschen“ in den Eintragstabellen des Editors.
+- Beide bekommen ihn über KRK, und die eine wirkt nur in einem Teil der Lagen,
+  in denen die andere wirkt. Dann geht die engere vor. So liegt `cmd+n` auf
+  „Eintrag hinzufügen“, solange der Fokus im Editor vor einer der
+  Eintragsdateien des Notizordners steht, und sonst auf „Fenster einblenden“;
+  ebenso `cmd+up` auf „Voriges Bild“, solange die Vorschau eine Bildfolge
+  zeigt, und sonst auf „In den übergeordneten Ordner“.
 
 Eine Funktion, die im Editor und außerhalb wirkt, schließt keine andere aus.
 Drei Funktionen, die den Tastendruck auf demselben Weg bekommen, ergeben auf
@@ -1135,16 +1142,17 @@ zum Anfang der Datei.
 | Klick auf das Kästchen | die Aufgabe abhaken oder wieder öffnen |
 | `shift+cmd+x` | die gewählte Aufgabe abhaken oder wieder öffnen |
 | `cmd+return` | die gewählte Zelle öffnen; in einer offenen Zelle den Text übernehmen |
-| `shift+cmd+return` | eine leere Aufgabe ans Ende, ihre Zelle gleich offen |
+| `cmd+n`, `shift+cmd+return` | eine leere Aufgabe ans Ende, ihre Zelle gleich offen |
 | `opt+cmd+up`, `opt+cmd+down` | die gewählte Aufgabe eine Stelle nach oben oder unten |
-| `shift+cmd+delete` | die gewählte Aufgabe löschen |
+| `delete`, `shift+cmd+delete` | die gewählte Aufgabe löschen |
 | `cmd+c` | den Text der gewählten Aufgabe kopieren |
 | `cmd+z` | jede dieser Handlungen zurücknehmen |
 
 Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Home“. Wirken können
 sie nur, solange der Fokus im Editor steht und dieser eine der Tabellen
 zeigt; das Abhaken wirkt allein in der Aufgabentabelle, und das Verschieben
-wirkt in der Termintabelle nicht. Sonst sind sie
+wirkt in der Termintabelle nicht. Allein das Anlegen wirkt auch in der
+Rohansicht einer Eintragsdatei. Sonst sind sie
 ausgegraut, und ihre Tasten wirken so, als wären sie nicht belegt.
 Nach dem Öffnen ist die erste Aufgabe gewählt, damit die Tasten sofort eine
 Zeile vor sich haben, und ein Klick auf das Kästchen holt den Fokus in die
@@ -1156,9 +1164,41 @@ die Zeile der Aufgabe neu, in der Grundform `- [ ] ` oder `- [x] `. Eine
 Aufgabe, die als `* [X]` dastand, kommt deshalb als `- [ ] ` zurück, wenn man
 sie wieder öffnet; ihre Nachbarn bleiben Zeichen für Zeichen, wie sie waren.
 
-**`shift+cmd+delete` fragt nicht nach.** Im Finder heißt dieselbe Kombination
-„Papierkorb entleeren“. Hier wirkt sie allein auf die gewählte Aufgabe in der
-Tabelle, und die Statuszeile sagt dazu, dass `cmd+z` sie zurückholt.
+**`delete` und `shift+cmd+delete` fragen nicht nach.** Beide löschen den
+gewählten Eintrag, in jeder der vier Tabellen, und `cmd+z` holt ihn zurück;
+`shift+cmd+z` löscht ihn wieder. Die Statuszeile sagt es dazu. `delete` ist die
+Rückschritt-Taste (⌫). Im Dateifenster räumt sie weiter in den Papierkorb, mit
+Rückfrage; welche der zwei Bedeutungen gilt, entscheidet der Fokus.
+`shift+cmd+delete` heißt im Finder „Papierkorb entleeren“ und wirkt hier
+allein auf den gewählten Eintrag der Tabelle.
+
+**In einer offenen Zelle bleibt `delete` der Rückschritt.** Solange eine Zelle
+bearbeitet wird, nimmt die Taste dort ein Zeichen zurück und löscht keinen
+Eintrag; dasselbe gilt in der Rohansicht und in der Quicknote. Wer aus einer
+offenen Zelle heraus den ganzen Eintrag löschen will, nimmt
+`shift+cmd+delete`: es übernimmt die Zelle und löscht dann.
+
+**`cmd+n` legt einen Eintrag an, gleich wo der Fokus im Editor steht.** In der
+Tabelle entsteht die leere Zeile am Ende, und ihre erste Zelle ist offen; aus
+einer offenen Zelle heraus wird diese zuerst übernommen, und lässt sie sich
+nicht übernehmen, entsteht nichts. **In der Rohansicht einer der vier
+Eintragsdateien wirkt derselbe Befehl ebenso**, auch über `shift+cmd+return`:
+KRK hängt den leeren Eintrag als Text ans Ende, also `- [ ] ` in `tasks.txt`,
+`## ` in `notes.txt` und `secrets.txt` und `## ` mit dem heutigen Datum in
+`appointments.md`, und die Schreibmarke steht am Ende dieser Zeile. Ein
+`cmd+z` nimmt ihn zurück. In jeder anderen Datei, in der Quicknote und
+außerhalb des Editors holt `cmd+n` wie bisher das Fenster zurück („Fenster
+einblenden“); vor einer Eintragsdatei bleibt dieser Befehl über das Menü
+erreichbar.
+
+**Mit einer eigenen `keymap.toml` tragen „Eintrag löschen“ und „Eintrag
+hinzufügen“ die zwei neuen Tasten nicht von selbst.** Beide behalten, was die
+eigene Datei ihnen gibt. Wer `delete` und `cmd+n` dazu will, weist sie einzeln
+zu: **F1**, den Befehl wählen, `cmd+t`, die Taste drücken, die Ansicht mit
+„Fertig“ verlassen. Dass `delete` schon auf „In den Papierkorb räumen“ und
+`cmd+n` schon auf „Fenster einblenden“ liegt, ist dabei kein Konflikt, und
+beide behalten ihre Taste. **Nicht `cmd+r`**: es brächte die Tasten zwar mit,
+setzt aber die ganze eigene Belegung auf die Auslieferungsfassung zurück.
 
 **In einer offenen Zelle gelten diese Regeln:**
 
@@ -1209,9 +1249,9 @@ Löschen nimmt eine Notiz ganz, also Thema und Text.
 | Doppelklick auf eine Zelle | diese Zelle öffnet sich, ihr Text ist ausgewählt |
 | Doppelklick unter die letzte Notiz, auch in die leere Tabelle | eine leere Notiz ans Ende, ihr Thema gleich offen |
 | `cmd+return` | das Thema der gewählten Notiz öffnen; in einer offenen Zelle den Text übernehmen |
-| `shift+cmd+return` | eine leere Notiz ans Ende, ihr Thema gleich offen |
+| `cmd+n`, `shift+cmd+return` | eine leere Notiz ans Ende, ihr Thema gleich offen |
 | `opt+cmd+up`, `opt+cmd+down` | die gewählte Notiz eine Stelle nach oben oder unten |
-| `shift+cmd+delete` | die gewählte Notiz löschen, ohne Rückfrage |
+| `delete`, `shift+cmd+delete` | die gewählte Notiz löschen, ohne Rückfrage |
 | `cmd+c` | den Text der gewählten Notiz kopieren; ist er leer, das Thema |
 | `cmd+z` | jede dieser Handlungen zurücknehmen |
 
@@ -1290,8 +1330,8 @@ Datei, auch wenn er in der Tabelle weiter oben steht.
 | Doppelklick auf eine Zelle | diese Zelle öffnet sich, ihr Text ist ausgewählt |
 | Doppelklick unter den letzten Termin, auch in die leere Tabelle | ein Termin mit dem heutigen Datum, sein Datum gleich offen |
 | `cmd+return` | das Datum des gewählten Termins öffnen; in einer offenen Zelle den Text übernehmen |
-| `shift+cmd+return` | ein Termin mit dem heutigen Datum, sein Datum gleich offen |
-| `shift+cmd+delete` | den gewählten Termin löschen, ohne Rückfrage |
+| `cmd+n`, `shift+cmd+return` | ein Termin mit dem heutigen Datum, sein Datum gleich offen |
+| `delete`, `shift+cmd+delete` | den gewählten Termin löschen, ohne Rückfrage |
 | `cmd+1`, Klick auf den Kopf „Datum“ | die Richtung umkehren, aufsteigend oder absteigend |
 | `cmd+c` | den Text des gewählten Termins kopieren; ist er leer, das Datum |
 | `cmd+z` | jede dieser Handlungen zurücknehmen |

@@ -241,6 +241,19 @@ pub struct Lage {
     /// meldet `false`: ihre PIN steht noch in keinem Kopf, und das naechste
     /// Oeffnen fragt ohnehin nach einer neuen.
     pub pin_aenderbar: bool,
+    /// Ob der Editor eine Eintragsdatei des Notizordners haelt (`tasks.txt`,
+    /// `notes.txt`, `secrets.txt` entsperrt, `appointments.md`), gleich in
+    /// welcher Ansicht.
+    ///
+    /// Erhoben von `Anwendungsdelegierter::lage` ueber
+    /// `Editorbereich::haelt_eintragsdatei`, das den Dateityp des Modells
+    /// liest; der steht seit dem Laden fest und kostet keinen Systemaufruf.
+    /// Gelesen allein von [`datei_passt`] fuer
+    /// `Wirkungsbereich::Eintragsdatei`, den Bereich von „Eintrag
+    /// hinzufügen“, das seit dem 261005 auch in der Rohansicht wirkt. Zeigt
+    /// der Editor eine Eintragstabelle, ist das Feld wahr; die Umkehrung gilt
+    /// nicht, und daran haengt die Rohansicht.
+    pub eintragsdatei: bool,
     /// Ob die Vorschau sichtbar ist und im aktiven Tab eine Bildfolge fuer
     /// genau den Pfad zeigt, den das aktive Dateifenster beschreibt, ohne
     /// wartenden neueren Auftrag
@@ -472,7 +485,7 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
     durchgelassen
         && fokus::wirkt(bereich, lage.fokus)
         && form_passt(bereich, lage.editorform)
-        && datei_passt(bereich, lage.pin_aenderbar)
+        && datei_passt(bereich, lage.pin_aenderbar, lage.eintragsdatei)
         && folge_passt(bereich, lage.bildfolge)
 }
 
@@ -509,6 +522,20 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Termine => true,
+        },
+        // Das Anlegen wirkt in jeder Tabellenform und in der Textflaeche,
+        // denn die Rohansicht einer Eintragsdatei ist eine Textflaeche
+        // (Nutzerauftrag vom 261005); ob der Editor ueberhaupt eine
+        // Eintragsdatei haelt, fragt `datei_passt`. Allein die Quicknote sagt
+        // nein, sonst schriebe der Befehl durch sie hindurch in die Datei
+        // darunter.
+        Wirkungsbereich::Eintragsdatei => match form {
+            Editorform::Text
+            | Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine => true,
+            Editorform::Quicknote => false,
         },
         // Das Verschieben verlangt eine Tabelle in Dateireihenfolge. Die
         // Termintabelle ordnet nach dem Datum und lehnt es ab (Entscheidung 2
@@ -588,19 +615,23 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
 /// Ob der Editor die Datei haelt, die dieser Wirkungsbereich verlangt (die
 /// dritte Haelfte von Bestandteil (3), Schritt 5.5 der krkhome-Arbeit).
 ///
-/// **Allein [`Wirkungsbereich::Geheimnisse`] fragt hier etwas**, naemlich
-/// [`Lage::pin_aenderbar`]: „PIN ändern" wirkt nur, solange der Editor
+/// **Zwei Bereiche fragen hier etwas.** [`Wirkungsbereich::Geheimnisse`]
+/// fragt [`Lage::pin_aenderbar`]: „PIN ändern" wirkt nur, solange der Editor
 /// `secrets.txt` entsperrt haelt und ihre PIN schon in einem Kopf auf der
-/// Platte steht. Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
+/// Platte steht. [`Wirkungsbereich::Eintragsdatei`] fragt seit dem 261005
+/// [`Lage::eintragsdatei`]: „Eintrag hinzufügen“ wirkt vor jeder
+/// Eintragsdatei, als Tabelle wie in der Rohansicht, und vor keiner anderen
+/// Datei. Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
 /// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
 /// bewusst.
 ///
 /// Eine eigene Funktion und keine Zeile in [`form_passt`], weil die Frage eine
 /// andere ist: die Form sagt, was der Editor zeigt, dieses Feld, was er haelt.
 #[must_use = "fallengelassen laeuft der Befehl an der falschen Datei weiter"]
-fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool) -> bool {
+fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool, eintragsdatei: bool) -> bool {
     match bereich {
         Wirkungsbereich::Geheimnisse => pin_aenderbar,
+        Wirkungsbereich::Eintragsdatei => eintragsdatei,
         Wirkungsbereich::Dateifenster
         | Wirkungsbereich::Leiste
         | Wirkungsbereich::Dateibereiche
@@ -637,6 +668,7 @@ fn folge_passt(bereich: Wirkungsbereich, bildfolge: bool) -> bool {
         | Wirkungsbereich::Editor
         | Wirkungsbereich::Editortext
         | Wirkungsbereich::Eintraege
+        | Wirkungsbereich::Eintragsdatei
         | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Termine
@@ -848,16 +880,16 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 16] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 17] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
         (Wirkungsbereich::Editor, Kommando::EditorSichern),
         (Wirkungsbereich::Editortext, Kommando::EditorWeitersuchen),
-        // `EintragHinzufuegen` und nicht mehr `EintragHoch`, seit das
-        // Verschieben einen eigenen Bereich traegt; er steht auf keiner
-        // Ausnahmeliste und kommt waehrend eines Blattes nicht durch.
-        (Wirkungsbereich::Eintraege, Kommando::EintragHinzufuegen),
+        // `EintragLoeschen`, seit das Verschieben und das Anlegen je einen
+        // eigenen Bereich tragen; er steht auf keiner Ausnahmeliste und kommt
+        // waehrend eines Blattes nicht durch.
+        (Wirkungsbereich::Eintraege, Kommando::EintragLoeschen),
         (Wirkungsbereich::Reihenfolge, Kommando::EintragHoch),
         (Wirkungsbereich::Aufgaben, Kommando::AufgabeAbhaken),
         (Wirkungsbereich::Termine, Kommando::TermineRichtungUmkehren),
@@ -868,6 +900,9 @@ mod tests {
         (Wirkungsbereich::Vorschau, Kommando::VorschauVergroessern),
         (Wirkungsbereich::Bildfolge, Kommando::BildZurueck),
         (Wirkungsbereich::Ueberall, Kommando::LeisteUmschalten),
+        // Am Ende und nicht bei `Eintraege`, damit die Zeilen der Tafeln
+        // darunter ihre Stelle behalten.
+        (Wirkungsbereich::Eintragsdatei, Kommando::EintragHinzufuegen),
     ];
 
     /// Jede Variante von [`Wirkungsbereich`] hat genau einen Stellvertreter.
@@ -942,7 +977,11 @@ mod tests {
     /// [`pin_aendern_wirkt_allein_mit_dem_fokus_im_editor_und_pin_aenderbar`]
     /// selbst. `bildfolge` steht ebenso auf `false`, und die drei Befehle der
     /// Bildfolge sind in der Tafel ueberall abgewiesen; die Lage mit `true`
-    /// bauen [`jede_lage`] und die Proben der Bildfolge.
+    /// bauen [`jede_lage`] und die Proben der Bildfolge. `eintragsdatei` steht
+    /// auch in den Tabellenformen auf `false`, eine Lage, die der Betrieb
+    /// nicht kennt: so ist „Eintrag hinzufügen“ in der Tafel ueberall
+    /// abgewiesen, und die Lage mit `true` baut
+    /// [`eintrag_hinzufuegen_wirkt_vor_jeder_eintragsdatei_in_tabelle_und_rohansicht`].
     fn lage_in(
         blatt_steht: bool,
         ersthelfer_gehoert_appkit: bool,
@@ -957,6 +996,7 @@ mod tests {
             fokus,
             editorform,
             pin_aenderbar: false,
+            eintragsdatei: false,
             bildfolge: false,
         }
     }
@@ -1095,7 +1135,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 16] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1120,8 +1160,10 @@ mod tests {
             // Bildfolge: ohne stehende Bildfolge nirgends
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
+            // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 16] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1146,10 +1188,12 @@ mod tests {
             // Bildfolge: ohne stehende Bildfolge nirgends
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
+            // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 16] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1174,11 +1218,13 @@ mod tests {
             // Bildfolge: ohne stehende Bildfolge nirgends
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
+            // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
         ];
         // Wie die Notiztabelle, nur ohne die Zeile `Reihenfolge`: die
         // Termintabelle ordnet nach dem Datum, und verschieben laesst sich
         // darin nichts (Schritt 6 des Plans der Termine, T3.7).
-        const IN_DER_TERMINTABELLE: [[bool; 6]; 16] = [
+        const IN_DER_TERMINTABELLE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1203,12 +1249,14 @@ mod tests {
             // Bildfolge: ohne stehende Bildfolge nirgends
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
+            // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
         ];
         // Wie die Textflaeche, nur dass jede Zeile, die an der Datei darunter
         // arbeitet, ueberall nein sagt und allein die Zeile `Quicknote` mit
         // dem Fokus im Editor ja (Schritt 2 des Plans der Quicknote,
         // Entscheidung 7).
-        const IN_DER_QUICKNOTE: [[bool; 6]; 16] = [
+        const IN_DER_QUICKNOTE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1234,8 +1282,10 @@ mod tests {
             // Bildfolge: ohne stehende Bildfolge nirgends
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
+            // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 16] = [[false; 6]; 16];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 17] = [[false; 6]; 17];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1254,7 +1304,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 16]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 17]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),
@@ -1297,7 +1347,8 @@ mod tests {
 
     /// Jede Lage, die die Regel unterscheidet: jeder Fokus, jede Form, alle
     /// acht Achtel aus Blattstand, Ersthelferbefund und Schluesselfenster und
-    /// beide Werte von `pin_aenderbar` und von `bildfolge`.
+    /// beide Werte von `pin_aenderbar`, von `eintragsdatei` und von
+    /// `bildfolge`.
     ///
     /// **Die zweite Dimension von `bildfolge` steht von Hand da**: das Literal
     /// in [`lage_in`] zwingt nur zu einem Wert, und eine Schleife ueber beide
@@ -1308,12 +1359,15 @@ mod tests {
             for form in JEDE_FORM {
                 for (blatt, appkit, krk) in HINDERNISSE.into_iter().chain([OHNE_HINDERNIS]) {
                     for pin_aenderbar in [false, true] {
-                        for bildfolge in [false, true] {
-                            lagen.push(Lage {
-                                pin_aenderbar,
-                                bildfolge,
-                                ..lage_in(blatt, appkit, krk, fokus, form)
-                            });
+                        for eintragsdatei in [false, true] {
+                            for bildfolge in [false, true] {
+                                lagen.push(Lage {
+                                    pin_aenderbar,
+                                    eintragsdatei,
+                                    bildfolge,
+                                    ..lage_in(blatt, appkit, krk, fokus, form)
+                                });
+                            }
                         }
                     }
                 }
@@ -2050,6 +2104,12 @@ mod tests {
     /// nicht (C5: dieselben Befehle und keine zweiten). Die Erwartung steht
     /// deshalb als `match` ueber Befehl und Form, und eine weitere Form haelt
     /// den Bau hier an, statt still als „keine Tabelle" zu gelten.
+    ///
+    /// **Seit dem 261005 wirkt das Anlegen auch in der Textflaeche**, sofern
+    /// der Editor eine Eintragsdatei haelt (die Rohansicht). Die Lage dieser
+    /// Probe meldet deshalb `eintragsdatei`, wie der Betrieb es vor jeder
+    /// Tabelle tut; die Lage ohne sie haelt
+    /// `eintrag_hinzufuegen_wirkt_vor_jeder_eintragsdatei_in_tabelle_und_rohansicht`.
     #[test]
     fn die_sechs_befehle_der_eintragstabelle_wirken_nur_im_editor_in_passender_form() {
         let (blatt, appkit, krk) = OHNE_HINDERNIS;
@@ -2063,9 +2123,11 @@ mod tests {
         ] {
             for form in JEDE_FORM {
                 let form_passt = match form {
+                    // Die Rohansicht einer Eintragsdatei: allein das Anlegen.
+                    Editorform::Text => kommando == Kommando::EintragHinzufuegen,
                     // Die Quicknote zeigt keine Tabelle (Schritt 2 des Plans
                     // der Quicknote).
-                    Editorform::Text | Editorform::Quicknote => false,
+                    Editorform::Quicknote => false,
                     Editorform::Aufgaben => true,
                     Editorform::Notizen | Editorform::Geheimnisse => {
                         kommando != Kommando::AufgabeAbhaken
@@ -2078,8 +2140,12 @@ mod tests {
                     ),
                 };
                 for fokus in JEDER_FOKUS {
+                    let lage = Lage {
+                        eintragsdatei: true,
+                        ..lage_in(blatt, appkit, krk, fokus, form)
+                    };
                     assert_eq!(
-                        zulaessig(kommando, lage_in(blatt, appkit, krk, fokus, form)),
+                        zulaessig(kommando, lage),
                         fokus == Fokus::Editor && form_passt,
                         "{kommando:?} antwortet in {fokus:?} bei {form:?} falsch"
                     );
@@ -2203,6 +2269,121 @@ mod tests {
         }
     }
 
+    /// „Eintrag hinzufügen“ wirkt allein mit dem Fokus im Editor und nur,
+    /// wenn die Lage `eintragsdatei` meldet, dann aber in jeder Tabellenform
+    /// **und in der Textflaeche**, also in der Rohansicht (Nutzerauftrag vom
+    /// 261005). Allein die Quicknote sagt nein.
+    ///
+    /// Ueber jeden Fokuswert, jede Form und beide Werte von `eintragsdatei`,
+    /// ohne Hindernis der Lage; mit jedem Hindernis ist der Befehl abgewiesen
+    /// wie jeder andere. In einer gewoehnlichen Textdatei und ausserhalb des
+    /// Editors bleibt er damit unzulaessig, und `cmd+n` gehoert dort „Fenster
+    /// einblenden“.
+    #[test]
+    fn eintrag_hinzufuegen_wirkt_vor_jeder_eintragsdatei_in_tabelle_und_rohansicht() {
+        let kommando = Kommando::EintragHinzufuegen;
+        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Eintragsdatei);
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        for eintragsdatei in [false, true] {
+            for form in JEDE_FORM {
+                for fokus in JEDER_FOKUS {
+                    let lage = Lage {
+                        eintragsdatei,
+                        ..lage_in(blatt, appkit, krk, fokus, form)
+                    };
+                    assert_eq!(
+                        zulaessig(kommando, lage),
+                        fokus == Fokus::Editor && eintragsdatei && form != Editorform::Quicknote,
+                        "das Anlegen antwortet in {fokus:?} bei {form:?} mit \
+                         eintragsdatei={eintragsdatei} falsch"
+                    );
+                    for (blatt, appkit, krk) in HINDERNISSE {
+                        let gesperrt = Lage {
+                            eintragsdatei,
+                            ..lage_in(blatt, appkit, krk, fokus, form)
+                        };
+                        assert!(!zulaessig(kommando, gesperrt));
+                    }
+                }
+            }
+        }
+    }
+
+    /// Kein anderer Befehl fragt `eintragsdatei`: mit ihm und ohne ihn gibt
+    /// die Regel fuer jedes Kommando ausser dem Anlegen dieselbe Antwort.
+    /// Das Loeschen und das Bearbeiten bleiben damit Befehle der Tabelle und
+    /// wirken in der Rohansicht nicht.
+    #[test]
+    fn allein_eintrag_hinzufuegen_fragt_eintragsdatei() {
+        for kommando in Kommando::KENNUNGEN.map(|(kommando, _)| kommando) {
+            if kommando == Kommando::EintragHinzufuegen {
+                continue;
+            }
+            for form in JEDE_FORM {
+                for fokus in JEDER_FOKUS {
+                    let ohne = lage_in(false, false, true, fokus, form);
+                    let mit = Lage {
+                        eintragsdatei: true,
+                        ..ohne
+                    };
+                    assert_eq!(
+                        zulaessig(kommando, ohne),
+                        zulaessig(kommando, mit),
+                        "{kommando:?} fragt eintragsdatei in {fokus:?} bei {form:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// `cmd+n` am ausgelieferten Stand (Nutzerauftrag vom 261005): mit dem
+    /// Fokus im Editor vor einer Eintragsdatei legt es einen Eintrag an, in
+    /// der Tabelle, in der Rohansicht und aus einer laufenden Zelle heraus,
+    /// die eine eigene Textflaeche ist; in jeder anderen Lage holt es das
+    /// Fenster zurueck wie bisher, auch vor einem Blatt, in einem Textfeld von
+    /// AppKit und ohne Schluesselfenster.
+    ///
+    /// Der Nachschlag nennt die engere Funktion zuerst, und
+    /// [`waehlen`] nimmt die zweite, wo allein sie zulaessig ist; „Fenster
+    /// einblenden“ ist es als Befehl der Ausnahmeliste in jeder Lage.
+    #[test]
+    fn cmd_n_legt_vor_einer_eintragsdatei_an_und_holt_sonst_das_fenster() {
+        use krk_core::tasten::{Belegung, Kombination, Nachschlag};
+        let belegung = Belegung::auslieferung();
+        let druck = Kombination::lesen("cmd+n")
+            .expect("gueltige Schreibweise")
+            .tastendruck();
+        let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(druck) else {
+            panic!("cmd+n ergibt keinen geteilten Nachschlag");
+        };
+        let erste = erste.kommando().expect("ein Kommando");
+        let zweite = zweite.kommando().expect("ein Kommando");
+        assert_eq!(
+            (erste, zweite),
+            (Kommando::EintragHinzufuegen, Kommando::FensterEinblenden),
+            "die engere zuerst"
+        );
+        let mut angelegt = 0usize;
+        for lage in jede_lage() {
+            let vor_eintragsdatei = lage.fokus == Fokus::Editor
+                && lage.eintragsdatei
+                && lage.editorform != Editorform::Quicknote
+                && !lage.blatt_steht
+                && !lage.ersthelfer_gehoert_appkit
+                && lage.schluesselfenster_gehoert_krk;
+            let erwartet = if vor_eintragsdatei {
+                angelegt += 1;
+                Kommando::EintragHinzufuegen
+            } else {
+                Kommando::FensterEinblenden
+            };
+            let gewaehlt = waehlen(erste, zweite, lage);
+            assert_eq!(gewaehlt, erwartet, "{lage:?}");
+            assert!(zulaessig(gewaehlt, lage), "{lage:?}");
+        }
+        assert!(angelegt > 0, "keine Lage legt an; die Probe prueft nichts");
+    }
+
     /// Sichern, Schliessen und der Ansichtswechsel wirken in jeder Form, in
     /// der der Editor die Datei zeigt.
     ///
@@ -2281,7 +2462,11 @@ mod tests {
     #[test]
     fn in_der_termintabelle_wirkt_das_anlegen_und_kein_verschieben() {
         let (blatt, appkit, krk) = OHNE_HINDERNIS;
-        let termine = lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Termine);
+        // Vor der Termintabelle haelt der Editor eine Eintragsdatei.
+        let termine = Lage {
+            eintragsdatei: true,
+            ..lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Termine)
+        };
         assert!(zulaessig(Kommando::EintragHinzufuegen, termine));
         assert!(zulaessig(Kommando::EintragBearbeiten, termine));
         assert!(zulaessig(Kommando::EintragLoeschen, termine));

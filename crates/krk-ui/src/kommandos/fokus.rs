@@ -435,6 +435,7 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         Wirkungsbereich::Editor
         | Wirkungsbereich::Editortext
         | Wirkungsbereich::Eintraege
+        | Wirkungsbereich::Eintragsdatei
         | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Termine
@@ -512,7 +513,7 @@ mod tests {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
         // Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 6]); 16] = [
+        const TAFEL: [(Wirkungsbereich, [bool; 6]); 17] = [
             (
                 Wirkungsbereich::Dateifenster,
                 [true, false, false, false, false, false],
@@ -535,6 +536,10 @@ mod tests {
             ),
             (
                 Wirkungsbereich::Eintraege,
+                [false, false, false, true, false, false],
+            ),
+            (
+                Wirkungsbereich::Eintragsdatei,
                 [false, false, false, true, false, false],
             ),
             (
@@ -997,6 +1002,7 @@ mod tests {
                 Wirkungsbereich::Editor
                 | Wirkungsbereich::Editortext
                 | Wirkungsbereich::Eintraege
+                | Wirkungsbereich::Eintragsdatei
                 | Wirkungsbereich::Reihenfolge
                 | Wirkungsbereich::Aufgaben
                 | Wirkungsbereich::Termine

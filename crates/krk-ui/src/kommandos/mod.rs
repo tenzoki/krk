@@ -24,6 +24,9 @@
 //! rueckschritt Was die nackte Rueckschritt-Taste bedeutet: ein Zeichen des
 //!              Filtertextes zurueck, nichts, oder in den Papierkorb (C1 und C6
 //!              der Runde 10)
+//! zellentaste  Wem ein Anschlag gehoert, solange eine Zelle der
+//!              Eintragstabelle bearbeitet wird: dem Text der Zelle oder dem
+//!              Befehl (Nutzerauftrag vom 261005)
 //! rundweg      Was cmd+e bedeutet: aus der Dateiliste oder aus der Vorschau in
 //!              den Editor, aus dem Editor zurueck in die Dateiliste
 //!              (Nutzerentscheid vom 260823-0942)
@@ -122,6 +125,15 @@
 //! 260904, in dem ein `cmd+s` vor einem stehenden Blatt stumm verfiel und der
 //! Nutzer die Datei fuer gesichert hielt.
 //!
+//! **`zellentaste` ist die vierte Regel hinter `zulaessigkeit`, und die
+//! einzige, die einer durchgekommenen Taste den Befehl wieder nimmt.** Das
+//! nackte `delete` loescht seit dem 261005 den gewaehlten Eintrag der
+//! Eintragstabellen; laeuft eine Zelle, gehoert derselbe Anschlag ihrem Text.
+//! In `zulaessigkeit` steht sie aus dem Grund von `rueckschritt` nicht: dort
+//! sind `delete` und `shift+cmd+delete` dasselbe Kommando, und die Antwort
+//! graute den Menueeintrag aus. Anders als bei `rueckschritt` wird der
+//! Tastendruck hier nicht geschluckt, sondern geht an AppKit weiter.
+//!
 //! **`pfadeingabe` ist die eine Stelle, die einen Pfad prueft.** Zwei Ausloeser
 //! benutzen sie, die Pfadeingabe von Hand auf Shift+Cmd+G und der Sprung zum
 //! Inhalt der Zwischenablage auf Opt+Cmd+G. Der Unterschied ist allein, woher
@@ -145,4 +157,5 @@ pub mod pfadeingabe;
 pub mod rueckschritt;
 pub mod rundweg;
 pub mod werkseinstellungen;
+pub mod zellentaste;
 pub mod zulaessigkeit;

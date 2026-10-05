@@ -39,7 +39,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 110 Funktionen mit zusammen 110 Kombinationen.
+# Ausgeliefert sind 110 Funktionen mit zusammen 112 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -716,6 +716,11 @@ tasten = ["cmd+n"]
 # Runde genau ein Anwendungsfenster; der Eintrag legt deshalb kein neues an,
 # sondern holt das vorhandene wieder nach vorn. Darum "Fenster einblenden" und
 # nicht "Neues Fenster" (C7).
+#
+# Seit dem 261005 teilt der Befehl cmd+n mit "eintrag_hinzufuegen", der ihm mit
+# dem Fokus im Editor vor einer Eintragsdatei vorgeht, in der Tabelle wie in
+# der Rohansicht; der Grund steht dort. In jener Lage bleibt er ueber seinen
+# Menueeintrag erreichbar.
 
 [[funktion]]
 id = "fenster_schliessen"
@@ -1304,17 +1309,29 @@ tasten = []
 # folgen sie ihm, wie hier dem Block darueber
 # (`work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/plans/260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
 # Wirksam sind die sechs allein, solange der Editor die Tabelle zeigt; sonst
-# sind sie ausgegraut, und die Taste geht an AppKit.
+# sind sie ausgegraut, und die Taste geht an AppKit. Die eine Ausnahme ist seit
+# dem 261005 "eintrag_hinzufuegen": es wirkt auch in der Rohansicht einer
+# Eintragsdatei und haengt dort denselben leeren Eintrag als Text an.
 #
-# Alle sechs Kombinationen waren am 260926 ueber alle Tastenlisten dieser Datei
-# frei, und keine davon hat im Feldeditor von AppKit eine eingefuehrte
-# Bedeutung: `StandardKeyBinding.dict` belegt keine. Die naeherliegenden nackten
-# Tasten sind vergeben: `return` oeffnet mit dem Standardprogramm, `delete`
-# raeumt in den Papierkorb und `space` markiert einen Eintrag. Die
-# Konfliktregel liesse seit dem 260926 eine davon mit einem Tabellenbefehl
-# teilen, weil Dateifenster und Editor einander ausschliessen; geteilt ist
-# trotzdem keine, weil jede Doppelung im Menue ein Kuerzel kostet.
-# `shift+delete` und `opt+cmd+delete`
+# Die sechs Kombinationen mit Cmd waren am 260926 ueber alle Tastenlisten
+# dieser Datei frei, und keine davon hat im Feldeditor von AppKit eine
+# eingefuehrte Bedeutung: `StandardKeyBinding.dict` belegt keine. Die
+# naeherliegenden nackten Tasten sind vergeben: `return` oeffnet mit dem
+# Standardprogramm, `delete` raeumt in den Papierkorb und `space` markiert
+# einen Eintrag. Die Konfliktregel laesst seit dem 260926 eine davon mit einem
+# Tabellenbefehl teilen, weil Dateifenster und Editor einander ausschliessen.
+#
+# **Geteilt ist seit dem 261005 genau eine, das nackte `delete`.** Es loescht
+# in jeder der vier Eintragstabellen den gewaehlten Eintrag und bleibt im
+# Dateifenster der Weg in den Papierkorb; welche der zwei Funktionen ein
+# Anschlag meint, entscheidet der Fokus (Nutzerauftrag vom 261005: die
+# Rueckschritt-Taste loescht den gewaehlten Eintrag, `cmd+z` nimmt es
+# zurueck). Die Doppelung kostet im Menue kein Kuerzel, weil "eintrag_loeschen"
+# `shift+cmd+delete` als erste Kombination behaelt und das Menue die erste
+# zeigt. Solange eine Zelle bearbeitet wird, gehoert die Taste dem Text der
+# Zelle und nimmt dort ein Zeichen zurueck
+# (`crates/krk-ui/src/kommandos/zellentaste.rs`). `return` und `space` bleiben
+# ungeteilt. `shift+delete` und `opt+cmd+delete`
 # bleiben absichtlich frei.
 #
 # **`shift+cmd+delete` heisst im Finder "Papierkorb entleeren" und wird hier
@@ -1326,9 +1343,20 @@ tasten = []
 
 [[funktion]]
 id = "eintrag_hinzufuegen"
-tasten = ["shift+cmd+return"]
+tasten = ["shift+cmd+return", "cmd+n"]
 # Die Zweitform von cmd+return darunter: shift+cmd traegt das Anlegen, die
 # blanke Cmd-Ebene das Bearbeiten des Vorhandenen.
+#
+# `cmd+n` steht seit dem 261005 daneben (Nutzerauftrag vom 261005: ein neuer
+# Eintrag auf cmd+n, gleich wo der Fokus im Editor steht) und ist mit
+# "fenster_einblenden" geteilt. Die Teilung ist eine Verengung: der Bereich der
+# Eintragsdateien verengt "ueberall" (`Wirkungsbereich::weiter` im Kern). Mit
+# dem Fokus im Editor vor einer Eintragsdatei legt cmd+n einen Eintrag an: in
+# der Tabelle, auch aus einer laufenden Zelle heraus, die dabei zuerst
+# uebernommen wird, und in der Rohansicht als Text am Ende der Datei;
+# ueberall sonst, vor einem Blatt und bei geschlossenem Fenster holt es wie
+# bisher das Fenster zurueck. `shift+cmd+return` steht zuerst, damit das Menue
+# es hier zeigt und cmd+n bei "Fenster einblenden" stehen bleibt.
 
 [[funktion]]
 id = "eintrag_bearbeiten"
@@ -1349,8 +1377,10 @@ tasten = ["opt+cmd+down"]
 
 [[funktion]]
 id = "eintrag_loeschen"
-tasten = ["shift+cmd+delete"]
-# Warum trotz der Finder-Bedeutung, steht im Blockkommentar oben.
+tasten = ["shift+cmd+delete", "delete"]
+# Warum trotz der Finder-Bedeutung und warum das nackte `delete` daneben, steht
+# im Blockkommentar oben. `shift+cmd+delete` steht zuerst, damit das Menue es
+# zeigt; `delete` teilt sich die Taste mit "in_papierkorb".
 
 [[funktion]]
 id = "aufgabe_abhaken"

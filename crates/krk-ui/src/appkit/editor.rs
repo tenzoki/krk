@@ -549,7 +549,7 @@ use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::heimordner::Sonderdatei;
 use krk_core::heimordner::eintraege::{
-    self, Aufgaben, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
+    self, Aufgaben, Block, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
 };
 use krk_core::heimordner::tresor::Pin;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
@@ -1804,6 +1804,48 @@ fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
     }
 }
 
+/// Die Art der Eintraege, die dieser Dateityp fuehrt; `None` fuer jede Datei,
+/// die keine Eintragsdatei ist.
+///
+/// Gefragt von der Rohansicht, die keine Tabellenform hat und ihre Art deshalb
+/// nicht ueber [`eintragsart_der_form`] bekommt. Vollstaendig ueber Dateityp
+/// und Sonderdatei und ohne Auffangzweig. Dass beide Zuordnungen dieselbe Art
+/// nennen, haelt die Probe
+/// `rohansicht_und_tabelle_nennen_dieselbe_eintragsart`.
+fn eintragsart_des_typs(typ: Dateityp) -> Option<Eintragsart> {
+    match typ {
+        Dateityp::Markdown | Dateityp::Sonstiges => None,
+        Dateityp::Eintraege(Sonderdatei::Aufgaben) => Some(Eintragsart::Aufgaben),
+        Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse) => {
+            Some(Eintragsart::Notizen)
+        }
+        Dateityp::Eintraege(Sonderdatei::Termine) => Some(Eintragsart::Termine),
+    }
+}
+
+/// Wo die Schreibmarke steht, nachdem die Rohansicht einen leeren Eintrag
+/// angehaengt hat: am Ende der Kopfzeile des letzten Eintrags, vor ihrem
+/// Umbruch, als Stelle in Bytes.
+///
+/// Die Kopfzeile ist, was die Tabelle nach dem Anlegen als erste Zelle
+/// oeffnet: der Aufgabentext hinter dem Kaestchen, das Thema einer Notiz, das
+/// Datum eines Termins. Wo sie liegt, sagt der Leser des Kerns und keine
+/// zweite Fassung der Grammatik hier; der letzte Block reicht bis ans
+/// Dateiende, also beginnt er dort, wo seine Zeilen vom Ende her anfangen.
+/// Ohne einen Eintrag steht die Marke am Dateiende.
+fn schreibstelle_im_letzten_eintrag(art: Eintragsart, stand: &str) -> usize {
+    let stelle = |bloecke: &[Block<'_>]| {
+        bloecke.last().map_or(stand.len(), |block| {
+            let laenge: usize = block.zeilen().iter().map(|zeile| zeile.len()).sum();
+            stand.len() - laenge + block.kopf().trim_end_matches('\n').len()
+        })
+    };
+    match art {
+        Eintragsart::Aufgaben => stelle(Aufgaben::lesen(stand).bloecke()),
+        Eintragsart::Notizen | Eintragsart::Termine => stelle(Notizen::lesen(stand).bloecke()),
+    }
+}
+
 /// Die Schritte, die von der gezeigten zur gewuenschten Flaeche fuehren.
 ///
 /// **Gleiche Flaechen, keine Schritte.** Damit ruft ein Ansichtswechsel oder
@@ -2758,7 +2800,12 @@ impl Editorbereich {
     }
 
     /// Ob im Fenster des Editors gerade eine Zelle bearbeitet wird.
-    fn zelle_laeuft(&self) -> bool {
+    ///
+    /// Von aussen fragt der Anwendungsdelegierte danach, bevor er einen
+    /// Tastenbefehl ausfuehrt: ein Anschlag ohne `cmd` gehoert dem Text der
+    /// laufenden Zelle (`crate::kommandos::zellentaste`).
+    #[must_use]
+    pub fn zelle_laeuft(&self) -> bool {
         self.ivars()
             .bereich
             .window()
@@ -2928,9 +2975,78 @@ impl Editorbereich {
     }
 
     /// Ein leerer Eintrag ans Ende, seine erste Zelle danach in Bearbeitung
-    /// (C6, C5).
+    /// (C6, C5); in der Rohansicht einer Eintragsdatei derselbe Eintrag als
+    /// Text, die Schreibmarke danach in seiner Kopfzeile (Nutzerauftrag vom
+    /// 261005).
+    ///
+    /// Verzweigt wird ueber die Form, vollstaendig und ohne Auffangzweig. Die
+    /// Quicknote erreicht diese Stelle im Betrieb nicht, weil die
+    /// Zulaessigkeit sie abweist; sie geht den Tabellenweg, der dann „keine
+    /// Tabelle“ antwortet.
     pub fn eintrag_hinzufuegen(&self) -> Editormeldung {
-        self.handlung_ausfuehren(Handlung::Hinzufuegen, None)
+        match self.form() {
+            Editorform::Text => self.eintrag_im_text_hinzufuegen(),
+            Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine
+            | Editorform::Quicknote => self.handlung_ausfuehren(Handlung::Hinzufuegen, None),
+        }
+    }
+
+    /// Ob der Editor eine Eintragsdatei des Notizordners haelt, gleich in
+    /// welcher Ansicht; der Wert von `Lage::eintragsdatei`.
+    ///
+    /// Gelesen am Dateityp des Modells, der seit dem Laden feststeht; die
+    /// Frage stellt keinen Systemaufruf.
+    #[must_use]
+    pub fn haelt_eintragsdatei(&self) -> bool {
+        eintragsart_des_typs(self.ivars().modell.borrow().typ()).is_some()
+    }
+
+    /// Haengt in der Rohansicht einer Eintragsdatei den leeren Eintrag an, den
+    /// die Tabelle anlegte, und stellt die Schreibmarke in seine Kopfzeile.
+    ///
+    /// **Dieselbe Rechnung und derselbe Weg in den Verwalter wie in der
+    /// Tabelle**: [`handlung_rechnen`] ruft die Funktionen des Kerns, und
+    /// [`Self::umbau_anwenden`] schreibt den Neustand als eine Handlung ein,
+    /// die `cmd+z` zuruecknimmt. Die Grammatik der Datei steht damit weiter
+    /// allein im Kern. Was hier dazukommt, ist die Schreibmarke: die Rohansicht
+    /// hat keine Zelle, die sich oeffnen liesse.
+    ///
+    /// **[`Self::zelle_uebernehmen`] ruft dieser Weg nicht**: in der Textform
+    /// ist die Tabelle ausgeblendet, und eine ausgeblendete Tabelle haelt
+    /// keine laufende Zelle ([`Self::flaeche_waehlen`] nimmt ihr den
+    /// Ersthelfer vor dem Ausblenden).
+    ///
+    /// Haelt der Editor keine Eintragsdatei, antwortet der Weg „keine
+    /// Tabelle“ wie der Tabellenweg; die Zulaessigkeit laesst den Befehl dann
+    /// gar nicht erst durch.
+    fn eintrag_im_text_hinzufuegen(&self) -> Editormeldung {
+        let Some(art) = eintragsart_des_typs(self.ivars().modell.borrow().typ()) else {
+            return Editormeldung::Eintrag(Eintragsart::Aufgaben, Eintragsantwort::KeineTabelle);
+        };
+        let heute = if art == Eintragsart::Termine {
+            termine::heute()
+        } else {
+            None
+        };
+        let (meldung, neustand) = handlung_rechnen(
+            self.ivars().modell.borrow().stand(),
+            art,
+            Handlung::Hinzufuegen,
+            None,
+            heute,
+        );
+        if let Some(neustand) = neustand {
+            self.umbau_anwenden(neustand);
+            let stelle = {
+                let modell = self.ivars().modell.borrow();
+                schreibstelle_im_letzten_eintrag(art, modell.stand())
+            };
+            self.stelle_zeigen(stelle, stelle);
+        }
+        meldung
     }
 
     /// Uebernimmt eine laufende Zelle, oder setzt die erste Zelle der
@@ -9807,6 +9923,156 @@ mod tests {
                 Some((1, 0))
             );
         });
+    }
+
+    /// Das Loeschen ist in jeder der vier Tabellen ueber einen
+    /// [`Umkehrpunkt`] Byte fuer Byte zuruecknehmbar und wiederherstellbar
+    /// (Nutzerauftrag vom 261005: `delete` loescht den gewaehlten Eintrag,
+    /// `cmd+z` nimmt es zurueck).
+    ///
+    /// Gerechnet wird ueber [`handlung_rechnen`], den Weg von
+    /// `eintrag_loeschen`, und je Form ueber [`eintragsart_der_form`]: die
+    /// Geheimnisse gehen damit denselben Weg wie die Notizen. Der Umkehrpunkt
+    /// ist, was `umbau_anwenden` in den Verwalter legt
+    /// (`der_umbau_geht_den_weg_des_ersetzens`), und `cmd+z` mit der Tabelle
+    /// als Ersthelfer erreicht diesen Verwalter
+    /// (`textflaeche_und_tabelle_finden_denselben_verwalter`). Der Gegenweg
+    /// ist der, den `umkehren` fuer `shift+cmd+z` anmeldet.
+    #[test]
+    fn das_loeschen_ist_in_jeder_der_vier_tabellen_zuruecknehmbar() {
+        for (form, stand) in [
+            (Editorform::Aufgaben, AUFGABEN),
+            (Editorform::Notizen, NOTIZEN),
+            (Editorform::Geheimnisse, NOTIZEN),
+            (Editorform::Termine, TERMINE),
+        ] {
+            let art = eintragsart_der_form(form).expect("eine Tabellenform");
+            for stelle in 0..2 {
+                let (meldung, neustand) =
+                    handlung_rechnen(stand, art, Handlung::Loeschen, Some(stelle), None);
+                assert_eq!(
+                    meldung,
+                    Editormeldung::Eintrag(art, Eintragsantwort::Geloescht),
+                    "{form:?}"
+                );
+                let neustand = neustand.expect("geloescht ist ein Umbau");
+                assert_ne!(neustand.text, stand, "{form:?}");
+                let punkt = Umkehrpunkt::zwischen(stand, &neustand.text, NSRange::new(0, 0));
+                let zurueck = punkt.angewandt_auf(&neustand.text);
+                assert_eq!(zurueck, stand, "{form:?}: zurueck aus {:?}", neustand.text);
+                let gegenweg = Umkehrpunkt::zwischen(&neustand.text, &zurueck, NSRange::new(0, 0));
+                assert_eq!(gegenweg.angewandt_auf(&zurueck), neustand.text, "{form:?}");
+            }
+        }
+    }
+
+    /// Die Rohansicht und die Tabelle nennen fuer jede Datei dieselbe
+    /// Eintragsart, und eine Datei ohne Tabelle hat in der Rohansicht keine.
+    #[test]
+    fn rohansicht_und_tabelle_nennen_dieselbe_eintragsart() {
+        for typ in [
+            Dateityp::Markdown,
+            Dateityp::Sonstiges,
+            Dateityp::Eintraege(Sonderdatei::Aufgaben),
+            Dateityp::Eintraege(Sonderdatei::Notizen),
+            Dateityp::Eintraege(Sonderdatei::Geheimnisse),
+            Dateityp::Eintraege(Sonderdatei::Termine),
+        ] {
+            assert_eq!(
+                eintragsart_des_typs(typ),
+                eintragsart_der_form(editorform(Ansicht::Format, typ)),
+                "{typ:?}"
+            );
+            assert_eq!(
+                editorform(Ansicht::Roh, typ),
+                Editorform::Text,
+                "die Rohansicht ist immer die Textflaeche"
+            );
+        }
+    }
+
+    /// `cmd+n` in der Rohansicht einer Eintragsdatei (Nutzerauftrag vom
+    /// 261005): angehaengt wird genau der leere Eintrag, den die Tabelle
+    /// anlegt, die Schreibmarke steht am Ende seiner Kopfzeile, und der Umbau
+    /// ist ueber einen [`Umkehrpunkt`] zuruecknehmbar.
+    ///
+    /// **Am Rumpf gelesen**, dass der Weg der Rohansicht ueber
+    /// [`handlung_rechnen`] und `umbau_anwenden` geht und keine Zeile der
+    /// Grammatik selbst schreibt: ein ganzer Editorbereich laesst sich in
+    /// keiner Probe bauen.
+    #[test]
+    fn die_rohansicht_haengt_den_eintrag_der_tabelle_an() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        use Eintragsantwort as A;
+        let heute = tag(2026, 10, 5);
+        for (art, stand, erwartet, kopf) in [
+            (
+                Eintragsart::Aufgaben,
+                AUFGABEN,
+                aufgaben::hinzufuegen(AUFGABEN, "").expect("ein leerer Text ist zulaessig"),
+                "- [ ] ",
+            ),
+            (
+                Eintragsart::Notizen,
+                NOTIZEN,
+                notizen::hinzufuegen(NOTIZEN, "", "").expect("eine leere Notiz ist zulaessig"),
+                "## ",
+            ),
+            (
+                Eintragsart::Termine,
+                TERMINE,
+                termine::hinzufuegen(TERMINE, heute),
+                "## 261005",
+            ),
+        ] {
+            let (meldung, neustand) =
+                handlung_rechnen(stand, art, Handlung::Hinzufuegen, None, Some(heute));
+            assert_eq!(meldung, Editormeldung::Eintrag(art, A::Hinzugefuegt));
+            let neustand = neustand.expect("hinzugefuegt ist ein Umbau");
+            assert_eq!(neustand, erwartet, "{art:?}: der Eintrag des Kerns");
+            assert!(neustand.text.starts_with(stand), "{art:?}: angehaengt");
+
+            let stelle = schreibstelle_im_letzten_eintrag(art, &neustand.text);
+            assert_eq!(
+                &neustand.text[stand.len()..stelle],
+                kopf,
+                "{art:?}: die Marke steht am Ende der neuen Kopfzeile"
+            );
+            assert!(
+                matches!(&neustand.text[stelle..], "" | "\n"),
+                "{art:?}: hinter der Marke steht hoechstens der Umbruch"
+            );
+
+            let punkt = Umkehrpunkt::zwischen(stand, &neustand.text, NSRange::new(0, 0));
+            assert_eq!(punkt.angewandt_auf(&neustand.text), stand, "{art:?}");
+        }
+        // Ohne Schlussumbruch und in der leeren Datei steht die Marke ebenso.
+        let ohne_umbruch = aufgaben::hinzufuegen("- [ ] Brot", "").expect("zulaessig");
+        let stelle = schreibstelle_im_letzten_eintrag(Eintragsart::Aufgaben, &ohne_umbruch.text);
+        assert_eq!(&ohne_umbruch.text[..stelle], "- [ ] Brot\n- [ ] ");
+        assert_eq!(
+            schreibstelle_im_letzten_eintrag(Eintragsart::Notizen, ""),
+            0
+        );
+
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let weg = rumpf(&quelle, "eintrag_im_text_hinzufuegen");
+        let rechnung = weg
+            .find("handlung_rechnen(")
+            .expect("die Rohansicht rechnet ueber den Kern");
+        let umbau = weg
+            .find("self.umbau_anwenden(")
+            .expect("und schreibt ueber den einen Weg in den Verwalter");
+        let marke = weg
+            .find("self.stelle_zeigen(")
+            .expect("und setzt danach die Schreibmarke");
+        assert!(rechnung < umbau && umbau < marke);
+        assert!(
+            !weg.contains("stand_einsetzen") && !weg.contains("bearbeiten("),
+            "die Rohansicht schreibt den Stand auf keinem zweiten Weg"
+        );
+        let anlegen = rumpf(&quelle, "eintrag_hinzufuegen");
+        assert!(anlegen.contains("Editorform::Text => self.eintrag_im_text_hinzufuegen()"));
     }
 
     /// T3.1 bis T3.5 in ihrer reinen Haelfte: ohne Tag entsteht kein Termin,
