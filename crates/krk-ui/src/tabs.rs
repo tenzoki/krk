@@ -944,25 +944,24 @@ impl Tabliste {
     /// als
     /// `shared/issues/260815-1047_*_c1-9-und-der-doc-kommentar-nennen-zwei-loeschwege-des-filtertextes-der-baum-hat-fuenf.md`.
     ///
-    /// **Die Sichtbarkeit des stehenden Filtertextes ist nicht zugesagt.** Der
-    /// Nutzerentscheid haengt an ihr: die Statuszeile soll den Filtertext samt
-    /// Trefferzahl nennen, sonst hielte der Nutzer den neuen Ordner fuer fast
-    /// leer. Geprueft war dafuer allein `statuszeile::filterstand_text`, das
-    /// den Satz **baut**. Ob er die Zeile erreicht, entscheidet
-    /// `statuszeile::zeile` ueber die Rangfolge `Rang::ALLE`, und dort steht
-    /// der Filterstand unter der Befehlsantwort, der Vorgangsanzeige, der
-    /// Fenstermeldung und der Tabmeldung. Die Ordnung ist erst der Rang und
-    /// dann die aktive Seite, also verdraengt ihn jede von ihnen, und alle
-    /// bis auf die Befehlsantwort — die an beiden Dateifenstern zugleich
-    /// geraeumt wird — auch aus dem anderen Dateifenster. Eine Fenstermeldung
-    /// des inaktiven Dateifensters verdraengt den Filterstand und wird allein
-    /// vom Ordner- oder Tabwechsel **derselben** Seite geraeumt. Wer in dieser Lage
-    /// filtert, sieht seinen Filtertext nicht, auch nicht im Augenblick des
-    /// Tippens und ueber jeden folgenden Ordnerwechsel hinweg. Der Weg besteht
-    /// seit der Runde 10 unveraendert; was der 260815 aendert, ist die
-    /// Haeufigkeit: ein vergessener Filter war die Ausnahme und ist der
-    /// Regelfall. Offen als
-    /// `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`.
+    /// **Der stehende Filtertext ist sichtbar, und zwar ohne Rang.** Der
+    /// Nutzerentscheid haengt an seiner Sichtbarkeit: wer filtert, in einen
+    /// Ordner steigt und den Filter vergessen hat, haelt den neuen Ordner sonst
+    /// fuer fast leer. Bis zum 261007 nannte ihn allein die Statuszeile, auf
+    /// dem fuenften Rang von `statuszeile::zeile`, und jede Befehlsantwort,
+    /// Vorgangsanzeige, Fenstermeldung oder Tabmeldung verdraengte ihn, die
+    /// meisten auch aus dem anderen Dateifenster. Seitdem nennt ihn ausserdem
+    /// das Etikett rechts von „Deep“ und „Content“ in der Bereichsleiste, das
+    /// keinen Mitbewerber hat: es zeigt den Filtertext des sichtbaren Tabs im
+    /// aktiven Dateifenster, solange er steht, und den Text dafuer rechnet
+    /// [`crate::filteranzeige::anzeigetext`] aus demselben Wert, den diese
+    /// Stelle in das neue Modell traegt (Moeglichkeit 2 aus
+    /// `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`).
+    /// Die Statuszeile nennt ihn daneben weiter samt Trefferzahl, mit dem
+    /// alten Vorbehalt ueber ihre Rangfolge. **Dass das Etikett auf dem Schirm
+    /// richtig sitzt, haelt keine Probe**; gehalten ist, dass sein Text dem
+    /// Filtertext ueber den Ordnerwechsel folgt
+    /// (`die_filteranzeige_folgt_dem_filtertext_ueber_den_ordnerwechsel`).
     ///
     /// **Der Aufstieg braucht keine eigene Zeile.** Er geht wie der Einstieg
     /// durch diese Stelle, und damit gilt fuer ihn dieselbe Regel (C1.9).
@@ -2202,6 +2201,41 @@ mod tests {
             liste.aktiver().ordner(),
             Path::new(&dorthin),
             "gewechselt wurde trotzdem"
+        );
+    }
+
+    /// Das Etikett neben „Deep“ (Moeglichkeit 2 aus
+    /// `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`):
+    /// ohne Filtertext zeigt es nichts, mit stehendem Filtertext genau diesen,
+    /// und nach dem Ordnerwechsel denselben, weil der Filtertext mitwandert.
+    ///
+    /// Gefragt wird die Funktion, die `bereichsleiste_nachziehen` fragt, an
+    /// demselben Wert, den sie fragt: dem Filtertext am Modell des sichtbaren
+    /// Tabs. Dass die Leiste den Text dann auch schreibt, sieht man allein am
+    /// laufenden Buendel.
+    #[test]
+    fn die_filteranzeige_folgt_dem_filtertext_ueber_den_ordnerwechsel() {
+        let (_ordner, hier, dorthin) = zwei_vorhandene_ordner();
+        let mut liste = liste(&[&hier]);
+        assert_eq!(
+            crate::filteranzeige::anzeigetext(liste.aktiver().modell().filtertext()),
+            None,
+            "ohne Filtertext zeigt das Etikett nichts"
+        );
+
+        liste.aktiver_mut().modell_mut().filtertext_setzen("rs");
+        assert_eq!(
+            crate::filteranzeige::anzeigetext(liste.aktiver().modell().filtertext()).as_deref(),
+            Some("Filter „rs“"),
+            "ein stehender Filtertext erscheint woertlich"
+        );
+
+        liste.ordner_setzen(&dorthin, None);
+        assert_eq!(liste.aktiver().ordner(), Path::new(&dorthin));
+        assert_eq!(
+            crate::filteranzeige::anzeigetext(liste.aktiver().modell().filtertext()).as_deref(),
+            Some("Filter „rs“"),
+            "der Filtertext wandert mit, und das Etikett nennt ihn im neuen Ordner"
         );
     }
 

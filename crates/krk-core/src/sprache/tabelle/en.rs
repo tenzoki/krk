@@ -406,6 +406,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LeisteSpalteUmschalten => "Show or hide the “{spalte}” column in both file lists",
         Text::LeisteTiefeHinweis => "Extend the current filter to the subtree",
         Text::LeisteInhaltHinweis => "Apply the current filter to the file contents as well",
+        Text::LeisteFilter => "Filter “{filtertext}”",
+        Text::LeisteFilterHinweis => {
+            "The filter text of the active file pane; it stays in place across folder changes"
+        }
         Text::LeisteUeberschriftLesezeichen => "Bookmarks",
         Text::LeisteUeberschriftGeraete => "Volumes and Locations",
         Text::LeisteLesezeichenFehlt => "{name} (missing)",

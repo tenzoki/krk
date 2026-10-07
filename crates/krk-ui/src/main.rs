@@ -38,7 +38,9 @@
 //! angeht und was mit ihnen geschieht. `belegungsmodell` haelt die
 //! Arbeitskopie der Belegung, solange die Belegungsansicht aus C3 offen ist.
 //! `fenstertitel` rechnet aus dem Fokus und drei Pfaden aus, was im
-//! Fenstertitel steht (C11 der Runde 2). `angezeigtedatei` beantwortet
+//! Fenstertitel steht (C11 der Runde 2). `filteranzeige` rechnet aus dem
+//! Filtertext des aktiven Dateifensters den Text des Etiketts neben „Deep“
+//! und „Content“ in der Bereichsleiste. `angezeigtedatei` beantwortet
 //! daneben, welche Datei "die angezeigte" ist, aus der Sichtbarkeit von
 //! Vorschau und Editor und den Pfaden, die beide halten; der Ordnersprung aus
 //! C2 der Runde 6 und das Teilen aus C1 fragen dieselbe Stelle.
@@ -77,6 +79,7 @@ mod belegungsmodell;
 mod editormodell;
 mod fenstermodell;
 mod fenstertitel;
+mod filteranzeige;
 mod gitmodell;
 mod heimgriff;
 mod hervorhebung;

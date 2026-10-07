@@ -304,6 +304,7 @@ use crate::fenstermodell::{
     BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in, spalte_sichtbar_in,
 };
 use crate::fenstertitel::{self, Editoranzeige};
+use crate::filteranzeige;
 use crate::heimgriff::{self, Heimgriff, Notizlage};
 use crate::kommandos::abwurfregel::Abwurfvorgang;
 use crate::kommandos::blattmeldung;
@@ -1910,6 +1911,16 @@ impl Anwendungsdelegierter {
                 .meldungswechsel_setzen(Box::new(move || {
                     if let Some(selbst) = schwach.load() {
                         selbst.statuszeile_nachziehen();
+                        // **Und das Filteretikett der Bereichsleiste**, denn
+                        // jede Aenderung des Filtertexts — Tippen,
+                        // Rueckschritt, Einfuegen, `Esc` — meldet sich hier
+                        // und nur hier, ueber `nach_filteraenderung` in
+                        // [`super::tabelle`]. Kein zweiter Beobachter: der
+                        // Anlass ist derselbe, an dem die Statuszeile den
+                        // Filterstand nachzieht, und der Nachzug steht neben
+                        // ihr und nicht in ihr. Den Grund im Langen sagt
+                        // `bereichsleiste_nachziehen`.
+                        selbst.bereichsleiste_nachziehen();
                     }
                 }));
             // Der Abwurf aus einer fremden Anwendung (C4 bis C7 der Runde 13).
@@ -6633,7 +6644,7 @@ impl Anwendungsdelegierter {
     /// keine Zahl hier: sie waechst mit jedem Bereich und mit jeder schaltbaren
     /// Spalte.
     ///
-    /// **Der eine Schreiber, mit zwei Anlaessen**, nach dem Vorbild von
+    /// **Der eine Schreiber, mit drei Anlaessen**, nach dem Vorbild von
     /// [`Self::fokusanzeige_nachziehen`] und [`Self::spaltenanzeige_nachziehen`].
     /// Der erste ist [`Self::aufteilung_nachziehen`], das jedem ausgefuehrten
     /// Kommando folgt, fuer den Tastendruck wie fuer den Klick.
@@ -6664,6 +6675,21 @@ impl Anwendungsdelegierter {
     /// der von "Deep",
     /// und damit ist C2.3 der Inhaltsfilter-Runde ohne eine eigene Zeile
     /// erfuellt.
+    ///
+    /// **Der dritte ist der Meldungswechsel eines Dateifensters**, und er kam
+    /// am 261007 mit dem Etikett des Filtertexts dazu (Moeglichkeit 2 aus
+    /// `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`).
+    /// Der Filtertext haengt am selben `Ordnermodell` wie "Deep", wechselt
+    /// aber auch ohne Ordner- oder Tabwechsel: jedes getippte Zeichen, jeder
+    /// Rueckschritt, jedes Einfuegen und `Esc` aendern ihn, und alle gehen
+    /// durch `nach_filteraenderung` in [`super::tabelle`], das den
+    /// Meldungswechsel ausloest. Derselbe Rueckruf zieht die Statuszeile nach;
+    /// das Etikett haengt an demselben Anlass und an keinem eigenen. Der
+    /// Ordnerwechsel mit mitwanderndem Filter, der Tabwechsel, der Wechsel der
+    /// aktiven Seite und der Aufbau der Oberflaeche erreichen das Etikett
+    /// ueber die beiden Anlaesse darueber. Ein Meldungswechsel ohne neuen
+    /// Filtertext schreibt dieselben Werte noch einmal, und das ist der Preis
+    /// dafuer, keinen zweiten Beobachter zu bauen.
     ///
     /// **Faellt die offene Frage nach dem Gueltigkeitsbereich auf "je
     /// Fenster"**, faellt der zweite Anlass wieder weg und die zwei Werte
@@ -6708,7 +6734,10 @@ impl Anwendungsdelegierter {
         let quelle = self.dateifenster(aktiv).quelle();
         let tief = quelle.tiefe_suche_steht();
         let inhalt = quelle.inhaltssuche_steht();
-        leiste.zustaende_setzen(&sichtbar, &spalten, tief, inhalt);
+        // Der Text des Filteretiketts, gerechnet ohne AppKit; die Ausleihe
+        // des Tabmodells endet in `filtertext`, bevor die Leiste schreibt.
+        let filter = filteranzeige::anzeigetext(&quelle.filtertext());
+        leiste.zustaende_setzen(&sichtbar, &spalten, tief, inhalt, filter.as_deref());
     }
 
     /// Raeumt die Antwort auf den vorigen Tastenbefehl an **beiden**
@@ -6782,9 +6811,11 @@ impl Anwendungsdelegierter {
     /// (`issues/260812-1805_*_die-eine-statuszeile-zeigt-meldungen-eines-ausgeblendeten-dateifensters.md`).
     ///
     /// **Sie steht neben [`Self::bereichsleiste_nachziehen`] und nicht darin.**
-    /// Die Leiste zeigt Schalterzustaende, die Zeile zeigt Meldungen; ein
-    /// gemeinsamer Nachzug haette zwei Anlaesse in einer Funktion, und der
-    /// Meldungswechsel eines Dateifensters ginge die Leiste nichts an.
+    /// Die Leiste zeigt Schalterzustaende und das Etikett des Filtertexts, die
+    /// Zeile zeigt Meldungen; ein gemeinsamer Nachzug haette zwei Gegenstaende
+    /// in einer Funktion. Seit dem 261007 teilen sich beide den
+    /// Meldungswechsel eines Dateifensters als Anlass, weil der Filtertext
+    /// dort wechselt; der Rueckruf ruft sie nacheinander und nicht ineinander.
     fn statuszeile_nachziehen(&self) {
         // Steht die Zeile, stehen auch die Dateifenster: `oberflaeche_aufbauen`
         // haengt sie in derselben Folge ein und die Dateifenster zuerst. Eine

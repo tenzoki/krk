@@ -3548,6 +3548,23 @@ impl DateifensterQuelle {
         tabs.aktiver().modell().inhalt()
     }
 
+    /// Der Filtertext am Modell des sichtbaren Tabs, leer, wenn keiner steht.
+    ///
+    /// **Die Leseseite des Filteretiketts in der Bereichsleiste**, in derselben
+    /// Bauart wie [`Self::tiefe_suche_steht`]: eine Ausleihe, eine Frage an das
+    /// `Ordnermodell` des sichtbaren Tabs, kein zweiter Halteort. Gefragt wird
+    /// sie von `Anwendungsdelegierter::bereichsleiste_nachziehen`, und zwar am
+    /// **aktiven** Dateifenster, dem, auf das „Deep“ und „Content“ wirken.
+    ///
+    /// **Eine eigene Zeichenkette und keine Ausleihe**, weil der Aufrufer
+    /// danach AppKit ruft; eine Ausleihe des Tabmodells, die einen
+    /// Objective-C-Aufruf ueberlebt, schliesst der Modulkopf aus.
+    #[must_use]
+    pub fn filtertext(&self) -> String {
+        let tabs = self.ivars().tabs.borrow();
+        tabs.aktiver().modell().filtertext().to_owned()
+    }
+
     /// Ob das Modell des sichtbaren Tabs einen Filtertext fuehrt.
     ///
     /// **Die eine Groesse, an der die Rueckschritt-Taste ihre Bedeutung

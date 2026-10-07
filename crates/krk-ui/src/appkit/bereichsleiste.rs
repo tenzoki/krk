@@ -1,4 +1,5 @@
-//! Die Bereichsleiste am Fensterfuss: Ankreuzfelder, sonst nichts.
+//! Die Bereichsleiste am Fensterfuss: Ankreuzfelder und, rechts von ihnen,
+//! das Etikett des stehenden Filtertexts.
 //!
 //! **Wie viele es sind, steht hier nicht.** Die Zahl ist seit der
 //! Bereichsleisten-Runde viermal gewachsen, und die naechste Spalte oder der
@@ -55,6 +56,34 @@
 //! Arguments von [`Bereichsleiste::zustaende_setzen`], und diese Datei bleibt,
 //! wie sie ist.
 //!
+//! # Das Etikett des Filtertexts steht rechts von „Content“
+//!
+//! Seit dem 261007 traegt die Leiste neben den Ankreuzfeldern ein Etikett, das
+//! den stehenden Filtertext des aktiven Dateifensters nennt (Nutzerentscheid
+//! „lege den filtertext neben deep“, Moeglichkeit 2 aus
+//! `shared/issues/260815-1047_*_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md`).
+//! Bis dahin nannte ihn allein die Statuszeile, auf einem Rang, den vier
+//! andere verdraengen; das Etikett hat keinen Rang. Es ist **kein Schalter**:
+//! es schickt kein Kommando, traegt keine `tag` und zaehlt deshalb nicht zu
+//! den Schaltern der Probe `tests::zwoelf_schalter_der_leiste_tragen_ein_kommando`.
+//! Den Text rechnet [`crate::filteranzeige::anzeigetext`] ohne AppKit; das
+//! Etikett schreibt ihn nur.
+//!
+//! **Es bleibt an seiner Stelle, ob ein Filtertext steht oder nicht.** Ohne
+//! Filtertext ist es leer und damit unsichtbar, und kein Ankreuzfeld rueckt.
+//! Seine Breite reicht vom Ende von „Content“ bis zum rechten Rand der Leiste;
+//! was nicht hineinpasst, endet in einem Auslassungszeichen und bricht nicht
+//! um. Die Breite zieht [`Leistensicht`] bei jeder Groessenaenderung aus
+//! ihrer eigenen Breite nach, statt sie einer Autogroesse zu ueberlassen: das
+//! Fenster laesst sich schmaler ziehen, als die Ankreuzfelder breit sind, und
+//! eine Autogroesse, die unter null faellt, kommt beim Breiterziehen nicht
+//! mehr auf ihr Mass zurueck.
+//!
+//! **Es nimmt den Ersthelferrang so wenig an wie die Schalter**:
+//! `labelWithString:` baut ein Feld, das weder bearbeitbar noch auswaehlbar
+//! ist, und ein solches Feld lehnt den Rang ab. Der Absatz `# Kein Schalter
+//! nimmt den Ersthelferrang an` darunter gilt damit auch fuer das Etikett.
+//!
 //! # Die Leiste zeigt an und haelt keinen Stand
 //!
 //! Ein Ankreuzfeld kippt seinen Zustand selbst, **bevor** seine Aktion laeuft.
@@ -107,16 +136,22 @@
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
-//! `NSView`, `NSButton`, seine Oberklasse `NSControl`, dazu `NSFont`,
-//! `NSObject` und `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso
-//! `initWithFrame:`, `setFrame:`, `addSubview:`, `setAutoresizingMask:`,
-//! `sizeToFit`, `setFont:`, `setTag:`, `tag`, `setState:`, `state`,
-//! `setToolTip:`, `refusesFirstResponder` (`NSControl.h:30`, ohne eigene
-//! Angabe), `systemFontOfSize:` und `smallSystemFontSize`; die drei Werte von
-//! `NSControlStateValue` (`NSCell.h:71-74`) tragen ebenfalls keine Angabe.
-//! Zwei Beruehrungen sind juenger als ihre Klasse: `controlSize` seit 10.10
-//! (`NSControl.h:32`) und `checkboxWithTitle:target:action:` seit 10.12
-//! (`NSButton.h:59`) — die hoechste Untergrenze dieser Datei. Das Buendel
+//! `NSView`, `NSButton`, seine Oberklasse `NSControl`, dazu `NSTextField`,
+//! `NSColor`, `NSFont`, `NSObject` und `NSString` stehen seit macOS 10.0 zur
+//! Verfuegung, ebenso `initWithFrame:`, `setFrame:`, `frame`, `addSubview:`,
+//! `setAutoresizingMask:`, `resizeSubviewsWithOldSize:` (`NSView.h:122`),
+//! `sizeToFit`, `setFont:`, `setTextColor:`, `setTag:`, `tag`, `setState:`,
+//! `state`, `setToolTip:`, `setStringValue:`, `refusesFirstResponder`
+//! (`NSControl.h:30`, ohne eigene Angabe), `systemFontOfSize:` und
+//! `smallSystemFontSize`; die drei Werte von `NSControlStateValue`
+//! (`NSCell.h:71-74`) und der Wert `NSLineBreakByTruncatingTail` der
+//! Aufzaehlung `NSLineBreakMode` tragen ebenfalls keine Angabe. Fuenf
+//! Beruehrungen sind juenger als ihre Klasse: `controlSize` und
+//! `lineBreakMode` am `NSControl` seit 10.10 (`NSControl.h:32`),
+//! `maximumNumberOfLines` seit 10.11, `labelWithString:` und
+//! `checkboxWithTitle:target:action:` seit 10.12 (`NSButton.h:59`), und die
+//! Semantikfarbe `controlAccentColor` seit 10.14 — die hoechste Untergrenze
+//! dieser Datei. Das Buendel
 //! zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach macOS 15
 //! hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb eine
 //! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
@@ -125,7 +160,8 @@
 //!
 //! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
 //! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
-//! Kiste und hat kein macOS-Alter; `NSObjectProtocol` ist der Kistenname des
+//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Zeichenkette beim Uebersetzen und hat keines; `NSObjectProtocol` ist der Kistenname des
 //! Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene Angabe); `NSPoint`,
 //! `NSRect` und `NSSize` sind C-Strukturen (`NSGeometry.h:23`, `:33` und
 //! `:28`); die Aufzaehlung `NSControlSize` (`NSCell.h:91`) schliesst mit
@@ -140,10 +176,11 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSButton, NSControlSize, NSControlStateValueOff, NSControlStateValueOn, NSFont, NSView,
+    NSButton, NSColor, NSControlSize, NSControlStateValueOff, NSControlStateValueOn, NSFont,
+    NSLineBreakMode, NSTextField, NSView,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
+    MainThreadMarker, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, ns_string,
 };
 
 use krk_core::ablage::{Sichtbarkeit, Spaltensichtbarkeit};
@@ -462,6 +499,99 @@ fn stelle_des_absenders(absender: &NSButton) -> Option<usize> {
     usize::try_from(absender.tag()).ok()
 }
 
+define_class!(
+    /// Die Ansicht der Leiste: eine `NSView`, die beim Auslegen die Breite
+    /// des Filteretiketts aus ihrer eigenen Breite nachzieht.
+    ///
+    /// **Eine eigene Klasse allein wegen dieser einen Meldung.** Die
+    /// Ankreuzfelder haengen am linken Rand und brauchen keine Autogroesse;
+    /// das Etikett soll bis zum rechten Rand reichen und dort mit einem
+    /// Auslassungszeichen enden. Eine Autogroesse ueber die Breite rechnete
+    /// mit Differenzen und faellt unter null, sobald das Fenster schmaler ist
+    /// als die Ankreuzfelder; danach kaeme sie nicht mehr auf ihr Mass
+    /// zurueck. Hier wird die Breite bei jeder Auslegung neu aus der eigenen
+    /// gerechnet und nach unten bei null gehalten. Dieselbe Bauart wie
+    /// `Gitsicht` in [`super::git`].
+    ///
+    /// Sie haelt das Etikett **stark**, und das schliesst keinen Ring: das
+    /// Etikett ist ihre Unteransicht und haelt sie nicht.
+    // SAFETY:
+    // - Die Oberklasse NSView stellt keine Bedingungen an Unterklassen.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = RefCell<Option<Retained<NSTextField>>>]
+    struct Leistensicht;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Leistensicht {}
+
+    impl Leistensicht {
+        /// AppKit legt die Unteransichten neu aus.
+        ///
+        /// Erst die Oberklasse, die die Masken der Ankreuzfelder anwendet —
+        /// sie tragen keine, also bleibt dort alles stehen —, dann die Breite
+        /// des Etiketts.
+        // SAFETY: Die Signatur entspricht der von NSView (`NSView.h:122`).
+        #[unsafe(method(resizeSubviewsWithOldSize:))]
+        fn unteransichten_auslegen(&self, alte_groesse: NSSize) {
+            // SAFETY: `resizeSubviewsWithOldSize:` von NSView hat die hier
+            // angenommene Signatur.
+            unsafe {
+                let _: () = msg_send![super(self), resizeSubviewsWithOldSize: alte_groesse];
+            }
+            self.etikett_einpassen();
+        }
+    }
+);
+
+impl Leistensicht {
+    /// Eine Leistenansicht ohne Etikett; das traegt [`Bereichsleiste::bauen`]
+    /// nach, sobald es steht.
+    fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(RefCell::new(None));
+        // SAFETY: `initWithFrame:` von NSView hat die hier angenommene Signatur.
+        unsafe { msg_send![super(this), initWithFrame: rahmen] }
+    }
+
+    /// Haengt das Etikett ein, merkt es sich und passt es ein.
+    fn etikett_einhaengen(&self, etikett: &Retained<NSTextField>) {
+        self.addSubview(etikett);
+        *self.ivars().borrow_mut() = Some(etikett.clone());
+        self.etikett_einpassen();
+    }
+
+    /// Zieht die Breite des Etiketts bis an den rechten Rand, mit demselben
+    /// Abstand, den die Ankreuzfelder links halten.
+    ///
+    /// Die linke Kante und die Hoehe bleiben, wie [`Bereichsleiste::bauen`]
+    /// sie gesetzt hat; allein die Breite folgt der Leiste. Eine leere oder
+    /// negative Breite wird null, und das Etikett zeigt dann nichts.
+    fn etikett_einpassen(&self) {
+        let etikett = self.ivars().borrow();
+        let Some(etikett) = etikett.as_ref() else {
+            return;
+        };
+        let rahmen = etikett.frame();
+        let breite = etikettbreite(self.frame().size.width, rahmen.origin.x);
+        etikett.setFrame(NSRect::new(
+            rahmen.origin,
+            NSSize::new(breite, rahmen.size.height),
+        ));
+    }
+}
+
+/// Wie breit das Etikett bei dieser Breite der Leiste ist, wenn es bei
+/// `links` beginnt.
+///
+/// Rechts bleibt [`EINZUG`] frei, wie links vor dem ersten Schalter. **Nie
+/// negativ**: ist das Fenster schmaler als die Ankreuzfelder, ist das Etikett
+/// null breit und zeigt nichts, und beim Breiterziehen waechst es aus derselben
+/// Rechnung wieder auf.
+fn etikettbreite(leistenbreite: f64, links: f64) -> f64 {
+    (leistenbreite - links - EINZUG).max(0.0)
+}
+
 /// Die aufgebaute Bereichsleiste.
 ///
 /// `NSControl` haelt sein Ziel nur schwach; die Leiste haelt die Quelle
@@ -469,7 +599,7 @@ fn stelle_des_absenders(absender: &NSButton) -> Option<usize> {
 /// Ring, den die Gegenrichtung aufspannte, entsteht nicht: die Quelle haelt
 /// allein den Melder und keine Ansicht.
 pub struct Bereichsleiste {
-    sicht: Retained<NSView>,
+    sicht: Retained<Leistensicht>,
     /// Die Schalter der sechs Bereiche, in der Reihenfolge von
     /// [`Bereich::ALLE`].
     ///
@@ -525,6 +655,13 @@ pub struct Bereichsleiste {
     /// Reihenfolge und ein Nachschlagen und spraeche damit ueber mehr, als es
     /// hier gibt.
     inhaltsschalter: Retained<NSButton>,
+    /// Das Etikett des stehenden Filtertexts, rechts von „Content“.
+    ///
+    /// **Kein Schalter**, und deshalb ein Feld fuer sich: es traegt weder ein
+    /// Kommando noch eine `tag`. Geschrieben wird es allein in
+    /// [`Self::zustaende_setzen`], mit dem Text, den
+    /// [`crate::filteranzeige::anzeigetext`] rechnet.
+    filteretikett: Retained<NSTextField>,
     quelle: Retained<Leistenquelle>,
 }
 
@@ -536,8 +673,8 @@ impl Bereichsleiste {
     /// noch nicht gesetzt; das tut [`Self::zustaende_setzen`], sobald das
     /// Modell steht.
     pub fn bauen(mtm: MainThreadMarker) -> Self {
-        let sicht = NSView::initWithFrame(
-            NSView::alloc(mtm),
+        let sicht = Leistensicht::neu(
+            mtm,
             NSRect::new(NSPoint::ZERO, NSSize::new(AUFBAUBREITE, HOEHE)),
         );
         let quelle = Leistenquelle::neu(mtm);
@@ -622,12 +759,20 @@ impl Bereichsleiste {
         );
         einhaengen(&sicht, &inhaltsschalter, &mut links);
 
+        // Das Etikett des Filtertexts, mit [`ABSTAND`] rechts von „Content“:
+        // es gehoert zu derselben Gruppe, denn es nennt den Text, auf den die
+        // zwei Schalter links wirken. `einhaengen` hat `links` schon um den
+        // Abstand weitergerueckt.
+        let filteretikett = filteretikett_bauen(mtm, links);
+        sicht.etikett_einhaengen(&filteretikett);
+
         Self {
             sicht,
             bereichsschalter,
             spaltenschalter,
             tiefenschalter,
             inhaltsschalter,
+            filteretikett,
             quelle,
         }
     }
@@ -661,9 +806,13 @@ impl Bereichsleiste {
     /// geaendert" waere hier also eine Fallunterscheidung, die die Antwort
     /// schon voraussetzt.
     ///
-    /// **`tief` und `inhalt` kommen aus einer anderen Quelle als die beiden
-    /// ersten Argumente**, und die Leiste erfaehrt davon nichts: sie bekommt
-    /// vier Werte und schreibt vier Gruppen. Wo die beiden herkommen,
+    /// **`tief`, `inhalt` und `filter` kommen aus einer anderen Quelle als die
+    /// beiden ersten Argumente**, und die Leiste erfaehrt davon nichts: sie
+    /// bekommt fuenf Werte und schreibt sie.
+    /// `filter` ist der fertige Text des Etiketts aus
+    /// [`crate::filteranzeige::anzeigetext`]; `None` leert es und nimmt
+    /// seinen Hinweistext weg, damit ein Verweilen ueber der leeren Stelle
+    /// nichts zeigt. Wo die beiden herkommen,
     /// entscheidet allein `Anwendungsdelegierter::bereichsleiste_nachziehen`;
     /// das ist die Naht, an der eine Antwort "je Fenster" auf
     /// `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
@@ -674,6 +823,7 @@ impl Bereichsleiste {
         spalten: &Spaltensichtbarkeit,
         tief: bool,
         inhalt: bool,
+        filter: Option<&str>,
     ) {
         for bereich in Bereich::ALLE {
             zustand_setzen(
@@ -692,7 +842,51 @@ impl Bereichsleiste {
         }
         zustand_setzen(&self.tiefenschalter, tief);
         zustand_setzen(&self.inhaltsschalter, inhalt);
+        match filter {
+            Some(anzeige) => {
+                self.filteretikett
+                    .setStringValue(&NSString::from_str(anzeige));
+                self.filteretikett
+                    .setToolTip(Some(&NSString::from_str(text(Text::LeisteFilterHinweis))));
+            }
+            None => {
+                self.filteretikett.setStringValue(ns_string!(""));
+                self.filteretikett.setToolTip(None);
+            }
+        }
     }
+}
+
+/// Baut das Etikett des Filtertexts, leer und an der Stelle `links`.
+///
+/// **Einzeilig und am Ende gekuerzt**: `setMaximumNumberOfLines(1)` und das
+/// Kuerzen am Ende halten einen langen Filtertext in der einen Zeile der Leiste
+/// und setzen ein Auslassungszeichen, wo er nicht mehr passt. Die Breite setzt
+/// [`Leistensicht::etikett_einpassen`]; hier steht sie auf null.
+///
+/// **In der Akzentfarbe des Systems**, weil das Etikett gesehen werden soll:
+/// ein vergessener Filtertext laesst einen Ordner leer aussehen, und genau das
+/// soll es verhindern. Ein Fehler ist er nicht, also nicht rot wie ein
+/// Fehler in der Statuszeile.
+///
+/// **Die Hoehe kommt aus der Schrift**: `sizeToFit` misst die Zeilenhoehe auch
+/// bei leerem Text, und das Etikett steht damit senkrecht mittig wie die
+/// Schalter, die [`einhaengen`] ebenso mittig setzt.
+fn filteretikett_bauen(mtm: MainThreadMarker, links: f64) -> Retained<NSTextField> {
+    let etikett = NSTextField::labelWithString(ns_string!(""), mtm);
+    etikett.setFont(Some(&NSFont::systemFontOfSize(
+        NSFont::smallSystemFontSize(),
+    )));
+    etikett.setTextColor(Some(&NSColor::controlAccentColor()));
+    etikett.setMaximumNumberOfLines(1);
+    etikett.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+    etikett.sizeToFit();
+    let hoehe = etikett.frame().size.height.min(HOEHE);
+    etikett.setFrame(NSRect::new(
+        NSPoint::new(links, (HOEHE - hoehe) / 2.0),
+        NSSize::new(0.0, hoehe),
+    ));
+    etikett
 }
 
 /// Baut ein Ankreuzfeld, das seine Stelle ueber die `tag` nennt.
@@ -978,6 +1172,16 @@ mod tests {
                 "der Schalter »{name}« wirkt nicht aus jedem Fokus"
             );
         }
+    }
+
+    /// Das Etikett des Filtertexts reicht bis an den rechten Rand, laesst
+    /// dort den Einzug frei und wird nie negativ breit, auch wenn das Fenster
+    /// schmaler ist als die Ankreuzfelder.
+    #[test]
+    fn das_filteretikett_reicht_bis_zum_rand_und_wird_nie_negativ() {
+        assert_eq!(etikettbreite(1280.0, 700.0), 1280.0 - 700.0 - EINZUG);
+        assert_eq!(etikettbreite(700.0, 700.0), 0.0);
+        assert_eq!(etikettbreite(500.0, 700.0), 0.0);
     }
 
     /// Die Stelle eines Spaltenschalters folgt der Reihenfolge in

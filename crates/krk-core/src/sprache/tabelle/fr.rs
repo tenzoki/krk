@@ -448,6 +448,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::LeisteTiefeHinweis => "Étendre le filtre en cours à la sous-arborescence",
         Text::LeisteInhaltHinweis => "Appliquer le filtre en cours aussi au contenu des fichiers",
+        Text::LeisteFilter => "Filtre «\u{a0}{filtertext}\u{a0}»",
+        Text::LeisteFilterHinweis => {
+            "Le texte du filtre du volet de fichiers actif\u{a0}; il reste en place à chaque changement de dossier"
+        }
         Text::LeisteUeberschriftLesezeichen => "Signets",
         Text::LeisteUeberschriftGeraete => "Volumes et emplacements",
         Text::LeisteLesezeichenFehlt => "{name} (absent)",

@@ -605,6 +605,12 @@ pub enum Text {
     LeisteTiefeHinweis,
     /// Der Hinweistext des Schalters „Content“.
     LeisteInhaltHinweis,
+    /// `filteranzeige::anzeigetext`: das Etikett neben „Deep“ und „Content“,
+    /// das den stehenden Filtertext nennt; `{filtertext}` ist der Filtertext
+    /// in seiner woertlichen Form.
+    LeisteFilter,
+    /// Der Hinweistext dieses Etiketts, solange ein Filtertext steht.
+    LeisteFilterHinweis,
     /// `Teil::Lesezeichen`: die Ueberschrift des oberen Teils der Lesezeichen-
     /// und Geraeteleiste.
     LeisteUeberschriftLesezeichen,
@@ -1431,7 +1437,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 599] = [
+    pub const ALLE: [Text; 601] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1682,6 +1688,8 @@ impl Text {
         Text::LeisteSpalteUmschalten,
         Text::LeisteTiefeHinweis,
         Text::LeisteInhaltHinweis,
+        Text::LeisteFilter,
+        Text::LeisteFilterHinweis,
         Text::LeisteUeberschriftLesezeichen,
         Text::LeisteUeberschriftGeraete,
         Text::LeisteLesezeichenFehlt,

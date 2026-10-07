@@ -426,6 +426,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LeisteInhaltHinweis => {
             "Den stehenden Filter auch auf den Inhalt der Dateien anwenden"
         }
+        Text::LeisteFilter => "Filter „{filtertext}“",
+        Text::LeisteFilterHinweis => {
+            "Der Filtertext des aktiven Dateifensters; er bleibt bei jedem Ordnerwechsel stehen"
+        }
         Text::LeisteUeberschriftLesezeichen => "Lesezeichen",
         Text::LeisteUeberschriftGeraete => "Geräte und Orte",
         Text::LeisteLesezeichenFehlt => "{name} (fehlt)",

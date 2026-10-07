@@ -466,6 +466,13 @@ pub struct Filterstand {
 /// vorigen Ordners; eine Zahl daraus waere eine Auskunft ueber einen Ordner,
 /// den der Nutzer schon verlassen hat (C4.7 der Runde 10).
 ///
+/// **Dieser Rang ist seit dem 261007 nicht mehr die einzige Stelle, die den
+/// Filtertext nennt.** Er kann von den vier Raengen darueber verdraengt
+/// werden, auch aus dem anderen Dateifenster; das Etikett rechts von „Deep“
+/// und „Content“ in der Bereichsleiste nennt den Filtertext daneben ohne Rang
+/// ([`crate::filteranzeige::anzeigetext`]). Die Rangfolge bleibt dabei, wie
+/// sie ist: die Zeile traegt weiter die Zahlen, die das Etikett nicht nennt.
+///
 /// **Der Satz hat einen Kern und drei Zusaetze, und jeder Zusatz steht nur
 /// unter seiner Bedingung.** Der Kern nennt den Filtertext, die Zahl der
 /// gezeigten Zeilen und die Zahl der Eintraege des angezeigten Ordners (C4.3
