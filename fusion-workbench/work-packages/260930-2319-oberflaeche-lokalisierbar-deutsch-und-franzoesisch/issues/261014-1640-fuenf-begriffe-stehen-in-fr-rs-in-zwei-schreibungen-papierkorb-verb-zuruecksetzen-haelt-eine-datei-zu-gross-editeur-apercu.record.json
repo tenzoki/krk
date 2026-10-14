@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f3a095e3-e698-4953-b2bd-9cdae0cef1a2",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/issues/261014-1640-fuenf-begriffe-stehen-in-fr-rs-in-zwei-schreibungen-papierkorb-verb-zuruecksetzen-haelt-eine-datei-zu-gross-editeur-apercu.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

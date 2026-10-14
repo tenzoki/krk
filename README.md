@@ -65,9 +65,10 @@ selbst gibt es dafür nicht, und ein Neustart ist nötig, weil macOS die
 Sprache eines Programms beim Start festlegt.
 
 Die französischen und die englischen Texte hat ein Agent am 261001 übersetzt,
-und die Durchsicht Fläche für Fläche gegen die laufende Anwendung steht aus;
-die Kopfzeile von `crates/krk-core/src/sprache/tabelle/fr.rs` und `en.rs` sagt
-das, bis sie gefahren ist.
+und eine Durchsicht hat sie am 261014 Eintrag für Eintrag gegen die deutsche
+Tabelle gelesen; die Kopfzeile von `crates/krk-core/src/sprache/tabelle/fr.rs`
+und `en.rs` sagt beides. Die Durchsicht Fläche für Fläche gegen die laufende
+Anwendung steht weiter aus und ist Nutzerarbeit.
 
 Für die Arbeit am Quelltext: jeder Text, den ein Mensch durch KRKs Fenster
 liest, ist ein Eintrag der drei Tabellen unter `crates/krk-core/src/sprache/`

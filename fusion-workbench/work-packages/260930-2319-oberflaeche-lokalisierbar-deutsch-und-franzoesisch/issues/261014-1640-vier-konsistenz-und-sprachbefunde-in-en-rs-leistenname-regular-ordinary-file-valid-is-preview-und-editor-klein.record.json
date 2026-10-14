@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "cfde6493-ab2f-4df9-a360-4c1177da9286",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/issues/261014-1640-vier-konsistenz-und-sprachbefunde-in-en-rs-leistenname-regular-ordinary-file-valid-is-preview-und-editor-klein.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

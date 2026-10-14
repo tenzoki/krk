@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "7093dfb5-5f99-47ad-96bb-14a7ad314549",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/issues/261014-1640-drei-sprach-und-typografiebefunde-in-fr-rs-u00a0-vor-semikolon-branchee-und-aller-a-la-ligne.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

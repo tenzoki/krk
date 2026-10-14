@@ -16,8 +16,9 @@
 //! letzte Probe haelt das fest.
 //!
 //! Was keine Probe hier kann: eine Uebersetzung auf Richtigkeit pruefen. Das
-//! ist die Durchsicht des Nutzers, Flaeche fuer Flaeche in der laufenden
-//! Anwendung, und bis dahin tragen `fr.rs` und `en.rs` ihre Kopfzeile.
+//! hat am 261014 eine Durchsicht Eintrag fuer Eintrag gegen `de.rs` getan,
+//! und der Kopf von `fr.rs` und `en.rs` sagt es; die Durchsicht des Nutzers
+//! Flaeche fuer Flaeche in der laufenden Anwendung steht weiter aus.
 
 use std::collections::BTreeSet;
 
@@ -153,8 +154,11 @@ fn deutsche_eintraege_tragen_keine_guillemets() {
 }
 
 /// C4 fuer Franzoesisch: keine deutschen Anfuehrungszeichen, Guillemets mit
-/// U+00A0 innen, und vor `:`, `;`, `!` und `?` ein geschuetztes Leerzeichen
-/// (U+00A0 oder U+202F), nie ein gewoehnliches und nie keines.
+/// U+00A0 innen, vor `:` U+00A0 und vor `;`, `!` und `?` U+202F, wie der
+/// Kopf von `tabelle/mod.rs` unter `# Typografie` es festlegt; nie ein
+/// gewoehnliches Leerzeichen, nie keines und nie das jeweils andere
+/// geschuetzte. Bis zum 261014 liess die Probe vor jedem der vier Zeichen
+/// beide geschuetzten zu, und ein `\u{a0}` vor `;` kam so durch.
 ///
 /// **Ein `:` innerhalb einer Schreibweise ist kein Satzzeichen.** `HH:MM`
 /// und `09:30` tragen den Doppelpunkt als Trenner einer Uhrzeit, und ein
@@ -201,10 +205,11 @@ fn franzoesische_eintraege_tragen_die_franzoesische_typografie() {
                         !davor.is_alphanumeric(),
                         "{name}: vor `{aktuell}` fehlt das geschuetzte Leerzeichen: {eintrag}"
                     );
+                    let verlangt = if aktuell == ':' { '\u{a0}' } else { '\u{202f}' };
                     assert!(
-                        davor == '\u{a0}' || davor == '\u{202f}' || !davor.is_whitespace(),
-                        "{name}: vor `{aktuell}` steht ein anderer Leerraum als U+00A0 oder \
-                         U+202F: {eintrag}"
+                        davor == verlangt || !davor.is_whitespace(),
+                        "{name}: vor `{aktuell}` steht ein anderer Leerraum als U+{:04X}: {eintrag}",
+                        verlangt as u32
                     );
                 }
                 _ => {}

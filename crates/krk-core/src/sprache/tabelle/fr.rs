@@ -1,5 +1,5 @@
-//! Uebersetzt von einem Agenten am 261001; vom Nutzer noch nicht Flaeche
-//! fuer Flaeche durchgesehen.
+//! Uebersetzt von einem Agenten am 261001, am 261014 Eintrag fuer Eintrag
+//! gegen `de.rs` durchgesehen; in der laufenden Anwendung noch nicht.
 //!
 //! Die franzoesische Tabelle. Das Glossar und die Typografie stehen im Kopf
 //! von [`super`]; die geschuetzten Leerzeichen stehen als `\u{a0}` (vor `:`
@@ -101,11 +101,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "copié, mais resté dans la source\u{a0}: {grund}"
         }
         Text::VorgangKeinPapierkorb => {
-            "aucune Corbeille n’est branchée\u{202f}; rien n’a été supprimé"
+            "aucune Corbeille n’est disponible\u{202f}; rien n’a été supprimé"
         }
         Text::VorgangKeineGewoehnlicheDatei => "pas un fichier ordinaire",
         Text::VorgangZielNichtInPapierkorb => {
-            "la destination n’a pas pu être placée dans la Corbeille\u{a0}: {grund}"
+            "la destination n’a pas pu être mise à la Corbeille\u{a0}: {grund}"
         }
         Text::EntpackenEintragFuehrtHeraus => {
             "«\u{a0}{name}\u{a0}» sort du dossier de destination et est ignoré"
@@ -225,8 +225,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WerksNichtZurueckgebaut => {
             "{hindernis} Une seconde copie du contenu inchangé est restée sous {pfade}."
         }
-        Text::WerksZurueckgesetzt => "Réglages d’usine rétablis.",
-        Text::WerksTeilweiseZurueckgesetzt => "Réglages d’usine rétablis seulement en partie.",
+        Text::WerksZurueckgesetzt => "Réinitialisé aux réglages d’usine.",
+        Text::WerksTeilweiseZurueckgesetzt => {
+            "Réinitialisé aux réglages d’usine seulement en partie."
+        }
         Text::WerksBeiseitegelegt => "Mis de côté\u{a0}: {pfade}.",
         Text::WerksStandNichtDa => "{datei} n’existait pas, rien n’a été mis de côté pour lui.",
         Text::WerksDateiNichtZurueckgesetzt => "{datei} n’est pas réinitialisé\u{a0}: {fehler}.",
@@ -326,7 +328,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimZettelUnlesbar => {
             "{thema} n’a pas été repris ({grund})\u{202f}; {datei} reste inchangé dans le dossier de données"
         }
-        Text::HeimZettelZuGross => "trop gros avec {groesse} octets",
+        Text::HeimZettelZuGross => "trop volumineux avec {groesse} octets",
         Text::HeimZettelKeinText => "pas de texte lisible",
         Text::HeimAngefangeneDateiBleibt => {
             "{fehler}\u{202f}; le fichier commencé ne peut pas être supprimé\u{a0}: {entfernen}"
@@ -433,8 +435,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::BereichLesezeichenLang => "la barre des signets et des volumes",
         Text::BereichLinksLang => "le volet de fichiers gauche",
         Text::BereichRechtsLang => "le volet de fichiers droit",
-        Text::BereichVorschauLang => "la fenêtre d’aperçu",
-        Text::BereichEditorLang => "l’éditeur intégré",
+        Text::BereichVorschauLang => "la fenêtre d’Aperçu",
+        Text::BereichEditorLang => "l’Éditeur intégré",
         Text::BereichGitLang => "la zone Git",
         Text::SpalteName => "Nom",
         Text::SpalteGroesse => "Taille",
@@ -450,7 +452,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LeisteInhaltHinweis => "Appliquer le filtre en cours aussi au contenu des fichiers",
         Text::LeisteFilter => "Filtre «\u{a0}{filtertext}\u{a0}»",
         Text::LeisteFilterHinweis => {
-            "Le texte du filtre du volet de fichiers actif\u{a0}; il reste en place à chaque changement de dossier"
+            "Le texte du filtre du volet de fichiers actif\u{202f}; il reste en place à chaque changement de dossier"
         }
         Text::LeisteUeberschriftLesezeichen => "Signets",
         Text::LeisteUeberschriftGeraete => "Volumes et emplacements",
@@ -935,7 +937,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::LesezeichenNameFrage => "Quel nom donner au signet\u{202f}?",
         Text::LesezeichenAngelegt => "Signet «\u{a0}{name}\u{a0}» créé",
-        Text::EditorHaeltKeineDatei => "l’Éditeur ne contient aucun fichier",
+        Text::EditorHaeltKeineDatei => "l’Éditeur ne tient aucun fichier",
         Text::HinweisTastenabgriffTitel => "KRK ne peut pas lire les frappes de touches",
         Text::HinweisTastenabgriffText => {
             "L’interception du clavier n’a pas pu être mise en place. Sans elle, aucune touche ne déplace la sélection et aucun raccourci clavier n’agit. KRK se ferme plutôt que de continuer avec une fenêtre sans commande au clavier."
@@ -1144,7 +1146,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::BereichVerschmaelern => "Rétrécir la zone active",
         Kommando::Kopieren => "Copier dans l’autre volet",
         Kommando::Verschieben => "Déplacer vers l’autre volet",
-        Kommando::InPapierkorb => "Placer dans la Corbeille",
+        Kommando::InPapierkorb => "Mettre à la Corbeille",
         Kommando::Abbrechen => "Annuler l’opération en cours",
         Kommando::OrdnerAnlegen => "Nouveau dossier",
         Kommando::DateiAnlegen => "Nouveau fichier vide",
@@ -1170,7 +1172,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::EditorUmschalten => "Afficher ou masquer l’Éditeur",
         Kommando::EditorAnsichtUmschalten => "Basculer entre vue brute et vue formatée",
         Kommando::EditorSichern => "Enregistrer",
-        Kommando::EditorZeileSpringen => "Aller à la ligne",
+        Kommando::EditorZeileSpringen => "Atteindre la ligne…",
         Kommando::EditorSuchen => "Rechercher dans le texte",
         Kommando::EditorWeitersuchen => "Rechercher le suivant",
         Kommando::EditorRueckwaertsSuchen => "Rechercher le précédent",
@@ -1200,7 +1202,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::FokusGit => "Focus sur la zone Git",
         Kommando::SpalteMarkeUmschalten => "Afficher ou masquer la colonne Marque",
         Kommando::NeuerungenZeigen => "Afficher les nouveautés",
-        Kommando::Werkseinstellungen => "Rétablir les réglages d’usine…",
+        Kommando::Werkseinstellungen => "Réinitialiser aux réglages d’usine…",
         Kommando::BildVor => "Image suivante",
         Kommando::BildZurueck => "Image précédente",
         Kommando::ZumBild => "Aller à l’image affichée",

@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "a9bf900c-a807-49e0-bace-5eee2f20ab03",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "fed9d95beb93b086847013254c80073670ba9214",
+    "git_range": null
+  },
+  "brief_revision": "sha256:9768f3878c3f335a774cda67975e09722332823c0016fb463772cb84c43db2d8",
+  "plan_revision": null,
+  "role": {
+    "profile": "reviewer",
+    "version": "13.0.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/reviews/261014-1640-reviewer-durchsicht-der-zwei-uebersetzten-sprachtabellen-eintrag-fuer-eintrag.md",
+    "sha256": "sha256:e30575d2e233c151e1e943eb7a8de02e7141c44e236059f0148a4de18fca423f",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-14T14:44:07Z",
+  "extensions": {}
+}

@@ -1,5 +1,5 @@
-//! Uebersetzt von einem Agenten am 261001; vom Nutzer noch nicht Flaeche
-//! fuer Flaeche durchgesehen.
+//! Uebersetzt von einem Agenten am 261001, am 261014 Eintrag fuer Eintrag
+//! gegen `de.rs` durchgesehen; in der laufenden Anwendung noch nicht.
 //!
 //! Die englische Tabelle. Das Glossar und die Typografie stehen im Kopf von
 //! [`super`].
@@ -11,7 +11,7 @@ use crate::tasten::belegung::{Kommando, Zugestellt};
 pub(in super::super) const fn text(schluessel: Text) -> &'static str {
     match schluessel {
         Text::WirkungsbereichDateifenster => "file pane",
-        Text::WirkungsbereichLeiste => "bookmark and volume bar",
+        Text::WirkungsbereichLeiste => "bookmarks and volumes bar",
         Text::WirkungsbereichDateibereiche => "file pane, Preview and Editor",
         Text::WirkungsbereichEditor => "Editor",
         Text::WirkungsbereichEditortext => "text in the Editor",
@@ -167,7 +167,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "settings.toml could not be written and stays as it was: {befund}"
         }
         Text::EinstellungenKeineGewoehnlicheDatei => {
-            "in its place stands something other than an ordinary file"
+            "in its place stands something other than a regular file"
         }
         Text::EinstellungenNotizordnerKeinEinzelwert => {
             "notizordner does not stand as a single value on a line “notizordner = …”"
@@ -178,7 +178,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "{datei} is a symbolic link, and KRK does not replace it with a file; nothing has been reset."
         }
         Text::WerksKeineDatei => {
-            "In the place of {datei} stands something other than an ordinary file; nothing has been reset."
+            "In the place of {datei} stands something other than a regular file; nothing has been reset."
         }
         Text::WerksNichtLesbar => "{datei} cannot be queried ({befund}); nothing has been reset.",
         Text::WerksKeineOrtszeit => {
@@ -232,16 +232,16 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "The system names no home directory, so there is no notes folder"
         }
         Text::OrtLeer => {
-            "The notes folder in settings.toml is empty; valid is a location starting with “~/” or “/”, by default “~/{ordnername}”"
+            "The notes folder in settings.toml is empty; a valid location starts with “~/” or “/”, by default “~/{ordnername}”"
         }
         Text::OrtNichtAbsolut => {
             "The notes folder “{wert}” in settings.toml starts neither with “~/” nor with “/”"
         }
         Text::OrtFremdesBenutzerverzeichnis => {
-            "The notes folder “{wert}” in settings.toml names another user’s home directory; valid is “~/” for your own or a path starting with “/”"
+            "The notes folder “{wert}” in settings.toml names another user’s home directory; “~/” stands for your own, and a path starting with “/” is valid as well"
         }
         Text::OrtKeinText => {
-            "The notes folder in settings.toml is not a text but {wert}; valid is a location in quotation marks, such as {beispiel}"
+            "The notes folder in settings.toml is not a text but {wert}; a valid location is in quotation marks, such as {beispiel}"
         }
         Text::OrtImAblageordner => {
             "The notes folder “{wert}” lies in KRK’s data folder; a tool that removes KRK would take it along, so it does not count"
@@ -393,8 +393,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::BereichLesezeichenLang => "the bookmarks and volumes bar",
         Text::BereichLinksLang => "the left file pane",
         Text::BereichRechtsLang => "the right file pane",
-        Text::BereichVorschauLang => "the preview pane",
-        Text::BereichEditorLang => "the built-in editor",
+        Text::BereichVorschauLang => "the Preview pane",
+        Text::BereichEditorLang => "the built-in Editor",
         Text::BereichGitLang => "the Git area",
         Text::SpalteName => "Name",
         Text::SpalteGroesse => "Size",
@@ -947,8 +947,8 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "Move these {n} entries {grund}to the Trash?",
         ),
         Zahlwort::StartMeldungen => (
-            "There was one message at start",
-            "There were {n} messages at start",
+            "There was one message at start-up",
+            "There were {n} messages at start-up",
         ),
         Zahlwort::StapelFrage => ("Rename one entry", "Rename {n} entries in a batch"),
         Zahlwort::StapelEintraege => ("{n} entry", "{n} entries"),

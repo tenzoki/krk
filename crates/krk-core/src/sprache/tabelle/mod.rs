@@ -6,8 +6,10 @@
 //! Die deutsche Tabelle ist die Quelle: ihre Eintraege sind der Wortlaut,
 //! den die Oberflaeche vor dieser Arbeit trug, Zeichen fuer Zeichen, damit
 //! jede Wortlautprobe weiter haelt. Die franzoesische und die englische hat
-//! ein Agent uebersetzt; ihr Kopf sagt, solange der Nutzer sie nicht
-//! Flaeche fuer Flaeche durchgesehen hat.
+//! ein Agent uebersetzt, und eine Durchsicht hat sie am 261014 Eintrag fuer
+//! Eintrag gegen `de.rs` gelesen; ihr Kopf sagt beides. Eine Durchsicht
+//! Flaeche fuer Flaeche in der laufenden Anwendung steht aus und ist
+//! Nutzerarbeit.
 //!
 //! **Dieses Verzeichnis ist die eine Eigenschaft, die die Umlautprobe
 //! ausnimmt**: ein Stringliteral mit Umlaut im Betriebscode ausserhalb von
@@ -94,6 +96,7 @@
 //! | Tab (eines Dateifensters) | onglet | tab |
 //! | markieren (Eintraege fuer einen Vorgang) | marquer | mark |
 //! | Marke (die Spalte des Git-Status) | marque | mark |
+//! | Markierung (eines Eintrags fuer einen Vorgang; dasselbe Wort wie die Marke der Git-Spalte, obwohl Deutsch beide trennt, und das absichtlich: `261014-1646-folgt-das-franzoesische-papierkorb-verb-dem-glossar-oder-dem-finder-und-bekommt-die-markierung-ein-eigenes-wort.md`, Moeglichkeit 1) | marque | mark |
 //! | Fokus | focus | focus |
 //! | Standardprogramm | application par défaut | default application |
 //! | Terminal | Terminal | Terminal |
@@ -148,7 +151,7 @@
 //! | Git-Arbeitsbaum | arborescence de travail Git | Git working tree |
 //! | Benutzerordner (in der Loeschwarnung, derselbe Ort wie das Benutzerverzeichnis) | dossier de départ | home directory |
 //! | raeumen (in den Papierkorb) | mettre à la Corbeille | move to the Trash |
-//! | Startmeldung | message au démarrage | message at start |
+//! | Startmeldung | message au démarrage | message at start-up |
 //! | Zeitstempel | horodatage | timestamp |
 //! | Tastenzuweisung (eigene) | attribution de touches | key assignment |
 //! | Filterstand (Filter „…“: n von m angezeigt) | Filtre | Filter |
@@ -184,6 +187,14 @@
 //! | auswerfen (einen Datentraeger) | éjecter | eject |
 //! | verdeckter Tab | onglet masqué | hidden tab |
 //! | eine Fassung, hinter der eine Datei zurueckliegt | version sur laquelle un fichier est en retard | version a file lags behind |
+//! | Auswahl (die gewaehlte Zeile des Dateifensters) | sélection | selection |
+//! | Tabelle (Aufgaben-, Notiz-, Termintabelle des Editors) | tableau | table |
+//! | Kombination (einer Belegung) | combinaison | combination |
+//! | Funktion (der Belegung) | fonction | function |
+//! | Unterbaum | sous-arborescence | subtree |
+//! | zu gross (eine Datei; ein Text ist „trop long“) | trop volumineux | too large |
+//! | haelt (der Editor haelt eine Datei) | tient | holds |
+//! | Ruecktaste | retour arrière | Backspace |
 //!
 //! # Die Befehlsnamen
 //!

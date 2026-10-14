@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "9f133a4b-65ca-4385-8358-a5b71d2e6fe3",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/decisions/261014-1646-folgt-das-franzoesische-papierkorb-verb-dem-glossar-oder-dem-finder-und-bekommt-die-markierung-ein-eigenes-wort.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}
